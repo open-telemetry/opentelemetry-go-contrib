@@ -92,7 +92,8 @@ merge**.
 ## Adding a new Contrib package
 
 To add a new contrib package follow an existing one. An empty Sample plugin
-provides base structure with an example and a test.
+provides base structure with an example and a test. Each contrib package 
+should be its own module. A contrib package may contain more than one go package.
 
 ### Folder Structure
 - plugins/\<plugin-package>  (**Common**)
