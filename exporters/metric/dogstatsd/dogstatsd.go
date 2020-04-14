@@ -80,7 +80,7 @@ func InstallNewPipeline(config Config) (*push.Controller, error) {
 
 // NewExportPipeline sets up a complete export pipeline with the recommended setup,
 // chaining a NewRawExporter into the recommended selectors and batchers.
-func NewExportPipeline(config Config, period time.Duration) (*push.Controller, error) {
+func NewExportPipeline(config Config, period time.Duration, options ...push.Option) (*push.Controller, error) {
 	selector := simple.NewWithExactMeasure()
 	exporter, err := NewRawExporter(config)
 	if err != nil {
@@ -91,7 +91,7 @@ func NewExportPipeline(config Config, period time.Duration) (*push.Controller, e
 	// set of labels as dogstatsd tags.
 	batcher := ungrouped.New(selector, exporter.labelEncoder, false)
 
-	pusher := push.New(batcher, exporter, period)
+	pusher := push.New(batcher, exporter, period, options...)
 	pusher.Start()
 
 	return pusher, nil
