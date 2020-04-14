@@ -77,10 +77,10 @@ const (
 	formatGauge     = "g"
 	formatTiming    = "ms"
 
-	// MaxPacketSize defaults to Ethernet Jumbo frame size.  If
-	// this is too large, you will see "write: message too long"
-	// errors.
-	MaxPacketSize = 9216
+	// MaxPacketSize defaults to the smallest value known to work
+	// across all cloud providers.  If the packets are too large,
+	// you will see "write: message too long" errors.
+	MaxPacketSize = 1432
 )
 
 var (
