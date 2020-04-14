@@ -309,3 +309,33 @@ func TestPacketSplit(t *testing.T) {
 		})
 	}
 }
+
+func TestArraySplit(t *testing.T) {
+	ctx := context.Background()
+	writer := &testWriter{}
+	config := statsd.Config{
+		Writer:        writer,
+		MaxPacketSize: 1024,
+	}
+	adapter := newWithTagsAdapter()
+	exp, err := statsd.NewExporter(config, adapter)
+	if err != nil {
+		t.Fatal("New error: ", err)
+	}
+
+	checkpointSet := test.NewCheckpointSet(adapter.LabelEncoder)
+	desc := metric.NewDescriptor("measure", metric.MeasureKind, core.Int64NumberKind)
+
+	for i := 0; i < 1024; i++ {
+		checkpointSet.AddMeasure(&desc, 100)
+	}
+
+	err = exp.Export(ctx, checkpointSet)
+	require.Nil(t, err)
+
+	require.Greater(t, len(writer.vec), 1)
+
+	for _, result := range writer.vec {
+		require.LessOrEqual(t, len(result), config.MaxPacketSize)
+	}
+}

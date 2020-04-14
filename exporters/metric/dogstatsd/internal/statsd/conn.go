@@ -167,34 +167,40 @@ func (e *Exporter) Export(_ context.Context, checkpointSet export.CheckpointSet)
 	var sendErr error
 
 	aggErr = checkpointSet.ForEach(func(rec export.Record) error {
-		before := buf.Len()
-
-		if err := e.formatMetric(rec, buf); err != nil {
+		pts, err := e.countPoints(rec)
+		if err != nil {
 			return err
 		}
+		for pt := 0; pt < pts; pt++ {
+			before := buf.Len()
 
-		if buf.Len() < e.config.MaxPacketSize {
-			return nil
-		}
-		if before == 0 {
-			// A single metric >= packet size
-			if err := e.send(buf.Bytes()); err != nil && sendErr == nil {
+			if err := e.formatMetric(rec, pt, buf); err != nil {
+				return err
+			}
+
+			if buf.Len() < e.config.MaxPacketSize {
+				continue
+			}
+			if before == 0 {
+				// A single metric >= packet size
+				if err := e.send(buf.Bytes()); err != nil && sendErr == nil {
+					sendErr = err
+				}
+				buf.Reset()
+				continue
+			}
+
+			// Send and copy the leftover
+			if err := e.send(buf.Bytes()[:before]); err != nil && sendErr == nil {
 				sendErr = err
 			}
-			buf.Reset()
-			return nil
+
+			leftover := buf.Len() - before
+
+			copy(buf.Bytes()[0:leftover], buf.Bytes()[before:])
+
+			buf.Truncate(leftover)
 		}
-
-		// Send and copy the leftover
-		if err := e.send(buf.Bytes()[:before]); err != nil && sendErr == nil {
-			sendErr = err
-		}
-
-		leftover := buf.Len() - before
-
-		copy(buf.Bytes()[0:leftover], buf.Bytes()[before:])
-
-		buf.Truncate(leftover)
 		return nil
 	})
 	if err := e.send(buf.Bytes()); err != nil && sendErr == nil {
@@ -218,10 +224,25 @@ func (e *Exporter) send(buf []byte) error {
 	return nil
 }
 
+// countPoints returns the number of separate statsd points contained
+// in this record.
+func (e *Exporter) countPoints(rec export.Record) (int, error) {
+	agg := rec.Aggregator()
+
+	if pts, ok := agg.(aggregator.Points); ok {
+		points, err := pts.Points()
+		if err != nil {
+			return 0, err
+		}
+		return len(points), nil
+	}
+	return 1, nil
+}
+
 // formatMetric formats an individual export record.  For some records
 // this will emit a single statistic, for some it will emit more than
 // one.
-func (e *Exporter) formatMetric(rec export.Record, buf *bytes.Buffer) error {
+func (e *Exporter) formatMetric(rec export.Record, pos int, buf *bytes.Buffer) error {
 	desc := rec.Descriptor()
 	agg := rec.Aggregator()
 
@@ -242,9 +263,7 @@ func (e *Exporter) formatMetric(rec export.Record, buf *bytes.Buffer) error {
 		if err != nil {
 			return err
 		}
-		for _, pt := range points {
-			e.formatSingleStat(rec, pt, format, buf)
-		}
+		e.formatSingleStat(rec, points[pos], format, buf)
 
 	} else if sum, ok := agg.(aggregator.Sum); ok {
 		sum, err := sum.Sum()
