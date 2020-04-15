@@ -20,7 +20,6 @@ import (
 	"testing"
 
 	"github.com/open-telemetry/opentelemetry-go-contrib/exporters/metric/dogstatsd"
-	"github.com/open-telemetry/opentelemetry-go-contrib/exporters/metric/dogstatsd/internal/statsd"
 	"github.com/stretchr/testify/require"
 
 	"go.opentelemetry.io/otel/api/core"
@@ -28,13 +27,14 @@ import (
 	"go.opentelemetry.io/otel/api/metric"
 	"go.opentelemetry.io/otel/exporters/metric/test"
 	"go.opentelemetry.io/otel/sdk/metric/aggregator/sum"
+	"go.opentelemetry.io/otel/sdk/resource"
 )
 
 // TestDogstatsLabels that labels are formatted in the correct style,
 // whether or not the provided labels were encoded by a statsd label
 // encoder.
 func TestDogstatsLabels(t *testing.T) {
-	encoder := statsd.NewLabelEncoder()
+	encoder := dogstatsd.NewLabelEncoder(resource.New(key.String("R", "S")))
 	ctx := context.Background()
 	checkpointSet := test.NewCheckpointSet(encoder)
 
@@ -54,5 +54,5 @@ func TestDogstatsLabels(t *testing.T) {
 	err = exp.Export(ctx, checkpointSet)
 	require.Nil(t, err)
 
-	require.Equal(t, "test.name:123|c|#A:B\n", buf.String())
+	require.Equal(t, "test.name:123|c|#R:S,A:B\n", buf.String())
 }

@@ -31,6 +31,7 @@ import (
 	"go.opentelemetry.io/otel/api/unit"
 	export "go.opentelemetry.io/otel/sdk/export/metric"
 	"go.opentelemetry.io/otel/sdk/export/metric/aggregator"
+	"go.opentelemetry.io/otel/sdk/resource"
 )
 
 type (
@@ -49,6 +50,12 @@ type (
 
 		// MaxPacketSize this limits the packet size for packet-oriented transports.
 		MaxPacketSize int
+
+		// Resource WILL BE REMOVED AFTER RESOURCES ARE ADDED
+		// TO THE EXPORT APIs.  TODO: Remove this when Export()
+		// passes the Resource.  See:
+		// https://github.com/open-telemetry/opentelemetry-go/pull/640
+		Resource *resource.Resource
 
 		// TODO support Dial and Write timeouts
 	}
