@@ -20,11 +20,14 @@ import (
 
 	"github.com/open-telemetry/opentelemetry-go-contrib/exporters/metric/dogstatsd/internal/statsd"
 	"go.opentelemetry.io/otel/api/global"
+	"go.opentelemetry.io/otel/api/metric"
+	"go.opentelemetry.io/otel/sdk/metric/aggregator/array"
+	"go.opentelemetry.io/otel/sdk/metric/aggregator/lastvalue"
+	"go.opentelemetry.io/otel/sdk/metric/aggregator/sum"
 
 	export "go.opentelemetry.io/otel/sdk/export/metric"
 	"go.opentelemetry.io/otel/sdk/metric/batcher/ungrouped"
 	"go.opentelemetry.io/otel/sdk/metric/controller/push"
-	"go.opentelemetry.io/otel/sdk/metric/selector/simple"
 )
 
 type (
@@ -81,7 +84,6 @@ func InstallNewPipeline(config Config) (*push.Controller, error) {
 // NewExportPipeline sets up a complete export pipeline with the recommended setup,
 // chaining a NewRawExporter into the recommended selectors and batchers.
 func NewExportPipeline(config Config, period time.Duration) (*push.Controller, error) {
-	selector := simple.NewWithExactMeasure()
 	exporter, err := NewRawExporter(config)
 	if err != nil {
 		return nil, err
@@ -89,12 +91,25 @@ func NewExportPipeline(config Config, period time.Duration) (*push.Controller, e
 
 	// The ungrouped batcher ensures that the export sees the full
 	// set of labels as dogstatsd tags.
-	batcher := ungrouped.New(selector, exporter.labelEncoder, false)
+	batcher := ungrouped.New(exporter, exporter.labelEncoder, false)
 
 	pusher := push.New(batcher, exporter, period)
 	pusher.Start()
 
 	return pusher, nil
+}
+
+// AggregatorFor uses a Sum aggregator for counters, an Array
+// aggregator for Measures, and a LastValue aggregator for Observers.
+func (*Exporter) AggregatorFor(descriptor *metric.Descriptor) export.Aggregator {
+	switch descriptor.MetricKind() {
+	case metric.ObserverKind:
+		return lastvalue.New()
+	case metric.MeasureKind:
+		return array.New()
+	default:
+		return sum.New()
+	}
 }
 
 // AppendName is part of the stats-internal adapter interface.
