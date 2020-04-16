@@ -21,13 +21,13 @@ import (
 	"github.com/open-telemetry/opentelemetry-go-contrib/exporters/metric/dogstatsd/internal/statsd"
 	"go.opentelemetry.io/otel/api/global"
 	"go.opentelemetry.io/otel/api/metric"
+	export "go.opentelemetry.io/otel/sdk/export/metric"
 	"go.opentelemetry.io/otel/sdk/metric/aggregator/array"
 	"go.opentelemetry.io/otel/sdk/metric/aggregator/lastvalue"
 	"go.opentelemetry.io/otel/sdk/metric/aggregator/sum"
-
-	export "go.opentelemetry.io/otel/sdk/export/metric"
 	"go.opentelemetry.io/otel/sdk/metric/batcher/ungrouped"
 	"go.opentelemetry.io/otel/sdk/metric/controller/push"
+	"go.opentelemetry.io/otel/sdk/resource"
 )
 
 type (
@@ -44,7 +44,7 @@ type (
 	Exporter struct {
 		*statsd.Exporter
 
-		labelEncoder *statsd.LabelEncoder
+		labelEncoder *LabelEncoder
 	}
 )
 
@@ -54,8 +54,17 @@ var (
 
 // NewRawExporter returns a new Dogstatsd-syntax exporter for use in a pipeline.
 func NewRawExporter(config Config) (*Exporter, error) {
+	// TODO: Remove the resource value set from the Config here when
+	// https://github.com/open-telemetry/opentelemetry-go/pull/640
+	// and 641 are released.  The resources will be received on
+	// the first call to Export().
+	res := config.Resource
+	if res == nil {
+		res = resource.New()
+	}
+
 	exp := &Exporter{
-		labelEncoder: statsd.NewLabelEncoder(),
+		labelEncoder: NewLabelEncoder(res),
 	}
 
 	var err error

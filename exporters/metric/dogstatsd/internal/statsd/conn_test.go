@@ -35,7 +35,7 @@ import (
 
 // withTagsAdapter tests a dogstatsd-style statsd exporter.
 type withTagsAdapter struct {
-	*statsd.LabelEncoder
+	export.LabelEncoder
 }
 
 func (*withTagsAdapter) AppendName(rec export.Record, buf *bytes.Buffer) {
@@ -44,12 +44,14 @@ func (*withTagsAdapter) AppendName(rec export.Record, buf *bytes.Buffer) {
 
 func (ta *withTagsAdapter) AppendTags(rec export.Record, buf *bytes.Buffer) {
 	encoded := rec.Labels().Encoded(ta.LabelEncoder)
+	_, _ = buf.WriteString("++")
 	_, _ = buf.WriteString(encoded)
 }
 
 func newWithTagsAdapter() *withTagsAdapter {
 	return &withTagsAdapter{
-		statsd.NewLabelEncoder(),
+		// Note: This uses non-statsd syntax.  (No problem.)
+		export.NewDefaultLabelEncoder(),
 	}
 }
 
@@ -93,10 +95,10 @@ func TestBasicFormat(t *testing.T) {
 
 	for _, ao := range []adapterOutput{{
 		adapter: newWithTagsAdapter(),
-		expected: `counter:%s|c|#A:B,C:D
-observer:%s|g|#A:B,C:D
-measure:%s|h|#A:B,C:D
-timer:%s|ms|#A:B,C:D
+		expected: `counter:%s|c++A=B,C=D
+observer:%s|g++A=B,C=D
+measure:%s|h++A=B,C=D
+timer:%s|ms++A=B,C=D
 `}, {
 		adapter: newNoTagsAdapter(),
 		expected: `counter.B.D:%s|c
@@ -297,7 +299,7 @@ func TestPacketSplit(t *testing.T) {
 				offset += nkeys
 				iter := export.LabelSlice(labels).Iter()
 				encoded := adapter.LabelEncoder.Encode(iter)
-				expect := fmt.Sprint("counter:100|c", encoded, "\n")
+				expect := fmt.Sprint("counter:100|c++", encoded, "\n")
 				expected = append(expected, expect)
 				checkpointSet.AddCounter(&desc, 100, labels...)
 			})

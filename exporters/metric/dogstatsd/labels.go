@@ -12,13 +12,16 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package statsd
+package dogstatsd
 
 import (
 	"bytes"
+	"sort"
 	"sync"
 
+	"go.opentelemetry.io/otel/api/core"
 	export "go.opentelemetry.io/otel/sdk/export/metric"
+	"go.opentelemetry.io/otel/sdk/resource"
 )
 
 // LabelEncoder encodes metric labels in the dogstatsd syntax.
@@ -28,7 +31,8 @@ import (
 //
 // https://github.com/stripe/veneur/blob/master/sinks/datadog/datadog.go
 type LabelEncoder struct {
-	pool sync.Pool
+	pool      sync.Pool
+	resources []core.KeyValue
 }
 
 var _ export.LabelEncoder = &LabelEncoder{}
@@ -36,13 +40,19 @@ var leID = export.NewLabelEncoderID()
 
 // NewLabelEncoder returns a new encoder for dogstatsd-syntax metric
 // labels.
-func NewLabelEncoder() *LabelEncoder {
+func NewLabelEncoder(resource *resource.Resource) *LabelEncoder {
+	attrs := resource.Attributes()
+	sort.Slice(attrs[:], func(i, j int) bool {
+		return attrs[i].Key < attrs[j].Key
+	})
+
 	return &LabelEncoder{
 		pool: sync.Pool{
 			New: func() interface{} {
 				return &bytes.Buffer{}
 			},
 		},
+		resources: attrs,
 	}
 }
 
@@ -52,17 +62,24 @@ func (e *LabelEncoder) Encode(iter export.LabelIterator) string {
 	defer e.pool.Put(buf)
 	buf.Reset()
 
-	delimiter := "|#"
-
+	for _, kv := range e.resources {
+		e.encodeOne(buf, kv)
+	}
 	for iter.Next() {
-		kv := iter.Label()
-		_, _ = buf.WriteString(delimiter)
-		_, _ = buf.WriteString(string(kv.Key))
-		_, _ = buf.WriteRune(':')
-		_, _ = buf.WriteString(kv.Value.Emit())
-		delimiter = ","
+		e.encodeOne(buf, iter.Label())
 	}
 	return buf.String()
+}
+
+func (e *LabelEncoder) encodeOne(buf *bytes.Buffer, kv core.KeyValue) {
+	if buf.Len() == 0 {
+		_, _ = buf.WriteString("|#")
+	} else {
+		_, _ = buf.WriteRune(',')
+	}
+	_, _ = buf.WriteString(string(kv.Key))
+	_, _ = buf.WriteRune(':')
+	_, _ = buf.WriteString(kv.Value.Emit())
 }
 
 func (*LabelEncoder) ID() int64 {
