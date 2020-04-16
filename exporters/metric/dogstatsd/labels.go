@@ -16,6 +16,7 @@ package dogstatsd
 
 import (
 	"bytes"
+	"sort"
 	"sync"
 
 	"go.opentelemetry.io/otel/api/core"
@@ -40,13 +41,18 @@ var leID = export.NewLabelEncoderID()
 // NewLabelEncoder returns a new encoder for dogstatsd-syntax metric
 // labels.
 func NewLabelEncoder(resource *resource.Resource) *LabelEncoder {
+	attrs := resource.Attributes()
+	sort.Slice(attrs[:], func(i, j int) bool {
+		return attrs[i].Key < attrs[j].Key
+	})
+
 	return &LabelEncoder{
 		pool: sync.Pool{
 			New: func() interface{} {
 				return &bytes.Buffer{}
 			},
 		},
-		resources: resource.Attributes(),
+		resources: attrs,
 	}
 }
 

@@ -311,7 +311,6 @@ func writeNumber(buf *bytes.Buffer, num core.Number, kind core.NumberKind) {
 		conv = strconv.AppendFloat(tmp[:0], num.AsFloat64(), 'g', -1, 64)
 	case core.Uint64NumberKind:
 		conv = strconv.AppendUint(tmp[:0], num.AsUint64(), 10)
-
 	}
 	_, _ = buf.Write(conv)
 }
