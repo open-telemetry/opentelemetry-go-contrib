@@ -13,4 +13,4 @@
 // limitations under the License.
 
 // Package sample contains a sample plugin for OpenTelemetry distributed tracing.
-package trace // import "github.com/open-telemetry/opentelemetry-go-contrib/plugins/sample/trace"
+package trace // import "go.opentelemetry.io/contrib/plugins/sample/trace"

@@ -1,4 +1,4 @@
-module github.com/open-telemetry/opentelemetry-go-contrib/exporters/metric/dogstatsd
+module go.opentelemetry.io/contrib/exporters/metric/dogstatsd
 
 go 1.14
 

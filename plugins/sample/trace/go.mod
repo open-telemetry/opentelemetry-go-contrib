@@ -1,4 +1,4 @@
-module github.com/open-telemetry/opentelemetry-go-contrib/plugins/sample/trace
+module go.opentelemetry.io/contrib/plugins/sample/trace
 
 go 1.13
 
