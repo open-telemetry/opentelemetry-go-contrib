@@ -1,3 +1,3 @@
-module github.com/open-telemetry/opentelemetry-go-contrib
+module go.opentelemetry.io/contrib
 
 go 1.14

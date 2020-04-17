@@ -17,8 +17,9 @@ package trace_test
 import (
 	"testing"
 
-	"github.com/open-telemetry/opentelemetry-go-contrib/plugins/sample/trace"
 	"github.com/stretchr/testify/assert"
+
+	"go.opentelemetry.io/contrib/plugins/sample/trace"
 )
 
 // Register registers sample plugin to instrument a Sample appliction.

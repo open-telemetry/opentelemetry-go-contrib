@@ -17,9 +17,9 @@ package dogstatsd_test
 import (
 	"testing"
 
-	"github.com/open-telemetry/opentelemetry-go-contrib/exporters/metric/dogstatsd"
 	"github.com/stretchr/testify/require"
 
+	"go.opentelemetry.io/contrib/exporters/metric/dogstatsd"
 	"go.opentelemetry.io/otel/api/core"
 	"go.opentelemetry.io/otel/api/key"
 	export "go.opentelemetry.io/otel/sdk/export/metric"

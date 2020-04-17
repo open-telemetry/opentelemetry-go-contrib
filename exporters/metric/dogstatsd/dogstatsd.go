@@ -12,13 +12,13 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package dogstatsd // import "github.com/open-telemetry/opentelemetry-go-contrib/exporters/metric/dogstatsd"
+package dogstatsd // import "go.opentelemetry.io/contrib/exporters/metric/dogstatsd"
 
 import (
 	"bytes"
 	"time"
 
-	"github.com/open-telemetry/opentelemetry-go-contrib/exporters/metric/dogstatsd/internal/statsd"
+	"go.opentelemetry.io/contrib/exporters/metric/dogstatsd/internal/statsd"
 	"go.opentelemetry.io/otel/api/global"
 	"go.opentelemetry.io/otel/api/metric"
 	export "go.opentelemetry.io/otel/sdk/export/metric"

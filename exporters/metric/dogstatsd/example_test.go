@@ -22,7 +22,7 @@ import (
 	"sync"
 	"time"
 
-	"github.com/open-telemetry/opentelemetry-go-contrib/exporters/metric/dogstatsd"
+	"go.opentelemetry.io/contrib/exporters/metric/dogstatsd"
 	"go.opentelemetry.io/otel/api/key"
 	"go.opentelemetry.io/otel/api/metric"
 )
