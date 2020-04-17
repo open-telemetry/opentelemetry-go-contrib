@@ -8,7 +8,7 @@ import (
 	"go.opentelemetry.io/otel/api/unit"
 	"golang.org/x/time/rate"
 
-	"github.com/open-telemetry/opentelemetry-go-contrib/plugins/metrics/runtime/internal/metrics"
+	"go.opentelemetry.io/contrib/plugins/metrics/runtime/internal/metrics"
 )
 
 var (
@@ -85,5 +85,8 @@ func Runtime(ctx context.Context, meter metric.Meter, interval time.Duration) co
 		result.Observe(int64(m.Memory.HeapAlloc))
 	}, metric.WithUnit(unit.Bytes), metric.WithDescription("bytes of allocated heap objects"))
 
+
+	// go version
+	// cgo.calls
 	return cancel
 }
