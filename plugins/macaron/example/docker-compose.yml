@@ -20,7 +20,7 @@ services:
     command:
       - "/bin/sh"
       - "-c"
-      - "wget http://macaron-server:4000/users/123 && cat 123"
+      - "wget http://macaron-server:8080/users/123 && cat 123"
     depends_on:
       - macaron-server
   macaron-server:
@@ -28,12 +28,14 @@ services:
       dockerfile: $PWD/Dockerfile
       context: ../../..
     ports:
-      - "4000:4000"
+      - "8080:80"
     command:
       - "/bin/sh"
       - "-c"
       - "/go/bin/server"
     networks:
       - example
+    environment:
+      - PORT=80
 networks:
   example:
