@@ -25,6 +25,8 @@ import (
 	"go.opentelemetry.io/contrib/exporters/metric/dogstatsd"
 	"go.opentelemetry.io/otel/api/key"
 	"go.opentelemetry.io/otel/api/metric"
+	"go.opentelemetry.io/otel/sdk/metric/controller/push"
+	"go.opentelemetry.io/otel/sdk/resource"
 )
 
 func ExampleNew() {
@@ -60,7 +62,7 @@ func ExampleNew() {
 		// In real code, use the URL field:
 		//
 		// URL: fmt.Sprint("unix://", path),
-	}, time.Minute)
+	}, time.Minute, push.WithResource(resource.New(key.String("host", "name"))))
 	if err != nil {
 		log.Fatal("Could not initialize dogstatsd exporter:", err)
 	}
@@ -73,7 +75,7 @@ func ExampleNew() {
 	meter := pusher.Meter("example")
 
 	// Create and update a single counter:
-	counter := metric.Must(meter).NewInt64Counter("a.counter", metric.WithKeys(key))
+	counter := metric.Must(meter).NewInt64Counter("a.counter")
 
 	counter.Add(ctx, 100, key.String("value"))
 
@@ -83,5 +85,5 @@ func ExampleNew() {
 	wg.Wait()
 
 	// Output:
-	// a.counter:100|c|#key:value
+	// a.counter:100|c|#host:name,key:value
 }

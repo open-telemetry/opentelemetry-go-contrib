@@ -22,8 +22,7 @@ import (
 	"go.opentelemetry.io/contrib/exporters/metric/dogstatsd"
 	"go.opentelemetry.io/otel/api/core"
 	"go.opentelemetry.io/otel/api/key"
-	export "go.opentelemetry.io/otel/sdk/export/metric"
-	"go.opentelemetry.io/otel/sdk/resource"
+	"go.opentelemetry.io/otel/api/label"
 )
 
 var testLabels = []core.KeyValue{
@@ -38,20 +37,20 @@ var testResources = []core.KeyValue{
 }
 
 func TestLabelSyntax(t *testing.T) {
-	encoder := dogstatsd.NewLabelEncoder(resource.New())
+	encoder := dogstatsd.NewLabelEncoder()
 
-	require.Equal(t, `|#A:B,C:D,E:1.5`, encoder.Encode(export.LabelSlice(testLabels).Iter()))
+	labels := label.NewSet(testLabels...)
+	require.Equal(t, `A:B,C:D,E:1.5`, encoder.Encode(labels.Iter()))
 
 	kvs := []core.KeyValue{
 		key.String("A", "B"),
 	}
-	require.Equal(t, `|#A:B`, encoder.Encode(export.LabelSlice(kvs).Iter()))
+	labels = label.NewSet(kvs...)
+	require.Equal(t, `A:B`, encoder.Encode(labels.Iter()))
 
-	require.Equal(t, "", encoder.Encode(export.LabelSlice(nil).Iter()))
-}
+	labels = label.NewSet()
+	require.Equal(t, "", encoder.Encode(labels.Iter()))
 
-func TestLabelResources(t *testing.T) {
-	encoder := dogstatsd.NewLabelEncoder(resource.New(testResources...))
-
-	require.Equal(t, `|#R1:V1,R2:V2,A:B,C:D,E:1.5`, encoder.Encode(export.LabelSlice(testLabels).Iter()))
+	labels = label.Set{}
+	require.Equal(t, "", encoder.Encode(labels.Iter()))
 }

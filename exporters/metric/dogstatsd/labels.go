@@ -16,12 +16,10 @@ package dogstatsd
 
 import (
 	"bytes"
-	"sort"
 	"sync"
 
 	"go.opentelemetry.io/otel/api/core"
-	export "go.opentelemetry.io/otel/sdk/export/metric"
-	"go.opentelemetry.io/otel/sdk/resource"
+	"go.opentelemetry.io/otel/api/label"
 )
 
 // LabelEncoder encodes metric labels in the dogstatsd syntax.
@@ -31,40 +29,30 @@ import (
 //
 // https://github.com/stripe/veneur/blob/master/sinks/datadog/datadog.go
 type LabelEncoder struct {
-	pool      sync.Pool
-	resources []core.KeyValue
+	pool sync.Pool
 }
 
-var _ export.LabelEncoder = &LabelEncoder{}
-var leID = export.NewLabelEncoderID()
+var _ label.Encoder = &LabelEncoder{}
+var leID = label.NewEncoderID()
 
 // NewLabelEncoder returns a new encoder for dogstatsd-syntax metric
 // labels.
-func NewLabelEncoder(resource *resource.Resource) *LabelEncoder {
-	attrs := resource.Attributes()
-	sort.Slice(attrs[:], func(i, j int) bool {
-		return attrs[i].Key < attrs[j].Key
-	})
-
+func NewLabelEncoder() *LabelEncoder {
 	return &LabelEncoder{
 		pool: sync.Pool{
 			New: func() interface{} {
 				return &bytes.Buffer{}
 			},
 		},
-		resources: attrs,
 	}
 }
 
 // Encode emits a string like "|#key1:value1,key2:value2".
-func (e *LabelEncoder) Encode(iter export.LabelIterator) string {
+func (e *LabelEncoder) Encode(iter label.Iterator) string {
 	buf := e.pool.Get().(*bytes.Buffer)
 	defer e.pool.Put(buf)
 	buf.Reset()
 
-	for _, kv := range e.resources {
-		e.encodeOne(buf, kv)
-	}
 	for iter.Next() {
 		e.encodeOne(buf, iter.Label())
 	}
@@ -72,9 +60,7 @@ func (e *LabelEncoder) Encode(iter export.LabelIterator) string {
 }
 
 func (e *LabelEncoder) encodeOne(buf *bytes.Buffer, kv core.KeyValue) {
-	if buf.Len() == 0 {
-		_, _ = buf.WriteString("|#")
-	} else {
+	if buf.Len() != 0 {
 		_, _ = buf.WriteRune(',')
 	}
 	_, _ = buf.WriteString(string(kv.Key))
@@ -82,6 +68,6 @@ func (e *LabelEncoder) encodeOne(buf *bytes.Buffer, kv core.KeyValue) {
 	_, _ = buf.WriteString(kv.Value.Emit())
 }
 
-func (*LabelEncoder) ID() int64 {
+func (*LabelEncoder) ID() label.EncoderID {
 	return leID
 }
