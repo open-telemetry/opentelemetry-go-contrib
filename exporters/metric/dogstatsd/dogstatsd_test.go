@@ -31,10 +31,10 @@ import (
 )
 
 // TestDogstatsLabels that labels are formatted in the correct style,
-// whether or not the provided labels were encoded by a statsd label
-// encoder.
+// including Resources.
 func TestDogstatsLabels(t *testing.T) {
 	type testCase struct {
+		name      string
 		resources []core.KeyValue
 		labels    []core.KeyValue
 		expected  string
@@ -44,21 +44,25 @@ func TestDogstatsLabels(t *testing.T) {
 
 	cases := []testCase{
 		{
+			name:      "no labels",
 			resources: nil,
 			labels:    nil,
 			expected:  "test.name:123|c\n",
 		},
 		{
+			name:      "only resources",
 			resources: kvs(key.String("R", "S")),
 			labels:    nil,
 			expected:  "test.name:123|c|#R:S\n",
 		},
 		{
+			name:      "only labels",
 			resources: nil,
 			labels:    kvs(key.String("A", "B")),
 			expected:  "test.name:123|c|#A:B\n",
 		},
 		{
+			name:      "both resources and labels",
 			resources: kvs(key.String("R", "S")),
 			labels:    kvs(key.String("A", "B")),
 			expected:  "test.name:123|c|#R:S,A:B\n",
@@ -70,26 +74,28 @@ func TestDogstatsLabels(t *testing.T) {
 		},
 	}
 	for _, tc := range cases {
-		res := resource.New(tc.resources...)
-		ctx := context.Background()
-		checkpointSet := test.NewCheckpointSet()
+		t.Run(tc.name, func(t *testing.T) {
+			res := resource.New(tc.resources...)
+			ctx := context.Background()
+			checkpointSet := test.NewCheckpointSet()
 
-		desc := metric.NewDescriptor("test.name", metric.CounterKind, core.Int64NumberKind)
-		cagg := sum.New()
-		_ = cagg.Update(ctx, core.NewInt64Number(123), &desc)
-		cagg.Checkpoint(ctx, &desc)
+			desc := metric.NewDescriptor("test.name", metric.CounterKind, core.Int64NumberKind)
+			cagg := sum.New()
+			_ = cagg.Update(ctx, core.NewInt64Number(123), &desc)
+			cagg.Checkpoint(ctx, &desc)
 
-		checkpointSet.Add(&desc, cagg, tc.labels...)
+			checkpointSet.Add(&desc, cagg, tc.labels...)
 
-		var buf bytes.Buffer
-		exp, err := dogstatsd.NewRawExporter(dogstatsd.Config{
-			Writer: &buf,
+			var buf bytes.Buffer
+			exp, err := dogstatsd.NewRawExporter(dogstatsd.Config{
+				Writer: &buf,
+			})
+			require.Nil(t, err)
+
+			err = exp.Export(ctx, res, checkpointSet)
+			require.Nil(t, err)
+
+			require.Equal(t, tc.expected, buf.String())
 		})
-		require.Nil(t, err)
-
-		err = exp.Export(ctx, res, checkpointSet)
-		require.Nil(t, err)
-
-		require.Equal(t, tc.expected, buf.String())
 	}
 }
