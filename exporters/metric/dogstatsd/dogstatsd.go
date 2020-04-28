@@ -54,17 +54,8 @@ var (
 
 // NewRawExporter returns a new Dogstatsd-syntax exporter for use in a pipeline.
 func NewRawExporter(config Config) (*Exporter, error) {
-	// TODO: Remove the resource value set from the Config here when
-	// https://github.com/open-telemetry/opentelemetry-go/pull/640
-	// and 641 are released.  The resources will be received on
-	// the first call to Export().
-	res := config.Resource
-	if res == nil {
-		res = resource.New()
-	}
-
 	exp := &Exporter{
-		labelEncoder: NewLabelEncoder(res),
+		labelEncoder: NewLabelEncoder(),
 	}
 
 	var err error
@@ -92,7 +83,7 @@ func InstallNewPipeline(config Config) (*push.Controller, error) {
 
 // NewExportPipeline sets up a complete export pipeline with the recommended setup,
 // chaining a NewRawExporter into the recommended selectors and batchers.
-func NewExportPipeline(config Config, period time.Duration) (*push.Controller, error) {
+func NewExportPipeline(config Config, period time.Duration, opts ...push.Option) (*push.Controller, error) {
 	exporter, err := NewRawExporter(config)
 	if err != nil {
 		return nil, err
@@ -100,9 +91,9 @@ func NewExportPipeline(config Config, period time.Duration) (*push.Controller, e
 
 	// The ungrouped batcher ensures that the export sees the full
 	// set of labels as dogstatsd tags.
-	batcher := ungrouped.New(exporter, exporter.labelEncoder, false)
+	batcher := ungrouped.New(exporter, false)
 
-	pusher := push.New(batcher, exporter, period)
+	pusher := push.New(batcher, exporter, period, opts...)
 	pusher.Start()
 
 	return pusher, nil
@@ -127,7 +118,27 @@ func (*Exporter) AppendName(rec export.Record, buf *bytes.Buffer) {
 }
 
 // AppendTags is part of the stats-internal adapter interface.
-func (e *Exporter) AppendTags(rec export.Record, buf *bytes.Buffer) {
-	encoded := rec.Labels().Encoded(e.labelEncoder)
-	_, _ = buf.WriteString(encoded)
+func (e *Exporter) AppendTags(rec export.Record, res *resource.Resource, buf *bytes.Buffer) {
+	rencoded := res.Encoded(e.labelEncoder)
+	lencoded := rec.Labels().Encoded(e.labelEncoder)
+
+	// Note: We do not de-duplicate tag-keys between resources and
+	// event labels here.  Instead, include resources first so
+	// that the receiver can apply OTel's last-value-wins
+	// semantcis, if desired.
+	rlen := len(rencoded)
+	llen := len(lencoded)
+	if rlen == 0 && llen == 0 {
+		return
+	}
+
+	buf.WriteString("|#")
+
+	_, _ = buf.WriteString(rencoded)
+
+	if rlen != 0 && llen != 0 {
+		buf.WriteRune(',')
+	}
+
+	_, _ = buf.WriteString(lencoded)
 }

@@ -51,12 +51,6 @@ type (
 		// MaxPacketSize this limits the packet size for packet-oriented transports.
 		MaxPacketSize int
 
-		// Resource WILL BE REMOVED AFTER RESOURCES ARE ADDED
-		// TO THE EXPORT APIs.  TODO: Remove this when Export()
-		// passes the Resource.  See:
-		// https://github.com/open-telemetry/opentelemetry-go/pull/640
-		Resource *resource.Resource
-
 		// TODO support Dial and Write timeouts
 	}
 
@@ -74,7 +68,7 @@ type (
 	// statsd vs. dogstatsd.
 	Adapter interface {
 		AppendName(export.Record, *bytes.Buffer)
-		AppendTags(export.Record, *bytes.Buffer)
+		AppendTags(export.Record, *resource.Resource, *bytes.Buffer)
 	}
 )
 
@@ -166,7 +160,7 @@ func dial(endpoint string) (net.Conn, error) {
 }
 
 // Export is common code for any statsd-based metric.Exporter implementation.
-func (e *Exporter) Export(_ context.Context, checkpointSet export.CheckpointSet) error {
+func (e *Exporter) Export(_ context.Context, resource *resource.Resource, checkpointSet export.CheckpointSet) error {
 	buf := &e.buffer
 	buf.Reset()
 
@@ -181,7 +175,7 @@ func (e *Exporter) Export(_ context.Context, checkpointSet export.CheckpointSet)
 		for pt := 0; pt < pts; pt++ {
 			before := buf.Len()
 
-			if err := e.formatMetric(rec, pt, buf); err != nil {
+			if err := e.formatMetric(rec, resource, pt, buf); err != nil {
 				return err
 			}
 
@@ -249,7 +243,7 @@ func (e *Exporter) countPoints(rec export.Record) (int, error) {
 // formatMetric formats an individual export record.  For some records
 // this will emit a single statistic, for some it will emit more than
 // one.
-func (e *Exporter) formatMetric(rec export.Record, pos int, buf *bytes.Buffer) error {
+func (e *Exporter) formatMetric(rec export.Record, res *resource.Resource, pos int, buf *bytes.Buffer) error {
 	desc := rec.Descriptor()
 	agg := rec.Aggregator()
 
@@ -270,34 +264,34 @@ func (e *Exporter) formatMetric(rec export.Record, pos int, buf *bytes.Buffer) e
 		if err != nil {
 			return err
 		}
-		e.formatSingleStat(rec, points[pos], format, buf)
+		e.formatSingleStat(rec, res, points[pos], format, buf)
 
 	} else if sum, ok := agg.(aggregator.Sum); ok {
 		sum, err := sum.Sum()
 		if err != nil {
 			return err
 		}
-		e.formatSingleStat(rec, sum, formatCounter, buf)
+		e.formatSingleStat(rec, res, sum, formatCounter, buf)
 
 	} else if lv, ok := agg.(aggregator.LastValue); ok {
 		lv, _, err := lv.LastValue()
 		if err != nil {
 			return err
 		}
-		e.formatSingleStat(rec, lv, formatGauge, buf)
+		e.formatSingleStat(rec, res, lv, formatGauge, buf)
 	}
 	return nil
 }
 
 // formatSingleStat encodes a single item of statsd data followed by a
 // newline.
-func (e *Exporter) formatSingleStat(rec export.Record, val core.Number, fmtStr string, buf *bytes.Buffer) {
+func (e *Exporter) formatSingleStat(rec export.Record, res *resource.Resource, val core.Number, fmtStr string, buf *bytes.Buffer) {
 	e.adapter.AppendName(rec, buf)
 	_, _ = buf.WriteRune(':')
 	writeNumber(buf, val, rec.Descriptor().NumberKind())
 	_, _ = buf.WriteRune('|')
 	_, _ = buf.WriteString(fmtStr)
-	e.adapter.AppendTags(rec, buf)
+	e.adapter.AppendTags(rec, res, buf)
 	_, _ = buf.WriteRune('\n')
 }
 
