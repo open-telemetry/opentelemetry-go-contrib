@@ -32,10 +32,8 @@ func TestMain(m *testing.M) {
 
 func Test(t *testing.T) {
   mt := mocktracer.NewTracer("mongodb")
-	// mt := mocktracer.StartTracer()
-	// defer mt.Stop()
 
-	// hostname, port := "localhost", "27017"
+	hostname, port := "localhost", "27017"
 
 	ctx, cancel := context.WithTimeout(context.Background(), time.Second*3)
 	defer cancel()
@@ -62,12 +60,12 @@ func Test(t *testing.T) {
 	assert.Len(t, spans, 2)
 	assert.Equal(t, spans[0].SpanContext().TraceID, spans[1].SpanContext().TraceID)
 
-	// s := spans[0]
-	// assert.Equal(t, "mongo", s.Attribute(ServiceNameKey).AsString())
-	// assert.Equal(t, "mongo.insert", s.Attribute(ResourceNameKey).AsString())
-	// assert.Equal(t, hostname, s.Attribute(PeerHostnameKey).AsString())
-	// assert.Equal(t, port, s.Attribute(PeerPortKey).AsString())
-	// assert.Contains(t, s.Attribute(DBStatementKey).AsString(), `"test-item":"test-value"`)
-	// assert.Equal(t, "test-database", s.Attribute(DBInstanceKey).AsString())
-	// assert.Equal(t, "mongo", s.Attribute(DBTypeKey).AsString())
+	s := spans[0]
+	assert.Equal(t, "mongo", s.Attributes[ServiceNameKey].AsString())
+	assert.Equal(t, "mongo.insert", s.Attributes[ResourceNameKey].AsString())
+	assert.Equal(t, hostname, s.Attributes[PeerHostnameKey].AsString())
+	assert.Equal(t, port, s.Attributes[PeerPortKey].AsString())
+	assert.Contains(t, s.Attributes[DBStatementKey].AsString(), `"test-item":"test-value"`)
+	assert.Equal(t, "test-database", s.Attributes[DBInstanceKey].AsString())
+	assert.Equal(t, "mongo", s.Attributes[DBTypeKey].AsString())
 }
