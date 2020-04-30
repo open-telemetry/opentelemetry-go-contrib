@@ -12,14 +12,13 @@ import (
 	"testing"
 	"time"
 
-	// "go.opentelemetry.io/contrib/internal/mocktracer"
-	"go.opentelemetry.io/otel/api/trace"
+	mocktracer "go.opentelemetry.io/contrib/internal/trace"
 
 	"go.mongodb.org/mongo-driver/bson"
 	"go.mongodb.org/mongo-driver/mongo"
 	"go.mongodb.org/mongo-driver/mongo/options"
 
-	// "github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/assert"
 )
 
 func TestMain(m *testing.M) {
@@ -32,8 +31,8 @@ func TestMain(m *testing.M) {
 }
 
 func Test(t *testing.T) {
+  mt := mocktracer.NewTracer("mongodb")
 	// mt := mocktracer.StartTracer()
-  // mt := trace.NoopTracer{}
 	// defer mt.Stop()
 
 	// hostname, port := "localhost", "27017"
@@ -41,11 +40,11 @@ func Test(t *testing.T) {
 	ctx, cancel := context.WithTimeout(context.Background(), time.Second*3)
 	defer cancel()
 
-	ctx, span := trace.NoopTracer{}.Start(ctx, "mongodb-test")
+	ctx, span := mt.Start(ctx, "mongodb-test")
 
 	addr := fmt.Sprintf("mongodb://localhost:27017/?connect=direct")
 	opts := options.Client()
-	opts.Monitor = NewMonitor()
+	opts.Monitor = NewMonitor(WithTracer(mt))
 	opts.ApplyURI(addr)
 	client, err := mongo.Connect(ctx, opts)
 	if err != nil {
@@ -59,9 +58,9 @@ func Test(t *testing.T) {
 
 	span.End()
 
-	// spans := mt.FinishedSpans()
-	// assert.Len(t, spans, 2)
-	// assert.Equal(t, spans[0].SpanContext().TraceID, spans[1].SpanContext().TraceID)
+	spans := mt.EndedSpans()
+	assert.Len(t, spans, 2)
+	assert.Equal(t, spans[0].SpanContext().TraceID, spans[1].SpanContext().TraceID)
 
 	// s := spans[0]
 	// assert.Equal(t, "mongo", s.Attribute(ServiceNameKey).AsString())
