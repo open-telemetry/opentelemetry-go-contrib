@@ -108,11 +108,11 @@ should be its own module. A contrib package may contain more than one go package
 
 Approvers:
 
-- [Isobel Redelmeier](https://github.com/iredelmeier), LightStep
 - [Krzesimir Nowak](https://github.com/krnowak), Kinvolk
 - [Liz Fong-Jones](https://github.com/lizthegrey), Honeycomb
 - [Gustavo Silva Paiva](https://github.com/paivagustavo), Stilingue
 - [Ted Young](https://github.com/tedsuo), LightStep
+- [Anthony Mirabella](https://github.com/Aneurysm9), Centene
 
 Maintainers:
 
