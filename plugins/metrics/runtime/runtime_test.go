@@ -1,15 +1,19 @@
 package runtime
 
 import (
-	"context"
 	"testing"
 	"time"
+
+	"github.com/stretchr/testify/assert"
 
 	"go.opentelemetry.io/otel/api/global"
 )
 
 func TestRuntime(t *testing.T) {
 	meter := global.Meter("test")
-	cancelRuntime := Runtime(context.Background(), meter, time.Second)
-	cancelRuntime()
+	r := NewRuntime(meter, time.Second)
+	err := r.Start()
+	assert.NoError(t, err)
+	time.Sleep(time.Second)
+	r.Stop()
 }
