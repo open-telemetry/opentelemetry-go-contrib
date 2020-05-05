@@ -6,6 +6,7 @@ import (
 	"regexp"
 
 	"github.com/DataDog/datadog-go/statsd"
+
 	"go.opentelemetry.io/otel/api/core"
 	export "go.opentelemetry.io/otel/sdk/export/metric"
 	"go.opentelemetry.io/otel/sdk/export/metric/aggregator"
