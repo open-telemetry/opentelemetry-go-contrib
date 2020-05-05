@@ -5,6 +5,7 @@ import (
 	"time"
 
 	"github.com/DataDog/sketches-go/ddsketch"
+
 	"go.opentelemetry.io/contrib/exporters/metric/datadog"
 	"go.opentelemetry.io/otel/api/global"
 	"go.opentelemetry.io/otel/api/metric"
