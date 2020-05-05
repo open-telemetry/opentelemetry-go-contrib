@@ -3,6 +3,7 @@ package runtime // import "go.opentelemetry.io/contrib/plugins/metrics/runtime"
 import (
 	"context"
 	goruntime "runtime"
+	"sync"
 	"time"
 
 	"go.opentelemetry.io/otel/api/metric"
@@ -10,6 +11,7 @@ import (
 )
 
 type Runtime struct {
+	mu       sync.RWMutex
 	meter    metric.Meter
 	interval time.Duration
 	done     chan bool
@@ -66,6 +68,9 @@ func (r *Runtime) ticker() {
 }
 
 func (r *Runtime) register() error {
+	r.mu.Lock()
+	defer r.mu.Unlock()
+
 	var err error
 
 	t0 := time.Now()
@@ -74,7 +79,7 @@ func (r *Runtime) register() error {
 			result.Observe(time.Since(t0).Milliseconds())
 		},
 		metric.WithUnit(unit.Milliseconds),
-		metric.WithDescription("milliseconds since application was initialized"),
+		metric.WithDescription("Milliseconds since application was initialized"),
 	)
 	if err != nil {
 		return err
@@ -116,6 +121,8 @@ func (r *Runtime) registerMemStats() error {
 	var err error
 
 	_, err = r.meter.RegisterInt64Observer("runtime.go.mem.heap_alloc", func(result metric.Int64ObserverResult) {
+		r.mu.RLock()
+		defer r.mu.RUnlock()
 		result.Observe(int64(r.memStats.HeapAlloc))
 	}, metric.WithUnit(unit.Bytes), metric.WithDescription("Bytes of allocated heap objects"))
 	if err != nil {
@@ -123,6 +130,8 @@ func (r *Runtime) registerMemStats() error {
 	}
 
 	_, err = r.meter.RegisterInt64Observer("runtime.go.mem.heap_idle", func(result metric.Int64ObserverResult) {
+		r.mu.RLock()
+		defer r.mu.RUnlock()
 		result.Observe(int64(r.memStats.HeapIdle))
 	}, metric.WithUnit(unit.Bytes), metric.WithDescription("Bytes in idle (unused) spans"))
 	if err != nil {
@@ -130,6 +139,8 @@ func (r *Runtime) registerMemStats() error {
 	}
 
 	_, err = r.meter.RegisterInt64Observer("runtime.go.mem.heap_inuse", func(result metric.Int64ObserverResult) {
+		r.mu.RLock()
+		defer r.mu.RUnlock()
 		result.Observe(int64(r.memStats.HeapInuse))
 	}, metric.WithUnit(unit.Bytes), metric.WithDescription("Bytes in in-use spans"))
 	if err != nil {
@@ -137,6 +148,8 @@ func (r *Runtime) registerMemStats() error {
 	}
 
 	_, err = r.meter.RegisterInt64Observer("runtime.go.mem.heap_objects", func(result metric.Int64ObserverResult) {
+		r.mu.RLock()
+		defer r.mu.RUnlock()
 		result.Observe(int64(r.memStats.HeapObjects))
 	}, metric.WithDescription("Number of allocated heap objects"))
 	if err != nil {
@@ -145,6 +158,8 @@ func (r *Runtime) registerMemStats() error {
 
 	// https://github.com/golang/go/issues/32284 is actually gauge
 	_, err = r.meter.RegisterInt64Observer("runtime.go.mem.heap_released", func(result metric.Int64ObserverResult) {
+		r.mu.RLock()
+		defer r.mu.RUnlock()
 		result.Observe(int64(r.memStats.HeapReleased))
 	}, metric.WithUnit(unit.Bytes),
 		metric.WithDescription("Bytes of idle spans whose physical memory has been returned to the OS"))
@@ -153,6 +168,8 @@ func (r *Runtime) registerMemStats() error {
 	}
 
 	_, err = r.meter.RegisterInt64Observer("runtime.go.mem.heap_sys", func(result metric.Int64ObserverResult) {
+		r.mu.RLock()
+		defer r.mu.RUnlock()
 		result.Observe(int64(r.memStats.HeapSys))
 	}, metric.WithUnit(unit.Bytes), metric.WithDescription("Bytes of heap memory obtained from the OS"))
 	if err != nil {
@@ -166,6 +183,8 @@ func (r *Runtime) registerMemStats() error {
 	}
 
 	_, err = r.meter.RegisterInt64Observer("runtime.go.mem.live_objects", func(result metric.Int64ObserverResult) {
+		r.mu.RLock()
+		defer r.mu.RUnlock()
 		result.Observe(int64(r.memStats.Mallocs - r.memStats.Frees))
 	}, metric.WithDescription("Number of live objects is the number of cumulative Mallocs - Frees"))
 	if err != nil {
@@ -185,6 +204,8 @@ func (r *Runtime) registerGcStats() error {
 	}
 
 	_, err = r.meter.RegisterInt64Observer("runtime.go.gc.pause_total_ns", func(result metric.Int64ObserverResult) {
+		r.mu.RLock()
+		defer r.mu.RUnlock()
 		result.Observe(int64(r.memStats.PauseTotalNs))
 	}, metric.WithDescription("Cumulative nanoseconds in GC stop-the-world pauses since the program started"))
 	if err != nil {
@@ -201,6 +222,9 @@ func (r *Runtime) registerGcStats() error {
 }
 
 func (r *Runtime) collect(ctx context.Context) {
+	r.mu.Lock()
+	defer r.mu.Unlock()
+
 	lastNumCgoCalls := r.numCgoCalls
 	r.numCgoCalls = goruntime.NumCgoCall()
 	r.metrics.goCgoCalls.Add(ctx, r.numCgoCalls-lastNumCgoCalls)
