@@ -16,10 +16,7 @@ package trace
 
 import (
 	"fmt"
-	"net"
 	"net/http"
-	"strconv"
-	"strings"
 
 	"google.golang.org/grpc/codes"
 
@@ -49,73 +46,13 @@ func NetAttributesFromHTTPRequest(network string, request *http.Request) []otelc
 		otelkey.String("net.transport", transport),
 	}
 
-	peerName, peerIP, peerPort := "", "", 0
-	{
-		hostPart := request.RemoteAddr
-		portPart := ""
-		if idx := strings.LastIndex(hostPart, ":"); idx >= 0 {
-			hostPart = request.RemoteAddr[:idx]
-			portPart = request.RemoteAddr[idx+1:]
-		}
-		if hostPart != "" {
-			if ip := net.ParseIP(hostPart); ip != nil {
-				peerIP = ip.String()
-			} else {
-				peerName = hostPart
-			}
-
-			if portPart != "" {
-				numPort, err := strconv.ParseUint(portPart, 10, 16)
-				if err == nil {
-					peerPort = (int)(numPort)
-				} else {
-					peerName, peerIP = "", ""
-				}
-			}
-		}
-	}
-	if peerName != "" {
-		attrs = append(attrs, otelkey.String("net.peer.name", peerName))
-	}
-	if peerIP != "" {
-		attrs = append(attrs, otelkey.String("net.peer.ip", peerIP))
-	}
-	if peerPort != 0 {
-		attrs = append(attrs, otelkey.Int("net.peer.port", peerPort))
-	}
-	hostIP, hostName, hostPort := "", "", 0
+	attrs = append(attrs, NetPeerAttrsFromString(request.RemoteAddr, HostParseStrict)...)
 	for _, someHost := range []string{request.Host, request.Header.Get("Host"), request.URL.Host} {
-		hostPart := ""
-		if idx := strings.LastIndex(someHost, ":"); idx >= 0 {
-			strPort := someHost[idx+1:]
-			numPort, err := strconv.ParseUint(strPort, 10, 16)
-			if err == nil {
-				hostPort = (int)(numPort)
-			}
-			hostPart = someHost[:idx]
-		} else {
-			hostPart = someHost
-		}
-		if hostPart != "" {
-			ip := net.ParseIP(hostPart)
-			if ip != nil {
-				hostIP = ip.String()
-			} else {
-				hostName = hostPart
-			}
+		hostAttrs := NetHostAttrsFromString(someHost, HostParsePermissive)
+		if len(hostAttrs) > 0 {
+			attrs = append(attrs, hostAttrs...)
 			break
-		} else {
-			hostPort = 0
 		}
-	}
-	if hostIP != "" {
-		attrs = append(attrs, otelkey.String("net.host.ip", hostIP))
-	}
-	if hostName != "" {
-		attrs = append(attrs, otelkey.String("net.host.name", hostName))
-	}
-	if hostPort != 0 {
-		attrs = append(attrs, otelkey.Int("net.host.port", hostPort))
 	}
 	return attrs
 }
