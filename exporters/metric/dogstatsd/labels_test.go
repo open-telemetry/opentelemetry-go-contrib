@@ -31,11 +31,6 @@ var testLabels = []core.KeyValue{
 	key.Float64("E", 1.5),
 }
 
-var testResources = []core.KeyValue{
-	key.String("R1", "V1"),
-	key.String("R2", "V2"),
-}
-
 func TestLabelSyntax(t *testing.T) {
 	encoder := dogstatsd.NewLabelEncoder()
 
