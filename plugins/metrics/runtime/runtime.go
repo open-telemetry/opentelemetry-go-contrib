@@ -2,6 +2,7 @@ package runtime // import "go.opentelemetry.io/contrib/plugins/metrics/runtime"
 
 import (
 	"context"
+	"errors"
 	goruntime "runtime"
 	"sync"
 	"time"
@@ -10,6 +11,7 @@ import (
 	"go.opentelemetry.io/otel/api/unit"
 )
 
+// Runtime reports the work-in-progress conventional runtime metrics specified by OpenTelemetry
 type Runtime struct {
 	mu       sync.RWMutex
 	meter    metric.Meter
@@ -27,7 +29,12 @@ type Runtime struct {
 	numCgoCalls int64
 }
 
-func NewRuntime(meter metric.Meter, interval time.Duration) *Runtime {
+// New returns Runtime, a structure for reporting Go runtime metrics
+// interval is used to define how often to invoke Go runtime.ReadMemStats() to obtain metric data. It should be noted
+// this package invokes a stop-the-world function on this interval. The interval should not be set arbitrarily small
+// without accepting the performance overhead.
+// TODO this interval may be removed in favor of otel SDK control after batch observers land
+func New(meter metric.Meter, interval time.Duration) *Runtime {
 	r := &Runtime{
 		meter:    meter,
 		interval: interval,
@@ -37,7 +44,12 @@ func NewRuntime(meter metric.Meter, interval time.Duration) *Runtime {
 	return r
 }
 
+// Start begins regular background polling of Go runtime metrics and will return an error if any issues are encountered
 func (r *Runtime) Start() error {
+	if r.interval <= 0 {
+		return errors.New("non-positive interval for runtime.New")
+	}
+
 	err := r.register()
 	if err != nil {
 		return err
@@ -48,6 +60,7 @@ func (r *Runtime) Start() error {
 	return nil
 }
 
+// Stop terminates the regular background polling of Go runtime metrics
 func (r *Runtime) Stop() {
 	r.done <- true
 }

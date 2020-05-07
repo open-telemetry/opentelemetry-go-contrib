@@ -31,7 +31,7 @@ func main() {
 
 	meter := global.Meter("runtime")
 
-	r := runtime.NewRuntime(meter, time.Second)
+	r := runtime.New(meter, time.Second)
 	err := r.Start()
 	if err != nil {
 		panic(err)

@@ -11,7 +11,7 @@ import (
 
 func TestRuntime(t *testing.T) {
 	meter := global.Meter("test")
-	r := NewRuntime(meter, time.Second)
+	r := New(meter, time.Second)
 	err := r.Start()
 	assert.NoError(t, err)
 	time.Sleep(time.Second)
