@@ -25,7 +25,7 @@ import (
 	metricstdout "go.opentelemetry.io/otel/exporters/metric/stdout"
 	"go.opentelemetry.io/otel/sdk/metric/controller/push"
 
-	"go.opentelemetry.io/contrib/plugins/metrics/runtime"
+	"go.opentelemetry.io/contrib/plugins/runtime"
 )
 
 func initMeter() *push.Controller {

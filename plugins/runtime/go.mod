@@ -1,4 +1,4 @@
-module go.opentelemetry.io/contrib/plugins/metrics/runtime
+module go.opentelemetry.io/contrib/plugins/runtime
 
 go 1.14
 
