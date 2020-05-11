@@ -27,31 +27,32 @@ import (
 	"go.opentelemetry.io/contrib/exporters/metric/dogstatsd/internal/statsd"
 	"go.opentelemetry.io/otel/api/core"
 	"go.opentelemetry.io/otel/api/key"
+	"go.opentelemetry.io/otel/api/label"
 	"go.opentelemetry.io/otel/api/metric"
 	"go.opentelemetry.io/otel/api/unit"
 	"go.opentelemetry.io/otel/exporters/metric/test"
 	export "go.opentelemetry.io/otel/sdk/export/metric"
+	"go.opentelemetry.io/otel/sdk/resource"
 )
 
 // withTagsAdapter tests a dogstatsd-style statsd exporter.
 type withTagsAdapter struct {
-	export.LabelEncoder
+	label.Encoder
 }
 
 func (*withTagsAdapter) AppendName(rec export.Record, buf *bytes.Buffer) {
 	_, _ = buf.WriteString(rec.Descriptor().Name())
 }
 
-func (ta *withTagsAdapter) AppendTags(rec export.Record, buf *bytes.Buffer) {
-	encoded := rec.Labels().Encoded(ta.LabelEncoder)
-	_, _ = buf.WriteString("++")
-	_, _ = buf.WriteString(encoded)
+func (ta *withTagsAdapter) AppendTags(rec export.Record, _ *resource.Resource, buf *bytes.Buffer) {
+	_, _ = buf.WriteString("|#")
+	_, _ = buf.WriteString(rec.Labels().Encoded(ta.Encoder))
 }
 
 func newWithTagsAdapter() *withTagsAdapter {
 	return &withTagsAdapter{
 		// Note: This uses non-statsd syntax.  (No problem.)
-		export.NewDefaultLabelEncoder(),
+		label.DefaultEncoder(),
 	}
 }
 
@@ -71,7 +72,7 @@ func (*noTagsAdapter) AppendName(rec export.Record, buf *bytes.Buffer) {
 	}
 }
 
-func (*noTagsAdapter) AppendTags(rec export.Record, buf *bytes.Buffer) {
+func (*noTagsAdapter) AppendTags(_ export.Record, _ *resource.Resource, _ *bytes.Buffer) {
 }
 
 func newNoTagsAdapter() *noTagsAdapter {
@@ -95,10 +96,10 @@ func TestBasicFormat(t *testing.T) {
 
 	for _, ao := range []adapterOutput{{
 		adapter: newWithTagsAdapter(),
-		expected: `counter:%s|c++A=B,C=D
-observer:%s|g++A=B,C=D
-measure:%s|h++A=B,C=D
-timer:%s|ms++A=B,C=D
+		expected: `counter:%s|c|#A=B,C=D
+observer:%s|g|#A=B,C=D
+measure:%s|h|#A=B,C=D
+timer:%s|ms|#A=B,C=D
 `}, {
 		adapter: newNoTagsAdapter(),
 		expected: `counter.B.D:%s|c
@@ -126,7 +127,7 @@ timer.B.D:%s|ms
 						t.Fatal("New error: ", err)
 					}
 
-					checkpointSet := test.NewCheckpointSet(export.NewDefaultLabelEncoder())
+					checkpointSet := test.NewCheckpointSet()
 					cdesc := metric.NewDescriptor(
 						"counter", metric.CounterKind, nkind)
 					gdesc := metric.NewDescriptor(
@@ -147,7 +148,7 @@ timer.B.D:%s|ms
 					checkpointSet.AddMeasure(&mdesc, value, labels...)
 					checkpointSet.AddMeasure(&tdesc, value, labels...)
 
-					err = exp.Export(ctx, checkpointSet)
+					err = exp.Export(ctx, nil, checkpointSet)
 					require.Nil(t, err)
 
 					var vfmt string
@@ -288,7 +289,7 @@ func TestPacketSplit(t *testing.T) {
 				t.Fatal("New error: ", err)
 			}
 
-			checkpointSet := test.NewCheckpointSet(adapter.LabelEncoder)
+			checkpointSet := test.NewCheckpointSet()
 			desc := metric.NewDescriptor("counter", metric.CounterKind, core.Int64NumberKind)
 
 			var expected []string
@@ -297,14 +298,14 @@ func TestPacketSplit(t *testing.T) {
 			tcase.setup(func(nkeys int) {
 				labels := makeLabels(offset, nkeys)
 				offset += nkeys
-				iter := export.LabelSlice(labels).Iter()
-				encoded := adapter.LabelEncoder.Encode(iter)
-				expect := fmt.Sprint("counter:100|c++", encoded, "\n")
+				elabels := label.NewSet(labels...)
+				encoded := adapter.Encoder.Encode(elabels.Iter())
+				expect := fmt.Sprint("counter:100|c|#", encoded, "\n")
 				expected = append(expected, expect)
 				checkpointSet.AddCounter(&desc, 100, labels...)
 			})
 
-			err = exp.Export(ctx, checkpointSet)
+			err = exp.Export(ctx, nil, checkpointSet)
 			require.Nil(t, err)
 
 			tcase.check(expected, writer.vec, t)
@@ -325,14 +326,14 @@ func TestArraySplit(t *testing.T) {
 		t.Fatal("New error: ", err)
 	}
 
-	checkpointSet := test.NewCheckpointSet(adapter.LabelEncoder)
+	checkpointSet := test.NewCheckpointSet()
 	desc := metric.NewDescriptor("measure", metric.MeasureKind, core.Int64NumberKind)
 
 	for i := 0; i < 1024; i++ {
 		checkpointSet.AddMeasure(&desc, 100)
 	}
 
-	err = exp.Export(ctx, checkpointSet)
+	err = exp.Export(ctx, nil, checkpointSet)
 	require.Nil(t, err)
 
 	require.Greater(t, len(writer.vec), 1)

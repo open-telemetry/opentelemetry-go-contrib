@@ -28,9 +28,9 @@ import (
 )
 
 // NetAttributesFromHTTPRequest generates attributes of the net
-// namespace as specified by opentelemetry specification for a span.
-// The network parameter is a string that net.Dial function from
-// standard library can understand.
+// namespace as specified by the OpenTelemetry specification for a
+// span.  The network parameter is a string that net.Dial function
+// from standard library can understand.
 func NetAttributesFromHTTPRequest(network string, request *http.Request) []otelcore.KeyValue {
 	transport := ""
 	switch network {
@@ -121,8 +121,8 @@ func NetAttributesFromHTTPRequest(network string, request *http.Request) []otelc
 }
 
 // EndUserAttributesFromHTTPRequest generates attributes of the
-// enduser namespace as specified by opentelemetry specification for a
-// span. Currently, only basic authentication is supported.
+// enduser namespace as specified by the OpenTelemetry specification
+// for a span.
 func EndUserAttributesFromHTTPRequest(request *http.Request) []otelcore.KeyValue {
 	if username, _, ok := request.BasicAuth(); ok {
 		return []otelcore.KeyValue{otelkey.String("enduser.id", username)}
@@ -130,9 +130,10 @@ func EndUserAttributesFromHTTPRequest(request *http.Request) []otelcore.KeyValue
 	return nil
 }
 
-// HTTPServerAttributesFromHTTPRequest generates attributes of the http
-// namespace as specified by opentelemetry specification for a span on
-// the server side. Currently, only basic authentication is supported.
+// HTTPServerAttributesFromHTTPRequest generates attributes of the
+// http namespace as specified by the OpenTelemetry specification for
+// a span on the server side. Currently, only basic authentication is
+// supported.
 func HTTPServerAttributesFromHTTPRequest(serverName, route string, request *http.Request) []otelcore.KeyValue {
 	attrs := []otelcore.KeyValue{
 		otelkey.String("http.method", request.Method),
@@ -173,7 +174,7 @@ func HTTPServerAttributesFromHTTPRequest(serverName, route string, request *http
 }
 
 // HTTPAttributesFromHTTPStatusCode generates attributes of the http
-// namespace as specified by opentelemetry specification for a
+// namespace as specified by the OpenTelemetry specification for a
 // span.
 func HTTPAttributesFromHTTPStatusCode(code int) []otelcore.KeyValue {
 	attrs := []otelcore.KeyValue{
@@ -221,7 +222,7 @@ var validRangesPerCategory = map[int][]codeRange{
 }
 
 // SpanStatusFromHTTPStatusCode generates a status code and a message
-// as specified by opentelemetry specification for a span.
+// as specified by the OpenTelemetry specification for a span.
 func SpanStatusFromHTTPStatusCode(code int) (codes.Code, string) {
 	spanCode := func() codes.Code {
 		category := code / 100
@@ -264,7 +265,10 @@ func SpanStatusFromHTTPStatusCode(code int) (codes.Code, string) {
 		if category == 5 {
 			return codes.Internal
 		}
-		panic("code got out of sync with validRangesPerCategory map")
+		// this really should not happen, if we get there then
+		// it means that the code got out of sync with
+		// validRangesPerCategory map
+		return codes.Unknown
 	}()
 	if spanCode == codes.Unknown {
 		return spanCode, fmt.Sprintf("Invalid HTTP status code %d", code)
