@@ -53,7 +53,7 @@ func Middleware(service string, opts ...Option) macaron.Handler {
 		opts := []oteltrace.StartOption{
 			oteltrace.WithAttributes(trace.NetAttributesFromHTTPRequest("tcp", c.Req.Request)...),
 			oteltrace.WithAttributes(trace.EndUserAttributesFromHTTPRequest(c.Req.Request)...),
-			oteltrace.WithAttributes(trace.HTTPServerAttributesFromHTTPRequest(service, c.Req.RequestURI, c.Req.Request)...),
+			oteltrace.WithAttributes(trace.HTTPServerAttributesFromHTTPRequest(service, "", c.Req.Request)...),
 			oteltrace.WithSpanKind(oteltrace.SpanKindServer),
 		}
 		// TODO: span name should be router template not the actual request path, eg /user/:id vs /user/123
