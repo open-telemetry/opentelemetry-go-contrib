@@ -111,7 +111,7 @@ Approvers:
 - [Krzesimir Nowak](https://github.com/krnowak), Kinvolk
 - [Liz Fong-Jones](https://github.com/lizthegrey), Honeycomb
 - [Gustavo Silva Paiva](https://github.com/paivagustavo), Stilingue
-- [Ted Young](https://github.com/tedsuo), LightStep
+- [Evan Torrie](https://github.com/evantorrie), Comcast
 - [Anthony Mirabella](https://github.com/Aneurysm9), Centene
 
 Maintainers:
