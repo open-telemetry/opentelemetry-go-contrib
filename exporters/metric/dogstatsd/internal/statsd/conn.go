@@ -51,6 +51,9 @@ type (
 		// MaxPacketSize this limits the packet size for packet-oriented transports.
 		MaxPacketSize int
 
+		// Prefix will be prepended to every metric name.
+		Prefix string
+
 		// TODO support Dial and Write timeouts
 	}
 
@@ -286,6 +289,9 @@ func (e *Exporter) formatMetric(rec export.Record, res *resource.Resource, pos i
 // formatSingleStat encodes a single item of statsd data followed by a
 // newline.
 func (e *Exporter) formatSingleStat(rec export.Record, res *resource.Resource, val core.Number, fmtStr string, buf *bytes.Buffer) {
+	if e.config.Prefix != "" {
+		_, _ = buf.WriteString(e.config.Prefix)
+	}
 	e.adapter.AppendName(rec, buf)
 	_, _ = buf.WriteRune(':')
 	writeNumber(buf, val, rec.Descriptor().NumberKind())

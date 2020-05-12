@@ -342,3 +342,29 @@ func TestArraySplit(t *testing.T) {
 		require.LessOrEqual(t, len(result), config.MaxPacketSize)
 	}
 }
+
+func TestPrefix(t *testing.T) {
+	ctx := context.Background()
+	writer := &testWriter{}
+	config := statsd.Config{
+		Writer:        writer,
+		MaxPacketSize: 1024,
+		Prefix:        "veryspecial.",
+	}
+	adapter := newWithTagsAdapter()
+	exp, err := statsd.NewExporter(config, adapter)
+	if err != nil {
+		t.Fatal("New error: ", err)
+	}
+
+	checkpointSet := test.NewCheckpointSet()
+	desc := metric.NewDescriptor("measure", metric.MeasureKind, core.Int64NumberKind)
+
+	checkpointSet.AddMeasure(&desc, 100)
+
+	err = exp.Export(ctx, nil, checkpointSet)
+	require.Nil(t, err)
+
+	require.Equal(t, `veryspecial.measure:100|h|#
+`, strings.Join(writer.vec, ""))
+}
