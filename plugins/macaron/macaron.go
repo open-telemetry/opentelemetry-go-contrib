@@ -31,7 +31,7 @@ const (
 	tracerName = "go.opentelemetry.io/contrib/plugins/macaron"
 )
 
-// Middleware returns stuff
+// Middleware returns a macaron Handler to trace requests to the server.
 func Middleware(service string, opts ...Option) macaron.Handler {
 	cfg := Config{}
 	for _, opt := range opts {
