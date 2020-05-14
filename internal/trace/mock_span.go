@@ -20,30 +20,31 @@ import (
 
 	"google.golang.org/grpc/codes"
 
-	otelcore "go.opentelemetry.io/otel/api/core"
+	otelkv "go.opentelemetry.io/otel/api/kv"
+	otelvalue "go.opentelemetry.io/otel/api/kv/value"
 	oteltrace "go.opentelemetry.io/otel/api/trace"
 )
 
 // Span is a mock span used in association with Tracer for
 // testing purpose only.
 type Span struct {
-	sc           otelcore.SpanContext
+	sc           oteltrace.SpanContext
 	tracer       *Tracer
 	Name         string
-	Attributes   map[otelcore.Key]otelcore.Value
+	Attributes   map[otelkv.Key]otelvalue.Value
 	Kind         oteltrace.SpanKind
 	Status       codes.Code
-	ParentSpanID otelcore.SpanID
+	ParentSpanID oteltrace.SpanID
 }
 
 var _ oteltrace.Span = (*Span)(nil)
 
-// SpanContext returns associated otelcore.SpanContext.
+// SpanContext returns associated oteltrace.SpanContext.
 //
-// If the receiver is nil it returns an empty otelcore.SpanContext.
-func (ms *Span) SpanContext() otelcore.SpanContext {
+// If the receiver is nil it returns an empty oteltrace.SpanContext.
+func (ms *Span) SpanContext() oteltrace.SpanContext {
 	if ms == nil {
-		return otelcore.EmptySpanContext()
+		return oteltrace.EmptySpanContext()
 	}
 	return ms.sc
 }
@@ -58,10 +59,15 @@ func (ms *Span) SetStatus(status codes.Code, msg string) {
 	ms.Status = status
 }
 
+// SetAttribute adds a single inferred attribute.
+func (ms *Span) SetAttribute(key string, value interface{}) {
+	ms.SetAttributes(otelkv.Infer(key, value))
+}
+
 // SetAttributes adds an attribute to Attributes member.
-func (ms *Span) SetAttributes(attributes ...otelcore.KeyValue) {
+func (ms *Span) SetAttributes(attributes ...otelkv.KeyValue) {
 	if ms.Attributes == nil {
-		ms.Attributes = make(map[otelcore.Key]otelcore.Value)
+		ms.Attributes = make(map[otelkv.Key]otelvalue.Value)
 	}
 	for _, kv := range attributes {
 		ms.Attributes[kv.Key] = kv.Value
@@ -88,9 +94,9 @@ func (ms *Span) Tracer() oteltrace.Tracer {
 }
 
 // AddEvent does nothing.
-func (ms *Span) AddEvent(ctx context.Context, name string, attrs ...otelcore.KeyValue) {
+func (ms *Span) AddEvent(ctx context.Context, name string, attrs ...otelkv.KeyValue) {
 }
 
 // AddEvent does nothing.
-func (ms *Span) AddEventWithTimestamp(ctx context.Context, timestamp time.Time, name string, attrs ...otelcore.KeyValue) {
+func (ms *Span) AddEventWithTimestamp(ctx context.Context, timestamp time.Time, name string, attrs ...otelkv.KeyValue) {
 }

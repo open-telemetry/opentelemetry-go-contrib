@@ -2,6 +2,8 @@ module go.opentelemetry.io/contrib/exporters/metric/datadog
 
 go 1.14
 
+replace go.opentelemetry.io/otel => ../../../../../../go.opentelemetry.io
+
 require (
 	github.com/DataDog/datadog-go v3.5.0+incompatible
 	github.com/DataDog/sketches-go v0.0.0-20190923095040-43f19ad77ff7
