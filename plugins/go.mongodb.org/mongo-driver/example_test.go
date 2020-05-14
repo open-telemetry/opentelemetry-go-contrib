@@ -27,7 +27,7 @@ import (
 func Example() {
 	// connect to MongoDB
 	opts := options.Client()
-	opts.Monitor = mongotrace.NewMonitor()
+	opts.Monitor = mongotrace.NewMonitor("test-service")
 	opts.ApplyURI("mongodb://localhost:27017")
 	client, err := mongo.Connect(context.Background(), opts)
 	if err != nil {
