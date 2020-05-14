@@ -24,8 +24,7 @@ import (
 	"github.com/stretchr/testify/assert"
 	"google.golang.org/grpc/codes"
 
-	otelcore "go.opentelemetry.io/otel/api/core"
-	otelkey "go.opentelemetry.io/otel/api/key"
+	otelkv "go.opentelemetry.io/otel/api/kv"
 )
 
 type tlsOption int
@@ -49,7 +48,7 @@ func TestNetAttributesFromHTTPRequest(t *testing.T) {
 		url        *url.URL
 		header     http.Header
 
-		expected []otelcore.KeyValue
+		expected []otelkv.KeyValue
 	}
 	testcases := []testcase{
 		{
@@ -64,8 +63,8 @@ func TestNetAttributesFromHTTPRequest(t *testing.T) {
 				Path: "/user/123",
 			},
 			header: nil,
-			expected: []otelcore.KeyValue{
-				otelkey.String("net.transport", "IP.TCP"),
+			expected: []otelkv.KeyValue{
+				otelkv.String("net.transport", "IP.TCP"),
 			},
 		},
 		{
@@ -80,8 +79,8 @@ func TestNetAttributesFromHTTPRequest(t *testing.T) {
 				Path: "/user/123",
 			},
 			header: nil,
-			expected: []otelcore.KeyValue{
-				otelkey.String("net.transport", "IP.UDP"),
+			expected: []otelkv.KeyValue{
+				otelkv.String("net.transport", "IP.UDP"),
 			},
 		},
 		{
@@ -96,8 +95,8 @@ func TestNetAttributesFromHTTPRequest(t *testing.T) {
 				Path: "/user/123",
 			},
 			header: nil,
-			expected: []otelcore.KeyValue{
-				otelkey.String("net.transport", "IP"),
+			expected: []otelkv.KeyValue{
+				otelkv.String("net.transport", "IP"),
 			},
 		},
 		{
@@ -112,8 +111,8 @@ func TestNetAttributesFromHTTPRequest(t *testing.T) {
 				Path: "/user/123",
 			},
 			header: nil,
-			expected: []otelcore.KeyValue{
-				otelkey.String("net.transport", "Unix"),
+			expected: []otelkv.KeyValue{
+				otelkv.String("net.transport", "Unix"),
 			},
 		},
 		{
@@ -128,8 +127,8 @@ func TestNetAttributesFromHTTPRequest(t *testing.T) {
 				Path: "/user/123",
 			},
 			header: nil,
-			expected: []otelcore.KeyValue{
-				otelkey.String("net.transport", "other"),
+			expected: []otelkv.KeyValue{
+				otelkv.String("net.transport", "other"),
 			},
 		},
 		{
@@ -144,10 +143,10 @@ func TestNetAttributesFromHTTPRequest(t *testing.T) {
 				Path: "/user/123",
 			},
 			header: nil,
-			expected: []otelcore.KeyValue{
-				otelkey.String("net.transport", "IP.TCP"),
-				otelkey.String("net.peer.ip", "1.2.3.4"),
-				otelkey.Int("net.peer.port", 56),
+			expected: []otelkv.KeyValue{
+				otelkv.String("net.transport", "IP.TCP"),
+				otelkv.String("net.peer.ip", "1.2.3.4"),
+				otelkv.Int("net.peer.port", 56),
 			},
 		},
 		{
@@ -162,10 +161,10 @@ func TestNetAttributesFromHTTPRequest(t *testing.T) {
 				Path: "/user/123",
 			},
 			header: nil,
-			expected: []otelcore.KeyValue{
-				otelkey.String("net.transport", "IP.TCP"),
-				otelkey.String("net.peer.name", "example.com"),
-				otelkey.Int("net.peer.port", 56),
+			expected: []otelkv.KeyValue{
+				otelkv.String("net.transport", "IP.TCP"),
+				otelkv.String("net.peer.name", "example.com"),
+				otelkv.Int("net.peer.port", 56),
 			},
 		},
 		{
@@ -180,9 +179,9 @@ func TestNetAttributesFromHTTPRequest(t *testing.T) {
 				Path: "/user/123",
 			},
 			header: nil,
-			expected: []otelcore.KeyValue{
-				otelkey.String("net.transport", "IP.TCP"),
-				otelkey.String("net.peer.ip", "1.2.3.4"),
+			expected: []otelkv.KeyValue{
+				otelkv.String("net.transport", "IP.TCP"),
+				otelkv.String("net.peer.ip", "1.2.3.4"),
 			},
 		},
 		{
@@ -197,9 +196,9 @@ func TestNetAttributesFromHTTPRequest(t *testing.T) {
 				Path: "/user/123",
 			},
 			header: nil,
-			expected: []otelcore.KeyValue{
-				otelkey.String("net.transport", "IP.TCP"),
-				otelkey.String("net.peer.name", "example.com"),
+			expected: []otelkv.KeyValue{
+				otelkv.String("net.transport", "IP.TCP"),
+				otelkv.String("net.peer.name", "example.com"),
 			},
 		},
 		{
@@ -214,8 +213,8 @@ func TestNetAttributesFromHTTPRequest(t *testing.T) {
 				Path: "/user/123",
 			},
 			header: nil,
-			expected: []otelcore.KeyValue{
-				otelkey.String("net.transport", "IP.TCP"),
+			expected: []otelkv.KeyValue{
+				otelkv.String("net.transport", "IP.TCP"),
 			},
 		},
 		{
@@ -230,11 +229,11 @@ func TestNetAttributesFromHTTPRequest(t *testing.T) {
 				Path: "/user/123",
 			},
 			header: nil,
-			expected: []otelcore.KeyValue{
-				otelkey.String("net.transport", "IP.TCP"),
-				otelkey.String("net.peer.ip", "1.2.3.4"),
-				otelkey.Int("net.peer.port", 56),
-				otelkey.String("net.host.name", "example.com"),
+			expected: []otelkv.KeyValue{
+				otelkv.String("net.transport", "IP.TCP"),
+				otelkv.String("net.peer.ip", "1.2.3.4"),
+				otelkv.Int("net.peer.port", 56),
+				otelkv.String("net.host.name", "example.com"),
 			},
 		},
 		{
@@ -249,11 +248,11 @@ func TestNetAttributesFromHTTPRequest(t *testing.T) {
 				Path: "/user/123",
 			},
 			header: nil,
-			expected: []otelcore.KeyValue{
-				otelkey.String("net.transport", "IP.TCP"),
-				otelkey.String("net.peer.ip", "1.2.3.4"),
-				otelkey.Int("net.peer.port", 56),
-				otelkey.String("net.host.ip", "4.3.2.1"),
+			expected: []otelkv.KeyValue{
+				otelkv.String("net.transport", "IP.TCP"),
+				otelkv.String("net.peer.ip", "1.2.3.4"),
+				otelkv.Int("net.peer.port", 56),
+				otelkv.String("net.host.ip", "4.3.2.1"),
 			},
 		},
 		{
@@ -268,12 +267,12 @@ func TestNetAttributesFromHTTPRequest(t *testing.T) {
 				Path: "/user/123",
 			},
 			header: nil,
-			expected: []otelcore.KeyValue{
-				otelkey.String("net.transport", "IP.TCP"),
-				otelkey.String("net.peer.ip", "1.2.3.4"),
-				otelkey.Int("net.peer.port", 56),
-				otelkey.String("net.host.name", "example.com"),
-				otelkey.Int("net.host.port", 78),
+			expected: []otelkv.KeyValue{
+				otelkv.String("net.transport", "IP.TCP"),
+				otelkv.String("net.peer.ip", "1.2.3.4"),
+				otelkv.Int("net.peer.port", 56),
+				otelkv.String("net.host.name", "example.com"),
+				otelkv.Int("net.host.port", 78),
 			},
 		},
 		{
@@ -288,12 +287,12 @@ func TestNetAttributesFromHTTPRequest(t *testing.T) {
 				Path: "/user/123",
 			},
 			header: nil,
-			expected: []otelcore.KeyValue{
-				otelkey.String("net.transport", "IP.TCP"),
-				otelkey.String("net.peer.ip", "1.2.3.4"),
-				otelkey.Int("net.peer.port", 56),
-				otelkey.String("net.host.ip", "4.3.2.1"),
-				otelkey.Int("net.host.port", 78),
+			expected: []otelkv.KeyValue{
+				otelkv.String("net.transport", "IP.TCP"),
+				otelkv.String("net.peer.ip", "1.2.3.4"),
+				otelkv.Int("net.peer.port", 56),
+				otelkv.String("net.host.ip", "4.3.2.1"),
+				otelkv.Int("net.host.port", 78),
 			},
 		},
 		{
@@ -308,11 +307,11 @@ func TestNetAttributesFromHTTPRequest(t *testing.T) {
 				Path: "/user/123",
 			},
 			header: nil,
-			expected: []otelcore.KeyValue{
-				otelkey.String("net.transport", "IP.TCP"),
-				otelkey.String("net.peer.ip", "1.2.3.4"),
-				otelkey.Int("net.peer.port", 56),
-				otelkey.String("net.host.name", "example.com"),
+			expected: []otelkv.KeyValue{
+				otelkv.String("net.transport", "IP.TCP"),
+				otelkv.String("net.peer.ip", "1.2.3.4"),
+				otelkv.Int("net.peer.port", 56),
+				otelkv.String("net.host.name", "example.com"),
 			},
 		},
 		{
@@ -327,11 +326,11 @@ func TestNetAttributesFromHTTPRequest(t *testing.T) {
 				Path: "/user/123",
 			},
 			header: nil,
-			expected: []otelcore.KeyValue{
-				otelkey.String("net.transport", "IP.TCP"),
-				otelkey.String("net.peer.ip", "1.2.3.4"),
-				otelkey.Int("net.peer.port", 56),
-				otelkey.String("net.host.ip", "4.3.2.1"),
+			expected: []otelkv.KeyValue{
+				otelkv.String("net.transport", "IP.TCP"),
+				otelkv.String("net.peer.ip", "1.2.3.4"),
+				otelkv.Int("net.peer.port", 56),
+				otelkv.String("net.host.ip", "4.3.2.1"),
 			},
 		},
 		{
@@ -346,10 +345,10 @@ func TestNetAttributesFromHTTPRequest(t *testing.T) {
 				Path: "/user/123",
 			},
 			header: nil,
-			expected: []otelcore.KeyValue{
-				otelkey.String("net.transport", "IP.TCP"),
-				otelkey.String("net.peer.ip", "1.2.3.4"),
-				otelkey.Int("net.peer.port", 56),
+			expected: []otelkv.KeyValue{
+				otelkv.String("net.transport", "IP.TCP"),
+				otelkv.String("net.peer.ip", "1.2.3.4"),
+				otelkv.Int("net.peer.port", 56),
 			},
 		},
 		{
@@ -366,12 +365,12 @@ func TestNetAttributesFromHTTPRequest(t *testing.T) {
 			header: http.Header{
 				"Host": []string{"4.3.2.1:78"},
 			},
-			expected: []otelcore.KeyValue{
-				otelkey.String("net.transport", "IP.TCP"),
-				otelkey.String("net.peer.ip", "1.2.3.4"),
-				otelkey.Int("net.peer.port", 56),
-				otelkey.String("net.host.ip", "4.3.2.1"),
-				otelkey.Int("net.host.port", 78),
+			expected: []otelkv.KeyValue{
+				otelkv.String("net.transport", "IP.TCP"),
+				otelkv.String("net.peer.ip", "1.2.3.4"),
+				otelkv.Int("net.peer.port", 56),
+				otelkv.String("net.host.ip", "4.3.2.1"),
+				otelkv.Int("net.host.port", 78),
 			},
 		},
 		{
@@ -387,12 +386,12 @@ func TestNetAttributesFromHTTPRequest(t *testing.T) {
 				Path: "/user/123",
 			},
 			header: nil,
-			expected: []otelcore.KeyValue{
-				otelkey.String("net.transport", "IP.TCP"),
-				otelkey.String("net.peer.ip", "1.2.3.4"),
-				otelkey.Int("net.peer.port", 56),
-				otelkey.String("net.host.ip", "4.3.2.1"),
-				otelkey.Int("net.host.port", 78),
+			expected: []otelkv.KeyValue{
+				otelkv.String("net.transport", "IP.TCP"),
+				otelkv.String("net.peer.ip", "1.2.3.4"),
+				otelkv.Int("net.peer.port", 56),
+				otelkv.String("net.host.ip", "4.3.2.1"),
+				otelkv.Int("net.host.port", 78),
 			},
 		},
 	}
@@ -405,11 +404,11 @@ func TestNetAttributesFromHTTPRequest(t *testing.T) {
 
 func TestEndUserAttributesFromHTTPRequest(t *testing.T) {
 	r := testRequest("GET", "/user/123", "HTTP/1.1", "", "", nil, http.Header{}, withTLS)
-	var expected []otelcore.KeyValue
+	var expected []otelkv.KeyValue
 	got := EndUserAttributesFromHTTPRequest(r)
 	assert.ElementsMatch(t, expected, got)
 	r.SetBasicAuth("admin", "password")
-	expected = []otelcore.KeyValue{otelkey.String("enduser.id", "admin")}
+	expected = []otelkv.KeyValue{otelkv.String("enduser.id", "admin")}
 	got = EndUserAttributesFromHTTPRequest(r)
 	assert.ElementsMatch(t, expected, got)
 }
@@ -430,7 +429,7 @@ func TestHTTPServerAttributesFromHTTPRequest(t *testing.T) {
 		header     http.Header
 		tls        tlsOption
 
-		expected []otelcore.KeyValue
+		expected []otelkv.KeyValue
 	}
 	testcases := []testcase{
 		{
@@ -447,11 +446,11 @@ func TestHTTPServerAttributesFromHTTPRequest(t *testing.T) {
 			},
 			header: nil,
 			tls:    noTLS,
-			expected: []otelcore.KeyValue{
-				otelkey.String("http.method", "GET"),
-				otelkey.String("http.target", "/user/123"),
-				otelkey.String("http.scheme", "http"),
-				otelkey.String("http.flavor", "1.0"),
+			expected: []otelkv.KeyValue{
+				otelkv.String("http.method", "GET"),
+				otelkv.String("http.target", "/user/123"),
+				otelkv.String("http.scheme", "http"),
+				otelkv.String("http.flavor", "1.0"),
 			},
 		},
 		{
@@ -468,12 +467,12 @@ func TestHTTPServerAttributesFromHTTPRequest(t *testing.T) {
 			},
 			header: nil,
 			tls:    noTLS,
-			expected: []otelcore.KeyValue{
-				otelkey.String("http.method", "GET"),
-				otelkey.String("http.target", "/user/123"),
-				otelkey.String("http.scheme", "http"),
-				otelkey.String("http.flavor", "1.0"),
-				otelkey.String("http.server_name", "my-server-name"),
+			expected: []otelkv.KeyValue{
+				otelkv.String("http.method", "GET"),
+				otelkv.String("http.target", "/user/123"),
+				otelkv.String("http.scheme", "http"),
+				otelkv.String("http.flavor", "1.0"),
+				otelkv.String("http.server_name", "my-server-name"),
 			},
 		},
 		{
@@ -490,12 +489,12 @@ func TestHTTPServerAttributesFromHTTPRequest(t *testing.T) {
 			},
 			header: nil,
 			tls:    withTLS,
-			expected: []otelcore.KeyValue{
-				otelkey.String("http.method", "GET"),
-				otelkey.String("http.target", "/user/123"),
-				otelkey.String("http.scheme", "https"),
-				otelkey.String("http.flavor", "1.0"),
-				otelkey.String("http.server_name", "my-server-name"),
+			expected: []otelkv.KeyValue{
+				otelkv.String("http.method", "GET"),
+				otelkv.String("http.target", "/user/123"),
+				otelkv.String("http.scheme", "https"),
+				otelkv.String("http.flavor", "1.0"),
+				otelkv.String("http.server_name", "my-server-name"),
 			},
 		},
 		{
@@ -512,13 +511,13 @@ func TestHTTPServerAttributesFromHTTPRequest(t *testing.T) {
 			},
 			header: nil,
 			tls:    withTLS,
-			expected: []otelcore.KeyValue{
-				otelkey.String("http.method", "GET"),
-				otelkey.String("http.target", "/user/123"),
-				otelkey.String("http.scheme", "https"),
-				otelkey.String("http.flavor", "1.0"),
-				otelkey.String("http.server_name", "my-server-name"),
-				otelkey.String("http.route", "/user/:id"),
+			expected: []otelkv.KeyValue{
+				otelkv.String("http.method", "GET"),
+				otelkv.String("http.target", "/user/123"),
+				otelkv.String("http.scheme", "https"),
+				otelkv.String("http.flavor", "1.0"),
+				otelkv.String("http.server_name", "my-server-name"),
+				otelkv.String("http.route", "/user/:id"),
 			},
 		},
 		{
@@ -535,14 +534,14 @@ func TestHTTPServerAttributesFromHTTPRequest(t *testing.T) {
 			},
 			header: nil,
 			tls:    withTLS,
-			expected: []otelcore.KeyValue{
-				otelkey.String("http.method", "GET"),
-				otelkey.String("http.target", "/user/123"),
-				otelkey.String("http.scheme", "https"),
-				otelkey.String("http.flavor", "1.0"),
-				otelkey.String("http.server_name", "my-server-name"),
-				otelkey.String("http.route", "/user/:id"),
-				otelkey.String("http.host", "example.com"),
+			expected: []otelkv.KeyValue{
+				otelkv.String("http.method", "GET"),
+				otelkv.String("http.target", "/user/123"),
+				otelkv.String("http.scheme", "https"),
+				otelkv.String("http.flavor", "1.0"),
+				otelkv.String("http.server_name", "my-server-name"),
+				otelkv.String("http.route", "/user/:id"),
+				otelkv.String("http.host", "example.com"),
 			},
 		},
 		{
@@ -561,15 +560,15 @@ func TestHTTPServerAttributesFromHTTPRequest(t *testing.T) {
 				"User-Agent": []string{"foodownloader"},
 			},
 			tls: withTLS,
-			expected: []otelcore.KeyValue{
-				otelkey.String("http.method", "GET"),
-				otelkey.String("http.target", "/user/123"),
-				otelkey.String("http.scheme", "https"),
-				otelkey.String("http.flavor", "1.0"),
-				otelkey.String("http.server_name", "my-server-name"),
-				otelkey.String("http.route", "/user/:id"),
-				otelkey.String("http.host", "example.com"),
-				otelkey.String("http.user_agent", "foodownloader"),
+			expected: []otelkv.KeyValue{
+				otelkv.String("http.method", "GET"),
+				otelkv.String("http.target", "/user/123"),
+				otelkv.String("http.scheme", "https"),
+				otelkv.String("http.flavor", "1.0"),
+				otelkv.String("http.server_name", "my-server-name"),
+				otelkv.String("http.route", "/user/:id"),
+				otelkv.String("http.host", "example.com"),
+				otelkv.String("http.user_agent", "foodownloader"),
 			},
 		},
 		{
@@ -589,16 +588,16 @@ func TestHTTPServerAttributesFromHTTPRequest(t *testing.T) {
 				"X-Forwarded-For": []string{"1.2.3.4"},
 			},
 			tls: withTLS,
-			expected: []otelcore.KeyValue{
-				otelkey.String("http.method", "GET"),
-				otelkey.String("http.target", "/user/123"),
-				otelkey.String("http.scheme", "https"),
-				otelkey.String("http.flavor", "1.0"),
-				otelkey.String("http.server_name", "my-server-name"),
-				otelkey.String("http.route", "/user/:id"),
-				otelkey.String("http.host", "example.com"),
-				otelkey.String("http.user_agent", "foodownloader"),
-				otelkey.String("http.client_ip", "1.2.3.4"),
+			expected: []otelkv.KeyValue{
+				otelkv.String("http.method", "GET"),
+				otelkv.String("http.target", "/user/123"),
+				otelkv.String("http.scheme", "https"),
+				otelkv.String("http.flavor", "1.0"),
+				otelkv.String("http.server_name", "my-server-name"),
+				otelkv.String("http.route", "/user/:id"),
+				otelkv.String("http.host", "example.com"),
+				otelkv.String("http.user_agent", "foodownloader"),
+				otelkv.String("http.client_ip", "1.2.3.4"),
 			},
 		},
 		{
@@ -618,16 +617,16 @@ func TestHTTPServerAttributesFromHTTPRequest(t *testing.T) {
 				"X-Forwarded-For": []string{"1.2.3.4"},
 			},
 			tls: withTLS,
-			expected: []otelcore.KeyValue{
-				otelkey.String("http.method", "GET"),
-				otelkey.String("http.target", "/user/123"),
-				otelkey.String("http.scheme", "https"),
-				otelkey.String("http.flavor", "1.1"),
-				otelkey.String("http.server_name", "my-server-name"),
-				otelkey.String("http.route", "/user/:id"),
-				otelkey.String("http.host", "example.com"),
-				otelkey.String("http.user_agent", "foodownloader"),
-				otelkey.String("http.client_ip", "1.2.3.4"),
+			expected: []otelkv.KeyValue{
+				otelkv.String("http.method", "GET"),
+				otelkv.String("http.target", "/user/123"),
+				otelkv.String("http.scheme", "https"),
+				otelkv.String("http.flavor", "1.1"),
+				otelkv.String("http.server_name", "my-server-name"),
+				otelkv.String("http.route", "/user/:id"),
+				otelkv.String("http.host", "example.com"),
+				otelkv.String("http.user_agent", "foodownloader"),
+				otelkv.String("http.client_ip", "1.2.3.4"),
 			},
 		},
 		{
@@ -647,16 +646,16 @@ func TestHTTPServerAttributesFromHTTPRequest(t *testing.T) {
 				"X-Forwarded-For": []string{"1.2.3.4"},
 			},
 			tls: withTLS,
-			expected: []otelcore.KeyValue{
-				otelkey.String("http.method", "GET"),
-				otelkey.String("http.target", "/user/123"),
-				otelkey.String("http.scheme", "https"),
-				otelkey.String("http.flavor", "2"),
-				otelkey.String("http.server_name", "my-server-name"),
-				otelkey.String("http.route", "/user/:id"),
-				otelkey.String("http.host", "example.com"),
-				otelkey.String("http.user_agent", "foodownloader"),
-				otelkey.String("http.client_ip", "1.2.3.4"),
+			expected: []otelkv.KeyValue{
+				otelkv.String("http.method", "GET"),
+				otelkv.String("http.target", "/user/123"),
+				otelkv.String("http.scheme", "https"),
+				otelkv.String("http.flavor", "2"),
+				otelkv.String("http.server_name", "my-server-name"),
+				otelkv.String("http.route", "/user/:id"),
+				otelkv.String("http.host", "example.com"),
+				otelkv.String("http.user_agent", "foodownloader"),
+				otelkv.String("http.client_ip", "1.2.3.4"),
 			},
 		},
 	}
@@ -668,15 +667,15 @@ func TestHTTPServerAttributesFromHTTPRequest(t *testing.T) {
 }
 
 func TestHTTPAttributesFromHTTPStatusCode(t *testing.T) {
-	expected := []otelcore.KeyValue{
-		otelkey.Int("http.status_code", 404),
-		otelkey.String("http.status_text", "Not Found"),
+	expected := []otelkv.KeyValue{
+		otelkv.Int("http.status_code", 404),
+		otelkv.String("http.status_text", "Not Found"),
 	}
 	got := HTTPAttributesFromHTTPStatusCode(http.StatusNotFound)
 	assertElementsMatch(t, expected, got, "with valid HTTP status code")
 	assert.ElementsMatch(t, expected, got)
-	expected = []otelcore.KeyValue{
-		otelkey.Int("http.status_code", 499),
+	expected = []otelkv.KeyValue{
+		otelkv.Int("http.status_code", 499),
 	}
 	got = HTTPAttributesFromHTTPStatusCode(499)
 	assertElementsMatch(t, expected, got, "with invalid HTTP status code")
@@ -720,7 +719,7 @@ func getExpectedGRPCCodeForHTTPCode(code int) codes.Code {
 	return codes.Internal
 }
 
-func assertElementsMatch(t *testing.T, expected, got []otelcore.KeyValue, format string, args ...interface{}) {
+func assertElementsMatch(t *testing.T, expected, got []otelkv.KeyValue, format string, args ...interface{}) {
 	if !assert.ElementsMatchf(t, expected, got, format, args...) {
 		t.Log("expected:", kvStr(expected))
 		t.Log("got:", kvStr(got))
@@ -762,7 +761,7 @@ func protoToInts(proto string) (int, int) {
 	return 13, 42
 }
 
-func kvStr(kvs []otelcore.KeyValue) string {
+func kvStr(kvs []otelkv.KeyValue) string {
 	sb := strings.Builder{}
 	sb.WriteRune('[')
 	for idx, kv := range kvs {

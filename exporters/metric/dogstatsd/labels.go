@@ -18,7 +18,7 @@ import (
 	"bytes"
 	"sync"
 
-	"go.opentelemetry.io/otel/api/core"
+	"go.opentelemetry.io/otel/api/kv"
 	"go.opentelemetry.io/otel/api/label"
 )
 
@@ -59,7 +59,7 @@ func (e *LabelEncoder) Encode(iter label.Iterator) string {
 	return buf.String()
 }
 
-func (e *LabelEncoder) encodeOne(buf *bytes.Buffer, kv core.KeyValue) {
+func (e *LabelEncoder) encodeOne(buf *bytes.Buffer, kv kv.KeyValue) {
 	if buf.Len() != 0 {
 		_, _ = buf.WriteRune(',')
 	}

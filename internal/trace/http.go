@@ -23,15 +23,14 @@ import (
 
 	"google.golang.org/grpc/codes"
 
-	otelcore "go.opentelemetry.io/otel/api/core"
-	otelkey "go.opentelemetry.io/otel/api/key"
+	otelkv "go.opentelemetry.io/otel/api/kv"
 )
 
 // NetAttributesFromHTTPRequest generates attributes of the net
 // namespace as specified by the OpenTelemetry specification for a
 // span.  The network parameter is a string that net.Dial function
 // from standard library can understand.
-func NetAttributesFromHTTPRequest(network string, request *http.Request) []otelcore.KeyValue {
+func NetAttributesFromHTTPRequest(network string, request *http.Request) []otelkv.KeyValue {
 	transport := ""
 	switch network {
 	case "tcp", "tcp4", "tcp6":
@@ -45,8 +44,8 @@ func NetAttributesFromHTTPRequest(network string, request *http.Request) []otelc
 	default:
 		transport = "other"
 	}
-	attrs := []otelcore.KeyValue{
-		otelkey.String("net.transport", transport),
+	attrs := []otelkv.KeyValue{
+		otelkv.String("net.transport", transport),
 	}
 
 	peerName, peerIP, peerPort := "", "", 0
@@ -75,13 +74,13 @@ func NetAttributesFromHTTPRequest(network string, request *http.Request) []otelc
 		}
 	}
 	if peerName != "" {
-		attrs = append(attrs, otelkey.String("net.peer.name", peerName))
+		attrs = append(attrs, otelkv.String("net.peer.name", peerName))
 	}
 	if peerIP != "" {
-		attrs = append(attrs, otelkey.String("net.peer.ip", peerIP))
+		attrs = append(attrs, otelkv.String("net.peer.ip", peerIP))
 	}
 	if peerPort != 0 {
-		attrs = append(attrs, otelkey.Int("net.peer.port", peerPort))
+		attrs = append(attrs, otelkv.Int("net.peer.port", peerPort))
 	}
 	hostIP, hostName, hostPort := "", "", 0
 	for _, someHost := range []string{request.Host, request.Header.Get("Host"), request.URL.Host} {
@@ -109,13 +108,13 @@ func NetAttributesFromHTTPRequest(network string, request *http.Request) []otelc
 		}
 	}
 	if hostIP != "" {
-		attrs = append(attrs, otelkey.String("net.host.ip", hostIP))
+		attrs = append(attrs, otelkv.String("net.host.ip", hostIP))
 	}
 	if hostName != "" {
-		attrs = append(attrs, otelkey.String("net.host.name", hostName))
+		attrs = append(attrs, otelkv.String("net.host.name", hostName))
 	}
 	if hostPort != 0 {
-		attrs = append(attrs, otelkey.Int("net.host.port", hostPort))
+		attrs = append(attrs, otelkv.Int("net.host.port", hostPort))
 	}
 	return attrs
 }
@@ -123,9 +122,9 @@ func NetAttributesFromHTTPRequest(network string, request *http.Request) []otelc
 // EndUserAttributesFromHTTPRequest generates attributes of the
 // enduser namespace as specified by the OpenTelemetry specification
 // for a span.
-func EndUserAttributesFromHTTPRequest(request *http.Request) []otelcore.KeyValue {
+func EndUserAttributesFromHTTPRequest(request *http.Request) []otelkv.KeyValue {
 	if username, _, ok := request.BasicAuth(); ok {
-		return []otelcore.KeyValue{otelkey.String("enduser.id", username)}
+		return []otelkv.KeyValue{otelkv.String("enduser.id", username)}
 	}
 	return nil
 }
@@ -134,13 +133,13 @@ func EndUserAttributesFromHTTPRequest(request *http.Request) []otelcore.KeyValue
 // http namespace as specified by the OpenTelemetry specification for
 // a span on the server side. Currently, only basic authentication is
 // supported.
-func HTTPServerAttributesFromHTTPRequest(serverName, route string, request *http.Request) []otelcore.KeyValue {
-	attrs := []otelcore.KeyValue{
-		otelkey.String("http.method", request.Method),
-		otelkey.String("http.target", request.RequestURI),
+func HTTPServerAttributesFromHTTPRequest(serverName, route string, request *http.Request) []otelkv.KeyValue {
+	attrs := []otelkv.KeyValue{
+		otelkv.String("http.method", request.Method),
+		otelkv.String("http.target", request.RequestURI),
 	}
 	if serverName != "" {
-		attrs = append(attrs, otelkey.String("http.server_name", serverName))
+		attrs = append(attrs, otelkv.String("http.server_name", serverName))
 	}
 	scheme := ""
 	if request.TLS != nil {
@@ -148,18 +147,18 @@ func HTTPServerAttributesFromHTTPRequest(serverName, route string, request *http
 	} else {
 		scheme = "http"
 	}
-	attrs = append(attrs, otelkey.String("http.scheme", scheme))
+	attrs = append(attrs, otelkv.String("http.scheme", scheme))
 	if route != "" {
-		attrs = append(attrs, otelkey.String("http.route", route))
+		attrs = append(attrs, otelkv.String("http.route", route))
 	}
 	if request.Host != "" {
-		attrs = append(attrs, otelkey.String("http.host", request.Host))
+		attrs = append(attrs, otelkv.String("http.host", request.Host))
 	}
 	if ua := request.UserAgent(); ua != "" {
-		attrs = append(attrs, otelkey.String("http.user_agent", ua))
+		attrs = append(attrs, otelkv.String("http.user_agent", ua))
 	}
 	if values, ok := request.Header["X-Forwarded-For"]; ok && len(values) > 0 {
-		attrs = append(attrs, otelkey.String("http.client_ip", values[0]))
+		attrs = append(attrs, otelkv.String("http.client_ip", values[0]))
 	}
 	flavor := ""
 	if request.ProtoMajor == 1 {
@@ -168,7 +167,7 @@ func HTTPServerAttributesFromHTTPRequest(serverName, route string, request *http
 		flavor = "2"
 	}
 	if flavor != "" {
-		attrs = append(attrs, otelkey.String("http.flavor", flavor))
+		attrs = append(attrs, otelkv.String("http.flavor", flavor))
 	}
 	return attrs
 }
@@ -176,13 +175,13 @@ func HTTPServerAttributesFromHTTPRequest(serverName, route string, request *http
 // HTTPAttributesFromHTTPStatusCode generates attributes of the http
 // namespace as specified by the OpenTelemetry specification for a
 // span.
-func HTTPAttributesFromHTTPStatusCode(code int) []otelcore.KeyValue {
-	attrs := []otelcore.KeyValue{
-		otelkey.Int("http.status_code", code),
+func HTTPAttributesFromHTTPStatusCode(code int) []otelkv.KeyValue {
+	attrs := []otelkv.KeyValue{
+		otelkv.Int("http.status_code", code),
 	}
 	text := http.StatusText(code)
 	if text != "" {
-		attrs = append(attrs, otelkey.String("http.status_text", text))
+		attrs = append(attrs, otelkv.String("http.status_text", text))
 	}
 	return attrs
 }

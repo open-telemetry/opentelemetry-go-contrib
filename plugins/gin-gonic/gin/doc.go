@@ -1,4 +1,4 @@
-// Copyright 2020, OpenTelemetry Authors
+// Copyright The OpenTelemetry Authors
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -12,18 +12,11 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package trace_test
-
-import (
-	"testing"
-
-	"github.com/stretchr/testify/assert"
-
-	"go.opentelemetry.io/contrib/plugins/sample/trace"
-)
-
-// Register registers sample plugin to instrument a Sample appliction.
-func TestRegister(t *testing.T) {
-	err := trace.Register()
-	assert.NoError(t, err)
-}
+// Package gin provides functions to trace the gin-gonic/gin package
+// (https://github.com/gin-gonic/gin).
+//
+// Currently there are two ways the code can be instrumented. One is
+// instrumenting the routing of a received message (the Middleware
+// function) and instrumenting the response generation through
+// template evaluation (the HTML function).
+package gin // import "go.opentelemetry.io/contrib/plugins/gin-gonic/gin"

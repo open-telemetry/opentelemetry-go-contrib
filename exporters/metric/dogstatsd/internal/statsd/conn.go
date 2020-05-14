@@ -27,7 +27,7 @@ import (
 	"net/url"
 	"strconv"
 
-	"go.opentelemetry.io/otel/api/core"
+	"go.opentelemetry.io/otel/api/metric"
 	"go.opentelemetry.io/otel/api/unit"
 	export "go.opentelemetry.io/otel/sdk/export/metric"
 	"go.opentelemetry.io/otel/sdk/export/metric/aggregator"
@@ -50,6 +50,9 @@ type (
 
 		// MaxPacketSize this limits the packet size for packet-oriented transports.
 		MaxPacketSize int
+
+		// Prefix will be prepended to every metric name.
+		Prefix string
 
 		// TODO support Dial and Write timeouts
 	}
@@ -285,7 +288,10 @@ func (e *Exporter) formatMetric(rec export.Record, res *resource.Resource, pos i
 
 // formatSingleStat encodes a single item of statsd data followed by a
 // newline.
-func (e *Exporter) formatSingleStat(rec export.Record, res *resource.Resource, val core.Number, fmtStr string, buf *bytes.Buffer) {
+func (e *Exporter) formatSingleStat(rec export.Record, res *resource.Resource, val metric.Number, fmtStr string, buf *bytes.Buffer) {
+	if e.config.Prefix != "" {
+		_, _ = buf.WriteString(e.config.Prefix)
+	}
 	e.adapter.AppendName(rec, buf)
 	_, _ = buf.WriteRune(':')
 	writeNumber(buf, val, rec.Descriptor().NumberKind())
@@ -295,15 +301,15 @@ func (e *Exporter) formatSingleStat(rec export.Record, res *resource.Resource, v
 	_, _ = buf.WriteRune('\n')
 }
 
-func writeNumber(buf *bytes.Buffer, num core.Number, kind core.NumberKind) {
+func writeNumber(buf *bytes.Buffer, num metric.Number, kind metric.NumberKind) {
 	var tmp [128]byte
 	var conv []byte
 	switch kind {
-	case core.Int64NumberKind:
+	case metric.Int64NumberKind:
 		conv = strconv.AppendInt(tmp[:0], num.AsInt64(), 10)
-	case core.Float64NumberKind:
+	case metric.Float64NumberKind:
 		conv = strconv.AppendFloat(tmp[:0], num.AsFloat64(), 'g', -1, 64)
-	case core.Uint64NumberKind:
+	case metric.Uint64NumberKind:
 		conv = strconv.AppendUint(tmp[:0], num.AsUint64(), 10)
 	}
 	_, _ = buf.Write(conv)

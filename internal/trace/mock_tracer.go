@@ -21,7 +21,6 @@ import (
 	"sync"
 	"sync/atomic"
 
-	otelcore "go.opentelemetry.io/otel/api/core"
 	oteltrace "go.opentelemetry.io/otel/api/trace"
 )
 
@@ -115,16 +114,16 @@ func (mt *Tracer) Start(ctx context.Context, name string, o ...oteltrace.StartOp
 		op(&opts)
 	}
 	var span *Span
-	var sc otelcore.SpanContext
+	var sc oteltrace.SpanContext
 
 	parentSpanContext := getSpanContext(ctx, opts.NewRoot)
 	parentSpanID := parentSpanContext.SpanID
 
 	if !parentSpanContext.IsValid() {
-		sc = otelcore.SpanContext{}
+		sc = oteltrace.SpanContext{}
 		_, _ = rand.Read(sc.TraceID[:])
 		if mt.Sampled {
-			sc.TraceFlags = otelcore.TraceFlagsSampled
+			sc.TraceFlags = oteltrace.FlagsSampled
 		}
 	} else {
 		sc = parentSpanContext
@@ -149,9 +148,9 @@ func (mt *Tracer) Start(ctx context.Context, name string, o ...oteltrace.StartOp
 	return oteltrace.ContextWithSpan(ctx, span), span
 }
 
-func getSpanContext(ctx context.Context, ignoreContext bool) otelcore.SpanContext {
+func getSpanContext(ctx context.Context, ignoreContext bool) oteltrace.SpanContext {
 	if ignoreContext {
-		return otelcore.EmptySpanContext()
+		return oteltrace.EmptySpanContext()
 	}
 
 	lsctx := oteltrace.SpanFromContext(ctx).SpanContext()
@@ -164,5 +163,5 @@ func getSpanContext(ctx context.Context, ignoreContext bool) otelcore.SpanContex
 		return rsctx
 	}
 
-	return otelcore.EmptySpanContext()
+	return oteltrace.EmptySpanContext()
 }
