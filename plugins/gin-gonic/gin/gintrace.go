@@ -24,7 +24,7 @@ import (
 
 	"go.opentelemetry.io/contrib/internal/trace"
 	otelglobal "go.opentelemetry.io/otel/api/global"
-	otelkey "go.opentelemetry.io/otel/api/key"
+	"go.opentelemetry.io/otel/api/kv"
 	otelpropagation "go.opentelemetry.io/otel/api/propagation"
 	oteltrace "go.opentelemetry.io/otel/api/trace"
 )
@@ -80,7 +80,7 @@ func Middleware(service string, opts ...Option) gin.HandlerFunc {
 		span.SetAttributes(attrs...)
 		span.SetStatus(spanStatus, spanMessage)
 		if len(c.Errors) > 0 {
-			span.SetAttributes(otelkey.String("gin.errors", c.Errors.String()))
+			span.SetAttributes(kv.String("gin.errors", c.Errors.String()))
 		}
 	}
 }
@@ -102,7 +102,7 @@ func HTML(c *gin.Context, code int, name string, obj interface{}) {
 	defer func() {
 		c.Request = c.Request.WithContext(savedContext)
 	}()
-	opt := oteltrace.WithAttributes(otelkey.String("go.template", name))
+	opt := oteltrace.WithAttributes(kv.String("go.template", name))
 	ctx, span := tracer.Start(savedContext, "gin.renderer.html", opt)
 	defer func() {
 		if r := recover(); r != nil {
