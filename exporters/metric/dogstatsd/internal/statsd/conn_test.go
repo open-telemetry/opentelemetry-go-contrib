@@ -25,8 +25,7 @@ import (
 	"github.com/stretchr/testify/require"
 
 	"go.opentelemetry.io/contrib/exporters/metric/dogstatsd/internal/statsd"
-	"go.opentelemetry.io/otel/api/core"
-	"go.opentelemetry.io/otel/api/key"
+	"go.opentelemetry.io/otel/api/kv"
 	"go.opentelemetry.io/otel/api/label"
 	"go.opentelemetry.io/otel/api/metric"
 	"go.opentelemetry.io/otel/api/unit"
@@ -111,9 +110,9 @@ timer.B.D:%s|ms
 		adapter := ao.adapter
 		expected := ao.expected
 		t.Run(fmt.Sprintf("%T", adapter), func(t *testing.T) {
-			for _, nkind := range []core.NumberKind{
-				core.Float64NumberKind,
-				core.Int64NumberKind,
+			for _, nkind := range []metric.NumberKind{
+				metric.Float64NumberKind,
+				metric.Int64NumberKind,
 			} {
 				t.Run(nkind.String(), func(t *testing.T) {
 					ctx := context.Background()
@@ -137,9 +136,9 @@ timer.B.D:%s|ms
 					tdesc := metric.NewDescriptor(
 						"timer", metric.MeasureKind, nkind, metric.WithUnit(unit.Milliseconds))
 
-					labels := []core.KeyValue{
-						key.New("A").String("B"),
-						key.New("C").String("D"),
+					labels := []kv.KeyValue{
+						kv.String("A", "B"),
+						kv.String("C", "D"),
 					}
 					const value = 123.456
 
@@ -152,7 +151,7 @@ timer.B.D:%s|ms
 					require.Nil(t, err)
 
 					var vfmt string
-					if nkind == core.Int64NumberKind {
+					if nkind == metric.Int64NumberKind {
 						fv := value
 						vfmt = strconv.FormatInt(int64(fv), 10)
 					} else {
@@ -167,10 +166,10 @@ timer.B.D:%s|ms
 	}
 }
 
-func makeLabels(offset, nkeys int) []core.KeyValue {
-	r := make([]core.KeyValue, nkeys)
+func makeLabels(offset, nkeys int) []kv.KeyValue {
+	r := make([]kv.KeyValue, nkeys)
 	for i := range r {
-		r[i] = key.New(fmt.Sprint("k", offset+i)).String(fmt.Sprint("v", offset+i))
+		r[i] = kv.String(fmt.Sprint("k", offset+i), fmt.Sprint("v", offset+i))
 	}
 	return r
 }
@@ -290,7 +289,7 @@ func TestPacketSplit(t *testing.T) {
 			}
 
 			checkpointSet := test.NewCheckpointSet()
-			desc := metric.NewDescriptor("counter", metric.CounterKind, core.Int64NumberKind)
+			desc := metric.NewDescriptor("counter", metric.CounterKind, metric.Int64NumberKind)
 
 			var expected []string
 
@@ -327,7 +326,7 @@ func TestArraySplit(t *testing.T) {
 	}
 
 	checkpointSet := test.NewCheckpointSet()
-	desc := metric.NewDescriptor("measure", metric.MeasureKind, core.Int64NumberKind)
+	desc := metric.NewDescriptor("measure", metric.MeasureKind, metric.Int64NumberKind)
 
 	for i := 0; i < 1024; i++ {
 		checkpointSet.AddMeasure(&desc, 100)
@@ -341,4 +340,30 @@ func TestArraySplit(t *testing.T) {
 	for _, result := range writer.vec {
 		require.LessOrEqual(t, len(result), config.MaxPacketSize)
 	}
+}
+
+func TestPrefix(t *testing.T) {
+	ctx := context.Background()
+	writer := &testWriter{}
+	config := statsd.Config{
+		Writer:        writer,
+		MaxPacketSize: 1024,
+		Prefix:        "veryspecial.",
+	}
+	adapter := newWithTagsAdapter()
+	exp, err := statsd.NewExporter(config, adapter)
+	if err != nil {
+		t.Fatal("New error: ", err)
+	}
+
+	checkpointSet := test.NewCheckpointSet()
+	desc := metric.NewDescriptor("measure", metric.MeasureKind, metric.Int64NumberKind)
+
+	checkpointSet.AddMeasure(&desc, 100)
+
+	err = exp.Export(ctx, nil, checkpointSet)
+	require.Nil(t, err)
+
+	require.Equal(t, `veryspecial.measure:100|h|#
+`, strings.Join(writer.vec, ""))
 }

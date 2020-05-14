@@ -25,8 +25,8 @@ import (
 	"go.opentelemetry.io/otel/sdk/metric/aggregator/array"
 	"go.opentelemetry.io/otel/sdk/metric/aggregator/lastvalue"
 	"go.opentelemetry.io/otel/sdk/metric/aggregator/sum"
-	"go.opentelemetry.io/otel/sdk/metric/batcher/ungrouped"
 	"go.opentelemetry.io/otel/sdk/metric/controller/push"
+	integrator "go.opentelemetry.io/otel/sdk/metric/integrator/simple"
 	"go.opentelemetry.io/otel/sdk/resource"
 )
 
@@ -89,11 +89,11 @@ func NewExportPipeline(config Config, period time.Duration, opts ...push.Option)
 		return nil, err
 	}
 
-	// The ungrouped batcher ensures that the export sees the full
+	// The simple integrator ensures that the export sees the full
 	// set of labels as dogstatsd tags.
-	batcher := ungrouped.New(exporter, false)
+	integrator := integrator.New(exporter, false)
 
-	pusher := push.New(batcher, exporter, period, opts...)
+	pusher := push.New(integrator, exporter, period, opts...)
 	pusher.Start()
 
 	return pusher, nil
