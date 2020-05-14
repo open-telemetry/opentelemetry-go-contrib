@@ -23,7 +23,7 @@ import (
 	"time"
 
 	"go.opentelemetry.io/contrib/exporters/metric/dogstatsd"
-	"go.opentelemetry.io/otel/api/key"
+	"go.opentelemetry.io/otel/api/kv"
 	"go.opentelemetry.io/otel/api/metric"
 	"go.opentelemetry.io/otel/sdk/metric/controller/push"
 	"go.opentelemetry.io/otel/sdk/resource"
@@ -62,14 +62,14 @@ func ExampleNew() {
 		// In real code, use the URL field:
 		//
 		// URL: fmt.Sprint("unix://", path),
-	}, time.Minute, push.WithResource(resource.New(key.String("host", "name"))))
+	}, time.Minute, push.WithResource(resource.New(kv.String("host", "name"))))
 	if err != nil {
 		log.Fatal("Could not initialize dogstatsd exporter:", err)
 	}
 
 	ctx := context.Background()
 
-	key := key.New("key")
+	key := kv.Key("key")
 
 	// pusher implements the metric.MeterProvider interface:
 	meter := pusher.Meter("example")

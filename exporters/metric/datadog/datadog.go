@@ -7,9 +7,10 @@ import (
 
 	"github.com/DataDog/datadog-go/statsd"
 
-	"go.opentelemetry.io/otel/api/core"
+	"go.opentelemetry.io/otel/api/metric"
 	export "go.opentelemetry.io/otel/sdk/export/metric"
 	"go.opentelemetry.io/otel/sdk/export/metric/aggregator"
+	"go.opentelemetry.io/otel/sdk/resource"
 )
 
 const (
@@ -65,7 +66,8 @@ func defaultFormatter(namespace, name string) string {
 	return name
 }
 
-func (e *Exporter) Export(ctx context.Context, cs export.CheckpointSet) error {
+func (e *Exporter) Export(ctx context.Context, _ *resource.Resource, cs export.CheckpointSet) error {
+	// TODO: Use the Resource argument.
 	return cs.ForEach(func(r export.Record) error {
 		agg := r.Aggregator()
 		name := e.sanitizeMetricName(r.Descriptor().LibraryName(), r.Descriptor().Name())
@@ -94,7 +96,7 @@ func (e *Exporter) Export(ctx context.Context, cs export.CheckpointSet) error {
 		case aggregator.MinMaxSumCount:
 			type record struct {
 				name string
-				f    func() (core.Number, error)
+				f    func() (metric.Number, error)
 			}
 			recs := []record{
 				{
@@ -108,10 +110,10 @@ func (e *Exporter) Export(ctx context.Context, cs export.CheckpointSet) error {
 			}
 			if dist, ok := agg.(aggregator.Distribution); ok {
 				recs = append(recs,
-					record{name: name + ".median", f: func() (core.Number, error) {
+					record{name: name + ".median", f: func() (metric.Number, error) {
 						return dist.Quantile(0.5)
 					}},
-					record{name: name + ".p95", f: func() (core.Number, error) {
+					record{name: name + ".p95", f: func() (metric.Number, error) {
 						return dist.Quantile(0.95)
 					}},
 				)
@@ -166,13 +168,13 @@ func sanitizeString(str string) string {
 	return reg.ReplaceAllString(str, "_")
 }
 
-func metricValue(kind core.NumberKind, number core.Number) float64 {
+func metricValue(kind metric.NumberKind, number metric.Number) float64 {
 	switch kind {
-	case core.Float64NumberKind:
+	case metric.Float64NumberKind:
 		return number.AsFloat64()
-	case core.Int64NumberKind:
+	case metric.Int64NumberKind:
 		return float64(number.AsInt64())
-	case core.Uint64NumberKind:
+	case metric.Uint64NumberKind:
 		return float64(number.AsUint64())
 	}
 	return float64(number)

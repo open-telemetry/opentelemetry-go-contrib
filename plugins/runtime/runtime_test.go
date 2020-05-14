@@ -1,4 +1,4 @@
-// Copyright 2020, OpenTelemetry Authors
+// Copyright The OpenTelemetry Authors
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -12,18 +12,22 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package trace_test
+package runtime
 
 import (
 	"testing"
+	"time"
 
 	"github.com/stretchr/testify/assert"
 
-	"go.opentelemetry.io/contrib/plugins/sample/trace"
+	"go.opentelemetry.io/otel/api/global"
 )
 
-// Register registers sample plugin to instrument a Sample appliction.
-func TestRegister(t *testing.T) {
-	err := trace.Register()
+func TestRuntime(t *testing.T) {
+	meter := global.Meter("test")
+	r := New(meter, time.Second)
+	err := r.Start()
 	assert.NoError(t, err)
+	time.Sleep(time.Second)
+	r.Stop()
 }
