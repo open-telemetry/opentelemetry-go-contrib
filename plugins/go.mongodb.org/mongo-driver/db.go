@@ -10,43 +10,43 @@
 // `NewMonitor` will return an event.CommandMonitor which is used to trace requests.
 package mongo
 
-import "go.opentelemetry.io/otel/api/core"
+import "go.opentelemetry.io/otel/api/kv"
 
 const (
-	DBApplicationKey = core.Key("db.application")
-	DBNameKey        = core.Key("db.name")
-	DBTypeKey        = core.Key("db.type")
-	DBInstanceKey    = core.Key("db.instance")
-	DBUserKey        = core.Key("db.user")
-	DBStatementKey   = core.Key("db.statement")
+	DBApplicationKey = kv.Key("db.application")
+	DBNameKey        = kv.Key("db.name")
+	DBTypeKey        = kv.Key("db.type")
+	DBInstanceKey    = kv.Key("db.instance")
+	DBUserKey        = kv.Key("db.user")
+	DBStatementKey   = kv.Key("db.statement")
 )
 
 // DBApplication indicates the application using the database.
-func DBApplication(dbApplication string) core.KeyValue {
+func DBApplication(dbApplication string) kv.KeyValue {
 	return DBApplicationKey.String(dbApplication)
 }
 
 // DBName indicates the database name.
-func DBName(dbName string) core.KeyValue {
+func DBName(dbName string) kv.KeyValue {
 	return DBNameKey.String(dbName)
 }
 
 // DBType indicates the type of Database.
-func DBType(dbType string) core.KeyValue {
+func DBType(dbType string) kv.KeyValue {
 	return DBTypeKey.String(dbType)
 }
 
 // DBInstance indicates the instance name of Database.
-func DBInstance(dbInstance string) core.KeyValue {
+func DBInstance(dbInstance string) kv.KeyValue {
 	return DBInstanceKey.String(dbInstance)
 }
 
 // DBUser indicates the user name of Database, e.g. "readonly_user" or "reporting_user".
-func DBUser(dbUser string) core.KeyValue {
+func DBUser(dbUser string) kv.KeyValue {
 	return DBUserKey.String(dbUser)
 }
 
 // DBStatement records a database statement for the given database type.
-func DBStatement(dbStatement string) core.KeyValue {
+func DBStatement(dbStatement string) kv.KeyValue {
 	return DBStatementKey.String(dbStatement)
 }
