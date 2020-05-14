@@ -32,7 +32,7 @@ func TestMain(m *testing.M) {
 }
 
 func Test(t *testing.T) {
-  mt := mocktracer.NewTracer("mongodb")
+	mt := mocktracer.NewTracer("mongodb")
 
 	hostname, port := "localhost", "27017"
 
@@ -50,10 +50,10 @@ func Test(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	client.
-		Database("test-database").
-		Collection("test-collection").
-		InsertOne(ctx, bson.D{{Key: "test-item", Value: "test-value"}})
+	_, err = client.Database("test-database").Collection("test-collection").InsertOne(ctx, bson.D{{Key: "test-item", Value: "test-value"}})
+	if err != nil {
+		t.Fatal(err)
+	}
 
 	span.End()
 

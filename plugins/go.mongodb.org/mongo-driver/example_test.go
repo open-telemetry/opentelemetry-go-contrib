@@ -27,7 +27,7 @@ func Example() {
 	db := client.Database("example")
 	inventory := db.Collection("inventory")
 
-	inventory.InsertOne(context.Background(), bson.D{
+	_, err = inventory.InsertOne(context.Background(), bson.D{
 		{Key: "item", Value: "canvas"},
 		{Key: "qty", Value: 100},
 		{Key: "attributes", Value: bson.A{"cotton"}},
@@ -37,4 +37,7 @@ func Example() {
 			{Key: "uom", Value: "cm"},
 		}},
 	})
+	if err != nil {
+		panic(err)
+	}
 }
