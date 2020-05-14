@@ -13,7 +13,7 @@
 // limitations under the License.
 
 // Package mongo-driver provides functions to trace the
-// mongodb/mongo-go-driver package (https://github.com/mongodb/mongo-go-driver).
+// [go.mongodb.org/mongo-driver/mongo](https://github.com/mongodb/mongo-go-driver) package.
 // It support v0.2.0 of github.com/mongodb/mongo-go-driver
 //
 // `NewMonitor` will return an event.CommandMonitor which is used to trace
