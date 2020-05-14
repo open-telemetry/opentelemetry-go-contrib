@@ -12,8 +12,6 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-// Package ext contains a set of Datadog-specific constants. Most of them are used
-// for setting span metadata.
 package mongo
 
 import "go.opentelemetry.io/otel/api/kv"
