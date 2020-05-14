@@ -22,8 +22,7 @@ import (
 	"github.com/stretchr/testify/require"
 
 	"go.opentelemetry.io/contrib/exporters/metric/dogstatsd"
-	"go.opentelemetry.io/otel/api/core"
-	"go.opentelemetry.io/otel/api/key"
+	"go.opentelemetry.io/otel/api/kv"
 	"go.opentelemetry.io/otel/api/metric"
 	"go.opentelemetry.io/otel/exporters/metric/test"
 	"go.opentelemetry.io/otel/sdk/metric/aggregator/sum"
@@ -35,12 +34,12 @@ import (
 func TestDogstatsLabels(t *testing.T) {
 	type testCase struct {
 		name      string
-		resources []core.KeyValue
-		labels    []core.KeyValue
+		resources []kv.KeyValue
+		labels    []kv.KeyValue
 		expected  string
 	}
 
-	kvs := func(kvs ...core.KeyValue) []core.KeyValue { return kvs }
+	kvs := func(kvs ...kv.KeyValue) []kv.KeyValue { return kvs }
 
 	cases := []testCase{
 		{
@@ -51,25 +50,25 @@ func TestDogstatsLabels(t *testing.T) {
 		},
 		{
 			name:      "only resources",
-			resources: kvs(key.String("R", "S")),
+			resources: kvs(kv.String("R", "S")),
 			labels:    nil,
 			expected:  "test.name:123|c|#R:S\n",
 		},
 		{
 			name:      "only labels",
 			resources: nil,
-			labels:    kvs(key.String("A", "B")),
+			labels:    kvs(kv.String("A", "B")),
 			expected:  "test.name:123|c|#A:B\n",
 		},
 		{
 			name:      "both resources and labels",
-			resources: kvs(key.String("R", "S")),
-			labels:    kvs(key.String("A", "B")),
+			resources: kvs(kv.String("R", "S")),
+			labels:    kvs(kv.String("A", "B")),
 			expected:  "test.name:123|c|#R:S,A:B\n",
 		},
 		{
-			resources: kvs(key.String("A", "R")),
-			labels:    kvs(key.String("A", "B")),
+			resources: kvs(kv.String("A", "R")),
+			labels:    kvs(kv.String("A", "B")),
 			expected:  "test.name:123|c|#A:R,A:B\n",
 		},
 	}
@@ -79,9 +78,9 @@ func TestDogstatsLabels(t *testing.T) {
 			ctx := context.Background()
 			checkpointSet := test.NewCheckpointSet()
 
-			desc := metric.NewDescriptor("test.name", metric.CounterKind, core.Int64NumberKind)
+			desc := metric.NewDescriptor("test.name", metric.CounterKind, metric.Int64NumberKind)
 			cagg := sum.New()
-			_ = cagg.Update(ctx, core.NewInt64Number(123), &desc)
+			_ = cagg.Update(ctx, metric.NewInt64Number(123), &desc)
 			cagg.Checkpoint(ctx, &desc)
 
 			checkpointSet.Add(&desc, cagg, tc.labels...)

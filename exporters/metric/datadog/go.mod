@@ -5,5 +5,5 @@ go 1.14
 require (
 	github.com/DataDog/datadog-go v3.5.0+incompatible
 	github.com/DataDog/sketches-go v0.0.0-20190923095040-43f19ad77ff7
-	go.opentelemetry.io/otel v0.4.2
+	go.opentelemetry.io/otel v0.5.0
 )
