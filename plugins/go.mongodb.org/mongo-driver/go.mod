@@ -13,7 +13,3 @@ require (
 	golang.org/x/crypto v0.0.0-20191105034135-c7e5f84aec59 // indirect
 	golang.org/x/sync v0.0.0-20190911185100-cd5d95a43a6e // indirect
 )
-
-replace go.opentelemetry.io/contrib/internal/ext => ../../../internal/ext
-
-replace go.opentelemetry.io/contrib/internal/mocktracer => ../../../internal/mocktracer
