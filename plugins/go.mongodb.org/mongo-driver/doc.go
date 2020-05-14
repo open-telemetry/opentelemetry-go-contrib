@@ -12,4 +12,4 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package mongo // import "go.opentelemetry.io/contrib/go.mongodb.org/mongo-driver/mongo"
+package mongo // import "go.opentelemetry.io/contrib/plugins/go.mongodb.org/mongo-driver"

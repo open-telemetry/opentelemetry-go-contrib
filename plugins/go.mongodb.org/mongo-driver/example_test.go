@@ -21,7 +21,7 @@ import (
 	"go.mongodb.org/mongo-driver/mongo"
 	"go.mongodb.org/mongo-driver/mongo/options"
 
-	mongotrace "go.opentelemetry.io/contrib/go.mongodb.org/mongo-driver/mongo"
+	mongotrace "go.opentelemetry.io/contrib/plugins/go.mongodb.org/mongo-driver"
 )
 
 func Example() {
