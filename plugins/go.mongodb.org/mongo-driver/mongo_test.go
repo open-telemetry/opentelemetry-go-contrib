@@ -51,7 +51,7 @@ func Test(t *testing.T) {
 
 	addr := fmt.Sprintf("mongodb://localhost:27017/?connect=direct")
 	opts := options.Client()
-	opts.Monitor = NewMonitor("test-service", WithTracer(mt))
+	opts.Monitor = NewMonitor("mongo", WithTracer(mt))
 	opts.ApplyURI(addr)
 	client, err := mongo.Connect(ctx, opts)
 	if err != nil {
