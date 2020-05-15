@@ -108,7 +108,6 @@ should be its own module. A contrib package may contain more than one go package
 
 Approvers:
 
-- [Krzesimir Nowak](https://github.com/krnowak), Kinvolk
 - [Liz Fong-Jones](https://github.com/lizthegrey), Honeycomb
 - [Gustavo Silva Paiva](https://github.com/paivagustavo), Stilingue
 - [Evan Torrie](https://github.com/evantorrie), Comcast
