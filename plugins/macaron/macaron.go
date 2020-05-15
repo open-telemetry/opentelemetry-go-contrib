@@ -27,7 +27,6 @@ import (
 )
 
 const (
-	tracerKey  = "otel-go-contrib-tracer"
 	tracerName = "go.opentelemetry.io/contrib/plugins/macaron"
 )
 
