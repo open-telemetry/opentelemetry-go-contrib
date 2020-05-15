@@ -23,7 +23,7 @@ import (
 	macarontrace "go.opentelemetry.io/contrib/plugins/macaron"
 
 	otelglobal "go.opentelemetry.io/otel/api/global"
-	"go.opentelemetry.io/otel/api/kv"
+	otelkv "go.opentelemetry.io/otel/api/kv"
 	oteltrace "go.opentelemetry.io/otel/api/trace"
 	oteltracestdout "go.opentelemetry.io/otel/exporters/trace/stdout"
 	sdktrace "go.opentelemetry.io/otel/sdk/trace"
@@ -62,7 +62,7 @@ func initTracer() {
 }
 
 func getUser(ctx context.Context, id string) string {
-	_, span := tracer.Start(ctx, "getUser", oteltrace.WithAttributes(kv.String("id", id)))
+	_, span := tracer.Start(ctx, "getUser", oteltrace.WithAttributes(otelkv.String("id", id)))
 	defer span.End()
 	if id == "123" {
 		return "macarontrace tester"
