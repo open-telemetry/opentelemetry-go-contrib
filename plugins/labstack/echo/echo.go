@@ -27,7 +27,7 @@ import (
 )
 
 const (
-	tracerKey  = "otel-go-contrib-tracer"
+	tracerKey  = "otel-go-contrib-tracer-labstack-echo"
 	tracerName = "go.opentelemetry.io/contrib/plugins/labstack/echo"
 )
 
