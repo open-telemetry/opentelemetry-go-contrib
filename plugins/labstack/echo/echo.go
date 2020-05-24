@@ -33,17 +33,17 @@ const (
 
 // Middleware returns echo middleware which will trace incoming requests.
 func Middleware(service string, opts ...Option) echo.MiddlewareFunc {
+	cfg := Config{}
+	for _, opt := range opts {
+		opt(&cfg)
+	}
+	if cfg.Tracer == nil {
+		cfg.Tracer = otelglobal.Tracer(tracerName)
+	}
+	if cfg.Propagators == nil {
+		cfg.Propagators = otelglobal.Propagators()
+	}
 	return func(next echo.HandlerFunc) echo.HandlerFunc {
-		cfg := Config{}
-		for _, opt := range opts {
-			opt(&cfg)
-		}
-		if cfg.Tracer == nil {
-			cfg.Tracer = otelglobal.Tracer(tracerName)
-		}
-		if cfg.Propagators == nil {
-			cfg.Propagators = otelglobal.Propagators()
-		}
 		return func(c echo.Context) error {
 			c.Set(tracerKey, cfg.Tracer)
 			request := c.Request()
