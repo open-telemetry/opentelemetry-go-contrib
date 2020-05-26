@@ -12,22 +12,21 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package runtime
+package runtime_test
 
 import (
 	"testing"
 	"time"
 
 	"github.com/stretchr/testify/assert"
+	"go.opentelemetry.io/contrib/plugins/runtime"
 
 	"go.opentelemetry.io/otel/api/global"
 )
 
 func TestRuntime(t *testing.T) {
 	meter := global.Meter("test")
-	r := New(meter, time.Second)
-	err := r.Start()
+	err := runtime.Start(meter, time.Second)
 	assert.NoError(t, err)
 	time.Sleep(time.Second)
-	r.Stop()
 }
