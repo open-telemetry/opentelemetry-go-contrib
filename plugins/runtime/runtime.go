@@ -17,6 +17,7 @@ package runtime // import "go.opentelemetry.io/contrib/plugins/runtime"
 import (
 	"context"
 	goruntime "runtime"
+	"sync"
 	"time"
 
 	"go.opentelemetry.io/otel/api/metric"
@@ -104,9 +105,17 @@ func (r *runtime) registerMemStats() error {
 		lastNumGC    uint32
 		lastMemStats time.Time
 		memStats     goruntime.MemStats
+
+		// lock prevents a race between batch observer and instrument registration.
+		lock sync.Mutex
 	)
 
+	lock.Lock()
+	defer lock.Unlock()
+
 	batchObserver := r.meter.NewBatchObserver(func(ctx context.Context, result metric.BatchObserverResult) {
+		lock.Lock()
+		defer lock.Unlock()
 
 		now := time.Now()
 		if now.Sub(lastMemStats) >= r.interval {
