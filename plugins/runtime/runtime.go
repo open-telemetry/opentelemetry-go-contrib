@@ -14,9 +14,6 @@
 
 package runtime // import "go.opentelemetry.io/contrib/plugins/runtime"
 
-// issues induced by this file:
-// want nanosecond units in otel/api/unit
-
 import (
 	"context"
 	goruntime "runtime"
@@ -80,8 +77,6 @@ func (r *runtime) register() error {
 	if err := r.registerMemStats(); err != nil {
 		return err
 	}
-
-	// TODO go version as tag: make this a sub-package for providing standard runtime labels?
 
 	return nil
 }
