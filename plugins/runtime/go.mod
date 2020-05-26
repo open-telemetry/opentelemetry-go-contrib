@@ -6,5 +6,5 @@ replace go.opentelemetry.io/otel => ../../../../../go.opentelemetry.io
 
 require (
 	github.com/stretchr/testify v1.4.0
-	go.opentelemetry.io/otel v0.5.0
+	go.opentelemetry.io/otel v0.6.0
 )
