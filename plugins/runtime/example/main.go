@@ -32,11 +32,11 @@ func initMeter() *push.Controller {
 	pusher, err := metricstdout.NewExportPipeline(metricstdout.Config{
 		Quantiles:   []float64{0.5},
 		PrettyPrint: true,
-	}, 10*time.Second)
+	})
 	if err != nil {
 		log.Panicf("failed to initialize metric stdout exporter %v", err)
 	}
-	global.SetMeterProvider(pusher)
+	global.SetMeterProvider(pusher.Provider())
 	return pusher
 }
 
@@ -45,15 +45,11 @@ func main() {
 
 	meter := global.Meter("runtime")
 
-	r := runtime.New(meter, time.Second)
-	err := r.Start()
-	if err != nil {
+	if err := runtime.Start(meter, time.Second); err != nil {
 		panic(err)
 	}
 
 	stopChan := make(chan os.Signal, 1)
 	signal.Notify(stopChan, syscall.SIGTERM, syscall.SIGINT)
 	<-stopChan
-
-	r.Stop()
 }
