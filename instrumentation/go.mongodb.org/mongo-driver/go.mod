@@ -1,4 +1,4 @@
-module go.opentelemetry.io/contrib/plugins/go.mongodb.org/mongo-driver
+module go.opentelemetry.io/contrib/instrumentation/go.mongodb.org/mongo-driver
 
 go 1.13
 

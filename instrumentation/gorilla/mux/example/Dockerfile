@@ -13,7 +13,7 @@
 # limitations under the License.
 FROM golang:alpine AS base
 COPY . /src/
-WORKDIR /src/plugins/gorilla/mux
+WORKDIR /src/instrumentation/gorilla/mux
 
 FROM base AS mux-server
 RUN go install ./example/server.go

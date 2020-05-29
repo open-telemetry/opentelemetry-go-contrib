@@ -27,7 +27,7 @@ import (
 )
 
 const (
-	tracerName = "go.opentelemetry.io/contrib/instrumentations/macaron"
+	tracerName = "go.opentelemetry.io/contrib/instrumentation/macaron"
 )
 
 // Middleware returns a macaron Handler to trace requests to the server.

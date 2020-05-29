@@ -43,7 +43,7 @@ func TestChildSpanFromGlobalTracer(t *testing.T) {
 		spanTracer := span.Tracer()
 		mockTracer, ok := spanTracer.(*mocktrace.Tracer)
 		require.True(t, ok)
-		assert.Equal(t, "go.opentelemetry.io/contrib/instrumentations/macaron", mockTracer.Name)
+		assert.Equal(t, "go.opentelemetry.io/contrib/instrumentation/macaron", mockTracer.Name)
 		ctx.Resp.WriteHeader(http.StatusOK)
 	})
 

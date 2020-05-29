@@ -21,7 +21,7 @@ import (
 
 	"github.com/labstack/echo/v4"
 
-	echotrace "go.opentelemetry.io/contrib/instrumentations/labstack/echo"
+	echotrace "go.opentelemetry.io/contrib/instrumentation/labstack/echo"
 	otelglobal "go.opentelemetry.io/otel/api/global"
 	"go.opentelemetry.io/otel/api/kv"
 	oteltrace "go.opentelemetry.io/otel/api/trace"

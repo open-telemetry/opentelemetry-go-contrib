@@ -1,4 +1,4 @@
-module go.opentelemetry.io/contrib/plugins/macaron
+module go.opentelemetry.io/contrib/instrumentation/macaron
 
 go 1.14
 

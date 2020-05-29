@@ -13,7 +13,7 @@
 # limitations under the License.
 FROM golang:alpine AS base
 COPY . /src/
-WORKDIR /src/plugins/gin-gonic/gin
+WORKDIR /src/instrumentation/gin-gonic/gin
 
 FROM base AS gin-server
 RUN go install ./example/server.go

@@ -1,4 +1,4 @@
-module go.opentelemetry.io/contrib/plugins/labstack/echo
+module go.opentelemetry.io/contrib/instrumentation/labstack/echo
 
 go 1.14
 

@@ -13,7 +13,7 @@
 # limitations under the License.
 FROM golang:alpine AS base
 COPY . /src/
-WORKDIR /src/plugins/labstack/echo
+WORKDIR /src/instrumentation/labstack/echo
 
 FROM base AS echo-server
 RUN go install ./example/server.go

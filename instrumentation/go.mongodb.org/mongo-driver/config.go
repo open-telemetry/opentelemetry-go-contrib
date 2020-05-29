@@ -20,7 +20,7 @@ import (
 )
 
 const (
-	defaultTracerName = "go.opentelemetry.io/contrib/instrumentations/go.mongodb.org/mongo-driver"
+	defaultTracerName = "go.opentelemetry.io/contrib/instrumentation/go.mongodb.org/mongo-driver"
 )
 
 // Config is used to configure the mongo tracer.
@@ -45,7 +45,7 @@ type Option func(*Config)
 
 // WithTracer specifies a tracer to use for creating spans. If none is
 // specified, a tracer named
-// "go.opentelemetry.io/contrib/instrumentations/go.mongodb.org/mongo-driver"
+// "go.opentelemetry.io/contrib/instrumentation/go.mongodb.org/mongo-driver"
 // from the global provider is used.
 func WithTracer(tracer trace.Tracer) Option {
 	return func(cfg *Config) {

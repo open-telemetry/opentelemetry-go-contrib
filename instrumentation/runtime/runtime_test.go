@@ -20,7 +20,7 @@ import (
 
 	"github.com/stretchr/testify/assert"
 
-	"go.opentelemetry.io/contrib/instrumentations/runtime"
+	"go.opentelemetry.io/contrib/instrumentation/runtime"
 
 	"go.opentelemetry.io/otel/api/global"
 )

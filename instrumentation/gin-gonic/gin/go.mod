@@ -1,4 +1,4 @@
-module go.opentelemetry.io/contrib/plugins/gin-gonic/gin
+module go.opentelemetry.io/contrib/instrumentation/gin-gonic/gin
 
 go 1.14
 

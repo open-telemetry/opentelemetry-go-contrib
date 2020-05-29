@@ -31,7 +31,7 @@ import (
 
 const (
 	tracerKey  = "otel-go-contrib-tracer"
-	tracerName = "go.opentelemetry.io/contrib/instrumentations/gin-gonic/gin"
+	tracerName = "go.opentelemetry.io/contrib/instrumentation/gin-gonic/gin"
 )
 
 // Middleware returns middleware that will trace incoming requests.

@@ -1,4 +1,4 @@
-module go.opentelemetry.io/contrib/plugins/gorilla/mux
+module go.opentelemetry.io/contrib/instrumentation/gorilla/mux
 
 go 1.14
 

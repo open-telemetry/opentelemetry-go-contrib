@@ -17,4 +17,4 @@
 //
 // Currently only the routing of a received message can be
 // instrumented. To do it, use the Middleware function.
-package macaron // import "go.opentelemetry.io/contrib/instrumentations/macaron"
+package macaron // import "go.opentelemetry.io/contrib/instrumentation/macaron"

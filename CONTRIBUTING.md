@@ -91,18 +91,18 @@ merge**.
 
 ## Adding a new Contrib package
 
-To add a new contrib package follow an existing one. An empty Sample plugin
+To add a new contrib package follow an existing one. An empty Sample instrumentation
 provides base structure with an example and a test. Each contrib package 
 should be its own module. A contrib package may contain more than one go package.
 
 ### Folder Structure
-- plugins/\<plugin-package>  (**Common**)
-- plugins/\<plugin-package>/trace (**specific to trace**)
-- plugins/\<plugin-package>/metrics (**specific to metrics**)
+- instrumentation/\<instrumentation-package>  (**Common**)
+- instrumentation/\<instrumentation-package>/trace (**specific to trace**)
+- instrumentation/\<instrumentation-package>/metrics (**specific to metrics**)
 
 #### Example
-- plugins/gorm/trace
-- plugins/kafka/metrics
+- instrumentation/gorm/trace
+- instrumentation/kafka/metrics
 
 ## Approvers and Maintainers
 

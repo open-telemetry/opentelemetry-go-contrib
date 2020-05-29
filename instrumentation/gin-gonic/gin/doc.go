@@ -19,4 +19,4 @@
 // instrumenting the routing of a received message (the Middleware
 // function) and instrumenting the response generation through
 // template evaluation (the HTML function).
-package gin // import "go.opentelemetry.io/contrib/instrumentations/gin-gonic/gin"
+package gin // import "go.opentelemetry.io/contrib/instrumentation/gin-gonic/gin"
