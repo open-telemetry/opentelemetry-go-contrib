@@ -22,7 +22,7 @@ import (
 
 	"github.com/gin-gonic/gin"
 
-	gintrace "go.opentelemetry.io/contrib/plugins/gin-gonic/gin"
+	gintrace "go.opentelemetry.io/contrib/instrumentations/gin-gonic/gin"
 	otelglobal "go.opentelemetry.io/otel/api/global"
 	"go.opentelemetry.io/otel/api/kv"
 	oteltrace "go.opentelemetry.io/otel/api/trace"

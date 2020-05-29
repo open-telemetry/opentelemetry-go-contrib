@@ -22,7 +22,7 @@ import (
 
 	"github.com/gorilla/mux"
 
-	muxtrace "go.opentelemetry.io/contrib/plugins/gorilla/mux"
+	muxtrace "go.opentelemetry.io/contrib/instrumentations/gorilla/mux"
 	otelglobal "go.opentelemetry.io/otel/api/global"
 	otelkv "go.opentelemetry.io/otel/api/kv"
 	oteltrace "go.opentelemetry.io/otel/api/trace"

@@ -30,7 +30,7 @@ type Option func(*Config)
 
 // WithTracer specifies a tracer to use for creating spans. If none is
 // specified, a tracer named
-// "go.opentelemetry.io/contrib/plugins/labstack/echo" from the global
+// "go.opentelemetry.io/contrib/instrumentations/labstack/echo" from the global
 // provider is used.
 func WithTracer(tracer oteltrace.Tracer) Option {
 	return func(cfg *Config) {

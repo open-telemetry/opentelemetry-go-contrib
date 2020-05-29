@@ -28,7 +28,7 @@ import (
 
 const (
 	tracerKey  = "otel-go-contrib-tracer-labstack-echo"
-	tracerName = "go.opentelemetry.io/contrib/plugins/labstack/echo"
+	tracerName = "go.opentelemetry.io/contrib/instrumentations/labstack/echo"
 )
 
 // Middleware returns echo middleware which will trace incoming requests.

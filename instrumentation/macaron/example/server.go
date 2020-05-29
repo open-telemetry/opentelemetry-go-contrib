@@ -20,7 +20,7 @@ import (
 
 	"gopkg.in/macaron.v1"
 
-	macarontrace "go.opentelemetry.io/contrib/plugins/macaron"
+	macarontrace "go.opentelemetry.io/contrib/instrumentations/macaron"
 
 	otelglobal "go.opentelemetry.io/otel/api/global"
 	otelkv "go.opentelemetry.io/otel/api/kv"

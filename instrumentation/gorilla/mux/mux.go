@@ -28,7 +28,7 @@ import (
 )
 
 const (
-	tracerName = "go.opentelemetry.io/contrib/plugins/gorilla/mux"
+	tracerName = "go.opentelemetry.io/contrib/instrumentations/gorilla/mux"
 )
 
 // Middleware sets up a handler to start tracing the incoming

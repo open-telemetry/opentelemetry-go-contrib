@@ -12,7 +12,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package runtime // import "go.opentelemetry.io/contrib/plugins/runtime"
+package runtime // import "go.opentelemetry.io/contrib/instrumentations/runtime"
 
 import (
 	"context"

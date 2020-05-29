@@ -48,7 +48,7 @@ func TestChildSpanFromGlobalTracer(t *testing.T) {
 		spanTracer := span.Tracer()
 		mockTracer, ok := spanTracer.(*mocktrace.Tracer)
 		require.True(t, ok)
-		assert.Equal(t, "go.opentelemetry.io/contrib/plugins/labstack/echo", mockTracer.Name)
+		assert.Equal(t, "go.opentelemetry.io/contrib/instrumentations/labstack/echo", mockTracer.Name)
 		return c.NoContent(200)
 	})
 
