@@ -1,6 +1,7 @@
 # opentelemetry-go-contrib
 
-This repo contains packages that facilitates instrumenting libraries with Opentelemetry for
-distributed tracing and monitoring.
+This repo contains packages that facilitate instrumenting commonly
+used libraries with OpenTelemetry for distributed tracing and
+monitoring.
 
 
