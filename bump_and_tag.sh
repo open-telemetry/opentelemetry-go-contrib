@@ -23,8 +23,7 @@
 #
 set -e
 
-help()
-{
+help() {
    printf "\n"
    printf "Usage: %s [-o otel_tag] [-t tag]\n" "$0"
    printf "\t-o Otel release tag. Update all go.mod to reference go.opentelemetry.io/otel <otel_tag>.\n"
@@ -83,7 +82,7 @@ if [ -n "${TAG}" ]; then
     fi
 fi
 
-cd $(dirname $0)
+cd "$(dirname "$0")"
 
 if ! git diff --quiet; then \
     printf "Working tree is not clean, can't proceed\n"
