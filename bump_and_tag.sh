@@ -40,10 +40,10 @@ do
    esac
 done
 
+declare -r SEMVER_REGEX="^v(0|[1-9][0-9]*)\\.(0|[1-9][0-9]*)\\.(0|[1-9][0-9]*)(\\-[0-9A-Za-z-]+(\\.[0-9A-Za-z-]+)*)?(\\+[0-9A-Za-z-]+(\\.[0-9A-Za-z-]+)*)?$"
 
 validate_tag() {
     local tag_=$1
-    SEMVER_REGEX="^v(0|[1-9][0-9]*)\\.(0|[1-9][0-9]*)\\.(0|[1-9][0-9]*)(\\-[0-9A-Za-z-]+(\\.[0-9A-Za-z-]+)*)?(\\+[0-9A-Za-z-]+(\\.[0-9A-Za-z-]+)*)?$"
     if [[ "${tag_}" =~ ${SEMVER_REGEX} ]]; then
 	    printf "%s is valid semver tag.\n" "${tag_}"
     else
@@ -69,7 +69,7 @@ if [ -n "${OTEL_TAG}" ]; then
     (cd "${TMPDIR}" && go mod init tagtest)
     # requires go 1.14 for support of '-modfile'
     if ! go get -modfile="${TMPDIR}/go.mod" -d -v "go.opentelemetry.io/otel@${OTEL_TAG}"; then
-        printf "Otel tag %s does not appear to exist.\n" "${OTEL_TAG}"
+        printf "go.opentelemetry.io/otel %s does not exist. Please supply a valid tag\n" "${OTEL_TAG}"
         exit 1
     fi
 fi
