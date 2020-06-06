@@ -34,7 +34,7 @@ import (
 	"go.opentelemetry.io/otel/sdk/resource"
 )
 
-var testResource = resource.New(kv.String("k1", "v1"))
+var testResource = resource.New(kv.String("host", "value"))
 
 // withTagsAdapter tests a dogstatsd-style statsd exporter.
 type withTagsAdapter struct {
