@@ -110,9 +110,10 @@ patch_gomods() {
     done
 }
 
-# Update go.mods
-git checkout -b "${BRANCH_NAME}"
+# branch off from existing master
+git checkout -b "${BRANCH_NAME}" master
 
+# Update go.mods
 if [ -n "${OTEL_TAG}" ]; then
     # first update the top most module
     go get "go.opentelemetry.io/otel@${OTEL_TAG}"
