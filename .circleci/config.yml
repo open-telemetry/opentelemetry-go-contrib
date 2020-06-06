@@ -19,7 +19,8 @@ jobs:
           name: "Precommit and Coverage Report"
           command: |
             make ci
-            find . -name 'coverage.html' | cpio -pLdm $(realpath $TEST_RESULTS/)
+            find . -name 'coverage.html' > "${TEST_RESULTS}/coverage.lst"
+            tar -n -cf - -T "${TEST_RESULTS}/coverage.lst" | tar -C /tmp/results -xvf -
 
       - save_cache:
           key: go-pkg-mod-{{ checksum "go.sum" }}
