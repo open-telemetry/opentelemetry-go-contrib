@@ -163,7 +163,7 @@ func dial(endpoint string) (net.Conn, error) {
 }
 
 // Export is common code for any statsd-based metric.Exporter implementation.
-func (e *Exporter) Export(_ context.Context, resource *resource.Resource, checkpointSet export.CheckpointSet) error {
+func (e *Exporter) Export(_ context.Context, checkpointSet export.CheckpointSet) error {
 	buf := &e.buffer
 	buf.Reset()
 
@@ -178,7 +178,7 @@ func (e *Exporter) Export(_ context.Context, resource *resource.Resource, checkp
 		for pt := 0; pt < pts; pt++ {
 			before := buf.Len()
 
-			if err := e.formatMetric(rec, resource, pt, buf); err != nil {
+			if err := e.formatMetric(rec, pt, buf); err != nil {
 				return err
 			}
 
@@ -246,10 +246,10 @@ func (e *Exporter) countPoints(rec export.Record) (int, error) {
 // formatMetric formats an individual export record.  For some records
 // this will emit a single statistic, for some it will emit more than
 // one.
-func (e *Exporter) formatMetric(rec export.Record, res *resource.Resource, pos int, buf *bytes.Buffer) error {
+func (e *Exporter) formatMetric(rec export.Record, pos int, buf *bytes.Buffer) error {
 	desc := rec.Descriptor()
 	agg := rec.Aggregator()
-
+	res := rec.Resource()
 	// TODO handle non-Points Distribution/MaxSumCount by
 	// formatting individual quantiles, the sum, and the count as
 	// single statistics.  For the dogstatsd variation, assuming

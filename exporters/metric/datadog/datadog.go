@@ -10,7 +10,6 @@ import (
 	"go.opentelemetry.io/otel/api/metric"
 	export "go.opentelemetry.io/otel/sdk/export/metric"
 	"go.opentelemetry.io/otel/sdk/export/metric/aggregator"
-	"go.opentelemetry.io/otel/sdk/resource"
 )
 
 const (
@@ -27,7 +26,7 @@ func NewExporter(opts Options) (*Exporter, error) {
 	if opts.MetricNameFormatter == nil {
 		opts.MetricNameFormatter = defaultFormatter
 	}
-	client, err := statsd.New(opts.StatsAddr)
+	client, err := statsd.New(opts.StatsAddr, opts.StatsDOptions...)
 	if err != nil {
 		return nil, err
 	}
@@ -52,6 +51,9 @@ type Options struct {
 	// MetricNameFormatter lets you customize the metric name that gets sent to
 	// datadog before exporting
 	MetricNameFormatter func(namespace, name string) string
+
+	// StatsD specific Options
+	StatsDOptions []statsd.Option
 }
 
 // Exporter forwards metrics to a DataDog agent
@@ -66,9 +68,9 @@ func defaultFormatter(namespace, name string) string {
 	return name
 }
 
-func (e *Exporter) Export(ctx context.Context, _ *resource.Resource, cs export.CheckpointSet) error {
-	// TODO: Use the Resource argument.
+func (e *Exporter) Export(ctx context.Context, cs export.CheckpointSet) error {
 	return cs.ForEach(func(r export.Record) error {
+		// TODO: Use the Resource() method
 		agg := r.Aggregator()
 		name := e.sanitizeMetricName(r.Descriptor().LibraryName(), r.Descriptor().Name())
 		itr := r.Labels().Iter()
