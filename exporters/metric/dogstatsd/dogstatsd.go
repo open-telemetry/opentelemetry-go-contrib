@@ -23,7 +23,6 @@ import (
 	"go.opentelemetry.io/otel/api/metric"
 	export "go.opentelemetry.io/otel/sdk/export/metric"
 	"go.opentelemetry.io/otel/sdk/metric/aggregator/array"
-	"go.opentelemetry.io/otel/sdk/metric/aggregator/lastvalue"
 	"go.opentelemetry.io/otel/sdk/metric/aggregator/sum"
 	"go.opentelemetry.io/otel/sdk/metric/controller/push"
 	integrator "go.opentelemetry.io/otel/sdk/metric/integrator/simple"
@@ -73,17 +72,17 @@ func NewRawExporter(config Config) (*Exporter, error) {
 // 	defer pipeline.Stop()
 // 	... Done
 func InstallNewPipeline(config Config) (*push.Controller, error) {
-	controller, err := NewExportPipeline(config, time.Minute)
+	controller, err := NewExportPipeline(config, push.WithPeriod(time.Minute))
 	if err != nil {
 		return controller, err
 	}
-	global.SetMeterProvider(controller)
+	global.SetMeterProvider(controller.Provider())
 	return controller, err
 }
 
 // NewExportPipeline sets up a complete export pipeline with the recommended setup,
 // chaining a NewRawExporter into the recommended selectors and batchers.
-func NewExportPipeline(config Config, period time.Duration, opts ...push.Option) (*push.Controller, error) {
+func NewExportPipeline(config Config, opts ...push.Option) (*push.Controller, error) {
 	exporter, err := NewRawExporter(config)
 	if err != nil {
 		return nil, err
@@ -93,19 +92,16 @@ func NewExportPipeline(config Config, period time.Duration, opts ...push.Option)
 	// set of labels as dogstatsd tags.
 	integrator := integrator.New(exporter, false)
 
-	pusher := push.New(integrator, exporter, period, opts...)
+	pusher := push.New(integrator, exporter, opts...)
 	pusher.Start()
 
 	return pusher, nil
 }
 
-// AggregatorFor uses a Sum aggregator for counters, an Array
-// aggregator for Measures, and a LastValue aggregator for Observers.
+// AggregatorFor uses an Array aggregator for Values and a Sum aggregator for counters
 func (*Exporter) AggregatorFor(descriptor *metric.Descriptor) export.Aggregator {
 	switch descriptor.MetricKind() {
-	case metric.ObserverKind:
-		return lastvalue.New()
-	case metric.MeasureKind:
+	case metric.ValueObserverKind, metric.ValueRecorderKind:
 		return array.New()
 	default:
 		return sum.New()

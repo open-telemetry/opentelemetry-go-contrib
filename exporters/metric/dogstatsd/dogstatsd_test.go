@@ -76,7 +76,7 @@ func TestDogstatsLabels(t *testing.T) {
 		t.Run(tc.name, func(t *testing.T) {
 			res := resource.New(tc.resources...)
 			ctx := context.Background()
-			checkpointSet := test.NewCheckpointSet()
+			checkpointSet := test.NewCheckpointSet(res)
 
 			desc := metric.NewDescriptor("test.name", metric.CounterKind, metric.Int64NumberKind)
 			cagg := sum.New()
@@ -91,7 +91,7 @@ func TestDogstatsLabels(t *testing.T) {
 			})
 			require.Nil(t, err)
 
-			err = exp.Export(ctx, res, checkpointSet)
+			err = exp.Export(ctx, checkpointSet)
 			require.Nil(t, err)
 
 			require.Equal(t, tc.expected, buf.String())

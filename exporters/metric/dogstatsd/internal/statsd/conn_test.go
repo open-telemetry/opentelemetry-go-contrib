@@ -34,6 +34,8 @@ import (
 	"go.opentelemetry.io/otel/sdk/resource"
 )
 
+var testResource = resource.New(kv.String("host", "value"))
+
 // withTagsAdapter tests a dogstatsd-style statsd exporter.
 type withTagsAdapter struct {
 	label.Encoder
@@ -126,15 +128,15 @@ timer.B.D:%s|ms
 						t.Fatal("New error: ", err)
 					}
 
-					checkpointSet := test.NewCheckpointSet()
+					checkpointSet := test.NewCheckpointSet(testResource)
 					cdesc := metric.NewDescriptor(
 						"counter", metric.CounterKind, nkind)
 					gdesc := metric.NewDescriptor(
-						"observer", metric.ObserverKind, nkind)
+						"observer", metric.ValueObserverKind, nkind)
 					mdesc := metric.NewDescriptor(
-						"measure", metric.MeasureKind, nkind)
+						"measure", metric.ValueRecorderKind, nkind)
 					tdesc := metric.NewDescriptor(
-						"timer", metric.MeasureKind, nkind, metric.WithUnit(unit.Milliseconds))
+						"timer", metric.ValueRecorderKind, nkind, metric.WithUnit(unit.Milliseconds))
 
 					labels := []kv.KeyValue{
 						kv.String("A", "B"),
@@ -144,10 +146,10 @@ timer.B.D:%s|ms
 
 					checkpointSet.AddCounter(&cdesc, value, labels...)
 					checkpointSet.AddLastValue(&gdesc, value, labels...)
-					checkpointSet.AddMeasure(&mdesc, value, labels...)
-					checkpointSet.AddMeasure(&tdesc, value, labels...)
+					checkpointSet.AddValueRecorder(&mdesc, value, labels...)
+					checkpointSet.AddValueRecorder(&tdesc, value, labels...)
 
-					err = exp.Export(ctx, nil, checkpointSet)
+					err = exp.Export(ctx, checkpointSet)
 					require.Nil(t, err)
 
 					var vfmt string
@@ -288,7 +290,7 @@ func TestPacketSplit(t *testing.T) {
 				t.Fatal("New error: ", err)
 			}
 
-			checkpointSet := test.NewCheckpointSet()
+			checkpointSet := test.NewCheckpointSet(testResource)
 			desc := metric.NewDescriptor("counter", metric.CounterKind, metric.Int64NumberKind)
 
 			var expected []string
@@ -304,7 +306,7 @@ func TestPacketSplit(t *testing.T) {
 				checkpointSet.AddCounter(&desc, 100, labels...)
 			})
 
-			err = exp.Export(ctx, nil, checkpointSet)
+			err = exp.Export(ctx, checkpointSet)
 			require.Nil(t, err)
 
 			tcase.check(expected, writer.vec, t)
@@ -325,14 +327,14 @@ func TestArraySplit(t *testing.T) {
 		t.Fatal("New error: ", err)
 	}
 
-	checkpointSet := test.NewCheckpointSet()
-	desc := metric.NewDescriptor("measure", metric.MeasureKind, metric.Int64NumberKind)
+	checkpointSet := test.NewCheckpointSet(testResource)
+	desc := metric.NewDescriptor("measure", metric.ValueRecorderKind, metric.Int64NumberKind)
 
 	for i := 0; i < 1024; i++ {
-		checkpointSet.AddMeasure(&desc, 100)
+		checkpointSet.AddValueRecorder(&desc, 100)
 	}
 
-	err = exp.Export(ctx, nil, checkpointSet)
+	err = exp.Export(ctx, checkpointSet)
 	require.Nil(t, err)
 
 	require.Greater(t, len(writer.vec), 1)
@@ -356,12 +358,12 @@ func TestPrefix(t *testing.T) {
 		t.Fatal("New error: ", err)
 	}
 
-	checkpointSet := test.NewCheckpointSet()
-	desc := metric.NewDescriptor("measure", metric.MeasureKind, metric.Int64NumberKind)
+	checkpointSet := test.NewCheckpointSet(testResource)
+	desc := metric.NewDescriptor("measure", metric.ValueRecorderKind, metric.Int64NumberKind)
 
-	checkpointSet.AddMeasure(&desc, 100)
+	checkpointSet.AddValueRecorder(&desc, 100)
 
-	err = exp.Export(ctx, nil, checkpointSet)
+	err = exp.Export(ctx, checkpointSet)
 	require.Nil(t, err)
 
 	require.Equal(t, `veryspecial.measure:100|h|#
