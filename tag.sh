@@ -147,7 +147,7 @@ print_changes() {
     local previous
 
     previous="$( previous_version "$tag" )"
-    if [ "$previous" ]
+    if [ -n "$previous" ]
     then
         printf "\nRaw changes made between %s and %s\n" "$previous" "$tag"
         printf "======================================\n"
