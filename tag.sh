@@ -135,10 +135,10 @@ git_tag() {
 previous_version() {
     local current="$1"
 
-    git tag \
+    # Requires git > 2.0
+    git tag -l --sort=v:refname \
         | grep -E "^${SEMVER_REGEX}$" \
         | grep -v "$current" \
-        | sort \
         | tail -1
 }
 
