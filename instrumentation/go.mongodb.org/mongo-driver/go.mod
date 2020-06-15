@@ -5,7 +5,7 @@ go 1.13
 replace go.opentelemetry.io/contrib => ../../..
 
 require (
-	github.com/stretchr/testify v1.4.0
+	github.com/stretchr/testify v1.6.1
 	github.com/xdg/stringprep v1.0.0 // indirect
 	go.mongodb.org/mongo-driver v1.3.2
 	go.opentelemetry.io/contrib v0.6.1
