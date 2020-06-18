@@ -31,6 +31,7 @@ Additionally the following guidelines for package composition need to be followe
 
 - All instrumentation packages MUST be a Go package.
    Therefore, an appropriately configured `go.mod` and `go.sum` need to exist for each package.
-- To help understand the instrumentation a README.md SHOULD be included.
-   This file SHOULD be at the top-level of the instrumentation package and contain useful information like what the instrumentation is for, how to install and use it, and any compatibility restrictions that might exist. 
+- To help understand the instrumentation a Go package documentation SHOULD be included.
+   This documentation SHOULD be in a dedicated `doc.go` file if the package is more than one file.
+   It SHOULD contain useful information like what the purpose of the instrumentation is, how to use it, and any compatibility restrictions that might exist. 
 - Examples of how to actually use the instrumentation SHOULD be included.
