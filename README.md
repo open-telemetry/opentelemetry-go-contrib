@@ -6,3 +6,12 @@
 [![Gitter](https://badges.gitter.im/open-telemetry/opentelemetry-go-contrib.svg)](https://gitter.im/open-telemetry/opentelemetry-go-contrib?utm_source=badge&utm_medium=badge&utm_campaign=pr-badge)
 
 Collection of 3rd-party instrumentation and exporters for [OpenTelemetry-Go](https://github.com/open-telemetry/opentelemetry-go).
+
+## Contents
+
+- [Instrumentation](./instrumentation/): Packages providing OpenTelemetry instrumentation for 3rd-party libraries.
+- [Exporters](./exporters/): Packages providing OpenTelemetry exporters for 3rd-party telemetry systems.
+
+## Contributing
+
+For information on how to contribute, consult [the contributing guidelines](./CONTRIBUTING.md)
