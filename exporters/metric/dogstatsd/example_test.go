@@ -19,6 +19,8 @@ import (
 	"fmt"
 	"io"
 	"log"
+	"sort"
+	"strings"
 	"sync"
 	"time"
 
@@ -37,7 +39,10 @@ func ExampleNew() {
 	reader, writer := io.Pipe()
 
 	go func() {
+		var statLines []string
+
 		defer wg.Done()
+		defer func() { canonicalStats(statLines) }()
 
 		for {
 			var buf [4096]byte
@@ -49,7 +54,7 @@ func ExampleNew() {
 			} else if n >= len(buf) {
 				log.Fatal("Read small buffer: ", n)
 			} else {
-				fmt.Print(string(buf[0:n]))
+				statLines = append(statLines, string(buf[0:n]))
 			}
 		}
 	}()
@@ -62,7 +67,7 @@ func ExampleNew() {
 		// In real code, use the URL field:
 		//
 		// URL: fmt.Sprint("unix://", path),
-	}, time.Minute, push.WithResource(resource.New(kv.String("host", "name"))))
+	}, push.WithPeriod(time.Minute), push.WithResource(resource.New(kv.String("host", "name"))))
 	if err != nil {
 		log.Fatal("Could not initialize dogstatsd exporter:", err)
 	}
@@ -72,12 +77,15 @@ func ExampleNew() {
 	key := kv.Key("key")
 
 	// pusher implements the metric.MeterProvider interface:
-	meter := pusher.Meter("example")
+	meter := pusher.Provider().Meter("example")
 
 	// Create and update a single counter:
 	counter := metric.Must(meter).NewInt64Counter("a.counter")
+	values := metric.Must(meter).NewInt64ValueRecorder("a.values")
 
+	values.Record(ctx, 50, key.String("value"))
 	counter.Add(ctx, 100, key.String("value"))
+	values.Record(ctx, 150, key.String("value"))
 
 	// Flush the exporter, close the pipe, and wait for the reader.
 	pusher.Stop()
@@ -86,4 +94,21 @@ func ExampleNew() {
 
 	// Output:
 	// a.counter:100|c|#host:name,key:value
+	// a.values:150|h|#host:name,key:value
+	// a.values:50|h|#host:name,key:value
+}
+
+func canonicalStats(lines []string) {
+	// split on newline and sort
+	// concatenate, split on newline and sort
+	var allStats string
+	for _, s := range lines {
+		allStats += s
+	}
+	// trim any trailing "\n"
+	lines = strings.Split(strings.TrimSuffix(allStats, "\n"), "\n")
+	sort.Strings(lines)
+	for _, s := range lines {
+		fmt.Println(s)
+	}
 }
