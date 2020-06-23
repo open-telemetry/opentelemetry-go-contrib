@@ -49,7 +49,7 @@ func Test(t *testing.T) {
 
 	ctx, span := mt.Start(ctx, "mongodb-test")
 
-	addr := fmt.Sprintf("mongodb://localhost:27017/?connect=direct")
+	addr := "mongodb://localhost:27017/?connect=direct"
 	opts := options.Client()
 	opts.Monitor = NewMonitor("mongo", WithTracer(mt))
 	opts.ApplyURI(addr)
