@@ -74,7 +74,7 @@ func (e *Exporter) Export(ctx context.Context, cs export.CheckpointSet) error {
 		// TODO: Use the Resource() method
 		agg := r.Aggregator()
 		name := e.sanitizeMetricName(r.Descriptor().LibraryName(), r.Descriptor().Name())
-		itr := label.NewMergeIterator(r.Resource().LabelSet(), r.Labels())
+		itr := label.NewMergeIterator(r.Labels(), r.Resource().LabelSet())
 		tags := append([]string{}, e.opts.Tags...)
 		for itr.Next() {
 			label := itr.Label()
