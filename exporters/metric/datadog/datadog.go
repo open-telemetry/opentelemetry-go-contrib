@@ -7,6 +7,7 @@ import (
 
 	"github.com/DataDog/datadog-go/statsd"
 
+	"go.opentelemetry.io/otel/api/label"
 	"go.opentelemetry.io/otel/api/metric"
 	export "go.opentelemetry.io/otel/sdk/export/metric"
 	"go.opentelemetry.io/otel/sdk/export/metric/aggregator"
@@ -73,7 +74,7 @@ func (e *Exporter) Export(ctx context.Context, cs export.CheckpointSet) error {
 		// TODO: Use the Resource() method
 		agg := r.Aggregator()
 		name := e.sanitizeMetricName(r.Descriptor().LibraryName(), r.Descriptor().Name())
-		itr := r.Labels().Iter()
+		itr := label.NewMergeIterator(r.Labels(), r.Resource().LabelSet())
 		tags := append([]string{}, e.opts.Tags...)
 		for itr.Next() {
 			label := itr.Label()
