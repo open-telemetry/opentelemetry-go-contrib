@@ -12,7 +12,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package dynamicconfig_test
+package notifier_test
 
 import (
 	"errors"
@@ -21,13 +21,13 @@ import (
 	"github.com/stretchr/testify/require"
 	pb "github.com/vmingchen/opentelemetry-proto/gen/go/collector/dynamicconfig/v1"
 
-	"go.opentelemetry.io/contrib/exporters/metric/dynamicconfig"
+	notify "go.opentelemetry.io/contrib/sdk/dynamicconfig/sdk/metric/controller/notifier"
 )
 
 func TestEquals(t *testing.T) {
-	fooConfig1 := dynamicconfig.GetDefaultConfig(1, []byte{'f', 'o', 'o'})
-	fooConfig2 := dynamicconfig.GetDefaultConfig(2, []byte{'f', 'o', 'o'})
-	barConfig := dynamicconfig.GetDefaultConfig(1, []byte{'b', 'a', 'r'})
+	fooConfig1 := notify.GetDefaultConfig(1, []byte{'f', 'o', 'o'})
+	fooConfig2 := notify.GetDefaultConfig(2, []byte{'f', 'o', 'o'})
+	barConfig := notify.GetDefaultConfig(1, []byte{'b', 'a', 'r'})
 
 	require.True(t, fooConfig1.Equals(fooConfig2))
 	require.False(t, fooConfig1.Equals(barConfig))
@@ -37,7 +37,7 @@ func TestValidate(t *testing.T) {
 	schedule1 := pb.ConfigResponse_MetricConfig_Schedule{Period: 0}
 	schedule2 := pb.ConfigResponse_MetricConfig_Schedule{Period: 1}
 
-	config := &dynamicconfig.Config{
+	config := &notify.Config{
 		pb.ConfigResponse{
 			MetricConfig: &pb.ConfigResponse_MetricConfig{
 				Schedules: []*pb.ConfigResponse_MetricConfig_Schedule{&schedule2, &schedule2},
@@ -46,7 +46,7 @@ func TestValidate(t *testing.T) {
 	}
 	require.Equal(t, config.Validate(), errors.New("Config must have exactly one Schedule"))
 
-	config = &dynamicconfig.Config{
+	config = &notify.Config{
 		pb.ConfigResponse{
 			MetricConfig: &pb.ConfigResponse_MetricConfig{
 				Schedules: []*pb.ConfigResponse_MetricConfig_Schedule{&schedule1},
@@ -55,7 +55,7 @@ func TestValidate(t *testing.T) {
 	}
 	require.Equal(t, config.Validate(), errors.New("Period must be positive"))
 
-	config = &dynamicconfig.Config{
+	config = &notify.Config{
 		pb.ConfigResponse{
 			MetricConfig: &pb.ConfigResponse_MetricConfig{
 				Schedules: []*pb.ConfigResponse_MetricConfig_Schedule{&schedule2},

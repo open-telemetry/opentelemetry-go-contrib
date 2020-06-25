@@ -12,14 +12,15 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package push // import "go.opentelemetry.io/contrib/exporters/metric/dynamicconfig/push"
+// import "go.opentelemetry.io/contrib/sdk/dynamicconfig/sdk/metric/controller/push"
+package push
 
 import (
 	"context"
 	"sync"
 	"time"
 
-	"go.opentelemetry.io/contrib/exporters/metric/dynamicconfig"
+	notify "go.opentelemetry.io/contrib/sdk/dynamicconfig/sdk/metric/controller/notifier"
 
 	"go.opentelemetry.io/otel/api/global"
 	"go.opentelemetry.io/otel/api/metric"
@@ -46,7 +47,7 @@ type Controller struct {
 	timeout     time.Duration
 	clock       controllerTime.Clock
 	ticker      controllerTime.Ticker
-	notifier    *dynamicconfig.Notifier
+	notifier    *notify.Notifier
 }
 
 // New constructs a Controller, an implementation of metric.Provider,
@@ -138,7 +139,7 @@ func (c *Controller) Stop() {
 
 // We assume that the only metric schedule is one with an inclusion pattern
 // that includes all metrics
-func (c *Controller) OnInitialConfig(config *dynamicconfig.Config) error {
+func (c *Controller) OnInitialConfig(config *notify.Config) error {
 	err := config.Validate()
 	if err != nil {
 		return err
@@ -149,7 +150,7 @@ func (c *Controller) OnInitialConfig(config *dynamicconfig.Config) error {
 	return nil
 }
 
-func (c *Controller) OnUpdatedConfig(config *dynamicconfig.Config) error {
+func (c *Controller) OnUpdatedConfig(config *notify.Config) error {
 	c.lock.Lock()
 	defer c.lock.Unlock()
 

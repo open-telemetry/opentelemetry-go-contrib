@@ -25,7 +25,7 @@ make otelcol
 
 # Run collector using example-otlp-config.yaml
 # Assume opentelemetry-go is in the home directory
-./bin/otelcol_linux_amd64 --config ~/opentelemetry-go-contrib/exporters/metric/dynamicconfig/example/example-otlp-config.yaml
+./bin/otelcol_linux_amd64 --config ~/opentelemetry-go-contrib/sdk/dynamicconfig/example/example-otlp-config.yaml
 ```
 
 ### Run server
