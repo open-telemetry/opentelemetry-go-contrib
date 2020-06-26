@@ -20,13 +20,15 @@ import (
 	"sync"
 	"time"
 
+	pb "github.com/vmingchen/opentelemetry-proto/gen/go/collector/dynamicconfig/v1"
+
+	sdk "go.opentelemetry.io/contrib/sdk/dynamicconfig/sdk/metric"
 	notify "go.opentelemetry.io/contrib/sdk/dynamicconfig/sdk/metric/controller/notifier"
 
 	"go.opentelemetry.io/otel/api/global"
 	"go.opentelemetry.io/otel/api/metric"
 	"go.opentelemetry.io/otel/api/metric/registry"
 	export "go.opentelemetry.io/otel/sdk/export/metric"
-	sdk "go.opentelemetry.io/otel/sdk/metric"
 	controllerTime "go.opentelemetry.io/otel/sdk/metric/controller/time"
 	"go.opentelemetry.io/otel/sdk/metric/processor/basic"
 )
@@ -48,6 +50,11 @@ type Controller struct {
 	clock       controllerTime.Clock
 	ticker      controllerTime.Ticker
 	notifier    *notify.Notifier
+	schedules *[]*pb.ConfigResponse_MetricConfig_Schedule
+	// Timestamp all metrics with CollectionPeriod were last exported
+	lastCollected map[pb.ConfigResponse_MetricConfig_Schedule_CollectionPeriod]time.Time
+	// Maps instrument name to a CollectionPeriod
+	instrumentPeriod map[string]pb.ConfigResponse_MetricConfig_Schedule_CollectionPeriod
 }
 
 // New constructs a Controller, an implementation of metric.Provider,
@@ -64,12 +71,24 @@ func New(selector export.AggregatorSelector, exporter export.Exporter, opts ...O
 		c.Timeout = c.Period
 	}
 
+	lock := sync.Mutex{}
+	schedules := []*pb.ConfigResponse_MetricConfig_Schedule{}
+	var instrumentPeriod map[string]pb.ConfigResponse_MetricConfig_Schedule_CollectionPeriod
+
+	var dynamicExtension *sdk.DynamicExtension = nil
+	if c.Notifier != nil {
+		instrumentPeriod = make(map[string]pb.ConfigResponse_MetricConfig_Schedule_CollectionPeriod)
+		dynamicExtension = sdk.NewDynamicExtension(&lock, &schedules, instrumentPeriod)
+	}
+
 	processor := basic.New(selector, exporter)
 	impl := sdk.NewAccumulator(
 		processor,
 		sdk.WithResource(c.Resource),
+		sdk.WithDynamicExtension(dynamicExtension),
 	)
 	return &Controller{
+		lock: lock,
 		provider:    registry.NewProvider(impl),
 		accumulator: impl,
 		processor:   processor,
@@ -79,6 +98,8 @@ func New(selector export.AggregatorSelector, exporter export.Exporter, opts ...O
 		timeout:     c.Timeout,
 		clock:       controllerTime.RealClock{},
 		notifier:    c.Notifier,
+		schedules: &schedules,
+		instrumentPeriod: instrumentPeriod,
 	}
 }
 
@@ -137,15 +158,14 @@ func (c *Controller) Stop() {
 	}
 }
 
-// We assume that the only metric schedule is one with an inclusion pattern
-// that includes all metrics
 func (c *Controller) OnInitialConfig(config *notify.Config) error {
 	err := config.Validate()
 	if err != nil {
 		return err
 	}
 
-	c.period = time.Duration(config.MetricConfig.Schedules[0].Period) * time.Second
+	*c.schedules = config.MetricConfig.Schedules
+	c.period = c.updateFromSchedules()
 
 	return nil
 }
@@ -159,18 +179,51 @@ func (c *Controller) OnUpdatedConfig(config *notify.Config) error {
 		return err
 	}
 
-	// Stop the existing ticker
-	// Make a new ticker with the new sampling period
-	c.ticker.Stop()
-	if len(config.MetricConfig.Schedules) > 0 {
-		c.period = time.Duration(config.MetricConfig.Schedules[0].Period) * time.Second
+	// Clear instrument name  to collectionPeriod mappings, since
+	// they are obsolete with an updated config.
+	for name := range c.instrumentPeriod {
+		delete(c.instrumentPeriod, name)
 	}
+
+	// Stop the existing ticker
+	// Make a new ticker with a new sampling period
+	c.ticker.Stop()
+	*c.schedules = config.MetricConfig.Schedules
+	c.period = c.updateFromSchedules()
 	c.ticker = c.clock.Ticker(c.period)
 
 	// Let the controller know to check the new ticker
 	c.ch <- true
 
 	return nil
+}
+
+// Iterate through the schedules for two purposes:
+//    -Return the minimal non-zero period
+//    -Reset lastCollected, set each CollectionPeriod's last collection
+//    timestamp to now. 
+func (c *Controller) updateFromSchedules() time.Duration {
+	now := time.Now()
+
+	var period pb.ConfigResponse_MetricConfig_Schedule_CollectionPeriod = 0
+	c.lastCollected = make(map[pb.ConfigResponse_MetricConfig_Schedule_CollectionPeriod]time.Time)
+
+	for _, schedule := range *c.schedules {
+		// If CollectionPeriod is 0, we do not do anything with it
+		if schedule.Period == 0 {
+			continue
+		}
+
+		if _, ok := c.lastCollected[schedule.Period]; !ok {
+			c.lastCollected[schedule.Period] = now
+		}
+
+		if period == 0 || period > schedule.Period {
+			period = schedule.Period
+		}
+	}
+
+	return time.Duration(period) * time.Second
 }
 
 func (c *Controller) run(ch chan bool) {
@@ -198,7 +251,25 @@ func (c *Controller) tick() {
 	defer c.processor.Unlock()
 
 	c.processor.StartCollection()
-	c.accumulator.Collect(ctx)
+
+	if c.notifier == nil {
+		c.accumulator.Collect(ctx)
+	} else {
+		// Export all metrics with the same CollectionPeriod at the same time.
+		overdue := []pb.ConfigResponse_MetricConfig_Schedule_CollectionPeriod{}
+		now := time.Now()
+
+		for period, lastCollect := range c.lastCollected {
+			// Check if enough time elapsed since metric with a CollectionPeriod were
+			// last exported.
+			if lastCollect.Add(time.Duration(period) * time.Second).Before(now) {
+				overdue = append(overdue, period)
+				c.lastCollected[period] = now
+			}
+		}
+		c.accumulator.Collect(ctx, sdk.WithPeriods(overdue))
+	}
+
 	if err := c.processor.FinishCollection(); err != nil {
 		global.Handle(err)
 	}

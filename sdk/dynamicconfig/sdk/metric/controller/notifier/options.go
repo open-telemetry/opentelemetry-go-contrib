@@ -22,7 +22,7 @@ import (
 
 // Option is the interface that applies the value to a configuration option.
 type Option interface {
-	// Apply sets the Option value of a Config.
+	// Apply sets the Option value of a Notifier.
 	Apply(*Notifier)
 }
 

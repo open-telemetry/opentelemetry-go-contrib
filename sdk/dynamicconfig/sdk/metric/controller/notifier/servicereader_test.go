@@ -22,7 +22,7 @@ import (
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 
-	"go.opentelemetry.io/contrib/internal/transform"
+	"go.opentelemetry.io/contrib/sdk/dynamicconfig/internal/transform"
 )
 
 const TestAddress string = "localhost:50420"

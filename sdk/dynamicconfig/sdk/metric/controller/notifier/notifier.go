@@ -21,7 +21,7 @@ import (
 	"sync"
 	"time"
 
-	"go.opentelemetry.io/contrib/internal/transform"
+	"go.opentelemetry.io/contrib/sdk/dynamicconfig/internal/transform"
 	controllerTime "go.opentelemetry.io/otel/sdk/metric/controller/time"
 	"go.opentelemetry.io/otel/sdk/resource"
 )

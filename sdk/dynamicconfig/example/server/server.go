@@ -37,12 +37,26 @@ type server struct {
 // GetConfig implemented DynamicConfigServer
 func (s *server) GetConfig(ctx context.Context, in *pb.ConfigRequest) (*pb.ConfigResponse, error) {
 	log.Printf("Config being read\n")
-	schedule := pb.ConfigResponse_MetricConfig_Schedule{Period: 1}
+
+	pattern1 := pb.ConfigResponse_MetricConfig_Schedule_Pattern{
+		Match: &pb.ConfigResponse_MetricConfig_Schedule_Pattern_StartsWith{ StartsWith: "One" },
+	}
+	schedule1 := pb.ConfigResponse_MetricConfig_Schedule{
+		InclusionPatterns: []*pb.ConfigResponse_MetricConfig_Schedule_Pattern{&pattern1},
+		Period: 1,
+	}
+	pattern2 := pb.ConfigResponse_MetricConfig_Schedule_Pattern{
+		Match: &pb.ConfigResponse_MetricConfig_Schedule_Pattern_Equals{ Equals: "Two Metric" },
+	}
+	schedule2 := pb.ConfigResponse_MetricConfig_Schedule{
+		InclusionPatterns: []*pb.ConfigResponse_MetricConfig_Schedule_Pattern{&pattern2},
+		Period: 5,
+	}
 
 	return &pb.ConfigResponse{
 		Fingerprint: []byte{'b', 'a', 'r'},
 		MetricConfig: &pb.ConfigResponse_MetricConfig{
-			Schedules: []*pb.ConfigResponse_MetricConfig_Schedule{&schedule},
+			Schedules: []*pb.ConfigResponse_MetricConfig_Schedule{&schedule1, &schedule2},
 		},
 	}, nil
 }
