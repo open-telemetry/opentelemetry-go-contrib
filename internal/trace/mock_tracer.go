@@ -31,7 +31,7 @@ type Provider struct {
 
 var _ oteltrace.Provider = &Provider{}
 
-func (p *Provider) Tracer(name string) oteltrace.Tracer {
+func (p *Provider) Tracer(name string, _ ...oteltrace.TracerOption) oteltrace.Tracer {
 	p.tracersLock.Lock()
 	defer p.tracersLock.Unlock()
 	if p.tracers == nil {
