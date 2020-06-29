@@ -80,8 +80,8 @@ func TestDogstatsLabels(t *testing.T) {
 
 			desc := metric.NewDescriptor("test.name", metric.CounterKind, metric.Int64NumberKind)
 			cagg, cckpt := test.Unslice2(sum.New(2))
-			require.Nil(t, cagg.Update(ctx, metric.NewInt64Number(123), &desc))
-			require.Nil(t, cagg.SynchronizedMove(cckpt, &desc))
+			require.NoError(t, cagg.Update(ctx, metric.NewInt64Number(123), &desc))
+			require.NoError(t, cagg.SynchronizedMove(cckpt, &desc))
 
 			checkpointSet.Add(&desc, cckpt, tc.labels...)
 
