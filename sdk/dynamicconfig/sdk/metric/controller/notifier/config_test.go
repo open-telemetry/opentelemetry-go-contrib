@@ -40,15 +40,6 @@ func TestValidate(t *testing.T) {
 	config := &notify.Config{
 		pb.ConfigResponse{
 			MetricConfig: &pb.ConfigResponse_MetricConfig{
-				Schedules: []*pb.ConfigResponse_MetricConfig_Schedule{&schedule2, &schedule2},
-			},
-		},
-	}
-	require.Equal(t, config.Validate(), errors.New("Config must have exactly one Schedule"))
-
-	config = &notify.Config{
-		pb.ConfigResponse{
-			MetricConfig: &pb.ConfigResponse_MetricConfig{
 				Schedules: []*pb.ConfigResponse_MetricConfig_Schedule{&schedule1},
 			},
 		},
