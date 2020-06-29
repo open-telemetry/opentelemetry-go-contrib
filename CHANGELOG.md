@@ -10,7 +10,8 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 
 ### Changed
 
-- Update `CONTRIBUTING.md` to ask for updates to `CHANGELOG.md` with each pull request.
+- Update `CONTRIBUTING.md` to ask for updates to `CHANGELOG.md` with each pull request. (#114)
+- Create this `CHANGELOG.md` (#114)
 
 ## [0.7.0] - 2020-06-29
 
