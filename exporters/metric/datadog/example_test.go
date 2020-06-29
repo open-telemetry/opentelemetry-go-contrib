@@ -16,7 +16,7 @@ import (
 	"go.opentelemetry.io/otel/api/kv"
 	"go.opentelemetry.io/otel/api/metric"
 	"go.opentelemetry.io/otel/sdk/metric/controller/push"
-	integrator "go.opentelemetry.io/otel/sdk/metric/integrator/simple"
+	"go.opentelemetry.io/otel/sdk/metric/processor/basic"
 	"go.opentelemetry.io/otel/sdk/metric/selector/simple"
 )
 
@@ -26,7 +26,6 @@ type TestUDPServer struct {
 
 func ExampleExporter() {
 	selector := simple.NewWithSketchDistribution(ddsketch.NewDefaultConfig())
-	myIntegrator := integrator.New(selector, false)
 	exp, err := datadog.NewExporter(datadog.Options{
 		Tags:          []string{"env:dev"},
 		StatsDOptions: []statsd.Option{statsd.WithoutTelemetry()},
@@ -42,7 +41,8 @@ func ExampleExporter() {
 
 	go func() {
 		defer exp.Close()
-		pusher := push.New(myIntegrator, exp, push.WithPeriod(time.Second*60))
+		processor := basic.New(selector, exp)
+		pusher := push.New(processor, exp, push.WithPeriod(time.Second*10))
 		defer pusher.Stop()
 		pusher.Start()
 		global.SetMeterProvider(pusher.Provider())

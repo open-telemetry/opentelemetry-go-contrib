@@ -10,7 +10,7 @@ import (
 	"go.opentelemetry.io/otel/api/label"
 	"go.opentelemetry.io/otel/api/metric"
 	export "go.opentelemetry.io/otel/sdk/export/metric"
-	"go.opentelemetry.io/otel/sdk/export/metric/aggregator"
+	"go.opentelemetry.io/otel/sdk/export/metric/aggregation"
 )
 
 const (
@@ -63,17 +63,26 @@ type Exporter struct {
 	client *statsd.Client
 }
 
+var (
+	_ export.Exporter = &Exporter{}
+)
+
 const rate = 1
 
 func defaultFormatter(namespace, name string) string {
 	return name
 }
 
+// ExportKindFor returns export.DeltaExporter for statsd-derived exporters
+func (e *Exporter) ExportKindFor(*metric.Descriptor, aggregation.Kind) export.ExportKind {
+	return export.DeltaExporter
+}
+
 func (e *Exporter) Export(ctx context.Context, cs export.CheckpointSet) error {
-	return cs.ForEach(func(r export.Record) error {
+	return cs.ForEach(e, func(r export.Record) error {
 		// TODO: Use the Resource() method
-		agg := r.Aggregator()
-		name := e.sanitizeMetricName(r.Descriptor().LibraryName(), r.Descriptor().Name())
+		agg := r.Aggregation()
+		name := e.sanitizeMetricName(r.Descriptor().InstrumentationName(), r.Descriptor().Name())
 		itr := label.NewMergeIterator(r.Labels(), r.Resource().LabelSet())
 		tags := append([]string{}, e.opts.Tags...)
 		for itr.Next() {
@@ -82,7 +91,7 @@ func (e *Exporter) Export(ctx context.Context, cs export.CheckpointSet) error {
 			tags = append(tags, tag)
 		}
 		switch agg := agg.(type) {
-		case aggregator.Points:
+		case aggregation.Points:
 			numbers, err := agg.Points()
 			if err != nil {
 				return fmt.Errorf("error getting Points for %s: %w", name, err)
@@ -96,7 +105,7 @@ func (e *Exporter) Export(ctx context.Context, cs export.CheckpointSet) error {
 					return fmt.Errorf("error submitting %s point: %w", name, err)
 				}
 			}
-		case aggregator.MinMaxSumCount:
+		case aggregation.MinMaxSumCount:
 			type record struct {
 				name string
 				f    func() (metric.Number, error)
@@ -111,7 +120,7 @@ func (e *Exporter) Export(ctx context.Context, cs export.CheckpointSet) error {
 					f:    agg.Max,
 				},
 			}
-			if dist, ok := agg.(aggregator.Distribution); ok {
+			if dist, ok := agg.(aggregation.Distribution); ok {
 				recs = append(recs,
 					record{name: name + ".median", f: func() (metric.Number, error) {
 						return dist.Quantile(0.5)
@@ -130,7 +139,7 @@ func (e *Exporter) Export(ctx context.Context, cs export.CheckpointSet) error {
 					return fmt.Errorf("error submitting %s point: %w", name, err)
 				}
 			}
-		case aggregator.Sum:
+		case aggregation.Sum:
 			val, err := agg.Sum()
 			if err != nil {
 				return fmt.Errorf("error getting Sum value for %s: %w", name, err)
@@ -138,7 +147,7 @@ func (e *Exporter) Export(ctx context.Context, cs export.CheckpointSet) error {
 			if err := e.client.Count(name, val.AsInt64(), tags, rate); err != nil {
 				return fmt.Errorf("error submitting %s point: %w", name, err)
 			}
-		case aggregator.LastValue:
+		case aggregation.LastValue:
 			val, _, err := agg.LastValue()
 			if err != nil {
 				return fmt.Errorf("error getting LastValue for %s: %w", name, err)
@@ -177,8 +186,6 @@ func metricValue(kind metric.NumberKind, number metric.Number) float64 {
 		return number.AsFloat64()
 	case metric.Int64NumberKind:
 		return float64(number.AsInt64())
-	case metric.Uint64NumberKind:
-		return float64(number.AsUint64())
 	}
 	return float64(number)
 }
