@@ -23,18 +23,21 @@
 #
 set -e
 
+declare CONTRIB_TAG
+declare OTEL_TAG
+
 help() {
    printf "\n"
    printf "Usage: %s [-o otel_tag] [-t tag]\n" "$0"
    printf "\t-o Otel release tag. Update all go.mod to reference go.opentelemetry.io/otel <otel_tag>.\n"
-   printf "\t-t New unreleased tag. Update all go.mod with this tag.\n"
+   printf "\t-t New Contrib unreleased tag. Update all go.mod files with this tag.\n"
    exit 1 # Exit script after printing help
 }
 
 while getopts "t:o:" opt
 do
    case "$opt" in
-      t ) TAG="$OPTARG" ;;
+      t ) CONTRIB_TAG="$OPTARG" ;;
       o ) OTEL_TAG="$OPTARG" ;;
       ? ) help ;; # Print help
    esac
@@ -53,7 +56,7 @@ validate_tag() {
 }
 
 # Print help in case parameters are empty
-if [[ -z "$TAG" && -z "$OTEL_TAG" ]]
+if [[ -z "$CONTRIB_TAG" && -z "$OTEL_TAG" ]]
 then
     printf "At least one of '-o' or '-t' must be specified.\n"
     help
@@ -63,6 +66,7 @@ fi
 ## Validate tags first
 if [ -n "${OTEL_TAG}" ]; then
     validate_tag "${OTEL_TAG}" || exit $?
+
     # check that OTEL_TAG is a currently released tag for go.opentelemetry.io/otel
     TMPDIR=$(mktemp -d "/tmp/otel-contrib.XXXXXX") || exit 1
     trap "rm -fr ${TMPDIR}" EXIT
@@ -73,13 +77,15 @@ if [ -n "${OTEL_TAG}" ]; then
         exit 1
     fi
 fi
-if [ -n "${TAG}" ]; then
-    validate_tag "${TAG}" || exit $?
-    TAG_FOUND=$(git tag --list "${TAG}")
-    if [[ ${TAG_FOUND} = "${TAG}" ]] ; then
-        printf "Tag %s already exists\n" "${TAG}"
+if [ -n "${CONTRIB_TAG}" ]; then
+    validate_tag "${CONTRIB_TAG}" || exit $?
+    TAG_FOUND=$(git tag --list "${CONTRIB_TAG}")
+    if [[ ${TAG_FOUND} = "${CONTRIB_TAG}" ]] ; then
+        printf "Tag %s already exists in this repo\n" "${CONTRIB_TAG}"
         exit 1
     fi
+else
+    CONTRIB_TAG=${OTEL_TAG}  # if contrib_tag not specified, but OTEL_TAG is, then set it to OTEL_TAG
 fi
 
 cd "$(dirname "$0")"
@@ -91,10 +97,7 @@ if ! git diff --quiet; then \
     exit 1
 fi
 
-declare BRANCH_NAME=pre_release_${TAG}
-if [ -z "${TAG}" ]; then
-    BRANCH_NAME=bump_otel_${OTEL_TAG}
-fi
+declare -r BRANCH_NAME=pre_release_${CONTRIB_TAG}
 
 patch_gomods() {
     local pkg_=$1
@@ -120,8 +123,8 @@ if [ -n "${OTEL_TAG}" ]; then
     patch_gomods go.opentelemetry.io/otel "${OTEL_TAG}"
 fi
 
-if [ -n "${TAG}" ]; then
-    patch_gomods go.opentelemetry.io/contrib "${TAG}"
+if [ -n "${CONTRIB_TAG}" ]; then
+    patch_gomods go.opentelemetry.io/contrib "${CONTRIB_TAG}"
 fi
 
 git diff
@@ -131,10 +134,11 @@ make lint
 # Add changes and commit.
 git add .
 make ci
-declare COMMIT_MSG="Prepare for releasing $TAG"
-if [ -z "${TAG}" ]; then
-    COMMIT_MSG="Bumping otel version to ${OTEL_TAG}"
+declare COMMIT_MSG=""
+if [ -n "${OTEL_TAG}" ]; then
+    COMMIT_MSG+="Bumping otel version to ${OTEL_TAG}"
 fi
+COMMIT_MSG+=".  Prepare for releasing ${CONTRIB_TAG}"
 git commit -m "${COMMIT_MSG}"
 
 printf "Now run following to verify the changes.\ngit diff master\n"
