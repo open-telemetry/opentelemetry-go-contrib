@@ -89,7 +89,6 @@ func (u UserResource) getUser(req *restful.Request, resp *restful.Response) {
 		return
 	}
 	_ = resp.WriteErrorString(http.StatusNotFound, "User could not be found.")
-	return
 }
 
 type User struct {
