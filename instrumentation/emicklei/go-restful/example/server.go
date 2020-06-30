@@ -20,6 +20,7 @@ import (
 	"strconv"
 
 	"github.com/emicklei/go-restful/v3"
+
 	restfultrace "go.opentelemetry.io/contrib/instrumentation/emicklei/go-restful"
 	otelglobal "go.opentelemetry.io/otel/api/global"
 	otelkv "go.opentelemetry.io/otel/api/kv"
@@ -30,7 +31,7 @@ import (
 
 var tracer oteltrace.Tracer
 
-type UserResource struct {}
+type UserResource struct{}
 
 func (u UserResource) WebService() *restful.WebService {
 	ws := &restful.WebService{}
@@ -45,7 +46,7 @@ func (u UserResource) WebService() *restful.WebService {
 		Writes(User{}). // on the response
 		Returns(200, "OK", User{}).
 		Returns(404, "Not Found", nil))
-	return ws;
+	return ws
 }
 
 func main() {
@@ -92,5 +93,5 @@ func (u UserResource) getUser(req *restful.Request, resp *restful.Response) {
 }
 
 type User struct {
-	ID int  `json:"id" description:"identifier of the user"`
+	ID int `json:"id" description:"identifier of the user"`
 }

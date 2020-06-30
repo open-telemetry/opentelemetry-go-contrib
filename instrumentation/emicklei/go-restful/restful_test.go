@@ -23,6 +23,7 @@ import (
 	"github.com/emicklei/go-restful/v3"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
+
 	restfultrace "go.opentelemetry.io/contrib/instrumentation/emicklei/go-restful"
 	mocktrace "go.opentelemetry.io/contrib/internal/trace"
 	otelglobal "go.opentelemetry.io/otel/api/global"
@@ -46,8 +47,8 @@ func TestChildSpanFromGlobalTracer(t *testing.T) {
 	}
 	ws := &restful.WebService{}
 	ws.Route(ws.GET("/user/{id}").To(handlerFunc).
-			Returns(200, "OK", nil).
-			Returns(404, "Not Found", nil))
+		Returns(200, "OK", nil).
+		Returns(404, "Not Found", nil))
 	container := restful.NewContainer()
 	container.Filter(restfultrace.OtelFilter("my-service"))
 	container.Add(ws)

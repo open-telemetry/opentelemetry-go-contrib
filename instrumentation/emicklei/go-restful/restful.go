@@ -16,6 +16,7 @@ package restful
 
 import (
 	"github.com/emicklei/go-restful/v3"
+
 	otelglobal "go.opentelemetry.io/otel/api/global"
 	otelpropagation "go.opentelemetry.io/otel/api/propagation"
 	"go.opentelemetry.io/otel/api/standard"
@@ -23,7 +24,7 @@ import (
 )
 
 const (
-	tracerName = "go.opentelemetry.io/contrib/instrumentation/emicklei/go-restful"
+	tracerName    = "go.opentelemetry.io/contrib/instrumentation/emicklei/go-restful"
 	tracerVersion = "1.0"
 )
 
@@ -69,5 +70,3 @@ func OtelFilter(service string, opts ...Option) restful.FilterFunction {
 		span.SetStatus(spanStatus, spanMessage)
 	}
 }
-
-
