@@ -158,6 +158,7 @@ func (c *Controller) Stop() {
 	}
 }
 
+// Called by notifier if we Register with one.
 func (c *Controller) OnInitialConfig(config *notify.Config) error {
 	err := config.Validate()
 	if err != nil {
@@ -170,6 +171,7 @@ func (c *Controller) OnInitialConfig(config *notify.Config) error {
 	return nil
 }
 
+// Called by notifier if it receives an update.
 func (c *Controller) OnUpdatedConfig(config *notify.Config) error {
 	c.lock.Lock()
 	defer c.lock.Unlock()
@@ -203,7 +205,7 @@ func (c *Controller) OnUpdatedConfig(config *notify.Config) error {
 //    -Reset lastCollected, set each CollectionPeriod's last collection
 //    timestamp to now. 
 func (c *Controller) updateFromSchedules() time.Duration {
-	now := time.Now()
+	now := c.clock.Now()
 
 	var period pb.ConfigResponse_MetricConfig_Schedule_CollectionPeriod = 0
 	c.lastCollected = make(map[pb.ConfigResponse_MetricConfig_Schedule_CollectionPeriod]time.Time)
@@ -257,12 +259,14 @@ func (c *Controller) tick() {
 	} else {
 		// Export all metrics with the same CollectionPeriod at the same time.
 		overdue := []pb.ConfigResponse_MetricConfig_Schedule_CollectionPeriod{}
-		now := time.Now()
+		now := c.clock.Now()
 
 		for period, lastCollect := range c.lastCollected {
+			expectedExportTime := lastCollect.Add(time.Duration(period) * time.Second)
+
 			// Check if enough time elapsed since metric with a CollectionPeriod were
 			// last exported.
-			if lastCollect.Add(time.Duration(period) * time.Second).Before(now) {
+			if expectedExportTime.Before(now) || expectedExportTime.Equal(now) {
 				overdue = append(overdue, period)
 				c.lastCollected[period] = now
 			}
