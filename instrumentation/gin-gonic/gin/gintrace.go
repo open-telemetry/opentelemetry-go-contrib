@@ -22,10 +22,10 @@ import (
 	"github.com/gin-gonic/gin"
 	"google.golang.org/grpc/codes"
 
-	"go.opentelemetry.io/contrib/internal/trace"
 	otelglobal "go.opentelemetry.io/otel/api/global"
 	"go.opentelemetry.io/otel/api/kv"
 	otelpropagation "go.opentelemetry.io/otel/api/propagation"
+	"go.opentelemetry.io/otel/api/standard"
 	oteltrace "go.opentelemetry.io/otel/api/trace"
 )
 
@@ -56,9 +56,9 @@ func Middleware(service string, opts ...Option) gin.HandlerFunc {
 		}()
 		ctx := otelpropagation.ExtractHTTP(savedCtx, cfg.Propagators, c.Request.Header)
 		opts := []oteltrace.StartOption{
-			oteltrace.WithAttributes(trace.NetAttributesFromHTTPRequest("tcp", c.Request)...),
-			oteltrace.WithAttributes(trace.EndUserAttributesFromHTTPRequest(c.Request)...),
-			oteltrace.WithAttributes(trace.HTTPServerAttributesFromHTTPRequest(service, c.FullPath(), c.Request)...),
+			oteltrace.WithAttributes(standard.NetAttributesFromHTTPRequest("tcp", c.Request)...),
+			oteltrace.WithAttributes(standard.EndUserAttributesFromHTTPRequest(c.Request)...),
+			oteltrace.WithAttributes(standard.HTTPServerAttributesFromHTTPRequest(service, c.FullPath(), c.Request)...),
 			oteltrace.WithSpanKind(oteltrace.SpanKindServer),
 		}
 		spanName := c.FullPath()
@@ -75,8 +75,8 @@ func Middleware(service string, opts ...Option) gin.HandlerFunc {
 		c.Next()
 
 		status := c.Writer.Status()
-		attrs := trace.HTTPAttributesFromHTTPStatusCode(status)
-		spanStatus, spanMessage := trace.SpanStatusFromHTTPStatusCode(status)
+		attrs := standard.HTTPAttributesFromHTTPStatusCode(status)
+		spanStatus, spanMessage := standard.SpanStatusFromHTTPStatusCode(status)
 		span.SetAttributes(attrs...)
 		span.SetStatus(spanStatus, spanMessage)
 		if len(c.Errors) > 0 {

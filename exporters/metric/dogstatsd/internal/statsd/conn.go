@@ -30,7 +30,7 @@ import (
 	"go.opentelemetry.io/otel/api/metric"
 	"go.opentelemetry.io/otel/api/unit"
 	export "go.opentelemetry.io/otel/sdk/export/metric"
-	"go.opentelemetry.io/otel/sdk/export/metric/aggregator"
+	"go.opentelemetry.io/otel/sdk/export/metric/aggregation"
 	"go.opentelemetry.io/otel/sdk/resource"
 )
 
@@ -162,6 +162,11 @@ func dial(endpoint string) (net.Conn, error) {
 	return nil, ErrInvalidScheme
 }
 
+// ExportKindFor returns export.DeltaExporter for statsd-derived exporters
+func (e *Exporter) ExportKindFor(*metric.Descriptor, aggregation.Kind) export.ExportKind {
+	return export.DeltaExporter
+}
+
 // Export is common code for any statsd-based metric.Exporter implementation.
 func (e *Exporter) Export(_ context.Context, checkpointSet export.CheckpointSet) error {
 	buf := &e.buffer
@@ -170,7 +175,7 @@ func (e *Exporter) Export(_ context.Context, checkpointSet export.CheckpointSet)
 	var aggErr error
 	var sendErr error
 
-	aggErr = checkpointSet.ForEach(func(rec export.Record) error {
+	aggErr = checkpointSet.ForEach(e, func(rec export.Record) error {
 		pts, err := e.countPoints(rec)
 		if err != nil {
 			return err
@@ -231,9 +236,9 @@ func (e *Exporter) send(buf []byte) error {
 // countPoints returns the number of separate statsd points contained
 // in this record.
 func (e *Exporter) countPoints(rec export.Record) (int, error) {
-	agg := rec.Aggregator()
+	agg := rec.Aggregation()
 
-	if pts, ok := agg.(aggregator.Points); ok {
+	if pts, ok := agg.(aggregation.Points); ok {
 		points, err := pts.Points()
 		if err != nil {
 			return 0, err
@@ -248,7 +253,7 @@ func (e *Exporter) countPoints(rec export.Record) (int, error) {
 // one.
 func (e *Exporter) formatMetric(rec export.Record, pos int, buf *bytes.Buffer) error {
 	desc := rec.Descriptor()
-	agg := rec.Aggregator()
+	agg := rec.Aggregation()
 	res := rec.Resource()
 	// TODO handle non-Points Distribution/MaxSumCount by
 	// formatting individual quantiles, the sum, and the count as
@@ -256,7 +261,7 @@ func (e *Exporter) formatMetric(rec export.Record, pos int, buf *bytes.Buffer) e
 	// open-source systems like Veneur add support, figure out the
 	// proper encoding for "d"-type distribution data.
 
-	if pts, ok := agg.(aggregator.Points); ok {
+	if pts, ok := agg.(aggregation.Points); ok {
 		var format string
 		if desc.Unit() == unit.Milliseconds {
 			format = formatTiming
@@ -269,14 +274,14 @@ func (e *Exporter) formatMetric(rec export.Record, pos int, buf *bytes.Buffer) e
 		}
 		e.formatSingleStat(rec, res, points[pos], format, buf)
 
-	} else if sum, ok := agg.(aggregator.Sum); ok {
+	} else if sum, ok := agg.(aggregation.Sum); ok {
 		sum, err := sum.Sum()
 		if err != nil {
 			return err
 		}
 		e.formatSingleStat(rec, res, sum, formatCounter, buf)
 
-	} else if lv, ok := agg.(aggregator.LastValue); ok {
+	} else if lv, ok := agg.(aggregation.LastValue); ok {
 		lv, _, err := lv.LastValue()
 		if err != nil {
 			return err
@@ -309,8 +314,6 @@ func writeNumber(buf *bytes.Buffer, num metric.Number, kind metric.NumberKind) {
 		conv = strconv.AppendInt(tmp[:0], num.AsInt64(), 10)
 	case metric.Float64NumberKind:
 		conv = strconv.AppendFloat(tmp[:0], num.AsFloat64(), 'g', -1, 64)
-	case metric.Uint64NumberKind:
-		conv = strconv.AppendUint(tmp[:0], num.AsUint64(), 10)
 	}
 	_, _ = buf.Write(conv)
 }

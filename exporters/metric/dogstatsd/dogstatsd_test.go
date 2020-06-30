@@ -79,11 +79,11 @@ func TestDogstatsLabels(t *testing.T) {
 			checkpointSet := test.NewCheckpointSet(res)
 
 			desc := metric.NewDescriptor("test.name", metric.CounterKind, metric.Int64NumberKind)
-			cagg := sum.New()
-			_ = cagg.Update(ctx, metric.NewInt64Number(123), &desc)
-			cagg.Checkpoint(ctx, &desc)
+			cagg, cckpt := test.Unslice2(sum.New(2))
+			require.NoError(t, cagg.Update(ctx, metric.NewInt64Number(123), &desc))
+			require.NoError(t, cagg.SynchronizedMove(cckpt, &desc))
 
-			checkpointSet.Add(&desc, cagg, tc.labels...)
+			checkpointSet.Add(&desc, cckpt, tc.labels...)
 
 			var buf bytes.Buffer
 			exp, err := dogstatsd.NewRawExporter(dogstatsd.Config{

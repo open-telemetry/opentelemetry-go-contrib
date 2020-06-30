@@ -20,12 +20,10 @@ import (
 
 	"go.opentelemetry.io/contrib/exporters/metric/dogstatsd/internal/statsd"
 	"go.opentelemetry.io/otel/api/global"
-	"go.opentelemetry.io/otel/api/metric"
 	export "go.opentelemetry.io/otel/sdk/export/metric"
-	"go.opentelemetry.io/otel/sdk/metric/aggregator/array"
-	"go.opentelemetry.io/otel/sdk/metric/aggregator/sum"
 	"go.opentelemetry.io/otel/sdk/metric/controller/push"
-	integrator "go.opentelemetry.io/otel/sdk/metric/integrator/simple"
+	"go.opentelemetry.io/otel/sdk/metric/processor/basic"
+	"go.opentelemetry.io/otel/sdk/metric/selector/simple"
 	"go.opentelemetry.io/otel/sdk/resource"
 )
 
@@ -88,24 +86,17 @@ func NewExportPipeline(config Config, opts ...push.Option) (*push.Controller, er
 		return nil, err
 	}
 
-	// The simple integrator ensures that the export sees the full
-	// set of labels as dogstatsd tags.
-	integrator := integrator.New(exporter, false)
+	// Use arrays for Values and sums for everything else
+	selector := simple.NewWithExactDistribution()
 
-	pusher := push.New(integrator, exporter, opts...)
+	// The basic processor ensures that the exporter sees the full
+	// set of labels as dogstatsd tags.
+	processor := basic.New(selector, exporter)
+
+	pusher := push.New(processor, exporter, opts...)
 	pusher.Start()
 
 	return pusher, nil
-}
-
-// AggregatorFor uses an Array aggregator for Values and a Sum aggregator for counters
-func (*Exporter) AggregatorFor(descriptor *metric.Descriptor) export.Aggregator {
-	switch descriptor.MetricKind() {
-	case metric.ValueObserverKind, metric.ValueRecorderKind:
-		return array.New()
-	default:
-		return sum.New()
-	}
 }
 
 // AppendName is part of the stats-internal adapter interface.
