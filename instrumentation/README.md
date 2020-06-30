@@ -35,3 +35,11 @@ Additionally the following guidelines for package composition need to be followe
    This documentation SHOULD be in a dedicated `doc.go` file if the package is more than one file.
    It SHOULD contain useful information like what the purpose of the instrumentation is, how to use it, and any compatibility restrictions that might exist. 
 - Examples of how to actually use the instrumentation SHOULD be included.
+
+### Additional Instrumentation Packages
+
+Below are additional instrumentation packages outside of the opentelemetry-go-contrib repo:
+
+|  Package Name  |                     Link                    |                                                          Notes                                                                 |
+| :------------: | :-----------------------------------------: | :----------------------------------------------------------------------------------------------------------------------------: |
+| go-redis/redis | [Github](https://github.com/go-redis/redis) | Trace only; add the hook found [here](https://github.com/go-redis/redis/blob/master/redisext/otel.go) to your go-redis client. |
