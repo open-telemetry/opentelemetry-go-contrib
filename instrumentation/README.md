@@ -36,7 +36,7 @@ Additionally the following guidelines for package composition need to be followe
    It SHOULD contain useful information like what the purpose of the instrumentation is, how to use it, and any compatibility restrictions that might exist. 
 - Examples of how to actually use the instrumentation SHOULD be included.
 
-### Additional Instrumentation Packages
+## Additional Instrumentation Packages
 
 Below are additional instrumentation packages outside of the opentelemetry-go-contrib repo:
 
