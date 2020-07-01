@@ -15,7 +15,7 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 
 ## [0.7.0] - 2020-06-29
 
-This release upgrades its [go.opentelemetry.io/otel](https://github.com/open-telemetry/opentelemetry-go "Otel Github") dependency to v0.7.0.
+This release upgrades its [go.opentelemetry.io/otel](https://github.com/open-telemetry/opentelemetry-go "Open Telemetry for Go on Github") dependency to v0.7.0.
 
 ### Added
 
@@ -37,10 +37,7 @@ This release upgrades its [go.opentelemetry.io/otel](https://github.com/open-tel
 - Bump gopkg.in/macaron.v1 from 1.3.5 to 1.3.9 in /instrumentation/macaron. (#68)
 - Bump github.com/gin-gonic/gin from 1.6.2 to 1.6.3 in /instrumentation/gin-gonic/gin. (#73)
 - Bump github.com/DataDog/datadog-go from 3.5.0+incompatible to 3.7.2+incompatible in /exporters/metric/datadog. (#78)
-
-### Removed
-
-- `internal/trace/http.go` helpers, replaced by `api/standard` helpers in otel-go repo (#112)
+- Replaced `internal/trace/http.go` helpers with `api/standard` helpers from otel-go repo. (#112)
 
 ## [0.6.1] - 2020-06-08
 
