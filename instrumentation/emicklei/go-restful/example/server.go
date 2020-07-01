@@ -36,8 +36,7 @@ type UserResource struct{}
 func (u UserResource) WebService() *restful.WebService {
 	ws := &restful.WebService{}
 
-	ws.
-		Path("/users").
+	ws.Path("/users").
 		Consumes(restful.MIME_JSON).
 		Produces(restful.MIME_JSON)
 
