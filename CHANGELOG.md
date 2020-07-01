@@ -10,6 +10,7 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 
 ### Changed
 
+- Add `emicklei/go-restful/v3` trace instrumentation. (#115)
 - Update `CONTRIBUTING.md` to ask for updates to `CHANGELOG.md` with each pull request. (#114)
 - Create this `CHANGELOG.md`. (#114)
 
