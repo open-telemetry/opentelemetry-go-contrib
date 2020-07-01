@@ -50,7 +50,7 @@ func TestChildSpanFromGlobalTracer(t *testing.T) {
 		Returns(200, "OK", nil).
 		Returns(404, "Not Found", nil))
 	container := restful.NewContainer()
-	container.Filter(restfultrace.OtelFilter("my-service"))
+	container.Filter(restfultrace.OTelFilter("my-service"))
 	container.Add(ws)
 
 	r := httptest.NewRequest("GET", "/user/123", nil)
@@ -76,7 +76,7 @@ func TestChildSpanFromCustomTracer(t *testing.T) {
 	ws.Route(ws.GET("/user/{id}").To(handlerFunc))
 
 	container := restful.NewContainer()
-	container.Filter(restfultrace.OtelFilter("my-service", restfultrace.WithTracer(tracer)))
+	container.Filter(restfultrace.OTelFilter("my-service", restfultrace.WithTracer(tracer)))
 	container.Add(ws)
 
 	r := httptest.NewRequest("GET", "/user/123", nil)
@@ -95,7 +95,7 @@ func TestChildSpanNames(t *testing.T) {
 	ws.Route(ws.GET("/user/{id:[0-9]+}").To(handlerFunc))
 
 	container := restful.NewContainer()
-	container.Filter(restfultrace.OtelFilter("foobar", restfultrace.WithTracer(tracer)))
+	container.Filter(restfultrace.OTelFilter("foobar", restfultrace.WithTracer(tracer)))
 	container.Add(ws)
 
 	ws.Route(ws.GET("/book/{title}").To(func(req *restful.Request, resp *restful.Response) {
@@ -171,7 +171,7 @@ func TestPropagationWithGlobalPropagators(t *testing.T) {
 	ws.Route(ws.GET("/user/{id}").To(handlerFunc))
 
 	container := restful.NewContainer()
-	container.Filter(restfultrace.OtelFilter("foobar", restfultrace.WithTracer(tracer)))
+	container.Filter(restfultrace.OTelFilter("foobar", restfultrace.WithTracer(tracer)))
 	container.Add(ws)
 
 	container.ServeHTTP(w, r)
@@ -203,7 +203,7 @@ func TestPropagationWithCustomPropagators(t *testing.T) {
 	ws.Route(ws.GET("/user/{id}").To(handlerFunc))
 
 	container := restful.NewContainer()
-	container.Filter(restfultrace.OtelFilter("foobar",
+	container.Filter(restfultrace.OTelFilter("foobar",
 		restfultrace.WithTracer(tracer),
 		restfultrace.WithPropagators(props)))
 	container.Add(ws)
@@ -231,15 +231,15 @@ func TestMultiFilters(t *testing.T) {
 	ws1 := &restful.WebService{}
 	ws1.Path("/user")
 	ws1.Route(ws1.GET("/{id}").
-		Filter(restfultrace.OtelFilter("my-service", restfultrace.WithTracer(tracer1))).
+		Filter(restfultrace.OTelFilter("my-service", restfultrace.WithTracer(tracer1))).
 		To(wrappedFunc("tracer1")))
 	ws1.Route(ws1.GET("/{id}/books").
-		Filter(restfultrace.OtelFilter("book-service", restfultrace.WithTracer(tracer2))).
+		Filter(restfultrace.OTelFilter("book-service", restfultrace.WithTracer(tracer2))).
 		To(wrappedFunc("tracer2")))
 
 	ws2 := &restful.WebService{}
 	ws2.Path("/library")
-	ws2.Filter(restfultrace.OtelFilter("library-service", restfultrace.WithTracer(tracer3)))
+	ws2.Filter(restfultrace.OTelFilter("library-service", restfultrace.WithTracer(tracer3)))
 	ws2.Route(ws2.GET("/{name}").To(wrappedFunc("tracer3")))
 
 	container := restful.NewContainer()

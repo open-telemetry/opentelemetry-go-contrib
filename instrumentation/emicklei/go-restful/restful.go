@@ -28,12 +28,12 @@ const (
 	tracerVersion = "1.0"
 )
 
-// OtelFilter returns a restful.FilterFunction which will trace an incoming request.
+// OTelFilter returns a restful.FilterFunction which will trace an incoming request.
 //
 // The service parameter should describe the name of the (virtual) server handling
 // the request.  Options can be applied to configure the tracer and propagators
 // used for this filter.
-func OtelFilter(service string, opts ...Option) restful.FilterFunction {
+func OTelFilter(service string, opts ...Option) restful.FilterFunction {
 	cfg := Config{}
 	for _, opt := range opts {
 		opt(&cfg)

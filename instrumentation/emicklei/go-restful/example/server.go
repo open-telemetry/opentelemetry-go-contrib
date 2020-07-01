@@ -53,7 +53,7 @@ func main() {
 	initTracer()
 	u := UserResource{}
 	// create the Otel filter
-	filter := restfultrace.OtelFilter("my-service")
+	filter := restfultrace.OTelFilter("my-service")
 	// use it
 	restful.DefaultContainer.Filter(filter)
 	restful.DefaultContainer.Add(u.WebService())
