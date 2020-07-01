@@ -35,7 +35,7 @@ To create a new PR, fork the project in GitHub and clone the upstream
 repo:
 
 ```sh
-$ git clone https://github.com/open-telemetry/opentelemetry-go
+$ git clone https://github.com/open-telemetry/opentelemetry-go-contrib
 ```
 This would put the project in the `opentelemetry-go-contrib` directory in
 current working directory.
@@ -46,19 +46,21 @@ Enter the newly created directory and add your fork as a new remote:
 $ git remote add <YOUR_FORK> git@github.com:<YOUR_GITHUB_USERNAME>/opentelemetry-go
 ```
 
-Check out a new branch, make modifications, run linters and tests, and
-push the branch to your fork:
+Check out a new branch, make modifications, run linters and tests, update
+`CHANGELOG.md` and push the branch to your fork:
 
 ```sh
 $ git checkout -b <YOUR_BRANCH_NAME>
 # edit files
+# update changelog
 $ make precommit
 $ git add -p
 $ git commit
 $ git push <YOUR_FORK> <YOUR_BRANCH_NAME>
 ```
 
-Open a pull request against the main `opentelemetry-go-contrib` repo.
+Open a pull request against the main `opentelemetry-go-contrib` repo. Be sure to add the pull
+request ID to the entry you added to `CHANGELOG.md`.
 
 ### How to Receive Comments
 
@@ -71,18 +73,19 @@ Open a pull request against the main `opentelemetry-go-contrib` repo.
 
 A PR is considered to be **ready to merge** when:
 
-* It has received two approvals from Collaborators/Maintainers (at
+* It has received two approvals from Approvers/Maintainers (at
   different companies).
-* Major feedbacks are resolved.
+* Major feedback items are resolved.
 * It has been open for review for at least one working day. This gives
   people reasonable time to review.
 * Trivial change (typo, cosmetic, doc, etc.) doesn't have to wait for
   one day.
+* `CHANGELOG.md` has been updated to reflect what has been
+  added, changed, removed, or fixed.
 * Urgent fix can take exception as long as it has been actively
   communicated.
 
-Any Collaborator/Maintainer can merge the PR once it is **ready to
-merge**.
+Any Maintainer can merge the PR once it is **ready to merge**.
 
 ## Style Guide
 
