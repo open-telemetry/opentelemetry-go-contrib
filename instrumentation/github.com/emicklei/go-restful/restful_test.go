@@ -24,7 +24,8 @@ import (
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 
-	restfultrace "go.opentelemetry.io/contrib/instrumentation/emicklei/go-restful"
+	restfultrace "go.opentelemetry.io/contrib/instrumentation/github.com/emicklei/go-restful"
+
 	mocktrace "go.opentelemetry.io/contrib/internal/trace"
 	otelglobal "go.opentelemetry.io/otel/api/global"
 	otelvalue "go.opentelemetry.io/otel/api/kv/value"
@@ -42,7 +43,7 @@ func TestChildSpanFromGlobalTracer(t *testing.T) {
 		spanTracer := span.Tracer()
 		mockTracer, ok := spanTracer.(*mocktrace.Tracer)
 		require.True(t, ok)
-		assert.Equal(t, "go.opentelemetry.io/contrib/instrumentation/emicklei/go-restful", mockTracer.Name)
+		assert.Equal(t, "go.opentelemetry.io/contrib/instrumentation/github.com/emicklei/go-restful", mockTracer.Name)
 		resp.WriteHeader(http.StatusOK)
 	}
 	ws := &restful.WebService{}
