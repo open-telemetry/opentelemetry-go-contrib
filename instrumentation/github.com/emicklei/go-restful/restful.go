@@ -24,7 +24,7 @@ import (
 )
 
 const (
-	tracerName    = "go.opentelemetry.io/contrib/instrumentation/emicklei/go-restful"
+	tracerName    = "go.opentelemetry.io/contrib/instrumentation/github.com/emicklei/go-restful"
 	tracerVersion = "1.0"
 )
 

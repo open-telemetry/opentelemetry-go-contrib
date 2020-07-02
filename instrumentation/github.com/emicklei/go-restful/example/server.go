@@ -21,7 +21,7 @@ import (
 
 	"github.com/emicklei/go-restful/v3"
 
-	restfultrace "go.opentelemetry.io/contrib/instrumentation/emicklei/go-restful"
+	restfultrace "go.opentelemetry.io/contrib/instrumentation/github.com/emicklei/go-restful"
 	otelglobal "go.opentelemetry.io/otel/api/global"
 	otelkv "go.opentelemetry.io/otel/api/kv"
 	oteltrace "go.opentelemetry.io/otel/api/trace"
