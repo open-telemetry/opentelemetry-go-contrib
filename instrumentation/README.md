@@ -40,6 +40,6 @@ Additionally the following guidelines for package composition need to be followe
 
 Below are additional instrumentation packages outside of the opentelemetry-go-contrib repo:
 
-|  Package Name  |                     Link                    |                                                          Notes                                                                 |
-| :------------: | :-----------------------------------------: | :----------------------------------------------------------------------------------------------------------------------------: |
-| go-redis/redis | [Github](https://github.com/go-redis/redis) | Trace only; add the hook found [here](https://github.com/go-redis/redis/blob/master/redisext/otel.go) to your go-redis client. |
+| Package Name | Documentation | Notes |
+| :----------: | :-----------: | :---: |
+| [`github.com/go-redis/redis/v8/redisext`](https://github.com/go-redis/redis/blob/v8.0.0-beta.5/redisext/otel.go) | [Go Docs](https://pkg.go.dev/github.com/go-redis/redis/v8@v8.0.0-beta.5.0.20200614113957-5b4d00c217b0/redisext?tab=doc) | Trace only; add the hook found [here](https://github.com/go-redis/redis/blob/v8.0.0-beta.5/redisext/otel.go) to your go-redis client. |
