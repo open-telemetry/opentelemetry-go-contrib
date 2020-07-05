@@ -16,6 +16,8 @@
 // package (https://github.com/emicklei/go-restful).
 //
 // Instrumentation of an incoming request is achieved via a go-restful
-// FilterFunc which may be applied at the container level, at the
-// webservice level or at a route level
+// FilterFunc called `OTelFilterFunc` which may be applied at any one of
+//   * the container level
+//   * webservice level
+//   * route level
 package restful // import "go.opentelemetry.io/contrib/instrumentation/github.com/emicklei/go-restful"
