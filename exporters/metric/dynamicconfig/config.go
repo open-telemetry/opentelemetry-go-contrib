@@ -18,7 +18,7 @@ import (
 	"bytes"
 	"errors"
 
-	pb "github.com/vmingchen/opentelemetry-proto/gen/go/collector/dynamicconfig/v1"
+	pb "github.com/open-telemetry/opentelemetry-proto/gen/go/collector/dynamicconfig/v1"
 )
 
 // A configuration used in the SDK to dynamically change metric collection and tracing.

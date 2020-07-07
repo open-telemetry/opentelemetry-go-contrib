@@ -19,8 +19,8 @@ import (
 	"time"
 
 	"github.com/benbjohnson/clock"
+	pb "github.com/open-telemetry/opentelemetry-proto/gen/go/collector/dynamicconfig/v1"
 	resourcepb "github.com/open-telemetry/opentelemetry-proto/gen/go/resource/v1"
-	pb "github.com/vmingchen/opentelemetry-proto/gen/go/collector/dynamicconfig/v1"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/metadata"
 )

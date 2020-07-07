@@ -12,7 +12,7 @@ replace go.opentelemetry.io/otel/exporters/otlp => github.com/open-telemetry/ope
 
 require (
 	github.com/open-telemetry/opentelemetry-proto v0.3.0 // indirect
-	github.com/vmingchen/opentelemetry-proto v0.3.1-0.20200611154326-5406581153f7
+	github.com/open-telemetry/opentelemetry-proto v0.3.1-0.20200611154326-5406581153f7
 	go.opentelemetry.io/contrib v0.6.1
 	go.opentelemetry.io/contrib/exporters/metric/dynamicconfig v0.6.1
 	go.opentelemetry.io/otel v0.6.0

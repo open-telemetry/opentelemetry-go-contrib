@@ -20,7 +20,7 @@ import (
 	"testing"
 
 	"github.com/open-telemetry/opentelemetry-collector/translator/conventions"
-	pb "github.com/vmingchen/opentelemetry-proto/gen/go/collector/dynamicconfig/v1"
+	pb "github.com/open-telemetry/opentelemetry-proto/gen/go/collector/dynamicconfig/v1"
 
 	"google.golang.org/grpc"
 
