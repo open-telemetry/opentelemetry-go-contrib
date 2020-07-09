@@ -50,11 +50,10 @@ type Controller struct {
 	clock       controllerTime.Clock
 	ticker      controllerTime.Ticker
 	notifier    *notify.Notifier
-	schedules *[]*pb.ConfigResponse_MetricConfig_Schedule
+	// Used to store and apply metric schedules
+	dynamicExtension *sdk.DynamicExtension
 	// Timestamp all metrics with CollectionPeriod were last exported
 	lastCollected map[pb.ConfigResponse_MetricConfig_Schedule_CollectionPeriod]time.Time
-	// Maps instrument name to a CollectionPeriod
-	instrumentPeriod map[string]pb.ConfigResponse_MetricConfig_Schedule_CollectionPeriod
 }
 
 // New constructs a Controller, an implementation of metric.Provider,
@@ -71,24 +70,18 @@ func New(selector export.AggregatorSelector, exporter export.Exporter, opts ...O
 		c.Timeout = c.Period
 	}
 
-	lock := sync.Mutex{}
-	schedules := []*pb.ConfigResponse_MetricConfig_Schedule{}
-	var instrumentPeriod map[string]pb.ConfigResponse_MetricConfig_Schedule_CollectionPeriod
-
-	var dynamicExtension *sdk.DynamicExtension = nil
+	var extension *sdk.DynamicExtension = nil
 	if c.Notifier != nil {
-		instrumentPeriod = make(map[string]pb.ConfigResponse_MetricConfig_Schedule_CollectionPeriod)
-		dynamicExtension = sdk.NewDynamicExtension(&lock, &schedules, instrumentPeriod)
+		extension = sdk.NewDynamicExtension()
 	}
 
 	processor := basic.New(selector, exporter)
 	impl := sdk.NewAccumulator(
 		processor,
 		sdk.WithResource(c.Resource),
-		sdk.WithDynamicExtension(dynamicExtension),
+		sdk.WithDynamicExtension(extension),
 	)
 	return &Controller{
-		lock: lock,
 		provider:    registry.NewProvider(impl),
 		accumulator: impl,
 		processor:   processor,
@@ -98,8 +91,7 @@ func New(selector export.AggregatorSelector, exporter export.Exporter, opts ...O
 		timeout:     c.Timeout,
 		clock:       controllerTime.RealClock{},
 		notifier:    c.Notifier,
-		schedules: &schedules,
-		instrumentPeriod: instrumentPeriod,
+		dynamicExtension: extension,
 	}
 }
 
@@ -160,12 +152,12 @@ func (c *Controller) Stop() {
 
 // Called by notifier if we Register with one.
 func (c *Controller) OnInitialConfig(config *notify.Config) error {
-	err := config.Validate()
+	err := config.ValidateMetricConfig()
 	if err != nil {
 		return err
 	}
 
-	*c.schedules = config.MetricConfig.Schedules
+	c.dynamicExtension.SetSchedules(config.MetricConfig.Schedules)
 	c.period = c.updateFromSchedules()
 
 	return nil
@@ -176,22 +168,24 @@ func (c *Controller) OnUpdatedConfig(config *notify.Config) error {
 	c.lock.Lock()
 	defer c.lock.Unlock()
 
-	err := config.Validate()
+	err := config.ValidateMetricConfig()
 	if err != nil {
 		return err
 	}
 
-	// Clear instrument name  to collectionPeriod mappings, since
-	// they are obsolete with an updated config.
-	for name := range c.instrumentPeriod {
-		delete(c.instrumentPeriod, name)
-	}
+	c.dynamicExtension.Clear()
+
+	c.dynamicExtension.SetSchedules(config.MetricConfig.Schedules)
+	c.period = c.updateFromSchedules()
 
 	// Stop the existing ticker
-	// Make a new ticker with a new sampling period
 	c.ticker.Stop()
-	*c.schedules = config.MetricConfig.Schedules
-	c.period = c.updateFromSchedules()
+	// If no schedules, or all schedules have a period of 0, controller never exports.
+	if c.period == 0 {
+		return nil
+	}
+
+	// Make a new ticker with a new sampling period
 	c.ticker = c.clock.Ticker(c.period)
 
 	// Let the controller know to check the new ticker
@@ -210,7 +204,7 @@ func (c *Controller) updateFromSchedules() time.Duration {
 	var period pb.ConfigResponse_MetricConfig_Schedule_CollectionPeriod = 0
 	c.lastCollected = make(map[pb.ConfigResponse_MetricConfig_Schedule_CollectionPeriod]time.Time)
 
-	for _, schedule := range *c.schedules {
+	for _, schedule := range c.dynamicExtension.GetSchedules() {
 		// If CollectionPeriod is 0, we do not do anything with it
 		if schedule.Period == 0 {
 			continue

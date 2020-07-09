@@ -33,18 +33,23 @@ func TestEquals(t *testing.T) {
 	require.False(t, fooConfig1.Equals(barConfig))
 }
 
-func TestValidate(t *testing.T) {
-	schedule1 := pb.ConfigResponse_MetricConfig_Schedule{Period: 0}
+func TestMetricConfigValidate(t *testing.T) {
+	schedule1 := pb.ConfigResponse_MetricConfig_Schedule{Period: -1}
 	schedule2 := pb.ConfigResponse_MetricConfig_Schedule{Period: 1}
 
 	config := &notify.Config{
+		pb.ConfigResponse{},
+	}
+	require.Equal(t, config.ValidateMetricConfig(), errors.New("No MetricConfig"))
+
+	config = &notify.Config{
 		pb.ConfigResponse{
 			MetricConfig: &pb.ConfigResponse_MetricConfig{
 				Schedules: []*pb.ConfigResponse_MetricConfig_Schedule{&schedule1},
 			},
 		},
 	}
-	require.Equal(t, config.Validate(), errors.New("Period must be positive"))
+	require.Equal(t, config.ValidateMetricConfig(), errors.New("Periods must be positive"))
 
 	config = &notify.Config{
 		pb.ConfigResponse{
@@ -53,5 +58,5 @@ func TestValidate(t *testing.T) {
 			},
 		},
 	}
-	require.Equal(t, config.Validate(), nil)
+	require.Equal(t, config.ValidateMetricConfig(), nil)
 }

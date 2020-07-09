@@ -27,26 +27,73 @@ import (
 
 // Extension to accumulator which allows per-metric collection.
 type DynamicExtension struct {
-	lock *sync.Mutex
+	lock sync.Mutex
 
 	// List of current schedules.
-	schedules *[]*pb.ConfigResponse_MetricConfig_Schedule
+	schedules []*pb.ConfigResponse_MetricConfig_Schedule
 
-	// Maps the instrument to its CollectionPeriod. Updated when new config
-	// is applied and new instruments are added.
+	// Maps the instrument to most frequent CollectionPeriod of the schedules it matches.
+	// Updated when new config is applied and new instruments are added.
 	instrumentPeriod map[string]pb.ConfigResponse_MetricConfig_Schedule_CollectionPeriod
 }
 
-func NewDynamicExtension(
-	lock *sync.Mutex,
-	schedules *[]*pb.ConfigResponse_MetricConfig_Schedule,
-	instrumentPeriod map[string]pb.ConfigResponse_MetricConfig_Schedule_CollectionPeriod,
-) *DynamicExtension {
+func NewDynamicExtension() *DynamicExtension {
 	return &DynamicExtension{
-		lock: lock, 
-		schedules: schedules,
-		instrumentPeriod: instrumentPeriod,
+		instrumentPeriod: make(map[string]pb.ConfigResponse_MetricConfig_Schedule_CollectionPeriod),
 	}
+}
+
+// Find period associated with the instrument name. If it is cached in 
+// ext.instrumentPeriod, use that. Otherwise, find the period from the
+// current list of schedules (choosing the most frequent if multiple
+// schedules match. 
+func (ext *DynamicExtension) FindPeriod(name string) pb.ConfigResponse_MetricConfig_Schedule_CollectionPeriod {
+	ext.lock.Lock()
+	defer ext.lock.Unlock()
+
+	// Check if period associated with instrument name is cached. If so return it.
+	if period, ok := ext.instrumentPeriod[name]; ok {
+		return period
+	}
+
+	// Find schedules that matches with instrument name, and return the most
+	// frequent associated CollectionPeriod.
+	var minPeriod pb.ConfigResponse_MetricConfig_Schedule_CollectionPeriod = 0
+	for _, schedule := range ext.schedules {
+		// To match, name must match at least one InclusionPattern and no
+		// ExclusionPatterns.
+		if metricpattern.Matches(name, schedule.InclusionPatterns) &&
+		!metricpattern.Matches(name, schedule.ExclusionPatterns) &&
+		// Check if the CollectionPeriod is the smallest of all those from
+		// matching schedules so far.
+		(minPeriod == 0 || minPeriod > schedule.Period) {
+			minPeriod = schedule.Period
+		}
+	}
+
+	ext.instrumentPeriod[name] = minPeriod
+	return minPeriod
+}
+
+// Clear instrumentPeriod cache. 
+func (ext *DynamicExtension) Clear() {
+	ext.lock.Lock()
+	defer ext.lock.Unlock()
+	for name := range ext.instrumentPeriod {
+		delete(ext.instrumentPeriod, name)
+	}
+}
+
+func (ext *DynamicExtension) GetSchedules() []*pb.ConfigResponse_MetricConfig_Schedule {
+	ext.lock.Lock()
+	defer ext.lock.Unlock()
+	return ext.schedules
+}
+
+func (ext *DynamicExtension) SetSchedules(schedules []*pb.ConfigResponse_MetricConfig_Schedule) {
+	ext.lock.Lock()
+	defer ext.lock.Unlock()
+	ext.schedules = schedules
 }
 
 // CollectConfig contains optional parameters for Accumulator.Collect().
@@ -75,27 +122,4 @@ type periodsOption struct {
 
 func (o periodsOption) Apply(config *CollectConfig) {
 	config.Periods = o.periods
-}
-
-// Find schedule that matches with instrument name, and return the one with the
-// minimal CollectionPeriod.
-func FindPeriod(
-	name string,
-	schedules *[]*pb.ConfigResponse_MetricConfig_Schedule,
-) pb.ConfigResponse_MetricConfig_Schedule_CollectionPeriod {
-	var period pb.ConfigResponse_MetricConfig_Schedule_CollectionPeriod = 0
-
-	for _, schedule := range *schedules {
-		schedulePeriod := schedule.Period
-
-		// To match, name must match at least one InclusionPattern and no
-		// ExclusionPatterns. If it matches multiple schedules, take the one
-		// with the smallest CollectionPeriod.
-		if metricpattern.Matches(name, schedule.InclusionPatterns) &&
-		!metricpattern.Matches(name, schedule.ExclusionPatterns) &&
-		(period == 0 || period > schedulePeriod) {
-			period = schedulePeriod
-		}
-	}
-	return period
 }

@@ -27,7 +27,7 @@ import (
 )
 
 // DefaultCheckFrequency is the default frequency at which we check for new configs.
-const DefaultCheckFrequency = time.Minute
+const DefaultCheckFrequency = 10 * time.Minute
 
 type Watcher interface {
 	// NOTE: A lock will be held during the execution of both these functions.
@@ -181,6 +181,7 @@ func (n *Notifier) checkChanges(ch chan struct{}) {
 				log.Printf("Failed to read from config service: %v\n", err)
 				break
 			}
+
 
 			n.lock.Lock()
 			if !n.config.Equals(newConfig) {

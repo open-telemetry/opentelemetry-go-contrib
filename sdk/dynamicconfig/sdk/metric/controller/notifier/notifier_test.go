@@ -15,6 +15,7 @@
 package notifier_test
 
 import (
+	"runtime"
 	"sync"
 	"testing"
 	"time"
@@ -56,7 +57,8 @@ func (w *testWatcher) getTestVar() int {
 
 func newExampleNotifier(t *testing.T) *notify.Notifier {
 	notifier, err := notify.NewNotifier(
-		notify.GetDefaultConfig(60, []byte{'b', 'a', 'r'}),
+		notify.GetDefaultConfig(1, []byte{'b', 'a', 'r'}),
+		notify.WithCheckFrequency(time.Minute),
 		notify.WithConfigHost(notify.TestAddress),
 		notify.WithResource(notify.MockResource("notifiertest")),
 	)
@@ -75,24 +77,24 @@ func TestDynamicNotifier(t *testing.T) {
 	stopFunc := notify.RunMockConfigService(
 		t,
 		notify.TestAddress,
-		notify.GetDefaultConfig(60, notify.TestFingerprint),
+		notify.GetDefaultConfig(1, notify.TestFingerprint),
 	)
+	defer stopFunc()
 
 	notifier := newExampleNotifier(t)
 	require.Equal(t, watcher.getTestVar(), 0)
 
 	notifier.SetClock(mock)
 	notifier.Start()
+	defer notifier.Stop()
 
 	notifier.Register(&watcher)
 	require.Equal(t, watcher.getTestVar(), 1)
 
 	mock.Add(5 * time.Minute)
+	runtime.Gosched()
 
 	require.Equal(t, watcher.getTestVar(), 2)
-
-	notifier.Stop()
-	stopFunc()
 }
 
 // Test config doesn't update
@@ -125,11 +127,11 @@ func TestDoubleStop(t *testing.T) {
 		notify.TestAddress,
 		notify.GetDefaultConfig(60, notify.TestFingerprint),
 	)
+	defer stopFunc()
 	notifier := newExampleNotifier(t)
 	notifier.Start()
 	notifier.Stop()
 	notifier.Stop()
-	stopFunc()
 }
 
 func TestPushDoubleStart(t *testing.T) {
@@ -138,9 +140,9 @@ func TestPushDoubleStart(t *testing.T) {
 		notify.TestAddress,
 		notify.GetDefaultConfig(60, notify.TestFingerprint),
 	)
+	defer stopFunc()
 	notifier := newExampleNotifier(t)
 	notifier.Start()
 	notifier.Start()
 	notifier.Stop()
-	stopFunc()
 }

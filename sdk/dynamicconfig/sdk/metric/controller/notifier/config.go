@@ -47,9 +47,15 @@ func GetDefaultConfig(period pb.ConfigResponse_MetricConfig_Schedule_CollectionP
 	}
 }
 
-func (config *Config) Validate() error {
-	if config.MetricConfig.Schedules[0].Period <= 0 {
-		return errors.New("Period must be positive")
+func (config *Config) ValidateMetricConfig() error {
+	if config.MetricConfig == nil {
+		return errors.New("No MetricConfig")
+	}
+
+	for _, schedule := range config.MetricConfig.Schedules {
+		if schedule.Period < 0 {
+			return errors.New("Periods must be positive")
+		}
 	}
 
 	return nil

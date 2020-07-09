@@ -471,16 +471,7 @@ func (m *Accumulator) shouldCollect(
 		return true
 	}
 
-	m.ext.lock.Lock()
-	// Determine CollectionPeriod associated with instrument.
-	var collectionPeriod pb.ConfigResponse_MetricConfig_Schedule_CollectionPeriod = 0
-	if period, ok := m.ext.instrumentPeriod[name]; ok {
-		collectionPeriod = period
-	} else {
-		collectionPeriod = FindPeriod(name, m.ext.schedules)
-		m.ext.instrumentPeriod[name] = collectionPeriod
-	}
-	m.ext.lock.Unlock()
+	collectionPeriod := m.ext.FindPeriod(name)
 
 	// We treat a collectionPeriod of 0 as meaning "do not collect".
 	if collectionPeriod == 0 {
