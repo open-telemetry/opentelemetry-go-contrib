@@ -20,7 +20,7 @@ import (
 	"sync"
 	"time"
 
-	pb "github.com/vmingchen/opentelemetry-proto/gen/go/collector/dynamicconfig/v1"
+	pb "github.com/open-telemetry/opentelemetry-proto/gen/go/collector/dynamicconfig/v1"
 
 	sdk "go.opentelemetry.io/contrib/sdk/dynamicconfig/sdk/metric"
 	notify "go.opentelemetry.io/contrib/sdk/dynamicconfig/sdk/metric/controller/notifier"

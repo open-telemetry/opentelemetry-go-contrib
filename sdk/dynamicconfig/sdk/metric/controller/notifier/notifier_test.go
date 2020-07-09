@@ -111,6 +111,7 @@ func TestNonDynamicNotifier(t *testing.T) {
 
 	notifier.SetClock(mock)
 	notifier.Start()
+	defer notifier.Stop()
 
 	notifier.Register(&watcher)
 	require.Equal(t, watcher.getTestVar(), 1)
@@ -118,7 +119,6 @@ func TestNonDynamicNotifier(t *testing.T) {
 	mock.Add(time.Minute)
 
 	require.Equal(t, watcher.getTestVar(), 1)
-	notifier.Stop()
 }
 
 func TestDoubleStop(t *testing.T) {

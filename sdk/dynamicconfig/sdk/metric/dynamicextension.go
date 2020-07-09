@@ -17,7 +17,7 @@ package metric
 import (
 	"sync"
 
-	pb "github.com/vmingchen/opentelemetry-proto/gen/go/collector/dynamicconfig/v1"
+	pb "github.com/open-telemetry/opentelemetry-proto/gen/go/collector/dynamicconfig/v1"
 
 	"go.opentelemetry.io/contrib/sdk/dynamicconfig/internal/metricpattern"
 )
