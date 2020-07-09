@@ -31,6 +31,10 @@ import (
 	"go.opentelemetry.io/otel/api/unit"
 	"go.opentelemetry.io/otel/exporters/metric/test"
 	export "go.opentelemetry.io/otel/sdk/export/metric"
+	"go.opentelemetry.io/otel/sdk/metric/aggregator/array"
+	"go.opentelemetry.io/otel/sdk/metric/aggregator/lastvalue"
+	"go.opentelemetry.io/otel/sdk/metric/aggregator/sum"
+	aggtest "go.opentelemetry.io/otel/sdk/metric/aggregator/test"
 	"go.opentelemetry.io/otel/sdk/resource"
 )
 
@@ -143,11 +147,27 @@ timer.B.D:%s|ms
 						kv.String("C", "D"),
 					}
 					const value = 123.456
+					val := number(t, nkind, value)
 
-					checkpointSet.AddCounter(&cdesc, value, labels...)
-					checkpointSet.AddLastValue(&gdesc, value, labels...)
-					checkpointSet.AddValueRecorder(&mdesc, value, labels...)
-					checkpointSet.AddValueRecorder(&tdesc, value, labels...)
+					cagg, cckpt := test.Unslice2(sum.New(2))
+					gagg, gckpt := test.Unslice2(lastvalue.New(2))
+					magg, mckpt := test.Unslice2(array.New(2))
+					tagg, tckpt := test.Unslice2(array.New(2))
+
+					aggtest.CheckedUpdate(t, cagg, val, &cdesc)
+					aggtest.CheckedUpdate(t, gagg, val, &gdesc)
+					aggtest.CheckedUpdate(t, magg, val, &mdesc)
+					aggtest.CheckedUpdate(t, tagg, val, &tdesc)
+
+					require.NoError(t, cagg.SynchronizedMove(cckpt, &cdesc))
+					require.NoError(t, gagg.SynchronizedMove(gckpt, &gdesc))
+					require.NoError(t, magg.SynchronizedMove(mckpt, &mdesc))
+					require.NoError(t, tagg.SynchronizedMove(tckpt, &tdesc))
+
+					checkpointSet.Add(&cdesc, cckpt, labels...)
+					checkpointSet.Add(&gdesc, gckpt, labels...)
+					checkpointSet.Add(&mdesc, mckpt, labels...)
+					checkpointSet.Add(&tdesc, tckpt, labels...)
 
 					err = exp.Export(ctx, checkpointSet)
 					require.Nil(t, err)
@@ -166,6 +186,17 @@ timer.B.D:%s|ms
 			}
 		})
 	}
+}
+
+func number(t *testing.T, kind metric.NumberKind, value float64) metric.Number {
+	t.Helper()
+	switch kind {
+	case metric.Int64NumberKind:
+		return metric.NewInt64Number(int64(value))
+	case metric.Float64NumberKind:
+		return metric.NewFloat64Number(value)
+	}
+	panic("invalid number kind")
 }
 
 func makeLabels(offset, nkeys int) []kv.KeyValue {
@@ -303,7 +334,10 @@ func TestPacketSplit(t *testing.T) {
 				encoded := adapter.Encoder.Encode(elabels.Iter())
 				expect := fmt.Sprint("counter:100|c|#", encoded, "\n")
 				expected = append(expected, expect)
-				checkpointSet.AddCounter(&desc, 100, labels...)
+				agg, ckpt := test.Unslice2(sum.New(2))
+				aggtest.CheckedUpdate(t, agg, metric.NewInt64Number(100), &desc)
+				require.NoError(t, agg.SynchronizedMove(ckpt, &desc))
+				checkpointSet.Add(&desc, ckpt, labels...)
 			})
 
 			err = exp.Export(ctx, checkpointSet)
@@ -330,9 +364,13 @@ func TestArraySplit(t *testing.T) {
 	checkpointSet := test.NewCheckpointSet(testResource)
 	desc := metric.NewDescriptor("measure", metric.ValueRecorderKind, metric.Int64NumberKind)
 
+	agg, ckpt := test.Unslice2(array.New(2))
+
 	for i := 0; i < 1024; i++ {
-		checkpointSet.AddValueRecorder(&desc, 100)
+		aggtest.CheckedUpdate(t, agg, metric.NewInt64Number(100), &desc)
 	}
+	require.NoError(t, agg.SynchronizedMove(ckpt, &desc))
+	checkpointSet.Add(&desc, ckpt)
 
 	err = exp.Export(ctx, checkpointSet)
 	require.Nil(t, err)
@@ -361,7 +399,10 @@ func TestPrefix(t *testing.T) {
 	checkpointSet := test.NewCheckpointSet(testResource)
 	desc := metric.NewDescriptor("measure", metric.ValueRecorderKind, metric.Int64NumberKind)
 
-	checkpointSet.AddValueRecorder(&desc, 100)
+	agg, ckpt := test.Unslice2(array.New(2))
+	aggtest.CheckedUpdate(t, agg, metric.NewInt64Number(100), &desc)
+	require.NoError(t, agg.SynchronizedMove(ckpt, &desc))
+	checkpointSet.Add(&desc, ckpt)
 
 	err = exp.Export(ctx, checkpointSet)
 	require.Nil(t, err)
