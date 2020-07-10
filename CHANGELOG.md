@@ -8,19 +8,30 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 
 ## [Unreleased]
 
+## [0.8.0] - 2020-07-10
+
+This release upgrades its [go.opentelemetry.io/otel](https://github.com/open-telemetry/opentelemetry-go/releases/tag/v0.8.0) dependency to v0.8.0, includes minor fixes, and new instrumentation.
+
 ### Additions
 
+- Create this `CHANGELOG.md`. (#114)
 - Add `emicklei/go-restful/v3` trace instrumentation. (#115)
 
 ### Changed
 
-- Move all github.com package instrumentation under a github.com directory. (#118)
 - Update `CONTRIBUTING.md` to ask for updates to `CHANGELOG.md` with each pull request. (#114)
-- Create this `CHANGELOG.md`. (#114)
+- Move all `github.com` package instrumentation under a `github.com` directory. (#118)
+
+### Fixed
+
+- Update README to include information about external instrumentation.
+   To start, this includes native instrumentation found in the `go-redis/redis` package. (#117)
+- Bump github.com/golangci/golangci-lint from 1.27.0 to 1.28.2 in /tools. (#122, #123, #125)
+- Bump go.mongodb.org/mongo-driver from 1.3.4 to 1.3.5 in /instrumentation/go.mongodb.org/mongo-driver. (#124)
 
 ## [0.7.0] - 2020-06-29
 
-This release upgrades its [go.opentelemetry.io/otel](https://github.com/open-telemetry/opentelemetry-go "Open Telemetry for Go on Github") dependency to v0.7.0.
+This release upgrades its [go.opentelemetry.io/otel](https://github.com/open-telemetry/opentelemetry-go/releases/tag/v0.7.0) dependency to v0.7.0.
 
 ### Added
 
@@ -66,6 +77,7 @@ First official tagged release of `contrib` repository.
 - Prefix support for dogstatsd (#34)
 - Update Go Runtime package to use batch observer (#44)
 
-[Unreleased]: https://github.com/open-telemetry/opentelemetry-go-contrib/compare/v0.7.0...HEAD
+[Unreleased]: https://github.com/open-telemetry/opentelemetry-go-contrib/compare/v0.8.0...HEAD
+[0.8.0]: https://github.com/open-telemetry/opentelemetry-go-contrib/releases/tag/v0.8.0
 [0.7.0]: https://github.com/open-telemetry/opentelemetry-go-contrib/releases/tag/v0.7.0
 [0.6.1]: https://github.com/open-telemetry/opentelemetry-go-contrib/releases/tag/v0.6.1
