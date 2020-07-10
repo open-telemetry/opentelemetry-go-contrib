@@ -22,7 +22,19 @@ updates:
     schedule:
       interval: "daily"
   - package-ecosystem: "gomod" # See documentation for possible values
-    directory: "/instrumentation/labstack/echo" # Location of package manifests
+    directory: "/instrumentation/github.com/emicklei/go-restful" # Location of package manifests
+    schedule:
+      interval: "daily"
+  - package-ecosystem: "gomod" # See documentation for possible values
+    directory: "/instrumentation/github.com/gin-gonic/gin" # Location of package manifests
+    schedule:
+      interval: "daily"
+  - package-ecosystem: "gomod" # See documentation for possible values
+    directory: "/instrumentation/github.com/gorilla/mux" # Location of package manifests
+    schedule:
+      interval: "daily"
+  - package-ecosystem: "gomod" # See documentation for possible values
+    directory: "/instrumentation/github.com/labstack/echo" # Location of package manifests
     schedule:
       interval: "daily"
   - package-ecosystem: "gomod" # See documentation for possible values
@@ -30,15 +42,7 @@ updates:
     schedule:
       interval: "daily"
   - package-ecosystem: "gomod" # See documentation for possible values
-    directory: "/instrumentation/gorilla/mux" # Location of package manifests
-    schedule:
-      interval: "daily"
-  - package-ecosystem: "gomod" # See documentation for possible values
-    directory: "/instrumentation/gin-gonic/gin" # Location of package manifests
-    schedule:
-      interval: "daily"
-  - package-ecosystem: "gomod" # See documentation for possible values
-    directory: "/instrumentation/macaron" # Location of package manifests
+    directory: "/instrumentation/gopkg.in/macaron.v1" # Location of package manifests
     schedule:
       interval: "daily"
   - package-ecosystem: "gomod" # See documentation for possible values
