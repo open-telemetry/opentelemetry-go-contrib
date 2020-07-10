@@ -16,6 +16,7 @@ package sarama
 
 import (
 	"github.com/Shopify/sarama"
+
 	"go.opentelemetry.io/otel/api/propagation"
 )
 
@@ -35,7 +36,7 @@ func NewProducerMessageCarrier(msg *sarama.ProducerMessage) ProducerMessageCarri
 // Get retrieves a single value for a given key.
 func (c ProducerMessageCarrier) Get(key string) string {
 	for _, h := range c.msg.Headers {
-		if string(h.Key) == key{
+		if string(h.Key) == key {
 			return string(h.Value)
 		}
 	}
@@ -70,7 +71,7 @@ func NewConsumerMessageCarrier(msg *sarama.ConsumerMessage) ConsumerMessageCarri
 // Get retrieves a single value for a given key.
 func (c ConsumerMessageCarrier) Get(key string) string {
 	for _, h := range c.msg.Headers {
-		if h != nil && string(h.Key) == key{
+		if h != nil && string(h.Key) == key {
 			return string(h.Value)
 		}
 	}

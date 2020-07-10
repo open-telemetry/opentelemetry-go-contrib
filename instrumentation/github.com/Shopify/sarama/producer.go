@@ -19,11 +19,12 @@ import (
 
 	"github.com/Shopify/sarama"
 	"github.com/google/uuid"
+	"google.golang.org/grpc/codes"
+
 	"go.opentelemetry.io/otel/api/kv"
 	"go.opentelemetry.io/otel/api/propagation"
 	"go.opentelemetry.io/otel/api/standard"
 	"go.opentelemetry.io/otel/api/trace"
-	"google.golang.org/grpc/codes"
 )
 
 type syncProducer struct {
@@ -109,7 +110,7 @@ func (p *asyncProducer) Close() error {
 
 // WrapAsyncProducer wraps a sarama.AsyncProducer so that all produced messages
 // are traced. It requires the underlying sarama Config so we can know whether
-// or not sucesses will be returned.
+// or not successes will be returned.
 //
 // If `Return.Successes` is false, there is no way to know partition and offset of
 // the message.

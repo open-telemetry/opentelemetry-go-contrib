@@ -22,6 +22,7 @@ import (
 	"github.com/Shopify/sarama"
 	"github.com/Shopify/sarama/mocks"
 	"github.com/stretchr/testify/assert"
+
 	"go.opentelemetry.io/otel/api/global"
 	"go.opentelemetry.io/otel/api/kv"
 	"go.opentelemetry.io/otel/api/propagation"
@@ -161,8 +162,9 @@ func TestConsumer_ConsumePartitionWithError(t *testing.T) {
 	mockConsumer.ExpectConsumePartition(topic, 0, 0)
 
 	consumer := WrapConsumer(serviceName, mockConsumer)
-	consumer.ConsumePartition(topic, 0, 0)
-	// Consume twice
 	_, err := consumer.ConsumePartition(topic, 0, 0)
+	assert.NoError(t, err)
+	// Consume twice
+	_, err = consumer.ConsumePartition(topic, 0, 0)
 	assert.Error(t, err)
 }

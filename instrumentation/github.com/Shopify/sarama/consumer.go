@@ -18,6 +18,7 @@ import (
 	"context"
 
 	"github.com/Shopify/sarama"
+
 	"go.opentelemetry.io/otel/api/kv"
 	"go.opentelemetry.io/otel/api/propagation"
 	"go.opentelemetry.io/otel/api/standard"
