@@ -60,19 +60,19 @@ func (gcp *GCP) Detect(ctx context.Context) (*resource.Resource, error) {
 
 	name, err := metadata.InstanceName()
 	logError(err)
-	if instanceID != "" {
+	if name != "" {
 		labels = append(labels, standard.HostNameKey.String(name))
 	}
 
 	hostname, err := metadata.Hostname()
 	logError(err)
-	if instanceID != "" {
+	if hostname != "" {
 		labels = append(labels, standard.HostHostNameKey.String(hostname))
 	}
 
 	hostType, err := metadata.Get("instance/machine-type")
 	logError(err)
-	if instanceID != "" {
+	if hostType != "" {
 		labels = append(labels, standard.HostTypeKey.String(hostType))
 	}
 
