@@ -362,7 +362,7 @@ func (m *Accumulator) NewAsyncInstrument(descriptor api.Descriptor, runner metri
 //
 // Returns the number of records that were checkpointed.
 func (m *Accumulator) Collect(ctx context.Context, opts ...CollectOption) int {
-	c := &CollectConfig{}
+	c := &CollectOptions{}
 	for _, opt := range opts {
 		opt.Apply(c)
 	}
@@ -388,8 +388,7 @@ func (m *Accumulator) collectSyncInstruments(
 		inuse := value.(*record)
 
 		name := inuse.inst.descriptor.Name()
-		shouldCollect := m.shouldCollect(name, periods)
-		if !shouldCollect {
+		if !m.shouldCollect(name, periods) {
 			return true
 		}
 
@@ -450,7 +449,6 @@ func (m *Accumulator) observeAsyncInstruments(
 
 	// TODO: change this to `ctx` (in a separate PR, with tests)
 	m.asyncInstruments.Run(context.Background(), m)
-
 	for _, inst := range m.asyncInstruments.Instruments() {
 		if a := m.fromAsync(inst); a != nil &&
 		m.shouldCollect(a.descriptor.Name(), periods) {

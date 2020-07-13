@@ -40,7 +40,7 @@ func TestMetricConfigValidate(t *testing.T) {
 	config := &notify.Config{
 		pb.ConfigResponse{},
 	}
-	require.Equal(t, config.ValidateMetricConfig(), errors.New("No MetricConfig"))
+	require.Equal(t, errors.New("No MetricConfig"), config.ValidateMetricConfig())
 
 	config = &notify.Config{
 		pb.ConfigResponse{
@@ -49,7 +49,7 @@ func TestMetricConfigValidate(t *testing.T) {
 			},
 		},
 	}
-	require.Equal(t, config.ValidateMetricConfig(), errors.New("Periods must be positive"))
+	require.Equal(t, errors.New("Periods must be positive"), config.ValidateMetricConfig())
 
 	config = &notify.Config{
 		pb.ConfigResponse{
@@ -58,5 +58,5 @@ func TestMetricConfigValidate(t *testing.T) {
 			},
 		},
 	}
-	require.Equal(t, config.ValidateMetricConfig(), nil)
+	require.Equal(t, nil, config.ValidateMetricConfig())
 }

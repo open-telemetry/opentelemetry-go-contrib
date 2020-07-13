@@ -45,7 +45,7 @@ func TestReadConfig(t *testing.T) {
 
 	stopFunc()
 
-	require.Equal(t, response.Fingerprint, config.Fingerprint)
+	require.Equal(t, config.Fingerprint, response.Fingerprint)
 }
 
 func TestSuggestedWaitTime(t *testing.T) {
@@ -58,13 +58,13 @@ func TestSuggestedWaitTime(t *testing.T) {
 		suggestedWaitTimeSec: 5 * 60,
 	}
 
-	require.Equal(t, reader.suggestedWaitTime(), 5 * time.Minute)
+	require.Equal(t, 5 * time.Minute, reader.suggestedWaitTime())
 
 	clock.Add(5 * time.Minute)
 
-	require.Equal(t, reader.suggestedWaitTime(), time.Duration(0))
+	require.Equal(t, time.Duration(0), reader.suggestedWaitTime())
 
 	clock.Add(5 * time.Minute)
 
-	require.Equal(t, reader.suggestedWaitTime(), time.Duration(0))
+	require.Equal(t, time.Duration(0), reader.suggestedWaitTime())
 }

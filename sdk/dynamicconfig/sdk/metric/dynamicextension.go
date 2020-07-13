@@ -79,9 +79,7 @@ func (ext *DynamicExtension) FindPeriod(name string) pb.ConfigResponse_MetricCon
 func (ext *DynamicExtension) Clear() {
 	ext.lock.Lock()
 	defer ext.lock.Unlock()
-	for name := range ext.instrumentPeriod {
-		delete(ext.instrumentPeriod, name)
-	}
+	ext.instrumentPeriod = make(map[string]pb.ConfigResponse_MetricConfig_Schedule_CollectionPeriod)
 }
 
 func (ext *DynamicExtension) GetSchedules() []*pb.ConfigResponse_MetricConfig_Schedule {
@@ -96,8 +94,8 @@ func (ext *DynamicExtension) SetSchedules(schedules []*pb.ConfigResponse_MetricC
 	ext.schedules = schedules
 }
 
-// CollectConfig contains optional parameters for Accumulator.Collect().
-type CollectConfig struct {
+// CollectOptions contains optional parameters for Accumulator.Collect().
+type CollectOptions struct {
 	// All instruments with a CollectPeriod included in `periods` should be
 	// exported.
 	Periods []pb.ConfigResponse_MetricConfig_Schedule_CollectionPeriod
@@ -105,11 +103,11 @@ type CollectConfig struct {
 
 // CollectOption is the interface that applies the optional parameter.
 type CollectOption interface {
-	// Apply sets the Option value of a CollectConfig.
-	Apply(*CollectConfig)
+	// Apply sets the Option value of a CollectOptions.
+	Apply(*CollectOptions)
 }
 
-// WithPeriods sets the Periods option of a CollectConfig.
+// WithPeriods sets the Periods option of a CollectOptions.
 func WithPeriods(
 	periods []pb.ConfigResponse_MetricConfig_Schedule_CollectionPeriod,
 ) CollectOption {
@@ -120,6 +118,6 @@ type periodsOption struct {
 	periods []pb.ConfigResponse_MetricConfig_Schedule_CollectionPeriod
 }
 
-func (o periodsOption) Apply(config *CollectConfig) {
+func (o periodsOption) Apply(config *CollectOptions) {
 	config.Periods = o.periods
 }

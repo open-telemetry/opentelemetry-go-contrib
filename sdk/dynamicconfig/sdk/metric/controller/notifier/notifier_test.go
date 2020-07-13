@@ -82,19 +82,19 @@ func TestDynamicNotifier(t *testing.T) {
 	defer stopFunc()
 
 	notifier := newExampleNotifier(t)
-	require.Equal(t, watcher.getTestVar(), 0)
+	require.Equal(t, 0, watcher.getTestVar())
 
 	notifier.SetClock(mock)
 	notifier.Start()
 	defer notifier.Stop()
 
 	notifier.Register(&watcher)
-	require.Equal(t, watcher.getTestVar(), 1)
+	require.Equal(t, 1, watcher.getTestVar())
 
 	mock.Add(5 * time.Minute)
 	runtime.Gosched()
 
-	require.Equal(t, watcher.getTestVar(), 2)
+	require.Equal(t, 2, watcher.getTestVar())
 }
 
 // Test config doesn't update
@@ -107,18 +107,18 @@ func TestNonDynamicNotifier(t *testing.T) {
 		notify.GetDefaultConfig(60, notify.TestFingerprint),
 	)
 	assert.NoError(t, err)
-	require.Equal(t, watcher.getTestVar(), 0)
+	require.Equal(t, 0, watcher.getTestVar())
 
 	notifier.SetClock(mock)
 	notifier.Start()
 	defer notifier.Stop()
 
 	notifier.Register(&watcher)
-	require.Equal(t, watcher.getTestVar(), 1)
+	require.Equal(t, 1, watcher.getTestVar())
 
 	mock.Add(time.Minute)
 
-	require.Equal(t, watcher.getTestVar(), 1)
+	require.Equal(t, 1, watcher.getTestVar())
 }
 
 func TestDoubleStop(t *testing.T) {
