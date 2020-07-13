@@ -28,11 +28,11 @@ func Matches(name string, patterns []*pb.ConfigResponse_MetricConfig_Schedule_Pa
 	for _, pattern := range patterns {
 		switch m := pattern.Match.(type) {
 		case *pb.ConfigResponse_MetricConfig_Schedule_Pattern_Equals:
-			if name == m.Equals {
+			if m.Equals == "*" || m.Equals == name {
 				return true
 			} 
 		case *pb.ConfigResponse_MetricConfig_Schedule_Pattern_StartsWith:
-			if strings.HasPrefix(name, m.StartsWith) {
+			if m.StartsWith == "*" || strings.HasPrefix(name, m.StartsWith) {
 				return true
 			}
 		}

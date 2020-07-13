@@ -50,6 +50,16 @@ var NotStartsPattern = pb.ConfigResponse_MetricConfig_Schedule_Pattern {
 		StartsWith: "Two",
 	},
 }
+var WildcardEqualsPattern = pb.ConfigResponse_MetricConfig_Schedule_Pattern {
+	Match: &pb.ConfigResponse_MetricConfig_Schedule_Pattern_Equals {
+		Equals: "*",
+	},
+}
+var WildcardStartsPattern = pb.ConfigResponse_MetricConfig_Schedule_Pattern {
+	Match: &pb.ConfigResponse_MetricConfig_Schedule_Pattern_StartsWith {
+		StartsWith: "*",
+	},
+}
 
 func TestMatchEquals(t *testing.T) {
 	patterns := []*pb.ConfigResponse_MetricConfig_Schedule_Pattern{&EqualsPattern}
@@ -98,6 +108,20 @@ func TestNoMatch(t *testing.T) {
 }
 
 func TestEmptyPatterns(t *testing.T) {
-	patterns := []
+	patterns := []*pb.ConfigResponse_MetricConfig_Schedule_Pattern{}
 	require.False(t, metricpattern.Matches(InstrumentName, patterns))
+}
+
+func TestWildcardPatterns(t *testing.T) {
+	patterns := []*pb.ConfigResponse_MetricConfig_Schedule_Pattern{
+		&WildcardEqualsPattern,
+	}
+
+	require.True(t, metricpattern.Matches(InstrumentName, patterns))
+
+	patterns = []*pb.ConfigResponse_MetricConfig_Schedule_Pattern{
+		&WildcardStartsPattern,
+	}
+
+	require.True(t, metricpattern.Matches(InstrumentName, patterns))
 }
