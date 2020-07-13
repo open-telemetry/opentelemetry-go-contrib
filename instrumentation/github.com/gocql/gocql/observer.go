@@ -87,6 +87,7 @@ func (o *OtelQueryObserver) ObserveQuery(ctx context.Context, observedQuery gocq
 			attributes,
 			CassErrMsg(observedQuery.Err.Error()),
 		)
+		iQueryErrors.Add(ctx, 1)
 	}
 
 	ctx, span := o.tracer.Start(
@@ -97,6 +98,8 @@ func (o *OtelQueryObserver) ObserveQuery(ctx context.Context, observedQuery gocq
 	)
 
 	span.End(trace.WithEndTime(observedQuery.End))
+
+	iQueryCount.Add(ctx, 1, CassStatement(observedQuery.Statement))
 
 	if o.observer != nil {
 		o.observer.ObserveQuery(ctx, observedQuery)
@@ -115,6 +118,7 @@ func (o *OtelBatchObserver) ObserveBatch(ctx context.Context, observedBatch gocq
 			attributes,
 			CassErrMsg(observedBatch.Err.Error()),
 		)
+		iBatchErrors.Add(ctx, 1)
 	}
 
 	ctx, span := o.tracer.Start(
@@ -126,6 +130,8 @@ func (o *OtelBatchObserver) ObserveBatch(ctx context.Context, observedBatch gocq
 
 	span.End(trace.WithEndTime(observedBatch.End))
 
+	iBatchCount.Add(ctx, 1, CassBatchStatements(observedBatch.Statements))
+
 	if o.observer != nil {
 		o.observer.ObserveBatch(ctx, observedBatch)
 	}
@@ -133,6 +139,8 @@ func (o *OtelBatchObserver) ObserveBatch(ctx context.Context, observedBatch gocq
 
 // ObserveConnect instruments a specific connection attempt.
 func (o *OtelConnectObserver) ObserveConnect(observedConnect gocql.ObservedConnect) {
+	// TODO: fix context issue
+	ctx := context.TODO()
 	attributes := defaultAttributes(observedConnect.Host)
 
 	if observedConnect.Err != nil {
@@ -140,17 +148,20 @@ func (o *OtelConnectObserver) ObserveConnect(observedConnect gocql.ObservedConne
 			attributes,
 			CassErrMsg(observedConnect.Err.Error()),
 		)
+		iConnectErrors.Add(ctx, 1)
 	}
 
 	_, span := o.tracer.Start(
-		// TODO: fix the context issue
-		context.TODO(),
+		ctx,
 		cassConnectName,
 		trace.WithStartTime(observedConnect.Start),
 		trace.WithAttributes(attributes...),
 	)
 
 	span.End(trace.WithEndTime(observedConnect.End))
+
+	host := observedConnect.Host.HostnameAndPort()
+	iConnectionCount.Add(ctx, 1, CassHostKey.String(host))
 
 	if o.observer != nil {
 		o.observer.ObserveConnect(observedConnect)

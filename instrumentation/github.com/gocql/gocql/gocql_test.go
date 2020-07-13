@@ -173,7 +173,7 @@ func getCluster() *gocql.ClusterConfig {
 	return cluster
 }
 
-// initDb recreates the testing keyspace so that a new table
+// beforeAll recreates the testing keyspace so that a new table
 // can be created. This allows the test to be run multiple times
 // consecutively withouth any issues arising.
 func beforeAll() {
