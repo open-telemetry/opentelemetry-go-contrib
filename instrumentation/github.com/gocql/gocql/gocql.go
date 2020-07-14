@@ -14,26 +14,22 @@
 
 package gocql
 
-import "github.com/gocql/gocql"
+import (
+	"context"
+
+	"github.com/gocql/gocql"
+)
 
 // NewSessionWithTracing creates a new session using the given cluster
 // configuration enabling tracing for queries, batch queries, and connection attempts.
 // You may use additional observers and disable specific tracing using the provided `TracedSessionOption`s.
-func NewSessionWithTracing(cluster *gocql.ClusterConfig, options ...TracedSessionOption) (*gocql.Session, error) {
+func NewSessionWithTracing(ctx context.Context, cluster *gocql.ClusterConfig, options ...TracedSessionOption) (*gocql.Session, error) {
 	config := configure(options...)
 	otelConfig := config.otelConfig
 
-	if config.instrumentQuery {
-		cluster.QueryObserver = NewQueryObserver(config.queryObserver, otelConfig.tracer)
-	}
-
-	if config.instrumentBatch {
-		cluster.BatchObserver = NewBatchObserver(config.batchObserver, otelConfig.tracer)
-	}
-
-	if config.instrumentConnect {
-		cluster.ConnectObserver = NewConnectObserver(config.connectObserver, otelConfig.tracer)
-	}
+	cluster.QueryObserver = NewQueryObserver(config.queryObserver, otelConfig)
+	cluster.BatchObserver = NewBatchObserver(config.batchObserver, otelConfig)
+	cluster.ConnectObserver = NewConnectObserver(ctx, config.connectObserver, otelConfig)
 
 	return cluster.CreateSession()
 }

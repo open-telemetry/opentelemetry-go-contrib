@@ -99,15 +99,16 @@ func TestQuery(t *testing.T) {
 	tracer := mocktracer.NewTracer("gocql-test")
 	connectObserver := &mockConnectObserver{}
 
+	ctx, parentSpan := tracer.Start(context.Background(), "gocql-test")
+
 	session, err := NewSessionWithTracing(
+		ctx,
 		cluster,
 		WithTracer(tracer),
 		WithConnectObserver(connectObserver),
 	)
 	assert.NoError(t, err)
 	defer session.Close()
-
-	ctx, parentSpan := tracer.Start(context.Background(), "gocql-test")
 
 	id := gocql.TimeUUID()
 	title := "example-title"
@@ -200,15 +201,16 @@ func TestBatch(t *testing.T) {
 	cluster := getCluster()
 	tracer := mocktracer.NewTracer("gocql-test")
 
+	ctx, parentSpan := tracer.Start(context.Background(), "gocql-test")
+
 	session, err := NewSessionWithTracing(
+		ctx,
 		cluster,
 		WithTracer(tracer),
 		WithConnectInstrumentation(false),
 	)
 	assert.NoError(t, err)
 	defer session.Close()
-
-	ctx, parentSpan := tracer.Start(context.Background(), "gocql-test")
 
 	batch := session.NewBatch(gocql.LoggedBatch).WithContext(ctx)
 	ids := make([]gocql.UUID, 10)
@@ -268,7 +270,11 @@ func TestConnection(t *testing.T) {
 	cluster := getCluster()
 	tracer := mocktracer.NewTracer("gocql-test")
 
-	session, err := NewSessionWithTracing(cluster, WithTracer(tracer))
+	session, err := NewSessionWithTracing(
+		context.Background(),
+		cluster,
+		WithTracer(tracer),
+	)
 	assert.NoError(t, err)
 	defer session.Close()
 
@@ -389,7 +395,7 @@ func afterEach() {
 
 func TestMain(m *testing.M) {
 	if _, present := os.LookupEnv("INTEGRATION"); !present {
-		log.Print("--- SKIP: to enable integration test, set the INTEGRATION environment variable")
+		fmt.Println("--- SKIP: to enable integration test, set the INTEGRATION environment variable")
 		os.Exit(0)
 	}
 	beforeAll()
