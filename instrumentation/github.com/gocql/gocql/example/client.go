@@ -27,26 +27,68 @@ package main
 
 import (
 	"context"
-	"log"
-
 	"github.com/gocql/gocql"
+	"log"
+	"net/http"
+	"os"
+	"os/signal"
+	"sync"
 
 	otelGocql "go.opentelemetry.io/contrib/github.com/gocql/gocql"
 	"go.opentelemetry.io/otel/api/global"
-	traceStdout "go.opentelemetry.io/otel/exporters/trace/stdout"
+	"go.opentelemetry.io/otel/exporters/metric/prometheus"
+	zipkintrace "go.opentelemetry.io/otel/exporters/trace/zipkin"
 	sdktrace "go.opentelemetry.io/otel/sdk/trace"
 )
 
-func initTracer() {
-	traceExporter, err := traceStdout.NewExporter(traceStdout.Options{
-		PrettyPrint: true,
-	})
+var logger = log.New(os.Stderr, "zipkin-example", log.Ldate|log.Ltime|log.Llongfile)
+var wg sync.WaitGroup
+
+func initMetrics() {
+	// Start prometheus
+	metricExporter, err := prometheus.NewExportPipeline(prometheus.Config{})
 	if err != nil {
-		log.Fatalf("failed to create span exporter, %v", err)
+		logger.Fatalf("failed to install metric exporter, %v", err)
+	}
+	server := http.Server{Addr: ":2222"}
+	http.HandleFunc("/", metricExporter.ServeHTTP)
+	go func() {
+		defer wg.Done()
+		wg.Add(1)
+		log.Print(server.ListenAndServe())
+	}()
+
+	// ctrl+c will stop the server gracefully
+	shutdown := make(chan os.Signal, 1)
+	signal.Notify(shutdown, os.Interrupt)
+	go func() {
+		<-shutdown
+		if err := server.Shutdown(context.Background()); err != nil {
+			log.Printf("problem shutting down server, %v", err)
+		} else {
+			log.Print("gracefully shutting down server")
+		}
+	}()
+
+	otelGocql.InstrumentWithProvider(metricExporter.Provider())
+}
+
+func initTracer() {
+	traceExporter, err := zipkintrace.NewExporter(
+		"http://localhost:9411/api/v2/spans",
+		"zipkin-example",
+		zipkintrace.WithLogger(logger),
+	)
+	if err != nil {
+		log.Fatalf("failed to create span traceExporter, %v", err)
 	}
 
 	provider, err := sdktrace.NewProvider(
-		sdktrace.WithSyncer(traceExporter),
+		sdktrace.WithBatcher(
+			traceExporter,
+			sdktrace.WithBatchTimeout(5),
+			sdktrace.WithMaxExportBatchSize(10),
+		),
 		sdktrace.WithConfig(sdktrace.Config{DefaultSampler: sdktrace.AlwaysSample()}),
 	)
 	if err != nil {
@@ -65,6 +107,7 @@ func getCluster() *gocql.ClusterConfig {
 }
 
 func main() {
+	initMetrics()
 	initTracer()
 
 	ctx, span := global.Tracer(
@@ -73,7 +116,9 @@ func main() {
 
 	cluster := getCluster()
 	// Create a session to begin making queries
-	session, err := otelGocql.NewSessionWithTracing(cluster)
+	session, err := otelGocql.NewSessionWithTracing(
+		cluster,
+	)
 	if err != nil {
 		log.Fatalf("failed to create a session, %v", err)
 	}
@@ -87,7 +132,7 @@ func main() {
 		"firstName",
 		"lastName",
 	).WithContext(ctx).Exec(); err != nil {
-		log.Fatalf("failed to insert data, %v", err)
+		log.Printf("failed to insert data, %v", err)
 	}
 
 	res := session.Query(
@@ -108,8 +153,10 @@ func main() {
 	res.Close()
 
 	if err = session.Query("DELETE FROM book WHERE id = ?", id).WithContext(ctx).Exec(); err != nil {
-		log.Fatalf("failed to delete data, %v", err)
+		log.Printf("failed to delete data, %v", err)
 	}
 
 	span.End()
+
+	wg.Wait()
 }

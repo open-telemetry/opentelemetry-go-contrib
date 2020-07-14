@@ -12,14 +12,12 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-version: '3'
-services: 
-#  cassandra:
-#    image: cassandra:latest
-#    ports:
-#      - 9042:9042
-#      - 9160:9160
-  zipkin:
-    image: openzipkin/zipkin
-    ports:
-    - 9411:9411
+global:
+  scrape_interval: 15s # Default is every 1 minute.
+
+scrape_configs:
+  - job_name: 'opentelemetry'
+    # metrics_path defaults to '/metrics'
+    # scheme defaults to 'http'.
+    static_configs:
+      - targets: ['localhost:9464']
