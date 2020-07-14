@@ -15,10 +15,10 @@
 package gocql
 
 import (
-	"context"
 	"log"
 
 	"go.opentelemetry.io/otel/api/global"
+
 	"go.opentelemetry.io/otel/api/metric"
 )
 
@@ -26,6 +26,7 @@ var (
 	// Query
 	iQueryCount  metric.Int64Counter
 	iQueryErrors metric.Int64Counter
+	iQueryRows   metric.Int64ValueRecorder
 
 	// Batch
 	iBatchCount  metric.Int64Counter
@@ -38,16 +39,19 @@ var (
 	iLatency metric.Int64ValueRecorder
 )
 
-func init() {
+// InstrumentWithProvider will recreate instruments using a meter
+// from the given provider p.
+func InstrumentWithProvider(p metric.Provider) {
 	defer func() {
 		if recovered := recover(); recovered != nil {
 			log.Print("failed to create meter. metrics are not being recorded")
 		}
 	}()
-	meter := metric.Must(global.Meter("github.com/gocql/gocql"))
+	meter := metric.Must(p.Meter("github.com/gocql/gocql"))
 
 	iQueryCount = meter.NewInt64Counter("cassandra.queries")
 	iQueryErrors = meter.NewInt64Counter("cassandra.query_errors")
+	iQueryRows = meter.NewInt64ValueRecorder("cassandra.rows")
 
 	iBatchCount = meter.NewInt64Counter("cassandra.batch_queries")
 	iBatchErrors = meter.NewInt64Counter("cassandra.batch_errors")
@@ -56,6 +60,6 @@ func init() {
 	iConnectErrors = meter.NewInt64Counter("cassandra.connect_errors")
 }
 
-func countQuery(ctx context.Context, stmt string) {
-	iQueryCount.Add(ctx, 1, CassStatement(stmt))
+func init() {
+	InstrumentWithProvider(global.MeterProvider())
 }

@@ -100,6 +100,7 @@ func (o *OtelQueryObserver) ObserveQuery(ctx context.Context, observedQuery gocq
 	span.End(trace.WithEndTime(observedQuery.End))
 
 	iQueryCount.Add(ctx, 1, CassStatement(observedQuery.Statement))
+	iQueryRows.Record(ctx, int64(observedQuery.Rows))
 
 	if o.observer != nil {
 		o.observer.ObserveQuery(ctx, observedQuery)
@@ -130,7 +131,7 @@ func (o *OtelBatchObserver) ObserveBatch(ctx context.Context, observedBatch gocq
 
 	span.End(trace.WithEndTime(observedBatch.End))
 
-	iBatchCount.Add(ctx, 1, CassBatchStatements(observedBatch.Statements))
+	iBatchCount.Add(ctx, 1)
 
 	if o.observer != nil {
 		o.observer.ObserveBatch(ctx, observedBatch)

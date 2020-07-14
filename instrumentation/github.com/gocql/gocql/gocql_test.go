@@ -21,16 +21,61 @@ import (
 	"os"
 	"strings"
 	"testing"
+	"time"
+
+	"go.opentelemetry.io/otel/sdk/metric/controller/push"
+	"go.opentelemetry.io/otel/sdk/metric/selector/simple"
 
 	"github.com/gocql/gocql"
 	"github.com/stretchr/testify/assert"
 	mocktracer "go.opentelemetry.io/contrib/internal/trace"
+	"go.opentelemetry.io/otel/api/kv"
+	"go.opentelemetry.io/otel/api/metric"
+	export "go.opentelemetry.io/otel/sdk/export/metric"
+	"go.opentelemetry.io/otel/sdk/export/metric/aggregation"
 )
 
 const (
 	keyspace  string = "gotest"
 	tableName string = "test_table"
 )
+
+var exporter *mockExporter
+
+// mockExporter provides an exporter to access metrics
+// used for testing puporses only.
+type mockExporter struct {
+	t       *testing.T
+	records []export.Record
+}
+
+func (mockExporter) ExportKindFor(*metric.Descriptor, aggregation.Kind) export.ExportKind {
+	return export.PassThroughExporter
+}
+
+func (e *mockExporter) Export(_ context.Context, set export.CheckpointSet) error {
+	if err := set.ForEach(e, func(record export.Record) error {
+		e.records = append(e.records, record)
+		return nil
+	}); err != nil {
+		e.t.Fatal(err)
+		return err
+	}
+	return nil
+}
+
+// mockExportPipeline returns a push controller with a mockExporter.
+func mockExportPipeline(t *testing.T) *push.Controller {
+	var records []export.Record
+	exporter = &mockExporter{t, records}
+	controller := push.New(
+		simple.NewWithExactDistribution(),
+		exporter,
+		push.WithPeriod(1*time.Second),
+	)
+	controller.Start()
+	return controller
+}
 
 type mockConnectObserver struct {
 	callCount int
@@ -40,7 +85,15 @@ func (m *mockConnectObserver) ObserveConnect(observedConnect gocql.ObservedConne
 	m.callCount++
 }
 
+type testRecord struct {
+	Name      string
+	MeterName string
+	Labels    []kv.KeyValue
+	Number    metric.Number
+}
+
 func TestQuery(t *testing.T) {
+	controller := getController(t)
 	defer afterEach()
 	cluster := getCluster()
 	tracer := mocktracer.NewTracer("gocql-test")
@@ -94,12 +147,55 @@ func TestQuery(t *testing.T) {
 		assert.Equal(t, int32(cluster.Port), span.Attributes[CassPortKey].AsInt32())
 		assert.Equal(t, "up", strings.ToLower(span.Attributes[CassHostStateKey].AsString()))
 	}
-
 	assert.Equal(t, 0, numberOfConnections)
+
+	// Check metrics
+	controller.Stop()
+
+	assert.Equal(t, 3, len(exporter.records))
+	expected := []testRecord{
+		testRecord{
+			Name:      "cassandra.connections",
+			MeterName: "github.com/gocql/gocql",
+			// TODO: Labels
+			Number: 3,
+		},
+		testRecord{
+			Name:      "cassandra.queries",
+			MeterName: "github.com/gocql/gocql",
+			// TODO: Labels
+			Number: 1,
+		},
+		testRecord{
+			Name:      "cassandra.rows",
+			MeterName: "github.com/gocql/gocql",
+			Number:    0,
+		},
+	}
+
+	for _, record := range exporter.records {
+		name := record.Descriptor().Name()
+		agg := record.Aggregation()
+		switch name {
+		case "cassandra.connections":
+			recordEqual(t, expected[0], record)
+			numberEqual(t, expected[0].Number, agg)
+		case "cassandra.queries":
+			recordEqual(t, expected[1], record)
+			numberEqual(t, expected[1].Number, agg)
+			break
+		case "cassandra.rows":
+			recordEqual(t, expected[2], record)
+			numberEqual(t, expected[2].Number, agg)
+		default:
+			t.Fatalf("wrong metric %s", name)
+		}
+	}
 
 }
 
 func TestBatch(t *testing.T) {
+	controller := getController(t)
 	defer afterEach()
 	cluster := getCluster()
 	tracer := mocktracer.NewTracer("gocql-test")
@@ -141,6 +237,30 @@ func TestBatch(t *testing.T) {
 	assert.Equal(t, "up", strings.ToLower(span.Attributes[CassHostStateKey].AsString()))
 	assert.Equal(t, stmts, span.Attributes[CassBatchStatementsKey].AsArray())
 
+	controller.Stop()
+
+	assert.Equal(t, 1, len(exporter.records))
+	expected := []testRecord{
+		testRecord{
+			Name:      "cassandra.batch_queries",
+			MeterName: "github.com/gocql/gocql",
+			// TODO: Labels
+			Number: 1,
+		},
+	}
+
+	for _, record := range exporter.records {
+		name := record.Descriptor().Name()
+		agg := record.Aggregation()
+		switch name {
+		case "cassandra.batch_queries":
+			recordEqual(t, expected[0], record)
+			numberEqual(t, expected[0].Number, agg)
+		default:
+			t.Fatalf("wrong metric %s", name)
+		}
+	}
+
 }
 
 func TestConnection(t *testing.T) {
@@ -171,6 +291,49 @@ func getCluster() *gocql.ClusterConfig {
 	cluster.Consistency = gocql.LocalQuorum
 	cluster.NumConns = 1
 	return cluster
+}
+
+// beforeEach creates a metric export pipeline with mockExporter
+// to enable testing metric collection.
+func getController(t *testing.T) *push.Controller {
+	controller := mockExportPipeline(t)
+	InstrumentWithProvider(controller.Provider())
+	return controller
+}
+
+// recordEqual checks that the given metric name and instrumentation names are equal.
+func recordEqual(t *testing.T, expected testRecord, actual export.Record) {
+	descriptor := actual.Descriptor()
+	assert.Equal(t, expected.Name, descriptor.Name())
+	assert.Equal(t, expected.MeterName, descriptor.InstrumentationName())
+}
+
+func numberEqual(t *testing.T, expected metric.Number, agg aggregation.Aggregation) {
+	kind := agg.Kind()
+	switch kind {
+	case aggregation.SumKind:
+		if sum, ok := agg.(aggregation.Sum); !ok {
+			t.Fatal("missing sum value")
+		} else {
+			if num, err := sum.Sum(); err == nil {
+				assert.Equal(t, expected, num)
+			} else {
+				t.Fatal("missing value")
+			}
+		}
+	case aggregation.ExactKind:
+		if mmsc, ok := agg.(aggregation.MinMaxSumCount); !ok {
+			t.Fatal("missing aggregation")
+		} else {
+			if max, err := mmsc.Max(); err == nil {
+				assert.Equal(t, expected, max)
+			} else {
+				t.Fatal("missing sum")
+			}
+		}
+	default:
+		t.Fatalf("unexpected kind %s", kind)
+	}
 }
 
 // beforeAll recreates the testing keyspace so that a new table
@@ -210,7 +373,7 @@ func beforeAll() {
 	}
 }
 
-// cleanup removes the keyspace from the database for later test sessions.
+// afterEach removes the keyspace from the database for later test sessions.
 func afterEach() {
 	cluster := gocql.NewCluster("localhost")
 	cluster.Consistency = gocql.LocalQuorum
