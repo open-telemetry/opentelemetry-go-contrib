@@ -20,6 +20,7 @@ import (
 	"strings"
 
 	"cloud.google.com/go/compute/metadata"
+	"go.uber.org/multierr"
 
 	"go.opentelemetry.io/otel/api/kv"
 	"go.opentelemetry.io/otel/api/standard"
@@ -40,10 +41,15 @@ func (gcp *GCP) Detect(ctx context.Context) (*resource.Resource, error) {
 		standard.CloudRegionKey.String(""),
 	}
 
+	var aggregatedErr error
+
 	projectID, err := metadata.ProjectID()
 	logError(err)
 	if projectID != "" {
 		labels = append(labels, standard.CloudAccountIDKey.String(projectID))
+	}
+	if err != nil {
+		aggregatedErr = multierr.Append(aggregatedErr, err)
 	}
 
 	zone, err := metadata.Zone()
@@ -51,11 +57,17 @@ func (gcp *GCP) Detect(ctx context.Context) (*resource.Resource, error) {
 	if zone != "" {
 		labels = append(labels, standard.CloudZoneKey.String(zone))
 	}
+	if err != nil {
+		aggregatedErr = multierr.Append(aggregatedErr, err)
+	}
 
 	instanceID, err := metadata.InstanceID()
 	logError(err)
 	if instanceID != "" {
 		labels = append(labels, standard.HostIDKey.String(instanceID))
+	}
+	if err != nil {
+		aggregatedErr = multierr.Append(aggregatedErr, err)
 	}
 
 	name, err := metadata.InstanceName()
@@ -63,11 +75,17 @@ func (gcp *GCP) Detect(ctx context.Context) (*resource.Resource, error) {
 	if name != "" {
 		labels = append(labels, standard.HostNameKey.String(name))
 	}
+	if err != nil {
+		aggregatedErr = multierr.Append(aggregatedErr, err)
+	}
 
 	hostname, err := metadata.Hostname()
 	logError(err)
 	if hostname != "" {
 		labels = append(labels, standard.HostHostNameKey.String(hostname))
+	}
+	if err != nil {
+		aggregatedErr = multierr.Append(aggregatedErr, err)
 	}
 
 	hostType, err := metadata.Get("instance/machine-type")
@@ -75,8 +93,11 @@ func (gcp *GCP) Detect(ctx context.Context) (*resource.Resource, error) {
 	if hostType != "" {
 		labels = append(labels, standard.HostTypeKey.String(hostType))
 	}
+	if err != nil {
+		aggregatedErr = multierr.Append(aggregatedErr, err)
+	}
 
-	return resource.New(labels...), nil
+	return resource.New(labels...), aggregatedErr
 
 }
 
