@@ -38,11 +38,12 @@ func TestWrapSyncProducer(t *testing.T) {
 	// Mock tracer
 	mt := mocktracer.NewTracer("kafka")
 
+	cfg := newSaramaConfig()
 	// Mock sync producer
-	mockSyncProducer := mocks.NewSyncProducer(t, sarama.NewConfig())
+	mockSyncProducer := mocks.NewSyncProducer(t, cfg)
 
 	// Wrap sync producer
-	syncProducer := WrapSyncProducer(serviceName, mockSyncProducer, WithTracer(mt))
+	syncProducer := WrapSyncProducer(serviceName, cfg, mockSyncProducer, WithTracer(mt))
 
 	// Create message with span context
 	ctx, _ := mt.Start(context.Background(), "")
@@ -157,8 +158,9 @@ func TestWrapAsyncProducer(t *testing.T) {
 
 	t.Run("without successes config", func(t *testing.T) {
 		mt := mocktracer.NewTracer("kafka")
-		mockAsyncProducer := mocks.NewAsyncProducer(t, nil)
-		ap := WrapAsyncProducer(serviceName, nil, mockAsyncProducer, WithTracer(mt))
+		cfg := newSaramaConfig()
+		mockAsyncProducer := mocks.NewAsyncProducer(t, cfg)
+		ap := WrapAsyncProducer(serviceName, cfg, mockAsyncProducer, WithTracer(mt))
 
 		msgList := createMessages(mt)
 		// Send message
@@ -225,7 +227,7 @@ func TestWrapAsyncProducer(t *testing.T) {
 		mt := mocktracer.NewTracer("kafka")
 
 		// Set producer with successes config
-		cfg := sarama.NewConfig()
+		cfg := newSaramaConfig()
 		cfg.Producer.Return.Successes = true
 
 		mockAsyncProducer := mocks.NewAsyncProducer(t, cfg)
@@ -298,7 +300,7 @@ func TestWrapAsyncProducer_Error(t *testing.T) {
 	mt := mocktracer.NewTracer("kafka")
 
 	// Set producer with successes config
-	cfg := sarama.NewConfig()
+	cfg := newSaramaConfig()
 	cfg.Producer.Return.Successes = true
 
 	mockAsyncProducer := mocks.NewAsyncProducer(t, cfg)
@@ -319,4 +321,10 @@ func TestWrapAsyncProducer_Error(t *testing.T) {
 
 	assert.Equal(t, codes.Internal, span.Status)
 	assert.Equal(t, "test", span.StatusMessage)
+}
+
+func newSaramaConfig() *sarama.Config {
+	cfg := sarama.NewConfig()
+	cfg.Version = sarama.V0_11_0_0
+	return cfg
 }
