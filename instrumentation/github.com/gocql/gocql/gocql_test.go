@@ -153,7 +153,7 @@ func TestQuery(t *testing.T) {
 	// Check metrics
 	controller.Stop()
 
-	assert.Equal(t, 3, len(exporter.records))
+	assert.Equal(t, 4, len(exporter.records))
 	expected := []testRecord{
 		testRecord{
 			Name:      "cassandra.connections",
@@ -172,6 +172,10 @@ func TestQuery(t *testing.T) {
 			MeterName: "github.com/gocql/gocql",
 			Number:    0,
 		},
+		testRecord{
+			Name:      "cassandra.latency",
+			MeterName: "github.com/gocql/gocql",
+		},
 	}
 
 	for _, record := range exporter.records {
@@ -188,6 +192,8 @@ func TestQuery(t *testing.T) {
 		case "cassandra.rows":
 			recordEqual(t, expected[2], record)
 			numberEqual(t, expected[2].Number, agg)
+		case "cassandra.latency":
+			recordEqual(t, expected[3], record)
 		default:
 			t.Fatalf("wrong metric %s", name)
 		}
@@ -237,17 +243,21 @@ func TestBatch(t *testing.T) {
 	assert.Equal(t, cluster.Hosts[0], span.Attributes[CassHostKey].AsString())
 	assert.Equal(t, int32(cluster.Port), span.Attributes[CassPortKey].AsInt32())
 	assert.Equal(t, "up", strings.ToLower(span.Attributes[CassHostStateKey].AsString()))
-	assert.Equal(t, stmts, span.Attributes[CassBatchStatementsKey].AsArray())
+	assert.Equal(t, int32(len(stmts)), span.Attributes[CassBatchQueriesKey].AsInt32())
 
 	controller.Stop()
 
-	assert.Equal(t, 1, len(exporter.records))
+	assert.Equal(t, 2, len(exporter.records))
 	expected := []testRecord{
 		testRecord{
-			Name:      "cassandra.batch_queries",
+			Name:      "cassandra.batch.queries",
 			MeterName: "github.com/gocql/gocql",
 			// TODO: Labels
 			Number: 1,
+		},
+		testRecord{
+			Name:      "cassandra.latency",
+			MeterName: "github.com/gocql/gocql",
 		},
 	}
 
@@ -255,9 +265,11 @@ func TestBatch(t *testing.T) {
 		name := record.Descriptor().Name()
 		agg := record.Aggregation()
 		switch name {
-		case "cassandra.batch_queries":
+		case "cassandra.batch.queries":
 			recordEqual(t, expected[0], record)
 			numberEqual(t, expected[0].Number, agg)
+		case "cassandra.latency":
+			recordEqual(t, expected[1], record)
 		default:
 			t.Fatalf("wrong metric %s", name)
 		}

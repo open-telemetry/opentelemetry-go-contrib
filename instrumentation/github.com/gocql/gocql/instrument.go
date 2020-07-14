@@ -23,19 +23,32 @@ import (
 )
 
 var (
-	// Query
-	iQueryCount  metric.Int64Counter
-	iQueryErrors metric.Int64Counter
-	iQueryRows   metric.Int64ValueRecorder
+	// iQueryCount is the number of queries executed.
+	iQueryCount metric.Int64Counter
 
-	// Batch
-	iBatchCount  metric.Int64Counter
+	// iQueryErrors is the number of errors encountered when
+	// executing queries.
+	iQueryErrors metric.Int64Counter
+
+	// iQueryRows is the number of rows returned by a query.
+	iQueryRows metric.Int64ValueRecorder
+
+	// iBatchCount is the number of batch queries executed.
+	iBatchCount metric.Int64Counter
+
+	// iBatchErrors is the number of errors encountered when
+	// executing batch queries.
 	iBatchErrors metric.Int64Counter
 
-	// Connections
+	// iConnectionCount is the number of connections made
+	// with the traced session.
 	iConnectionCount metric.Int64Counter
-	iConnectErrors   metric.Int64Counter
 
+	// iConnectErrors is the number of errors encountered
+	// when making connections with the current traced session.
+	iConnectErrors metric.Int64Counter
+
+	// iLatency is the sum of attempt latencies.
 	iLatency metric.Int64ValueRecorder
 )
 
@@ -49,15 +62,46 @@ func InstrumentWithProvider(p metric.Provider) {
 	}()
 	meter := metric.Must(p.Meter("github.com/gocql/gocql"))
 
-	iQueryCount = meter.NewInt64Counter("cassandra.queries")
-	iQueryErrors = meter.NewInt64Counter("cassandra.query_errors")
-	iQueryRows = meter.NewInt64ValueRecorder("cassandra.rows")
+	iQueryCount = meter.NewInt64Counter(
+		"cassandra.queries",
+		metric.WithDescription("Number queries executed"),
+	)
 
-	iBatchCount = meter.NewInt64Counter("cassandra.batch_queries")
-	iBatchErrors = meter.NewInt64Counter("cassandra.batch_errors")
+	iQueryErrors = meter.NewInt64Counter(
+		"cassandra.query.errors",
+		metric.WithDescription("Number of errors encountered when executing queries"),
+	)
 
-	iConnectionCount = meter.NewInt64Counter("cassandra.connections")
-	iConnectErrors = meter.NewInt64Counter("cassandra.connect_errors")
+	iQueryRows = meter.NewInt64ValueRecorder(
+		"cassandra.rows",
+		metric.WithDescription("Number of rows returned from query"),
+	)
+
+	iBatchCount = meter.NewInt64Counter(
+		"cassandra.batch.queries",
+		metric.WithDescription("Number of batch queries executed"),
+	)
+
+	iBatchErrors = meter.NewInt64Counter(
+		"cassandra.batch.errors",
+		metric.WithDescription("Number of errors encountered when executing batch queries"),
+	)
+
+	iConnectionCount = meter.NewInt64Counter(
+		"cassandra.connections",
+		metric.WithDescription("Number of connections created"),
+	)
+
+	iConnectErrors = meter.NewInt64Counter(
+		"cassandra.connect.errors",
+		metric.WithDescription("Number of errors encountered when creating connections"),
+	)
+
+	iLatency = meter.NewInt64ValueRecorder(
+		"cassandra.latency",
+		metric.WithDescription("Sum of latency to host"),
+		// TODO: dimension
+	)
 }
 
 func init() {

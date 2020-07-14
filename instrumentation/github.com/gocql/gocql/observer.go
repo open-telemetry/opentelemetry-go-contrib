@@ -83,15 +83,10 @@ func (o *OtelQueryObserver) ObserveQuery(ctx context.Context, observedQuery gocq
 		attributes := append(
 			defaultAttributes(observedQuery.Host),
 			CassStatement(observedQuery.Statement),
+			CassRowsReturned(observedQuery.Rows),
+			CassQueryAttempts(observedQuery.Metrics.Attempts),
+			CassQueryAttemptNum(observedQuery.Attempt),
 		)
-
-		if observedQuery.Err != nil {
-			attributes = append(
-				attributes,
-				CassErrMsg(observedQuery.Err.Error()),
-			)
-			iQueryErrors.Add(ctx, 1)
-		}
 
 		ctx, span := o.cfg.tracer.Start(
 			ctx,
@@ -100,11 +95,18 @@ func (o *OtelQueryObserver) ObserveQuery(ctx context.Context, observedQuery gocq
 			trace.WithAttributes(attributes...),
 		)
 
+		if observedQuery.Err != nil {
+			span.SetAttributes(CassErrMsg(observedQuery.Err.Error()))
+			iQueryErrors.Add(ctx, 1)
+		}
+
 		span.End(trace.WithEndTime(observedQuery.End))
 
 		iQueryCount.Add(ctx, 1, CassStatement(observedQuery.Statement))
 		iQueryRows.Record(ctx, int64(observedQuery.Rows))
+		iLatency.Record(ctx, observedQuery.Metrics.TotalLatency)
 	}
+
 	if o.observer != nil {
 		o.observer.ObserveQuery(ctx, observedQuery)
 	}
@@ -115,16 +117,8 @@ func (o *OtelBatchObserver) ObserveBatch(ctx context.Context, observedBatch gocq
 	if o.cfg.instrumentBatch {
 		attributes := append(
 			defaultAttributes(observedBatch.Host),
-			CassBatchStatements(observedBatch.Statements),
+			CassBatchQueries(len(observedBatch.Statements)),
 		)
-
-		if observedBatch.Err != nil {
-			attributes = append(
-				attributes,
-				CassErrMsg(observedBatch.Err.Error()),
-			)
-			iBatchErrors.Add(ctx, 1)
-		}
 
 		ctx, span := o.cfg.tracer.Start(
 			ctx,
@@ -133,9 +127,19 @@ func (o *OtelBatchObserver) ObserveBatch(ctx context.Context, observedBatch gocq
 			trace.WithAttributes(attributes...),
 		)
 
+		if observedBatch.Err != nil {
+			span.SetAttributes(CassErrMsg(observedBatch.Err.Error()))
+			iBatchErrors.Add(ctx, 1)
+		}
+
 		span.End(trace.WithEndTime(observedBatch.End))
 
 		iBatchCount.Add(ctx, 1)
+		iLatency.Record(
+			ctx,
+			observedBatch.Metrics.TotalLatency,
+			CassHostID(observedBatch.Host.HostID()),
+		)
 	}
 
 	if o.observer != nil {
@@ -148,20 +152,17 @@ func (o *OtelConnectObserver) ObserveConnect(observedConnect gocql.ObservedConne
 	if o.cfg.instrumentConnect {
 		attributes := defaultAttributes(observedConnect.Host)
 
-		if observedConnect.Err != nil {
-			attributes = append(
-				attributes,
-				CassErrMsg(observedConnect.Err.Error()),
-			)
-			iConnectErrors.Add(o.ctx, 1)
-		}
-
 		_, span := o.cfg.tracer.Start(
 			o.ctx,
 			cassConnectName,
 			trace.WithStartTime(observedConnect.Start),
 			trace.WithAttributes(attributes...),
 		)
+
+		if observedConnect.Err != nil {
+			span.SetAttributes(CassErrMsg(observedConnect.Err.Error()))
+			iConnectErrors.Add(o.ctx, 1)
+		}
 
 		span.End(trace.WithEndTime(observedConnect.End))
 
