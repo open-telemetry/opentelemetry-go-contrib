@@ -27,12 +27,14 @@ package main
 
 import (
 	"context"
-	"github.com/gocql/gocql"
+	"fmt"
 	"log"
 	"net/http"
 	"os"
 	"os/signal"
 	"sync"
+
+	"github.com/gocql/gocql"
 
 	otelGocql "go.opentelemetry.io/contrib/github.com/gocql/gocql"
 	"go.opentelemetry.io/otel/api/global"
@@ -41,14 +43,13 @@ import (
 	sdktrace "go.opentelemetry.io/otel/sdk/trace"
 )
 
-var logger = log.New(os.Stderr, "zipkin-example", log.Ldate|log.Ltime|log.Llongfile)
 var wg sync.WaitGroup
 
 func initMetrics() {
 	// Start prometheus
 	metricExporter, err := prometheus.NewExportPipeline(prometheus.Config{})
 	if err != nil {
-		logger.Fatalf("failed to install metric exporter, %v", err)
+		log.Fatalf("failed to install metric exporter, %v", err)
 	}
 	server := http.Server{Addr: ":2222"}
 	http.HandleFunc("/", metricExporter.ServeHTTP)
@@ -77,7 +78,6 @@ func initTracer() {
 	traceExporter, err := zipkintrace.NewExporter(
 		"http://localhost:9411/api/v2/spans",
 		"zipkin-example",
-		zipkintrace.WithLogger(logger),
 	)
 	if err != nil {
 		log.Fatalf("failed to create span traceExporter, %v", err)
@@ -117,6 +117,7 @@ func main() {
 	cluster := getCluster()
 	// Create a session to begin making queries
 	session, err := otelGocql.NewSessionWithTracing(
+		ctx,
 		cluster,
 	)
 	if err != nil {
@@ -124,21 +125,24 @@ func main() {
 	}
 	defer session.Close()
 
-	id := gocql.TimeUUID()
-	if err := session.Query(
-		"INSERT INTO book (id, title, author_first_name, author_last_name) VALUES (?, ?, ?, ?)",
-		id,
-		"Example Book 1",
-		"firstName",
-		"lastName",
-	).WithContext(ctx).Exec(); err != nil {
-		log.Printf("failed to insert data, %v", err)
+	batch := session.NewBatch(gocql.LoggedBatch)
+	for i := 0; i < 500; i++ {
+		batch.Query(
+			"INSERT INTO book (id, title, author_first_name, author_last_name) VALUES (?, ?, ?, ?)",
+			gocql.TimeUUID(),
+			fmt.Sprintf("Example Book %d", i),
+			"firstName",
+			"lastName",
+		)
+	}
+	if err := session.ExecuteBatch(batch.WithContext(ctx)); err != nil {
+		log.Printf("failed to batch insert, %v", err)
 	}
 
 	res := session.Query(
-		"SELECT title, author_first_name, author_last_name from book WHERE id = ?",
-		id,
-	).WithContext(ctx).Iter()
+		"SELECT title, author_first_name, author_last_name from book WHERE author_last_name = ?",
+		"lastName",
+	).WithContext(ctx).PageSize(100).Iter()
 
 	var (
 		title     string
@@ -146,13 +150,13 @@ func main() {
 		lastName  string
 	)
 
-	res.Scan(&title, &firstName, &lastName)
-
-	log.Printf("Found Book {id: %s, title: %s, Name: %s, %s}", id, title, lastName, firstName)
+	for res.Scan(&title, &firstName, &lastName) {
+		res.Scan(&title, &firstName, &lastName)
+	}
 
 	res.Close()
 
-	if err = session.Query("DELETE FROM book WHERE id = ?", id).WithContext(ctx).Exec(); err != nil {
+	if err = session.Query("truncate table book").WithContext(ctx).Exec(); err != nil {
 		log.Printf("failed to delete data, %v", err)
 	}
 
