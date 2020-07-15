@@ -350,10 +350,10 @@ func (m *Accumulator) NewAsyncInstrument(descriptor api.Descriptor, runner metri
 	return a, nil
 }
 
-// Collect traverses the list of active records and observers. If the periods
-// option is set with more than one period, it only exports metrics with a
-// CollectionPeriod that matches one of the periods. If not, it exports data
-// for each active instrument.
+// Collect traverses the list of active records and observers. Periods is an
+// an optional parameter. If it is set with more than one period, only
+// instruments associated with one of those periods will be collected from.
+// If not, it exports data for each active instrument.
 //
 // Collect() may not be called concurrently.
 //
