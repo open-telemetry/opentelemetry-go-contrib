@@ -97,7 +97,6 @@ func TestQuery(t *testing.T) {
 	defer afterEach()
 	cluster := getCluster()
 	tracer := mocktracer.NewTracer("gocql-test")
-	connectObserver := &mockConnectObserver{}
 
 	ctx, parentSpan := tracer.Start(context.Background(), "gocql-test")
 
@@ -105,7 +104,7 @@ func TestQuery(t *testing.T) {
 		ctx,
 		cluster,
 		WithTracer(tracer),
-		WithConnectObserver(connectObserver),
+		WithConnectInstrumentation(false),
 	)
 	assert.NoError(t, err)
 	defer session.Close()
@@ -125,10 +124,10 @@ func TestQuery(t *testing.T) {
 	spans := tracer.EndedSpans()
 
 	// Collect all the connection spans
-	numberOfConnections := connectObserver.callCount
-	// there should be numberOfConnections + 1 Query + 1 Batch spans
-	assert.Equal(t, numberOfConnections+2, len(spans))
-	assert.Greater(t, numberOfConnections, 0, "at least one connection needs to have been made")
+	// total spans:
+	// 1 span for the Query
+	// 1 span created in test
+	assert.Equal(t, 2, len(spans))
 
 	// Verify attributes are correctly added to the spans. Omit the one local span
 	for _, span := range spans[0 : len(spans)-1] {
@@ -138,8 +137,6 @@ func TestQuery(t *testing.T) {
 			assert.Equal(t, insertStmt, span.Attributes[CassStatementKey].AsString())
 			assert.Equal(t, parentSpan.SpanContext().SpanID.String(), span.ParentSpanID.String())
 			break
-		case cassConnectName:
-			numberOfConnections--
 		default:
 			t.Fatalf("unexpected span name %s", span.Name)
 		}
@@ -148,33 +145,38 @@ func TestQuery(t *testing.T) {
 		assert.Equal(t, int32(cluster.Port), span.Attributes[CassPortKey].AsInt32())
 		assert.Equal(t, "up", strings.ToLower(span.Attributes[CassHostStateKey].AsString()))
 	}
-	assert.Equal(t, 0, numberOfConnections)
 
 	// Check metrics
 	controller.Stop()
 
-	assert.Equal(t, 4, len(exporter.records))
+	assert.Equal(t, 3, len(exporter.records))
 	expected := []testRecord{
-		testRecord{
-			Name:      "cassandra.connections",
-			MeterName: "github.com/gocql/gocql",
-			// TODO: Labels
-			Number: 3,
-		},
 		testRecord{
 			Name:      "cassandra.queries",
 			MeterName: "github.com/gocql/gocql",
-			// TODO: Labels
+			Labels: []kv.KeyValue{
+				CassHostID("test-id"),
+				CassKeyspace(keyspace),
+				CassStatement(insertStmt),
+			},
 			Number: 1,
 		},
 		testRecord{
 			Name:      "cassandra.rows",
 			MeterName: "github.com/gocql/gocql",
-			Number:    0,
+			Labels: []kv.KeyValue{
+				CassHostID("test-id"),
+				CassKeyspace(keyspace),
+			},
+			Number: 0,
 		},
 		testRecord{
 			Name:      "cassandra.latency",
 			MeterName: "github.com/gocql/gocql",
+			Labels: []kv.KeyValue{
+				CassHostID("test-id"),
+				CassKeyspace(keyspace),
+			},
 		},
 	}
 
@@ -182,18 +184,19 @@ func TestQuery(t *testing.T) {
 		name := record.Descriptor().Name()
 		agg := record.Aggregation()
 		switch name {
-		case "cassandra.connections":
+		case "cassandra.queries":
 			recordEqual(t, expected[0], record)
 			numberEqual(t, expected[0].Number, agg)
-		case "cassandra.queries":
-			recordEqual(t, expected[1], record)
-			numberEqual(t, expected[1].Number, agg)
 			break
 		case "cassandra.rows":
-			recordEqual(t, expected[2], record)
-			numberEqual(t, expected[2].Number, agg)
+			recordEqual(t, expected[1], record)
+			numberEqual(t, expected[1].Number, agg)
 		case "cassandra.latency":
-			recordEqual(t, expected[3], record)
+			recordEqual(t, expected[2], record)
+			// The latency will vary, so just check that it exists
+			if _, ok := agg.(aggregation.MinMaxSumCount); !ok {
+				t.Fatal("missing aggregation in latency record")
+			}
 		default:
 			t.Fatalf("wrong metric %s", name)
 		}
@@ -234,6 +237,9 @@ func TestBatch(t *testing.T) {
 	parentSpan.End()
 
 	spans := tracer.EndedSpans()
+	// total spans:
+	// 1 span for the query
+	// 1 span for the local span
 	assert.Equal(t, 2, len(spans))
 	span := spans[0]
 
@@ -247,17 +253,25 @@ func TestBatch(t *testing.T) {
 
 	controller.Stop()
 
+	// Check metrics
 	assert.Equal(t, 2, len(exporter.records))
 	expected := []testRecord{
 		testRecord{
 			Name:      "cassandra.batch.queries",
 			MeterName: "github.com/gocql/gocql",
-			// TODO: Labels
+			Labels: []kv.KeyValue{
+				CassHostID("test-id"),
+				CassKeyspace(keyspace),
+			},
 			Number: 1,
 		},
 		testRecord{
 			Name:      "cassandra.latency",
 			MeterName: "github.com/gocql/gocql",
+			Labels: []kv.KeyValue{
+				CassHostID("test-id"),
+				CassKeyspace(keyspace),
+			},
 		},
 	}
 
@@ -270,6 +284,9 @@ func TestBatch(t *testing.T) {
 			numberEqual(t, expected[0].Number, agg)
 		case "cassandra.latency":
 			recordEqual(t, expected[1], record)
+			if _, ok := agg.(aggregation.MinMaxSumCount); !ok {
+				t.Fatal("missing aggregation in latency record")
+			}
 		default:
 			t.Fatalf("wrong metric %s", name)
 		}
@@ -278,20 +295,28 @@ func TestBatch(t *testing.T) {
 }
 
 func TestConnection(t *testing.T) {
+	controller := getController(t)
 	defer afterEach()
 	cluster := getCluster()
 	tracer := mocktracer.NewTracer("gocql-test")
+	connectObserver := &mockConnectObserver{0}
 
 	session, err := NewSessionWithTracing(
 		context.Background(),
 		cluster,
 		WithTracer(tracer),
+		WithConnectObserver(connectObserver),
 	)
 	assert.NoError(t, err)
 	defer session.Close()
 
 	spans := tracer.EndedSpans()
 
+	assert.Less(t, 0, connectObserver.callCount)
+
+	controller.Stop()
+
+	// Verify the span attributes
 	for _, span := range spans {
 		assert.Equal(t, cassConnectName, span.Name)
 		assert.NotNil(t, span.Attributes[CassVersionKey].AsString())
@@ -299,6 +324,39 @@ func TestConnection(t *testing.T) {
 		assert.Equal(t, int32(cluster.Port), span.Attributes[CassPortKey].AsInt32())
 		assert.Equal(t, "up", strings.ToLower(span.Attributes[CassHostStateKey].AsString()))
 	}
+
+	// Verify the metrics
+	expected := []testRecord{
+		testRecord{
+			Name:      "cassandra.connections",
+			MeterName: "github.com/gocql/gocql",
+			Labels: []kv.KeyValue{
+				CassHost("127.0.0.1"),
+				CassHostID("test-id"),
+			},
+		},
+	}
+
+	for _, record := range exporter.records {
+		name := record.Descriptor().Name()
+		switch name {
+		case "cassandra.connections":
+			recordEqual(t, expected[0], record)
+		default:
+			t.Fatalf("wrong metric %s", name)
+		}
+	}
+}
+
+func TestGetHost(t *testing.T) {
+	hostAndPort := "localhost:9042"
+	assert.Equal(t, "localhost", getHost(hostAndPort))
+
+	hostAndPort = "127.0.0.1:9042"
+	assert.Equal(t, "127.0.0.1", getHost(hostAndPort))
+
+	hostAndPort = ":9042"
+	assert.Equal(t, "", getHost(hostAndPort))
 }
 
 // getCluster creates a gocql ClusterConfig with the appropriate
@@ -324,6 +382,17 @@ func recordEqual(t *testing.T, expected testRecord, actual export.Record) {
 	descriptor := actual.Descriptor()
 	assert.Equal(t, expected.Name, descriptor.Name())
 	assert.Equal(t, expected.MeterName, descriptor.InstrumentationName())
+	for _, label := range expected.Labels {
+		actualValue, ok := actual.Labels().Value(label.Key)
+		assert.True(t, ok)
+		assert.NotNil(t, actualValue)
+		// Cant test equality of host id
+		if label.Key != CassHostIDKey {
+			assert.Equal(t, label.Value, actualValue)
+		} else {
+			assert.NotEmpty(t, actualValue)
+		}
+	}
 }
 
 func numberEqual(t *testing.T, expected metric.Number, agg aggregation.Aggregation) {

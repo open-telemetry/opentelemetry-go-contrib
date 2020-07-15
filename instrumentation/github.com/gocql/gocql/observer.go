@@ -17,9 +17,11 @@ package gocql
 import (
 	"context"
 	"strings"
+	"time"
 
 	"github.com/gocql/gocql"
 	"go.opentelemetry.io/otel/api/kv"
+	"go.opentelemetry.io/otel/api/metric"
 	"go.opentelemetry.io/otel/api/trace"
 )
 
@@ -80,12 +82,16 @@ func NewConnectObserver(ctx context.Context, observer gocql.ConnectObserver, cfg
 // ObserveQuery instruments a specific query.
 func (o *OtelQueryObserver) ObserveQuery(ctx context.Context, observedQuery gocql.ObservedQuery) {
 	if o.cfg.instrumentQuery {
+		host := observedQuery.Host
+		keyspace := observedQuery.Keyspace
+
 		attributes := append(
-			defaultAttributes(observedQuery.Host),
+			defaultAttributes(host),
 			CassStatement(observedQuery.Statement),
 			CassRowsReturned(observedQuery.Rows),
 			CassQueryAttempts(observedQuery.Metrics.Attempts),
 			CassQueryAttemptNum(observedQuery.Attempt),
+			CassKeyspace(keyspace),
 		)
 
 		ctx, span := o.cfg.tracer.Start(
@@ -97,14 +103,30 @@ func (o *OtelQueryObserver) ObserveQuery(ctx context.Context, observedQuery gocq
 
 		if observedQuery.Err != nil {
 			span.SetAttributes(CassErrMsg(observedQuery.Err.Error()))
-			iQueryErrors.Add(ctx, 1)
+			recordError(ctx, iQueryErrors, keyspace, host)
 		}
 
 		span.End(trace.WithEndTime(observedQuery.End))
 
-		iQueryCount.Add(ctx, 1, CassStatement(observedQuery.Statement))
-		iQueryRows.Record(ctx, int64(observedQuery.Rows))
-		iLatency.Record(ctx, observedQuery.Metrics.TotalLatency)
+		queryLabels := append(
+			defaultMetricLabels(keyspace, host),
+			CassStatement(observedQuery.Statement),
+		)
+		iQueryCount.Add(
+			ctx,
+			1,
+			queryLabels...,
+		)
+		iQueryRows.Record(
+			ctx,
+			int64(observedQuery.Rows),
+			defaultMetricLabels(keyspace, host)...,
+		)
+		iLatency.Record(
+			ctx,
+			nanoToMilliseconds(observedQuery.Metrics.TotalLatency),
+			defaultMetricLabels(keyspace, host)...,
+		)
 	}
 
 	if o.observer != nil {
@@ -115,9 +137,12 @@ func (o *OtelQueryObserver) ObserveQuery(ctx context.Context, observedQuery gocq
 // ObserveBatch instruments a specific batch query.
 func (o *OtelBatchObserver) ObserveBatch(ctx context.Context, observedBatch gocql.ObservedBatch) {
 	if o.cfg.instrumentBatch {
+		host := observedBatch.Host
+		keyspace := observedBatch.Keyspace
 		attributes := append(
-			defaultAttributes(observedBatch.Host),
+			defaultAttributes(host),
 			CassBatchQueries(len(observedBatch.Statements)),
+			CassKeyspace(keyspace),
 		)
 
 		ctx, span := o.cfg.tracer.Start(
@@ -129,16 +154,20 @@ func (o *OtelBatchObserver) ObserveBatch(ctx context.Context, observedBatch gocq
 
 		if observedBatch.Err != nil {
 			span.SetAttributes(CassErrMsg(observedBatch.Err.Error()))
-			iBatchErrors.Add(ctx, 1)
+			recordError(ctx, iBatchErrors, keyspace, host)
 		}
 
 		span.End(trace.WithEndTime(observedBatch.End))
 
-		iBatchCount.Add(ctx, 1)
+		iBatchCount.Add(
+			ctx,
+			1,
+			defaultMetricLabels(observedBatch.Keyspace, observedBatch.Host)...,
+		)
 		iLatency.Record(
 			ctx,
-			observedBatch.Metrics.TotalLatency,
-			CassHostID(observedBatch.Host.HostID()),
+			nanoToMilliseconds(observedBatch.Metrics.TotalLatency),
+			defaultMetricLabels(keyspace, host)...,
 		)
 	}
 
@@ -150,6 +179,8 @@ func (o *OtelBatchObserver) ObserveBatch(ctx context.Context, observedBatch gocq
 // ObserveConnect instruments a specific connection attempt.
 func (o *OtelConnectObserver) ObserveConnect(observedConnect gocql.ObservedConnect) {
 	if o.cfg.instrumentConnect {
+		host := observedConnect.Host
+		hostname := getHost(host.HostnameAndPort())
 		attributes := defaultAttributes(observedConnect.Host)
 
 		_, span := o.cfg.tracer.Start(
@@ -161,13 +192,22 @@ func (o *OtelConnectObserver) ObserveConnect(observedConnect gocql.ObservedConne
 
 		if observedConnect.Err != nil {
 			span.SetAttributes(CassErrMsg(observedConnect.Err.Error()))
-			iConnectErrors.Add(o.ctx, 1)
+			iConnectErrors.Add(
+				o.ctx,
+				1,
+				CassHost(hostname),
+				CassHostID(host.HostID()),
+			)
 		}
 
 		span.End(trace.WithEndTime(observedConnect.End))
 
-		host := observedConnect.Host.HostnameAndPort()
-		iConnectionCount.Add(o.ctx, 1, CassHostKey.String(host))
+		iConnectionCount.Add(
+			o.ctx,
+			1,
+			CassHost(hostname),
+			CassHostID(host.HostID()),
+		)
 	}
 
 	if o.observer != nil {
@@ -177,12 +217,46 @@ func (o *OtelConnectObserver) ObserveConnect(observedConnect gocql.ObservedConne
 
 // ------------------------------------------ Private Functions
 
+// getHost returns the hostname as a string.
+// gocql.HostInfo.HostnameAndPort() returns a string
+// formatted like host:port. This function returns the host.
+func getHost(hostPort string) string {
+	idx := strings.Index(hostPort, ":")
+	host := hostPort[0:idx]
+	return host
+}
+
+// defaultAttributes creates an array of KeyValue pairs that are
+// attributes for all gocql spans.
 func defaultAttributes(host *gocql.HostInfo) []kv.KeyValue {
 	hostnameAndPort := host.HostnameAndPort()
 	return []kv.KeyValue{
 		CassVersion(host.Version().String()),
-		CassHost(hostnameAndPort[0:strings.Index(hostnameAndPort, ":")]),
+		CassHost(getHost(hostnameAndPort)),
 		CassPort(host.Port()),
 		CassHostState(host.State().String()),
+		CassHostID(host.HostID()),
 	}
+}
+
+// defaultMetricLabels returns an array of the default labels added to metrics.
+func defaultMetricLabels(keyspace string, host *gocql.HostInfo) []kv.KeyValue {
+	return []kv.KeyValue{
+		CassHostID(host.HostID()),
+		CassKeyspace(keyspace),
+	}
+}
+
+// nanoToMilliseconds converts nanoseconds to milliseconds.
+func nanoToMilliseconds(ns int64) int64 {
+	return ns / int64(time.Millisecond)
+}
+
+func recordError(ctx context.Context, counter metric.Int64Counter, keyspace string, host *gocql.HostInfo) {
+	labels := append(defaultMetricLabels(keyspace, host), CassHostState(host.State().String()))
+	counter.Add(
+		ctx,
+		1,
+		labels...,
+	)
 }

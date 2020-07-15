@@ -37,6 +37,10 @@ const (
 	// the state of the casssandra server hosting the node being queried.
 	CassHostStateKey = kv.Key("cassandra.host.state")
 
+	// CassKeyspaceKey is the key for the KeyValue pair describing the
+	// keyspace of the current session.
+	CassKeyspaceKey = kv.Key("cassandra.keyspace")
+
 	// CassStatementKey is the key for the span attribute describing the
 	// the statement used to query the cassandra database.
 	// This attribute will only be found on a span for a query.
@@ -93,6 +97,11 @@ func CassPort(port int) kv.KeyValue {
 // CassHostState returns the state of the cassandra host as a KeyValue pair.
 func CassHostState(state string) kv.KeyValue {
 	return CassHostStateKey.String(state)
+}
+
+// CassKeyspace returns the keyspace of the session as a keyvalue pair.
+func CassKeyspace(keyspace string) kv.KeyValue {
+	return CassKeyspaceKey.String(keyspace)
 }
 
 // CassStatement returns the statement made to the cassandra database as a
