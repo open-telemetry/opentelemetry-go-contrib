@@ -51,7 +51,7 @@ func WrapPartitionConsumer(serviceName string, pc sarama.PartitionConsumer, opts
 		for msg := range msgs {
 			// Extract a span context from message to link.
 			carrier := NewConsumerMessageCarrier(msg)
-			parentSpanContext := trace.RemoteSpanContextFromContext(propagation.ExtractHTTP(context.Background(), cfg.Propagators, carrier))
+			parentSpanContext := propagation.ExtractHTTP(context.Background(), cfg.Propagators, carrier)
 
 			// Create a span.
 			attrs := []kv.KeyValue{
@@ -67,10 +67,7 @@ func WrapPartitionConsumer(serviceName string, pc sarama.PartitionConsumer, opts
 				trace.WithAttributes(attrs...),
 				trace.WithSpanKind(trace.SpanKindConsumer),
 			}
-			if parentSpanContext.IsValid() {
-				opts = append(opts, trace.LinkedTo(parentSpanContext))
-			}
-			newCtx, span := cfg.Tracer.Start(context.Background(), "kafka.consume", opts...)
+			newCtx, span := cfg.Tracer.Start(parentSpanContext, "kafka.consume", opts...)
 
 			// Inject current span context, so consumers can use it to propagate span.
 			propagation.InjectHTTP(newCtx, cfg.Propagators, carrier)

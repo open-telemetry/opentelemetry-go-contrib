@@ -99,10 +99,10 @@ func consumeAndCheck(t *testing.T, mt *mocktracer.Tracer, mockPartitionConsumer 
 	assert.Len(t, spans, 2)
 
 	expectedList := []struct {
-		kvList []kv.KeyValue
-		links  map[trace.SpanContext][]kv.KeyValue
-		kind   trace.SpanKind
-		msgKey []byte
+		kvList       []kv.KeyValue
+		parentSpanID trace.SpanID
+		kind         trace.SpanKind
+		msgKey       []byte
 	}{
 		{
 			kvList: []kv.KeyValue{
@@ -114,11 +114,9 @@ func consumeAndCheck(t *testing.T, mt *mocktracer.Tracer, mockPartitionConsumer 
 				standard.MessagingMessageIDKey.Int64(1),
 				kafkaPartitionKey.Int32(0),
 			},
-			links: map[trace.SpanContext][]kv.KeyValue{
-				trace.SpanFromContext(ctx).SpanContext(): nil,
-			},
-			kind:   trace.SpanKindConsumer,
-			msgKey: []byte("foo"),
+			parentSpanID: trace.SpanFromContext(ctx).SpanContext().SpanID,
+			kind:         trace.SpanKindConsumer,
+			msgKey:       []byte("foo"),
 		},
 		{
 			kvList: []kv.KeyValue{
@@ -130,7 +128,6 @@ func consumeAndCheck(t *testing.T, mt *mocktracer.Tracer, mockPartitionConsumer 
 				standard.MessagingMessageIDKey.Int64(2),
 				kafkaPartitionKey.Int32(0),
 			},
-			links:  make(map[trace.SpanContext][]kv.KeyValue),
 			kind:   trace.SpanKindConsumer,
 			msgKey: []byte("foo2"),
 		},
@@ -140,7 +137,7 @@ func consumeAndCheck(t *testing.T, mt *mocktracer.Tracer, mockPartitionConsumer 
 		t.Run(fmt.Sprint("index", i), func(t *testing.T) {
 			span := spans[i]
 
-			assert.Equal(t, expected.links, span.Links)
+			assert.Equal(t, expected.parentSpanID, span.ParentSpanID)
 
 			remoteSpanFromMessage := trace.RemoteSpanContextFromContext(propagation.ExtractHTTP(context.Background(), propagators, NewConsumerMessageCarrier(msgList[i])))
 			assert.Equal(t, span.SpanContext(), remoteSpanFromMessage,
