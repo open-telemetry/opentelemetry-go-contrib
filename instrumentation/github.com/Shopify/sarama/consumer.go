@@ -48,7 +48,6 @@ func WrapPartitionConsumer(serviceName string, pc sarama.PartitionConsumer, opts
 	go func() {
 		msgs := pc.Messages()
 
-		var prevSpan trace.Span
 		for msg := range msgs {
 			// Extract a span context from message to link.
 			carrier := NewConsumerMessageCarrier(msg)
@@ -79,15 +78,7 @@ func WrapPartitionConsumer(serviceName string, pc sarama.PartitionConsumer, opts
 			// Send messages back to user.
 			wrapped.messages <- msg
 
-			// Finish the previous span.
-			if prevSpan != nil {
-				prevSpan.End()
-			}
-			prevSpan = span
-		}
-		// Finish any remaining span.
-		if prevSpan != nil {
-			prevSpan.End()
+			span.End()
 		}
 		close(wrapped.messages)
 	}()
