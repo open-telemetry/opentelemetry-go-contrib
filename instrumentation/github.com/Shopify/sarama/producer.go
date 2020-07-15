@@ -143,7 +143,9 @@ func WrapAsyncProducer(serviceName string, saramaConfig *sarama.Config, p sarama
 			case t := <-wrapped.close:
 				switch t {
 				case closeSync:
-					wrapped.closeErr <- p.Close()
+					go func() {
+						wrapped.closeErr <- p.Close()
+					}()
 				case closeAsync:
 					p.AsyncClose()
 				}
