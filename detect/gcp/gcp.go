@@ -17,6 +17,7 @@ package gcp
 import (
 	"context"
 	"log"
+	"os"
 	"strings"
 
 	"cloud.google.com/go/compute/metadata"
@@ -79,7 +80,7 @@ func (gcp *GCP) Detect(ctx context.Context) (*resource.Resource, error) {
 		aggregatedErr = multierr.Append(aggregatedErr, err)
 	}
 
-	hostname, err := metadata.Hostname()
+	hostname, err := os.Hostname()
 	logError(err)
 	if hostname != "" {
 		labels = append(labels, standard.HostHostNameKey.String(hostname))
