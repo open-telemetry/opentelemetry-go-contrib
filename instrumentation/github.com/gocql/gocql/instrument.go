@@ -20,6 +20,7 @@ import (
 	"go.opentelemetry.io/otel/api/global"
 
 	"go.opentelemetry.io/otel/api/metric"
+	"go.opentelemetry.io/otel/api/unit"
 )
 
 var (
@@ -99,8 +100,8 @@ func InstrumentWithProvider(p metric.Provider) {
 
 	iLatency = meter.NewInt64ValueRecorder(
 		"cassandra.latency",
-		metric.WithDescription("Sum of latency to host"),
-		// TODO: dimension
+		metric.WithDescription("Sum of latency to host in milliseconds"),
+		metric.WithUnit(unit.Milliseconds),
 	)
 }
 
