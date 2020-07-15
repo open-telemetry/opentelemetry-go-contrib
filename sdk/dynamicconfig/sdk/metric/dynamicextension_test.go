@@ -23,49 +23,50 @@ import (
 )
 
 const InstrumentName string = "One Fish"
+
 var MatchingPatterns1 = []*pb.ConfigResponse_MetricConfig_Schedule_Pattern{
-	&pb.ConfigResponse_MetricConfig_Schedule_Pattern{
+	{
 		Match: &pb.ConfigResponse_MetricConfig_Schedule_Pattern_Equals{
 			Equals: "One Fish",
 		},
 	},
-	&pb.ConfigResponse_MetricConfig_Schedule_Pattern{
+	{
 		Match: &pb.ConfigResponse_MetricConfig_Schedule_Pattern_Equals{
 			Equals: "Two Fish",
 		},
 	},
 }
 var MatchingPatterns2 = []*pb.ConfigResponse_MetricConfig_Schedule_Pattern{
-	&pb.ConfigResponse_MetricConfig_Schedule_Pattern {
+	{
 		Match: &pb.ConfigResponse_MetricConfig_Schedule_Pattern_StartsWith{
 			StartsWith: "One",
 		},
 	},
-	&pb.ConfigResponse_MetricConfig_Schedule_Pattern{
+	{
 		Match: &pb.ConfigResponse_MetricConfig_Schedule_Pattern_StartsWith{
 			StartsWith: "Two",
 		},
 	},
 }
 var NotMatchingPatterns1 = []*pb.ConfigResponse_MetricConfig_Schedule_Pattern{
-	&pb.ConfigResponse_MetricConfig_Schedule_Pattern{
+	{
 		Match: &pb.ConfigResponse_MetricConfig_Schedule_Pattern_Equals{
 			Equals: "Red Fish",
 		},
 	},
-	&pb.ConfigResponse_MetricConfig_Schedule_Pattern{
+	{
 		Match: &pb.ConfigResponse_MetricConfig_Schedule_Pattern_Equals{
 			Equals: "Blue Fish",
 		},
 	},
 }
 var NotMatchingPatterns2 = []*pb.ConfigResponse_MetricConfig_Schedule_Pattern{
-	&pb.ConfigResponse_MetricConfig_Schedule_Pattern {
+	{
 		Match: &pb.ConfigResponse_MetricConfig_Schedule_Pattern_StartsWith{
 			StartsWith: "Red",
 		},
 	},
-	&pb.ConfigResponse_MetricConfig_Schedule_Pattern {
+	{
 		Match: &pb.ConfigResponse_MetricConfig_Schedule_Pattern_StartsWith{
 			StartsWith: "Blue",
 		},
@@ -81,7 +82,7 @@ func TestFindPeriodCached(t *testing.T) {
 
 	notMatchingSchedule := pb.ConfigResponse_MetricConfig_Schedule{
 		InclusionPatterns: MatchingPatterns1,
-		Period: 5,
+		Period:            5,
 	}
 	ext.schedules = []*pb.ConfigResponse_MetricConfig_Schedule{&notMatchingSchedule}
 
@@ -94,12 +95,12 @@ func TestFindPeriodMinimum(t *testing.T) {
 	matchingSchedule1 := pb.ConfigResponse_MetricConfig_Schedule{
 		InclusionPatterns: MatchingPatterns1,
 		ExclusionPatterns: NotMatchingPatterns1,
-		Period: 5,
+		Period:            5,
 	}
 	matchingSchedule2 := pb.ConfigResponse_MetricConfig_Schedule{
 		InclusionPatterns: MatchingPatterns2,
 		ExclusionPatterns: NotMatchingPatterns2,
-		Period: 1,
+		Period:            1,
 	}
 	ext.schedules = []*pb.ConfigResponse_MetricConfig_Schedule{
 		&matchingSchedule1,
@@ -116,7 +117,7 @@ func TestFindPeriodExcluded(t *testing.T) {
 	matchingSchedule := pb.ConfigResponse_MetricConfig_Schedule{
 		InclusionPatterns: MatchingPatterns1,
 		ExclusionPatterns: MatchingPatterns2,
-		Period: 5,
+		Period:            5,
 	}
 	ext.schedules = []*pb.ConfigResponse_MetricConfig_Schedule{&matchingSchedule}
 
@@ -130,12 +131,12 @@ func TestFindPeriodRightMatch(t *testing.T) {
 	notMatchingSchedule := pb.ConfigResponse_MetricConfig_Schedule{
 		InclusionPatterns: NotMatchingPatterns1,
 		ExclusionPatterns: MatchingPatterns1,
-		Period: 1,
+		Period:            1,
 	}
 	matchingSchedule := pb.ConfigResponse_MetricConfig_Schedule{
 		InclusionPatterns: MatchingPatterns2,
 		ExclusionPatterns: NotMatchingPatterns2,
-		Period: 5,
+		Period:            5,
 	}
 	ext.schedules = []*pb.ConfigResponse_MetricConfig_Schedule{
 		&notMatchingSchedule,

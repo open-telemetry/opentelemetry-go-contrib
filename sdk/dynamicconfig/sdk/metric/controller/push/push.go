@@ -83,15 +83,15 @@ func New(selector export.AggregatorSelector, exporter export.Exporter, opts ...O
 		sdk.WithDynamicExtension(extension),
 	)
 	return &Controller{
-		provider:    registry.NewProvider(impl),
-		accumulator: impl,
-		processor:   processor,
-		exporter:    exporter,
-		ch:          make(chan bool),
-		period:      c.Period,
-		timeout:     c.Timeout,
-		clock:       controllerTime.RealClock{},
-		notifier:    c.Notifier,
+		provider:         registry.NewProvider(impl),
+		accumulator:      impl,
+		processor:        processor,
+		exporter:         exporter,
+		ch:               make(chan bool),
+		period:           c.Period,
+		timeout:          c.Timeout,
+		clock:            controllerTime.RealClock{},
+		notifier:         c.Notifier,
 		dynamicExtension: extension,
 	}
 }
@@ -198,7 +198,7 @@ func (c *Controller) OnUpdatedConfig(config *notify.Config) error {
 // Iterate through the schedules for two purposes:
 //    -Return the minimal non-zero period
 //    -Reset lastCollected, set each CollectionPeriod's last collection
-//    timestamp to now. 
+//    timestamp to now.
 func (c *Controller) updateFromSchedules() time.Duration {
 	now := c.clock.Now()
 

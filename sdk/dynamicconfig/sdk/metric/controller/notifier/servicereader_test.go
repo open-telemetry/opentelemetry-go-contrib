@@ -53,12 +53,12 @@ func TestSuggestedWaitTime(t *testing.T) {
 
 	// ServiceReader with suggestedWaitTimeSec of 5 minutes.
 	reader := ServiceReader{
-		clock: clock,
-		lastTimestamp: clock.Now(),
+		clock:                clock,
+		lastTimestamp:        clock.Now(),
 		suggestedWaitTimeSec: 5 * 60,
 	}
 
-	require.Equal(t, 5 * time.Minute, reader.suggestedWaitTime())
+	require.Equal(t, 5*time.Minute, reader.suggestedWaitTime())
 
 	clock.Add(5 * time.Minute)
 

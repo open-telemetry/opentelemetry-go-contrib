@@ -322,7 +322,7 @@ func NewAccumulator(processor export.Processor, opts ...Option) *Accumulator {
 		processor:        processor,
 		asyncInstruments: internal.NewAsyncInstrumentState(),
 		resource:         c.Resource,
-		ext: c.Ext,
+		ext:              c.Ext,
 	}
 }
 
@@ -451,7 +451,7 @@ func (m *Accumulator) observeAsyncInstruments(
 	m.asyncInstruments.Run(context.Background(), m)
 	for _, inst := range m.asyncInstruments.Instruments() {
 		if a := m.fromAsync(inst); a != nil &&
-		m.shouldCollect(a.descriptor.Name(), periods) {
+			m.shouldCollect(a.descriptor.Name(), periods) {
 			asyncCollected += m.checkpointAsync(a)
 		}
 	}

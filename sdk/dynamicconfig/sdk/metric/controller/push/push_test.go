@@ -285,7 +285,7 @@ func TestPushExportError(t *testing.T) {
 func TestPushScheduleChange(t *testing.T) {
 	oneSchedule := pb.ConfigResponse_MetricConfig_Schedule{
 		InclusionPatterns: []*pb.ConfigResponse_MetricConfig_Schedule_Pattern{
-			&pb.ConfigResponse_MetricConfig_Schedule_Pattern{
+			{
 				Match: &pb.ConfigResponse_MetricConfig_Schedule_Pattern_StartsWith{
 					StartsWith: "one",
 				},
@@ -295,7 +295,7 @@ func TestPushScheduleChange(t *testing.T) {
 	}
 	twoSchedule := pb.ConfigResponse_MetricConfig_Schedule{
 		InclusionPatterns: []*pb.ConfigResponse_MetricConfig_Schedule_Pattern{
-			&pb.ConfigResponse_MetricConfig_Schedule_Pattern{
+			{
 				Match: &pb.ConfigResponse_MetricConfig_Schedule_Pattern_StartsWith{
 					StartsWith: "two",
 				},
@@ -319,7 +319,7 @@ func TestPushScheduleChange(t *testing.T) {
 	p := push.New(
 		test.AggregatorSelector(),
 		fix.exporter,
-		push.WithPeriod(1 * time.Second),
+		push.WithPeriod(1*time.Second),
 		push.WithResource(testResource),
 		push.WithNotifier(notifier),
 	)

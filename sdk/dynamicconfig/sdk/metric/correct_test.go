@@ -25,13 +25,13 @@ import (
 
 	pb "github.com/open-telemetry/opentelemetry-proto/gen/go/collector/dynamicconfig/v1"
 
+	metricsdk "go.opentelemetry.io/contrib/sdk/dynamicconfig/sdk/metric"
 	"go.opentelemetry.io/otel/api/global"
 	"go.opentelemetry.io/otel/api/kv"
 	"go.opentelemetry.io/otel/api/label"
 	"go.opentelemetry.io/otel/api/metric"
 	export "go.opentelemetry.io/otel/sdk/export/metric"
 	"go.opentelemetry.io/otel/sdk/export/metric/aggregation"
-	metricsdk "go.opentelemetry.io/contrib/sdk/dynamicconfig/sdk/metric"
 	"go.opentelemetry.io/otel/sdk/metric/processor/test"
 	batchTest "go.opentelemetry.io/otel/sdk/metric/processor/test"
 	"go.opentelemetry.io/otel/sdk/resource"
@@ -594,7 +594,7 @@ func TestWithDynamicExtension(t *testing.T) {
 	// Create new dynamic extension with set of schedules
 	schedule := pb.ConfigResponse_MetricConfig_Schedule{
 		InclusionPatterns: metricsdk.MatchingPatterns2,
-		Period: 5,
+		Period:            5,
 	}
 	ext := metricsdk.NewDynamicExtension()
 	ext.SetSchedules([]*pb.ConfigResponse_MetricConfig_Schedule{&schedule})

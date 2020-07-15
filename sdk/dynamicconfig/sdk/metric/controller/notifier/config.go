@@ -26,15 +26,16 @@ type Config struct {
 	pb.ConfigResponse
 }
 
-// TODO: Either get rid of this or replace later.
 // This is for convenient development/testing purposes.
+// It produces a Config with a schedule that matches all instruments, with a
+// collection period of `period`
 func GetDefaultConfig(period pb.ConfigResponse_MetricConfig_Schedule_CollectionPeriod, fingerprint []byte) *Config {
 	pattern := pb.ConfigResponse_MetricConfig_Schedule_Pattern{
-		Match: &pb.ConfigResponse_MetricConfig_Schedule_Pattern_StartsWith{ StartsWith: "" },
+		Match: &pb.ConfigResponse_MetricConfig_Schedule_Pattern_StartsWith{StartsWith: "*"},
 	}
 	schedule := pb.ConfigResponse_MetricConfig_Schedule{
 		InclusionPatterns: []*pb.ConfigResponse_MetricConfig_Schedule_Pattern{&pattern},
-		Period: period,
+		Period:            period,
 	}
 
 	return &Config{

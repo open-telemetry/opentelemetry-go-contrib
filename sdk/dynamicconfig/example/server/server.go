@@ -39,18 +39,18 @@ func (s *server) GetConfig(ctx context.Context, in *pb.ConfigRequest) (*pb.Confi
 	log.Printf("Config being read\n")
 
 	pattern1 := pb.ConfigResponse_MetricConfig_Schedule_Pattern{
-		Match: &pb.ConfigResponse_MetricConfig_Schedule_Pattern_StartsWith{ StartsWith: "One" },
+		Match: &pb.ConfigResponse_MetricConfig_Schedule_Pattern_StartsWith{StartsWith: "One"},
 	}
 	schedule1 := pb.ConfigResponse_MetricConfig_Schedule{
 		InclusionPatterns: []*pb.ConfigResponse_MetricConfig_Schedule_Pattern{&pattern1},
-		Period: 1,
+		Period:            1,
 	}
 	pattern2 := pb.ConfigResponse_MetricConfig_Schedule_Pattern{
-		Match: &pb.ConfigResponse_MetricConfig_Schedule_Pattern_Equals{ Equals: "Two Metric" },
+		Match: &pb.ConfigResponse_MetricConfig_Schedule_Pattern_Equals{Equals: "Two Metric"},
 	}
 	schedule2 := pb.ConfigResponse_MetricConfig_Schedule{
 		InclusionPatterns: []*pb.ConfigResponse_MetricConfig_Schedule_Pattern{&pattern2},
-		Period: 5,
+		Period:            5,
 	}
 
 	return &pb.ConfigResponse{

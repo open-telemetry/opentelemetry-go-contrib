@@ -43,10 +43,10 @@ func NewDynamicExtension() *DynamicExtension {
 	}
 }
 
-// Find period associated with the instrument name. If it is cached in 
+// Find period associated with the instrument name. If it is cached in
 // ext.instrumentPeriod, use that. Otherwise, find the period from the
 // current list of schedules (choosing the most frequent if multiple
-// schedules match. 
+// schedules match.
 func (ext *DynamicExtension) FindPeriod(name string) pb.ConfigResponse_MetricConfig_Schedule_CollectionPeriod {
 	ext.lock.Lock()
 	defer ext.lock.Unlock()
@@ -63,10 +63,10 @@ func (ext *DynamicExtension) FindPeriod(name string) pb.ConfigResponse_MetricCon
 		// To match, name must match at least one InclusionPattern and no
 		// ExclusionPatterns.
 		if metricpattern.Matches(name, schedule.InclusionPatterns) &&
-		!metricpattern.Matches(name, schedule.ExclusionPatterns) &&
-		// Check if the CollectionPeriod is the smallest of all those from
-		// matching schedules so far.
-		(minPeriod == 0 || minPeriod > schedule.Period) {
+			!metricpattern.Matches(name, schedule.ExclusionPatterns) &&
+			// Check if the CollectionPeriod is the smallest of all those from
+			// matching schedules so far.
+			(minPeriod == 0 || minPeriod > schedule.Period) {
 			minPeriod = schedule.Period
 		}
 	}
@@ -75,7 +75,7 @@ func (ext *DynamicExtension) FindPeriod(name string) pb.ConfigResponse_MetricCon
 	return minPeriod
 }
 
-// Clear instrumentPeriod cache. 
+// Clear instrumentPeriod cache.
 func (ext *DynamicExtension) Clear() {
 	ext.lock.Lock()
 	defer ext.lock.Unlock()

@@ -182,7 +182,6 @@ func (n *Notifier) checkChanges(ch chan struct{}) {
 				break
 			}
 
-
 			n.lock.Lock()
 			if !n.config.Equals(newConfig) {
 				n.config = newConfig

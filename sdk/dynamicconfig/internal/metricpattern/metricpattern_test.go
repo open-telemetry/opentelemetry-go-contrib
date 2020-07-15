@@ -25,38 +25,39 @@ import (
 )
 
 const InstrumentName string = "One Fish"
+
 var EqualsPattern = pb.ConfigResponse_MetricConfig_Schedule_Pattern{
-	Match: &pb.ConfigResponse_MetricConfig_Schedule_Pattern_Equals {
+	Match: &pb.ConfigResponse_MetricConfig_Schedule_Pattern_Equals{
 		Equals: "One Fish",
 	},
 }
-var StartsPattern = pb.ConfigResponse_MetricConfig_Schedule_Pattern {
-	Match: &pb.ConfigResponse_MetricConfig_Schedule_Pattern_StartsWith {
+var StartsPattern = pb.ConfigResponse_MetricConfig_Schedule_Pattern{
+	Match: &pb.ConfigResponse_MetricConfig_Schedule_Pattern_StartsWith{
 		StartsWith: "One",
 	},
 }
-var MismatchPattern = pb.ConfigResponse_MetricConfig_Schedule_Pattern {
-	Match: &pb.ConfigResponse_MetricConfig_Schedule_Pattern_Equals {
+var MismatchPattern = pb.ConfigResponse_MetricConfig_Schedule_Pattern{
+	Match: &pb.ConfigResponse_MetricConfig_Schedule_Pattern_Equals{
 		Equals: "One Whale",
 	},
 }
-var NotEqualsPattern = pb.ConfigResponse_MetricConfig_Schedule_Pattern {
-	Match: &pb.ConfigResponse_MetricConfig_Schedule_Pattern_Equals {
+var NotEqualsPattern = pb.ConfigResponse_MetricConfig_Schedule_Pattern{
+	Match: &pb.ConfigResponse_MetricConfig_Schedule_Pattern_Equals{
 		Equals: "Blue Whale",
 	},
 }
-var NotStartsPattern = pb.ConfigResponse_MetricConfig_Schedule_Pattern {
-	Match: &pb.ConfigResponse_MetricConfig_Schedule_Pattern_StartsWith {
+var NotStartsPattern = pb.ConfigResponse_MetricConfig_Schedule_Pattern{
+	Match: &pb.ConfigResponse_MetricConfig_Schedule_Pattern_StartsWith{
 		StartsWith: "Two",
 	},
 }
-var WildcardEqualsPattern = pb.ConfigResponse_MetricConfig_Schedule_Pattern {
-	Match: &pb.ConfigResponse_MetricConfig_Schedule_Pattern_Equals {
+var WildcardEqualsPattern = pb.ConfigResponse_MetricConfig_Schedule_Pattern{
+	Match: &pb.ConfigResponse_MetricConfig_Schedule_Pattern_Equals{
 		Equals: "*",
 	},
 }
-var WildcardStartsPattern = pb.ConfigResponse_MetricConfig_Schedule_Pattern {
-	Match: &pb.ConfigResponse_MetricConfig_Schedule_Pattern_StartsWith {
+var WildcardStartsPattern = pb.ConfigResponse_MetricConfig_Schedule_Pattern{
+	Match: &pb.ConfigResponse_MetricConfig_Schedule_Pattern_StartsWith{
 		StartsWith: "*",
 	},
 }
