@@ -12,7 +12,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package dynamicconfig
+package notifier
 
 import (
 	"bytes"
@@ -26,10 +26,17 @@ type Config struct {
 	pb.ConfigResponse
 }
 
-// TODO: Either get rid of this or replace later.
 // This is for convenient development/testing purposes.
+// It produces a Config with a schedule that matches all instruments, with a
+// collection period of `period`
 func GetDefaultConfig(period pb.ConfigResponse_MetricConfig_Schedule_CollectionPeriod, fingerprint []byte) *Config {
-	schedule := pb.ConfigResponse_MetricConfig_Schedule{Period: period}
+	pattern := pb.ConfigResponse_MetricConfig_Schedule_Pattern{
+		Match: &pb.ConfigResponse_MetricConfig_Schedule_Pattern_StartsWith{StartsWith: "*"},
+	}
+	schedule := pb.ConfigResponse_MetricConfig_Schedule{
+		InclusionPatterns: []*pb.ConfigResponse_MetricConfig_Schedule_Pattern{&pattern},
+		Period:            period,
+	}
 
 	return &Config{
 		pb.ConfigResponse{
@@ -41,13 +48,15 @@ func GetDefaultConfig(period pb.ConfigResponse_MetricConfig_Schedule_CollectionP
 	}
 }
 
-func (config *Config) Validate() error {
-	if len(config.MetricConfig.Schedules) != 1 {
-		return errors.New("Config must have exactly one Schedule")
+func (config *Config) ValidateMetricConfig() error {
+	if config.MetricConfig == nil {
+		return errors.New("No MetricConfig")
 	}
 
-	if config.MetricConfig.Schedules[0].Period <= 0 {
-		return errors.New("Period must be positive")
+	for _, schedule := range config.MetricConfig.Schedules {
+		if schedule.Period < 0 {
+			return errors.New("Periods must be positive")
+		}
 	}
 
 	return nil

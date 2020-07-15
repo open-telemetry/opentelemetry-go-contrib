@@ -12,7 +12,8 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package dynamicconfig
+// import "go.opentelemetry.io/contrib/sdk/dynamicconfig/sdk/metric/controller/notifier"
+package notifier
 
 import (
 	"errors"
@@ -20,13 +21,13 @@ import (
 	"sync"
 	"time"
 
-	"go.opentelemetry.io/contrib/internal/transform"
+	"go.opentelemetry.io/contrib/sdk/dynamicconfig/internal/transform"
 	controllerTime "go.opentelemetry.io/otel/sdk/metric/controller/time"
 	"go.opentelemetry.io/otel/sdk/resource"
 )
 
 // DefaultCheckFrequency is the default frequency at which we check for new configs.
-const DefaultCheckFrequency = time.Minute
+const DefaultCheckFrequency = 10 * time.Minute
 
 type Watcher interface {
 	// NOTE: A lock will be held during the execution of both these functions.
@@ -189,7 +190,6 @@ func (n *Notifier) checkChanges(ch chan struct{}) {
 					err = watcher.OnUpdatedConfig(newConfig)
 					if err != nil {
 						log.Printf("Failed to apply config: %v\n", err)
-						break
 					}
 				}
 			}

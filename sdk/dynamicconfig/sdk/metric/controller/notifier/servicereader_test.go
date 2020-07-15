@@ -12,7 +12,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package dynamicconfig
+package notifier
 
 import (
 	"testing"
@@ -22,7 +22,7 @@ import (
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 
-	"go.opentelemetry.io/contrib/internal/transform"
+	"go.opentelemetry.io/contrib/sdk/dynamicconfig/internal/transform"
 )
 
 const TestAddress string = "localhost:50420"
@@ -45,7 +45,7 @@ func TestReadConfig(t *testing.T) {
 
 	stopFunc()
 
-	require.Equal(t, response.Fingerprint, config.Fingerprint)
+	require.Equal(t, config.Fingerprint, response.Fingerprint)
 }
 
 func TestSuggestedWaitTime(t *testing.T) {
@@ -53,18 +53,18 @@ func TestSuggestedWaitTime(t *testing.T) {
 
 	// ServiceReader with suggestedWaitTimeSec of 5 minutes.
 	reader := ServiceReader{
-		clock: clock,
-		lastTimestamp: clock.Now(),
+		clock:                clock,
+		lastTimestamp:        clock.Now(),
 		suggestedWaitTimeSec: 5 * 60,
 	}
 
-	require.Equal(t, reader.suggestedWaitTime(), 5 * time.Minute)
+	require.Equal(t, 5*time.Minute, reader.suggestedWaitTime())
 
 	clock.Add(5 * time.Minute)
 
-	require.Equal(t, reader.suggestedWaitTime(), time.Duration(0))
+	require.Equal(t, time.Duration(0), reader.suggestedWaitTime())
 
 	clock.Add(5 * time.Minute)
 
-	require.Equal(t, reader.suggestedWaitTime(), time.Duration(0))
+	require.Equal(t, time.Duration(0), reader.suggestedWaitTime())
 }

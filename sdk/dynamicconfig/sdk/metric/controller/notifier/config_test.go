@@ -12,55 +12,51 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package dynamicconfig_test
+package notifier_test
 
 import (
 	"errors"
 	"testing"
 
-	"github.com/stretchr/testify/require"
 	pb "github.com/open-telemetry/opentelemetry-proto/gen/go/collector/dynamicconfig/v1"
+	"github.com/stretchr/testify/require"
 
-	"go.opentelemetry.io/contrib/exporters/metric/dynamicconfig"
+	notify "go.opentelemetry.io/contrib/sdk/dynamicconfig/sdk/metric/controller/notifier"
 )
 
 func TestEquals(t *testing.T) {
-	fooConfig1 := dynamicconfig.GetDefaultConfig(1, []byte{'f', 'o', 'o'})
-	fooConfig2 := dynamicconfig.GetDefaultConfig(2, []byte{'f', 'o', 'o'})
-	barConfig := dynamicconfig.GetDefaultConfig(1, []byte{'b', 'a', 'r'})
+	fooConfig1 := notify.GetDefaultConfig(1, []byte{'f', 'o', 'o'})
+	fooConfig2 := notify.GetDefaultConfig(2, []byte{'f', 'o', 'o'})
+	barConfig := notify.GetDefaultConfig(1, []byte{'b', 'a', 'r'})
 
 	require.True(t, fooConfig1.Equals(fooConfig2))
 	require.False(t, fooConfig1.Equals(barConfig))
 }
 
-func TestValidate(t *testing.T) {
-	schedule1 := pb.ConfigResponse_MetricConfig_Schedule{Period: 0}
+func TestMetricConfigValidate(t *testing.T) {
+	schedule1 := pb.ConfigResponse_MetricConfig_Schedule{Period: -1}
 	schedule2 := pb.ConfigResponse_MetricConfig_Schedule{Period: 1}
 
-	config := &dynamicconfig.Config{
-		pb.ConfigResponse{
-			MetricConfig: &pb.ConfigResponse_MetricConfig{
-				Schedules: []*pb.ConfigResponse_MetricConfig_Schedule{&schedule2, &schedule2},
-			},
-		},
+	config := &notify.Config{
+		pb.ConfigResponse{},
 	}
-	require.Equal(t, config.Validate(), errors.New("Config must have exactly one Schedule"))
+	require.Equal(t, errors.New("No MetricConfig"), config.ValidateMetricConfig())
 
-	config = &dynamicconfig.Config{
+	config = &notify.Config{
 		pb.ConfigResponse{
 			MetricConfig: &pb.ConfigResponse_MetricConfig{
 				Schedules: []*pb.ConfigResponse_MetricConfig_Schedule{&schedule1},
 			},
 		},
 	}
-	require.Equal(t, config.Validate(), errors.New("Period must be positive"))
+	require.Equal(t, errors.New("Periods must be positive"), config.ValidateMetricConfig())
 
-	config = &dynamicconfig.Config{
+	config = &notify.Config{
 		pb.ConfigResponse{
 			MetricConfig: &pb.ConfigResponse_MetricConfig{
 				Schedules: []*pb.ConfigResponse_MetricConfig_Schedule{&schedule2},
 			},
 		},
 	}
-	require.Equal(t, config.Validate(), nil)
+	require.Equal(t, nil, config.ValidateMetricConfig())
 }

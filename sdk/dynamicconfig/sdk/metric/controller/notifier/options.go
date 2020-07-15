@@ -12,7 +12,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package dynamicconfig
+package notifier
 
 import (
 	"time"
@@ -22,7 +22,7 @@ import (
 
 // Option is the interface that applies the value to a configuration option.
 type Option interface {
-	// Apply sets the Option value of a Config.
+	// Apply sets the Option value of a Notifier.
 	Apply(*Notifier)
 }
 

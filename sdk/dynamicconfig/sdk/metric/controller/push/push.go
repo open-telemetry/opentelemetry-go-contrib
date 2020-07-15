@@ -12,20 +12,23 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package push // import "go.opentelemetry.io/contrib/exporters/metric/dynamicconfig/push"
+// import "go.opentelemetry.io/contrib/sdk/dynamicconfig/sdk/metric/controller/push"
+package push
 
 import (
 	"context"
 	"sync"
 	"time"
 
-	"go.opentelemetry.io/contrib/exporters/metric/dynamicconfig"
+	pb "github.com/open-telemetry/opentelemetry-proto/gen/go/collector/dynamicconfig/v1"
+
+	sdk "go.opentelemetry.io/contrib/sdk/dynamicconfig/sdk/metric"
+	notify "go.opentelemetry.io/contrib/sdk/dynamicconfig/sdk/metric/controller/notifier"
 
 	"go.opentelemetry.io/otel/api/global"
 	"go.opentelemetry.io/otel/api/metric"
 	"go.opentelemetry.io/otel/api/metric/registry"
 	export "go.opentelemetry.io/otel/sdk/export/metric"
-	sdk "go.opentelemetry.io/otel/sdk/metric"
 	controllerTime "go.opentelemetry.io/otel/sdk/metric/controller/time"
 	"go.opentelemetry.io/otel/sdk/metric/processor/basic"
 )
@@ -46,7 +49,11 @@ type Controller struct {
 	timeout     time.Duration
 	clock       controllerTime.Clock
 	ticker      controllerTime.Ticker
-	notifier    *dynamicconfig.Notifier
+	notifier    *notify.Notifier
+	// Used to store and apply metric schedules
+	dynamicExtension *sdk.DynamicExtension
+	// Timestamp all metrics with CollectionPeriod were last exported
+	lastCollected map[pb.ConfigResponse_MetricConfig_Schedule_CollectionPeriod]time.Time
 }
 
 // New constructs a Controller, an implementation of metric.Provider,
@@ -63,21 +70,28 @@ func New(selector export.AggregatorSelector, exporter export.Exporter, opts ...O
 		c.Timeout = c.Period
 	}
 
+	var extension *sdk.DynamicExtension = nil
+	if c.Notifier != nil {
+		extension = sdk.NewDynamicExtension()
+	}
+
 	processor := basic.New(selector, exporter)
 	impl := sdk.NewAccumulator(
 		processor,
 		sdk.WithResource(c.Resource),
+		sdk.WithDynamicExtension(extension),
 	)
 	return &Controller{
-		provider:    registry.NewProvider(impl),
-		accumulator: impl,
-		processor:   processor,
-		exporter:    exporter,
-		ch:          make(chan bool),
-		period:      c.Period,
-		timeout:     c.Timeout,
-		clock:       controllerTime.RealClock{},
-		notifier:    c.Notifier,
+		provider:         registry.NewProvider(impl),
+		accumulator:      impl,
+		processor:        processor,
+		exporter:         exporter,
+		ch:               make(chan bool),
+		period:           c.Period,
+		timeout:          c.Timeout,
+		clock:            controllerTime.RealClock{},
+		notifier:         c.Notifier,
+		dynamicExtension: extension,
 	}
 }
 
@@ -136,40 +150,76 @@ func (c *Controller) Stop() {
 	}
 }
 
-// We assume that the only metric schedule is one with an inclusion pattern
-// that includes all metrics
-func (c *Controller) OnInitialConfig(config *dynamicconfig.Config) error {
-	err := config.Validate()
+// Called by notifier if we Register with one.
+func (c *Controller) OnInitialConfig(config *notify.Config) error {
+	err := config.ValidateMetricConfig()
 	if err != nil {
 		return err
 	}
 
-	c.period = time.Duration(config.MetricConfig.Schedules[0].Period) * time.Second
+	c.dynamicExtension.SetSchedules(config.MetricConfig.Schedules)
+	c.period = c.updateFromSchedules()
 
 	return nil
 }
 
-func (c *Controller) OnUpdatedConfig(config *dynamicconfig.Config) error {
+// Called by notifier if it receives an update.
+func (c *Controller) OnUpdatedConfig(config *notify.Config) error {
 	c.lock.Lock()
 	defer c.lock.Unlock()
 
-	err := config.Validate()
+	err := config.ValidateMetricConfig()
 	if err != nil {
 		return err
 	}
 
+	c.dynamicExtension.Clear()
+
+	c.dynamicExtension.SetSchedules(config.MetricConfig.Schedules)
+	c.period = c.updateFromSchedules()
+
 	// Stop the existing ticker
-	// Make a new ticker with the new sampling period
 	c.ticker.Stop()
-	if len(config.MetricConfig.Schedules) > 0 {
-		c.period = time.Duration(config.MetricConfig.Schedules[0].Period) * time.Second
+	// If no schedules, or all schedules have a period of 0, controller never exports.
+	if c.period == 0 {
+		return nil
 	}
+
+	// Make a new ticker with a new sampling period
 	c.ticker = c.clock.Ticker(c.period)
 
 	// Let the controller know to check the new ticker
 	c.ch <- true
 
 	return nil
+}
+
+// Iterate through the schedules for two purposes:
+//    -Return the minimal non-zero period
+//    -Reset lastCollected, set each CollectionPeriod's last collection
+//    timestamp to now.
+func (c *Controller) updateFromSchedules() time.Duration {
+	now := c.clock.Now()
+
+	var period pb.ConfigResponse_MetricConfig_Schedule_CollectionPeriod = 0
+	c.lastCollected = make(map[pb.ConfigResponse_MetricConfig_Schedule_CollectionPeriod]time.Time)
+
+	for _, schedule := range c.dynamicExtension.GetSchedules() {
+		// If CollectionPeriod is 0, we do not do anything with it
+		if schedule.Period == 0 {
+			continue
+		}
+
+		if _, ok := c.lastCollected[schedule.Period]; !ok {
+			c.lastCollected[schedule.Period] = now
+		}
+
+		if period == 0 || period > schedule.Period {
+			period = schedule.Period
+		}
+	}
+
+	return time.Duration(period) * time.Second
 }
 
 func (c *Controller) run(ch chan bool) {
@@ -197,7 +247,27 @@ func (c *Controller) tick() {
 	defer c.processor.Unlock()
 
 	c.processor.StartCollection()
-	c.accumulator.Collect(ctx)
+
+	if c.notifier == nil {
+		c.accumulator.Collect(ctx)
+	} else {
+		// Export all metrics with the same CollectionPeriod at the same time.
+		overdue := []pb.ConfigResponse_MetricConfig_Schedule_CollectionPeriod{}
+		now := c.clock.Now()
+
+		for period, lastCollect := range c.lastCollected {
+			expectedExportTime := lastCollect.Add(time.Duration(period) * time.Second)
+
+			// Check if enough time elapsed since metric with a CollectionPeriod were
+			// last exported.
+			if expectedExportTime.Before(now) || expectedExportTime.Equal(now) {
+				overdue = append(overdue, period)
+				c.lastCollected[period] = now
+			}
+		}
+		c.accumulator.Collect(ctx, sdk.WithPeriods(overdue))
+	}
+
 	if err := c.processor.FinishCollection(); err != nil {
 		global.Handle(err)
 	}

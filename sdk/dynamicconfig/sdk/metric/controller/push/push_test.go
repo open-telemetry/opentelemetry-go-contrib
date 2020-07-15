@@ -25,8 +25,10 @@ import (
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 
-	"go.opentelemetry.io/contrib/exporters/metric/dynamicconfig"
-	"go.opentelemetry.io/contrib/exporters/metric/dynamicconfig/push"
+	pb "github.com/open-telemetry/opentelemetry-proto/gen/go/collector/dynamicconfig/v1"
+
+	notify "go.opentelemetry.io/contrib/sdk/dynamicconfig/sdk/metric/controller/notifier"
+	"go.opentelemetry.io/contrib/sdk/dynamicconfig/sdk/metric/controller/push"
 
 	"go.opentelemetry.io/otel/api/global"
 	"go.opentelemetry.io/otel/api/kv"
@@ -80,7 +82,6 @@ type testExporter struct {
 type testFixture struct {
 	checkpointSet *exporterTest.CheckpointSet
 	exporter      *testExporter
-	notifier      *dynamicconfig.Notifier
 }
 
 func newFixture(t *testing.T) testFixture {
@@ -89,14 +90,10 @@ func newFixture(t *testing.T) testFixture {
 	exporter := &testExporter{
 		t: t,
 	}
-	notifier, err := dynamicconfig.NewNotifier(
-		dynamicconfig.GetDefaultConfig(1, []byte{'f', 'o', 'o'}),
-	)
-	assert.NoError(t, err)
+
 	return testFixture{
 		checkpointSet: checkpointSet,
 		exporter:      exporter,
-		notifier:      notifier,
 	}
 }
 
@@ -156,7 +153,6 @@ func TestPushTicker(t *testing.T) {
 		fix.exporter,
 		push.WithPeriod(time.Second),
 		push.WithResource(testResource),
-		push.WithNotifier(fix.notifier),
 	)
 	meter := p.Provider().Meter("name")
 
@@ -238,7 +234,6 @@ func TestPushExportError(t *testing.T) {
 				fix.exporter,
 				push.WithPeriod(time.Second),
 				push.WithResource(testResource),
-				push.WithNotifier(fix.notifier),
 			)
 
 			mock := controllerTest.NewMockClock()
@@ -285,4 +280,113 @@ func TestPushExportError(t *testing.T) {
 			p.Stop()
 		})
 	}
+}
+
+func TestPushScheduleChange(t *testing.T) {
+	oneSchedule := pb.ConfigResponse_MetricConfig_Schedule{
+		InclusionPatterns: []*pb.ConfigResponse_MetricConfig_Schedule_Pattern{
+			{
+				Match: &pb.ConfigResponse_MetricConfig_Schedule_Pattern_StartsWith{
+					StartsWith: "one",
+				},
+			},
+		},
+		Period: 5,
+	}
+	twoSchedule := pb.ConfigResponse_MetricConfig_Schedule{
+		InclusionPatterns: []*pb.ConfigResponse_MetricConfig_Schedule_Pattern{
+			{
+				Match: &pb.ConfigResponse_MetricConfig_Schedule_Pattern_StartsWith{
+					StartsWith: "two",
+				},
+			},
+		},
+		Period: 10,
+	}
+	config := pb.ConfigResponse{
+		MetricConfig: &pb.ConfigResponse_MetricConfig{
+			Schedules: []*pb.ConfigResponse_MetricConfig_Schedule{
+				&oneSchedule,
+				&twoSchedule,
+			},
+		},
+	}
+	notifier, err := notify.NewNotifier(&notify.Config{config})
+	assert.NoError(t, err)
+
+	fix := newFixture(t)
+
+	p := push.New(
+		test.AggregatorSelector(),
+		fix.exporter,
+		push.WithPeriod(1*time.Second),
+		push.WithResource(testResource),
+		push.WithNotifier(notifier),
+	)
+	meter := p.Provider().Meter("name")
+
+	mock := controllerTest.NewMockClock()
+	p.SetClock(mock)
+
+	ctx := context.Background()
+
+	// Initially has period of 5 seconds.
+	counter1 := metric.Must(meter).NewInt64Counter("one.sum")
+	// Initially has period of 10 seconds.
+	counter2 := metric.Must(meter).NewInt64Counter("two.sum")
+
+	counter1.Add(ctx, 1)
+	counter2.Add(ctx, 2)
+
+	p.Start()
+
+	records, _ := fix.exporter.resetRecords()
+	require.Equal(t, 0, len(records))
+
+	mock.Add(5 * time.Second)
+	runtime.Gosched()
+
+	// After 5 seconds, expect export from counter1 instrument.
+	records, _ = fix.exporter.resetRecords()
+	require.Equal(t, 1, len(records))
+	require.Equal(t, "one.sum", records[0].Descriptor().Name())
+
+	fix.checkpointSet.Reset()
+
+	counter1.Add(ctx, 1)
+	mock.Add(5 * time.Second)
+	runtime.Gosched()
+
+	// After 10 seconds, expect export from both instruments.
+	records, _ = fix.exporter.resetRecords()
+	require.Equal(t, 2, len(records))
+	require.Equal(t, "one.sum", records[0].Descriptor().Name())
+	require.Equal(t, "two.sum", records[1].Descriptor().Name())
+
+	fix.checkpointSet.Reset()
+
+	counter1.Add(ctx, 3)
+	counter2.Add(ctx, 4)
+
+	// Update counter1's period to 10 seconds.
+	oneSchedule.Period = 10
+	p.OnUpdatedConfig(&notify.Config{config})
+
+	mock.Add(5 * time.Second)
+	runtime.Gosched()
+
+	// After 5 seconds, expect no exports.
+	records, _ = fix.exporter.resetRecords()
+	require.Equal(t, 0, len(records))
+
+	mock.Add(5 * time.Second)
+	runtime.Gosched()
+
+	// After 10 seconds, expect exports from both instruments.
+	records, _ = fix.exporter.resetRecords()
+	require.Equal(t, 2, len(records))
+	require.Equal(t, "one.sum", records[0].Descriptor().Name())
+	require.Equal(t, "two.sum", records[1].Descriptor().Name())
+
+	p.Stop()
 }

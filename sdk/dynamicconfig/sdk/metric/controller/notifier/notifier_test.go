@@ -12,9 +12,10 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package dynamicconfig_test
+package notifier_test
 
 import (
+	"runtime"
 	"sync"
 	"testing"
 	"time"
@@ -22,8 +23,7 @@ import (
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 
-	"go.opentelemetry.io/contrib/exporters/metric/dynamicconfig"
-
+	notify "go.opentelemetry.io/contrib/sdk/dynamicconfig/sdk/metric/controller/notifier"
 	controllerTest "go.opentelemetry.io/otel/sdk/metric/controller/test"
 )
 
@@ -34,14 +34,14 @@ type testWatcher struct {
 	testVar  int
 }
 
-func (w *testWatcher) OnInitialConfig(config *dynamicconfig.Config) error {
+func (w *testWatcher) OnInitialConfig(config *notify.Config) error {
 	w.testLock.Lock()
 	defer w.testLock.Unlock()
 	w.testVar = 1
 	return nil
 }
 
-func (w *testWatcher) OnUpdatedConfig(config *dynamicconfig.Config) error {
+func (w *testWatcher) OnUpdatedConfig(config *notify.Config) error {
 	w.testLock.Lock()
 	defer w.testLock.Unlock()
 	w.testVar = 2
@@ -55,11 +55,12 @@ func (w *testWatcher) getTestVar() int {
 	return w.testVar
 }
 
-func newExampleNotifier(t *testing.T) *dynamicconfig.Notifier {
-	notifier, err := dynamicconfig.NewNotifier(
-		dynamicconfig.GetDefaultConfig(60, []byte{'b', 'a', 'r'}),
-		dynamicconfig.WithConfigHost(dynamicconfig.TestAddress),
-		dynamicconfig.WithResource(dynamicconfig.MockResource("notifiertest")),
+func newExampleNotifier(t *testing.T) *notify.Notifier {
+	notifier, err := notify.NewNotifier(
+		notify.GetDefaultConfig(1, []byte{'b', 'a', 'r'}),
+		notify.WithCheckFrequency(time.Minute),
+		notify.WithConfigHost(notify.TestAddress),
+		notify.WithResource(notify.MockResource("notifiertest")),
 	)
 	assert.NoError(t, err)
 
@@ -73,27 +74,27 @@ func TestDynamicNotifier(t *testing.T) {
 	}
 	mock := controllerTest.NewMockClock()
 
-	stopFunc := dynamicconfig.RunMockConfigService(
+	stopFunc := notify.RunMockConfigService(
 		t,
-		dynamicconfig.TestAddress,
-		dynamicconfig.GetDefaultConfig(60, dynamicconfig.TestFingerprint),
+		notify.TestAddress,
+		notify.GetDefaultConfig(1, notify.TestFingerprint),
 	)
+	defer stopFunc()
 
 	notifier := newExampleNotifier(t)
-	require.Equal(t, watcher.getTestVar(), 0)
+	require.Equal(t, 0, watcher.getTestVar())
 
 	notifier.SetClock(mock)
 	notifier.Start()
+	defer notifier.Stop()
 
 	notifier.Register(&watcher)
-	require.Equal(t, watcher.getTestVar(), 1)
+	require.Equal(t, 1, watcher.getTestVar())
 
 	mock.Add(5 * time.Minute)
+	runtime.Gosched()
 
-	require.Equal(t, watcher.getTestVar(), 2)
-
-	notifier.Stop()
-	stopFunc()
+	require.Equal(t, 2, watcher.getTestVar())
 }
 
 // Test config doesn't update
@@ -102,46 +103,46 @@ func TestNonDynamicNotifier(t *testing.T) {
 		testVar: 0,
 	}
 	mock := controllerTest.NewMockClock()
-	notifier, err := dynamicconfig.NewNotifier(
-		dynamicconfig.GetDefaultConfig(60, dynamicconfig.TestFingerprint),
+	notifier, err := notify.NewNotifier(
+		notify.GetDefaultConfig(60, notify.TestFingerprint),
 	)
 	assert.NoError(t, err)
-	require.Equal(t, watcher.getTestVar(), 0)
+	require.Equal(t, 0, watcher.getTestVar())
 
 	notifier.SetClock(mock)
 	notifier.Start()
+	defer notifier.Stop()
 
 	notifier.Register(&watcher)
-	require.Equal(t, watcher.getTestVar(), 1)
+	require.Equal(t, 1, watcher.getTestVar())
 
 	mock.Add(time.Minute)
 
-	require.Equal(t, watcher.getTestVar(), 1)
-	notifier.Stop()
+	require.Equal(t, 1, watcher.getTestVar())
 }
 
 func TestDoubleStop(t *testing.T) {
-	stopFunc := dynamicconfig.RunMockConfigService(
+	stopFunc := notify.RunMockConfigService(
 		t,
-		dynamicconfig.TestAddress,
-		dynamicconfig.GetDefaultConfig(60, dynamicconfig.TestFingerprint),
+		notify.TestAddress,
+		notify.GetDefaultConfig(60, notify.TestFingerprint),
 	)
+	defer stopFunc()
 	notifier := newExampleNotifier(t)
 	notifier.Start()
 	notifier.Stop()
 	notifier.Stop()
-	stopFunc()
 }
 
 func TestPushDoubleStart(t *testing.T) {
-	stopFunc := dynamicconfig.RunMockConfigService(
+	stopFunc := notify.RunMockConfigService(
 		t,
-		dynamicconfig.TestAddress,
-		dynamicconfig.GetDefaultConfig(60, dynamicconfig.TestFingerprint),
+		notify.TestAddress,
+		notify.GetDefaultConfig(60, notify.TestFingerprint),
 	)
+	defer stopFunc()
 	notifier := newExampleNotifier(t)
 	notifier.Start()
 	notifier.Start()
 	notifier.Stop()
-	stopFunc()
 }
