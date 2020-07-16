@@ -20,7 +20,7 @@ import (
 	"testing"
 
 	"github.com/open-telemetry/opentelemetry-collector/translator/conventions"
-	pb "github.com/open-telemetry/opentelemetry-proto/gen/go/collector/dynamicconfig/v1"
+	pb "github.com/open-telemetry/opentelemetry-proto/gen/go/experimental/metricconfigservice"
 
 	"google.golang.org/grpc"
 
@@ -29,30 +29,25 @@ import (
 )
 
 type mockServer struct {
-	pb.UnimplementedDynamicConfigServer
-	config *Config
+	pb.UnimplementedMetricConfigServer
+	config *MetricConfig
 }
 
-// GetConfig implemented DynamicConfigServer
-func (s *mockServer) GetConfig(ctx context.Context, in *pb.ConfigRequest) (*pb.ConfigResponse, error) {
-	config := &pb.ConfigResponse{
-		Fingerprint:  s.config.Fingerprint,
-		MetricConfig: s.config.MetricConfig,
-		TraceConfig:  s.config.TraceConfig,
-	}
-	return config, nil
+// GetMetricConfig implemented MetricConfigServer
+func (s *mockServer) GetMetricConfig(ctx context.Context, in *pb.MetricConfigRequest) (*pb.MetricConfigResponse, error) {
+	return &s.config.MetricConfigResponse, nil
 }
 
 // This function runs a mock config service at an address, serving a defined config.
 // It returns a callback that stops the service.
-func RunMockConfigService(t *testing.T, addr string, config *Config) func() {
+func RunMockConfigService(t *testing.T, addr string, config *MetricConfig) func() {
 	ln, err := net.Listen("tcp", addr)
 	if err != nil {
 		t.Fatalf("Failed to get an address: %v", err)
 	}
 
 	srv := grpc.NewServer()
-	pb.RegisterDynamicConfigServer(srv, &mockServer{config: config})
+	pb.RegisterMetricConfigServer(srv, &mockServer{config: config})
 
 	go func() {
 		_ = srv.Serve(ln)

@@ -17,7 +17,7 @@ package metric
 import (
 	"sync"
 
-	pb "github.com/open-telemetry/opentelemetry-proto/gen/go/collector/dynamicconfig/v1"
+	pb "github.com/open-telemetry/opentelemetry-proto/gen/go/experimental/metricconfigservice"
 
 	"go.opentelemetry.io/contrib/sdk/dynamicconfig/internal/metricpattern"
 )
@@ -30,16 +30,16 @@ type DynamicExtension struct {
 	lock sync.Mutex
 
 	// List of current schedules.
-	schedules []*pb.ConfigResponse_MetricConfig_Schedule
+	schedules []*pb.MetricConfigResponse_Schedule
 
-	// Maps the instrument to most frequent CollectionPeriod of the schedules it matches.
+	// Maps the instrument to the most frequent period of the schedules it matches.
 	// Updated when new config is applied and new instruments are added.
-	instrumentPeriod map[string]pb.ConfigResponse_MetricConfig_Schedule_CollectionPeriod
+	instrumentPeriod map[string]int32
 }
 
 func NewDynamicExtension() *DynamicExtension {
 	return &DynamicExtension{
-		instrumentPeriod: make(map[string]pb.ConfigResponse_MetricConfig_Schedule_CollectionPeriod),
+		instrumentPeriod: make(map[string]int32),
 	}
 }
 
@@ -47,7 +47,7 @@ func NewDynamicExtension() *DynamicExtension {
 // ext.instrumentPeriod, use that. Otherwise, find the period from the
 // current list of schedules (choosing the most frequent if multiple
 // schedules match.
-func (ext *DynamicExtension) FindPeriod(name string) pb.ConfigResponse_MetricConfig_Schedule_CollectionPeriod {
+func (ext *DynamicExtension) FindPeriod(name string) int32 {
 	ext.lock.Lock()
 	defer ext.lock.Unlock()
 
@@ -57,17 +57,17 @@ func (ext *DynamicExtension) FindPeriod(name string) pb.ConfigResponse_MetricCon
 	}
 
 	// Find schedules that matches with instrument name, and return the most
-	// frequent associated CollectionPeriod.
-	var minPeriod pb.ConfigResponse_MetricConfig_Schedule_CollectionPeriod = 0
+	// frequent associated period.
+	var minPeriod int32 = 0
 	for _, schedule := range ext.schedules {
 		// To match, name must match at least one InclusionPattern and no
 		// ExclusionPatterns.
 		if metricpattern.Matches(name, schedule.InclusionPatterns) &&
 			!metricpattern.Matches(name, schedule.ExclusionPatterns) &&
-			// Check if the CollectionPeriod is the smallest of all those from
+			// Check if the period is the smallest of all those from
 			// matching schedules so far.
-			(minPeriod == 0 || minPeriod > schedule.Period) {
-			minPeriod = schedule.Period
+			(minPeriod == 0 || minPeriod > schedule.PeriodSec) {
+			minPeriod = schedule.PeriodSec
 		}
 	}
 
@@ -79,16 +79,16 @@ func (ext *DynamicExtension) FindPeriod(name string) pb.ConfigResponse_MetricCon
 func (ext *DynamicExtension) Clear() {
 	ext.lock.Lock()
 	defer ext.lock.Unlock()
-	ext.instrumentPeriod = make(map[string]pb.ConfigResponse_MetricConfig_Schedule_CollectionPeriod)
+	ext.instrumentPeriod = make(map[string]int32)
 }
 
-func (ext *DynamicExtension) GetSchedules() []*pb.ConfigResponse_MetricConfig_Schedule {
+func (ext *DynamicExtension) GetSchedules() []*pb.MetricConfigResponse_Schedule {
 	ext.lock.Lock()
 	defer ext.lock.Unlock()
 	return ext.schedules
 }
 
-func (ext *DynamicExtension) SetSchedules(schedules []*pb.ConfigResponse_MetricConfig_Schedule) {
+func (ext *DynamicExtension) SetSchedules(schedules []*pb.MetricConfigResponse_Schedule) {
 	ext.lock.Lock()
 	defer ext.lock.Unlock()
 	ext.schedules = schedules
@@ -96,9 +96,11 @@ func (ext *DynamicExtension) SetSchedules(schedules []*pb.ConfigResponse_MetricC
 
 // CollectOptions contains optional parameters for Accumulator.Collect().
 type CollectOptions struct {
+	// TODO: Should sort so binary search can be used in deciding which
+	// instruments to collect metrics from.
 	// All instruments with a CollectPeriod included in `periods` should be
 	// exported.
-	Periods []pb.ConfigResponse_MetricConfig_Schedule_CollectionPeriod
+	Periods []int32
 }
 
 // CollectOption is the interface that applies the optional parameter.
@@ -109,13 +111,13 @@ type CollectOption interface {
 
 // WithPeriods sets the Periods option of a CollectOptions.
 func WithPeriods(
-	periods []pb.ConfigResponse_MetricConfig_Schedule_CollectionPeriod,
+	periods []int32,
 ) CollectOption {
 	return periodsOption{periods}
 }
 
 type periodsOption struct {
-	periods []pb.ConfigResponse_MetricConfig_Schedule_CollectionPeriod
+	periods []int32
 }
 
 func (o periodsOption) Apply(config *CollectOptions) {

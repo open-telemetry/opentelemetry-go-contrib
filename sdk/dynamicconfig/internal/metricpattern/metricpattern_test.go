@@ -19,64 +19,64 @@ import (
 
 	"github.com/stretchr/testify/require"
 
-	pb "github.com/open-telemetry/opentelemetry-proto/gen/go/collector/dynamicconfig/v1"
+	pb "github.com/open-telemetry/opentelemetry-proto/gen/go/experimental/metricconfigservice"
 
 	"go.opentelemetry.io/contrib/sdk/dynamicconfig/internal/metricpattern"
 )
 
 const InstrumentName string = "One Fish"
 
-var EqualsPattern = pb.ConfigResponse_MetricConfig_Schedule_Pattern{
-	Match: &pb.ConfigResponse_MetricConfig_Schedule_Pattern_Equals{
+var EqualsPattern = pb.MetricConfigResponse_Schedule_Pattern{
+	Match: &pb.MetricConfigResponse_Schedule_Pattern_Equals{
 		Equals: "One Fish",
 	},
 }
-var StartsPattern = pb.ConfigResponse_MetricConfig_Schedule_Pattern{
-	Match: &pb.ConfigResponse_MetricConfig_Schedule_Pattern_StartsWith{
+var StartsPattern = pb.MetricConfigResponse_Schedule_Pattern{
+	Match: &pb.MetricConfigResponse_Schedule_Pattern_StartsWith{
 		StartsWith: "One",
 	},
 }
-var MismatchPattern = pb.ConfigResponse_MetricConfig_Schedule_Pattern{
-	Match: &pb.ConfigResponse_MetricConfig_Schedule_Pattern_Equals{
+var MismatchPattern = pb.MetricConfigResponse_Schedule_Pattern{
+	Match: &pb.MetricConfigResponse_Schedule_Pattern_Equals{
 		Equals: "One Whale",
 	},
 }
-var NotEqualsPattern = pb.ConfigResponse_MetricConfig_Schedule_Pattern{
-	Match: &pb.ConfigResponse_MetricConfig_Schedule_Pattern_Equals{
+var NotEqualsPattern = pb.MetricConfigResponse_Schedule_Pattern{
+	Match: &pb.MetricConfigResponse_Schedule_Pattern_Equals{
 		Equals: "Blue Whale",
 	},
 }
-var NotStartsPattern = pb.ConfigResponse_MetricConfig_Schedule_Pattern{
-	Match: &pb.ConfigResponse_MetricConfig_Schedule_Pattern_StartsWith{
+var NotStartsPattern = pb.MetricConfigResponse_Schedule_Pattern{
+	Match: &pb.MetricConfigResponse_Schedule_Pattern_StartsWith{
 		StartsWith: "Two",
 	},
 }
-var WildcardStartsPattern = pb.ConfigResponse_MetricConfig_Schedule_Pattern{
-	Match: &pb.ConfigResponse_MetricConfig_Schedule_Pattern_StartsWith{
+var WildcardStartsPattern = pb.MetricConfigResponse_Schedule_Pattern{
+	Match: &pb.MetricConfigResponse_Schedule_Pattern_StartsWith{
 		StartsWith: "*",
 	},
 }
 
 func TestMatchEquals(t *testing.T) {
-	patterns := []*pb.ConfigResponse_MetricConfig_Schedule_Pattern{&EqualsPattern}
+	patterns := []*pb.MetricConfigResponse_Schedule_Pattern{&EqualsPattern}
 
 	require.True(t, metricpattern.Matches(InstrumentName, patterns))
 }
 
 func TestMatchStartsWith(t *testing.T) {
-	patterns := []*pb.ConfigResponse_MetricConfig_Schedule_Pattern{&StartsPattern}
+	patterns := []*pb.MetricConfigResponse_Schedule_Pattern{&StartsPattern}
 
 	require.True(t, metricpattern.Matches(InstrumentName, patterns))
 }
 
 func TestMatchMismatch(t *testing.T) {
-	patterns := []*pb.ConfigResponse_MetricConfig_Schedule_Pattern{&MismatchPattern}
+	patterns := []*pb.MetricConfigResponse_Schedule_Pattern{&MismatchPattern}
 
 	require.False(t, metricpattern.Matches(InstrumentName, patterns))
 }
 
 func TestOneMatch(t *testing.T) {
-	patterns := []*pb.ConfigResponse_MetricConfig_Schedule_Pattern{
+	patterns := []*pb.MetricConfigResponse_Schedule_Pattern{
 		&EqualsPattern,
 		&MismatchPattern,
 	}
@@ -85,7 +85,7 @@ func TestOneMatch(t *testing.T) {
 }
 
 func TestMultipleMatch(t *testing.T) {
-	patterns := []*pb.ConfigResponse_MetricConfig_Schedule_Pattern{
+	patterns := []*pb.MetricConfigResponse_Schedule_Pattern{
 		&EqualsPattern,
 		&StartsPattern,
 		&MismatchPattern,
@@ -95,7 +95,7 @@ func TestMultipleMatch(t *testing.T) {
 }
 
 func TestNoMatch(t *testing.T) {
-	patterns := []*pb.ConfigResponse_MetricConfig_Schedule_Pattern{
+	patterns := []*pb.MetricConfigResponse_Schedule_Pattern{
 		&NotEqualsPattern,
 		&NotStartsPattern,
 	}
@@ -104,12 +104,12 @@ func TestNoMatch(t *testing.T) {
 }
 
 func TestEmptyPatterns(t *testing.T) {
-	patterns := []*pb.ConfigResponse_MetricConfig_Schedule_Pattern{}
+	patterns := []*pb.MetricConfigResponse_Schedule_Pattern{}
 	require.False(t, metricpattern.Matches(InstrumentName, patterns))
 }
 
 func TestWildcardPatterns(t *testing.T) {
-	patterns := []*pb.ConfigResponse_MetricConfig_Schedule_Pattern{
+	patterns := []*pb.MetricConfigResponse_Schedule_Pattern{
 		&WildcardStartsPattern,
 	}
 

@@ -22,42 +22,40 @@ import (
 
 	"google.golang.org/grpc"
 
-	pb "github.com/open-telemetry/opentelemetry-proto/gen/go/collector/dynamicconfig/v1"
+	pb "github.com/open-telemetry/opentelemetry-proto/gen/go/experimental/metricconfigservice"
 )
 
 const (
 	port = ":7777"
 )
 
-// server is used to implement pb.DynamicConfigServer
+// server is used to implement pb.MetricConfigServer
 type server struct {
-	pb.UnimplementedDynamicConfigServer
+	pb.UnimplementedMetricConfigServer
 }
 
-// GetConfig implemented DynamicConfigServer
-func (s *server) GetConfig(ctx context.Context, in *pb.ConfigRequest) (*pb.ConfigResponse, error) {
+// GetMetricConfig implemented MetricConfigServer
+func (s *server) GetMetricConfig(ctx context.Context, in *pb.MetricConfigRequest) (*pb.MetricConfigResponse, error) {
 	log.Printf("Config being read\n")
 
-	pattern1 := pb.ConfigResponse_MetricConfig_Schedule_Pattern{
-		Match: &pb.ConfigResponse_MetricConfig_Schedule_Pattern_StartsWith{StartsWith: "One"},
+	pattern1 := pb.MetricConfigResponse_Schedule_Pattern{
+		Match: &pb.MetricConfigResponse_Schedule_Pattern_StartsWith{StartsWith: "One"},
 	}
-	schedule1 := pb.ConfigResponse_MetricConfig_Schedule{
-		InclusionPatterns: []*pb.ConfigResponse_MetricConfig_Schedule_Pattern{&pattern1},
-		Period:            1,
+	schedule1 := pb.MetricConfigResponse_Schedule{
+		InclusionPatterns: []*pb.MetricConfigResponse_Schedule_Pattern{&pattern1},
+		PeriodSec:            1,
 	}
-	pattern2 := pb.ConfigResponse_MetricConfig_Schedule_Pattern{
-		Match: &pb.ConfigResponse_MetricConfig_Schedule_Pattern_Equals{Equals: "Two Metric"},
+	pattern2 := pb.MetricConfigResponse_Schedule_Pattern{
+		Match: &pb.MetricConfigResponse_Schedule_Pattern_Equals{Equals: "Two Metric"},
 	}
-	schedule2 := pb.ConfigResponse_MetricConfig_Schedule{
-		InclusionPatterns: []*pb.ConfigResponse_MetricConfig_Schedule_Pattern{&pattern2},
-		Period:            5,
+	schedule2 := pb.MetricConfigResponse_Schedule{
+		InclusionPatterns: []*pb.MetricConfigResponse_Schedule_Pattern{&pattern2},
+		PeriodSec:            5,
 	}
 
-	return &pb.ConfigResponse{
+	return &pb.MetricConfigResponse{
 		Fingerprint: []byte{'b', 'a', 'r'},
-		MetricConfig: &pb.ConfigResponse_MetricConfig{
-			Schedules: []*pb.ConfigResponse_MetricConfig_Schedule{&schedule1, &schedule2},
-		},
+		Schedules: []*pb.MetricConfigResponse_Schedule{&schedule1, &schedule2},
 	}, nil
 }
 
@@ -69,7 +67,7 @@ func main() {
 
 	s := grpc.NewServer()
 
-	pb.RegisterDynamicConfigServer(s, &server{})
+	pb.RegisterMetricConfigServer(s, &server{})
 	if err := s.Serve(ln); err != nil {
 		log.Fatalf("failed to serve: %v", err)
 	}

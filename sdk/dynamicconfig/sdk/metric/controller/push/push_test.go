@@ -25,7 +25,7 @@ import (
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 
-	pb "github.com/open-telemetry/opentelemetry-proto/gen/go/collector/dynamicconfig/v1"
+	pb "github.com/open-telemetry/opentelemetry-proto/gen/go/experimental/metricconfigservice"
 
 	notify "go.opentelemetry.io/contrib/sdk/dynamicconfig/sdk/metric/controller/notifier"
 	"go.opentelemetry.io/contrib/sdk/dynamicconfig/sdk/metric/controller/push"
@@ -283,35 +283,33 @@ func TestPushExportError(t *testing.T) {
 }
 
 func TestPushScheduleChange(t *testing.T) {
-	oneSchedule := pb.ConfigResponse_MetricConfig_Schedule{
-		InclusionPatterns: []*pb.ConfigResponse_MetricConfig_Schedule_Pattern{
+	oneSchedule := pb.MetricConfigResponse_Schedule{
+		InclusionPatterns: []*pb.MetricConfigResponse_Schedule_Pattern{
 			{
-				Match: &pb.ConfigResponse_MetricConfig_Schedule_Pattern_StartsWith{
+				Match: &pb.MetricConfigResponse_Schedule_Pattern_StartsWith{
 					StartsWith: "one",
 				},
 			},
 		},
-		Period: 5,
+		PeriodSec: 5,
 	}
-	twoSchedule := pb.ConfigResponse_MetricConfig_Schedule{
-		InclusionPatterns: []*pb.ConfigResponse_MetricConfig_Schedule_Pattern{
+	twoSchedule := pb.MetricConfigResponse_Schedule{
+		InclusionPatterns: []*pb.MetricConfigResponse_Schedule_Pattern{
 			{
-				Match: &pb.ConfigResponse_MetricConfig_Schedule_Pattern_StartsWith{
+				Match: &pb.MetricConfigResponse_Schedule_Pattern_StartsWith{
 					StartsWith: "two",
 				},
 			},
 		},
-		Period: 10,
+		PeriodSec: 10,
 	}
-	config := pb.ConfigResponse{
-		MetricConfig: &pb.ConfigResponse_MetricConfig{
-			Schedules: []*pb.ConfigResponse_MetricConfig_Schedule{
-				&oneSchedule,
-				&twoSchedule,
-			},
+	config := pb.MetricConfigResponse{
+		Schedules: []*pb.MetricConfigResponse_Schedule{
+			&oneSchedule,
+			&twoSchedule,
 		},
 	}
-	notifier, err := notify.NewNotifier(&notify.Config{config})
+	notifier, err := notify.NewNotifier(&notify.MetricConfig{config})
 	assert.NoError(t, err)
 
 	fix := newFixture(t)
@@ -369,8 +367,8 @@ func TestPushScheduleChange(t *testing.T) {
 	counter2.Add(ctx, 4)
 
 	// Update counter1's period to 10 seconds.
-	oneSchedule.Period = 10
-	p.OnUpdatedConfig(&notify.Config{config})
+	oneSchedule.PeriodSec = 10
+	p.OnUpdatedConfig(&notify.MetricConfig{config})
 
 	mock.Add(5 * time.Second)
 	runtime.Gosched()

@@ -18,7 +18,7 @@ import (
 	"errors"
 	"testing"
 
-	pb "github.com/open-telemetry/opentelemetry-proto/gen/go/collector/dynamicconfig/v1"
+	pb "github.com/open-telemetry/opentelemetry-proto/gen/go/experimental/metricconfigservice"
 	"github.com/stretchr/testify/require"
 
 	notify "go.opentelemetry.io/contrib/sdk/dynamicconfig/sdk/metric/controller/notifier"
@@ -34,28 +34,19 @@ func TestEquals(t *testing.T) {
 }
 
 func TestMetricConfigValidate(t *testing.T) {
-	schedule1 := pb.ConfigResponse_MetricConfig_Schedule{Period: -1}
-	schedule2 := pb.ConfigResponse_MetricConfig_Schedule{Period: 1}
+	schedule1 := pb.MetricConfigResponse_Schedule{PeriodSec: -1}
+	schedule2 := pb.MetricConfigResponse_Schedule{PeriodSec: 1}
 
-	config := &notify.Config{
-		pb.ConfigResponse{},
-	}
-	require.Equal(t, errors.New("No MetricConfig"), config.ValidateMetricConfig())
-
-	config = &notify.Config{
-		pb.ConfigResponse{
-			MetricConfig: &pb.ConfigResponse_MetricConfig{
-				Schedules: []*pb.ConfigResponse_MetricConfig_Schedule{&schedule1},
-			},
+	config := &notify.MetricConfig{
+		pb.MetricConfigResponse{
+			Schedules: []*pb.MetricConfigResponse_Schedule{&schedule1},
 		},
 	}
 	require.Equal(t, errors.New("Periods must be positive"), config.ValidateMetricConfig())
 
-	config = &notify.Config{
-		pb.ConfigResponse{
-			MetricConfig: &pb.ConfigResponse_MetricConfig{
-				Schedules: []*pb.ConfigResponse_MetricConfig_Schedule{&schedule2},
-			},
+	config = &notify.MetricConfig{
+		pb.MetricConfigResponse{
+			Schedules: []*pb.MetricConfigResponse_Schedule{&schedule2},
 		},
 	}
 	require.Equal(t, nil, config.ValidateMetricConfig())

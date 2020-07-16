@@ -34,14 +34,14 @@ type testWatcher struct {
 	testVar  int
 }
 
-func (w *testWatcher) OnInitialConfig(config *notify.Config) error {
+func (w *testWatcher) OnInitialConfig(config *notify.MetricConfig) error {
 	w.testLock.Lock()
 	defer w.testLock.Unlock()
 	w.testVar = 1
 	return nil
 }
 
-func (w *testWatcher) OnUpdatedConfig(config *notify.Config) error {
+func (w *testWatcher) OnUpdatedConfig(config *notify.MetricConfig) error {
 	w.testLock.Lock()
 	defer w.testLock.Unlock()
 	w.testVar = 2

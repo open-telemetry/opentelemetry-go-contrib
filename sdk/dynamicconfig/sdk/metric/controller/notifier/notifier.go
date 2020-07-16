@@ -37,8 +37,8 @@ type Watcher interface {
 	// There is a common lock shared by both functions, ensuring there is no
 	// concurrent invocation of these two functions; therefore caller does not
 	// need a lock protecting access to members of MetricConfig.
-	OnInitialConfig(config *Config) error
-	OnUpdatedConfig(config *Config) error
+	OnInitialConfig(config *MetricConfig) error
+	OnUpdatedConfig(config *MetricConfig) error
 }
 
 // A Notifier monitors a config service for a config changing, then letting
@@ -58,7 +58,7 @@ type Notifier struct {
 
 	// The current config we use as a default if we cannot read from the remote
 	// configuration service.
-	config *Config
+	config *MetricConfig
 
 	// Optional field for the address of the config service host if the config is
 	// non-dynamic.
@@ -85,7 +85,7 @@ type Notifier struct {
 }
 
 // Constructor for a Notifier
-func NewNotifier(defaultConfig *Config, opts ...Option) (*Notifier, error) {
+func NewNotifier(defaultConfig *MetricConfig, opts ...Option) (*Notifier, error) {
 	notifier := &Notifier{
 		ch:             make(chan struct{}),
 		checkFrequency: DefaultCheckFrequency,
