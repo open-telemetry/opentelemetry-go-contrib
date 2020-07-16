@@ -49,4 +49,3 @@ func initDb() {
 		log.Fatal(err)
 	}
 }
-
