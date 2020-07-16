@@ -31,7 +31,18 @@ func main() {
 }
 ```
 
-You can customize the tracing session by passing any of the following options to `NewSessionWithTracing`:
+In addition to using the convenience function, you can also manually set observers:
+
+```go
+host := "localhost"
+cluster := gocql.NewCluster(host)
+cluster.QueryObserver = otelGocql.NewQueryObserver(nil, &OtelConfig{
+        tracer: global.Tracer("github.com/gocql/gocql"),
+})
+session, err := cluster.CreateSession()
+```
+
+You can customize instrumentation by passing any of the following options to `NewSessionWithTracing`:
 
 | Function | Description |
 | -------- | ----------- |
@@ -43,13 +54,3 @@ You can customize the tracing session by passing any of the following options to
 | `WithBatchInstrumentation(bool)` | To enable/disable tracing and metrics for batch queries. |
 | `WithConnectInstrumentation(bool)` | To enable/disable tracing and metrics for new connections. |
 
-In addition to using the convenience function, you may also manually set the obsevers: 
-
-```go
-host := "localhost"
-cluster := gocql.NewCluster(host)
-cluster.QueryObserver = otelGocql.NewQueryObserver(nil, &OtelConfig{
-        tracer: global.Tracer("github.com/gocql/gocql"),
-})
-session, err := cluster.CreateSession()
-```

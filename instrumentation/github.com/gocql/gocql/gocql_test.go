@@ -386,7 +386,7 @@ func recordEqual(t *testing.T, expected testRecord, actual export.Record) {
 		actualValue, ok := actual.Labels().Value(label.Key)
 		assert.True(t, ok)
 		assert.NotNil(t, actualValue)
-		// Cant test equality of host id
+		// Can't test equality of host id
 		if label.Key != cassHostIDKey {
 			assert.Equal(t, label.Value, actualValue)
 		} else {

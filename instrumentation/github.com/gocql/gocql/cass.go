@@ -83,7 +83,7 @@ func cassHost(host string) kv.KeyValue {
 	return cassHostKey.String(host)
 }
 
-// cassHostID returns the id of the cassandra host as a keyvalue pair.
+// cassHostID returns the id of the cassandra host as a KeyValue pair.
 func cassHostID(id string) kv.KeyValue {
 	return cassHostIDKey.String(id)
 }
@@ -99,7 +99,7 @@ func cassHostState(state string) kv.KeyValue {
 	return cassHostStateKey.String(state)
 }
 
-// cassKeyspace returns the keyspace of the session as a keyvalue pair.
+// cassKeyspace returns the keyspace of the session as a KeyValue pair.
 func cassKeyspace(keyspace string) kv.KeyValue {
 	return cassKeyspaceKey.String(keyspace)
 }
@@ -111,31 +111,31 @@ func cassStatement(stmt string) kv.KeyValue {
 }
 
 // cassBatchQueries returns the number of queries in a batch query
-// as a keyvalue pair.
+// as a KeyValue pair.
 func cassBatchQueries(num int) kv.KeyValue {
 	return cassBatchQueriesKey.Int(num)
 }
 
-// cassErrMsg returns the keyvalue pair of an error message
+// cassErrMsg returns the KeyValue pair of an error message
 // encountered when executing a query, batch query, or error.
 func cassErrMsg(msg string) kv.KeyValue {
 	return cassErrMsgKey.String(msg)
 }
 
-// cassRowsReturned returns the keyvalue pair of the number of rows
+// cassRowsReturned returns the KeyValue pair of the number of rows
 // returned from a query.
 func cassRowsReturned(rows int) kv.KeyValue {
 	return cassRowsReturnedKey.Int(rows)
 }
 
-// cassQueryAttempts returns the keyvalue pair of the number of attempts
+// cassQueryAttempts returns the KeyValue pair of the number of attempts
 // made for a query.
 func cassQueryAttempts(num int) kv.KeyValue {
 	return cassQueryAttemptsKey.Int(num)
 }
 
 // cassQueryAttemptNum returns the 0-based index attempt number of a
-// query as a keyvalue pair.
+// query as a KeyValue pair.
 func cassQueryAttemptNum(num int) kv.KeyValue {
 	return cassQueryAttemptNumKey.Int(num)
 }
