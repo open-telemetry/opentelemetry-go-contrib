@@ -221,13 +221,11 @@ func TestBatch(t *testing.T) {
 	defer session.Close()
 
 	batch := session.NewBatch(gocql.LoggedBatch).WithContext(ctx)
-	ids := make([]gocql.UUID, 10)
-	stmts := make([]string, 10)
 	for i := 0; i < 10; i++ {
-		ids[i] = gocql.TimeUUID()
+		id := gocql.TimeUUID()
 		title := fmt.Sprintf("batch-title-%d", i)
-		stmts[i] = fmt.Sprintf("insert into %s (id, title) values (?, ?)", tableName)
-		batch.Query(stmts[i], ids[i], title)
+		stmt := fmt.Sprintf("insert into %s (id, title) values (?, ?)", tableName)
+		batch.Query(stmt, id, title)
 	}
 
 	err = session.ExecuteBatch(batch)
@@ -248,7 +246,7 @@ func TestBatch(t *testing.T) {
 	assert.Equal(t, cluster.Hosts[0], span.Attributes[cassHostKey].AsString())
 	assert.Equal(t, int32(cluster.Port), span.Attributes[cassPortKey].AsInt32())
 	assert.Equal(t, "up", strings.ToLower(span.Attributes[cassHostStateKey].AsString()))
-	assert.Equal(t, int32(len(stmts)), span.Attributes[cassBatchQueriesKey].AsInt32())
+	assert.Equal(t, int32(10), span.Attributes[cassBatchQueriesKey].AsInt32())
 
 	controller.Stop()
 
@@ -368,8 +366,8 @@ func getCluster() *gocql.ClusterConfig {
 	return cluster
 }
 
-// beforeEach creates a metric export pipeline with mockExporter
-// to enable testing metric collection.
+// getController returns the push controller for the mock
+// export pipeline.
 func getController(t *testing.T) *push.Controller {
 	controller := mockExportPipeline(t)
 	InstrumentWithProvider(controller.Provider())
@@ -422,9 +420,7 @@ func numberEqual(t *testing.T, expected metric.Number, agg aggregation.Aggregati
 	}
 }
 
-// beforeAll recreates the testing keyspace so that a new table
-// can be created. This allows the test to be run multiple times
-// consecutively withouth any issues arising.
+// beforeAll creates the testing keyspace and table if they do not already exist.
 func beforeAll() {
 	cluster := gocql.NewCluster("localhost")
 	cluster.Consistency = gocql.LocalQuorum
@@ -459,7 +455,7 @@ func beforeAll() {
 	}
 }
 
-// afterEach removes the keyspace from the database for later test sessions.
+// afterEach truncates the table used for testing.
 func afterEach() {
 	cluster := gocql.NewCluster("localhost")
 	cluster.Consistency = gocql.LocalQuorum

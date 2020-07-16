@@ -51,7 +51,7 @@ type OtelConnectObserver struct {
 // ----------------------------------------- Constructor Functions
 
 // NewQueryObserver creates a QueryObserver that provides OpenTelemetry
-// tracing and metrics.
+// instrumentation for queries.
 func NewQueryObserver(observer gocql.QueryObserver, cfg *OtelConfig) gocql.QueryObserver {
 	return &OtelQueryObserver{
 		observer,
@@ -80,7 +80,7 @@ func NewConnectObserver(ctx context.Context, observer gocql.ConnectObserver, cfg
 
 // ------------------------------------------ Observer Functions
 
-// ObserveQuery instruments a specific query.
+// ObserveQuery is called once per query, and provides instrumentation for it.
 func (o *OtelQueryObserver) ObserveQuery(ctx context.Context, observedQuery gocql.ObservedQuery) {
 	if o.cfg.InstrumentQuery {
 		host := observedQuery.Host
@@ -135,7 +135,7 @@ func (o *OtelQueryObserver) ObserveQuery(ctx context.Context, observedQuery gocq
 	}
 }
 
-// ObserveBatch instruments a specific batch query.
+// ObserveBatch is called once per batch query, and provides instrumentation for it.
 func (o *OtelBatchObserver) ObserveBatch(ctx context.Context, observedBatch gocql.ObservedBatch) {
 	if o.cfg.InstrumentBatch {
 		host := observedBatch.Host
@@ -177,7 +177,7 @@ func (o *OtelBatchObserver) ObserveBatch(ctx context.Context, observedBatch gocq
 	}
 }
 
-// ObserveConnect instruments a specific connection attempt.
+// ObserveConnect is called once per connection attempt, and provides instrumentation for it.
 func (o *OtelConnectObserver) ObserveConnect(observedConnect gocql.ObservedConnect) {
 	if o.cfg.InstrumentConnect {
 		host := observedConnect.Host

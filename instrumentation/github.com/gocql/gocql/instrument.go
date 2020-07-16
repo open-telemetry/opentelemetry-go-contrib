@@ -65,7 +65,7 @@ func InstrumentWithProvider(p metric.Provider) {
 
 	iQueryCount = meter.NewInt64Counter(
 		"cassandra.queries",
-		metric.WithDescription("Number queries executed"),
+		metric.WithDescription("Number of queries executed"),
 	)
 
 	iQueryErrors = meter.NewInt64Counter(
