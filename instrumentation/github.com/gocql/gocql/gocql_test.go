@@ -134,16 +134,16 @@ func TestQuery(t *testing.T) {
 
 		switch span.Name {
 		case cassQueryName:
-			assert.Equal(t, insertStmt, span.Attributes[CassStatementKey].AsString())
+			assert.Equal(t, insertStmt, span.Attributes[cassStatementKey].AsString())
 			assert.Equal(t, parentSpan.SpanContext().SpanID.String(), span.ParentSpanID.String())
 			break
 		default:
 			t.Fatalf("unexpected span name %s", span.Name)
 		}
-		assert.NotNil(t, span.Attributes[CassVersionKey].AsString())
-		assert.Equal(t, cluster.Hosts[0], span.Attributes[CassHostKey].AsString())
-		assert.Equal(t, int32(cluster.Port), span.Attributes[CassPortKey].AsInt32())
-		assert.Equal(t, "up", strings.ToLower(span.Attributes[CassHostStateKey].AsString()))
+		assert.NotNil(t, span.Attributes[cassVersionKey].AsString())
+		assert.Equal(t, cluster.Hosts[0], span.Attributes[cassHostKey].AsString())
+		assert.Equal(t, int32(cluster.Port), span.Attributes[cassPortKey].AsInt32())
+		assert.Equal(t, "up", strings.ToLower(span.Attributes[cassHostStateKey].AsString()))
 	}
 
 	// Check metrics
@@ -155,9 +155,9 @@ func TestQuery(t *testing.T) {
 			Name:      "cassandra.queries",
 			MeterName: "github.com/gocql/gocql",
 			Labels: []kv.KeyValue{
-				CassHostID("test-id"),
-				CassKeyspace(keyspace),
-				CassStatement(insertStmt),
+				cassHostID("test-id"),
+				cassKeyspace(keyspace),
+				cassStatement(insertStmt),
 			},
 			Number: 1,
 		},
@@ -165,8 +165,8 @@ func TestQuery(t *testing.T) {
 			Name:      "cassandra.rows",
 			MeterName: "github.com/gocql/gocql",
 			Labels: []kv.KeyValue{
-				CassHostID("test-id"),
-				CassKeyspace(keyspace),
+				cassHostID("test-id"),
+				cassKeyspace(keyspace),
 			},
 			Number: 0,
 		},
@@ -174,8 +174,8 @@ func TestQuery(t *testing.T) {
 			Name:      "cassandra.latency",
 			MeterName: "github.com/gocql/gocql",
 			Labels: []kv.KeyValue{
-				CassHostID("test-id"),
-				CassKeyspace(keyspace),
+				cassHostID("test-id"),
+				cassKeyspace(keyspace),
 			},
 		},
 	}
@@ -245,11 +245,11 @@ func TestBatch(t *testing.T) {
 
 	assert.Equal(t, cassBatchQueryName, span.Name)
 	assert.Equal(t, parentSpan.SpanContext().SpanID, span.ParentSpanID)
-	assert.NotNil(t, span.Attributes[CassVersionKey].AsString())
-	assert.Equal(t, cluster.Hosts[0], span.Attributes[CassHostKey].AsString())
-	assert.Equal(t, int32(cluster.Port), span.Attributes[CassPortKey].AsInt32())
-	assert.Equal(t, "up", strings.ToLower(span.Attributes[CassHostStateKey].AsString()))
-	assert.Equal(t, int32(len(stmts)), span.Attributes[CassBatchQueriesKey].AsInt32())
+	assert.NotNil(t, span.Attributes[cassVersionKey].AsString())
+	assert.Equal(t, cluster.Hosts[0], span.Attributes[cassHostKey].AsString())
+	assert.Equal(t, int32(cluster.Port), span.Attributes[cassPortKey].AsInt32())
+	assert.Equal(t, "up", strings.ToLower(span.Attributes[cassHostStateKey].AsString()))
+	assert.Equal(t, int32(len(stmts)), span.Attributes[cassBatchQueriesKey].AsInt32())
 
 	controller.Stop()
 
@@ -260,8 +260,8 @@ func TestBatch(t *testing.T) {
 			Name:      "cassandra.batch.queries",
 			MeterName: "github.com/gocql/gocql",
 			Labels: []kv.KeyValue{
-				CassHostID("test-id"),
-				CassKeyspace(keyspace),
+				cassHostID("test-id"),
+				cassKeyspace(keyspace),
 			},
 			Number: 1,
 		},
@@ -269,8 +269,8 @@ func TestBatch(t *testing.T) {
 			Name:      "cassandra.latency",
 			MeterName: "github.com/gocql/gocql",
 			Labels: []kv.KeyValue{
-				CassHostID("test-id"),
-				CassKeyspace(keyspace),
+				cassHostID("test-id"),
+				cassKeyspace(keyspace),
 			},
 		},
 	}
@@ -319,10 +319,10 @@ func TestConnection(t *testing.T) {
 	// Verify the span attributes
 	for _, span := range spans {
 		assert.Equal(t, cassConnectName, span.Name)
-		assert.NotNil(t, span.Attributes[CassVersionKey].AsString())
-		assert.Equal(t, cluster.Hosts[0], span.Attributes[CassHostKey].AsString())
-		assert.Equal(t, int32(cluster.Port), span.Attributes[CassPortKey].AsInt32())
-		assert.Equal(t, "up", strings.ToLower(span.Attributes[CassHostStateKey].AsString()))
+		assert.NotNil(t, span.Attributes[cassVersionKey].AsString())
+		assert.Equal(t, cluster.Hosts[0], span.Attributes[cassHostKey].AsString())
+		assert.Equal(t, int32(cluster.Port), span.Attributes[cassPortKey].AsInt32())
+		assert.Equal(t, "up", strings.ToLower(span.Attributes[cassHostStateKey].AsString()))
 	}
 
 	// Verify the metrics
@@ -331,8 +331,8 @@ func TestConnection(t *testing.T) {
 			Name:      "cassandra.connections",
 			MeterName: "github.com/gocql/gocql",
 			Labels: []kv.KeyValue{
-				CassHost("127.0.0.1"),
-				CassHostID("test-id"),
+				cassHost("127.0.0.1"),
+				cassHostID("test-id"),
 			},
 		},
 	}
@@ -387,7 +387,7 @@ func recordEqual(t *testing.T, expected testRecord, actual export.Record) {
 		assert.True(t, ok)
 		assert.NotNil(t, actualValue)
 		// Cant test equality of host id
-		if label.Key != CassHostIDKey {
+		if label.Key != cassHostIDKey {
 			assert.Equal(t, label.Value, actualValue)
 		} else {
 			assert.NotEmpty(t, actualValue)
