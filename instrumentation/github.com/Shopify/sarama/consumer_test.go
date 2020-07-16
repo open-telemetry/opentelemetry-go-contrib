@@ -165,3 +165,46 @@ func TestConsumer_ConsumePartitionWithError(t *testing.T) {
 	_, err = consumer.ConsumePartition(topic, 0, 0)
 	assert.Error(t, err)
 }
+
+func BenchmarkWrapPartitionConsumer(b *testing.B) {
+	// Mock tracer
+	mt := mocktracer.NewTracer("kafka")
+
+	mockPartitionConsumer, partitionConsumer := createMockPartitionConsumer(b)
+
+	partitionConsumer = WrapPartitionConsumer(serviceName, partitionConsumer, WithTracer(mt))
+	message := sarama.ConsumerMessage{Key: []byte("foo")}
+
+	b.ReportAllocs()
+	b.ResetTimer()
+
+	for i := 0; i < b.N; i++ {
+		mockPartitionConsumer.YieldMessage(&message)
+		<-partitionConsumer.Messages()
+	}
+}
+
+func BenchmarkMockPartitionConsumer(b *testing.B) {
+	mockPartitionConsumer, partitionConsumer := createMockPartitionConsumer(b)
+
+	message := sarama.ConsumerMessage{Key: []byte("foo")}
+
+	b.ReportAllocs()
+	b.ResetTimer()
+
+	for i := 0; i < b.N; i++ {
+		mockPartitionConsumer.YieldMessage(&message)
+		<-partitionConsumer.Messages()
+	}
+}
+
+func createMockPartitionConsumer(b *testing.B) (*mocks.PartitionConsumer, sarama.PartitionConsumer) {
+	// Mock partition consumer controller
+	consumer := mocks.NewConsumer(b, sarama.NewConfig())
+	mockPartitionConsumer := consumer.ExpectConsumePartition(topic, 0, 0)
+
+	// Create partition consumer
+	partitionConsumer, err := consumer.ConsumePartition(topic, 0, 0)
+	assert.NoError(b, err)
+	return mockPartitionConsumer, partitionConsumer
+}

@@ -328,3 +328,85 @@ func newSaramaConfig() *sarama.Config {
 	cfg.Version = sarama.V0_11_0_0
 	return cfg
 }
+
+func BenchmarkWrapSyncProducer(b *testing.B) {
+	// Mock tracer
+	mt := mocktracer.NewTracer("kafka")
+
+	cfg := newSaramaConfig()
+	// Mock sync producer
+	mockSyncProducer := mocks.NewSyncProducer(b, cfg)
+
+	// Wrap sync producer
+	syncProducer := WrapSyncProducer(serviceName, cfg, mockSyncProducer, WithTracer(mt))
+	message := sarama.ProducerMessage{Key: sarama.StringEncoder("foo")}
+
+	b.ReportAllocs()
+	b.ResetTimer()
+
+	for i := 0; i < b.N; i++ {
+		mockSyncProducer.ExpectSendMessageAndSucceed()
+		_, _, err := syncProducer.SendMessage(&message)
+		assert.NoError(b, err)
+	}
+}
+
+func BenchmarkMockSyncProducer(b *testing.B) {
+	cfg := newSaramaConfig()
+	// Mock sync producer
+	mockSyncProducer := mocks.NewSyncProducer(b, cfg)
+
+	// Wrap sync producer
+	syncProducer := mockSyncProducer
+	message := sarama.ProducerMessage{Key: sarama.StringEncoder("foo")}
+
+	b.ReportAllocs()
+	b.ResetTimer()
+
+	for i := 0; i < b.N; i++ {
+		mockSyncProducer.ExpectSendMessageAndSucceed()
+		_, _, err := syncProducer.SendMessage(&message)
+		assert.NoError(b, err)
+	}
+}
+
+func BenchmarkWrapAsyncProducer(b *testing.B) {
+	// Mock tracer
+	mt := mocktracer.NewTracer("kafka")
+
+	cfg := newSaramaConfig()
+	cfg.Producer.Return.Successes = true
+	mockAsyncProducer := mocks.NewAsyncProducer(b, cfg)
+
+	// Wrap sync producer
+	asyncProducer := WrapAsyncProducer(serviceName, cfg, mockAsyncProducer, WithTracer(mt))
+	message := sarama.ProducerMessage{Key: sarama.StringEncoder("foo")}
+
+	b.ReportAllocs()
+	b.ResetTimer()
+
+	for i := 0; i < b.N; i++ {
+		mockAsyncProducer.ExpectInputAndSucceed()
+		asyncProducer.Input() <- &message
+		<-asyncProducer.Successes()
+	}
+}
+
+func BenchmarkMockAsyncProducer(b *testing.B) {
+	cfg := newSaramaConfig()
+	cfg.Producer.Return.Successes = true
+	mockAsyncProducer := mocks.NewAsyncProducer(b, cfg)
+
+	// Wrap sync producer
+	asyncProducer := mockAsyncProducer
+	message := sarama.ProducerMessage{Key: sarama.StringEncoder("foo")}
+
+	b.ReportAllocs()
+	b.ResetTimer()
+
+	for i := 0; i < b.N; i++ {
+		mockAsyncProducer.ExpectInputAndSucceed()
+		mockAsyncProducer.Input() <- &message
+		<-asyncProducer.Successes()
+	}
+}
