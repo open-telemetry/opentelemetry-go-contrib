@@ -16,6 +16,7 @@ package gocql
 
 import (
 	"github.com/gocql/gocql"
+
 	"go.opentelemetry.io/otel/api/global"
 	"go.opentelemetry.io/otel/api/trace"
 )

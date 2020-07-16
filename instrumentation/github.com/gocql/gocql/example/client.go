@@ -13,7 +13,7 @@
 // limitations under the License.
 
 // This example will create the keyspace
-// "gocql-integration-example" and a single table
+// "gocql_integration_example" and a single table
 // with the following schema:
 // gocql_integration_example.book
 //   id UUID

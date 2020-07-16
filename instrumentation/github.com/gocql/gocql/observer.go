@@ -20,6 +20,7 @@ import (
 	"time"
 
 	"github.com/gocql/gocql"
+
 	"go.opentelemetry.io/otel/api/kv"
 	"go.opentelemetry.io/otel/api/metric"
 	"go.opentelemetry.io/otel/api/trace"

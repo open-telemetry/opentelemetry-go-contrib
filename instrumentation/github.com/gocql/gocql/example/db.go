@@ -39,6 +39,9 @@ func initDb() {
 
 	cluster.Keyspace = keyspace
 	session, err = cluster.CreateSession()
+	if err != nil {
+		log.Fatal(err)
+	}
 
 	stmt = "create table if not exists book(id UUID, title text, author_first_name text, author_last_name text, PRIMARY KEY(id))"
 	if err = session.Query(stmt).Exec(); err != nil {

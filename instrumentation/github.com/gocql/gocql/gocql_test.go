@@ -28,6 +28,7 @@ import (
 
 	"github.com/gocql/gocql"
 	"github.com/stretchr/testify/assert"
+
 	mocktracer "go.opentelemetry.io/contrib/internal/trace"
 	"go.opentelemetry.io/otel/api/kv"
 	"go.opentelemetry.io/otel/api/metric"
@@ -136,7 +137,6 @@ func TestQuery(t *testing.T) {
 		case cassQueryName:
 			assert.Equal(t, insertStmt, span.Attributes[cassStatementKey].AsString())
 			assert.Equal(t, parentSpan.SpanContext().SpanID.String(), span.ParentSpanID.String())
-			break
 		default:
 			t.Fatalf("unexpected span name %s", span.Name)
 		}
@@ -151,7 +151,7 @@ func TestQuery(t *testing.T) {
 
 	assert.Equal(t, 3, len(exporter.records))
 	expected := []testRecord{
-		testRecord{
+		{
 			Name:      "cassandra.queries",
 			MeterName: "github.com/gocql/gocql",
 			Labels: []kv.KeyValue{
@@ -161,7 +161,7 @@ func TestQuery(t *testing.T) {
 			},
 			Number: 1,
 		},
-		testRecord{
+		{
 			Name:      "cassandra.rows",
 			MeterName: "github.com/gocql/gocql",
 			Labels: []kv.KeyValue{
@@ -170,7 +170,7 @@ func TestQuery(t *testing.T) {
 			},
 			Number: 0,
 		},
-		testRecord{
+		{
 			Name:      "cassandra.latency",
 			MeterName: "github.com/gocql/gocql",
 			Labels: []kv.KeyValue{
@@ -187,7 +187,6 @@ func TestQuery(t *testing.T) {
 		case "cassandra.queries":
 			recordEqual(t, expected[0], record)
 			numberEqual(t, expected[0].Number, agg)
-			break
 		case "cassandra.rows":
 			recordEqual(t, expected[1], record)
 			numberEqual(t, expected[1].Number, agg)
@@ -256,7 +255,7 @@ func TestBatch(t *testing.T) {
 	// Check metrics
 	assert.Equal(t, 2, len(exporter.records))
 	expected := []testRecord{
-		testRecord{
+		{
 			Name:      "cassandra.batch.queries",
 			MeterName: "github.com/gocql/gocql",
 			Labels: []kv.KeyValue{
@@ -265,7 +264,7 @@ func TestBatch(t *testing.T) {
 			},
 			Number: 1,
 		},
-		testRecord{
+		{
 			Name:      "cassandra.latency",
 			MeterName: "github.com/gocql/gocql",
 			Labels: []kv.KeyValue{
@@ -327,7 +326,7 @@ func TestConnection(t *testing.T) {
 
 	// Verify the metrics
 	expected := []testRecord{
-		testRecord{
+		{
 			Name:      "cassandra.connections",
 			MeterName: "github.com/gocql/gocql",
 			Labels: []kv.KeyValue{
