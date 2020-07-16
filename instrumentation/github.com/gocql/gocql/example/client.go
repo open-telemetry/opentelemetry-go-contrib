@@ -43,7 +43,69 @@ import (
 	sdktrace "go.opentelemetry.io/otel/sdk/trace"
 )
 
+const keyspace = "gocql_integration_example"
+
 var wg sync.WaitGroup
+
+func main() {
+	initMetrics()
+	initTracer()
+	initDb()
+
+	ctx, span := global.Tracer(
+		"go.opentelemetry.io/contrib/github.com/gocql/gocql/example",
+	).Start(context.Background(), "begin example")
+
+	cluster := getCluster()
+	// Create a session to begin making queries
+	session, err := otelGocql.NewSessionWithTracing(
+		ctx,
+		cluster,
+	)
+	if err != nil {
+		log.Fatalf("failed to create a session, %v", err)
+	}
+	defer session.Close()
+
+	batch := session.NewBatch(gocql.LoggedBatch)
+	for i := 0; i < 500; i++ {
+		batch.Query(
+			"INSERT INTO book (id, title, author_first_name, author_last_name) VALUES (?, ?, ?, ?)",
+			gocql.TimeUUID(),
+			fmt.Sprintf("Example Book %d", i),
+			"firstName",
+			"lastName",
+		)
+	}
+	if err := session.ExecuteBatch(batch.WithContext(ctx)); err != nil {
+		log.Printf("failed to batch insert, %v", err)
+	}
+
+	res := session.Query(
+		"SELECT title, author_first_name, author_last_name from book WHERE author_last_name = ?",
+		"lastName",
+	).WithContext(ctx).PageSize(100).Iter()
+
+	var (
+		title     string
+		firstName string
+		lastName  string
+	)
+
+	for res.Scan(&title, &firstName, &lastName) {
+		res.Scan(&title, &firstName, &lastName)
+	}
+
+	res.Close()
+
+	if err = session.Query("truncate table book").WithContext(ctx).Exec(); err != nil {
+		log.Printf("failed to delete data, %v", err)
+	}
+
+	span.End()
+
+	wg.Wait()
+}
 
 func initMetrics() {
 	// Start prometheus
@@ -100,67 +162,8 @@ func initTracer() {
 
 func getCluster() *gocql.ClusterConfig {
 	cluster := gocql.NewCluster("127.0.0.1")
-	cluster.Keyspace = "gocql_integration_example"
+	cluster.Keyspace = keyspace
 	cluster.Consistency = gocql.LocalQuorum
 	cluster.ProtoVersion = 3
 	return cluster
-}
-
-func main() {
-	initMetrics()
-	initTracer()
-
-	ctx, span := global.Tracer(
-		"go.opentelemetry.io/contrib/github.com/gocql/gocql/example",
-	).Start(context.Background(), "begin example")
-
-	cluster := getCluster()
-	// Create a session to begin making queries
-	session, err := otelGocql.NewSessionWithTracing(
-		ctx,
-		cluster,
-	)
-	if err != nil {
-		log.Fatalf("failed to create a session, %v", err)
-	}
-	defer session.Close()
-
-	batch := session.NewBatch(gocql.LoggedBatch)
-	for i := 0; i < 500; i++ {
-		batch.Query(
-			"INSERT INTO book (id, title, author_first_name, author_last_name) VALUES (?, ?, ?, ?)",
-			gocql.TimeUUID(),
-			fmt.Sprintf("Example Book %d", i),
-			"firstName",
-			"lastName",
-		)
-	}
-	if err := session.ExecuteBatch(batch.WithContext(ctx)); err != nil {
-		log.Printf("failed to batch insert, %v", err)
-	}
-
-	res := session.Query(
-		"SELECT title, author_first_name, author_last_name from book WHERE author_last_name = ?",
-		"lastName",
-	).WithContext(ctx).PageSize(100).Iter()
-
-	var (
-		title     string
-		firstName string
-		lastName  string
-	)
-
-	for res.Scan(&title, &firstName, &lastName) {
-		res.Scan(&title, &firstName, &lastName)
-	}
-
-	res.Close()
-
-	if err = session.Query("truncate table book").WithContext(ctx).Exec(); err != nil {
-		log.Printf("failed to delete data, %v", err)
-	}
-
-	span.End()
-
-	wg.Wait()
 }

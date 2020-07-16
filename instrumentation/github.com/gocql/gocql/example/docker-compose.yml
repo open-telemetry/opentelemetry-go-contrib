@@ -14,12 +14,11 @@
 
 version: '3'
 services: 
-#  cassandra:
-#    image: cassandra:latest
-#    ports:
-#      - 9042:9042
-#      - 9160:9160
+  cassandra:
+    image: cassandra:3
+    ports:
+    - 9042:9042
   zipkin:
-    image: openzipkin/zipkin
+    image: openzipkin/zipkin:2
     ports:
     - 9411:9411
