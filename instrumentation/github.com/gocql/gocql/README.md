@@ -37,7 +37,8 @@ In addition to using the convenience function, you can also manually set observe
 host := "localhost"
 cluster := gocql.NewCluster(host)
 cluster.QueryObserver = otelGocql.NewQueryObserver(nil, &OtelConfig{
-        tracer: global.Tracer("github.com/gocql/gocql"),
+        Tracer: global.Tracer("github.com/gocql/gocql"),
+        InstrumentQuery: true,
 })
 session, err := cluster.CreateSession()
 ```

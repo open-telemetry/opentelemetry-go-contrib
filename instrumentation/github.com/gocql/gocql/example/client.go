@@ -12,8 +12,8 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-// The Cassandra docker container conatains the
-// "gocql-integration-example" keyspace and a single table
+// This example will create the keyspace
+// "gocql-integration-example" and a single table
 // with the following schema:
 // gocql_integration_example.book
 //   id UUID
@@ -21,7 +21,8 @@
 //   author_first_name text
 //   author_last_name text
 //   PRIMARY KEY(id)
-// The example will insert fictional books into the database.
+// The example will insert fictional books into the database and
+// then truncate the table.
 
 package main
 

@@ -81,7 +81,7 @@ func NewConnectObserver(ctx context.Context, observer gocql.ConnectObserver, cfg
 
 // ObserveQuery instruments a specific query.
 func (o *OtelQueryObserver) ObserveQuery(ctx context.Context, observedQuery gocql.ObservedQuery) {
-	if o.cfg.instrumentQuery {
+	if o.cfg.InstrumentQuery {
 		host := observedQuery.Host
 		keyspace := observedQuery.Keyspace
 
@@ -94,7 +94,7 @@ func (o *OtelQueryObserver) ObserveQuery(ctx context.Context, observedQuery gocq
 			cassKeyspace(keyspace),
 		)
 
-		ctx, span := o.cfg.tracer.Start(
+		ctx, span := o.cfg.Tracer.Start(
 			ctx,
 			cassQueryName,
 			trace.WithStartTime(observedQuery.Start),
@@ -136,7 +136,7 @@ func (o *OtelQueryObserver) ObserveQuery(ctx context.Context, observedQuery gocq
 
 // ObserveBatch instruments a specific batch query.
 func (o *OtelBatchObserver) ObserveBatch(ctx context.Context, observedBatch gocql.ObservedBatch) {
-	if o.cfg.instrumentBatch {
+	if o.cfg.InstrumentBatch {
 		host := observedBatch.Host
 		keyspace := observedBatch.Keyspace
 		attributes := append(
@@ -145,7 +145,7 @@ func (o *OtelBatchObserver) ObserveBatch(ctx context.Context, observedBatch gocq
 			cassKeyspace(keyspace),
 		)
 
-		ctx, span := o.cfg.tracer.Start(
+		ctx, span := o.cfg.Tracer.Start(
 			ctx,
 			cassBatchQueryName,
 			trace.WithStartTime(observedBatch.Start),
@@ -178,12 +178,12 @@ func (o *OtelBatchObserver) ObserveBatch(ctx context.Context, observedBatch gocq
 
 // ObserveConnect instruments a specific connection attempt.
 func (o *OtelConnectObserver) ObserveConnect(observedConnect gocql.ObservedConnect) {
-	if o.cfg.instrumentConnect {
+	if o.cfg.InstrumentConnect {
 		host := observedConnect.Host
 		hostname := getHost(host.HostnameAndPort())
 		attributes := defaultAttributes(observedConnect.Host)
 
-		_, span := o.cfg.tracer.Start(
+		_, span := o.cfg.Tracer.Start(
 			o.ctx,
 			cassConnectName,
 			trace.WithStartTime(observedConnect.Start),

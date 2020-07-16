@@ -31,10 +31,10 @@ type TracedSessionConfig struct {
 
 // OtelConfig provides OpenTelemetry configuration.
 type OtelConfig struct {
-	tracer            trace.Tracer
-	instrumentQuery   bool
-	instrumentBatch   bool
-	instrumentConnect bool
+	Tracer            trace.Tracer
+	InstrumentQuery   bool
+	InstrumentBatch   bool
+	InstrumentConnect bool
 }
 
 // TracedSessionOption is a function type that applies
@@ -77,7 +77,7 @@ func WithConnectObserver(observer gocql.ConnectObserver) TracedSessionOption {
 // Defaults to global.Tracer("github.com/gocql/gocql").
 func WithTracer(tracer trace.Tracer) TracedSessionOption {
 	return func(c *TracedSessionConfig) {
-		c.otelConfig.tracer = tracer
+		c.otelConfig.Tracer = tracer
 	}
 }
 
@@ -85,7 +85,7 @@ func WithTracer(tracer trace.Tracer) TracedSessionOption {
 // queries. Defaults to enabled.
 func WithQueryInstrumentation(enabled bool) TracedSessionOption {
 	return func(cfg *TracedSessionConfig) {
-		cfg.otelConfig.instrumentQuery = enabled
+		cfg.otelConfig.InstrumentQuery = enabled
 	}
 }
 
@@ -93,7 +93,7 @@ func WithQueryInstrumentation(enabled bool) TracedSessionOption {
 // batch queries. Defaults to enabled.
 func WithBatchInstrumentation(enabled bool) TracedSessionOption {
 	return func(cfg *TracedSessionConfig) {
-		cfg.otelConfig.instrumentBatch = enabled
+		cfg.otelConfig.InstrumentBatch = enabled
 	}
 }
 
@@ -101,7 +101,7 @@ func WithBatchInstrumentation(enabled bool) TracedSessionOption {
 // connection attempts. Defaults to enabled.
 func WithConnectInstrumentation(enabled bool) TracedSessionOption {
 	return func(cfg *TracedSessionConfig) {
-		cfg.otelConfig.instrumentConnect = enabled
+		cfg.otelConfig.InstrumentConnect = enabled
 	}
 }
 
@@ -121,9 +121,9 @@ func configure(options ...TracedSessionOption) *TracedSessionConfig {
 
 func otelConfiguration() *OtelConfig {
 	return &OtelConfig{
-		tracer:            global.Tracer("github.com/gocql/gocql"),
-		instrumentQuery:   true,
-		instrumentBatch:   true,
-		instrumentConnect: true,
+		Tracer:            global.Tracer("github.com/gocql/gocql"),
+		InstrumentQuery:   true,
+		InstrumentBatch:   true,
+		InstrumentConnect: true,
 	}
 }
