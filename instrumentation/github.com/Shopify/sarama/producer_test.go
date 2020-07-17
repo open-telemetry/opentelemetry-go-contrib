@@ -235,10 +235,13 @@ func TestWrapAsyncProducer(t *testing.T) {
 
 		msgList := createMessages(mt)
 		// Send message
-		for _, msg := range msgList {
+		for i, msg := range msgList {
 			mockAsyncProducer.ExpectInputAndSucceed()
+			// Add metadata to msg
+			msg.Metadata = i
 			ap.Input() <- msg
-			<-ap.Successes()
+			newMsg := <-ap.Successes()
+			assert.Equal(t, newMsg, msg)
 		}
 
 		err := ap.Close()
@@ -288,6 +291,9 @@ func TestWrapAsyncProducer(t *testing.T) {
 			for _, k := range expected.kvList {
 				assert.Equal(t, k.Value, span.Attributes[k.Key], k.Key)
 			}
+
+			// Check metadata
+			assert.Equal(t, i, msg.Metadata)
 
 			// Check tracing propagation
 			remoteSpanFromMessage := trace.RemoteSpanContextFromContext(propagation.ExtractHTTP(context.Background(), propagators, NewProducerMessageCarrier(msg)))

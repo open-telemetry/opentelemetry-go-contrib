@@ -18,7 +18,6 @@ import (
 	"context"
 
 	"github.com/Shopify/sarama"
-	"github.com/google/uuid"
 	"google.golang.org/grpc/codes"
 
 	"go.opentelemetry.io/otel/api/kv"
@@ -83,7 +82,6 @@ type asyncProducer struct {
 	input     chan *sarama.ProducerMessage
 	successes chan *sarama.ProducerMessage
 	errors    chan *sarama.ProducerError
-	close     chan closeType
 	closeErr  chan error
 }
 
@@ -104,14 +102,23 @@ func (p *asyncProducer) Errors() <-chan *sarama.ProducerError {
 
 // AsyncClose async close producer.
 func (p *asyncProducer) AsyncClose() {
-	p.close <- closeAsync
+	p.input <- &sarama.ProducerMessage{
+		Metadata: closeAsync,
+	}
 }
 
 // Close shuts down the producer and waits for any buffered messages to be
 // flushed.
 func (p *asyncProducer) Close() error {
-	p.close <- closeSync
+	p.input <- &sarama.ProducerMessage{
+		Metadata: closeSync,
+	}
 	return <-p.closeErr
+}
+
+type producerMessageContext struct {
+	span           trace.Span
+	metadataBackup interface{}
 }
 
 // WrapAsyncProducer wraps a sarama.AsyncProducer so that all produced messages
@@ -131,30 +138,45 @@ func WrapAsyncProducer(serviceName string, saramaConfig *sarama.Config, p sarama
 		input:         make(chan *sarama.ProducerMessage),
 		successes:     make(chan *sarama.ProducerMessage),
 		errors:        make(chan *sarama.ProducerError),
-		close:         make(chan closeType),
 		closeErr:      make(chan error),
 	}
 	go func() {
-		spans := make(map[interface{}]trace.Span)
+		producerMessageContexts := make(map[interface{}]producerMessageContext)
 		defer close(wrapped.successes)
 		defer close(wrapped.errors)
 		for {
 			select {
-			case t := <-wrapped.close:
-				switch t {
-				case closeSync:
-					go func() {
-						wrapped.closeErr <- p.Close()
-					}()
-				case closeAsync:
-					p.AsyncClose()
-				}
 			case msg := <-wrapped.input:
-				msg.Metadata = uuid.New()
+				// Shut down if message metadata is a close type.
+				// Sarama will close after dispatching every message.
+				// So wrapper should follow this mechanism by adding a special message at
+				// the end of the input channel.
+				if ct, ok := msg.Metadata.(closeType); ok {
+					switch ct {
+					case closeSync:
+						go func() {
+							wrapped.closeErr <- p.Close()
+						}()
+					case closeAsync:
+						p.AsyncClose()
+					}
+					continue
+				}
+
 				span := startProducerSpan(cfg, saramaConfig.Version, msg)
+
+				// Create message context, backend message metadata
+				mc := producerMessageContext{
+					metadataBackup: msg.Metadata,
+					span:           span,
+				}
+
+				// Specific metadata with span id
+				msg.Metadata = span.SpanContext().SpanID
+
 				p.Input() <- msg
 				if saramaConfig.Producer.Return.Successes {
-					spans[msg.Metadata] = span
+					producerMessageContexts[msg.Metadata] = mc
 				} else {
 					// If returning successes isn't enabled, we just finish the
 					// span right away because there's no way to know when it will
@@ -167,9 +189,12 @@ func WrapAsyncProducer(serviceName string, saramaConfig *sarama.Config, p sarama
 					return
 				}
 				key := msg.Metadata
-				if span, ok := spans[key]; ok {
-					delete(spans, key)
-					finishProducerSpan(span, msg.Partition, msg.Offset, nil)
+				if mc, ok := producerMessageContexts[key]; ok {
+					delete(producerMessageContexts, key)
+					finishProducerSpan(mc.span, msg.Partition, msg.Offset, nil)
+
+					// Restore message metadata
+					msg.Metadata = mc.metadataBackup
 				}
 				wrapped.successes <- msg
 			case err, ok := <-p.Errors():
@@ -178,9 +203,9 @@ func WrapAsyncProducer(serviceName string, saramaConfig *sarama.Config, p sarama
 					return
 				}
 				key := err.Msg.Metadata
-				if span, ok := spans[key]; ok {
-					delete(spans, key)
-					finishProducerSpan(span, err.Msg.Partition, err.Msg.Offset, err.Err)
+				if mc, ok := producerMessageContexts[key]; ok {
+					delete(producerMessageContexts, key)
+					finishProducerSpan(mc.span, err.Msg.Partition, err.Msg.Offset, err.Err)
 				}
 				wrapped.errors <- err
 			}
