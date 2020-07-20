@@ -14,8 +14,7 @@
 
 // Package sarama provides functions to trace the Shopify/sarama package. (https://github.com/Shopify/sarama)
 //
-// The consumer's span will not be created as a child of the producer's span; instead, it will link the producer's span.
-// (https://github.com/open-telemetry/opentelemetry-specification/blob/v0.6.0/specification/trace/semantic_conventions/messaging.md#batch-receiving)
+// The consumer's span will be created as a child of the producer's span.
 //
 // Context propagation only works on Kafka versions higher than 0.11.0.0 which supports record headers.
 // (https://archive.apache.org/dist/kafka/0.11.0.0/RELEASE_NOTES.html)
