@@ -1,4 +1,4 @@
-module go.opentelemetry.io/contrib/detect/gcp
+module go.opentelemetry.io/contrib/detectors/gcp
 
 go 1.14
 

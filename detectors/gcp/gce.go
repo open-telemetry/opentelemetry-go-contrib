@@ -17,9 +17,7 @@ package gcp
 import (
 	"context"
 	"fmt"
-	"log"
 	"os"
-	"strings"
 
 	"cloud.google.com/go/compute/metadata"
 
@@ -30,6 +28,9 @@ import (
 
 // GCE collects resource information of GCE computing instances
 type GCE struct{}
+
+// compile time assertion that GCE implements the resource.Detector interface.
+//var _ resource.Detector = (*GCE)(nil) // uncomment it when Detector is published
 
 // Detect detects associated resources when running on GCE hosts.
 func (gce *GCE) Detect(ctx context.Context) (*resource.Resource, error) {
@@ -44,58 +45,40 @@ func (gce *GCE) Detect(ctx context.Context) (*resource.Resource, error) {
 
 	var errInfo []string
 
-	projectID, err := metadata.ProjectID()
-	logError(err)
-	if projectID != "" {
+	if projectID, err := metadata.ProjectID(); hasProblem(err) {
+		errInfo = append(errInfo, err.Error())
+	} else if projectID != "" {
 		labels = append(labels, standard.CloudAccountIDKey.String(projectID))
 	}
-	if err != nil {
-		errInfo = append(errInfo, err.Error())
-	}
 
-	zone, err := metadata.Zone()
-	logError(err)
-	if zone != "" {
+	if zone, err := metadata.Zone(); hasProblem(err) {
+		errInfo = append(errInfo, err.Error())
+	} else if zone != "" {
 		labels = append(labels, standard.CloudZoneKey.String(zone))
 	}
-	if err != nil {
-		errInfo = append(errInfo, err.Error())
-	}
 
-	instanceID, err := metadata.InstanceID()
-	logError(err)
-	if instanceID != "" {
+	if instanceID, err := metadata.InstanceID(); hasProblem(err) {
+		errInfo = append(errInfo, err.Error())
+	} else if instanceID != "" {
 		labels = append(labels, standard.HostIDKey.String(instanceID))
 	}
-	if err != nil {
-		errInfo = append(errInfo, err.Error())
-	}
 
-	name, err := metadata.InstanceName()
-	logError(err)
-	if name != "" {
+	if name, err := metadata.InstanceName(); hasProblem(err) {
+		errInfo = append(errInfo, err.Error())
+	} else if name != "" {
 		labels = append(labels, standard.HostNameKey.String(name))
 	}
-	if err != nil {
-		errInfo = append(errInfo, err.Error())
-	}
 
-	hostname, err := os.Hostname()
-	logError(err)
-	if hostname != "" {
+	if hostname, err := os.Hostname(); hasProblem(err) {
+		errInfo = append(errInfo, err.Error())
+	} else if hostname != "" {
 		labels = append(labels, standard.HostHostNameKey.String(hostname))
 	}
-	if err != nil {
-		errInfo = append(errInfo, err.Error())
-	}
 
-	hostType, err := metadata.Get("instance/machine-type")
-	logError(err)
-	if hostType != "" {
-		labels = append(labels, standard.HostTypeKey.String(hostType))
-	}
-	if err != nil {
+	if hostType, err := metadata.Get("instance/machine-type"); hasProblem(err) {
 		errInfo = append(errInfo, err.Error())
+	} else if hostType != "" {
+		labels = append(labels, standard.HostTypeKey.String(hostType))
 	}
 
 	var aggregatedErr error
@@ -106,11 +89,13 @@ func (gce *GCE) Detect(ctx context.Context) (*resource.Resource, error) {
 	return resource.New(labels...), aggregatedErr
 }
 
-//logError logs error only if the error is present and it is not 'not defined'
-func logError(err error) {
-	if err != nil {
-		if !strings.Contains(err.Error(), "not defined") {
-			log.Printf("Error retrieving gcp metadata: %v", err)
-		}
+// hasProblem checks if the err is not nil or for missing resources
+func hasProblem(err error) bool {
+	if err == nil {
+		return false
 	}
+	if _, undefined := err.(metadata.NotDefinedError); !undefined {
+		return false
+	}
+	return true
 }
