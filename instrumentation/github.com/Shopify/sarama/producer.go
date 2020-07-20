@@ -109,6 +109,9 @@ func (p *asyncProducer) AsyncClose() {
 
 // Close shuts down the producer and waits for any buffered messages to be
 // flushed.
+//
+// Due to the implement of sarama, some messages may lost successes or errors status
+// while closing.
 func (p *asyncProducer) Close() error {
 	p.input <- &sarama.ProducerMessage{
 		Metadata: closeSync,
@@ -142,6 +145,15 @@ func WrapAsyncProducer(serviceName string, saramaConfig *sarama.Config, p sarama
 	}
 	go func() {
 		producerMessageContexts := make(map[interface{}]producerMessageContext)
+		// Clear all spans.
+		// Sarama will consume all the successes and errors by itself while closing,
+		// so our `Successes()` and `Errors()` may get nothing and those remaining spans
+		// cannot be closed.
+		defer func() {
+			for _, mc := range producerMessageContexts {
+				finishProducerSpan(mc.span, 0, 0, nil)
+			}
+		}()
 		defer close(wrapped.successes)
 		defer close(wrapped.errors)
 		for {
