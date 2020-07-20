@@ -16,23 +16,23 @@ package gcp
 
 import (
 	"context"
+	"fmt"
 	"log"
 	"os"
 	"strings"
 
 	"cloud.google.com/go/compute/metadata"
-	"go.uber.org/multierr"
 
 	"go.opentelemetry.io/otel/api/kv"
 	"go.opentelemetry.io/otel/api/standard"
 	"go.opentelemetry.io/otel/sdk/resource"
 )
 
-// GCP is a detector that implements Detect() function
-type GCP struct{}
+// GCE collects resource information of GCE computing instances
+type GCE struct{}
 
 // Detect detects associated resources when running on GCE hosts.
-func (gcp *GCP) Detect(ctx context.Context) (*resource.Resource, error) {
+func (gce *GCE) Detect(ctx context.Context) (*resource.Resource, error) {
 	if !metadata.OnGCE() {
 		return nil, nil
 	}
@@ -42,7 +42,7 @@ func (gcp *GCP) Detect(ctx context.Context) (*resource.Resource, error) {
 		standard.CloudRegionKey.String(""),
 	}
 
-	var aggregatedErr error
+	var errInfo []string
 
 	projectID, err := metadata.ProjectID()
 	logError(err)
@@ -50,7 +50,7 @@ func (gcp *GCP) Detect(ctx context.Context) (*resource.Resource, error) {
 		labels = append(labels, standard.CloudAccountIDKey.String(projectID))
 	}
 	if err != nil {
-		aggregatedErr = multierr.Append(aggregatedErr, err)
+		errInfo = append(errInfo, err.Error())
 	}
 
 	zone, err := metadata.Zone()
@@ -59,7 +59,7 @@ func (gcp *GCP) Detect(ctx context.Context) (*resource.Resource, error) {
 		labels = append(labels, standard.CloudZoneKey.String(zone))
 	}
 	if err != nil {
-		aggregatedErr = multierr.Append(aggregatedErr, err)
+		errInfo = append(errInfo, err.Error())
 	}
 
 	instanceID, err := metadata.InstanceID()
@@ -68,7 +68,7 @@ func (gcp *GCP) Detect(ctx context.Context) (*resource.Resource, error) {
 		labels = append(labels, standard.HostIDKey.String(instanceID))
 	}
 	if err != nil {
-		aggregatedErr = multierr.Append(aggregatedErr, err)
+		errInfo = append(errInfo, err.Error())
 	}
 
 	name, err := metadata.InstanceName()
@@ -77,7 +77,7 @@ func (gcp *GCP) Detect(ctx context.Context) (*resource.Resource, error) {
 		labels = append(labels, standard.HostNameKey.String(name))
 	}
 	if err != nil {
-		aggregatedErr = multierr.Append(aggregatedErr, err)
+		errInfo = append(errInfo, err.Error())
 	}
 
 	hostname, err := os.Hostname()
@@ -86,7 +86,7 @@ func (gcp *GCP) Detect(ctx context.Context) (*resource.Resource, error) {
 		labels = append(labels, standard.HostHostNameKey.String(hostname))
 	}
 	if err != nil {
-		aggregatedErr = multierr.Append(aggregatedErr, err)
+		errInfo = append(errInfo, err.Error())
 	}
 
 	hostType, err := metadata.Get("instance/machine-type")
@@ -95,11 +95,15 @@ func (gcp *GCP) Detect(ctx context.Context) (*resource.Resource, error) {
 		labels = append(labels, standard.HostTypeKey.String(hostType))
 	}
 	if err != nil {
-		aggregatedErr = multierr.Append(aggregatedErr, err)
+		errInfo = append(errInfo, err.Error())
+	}
+
+	var aggregatedErr error
+	if len(errInfo) > 0 {
+		aggregatedErr = fmt.Errorf("detecting GCE resources: %s", errInfo)
 	}
 
 	return resource.New(labels...), aggregatedErr
-
 }
 
 //logError logs error only if the error is present and it is not 'not defined'
