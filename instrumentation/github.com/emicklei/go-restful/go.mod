@@ -9,5 +9,5 @@ require (
 	github.com/json-iterator/go v1.1.10 // indirect
 	github.com/stretchr/testify v1.6.1
 	go.opentelemetry.io/contrib v0.8.0
-	go.opentelemetry.io/otel v0.8.0
+	go.opentelemetry.io/otel v0.9.0
 )
