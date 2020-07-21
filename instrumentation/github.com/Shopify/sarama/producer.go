@@ -16,6 +16,7 @@ package sarama
 
 import (
 	"context"
+	"strconv"
 
 	"github.com/Shopify/sarama"
 	"google.golang.org/grpc/codes"
@@ -254,7 +255,7 @@ func startProducerSpan(cfg config, version sarama.KafkaVersion, msg *sarama.Prod
 
 func finishProducerSpan(span trace.Span, partition int32, offset int64, err error) {
 	span.SetAttributes(
-		standard.MessagingMessageIDKey.Int64(offset),
+		standard.MessagingMessageIDKey.String(strconv.FormatInt(offset, 10)),
 		kafkaPartitionKey.Int32(partition),
 	)
 	if err != nil {

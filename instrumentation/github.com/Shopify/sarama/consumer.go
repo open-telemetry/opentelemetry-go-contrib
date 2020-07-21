@@ -16,6 +16,7 @@ package sarama
 
 import (
 	"context"
+	"strconv"
 
 	"github.com/Shopify/sarama"
 
@@ -60,7 +61,7 @@ func WrapPartitionConsumer(serviceName string, pc sarama.PartitionConsumer, opts
 				standard.MessagingDestinationKindKeyTopic,
 				standard.MessagingDestinationKey.String(msg.Topic),
 				standard.MessagingOperationReceive,
-				standard.MessagingMessageIDKey.Int64(msg.Offset),
+				standard.MessagingMessageIDKey.String(strconv.FormatInt(msg.Offset, 10)),
 				kafkaPartitionKey.Int32(msg.Partition),
 			}
 			opts := []trace.StartOption{
