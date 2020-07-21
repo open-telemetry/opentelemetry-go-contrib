@@ -22,6 +22,7 @@ import (
 	"github.com/Shopify/sarama"
 	"github.com/Shopify/sarama/mocks"
 	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 	"google.golang.org/grpc/codes"
 
 	"go.opentelemetry.io/otel/api/kv"
@@ -116,11 +117,11 @@ func TestWrapSyncProducer(t *testing.T) {
 		{Topic: topic, Key: sarama.StringEncoder("foo4")},
 	}
 	_, _, err = syncProducer.SendMessage(msgList[0])
-	assert.NoError(t, err)
+	require.NoError(t, err)
 	_, _, err = syncProducer.SendMessage(msgList[1])
-	assert.NoError(t, err)
+	require.NoError(t, err)
 	// Send messages
-	assert.NoError(t, syncProducer.SendMessages(msgList[2:]))
+	require.NoError(t, syncProducer.SendMessages(msgList[2:]))
 
 	spanList := mt.EndedSpans()
 	for i, expected := range expectedList {
@@ -170,7 +171,7 @@ func TestWrapAsyncProducer(t *testing.T) {
 		}
 
 		err := ap.Close()
-		assert.NoError(t, err)
+		require.NoError(t, err)
 
 		spanList := mt.EndedSpans()
 
@@ -245,7 +246,7 @@ func TestWrapAsyncProducer(t *testing.T) {
 		}
 
 		err := ap.Close()
-		assert.NoError(t, err)
+		require.NoError(t, err)
 
 		spanList := mt.EndedSpans()
 
@@ -316,7 +317,7 @@ func TestWrapAsyncProducer_Error(t *testing.T) {
 	ap.Input() <- &sarama.ProducerMessage{Topic: topic, Key: sarama.StringEncoder("foo2")}
 
 	err := <-ap.Errors()
-	assert.Error(t, err)
+	require.Error(t, err)
 
 	ap.AsyncClose()
 

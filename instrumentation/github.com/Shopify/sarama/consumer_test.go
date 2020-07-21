@@ -22,6 +22,7 @@ import (
 	"github.com/Shopify/sarama"
 	"github.com/Shopify/sarama/mocks"
 	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 
 	"go.opentelemetry.io/otel/api/global"
 	"go.opentelemetry.io/otel/api/kv"
@@ -51,7 +52,7 @@ func TestWrapPartitionConsumer(t *testing.T) {
 
 	// Create partition consumer
 	partitionConsumer, err := consumer.ConsumePartition(topic, 0, 0)
-	assert.NoError(t, err)
+	require.NoError(t, err)
 
 	partitionConsumer = WrapPartitionConsumer(serviceName, partitionConsumer, WithTracer(mt))
 
@@ -71,7 +72,7 @@ func TestWrapConsumer(t *testing.T) {
 
 	// Create partition consumer
 	partitionConsumer, err := consumer.ConsumePartition(topic, 0, 0)
-	assert.NoError(t, err)
+	require.NoError(t, err)
 
 	consumeAndCheck(t, mt, mockPartitionConsumer, partitionConsumer)
 }
@@ -90,7 +91,7 @@ func consumeAndCheck(t *testing.T, mt *mocktracer.Tracer, mockPartitionConsumer 
 	msgList := make([]*sarama.ConsumerMessage, 2)
 	msgList[0] = <-partitionConsumer.Messages()
 	msgList[1] = <-partitionConsumer.Messages()
-	assert.NoError(t, partitionConsumer.Close())
+	require.NoError(t, partitionConsumer.Close())
 	// Wait for the channel to be closed
 	<-partitionConsumer.Messages()
 
@@ -205,6 +206,6 @@ func createMockPartitionConsumer(b *testing.B) (*mocks.PartitionConsumer, sarama
 
 	// Create partition consumer
 	partitionConsumer, err := consumer.ConsumePartition(topic, 0, 0)
-	assert.NoError(b, err)
+	require.NoError(b, err)
 	return mockPartitionConsumer, partitionConsumer
 }
