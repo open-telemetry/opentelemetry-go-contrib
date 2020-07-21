@@ -31,7 +31,7 @@ import (
 type GCE struct{}
 
 // compile time assertion that GCE implements the resource.Detector interface.
-var _ resource.Detector = (*GCE)(nil) // uncomment it when Detector is published
+var _ resource.Detector = (*GCE)(nil)
 
 // Detect detects associated resources when running on GCE hosts.
 func (gce *GCE) Detect(ctx context.Context) (*resource.Resource, error) {
@@ -99,7 +99,7 @@ func hasProblem(err error) bool {
 	if err == nil {
 		return false
 	}
-	if _, undefined := err.(metadata.NotDefinedError); !undefined {
+	if _, undefined := err.(metadata.NotDefinedError); undefined {
 		return false
 	}
 	return true
