@@ -18,6 +18,7 @@ import (
 	"context"
 	"fmt"
 	"os"
+	"strings"
 
 	"cloud.google.com/go/compute/metadata"
 
@@ -30,7 +31,7 @@ import (
 type GCE struct{}
 
 // compile time assertion that GCE implements the resource.Detector interface.
-//var _ resource.Detector = (*GCE)(nil) // uncomment it when Detector is published
+var _ resource.Detector = (*GCE)(nil) // uncomment it when Detector is published
 
 // Detect detects associated resources when running on GCE hosts.
 func (gce *GCE) Detect(ctx context.Context) (*resource.Resource, error) {
@@ -40,7 +41,6 @@ func (gce *GCE) Detect(ctx context.Context) (*resource.Resource, error) {
 
 	labels := []kv.KeyValue{
 		standard.CloudProviderGCP,
-		standard.CloudRegionKey.String(""),
 	}
 
 	var errInfo []string
@@ -55,6 +55,11 @@ func (gce *GCE) Detect(ctx context.Context) (*resource.Resource, error) {
 		errInfo = append(errInfo, err.Error())
 	} else if zone != "" {
 		labels = append(labels, standard.CloudZoneKey.String(zone))
+
+		splitArr := strings.SplitN(zone, "-", 3)
+		if len(splitArr) == 3 {
+			standard.CloudRegionKey.String(strings.Join(splitArr[0:2], "-"))
+		}
 	}
 
 	if instanceID, err := metadata.InstanceID(); hasProblem(err) {
