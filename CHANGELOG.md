@@ -12,6 +12,17 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 
 - Create a detector that collects resources from GCE machines. (#132)
 
+## [0.9.0] - 2020-07-20
+
+This release upgrades its [go.opentelemetry.io/otel](https://github.com/open-telemetry/opentelemetry-go/releases/tag/v0.9.0) dependency to v0.9.0.
+
+### Fixed
+
+- Bump github.com/emicklei/go-restful/v3 from 3.0.0 to 3.2.0 in /instrumentation/github.com/emicklei/go-restful. (#133)
+- Update dependabot configuration to correctly check all included packages. (#131)
+- Update `RELEASING.md` with correct `tag.sh` command. (#130)
+
+
 ## [0.8.0] - 2020-07-10
 
 This release upgrades its [go.opentelemetry.io/otel](https://github.com/open-telemetry/opentelemetry-go/releases/tag/v0.8.0) dependency to v0.8.0, includes minor fixes, and new instrumentation.
@@ -81,7 +92,8 @@ First official tagged release of `contrib` repository.
 - Prefix support for dogstatsd (#34)
 - Update Go Runtime package to use batch observer (#44)
 
-[Unreleased]: https://github.com/open-telemetry/opentelemetry-go-contrib/compare/v0.8.0...HEAD
+[Unreleased]: https://github.com/open-telemetry/opentelemetry-go-contrib/compare/v0.9.0...HEAD
+[0.9.0]: https://github.com/open-telemetry/opentelemetry-go-contrib/releases/tag/v0.9.0
 [0.8.0]: https://github.com/open-telemetry/opentelemetry-go-contrib/releases/tag/v0.8.0
 [0.7.0]: https://github.com/open-telemetry/opentelemetry-go-contrib/releases/tag/v0.7.0
 [0.6.1]: https://github.com/open-telemetry/opentelemetry-go-contrib/releases/tag/v0.6.1
