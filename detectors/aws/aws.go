@@ -16,6 +16,7 @@ package aws
 
 import (
 	"context"
+	"errors"
 
 	"github.com/aws/aws-sdk-go/aws/ec2metadata"
 	"github.com/aws/aws-sdk-go/aws/session"
@@ -29,7 +30,7 @@ import (
 type AWS struct{}
 
 // compile time assertion that AWS implements the resource.Detector interface.
-//var _ resource.Detector = (*AWS)(nil) // uncomment it when Detector is published
+var _ resource.Detector = (*AWS)(nil)
 
 // Detect detects associated resources when running in AWS environment.
 func (aws *AWS) Detect(ctx context.Context) (*resource.Resource, error) {
@@ -40,7 +41,7 @@ func (aws *AWS) Detect(ctx context.Context) (*resource.Resource, error) {
 
 	client := ec2metadata.New(session)
 	if !client.Available() {
-		return nil, nil
+		return nil, errors.New("unavailable EC2 client")
 	}
 
 	doc, err := client.GetInstanceIdentityDocument()
