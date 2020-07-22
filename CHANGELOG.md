@@ -11,6 +11,7 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 ### Additions
 
 - Add `emicklei/go-restful/v3` trace instrumentation. (#115)
+- Create a detector that collects resources from AWS machines. (#139)
 
 ### Changed
 
