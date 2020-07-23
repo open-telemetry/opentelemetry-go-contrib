@@ -23,7 +23,7 @@ import (
 
 	"github.com/stretchr/testify/require"
 
-	pb "github.com/open-telemetry/opentelemetry-proto/gen/go/collector/dynamicconfig/v1"
+	pb "github.com/open-telemetry/opentelemetry-proto/gen/go/experimental/metricconfigservice"
 
 	metricsdk "go.opentelemetry.io/contrib/sdk/dynamicconfig/sdk/metric"
 	"go.opentelemetry.io/otel/api/global"
@@ -592,12 +592,12 @@ func TestWithDynamicExtension(t *testing.T) {
 	testHandler.Reset()
 
 	// Create new dynamic extension with set of schedules
-	schedule := pb.ConfigResponse_MetricConfig_Schedule{
+	schedule := pb.MetricConfigResponse_Schedule{
 		InclusionPatterns: metricsdk.MatchingPatterns2,
-		Period:            5,
+		PeriodSec:         5,
 	}
 	ext := metricsdk.NewDynamicExtension()
-	ext.SetSchedules([]*pb.ConfigResponse_MetricConfig_Schedule{&schedule})
+	ext.SetSchedules([]*pb.MetricConfigResponse_Schedule{&schedule})
 
 	processor := &correctnessProcessor{
 		t:            t,
@@ -619,12 +619,10 @@ func TestWithDynamicExtension(t *testing.T) {
 		result.Observe(2, kv.String("C", "F"))
 	})
 
-	// Collect from all instruments associated with a CollectionPeriod of 5 seconds. The instrument
+	// Collect from all instruments associated with a period of 5 seconds. The instrument
 	// "One.sum" is, but the instrument "Three.sum" is not.
-	collectPeriods := []pb.ConfigResponse_MetricConfig_Schedule_CollectionPeriod{
-		pb.ConfigResponse_MetricConfig_Schedule_SEC_5,
-	}
-	collected := sdk.Collect(ctx, metricsdk.WithPeriods(collectPeriods))
+	periods := []int32{5}
+	collected := sdk.Collect(ctx, metricsdk.WithPeriods(periods))
 
 	require.Equal(t, collected, len(processor.accumulations))
 

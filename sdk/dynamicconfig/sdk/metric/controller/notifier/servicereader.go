@@ -19,7 +19,7 @@ import (
 	"time"
 
 	"github.com/benbjohnson/clock"
-	pb "github.com/open-telemetry/opentelemetry-proto/gen/go/collector/dynamicconfig/v1"
+	pb "github.com/open-telemetry/opentelemetry-proto/gen/go/experimental/metricconfigservice"
 	resourcepb "github.com/open-telemetry/opentelemetry-proto/gen/go/resource/v1"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/metadata"
@@ -58,7 +58,7 @@ func NewServiceReader(configHost string, resource *resourcepb.Resource) *Service
 
 // Reads from a config service. readConfig() will cause thread to sleep until
 // suggestedWaitTimeSec.
-func (r *ServiceReader) readConfig() (*Config, error) {
+func (r *ServiceReader) readConfig() (*MetricConfig, error) {
 	// suggstedWaitTime is how much longer to wait before reaching the full
 	// ServiceReader.suggestedWaitTimeSec.
 	suggestedWaitTime := r.suggestedWaitTime()
@@ -72,9 +72,9 @@ func (r *ServiceReader) readConfig() (*Config, error) {
 	}
 	defer conn.Close()
 
-	c := pb.NewDynamicConfigClient(conn)
+	c := pb.NewMetricConfigClient(conn)
 
-	request := &pb.ConfigRequest{
+	request := &pb.MetricConfigRequest{
 		LastKnownFingerprint: r.lastKnownFingerprint,
 		Resource:             r.resource,
 	}
@@ -82,7 +82,7 @@ func (r *ServiceReader) readConfig() (*Config, error) {
 	md := metadata.Pairs("timestamp", r.clock.Now().Format(time.StampNano))
 	ctx := metadata.NewOutgoingContext(context.Background(), md)
 
-	response, err := c.GetConfig(ctx, request)
+	response, err := c.GetMetricConfig(ctx, request)
 	if err != nil {
 		return nil, err
 	}
@@ -91,13 +91,7 @@ func (r *ServiceReader) readConfig() (*Config, error) {
 	r.lastTimestamp = r.clock.Now()
 	r.suggestedWaitTimeSec = response.SuggestedWaitTimeSec
 
-	newConfig := Config{
-		pb.ConfigResponse{
-			Fingerprint:  response.Fingerprint,
-			MetricConfig: response.MetricConfig,
-			TraceConfig:  response.TraceConfig,
-		},
-	}
+	newConfig := MetricConfig{*response}
 
 	return &newConfig, nil
 }

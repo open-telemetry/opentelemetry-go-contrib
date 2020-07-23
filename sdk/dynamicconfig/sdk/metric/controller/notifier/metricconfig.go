@@ -18,43 +18,37 @@ import (
 	"bytes"
 	"errors"
 
-	pb "github.com/open-telemetry/opentelemetry-proto/gen/go/collector/dynamicconfig/v1"
+	pb "github.com/open-telemetry/opentelemetry-proto/gen/go/experimental/metricconfigservice"
 )
 
 // A configuration used in the SDK to dynamically change metric collection and tracing.
-type Config struct {
-	pb.ConfigResponse
+type MetricConfig struct {
+	pb.MetricConfigResponse
 }
 
 // This is for convenient development/testing purposes.
 // It produces a Config with a schedule that matches all instruments, with a
 // collection period of `period`
-func GetDefaultConfig(period pb.ConfigResponse_MetricConfig_Schedule_CollectionPeriod, fingerprint []byte) *Config {
-	pattern := pb.ConfigResponse_MetricConfig_Schedule_Pattern{
-		Match: &pb.ConfigResponse_MetricConfig_Schedule_Pattern_StartsWith{StartsWith: "*"},
+func GetDefaultConfig(period int32, fingerprint []byte) *MetricConfig {
+	pattern := pb.MetricConfigResponse_Schedule_Pattern{
+		Match: &pb.MetricConfigResponse_Schedule_Pattern_StartsWith{StartsWith: "*"},
 	}
-	schedule := pb.ConfigResponse_MetricConfig_Schedule{
-		InclusionPatterns: []*pb.ConfigResponse_MetricConfig_Schedule_Pattern{&pattern},
-		Period:            period,
+	schedule := pb.MetricConfigResponse_Schedule{
+		InclusionPatterns: []*pb.MetricConfigResponse_Schedule_Pattern{&pattern},
+		PeriodSec:         period,
 	}
 
-	return &Config{
-		pb.ConfigResponse{
+	return &MetricConfig{
+		pb.MetricConfigResponse{
 			Fingerprint: fingerprint,
-			MetricConfig: &pb.ConfigResponse_MetricConfig{
-				Schedules: []*pb.ConfigResponse_MetricConfig_Schedule{&schedule},
-			},
+			Schedules:   []*pb.MetricConfigResponse_Schedule{&schedule},
 		},
 	}
 }
 
-func (config *Config) ValidateMetricConfig() error {
-	if config.MetricConfig == nil {
-		return errors.New("No MetricConfig")
-	}
-
-	for _, schedule := range config.MetricConfig.Schedules {
-		if schedule.Period < 0 {
+func (config *MetricConfig) ValidateMetricConfig() error {
+	for _, schedule := range config.Schedules {
+		if schedule.PeriodSec < 0 {
 			return errors.New("Periods must be positive")
 		}
 	}
@@ -62,6 +56,6 @@ func (config *Config) ValidateMetricConfig() error {
 	return nil
 }
 
-func (config *Config) Equals(otherConfig *Config) bool {
+func (config *MetricConfig) Equals(otherConfig *MetricConfig) bool {
 	return bytes.Equal(config.Fingerprint, otherConfig.Fingerprint)
 }

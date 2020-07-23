@@ -20,8 +20,6 @@ import (
 	"sync"
 	"time"
 
-	pb "github.com/open-telemetry/opentelemetry-proto/gen/go/collector/dynamicconfig/v1"
-
 	sdk "go.opentelemetry.io/contrib/sdk/dynamicconfig/sdk/metric"
 	notify "go.opentelemetry.io/contrib/sdk/dynamicconfig/sdk/metric/controller/notifier"
 
@@ -52,8 +50,8 @@ type Controller struct {
 	notifier    *notify.Notifier
 	// Used to store and apply metric schedules
 	dynamicExtension *sdk.DynamicExtension
-	// Timestamp all metrics with CollectionPeriod were last exported
-	lastCollected map[pb.ConfigResponse_MetricConfig_Schedule_CollectionPeriod]time.Time
+	// Timestamp all metrics with period were last exported
+	lastCollected map[int32]time.Time
 }
 
 // New constructs a Controller, an implementation of metric.Provider,
@@ -151,20 +149,20 @@ func (c *Controller) Stop() {
 }
 
 // Called by notifier if we Register with one.
-func (c *Controller) OnInitialConfig(config *notify.Config) error {
+func (c *Controller) OnInitialConfig(config *notify.MetricConfig) error {
 	err := config.ValidateMetricConfig()
 	if err != nil {
 		return err
 	}
 
-	c.dynamicExtension.SetSchedules(config.MetricConfig.Schedules)
+	c.dynamicExtension.SetSchedules(config.Schedules)
 	c.period = c.updateFromSchedules()
 
 	return nil
 }
 
 // Called by notifier if it receives an update.
-func (c *Controller) OnUpdatedConfig(config *notify.Config) error {
+func (c *Controller) OnUpdatedConfig(config *notify.MetricConfig) error {
 	c.lock.Lock()
 	defer c.lock.Unlock()
 
@@ -175,7 +173,7 @@ func (c *Controller) OnUpdatedConfig(config *notify.Config) error {
 
 	c.dynamicExtension.Clear()
 
-	c.dynamicExtension.SetSchedules(config.MetricConfig.Schedules)
+	c.dynamicExtension.SetSchedules(config.Schedules)
 	c.period = c.updateFromSchedules()
 
 	// Stop the existing ticker
@@ -194,32 +192,33 @@ func (c *Controller) OnUpdatedConfig(config *notify.Config) error {
 	return nil
 }
 
+// TODO: Return time.Second if periods are not mutually divisible
 // Iterate through the schedules for two purposes:
 //    -Return the minimal non-zero period
-//    -Reset lastCollected, set each CollectionPeriod's last collection
+//    -Reset lastCollected, set each period's last collection
 //    timestamp to now.
 func (c *Controller) updateFromSchedules() time.Duration {
 	now := c.clock.Now()
 
-	var period pb.ConfigResponse_MetricConfig_Schedule_CollectionPeriod = 0
-	c.lastCollected = make(map[pb.ConfigResponse_MetricConfig_Schedule_CollectionPeriod]time.Time)
+	var minPeriod int32 = 0
+	c.lastCollected = make(map[int32]time.Time)
 
 	for _, schedule := range c.dynamicExtension.GetSchedules() {
-		// If CollectionPeriod is 0, we do not do anything with it
-		if schedule.Period == 0 {
+		// If the period is 0, we do not do anything with it
+		if schedule.PeriodSec == 0 {
 			continue
 		}
 
-		if _, ok := c.lastCollected[schedule.Period]; !ok {
-			c.lastCollected[schedule.Period] = now
+		if _, ok := c.lastCollected[schedule.PeriodSec]; !ok {
+			c.lastCollected[schedule.PeriodSec] = now
 		}
 
-		if period == 0 || period > schedule.Period {
-			period = schedule.Period
+		if minPeriod == 0 || minPeriod > schedule.PeriodSec {
+			minPeriod = schedule.PeriodSec
 		}
 	}
 
-	return time.Duration(period) * time.Second
+	return time.Duration(minPeriod) * time.Second
 }
 
 func (c *Controller) run(ch chan bool) {
@@ -251,21 +250,24 @@ func (c *Controller) tick() {
 	if c.notifier == nil {
 		c.accumulator.Collect(ctx)
 	} else {
-		// Export all metrics with the same CollectionPeriod at the same time.
-		overdue := []pb.ConfigResponse_MetricConfig_Schedule_CollectionPeriod{}
+		// Export all metrics with the same period at the same time.
+		overdue := []int32{}
 		now := c.clock.Now()
 
 		for period, lastCollect := range c.lastCollected {
 			expectedExportTime := lastCollect.Add(time.Duration(period) * time.Second)
 
-			// Check if enough time elapsed since metric with a CollectionPeriod were
+			// Check if enough time elapsed since metrics with `period` were
 			// last exported.
 			if expectedExportTime.Before(now) || expectedExportTime.Equal(now) {
 				overdue = append(overdue, period)
 				c.lastCollected[period] = now
 			}
 		}
-		c.accumulator.Collect(ctx, sdk.WithPeriods(overdue))
+
+		if len(overdue) > 0 {
+			c.accumulator.Collect(ctx, sdk.WithPeriods(overdue))
+		}
 	}
 
 	if err := c.processor.FinishCollection(); err != nil {

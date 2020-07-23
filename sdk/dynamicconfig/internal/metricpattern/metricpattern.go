@@ -17,21 +17,21 @@ package metricpattern
 import (
 	"strings"
 
-	pb "github.com/open-telemetry/opentelemetry-proto/gen/go/collector/dynamicconfig/v1"
+	pb "github.com/open-telemetry/opentelemetry-proto/gen/go/experimental/metricconfigservice"
 )
 
-func Matches(name string, patterns []*pb.ConfigResponse_MetricConfig_Schedule_Pattern) bool {
+func Matches(name string, patterns []*pb.MetricConfigResponse_Schedule_Pattern) bool {
 	if len(patterns) == 0 {
 		return false
 	}
 
 	for _, pattern := range patterns {
 		switch m := pattern.Match.(type) {
-		case *pb.ConfigResponse_MetricConfig_Schedule_Pattern_Equals:
+		case *pb.MetricConfigResponse_Schedule_Pattern_Equals:
 			if m.Equals == name {
 				return true
 			}
-		case *pb.ConfigResponse_MetricConfig_Schedule_Pattern_StartsWith:
+		case *pb.MetricConfigResponse_Schedule_Pattern_StartsWith:
 			if m.StartsWith == "*" || strings.HasPrefix(name, m.StartsWith) {
 				return true
 			}

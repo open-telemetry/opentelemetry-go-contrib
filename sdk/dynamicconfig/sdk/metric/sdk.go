@@ -21,8 +21,6 @@ import (
 	"sync"
 	"sync/atomic"
 
-	pb "github.com/open-telemetry/opentelemetry-proto/gen/go/collector/dynamicconfig/v1"
-
 	internal "go.opentelemetry.io/contrib/sdk/dynamicconfig/internal/metric"
 
 	"go.opentelemetry.io/otel/api/global"
@@ -377,9 +375,7 @@ func (m *Accumulator) Collect(ctx context.Context, opts ...CollectOption) int {
 	return checkpointed
 }
 
-func (m *Accumulator) collectSyncInstruments(
-	periods []pb.ConfigResponse_MetricConfig_Schedule_CollectionPeriod,
-) int {
+func (m *Accumulator) collectSyncInstruments(periods []int32) int {
 	checkpointed := 0
 
 	m.current.Range(func(key interface{}, value interface{}) bool {
@@ -438,10 +434,7 @@ func (m *Accumulator) CollectAsync(kv []kv.KeyValue, obs ...metric.Observation) 
 	}
 }
 
-func (m *Accumulator) observeAsyncInstruments(
-	ctx context.Context,
-	periods []pb.ConfigResponse_MetricConfig_Schedule_CollectionPeriod,
-) int {
+func (m *Accumulator) observeAsyncInstruments(ctx context.Context, periods []int32) int {
 	m.asyncLock.Lock()
 	defer m.asyncLock.Unlock()
 
@@ -460,10 +453,7 @@ func (m *Accumulator) observeAsyncInstruments(
 }
 
 // Determines if we should collect metrics from an instrument with `name`.
-func (m *Accumulator) shouldCollect(
-	name string,
-	periods []pb.ConfigResponse_MetricConfig_Schedule_CollectionPeriod,
-) bool {
+func (m *Accumulator) shouldCollect(name string, periods []int32) bool {
 	// If we aren't enabling the dynamic config extension, we collect everything.
 	if m.ext == nil {
 		return true
