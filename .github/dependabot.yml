@@ -49,3 +49,7 @@ updates:
     directory: "/instrumentation/runtime" # Location of package manifests
     schedule:
       interval: "daily"
+  - package-ecosystem: "gomod" # See documentation for possible values
+    directory: "/instrumentation/github.com/Shopify/sarama" # Location of package manifests
+    schedule:
+      interval: "daily"
