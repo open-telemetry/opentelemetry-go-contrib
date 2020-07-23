@@ -21,7 +21,10 @@ import (
 	"sync"
 	"sync/atomic"
 
+	"go.opentelemetry.io/otel/api/kv"
 	oteltrace "go.opentelemetry.io/otel/api/trace"
+
+	"go.opentelemetry.io/contrib/internal/trace/parent"
 )
 
 type Provider struct {
@@ -116,7 +119,7 @@ func (mt *Tracer) Start(ctx context.Context, name string, o ...oteltrace.StartOp
 	var span *Span
 	var sc oteltrace.SpanContext
 
-	parentSpanContext := getSpanContext(ctx, opts.NewRoot)
+	parentSpanContext, _, links := parent.GetSpanContextAndLinks(ctx, opts.NewRoot)
 	parentSpanID := parentSpanContext.SpanID
 
 	if !parentSpanContext.IsValid() {
@@ -136,6 +139,7 @@ func (mt *Tracer) Start(ctx context.Context, name string, o ...oteltrace.StartOp
 		Name:         name,
 		Attributes:   nil,
 		ParentSpanID: parentSpanID,
+		Links:        make(map[oteltrace.SpanContext][]kv.KeyValue),
 	}
 	if len(opts.Attributes) > 0 {
 		span.SetAttributes(opts.Attributes...)
@@ -145,23 +149,12 @@ func (mt *Tracer) Start(ctx context.Context, name string, o ...oteltrace.StartOp
 		mt.OnSpanStarted(span)
 	}
 
+	for _, link := range links {
+		span.Links[link.SpanContext] = link.Attributes
+	}
+	for _, link := range opts.Links {
+		span.Links[link.SpanContext] = link.Attributes
+	}
+
 	return oteltrace.ContextWithSpan(ctx, span), span
-}
-
-func getSpanContext(ctx context.Context, ignoreContext bool) oteltrace.SpanContext {
-	if ignoreContext {
-		return oteltrace.EmptySpanContext()
-	}
-
-	lsctx := oteltrace.SpanFromContext(ctx).SpanContext()
-	if lsctx.IsValid() {
-		return lsctx
-	}
-
-	rsctx := oteltrace.RemoteSpanContextFromContext(ctx)
-	if rsctx.IsValid() {
-		return rsctx
-	}
-
-	return oteltrace.EmptySpanContext()
 }

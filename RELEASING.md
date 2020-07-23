@@ -69,17 +69,22 @@ In nearly all cases, `<new_contrib_tag>` should be the same as
 Now create a `<new_contrib_tag>` on the commit hash of the changes made in pre-release step,
 
 1. Run the tag.sh script.
+
+    ```
+    ./tag.sh <new_contrib_tag> <commit-hash>
+    ```
 2. Push tags upstream. Make sure you push upstream for all the sub-module tags as well.
 
     ```
-    ./tag.sh -t <new_contrib_tag> -c <commit-hash>
     git push upstream <new_contrib_tag>
     git push upstream <submodules-path/new_contrib_tag>
+    ...
     ```
 
 ## Release
-Now create a release for the new `<new_contrib_tag>` on github. tag.sh script generates commit logs since
-last release. Use that to draft the new release.
+Now create a release for the new `<new_contrib_tag>` on github.
+The release body should include all the release notes in the Changelog for this release.
+Additionally, the `tag.sh` script generates commit logs since last release which can be used to suppliment the release notes.
 
 <!-- ## Verify Examples -->
 <!-- After releasing run following script to verify that examples build outside of the otel repo. -->
