@@ -8,9 +8,12 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 
 ## [Unreleased]
 
-### Additions
+### Added
 
 - Create a detector that collects resources from GCE machines. (#132)
+- Add instrumentation for Kafka (github.com/Shopify/sarama). (#134)
+- Add links and status message for mock span. (#134)
+
 
 ## [0.9.0] - 2020-07-20
 
