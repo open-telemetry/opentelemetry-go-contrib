@@ -154,7 +154,7 @@ func consumeAndCheck(t *testing.T, mt *mocktracer.Tracer, mockPartitionConsumer 
 	}
 }
 
-func TestConsumer_ConsumePartitionWithError(t *testing.T) {
+func TestConsumerConsumePartitionWithError(t *testing.T) {
 	// Mock partition consumer controller
 	mockConsumer := mocks.NewConsumer(t, sarama.NewConfig())
 	mockConsumer.ExpectConsumePartition(topic, 0, 0)

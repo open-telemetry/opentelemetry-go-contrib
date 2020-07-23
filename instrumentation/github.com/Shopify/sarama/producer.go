@@ -43,7 +43,7 @@ func (p *syncProducer) SendMessage(msg *sarama.ProducerMessage) (partition int32
 
 // SendMessages calls sarama.SyncProducer.SendMessages and traces the requests.
 func (p *syncProducer) SendMessages(msgs []*sarama.ProducerMessage) error {
-	// although there's only one call made to the SyncProducer, the messages are
+	// Although there's only one call made to the SyncProducer, the messages are
 	// treated individually, so we create a span for each one
 	spans := make([]trace.Span, len(msgs))
 	for i, msg := range msgs {
@@ -74,8 +74,8 @@ func WrapSyncProducer(serviceName string, saramaConfig *sarama.Config, producer 
 type closeType int
 
 const (
-	closeSync  closeType = iota
-	closeAsync closeType = iota
+	closeSync closeType = iota
+	closeAsync
 )
 
 type asyncProducer struct {
@@ -111,7 +111,7 @@ func (p *asyncProducer) AsyncClose() {
 // Close shuts down the producer and waits for any buffered messages to be
 // flushed.
 //
-// Due to the implement of sarama, some messages may lost successes or errors status
+// Due to the implement of sarama, some messages may lose successes or errors status
 // while closing.
 func (p *asyncProducer) Close() error {
 	p.input <- &sarama.ProducerMessage{

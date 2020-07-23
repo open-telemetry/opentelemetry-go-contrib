@@ -21,7 +21,7 @@ import (
 	"github.com/stretchr/testify/assert"
 )
 
-func TestProducerMessageCarrier_Get(t *testing.T) {
+func TestProducerMessageCarrierGet(t *testing.T) {
 	testCases := []struct {
 		name     string
 		carrier  ProducerMessageCarrier
@@ -52,7 +52,7 @@ func TestProducerMessageCarrier_Get(t *testing.T) {
 	}
 }
 
-func TestProducerMessageCarrier_Set(t *testing.T) {
+func TestProducerMessageCarrierSet(t *testing.T) {
 	msg := sarama.ProducerMessage{Headers: []sarama.RecordHeader{
 		{Key: []byte("foo"), Value: []byte("bar")},
 	}}
@@ -70,7 +70,7 @@ func TestProducerMessageCarrier_Set(t *testing.T) {
 	})
 }
 
-func TestConsumerMessageCarrier_Get(t *testing.T) {
+func TestConsumerMessageCarrierGet(t *testing.T) {
 	testCases := []struct {
 		name     string
 		carrier  ConsumerMessageCarrier
@@ -101,7 +101,7 @@ func TestConsumerMessageCarrier_Get(t *testing.T) {
 	}
 }
 
-func TestConsumerMessageCarrier_Set(t *testing.T) {
+func TestConsumerMessageCarrierSet(t *testing.T) {
 	msg := sarama.ConsumerMessage{Headers: []*sarama.RecordHeader{
 		{Key: []byte("foo"), Value: []byte("bar")},
 	}}

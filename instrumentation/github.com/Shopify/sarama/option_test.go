@@ -22,7 +22,7 @@ import (
 	"go.opentelemetry.io/otel/api/global"
 )
 
-func Test_newConfig(t *testing.T) {
+func TestNewConfig(t *testing.T) {
 	testCases := []struct {
 		name        string
 		serviceName string

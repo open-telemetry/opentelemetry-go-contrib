@@ -303,7 +303,7 @@ func TestWrapAsyncProducer(t *testing.T) {
 	})
 }
 
-func TestWrapAsyncProducer_Error(t *testing.T) {
+func TestWrapAsyncProducerError(t *testing.T) {
 	mt := mocktracer.NewTracer("kafka")
 
 	// Set producer with successes config
