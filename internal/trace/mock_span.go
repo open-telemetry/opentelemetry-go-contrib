@@ -28,13 +28,15 @@ import (
 // Span is a mock span used in association with Tracer for
 // testing purpose only.
 type Span struct {
-	sc           oteltrace.SpanContext
-	tracer       *Tracer
-	Name         string
-	Attributes   map[otelkv.Key]otelvalue.Value
-	Kind         oteltrace.SpanKind
-	Status       codes.Code
-	ParentSpanID oteltrace.SpanID
+	sc            oteltrace.SpanContext
+	tracer        *Tracer
+	Name          string
+	Attributes    map[otelkv.Key]otelvalue.Value
+	Kind          oteltrace.SpanKind
+	Status        codes.Code
+	StatusMessage string
+	ParentSpanID  oteltrace.SpanID
+	Links         map[oteltrace.SpanContext][]otelkv.KeyValue
 }
 
 var _ oteltrace.Span = (*Span)(nil)
@@ -57,6 +59,7 @@ func (ms *Span) IsRecording() bool {
 // SetStatus sets the Status member.
 func (ms *Span) SetStatus(status codes.Code, msg string) {
 	ms.Status = status
+	ms.StatusMessage = msg
 }
 
 // SetAttribute adds a single inferred attribute.
