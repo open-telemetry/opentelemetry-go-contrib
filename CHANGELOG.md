@@ -10,8 +10,10 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 
 ### Added
 
+- Create a detector that collects resources from GCE machines. (#132)
 - Add instrumentation for Kafka (github.com/Shopify/sarama). (#134)
 - Add links and status message for mock span. (#134)
+
 
 ## [0.9.0] - 2020-07-20
 
@@ -22,6 +24,7 @@ This release upgrades its [go.opentelemetry.io/otel](https://github.com/open-tel
 - Bump github.com/emicklei/go-restful/v3 from 3.0.0 to 3.2.0 in /instrumentation/github.com/emicklei/go-restful. (#133)
 - Update dependabot configuration to correctly check all included packages. (#131)
 - Update `RELEASING.md` with correct `tag.sh` command. (#130)
+
 
 ## [0.8.0] - 2020-07-10
 
