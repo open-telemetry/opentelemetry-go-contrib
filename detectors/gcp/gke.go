@@ -55,7 +55,7 @@ func (gke *GKE) Detect(ctx context.Context) (*resource.Resource, error) {
 		labels = append(labels, standard.ContainerNameKey.String(containerName))
 	}
 
-	if clusterName, err := metadata.Get("cluster-name"); hasProblem(err) {
+	if clusterName, err := metadata.InstanceAttributeValue("cluster-name"); hasProblem(err) {
 		errInfo = append(errInfo, err.Error())
 	} else if clusterName != "" {
 		labels = append(labels, standard.K8SClusterNameKey.String(clusterName))
