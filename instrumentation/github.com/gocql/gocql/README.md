@@ -8,26 +8,26 @@ To enable tracing in your application:
 package main
 
 import (
-        "context"
-        
-        "github.com/gocql/gocql"
-        otelGocql "go.opentelemetry.io/contrib/github.com/gocql/gocql"
+	"context"
+
+	"github.com/gocql/gocql"
+	otelGocql "go.opentelemetry.io/contrib/github.com/gocql/gocql"
 )
 
 func main() {
-        // Create a cluster
-        host := "localhost"
-        cluster := gocql.NewCluster(host)
+	// Create a cluster
+	host := "localhost"
+	cluster := gocql.NewCluster(host)
 
-        // Create a session with tracing
-        session, err := otelGocql.NewSessionWithTracing(
-                context.Background(),
-                cluster,
-                // Include any options here
-        )
+	// Create a session with tracing
+	session, err := otelGocql.NewSessionWithTracing(
+		context.Background(),
+		cluster,
+		// Include any options here
+	)
 
-        // Begin using the session
-        
+	// Begin using the session
+
 }
 ```
 
@@ -37,8 +37,8 @@ In addition to using the convenience function, you can also manually set observe
 host := "localhost"
 cluster := gocql.NewCluster(host)
 cluster.QueryObserver = otelGocql.NewQueryObserver(nil, &OtelConfig{
-        Tracer: global.Tracer("github.com/gocql/gocql"),
-        InstrumentQuery: true,
+	Tracer:          global.Tracer("github.com/gocql/gocql"),
+	InstrumentQuery: true,
 })
 session, err := cluster.CreateSession()
 ```

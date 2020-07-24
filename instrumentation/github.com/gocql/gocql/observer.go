@@ -16,13 +16,13 @@ package gocql
 
 import (
 	"context"
-	"strings"
+	"log"
+	"net"
 	"time"
 
 	"github.com/gocql/gocql"
 
 	"go.opentelemetry.io/otel/api/kv"
-	"go.opentelemetry.io/otel/api/metric"
 	"go.opentelemetry.io/otel/api/trace"
 )
 
@@ -86,47 +86,52 @@ func (o *OtelQueryObserver) ObserveQuery(ctx context.Context, observedQuery gocq
 		host := observedQuery.Host
 		keyspace := observedQuery.Keyspace
 
-		attributes := append(
-			defaultAttributes(host),
+		attributes := includeKeyValues(host,
+			cassKeyspace(keyspace),
 			cassStatement(observedQuery.Statement),
 			cassRowsReturned(observedQuery.Rows),
 			cassQueryAttempts(observedQuery.Metrics.Attempts),
-			cassQueryAttemptNum(observedQuery.Attempt),
-			cassKeyspace(keyspace),
 		)
 
 		ctx, span := o.cfg.Tracer.Start(
 			ctx,
-			cassQueryName,
+			observedQuery.Statement,
 			trace.WithStartTime(observedQuery.Start),
 			trace.WithAttributes(attributes...),
 		)
 
 		if observedQuery.Err != nil {
 			span.SetAttributes(cassErrMsg(observedQuery.Err.Error()))
-			recordError(ctx, iQueryErrors, keyspace, host)
+			iQueryCount.Add(
+				ctx,
+				1,
+				includeKeyValues(host,
+					cassKeyspace(keyspace),
+					cassErrMsg(observedQuery.Err.Error()),
+				)...,
+			)
+		} else {
+			iQueryCount.Add(
+				ctx,
+				1,
+				includeKeyValues(host,
+					cassKeyspace(keyspace),
+					cassStatement(observedQuery.Statement),
+				)...,
+			)
 		}
 
 		span.End(trace.WithEndTime(observedQuery.End))
 
-		queryLabels := append(
-			defaultMetricLabels(keyspace, host),
-			cassStatement(observedQuery.Statement),
-		)
-		iQueryCount.Add(
-			ctx,
-			1,
-			queryLabels...,
-		)
 		iQueryRows.Record(
 			ctx,
 			int64(observedQuery.Rows),
-			defaultMetricLabels(keyspace, host)...,
+			includeKeyValues(host, cassKeyspace(keyspace))...,
 		)
 		iLatency.Record(
 			ctx,
 			nanoToMilliseconds(observedQuery.Metrics.TotalLatency),
-			defaultMetricLabels(keyspace, host)...,
+			includeKeyValues(host, cassKeyspace(keyspace))...,
 		)
 	}
 
@@ -140,10 +145,11 @@ func (o *OtelBatchObserver) ObserveBatch(ctx context.Context, observedBatch gocq
 	if o.cfg.InstrumentBatch {
 		host := observedBatch.Host
 		keyspace := observedBatch.Keyspace
-		attributes := append(
-			defaultAttributes(host),
-			cassBatchQueries(len(observedBatch.Statements)),
+
+		attributes := includeKeyValues(host,
 			cassKeyspace(keyspace),
+			cassBatchQueryOperation(),
+			cassBatchQueries(len(observedBatch.Statements)),
 		)
 
 		ctx, span := o.cfg.Tracer.Start(
@@ -155,20 +161,28 @@ func (o *OtelBatchObserver) ObserveBatch(ctx context.Context, observedBatch gocq
 
 		if observedBatch.Err != nil {
 			span.SetAttributes(cassErrMsg(observedBatch.Err.Error()))
-			recordError(ctx, iBatchErrors, keyspace, host)
+			iBatchCount.Add(
+				ctx,
+				1,
+				includeKeyValues(host,
+					cassKeyspace(keyspace),
+					cassErrMsg(observedBatch.Err.Error()),
+				)...,
+			)
+		} else {
+			iBatchCount.Add(
+				ctx,
+				1,
+				includeKeyValues(host, cassKeyspace(keyspace))...,
+			)
 		}
 
 		span.End(trace.WithEndTime(observedBatch.End))
 
-		iBatchCount.Add(
-			ctx,
-			1,
-			defaultMetricLabels(observedBatch.Keyspace, observedBatch.Host)...,
-		)
 		iLatency.Record(
 			ctx,
 			nanoToMilliseconds(observedBatch.Metrics.TotalLatency),
-			defaultMetricLabels(keyspace, host)...,
+			includeKeyValues(host, cassKeyspace(keyspace))...,
 		)
 	}
 
@@ -181,8 +195,8 @@ func (o *OtelBatchObserver) ObserveBatch(ctx context.Context, observedBatch gocq
 func (o *OtelConnectObserver) ObserveConnect(observedConnect gocql.ObservedConnect) {
 	if o.cfg.InstrumentConnect {
 		host := observedConnect.Host
-		hostname := getHost(host.HostnameAndPort())
-		attributes := defaultAttributes(observedConnect.Host)
+
+		attributes := includeKeyValues(host, cassConnectOperation())
 
 		_, span := o.cfg.Tracer.Start(
 			o.ctx,
@@ -193,22 +207,20 @@ func (o *OtelConnectObserver) ObserveConnect(observedConnect gocql.ObservedConne
 
 		if observedConnect.Err != nil {
 			span.SetAttributes(cassErrMsg(observedConnect.Err.Error()))
-			iConnectErrors.Add(
+			iConnectionCount.Add(
 				o.ctx,
 				1,
-				cassHost(hostname),
-				cassHostID(host.HostID()),
+				includeKeyValues(host, cassErrMsg(observedConnect.Err.Error()))...,
+			)
+		} else {
+			iConnectionCount.Add(
+				o.ctx,
+				1,
+				includeKeyValues(host)...,
 			)
 		}
 
 		span.End(trace.WithEndTime(observedConnect.End))
-
-		iConnectionCount.Add(
-			o.ctx,
-			1,
-			cassHost(hostname),
-			cassHostID(host.HostID()),
-		)
 	}
 
 	if o.observer != nil {
@@ -218,46 +230,39 @@ func (o *OtelConnectObserver) ObserveConnect(observedConnect gocql.ObservedConne
 
 // ------------------------------------------ Private Functions
 
-// getHost returns the hostname as a string.
-// gocql.HostInfo.HostnameAndPort() returns a string
-// formatted like host:port. This function returns the host.
-func getHost(hostPort string) string {
-	idx := strings.Index(hostPort, ":")
-	host := hostPort[0:idx]
-	return host
-}
-
-// defaultAttributes creates an array of KeyValue pairs that are
-// attributes for all gocql spans.
-func defaultAttributes(host *gocql.HostInfo) []kv.KeyValue {
-	hostnameAndPort := host.HostnameAndPort()
-	return []kv.KeyValue{
+// includeKeyValues is a convenience function for adding multiple attributes/labels to a
+// span or instrument. By default, this function includes connection-level attributes,
+// (as per the semantic conventions) which have been made standard for all spans and metrics
+// generated by this instrumentation integration.
+func includeKeyValues(host *gocql.HostInfo, values ...kv.KeyValue) []kv.KeyValue {
+	connectionLevelAttributes := []kv.KeyValue{
+		cassDBSystem(),
+		hostOrIP(host.HostnameAndPort()),
+		cassPeerPort(host.Port()),
 		cassVersion(host.Version().String()),
-		cassHost(getHost(hostnameAndPort)),
-		cassPort(host.Port()),
-		cassHostState(host.State().String()),
 		cassHostID(host.HostID()),
+		cassHostState(host.State().String()),
 	}
+	return append(connectionLevelAttributes, values...)
 }
 
-// defaultMetricLabels returns an array of the default labels added to metrics.
-func defaultMetricLabels(keyspace string, host *gocql.HostInfo) []kv.KeyValue {
-	return []kv.KeyValue{
-		cassHostID(host.HostID()),
-		cassKeyspace(keyspace),
+// hostOrIP returns a KeyValue pair for the hostname
+// retrieved from gocql.HostInfo.HostnameAndPort(). If the hostname
+// is returned as a resolved IP address (as is the case for localhost),
+// then the KeyValue will have the key net.peer.ip.
+// If the hostname is the proper DNS name, then the key will be net.peer.name.
+func hostOrIP(hostnameAndPort string) kv.KeyValue {
+	hostname, _, err := net.SplitHostPort(hostnameAndPort)
+	if err != nil {
+		log.Printf("failed to parse hostname from port, %v", err)
 	}
+	if parse := net.ParseIP(hostname); parse != nil {
+		return cassPeerIP(parse.String())
+	}
+	return cassPeerName(hostname)
 }
 
 // nanoToMilliseconds converts nanoseconds to milliseconds.
 func nanoToMilliseconds(ns int64) int64 {
 	return ns / int64(time.Millisecond)
-}
-
-func recordError(ctx context.Context, counter metric.Int64Counter, keyspace string, host *gocql.HostInfo) {
-	labels := append(defaultMetricLabels(keyspace, host), cassHostState(host.State().String()))
-	counter.Add(
-		ctx,
-		1,
-		labels...,
-	)
 }

@@ -34,6 +34,7 @@ import (
 	"os"
 	"os/signal"
 	"sync"
+	"time"
 
 	"github.com/gocql/gocql"
 
@@ -161,10 +162,44 @@ func initTracer() {
 	global.SetTraceProvider(provider)
 }
 
+func initDb() {
+	cluster := gocql.NewCluster("127.0.0.1")
+	cluster.Keyspace = "system"
+	cluster.Consistency = gocql.LocalQuorum
+	cluster.Timeout = time.Second * 2
+	session, err := cluster.CreateSession()
+	if err != nil {
+		log.Fatal(err)
+	}
+	stmt := fmt.Sprintf(
+		"create keyspace if not exists %s with replication = { 'class' : 'SimpleStrategy', 'replication_factor' : 1 }",
+		keyspace,
+	)
+	if err := session.Query(stmt).Exec(); err != nil {
+		log.Fatal(err)
+	}
+
+	cluster.Keyspace = keyspace
+	session, err = cluster.CreateSession()
+	if err != nil {
+		log.Fatal(err)
+	}
+
+	stmt = "create table if not exists book(id UUID, title text, author_first_name text, author_last_name text, PRIMARY KEY(id))"
+	if err = session.Query(stmt).Exec(); err != nil {
+		log.Fatal(err)
+	}
+
+	if err := session.Query("create index if not exists on book(author_last_name)").Exec(); err != nil {
+		log.Fatal(err)
+	}
+}
+
 func getCluster() *gocql.ClusterConfig {
 	cluster := gocql.NewCluster("127.0.0.1")
 	cluster.Keyspace = keyspace
 	cluster.Consistency = gocql.LocalQuorum
 	cluster.ProtoVersion = 3
+	cluster.Timeout = 2 * time.Second
 	return cluster
 }

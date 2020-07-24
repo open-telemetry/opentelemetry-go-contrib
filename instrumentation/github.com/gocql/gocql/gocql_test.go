@@ -23,6 +23,10 @@ import (
 	"testing"
 	"time"
 
+	"github.com/stretchr/testify/require"
+
+	"go.opentelemetry.io/otel/api/standard"
+
 	"go.opentelemetry.io/otel/sdk/metric/controller/push"
 	"go.opentelemetry.io/otel/sdk/metric/selector/simple"
 
@@ -107,17 +111,16 @@ func TestQuery(t *testing.T) {
 		WithTracer(tracer),
 		WithConnectInstrumentation(false),
 	)
-	assert.NoError(t, err)
+	require.NoError(t, err)
 	defer session.Close()
+	require.NoError(t, session.AwaitSchemaAgreement(ctx))
 
 	id := gocql.TimeUUID()
 	title := "example-title"
 	insertStmt := fmt.Sprintf("insert into %s (id, title) values (?, ?)", tableName)
 	query := session.Query(insertStmt, id, title).WithContext(ctx)
 	assert.NotNil(t, query, "expected query to not be nil")
-	if err := query.Exec(); err != nil {
-		t.Fatal(err.Error())
-	}
+	require.NoError(t, query.Exec())
 
 	parentSpan.End()
 
@@ -128,53 +131,65 @@ func TestQuery(t *testing.T) {
 	// total spans:
 	// 1 span for the Query
 	// 1 span created in test
-	assert.Equal(t, 2, len(spans))
+	require.Len(t, spans, 2)
 
 	// Verify attributes are correctly added to the spans. Omit the one local span
 	for _, span := range spans[0 : len(spans)-1] {
 
 		switch span.Name {
-		case cassQueryName:
-			assert.Equal(t, insertStmt, span.Attributes[cassStatementKey].AsString())
+		case insertStmt:
+			assert.Equal(t, insertStmt, span.Attributes[standard.DBStatementKey].AsString())
 			assert.Equal(t, parentSpan.SpanContext().SpanID.String(), span.ParentSpanID.String())
 		default:
 			t.Fatalf("unexpected span name %s", span.Name)
 		}
-		assert.NotNil(t, span.Attributes[cassVersionKey].AsString())
-		assert.Equal(t, cluster.Hosts[0], span.Attributes[cassHostKey].AsString())
-		assert.Equal(t, int32(cluster.Port), span.Attributes[cassPortKey].AsInt32())
-		assert.Equal(t, "up", strings.ToLower(span.Attributes[cassHostStateKey].AsString()))
+		assertConnectionLevelAttributes(t, span)
 	}
 
 	// Check metrics
 	controller.Stop()
 
-	assert.Equal(t, 3, len(exporter.records))
+	require.Len(t, exporter.records, 3)
 	expected := []testRecord{
 		{
-			Name:      "cassandra.queries",
+			Name:      "db.cassandra.queries",
 			MeterName: "github.com/gocql/gocql",
 			Labels: []kv.KeyValue{
+				cassDBSystem(),
+				cassPeerIP("127.0.0.1"),
+				cassPeerPort(9042),
+				cassVersion("3"),
 				cassHostID("test-id"),
+				cassHostState("UP"),
 				cassKeyspace(keyspace),
 				cassStatement(insertStmt),
 			},
 			Number: 1,
 		},
 		{
-			Name:      "cassandra.rows",
+			Name:      "db.cassandra.rows",
 			MeterName: "github.com/gocql/gocql",
 			Labels: []kv.KeyValue{
+				cassDBSystem(),
+				cassPeerIP("127.0.0.1"),
+				cassPeerPort(9042),
+				cassVersion("3"),
 				cassHostID("test-id"),
+				cassHostState("UP"),
 				cassKeyspace(keyspace),
 			},
 			Number: 0,
 		},
 		{
-			Name:      "cassandra.latency",
+			Name:      "db.cassandra.latency",
 			MeterName: "github.com/gocql/gocql",
 			Labels: []kv.KeyValue{
+				cassDBSystem(),
+				cassPeerIP("127.0.0.1"),
+				cassPeerPort(9042),
+				cassVersion("3"),
 				cassHostID("test-id"),
+				cassHostState("UP"),
 				cassKeyspace(keyspace),
 			},
 		},
@@ -184,13 +199,13 @@ func TestQuery(t *testing.T) {
 		name := record.Descriptor().Name()
 		agg := record.Aggregation()
 		switch name {
-		case "cassandra.queries":
+		case "db.cassandra.queries":
 			recordEqual(t, expected[0], record)
 			numberEqual(t, expected[0].Number, agg)
-		case "cassandra.rows":
+		case "db.cassandra.rows":
 			recordEqual(t, expected[1], record)
 			numberEqual(t, expected[1].Number, agg)
-		case "cassandra.latency":
+		case "db.cassandra.latency":
 			recordEqual(t, expected[2], record)
 			// The latency will vary, so just check that it exists
 			if _, ok := agg.(aggregation.MinMaxSumCount); !ok {
@@ -217,8 +232,9 @@ func TestBatch(t *testing.T) {
 		WithTracer(tracer),
 		WithConnectInstrumentation(false),
 	)
-	assert.NoError(t, err)
+	require.NoError(t, err)
 	defer session.Close()
+	require.NoError(t, session.AwaitSchemaAgreement(ctx))
 
 	batch := session.NewBatch(gocql.LoggedBatch).WithContext(ctx)
 	for i := 0; i < 10; i++ {
@@ -228,8 +244,7 @@ func TestBatch(t *testing.T) {
 		batch.Query(stmt, id, title)
 	}
 
-	err = session.ExecuteBatch(batch)
-	assert.NoError(t, err)
+	require.NoError(t, session.ExecuteBatch(batch))
 
 	parentSpan.End()
 
@@ -237,36 +252,45 @@ func TestBatch(t *testing.T) {
 	// total spans:
 	// 1 span for the query
 	// 1 span for the local span
-	assert.Equal(t, 2, len(spans))
-	span := spans[0]
-
-	assert.Equal(t, cassBatchQueryName, span.Name)
-	assert.Equal(t, parentSpan.SpanContext().SpanID, span.ParentSpanID)
-	assert.NotNil(t, span.Attributes[cassVersionKey].AsString())
-	assert.Equal(t, cluster.Hosts[0], span.Attributes[cassHostKey].AsString())
-	assert.Equal(t, int32(cluster.Port), span.Attributes[cassPortKey].AsInt32())
-	assert.Equal(t, "up", strings.ToLower(span.Attributes[cassHostStateKey].AsString()))
-	assert.Equal(t, int32(10), span.Attributes[cassBatchQueriesKey].AsInt32())
+	if assert.Len(t, spans, 2) {
+		span := spans[0]
+		assert.Equal(t, cassBatchQueryName, span.Name)
+		assert.Equal(t, parentSpan.SpanContext().SpanID, span.ParentSpanID)
+		assert.Equal(t, "db.cassandra.batch.query",
+			span.Attributes[standard.DBOperationKey].AsString(),
+		)
+		assertConnectionLevelAttributes(t, span)
+	}
 
 	controller.Stop()
 
 	// Check metrics
-	assert.Equal(t, 2, len(exporter.records))
+	require.Len(t, exporter.records, 2)
 	expected := []testRecord{
 		{
-			Name:      "cassandra.batch.queries",
+			Name:      "db.cassandra.batch.queries",
 			MeterName: "github.com/gocql/gocql",
 			Labels: []kv.KeyValue{
+				cassDBSystem(),
+				cassPeerIP("127.0.0.1"),
+				cassPeerPort(9042),
+				cassVersion("3"),
 				cassHostID("test-id"),
+				cassHostState("UP"),
 				cassKeyspace(keyspace),
 			},
 			Number: 1,
 		},
 		{
-			Name:      "cassandra.latency",
+			Name:      "db.cassandra.latency",
 			MeterName: "github.com/gocql/gocql",
 			Labels: []kv.KeyValue{
+				cassDBSystem(),
+				cassPeerIP("127.0.0.1"),
+				cassPeerPort(9042),
+				cassVersion("3"),
 				cassHostID("test-id"),
+				cassHostState("UP"),
 				cassKeyspace(keyspace),
 			},
 		},
@@ -276,10 +300,10 @@ func TestBatch(t *testing.T) {
 		name := record.Descriptor().Name()
 		agg := record.Aggregation()
 		switch name {
-		case "cassandra.batch.queries":
+		case "db.cassandra.batch.queries":
 			recordEqual(t, expected[0], record)
 			numberEqual(t, expected[0].Number, agg)
-		case "cassandra.latency":
+		case "db.cassandra.latency":
 			recordEqual(t, expected[1], record)
 			if _, ok := agg.(aggregation.MinMaxSumCount); !ok {
 				t.Fatal("missing aggregation in latency record")
@@ -297,15 +321,17 @@ func TestConnection(t *testing.T) {
 	cluster := getCluster()
 	tracer := mocktracer.NewTracer("gocql-test")
 	connectObserver := &mockConnectObserver{0}
+	ctx := context.Background()
 
 	session, err := NewSessionWithTracing(
-		context.Background(),
+		ctx,
 		cluster,
 		WithTracer(tracer),
 		WithConnectObserver(connectObserver),
 	)
-	assert.NoError(t, err)
+	require.NoError(t, err)
 	defer session.Close()
+	require.NoError(t, session.AwaitSchemaAgreement(ctx))
 
 	spans := tracer.EndedSpans()
 
@@ -316,20 +342,22 @@ func TestConnection(t *testing.T) {
 	// Verify the span attributes
 	for _, span := range spans {
 		assert.Equal(t, cassConnectName, span.Name)
-		assert.NotNil(t, span.Attributes[cassVersionKey].AsString())
-		assert.Equal(t, cluster.Hosts[0], span.Attributes[cassHostKey].AsString())
-		assert.Equal(t, int32(cluster.Port), span.Attributes[cassPortKey].AsInt32())
-		assert.Equal(t, "up", strings.ToLower(span.Attributes[cassHostStateKey].AsString()))
+		assert.Equal(t, "db.cassandra.connect", span.Attributes[standard.DBOperationKey].AsString())
+		assertConnectionLevelAttributes(t, span)
 	}
 
 	// Verify the metrics
 	expected := []testRecord{
 		{
-			Name:      "cassandra.connections",
+			Name:      "db.cassandra.connections",
 			MeterName: "github.com/gocql/gocql",
 			Labels: []kv.KeyValue{
-				cassHost("127.0.0.1"),
+				cassDBSystem(),
+				cassPeerIP("127.0.0.1"),
+				cassPeerPort(9042),
+				cassVersion("3"),
 				cassHostID("test-id"),
+				cassHostState("UP"),
 			},
 		},
 	}
@@ -337,7 +365,7 @@ func TestConnection(t *testing.T) {
 	for _, record := range exporter.records {
 		name := record.Descriptor().Name()
 		switch name {
-		case "cassandra.connections":
+		case "db.cassandra.connections":
 			recordEqual(t, expected[0], record)
 		default:
 			t.Fatalf("wrong metric %s", name)
@@ -345,15 +373,31 @@ func TestConnection(t *testing.T) {
 	}
 }
 
-func TestGetHost(t *testing.T) {
-	hostAndPort := "localhost:9042"
-	assert.Equal(t, "localhost", getHost(hostAndPort))
+func TestHostOrIP(t *testing.T) {
+	hostAndPort := "127.0.0.1:9042"
+	attribute := hostOrIP(hostAndPort)
+	assert.Equal(t, standard.NetPeerIPKey, attribute.Key)
+	assert.Equal(t, "127.0.0.1", attribute.Value.AsString())
 
-	hostAndPort = "127.0.0.1:9042"
-	assert.Equal(t, "127.0.0.1", getHost(hostAndPort))
+	hostAndPort = "exampleHost:9042"
+	attribute = hostOrIP(hostAndPort)
+	assert.Equal(t, standard.NetPeerNameKey, attribute.Key)
+	assert.Equal(t, "exampleHost", attribute.Value.AsString())
 
-	hostAndPort = ":9042"
-	assert.Equal(t, "", getHost(hostAndPort))
+	hostAndPort = "invalid-host-and-port-string"
+	attribute = hostOrIP(hostAndPort)
+	require.Empty(t, attribute.Value.AsString())
+}
+
+func assertConnectionLevelAttributes(t *testing.T, span *mocktracer.Span) {
+	assert.Equal(t, span.Attributes[standard.DBSystemKey].AsString(),
+		standard.DBSystemCassandra.Value.AsString(),
+	)
+	assert.Equal(t, "127.0.0.1", span.Attributes[standard.NetPeerIPKey].AsString())
+	assert.Equal(t, int32(9042), span.Attributes[standard.NetPeerPortKey].AsInt32())
+	assert.Contains(t, span.Attributes, cassVersionKey)
+	assert.Contains(t, span.Attributes, cassHostIDKey)
+	assert.Equal(t, "up", strings.ToLower(span.Attributes[cassHostStateKey].AsString()))
 }
 
 // getCluster creates a gocql ClusterConfig with the appropriate
@@ -379,12 +423,13 @@ func recordEqual(t *testing.T, expected testRecord, actual export.Record) {
 	descriptor := actual.Descriptor()
 	assert.Equal(t, expected.Name, descriptor.Name())
 	assert.Equal(t, expected.MeterName, descriptor.InstrumentationName())
+	require.Len(t, actual.Labels().ToSlice(), len(expected.Labels))
 	for _, label := range expected.Labels {
 		actualValue, ok := actual.Labels().Value(label.Key)
 		assert.True(t, ok)
 		assert.NotNil(t, actualValue)
 		// Can't test equality of host id
-		if label.Key != cassHostIDKey {
+		if label.Key != cassHostIDKey && label.Key != cassVersionKey {
 			assert.Equal(t, label.Value, actualValue)
 		} else {
 			assert.NotEmpty(t, actualValue)
@@ -442,6 +487,7 @@ func beforeAll() {
 	}
 
 	cluster.Keyspace = keyspace
+	cluster.Timeout = time.Second * 2
 	session, err = cluster.CreateSession()
 	if err != nil {
 		log.Fatal(err)
@@ -460,6 +506,7 @@ func afterEach() {
 	cluster := gocql.NewCluster("localhost")
 	cluster.Consistency = gocql.LocalQuorum
 	cluster.Keyspace = keyspace
+	cluster.Timeout = time.Second * 2
 	session, err := cluster.CreateSession()
 	if err != nil {
 		log.Fatalf("failed to connect to database during afterEach, %v", err)

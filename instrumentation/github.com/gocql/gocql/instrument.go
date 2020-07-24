@@ -27,27 +27,15 @@ var (
 	// iQueryCount is the number of queries executed.
 	iQueryCount metric.Int64Counter
 
-	// iQueryErrors is the number of errors encountered when
-	// executing queries.
-	iQueryErrors metric.Int64Counter
-
 	// iQueryRows is the number of rows returned by a query.
 	iQueryRows metric.Int64ValueRecorder
 
 	// iBatchCount is the number of batch queries executed.
 	iBatchCount metric.Int64Counter
 
-	// iBatchErrors is the number of errors encountered when
-	// executing batch queries.
-	iBatchErrors metric.Int64Counter
-
 	// iConnectionCount is the number of connections made
 	// with the traced session.
 	iConnectionCount metric.Int64Counter
-
-	// iConnectErrors is the number of errors encountered
-	// when making connections with the current traced session.
-	iConnectErrors metric.Int64Counter
 
 	// iLatency is the sum of attempt latencies.
 	iLatency metric.Int64ValueRecorder
@@ -56,53 +44,44 @@ var (
 // InstrumentWithProvider will recreate instruments using a meter
 // from the given provider p.
 func InstrumentWithProvider(p metric.Provider) {
-	defer func() {
-		if recovered := recover(); recovered != nil {
-			log.Print("failed to create meter. metrics are not being recorded")
-		}
-	}()
-	meter := metric.Must(p.Meter("github.com/gocql/gocql"))
+	meter := p.Meter("github.com/gocql/gocql")
+	var err error
 
-	iQueryCount = meter.NewInt64Counter(
-		"cassandra.queries",
-		metric.WithDescription("Number of queries executed"),
-	)
+	if iQueryCount, err = meter.NewInt64Counter(
+		"db.cassandra.queries",
+		metric.WithDescription("Number queries executed"),
+	); err != nil {
+		log.Printf("failed to create iQueryCount instrument, %v", err)
+	}
 
-	iQueryErrors = meter.NewInt64Counter(
-		"cassandra.query.errors",
-		metric.WithDescription("Number of errors encountered when executing queries"),
-	)
-
-	iQueryRows = meter.NewInt64ValueRecorder(
-		"cassandra.rows",
+	if iQueryRows, err = meter.NewInt64ValueRecorder(
+		"db.cassandra.rows",
 		metric.WithDescription("Number of rows returned from query"),
-	)
+	); err != nil {
+		log.Printf("failed to create iQueryRows instrument, %v", err)
+	}
 
-	iBatchCount = meter.NewInt64Counter(
-		"cassandra.batch.queries",
+	if iBatchCount, err = meter.NewInt64Counter(
+		"db.cassandra.batch.queries",
 		metric.WithDescription("Number of batch queries executed"),
-	)
+	); err != nil {
+		log.Printf("failed to create iBatchCount instrument, %v", err)
+	}
 
-	iBatchErrors = meter.NewInt64Counter(
-		"cassandra.batch.errors",
-		metric.WithDescription("Number of errors encountered when executing batch queries"),
-	)
-
-	iConnectionCount = meter.NewInt64Counter(
-		"cassandra.connections",
+	if iConnectionCount, err = meter.NewInt64Counter(
+		"db.cassandra.connections",
 		metric.WithDescription("Number of connections created"),
-	)
+	); err != nil {
+		log.Printf("failed to create iConnectionCount instrument, %v", err)
+	}
 
-	iConnectErrors = meter.NewInt64Counter(
-		"cassandra.connect.errors",
-		metric.WithDescription("Number of errors encountered when creating connections"),
-	)
-
-	iLatency = meter.NewInt64ValueRecorder(
-		"cassandra.latency",
+	if iLatency, err = meter.NewInt64ValueRecorder(
+		"db.cassandra.latency",
 		metric.WithDescription("Sum of latency to host in milliseconds"),
 		metric.WithUnit(unit.Milliseconds),
-	)
+	); err != nil {
+		log.Printf("failed to create iLatency instrument, %v", err)
+	}
 }
 
 func init() {
