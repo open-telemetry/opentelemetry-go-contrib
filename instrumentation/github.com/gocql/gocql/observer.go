@@ -26,63 +26,36 @@ import (
 	"go.opentelemetry.io/otel/api/trace"
 )
 
-// OtelQueryObserver implements the gocql.QueryObserver interface
+// OTelQueryObserver implements the gocql.QueryObserver interface
 // to provide instrumentation to gocql queries.
-type OtelQueryObserver struct {
+type OTelQueryObserver struct {
+	enabled  bool
 	observer gocql.QueryObserver
-	cfg      *OtelConfig
+	tracer   trace.Tracer
 }
 
-// OtelBatchObserver implements the gocql.BatchObserver interface
+// OTelBatchObserver implements the gocql.BatchObserver interface
 // to provide instrumentation to gocql batch queries.
-type OtelBatchObserver struct {
+type OTelBatchObserver struct {
+	enabled  bool
 	observer gocql.BatchObserver
-	cfg      *OtelConfig
+	tracer   trace.Tracer
 }
 
-// OtelConnectObserver implements the gocql.ConnectObserver interface
+// OTelConnectObserver implements the gocql.ConnectObserver interface
 // to provide instrumentation to connection attempts made by the session.
-type OtelConnectObserver struct {
-	observer gocql.ConnectObserver
-	cfg      *OtelConfig
+type OTelConnectObserver struct {
 	ctx      context.Context
-}
-
-// ----------------------------------------- Constructor Functions
-
-// NewQueryObserver creates a QueryObserver that provides OpenTelemetry
-// instrumentation for queries.
-func NewQueryObserver(observer gocql.QueryObserver, cfg *OtelConfig) gocql.QueryObserver {
-	return &OtelQueryObserver{
-		observer,
-		cfg,
-	}
-}
-
-// NewBatchObserver creates a BatchObserver that provides OpenTelemetry instrumentation for
-// batch queries.
-func NewBatchObserver(observer gocql.BatchObserver, cfg *OtelConfig) gocql.BatchObserver {
-	return &OtelBatchObserver{
-		observer,
-		cfg,
-	}
-}
-
-// NewConnectObserver creates a ConnectObserver that provides OpenTelemetry instrumentation for
-// connection attempts.
-func NewConnectObserver(ctx context.Context, observer gocql.ConnectObserver, cfg *OtelConfig) gocql.ConnectObserver {
-	return &OtelConnectObserver{
-		observer,
-		cfg,
-		ctx,
-	}
+	enabled  bool
+	observer gocql.ConnectObserver
+	tracer   trace.Tracer
 }
 
 // ------------------------------------------ Observer Functions
 
 // ObserveQuery is called once per query, and provides instrumentation for it.
-func (o *OtelQueryObserver) ObserveQuery(ctx context.Context, observedQuery gocql.ObservedQuery) {
-	if o.cfg.InstrumentQuery {
+func (o *OTelQueryObserver) ObserveQuery(ctx context.Context, observedQuery gocql.ObservedQuery) {
+	if o.enabled {
 		host := observedQuery.Host
 		keyspace := observedQuery.Keyspace
 
@@ -93,7 +66,7 @@ func (o *OtelQueryObserver) ObserveQuery(ctx context.Context, observedQuery gocq
 			cassQueryAttempts(observedQuery.Metrics.Attempts),
 		)
 
-		ctx, span := o.cfg.Tracer.Start(
+		ctx, span := o.tracer.Start(
 			ctx,
 			observedQuery.Statement,
 			trace.WithStartTime(observedQuery.Start),
@@ -107,6 +80,7 @@ func (o *OtelQueryObserver) ObserveQuery(ctx context.Context, observedQuery gocq
 				1,
 				includeKeyValues(host,
 					cassKeyspace(keyspace),
+					cassStatement(observedQuery.Statement),
 					cassErrMsg(observedQuery.Err.Error()),
 				)...,
 			)
@@ -141,8 +115,8 @@ func (o *OtelQueryObserver) ObserveQuery(ctx context.Context, observedQuery gocq
 }
 
 // ObserveBatch is called once per batch query, and provides instrumentation for it.
-func (o *OtelBatchObserver) ObserveBatch(ctx context.Context, observedBatch gocql.ObservedBatch) {
-	if o.cfg.InstrumentBatch {
+func (o *OTelBatchObserver) ObserveBatch(ctx context.Context, observedBatch gocql.ObservedBatch) {
+	if o.enabled {
 		host := observedBatch.Host
 		keyspace := observedBatch.Keyspace
 
@@ -152,7 +126,7 @@ func (o *OtelBatchObserver) ObserveBatch(ctx context.Context, observedBatch gocq
 			cassBatchQueries(len(observedBatch.Statements)),
 		)
 
-		ctx, span := o.cfg.Tracer.Start(
+		ctx, span := o.tracer.Start(
 			ctx,
 			cassBatchQueryName,
 			trace.WithStartTime(observedBatch.Start),
@@ -192,13 +166,13 @@ func (o *OtelBatchObserver) ObserveBatch(ctx context.Context, observedBatch gocq
 }
 
 // ObserveConnect is called once per connection attempt, and provides instrumentation for it.
-func (o *OtelConnectObserver) ObserveConnect(observedConnect gocql.ObservedConnect) {
-	if o.cfg.InstrumentConnect {
+func (o *OTelConnectObserver) ObserveConnect(observedConnect gocql.ObservedConnect) {
+	if o.enabled {
 		host := observedConnect.Host
 
 		attributes := includeKeyValues(host, cassConnectOperation())
 
-		_, span := o.cfg.Tracer.Start(
+		_, span := o.tracer.Start(
 			o.ctx,
 			cassConnectName,
 			trace.WithStartTime(observedConnect.Start),

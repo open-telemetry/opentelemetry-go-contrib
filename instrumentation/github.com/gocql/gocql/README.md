@@ -31,18 +31,6 @@ func main() {
 }
 ```
 
-In addition to using the convenience function, you can also manually set observers:
-
-```go
-host := "localhost"
-cluster := gocql.NewCluster(host)
-cluster.QueryObserver = otelGocql.NewQueryObserver(nil, &OtelConfig{
-	Tracer:          global.Tracer("github.com/gocql/gocql"),
-	InstrumentQuery: true,
-})
-session, err := cluster.CreateSession()
-```
-
 You can customize instrumentation by passing any of the following options to `NewSessionWithTracing`:
 
 | Function | Description |

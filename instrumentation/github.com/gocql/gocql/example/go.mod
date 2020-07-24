@@ -13,5 +13,4 @@ require (
 	google.golang.org/protobuf v1.25.0 // indirect
 )
 
-// TODO: remove
 replace go.opentelemetry.io/contrib/github.com/gocql/gocql => ../

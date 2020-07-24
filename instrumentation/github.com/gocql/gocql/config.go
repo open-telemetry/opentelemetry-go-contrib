@@ -24,23 +24,30 @@ import (
 // TracedSessionConfig provides configuration for sessions
 // created with NewSessionWithTracing.
 type TracedSessionConfig struct {
-	otelConfig      *OtelConfig
-	queryObserver   gocql.QueryObserver
-	batchObserver   gocql.BatchObserver
-	connectObserver gocql.ConnectObserver
+	tracer            trace.Tracer
+	instrumentQuery   bool
+	instrumentBatch   bool
+	instrumentConnect bool
+	queryObserver     gocql.QueryObserver
+	batchObserver     gocql.BatchObserver
+	connectObserver   gocql.ConnectObserver
 }
 
-// OtelConfig provides OpenTelemetry configuration.
-type OtelConfig struct {
-	Tracer            trace.Tracer
-	InstrumentQuery   bool
-	InstrumentBatch   bool
-	InstrumentConnect bool
+// TracedSessionOption applies a configuration option to
+// the given TracedSessionConfig.
+type TracedSessionOption interface {
+	Apply(*TracedSessionConfig)
 }
 
-// TracedSessionOption is a function type that applies
+// TracedSessionOptionFunc is a function type that applies
 // a particular configuration to the traced session in question.
-type TracedSessionOption func(*TracedSessionConfig)
+type TracedSessionOptionFunc func(*TracedSessionConfig)
+
+// Apply will apply the TracedSessionOptionFunc to c, the given
+// TracedSessionConfig.
+func (o TracedSessionOptionFunc) Apply(c *TracedSessionConfig) {
+	o(c)
+}
 
 // ------------------------------------------ TracedSessionOptions
 
@@ -48,83 +55,75 @@ type TracedSessionOption func(*TracedSessionConfig)
 // there is an existing QueryObserver that you would like called. It will be called after the
 // OpenTelemetry implementation, if it is not nil. Defaults to nil.
 func WithQueryObserver(observer gocql.QueryObserver) TracedSessionOption {
-	return func(cfg *TracedSessionConfig) {
+	return TracedSessionOptionFunc(func(cfg *TracedSessionConfig) {
 		cfg.queryObserver = observer
-	}
+	})
 }
 
 // WithBatchObserver sets an additional BatchObserver to the session configuration. Use this if
 // there is an existing BatchObserver that you would like called. It will be called after the
 // OpenTelemetry implementation, if it is not nil. Defaults to nil.
 func WithBatchObserver(observer gocql.BatchObserver) TracedSessionOption {
-	return func(cfg *TracedSessionConfig) {
+	return TracedSessionOptionFunc(func(cfg *TracedSessionConfig) {
 		cfg.batchObserver = observer
-	}
+	})
 }
 
 // WithConnectObserver sets an additional ConnectObserver to the session configuration. Use this if
 // there is an existing ConnectObserver that you would like called. It will be called after the
 // OpenTelemetry implementation, if it is not nil. Defaults to nil.
 func WithConnectObserver(observer gocql.ConnectObserver) TracedSessionOption {
-	return func(cfg *TracedSessionConfig) {
+	return TracedSessionOptionFunc(func(cfg *TracedSessionConfig) {
 		cfg.connectObserver = observer
-	}
+	})
 }
-
-// ------------------------------------------ Otel Options
 
 // WithTracer will set tracer to be the tracer used to create spans
 // for query, batch query, and connection instrumentation.
 // Defaults to global.Tracer("github.com/gocql/gocql").
 func WithTracer(tracer trace.Tracer) TracedSessionOption {
-	return func(c *TracedSessionConfig) {
-		c.otelConfig.Tracer = tracer
-	}
+	return TracedSessionOptionFunc(func(c *TracedSessionConfig) {
+		c.tracer = tracer
+	})
 }
 
 // WithQueryInstrumentation will enable and disable instrumentation of
 // queries. Defaults to enabled.
 func WithQueryInstrumentation(enabled bool) TracedSessionOption {
-	return func(cfg *TracedSessionConfig) {
-		cfg.otelConfig.InstrumentQuery = enabled
-	}
+	return TracedSessionOptionFunc(func(cfg *TracedSessionConfig) {
+		cfg.instrumentQuery = enabled
+	})
 }
 
 // WithBatchInstrumentation will enable and disable insturmentation of
 // batch queries. Defaults to enabled.
 func WithBatchInstrumentation(enabled bool) TracedSessionOption {
-	return func(cfg *TracedSessionConfig) {
-		cfg.otelConfig.InstrumentBatch = enabled
-	}
+	return TracedSessionOptionFunc(func(cfg *TracedSessionConfig) {
+		cfg.instrumentBatch = enabled
+	})
 }
 
 // WithConnectInstrumentation will enable and disable instrumentation of
 // connection attempts. Defaults to enabled.
 func WithConnectInstrumentation(enabled bool) TracedSessionOption {
-	return func(cfg *TracedSessionConfig) {
-		cfg.otelConfig.InstrumentConnect = enabled
-	}
+	return TracedSessionOptionFunc(func(cfg *TracedSessionConfig) {
+		cfg.instrumentConnect = enabled
+	})
 }
 
 // ------------------------------------------ Private Functions
 
 func configure(options ...TracedSessionOption) *TracedSessionConfig {
 	config := &TracedSessionConfig{
-		otelConfig: otelConfiguration(),
+		tracer:            global.Tracer("github.com/gocql/gocql"),
+		instrumentQuery:   true,
+		instrumentBatch:   true,
+		instrumentConnect: true,
 	}
 
 	for _, apply := range options {
-		apply(config)
+		apply.Apply(config)
 	}
 
 	return config
-}
-
-func otelConfiguration() *OtelConfig {
-	return &OtelConfig{
-		Tracer:            global.Tracer("github.com/gocql/gocql"),
-		InstrumentQuery:   true,
-		InstrumentBatch:   true,
-		InstrumentConnect: true,
-	}
 }
