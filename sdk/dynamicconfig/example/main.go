@@ -19,8 +19,8 @@ import (
 	"log"
 	"time"
 
-	notify "go.opentelemetry.io/contrib/sdk/dynamicconfig/sdk/metric/controller/notifier"
-	"go.opentelemetry.io/contrib/sdk/dynamicconfig/sdk/metric/controller/push"
+	notify "go.opentelemetry.io/contrib/sdk/dynamicconfig/metric/controller/push/notifier"
+	"go.opentelemetry.io/contrib/sdk/dynamicconfig/metric/controller/push"
 
 	"go.opentelemetry.io/otel/api/global"
 	"go.opentelemetry.io/otel/api/kv"

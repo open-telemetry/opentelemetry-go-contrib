@@ -17,7 +17,7 @@ package push
 import (
 	"time"
 
-	notify "go.opentelemetry.io/contrib/sdk/dynamicconfig/sdk/metric/controller/notifier"
+	notify "go.opentelemetry.io/contrib/sdk/dynamicconfig/metric/controller/push/notifier"
 
 	"go.opentelemetry.io/otel/sdk/resource"
 )

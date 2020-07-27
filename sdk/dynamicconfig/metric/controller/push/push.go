@@ -12,7 +12,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-// import "go.opentelemetry.io/contrib/sdk/dynamicconfig/sdk/metric/controller/push"
+// import "go.opentelemetry.io/contrib/sdk/dynamicconfig/metric/controller/push"
 package push
 
 import (
@@ -20,8 +20,8 @@ import (
 	"sync"
 	"time"
 
-	sdk "go.opentelemetry.io/contrib/sdk/dynamicconfig/sdk/metric"
-	notify "go.opentelemetry.io/contrib/sdk/dynamicconfig/sdk/metric/controller/notifier"
+	sdk "go.opentelemetry.io/contrib/sdk/dynamicconfig/metric"
+	notify "go.opentelemetry.io/contrib/sdk/dynamicconfig/metric/controller/push/notifier"
 
 	"go.opentelemetry.io/otel/api/global"
 	"go.opentelemetry.io/otel/api/metric"

@@ -21,7 +21,7 @@ import (
 	pb "github.com/open-telemetry/opentelemetry-proto/gen/go/experimental/metricconfigservice"
 	"github.com/stretchr/testify/require"
 
-	notify "go.opentelemetry.io/contrib/sdk/dynamicconfig/sdk/metric/controller/notifier"
+	notify "go.opentelemetry.io/contrib/sdk/dynamicconfig/metric/controller/push/notifier"
 )
 
 func TestEquals(t *testing.T) {

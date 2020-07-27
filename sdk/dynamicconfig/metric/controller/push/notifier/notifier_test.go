@@ -23,7 +23,7 @@ import (
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 
-	notify "go.opentelemetry.io/contrib/sdk/dynamicconfig/sdk/metric/controller/notifier"
+	notify "go.opentelemetry.io/contrib/sdk/dynamicconfig/metric/controller/push/notifier"
 	controllerTest "go.opentelemetry.io/otel/sdk/metric/controller/test"
 )
 

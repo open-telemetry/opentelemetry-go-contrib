@@ -25,7 +25,7 @@ import (
 
 	pb "github.com/open-telemetry/opentelemetry-proto/gen/go/experimental/metricconfigservice"
 
-	metricsdk "go.opentelemetry.io/contrib/sdk/dynamicconfig/sdk/metric"
+	metricsdk "go.opentelemetry.io/contrib/sdk/dynamicconfig/metric"
 	"go.opentelemetry.io/otel/api/global"
 	"go.opentelemetry.io/otel/api/kv"
 	"go.opentelemetry.io/otel/api/label"

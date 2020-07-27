@@ -12,7 +12,6 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-// import "go.opentelemetry.io/contrib/sdk/dynamicconfig/sdk/metric/controller/notifier"
 package notifier
 
 import (

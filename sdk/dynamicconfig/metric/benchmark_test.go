@@ -20,7 +20,7 @@ import (
 	"math/rand"
 	"testing"
 
-	sdk "go.opentelemetry.io/contrib/sdk/dynamicconfig/sdk/metric"
+	sdk "go.opentelemetry.io/contrib/sdk/dynamicconfig/metric"
 	"go.opentelemetry.io/otel/api/kv"
 	"go.opentelemetry.io/otel/api/label"
 	"go.opentelemetry.io/otel/api/metric"
