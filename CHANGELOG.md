@@ -35,6 +35,7 @@ This release upgrades its [go.opentelemetry.io/otel](https://github.com/open-tel
 
 - Create this `CHANGELOG.md`. (#114)
 - Add `emicklei/go-restful/v3` trace instrumentation. (#115)
+- Create a detector that collects resources from AWS machines. (#139)
 
 ### Changed
 

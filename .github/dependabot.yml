@@ -10,6 +10,10 @@ updates:
     schedule:
       interval: "daily"
   - package-ecosystem: "gomod" # See documentation for possible values
+    directory: "/detectors/aws" # Location of package manifests
+    schedule:
+      interval: "daily"
+  - package-ecosystem: "gomod" # See documentation for possible values
     directory: "/detectors/gcp" # Location of package manifests
     schedule:
       interval: "daily"
