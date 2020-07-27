@@ -93,33 +93,3 @@ func (ext *DynamicExtension) SetSchedules(schedules []*pb.MetricConfigResponse_S
 	defer ext.lock.Unlock()
 	ext.schedules = schedules
 }
-
-// CollectOptions contains optional parameters for Accumulator.Collect().
-type CollectOptions struct {
-	// TODO: Should sort so binary search can be used in deciding which
-	// instruments to collect metrics from.
-	// All instruments with a CollectPeriod included in `periods` should be
-	// exported.
-	Periods []int32
-}
-
-// CollectOption is the interface that applies the optional parameter.
-type CollectOption interface {
-	// Apply sets the Option value of a CollectOptions.
-	Apply(*CollectOptions)
-}
-
-// WithPeriods sets the Periods option of a CollectOptions.
-func WithPeriods(
-	periods []int32,
-) CollectOption {
-	return periodsOption{periods}
-}
-
-type periodsOption struct {
-	periods []int32
-}
-
-func (o periodsOption) Apply(config *CollectOptions) {
-	config.Periods = o.periods
-}

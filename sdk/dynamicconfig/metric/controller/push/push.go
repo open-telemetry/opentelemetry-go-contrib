@@ -257,7 +257,7 @@ func (c *Controller) tick() {
 		tolerance := c.period / time.Duration(10)
 
 		for period, lastCollect := range c.lastCollected {
-			expectedExportTimeWithTolerance := lastCollect.Add(time.Duration(period) * time.Second - tolerance)
+			expectedExportTimeWithTolerance := lastCollect.Add(time.Duration(period)*time.Second - tolerance)
 
 			// Check if enough time elapsed since metrics with `period` were
 			// last exported, within the tolerance.
@@ -268,7 +268,7 @@ func (c *Controller) tick() {
 		}
 
 		if len(overdue) > 0 {
-			c.accumulator.Collect(ctx, sdk.WithPeriods(overdue))
+			c.accumulator.Collect(ctx, overdue...)
 		}
 	}
 

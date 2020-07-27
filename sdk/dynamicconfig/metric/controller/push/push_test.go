@@ -27,8 +27,8 @@ import (
 
 	pb "github.com/open-telemetry/opentelemetry-proto/gen/go/experimental/metricconfigservice"
 
-	notify "go.opentelemetry.io/contrib/sdk/dynamicconfig/metric/controller/push/notifier"
 	"go.opentelemetry.io/contrib/sdk/dynamicconfig/metric/controller/push"
+	notify "go.opentelemetry.io/contrib/sdk/dynamicconfig/metric/controller/push/notifier"
 
 	"go.opentelemetry.io/otel/api/global"
 	"go.opentelemetry.io/otel/api/kv"
@@ -356,6 +356,7 @@ func TestPushScheduleChange(t *testing.T) {
 	runtime.Gosched()
 
 	// After 10 seconds, expect export from both instruments.
+	// TODO: data race in test
 	records, _ = fix.exporter.resetRecords()
 	require.Equal(t, 2, len(records))
 	require.Equal(t, "one.sum", records[0].Descriptor().Name())

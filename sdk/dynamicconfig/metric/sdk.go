@@ -358,17 +358,12 @@ func (m *Accumulator) NewAsyncInstrument(descriptor api.Descriptor, runner metri
 // one Export() call per current aggregation.
 //
 // Returns the number of records that were checkpointed.
-func (m *Accumulator) Collect(ctx context.Context, opts ...CollectOption) int {
-	c := &CollectOptions{}
-	for _, opt := range opts {
-		opt.Apply(c)
-	}
-
+func (m *Accumulator) Collect(ctx context.Context, periods ...int32) int {
 	m.collectLock.Lock()
 	defer m.collectLock.Unlock()
 
-	checkpointed := m.observeAsyncInstruments(ctx, c.Periods)
-	checkpointed += m.collectSyncInstruments(c.Periods)
+	checkpointed := m.observeAsyncInstruments(ctx, periods)
+	checkpointed += m.collectSyncInstruments(periods)
 	m.currentEpoch++
 
 	return checkpointed
@@ -444,6 +439,7 @@ func (m *Accumulator) observeAsyncInstruments(ctx context.Context, periods []int
 	for _, inst := range m.asyncInstruments.Instruments() {
 		if a := m.fromAsync(inst); a != nil &&
 			m.shouldCollect(a.descriptor.Name(), periods) {
+
 			asyncCollected += m.checkpointAsync(a)
 		}
 	}

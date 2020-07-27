@@ -622,7 +622,7 @@ func TestWithDynamicExtension(t *testing.T) {
 	// Collect from all instruments associated with a period of 5 seconds. The instrument
 	// "One.sum" is, but the instrument "Three.sum" is not.
 	periods := []int32{5}
-	collected := sdk.Collect(ctx, metricsdk.WithPeriods(periods))
+	collected := sdk.Collect(ctx, periods...)
 
 	require.Equal(t, collected, len(processor.accumulations))
 
