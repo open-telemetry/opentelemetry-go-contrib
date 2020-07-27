@@ -253,13 +253,15 @@ func (c *Controller) tick() {
 		// Export all metrics with the same period at the same time.
 		overdue := []int32{}
 		now := c.clock.Now()
+		// Have a tolerance of 10% of the period
+		tolerance := c.period / time.Duration(10)
 
 		for period, lastCollect := range c.lastCollected {
-			expectedExportTime := lastCollect.Add(time.Duration(period) * time.Second)
+			expectedExportTimeWithTolerance := lastCollect.Add(time.Duration(period) * time.Second - tolerance)
 
 			// Check if enough time elapsed since metrics with `period` were
-			// last exported.
-			if expectedExportTime.Before(now) || expectedExportTime.Equal(now) {
+			// last exported, within the tolerance.
+			if expectedExportTimeWithTolerance.Before(now) {
 				overdue = append(overdue, period)
 				c.lastCollected[period] = now
 			}
