@@ -22,6 +22,10 @@ updates:
     schedule:
       interval: "daily"
   - package-ecosystem: "gomod" # See documentation for possible values
+    directory: "/instrumentation//google.golang.org/grpc" # Location of package manifests
+    schedule:
+      interval: "daily"
+  - package-ecosystem: "gomod" # See documentation for possible values
     directory: "/instrumentation/github.com/emicklei/go-restful" # Location of package manifests
     schedule:
       interval: "daily"
