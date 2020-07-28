@@ -15,9 +15,10 @@
 package grpc_test
 
 import (
+	"google.golang.org/grpc"
+
 	otelInst "go.opentelemetry.io/contrib/instrumentation/google.golang.org/grpc"
 	"go.opentelemetry.io/otel/api/global"
-	"google.golang.org/grpc"
 )
 
 func ExampleStreamClientInterceptor() {
