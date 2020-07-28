@@ -11,6 +11,7 @@
 // WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 // See the License for the specific language governing permissions and
 // limitations under the License.
+
 package grpc
 
 import (
@@ -32,6 +33,7 @@ import (
 	"google.golang.org/grpc/status"
 
 	"go.opentelemetry.io/otel/api/kv"
+	"go.opentelemetry.io/otel/api/kv/value"
 	export "go.opentelemetry.io/otel/sdk/export/trace"
 	sdktrace "go.opentelemetry.io/otel/sdk/trace"
 )
@@ -81,7 +83,7 @@ func TestUnaryClientInterceptor(t *testing.T) {
 		t.Fatalf("failed to create client connection: %v", err)
 	}
 
-	tracer := tp.Tracer("grpc/client")
+	tracer := tp.Tracer("grpctrace/client")
 	unaryInterceptor := UnaryClientInterceptor(tracer)
 
 	req := &mockProtoMessage{}
@@ -91,119 +93,119 @@ func TestUnaryClientInterceptor(t *testing.T) {
 	checks := []struct {
 		method       string
 		name         string
-		expectedAttr map[kv.Key]kv.Value
-		eventsAttr   []map[kv.Key]kv.Value
+		expectedAttr map[kv.Key]value.Value
+		eventsAttr   []map[kv.Key]value.Value
 	}{
 		{
 			method: "/github.com.serviceName/bar",
 			name:   "github.com.serviceName/bar",
-			expectedAttr: map[kv.Key]kv.Value{
-				standard.RPCSystemKey:   kv.StringValue("grpc"),
-				standard.RPCServiceKey:  kv.StringValue("github.com.serviceName"),
-				standard.RPCMethodKey:   kv.StringValue("bar"),
-				standard.NetPeerIPKey:   kv.StringValue("fake"),
-				standard.NetPeerPortKey: kv.StringValue("connection"),
+			expectedAttr: map[kv.Key]value.Value{
+				standard.RPCSystemKey:   value.String("grpc"),
+				standard.RPCServiceKey:  value.String("github.com.serviceName"),
+				standard.RPCMethodKey:   value.String("bar"),
+				standard.NetPeerIPKey:   value.String("fake"),
+				standard.NetPeerPortKey: value.String("connection"),
 			},
-			eventsAttr: []map[kv.Key]kv.Value{
+			eventsAttr: []map[kv.Key]value.Value{
 				{
-					standard.RPCMessageTypeKey:             kv.StringValue("SENT"),
-					standard.RPCMessageIDKey:               kv.IntValue(1),
-					standard.RPCMessageUncompressedSizeKey: kv.IntValue(proto.Size(proto.Message(req))),
+					standard.RPCMessageTypeKey:             value.String("SENT"),
+					standard.RPCMessageIDKey:               value.Int(1),
+					standard.RPCMessageUncompressedSizeKey: value.Int(proto.Size(proto.Message(req))),
 				},
 				{
-					standard.RPCMessageTypeKey:             kv.StringValue("RECEIVED"),
-					standard.RPCMessageIDKey:               kv.IntValue(1),
-					standard.RPCMessageUncompressedSizeKey: kv.IntValue(proto.Size(proto.Message(reply))),
+					standard.RPCMessageTypeKey:             value.String("RECEIVED"),
+					standard.RPCMessageIDKey:               value.Int(1),
+					standard.RPCMessageUncompressedSizeKey: value.Int(proto.Size(proto.Message(reply))),
 				},
 			},
 		},
 		{
 			method: "/serviceName/bar",
 			name:   "serviceName/bar",
-			expectedAttr: map[kv.Key]kv.Value{
-				standard.RPCSystemKey:   kv.StringValue("grpc"),
-				standard.RPCServiceKey:  kv.StringValue("serviceName"),
-				standard.RPCMethodKey:   kv.StringValue("bar"),
-				standard.NetPeerIPKey:   kv.StringValue("fake"),
-				standard.NetPeerPortKey: kv.StringValue("connection"),
+			expectedAttr: map[kv.Key]value.Value{
+				standard.RPCSystemKey:   value.String("grpc"),
+				standard.RPCServiceKey:  value.String("serviceName"),
+				standard.RPCMethodKey:   value.String("bar"),
+				standard.NetPeerIPKey:   value.String("fake"),
+				standard.NetPeerPortKey: value.String("connection"),
 			},
-			eventsAttr: []map[kv.Key]kv.Value{
+			eventsAttr: []map[kv.Key]value.Value{
 				{
-					standard.RPCMessageTypeKey:             kv.StringValue("SENT"),
-					standard.RPCMessageIDKey:               kv.IntValue(1),
-					standard.RPCMessageUncompressedSizeKey: kv.IntValue(proto.Size(proto.Message(req))),
+					standard.RPCMessageTypeKey:             value.String("SENT"),
+					standard.RPCMessageIDKey:               value.Int(1),
+					standard.RPCMessageUncompressedSizeKey: value.Int(proto.Size(proto.Message(req))),
 				},
 				{
-					standard.RPCMessageTypeKey:             kv.StringValue("RECEIVED"),
-					standard.RPCMessageIDKey:               kv.IntValue(1),
-					standard.RPCMessageUncompressedSizeKey: kv.IntValue(proto.Size(proto.Message(reply))),
+					standard.RPCMessageTypeKey:             value.String("RECEIVED"),
+					standard.RPCMessageIDKey:               value.Int(1),
+					standard.RPCMessageUncompressedSizeKey: value.Int(proto.Size(proto.Message(reply))),
 				},
 			},
 		},
 		{
 			method: "serviceName/bar",
 			name:   "serviceName/bar",
-			expectedAttr: map[kv.Key]kv.Value{
-				standard.RPCSystemKey:   kv.StringValue("grpc"),
-				standard.RPCServiceKey:  kv.StringValue("serviceName"),
-				standard.RPCMethodKey:   kv.StringValue("bar"),
-				standard.NetPeerIPKey:   kv.StringValue("fake"),
-				standard.NetPeerPortKey: kv.StringValue("connection"),
+			expectedAttr: map[kv.Key]value.Value{
+				standard.RPCSystemKey:   value.String("grpc"),
+				standard.RPCServiceKey:  value.String("serviceName"),
+				standard.RPCMethodKey:   value.String("bar"),
+				standard.NetPeerIPKey:   value.String("fake"),
+				standard.NetPeerPortKey: value.String("connection"),
 			},
-			eventsAttr: []map[kv.Key]kv.Value{
+			eventsAttr: []map[kv.Key]value.Value{
 				{
-					standard.RPCMessageTypeKey:             kv.StringValue("SENT"),
-					standard.RPCMessageIDKey:               kv.IntValue(1),
-					standard.RPCMessageUncompressedSizeKey: kv.IntValue(proto.Size(proto.Message(req))),
+					standard.RPCMessageTypeKey:             value.String("SENT"),
+					standard.RPCMessageIDKey:               value.Int(1),
+					standard.RPCMessageUncompressedSizeKey: value.Int(proto.Size(proto.Message(req))),
 				},
 				{
-					standard.RPCMessageTypeKey:             kv.StringValue("RECEIVED"),
-					standard.RPCMessageIDKey:               kv.IntValue(1),
-					standard.RPCMessageUncompressedSizeKey: kv.IntValue(proto.Size(proto.Message(reply))),
+					standard.RPCMessageTypeKey:             value.String("RECEIVED"),
+					standard.RPCMessageIDKey:               value.Int(1),
+					standard.RPCMessageUncompressedSizeKey: value.Int(proto.Size(proto.Message(reply))),
 				},
 			},
 		},
 		{
 			method: "invalidName",
 			name:   "invalidName",
-			expectedAttr: map[kv.Key]kv.Value{
-				standard.RPCSystemKey:   kv.StringValue("grpc"),
-				standard.NetPeerIPKey:   kv.StringValue("fake"),
-				standard.NetPeerPortKey: kv.StringValue("connection"),
+			expectedAttr: map[kv.Key]value.Value{
+				standard.RPCSystemKey:   value.String("grpc"),
+				standard.NetPeerIPKey:   value.String("fake"),
+				standard.NetPeerPortKey: value.String("connection"),
 			},
-			eventsAttr: []map[kv.Key]kv.Value{
+			eventsAttr: []map[kv.Key]value.Value{
 				{
-					standard.RPCMessageTypeKey:             kv.StringValue("SENT"),
-					standard.RPCMessageIDKey:               kv.IntValue(1),
-					standard.RPCMessageUncompressedSizeKey: kv.IntValue(proto.Size(proto.Message(req))),
+					standard.RPCMessageTypeKey:             value.String("SENT"),
+					standard.RPCMessageIDKey:               value.Int(1),
+					standard.RPCMessageUncompressedSizeKey: value.Int(proto.Size(proto.Message(req))),
 				},
 				{
-					standard.RPCMessageTypeKey:             kv.StringValue("RECEIVED"),
-					standard.RPCMessageIDKey:               kv.IntValue(1),
-					standard.RPCMessageUncompressedSizeKey: kv.IntValue(proto.Size(proto.Message(reply))),
+					standard.RPCMessageTypeKey:             value.String("RECEIVED"),
+					standard.RPCMessageIDKey:               value.Int(1),
+					standard.RPCMessageUncompressedSizeKey: value.Int(proto.Size(proto.Message(reply))),
 				},
 			},
 		},
 		{
 			method: "/github.com.foo.serviceName_123/method",
 			name:   "github.com.foo.serviceName_123/method",
-			expectedAttr: map[kv.Key]kv.Value{
-				standard.RPCSystemKey:   kv.StringValue("grpc"),
-				standard.RPCServiceKey:  kv.StringValue("github.com.foo.serviceName_123"),
-				standard.RPCMethodKey:   kv.StringValue("method"),
-				standard.NetPeerIPKey:   kv.StringValue("fake"),
-				standard.NetPeerPortKey: kv.StringValue("connection"),
+			expectedAttr: map[kv.Key]value.Value{
+				standard.RPCSystemKey:   value.String("grpc"),
+				standard.RPCServiceKey:  value.String("github.com.foo.serviceName_123"),
+				standard.RPCMethodKey:   value.String("method"),
+				standard.NetPeerIPKey:   value.String("fake"),
+				standard.NetPeerPortKey: value.String("connection"),
 			},
-			eventsAttr: []map[kv.Key]kv.Value{
+			eventsAttr: []map[kv.Key]value.Value{
 				{
-					standard.RPCMessageTypeKey:             kv.StringValue("SENT"),
-					standard.RPCMessageIDKey:               kv.IntValue(1),
-					standard.RPCMessageUncompressedSizeKey: kv.IntValue(proto.Size(proto.Message(req))),
+					standard.RPCMessageTypeKey:             value.String("SENT"),
+					standard.RPCMessageIDKey:               value.Int(1),
+					standard.RPCMessageUncompressedSizeKey: value.Int(proto.Size(proto.Message(req))),
 				},
 				{
-					standard.RPCMessageTypeKey:             kv.StringValue("RECEIVED"),
-					standard.RPCMessageIDKey:               kv.IntValue(1),
-					standard.RPCMessageUncompressedSizeKey: kv.IntValue(proto.Size(proto.Message(reply))),
+					standard.RPCMessageTypeKey:             value.String("RECEIVED"),
+					standard.RPCMessageIDKey:               value.Int(1),
+					standard.RPCMessageUncompressedSizeKey: value.Int(proto.Size(proto.Message(reply))),
 				},
 			},
 		},
@@ -299,7 +301,7 @@ func TestStreamClientInterceptor(t *testing.T) {
 	}
 
 	// tracer
-	tracer := tp.Tracer("grpc/Server")
+	tracer := tp.Tracer("grpctrace/Server")
 	streamCI := StreamClientInterceptor(tracer)
 
 	var mockClStr mockClientStream
@@ -388,7 +390,7 @@ func TestStreamClientInterceptor(t *testing.T) {
 				if attr.Key == standard.RPCMessageTypeKey && attr.Value.AsString() != eventName {
 					t.Errorf("invalid event on index: %d expecting %s event, receive %s event", i, eventName, attr.Value.AsString())
 				}
-				if attr.Key == standard.RPCMessageIDKey && attr.Value != kv.IntValue(msgID) {
+				if attr.Key == standard.RPCMessageIDKey && attr.Value != value.Int(msgID) {
 					t.Errorf("invalid id for message event expected %d received %d", msgID, attr.Value.AsInt32())
 				}
 			}
@@ -411,7 +413,7 @@ func TestServerInterceptorError(t *testing.T) {
 	)
 	require.NoError(t, err)
 
-	tracer := tp.Tracer("grpc/Server")
+	tracer := tp.Tracer("grpctrace/Server")
 	usi := UnaryServerInterceptor(tracer)
 	deniedErr := status.Error(codes.PermissionDenied, "PERMISSION_DENIED_TEXT")
 	handler := func(_ context.Context, _ interface{}) (interface{}, error) {
