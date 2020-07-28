@@ -12,7 +12,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package grpctrace
+package grpc
 
 // gRPC tracing middleware
 // https://github.com/open-telemetry/opentelemetry-specification/blob/master/specification/trace/semantic_conventions/rpc.md
@@ -67,7 +67,7 @@ var (
 // For example:
 //     tracer := global.Tracer("client-tracer")
 //     s := grpc.NewServer(
-//         grpc.WithUnaryInterceptor(grpctrace.UnaryClientInterceptor(tracer)),
+//         grpc.WithUnaryInterceptor(grpc.UnaryClientInterceptor(tracer)),
 //         ...,  // (existing DialOptions))
 func UnaryClientInterceptor(tracer trace.Tracer) grpc.UnaryClientInterceptor {
 	return func(
@@ -298,7 +298,7 @@ func StreamClientInterceptor(tracer trace.Tracer) grpc.StreamClientInterceptor {
 // For example:
 //     tracer := global.Tracer("server-tracer")
 //     s := grpc.Dial(
-//         grpc.UnaryInterceptor(grpctrace.UnaryServerInterceptor(tracer)),
+//         grpc.UnaryInterceptor(otel.UnaryServerInterceptor(tracer)),
 //         ...,  // (existing ServerOptions))
 func UnaryServerInterceptor(tracer trace.Tracer) grpc.UnaryServerInterceptor {
 	return func(
