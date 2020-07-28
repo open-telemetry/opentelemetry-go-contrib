@@ -8,6 +8,14 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 
 ## [Unreleased]
 
+### Added
+
+- Create a detector that collects resources from GKE machines. (#139)
+- Create a detector that collects resources from GCE machines. (#132)
+- Add instrumentation for Kafka (github.com/Shopify/sarama). (#134)
+- Add links and status message for mock span. (#134)
+
+
 ## [0.9.0] - 2020-07-20
 
 This release upgrades its [go.opentelemetry.io/otel](https://github.com/open-telemetry/opentelemetry-go/releases/tag/v0.9.0) dependency to v0.9.0.
@@ -18,6 +26,7 @@ This release upgrades its [go.opentelemetry.io/otel](https://github.com/open-tel
 - Update dependabot configuration to correctly check all included packages. (#131)
 - Update `RELEASING.md` with correct `tag.sh` command. (#130)
 
+
 ## [0.8.0] - 2020-07-10
 
 This release upgrades its [go.opentelemetry.io/otel](https://github.com/open-telemetry/opentelemetry-go/releases/tag/v0.8.0) dependency to v0.8.0, includes minor fixes, and new instrumentation.
@@ -26,6 +35,7 @@ This release upgrades its [go.opentelemetry.io/otel](https://github.com/open-tel
 
 - Create this `CHANGELOG.md`. (#114)
 - Add `emicklei/go-restful/v3` trace instrumentation. (#115)
+- Create a detector that collects resources from AWS machines. (#139)
 
 ### Changed
 
