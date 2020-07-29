@@ -38,7 +38,7 @@ You can customize instrumentation by passing any of the following options to `Ne
 | `WithQueryObserver(gocql.QueryObserver)` | Specify an additional QueryObserver to be called. |
 | `WithBatchObserver(gocql.BatchObserver)` | Specify an additional BatchObserver to be called. |
 | `WithConnectObserver(gocql.ConnectObserver)` | Specify an additional ConnectObserver to be called. |
-| `WithTracer(trace.Tracer)` | The tracer to be used to create spans for the gocql session. If not specified, `global.Tracer("github.com/gocql/gocql")` will be used. |
+| `WithTracer(trace.Tracer)` | The tracer to be used to create spans for the gocql session. If not specified, `global.Tracer("go.opentelemetry.io/contrib/github.com/gocql/gocql")` will be used. |
 | `WithQueryInstrumentation(bool)` | To enable/disable tracing and metrics for queries. |
 | `WithBatchInstrumentation(bool)` | To enable/disable tracing and metrics for batch queries. |
 | `WithConnectInstrumentation(bool)` | To enable/disable tracing and metrics for new connections. |

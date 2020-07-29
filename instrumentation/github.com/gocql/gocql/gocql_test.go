@@ -153,7 +153,7 @@ func TestQuery(t *testing.T) {
 	expected := []testRecord{
 		{
 			Name:      "db.cassandra.queries",
-			MeterName: "github.com/gocql/gocql",
+			MeterName: "go.opentelemetry.io/contrib/github.com/gocql/gocql",
 			Labels: []kv.KeyValue{
 				cassDBSystem(),
 				cassPeerIP("127.0.0.1"),
@@ -168,7 +168,7 @@ func TestQuery(t *testing.T) {
 		},
 		{
 			Name:      "db.cassandra.rows",
-			MeterName: "github.com/gocql/gocql",
+			MeterName: "go.opentelemetry.io/contrib/github.com/gocql/gocql",
 			Labels: []kv.KeyValue{
 				cassDBSystem(),
 				cassPeerIP("127.0.0.1"),
@@ -182,7 +182,7 @@ func TestQuery(t *testing.T) {
 		},
 		{
 			Name:      "db.cassandra.latency",
-			MeterName: "github.com/gocql/gocql",
+			MeterName: "go.opentelemetry.io/contrib/github.com/gocql/gocql",
 			Labels: []kv.KeyValue{
 				cassDBSystem(),
 				cassPeerIP("127.0.0.1"),
@@ -269,7 +269,7 @@ func TestBatch(t *testing.T) {
 	expected := []testRecord{
 		{
 			Name:      "db.cassandra.batch.queries",
-			MeterName: "github.com/gocql/gocql",
+			MeterName: "go.opentelemetry.io/contrib/github.com/gocql/gocql",
 			Labels: []kv.KeyValue{
 				cassDBSystem(),
 				cassPeerIP("127.0.0.1"),
@@ -283,7 +283,7 @@ func TestBatch(t *testing.T) {
 		},
 		{
 			Name:      "db.cassandra.latency",
-			MeterName: "github.com/gocql/gocql",
+			MeterName: "go.opentelemetry.io/contrib/github.com/gocql/gocql",
 			Labels: []kv.KeyValue{
 				cassDBSystem(),
 				cassPeerIP("127.0.0.1"),
@@ -350,7 +350,7 @@ func TestConnection(t *testing.T) {
 	expected := []testRecord{
 		{
 			Name:      "db.cassandra.connections",
-			MeterName: "github.com/gocql/gocql",
+			MeterName: "go.opentelemetry.io/contrib/github.com/gocql/gocql",
 			Labels: []kv.KeyValue{
 				cassDBSystem(),
 				cassPeerIP("127.0.0.1"),

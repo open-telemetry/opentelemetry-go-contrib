@@ -80,7 +80,7 @@ func WithConnectObserver(observer gocql.ConnectObserver) TracedSessionOption {
 
 // WithTracer will set tracer to be the tracer used to create spans
 // for query, batch query, and connection instrumentation.
-// Defaults to global.Tracer("github.com/gocql/gocql").
+// Defaults to global.Tracer("go.opentelemetry.io/contrib/github.com/gocql/gocql").
 func WithTracer(tracer trace.Tracer) TracedSessionOption {
 	return TracedSessionOptionFunc(func(c *TracedSessionConfig) {
 		c.tracer = tracer
@@ -115,7 +115,7 @@ func WithConnectInstrumentation(enabled bool) TracedSessionOption {
 
 func configure(options ...TracedSessionOption) *TracedSessionConfig {
 	config := &TracedSessionConfig{
-		tracer:            global.Tracer("github.com/gocql/gocql"),
+		tracer:            global.Tracer("go.opentelemetry.io/contrib/github.com/gocql/gocql"),
 		instrumentQuery:   true,
 		instrumentBatch:   true,
 		instrumentConnect: true,

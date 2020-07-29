@@ -44,7 +44,7 @@ var (
 // InstrumentWithProvider will recreate instruments using a meter
 // from the given provider p.
 func InstrumentWithProvider(p metric.Provider) {
-	meter := p.Meter("github.com/gocql/gocql")
+	meter := p.Meter("go.opentelemetry.io/contrib/github.com/gocql/gocql")
 	var err error
 
 	if iQueryCount, err = meter.NewInt64Counter(
