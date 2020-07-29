@@ -71,6 +71,7 @@ func (o *OTelQueryObserver) ObserveQuery(ctx context.Context, observedQuery gocq
 			observedQuery.Statement,
 			trace.WithStartTime(observedQuery.Start),
 			trace.WithAttributes(attributes...),
+			trace.WithSpanKind(trace.SpanKindClient),
 		)
 
 		if observedQuery.Err != nil {
@@ -131,6 +132,7 @@ func (o *OTelBatchObserver) ObserveBatch(ctx context.Context, observedBatch gocq
 			cassBatchQueryName,
 			trace.WithStartTime(observedBatch.Start),
 			trace.WithAttributes(attributes...),
+			trace.WithSpanKind(trace.SpanKindClient),
 		)
 
 		if observedBatch.Err != nil {
@@ -177,6 +179,7 @@ func (o *OTelConnectObserver) ObserveConnect(observedConnect gocql.ObservedConne
 			cassConnectName,
 			trace.WithStartTime(observedConnect.Start),
 			trace.WithAttributes(attributes...),
+			trace.WithSpanKind(trace.SpanKindClient),
 		)
 
 		if observedConnect.Err != nil {

@@ -26,6 +26,7 @@ import (
 	"github.com/stretchr/testify/require"
 
 	"go.opentelemetry.io/otel/api/standard"
+	"go.opentelemetry.io/otel/api/trace"
 
 	"go.opentelemetry.io/otel/sdk/metric/controller/push"
 	"go.opentelemetry.io/otel/sdk/metric/selector/simple"
@@ -398,6 +399,7 @@ func assertConnectionLevelAttributes(t *testing.T, span *mocktracer.Span) {
 	assert.Contains(t, span.Attributes, cassVersionKey)
 	assert.Contains(t, span.Attributes, cassHostIDKey)
 	assert.Equal(t, "up", strings.ToLower(span.Attributes[cassHostStateKey].AsString()))
+	assert.Equal(t, trace.SpanKindClient, span.Kind)
 }
 
 // getCluster creates a gocql ClusterConfig with the appropriate
