@@ -52,6 +52,9 @@ const (
 	// Static span names
 	cassBatchQueryName = "Batch Query"
 	cassConnectName    = "New Connection"
+
+	// instrumentationName is the name of the instrumentation package.
+	instrumentationName = "go.opentelemetry.io/contrib/instrumentation/github.com/gocql/gocql"
 )
 
 // ------------------------------------------ Connection-level Attributes

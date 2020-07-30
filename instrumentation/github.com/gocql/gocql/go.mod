@@ -1,4 +1,4 @@
-module go.opentelemetry.io/contrib/github.com/gocql/gocql
+module go.opentelemetry.io/contrib/instrumentation/github.com/gocql/gocql
 
 go 1.14
 
