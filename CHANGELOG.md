@@ -10,6 +10,7 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 
 ### Added
 
+- Create a detector that collects resources from GKE machines. (#139)
 - Create a detector that collects resources from GCE machines. (#132)
 - Add instrumentation for Kafka (github.com/Shopify/sarama). (#134, #153)
 - Add links and status message for mock span. (#134)
@@ -34,6 +35,7 @@ This release upgrades its [go.opentelemetry.io/otel](https://github.com/open-tel
 
 - Create this `CHANGELOG.md`. (#114)
 - Add `emicklei/go-restful/v3` trace instrumentation. (#115)
+- Create a detector that collects resources from AWS machines. (#139)
 
 ### Changed
 
