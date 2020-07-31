@@ -21,11 +21,9 @@ import (
 
 	"github.com/open-telemetry/opentelemetry-collector/translator/conventions"
 	pb "github.com/open-telemetry/opentelemetry-proto/gen/go/experimental/metricconfigservice"
-
-	"google.golang.org/grpc"
-
 	"go.opentelemetry.io/otel/api/kv"
 	"go.opentelemetry.io/otel/sdk/resource"
+	"google.golang.org/grpc"
 )
 
 type mockServer struct {

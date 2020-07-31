@@ -12,15 +12,18 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package push
+package basic
 
 import (
 	"time"
 
 	"go.opentelemetry.io/contrib/sdk/dynamicconfig/internal/transform"
+	"go.opentelemetry.io/contrib/sdk/dynamicconfig/metric/controller/notify"
 	controllerTime "go.opentelemetry.io/otel/sdk/metric/controller/time"
 	"go.opentelemetry.io/otel/sdk/resource"
 )
+
+// TODO: fix tests, make mock notifier <-- STOPPED HERE
 
 // A Notifier monitors a config service for a config changing, then letting
 // all its subscribers know if the config has changed.
@@ -58,19 +61,7 @@ func NewNotifier(configHost string, resource *resource.Resource) *Notifier {
 	return notifier, nil
 }
 
-// SetClock supports setting a mock clock for testing.  This must be
-// called before Start().
-func (n *Notifier) SetClock(clock controllerTime.Clock) {
-	n.clock = clock
-}
-
-type MonitorChannel struct {
-	Data <-chan *MetricConfig
-	Err  <-chan error
-	Quit chan<- struct{}
-}
-
-func (n *Notifier) MonitorChanges(mch MonitorChannel) {
+func (n *Notifier) MonitorChanges(mch notify.MonitorChannel) {
 	n.ticker = n.clock.Ticker(DefaultCheckFrequency)
 	serviceReader, err := NewServiceReader(n.configHost, transform.Resource(n.resource))
 	if err != nil {
