@@ -21,7 +21,6 @@ import (
 	"time"
 
 	sdk "go.opentelemetry.io/contrib/sdk/dynamicconfig/metric"
-	notify "go.opentelemetry.io/contrib/sdk/dynamicconfig/metric/controller/push/notifier"
 
 	"go.opentelemetry.io/otel/api/global"
 	"go.opentelemetry.io/otel/api/metric"
@@ -31,8 +30,7 @@ import (
 	"go.opentelemetry.io/otel/sdk/metric/processor/basic"
 )
 
-// DefaultPushPeriod is the default time interval between pushes.
-const DefaultPushPeriod = 10 * time.Second
+const fallbackPeriod = 10 * time.Second
 
 // Controller organizes a periodic push of metric data.
 type Controller struct {
@@ -41,60 +39,58 @@ type Controller struct {
 	provider    *registry.Provider
 	processor   *basic.Processor
 	exporter    export.Exporter
-	wg          sync.WaitGroup
-	ch          chan bool
-	period      time.Duration
+	quit        chan bool
 	timeout     time.Duration
 	clock       controllerTime.Clock
 	ticker      controllerTime.Ticker
-	notifier    *notify.Notifier
-	// Used to store and apply metric schedules
-	dynamicExtension *sdk.DynamicExtension
-	// Timestamp all metrics with period were last exported
-	lastCollected map[int32]time.Time
+	notifier    *Notifier
+	mch         MonitorChannel
+	matcher     *PeriodMatcher
 }
 
 // New constructs a Controller, an implementation of metric.Provider,
 // using the provided exporter and options to configure an SDK with
 // periodic collection.
-func New(selector export.AggregatorSelector, exporter export.Exporter, opts ...Option) *Controller {
-	c := &Config{
-		Period: DefaultPushPeriod,
-	}
+func New(selector export.AggregatorSelector, exporter export.Exporter, configHost string, opts ...Option) *Controller {
+	c := &Config{}
 	for _, opt := range opts {
 		opt.Apply(c)
 	}
 	if c.Timeout == 0 {
-		c.Timeout = c.Period
-	}
-
-	var extension *sdk.DynamicExtension = nil
-	if c.Notifier != nil {
-		extension = sdk.NewDynamicExtension()
+		c.Timeout = fallbackPeriod
 	}
 
 	processor := basic.New(selector, exporter)
 	impl := sdk.NewAccumulator(
 		processor,
 		sdk.WithResource(c.Resource),
-		sdk.WithDynamicExtension(extension),
 	)
+
+	notifier := NewNotifier(configHost, c.Resource)
+	mch := MonitorChannel{
+		Data: make(chan *MetricConfig),
+		Err:  make(chan error),
+		Quit: make(chan struct{}),
+	}
+
 	return &Controller{
-		provider:         registry.NewProvider(impl),
-		accumulator:      impl,
-		processor:        processor,
-		exporter:         exporter,
-		ch:               make(chan bool),
-		period:           c.Period,
-		timeout:          c.Timeout,
-		clock:            controllerTime.RealClock{},
-		notifier:         c.Notifier,
-		dynamicExtension: extension,
+		provider:    registry.NewProvider(impl),
+		accumulator: impl,
+		processor:   processor,
+		exporter:    exporter,
+		quit:        make(chan bool),
+		period:      c.Period,
+		timeout:     c.Timeout,
+		clock:       controllerTime.RealClock{},
+		notifier:    notifier,
+		mch:         mch,
+		matcher:     &PeriodMatcher{},
 	}
 }
 
-// SetClock supports setting a mock clock for testing.  This must be
+// SetClock supports setting a mock clock for testing. This must be
 // called before Start().
+// TODO: use export?
 func (c *Controller) SetClock(clock controllerTime.Clock) {
 	c.lock.Lock()
 	defer c.lock.Unlock()
@@ -116,13 +112,10 @@ func (c *Controller) Start() {
 		return
 	}
 
-	if c.notifier != nil {
-		c.notifier.Register(c)
-	}
+	c.ticker = c.clock.Ticker(fallbackPeriod)
 
-	c.ticker = c.clock.Ticker(c.period)
-	c.wg.Add(1)
-	go c.run(c.ch)
+	go c.notifier.MonitorChanges(c.mch)
+	go c.run()
 }
 
 // Stop waits for the background goroutine to return and then collects
@@ -131,109 +124,30 @@ func (c *Controller) Stop() {
 	c.lock.Lock()
 	defer c.lock.Unlock()
 
-	if c.ch == nil {
+	if c.quit == nil {
 		return
 	}
 
-	close(c.ch)
-	c.ch = nil
-	c.wg.Wait()
+	close(c.quit)
+	c.quit = nil
 	c.ticker.Stop()
 	c.ticker = nil
 
 	c.tick()
-
-	if c.notifier != nil {
-		c.notifier.Unregister(c)
-	}
 }
 
-// Called by notifier if we Register with one.
-func (c *Controller) OnInitialConfig(config *notify.MetricConfig) error {
-	err := config.ValidateMetricConfig()
-	if err != nil {
-		return err
-	}
-
-	c.dynamicExtension.SetSchedules(config.Schedules)
-	c.period = c.updateFromSchedules()
-
-	return nil
-}
-
-// Called by notifier if it receives an update.
-func (c *Controller) OnUpdatedConfig(config *notify.MetricConfig) error {
-	c.lock.Lock()
-	defer c.lock.Unlock()
-
-	err := config.ValidateMetricConfig()
-	if err != nil {
-		return err
-	}
-
-	c.dynamicExtension.Clear()
-
-	c.dynamicExtension.SetSchedules(config.Schedules)
-	c.period = c.updateFromSchedules()
-
-	// Stop the existing ticker
-	c.ticker.Stop()
-	// If no schedules, or all schedules have a period of 0, controller never exports.
-	if c.period == 0 {
-		return nil
-	}
-
-	// Make a new ticker with a new sampling period
-	c.ticker = c.clock.Ticker(c.period)
-
-	// Let the controller know to check the new ticker
-	c.ch <- true
-
-	return nil
-}
-
-// TODO: Return time.Second if periods are not mutually divisible
-// Iterate through the schedules for two purposes:
-//    -Return the minimal non-zero period
-//    -Reset lastCollected, set each period's last collection
-//    timestamp to now.
-func (c *Controller) updateFromSchedules() time.Duration {
-	now := c.clock.Now()
-
-	var minPeriod int32 = 0
-	c.lastCollected = make(map[int32]time.Time)
-
-	for _, schedule := range c.dynamicExtension.GetSchedules() {
-		// If the period is 0, we do not do anything with it
-		if schedule.PeriodSec == 0 {
-			continue
-		}
-
-		if _, ok := c.lastCollected[schedule.PeriodSec]; !ok {
-			c.lastCollected[schedule.PeriodSec] = now
-		}
-
-		if minPeriod == 0 || minPeriod > schedule.PeriodSec {
-			minPeriod = schedule.PeriodSec
-		}
-	}
-
-	return time.Duration(minPeriod) * time.Second
-}
-
-func (c *Controller) run(ch chan bool) {
+func (c *Controller) run() {
 	for {
 		select {
-		// If signal receives 'true', break to check the new ticker
-		// If signal receives 'false', that means controller is stopping
-		case signal := <-ch:
-			if signal {
-				break
-			}
-			c.wg.Done()
+		case <-c.quit:
+			close(c.mch.Quit)
 			return
 		case <-c.ticker.C():
 			c.tick()
+		case data := <-c.mch.Data:
+			c.update(data)
+		case err := <-c.mch.Err:
+			global.Handle(err)
 		}
 	}
 }
@@ -246,31 +160,8 @@ func (c *Controller) tick() {
 	defer c.processor.Unlock()
 
 	c.processor.StartCollection()
-
-	if c.notifier == nil {
-		c.accumulator.Collect(ctx)
-	} else {
-		// Export all metrics with the same period at the same time.
-		overdue := []int32{}
-		now := c.clock.Now()
-		// Have a tolerance of 10% of the period
-		tolerance := c.period / time.Duration(10)
-
-		for period, lastCollect := range c.lastCollected {
-			expectedExportTimeWithTolerance := lastCollect.Add(time.Duration(period)*time.Second - tolerance)
-
-			// Check if enough time elapsed since metrics with `period` were
-			// last exported, within the tolerance.
-			if expectedExportTimeWithTolerance.Before(now) {
-				overdue = append(overdue, period)
-				c.lastCollected[period] = now
-			}
-		}
-
-		if len(overdue) > 0 {
-			c.accumulator.Collect(ctx, overdue...)
-		}
-	}
+	rule := c.matcher.BuildRule(c.clock.Now())
+	c.accumulator.Collect(ctx, rule)
 
 	if err := c.processor.FinishCollection(); err != nil {
 		global.Handle(err)
@@ -278,5 +169,14 @@ func (c *Controller) tick() {
 
 	if err := c.exporter.Export(ctx, c.processor.CheckpointSet()); err != nil {
 		global.Handle(err)
+	}
+}
+
+func (c *Controller) update(data *MetricConfig) {
+	c.matcher.ConsumeSchedules(data.Schedules)
+	minPeriod := c.matcher.GetMinPeriod()
+	if c.period != minPeriod {
+		c.ticker.Stop()
+		c.ticker = c.clock.Ticker(matcher.GetMinPeriod())
 	}
 }

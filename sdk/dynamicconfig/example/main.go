@@ -19,8 +19,8 @@ import (
 	"log"
 	"time"
 
-	notify "go.opentelemetry.io/contrib/sdk/dynamicconfig/metric/controller/push/notifier"
 	"go.opentelemetry.io/contrib/sdk/dynamicconfig/metric/controller/push"
+	notify "go.opentelemetry.io/contrib/sdk/dynamicconfig/metric/controller/push/notifier"
 
 	"go.opentelemetry.io/otel/api/global"
 	"go.opentelemetry.io/otel/api/kv"
@@ -52,8 +52,6 @@ func initProvider() (*otlp.Exporter, *push.Controller) {
 	pusher := push.New(
 		simple.NewWithExactDistribution(),
 		exp,
-		push.WithStateful(true),
-		push.WithNotifier(notifier),
 	)
 	global.SetMeterProvider(pusher.Provider())
 	pusher.Start()

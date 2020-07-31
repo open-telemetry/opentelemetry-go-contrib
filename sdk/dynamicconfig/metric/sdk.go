@@ -73,6 +73,8 @@ type (
 		resource *resource.Resource
 	}
 
+	Rule func(string) bool
+
 	syncInstrument struct {
 		instrument
 	}
@@ -358,18 +360,18 @@ func (m *Accumulator) NewAsyncInstrument(descriptor api.Descriptor, runner metri
 // one Export() call per current aggregation.
 //
 // Returns the number of records that were checkpointed.
-func (m *Accumulator) Collect(ctx context.Context, periods ...int32) int {
+func (m *Accumulator) Collect(ctx context.Context, rule Rule) int {
 	m.collectLock.Lock()
 	defer m.collectLock.Unlock()
 
-	checkpointed := m.observeAsyncInstruments(ctx, periods)
-	checkpointed += m.collectSyncInstruments(periods)
+	checkpointed := m.observeAsyncInstruments(ctx, rule)
+	checkpointed += m.collectSyncInstruments(rule)
 	m.currentEpoch++
 
 	return checkpointed
 }
 
-func (m *Accumulator) collectSyncInstruments(periods []int32) int {
+func (m *Accumulator) collectSyncInstruments(rule Rule) int {
 	checkpointed := 0
 
 	m.current.Range(func(key interface{}, value interface{}) bool {
@@ -378,7 +380,7 @@ func (m *Accumulator) collectSyncInstruments(periods []int32) int {
 		inuse := value.(*record)
 
 		name := inuse.inst.descriptor.Name()
-		if !m.shouldCollect(name, periods) {
+		if rule(name) {
 			return true
 		}
 
@@ -428,7 +430,7 @@ func (m *Accumulator) CollectAsync(kv []kv.KeyValue, obs ...metric.Observation) 
 	}
 }
 
-func (m *Accumulator) observeAsyncInstruments(ctx context.Context, periods []int32) int {
+func (m *Accumulator) observeAsyncInstruments(ctx context.Context, rule Rule) int {
 	m.asyncLock.Lock()
 	defer m.asyncLock.Unlock()
 
@@ -437,9 +439,7 @@ func (m *Accumulator) observeAsyncInstruments(ctx context.Context, periods []int
 	// TODO: change this to `ctx` (in a separate PR, with tests)
 	m.asyncInstruments.Run(context.Background(), m)
 	for _, inst := range m.asyncInstruments.Instruments() {
-		if a := m.fromAsync(inst); a != nil &&
-			m.shouldCollect(a.descriptor.Name(), periods) {
-
+		if a := m.fromAsync(inst); a != nil && rule(a.descriptor.Name()) {
 			asyncCollected += m.checkpointAsync(a)
 		}
 	}

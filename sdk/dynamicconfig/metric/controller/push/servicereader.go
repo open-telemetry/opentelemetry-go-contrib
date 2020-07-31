@@ -12,10 +12,12 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package notifier
+package push
 
 import (
+	"bytes"
 	"context"
+	"fmt"
 	"time"
 
 	"github.com/benbjohnson/clock"
@@ -28,52 +30,36 @@ import (
 // A ServiceReader periodically reads from a remote configuration service to get configs that apply
 // to the SDK.
 type ServiceReader struct {
-	// Used for testing purposes.
-	clock clock.Clock
+	clock clock.Clock // for testing
 
-	// Required
 	configHost string
+	conn       grpc.ClientConn
+	client     pb.NewMetricConfigClient
 
-	// Timestamp of last time config service was checked.
-	lastTimestamp time.Time
-
-	// Most recent config version.
+	lastTimestamp        time.Time
 	lastKnownFingerprint []byte
-
-	// Suggested time from reading from the config service to wait before checking
-	// config service again (seconds).
-	suggestedWaitTimeSec int32
-
-	// Required. Label to identify this instance.
-	resource *resourcepb.Resource
+	resource             *resourcepb.Resource
 }
 
-func NewServiceReader(configHost string, resource *resourcepb.Resource) *ServiceReader {
+func NewServiceReader(configHost string, resource *resourcepb.Resource) (*ServiceReader, error) {
+	conn, err := grpc.Dial(r.configHost, grpc.WithInsecure())
+	if err != nil {
+		return nil, fmt.Errorf("fail to connect to config backend: %w", err)
+	}
+
 	return &ServiceReader{
 		clock:      clock.New(),
 		configHost: configHost,
+		conn:       conn,
+		client:     pb.NewMetricConfigClient(conn),
 		resource:   resource,
-	}
+	}, nil
 }
 
-// Reads from a config service. readConfig() will cause thread to sleep until
-// suggestedWaitTimeSec.
-func (r *ServiceReader) readConfig() (*MetricConfig, error) {
-	// suggstedWaitTime is how much longer to wait before reaching the full
-	// ServiceReader.suggestedWaitTimeSec.
-	suggestedWaitTime := r.suggestedWaitTime()
-	time.Sleep(suggestedWaitTime)
-	r.suggestedWaitTimeSec = 0
-
-	// Get the new config.
-	conn, err := grpc.Dial(r.configHost, grpc.WithInsecure(), grpc.WithBlock())
-	if err != nil {
-		return nil, err
-	}
-	defer conn.Close()
-
-	c := pb.NewMetricConfigClient(conn)
-
+// ReadConfig reads the latest configuration data from the backend. Returns
+// a nil *MetricConfig if there have been no changes to the configuration
+// since the last check.
+func (r *ServiceReader) ReadConfig() (*MetricConfig, error) {
 	request := &pb.MetricConfigRequest{
 		LastKnownFingerprint: r.lastKnownFingerprint,
 		Resource:             r.resource,
@@ -84,7 +70,11 @@ func (r *ServiceReader) readConfig() (*MetricConfig, error) {
 
 	response, err := c.GetMetricConfig(ctx, request)
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("fail to get metric config: %w", err)
+	}
+
+	if bytes.Equal(r.lastKnownFingerprint, response.Fingerprint) {
+		return nil, nil
 	}
 
 	r.lastKnownFingerprint = response.Fingerprint
@@ -92,24 +82,17 @@ func (r *ServiceReader) readConfig() (*MetricConfig, error) {
 	r.suggestedWaitTimeSec = response.SuggestedWaitTimeSec
 
 	newConfig := MetricConfig{*response}
+	if err := newConfig.Validate(); err != nil {
+		return nil, fmt.Errorf("metric config invalid: %w", err)
+	}
 
 	return &newConfig, nil
 }
 
-// Returns how much longer we need to wait to reach the full suggestedWaitTimeSec.
-func (r *ServiceReader) suggestedWaitTime() time.Duration {
-	if r.lastTimestamp.IsZero() || r.suggestedWaitTimeSec == 0 {
-		return 0
+func (r *ServiceReader) Stop() error {
+	if err := r.conn.Close(); err != nil {
+		return fmt.Errorf("fail to close connection to config backend: %w", err)
 	}
 
-	// This is the suggested earliest time we should read from the config service again.
-	suggestedReadTime := r.lastTimestamp.Add(time.Duration(r.suggestedWaitTimeSec) * time.Second)
-
-	suggestedWaitTime := suggestedReadTime.Sub(r.clock.Now())
-	if suggestedWaitTime < 0 {
-		suggestedWaitTime = 0
-	}
-
-	// Return the time needed to wait to reach suggestedReadTime.
-	return suggestedWaitTime
+	return nil
 }

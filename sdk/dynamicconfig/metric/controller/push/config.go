@@ -17,33 +17,19 @@ package push
 import (
 	"time"
 
-	notify "go.opentelemetry.io/contrib/sdk/dynamicconfig/metric/controller/push/notifier"
-
 	"go.opentelemetry.io/otel/sdk/resource"
 )
 
-// Config contains configuration for a push Controller.
+// A Config contains configuration for a push Controller.
 type Config struct {
 	// Resource is the OpenTelemetry resource associated with all Meters
 	// created by the Controller.
 	Resource *resource.Resource
 
-	// Stateful causes the controller to maintain state across
-	// collection events, so that records in the exported
-	// checkpoint set are cumulative.
-	Stateful bool
-
-	// Period is the interval between calls to Collect a checkpoint.
-	Period time.Duration
-
 	// Timeout is the duration a collection (i.e. collect, accumulate,
 	// integrate, and export) can last before it is canceled. Defaults to
 	// the controller push period.
 	Timeout time.Duration
-
-	// Notifier supplies configurations for the push controller
-	// from a remote config service.
-	Notifier *notify.Notifier
 }
 
 // Option is the interface that applies the value to a configuration option.
@@ -63,28 +49,6 @@ func (o resourceOption) Apply(config *Config) {
 	config.Resource = o.Resource
 }
 
-// WithStateful sets the Stateful configuration option of a Config.
-func WithStateful(stateful bool) Option {
-	return statefulOption(stateful)
-}
-
-type statefulOption bool
-
-func (o statefulOption) Apply(config *Config) {
-	config.Stateful = bool(o)
-}
-
-// WithPeriod sets the Period configuration option of a Config.
-func WithPeriod(period time.Duration) Option {
-	return periodOption(period)
-}
-
-type periodOption time.Duration
-
-func (o periodOption) Apply(config *Config) {
-	config.Period = time.Duration(o)
-}
-
 // WithTimeout sets the Timeout configuration option of a Config.
 func WithTimeout(timeout time.Duration) Option {
 	return timeoutOption(timeout)
@@ -94,15 +58,4 @@ type timeoutOption time.Duration
 
 func (o timeoutOption) Apply(config *Config) {
 	config.Timeout = time.Duration(o)
-}
-
-// WithNotifier sets the Notifier configuration option of a Config.
-func WithNotifier(notifier *notify.Notifier) Option {
-	return notifierOption{notifier}
-}
-
-type notifierOption struct{ *notify.Notifier }
-
-func (o notifierOption) Apply(config *Config) {
-	config.Notifier = o.Notifier
 }

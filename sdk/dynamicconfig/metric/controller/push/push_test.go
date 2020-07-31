@@ -26,9 +26,7 @@ import (
 	"github.com/stretchr/testify/require"
 
 	pb "github.com/open-telemetry/opentelemetry-proto/gen/go/experimental/metricconfigservice"
-
 	"go.opentelemetry.io/contrib/sdk/dynamicconfig/metric/controller/push"
-	notify "go.opentelemetry.io/contrib/sdk/dynamicconfig/metric/controller/push/notifier"
 
 	"go.opentelemetry.io/otel/api/global"
 	"go.opentelemetry.io/otel/api/kv"
@@ -309,7 +307,7 @@ func TestPushScheduleChange(t *testing.T) {
 			&twoSchedule,
 		},
 	}
-	notifier, err := notify.NewNotifier(&notify.MetricConfig{config})
+	notifier, err := push.NewNotifier(&MetricConfig{config})
 	assert.NoError(t, err)
 
 	fix := newFixture(t)
@@ -317,7 +315,6 @@ func TestPushScheduleChange(t *testing.T) {
 	p := push.New(
 		test.AggregatorSelector(),
 		fix.exporter,
-		push.WithPeriod(1*time.Second),
 		push.WithResource(testResource),
 		push.WithNotifier(notifier),
 	)

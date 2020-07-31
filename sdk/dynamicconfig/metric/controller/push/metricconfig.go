@@ -12,10 +12,9 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package notifier
+package push
 
 import (
-	"bytes"
 	"errors"
 
 	pb "github.com/open-telemetry/opentelemetry-proto/gen/go/experimental/metricconfigservice"
@@ -46,16 +45,12 @@ func GetDefaultConfig(period int32, fingerprint []byte) *MetricConfig {
 	}
 }
 
-func (config *MetricConfig) ValidateMetricConfig() error {
+func (config *MetricConfig) Validate() error {
 	for _, schedule := range config.Schedules {
 		if schedule.PeriodSec < 0 {
-			return errors.New("Periods must be positive")
+			return errors.New("periods must be positive")
 		}
 	}
 
 	return nil
-}
-
-func (config *MetricConfig) Equals(otherConfig *MetricConfig) bool {
-	return bytes.Equal(config.Fingerprint, otherConfig.Fingerprint)
 }
