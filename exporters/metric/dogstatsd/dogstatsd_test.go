@@ -24,7 +24,7 @@ import (
 	"go.opentelemetry.io/contrib/exporters/metric/dogstatsd"
 	"go.opentelemetry.io/otel/api/kv"
 	"go.opentelemetry.io/otel/api/metric"
-	"go.opentelemetry.io/otel/exporters/metric/test"
+	"go.opentelemetry.io/otel/sdk/export/metric/metrictest"
 	"go.opentelemetry.io/otel/sdk/metric/aggregator/sum"
 	"go.opentelemetry.io/otel/sdk/resource"
 )
@@ -76,10 +76,10 @@ func TestDogstatsLabels(t *testing.T) {
 		t.Run(tc.name, func(t *testing.T) {
 			res := resource.New(tc.resources...)
 			ctx := context.Background()
-			checkpointSet := test.NewCheckpointSet(res)
+			checkpointSet := metrictest.NewCheckpointSet(res)
 
 			desc := metric.NewDescriptor("test.name", metric.CounterKind, metric.Int64NumberKind)
-			cagg, cckpt := test.Unslice2(sum.New(2))
+			cagg, cckpt := metrictest.Unslice2(sum.New(2))
 			require.NoError(t, cagg.Update(ctx, metric.NewInt64Number(123), &desc))
 			require.NoError(t, cagg.SynchronizedMove(cckpt, &desc))
 
