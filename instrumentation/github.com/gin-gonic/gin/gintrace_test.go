@@ -31,7 +31,7 @@ import (
 
 	mocktrace "go.opentelemetry.io/contrib/internal/trace"
 	otelglobal "go.opentelemetry.io/otel/api/global"
-	"go.opentelemetry.io/otel/api/kv/value"
+	"go.opentelemetry.io/otel/api/kv"
 	otelpropagation "go.opentelemetry.io/otel/api/propagation"
 	oteltrace "go.opentelemetry.io/otel/api/trace"
 )
@@ -91,7 +91,7 @@ func TestTrace200(t *testing.T) {
 		span := oteltrace.SpanFromContext(c.Request.Context())
 		mspan, ok := span.(*mocktrace.Span)
 		require.True(t, ok)
-		assert.Equal(t, value.String("foobar"), mspan.Attributes["http.server_name"])
+		assert.Equal(t, kv.StringValue("foobar"), mspan.Attributes["http.server_name"])
 		id := c.Param("id")
 		_, _ = c.Writer.Write([]byte(id))
 	})
@@ -110,11 +110,11 @@ func TestTrace200(t *testing.T) {
 	span := spans[0]
 	assert.Equal(t, "/user/:id", span.Name)
 	assert.Equal(t, oteltrace.SpanKindServer, span.Kind)
-	assert.Equal(t, value.String("foobar"), span.Attributes["http.server_name"])
-	assert.Equal(t, value.Int(http.StatusOK), span.Attributes["http.status_code"])
-	assert.Equal(t, value.String("GET"), span.Attributes["http.method"])
-	assert.Equal(t, value.String("/user/123"), span.Attributes["http.target"])
-	assert.Equal(t, value.String("/user/:id"), span.Attributes["http.route"])
+	assert.Equal(t, kv.StringValue("foobar"), span.Attributes["http.server_name"])
+	assert.Equal(t, kv.IntValue(http.StatusOK), span.Attributes["http.status_code"])
+	assert.Equal(t, kv.StringValue("GET"), span.Attributes["http.method"])
+	assert.Equal(t, kv.StringValue("/user/123"), span.Attributes["http.target"])
+	assert.Equal(t, kv.StringValue("/user/:id"), span.Attributes["http.route"])
 }
 
 func TestError(t *testing.T) {
@@ -140,9 +140,9 @@ func TestError(t *testing.T) {
 	require.Len(t, spans, 1)
 	span := spans[0]
 	assert.Equal(t, "/server_err", span.Name)
-	assert.Equal(t, value.String("foobar"), span.Attributes["http.server_name"])
-	assert.Equal(t, value.Int(http.StatusInternalServerError), span.Attributes["http.status_code"])
-	assert.Equal(t, value.String("Error #01: oh no\n"), span.Attributes["gin.errors"])
+	assert.Equal(t, kv.StringValue("foobar"), span.Attributes["http.server_name"])
+	assert.Equal(t, kv.IntValue(http.StatusInternalServerError), span.Attributes["http.status_code"])
+	assert.Equal(t, kv.StringValue("Error #01: oh no\n"), span.Attributes["gin.errors"])
 	// server errors set the status
 	assert.Equal(t, codes.Internal, span.Status)
 }
@@ -182,7 +182,7 @@ func TestHTML(t *testing.T) {
 		}
 	}
 	require.NotNil(t, tspan)
-	assert.Equal(t, value.String("hello"), tspan.Attributes["go.template"])
+	assert.Equal(t, kv.StringValue("hello"), tspan.Attributes["go.template"])
 }
 
 func TestGetSpanNotInstrumented(t *testing.T) {
