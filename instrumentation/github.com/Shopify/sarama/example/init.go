@@ -18,7 +18,7 @@ import (
 	"log"
 
 	otelglobal "go.opentelemetry.io/otel/api/global"
-	oteltracestdout "go.opentelemetry.io/otel/exporters/trace/stdout"
+	"go.opentelemetry.io/otel/exporters/stdout"
 	sdktrace "go.opentelemetry.io/otel/sdk/trace"
 )
 
@@ -27,7 +27,7 @@ const (
 )
 
 func InitTracer() {
-	exporter, err := oteltracestdout.NewExporter(oteltracestdout.Options{PrettyPrint: true})
+	exporter, err := stdout.NewExporter(stdout.WithPrettyPrint())
 	if err != nil {
 		log.Fatal(err)
 	}
