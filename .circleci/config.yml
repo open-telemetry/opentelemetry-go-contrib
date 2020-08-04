@@ -41,7 +41,7 @@ jobs:
         type: string
 
     machine:
-      image: ubuntu-1064:201903-01
+      image: ubuntu-1604:202004-01
     
     environment:
       TEST_RESULTS: /tmp/test-results # path to where test results will be saved
