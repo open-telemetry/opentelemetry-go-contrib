@@ -57,7 +57,8 @@ ci: precommit check-clean-work-tree test-with-coverage test-386
 .PHONY: cassandra
 cassandra:
 	set -e; \
-	docker run --name cassandra-integ --rm -p 9042:9042 cassandra:3; \
+	docker run --name cassandra-integ --rm -p 9042:9042 -d cassandra:3; \
+	curl -sSL https://s3.amazonaws.com/circle-downloads/wait-for-cassandra.sh | sh; \
 	(cd instrumentation/github.com/gocql/gocql && \
 	INTEGRATION=gocql go test); \
 	docker stop cassandra-integ; \
