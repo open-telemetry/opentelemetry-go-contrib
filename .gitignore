@@ -8,3 +8,4 @@ Thumbs.db
 *.so
 coverage.*
 
+instrumentation/github.com/gocql/gocql/example/example
