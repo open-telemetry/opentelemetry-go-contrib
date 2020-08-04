@@ -68,6 +68,8 @@ workflows:
   build_and_test:
     jobs:
       - build
+  integration_test:
+    jobs:
       - integration:
           matrix:
             parameters:
