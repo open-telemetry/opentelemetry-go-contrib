@@ -22,8 +22,6 @@ import (
 	"net"
 	"strings"
 
-	"go.opentelemetry.io/otel/semconv"
-
 	"github.com/golang/protobuf/proto" //nolint:staticcheck
 
 	"google.golang.org/grpc"
@@ -33,6 +31,7 @@ import (
 
 	"go.opentelemetry.io/otel/api/correlation"
 	"go.opentelemetry.io/otel/api/kv"
+	"go.opentelemetry.io/otel/api/standard"
 	"go.opentelemetry.io/otel/api/trace"
 )
 
@@ -45,20 +44,20 @@ func (m messageType) Event(ctx context.Context, id int, message interface{}) {
 	if p, ok := message.(proto.Message); ok {
 		span.AddEvent(ctx, "message",
 			kv.KeyValue(m),
-			semconv.RPCMessageIDKey.Int(id),
-			semconv.RPCMessageUncompressedSizeKey.Int(proto.Size(p)),
+			standard.RPCMessageIDKey.Int(id),
+			standard.RPCMessageUncompressedSizeKey.Int(proto.Size(p)),
 		)
 	} else {
 		span.AddEvent(ctx, "message",
 			kv.KeyValue(m),
-			semconv.RPCMessageIDKey.Int(id),
+			standard.RPCMessageIDKey.Int(id),
 		)
 	}
 }
 
 var (
-	messageSent     = messageType(semconv.RPCMessageTypeSent)
-	messageReceived = messageType(semconv.RPCMessageTypeReceived)
+	messageSent     = messageType(standard.RPCMessageTypeSent)
+	messageReceived = messageType(standard.RPCMessageTypeReceived)
 )
 
 // UnaryClientInterceptor returns a grpc.UnaryClientInterceptor suitable
@@ -404,7 +403,7 @@ func StreamServerInterceptor(tracer trace.Tracer, opts ...Option) grpc.StreamSer
 // spanInfo returns a span name and all appropriate attributes from the gRPC
 // method and peer address.
 func spanInfo(fullMethod, peerAddress string) (string, []kv.KeyValue) {
-	attrs := []kv.KeyValue{semconv.RPCSystemGRPC}
+	attrs := []kv.KeyValue{standard.RPCSystemGRPC}
 	name, mAttrs := parseFullMethod(fullMethod)
 	attrs = append(attrs, mAttrs...)
 	attrs = append(attrs, peerAttr(peerAddress)...)
@@ -423,8 +422,8 @@ func peerAttr(addr string) []kv.KeyValue {
 	}
 
 	return []kv.KeyValue{
-		semconv.NetPeerIPKey.String(host),
-		semconv.NetPeerPortKey.String(port),
+		standard.NetPeerIPKey.String(host),
+		standard.NetPeerPortKey.String(port),
 	}
 }
 
@@ -450,10 +449,10 @@ func parseFullMethod(fullMethod string) (string, []kv.KeyValue) {
 
 	var attrs []kv.KeyValue
 	if service := parts[0]; service != "" {
-		attrs = append(attrs, semconv.RPCServiceKey.String(service))
+		attrs = append(attrs, standard.RPCServiceKey.String(service))
 	}
 	if method := parts[1]; method != "" {
-		attrs = append(attrs, semconv.RPCMethodKey.String(method))
+		attrs = append(attrs, standard.RPCMethodKey.String(method))
 	}
 	return name, attrs
 }
