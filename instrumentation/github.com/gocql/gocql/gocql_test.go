@@ -35,6 +35,8 @@ import (
 	"github.com/stretchr/testify/assert"
 
 	mocktracer "go.opentelemetry.io/contrib/internal/trace"
+	"go.opentelemetry.io/contrib/internal/util"
+
 	"go.opentelemetry.io/otel/api/kv"
 	"go.opentelemetry.io/otel/api/metric"
 	export "go.opentelemetry.io/otel/sdk/export/metric"
@@ -519,10 +521,7 @@ func afterEach() {
 }
 
 func TestMain(m *testing.M) {
-	if _, present := os.LookupEnv("INTEGRATION"); !present {
-		fmt.Println("--- SKIP: to enable integration test, set the INTEGRATION environment variable")
-		os.Exit(0)
-	}
+	util.IntegrationShouldRun("gocql")
 	beforeAll()
 	os.Exit(m.Run())
 }
