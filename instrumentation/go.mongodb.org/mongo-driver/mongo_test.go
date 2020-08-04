@@ -31,7 +31,7 @@ import (
 )
 
 func TestMain(m *testing.M) {
-	util.IntegrationShouldRun("mongo-driver")
+	util.IntegrationShouldRun("test-mongo-driver")
 	os.Exit(m.Run())
 }
 

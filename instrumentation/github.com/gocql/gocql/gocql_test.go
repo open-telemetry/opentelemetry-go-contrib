@@ -521,7 +521,7 @@ func afterEach() {
 }
 
 func TestMain(m *testing.M) {
-	util.IntegrationShouldRun("gocql")
+	util.IntegrationShouldRun("test-gocql")
 	beforeAll()
 	os.Exit(m.Run())
 }

@@ -55,33 +55,23 @@ test-with-coverage:
 ci: precommit check-clean-work-tree test-with-coverage test-386
 
 .PHONY: test-gocql
-cassandra:
+test-gocql:
 	set -e; \
 	docker run --name cass-integ --rm -p 9042:9042 -d cassandra:3; \
-	for i in 1 2 3 4; do \
-    if docker exec cass-integ nodetool status | grep "^UN"; then \
-      break; \
-    fi; \
-    echo "cassandra not yet ready..."; \
-    sleep 10; \
-  done; \
+	CMD=cassandra IMG_NAME=cass-integ ./.circleci/wait.sh
 	(cd instrumentation/github.com/gocql/gocql && \
-	INTEGRATION=gocql go test); \
+	  $(GOTEST_WITH_COVERAGE) . && \
+	  go tool cover -html=coverage.txt -o coverage.html); \
 	docker stop cass-integ; \
 
 .PHONY: test-mongo-driver
 test-mongo-driver:
 	set -e; \
 	docker run --name mongo-integ --rm -p 27017:27017 -d mongo; \
-	for i in 1 2 3 4; do \
-		if docker logs --tail mongo-integ | grep "waiting for connections on port 27017"; then \
-			break; \
-		fi; \
-		echo "mongo not yet ready..."; \
-		sleep 10; \
-	done; \
+	CMD=mongo IMG_NAME=mongo-integ ./.circleci/wait.sh
 	(cd instrumentation/go.mongodb.org/mongo-driver && \
-		INTEGRATION=mongo-driver go test); \
+	  $(GOTEST_WITH_COVERAGE) . && \
+	  go tool cover -html=coverage.txt -o coverage.html); \
 	docker stop mongo-integ; \
 
 .PHONY: check-clean-work-tree
