@@ -37,15 +37,16 @@ jobs:
   integration:
 
     parameters:
-      integ:
+      target:
         type: string
+        description: "The makefile target that will run the tests for the integration."
 
     machine:
       image: ubuntu-1604:202004-01
     
     environment:
       TEST_RESULTS: /tmp/test-results # path to where test results will be saved
-      INTEGRATION: << parameters.integ >>
+      INTEGRATION: << parameters.target >>
     
     steps:
       - checkout
@@ -70,4 +71,4 @@ workflows:
       - integration:
           matrix:
             parameters:
-              integ: [test-gocql, test-mongo-driver]
+              target: [test-gocql, test-mongo-driver]
