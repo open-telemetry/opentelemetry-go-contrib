@@ -57,11 +57,17 @@ ci: precommit check-clean-work-tree test-with-coverage test-386
 .PHONY: cassandra
 cassandra:
 	set -e; \
-	docker run --name cassandra-integ --rm -p 9042:9042 -d cassandra:3; \
-	curl -sSL https://s3.amazonaws.com/circle-downloads/wait-for-cassandra.sh | sh; \
+	docker run --name cass-integ --rm -p 9042:9042 -d cassandra:3; \
+	for i in 1 2 3 4; do \
+    if docker exec cass-integ nodetool status | grep "^UN"; then \
+      break; \
+    fi; \
+    echo "cassandra not yet read..."; \
+    sleep 10; \
+  done; \
 	(cd instrumentation/github.com/gocql/gocql && \
 	INTEGRATION=gocql go test); \
-	docker stop cassandra-integ; \
+	docker stop cass-integ; \
 
 .PHONY: check-clean-work-tree
 check-clean-work-tree:
