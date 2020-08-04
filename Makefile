@@ -54,6 +54,14 @@ test-with-coverage:
 .PHONY: ci
 ci: precommit check-clean-work-tree test-with-coverage test-386
 
+.PHONY: cassandra
+cassandra:
+	set -e; \
+	docker run --name cassandra-integ --rm -p 9042:9042 cassandra:3; \
+	(cd instrumentation/github.com/gocql/gocql && \
+	INTEGRATION=gocql go test); \
+	docker stop cassandra-integ; \
+
 .PHONY: check-clean-work-tree
 check-clean-work-tree:
 	@if ! git diff --quiet; then \
