@@ -65,3 +65,7 @@ updates:
     directory: "/instrumentation/net/http" # Location of package manifests
     schedule:
       interval: "daily"
+  - package-ecosystem: "gomod" # See documentation for possible values
+    directory: "/instrumentation/net/http/httptrace" # Location of package manifests
+    schedule:
+      interval: "daily"
