@@ -42,7 +42,6 @@ import (
 	"go.opentelemetry.io/otel/api/global"
 	"go.opentelemetry.io/otel/exporters/metric/prometheus"
 	zipkintrace "go.opentelemetry.io/otel/exporters/trace/zipkin"
-	sdktrace "go.opentelemetry.io/otel/sdk/trace"
 )
 
 const keyspace = "gocql_integration_example"
@@ -139,27 +138,12 @@ func initMetrics() {
 }
 
 func initTracer() {
-	traceExporter, err := zipkintrace.NewExporter(
+	if err := zipkintrace.InstallNewPipeline(
 		"http://localhost:9411/api/v2/spans",
 		"zipkin-example",
-	)
-	if err != nil {
+	); err != nil {
 		log.Fatalf("failed to create span traceExporter, %v", err)
 	}
-
-	provider, err := sdktrace.NewProvider(
-		sdktrace.WithBatcher(
-			traceExporter,
-			sdktrace.WithBatchTimeout(5),
-			sdktrace.WithMaxExportBatchSize(10),
-		),
-		sdktrace.WithConfig(sdktrace.Config{DefaultSampler: sdktrace.AlwaysSample()}),
-	)
-	if err != nil {
-		log.Fatalf("failed to create trace provider, %v", err)
-	}
-
-	global.SetTraceProvider(provider)
 }
 
 func initDb() {
