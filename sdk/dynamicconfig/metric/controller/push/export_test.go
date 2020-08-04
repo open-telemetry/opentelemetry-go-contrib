@@ -14,12 +14,50 @@
 
 package push
 
+import (
+	pb "github.com/open-telemetry/opentelemetry-proto/gen/go/experimental/metricconfigservice"
+	"go.opentelemetry.io/contrib/sdk/dynamicconfig/metric/controller/notify"
+	"go.opentelemetry.io/contrib/sdk/dynamicconfig/metric/controller/notify/mock"
+	controllerTime "go.opentelemetry.io/otel/sdk/metric/controller/time"
+)
+
 func (c *Controller) SetClock(clock controllerTime.Clock) {
 	c.lock.Lock()
 	defer c.lock.Unlock()
 	c.clock = clock
 }
 
-func (n *Notifier) SetClock(clock controllerTime.Clock) {
-	n.clock = clock
+func (c *Controller) SetNotifier(notifier notify.Notifier) {
+	c.lock.Lock()
+	defer c.lock.Unlock()
+	c.notifier = notifier
+}
+
+func (c *Controller) SetPeriod(period int32) {
+	config := pb.MetricConfigResponse{
+		Schedules: []*pb.MetricConfigResponse_Schedule{
+			{
+				InclusionPatterns: []*pb.MetricConfigResponse_Schedule_Pattern{
+					{
+						Match: &pb.MetricConfigResponse_Schedule_Pattern_StartsWith{
+							StartsWith: "",
+						},
+					},
+				},
+				PeriodSec: period,
+			},
+		},
+	}
+
+	notifier := mock.NewNotifier()
+	notifier.Receive(&notify.MetricConfig{config})
+	c.SetNotifier(notifier)
+}
+
+func (c *Controller) SetDone() {
+	c.done = make(chan struct{})
+}
+
+func (c *Controller) WaitDone() {
+	<-c.done
 }

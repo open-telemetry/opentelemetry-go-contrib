@@ -16,11 +16,14 @@ package push
 
 import (
 	"context"
+	"log"
 	"sync"
 	"time"
 
 	sdk "go.opentelemetry.io/contrib/sdk/dynamicconfig/metric"
 
+	"go.opentelemetry.io/contrib/sdk/dynamicconfig/metric/controller/notify"
+	nbasic "go.opentelemetry.io/contrib/sdk/dynamicconfig/metric/controller/notify/basic"
 	"go.opentelemetry.io/otel/api/global"
 	"go.opentelemetry.io/otel/api/metric"
 	"go.opentelemetry.io/otel/api/metric/registry"
@@ -29,7 +32,7 @@ import (
 	"go.opentelemetry.io/otel/sdk/metric/processor/basic"
 )
 
-const fallbackPeriod = 10 * time.Second
+const fallbackPeriod = 10 * time.Minute
 
 // Controller organizes a periodic push of metric data.
 type Controller struct {
@@ -38,12 +41,15 @@ type Controller struct {
 	provider    *registry.Provider
 	processor   *basic.Processor
 	exporter    export.Exporter
-	quit        chan bool
+	lastPeriod  time.Duration
+	quit        chan struct{}
+	done        chan struct{}
+	isRunning   bool
 	timeout     time.Duration
 	clock       controllerTime.Clock
 	ticker      controllerTime.Ticker
-	notifier    *Notifier
-	mch         MonitorChannel
+	notifier    notify.Notifier
+	mch         notify.MonitorChannel
 	matcher     *PeriodMatcher
 }
 
@@ -65,9 +71,9 @@ func New(selector export.AggregatorSelector, exporter export.Exporter, configHos
 		sdk.WithResource(c.Resource),
 	)
 
-	notifier := NewNotifier(configHost, c.Resource)
-	mch := MonitorChannel{
-		Data: make(chan *MetricConfig),
+	notifier := nbasic.NewNotifier(configHost, c.Resource)
+	mch := notify.MonitorChannel{
+		Data: make(chan *notify.MetricConfig),
 		Err:  make(chan error),
 		Quit: make(chan struct{}),
 	}
@@ -77,23 +83,13 @@ func New(selector export.AggregatorSelector, exporter export.Exporter, configHos
 		accumulator: impl,
 		processor:   processor,
 		exporter:    exporter,
-		quit:        make(chan bool),
-		period:      c.Period,
+		quit:        make(chan struct{}),
 		timeout:     c.Timeout,
 		clock:       controllerTime.RealClock{},
 		notifier:    notifier,
 		mch:         mch,
 		matcher:     &PeriodMatcher{},
 	}
-}
-
-// SetClock supports setting a mock clock for testing. This must be
-// called before Start().
-// TODO: use export?
-func (c *Controller) SetClock(clock controllerTime.Clock) {
-	c.lock.Lock()
-	defer c.lock.Unlock()
-	c.clock = clock
 }
 
 // Provider returns a metric.Provider instance for this controller.
@@ -107,12 +103,12 @@ func (c *Controller) Start() {
 	c.lock.Lock()
 	defer c.lock.Unlock()
 
-	if c.ticker != nil {
+	if c.isRunning {
 		return
 	}
 
-	c.ticker = c.clock.Ticker(fallbackPeriod)
-
+	c.isRunning = true
+	c.matcher.Start(c.clock)
 	go c.notifier.MonitorChanges(c.mch)
 	go c.run()
 }
@@ -123,29 +119,39 @@ func (c *Controller) Stop() {
 	c.lock.Lock()
 	defer c.lock.Unlock()
 
-	if c.quit == nil {
+	if !c.isRunning {
 		return
 	}
 
+	c.isRunning = false
 	close(c.quit)
-	c.quit = nil
-	c.ticker.Stop()
-	c.ticker = nil
+	if c.ticker != nil {
+		c.ticker.Stop()
+	}
 
-	c.tick()
+	go c.tick()
 }
 
 func (c *Controller) run() {
+	initData := <-c.mch.Data
+	c.update(initData)
+	// log.Println("[WOOT] current ticker:", c.ticker.C())
+
 	for {
 		select {
 		case <-c.quit:
+			log.Println("[WOOT] quitting")
 			close(c.mch.Quit)
 			return
-		case <-c.ticker.C():
+		case <-c.ticker.C(): // TODO: make explicit dynamic ticker? <-- STOPPED HERE
+			log.Println("[WOOT] just ticked")
 			c.tick()
 		case data := <-c.mch.Data:
+			log.Println("[WOOT] receiving new data")
+			// log.Println("[WOOT] ticker prior to update: ", c.ticker.C())
 			c.update(data)
 		case err := <-c.mch.Err:
+			log.Println("[WOOT] err-ing")
 			global.Handle(err)
 		}
 	}
@@ -154,6 +160,7 @@ func (c *Controller) run() {
 func (c *Controller) tick() {
 	ctx, cancel := context.WithTimeout(context.Background(), c.timeout)
 	defer cancel()
+	log.Println("[WOOT] starting export")
 
 	c.processor.Lock()
 	defer c.processor.Unlock()
@@ -169,13 +176,34 @@ func (c *Controller) tick() {
 	if err := c.exporter.Export(ctx, c.processor.CheckpointSet()); err != nil {
 		global.Handle(err)
 	}
+
+	if c.done != nil {
+		log.Println("[WOOT] about to send done signal")
+		c.done <- struct{}{}
+	}
+	log.Println("[WOOT] finished exporting")
 }
 
-func (c *Controller) update(data *MetricConfig) {
+func (c *Controller) update(data *notify.MetricConfig) {
+	log.Println("[WOOT] updating ticker")
 	c.matcher.ConsumeSchedules(data.Schedules)
 	minPeriod := c.matcher.GetMinPeriod()
-	if c.period != minPeriod {
-		c.ticker.Stop()
-		c.ticker = c.clock.Ticker(matcher.GetMinPeriod())
+	if c.lastPeriod != minPeriod {
+		log.Println("[WOOT] using new period: ", minPeriod)
+		if c.ticker != nil {
+			c.ticker.Stop()
+		}
+
+		c.lastPeriod = minPeriod
+		log.Println("[WOOT] init'ing new ticker")
+
+		// TOOD: create tidier, encapsulated dynamic ticker
+		c.lock.Lock()
+		c.ticker = c.clock.Ticker(c.lastPeriod)
+		c.lock.Unlock()
+
+		if c.done != nil {
+			c.done <- struct{}{}
+		}
 	}
 }

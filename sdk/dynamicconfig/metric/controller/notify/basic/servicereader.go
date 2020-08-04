@@ -23,6 +23,7 @@ import (
 	"github.com/benbjohnson/clock"
 	pb "github.com/open-telemetry/opentelemetry-proto/gen/go/experimental/metricconfigservice"
 	resourcepb "github.com/open-telemetry/opentelemetry-proto/gen/go/resource/v1"
+	"go.opentelemetry.io/contrib/sdk/dynamicconfig/metric/controller/notify"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/metadata"
 )
@@ -32,9 +33,8 @@ import (
 type ServiceReader struct {
 	clock clock.Clock // for testing
 
-	configHost string
-	conn       grpc.ClientConn
-	client     pb.NewMetricConfigClient
+	conn   *grpc.ClientConn
+	client pb.MetricConfigClient
 
 	lastTimestamp        time.Time
 	lastKnownFingerprint []byte
@@ -42,24 +42,23 @@ type ServiceReader struct {
 }
 
 func NewServiceReader(configHost string, resource *resourcepb.Resource) (*ServiceReader, error) {
-	conn, err := grpc.Dial(r.configHost, grpc.WithInsecure())
+	conn, err := grpc.Dial(configHost, grpc.WithInsecure())
 	if err != nil {
 		return nil, fmt.Errorf("fail to connect to config backend: %w", err)
 	}
 
 	return &ServiceReader{
-		clock:      clock.New(),
-		configHost: configHost,
-		conn:       conn,
-		client:     pb.NewMetricConfigClient(conn),
-		resource:   resource,
+		clock:    clock.New(),
+		conn:     conn,
+		client:   pb.NewMetricConfigClient(conn),
+		resource: resource,
 	}, nil
 }
 
 // ReadConfig reads the latest configuration data from the backend. Returns
 // a nil *MetricConfig if there have been no changes to the configuration
 // since the last check.
-func (r *ServiceReader) ReadConfig() (*MetricConfig, error) {
+func (r *ServiceReader) ReadConfig() (*notify.MetricConfig, error) {
 	request := &pb.MetricConfigRequest{
 		LastKnownFingerprint: r.lastKnownFingerprint,
 		Resource:             r.resource,
@@ -68,20 +67,21 @@ func (r *ServiceReader) ReadConfig() (*MetricConfig, error) {
 	md := metadata.Pairs("timestamp", r.clock.Now().Format(time.StampNano))
 	ctx := metadata.NewOutgoingContext(context.Background(), md)
 
-	response, err := c.GetMetricConfig(ctx, request)
+	response, err := r.client.GetMetricConfig(ctx, request)
 	if err != nil {
 		return nil, fmt.Errorf("fail to get metric config: %w", err)
 	}
 
+	// TODO: SuggestedWaitTimeSec may not be read unless there is a change
+	// reflected in the fingerprints
 	if bytes.Equal(r.lastKnownFingerprint, response.Fingerprint) {
 		return nil, nil
 	}
 
 	r.lastKnownFingerprint = response.Fingerprint
 	r.lastTimestamp = r.clock.Now()
-	r.suggestedWaitTimeSec = response.SuggestedWaitTimeSec
 
-	newConfig := MetricConfig{*response}
+	newConfig := notify.MetricConfig{*response}
 	if err := newConfig.Validate(); err != nil {
 		return nil, fmt.Errorf("metric config invalid: %w", err)
 	}

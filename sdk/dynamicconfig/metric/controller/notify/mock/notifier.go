@@ -12,14 +12,32 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package notify
+package mock
 
-type MonitorChannel struct {
-	Data chan *MetricConfig
-	Err  chan error
-	Quit chan struct{}
+import (
+	"go.opentelemetry.io/contrib/sdk/dynamicconfig/metric/controller/notify"
+)
+
+type Notifier struct {
+	data chan *notify.MetricConfig
 }
 
-type Notifier interface {
-	MonitorChanges(mch MonitorChannel)
+func NewNotifier() *Notifier {
+	return &Notifier{make(chan *notify.MetricConfig)}
+}
+
+func (n *Notifier) Receive(config *notify.MetricConfig) {
+	go func() { n.data <- config }()
+}
+
+// TODO: switch to sending data paradigm
+func (n *Notifier) MonitorChanges(mch notify.MonitorChannel) {
+	for {
+		select {
+		case config := <-n.data:
+			mch.Data <- config
+		case <-mch.Quit:
+			return
+		}
+	}
 }

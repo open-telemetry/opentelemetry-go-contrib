@@ -380,7 +380,7 @@ func (m *Accumulator) collectSyncInstruments(rule Rule) int {
 		inuse := value.(*record)
 
 		name := inuse.inst.descriptor.Name()
-		if rule(name) {
+		if !rule(name) {
 			return true
 		}
 

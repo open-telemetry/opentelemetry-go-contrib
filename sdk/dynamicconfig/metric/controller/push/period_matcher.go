@@ -15,19 +15,21 @@
 package push
 
 import (
+	"log"
 	"sync"
 	"time"
 
 	pb "github.com/open-telemetry/opentelemetry-proto/gen/go/experimental/metricconfigservice"
 	"go.opentelemetry.io/contrib/sdk/dynamicconfig/internal/metricpattern"
 	"go.opentelemetry.io/contrib/sdk/dynamicconfig/metric"
+	controllerTime "go.opentelemetry.io/otel/sdk/metric/controller/time"
 )
 
 const tolerance float64 = 0.1
 
-// TODO: add PeriodMatcher to pusher and accumulator, remove dynamicextension
 type PeriodMatcher struct {
-	metrics map[string]*CollectData
+	metrics   map[string]*CollectData
+	startTime time.Time
 
 	m     sync.Mutex
 	sched []*pb.MetricConfigResponse_Schedule
@@ -38,34 +40,44 @@ type CollectData struct {
 	period        time.Duration
 }
 
+func (matcher *PeriodMatcher) Start(clock controllerTime.Clock) {
+	if clock == nil {
+		matcher.startTime = time.Now()
+	} else {
+		matcher.startTime = clock.Now()
+	}
+}
+
 func (matcher *PeriodMatcher) BuildRule(now time.Time) metric.Rule {
 	return func(name string) bool {
 		matcher.m.Lock()
 		defer matcher.m.Unlock()
 
 		var doCollect bool
-		if data, ok := matcher.metrics[name]; ok {
-			boundary := (1 - tolerance) * float64(data.period)
-			nextCollection := data.lastCollected.Add(time.Duration(boundary))
-			if now.After(nextCollection) {
-				data.lastCollected = now
-				doCollect = true
-			}
-		} else {
+		data, ok := matcher.metrics[name]
+		if !ok {
 			matcher.metrics[name] = &CollectData{
-				lastCollected: now, // but don't collect the first time
+				lastCollected: matcher.startTime,
 				period:        matcher.matchPeriod(name),
 			}
+
+			data = matcher.metrics[name]
 		}
 
+		boundary := (1 - tolerance) * float64(data.period)
+		nextCollection := data.lastCollected.Add(time.Duration(boundary))
+		if now.After(nextCollection) {
+			data.lastCollected = now
+			doCollect = true
+		}
+
+		log.Println("[WOOT] current time:", now)
+		log.Printf("[WOOT] time for %s: %v", name, nextCollection)
 		return doCollect
 	}
 }
 
 func (matcher *PeriodMatcher) matchPeriod(name string) time.Duration {
-	matcher.m.Lock()
-	defer matcher.m.Unlock()
-
 	var minPeriod int32
 	for _, schedule := range matcher.sched {
 		if metricpattern.Matches(name, schedule.InclusionPatterns) &&
@@ -89,6 +101,9 @@ func (matcher *PeriodMatcher) ConsumeSchedules(sched []*pb.MetricConfigResponse_
 
 // TODO: compute GCD for divisibility issues
 func (matcher *PeriodMatcher) GetMinPeriod() time.Duration {
+	matcher.m.Lock()
+	defer matcher.m.Unlock()
+
 	if len(matcher.sched) == 0 {
 		panic("matcher has not consumed any schedules")
 	}

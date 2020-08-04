@@ -23,7 +23,7 @@ import (
 	"go.opentelemetry.io/otel/sdk/resource"
 )
 
-// TODO: fix tests, make mock notifier <-- STOPPED HERE
+const DefaultCheckFrequency = 30 * time.Minute
 
 // A Notifier monitors a config service for a config changing, then letting
 // all its subscribers know if the config has changed.
@@ -32,7 +32,7 @@ import (
 // should be read-only once set.
 type Notifier struct {
 	// How often we check to see if the config service has changed.
-	checkFrequency time.Duration
+	lastWaitTime int32
 
 	// Added for testing time-related functionality.
 	clock controllerTime.Clock
@@ -54,11 +54,16 @@ type Notifier struct {
 func NewNotifier(configHost string, resource *resource.Resource) *Notifier {
 	notifier := &Notifier{
 		clock:      controllerTime.RealClock{},
-		configHost: configHostOption,
+		configHost: configHost,
 		resource:   resource,
 	}
 
-	return notifier, nil
+	return notifier
+}
+
+// TODO: move to export?
+func (n *Notifier) SetClock(clock controllerTime.Clock) {
+	n.clock = clock
 }
 
 func (n *Notifier) MonitorChanges(mch notify.MonitorChannel) {
@@ -68,23 +73,23 @@ func (n *Notifier) MonitorChanges(mch notify.MonitorChannel) {
 		mch.Err <- err
 	}
 
-	n.tick(mch.Data, mch.Err)
+	n.tick(mch.Data, mch.Err, serviceReader)
 	for {
 		select {
 		case <-n.ticker.C():
-			n.tick(mch.Data, mch.Err)
+			n.tick(mch.Data, mch.Err, serviceReader)
 
 		case <-mch.Quit:
 			n.ticker.Stop()
 			if err := serviceReader.Stop(); err != nil {
-				errCh <- err
+				mch.Err <- err
 			}
 			return
 		}
 	}
 }
 
-func (n *Notifier) tick(data <-chan *MetricConfig, errCh <-chan error) {
+func (n *Notifier) tick(data chan<- *notify.MetricConfig, errCh chan<- error, serviceReader *ServiceReader) {
 	newConfig, err := serviceReader.ReadConfig()
 	if err != nil {
 		errCh <- err
@@ -97,9 +102,9 @@ func (n *Notifier) tick(data <-chan *MetricConfig, errCh <-chan error) {
 }
 
 func (n *Notifier) updateWaitTime(waitTime int32) {
-	if waitTime > 0 && n.checkFrequency != waitTime {
+	if waitTime > 0 && n.lastWaitTime != waitTime {
 		n.ticker.Stop()
-		n.checkFrequency = waitTime
-		n.ticker = n.clock.Ticker(n.checkFrequency)
+		n.lastWaitTime = waitTime
+		n.ticker = n.clock.Ticker(time.Duration(n.lastWaitTime))
 	}
 }

@@ -17,15 +17,16 @@ package push_test
 import (
 	"context"
 	"fmt"
-	"runtime"
+	"log"
 	"sync"
 	"testing"
 	"time"
 
-	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 
 	pb "github.com/open-telemetry/opentelemetry-proto/gen/go/experimental/metricconfigservice"
+	"go.opentelemetry.io/contrib/sdk/dynamicconfig/metric/controller/notify"
+	"go.opentelemetry.io/contrib/sdk/dynamicconfig/metric/controller/notify/mock"
 	"go.opentelemetry.io/contrib/sdk/dynamicconfig/metric/controller/push"
 
 	"go.opentelemetry.io/otel/api/global"
@@ -129,7 +130,8 @@ func (e *testExporter) resetRecords() ([]export.Record, int) {
 
 func TestPushDoubleStop(t *testing.T) {
 	fix := newFixture(t)
-	p := push.New(processorTest.AggregatorSelector(), fix.exporter)
+	p := push.New(processorTest.AggregatorSelector(), fix.exporter, "")
+	p.SetPeriod(1)
 	p.Start()
 	p.Stop()
 	p.Stop()
@@ -137,31 +139,35 @@ func TestPushDoubleStop(t *testing.T) {
 
 func TestPushDoubleStart(t *testing.T) {
 	fix := newFixture(t)
-	p := push.New(test.AggregatorSelector(), fix.exporter)
+	p := push.New(test.AggregatorSelector(), fix.exporter, "")
+	p.SetPeriod(1)
 	p.Start()
 	p.Start()
 	p.Stop()
 }
 
-func TestPushTicker(t *testing.T) {
+func TestPushPeriod(t *testing.T) {
 	fix := newFixture(t)
 
 	p := push.New(
 		test.AggregatorSelector(),
 		fix.exporter,
-		push.WithPeriod(time.Second),
+		"",
 		push.WithResource(testResource),
 	)
 	meter := p.Provider().Meter("name")
 
-	mock := controllerTest.NewMockClock()
-	p.SetClock(mock)
+	mockClock := controllerTest.NewMockClock()
+	p.SetClock(mockClock)
+	p.SetPeriod(1)
+	p.SetDone()
 
 	ctx := context.Background()
 
 	counter := metric.Must(meter).NewInt64Counter("counter.sum")
 
 	p.Start()
+	p.WaitDone()
 
 	counter.Add(ctx, 3)
 
@@ -169,8 +175,9 @@ func TestPushTicker(t *testing.T) {
 	require.Equal(t, 0, exports)
 	require.Equal(t, 0, len(records))
 
-	mock.Add(time.Second)
-	runtime.Gosched()
+	log.Println("[WOOT] adding time to mock timer")
+	mockClock.Add(1 * time.Second)
+	p.WaitDone()
 
 	records, exports = fix.exporter.resetRecords()
 	require.Equal(t, 1, exports)
@@ -186,8 +193,8 @@ func TestPushTicker(t *testing.T) {
 
 	counter.Add(ctx, 7)
 
-	mock.Add(time.Second)
-	runtime.Gosched()
+	mockClock.Add(time.Second)
+	p.WaitDone()
 
 	records, exports = fix.exporter.resetRecords()
 	require.Equal(t, 2, exports)
@@ -200,6 +207,7 @@ func TestPushTicker(t *testing.T) {
 	require.Nil(t, err)
 
 	p.Stop()
+	p.WaitDone()
 }
 
 func TestPushExportError(t *testing.T) {
@@ -230,12 +238,14 @@ func TestPushExportError(t *testing.T) {
 			p := push.New(
 				test.AggregatorSelector(),
 				fix.exporter,
-				push.WithPeriod(time.Second),
+				"",
 				push.WithResource(testResource),
 			)
 
-			mock := controllerTest.NewMockClock()
-			p.SetClock(mock)
+			mockClock := controllerTest.NewMockClock()
+			p.SetClock(mockClock)
+			p.SetPeriod(1)
+			p.SetDone()
 
 			ctx := context.Background()
 
@@ -244,7 +254,7 @@ func TestPushExportError(t *testing.T) {
 			counter2 := metric.Must(meter).NewInt64Counter("counter2.sum")
 
 			p.Start()
-			runtime.Gosched()
+			p.WaitDone()
 
 			counter1.Add(ctx, 3, kv.String("X", "Y"))
 			counter2.Add(ctx, 5)
@@ -252,8 +262,8 @@ func TestPushExportError(t *testing.T) {
 			require.Equal(t, 0, fix.exporter.exports)
 			require.Nil(t, testHandler.Flush())
 
-			mock.Add(time.Second)
-			runtime.Gosched()
+			mockClock.Add(time.Second)
+			p.WaitDone()
 
 			records, exports := fix.exporter.resetRecords()
 			require.Equal(t, 1, exports)
@@ -276,6 +286,7 @@ func TestPushExportError(t *testing.T) {
 			}
 
 			p.Stop()
+			p.WaitDone()
 		})
 	}
 }
@@ -307,22 +318,25 @@ func TestPushScheduleChange(t *testing.T) {
 			&twoSchedule,
 		},
 	}
-	notifier, err := push.NewNotifier(&MetricConfig{config})
-	assert.NoError(t, err)
-
 	fix := newFixture(t)
 
 	p := push.New(
 		test.AggregatorSelector(),
 		fix.exporter,
+		"",
 		push.WithResource(testResource),
-		push.WithNotifier(notifier),
 	)
+
+	mockClock := controllerTest.NewMockClock()
+	p.SetClock(mockClock)
+
+	notifier := mock.NewNotifier()
+	notifier.Receive(&notify.MetricConfig{config})
+	p.SetNotifier(notifier)
+
+	p.SetDone()
+
 	meter := p.Provider().Meter("name")
-
-	mock := controllerTest.NewMockClock()
-	p.SetClock(mock)
-
 	ctx := context.Background()
 
 	// Initially has period of 5 seconds.
@@ -334,12 +348,13 @@ func TestPushScheduleChange(t *testing.T) {
 	counter2.Add(ctx, 2)
 
 	p.Start()
+	p.WaitDone()
 
 	records, _ := fix.exporter.resetRecords()
 	require.Equal(t, 0, len(records))
 
-	mock.Add(5 * time.Second)
-	runtime.Gosched()
+	mockClock.Add(5 * time.Second)
+	p.WaitDone()
 
 	// After 5 seconds, expect export from counter1 instrument.
 	records, _ = fix.exporter.resetRecords()
@@ -349,8 +364,8 @@ func TestPushScheduleChange(t *testing.T) {
 	fix.checkpointSet.Reset()
 
 	counter1.Add(ctx, 1)
-	mock.Add(5 * time.Second)
-	runtime.Gosched()
+	mockClock.Add(5 * time.Second)
+	p.WaitDone()
 
 	// After 10 seconds, expect export from both instruments.
 	// TODO: data race in test
@@ -366,23 +381,31 @@ func TestPushScheduleChange(t *testing.T) {
 
 	// Update counter1's period to 10 seconds.
 	oneSchedule.PeriodSec = 10
-	p.OnUpdatedConfig(&notify.MetricConfig{config})
+	notifier.Receive(&notify.MetricConfig{config})
+	p.WaitDone()
 
-	mock.Add(5 * time.Second)
-	runtime.Gosched()
+	mockClock.Add(5 * time.Second)
 
 	// After 5 seconds, expect no exports.
 	records, _ = fix.exporter.resetRecords()
 	require.Equal(t, 0, len(records))
 
-	mock.Add(5 * time.Second)
-	runtime.Gosched()
+	mockClock.Add(5 * time.Second)
+	p.WaitDone()
 
 	// After 10 seconds, expect exports from both instruments.
 	records, _ = fix.exporter.resetRecords()
 	require.Equal(t, 2, len(records))
-	require.Equal(t, "one.sum", records[0].Descriptor().Name())
-	require.Equal(t, "two.sum", records[1].Descriptor().Name())
+	firstName := records[0].Descriptor().Name()
+	secondName := records[1].Descriptor().Name()
+	if "one.sum" != firstName && "one.sum" != secondName {
+		t.Errorf("could not find name 'one.sum' in results: %v", []string{firstName, secondName})
+	}
+
+	if "two.sum" != firstName && "two.sum" != secondName {
+		t.Errorf("could not find name 'two.sum' in results: %v", []string{firstName, secondName})
+	}
 
 	p.Stop()
+	p.WaitDone()
 }

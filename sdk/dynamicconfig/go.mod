@@ -4,6 +4,7 @@ go 1.14
 
 require (
 	github.com/benbjohnson/clock v1.0.3
+	github.com/go-delve/delve v1.5.0 // indirect
 	github.com/open-telemetry/opentelemetry-collector v0.3.0
 	github.com/open-telemetry/opentelemetry-proto v0.3.0
 	github.com/stretchr/testify v1.6.1
