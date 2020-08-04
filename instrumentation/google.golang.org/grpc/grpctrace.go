@@ -12,7 +12,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package grpctrace
+package grpc
 
 import (
 	"context"
@@ -26,7 +26,7 @@ import (
 	"go.opentelemetry.io/otel/api/trace"
 )
 
-// Option is a function that allows configuration of the grpctrace Extract()
+// Option is a function that allows configuration of the grpc Extract()
 // and Inject() functions
 type Option func(*config)
 

@@ -11,7 +11,7 @@
 // WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 // See the License for the specific language governing permissions and
 // limitations under the License.
-package grpctrace
+package grpc
 
 import (
 	"context"
@@ -88,7 +88,7 @@ func TestUnaryClientInterceptor(t *testing.T) {
 
 	sr := NewSpanRecorder()
 	tp := testtrace.NewProvider(testtrace.WithSpanRecorder(sr))
-	tracer := tp.Tracer("grpctrace/client")
+	tracer := tp.Tracer("grpc/client")
 	unaryInterceptor := UnaryClientInterceptor(tracer)
 
 	req := &mockProtoMessage{}
@@ -258,7 +258,7 @@ func TestStreamClientInterceptor(t *testing.T) {
 	// tracer
 	sr := NewSpanRecorder()
 	tp := testtrace.NewProvider(testtrace.WithSpanRecorder(sr))
-	tracer := tp.Tracer("grpctrace/Server")
+	tracer := tp.Tracer("grpc/Server")
 	streamCI := StreamClientInterceptor(tracer)
 
 	var mockClStr mockClientStream
@@ -342,7 +342,7 @@ func TestStreamClientInterceptor(t *testing.T) {
 func TestServerInterceptorError(t *testing.T) {
 	sr := NewSpanRecorder()
 	tp := testtrace.NewProvider(testtrace.WithSpanRecorder(sr))
-	tracer := tp.Tracer("grpctrace/Server")
+	tracer := tp.Tracer("grpc/Server")
 	usi := UnaryServerInterceptor(tracer)
 	deniedErr := status.Error(codes.PermissionDenied, "PERMISSION_DENIED_TEXT")
 	handler := func(_ context.Context, _ interface{}) (interface{}, error) {
