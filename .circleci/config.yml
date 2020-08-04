@@ -60,4 +60,4 @@ workflows:
       - integration:
           matrix:
             parameters:
-              integ: [cassandra]
+              integ: [gocql, mongo-driver]
