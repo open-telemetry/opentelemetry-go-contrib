@@ -22,21 +22,20 @@ import (
 	"time"
 
 	"go.opentelemetry.io/otel/api/global"
-	metricstdout "go.opentelemetry.io/otel/exporters/metric/stdout"
+	"go.opentelemetry.io/otel/exporters/stdout"
 	"go.opentelemetry.io/otel/sdk/metric/controller/push"
 
 	"go.opentelemetry.io/contrib/instrumentation/runtime"
 )
 
 func initMeter() *push.Controller {
-	pusher, err := metricstdout.NewExportPipeline(metricstdout.Config{
-		Quantiles:   []float64{0.5},
-		PrettyPrint: true,
-	})
+	pusher, err := stdout.InstallNewPipeline([]stdout.Option{
+		stdout.WithQuantiles([]float64{0.5}),
+		stdout.WithPrettyPrint(),
+	}, nil)
 	if err != nil {
 		log.Panicf("failed to initialize metric stdout exporter %v", err)
 	}
-	global.SetMeterProvider(pusher.Provider())
 	return pusher
 }
 
