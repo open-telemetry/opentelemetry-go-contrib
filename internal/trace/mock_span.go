@@ -21,7 +21,6 @@ import (
 	"google.golang.org/grpc/codes"
 
 	otelkv "go.opentelemetry.io/otel/api/kv"
-	otelvalue "go.opentelemetry.io/otel/api/kv/value"
 	oteltrace "go.opentelemetry.io/otel/api/trace"
 )
 
@@ -31,7 +30,7 @@ type Span struct {
 	sc            oteltrace.SpanContext
 	tracer        *Tracer
 	Name          string
-	Attributes    map[otelkv.Key]otelvalue.Value
+	Attributes    map[otelkv.Key]otelkv.Value
 	Kind          oteltrace.SpanKind
 	Status        codes.Code
 	StatusMessage string
@@ -64,13 +63,13 @@ func (ms *Span) SetStatus(status codes.Code, msg string) {
 
 // SetAttribute adds a single inferred attribute.
 func (ms *Span) SetAttribute(key string, value interface{}) {
-	ms.SetAttributes(otelkv.Infer(key, value))
+	ms.SetAttributes(otelkv.Any(key, value))
 }
 
 // SetAttributes adds an attribute to Attributes member.
 func (ms *Span) SetAttributes(attributes ...otelkv.KeyValue) {
 	if ms.Attributes == nil {
-		ms.Attributes = make(map[otelkv.Key]otelvalue.Value)
+		ms.Attributes = make(map[otelkv.Key]otelkv.Value)
 	}
 	for _, kv := range attributes {
 		ms.Attributes[kv.Key] = kv.Value

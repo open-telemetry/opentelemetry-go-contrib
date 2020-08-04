@@ -8,13 +8,23 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 
 ## [Unreleased]
 
+## [0.10.0] - 2020-07-31
+
+This release upgrades its [go.opentelemetry.io/otel](https://github.com/open-telemetry/opentelemetry-go/releases/tag/v0.10.0) dependency to v0.10.0 and includes new instrumentation for popular Kafka and Cassandra clients.
+
 ### Added
 
-- Create a detector that collects resources from GKE machines. (#139)
-- Create a detector that collects resources from GCE machines. (#132)
-- Add instrumentation for Kafka (github.com/Shopify/sarama). (#134, #153)
-- Add links and status message for mock span. (#134)
+- A detector that generate resources from GCE instance. (#132)
+- A detector that generate resources from AWS instances. (#139)
+- Instrumentation for the Kafka client github.com/Shopify/sarama. (#134, #153)
+- Links and status message for mock span in the internal testing library. (#134)
+- Instrumentation for the Cassandra client github.com/gocql/gocql. (#137)
+- A detector that generate resources from GKE clusters. (#154)
 
+### Fixed
+
+- Bump github.com/aws/aws-sdk-go from 1.33.8 to 1.33.15 in /detectors/aws. (#155, #157, #159, #162)
+- Bump github.com/golangci/golangci-lint from 1.28.3 to 1.29.0 in /tools. (#146)
 
 ## [0.9.0] - 2020-07-20
 
@@ -31,11 +41,10 @@ This release upgrades its [go.opentelemetry.io/otel](https://github.com/open-tel
 
 This release upgrades its [go.opentelemetry.io/otel](https://github.com/open-telemetry/opentelemetry-go/releases/tag/v0.8.0) dependency to v0.8.0, includes minor fixes, and new instrumentation.
 
-### Additions
+### Added
 
 - Create this `CHANGELOG.md`. (#114)
 - Add `emicklei/go-restful/v3` trace instrumentation. (#115)
-- Create a detector that collects resources from AWS machines. (#139)
 
 ### Changed
 
@@ -97,7 +106,8 @@ First official tagged release of `contrib` repository.
 - Prefix support for dogstatsd (#34)
 - Update Go Runtime package to use batch observer (#44)
 
-[Unreleased]: https://github.com/open-telemetry/opentelemetry-go-contrib/compare/v0.9.0...HEAD
+[Unreleased]: https://github.com/open-telemetry/opentelemetry-go-contrib/compare/v0.10.0...HEAD
+[0.10.0]: https://github.com/open-telemetry/opentelemetry-go-contrib/releases/tag/v0.10.0
 [0.9.0]: https://github.com/open-telemetry/opentelemetry-go-contrib/releases/tag/v0.9.0
 [0.8.0]: https://github.com/open-telemetry/opentelemetry-go-contrib/releases/tag/v0.8.0
 [0.7.0]: https://github.com/open-telemetry/opentelemetry-go-contrib/releases/tag/v0.7.0
