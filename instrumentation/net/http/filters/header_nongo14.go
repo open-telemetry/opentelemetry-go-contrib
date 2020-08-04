@@ -21,12 +21,12 @@ import (
 	"net/textproto"
 	"strings"
 
-	othttp "go.opentelemetry.io/contrib/instrumentation/net/http"
+	otelhttp "go.opentelemetry.io/contrib/instrumentation/net/http"
 )
 
 // Header returns a Filter that returns true if the request
 // includes a header k with a value equal to v.
-func Header(k, v string) othttp.Filter {
+func Header(k, v string) otelhttp.Filter {
 	return func(r *http.Request) bool {
 		for _, hv := range r.Header[textproto.CanonicalMIMEHeaderKey(k)] {
 			if v == hv {
@@ -39,7 +39,7 @@ func Header(k, v string) othttp.Filter {
 
 // HeaderContains returns a Filter that returns true if the request
 // includes a header k with a value that contains v.
-func HeaderContains(k, v string) othttp.Filter {
+func HeaderContains(k, v string) otelhttp.Filter {
 	return func(r *http.Request) bool {
 		for _, hv := range r.Header[textproto.CanonicalMIMEHeaderKey(k)] {
 			if strings.Contains(hv, v) {

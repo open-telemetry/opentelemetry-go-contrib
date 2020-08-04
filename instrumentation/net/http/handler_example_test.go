@@ -25,7 +25,7 @@ import (
 	"go.opentelemetry.io/otel/api/kv"
 	"go.opentelemetry.io/otel/api/trace"
 
-	othttp "go.opentelemetry.io/contrib/instrumentation/net/http"
+	otelhttp "go.opentelemetry.io/contrib/instrumentation/net/http"
 )
 
 func ExampleNewHandler() {
@@ -57,7 +57,7 @@ func ExampleNewHandler() {
 
 	var mux http.ServeMux
 	mux.Handle("/hello/",
-		othttp.WithRouteTag("/hello/:name", http.HandlerFunc(
+		otelhttp.WithRouteTag("/hello/:name", http.HandlerFunc(
 			func(w http.ResponseWriter, r *http.Request) {
 				ctx := r.Context()
 				var name string
@@ -89,8 +89,8 @@ func ExampleNewHandler() {
 	)
 
 	if err := http.ListenAndServe(":7777",
-		othttp.NewHandler(&mux, "server",
-			othttp.WithMessageEvents(othttp.ReadEvents, othttp.WriteEvents),
+		otelhttp.NewHandler(&mux, "server",
+			otelhttp.WithMessageEvents(otelhttp.ReadEvents, otelhttp.WriteEvents),
 		),
 	); err != nil {
 		log.Fatal(err)

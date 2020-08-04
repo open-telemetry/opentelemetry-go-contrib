@@ -13,19 +13,19 @@
 // limitations under the License.
 
 // Package filters provides a set of filters useful with the
-// othttp.WithFilter() option to control which inbound requests are traced.
+// otelhttp.WithFilter() option to control which inbound requests are traced.
 package filters
 
 import (
 	"net/http"
 	"strings"
 
-	othttp "go.opentelemetry.io/contrib/instrumentation/net/http"
+	otelhttp "go.opentelemetry.io/contrib/instrumentation/net/http"
 )
 
 // Any takes a list of Filters and returns a Filter that
 // returns true if any Filter in the list returns true.
-func Any(fs ...othttp.Filter) othttp.Filter {
+func Any(fs ...otelhttp.Filter) otelhttp.Filter {
 	return func(r *http.Request) bool {
 		for _, f := range fs {
 			if f(r) {
@@ -38,7 +38,7 @@ func Any(fs ...othttp.Filter) othttp.Filter {
 
 // All takes a list of Filters and returns a Filter that
 // returns true only if all Filters in the list return true.
-func All(fs ...othttp.Filter) othttp.Filter {
+func All(fs ...otelhttp.Filter) otelhttp.Filter {
 	return func(r *http.Request) bool {
 		for _, f := range fs {
 			if !f(r) {
@@ -51,7 +51,7 @@ func All(fs ...othttp.Filter) othttp.Filter {
 
 // None takes a list of Filters and returns a Filter that returns
 // true only if none of the Filters in the list return true.
-func None(fs ...othttp.Filter) othttp.Filter {
+func None(fs ...otelhttp.Filter) otelhttp.Filter {
 	return func(r *http.Request) bool {
 		for _, f := range fs {
 			if f(r) {
@@ -63,7 +63,7 @@ func None(fs ...othttp.Filter) othttp.Filter {
 }
 
 // Not provides a convenience mechanism for inverting a Filter
-func Not(f othttp.Filter) othttp.Filter {
+func Not(f otelhttp.Filter) otelhttp.Filter {
 	return func(r *http.Request) bool {
 		return !f(r)
 	}
@@ -71,7 +71,7 @@ func Not(f othttp.Filter) othttp.Filter {
 
 // Hostname returns a Filter that returns true if the request's
 // hostname matches the provided string.
-func Hostname(h string) othttp.Filter {
+func Hostname(h string) otelhttp.Filter {
 	return func(r *http.Request) bool {
 		return r.URL.Hostname() == h
 	}
@@ -79,7 +79,7 @@ func Hostname(h string) othttp.Filter {
 
 // Path returns a Filter that returns true if the request's
 // path matches the provided string.
-func Path(p string) othttp.Filter {
+func Path(p string) otelhttp.Filter {
 	return func(r *http.Request) bool {
 		return r.URL.Path == p
 	}
@@ -87,7 +87,7 @@ func Path(p string) othttp.Filter {
 
 // PathPrefix returns a Filter that returns true if the request's
 // path starts with the provided string.
-func PathPrefix(p string) othttp.Filter {
+func PathPrefix(p string) otelhttp.Filter {
 	return func(r *http.Request) bool {
 		return strings.HasPrefix(r.URL.Path, p)
 	}
@@ -95,7 +95,7 @@ func PathPrefix(p string) othttp.Filter {
 
 // Query returns a Filter that returns true if the request
 // includes a query parameter k with a value equal to v.
-func Query(k, v string) othttp.Filter {
+func Query(k, v string) otelhttp.Filter {
 	return func(r *http.Request) bool {
 		for _, qv := range r.URL.Query()[k] {
 			if v == qv {
@@ -108,7 +108,7 @@ func Query(k, v string) othttp.Filter {
 
 // QueryContains returns a Filter that returns true if the request
 // includes a query parameter k with a value that contains v.
-func QueryContains(k, v string) othttp.Filter {
+func QueryContains(k, v string) otelhttp.Filter {
 	return func(r *http.Request) bool {
 		for _, qv := range r.URL.Query()[k] {
 			if strings.Contains(qv, v) {
@@ -121,7 +121,7 @@ func QueryContains(k, v string) othttp.Filter {
 
 // Method returns a Filter that returns true if the request
 // method is equal to the provided value.
-func Method(m string) othttp.Filter {
+func Method(m string) otelhttp.Filter {
 	return func(r *http.Request) bool {
 		return m == r.Method
 	}

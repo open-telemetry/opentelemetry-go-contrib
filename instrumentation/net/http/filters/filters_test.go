@@ -19,12 +19,12 @@ import (
 	"net/url"
 	"testing"
 
-	othttp "go.opentelemetry.io/contrib/instrumentation/net/http"
+	otelhttp "go.opentelemetry.io/contrib/instrumentation/net/http"
 )
 
 type scenario struct {
 	name   string
-	filter othttp.Filter
+	filter otelhttp.Filter
 	req    *http.Request
 	exp    bool
 }
