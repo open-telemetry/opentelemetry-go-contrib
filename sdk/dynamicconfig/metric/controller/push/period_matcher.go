@@ -15,7 +15,6 @@
 package push
 
 import (
-	"log"
 	"sync"
 	"time"
 
@@ -71,8 +70,6 @@ func (matcher *PeriodMatcher) BuildRule(now time.Time) metric.Rule {
 			doCollect = true
 		}
 
-		log.Println("[WOOT] current time:", now)
-		log.Printf("[WOOT] time for %s: %v", name, nextCollection)
 		return doCollect
 	}
 }

@@ -61,11 +61,6 @@ func NewNotifier(configHost string, resource *resource.Resource) *Notifier {
 	return notifier
 }
 
-// TODO: move to export?
-func (n *Notifier) SetClock(clock controllerTime.Clock) {
-	n.clock = clock
-}
-
 func (n *Notifier) MonitorChanges(mch notify.MonitorChannel) {
 	n.ticker = n.clock.Ticker(DefaultCheckFrequency)
 	serviceReader, err := NewServiceReader(n.configHost, transform.Resource(n.resource))
@@ -96,8 +91,8 @@ func (n *Notifier) tick(data chan<- *notify.MetricConfig, errCh chan<- error, se
 	}
 
 	if newConfig != nil {
-		data <- newConfig
 		n.updateWaitTime(newConfig.SuggestedWaitTimeSec)
+		data <- newConfig
 	}
 }
 
@@ -105,6 +100,6 @@ func (n *Notifier) updateWaitTime(waitTime int32) {
 	if waitTime > 0 && n.lastWaitTime != waitTime {
 		n.ticker.Stop()
 		n.lastWaitTime = waitTime
-		n.ticker = n.clock.Ticker(time.Duration(n.lastWaitTime))
+		n.ticker = n.clock.Ticker(time.Duration(n.lastWaitTime) * time.Second)
 	}
 }

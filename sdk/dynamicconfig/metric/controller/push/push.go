@@ -16,7 +16,6 @@ package push
 
 import (
 	"context"
-	"log"
 	"sync"
 	"time"
 
@@ -135,23 +134,17 @@ func (c *Controller) Stop() {
 func (c *Controller) run() {
 	initData := <-c.mch.Data
 	c.update(initData)
-	// log.Println("[WOOT] current ticker:", c.ticker.C())
 
 	for {
 		select {
 		case <-c.quit:
-			log.Println("[WOOT] quitting")
 			close(c.mch.Quit)
 			return
-		case <-c.ticker.C(): // TODO: make explicit dynamic ticker? <-- STOPPED HERE
-			log.Println("[WOOT] just ticked")
+		case <-c.ticker.C():
 			c.tick()
 		case data := <-c.mch.Data:
-			log.Println("[WOOT] receiving new data")
-			// log.Println("[WOOT] ticker prior to update: ", c.ticker.C())
 			c.update(data)
 		case err := <-c.mch.Err:
-			log.Println("[WOOT] err-ing")
 			global.Handle(err)
 		}
 	}
@@ -160,7 +153,6 @@ func (c *Controller) run() {
 func (c *Controller) tick() {
 	ctx, cancel := context.WithTimeout(context.Background(), c.timeout)
 	defer cancel()
-	log.Println("[WOOT] starting export")
 
 	c.processor.Lock()
 	defer c.processor.Unlock()
@@ -178,24 +170,19 @@ func (c *Controller) tick() {
 	}
 
 	if c.done != nil {
-		log.Println("[WOOT] about to send done signal")
 		c.done <- struct{}{}
 	}
-	log.Println("[WOOT] finished exporting")
 }
 
 func (c *Controller) update(data *notify.MetricConfig) {
-	log.Println("[WOOT] updating ticker")
 	c.matcher.ConsumeSchedules(data.Schedules)
 	minPeriod := c.matcher.GetMinPeriod()
 	if c.lastPeriod != minPeriod {
-		log.Println("[WOOT] using new period: ", minPeriod)
 		if c.ticker != nil {
 			c.ticker.Stop()
 		}
 
 		c.lastPeriod = minPeriod
-		log.Println("[WOOT] init'ing new ticker")
 
 		// TOOD: create tidier, encapsulated dynamic ticker
 		c.lock.Lock()

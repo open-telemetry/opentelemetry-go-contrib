@@ -20,6 +20,14 @@ type MonitorChannel struct {
 	Quit chan struct{}
 }
 
+func NewMonitorChannel() MonitorChannel {
+	return MonitorChannel{
+		Data: make(chan *MetricConfig),
+		Err:  make(chan error),
+		Quit: make(chan struct{}),
+	}
+}
+
 type Notifier interface {
 	MonitorChanges(mch MonitorChannel)
 }

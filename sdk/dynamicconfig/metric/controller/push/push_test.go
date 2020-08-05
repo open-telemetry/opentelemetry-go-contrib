@@ -17,7 +17,6 @@ package push_test
 import (
 	"context"
 	"fmt"
-	"log"
 	"sync"
 	"testing"
 	"time"
@@ -175,7 +174,6 @@ func TestPushPeriod(t *testing.T) {
 	require.Equal(t, 0, exports)
 	require.Equal(t, 0, len(records))
 
-	log.Println("[WOOT] adding time to mock timer")
 	mockClock.Add(1 * time.Second)
 	p.WaitDone()
 

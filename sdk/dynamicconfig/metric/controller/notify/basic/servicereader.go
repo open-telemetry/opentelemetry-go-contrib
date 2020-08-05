@@ -18,25 +18,19 @@ import (
 	"bytes"
 	"context"
 	"fmt"
-	"time"
 
-	"github.com/benbjohnson/clock"
 	pb "github.com/open-telemetry/opentelemetry-proto/gen/go/experimental/metricconfigservice"
 	resourcepb "github.com/open-telemetry/opentelemetry-proto/gen/go/resource/v1"
 	"go.opentelemetry.io/contrib/sdk/dynamicconfig/metric/controller/notify"
 	"google.golang.org/grpc"
-	"google.golang.org/grpc/metadata"
 )
 
 // A ServiceReader periodically reads from a remote configuration service to get configs that apply
 // to the SDK.
 type ServiceReader struct {
-	clock clock.Clock // for testing
-
 	conn   *grpc.ClientConn
 	client pb.MetricConfigClient
 
-	lastTimestamp        time.Time
 	lastKnownFingerprint []byte
 	resource             *resourcepb.Resource
 }
@@ -48,7 +42,6 @@ func NewServiceReader(configHost string, resource *resourcepb.Resource) (*Servic
 	}
 
 	return &ServiceReader{
-		clock:    clock.New(),
 		conn:     conn,
 		client:   pb.NewMetricConfigClient(conn),
 		resource: resource,
@@ -64,22 +57,18 @@ func (r *ServiceReader) ReadConfig() (*notify.MetricConfig, error) {
 		Resource:             r.resource,
 	}
 
-	md := metadata.Pairs("timestamp", r.clock.Now().Format(time.StampNano))
-	ctx := metadata.NewOutgoingContext(context.Background(), md)
-
-	response, err := r.client.GetMetricConfig(ctx, request)
+	response, err := r.client.GetMetricConfig(context.Background(), request)
 	if err != nil {
 		return nil, fmt.Errorf("fail to get metric config: %w", err)
 	}
 
 	// TODO: SuggestedWaitTimeSec may not be read unless there is a change
 	// reflected in the fingerprints
-	if bytes.Equal(r.lastKnownFingerprint, response.Fingerprint) {
+	if r.lastKnownFingerprint != nil && bytes.Equal(r.lastKnownFingerprint, response.Fingerprint) {
 		return nil, nil
 	}
 
 	r.lastKnownFingerprint = response.Fingerprint
-	r.lastTimestamp = r.clock.Now()
 
 	newConfig := notify.MetricConfig{*response}
 	if err := newConfig.Validate(); err != nil {

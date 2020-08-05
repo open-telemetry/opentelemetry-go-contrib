@@ -11,60 +11,61 @@
 // WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 // See the License for the specific language governing permissions and
 // limitations under the License.
-
 package basic
 
 import (
 	"testing"
-	"time"
 
-	"github.com/benbjohnson/clock"
-	"github.com/stretchr/testify/assert"
-	"github.com/stretchr/testify/require"
-
-	"go.opentelemetry.io/contrib/sdk/dynamicconfig/internal/transform"
+	pb "github.com/open-telemetry/opentelemetry-proto/gen/go/experimental/metricconfigservice"
 )
 
-const TestAddress string = "localhost:50420"
+func TestNewServiceReader(t *testing.T) {
+	server := MockServer{}
+	stop, addr := server.Run(t)
+	defer stop()
 
-var TestFingerprint = []byte{'f', 'o', 'o'}
-
-func TestReadConfig(t *testing.T) {
-	// Mock config service returns config with a suggested wait time of 5 minutes.
-	config := GetDefaultConfig(60, TestFingerprint)
-	config.SuggestedWaitTimeSec = 300
-	stopFunc := RunMockConfigService(t, TestAddress, config)
-
-	reader := NewServiceReader(
-		TestAddress,
-		transform.Resource(MockResource("servicereadertest")),
-	)
-
-	response, err := reader.readConfig()
-	assert.NoError(t, err)
-
-	stopFunc()
-
-	require.Equal(t, config.Fingerprint, response.Fingerprint)
-}
-
-func TestSuggestedWaitTime(t *testing.T) {
-	clock := clock.NewMock()
-
-	// ServiceReader with suggestedWaitTimeSec of 5 minutes.
-	reader := ServiceReader{
-		clock:                clock,
-		lastTimestamp:        clock.Now(),
-		suggestedWaitTimeSec: 5 * 60,
+	reader, err := NewServiceReader(addr, nil)
+	if err != nil {
+		t.Errorf("fail to start service reader: %v", err)
 	}
 
-	require.Equal(t, 5*time.Minute, reader.suggestedWaitTime())
+	if err := reader.Stop(); err != nil {
+		t.Errorf("fail to stop service reader: %v", err)
+	}
+}
 
-	clock.Add(5 * time.Minute)
+func TestReadConfig(t *testing.T) {
+	config := &pb.MetricConfigResponse{
+		Schedules: []*pb.MetricConfigResponse_Schedule{
+			{
+				InclusionPatterns: []*pb.MetricConfigResponse_Schedule_Pattern{
+					{
+						Match: &pb.MetricConfigResponse_Schedule_Pattern_StartsWith{
+							StartsWith: "*",
+						},
+					},
+				},
+				PeriodSec: 5,
+			},
+		},
+	}
 
-	require.Equal(t, time.Duration(0), reader.suggestedWaitTime())
+	server := MockServer{Config: config}
+	stop, addr := server.Run(t)
+	defer stop()
 
-	clock.Add(5 * time.Minute)
+	reader, err := NewServiceReader(addr, nil)
+	if err != nil {
+		t.Errorf("fail to start service reader: %v", err)
+	}
+	defer reader.Stop()
 
-	require.Equal(t, time.Duration(0), reader.suggestedWaitTime())
+	resp, err := reader.ReadConfig()
+	if err != nil {
+		t.Errorf("fail to read config: %v", err)
+	}
+
+	if resp.Schedules[0].PeriodSec != config.Schedules[0].PeriodSec {
+		t.Errorf("schedules do not match, resp: %v", resp)
+	}
 }

@@ -15,134 +15,122 @@
 package basic
 
 import (
-	"runtime"
-	"sync"
 	"testing"
 	"time"
 
-	"github.com/stretchr/testify/assert"
-	"github.com/stretchr/testify/require"
-
-	notify "go.opentelemetry.io/contrib/sdk/dynamicconfig/metric/controller/push/notifier"
+	pb "github.com/open-telemetry/opentelemetry-proto/gen/go/experimental/metricconfigservice"
+	"go.opentelemetry.io/contrib/sdk/dynamicconfig/metric/controller/notify"
 	controllerTest "go.opentelemetry.io/otel/sdk/metric/controller/test"
 )
 
-// testLock is to prevent race conditions in test code
-// testVar is used to verify OnInitialConfig and OnUpdatedConfig are called
-type testWatcher struct {
-	testLock sync.Mutex
-	testVar  int
-}
-
-func (w *testWatcher) OnInitialConfig(config *notify.MetricConfig) error {
-	w.testLock.Lock()
-	defer w.testLock.Unlock()
-	w.testVar = 1
-	return nil
-}
-
-func (w *testWatcher) OnUpdatedConfig(config *notify.MetricConfig) error {
-	w.testLock.Lock()
-	defer w.testLock.Unlock()
-	w.testVar = 2
-	return nil
-}
-
-// Use a getter to prevent race conditions around testVar
-func (w *testWatcher) getTestVar() int {
-	w.testLock.Lock()
-	defer w.testLock.Unlock()
-	return w.testVar
-}
-
-func newExampleNotifier(t *testing.T) *notify.Notifier {
-	notifier, err := notify.NewNotifier(
-		notify.GetDefaultConfig(1, []byte{'b', 'a', 'r'}),
-		notify.WithCheckFrequency(time.Minute),
-		notify.WithConfigHost(notify.TestAddress),
-		notify.WithResource(notify.MockResource("notifiertest")),
-	)
-	assert.NoError(t, err)
-
-	return notifier
-}
-
-// Test config updates
-func TestDynamicNotifier(t *testing.T) {
-	watcher := testWatcher{
-		testVar: 0,
+func TestMonitorChanges(t *testing.T) {
+	config := &pb.MetricConfigResponse{
+		Schedules: []*pb.MetricConfigResponse_Schedule{
+			{
+				InclusionPatterns: []*pb.MetricConfigResponse_Schedule_Pattern{
+					{
+						Match: &pb.MetricConfigResponse_Schedule_Pattern_StartsWith{
+							StartsWith: "*",
+						},
+					},
+				},
+				PeriodSec: 5,
+			},
+		},
 	}
-	mock := controllerTest.NewMockClock()
 
-	stopFunc := notify.RunMockConfigService(
-		t,
-		notify.TestAddress,
-		notify.GetDefaultConfig(1, notify.TestFingerprint),
-	)
-	defer stopFunc()
+	server := MockServer{Config: config}
+	stop, addr := server.Run(t)
+	defer stop()
 
-	notifier := newExampleNotifier(t)
-	require.Equal(t, 0, watcher.getTestVar())
+	mockClock := controllerTest.NewMockClock()
+	notifier := NewNotifier(addr, nil)
+	notifier.clock = mockClock
 
-	notifier.SetClock(mock)
-	notifier.Start()
-	defer notifier.Stop()
+	mch := notify.NewMonitorChannel()
+	go notifier.MonitorChanges(mch)
 
-	notifier.Register(&watcher)
-	require.Equal(t, 1, watcher.getTestVar())
-
-	mock.Add(5 * time.Minute)
-	runtime.Gosched()
-
-	require.Equal(t, 2, watcher.getTestVar())
-}
-
-// Test config doesn't update
-func TestNonDynamicNotifier(t *testing.T) {
-	watcher := testWatcher{
-		testVar: 0,
+	select {
+	case data := <-mch.Data:
+		if data.Schedules[0].PeriodSec != config.Schedules[0].PeriodSec {
+			t.Errorf("config does not match received data: %v", data)
+		}
+	case err := <-mch.Err:
+		t.Errorf("monitor failed: %v", err)
 	}
-	mock := controllerTest.NewMockClock()
-	notifier, err := notify.NewNotifier(
-		notify.GetDefaultConfig(60, notify.TestFingerprint),
-	)
-	assert.NoError(t, err)
-	require.Equal(t, 0, watcher.getTestVar())
 
-	notifier.SetClock(mock)
-	notifier.Start()
-	defer notifier.Stop()
+	config.Schedules[0].PeriodSec = 10
+	config.SuggestedWaitTimeSec = 5
+	mockClock.Add(DefaultCheckFrequency)
 
-	notifier.Register(&watcher)
-	require.Equal(t, 1, watcher.getTestVar())
+	select {
+	case data := <-mch.Data:
+		if data.Schedules[0].PeriodSec != config.Schedules[0].PeriodSec {
+			t.Errorf("config does not match received data: %v", data)
+		}
+	case err := <-mch.Err:
+		t.Errorf("monitor failed: %v", err)
+	}
 
-	mock.Add(time.Minute)
+	config.Schedules[0].PeriodSec = 15
+	mockClock.Add(5 * time.Second)
 
-	require.Equal(t, 1, watcher.getTestVar())
+	select {
+	case data := <-mch.Data:
+		if data.Schedules[0].PeriodSec != config.Schedules[0].PeriodSec {
+			t.Errorf("config does not match received data: %v", data)
+		}
+	case err := <-mch.Err:
+		t.Errorf("monitor failed: %v", err)
+	}
 }
 
-func TestDoubleStop(t *testing.T) {
-	stopFunc := notify.RunMockConfigService(
-		t,
-		notify.TestAddress,
-		notify.GetDefaultConfig(60, notify.TestFingerprint),
-	)
-	defer stopFunc()
-	notifier := newExampleNotifier(t)
-	notifier.Start()
-	notifier.Stop()
-	notifier.Stop()
-}
+func TestUpdateWaitTime(t *testing.T) {
+	notifier := NewNotifier("", nil)
+	mockClock := controllerTest.NewMockClock()
+	notifier.clock = mockClock
+	notifier.ticker = notifier.clock.Ticker(1 * time.Second)
 
-func TestPushDoubleStart(t *testing.T) {
-	stopFunc := notify.RunMockConfigService(
-		t,
-		notify.TestAddress,
-		notify.GetDefaultConfig(60, notify.TestFingerprint),
-	)
-	defer stopFunc()
-	notifier := newExampleNotifier(t)
-	notifier.Start()
-	notifier.Start()
-	notifier.Stop()
+	notifier.updateWaitTime(10)
+	mockClock.Add(1 * time.Second)
+
+	select {
+	case <-notifier.ticker.C():
+		t.Errorf("clock ticked after 1 second, not 10")
+	default:
+	}
+
+	mockClock.Add(9 * time.Second)
+
+	select {
+	case <-notifier.ticker.C():
+	default:
+		t.Errorf("clock should have ticked by now, after 10 seconds")
+	}
+
+	notifier.updateWaitTime(15)
+	mockClock.Add(10 * time.Second)
+
+	select {
+	case <-notifier.ticker.C():
+		t.Errorf("clock ticked after 10 seconds, not 15")
+	default:
+	}
+
+	mockClock.Add(5 * time.Second)
+
+	select {
+	case <-notifier.ticker.C():
+	default:
+		t.Errorf("clock should have ticked by now, after 15 seconds")
+	}
+
+	notifier.updateWaitTime(0)
+	mockClock.Add(15 * time.Second)
+
+	select {
+	case <-notifier.ticker.C():
+	default:
+		t.Errorf("clock should have ticked by now, after 15 seconds")
+	}
 }

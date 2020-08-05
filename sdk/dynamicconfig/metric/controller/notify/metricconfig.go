@@ -25,26 +25,6 @@ type MetricConfig struct {
 	pb.MetricConfigResponse
 }
 
-// This is for convenient development/testing purposes.
-// It produces a Config with a schedule that matches all instruments, with a
-// collection period of `period`
-func GetDefaultConfig(period int32, fingerprint []byte) *MetricConfig {
-	pattern := pb.MetricConfigResponse_Schedule_Pattern{
-		Match: &pb.MetricConfigResponse_Schedule_Pattern_StartsWith{StartsWith: "*"},
-	}
-	schedule := pb.MetricConfigResponse_Schedule{
-		InclusionPatterns: []*pb.MetricConfigResponse_Schedule_Pattern{&pattern},
-		PeriodSec:         period,
-	}
-
-	return &MetricConfig{
-		pb.MetricConfigResponse{
-			Fingerprint: fingerprint,
-			Schedules:   []*pb.MetricConfigResponse_Schedule{&schedule},
-		},
-	}
-}
-
 func (config *MetricConfig) Validate() error {
 	for _, schedule := range config.Schedules {
 		if schedule.PeriodSec < 0 {

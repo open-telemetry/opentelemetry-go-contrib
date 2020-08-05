@@ -26,26 +26,26 @@ import (
 	"google.golang.org/grpc"
 )
 
-type mockServer struct {
+type MockServer struct {
 	pb.UnimplementedMetricConfigServer
-	config *MetricConfig
+	Config *pb.MetricConfigResponse
 }
 
 // GetMetricConfig implemented MetricConfigServer
-func (s *mockServer) GetMetricConfig(ctx context.Context, in *pb.MetricConfigRequest) (*pb.MetricConfigResponse, error) {
-	return &s.config.MetricConfigResponse, nil
+func (s *MockServer) GetMetricConfig(ctx context.Context, in *pb.MetricConfigRequest) (*pb.MetricConfigResponse, error) {
+	return s.Config, nil
 }
 
 // This function runs a mock config service at an address, serving a defined config.
 // It returns a callback that stops the service.
-func RunMockConfigService(t *testing.T, addr string, config *MetricConfig) func() {
-	ln, err := net.Listen("tcp", addr)
+func (server *MockServer) Run(t *testing.T) (func(), string) {
+	ln, err := net.Listen("tcp", ":0")
 	if err != nil {
 		t.Fatalf("Failed to get an address: %v", err)
 	}
 
 	srv := grpc.NewServer()
-	pb.RegisterMetricConfigServer(srv, &mockServer{config: config})
+	pb.RegisterMetricConfigServer(srv, server)
 
 	go func() {
 		_ = srv.Serve(ln)
@@ -54,7 +54,7 @@ func RunMockConfigService(t *testing.T, addr string, config *MetricConfig) func(
 	return func() {
 		srv.Stop()
 		_ = ln.Close()
-	}
+	}, ln.Addr().String()
 }
 
 func MockResource(serviceName string) *resource.Resource {

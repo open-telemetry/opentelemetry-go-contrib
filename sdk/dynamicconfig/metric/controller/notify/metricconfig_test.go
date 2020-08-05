@@ -15,39 +15,44 @@
 package notify
 
 import (
-	"errors"
 	"testing"
 
 	pb "github.com/open-telemetry/opentelemetry-proto/gen/go/experimental/metricconfigservice"
 	"github.com/stretchr/testify/require"
-
-	notify "go.opentelemetry.io/contrib/sdk/dynamicconfig/metric/controller/push/notifier"
 )
 
-func TestEquals(t *testing.T) {
-	fooConfig1 := notify.GetDefaultConfig(1, []byte{'f', 'o', 'o'})
-	fooConfig2 := notify.GetDefaultConfig(2, []byte{'f', 'o', 'o'})
-	barConfig := notify.GetDefaultConfig(1, []byte{'b', 'a', 'r'})
+func GetDefaultConfig(period int32, fingerprint []byte) *MetricConfig {
+	pattern := pb.MetricConfigResponse_Schedule_Pattern{
+		Match: &pb.MetricConfigResponse_Schedule_Pattern_StartsWith{StartsWith: "*"},
+	}
+	schedule := pb.MetricConfigResponse_Schedule{
+		InclusionPatterns: []*pb.MetricConfigResponse_Schedule_Pattern{&pattern},
+		PeriodSec:         period,
+	}
 
-	require.True(t, fooConfig1.Equals(fooConfig2))
-	require.False(t, fooConfig1.Equals(barConfig))
+	return &MetricConfig{
+		pb.MetricConfigResponse{
+			Fingerprint: fingerprint,
+			Schedules:   []*pb.MetricConfigResponse_Schedule{&schedule},
+		},
+	}
 }
 
 func TestMetricConfigValidate(t *testing.T) {
 	schedule1 := pb.MetricConfigResponse_Schedule{PeriodSec: -1}
 	schedule2 := pb.MetricConfigResponse_Schedule{PeriodSec: 1}
 
-	config := &notify.MetricConfig{
+	config := &MetricConfig{
 		pb.MetricConfigResponse{
 			Schedules: []*pb.MetricConfigResponse_Schedule{&schedule1},
 		},
 	}
-	require.Equal(t, errors.New("Periods must be positive"), config.ValidateMetricConfig())
+	require.NotNil(t, config.Validate())
 
-	config = &notify.MetricConfig{
+	config = &MetricConfig{
 		pb.MetricConfigResponse{
 			Schedules: []*pb.MetricConfigResponse_Schedule{&schedule2},
 		},
 	}
-	require.Equal(t, nil, config.ValidateMetricConfig())
+	require.Equal(t, nil, config.Validate())
 }
