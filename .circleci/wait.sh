@@ -1,8 +1,22 @@
 #!/bin/bash
 
+# Copyright The OpenTelemetry Authors
+#
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+#     http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+
 wait_for_cassandra () {
-  for i in 1 2 3 4 5; do
-    if docker exec $1 nodetool status | grep "^UN"; then
+  for ((i = 0; i < 5; ++i)); do
+    if docker exec "$1" nodetool status | grep "^UN"; then
       exit 0
     fi
     echo "Cassandra not yet available"
@@ -13,8 +27,8 @@ wait_for_cassandra () {
 }
 
 wait_for_mongo () {
-  for i in 1 2 3 4 5; do
-    if docker exec $1 mongo; then
+  for ((i = 0; i < 5; ++i)); do
+    if docker exec "$1" mongo; then
       exit 0
     fi
     echo "Mongo not yet available..."
@@ -33,9 +47,9 @@ elif [ -z "$IMG_NAME" ]; then
 fi
 
 if [ "$CMD" == "cassandra" ]; then
-  wait_for_cassandra $IMG_NAME
+  wait_for_cassandra "$IMG_NAME"
 elif [ "$CMD" == "mongo" ]; then
-  wait_for_mongo $IMG_NAME
+  wait_for_mongo "$IMG_NAME"
 else
   echo "unknown CMD"
   exit 1
