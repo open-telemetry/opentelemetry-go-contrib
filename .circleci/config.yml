@@ -52,6 +52,10 @@ jobs:
       - checkout
       
       - run: mkdir -p $TEST_RESULTS
+
+      - restore_cache: # restores saved cache if no changes are detected since last run
+          keys:
+            - go-pkg-mod-{{ checksum "go.sum" }}
       
       - run: 
           name: "Integration test $INTEGRATION"
@@ -60,6 +64,15 @@ jobs:
             find . -name 'coverage.html' > "${TEST_RESULTS}/coverage.lst"
             tar -n -cf - -T "${TEST_RESULTS}/coverage.lst" | tar -C "${TEST_RESULTS}" -xvf -
       
+      - save_cache:
+          key: go-pkg-mod-{{ checksum "go.sum" }}
+          paths:
+            - "/go/pkg/mod"
+
+      - store_artifacts:
+          path: /tmp/test-results
+          destination: opentelemetry-go-contrib-test-output
+
       - store_test_results:
           path: /tmp/test-results
 
