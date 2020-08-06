@@ -23,8 +23,6 @@ type Config struct {
 	// Resource describes all the metric records processed by the
 	// Accumulator.
 	Resource *resource.Resource
-
-	Ext *DynamicExtension
 }
 
 // Option is the interface that applies the value to a configuration option.
@@ -44,16 +42,4 @@ type resourceOption struct {
 
 func (o resourceOption) Apply(config *Config) {
 	config.Resource = o.Resource
-}
-
-func WithDynamicExtension(ext *DynamicExtension) Option {
-	return dynamicExtensionOption{ext}
-}
-
-type dynamicExtensionOption struct {
-	ext *DynamicExtension
-}
-
-func (o dynamicExtensionOption) Apply(config *Config) {
-	config.Ext = o.ext
 }

@@ -51,9 +51,6 @@ type (
 		asyncLock        sync.Mutex
 		asyncInstruments *internal.AsyncInstrumentState
 
-		// Optional. Allows per-metric configuration.
-		ext *DynamicExtension
-
 		// currentEpoch is the current epoch number. It is
 		// incremented in `Collect()`.
 		currentEpoch int64
@@ -153,7 +150,8 @@ var (
 	_ api.SyncImpl      = &syncInstrument{}
 	_ api.BoundSyncImpl = &record{}
 
-	ErrUninitializedInstrument = fmt.Errorf("use of an uninitialized instrument")
+	MatchAll                   Rule = func(_ string) bool { return true }
+	ErrUninitializedInstrument      = fmt.Errorf("use of an uninitialized instrument")
 )
 
 func (inst *instrument) Descriptor() api.Descriptor {
@@ -321,7 +319,6 @@ func NewAccumulator(processor export.Processor, opts ...Option) *Accumulator {
 		processor:        processor,
 		asyncInstruments: internal.NewAsyncInstrumentState(),
 		resource:         c.Resource,
-		ext:              c.Ext,
 	}
 }
 
@@ -439,36 +436,14 @@ func (m *Accumulator) observeAsyncInstruments(ctx context.Context, rule Rule) in
 	// TODO: change this to `ctx` (in a separate PR, with tests)
 	m.asyncInstruments.Run(context.Background(), m)
 	for _, inst := range m.asyncInstruments.Instruments() {
-		if a := m.fromAsync(inst); a != nil && rule(a.descriptor.Name()) {
-			asyncCollected += m.checkpointAsync(a)
+		if a := m.fromAsync(inst); a != nil {
+			if rule(a.descriptor.Name()) {
+				asyncCollected += m.checkpointAsync(a)
+			}
 		}
 	}
 
 	return asyncCollected
-}
-
-// Determines if we should collect metrics from an instrument with `name`.
-func (m *Accumulator) shouldCollect(name string, periods []int32) bool {
-	// If we aren't enabling the dynamic config extension, we collect everything.
-	if m.ext == nil {
-		return true
-	}
-
-	collectionPeriod := m.ext.FindPeriod(name)
-
-	// We treat a collectionPeriod of 0 as meaning "do not collect".
-	if collectionPeriod == 0 {
-		return false
-	}
-
-	// CollectionPeriod of instrument must match one of the `periods`
-	for _, period := range periods {
-		if collectionPeriod == period {
-			return true
-		}
-	}
-
-	return false
 }
 
 func (m *Accumulator) checkpointRecord(r *record) int {

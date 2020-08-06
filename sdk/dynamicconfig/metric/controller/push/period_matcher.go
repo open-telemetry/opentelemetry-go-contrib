@@ -89,7 +89,6 @@ func (matcher *PeriodMatcher) BuildRule(now time.Time) metric.Rule {
 		matcher.m.Lock()
 		defer matcher.m.Unlock()
 
-		var doCollect bool
 		data, ok := matcher.metrics[name]
 		if !ok {
 			matcher.metrics[name] = &CollectData{
@@ -100,6 +99,11 @@ func (matcher *PeriodMatcher) BuildRule(now time.Time) metric.Rule {
 			data = matcher.metrics[name]
 		}
 
+		if data.period == 0 {
+			return false
+		}
+
+		var doCollect bool
 		boundary := (1 - tolerance) * float64(data.period)
 		nextCollection := data.lastCollected.Add(time.Duration(boundary))
 		if now.After(nextCollection) {

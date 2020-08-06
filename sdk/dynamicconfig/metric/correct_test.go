@@ -20,8 +20,10 @@ import (
 	"math"
 	"sync"
 	"testing"
+	"time"
 
 	"github.com/stretchr/testify/require"
+	"go.opentelemetry.io/contrib/sdk/dynamicconfig/metric/controller/push"
 
 	pb "github.com/open-telemetry/opentelemetry-proto/gen/go/experimental/metricconfigservice"
 
@@ -32,6 +34,7 @@ import (
 	"go.opentelemetry.io/otel/api/metric"
 	export "go.opentelemetry.io/otel/sdk/export/metric"
 	"go.opentelemetry.io/otel/sdk/export/metric/aggregation"
+	controllerTest "go.opentelemetry.io/otel/sdk/metric/controller/test"
 	"go.opentelemetry.io/otel/sdk/metric/processor/test"
 	batchTest "go.opentelemetry.io/otel/sdk/metric/processor/test"
 	"go.opentelemetry.io/otel/sdk/resource"
@@ -117,12 +120,12 @@ func TestInputRangeCounter(t *testing.T) {
 	counter.Add(ctx, -1)
 	require.Equal(t, aggregation.ErrNegativeInput, testHandler.Flush())
 
-	checkpointed := sdk.Collect(ctx)
+	checkpointed := sdk.Collect(ctx, metricsdk.MatchAll)
 	require.Equal(t, 0, checkpointed)
 
 	processor.accumulations = nil
 	counter.Add(ctx, 1)
-	checkpointed = sdk.Collect(ctx)
+	checkpointed = sdk.Collect(ctx, metricsdk.MatchAll)
 	sum, err := processor.accumulations[0].Aggregator().(aggregation.Sum).Sum()
 	require.Equal(t, int64(1), sum.AsInt64())
 	require.Equal(t, 1, checkpointed)
@@ -141,7 +144,7 @@ func TestInputRangeUpDownCounter(t *testing.T) {
 	counter.Add(ctx, 2)
 	counter.Add(ctx, 1)
 
-	checkpointed := sdk.Collect(ctx)
+	checkpointed := sdk.Collect(ctx, metricsdk.MatchAll)
 	sum, err := processor.accumulations[0].Aggregator().(aggregation.Sum).Sum()
 	require.Equal(t, int64(1), sum.AsInt64())
 	require.Equal(t, 1, checkpointed)
@@ -158,14 +161,14 @@ func TestInputRangeValueRecorder(t *testing.T) {
 	valuerecorder.Record(ctx, math.NaN())
 	require.Equal(t, aggregation.ErrNaNInput, testHandler.Flush())
 
-	checkpointed := sdk.Collect(ctx)
+	checkpointed := sdk.Collect(ctx, metricsdk.MatchAll)
 	require.Equal(t, 0, checkpointed)
 
 	valuerecorder.Record(ctx, 1)
 	valuerecorder.Record(ctx, 2)
 
 	processor.accumulations = nil
-	checkpointed = sdk.Collect(ctx)
+	checkpointed = sdk.Collect(ctx, metricsdk.MatchAll)
 
 	count, err := processor.accumulations[0].Aggregator().(aggregation.Distribution).Count()
 	require.Equal(t, int64(2), count)
@@ -181,7 +184,7 @@ func TestDisabledInstrument(t *testing.T) {
 	valuerecorder := Must(meter).NewFloat64ValueRecorder("name.disabled")
 
 	valuerecorder.Record(ctx, -1)
-	checkpointed := sdk.Collect(ctx)
+	checkpointed := sdk.Collect(ctx, metricsdk.MatchAll)
 
 	require.Equal(t, 0, checkpointed)
 	require.Equal(t, 0, len(processor.accumulations))
@@ -249,7 +252,7 @@ func TestSDKLabelsDeduplication(t *testing.T) {
 
 	}
 
-	sdk.Collect(ctx)
+	sdk.Collect(ctx, metricsdk.MatchAll)
 
 	var actual [][]kv.KeyValue
 	for _, rec := range processor.accumulations {
@@ -344,7 +347,7 @@ func TestObserverCollection(t *testing.T) {
 	_ = Must(meter).NewInt64ValueObserver("empty.valueobserver.sum", func(_ context.Context, result metric.Int64ObserverResult) {
 	})
 
-	collected := sdk.Collect(ctx)
+	collected := sdk.Collect(ctx, metricsdk.MatchAll)
 
 	require.Equal(t, collected, len(processor.accumulations))
 
@@ -388,7 +391,7 @@ func TestSumObserverInputRange(t *testing.T) {
 		require.Equal(t, aggregation.ErrNegativeInput, testHandler.Flush())
 	})
 
-	collected := sdk.Collect(ctx)
+	collected := sdk.Collect(ctx, metricsdk.MatchAll)
 
 	require.Equal(t, 0, collected)
 	require.Equal(t, 0, len(processor.accumulations))
@@ -447,7 +450,7 @@ func TestObserverBatch(t *testing.T) {
 	floatUpDownSumObs = batch.NewFloat64UpDownSumObserver("float.updownsumobserver.sum")
 	intUpDownSumObs = batch.NewInt64UpDownSumObserver("int.updownsumobserver.sum")
 
-	collected := sdk.Collect(ctx)
+	collected := sdk.Collect(ctx, metricsdk.MatchAll)
 
 	require.Equal(t, collected, len(processor.accumulations))
 
@@ -494,7 +497,7 @@ func TestRecordBatch(t *testing.T) {
 		valuerecorder2.Measurement(4),
 	)
 
-	sdk.Collect(ctx)
+	sdk.Collect(ctx, metricsdk.MatchAll)
 
 	out := batchTest.NewOutput(label.DefaultEncoder())
 	for _, rec := range processor.accumulations {
@@ -522,7 +525,7 @@ func TestRecordPersistence(t *testing.T) {
 	for i := 0; i < 100; i++ {
 		c.Add(ctx, 1, uk)
 		b.Add(ctx, 1)
-		sdk.Collect(ctx)
+		sdk.Collect(ctx, metricsdk.MatchAll)
 	}
 
 	require.Equal(t, 4, processor.newAggCount)
@@ -543,7 +546,7 @@ func TestIncorrectInstruments(t *testing.T) {
 		result.Observe(nil, observer.Observation(1))
 	})
 
-	collected := sdk.Collect(ctx)
+	collected := sdk.Collect(ctx, metricsdk.MatchAll)
 	require.Equal(t, metricsdk.ErrUninitializedInstrument, testHandler.Flush())
 	require.Equal(t, 0, collected)
 
@@ -559,7 +562,7 @@ func TestIncorrectInstruments(t *testing.T) {
 		result.Observe(nil, observer.Observation(1))
 	})
 
-	collected = sdk.Collect(ctx)
+	collected = sdk.Collect(ctx, metricsdk.MatchAll)
 	require.Equal(t, 0, collected)
 	require.Equal(t, metricsdk.ErrUninitializedInstrument, testHandler.Flush())
 }
@@ -576,7 +579,7 @@ func TestSyncInAsync(t *testing.T) {
 		},
 	)
 
-	sdk.Collect(ctx)
+	sdk.Collect(ctx, metricsdk.MatchAll)
 
 	out := batchTest.NewOutput(label.DefaultEncoder())
 	for _, rec := range processor.accumulations {
@@ -588,16 +591,28 @@ func TestSyncInAsync(t *testing.T) {
 	}, out.Map)
 }
 
-func TestWithDynamicExtension(t *testing.T) {
+func TestCollectWithRule(t *testing.T) {
 	testHandler.Reset()
 
-	// Create new dynamic extension with set of schedules
-	schedule := pb.MetricConfigResponse_Schedule{
-		InclusionPatterns: metricsdk.MatchingPatterns2,
-		PeriodSec:         5,
+	oneSchedule := pb.MetricConfigResponse_Schedule{
+		InclusionPatterns: []*pb.MetricConfigResponse_Schedule_Pattern{
+			{
+				Match: &pb.MetricConfigResponse_Schedule_Pattern_StartsWith{
+					StartsWith: "one",
+				},
+			},
+		},
+		PeriodSec: 5,
 	}
-	ext := metricsdk.NewDynamicExtension()
-	ext.SetSchedules([]*pb.MetricConfigResponse_Schedule{&schedule})
+
+	schedules := []*pb.MetricConfigResponse_Schedule{
+		&oneSchedule,
+	}
+
+	mockClock := controllerTest.NewMockClock()
+	matcher := push.PeriodMatcher{}
+	matcher.MarkStart(mockClock.Now())
+	matcher.ConsumeSchedules(schedules)
 
 	processor := &correctnessProcessor{
 		t:            t,
@@ -606,23 +621,23 @@ func TestWithDynamicExtension(t *testing.T) {
 	sdk := metricsdk.NewAccumulator(
 		processor,
 		metricsdk.WithResource(testResource),
-		metricsdk.WithDynamicExtension(ext),
 	)
 	meter := metric.WrapMeterImpl(sdk, "test")
 
 	ctx := context.Background()
 
-	_ = Must(meter).NewFloat64ValueObserver("One.sum", func(_ context.Context, result metric.Float64ObserverResult) {
+	_ = Must(meter).NewFloat64ValueObserver("one.sum", func(_ context.Context, result metric.Float64ObserverResult) {
 		result.Observe(1, kv.String("A", "B"))
 	})
-	_ = Must(meter).NewInt64ValueObserver("Three.sum", func(_ context.Context, result metric.Int64ObserverResult) {
+	_ = Must(meter).NewInt64ValueObserver("three.sum", func(_ context.Context, result metric.Int64ObserverResult) {
 		result.Observe(2, kv.String("C", "F"))
 	})
 
 	// Collect from all instruments associated with a period of 5 seconds. The instrument
-	// "One.sum" is, but the instrument "Three.sum" is not.
-	periods := []int32{5}
-	collected := sdk.Collect(ctx, periods...)
+	// "one.sum" is, but the instrument "three.sum" is not.
+	mockClock.Add(5 * time.Second)
+	rule := matcher.BuildRule(mockClock.Now())
+	collected := sdk.Collect(ctx, rule)
 
 	require.Equal(t, collected, len(processor.accumulations))
 
@@ -631,6 +646,6 @@ func TestWithDynamicExtension(t *testing.T) {
 		require.NoError(t, out.AddAccumulation(rec))
 	}
 	require.EqualValues(t, map[string]float64{
-		"One.sum/A=B/R=V": 1,
+		"one.sum/A=B/R=V": 1,
 	}, out.Map)
 }
