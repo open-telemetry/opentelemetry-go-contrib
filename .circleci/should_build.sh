@@ -30,6 +30,7 @@ fi
 if git diff --name-only origin/master HEAD | grep -q "$TARGET"; then
   exit 0
 else
+  echo "no changes found for $TARGET. skipping tests..."
   exit 1
 fi
 
