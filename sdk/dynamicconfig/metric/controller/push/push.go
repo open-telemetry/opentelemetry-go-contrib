@@ -107,7 +107,7 @@ func (c *Controller) Start() {
 	}
 
 	c.isRunning = true
-	c.matcher.Start(c.clock)
+	c.matcher.MarkStart(c.clock.Now())
 	go c.notifier.MonitorChanges(c.mch)
 	go c.run()
 }

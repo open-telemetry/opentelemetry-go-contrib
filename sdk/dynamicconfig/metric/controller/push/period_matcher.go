@@ -21,7 +21,6 @@ import (
 	pb "github.com/open-telemetry/opentelemetry-proto/gen/go/experimental/metricconfigservice"
 	"go.opentelemetry.io/contrib/sdk/dynamicconfig/internal/metricpattern"
 	"go.opentelemetry.io/contrib/sdk/dynamicconfig/metric"
-	controllerTime "go.opentelemetry.io/otel/sdk/metric/controller/time"
 )
 
 const tolerance float64 = 0.1
@@ -39,12 +38,50 @@ type CollectData struct {
 	period        time.Duration
 }
 
-func (matcher *PeriodMatcher) Start(clock controllerTime.Clock) {
-	if clock == nil {
-		matcher.startTime = time.Now()
-	} else {
-		matcher.startTime = clock.Now()
+func (matcher *PeriodMatcher) MarkStart(startTime time.Time) {
+	matcher.startTime = startTime
+}
+
+func (matcher *PeriodMatcher) ConsumeSchedules(sched []*pb.MetricConfigResponse_Schedule) {
+	matcher.m.Lock()
+	defer matcher.m.Unlock()
+
+	matcher.sched = sched
+	matcher.metrics = make(map[string]*CollectData)
+}
+
+// TODO: compute GCD for divisibility issues
+func (matcher *PeriodMatcher) GetMinPeriod() time.Duration {
+	matcher.m.Lock()
+	defer matcher.m.Unlock()
+
+	if len(matcher.sched) == 0 {
+		panic("matcher has not consumed any schedules")
 	}
+
+	minPeriod := matcher.sched[0].PeriodSec
+	for _, schedule := range matcher.sched[1:] {
+		minPeriod = gcd(minPeriod, schedule.PeriodSec)
+	}
+
+	return time.Duration(minPeriod) * time.Second
+}
+
+// Euclid's algorithm
+func gcd(a, b int32) int32 {
+	if a < b {
+		return gcd(b, a)
+	}
+
+	if a == 0 {
+		panic("cannot find GCD of zero values")
+	}
+
+	if b == 0 {
+		return a
+	}
+
+	return gcd(b, a%b)
 }
 
 func (matcher *PeriodMatcher) BuildRule(now time.Time) metric.Rule {
@@ -81,33 +118,6 @@ func (matcher *PeriodMatcher) matchPeriod(name string) time.Duration {
 			!metricpattern.Matches(name, schedule.ExclusionPatterns) &&
 			(minPeriod == 0 || minPeriod > schedule.PeriodSec) {
 
-			minPeriod = schedule.PeriodSec
-		}
-	}
-
-	return time.Duration(minPeriod) * time.Second
-}
-
-func (matcher *PeriodMatcher) ConsumeSchedules(sched []*pb.MetricConfigResponse_Schedule) {
-	matcher.m.Lock()
-	defer matcher.m.Unlock()
-
-	matcher.sched = sched
-	matcher.metrics = make(map[string]*CollectData)
-}
-
-// TODO: compute GCD for divisibility issues
-func (matcher *PeriodMatcher) GetMinPeriod() time.Duration {
-	matcher.m.Lock()
-	defer matcher.m.Unlock()
-
-	if len(matcher.sched) == 0 {
-		panic("matcher has not consumed any schedules")
-	}
-
-	minPeriod := matcher.sched[0].PeriodSec
-	for _, schedule := range matcher.sched[1:] {
-		if minPeriod > schedule.PeriodSec {
 			minPeriod = schedule.PeriodSec
 		}
 	}

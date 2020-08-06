@@ -369,8 +369,15 @@ func TestPushScheduleChange(t *testing.T) {
 	// TODO: data race in test
 	records, _ = fix.exporter.resetRecords()
 	require.Equal(t, 2, len(records))
-	require.Equal(t, "one.sum", records[0].Descriptor().Name())
-	require.Equal(t, "two.sum", records[1].Descriptor().Name())
+	firstName := records[0].Descriptor().Name()
+	secondName := records[1].Descriptor().Name()
+	if "one.sum" != firstName && "one.sum" != secondName {
+		t.Errorf("could not find name 'one.sum' in results: %v", []string{firstName, secondName})
+	}
+
+	if "two.sum" != firstName && "two.sum" != secondName {
+		t.Errorf("could not find name 'two.sum' in results: %v", []string{firstName, secondName})
+	}
 
 	fix.checkpointSet.Reset()
 
@@ -394,8 +401,8 @@ func TestPushScheduleChange(t *testing.T) {
 	// After 10 seconds, expect exports from both instruments.
 	records, _ = fix.exporter.resetRecords()
 	require.Equal(t, 2, len(records))
-	firstName := records[0].Descriptor().Name()
-	secondName := records[1].Descriptor().Name()
+	firstName = records[0].Descriptor().Name()
+	secondName = records[1].Descriptor().Name()
 	if "one.sum" != firstName && "one.sum" != secondName {
 		t.Errorf("could not find name 'one.sum' in results: %v", []string{firstName, secondName})
 	}
