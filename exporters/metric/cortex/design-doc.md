@@ -12,7 +12,7 @@ and
 
 ## Use Cases
 
-![Pipeline diagram](./images/pipeline.png) Metrics are raw measurements of resource usage and
+![Pipeline diagram](/images/pipeline.png) Metrics are raw measurements of resource usage and
 behavior of a software system. Metrics provide insight into the behavior and health of systems.
 Example metrics include average server latency and total bytes served. By monitoring metrics data,
 backend monitoring systems like Prometheus and Cortex can help engineers understand their system,
@@ -85,7 +85,8 @@ the
 [Zipkin exporter](https://github.com/open-telemetry/opentelemetry-go/tree/master/example/zipkin).
 
 ![Diagram showing docker container with a Go Application, OpenTelemetry SDK, Go SDK Cortex Exporter, and
-Cortex](./images/docker-pipeline.png)
+Cortex](
+images/docker-pipeline.png)
 
 ## Go SDK Collection Pipeline
 
@@ -93,7 +94,7 @@ Described below are the existing components from the Go SDK which the Cortex Exp
 with.
 
 ![Diagram showing data flow from the Controller to accumulator, to processor, to exporter, to backend like
-Jaeger](./images/DataPath.png)
+Jaeger](/images/DataPath.png)
 
 The Go SDK implements a
 [Push](https://github.com/open-telemetry/opentelemetry-go/blob/master/sdk/metric/controller/push/push.go)
@@ -129,7 +130,7 @@ Exporter and Push Controller. The steps in this pipeline are:
 While the steps above remain similar for exporters in the Go SDK and Go Contrib, there are a couple
 function combinations that these other exporters use in their Exporter Installation pipelines:
 
-![Export install pipelines](./images/install-pipelines.png)
+![Export install pipelines](/images/install-pipelines.png)
 
 - `InstallNewPipeline()` → `NewExportPipeline()` → `NewRawExporter()`
   - [Stdout Exporter (metrics)](https://github.com/open-telemetry/opentelemetry-go/tree/master/exporters/stdout)
@@ -164,7 +165,7 @@ We chose these three functions over the other combinations because:
 
 **Proposed Installation Pipeline:**
 ![Proposed installation pipeline
-diagram](./images/installation-pipeline.png)
+diagram](/images/installation-pipeline.png)
 
 ```go
 func InstallNewPipeline(config Config, options ...push.Option) (*push.Controller, error) {
@@ -426,7 +427,7 @@ CheckpointSet to TimeSeries by calling `convertToTimeSeries()`. It then calls `B
 `SendRequest()` functions which will build and send an HTTP request with the TimeSeries to Cortex.
 These methods are described in detail below.
 
-![Overall exporter design diagram](./images/exporter.png)
+![Overall exporter design diagram](/images/exporter.png)
 
 ### ExportKindFor
 
@@ -596,7 +597,7 @@ service which may require additional authentication such as AWS Sig v4. Propriet
 will not be directly supported by the Exporter; however, the Exporter will allow the user to pass in
 their own HTTP client so they can add it themselves.
 
-![Cortex Architecture](./images/cortex-architecture.png)
+![Cortex Architecture](/images/cortex-architecture.png)
 
 There are two things to be done:
 
@@ -656,7 +657,7 @@ func buildMessage (timeseries []TimeSeries) ([]byte, error) {
 
 ### Compressed []byte → HTTP request
 
-![Diagram showing sent HTTP request to Cortex](./images/send-cortex.png)
+![Diagram showing sent HTTP request to Cortex](/images/send-cortex.png)
 
 After the compressed `[]byte` is created, it needs to be put inside a HTTP request and sent to
 Cortex with the correct headers attached. The design will rely on `http.Client` from Go’s native
