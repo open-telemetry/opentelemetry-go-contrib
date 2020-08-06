@@ -9,3 +9,5 @@ Thumbs.db
 coverage.*
 
 instrumentation/github.com/gocql/gocql/example/example
+instrumentation/google.golang.org/grpc/example/server/server
+instrumentation/google.golang.org/grpc/example/client/client
