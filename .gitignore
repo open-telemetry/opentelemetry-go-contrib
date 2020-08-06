@@ -8,3 +8,5 @@ Thumbs.db
 *.so
 coverage.*
 
+instrumentation/google.golang.org/grpc/example/server/server
+instrumentation/google.golang.org/grpc/example/client/client
