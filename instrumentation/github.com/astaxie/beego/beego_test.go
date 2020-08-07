@@ -15,6 +15,7 @@
 package beego
 
 import (
+	"encoding/json"
 	"fmt"
 	"io/ioutil"
 	"net/http"
@@ -36,25 +37,41 @@ import (
 
 const defaultReply = "hello world"
 
+type testReply struct {
+	Message string `json:"message"`
+	Err     string `json:"error"`
+}
+
 type testController struct {
 	beego.Controller
 }
 
 func (c *testController) BasicHello() {
-	c.Ctx.ResponseWriter.Write([]byte(defaultReply))
+	reply := &testReply{
+		Message: defaultReply,
+	}
+	c.Data["json"] = reply
+	c.ServeJSON()
 }
 
 func (c *testController) HelloWithName() {
 	name := c.GetString("name")
+	var reply *testReply
 	if name == "" {
 		c.Ctx.ResponseWriter.WriteHeader(http.StatusBadRequest)
-		c.Ctx.ResponseWriter.Write([]byte("missing query param \"name\""))
-		return
+		reply = &testReply{
+			Err: "missing query param \"name\"",
+		}
+	} else {
+		reply = &testReply{
+			Message: fmt.Sprintf("%s said hello.", name),
+		}
 	}
-	c.Ctx.ResponseWriter.Write([]byte(fmt.Sprintf("%s said hello.", name)))
+	c.Data["json"] = reply
+	c.ServeJSON()
 }
 
-func newTestRouterWithController() *beego.ControllerRegister {
+func newTestRouterWithController(t *testing.T) *beego.ControllerRegister {
 	router := beego.NewControllerRegister()
 	controller := &testController{}
 	router.Add("/", controller, "get:BasicHello")
@@ -68,14 +85,13 @@ const middleWareName = "test-router"
 
 type testCase struct {
 	name               string
-	mwName             string
 	method             string
 	url                string
 	options            []Option
 	hasSpan            bool
 	expectedSpanName   string
 	expectedHTTPStatus int
-	expectedResponse   string
+	expectedResponse   testReply
 	expectedAttributes []kv.KeyValue
 }
 
@@ -88,7 +104,7 @@ var testCases = []*testCase{
 		hasSpan:            true,
 		expectedSpanName:   "/",
 		expectedHTTPStatus: http.StatusOK,
-		expectedResponse:   defaultReply,
+		expectedResponse:   testReply{Message: defaultReply},
 		expectedAttributes: []kv.KeyValue{},
 	},
 	{
@@ -99,7 +115,7 @@ var testCases = []*testCase{
 		hasSpan:            true,
 		expectedSpanName:   "/greet",
 		expectedHTTPStatus: http.StatusOK,
-		expectedResponse:   "test said hello.",
+		expectedResponse:   testReply{Message: "test said hello."},
 		expectedAttributes: []kv.KeyValue{},
 	},
 	{
@@ -113,7 +129,7 @@ var testCases = []*testCase{
 		},
 		hasSpan:            false,
 		expectedHTTPStatus: http.StatusOK,
-		expectedResponse:   defaultReply,
+		expectedResponse:   testReply{Message: defaultReply},
 	},
 	{
 		name:   "GET/__Custom filter not filtering route",
@@ -127,7 +143,7 @@ var testCases = []*testCase{
 		hasSpan:            true,
 		expectedSpanName:   "/",
 		expectedHTTPStatus: http.StatusOK,
-		expectedResponse:   defaultReply,
+		expectedResponse:   testReply{Message: defaultReply},
 		expectedAttributes: []kv.KeyValue{},
 	},
 	{
@@ -138,7 +154,7 @@ var testCases = []*testCase{
 		hasSpan:            true,
 		expectedSpanName:   "/greet",
 		expectedHTTPStatus: http.StatusBadRequest,
-		expectedResponse:   "missing query param \"name\"",
+		expectedResponse:   testReply{Err: "missing query param \"name\""},
 		expectedAttributes: []kv.KeyValue{},
 	},
 	{
@@ -153,7 +169,7 @@ var testCases = []*testCase{
 		hasSpan:            true,
 		expectedSpanName:   "Test Span Name",
 		expectedHTTPStatus: http.StatusOK,
-		expectedResponse:   "test said hello.",
+		expectedResponse:   testReply{Message: "test said hello."},
 		expectedAttributes: []kv.KeyValue{},
 	},
 }
@@ -164,7 +180,7 @@ func TestHandler(t *testing.T) {
 		t.Run(tc.name, func(t *testing.T) {
 			tracer := mocktrace.NewTracer("beego-test")
 			meterimpl, meter := mockmeter.NewMeter()
-			router := newTestRouterWithController()
+			router := newTestRouterWithController(t)
 
 			rr := httptest.NewRecorder()
 			req, err := http.NewRequest(tc.method, tc.url, nil)
@@ -186,7 +202,9 @@ func TestHandler(t *testing.T) {
 			require.Equal(t, tc.expectedHTTPStatus, rr.Result().StatusCode)
 			body, err := ioutil.ReadAll(rr.Result().Body)
 			require.NoError(t, err)
-			require.Equal(t, tc.expectedResponse, string(body))
+			message := testReply{}
+			require.NoError(t, json.Unmarshal(body, &message))
+			require.Equal(t, tc.expectedResponse, message)
 
 			spans := tracer.EndedSpans()
 			if tc.hasSpan {

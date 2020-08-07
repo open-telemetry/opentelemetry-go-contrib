@@ -31,7 +31,7 @@ type Config struct {
 	formatter   SpanNameFormatter
 }
 
-// Option applies a configuration to the give Config.
+// Option applies a configuration to the given Config.
 type Option interface {
 	Apply(*Config)
 }
