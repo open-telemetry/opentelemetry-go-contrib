@@ -34,12 +34,14 @@ import (
 
 // ------------------------------------------ Test Controller
 
+const defaultReply = "hello world"
+
 type testController struct {
 	beego.Controller
 }
 
-func (c *testController) Hello() {
-	c.Ctx.ResponseWriter.Write([]byte("Hello, world!"))
+func (c *testController) BasicHello() {
+	c.Ctx.ResponseWriter.Write([]byte(defaultReply))
 }
 
 func (c *testController) HelloWithName() {
@@ -55,7 +57,7 @@ func (c *testController) HelloWithName() {
 func newTestRouterWithController() *beego.ControllerRegister {
 	router := beego.NewControllerRegister()
 	controller := &testController{}
-	router.Add("/", controller, "get:Hello")
+	router.Add("/", controller, "get:BasicHello")
 	router.Add("/greet", controller, "post:HelloWithName")
 	return router
 }
@@ -79,18 +81,18 @@ type testCase struct {
 
 var testCases = []*testCase{
 	{
-		name:               "GET/||All default options",
+		name:               "GET/__All default options",
 		method:             http.MethodGet,
 		url:                "http://localhost/",
 		options:            []Option{},
 		hasSpan:            true,
 		expectedSpanName:   "/",
 		expectedHTTPStatus: http.StatusOK,
-		expectedResponse:   "Hello, world!",
+		expectedResponse:   defaultReply,
 		expectedAttributes: []kv.KeyValue{},
 	},
 	{
-		name:               "POST/greet?name=test||All default options",
+		name:               "POST/greet?name=test__All default options",
 		method:             http.MethodPost,
 		url:                "http://localhost/greet?name=test",
 		options:            []Option{},
@@ -101,7 +103,7 @@ var testCases = []*testCase{
 		expectedAttributes: []kv.KeyValue{},
 	},
 	{
-		name:   "GET/||Custom filter filtering route",
+		name:   "GET/__Custom filter filtering route",
 		method: http.MethodGet,
 		url:    "http://localhost/",
 		options: []Option{
@@ -111,10 +113,10 @@ var testCases = []*testCase{
 		},
 		hasSpan:            false,
 		expectedHTTPStatus: http.StatusOK,
-		expectedResponse:   "Hello, world!",
+		expectedResponse:   defaultReply,
 	},
 	{
-		name:   "GET/||Custom filter not filtering route",
+		name:   "GET/__Custom filter not filtering route",
 		method: http.MethodGet,
 		url:    "http://localhost/",
 		options: []Option{
@@ -125,11 +127,11 @@ var testCases = []*testCase{
 		hasSpan:            true,
 		expectedSpanName:   "/",
 		expectedHTTPStatus: http.StatusOK,
-		expectedResponse:   "Hello, world!",
+		expectedResponse:   defaultReply,
 		expectedAttributes: []kv.KeyValue{},
 	},
 	{
-		name:               "POST/greet||Default options, bad request",
+		name:               "POST/greet__Default options, bad request",
 		method:             http.MethodPost,
 		url:                "http://localhost/greet",
 		options:            []Option{},
@@ -140,7 +142,7 @@ var testCases = []*testCase{
 		expectedAttributes: []kv.KeyValue{},
 	},
 	{
-		name:   "POST/greet?name=test||Custom span name formatter",
+		name:   "POST/greet?name=test__Custom span name formatter",
 		method: http.MethodPost,
 		url:    "http://localhost/greet?name=test",
 		options: []Option{
