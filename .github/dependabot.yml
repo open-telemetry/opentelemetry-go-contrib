@@ -50,6 +50,10 @@ updates:
     schedule:
       interval: "daily"
   - package-ecosystem: "gomod" # See documentation for possible values
+    directory: "/instrumentation/google.golang.org/grpc" # Location of package manifests
+    schedule:
+      interval: "daily"
+  - package-ecosystem: "gomod" # See documentation for possible values
     directory: "/instrumentation/gopkg.in/macaron.v1" # Location of package manifests
     schedule:
       interval: "daily"
@@ -59,5 +63,13 @@ updates:
       interval: "daily"
   - package-ecosystem: "gomod" # See documentation for possible values
     directory: "/instrumentation/github.com/Shopify/sarama" # Location of package manifests
+    schedule:
+      interval: "daily"
+  - package-ecosystem: "gomod" # See documentation for possible values
+    directory: "/instrumentation/net/http" # Location of package manifests
+    schedule:
+      interval: "daily"
+  - package-ecosystem: "gomod" # See documentation for possible values
+    directory: "/instrumentation/net/http/httptrace" # Location of package manifests
     schedule:
       interval: "daily"
