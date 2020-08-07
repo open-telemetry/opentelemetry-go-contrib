@@ -73,8 +73,7 @@ func WithPropagators(propagators propagation.Propagators) OptionFunc {
 	})
 }
 
-// WithFilter adds the given filter
-// as a filter used for tracing in the middleware.
+// WithFilter adds the given filter for use in the middleware.
 // Defaults to no filters.
 func WithFilter(f Filter) OptionFunc {
 	return OptionFunc(func(c *Config) {
@@ -82,7 +81,7 @@ func WithFilter(f Filter) OptionFunc {
 	})
 }
 
-// WithSpanNameFormatter sets the formatter to be used for format
+// WithSpanNameFormatter sets the formatter to be used to format
 // span names. Defaults to http.Request.URL.Path.
 func WithSpanNameFormatter(f SpanNameFormatter) OptionFunc {
 	return OptionFunc(func(c *Config) {
