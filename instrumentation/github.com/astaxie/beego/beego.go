@@ -29,7 +29,7 @@ func defaultSpanNameFormatter(operation string, req *http.Request) string {
 }
 
 // NewOTelBeegoMiddleWare creates a MiddleWare that provides OpenTelemetry
-// tracing and metrics to a Beego web app. 
+// tracing and metrics to a Beego web app.
 // Name is the http handler operation name.
 // The OTelBeegoMiddleWare can be configured using the provided Options.
 func NewOTelBeegoMiddleWare(name string, options ...Option) beego.MiddleWare {

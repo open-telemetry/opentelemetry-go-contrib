@@ -24,7 +24,6 @@ const (
 	// packageName is the name of the this package, and is used as the default tracer
 	// and meter names.
 	packageName = "go.opentelemetry.io/contrib/instrumentation/github.com/astaxie/beego"
-
 )
 
 // Filter returns true if the request should be traced.
