@@ -25,14 +25,17 @@ import (
 // defaultSpanNameFormatter is the default formatter for spans created with
 // the beego integration. Returns the request URL path.
 func defaultSpanNameFormatter(operation string, req *http.Request) string {
+	if req.URL.Path == "" {
+		return req.Method
+	}
 	return req.URL.Path
 }
 
 // NewOTelBeegoMiddleWare creates a MiddleWare that provides OpenTelemetry
 // tracing and metrics to a Beego web app.
-// Name is the http handler operation name.
+// Parameter service should describe the name of the (virtual) server handling the request.
 // The OTelBeegoMiddleWare can be configured using the provided Options.
-func NewOTelBeegoMiddleWare(name string, options ...Option) beego.MiddleWare {
+func NewOTelBeegoMiddleWare(service string, options ...Option) beego.MiddleWare {
 	cfg := configure(options...)
 
 	httpOptions := []otelhttp.Option{
@@ -55,7 +58,7 @@ func NewOTelBeegoMiddleWare(name string, options ...Option) beego.MiddleWare {
 	return func(handler http.Handler) http.Handler {
 		return otelhttp.NewHandler(
 			handler,
-			name,
+			service,
 			httpOptions...,
 		)
 	}
