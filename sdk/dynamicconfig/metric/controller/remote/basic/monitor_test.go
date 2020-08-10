@@ -19,7 +19,7 @@ import (
 	"time"
 
 	pb "github.com/open-telemetry/opentelemetry-proto/gen/go/experimental/metricconfigservice"
-	"go.opentelemetry.io/contrib/sdk/dynamicconfig/metric/controller/notify"
+	"go.opentelemetry.io/contrib/sdk/dynamicconfig/metric/controller/remote"
 	controllerTest "go.opentelemetry.io/otel/sdk/metric/controller/test"
 )
 
@@ -44,11 +44,11 @@ func TestMonitorChanges(t *testing.T) {
 	defer stop()
 
 	mockClock := controllerTest.NewMockClock()
-	notifier := NewNotifier(addr, nil)
-	notifier.clock = mockClock
+	monitor := NewMonitor(addr, nil)
+	monitor.clock = mockClock
 
-	mch := notify.NewMonitorChannel()
-	notifier.MonitorChanges(mch)
+	mch := remote.NewMonitorChannel()
+	monitor.MonitorChanges(mch)
 
 	select {
 	case scheds := <-mch.Data:
@@ -86,16 +86,16 @@ func TestMonitorChanges(t *testing.T) {
 }
 
 func TestUpdateWaitTime(t *testing.T) {
-	notifier := NewNotifier("", nil)
+	monitor := NewMonitor("", nil)
 	mockClock := controllerTest.NewMockClock()
-	notifier.clock = mockClock
-	notifier.ticker = notifier.clock.Ticker(1 * time.Second)
+	monitor.clock = mockClock
+	monitor.ticker = monitor.clock.Ticker(1 * time.Second)
 
-	notifier.updateWaitTime(10)
+	monitor.updateWaitTime(10)
 	mockClock.Add(1 * time.Second)
 
 	select {
-	case <-notifier.ticker.C():
+	case <-monitor.ticker.C():
 		t.Errorf("clock ticked after 1 second, not 10")
 	default:
 	}
@@ -103,16 +103,16 @@ func TestUpdateWaitTime(t *testing.T) {
 	mockClock.Add(9 * time.Second)
 
 	select {
-	case <-notifier.ticker.C():
+	case <-monitor.ticker.C():
 	default:
 		t.Errorf("clock should have ticked by now, after 10 seconds")
 	}
 
-	notifier.updateWaitTime(15)
+	monitor.updateWaitTime(15)
 	mockClock.Add(10 * time.Second)
 
 	select {
-	case <-notifier.ticker.C():
+	case <-monitor.ticker.C():
 		t.Errorf("clock ticked after 10 seconds, not 15")
 	default:
 	}
@@ -120,16 +120,16 @@ func TestUpdateWaitTime(t *testing.T) {
 	mockClock.Add(5 * time.Second)
 
 	select {
-	case <-notifier.ticker.C():
+	case <-monitor.ticker.C():
 	default:
 		t.Errorf("clock should have ticked by now, after 15 seconds")
 	}
 
-	notifier.updateWaitTime(0)
+	monitor.updateWaitTime(0)
 	mockClock.Add(15 * time.Second)
 
 	select {
-	case <-notifier.ticker.C():
+	case <-monitor.ticker.C():
 	default:
 		t.Errorf("clock should have ticked by now, after 15 seconds")
 	}

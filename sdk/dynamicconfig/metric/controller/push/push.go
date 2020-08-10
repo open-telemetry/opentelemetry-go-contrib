@@ -22,8 +22,8 @@ import (
 	sdk "go.opentelemetry.io/contrib/sdk/dynamicconfig/metric"
 
 	pb "github.com/open-telemetry/opentelemetry-proto/gen/go/experimental/metricconfigservice"
-	"go.opentelemetry.io/contrib/sdk/dynamicconfig/metric/controller/notify"
-	nbasic "go.opentelemetry.io/contrib/sdk/dynamicconfig/metric/controller/notify/basic"
+	"go.opentelemetry.io/contrib/sdk/dynamicconfig/metric/controller/remote"
+	mbasic "go.opentelemetry.io/contrib/sdk/dynamicconfig/metric/controller/remote/basic"
 	"go.opentelemetry.io/otel/api/global"
 	"go.opentelemetry.io/otel/api/metric"
 	"go.opentelemetry.io/otel/api/metric/registry"
@@ -48,8 +48,8 @@ type Controller struct {
 	timeout     time.Duration
 	clock       controllerTime.Clock
 	ticker      controllerTime.Ticker
-	notifier    notify.Notifier
-	mch         notify.MonitorChannel
+	monitor     remote.Monitor
+	mch         remote.MonitorChannel
 	matcher     *PeriodMatcher
 }
 
@@ -71,8 +71,8 @@ func New(selector export.AggregatorSelector, exporter export.Exporter, configHos
 		sdk.WithResource(c.Resource),
 	)
 
-	notifier := nbasic.NewNotifier(configHost, c.Resource)
-	mch := notify.NewMonitorChannel()
+	monitor := mbasic.NewMonitor(configHost, c.Resource)
+	mch := remote.NewMonitorChannel()
 
 	return &Controller{
 		provider:    registry.NewProvider(impl),
@@ -82,7 +82,7 @@ func New(selector export.AggregatorSelector, exporter export.Exporter, configHos
 		quit:        make(chan struct{}),
 		timeout:     c.Timeout,
 		clock:       controllerTime.RealClock{},
-		notifier:    notifier,
+		monitor:     monitor,
 		mch:         mch,
 		matcher:     &PeriodMatcher{},
 	}
@@ -105,7 +105,7 @@ func (c *Controller) Start() {
 
 	c.isRunning = true
 	c.matcher.MarkStart(c.clock.Now())
-	c.notifier.MonitorChanges(c.mch)
+	c.monitor.MonitorChanges(c.mch)
 	go c.run()
 }
 

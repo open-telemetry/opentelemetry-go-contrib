@@ -12,9 +12,13 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package notify
+package remote
 
 import pb "github.com/open-telemetry/opentelemetry-proto/gen/go/experimental/metricconfigservice"
+
+type Monitor interface {
+	MonitorChanges(mch MonitorChannel)
+}
 
 type MonitorChannel struct {
 	Data chan []*pb.MetricConfigResponse_Schedule
@@ -28,8 +32,4 @@ func NewMonitorChannel() MonitorChannel {
 		Err:  make(chan error),
 		Quit: make(chan struct{}),
 	}
-}
-
-type Notifier interface {
-	MonitorChanges(mch MonitorChannel)
 }

@@ -16,8 +16,8 @@ package push
 
 import (
 	pb "github.com/open-telemetry/opentelemetry-proto/gen/go/experimental/metricconfigservice"
-	"go.opentelemetry.io/contrib/sdk/dynamicconfig/metric/controller/notify"
-	"go.opentelemetry.io/contrib/sdk/dynamicconfig/metric/controller/notify/mock"
+	"go.opentelemetry.io/contrib/sdk/dynamicconfig/metric/controller/remote"
+	"go.opentelemetry.io/contrib/sdk/dynamicconfig/metric/controller/remote/mock"
 	controllerTime "go.opentelemetry.io/otel/sdk/metric/controller/time"
 )
 
@@ -27,10 +27,10 @@ func (c *Controller) SetClock(clock controllerTime.Clock) {
 	c.clock = clock
 }
 
-func (c *Controller) SetNotifier(notifier notify.Notifier) {
+func (c *Controller) SetMonitor(monitor remote.Monitor) {
 	c.lock.Lock()
 	defer c.lock.Unlock()
-	c.notifier = notifier
+	c.monitor = monitor
 }
 
 func (c *Controller) SetPeriod(period int32) {
@@ -47,9 +47,9 @@ func (c *Controller) SetPeriod(period int32) {
 		},
 	}
 
-	notifier := mock.NewNotifier()
-	notifier.Receive(scheds)
-	c.SetNotifier(notifier)
+	monitor := mock.NewMonitor()
+	monitor.Receive(scheds)
+	c.SetMonitor(monitor)
 }
 
 func (c *Controller) SetDone() {
