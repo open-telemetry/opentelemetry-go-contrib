@@ -13,3 +13,28 @@
 // limitations under the License.
 
 package utils_test
+
+import (
+	"path/filepath"
+
+	"github.com/spf13/afero"
+)
+
+// initYAML creates a YAML file at a given filepath in a in-memory file system.
+func initYAML(yamlBytes []byte, path string) (afero.Fs, error) {
+	// Create an in-memory file system.
+	fs := afero.NewMemMapFs()
+
+	// Retrieve the directory path.
+	dirPath := filepath.Dir(path)
+
+	// Create the directory and the file in the directory.
+	if err := fs.MkdirAll(dirPath, 0755); err != nil {
+		return nil, err
+	}
+	if err := afero.WriteFile(fs, path, yamlBytes, 0644); err != nil {
+		return nil, err
+	}
+
+	return fs, nil
+}
