@@ -216,7 +216,7 @@ var testCases = []*testCase{
 		path:   "/greet?name=test",
 		options: []Option{
 			WithFilter(Filter(func(req *http.Request) bool {
-				return strings.Index(req.URL.Path, "greet") < 0
+				return !strings.Contains(req.URL.Path, "greet")
 			})),
 			WithSpanNameFormatter(SpanNameFormatter(func(opp string, req *http.Request) string {
 				return customSpanName
