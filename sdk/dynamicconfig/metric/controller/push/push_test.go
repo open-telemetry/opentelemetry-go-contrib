@@ -24,7 +24,6 @@ import (
 	"github.com/stretchr/testify/require"
 
 	pb "github.com/open-telemetry/opentelemetry-proto/gen/go/experimental/metricconfigservice"
-	"go.opentelemetry.io/contrib/sdk/dynamicconfig/metric/controller/notify"
 	"go.opentelemetry.io/contrib/sdk/dynamicconfig/metric/controller/notify/mock"
 	"go.opentelemetry.io/contrib/sdk/dynamicconfig/metric/controller/push"
 
@@ -310,11 +309,9 @@ func TestPushScheduleChange(t *testing.T) {
 		},
 		PeriodSec: 10,
 	}
-	config := pb.MetricConfigResponse{
-		Schedules: []*pb.MetricConfigResponse_Schedule{
-			&oneSchedule,
-			&twoSchedule,
-		},
+	scheds := []*pb.MetricConfigResponse_Schedule{
+		&oneSchedule,
+		&twoSchedule,
 	}
 	fix := newFixture(t)
 
@@ -329,7 +326,7 @@ func TestPushScheduleChange(t *testing.T) {
 	p.SetClock(mockClock)
 
 	notifier := mock.NewNotifier()
-	notifier.Receive(&notify.MetricConfig{config})
+	notifier.Receive(scheds)
 	p.SetNotifier(notifier)
 
 	p.SetDone()
@@ -386,7 +383,7 @@ func TestPushScheduleChange(t *testing.T) {
 
 	// Update counter1's period to 10 seconds.
 	oneSchedule.PeriodSec = 10
-	notifier.Receive(&notify.MetricConfig{config})
+	notifier.Receive(scheds)
 	p.WaitDone()
 
 	mockClock.Add(5 * time.Second)

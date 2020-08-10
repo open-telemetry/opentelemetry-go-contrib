@@ -31,6 +31,7 @@ import (
 )
 
 // Initializes an OTLP exporter and metric provider
+// TODO: update, use collector config as backend
 func initProvider() (*otlp.Exporter, *push.Controller) {
 	exp, err := otlp.NewExporter(
 		otlp.WithInsecure(),

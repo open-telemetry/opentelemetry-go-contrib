@@ -51,9 +51,9 @@ func TestMonitorChanges(t *testing.T) {
 	go notifier.MonitorChanges(mch)
 
 	select {
-	case data := <-mch.Data:
-		if data.Schedules[0].PeriodSec != config.Schedules[0].PeriodSec {
-			t.Errorf("config does not match received data: %v", data)
+	case scheds := <-mch.Data:
+		if scheds[0].PeriodSec != config.Schedules[0].PeriodSec {
+			t.Errorf("config does not match received data: %v", scheds)
 		}
 	case err := <-mch.Err:
 		t.Errorf("monitor failed: %v", err)
@@ -64,9 +64,9 @@ func TestMonitorChanges(t *testing.T) {
 	mockClock.Add(DefaultCheckFrequency)
 
 	select {
-	case data := <-mch.Data:
-		if data.Schedules[0].PeriodSec != config.Schedules[0].PeriodSec {
-			t.Errorf("config does not match received data: %v", data)
+	case scheds := <-mch.Data:
+		if scheds[0].PeriodSec != config.Schedules[0].PeriodSec {
+			t.Errorf("config does not match received data: %v", scheds)
 		}
 	case err := <-mch.Err:
 		t.Errorf("monitor failed: %v", err)
@@ -76,9 +76,9 @@ func TestMonitorChanges(t *testing.T) {
 	mockClock.Add(5 * time.Second)
 
 	select {
-	case data := <-mch.Data:
-		if data.Schedules[0].PeriodSec != config.Schedules[0].PeriodSec {
-			t.Errorf("config does not match received data: %v", data)
+	case scheds := <-mch.Data:
+		if scheds[0].PeriodSec != config.Schedules[0].PeriodSec {
+			t.Errorf("config does not match received data: %v", scheds)
 		}
 	case err := <-mch.Err:
 		t.Errorf("monitor failed: %v", err)

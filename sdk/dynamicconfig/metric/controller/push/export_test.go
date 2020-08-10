@@ -34,23 +34,21 @@ func (c *Controller) SetNotifier(notifier notify.Notifier) {
 }
 
 func (c *Controller) SetPeriod(period int32) {
-	config := pb.MetricConfigResponse{
-		Schedules: []*pb.MetricConfigResponse_Schedule{
-			{
-				InclusionPatterns: []*pb.MetricConfigResponse_Schedule_Pattern{
-					{
-						Match: &pb.MetricConfigResponse_Schedule_Pattern_StartsWith{
-							StartsWith: "",
-						},
+	scheds := []*pb.MetricConfigResponse_Schedule{
+		{
+			InclusionPatterns: []*pb.MetricConfigResponse_Schedule_Pattern{
+				{
+					Match: &pb.MetricConfigResponse_Schedule_Pattern_StartsWith{
+						StartsWith: "",
 					},
 				},
-				PeriodSec: period,
 			},
+			PeriodSec: period,
 		},
 	}
 
 	notifier := mock.NewNotifier()
-	notifier.Receive(&notify.MetricConfig{config})
+	notifier.Receive(scheds)
 	c.SetNotifier(notifier)
 }
 

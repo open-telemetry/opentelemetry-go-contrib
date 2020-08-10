@@ -14,15 +14,17 @@
 
 package notify
 
+import pb "github.com/open-telemetry/opentelemetry-proto/gen/go/experimental/metricconfigservice"
+
 type MonitorChannel struct {
-	Data chan *MetricConfig
+	Data chan []*pb.MetricConfigResponse_Schedule
 	Err  chan error
 	Quit chan struct{}
 }
 
 func NewMonitorChannel() MonitorChannel {
 	return MonitorChannel{
-		Data: make(chan *MetricConfig),
+		Data: make(chan []*pb.MetricConfigResponse_Schedule),
 		Err:  make(chan error),
 		Quit: make(chan struct{}),
 	}

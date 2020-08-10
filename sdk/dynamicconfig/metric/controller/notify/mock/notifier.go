@@ -15,19 +15,20 @@
 package mock
 
 import (
+	pb "github.com/open-telemetry/opentelemetry-proto/gen/go/experimental/metricconfigservice"
 	"go.opentelemetry.io/contrib/sdk/dynamicconfig/metric/controller/notify"
 )
 
 type Notifier struct {
-	data chan *notify.MetricConfig
+	data chan []*pb.MetricConfigResponse_Schedule
 }
 
 func NewNotifier() *Notifier {
-	return &Notifier{make(chan *notify.MetricConfig)}
+	return &Notifier{make(chan []*pb.MetricConfigResponse_Schedule)}
 }
 
-func (n *Notifier) Receive(config *notify.MetricConfig) {
-	go func() { n.data <- config }()
+func (n *Notifier) Receive(scheds []*pb.MetricConfigResponse_Schedule) {
+	go func() { n.data <- scheds }()
 }
 
 // TODO: switch to sending data paradigm

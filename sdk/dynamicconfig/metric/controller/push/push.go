@@ -21,6 +21,7 @@ import (
 
 	sdk "go.opentelemetry.io/contrib/sdk/dynamicconfig/metric"
 
+	pb "github.com/open-telemetry/opentelemetry-proto/gen/go/experimental/metricconfigservice"
 	"go.opentelemetry.io/contrib/sdk/dynamicconfig/metric/controller/notify"
 	nbasic "go.opentelemetry.io/contrib/sdk/dynamicconfig/metric/controller/notify/basic"
 	"go.opentelemetry.io/otel/api/global"
@@ -71,11 +72,7 @@ func New(selector export.AggregatorSelector, exporter export.Exporter, configHos
 	)
 
 	notifier := nbasic.NewNotifier(configHost, c.Resource)
-	mch := notify.MonitorChannel{
-		Data: make(chan *notify.MetricConfig),
-		Err:  make(chan error),
-		Quit: make(chan struct{}),
-	}
+	mch := notify.NewMonitorChannel()
 
 	return &Controller{
 		provider:    registry.NewProvider(impl),
@@ -132,8 +129,8 @@ func (c *Controller) Stop() {
 }
 
 func (c *Controller) run() {
-	initData := <-c.mch.Data
-	c.update(initData)
+	initSchedules := <-c.mch.Data
+	c.update(initSchedules)
 
 	for {
 		select {
@@ -142,8 +139,8 @@ func (c *Controller) run() {
 			return
 		case <-c.ticker.C():
 			c.tick()
-		case data := <-c.mch.Data:
-			c.update(data)
+		case scheds := <-c.mch.Data:
+			c.update(scheds)
 		case err := <-c.mch.Err:
 			global.Handle(err)
 		}
@@ -174,8 +171,8 @@ func (c *Controller) tick() {
 	}
 }
 
-func (c *Controller) update(data *notify.MetricConfig) {
-	c.matcher.ConsumeSchedules(data.Schedules)
+func (c *Controller) update(schedules []*pb.MetricConfigResponse_Schedule) {
+	c.matcher.ConsumeSchedules(schedules)
 	minPeriod := c.matcher.GetMinPeriod()
 	if c.lastPeriod != minPeriod {
 		if c.ticker != nil {

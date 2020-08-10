@@ -17,11 +17,11 @@ package basic
 import (
 	"bytes"
 	"context"
+	"errors"
 	"fmt"
 
 	pb "github.com/open-telemetry/opentelemetry-proto/gen/go/experimental/metricconfigservice"
 	resourcepb "github.com/open-telemetry/opentelemetry-proto/gen/go/resource/v1"
-	"go.opentelemetry.io/contrib/sdk/dynamicconfig/metric/controller/notify"
 	"google.golang.org/grpc"
 )
 
@@ -51,7 +51,7 @@ func NewServiceReader(configHost string, resource *resourcepb.Resource) (*Servic
 // ReadConfig reads the latest configuration data from the backend. Returns
 // a nil *MetricConfig if there have been no changes to the configuration
 // since the last check.
-func (r *ServiceReader) ReadConfig() (*notify.MetricConfig, error) {
+func (r *ServiceReader) ReadConfig() (*pb.MetricConfigResponse, error) {
 	request := &pb.MetricConfigRequest{
 		LastKnownFingerprint: r.lastKnownFingerprint,
 		Resource:             r.resource,
@@ -70,12 +70,21 @@ func (r *ServiceReader) ReadConfig() (*notify.MetricConfig, error) {
 
 	r.lastKnownFingerprint = response.Fingerprint
 
-	newConfig := notify.MetricConfig{*response}
-	if err := newConfig.Validate(); err != nil {
+	if err := validate(response); err != nil {
 		return nil, fmt.Errorf("metric config invalid: %w", err)
 	}
 
-	return &newConfig, nil
+	return response, nil
+}
+
+func validate(resp *pb.MetricConfigResponse) error {
+	for _, schedule := range resp.Schedules {
+		if schedule.PeriodSec < 0 {
+			return errors.New("periods must be positive")
+		}
+	}
+
+	return nil
 }
 
 func (r *ServiceReader) Stop() error {

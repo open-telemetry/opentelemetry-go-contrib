@@ -17,6 +17,7 @@ package basic
 import (
 	"time"
 
+	pb "github.com/open-telemetry/opentelemetry-proto/gen/go/experimental/metricconfigservice"
 	"go.opentelemetry.io/contrib/sdk/dynamicconfig/internal/transform"
 	"go.opentelemetry.io/contrib/sdk/dynamicconfig/metric/controller/notify"
 	controllerTime "go.opentelemetry.io/otel/sdk/metric/controller/time"
@@ -84,7 +85,7 @@ func (n *Notifier) MonitorChanges(mch notify.MonitorChannel) {
 	}
 }
 
-func (n *Notifier) tick(data chan<- *notify.MetricConfig, errCh chan<- error, serviceReader *ServiceReader) {
+func (n *Notifier) tick(data chan<- []*pb.MetricConfigResponse_Schedule, errCh chan<- error, serviceReader *ServiceReader) {
 	newConfig, err := serviceReader.ReadConfig()
 	if err != nil {
 		errCh <- err
@@ -92,7 +93,7 @@ func (n *Notifier) tick(data chan<- *notify.MetricConfig, errCh chan<- error, se
 
 	if newConfig != nil {
 		n.updateWaitTime(newConfig.SuggestedWaitTimeSec)
-		data <- newConfig
+		data <- newConfig.Schedules
 	}
 }
 
