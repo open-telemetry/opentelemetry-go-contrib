@@ -47,7 +47,6 @@ type Client struct {
 // executes the operation and ends the span (additionally also sets a status
 // error code and message, if an error occurs). Optionally, client context can
 // be set before an operation with the WithContext method.
-//
 func NewClientWithTracing(client *memcache.Client, opts ...Option) *Client {
 	cfg := &config{}
 	for _, o := range opts {
@@ -73,7 +72,7 @@ func NewClientWithTracing(client *memcache.Client, opts ...Option) *Client {
 }
 
 // attrsByOperationAndItemKey returns appropriate span attributes on the basis
-// of operation name and item key (if available)
+// of the operation name and item key(s) (if available)
 func (c *Client) attrsByOperationAndItemKey(operation string, key ...string) []kv.KeyValue {
 	kvs := []kv.KeyValue{
 		standard.ServiceNameKey.String(c.cfg.serviceName),
@@ -85,7 +84,7 @@ func (c *Client) attrsByOperationAndItemKey(operation string, key ...string) []k
 	return kvs
 }
 
-// starts span with appropriate span kind and attributes
+// Starts span with appropriate span kind and attributes
 func (c *Client) startSpan(operationName string, itemKey ...string) oteltrace.Span {
 	opts := []oteltrace.StartOption{
 		// for database client calls, always use CLIENT span kind
@@ -104,7 +103,7 @@ func (c *Client) startSpan(operationName string, itemKey ...string) oteltrace.Sp
 	return span
 }
 
-// ends span and, if applicable, sets error status
+// Ends span and, if applicable, sets error status
 func endSpan(s oteltrace.Span, err error) {
 	if err != nil {
 		s.SetStatus(memcacheErrToStatusCode(err), err.Error())
