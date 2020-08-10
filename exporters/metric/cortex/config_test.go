@@ -13,3 +13,73 @@
 // limitations under the License.
 
 package cortex_test
+
+import (
+	"testing"
+
+	"github.com/stretchr/testify/require"
+	"go.opentelemetry.io/contrib/exporters/metric/cortex"
+)
+
+// TestValidate checks whether Validate() returns the correct error and sets the correct default
+// values.
+func TestValidate(t *testing.T) {
+	tests := []struct {
+		testName       string
+		config         *cortex.Config
+		expectedConfig *cortex.Config
+		expectedError  error
+	}{
+		{
+			testName:       "Config with Conflicting Bearer Tokens",
+			config:         &exampleTwoBearerTokenConfig,
+			expectedConfig: nil,
+			expectedError:  cortex.ErrTwoBearerTokens,
+		},
+		{
+			testName:       "Config with Conflicting Passwords",
+			config:         &exampleTwoPasswordConfig,
+			expectedConfig: nil,
+			expectedError:  cortex.ErrTwoPasswords,
+		},
+		{
+			testName:       "Config with Custom Timeout",
+			config:         &exampleRemoteTimeoutConfig,
+			expectedConfig: &validatedCustomTimeoutConfig,
+			expectedError:  nil,
+		},
+		{
+			testName:       "Config with no Endpoint",
+			config:         &exampleNoEndpointConfig,
+			expectedConfig: &validatedStandardConfig,
+			expectedError:  nil,
+		},
+		{
+			testName:       "Config with no Remote Timeout",
+			config:         &exampleNoRemoteTimeoutConfig,
+			expectedConfig: &validatedStandardConfig,
+			expectedError:  nil,
+		},
+		{
+			testName:       "Config with no Push Interval",
+			config:         &exampleNoPushIntervalConfig,
+			expectedConfig: &validatedStandardConfig,
+			expectedError:  nil,
+		},
+		{
+			testName:       "Config with no Client",
+			config:         &exampleNoClientConfig,
+			expectedConfig: &validatedStandardConfig,
+			expectedError:  nil,
+		},
+	}
+	for _, test := range tests {
+		t.Run(test.testName, func(t *testing.T) {
+			err := test.config.Validate()
+			require.Equal(t, err, test.expectedError)
+			if err == nil {
+				require.Equal(t, test.config, test.expectedConfig)
+			}
+		})
+	}
+}

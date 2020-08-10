@@ -15,8 +15,17 @@
 package cortex
 
 import (
+	"fmt"
 	"net/http"
 	"time"
+)
+
+var (
+	// ErrTwoPasswords occurs when the YAML file contains both `password` and `password_file`.
+	ErrTwoPasswords = fmt.Errorf("Cannot have two passwords in the YAML file")
+
+	// ErrTwoBearerTokens occurs when the YAML file contains `bearer_token` and `bearer_token_file`.
+	ErrTwoBearerTokens = fmt.Errorf("Cannot have two bearer tokens in the YAML file")
 )
 
 // Config contains properties the Exporter uses to export metrics data to Cortex.
@@ -32,4 +41,10 @@ type Config struct {
 	PushInterval    time.Duration
 	Headers         map[string]string
 	Client          *http.Client
+}
+
+// Validate checks a Config struct for missing required properties and property conflicts.
+// Additionally, it adds default values to missing properties when there is a default.
+func (c *Config) Validate() error {
+	return nil
 }

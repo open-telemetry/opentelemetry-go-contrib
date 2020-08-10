@@ -56,7 +56,7 @@ var exampleRemoteTimeoutConfig = cortex.Config{
 }
 
 // Example Config struct without a remote timeout.
-var ExampleNoRemoteTimeoutConfig = cortex.Config{
+var exampleNoRemoteTimeoutConfig = cortex.Config{
 	Endpoint:     "/api/prom/push",
 	Name:         "Standard Config",
 	PushInterval: 10 * time.Second,
