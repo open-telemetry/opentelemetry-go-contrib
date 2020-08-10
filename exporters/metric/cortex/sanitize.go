@@ -15,18 +15,33 @@
 package cortex
 
 import (
-	"testing"
-
-	"go.opentelemetry.io/otel/sdk/export/metric"
-	"go.opentelemetry.io/otel/sdk/export/metric/aggregation"
+	"strings"
+	"unicode"
 )
 
-func TestExportKindFor(t *testing.T) {
-	exporter := Exporter{}
-	got := exporter.ExportKindFor(nil, aggregation.Kind(0))
-	want := metric.CumulativeExporter
+// This is a copy of opentelemetry-go/sdk/internal/sanitize.go
 
-	if got != want {
-		t.Errorf("ExportKindFor() =  %q, want %q", got, want)
+// sanitize replaces non-alphanumeric characters with underscores
+func sanitize(s string) string {
+	if len(s) == 0 {
+		return s
 	}
+
+	s = strings.Map(sanitizeRune, s)
+	if unicode.IsDigit(rune(s[0])) {
+		s = "key_" + s
+	}
+	if s[0] == '_' {
+		s = "key" + s
+	}
+	return s
+}
+
+// converts anything that is not a letter or digit to an underscore
+func sanitizeRune(r rune) rune {
+	if unicode.IsLetter(r) || unicode.IsDigit(r) {
+		return r
+	}
+	// Everything else turns into an underscore
+	return '_'
 }
