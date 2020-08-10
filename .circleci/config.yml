@@ -1,4 +1,4 @@
-version: 2
+version: 2.1
 jobs:
   build:
     docker:
@@ -33,3 +33,48 @@ jobs:
 
       - store_test_results:
           path: /tmp/test-results
+  
+  integration:
+
+    parameters:
+      target:
+        type: string
+        description: "The makefile target that will run the tests for the integration."
+
+    machine:
+      image: ubuntu-1604:202004-01
+    
+    environment:
+      TEST_RESULTS: /tmp/test-results # path to where test results will be saved
+      INTEGRATION: << parameters.target >>
+    
+    steps:
+      - checkout
+      
+      - run: mkdir -p $TEST_RESULTS
+      
+      - run: 
+          name: "Integration test $INTEGRATION"
+          command: |
+            make $INTEGRATION
+            find . -name 'coverage.html' > "${TEST_RESULTS}/coverage.lst"
+            tar -n -cf - -T "${TEST_RESULTS}/coverage.lst" | tar -C "${TEST_RESULTS}" -xvf -
+
+      - store_artifacts:
+          path: /tmp/test-results
+          destination: opentelemetry-go-contrib-test-output
+
+      - store_test_results:
+          path: /tmp/test-results
+
+workflows:
+  version: 2.1
+  build_and_test:
+    jobs:
+      - build
+  integration_test:
+    jobs:
+      - integration:
+          matrix:
+            parameters:
+              target: [test-gocql, test-mongo-driver]
