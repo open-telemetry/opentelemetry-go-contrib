@@ -48,7 +48,7 @@ func TestMonitorChanges(t *testing.T) {
 	notifier.clock = mockClock
 
 	mch := notify.NewMonitorChannel()
-	go notifier.MonitorChanges(mch)
+	notifier.MonitorChanges(mch)
 
 	select {
 	case scheds := <-mch.Data:

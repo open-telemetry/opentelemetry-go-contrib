@@ -63,26 +63,28 @@ func NewNotifier(configHost string, resource *resource.Resource) *Notifier {
 }
 
 func (n *Notifier) MonitorChanges(mch notify.MonitorChannel) {
-	n.ticker = n.clock.Ticker(DefaultCheckFrequency)
-	serviceReader, err := NewServiceReader(n.configHost, transform.Resource(n.resource))
-	if err != nil {
-		mch.Err <- err
-	}
-
-	n.tick(mch.Data, mch.Err, serviceReader)
-	for {
-		select {
-		case <-n.ticker.C():
-			n.tick(mch.Data, mch.Err, serviceReader)
-
-		case <-mch.Quit:
-			n.ticker.Stop()
-			if err := serviceReader.Stop(); err != nil {
-				mch.Err <- err
-			}
-			return
+	go func() {
+		n.ticker = n.clock.Ticker(DefaultCheckFrequency)
+		serviceReader, err := NewServiceReader(n.configHost, transform.Resource(n.resource))
+		if err != nil {
+			mch.Err <- err
 		}
-	}
+
+		n.tick(mch.Data, mch.Err, serviceReader)
+		for {
+			select {
+			case <-n.ticker.C():
+				n.tick(mch.Data, mch.Err, serviceReader)
+
+			case <-mch.Quit:
+				n.ticker.Stop()
+				if err := serviceReader.Stop(); err != nil {
+					mch.Err <- err
+				}
+				return
+			}
+		}
+	}()
 }
 
 func (n *Notifier) tick(data chan<- []*pb.MetricConfigResponse_Schedule, errCh chan<- error, serviceReader *ServiceReader) {

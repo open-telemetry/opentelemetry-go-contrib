@@ -33,12 +33,14 @@ func (n *Notifier) Receive(scheds []*pb.MetricConfigResponse_Schedule) {
 
 // TODO: switch to sending data paradigm
 func (n *Notifier) MonitorChanges(mch notify.MonitorChannel) {
-	for {
-		select {
-		case config := <-n.data:
-			mch.Data <- config
-		case <-mch.Quit:
-			return
+	go func() {
+		for {
+			select {
+			case config := <-n.data:
+				mch.Data <- config
+			case <-mch.Quit:
+				return
+			}
 		}
-	}
+	}()
 }
