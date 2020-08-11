@@ -3,6 +3,22 @@
 Work in progress exporter to send data from the OpenTelemetry Go SDK to Cortex using the Prometheus
 Remote Write API.
 
+## Setting up an Exporter
+
+Users can setup the Exporter with the `InstallNewPipeline` function. It requires a
+`Config` struct and returns a push Controller that will periodically collect and push
+data.
+
+Example:
+```go
+pusher, err := cortex.InstallNewPipeline(config)
+if err != nil {
+    return err
+}
+
+// Make instruments and record data
+```
+
 ## Configuration
 
 The Exporter needs certain information, such as the endpoint URL and push interval
