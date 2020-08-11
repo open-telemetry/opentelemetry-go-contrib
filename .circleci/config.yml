@@ -77,4 +77,4 @@ workflows:
       - integration:
           matrix:
             parameters:
-              target: [test-gocql, test-mongo-driver]
+              target: [test-gocql, test-mongo-driver, test-gomemcache]

@@ -78,6 +78,18 @@ test-mongo-driver:
 	  docker stop mongo-integ; \
 	fi
 
+.PHONY: test-gomemcache
+test-gomemcache:
+	@if ./.circleci/should_build.sh gomemcache; then \
+	  set -e; \
+	  docker run --name gomemcache-integ --rm -p 11211:11211 -d memcached; \
+	  CMD=gomemcache IMG_NAME=gomemcache-integ  ./.circleci/wait.sh; \
+	  (cd instrumentation/github.com/bradfitz/gomemcache && \
+	    $(GOTEST_WITH_COVERAGE) . && \
+	    go tool cover -html=coverage.txt -o coverage.html); \
+	  docker stop gomemcache-integ ; \
+	fi
+
 .PHONY: check-clean-work-tree
 check-clean-work-tree:
 	@if ! git diff --quiet; then \
