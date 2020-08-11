@@ -26,7 +26,7 @@ import (
 
 	mocktrace "go.opentelemetry.io/contrib/internal/trace"
 	otelglobal "go.opentelemetry.io/otel/api/global"
-	otelvalue "go.opentelemetry.io/otel/api/kv/value"
+	"go.opentelemetry.io/otel/api/kv"
 	otelpropagation "go.opentelemetry.io/otel/api/propagation"
 	oteltrace "go.opentelemetry.io/otel/api/trace"
 )
@@ -98,12 +98,12 @@ func TestChildSpanNames(t *testing.T) {
 	span := spans[0]
 	assert.Equal(t, "/user/123", span.Name) // TODO: span name should show router template, eg /user/:id
 	assert.Equal(t, oteltrace.SpanKindServer, span.Kind)
-	assert.Equal(t, otelvalue.String("foobar"), span.Attributes["http.server_name"])
-	assert.Equal(t, otelvalue.Int(http.StatusOK), span.Attributes["http.status_code"])
-	assert.Equal(t, otelvalue.String("GET"), span.Attributes["http.method"])
-	assert.Equal(t, otelvalue.String("/user/123"), span.Attributes["http.target"])
+	assert.Equal(t, kv.StringValue("foobar"), span.Attributes["http.server_name"])
+	assert.Equal(t, kv.IntValue(http.StatusOK), span.Attributes["http.status_code"])
+	assert.Equal(t, kv.StringValue("GET"), span.Attributes["http.method"])
+	assert.Equal(t, kv.StringValue("/user/123"), span.Attributes["http.target"])
 	// TODO: span name should show router template, eg /user/:id
-	//assert.Equal(t, otelvalue.String("/user/:id"), span.Attributes["http.route"])
+	//assert.Equal(t, kv.StringValue("/user/:id"), span.Attributes["http.route"])
 
 	r = httptest.NewRequest("GET", "/book/foo", nil)
 	w = httptest.NewRecorder()
@@ -113,12 +113,12 @@ func TestChildSpanNames(t *testing.T) {
 	span = spans[0]
 	assert.Equal(t, "/book/foo", span.Name) // TODO: span name should show router template, eg /book/:title
 	assert.Equal(t, oteltrace.SpanKindServer, span.Kind)
-	assert.Equal(t, otelvalue.String("foobar"), span.Attributes["http.server_name"])
-	assert.Equal(t, otelvalue.Int(http.StatusOK), span.Attributes["http.status_code"])
-	assert.Equal(t, otelvalue.String("GET"), span.Attributes["http.method"])
-	assert.Equal(t, otelvalue.String("/book/foo"), span.Attributes["http.target"])
+	assert.Equal(t, kv.StringValue("foobar"), span.Attributes["http.server_name"])
+	assert.Equal(t, kv.IntValue(http.StatusOK), span.Attributes["http.status_code"])
+	assert.Equal(t, kv.StringValue("GET"), span.Attributes["http.method"])
+	assert.Equal(t, kv.StringValue("/book/foo"), span.Attributes["http.target"])
 	// TODO: span name should show router template, eg /book/:title
-	//assert.Equal(t, otelvalue.String("/book/:title"), span.Attributes["http.route"])
+	//assert.Equal(t, kv.StringValue("/book/:title"), span.Attributes["http.route"])
 }
 
 func TestGetSpanNotInstrumented(t *testing.T) {

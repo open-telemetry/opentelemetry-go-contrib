@@ -16,12 +16,12 @@ package mongo
 
 import (
 	"context"
-	"fmt"
 	"os"
 	"testing"
 	"time"
 
 	mocktracer "go.opentelemetry.io/contrib/internal/trace"
+	"go.opentelemetry.io/contrib/internal/util"
 
 	"go.mongodb.org/mongo-driver/bson"
 	"go.mongodb.org/mongo-driver/mongo"
@@ -31,11 +31,7 @@ import (
 )
 
 func TestMain(m *testing.M) {
-	_, ok := os.LookupEnv("INTEGRATION")
-	if !ok {
-		fmt.Println("--- SKIP: to enable integration test, set the INTEGRATION environment variable")
-		os.Exit(0)
-	}
+	util.IntegrationShouldRun("test-mongo-driver")
 	os.Exit(m.Run())
 }
 
