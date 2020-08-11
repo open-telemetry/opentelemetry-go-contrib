@@ -22,6 +22,7 @@ import (
 
 	"github.com/spf13/afero"
 	"github.com/stretchr/testify/require"
+
 	"go.opentelemetry.io/contrib/exporters/metric/cortex"
 	"go.opentelemetry.io/contrib/exporters/metric/cortex/utils"
 )
