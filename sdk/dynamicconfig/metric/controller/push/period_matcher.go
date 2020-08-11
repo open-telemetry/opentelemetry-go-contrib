@@ -50,7 +50,6 @@ func (matcher *PeriodMatcher) ConsumeSchedules(sched []*pb.MetricConfigResponse_
 	matcher.metrics = make(map[string]*CollectData)
 }
 
-// TODO: compute GCD for divisibility issues
 func (matcher *PeriodMatcher) GetMinPeriod() time.Duration {
 	matcher.m.Lock()
 	defer matcher.m.Unlock()
