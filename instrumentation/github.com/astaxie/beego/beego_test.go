@@ -241,6 +241,7 @@ func TestStatic(t *testing.T) {
 	require.NoError(t, err)
 
 	beego.SetStaticPath("/", file.Name())
+	defer beego.SetStaticPath("/", "")
 
 	mw := NewOTelBeegoMiddleWare(middleWareName,
 		WithTracer(tracer),
@@ -257,6 +258,9 @@ func TestStatic(t *testing.T) {
 	}
 
 	require.Equal(t, http.StatusOK, rr.Result().StatusCode)
+	body, err := ioutil.ReadAll(rr.Result().Body)
+	require.NoError(t, err)
+	require.Equal(t, "<h1>Hello, world!</h1>", string(body))
 	spans := tracer.EndedSpans()
 	require.Len(t, spans, 1)
 	assertSpan(t, spans[0], tc)

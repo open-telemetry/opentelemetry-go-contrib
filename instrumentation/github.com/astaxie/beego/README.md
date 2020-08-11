@@ -77,6 +77,6 @@ func main() {
 
 | Function | Description |
 | -------- | ----------- |
-| `Render(*beego.Controller) error` | Provides tracing to `beego.Render`. |
-| `RenderString(*beego.Controller) (string, error)` | Provides tracing to `beego.RenderString`. |
-| `RenderBytes(*beego.Controller) ([]byte, error)` | Provides tracing to `beego.RenderBytes`. |
+| `Render(*beego.Controller) error` | Provides tracing to `beego.Controller.Render`. |
+| `RenderString(*beego.Controller) (string, error)` | Provides tracing to `beego.Controller.RenderString`. |
+| `RenderBytes(*beego.Controller) ([]byte, error)` | Provides tracing to `beego.Controller.RenderBytes`. |

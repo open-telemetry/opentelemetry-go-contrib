@@ -69,7 +69,7 @@ func NewOTelBeegoMiddleWare(service string, options ...Option) beego.MiddleWare 
 }
 
 // Render traces beego.Controller.Render. Use this function
-// if you want to add a child span to the rendering of a template file.
+// if you want to add a child span for the rendering of a template file.
 // Disable autorender before use, and call this function explicitly.
 func Render(c *beego.Controller) error {
 	ctx, span := span(c, renderTemplateSpanName)
@@ -83,7 +83,7 @@ func Render(c *beego.Controller) error {
 }
 
 // RenderString traces beego.Controller.RenderString. Use this function
-// if you want to add a child span to the rendering of a template file to
+// if you want to add a child span for the rendering of a template file to
 // its string representation.
 // Disable autorender before use, and call this function explicitly.
 func RenderString(c *beego.Controller) (string, error) {
@@ -98,7 +98,7 @@ func RenderString(c *beego.Controller) (string, error) {
 }
 
 // RenderBytes traces beego.Controller.RenderBytes. Use this function if
-// you want to add a child span to the rendering of a template file to its
+// you want to add a child span for the rendering of a template file to its
 // byte representation.
 // Disable autorender before use, and call this function explicitly.
 func RenderBytes(c *beego.Controller) ([]byte, error) {
