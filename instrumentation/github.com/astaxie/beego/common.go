@@ -16,6 +16,8 @@ package beego
 
 import (
 	"net/http"
+
+	"go.opentelemetry.io/otel/api/kv"
 )
 
 // ------------------------------------------ Constants
@@ -24,7 +26,22 @@ const (
 	// packageName is the name of the this package, and is used as the default tracer
 	// and meter names.
 	packageName = "go.opentelemetry.io/contrib/instrumentation/github.com/astaxie/beego"
+
+	renderTemplateSpanName = "beego.render.template"
+	renderStringSpanName   = "beego.render.string"
+	renderBytesSpanName    = "beego.render.bytes"
+
+	templateKey = kv.Key("go.template")
 )
+
+// ------------------------------------------ Attribute Functions
+
+// Template returns the template name as a KeyValue pair.
+func Template(name string) kv.KeyValue {
+	return templateKey.String(name)
+}
+
+// ------------------------------------------ OTel HTTP Types
 
 // Filter returns true if the request should be traced.
 type Filter func(*http.Request) bool
