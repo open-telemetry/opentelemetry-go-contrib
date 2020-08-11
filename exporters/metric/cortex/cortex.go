@@ -23,7 +23,9 @@ import (
 )
 
 // Exporter forwards metrics to a Cortex instance
-type Exporter struct{}
+type Exporter struct {
+	config Config
+}
 
 // ExportKindFor returns CumulativeExporter so the Processor correctly aggregates data
 func (e *Exporter) ExportKindFor(*apimetric.Descriptor, aggregation.Kind) metric.ExportKind {
@@ -33,4 +35,16 @@ func (e *Exporter) ExportKindFor(*apimetric.Descriptor, aggregation.Kind) metric
 // Export forwards metrics to Cortex from the SDK
 func (e *Exporter) Export(_ context.Context, checkpointSet metric.CheckpointSet) error {
 	return nil
+}
+
+// NewRawExporter validates the Config struct and creates an Exporter with it.
+func NewRawExporter(config Config) (*Exporter, error) {
+	// This is redundant when the user creates the Config struct with the NewConfig
+	// function.
+	if err := config.Validate(); err != nil {
+		return nil, err
+	}
+
+	exporter := Exporter{config}
+	return &exporter, nil
 }
