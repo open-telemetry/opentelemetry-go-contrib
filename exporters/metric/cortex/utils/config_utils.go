@@ -25,6 +25,31 @@ type Option interface {
 	Apply(*cortex.Config)
 }
 
+// WithFilepath adds a path where Viper will search for the YAML file in.
+func WithFilepath(filepath string) Option {
+	return filepathOption(filepath)
+}
+
+type filepathOption string
+
+func (o filepathOption) Apply(config *cortex.Config) {
+	viper.AddConfigPath(string(o))
+}
+
+// WithFilesystem tells Viper which file system to search for the YAML file in. By default, Viper
+// will search the OS file system, but users can pass in an in-memory filesystem for testing.
+func WithFilesystem(fs afero.Fs) Option {
+	return fsOption{fs}
+}
+
+type fsOption struct {
+	fs afero.Fs
+}
+
+func (o fsOption) Apply(config *cortex.Config) {
+	viper.SetFs(o.fs)
+}
+
 // NewConfig creates a Config struct with a YAML file and applies Option functions to the
 // Config struct.
 func NewConfig(filename string, opts ...Option) (*cortex.Config, error) {
