@@ -54,6 +54,30 @@ test-with-coverage:
 .PHONY: ci
 ci: precommit check-clean-work-tree test-with-coverage test-386
 
+.PHONY: test-gocql
+test-gocql:
+	@if ./.circleci/should_build.sh gocql; then \
+	  set -e; \
+	  docker run --name cass-integ --rm -p 9042:9042 -d cassandra:3; \
+	  CMD=cassandra IMG_NAME=cass-integ ./.circleci/wait.sh; \
+	  (cd instrumentation/github.com/gocql/gocql && \
+	    $(GOTEST_WITH_COVERAGE) . && \
+	    go tool cover -html=coverage.txt -o coverage.html); \
+	  docker stop cass-integ; \
+	fi
+
+.PHONY: test-mongo-driver
+test-mongo-driver:
+	@if ./.circleci/should_build.sh mongo-driver; then \
+	  set -e; \
+	  docker run --name mongo-integ --rm -p 27017:27017 -d mongo; \
+	  CMD=mongo IMG_NAME=mongo-integ ./.circleci/wait.sh; \
+	  (cd instrumentation/go.mongodb.org/mongo-driver && \
+	    $(GOTEST_WITH_COVERAGE) . && \
+	    go tool cover -html=coverage.txt -o coverage.html); \
+	  docker stop mongo-integ; \
+	fi
+
 .PHONY: check-clean-work-tree
 check-clean-work-tree:
 	@if ! git diff --quiet; then \

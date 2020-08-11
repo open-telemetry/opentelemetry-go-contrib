@@ -15,26 +15,18 @@
 package sarama
 
 import (
-	"context"
-	"strconv"
-
 	"github.com/Shopify/sarama"
-
-	"go.opentelemetry.io/otel/api/kv"
-	"go.opentelemetry.io/otel/api/propagation"
-	"go.opentelemetry.io/otel/api/standard"
-	"go.opentelemetry.io/otel/api/trace"
 )
 
 type partitionConsumer struct {
 	sarama.PartitionConsumer
-	messages chan *sarama.ConsumerMessage
+	dispatcher consumerMessagesDispatcher
 }
 
 // Messages returns the read channel for the messages that are returned by
 // the broker.
 func (pc *partitionConsumer) Messages() <-chan *sarama.ConsumerMessage {
-	return pc.messages
+	return pc.dispatcher.Messages()
 }
 
 // WrapPartitionConsumer wraps a sarama.PartitionConsumer causing each received
@@ -42,44 +34,12 @@ func (pc *partitionConsumer) Messages() <-chan *sarama.ConsumerMessage {
 func WrapPartitionConsumer(serviceName string, pc sarama.PartitionConsumer, opts ...Option) sarama.PartitionConsumer {
 	cfg := newConfig(serviceName, opts...)
 
+	dispatcher := newConsumerMessagesDispatcherWrapper(pc, cfg)
+	go dispatcher.Run()
 	wrapped := &partitionConsumer{
 		PartitionConsumer: pc,
-		messages:          make(chan *sarama.ConsumerMessage),
+		dispatcher:        dispatcher,
 	}
-	go func() {
-		msgs := pc.Messages()
-
-		for msg := range msgs {
-			// Extract a span context from message to link.
-			carrier := NewConsumerMessageCarrier(msg)
-			parentSpanContext := propagation.ExtractHTTP(context.Background(), cfg.Propagators, carrier)
-
-			// Create a span.
-			attrs := []kv.KeyValue{
-				standard.ServiceNameKey.String(cfg.ServiceName),
-				standard.MessagingSystemKey.String("kafka"),
-				standard.MessagingDestinationKindKeyTopic,
-				standard.MessagingDestinationKey.String(msg.Topic),
-				standard.MessagingOperationReceive,
-				standard.MessagingMessageIDKey.String(strconv.FormatInt(msg.Offset, 10)),
-				kafkaPartitionKey.Int32(msg.Partition),
-			}
-			opts := []trace.StartOption{
-				trace.WithAttributes(attrs...),
-				trace.WithSpanKind(trace.SpanKindConsumer),
-			}
-			newCtx, span := cfg.Tracer.Start(parentSpanContext, "kafka.consume", opts...)
-
-			// Inject current span context, so consumers can use it to propagate span.
-			propagation.InjectHTTP(newCtx, cfg.Propagators, carrier)
-
-			// Send messages back to user.
-			wrapped.messages <- msg
-
-			span.End()
-		}
-		close(wrapped.messages)
-	}()
 	return wrapped
 }
 
