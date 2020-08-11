@@ -74,7 +74,7 @@ var exampleNoEndpointConfig = cortex.Config{
 	PushInterval:  10 * time.Second,
 }
 
-// This is an example Config struct with two bearer tokens.
+// Example Config struct with two bearer tokens.
 var exampleTwoBearerTokenConfig = cortex.Config{
 	Endpoint:        "/api/prom/push",
 	Name:            "Config",
@@ -84,7 +84,7 @@ var exampleTwoBearerTokenConfig = cortex.Config{
 	BearerTokenFile: "bearer_token_file",
 }
 
-// This is an example Config struct with two passwords.
+// Example Config struct with two passwords.
 var exampleTwoPasswordConfig = cortex.Config{
 	Endpoint:      "/api/prom/push",
 	Name:          "Config",
@@ -95,4 +95,18 @@ var exampleTwoPasswordConfig = cortex.Config{
 		"password":      "password",
 		"password_file": "passwordFile",
 	},
+}
+
+// Example Config struct with both basic auth and bearer token authentication.
+var exampleTwoAuthConfig = cortex.Config{
+	Endpoint:      "/api/prom/push",
+	Name:          "Config",
+	RemoteTimeout: 30 * time.Second,
+	PushInterval:  10 * time.Second,
+	BasicAuth: map[string]string{
+		"username":      "user",
+		"password":      "password",
+		"password_file": "passwordFile",
+	},
+	BearerToken: "bearer_token",
 }

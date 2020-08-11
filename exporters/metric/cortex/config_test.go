@@ -72,6 +72,12 @@ func TestValidate(t *testing.T) {
 			expectedConfig: &validatedStandardConfig,
 			expectedError:  nil,
 		},
+		{
+			testName:       "Config with both BasicAuth and BearerTokens",
+			config:         &exampleTwoAuthConfig,
+			expectedConfig: nil,
+			expectedError:  cortex.ErrConflictingAuthorization,
+		},
 	}
 	for _, test := range tests {
 		t.Run(test.testName, func(t *testing.T) {

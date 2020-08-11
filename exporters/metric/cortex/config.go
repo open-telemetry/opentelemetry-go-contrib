@@ -28,6 +28,10 @@ var (
 	// ErrTwoBearerTokens occurs when the YAML file contains both `bearer_token` and
 	// `bearer_token_file`.
 	ErrTwoBearerTokens = fmt.Errorf("Cannot have two bearer tokens in the YAML file")
+
+	// ErrConflictingAuthorization occurs when the YAML file contains both BasicAuth and
+	// bearer token authorization
+	ErrConflictingAuthorization = fmt.Errorf("Cannot have both basic auth and bearer token authorization")
 )
 
 // Config contains properties the Exporter uses to export metrics data to Cortex.
@@ -49,11 +53,16 @@ type Config struct {
 // Additionally, it adds default values to missing properties when there is a default.
 func (c *Config) Validate() error {
 	// Check for mutually exclusive properties.
+	if c.BasicAuth != nil {
+		if c.BearerToken != "" || c.BearerTokenFile != "" {
+			return ErrConflictingAuthorization
+		}
+		if c.BasicAuth["password"] != "" && c.BasicAuth["password_file"] != "" {
+			return ErrTwoPasswords
+		}
+	}
 	if c.BearerToken != "" && c.BearerTokenFile != "" {
 		return ErrTwoBearerTokens
-	}
-	if c.BasicAuth["password"] != "" && c.BasicAuth["password_file"] != "" {
-		return ErrTwoPasswords
 	}
 
 	// Add default values for missing properties.

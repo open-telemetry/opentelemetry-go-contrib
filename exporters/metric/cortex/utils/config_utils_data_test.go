@@ -28,7 +28,6 @@ name: Valid Config Example
 basic_auth:
   username: user
   password: password
-bearer_token: qwerty12345
 tls_config:
   ca_file: cafile
   cert_file: certfile
@@ -46,7 +45,6 @@ name: Valid Config Example
 basic_auth:
   username: user
   password: password
-bearer_token: qwerty12345
 tls_config:
   ca_file: cafile
   cert_file: certfile
@@ -64,7 +62,6 @@ name: Valid Config Example
 basic_auth:
   username: user
   password: password
-bearer_token: qwerty12345
 tls_config:
   ca_file: cafile
   cert_file: certfile
@@ -84,7 +81,6 @@ basic_auth:
   username: user
   password: password
   password_file: passwordfile
-bearer_token: qwerty12345
 tls_config:
   ca_file: cafile
   cert_file: certfile
@@ -100,9 +96,6 @@ headers:
 var twoBearerTokensYAML = []byte(`url: /api/prom/push
 remote_timeout: 30s
 name: Valid Config Example
-basic_auth:
-  username: user
-  password: password
 bearer_token: qwerty12345
 bearer_token_file: bearertokenfile
 tls_config:
@@ -124,7 +117,7 @@ var validConfig = cortex.Config{
 		"username": "user",
 		"password": "password",
 	},
-	BearerToken:     "qwerty12345",
+	BearerToken:     "",
 	BearerTokenFile: "",
 	TLSConfig: map[string]string{
 		"ca_file":              "cafile",
