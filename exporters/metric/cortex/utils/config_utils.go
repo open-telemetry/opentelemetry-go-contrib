@@ -15,6 +15,8 @@
 package utils
 
 import (
+	"net/http"
+
 	"github.com/spf13/afero"
 	"github.com/spf13/viper"
 	"go.opentelemetry.io/contrib/exporters/metric/cortex"
@@ -48,6 +50,19 @@ type fsOption struct {
 
 func (o fsOption) Apply(config *cortex.Config) {
 	viper.SetFs(o.fs)
+}
+
+// WithClient adds a custom http.Client to the Config struct.
+func WithClient(client *http.Client) Option {
+	return clientOption{client}
+}
+
+type clientOption struct {
+	client *http.Client
+}
+
+func (o clientOption) Apply(config *cortex.Config) {
+	config.Client = (*http.Client)(o.client)
 }
 
 // NewConfig creates a Config struct with a YAML file and applies Option functions to the

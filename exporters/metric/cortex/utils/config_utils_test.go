@@ -15,8 +15,10 @@
 package utils_test
 
 import (
+	"net/http"
 	"path/filepath"
 	"testing"
+	"time"
 
 	"github.com/spf13/afero"
 	"github.com/stretchr/testify/require"
@@ -168,4 +170,26 @@ func TestWithFilepath(t *testing.T) {
 			}
 		})
 	}
+}
+
+// TestWithClient tests whether NewConfig successfully adds a HTTP client to the Config
+// struct.
+func TestWithClient(t *testing.T) {
+	// Create a YAML file.
+	fs, err := initYAML(validYAML, "/test/config.yml")
+	require.Nil(t, err)
+
+	// Create a new Config struct with a custom HTTP client.
+	customClient := &http.Client{
+		Timeout: 5 * time.Second,
+	}
+	config, _ := utils.NewConfig(
+		"config.yml",
+		utils.WithClient(customClient),
+		utils.WithFilepath("/test"),
+		utils.WithFilesystem(fs),
+	)
+
+	// Verify that the clients are the same.
+	require.Equal(t, customClient, config.Client)
 }
