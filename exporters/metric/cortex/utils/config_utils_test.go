@@ -43,8 +43,9 @@ func initYAML(yamlBytes []byte, path string) (afero.Fs, error) {
 	return fs, nil
 }
 
-// TestNewConfig tests whether NewConfig returns a correct Config struct. It checks whether the YAML
-// file was read correctly and whether validation of the struct succeeded.
+// TestNewConfig tests whether NewConfig returns a correct Config struct. It checks
+// whether the YAML file was read correctly and whether validation of the struct
+// succeeded.
 func TestNewConfig(t *testing.T) {
 	tests := []struct {
 		testName       string
@@ -113,6 +114,58 @@ func TestNewConfig(t *testing.T) {
 			// Verify error and struct contents.
 			require.Equal(t, err, test.expectedError)
 			require.Equal(t, config, test.expectedConfig)
+		})
+	}
+}
+
+// TestWithFilepath tests whether NewConfig can find a YAML file that is not in the
+// current directory.
+func TestWithFilepath(t *testing.T) {
+	tests := []struct {
+		testName       string
+		yamlByteString []byte
+		fileName       string
+		directoryPath  string
+		addPath        bool
+	}{
+		{
+			testName:       "Filepath provided, successful construction of Config",
+			yamlByteString: validYAML,
+			fileName:       "config.yml",
+			directoryPath:  "/success",
+			addPath:        true,
+		},
+		{
+			testName:       "Filepath not provided, unsuccessful construction of Config",
+			yamlByteString: validYAML,
+			fileName:       "config.yml",
+			directoryPath:  "/fail",
+			addPath:        false,
+		},
+	}
+
+	for _, test := range tests {
+		t.Run(test.testName, func(t *testing.T) {
+			// Create YAML file.
+			fullPath := test.directoryPath + "/" + test.fileName
+			fs, err := initYAML(test.yamlByteString, fullPath)
+			require.Nil(t, err)
+
+			// Create new Config struct from the specified YAML file with an in-memory
+			// filesystem. If a path is added, Viper should be able to find the file and
+			// there should be no error. Otherwise, an error should occur as Viper cannot
+			// find the file.
+			if test.addPath {
+				_, err := utils.NewConfig(
+					test.fileName,
+					utils.WithFilepath(test.directoryPath),
+					utils.WithFilesystem(fs),
+				)
+				require.Nil(t, err)
+			} else {
+				_, err := utils.NewConfig(test.fileName, utils.WithFilesystem(fs))
+				require.Error(t, err)
+			}
 		})
 	}
 }
