@@ -15,7 +15,6 @@
 package utils_test
 
 import (
-	"net/http"
 	"time"
 
 	"go.opentelemetry.io/contrib/exporters/metric/cortex"
@@ -138,8 +137,5 @@ var validConfig = cortex.Config{
 	PushInterval: 5 * time.Second,
 	Headers: map[string]string{
 		"test": "header",
-	},
-	Client: &http.Client{
-		Timeout: 30 * time.Second,
 	},
 }

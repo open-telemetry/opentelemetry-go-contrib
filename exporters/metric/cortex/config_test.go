@@ -21,8 +21,8 @@ import (
 	"go.opentelemetry.io/contrib/exporters/metric/cortex"
 )
 
-// TestValidate checks whether Validate() returns the correct error and sets the correct default
-// values.
+// TestValidate checks whether Validate() returns the correct error and sets the correct
+// default values.
 func TestValidate(t *testing.T) {
 	tests := []struct {
 		testName       string

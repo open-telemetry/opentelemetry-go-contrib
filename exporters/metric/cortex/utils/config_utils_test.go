@@ -106,7 +106,8 @@ func TestNewConfig(t *testing.T) {
 			fs, err := initYAML(test.yamlByteString, fullPath)
 			require.Nil(t, err)
 
-			// Create new Config struct from the specified YAML file with an in-memory filesystem.
+			// Create new Config struct from the specified YAML file with an in-memory
+			// filesystem.
 			config, err := utils.NewConfig(
 				test.fileName,
 				utils.WithFilepath(test.directoryPath),

@@ -15,42 +15,32 @@
 package cortex_test
 
 import (
-	"net/http"
 	"time"
 
 	"go.opentelemetry.io/contrib/exporters/metric/cortex"
 )
 
-// Default http client with a timeout of 30 seconds.
-var defaultClientWithTimeout = &http.Client{
-	Timeout: 30 * time.Second,
-}
-
 // Config struct with default values. This is used to verify the output of Validate().
 var validatedStandardConfig = cortex.Config{
 	Endpoint:      "/api/prom/push",
-	Name:          "Standard Config",
+	Name:          "Config",
 	RemoteTimeout: 30 * time.Second,
 	PushInterval:  10 * time.Second,
-	Client:        defaultClientWithTimeout,
 }
 
-// Config struct with default values other than the remote timeout. This is used to verify the
-// output of Validate().
+// Config struct with default values other than the remote timeout. This is used to verify
+// the output of Validate().
 var validatedCustomTimeoutConfig = cortex.Config{
 	Endpoint:      "/api/prom/push",
-	Name:          "Standard Config",
+	Name:          "Config",
 	RemoteTimeout: 10 * time.Second,
 	PushInterval:  10 * time.Second,
-	Client: &http.Client{
-		Timeout: 10 * time.Second,
-	},
 }
 
 // Example Config struct with a custom remote timeout.
 var exampleRemoteTimeoutConfig = cortex.Config{
 	Endpoint:      "/api/prom/push",
-	Name:          "Standard Config",
+	Name:          "Config",
 	PushInterval:  10 * time.Second,
 	RemoteTimeout: 10 * time.Second,
 }
@@ -58,28 +48,28 @@ var exampleRemoteTimeoutConfig = cortex.Config{
 // Example Config struct without a remote timeout.
 var exampleNoRemoteTimeoutConfig = cortex.Config{
 	Endpoint:     "/api/prom/push",
-	Name:         "Standard Config",
+	Name:         "Config",
 	PushInterval: 10 * time.Second,
 }
 
 // Example Config struct without a push interval.
 var exampleNoPushIntervalConfig = cortex.Config{
 	Endpoint:      "/api/prom/push",
-	Name:          "Standard Config",
+	Name:          "Config",
 	RemoteTimeout: 30 * time.Second,
 }
 
 // Example Config struct without a http client.
 var exampleNoClientConfig = cortex.Config{
 	Endpoint:      "/api/prom/push",
-	Name:          "Standard Config",
+	Name:          "Config",
 	RemoteTimeout: 30 * time.Second,
 	PushInterval:  10 * time.Second,
 }
 
 // Example Config struct without an endpoint.
 var exampleNoEndpointConfig = cortex.Config{
-	Name:          "Standard Config",
+	Name:          "Config",
 	RemoteTimeout: 30 * time.Second,
 	PushInterval:  10 * time.Second,
 }
@@ -87,7 +77,7 @@ var exampleNoEndpointConfig = cortex.Config{
 // This is an example Config struct with two bearer tokens.
 var exampleTwoBearerTokenConfig = cortex.Config{
 	Endpoint:        "/api/prom/push",
-	Name:            "Standard Config",
+	Name:            "Config",
 	RemoteTimeout:   30 * time.Second,
 	PushInterval:    10 * time.Second,
 	BearerToken:     "bearer_token",
@@ -97,7 +87,7 @@ var exampleTwoBearerTokenConfig = cortex.Config{
 // This is an example Config struct with two passwords.
 var exampleTwoPasswordConfig = cortex.Config{
 	Endpoint:      "/api/prom/push",
-	Name:          "Standard Config",
+	Name:          "Config",
 	RemoteTimeout: 30 * time.Second,
 	PushInterval:  10 * time.Second,
 	BasicAuth: map[string]string{
