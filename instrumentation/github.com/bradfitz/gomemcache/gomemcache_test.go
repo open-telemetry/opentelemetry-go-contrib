@@ -19,17 +19,15 @@ import (
 	"os"
 	"testing"
 
-	"go.opentelemetry.io/otel/api/standard"
-
-	"google.golang.org/grpc/codes"
-
 	mocktracer "go.opentelemetry.io/contrib/internal/trace"
 	"go.opentelemetry.io/otel/api/kv"
+	"go.opentelemetry.io/otel/api/standard"
 	oteltrace "go.opentelemetry.io/otel/api/trace"
 
 	"github.com/bradfitz/gomemcache/memcache"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
+	"google.golang.org/grpc/codes"
 )
 
 func TestMain(m *testing.M) {
@@ -48,12 +46,13 @@ func TestNewClientWithTracing(t *testing.T) {
 
 	assert.NotNil(t, c.Client)
 	assert.NotNil(t, c.cfg)
-	assert.NotEqual(t, &oteltrace.NoopProvider{}, c.cfg.tracer)
+	assert.NotNil(t, c.cfg.traceProvider)
+	assert.NotNil(t, c.tracer)
 	assert.Equal(t, defaultServiceName, c.cfg.serviceName)
 }
 
 func TestOperation(t *testing.T) {
-	c, mt := initClientWithMockTracer(t)
+	c, mtp := initClientWithMockTraceProvider(t)
 
 	mi := &memcache.Item{
 		Key:   "foo",
@@ -62,6 +61,7 @@ func TestOperation(t *testing.T) {
 	err := c.Add(mi)
 	require.NoError(t, err)
 
+	mt := mtp.Tracer(defaultTracerName).(*mocktracer.Tracer)
 	spans := mt.EndedSpans()
 	assert.Len(t, spans, 1)
 	assert.Equal(t, oteltrace.SpanKindClient, spans[0].Kind)
@@ -79,11 +79,12 @@ func TestOperation(t *testing.T) {
 
 func TestOperationWithCacheMissError(t *testing.T) {
 	key := "foo"
-	c, mt := initClientWithMockTracer(t)
+	c, mtp := initClientWithMockTraceProvider(t)
 
 	_, err := c.Get(key)
 	assert.Error(t, err)
 
+	mt := mtp.Tracer(defaultTracerName).(*mocktracer.Tracer)
 	spans := mt.EndedSpans()
 	assert.Len(t, spans, 1)
 	assert.Equal(t, oteltrace.SpanKindClient, spans[0].Kind)
@@ -103,9 +104,8 @@ func TestOperationWithCacheMissError(t *testing.T) {
 }
 
 // tests require running memcached instance
-func initClientWithMockTracer(t *testing.T) (*Client, *mocktracer.Tracer) {
-	mt := mocktracer.NewTracer("memcache-test")
-
+func initClientWithMockTraceProvider(t *testing.T) (*Client, *mocktracer.Provider) {
+	mt := &mocktracer.Provider{}
 	host, port := "localhost", "11211"
 
 	mc := memcache.New(host + ":" + port)
@@ -113,7 +113,7 @@ func initClientWithMockTracer(t *testing.T) (*Client, *mocktracer.Tracer) {
 
 	c := NewClientWithTracing(
 		mc,
-		WithTracer(mt),
+		WithTraceProvider(mt),
 	)
 
 	return c, mt

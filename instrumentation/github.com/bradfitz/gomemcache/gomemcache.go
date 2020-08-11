@@ -35,13 +35,15 @@ const (
 // Client is a wrapper around *memcache.Client.
 type Client struct {
 	*memcache.Client
-	cfg *config
-	ctx context.Context
+	cfg    *config
+	tracer oteltrace.Tracer
+	ctx    context.Context
 }
 
 // NewClientWithTracing wraps the provided memcache client to allow
-// tracing of all client operations. Accepts options to set tracer and
-// service name, otherwise uses default values.
+// tracing of all client operations. Accepts options to set trace provider
+// and service name, otherwise uses registered global trace provider and
+// default value for service name.
 //
 // Every client operation starts a span with appropriate attributes,
 // executes the operation and ends the span (additionally also sets a status
@@ -57,16 +59,17 @@ func NewClientWithTracing(client *memcache.Client, opts ...Option) *Client {
 		cfg.serviceName = defaultServiceName
 	}
 
-	if cfg.tracer == nil {
-		cfg.tracer = otelglobal.TraceProvider().Tracer(
-			defaultTracerName,
-			oteltrace.WithInstrumentationVersion(tracerVersion),
-		)
+	if cfg.traceProvider == nil {
+		cfg.traceProvider = otelglobal.TraceProvider()
 	}
 
 	return &Client{
 		client,
 		cfg,
+		cfg.traceProvider.Tracer(
+			defaultTracerName,
+			oteltrace.WithInstrumentationVersion(tracerVersion),
+		),
 		context.Background(),
 	}
 }
@@ -94,7 +97,7 @@ func (c *Client) startSpan(operationName string, itemKey ...string) oteltrace.Sp
 		),
 	}
 
-	_, span := c.cfg.tracer.Start(
+	_, span := c.tracer.Start(
 		c.ctx,
 		operationName,
 		opts...,
@@ -117,6 +120,7 @@ func (c *Client) WithContext(ctx context.Context) *Client {
 	return &Client{
 		Client: cc,
 		cfg:    c.cfg,
+		tracer: c.tracer,
 		ctx:    ctx,
 	}
 }

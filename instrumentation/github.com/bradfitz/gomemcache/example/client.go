@@ -21,8 +21,9 @@ import (
 
 	"github.com/bradfitz/gomemcache/memcache"
 
+	"go.opentelemetry.io/contrib/instrumentation/github.com/bradfitz/gomemcache"
 	otelgomemcache "go.opentelemetry.io/contrib/instrumentation/github.com/bradfitz/gomemcache"
-	otelglobal "go.opentelemetry.io/otel/api/global"
+	oteltrace "go.opentelemetry.io/otel/api/trace"
 
 	oteltracestdout "go.opentelemetry.io/otel/exporters/stdout"
 	sdktrace "go.opentelemetry.io/otel/sdk/trace"
@@ -31,23 +32,25 @@ import (
 func main() {
 	var host, port = os.Getenv("HOST"), "11211"
 
-	initTracer()
+	tp := initTracer()
 	ctx := context.Background()
 
 	c := otelgomemcache.NewClientWithTracing(
 		memcache.New(
-			host + ":" + port,
+			host+":"+port,
 		),
+		gomemcache.WithTraceProvider(tp),
 	)
 
-	t := otelglobal.Tracer("memcached-test")
-	ctx, s := t.Start(ctx, "test-operations")
+	ctx, s := tp.Tracer("example-tracer").Start(ctx, "test-operations")
 	doMemcacheOperations(ctx, c)
 	s.End()
 }
 
 func doMemcacheOperations(ctx context.Context, c *otelgomemcache.Client) {
-	err := c.WithContext(ctx).Add(&memcache.Item{
+	cc := c.WithContext(ctx)
+
+	err := cc.Add(&memcache.Item{
 		Key:   "foo",
 		Value: []byte("bar"),
 	})
@@ -55,23 +58,23 @@ func doMemcacheOperations(ctx context.Context, c *otelgomemcache.Client) {
 		log.Printf("Add failed: %s", err)
 	}
 
-	_, err = c.WithContext(ctx).Get("foo")
+	_, err = cc.Get("foo")
 	if err != nil {
 		log.Printf("Get failed: %s", err)
 	}
 
-	err = c.WithContext(ctx).Delete("baz")
+	err = cc.Delete("baz")
 	if err != nil {
 		log.Printf("Delete failed: %s", err)
 	}
 
-	err = c.WithContext(ctx).DeleteAll()
+	err = cc.DeleteAll()
 	if err != nil {
 		log.Printf("DeleteAll failed: %s", err)
 	}
 }
 
-func initTracer() {
+func initTracer() oteltrace.Provider {
 	exporter, err := oteltracestdout.NewExporter(oteltracestdout.WithPrettyPrint())
 	if err != nil {
 		log.Fatal(err)
@@ -86,5 +89,6 @@ func initTracer() {
 	if err != nil {
 		log.Fatal(err)
 	}
-	otelglobal.SetTraceProvider(tp)
+
+	return tp
 }

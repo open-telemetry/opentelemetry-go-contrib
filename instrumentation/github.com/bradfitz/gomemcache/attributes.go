@@ -35,7 +35,7 @@ const (
 
 	mamcacheDBSystemValue = "memcached"
 
-	memcacheDBItemKeyKeyName = "db.memcached.itemKey"
+	memcacheDBItemKeyKeyName kv.Key = "db.memcached.itemKey"
 )
 
 func memcacheDBSystem() kv.KeyValue {
@@ -49,7 +49,7 @@ func memcacheDBOperation(opName string) kv.KeyValue {
 func memcacheDBItemKeys(itemKeys ...string) []kv.KeyValue {
 	kvs := make([]kv.KeyValue, 0, len(itemKeys))
 	for _, ik := range itemKeys {
-		kvs = append(kvs, kv.Key(memcacheDBItemKeyKeyName).String(ik))
+		kvs = append(kvs, memcacheDBItemKeyKeyName.String(ik))
 	}
 	return kvs
 }
