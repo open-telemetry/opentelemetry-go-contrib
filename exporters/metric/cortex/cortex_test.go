@@ -15,11 +15,40 @@
 package cortex
 
 import (
+	"net/http"
 	"testing"
+	"time"
 
 	"go.opentelemetry.io/otel/sdk/export/metric"
 	"go.opentelemetry.io/otel/sdk/export/metric/aggregation"
 )
+
+// ValidConfig is a Config struct that should cause no errors.
+var validConfig = Config{
+	Endpoint:      "/api/prom/push",
+	RemoteTimeout: 30 * time.Second,
+	Name:          "Valid Config Example",
+	BasicAuth: map[string]string{
+		"username": "user",
+		"password": "password",
+	},
+	BearerToken:     "",
+	BearerTokenFile: "",
+	TLSConfig: map[string]string{
+		"ca_file":              "cafile",
+		"cert_file":            "certfile",
+		"key_file":             "keyfile",
+		"server_name":          "server",
+		"insecure_skip_verify": "1",
+	},
+	ProxyURL:     "",
+	PushInterval: 10 * time.Second,
+	Headers: map[string]string{
+		"x-prometheus-remote-write-version": "0.1.0",
+		"tenant-id":                         "123",
+	},
+	Client: http.DefaultClient,
+}
 
 func TestExportKindFor(t *testing.T) {
 	exporter := Exporter{}
