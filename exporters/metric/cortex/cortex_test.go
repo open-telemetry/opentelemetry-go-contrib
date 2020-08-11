@@ -73,3 +73,13 @@ func TestNewRawExporter(t *testing.T) {
 		t.Fatalf("Got configuration %v, wanted %v", exporter.config, validConfig)
 	}
 }
+
+// TestNewExportPipeline tests whether a push Controller was successfully created with an
+// Exporter from NewRawExporter. Errors in this function will be from calls to push
+// controller package and NewRawExport. Both have their own tests.
+func TestNewExportPipeline(t *testing.T) {
+	_, err := NewExportPipeline(validConfig)
+	if err != nil {
+		t.Fatalf("Failed to create export pipeline with error %v", err)
+	}
+}

@@ -20,6 +20,8 @@ import (
 	apimetric "go.opentelemetry.io/otel/api/metric"
 	"go.opentelemetry.io/otel/sdk/export/metric"
 	"go.opentelemetry.io/otel/sdk/export/metric/aggregation"
+	"go.opentelemetry.io/otel/sdk/metric/controller/push"
+	"go.opentelemetry.io/otel/sdk/metric/selector/simple"
 )
 
 // Exporter forwards metrics to a Cortex instance
@@ -47,4 +49,21 @@ func NewRawExporter(config Config) (*Exporter, error) {
 
 	exporter := Exporter{config}
 	return &exporter, nil
+}
+
+// NewExportPipeline sets up a complete export pipeline with a push Controller and
+// Exporter.
+func NewExportPipeline(config Config, options ...push.Option) (*push.Controller, error) {
+	exporter, err := NewRawExporter(config)
+	if err != nil {
+		return nil, err
+	}
+
+	pusher := push.New(
+		simple.NewWithExactDistribution(),
+		exporter,
+		options...,
+	)
+	pusher.Start()
+	return pusher, nil
 }
