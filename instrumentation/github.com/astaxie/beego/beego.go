@@ -20,6 +20,7 @@ import (
 	otelhttp "go.opentelemetry.io/contrib/instrumentation/net/http"
 
 	"github.com/astaxie/beego"
+	beegoCtx "github.com/astaxie/beego/context"
 )
 
 // defaultSpanNameFormatter is the default formatter for spans created with
@@ -63,3 +64,4 @@ func NewOTelBeegoMiddleWare(service string, options ...Option) beego.MiddleWare 
 		)
 	}
 }
+

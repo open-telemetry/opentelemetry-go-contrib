@@ -15,16 +15,21 @@
 package beego
 
 import (
+	"context"
 	"encoding/json"
 	"fmt"
 	"io/ioutil"
 	"net/http"
 	"net/http/httptest"
+	"os"
 	"strings"
 	"testing"
 
+	"go.opentelemetry.io/otel/api/global"
 	"go.opentelemetry.io/otel/api/kv"
+	prop "go.opentelemetry.io/otel/api/propagation"
 	"go.opentelemetry.io/otel/api/standard"
+	"go.opentelemetry.io/otel/api/trace"
 
 	"github.com/stretchr/testify/require"
 
@@ -46,6 +51,7 @@ type testReply struct {
 
 type testController struct {
 	beego.Controller
+	T *testing.T
 }
 
 func (c *testController) Get() {
@@ -82,11 +88,21 @@ func (c *testController) Delete() {
 	c.ServeJSON()
 }
 
-func addTestRoutes() {
-	controller := &testController{}
+func (c *testController) Put() {
+	reply := &testReply{
+		Message: "successfully put",
+	}
+	c.Ctx.ResponseWriter.WriteHeader(http.StatusAccepted)
+	c.Data["json"] = reply
+	c.ServeJSON()
+}
+
+func addTestRoutes(t *testing.T) {
+	controller := &testController{
+		T: t,
+	}
 	beego.Router("/", controller)
 	beego.Router("/greet", controller)
-	controller = &testController{}
 	router := beego.NewNamespace("/api",
 		beego.NSNamespace("/v1",
 			beego.NSRouter("/", controller),
@@ -153,6 +169,33 @@ var testCases = []*testCase{
 		expectedSpanName:   "/",
 		expectedHTTPStatus: http.StatusAccepted,
 		expectedResponse:   testReply{Message: "success"},
+		expectedAttributes: []kv.KeyValue{},
+	},
+	{
+		name:               "PUT/__All default options",
+		method:             http.MethodPut,
+		path:               "/",
+		options:            []Option{},
+		hasSpan:            true,
+		expectedSpanName:   "/",
+		expectedHTTPStatus: http.StatusAccepted,
+		expectedResponse:   testReply{Message: "successfully put"},
+		expectedAttributes: []kv.KeyValue{},
+	},
+	{
+		name:   "GET/__Custom propagators",
+		method: http.MethodGet,
+		path:   "/",
+		options: []Option{
+			WithPropagators(prop.New(
+				prop.WithExtractors(trace.B3{}),
+				prop.WithInjectors(trace.B3{}),
+			)),
+		},
+		hasSpan:            true,
+		expectedSpanName:   "/",
+		expectedHTTPStatus: http.StatusOK,
+		expectedResponse:   testReply{Message: defaultReply},
 		expectedAttributes: []kv.KeyValue{},
 	},
 	{
@@ -265,12 +308,85 @@ func TestWithFilters(t *testing.T) {
 	}
 }
 
+func TestSpanFromContextDefaultTracer(t *testing.T) {
+	_, provider := mockmeter.NewProvider()
+	global.SetMeterProvider(provider)
+	global.SetTraceProvider(&mocktrace.Provider{})
+	router := beego.NewControllerRegister()
+	router.Get("/hello-with-span", func(ctx *beegoCtx.Context) {
+		assertSpanFromContext(ctx.Request.Context(), t, packageName)
+		ctx.ResponseWriter.WriteHeader(http.StatusAccepted)
+	})
+
+	rr := httptest.NewRecorder()
+	req := httptest.NewRequest(http.MethodGet, "http://localhost/hello-with-span", nil)
+
+	mw := NewOTelBeegoMiddleWare(middleWareName)
+
+	mw(router).ServeHTTP(rr, req)
+
+	require.Equal(t, http.StatusAccepted, rr.Result().StatusCode)
+}
+
+func TestSpanFromContextCustomTracer(t *testing.T) {
+	_, meter := mockmeter.NewMeter()
+	tracer := mocktrace.NewTracer("beego-test")
+	router := beego.NewControllerRegister()
+	router.Get("/hello-with-span", func(ctx *beegoCtx.Context) {
+		assertSpanFromContext(ctx.Request.Context(), t, "beego-test")
+		ctx.ResponseWriter.WriteHeader(http.StatusAccepted)
+	})
+
+	rr := httptest.NewRecorder()
+	req := httptest.NewRequest(http.MethodGet, "http://localhost/hello-with-span", nil)
+	mw := NewOTelBeegoMiddleWare(
+		middleWareName,
+		WithTracer(tracer),
+		WithMeter(meter),
+	)
+
+	mw(router).ServeHTTP(rr, req)
+
+	require.Equal(t, http.StatusAccepted, rr.Result().StatusCode)
+}
+
+func TestStatic(t *testing.T) {
+	tracer := mocktrace.NewTracer("beego-test")
+	meterimpl, meter := mockmeter.NewMeter()
+	file, err := ioutil.TempFile("", "static-*.html")
+	require.NoError(t, err)
+	defer os.Remove(file.Name())
+	file.WriteString(beego.Htmlunquote("<h1>Hello, world!</h1>"))
+
+	beego.SetStaticPath("/", file.Name())
+
+	mw := NewOTelBeegoMiddleWare(middleWareName,
+		WithTracer(tracer),
+		WithMeter(meter),
+	)
+
+	rr := httptest.NewRecorder()
+	req := httptest.NewRequest(http.MethodGet, "http://localhost/", nil)
+
+	mw(beego.BeeApp.Handlers).ServeHTTP(rr, req)
+	tc := &testCase{
+		expectedSpanName:   "/",
+		expectedAttributes: defaultAttributes(),
+	}
+
+	require.Equal(t, http.StatusOK, rr.Result().StatusCode)
+	spans := tracer.EndedSpans()
+	require.Len(t, spans, 1)
+	assertSpan(t, spans[0], tc)
+	assertMetrics(t, meterimpl.MeasurementBatches, tc)
+}
+
 // ------------------------------------------ Utilities
 
 func runTest(t *testing.T, tc *testCase, url string) {
 	tracer := mocktrace.NewTracer("beego-test")
 	meterimpl, meter := mockmeter.NewMeter()
-	addTestRoutes()
+	addTestRoutes(t)
 
 	rr := httptest.NewRecorder()
 	req, err := http.NewRequest(
@@ -303,8 +419,7 @@ func runTest(t *testing.T, tc *testCase, url string) {
 	spans := tracer.EndedSpans()
 	if tc.hasSpan {
 		require.Len(t, spans, 1)
-		result := rr.Result()
-		assertSpan(t, spans[0], tc, result)
+		assertSpan(t, spans[0], tc)
 	} else {
 		require.Len(t, spans, 0)
 	}
@@ -321,7 +436,7 @@ func defaultAttributes() []kv.KeyValue {
 	}
 }
 
-func assertSpan(t *testing.T, span *mocktrace.Span, tc *testCase, res *http.Response) {
+func assertSpan(t *testing.T, span *mocktrace.Span, tc *testCase) {
 	require.Equal(t, tc.expectedSpanName, span.Name)
 	for _, att := range tc.expectedAttributes {
 		require.Equal(t, att.Value.AsInterface(), span.Attributes[att.Key].AsInterface())
@@ -334,4 +449,14 @@ func assertMetrics(t *testing.T, batches []mockmeter.Batch, tc *testCase) {
 			require.Contains(t, batch.Labels, att)
 		}
 	}
+}
+
+func assertSpanFromContext(ctx context.Context, t *testing.T, tracerName string) {
+	span := trace.SpanFromContext(ctx)
+	_, ok := span.(*mocktrace.Span)
+	require.True(t, ok)
+	spanTracer := span.Tracer()
+	mockTracer, ok := spanTracer.(*mocktrace.Tracer)
+	require.True(t, ok)
+	require.Equal(t, tracerName, mockTracer.Name)
 }
