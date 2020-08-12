@@ -57,7 +57,7 @@ func main() {
 func startConsumerGroup(brokerList []string) {
 	consumerGroupHandler := Consumer{}
 	// Wrap instrumentation
-	handler := saramatrace.WrapConsumerGroupHandler("example-consumer", &consumerGroupHandler)
+	handler := saramatrace.WrapConsumerGroupHandler(&consumerGroupHandler)
 
 	config := sarama.NewConfig()
 	config.Version = sarama.V2_5_0_0

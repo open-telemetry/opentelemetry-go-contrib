@@ -34,8 +34,7 @@ import (
 )
 
 const (
-	serviceName = "test-service-name"
-	topic       = "test-topic"
+	topic = "test-topic"
 )
 
 var (
@@ -54,7 +53,7 @@ func TestWrapPartitionConsumer(t *testing.T) {
 	partitionConsumer, err := consumer.ConsumePartition(topic, 0, 0)
 	require.NoError(t, err)
 
-	partitionConsumer = WrapPartitionConsumer(serviceName, partitionConsumer, WithTracer(mt))
+	partitionConsumer = WrapPartitionConsumer(partitionConsumer, WithTracer(mt))
 
 	consumeAndCheck(t, mt, mockPartitionConsumer, partitionConsumer)
 }
@@ -68,7 +67,7 @@ func TestWrapConsumer(t *testing.T) {
 	mockPartitionConsumer := mockConsumer.ExpectConsumePartition(topic, 0, 0)
 
 	// Wrap consumer
-	consumer := WrapConsumer(serviceName, mockConsumer, WithTracer(mt))
+	consumer := WrapConsumer(mockConsumer, WithTracer(mt))
 
 	// Create partition consumer
 	partitionConsumer, err := consumer.ConsumePartition(topic, 0, 0)
@@ -107,7 +106,6 @@ func consumeAndCheck(t *testing.T, mt *mocktracer.Tracer, mockPartitionConsumer 
 	}{
 		{
 			kvList: []kv.KeyValue{
-				standard.ServiceNameKey.String(serviceName),
 				standard.MessagingSystemKey.String("kafka"),
 				standard.MessagingDestinationKindKeyTopic,
 				standard.MessagingDestinationKey.String("test-topic"),
@@ -121,7 +119,6 @@ func consumeAndCheck(t *testing.T, mt *mocktracer.Tracer, mockPartitionConsumer 
 		},
 		{
 			kvList: []kv.KeyValue{
-				standard.ServiceNameKey.String(serviceName),
 				standard.MessagingSystemKey.String("kafka"),
 				standard.MessagingDestinationKindKeyTopic,
 				standard.MessagingDestinationKey.String("test-topic"),
@@ -159,7 +156,7 @@ func TestConsumerConsumePartitionWithError(t *testing.T) {
 	mockConsumer := mocks.NewConsumer(t, sarama.NewConfig())
 	mockConsumer.ExpectConsumePartition(topic, 0, 0)
 
-	consumer := WrapConsumer(serviceName, mockConsumer)
+	consumer := WrapConsumer(mockConsumer)
 	_, err := consumer.ConsumePartition(topic, 0, 0)
 	assert.NoError(t, err)
 	// Consume twice
@@ -173,7 +170,7 @@ func BenchmarkWrapPartitionConsumer(b *testing.B) {
 
 	mockPartitionConsumer, partitionConsumer := createMockPartitionConsumer(b)
 
-	partitionConsumer = WrapPartitionConsumer(serviceName, partitionConsumer, WithTracer(mt))
+	partitionConsumer = WrapPartitionConsumer(partitionConsumer, WithTracer(mt))
 	message := sarama.ConsumerMessage{Key: []byte("foo")}
 
 	b.ReportAllocs()

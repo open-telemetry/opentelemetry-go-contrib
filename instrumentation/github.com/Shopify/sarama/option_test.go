@@ -24,40 +24,33 @@ import (
 
 func TestNewConfig(t *testing.T) {
 	testCases := []struct {
-		name        string
-		serviceName string
-		opts        []Option
-		expected    config
+		name     string
+		opts     []Option
+		expected config
 	}{
 		{
-			name:        "set service name",
-			serviceName: serviceName,
+			name: "set service name",
 			expected: config{
-				ServiceName: serviceName,
 				Tracer:      global.Tracer(defaultTracerName),
 				Propagators: global.Propagators(),
 			},
 		},
 		{
-			name:        "with tracer",
-			serviceName: serviceName,
+			name: "with tracer",
 			opts: []Option{
 				WithTracer(global.Tracer("new")),
 			},
 			expected: config{
-				ServiceName: serviceName,
 				Tracer:      global.Tracer("new"),
 				Propagators: global.Propagators(),
 			},
 		},
 		{
-			name:        "with propagators",
-			serviceName: serviceName,
+			name: "with propagators",
 			opts: []Option{
 				WithPropagators(nil),
 			},
 			expected: config{
-				ServiceName: serviceName,
 				Tracer:      global.Tracer(defaultTracerName),
 				Propagators: nil,
 			},
@@ -66,7 +59,7 @@ func TestNewConfig(t *testing.T) {
 
 	for _, tc := range testCases {
 		t.Run(tc.name, func(t *testing.T) {
-			result := newConfig(tc.serviceName, tc.opts...)
+			result := newConfig(tc.opts...)
 			assert.Equal(t, tc.expected, result)
 		})
 	}

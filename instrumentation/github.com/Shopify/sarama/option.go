@@ -28,14 +28,13 @@ const (
 )
 
 type config struct {
-	ServiceName string
 	Tracer      trace.Tracer
 	Propagators otelpropagation.Propagators
 }
 
 // newConfig returns a config with all Options set.
-func newConfig(serviceName string, opts ...Option) config {
-	cfg := config{Propagators: global.Propagators(), ServiceName: serviceName}
+func newConfig(opts ...Option) config {
+	cfg := config{Propagators: global.Propagators()}
 	for _, opt := range opts {
 		opt(&cfg)
 	}
