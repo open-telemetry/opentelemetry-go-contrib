@@ -612,7 +612,7 @@ func TestCollectWithRule(t *testing.T) {
 	mockClock := controllerTest.NewMockClock()
 	matcher := push.PeriodMatcher{}
 	matcher.MarkStart(mockClock.Now())
-	matcher.ConsumeSchedules(schedules)
+	matcher.ApplySchedules(schedules)
 
 	processor := &correctnessProcessor{
 		t:            t,

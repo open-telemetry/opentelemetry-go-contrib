@@ -42,28 +42,27 @@ func (matcher *PeriodMatcher) MarkStart(startTime time.Time) {
 	matcher.startTime = startTime
 }
 
-func (matcher *PeriodMatcher) ConsumeSchedules(sched []*pb.MetricConfigResponse_Schedule) {
+func (matcher *PeriodMatcher) ApplySchedules(sched []*pb.MetricConfigResponse_Schedule) time.Duration {
 	matcher.m.Lock()
 	defer matcher.m.Unlock()
 
 	matcher.sched = sched
 	matcher.metrics = make(map[string]*CollectData)
+
+	return getExportPeriod(matcher.sched)
 }
 
-func (matcher *PeriodMatcher) GetMinPeriod() time.Duration {
-	matcher.m.Lock()
-	defer matcher.m.Unlock()
-
-	if len(matcher.sched) == 0 {
-		panic("matcher has not consumed any schedules")
+func getExportPeriod(sched []*pb.MetricConfigResponse_Schedule) time.Duration {
+	if len(sched) == 0 {
+		panic("matcher has not applied any schedules")
 	}
 
-	minPeriod := matcher.sched[0].PeriodSec
-	for _, schedule := range matcher.sched[1:] {
-		minPeriod = gcd(minPeriod, schedule.PeriodSec)
+	checkPeriod := sched[0].PeriodSec
+	for _, schedule := range sched[1:] {
+		checkPeriod = gcd(checkPeriod, schedule.PeriodSec)
 	}
 
-	return time.Duration(minPeriod) * time.Second
+	return time.Duration(checkPeriod) * time.Second
 }
 
 // Euclid's algorithm

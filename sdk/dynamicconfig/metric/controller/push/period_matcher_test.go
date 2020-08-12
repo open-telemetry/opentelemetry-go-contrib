@@ -65,11 +65,11 @@ func makeConfig() *pb.MetricConfigResponse {
 	return &config
 }
 
-func TestConsumeSchedules(t *testing.T) {
+func TestApplySchedules(t *testing.T) {
 	config := makeConfig()
 	matcher := PeriodMatcher{}
 
-	matcher.ConsumeSchedules(config.Schedules)
+	newPeriod := matcher.ApplySchedules(config.Schedules)
 
 	if !reflect.DeepEqual(config.Schedules, matcher.sched) {
 		t.Errorf("consumed schedule does not match in memory version")
@@ -77,6 +77,10 @@ func TestConsumeSchedules(t *testing.T) {
 
 	if len(matcher.metrics) != 0 {
 		t.Errorf("metrics map not reset")
+	}
+
+	if newPeriod != 7*time.Second {
+		t.Errorf("expected export period to be 7s, got: %v", newPeriod)
 	}
 }
 
@@ -108,26 +112,22 @@ func TestGCDPanic(t *testing.T) {
 	gcd(0, 0)
 }
 
-func TestGetMinPeriod(t *testing.T) {
-	matcher := PeriodMatcher{}
-
+func TestGetExportPeriod(t *testing.T) {
 	config := makeConfig()
-	matcher.ConsumeSchedules(config.Schedules)
-	minPeriod := matcher.GetMinPeriod()
-	if minPeriod != 7*time.Second {
-		t.Errorf("expected min period to be 7s, got: %v", minPeriod)
+	exportPeriod := getExportPeriod(config.Schedules)
+	if exportPeriod != 7*time.Second {
+		t.Errorf("expected export period to be 7s, got: %v", exportPeriod)
 	}
 }
 
-func TestGetMinPeriodPanic(t *testing.T) {
+func TestGetExportPeriodPanic(t *testing.T) {
 	defer func() {
 		if err := recover(); err == nil {
 			t.Errorf("matcher did not consume schedules, but did not panic")
 		}
 	}()
 
-	matcher := PeriodMatcher{}
-	matcher.GetMinPeriod()
+	getExportPeriod([]*pb.MetricConfigResponse_Schedule{})
 }
 
 func TestBuildRule(t *testing.T) {
@@ -136,7 +136,7 @@ func TestBuildRule(t *testing.T) {
 	matcher.MarkStart(mockClock.Now())
 
 	config := makeConfig()
-	matcher.ConsumeSchedules(config.Schedules)
+	matcher.ApplySchedules(config.Schedules)
 
 	mockClock.Add(7 * time.Second)
 	rule := matcher.BuildRule(mockClock.Now())

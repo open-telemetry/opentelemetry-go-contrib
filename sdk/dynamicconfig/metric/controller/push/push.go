@@ -172,14 +172,13 @@ func (c *Controller) tick() {
 }
 
 func (c *Controller) update(schedules []*pb.MetricConfigResponse_Schedule) {
-	c.matcher.ConsumeSchedules(schedules)
-	minPeriod := c.matcher.GetMinPeriod()
-	if c.lastPeriod != minPeriod {
+	newPeriod := c.matcher.ApplySchedules(schedules)
+	if c.lastPeriod != newPeriod {
 		if c.ticker != nil {
 			c.ticker.Stop()
 		}
 
-		c.lastPeriod = minPeriod
+		c.lastPeriod = newPeriod
 
 		// TOOD: create tidier, encapsulated dynamic ticker
 		c.lock.Lock()
