@@ -171,9 +171,9 @@ func TestBuildRequest(t *testing.T) {
 	require.Equal(t, req.Header.Get("X-Prometheus-Remote-Write-Version"), "0.1.0")
 }
 
-// verifyRequest checks whether an http request contains a correctly formatted
-// remote_write body and the required headers.
-func verifyRequest(req *http.Request) error {
+// verifyExporterRequest checks a HTTP request from the export pipeline. It checks whether
+// the request contains a correctly formatted remote_write body and the required headers.
+func verifyExporterRequest(req *http.Request) error {
 	// Check for required headers.
 	if req.Header.Get("X-Prometheus-Remote-Write-Version") != "0.1.0" ||
 		req.Header.Get("Content-Encoding") != "snappy" ||
@@ -228,7 +228,7 @@ func TestSendRequest(t *testing.T) {
 	// format. Additionally, the server can respond with status code 404 Not Found to
 	// simulate send failures.
 	handler := func(rw http.ResponseWriter, req *http.Request) {
-		err := verifyRequest(req)
+		err := verifyExporterRequest(req)
 		if err != nil {
 			rw.WriteHeader(http.StatusBadRequest)
 			return

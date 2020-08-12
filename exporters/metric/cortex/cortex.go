@@ -101,7 +101,7 @@ func (e *Exporter) addHeaders(req *http.Request) {
 	}
 }
 
-// BuildMessage creates a Snappy-compressed protobuf message from a slice of TimeSeries.
+// buildMessage creates a Snappy-compressed protobuf message from a slice of TimeSeries.
 func (e *Exporter) buildMessage(timeseries []*prompb.TimeSeries) ([]byte, error) {
 	// Wrap the TimeSeries as a WriteRequest since Cortex requires it.
 	writeRequest := &prompb.WriteRequest{
@@ -118,7 +118,7 @@ func (e *Exporter) buildMessage(timeseries []*prompb.TimeSeries) ([]byte, error)
 	return compressed, nil
 }
 
-// BuildRequest creates an http POST request with a Snappy-compressed protocol buffer
+// buildRequest creates an http POST request with a Snappy-compressed protocol buffer
 // message as the body and with all the headers attached.
 func (e *Exporter) buildRequest(message []byte) (*http.Request, error) {
 	req, err := http.NewRequest(
