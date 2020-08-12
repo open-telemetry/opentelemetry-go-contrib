@@ -15,6 +15,7 @@
 package cortex
 
 import (
+	"bytes"
 	"context"
 	"net/http"
 
@@ -113,4 +114,22 @@ func (e *Exporter) buildMessage(timeseries []*prompb.TimeSeries) ([]byte, error)
 	compressed := snappy.Encode(nil, message)
 
 	return compressed, nil
+}
+
+// BuildRequest creates an http POST request with a Snappy-compressed protocol buffer
+// message as the body and with all the headers attached.
+func (e *Exporter) buildRequest(message []byte) (*http.Request, error) {
+	req, err := http.NewRequest(
+		http.MethodPost,
+		e.config.Endpoint,
+		bytes.NewBuffer(message),
+	)
+	if err != nil {
+		return nil, err
+	}
+
+	// Add the required headers and the headers from Config.Headers.
+	e.addHeaders(req)
+
+	return req, nil
 }

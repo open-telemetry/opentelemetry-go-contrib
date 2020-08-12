@@ -15,6 +15,7 @@
 package cortex
 
 import (
+	"io/ioutil"
 	"net/http"
 	"testing"
 	"time"
@@ -121,6 +122,7 @@ func TestAddHeaders(t *testing.T) {
 	}
 	require.Equal(t, req.Header.Get("Content-Encoding"), "snappy")
 	require.Equal(t, req.Header.Get("Content-Type"), "application/x-protobuf")
+	require.Equal(t, req.Header.Get("X-Prometheus-Remote-Write-Version"), "0.1.0")
 }
 
 // TestBuildMessage tests whether BuildMessage successfully returns a Snappy-compressed
@@ -134,4 +136,32 @@ func TestBuildMessage(t *testing.T) {
 	// are no errors.
 	_, err := exporter.buildMessage(timeseries)
 	require.Nil(t, err)
+}
+
+// TestBuildRequest tests whether a http request is a POST request, has the correct body,
+// and has the correct headers.
+func TestBuildRequest(t *testing.T) {
+	// Make fake exporter and message for testing.
+	var testMessage = []byte(`Test Message`)
+	exporter := Exporter{validConfig}
+
+	// Create the http request.
+	req, err := exporter.buildRequest(testMessage)
+	require.Nil(t, err)
+
+	// Verify the http method, url, and body.
+	require.Equal(t, req.Method, http.MethodPost)
+	require.Equal(t, req.URL.String(), validConfig.Endpoint)
+
+	reqMessage, err := ioutil.ReadAll(req.Body)
+	require.Nil(t, err)
+	require.Equal(t, reqMessage, testMessage)
+
+	// Verify headers.
+	for name, field := range exporter.config.Headers {
+		require.Equal(t, req.Header.Get(name), field)
+	}
+	require.Equal(t, req.Header.Get("Content-Encoding"), "snappy")
+	require.Equal(t, req.Header.Get("Content-Type"), "application/x-protobuf")
+	require.Equal(t, req.Header.Get("X-Prometheus-Remote-Write-Version"), "0.1.0")
 }
