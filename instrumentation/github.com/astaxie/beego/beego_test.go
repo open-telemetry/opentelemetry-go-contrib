@@ -200,7 +200,8 @@ func TestSpanFromContextDefaultTracer(t *testing.T) {
 	})
 
 	rr := httptest.NewRecorder()
-	req := httptest.NewRequest(http.MethodGet, "http://localhost/hello-with-span", nil)
+	req, err := http.NewRequest(http.MethodGet, "http://localhost/hello-with-span", nil)
+	require.NoError(t, err)
 
 	mw := NewOTelBeegoMiddleWare(middleWareName)
 
@@ -219,7 +220,9 @@ func TestSpanFromContextCustomTracer(t *testing.T) {
 	})
 
 	rr := httptest.NewRecorder()
-	req := httptest.NewRequest(http.MethodGet, "http://localhost/hello-with-span", nil)
+	req, err := http.NewRequest(http.MethodGet, "http://localhost/hello-with-span", nil)
+	require.NoError(t, err)
+
 	mw := NewOTelBeegoMiddleWare(
 		middleWareName,
 		WithTracer(tracer),
@@ -249,8 +252,8 @@ func TestStatic(t *testing.T) {
 	)
 
 	rr := httptest.NewRecorder()
-	req := httptest.NewRequest(http.MethodGet, "http://localhost/", nil)
-
+	req, err := http.NewRequest(http.MethodGet, "http://localhost/", nil)
+	require.NoError(t, err)
 	mw(beego.BeeApp.Handlers).ServeHTTP(rr, req)
 	tc := &testCase{
 		expectedSpanName:   "/",
