@@ -21,7 +21,7 @@ import (
 	"sync"
 	"sync/atomic"
 
-	internal "go.opentelemetry.io/contrib/sdk/dynamicconfig/internal/metric"
+	internal "go.opentelemetry.io/contrib/internal/metric"
 	"go.opentelemetry.io/otel/api/global"
 	"go.opentelemetry.io/otel/api/kv"
 	"go.opentelemetry.io/otel/api/label"

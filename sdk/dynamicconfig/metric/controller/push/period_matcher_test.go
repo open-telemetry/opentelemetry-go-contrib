@@ -19,7 +19,7 @@ import (
 	"testing"
 	"time"
 
-	pb "github.com/open-telemetry/opentelemetry-proto/gen/go/experimental/metricconfigservice"
+	pb "go.opentelemetry.io/contrib/sdk/dynamicconfig/internal/proto/experimental/metrics/configservice"
 	controllerTest "go.opentelemetry.io/otel/sdk/metric/controller/test"
 )
 

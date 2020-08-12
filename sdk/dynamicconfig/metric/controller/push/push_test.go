@@ -23,17 +23,17 @@ import (
 
 	"github.com/stretchr/testify/require"
 
-	pb "github.com/open-telemetry/opentelemetry-proto/gen/go/experimental/metricconfigservice"
-	"go.opentelemetry.io/contrib/sdk/dynamicconfig/metric/controller/remote/mock"
+	pb "go.opentelemetry.io/contrib/sdk/dynamicconfig/internal/proto/experimental/metrics/configservice"
 	"go.opentelemetry.io/contrib/sdk/dynamicconfig/metric/controller/push"
+	"go.opentelemetry.io/contrib/sdk/dynamicconfig/metric/controller/remote/mock"
 
 	"go.opentelemetry.io/otel/api/global"
 	"go.opentelemetry.io/otel/api/kv"
 	"go.opentelemetry.io/otel/api/label"
 	"go.opentelemetry.io/otel/api/metric"
-	exporterTest "go.opentelemetry.io/otel/exporters/metric/test"
 	export "go.opentelemetry.io/otel/sdk/export/metric"
 	"go.opentelemetry.io/otel/sdk/export/metric/aggregation"
+	"go.opentelemetry.io/otel/sdk/export/metric/metrictest"
 	controllerTest "go.opentelemetry.io/otel/sdk/metric/controller/test"
 	"go.opentelemetry.io/otel/sdk/metric/processor/test"
 	processorTest "go.opentelemetry.io/otel/sdk/metric/processor/test"
@@ -77,12 +77,12 @@ type testExporter struct {
 }
 
 type testFixture struct {
-	checkpointSet *exporterTest.CheckpointSet
+	checkpointSet *metrictest.CheckpointSet
 	exporter      *testExporter
 }
 
 func newFixture(t *testing.T) testFixture {
-	checkpointSet := exporterTest.NewCheckpointSet(testResource)
+	checkpointSet := metrictest.NewCheckpointSet(testResource)
 
 	exporter := &testExporter{
 		t: t,

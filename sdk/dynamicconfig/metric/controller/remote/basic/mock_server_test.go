@@ -19,10 +19,7 @@ import (
 	"net"
 	"testing"
 
-	"github.com/open-telemetry/opentelemetry-collector/translator/conventions"
-	pb "github.com/open-telemetry/opentelemetry-proto/gen/go/experimental/metricconfigservice"
-	"go.opentelemetry.io/otel/api/kv"
-	"go.opentelemetry.io/otel/sdk/resource"
+	pb "go.opentelemetry.io/contrib/sdk/dynamicconfig/internal/proto/experimental/metrics/configservice"
 	"google.golang.org/grpc"
 )
 
@@ -55,8 +52,4 @@ func (server *MockServer) Run(t *testing.T) (func(), string) {
 		srv.Stop()
 		_ = ln.Close()
 	}, ln.Addr().String()
-}
-
-func MockResource(serviceName string) *resource.Resource {
-	return resource.New(kv.Key(conventions.AttributeServiceName).String(serviceName))
 }

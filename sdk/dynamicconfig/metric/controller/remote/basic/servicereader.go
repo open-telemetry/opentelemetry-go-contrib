@@ -20,8 +20,8 @@ import (
 	"errors"
 	"fmt"
 
-	pb "github.com/open-telemetry/opentelemetry-proto/gen/go/experimental/metricconfigservice"
-	resourcepb "github.com/open-telemetry/opentelemetry-proto/gen/go/resource/v1"
+	pb "go.opentelemetry.io/contrib/sdk/dynamicconfig/internal/proto/experimental/metrics/configservice"
+	resourcepb "go.opentelemetry.io/contrib/sdk/dynamicconfig/internal/proto/resource/v1"
 	"google.golang.org/grpc"
 )
 

@@ -21,7 +21,7 @@ import (
 
 	sdk "go.opentelemetry.io/contrib/sdk/dynamicconfig/metric"
 
-	pb "github.com/open-telemetry/opentelemetry-proto/gen/go/experimental/metricconfigservice"
+	pb "go.opentelemetry.io/contrib/sdk/dynamicconfig/internal/proto/experimental/metrics/configservice"
 	"go.opentelemetry.io/contrib/sdk/dynamicconfig/metric/controller/remote"
 	mbasic "go.opentelemetry.io/contrib/sdk/dynamicconfig/metric/controller/remote/basic"
 	"go.opentelemetry.io/otel/api/global"

@@ -17,7 +17,7 @@ package metricpattern
 import (
 	"strings"
 
-	pb "github.com/open-telemetry/opentelemetry-proto/gen/go/experimental/metricconfigservice"
+	pb "go.opentelemetry.io/contrib/sdk/dynamicconfig/internal/proto/experimental/metrics/configservice"
 )
 
 func Matches(name string, patterns []*pb.MetricConfigResponse_Schedule_Pattern) bool {
