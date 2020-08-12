@@ -141,14 +141,8 @@ func addTestRoutes(t *testing.T) {
 	beego.AddNamespace(router)
 }
 
-func removeTestRoutes() {
-	beego.UnregisterFixedRoute("/", "*")
-	beego.UnregisterFixedRoute("/greet", "*")
-	beego.UnregisterFixedRoute("/template/render", "*")
-	beego.UnregisterFixedRoute("/template/renderstring", "*")
-	beego.UnregisterFixedRoute("/template/renderbytes", "*")
-	beego.UnregisterFixedRoute("/api/v1/", "*")
-	beego.UnregisterFixedRoute("/api/v1/greet", "*")
+func replaceBeego() {
+	beego.BeeApp = beego.NewApp()
 }
 
 // ------------------------------------------ Unit Tests
@@ -190,6 +184,7 @@ func TestWithFilters(t *testing.T) {
 }
 
 func TestSpanFromContextDefaultTracer(t *testing.T) {
+	defer replaceBeego()
 	_, provider := mockmeter.NewProvider()
 	global.SetMeterProvider(provider)
 	global.SetTraceProvider(&mocktrace.Provider{})
@@ -211,6 +206,7 @@ func TestSpanFromContextDefaultTracer(t *testing.T) {
 }
 
 func TestSpanFromContextCustomTracer(t *testing.T) {
+	defer replaceBeego()
 	_, meter := mockmeter.NewMeter()
 	tracer := mocktrace.NewTracer("beego-test")
 	router := beego.NewControllerRegister()
@@ -235,6 +231,7 @@ func TestSpanFromContextCustomTracer(t *testing.T) {
 }
 
 func TestStatic(t *testing.T) {
+	defer replaceBeego()
 	tracer := mocktrace.NewTracer("beego-test")
 	meterimpl, meter := mockmeter.NewMeter()
 	file, err := ioutil.TempFile("", "static-*.html")
@@ -275,7 +272,7 @@ func TestRender(t *testing.T) {
 	beego.BConfig.WebConfig.AutoRender = false
 	tracer := mocktrace.NewTracer("beego-test")
 	addTestRoutes(t)
-	defer removeTestRoutes()
+	defer replaceBeego()
 	htmlStr := "<!DOCTYPE html><html lang=\"en\">" +
 		"<head><meta charset=\"UTF-8\"><title>Hello World</title></head>" +
 		"<body>This is a template test. Hello {{.name}}</body></html>"
@@ -335,7 +332,7 @@ func runTest(t *testing.T, tc *testCase, url string) {
 	tracer := mocktrace.NewTracer("beego-test")
 	meterimpl, meter := mockmeter.NewMeter()
 	addTestRoutes(t)
-	defer removeTestRoutes()
+	defer replaceBeego()
 
 	rr := httptest.NewRecorder()
 	req, err := http.NewRequest(
