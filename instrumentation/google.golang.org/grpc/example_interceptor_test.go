@@ -16,36 +16,30 @@ package grpc
 
 import (
 	"google.golang.org/grpc"
-
-	"go.opentelemetry.io/otel/api/global"
 )
 
 func ExampleStreamClientInterceptor() {
-	tracer := global.Tracer("client-instrumentation")
 	_, _ = grpc.Dial(
 		"localhost",
-		grpc.WithStreamInterceptor(StreamClientInterceptor(tracer)),
+		grpc.WithStreamInterceptor(StreamClientInterceptor()),
 	)
 }
 
 func ExampleUnaryClientInterceptor() {
-	tracer := global.Tracer("client-instrumentation")
 	_, _ = grpc.Dial(
 		"localhost",
-		grpc.WithUnaryInterceptor(UnaryClientInterceptor(tracer)),
+		grpc.WithUnaryInterceptor(UnaryClientInterceptor()),
 	)
 }
 
 func ExampleStreamServerInterceptor() {
-	tracer := global.Tracer("server-instrumentation")
 	_ = grpc.NewServer(
-		grpc.StreamInterceptor(StreamServerInterceptor(tracer)),
+		grpc.StreamInterceptor(StreamServerInterceptor()),
 	)
 }
 
 func ExampleUnaryServerInterceptor() {
-	tracer := global.Tracer("server-instrumentation")
 	_ = grpc.NewServer(
-		grpc.UnaryInterceptor(UnaryServerInterceptor(tracer)),
+		grpc.UnaryInterceptor(UnaryServerInterceptor()),
 	)
 }

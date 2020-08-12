@@ -19,6 +19,7 @@ import (
 	"testing"
 	"time"
 
+	"go.opentelemetry.io/otel/api/global"
 	"go.opentelemetry.io/otel/api/standard"
 	"go.opentelemetry.io/otel/api/trace/testtrace"
 
@@ -89,7 +90,7 @@ func TestUnaryClientInterceptor(t *testing.T) {
 	sr := NewSpanRecorder()
 	tp := testtrace.NewProvider(testtrace.WithSpanRecorder(sr))
 	tracer := tp.Tracer("grpc/client")
-	unaryInterceptor := UnaryClientInterceptor(tracer)
+	unaryInterceptor := UnaryClientInterceptor(WithTracer(tracer))
 
 	req := &mockProtoMessage{}
 	reply := &mockProtoMessage{}
@@ -259,7 +260,7 @@ func TestStreamClientInterceptor(t *testing.T) {
 	sr := NewSpanRecorder()
 	tp := testtrace.NewProvider(testtrace.WithSpanRecorder(sr))
 	tracer := tp.Tracer("grpc/Server")
-	streamCI := StreamClientInterceptor(tracer)
+	streamCI := StreamClientInterceptor(WithTracer(tracer))
 
 	var mockClStr mockClientStream
 	method := "/github.com.serviceName/bar"
@@ -342,8 +343,8 @@ func TestStreamClientInterceptor(t *testing.T) {
 func TestServerInterceptorError(t *testing.T) {
 	sr := NewSpanRecorder()
 	tp := testtrace.NewProvider(testtrace.WithSpanRecorder(sr))
-	tracer := tp.Tracer("grpc/Server")
-	usi := UnaryServerInterceptor(tracer)
+	global.SetTraceProvider(tp)
+	usi := UnaryServerInterceptor()
 	deniedErr := status.Error(codes.PermissionDenied, "PERMISSION_DENIED_TEXT")
 	handler := func(_ context.Context, _ interface{}) (interface{}, error) {
 		return nil, deniedErr

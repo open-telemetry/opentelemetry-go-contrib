@@ -15,22 +15,20 @@
 package grpc
 
 import (
-	"context"
-
-	"google.golang.org/grpc/metadata"
-
-	"go.opentelemetry.io/otel/api/correlation"
 	"go.opentelemetry.io/otel/api/global"
-	"go.opentelemetry.io/otel/api/kv"
 	"go.opentelemetry.io/otel/api/propagation"
 	"go.opentelemetry.io/otel/api/trace"
 )
 
-// Option is a function that allows configuration of the grpc Extract()
-// and Inject() functions
+const (
+	defaultTracerName = "go.opentelemetry.io/contrib/instrumentation/google.golang.org/grpc"
+)
+
+// Option specifies instrumentation configuration options.
 type Option func(*config)
 
 type config struct {
+	tracer      trace.Tracer
 	propagators propagation.Propagators
 }
 
@@ -38,6 +36,9 @@ func newConfig(opts []Option) *config {
 	c := &config{propagators: global.Propagators()}
 	for _, o := range opts {
 		o(c)
+	}
+	if c.tracer == nil {
+		c.tracer = global.Tracer(defaultTracerName)
 	}
 	return c
 }
@@ -49,47 +50,12 @@ func WithPropagators(props propagation.Propagators) Option {
 	}
 }
 
-type metadataSupplier struct {
-	metadata *metadata.MD
-}
-
-func (s *metadataSupplier) Get(key string) string {
-	values := s.metadata.Get(key)
-	if len(values) == 0 {
-		return ""
+// WithTracer specifies a tracer to use for creating spans. If none is
+// specified, a tracer named
+// "go.opentelemetry.io/contrib/instrumentation/google.golang.org/grpc"
+// from the global provider is used.
+func WithTracer(tracer trace.Tracer) Option {
+	return func(cfg *config) {
+		cfg.tracer = tracer
 	}
-	return values[0]
-}
-
-func (s *metadataSupplier) Set(key string, value string) {
-	s.metadata.Set(key, value)
-}
-
-// Inject injects correlation context and span context into the gRPC
-// metadata object. This function is meant to be used on outgoing
-// requests.
-func Inject(ctx context.Context, metadata *metadata.MD, opts ...Option) {
-	c := newConfig(opts)
-	propagation.InjectHTTP(ctx, c.propagators, &metadataSupplier{
-		metadata: metadata,
-	})
-}
-
-// Extract returns the correlation context and span context that
-// another service encoded in the gRPC metadata object with Inject.
-// This function is meant to be used on incoming requests.
-func Extract(ctx context.Context, metadata *metadata.MD, opts ...Option) ([]kv.KeyValue, trace.SpanContext) {
-	c := newConfig(opts)
-	ctx = propagation.ExtractHTTP(ctx, c.propagators, &metadataSupplier{
-		metadata: metadata,
-	})
-
-	spanContext := trace.RemoteSpanContextFromContext(ctx)
-	var correlationCtxKVs []kv.KeyValue
-	correlation.MapFromContext(ctx).Foreach(func(kv kv.KeyValue) bool {
-		correlationCtxKVs = append(correlationCtxKVs, kv)
-		return true
-	})
-
-	return correlationCtxKVs, spanContext
 }

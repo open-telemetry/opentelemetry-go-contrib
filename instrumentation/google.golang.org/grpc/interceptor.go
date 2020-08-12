@@ -33,6 +33,8 @@ import (
 	"go.opentelemetry.io/otel/api/kv"
 	"go.opentelemetry.io/otel/api/standard"
 	"go.opentelemetry.io/otel/api/trace"
+
+	grpcpropagation "go.opentelemetry.io/contrib/instrumentation/google.golang.org/grpc/propagation"
 )
 
 type messageType kv.KeyValue
@@ -62,7 +64,9 @@ var (
 
 // UnaryClientInterceptor returns a grpc.UnaryClientInterceptor suitable
 // for use in a grpc.Dial call.
-func UnaryClientInterceptor(tracer trace.Tracer, opts ...Option) grpc.UnaryClientInterceptor {
+func UnaryClientInterceptor(opts ...Option) grpc.UnaryClientInterceptor {
+	cfg := newConfig(opts)
+
 	return func(
 		ctx context.Context,
 		method string,
@@ -76,7 +80,7 @@ func UnaryClientInterceptor(tracer trace.Tracer, opts ...Option) grpc.UnaryClien
 
 		name, attr := spanInfo(method, cc.Target())
 		var span trace.Span
-		ctx, span = tracer.Start(
+		ctx, span = cfg.tracer.Start(
 			ctx,
 			name,
 			trace.WithSpanKind(trace.SpanKindClient),
@@ -84,7 +88,9 @@ func UnaryClientInterceptor(tracer trace.Tracer, opts ...Option) grpc.UnaryClien
 		)
 		defer span.End()
 
-		Inject(ctx, &metadataCopy, opts...)
+		grpcpropagation.Inject(ctx, &metadataCopy,
+			grpcpropagation.WithPropagators(cfg.propagators),
+		)
 		ctx = metadata.NewOutgoingContext(ctx, metadataCopy)
 
 		messageSent.Event(ctx, 1, req)
@@ -235,7 +241,9 @@ func (w *clientStream) sendStreamEvent(eventType streamEventType, err error) {
 
 // StreamClientInterceptor returns a grpc.StreamClientInterceptor suitable
 // for use in a grpc.Dial call.
-func StreamClientInterceptor(tracer trace.Tracer, opts ...Option) grpc.StreamClientInterceptor {
+func StreamClientInterceptor(opts ...Option) grpc.StreamClientInterceptor {
+	cfg := newConfig(opts)
+
 	return func(
 		ctx context.Context,
 		desc *grpc.StreamDesc,
@@ -249,14 +257,16 @@ func StreamClientInterceptor(tracer trace.Tracer, opts ...Option) grpc.StreamCli
 
 		name, attr := spanInfo(method, cc.Target())
 		var span trace.Span
-		ctx, span = tracer.Start(
+		ctx, span = cfg.tracer.Start(
 			ctx,
 			name,
 			trace.WithSpanKind(trace.SpanKindClient),
 			trace.WithAttributes(attr...),
 		)
 
-		Inject(ctx, &metadataCopy, opts...)
+		grpcpropagation.Inject(ctx, &metadataCopy,
+			grpcpropagation.WithPropagators(cfg.propagators),
+		)
 		ctx = metadata.NewOutgoingContext(ctx, metadataCopy)
 
 		s, err := streamer(ctx, desc, cc, method, callOpts...)
@@ -281,7 +291,9 @@ func StreamClientInterceptor(tracer trace.Tracer, opts ...Option) grpc.StreamCli
 
 // UnaryServerInterceptor returns a grpc.UnaryServerInterceptor suitable
 // for use in a grpc.NewServer call.
-func UnaryServerInterceptor(tracer trace.Tracer, opts ...Option) grpc.UnaryServerInterceptor {
+func UnaryServerInterceptor(opts ...Option) grpc.UnaryServerInterceptor {
+	cfg := newConfig(opts)
+
 	return func(
 		ctx context.Context,
 		req interface{},
@@ -291,13 +303,15 @@ func UnaryServerInterceptor(tracer trace.Tracer, opts ...Option) grpc.UnaryServe
 		requestMetadata, _ := metadata.FromIncomingContext(ctx)
 		metadataCopy := requestMetadata.Copy()
 
-		entries, spanCtx := Extract(ctx, &metadataCopy, opts...)
+		entries, spanCtx := grpcpropagation.Extract(ctx, &metadataCopy,
+			grpcpropagation.WithPropagators(cfg.propagators),
+		)
 		ctx = correlation.ContextWithMap(ctx, correlation.NewMap(correlation.MapUpdate{
 			MultiKV: entries,
 		}))
 
 		name, attr := spanInfo(info.FullMethod, peerFromCtx(ctx))
-		ctx, span := tracer.Start(
+		ctx, span := cfg.tracer.Start(
 			trace.ContextWithRemoteSpanContext(ctx, spanCtx),
 			name,
 			trace.WithSpanKind(trace.SpanKindServer),
@@ -363,7 +377,9 @@ func wrapServerStream(ctx context.Context, ss grpc.ServerStream) *serverStream {
 
 // StreamServerInterceptor returns a grpc.StreamServerInterceptor suitable
 // for use in a grpc.NewServer call.
-func StreamServerInterceptor(tracer trace.Tracer, opts ...Option) grpc.StreamServerInterceptor {
+func StreamServerInterceptor(opts ...Option) grpc.StreamServerInterceptor {
+	cfg := newConfig(opts)
+
 	return func(
 		srv interface{},
 		ss grpc.ServerStream,
@@ -375,13 +391,15 @@ func StreamServerInterceptor(tracer trace.Tracer, opts ...Option) grpc.StreamSer
 		requestMetadata, _ := metadata.FromIncomingContext(ctx)
 		metadataCopy := requestMetadata.Copy()
 
-		entries, spanCtx := Extract(ctx, &metadataCopy, opts...)
+		entries, spanCtx := grpcpropagation.Extract(ctx, &metadataCopy,
+			grpcpropagation.WithPropagators(cfg.propagators),
+		)
 		ctx = correlation.ContextWithMap(ctx, correlation.NewMap(correlation.MapUpdate{
 			MultiKV: entries,
 		}))
 
 		name, attr := spanInfo(info.FullMethod, peerFromCtx(ctx))
-		ctx, span := tracer.Start(
+		ctx, span := cfg.tracer.Start(
 			trace.ContextWithRemoteSpanContext(ctx, spanCtx),
 			name,
 			trace.WithSpanKind(trace.SpanKindServer),
