@@ -307,7 +307,7 @@ func TestRender(t *testing.T) {
 	}
 
 	spans := tracer.EndedSpans()
-	require.Len(t, spans, 6)
+	require.Len(t, spans, 6) // 3 HTTP requests, each creating 2 spans
 	for _, span := range spans {
 		switch span.Name {
 		case "/template/render":
@@ -490,8 +490,10 @@ var testCases = []*testCase{
 		path:   "/",
 		options: []Option{
 			WithFilter(Filter(func(req *http.Request) bool {
-				return req.URL.Path != "/" &&
-					req.URL.Path != "/api/v1/"
+				return req.URL.Path != "/"
+			})),
+			WithFilter(Filter(func(req *http.Request) bool {
+				return req.URL.Path != "/api/v1/"
 			})),
 		},
 		hasSpan:            false,
