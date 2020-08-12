@@ -20,6 +20,7 @@ import (
 	"time"
 
 	"github.com/google/go-cmp/cmp"
+	"github.com/stretchr/testify/require"
 
 	"go.opentelemetry.io/otel/api/global"
 	"go.opentelemetry.io/otel/sdk/export/metric"
@@ -96,4 +97,27 @@ func TestInstallNewPipeline(t *testing.T) {
 	if global.MeterProvider() != pusher.Provider() {
 		t.Fatalf("Failed to register push Controller provider globally")
 	}
+}
+
+// TestAddHeaders tests whether the correct headers are correctly added to a http request.
+func TestAddHeaders(t *testing.T) {
+	testConfig := Config{
+		Headers: map[string]string{
+			"TestHeaderOne": "TestFieldTwo",
+			"TestHeaderTwo": "TestFieldTwo",
+		},
+	}
+	exporter := Exporter{testConfig}
+
+	// Create http request to add headers to.
+	req, err := http.NewRequest("POST", "test.com", nil)
+	require.Nil(t, err)
+	exporter.addHeaders(req)
+
+	// Check that all the headers are there.
+	for name, field := range testConfig.Headers {
+		require.Equal(t, req.Header.Get(name), field)
+	}
+	require.Equal(t, req.Header.Get("Content-Encoding"), "snappy")
+	require.Equal(t, req.Header.Get("Content-Type"), "application/x-protobuf")
 }
