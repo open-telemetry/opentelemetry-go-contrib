@@ -20,6 +20,7 @@ import (
 	"time"
 
 	"github.com/google/go-cmp/cmp"
+	"github.com/prometheus/prometheus/prompb"
 	"github.com/stretchr/testify/require"
 
 	"go.opentelemetry.io/otel/api/global"
@@ -120,4 +121,17 @@ func TestAddHeaders(t *testing.T) {
 	}
 	require.Equal(t, req.Header.Get("Content-Encoding"), "snappy")
 	require.Equal(t, req.Header.Get("Content-Type"), "application/x-protobuf")
+}
+
+// TestBuildMessage tests whether BuildMessage successfully returns a Snappy-compressed
+// protobuf message.
+func TestBuildMessage(t *testing.T) {
+	exporter := Exporter{validConfig}
+	timeseries := []*prompb.TimeSeries{}
+
+	// buildMessage returns the error that proto.Marshal() returns. Since the proto
+	// package has its own tests, buildMessage should work as expected as long as there
+	// are no errors.
+	_, err := exporter.buildMessage(timeseries)
+	require.Nil(t, err)
 }
