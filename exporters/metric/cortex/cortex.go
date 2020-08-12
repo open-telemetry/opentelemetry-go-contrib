@@ -23,6 +23,7 @@ import (
 	"github.com/gogo/protobuf/proto"
 	"github.com/golang/snappy"
 	"github.com/prometheus/prometheus/prompb"
+
 	"go.opentelemetry.io/otel/api/global"
 	apimetric "go.opentelemetry.io/otel/api/metric"
 	"go.opentelemetry.io/otel/sdk/export/metric"
