@@ -17,6 +17,7 @@ package cortex
 import (
 	"bytes"
 	"context"
+	"fmt"
 	"net/http"
 
 	"github.com/gogo/protobuf/proto"
@@ -132,4 +133,26 @@ func (e *Exporter) buildRequest(message []byte) (*http.Request, error) {
 	e.addHeaders(req)
 
 	return req, nil
+}
+
+// sendRequest sends an http request using the Exporter's http Client.
+func (e *Exporter) sendRequest(req *http.Request) error {
+	// Set a client if the user didn't provide one.
+	if e.config.Client == nil {
+		e.config.Client = http.DefaultClient
+		e.config.Client.Timeout = e.config.RemoteTimeout
+	}
+
+	// Attempt to send request.
+	res, err := e.config.Client.Do(req)
+	if err != nil {
+		return err
+	}
+	defer res.Body.Close()
+
+	// The response should have a status code of 200.
+	if res.StatusCode != http.StatusOK {
+		return fmt.Errorf("%v", res.Status)
+	}
+	return nil
 }

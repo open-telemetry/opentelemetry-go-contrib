@@ -15,11 +15,16 @@
 package cortex
 
 import (
+	"fmt"
 	"io/ioutil"
 	"net/http"
+	"net/http/httptest"
+	"strconv"
 	"testing"
 	"time"
 
+	"github.com/gogo/protobuf/proto"
+	"github.com/golang/snappy"
 	"github.com/google/go-cmp/cmp"
 	"github.com/prometheus/prometheus/prompb"
 	"github.com/stretchr/testify/require"
@@ -164,4 +169,107 @@ func TestBuildRequest(t *testing.T) {
 	require.Equal(t, req.Header.Get("Content-Encoding"), "snappy")
 	require.Equal(t, req.Header.Get("Content-Type"), "application/x-protobuf")
 	require.Equal(t, req.Header.Get("X-Prometheus-Remote-Write-Version"), "0.1.0")
+}
+
+// verifyRequest checks whether an http request contains a correctly formatted
+// remote_write body and the required headers.
+func verifyRequest(req *http.Request) error {
+	// Check for required headers.
+	if req.Header.Get("X-Prometheus-Remote-Write-Version") != "0.1.0" ||
+		req.Header.Get("Content-Encoding") != "snappy" ||
+		req.Header.Get("Content-Type") != "application/x-protobuf" {
+		return fmt.Errorf("Request does not contain the three required headers")
+	}
+
+	// Check body format and headers.
+	compressed, err := ioutil.ReadAll(req.Body)
+	if err != nil {
+		return fmt.Errorf("Failed to read request body")
+	}
+	uncompressed, err := snappy.Decode(nil, compressed)
+	if err != nil {
+		return fmt.Errorf("Failed to uncompress request body")
+	}
+	wr := &prompb.WriteRequest{}
+	err = proto.Unmarshal(uncompressed, wr)
+	if err != nil {
+		return fmt.Errorf("Failed to unmarshal message into WriteRequest struct")
+	}
+
+	return nil
+}
+
+// TestSendRequest checks if the Exporter can successfully send a http request with a
+// correctly formatted body and the correct headers. A test server returns different
+// status codes to test if the Exporter responds to a send failure correctly.
+func TestSendRequest(t *testing.T) {
+	tests := []struct {
+		testName         string
+		config           *Config
+		expectedError    error
+		isStatusNotFound bool
+	}{
+		{
+			testName:         "Successful Export",
+			config:           &validConfig,
+			expectedError:    nil,
+			isStatusNotFound: false,
+		},
+		{
+			testName:         "Export Failure",
+			config:           &Config{},
+			expectedError:    fmt.Errorf("%v", "404 Not Found"),
+			isStatusNotFound: true,
+		},
+	}
+
+	// Set up a test server to receive the request. The server responds with a 400 Bad
+	// Request status code if any headers are missing or if the body is not of the correct
+	// format. Additionally, the server can respond with status code 404 Not Found to
+	// simulate send failures.
+	handler := func(rw http.ResponseWriter, req *http.Request) {
+		err := verifyRequest(req)
+		if err != nil {
+			rw.WriteHeader(http.StatusBadRequest)
+			return
+		}
+
+		// Return a status code 400 if header isStatusNotFound is "true", 200 otherwise.
+		if req.Header.Get("isStatusNotFound") == "true" {
+			rw.WriteHeader(http.StatusNotFound)
+		} else {
+			rw.WriteHeader(http.StatusOK)
+		}
+	}
+	server := httptest.NewServer(http.HandlerFunc(handler))
+	defer server.Close()
+
+	for _, test := range tests {
+		t.Run(test.testName, func(t *testing.T) {
+			// Set up an Exporter that uses the test server's endpoint and attaches the
+			// test's isStatusNotFound header.
+			test.config.Endpoint = server.URL
+			test.config.Headers = map[string]string{
+				"isStatusNotFound": strconv.FormatBool(test.isStatusNotFound),
+			}
+			exporter := Exporter{*test.config}
+
+			// Create an empty Snappy-compressed message.
+			msg, err := exporter.buildMessage([]*prompb.TimeSeries{})
+			require.Nil(t, err)
+
+			// Create a http POST request with the compressed message.
+			req, err := exporter.buildRequest(msg)
+			require.Nil(t, err)
+
+			// Send the request to the test server and verify the error.
+			err = exporter.sendRequest(req)
+			if err != nil {
+				errorString := err.Error()
+				require.Equal(t, errorString, test.expectedError.Error())
+			} else {
+				require.Nil(t, test.expectedError)
+			}
+		})
+	}
 }
