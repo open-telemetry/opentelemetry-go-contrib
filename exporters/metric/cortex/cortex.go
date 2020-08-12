@@ -15,7 +15,14 @@
 package cortex
 
 import (
+	"bytes"
 	"context"
+	"fmt"
+	"net/http"
+
+	"github.com/gogo/protobuf/proto"
+	"github.com/golang/snappy"
+	"github.com/prometheus/prometheus/prompb"
 
 	"go.opentelemetry.io/otel/api/global"
 	apimetric "go.opentelemetry.io/otel/api/metric"
@@ -77,4 +84,76 @@ func InstallNewPipeline(config Config, options ...push.Option) (*push.Controller
 	}
 	global.SetMeterProvider(pusher.Provider())
 	return pusher, nil
+}
+
+// addHeaders adds required headers as well as all headers in Header map to a http
+// request.
+func (e *Exporter) addHeaders(req *http.Request) {
+	// Cortex expects Snappy-compressed protobuf messages. These three headers are
+	// hard-coded as they should be on every request.
+	req.Header.Add("X-Prometheus-Remote-Write-Version", "0.1.0")
+	req.Header.Add("Content-Encoding", "snappy")
+	req.Header.Set("Content-Type", "application/x-protobuf")
+
+	// Add all user-supplied headers to the request.
+	for name, field := range e.config.Headers {
+		req.Header.Add(name, field)
+	}
+}
+
+// buildMessage creates a Snappy-compressed protobuf message from a slice of TimeSeries.
+func (e *Exporter) buildMessage(timeseries []*prompb.TimeSeries) ([]byte, error) {
+	// Wrap the TimeSeries as a WriteRequest since Cortex requires it.
+	writeRequest := &prompb.WriteRequest{
+		Timeseries: timeseries,
+	}
+
+	// Convert the struct to a slice of bytes and then compress it.
+	message, err := proto.Marshal(writeRequest)
+	if err != nil {
+		return nil, err
+	}
+	compressed := snappy.Encode(nil, message)
+
+	return compressed, nil
+}
+
+// buildRequest creates an http POST request with a Snappy-compressed protocol buffer
+// message as the body and with all the headers attached.
+func (e *Exporter) buildRequest(message []byte) (*http.Request, error) {
+	req, err := http.NewRequest(
+		http.MethodPost,
+		e.config.Endpoint,
+		bytes.NewBuffer(message),
+	)
+	if err != nil {
+		return nil, err
+	}
+
+	// Add the required headers and the headers from Config.Headers.
+	e.addHeaders(req)
+
+	return req, nil
+}
+
+// sendRequest sends an http request using the Exporter's http Client.
+func (e *Exporter) sendRequest(req *http.Request) error {
+	// Set a client if the user didn't provide one.
+	if e.config.Client == nil {
+		e.config.Client = http.DefaultClient
+		e.config.Client.Timeout = e.config.RemoteTimeout
+	}
+
+	// Attempt to send request.
+	res, err := e.config.Client.Do(req)
+	if err != nil {
+		return err
+	}
+	defer res.Body.Close()
+
+	// The response should have a status code of 200.
+	if res.StatusCode != http.StatusOK {
+		return fmt.Errorf("%v", res.Status)
+	}
+	return nil
 }
