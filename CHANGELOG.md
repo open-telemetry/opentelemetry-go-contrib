@@ -26,6 +26,10 @@ This release upgrades its [go.opentelemetry.io/otel](https://github.com/open-tel
 - Instrumentation for the Cassandra client github.com/gocql/gocql. (#137)
 - A detector that generate resources from GKE clusters. (#154)
 
+### Changed
+
+- Remove tracer as a parameter of gRPC instrumentation. (#209)
+
 ### Fixed
 
 - Bump github.com/aws/aws-sdk-go from 1.33.8 to 1.33.15 in /detectors/aws. (#155, #157, #159, #162)
