@@ -27,11 +27,15 @@ import (
 	"github.com/golang/snappy"
 	"github.com/google/go-cmp/cmp"
 	"github.com/prometheus/prometheus/prompb"
+	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 
 	"go.opentelemetry.io/otel/api/global"
+	"go.opentelemetry.io/otel/api/kv"
 	"go.opentelemetry.io/otel/sdk/export/metric"
+	export "go.opentelemetry.io/otel/sdk/export/metric"
 	"go.opentelemetry.io/otel/sdk/export/metric/aggregation"
+	"go.opentelemetry.io/otel/sdk/resource"
 )
 
 // ValidConfig is a Config struct that should cause no errors.
@@ -61,6 +65,9 @@ var validConfig = Config{
 	Client: http.DefaultClient,
 }
 
+var testResource = resource.New(kv.String("R", "V"))
+var mockTime int64 = time.Time{}.Unix()
+
 func TestExportKindFor(t *testing.T) {
 	exporter := Exporter{}
 	got := exporter.ExportKindFor(nil, aggregation.Kind(0))
@@ -68,6 +75,171 @@ func TestExportKindFor(t *testing.T) {
 
 	if got != want {
 		t.Errorf("ExportKindFor() =  %q, want %q", got, want)
+	}
+}
+
+func TestConvertToTimeSeries(t *testing.T) {
+	// Setup
+	exporter := Exporter{}
+
+	// Test conversions based on aggregation type
+	tests := []struct {
+		name       string
+		input      export.CheckpointSet
+		want       []*prompb.TimeSeries
+		wantLength int
+	}{
+		{
+			name:  "validCheckpointSet",
+			input: getValidCheckpointSet(t),
+			want: []*prompb.TimeSeries{
+				{
+					Labels: []*prompb.Label{
+						{
+							Name:  "R",
+							Value: "V",
+						},
+						{
+							Name:  "__name__",
+							Value: "metric_name",
+						},
+					},
+					Samples: []prompb.Sample{{
+						Value:     321,
+						Timestamp: mockTime,
+					}},
+				},
+			},
+			wantLength: 1,
+		},
+		{
+			name:  "convertFromSum",
+			input: getSumCheckpoint(t, 321),
+			want: []*prompb.TimeSeries{
+				{
+					Labels: []*prompb.Label{
+						{
+							Name:  "R",
+							Value: "V",
+						},
+						{
+							Name:  "__name__",
+							Value: "metric_name",
+						},
+					},
+					Samples: []prompb.Sample{{
+						Value:     321,
+						Timestamp: mockTime,
+					}},
+				},
+			},
+			wantLength: 1,
+		},
+		{
+			name:  "convertFromLastValue",
+			input: getLastValueCheckpoint(t, 123),
+			want: []*prompb.TimeSeries{
+				{
+					Labels: []*prompb.Label{
+						{
+							Name:  "R",
+							Value: "V",
+						},
+						{
+							Name:  "__name__",
+							Value: "metric_name",
+						},
+					},
+					Samples: []prompb.Sample{{
+						Value:     123,
+						Timestamp: mockTime,
+					}},
+				},
+			},
+			wantLength: 1,
+		},
+		{
+			name:  "convertFromMinMaxSumCount",
+			input: getMMSCCheckpoint(t, 123.456, 876.543),
+			want: []*prompb.TimeSeries{
+				{
+					Labels: []*prompb.Label{
+						{
+							Name:  "R",
+							Value: "V",
+						},
+						{
+							Name:  "__name__",
+							Value: "metric_name",
+						},
+					},
+					Samples: []prompb.Sample{{
+						Value:     999.999,
+						Timestamp: mockTime,
+					}},
+				},
+				{
+					Labels: []*prompb.Label{
+						{
+							Name:  "R",
+							Value: "V",
+						},
+						{
+							Name:  "__name__",
+							Value: "metric_name_min",
+						},
+					},
+					Samples: []prompb.Sample{{
+						Value:     123.456,
+						Timestamp: mockTime,
+					}},
+				},
+				{
+					Labels: []*prompb.Label{
+						{
+							Name:  "__name__",
+							Value: "metric_name_max",
+						},
+						{
+							Name:  "R",
+							Value: "V",
+						},
+					},
+					Samples: []prompb.Sample{{
+						Value:     876.543,
+						Timestamp: mockTime,
+					}},
+				},
+				{
+					Labels: []*prompb.Label{
+						{
+							Name:  "R",
+							Value: "V",
+						},
+						{
+							Name:  "__name__",
+							Value: "metric_name_count",
+						},
+					},
+					Samples: []prompb.Sample{{
+						Value:     2,
+						Timestamp: mockTime,
+					}},
+				},
+			},
+			wantLength: 4,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			got, err := exporter.ConvertToTimeSeries(tt.input)
+			want := tt.want
+
+			assert.Nil(t, err, "ConvertToTimeSeries error")
+			assert.Len(t, got, tt.wantLength, "Incorrect number of timeseries")
+			cmp.Equal(got, want)
+		})
 	}
 }
 
