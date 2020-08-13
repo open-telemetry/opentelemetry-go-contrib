@@ -24,11 +24,11 @@ import (
 // Config provides configuration for the beego OpenTelemetry
 // middleware. Configuration is modified using the provided Options.
 type Config struct {
-	tracer      trace.Tracer
-	meter       metric.Meter
-	propagators propagation.Propagators
-	filters     []Filter
-	formatter   SpanNameFormatter
+	traceProvider trace.Provider
+	meterProvider metric.Provider
+	propagators   propagation.Propagators
+	filters       []Filter
+	formatter     SpanNameFormatter
 }
 
 // Option applies a configuration to the given Config.
@@ -47,21 +47,23 @@ func (o OptionFunc) Apply(c *Config) {
 
 // ------------------------------------------ Options
 
-// WithTracer set the tracer to be used by the middleware for
-// creating spans.
-// Defaults to global.Tracer("go.opentelemetry.io/contrib/instrumentation/github.com/astaxie/beego").
-func WithTracer(tracer trace.Tracer) OptionFunc {
+// WithTraceProvider sets the trace provider to be used by the middleware
+// to create a tracer for the spans.
+// Defaults to calling global.TraceProvider().
+// Tracer name is set to "go.opentelemetry.io/contrib/instrumentation/github.com/astaxie/beego".
+func WithTraceProvider(provider trace.Provider) OptionFunc {
 	return OptionFunc(func(c *Config) {
-		c.tracer = tracer
+		c.traceProvider = provider
 	})
 }
 
-// WithMeter sets the meter to be used to create the instruments
-// used in the middleware.
-// Defaults to global.Meter("go.opentelemetry.io/contrib/instrumentation/github.com/astaxie/beego").
-func WithMeter(meter metric.Meter) OptionFunc {
+// WithMeterProvider sets the meter provider to be used to create a meter
+// by the middleware.
+// Defaults to calling global.MeterProvider().
+// Meter name is set to "go.opentelemetry.io/contrib/instrumentation/github.com/astaxie/beego".
+func WithMeterProvider(provider metric.Provider) OptionFunc {
 	return OptionFunc(func(c *Config) {
-		c.meter = meter
+		c.meterProvider = provider
 	})
 }
 
@@ -93,11 +95,11 @@ func WithSpanNameFormatter(f SpanNameFormatter) OptionFunc {
 
 func configure(options ...Option) *Config {
 	config := &Config{
-		tracer:      global.Tracer(packageName),
-		meter:       global.Meter(packageName),
-		propagators: global.Propagators(),
-		filters:     []Filter{},
-		formatter:   defaultSpanNameFormatter,
+		traceProvider: global.TraceProvider(),
+		meterProvider: global.MeterProvider(),
+		propagators:   global.Propagators(),
+		filters:       []Filter{},
+		formatter:     defaultSpanNameFormatter,
 	}
 	for _, option := range options {
 		option.Apply(config)

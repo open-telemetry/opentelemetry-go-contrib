@@ -41,6 +41,22 @@ import (
 	mocktrace "go.opentelemetry.io/contrib/internal/trace"
 )
 
+// ------------------------------------------ Mock Trace Provider
+
+type MockTraceProvider struct {
+	tracer *mocktrace.Tracer
+}
+
+func (m *MockTraceProvider) Tracer(name string, options ...trace.TracerOption) trace.Tracer {
+	return m.tracer
+}
+
+func NewTraceProvider() *MockTraceProvider {
+	return &MockTraceProvider{
+		tracer: mocktrace.NewTracer(packageName),
+	}
+}
+
 // ------------------------------------------ Test Controller
 
 const defaultReply = "hello world"
@@ -183,14 +199,14 @@ func TestWithFilters(t *testing.T) {
 	}
 }
 
-func TestSpanFromContextDefaultTracer(t *testing.T) {
+func TestSpanFromContextDefaultProvider(t *testing.T) {
 	defer replaceBeego()
 	_, provider := mockmeter.NewProvider()
 	global.SetMeterProvider(provider)
-	global.SetTraceProvider(&mocktrace.Provider{})
+	global.SetTraceProvider(NewTraceProvider())
 	router := beego.NewControllerRegister()
 	router.Get("/hello-with-span", func(ctx *beegoCtx.Context) {
-		assertSpanFromContext(ctx.Request.Context(), t, packageName)
+		assertSpanFromContext(ctx.Request.Context(), t)
 		ctx.ResponseWriter.WriteHeader(http.StatusAccepted)
 	})
 
@@ -205,13 +221,12 @@ func TestSpanFromContextDefaultTracer(t *testing.T) {
 	require.Equal(t, http.StatusAccepted, rr.Result().StatusCode)
 }
 
-func TestSpanFromContextCustomTracer(t *testing.T) {
+func TestSpanFromContextCustomProvider(t *testing.T) {
 	defer replaceBeego()
-	_, meter := mockmeter.NewMeter()
-	tracer := mocktrace.NewTracer("beego-test")
+	_, provider := mockmeter.NewProvider()
 	router := beego.NewControllerRegister()
 	router.Get("/hello-with-span", func(ctx *beegoCtx.Context) {
-		assertSpanFromContext(ctx.Request.Context(), t, "beego-test")
+		assertSpanFromContext(ctx.Request.Context(), t)
 		ctx.ResponseWriter.WriteHeader(http.StatusAccepted)
 	})
 
@@ -221,8 +236,8 @@ func TestSpanFromContextCustomTracer(t *testing.T) {
 
 	mw := NewOTelBeegoMiddleWare(
 		middleWareName,
-		WithTracer(tracer),
-		WithMeter(meter),
+		WithTraceProvider(NewTraceProvider()),
+		WithMeterProvider(provider),
 	)
 
 	mw(router).ServeHTTP(rr, req)
@@ -232,8 +247,8 @@ func TestSpanFromContextCustomTracer(t *testing.T) {
 
 func TestStatic(t *testing.T) {
 	defer replaceBeego()
-	tracer := mocktrace.NewTracer("beego-test")
-	meterimpl, meter := mockmeter.NewMeter()
+	traceProvider := NewTraceProvider()
+	meterimpl, meterProvider := mockmeter.NewProvider()
 	file, err := ioutil.TempFile("", "static-*.html")
 	require.NoError(t, err)
 	defer os.Remove(file.Name())
@@ -244,8 +259,8 @@ func TestStatic(t *testing.T) {
 	defer beego.SetStaticPath("/", "")
 
 	mw := NewOTelBeegoMiddleWare(middleWareName,
-		WithTracer(tracer),
-		WithMeter(meter),
+		WithTraceProvider(traceProvider),
+		WithMeterProvider(meterProvider),
 	)
 
 	rr := httptest.NewRecorder()
@@ -261,7 +276,7 @@ func TestStatic(t *testing.T) {
 	body, err := ioutil.ReadAll(rr.Result().Body)
 	require.NoError(t, err)
 	require.Equal(t, "<h1>Hello, world!</h1>", string(body))
-	spans := tracer.EndedSpans()
+	spans := traceProvider.tracer.EndedSpans()
 	require.Len(t, spans, 1)
 	assertSpan(t, spans[0], tc)
 	assertMetrics(t, meterimpl.MeasurementBatches, tc)
@@ -270,7 +285,6 @@ func TestStatic(t *testing.T) {
 func TestRender(t *testing.T) {
 	// Disable autorender to enable traced render
 	beego.BConfig.WebConfig.AutoRender = false
-	tracer := mocktrace.NewTracer("beego-test")
 	addTestRoutes(t)
 	defer replaceBeego()
 	htmlStr := "<!DOCTYPE html><html lang=\"en\">" +
@@ -292,9 +306,11 @@ func TestRender(t *testing.T) {
 	beego.SetViewsPath(dir)
 	_, tplName = filepath.Split(file.Name())
 
+	traceProvider := NewTraceProvider()
+
 	mw := NewOTelBeegoMiddleWare(
 		middleWareName,
-		WithTracer(tracer),
+		WithTraceProvider(traceProvider),
 	)
 	for _, str := range []string{"/render", "/renderstring", "/renderbytes"} {
 		rr := httptest.NewRecorder()
@@ -306,7 +322,7 @@ func TestRender(t *testing.T) {
 		require.NoError(t, err)
 	}
 
-	spans := tracer.EndedSpans()
+	spans := traceProvider.tracer.EndedSpans()
 	require.Len(t, spans, 6) // 3 HTTP requests, each creating 2 spans
 	for _, span := range spans {
 		switch span.Name {
@@ -329,8 +345,8 @@ func TestRender(t *testing.T) {
 // ------------------------------------------ Utilities
 
 func runTest(t *testing.T, tc *testCase, url string) {
-	tracer := mocktrace.NewTracer("beego-test")
-	meterimpl, meter := mockmeter.NewMeter()
+	traceProvider := NewTraceProvider()
+	meterimpl, meterProvider := mockmeter.NewProvider()
 	addTestRoutes(t)
 	defer replaceBeego()
 
@@ -348,8 +364,8 @@ func runTest(t *testing.T, tc *testCase, url string) {
 		middleWareName,
 		append(
 			tc.options,
-			WithTracer(tracer),
-			WithMeter(meter),
+			WithTraceProvider(traceProvider),
+			WithMeterProvider(meterProvider),
 		)...,
 	)
 
@@ -362,7 +378,7 @@ func runTest(t *testing.T, tc *testCase, url string) {
 	require.NoError(t, json.Unmarshal(body, &message))
 	require.Equal(t, tc.expectedResponse, message)
 
-	spans := tracer.EndedSpans()
+	spans := traceProvider.tracer.EndedSpans()
 	if tc.hasSpan {
 		require.Len(t, spans, 1)
 		assertSpan(t, spans[0], tc)
@@ -395,14 +411,14 @@ func assertMetrics(t *testing.T, batches []mockmeter.Batch, tc *testCase) {
 	}
 }
 
-func assertSpanFromContext(ctx context.Context, t *testing.T, tracerName string) {
+func assertSpanFromContext(ctx context.Context, t *testing.T) {
 	span := trace.SpanFromContext(ctx)
 	_, ok := span.(*mocktrace.Span)
 	require.True(t, ok)
 	spanTracer := span.Tracer()
 	mockTracer, ok := spanTracer.(*mocktrace.Tracer)
 	require.True(t, ok)
-	require.Equal(t, tracerName, mockTracer.Name)
+	require.Equal(t, packageName, mockTracer.Name)
 }
 
 // ------------------------------------------ Test Cases

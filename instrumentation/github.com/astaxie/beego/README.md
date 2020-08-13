@@ -8,30 +8,30 @@ To enable tracing and metrics in your beego application:
 package main
 
 import (
-        "github.com/astaxie/beego"
+	"github.com/astaxie/beego"
 
-        otelBeego "go.opentelemetry.io/contrib/instrumentation/github.com/astaxie/beego"
+	otelBeego "go.opentelemetry.io/contrib/instrumentation/github.com/astaxie/beego"
 )
 
 func main() {
-        // Init the tracer and metric export pipelines
+	// Init the tracer and metric export pipelines
 
-        // Create your routes
-        
-        // Create the MiddleWare
-        mware := otelBeego.NewOTelBeegoMiddleWare("example-server")
+	// Create your routes
 
-        // Run the server with the MiddleWare
-        beego.RunWithMiddleWares("localhost:8080", mware)
+	// Create the MiddleWare
+	mware := otelBeego.NewOTelBeegoMiddleWare("example-server")
+
+	// Run the server with the MiddleWare
+	beego.RunWithMiddleWares("localhost:8080", mware)
 }
 ```
 
-You can customize instrumentation by passing any of the following options to `NewOtelBeegoMiddleWare`:
+You can customize instrumentation by passing any of the following options to `NewOTelBeegoMiddleWare`:
 
 | Function | Description |
 | -------- | ----------- |
-| `WithTracer(trace.Tracer)` | The tracer to be used to create spans for the beego server. If not specified, `global.Tracer("go.opentelemetry.io/contrib/instrumentation/github.com/astaxie/beego")` will be used. |
-| `WithMeter(metric.Meter)` | The meter to be used to create the instruments. If not specified, `global.Meter("go.opentelemery.io/contrib/instrumentation/github.com/astaxie/beego")` will be used. |
+| `WithTraceProvider(trace.Provider)` | The trace provider used to get a tracer to create spans for the middleware. If not specified, `global.TraceProvider()` will be used. |
+| `WithMeterProvider(metric.Provider)` | The meter provider used to get a meter to create instruments for the middleware. If not specified, `global.MeterProvider()` will be used. |
 | `WithPropagators(propagation.Propagators)` | The propagators to be used. If not specified, `global.Propagators()` will be used. |
 | `WithFilter(Filter)` | Adds an additional filter function to the configuration. Defaults to no filters. |
 | `WithSpanNameFormatter(SpanNameFormatter)` | The formatter used to format span names. If not specified, the route will be used instead. |
@@ -42,36 +42,36 @@ You can also trace the `Render`, `RenderString`, and `RenderBytes` functions. Yo
 package main
 
 import (
-        "github.com/astaxie/beego"
+	"github.com/astaxie/beego"
 
-        otelBeego "go.opentelemetry.io/contrib/instrumentation/github.com/astaxie/beego"
+	otelBeego "go.opentelemetry.io/contrib/instrumentation/github.com/astaxie/beego"
 )
 
 type ExampleController struct {
-        beego.Controller
+	beego.Controller
 }
 
 func (c *ExampleController) Get() {
-        c.TplName = "index.ptl"
+	c.TplName = "index.ptl"
 
-        // explicit call to traced Render function
-        otelBeego.Render(&c.Controller)
+	// explicit call to traced Render function
+	otelBeego.Render(&c.Controller)
 }
 
 func main() {
-        // Init the tracer and metric export pipelines
+	// Init the tracer and metric export pipelines
 
-        // Disable autorender
-        beego.BConfig.WebConfig.AutoRender = false
+	// Disable autorender
+	beego.BConfig.WebConfig.AutoRender = false
 
-        // Create your routes
-        beego.Router("/", &ExampleController{})
+	// Create your routes
+	beego.Router("/", &ExampleController{})
 
-        // Create the MiddleWare
-        mware := otelBeego.NewOTelBeegoMiddleWare("example-server")
+	// Create the MiddleWare
+	mware := otelBeego.NewOTelBeegoMiddleWare("example-server")
 
-        // Run the server with the MiddleWare
-        beego.RunWithMiddleWares("localhost:8080", mware)
+	// Run the server with the MiddleWare
+	beego.RunWithMiddleWares("localhost:8080", mware)
 }
 ```
 

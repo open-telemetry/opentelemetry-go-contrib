@@ -43,8 +43,8 @@ func NewOTelBeegoMiddleWare(service string, options ...Option) beego.MiddleWare 
 	cfg := configure(options...)
 
 	httpOptions := []otelhttp.Option{
-		otelhttp.WithTracer(cfg.tracer),
-		otelhttp.WithMeter(cfg.meter),
+		otelhttp.WithTracer(cfg.traceProvider.Tracer(packageName)),
+		otelhttp.WithMeter(cfg.meterProvider.Meter(packageName)),
 		otelhttp.WithPropagators(cfg.propagators),
 	}
 
