@@ -312,7 +312,7 @@ func createLabelSet(record metric.Record, extras ...string) []*prompb.Label {
 			log.Printf("Label %s is overwritten. Check if Prometheus reserved labels are used.\n", extras[i])
 		}
 		labelMap[extras[i]] = prompb.Label{
-			Name:  sanitize(extras[i]),
+			Name:  extras[i],
 			Value: extras[i+1],
 		}
 	}
