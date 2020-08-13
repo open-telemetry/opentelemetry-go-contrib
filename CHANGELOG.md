@@ -8,10 +8,26 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 
 ## [Unreleased]
 
+## [0.10.1] - 2020-08-13
+
 ### Added
 
 - The `go.opentelemetry.io/contrib/instrumentation/google.golang.org/grpc` module has been added to replace the instrumentation that had previoiusly existed in the `go.opentelemetry.io/otel/instrumentation/grpctrace` package. (#189)
 - Instrumentation for the stdlib `net/http` and `net/http/httptrace` packages. (#190)
+- Initial Cortex exporter. (#202, #205, #210, #211)
+
+### Fixed
+
+- Bump google.golang.org/grpc from 1.30.0 to 1.31.0. (#166)
+- Bump go.mongodb.org/mongo-driver from 1.3.5 to 1.4.0 in /instrumentation/go.mongodb.org/mongo-driver. (#170)
+- Bump google.golang.org/grpc in /instrumentation/github.com/gin-gonic/gin. (#173)
+- Bump google.golang.org/grpc in /instrumentation/github.com/labstack/echo. (#176)
+- Bump google.golang.org/grpc from 1.30.0 to 1.31.0 in /instrumentation/github.com/Shopify/sarama. (#179)
+- Bump cloud.google.com/go from 0.61.0 to 0.63.0 in /detectors/gcp. (#181, #199)
+- Bump github.com/aws/aws-sdk-go from 1.33.15 to 1.34.1 in /detectors/aws. (#184, #192, #193, #198, #201, #203)
+- Bump github.com/golangci/golangci-lint from 1.29.0 to 1.30.0 in /tools. (#186)
+- Setup CI to run tests that require external resources (Cassandra and MongoDB). (#191)
+- Bump github.com/Shopify/sarama from 1.26.4 to 1.27.0 in /instrumentation/github.com/Shopify/sarama. (#206)
 
 ## [0.10.0] - 2020-07-31
 
@@ -111,7 +127,8 @@ First official tagged release of `contrib` repository.
 - Prefix support for dogstatsd (#34)
 - Update Go Runtime package to use batch observer (#44)
 
-[Unreleased]: https://github.com/open-telemetry/opentelemetry-go-contrib/compare/v0.10.0...HEAD
+[Unreleased]: https://github.com/open-telemetry/opentelemetry-go-contrib/compare/v0.10.1...HEAD
+[0.10.1]: https://github.com/open-telemetry/opentelemetry-go-contrib/releases/tag/v0.10.1
 [0.10.0]: https://github.com/open-telemetry/opentelemetry-go-contrib/releases/tag/v0.10.0
 [0.9.0]: https://github.com/open-telemetry/opentelemetry-go-contrib/releases/tag/v0.9.0
 [0.8.0]: https://github.com/open-telemetry/opentelemetry-go-contrib/releases/tag/v0.8.0
