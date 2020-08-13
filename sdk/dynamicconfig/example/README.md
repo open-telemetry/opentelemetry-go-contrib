@@ -5,7 +5,7 @@ runtime, via a remote configuration service. It is a prototype implementation of
 specification](https://github.com/open-telemetry/opentelemetry-specification/blob/master/experimental/metrics/config-service.md). The prototype is currently available
 only for Go.
 
-**Note: this system is experimental, and liable to rapid breaking change.
+**NOTE: this system is experimental, and liable to rapid breaking changes.
 Use at your own risk.**
 
 ## Push Controller
@@ -39,7 +39,7 @@ A simple example application is provided in [main.go](main.go).
 ## Collector Extension
 A service backend for this configuration system has been implemented as an
 extension on the [contrib
-collector](https://github.com/vmingchen/opentelemetry-collector-contrib).
+collector](https://github.com/open-telemetry/opentelemetry-collector-contrib).
 
 To use it, include the following block under `extensions` in the collector's
 startup configurations:
