@@ -14,7 +14,7 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 
 - The `go.opentelemetry.io/contrib/instrumentation/google.golang.org/grpc` module has been added to replace the instrumentation that had previoiusly existed in the `go.opentelemetry.io/otel/instrumentation/grpctrace` package. (#189)
 - Instrumentation for the stdlib `net/http` and `net/http/httptrace` packages. (#190)
-- Initial Cortex exporter. (#202, #205, #210, #211)
+- Initial Cortex exporter. (#202, #205, #210, #211, #215)
 
 ### Fixed
 
