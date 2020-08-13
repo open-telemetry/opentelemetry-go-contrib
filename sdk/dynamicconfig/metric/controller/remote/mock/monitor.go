@@ -12,6 +12,8 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
+// Package mock provides a monitor that simulates receiving upstream metric
+// updates. It is intended for testing use only.
 package mock
 
 import (
@@ -31,7 +33,6 @@ func (m *Monitor) Receive(scheds []*pb.MetricConfigResponse_Schedule) {
 	go func() { m.data <- scheds }()
 }
 
-// TODO: switch to sending data paradigm
 func (m *Monitor) MonitorChanges(mch remote.MonitorChannel) {
 	go func() {
 		for {

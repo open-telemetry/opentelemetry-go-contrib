@@ -12,6 +12,8 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
+// Package basic provides a simple Monitor that uses a ServiceReader to
+// communicate with a configuration service.
 package basic
 
 import (
@@ -24,13 +26,8 @@ import (
 	"go.opentelemetry.io/otel/sdk/resource"
 )
 
-const DefaultCheckFrequency = 30 * time.Minute
+const initialCheckFrequency = 30 * time.Minute
 
-// A Monitor monitors a config service for a config changing, then letting
-// all its subscribers know if the config has changed.
-//
-// All fields except for subscribed and config, which are protected by lock,
-// should be read-only once set.
 type Monitor struct {
 	clock        controllerTime.Clock
 	configHost   string
@@ -39,7 +36,8 @@ type Monitor struct {
 	ticker       controllerTime.Ticker
 }
 
-// Constructor for a Monitor
+// NewMonitor creates a monitor that watches the connection to configHost. It
+// associates all communication with the provided resource.
 func NewMonitor(configHost string, resource *resource.Resource) *Monitor {
 	monitor := &Monitor{
 		clock:      controllerTime.RealClock{},
@@ -50,9 +48,12 @@ func NewMonitor(configHost string, resource *resource.Resource) *Monitor {
 	return monitor
 }
 
+// MonitorChanges monitors the upstream configuraiton service for changes. If
+// a valid change is detected, then the configuration data is passed via
+// the MonitorChannel.
 func (m *Monitor) MonitorChanges(mch remote.MonitorChannel) {
 	go func() {
-		m.ticker = m.clock.Ticker(DefaultCheckFrequency)
+		m.ticker = m.clock.Ticker(initialCheckFrequency)
 		serviceReader, err := NewServiceReader(m.configHost, transform.Resource(m.resource))
 		if err != nil {
 			mch.Err <- err

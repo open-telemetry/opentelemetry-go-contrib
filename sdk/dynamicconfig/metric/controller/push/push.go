@@ -12,6 +12,8 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
+// Package push implements a push controller that supports dynamic, per-metric
+// collection schedules.
 package push
 
 import (
@@ -32,7 +34,7 @@ import (
 	"go.opentelemetry.io/otel/sdk/metric/processor/basic"
 )
 
-const fallbackPeriod = 10 * time.Minute
+const defaultTimeout = 10 * time.Minute
 
 // Controller organizes a periodic push of metric data.
 type Controller struct {
@@ -53,8 +55,8 @@ type Controller struct {
 	matcher     *PeriodMatcher
 }
 
-// New constructs a Controller, an implementation of metric.Provider,
-// using the provided exporter and options to configure an SDK with
+// New constructs a Controller, an implementation of metric.Provider, using the
+// provided exporter, config host address, and options to configure an SDK with
 // periodic collection.
 func New(selector export.AggregatorSelector, exporter export.Exporter, configHost string, opts ...Option) *Controller {
 	c := &Config{}
@@ -62,7 +64,7 @@ func New(selector export.AggregatorSelector, exporter export.Exporter, configHos
 		opt.Apply(c)
 	}
 	if c.Timeout == 0 {
-		c.Timeout = fallbackPeriod
+		c.Timeout = defaultTimeout
 	}
 
 	processor := basic.New(selector, exporter)
@@ -180,7 +182,6 @@ func (c *Controller) update(schedules []*pb.MetricConfigResponse_Schedule) {
 
 		c.lastPeriod = newPeriod
 
-		// TOOD: create tidier, encapsulated dynamic ticker
 		c.lock.Lock()
 		c.ticker = c.clock.Ticker(c.lastPeriod)
 		c.lock.Unlock()

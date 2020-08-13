@@ -25,8 +25,8 @@ import (
 	"google.golang.org/grpc"
 )
 
-// A ServiceReader periodically reads from a remote configuration service to get configs that apply
-// to the SDK.
+// A ServiceReader periodically reads from a remote configuration service to get
+// configs that apply to the SDK.
 type ServiceReader struct {
 	conn   *grpc.ClientConn
 	client pb.MetricConfigClient
@@ -35,6 +35,9 @@ type ServiceReader struct {
 	resource             *resourcepb.Resource
 }
 
+// NewServiceReader forges a connection with the config service at the address
+// in configHost. Additionally it associates the provided resource with all
+// communications to the service.
 func NewServiceReader(configHost string, resource *resourcepb.Resource) (*ServiceReader, error) {
 	conn, err := grpc.Dial(configHost, grpc.WithInsecure())
 	if err != nil {
@@ -48,9 +51,9 @@ func NewServiceReader(configHost string, resource *resourcepb.Resource) (*Servic
 	}, nil
 }
 
-// ReadConfig reads the latest configuration data from the backend. Returns
-// a nil *MetricConfig if there have been no changes to the configuration
-// since the last check.
+// ReadConfig reads and validates the latest configuration data from the
+// backend. Returns a nil *MetricConfig if there have been no changes to the
+// configuration since the last check.
 func (r *ServiceReader) ReadConfig() (*pb.MetricConfigResponse, error) {
 	request := &pb.MetricConfigRequest{
 		LastKnownFingerprint: r.lastKnownFingerprint,
@@ -87,6 +90,7 @@ func validate(resp *pb.MetricConfigResponse) error {
 	return nil
 }
 
+// Stop closes the connection to the config service.
 func (r *ServiceReader) Stop() error {
 	if err := r.conn.Close(); err != nil {
 		return fmt.Errorf("fail to close connection to config backend: %w", err)

@@ -18,10 +18,8 @@ import (
 	"testing"
 
 	"github.com/stretchr/testify/require"
-
-	pb "go.opentelemetry.io/contrib/sdk/dynamicconfig/internal/proto/experimental/metrics/configservice"
-
 	"go.opentelemetry.io/contrib/sdk/dynamicconfig/internal/metricpattern"
+	pb "go.opentelemetry.io/contrib/sdk/dynamicconfig/internal/proto/experimental/metrics/configservice"
 )
 
 const InstrumentName string = "One Fish"

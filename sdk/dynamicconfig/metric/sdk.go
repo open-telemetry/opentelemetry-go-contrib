@@ -12,6 +12,8 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
+// Package metric implements the OpenTelemetry Metric API, adding additional
+// support for dynamically configuring per-metric collection schedules.
 package metric
 
 import (
@@ -70,6 +72,8 @@ type (
 		resource *resource.Resource
 	}
 
+	// Rule is a function that takes a metric name, and then determines
+	// whether the metric should be collected during the current sweep.
 	Rule func(string) bool
 
 	syncInstrument struct {
@@ -346,10 +350,9 @@ func (m *Accumulator) NewAsyncInstrument(descriptor api.Descriptor, runner metri
 	return a, nil
 }
 
-// Collect traverses the list of active records and observers. Periods is an
-// an optional parameter. If it is set with more than one period, only
-// instruments associated with one of those periods will be collected from.
-// If not, it exports data for each active instrument.
+// Collect traverses the list of active records and observers. rule is a
+// function with signature func(string) bool. It takes a metric name, and
+// returns whether this metric should be collected in the current sweep.
 //
 // Collect() may not be called concurrently.
 //

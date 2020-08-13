@@ -61,7 +61,7 @@ func TestMonitorChanges(t *testing.T) {
 
 	config.Schedules[0].PeriodSec = 10
 	config.SuggestedWaitTimeSec = 5
-	mockClock.Add(DefaultCheckFrequency)
+	mockClock.Add(initialCheckFrequency)
 
 	select {
 	case scheds := <-mch.Data:

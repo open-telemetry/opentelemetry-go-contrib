@@ -25,29 +25,40 @@ import (
 
 const tolerance float64 = 0.1
 
+// PeriodMatcher pairs metric names to their associated periods and collection
+// information. Its purpose is to build a Rule, used by the Accumulator when
+// determining which metrics to collect.
 type PeriodMatcher struct {
-	metrics   map[string]*CollectData
+	metrics   map[string]*collectData
 	startTime time.Time
 
 	m     sync.Mutex
 	sched []*pb.MetricConfigResponse_Schedule
 }
 
-type CollectData struct {
+type collectData struct {
 	lastCollected time.Time
 	period        time.Duration
 }
 
+// MarkStart records the starting time for the PeriodMatcher. It's purpose is
+// to align the metric collection schedule to a particular starting point. If
+// unset, then all metrics will be collected on the first collection sweep.
 func (matcher *PeriodMatcher) MarkStart(startTime time.Time) {
 	matcher.startTime = startTime
 }
 
+// ApplySchedules sets the schedules that a PeriodMatcher consults when
+// constructing a Rule. After processing the schedules, ApplySchedules returns
+// the optimal period with which a controller should run a collection sweep.
+//
+// This function may be called concurrently.
 func (matcher *PeriodMatcher) ApplySchedules(sched []*pb.MetricConfigResponse_Schedule) time.Duration {
 	matcher.m.Lock()
 	defer matcher.m.Unlock()
 
 	matcher.sched = sched
-	matcher.metrics = make(map[string]*CollectData)
+	matcher.metrics = make(map[string]*collectData)
 
 	return getExportPeriod(matcher.sched)
 }
@@ -82,6 +93,9 @@ func gcd(a, b int32) int32 {
 	return gcd(b, a%b)
 }
 
+// BuildRule constructs a Rule function. This function can then be passed to
+// the Accumulator to decide which metrics should be collected in the
+// current collection sweep, based on the time passed to this function.
 func (matcher *PeriodMatcher) BuildRule(now time.Time) metric.Rule {
 	return func(name string) bool {
 		matcher.m.Lock()
@@ -89,7 +103,7 @@ func (matcher *PeriodMatcher) BuildRule(now time.Time) metric.Rule {
 
 		data, ok := matcher.metrics[name]
 		if !ok {
-			matcher.metrics[name] = &CollectData{
+			matcher.metrics[name] = &collectData{
 				lastCollected: matcher.startTime,
 				period:        matcher.matchPeriod(name),
 			}

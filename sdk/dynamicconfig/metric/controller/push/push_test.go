@@ -363,7 +363,6 @@ func TestPushScheduleChange(t *testing.T) {
 	p.WaitDone()
 
 	// After 10 seconds, expect export from both instruments.
-	// TODO: data race in test
 	records, _ = fix.exporter.resetRecords()
 	require.Equal(t, 2, len(records))
 	firstName := records[0].Descriptor().Name()
