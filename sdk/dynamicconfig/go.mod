@@ -15,11 +15,6 @@ require (
 	google.golang.org/grpc v1.31.0
 )
 
-// TODO: delete?
-// replace github.com/open-telemetry/opentelemetry-proto => github.com/vmingchen/opentelemetry-proto v0.3.1-0.20200716191220-7eb25882f08b
-// replace github.com/open-telemetry/opentelemetry-proto => github.com/vmingchen/opentelemetry-proto v0.3.1-0.20200811161559-2b8579ef37a0
-// replace github.com/open-telemetry/opentelemetry-proto => /home/williamtong/go/src/github.com/vmingchen/opentelemetry-proto
-
 replace go.opentelemetry.io/contrib => ../../
 
 replace go.opentelemetry.io/contrib/sdk/dynamicconfig => ./

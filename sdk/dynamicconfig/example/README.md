@@ -1,41 +1,72 @@
-# Dynamic config service example
+# Dynamic Metric Configuration
+This example showcases the ability to configure metric collection periods at
+runtime, via a remote configuration service. It is a prototype implementation of
+[this experimental
+specification](https://github.com/open-telemetry/opentelemetry-specification/blob/master/experimental/metrics/config-service.md). The prototype is currently available
+only for Go.
 
-Right now the generated protobuf .go file we're using is in our fork of the repo. Eventually we want to import in from opentelemetry-proto.
+**Note: this system is experimental, and liable to rapid breaking change.
+Use at your own risk.**
 
-Additionally, right now (June 18, 2020), the collector received an update that makes it incompatible with metric exporting from the SDK. We will need to export to an older version of the collector.
+## Push Controller
+A prototype push controller that implements dynamic per-metric configuration is
+available from the [Go contrib
+repository](https://github.com/open-telemetry/opentelemetry-go-contrib). To
+use it, ensure you have the following import
 
-### Expected behaviour for this example
-Initial period of 10 seconds. After about 10 seconds, new config will be read, and collection period is changed to 1 second.
-
-You can change expected behaviour by editing the config served by the dummy configuration service in `./server/server.go`.
-
-### Setup and run collector
-
-```sh
-# Clone repo
-git clone https://github.com/open-telemetry/opentelemetry-collector.git
-
-cd opentelemetry-collector
-
-# Checkout proper commit
-git branch compatible-master 746db761d19ed12ac2278cdfe7f30826a5ba6257 && git checkout compatible-master
-
-# Build collector binary
-make otelcol
-
-# Run collector using example-otlp-config.yaml
-# Assume opentelemetry-go is in the home directory
-./bin/otelcol_linux_amd64 --config ~/opentelemetry-go-contrib/sdk/dynamicconfig/example/example-otlp-config.yaml
+```go
+import "go.opentelemetry.io/contrib/sdk/dynamicconfig/metric/controller/push"
 ```
 
-### Run server
+It's use is almost identical to the push controller available from the Go SDK.
+The crucial difference is that the constructor takes an additional argument
+that represents the address of the configuration service. For example:
 
-```sh
-go run ./server
+```go
+pusher := push.New(
+	simple.NewWithExactDistribution(),   // AggregatorSelector
+	exporter,                            // Exporter
+	"localhost:55700",                   // DIFFERENT: address of config service
+	push.WithResource(resource),         // zero or more options
+)
 ```
 
-### Run sdk
+Otherwise, the contrib pusher is a drop-in replacement for the SDK's push
+controller.
 
-```sh
-go run ./
+A simple example application is provided in [main.go](main.go).
+
+## Collector Extension
+A service backend for this configuration system has been implemented as an
+extension on the [contrib
+collector](https://github.com/vmingchen/opentelemetry-collector-contrib).
+
+To use it, include the following block under `extensions` in the collector's
+startup configurations:
+
+```yaml
+dynamicconfig:
+    endpoint: 0.0.0.0:55700               # listen on localhost:55700
+    local_config_file: 'schedules.yaml'   # use metric config data from this file
+    wait_time: 30                         # suggested time (in seconds) for client to wait between polls
 ```
+
+Alternatively, one can specify a `remote_config_address` in place of the
+`local_config_file`, if the collector would like to pull its metric data from
+an upstream source (e.g. a third-party service, or another collector).
+
+
+A sample configuration file is provided in [config/file-backend-config.yaml](config/file-backend-config.yaml),
+and may be used directly with the contrib collector.
+
+Additionally, we provide a sample [schedules.yaml](config/schedules.yaml)
+that corresponds to metrics in the example app, and can be used directly with
+the configuration file above. Details about setting up and modifying
+this file can be found [here](https://github.com/open-telemetry/opentelemetry-specification/blob/master/experimental/metrics/config-service.md#local-file)
+
+## Additional Resources
+For a more detailed explanation of the concepts underlying this example,
+please see the:
+
+* [experimental specification](https://github.com/open-telemetry/opentelemetry-specification/blob/master/experimental/metrics/config-service.md)
+* [experimental protocol](https://github.com/open-telemetry/opentelemetry-proto/pull/183)
