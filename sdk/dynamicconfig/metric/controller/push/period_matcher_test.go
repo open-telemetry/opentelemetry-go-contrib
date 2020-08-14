@@ -65,11 +65,45 @@ func makeConfig() *pb.MetricConfigResponse {
 	return &config
 }
 
+func makeBadConfig() *pb.MetricConfigResponse {
+	oneSchedule := pb.MetricConfigResponse_Schedule{
+		InclusionPatterns: []*pb.MetricConfigResponse_Schedule_Pattern{
+			{
+				Match: &pb.MetricConfigResponse_Schedule_Pattern_StartsWith{
+					StartsWith: "one",
+				},
+			},
+		},
+		PeriodSec: 0,
+	}
+	twoSchedule := pb.MetricConfigResponse_Schedule{
+		InclusionPatterns: []*pb.MetricConfigResponse_Schedule_Pattern{
+			{
+				Match: &pb.MetricConfigResponse_Schedule_Pattern_StartsWith{
+					StartsWith: "two",
+				},
+			},
+		},
+		PeriodSec: -10,
+	}
+	config := pb.MetricConfigResponse{
+		Schedules: []*pb.MetricConfigResponse_Schedule{
+			&oneSchedule,
+			&twoSchedule,
+		},
+	}
+
+	return &config
+}
+
 func TestApplySchedules(t *testing.T) {
 	config := makeConfig()
 	matcher := PeriodMatcher{}
 
-	newPeriod := matcher.ApplySchedules(config.Schedules)
+	newPeriod, err := matcher.ApplySchedules(config.Schedules)
+	if err != nil {
+		t.Errorf("fail to apply schedules: %v", err)
+	}
 
 	if !reflect.DeepEqual(config.Schedules, matcher.sched) {
 		t.Errorf("consumed schedule does not match in memory version")
@@ -81,6 +115,22 @@ func TestApplySchedules(t *testing.T) {
 
 	if newPeriod != 7*time.Second {
 		t.Errorf("expected export period to be 7s, got: %v", newPeriod)
+	}
+}
+
+func TestApplySchedulesBad(t *testing.T) {
+	config := makeBadConfig()
+	matcher := PeriodMatcher{}
+
+	_, err := matcher.ApplySchedules(config.Schedules)
+	if err == nil {
+		t.Errorf("expected schedules to throw error: %v", config.Schedules)
+	}
+
+	config.Schedules = nil
+	_, err = matcher.ApplySchedules(config.Schedules)
+	if err == nil {
+		t.Errorf("expected error with empty schedules")
 	}
 }
 
