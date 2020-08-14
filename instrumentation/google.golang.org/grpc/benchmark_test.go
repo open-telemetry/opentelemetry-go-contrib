@@ -27,9 +27,12 @@ import (
 	"google.golang.org/grpc/test/bufconn"
 )
 
-const bufSize = 2048
+const (
+	bufSize  = 2048
+	instName = "go.opentelemetry.io/contrib/instrumentation/google.golang.org/grpc"
+)
 
-var tracer = testtrace.NewProvider().Tracer("go.opentelemetry.io/contrib/instrumentation/google.golang.org/grpc")
+var tracer = testtrace.NewProvider().Tracer(instName)
 
 func benchmark(b *testing.B, cOpt []grpc.DialOption, sOpt []grpc.ServerOption) {
 	l := bufconn.Listen(bufSize)
