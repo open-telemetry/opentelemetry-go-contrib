@@ -77,7 +77,7 @@ func validate(sched []*pb.MetricConfigResponse_Schedule) error {
 
 	for _, schedule := range sched {
 		if schedule.PeriodSec < 0 {
-			return errors.New("periods must be positive")
+			return errors.New("periods must be nonnegative")
 		}
 	}
 
