@@ -16,6 +16,11 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 - Instrumentation for the stdlib `net/http` and `net/http/httptrace` packages. (#190)
 - Initial Cortex exporter. (#202, #205, #210, #211, #215)
 
+### Changed
+
+- Remove service name as a parameter of Sarama instrumentation. (#221)
+- Replace `WithTracer` with `WithTracerProvider` in Sarama instrumentation. (#221)
+
 ### Fixed
 
 - Bump google.golang.org/grpc from 1.30.0 to 1.31.0. (#166)
