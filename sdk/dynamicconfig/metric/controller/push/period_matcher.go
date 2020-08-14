@@ -100,6 +100,7 @@ func getExportPeriod(sched []*pb.MetricConfigResponse_Schedule) time.Duration {
 }
 
 // Euclid's algorithm
+// Note: defining gcd(0, n) = n, for all integers n > 0
 func gcd(a, b int32) int32 {
 	if a < b {
 		return gcd(b, a)
