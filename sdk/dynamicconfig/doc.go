@@ -12,4 +12,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package dynamicconfig // import "go.opentelemetry.io/contrib/sdk/dynamicconfig"
+// Package dynamicconfig houses the implementations for dynamically
+// configuration aspects of telemetry collection and export. At present,
+// it supports only configuring metric collection schedules.
+package dynamicconfig

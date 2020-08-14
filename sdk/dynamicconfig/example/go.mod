@@ -2,14 +2,13 @@ module go.opentelemetry.io/contrib/sdk/dynamicconfig/example
 
 go 1.13
 
-replace github.com/open-telemetry/opentelemetry-proto => github.com/vmingchen/opentelemetry-proto v0.3.1-0.20200716191220-7eb25882f08b
+replace go.opentelemetry.io/contrib => ../../../
 
 replace go.opentelemetry.io/contrib/sdk/dynamicconfig => ../
 
 require (
-	github.com/open-telemetry/opentelemetry-proto v0.4.0
-	go.opentelemetry.io/contrib/sdk/dynamicconfig v0.6.1
-	go.opentelemetry.io/otel v0.7.0
-	go.opentelemetry.io/otel/exporters/otlp v0.7.0
-	google.golang.org/grpc v1.30.0
+	go.opentelemetry.io/contrib/sdk/dynamicconfig v0.0.0-00010101000000-000000000000
+	go.opentelemetry.io/otel v0.10.0
+	go.opentelemetry.io/otel/exporters/otlp v0.10.0
+	go.opentelemetry.io/otel/sdk v0.10.0
 )

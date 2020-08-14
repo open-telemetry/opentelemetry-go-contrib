@@ -12,14 +12,18 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
+// Package metricpatern implements the pattern matching "language" for selecting
+// metric names.
 package metricpattern
 
 import (
 	"strings"
 
-	pb "github.com/open-telemetry/opentelemetry-proto/gen/go/experimental/metricconfigservice"
+	pb "go.opentelemetry.io/contrib/sdk/dynamicconfig/internal/proto/experimental/metrics/configservice"
 )
 
+// Matches determines whether a name falls in the set of metric names prescribed
+// by the patterns
 func Matches(name string, patterns []*pb.MetricConfigResponse_Schedule_Pattern) bool {
 	if len(patterns) == 0 {
 		return false

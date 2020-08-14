@@ -29,12 +29,12 @@ import (
 	"go.opentelemetry.io/otel/api/label"
 	"go.opentelemetry.io/otel/api/metric"
 	"go.opentelemetry.io/otel/api/unit"
-	"go.opentelemetry.io/otel/exporters/metric/test"
 	export "go.opentelemetry.io/otel/sdk/export/metric"
+	"go.opentelemetry.io/otel/sdk/export/metric/metrictest"
+	aggtest "go.opentelemetry.io/otel/sdk/metric/aggregator/aggregatortest"
 	"go.opentelemetry.io/otel/sdk/metric/aggregator/array"
 	"go.opentelemetry.io/otel/sdk/metric/aggregator/lastvalue"
 	"go.opentelemetry.io/otel/sdk/metric/aggregator/sum"
-	aggtest "go.opentelemetry.io/otel/sdk/metric/aggregator/test"
 	"go.opentelemetry.io/otel/sdk/resource"
 )
 
@@ -132,7 +132,7 @@ timer.B.D:%s|ms
 						t.Fatal("New error: ", err)
 					}
 
-					checkpointSet := test.NewCheckpointSet(testResource)
+					checkpointSet := metrictest.NewCheckpointSet(testResource)
 					cdesc := metric.NewDescriptor(
 						"counter", metric.CounterKind, nkind)
 					gdesc := metric.NewDescriptor(
@@ -149,10 +149,10 @@ timer.B.D:%s|ms
 					const value = 123.456
 					val := number(t, nkind, value)
 
-					cagg, cckpt := test.Unslice2(sum.New(2))
-					gagg, gckpt := test.Unslice2(lastvalue.New(2))
-					magg, mckpt := test.Unslice2(array.New(2))
-					tagg, tckpt := test.Unslice2(array.New(2))
+					cagg, cckpt := metrictest.Unslice2(sum.New(2))
+					gagg, gckpt := metrictest.Unslice2(lastvalue.New(2))
+					magg, mckpt := metrictest.Unslice2(array.New(2))
+					tagg, tckpt := metrictest.Unslice2(array.New(2))
 
 					aggtest.CheckedUpdate(t, cagg, val, &cdesc)
 					aggtest.CheckedUpdate(t, gagg, val, &gdesc)
@@ -321,7 +321,7 @@ func TestPacketSplit(t *testing.T) {
 				t.Fatal("New error: ", err)
 			}
 
-			checkpointSet := test.NewCheckpointSet(testResource)
+			checkpointSet := metrictest.NewCheckpointSet(testResource)
 			desc := metric.NewDescriptor("counter", metric.CounterKind, metric.Int64NumberKind)
 
 			var expected []string
@@ -334,7 +334,7 @@ func TestPacketSplit(t *testing.T) {
 				encoded := adapter.Encoder.Encode(elabels.Iter())
 				expect := fmt.Sprint("counter:100|c|#", encoded, "\n")
 				expected = append(expected, expect)
-				agg, ckpt := test.Unslice2(sum.New(2))
+				agg, ckpt := metrictest.Unslice2(sum.New(2))
 				aggtest.CheckedUpdate(t, agg, metric.NewInt64Number(100), &desc)
 				require.NoError(t, agg.SynchronizedMove(ckpt, &desc))
 				checkpointSet.Add(&desc, ckpt, labels...)
@@ -361,10 +361,10 @@ func TestArraySplit(t *testing.T) {
 		t.Fatal("New error: ", err)
 	}
 
-	checkpointSet := test.NewCheckpointSet(testResource)
+	checkpointSet := metrictest.NewCheckpointSet(testResource)
 	desc := metric.NewDescriptor("measure", metric.ValueRecorderKind, metric.Int64NumberKind)
 
-	agg, ckpt := test.Unslice2(array.New(2))
+	agg, ckpt := metrictest.Unslice2(array.New(2))
 
 	for i := 0; i < 1024; i++ {
 		aggtest.CheckedUpdate(t, agg, metric.NewInt64Number(100), &desc)
@@ -396,10 +396,10 @@ func TestPrefix(t *testing.T) {
 		t.Fatal("New error: ", err)
 	}
 
-	checkpointSet := test.NewCheckpointSet(testResource)
+	checkpointSet := metrictest.NewCheckpointSet(testResource)
 	desc := metric.NewDescriptor("measure", metric.ValueRecorderKind, metric.Int64NumberKind)
 
-	agg, ckpt := test.Unslice2(array.New(2))
+	agg, ckpt := metrictest.Unslice2(array.New(2))
 	aggtest.CheckedUpdate(t, agg, metric.NewInt64Number(100), &desc)
 	require.NoError(t, agg.SynchronizedMove(ckpt, &desc))
 	checkpointSet.Add(&desc, ckpt)

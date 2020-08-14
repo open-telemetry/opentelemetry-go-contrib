@@ -1,0 +1,8 @@
+ConfigBlocks:
+    - Resource:
+      - "name:seuss"
+      - "profession:doctor"
+      Schedules:
+      - InclusionPatterns:
+          - StartsWith: "*"
+        Period: SEC_5

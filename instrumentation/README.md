@@ -1,6 +1,6 @@
 # Instrumentation
 
-Code contained in this directory contains instrumentation for 3rd-party Go packages.
+Code contained in this directory contains instrumentation for 3rd-party Go packages and some packages from the standard library.
 
 ## Organization
 

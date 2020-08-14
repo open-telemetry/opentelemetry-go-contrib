@@ -16,11 +16,11 @@ package main
 
 import (
 	"context"
+	"fmt"
 	"log"
 	"time"
 
-	notify "go.opentelemetry.io/contrib/sdk/dynamicconfig/sdk/metric/controller/notifier"
-	"go.opentelemetry.io/contrib/sdk/dynamicconfig/sdk/metric/controller/push"
+	"go.opentelemetry.io/contrib/sdk/dynamicconfig/metric/controller/push"
 
 	"go.opentelemetry.io/otel/api/global"
 	"go.opentelemetry.io/otel/api/kv"
@@ -36,24 +36,18 @@ func initProvider() (*otlp.Exporter, *push.Controller) {
 		otlp.WithInsecure(),
 		otlp.WithAddress("localhost:55680"),
 	)
-	handleErr(err, "Failed to create exporter: $v")
+	handleErr(err, "failed to create exporter")
 
-	resource := resource.New(kv.String("R", "V"))
-
-	notifier, err := notify.NewNotifier(
-		notify.GetDefaultConfig(10, []byte{'f', 'o', 'o'}),
-		notify.WithCheckFrequency(10*time.Second),
-		notify.WithConfigHost("localhost:7777"),
-		notify.WithResource(resource),
+	resource := resource.New(
+		kv.String("name", "seuss"),
+		kv.String("profession", "doctor"),
 	)
-	handleErr(err, "Failed to create notifier: $v")
-	notifier.Start()
 
 	pusher := push.New(
 		simple.NewWithExactDistribution(),
 		exp,
-		push.WithStateful(true),
-		push.WithNotifier(notifier),
+		"localhost:55700",
+		push.WithResource(resource),
 	)
 	global.SetMeterProvider(pusher.Provider())
 	pusher.Start()
@@ -63,21 +57,28 @@ func initProvider() (*otlp.Exporter, *push.Controller) {
 
 func main() {
 	exp, pusher := initProvider()
-	defer func() { handleErr(exp.Stop(), "Failed to stop exporter") }()
+	defer func() { handleErr(exp.Stop(), "fail to stop exporter") }()
 	defer pusher.Stop() // pushes any last exports to the receiver
 
 	meter := pusher.Provider().Meter("test-meter")
 	labels := []kv.KeyValue{kv.Bool("test", true)}
 
-	oneMetricCB := func(_ context.Context, result metric.Float64ObserverResult) {
-		result.Observe(1, labels...)
-	}
-	_ = metric.Must(meter).NewFloat64ValueObserver("One Metric", oneMetricCB)
-	_ = metric.Must(meter).NewFloat64ValueObserver("Two Metric", oneMetricCB)
-	_ = metric.Must(meter).NewFloat64ValueObserver("Red Metric", oneMetricCB)
-	_ = metric.Must(meter).NewFloat64ValueObserver("Blue Metric", oneMetricCB)
+	oneMetric := metric.Must(meter).NewFloat64Counter("one-fish").Bind(labels...)
+	twoMetric := metric.Must(meter).NewFloat64Counter("two-fish").Bind(labels...)
+	redMetric := metric.Must(meter).NewFloat64Counter("red-fish").Bind(labels...)
+	blueMetric := metric.Must(meter).NewFloat64Counter("blue-fish").Bind(labels...)
 
-	time.Sleep(5 * time.Minute)
+	for i := 1; i <= 100; i++ {
+		fmt.Printf("hard at work! (%d/100)\n", i)
+
+		oneMetric.Add(context.Background(), 1.0)
+		twoMetric.Add(context.Background(), 2.0)
+		redMetric.Add(context.Background(), 3.0)
+		blueMetric.Add(context.Background(), 4.0)
+		time.Sleep(time.Second)
+	}
+
+	fmt.Println("done!")
 }
 
 func handleErr(err error, message string) {
