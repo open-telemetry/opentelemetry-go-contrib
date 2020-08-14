@@ -26,8 +26,10 @@ import (
 )
 
 func TestRuntime(t *testing.T) {
-	meter := global.Meter("test")
-	err := runtime.Start(meter, time.Second)
+	err := runtime.Start(
+		global.MeterProvider(),
+		runtime.WithMinimumGCStatsInterval(time.Second),
+	)
 	assert.NoError(t, err)
 	time.Sleep(time.Second)
 }

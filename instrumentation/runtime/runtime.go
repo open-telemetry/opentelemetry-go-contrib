@@ -26,18 +26,37 @@ import (
 
 // Runtime reports the work-in-progress conventional runtime metrics specified by OpenTelemetry
 type runtime struct {
-	meter    metric.Meter
-	interval time.Duration
+	meter              metric.Meter
+	minGCStatsInterval time.Duration
+}
+
+// Option supports configuring optional settings for runtime metrics.
+type Option func(*runtime)
+
+// WithMinimumGCStatsInterval sets a minimum interval between calls to
+// runtime.ReadMemStats().  If this option is not used, the Metrics
+// SDK's collection period will be used.  When this option is used,
+// calls to runtime.ReadMemStats() will be skipped and the prior value
+// will be used.
+func WithMinimumGCStatsInterval(d time.Duration) Option {
+	return func(r *runtime) {
+		if d > 0 {
+			r.minGCStatsInterval = d
+		}
+	}
 }
 
 // New returns Runtime, a structure for reporting Go runtime metrics
 // interval is used to limit how often to invoke Go runtime.ReadMemStats() to obtain metric data.
 // If the metric SDK attempts to observe MemStats-derived instruments more frequently than the
 // interval, a cached value will be used.
-func Start(meter metric.Meter, interval time.Duration) error {
+func Start(provider metric.Provider, opts ...Option) error {
 	r := &runtime{
-		meter:    meter,
-		interval: interval,
+		// TODO: How to set the instrumentation library version?
+		meter: provider.Meter("runtime"),
+	}
+	for _, opt := range opts {
+		opt(r)
 	}
 	return r.register()
 }
@@ -117,10 +136,13 @@ func (r *runtime) registerMemStats() error {
 		lock.Lock()
 		defer lock.Unlock()
 
-		now := time.Now()
-		if now.Sub(lastMemStats) >= r.interval {
-			goruntime.ReadMemStats(&memStats)
-			lastMemStats = now
+		// If a m
+		if r.minGCStatsInterval > 0 {
+			now := time.Now()
+			if now.Sub(lastMemStats) >= r.minGCStatsInterval {
+				goruntime.ReadMemStats(&memStats)
+				lastMemStats = now
+			}
 		}
 
 		result.Observe(

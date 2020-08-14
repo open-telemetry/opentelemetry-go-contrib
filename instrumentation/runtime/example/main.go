@@ -42,9 +42,7 @@ func initMeter() *push.Controller {
 func main() {
 	defer initMeter().Stop()
 
-	meter := global.Meter("runtime")
-
-	if err := runtime.Start(meter, time.Second); err != nil {
+	if err := runtime.Start(global.MeterProvider(), runtime.WithMinimumGCStatsInterval(time.Second)); err != nil {
 		panic(err)
 	}
 
