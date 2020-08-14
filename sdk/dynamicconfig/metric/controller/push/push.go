@@ -18,6 +18,7 @@ package push
 
 import (
 	"context"
+	"fmt"
 	"sync"
 	"time"
 
@@ -174,7 +175,16 @@ func (c *Controller) tick() {
 }
 
 func (c *Controller) update(schedules []*pb.MetricConfigResponse_Schedule) {
-	newPeriod := c.matcher.ApplySchedules(schedules)
+	newPeriod, err := c.matcher.ApplySchedules(schedules)
+	if err != nil {
+		global.Handle(fmt.Errorf("fail to apply schedules: %w", err))
+		return
+	}
+
+	if newPeriod == 0 {
+		newPeriod = 7 * 24 * time.Hour // essentially disable ticker
+	}
+
 	if c.exportPeriod != newPeriod {
 		if c.ticker != nil {
 			c.ticker.Stop()

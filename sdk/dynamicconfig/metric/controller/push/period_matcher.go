@@ -15,6 +15,7 @@
 package push
 
 import (
+	"errors"
 	"sync"
 	"time"
 
@@ -51,32 +52,55 @@ func (matcher *PeriodMatcher) MarkStart(startTime time.Time) {
 // ApplySchedules sets the schedules that a PeriodMatcher consults when
 // constructing a Rule. After processing the schedules, ApplySchedules returns
 // the optimal period with which a controller should run a collection sweep.
+// If a period of 0 is returned, then metric collection should be halted.
 //
 // This function may be called concurrently.
-func (matcher *PeriodMatcher) ApplySchedules(sched []*pb.MetricConfigResponse_Schedule) time.Duration {
+func (matcher *PeriodMatcher) ApplySchedules(sched []*pb.MetricConfigResponse_Schedule) (time.Duration, error) {
+	if err := validate(sched); err != nil {
+		return 0, err
+	}
+
+	exportPeriod := getExportPeriod(sched)
+
 	matcher.m.Lock()
 	matcher.sched = sched
 	matcher.metrics = make(map[string]*collectData)
 	matcher.m.Unlock()
 
-	return getExportPeriod(matcher.sched)
+	return exportPeriod, nil
 }
 
-// TODO: handle explicit zeros
+func validate(sched []*pb.MetricConfigResponse_Schedule) error {
+	if len(sched) == 0 {
+		return errors.New("no schedules")
+	}
+
+	for _, schedule := range sched {
+		if schedule.PeriodSec < 0 {
+			return errors.New("periods must be nonnegative")
+		}
+	}
+
+	return nil
+}
+
 func getExportPeriod(sched []*pb.MetricConfigResponse_Schedule) time.Duration {
 	if len(sched) == 0 {
 		panic("matcher has not applied any schedules")
 	}
 
-	checkPeriod := sched[0].PeriodSec
-	for _, schedule := range sched[1:] {
-		checkPeriod = gcd(checkPeriod, schedule.PeriodSec)
+	var checkPeriod int32
+	for _, schedule := range sched[0:] {
+		if schedule.PeriodSec != 0 {
+			checkPeriod = gcd(checkPeriod, schedule.PeriodSec)
+		}
 	}
 
 	return time.Duration(checkPeriod) * time.Second
 }
 
 // Euclid's algorithm
+// Note: defining gcd(0, n) = n, for all integers n > 0
 func gcd(a, b int32) int32 {
 	if a < b {
 		return gcd(b, a)

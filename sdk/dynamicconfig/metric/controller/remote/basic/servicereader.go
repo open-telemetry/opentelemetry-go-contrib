@@ -83,7 +83,7 @@ func (r *ServiceReader) ReadConfig() (*pb.MetricConfigResponse, error) {
 func validate(resp *pb.MetricConfigResponse) error {
 	for _, schedule := range resp.Schedules {
 		if schedule.PeriodSec < 0 {
-			return errors.New("periods must be positive")
+			return errors.New("periods must be nonnegative")
 		}
 	}
 

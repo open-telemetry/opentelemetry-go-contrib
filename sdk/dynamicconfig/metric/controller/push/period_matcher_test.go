@@ -54,11 +54,74 @@ func makeConfig() *pb.MetricConfigResponse {
 		},
 		PeriodSec: 49,
 	}
+	blueSchedule := pb.MetricConfigResponse_Schedule{
+		InclusionPatterns: []*pb.MetricConfigResponse_Schedule_Pattern{
+			{
+				Match: &pb.MetricConfigResponse_Schedule_Pattern_StartsWith{
+					StartsWith: "blue",
+				},
+			},
+		},
+		PeriodSec: 0,
+	}
+
 	config := pb.MetricConfigResponse{
 		Schedules: []*pb.MetricConfigResponse_Schedule{
 			&oneSchedule,
 			&twoSchedule,
 			&redSchedule,
+			&blueSchedule,
+		},
+	}
+
+	return &config
+}
+
+func makeBadConfig() *pb.MetricConfigResponse {
+	oneSchedule := pb.MetricConfigResponse_Schedule{
+		InclusionPatterns: []*pb.MetricConfigResponse_Schedule_Pattern{
+			{
+				Match: &pb.MetricConfigResponse_Schedule_Pattern_StartsWith{
+					StartsWith: "one",
+				},
+			},
+		},
+		PeriodSec: -1,
+	}
+	config := pb.MetricConfigResponse{
+		Schedules: []*pb.MetricConfigResponse_Schedule{
+			&oneSchedule,
+		},
+	}
+
+	return &config
+}
+
+func makeZeroConfig() *pb.MetricConfigResponse {
+	oneSchedule := pb.MetricConfigResponse_Schedule{
+		InclusionPatterns: []*pb.MetricConfigResponse_Schedule_Pattern{
+			{
+				Match: &pb.MetricConfigResponse_Schedule_Pattern_StartsWith{
+					StartsWith: "one",
+				},
+			},
+		},
+		PeriodSec: 0,
+	}
+	twoSchedule := pb.MetricConfigResponse_Schedule{
+		InclusionPatterns: []*pb.MetricConfigResponse_Schedule_Pattern{
+			{
+				Match: &pb.MetricConfigResponse_Schedule_Pattern_StartsWith{
+					StartsWith: "two",
+				},
+			},
+		},
+		PeriodSec: 0,
+	}
+	config := pb.MetricConfigResponse{
+		Schedules: []*pb.MetricConfigResponse_Schedule{
+			&oneSchedule,
+			&twoSchedule,
 		},
 	}
 
@@ -69,7 +132,10 @@ func TestApplySchedules(t *testing.T) {
 	config := makeConfig()
 	matcher := PeriodMatcher{}
 
-	newPeriod := matcher.ApplySchedules(config.Schedules)
+	newPeriod, err := matcher.ApplySchedules(config.Schedules)
+	if err != nil {
+		t.Errorf("fail to apply schedules: %v", err)
+	}
 
 	if !reflect.DeepEqual(config.Schedules, matcher.sched) {
 		t.Errorf("consumed schedule does not match in memory version")
@@ -81,6 +147,36 @@ func TestApplySchedules(t *testing.T) {
 
 	if newPeriod != 7*time.Second {
 		t.Errorf("expected export period to be 7s, got: %v", newPeriod)
+	}
+}
+
+func TestApplySchedulesBad(t *testing.T) {
+	config := makeBadConfig()
+	matcher := PeriodMatcher{}
+
+	_, err := matcher.ApplySchedules(config.Schedules)
+	if err == nil {
+		t.Errorf("expected schedules to throw error: %v", config.Schedules)
+	}
+
+	config.Schedules = nil
+	_, err = matcher.ApplySchedules(config.Schedules)
+	if err == nil {
+		t.Errorf("expected error with empty schedules")
+	}
+}
+
+func TestApplySchedulesZero(t *testing.T) {
+	config := makeZeroConfig()
+	matcher := PeriodMatcher{}
+
+	newPeriod, err := matcher.ApplySchedules(config.Schedules)
+	if err != nil {
+		t.Errorf("fail to apply schedules: %v", config.Schedules)
+	}
+
+	if newPeriod != 0 {
+		t.Errorf("expected period=0, got: %v", newPeriod)
 	}
 }
 
@@ -140,31 +236,31 @@ func TestBuildRule(t *testing.T) {
 
 	mockClock.Add(7 * time.Second)
 	rule := matcher.BuildRule(mockClock.Now())
-	if rule("one-fish") || rule("two-fish") || rule("red-fish") {
+	if rule("one-fish") || rule("two-fish") || rule("red-fish") || rule("blue-fish") {
 		t.Errorf("no schedule should match at time=7")
 	}
 
 	mockClock.Add(14 * time.Second)
 	rule = matcher.BuildRule(mockClock.Now())
-	if !rule("one-fish") || rule("two-fish") || rule("red-fish") {
+	if !rule("one-fish") || rule("two-fish") || rule("red-fish") || rule("blue-fish") {
 		t.Errorf("only one* schedule should match at time=21")
 	}
 
 	mockClock.Add(21 * time.Second)
 	rule = matcher.BuildRule(mockClock.Now())
-	if !rule("one-fish") || !rule("two-fish") || rule("red-fish") {
+	if !rule("one-fish") || !rule("two-fish") || rule("red-fish") || rule("blue-fish") {
 		t.Errorf("only one* and two* schedules should match at time=42")
 	}
 
 	mockClock.Add(7 * time.Second)
 	rule = matcher.BuildRule(mockClock.Now())
-	if rule("one-fish") || rule("two-fish") || !rule("red-fish") {
-		t.Errorf("only three* schedule should match at time=49")
+	if rule("one-fish") || rule("two-fish") || !rule("red-fish") || rule("blue-fish") {
+		t.Errorf("only red* schedule should match at time=49")
 	}
 
 	mockClock.Add(245 * time.Second)
 	rule = matcher.BuildRule(mockClock.Now())
-	if !rule("one-fish") || !rule("two-fish") || !rule("red-fish") {
-		t.Errorf("one*, two*, and three* schedules should match at time=294")
+	if !rule("one-fish") || !rule("two-fish") || !rule("red-fish") || rule("blue-fish") {
+		t.Errorf("one*, two*, and red* schedules should match at time=294")
 	}
 }
