@@ -29,20 +29,14 @@ func TestNewConfig(t *testing.T) {
 		expected config
 	}{
 		{
-			name: "set service name",
-			expected: config{
-				Tracer:      global.Tracer(defaultTracerName),
-				Propagators: global.Propagators(),
-			},
-		},
-		{
-			name: "with tracer",
+			name: "with provider",
 			opts: []Option{
-				WithTracer(global.Tracer("new")),
+				WithTraceProvider(global.TraceProvider()),
 			},
 			expected: config{
-				Tracer:      global.Tracer("new"),
-				Propagators: global.Propagators(),
+				TraceProvider: global.TraceProvider(),
+				Tracer:        global.TraceProvider().Tracer(defaultTracerName),
+				Propagators:   global.Propagators(),
 			},
 		},
 		{
@@ -51,8 +45,9 @@ func TestNewConfig(t *testing.T) {
 				WithPropagators(nil),
 			},
 			expected: config{
-				Tracer:      global.Tracer(defaultTracerName),
-				Propagators: nil,
+				TraceProvider: global.TraceProvider(),
+				Tracer:        global.TraceProvider().Tracer(defaultTracerName),
+				Propagators:   nil,
 			},
 		},
 	}

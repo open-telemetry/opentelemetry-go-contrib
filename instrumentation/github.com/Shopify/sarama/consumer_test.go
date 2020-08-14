@@ -42,8 +42,8 @@ var (
 )
 
 func TestWrapPartitionConsumer(t *testing.T) {
-	// Mock tracer
-	mt := mocktracer.NewTracer("kafka")
+	// Mock provider
+	provider, mt := newProviderAndTracer()
 
 	// Mock partition consumer controller
 	consumer := mocks.NewConsumer(t, sarama.NewConfig())
@@ -53,21 +53,21 @@ func TestWrapPartitionConsumer(t *testing.T) {
 	partitionConsumer, err := consumer.ConsumePartition(topic, 0, 0)
 	require.NoError(t, err)
 
-	partitionConsumer = WrapPartitionConsumer(partitionConsumer, WithTracer(mt))
+	partitionConsumer = WrapPartitionConsumer(partitionConsumer, WithTraceProvider(provider))
 
 	consumeAndCheck(t, mt, mockPartitionConsumer, partitionConsumer)
 }
 
 func TestWrapConsumer(t *testing.T) {
-	// Mock tracer
-	mt := mocktracer.NewTracer("kafka")
+	// Mock provider
+	provider, mt := newProviderAndTracer()
 
 	// Mock partition consumer controller
 	mockConsumer := mocks.NewConsumer(t, sarama.NewConfig())
 	mockPartitionConsumer := mockConsumer.ExpectConsumePartition(topic, 0, 0)
 
 	// Wrap consumer
-	consumer := WrapConsumer(mockConsumer, WithTracer(mt))
+	consumer := WrapConsumer(mockConsumer, WithTraceProvider(provider))
 
 	// Create partition consumer
 	partitionConsumer, err := consumer.ConsumePartition(topic, 0, 0)
@@ -165,12 +165,12 @@ func TestConsumerConsumePartitionWithError(t *testing.T) {
 }
 
 func BenchmarkWrapPartitionConsumer(b *testing.B) {
-	// Mock tracer
-	mt := mocktracer.NewTracer("kafka")
+	// Mock provider
+	provider, _ := newProviderAndTracer()
 
 	mockPartitionConsumer, partitionConsumer := createMockPartitionConsumer(b)
 
-	partitionConsumer = WrapPartitionConsumer(partitionConsumer, WithTracer(mt))
+	partitionConsumer = WrapPartitionConsumer(partitionConsumer, WithTraceProvider(provider))
 	message := sarama.ConsumerMessage{Key: []byte("foo")}
 
 	b.ReportAllocs()
