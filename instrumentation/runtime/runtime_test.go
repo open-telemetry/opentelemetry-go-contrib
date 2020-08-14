@@ -15,12 +15,15 @@
 package runtime_test
 
 import (
+	goruntime "runtime"
 	"testing"
 	"time"
 
 	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 
 	"go.opentelemetry.io/contrib/instrumentation/runtime"
+	"go.opentelemetry.io/contrib/internal/metric"
 
 	"go.opentelemetry.io/otel/api/global"
 )
@@ -32,4 +35,64 @@ func TestRuntime(t *testing.T) {
 	)
 	assert.NoError(t, err)
 	time.Sleep(time.Second)
+}
+
+func getGCCount(impl *metric.MeterImpl) int {
+	for _, b := range impl.MeasurementBatches {
+		for _, m := range b.Measurements {
+			if m.Instrument.Descriptor().Name() == "runtime.go.gc.count" {
+				return int(m.Number.CoerceToInt64(m.Instrument.Descriptor().NumberKind()))
+			}
+		}
+	}
+	panic("Could not locate a runtime.go.gc.count metric in test output")
+}
+
+func testMinimumInterval(t *testing.T, shouldHappen bool, opts ...runtime.Option) {
+	goruntime.GC()
+
+	var mstats0 goruntime.MemStats
+	goruntime.ReadMemStats(&mstats0)
+	baseline := int(mstats0.NumGC)
+
+	impl, provider := metric.NewProvider()
+
+	err := runtime.Start(
+		provider,
+		opts...,
+	)
+	assert.NoError(t, err)
+
+	goruntime.GC()
+
+	impl.RunAsyncInstruments()
+
+	require.Equal(t, 1, getGCCount(impl)-baseline)
+
+	impl.MeasurementBatches = nil
+
+	extra := 0
+	if shouldHappen {
+		extra = 3
+	}
+
+	goruntime.GC()
+	goruntime.GC()
+	goruntime.GC()
+
+	impl.RunAsyncInstruments()
+
+	require.Equal(t, 1+extra, getGCCount(impl)-baseline)
+}
+
+func TestDefaultMinimumInterval(t *testing.T) {
+	testMinimumInterval(t, false)
+}
+
+func TestNoMinimumInterval(t *testing.T) {
+	testMinimumInterval(t, true, runtime.WithMinimumGCStatsInterval(0))
+}
+
+func TestExplicitMinimumInterval(t *testing.T) {
+	testMinimumInterval(t, false, runtime.WithMinimumGCStatsInterval(time.Hour))
 }

@@ -33,14 +33,18 @@ type runtime struct {
 // Option supports configuring optional settings for runtime metrics.
 type Option func(*runtime)
 
+// DefaultMinimumGCStatsInterval is the default minimum interval
+// between calls to runtime.ReadMemStats().  Use the
+// WithMinimumGCStatsInterval() option to modify this setting in
+// Start().
+const DefaultMinimumGCStatsInterval time.Duration = 15 * time.Second
+
 // WithMinimumGCStatsInterval sets a minimum interval between calls to
-// runtime.ReadMemStats().  If this option is not used, the Metrics
-// SDK's collection period will be used.  When this option is used,
-// calls to runtime.ReadMemStats() will be skipped and the prior value
-// will be used.
+// runtime.ReadMemStats(), which is a relatively expensive call to make
+// frequently.  `d` values less than 0 will be disregarded silently.
 func WithMinimumGCStatsInterval(d time.Duration) Option {
 	return func(r *runtime) {
-		if d > 0 {
+		if d >= 0 {
 			r.minGCStatsInterval = d
 		}
 	}
@@ -53,7 +57,8 @@ func WithMinimumGCStatsInterval(d time.Duration) Option {
 func Start(provider metric.Provider, opts ...Option) error {
 	r := &runtime{
 		// TODO: How to set the instrumentation library version?
-		meter: provider.Meter("runtime"),
+		meter:              provider.Meter("runtime"),
+		minGCStatsInterval: DefaultMinimumGCStatsInterval,
 	}
 	for _, opt := range opts {
 		opt(r)
@@ -136,13 +141,10 @@ func (r *runtime) registerMemStats() error {
 		lock.Lock()
 		defer lock.Unlock()
 
-		// If a m
-		if r.minGCStatsInterval > 0 {
-			now := time.Now()
-			if now.Sub(lastMemStats) >= r.minGCStatsInterval {
-				goruntime.ReadMemStats(&memStats)
-				lastMemStats = now
-			}
+		now := time.Now()
+		if now.Sub(lastMemStats) >= r.minGCStatsInterval {
+			goruntime.ReadMemStats(&memStats)
+			lastMemStats = now
 		}
 
 		result.Observe(
