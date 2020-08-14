@@ -9,7 +9,7 @@ replace (
 
 require (
 	github.com/gocql/gocql v0.0.0-20200624222514-34081eda590e
-	go.opentelemetry.io/contrib/instrumentation/github.com/gocql/gocql v0.10.0
+	go.opentelemetry.io/contrib/instrumentation/github.com/gocql/gocql v0.10.1
 	go.opentelemetry.io/otel v0.10.0
 	go.opentelemetry.io/otel/exporters/metric/prometheus v0.10.0
 	go.opentelemetry.io/otel/exporters/trace/zipkin v0.10.0
