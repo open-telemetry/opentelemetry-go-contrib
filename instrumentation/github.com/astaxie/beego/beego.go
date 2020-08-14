@@ -26,13 +26,36 @@ import (
 	"github.com/astaxie/beego"
 )
 
-// defaultSpanNameFormatter is the default formatter for spans created with
-// the beego integration. Returns the request URL path.
-func defaultSpanNameFormatter(operation string, req *http.Request) string {
-	if req.URL.Path == "" {
-		return req.Method
+// OTelBeegoHandler implements the http.Handler interface and provides
+// trace and metrics to beego web apps.
+type OTelBeegoHandler struct {
+	http.Handler
+}
+
+func (o *OTelBeegoHandler) ServeHTTP(rr http.ResponseWriter, req *http.Request) {
+	ctx := beego.BeeApp.Handlers.GetContext()
+	defer beego.BeeApp.Handlers.GiveBackContext(ctx)
+	ctx.Reset(rr, req)
+	// use the beego context to try to find a route template
+	if router, found := beego.BeeApp.Handlers.FindRouter(ctx); found {
+		// if found, save it to the context
+		reqCtx := context.WithValue(req.Context(), ctxRouteTemplateKey, router.GetPattern())
+		req = req.WithContext(reqCtx)
 	}
-	return req.URL.Path
+	o.Handler.ServeHTTP(rr, req)
+}
+
+// defaultSpanNameFormatter is the default formatter for spans created with the beego
+// integration. Returns the route path template, or the URL path if the current path
+// is not associated with a router.
+func defaultSpanNameFormatter(operation string, req *http.Request) string {
+	if val := req.Context().Value(ctxRouteTemplateKey); val != nil {
+		str, ok := val.(string)
+		if ok {
+			return str
+		}
+	}
+	return req.Method
 }
 
 // NewOTelBeegoMiddleWare creates a MiddleWare that provides OpenTelemetry
@@ -60,11 +83,13 @@ func NewOTelBeegoMiddleWare(service string, options ...Option) beego.MiddleWare 
 	}
 
 	return func(handler http.Handler) http.Handler {
-		return otelhttp.NewHandler(
-			handler,
-			service,
-			httpOptions...,
-		)
+		return &OTelBeegoHandler{
+			otelhttp.NewHandler(
+				handler,
+				service,
+				httpOptions...,
+			),
+		}
 	}
 }
 

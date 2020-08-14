@@ -27,6 +27,8 @@ const (
 	// and meter names.
 	packageName = "go.opentelemetry.io/contrib/instrumentation/github.com/astaxie/beego"
 
+	ctxRouteTemplateKey = contextKey("x-opentelemetry-route-template")
+
 	renderTemplateSpanName = "beego.render.template"
 	renderStringSpanName   = "beego.render.string"
 	renderBytesSpanName    = "beego.render.bytes"
@@ -48,3 +50,9 @@ type Filter func(*http.Request) bool
 
 // SpanNameFormatter creates a custom span name from the operation and request object.
 type SpanNameFormatter func(operation string, req *http.Request) string
+
+// ------------------------------------------ Misc
+
+// contextKey is a key for a value in a context.Context,
+// used as it is not recommended to use basic types as keys.
+type contextKey string

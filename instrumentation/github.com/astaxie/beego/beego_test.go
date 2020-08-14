@@ -144,6 +144,7 @@ func addTestRoutes(t *testing.T) {
 		T: t,
 	}
 	beego.Router("/", controller)
+	beego.Router("/:id", controller)
 	beego.Router("/greet", controller)
 	beego.Router("/template/render", controller, "get:TemplateRender")
 	beego.Router("/template/renderstring", controller, "get:TemplateRenderString")
@@ -151,6 +152,7 @@ func addTestRoutes(t *testing.T) {
 	router := beego.NewNamespace("/api",
 		beego.NSNamespace("/v1",
 			beego.NSRouter("/", controller),
+			beego.NSRouter("/:id", controller),
 			beego.NSRouter("/greet", controller),
 		),
 	)
@@ -268,7 +270,7 @@ func TestStatic(t *testing.T) {
 	require.NoError(t, err)
 	mw(beego.BeeApp.Handlers).ServeHTTP(rr, req)
 	tc := &testCase{
-		expectedSpanName:   "/",
+		expectedSpanName:   "GET",
 		expectedAttributes: defaultAttributes(),
 	}
 
@@ -447,6 +449,17 @@ var testCases = []*testCase{
 		options:            []Option{},
 		hasSpan:            true,
 		expectedSpanName:   "/",
+		expectedHTTPStatus: http.StatusOK,
+		expectedResponse:   testReply{Message: defaultReply},
+		expectedAttributes: []kv.KeyValue{},
+	},
+	{
+		name:               "GET/1__All default options",
+		method:             http.MethodGet,
+		path:               "/1",
+		options:            []Option{},
+		hasSpan:            true,
+		expectedSpanName:   "/:id",
 		expectedHTTPStatus: http.StatusOK,
 		expectedResponse:   testReply{Message: defaultReply},
 		expectedAttributes: []kv.KeyValue{},
