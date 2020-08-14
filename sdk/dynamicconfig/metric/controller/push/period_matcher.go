@@ -60,12 +60,14 @@ func (matcher *PeriodMatcher) ApplySchedules(sched []*pb.MetricConfigResponse_Sc
 		return 0, err
 	}
 
+	exportPeriod := getExportPeriod(sched)
+
 	matcher.m.Lock()
 	matcher.sched = sched
 	matcher.metrics = make(map[string]*collectData)
 	matcher.m.Unlock()
 
-	return getExportPeriod(matcher.sched), nil
+	return exportPeriod, nil
 }
 
 func validate(sched []*pb.MetricConfigResponse_Schedule) error {
