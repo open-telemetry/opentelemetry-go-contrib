@@ -38,21 +38,21 @@ const defaultTimeout = 10 * time.Minute
 
 // Controller organizes a periodic push of metric data.
 type Controller struct {
-	lock        sync.Mutex
-	accumulator *sdk.Accumulator
-	provider    *registry.Provider
-	processor   *basic.Processor
-	exporter    export.Exporter
-	lastPeriod  time.Duration
-	quit        chan struct{}
-	done        chan struct{}
-	isRunning   bool
-	timeout     time.Duration
-	clock       controllerTime.Clock
-	ticker      controllerTime.Ticker
-	monitor     remote.Monitor
-	mch         remote.MonitorChannel
-	matcher     *PeriodMatcher
+	lock         sync.Mutex
+	accumulator  *sdk.Accumulator
+	provider     *registry.Provider
+	processor    *basic.Processor
+	exporter     export.Exporter
+	exportPeriod time.Duration
+	quit         chan struct{}
+	done         chan struct{}
+	isRunning    bool
+	timeout      time.Duration
+	clock        controllerTime.Clock
+	ticker       controllerTime.Ticker
+	monitor      remote.Monitor
+	mch          remote.MonitorChannel
+	matcher      *PeriodMatcher
 }
 
 // New constructs a Controller, an implementation of metric.Provider, using the
@@ -175,15 +175,15 @@ func (c *Controller) tick() {
 
 func (c *Controller) update(schedules []*pb.MetricConfigResponse_Schedule) {
 	newPeriod := c.matcher.ApplySchedules(schedules)
-	if c.lastPeriod != newPeriod {
+	if c.exportPeriod != newPeriod {
 		if c.ticker != nil {
 			c.ticker.Stop()
 		}
 
-		c.lastPeriod = newPeriod
+		c.exportPeriod = newPeriod
 
 		c.lock.Lock()
-		c.ticker = c.clock.Ticker(c.lastPeriod)
+		c.ticker = c.clock.Ticker(c.exportPeriod)
 		c.lock.Unlock()
 
 		if c.done != nil {

@@ -27,7 +27,7 @@ type Monitor interface {
 }
 
 // A MonitorChannel holds the communication channels that a Monitor uses to
-// inform a controller of updates from an upstream service.
+// inform a controller of metric collection updates from an upstream service.
 type MonitorChannel struct {
 	// Data contains updated metric schedules
 	Data chan []*pb.MetricConfigResponse_Schedule

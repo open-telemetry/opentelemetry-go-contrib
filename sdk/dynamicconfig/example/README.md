@@ -5,8 +5,7 @@ runtime, via a remote configuration service. It is a prototype implementation of
 specification](https://github.com/open-telemetry/opentelemetry-specification/blob/master/experimental/metrics/config-service.md). The prototype is currently available
 only for Go.
 
-**NOTE: this system is experimental, and liable to rapid breaking changes.
-Use at your own risk.**
+**NOTE: this system is experimental**
 
 ## Push Controller
 A prototype push controller that implements dynamic per-metric configuration is
@@ -18,7 +17,7 @@ use it, ensure you have the following import
 import "go.opentelemetry.io/contrib/sdk/dynamicconfig/metric/controller/push"
 ```
 
-It's use is almost identical to the push controller available from the Go SDK.
+Its use is almost identical to the push controller available from the Go SDK.
 The crucial difference is that the constructor takes an additional argument
 that represents the address of the configuration service. For example:
 

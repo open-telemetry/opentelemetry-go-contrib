@@ -41,7 +41,7 @@ type collectData struct {
 	period        time.Duration
 }
 
-// MarkStart records the starting time for the PeriodMatcher. It's purpose is
+// MarkStart records the starting time for the PeriodMatcher. Its purpose is
 // to align the metric collection schedule to a particular starting point. If
 // unset, then all metrics will be collected on the first collection sweep.
 func (matcher *PeriodMatcher) MarkStart(startTime time.Time) {
@@ -55,14 +55,14 @@ func (matcher *PeriodMatcher) MarkStart(startTime time.Time) {
 // This function may be called concurrently.
 func (matcher *PeriodMatcher) ApplySchedules(sched []*pb.MetricConfigResponse_Schedule) time.Duration {
 	matcher.m.Lock()
-	defer matcher.m.Unlock()
-
 	matcher.sched = sched
 	matcher.metrics = make(map[string]*collectData)
+	matcher.m.Unlock()
 
 	return getExportPeriod(matcher.sched)
 }
 
+// TODO: handle explicit zeros
 func getExportPeriod(sched []*pb.MetricConfigResponse_Schedule) time.Duration {
 	if len(sched) == 0 {
 		panic("matcher has not applied any schedules")
