@@ -32,6 +32,7 @@ type OTelQueryObserver struct {
 	enabled  bool
 	observer gocql.QueryObserver
 	tracer   trace.Tracer
+	inst        *instruments
 }
 
 // OTelBatchObserver implements the gocql.BatchObserver interface
@@ -40,6 +41,7 @@ type OTelBatchObserver struct {
 	enabled  bool
 	observer gocql.BatchObserver
 	tracer   trace.Tracer
+	inst        *instruments
 }
 
 // OTelConnectObserver implements the gocql.ConnectObserver interface
@@ -49,6 +51,7 @@ type OTelConnectObserver struct {
 	enabled  bool
 	observer gocql.ConnectObserver
 	tracer   trace.Tracer
+	inst        *instruments
 }
 
 // ------------------------------------------ Observer Functions
@@ -58,6 +61,7 @@ func (o *OTelQueryObserver) ObserveQuery(ctx context.Context, observedQuery gocq
 	if o.enabled {
 		host := observedQuery.Host
 		keyspace := observedQuery.Keyspace
+		inst := o.inst
 
 		attributes := includeKeyValues(host,
 			cassKeyspace(keyspace),
@@ -76,7 +80,7 @@ func (o *OTelQueryObserver) ObserveQuery(ctx context.Context, observedQuery gocq
 
 		if observedQuery.Err != nil {
 			span.SetAttributes(cassErrMsg(observedQuery.Err.Error()))
-			iQueryCount.Add(
+			inst.queryCount.Add(
 				ctx,
 				1,
 				includeKeyValues(host,
@@ -86,7 +90,7 @@ func (o *OTelQueryObserver) ObserveQuery(ctx context.Context, observedQuery gocq
 				)...,
 			)
 		} else {
-			iQueryCount.Add(
+			inst.queryCount.Add(
 				ctx,
 				1,
 				includeKeyValues(host,
@@ -98,12 +102,12 @@ func (o *OTelQueryObserver) ObserveQuery(ctx context.Context, observedQuery gocq
 
 		span.End(trace.WithEndTime(observedQuery.End))
 
-		iQueryRows.Record(
+		inst.queryRows.Record(
 			ctx,
 			int64(observedQuery.Rows),
 			includeKeyValues(host, cassKeyspace(keyspace))...,
 		)
-		iLatency.Record(
+		inst.latency.Record(
 			ctx,
 			nanoToMilliseconds(observedQuery.Metrics.TotalLatency),
 			includeKeyValues(host, cassKeyspace(keyspace))...,
@@ -120,6 +124,7 @@ func (o *OTelBatchObserver) ObserveBatch(ctx context.Context, observedBatch gocq
 	if o.enabled {
 		host := observedBatch.Host
 		keyspace := observedBatch.Keyspace
+		inst := o.inst
 
 		attributes := includeKeyValues(host,
 			cassKeyspace(keyspace),
@@ -137,7 +142,7 @@ func (o *OTelBatchObserver) ObserveBatch(ctx context.Context, observedBatch gocq
 
 		if observedBatch.Err != nil {
 			span.SetAttributes(cassErrMsg(observedBatch.Err.Error()))
-			iBatchCount.Add(
+			inst.batchCount.Add(
 				ctx,
 				1,
 				includeKeyValues(host,
@@ -146,7 +151,7 @@ func (o *OTelBatchObserver) ObserveBatch(ctx context.Context, observedBatch gocq
 				)...,
 			)
 		} else {
-			iBatchCount.Add(
+			inst.batchCount.Add(
 				ctx,
 				1,
 				includeKeyValues(host, cassKeyspace(keyspace))...,
@@ -155,7 +160,7 @@ func (o *OTelBatchObserver) ObserveBatch(ctx context.Context, observedBatch gocq
 
 		span.End(trace.WithEndTime(observedBatch.End))
 
-		iLatency.Record(
+		inst.latency.Record(
 			ctx,
 			nanoToMilliseconds(observedBatch.Metrics.TotalLatency),
 			includeKeyValues(host, cassKeyspace(keyspace))...,
@@ -171,6 +176,7 @@ func (o *OTelBatchObserver) ObserveBatch(ctx context.Context, observedBatch gocq
 func (o *OTelConnectObserver) ObserveConnect(observedConnect gocql.ObservedConnect) {
 	if o.enabled {
 		host := observedConnect.Host
+		inst := o.inst
 
 		attributes := includeKeyValues(host, cassConnectOperation())
 
@@ -184,13 +190,13 @@ func (o *OTelConnectObserver) ObserveConnect(observedConnect gocql.ObservedConne
 
 		if observedConnect.Err != nil {
 			span.SetAttributes(cassErrMsg(observedConnect.Err.Error()))
-			iConnectionCount.Add(
+			inst.connectionCount.Add(
 				o.ctx,
 				1,
 				includeKeyValues(host, cassErrMsg(observedConnect.Err.Error()))...,
 			)
 		} else {
-			iConnectionCount.Add(
+			inst.connectionCount.Add(
 				o.ctx,
 				1,
 				includeKeyValues(host)...,

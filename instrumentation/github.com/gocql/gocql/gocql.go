@@ -25,21 +25,26 @@ import (
 // You may use additional observers and disable specific tracing using the provided `TracedSessionOption`s.
 func NewSessionWithTracing(ctx context.Context, cluster *gocql.ClusterConfig, options ...TracedSessionOption) (*gocql.Session, error) {
 	config := configure(options...)
+	instruments := newInstruments(config.meterProvider)
+	tracer := config.traceProvider.Tracer(instrumentationName)
 	cluster.QueryObserver = &OTelQueryObserver{
 		enabled:  config.instrumentQuery,
 		observer: config.queryObserver,
-		tracer:   config.tracer,
+		tracer:   tracer,
+		inst:     instruments,
 	}
 	cluster.BatchObserver = &OTelBatchObserver{
 		enabled:  config.instrumentBatch,
 		observer: config.batchObserver,
-		tracer:   config.tracer,
+		tracer:   tracer,
+		inst:     instruments,
 	}
 	cluster.ConnectObserver = &OTelConnectObserver{
 		ctx:      ctx,
 		enabled:  config.instrumentConnect,
 		observer: config.connectObserver,
-		tracer:   config.tracer,
+		tracer:   tracer,
+		inst:     instruments,
 	}
 	return cluster.CreateSession()
 }

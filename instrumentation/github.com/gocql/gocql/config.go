@@ -18,13 +18,15 @@ import (
 	"github.com/gocql/gocql"
 
 	"go.opentelemetry.io/otel/api/global"
+	"go.opentelemetry.io/otel/api/metric"
 	"go.opentelemetry.io/otel/api/trace"
 )
 
 // TracedSessionConfig provides configuration for sessions
 // created with NewSessionWithTracing.
 type TracedSessionConfig struct {
-	tracer            trace.Tracer
+	traceProvider     trace.Provider
+	meterProvider     metric.Provider
 	instrumentQuery   bool
 	instrumentBatch   bool
 	instrumentConnect bool
@@ -78,12 +80,20 @@ func WithConnectObserver(observer gocql.ConnectObserver) TracedSessionOption {
 	})
 }
 
-// WithTracer will set tracer to be the tracer used to create spans
-// for query, batch query, and connection instrumentation.
-// Defaults to global.Tracer("go.opentelemetry.io/contrib/instrumentation/github.com/gocql/gocql").
-func WithTracer(tracer trace.Tracer) TracedSessionOption {
+// WithTraceProvider will set the trace provider used to get a tracer
+// for creating spans. Defaults to global.TraceProvider()
+func WithTraceProvider(provider trace.Provider) TracedSessionOption {
 	return TracedSessionOptionFunc(func(c *TracedSessionConfig) {
-		c.tracer = tracer
+		c.traceProvider = provider
+	})
+}
+
+// WithMeterProvider will set the meter provider used to get a meter
+// for creating instruments.
+// Defaults to global.MeterProvider().
+func WithMeterProvider(provider metric.Provider) TracedSessionOption {
+	return TracedSessionOptionFunc(func(c *TracedSessionConfig) {
+		c.meterProvider = provider
 	})
 }
 
@@ -115,7 +125,8 @@ func WithConnectInstrumentation(enabled bool) TracedSessionOption {
 
 func configure(options ...TracedSessionOption) *TracedSessionConfig {
 	config := &TracedSessionConfig{
-		tracer:            global.Tracer(instrumentationName),
+		traceProvider:     global.TraceProvider(),
+		meterProvider:     global.MeterProvider(),
 		instrumentQuery:   true,
 		instrumentBatch:   true,
 		instrumentConnect: true,
