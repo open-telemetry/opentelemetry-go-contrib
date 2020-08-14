@@ -113,11 +113,11 @@ Approvers:
 
 - [Liz Fong-Jones](https://github.com/lizthegrey), Honeycomb
 - [Evan Torrie](https://github.com/evantorrie), Verizon Media
-- [Anthony Mirabella](https://github.com/Aneurysm9), Centene
+- [Josh MacDonald](https://github.com/jmacd), LightStep
 
 Maintainers:
 
-- [Josh MacDonald](https://github.com/jmacd), LightStep
+- [Anthony Mirabella](https://github.com/Aneurysm9), Centene
 - [Tyler Yahn](https://github.com/MrAlias), New Relic
 
 ### Become an Approver or a Maintainer
