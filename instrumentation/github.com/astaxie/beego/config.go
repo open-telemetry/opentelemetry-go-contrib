@@ -84,7 +84,7 @@ func WithFilter(f Filter) OptionFunc {
 }
 
 // WithSpanNameFormatter sets the formatter to be used to format
-// span names. Defaults to http.Request.URL.Path.
+// span names. Defaults to the path template.
 func WithSpanNameFormatter(f SpanNameFormatter) OptionFunc {
 	return OptionFunc(func(c *Config) {
 		c.formatter = f
