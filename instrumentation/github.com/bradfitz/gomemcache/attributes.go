@@ -19,37 +19,39 @@ import (
 	"go.opentelemetry.io/otel/api/standard"
 )
 
+type operation string
+
 const (
-	operationAdd            = "add"
-	operationCompareAndSwap = "cas"
-	operationDecrement      = "decr"
-	operationDelete         = "delete"
-	operationDeleteAll      = "delete_all"
-	operationFlushAll       = "flush_all"
-	operationGet            = "get"
-	operationIncrement      = "incr"
-	operationPing           = "ping"
-	operationReplace        = "replace"
-	operationSet            = "set"
-	operationTouch          = "touch"
+	operationAdd            operation = "add"
+	operationCompareAndSwap operation = "cas"
+	operationDecrement      operation = "decr"
+	operationDelete         operation = "delete"
+	operationDeleteAll      operation = "delete_all"
+	operationFlushAll       operation = "flush_all"
+	operationGet            operation = "get"
+	operationIncrement      operation = "incr"
+	operationPing           operation = "ping"
+	operationReplace        operation = "replace"
+	operationSet            operation = "set"
+	operationTouch          operation = "touch"
 
 	mamcacheDBSystemValue = "memcached"
 
-	memcacheDBItemKeyKeyName kv.Key = "db.memcached.itemKey"
+	memcacheDBItemKeyName kv.Key = "db.memcached.item"
 )
 
 func memcacheDBSystem() kv.KeyValue {
 	return standard.DBSystemKey.String(mamcacheDBSystemValue)
 }
 
-func memcacheDBOperation(opName string) kv.KeyValue {
-	return standard.DBOperationKey.String(opName)
+func memcacheDBOperation(opName operation) kv.KeyValue {
+	return standard.DBOperationKey.String(string(opName))
 }
 
-func memcacheDBItemKeys(itemKeys ...string) []kv.KeyValue {
-	kvs := make([]kv.KeyValue, 0, len(itemKeys))
-	for _, ik := range itemKeys {
-		kvs = append(kvs, memcacheDBItemKeyKeyName.String(ik))
+func memcacheDBItemKeys(itemKeys ...string) kv.KeyValue {
+	if len(itemKeys) > 1 {
+		return memcacheDBItemKeyName.Array(itemKeys)
 	}
-	return kvs
+
+	return memcacheDBItemKeyName.String(itemKeys[0])
 }

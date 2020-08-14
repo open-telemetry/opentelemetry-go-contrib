@@ -65,14 +65,14 @@ func TestOperation(t *testing.T) {
 	spans := mt.EndedSpans()
 	assert.Len(t, spans, 1)
 	assert.Equal(t, oteltrace.SpanKindClient, spans[0].Kind)
-	assert.Equal(t, operationAdd, spans[0].Name)
+	assert.Equal(t, string(operationAdd), spans[0].Name)
 	assert.Len(t, spans[0].Attributes, 4)
 
 	expectedKvMap := map[kv.Key]kv.Value{
-		standard.ServiceNameKey:                             standard.ServiceNameKey.String(defaultServiceName).Value,
-		memcacheDBSystem().Key:                              memcacheDBSystem().Value,
-		memcacheDBOperation(operationAdd).Key:               memcacheDBOperation(operationAdd).Value,
-		kv.Key(memcacheDBItemKeyKeyName).String(mi.Key).Key: kv.Key(memcacheDBItemKeyKeyName).String(mi.Key).Value,
+		standard.ServiceNameKey:                          standard.ServiceNameKey.String(defaultServiceName).Value,
+		memcacheDBSystem().Key:                           memcacheDBSystem().Value,
+		memcacheDBOperation(operationAdd).Key:            memcacheDBOperation(operationAdd).Value,
+		kv.Key(memcacheDBItemKeyName).String(mi.Key).Key: kv.Key(memcacheDBItemKeyName).String(mi.Key).Value,
 	}
 	assert.Equal(t, expectedKvMap, spans[0].Attributes)
 }
@@ -88,14 +88,14 @@ func TestOperationWithCacheMissError(t *testing.T) {
 	spans := mt.EndedSpans()
 	assert.Len(t, spans, 1)
 	assert.Equal(t, oteltrace.SpanKindClient, spans[0].Kind)
-	assert.Equal(t, operationGet, spans[0].Name)
+	assert.Equal(t, string(operationGet), spans[0].Name)
 	assert.Len(t, spans[0].Attributes, 4)
 
 	expectedKvMap := map[kv.Key]kv.Value{
-		standard.ServiceNameKey:                          standard.ServiceNameKey.String(defaultServiceName).Value,
-		memcacheDBSystem().Key:                           memcacheDBSystem().Value,
-		memcacheDBOperation(operationGet).Key:            memcacheDBOperation(operationGet).Value,
-		kv.Key(memcacheDBItemKeyKeyName).String(key).Key: kv.Key(memcacheDBItemKeyKeyName).String(key).Value,
+		standard.ServiceNameKey:                       standard.ServiceNameKey.String(defaultServiceName).Value,
+		memcacheDBSystem().Key:                        memcacheDBSystem().Value,
+		memcacheDBOperation(operationGet).Key:         memcacheDBOperation(operationGet).Value,
+		kv.Key(memcacheDBItemKeyName).String(key).Key: kv.Key(memcacheDBItemKeyName).String(key).Value,
 	}
 	assert.Equal(t, expectedKvMap, spans[0].Attributes)
 

@@ -12,7 +12,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-// Package gomemcache provides tracing intstrumentation for
+// Package gomemcache provides tracing instrumentation for
 // the memcached client (https://github.com/bradfitz/gomemcache).
 //
 // The instrumentation works by wrapping the memcache client by calling `NewClientWithTracing` and

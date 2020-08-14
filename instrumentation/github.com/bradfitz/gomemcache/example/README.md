@@ -15,7 +15,7 @@ These instructions expect you to have
     docker-compose up --detach
     ```
 
-2. The instrumentation works with an `stdout` exporter, meaning the spans should be visible in the output of the `gomemcache-container`. To inspect the output, you can run:
+2. The instrumentation works with a `stdout` exporter, meaning the spans should be visible in the output of the `gomemcache-container`. To inspect the output, you can run:
 
     ```sh
     docker-compose logs gomemcache-client

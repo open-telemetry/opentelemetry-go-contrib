@@ -76,19 +76,22 @@ func NewClientWithTracing(client *memcache.Client, opts ...Option) *Client {
 
 // attrsByOperationAndItemKey returns appropriate span attributes on the basis
 // of the operation name and item key(s) (if available)
-func (c *Client) attrsByOperationAndItemKey(operation string, key ...string) []kv.KeyValue {
+func (c *Client) attrsByOperationAndItemKey(operation operation, key ...string) []kv.KeyValue {
 	kvs := []kv.KeyValue{
 		standard.ServiceNameKey.String(c.cfg.serviceName),
 		memcacheDBSystem(),
 		memcacheDBOperation(operation),
 	}
 
-	kvs = append(kvs, memcacheDBItemKeys(key...)...)
+	if len(key) > 0 {
+		kvs = append(kvs, memcacheDBItemKeys(key...))
+	}
+
 	return kvs
 }
 
 // Starts span with appropriate span kind and attributes
-func (c *Client) startSpan(operationName string, itemKey ...string) oteltrace.Span {
+func (c *Client) startSpan(operationName operation, itemKey ...string) oteltrace.Span {
 	opts := []oteltrace.StartOption{
 		// for database client calls, always use CLIENT span kind
 		oteltrace.WithSpanKind(oteltrace.SpanKindClient),
@@ -99,7 +102,7 @@ func (c *Client) startSpan(operationName string, itemKey ...string) oteltrace.Sp
 
 	_, span := c.tracer.Start(
 		c.ctx,
-		operationName,
+		string(operationName),
 		opts...,
 	)
 
@@ -181,7 +184,7 @@ func (c *Client) Get(key string) (*memcache.Item, error) {
 	return item, err
 }
 
-// GetMulti invokes the get multi operation and traces it
+// GetMulti invokes the get operation for multiple keys and traces it
 func (c *Client) GetMulti(keys []string) (map[string]*memcache.Item, error) {
 	s := c.startSpan(operationGet, keys...)
 	items, err := c.Client.GetMulti(keys)
