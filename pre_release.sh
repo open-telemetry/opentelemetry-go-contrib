@@ -88,6 +88,11 @@ else
     CONTRIB_TAG=${OTEL_TAG}  # if contrib_tag not specified, but OTEL_TAG is, then set it to OTEL_TAG
 fi
 
+# Get version for contrib.go
+OTEL_CONTRIB_VERSION=$(echo "${CONTRIB_TAG}" | grep -o '^v[0-9]\+\.[0-9]\+\.[0-9]\+')
+# Strip leading v
+OTEL_CONTRIB_VERSION="${OTEL_CONTRIB_VERSION#v}"
+
 cd "$(dirname "$0")"
 
 if ! git diff --quiet; then \
@@ -96,6 +101,10 @@ if ! git diff --quiet; then \
     git diff
     exit 1
 fi
+
+# Update contrib.go version definition
+sed -i .bak "s/\(return \"\)[0-9]*\.[0-9]*\.[0-9]*\"/\1${OTEL_CONTRIB_VERSION}\"/" ./contrib.go
+rm -f ./contrib.go.bak
 
 declare -r BRANCH_NAME=pre_release_${CONTRIB_TAG}
 

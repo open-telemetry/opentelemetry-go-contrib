@@ -8,6 +8,10 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 
 ## [Unreleased]
 
+### Added
+
+- Top-level `Version()` and `SemVersion()` functions defining the current version of the contrib package.
+
 ## [0.10.1] - 2020-08-13
 
 ### Added
