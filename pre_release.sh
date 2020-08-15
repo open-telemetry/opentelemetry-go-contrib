@@ -89,7 +89,7 @@ else
 fi
 
 # Get version for contrib.go
-OTEL_CONTRIB_VERSION=$(echo "${CONTRIB_TAG}" | grep -o '^v[0-9]\+\.[0-9]\+\.[0-9]\+')
+OTEL_CONTRIB_VERSION=$(echo "${CONTRIB_TAG}" | egrep -o "${SEMVER_REGEX}")
 # Strip leading v
 OTEL_CONTRIB_VERSION="${OTEL_CONTRIB_VERSION#v}"
 
