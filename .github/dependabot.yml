@@ -73,3 +73,7 @@ updates:
     directory: "/instrumentation/net/http/httptrace" # Location of package manifests
     schedule:
       interval: "daily"
+  - package-ecosystem: "gomod" # See documentation for possible values
+    directory: "/instrumentation/github.com/bradfitz/gomemcache" # Location of package manifests
+    schedule:
+      interval: "daily"
