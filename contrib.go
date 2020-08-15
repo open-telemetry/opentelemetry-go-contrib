@@ -19,6 +19,7 @@ package contrib // import "go.opentelemetry.io/contrib"
 // Version is the current release version of OpenTelemetry Contrib in use.
 func Version() string {
 	return "0.10.1"
+	// This string is updated by the pre_release.sh script during release
 }
 
 // SemVersion is the semantic version to be supplied to tracer/meter creation.
