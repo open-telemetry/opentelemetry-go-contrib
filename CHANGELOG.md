@@ -12,6 +12,14 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 
 - Top-level `Version()` and `SemVersion()` functions defining the current version of the contrib package. (#225)
 
+### Changed
+
+- Switch to use common top-level module `SemVersion()` when creating versioned tracer in `bradfitz/gomemcache`.
+
+### Fixed
+
+- Update dependabot configuration to include newly added `bradfitz/gomemcache` package.
+
 ## [0.10.1] - 2020-08-13
 
 ### Added
