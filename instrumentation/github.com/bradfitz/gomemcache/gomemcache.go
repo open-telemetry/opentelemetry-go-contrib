@@ -19,6 +19,7 @@ import (
 
 	"github.com/bradfitz/gomemcache/memcache"
 
+	"go.opentelemetry.io/contrib"
 	otelglobal "go.opentelemetry.io/otel/api/global"
 	"go.opentelemetry.io/otel/api/kv"
 	"go.opentelemetry.io/otel/api/standard"
@@ -26,9 +27,7 @@ import (
 )
 
 const (
-	defaultTracerName = "go.opentelemetry.io/contrib/instrumentation/github.com/bradfitz/gomemcache"
-	tracerVersion     = "semver:0.1.0"
-
+	defaultTracerName  = "go.opentelemetry.io/contrib/instrumentation/github.com/bradfitz/gomemcache"
 	defaultServiceName = "memcached"
 )
 
@@ -68,7 +67,7 @@ func NewClientWithTracing(client *memcache.Client, opts ...Option) *Client {
 		cfg,
 		cfg.traceProvider.Tracer(
 			defaultTracerName,
-			oteltrace.WithInstrumentationVersion(tracerVersion),
+			oteltrace.WithInstrumentationVersion(contrib.SemVersion()),
 		),
 		context.Background(),
 	}

@@ -12,29 +12,17 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package gomemcache
+// Package contrib contains common values used across all
+// instrumentation, exporter, and detector contributions.
+package contrib // import "go.opentelemetry.io/contrib"
 
-import (
-	"github.com/bradfitz/gomemcache/memcache"
-	"google.golang.org/grpc/codes"
-)
+// Version is the current release version of OpenTelemetry Contrib in use.
+func Version() string {
+	return "0.10.1"
+	// This string is updated by the pre_release.sh script during release
+}
 
-// maps memcache error to appropriate error code; otherwise returns status OK
-func memcacheErrToStatusCode(err error) codes.Code {
-	if err == nil {
-		return codes.OK
-	}
-
-	switch err {
-	case memcache.ErrCacheMiss, memcache.ErrNotStored, memcache.ErrNoStats:
-		return codes.NotFound
-	case memcache.ErrCASConflict:
-		return codes.AlreadyExists
-	case memcache.ErrServerError:
-		return codes.Internal
-	case memcache.ErrMalformedKey:
-		return codes.InvalidArgument
-	default:
-		return codes.Unknown
-	}
+// SemVersion is the semantic version to be supplied to tracer/meter creation.
+func SemVersion() string {
+	return "semver:" + Version()
 }
