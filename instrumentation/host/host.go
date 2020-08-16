@@ -16,7 +16,11 @@ package host // import "go.opentelemetry.io/contrib/instrumentation/host"
 
 import (
 	"context"
+	"fmt"
+	"os"
 	"sync"
+
+	"github.com/shirou/gopsutil/process"
 
 	"go.opentelemetry.io/otel/api/global"
 	"go.opentelemetry.io/otel/api/metric"
@@ -182,12 +186,24 @@ func (r *runtime) register() error {
 		lock sync.Mutex
 	)
 
+	proc, err := process.NewProcess(int32(os.Getpid()))
+	if err != nil {
+		return fmt.Errorf("could not find this process: %w", err)
+	}
+
 	lock.Lock()
 	defer lock.Unlock()
 
 	batchObserver := r.meter.NewBatchObserver(func(ctx context.Context, result metric.BatchObserverResult) {
 		lock.Lock()
 		defer lock.Unlock()
+
+		// This follows, measures User, System, and IOwait time.
+		// opentelemetry-collector/receiver/hostmetricsreceiver/internal/scraper/processscraper/
+		processTimes, err := proc.TimesWithContext(ctx) // returns user and system time for process
+		if err != nil {
+			return Metrics{}, err
+		}
 
 		// now := time.Now()
 		// if now.Sub(lastMemStats) >= r.config.MinimumReadMemStatsInterval {
