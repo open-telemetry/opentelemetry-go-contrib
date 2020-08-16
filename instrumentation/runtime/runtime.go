@@ -33,12 +33,17 @@ type runtime struct {
 
 // Config contains optional settings for reporting runtime metrics.
 type Config struct {
+	// Negative values are ignored.
 	MinimumReadMemStatsInterval time.Duration
-	MeterProvider               metric.Provider
+
+	// MeterProvider sets the metric.Provider.  If nil, the global
+	// Provider will be used.
+	MeterProvider metric.Provider
 }
 
 // Option supports configuring optional settings for runtime metrics.
 type Option interface {
+	// ApplyRuntime updates *Config.
 	ApplyRuntime(*Config)
 }
 
@@ -50,13 +55,14 @@ const DefaultMinimumReadMemStatsInterval time.Duration = 15 * time.Second
 
 // WithMinimumReadMemStatsInterval sets a minimum interval between calls to
 // runtime.ReadMemStats(), which is a relatively expensive call to make
-// frequently.  `d` values less than 0 will be disregarded silently.
+// frequently.  This setting is ignored when `d` is negative.
 func WithMinimumReadMemStatsInterval(d time.Duration) Option {
 	return minimumReadMemStatsIntervalOption(d)
 }
 
 type minimumReadMemStatsIntervalOption time.Duration
 
+// ApplyRuntime implements Option.
 func (o minimumReadMemStatsIntervalOption) ApplyRuntime(c *Config) {
 	if o >= 0 {
 		c.MinimumReadMemStatsInterval = time.Duration(o)
@@ -72,6 +78,7 @@ func WithMeterProvider(provider metric.Provider) Option {
 
 type metricProviderOption struct{ metric.Provider }
 
+// ApplyRuntime implements Option.
 func (o metricProviderOption) ApplyRuntime(c *Config) {
 	c.MeterProvider = o.Provider
 }
@@ -90,10 +97,19 @@ func Configure(opts ...Option) Config {
 
 // Start initializes reporting of runtime metrics using the supplied Config.
 func Start(c Config) error {
+	if c.MinimumReadMemStatsInterval < 0 {
+		c.MinimumReadMemStatsInterval = DefaultMinimumReadMemStatsInterval
+	}
+	if c.MeterProvider == nil {
+		c.MeterProvider = global.MeterProvider()
+	}
 	r := &runtime{
 		meter: c.MeterProvider.Meter(
-			"go.opentelemetry.io/contrib/runtime",
-			// TODO: set the instrumentation library version
+			// TODO: should library names be qualified?
+			// e.g., contrib/runtime?
+			"runtime",
+			// TODO(#225): set the instrumentation library version
+			// metric.WithInstrumentationVersion(contrib.SemVersion())
 		),
 		config: c,
 	}
