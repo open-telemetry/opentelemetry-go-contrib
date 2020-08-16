@@ -24,14 +24,13 @@ import (
 
 	"go.opentelemetry.io/contrib/instrumentation/runtime"
 	"go.opentelemetry.io/contrib/internal/metric"
-
-	"go.opentelemetry.io/otel/api/global"
 )
 
 func TestRuntime(t *testing.T) {
 	err := runtime.Start(
-		global.MeterProvider(),
-		runtime.WithMinimumGCStatsInterval(time.Second),
+		runtime.Configure(
+			runtime.WithMinimumReadMemStatsInterval(time.Second),
+		),
 	)
 	assert.NoError(t, err)
 	time.Sleep(time.Second)
@@ -58,8 +57,12 @@ func testMinimumInterval(t *testing.T, shouldHappen bool, opts ...runtime.Option
 	impl, provider := metric.NewProvider()
 
 	err := runtime.Start(
-		provider,
-		opts...,
+		runtime.Configure(
+			append(
+				opts,
+				runtime.WithMeterProvider(provider),
+			)...,
+		),
 	)
 	assert.NoError(t, err)
 
@@ -90,9 +93,9 @@ func TestDefaultMinimumInterval(t *testing.T) {
 }
 
 func TestNoMinimumInterval(t *testing.T) {
-	testMinimumInterval(t, true, runtime.WithMinimumGCStatsInterval(0))
+	testMinimumInterval(t, true, runtime.WithMinimumReadMemStatsInterval(0))
 }
 
 func TestExplicitMinimumInterval(t *testing.T) {
-	testMinimumInterval(t, false, runtime.WithMinimumGCStatsInterval(time.Hour))
+	testMinimumInterval(t, false, runtime.WithMinimumReadMemStatsInterval(time.Hour))
 }
