@@ -33,7 +33,9 @@ type runtime struct {
 
 // Config contains optional settings for reporting runtime metrics.
 type Config struct {
-	// Negative values are ignored.
+	// MinimumReadMemStatsInterval sets the mininum interval
+	// between calls to runtime.ReadMemStats().  Negative values
+	// are ignored.
 	MinimumReadMemStatsInterval time.Duration
 
 	// MeterProvider sets the metric.Provider.  If nil, the global
