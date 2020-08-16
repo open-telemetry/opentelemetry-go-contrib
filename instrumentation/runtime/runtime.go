@@ -20,6 +20,7 @@ import (
 	"sync"
 	"time"
 
+	"go.opentelemetry.io/contrib"
 	"go.opentelemetry.io/otel/api/global"
 	"go.opentelemetry.io/otel/api/metric"
 	"go.opentelemetry.io/otel/api/unit"
@@ -110,8 +111,7 @@ func Start(c Config) error {
 			// TODO: should library names be qualified?
 			// e.g., contrib/runtime?
 			"runtime",
-			// TODO(#225): set the instrumentation library version
-			// metric.WithInstrumentationVersion(contrib.SemVersion())
+			metric.WithInstrumentationVersion(contrib.SemVersion()),
 		),
 		config: c,
 	}
