@@ -34,8 +34,7 @@ import (
 )
 
 const (
-	serviceName = "test-service-name"
-	topic       = "test-topic"
+	topic = "test-topic"
 )
 
 var (
@@ -43,8 +42,8 @@ var (
 )
 
 func TestWrapPartitionConsumer(t *testing.T) {
-	// Mock tracer
-	mt := mocktracer.NewTracer("kafka")
+	// Mock provider
+	provider, mt := newProviderAndTracer()
 
 	// Mock partition consumer controller
 	consumer := mocks.NewConsumer(t, sarama.NewConfig())
@@ -54,21 +53,21 @@ func TestWrapPartitionConsumer(t *testing.T) {
 	partitionConsumer, err := consumer.ConsumePartition(topic, 0, 0)
 	require.NoError(t, err)
 
-	partitionConsumer = WrapPartitionConsumer(serviceName, partitionConsumer, WithTracer(mt))
+	partitionConsumer = WrapPartitionConsumer(partitionConsumer, WithTraceProvider(provider))
 
 	consumeAndCheck(t, mt, mockPartitionConsumer, partitionConsumer)
 }
 
 func TestWrapConsumer(t *testing.T) {
-	// Mock tracer
-	mt := mocktracer.NewTracer("kafka")
+	// Mock provider
+	provider, mt := newProviderAndTracer()
 
 	// Mock partition consumer controller
 	mockConsumer := mocks.NewConsumer(t, sarama.NewConfig())
 	mockPartitionConsumer := mockConsumer.ExpectConsumePartition(topic, 0, 0)
 
 	// Wrap consumer
-	consumer := WrapConsumer(serviceName, mockConsumer, WithTracer(mt))
+	consumer := WrapConsumer(mockConsumer, WithTraceProvider(provider))
 
 	// Create partition consumer
 	partitionConsumer, err := consumer.ConsumePartition(topic, 0, 0)
@@ -107,7 +106,6 @@ func consumeAndCheck(t *testing.T, mt *mocktracer.Tracer, mockPartitionConsumer 
 	}{
 		{
 			kvList: []kv.KeyValue{
-				standard.ServiceNameKey.String(serviceName),
 				standard.MessagingSystemKey.String("kafka"),
 				standard.MessagingDestinationKindKeyTopic,
 				standard.MessagingDestinationKey.String("test-topic"),
@@ -121,7 +119,6 @@ func consumeAndCheck(t *testing.T, mt *mocktracer.Tracer, mockPartitionConsumer 
 		},
 		{
 			kvList: []kv.KeyValue{
-				standard.ServiceNameKey.String(serviceName),
 				standard.MessagingSystemKey.String("kafka"),
 				standard.MessagingDestinationKindKeyTopic,
 				standard.MessagingDestinationKey.String("test-topic"),
@@ -159,7 +156,7 @@ func TestConsumerConsumePartitionWithError(t *testing.T) {
 	mockConsumer := mocks.NewConsumer(t, sarama.NewConfig())
 	mockConsumer.ExpectConsumePartition(topic, 0, 0)
 
-	consumer := WrapConsumer(serviceName, mockConsumer)
+	consumer := WrapConsumer(mockConsumer)
 	_, err := consumer.ConsumePartition(topic, 0, 0)
 	assert.NoError(t, err)
 	// Consume twice
@@ -168,12 +165,12 @@ func TestConsumerConsumePartitionWithError(t *testing.T) {
 }
 
 func BenchmarkWrapPartitionConsumer(b *testing.B) {
-	// Mock tracer
-	mt := mocktracer.NewTracer("kafka")
+	// Mock provider
+	provider, _ := newProviderAndTracer()
 
 	mockPartitionConsumer, partitionConsumer := createMockPartitionConsumer(b)
 
-	partitionConsumer = WrapPartitionConsumer(serviceName, partitionConsumer, WithTracer(mt))
+	partitionConsumer = WrapPartitionConsumer(partitionConsumer, WithTraceProvider(provider))
 	message := sarama.ConsumerMessage{Key: []byte("foo")}
 
 	b.ReportAllocs()

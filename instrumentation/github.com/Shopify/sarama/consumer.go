@@ -31,8 +31,8 @@ func (pc *partitionConsumer) Messages() <-chan *sarama.ConsumerMessage {
 
 // WrapPartitionConsumer wraps a sarama.PartitionConsumer causing each received
 // message to be traced.
-func WrapPartitionConsumer(serviceName string, pc sarama.PartitionConsumer, opts ...Option) sarama.PartitionConsumer {
-	cfg := newConfig(serviceName, opts...)
+func WrapPartitionConsumer(pc sarama.PartitionConsumer, opts ...Option) sarama.PartitionConsumer {
+	cfg := newConfig(opts...)
 
 	dispatcher := newConsumerMessagesDispatcherWrapper(pc, cfg)
 	go dispatcher.Run()
@@ -46,8 +46,7 @@ func WrapPartitionConsumer(serviceName string, pc sarama.PartitionConsumer, opts
 type consumer struct {
 	sarama.Consumer
 
-	serviceName string
-	opts        []Option
+	opts []Option
 }
 
 // ConsumePartition invokes Consumer.ConsumePartition and wraps the resulting
@@ -57,15 +56,14 @@ func (c *consumer) ConsumePartition(topic string, partition int32, offset int64)
 	if err != nil {
 		return nil, err
 	}
-	return WrapPartitionConsumer(c.serviceName, pc, c.opts...), nil
+	return WrapPartitionConsumer(pc, c.opts...), nil
 }
 
 // WrapConsumer wraps a sarama.Consumer wrapping any PartitionConsumer created
 // via Consumer.ConsumePartition.
-func WrapConsumer(serviceName string, c sarama.Consumer, opts ...Option) sarama.Consumer {
+func WrapConsumer(c sarama.Consumer, opts ...Option) sarama.Consumer {
 	return &consumer{
-		Consumer:    c,
-		serviceName: serviceName,
-		opts:        opts,
+		Consumer: c,
+		opts:     opts,
 	}
 }

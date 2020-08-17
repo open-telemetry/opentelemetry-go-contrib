@@ -58,8 +58,8 @@ func (p *syncProducer) SendMessages(msgs []*sarama.ProducerMessage) error {
 
 // WrapSyncProducer wraps a sarama.SyncProducer so that all produced messages
 // are traced.
-func WrapSyncProducer(serviceName string, saramaConfig *sarama.Config, producer sarama.SyncProducer, opts ...Option) sarama.SyncProducer {
-	cfg := newConfig(serviceName, opts...)
+func WrapSyncProducer(saramaConfig *sarama.Config, producer sarama.SyncProducer, opts ...Option) sarama.SyncProducer {
+	cfg := newConfig(opts...)
 	if saramaConfig == nil {
 		saramaConfig = sarama.NewConfig()
 	}
@@ -131,8 +131,8 @@ type producerMessageContext struct {
 //
 // If `Return.Successes` is false, there is no way to know partition and offset of
 // the message.
-func WrapAsyncProducer(serviceName string, saramaConfig *sarama.Config, p sarama.AsyncProducer, opts ...Option) sarama.AsyncProducer {
-	cfg := newConfig(serviceName, opts...)
+func WrapAsyncProducer(saramaConfig *sarama.Config, p sarama.AsyncProducer, opts ...Option) sarama.AsyncProducer {
+	cfg := newConfig(opts...)
 	if saramaConfig == nil {
 		saramaConfig = sarama.NewConfig()
 	}
@@ -234,7 +234,6 @@ func startProducerSpan(cfg config, version sarama.KafkaVersion, msg *sarama.Prod
 
 	// Create a span.
 	attrs := []kv.KeyValue{
-		standard.ServiceNameKey.String(cfg.ServiceName),
 		standard.MessagingSystemKey.String("kafka"),
 		standard.MessagingDestinationKindKeyTopic,
 		standard.MessagingDestinationKey.String(msg.Topic),

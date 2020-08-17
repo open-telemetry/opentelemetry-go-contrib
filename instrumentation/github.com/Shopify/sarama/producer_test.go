@@ -33,18 +33,25 @@ import (
 	mocktracer "go.opentelemetry.io/contrib/internal/trace"
 )
 
+func newProviderAndTracer() (*mocktracer.Provider, *mocktracer.Tracer) {
+	var provider mocktracer.Provider
+	tracer := provider.Tracer(defaultTracerName)
+
+	return &provider, tracer.(*mocktracer.Tracer)
+}
+
 func TestWrapSyncProducer(t *testing.T) {
 	var err error
 
-	// Mock tracer
-	mt := mocktracer.NewTracer("kafka")
+	// Mock provider
+	provider, mt := newProviderAndTracer()
 
 	cfg := newSaramaConfig()
 	// Mock sync producer
 	mockSyncProducer := mocks.NewSyncProducer(t, cfg)
 
 	// Wrap sync producer
-	syncProducer := WrapSyncProducer(serviceName, cfg, mockSyncProducer, WithTracer(mt))
+	syncProducer := WrapSyncProducer(cfg, mockSyncProducer, WithTraceProvider(provider))
 
 	// Create message with span context
 	ctx, _ := mt.Start(context.Background(), "")
@@ -59,7 +66,6 @@ func TestWrapSyncProducer(t *testing.T) {
 	}{
 		{
 			kvList: []kv.KeyValue{
-				standard.ServiceNameKey.String(serviceName),
 				standard.MessagingSystemKey.String("kafka"),
 				standard.MessagingDestinationKindKeyTopic,
 				standard.MessagingDestinationKey.String(topic),
@@ -71,7 +77,6 @@ func TestWrapSyncProducer(t *testing.T) {
 		},
 		{
 			kvList: []kv.KeyValue{
-				standard.ServiceNameKey.String(serviceName),
 				standard.MessagingSystemKey.String("kafka"),
 				standard.MessagingDestinationKindKeyTopic,
 				standard.MessagingDestinationKey.String(topic),
@@ -82,7 +87,6 @@ func TestWrapSyncProducer(t *testing.T) {
 		},
 		{
 			kvList: []kv.KeyValue{
-				standard.ServiceNameKey.String(serviceName),
 				standard.MessagingSystemKey.String("kafka"),
 				standard.MessagingDestinationKindKeyTopic,
 				standard.MessagingDestinationKey.String(topic),
@@ -95,7 +99,6 @@ func TestWrapSyncProducer(t *testing.T) {
 		},
 		{
 			kvList: []kv.KeyValue{
-				standard.ServiceNameKey.String(serviceName),
 				standard.MessagingSystemKey.String("kafka"),
 				standard.MessagingDestinationKindKeyTopic,
 				standard.MessagingDestinationKey.String(topic),
@@ -158,10 +161,12 @@ func TestWrapAsyncProducer(t *testing.T) {
 	}
 
 	t.Run("without successes config", func(t *testing.T) {
-		mt := mocktracer.NewTracer("kafka")
+		// Mock provider
+		provider, mt := newProviderAndTracer()
+
 		cfg := newSaramaConfig()
 		mockAsyncProducer := mocks.NewAsyncProducer(t, cfg)
-		ap := WrapAsyncProducer(serviceName, cfg, mockAsyncProducer, WithTracer(mt))
+		ap := WrapAsyncProducer(cfg, mockAsyncProducer, WithTraceProvider(provider))
 
 		msgList := createMessages(mt)
 		// Send message
@@ -183,7 +188,6 @@ func TestWrapAsyncProducer(t *testing.T) {
 		}{
 			{
 				kvList: []kv.KeyValue{
-					standard.ServiceNameKey.String(serviceName),
 					standard.MessagingSystemKey.String("kafka"),
 					standard.MessagingDestinationKindKeyTopic,
 					standard.MessagingDestinationKey.String(topic),
@@ -195,7 +199,6 @@ func TestWrapAsyncProducer(t *testing.T) {
 			},
 			{
 				kvList: []kv.KeyValue{
-					standard.ServiceNameKey.String(serviceName),
 					standard.MessagingSystemKey.String("kafka"),
 					standard.MessagingDestinationKindKeyTopic,
 					standard.MessagingDestinationKey.String(topic),
@@ -225,14 +228,15 @@ func TestWrapAsyncProducer(t *testing.T) {
 	})
 
 	t.Run("with successes config", func(t *testing.T) {
-		mt := mocktracer.NewTracer("kafka")
+		// Mock provider
+		provider, mt := newProviderAndTracer()
 
 		// Set producer with successes config
 		cfg := newSaramaConfig()
 		cfg.Producer.Return.Successes = true
 
 		mockAsyncProducer := mocks.NewAsyncProducer(t, cfg)
-		ap := WrapAsyncProducer(serviceName, cfg, mockAsyncProducer, WithTracer(mt))
+		ap := WrapAsyncProducer(cfg, mockAsyncProducer, WithTraceProvider(provider))
 
 		msgList := createMessages(mt)
 		// Send message
@@ -258,7 +262,6 @@ func TestWrapAsyncProducer(t *testing.T) {
 		}{
 			{
 				kvList: []kv.KeyValue{
-					standard.ServiceNameKey.String(serviceName),
 					standard.MessagingSystemKey.String("kafka"),
 					standard.MessagingDestinationKindKeyTopic,
 					standard.MessagingDestinationKey.String(topic),
@@ -270,7 +273,6 @@ func TestWrapAsyncProducer(t *testing.T) {
 			},
 			{
 				kvList: []kv.KeyValue{
-					standard.ServiceNameKey.String(serviceName),
 					standard.MessagingSystemKey.String("kafka"),
 					standard.MessagingDestinationKindKeyTopic,
 					standard.MessagingDestinationKey.String(topic),
@@ -304,14 +306,15 @@ func TestWrapAsyncProducer(t *testing.T) {
 }
 
 func TestWrapAsyncProducerError(t *testing.T) {
-	mt := mocktracer.NewTracer("kafka")
+	// Mock provider
+	provider, mt := newProviderAndTracer()
 
 	// Set producer with successes config
 	cfg := newSaramaConfig()
 	cfg.Producer.Return.Successes = true
 
 	mockAsyncProducer := mocks.NewAsyncProducer(t, cfg)
-	ap := WrapAsyncProducer(serviceName, cfg, mockAsyncProducer, WithTracer(mt))
+	ap := WrapAsyncProducer(cfg, mockAsyncProducer, WithTraceProvider(provider))
 
 	mockAsyncProducer.ExpectInputAndFail(errors.New("test"))
 	ap.Input() <- &sarama.ProducerMessage{Topic: topic, Key: sarama.StringEncoder("foo2")}
@@ -337,15 +340,15 @@ func newSaramaConfig() *sarama.Config {
 }
 
 func BenchmarkWrapSyncProducer(b *testing.B) {
-	// Mock tracer
-	mt := mocktracer.NewTracer("kafka")
+	// Mock provider
+	provider, _ := newProviderAndTracer()
 
 	cfg := newSaramaConfig()
 	// Mock sync producer
 	mockSyncProducer := mocks.NewSyncProducer(b, cfg)
 
 	// Wrap sync producer
-	syncProducer := WrapSyncProducer(serviceName, cfg, mockSyncProducer, WithTracer(mt))
+	syncProducer := WrapSyncProducer(cfg, mockSyncProducer, WithTraceProvider(provider))
 	message := sarama.ProducerMessage{Key: sarama.StringEncoder("foo")}
 
 	b.ReportAllocs()
@@ -378,15 +381,15 @@ func BenchmarkMockSyncProducer(b *testing.B) {
 }
 
 func BenchmarkWrapAsyncProducer(b *testing.B) {
-	// Mock tracer
-	mt := mocktracer.NewTracer("kafka")
+	// Mock provider
+	provider, _ := newProviderAndTracer()
 
 	cfg := newSaramaConfig()
 	cfg.Producer.Return.Successes = true
 	mockAsyncProducer := mocks.NewAsyncProducer(b, cfg)
 
 	// Wrap sync producer
-	asyncProducer := WrapAsyncProducer(serviceName, cfg, mockAsyncProducer, WithTracer(mt))
+	asyncProducer := WrapAsyncProducer(cfg, mockAsyncProducer, WithTraceProvider(provider))
 	message := sarama.ProducerMessage{Key: sarama.StringEncoder("foo")}
 
 	b.ReportAllocs()
