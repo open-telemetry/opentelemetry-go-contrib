@@ -53,9 +53,7 @@ func newConfig(opts ...Option) config {
 type Option func(*config)
 
 // WithTraceProvider specifies a trace provider to use for creating a tracer for spans.
-// If none is specified, a tracer named
-// "go.opentelemetry.io/contrib/instrumentation/github.com/Shopify/sarama"
-// from the global provider is used.
+// If none is specified, the global provider is used.
 func WithTraceProvider(provider trace.Provider) Option {
 	return func(cfg *config) {
 		cfg.TraceProvider = provider
