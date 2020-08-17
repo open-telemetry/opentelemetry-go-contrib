@@ -8,6 +8,20 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 
 ## [Unreleased]
 
+### Added
+
+- Top-level `Version()` and `SemVersion()` functions defining the current version of the contrib package. (#225)
+
+### Changed
+
+- Remove service name as a parameter of Sarama instrumentation. (#221)
+- Replace `WithTracer` with `WithTracerProvider` in Sarama instrumentation. (#221)
+- Switch to use common top-level module `SemVersion()` when creating versioned tracer in `bradfitz/gomemcache`. (#226)
+
+### Fixed
+
+- Update dependabot configuration to include newly added `bradfitz/gomemcache` package. (#226)
+
 ## [0.10.1] - 2020-08-13
 
 ### Added

@@ -40,7 +40,7 @@ $(TOOLS_DIR)/stringer: $(TOOLS_MOD_DIR)/go.mod $(TOOLS_MOD_DIR)/go.sum $(TOOLS_M
 	cd $(TOOLS_MOD_DIR) && \
 	go build -o $(TOOLS_DIR)/stringer golang.org/x/tools/cmd/stringer
 
-precommit: generate build lint test
+precommit: license-check generate build lint test
 
 .PHONY: test-with-coverage
 test-with-coverage:
@@ -145,5 +145,16 @@ lint: $(TOOLS_DIR)/golangci-lint $(TOOLS_DIR)/misspell
 	    go mod tidy); \
 	done
 
+.PHONY: generate
 generate: $(TOOLS_DIR)/stringer
 	PATH="$(TOOLS_DIR):$${PATH}" go generate ./...
+
+.PHONY: license-check
+license-check:
+	@licRes=$$(for f in $$(find . -type f \( -iname '*.go' -o -iname '*.sh' \) ! -path './vendor/*' ! -path './exporters/otlp/internal/opentelemetry-proto/*') ; do \
+	           awk '/Copyright The OpenTelemetry Authors|generated|GENERATED/ && NR<=3 { found=1; next } END { if (!found) print FILENAME }' $$f; \
+	   done); \
+	   if [ -n "$${licRes}" ]; then \
+	           echo "license header checking failed:"; echo "$${licRes}"; \
+	           exit 1; \
+	   fi

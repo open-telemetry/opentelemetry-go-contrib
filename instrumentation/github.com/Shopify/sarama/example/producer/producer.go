@@ -90,7 +90,7 @@ func newAccessLogProducer(brokerList []string) sarama.AsyncProducer {
 	}
 
 	// Wrap instrumentation
-	producer = saramatrace.WrapAsyncProducer("example-producer", config, producer)
+	producer = saramatrace.WrapAsyncProducer(config, producer)
 
 	// We will log to STDOUT if we're not able to produce messages.
 	go func() {
