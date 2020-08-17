@@ -32,6 +32,7 @@ type OTelBeegoHandler struct {
 	http.Handler
 }
 
+// ServerHTTP calls the configured handler to serve HTTP for req to rr.
 func (o *OTelBeegoHandler) ServeHTTP(rr http.ResponseWriter, req *http.Request) {
 	ctx := beego.BeeApp.Handlers.GetContext()
 	defer beego.BeeApp.Handlers.GiveBackContext(ctx)

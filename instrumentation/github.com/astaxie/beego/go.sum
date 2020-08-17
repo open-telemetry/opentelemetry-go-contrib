@@ -148,8 +148,8 @@ github.com/syndtr/goleveldb v0.0.0-20181127023241-353a9fca669c/go.mod h1:Z4AUp2K
 github.com/ugorji/go v0.0.0-20171122102828-84cb69a8af83/go.mod h1:hnLbHMwcvSihnDhEfx2/BzKp2xb0Y+ErdfYcrs9tkJQ=
 github.com/wendal/errors v0.0.0-20130201093226-f66c77a7882b/go.mod h1:Q12BUT7DqIlHRmgv3RskH+UCM/4eqVMgI0EMmlSpAXc=
 github.com/yuin/gopher-lua v0.0.0-20171031051903-609c9cd26973/go.mod h1:aEV29XrmTYFr3CiRxZeGHpkvbwq+prZduBqMaascyCU=
-go.opentelemetry.io/contrib/instrumentation/net/http v0.0.0-20200806162034-3fc65dc78f63 h1:zXqBXDqlSUpUBo8YS5MPYg9a7nuiN5BR3lJGGsldFnQ=
-go.opentelemetry.io/contrib/instrumentation/net/http v0.0.0-20200806162034-3fc65dc78f63/go.mod h1:swNWW96agiiMEBGdzcQsWBqZWu38SueRalMTQYhe1ug=
+go.opentelemetry.io/contrib/instrumentation/net/http v0.10.1 h1:9tIDwzTYu2uHTgbEZbHndxzA7dCsuQiagf4IopRTbdA=
+go.opentelemetry.io/contrib/instrumentation/net/http v0.10.1/go.mod h1:f1+E6aTPAGAC5CSNsvC3yQlGvc3emI59iGfPid6R3K8=
 go.opentelemetry.io/otel v0.10.0 h1:2y/HYj1dIfG1nPh0Z15X4se8WwYWuTyKHLSgRb/mbQ0=
 go.opentelemetry.io/otel v0.10.0/go.mod h1:n3v1JGUBpn5DafiF1UeoDs5fr5XZMG+43kigDtFB8Vk=
 golang.org/x/crypto v0.0.0-20180904163835-0709b304e793/go.mod h1:6SG95UA2DQfeDnfUPMdvaQW0Q7yPrPDi9nlGo2tz2b4=

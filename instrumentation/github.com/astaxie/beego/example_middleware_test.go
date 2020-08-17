@@ -22,10 +22,6 @@ type ExampleController struct {
 	beego.Controller
 }
 
-type ExampleReply struct {
-	Message string `json:"message"`
-}
-
 func (c *ExampleController) Get() {
 	// name of the template in the views directory
 	c.TplName = "index.tpl"
