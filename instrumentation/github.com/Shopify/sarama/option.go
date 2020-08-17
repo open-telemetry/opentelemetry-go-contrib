@@ -28,33 +28,35 @@ const (
 )
 
 type config struct {
-	ServiceName string
-	Tracer      trace.Tracer
-	Propagators otelpropagation.Propagators
+	TraceProvider trace.Provider
+	Propagators   otelpropagation.Propagators
+
+	Tracer trace.Tracer
 }
 
 // newConfig returns a config with all Options set.
-func newConfig(serviceName string, opts ...Option) config {
-	cfg := config{Propagators: global.Propagators(), ServiceName: serviceName}
+func newConfig(opts ...Option) config {
+	cfg := config{
+		Propagators:   global.Propagators(),
+		TraceProvider: global.TraceProvider(),
+	}
 	for _, opt := range opts {
 		opt(&cfg)
 	}
-	if cfg.Tracer == nil {
-		cfg.Tracer = global.Tracer(defaultTracerName)
-	}
+
+	cfg.Tracer = cfg.TraceProvider.Tracer(defaultTracerName)
+
 	return cfg
 }
 
 // Option specifies instrumentation configuration options.
 type Option func(*config)
 
-// WithTracer specifies a tracer to use for creating spans. If none is
-// specified, a tracer named
-// "go.opentelemetry.io/contrib/instrumentation/github.com/Shopify/sarama"
-// from the global provider is used.
-func WithTracer(tracer trace.Tracer) Option {
+// WithTraceProvider specifies a trace provider to use for creating a tracer for spans.
+// If none is specified, the global provider is used.
+func WithTraceProvider(provider trace.Provider) Option {
 	return func(cfg *config) {
-		cfg.Tracer = tracer
+		cfg.TraceProvider = provider
 	}
 }
 

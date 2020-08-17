@@ -61,7 +61,6 @@ func (w *consumerMessagesDispatcherWrapper) Run() {
 
 		// Create a span.
 		attrs := []kv.KeyValue{
-			standard.ServiceNameKey.String(w.cfg.ServiceName),
 			standard.MessagingSystemKey.String("kafka"),
 			standard.MessagingDestinationKindKeyTopic,
 			standard.MessagingDestinationKey.String(msg.Topic),
