@@ -20,9 +20,10 @@ import (
 	"errors"
 	"fmt"
 
+	"google.golang.org/grpc"
+
 	pb "go.opentelemetry.io/contrib/sdk/dynamicconfig/internal/proto/experimental/metrics/configservice"
 	resourcepb "go.opentelemetry.io/contrib/sdk/dynamicconfig/internal/proto/resource/v1"
-	"google.golang.org/grpc"
 )
 
 // A ServiceReader periodically reads from a remote configuration service to get

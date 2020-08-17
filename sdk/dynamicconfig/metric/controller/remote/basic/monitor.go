@@ -48,7 +48,7 @@ func NewMonitor(configHost string, resource *resource.Resource) *Monitor {
 	return monitor
 }
 
-// MonitorChanges monitors the upstream configuraiton service for changes. If
+// MonitorChanges monitors the upstream configuration service for changes. If
 // a valid change is detected, then the configuration data is passed via
 // the MonitorChannel.
 func (m *Monitor) MonitorChanges(mch remote.MonitorChannel) {

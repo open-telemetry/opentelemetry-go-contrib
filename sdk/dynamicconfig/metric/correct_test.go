@@ -23,6 +23,7 @@ import (
 	"time"
 
 	"github.com/stretchr/testify/require"
+
 	"go.opentelemetry.io/contrib/sdk/dynamicconfig/metric/controller/push"
 
 	pb "go.opentelemetry.io/contrib/sdk/dynamicconfig/internal/proto/experimental/metrics/configservice"
@@ -612,7 +613,10 @@ func TestCollectWithRule(t *testing.T) {
 	mockClock := controllerTest.NewMockClock()
 	matcher := push.PeriodMatcher{}
 	matcher.MarkStart(mockClock.Now())
-	matcher.ApplySchedules(schedules)
+	_, err := matcher.ApplySchedules(schedules)
+	if err != nil {
+		t.Errorf("fail to apply schedules: %v", err)
+	}
 
 	processor := &correctnessProcessor{
 		t:            t,

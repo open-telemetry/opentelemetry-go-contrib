@@ -19,8 +19,9 @@ import (
 	"net"
 	"testing"
 
-	pb "go.opentelemetry.io/contrib/sdk/dynamicconfig/internal/proto/experimental/metrics/configservice"
 	"google.golang.org/grpc"
+
+	pb "go.opentelemetry.io/contrib/sdk/dynamicconfig/internal/proto/experimental/metrics/configservice"
 )
 
 type MockServer struct {
@@ -29,8 +30,8 @@ type MockServer struct {
 }
 
 // GetMetricConfig implemented MetricConfigServer
-func (s *MockServer) GetMetricConfig(ctx context.Context, in *pb.MetricConfigRequest) (*pb.MetricConfigResponse, error) {
-	return s.Config, nil
+func (server *MockServer) GetMetricConfig(ctx context.Context, in *pb.MetricConfigRequest) (*pb.MetricConfigResponse, error) {
+	return server.Config, nil
 }
 
 // This function runs a mock config service at an address, serving a defined config.

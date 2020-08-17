@@ -232,7 +232,10 @@ func TestBuildRule(t *testing.T) {
 	matcher.MarkStart(mockClock.Now())
 
 	config := makeConfig()
-	matcher.ApplySchedules(config.Schedules)
+	_, err := matcher.ApplySchedules(config.Schedules)
+	if err != nil {
+		t.Errorf("fail to apply schedules: %v", err)
+	}
 
 	mockClock.Add(7 * time.Second)
 	rule := matcher.BuildRule(mockClock.Now())

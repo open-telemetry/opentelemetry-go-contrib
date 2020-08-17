@@ -58,7 +58,11 @@ func TestReadConfig(t *testing.T) {
 	if err != nil {
 		t.Errorf("fail to start service reader: %v", err)
 	}
-	defer reader.Stop()
+	defer func() {
+		if err := reader.Stop(); err != nil {
+			t.Errorf("fail to stop reader: %v", err)
+		}
+	}()
 
 	resp, err := reader.ReadConfig()
 	if err != nil {
