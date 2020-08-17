@@ -20,11 +20,13 @@ import (
 	"os"
 	"sync"
 
+	"github.com/shirou/gopsutil/cpu"
 	"github.com/shirou/gopsutil/process"
 
+	"go.opentelemetry.io/contrib"
 	"go.opentelemetry.io/otel/api/global"
+	"go.opentelemetry.io/otel/api/kv"
 	"go.opentelemetry.io/otel/api/metric"
-	"go.opentelemetry.io/otel/api/unit"
 )
 
 // Host reports the work-in-progress conventional host metrics specified by OpenTelemetry
@@ -35,11 +37,6 @@ type host struct {
 
 // Config contains optional settings for reporting host metrics.
 type Config struct {
-	// // MinimumReadMemStatsInterval sets the mininum interval
-	// // between calls to runtime.ReadMemStats().  Negative values
-	// // are ignored.
-	// MinimumReadMemStatsInterval time.Duration
-
 	// MeterProvider sets the metric.Provider.  If nil, the global
 	// Provider will be used.
 	MeterProvider metric.Provider
@@ -50,28 +47,6 @@ type Option interface {
 	// ApplyHost updates *Config.
 	ApplyHost(*Config)
 }
-
-// // DefaultMinimumReadMemStatsInterval is the default minimum interval
-// // between calls to runtime.ReadMemStats().  Use the
-// // WithMinimumReadMemStatsInterval() option to modify this setting in
-// // Start().
-// const DefaultMinimumReadMemStatsInterval time.Duration = 15 * time.Second
-
-// // WithMinimumReadMemStatsInterval sets a minimum interval between calls to
-// // runtime.ReadMemStats(), which is a relatively expensive call to make
-// // frequently.  This setting is ignored when `d` is negative.
-// func WithMinimumReadMemStatsInterval(d time.Duration) Option {
-// 	return minimumReadMemStatsIntervalOption(d)
-// }
-
-// type minimumReadMemStatsIntervalOption time.Duration
-
-// // ApplyHost implements Option.
-// func (o minimumReadMemStatsIntervalOption) ApplyHost(c *Config) {
-// 	if o >= 0 {
-// 		c.MinimumReadMemStatsInterval = time.Duration(o)
-// 	}
-// }
 
 // WithMeterProvider sets the Metric implementation to use for
 // reporting.  If this option is not used, the global metric.Provider
@@ -87,11 +62,17 @@ func (o metricProviderOption) ApplyHost(c *Config) {
 	c.MeterProvider = o.Provider
 }
 
+var (
+	cpuTimeUser   = []kv.KeyValue{kv.String("state", "user")}
+	cpuTimeSystem = []kv.KeyValue{kv.String("state", "system")}
+	cpuTimeOther  = []kv.KeyValue{kv.String("state", "other")}
+	cpuTimeIdle   = []kv.KeyValue{kv.String("state", "idle")}
+)
+
 // Configure computes a Config from the supplied Options.
 func Configure(opts ...Option) Config {
 	c := Config{
 		MeterProvider: global.MeterProvider(),
-		// MinimumReadMemStatsInterval: DefaultMinimumReadMemStatsInterval,
 	}
 	for _, opt := range opts {
 		opt.ApplyHost(&c)
@@ -101,9 +82,6 @@ func Configure(opts ...Option) Config {
 
 // Start initializes reporting of host metrics using the supplied Config.
 func Start(c Config) error {
-	// if c.MinimumReadMemStatsInterval < 0 {
-	// 	c.MinimumReadMemStatsInterval = DefaultMinimumReadMemStatsInterval
-	// }
 	if c.MeterProvider == nil {
 		c.MeterProvider = global.MeterProvider()
 	}
@@ -117,71 +95,13 @@ func Start(c Config) error {
 	return h.register()
 }
 
-func (r *runtime) register() error {
-	// 	startTime := time.Now()
-	// 	if _, err := r.meter.NewInt64SumObserver(
-	// 		"runtime.uptime",
-	// 		func(_ context.Context, result metric.Int64ObserverResult) {
-	// 			result.Observe(time.Since(startTime).Milliseconds())
-	// 		},
-	// 		metric.WithUnit(unit.Milliseconds),
-	// 		metric.WithDescription("Milliseconds since application was initialized"),
-	// 	); err != nil {
-	// 		return err
-	// 	}
-
-	// 	if _, err := r.meter.NewInt64UpDownSumObserver(
-	// 		"runtime.go.goroutines",
-	// 		func(_ context.Context, result metric.Int64ObserverResult) {
-	// 			result.Observe(int64(goruntime.NumGoroutine()))
-	// 		},
-	// 		metric.WithDescription("Number of goroutines that currently exist"),
-	// 	); err != nil {
-	// 		return err
-	// 	}
-
-	// 	if _, err := r.meter.NewInt64SumObserver(
-	// 		"runtime.go.cgo.calls",
-	// 		func(_ context.Context, result metric.Int64ObserverResult) {
-	// 			result.Observe(goruntime.NumCgoCall())
-	// 		},
-	// 		metric.WithDescription("Number of cgo calls made by the current process"),
-	// 	); err != nil {
-	// 		return err
-	// 	}
-
-	// 	if err := r.registerMemStats(); err != nil {
-	// 		return err
-	// 	}
-
-	// 	return nil
-	// }
-
-	// func (r *runtime) registerMemStats() error {
+func (h *host) register() error {
 	var (
 		err error
 
 		processCPUTime metric.Float64SumObserver
+		hostCPUTime    metric.Float64SumObserver
 
-		// heapAlloc    metric.Int64UpDownSumObserver
-		// heapIdle     metric.Int64UpDownSumObserver
-		// heapInuse    metric.Int64UpDownSumObserver
-		// heapObjects  metric.Int64UpDownSumObserver
-		// heapReleased metric.Int64UpDownSumObserver
-		// heapSys      metric.Int64UpDownSumObserver
-		// liveObjects  metric.Int64UpDownSumObserver
-
-		// // TODO: is ptrLookups useful? I've not seen a value
-		// // other than zero.
-		// ptrLookups metric.Int64SumObserver
-
-		// gcCount      metric.Int64SumObserver
-		// pauseTotalNs metric.Int64SumObserver
-		// gcPauseNs    metric.Int64ValueRecorder
-
-		// lastNumGC    uint32
-		// memStats     goruntime.MemStats
-		// lastMemStats time.Time
 		// lock prevents a race between batch observer and instrument registration.
 		lock sync.Mutex
 	)
@@ -194,113 +114,71 @@ func (r *runtime) register() error {
 	lock.Lock()
 	defer lock.Unlock()
 
-	batchObserver := r.meter.NewBatchObserver(func(ctx context.Context, result metric.BatchObserverResult) {
+	batchObserver := h.meter.NewBatchObserver(func(ctx context.Context, result metric.BatchObserverResult) {
 		lock.Lock()
 		defer lock.Unlock()
 
-		// This follows
-		// opentelemetry-collector/receiver/hostmetricsreceiver/internal/scraper/processscraper/
-		// measures User, System, and (on Linux) IOwait time.
+		// This follows the OpenTelemetry Collector's "hostmetrics"
+		// receiver/hostmetricsreceiver/internal/scraper/processscraper
+		// measures User and System IOwait time.
+		// TODO: the Collector has per-OS compilation modules to support
+		// specific metrics that are not universal.
 		processTimes, err := proc.TimesWithContext(ctx)
 		if err != nil {
 			global.Handler().Handle(err)
 			return
 		}
 
-		// now := time.Now()
-		// if now.Sub(lastMemStats) >= r.config.MinimumReadMemStatsInterval {
-		// 	goruntime.ReadMemStats(&memStats)
-		// 	lastMemStats = now
-		// }
+		hostTimeSlice, err := cpu.TimesWithContext(ctx, false)
+		if err != nil {
+			global.Handler().Handle(err)
+			return
+		}
+		if len(hostTimeSlice) != 1 {
+			global.Handler().Handle(fmt.Errorf("host CPU usage: incorrect summary count"))
+			return
+		}
 
-		result.Observe(
-			nil,
-			// heapAlloc.Observation(int64(memStats.HeapAlloc)),
-			// heapIdle.Observation(int64(memStats.HeapIdle)),
-			// heapInuse.Observation(int64(memStats.HeapInuse)),
-			// heapObjects.Observation(int64(memStats.HeapObjects)),
-			// heapReleased.Observation(int64(memStats.HeapReleased)),
-			// heapSys.Observation(int64(memStats.HeapSys)),
-			// liveObjects.Observation(int64(memStats.Mallocs-memStats.Frees)),
-			// ptrLookups.Observation(int64(memStats.Lookups)),
-			// gcCount.Observation(int64(memStats.NumGC)),
-			// pauseTotalNs.Observation(int64(memStats.PauseTotalNs)),
-		)
+		result.Observe(cpuTimeUser, processCPUTime.Observation(processTimes.User))
+		result.Observe(cpuTimeSystem, processCPUTime.Observation(processTimes.System))
 
-		// computeGCPauses(ctx, &gcPauseNs, memStats.PauseNs[:], lastNumGC, memStats.NumGC)
+		hostTime := hostTimeSlice[0]
+		result.Observe(cpuTimeUser, hostCPUTime.Observation(hostTime.User))
+		result.Observe(cpuTimeSystem, hostCPUTime.Observation(hostTime.System))
 
-		// lastNumGC = memStats.NumGC
+		other := hostTime.Nice +
+			hostTime.Iowait +
+			hostTime.Irq +
+			hostTime.Softirq +
+			hostTime.Steal +
+			hostTime.Guest +
+			hostTime.GuestNice
+
+		result.Observe(cpuTimeOther, hostCPUTime.Observation(other))
+		result.Observe(cpuTimeIdle, hostCPUTime.Observation(hostTime.Idle))
 	})
 
-	if processCPUTime, err = batchObserver.NewInt64SumObserver(
-		"runtime.go.mem.heap_alloc",
-		metric.WithUnit(unit.Seconds),
-		metric.WithDescription("Accumulated CPU time spent by this process"),
+	// Note: Units are in seconds, but "unit" package does not
+	// include this string.
+	if processCPUTime, err = batchObserver.NewFloat64SumObserver(
+		"process.cpu.time",
+		metric.WithUnit("s"),
+		metric.WithDescription(
+			"Accumulated CPU time spent by this process labeled with attribution (User, System, ...)",
+		),
 	); err != nil {
 		return err
 	}
 
-	// if heapIdle, err = batchObserver.NewInt64UpDownSumObserver(
-	// 	"runtime.go.mem.heap_idle",
-	// 	metric.WithUnit(unit.Bytes),
-	// 	metric.WithDescription("Bytes in idle (unused) spans"),
-	// ); err != nil {
-	// 	return err
-	// }
-
-	// if heapInuse, err = batchObserver.NewInt64UpDownSumObserver(
-	// 	"runtime.go.mem.heap_inuse",
-	// 	metric.WithUnit(unit.Bytes),
-	// 	metric.WithDescription("Bytes in in-use spans"),
-	// ); err != nil {
-	// 	return err
-	// }
-
-	// if heapObjects, err = batchObserver.NewInt64UpDownSumObserver(
-	// 	"runtime.go.mem.heap_objects",
-	// 	metric.WithDescription("Number of allocated heap objects"),
-	// ); err != nil {
-	// 	return err
-	// }
-
-	// // FYI see https://github.com/golang/go/issues/32284 to help
-	// // understand the meaning of this value.
-	// if heapReleased, err = batchObserver.NewInt64UpDownSumObserver(
-	// 	"runtime.go.mem.heap_released",
-	// 	metric.WithUnit(unit.Bytes),
-	// 	metric.WithDescription("Bytes of idle spans whose physical memory has been returned to the OS"),
-	// ); err != nil {
-	// 	return err
-	// }
-
-	// if heapSys, err = batchObserver.NewInt64UpDownSumObserver(
-	// 	"runtime.go.mem.heap_sys",
-	// 	metric.WithUnit(unit.Bytes),
-	// 	metric.WithDescription("Bytes of heap memory obtained from the OS"),
-	// ); err != nil {
-	// 	return err
-	// }
-
-	// if ptrLookups, err = batchObserver.NewInt64SumObserver(
-	// 	"runtime.go.mem.lookups",
-	// 	metric.WithDescription("Number of pointer lookups performed by the runtime"),
-	// ); err != nil {
-	// 	return err
-	// }
-
-	// if liveObjects, err = batchObserver.NewInt64UpDownSumObserver(
-	// 	"runtime.go.mem.live_objects",
-	// 	metric.WithDescription("Number of live objects is the number of cumulative Mallocs - Frees"),
-	// ); err != nil {
-	// 	return err
-	// }
-
-	// if gcCount, err = batchObserver.NewInt64SumObserver(
-	// 	"runtime.go.gc.count",
-	// 	metric.WithDescription("Number of completed garbage collection cycles"),
-	// ); err != nil {
-	// 	return err
-	// }
+	if hostCPUTime, err = batchObserver.NewFloat64SumObserver(
+		"system.cpu.time",
+		metric.WithUnit("s"),
+		metric.WithDescription(
+			"Accumulated CPU time spent by this host labeled with attribution (User, System, ...)",
+		),
+	); err != nil {
+		return err
+	}
 
 	return nil
 }

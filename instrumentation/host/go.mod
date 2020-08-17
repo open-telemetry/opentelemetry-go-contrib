@@ -1,4 +1,4 @@
-module go.opentelemetry.io/contrib/instrumentation/runtime
+module go.opentelemetry.io/contrib/instrumentation/host
 
 go 1.14
 
