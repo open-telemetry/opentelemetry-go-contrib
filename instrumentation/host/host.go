@@ -63,10 +63,10 @@ func (o metricProviderOption) ApplyHost(c *Config) {
 }
 
 var (
-	cpuTimeUser   = []kv.KeyValue{kv.String("state", "user")}
-	cpuTimeSystem = []kv.KeyValue{kv.String("state", "system")}
-	cpuTimeOther  = []kv.KeyValue{kv.String("state", "other")}
-	cpuTimeIdle   = []kv.KeyValue{kv.String("state", "idle")}
+	LabelCPUTimeUser   = []kv.KeyValue{kv.String("state", "user")}
+	LabelCPUTimeSystem = []kv.KeyValue{kv.String("state", "system")}
+	LabelCPUTimeOther  = []kv.KeyValue{kv.String("state", "other")}
+	LabelCPUTimeIdle   = []kv.KeyValue{kv.String("state", "idle")}
 )
 
 // Configure computes a Config from the supplied Options.
@@ -139,12 +139,12 @@ func (h *host) register() error {
 			return
 		}
 
-		result.Observe(cpuTimeUser, processCPUTime.Observation(processTimes.User))
-		result.Observe(cpuTimeSystem, processCPUTime.Observation(processTimes.System))
+		result.Observe(LabelCPUTimeUser, processCPUTime.Observation(processTimes.User))
+		result.Observe(LabelCPUTimeSystem, processCPUTime.Observation(processTimes.System))
 
 		hostTime := hostTimeSlice[0]
-		result.Observe(cpuTimeUser, hostCPUTime.Observation(hostTime.User))
-		result.Observe(cpuTimeSystem, hostCPUTime.Observation(hostTime.System))
+		result.Observe(LabelCPUTimeUser, hostCPUTime.Observation(hostTime.User))
+		result.Observe(LabelCPUTimeSystem, hostCPUTime.Observation(hostTime.System))
 
 		other := hostTime.Nice +
 			hostTime.Iowait +
@@ -154,8 +154,8 @@ func (h *host) register() error {
 			hostTime.Guest +
 			hostTime.GuestNice
 
-		result.Observe(cpuTimeOther, hostCPUTime.Observation(other))
-		result.Observe(cpuTimeIdle, hostCPUTime.Observation(hostTime.Idle))
+		result.Observe(LabelCPUTimeOther, hostCPUTime.Observation(other))
+		result.Observe(LabelCPUTimeIdle, hostCPUTime.Observation(hostTime.Idle))
 	})
 
 	// Note: Units are in seconds, but "unit" package does not
