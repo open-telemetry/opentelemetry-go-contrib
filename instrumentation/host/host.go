@@ -24,6 +24,7 @@ import (
 
 	"go.opentelemetry.io/otel/api/global"
 	"go.opentelemetry.io/otel/api/metric"
+	"go.opentelemetry.io/otel/api/unit"
 )
 
 // Host reports the work-in-progress conventional host metrics specified by OpenTelemetry
@@ -108,11 +109,8 @@ func Start(c Config) error {
 	}
 	h := &host{
 		meter: c.MeterProvider.Meter(
-			// TODO: should library names be qualified?
-			// e.g., contrib/host?
 			"host",
-			// TODO(#225): set the instrumentation library version
-			// metric.WithInstrumentationVersion(contrib.SemVersion())
+			metric.WithInstrumentationVersion(contrib.SemVersion()),
 		),
 		config: c,
 	}
@@ -163,6 +161,8 @@ func (r *runtime) register() error {
 	var (
 		err error
 
+		processCPUTime metric.Float64SumObserver
+
 		// heapAlloc    metric.Int64UpDownSumObserver
 		// heapIdle     metric.Int64UpDownSumObserver
 		// heapInuse    metric.Int64UpDownSumObserver
@@ -198,11 +198,13 @@ func (r *runtime) register() error {
 		lock.Lock()
 		defer lock.Unlock()
 
-		// This follows, measures User, System, and IOwait time.
+		// This follows
 		// opentelemetry-collector/receiver/hostmetricsreceiver/internal/scraper/processscraper/
-		processTimes, err := proc.TimesWithContext(ctx) // returns user and system time for process
+		// measures User, System, and (on Linux) IOwait time.
+		processTimes, err := proc.TimesWithContext(ctx)
 		if err != nil {
-			return Metrics{}, err
+			global.Handler().Handle(err)
+			return
 		}
 
 		// now := time.Now()
@@ -230,13 +232,13 @@ func (r *runtime) register() error {
 		// lastNumGC = memStats.NumGC
 	})
 
-	// if heapAlloc, err = batchObserver.NewInt64UpDownSumObserver(
-	// 	"runtime.go.mem.heap_alloc",
-	// 	metric.WithUnit(unit.Bytes),
-	// 	metric.WithDescription("Bytes of allocated heap objects"),
-	// ); err != nil {
-	// 	return err
-	// }
+	if processCPUTime, err = batchObserver.NewInt64SumObserver(
+		"runtime.go.mem.heap_alloc",
+		metric.WithUnit(unit.Seconds),
+		metric.WithDescription("Accumulated CPU time spent by this process"),
+	); err != nil {
+		return err
+	}
 
 	// if heapIdle, err = batchObserver.NewInt64UpDownSumObserver(
 	// 	"runtime.go.mem.heap_idle",

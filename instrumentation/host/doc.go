@@ -21,4 +21,4 @@
 //
 // The metrics produced are:
 // @@@
-package runtime // import "go.opentelemetry.io/contrib/instrumentation/host"
+package host // import "go.opentelemetry.io/contrib/instrumentation/host"
