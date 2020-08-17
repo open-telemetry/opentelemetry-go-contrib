@@ -12,9 +12,9 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-// This package provides all of its functionality through its
-// submodules. The submodules in the exporters directory provide
-// implementations for trace and metric exporters for third-party
-// collectors, and submodules in the instrumentation directory provide the
-// instrumentation for the popular go libraries.
-package contrib
+// Package gomemcache provides tracing instrumentation for
+// the memcached client (https://github.com/bradfitz/gomemcache).
+//
+// The instrumentation works by wrapping the memcache client by calling `NewClientWithTracing` and
+// tracing it's every operation.
+package gomemcache // import "go.opentelemetry.io/contrib/instrumentation/github.com/bradfitz/gomemcache"

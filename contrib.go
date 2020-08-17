@@ -12,9 +12,17 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-// This package provides all of its functionality through its
-// submodules. The submodules in the exporters directory provide
-// implementations for trace and metric exporters for third-party
-// collectors, and submodules in the instrumentation directory provide the
-// instrumentation for the popular go libraries.
-package contrib
+// Package contrib contains common values used across all
+// instrumentation, exporter, and detector contributions.
+package contrib // import "go.opentelemetry.io/contrib"
+
+// Version is the current release version of OpenTelemetry Contrib in use.
+func Version() string {
+	return "0.10.1"
+	// This string is updated by the pre_release.sh script during release
+}
+
+// SemVersion is the semantic version to be supplied to tracer/meter creation.
+func SemVersion() string {
+	return "semver:" + Version()
+}

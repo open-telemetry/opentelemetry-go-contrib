@@ -40,7 +40,7 @@ $(TOOLS_DIR)/stringer: $(TOOLS_MOD_DIR)/go.mod $(TOOLS_MOD_DIR)/go.sum $(TOOLS_M
 	cd $(TOOLS_MOD_DIR) && \
 	go build -o $(TOOLS_DIR)/stringer golang.org/x/tools/cmd/stringer
 
-precommit: generate build lint test
+precommit: license-check generate build lint test
 
 .PHONY: test-with-coverage
 test-with-coverage:
@@ -76,6 +76,18 @@ test-mongo-driver:
 	    $(GOTEST_WITH_COVERAGE) . && \
 	    go tool cover -html=coverage.txt -o coverage.html); \
 	  docker stop mongo-integ; \
+	fi
+
+.PHONY: test-gomemcache
+test-gomemcache:
+	@if ./.circleci/should_build.sh gomemcache; then \
+	  set -e; \
+	  docker run --name gomemcache-integ --rm -p 11211:11211 -d memcached; \
+	  CMD=gomemcache IMG_NAME=gomemcache-integ  ./.circleci/wait.sh; \
+	  (cd instrumentation/github.com/bradfitz/gomemcache && \
+	    $(GOTEST_WITH_COVERAGE) . && \
+	    go tool cover -html=coverage.txt -o coverage.html); \
+	  docker stop gomemcache-integ ; \
 	fi
 
 .PHONY: check-clean-work-tree
@@ -133,5 +145,16 @@ lint: $(TOOLS_DIR)/golangci-lint $(TOOLS_DIR)/misspell
 	    go mod tidy); \
 	done
 
+.PHONY: generate
 generate: $(TOOLS_DIR)/stringer
 	PATH="$(TOOLS_DIR):$${PATH}" go generate ./...
+
+.PHONY: license-check
+license-check:
+	@licRes=$$(for f in $$(find . -type f \( -iname '*.go' -o -iname '*.sh' \) ! -path './vendor/*' ! -path './exporters/otlp/internal/opentelemetry-proto/*') ; do \
+	           awk '/Copyright The OpenTelemetry Authors|generated|GENERATED/ && NR<=3 { found=1; next } END { if (!found) print FILENAME }' $$f; \
+	   done); \
+	   if [ -n "$${licRes}" ]; then \
+	           echo "license header checking failed:"; echo "$${licRes}"; \
+	           exit 1; \
+	   fi

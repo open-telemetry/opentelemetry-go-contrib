@@ -12,12 +12,29 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-// +build tools
-
-package tools
+package gomemcache
 
 import (
-	_ "github.com/client9/misspell/cmd/misspell"
-	_ "github.com/golangci/golangci-lint/cmd/golangci-lint"
-	_ "golang.org/x/tools/cmd/stringer"
+	"github.com/bradfitz/gomemcache/memcache"
+	"google.golang.org/grpc/codes"
 )
+
+// maps memcache error to appropriate error code; otherwise returns status OK
+func memcacheErrToStatusCode(err error) codes.Code {
+	if err == nil {
+		return codes.OK
+	}
+
+	switch err {
+	case memcache.ErrCacheMiss, memcache.ErrNotStored, memcache.ErrNoStats:
+		return codes.NotFound
+	case memcache.ErrCASConflict:
+		return codes.AlreadyExists
+	case memcache.ErrServerError:
+		return codes.Internal
+	case memcache.ErrMalformedKey:
+		return codes.InvalidArgument
+	default:
+		return codes.Unknown
+	}
+}

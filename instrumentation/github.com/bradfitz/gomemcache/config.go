@@ -12,9 +12,30 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-// This package provides all of its functionality through its
-// submodules. The submodules in the exporters directory provide
-// implementations for trace and metric exporters for third-party
-// collectors, and submodules in the instrumentation directory provide the
-// instrumentation for the popular go libraries.
-package contrib
+package gomemcache
+
+import (
+	oteltrace "go.opentelemetry.io/otel/api/trace"
+)
+
+type config struct {
+	serviceName   string
+	traceProvider oteltrace.Provider
+}
+
+// Option is used to configure the client.
+type Option func(*config)
+
+// WithTracer configures the client with the provided trace provider.
+func WithTraceProvider(traceProvider oteltrace.Provider) Option {
+	return func(cfg *config) {
+		cfg.traceProvider = traceProvider
+	}
+}
+
+// WithServiceName sets the service name.
+func WithServiceName(serviceName string) Option {
+	return func(cfg *config) {
+		cfg.serviceName = serviceName
+	}
+}

@@ -38,6 +38,18 @@ wait_for_mongo () {
   exit 1
 }
 
+wait_for_gomemcache () {
+  for ((i = 0; i < 5; ++i)); do
+    if nc -z localhost 11211; then
+      exit 0
+    fi
+    echo "Gomemcache not yet available..."
+    sleep 10
+  done
+  echo "Timeout waiting for gomemcache to initialize"
+  exit 1
+}
+
 if [ -z "$CMD" ]; then
   echo "CMD is undefined. exiting..."
   exit 1
@@ -50,6 +62,8 @@ if [ "$CMD" == "cassandra" ]; then
   wait_for_cassandra "$IMG_NAME"
 elif [ "$CMD" == "mongo" ]; then
   wait_for_mongo "$IMG_NAME"
+elif [ "$CMD" == "gomemcache" ]; then
+  wait_for_gomemcache
 else
   echo "unknown CMD"
   exit 1
