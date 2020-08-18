@@ -20,24 +20,98 @@ import (
 	"sync"
 	"time"
 
+	"go.opentelemetry.io/contrib"
+	"go.opentelemetry.io/otel/api/global"
 	"go.opentelemetry.io/otel/api/metric"
 	"go.opentelemetry.io/otel/api/unit"
 )
 
 // Runtime reports the work-in-progress conventional runtime metrics specified by OpenTelemetry
 type runtime struct {
-	meter    metric.Meter
-	interval time.Duration
+	config Config
+	meter  metric.Meter
 }
 
-// New returns Runtime, a structure for reporting Go runtime metrics
-// interval is used to limit how often to invoke Go runtime.ReadMemStats() to obtain metric data.
-// If the metric SDK attempts to observe MemStats-derived instruments more frequently than the
-// interval, a cached value will be used.
-func Start(meter metric.Meter, interval time.Duration) error {
+// Config contains optional settings for reporting runtime metrics.
+type Config struct {
+	// MinimumReadMemStatsInterval sets the mininum interval
+	// between calls to runtime.ReadMemStats().  Negative values
+	// are ignored.
+	MinimumReadMemStatsInterval time.Duration
+
+	// MeterProvider sets the metric.Provider.  If nil, the global
+	// Provider will be used.
+	MeterProvider metric.Provider
+}
+
+// Option supports configuring optional settings for runtime metrics.
+type Option interface {
+	// ApplyRuntime updates *Config.
+	ApplyRuntime(*Config)
+}
+
+// DefaultMinimumReadMemStatsInterval is the default minimum interval
+// between calls to runtime.ReadMemStats().  Use the
+// WithMinimumReadMemStatsInterval() option to modify this setting in
+// Start().
+const DefaultMinimumReadMemStatsInterval time.Duration = 15 * time.Second
+
+// WithMinimumReadMemStatsInterval sets a minimum interval between calls to
+// runtime.ReadMemStats(), which is a relatively expensive call to make
+// frequently.  This setting is ignored when `d` is negative.
+func WithMinimumReadMemStatsInterval(d time.Duration) Option {
+	return minimumReadMemStatsIntervalOption(d)
+}
+
+type minimumReadMemStatsIntervalOption time.Duration
+
+// ApplyRuntime implements Option.
+func (o minimumReadMemStatsIntervalOption) ApplyRuntime(c *Config) {
+	if o >= 0 {
+		c.MinimumReadMemStatsInterval = time.Duration(o)
+	}
+}
+
+// WithMeterProvider sets the Metric implementation to use for
+// reporting.  If this option is not used, the global metric.Provider
+// will be used.  `provider` must be non-nil.
+func WithMeterProvider(provider metric.Provider) Option {
+	return metricProviderOption{provider}
+}
+
+type metricProviderOption struct{ metric.Provider }
+
+// ApplyRuntime implements Option.
+func (o metricProviderOption) ApplyRuntime(c *Config) {
+	c.MeterProvider = o.Provider
+}
+
+// Configure computes a Config from the supplied Options.
+func Configure(opts ...Option) Config {
+	c := Config{
+		MeterProvider:               global.MeterProvider(),
+		MinimumReadMemStatsInterval: DefaultMinimumReadMemStatsInterval,
+	}
+	for _, opt := range opts {
+		opt.ApplyRuntime(&c)
+	}
+	return c
+}
+
+// Start initializes reporting of runtime metrics using the supplied Config.
+func Start(c Config) error {
+	if c.MinimumReadMemStatsInterval < 0 {
+		c.MinimumReadMemStatsInterval = DefaultMinimumReadMemStatsInterval
+	}
+	if c.MeterProvider == nil {
+		c.MeterProvider = global.MeterProvider()
+	}
 	r := &runtime{
-		meter:    meter,
-		interval: interval,
+		meter: c.MeterProvider.Meter(
+			"go.opentelemetry.io/contrib/instrumentation/runtime",
+			metric.WithInstrumentationVersion(contrib.SemVersion()),
+		),
+		config: c,
 	}
 	return r.register()
 }
@@ -118,7 +192,7 @@ func (r *runtime) registerMemStats() error {
 		defer lock.Unlock()
 
 		now := time.Now()
-		if now.Sub(lastMemStats) >= r.interval {
+		if now.Sub(lastMemStats) >= r.config.MinimumReadMemStatsInterval {
 			goruntime.ReadMemStats(&memStats)
 			lastMemStats = now
 		}

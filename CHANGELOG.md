@@ -11,6 +11,7 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 ### Added
 
 - Top-level `Version()` and `SemVersion()` functions defining the current version of the contrib package. (#225)
+- Instrumentation for the `github.com/astaxie/beego` package. (#200)
 
 ### Changed
 
