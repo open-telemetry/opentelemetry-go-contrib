@@ -5,11 +5,11 @@ Remote Write API.
 
 ## Setting up an Exporter
 
-Users can setup the Exporter with the `InstallNewPipeline` function. It requires a
-`Config` struct and returns a push Controller that will periodically collect and push
-data.
+Users can setup the Exporter with the `InstallNewPipeline` function. It requires a `Config` struct
+and returns a push Controller that will periodically collect and push data.
 
 Example:
+
 ```go
 pusher, err := cortex.InstallNewPipeline(config)
 if err != nil {
@@ -21,15 +21,15 @@ if err != nil {
 
 ## Configuration
 
-The Exporter needs certain information, such as the endpoint URL and push interval
-duration, to function properly. This information is stored in a `Config` struct, which is
-passed into the Exporter during the setup pipeline. 
+The Exporter needs certain information, such as the endpoint URL and push interval duration, to
+function properly. This information is stored in a `Config` struct, which is passed into the
+Exporter during the setup pipeline.
 
 ### Creating the Config struct
 
-Users can either create the struct manually or use a `utils` submodule in the package to
-read settings from a YAML file into a new Config struct using `Viper`. Here are the
-supported YAML properties as well as the Config struct that they map to.
+Users can either create the struct manually or use a `utils` submodule in the package to read
+settings from a YAML file into a new Config struct using [Viper](https://github.com/spf13/viper).
+Here are the supported YAML properties as well as the Config struct that they map to.
 
 ```yaml
 # The URL of the endpoint to send samples to.
@@ -61,35 +61,49 @@ basic_auth:
 tls_config:
   # CA certificate to validate API server certificate with.
   [ ca_file: <filename>]
-  
+
   # Certificate and key files for client cert authentication to the   server.
   [ cert_file: <filename> ]
   [ key_file: <filename> ]
-  
+
   # ServerName extension to indicate the name of the server.
   # https://tools.ietf.org/html/rfc4366#section-3.1
   [ server_name: <string> ]
-  
+
   # Disable validation of the server certificate.
   [ insecure_skip_verify: <boolean> ]
 
 # Optional proxy URL.
 [ proxy_url: <string>]
+
+# Quantiles for Distribution aggregations
+[ quantiles: ]
+  - <string>
+  - <string>
+  - ...
+
+# Histogram Buckets
+[ histogram_buckets: ]
+  - <string>
+  - <string>
+  - ...
 ```
 
 ```go
 type Config struct {
-	Endpoint        string            `mapstructure:"url"`
-	RemoteTimeout   time.Duration     `mapstructure:"remote_timeout"`
-	Name            string            `mapstructure:"name"`
-	BasicAuth       map[string]string `mapstructure:"basic_auth"`
-	BearerToken     string            `mapstructure:"bearer_token"`
-	BearerTokenFile string            `mapstructure:"bearer_token_file"`
-	TLSConfig       map[string]string `mapstructure:"tls_config"`
-	ProxyURL        string            `mapstructure:"proxy_url"`
-	PushInterval    time.Duration     `mapstructure:"push_interval"`
-	Headers         map[string]string `mapstructure:"headers"`
-	Client          *http.Client
+	Endpoint            string            `mapstructure:"url"`
+	RemoteTimeout       time.Duration     `mapstructure:"remote_timeout"`
+	Name                string            `mapstructure:"name"`
+	BasicAuth           map[string]string `mapstructure:"basic_auth"`
+	BearerToken         string            `mapstructure:"bearer_token"`
+	BearerTokenFile     string            `mapstructure:"bearer_token_file"`
+	TLSConfig           map[string]string `mapstructure:"tls_config"`
+	ProxyURL            string            `mapstructure:"proxy_url"`
+	PushInterval        time.Duration     `mapstructure:"push_interval"`
+	Quantiles           []float64         `mapstructure:"quantiles"`
+	HistogramBoundaries []float64         `mapstructure:"histogram_boundaries"`
+	Headers             map[string]string `mapstructure:"headers"`
+	Client              *http.Client
 }
 ```
 
