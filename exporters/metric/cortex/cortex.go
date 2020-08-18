@@ -275,7 +275,7 @@ func convertFromMinMaxSumCount(record metric.Record, minMaxSumCount aggregation.
 	return tSeries, nil
 }
 
-// convertFromDistribution returns n TimeSeries for n quantiles in a distributions
+// convertFromDistribution returns len(quantiles) number of TimeSeries in a distribution.
 func convertFromDistribution(record metric.Record, distribution aggregation.Distribution, quantiles []float64) ([]*prompb.TimeSeries, error) {
 	var timeSeries []*prompb.TimeSeries
 	metricName := sanitize(record.Descriptor().Name())
