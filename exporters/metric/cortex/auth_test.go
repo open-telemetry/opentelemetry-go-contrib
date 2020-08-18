@@ -13,3 +13,14 @@
 // limitations under the License.
 
 package cortex
+
+import "io/ioutil"
+
+// createFile writes a file with a slice of bytes at a specified filepath.
+func createFile(bytes []byte, filepath string) error {
+	err := ioutil.WriteFile(filepath, bytes, 0644)
+	if err != nil {
+		return err
+	}
+	return nil
+}
