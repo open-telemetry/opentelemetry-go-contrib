@@ -111,7 +111,7 @@ func InstallNewPipeline(config Config, options ...push.Option) (*push.Controller
 }
 
 // ConvertToTimeSeries converts a CheckpointSet to a slice of TimeSeries pointers
-// Based on the aggregation type, ConvertToTimeSeries will call helper function like
+// Based on the aggregation type, ConvertToTimeSeries will call helper functions like
 // convertFromSum to generate the correct number of TimeSeries.
 func (e *Exporter) ConvertToTimeSeries(checkpointSet export.CheckpointSet) ([]*prompb.TimeSeries, error) {
 	var aggError error
