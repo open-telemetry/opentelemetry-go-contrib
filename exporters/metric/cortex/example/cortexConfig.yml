@@ -1,3 +1,6 @@
+# This Cortex Config is copied from the Cortex Project documentation
+# Source: https://github.com/cortexproject/cortex/blob/master/docs/configuration/single-process-config.yaml
+
 # Configuration for running Cortex in single-process mode.
 # This configuration should not be used in production.
 # It is only for getting started and development.
