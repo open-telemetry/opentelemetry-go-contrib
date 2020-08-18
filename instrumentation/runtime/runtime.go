@@ -108,9 +108,7 @@ func Start(c Config) error {
 	}
 	r := &runtime{
 		meter: c.MeterProvider.Meter(
-			// TODO: should library names be qualified?
-			// e.g., contrib/runtime?
-			"runtime",
+			"go.opentelemetry.io/contrib/instrumentation/runtime",
 			metric.WithInstrumentationVersion(contrib.SemVersion()),
 		),
 		config: c,
