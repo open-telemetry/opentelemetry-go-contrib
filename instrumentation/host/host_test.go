@@ -182,7 +182,7 @@ func TestHostMemory(t *testing.T) {
 	require.InEpsilon(t, 1.0, hostUsedUtil+hostAvailableUtil, 0.01)
 }
 
-func sendBytes(count int) error {
+func sendBytes(t *testing.T, count int) error {
 	conn1, err := gonet.ListenPacket("udp", "127.0.0.1:0")
 	if err != nil {
 		return err
@@ -195,16 +195,24 @@ func sendBytes(count int) error {
 	}
 	defer conn2.Close()
 
-	data := make([]byte, 1000)
-	for i := range data {
-		data[i] = byte(i)
+	data1 := make([]byte, 1000)
+	data2 := make([]byte, 1000)
+	for i := range data1 {
+		data1[i] = byte(i)
 	}
 
-	for ; count > 0; count -= len(data) {
-		_, err = conn1.WriteTo(data, conn2.LocalAddr())
+	for ; count > 0; count -= len(data1) {
+		_, err = conn1.WriteTo(data1, conn2.LocalAddr())
 		if err != nil {
 			return err
 		}
+		_, readAddr, err := conn2.ReadFrom(data2)
+		if err != nil {
+			return err
+		}
+
+		require.Equal(t, "udp", readAddr.Network())
+		require.Equal(t, conn1.LocalAddr().String(), readAddr.String())
 	}
 
 	return nil
@@ -224,7 +232,7 @@ func TestHostNetwork(t *testing.T) {
 	require.NoError(t, err)
 
 	const howMuch = 10000
-	err = sendBytes(howMuch)
+	err = sendBytes(t, howMuch)
 	require.NoError(t, err)
 
 	impl.RunAsyncInstruments()
