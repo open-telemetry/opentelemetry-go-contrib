@@ -191,7 +191,8 @@ func TestAddHeaders(t *testing.T) {
 	// Create http request to add headers to.
 	req, err := http.NewRequest("POST", "test.com", nil)
 	require.Nil(t, err)
-	exporter.addHeaders(req)
+	err = exporter.addHeaders(req)
+	require.Nil(t, err)
 
 	// Check that all the headers are there.
 	for name, field := range testConfig.Headers {

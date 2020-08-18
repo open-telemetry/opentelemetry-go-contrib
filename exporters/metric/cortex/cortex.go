@@ -452,7 +452,10 @@ func (e *Exporter) buildRequest(message []byte) (*http.Request, error) {
 	}
 
 	// Add the required headers and the headers from Config.Headers.
-	e.addHeaders(req)
+	err = e.addHeaders(req)
+	if err != nil {
+		return nil, err
+	}
 
 	return req, nil
 }

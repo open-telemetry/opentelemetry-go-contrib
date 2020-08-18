@@ -113,7 +113,8 @@ func TestAuthentication(t *testing.T) {
 			// response body.
 			handler := func(rw http.ResponseWriter, req *http.Request) {
 				authHeaderValue := req.Header.Get("Authorization")
-				rw.Write([]byte(authHeaderValue))
+				_, err := rw.Write([]byte(authHeaderValue))
+				require.Nil(t, err)
 			}
 			server := httptest.NewServer(http.HandlerFunc(handler))
 			defer server.Close()
