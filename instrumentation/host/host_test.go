@@ -173,7 +173,7 @@ func TestHostMemory(t *testing.T) {
 	afterTotal := hostAfter.Available + hostAfter.Used
 	measureTotal := hostUsed + hostAvailable
 
-	// Tolrance is 5%
+	// Tolerance is 5%
 	const tolerance = 0.05
 
 	// Check that the sum of used and available doesn't change:

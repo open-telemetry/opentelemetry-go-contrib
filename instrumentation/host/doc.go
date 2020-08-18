@@ -12,11 +12,12 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-// package host implements the conventional host metrics specified by
-// OpenTelemetry.  Host metrics are sometimes collected through the
-// OpenTelemetry Collector "hostmetrics" receiver running as an agent;
-// this instrumentation is an alternative for processes that want to
-// record the same information with am agent.
+// Package host provides the conventional host metric instruments
+// specified by OpenTelemetry.  Host metric events are sometimes
+// collected through the OpenTelemetry Collector "hostmetrics"
+// receiver running as an agent; this instrumentation is an
+// alternative for processes that want to record the same information
+// without an agent.
 //
 // The metric events produced are listed here with label dimensions.
 //

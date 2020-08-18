@@ -102,7 +102,7 @@ func Start(c Config) error {
 	}
 	h := &host{
 		meter: c.MeterProvider.Meter(
-			"host",
+			"go.opentelemetry.io/contrib/instrumentation/host",
 			metric.WithInstrumentationVersion(contrib.SemVersion()),
 		),
 		config: c,
@@ -145,33 +145,33 @@ func (h *host) register() error {
 		// specific metrics that are not universal.
 		processTimes, err := proc.TimesWithContext(ctx)
 		if err != nil {
-			global.Handler().Handle(err)
+			global.Handle(err)
 			return
 		}
 
 		hostTimeSlice, err := cpu.TimesWithContext(ctx, false)
 		if err != nil {
-			global.Handler().Handle(err)
+			global.Handle(err)
 			return
 		}
 		if len(hostTimeSlice) != 1 {
-			global.Handler().Handle(fmt.Errorf("host CPU usage: incorrect summary count"))
+			global.Handle(fmt.Errorf("host CPU usage: incorrect summary count"))
 			return
 		}
 
 		vmStats, err := mem.VirtualMemoryWithContext(ctx)
 		if err != nil {
-			global.Handler().Handle(err)
+			global.Handle(err)
 			return
 		}
 
 		ioStats, err := net.IOCountersWithContext(ctx, false)
 		if err != nil {
-			global.Handler().Handle(err)
+			global.Handle(err)
 			return
 		}
 		if len(ioStats) != 1 {
-			global.Handler().Handle(fmt.Errorf("host network usage: incorrect summary count"))
+			global.Handle(fmt.Errorf("host network usage: incorrect summary count"))
 			return
 		}
 
@@ -184,12 +184,13 @@ func (h *host) register() error {
 		result.Observe(LabelCPUTimeUser, hostCPUTime.Observation(hostTime.User))
 		result.Observe(LabelCPUTimeSystem, hostCPUTime.Observation(hostTime.System))
 
-		// TODO: "other" is a placeholder for actually dealing
+		// TODO(#244): "other" is a placeholder for actually dealing
 		// with these states.  Do users actually want this
 		// (unconditionally)?  How should we handle "iowait"
 		// if not all systems expose it?  Should we break
-		// these down by CPU?  If so, are users could to want
-		// to aggregate in-process?
+		// these down by CPU?  If so, are users going to want
+		// to aggregate in-process?  See:
+		// https://github.com/open-telemetry/opentelemetry-go-contrib/issues/244
 		other := hostTime.Nice +
 			hostTime.Iowait +
 			hostTime.Irq +
