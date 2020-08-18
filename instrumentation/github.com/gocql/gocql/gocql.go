@@ -18,6 +18,9 @@ import (
 	"context"
 
 	"github.com/gocql/gocql"
+
+	otelcontrib "go.opentelemetry.io/contrib"
+	"go.opentelemetry.io/otel/api/trace"
 )
 
 // NewSessionWithTracing creates a new session using the given cluster
@@ -26,7 +29,10 @@ import (
 func NewSessionWithTracing(ctx context.Context, cluster *gocql.ClusterConfig, options ...TracedSessionOption) (*gocql.Session, error) {
 	config := configure(options...)
 	instruments := newInstruments(config.meterProvider)
-	tracer := config.traceProvider.Tracer(instrumentationName)
+	tracer := config.traceProvider.Tracer(
+		instrumentationName,
+		trace.WithInstrumentationVersion(otelcontrib.SemVersion()),
+	)
 	cluster.QueryObserver = &OTelQueryObserver{
 		enabled:  config.instrumentQuery,
 		observer: config.queryObserver,

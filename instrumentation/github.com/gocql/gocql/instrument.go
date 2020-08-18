@@ -17,6 +17,7 @@ package gocql
 import (
 	"log"
 
+	otelcontrib "go.opentelemetry.io/contrib"
 	"go.opentelemetry.io/otel/api/metric"
 	"go.opentelemetry.io/otel/api/unit"
 )
@@ -42,7 +43,10 @@ type instruments struct {
 // newInstruments will recreate instruments using a meter
 // from the given provider p.
 func newInstruments(p metric.Provider) *instruments {
-	meter := p.Meter(instrumentationName)
+	meter := p.Meter(
+		instrumentationName,
+		metric.WithInstrumentationVersion(otelcontrib.SemVersion()),
+	)
 	instruments := &instruments{}
 	var err error
 
