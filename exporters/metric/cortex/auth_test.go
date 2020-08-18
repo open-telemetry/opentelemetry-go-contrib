@@ -86,6 +86,25 @@ func TestAuthentication(t *testing.T) {
 			expectedAuthHeaderValue: "",
 			expectedError:           ErrFailedToReadFile,
 		},
+		{
+			testName:                "Bearer Token",
+			bearerToken:             "testToken",
+			expectedAuthHeaderValue: "Bearer testToken",
+			expectedError:           nil,
+		},
+		{
+			testName:                "Bearer Token with bad bearer token file",
+			bearerTokenFile:         "missingBearerTokenFile",
+			expectedAuthHeaderValue: "",
+			expectedError:           ErrFailedToReadFile,
+		},
+		{
+			testName:                "Bearer Token with bearer token file",
+			bearerTokenFile:         "bearerTokenFile",
+			expectedAuthHeaderValue: "Bearer testToken",
+			bearerTokenFileContents: []byte("testToken"),
+			expectedError:           nil,
+		},
 	}
 	for _, test := range tests {
 		t.Run(test.testName, func(t *testing.T) {
