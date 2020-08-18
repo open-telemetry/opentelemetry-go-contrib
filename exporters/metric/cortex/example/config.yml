@@ -1,0 +1,6 @@
+url: http://host.docker.internal:9009/api/prom/push
+remote_timeout: 30s
+push_interval: 2s
+name: Test
+headers:
+  X-Scope-OrgID: 5
