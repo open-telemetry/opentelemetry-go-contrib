@@ -18,10 +18,16 @@
 // this instrumentation is an alternative for processes that want to
 // record the same information with am agent.
 //
-// The metric events produced are listed here with label dimensions:
+// The metric events produced are listed here with label dimensions.
+//
+//   Name			Label
+// ----------------------------------------------------------------------
 //   process.cpu.time           state=user|system
 //   system.cpu.time            state=user|system|other|idle
 //   system.memory.usage        state=used|available
 //   system.memory.utilization  state=used|available
 //   system.network.io          direction=transmit|receive
+//
+// See https://github.com/open-telemetry/oteps/blob/master/text/0119-standard-system-metrics.md
+// for the definition of these metric instruments.
 package host // import "go.opentelemetry.io/contrib/instrumentation/host"
