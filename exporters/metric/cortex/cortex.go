@@ -111,7 +111,7 @@ func InstallNewPipeline(config Config, options ...push.Option) (*push.Controller
 }
 
 // ConvertToTimeSeries converts a CheckpointSet to a slice of TimeSeries pointers
-// Based on the aggregation type, ConvertToTimeSeries will call helper function like
+// Based on the aggregation type, ConvertToTimeSeries will call helper functions like
 // convertFromSum to generate the correct number of TimeSeries.
 func (e *Exporter) ConvertToTimeSeries(checkpointSet export.CheckpointSet) ([]*prompb.TimeSeries, error) {
 	var aggError error
@@ -129,7 +129,7 @@ func (e *Exporter) ConvertToTimeSeries(checkpointSet export.CheckpointSet) ([]*p
 				return err
 			}
 			timeSeries = append(timeSeries, tSeries...)
-			// Check if aggregation has sum value
+		// Check if aggregation has sum value
 		} else if sum, ok := agg.(aggregation.Sum); ok {
 			tSeries, err := convertFromSum(record, sum)
 			if err != nil {
@@ -157,7 +157,7 @@ func (e *Exporter) ConvertToTimeSeries(checkpointSet export.CheckpointSet) ([]*p
 					timeSeries = append(timeSeries, tSeries...)
 				}
 			}
-			// Check if aggregation has lastValue
+		// Check if aggregation has lastValue
 		} else if lastValue, ok := agg.(aggregation.LastValue); ok {
 			tSeries, err := convertFromLastValue(record, lastValue)
 			if err != nil {
@@ -275,7 +275,7 @@ func convertFromMinMaxSumCount(record metric.Record, minMaxSumCount aggregation.
 	return tSeries, nil
 }
 
-// convertFromDistribution returns n TimeSeries for n quantiles in a distributions
+// convertFromDistribution returns len(quantiles) number of TimeSeries in a distribution.
 func convertFromDistribution(record metric.Record, distribution aggregation.Distribution, quantiles []float64) ([]*prompb.TimeSeries, error) {
 	var timeSeries []*prompb.TimeSeries
 	metricName := sanitize(record.Descriptor().Name())
