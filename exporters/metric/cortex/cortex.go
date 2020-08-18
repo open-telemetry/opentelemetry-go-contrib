@@ -157,7 +157,7 @@ func (e *Exporter) ConvertToTimeSeries(checkpointSet export.CheckpointSet) ([]*p
 					timeSeries = append(timeSeries, tSeries...)
 				}
 			}
-			// Check if aggregation has lastValue
+		// Check if aggregation has lastValue
 		} else if lastValue, ok := agg.(aggregation.LastValue); ok {
 			tSeries, err := convertFromLastValue(record, lastValue)
 			if err != nil {
