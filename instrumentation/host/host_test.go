@@ -20,6 +20,11 @@ import (
 	"testing"
 	"time"
 
+	gonet "net"
+
+	"github.com/shirou/gopsutil/cpu"
+	"github.com/shirou/gopsutil/mem"
+	"github.com/shirou/gopsutil/net"
 	"github.com/shirou/gopsutil/process"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
@@ -54,7 +59,7 @@ func getMetric(impl *metric.MeterImpl, name string, label kv.KeyValue) float64 {
 	panic("Could not locate a metric in test output")
 }
 
-func TestProcessCPU(t *testing.T) {
+func TestHostCPU(t *testing.T) {
 	impl, provider := metric.NewProvider()
 	err := host.Start(
 		host.Configure(
@@ -69,13 +74,17 @@ func TestProcessCPU(t *testing.T) {
 	}
 
 	ctx := context.Background()
-	timesBefore, err := proc.TimesWithContext(ctx)
+	processBefore, err := proc.TimesWithContext(ctx)
+	require.NoError(t, err)
+
+	hostBefore, err := cpu.TimesWithContext(ctx, false)
 	require.NoError(t, err)
 
 	start := time.Now()
 	for time.Now().Sub(start) < time.Second {
 		// This has a mix of user and system time, so serves
-		// the purpose of advancing both.
+		// the purpose of advancing both process and host,
+		// user and system CPU usage.
 		_, err = proc.TimesWithContext(ctx)
 		require.NoError(t, err)
 	}
@@ -85,20 +94,152 @@ func TestProcessCPU(t *testing.T) {
 	processUser := getMetric(impl, "process.cpu.time", host.LabelCPUTimeUser[0])
 	processSystem := getMetric(impl, "process.cpu.time", host.LabelCPUTimeSystem[0])
 
-	impl.MeasurementBatches = nil
+	hostUser := getMetric(impl, "system.cpu.time", host.LabelCPUTimeUser[0])
+	hostSystem := getMetric(impl, "system.cpu.time", host.LabelCPUTimeSystem[0])
 
-	timesAfter, err := proc.TimesWithContext(ctx)
+	processAfter, err := proc.TimesWithContext(ctx)
 	require.NoError(t, err)
 
+	hostAfter, err := cpu.TimesWithContext(ctx, false)
+	require.NoError(t, err)
+
+	// Validate process times:
 	// User times are in range
-	require.LessOrEqual(t, timesBefore.User, processUser)
-	require.GreaterOrEqual(t, timesAfter.User, processUser)
-
+	require.LessOrEqual(t, processBefore.User, processUser)
+	require.GreaterOrEqual(t, processAfter.User, processUser)
 	// System times are in range
-	require.LessOrEqual(t, timesBefore.System, processSystem)
-	require.GreaterOrEqual(t, timesAfter.System, processSystem)
-
+	require.LessOrEqual(t, processBefore.System, processSystem)
+	require.GreaterOrEqual(t, processAfter.System, processSystem)
 	// Ranges are not empty
-	require.NotEqual(t, timesAfter.System, timesBefore.System)
-	require.NotEqual(t, timesAfter.User, timesBefore.User)
+	require.NotEqual(t, processAfter.System, processBefore.System)
+	require.NotEqual(t, processAfter.User, processBefore.User)
+
+	// Validate host times:
+	// Correct assumptions:
+	require.Equal(t, 1, len(hostBefore))
+	require.Equal(t, 1, len(hostAfter))
+	// User times are in range
+	require.LessOrEqual(t, hostBefore[0].User, hostUser)
+	require.GreaterOrEqual(t, hostAfter[0].User, hostUser)
+	// System times are in range
+	require.LessOrEqual(t, hostBefore[0].System, hostSystem)
+	require.GreaterOrEqual(t, hostAfter[0].System, hostSystem)
+	// Ranges are not empty
+	require.NotEqual(t, hostAfter[0].System, hostBefore[0].System)
+	require.NotEqual(t, hostAfter[0].User, hostBefore[0].User)
+
+	// TODO: We are not testing host "Other" nor "Idle" and
+	// generally the specification hasn't been finalized, so
+	// there's more to do.  Moreover, "Other" is not portable and
+	// "Idle" may not advance on a fully loaded machine => both
+	// are difficult to test.
+}
+
+func TestHostMemory(t *testing.T) {
+	impl, provider := metric.NewProvider()
+	err := host.Start(
+		host.Configure(
+			host.WithMeterProvider(provider),
+		),
+	)
+	assert.NoError(t, err)
+
+	ctx := context.Background()
+	hostBefore, err := mem.VirtualMemoryWithContext(ctx)
+	require.NoError(t, err)
+
+	slice := make([]byte, 100*1024*1024)
+	for i := range slice {
+		slice[i] = byte(i)
+	}
+
+	impl.RunAsyncInstruments()
+
+	hostAfter, err := mem.VirtualMemoryWithContext(ctx)
+	require.NoError(t, err)
+
+	hostUsed := getMetric(impl, "system.memory.usage", host.LabelMemoryUsed[0])
+	hostAvailable := getMetric(impl, "system.memory.usage", host.LabelMemoryAvailable[0])
+
+	hostUsedUtil := getMetric(impl, "system.memory.utilization", host.LabelMemoryUsed[0])
+	hostAvailableUtil := getMetric(impl, "system.memory.utilization", host.LabelMemoryAvailable[0])
+
+	beforeTotal := hostBefore.Available + hostBefore.Used
+	afterTotal := hostAfter.Available + hostAfter.Used
+	measureTotal := hostUsed + hostAvailable
+
+	// Check that the host memory used is greater than before:
+	require.Greater(t, hostUsed, float64(hostBefore.Used))
+
+	// Check that the sum of used and available doesn't change:
+	require.InEpsilon(t, float64(beforeTotal), measureTotal, 0.01)
+	require.InEpsilon(t, float64(afterTotal), measureTotal, 0.01)
+
+	// Check that the implied total is equal from both Used and Available metrics:
+	require.InEpsilon(t, hostUsed/hostUsedUtil, hostAvailable/hostAvailableUtil, 0.01)
+
+	// Check that utilization sums to 1.0:
+	require.InEpsilon(t, 1.0, hostUsedUtil+hostAvailableUtil, 0.01)
+}
+
+func sendBytes(count int) error {
+	conn1, err := gonet.ListenPacket("udp", "127.0.0.1:0")
+	if err != nil {
+		return err
+	}
+	defer conn1.Close()
+
+	conn2, err := gonet.ListenPacket("udp", "127.0.0.1:0")
+	if err != nil {
+		return err
+	}
+	defer conn2.Close()
+
+	data := make([]byte, 1000)
+	for i := range data {
+		data[i] = byte(i)
+	}
+
+	for ; count > 0; count -= len(data) {
+		_, err = conn1.WriteTo(data, conn2.LocalAddr())
+		if err != nil {
+			return err
+		}
+	}
+
+	return nil
+}
+
+func TestHostNetwork(t *testing.T) {
+	impl, provider := metric.NewProvider()
+	err := host.Start(
+		host.Configure(
+			host.WithMeterProvider(provider),
+		),
+	)
+	assert.NoError(t, err)
+
+	ctx := context.Background()
+	hostBefore, err := net.IOCountersWithContext(ctx, false)
+	require.NoError(t, err)
+
+	const howMuch = 10000
+	err = sendBytes(howMuch)
+	require.NoError(t, err)
+
+	impl.RunAsyncInstruments()
+
+	hostAfter, err := net.IOCountersWithContext(ctx, false)
+	require.NoError(t, err)
+
+	hostTransmit := getMetric(impl, "system.network.io", host.LabelNetworkTransmit[0])
+	hostReceive := getMetric(impl, "system.network.io", host.LabelNetworkReceive[0])
+
+	// Check that the network transmit/receive used is greater than before:
+	require.LessOrEqual(t, uint64(howMuch), hostAfter[0].BytesSent-hostBefore[0].BytesSent)
+	require.LessOrEqual(t, uint64(howMuch), hostAfter[0].BytesRecv-hostBefore[0].BytesRecv)
+
+	// Check that the recorded measurements reflect the same change:
+	require.LessOrEqual(t, uint64(howMuch), uint64(hostTransmit)-hostBefore[0].BytesSent)
+	require.LessOrEqual(t, uint64(howMuch), uint64(hostReceive)-hostBefore[0].BytesRecv)
 }
