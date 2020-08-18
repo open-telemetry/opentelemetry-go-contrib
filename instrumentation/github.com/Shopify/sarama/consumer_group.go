@@ -40,8 +40,8 @@ func (h *consumerGroupHandler) ConsumeClaim(session sarama.ConsumerGroupSession,
 
 // WrapConsumerGroupHandler wraps a sarama.ConsumerGroupHandler causing each received
 // message to be traced.
-func WrapConsumerGroupHandler(serviceName string, handler sarama.ConsumerGroupHandler, opts ...Option) sarama.ConsumerGroupHandler {
-	cfg := newConfig(serviceName, opts...)
+func WrapConsumerGroupHandler(handler sarama.ConsumerGroupHandler, opts ...Option) sarama.ConsumerGroupHandler {
+	cfg := newConfig(opts...)
 
 	return &consumerGroupHandler{
 		ConsumerGroupHandler: handler,
