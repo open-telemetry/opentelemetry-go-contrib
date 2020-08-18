@@ -168,18 +168,21 @@ func TestHostMemory(t *testing.T) {
 	afterTotal := hostAfter.Available + hostAfter.Used
 	measureTotal := hostUsed + hostAvailable
 
+	// Tolrance is 5%
+	const tolerance = 0.05
+
 	// Check that the host memory used is greater than before:
 	require.Greater(t, hostUsed, float64(hostBefore.Used))
 
 	// Check that the sum of used and available doesn't change:
-	require.InEpsilon(t, float64(beforeTotal), measureTotal, 0.01)
-	require.InEpsilon(t, float64(afterTotal), measureTotal, 0.01)
+	require.InEpsilon(t, float64(beforeTotal), measureTotal, tolerance)
+	require.InEpsilon(t, float64(afterTotal), measureTotal, tolerance)
 
 	// Check that the implied total is equal from both Used and Available metrics:
-	require.InEpsilon(t, hostUsed/hostUsedUtil, hostAvailable/hostAvailableUtil, 0.01)
+	require.InEpsilon(t, hostUsed/hostUsedUtil, hostAvailable/hostAvailableUtil, tolerance)
 
 	// Check that utilization sums to 1.0:
-	require.InEpsilon(t, 1.0, hostUsedUtil+hostAvailableUtil, 0.01)
+	require.InEpsilon(t, 1.0, hostUsedUtil+hostAvailableUtil, tolerance)
 }
 
 func sendBytes(t *testing.T, count int) error {
