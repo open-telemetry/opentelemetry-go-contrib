@@ -70,7 +70,7 @@ var mockTime int64 = time.Time{}.Unix()
 
 func TestExportKindFor(t *testing.T) {
 	exporter := Exporter{}
-	got := exporter.ExportKindFor(nil, aggregation.Kind(0))
+	got := exporter.ExportKindFor(nil, aggregation.Kind(rune(0)))
 	want := metric.CumulativeExporter
 
 	if got != want {
