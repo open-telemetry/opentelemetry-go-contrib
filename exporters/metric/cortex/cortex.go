@@ -411,6 +411,9 @@ func (e *Exporter) addHeaders(req *http.Request) error {
 
 	// Add Authorization header if it wasn't already set.
 	if _, exists := e.config.Headers["Authorization"]; !exists {
+		if err := e.addBearerTokenAuth(req); err != nil {
+			return err
+		}
 		if err := e.addBasicAuth(req); err != nil {
 			return err
 		}

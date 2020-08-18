@@ -128,6 +128,12 @@ func TestAuthentication(t *testing.T) {
 					defer os.Remove(filepath)
 				}
 			}
+			if test.bearerTokenFile != "" && test.bearerTokenFileContents != nil {
+				filepath := "./" + test.bearerTokenFile
+				err := createFile(test.bearerTokenFileContents, filepath)
+				require.Nil(t, err)
+				defer os.Remove(filepath)
+			}
 
 			// Create a HTTP request and add headers to it through an Exporter. Since the
 			// Exporter has an empty Headers map, authentication methods will be called.

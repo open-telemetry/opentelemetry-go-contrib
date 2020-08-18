@@ -75,3 +75,33 @@ func (e *Exporter) addBasicAuth(req *http.Request) error {
 
 	return nil
 }
+
+// addBearerTokenAuth sets the Authorization header for bearer tokens using a bearer token
+// string or a bearer token file. To prevent the Exporter from potentially opening a
+// bearer token file on every request by calling this method, the Authorization header is
+// also added to the Config header map.
+func (e *Exporter) addBearerTokenAuth(req *http.Request) error {
+	// No need to add bearer token auth if the Authorization header is already set.
+	if _, exists := e.config.Headers["Authorization"]; exists {
+		return nil
+	}
+
+	// Use bearer token from bearer token file if it exists.
+	if e.config.BearerTokenFile != "" {
+		file, err := ioutil.ReadFile(e.config.BearerTokenFile)
+		if err != nil {
+			return ErrFailedToReadFile
+		}
+		bearerTokenString := "Bearer " + string(file)
+		req.Header.Set("Authorization", bearerTokenString)
+		return nil
+	}
+
+	// Otherwise, use bearer token field.
+	if e.config.BearerToken != "" {
+		bearerTokenString := "Bearer " + e.config.BearerToken
+		req.Header.Set("Authorization", bearerTokenString)
+	}
+
+	return nil
+}
