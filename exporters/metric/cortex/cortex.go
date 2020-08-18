@@ -298,7 +298,7 @@ func convertFromDistribution(record metric.Record, distribution aggregation.Dist
 	return timeSeries, nil
 }
 
-// convertFromHistogram returns
+// convertFromHistogram returns len(histogram.Buckets) timeseries for a histogram aggregation
 func convertFromHistogram(record metric.Record, histogram aggregation.Histogram) ([]*prompb.TimeSeries, error) {
 	var timeSeries []*prompb.TimeSeries
 	metricName := sanitize(record.Descriptor().Name())
@@ -320,11 +320,9 @@ func convertFromHistogram(record metric.Record, histogram aggregation.Histogram)
 	var totalCount float64
 	// counts maps from the bucket upper-bound to the cumulative count.
 	// The bucket with upper-bound +inf is not included.
-	counts := make(map[float64]float64, len(buckets.Boundaries))
 	for i, boundary := range buckets.Boundaries {
 		// Add bucket count to totalCount and record in map
 		totalCount += buckets.Counts[i]
-		counts[boundary] = totalCount
 
 		// Add lowerbound as a label. e.g. {le="5"}
 		boundaryStr := strconv.FormatFloat(boundary, 'f', -1, 64)
@@ -332,6 +330,7 @@ func convertFromHistogram(record metric.Record, histogram aggregation.Histogram)
 		// Create timeSeries and append
 		tSeries := createTimeSeries(record, apimetric.NewFloat64Number(totalCount), "__name__", metricName, "le", boundaryStr)
 		timeSeries = append(timeSeries, tSeries)
+		fmt.Printf("%+v\n", tSeries)
 	}
 
 	// Include the +inf boundary in the total count
