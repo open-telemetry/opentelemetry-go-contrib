@@ -12,13 +12,16 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-// package host implements the work-in-progress conventional host
-// metrics specified by OpenTelemetry.  Host metrics are sometimes
-// collected through the OpenTelemetry Collector "hostmetrics"
-// receiver running as an agent; this instrumentation is an
-// alternative for processes that want to record the same information
-// with am agent.
+// package host implements the conventional host metrics specified by
+// OpenTelemetry.  Host metrics are sometimes collected through the
+// OpenTelemetry Collector "hostmetrics" receiver running as an agent;
+// this instrumentation is an alternative for processes that want to
+// record the same information with am agent.
 //
-// The metrics produced are:
-// @@@
+// The metric events produced are listed here with label dimensions:
+//   process.cpu.time           state=user|system
+//   system.cpu.time            state=user|system|other|idle
+//   system.memory.usage        state=used|available
+//   system.memory.utilization  state=used|available
+//   system.network.io          direction=transmit|receive
 package host // import "go.opentelemetry.io/contrib/instrumentation/host"
