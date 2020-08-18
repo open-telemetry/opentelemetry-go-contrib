@@ -395,10 +395,11 @@ func createLabelSet(record metric.Record, extras ...string) []*prompb.Label {
 	return res
 }
 
-// AddHeaders adds required headers as well as all headers in Header map to a http request.
-func (e *Exporter) addHeaders(req *http.Request) {
-	// Cortex expects Snappy-compressed protobuf messages. These two headers are hard-coded as they
-	// should be on every request.
+// addHeaders adds required headers, an Authorization header, and all headers in the
+// Config Headers map to a http request.
+func (e *Exporter) addHeaders(req *http.Request) error {
+	// Cortex expects Snappy-compressed protobuf messages. These three headers are
+	// hard-coded as they should be on every request.
 	req.Header.Add("X-Prometheus-Remote-Write-Version", "0.1.0")
 	req.Header.Add("Content-Encoding", "snappy")
 	req.Header.Set("Content-Type", "application/x-protobuf")
@@ -407,6 +408,15 @@ func (e *Exporter) addHeaders(req *http.Request) {
 	for name, field := range e.config.Headers {
 		req.Header.Add(name, field)
 	}
+
+	// Add Authorization header if it wasn't already set.
+	if _, exists := e.config.Headers["Authorization"]; !exists {
+		if err := e.addBasicAuth(req); err != nil {
+			return err
+		}
+	}
+
+	return nil
 }
 
 // buildMessage creates a Snappy-compressed protobuf message from a slice of TimeSeries.
