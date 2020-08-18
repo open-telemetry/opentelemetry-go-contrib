@@ -81,7 +81,7 @@ func TestHostCPU(t *testing.T) {
 	require.NoError(t, err)
 
 	start := time.Now()
-	for time.Now().Sub(start) < time.Second {
+	for time.Since(start) < time.Second {
 		// This has a mix of user and system time, so serves
 		// the purpose of advancing both process and host,
 		// user and system CPU usage.

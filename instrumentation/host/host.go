@@ -79,6 +79,7 @@ var (
 	LabelMemoryUsed      = []kv.KeyValue{kv.String("state", "used")}
 
 	// Label sets used for Network measurements.
+
 	LabelNetworkTransmit = []kv.KeyValue{kv.String("direction", "transmit")}
 	LabelNetworkReceive  = []kv.KeyValue{kv.String("direction", "receive")}
 )
@@ -268,7 +269,7 @@ func (h *host) register() error {
 		"system.network.io",
 		metric.WithUnit(unit.Bytes),
 		metric.WithDescription(
-			"Bytes transfered labeled by direction (Transmit, Receive)",
+			"Bytes transferred labeled by direction (Transmit, Receive)",
 		),
 	); err != nil {
 		return err
