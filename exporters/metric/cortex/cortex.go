@@ -92,7 +92,7 @@ func NewExportPipeline(config Config, options ...push.Option) (*push.Controller,
 	}
 
 	pusher := push.New(
-		simple.NewWithExactDistribution(),
+		simple.NewWithHistogramDistribution(config.HistogramBoundaries),
 		exporter,
 		options...,
 	)
