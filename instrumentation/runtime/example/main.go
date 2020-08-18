@@ -21,7 +21,6 @@ import (
 	"syscall"
 	"time"
 
-	"go.opentelemetry.io/otel/api/global"
 	"go.opentelemetry.io/otel/exporters/stdout"
 	"go.opentelemetry.io/otel/sdk/metric/controller/push"
 
@@ -42,9 +41,11 @@ func initMeter() *push.Controller {
 func main() {
 	defer initMeter().Stop()
 
-	meter := global.Meter("runtime")
-
-	if err := runtime.Start(meter, time.Second); err != nil {
+	if err := runtime.Start(
+		runtime.Configure(
+			runtime.WithMinimumReadMemStatsInterval(time.Second),
+		),
+	); err != nil {
 		panic(err)
 	}
 
