@@ -17,6 +17,7 @@ package main
 import (
 	"context"
 	"fmt"
+	"math/rand"
 	"time"
 
 	"go.opentelemetry.io/contrib/exporters/metric/cortex"
@@ -29,12 +30,16 @@ import (
 )
 
 func main() {
+	// Create a new Config
 	config, err := utils.NewConfig("config.yml")
 	if err != nil {
 		fmt.Printf("Error: %v", err)
 	}
 	fmt.Println("Success: Created Config struct")
 
+	// Create and install the exporter
+	// Optionally, set the push interval to 5 seconds
+	// Optionally, add a resource to the controller
 	pusher, err := cortex.InstallNewPipeline(*config, push.WithPeriod(5*time.Second), push.WithResource(resource.New(kv.String("R", "V"))))
 	if err != nil {
 		fmt.Printf("Error: %v", err)
@@ -42,6 +47,7 @@ func main() {
 	defer pusher.Stop()
 	fmt.Println("Success: Installed Exporter Pipeline")
 
+	// Create a counter and a value recorder
 	meter := pusher.Provider().Meter("example")
 	ctx := context.Background()
 
@@ -56,13 +62,17 @@ func main() {
 	)
 	fmt.Println("Success: Created Int64ValueRecorder and Int64Counter instruments")
 
+	// Record random values to the instruments in a loop
 	fmt.Println("Starting to write data to the instruments")
-	for i := 1; i <= 10; i++ {
+	seed := rand.NewSource(time.Now().UnixNano())
+	random := rand.New(seed)
+	for {
 		time.Sleep(5 * time.Second)
-		value := int64(i * 100)
+		randomValue := random.Intn(100)
+		value := int64(randomValue * 10)
 		recorder.Record(ctx, value, kv.String("key", "value"))
-		counter.Add(ctx, int64(i), kv.String("key", "value"))
-		fmt.Printf("%d. Adding %d to counter and recording %d in recorder\n", i, i, value)
+		counter.Add(ctx, int64(randomValue), kv.String("key", "value"))
+		fmt.Printf("Adding %d to counter and recording %d in recorder\n", randomValue, value)
 	}
 
 }
