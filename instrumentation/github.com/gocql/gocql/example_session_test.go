@@ -21,7 +21,7 @@ import (
 	"github.com/gocql/gocql"
 )
 
-func ExampleTracedSession() {
+func ExampleNewSessionWithTracing() {
 	// Create a cluster
 	host := "localhost"
 	cluster := gocql.NewCluster(host)

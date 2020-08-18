@@ -32,7 +32,7 @@ type OTelQueryObserver struct {
 	enabled  bool
 	observer gocql.QueryObserver
 	tracer   trace.Tracer
-	inst        *instruments
+	inst     *instruments
 }
 
 // OTelBatchObserver implements the gocql.BatchObserver interface
@@ -41,7 +41,7 @@ type OTelBatchObserver struct {
 	enabled  bool
 	observer gocql.BatchObserver
 	tracer   trace.Tracer
-	inst        *instruments
+	inst     *instruments
 }
 
 // OTelConnectObserver implements the gocql.ConnectObserver interface
@@ -51,7 +51,7 @@ type OTelConnectObserver struct {
 	enabled  bool
 	observer gocql.ConnectObserver
 	tracer   trace.Tracer
-	inst        *instruments
+	inst     *instruments
 }
 
 // ------------------------------------------ Observer Functions
