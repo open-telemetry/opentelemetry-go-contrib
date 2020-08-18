@@ -48,6 +48,43 @@ func TestAuthentication(t *testing.T) {
 			),
 			expectedError: nil,
 		},
+		{
+			testName: "Basic Auth with no username",
+			basicAuth: map[string]string{
+				"password": "TestPassword",
+			},
+			expectedAuthHeaderValue: "",
+			expectedError:           ErrNoBasicAuthUsername,
+		},
+		{
+			testName: "Basic Auth with no password",
+			basicAuth: map[string]string{
+				"username": "TestUser",
+			},
+			expectedAuthHeaderValue: "",
+			expectedError:           ErrNoBasicAuthPassword,
+		},
+		{
+			testName: "Basic Auth with password file",
+			basicAuth: map[string]string{
+				"username":      "TestUser",
+				"password_file": "passwordFile",
+			},
+			basicAuthPasswordFileContents: []byte("TestPassword"),
+			expectedAuthHeaderValue: "Basic " + base64.StdEncoding.EncodeToString(
+				[]byte("TestUser:TestPassword"),
+			),
+			expectedError: nil,
+		},
+		{
+			testName: "Basic Auth with bad password file",
+			basicAuth: map[string]string{
+				"username":      "TestUser",
+				"password_file": "missingPasswordFile",
+			},
+			expectedAuthHeaderValue: "",
+			expectedError:           ErrFailedToReadFile,
+		},
 	}
 	for _, test := range tests {
 		t.Run(test.testName, func(t *testing.T) {
