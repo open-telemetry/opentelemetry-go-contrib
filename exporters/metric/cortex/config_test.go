@@ -44,6 +44,18 @@ func TestValidate(t *testing.T) {
 			expectedError:  cortex.ErrTwoPasswords,
 		},
 		{
+			testName:       "Config with no Password",
+			config:         &exampleNoPasswordConfig,
+			expectedConfig: nil,
+			expectedError:  cortex.ErrNoBasicAuthPassword,
+		},
+		{
+			testName:       "Config with no Username",
+			config:         &exampleNoUsernameConfig,
+			expectedConfig: nil,
+			expectedError:  cortex.ErrNoBasicAuthUsername,
+		},
+		{
 			testName:       "Config with Custom Timeout",
 			config:         &exampleRemoteTimeoutConfig,
 			expectedConfig: &validatedCustomTimeoutConfig,
@@ -83,7 +95,7 @@ func TestValidate(t *testing.T) {
 	for _, test := range tests {
 		t.Run(test.testName, func(t *testing.T) {
 			err := test.config.Validate()
-			require.Equal(t, err, test.expectedError)
+			require.Equal(t, test.expectedError, err)
 			if err == nil {
 				require.Equal(t, test.config, test.expectedConfig)
 			}

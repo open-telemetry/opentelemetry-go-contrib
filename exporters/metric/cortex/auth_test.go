@@ -50,22 +50,6 @@ func TestAuthentication(t *testing.T) {
 			expectedError: nil,
 		},
 		{
-			testName: "Basic Auth with no username",
-			basicAuth: map[string]string{
-				"password": "TestPassword",
-			},
-			expectedAuthHeaderValue: "",
-			expectedError:           ErrNoBasicAuthUsername,
-		},
-		{
-			testName: "Basic Auth with no password",
-			basicAuth: map[string]string{
-				"username": "TestUser",
-			},
-			expectedAuthHeaderValue: "",
-			expectedError:           ErrNoBasicAuthPassword,
-		},
-		{
 			testName: "Basic Auth with password file",
 			basicAuth: map[string]string{
 				"username":      "TestUser",
