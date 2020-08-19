@@ -42,9 +42,7 @@ func main() {
 	defer initMeter().Stop()
 
 	if err := runtime.Start(
-		runtime.Configure(
-			runtime.WithMinimumReadMemStatsInterval(time.Second),
-		),
+		runtime.WithMinimumReadMemStatsInterval(time.Second),
 	); err != nil {
 		panic(err)
 	}

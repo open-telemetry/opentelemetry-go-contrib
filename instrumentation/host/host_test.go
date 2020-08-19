@@ -63,9 +63,7 @@ func getMetric(impl *metric.MeterImpl, name string, label kv.KeyValue) float64 {
 func TestHostCPU(t *testing.T) {
 	impl, provider := metric.NewProvider()
 	err := host.Start(
-		host.Configure(
-			host.WithMeterProvider(provider),
-		),
+		host.WithMeterProvider(provider),
 	)
 	assert.NoError(t, err)
 
@@ -139,9 +137,7 @@ func TestHostCPU(t *testing.T) {
 func TestHostMemory(t *testing.T) {
 	impl, provider := metric.NewProvider()
 	err := host.Start(
-		host.Configure(
-			host.WithMeterProvider(provider),
-		),
+		host.WithMeterProvider(provider),
 	)
 	assert.NoError(t, err)
 
@@ -226,9 +222,7 @@ func sendBytes(t *testing.T, count int) error {
 func TestHostNetwork(t *testing.T) {
 	impl, provider := metric.NewProvider()
 	err := host.Start(
-		host.Configure(
-			host.WithMeterProvider(provider),
-		),
+		host.WithMeterProvider(provider),
 	)
 	assert.NoError(t, err)
 

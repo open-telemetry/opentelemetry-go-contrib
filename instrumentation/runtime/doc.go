@@ -12,9 +12,9 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-// package runtime implements the work-in-progress conventional runtime metrics specified by OpenTelemetry.
+// package runtime implements the conventional runtime metrics specified by OpenTelemetry.
 //
-// The metrics produced are:
+// The metric events produced are:
 //   runtime.go.cgo.calls         -          Number of cgo calls made by the current process
 //   runtime.go.gc.count          -          Number of completed garbage collection cycles
 //   runtime.go.gc.pause_ns       (ns)       Amount of nanoseconds in GC stop-the-world pauses

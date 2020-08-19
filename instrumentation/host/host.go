@@ -84,8 +84,8 @@ var (
 	LabelNetworkReceive  = []kv.KeyValue{kv.String("direction", "receive")}
 )
 
-// Configure computes a Config from the supplied Options.
-func Configure(opts ...Option) Config {
+// configure computes a Config from a list of Options.
+func configure(opts ...Option) Config {
 	c := Config{
 		MeterProvider: global.MeterProvider(),
 	}
@@ -96,7 +96,8 @@ func Configure(opts ...Option) Config {
 }
 
 // Start initializes reporting of host metrics using the supplied Config.
-func Start(c Config) error {
+func Start(opts ...Option) error {
+	c := configure(opts...)
 	if c.MeterProvider == nil {
 		c.MeterProvider = global.MeterProvider()
 	}

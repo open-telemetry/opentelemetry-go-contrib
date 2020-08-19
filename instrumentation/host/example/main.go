@@ -40,9 +40,7 @@ func initMeter() *push.Controller {
 func main() {
 	defer initMeter().Stop()
 
-	if err := host.Start(
-		host.Configure(),
-	); err != nil {
+	if err := host.Start(); err != nil {
 		panic(err)
 	}
 
