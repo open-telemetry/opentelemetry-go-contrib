@@ -23,15 +23,15 @@ import (
 var (
 	// ErrTwoPasswords occurs when the YAML file contains both `password` and
 	// `password_file`.
-	ErrTwoPasswords = fmt.Errorf("Cannot have two passwords in the YAML file")
+	ErrTwoPasswords = fmt.Errorf("cannot have two passwords in the YAML file")
 
 	// ErrTwoBearerTokens occurs when the YAML file contains both `bearer_token` and
 	// `bearer_token_file`.
-	ErrTwoBearerTokens = fmt.Errorf("Cannot have two bearer tokens in the YAML file")
+	ErrTwoBearerTokens = fmt.Errorf("cannot have two bearer tokens in the YAML file")
 
 	// ErrConflictingAuthorization occurs when the YAML file contains both BasicAuth and
 	// bearer token authorization
-	ErrConflictingAuthorization = fmt.Errorf("Cannot have both basic auth and bearer token authorization")
+	ErrConflictingAuthorization = fmt.Errorf("cannot have both basic auth and bearer token authorization")
 )
 
 // Config contains properties the Exporter uses to export metrics data to Cortex.

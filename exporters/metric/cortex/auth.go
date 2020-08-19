@@ -23,15 +23,15 @@ import (
 var (
 	// ErrNoBasicAuthUsername occurs when no username was provided for basic
 	// authentication.
-	ErrNoBasicAuthUsername = fmt.Errorf("No username provided for basic authentication")
+	ErrNoBasicAuthUsername = fmt.Errorf("no username provided for basic authentication")
 
 	// ErrNoBasicAuthPassword occurs when no password or password file was provided for
 	// basic authentication.
-	ErrNoBasicAuthPassword = fmt.Errorf("No password or password file provided for basic authentication")
+	ErrNoBasicAuthPassword = fmt.Errorf("no password or password file provided for basic authentication")
 
 	// ErrFailedToReadFile occurs when a password / bearer token file exists, but could
 	// not be read.
-	ErrFailedToReadFile = fmt.Errorf("Failed to read password / bearer token file")
+	ErrFailedToReadFile = fmt.Errorf("failed to read password / bearer token file")
 )
 
 // addBasicAuth sets the Authorization header for basic authentication using a username
