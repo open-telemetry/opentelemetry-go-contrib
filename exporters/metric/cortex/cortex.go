@@ -186,7 +186,7 @@ func (e *Exporter) ConvertToTimeSeries(checkpointSet export.CheckpointSet) ([]*p
 func createTimeSeries(record metric.Record, value apimetric.Number, extraLabels ...string) *prompb.TimeSeries {
 	sample := prompb.Sample{
 		Value:     value.CoerceToFloat64(record.Descriptor().NumberKind()),
-		Timestamp: record.EndTime().UnixNano() / int64(time.Millisecond),
+		Timestamp: int64(time.Nanosecond) * record.EndTime().UnixNano() / int64(time.Millisecond),
 	}
 
 	labels := createLabelSet(record, extraLabels...)
@@ -255,7 +255,7 @@ func convertFromMinMaxSumCount(record metric.Record, minMaxSumCount aggregation.
 	}
 	countSample := prompb.Sample{
 		Value:     float64(count),
-		Timestamp: record.EndTime().UnixNano() / int64(time.Millisecond),
+		Timestamp: int64(time.Nanosecond) * record.EndTime().UnixNano() / int64(time.Millisecond),
 	}
 
 	// Create labels, including metric name
