@@ -54,7 +54,7 @@ func NewExporter(opts Options) (*Exporter, error) {
 // Options contains options for configuring the exporter.
 type Options struct {
 	// StatsAddr specifies the host[:port] address for DogStatsD. It defaults
-	// to localhost:8125.
+	// to DefaultStatsAddrUDP.
 	StatsAddr string
 
 	// Tags specifies a set of global tags to attach to each metric.

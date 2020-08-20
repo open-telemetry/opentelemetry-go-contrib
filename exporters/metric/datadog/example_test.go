@@ -39,15 +39,17 @@ type TestUDPServer struct {
 }
 
 func ExampleExporter() {
+	const testHostPort = ":8159"
 	selector := simple.NewWithSketchDistribution(ddsketch.NewDefaultConfig())
 	exp, err := datadog.NewExporter(datadog.Options{
+		StatsAddr:     testHostPort,
 		Tags:          []string{"env:dev"},
 		StatsDOptions: []statsd.Option{statsd.WithoutTelemetry()},
 	})
 	if err != nil {
 		panic(err)
 	}
-	s, err := getTestServer(datadog.DefaultStatsAddrUDP)
+	s, err := getTestServer(testHostPort)
 	if err != nil {
 		panic(err)
 	}
