@@ -79,8 +79,12 @@ func TestExportKindFor(t *testing.T) {
 }
 
 func TestConvertToTimeSeries(t *testing.T) {
-	// Setup
-	exporter := Exporter{}
+	// Setup exporter with default quantiles and histogram buckets
+	exporter := Exporter{
+		config: Config{
+			Quantiles: []float64{0.5, 0.9, .99},
+		},
+	}
 
 	// Test conversions based on aggregation type
 	tests := []struct {
@@ -90,144 +94,40 @@ func TestConvertToTimeSeries(t *testing.T) {
 		wantLength int
 	}{
 		{
-			name:  "validCheckpointSet",
-			input: getValidCheckpointSet(t),
-			want: []*prompb.TimeSeries{
-				{
-					Labels: []*prompb.Label{
-						{
-							Name:  "R",
-							Value: "V",
-						},
-						{
-							Name:  "__name__",
-							Value: "metric_name",
-						},
-					},
-					Samples: []prompb.Sample{{
-						Value:     321,
-						Timestamp: mockTime,
-					}},
-				},
-			},
+			name:       "validCheckpointSet",
+			input:      getValidCheckpointSet(t),
+			want:       wantValidCheckpointSet,
 			wantLength: 1,
 		},
 		{
-			name:  "convertFromSum",
-			input: getSumCheckpoint(t, 321),
-			want: []*prompb.TimeSeries{
-				{
-					Labels: []*prompb.Label{
-						{
-							Name:  "R",
-							Value: "V",
-						},
-						{
-							Name:  "__name__",
-							Value: "metric_name",
-						},
-					},
-					Samples: []prompb.Sample{{
-						Value:     321,
-						Timestamp: mockTime,
-					}},
-				},
-			},
+			name:       "convertFromSum",
+			input:      getSumCheckpoint(t, 321),
+			want:       wantSumCheckpointSet,
 			wantLength: 1,
 		},
 		{
-			name:  "convertFromLastValue",
-			input: getLastValueCheckpoint(t, 123),
-			want: []*prompb.TimeSeries{
-				{
-					Labels: []*prompb.Label{
-						{
-							Name:  "R",
-							Value: "V",
-						},
-						{
-							Name:  "__name__",
-							Value: "metric_name",
-						},
-					},
-					Samples: []prompb.Sample{{
-						Value:     123,
-						Timestamp: mockTime,
-					}},
-				},
-			},
+			name:       "convertFromLastValue",
+			input:      getLastValueCheckpoint(t, 123),
+			want:       wantLastValueCheckpointSet,
 			wantLength: 1,
 		},
 		{
-			name:  "convertFromMinMaxSumCount",
-			input: getMMSCCheckpoint(t, 123.456, 876.543),
-			want: []*prompb.TimeSeries{
-				{
-					Labels: []*prompb.Label{
-						{
-							Name:  "R",
-							Value: "V",
-						},
-						{
-							Name:  "__name__",
-							Value: "metric_name",
-						},
-					},
-					Samples: []prompb.Sample{{
-						Value:     999.999,
-						Timestamp: mockTime,
-					}},
-				},
-				{
-					Labels: []*prompb.Label{
-						{
-							Name:  "R",
-							Value: "V",
-						},
-						{
-							Name:  "__name__",
-							Value: "metric_name_min",
-						},
-					},
-					Samples: []prompb.Sample{{
-						Value:     123.456,
-						Timestamp: mockTime,
-					}},
-				},
-				{
-					Labels: []*prompb.Label{
-						{
-							Name:  "__name__",
-							Value: "metric_name_max",
-						},
-						{
-							Name:  "R",
-							Value: "V",
-						},
-					},
-					Samples: []prompb.Sample{{
-						Value:     876.543,
-						Timestamp: mockTime,
-					}},
-				},
-				{
-					Labels: []*prompb.Label{
-						{
-							Name:  "R",
-							Value: "V",
-						},
-						{
-							Name:  "__name__",
-							Value: "metric_name_count",
-						},
-					},
-					Samples: []prompb.Sample{{
-						Value:     2,
-						Timestamp: mockTime,
-					}},
-				},
-			},
+			name:       "convertFromMinMaxSumCount",
+			input:      getMMSCCheckpoint(t, 123.456, 876.543),
+			want:       wantMMSCCheckpointSet,
 			wantLength: 4,
+		},
+		{
+			name:       "convertFromDistribution",
+			input:      getDistributionCheckpoint(t),
+			want:       wantDistributionCheckpointSet,
+			wantLength: 7,
+		},
+		{
+			name:       "convertFromHistogram",
+			input:      getHistogramCheckpoint(t),
+			want:       wantHistogramCheckpointSet,
+			wantLength: 6,
 		},
 	}
 
