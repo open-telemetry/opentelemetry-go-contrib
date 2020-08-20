@@ -25,7 +25,9 @@ import (
 var ErrFailedToReadFile = fmt.Errorf("failed to read password / bearer token file")
 
 // addBasicAuth sets the Authorization header for basic authentication using a username
-// and a password / password file.
+// and a password / password file. The header value is not changed if an Authorization
+// header already exists and no action is taken if the Exporter is not configured with
+// basic authorization credentials.
 func (e *Exporter) addBasicAuth(req *http.Request) error {
 	// No need to add basic auth if it isn't provided or if the Authorization header is
 	// already set.
@@ -58,7 +60,9 @@ func (e *Exporter) addBasicAuth(req *http.Request) error {
 }
 
 // addBearerTokenAuth sets the Authorization header for bearer tokens using a bearer token
-// string or a bearer token file.
+// string or a bearer token file. The header value is not changed if an Authorization
+// header already exists and no action is taken if the Exporter is not configured with
+// bearer token credentials.
 func (e *Exporter) addBearerTokenAuth(req *http.Request) error {
 	// No need to add bearer token auth if the Authorization header is already set.
 	if _, exists := e.config.Headers["Authorization"]; exists {
