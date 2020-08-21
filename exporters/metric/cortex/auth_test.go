@@ -22,6 +22,7 @@ import (
 	"crypto/x509/pkix"
 	"encoding/base64"
 	"encoding/pem"
+	"fmt"
 	"io/ioutil"
 	"math/big"
 	"net"
@@ -211,7 +212,7 @@ func TestBuildClient(t *testing.T) {
 		t.Run(test.testName, func(t *testing.T) {
 			// Create and start the TLS server.
 			handler := func(rw http.ResponseWriter, req *http.Request) {
-				rw.Write([]byte("Successfully received HTTP request!"))
+				fmt.Fprint(rw, "Successfully received HTTP request!")
 			}
 			server := httptest.NewTLSServer(http.HandlerFunc(handler))
 			defer server.Close()
@@ -223,7 +224,8 @@ func TestBuildClient(t *testing.T) {
 				Type:  "CERTIFICATE",
 				Bytes: encodedCACert,
 			})
-			createFile(caCertPEM, "./ca_cert.pem")
+			err := createFile(caCertPEM, "./ca_cert.pem")
+			require.Nil(t, err)
 			defer os.Remove("ca_cert.pem")
 
 			// Create an Exporter client and check the timeout.
@@ -293,7 +295,7 @@ func TestMutualTLS(t *testing.T) {
 
 	// Create and start the TLS server.
 	handler := func(rw http.ResponseWriter, req *http.Request) {
-		rw.Write([]byte("Successfully verified client and received request!"))
+		fmt.Fprint(rw, "Successfully verified client and received request!")
 	}
 	server := httptest.NewUnstartedServer(http.HandlerFunc(handler))
 	server.TLS = serverTLSConfig
@@ -353,15 +355,24 @@ func generateCertFiles(
 		Type:  "CERTIFICATE",
 		Bytes: encodedCert,
 	})
-	createFile(certPEM, certFilepath)
+	err = createFile(certPEM, certFilepath)
+	if err != nil {
+		return nil, nil, err
+	}
 
 	// Write the private key to the local directory.
 	encodedPrivateKey, err := x509.MarshalPKCS8PrivateKey(privateKey)
+	if err != nil {
+		return nil, nil, err
+	}
 	privateKeyPEM := pem.EncodeToMemory(&pem.Block{
 		Type:  "PRIVATE KEY",
 		Bytes: encodedPrivateKey,
 	})
-	createFile(privateKeyPEM, keyFilepath)
+	err = createFile(privateKeyPEM, keyFilepath)
+	if err != nil {
+		return nil, nil, err
+	}
 
 	// Parse the newly created certificate so it can be returned.
 	cert, err := x509.ParseCertificate(encodedCert)
