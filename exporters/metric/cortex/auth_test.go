@@ -177,6 +177,7 @@ func TestBuildClient(t *testing.T) {
 				},
 			},
 			expectedRemoteTimeout: 123 * time.Second,
+			expectedErrorSuffix:   "proxyconnect tcp: dial tcp :0: connect: can't assign requested address",
 		},
 	}
 	for _, test := range tests {

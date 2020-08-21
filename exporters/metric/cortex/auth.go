@@ -20,6 +20,7 @@ import (
 	"fmt"
 	"io/ioutil"
 	"net/http"
+	"net/url"
 	"strconv"
 )
 
@@ -95,8 +96,29 @@ func (e *Exporter) addBearerTokenAuth(req *http.Request) error {
 // buildClient returns a http client that uses TLS and has the user-specified proxy and
 // timeout.
 func (e *Exporter) buildClient() (*http.Client, error) {
+	// Create a TLS Config struct for use in a custom HTTP Transport.
+	tlsConfig, err := e.buildTLSConfig()
+	if err != nil {
+		return nil, err
+	}
+
+	transport := &http.Transport{
+		TLSClientConfig: tlsConfig,
+	}
+
+	// Convert proxy url to proxy function for use in the created Transport.
+	if e.config.ProxyURL != "" {
+		proxyURL, err := url.Parse(e.config.ProxyURL)
+		if err != nil {
+			return nil, err
+		}
+		proxy := http.ProxyURL(proxyURL)
+		transport.Proxy = proxy
+	}
+
 	client := http.Client{
-		Timeout: e.config.RemoteTimeout,
+		Transport: transport,
+		Timeout:   e.config.RemoteTimeout,
 	}
 	return &client, nil
 }
