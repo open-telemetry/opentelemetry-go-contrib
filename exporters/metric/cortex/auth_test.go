@@ -17,6 +17,7 @@ package cortex
 import (
 	"crypto/rand"
 	"crypto/rsa"
+	"crypto/tls"
 	"crypto/x509"
 	"crypto/x509/pkix"
 	"encoding/base64"
@@ -445,4 +446,31 @@ func generateClientCertFiles(
 	}
 
 	return cert, privateKey, nil
+}
+
+// generateServerTLSConfig creates a tls Config struct for a server that wants to both
+// verify servers and have clients verify itself.
+func generateServerTLSConfig(caCertFile string, servingCertFile string, servingKeyFile string) (*tls.Config, error) {
+	// Create the server's serving certificate. This allows clients to verify the server.
+	servingCert, err := tls.LoadX509KeyPair(servingCertFile, servingKeyFile)
+	if err != nil {
+		return nil, err
+	}
+
+	// Create a certificate pool to store the CA certificate. This allows the server to
+	// verify client certificates signed by the stored certicate authority.
+	encodedCACert, err := ioutil.ReadFile(caCertFile)
+	if err != nil {
+		return nil, err
+	}
+	certPool := x509.NewCertPool()
+	certPool.AppendCertsFromPEM(encodedCACert)
+
+	// Create the tls Config struct and set it to always verify the client with the CAs.
+	tlsConfig := &tls.Config{
+		Certificates: []tls.Certificate{servingCert},
+		ClientAuth:   tls.RequireAndVerifyClientCert,
+		ClientCAs:    certPool,
+	}
+	return tlsConfig, nil
 }
