@@ -92,6 +92,8 @@ func (e *Exporter) addBearerTokenAuth(req *http.Request) error {
 // buildClient returns a http client that uses TLS and has the user-specified proxy and
 // timeout.
 func (e *Exporter) buildClient() (*http.Client, error) {
-	client := http.Client{}
+	client := http.Client{
+		Timeout: e.config.RemoteTimeout,
+	}
 	return &client, nil
 }
