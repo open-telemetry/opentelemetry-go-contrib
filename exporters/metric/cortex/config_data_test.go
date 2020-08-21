@@ -104,9 +104,30 @@ var exampleTwoAuthConfig = cortex.Config{
 	RemoteTimeout: 30 * time.Second,
 	PushInterval:  10 * time.Second,
 	BasicAuth: map[string]string{
-		"username":      "user",
-		"password":      "password",
-		"password_file": "passwordFile",
+		"username": "user",
+		"password": "password",
 	},
 	BearerToken: "bearer_token",
+}
+
+// Example Config struct with no password for basic authentication
+var exampleNoPasswordConfig = cortex.Config{
+	Endpoint:      "/api/prom/push",
+	Name:          "Config",
+	RemoteTimeout: 30 * time.Second,
+	PushInterval:  10 * time.Second,
+	BasicAuth: map[string]string{
+		"username": "user",
+	},
+}
+
+// Example Config struct with no password for basic authentication
+var exampleNoUsernameConfig = cortex.Config{
+	Endpoint:      "/api/prom/push",
+	Name:          "Config",
+	RemoteTimeout: 30 * time.Second,
+	PushInterval:  10 * time.Second,
+	BasicAuth: map[string]string{
+		"password": "password",
+	},
 }
