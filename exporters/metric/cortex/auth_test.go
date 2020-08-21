@@ -248,6 +248,49 @@ func TestBuildClient(t *testing.T) {
 	}
 }
 
+// TestMutualTLS is an integration test that checks whether the Exporter's client can
+// successfully verify a server and send a HTTP request and whether a server can
+// successfully verify the Exporter client and receive the HTTP request.
+func TestMutualTLS(t *testing.T) {
+	// Generate certificate authority certificate to sign other certificates.
+	caCert, caPrivateKey, err := generateCACertFiles("./ca_cert.pem", "./ca_key.pem")
+	require.Nil(t, err)
+	defer os.Remove("./ca_cert.pem")
+	defer os.Remove("./ca_key.pem")
+
+	// Generate certificate for the server. The client will check this certificate against
+	// its certificate authority to verify the server.
+	_, _, err = generateServingCertFiles(
+		caCert,
+		caPrivateKey,
+		"./serving_cert.pem",
+		"./serving_key.pem",
+	)
+	require.Nil(t, err)
+	defer os.Remove("./serving_cert.pem")
+	defer os.Remove("./serving_key.pem")
+
+	// Generate certificate for the client. The server will check this certificate against
+	// its certificate authority to verify the client.
+	_, _, err = generateClientCertFiles(
+		caCert,
+		caPrivateKey,
+		"./client_cert.pem",
+		"./client_key.pem",
+	)
+	require.Nil(t, err)
+	defer os.Remove("./client_cert.pem")
+	defer os.Remove("./client_key.pem")
+
+	// Create and start the TLS server.
+	handler := func(rw http.ResponseWriter, req *http.Request) {
+		rw.Write([]byte("Successfully verified client and received request!"))
+	}
+	server := httptest.NewUnstartedServer(http.HandlerFunc(handler))
+	server.StartTLS()
+	defer server.Close()
+}
+
 // generateCertFiles generates new certificate files from a template that is signed with
 // the provided signer certificate and key.
 func generateCertFiles(
