@@ -179,6 +179,26 @@ func TestBuildClient(t *testing.T) {
 			expectedRemoteTimeout: 123 * time.Second,
 			expectedErrorSuffix:   "proxyconnect tcp: dial tcp :0: connect: can't assign requested address",
 		},
+		{
+			testName: "No Timeout or Proxy URL, InsecureSkipVerify is false",
+			config: Config{
+				TLSConfig: map[string]string{
+					"ca_file":              "./ca_cert.pem",
+					"insecure_skip_verify": "0",
+				},
+			},
+			expectedErrorSuffix: "",
+		},
+		{
+			testName: "No Timeout or Proxy URL, InsecureSkipVerify is true",
+			config: Config{
+				TLSConfig: map[string]string{
+					"ca_file":              "./ca_cert.pem",
+					"insecure_skip_verify": "1",
+				},
+			},
+			expectedErrorSuffix: "",
+		},
 	}
 	for _, test := range tests {
 		t.Run(test.testName, func(t *testing.T) {
