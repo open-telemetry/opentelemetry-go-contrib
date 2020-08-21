@@ -16,10 +16,12 @@ package cortex
 
 import (
 	"encoding/base64"
+	"encoding/pem"
 	"io/ioutil"
 	"net/http"
 	"net/http/httptest"
 	"os"
+	"strings"
 	"testing"
 	"time"
 
@@ -167,13 +169,35 @@ func TestBuildClient(t *testing.T) {
 		{
 			testName: "Remote Timeout with Proxy URL",
 			config: Config{
+				ProxyURL:      "123.4.5.6",
 				RemoteTimeout: 123 * time.Second,
+				TLSConfig: map[string]string{
+					"ca_file":              "./ca_cert.pem",
+					"insecure_skip_verify": "0",
+				},
 			},
 			expectedRemoteTimeout: 123 * time.Second,
 		},
 	}
 	for _, test := range tests {
 		t.Run(test.testName, func(t *testing.T) {
+			// Create and start the TLS server.
+			handler := func(rw http.ResponseWriter, req *http.Request) {
+				rw.Write([]byte("Successfully received HTTP request!"))
+			}
+			server := httptest.NewTLSServer(http.HandlerFunc(handler))
+			defer server.Close()
+
+			// Create a certicate for the CA from the TLS server. This will be used to
+			// verify the test server by the client.
+			encodedCACert := server.TLS.Certificates[0].Certificate[0]
+			caCertPEM := pem.EncodeToMemory(&pem.Block{
+				Type:  "CERTIFICATE",
+				Bytes: encodedCACert,
+			})
+			createFile(caCertPEM, "./ca_cert.pem")
+			defer os.Remove("ca_cert.pem")
+
 			// Create an Exporter client and check the timeout.
 			exporter := Exporter{
 				config: test.config,
@@ -181,6 +205,18 @@ func TestBuildClient(t *testing.T) {
 			client, err := exporter.buildClient()
 			require.Nil(t, err)
 			require.Equal(t, client.Timeout, test.expectedRemoteTimeout)
+
+			// Attempt to send the request and verify that the correct error occurred. If
+			// an error is expected, the test checks the error string's suffix since the
+			// error can contain the server URL, which changes every test.
+			_, err = client.Get(server.URL)
+			if test.expectedErrorSuffix != "" {
+				require.Error(t, err)
+				errorSuffix := strings.HasSuffix(err.Error(), test.expectedErrorSuffix)
+				require.True(t, errorSuffix)
+			} else {
+				require.Nil(t, err)
+			}
 		})
 	}
 }
