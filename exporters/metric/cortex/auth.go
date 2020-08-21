@@ -15,6 +15,8 @@
 package cortex
 
 import (
+	"crypto/tls"
+	"crypto/x509"
 	"fmt"
 	"io/ioutil"
 	"net/http"
@@ -96,4 +98,37 @@ func (e *Exporter) buildClient() (*http.Client, error) {
 		Timeout: e.config.RemoteTimeout,
 	}
 	return &client, nil
+}
+
+// loadCACertificates reads and loads a CA certificate file and updates a TLS Config
+// struct's certificate pool with it.
+func (e *Exporter) loadCACertificate(tlsConfig *tls.Config) error {
+	caFile := e.config.TLSConfig["ca_file"]
+
+	if caFile != "" {
+		caFileData, err := ioutil.ReadFile(caFile)
+		if err != nil {
+			return err
+		}
+		certPool := x509.NewCertPool()
+		certPool.AppendCertsFromPEM(caFileData)
+		tlsConfig.RootCAs = certPool
+	}
+	return nil
+}
+
+// loadClientCertificate loads a x509 certificate from a certificate file and key file,
+// and stores it in a TLS Config struct.
+func (e *Exporter) loadClientCertificate(tlsConfig *tls.Config) error {
+	certFile := e.config.TLSConfig["cert_file"]
+	keyFile := e.config.TLSConfig["key_file"]
+
+	if certFile != "" && keyFile != "" {
+		cert, err := tls.LoadX509KeyPair(certFile, keyFile)
+		if err != nil {
+			return err
+		}
+		tlsConfig.Certificates = []tls.Certificate{cert}
+	}
+	return nil
 }
