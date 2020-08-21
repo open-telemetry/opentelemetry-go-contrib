@@ -283,13 +283,41 @@ func TestMutualTLS(t *testing.T) {
 	defer os.Remove("./client_cert.pem")
 	defer os.Remove("./client_key.pem")
 
+	// Generate the tls Config to set up mutual TLS on the server.
+	serverTLSConfig, err := generateServerTLSConfig(
+		"ca_cert.pem",
+		"serving_cert.pem",
+		"serving_key.pem",
+	)
+	require.Nil(t, err)
+
 	// Create and start the TLS server.
 	handler := func(rw http.ResponseWriter, req *http.Request) {
 		rw.Write([]byte("Successfully verified client and received request!"))
 	}
 	server := httptest.NewUnstartedServer(http.HandlerFunc(handler))
+	server.TLS = serverTLSConfig
 	server.StartTLS()
 	defer server.Close()
+
+	// Create an Exporter client with the client and CA certificate files.
+	exporter := Exporter{
+		Config{
+			TLSConfig: map[string]string{
+				"ca_file":              "./ca_cert.pem",
+				"cert_file":            "./client_cert.pem",
+				"key_file":             "./client_key.pem",
+				"insecure_skip_verify": "0",
+			},
+		},
+	}
+	client, err := exporter.buildClient()
+	require.Nil(t, err)
+
+	// Send the request and verify that the request was successfully received.
+	res, err := client.Get(server.URL)
+	require.Nil(t, err)
+	defer res.Body.Close()
 }
 
 // generateCertFiles generates new certificate files from a template that is signed with
