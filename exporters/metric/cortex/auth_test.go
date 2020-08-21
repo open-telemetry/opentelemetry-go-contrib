@@ -15,6 +15,9 @@
 package cortex
 
 import (
+	"crypto/rand"
+	"crypto/rsa"
+	"crypto/x509"
 	"encoding/base64"
 	"encoding/pem"
 	"io/ioutil"
@@ -240,4 +243,55 @@ func TestBuildClient(t *testing.T) {
 			}
 		})
 	}
+}
+
+// generateCertFiles generates new certificate files from a template that is signed with
+// the provided signer certificate and key.
+func generateCertFiles(
+	template *x509.Certificate,
+	signer *x509.Certificate,
+	signerKey *rsa.PrivateKey,
+	certFilepath string,
+	keyFilepath string,
+) (*x509.Certificate, *rsa.PrivateKey, error) {
+	// Generate a private key for the new certificate. This does not have to be rsa 4096.
+	privateKey, err := rsa.GenerateKey(rand.Reader, 4096)
+	if err != nil {
+		return nil, nil, err
+	}
+
+	// Check if a signer key was provided. If not, then use the newly created key.
+	if signerKey == nil {
+		signerKey = privateKey
+	}
+
+	// Create a new certificate in DER encoding.
+	encodedCert, err := x509.CreateCertificate(
+		rand.Reader, template, signer, privateKey.Public(), signerKey,
+	)
+	if err != nil {
+		return nil, nil, err
+	}
+
+	// Write the certificate to the local directory.
+	certPEM := pem.EncodeToMemory(&pem.Block{
+		Type:  "CERTIFICATE",
+		Bytes: encodedCert,
+	})
+	createFile(certPEM, certFilepath)
+
+	// Write the private key to the local directory.
+	encodedPrivateKey, err := x509.MarshalPKCS8PrivateKey(privateKey)
+	privateKeyPEM := pem.EncodeToMemory(&pem.Block{
+		Type:  "PRIVATE KEY",
+		Bytes: encodedPrivateKey,
+	})
+	createFile(privateKeyPEM, keyFilepath)
+
+	// Parse the newly created certificate so it can be returned.
+	cert, err := x509.ParseCertificate(encodedCert)
+	if err != nil {
+		return nil, nil, err
+	}
+	return cert, privateKey, nil
 }
