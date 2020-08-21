@@ -28,9 +28,7 @@ import (
 
 func TestRuntime(t *testing.T) {
 	err := runtime.Start(
-		runtime.Configure(
-			runtime.WithMinimumReadMemStatsInterval(time.Second),
-		),
+		runtime.WithMinimumReadMemStatsInterval(time.Second),
 	)
 	assert.NoError(t, err)
 	time.Sleep(time.Second)
@@ -57,12 +55,10 @@ func testMinimumInterval(t *testing.T, shouldHappen bool, opts ...runtime.Option
 	impl, provider := metric.NewProvider()
 
 	err := runtime.Start(
-		runtime.Configure(
-			append(
-				opts,
-				runtime.WithMeterProvider(provider),
-			)...,
-		),
+		append(
+			opts,
+			runtime.WithMeterProvider(provider),
+		)...,
 	)
 	assert.NoError(t, err)
 
