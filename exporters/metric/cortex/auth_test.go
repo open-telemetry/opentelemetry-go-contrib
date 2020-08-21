@@ -18,9 +18,11 @@ import (
 	"crypto/rand"
 	"crypto/rsa"
 	"crypto/x509"
+	"crypto/x509/pkix"
 	"encoding/base64"
 	"encoding/pem"
 	"io/ioutil"
+	"math/big"
 	"net/http"
 	"net/http/httptest"
 	"os"
@@ -293,5 +295,37 @@ func generateCertFiles(
 	if err != nil {
 		return nil, nil, err
 	}
+	return cert, privateKey, nil
+}
+
+// generateCACertFiles creates a CA certificate and key in the local directory. This
+// certificate is used to sign other certificates.
+func generateCACertFiles(certFilepath string, keyFilepath string) (*x509.Certificate, *rsa.PrivateKey, error) {
+	// Create a template for CA certificates.
+	certTemplate := &x509.Certificate{
+		SerialNumber: big.NewInt(123),
+		Subject: pkix.Name{
+			Organization: []string{"CA Certificate"},
+		},
+		NotBefore:             time.Now(),
+		NotAfter:              time.Now().Add(5 * time.Minute),
+		KeyUsage:              x509.KeyUsageDigitalSignature | x509.KeyUsageKeyEncipherment | x509.KeyUsageCertSign,
+		IsCA:                  true,
+		BasicConstraintsValid: true,
+	}
+
+	// Create the certificate files. CA certificates are used to sign other certificates
+	// so it signs itself with its own template and private key during creation.
+	cert, privateKey, err := generateCertFiles(
+		certTemplate,
+		certTemplate,
+		nil,
+		certFilepath,
+		keyFilepath,
+	)
+	if err != nil {
+		return nil, nil, err
+	}
+
 	return cert, privateKey, nil
 }
