@@ -15,11 +15,11 @@
 package gomemcache
 
 import (
-	"go.opentelemetry.io/contrib/internal/util"
 	"os"
 	"testing"
 
 	mocktracer "go.opentelemetry.io/contrib/internal/trace"
+	"go.opentelemetry.io/contrib/internal/util"
 	"go.opentelemetry.io/otel/api/kv"
 	"go.opentelemetry.io/otel/api/standard"
 	oteltrace "go.opentelemetry.io/otel/api/trace"
