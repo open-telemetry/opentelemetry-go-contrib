@@ -23,6 +23,7 @@ import (
 	"encoding/pem"
 	"io/ioutil"
 	"math/big"
+	"net"
 	"net/http"
 	"net/http/httptest"
 	"os"
@@ -322,6 +323,43 @@ func generateCACertFiles(certFilepath string, keyFilepath string) (*x509.Certifi
 		nil,
 		certFilepath,
 		keyFilepath,
+	)
+	if err != nil {
+		return nil, nil, err
+	}
+
+	return cert, privateKey, nil
+}
+
+// generateServingCertFiles creates a new certificate that a client will check against its
+// certificate authority to verify the server. The certificate is signed by a certificate
+// authority.
+func generateServingCertFiles(
+	caCert *x509.Certificate,
+	caPrivateKey *rsa.PrivateKey,
+	certFilepath string,
+	keyFilepath string,
+) (*x509.Certificate, *rsa.PrivateKey, error) {
+	certTemplate := &x509.Certificate{
+		SerialNumber: big.NewInt(456),
+		Subject: pkix.Name{
+			Organization: []string{"Serving Certificate"},
+		},
+		NotBefore:   time.Now(),
+		NotAfter:    time.Now().Add(5 * time.Minute),
+		KeyUsage:    x509.KeyUsageDigitalSignature | x509.KeyUsageKeyEncipherment,
+		ExtKeyUsage: []x509.ExtKeyUsage{x509.ExtKeyUsageServerAuth},
+		IPAddresses: []net.IP{net.ParseIP("127.0.0.1")},
+	}
+
+	// Create the certificate files. The CA certificate is used to sign the new
+	// certificate.
+	cert, privateKey, err := generateCertFiles(
+		certTemplate,
+		caCert,
+		caPrivateKey,
+		"./serving_cert.pem",
+		"./serving_key.pem",
 	)
 	if err != nil {
 		return nil, nil, err
