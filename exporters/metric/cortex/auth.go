@@ -20,6 +20,7 @@ import (
 	"fmt"
 	"io/ioutil"
 	"net/http"
+	"strconv"
 )
 
 // ErrFailedToReadFile occurs when a password / bearer token file exists, but could
@@ -98,6 +99,39 @@ func (e *Exporter) buildClient() (*http.Client, error) {
 		Timeout: e.config.RemoteTimeout,
 	}
 	return &client, nil
+}
+
+// buildTLSConfig creates a new TLS Config struct with the properties from the exporter's
+// Config struct.
+func (e *Exporter) buildTLSConfig() (*tls.Config, error) {
+	tlsConfig := &tls.Config{}
+	if e.config.TLSConfig == nil {
+		return tlsConfig, nil
+	}
+
+	// Set the server name if it exists.
+	if e.config.TLSConfig["server_name"] != "" {
+		tlsConfig.ServerName = e.config.TLSConfig["server_name"]
+	}
+
+	// Set InsecureSkipVerify. Viper reads the bool as a string since it is in a map.
+	parsedBool, err := strconv.ParseBool(e.config.TLSConfig["insecure_skip_verify"])
+	if err != nil {
+		return nil, err
+	}
+	tlsConfig.InsecureSkipVerify = parsedBool
+
+	// Load certificates from CA file if it exists.
+	if err := e.loadCACertificate(tlsConfig); err != nil {
+		return nil, err
+	}
+
+	// Load the client certificate if it exists.
+	if err := e.loadClientCertificate(tlsConfig); err != nil {
+		return nil, err
+	}
+
+	return tlsConfig, nil
 }
 
 // loadCACertificates reads and loads a CA certificate file and updates a TLS Config
