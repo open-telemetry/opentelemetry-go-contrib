@@ -169,10 +169,10 @@ func createFile(bytes []byte, filepath string) error {
 // connect over TLS and has the correct remote timeout and proxy url.
 func TestBuildClient(t *testing.T) {
 	tests := []struct {
-		testName              string
-		config                Config
-		expectedRemoteTimeout time.Duration
-		expectedErrorSuffix   string
+		testName               string
+		config                 Config
+		expectedRemoteTimeout  time.Duration
+		expectedErrorSubstring string
 	}{
 		{
 			testName: "Remote Timeout with Proxy URL",
@@ -184,8 +184,8 @@ func TestBuildClient(t *testing.T) {
 					"insecure_skip_verify": "0",
 				},
 			},
-			expectedRemoteTimeout: 123 * time.Second,
-			expectedErrorSuffix:   "proxyconnect tcp: dial tcp :0: connect: can't assign requested address",
+			expectedRemoteTimeout:  123 * time.Second,
+			expectedErrorSubstring: "proxyconnect tcp",
 		},
 		{
 			testName: "No Timeout or Proxy URL, InsecureSkipVerify is false",
@@ -195,7 +195,7 @@ func TestBuildClient(t *testing.T) {
 					"insecure_skip_verify": "0",
 				},
 			},
-			expectedErrorSuffix: "",
+			expectedErrorSubstring: "",
 		},
 		{
 			testName: "No Timeout or Proxy URL, InsecureSkipVerify is true",
@@ -205,7 +205,7 @@ func TestBuildClient(t *testing.T) {
 					"insecure_skip_verify": "1",
 				},
 			},
-			expectedErrorSuffix: "",
+			expectedErrorSubstring: "",
 		},
 	}
 	for _, test := range tests {
@@ -237,12 +237,13 @@ func TestBuildClient(t *testing.T) {
 			require.Equal(t, client.Timeout, test.expectedRemoteTimeout)
 
 			// Attempt to send the request and verify that the correct error occurred. If
-			// an error is expected, the test checks the error string's suffix since the
-			// error can contain the server URL, which changes every test.
+			// an error is expected, the test checks if the error string contains the
+			// expected error substring since the error can contain the server URL, which
+			// changes every test.
 			_, err = client.Get(server.URL)
-			if test.expectedErrorSuffix != "" {
+			if test.expectedErrorSubstring != "" {
 				require.Error(t, err)
-				errorSuffix := strings.HasSuffix(err.Error(), test.expectedErrorSuffix)
+				errorSuffix := strings.Contains(err.Error(), test.expectedErrorSubstring)
 				require.True(t, errorSuffix)
 			} else {
 				require.Nil(t, err)
