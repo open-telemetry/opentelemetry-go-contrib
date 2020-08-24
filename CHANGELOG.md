@@ -18,6 +18,7 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 - Remove service name as a parameter of Sarama instrumentation. (#221)
 - Replace `WithTracer` with `WithTracerProvider` in Sarama instrumentation. (#221)
 - Switch to use common top-level module `SemVersion()` when creating versioned tracer in `bradfitz/gomemcache`. (#226)
+- Use `IntegrationShouldRun` in `gomemcache_test`. (#254)
 
 ### Fixed
 

@@ -15,11 +15,11 @@
 package gomemcache
 
 import (
-	"fmt"
 	"os"
 	"testing"
 
 	mocktracer "go.opentelemetry.io/contrib/internal/trace"
+	"go.opentelemetry.io/contrib/internal/util"
 	"go.opentelemetry.io/otel/api/kv"
 	"go.opentelemetry.io/otel/api/standard"
 	oteltrace "go.opentelemetry.io/otel/api/trace"
@@ -31,11 +31,7 @@ import (
 )
 
 func TestMain(m *testing.M) {
-	_, ok := os.LookupEnv("INTEGRATION")
-	if !ok {
-		fmt.Println("--- SKIP: to enable integration test, set the INTEGRATION environment variable")
-		os.Exit(0)
-	}
+	util.IntegrationShouldRun("test-gomemcache")
 	os.Exit(m.Run())
 }
 
