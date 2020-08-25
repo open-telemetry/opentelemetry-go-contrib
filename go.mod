@@ -3,6 +3,8 @@ module go.opentelemetry.io/contrib
 go 1.14
 
 require (
-	go.opentelemetry.io/otel v0.10.0
-	google.golang.org/grpc v1.31.0
+	github.com/davecgh/go-spew v1.1.1 // indirect
+	github.com/kr/pretty v0.1.0 // indirect
+	go.opentelemetry.io/otel v0.11.0
+	gopkg.in/check.v1 v1.0.0-20190902080502-41f04d3bba15 // indirect
 )

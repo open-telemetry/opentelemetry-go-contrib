@@ -18,7 +18,7 @@ import (
 	"context"
 	"net/http"
 
-	"google.golang.org/grpc/codes"
+	"go.opentelemetry.io/otel/codes"
 
 	otelhttp "go.opentelemetry.io/contrib/instrumentation/net/http"
 	"go.opentelemetry.io/otel/api/trace"

@@ -22,11 +22,11 @@ import (
 	otelhttp "go.opentelemetry.io/contrib/instrumentation/net/http"
 
 	"go.opentelemetry.io/otel/api/global"
-	"go.opentelemetry.io/otel/api/standard"
 	"go.opentelemetry.io/otel/api/trace"
 	"go.opentelemetry.io/otel/exporters/stdout"
 	"go.opentelemetry.io/otel/sdk/resource"
 	sdktrace "go.opentelemetry.io/otel/sdk/trace"
+	"go.opentelemetry.io/otel/semconv"
 )
 
 func initTracer() {
@@ -41,7 +41,7 @@ func initTracer() {
 	// In a production application, use sdktrace.ProbabilitySampler with a desired probability.
 	tp, err := sdktrace.NewProvider(sdktrace.WithConfig(sdktrace.Config{DefaultSampler: sdktrace.AlwaysSample()}),
 		sdktrace.WithSyncer(exporter),
-		sdktrace.WithResource(resource.New(standard.ServiceNameKey.String("ExampleService"))))
+		sdktrace.WithResource(resource.New(semconv.ServiceNameKey.String("ExampleService"))))
 	if err != nil {
 		log.Fatal(err)
 	}

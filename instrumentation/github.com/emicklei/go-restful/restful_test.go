@@ -28,9 +28,9 @@ import (
 
 	mocktrace "go.opentelemetry.io/contrib/internal/trace"
 	otelglobal "go.opentelemetry.io/otel/api/global"
-	otelkv "go.opentelemetry.io/otel/api/kv"
 	otelpropagation "go.opentelemetry.io/otel/api/propagation"
 	oteltrace "go.opentelemetry.io/otel/api/trace"
+	otelkv "go.opentelemetry.io/otel/label"
 )
 
 func TestChildSpanFromGlobalTracer(t *testing.T) {

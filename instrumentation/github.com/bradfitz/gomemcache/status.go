@@ -16,7 +16,8 @@ package gomemcache
 
 import (
 	"github.com/bradfitz/gomemcache/memcache"
-	"google.golang.org/grpc/codes"
+
+	"go.opentelemetry.io/otel/codes"
 )
 
 // maps memcache error to appropriate error code; otherwise returns status OK

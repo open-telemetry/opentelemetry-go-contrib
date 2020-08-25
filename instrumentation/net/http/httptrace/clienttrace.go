@@ -22,20 +22,20 @@ import (
 	"strings"
 	"sync"
 
-	"go.opentelemetry.io/otel/api/standard"
+	"go.opentelemetry.io/otel/semconv"
 
-	"google.golang.org/grpc/codes"
+	"go.opentelemetry.io/otel/codes"
 
 	"go.opentelemetry.io/otel/api/global"
-	"go.opentelemetry.io/otel/api/kv"
 	"go.opentelemetry.io/otel/api/trace"
+	"go.opentelemetry.io/otel/label"
 )
 
 var (
-	HTTPStatus     = kv.Key("http.status")
-	HTTPHeaderMIME = kv.Key("http.mime")
-	HTTPRemoteAddr = kv.Key("http.remote")
-	HTTPLocalAddr  = kv.Key("http.local")
+	HTTPStatus     = label.Key("http.status")
+	HTTPHeaderMIME = label.Key("http.mime")
+	HTTPRemoteAddr = label.Key("http.remote")
+	HTTPLocalAddr  = label.Key("http.local")
 )
 
 var (
@@ -91,7 +91,7 @@ func NewClientTrace(ctx context.Context) *httptrace.ClientTrace {
 	}
 }
 
-func (ct *clientTracer) start(hook, spanName string, attrs ...kv.KeyValue) {
+func (ct *clientTracer) start(hook, spanName string, attrs ...label.KeyValue) {
 	ct.mtx.Lock()
 	defer ct.mtx.Unlock()
 
@@ -111,7 +111,7 @@ func (ct *clientTracer) start(hook, spanName string, attrs ...kv.KeyValue) {
 	}
 }
 
-func (ct *clientTracer) end(hook string, err error, attrs ...kv.KeyValue) {
+func (ct *clientTracer) end(hook string, err error, attrs ...label.KeyValue) {
 	ct.mtx.Lock()
 	defer ct.mtx.Unlock()
 	if ctx, ok := ct.activeHooks[hook]; ok {
@@ -152,7 +152,7 @@ func (ct *clientTracer) span(hook string) trace.Span {
 }
 
 func (ct *clientTracer) getConn(host string) {
-	ct.start("http.getconn", "http.getconn", standard.HTTPHostKey.String(host))
+	ct.start("http.getconn", "http.getconn", semconv.HTTPHostKey.String(host))
 }
 
 func (ct *clientTracer) gotConn(info httptrace.GotConnInfo) {
@@ -172,7 +172,7 @@ func (ct *clientTracer) gotFirstResponseByte() {
 }
 
 func (ct *clientTracer) dnsStart(info httptrace.DNSStartInfo) {
-	ct.start("http.dns", "http.dns", standard.HTTPHostKey.String(info.Host))
+	ct.start("http.dns", "http.dns", semconv.HTTPHostKey.String(info.Host))
 }
 
 func (ct *clientTracer) dnsDone(info httptrace.DNSDoneInfo) {
@@ -199,7 +199,7 @@ func (ct *clientTracer) wroteHeaderField(k string, v []string) {
 	if ct.span("http.headers") == nil {
 		ct.start("http.headers", "http.headers")
 	}
-	ct.root.SetAttributes(kv.String("http."+strings.ToLower(k), sliceToString(v)))
+	ct.root.SetAttributes(label.String("http."+strings.ToLower(k), sliceToString(v)))
 }
 
 func (ct *clientTracer) wroteHeaders() {

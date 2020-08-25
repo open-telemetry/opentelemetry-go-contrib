@@ -21,9 +21,9 @@ import (
 	"github.com/aws/aws-sdk-go/aws/ec2metadata"
 	"github.com/aws/aws-sdk-go/aws/session"
 
-	"go.opentelemetry.io/otel/api/kv"
-	"go.opentelemetry.io/otel/api/standard"
+	"go.opentelemetry.io/otel/label"
 	"go.opentelemetry.io/otel/sdk/resource"
+	"go.opentelemetry.io/otel/semconv"
 )
 
 // AWS collects resource information of AWS computing instances
@@ -49,11 +49,11 @@ func (aws *AWS) Detect(ctx context.Context) (*resource.Resource, error) {
 		return nil, err
 	}
 
-	labels := []kv.KeyValue{
-		standard.CloudProviderAWS,
-		standard.CloudRegionKey.String(doc.Region),
-		standard.CloudAccountIDKey.String(doc.AccountID),
-		standard.HostIDKey.String(doc.InstanceID),
+	labels := []label.KeyValue{
+		semconv.CloudProviderAWS,
+		semconv.CloudRegionKey.String(doc.Region),
+		semconv.CloudAccountIDKey.String(doc.AccountID),
+		semconv.HostIDKey.String(doc.InstanceID),
 	}
 
 	return resource.New(labels...), nil
