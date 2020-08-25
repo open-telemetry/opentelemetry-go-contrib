@@ -20,7 +20,7 @@ import (
 	"testing"
 
 	otelgrpc "go.opentelemetry.io/contrib/instrumentation/google.golang.org/grpc"
-	"go.opentelemetry.io/otel/api/trace/testtrace"
+	"go.opentelemetry.io/otel/api/trace/tracetest"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/interop"
 	pb "google.golang.org/grpc/interop/grpc_testing"
@@ -32,7 +32,7 @@ const (
 	instName = "go.opentelemetry.io/contrib/instrumentation/google.golang.org/grpc"
 )
 
-var tracer = testtrace.NewProvider().Tracer(instName)
+var tracer = tracetest.NewProvider().Tracer(instName)
 
 func benchmark(b *testing.B, cOpt []grpc.DialOption, sOpt []grpc.ServerOption) {
 	l := bufconn.Listen(bufSize)
