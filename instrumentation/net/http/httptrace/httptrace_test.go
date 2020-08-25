@@ -23,28 +23,28 @@ import (
 
 	"github.com/google/go-cmp/cmp"
 
+	"go.opentelemetry.io/contrib/instrumentation/net/http/httptrace"
 	"go.opentelemetry.io/otel/api/correlation"
-	"go.opentelemetry.io/otel/api/kv"
 	"go.opentelemetry.io/otel/api/propagation"
-	"go.opentelemetry.io/otel/api/standard"
-	"go.opentelemetry.io/otel/api/trace/testtrace"
-	"go.opentelemetry.io/otel/instrumentation/httptrace"
+	"go.opentelemetry.io/otel/api/trace/tracetest"
+	"go.opentelemetry.io/otel/label"
+	"go.opentelemetry.io/otel/semconv"
 )
 
 func TestRoundtrip(t *testing.T) {
-	tr := testtrace.NewProvider().Tracer("httptrace/client")
+	tr := tracetest.NewProvider().Tracer("httptrace/client")
 
-	var expectedAttrs map[kv.Key]string
-	expectedCorrs := map[kv.Key]string{kv.Key("foo"): "bar"}
+	var expectedAttrs map[label.Key]string
+	expectedCorrs := map[label.Key]string{label.Key("foo"): "bar"}
 
 	// Mock http server
 	ts := httptest.NewServer(
 		http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 			attrs, corrs, span := httptrace.Extract(r.Context(), r)
 
-			actualAttrs := make(map[kv.Key]string)
+			actualAttrs := make(map[label.Key]string)
 			for _, attr := range attrs {
-				if attr.Key == standard.NetPeerPortKey {
+				if attr.Key == semconv.NetPeerPortKey {
 					// Peer port will be non-deterministic
 					continue
 				}
@@ -55,7 +55,7 @@ func TestRoundtrip(t *testing.T) {
 				t.Fatalf("[TestRoundtrip] Attributes are different: %v", diff)
 			}
 
-			actualCorrs := make(map[kv.Key]string)
+			actualCorrs := make(map[label.Key]string)
 			for _, corr := range corrs {
 				actualCorrs[corr.Key] = corr.Value.Emit()
 			}
@@ -78,51 +78,52 @@ func TestRoundtrip(t *testing.T) {
 
 	address := ts.Listener.Addr()
 	hp := strings.Split(address.String(), ":")
-	expectedAttrs = map[kv.Key]string{
-		standard.HTTPFlavorKey:               "1.1",
-		standard.HTTPHostKey:                 address.String(),
-		standard.HTTPMethodKey:               "GET",
-		standard.HTTPSchemeKey:               "http",
-		standard.HTTPTargetKey:               "/",
-		standard.HTTPUserAgentKey:            "Go-http-client/1.1",
-		standard.HTTPRequestContentLengthKey: "3",
-		standard.NetHostIPKey:                hp[0],
-		standard.NetHostPortKey:              hp[1],
-		standard.NetPeerIPKey:                "127.0.0.1",
-		standard.NetTransportKey:             "IP.TCP",
+	expectedAttrs = map[label.Key]string{
+		semconv.HTTPFlavorKey:               "1.1",
+		semconv.HTTPHostKey:                 address.String(),
+		semconv.HTTPMethodKey:               "GET",
+		semconv.HTTPSchemeKey:               "http",
+		semconv.HTTPTargetKey:               "/",
+		semconv.HTTPUserAgentKey:            "Go-http-client/1.1",
+		semconv.HTTPRequestContentLengthKey: "3",
+		semconv.NetHostIPKey:                hp[0],
+		semconv.NetHostPortKey:              hp[1],
+		semconv.NetPeerIPKey:                "127.0.0.1",
+		semconv.NetTransportKey:             "IP.TCP",
 	}
 
 	client := ts.Client()
-	err := tr.WithSpan(context.Background(), "test",
-		func(ctx context.Context) error {
-			ctx = correlation.ContextWithMap(ctx, correlation.NewMap(correlation.MapUpdate{SingleKV: kv.Key("foo").String("bar")}))
-			req, _ := http.NewRequest("GET", ts.URL, strings.NewReader("foo"))
-			httptrace.Inject(ctx, req)
+	err := func(ctx context.Context) error {
+		ctx, span := tr.Start(ctx, "test")
+		defer span.End()
+		ctx = correlation.ContextWithMap(ctx, correlation.NewMap(correlation.MapUpdate{SingleKV: label.Key("foo").String("bar")}))
+		req, _ := http.NewRequest("GET", ts.URL, strings.NewReader("foo"))
+		httptrace.Inject(ctx, req)
 
-			res, err := client.Do(req)
-			if err != nil {
-				t.Fatalf("Request failed: %s", err.Error())
-			}
-			_ = res.Body.Close()
+		res, err := client.Do(req)
+		if err != nil {
+			t.Fatalf("Request failed: %s", err.Error())
+		}
+		_ = res.Body.Close()
 
-			return nil
-		})
+		return nil
+	}(context.Background())
 	if err != nil {
 		panic("unexpected error in http request: " + err.Error())
 	}
 }
 
 func TestSpecifyPropagators(t *testing.T) {
-	tr := testtrace.NewProvider().Tracer("httptrace/client")
+	tr := tracetest.NewProvider().Tracer("httptrace/client")
 
-	expectedCorrs := map[kv.Key]string{kv.Key("foo"): "bar"}
+	expectedCorrs := map[label.Key]string{label.Key("foo"): "bar"}
 
 	// Mock http server
 	ts := httptest.NewServer(
 		http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 			_, corrs, span := httptrace.Extract(r.Context(), r, httptrace.WithPropagators(propagation.New(propagation.WithExtractors(correlation.DefaultHTTPPropagator()))))
 
-			actualCorrs := make(map[kv.Key]string)
+			actualCorrs := make(map[label.Key]string)
 			for _, corr := range corrs {
 				actualCorrs[corr.Key] = corr.Value.Emit()
 			}
@@ -144,20 +145,21 @@ func TestSpecifyPropagators(t *testing.T) {
 	defer ts.Close()
 
 	client := ts.Client()
-	err := tr.WithSpan(context.Background(), "test",
-		func(ctx context.Context) error {
-			ctx = correlation.ContextWithMap(ctx, correlation.NewMap(correlation.MapUpdate{SingleKV: kv.Key("foo").String("bar")}))
-			req, _ := http.NewRequest("GET", ts.URL, nil)
-			httptrace.Inject(ctx, req, httptrace.WithPropagators(propagation.New(propagation.WithInjectors(correlation.DefaultHTTPPropagator()))))
+	err := func(ctx context.Context) error {
+		ctx, span := tr.Start(ctx, "test")
+		defer span.End()
+		ctx = correlation.ContextWithMap(ctx, correlation.NewMap(correlation.MapUpdate{SingleKV: label.Key("foo").String("bar")}))
+		req, _ := http.NewRequest("GET", ts.URL, nil)
+		httptrace.Inject(ctx, req, httptrace.WithPropagators(propagation.New(propagation.WithInjectors(correlation.DefaultHTTPPropagator()))))
 
-			res, err := client.Do(req)
-			if err != nil {
-				t.Fatalf("Request failed: %s", err.Error())
-			}
-			_ = res.Body.Close()
+		res, err := client.Do(req)
+		if err != nil {
+			t.Fatalf("Request failed: %s", err.Error())
+		}
+		_ = res.Body.Close()
 
-			return nil
-		})
+		return nil
+	}(context.Background())
 	if err != nil {
 		panic("unexpected error in http request: " + err.Error())
 	}

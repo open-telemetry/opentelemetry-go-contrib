@@ -23,9 +23,9 @@ import (
 
 	restfultrace "go.opentelemetry.io/contrib/instrumentation/github.com/emicklei/go-restful"
 	otelglobal "go.opentelemetry.io/otel/api/global"
-	otelkv "go.opentelemetry.io/otel/api/kv"
 	oteltrace "go.opentelemetry.io/otel/api/trace"
 	"go.opentelemetry.io/otel/exporters/stdout"
+	otelkv "go.opentelemetry.io/otel/label"
 	sdktrace "go.opentelemetry.io/otel/sdk/trace"
 )
 

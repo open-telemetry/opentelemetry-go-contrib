@@ -14,21 +14,21 @@
 
 package mongo
 
-import "go.opentelemetry.io/otel/api/kv"
+import "go.opentelemetry.io/otel/label"
 
 const (
 	// PeerHostname records the host name of the peer.
-	PeerHostnameKey = kv.Key("peer.hostname")
+	PeerHostnameKey = label.Key("peer.hostname")
 	// PeerPort records the port number of the peer.
-	PeerPortKey = kv.Key("peer.port")
+	PeerPortKey = label.Key("peer.port")
 )
 
 // PeerHostname records the host name of the peer.
-func PeerHostname(peerHostname string) kv.KeyValue {
+func PeerHostname(peerHostname string) label.KeyValue {
 	return PeerHostnameKey.String(peerHostname)
 }
 
 // PeerPort records the port number of the peer.
-func PeerPort(peerport string) kv.KeyValue {
+func PeerPort(peerport string) label.KeyValue {
 	return PeerPortKey.String(peerport)
 }

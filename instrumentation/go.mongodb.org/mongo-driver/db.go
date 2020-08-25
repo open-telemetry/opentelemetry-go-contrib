@@ -14,43 +14,43 @@
 
 package mongo
 
-import "go.opentelemetry.io/otel/api/kv"
+import "go.opentelemetry.io/otel/label"
 
 const (
-	DBApplicationKey = kv.Key("db.application")
-	DBNameKey        = kv.Key("db.name")
-	DBTypeKey        = kv.Key("db.type")
-	DBInstanceKey    = kv.Key("db.instance")
-	DBUserKey        = kv.Key("db.user")
-	DBStatementKey   = kv.Key("db.statement")
+	DBApplicationKey = label.Key("db.application")
+	DBNameKey        = label.Key("db.name")
+	DBTypeKey        = label.Key("db.type")
+	DBInstanceKey    = label.Key("db.instance")
+	DBUserKey        = label.Key("db.user")
+	DBStatementKey   = label.Key("db.statement")
 )
 
 // DBApplication indicates the application using the database.
-func DBApplication(dbApplication string) kv.KeyValue {
+func DBApplication(dbApplication string) label.KeyValue {
 	return DBApplicationKey.String(dbApplication)
 }
 
 // DBName indicates the database name.
-func DBName(dbName string) kv.KeyValue {
+func DBName(dbName string) label.KeyValue {
 	return DBNameKey.String(dbName)
 }
 
 // DBType indicates the type of Database.
-func DBType(dbType string) kv.KeyValue {
+func DBType(dbType string) label.KeyValue {
 	return DBTypeKey.String(dbType)
 }
 
 // DBInstance indicates the instance name of Database.
-func DBInstance(dbInstance string) kv.KeyValue {
+func DBInstance(dbInstance string) label.KeyValue {
 	return DBInstanceKey.String(dbInstance)
 }
 
 // DBUser indicates the user name of Database, e.g. "readonly_user" or "reporting_user".
-func DBUser(dbUser string) kv.KeyValue {
+func DBUser(dbUser string) label.KeyValue {
 	return DBUserKey.String(dbUser)
 }
 
 // DBStatement records a database statement for the given database type.
-func DBStatement(dbStatement string) kv.KeyValue {
+func DBStatement(dbStatement string) label.KeyValue {
 	return DBStatementKey.String(dbStatement)
 }

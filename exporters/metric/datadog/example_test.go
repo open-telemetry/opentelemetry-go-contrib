@@ -27,8 +27,8 @@ import (
 
 	"go.opentelemetry.io/contrib/exporters/metric/datadog"
 	"go.opentelemetry.io/otel/api/global"
-	"go.opentelemetry.io/otel/api/kv"
 	"go.opentelemetry.io/otel/api/metric"
+	"go.opentelemetry.io/otel/label"
 	"go.opentelemetry.io/otel/sdk/metric/controller/push"
 	"go.opentelemetry.io/otel/sdk/metric/processor/basic"
 	"go.opentelemetry.io/otel/sdk/metric/selector/simple"
@@ -64,7 +64,7 @@ func ExampleExporter() {
 		global.SetMeterProvider(pusher.Provider())
 		meter := global.Meter("marwandist")
 		m := metric.Must(meter).NewInt64ValueRecorder("myrecorder")
-		meter.RecordBatch(context.Background(), []kv.KeyValue{kv.Int("l", 1)},
+		meter.RecordBatch(context.Background(), []label.KeyValue{label.Int("l", 1)},
 			m.Measurement(1), m.Measurement(50), m.Measurement(100))
 	}()
 

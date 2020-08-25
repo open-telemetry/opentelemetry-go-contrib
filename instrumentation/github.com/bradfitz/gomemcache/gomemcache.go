@@ -21,9 +21,9 @@ import (
 
 	"go.opentelemetry.io/contrib"
 	otelglobal "go.opentelemetry.io/otel/api/global"
-	"go.opentelemetry.io/otel/api/kv"
-	"go.opentelemetry.io/otel/api/standard"
 	oteltrace "go.opentelemetry.io/otel/api/trace"
+	"go.opentelemetry.io/otel/label"
+	"go.opentelemetry.io/otel/semconv"
 )
 
 const (
@@ -75,18 +75,18 @@ func NewClientWithTracing(client *memcache.Client, opts ...Option) *Client {
 
 // attrsByOperationAndItemKey returns appropriate span attributes on the basis
 // of the operation name and item key(s) (if available)
-func (c *Client) attrsByOperationAndItemKey(operation operation, key ...string) []kv.KeyValue {
-	kvs := []kv.KeyValue{
-		standard.ServiceNameKey.String(c.cfg.serviceName),
+func (c *Client) attrsByOperationAndItemKey(operation operation, key ...string) []label.KeyValue {
+	labels := []label.KeyValue{
+		semconv.ServiceNameKey.String(c.cfg.serviceName),
 		memcacheDBSystem(),
 		memcacheDBOperation(operation),
 	}
 
 	if len(key) > 0 {
-		kvs = append(kvs, memcacheDBItemKeys(key...))
+		labels = append(labels, memcacheDBItemKeys(key...))
 	}
 
-	return kvs
+	return labels
 }
 
 // Starts span with appropriate span kind and attributes

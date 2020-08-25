@@ -25,10 +25,11 @@ import (
 
 	"github.com/stretchr/testify/require"
 
-	"go.opentelemetry.io/otel/api/standard"
 	"go.opentelemetry.io/otel/api/trace"
+	"go.opentelemetry.io/otel/semconv"
 
 	"go.opentelemetry.io/otel/sdk/metric/controller/push"
+	"go.opentelemetry.io/otel/sdk/metric/processor/basic"
 	"go.opentelemetry.io/otel/sdk/metric/selector/simple"
 
 	"github.com/gocql/gocql"
@@ -37,8 +38,8 @@ import (
 	mocktracer "go.opentelemetry.io/contrib/internal/trace"
 	"go.opentelemetry.io/contrib/internal/util"
 
-	"go.opentelemetry.io/otel/api/kv"
 	"go.opentelemetry.io/otel/api/metric"
+	"go.opentelemetry.io/otel/label"
 	export "go.opentelemetry.io/otel/sdk/export/metric"
 	"go.opentelemetry.io/otel/sdk/export/metric/aggregation"
 )
@@ -77,7 +78,10 @@ func mockExportPipeline(t *testing.T) *push.Controller {
 	var records []export.Record
 	exporter = &mockExporter{t, records}
 	controller := push.New(
-		simple.NewWithExactDistribution(),
+		basic.New(
+			simple.NewWithExactDistribution(),
+			exporter,
+		),
 		exporter,
 		push.WithPeriod(1*time.Second),
 	)
@@ -96,7 +100,7 @@ func (m *mockConnectObserver) ObserveConnect(observedConnect gocql.ObservedConne
 type testRecord struct {
 	Name      string
 	MeterName string
-	Labels    []kv.KeyValue
+	Labels    []label.KeyValue
 	Number    metric.Number
 }
 
@@ -141,7 +145,7 @@ func TestQuery(t *testing.T) {
 
 		switch span.Name {
 		case insertStmt:
-			assert.Equal(t, insertStmt, span.Attributes[standard.DBStatementKey].AsString())
+			assert.Equal(t, insertStmt, span.Attributes[semconv.DBStatementKey].AsString())
 			assert.Equal(t, parentSpan.SpanContext().SpanID.String(), span.ParentSpanID.String())
 		default:
 			t.Fatalf("unexpected span name %s", span.Name)
@@ -157,7 +161,7 @@ func TestQuery(t *testing.T) {
 		{
 			Name:      "db.cassandra.queries",
 			MeterName: instrumentationName,
-			Labels: []kv.KeyValue{
+			Labels: []label.KeyValue{
 				cassDBSystem(),
 				cassPeerIP("127.0.0.1"),
 				cassPeerPort(9042),
@@ -172,7 +176,7 @@ func TestQuery(t *testing.T) {
 		{
 			Name:      "db.cassandra.rows",
 			MeterName: instrumentationName,
-			Labels: []kv.KeyValue{
+			Labels: []label.KeyValue{
 				cassDBSystem(),
 				cassPeerIP("127.0.0.1"),
 				cassPeerPort(9042),
@@ -186,7 +190,7 @@ func TestQuery(t *testing.T) {
 		{
 			Name:      "db.cassandra.latency",
 			MeterName: instrumentationName,
-			Labels: []kv.KeyValue{
+			Labels: []label.KeyValue{
 				cassDBSystem(),
 				cassPeerIP("127.0.0.1"),
 				cassPeerPort(9042),
@@ -260,7 +264,7 @@ func TestBatch(t *testing.T) {
 		assert.Equal(t, cassBatchQueryName, span.Name)
 		assert.Equal(t, parentSpan.SpanContext().SpanID, span.ParentSpanID)
 		assert.Equal(t, "db.cassandra.batch.query",
-			span.Attributes[standard.DBOperationKey].AsString(),
+			span.Attributes[semconv.DBOperationKey].AsString(),
 		)
 		assertConnectionLevelAttributes(t, span)
 	}
@@ -273,7 +277,7 @@ func TestBatch(t *testing.T) {
 		{
 			Name:      "db.cassandra.batch.queries",
 			MeterName: instrumentationName,
-			Labels: []kv.KeyValue{
+			Labels: []label.KeyValue{
 				cassDBSystem(),
 				cassPeerIP("127.0.0.1"),
 				cassPeerPort(9042),
@@ -287,7 +291,7 @@ func TestBatch(t *testing.T) {
 		{
 			Name:      "db.cassandra.latency",
 			MeterName: instrumentationName,
-			Labels: []kv.KeyValue{
+			Labels: []label.KeyValue{
 				cassDBSystem(),
 				cassPeerIP("127.0.0.1"),
 				cassPeerPort(9042),
@@ -345,7 +349,7 @@ func TestConnection(t *testing.T) {
 	// Verify the span attributes
 	for _, span := range spans {
 		assert.Equal(t, cassConnectName, span.Name)
-		assert.Equal(t, "db.cassandra.connect", span.Attributes[standard.DBOperationKey].AsString())
+		assert.Equal(t, "db.cassandra.connect", span.Attributes[semconv.DBOperationKey].AsString())
 		assertConnectionLevelAttributes(t, span)
 	}
 
@@ -354,7 +358,7 @@ func TestConnection(t *testing.T) {
 		{
 			Name:      "db.cassandra.connections",
 			MeterName: instrumentationName,
-			Labels: []kv.KeyValue{
+			Labels: []label.KeyValue{
 				cassDBSystem(),
 				cassPeerIP("127.0.0.1"),
 				cassPeerPort(9042),
@@ -379,12 +383,12 @@ func TestConnection(t *testing.T) {
 func TestHostOrIP(t *testing.T) {
 	hostAndPort := "127.0.0.1:9042"
 	attribute := hostOrIP(hostAndPort)
-	assert.Equal(t, standard.NetPeerIPKey, attribute.Key)
+	assert.Equal(t, semconv.NetPeerIPKey, attribute.Key)
 	assert.Equal(t, "127.0.0.1", attribute.Value.AsString())
 
 	hostAndPort = "exampleHost:9042"
 	attribute = hostOrIP(hostAndPort)
-	assert.Equal(t, standard.NetPeerNameKey, attribute.Key)
+	assert.Equal(t, semconv.NetPeerNameKey, attribute.Key)
 	assert.Equal(t, "exampleHost", attribute.Value.AsString())
 
 	hostAndPort = "invalid-host-and-port-string"
@@ -393,11 +397,11 @@ func TestHostOrIP(t *testing.T) {
 }
 
 func assertConnectionLevelAttributes(t *testing.T, span *mocktracer.Span) {
-	assert.Equal(t, span.Attributes[standard.DBSystemKey].AsString(),
-		standard.DBSystemCassandra.Value.AsString(),
+	assert.Equal(t, span.Attributes[semconv.DBSystemKey].AsString(),
+		semconv.DBSystemCassandra.Value.AsString(),
 	)
-	assert.Equal(t, "127.0.0.1", span.Attributes[standard.NetPeerIPKey].AsString())
-	assert.Equal(t, int32(9042), span.Attributes[standard.NetPeerPortKey].AsInt32())
+	assert.Equal(t, "127.0.0.1", span.Attributes[semconv.NetPeerIPKey].AsString())
+	assert.Equal(t, int32(9042), span.Attributes[semconv.NetPeerPortKey].AsInt32())
 	assert.Contains(t, span.Attributes, cassVersionKey)
 	assert.Contains(t, span.Attributes, cassHostIDKey)
 	assert.Equal(t, "up", strings.ToLower(span.Attributes[cassHostStateKey].AsString()))

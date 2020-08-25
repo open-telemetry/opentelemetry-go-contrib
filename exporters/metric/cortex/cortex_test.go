@@ -31,7 +31,7 @@ import (
 	"github.com/stretchr/testify/require"
 
 	"go.opentelemetry.io/otel/api/global"
-	"go.opentelemetry.io/otel/api/kv"
+	"go.opentelemetry.io/otel/label"
 	"go.opentelemetry.io/otel/sdk/export/metric"
 	export "go.opentelemetry.io/otel/sdk/export/metric"
 	"go.opentelemetry.io/otel/sdk/export/metric/aggregation"
@@ -65,7 +65,7 @@ var validConfig = Config{
 	Client: http.DefaultClient,
 }
 
-var testResource = resource.New(kv.String("R", "V"))
+var testResource = resource.New(label.String("R", "V"))
 var mockTime int64 = time.Time{}.Unix()
 
 func TestExportKindFor(t *testing.T) {

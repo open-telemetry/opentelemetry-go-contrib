@@ -18,10 +18,9 @@ import (
 	"context"
 	"time"
 
-	"google.golang.org/grpc/codes"
-
-	otelkv "go.opentelemetry.io/otel/api/kv"
 	oteltrace "go.opentelemetry.io/otel/api/trace"
+	"go.opentelemetry.io/otel/codes"
+	"go.opentelemetry.io/otel/label"
 )
 
 // Span is a mock span used in association with Tracer for
@@ -30,12 +29,12 @@ type Span struct {
 	sc            oteltrace.SpanContext
 	tracer        *Tracer
 	Name          string
-	Attributes    map[otelkv.Key]otelkv.Value
+	Attributes    map[label.Key]label.Value
 	Kind          oteltrace.SpanKind
 	Status        codes.Code
 	StatusMessage string
 	ParentSpanID  oteltrace.SpanID
-	Links         map[oteltrace.SpanContext][]otelkv.KeyValue
+	Links         map[oteltrace.SpanContext][]label.KeyValue
 }
 
 var _ oteltrace.Span = (*Span)(nil)
@@ -63,13 +62,13 @@ func (ms *Span) SetStatus(status codes.Code, msg string) {
 
 // SetAttribute adds a single inferred attribute.
 func (ms *Span) SetAttribute(key string, value interface{}) {
-	ms.SetAttributes(otelkv.Any(key, value))
+	ms.SetAttributes(label.Any(key, value))
 }
 
 // SetAttributes adds an attribute to Attributes member.
-func (ms *Span) SetAttributes(attributes ...otelkv.KeyValue) {
+func (ms *Span) SetAttributes(attributes ...label.KeyValue) {
 	if ms.Attributes == nil {
-		ms.Attributes = make(map[otelkv.Key]otelkv.Value)
+		ms.Attributes = make(map[label.Key]label.Value)
 	}
 	for _, kv := range attributes {
 		ms.Attributes[kv.Key] = kv.Value
@@ -96,9 +95,9 @@ func (ms *Span) Tracer() oteltrace.Tracer {
 }
 
 // AddEvent does nothing.
-func (ms *Span) AddEvent(ctx context.Context, name string, attrs ...otelkv.KeyValue) {
+func (ms *Span) AddEvent(ctx context.Context, name string, attrs ...label.KeyValue) {
 }
 
 // AddEvent does nothing.
-func (ms *Span) AddEventWithTimestamp(ctx context.Context, timestamp time.Time, name string, attrs ...otelkv.KeyValue) {
+func (ms *Span) AddEventWithTimestamp(ctx context.Context, timestamp time.Time, name string, attrs ...label.KeyValue) {
 }
