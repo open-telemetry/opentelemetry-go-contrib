@@ -8,10 +8,17 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 
 ## [Unreleased]
 
+## [0.11.0] - 2020-08-25
+
 ### Added
 
 - Top-level `Version()` and `SemVersion()` functions defining the current version of the contrib package. (#225)
 - Instrumentation for the `github.com/astaxie/beego` package. (#200)
+- Instrumentation for the `github.com/bradfitz/gomemcache` package. (#204)
+- Host metrics instrumentation. (#231)
+- Cortex histogram and distribution support. (#237)
+- Cortex example project. (#238)
+- Cortex HTTP authentication. (#246)
 
 ### Changed
 
@@ -19,10 +26,13 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 - Replace `WithTracer` with `WithTracerProvider` in Sarama instrumentation. (#221)
 - Switch to use common top-level module `SemVersion()` when creating versioned tracer in `bradfitz/gomemcache`. (#226)
 - Use `IntegrationShouldRun` in `gomemcache_test`. (#254)
+- Use Go 1.15 for CI builds. (#236)
+- Improved configuration for `runtime` instrumentation. (#224)
 
 ### Fixed
 
 - Update dependabot configuration to include newly added `bradfitz/gomemcache` package. (#226)
+- Correct `runtime` instrumentation name. (#241)
 
 ## [0.10.1] - 2020-08-13
 
@@ -143,7 +153,8 @@ First official tagged release of `contrib` repository.
 - Prefix support for dogstatsd (#34)
 - Update Go Runtime package to use batch observer (#44)
 
-[Unreleased]: https://github.com/open-telemetry/opentelemetry-go-contrib/compare/v0.10.1...HEAD
+[Unreleased]: https://github.com/open-telemetry/opentelemetry-go-contrib/compare/v0.11.0...HEAD
+[0.11.0]: https://github.com/open-telemetry/opentelemetry-go-contrib/releases/tag/v0.11.0
 [0.10.1]: https://github.com/open-telemetry/opentelemetry-go-contrib/releases/tag/v0.10.1
 [0.10.0]: https://github.com/open-telemetry/opentelemetry-go-contrib/releases/tag/v0.10.0
 [0.9.0]: https://github.com/open-telemetry/opentelemetry-go-contrib/releases/tag/v0.9.0
