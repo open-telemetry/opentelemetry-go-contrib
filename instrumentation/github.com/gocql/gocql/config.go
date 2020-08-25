@@ -25,7 +25,7 @@ import (
 // TracedSessionConfig provides configuration for sessions
 // created with NewSessionWithTracing.
 type TracedSessionConfig struct {
-	traceProvider     trace.Provider
+	tracerProvider    trace.Provider
 	meterProvider     metric.Provider
 	instrumentQuery   bool
 	instrumentBatch   bool
@@ -80,11 +80,11 @@ func WithConnectObserver(observer gocql.ConnectObserver) TracedSessionOption {
 	})
 }
 
-// WithTraceProvider will set the trace provider used to get a tracer
+// WithTracerProvider will set the trace provider used to get a tracer
 // for creating spans. Defaults to global.TraceProvider()
-func WithTraceProvider(provider trace.Provider) TracedSessionOption {
+func WithTracerProvider(provider trace.Provider) TracedSessionOption {
 	return TracedSessionOptionFunc(func(c *TracedSessionConfig) {
-		c.traceProvider = provider
+		c.tracerProvider = provider
 	})
 }
 
@@ -125,7 +125,7 @@ func WithConnectInstrumentation(enabled bool) TracedSessionOption {
 
 func configure(options ...TracedSessionOption) *TracedSessionConfig {
 	config := &TracedSessionConfig{
-		traceProvider:     global.TraceProvider(),
+		tracerProvider:    global.TraceProvider(),
 		meterProvider:     global.MeterProvider(),
 		instrumentQuery:   true,
 		instrumentBatch:   true,

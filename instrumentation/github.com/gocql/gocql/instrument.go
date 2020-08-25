@@ -40,7 +40,7 @@ type instruments struct {
 	latency metric.Int64ValueRecorder
 }
 
-// newInstruments will recreate instruments using a meter
+// newInstruments will create instruments using a meter
 // from the given provider p.
 func newInstruments(p metric.Provider) *instruments {
 	meter := p.Meter(

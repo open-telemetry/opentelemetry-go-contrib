@@ -29,7 +29,7 @@ import (
 func NewSessionWithTracing(ctx context.Context, cluster *gocql.ClusterConfig, options ...TracedSessionOption) (*gocql.Session, error) {
 	config := configure(options...)
 	instruments := newInstruments(config.meterProvider)
-	tracer := config.traceProvider.Tracer(
+	tracer := config.tracerProvider.Tracer(
 		instrumentationName,
 		trace.WithInstrumentationVersion(otelcontrib.SemVersion()),
 	)

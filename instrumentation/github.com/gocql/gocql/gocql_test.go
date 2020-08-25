@@ -89,16 +89,16 @@ func mockExportPipeline(t *testing.T) *push.Controller {
 	return controller
 }
 
-type mockTraceProvider struct {
+type mockTracerProvider struct {
 	tracer *mocktracer.Tracer
 }
 
-func (p *mockTraceProvider) Tracer(name string, options ...trace.TracerOption) trace.Tracer {
+func (p *mockTracerProvider) Tracer(name string, options ...trace.TracerOption) trace.Tracer {
 	return p.tracer
 }
 
-func newTraceProvider() *mockTraceProvider {
-	return &mockTraceProvider{
+func newTracerProvider() *mockTracerProvider {
+	return &mockTracerProvider{
 		mocktracer.NewTracer(instrumentationName),
 	}
 }
@@ -122,14 +122,14 @@ func TestQuery(t *testing.T) {
 	controller := getController(t)
 	defer afterEach()
 	cluster := getCluster()
-	traceProvider := newTraceProvider()
+	tracerProvider := newTracerProvider()
 
-	ctx, parentSpan := traceProvider.tracer.Start(context.Background(), "gocql-test")
+	ctx, parentSpan := tracerProvider.tracer.Start(context.Background(), "gocql-test")
 
 	session, err := NewSessionWithTracing(
 		ctx,
 		cluster,
-		WithTraceProvider(traceProvider),
+		WithTracerProvider(tracerProvider),
 		WithMeterProvider(controller.Provider()),
 		WithConnectInstrumentation(false),
 	)
@@ -147,7 +147,7 @@ func TestQuery(t *testing.T) {
 	parentSpan.End()
 
 	// Get the spans and ensure that they are child spans to the local parent
-	spans := traceProvider.tracer.EndedSpans()
+	spans := tracerProvider.tracer.EndedSpans()
 
 	// Collect all the connection spans
 	// total spans:
@@ -244,14 +244,14 @@ func TestBatch(t *testing.T) {
 	controller := getController(t)
 	defer afterEach()
 	cluster := getCluster()
-	traceProvider := newTraceProvider()
+	tracerProvider := newTracerProvider()
 
-	ctx, parentSpan := traceProvider.tracer.Start(context.Background(), "gocql-test")
+	ctx, parentSpan := tracerProvider.tracer.Start(context.Background(), "gocql-test")
 
 	session, err := NewSessionWithTracing(
 		ctx,
 		cluster,
-		WithTraceProvider(traceProvider),
+		WithTracerProvider(tracerProvider),
 		WithMeterProvider(controller.Provider()),
 		WithConnectInstrumentation(false),
 	)
@@ -271,7 +271,7 @@ func TestBatch(t *testing.T) {
 
 	parentSpan.End()
 
-	spans := traceProvider.tracer.EndedSpans()
+	spans := tracerProvider.tracer.EndedSpans()
 	// total spans:
 	// 1 span for the query
 	// 1 span for the local span
@@ -342,14 +342,14 @@ func TestConnection(t *testing.T) {
 	controller := getController(t)
 	defer afterEach()
 	cluster := getCluster()
-	traceProvider := newTraceProvider()
+	tracerProvider := newTracerProvider()
 	connectObserver := &mockConnectObserver{0}
 	ctx := context.Background()
 
 	session, err := NewSessionWithTracing(
 		ctx,
 		cluster,
-		WithTraceProvider(traceProvider),
+		WithTracerProvider(tracerProvider),
 		WithMeterProvider(controller.Provider()),
 		WithConnectObserver(connectObserver),
 	)
@@ -357,7 +357,7 @@ func TestConnection(t *testing.T) {
 	defer session.Close()
 	require.NoError(t, session.AwaitSchemaAgreement(ctx))
 
-	spans := traceProvider.tracer.EndedSpans()
+	spans := tracerProvider.tracer.EndedSpans()
 
 	assert.Less(t, 0, connectObserver.callCount)
 
