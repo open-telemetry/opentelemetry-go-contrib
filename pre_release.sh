@@ -103,7 +103,8 @@ if ! git diff --quiet; then \
 fi
 
 # Update contrib.go version definition
-sed -i .bak "s/\(return \"\)[0-9]*\.[0-9]*\.[0-9]*\"/\1${OTEL_CONTRIB_VERSION}\"/" ./contrib.go
+cp contrib.go contrib.go.bak
+sed "s/\(return \"\)[0-9]*\.[0-9]*\.[0-9]*\"/\1${OTEL_CONTRIB_VERSION}\"/" ./contrib.go.bak > ./contrib.go
 rm -f ./contrib.go.bak
 
 declare -r BRANCH_NAME=pre_release_${CONTRIB_TAG}
