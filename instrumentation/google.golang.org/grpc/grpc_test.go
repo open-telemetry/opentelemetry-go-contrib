@@ -22,13 +22,19 @@ import (
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	otelgrpc "go.opentelemetry.io/contrib/instrumentation/google.golang.org/grpc"
-	"go.opentelemetry.io/otel/api/kv"
-	"go.opentelemetry.io/otel/api/standard"
-	"go.opentelemetry.io/otel/api/trace/testtrace"
+	"go.opentelemetry.io/otel/api/trace"
+	"go.opentelemetry.io/otel/api/trace/tracetest"
+	"go.opentelemetry.io/otel/label"
+	"go.opentelemetry.io/otel/semconv"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/interop"
 	pb "google.golang.org/grpc/interop/grpc_testing"
 	"google.golang.org/grpc/test/bufconn"
+)
+
+const (
+	bufSize  = 2048
+	instName = "go.opentelemetry.io/contrib/instrumentation/google.golang.org/grpc"
 )
 
 func testUnaryCall(t *testing.T, cOpt []grpc.DialOption, sOpt []grpc.ServerOption) {
@@ -39,7 +45,7 @@ func testUnaryCall(t *testing.T, cOpt []grpc.DialOption, sOpt []grpc.ServerOptio
 	pb.RegisterTestServiceServer(s, interop.NewTestServer())
 	go func() {
 		if err := s.Serve(l); err != nil {
-			t.Fatal(err)
+			panic(err)
 		}
 	}()
 	defer s.Stop()
@@ -64,59 +70,163 @@ func testUnaryCall(t *testing.T, cOpt []grpc.DialOption, sOpt []grpc.ServerOptio
 	interop.DoLargeUnaryCall(client)
 }
 
-func TestUnaryClientInterceptor(t *testing.T) {
-	sr := new(testtrace.StandardSpanRecorder)
-	tp := testtrace.NewProvider(testtrace.WithSpanRecorder(sr))
-	tracer := tp.Tracer("TestUnaryClientInterceptor")
+func TestUnaryInterceptors(t *testing.T) {
+	clientSR := new(tracetest.StandardSpanRecorder)
+	clientTracer := tracetest.NewProvider(tracetest.WithSpanRecorder(clientSR)).Tracer("TestUnaryClientInterceptor")
 
-	testUnaryCall(t, nil, []grpc.ServerOption{
-		grpc.UnaryInterceptor(otelgrpc.UnaryServerInterceptor(tracer)),
+	serverSR := new(tracetest.StandardSpanRecorder)
+	serverTracer := tracetest.NewProvider(tracetest.WithSpanRecorder(serverSR)).Tracer("TestUnaryServerInterceptor")
+
+	testUnaryCall(
+		t,
+		[]grpc.DialOption{
+			grpc.WithUnaryInterceptor(otelgrpc.UnaryClientInterceptor(clientTracer)),
+		},
+		[]grpc.ServerOption{
+			grpc.UnaryInterceptor(otelgrpc.UnaryServerInterceptor(serverTracer)),
+		},
+	)
+
+	t.Run("UnaryClientSpans", func(t *testing.T) {
+		checkClientSpans(t, clientTracer, clientSR.Completed())
 	})
 
-	spans := sr.Completed()
+	t.Run("UnaryServerSpans", func(t *testing.T) {
+		checkServerSpans(t, serverTracer, serverSR.Completed())
+	})
+}
+
+func checkClientSpans(t *testing.T, tracer trace.Tracer, spans []*tracetest.Span) {
 	require.Len(t, spans, 2)
 
 	emptySpan := spans[0]
 	assert.True(t, emptySpan.Ended())
 	assert.Equal(t, tracer, emptySpan.Tracer())
 	assert.Equal(t, "grpc.testing.TestService/EmptyCall", emptySpan.Name())
-	assert.Equal(t, map[string]map[kv.Key]kv.Value{
-		"message": map[kv.Key]kv.Value{
-			standard.RPCMessageIDKey:               kv.IntValue(1),
-			standard.RPCMessageTypeKey:             kv.StringValue("SENT"),
-			standard.RPCMessageUncompressedSizeKey: kv.IntValue(0),
+	assert.Equal(t, []tracetest.Event{
+		{
+			Name: "message",
+			Attributes: map[label.Key]label.Value{
+				semconv.RPCMessageIDKey:               label.IntValue(1),
+				semconv.RPCMessageTypeKey:             label.StringValue("SENT"),
+				semconv.RPCMessageUncompressedSizeKey: label.IntValue(0),
+			},
 		},
-	}, eventMap(emptySpan.Events()))
-	assert.Equal(t, map[kv.Key]kv.Value{
-		standard.RPCMethodKey:      kv.StringValue("EmptyCall"),
-		standard.RPCServiceKey:     kv.StringValue("grpc.testing.TestService"),
-		standard.RPCSystemGRPC.Key: standard.RPCSystemGRPC.Value,
+		{
+			Name: "message",
+			Attributes: map[label.Key]label.Value{
+				semconv.RPCMessageIDKey:               label.IntValue(1),
+				semconv.RPCMessageTypeKey:             label.StringValue("RECEIVED"),
+				semconv.RPCMessageUncompressedSizeKey: label.IntValue(0),
+			},
+		},
+	}, noTimestamp(emptySpan.Events()))
+	assert.Equal(t, map[label.Key]label.Value{
+		semconv.RPCMethodKey:      label.StringValue("EmptyCall"),
+		semconv.RPCServiceKey:     label.StringValue("grpc.testing.TestService"),
+		semconv.RPCSystemGRPC.Key: semconv.RPCSystemGRPC.Value,
 	}, emptySpan.Attributes())
 
 	largeSpan := spans[1]
 	assert.True(t, largeSpan.Ended())
 	assert.Equal(t, tracer, largeSpan.Tracer())
 	assert.Equal(t, "grpc.testing.TestService/UnaryCall", largeSpan.Name())
-	assert.Equal(t, map[string]map[kv.Key]kv.Value{
-		"message": map[kv.Key]kv.Value{
-			standard.RPCMessageIDKey:   kv.IntValue(1),
-			standard.RPCMessageTypeKey: kv.StringValue("SENT"),
-			// largeRespSize from "google.golang.org/grpc/interop" + 8 (overhead).
-			standard.RPCMessageUncompressedSizeKey: kv.IntValue(314167),
+	assert.Equal(t, []tracetest.Event{
+		{
+			Name: "message",
+			Attributes: map[label.Key]label.Value{
+				semconv.RPCMessageIDKey:   label.IntValue(1),
+				semconv.RPCMessageTypeKey: label.StringValue("SENT"),
+				// largeReqSize from "google.golang.org/grpc/interop" + 12 (overhead).
+				semconv.RPCMessageUncompressedSizeKey: label.IntValue(271840),
+			},
 		},
-	}, eventMap(largeSpan.Events()))
-	assert.Equal(t, map[kv.Key]kv.Value{
-		standard.RPCMethodKey:      kv.StringValue("UnaryCall"),
-		standard.RPCServiceKey:     kv.StringValue("grpc.testing.TestService"),
-		standard.RPCSystemGRPC.Key: standard.RPCSystemGRPC.Value,
+		{
+			Name: "message",
+			Attributes: map[label.Key]label.Value{
+				semconv.RPCMessageIDKey:   label.IntValue(1),
+				semconv.RPCMessageTypeKey: label.StringValue("RECEIVED"),
+				// largeRespSize from "google.golang.org/grpc/interop" + 8 (overhead).
+				semconv.RPCMessageUncompressedSizeKey: label.IntValue(314167),
+			},
+		},
+	}, noTimestamp(largeSpan.Events()))
+	assert.Equal(t, map[label.Key]label.Value{
+		semconv.RPCMethodKey:      label.StringValue("UnaryCall"),
+		semconv.RPCServiceKey:     label.StringValue("grpc.testing.TestService"),
+		semconv.RPCSystemGRPC.Key: semconv.RPCSystemGRPC.Value,
 	}, largeSpan.Attributes())
 }
 
-func eventMap(events []testtrace.Event) map[string]map[kv.Key]kv.Value {
-	m := make(map[string]map[kv.Key]kv.Value, len(events))
+func checkServerSpans(t *testing.T, tracer trace.Tracer, spans []*tracetest.Span) {
+	require.Len(t, spans, 2)
+
+	emptySpan := spans[0]
+	assert.True(t, emptySpan.Ended())
+	assert.Equal(t, tracer, emptySpan.Tracer())
+	assert.Equal(t, "grpc.testing.TestService/EmptyCall", emptySpan.Name())
+	assert.Equal(t, []tracetest.Event{
+		{
+			Name: "message",
+			Attributes: map[label.Key]label.Value{
+				semconv.RPCMessageIDKey:               label.IntValue(1),
+				semconv.RPCMessageTypeKey:             label.StringValue("RECEIVED"),
+				semconv.RPCMessageUncompressedSizeKey: label.IntValue(0),
+			},
+		},
+		{
+			Name: "message",
+			Attributes: map[label.Key]label.Value{
+				semconv.RPCMessageIDKey:               label.IntValue(1),
+				semconv.RPCMessageTypeKey:             label.StringValue("SENT"),
+				semconv.RPCMessageUncompressedSizeKey: label.IntValue(0),
+			},
+		},
+	}, noTimestamp(emptySpan.Events()))
+	assert.Equal(t, map[label.Key]label.Value{
+		semconv.RPCMethodKey:      label.StringValue("EmptyCall"),
+		semconv.RPCServiceKey:     label.StringValue("grpc.testing.TestService"),
+		semconv.RPCSystemGRPC.Key: semconv.RPCSystemGRPC.Value,
+	}, emptySpan.Attributes())
+
+	largeSpan := spans[1]
+	assert.True(t, largeSpan.Ended())
+	assert.Equal(t, tracer, largeSpan.Tracer())
+	assert.Equal(t, "grpc.testing.TestService/UnaryCall", largeSpan.Name())
+	assert.Equal(t, []tracetest.Event{
+		{
+			Name: "message",
+			Attributes: map[label.Key]label.Value{
+				semconv.RPCMessageIDKey:   label.IntValue(1),
+				semconv.RPCMessageTypeKey: label.StringValue("RECEIVED"),
+				// largeReqSize from "google.golang.org/grpc/interop" + 12 (overhead).
+				semconv.RPCMessageUncompressedSizeKey: label.IntValue(271840),
+			},
+		},
+		{
+			Name: "message",
+			Attributes: map[label.Key]label.Value{
+				semconv.RPCMessageIDKey:   label.IntValue(1),
+				semconv.RPCMessageTypeKey: label.StringValue("SENT"),
+				// largeRespSize from "google.golang.org/grpc/interop" + 8 (overhead).
+				semconv.RPCMessageUncompressedSizeKey: label.IntValue(314167),
+			},
+		},
+	}, noTimestamp(largeSpan.Events()))
+	assert.Equal(t, map[label.Key]label.Value{
+		semconv.RPCMethodKey:      label.StringValue("UnaryCall"),
+		semconv.RPCServiceKey:     label.StringValue("grpc.testing.TestService"),
+		semconv.RPCSystemGRPC.Key: semconv.RPCSystemGRPC.Value,
+	}, largeSpan.Attributes())
+}
+
+func noTimestamp(events []tracetest.Event) []tracetest.Event {
+	out := make([]tracetest.Event, 0, len(events))
 	for _, e := range events {
-		// Assume no mutation.
-		m[e.Name] = e.Attributes
+		out = append(out, tracetest.Event{
+			Name:       e.Name,
+			Attributes: e.Attributes,
+		})
 	}
-	return m
+	return out
 }
