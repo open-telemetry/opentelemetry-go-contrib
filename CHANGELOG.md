@@ -10,7 +10,7 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 
 ### Added
 
-- Integration testing for the gRPC instrumentation.
+- Integration testing for the gRPC instrumentation. (#297)
 
 ## [0.11.0] - 2020-08-25
 
