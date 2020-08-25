@@ -19,12 +19,13 @@ import (
 	"net"
 	"testing"
 
-	otelgrpc "go.opentelemetry.io/contrib/instrumentation/google.golang.org/grpc"
-	"go.opentelemetry.io/otel/api/trace/tracetest"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/interop"
 	pb "google.golang.org/grpc/interop/grpc_testing"
 	"google.golang.org/grpc/test/bufconn"
+
+	otelgrpc "go.opentelemetry.io/contrib/instrumentation/google.golang.org/grpc"
+	"go.opentelemetry.io/otel/api/trace/tracetest"
 )
 
 const (
@@ -42,7 +43,7 @@ func benchmark(b *testing.B, cOpt []grpc.DialOption, sOpt []grpc.ServerOption) {
 	pb.RegisterTestServiceServer(s, interop.NewTestServer())
 	go func() {
 		if err := s.Serve(l); err != nil {
-			b.Fatal(err)
+			panic(err)
 		}
 	}()
 	defer s.Stop()
