@@ -358,11 +358,14 @@ func generateCertFiles(
 	}
 
 	// Write the certificate to the local directory.
-	certPEM := pem.EncodeToMemory(&pem.Block{
+	certFile, err := os.Create(certFilepath)
+	if err != nil {
+		return nil, nil, err
+	}
+	err = pem.Encode(certFile, &pem.Block{
 		Type:  "CERTIFICATE",
 		Bytes: encodedCert,
 	})
-	err = createFile(certPEM, certFilepath)
 	if err != nil {
 		return nil, nil, err
 	}
@@ -372,11 +375,14 @@ func generateCertFiles(
 	if err != nil {
 		return nil, nil, err
 	}
-	privateKeyPEM := pem.EncodeToMemory(&pem.Block{
+	keyFile, err := os.Create(keyFilepath)
+	if err != nil {
+		return nil, nil, err
+	}
+	err = pem.Encode(keyFile, &pem.Block{
 		Type:  "PRIVATE KEY",
 		Bytes: encodedPrivateKey,
 	})
-	err = createFile(privateKeyPEM, keyFilepath)
 	if err != nil {
 		return nil, nil, err
 	}
