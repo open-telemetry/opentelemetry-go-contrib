@@ -132,11 +132,12 @@ func (e *Exporter) buildTLSConfig() (*tls.Config, error) {
 	}
 
 	// Set InsecureSkipVerify. Viper reads the bool as a string since it is in a map.
-	parsedBool, err := strconv.ParseBool(e.config.TLSConfig["insecure_skip_verify"])
-	if err != nil {
-		return nil, err
+	if isv, ok := e.config.TLSConfig["insecure_skip_verify"]; ok {
+		var err error
+		if tlsConfig.InsecureSkipVerify, err = strconv.ParseBool(isv); err != nil {
+			return nil, err
+		}
 	}
-	tlsConfig.InsecureSkipVerify = parsedBool
 
 	// Load certificates from CA file if it exists.
 	caFile := e.config.TLSConfig["ca_file"]
