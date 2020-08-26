@@ -25,30 +25,31 @@ const (
 
 // Config is used to configure the mongo tracer.
 type Config struct {
+	TraceProvider trace.Provider
+
 	Tracer trace.Tracer
 }
 
 // newConfig returns a Config with all Options set.
 func newConfig(opts ...Option) Config {
-	cfg := Config{}
+	cfg := Config{
+		TraceProvider: global.TraceProvider(),
+	}
 	for _, opt := range opts {
 		opt(&cfg)
 	}
-	if cfg.Tracer == nil {
-		cfg.Tracer = global.Tracer(defaultTracerName)
-	}
+
+	cfg.Tracer = cfg.TraceProvider.Tracer(defaultTracerName)
 	return cfg
 }
 
 // Option specifies instrumentation configuration options.
 type Option func(*Config)
 
-// WithTracer specifies a tracer to use for creating spans. If none is
-// specified, a tracer named
-// "go.opentelemetry.io/contrib/instrumentation/go.mongodb.org/mongo-driver"
-// from the global provider is used.
-func WithTracer(tracer trace.Tracer) Option {
+// WithTracerProvider specifies a tracer provider to use for creating a tracer.
+// If none is specified, the global provider is used.
+func WithTracerProvider(provider trace.Provider) Option {
 	return func(cfg *Config) {
-		cfg.Tracer = tracer
+		cfg.TraceProvider = provider
 	}
 }
