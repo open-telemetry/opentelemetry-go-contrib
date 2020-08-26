@@ -56,7 +56,7 @@ var validConfig = Config{
 		"server_name":          "server",
 		"insecure_skip_verify": "1",
 	},
-	ProxyURL:     "",
+	ProxyURL:     nil,
 	PushInterval: 10 * time.Second,
 	Headers: map[string]string{
 		"x-prometheus-remote-write-version": "0.1.0",

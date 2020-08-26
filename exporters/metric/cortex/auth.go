@@ -20,7 +20,6 @@ import (
 	"fmt"
 	"io/ioutil"
 	"net/http"
-	"net/url"
 	"strconv"
 )
 
@@ -107,12 +106,8 @@ func (e *Exporter) buildClient() (*http.Client, error) {
 	}
 
 	// Convert proxy url to proxy function for use in the created Transport.
-	if e.config.ProxyURL != "" {
-		proxyURL, err := url.Parse(e.config.ProxyURL)
-		if err != nil {
-			return nil, err
-		}
-		proxy := http.ProxyURL(proxyURL)
+	if e.config.ProxyURL != nil {
+		proxy := http.ProxyURL(e.config.ProxyURL)
 		transport.Proxy = proxy
 	}
 

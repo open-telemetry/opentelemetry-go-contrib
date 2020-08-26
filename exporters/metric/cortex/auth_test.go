@@ -28,6 +28,7 @@ import (
 	"net"
 	"net/http"
 	"net/http/httptest"
+	"net/url"
 	"os"
 	"strings"
 	"testing"
@@ -168,6 +169,9 @@ func createFile(bytes []byte, filepath string) error {
 // TestBuildClient checks whether the buildClient successfully creates a client that can
 // connect over TLS and has the correct remote timeout and proxy url.
 func TestBuildClient(t *testing.T) {
+	testProxyURL, err := url.Parse("123.4.5.6")
+	require.Nil(t, err)
+
 	tests := []struct {
 		testName               string
 		config                 Config
@@ -177,7 +181,7 @@ func TestBuildClient(t *testing.T) {
 		{
 			testName: "Remote Timeout with Proxy URL",
 			config: Config{
-				ProxyURL:      "123.4.5.6",
+				ProxyURL:      testProxyURL,
 				RemoteTimeout: 123 * time.Second,
 				TLSConfig: map[string]string{
 					"ca_file":              "./ca_cert.pem",
