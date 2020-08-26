@@ -110,7 +110,7 @@ func initClientWithMockTraceProvider(t *testing.T) (*Client, *mocktracer.Provide
 
 	c := NewClientWithTracing(
 		mc,
-		WithTraceProvider(mt),
+		WithTracerProvider(mt),
 	)
 
 	return c, mt
