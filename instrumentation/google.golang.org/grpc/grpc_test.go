@@ -33,8 +33,6 @@ import (
 	"go.opentelemetry.io/otel/semconv"
 )
 
-const bufSize = 2048
-
 func doCalls(cOpt []grpc.DialOption, sOpt []grpc.ServerOption) error {
 	l := bufconn.Listen(bufSize)
 	defer l.Close()
