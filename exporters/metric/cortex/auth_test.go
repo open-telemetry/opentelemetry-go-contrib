@@ -34,6 +34,7 @@ import (
 	"testing"
 	"time"
 
+	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
 
@@ -238,7 +239,7 @@ func TestBuildClient(t *testing.T) {
 			}
 			client, err := exporter.buildClient()
 			require.NoError(t, err)
-			require.Equal(t, client.Timeout, test.expectedRemoteTimeout)
+			assert.Equal(t, client.Timeout, test.expectedRemoteTimeout)
 
 			// Attempt to send the request and verify that the correct error occurred. If
 			// an error is expected, the test checks if the error string contains the
@@ -246,9 +247,10 @@ func TestBuildClient(t *testing.T) {
 			// changes every test.
 			_, err = client.Get(server.URL)
 			if test.expectedErrorSubstring != "" {
-				require.Error(t, err)
-				errorSuffix := strings.Contains(err.Error(), test.expectedErrorSubstring)
-				require.True(t, errorSuffix)
+				if assert.Error(t, err) {
+					hasErrorSubstring := strings.Contains(err.Error(), test.expectedErrorSubstring)
+					assert.True(t, hasErrorSubstring, "missing error message")
+				}
 			} else {
 				require.NoError(t, err)
 			}
