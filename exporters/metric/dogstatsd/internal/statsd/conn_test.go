@@ -25,10 +25,9 @@ import (
 	"github.com/stretchr/testify/require"
 
 	"go.opentelemetry.io/contrib/exporters/metric/dogstatsd/internal/statsd"
-	"go.opentelemetry.io/otel/api/kv"
-	"go.opentelemetry.io/otel/api/label"
 	"go.opentelemetry.io/otel/api/metric"
 	"go.opentelemetry.io/otel/api/unit"
+	"go.opentelemetry.io/otel/label"
 	export "go.opentelemetry.io/otel/sdk/export/metric"
 	"go.opentelemetry.io/otel/sdk/export/metric/metrictest"
 	aggtest "go.opentelemetry.io/otel/sdk/metric/aggregator/aggregatortest"
@@ -38,7 +37,7 @@ import (
 	"go.opentelemetry.io/otel/sdk/resource"
 )
 
-var testResource = resource.New(kv.String("host", "value"))
+var testResource = resource.New(label.String("host", "value"))
 
 // withTagsAdapter tests a dogstatsd-style statsd exporter.
 type withTagsAdapter struct {
@@ -142,9 +141,9 @@ timer.B.D:%s|ms
 					tdesc := metric.NewDescriptor(
 						"timer", metric.ValueRecorderKind, nkind, metric.WithUnit(unit.Milliseconds))
 
-					labels := []kv.KeyValue{
-						kv.String("A", "B"),
-						kv.String("C", "D"),
+					labels := []label.KeyValue{
+						label.String("A", "B"),
+						label.String("C", "D"),
 					}
 					const value = 123.456
 					val := number(t, nkind, value)
@@ -199,10 +198,10 @@ func number(t *testing.T, kind metric.NumberKind, value float64) metric.Number {
 	panic("invalid number kind")
 }
 
-func makeLabels(offset, nkeys int) []kv.KeyValue {
-	r := make([]kv.KeyValue, nkeys)
+func makeLabels(offset, nkeys int) []label.KeyValue {
+	r := make([]label.KeyValue, nkeys)
 	for i := range r {
-		r[i] = kv.String(fmt.Sprint("k", offset+i), fmt.Sprint("v", offset+i))
+		r[i] = label.String(fmt.Sprint("k", offset+i), fmt.Sprint("v", offset+i))
 	}
 	return r
 }

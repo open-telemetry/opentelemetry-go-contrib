@@ -22,8 +22,8 @@ import (
 
 	otelglobal "go.opentelemetry.io/otel/api/global"
 	otelpropagation "go.opentelemetry.io/otel/api/propagation"
-	"go.opentelemetry.io/otel/api/standard"
 	oteltrace "go.opentelemetry.io/otel/api/trace"
+	"go.opentelemetry.io/otel/semconv"
 )
 
 const (
@@ -50,9 +50,9 @@ func Middleware(service string, opts ...Option) macaron.Handler {
 
 		ctx := otelpropagation.ExtractHTTP(savedCtx, cfg.Propagators, c.Req.Header)
 		opts := []oteltrace.StartOption{
-			oteltrace.WithAttributes(standard.NetAttributesFromHTTPRequest("tcp", c.Req.Request)...),
-			oteltrace.WithAttributes(standard.EndUserAttributesFromHTTPRequest(c.Req.Request)...),
-			oteltrace.WithAttributes(standard.HTTPServerAttributesFromHTTPRequest(service, "", c.Req.Request)...),
+			oteltrace.WithAttributes(semconv.NetAttributesFromHTTPRequest("tcp", c.Req.Request)...),
+			oteltrace.WithAttributes(semconv.EndUserAttributesFromHTTPRequest(c.Req.Request)...),
+			oteltrace.WithAttributes(semconv.HTTPServerAttributesFromHTTPRequest(service, "", c.Req.Request)...),
 			oteltrace.WithSpanKind(oteltrace.SpanKindServer),
 		}
 		// TODO: span name should be router template not the actual request path, eg /user/:id vs /user/123
@@ -70,8 +70,8 @@ func Middleware(service string, opts ...Option) macaron.Handler {
 		c.Next()
 
 		status := c.Resp.Status()
-		attrs := standard.HTTPAttributesFromHTTPStatusCode(status)
-		spanStatus, spanMessage := standard.SpanStatusFromHTTPStatusCode(status)
+		attrs := semconv.HTTPAttributesFromHTTPStatusCode(status)
+		spanStatus, spanMessage := semconv.SpanStatusFromHTTPStatusCode(status)
 		span.SetAttributes(attrs...)
 		span.SetStatus(spanStatus, spanMessage)
 	}

@@ -20,10 +20,10 @@ import (
 	"github.com/labstack/echo/v4"
 
 	otelglobal "go.opentelemetry.io/otel/api/global"
-	"go.opentelemetry.io/otel/api/kv"
 	otelpropagation "go.opentelemetry.io/otel/api/propagation"
-	"go.opentelemetry.io/otel/api/standard"
 	oteltrace "go.opentelemetry.io/otel/api/trace"
+	"go.opentelemetry.io/otel/label"
+	"go.opentelemetry.io/otel/semconv"
 )
 
 const (
@@ -54,9 +54,9 @@ func Middleware(service string, opts ...Option) echo.MiddlewareFunc {
 			}()
 			ctx := otelpropagation.ExtractHTTP(savedCtx, cfg.Propagators, request.Header)
 			opts := []oteltrace.StartOption{
-				oteltrace.WithAttributes(standard.NetAttributesFromHTTPRequest("tcp", request)...),
-				oteltrace.WithAttributes(standard.EndUserAttributesFromHTTPRequest(request)...),
-				oteltrace.WithAttributes(standard.HTTPServerAttributesFromHTTPRequest(service, c.Path(), request)...),
+				oteltrace.WithAttributes(semconv.NetAttributesFromHTTPRequest("tcp", request)...),
+				oteltrace.WithAttributes(semconv.EndUserAttributesFromHTTPRequest(request)...),
+				oteltrace.WithAttributes(semconv.HTTPServerAttributesFromHTTPRequest(service, c.Path(), request)...),
 				oteltrace.WithSpanKind(oteltrace.SpanKindServer),
 			}
 			spanName := c.Path()
@@ -73,13 +73,13 @@ func Middleware(service string, opts ...Option) echo.MiddlewareFunc {
 			// serve the request to the next middleware
 			err := next(c)
 			if err != nil {
-				span.SetAttributes(kv.String("echo.error", err.Error()))
+				span.SetAttributes(label.String("echo.error", err.Error()))
 				// invokes the registered HTTP error handler
 				c.Error(err)
 			}
 
-			attrs := standard.HTTPAttributesFromHTTPStatusCode(c.Response().Status)
-			spanStatus, spanMessage := standard.SpanStatusFromHTTPStatusCode(c.Response().Status)
+			attrs := semconv.HTTPAttributesFromHTTPStatusCode(c.Response().Status)
+			spanStatus, spanMessage := semconv.SpanStatusFromHTTPStatusCode(c.Response().Status)
 			span.SetAttributes(attrs...)
 			span.SetStatus(spanStatus, spanMessage)
 

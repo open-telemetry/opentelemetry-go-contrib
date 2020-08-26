@@ -24,9 +24,9 @@ import (
 
 	muxtrace "go.opentelemetry.io/contrib/instrumentation/github.com/gorilla/mux"
 	otelglobal "go.opentelemetry.io/otel/api/global"
-	otelkv "go.opentelemetry.io/otel/api/kv"
 	oteltrace "go.opentelemetry.io/otel/api/trace"
 	"go.opentelemetry.io/otel/exporters/stdout"
+	"go.opentelemetry.io/otel/label"
 	sdktrace "go.opentelemetry.io/otel/sdk/trace"
 )
 
@@ -66,7 +66,7 @@ func initTracer() {
 }
 
 func getUser(ctx context.Context, id string) string {
-	_, span := tracer.Start(ctx, "getUser", oteltrace.WithAttributes(otelkv.String("id", id)))
+	_, span := tracer.Start(ctx, "getUser", oteltrace.WithAttributes(label.String("id", id)))
 	defer span.End()
 	if id == "123" {
 		return "muxtrace tester"

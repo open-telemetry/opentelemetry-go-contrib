@@ -32,14 +32,14 @@ import (
 
 	"go.opentelemetry.io/contrib/instrumentation/host"
 	"go.opentelemetry.io/contrib/internal/metric"
-	"go.opentelemetry.io/otel/api/kv"
+	"go.opentelemetry.io/otel/label"
 )
 
-func getMetric(impl *metric.MeterImpl, name string, label kv.KeyValue) float64 {
+func getMetric(impl *metric.MeterImpl, name string, lbl label.KeyValue) float64 {
 	for _, b := range impl.MeasurementBatches {
 		foundLabel := false
 		for _, haveLabel := range b.Labels {
-			if haveLabel != label {
+			if haveLabel != lbl {
 				continue
 			}
 			foundLabel = true

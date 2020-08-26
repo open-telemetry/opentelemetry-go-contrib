@@ -28,11 +28,11 @@ import (
 
 	"go.opentelemetry.io/otel/api/correlation"
 	"go.opentelemetry.io/otel/api/global"
-	"go.opentelemetry.io/otel/api/kv"
-	"go.opentelemetry.io/otel/api/standard"
 	"go.opentelemetry.io/otel/api/trace"
 	"go.opentelemetry.io/otel/exporters/stdout"
+	"go.opentelemetry.io/otel/label"
 	sdktrace "go.opentelemetry.io/otel/sdk/trace"
+	"go.opentelemetry.io/otel/semconv"
 )
 
 func initTracer() {
@@ -61,27 +61,27 @@ func main() {
 	client := http.Client{Transport: otelhttp.NewTransport(http.DefaultTransport)}
 
 	ctx := correlation.NewContext(context.Background(),
-		kv.String("username", "donuts"),
+		label.String("username", "donuts"),
 	)
 
 	var body []byte
 
 	tr := global.Tracer("example/client")
-	err := tr.WithSpan(ctx, "say hello",
-		func(ctx context.Context) error {
-			req, _ := http.NewRequestWithContext(ctx, "GET", *url, nil)
+	err := func(ctx context.Context) error {
+		ctx, span := tr.Start(ctx, "say hello", trace.WithAttributes(semconv.PeerServiceKey.String("ExampleService")))
+		defer span.End()
+		req, _ := http.NewRequestWithContext(ctx, "GET", *url, nil)
 
-			fmt.Printf("Sending request...\n")
-			res, err := client.Do(req)
-			if err != nil {
-				panic(err)
-			}
-			body, err = ioutil.ReadAll(res.Body)
-			_ = res.Body.Close()
+		fmt.Printf("Sending request...\n")
+		res, err := client.Do(req)
+		if err != nil {
+			panic(err)
+		}
+		body, err = ioutil.ReadAll(res.Body)
+		_ = res.Body.Close()
 
-			return err
-		},
-		trace.WithAttributes(standard.PeerServiceKey.String("ExampleService")))
+		return err
+	}(ctx)
 
 	if err != nil {
 		panic(err)

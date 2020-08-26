@@ -21,9 +21,9 @@ import (
 
 	"go.opentelemetry.io/otel/api/correlation"
 	"go.opentelemetry.io/otel/api/global"
-	"go.opentelemetry.io/otel/api/kv"
 	"go.opentelemetry.io/otel/api/propagation"
 	"go.opentelemetry.io/otel/api/trace"
+	"go.opentelemetry.io/otel/label"
 )
 
 // Option is a function that allows configuration of the grpc Extract()
@@ -78,18 +78,18 @@ func Inject(ctx context.Context, metadata *metadata.MD, opts ...Option) {
 // Extract returns the correlation context and span context that
 // another service encoded in the gRPC metadata object with Inject.
 // This function is meant to be used on incoming requests.
-func Extract(ctx context.Context, metadata *metadata.MD, opts ...Option) ([]kv.KeyValue, trace.SpanContext) {
+func Extract(ctx context.Context, metadata *metadata.MD, opts ...Option) ([]label.KeyValue, trace.SpanContext) {
 	c := newConfig(opts)
 	ctx = propagation.ExtractHTTP(ctx, c.propagators, &metadataSupplier{
 		metadata: metadata,
 	})
 
 	spanContext := trace.RemoteSpanContextFromContext(ctx)
-	var correlationCtxKVs []kv.KeyValue
-	correlation.MapFromContext(ctx).Foreach(func(kv kv.KeyValue) bool {
-		correlationCtxKVs = append(correlationCtxKVs, kv)
+	var correlationCtxLabels []label.KeyValue
+	correlation.MapFromContext(ctx).Foreach(func(l label.KeyValue) bool {
+		correlationCtxLabels = append(correlationCtxLabels, l)
 		return true
 	})
 
-	return correlationCtxKVs, spanContext
+	return correlationCtxLabels, spanContext
 }

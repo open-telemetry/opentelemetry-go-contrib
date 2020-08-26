@@ -27,9 +27,9 @@ import (
 
 	"go.opentelemetry.io/contrib"
 	"go.opentelemetry.io/otel/api/global"
-	"go.opentelemetry.io/otel/api/kv"
 	"go.opentelemetry.io/otel/api/metric"
 	"go.opentelemetry.io/otel/api/unit"
+	"go.opentelemetry.io/otel/label"
 )
 
 // Host reports the work-in-progress conventional host metrics specified by OpenTelemetry
@@ -68,20 +68,20 @@ func (o metricProviderOption) ApplyHost(c *Config) {
 var (
 	// Label sets for CPU time measurements.
 
-	LabelCPUTimeUser   = []kv.KeyValue{kv.String("state", "user")}
-	LabelCPUTimeSystem = []kv.KeyValue{kv.String("state", "system")}
-	LabelCPUTimeOther  = []kv.KeyValue{kv.String("state", "other")}
-	LabelCPUTimeIdle   = []kv.KeyValue{kv.String("state", "idle")}
+	LabelCPUTimeUser   = []label.KeyValue{label.String("state", "user")}
+	LabelCPUTimeSystem = []label.KeyValue{label.String("state", "system")}
+	LabelCPUTimeOther  = []label.KeyValue{label.String("state", "other")}
+	LabelCPUTimeIdle   = []label.KeyValue{label.String("state", "idle")}
 
 	// Label sets used for Memory measurements.
 
-	LabelMemoryAvailable = []kv.KeyValue{kv.String("state", "available")}
-	LabelMemoryUsed      = []kv.KeyValue{kv.String("state", "used")}
+	LabelMemoryAvailable = []label.KeyValue{label.String("state", "available")}
+	LabelMemoryUsed      = []label.KeyValue{label.String("state", "used")}
 
 	// Label sets used for Network measurements.
 
-	LabelNetworkTransmit = []kv.KeyValue{kv.String("direction", "transmit")}
-	LabelNetworkReceive  = []kv.KeyValue{kv.String("direction", "receive")}
+	LabelNetworkTransmit = []label.KeyValue{label.String("direction", "transmit")}
+	LabelNetworkReceive  = []label.KeyValue{label.String("direction", "receive")}
 )
 
 // configure computes a Config from a list of Options.

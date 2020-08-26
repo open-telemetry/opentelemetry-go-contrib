@@ -28,12 +28,13 @@ import (
 	"github.com/prometheus/prometheus/prompb"
 
 	"go.opentelemetry.io/otel/api/global"
-	"go.opentelemetry.io/otel/api/label"
 	apimetric "go.opentelemetry.io/otel/api/metric"
+	"go.opentelemetry.io/otel/label"
 	"go.opentelemetry.io/otel/sdk/export/metric"
 	export "go.opentelemetry.io/otel/sdk/export/metric"
 	"go.opentelemetry.io/otel/sdk/export/metric/aggregation"
 	"go.opentelemetry.io/otel/sdk/metric/controller/push"
+	"go.opentelemetry.io/otel/sdk/metric/processor/basic"
 	"go.opentelemetry.io/otel/sdk/metric/selector/simple"
 )
 
@@ -93,7 +94,10 @@ func NewExportPipeline(config Config, options ...push.Option) (*push.Controller,
 	}
 
 	pusher := push.New(
-		simple.NewWithHistogramDistribution(config.HistogramBoundaries),
+		basic.New(
+			simple.NewWithHistogramDistribution(config.HistogramBoundaries),
+			exporter,
+		),
 		exporter,
 		options...,
 	)

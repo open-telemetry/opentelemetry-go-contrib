@@ -18,8 +18,7 @@ import (
 	"bytes"
 	"sync"
 
-	"go.opentelemetry.io/otel/api/kv"
-	"go.opentelemetry.io/otel/api/label"
+	"go.opentelemetry.io/otel/label"
 )
 
 // LabelEncoder encodes metric labels in the dogstatsd syntax.
@@ -59,7 +58,7 @@ func (e *LabelEncoder) Encode(iter label.Iterator) string {
 	return buf.String()
 }
 
-func (e *LabelEncoder) encodeOne(buf *bytes.Buffer, kv kv.KeyValue) {
+func (e *LabelEncoder) encodeOne(buf *bytes.Buffer, kv label.KeyValue) {
 	if buf.Len() != 0 {
 		_, _ = buf.WriteRune(',')
 	}
