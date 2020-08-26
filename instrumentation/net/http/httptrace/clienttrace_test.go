@@ -23,20 +23,20 @@ import (
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 
+	"go.opentelemetry.io/contrib/instrumentation/net/http/httptrace"
 	"go.opentelemetry.io/otel/api/global"
-	"go.opentelemetry.io/otel/api/kv"
-	"go.opentelemetry.io/otel/api/trace/testtrace"
-	"go.opentelemetry.io/otel/instrumentation/httptrace"
+	"go.opentelemetry.io/otel/api/trace/tracetest"
+	"go.opentelemetry.io/otel/label"
 )
 
-type SpanRecorder map[string]*testtrace.Span
+type SpanRecorder map[string]*tracetest.Span
 
-func (sr *SpanRecorder) OnStart(span *testtrace.Span) {}
-func (sr *SpanRecorder) OnEnd(span *testtrace.Span)   { (*sr)[span.Name()] = span }
+func (sr *SpanRecorder) OnStart(span *tracetest.Span) {}
+func (sr *SpanRecorder) OnEnd(span *tracetest.Span)   { (*sr)[span.Name()] = span }
 
 func TestHTTPRequestWithClientTrace(t *testing.T) {
 	sr := SpanRecorder{}
-	tp := testtrace.NewProvider(testtrace.WithSpanRecorder(&sr))
+	tp := tracetest.NewProvider(tracetest.WithSpanRecorder(&sr))
 	global.SetTraceProvider(tp)
 	tr := tp.Tracer("httptrace/client")
 
@@ -49,40 +49,41 @@ func TestHTTPRequestWithClientTrace(t *testing.T) {
 	address := ts.Listener.Addr()
 
 	client := ts.Client()
-	err := tr.WithSpan(context.Background(), "test",
-		func(ctx context.Context) error {
-			req, _ := http.NewRequest("GET", ts.URL, nil)
-			_, req = httptrace.W3C(ctx, req)
+	err := func(ctx context.Context) error {
+		ctx, span := tr.Start(ctx, "test")
+		defer span.End()
+		req, _ := http.NewRequest("GET", ts.URL, nil)
+		_, req = httptrace.W3C(ctx, req)
 
-			res, err := client.Do(req)
-			if err != nil {
-				t.Fatalf("Request failed: %s", err.Error())
-			}
-			_ = res.Body.Close()
+		res, err := client.Do(req)
+		if err != nil {
+			t.Fatalf("Request failed: %s", err.Error())
+		}
+		_ = res.Body.Close()
 
-			return nil
-		})
+		return nil
+	}(context.Background())
 	if err != nil {
 		panic("unexpected error in http request: " + err.Error())
 	}
 
 	testLen := []struct {
 		name       string
-		attributes map[kv.Key]kv.Value
+		attributes map[label.Key]label.Value
 		parent     string
 	}{
 		{
 			name: "http.connect",
-			attributes: map[kv.Key]kv.Value{
-				kv.Key("http.remote"): kv.StringValue(address.String()),
+			attributes: map[label.Key]label.Value{
+				label.Key("http.remote"): label.StringValue(address.String()),
 			},
 			parent: "http.getconn",
 		},
 		{
 			name: "http.getconn",
-			attributes: map[kv.Key]kv.Value{
-				kv.Key("http.remote"): kv.StringValue(address.String()),
-				kv.Key("http.host"):   kv.StringValue(address.String()),
+			attributes: map[label.Key]label.Value{
+				label.Key("http.remote"): label.StringValue(address.String()),
+				label.Key("http.host"):   label.StringValue(address.String()),
 			},
 			parent: "test",
 		},
@@ -116,7 +117,7 @@ func TestHTTPRequestWithClientTrace(t *testing.T) {
 			attrs := span.Attributes()
 			if tl.name == "http.getconn" {
 				// http.local attribute uses a non-deterministic port.
-				local := kv.Key("http.local")
+				local := label.Key("http.local")
 				assert.Contains(t, attrs, local)
 				delete(attrs, local)
 			}
@@ -125,18 +126,18 @@ func TestHTTPRequestWithClientTrace(t *testing.T) {
 	}
 }
 
-type MultiSpanRecorder map[string][]*testtrace.Span
+type MultiSpanRecorder map[string][]*tracetest.Span
 
 func (sr *MultiSpanRecorder) Reset()                       { (*sr) = MultiSpanRecorder{} }
-func (sr *MultiSpanRecorder) OnStart(span *testtrace.Span) {}
-func (sr *MultiSpanRecorder) OnEnd(span *testtrace.Span) {
+func (sr *MultiSpanRecorder) OnStart(span *tracetest.Span) {}
+func (sr *MultiSpanRecorder) OnEnd(span *tracetest.Span) {
 	(*sr)[span.Name()] = append((*sr)[span.Name()], span)
 }
 
 func TestConcurrentConnectionStart(t *testing.T) {
 	sr := MultiSpanRecorder{}
 	global.SetTraceProvider(
-		testtrace.NewProvider(testtrace.WithSpanRecorder(&sr)),
+		tracetest.NewProvider(tracetest.WithSpanRecorder(&sr)),
 	)
 	ct := httptrace.NewClientTrace(context.Background())
 	tts := []struct {
@@ -199,9 +200,9 @@ func TestConcurrentConnectionStart(t *testing.T) {
 		},
 	}
 
-	expectedRemotes := []kv.KeyValue{
-		kv.String("http.remote", "127.0.0.1:3000"),
-		kv.String("http.remote", "[::1]:3000"),
+	expectedRemotes := []label.KeyValue{
+		label.String("http.remote", "127.0.0.1:3000"),
+		label.String("http.remote", "[::1]:3000"),
 	}
 	for _, tt := range tts {
 		t.Run(tt.name, func(t *testing.T) {
@@ -210,10 +211,10 @@ func TestConcurrentConnectionStart(t *testing.T) {
 			spans := sr["http.connect"]
 			require.Len(t, spans, 2)
 
-			var gotRemotes []kv.KeyValue
+			var gotRemotes []label.KeyValue
 			for _, span := range spans {
 				for k, v := range span.Attributes() {
-					gotRemotes = append(gotRemotes, kv.Any(string(k), v.AsInterface()))
+					gotRemotes = append(gotRemotes, label.Any(string(k), v.AsInterface()))
 				}
 			}
 			assert.ElementsMatch(t, expectedRemotes, gotRemotes)
@@ -224,7 +225,7 @@ func TestConcurrentConnectionStart(t *testing.T) {
 func TestEndBeforeStartCreatesSpan(t *testing.T) {
 	sr := MultiSpanRecorder{}
 	global.SetTraceProvider(
-		testtrace.NewProvider(testtrace.WithSpanRecorder(&sr)),
+		tracetest.NewProvider(tracetest.WithSpanRecorder(&sr)),
 	)
 
 	ct := httptrace.NewClientTrace(context.Background())

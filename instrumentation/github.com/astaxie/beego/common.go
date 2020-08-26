@@ -17,7 +17,7 @@ package beego
 import (
 	"net/http"
 
-	"go.opentelemetry.io/otel/api/kv"
+	"go.opentelemetry.io/otel/label"
 )
 
 // ------------------------------------------ Constants
@@ -33,13 +33,13 @@ const (
 	renderStringSpanName   = "beego.render.string"
 	renderBytesSpanName    = "beego.render.bytes"
 
-	templateKey = kv.Key("go.template")
+	templateKey = label.Key("go.template")
 )
 
 // ------------------------------------------ Attribute Functions
 
 // Template returns the template name as a KeyValue pair.
-func Template(name string) kv.KeyValue {
+func Template(name string) label.KeyValue {
 	return templateKey.String(name)
 }
 

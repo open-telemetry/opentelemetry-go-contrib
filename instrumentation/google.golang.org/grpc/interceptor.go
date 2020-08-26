@@ -30,12 +30,13 @@ import (
 	"google.golang.org/grpc/status"
 
 	"go.opentelemetry.io/otel/api/correlation"
-	"go.opentelemetry.io/otel/api/kv"
-	"go.opentelemetry.io/otel/api/standard"
 	"go.opentelemetry.io/otel/api/trace"
+	"go.opentelemetry.io/otel/codes"
+	"go.opentelemetry.io/otel/label"
+	"go.opentelemetry.io/otel/semconv"
 )
 
-type messageType kv.KeyValue
+type messageType label.KeyValue
 
 // Event adds an event of the messageType to the span associated with the
 // passed context with id and size (if message is a proto message).
@@ -43,21 +44,21 @@ func (m messageType) Event(ctx context.Context, id int, message interface{}) {
 	span := trace.SpanFromContext(ctx)
 	if p, ok := message.(proto.Message); ok {
 		span.AddEvent(ctx, "message",
-			kv.KeyValue(m),
-			standard.RPCMessageIDKey.Int(id),
-			standard.RPCMessageUncompressedSizeKey.Int(proto.Size(p)),
+			label.KeyValue(m),
+			semconv.RPCMessageIDKey.Int(id),
+			semconv.RPCMessageUncompressedSizeKey.Int(proto.Size(p)),
 		)
 	} else {
 		span.AddEvent(ctx, "message",
-			kv.KeyValue(m),
-			standard.RPCMessageIDKey.Int(id),
+			label.KeyValue(m),
+			semconv.RPCMessageIDKey.Int(id),
 		)
 	}
 }
 
 var (
-	messageSent     = messageType(standard.RPCMessageTypeSent)
-	messageReceived = messageType(standard.RPCMessageTypeReceived)
+	messageSent     = messageType(semconv.RPCMessageTypeSent)
+	messageReceived = messageType(semconv.RPCMessageTypeReceived)
 )
 
 // UnaryClientInterceptor returns a grpc.UnaryClientInterceptor suitable
@@ -95,7 +96,7 @@ func UnaryClientInterceptor(tracer trace.Tracer, opts ...Option) grpc.UnaryClien
 
 		if err != nil {
 			s, _ := status.FromError(err)
-			span.SetStatus(s.Code(), s.Message())
+			span.SetStatus(codes.Code(s.Code()), s.Message())
 		}
 
 		return err
@@ -269,7 +270,7 @@ func StreamClientInterceptor(tracer trace.Tracer, opts ...Option) grpc.StreamCli
 
 			if err != nil {
 				s, _ := status.FromError(err)
-				span.SetStatus(s.Code(), s.Message())
+				span.SetStatus(codes.Code(s.Code()), s.Message())
 			}
 
 			span.End()
@@ -310,7 +311,7 @@ func UnaryServerInterceptor(tracer trace.Tracer, opts ...Option) grpc.UnaryServe
 		resp, err := handler(ctx, req)
 		if err != nil {
 			s, _ := status.FromError(err)
-			span.SetStatus(s.Code(), s.Message())
+			span.SetStatus(codes.Code(s.Code()), s.Message())
 			messageSent.Event(ctx, 1, s.Proto())
 		} else {
 			messageSent.Event(ctx, 1, resp)
@@ -393,7 +394,7 @@ func StreamServerInterceptor(tracer trace.Tracer, opts ...Option) grpc.StreamSer
 
 		if err != nil {
 			s, _ := status.FromError(err)
-			span.SetStatus(s.Code(), s.Message())
+			span.SetStatus(codes.Code(s.Code()), s.Message())
 		}
 
 		return err
@@ -402,8 +403,8 @@ func StreamServerInterceptor(tracer trace.Tracer, opts ...Option) grpc.StreamSer
 
 // spanInfo returns a span name and all appropriate attributes from the gRPC
 // method and peer address.
-func spanInfo(fullMethod, peerAddress string) (string, []kv.KeyValue) {
-	attrs := []kv.KeyValue{standard.RPCSystemGRPC}
+func spanInfo(fullMethod, peerAddress string) (string, []label.KeyValue) {
+	attrs := []label.KeyValue{semconv.RPCSystemGRPC}
 	name, mAttrs := parseFullMethod(fullMethod)
 	attrs = append(attrs, mAttrs...)
 	attrs = append(attrs, peerAttr(peerAddress)...)
@@ -411,19 +412,19 @@ func spanInfo(fullMethod, peerAddress string) (string, []kv.KeyValue) {
 }
 
 // peerAttr returns attributes about the peer address.
-func peerAttr(addr string) []kv.KeyValue {
+func peerAttr(addr string) []label.KeyValue {
 	host, port, err := net.SplitHostPort(addr)
 	if err != nil {
-		return []kv.KeyValue(nil)
+		return []label.KeyValue(nil)
 	}
 
 	if host == "" {
 		host = "127.0.0.1"
 	}
 
-	return []kv.KeyValue{
-		standard.NetPeerIPKey.String(host),
-		standard.NetPeerPortKey.String(port),
+	return []label.KeyValue{
+		semconv.NetPeerIPKey.String(host),
+		semconv.NetPeerPortKey.String(port),
 	}
 }
 
@@ -437,22 +438,22 @@ func peerFromCtx(ctx context.Context) string {
 }
 
 // parseFullMethod returns a span name following the OpenTelemetry semantic
-// conventions as well as all applicable span kv.KeyValue attributes based
+// conventions as well as all applicable span label.KeyValue attributes based
 // on a gRPC's FullMethod.
-func parseFullMethod(fullMethod string) (string, []kv.KeyValue) {
+func parseFullMethod(fullMethod string) (string, []label.KeyValue) {
 	name := strings.TrimLeft(fullMethod, "/")
 	parts := strings.SplitN(name, "/", 2)
 	if len(parts) != 2 {
 		// Invalid format, does not follow `/package.service/method`.
-		return name, []kv.KeyValue(nil)
+		return name, []label.KeyValue(nil)
 	}
 
-	var attrs []kv.KeyValue
+	var attrs []label.KeyValue
 	if service := parts[0]; service != "" {
-		attrs = append(attrs, standard.RPCServiceKey.String(service))
+		attrs = append(attrs, semconv.RPCServiceKey.String(service))
 	}
 	if method := parts[1]; method != "" {
-		attrs = append(attrs, standard.RPCMethodKey.String(method))
+		attrs = append(attrs, semconv.RPCMethodKey.String(method))
 	}
 	return name, attrs
 }

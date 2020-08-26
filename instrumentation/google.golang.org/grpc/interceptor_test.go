@@ -19,8 +19,8 @@ import (
 	"testing"
 	"time"
 
-	"go.opentelemetry.io/otel/api/standard"
-	"go.opentelemetry.io/otel/api/trace/testtrace"
+	"go.opentelemetry.io/otel/api/trace/tracetest"
+	"go.opentelemetry.io/otel/semconv"
 
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
@@ -32,27 +32,28 @@ import (
 	"google.golang.org/grpc/metadata"
 	"google.golang.org/grpc/status"
 
-	"go.opentelemetry.io/otel/api/kv"
+	otelcodes "go.opentelemetry.io/otel/codes"
+	"go.opentelemetry.io/otel/label"
 )
 
 type SpanRecorder struct {
 	mu    sync.RWMutex
-	spans map[string]*testtrace.Span
+	spans map[string]*tracetest.Span
 }
 
 func NewSpanRecorder() *SpanRecorder {
-	return &SpanRecorder{spans: make(map[string]*testtrace.Span)}
+	return &SpanRecorder{spans: make(map[string]*tracetest.Span)}
 }
 
-func (sr *SpanRecorder) OnStart(span *testtrace.Span) {}
+func (sr *SpanRecorder) OnStart(span *tracetest.Span) {}
 
-func (sr *SpanRecorder) OnEnd(span *testtrace.Span) {
+func (sr *SpanRecorder) OnEnd(span *tracetest.Span) {
 	sr.mu.Lock()
 	defer sr.mu.Unlock()
 	sr.spans[span.Name()] = span
 }
 
-func (sr *SpanRecorder) Get(name string) (*testtrace.Span, bool) {
+func (sr *SpanRecorder) Get(name string) (*tracetest.Span, bool) {
 	sr.mu.RLock()
 	defer sr.mu.RUnlock()
 	s, ok := sr.spans[name]
@@ -87,7 +88,7 @@ func TestUnaryClientInterceptor(t *testing.T) {
 	}
 
 	sr := NewSpanRecorder()
-	tp := testtrace.NewProvider(testtrace.WithSpanRecorder(sr))
+	tp := tracetest.NewProvider(tracetest.WithSpanRecorder(sr))
 	tracer := tp.Tracer("grpc/client")
 	unaryInterceptor := UnaryClientInterceptor(tracer)
 
@@ -98,119 +99,119 @@ func TestUnaryClientInterceptor(t *testing.T) {
 	checks := []struct {
 		method       string
 		name         string
-		expectedAttr map[kv.Key]kv.Value
-		eventsAttr   []map[kv.Key]kv.Value
+		expectedAttr map[label.Key]label.Value
+		eventsAttr   []map[label.Key]label.Value
 	}{
 		{
 			method: "/github.com.serviceName/bar",
 			name:   "github.com.serviceName/bar",
-			expectedAttr: map[kv.Key]kv.Value{
-				standard.RPCSystemKey:   kv.StringValue("grpc"),
-				standard.RPCServiceKey:  kv.StringValue("github.com.serviceName"),
-				standard.RPCMethodKey:   kv.StringValue("bar"),
-				standard.NetPeerIPKey:   kv.StringValue("fake"),
-				standard.NetPeerPortKey: kv.StringValue("connection"),
+			expectedAttr: map[label.Key]label.Value{
+				semconv.RPCSystemKey:   label.StringValue("grpc"),
+				semconv.RPCServiceKey:  label.StringValue("github.com.serviceName"),
+				semconv.RPCMethodKey:   label.StringValue("bar"),
+				semconv.NetPeerIPKey:   label.StringValue("fake"),
+				semconv.NetPeerPortKey: label.StringValue("connection"),
 			},
-			eventsAttr: []map[kv.Key]kv.Value{
+			eventsAttr: []map[label.Key]label.Value{
 				{
-					standard.RPCMessageTypeKey:             kv.StringValue("SENT"),
-					standard.RPCMessageIDKey:               kv.IntValue(1),
-					standard.RPCMessageUncompressedSizeKey: kv.IntValue(proto.Size(proto.Message(req))),
+					semconv.RPCMessageTypeKey:             label.StringValue("SENT"),
+					semconv.RPCMessageIDKey:               label.IntValue(1),
+					semconv.RPCMessageUncompressedSizeKey: label.IntValue(proto.Size(proto.Message(req))),
 				},
 				{
-					standard.RPCMessageTypeKey:             kv.StringValue("RECEIVED"),
-					standard.RPCMessageIDKey:               kv.IntValue(1),
-					standard.RPCMessageUncompressedSizeKey: kv.IntValue(proto.Size(proto.Message(reply))),
+					semconv.RPCMessageTypeKey:             label.StringValue("RECEIVED"),
+					semconv.RPCMessageIDKey:               label.IntValue(1),
+					semconv.RPCMessageUncompressedSizeKey: label.IntValue(proto.Size(proto.Message(reply))),
 				},
 			},
 		},
 		{
 			method: "/serviceName/bar",
 			name:   "serviceName/bar",
-			expectedAttr: map[kv.Key]kv.Value{
-				standard.RPCSystemKey:   kv.StringValue("grpc"),
-				standard.RPCServiceKey:  kv.StringValue("serviceName"),
-				standard.RPCMethodKey:   kv.StringValue("bar"),
-				standard.NetPeerIPKey:   kv.StringValue("fake"),
-				standard.NetPeerPortKey: kv.StringValue("connection"),
+			expectedAttr: map[label.Key]label.Value{
+				semconv.RPCSystemKey:   label.StringValue("grpc"),
+				semconv.RPCServiceKey:  label.StringValue("serviceName"),
+				semconv.RPCMethodKey:   label.StringValue("bar"),
+				semconv.NetPeerIPKey:   label.StringValue("fake"),
+				semconv.NetPeerPortKey: label.StringValue("connection"),
 			},
-			eventsAttr: []map[kv.Key]kv.Value{
+			eventsAttr: []map[label.Key]label.Value{
 				{
-					standard.RPCMessageTypeKey:             kv.StringValue("SENT"),
-					standard.RPCMessageIDKey:               kv.IntValue(1),
-					standard.RPCMessageUncompressedSizeKey: kv.IntValue(proto.Size(proto.Message(req))),
+					semconv.RPCMessageTypeKey:             label.StringValue("SENT"),
+					semconv.RPCMessageIDKey:               label.IntValue(1),
+					semconv.RPCMessageUncompressedSizeKey: label.IntValue(proto.Size(proto.Message(req))),
 				},
 				{
-					standard.RPCMessageTypeKey:             kv.StringValue("RECEIVED"),
-					standard.RPCMessageIDKey:               kv.IntValue(1),
-					standard.RPCMessageUncompressedSizeKey: kv.IntValue(proto.Size(proto.Message(reply))),
+					semconv.RPCMessageTypeKey:             label.StringValue("RECEIVED"),
+					semconv.RPCMessageIDKey:               label.IntValue(1),
+					semconv.RPCMessageUncompressedSizeKey: label.IntValue(proto.Size(proto.Message(reply))),
 				},
 			},
 		},
 		{
 			method: "serviceName/bar",
 			name:   "serviceName/bar",
-			expectedAttr: map[kv.Key]kv.Value{
-				standard.RPCSystemKey:   kv.StringValue("grpc"),
-				standard.RPCServiceKey:  kv.StringValue("serviceName"),
-				standard.RPCMethodKey:   kv.StringValue("bar"),
-				standard.NetPeerIPKey:   kv.StringValue("fake"),
-				standard.NetPeerPortKey: kv.StringValue("connection"),
+			expectedAttr: map[label.Key]label.Value{
+				semconv.RPCSystemKey:   label.StringValue("grpc"),
+				semconv.RPCServiceKey:  label.StringValue("serviceName"),
+				semconv.RPCMethodKey:   label.StringValue("bar"),
+				semconv.NetPeerIPKey:   label.StringValue("fake"),
+				semconv.NetPeerPortKey: label.StringValue("connection"),
 			},
-			eventsAttr: []map[kv.Key]kv.Value{
+			eventsAttr: []map[label.Key]label.Value{
 				{
-					standard.RPCMessageTypeKey:             kv.StringValue("SENT"),
-					standard.RPCMessageIDKey:               kv.IntValue(1),
-					standard.RPCMessageUncompressedSizeKey: kv.IntValue(proto.Size(proto.Message(req))),
+					semconv.RPCMessageTypeKey:             label.StringValue("SENT"),
+					semconv.RPCMessageIDKey:               label.IntValue(1),
+					semconv.RPCMessageUncompressedSizeKey: label.IntValue(proto.Size(proto.Message(req))),
 				},
 				{
-					standard.RPCMessageTypeKey:             kv.StringValue("RECEIVED"),
-					standard.RPCMessageIDKey:               kv.IntValue(1),
-					standard.RPCMessageUncompressedSizeKey: kv.IntValue(proto.Size(proto.Message(reply))),
+					semconv.RPCMessageTypeKey:             label.StringValue("RECEIVED"),
+					semconv.RPCMessageIDKey:               label.IntValue(1),
+					semconv.RPCMessageUncompressedSizeKey: label.IntValue(proto.Size(proto.Message(reply))),
 				},
 			},
 		},
 		{
 			method: "invalidName",
 			name:   "invalidName",
-			expectedAttr: map[kv.Key]kv.Value{
-				standard.RPCSystemKey:   kv.StringValue("grpc"),
-				standard.NetPeerIPKey:   kv.StringValue("fake"),
-				standard.NetPeerPortKey: kv.StringValue("connection"),
+			expectedAttr: map[label.Key]label.Value{
+				semconv.RPCSystemKey:   label.StringValue("grpc"),
+				semconv.NetPeerIPKey:   label.StringValue("fake"),
+				semconv.NetPeerPortKey: label.StringValue("connection"),
 			},
-			eventsAttr: []map[kv.Key]kv.Value{
+			eventsAttr: []map[label.Key]label.Value{
 				{
-					standard.RPCMessageTypeKey:             kv.StringValue("SENT"),
-					standard.RPCMessageIDKey:               kv.IntValue(1),
-					standard.RPCMessageUncompressedSizeKey: kv.IntValue(proto.Size(proto.Message(req))),
+					semconv.RPCMessageTypeKey:             label.StringValue("SENT"),
+					semconv.RPCMessageIDKey:               label.IntValue(1),
+					semconv.RPCMessageUncompressedSizeKey: label.IntValue(proto.Size(proto.Message(req))),
 				},
 				{
-					standard.RPCMessageTypeKey:             kv.StringValue("RECEIVED"),
-					standard.RPCMessageIDKey:               kv.IntValue(1),
-					standard.RPCMessageUncompressedSizeKey: kv.IntValue(proto.Size(proto.Message(reply))),
+					semconv.RPCMessageTypeKey:             label.StringValue("RECEIVED"),
+					semconv.RPCMessageIDKey:               label.IntValue(1),
+					semconv.RPCMessageUncompressedSizeKey: label.IntValue(proto.Size(proto.Message(reply))),
 				},
 			},
 		},
 		{
 			method: "/github.com.foo.serviceName_123/method",
 			name:   "github.com.foo.serviceName_123/method",
-			expectedAttr: map[kv.Key]kv.Value{
-				standard.RPCSystemKey:   kv.StringValue("grpc"),
-				standard.RPCServiceKey:  kv.StringValue("github.com.foo.serviceName_123"),
-				standard.RPCMethodKey:   kv.StringValue("method"),
-				standard.NetPeerIPKey:   kv.StringValue("fake"),
-				standard.NetPeerPortKey: kv.StringValue("connection"),
+			expectedAttr: map[label.Key]label.Value{
+				semconv.RPCSystemKey:   label.StringValue("grpc"),
+				semconv.RPCServiceKey:  label.StringValue("github.com.foo.serviceName_123"),
+				semconv.RPCMethodKey:   label.StringValue("method"),
+				semconv.NetPeerIPKey:   label.StringValue("fake"),
+				semconv.NetPeerPortKey: label.StringValue("connection"),
 			},
-			eventsAttr: []map[kv.Key]kv.Value{
+			eventsAttr: []map[label.Key]label.Value{
 				{
-					standard.RPCMessageTypeKey:             kv.StringValue("SENT"),
-					standard.RPCMessageIDKey:               kv.IntValue(1),
-					standard.RPCMessageUncompressedSizeKey: kv.IntValue(proto.Size(proto.Message(req))),
+					semconv.RPCMessageTypeKey:             label.StringValue("SENT"),
+					semconv.RPCMessageIDKey:               label.IntValue(1),
+					semconv.RPCMessageUncompressedSizeKey: label.IntValue(proto.Size(proto.Message(req))),
 				},
 				{
-					standard.RPCMessageTypeKey:             kv.StringValue("RECEIVED"),
-					standard.RPCMessageIDKey:               kv.IntValue(1),
-					standard.RPCMessageUncompressedSizeKey: kv.IntValue(proto.Size(proto.Message(reply))),
+					semconv.RPCMessageTypeKey:             label.StringValue("RECEIVED"),
+					semconv.RPCMessageIDKey:               label.IntValue(1),
+					semconv.RPCMessageUncompressedSizeKey: label.IntValue(proto.Size(proto.Message(reply))),
 				},
 			},
 		},
@@ -229,8 +230,8 @@ func TestUnaryClientInterceptor(t *testing.T) {
 	}
 }
 
-func eventAttrMap(events []testtrace.Event) []map[kv.Key]kv.Value {
-	maps := make([]map[kv.Key]kv.Value, len(events))
+func eventAttrMap(events []tracetest.Event) []map[label.Key]label.Value {
+	maps := make([]map[label.Key]label.Value, len(events))
 	for i, event := range events {
 		maps[i] = event.Attributes
 	}
@@ -257,7 +258,7 @@ func TestStreamClientInterceptor(t *testing.T) {
 
 	// tracer
 	sr := NewSpanRecorder()
-	tp := testtrace.NewProvider(testtrace.WithSpanRecorder(sr))
+	tp := tracetest.NewProvider(tracetest.WithSpanRecorder(sr))
 	tracer := tp.Tracer("grpc/Server")
 	streamCI := StreamClientInterceptor(tracer)
 
@@ -298,7 +299,7 @@ func TestStreamClientInterceptor(t *testing.T) {
 	_ = streamClient.RecvMsg(reply)
 
 	// added retry because span end is called in separate go routine
-	var span *testtrace.Span
+	var span *tracetest.Span
 	for retry := 0; retry < 5; retry++ {
 		span, ok = sr.Get(name)
 		if ok {
@@ -308,12 +309,12 @@ func TestStreamClientInterceptor(t *testing.T) {
 	}
 	require.True(t, ok, "missing span %s", name)
 
-	expectedAttr := map[kv.Key]kv.Value{
-		standard.RPCSystemKey:   kv.StringValue("grpc"),
-		standard.RPCServiceKey:  kv.StringValue("github.com.serviceName"),
-		standard.RPCMethodKey:   kv.StringValue("bar"),
-		standard.NetPeerIPKey:   kv.StringValue("fake"),
-		standard.NetPeerPortKey: kv.StringValue("connection"),
+	expectedAttr := map[label.Key]label.Value{
+		semconv.RPCSystemKey:   label.StringValue("grpc"),
+		semconv.RPCServiceKey:  label.StringValue("github.com.serviceName"),
+		semconv.RPCMethodKey:   label.StringValue("bar"),
+		semconv.NetPeerIPKey:   label.StringValue("fake"),
+		semconv.NetPeerPortKey: label.StringValue("connection"),
 	}
 	assert.Equal(t, expectedAttr, span.Attributes())
 
@@ -321,12 +322,12 @@ func TestStreamClientInterceptor(t *testing.T) {
 	require.Len(t, events, 20)
 	for i := 0; i < 20; i += 2 {
 		msgID := i/2 + 1
-		validate := func(eventName string, attrs map[kv.Key]kv.Value) {
+		validate := func(eventName string, attrs map[label.Key]label.Value) {
 			for k, v := range attrs {
-				if k == standard.RPCMessageTypeKey && v.AsString() != eventName {
+				if k == semconv.RPCMessageTypeKey && v.AsString() != eventName {
 					t.Errorf("invalid event on index: %d expecting %s event, receive %s event", i, eventName, v.AsString())
 				}
-				if k == standard.RPCMessageIDKey && v != kv.IntValue(msgID) {
+				if k == semconv.RPCMessageIDKey && v != label.IntValue(msgID) {
 					t.Errorf("invalid id for message event expected %d received %d", msgID, v.AsInt32())
 				}
 			}
@@ -341,7 +342,7 @@ func TestStreamClientInterceptor(t *testing.T) {
 
 func TestServerInterceptorError(t *testing.T) {
 	sr := NewSpanRecorder()
-	tp := testtrace.NewProvider(testtrace.WithSpanRecorder(sr))
+	tp := tracetest.NewProvider(tracetest.WithSpanRecorder(sr))
 	tracer := tp.Tracer("grpc/Server")
 	usi := UnaryServerInterceptor(tracer)
 	deniedErr := status.Error(codes.PermissionDenied, "PERMISSION_DENIED_TEXT")
@@ -356,13 +357,13 @@ func TestServerInterceptorError(t *testing.T) {
 	if !ok {
 		t.Fatalf("failed to export error span")
 	}
-	assert.Equal(t, span.StatusCode(), codes.PermissionDenied)
+	assert.Equal(t, span.StatusCode(), otelcodes.PermissionDenied)
 	assert.Contains(t, deniedErr.Error(), span.StatusMessage())
 	assert.Len(t, span.Events(), 2)
-	assert.Equal(t, map[kv.Key]kv.Value{
-		kv.Key("message.type"):              kv.StringValue("SENT"),
-		kv.Key("message.id"):                kv.IntValue(1),
-		kv.Key("message.uncompressed_size"): kv.IntValue(26),
+	assert.Equal(t, map[label.Key]label.Value{
+		label.Key("message.type"):              label.StringValue("SENT"),
+		label.Key("message.id"):                label.IntValue(1),
+		label.Key("message.uncompressed_size"): label.IntValue(26),
 	}, span.Events()[1].Attributes)
 }
 
@@ -370,52 +371,52 @@ func TestParseFullMethod(t *testing.T) {
 	tests := []struct {
 		fullMethod string
 		name       string
-		attr       []kv.KeyValue
+		attr       []label.KeyValue
 	}{
 		{
 			fullMethod: "/grpc.test.EchoService/Echo",
 			name:       "grpc.test.EchoService/Echo",
-			attr: []kv.KeyValue{
-				standard.RPCServiceKey.String("grpc.test.EchoService"),
-				standard.RPCMethodKey.String("Echo"),
+			attr: []label.KeyValue{
+				semconv.RPCServiceKey.String("grpc.test.EchoService"),
+				semconv.RPCMethodKey.String("Echo"),
 			},
 		}, {
 			fullMethod: "/com.example.ExampleRmiService/exampleMethod",
 			name:       "com.example.ExampleRmiService/exampleMethod",
-			attr: []kv.KeyValue{
-				standard.RPCServiceKey.String("com.example.ExampleRmiService"),
-				standard.RPCMethodKey.String("exampleMethod"),
+			attr: []label.KeyValue{
+				semconv.RPCServiceKey.String("com.example.ExampleRmiService"),
+				semconv.RPCMethodKey.String("exampleMethod"),
 			},
 		}, {
 			fullMethod: "/MyCalcService.Calculator/Add",
 			name:       "MyCalcService.Calculator/Add",
-			attr: []kv.KeyValue{
-				standard.RPCServiceKey.String("MyCalcService.Calculator"),
-				standard.RPCMethodKey.String("Add"),
+			attr: []label.KeyValue{
+				semconv.RPCServiceKey.String("MyCalcService.Calculator"),
+				semconv.RPCMethodKey.String("Add"),
 			},
 		}, {
 			fullMethod: "/MyServiceReference.ICalculator/Add",
 			name:       "MyServiceReference.ICalculator/Add",
-			attr: []kv.KeyValue{
-				standard.RPCServiceKey.String("MyServiceReference.ICalculator"),
-				standard.RPCMethodKey.String("Add"),
+			attr: []label.KeyValue{
+				semconv.RPCServiceKey.String("MyServiceReference.ICalculator"),
+				semconv.RPCMethodKey.String("Add"),
 			},
 		}, {
 			fullMethod: "/MyServiceWithNoPackage/theMethod",
 			name:       "MyServiceWithNoPackage/theMethod",
-			attr: []kv.KeyValue{
-				standard.RPCServiceKey.String("MyServiceWithNoPackage"),
-				standard.RPCMethodKey.String("theMethod"),
+			attr: []label.KeyValue{
+				semconv.RPCServiceKey.String("MyServiceWithNoPackage"),
+				semconv.RPCMethodKey.String("theMethod"),
 			},
 		}, {
 			fullMethod: "/pkg.srv",
 			name:       "pkg.srv",
-			attr:       []kv.KeyValue(nil),
+			attr:       []label.KeyValue(nil),
 		}, {
 			fullMethod: "/pkg.srv/",
 			name:       "pkg.srv/",
-			attr: []kv.KeyValue{
-				standard.RPCServiceKey.String("pkg.srv"),
+			attr: []label.KeyValue{
+				semconv.RPCServiceKey.String("pkg.srv"),
 			},
 		},
 	}

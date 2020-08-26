@@ -22,8 +22,8 @@ import (
 	"net/http"
 	"strings"
 
-	"go.opentelemetry.io/otel/api/kv"
 	"go.opentelemetry.io/otel/api/trace"
+	"go.opentelemetry.io/otel/label"
 
 	otelhttp "go.opentelemetry.io/contrib/instrumentation/net/http"
 )
@@ -50,7 +50,7 @@ func ExampleNewHandler() {
 		case "":
 			err = fmt.Errorf("expected /hello/:name in %q", s)
 		default:
-			trace.SpanFromContext(ctx).SetAttributes(kv.String("name", pp[1]))
+			trace.SpanFromContext(ctx).SetAttributes(label.String("name", pp[1]))
 		}
 		return pp[1], err
 	}
@@ -62,12 +62,14 @@ func ExampleNewHandler() {
 				ctx := r.Context()
 				var name string
 				// Wrap another function in its own span
-				if err := trace.SpanFromContext(ctx).Tracer().WithSpan(ctx, "figureOutName",
-					func(ctx context.Context) error {
-						var err error
-						name, err = figureOutName(ctx, r.URL.Path[1:])
-						return err
-					}); err != nil {
+				if err := func(ctx context.Context) error {
+					ctx, span := trace.SpanFromContext(ctx).Tracer().Start(ctx, "figureOutName")
+					defer span.End()
+
+					var err error
+					name, err = figureOutName(ctx, r.URL.Path[1:])
+					return err
+				}(ctx); err != nil {
 					log.Println("error figuring out name: ", err)
 					http.Error(w, err.Error(), http.StatusInternalServerError)
 					return

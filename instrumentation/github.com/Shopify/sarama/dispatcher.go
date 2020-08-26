@@ -20,10 +20,10 @@ import (
 
 	"github.com/Shopify/sarama"
 
-	"go.opentelemetry.io/otel/api/kv"
 	"go.opentelemetry.io/otel/api/propagation"
-	"go.opentelemetry.io/otel/api/standard"
 	"go.opentelemetry.io/otel/api/trace"
+	"go.opentelemetry.io/otel/label"
+	"go.opentelemetry.io/otel/semconv"
 )
 
 type consumerMessagesDispatcher interface {
@@ -60,12 +60,12 @@ func (w *consumerMessagesDispatcherWrapper) Run() {
 		parentSpanContext := propagation.ExtractHTTP(context.Background(), w.cfg.Propagators, carrier)
 
 		// Create a span.
-		attrs := []kv.KeyValue{
-			standard.MessagingSystemKey.String("kafka"),
-			standard.MessagingDestinationKindKeyTopic,
-			standard.MessagingDestinationKey.String(msg.Topic),
-			standard.MessagingOperationReceive,
-			standard.MessagingMessageIDKey.String(strconv.FormatInt(msg.Offset, 10)),
+		attrs := []label.KeyValue{
+			semconv.MessagingSystemKey.String("kafka"),
+			semconv.MessagingDestinationKindKeyTopic,
+			semconv.MessagingDestinationKey.String(msg.Topic),
+			semconv.MessagingOperationReceive,
+			semconv.MessagingMessageIDKey.String(strconv.FormatInt(msg.Offset, 10)),
 			kafkaPartitionKey.Int32(msg.Partition),
 		}
 		opts := []trace.StartOption{

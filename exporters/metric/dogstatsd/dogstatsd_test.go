@@ -22,8 +22,8 @@ import (
 	"github.com/stretchr/testify/require"
 
 	"go.opentelemetry.io/contrib/exporters/metric/dogstatsd"
-	"go.opentelemetry.io/otel/api/kv"
 	"go.opentelemetry.io/otel/api/metric"
+	"go.opentelemetry.io/otel/label"
 	"go.opentelemetry.io/otel/sdk/export/metric/metrictest"
 	"go.opentelemetry.io/otel/sdk/metric/aggregator/sum"
 	"go.opentelemetry.io/otel/sdk/resource"
@@ -34,12 +34,12 @@ import (
 func TestDogstatsLabels(t *testing.T) {
 	type testCase struct {
 		name      string
-		resources []kv.KeyValue
-		labels    []kv.KeyValue
+		resources []label.KeyValue
+		labels    []label.KeyValue
 		expected  string
 	}
 
-	kvs := func(kvs ...kv.KeyValue) []kv.KeyValue { return kvs }
+	labels := func(labels ...label.KeyValue) []label.KeyValue { return labels }
 
 	cases := []testCase{
 		{
@@ -50,25 +50,25 @@ func TestDogstatsLabels(t *testing.T) {
 		},
 		{
 			name:      "only resources",
-			resources: kvs(kv.String("R", "S")),
+			resources: labels(label.String("R", "S")),
 			labels:    nil,
 			expected:  "test.name:123|c|#R:S\n",
 		},
 		{
 			name:      "only labels",
 			resources: nil,
-			labels:    kvs(kv.String("A", "B")),
+			labels:    labels(label.String("A", "B")),
 			expected:  "test.name:123|c|#A:B\n",
 		},
 		{
 			name:      "both resources and labels",
-			resources: kvs(kv.String("R", "S")),
-			labels:    kvs(kv.String("A", "B")),
+			resources: labels(label.String("R", "S")),
+			labels:    labels(label.String("A", "B")),
 			expected:  "test.name:123|c|#R:S,A:B\n",
 		},
 		{
-			resources: kvs(kv.String("A", "R")),
-			labels:    kvs(kv.String("A", "B")),
+			resources: labels(label.String("A", "R")),
+			labels:    labels(label.String("A", "B")),
 			expected:  "test.name:123|c|#A:R,A:B\n",
 		},
 	}

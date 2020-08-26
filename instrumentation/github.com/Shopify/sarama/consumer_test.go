@@ -25,10 +25,10 @@ import (
 	"github.com/stretchr/testify/require"
 
 	"go.opentelemetry.io/otel/api/global"
-	"go.opentelemetry.io/otel/api/kv"
 	"go.opentelemetry.io/otel/api/propagation"
-	"go.opentelemetry.io/otel/api/standard"
 	"go.opentelemetry.io/otel/api/trace"
+	"go.opentelemetry.io/otel/label"
+	"go.opentelemetry.io/otel/semconv"
 
 	mocktracer "go.opentelemetry.io/contrib/internal/trace"
 )
@@ -99,18 +99,18 @@ func consumeAndCheck(t *testing.T, mt *mocktracer.Tracer, mockPartitionConsumer 
 	assert.Len(t, spans, 2)
 
 	expectedList := []struct {
-		kvList       []kv.KeyValue
+		labelList    []label.KeyValue
 		parentSpanID trace.SpanID
 		kind         trace.SpanKind
 		msgKey       []byte
 	}{
 		{
-			kvList: []kv.KeyValue{
-				standard.MessagingSystemKey.String("kafka"),
-				standard.MessagingDestinationKindKeyTopic,
-				standard.MessagingDestinationKey.String("test-topic"),
-				standard.MessagingOperationReceive,
-				standard.MessagingMessageIDKey.String("1"),
+			labelList: []label.KeyValue{
+				semconv.MessagingSystemKey.String("kafka"),
+				semconv.MessagingDestinationKindKeyTopic,
+				semconv.MessagingDestinationKey.String("test-topic"),
+				semconv.MessagingOperationReceive,
+				semconv.MessagingMessageIDKey.String("1"),
 				kafkaPartitionKey.Int32(0),
 			},
 			parentSpanID: trace.SpanFromContext(ctx).SpanContext().SpanID,
@@ -118,12 +118,12 @@ func consumeAndCheck(t *testing.T, mt *mocktracer.Tracer, mockPartitionConsumer 
 			msgKey:       []byte("foo"),
 		},
 		{
-			kvList: []kv.KeyValue{
-				standard.MessagingSystemKey.String("kafka"),
-				standard.MessagingDestinationKindKeyTopic,
-				standard.MessagingDestinationKey.String("test-topic"),
-				standard.MessagingOperationReceive,
-				standard.MessagingMessageIDKey.String("2"),
+			labelList: []label.KeyValue{
+				semconv.MessagingSystemKey.String("kafka"),
+				semconv.MessagingDestinationKindKeyTopic,
+				semconv.MessagingDestinationKey.String("test-topic"),
+				semconv.MessagingOperationReceive,
+				semconv.MessagingMessageIDKey.String("2"),
 				kafkaPartitionKey.Int32(0),
 			},
 			kind:   trace.SpanKindConsumer,
@@ -144,7 +144,7 @@ func consumeAndCheck(t *testing.T, mt *mocktracer.Tracer, mockPartitionConsumer 
 			assert.Equal(t, "kafka.consume", span.Name)
 			assert.Equal(t, expected.kind, span.Kind)
 			assert.Equal(t, expected.msgKey, msgList[i].Key)
-			for _, k := range expected.kvList {
+			for _, k := range expected.labelList {
 				assert.Equal(t, k.Value, span.Attributes[k.Key], k.Key)
 			}
 		})

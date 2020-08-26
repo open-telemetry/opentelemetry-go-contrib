@@ -26,8 +26,8 @@ import (
 
 	"go.opentelemetry.io/otel/api/global"
 	"go.opentelemetry.io/otel/api/propagation"
-	"go.opentelemetry.io/otel/api/standard"
 	"go.opentelemetry.io/otel/api/trace"
+	"go.opentelemetry.io/otel/semconv"
 
 	saramatrace "go.opentelemetry.io/contrib/instrumentation/github.com/Shopify/sarama"
 	"go.opentelemetry.io/contrib/instrumentation/github.com/Shopify/sarama/example"
@@ -81,7 +81,7 @@ func printMessage(msg *sarama.ConsumerMessage) {
 
 	tr := global.Tracer("consumer")
 	_, span := tr.Start(ctx, "consume message", trace.WithAttributes(
-		standard.MessagingOperationProcess,
+		semconv.MessagingOperationProcess,
 	))
 	defer span.End()
 

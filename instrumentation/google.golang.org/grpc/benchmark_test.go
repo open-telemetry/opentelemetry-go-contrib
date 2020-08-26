@@ -1,0 +1,108 @@
+// Copyright The OpenTelemetry Authors
+//
+// Licensed under the Apache License, Version 2.0 (the "License");
+// you may not use this file except in compliance with the License.
+// You may obtain a copy of the License at
+//
+//     http://www.apache.org/licenses/LICENSE-2.0
+//
+// Unless required by applicable law or agreed to in writing, software
+// distributed under the License is distributed on an "AS IS" BASIS,
+// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+// See the License for the specific language governing permissions and
+// limitations under the License.
+
+package grpc_test
+
+import (
+	"context"
+	"net"
+	"testing"
+
+	"google.golang.org/grpc"
+	"google.golang.org/grpc/interop"
+	pb "google.golang.org/grpc/interop/grpc_testing"
+	"google.golang.org/grpc/test/bufconn"
+
+	otelgrpc "go.opentelemetry.io/contrib/instrumentation/google.golang.org/grpc"
+	"go.opentelemetry.io/otel/api/trace/tracetest"
+)
+
+const (
+	bufSize  = 2048
+	instName = "go.opentelemetry.io/contrib/instrumentation/google.golang.org/grpc"
+)
+
+var tracer = tracetest.NewProvider().Tracer(instName)
+
+func benchmark(b *testing.B, cOpt []grpc.DialOption, sOpt []grpc.ServerOption) {
+	l := bufconn.Listen(bufSize)
+	defer l.Close()
+
+	s := grpc.NewServer(sOpt...)
+	pb.RegisterTestServiceServer(s, interop.NewTestServer())
+	go func() {
+		if err := s.Serve(l); err != nil {
+			panic(err)
+		}
+	}()
+	defer s.Stop()
+
+	ctx := context.Background()
+	dial := func(context.Context, string) (net.Conn, error) { return l.Dial() }
+	conn, err := grpc.DialContext(
+		ctx,
+		"bufnet",
+		append([]grpc.DialOption{
+			grpc.WithContextDialer(dial),
+			grpc.WithInsecure(),
+		}, cOpt...)...,
+	)
+	if err != nil {
+		b.Fatalf("Failed to dial bufnet: %v", err)
+	}
+	defer conn.Close()
+	client := pb.NewTestServiceClient(conn)
+
+	b.ReportAllocs()
+	b.ResetTimer()
+
+	for n := 0; n < b.N; n++ {
+		interop.DoEmptyUnaryCall(client)
+		interop.DoLargeUnaryCall(client)
+		interop.DoClientStreaming(client)
+		interop.DoServerStreaming(client)
+		interop.DoPingPong(client)
+		interop.DoEmptyStream(client)
+	}
+
+	b.StopTimer()
+}
+
+func BenchmarkNoInstrumentation(b *testing.B) {
+	benchmark(b, nil, nil)
+}
+
+func BenchmarkUnaryServerInterceptor(b *testing.B) {
+	benchmark(b, nil, []grpc.ServerOption{
+		grpc.UnaryInterceptor(otelgrpc.UnaryServerInterceptor(tracer)),
+	})
+}
+
+func BenchmarkStreamServerInterceptor(b *testing.B) {
+	benchmark(b, nil, []grpc.ServerOption{
+		grpc.StreamInterceptor(otelgrpc.StreamServerInterceptor(tracer)),
+	})
+}
+
+func BenchmarkUnaryClientInterceptor(b *testing.B) {
+	benchmark(b, []grpc.DialOption{
+		grpc.WithUnaryInterceptor(otelgrpc.UnaryClientInterceptor(tracer)),
+	}, nil)
+}
+
+func BenchmarkStreamClientInterceptor(b *testing.B) {
+	benchmark(b, []grpc.DialOption{
+		grpc.WithStreamInterceptor(otelgrpc.StreamClientInterceptor(tracer)),
+	}, nil)
+}

@@ -23,17 +23,18 @@ import (
 	"testing"
 
 	"github.com/stretchr/testify/assert"
-	"google.golang.org/grpc/codes"
 
-	"go.opentelemetry.io/otel/api/kv"
-	"go.opentelemetry.io/otel/api/standard"
+	"go.opentelemetry.io/otel/codes"
+
 	"go.opentelemetry.io/otel/api/trace"
+	"go.opentelemetry.io/otel/label"
+	"go.opentelemetry.io/otel/semconv"
 
 	mockmeter "go.opentelemetry.io/contrib/internal/metric"
 	mocktrace "go.opentelemetry.io/contrib/internal/trace"
 )
 
-func assertMetricLabels(t *testing.T, expectedLabels []kv.KeyValue, measurementBatches []mockmeter.Batch) {
+func assertMetricLabels(t *testing.T, expectedLabels []label.KeyValue, measurementBatches []mockmeter.Batch) {
 	for _, batch := range measurementBatches {
 		assert.ElementsMatch(t, expectedLabels, batch.Labels)
 	}
@@ -67,12 +68,11 @@ func TestHandlerBasics(t *testing.T) {
 		t.Fatalf("got 0 recorded measurements, expected 1 or more")
 	}
 
-	labelsToVerify := []kv.KeyValue{
-		standard.HTTPServerNameKey.String(operation),
-		standard.HTTPSchemeHTTP,
-		standard.HTTPHostKey.String(r.Host),
-		standard.HTTPFlavorKey.String(fmt.Sprintf("1.%d", r.ProtoMinor)),
-		standard.HTTPRequestContentLengthKey.Int64(3),
+	labelsToVerify := []label.KeyValue{
+		semconv.HTTPServerNameKey.String(operation),
+		semconv.HTTPSchemeHTTP,
+		semconv.HTTPHostKey.String(r.Host),
+		semconv.HTTPFlavorKey.String(fmt.Sprintf("1.%d", r.ProtoMinor)),
 	}
 
 	assertMetricLabels(t, labelsToVerify, meterimpl.MeasurementBatches)

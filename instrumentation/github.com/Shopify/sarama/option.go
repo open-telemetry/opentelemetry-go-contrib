@@ -16,15 +16,15 @@ package sarama
 
 import (
 	"go.opentelemetry.io/otel/api/global"
-	"go.opentelemetry.io/otel/api/kv"
 	otelpropagation "go.opentelemetry.io/otel/api/propagation"
 	"go.opentelemetry.io/otel/api/trace"
+	"go.opentelemetry.io/otel/label"
 )
 
 const (
 	defaultTracerName = "go.opentelemetry.io/contrib/instrumentation/github.com/Shopify/sarama"
 
-	kafkaPartitionKey = kv.Key("messaging.kafka.partition")
+	kafkaPartitionKey = label.Key("messaging.kafka.partition")
 )
 
 type config struct {

@@ -20,10 +20,10 @@ import (
 
 	"go.opentelemetry.io/otel/api/correlation"
 	"go.opentelemetry.io/otel/api/global"
-	"go.opentelemetry.io/otel/api/kv"
 	"go.opentelemetry.io/otel/api/propagation"
-	"go.opentelemetry.io/otel/api/standard"
 	"go.opentelemetry.io/otel/api/trace"
+	"go.opentelemetry.io/otel/label"
+	"go.opentelemetry.io/otel/semconv"
 )
 
 // Option is a function that allows configuration of the httptrace Extract()
@@ -50,22 +50,22 @@ func WithPropagators(props propagation.Propagators) Option {
 }
 
 // Returns the Attributes, Context Entries, and SpanContext that were encoded by Inject.
-func Extract(ctx context.Context, req *http.Request, opts ...Option) ([]kv.KeyValue, []kv.KeyValue, trace.SpanContext) {
+func Extract(ctx context.Context, req *http.Request, opts ...Option) ([]label.KeyValue, []label.KeyValue, trace.SpanContext) {
 	c := newConfig(opts)
 	ctx = propagation.ExtractHTTP(ctx, c.propagators, req.Header)
 
 	attrs := append(
-		standard.HTTPServerAttributesFromHTTPRequest("", "", req),
-		standard.NetAttributesFromHTTPRequest("tcp", req)...,
+		semconv.HTTPServerAttributesFromHTTPRequest("", "", req),
+		semconv.NetAttributesFromHTTPRequest("tcp", req)...,
 	)
 
-	var correlationCtxKVs []kv.KeyValue
-	correlation.MapFromContext(ctx).Foreach(func(kv kv.KeyValue) bool {
-		correlationCtxKVs = append(correlationCtxKVs, kv)
+	var correlationCtxLabels []label.KeyValue
+	correlation.MapFromContext(ctx).Foreach(func(lbl label.KeyValue) bool {
+		correlationCtxLabels = append(correlationCtxLabels, lbl)
 		return true
 	})
 
-	return attrs, correlationCtxKVs, trace.RemoteSpanContextFromContext(ctx)
+	return attrs, correlationCtxLabels, trace.RemoteSpanContextFromContext(ctx)
 }
 
 func Inject(ctx context.Context, req *http.Request, opts ...Option) {

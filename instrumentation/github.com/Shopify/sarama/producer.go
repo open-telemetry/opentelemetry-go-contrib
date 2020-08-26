@@ -19,12 +19,13 @@ import (
 	"strconv"
 
 	"github.com/Shopify/sarama"
-	"google.golang.org/grpc/codes"
 
-	"go.opentelemetry.io/otel/api/kv"
+	"go.opentelemetry.io/otel/codes"
+
 	"go.opentelemetry.io/otel/api/propagation"
-	"go.opentelemetry.io/otel/api/standard"
 	"go.opentelemetry.io/otel/api/trace"
+	"go.opentelemetry.io/otel/label"
+	"go.opentelemetry.io/otel/semconv"
 )
 
 type syncProducer struct {
@@ -233,10 +234,10 @@ func startProducerSpan(cfg config, version sarama.KafkaVersion, msg *sarama.Prod
 	ctx := propagation.ExtractHTTP(context.Background(), cfg.Propagators, carrier)
 
 	// Create a span.
-	attrs := []kv.KeyValue{
-		standard.MessagingSystemKey.String("kafka"),
-		standard.MessagingDestinationKindKeyTopic,
-		standard.MessagingDestinationKey.String(msg.Topic),
+	attrs := []label.KeyValue{
+		semconv.MessagingSystemKey.String("kafka"),
+		semconv.MessagingDestinationKindKeyTopic,
+		semconv.MessagingDestinationKey.String(msg.Topic),
 	}
 	opts := []trace.StartOption{
 		trace.WithAttributes(attrs...),
@@ -254,7 +255,7 @@ func startProducerSpan(cfg config, version sarama.KafkaVersion, msg *sarama.Prod
 
 func finishProducerSpan(span trace.Span, partition int32, offset int64, err error) {
 	span.SetAttributes(
-		standard.MessagingMessageIDKey.String(strconv.FormatInt(offset, 10)),
+		semconv.MessagingMessageIDKey.String(strconv.FormatInt(offset, 10)),
 		kafkaPartitionKey.Int32(partition),
 	)
 	if err != nil {

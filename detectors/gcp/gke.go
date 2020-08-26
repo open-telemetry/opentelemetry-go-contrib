@@ -21,9 +21,9 @@ import (
 
 	"cloud.google.com/go/compute/metadata"
 
-	"go.opentelemetry.io/otel/api/kv"
-	"go.opentelemetry.io/otel/api/standard"
+	"go.opentelemetry.io/otel/label"
 	"go.opentelemetry.io/otel/sdk/resource"
+	"go.opentelemetry.io/otel/semconv"
 )
 
 // GKE collects resource information of GKE computing instances
@@ -46,19 +46,19 @@ func (gke *GKE) Detect(ctx context.Context) (*resource.Resource, error) {
 		errInfo = append(errInfo, err.Error())
 	}
 
-	labels := []kv.KeyValue{
-		standard.K8SNamespaceNameKey.String(os.Getenv("NAMESPACE")),
-		standard.K8SPodNameKey.String(os.Getenv("HOSTNAME")),
+	labels := []label.KeyValue{
+		semconv.K8SNamespaceNameKey.String(os.Getenv("NAMESPACE")),
+		semconv.K8SPodNameKey.String(os.Getenv("HOSTNAME")),
 	}
 
 	if containerName := os.Getenv("CONTAINER_NAME"); containerName != "" {
-		labels = append(labels, standard.ContainerNameKey.String(containerName))
+		labels = append(labels, semconv.ContainerNameKey.String(containerName))
 	}
 
 	if clusterName, err := metadata.InstanceAttributeValue("cluster-name"); hasProblem(err) {
 		errInfo = append(errInfo, err.Error())
 	} else if clusterName != "" {
-		labels = append(labels, standard.K8SClusterNameKey.String(clusterName))
+		labels = append(labels, semconv.K8SClusterNameKey.String(clusterName))
 	}
 
 	k8sLabelRes := resource.New(labels...)

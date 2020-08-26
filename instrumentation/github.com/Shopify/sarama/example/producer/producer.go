@@ -25,7 +25,8 @@ import (
 	"time"
 
 	"github.com/Shopify/sarama"
-	"google.golang.org/grpc/codes"
+
+	"go.opentelemetry.io/otel/codes"
 
 	"go.opentelemetry.io/otel/api/global"
 	"go.opentelemetry.io/otel/api/propagation"

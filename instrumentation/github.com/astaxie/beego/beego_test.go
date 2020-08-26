@@ -27,10 +27,10 @@ import (
 	"testing"
 
 	"go.opentelemetry.io/otel/api/global"
-	"go.opentelemetry.io/otel/api/kv"
 	prop "go.opentelemetry.io/otel/api/propagation"
-	"go.opentelemetry.io/otel/api/standard"
 	"go.opentelemetry.io/otel/api/trace"
+	"go.opentelemetry.io/otel/label"
+	"go.opentelemetry.io/otel/semconv"
 
 	"github.com/stretchr/testify/require"
 
@@ -390,11 +390,11 @@ func runTest(t *testing.T, tc *testCase, url string) {
 	assertMetrics(t, meterimpl.MeasurementBatches, tc)
 }
 
-func defaultAttributes() []kv.KeyValue {
-	return []kv.KeyValue{
-		standard.HTTPServerNameKey.String(middleWareName),
-		standard.HTTPSchemeHTTP,
-		standard.HTTPHostKey.String("localhost"),
+func defaultAttributes() []label.KeyValue {
+	return []label.KeyValue{
+		semconv.HTTPServerNameKey.String(middleWareName),
+		semconv.HTTPSchemeHTTP,
+		semconv.HTTPHostKey.String("localhost"),
 	}
 }
 
@@ -438,7 +438,7 @@ type testCase struct {
 	expectedSpanName   string
 	expectedHTTPStatus int
 	expectedResponse   testReply
-	expectedAttributes []kv.KeyValue
+	expectedAttributes []label.KeyValue
 }
 
 var testCases = []*testCase{
@@ -451,7 +451,7 @@ var testCases = []*testCase{
 		expectedSpanName:   "/",
 		expectedHTTPStatus: http.StatusOK,
 		expectedResponse:   testReply{Message: defaultReply},
-		expectedAttributes: []kv.KeyValue{},
+		expectedAttributes: []label.KeyValue{},
 	},
 	{
 		name:               "GET/1__All default options",
@@ -462,7 +462,7 @@ var testCases = []*testCase{
 		expectedSpanName:   "/:id",
 		expectedHTTPStatus: http.StatusOK,
 		expectedResponse:   testReply{Message: defaultReply},
-		expectedAttributes: []kv.KeyValue{},
+		expectedAttributes: []label.KeyValue{},
 	},
 	{
 		name:               "POST/greet?name=test__All default options",
@@ -473,7 +473,7 @@ var testCases = []*testCase{
 		expectedSpanName:   "/greet",
 		expectedHTTPStatus: http.StatusOK,
 		expectedResponse:   testReply{Message: "test said hello."},
-		expectedAttributes: []kv.KeyValue{},
+		expectedAttributes: []label.KeyValue{},
 	},
 	{
 		name:               "DELETE/__All default options",
@@ -484,7 +484,7 @@ var testCases = []*testCase{
 		expectedSpanName:   "/",
 		expectedHTTPStatus: http.StatusAccepted,
 		expectedResponse:   testReply{Message: "success"},
-		expectedAttributes: []kv.KeyValue{},
+		expectedAttributes: []label.KeyValue{},
 	},
 	{
 		name:               "PUT/__All default options",
@@ -495,7 +495,7 @@ var testCases = []*testCase{
 		expectedSpanName:   "/",
 		expectedHTTPStatus: http.StatusAccepted,
 		expectedResponse:   testReply{Message: "successfully put"},
-		expectedAttributes: []kv.KeyValue{},
+		expectedAttributes: []label.KeyValue{},
 	},
 	{
 		name:   "GET/__Custom propagators",
@@ -511,7 +511,7 @@ var testCases = []*testCase{
 		expectedSpanName:   "/",
 		expectedHTTPStatus: http.StatusOK,
 		expectedResponse:   testReply{Message: defaultReply},
-		expectedAttributes: []kv.KeyValue{},
+		expectedAttributes: []label.KeyValue{},
 	},
 	{
 		name:   "GET/__Custom filter filtering route",
@@ -542,7 +542,7 @@ var testCases = []*testCase{
 		expectedSpanName:   "/",
 		expectedHTTPStatus: http.StatusOK,
 		expectedResponse:   testReply{Message: defaultReply},
-		expectedAttributes: []kv.KeyValue{},
+		expectedAttributes: []label.KeyValue{},
 	},
 	{
 		name:               "POST/greet__Default options, bad request",
@@ -553,7 +553,7 @@ var testCases = []*testCase{
 		expectedSpanName:   "/greet",
 		expectedHTTPStatus: http.StatusBadRequest,
 		expectedResponse:   testReply{Err: "missing query param \"name\""},
-		expectedAttributes: []kv.KeyValue{},
+		expectedAttributes: []label.KeyValue{},
 	},
 	{
 		name:   "POST/greet?name=test__Custom span name formatter",
@@ -568,7 +568,7 @@ var testCases = []*testCase{
 		expectedSpanName:   customSpanName,
 		expectedHTTPStatus: http.StatusOK,
 		expectedResponse:   testReply{Message: "test said hello."},
-		expectedAttributes: []kv.KeyValue{},
+		expectedAttributes: []label.KeyValue{},
 	},
 	{
 		name:   "POST/greet?name=test__Custom span name formatter and custom filter",
@@ -585,6 +585,6 @@ var testCases = []*testCase{
 		hasSpan:            false,
 		expectedHTTPStatus: http.StatusOK,
 		expectedResponse:   testReply{Message: "test said hello."},
-		expectedAttributes: []kv.KeyValue{},
+		expectedAttributes: []label.KeyValue{},
 	},
 }

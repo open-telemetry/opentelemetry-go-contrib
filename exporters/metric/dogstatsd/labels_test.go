@@ -20,14 +20,13 @@ import (
 	"github.com/stretchr/testify/require"
 
 	"go.opentelemetry.io/contrib/exporters/metric/dogstatsd"
-	"go.opentelemetry.io/otel/api/kv"
-	"go.opentelemetry.io/otel/api/label"
+	"go.opentelemetry.io/otel/label"
 )
 
-var testLabels = []kv.KeyValue{
-	kv.String("A", "B"),
-	kv.String("C", "D"),
-	kv.Float64("E", 1.5),
+var testLabels = []label.KeyValue{
+	label.String("A", "B"),
+	label.String("C", "D"),
+	label.Float64("E", 1.5),
 }
 
 func TestLabelSyntax(t *testing.T) {
@@ -36,8 +35,8 @@ func TestLabelSyntax(t *testing.T) {
 	labels := label.NewSet(testLabels...)
 	require.Equal(t, `A:B,C:D,E:1.5`, encoder.Encode(labels.Iter()))
 
-	kvs := []kv.KeyValue{
-		kv.String("A", "B"),
+	kvs := []label.KeyValue{
+		label.String("A", "B"),
 	}
 	labels = label.NewSet(kvs...)
 	require.Equal(t, `A:B`, encoder.Encode(labels.Iter()))
