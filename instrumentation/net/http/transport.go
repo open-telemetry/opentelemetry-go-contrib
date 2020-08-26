@@ -19,7 +19,6 @@ import (
 	"io"
 	"net/http"
 
-	"go.opentelemetry.io/otel/api/global"
 	"go.opentelemetry.io/otel/api/propagation"
 	"go.opentelemetry.io/otel/api/trace"
 	"go.opentelemetry.io/otel/semconv"
@@ -49,8 +48,6 @@ func NewTransport(base http.RoundTripper, opts ...Option) *Transport {
 	}
 
 	defaultOpts := []Option{
-		WithTracer(global.Tracer("go.opentelemetry.io/contrib/instrumentation/net/http")),
-		WithPropagators(global.Propagators()),
 		WithSpanOptions(trace.WithSpanKind(trace.SpanKindClient)),
 		WithSpanNameFormatter(defaultTransportFormatter),
 	}

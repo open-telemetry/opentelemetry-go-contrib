@@ -63,12 +63,7 @@ func NewHandler(handler http.Handler, operation string, opts ...Option) http.Han
 		operation: operation,
 	}
 
-	const domain = "go.opentelemetry.io/contrib/instrumentation/net/http"
-
 	defaultOpts := []Option{
-		WithTracer(global.Tracer(domain)),
-		WithMeter(global.Meter(domain)),
-		WithPropagators(global.Propagators()),
 		WithSpanOptions(trace.WithSpanKind(trace.SpanKindServer)),
 		WithSpanNameFormatter(defaultHandlerFormatter),
 	}

@@ -17,9 +17,14 @@ package http
 import (
 	"net/http"
 
+	"go.opentelemetry.io/otel/api/global"
 	"go.opentelemetry.io/otel/api/metric"
 	"go.opentelemetry.io/otel/api/propagation"
 	"go.opentelemetry.io/otel/api/trace"
+)
+
+const (
+	instrumentationName = "go.opentelemetry.io/contrib/instrumentation/net/http"
 )
 
 // Config represents the configuration options available for the http.Handler
@@ -33,6 +38,9 @@ type Config struct {
 	WriteEvent        bool
 	Filters           []Filter
 	SpanNameFormatter func(string, *http.Request) string
+
+	TraceProvider trace.Provider
+	MeterProvider metric.Provider
 }
 
 // Option Interface used for setting *optional* Config properties
@@ -50,26 +58,34 @@ func (o OptionFunc) Apply(c *Config) {
 
 // NewConfig creates a new Config struct and applies opts to it.
 func NewConfig(opts ...Option) *Config {
-	c := &Config{}
+	c := &Config{
+		Propagators:   global.Propagators(),
+		TraceProvider: global.TraceProvider(),
+		MeterProvider: global.MeterProvider(),
+	}
 	for _, opt := range opts {
 		opt.Apply(c)
 	}
+
+	c.Tracer = c.TraceProvider.Tracer(instrumentationName)
+	c.Meter = c.MeterProvider.Meter(instrumentationName)
+
 	return c
 }
 
-// WithTracer configures a specific tracer. If this option
-// isn't specified then the global tracer is used.
-func WithTracer(tracer trace.Tracer) Option {
-	return OptionFunc(func(c *Config) {
-		c.Tracer = tracer
+// WithTracerProvider specifies a tracer provider to use for creating a tracer.
+// If none is specified, the global provider is used.
+func WithTracerProvider(provider trace.Provider) Option {
+	return OptionFunc(func(cfg *Config) {
+		cfg.TraceProvider = provider
 	})
 }
 
-// WithMeter configures a specific meter. If this option
-// isn't specified then the global meter is used.
-func WithMeter(meter metric.Meter) Option {
-	return OptionFunc(func(c *Config) {
-		c.Meter = meter
+// WithMeterProvider specifies a meter provider to use for creating a meter.
+// If none is specified, the global provider is used.
+func WithMeterProvider(provider metric.Provider) Option {
+	return OptionFunc(func(cfg *Config) {
+		cfg.MeterProvider = provider
 	})
 }
 
