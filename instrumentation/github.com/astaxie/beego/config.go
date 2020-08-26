@@ -47,23 +47,19 @@ func (o OptionFunc) Apply(c *Config) {
 
 // ------------------------------------------ Options
 
-// WithTraceProvider sets the trace provider to be used by the middleware
-// to create a tracer for the spans.
-// Defaults to calling global.TraceProvider().
-// Tracer name is set to "go.opentelemetry.io/contrib/instrumentation/github.com/astaxie/beego".
-func WithTraceProvider(provider trace.Provider) OptionFunc {
-	return OptionFunc(func(c *Config) {
-		c.traceProvider = provider
+// WithTracerProvider specifies a tracer provider to use for creating a tracer.
+// If none is specified, the global provider is used.
+func WithTracerProvider(traceProvider trace.Provider) Option {
+	return OptionFunc(func(cfg *Config) {
+		cfg.traceProvider = traceProvider
 	})
 }
 
-// WithMeterProvider sets the meter provider to be used to create a meter
-// by the middleware.
-// Defaults to calling global.MeterProvider().
-// Meter name is set to "go.opentelemetry.io/contrib/instrumentation/github.com/astaxie/beego".
-func WithMeterProvider(provider metric.Provider) OptionFunc {
-	return OptionFunc(func(c *Config) {
-		c.meterProvider = provider
+// WithMeterProvider specifies a meter provider to use for creating a meter.
+// If none is specified, the global provider is used.
+func WithMeterProvider(provider metric.Provider) Option {
+	return OptionFunc(func(cfg *Config) {
+		cfg.meterProvider = provider
 	})
 }
 

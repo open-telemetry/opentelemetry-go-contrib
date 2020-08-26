@@ -238,7 +238,7 @@ func TestSpanFromContextCustomProvider(t *testing.T) {
 
 	mw := NewOTelBeegoMiddleWare(
 		middleWareName,
-		WithTraceProvider(NewTraceProvider()),
+		WithTracerProvider(NewTraceProvider()),
 		WithMeterProvider(provider),
 	)
 
@@ -261,7 +261,7 @@ func TestStatic(t *testing.T) {
 	defer beego.SetStaticPath("/", "")
 
 	mw := NewOTelBeegoMiddleWare(middleWareName,
-		WithTraceProvider(traceProvider),
+		WithTracerProvider(traceProvider),
 		WithMeterProvider(meterProvider),
 	)
 
@@ -312,7 +312,7 @@ func TestRender(t *testing.T) {
 
 	mw := NewOTelBeegoMiddleWare(
 		middleWareName,
-		WithTraceProvider(traceProvider),
+		WithTracerProvider(traceProvider),
 	)
 	for _, str := range []string{"/render", "/renderstring", "/renderbytes"} {
 		rr := httptest.NewRecorder()
@@ -366,7 +366,7 @@ func runTest(t *testing.T, tc *testCase, url string) {
 		middleWareName,
 		append(
 			tc.options,
-			WithTraceProvider(traceProvider),
+			WithTracerProvider(traceProvider),
 			WithMeterProvider(meterProvider),
 		)...,
 	)
