@@ -110,7 +110,7 @@ func TestAuthentication(t *testing.T) {
 			handler := func(rw http.ResponseWriter, req *http.Request) {
 				authHeaderValue := req.Header.Get("Authorization")
 				_, err := rw.Write([]byte(authHeaderValue))
-				require.Nil(t, err)
+				require.NoError(t, err)
 			}
 			server := httptest.NewServer(http.HandlerFunc(handler))
 			defer server.Close()
@@ -121,14 +121,14 @@ func TestAuthentication(t *testing.T) {
 				if passwordFile != "" && test.basicAuthPasswordFileContents != nil {
 					filepath := "./" + test.basicAuth["password_file"]
 					err := createFile(test.basicAuthPasswordFileContents, filepath)
-					require.Nil(t, err)
+					require.NoError(t, err)
 					defer os.Remove(filepath)
 				}
 			}
 			if test.bearerTokenFile != "" && test.bearerTokenFileContents != nil {
 				filepath := "./" + test.bearerTokenFile
 				err := createFile(test.bearerTokenFileContents, filepath)
-				require.Nil(t, err)
+				require.NoError(t, err)
 				defer os.Remove(filepath)
 			}
 
@@ -142,14 +142,14 @@ func TestAuthentication(t *testing.T) {
 				},
 			}
 			req, err := http.NewRequest(http.MethodPost, server.URL, nil)
-			require.Nil(t, err)
+			require.NoError(t, err)
 			err = exporter.addHeaders(req)
 
 			// Verify the error and if the Authorization header was correctly set.
 			if err != nil {
 				require.Equal(t, err.Error(), test.expectedError.Error())
 			} else {
-				require.Nil(t, test.expectedError)
+				require.NoError(t, test.expectedError)
 				authHeaderValue := req.Header.Get("Authorization")
 				require.Equal(t, authHeaderValue, test.expectedAuthHeaderValue)
 			}
@@ -170,7 +170,7 @@ func createFile(bytes []byte, filepath string) error {
 // connect over TLS and has the correct remote timeout and proxy url.
 func TestBuildClient(t *testing.T) {
 	testProxyURL, err := url.Parse("123.4.5.6")
-	require.Nil(t, err)
+	require.NoError(t, err)
 
 	tests := []struct {
 		testName               string
@@ -229,7 +229,7 @@ func TestBuildClient(t *testing.T) {
 				Bytes: encodedCACert,
 			})
 			err := createFile(caCertPEM, "./ca_cert.pem")
-			require.Nil(t, err)
+			require.NoError(t, err)
 			defer os.Remove("ca_cert.pem")
 
 			// Create an Exporter client and check the timeout.
@@ -237,7 +237,7 @@ func TestBuildClient(t *testing.T) {
 				config: test.config,
 			}
 			client, err := exporter.buildClient()
-			require.Nil(t, err)
+			require.NoError(t, err)
 			require.Equal(t, client.Timeout, test.expectedRemoteTimeout)
 
 			// Attempt to send the request and verify that the correct error occurred. If
@@ -250,7 +250,7 @@ func TestBuildClient(t *testing.T) {
 				errorSuffix := strings.Contains(err.Error(), test.expectedErrorSubstring)
 				require.True(t, errorSuffix)
 			} else {
-				require.Nil(t, err)
+				require.NoError(t, err)
 			}
 		})
 	}
@@ -262,7 +262,7 @@ func TestBuildClient(t *testing.T) {
 func TestMutualTLS(t *testing.T) {
 	// Generate certificate authority certificate to sign other certificates.
 	caCert, caPrivateKey, err := generateCACertFiles("./ca_cert.pem", "./ca_key.pem")
-	require.Nil(t, err)
+	require.NoError(t, err)
 	defer os.Remove("./ca_cert.pem")
 	defer os.Remove("./ca_key.pem")
 
@@ -274,7 +274,7 @@ func TestMutualTLS(t *testing.T) {
 		"./serving_cert.pem",
 		"./serving_key.pem",
 	)
-	require.Nil(t, err)
+	require.NoError(t, err)
 	defer os.Remove("./serving_cert.pem")
 	defer os.Remove("./serving_key.pem")
 
@@ -286,7 +286,7 @@ func TestMutualTLS(t *testing.T) {
 		"./client_cert.pem",
 		"./client_key.pem",
 	)
-	require.Nil(t, err)
+	require.NoError(t, err)
 	defer os.Remove("./client_cert.pem")
 	defer os.Remove("./client_key.pem")
 
@@ -296,7 +296,7 @@ func TestMutualTLS(t *testing.T) {
 		"serving_cert.pem",
 		"serving_key.pem",
 	)
-	require.Nil(t, err)
+	require.NoError(t, err)
 
 	// Create and start the TLS server.
 	handler := func(rw http.ResponseWriter, req *http.Request) {
@@ -319,11 +319,11 @@ func TestMutualTLS(t *testing.T) {
 		},
 	}
 	client, err := exporter.buildClient()
-	require.Nil(t, err)
+	require.NoError(t, err)
 
 	// Send the request and verify that the request was successfully received.
 	res, err := client.Get(server.URL)
-	require.Nil(t, err)
+	require.NoError(t, err)
 	defer res.Body.Close()
 }
 

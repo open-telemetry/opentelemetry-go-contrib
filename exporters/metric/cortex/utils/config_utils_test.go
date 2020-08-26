@@ -105,7 +105,7 @@ func TestNewConfig(t *testing.T) {
 			// Create YAML file.
 			fullPath := test.directoryPath + "/" + test.fileName
 			fs, err := initYAML(test.yamlByteString, fullPath)
-			require.Nil(t, err)
+			require.NoError(t, err)
 
 			// Create new Config struct from the specified YAML file with an in-memory
 			// filesystem.
@@ -153,7 +153,7 @@ func TestWithFilepath(t *testing.T) {
 			// Create YAML file.
 			fullPath := test.directoryPath + "/" + test.fileName
 			fs, err := initYAML(test.yamlByteString, fullPath)
-			require.Nil(t, err)
+			require.NoError(t, err)
 
 			// Create new Config struct from the specified YAML file with an in-memory
 			// filesystem. If a path is added, Viper should be able to find the file and
@@ -165,7 +165,7 @@ func TestWithFilepath(t *testing.T) {
 					utils.WithFilepath(test.directoryPath),
 					utils.WithFilesystem(fs),
 				)
-				require.Nil(t, err)
+				require.NoError(t, err)
 			} else {
 				_, err := utils.NewConfig(test.fileName, utils.WithFilesystem(fs))
 				require.Error(t, err)
@@ -179,7 +179,7 @@ func TestWithFilepath(t *testing.T) {
 func TestWithClient(t *testing.T) {
 	// Create a YAML file.
 	fs, err := initYAML(validYAML, "/test/config.yml")
-	require.Nil(t, err)
+	require.NoError(t, err)
 
 	// Create a new Config struct with a custom HTTP client.
 	customClient := &http.Client{
