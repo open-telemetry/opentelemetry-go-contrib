@@ -468,8 +468,11 @@ func (e *Exporter) buildRequest(message []byte) (*http.Request, error) {
 func (e *Exporter) sendRequest(req *http.Request) error {
 	// Set a client if the user didn't provide one.
 	if e.config.Client == nil {
-		e.config.Client = http.DefaultClient
-		e.config.Client.Timeout = e.config.RemoteTimeout
+		client, err := e.buildClient()
+		if err != nil {
+			return err
+		}
+		e.config.Client = client
 	}
 
 	// Attempt to send request.

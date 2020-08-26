@@ -15,9 +15,14 @@
 package cortex
 
 import (
+	"crypto/tls"
+	"crypto/x509"
 	"fmt"
 	"io/ioutil"
+	"net"
 	"net/http"
+	"strconv"
+	"time"
 )
 
 // ErrFailedToReadFile occurs when a password / bearer token file exists, but could
@@ -87,4 +92,90 @@ func (e *Exporter) addBearerTokenAuth(req *http.Request) error {
 	}
 
 	return nil
+}
+
+// buildClient returns a http client that uses TLS and has the user-specified proxy and
+// timeout.
+func (e *Exporter) buildClient() (*http.Client, error) {
+	// Create a TLS Config struct for use in a custom HTTP Transport.
+	tlsConfig, err := e.buildTLSConfig()
+	if err != nil {
+		return nil, err
+	}
+
+	// Create a custom HTTP Transport for the client. This is the same as
+	// http.DefaultTransport other than the TLSClientConfig.
+	transport := &http.Transport{
+		Proxy: http.ProxyFromEnvironment,
+		DialContext: (&net.Dialer{
+			Timeout:   30 * time.Second,
+			KeepAlive: 30 * time.Second,
+			DualStack: true,
+		}).DialContext,
+		ForceAttemptHTTP2:     true,
+		MaxIdleConns:          100,
+		IdleConnTimeout:       90 * time.Second,
+		TLSHandshakeTimeout:   10 * time.Second,
+		ExpectContinueTimeout: 1 * time.Second,
+		TLSClientConfig:       tlsConfig,
+	}
+
+	// Convert proxy url to proxy function for use in the created Transport.
+	if e.config.ProxyURL != nil {
+		proxy := http.ProxyURL(e.config.ProxyURL)
+		transport.Proxy = proxy
+	}
+
+	client := http.Client{
+		Transport: transport,
+		Timeout:   e.config.RemoteTimeout,
+	}
+	return &client, nil
+}
+
+// buildTLSConfig creates a new TLS Config struct with the properties from the exporter's
+// Config struct.
+func (e *Exporter) buildTLSConfig() (*tls.Config, error) {
+	tlsConfig := &tls.Config{}
+	if e.config.TLSConfig == nil {
+		return tlsConfig, nil
+	}
+
+	// Set the server name if it exists.
+	if e.config.TLSConfig["server_name"] != "" {
+		tlsConfig.ServerName = e.config.TLSConfig["server_name"]
+	}
+
+	// Set InsecureSkipVerify. Viper reads the bool as a string since it is in a map.
+	if isv, ok := e.config.TLSConfig["insecure_skip_verify"]; ok {
+		var err error
+		if tlsConfig.InsecureSkipVerify, err = strconv.ParseBool(isv); err != nil {
+			return nil, err
+		}
+	}
+
+	// Load certificates from CA file if it exists.
+	caFile := e.config.TLSConfig["ca_file"]
+	if caFile != "" {
+		caFileData, err := ioutil.ReadFile(caFile)
+		if err != nil {
+			return nil, err
+		}
+		certPool := x509.NewCertPool()
+		certPool.AppendCertsFromPEM(caFileData)
+		tlsConfig.RootCAs = certPool
+	}
+
+	// Load the client certificate if it exists.
+	certFile := e.config.TLSConfig["cert_file"]
+	keyFile := e.config.TLSConfig["key_file"]
+	if certFile != "" && keyFile != "" {
+		cert, err := tls.LoadX509KeyPair(certFile, keyFile)
+		if err != nil {
+			return nil, err
+		}
+		tlsConfig.Certificates = []tls.Certificate{cert}
+	}
+
+	return tlsConfig, nil
 }
