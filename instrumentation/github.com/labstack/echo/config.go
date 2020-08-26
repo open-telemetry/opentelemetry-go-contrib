@@ -21,22 +21,13 @@ import (
 
 // Config is used to configure the mux middleware.
 type Config struct {
-	Tracer      oteltrace.Tracer
-	Propagators otelpropagation.Propagators
+	TraceProvider oteltrace.Provider
+	Tracer        oteltrace.Tracer
+	Propagators   otelpropagation.Propagators
 }
 
 // Option specifies instrumentation configuration options.
 type Option func(*Config)
-
-// WithTracer specifies a tracer to use for creating spans. If none is
-// specified, a tracer named
-// "go.opentelemetry.io/contrib/instrumentation/github.com/labstack/echo"
-// from the global provider is used.
-func WithTracer(tracer oteltrace.Tracer) Option {
-	return func(cfg *Config) {
-		cfg.Tracer = tracer
-	}
-}
 
 // WithPropagators specifies propagators to use for extracting
 // information from the HTTP requests. If none are specified, global
@@ -44,5 +35,13 @@ func WithTracer(tracer oteltrace.Tracer) Option {
 func WithPropagators(propagators otelpropagation.Propagators) Option {
 	return func(cfg *Config) {
 		cfg.Propagators = propagators
+	}
+}
+
+// WithTracerProvider specifies a tracer provider to use for creating a tracer.
+// If none is specified, the global provider is used.
+func WithTracerProvider(provider oteltrace.Provider) Option {
+	return func(cfg *Config) {
+		cfg.TraceProvider = provider
 	}
 }
