@@ -21,7 +21,7 @@ import (
 	"net/http"
 
 	"github.com/gorilla/mux"
-	"github.com/open-telemetry/opentelemetry-go-contrib/instrumentation/github.com/gorilla/mux/otelmux"
+	"go.opentelemetry.io/contrib/instrumentation/github.com/gorilla/mux/otelmux"
 
 	otelglobal "go.opentelemetry.io/otel/api/global"
 	otelkv "go.opentelemetry.io/otel/api/kv"

@@ -23,15 +23,17 @@ import (
 	"net/http/httptest"
 	"testing"
 
+	"github.com/labstack/echo/v4"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	"google.golang.org/grpc/codes"
 
-	mocktrace "go.opentelemetry.io/contrib/internal/trace"
 	otelglobal "go.opentelemetry.io/otel/api/global"
 	"go.opentelemetry.io/otel/api/kv"
 	otelpropagation "go.opentelemetry.io/otel/api/propagation"
 	oteltrace "go.opentelemetry.io/otel/api/trace"
+
+	mocktrace "go.opentelemetry.io/contrib/internal/trace"
 )
 
 func TestChildSpanFromGlobalTracer(t *testing.T) {
@@ -46,7 +48,7 @@ func TestChildSpanFromGlobalTracer(t *testing.T) {
 		spanTracer := span.Tracer()
 		mockTracer, ok := spanTracer.(*mocktrace.Tracer)
 		require.True(t, ok)
-		assert.Equal(t, "go.opentelemetry.io/contrib/instrumentation/github.com/labstack/echo", mockTracer.Name)
+		assert.Equal(t, "go.opentelemetry.io/contrib/instrumentation/github.com/labstack/echo/otelecho", mockTracer.Name)
 		return c.NoContent(200)
 	})
 

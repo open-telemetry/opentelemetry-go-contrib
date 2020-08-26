@@ -19,13 +19,15 @@ import (
 	"log"
 	"net/http"
 
-	"github.com/open-telemetry/opentelemetry-go-contrib/instrumentation/github.com/labstack/echo/otelecho"
+	"go.opentelemetry.io/contrib/instrumentation/github.com/labstack/echo/otelecho"
 
 	otelglobal "go.opentelemetry.io/otel/api/global"
 	"go.opentelemetry.io/otel/api/kv"
 	oteltrace "go.opentelemetry.io/otel/api/trace"
 	"go.opentelemetry.io/otel/exporters/stdout"
 	sdktrace "go.opentelemetry.io/otel/sdk/trace"
+
+	"github.com/labstack/echo/v4"
 )
 
 var tracer = otelglobal.Tracer("gin-server")

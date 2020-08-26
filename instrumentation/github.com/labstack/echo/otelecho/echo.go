@@ -22,11 +22,13 @@ import (
 	otelpropagation "go.opentelemetry.io/otel/api/propagation"
 	"go.opentelemetry.io/otel/api/standard"
 	oteltrace "go.opentelemetry.io/otel/api/trace"
+
+	"github.com/labstack/echo/v4"
 )
 
 const (
 	tracerKey  = "otel-go-contrib-tracer-labstack-echo"
-	tracerName = "go.opentelemetry.io/contrib/instrumentation/github.com/labstack/echo"
+	tracerName = "go.opentelemetry.io/contrib/instrumentation/github.com/labstack/echo/otelecho"
 )
 
 // Middleware returns echo middleware which will trace incoming requests.

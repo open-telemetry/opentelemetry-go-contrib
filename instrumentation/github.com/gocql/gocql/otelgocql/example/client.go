@@ -37,7 +37,7 @@ import (
 	"time"
 
 	"github.com/gocql/gocql"
-	"github.com/open-telemetry/opentelemetry-go-contrib/instrumentation/github.com/gocql/gocql/otelgocql"
+	"go.opentelemetry.io/contrib/instrumentation/github.com/gocql/gocql/otelgocql"
 
 	"go.opentelemetry.io/otel/api/global"
 	"go.opentelemetry.io/otel/exporters/metric/prometheus"

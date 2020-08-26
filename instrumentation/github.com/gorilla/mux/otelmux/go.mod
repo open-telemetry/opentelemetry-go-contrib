@@ -1,8 +1,8 @@
-module go.opentelemetry.io/contrib/instrumentation/github.com/gorilla/mux
+module go.opentelemetry.io/contrib/instrumentation/github.com/gorilla/mux/otelmux
 
 go 1.14
 
-replace go.opentelemetry.io/contrib => ../../../..
+replace go.opentelemetry.io/contrib => ../../../../../
 
 require (
 	github.com/gorilla/mux v1.8.0
