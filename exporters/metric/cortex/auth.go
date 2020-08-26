@@ -104,12 +104,13 @@ func (e *Exporter) buildClient() (*http.Client, error) {
 	}
 
 	// Create a custom HTTP Transport for the client. This is the same as
-	// http.DefaultTransport other than the TLSClientConfig.
+	// http.DefaultTransport other than the TLSClientConfig and a longer DialContext
+	// Timeout and KeepAlive.
 	transport := &http.Transport{
 		Proxy: http.ProxyFromEnvironment,
 		DialContext: (&net.Dialer{
-			Timeout:   30 * time.Second,
-			KeepAlive: 30 * time.Second,
+			Timeout:   1 * time.Minute,
+			KeepAlive: 1 * time.Minute,
 			DualStack: true,
 		}).DialContext,
 		ForceAttemptHTTP2:     true,
