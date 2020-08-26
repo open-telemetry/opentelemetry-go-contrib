@@ -38,9 +38,10 @@ func OTelFilter(service string, opts ...Option) restful.FilterFunction {
 	for _, opt := range opts {
 		opt(&cfg)
 	}
-	if cfg.Tracer == nil {
-		cfg.Tracer = otelglobal.TraceProvider().Tracer(tracerName, oteltrace.WithInstrumentationVersion(tracerVersion))
+	if cfg.TraceProvider == nil {
+		cfg.TraceProvider = otelglobal.TraceProvider()
 	}
+	cfg.Tracer = cfg.TraceProvider.Tracer(tracerName, oteltrace.WithInstrumentationVersion(tracerVersion))
 	if cfg.Propagators == nil {
 		cfg.Propagators = otelglobal.Propagators()
 	}
