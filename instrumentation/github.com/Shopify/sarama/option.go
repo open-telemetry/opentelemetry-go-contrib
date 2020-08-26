@@ -52,9 +52,9 @@ func newConfig(opts ...Option) config {
 // Option specifies instrumentation configuration options.
 type Option func(*config)
 
-// WithTraceProvider specifies a trace provider to use for creating a tracer for spans.
+// WithTracerProvider specifies a tracer provider to use for creating a tracer.
 // If none is specified, the global provider is used.
-func WithTraceProvider(provider trace.Provider) Option {
+func WithTracerProvider(provider trace.Provider) Option {
 	return func(cfg *config) {
 		cfg.TraceProvider = provider
 	}

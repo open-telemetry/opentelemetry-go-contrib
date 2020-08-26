@@ -31,7 +31,7 @@ func TestNewConfig(t *testing.T) {
 		{
 			name: "with provider",
 			opts: []Option{
-				WithTraceProvider(global.TraceProvider()),
+				WithTracerProvider(global.TraceProvider()),
 			},
 			expected: config{
 				TraceProvider: global.TraceProvider(),
