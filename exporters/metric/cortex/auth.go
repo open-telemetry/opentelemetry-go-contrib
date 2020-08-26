@@ -144,47 +144,27 @@ func (e *Exporter) buildTLSConfig() (*tls.Config, error) {
 	tlsConfig.InsecureSkipVerify = parsedBool
 
 	// Load certificates from CA file if it exists.
-	if err := e.loadCACertificate(tlsConfig); err != nil {
-		return nil, err
-	}
-
-	// Load the client certificate if it exists.
-	if err := e.loadClientCertificate(tlsConfig); err != nil {
-		return nil, err
-	}
-
-	return tlsConfig, nil
-}
-
-// loadCACertificates reads and loads a CA certificate file and updates a TLS Config
-// struct's certificate pool with it.
-func (e *Exporter) loadCACertificate(tlsConfig *tls.Config) error {
 	caFile := e.config.TLSConfig["ca_file"]
-
 	if caFile != "" {
 		caFileData, err := ioutil.ReadFile(caFile)
 		if err != nil {
-			return err
+			return nil, err
 		}
 		certPool := x509.NewCertPool()
 		certPool.AppendCertsFromPEM(caFileData)
 		tlsConfig.RootCAs = certPool
 	}
-	return nil
-}
 
-// loadClientCertificate loads a x509 certificate from a certificate file and key file,
-// and stores it in a TLS Config struct.
-func (e *Exporter) loadClientCertificate(tlsConfig *tls.Config) error {
+	// Load the client certificate if it exists.
 	certFile := e.config.TLSConfig["cert_file"]
 	keyFile := e.config.TLSConfig["key_file"]
-
 	if certFile != "" && keyFile != "" {
 		cert, err := tls.LoadX509KeyPair(certFile, keyFile)
 		if err != nil {
-			return err
+			return nil, err
 		}
 		tlsConfig.Certificates = []tls.Certificate{cert}
 	}
-	return nil
+
+	return tlsConfig, nil
 }
