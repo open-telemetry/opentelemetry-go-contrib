@@ -15,4 +15,4 @@
 // Package http provides a http.Handler and functions that are
 // intended to be used to add tracing by wrapping
 // existing handlers (with Handler) and routes WithRouteTag.
-package otelhttp
+package otelhttp // import "go.opentelemetry.io/contrib/instrumentation/net/http/otelhttp"

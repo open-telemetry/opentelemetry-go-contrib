@@ -26,7 +26,7 @@ import (
 	"go.opentelemetry.io/otel/api/global"
 	"go.opentelemetry.io/otel/api/kv"
 	"go.opentelemetry.io/otel/api/trace/testtrace"
-	"go.opentelemetry.io/otel/instrumentation/httptrace"
+	"go.opentelemetry.io/contrib/instrumentation/net/http/httptrace/otelhttptrace"
 )
 
 type SpanRecorder map[string]*testtrace.Span
@@ -52,7 +52,7 @@ func TestHTTPRequestWithClientTrace(t *testing.T) {
 	err := tr.WithSpan(context.Background(), "test",
 		func(ctx context.Context) error {
 			req, _ := http.NewRequest("GET", ts.URL, nil)
-			_, req = httptrace.W3C(ctx, req)
+			_, req = otelhttptrace.W3C(ctx, req)
 
 			res, err := client.Do(req)
 			if err != nil {
@@ -138,7 +138,7 @@ func TestConcurrentConnectionStart(t *testing.T) {
 	global.SetTraceProvider(
 		testtrace.NewProvider(testtrace.WithSpanRecorder(&sr)),
 	)
-	ct := httptrace.NewClientTrace(context.Background())
+	ct := otelhttptrace.NewClientTrace(context.Background())
 	tts := []struct {
 		name string
 		run  func()
@@ -227,7 +227,7 @@ func TestEndBeforeStartCreatesSpan(t *testing.T) {
 		testtrace.NewProvider(testtrace.WithSpanRecorder(&sr)),
 	)
 
-	ct := httptrace.NewClientTrace(context.Background())
+	ct := otelhttptrace.NewClientTrace(context.Background())
 	ct.DNSDone(nhtrace.DNSDoneInfo{})
 	ct.DNSStart(nhtrace.DNSStartInfo{Host: "example.com"})
 

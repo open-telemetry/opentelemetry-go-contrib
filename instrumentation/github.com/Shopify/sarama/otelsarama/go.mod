@@ -1,8 +1,8 @@
-module go.opentelemetry.io/contrib/instrumentation/github.com/Shopify/sarama
+module go.opentelemetry.io/contrib/instrumentation/github.com/Shopify/sarama/otelsarama
 
 go 1.14
 
-replace go.opentelemetry.io/contrib => ../../../..
+replace go.opentelemetry.io/contrib => ../../../../..
 
 require (
 	github.com/Shopify/sarama v1.27.0

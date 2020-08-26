@@ -20,7 +20,7 @@ import (
 	"os/signal"
 	"syscall"
 
-	"github.com/open-telemetry/opentelemetry-go-contrib/instrumentation/github.com/shirou/gopsutil/otelgopsutil"
+	"go.opentelemetry.io/contrib/instrumentation/github.com/shirou/gopsutil/otelgopsutil"
 	"go.opentelemetry.io/otel/exporters/stdout"
 	"go.opentelemetry.io/otel/sdk/metric/controller/push"
 )

@@ -12,7 +12,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package otelmacaron //import "go.opentelemetry.io/contrib/instrumentation/instrumentation/macaron.v1/otelmacaron"
+package otelmacaron
 
 import (
 	"fmt"

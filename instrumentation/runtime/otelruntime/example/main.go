@@ -21,7 +21,7 @@ import (
 	"syscall"
 	"time"
 
-	"github.com/open-telemetry/opentelemetry-go-contrib/instrumentation/runtime/otelruntime"
+	"go.opentelemetry.io/contrib/instrumentation/runtime/otelruntime"
 	"go.opentelemetry.io/otel/exporters/stdout"
 	"go.opentelemetry.io/otel/sdk/metric/controller/push"
 )

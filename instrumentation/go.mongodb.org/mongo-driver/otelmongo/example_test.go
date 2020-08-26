@@ -17,7 +17,7 @@ package otelmongo_test
 import (
 	"context"
 
-	"github.com/open-telemetry/opentelemetry-go-contrib/instrumentation/go.mongodb.org/mongo-driver/otelmongo"
+	"go.opentelemetry.io/contrib/instrumentation/go.mongodb.org/mongo-driver/otelmongo"
 	"go.mongodb.org/mongo-driver/bson"
 	"go.mongodb.org/mongo-driver/mongo"
 	"go.mongodb.org/mongo-driver/mongo/options"

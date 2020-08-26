@@ -1,4 +1,4 @@
-module go.opentelemetry.io/contrib/instrumentation/macaron
+module go.opentelemetry.io/contrib/instrumentation/macaron/otelmacaron
 
 go 1.14
 

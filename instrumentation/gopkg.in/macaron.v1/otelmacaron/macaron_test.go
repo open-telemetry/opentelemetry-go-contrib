@@ -22,11 +22,13 @@ import (
 
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
-	mocktrace "go.opentelemetry.io/contrib/internal/trace"
 	otelglobal "go.opentelemetry.io/otel/api/global"
 	"go.opentelemetry.io/otel/api/kv"
 	otelpropagation "go.opentelemetry.io/otel/api/propagation"
 	oteltrace "go.opentelemetry.io/otel/api/trace"
+	"gopkg.in/macaron.v1"
+
+	mocktrace "go.opentelemetry.io/contrib/internal/trace"
 )
 
 func TestChildSpanFromGlobalTracer(t *testing.T) {

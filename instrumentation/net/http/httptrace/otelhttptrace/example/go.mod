@@ -1,11 +1,11 @@
-module go.opentelemetry.io/contrib/instrumentation/net/http/example
+module go.opentelemetry.io/contrib/instrumentation/net/http/httptrace/otelhttptrace/example
 
 go 1.14
 
 replace (
-	go.opentelemetry.io/contrib => ../../../../../
-	go.opentelemetry.io/contrib/instrumentation/net/http/otelhttp => ../../..
-	go.opentelemetry.io/contrib/instrumentation/net/http/httptrace/otelhttptrace => ../..
+	go.opentelemetry.io/contrib => ../../../../../../
+	go.opentelemetry.io/contrib/instrumentation/net/http/otelhttp => ../../../otelhttp
+	go.opentelemetry.io/contrib/instrumentation/net/http/httptrace/otelhttptrace => ../
 )
 
 require (

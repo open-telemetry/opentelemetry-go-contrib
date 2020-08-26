@@ -18,7 +18,7 @@ import (
 	"context"
 	"log"
 
-	"github.com/open-telemetry/opentelemetry-go-contrib/instrumentation/gopkg.in/macaron.v1/otelmacaron"
+	"go.opentelemetry.io/contrib/instrumentation/macaron/otelmacaron"
 	otelglobal "go.opentelemetry.io/otel/api/global"
 	otelkv "go.opentelemetry.io/otel/api/kv"
 	oteltrace "go.opentelemetry.io/otel/api/trace"

@@ -19,12 +19,12 @@ import (
 	"net/url"
 	"testing"
 
-	otelhttp2 "github.com/open-telemetry/opentelemetry-go-contrib/instrumentation/net/http/otelhttp"
+	"go.opentelemetry.io/contrib/instrumentation/net/http/otelhttp"
 )
 
 type scenario struct {
 	name   string
-	filter otelhttp2.Filter
+	filter otelhttp.Filter
 	req    *http.Request
 	exp    bool
 }

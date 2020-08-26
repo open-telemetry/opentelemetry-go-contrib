@@ -29,4 +29,4 @@
 //   runtime.go.mem.heap_sys      (bytes)    Bytes of heap memory obtained from the OS
 //   runtime.go.mem.live_objects  -          Number of live objects is the number of cumulative Mallocs - Frees
 //   runtime.uptime               (ms)       Milliseconds since application was initialized
-package otelruntime // import "go.opentelemetry.io/contrib/instrumentation/runtime"
+package otelruntime // import "go.opentelemetry.io/contrib/instrumentation/runtime/otelruntime"

@@ -19,7 +19,7 @@ import (
 	"testing"
 	"time"
 
-	"github.com/open-telemetry/opentelemetry-go-contrib/instrumentation/runtime/otelruntime"
+	"go.opentelemetry.io/contrib/instrumentation/runtime/otelruntime"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 

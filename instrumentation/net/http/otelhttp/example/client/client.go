@@ -24,7 +24,7 @@ import (
 	"net/http"
 	"time"
 
-	otelhttp "go.opentelemetry.io/contrib/instrumentation/net/http"
+	"go.opentelemetry.io/contrib/instrumentation/net/http/otelhttp"
 
 	"go.opentelemetry.io/otel/api/correlation"
 	"go.opentelemetry.io/otel/api/global"

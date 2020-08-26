@@ -20,12 +20,12 @@ import (
 	"net/http"
 	"strings"
 
-	otelhttp2 "github.com/open-telemetry/opentelemetry-go-contrib/instrumentation/net/http/otelhttp"
+	"go.opentelemetry.io/contrib/instrumentation/net/http/otelhttp"
 )
 
 // Header returns a Filter that returns true if the request
 // includes a header k with a value equal to v.
-func Header(k, v string) otelhttp2.Filter {
+func Header(k, v string) otelhttp.Filter {
 	return func(r *http.Request) bool {
 		for _, hv := range r.Header.Values(k) {
 			if v == hv {
@@ -38,7 +38,7 @@ func Header(k, v string) otelhttp2.Filter {
 
 // HeaderContains returns a Filter that returns true if the request
 // includes a header k with a value that contains v.
-func HeaderContains(k, v string) otelhttp2.Filter {
+func HeaderContains(k, v string) otelhttp.Filter {
 	return func(r *http.Request) bool {
 		for _, hv := range r.Header.Values(k) {
 			if strings.Contains(hv, v) {

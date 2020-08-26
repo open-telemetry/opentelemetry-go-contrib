@@ -28,7 +28,7 @@ import (
 	"go.opentelemetry.io/otel/api/propagation"
 	"go.opentelemetry.io/otel/api/standard"
 	"go.opentelemetry.io/otel/api/trace/testtrace"
-	"go.opentelemetry.io/otel/instrumentation/httptrace"
+	"go.opentelemetry.io/contrib/instrumentation/net/http/httptrace/otelhttptrace"
 )
 
 func TestRoundtrip(t *testing.T) {
@@ -40,7 +40,7 @@ func TestRoundtrip(t *testing.T) {
 	// Mock http server
 	ts := httptest.NewServer(
 		http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-			attrs, corrs, span := httptrace.Extract(r.Context(), r)
+			attrs, corrs, span := otelhttptrace.Extract(r.Context(), r)
 
 			actualAttrs := make(map[kv.Key]string)
 			for _, attr := range attrs {
@@ -97,7 +97,7 @@ func TestRoundtrip(t *testing.T) {
 		func(ctx context.Context) error {
 			ctx = correlation.ContextWithMap(ctx, correlation.NewMap(correlation.MapUpdate{SingleKV: kv.Key("foo").String("bar")}))
 			req, _ := http.NewRequest("GET", ts.URL, strings.NewReader("foo"))
-			httptrace.Inject(ctx, req)
+			otelhttptrace.Inject(ctx, req)
 
 			res, err := client.Do(req)
 			if err != nil {
@@ -120,7 +120,7 @@ func TestSpecifyPropagators(t *testing.T) {
 	// Mock http server
 	ts := httptest.NewServer(
 		http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-			_, corrs, span := httptrace.Extract(r.Context(), r, httptrace.WithPropagators(propagation.New(propagation.WithExtractors(correlation.DefaultHTTPPropagator()))))
+			_, corrs, span := otelhttptrace.Extract(r.Context(), r, otelhttptrace.WithPropagators(propagation.New(propagation.WithExtractors(correlation.DefaultHTTPPropagator()))))
 
 			actualCorrs := make(map[kv.Key]string)
 			for _, corr := range corrs {
@@ -148,7 +148,7 @@ func TestSpecifyPropagators(t *testing.T) {
 		func(ctx context.Context) error {
 			ctx = correlation.ContextWithMap(ctx, correlation.NewMap(correlation.MapUpdate{SingleKV: kv.Key("foo").String("bar")}))
 			req, _ := http.NewRequest("GET", ts.URL, nil)
-			httptrace.Inject(ctx, req, httptrace.WithPropagators(propagation.New(propagation.WithInjectors(correlation.DefaultHTTPPropagator()))))
+			otelhttptrace.Inject(ctx, req, otelhttptrace.WithPropagators(propagation.New(propagation.WithInjectors(correlation.DefaultHTTPPropagator()))))
 
 			res, err := client.Do(req)
 			if err != nil {

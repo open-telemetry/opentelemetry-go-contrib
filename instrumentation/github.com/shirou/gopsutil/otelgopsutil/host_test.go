@@ -23,7 +23,7 @@ import (
 
 	gonet "net"
 
-	"github.com/open-telemetry/opentelemetry-go-contrib/instrumentation/github.com/shirou/gopsutil/otelgopsutil"
+	"go.opentelemetry.io/contrib/instrumentation/github.com/shirou/gopsutil/otelgopsutil"
 	"github.com/shirou/gopsutil/cpu"
 	"github.com/shirou/gopsutil/mem"
 	"github.com/shirou/gopsutil/net"

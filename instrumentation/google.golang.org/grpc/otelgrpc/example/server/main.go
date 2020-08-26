@@ -22,7 +22,7 @@ import (
 	"net"
 	"time"
 
-	"github.com/open-telemetry/opentelemetry-go-contrib/instrumentation/google.golang.org/otelgrpc"
+	"go.opentelemetry.io/contrib/instrumentation/google.golang.org/grpc/otelgrpc"
 	"go.opentelemetry.io/otel/api/global"
 	"go.opentelemetry.io/otel/example/grpc/api"
 	"go.opentelemetry.io/otel/example/grpc/config"
