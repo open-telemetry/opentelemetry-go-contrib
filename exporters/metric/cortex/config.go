@@ -17,6 +17,7 @@ package cortex
 import (
 	"fmt"
 	"net/http"
+	"net/url"
 	"time"
 )
 
@@ -51,7 +52,7 @@ type Config struct {
 	BearerToken         string            `mapstructure:"bearer_token"`
 	BearerTokenFile     string            `mapstructure:"bearer_token_file"`
 	TLSConfig           map[string]string `mapstructure:"tls_config"`
-	ProxyURL            string            `mapstructure:"proxy_url"`
+	ProxyURL            *url.URL          `mapstructure:"proxy_url"`
 	PushInterval        time.Duration     `mapstructure:"push_interval"`
 	Quantiles           []float64         `mapstructure:"quantiles"`
 	HistogramBoundaries []float64         `mapstructure:"histogram_boundaries"`

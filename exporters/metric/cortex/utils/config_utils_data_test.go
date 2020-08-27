@@ -126,7 +126,7 @@ var validConfig = cortex.Config{
 		"server_name":          "server",
 		"insecure_skip_verify": "1",
 	},
-	ProxyURL:     "",
+	ProxyURL:     nil,
 	PushInterval: 5 * time.Second,
 	Headers: map[string]string{
 		"test": "header",
