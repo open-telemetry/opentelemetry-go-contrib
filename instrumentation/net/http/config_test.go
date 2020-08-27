@@ -120,8 +120,9 @@ func TestSpanNameFormatter(t *testing.T) {
 			}
 
 			spans := tracer.EndedSpans()
-			assert.Len(t, spans, 1)
-			assert.Equal(t, tc.expected, spans[0].Name)
+			if assert.Len(t, spans, 1) {
+				assert.Equal(t, tc.expected, spans[0].Name)
+			}
 		})
 	}
 }
