@@ -37,7 +37,7 @@ Additionally the following guidelines for package composition need to be followe
 - Examples of how to actually use the instrumentation SHOULD be included.
 - All instrumentation packages MUST provide an option to accept a `TracerProvider` if it uses a Tracer, a `MeterProvider` if it uses a Meter, and `Propagators` if it handles any context propagation.
   Also, packages MUST use the default `TracerProvider`, `MeterProvider`, and `Propagators` supplied by the `global` package if no optional one is provided.
-- All instrumentation packages MUST not provide an option to accept a `Tracer` or `Meter`.
+- All instrumentation packages MUST NOT provide an option to accept a `Tracer` or `Meter`.
 - All instrumentation packages MUST create any used `Tracer` or `Meter` with a name matching the instrumentation package name.
 
 ## Additional Instrumentation Packages
