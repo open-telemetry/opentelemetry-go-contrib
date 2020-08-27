@@ -8,6 +8,8 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 
 ## [Unreleased]
 
+- Update dependabot.yml to run checks once a week on Sundays and include all current go.mod locations.
+
 ## [0.11.0] - 2020-08-25
 
 ### Added

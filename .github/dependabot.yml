@@ -5,75 +5,160 @@
 
 version: 2
 updates:
+  - package-ecosystem: "github-actions" # See documentation for possible values
+    # Per documentation: For GitHub Actions, set the directory to / to
+    # check for workflow files in .github/workflows
+    directory: "/"
+    schedule:
+      interval: "weekly"
+      day: "sunday"
   - package-ecosystem: "gomod" # See documentation for possible values
     directory: "/" # Location of package manifests
     schedule:
-      interval: "daily"
-  - package-ecosystem: "gomod" # See documentation for possible values
-    directory: "/detectors/aws" # Location of package manifests
-    schedule:
-      interval: "daily"
-  - package-ecosystem: "gomod" # See documentation for possible values
-    directory: "/detectors/gcp" # Location of package manifests
-    schedule:
-      interval: "daily"
+      interval: "weekly"
+      day: "sunday"
   - package-ecosystem: "gomod" # See documentation for possible values
     directory: "/tools" # Location of package manifests
     schedule:
-      interval: "daily"
+      interval: "weekly"
+      day: "sunday"
   - package-ecosystem: "gomod" # See documentation for possible values
-    directory: "/exporters/metric/dogstatsd" # Location of package manifests
+    directory: "/detectors/aws" # Location of package manifests
     schedule:
-      interval: "daily"
+      interval: "weekly"
+      day: "sunday"
+  - package-ecosystem: "gomod" # See documentation for possible values
+    directory: "/detectors/gcp" # Location of package manifests
+    schedule:
+      interval: "weekly"
+      day: "sunday"
+  - package-ecosystem: "gomod" # See documentation for possible values
+    directory: "/exporters/metric/cortex" # Location of package manifests
+    schedule:
+      interval: "weekly"
+      day: "sunday"
+  - package-ecosystem: "gomod" # See documentation for possible values
+    directory: "/exporters/metric/cortex/example" # Location of package manifests
+    schedule:
+      interval: "weekly"
+      day: "sunday"
+  - package-ecosystem: "gomod" # See documentation for possible values
+    directory: "/exporters/metric/cortex/utils" # Location of package manifests
+    schedule:
+      interval: "weekly"
+      day: "sunday"
   - package-ecosystem: "gomod" # See documentation for possible values
     directory: "/exporters/metric/datadog" # Location of package manifests
     schedule:
-      interval: "daily"
+      interval: "weekly"
+      day: "sunday"
   - package-ecosystem: "gomod" # See documentation for possible values
-    directory: "/instrumentation/github.com/emicklei/go-restful" # Location of package manifests
+    directory: "/exporters/metric/dogstatsd" # Location of package manifests
     schedule:
-      interval: "daily"
-  - package-ecosystem: "gomod" # See documentation for possible values
-    directory: "/instrumentation/github.com/gin-gonic/gin" # Location of package manifests
-    schedule:
-      interval: "daily"
-  - package-ecosystem: "gomod" # See documentation for possible values
-    directory: "/instrumentation/github.com/gorilla/mux" # Location of package manifests
-    schedule:
-      interval: "daily"
-  - package-ecosystem: "gomod" # See documentation for possible values
-    directory: "/instrumentation/github.com/labstack/echo" # Location of package manifests
-    schedule:
-      interval: "daily"
-  - package-ecosystem: "gomod" # See documentation for possible values
-    directory: "/instrumentation/go.mongodb.org/mongo-driver" # Location of package manifests
-    schedule:
-      interval: "daily"
-  - package-ecosystem: "gomod" # See documentation for possible values
-    directory: "/instrumentation/google.golang.org/grpc" # Location of package manifests
-    schedule:
-      interval: "daily"
-  - package-ecosystem: "gomod" # See documentation for possible values
-    directory: "/instrumentation/gopkg.in/macaron.v1" # Location of package manifests
-    schedule:
-      interval: "daily"
-  - package-ecosystem: "gomod" # See documentation for possible values
-    directory: "/instrumentation/runtime" # Location of package manifests
-    schedule:
-      interval: "daily"
+      interval: "weekly"
+      day: "sunday"
   - package-ecosystem: "gomod" # See documentation for possible values
     directory: "/instrumentation/github.com/Shopify/sarama" # Location of package manifests
     schedule:
-      interval: "daily"
+      interval: "weekly"
+      day: "sunday"
   - package-ecosystem: "gomod" # See documentation for possible values
-    directory: "/instrumentation/net/http" # Location of package manifests
+    directory: "/instrumentation/github.com/Shopify/sarama/example" # Location of package manifests
     schedule:
-      interval: "daily"
+      interval: "weekly"
+      day: "sunday"
   - package-ecosystem: "gomod" # See documentation for possible values
-    directory: "/instrumentation/net/http/httptrace" # Location of package manifests
+    directory: "/instrumentation/github.com/astaxie/beego" # Location of package manifests
     schedule:
-      interval: "daily"
+      interval: "weekly"
+      day: "sunday"
+  - package-ecosystem: "gomod" # See documentation for possible values
+    directory: "/instrumentation/github.com/astaxie/beego/example" # Location of package manifests
+    schedule:
+      interval: "weekly"
+      day: "sunday"
   - package-ecosystem: "gomod" # See documentation for possible values
     directory: "/instrumentation/github.com/bradfitz/gomemcache" # Location of package manifests
     schedule:
-      interval: "daily"
+      interval: "weekly"
+      day: "sunday"
+  - package-ecosystem: "gomod" # See documentation for possible values
+    directory: "/instrumentation/github.com/emicklei/go-restful" # Location of package manifests
+    schedule:
+      interval: "weekly"
+      day: "sunday"
+  - package-ecosystem: "gomod" # See documentation for possible values
+    directory: "/instrumentation/github.com/gin-gonic/gin" # Location of package manifests
+    schedule:
+      interval: "weekly"
+      day: "sunday"
+  - package-ecosystem: "gomod" # See documentation for possible values
+    directory: "/instrumentation/github.com/gocql/gocql" # Location of package manifests
+    schedule:
+      interval: "weekly"
+      day: "sunday"
+  - package-ecosystem: "gomod" # See documentation for possible values
+    directory: "/instrumentation/github.com/gocql/gocql/example" # Location of package  manifests
+    schedule:
+      interval: "weekly"
+      day: "sunday"
+  - package-ecosystem: "gomod" # See documentation for possible values
+    directory: "/instrumentation/github.com/gorilla/mux" # Location of package manifests
+    schedule:
+      interval: "weekly"
+      day: "sunday"
+  - package-ecosystem: "gomod" # See documentation for possible values
+    directory: "/instrumentation/github.com/labstack/echo" # Location of package manifests
+    schedule:
+      interval: "weekly"
+      day: "sunday"
+  - package-ecosystem: "gomod" # See documentation for possible values
+    directory: "/instrumentation/go.mongodb.org/mongo-driver" # Location of package manifests
+    schedule:
+      interval: "weekly"
+      day: "sunday"
+  - package-ecosystem: "gomod" # See documentation for possible values
+    directory: "/instrumentation/google.golang.org/grpc" # Location of package manifests
+    schedule:
+      interval: "weekly"
+      day: "sunday"
+  - package-ecosystem: "gomod" # See documentation for possible values
+    directory: "/instrumentation/google.golang.org/grpc/example" # Location of package manifests
+    schedule:
+      interval: "weekly"
+      day: "sunday"
+  - package-ecosystem: "gomod" # See documentation for possible values
+    directory: "/instrumentation/gopkg.in/macaron.v1" # Location of package manifests
+    schedule:
+      interval: "weekly"
+      day: "sunday"
+  - package-ecosystem: "gomod" # See documentation for possible values
+    directory: "/instrumentation/host" # Location of package manifests
+    schedule:
+      interval: "weekly"
+      day: "sunday"
+  - package-ecosystem: "gomod" # See documentation for possible values
+    directory: "/instrumentation/net/http" # Location of package manifests
+    schedule:
+      interval: "weekly"
+      day: "sunday"
+  - package-ecosystem: "gomod" # See documentation for possible values
+    directory: "/instrumentation/net/http/example" # Location of package manifests
+    schedule:
+      interval: "weekly"
+      day: "sunday"
+  - package-ecosystem: "gomod" # See documentation for possible values
+    directory: "/instrumentation/net/http/httptrace" # Location of package manifests
+    schedule:
+      interval: "weekly"
+      day: "sunday"
+  - package-ecosystem: "gomod" # See documentation for possible values
+    directory: "/instrumentation/net/http/httptrace/example" # Location of package manifests
+    schedule:
+      interval: "weekly"
+      day: "sunday"
+  - package-ecosystem: "gomod" # See documentation for possible values
+    directory: "/instrumentation/runtime" # Location of package manifests
+    schedule:
+      interval: "weekly"
+      day: "sunday"
