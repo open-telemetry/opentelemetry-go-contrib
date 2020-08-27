@@ -110,7 +110,7 @@ func main() {
 
 func initMetrics() {
 	// Start prometheus
-	metricExporter, err := prometheus.NewExportPipeline(prometheus.Config{})
+	metricExporter, err := prometheus.InstallNewPipeline(prometheus.Config{})
 	if err != nil {
 		log.Fatalf("failed to install metric exporter, %v", err)
 	}
@@ -133,8 +133,6 @@ func initMetrics() {
 			log.Print("gracefully shutting down server")
 		}
 	}()
-
-	otelGocql.InstrumentWithProvider(metricExporter.Provider())
 }
 
 func initTracer() {
