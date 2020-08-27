@@ -39,8 +39,8 @@ type Config struct {
 	Filters           []Filter
 	SpanNameFormatter func(string, *http.Request) string
 
-	TraceProvider trace.Provider
-	MeterProvider metric.Provider
+	TracerProvider trace.Provider
+	MeterProvider  metric.Provider
 }
 
 // Option Interface used for setting *optional* Config properties
@@ -59,15 +59,15 @@ func (o OptionFunc) Apply(c *Config) {
 // NewConfig creates a new Config struct and applies opts to it.
 func NewConfig(opts ...Option) *Config {
 	c := &Config{
-		Propagators:   global.Propagators(),
-		TraceProvider: global.TraceProvider(),
-		MeterProvider: global.MeterProvider(),
+		Propagators:    global.Propagators(),
+		TracerProvider: global.TraceProvider(),
+		MeterProvider:  global.MeterProvider(),
 	}
 	for _, opt := range opts {
 		opt.Apply(c)
 	}
 
-	c.Tracer = c.TraceProvider.Tracer(instrumentationName)
+	c.Tracer = c.TracerProvider.Tracer(instrumentationName)
 	c.Meter = c.MeterProvider.Meter(instrumentationName)
 
 	return c
@@ -77,7 +77,7 @@ func NewConfig(opts ...Option) *Config {
 // If none is specified, the global provider is used.
 func WithTracerProvider(provider trace.Provider) Option {
 	return OptionFunc(func(cfg *Config) {
-		cfg.TraceProvider = provider
+		cfg.TracerProvider = provider
 	})
 }
 

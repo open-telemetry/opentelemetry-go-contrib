@@ -39,17 +39,17 @@ func Middleware(service string, opts ...Option) mux.MiddlewareFunc {
 	for _, opt := range opts {
 		opt(&cfg)
 	}
-	if cfg.TraceProvider == nil {
-		cfg.TraceProvider = otelglobal.TraceProvider()
+	if cfg.TracerProvider == nil {
+		cfg.TracerProvider = otelglobal.TraceProvider()
 	}
-	cfg.Tracer = cfg.TraceProvider.Tracer(tracerName)
+	tracer := cfg.TracerProvider.Tracer(tracerName)
 	if cfg.Propagators == nil {
 		cfg.Propagators = otelglobal.Propagators()
 	}
 	return func(handler http.Handler) http.Handler {
 		return traceware{
 			service:     service,
-			tracer:      cfg.Tracer,
+			tracer:      tracer,
 			propagators: cfg.Propagators,
 			handler:     handler,
 		}

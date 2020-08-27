@@ -22,9 +22,8 @@ import (
 )
 
 type Config struct {
-	TraceProvider oteltrace.Provider
-	Tracer        oteltrace.Tracer
-	Propagators   otelpropagation.Propagators
+	TracerProvider oteltrace.Provider
+	Propagators    otelpropagation.Propagators
 }
 
 // Option specifies instrumentation configuration options.
@@ -43,6 +42,6 @@ func WithPropagators(propagators otelpropagation.Propagators) Option {
 // If none is specified, the global provider is used.
 func WithTracerProvider(provider oteltrace.Provider) Option {
 	return func(cfg *Config) {
-		cfg.TraceProvider = provider
+		cfg.TracerProvider = provider
 	}
 }

@@ -24,11 +24,11 @@ import (
 // Config provides configuration for the beego OpenTelemetry
 // middleware. Configuration is modified using the provided Options.
 type Config struct {
-	traceProvider trace.Provider
-	meterProvider metric.Provider
-	propagators   propagation.Propagators
-	filters       []Filter
-	formatter     SpanNameFormatter
+	tracerProvider trace.Provider
+	meterProvider  metric.Provider
+	propagators    propagation.Propagators
+	filters        []Filter
+	formatter      SpanNameFormatter
 }
 
 // Option applies a configuration to the given Config.
@@ -49,9 +49,9 @@ func (o OptionFunc) Apply(c *Config) {
 
 // WithTracerProvider specifies a tracer provider to use for creating a tracer.
 // If none is specified, the global provider is used.
-func WithTracerProvider(traceProvider trace.Provider) Option {
+func WithTracerProvider(provider trace.Provider) Option {
 	return OptionFunc(func(cfg *Config) {
-		cfg.traceProvider = traceProvider
+		cfg.tracerProvider = provider
 	})
 }
 
@@ -91,11 +91,11 @@ func WithSpanNameFormatter(f SpanNameFormatter) OptionFunc {
 
 func configure(options ...Option) *Config {
 	config := &Config{
-		traceProvider: global.TraceProvider(),
-		meterProvider: global.MeterProvider(),
-		propagators:   global.Propagators(),
-		filters:       []Filter{},
-		formatter:     defaultSpanNameFormatter,
+		tracerProvider: global.TraceProvider(),
+		meterProvider:  global.MeterProvider(),
+		propagators:    global.Propagators(),
+		filters:        []Filter{},
+		formatter:      defaultSpanNameFormatter,
 	}
 	for _, option := range options {
 		option.Apply(config)
