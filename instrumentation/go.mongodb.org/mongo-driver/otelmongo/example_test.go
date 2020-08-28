@@ -17,10 +17,10 @@ package otelmongo_test
 import (
 	"context"
 
-	"go.opentelemetry.io/contrib/instrumentation/go.mongodb.org/mongo-driver/otelmongo"
 	"go.mongodb.org/mongo-driver/bson"
 	"go.mongodb.org/mongo-driver/mongo"
 	"go.mongodb.org/mongo-driver/mongo/options"
+	"go.opentelemetry.io/contrib/instrumentation/go.mongodb.org/mongo-driver/otelmongo"
 )
 
 func Example() {
