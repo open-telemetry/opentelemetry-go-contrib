@@ -16,6 +16,7 @@ package otelrestful
 
 import (
 	"github.com/emicklei/go-restful/v3"
+
 	otelglobal "go.opentelemetry.io/otel/api/global"
 	otelpropagation "go.opentelemetry.io/otel/api/propagation"
 	oteltrace "go.opentelemetry.io/otel/api/trace"

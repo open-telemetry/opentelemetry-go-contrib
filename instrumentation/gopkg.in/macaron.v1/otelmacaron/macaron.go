@@ -18,11 +18,12 @@ import (
 	"fmt"
 	"net/http"
 
+	"gopkg.in/macaron.v1"
+
 	otelglobal "go.opentelemetry.io/otel/api/global"
 	otelpropagation "go.opentelemetry.io/otel/api/propagation"
 	oteltrace "go.opentelemetry.io/otel/api/trace"
 	"go.opentelemetry.io/otel/semconv"
-	"gopkg.in/macaron.v1"
 )
 
 const (

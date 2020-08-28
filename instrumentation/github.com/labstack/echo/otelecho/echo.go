@@ -18,6 +18,7 @@ import (
 	"fmt"
 
 	"github.com/labstack/echo/v4"
+
 	otelglobal "go.opentelemetry.io/otel/api/global"
 	otelpropagation "go.opentelemetry.io/otel/api/propagation"
 	oteltrace "go.opentelemetry.io/otel/api/trace"

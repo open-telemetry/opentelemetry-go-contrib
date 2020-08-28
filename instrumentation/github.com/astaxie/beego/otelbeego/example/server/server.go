@@ -18,6 +18,7 @@ import (
 	"log"
 
 	"github.com/astaxie/beego"
+
 	"go.opentelemetry.io/contrib/instrumentation/github.com/astaxie/beego/otelbeego"
 
 	"go.opentelemetry.io/otel/api/global"

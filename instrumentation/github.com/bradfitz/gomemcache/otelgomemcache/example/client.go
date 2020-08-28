@@ -20,6 +20,7 @@ import (
 	"os"
 
 	"github.com/bradfitz/gomemcache/memcache"
+
 	"go.opentelemetry.io/contrib/instrumentation/github.com/bradfitz/gomemcache/otelgomemcache"
 
 	oteltrace "go.opentelemetry.io/otel/api/trace"

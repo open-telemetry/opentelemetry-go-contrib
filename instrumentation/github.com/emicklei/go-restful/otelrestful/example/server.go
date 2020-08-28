@@ -20,6 +20,7 @@ import (
 	"strconv"
 
 	"github.com/emicklei/go-restful/v3"
+
 	"go.opentelemetry.io/contrib/instrumentation/github.com/emicklei/go-restful/otelrestful"
 
 	otelglobal "go.opentelemetry.io/otel/api/global"

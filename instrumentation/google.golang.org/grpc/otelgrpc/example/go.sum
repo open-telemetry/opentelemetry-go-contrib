@@ -39,8 +39,6 @@ github.com/prometheus/client_model v0.0.0-20190812154241-14fe0d1b01d4/go.mod h1:
 github.com/stretchr/objx v0.1.0/go.mod h1:HFkY916IF+rwdDfMAkV7OtwuqBVzrE8GR6GFx+wExME=
 github.com/stretchr/testify v1.6.1 h1:hDPOHmpOpP40lSULcqw7IrRb/u7w6RpDC9399XyoNd0=
 github.com/stretchr/testify v1.6.1/go.mod h1:6Fq8oRcR53rry900zMqJjRRixrwX3KX962/h/Wwjteg=
-go.opentelemetry.io v0.1.0 h1:EANZoRCOP+A3faIlw/iN6YEWoYb1vleZRKm1EvH8T48=
-go.opentelemetry.io/contrib v0.11.0 h1:EQOdk+fxs7qp3wVIS5wCinwqNHfhD/DreQRY/VADO8s=
 go.opentelemetry.io/contrib/instrumentation/google.golang.org/grpc v0.11.0 h1:jx+6CPh/uE5xW4uCm5gCb5B36+/c/k58mH+8YQ1glZo=
 go.opentelemetry.io/contrib/instrumentation/google.golang.org/grpc v0.11.0/go.mod h1:+6Kxsolxctkb7k57eHfR2T1EF7ukt5btjo8s/92wk4M=
 go.opentelemetry.io/contrib/instrumentation/google.golang.org/grpc/example v0.11.0 h1:NqODLEnEqc5iij1qCy1pvmExGl1EW2PNVcpD1M5CBRY=

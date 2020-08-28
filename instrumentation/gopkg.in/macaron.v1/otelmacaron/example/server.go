@@ -18,13 +18,14 @@ import (
 	"context"
 	"log"
 
+	"gopkg.in/macaron.v1"
+
 	"go.opentelemetry.io/contrib/instrumentation/macaron/otelmacaron"
 	otelglobal "go.opentelemetry.io/otel/api/global"
 	oteltrace "go.opentelemetry.io/otel/api/trace"
 	"go.opentelemetry.io/otel/exporters/stdout"
 	"go.opentelemetry.io/otel/label"
 	sdktrace "go.opentelemetry.io/otel/sdk/trace"
-	"gopkg.in/macaron.v1"
 )
 
 var tracer = otelglobal.Tracer("macaron-server")
