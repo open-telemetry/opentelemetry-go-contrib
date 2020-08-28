@@ -262,71 +262,98 @@ func TestBuildClient(t *testing.T) {
 // successfully verify a server and send a HTTP request and whether a server can
 // successfully verify the Exporter client and receive the HTTP request.
 func TestMutualTLS(t *testing.T) {
-	// Generate certificate authority certificate to sign other certificates.
-	caCert, caPrivateKey, err := generateCACertFiles("./ca_cert.pem", "./ca_key.pem")
-	require.NoError(t, err)
-	defer os.Remove("./ca_cert.pem")
-	defer os.Remove("./ca_key.pem")
-
-	// Generate certificate for the server. The client will check this certificate against
-	// its certificate authority to verify the server.
-	_, _, err = generateServingCertFiles(
-		caCert,
-		caPrivateKey,
-		"./serving_cert.pem",
-		"./serving_key.pem",
-	)
-	require.NoError(t, err)
-	defer os.Remove("./serving_cert.pem")
-	defer os.Remove("./serving_key.pem")
-
-	// Generate certificate for the client. The server will check this certificate against
-	// its certificate authority to verify the client.
-	_, _, err = generateClientCertFiles(
-		caCert,
-		caPrivateKey,
-		"./client_cert.pem",
-		"./client_key.pem",
-	)
-	require.NoError(t, err)
-	defer os.Remove("./client_cert.pem")
-	defer os.Remove("./client_key.pem")
-
-	// Generate the tls Config to set up mutual TLS on the server.
-	serverTLSConfig, err := generateServerTLSConfig(
-		"ca_cert.pem",
-		"serving_cert.pem",
-		"serving_key.pem",
-	)
-	require.NoError(t, err)
-
-	// Create and start the TLS server.
-	handler := func(rw http.ResponseWriter, req *http.Request) {
-		fmt.Fprint(rw, "Successfully verified client and received request!")
-	}
-	server := httptest.NewUnstartedServer(http.HandlerFunc(handler))
-	server.TLS = serverTLSConfig
-	server.StartTLS()
-	defer server.Close()
-
-	// Create an Exporter client with the client and CA certificate files.
-	exporter := Exporter{
-		Config{
-			TLSConfig: map[string]string{
-				"ca_file":              "./ca_cert.pem",
-				"cert_file":            "./client_cert.pem",
-				"key_file":             "./client_key.pem",
-				"insecure_skip_verify": "0",
-			},
+	tests := []struct {
+		testName      string
+		generateCerts bool
+		caCert        string
+		caKey         string
+		servingCert   string
+		servingKey    string
+		clientCert    string
+		clientKey     string
+	}{
+		{
+			testName:      "Static Certs",
+			generateCerts: false,
+			caCert:        "testdata/ca.crt",
+			caKey:         "testdata/ca.key",
+			servingCert:   "testdata/server.crt",
+			servingKey:    "testdata/server.key",
+			clientCert:    "testdata/client.crt",
+			clientKey:     "testdata/client.key",
 		},
 	}
-	client, err := exporter.buildClient()
-	require.NoError(t, err)
+	for _, test := range tests {
+		t.Run(test.testName, func(t *testing.T) {
+			if test.generateCerts {
+				// Generate certificate authority certificate to sign other certificates.
+				caCert, caPrivateKey, err := generateCACertFiles(test.caCert, test.caKey)
+				require.NoError(t, err)
+				defer os.Remove(test.caCert)
+				defer os.Remove(test.caKey)
 
-	// Send the request and verify that the request was successfully received.
-	res, err := client.Get(server.URL)
-	require.NoError(t, err)
-	defer res.Body.Close()
+				// Generate certificate for the server. The client will check this
+				// certificate against its certificate authority to verify the server.
+				_, _, err = generateServingCertFiles(
+					caCert,
+					caPrivateKey,
+					test.servingCert,
+					test.servingKey,
+				)
+				require.NoError(t, err)
+				defer os.Remove(test.servingCert)
+				defer os.Remove(test.servingKey)
+
+				// Generate certificate for the client. The server will check this certificate against
+				// its certificate authority to verify the client.
+				_, _, err = generateClientCertFiles(
+					caCert,
+					caPrivateKey,
+					test.clientCert,
+					test.clientKey,
+				)
+				require.NoError(t, err)
+				defer os.Remove(test.clientCert)
+				defer os.Remove(test.clientKey)
+			}
+
+			// Generate the tls Config to set up mutual TLS on the server.
+			serverTLSConfig, err := generateServerTLSConfig(
+				test.caCert,
+				test.servingCert,
+				test.servingKey,
+			)
+			require.NoError(t, err)
+
+			// Create and start the TLS server.
+			handler := func(rw http.ResponseWriter, req *http.Request) {
+				fmt.Fprint(rw, "Successfully verified client and received request!")
+			}
+			server := httptest.NewUnstartedServer(http.HandlerFunc(handler))
+			server.TLS = serverTLSConfig
+			server.StartTLS()
+			defer server.Close()
+
+			// Create an Exporter client with the client and CA certificate files.
+			exporter := Exporter{
+				Config{
+					TLSConfig: map[string]string{
+						"ca_file":              test.caCert,
+						"cert_file":            test.clientCert,
+						"key_file":             test.clientKey,
+						"insecure_skip_verify": "0",
+					},
+				},
+			}
+			client, err := exporter.buildClient()
+			require.NoError(t, err)
+
+			// Send the request and verify that the request was successfully received.
+			res, err := client.Get(server.URL)
+			require.NoError(t, err)
+			defer res.Body.Close()
+		})
+	}
 }
 
 // generateCertFiles generates new certificate files from a template that is signed with
