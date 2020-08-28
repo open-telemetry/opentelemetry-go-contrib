@@ -15,13 +15,14 @@
 package otelruntime_test
 
 import (
-	goruntime "runtime"
+	"runtime"
 	"testing"
 	"time"
 
-	"go.opentelemetry.io/contrib/instrumentation/runtime/otelruntime"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
+
+	"go.opentelemetry.io/contrib/instrumentation/runtime/otelruntime"
 
 	"go.opentelemetry.io/contrib/internal/metric"
 )
@@ -46,10 +47,10 @@ func getGCCount(impl *metric.MeterImpl) int {
 }
 
 func testMinimumInterval(t *testing.T, shouldHappen bool, opts ...otelruntime.Option) {
-	goruntime.GC()
+	runtime.GC()
 
-	var mstats0 goruntime.MemStats
-	goruntime.ReadMemStats(&mstats0)
+	var mstats0 runtime.MemStats
+	runtime.ReadMemStats(&mstats0)
 	baseline := int(mstats0.NumGC)
 
 	impl, provider := metric.NewProvider()
@@ -62,7 +63,7 @@ func testMinimumInterval(t *testing.T, shouldHappen bool, opts ...otelruntime.Op
 	)
 	assert.NoError(t, err)
 
-	goruntime.GC()
+	runtime.GC()
 
 	impl.RunAsyncInstruments()
 
@@ -75,9 +76,9 @@ func testMinimumInterval(t *testing.T, shouldHappen bool, opts ...otelruntime.Op
 		extra = 3
 	}
 
-	goruntime.GC()
-	goruntime.GC()
-	goruntime.GC()
+	runtime.GC()
+	runtime.GC()
+	runtime.GC()
 
 	impl.RunAsyncInstruments()
 
