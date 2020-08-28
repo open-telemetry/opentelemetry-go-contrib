@@ -84,7 +84,7 @@ test-gomemcache:
 	  set -e; \
 	  docker run --name gomemcache-integ --rm -p 11211:11211 -d memcached; \
 	  CMD=gomemcache IMG_NAME=gomemcache-integ  ./.circleci/wait.sh; \
-	  (cd instrumentation/github.com/bradfitz/gomemcache && \
+	  (cd instrumentation/github.com/bradfitz/gomemcache/otelgomemcache && \
 	    $(GOTEST_WITH_COVERAGE) . && \
 	    go tool cover -html=coverage.txt -o coverage.html); \
 	  docker stop gomemcache-integ ; \

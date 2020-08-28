@@ -27,7 +27,7 @@ import (
 )
 
 const (
-	defaultTracerName  = "go.opentelemetry.io/contrib/instrumentation/github.com/bradfitz/gomemcache"
+	defaultTracerName  = "go.opentelemetry.io/contrib/instrumentation/github.com/bradfitz/gomemcache/otelgomemcache"
 	defaultServiceName = "memcached"
 )
 
