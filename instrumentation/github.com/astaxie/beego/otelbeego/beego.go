@@ -26,14 +26,14 @@ import (
 	"github.com/astaxie/beego"
 )
 
-// OTelBeegoHandler implements the http.Handler interface and provides
+// BeegoHandler implements the http.Handler interface and provides
 // trace and metrics to beego web apps.
-type OTelBeegoHandler struct {
+type BeegoHandler struct {
 	http.Handler
 }
 
 // ServerHTTP calls the configured handler to serve HTTP for req to rr.
-func (o *OTelBeegoHandler) ServeHTTP(rr http.ResponseWriter, req *http.Request) {
+func (o *BeegoHandler) ServeHTTP(rr http.ResponseWriter, req *http.Request) {
 	ctx := beego.BeeApp.Handlers.GetContext()
 	defer beego.BeeApp.Handlers.GiveBackContext(ctx)
 	ctx.Reset(rr, req)
@@ -84,7 +84,7 @@ func NewOTelBeegoMiddleWare(service string, options ...Option) beego.MiddleWare 
 	}
 
 	return func(handler http.Handler) http.Handler {
-		return &OTelBeegoHandler{
+		return &BeegoHandler{
 			otelhttp.NewHandler(
 				handler,
 				service,

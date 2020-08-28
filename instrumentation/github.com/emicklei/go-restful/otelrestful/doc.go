@@ -12,7 +12,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-// Package go-restful provides functions to trace the emicklei/go-restful/v3
+// Package otelrestful provides functions to trace the emicklei/go-restful/v3
 // package (https://github.com/emicklei/go-restful).
 //
 // Instrumentation of an incoming request is achieved via a go-restful

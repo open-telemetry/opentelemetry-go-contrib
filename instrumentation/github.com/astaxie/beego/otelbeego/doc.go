@@ -12,7 +12,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-// Package beego provides functions to instrument the github.com/astaxie/beego package
+// Package otelbeego provides functions to instrument the github.com/astaxie/beego package
 // (https://github.com/astaxie/beego).
 //
 package otelbeego // import "go.opentelemetry.io/contrib/instrumentation/github.com/astaxie/beego/otelbeego"
