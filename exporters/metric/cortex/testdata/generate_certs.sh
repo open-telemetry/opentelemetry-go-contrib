@@ -14,7 +14,8 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-# This script generates 3 sets of ECSDA (prime256v1 curve) certificates and keys
+# This script generates 3 sets of ECSDA (prime256v1 curve) certificates and keys. The
+# expiration date is set to 1000000 days from creation.
 
 # Generate a certificate authority certificate and key.
 openssl ecparam -genkey -name prime256v1 -out ca.key
