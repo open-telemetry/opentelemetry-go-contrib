@@ -11,16 +11,16 @@ In order to ensure the maintainability and discoverability of instrumentation pa
 All instrumentation packages MUST be of the form:
 
 ```
-go.opentelemetry.io/contrib/instrumentation/{PACKAGE}
+go.opentelemetry.io/contrib/instrumentation/{PACKAGE}/otel{PACKAGE}
 ```
 
 Where `{PACKAGE}` is the name of the package being instrumented.
 
 For example:
 
-- `go.opentelemetry.io/contrib/instrumentation/github.com/gorilla/mux`
-- `go.opentelemetry.io/contrib/instrumentation/gopkg.in/macaron.v1`
-- `go.opentelemetry.io/contrib/instrumentation/database/sql`
+- `go.opentelemetry.io/contrib/instrumentation/github.com/gorilla/mux/otelmux`
+- `go.opentelemetry.io/contrib/instrumentation/gopkg.in/macaron.v1/otelmacaron`
+- `go.opentelemetry.io/contrib/instrumentation/database/sql/otelsql`
 
 Consequentially, this means that all instrumentation MUST be contained in a sub-directory structure matching the package name.
 
