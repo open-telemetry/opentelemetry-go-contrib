@@ -21,7 +21,6 @@ import (
 	"testing"
 
 	"github.com/emicklei/go-restful/v3"
-	"go.opentelemetry.io/contrib/instrumentation/github.com/emicklei/go-restful/otelrestful"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 
