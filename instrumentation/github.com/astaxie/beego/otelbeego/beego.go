@@ -18,7 +18,7 @@ import (
 	"context"
 	"net/http"
 
-	otelhttp2 "github.com/open-telemetry/opentelemetry-go-contrib/instrumentation/net/http/otelhttp"
+	"go.opentelemetry.io/contrib/instrumentation/net/http/otelhttp"
 	"go.opentelemetry.io/otel/codes"
 
 	"go.opentelemetry.io/otel/api/trace"
@@ -66,26 +66,26 @@ func defaultSpanNameFormatter(operation string, req *http.Request) string {
 func NewOTelBeegoMiddleWare(service string, options ...Option) beego.MiddleWare {
 	cfg := configure(options...)
 
-	httpOptions := []otelhttp2.Option{
-		otelhttp2.WithTracer(cfg.traceProvider.Tracer(packageName)),
-		otelhttp2.WithMeter(cfg.meterProvider.Meter(packageName)),
-		otelhttp2.WithPropagators(cfg.propagators),
+	httpOptions := []otelhttp.Option{
+		otelhttp.WithTracer(cfg.traceProvider.Tracer(packageName)),
+		otelhttp.WithMeter(cfg.meterProvider.Meter(packageName)),
+		otelhttp.WithPropagators(cfg.propagators),
 	}
 
 	for _, f := range cfg.filters {
 		httpOptions = append(
 			httpOptions,
-			otelhttp2.WithFilter(otelhttp2.Filter(f)),
+			otelhttp.WithFilter(otelhttp.Filter(f)),
 		)
 	}
 
 	if cfg.formatter != nil {
-		httpOptions = append(httpOptions, otelhttp2.WithSpanNameFormatter(cfg.formatter))
+		httpOptions = append(httpOptions, otelhttp.WithSpanNameFormatter(cfg.formatter))
 	}
 
 	return func(handler http.Handler) http.Handler {
 		return &OTelBeegoHandler{
-			otelhttp2.NewHandler(
+			otelhttp.NewHandler(
 				handler,
 				service,
 				httpOptions...,
