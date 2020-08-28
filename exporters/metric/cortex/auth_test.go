@@ -304,8 +304,8 @@ func TestMutualTLS(t *testing.T) {
 				defer os.Remove(test.servingCert)
 				defer os.Remove(test.servingKey)
 
-				// Generate certificate for the client. The server will check this certificate against
-				// its certificate authority to verify the client.
+				// Generate certificate for the client. The server will check this
+				// certificate against its certificate authority to verify the client.
 				_, _, err = generateClientCertFiles(
 					caCert,
 					caPrivateKey,
