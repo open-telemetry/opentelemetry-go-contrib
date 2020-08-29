@@ -282,6 +282,16 @@ func TestMutualTLS(t *testing.T) {
 			clientCert:    "testdata/client.crt",
 			clientKey:     "testdata/client.key",
 		},
+		{
+			testName:      "Generated Certs",
+			generateCerts: true,
+			caCert:        "ca.crt",
+			caKey:         "ca.key",
+			servingCert:   "server.crt",
+			servingKey:    "server.key",
+			clientCert:    "client.crt",
+			clientKey:     "client.key",
+		},
 	}
 	for _, test := range tests {
 		t.Run(test.testName, func(t *testing.T) {
@@ -481,8 +491,8 @@ func generateServingCertFiles(
 		certTemplate,
 		caCert,
 		caPrivateKey,
-		"./serving_cert.pem",
-		"./serving_key.pem",
+		certFilepath,
+		keyFilepath,
 	)
 	if err != nil {
 		return nil, nil, err
@@ -517,8 +527,8 @@ func generateClientCertFiles(
 		certTemplate,
 		caCert,
 		caPrivateKey,
-		"./client_cert.pem",
-		"./client_key.pem",
+		certFilepath,
+		keyFilepath,
 	)
 	if err != nil {
 		return nil, nil, err
