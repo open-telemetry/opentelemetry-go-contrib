@@ -15,8 +15,9 @@
 package cortex
 
 import (
+	"crypto/ecdsa"
+	"crypto/elliptic"
 	"crypto/rand"
-	"crypto/rsa"
 	"crypto/tls"
 	"crypto/x509"
 	"crypto/x509/pkix"
@@ -371,12 +372,12 @@ func TestMutualTLS(t *testing.T) {
 func generateCertFiles(
 	template *x509.Certificate,
 	signer *x509.Certificate,
-	signerKey *rsa.PrivateKey,
+	signerKey *ecdsa.PrivateKey,
 	certFilepath string,
 	keyFilepath string,
-) (*x509.Certificate, *rsa.PrivateKey, error) {
+) (*x509.Certificate, *ecdsa.PrivateKey, error) {
 	// Generate a private key for the new certificate. This does not have to be rsa 4096.
-	privateKey, err := rsa.GenerateKey(rand.Reader, 4096)
+	privateKey, err := ecdsa.GenerateKey(elliptic.P256(), rand.Reader)
 	if err != nil {
 		return nil, nil, err
 	}
@@ -434,7 +435,7 @@ func generateCertFiles(
 
 // generateCACertFiles creates a CA certificate and key in the local directory. This
 // certificate is used to sign other certificates.
-func generateCACertFiles(certFilepath string, keyFilepath string) (*x509.Certificate, *rsa.PrivateKey, error) {
+func generateCACertFiles(certFilepath string, keyFilepath string) (*x509.Certificate, *ecdsa.PrivateKey, error) {
 	// Create a template for CA certificates.
 	certTemplate := &x509.Certificate{
 		SerialNumber: big.NewInt(123),
@@ -469,10 +470,10 @@ func generateCACertFiles(certFilepath string, keyFilepath string) (*x509.Certifi
 // authority.
 func generateServingCertFiles(
 	caCert *x509.Certificate,
-	caPrivateKey *rsa.PrivateKey,
+	caPrivateKey *ecdsa.PrivateKey,
 	certFilepath string,
 	keyFilepath string,
-) (*x509.Certificate, *rsa.PrivateKey, error) {
+) (*x509.Certificate, *ecdsa.PrivateKey, error) {
 	certTemplate := &x509.Certificate{
 		SerialNumber: big.NewInt(456),
 		Subject: pkix.Name{
@@ -506,10 +507,10 @@ func generateServingCertFiles(
 // authority.
 func generateClientCertFiles(
 	caCert *x509.Certificate,
-	caPrivateKey *rsa.PrivateKey,
+	caPrivateKey *ecdsa.PrivateKey,
 	certFilepath string,
 	keyFilepath string,
-) (*x509.Certificate, *rsa.PrivateKey, error) {
+) (*x509.Certificate, *ecdsa.PrivateKey, error) {
 	certTemplate := &x509.Certificate{
 		SerialNumber: big.NewInt(789),
 		Subject: pkix.Name{
