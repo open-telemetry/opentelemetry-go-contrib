@@ -21,9 +21,9 @@ import (
 	"go.opentelemetry.io/otel/api/trace"
 )
 
-// Config provides configuration for the beego OpenTelemetry
+// config provides configuration for the beego OpenTelemetry
 // middleware. Configuration is modified using the provided Options.
-type Config struct {
+type config struct {
 	tracerProvider trace.Provider
 	meterProvider  metric.Provider
 	propagators    propagation.Propagators
@@ -31,17 +31,17 @@ type Config struct {
 	formatter      SpanNameFormatter
 }
 
-// Option applies a configuration to the given Config.
+// Option applies a configuration to the given config.
 type Option interface {
-	Apply(*Config)
+	Apply(*config)
 }
 
 // OptionFunc is a function type that applies a particular
 // configuration to the beego middleware in question.
-type OptionFunc func(c *Config)
+type OptionFunc func(c *config)
 
-// Apply will apply the option to the Config, c.
-func (o OptionFunc) Apply(c *Config) {
+// Apply will apply the option to the config, c.
+func (o OptionFunc) Apply(c *config) {
 	o(c)
 }
 
@@ -50,7 +50,7 @@ func (o OptionFunc) Apply(c *Config) {
 // WithTracerProvider specifies a tracer provider to use for creating a tracer.
 // If none is specified, the global provider is used.
 func WithTracerProvider(provider trace.Provider) Option {
-	return OptionFunc(func(cfg *Config) {
+	return OptionFunc(func(cfg *config) {
 		cfg.tracerProvider = provider
 	})
 }
@@ -58,7 +58,7 @@ func WithTracerProvider(provider trace.Provider) Option {
 // WithMeterProvider specifies a meter provider to use for creating a meter.
 // If none is specified, the global provider is used.
 func WithMeterProvider(provider metric.Provider) Option {
-	return OptionFunc(func(cfg *Config) {
+	return OptionFunc(func(cfg *config) {
 		cfg.meterProvider = provider
 	})
 }
@@ -66,7 +66,7 @@ func WithMeterProvider(provider metric.Provider) Option {
 // WithPropagators sets the propagators used in the middleware.
 // Defaults to global.Propagators().
 func WithPropagators(propagators propagation.Propagators) OptionFunc {
-	return OptionFunc(func(c *Config) {
+	return OptionFunc(func(c *config) {
 		c.propagators = propagators
 	})
 }
@@ -74,7 +74,7 @@ func WithPropagators(propagators propagation.Propagators) OptionFunc {
 // WithFilter adds the given filter for use in the middleware.
 // Defaults to no filters.
 func WithFilter(f Filter) OptionFunc {
-	return OptionFunc(func(c *Config) {
+	return OptionFunc(func(c *config) {
 		c.filters = append(c.filters, f)
 	})
 }
@@ -82,15 +82,15 @@ func WithFilter(f Filter) OptionFunc {
 // WithSpanNameFormatter sets the formatter to be used to format
 // span names. Defaults to the path template.
 func WithSpanNameFormatter(f SpanNameFormatter) OptionFunc {
-	return OptionFunc(func(c *Config) {
+	return OptionFunc(func(c *config) {
 		c.formatter = f
 	})
 }
 
 // ------------------------------------------ Private Functions
 
-func configure(options ...Option) *Config {
-	config := &Config{
+func configure(options ...Option) *config {
+	config := &config{
 		tracerProvider: global.TraceProvider(),
 		meterProvider:  global.MeterProvider(),
 		propagators:    global.Propagators(),

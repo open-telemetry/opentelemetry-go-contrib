@@ -35,7 +35,7 @@ const (
 // requests.  The service parameter should describe the name of the
 // (virtual) server handling the request.
 func Middleware(service string, opts ...Option) mux.MiddlewareFunc {
-	cfg := Config{}
+	cfg := config{}
 	for _, opt := range opts {
 		opt(&cfg)
 	}

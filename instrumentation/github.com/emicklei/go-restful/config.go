@@ -19,20 +19,20 @@ import (
 	oteltrace "go.opentelemetry.io/otel/api/trace"
 )
 
-// Config is used to configure the go-restful middleware.
-type Config struct {
+// config is used to configure the go-restful middleware.
+type config struct {
 	TracerProvider oteltrace.Provider
 	Propagators    otelpropagation.Propagators
 }
 
 // Option specifies instrumentation configuration options.
-type Option func(*Config)
+type Option func(*config)
 
 // WithPropagators specifies propagators to use for extracting
 // information from the HTTP requests. If none are specified, global
 // ones will be used.
 func WithPropagators(propagators otelpropagation.Propagators) Option {
-	return func(cfg *Config) {
+	return func(cfg *config) {
 		cfg.Propagators = propagators
 	}
 }
@@ -40,7 +40,7 @@ func WithPropagators(propagators otelpropagation.Propagators) Option {
 // WithTracerProvider specifies a tracer provider to use for creating a tracer.
 // If none is specified, the global provider is used.
 func WithTracerProvider(provider oteltrace.Provider) Option {
-	return func(cfg *Config) {
+	return func(cfg *config) {
 		cfg.TracerProvider = provider
 	}
 }

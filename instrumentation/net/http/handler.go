@@ -68,14 +68,14 @@ func NewHandler(handler http.Handler, operation string, opts ...Option) http.Han
 		WithSpanNameFormatter(defaultHandlerFormatter),
 	}
 
-	c := NewConfig(append(defaultOpts, opts...)...)
+	c := newConfig(append(defaultOpts, opts...)...)
 	h.configure(c)
 	h.createMeasures()
 
 	return &h
 }
 
-func (h *Handler) configure(c *Config) {
+func (h *Handler) configure(c *config) {
 	h.tracer = c.Tracer
 	h.meter = c.Meter
 	h.propagators = c.Propagators

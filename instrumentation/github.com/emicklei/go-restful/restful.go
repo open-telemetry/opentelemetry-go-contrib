@@ -34,7 +34,7 @@ const (
 // the request.  Options can be applied to configure the tracer and propagators
 // used for this filter.
 func OTelFilter(service string, opts ...Option) restful.FilterFunction {
-	cfg := Config{}
+	cfg := config{}
 	for _, opt := range opts {
 		opt(&cfg)
 	}

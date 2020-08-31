@@ -27,9 +27,9 @@ const (
 	instrumentationName = "go.opentelemetry.io/contrib/instrumentation/net/http"
 )
 
-// Config represents the configuration options available for the http.Handler
+// config represents the configuration options available for the http.Handler
 // and http.Transport types.
-type Config struct {
+type config struct {
 	Tracer            trace.Tracer
 	Meter             metric.Meter
 	Propagators       propagation.Propagators
@@ -43,22 +43,22 @@ type Config struct {
 	MeterProvider  metric.Provider
 }
 
-// Option Interface used for setting *optional* Config properties
+// Option Interface used for setting *optional* config properties
 type Option interface {
-	Apply(*Config)
+	Apply(*config)
 }
 
 // OptionFunc provides a convenience wrapper for simple Options
 // that can be represented as functions.
-type OptionFunc func(*Config)
+type OptionFunc func(*config)
 
-func (o OptionFunc) Apply(c *Config) {
+func (o OptionFunc) Apply(c *config) {
 	o(c)
 }
 
-// NewConfig creates a new Config struct and applies opts to it.
-func NewConfig(opts ...Option) *Config {
-	c := &Config{
+// newConfig creates a new config struct and applies opts to it.
+func newConfig(opts ...Option) *config {
+	c := &config{
 		Propagators:    global.Propagators(),
 		TracerProvider: global.TraceProvider(),
 		MeterProvider:  global.MeterProvider(),
@@ -76,7 +76,7 @@ func NewConfig(opts ...Option) *Config {
 // WithTracerProvider specifies a tracer provider to use for creating a tracer.
 // If none is specified, the global provider is used.
 func WithTracerProvider(provider trace.Provider) Option {
-	return OptionFunc(func(cfg *Config) {
+	return OptionFunc(func(cfg *config) {
 		cfg.TracerProvider = provider
 	})
 }
@@ -84,7 +84,7 @@ func WithTracerProvider(provider trace.Provider) Option {
 // WithMeterProvider specifies a meter provider to use for creating a meter.
 // If none is specified, the global provider is used.
 func WithMeterProvider(provider metric.Provider) Option {
-	return OptionFunc(func(cfg *Config) {
+	return OptionFunc(func(cfg *config) {
 		cfg.MeterProvider = provider
 	})
 }
@@ -93,7 +93,7 @@ func WithMeterProvider(provider metric.Provider) Option {
 // span context. If this option is not provided, then the association is a child
 // association instead of a link.
 func WithPublicEndpoint() Option {
-	return OptionFunc(func(c *Config) {
+	return OptionFunc(func(c *config) {
 		c.SpanStartOptions = append(c.SpanStartOptions, trace.WithNewRoot())
 	})
 }
@@ -102,7 +102,7 @@ func WithPublicEndpoint() Option {
 // option isn't specified then
 // go.opentelemetry.io/otel/api/global.Propagators are used.
 func WithPropagators(ps propagation.Propagators) Option {
-	return OptionFunc(func(c *Config) {
+	return OptionFunc(func(c *config) {
 		c.Propagators = ps
 	})
 }
@@ -110,7 +110,7 @@ func WithPropagators(ps propagation.Propagators) Option {
 // WithSpanOptions configures an additional set of
 // trace.StartOptions, which are applied to each new span.
 func WithSpanOptions(opts ...trace.StartOption) Option {
-	return OptionFunc(func(c *Config) {
+	return OptionFunc(func(c *config) {
 		c.SpanStartOptions = append(c.SpanStartOptions, opts...)
 	})
 }
@@ -122,7 +122,7 @@ func WithSpanOptions(opts ...trace.StartOption) Option {
 // Filters will be invoked for each processed request, it is advised to make them
 // simple and fast.
 func WithFilter(f Filter) Option {
-	return OptionFunc(func(c *Config) {
+	return OptionFunc(func(c *config) {
 		c.Filters = append(c.Filters, f)
 	})
 }
@@ -145,7 +145,7 @@ const (
 //     * WriteEvents: Record the number of bytes written after every http.ResponeWriter.Write
 //       using the WriteBytesKey
 func WithMessageEvents(events ...event) Option {
-	return OptionFunc(func(c *Config) {
+	return OptionFunc(func(c *config) {
 		for _, e := range events {
 			switch e {
 			case ReadEvents:
@@ -160,7 +160,7 @@ func WithMessageEvents(events ...event) Option {
 // WithSpanNameFormatter takes a function that will be called on every
 // request and the returned string will become the Span Name
 func WithSpanNameFormatter(f func(operation string, r *http.Request) string) Option {
-	return OptionFunc(func(c *Config) {
+	return OptionFunc(func(c *config) {
 		c.SpanNameFormatter = f
 	})
 }
