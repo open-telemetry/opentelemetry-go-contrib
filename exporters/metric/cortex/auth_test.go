@@ -274,17 +274,7 @@ func TestMutualTLS(t *testing.T) {
 		clientKey     string
 	}{
 		{
-			testName:      "Static Certs",
-			generateCerts: false,
-			caCert:        "testdata/ca.crt",
-			caKey:         "testdata/ca.key",
-			servingCert:   "testdata/server.crt",
-			servingKey:    "testdata/server.key",
-			clientCert:    "testdata/client.crt",
-			clientKey:     "testdata/client.key",
-		},
-		{
-			testName:      "Generated Certs",
+			testName:      "Generated ECDSA Certs",
 			generateCerts: true,
 			caCert:        "ca.crt",
 			caKey:         "ca.key",
