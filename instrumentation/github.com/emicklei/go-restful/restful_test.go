@@ -33,6 +33,8 @@ import (
 	otelkv "go.opentelemetry.io/otel/label"
 )
 
+const tracerName = "go.opentelemetry.io/contrib/instrumentation/github.com/emicklei/go-restful"
+
 func TestChildSpanFromGlobalTracer(t *testing.T) {
 	otelglobal.SetTraceProvider(&mocktrace.Provider{})
 
@@ -43,7 +45,7 @@ func TestChildSpanFromGlobalTracer(t *testing.T) {
 		spanTracer := span.Tracer()
 		mockTracer, ok := spanTracer.(*mocktrace.Tracer)
 		require.True(t, ok)
-		assert.Equal(t, "go.opentelemetry.io/contrib/instrumentation/github.com/emicklei/go-restful", mockTracer.Name)
+		assert.Equal(t, tracerName, mockTracer.Name)
 		resp.WriteHeader(http.StatusOK)
 	}
 	ws := &restful.WebService{}
@@ -61,7 +63,7 @@ func TestChildSpanFromGlobalTracer(t *testing.T) {
 }
 
 func TestChildSpanFromCustomTracer(t *testing.T) {
-	tracer := mocktrace.NewTracer("test-tracer")
+	provider, _ := mocktrace.NewProviderAndTracer(tracerName)
 
 	handlerFunc := func(req *restful.Request, resp *restful.Response) {
 		span := oteltrace.SpanFromContext(req.Request.Context())
@@ -70,14 +72,14 @@ func TestChildSpanFromCustomTracer(t *testing.T) {
 		spanTracer := span.Tracer()
 		mockTracer, ok := spanTracer.(*mocktrace.Tracer)
 		require.True(t, ok)
-		assert.Equal(t, "test-tracer", mockTracer.Name)
+		assert.Equal(t, tracerName, mockTracer.Name)
 		resp.WriteHeader(http.StatusOK)
 	}
 	ws := &restful.WebService{}
 	ws.Route(ws.GET("/user/{id}").To(handlerFunc))
 
 	container := restful.NewContainer()
-	container.Filter(restfultrace.OTelFilter("my-service", restfultrace.WithTracer(tracer)))
+	container.Filter(restfultrace.OTelFilter("my-service", restfultrace.WithTracerProvider(provider)))
 	container.Add(ws)
 
 	r := httptest.NewRequest("GET", "/user/123", nil)
@@ -87,7 +89,7 @@ func TestChildSpanFromCustomTracer(t *testing.T) {
 }
 
 func TestChildSpanNames(t *testing.T) {
-	tracer := mocktrace.NewTracer("test-tracer")
+	provider, tracer := mocktrace.NewProviderAndTracer(tracerName)
 
 	handlerFunc := func(req *restful.Request, resp *restful.Response) {
 		resp.WriteHeader(http.StatusOK)
@@ -96,7 +98,7 @@ func TestChildSpanNames(t *testing.T) {
 	ws.Route(ws.GET("/user/{id:[0-9]+}").To(handlerFunc))
 
 	container := restful.NewContainer()
-	container.Filter(restfultrace.OTelFilter("foobar", restfultrace.WithTracer(tracer)))
+	container.Filter(restfultrace.OTelFilter("foobar", restfultrace.WithTracerProvider(provider)))
 	container.Add(ws)
 
 	ws.Route(ws.GET("/book/{title}").To(func(req *restful.Request, resp *restful.Response) {
@@ -152,7 +154,7 @@ func TestGetSpanNotInstrumented(t *testing.T) {
 }
 
 func TestPropagationWithGlobalPropagators(t *testing.T) {
-	tracer := mocktrace.NewTracer("test-tracer")
+	provider, tracer := mocktrace.NewProviderAndTracer(tracerName)
 
 	r := httptest.NewRequest("GET", "/user/123", nil)
 	w := httptest.NewRecorder()
@@ -172,14 +174,14 @@ func TestPropagationWithGlobalPropagators(t *testing.T) {
 	ws.Route(ws.GET("/user/{id}").To(handlerFunc))
 
 	container := restful.NewContainer()
-	container.Filter(restfultrace.OTelFilter("foobar", restfultrace.WithTracer(tracer)))
+	container.Filter(restfultrace.OTelFilter("foobar", restfultrace.WithTracerProvider(provider)))
 	container.Add(ws)
 
 	container.ServeHTTP(w, r)
 }
 
 func TestPropagationWithCustomPropagators(t *testing.T) {
-	tracer := mocktrace.NewTracer("test-tracer")
+	provider, tracer := mocktrace.NewProviderAndTracer(tracerName)
 	b3 := oteltrace.B3{}
 	props := otelpropagation.New(
 		otelpropagation.WithExtractors(b3),
@@ -205,7 +207,7 @@ func TestPropagationWithCustomPropagators(t *testing.T) {
 
 	container := restful.NewContainer()
 	container.Filter(restfultrace.OTelFilter("foobar",
-		restfultrace.WithTracer(tracer),
+		restfultrace.WithTracerProvider(provider),
 		restfultrace.WithPropagators(props)))
 	container.Add(ws)
 
@@ -213,9 +215,7 @@ func TestPropagationWithCustomPropagators(t *testing.T) {
 }
 
 func TestMultiFilters(t *testing.T) {
-	tracer1 := mocktrace.NewTracer("tracer1")
-	tracer2 := mocktrace.NewTracer("tracer2")
-	tracer3 := mocktrace.NewTracer("tracer3")
+	provider, _ := mocktrace.NewProviderAndTracer(tracerName)
 
 	wrappedFunc := func(tracerName string) restful.RouteFunction {
 		return func(req *restful.Request, resp *restful.Response) {
@@ -232,16 +232,16 @@ func TestMultiFilters(t *testing.T) {
 	ws1 := &restful.WebService{}
 	ws1.Path("/user")
 	ws1.Route(ws1.GET("/{id}").
-		Filter(restfultrace.OTelFilter("my-service", restfultrace.WithTracer(tracer1))).
-		To(wrappedFunc("tracer1")))
+		Filter(restfultrace.OTelFilter("my-service", restfultrace.WithTracerProvider(provider))).
+		To(wrappedFunc(tracerName)))
 	ws1.Route(ws1.GET("/{id}/books").
-		Filter(restfultrace.OTelFilter("book-service", restfultrace.WithTracer(tracer2))).
-		To(wrappedFunc("tracer2")))
+		Filter(restfultrace.OTelFilter("book-service", restfultrace.WithTracerProvider(provider))).
+		To(wrappedFunc(tracerName)))
 
 	ws2 := &restful.WebService{}
 	ws2.Path("/library")
-	ws2.Filter(restfultrace.OTelFilter("library-service", restfultrace.WithTracer(tracer3)))
-	ws2.Route(ws2.GET("/{name}").To(wrappedFunc("tracer3")))
+	ws2.Filter(restfultrace.OTelFilter("library-service", restfultrace.WithTracerProvider(provider)))
+	ws2.Route(ws2.GET("/{name}").To(wrappedFunc(tracerName)))
 
 	container := restful.NewContainer()
 	container.Add(ws1)

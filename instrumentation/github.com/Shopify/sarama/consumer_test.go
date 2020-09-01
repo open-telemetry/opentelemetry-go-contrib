@@ -53,7 +53,7 @@ func TestWrapPartitionConsumer(t *testing.T) {
 	partitionConsumer, err := consumer.ConsumePartition(topic, 0, 0)
 	require.NoError(t, err)
 
-	partitionConsumer = WrapPartitionConsumer(partitionConsumer, WithTraceProvider(provider))
+	partitionConsumer = WrapPartitionConsumer(partitionConsumer, WithTracerProvider(provider))
 
 	consumeAndCheck(t, mt, mockPartitionConsumer, partitionConsumer)
 }
@@ -67,7 +67,7 @@ func TestWrapConsumer(t *testing.T) {
 	mockPartitionConsumer := mockConsumer.ExpectConsumePartition(topic, 0, 0)
 
 	// Wrap consumer
-	consumer := WrapConsumer(mockConsumer, WithTraceProvider(provider))
+	consumer := WrapConsumer(mockConsumer, WithTracerProvider(provider))
 
 	// Create partition consumer
 	partitionConsumer, err := consumer.ConsumePartition(topic, 0, 0)
@@ -170,7 +170,7 @@ func BenchmarkWrapPartitionConsumer(b *testing.B) {
 
 	mockPartitionConsumer, partitionConsumer := createMockPartitionConsumer(b)
 
-	partitionConsumer = WrapPartitionConsumer(partitionConsumer, WithTraceProvider(provider))
+	partitionConsumer = WrapPartitionConsumer(partitionConsumer, WithTracerProvider(provider))
 	message := sarama.ConsumerMessage{Key: []byte("foo")}
 
 	b.ReportAllocs()

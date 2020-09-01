@@ -52,7 +52,7 @@ func TestWrapSyncProducer(t *testing.T) {
 	mockSyncProducer := mocks.NewSyncProducer(t, cfg)
 
 	// Wrap sync producer
-	syncProducer := WrapSyncProducer(cfg, mockSyncProducer, WithTraceProvider(provider))
+	syncProducer := WrapSyncProducer(cfg, mockSyncProducer, WithTracerProvider(provider))
 
 	// Create message with span context
 	ctx, _ := mt.Start(context.Background(), "")
@@ -167,7 +167,7 @@ func TestWrapAsyncProducer(t *testing.T) {
 
 		cfg := newSaramaConfig()
 		mockAsyncProducer := mocks.NewAsyncProducer(t, cfg)
-		ap := WrapAsyncProducer(cfg, mockAsyncProducer, WithTraceProvider(provider))
+		ap := WrapAsyncProducer(cfg, mockAsyncProducer, WithTracerProvider(provider))
 
 		msgList := createMessages(mt)
 		// Send message
@@ -237,7 +237,7 @@ func TestWrapAsyncProducer(t *testing.T) {
 		cfg.Producer.Return.Successes = true
 
 		mockAsyncProducer := mocks.NewAsyncProducer(t, cfg)
-		ap := WrapAsyncProducer(cfg, mockAsyncProducer, WithTraceProvider(provider))
+		ap := WrapAsyncProducer(cfg, mockAsyncProducer, WithTracerProvider(provider))
 
 		msgList := createMessages(mt)
 		// Send message
@@ -315,7 +315,7 @@ func TestWrapAsyncProducerError(t *testing.T) {
 	cfg.Producer.Return.Successes = true
 
 	mockAsyncProducer := mocks.NewAsyncProducer(t, cfg)
-	ap := WrapAsyncProducer(cfg, mockAsyncProducer, WithTraceProvider(provider))
+	ap := WrapAsyncProducer(cfg, mockAsyncProducer, WithTracerProvider(provider))
 
 	mockAsyncProducer.ExpectInputAndFail(errors.New("test"))
 	ap.Input() <- &sarama.ProducerMessage{Topic: topic, Key: sarama.StringEncoder("foo2")}
@@ -349,7 +349,7 @@ func BenchmarkWrapSyncProducer(b *testing.B) {
 	mockSyncProducer := mocks.NewSyncProducer(b, cfg)
 
 	// Wrap sync producer
-	syncProducer := WrapSyncProducer(cfg, mockSyncProducer, WithTraceProvider(provider))
+	syncProducer := WrapSyncProducer(cfg, mockSyncProducer, WithTracerProvider(provider))
 	message := sarama.ProducerMessage{Key: sarama.StringEncoder("foo")}
 
 	b.ReportAllocs()
@@ -390,7 +390,7 @@ func BenchmarkWrapAsyncProducer(b *testing.B) {
 	mockAsyncProducer := mocks.NewAsyncProducer(b, cfg)
 
 	// Wrap sync producer
-	asyncProducer := WrapAsyncProducer(cfg, mockAsyncProducer, WithTraceProvider(provider))
+	asyncProducer := WrapAsyncProducer(cfg, mockAsyncProducer, WithTracerProvider(provider))
 	message := sarama.ProducerMessage{Key: sarama.StringEncoder("foo")}
 
 	b.ReportAllocs()

@@ -39,7 +39,7 @@ func main() {
 		memcache.New(
 			host+":"+port,
 		),
-		gomemcache.WithTraceProvider(tp),
+		gomemcache.WithTracerProvider(tp),
 	)
 
 	ctx, s := tp.Tracer("example-tracer").Start(ctx, "test-operations")

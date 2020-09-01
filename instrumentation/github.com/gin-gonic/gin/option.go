@@ -21,29 +21,27 @@ import (
 	oteltrace "go.opentelemetry.io/otel/api/trace"
 )
 
-type Config struct {
-	Tracer      oteltrace.Tracer
-	Propagators otelpropagation.Propagators
+type config struct {
+	TracerProvider oteltrace.Provider
+	Propagators    otelpropagation.Propagators
 }
 
 // Option specifies instrumentation configuration options.
-type Option func(*Config)
-
-// WithTracer specifies a tracer to use for creating spans. If none is
-// specified, a tracer named
-// "go.opentelemetry.io/contrib/instrumentation/github.com/gin-gonic/gin"
-// from the global provider is used.
-func WithTracer(tracer oteltrace.Tracer) Option {
-	return func(cfg *Config) {
-		cfg.Tracer = tracer
-	}
-}
+type Option func(*config)
 
 // WithPropagators specifies propagators to use for extracting
 // information from the HTTP requests. If none are specified, global
 // ones will be used.
 func WithPropagators(propagators otelpropagation.Propagators) Option {
-	return func(cfg *Config) {
+	return func(cfg *config) {
 		cfg.Propagators = propagators
+	}
+}
+
+// WithTracerProvider specifies a tracer provider to use for creating a tracer.
+// If none is specified, the global provider is used.
+func WithTracerProvider(provider oteltrace.Provider) Option {
+	return func(cfg *config) {
+		cfg.TracerProvider = provider
 	}
 }

@@ -158,3 +158,11 @@ func (mt *Tracer) Start(ctx context.Context, name string, o ...oteltrace.StartOp
 
 	return oteltrace.ContextWithSpan(ctx, span), span
 }
+
+// NewProviderAndTracer return mock provider and tracer.
+func NewProviderAndTracer(tracerName string) (*Provider, *Tracer) {
+	var provider Provider
+	tracer := provider.Tracer(tracerName)
+
+	return &provider, tracer.(*Tracer)
+}
