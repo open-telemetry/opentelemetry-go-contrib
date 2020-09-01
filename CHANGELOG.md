@@ -13,6 +13,13 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 - Benchmark tests for the gRPC instrumentation. (#296)
 - Integration testing for the gRPC instrumentation. (#297)
 
+### Changed
+
+- Unify instrumentation about provider options for `go.mongodb.org/mongo-driver`, `gin-gonic/gin`, `gorilla/mux`,
+  `labstack/echo`, `emicklei/go-restful`, `bradfitz/gomemcache`, `Shopify/sarama`, `net/http` and `beego`. (#303)
+- Update instrumentation guidelines about uniform provider options. Also, update style guide. (#303)
+- Make config struct of instrumentation unexported. (#303)
+
 ## [0.11.0] - 2020-08-25
 
 ### Added

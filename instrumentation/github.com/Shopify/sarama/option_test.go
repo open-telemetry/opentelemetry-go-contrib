@@ -31,12 +31,12 @@ func TestNewConfig(t *testing.T) {
 		{
 			name: "with provider",
 			opts: []Option{
-				WithTraceProvider(global.TraceProvider()),
+				WithTracerProvider(global.TraceProvider()),
 			},
 			expected: config{
-				TraceProvider: global.TraceProvider(),
-				Tracer:        global.TraceProvider().Tracer(defaultTracerName),
-				Propagators:   global.Propagators(),
+				TracerProvider: global.TraceProvider(),
+				Tracer:         global.TraceProvider().Tracer(defaultTracerName),
+				Propagators:    global.Propagators(),
 			},
 		},
 		{
@@ -45,9 +45,9 @@ func TestNewConfig(t *testing.T) {
 				WithPropagators(nil),
 			},
 			expected: config{
-				TraceProvider: global.TraceProvider(),
-				Tracer:        global.TraceProvider().Tracer(defaultTracerName),
-				Propagators:   nil,
+				TracerProvider: global.TraceProvider(),
+				Tracer:         global.TraceProvider().Tracer(defaultTracerName),
+				Propagators:    nil,
 			},
 		},
 	}

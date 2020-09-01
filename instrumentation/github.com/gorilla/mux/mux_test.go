@@ -54,10 +54,10 @@ func TestChildSpanFromGlobalTracer(t *testing.T) {
 }
 
 func TestChildSpanFromCustomTracer(t *testing.T) {
-	tracer := mocktrace.NewTracer("test-tracer")
+	provider, _ := mocktrace.NewProviderAndTracer(tracerName)
 
 	router := mux.NewRouter()
-	router.Use(Middleware("foobar", WithTracer(tracer)))
+	router.Use(Middleware("foobar", WithTracerProvider(provider)))
 	router.HandleFunc("/user/{id}", http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		span := oteltrace.SpanFromContext(r.Context())
 		_, ok := span.(*mocktrace.Span)
@@ -65,7 +65,7 @@ func TestChildSpanFromCustomTracer(t *testing.T) {
 		spanTracer := span.Tracer()
 		mockTracer, ok := spanTracer.(*mocktrace.Tracer)
 		require.True(t, ok)
-		assert.Equal(t, "test-tracer", mockTracer.Name)
+		assert.Equal(t, tracerName, mockTracer.Name)
 		w.WriteHeader(http.StatusOK)
 	}))
 
@@ -76,10 +76,10 @@ func TestChildSpanFromCustomTracer(t *testing.T) {
 }
 
 func TestChildSpanNames(t *testing.T) {
-	tracer := mocktrace.NewTracer("test-tracer")
+	provider, tracer := mocktrace.NewProviderAndTracer(tracerName)
 
 	router := mux.NewRouter()
-	router.Use(Middleware("foobar", WithTracer(tracer)))
+	router.Use(Middleware("foobar", WithTracerProvider(provider)))
 	router.HandleFunc("/user/{id:[0-9]+}", http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		w.WriteHeader(http.StatusOK)
 	}))
@@ -132,7 +132,7 @@ func TestGetSpanNotInstrumented(t *testing.T) {
 }
 
 func TestPropagationWithGlobalPropagators(t *testing.T) {
-	tracer := mocktrace.NewTracer("test-tracer")
+	provider, tracer := mocktrace.NewProviderAndTracer(tracerName)
 
 	r := httptest.NewRequest("GET", "/user/123", nil)
 	w := httptest.NewRecorder()
@@ -141,7 +141,7 @@ func TestPropagationWithGlobalPropagators(t *testing.T) {
 	otelpropagation.InjectHTTP(ctx, otelglobal.Propagators(), r.Header)
 
 	router := mux.NewRouter()
-	router.Use(Middleware("foobar", WithTracer(tracer)))
+	router.Use(Middleware("foobar", WithTracerProvider(provider)))
 	router.HandleFunc("/user/{id}", http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		span := oteltrace.SpanFromContext(r.Context())
 		mspan, ok := span.(*mocktrace.Span)
@@ -155,7 +155,8 @@ func TestPropagationWithGlobalPropagators(t *testing.T) {
 }
 
 func TestPropagationWithCustomPropagators(t *testing.T) {
-	tracer := mocktrace.NewTracer("test-tracer")
+	provider, tracer := mocktrace.NewProviderAndTracer(tracerName)
+
 	b3 := oteltrace.B3{}
 	props := otelpropagation.New(
 		otelpropagation.WithExtractors(b3),
@@ -169,7 +170,7 @@ func TestPropagationWithCustomPropagators(t *testing.T) {
 	otelpropagation.InjectHTTP(ctx, props, r.Header)
 
 	router := mux.NewRouter()
-	router.Use(Middleware("foobar", WithTracer(tracer), WithPropagators(props)))
+	router.Use(Middleware("foobar", WithTracerProvider(provider), WithPropagators(props)))
 	router.HandleFunc("/user/{id}", http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		span := oteltrace.SpanFromContext(r.Context())
 		mspan, ok := span.(*mocktrace.Span)

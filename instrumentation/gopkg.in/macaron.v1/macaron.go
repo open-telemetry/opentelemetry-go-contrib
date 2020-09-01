@@ -32,7 +32,7 @@ const (
 
 // Middleware returns a macaron Handler to trace requests to the server.
 func Middleware(service string, opts ...Option) macaron.Handler {
-	cfg := Config{}
+	cfg := config{}
 	for _, opt := range opts {
 		opt(&cfg)
 	}

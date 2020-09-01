@@ -19,21 +19,21 @@ import (
 	"go.opentelemetry.io/otel/api/trace"
 )
 
-// Config is a helper struct to configure Macaron options
-type Config struct {
+// config is a helper struct to configure Macaron options
+type config struct {
 	Tracer      trace.Tracer
 	Propagators propagation.Propagators
 }
 
 // Option specifies instrumentation configuration options.
-type Option func(*Config)
+type Option func(*config)
 
 // WithTracer specifies a tracer to use for creating spans. If none is
 // specified, a tracer named
 // "go.opentelemetry.io/contrib/instrumentation/macaron" from the global
 // provider is used.
 func WithTracer(tracer trace.Tracer) Option {
-	return func(cfg *Config) {
+	return func(cfg *config) {
 		cfg.Tracer = tracer
 	}
 }
@@ -42,7 +42,7 @@ func WithTracer(tracer trace.Tracer) Option {
 // information from the HTTP requests. If none are specified, global
 // ones will be used.
 func WithPropagators(propagators propagation.Propagators) Option {
-	return func(cfg *Config) {
+	return func(cfg *config) {
 		cfg.Propagators = propagators
 	}
 }
