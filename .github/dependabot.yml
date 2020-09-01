@@ -5,75 +5,160 @@
 
 version: 2
 updates:
-  - package-ecosystem: "gomod" # See documentation for possible values
-    directory: "/" # Location of package manifests
+  - package-ecosystem: "github-actions"
+    # Workflow files stored in the
+    # default location of `.github/workflows`
+    directory: "/"
     schedule:
-      interval: "daily"
-  - package-ecosystem: "gomod" # See documentation for possible values
-    directory: "/detectors/aws" # Location of package manifests
+      interval: "weekly"
+      day: "sunday"
+  - package-ecosystem: "gomod"
+    directory: "/"
     schedule:
-      interval: "daily"
-  - package-ecosystem: "gomod" # See documentation for possible values
-    directory: "/detectors/gcp" # Location of package manifests
+      interval: "weekly"
+      day: "sunday"
+  - package-ecosystem: "gomod"
+    directory: "/detectors/aws"
     schedule:
-      interval: "daily"
-  - package-ecosystem: "gomod" # See documentation for possible values
-    directory: "/tools" # Location of package manifests
+      interval: "weekly"
+      day: "sunday"
+  - package-ecosystem: "gomod"
+    directory: "/detectors/gcp"
     schedule:
-      interval: "daily"
-  - package-ecosystem: "gomod" # See documentation for possible values
-    directory: "/exporters/metric/dogstatsd" # Location of package manifests
+      interval: "weekly"
+      day: "sunday"
+  - package-ecosystem: "gomod"
+    directory: "/exporters/metric/cortex"
     schedule:
-      interval: "daily"
-  - package-ecosystem: "gomod" # See documentation for possible values
-    directory: "/exporters/metric/datadog" # Location of package manifests
+      interval: "weekly"
+      day: "sunday"
+  - package-ecosystem: "gomod"
+    directory: "/exporters/metric/cortex/example"
     schedule:
-      interval: "daily"
-  - package-ecosystem: "gomod" # See documentation for possible values
-    directory: "/instrumentation/github.com/emicklei/go-restful" # Location of package manifests
+      interval: "weekly"
+      day: "sunday"
+  - package-ecosystem: "gomod"
+    directory: "/exporters/metric/cortex/utils"
     schedule:
-      interval: "daily"
-  - package-ecosystem: "gomod" # See documentation for possible values
-    directory: "/instrumentation/github.com/gin-gonic/gin" # Location of package manifests
+      interval: "weekly"
+      day: "sunday"
+  - package-ecosystem: "gomod"
+    directory: "/exporters/metric/datadog"
     schedule:
-      interval: "daily"
-  - package-ecosystem: "gomod" # See documentation for possible values
-    directory: "/instrumentation/github.com/gorilla/mux" # Location of package manifests
+      interval: "weekly"
+      day: "sunday"
+  - package-ecosystem: "gomod"
+    directory: "/exporters/metric/dogstatsd"
     schedule:
-      interval: "daily"
-  - package-ecosystem: "gomod" # See documentation for possible values
-    directory: "/instrumentation/github.com/labstack/echo" # Location of package manifests
+      interval: "weekly"
+      day: "sunday"
+  - package-ecosystem: "gomod"
+    directory: "/instrumentation/github.com/astaxie/beego"
     schedule:
-      interval: "daily"
-  - package-ecosystem: "gomod" # See documentation for possible values
-    directory: "/instrumentation/go.mongodb.org/mongo-driver" # Location of package manifests
+      interval: "weekly"
+      day: "sunday"
+  - package-ecosystem: "gomod"
+    directory: "/instrumentation/github.com/astaxie/beego/example"
     schedule:
-      interval: "daily"
-  - package-ecosystem: "gomod" # See documentation for possible values
-    directory: "/instrumentation/google.golang.org/grpc" # Location of package manifests
+      interval: "weekly"
+      day: "sunday"
+  - package-ecosystem: "gomod"
+    directory: "/instrumentation/github.com/bradfitz/gomemcache"
     schedule:
-      interval: "daily"
-  - package-ecosystem: "gomod" # See documentation for possible values
-    directory: "/instrumentation/gopkg.in/macaron.v1" # Location of package manifests
+      interval: "weekly"
+      day: "sunday"
+  - package-ecosystem: "gomod"
+    directory: "/instrumentation/github.com/emicklei/go-restful"
     schedule:
-      interval: "daily"
-  - package-ecosystem: "gomod" # See documentation for possible values
-    directory: "/instrumentation/runtime" # Location of package manifests
+      interval: "weekly"
+      day: "sunday"
+  - package-ecosystem: "gomod"
+    directory: "/instrumentation/github.com/gin-gonic/gin"
     schedule:
-      interval: "daily"
-  - package-ecosystem: "gomod" # See documentation for possible values
-    directory: "/instrumentation/github.com/Shopify/sarama" # Location of package manifests
+      interval: "weekly"
+      day: "sunday"
+  - package-ecosystem: "gomod"
+    directory: "/instrumentation/github.com/gocql/gocql"
     schedule:
-      interval: "daily"
-  - package-ecosystem: "gomod" # See documentation for possible values
-    directory: "/instrumentation/net/http" # Location of package manifests
+      interval: "weekly"
+      day: "sunday"
+  - package-ecosystem: "gomod"
+    directory: "/instrumentation/github.com/gocql/gocql/example"
     schedule:
-      interval: "daily"
-  - package-ecosystem: "gomod" # See documentation for possible values
-    directory: "/instrumentation/net/http/httptrace" # Location of package manifests
+      interval: "weekly"
+      day: "sunday"
+  - package-ecosystem: "gomod"
+    directory: "/instrumentation/github.com/gorilla/mux"
     schedule:
-      interval: "daily"
-  - package-ecosystem: "gomod" # See documentation for possible values
-    directory: "/instrumentation/github.com/bradfitz/gomemcache" # Location of package manifests
+      interval: "weekly"
+      day: "sunday"
+  - package-ecosystem: "gomod"
+    directory: "/instrumentation/github.com/labstack/echo"
     schedule:
-      interval: "daily"
+      interval: "weekly"
+      day: "sunday"
+  - package-ecosystem: "gomod"
+    directory: "/instrumentation/github.com/Shopify/sarama"
+    schedule:
+      interval: "weekly"
+      day: "sunday"
+  - package-ecosystem: "gomod"
+    directory: "/instrumentation/github.com/Shopify/sarama/example"
+    schedule:
+      interval: "weekly"
+      day: "sunday"
+  - package-ecosystem: "gomod"
+    directory: "/instrumentation/go.mongodb.org/mongo-driver"
+    schedule:
+      interval: "weekly"
+      day: "sunday"
+  - package-ecosystem: "gomod"
+    directory: "/instrumentation/google.golang.org/grpc"
+    schedule:
+      interval: "weekly"
+      day: "sunday"
+  - package-ecosystem: "gomod"
+    directory: "/instrumentation/google.golang.org/grpc/example"
+    schedule:
+      interval: "weekly"
+      day: "sunday"
+  - package-ecosystem: "gomod"
+    directory: "/instrumentation/gopkg.in/macaron.v1"
+    schedule:
+      interval: "weekly"
+      day: "sunday"
+  - package-ecosystem: "gomod"
+    directory: "/instrumentation/host"
+    schedule:
+      interval: "weekly"
+      day: "sunday"
+  - package-ecosystem: "gomod"
+    directory: "/instrumentation/net/http"
+    schedule:
+      interval: "weekly"
+      day: "sunday"
+  - package-ecosystem: "gomod"
+    directory: "/instrumentation/net/http/example"
+    schedule:
+      interval: "weekly"
+      day: "sunday"
+  - package-ecosystem: "gomod"
+    directory: "/instrumentation/net/http/httptrace"
+    schedule:
+      interval: "weekly"
+      day: "sunday"
+  - package-ecosystem: "gomod"
+    directory: "/instrumentation/net/http/httptrace/example"
+    schedule:
+      interval: "weekly"
+      day: "sunday"
+  - package-ecosystem: "gomod"
+    directory: "/instrumentation/runtime"
+    schedule:
+      interval: "weekly"
+      day: "sunday"
+  - package-ecosystem: "gomod"
+    directory: "/tools"
+    schedule:
+      interval: "weekly"
+      day: "sunday"
