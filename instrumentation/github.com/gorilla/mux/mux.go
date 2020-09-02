@@ -21,6 +21,8 @@ import (
 
 	"github.com/gorilla/mux"
 
+	otelcontrib "go.opentelemetry.io/contrib"
+
 	otelglobal "go.opentelemetry.io/otel/api/global"
 	otelpropagation "go.opentelemetry.io/otel/api/propagation"
 	oteltrace "go.opentelemetry.io/otel/api/trace"
@@ -42,7 +44,10 @@ func Middleware(service string, opts ...Option) mux.MiddlewareFunc {
 	if cfg.TracerProvider == nil {
 		cfg.TracerProvider = otelglobal.TraceProvider()
 	}
-	tracer := cfg.TracerProvider.Tracer(tracerName)
+	tracer := cfg.TracerProvider.Tracer(
+		tracerName,
+		oteltrace.WithInstrumentationVersion(otelcontrib.SemVersion()),
+	)
 	if cfg.Propagators == nil {
 		cfg.Propagators = otelglobal.Propagators()
 	}
