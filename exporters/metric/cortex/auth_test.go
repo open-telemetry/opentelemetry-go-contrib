@@ -109,7 +109,7 @@ func TestAuthentication(t *testing.T) {
 	}
 	for _, test := range tests {
 		t.Run(test.testName, func(t *testing.T) {
-			// Set up a test server that runs a handler function when it receives a http
+			// Set up a test server that runs a handler function when it receives a HTTP
 			// request. The server writes the request's Authorization header to the
 			// response body.
 			handler := func(rw http.ResponseWriter, req *http.Request) {
