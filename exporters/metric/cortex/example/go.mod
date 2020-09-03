@@ -3,8 +3,8 @@ module go.opentelemetry.io/contrib/exporters/metric/cortex/example
 go 1.14
 
 replace (
-	go.opentelemetry.io/contrib/exporters/metric/cortex => ../
-	go.opentelemetry.io/contrib/exporters/metric/cortex/utils => ../utils
+	go.opentelemetry.io/contrib/exporters/metric/cortex => ../cortex/
+	go.opentelemetry.io/contrib/exporters/metric/cortex/utils => ../cortex/utils
 )
 
 require (
