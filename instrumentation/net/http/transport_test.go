@@ -30,7 +30,7 @@ import (
 )
 
 func TestTransportBasics(t *testing.T) {
-	tracer := mocktrace.Tracer{}
+	provider, tracer := mocktrace.NewProviderAndTracer(instrumentationName)
 	content := []byte("Hello, world!")
 
 	ts := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
@@ -56,7 +56,7 @@ func TestTransportBasics(t *testing.T) {
 
 	tr := NewTransport(
 		http.DefaultTransport,
-		WithTracer(&tracer),
+		WithTracerProvider(provider),
 	)
 
 	c := http.Client{Transport: tr}

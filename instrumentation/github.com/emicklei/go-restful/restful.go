@@ -34,13 +34,14 @@ const (
 // the request.  Options can be applied to configure the tracer and propagators
 // used for this filter.
 func OTelFilter(service string, opts ...Option) restful.FilterFunction {
-	cfg := Config{}
+	cfg := config{}
 	for _, opt := range opts {
 		opt(&cfg)
 	}
-	if cfg.Tracer == nil {
-		cfg.Tracer = otelglobal.TraceProvider().Tracer(tracerName, oteltrace.WithInstrumentationVersion(tracerVersion))
+	if cfg.TracerProvider == nil {
+		cfg.TracerProvider = otelglobal.TraceProvider()
 	}
+	tracer := cfg.TracerProvider.Tracer(tracerName, oteltrace.WithInstrumentationVersion(tracerVersion))
 	if cfg.Propagators == nil {
 		cfg.Propagators = otelglobal.Propagators()
 	}
@@ -56,7 +57,7 @@ func OTelFilter(service string, opts ...Option) restful.FilterFunction {
 			oteltrace.WithAttributes(semconv.HTTPServerAttributesFromHTTPRequest(service, route, r)...),
 			oteltrace.WithSpanKind(oteltrace.SpanKindServer),
 		}
-		ctx, span := cfg.Tracer.Start(ctx, spanName, opts...)
+		ctx, span := tracer.Start(ctx, spanName, opts...)
 		defer span.End()
 
 		// pass the span through the request context

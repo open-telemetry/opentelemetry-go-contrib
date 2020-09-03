@@ -21,13 +21,15 @@ import (
 	"net/http/httptest"
 	"testing"
 
+	"github.com/stretchr/testify/assert"
+
 	mocktrace "go.opentelemetry.io/contrib/internal/trace"
 )
 
 func TestBasicFilter(t *testing.T) {
 	rr := httptest.NewRecorder()
 
-	tracer := mocktrace.Tracer{}
+	provider, tracer := mocktrace.NewProviderAndTracer(instrumentationName)
 
 	h := NewHandler(
 		http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
@@ -35,7 +37,7 @@ func TestBasicFilter(t *testing.T) {
 				t.Fatal(err)
 			}
 		}), "test_handler",
-		WithTracer(&tracer),
+		WithTracerProvider(provider),
 		WithFilter(func(r *http.Request) bool {
 			return false
 		}),
@@ -95,12 +97,8 @@ func TestSpanNameFormatter(t *testing.T) {
 	for _, tc := range testCases {
 		t.Run(tc.name, func(t *testing.T) {
 			rr := httptest.NewRecorder()
-			var spanName string
-			tracer := mocktrace.Tracer{
-				OnSpanStarted: func(span *mocktrace.Span) {
-					spanName = span.Name
-				},
-			}
+
+			provider, tracer := mocktrace.NewProviderAndTracer(instrumentationName)
 			handler := http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 				if _, err := io.WriteString(w, "hello world"); err != nil {
 					t.Fatal(err)
@@ -109,7 +107,7 @@ func TestSpanNameFormatter(t *testing.T) {
 			h := NewHandler(
 				handler,
 				tc.operation,
-				WithTracer(&tracer),
+				WithTracerProvider(provider),
 				WithSpanNameFormatter(tc.formatter),
 			)
 			r, err := http.NewRequest(http.MethodGet, "http://localhost/hello", nil)
@@ -120,8 +118,10 @@ func TestSpanNameFormatter(t *testing.T) {
 			if got, expected := rr.Result().StatusCode, http.StatusOK; got != expected {
 				t.Fatalf("got %d, expected %d", got, expected)
 			}
-			if got, expected := spanName, tc.expected; got != expected {
-				t.Fatalf("got %q, expected %q", got, expected)
+
+			spans := tracer.EndedSpans()
+			if assert.Len(t, spans, 1) {
+				assert.Equal(t, tc.expected, spans[0].Name)
 			}
 		})
 	}

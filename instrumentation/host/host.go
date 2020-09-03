@@ -34,12 +34,12 @@ import (
 
 // Host reports the work-in-progress conventional host metrics specified by OpenTelemetry
 type host struct {
-	config Config
+	config config
 	meter  metric.Meter
 }
 
-// Config contains optional settings for reporting host metrics.
-type Config struct {
+// config contains optional settings for reporting host metrics.
+type config struct {
 	// MeterProvider sets the metric.Provider.  If nil, the global
 	// Provider will be used.
 	MeterProvider metric.Provider
@@ -47,8 +47,8 @@ type Config struct {
 
 // Option supports configuring optional settings for host metrics.
 type Option interface {
-	// ApplyHost updates *Config.
-	ApplyHost(*Config)
+	// ApplyHost updates *config.
+	ApplyHost(*config)
 }
 
 // WithMeterProvider sets the Metric implementation to use for
@@ -61,7 +61,7 @@ func WithMeterProvider(provider metric.Provider) Option {
 type metricProviderOption struct{ metric.Provider }
 
 // ApplyHost implements Option.
-func (o metricProviderOption) ApplyHost(c *Config) {
+func (o metricProviderOption) ApplyHost(c *config) {
 	c.MeterProvider = o.Provider
 }
 
@@ -84,9 +84,9 @@ var (
 	LabelNetworkReceive  = []label.KeyValue{label.String("direction", "receive")}
 )
 
-// configure computes a Config from a list of Options.
-func configure(opts ...Option) Config {
-	c := Config{
+// configure computes a config from a list of Options.
+func configure(opts ...Option) config {
+	c := config{
 		MeterProvider: global.MeterProvider(),
 	}
 	for _, opt := range opts {
@@ -95,7 +95,7 @@ func configure(opts ...Option) Config {
 	return c
 }
 
-// Start initializes reporting of host metrics using the supplied Config.
+// Start initializes reporting of host metrics using the supplied config.
 func Start(opts ...Option) error {
 	c := configure(opts...)
 	if c.MeterProvider == nil {

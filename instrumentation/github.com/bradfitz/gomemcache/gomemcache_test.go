@@ -43,13 +43,13 @@ func TestNewClientWithTracing(t *testing.T) {
 
 	assert.NotNil(t, c.Client)
 	assert.NotNil(t, c.cfg)
-	assert.NotNil(t, c.cfg.traceProvider)
+	assert.NotNil(t, c.cfg.tracerProvider)
 	assert.NotNil(t, c.tracer)
 	assert.Equal(t, defaultServiceName, c.cfg.serviceName)
 }
 
 func TestOperation(t *testing.T) {
-	c, mtp := initClientWithMockTraceProvider(t)
+	c, mtp := initClientWithMockTracerProvider(t)
 
 	mi := &memcache.Item{
 		Key:   "foo",
@@ -76,7 +76,7 @@ func TestOperation(t *testing.T) {
 
 func TestOperationWithCacheMissError(t *testing.T) {
 	key := "foo"
-	c, mtp := initClientWithMockTraceProvider(t)
+	c, mtp := initClientWithMockTracerProvider(t)
 
 	_, err := c.Get(key)
 	assert.Error(t, err)
@@ -101,7 +101,7 @@ func TestOperationWithCacheMissError(t *testing.T) {
 }
 
 // tests require running memcached instance
-func initClientWithMockTraceProvider(t *testing.T) (*Client, *mocktracer.Provider) {
+func initClientWithMockTracerProvider(t *testing.T) (*Client, *mocktracer.Provider) {
 	mt := &mocktracer.Provider{}
 	host, port := "localhost", "11211"
 
@@ -110,7 +110,7 @@ func initClientWithMockTraceProvider(t *testing.T) (*Client, *mocktracer.Provide
 
 	c := NewClientWithTracing(
 		mc,
-		WithTraceProvider(mt),
+		WithTracerProvider(mt),
 	)
 
 	return c, mt
