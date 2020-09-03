@@ -321,7 +321,7 @@ func TestMutualTLS(t *testing.T) {
 				defer os.Remove(test.clientKey)
 			}
 
-			// Generate the tls Config to set up mutual TLS on the server.
+			// Generate the TLS Config to set up mutual TLS on the server.
 			serverTLSConfig, err := generateServerTLSConfig(
 				test.caCert,
 				test.servingCert,
