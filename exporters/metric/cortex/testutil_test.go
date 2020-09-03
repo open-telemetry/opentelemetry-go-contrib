@@ -118,26 +118,8 @@ func getHistogramCheckpoint(t *testing.T) export.CheckpointSet {
 	return checkpointSet
 }
 
-// The following variables hold expected TimeSeries values to be used in ConvertToTimeSeries tests
-var wantValidCheckpointSet = []*prompb.TimeSeries{
-	{
-		Labels: []*prompb.Label{
-			{
-				Name:  "R",
-				Value: "V",
-			},
-			{
-				Name:  "__name__",
-				Value: "metric_name",
-			},
-		},
-		Samples: []prompb.Sample{{
-			Value:     321,
-			Timestamp: mockTime,
-		}},
-	},
-}
-
+// The following variables hold expected TimeSeries values to be used in
+// ConvertToTimeSeries tests.
 var wantSumCheckpointSet = []*prompb.TimeSeries{
 	{
 		Labels: []*prompb.Label{

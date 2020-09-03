@@ -95,12 +95,6 @@ func TestConvertToTimeSeries(t *testing.T) {
 		wantLength int
 	}{
 		{
-			name:       "validCheckpointSet",
-			input:      getValidCheckpointSet(t),
-			want:       wantValidCheckpointSet,
-			wantLength: 1,
-		},
-		{
 			name:       "convertFromSum",
 			input:      getSumCheckpoint(t, 321),
 			want:       wantSumCheckpointSet,
