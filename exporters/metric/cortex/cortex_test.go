@@ -106,24 +106,24 @@ func TestConvertToTimeSeries(t *testing.T) {
 			want:       wantLastValueCheckpointSet,
 			wantLength: 1,
 		},
-		// {
-		// 	name:       "convertFromMinMaxSumCount",
-		// 	input:      getMMSCCheckpoint(t, 123.456, 876.543),
-		// 	want:       wantMMSCCheckpointSet,
-		// 	wantLength: 4,
-		// },
-		// {
-		// 	name:       "convertFromDistribution",
-		// 	input:      getDistributionCheckpoint(t),
-		// 	want:       wantDistributionCheckpointSet,
-		// 	wantLength: 7,
-		// },
-		// {
-		// 	name:       "convertFromHistogram",
-		// 	input:      getHistogramCheckpoint(t),
-		// 	want:       wantHistogramCheckpointSet,
-		// 	wantLength: 6,
-		// },
+		{
+			name:       "convertFromMinMaxSumCount",
+			input:      getMMSCCheckpoint(t, 123.456, 876.543),
+			want:       wantMMSCCheckpointSet,
+			wantLength: 4,
+		},
+		{
+			name:       "convertFromDistribution",
+			input:      getDistributionCheckpoint(t),
+			want:       wantDistributionCheckpointSet,
+			wantLength: 7,
+		},
+		{
+			name:       "convertFromHistogram",
+			input:      getHistogramCheckpoint(t),
+			want:       wantHistogramCheckpointSet,
+			wantLength: 6,
+		},
 	}
 
 	for _, tt := range tests {
@@ -131,10 +131,36 @@ func TestConvertToTimeSeries(t *testing.T) {
 			got, err := exporter.ConvertToTimeSeries(tt.input)
 			want := tt.want
 
+			// Check for errors and for the correct number of timeseries.
 			assert.Nil(t, err, "ConvertToTimeSeries error")
 			assert.Len(t, got, tt.wantLength, "Incorrect number of timeseries")
-			assert.Equal(t, got, want)
-			cmp.Equal(got, want)
+
+			// The TimeSeries cannot be compared easily using assert.ElementsMatch or
+			// cmp.Equal since both the ordering of the timeseries and the ordering of the
+			// labels inside each timeseries can change. To get around this, all the
+			// labels and samples are added to maps first. There aren't many labels or
+			// samples, so this nested loop shouldn't be a bottleneck.
+			gotLabels := make(map[string]bool)
+			wantLabels := make(map[string]bool)
+			gotSamples := make(map[string]bool)
+			wantSamples := make(map[string]bool)
+
+			for i := 0; i < len(got); i++ {
+				for _, label := range got[i].Labels {
+					gotLabels[label.String()] = true
+				}
+				for _, label := range want[i].Labels {
+					wantLabels[label.String()] = true
+				}
+				for _, sample := range got[i].Samples {
+					gotSamples[sample.String()] = true
+				}
+				for _, sample := range want[i].Samples {
+					wantSamples[sample.String()] = true
+				}
+			}
+			assert.Equal(t, gotLabels, wantLabels)
+			assert.Equal(t, gotSamples, wantSamples)
 		})
 	}
 }

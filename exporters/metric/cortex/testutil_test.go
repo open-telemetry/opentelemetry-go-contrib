@@ -194,12 +194,12 @@ var wantMMSCCheckpointSet = []*prompb.TimeSeries{
 	{
 		Labels: []*prompb.Label{
 			{
-				Name:  "__name__",
-				Value: "metric_name_max",
-			},
-			{
 				Name:  "R",
 				Value: "V",
+			},
+			{
+				Name:  "__name__",
+				Value: "metric_name_max",
 			},
 		},
 		Samples: []prompb.Sample{{
@@ -234,7 +234,7 @@ var wantDistributionCheckpointSet = []*prompb.TimeSeries{
 			},
 			{
 				Name:  "__name__",
-				Value: "metric_name",
+				Value: "metric_name_sum",
 			},
 		},
 		Samples: []prompb.Sample{{
@@ -261,12 +261,12 @@ var wantDistributionCheckpointSet = []*prompb.TimeSeries{
 	{
 		Labels: []*prompb.Label{
 			{
-				Name:  "__name__",
-				Value: "metric_name_max",
-			},
-			{
 				Name:  "R",
 				Value: "V",
+			},
+			{
+				Name:  "__name__",
+				Value: "metric_name_max",
 			},
 		},
 		Samples: []prompb.Sample{{
@@ -318,7 +318,7 @@ var wantDistributionCheckpointSet = []*prompb.TimeSeries{
 			},
 			{
 				Name:  "__name__",
-				Value: "metric_name_count",
+				Value: "metric_name",
 			},
 			{
 				Name:  "quantile",
@@ -338,7 +338,7 @@ var wantDistributionCheckpointSet = []*prompb.TimeSeries{
 			},
 			{
 				Name:  "__name__",
-				Value: "metric_name_count",
+				Value: "metric_name",
 			},
 			{
 				Name:  "quantile",
