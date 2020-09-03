@@ -255,7 +255,7 @@ func verifyExporterRequest(req *http.Request) error {
 		return fmt.Errorf("Request does not contain the three required headers")
 	}
 
-	// Check body format and headers.
+	// Check whether request body is in the correct format.
 	compressed, err := ioutil.ReadAll(req.Body)
 	if err != nil {
 		return fmt.Errorf("Failed to read request body")
@@ -268,6 +268,29 @@ func verifyExporterRequest(req *http.Request) error {
 	err = proto.Unmarshal(uncompressed, wr)
 	if err != nil {
 		return fmt.Errorf("Failed to unmarshal message into WriteRequest struct")
+	}
+
+	// Check whether the request contains the correct data.
+	expectedWriteRequest := &prompb.WriteRequest{
+		Timeseries: []*prompb.TimeSeries{
+			{
+				Samples: []prompb.Sample{
+					prompb.Sample{
+						Value:     float64(123),
+						Timestamp: int64(time.Nanosecond) * time.Time{}.UnixNano() / int64(time.Millisecond),
+					},
+				},
+				Labels: []*prompb.Label{
+					&prompb.Label{
+						Name:  "__name__",
+						Value: "test_name",
+					},
+				},
+			},
+		},
+	}
+	if !cmp.Equal(wr, expectedWriteRequest) {
+		return fmt.Errorf("request does not contain the expected contents")
 	}
 
 	return nil
@@ -298,9 +321,9 @@ func TestSendRequest(t *testing.T) {
 	}
 
 	// Set up a test server to receive the request. The server responds with a 400 Bad
-	// Request status code if any headers are missing or if the body is not of the correct
-	// format. Additionally, the server can respond with status code 404 Not Found to
-	// simulate send failures.
+	// Request status code if any headers are missing or if the body does not have the
+	// correct contents. Additionally, the server can respond with status code 404 Not
+	// Found to simulate send failures.
 	handler := func(rw http.ResponseWriter, req *http.Request) {
 		err := verifyExporterRequest(req)
 		if err != nil {
@@ -308,7 +331,8 @@ func TestSendRequest(t *testing.T) {
 			return
 		}
 
-		// Return a status code 400 if header isStatusNotFound is "true", 200 otherwise.
+		// Return a status code 400 if header isStatusNotFound is "true". Otherwise,
+		// return status code 200.
 		if req.Header.Get("isStatusNotFound") == "true" {
 			rw.WriteHeader(http.StatusNotFound)
 		} else {
@@ -328,8 +352,26 @@ func TestSendRequest(t *testing.T) {
 			}
 			exporter := Exporter{*test.config}
 
-			// Create an empty Snappy-compressed message.
-			msg, err := exporter.buildMessage([]*prompb.TimeSeries{})
+			// Create a test TimeSeries struct.
+			timeSeries := []*prompb.TimeSeries{
+				{
+					Samples: []prompb.Sample{
+						prompb.Sample{
+							Value:     float64(123),
+							Timestamp: int64(time.Nanosecond) * time.Time{}.UnixNano() / int64(time.Millisecond),
+						},
+					},
+					Labels: []*prompb.Label{
+						&prompb.Label{
+							Name:  "__name__",
+							Value: "test_name",
+						},
+					},
+				},
+			}
+
+			// Create a Snappy-compressed message.
+			msg, err := exporter.buildMessage(timeSeries)
 			require.NoError(t, err)
 
 			// Create a http POST request with the compressed message.
