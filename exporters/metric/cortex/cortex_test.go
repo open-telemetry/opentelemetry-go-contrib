@@ -62,7 +62,8 @@ var validConfig = Config{
 		"x-prometheus-remote-write-version": "0.1.0",
 		"tenant-id":                         "123",
 	},
-	Client: http.DefaultClient,
+	Client:    http.DefaultClient,
+	Quantiles: []float64{0, 0.25, 0.5, 0.75, 1},
 }
 
 var testResource = resource.New(label.String("R", "V"))
