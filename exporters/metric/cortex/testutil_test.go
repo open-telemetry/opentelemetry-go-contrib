@@ -31,11 +31,6 @@ import (
 	"go.opentelemetry.io/otel/sdk/metric/aggregator/sum"
 )
 
-// getValidCheckpointSet returns a valid checkpointset with several records
-func getValidCheckpointSet(t *testing.T) export.CheckpointSet {
-	return getSumCheckpoint(t, 321)
-}
-
 // getSumCheckpoint returns a checkpoint set with a sum aggregation record
 func getSumCheckpoint(t *testing.T, values ...int64) export.CheckpointSet {
 	// Create checkpoint set with resource and descriptor

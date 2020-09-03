@@ -296,13 +296,13 @@ func verifyExporterRequest(req *http.Request) error {
 		Timeseries: []*prompb.TimeSeries{
 			{
 				Samples: []prompb.Sample{
-					prompb.Sample{
+					{
 						Value:     float64(123),
 						Timestamp: int64(time.Nanosecond) * time.Time{}.UnixNano() / int64(time.Millisecond),
 					},
 				},
 				Labels: []*prompb.Label{
-					&prompb.Label{
+					{
 						Name:  "__name__",
 						Value: "test_name",
 					},
@@ -377,13 +377,13 @@ func TestSendRequest(t *testing.T) {
 			timeSeries := []*prompb.TimeSeries{
 				{
 					Samples: []prompb.Sample{
-						prompb.Sample{
+						{
 							Value:     float64(123),
 							Timestamp: int64(time.Nanosecond) * time.Time{}.UnixNano() / int64(time.Millisecond),
 						},
 					},
 					Labels: []*prompb.Label{
-						&prompb.Label{
+						{
 							Name:  "__name__",
 							Value: "test_name",
 						},
