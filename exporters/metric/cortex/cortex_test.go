@@ -96,13 +96,13 @@ func TestConvertToTimeSeries(t *testing.T) {
 	}{
 		{
 			name:       "convertFromSum",
-			input:      getSumCheckpoint(t, 321),
+			input:      getSumCheckpoint(t, 1, 2, 3, 4, 5),
 			want:       wantSumCheckpointSet,
 			wantLength: 1,
 		},
 		{
 			name:       "convertFromLastValue",
-			input:      getLastValueCheckpoint(t, 123),
+			input:      getLastValueCheckpoint(t, 1, 2, 3, 4, 5),
 			want:       wantLastValueCheckpointSet,
 			wantLength: 1,
 		},

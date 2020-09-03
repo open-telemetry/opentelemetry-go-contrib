@@ -37,14 +37,16 @@ func getValidCheckpointSet(t *testing.T) export.CheckpointSet {
 }
 
 // getSumCheckpoint returns a checkpoint set with a sum aggregation record
-func getSumCheckpoint(t *testing.T, value int64) export.CheckpointSet {
+func getSumCheckpoint(t *testing.T, values ...int64) export.CheckpointSet {
 	// Create checkpoint set with resource and descriptor
 	checkpointSet := metrictest.NewCheckpointSet(testResource)
 	desc := metric.NewDescriptor("metric_name", metric.CounterKind, metric.Int64NumberKind)
 
 	// Create aggregation, add value, and update checkpointset
 	agg, ckpt := metrictest.Unslice2(sum.New(2))
-	aggregatortest.CheckedUpdate(t, agg, metric.NewInt64Number(value), &desc)
+	for _, value := range values {
+		aggregatortest.CheckedUpdate(t, agg, metric.NewInt64Number(value), &desc)
+	}
 	require.NoError(t, agg.SynchronizedMove(ckpt, &desc))
 	checkpointSet.Add(&desc, ckpt)
 
@@ -52,14 +54,16 @@ func getSumCheckpoint(t *testing.T, value int64) export.CheckpointSet {
 }
 
 // getLastValueCheckpoint returns a checkpoint set with a last value aggregation record
-func getLastValueCheckpoint(t *testing.T, value int64) export.CheckpointSet {
+func getLastValueCheckpoint(t *testing.T, values ...int64) export.CheckpointSet {
 	// Create checkpoint set with resource and descriptor
 	checkpointSet := metrictest.NewCheckpointSet(testResource)
 	desc := metric.NewDescriptor("metric_name", metric.ValueObserverKind, metric.Int64NumberKind)
 
 	// Create aggregation, add value, and update checkpointset
 	agg, ckpt := metrictest.Unslice2(lastvalue.New(2))
-	aggregatortest.CheckedUpdate(t, agg, metric.NewInt64Number(value), &desc)
+	for _, value := range values {
+		aggregatortest.CheckedUpdate(t, agg, metric.NewInt64Number(value), &desc)
+	}
 	require.NoError(t, agg.SynchronizedMove(ckpt, &desc))
 	checkpointSet.Add(&desc, ckpt)
 
@@ -133,7 +137,7 @@ var wantSumCheckpointSet = []*prompb.TimeSeries{
 			},
 		},
 		Samples: []prompb.Sample{{
-			Value:     321,
+			Value:     15,
 			Timestamp: mockTime,
 		}},
 	},
@@ -152,7 +156,7 @@ var wantLastValueCheckpointSet = []*prompb.TimeSeries{
 			},
 		},
 		Samples: []prompb.Sample{{
-			Value:     123,
+			Value:     5,
 			Timestamp: mockTime,
 		}},
 	},
