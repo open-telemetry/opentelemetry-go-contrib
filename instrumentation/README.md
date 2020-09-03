@@ -11,7 +11,7 @@ In order to ensure the maintainability and discoverability of instrumentation pa
 All instrumentation packages MUST be of the form:
 
 ```
-go.opentelemetry.io/contrib/instrumentation/{PACKAGE}/otel{PACKAGE}
+go.opentelemetry.io/contrib/instrumentation/{IMPORT_PATH}/otel{PACKAGE_NAME}
 ```
 
 Where `{PACKAGE}` is the name of the package being instrumented.
