@@ -26,7 +26,7 @@ var validatedStandardConfig = cortex.Config{
 	Name:          "Config",
 	RemoteTimeout: 30 * time.Second,
 	PushInterval:  10 * time.Second,
-	Quantiles:     []float64{0, 0.25, 0.5, 0.75, 1},
+	Quantiles:     []float64{0.5, 0.9, 0.95, 0.99},
 }
 
 // Config struct with default values other than the remote timeout. This is used to verify
@@ -36,7 +36,7 @@ var validatedCustomTimeoutConfig = cortex.Config{
 	Name:          "Config",
 	RemoteTimeout: 10 * time.Second,
 	PushInterval:  10 * time.Second,
-	Quantiles:     []float64{0, 0.25, 0.5, 0.75, 1},
+	Quantiles:     []float64{0.5, 0.9, 0.95, 0.99},
 }
 
 // Config struct with default values other than the quantiles. This is used to verify

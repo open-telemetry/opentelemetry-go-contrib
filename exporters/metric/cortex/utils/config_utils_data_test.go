@@ -177,7 +177,7 @@ var validConfig = cortex.Config{
 	Headers: map[string]string{
 		"test": "header",
 	},
-	Quantiles: []float64{0, 0.25, 0.5, 0.75, 1},
+	Quantiles: []float64{0.5, 0.9, 0.95, 0.99},
 }
 
 // customQuantilesConfig is the resulting Config struct from reading quantilesYAML.
@@ -230,6 +230,6 @@ var customBucketBoundariesConfig = cortex.Config{
 	Headers: map[string]string{
 		"test": "header",
 	},
-	Quantiles:           []float64{0, 0.25, 0.5, 0.75, 1},
+	Quantiles:           []float64{0.5, 0.9, 0.95, 0.99},
 	HistogramBoundaries: []float64{100, 300, 500},
 }
