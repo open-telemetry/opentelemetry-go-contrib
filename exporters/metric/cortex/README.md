@@ -1,8 +1,9 @@
 # OpenTelemetry Go SDK Prometheus Remote Write Exporter for Cortex
 
-This module contains an exporter that sends metrics data from the OpenTelemetry Go SDK to
-[Cortex](https://cortexmetrics.io/) using the Prometheus Remote Write API. While it is
-aimed at Cortex, it should work with other backends that ingest data with the same API.
+This module contains an exporter that sends cumulative metrics data from the OpenTelemetry
+Go SDK to [Cortex](https://cortexmetrics.io/) using the Prometheus Remote Write API. While
+it is aimed at Cortex, it should work with other backends that ingest data with the same
+API.
 
 This exporter is push-based and integrates with the OpenTelemetry Go SDK's [push
 Controller](https://github.com/open-telemetry/opentelemetry-go/blob/master/sdk/metric/controller/push/push.go).
@@ -10,7 +11,10 @@ The Controller periodically collects data and passes it to this exporter. The ex
 then converts this data into
 [`TimeSeries`](https://prometheus.io/docs/concepts/data_model/), a format that Cortex
 accepts, and sends it to Cortex through HTTP POST requests. The request body is formatted
-according to the protocol defined by the Prometheus Remote Write API.
+according to the protocol defined by the Prometheus Remote Write API. See Prometheus's
+[remote storage integration
+documentation](https://prometheus.io/docs/prometheus/latest/storage/#remote-storage-integrations)
+for more details on the Remote Write API.
 
 See the `example` submodule for a working example of this exporter.
 
@@ -24,6 +28,8 @@ Table of Contents
          * [Authentication](#authentication)
          * [TLS](#tls)
       * [Instrument to Aggregation Mapping](#instrument-to-aggregation-mapping)
+      * [Error Handling](#error-handling)
+      * [Retry Logic](#retry-logic)
 
 ## Setting up the Exporter
 
@@ -270,3 +276,29 @@ exporter supports 5 different aggregations:
 3. `MinMaxSumCount`
 4. `Distribution`
 5. `Histogram`
+
+
+## Error Handling
+In general, errors are returned to the calling function / method. Eventually, errors make
+their way up to the push Controller where it calls the exporter's `Export()` method. The
+push Controller passes the errors to the OpenTelemetry Go SDK's global error handler. 
+
+The exception is when the exporter fails to send an HTTP request to Cortex. Regardless of
+status code, the error is ignored. See the retry logic section below for more details.
+
+## Retry Logic
+The exporter does not implement any retry logic since the exporter sends cumulative
+metrics data, which means that data will be preserved even if some exports fail. 
+
+For example, consider a situation where a user increments a `Counter` instrument 5 times
+and an export happens between each increment. If the exports happen like so:
+```
+  SUCCESS FAIL FAIL SUCCESS SUCCESS
+  1       2    3    4       5
+```
+the received data will be:
+```
+1 2 5
+```
+
+The end result is the same since the aggregations are cumulative.
