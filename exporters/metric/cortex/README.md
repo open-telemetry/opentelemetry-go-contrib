@@ -17,12 +17,13 @@ See the `example` submodule for a working example of this exporter.
 Table of Contents
 =================
    * [OpenTelemetry Go SDK Prometheus Remote Write Exporter for Cortex](#opentelemetry-go-sdk-prometheus-remote-write-exporter-for-cortex)
+   * [Table of Contents](#table-of-contents)
       * [Setting up the Exporter](#setting-up-the-exporter)
       * [Configuring the Exporter](#configuring-the-exporter)
-         * [Creating a Config struct](#creating-a-config-struct)
       * [Securing the Exporter](#securing-the-exporter)
          * [Authentication](#authentication)
          * [TLS](#tls)
+      * [Instrument to Aggregation Mapping](#instrument-to-aggregation-mapping)
 
 ## Setting up the Exporter
 
@@ -47,8 +48,6 @@ if err != nil {
 The Exporter requires certain information, such as the endpoint URL and push interval
 duration, to function properly. This information is stored in a `Config` struct, which is
 passed into the Exporter during the setup pipeline.
-
-### Creating a Config struct
 
 There are two options for creating a `Config` struct:
 
@@ -248,3 +247,26 @@ tls_config:
   server_name: server
   insecure_skip_verify: true
 ```
+
+## Instrument to Aggregation Mapping
+The exporter uses the `simple` selector's `NewWithHistogramDistribution()`. This means
+that instruments are mapped to aggregations as shown in the table below.
+
+| Instrument        | Aggregation |
+|-------------------|-------------|
+| Counter           | Sum         |
+| UpDownCounter     | Sum         |
+| ValueRecorder     | Histogram   |
+| SumObserver       | Sum         |
+| UpDownSumObserver | Sum         |
+| ValueObserver     | Histogram   |
+
+</br>
+
+Although only the `Sum` and `Histogram` aggregations are currently being used, the
+exporter supports 5 different aggregations:
+1. `Sum`
+2. `LastValue`
+3. `MinMaxSumCount`
+4. `Distribution`
+5. `Histogram`
