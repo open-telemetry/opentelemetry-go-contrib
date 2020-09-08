@@ -14,6 +14,16 @@ according to the protocol defined by the Prometheus Remote Write API.
 
 See the `example` submodule for a working example of this exporter.
 
+Table of Contents
+=================
+   * [OpenTelemetry Go SDK Prometheus Remote Write Exporter for Cortex](#opentelemetry-go-sdk-prometheus-remote-write-exporter-for-cortex)
+      * [Setting up the Exporter](#setting-up-the-exporter)
+      * [Configuring the Exporter](#configuring-the-exporter)
+         * [Creating a Config struct](#creating-a-config-struct)
+      * [Securing the Exporter](#securing-the-exporter)
+         * [Authentication](#authentication)
+         * [TLS](#tls)
+
 ## Setting up the Exporter
 
 Users only need to call the `InstallNewPipeline` function to setup the exporter. It
