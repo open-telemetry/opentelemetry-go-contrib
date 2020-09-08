@@ -22,6 +22,7 @@ Table of Contents
 =================
    * [OpenTelemetry Go SDK Prometheus Remote Write Exporter for Cortex](#opentelemetry-go-sdk-prometheus-remote-write-exporter-for-cortex)
    * [Table of Contents](#table-of-contents)
+      * [Installation](#installation)
       * [Setting up the Exporter](#setting-up-the-exporter)
       * [Configuring the Exporter](#configuring-the-exporter)
       * [Securing the Exporter](#securing-the-exporter)
@@ -30,6 +31,12 @@ Table of Contents
       * [Instrument to Aggregation Mapping](#instrument-to-aggregation-mapping)
       * [Error Handling](#error-handling)
       * [Retry Logic](#retry-logic)
+
+## Installation
+
+```bash
+go get -u go.opentelemetry.io/otel/exporters/metric/cortex
+```
 
 ## Setting up the Exporter
 
@@ -298,7 +305,7 @@ and an export happens between each increment. If the exports happen like so:
 ```
 Then the received data will be:
 ```
-1 2 5
+1 4 5
 ```
 
 The end result is the same since the aggregations are cumulative.
