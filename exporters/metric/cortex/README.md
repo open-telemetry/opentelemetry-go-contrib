@@ -99,6 +99,9 @@ type Config struct {
 <details>
 <summary>Supported YAML Properties</summary>
 
+This is sourced from the Prometheus Remote Write Configuration
+[documentation](https://prometheus.io/docs/prometheus/latest/configuration/configuration/#remote_write).
+
 ```yaml
 # The URL of the endpoint to send samples to.
 url: <string>
@@ -157,4 +160,81 @@ tls_config:
   - ...
 ```
 </details>
+<br>
 
+## Securing the Exporter
+
+### Authentication
+The exporter provides two forms of authentication which are shown below. Users can add
+their own custom authentication by providing their own HTTP Client through the `Config`
+struct and customizing it as needed.
+
+1. Basic Authentication
+   ```go
+    // Basic Authentication properties in the Config struct.
+    cortex.Config{
+      // ...
+      BasicAuth: map[string]string{
+        "username":      "user",
+        "password":      "password",
+        "password_file": "passwordFile",
+    }
+   ```
+   ```yaml
+    # Basic Authentication properties in the YAML file.
+    basic_auth:
+      username: user
+      password: password
+      password_file: passwordfile
+   ```
+    Basic authentication sets a HTTP Authorization header containing a `base64` encoded
+    username/password pair. See [RFC 7617](https://tools.ietf.org/html/rfc7617) for more
+    information. Note that the password and password file are mutually exclusive. The
+    `Config` struct's `Validate()` method will return an error if both are set.
+
+2. Bearer Token Authentication
+   ```go
+    // Bearer Token Authentication properties in the Config struct.
+   cortex.Config{
+      BearerToken:     "token",
+      BearerTokenFile: "tokenfile",
+    }
+   ```
+   ```yaml
+    # Bearer Token Authentication properties in the YAML file.
+    bearer_token: token
+    bearer_token_file: tokenfile
+   ```
+    Bearer token authentication sets a HTTP Authorization header containing a bearer token.
+    See [RFC 6750](https://tools.ietf.org/html/rfc6750) for more information. Note that the
+    bearer token and bearer token file are mutually exclusive. The `Config` struct's
+    `Validate()` method will return an error if both are set.
+
+### TLS
+Users can add TLS to the exporter's HTTP Client through the `Config` struct by providing
+certificate and key files. The certificate type does not matter. See `TestBuildClient()`
+and `TestMutualTLS()` in `auth_test.go` for an example of how TLS can be used with the
+exporter. `TestMutualTLS()` checks certificates between the exporter and a server both
+ways.
+
+```go
+// TLS properties in the Config struct.
+cortex.Config{
+  TLSConfig: map[string]string{
+    "ca_file":              "cafile",
+    "cert_file":            "certfile",
+    "key_file":             "keyfile",
+    "server_name":          "server",
+    "insecure_skip_verify": "0",
+  },
+}
+```
+```yaml
+# TLS properties in the YAML file.
+tls_config:
+  ca_file: cafile
+  cert_file: certfile
+  key_file: keyfile
+  server_name: server
+  insecure_skip_verify: true
+```

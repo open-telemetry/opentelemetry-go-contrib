@@ -59,7 +59,7 @@ filesystem for created test files.
 ## Supported YAML Properties
 
 The YAML file can contain the following properties. This is sourced from the Prometheus
-Configuration
+Remote Write Configuration
 [documentation](https://prometheus.io/docs/prometheus/latest/configuration/configuration/#remote_write).
 
 ```yaml
