@@ -38,7 +38,8 @@ headers:
   test: header 
 `)
 
-// YAML file with no remote_timout property. It should produce a Config struct without errors.
+// YAML file with no remote_timout property. It should produce a Config struct without
+// errors since a default remote_timeout will be added.
 var noTimeoutYAML = []byte(`url: /api/prom/push
 push_interval: 5s
 name: Valid Config Example
@@ -55,7 +56,8 @@ headers:
   test: header
 `)
 
-// YAML file with no endpoint. It should fail to produce a Config struct.
+// YAML file with no Cortex endpoint. It should produce a Config struct without errors
+// since the endpoint will be set to "/api/prom/push" by default.
 var noEndpointYAML = []byte(`remote_timeout: 30s
 push_interval: 5s
 name: Valid Config Example
@@ -72,8 +74,8 @@ headers:
   test: header
 `)
 
-// YAML file with both password and password_file properties. It should fail to produce a Config
-// struct since password and password_file are mutually exclusive.
+// YAML file with both password and password_file properties. It should fail to produce a
+// Config struct since password and password_file are mutually exclusive.
 var twoPasswordsYAML = []byte(`url: /api/prom/push
 remote_timeout: 30s
 name: Valid Config Example
@@ -91,8 +93,9 @@ headers:
   test: header
 `)
 
-// YAML file with both bearer_token and bearer_token_file properties. It should fail to produce a
-// Config struct since bearer_token and bearer_token_file are mutually exclusive.
+// YAML file with both bearer_token and bearer_token_file properties. It should fail to
+// produce a Config struct since bearer_token and bearer_token_file are mutually
+// exclusive.
 var twoBearerTokensYAML = []byte(`url: /api/prom/push
 remote_timeout: 30s
 name: Valid Config Example
@@ -108,7 +111,7 @@ headers:
   test: header
 `)
 
-// ValidConfig is the resulting Config struct from reading validYAML.
+// validConfig is the resulting Config struct from reading validYAML.
 var validConfig = cortex.Config{
 	Endpoint:      "/api/prom/push",
 	RemoteTimeout: 30 * time.Second,
