@@ -28,12 +28,12 @@ import (
 
 // Runtime reports the work-in-progress conventional runtime metrics specified by OpenTelemetry
 type runtime struct {
-	config Config
+	config config
 	meter  metric.Meter
 }
 
-// Config contains optional settings for reporting runtime metrics.
-type Config struct {
+// config contains optional settings for reporting runtime metrics.
+type config struct {
 	// MinimumReadMemStatsInterval sets the mininum interval
 	// between calls to runtime.ReadMemStats().  Negative values
 	// are ignored.
@@ -46,8 +46,8 @@ type Config struct {
 
 // Option supports configuring optional settings for runtime metrics.
 type Option interface {
-	// ApplyRuntime updates *Config.
-	ApplyRuntime(*Config)
+	// ApplyRuntime updates *config.
+	ApplyRuntime(*config)
 }
 
 // DefaultMinimumReadMemStatsInterval is the default minimum interval
@@ -66,7 +66,7 @@ func WithMinimumReadMemStatsInterval(d time.Duration) Option {
 type minimumReadMemStatsIntervalOption time.Duration
 
 // ApplyRuntime implements Option.
-func (o minimumReadMemStatsIntervalOption) ApplyRuntime(c *Config) {
+func (o minimumReadMemStatsIntervalOption) ApplyRuntime(c *config) {
 	if o >= 0 {
 		c.MinimumReadMemStatsInterval = time.Duration(o)
 	}
@@ -82,13 +82,13 @@ func WithMeterProvider(provider metric.Provider) Option {
 type metricProviderOption struct{ metric.Provider }
 
 // ApplyRuntime implements Option.
-func (o metricProviderOption) ApplyRuntime(c *Config) {
+func (o metricProviderOption) ApplyRuntime(c *config) {
 	c.MeterProvider = o.Provider
 }
 
-// configure computes a Config from the supplied Options.
-func configure(opts ...Option) Config {
-	c := Config{
+// configure computes a config from the supplied Options.
+func configure(opts ...Option) config {
+	c := config{
 		MeterProvider:               global.MeterProvider(),
 		MinimumReadMemStatsInterval: DefaultMinimumReadMemStatsInterval,
 	}
@@ -98,7 +98,7 @@ func configure(opts ...Option) Config {
 	return c
 }
 
-// Start initializes reporting of runtime metrics using the supplied Config.
+// Start initializes reporting of runtime metrics using the supplied config.
 func Start(opts ...Option) error {
 	c := configure(opts...)
 	if c.MinimumReadMemStatsInterval < 0 {

@@ -19,6 +19,8 @@ import (
 
 	"github.com/labstack/echo/v4"
 
+	otelcontrib "go.opentelemetry.io/contrib"
+
 	otelglobal "go.opentelemetry.io/otel/api/global"
 	otelpropagation "go.opentelemetry.io/otel/api/propagation"
 	oteltrace "go.opentelemetry.io/otel/api/trace"
@@ -33,19 +35,23 @@ const (
 
 // Middleware returns echo middleware which will trace incoming requests.
 func Middleware(service string, opts ...Option) echo.MiddlewareFunc {
-	cfg := Config{}
+	cfg := config{}
 	for _, opt := range opts {
 		opt(&cfg)
 	}
-	if cfg.Tracer == nil {
-		cfg.Tracer = otelglobal.Tracer(tracerName)
+	if cfg.TracerProvider == nil {
+		cfg.TracerProvider = otelglobal.TraceProvider()
 	}
+	tracer := cfg.TracerProvider.Tracer(
+		tracerName,
+		oteltrace.WithInstrumentationVersion(otelcontrib.SemVersion()),
+	)
 	if cfg.Propagators == nil {
 		cfg.Propagators = otelglobal.Propagators()
 	}
 	return func(next echo.HandlerFunc) echo.HandlerFunc {
 		return func(c echo.Context) error {
-			c.Set(tracerKey, cfg.Tracer)
+			c.Set(tracerKey, tracer)
 			request := c.Request()
 			savedCtx := request.Context()
 			defer func() {
@@ -64,7 +70,7 @@ func Middleware(service string, opts ...Option) echo.MiddlewareFunc {
 				spanName = fmt.Sprintf("HTTP %s route not found", request.Method)
 			}
 
-			ctx, span := cfg.Tracer.Start(ctx, spanName, opts...)
+			ctx, span := tracer.Start(ctx, spanName, opts...)
 			defer span.End()
 
 			// pass the span through the request context

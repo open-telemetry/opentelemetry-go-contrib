@@ -36,7 +36,7 @@ func TestMain(m *testing.M) {
 }
 
 func Test(t *testing.T) {
-	mt := mocktracer.NewTracer("mongodb")
+	provider, mt := mocktracer.NewProviderAndTracer(defaultTracerName)
 
 	hostname, port := "localhost", "27017"
 
@@ -47,7 +47,7 @@ func Test(t *testing.T) {
 
 	addr := "mongodb://localhost:27017/?connect=direct"
 	opts := options.Client()
-	opts.Monitor = NewMonitor("mongo", WithTracer(mt))
+	opts.Monitor = NewMonitor("mongo", WithTracerProvider(provider))
 	opts.ApplyURI(addr)
 	client, err := mongo.Connect(ctx, opts)
 	if err != nil {

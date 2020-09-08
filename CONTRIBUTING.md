@@ -91,6 +91,7 @@ Any Maintainer can merge the PR once it is **ready to merge**.
 
 * Make sure to run `make precommit` - this will find and fix the code
   formatting.
+* Check [opentelemetry-go Style Guide](https://github.com/open-telemetry/opentelemetry-go/blob/master/CONTRIBUTING.md#style-guide)
 
 ## Adding a new Contrib package
 
@@ -114,6 +115,7 @@ Approvers:
 - [Liz Fong-Jones](https://github.com/lizthegrey), Honeycomb
 - [Evan Torrie](https://github.com/evantorrie), Verizon Media
 - [Josh MacDonald](https://github.com/jmacd), LightStep
+- [Sam Xie](https://github.com/XSAM)
 
 Maintainers:
 

@@ -40,7 +40,7 @@ $(TOOLS_DIR)/stringer: $(TOOLS_MOD_DIR)/go.mod $(TOOLS_MOD_DIR)/go.sum $(TOOLS_M
 	cd $(TOOLS_MOD_DIR) && \
 	go build -o $(TOOLS_DIR)/stringer golang.org/x/tools/cmd/stringer
 
-precommit: license-check generate build lint test
+precommit: dependabot-check license-check generate build lint test
 
 .PHONY: test-with-coverage
 test-with-coverage:
@@ -158,3 +158,16 @@ license-check:
 	           echo "license header checking failed:"; echo "$${licRes}"; \
 	           exit 1; \
 	   fi
+
+.PHONY: dependabot-check
+dependabot-check:
+	@result=$$( \
+		for f in $$( find . -type f -name go.mod -exec dirname {} \; | sed 's/^.\/\?/\//' ); \
+			do grep -q "$$f" .github/dependabot.yml \
+			|| echo "$$f"; \
+		done; \
+	); \
+	if [ -n "$$result" ]; then \
+		echo "missing go.mod dependabot check:"; echo "$$result"; \
+		exit 1; \
+	fi

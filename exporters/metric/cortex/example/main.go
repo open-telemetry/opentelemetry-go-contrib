@@ -52,22 +52,22 @@ func main() {
 	ctx := context.Background()
 
 	recorder := metric.Must(meter).NewInt64ValueRecorder(
-		"pipeline.valuerecorder",
+		"example.valuerecorder",
 		metric.WithDescription("Records values"),
 	)
 
 	counter := metric.Must(meter).NewInt64Counter(
-		"pipeline.counter",
+		"example.counter",
 		metric.WithDescription("Counts things"),
 	)
-	fmt.Println("Success: Created Int64ValueRecorder and Int64Counter instruments")
+	fmt.Println("Success: Created Int64ValueRecorder and Int64Counter instruments!")
 
 	// Record random values to the instruments in a loop
-	fmt.Println("Starting to write data to the instruments")
+	fmt.Println("Starting to write data to the instruments!")
 	seed := rand.NewSource(time.Now().UnixNano())
 	random := rand.New(seed)
 	for {
-		time.Sleep(5 * time.Second)
+		time.Sleep(1 * time.Second)
 		randomValue := random.Intn(100)
 		value := int64(randomValue * 10)
 		recorder.Record(ctx, value, label.String("key", "value"))

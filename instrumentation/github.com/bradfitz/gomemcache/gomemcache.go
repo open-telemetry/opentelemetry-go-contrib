@@ -58,14 +58,14 @@ func NewClientWithTracing(client *memcache.Client, opts ...Option) *Client {
 		cfg.serviceName = defaultServiceName
 	}
 
-	if cfg.traceProvider == nil {
-		cfg.traceProvider = otelglobal.TraceProvider()
+	if cfg.tracerProvider == nil {
+		cfg.tracerProvider = otelglobal.TraceProvider()
 	}
 
 	return &Client{
 		client,
 		cfg,
-		cfg.traceProvider.Tracer(
+		cfg.tracerProvider.Tracer(
 			defaultTracerName,
 			oteltrace.WithInstrumentationVersion(contrib.SemVersion()),
 		),

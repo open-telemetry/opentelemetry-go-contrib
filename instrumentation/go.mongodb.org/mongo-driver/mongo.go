@@ -36,7 +36,7 @@ type monitor struct {
 	sync.Mutex
 	spans       map[spanKey]trace.Span
 	serviceName string
-	cfg         Config
+	cfg         config
 }
 
 func (m *monitor) Started(ctx context.Context, evt *event.CommandStartedEvent) {

@@ -12,11 +12,15 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
+// Remove when #310 is resolved.
+// +build !386
+
 package cortex
 
 import (
+	"crypto/ecdsa"
+	"crypto/elliptic"
 	"crypto/rand"
-	"crypto/rsa"
 	"crypto/tls"
 	"crypto/x509"
 	"crypto/x509/pkix"
@@ -105,7 +109,7 @@ func TestAuthentication(t *testing.T) {
 	}
 	for _, test := range tests {
 		t.Run(test.testName, func(t *testing.T) {
-			// Set up a test server that runs a handler function when it receives a http
+			// Set up a test server that runs a handler function when it receives a HTTP
 			// request. The server writes the request's Authorization header to the
 			// response body.
 			handler := func(rw http.ResponseWriter, req *http.Request) {
@@ -262,71 +266,98 @@ func TestBuildClient(t *testing.T) {
 // successfully verify a server and send a HTTP request and whether a server can
 // successfully verify the Exporter client and receive the HTTP request.
 func TestMutualTLS(t *testing.T) {
-	// Generate certificate authority certificate to sign other certificates.
-	caCert, caPrivateKey, err := generateCACertFiles("./ca_cert.pem", "./ca_key.pem")
-	require.NoError(t, err)
-	defer os.Remove("./ca_cert.pem")
-	defer os.Remove("./ca_key.pem")
-
-	// Generate certificate for the server. The client will check this certificate against
-	// its certificate authority to verify the server.
-	_, _, err = generateServingCertFiles(
-		caCert,
-		caPrivateKey,
-		"./serving_cert.pem",
-		"./serving_key.pem",
-	)
-	require.NoError(t, err)
-	defer os.Remove("./serving_cert.pem")
-	defer os.Remove("./serving_key.pem")
-
-	// Generate certificate for the client. The server will check this certificate against
-	// its certificate authority to verify the client.
-	_, _, err = generateClientCertFiles(
-		caCert,
-		caPrivateKey,
-		"./client_cert.pem",
-		"./client_key.pem",
-	)
-	require.NoError(t, err)
-	defer os.Remove("./client_cert.pem")
-	defer os.Remove("./client_key.pem")
-
-	// Generate the tls Config to set up mutual TLS on the server.
-	serverTLSConfig, err := generateServerTLSConfig(
-		"ca_cert.pem",
-		"serving_cert.pem",
-		"serving_key.pem",
-	)
-	require.NoError(t, err)
-
-	// Create and start the TLS server.
-	handler := func(rw http.ResponseWriter, req *http.Request) {
-		fmt.Fprint(rw, "Successfully verified client and received request!")
-	}
-	server := httptest.NewUnstartedServer(http.HandlerFunc(handler))
-	server.TLS = serverTLSConfig
-	server.StartTLS()
-	defer server.Close()
-
-	// Create an Exporter client with the client and CA certificate files.
-	exporter := Exporter{
-		Config{
-			TLSConfig: map[string]string{
-				"ca_file":              "./ca_cert.pem",
-				"cert_file":            "./client_cert.pem",
-				"key_file":             "./client_key.pem",
-				"insecure_skip_verify": "0",
-			},
+	tests := []struct {
+		testName      string
+		generateCerts bool
+		caCert        string
+		caKey         string
+		servingCert   string
+		servingKey    string
+		clientCert    string
+		clientKey     string
+	}{
+		{
+			testName:      "Generated ECDSA Certs",
+			generateCerts: true,
+			caCert:        "ca.crt",
+			caKey:         "ca.key",
+			servingCert:   "server.crt",
+			servingKey:    "server.key",
+			clientCert:    "client.crt",
+			clientKey:     "client.key",
 		},
 	}
-	client, err := exporter.buildClient()
-	require.NoError(t, err)
+	for _, test := range tests {
+		t.Run(test.testName, func(t *testing.T) {
+			if test.generateCerts {
+				// Generate certificate authority certificate to sign other certificates.
+				caCert, caPrivateKey, err := generateCACertFiles(test.caCert, test.caKey)
+				require.NoError(t, err)
+				defer os.Remove(test.caCert)
+				defer os.Remove(test.caKey)
 
-	// Send the request and verify that the request was successfully received.
-	res, err := client.Get(server.URL)
-	require.NoError(t, err)
-	defer res.Body.Close()
+				// Generate certificate for the server. The client will check this
+				// certificate against its certificate authority to verify the server.
+				_, _, err = generateServingCertFiles(
+					caCert,
+					caPrivateKey,
+					test.servingCert,
+					test.servingKey,
+				)
+				require.NoError(t, err)
+				defer os.Remove(test.servingCert)
+				defer os.Remove(test.servingKey)
+
+				// Generate certificate for the client. The server will check this
+				// certificate against its certificate authority to verify the client.
+				_, _, err = generateClientCertFiles(
+					caCert,
+					caPrivateKey,
+					test.clientCert,
+					test.clientKey,
+				)
+				require.NoError(t, err)
+				defer os.Remove(test.clientCert)
+				defer os.Remove(test.clientKey)
+			}
+
+			// Generate the TLS Config to set up mutual TLS on the server.
+			serverTLSConfig, err := generateServerTLSConfig(
+				test.caCert,
+				test.servingCert,
+				test.servingKey,
+			)
+			require.NoError(t, err)
+
+			// Create and start the TLS server.
+			handler := func(rw http.ResponseWriter, req *http.Request) {
+				fmt.Fprint(rw, "Successfully verified client and received request!")
+			}
+			server := httptest.NewUnstartedServer(http.HandlerFunc(handler))
+			server.TLS = serverTLSConfig
+			server.StartTLS()
+			defer server.Close()
+
+			// Create an Exporter client with the client and CA certificate files.
+			exporter := Exporter{
+				Config{
+					TLSConfig: map[string]string{
+						"ca_file":              test.caCert,
+						"cert_file":            test.clientCert,
+						"key_file":             test.clientKey,
+						"insecure_skip_verify": "0",
+					},
+				},
+			}
+			client, err := exporter.buildClient()
+			require.NoError(t, err)
+
+			// Send the request and verify that the request was successfully received.
+			res, err := client.Get(server.URL)
+			require.NoError(t, err)
+			defer res.Body.Close()
+		})
+	}
 }
 
 // generateCertFiles generates new certificate files from a template that is signed with
@@ -334,12 +365,12 @@ func TestMutualTLS(t *testing.T) {
 func generateCertFiles(
 	template *x509.Certificate,
 	signer *x509.Certificate,
-	signerKey *rsa.PrivateKey,
+	signerKey *ecdsa.PrivateKey,
 	certFilepath string,
 	keyFilepath string,
-) (*x509.Certificate, *rsa.PrivateKey, error) {
+) (*x509.Certificate, *ecdsa.PrivateKey, error) {
 	// Generate a private key for the new certificate. This does not have to be rsa 4096.
-	privateKey, err := rsa.GenerateKey(rand.Reader, 4096)
+	privateKey, err := ecdsa.GenerateKey(elliptic.P256(), rand.Reader)
 	if err != nil {
 		return nil, nil, err
 	}
@@ -397,7 +428,7 @@ func generateCertFiles(
 
 // generateCACertFiles creates a CA certificate and key in the local directory. This
 // certificate is used to sign other certificates.
-func generateCACertFiles(certFilepath string, keyFilepath string) (*x509.Certificate, *rsa.PrivateKey, error) {
+func generateCACertFiles(certFilepath string, keyFilepath string) (*x509.Certificate, *ecdsa.PrivateKey, error) {
 	// Create a template for CA certificates.
 	certTemplate := &x509.Certificate{
 		SerialNumber: big.NewInt(123),
@@ -432,10 +463,10 @@ func generateCACertFiles(certFilepath string, keyFilepath string) (*x509.Certifi
 // authority.
 func generateServingCertFiles(
 	caCert *x509.Certificate,
-	caPrivateKey *rsa.PrivateKey,
+	caPrivateKey *ecdsa.PrivateKey,
 	certFilepath string,
 	keyFilepath string,
-) (*x509.Certificate, *rsa.PrivateKey, error) {
+) (*x509.Certificate, *ecdsa.PrivateKey, error) {
 	certTemplate := &x509.Certificate{
 		SerialNumber: big.NewInt(456),
 		Subject: pkix.Name{
@@ -454,8 +485,8 @@ func generateServingCertFiles(
 		certTemplate,
 		caCert,
 		caPrivateKey,
-		"./serving_cert.pem",
-		"./serving_key.pem",
+		certFilepath,
+		keyFilepath,
 	)
 	if err != nil {
 		return nil, nil, err
@@ -469,10 +500,10 @@ func generateServingCertFiles(
 // authority.
 func generateClientCertFiles(
 	caCert *x509.Certificate,
-	caPrivateKey *rsa.PrivateKey,
+	caPrivateKey *ecdsa.PrivateKey,
 	certFilepath string,
 	keyFilepath string,
-) (*x509.Certificate, *rsa.PrivateKey, error) {
+) (*x509.Certificate, *ecdsa.PrivateKey, error) {
 	certTemplate := &x509.Certificate{
 		SerialNumber: big.NewInt(789),
 		Subject: pkix.Name{
@@ -490,8 +521,8 @@ func generateClientCertFiles(
 		certTemplate,
 		caCert,
 		caPrivateKey,
-		"./client_cert.pem",
-		"./client_key.pem",
+		certFilepath,
+		keyFilepath,
 	)
 	if err != nil {
 		return nil, nil, err

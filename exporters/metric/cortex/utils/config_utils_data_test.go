@@ -72,8 +72,8 @@ headers:
   test: header
 `)
 
-// YAML file with both password and password_file properties. It should fail to produce a Config
-// struct since password and password_file are mutually exclusive.
+// YAML file with both password and password_file properties. It should fail to produce a
+// Config struct since password and password_file are mutually exclusive.
 var twoPasswordsYAML = []byte(`url: /api/prom/push
 remote_timeout: 30s
 name: Valid Config Example
@@ -91,8 +91,9 @@ headers:
   test: header
 `)
 
-// YAML file with both bearer_token and bearer_token_file properties. It should fail to produce a
-// Config struct since bearer_token and bearer_token_file are mutually exclusive.
+// YAML file with both bearer_token and bearer_token_file properties. It should fail to
+// produce a Config struct since bearer_token and bearer_token_file are mutually
+// exclusive.
 var twoBearerTokensYAML = []byte(`url: /api/prom/push
 remote_timeout: 30s
 name: Valid Config Example
@@ -106,6 +107,51 @@ tls_config:
   insecure_skip_verify: true
 headers:
   test: header
+`)
+
+// YAML file that sets custom quantiles and produces a Config struct without errors.
+var quantilesYAML = []byte(`url: /api/prom/push
+remote_timeout: 30s
+push_interval: 5s
+name: Valid Config Example
+basic_auth:
+  username: user
+  password: password
+tls_config:
+  ca_file: cafile
+  cert_file: certfile
+  key_file: keyfile
+  server_name: server
+  insecure_skip_verify: true
+headers:
+  test: header 
+quantiles:
+  - 0
+  - 0.5
+  - 1
+`)
+
+// YAML file that sets custom histogram bucket boundaries and produces a Config struct
+// without errors.
+var bucketBoundariesYAML = []byte(`url: /api/prom/push
+remote_timeout: 30s
+push_interval: 5s
+name: Valid Config Example
+basic_auth:
+  username: user
+  password: password
+tls_config:
+  ca_file: cafile
+  cert_file: certfile
+  key_file: keyfile
+  server_name: server
+  insecure_skip_verify: true
+headers:
+  test: header 
+histogram_boundaries:
+  - 100
+  - 300
+  - 500
 `)
 
 // ValidConfig is the resulting Config struct from reading validYAML.
@@ -131,4 +177,59 @@ var validConfig = cortex.Config{
 	Headers: map[string]string{
 		"test": "header",
 	},
+	Quantiles: []float64{0.5, 0.9, 0.95, 0.99},
+}
+
+// customQuantilesConfig is the resulting Config struct from reading quantilesYAML.
+var customQuantilesConfig = cortex.Config{
+	Endpoint:      "/api/prom/push",
+	RemoteTimeout: 30 * time.Second,
+	Name:          "Valid Config Example",
+	BasicAuth: map[string]string{
+		"username": "user",
+		"password": "password",
+	},
+	BearerToken:     "",
+	BearerTokenFile: "",
+	TLSConfig: map[string]string{
+		"ca_file":              "cafile",
+		"cert_file":            "certfile",
+		"key_file":             "keyfile",
+		"server_name":          "server",
+		"insecure_skip_verify": "1",
+	},
+	ProxyURL:     nil,
+	PushInterval: 5 * time.Second,
+	Headers: map[string]string{
+		"test": "header",
+	},
+	Quantiles: []float64{0, 0.5, 1},
+}
+
+// customBucketBoundariesConfig is the resulting Config struct from reading
+// bucketBoundariesYAML.
+var customBucketBoundariesConfig = cortex.Config{
+	Endpoint:      "/api/prom/push",
+	RemoteTimeout: 30 * time.Second,
+	Name:          "Valid Config Example",
+	BasicAuth: map[string]string{
+		"username": "user",
+		"password": "password",
+	},
+	BearerToken:     "",
+	BearerTokenFile: "",
+	TLSConfig: map[string]string{
+		"ca_file":              "cafile",
+		"cert_file":            "certfile",
+		"key_file":             "keyfile",
+		"server_name":          "server",
+		"insecure_skip_verify": "1",
+	},
+	ProxyURL:     nil,
+	PushInterval: 5 * time.Second,
+	Headers: map[string]string{
+		"test": "header",
+	},
+	Quantiles:           []float64{0.5, 0.9, 0.95, 0.99},
+	HistogramBoundaries: []float64{100, 300, 500},
 }
