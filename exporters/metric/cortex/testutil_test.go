@@ -31,20 +31,17 @@ import (
 	"go.opentelemetry.io/otel/sdk/metric/aggregator/sum"
 )
 
-// getValidCheckpointSet returns a valid checkpointset with several records
-func getValidCheckpointSet(t *testing.T) export.CheckpointSet {
-	return getSumCheckpoint(t, 321)
-}
-
 // getSumCheckpoint returns a checkpoint set with a sum aggregation record
-func getSumCheckpoint(t *testing.T, value int64) export.CheckpointSet {
+func getSumCheckpoint(t *testing.T, values ...int64) export.CheckpointSet {
 	// Create checkpoint set with resource and descriptor
 	checkpointSet := metrictest.NewCheckpointSet(testResource)
 	desc := metric.NewDescriptor("metric_name", metric.CounterKind, metric.Int64NumberKind)
 
 	// Create aggregation, add value, and update checkpointset
 	agg, ckpt := metrictest.Unslice2(sum.New(2))
-	aggregatortest.CheckedUpdate(t, agg, metric.NewInt64Number(value), &desc)
+	for _, value := range values {
+		aggregatortest.CheckedUpdate(t, agg, metric.NewInt64Number(value), &desc)
+	}
 	require.NoError(t, agg.SynchronizedMove(ckpt, &desc))
 	checkpointSet.Add(&desc, ckpt)
 
@@ -52,14 +49,16 @@ func getSumCheckpoint(t *testing.T, value int64) export.CheckpointSet {
 }
 
 // getLastValueCheckpoint returns a checkpoint set with a last value aggregation record
-func getLastValueCheckpoint(t *testing.T, value int64) export.CheckpointSet {
+func getLastValueCheckpoint(t *testing.T, values ...int64) export.CheckpointSet {
 	// Create checkpoint set with resource and descriptor
 	checkpointSet := metrictest.NewCheckpointSet(testResource)
 	desc := metric.NewDescriptor("metric_name", metric.ValueObserverKind, metric.Int64NumberKind)
 
 	// Create aggregation, add value, and update checkpointset
 	agg, ckpt := metrictest.Unslice2(lastvalue.New(2))
-	aggregatortest.CheckedUpdate(t, agg, metric.NewInt64Number(value), &desc)
+	for _, value := range values {
+		aggregatortest.CheckedUpdate(t, agg, metric.NewInt64Number(value), &desc)
+	}
 	require.NoError(t, agg.SynchronizedMove(ckpt, &desc))
 	checkpointSet.Add(&desc, ckpt)
 
@@ -118,26 +117,8 @@ func getHistogramCheckpoint(t *testing.T) export.CheckpointSet {
 	return checkpointSet
 }
 
-// The following variables hold expected TimeSeries values to be used in ConvertToTimeSeries tests
-var wantValidCheckpointSet = []*prompb.TimeSeries{
-	{
-		Labels: []*prompb.Label{
-			{
-				Name:  "R",
-				Value: "V",
-			},
-			{
-				Name:  "__name__",
-				Value: "metric_name",
-			},
-		},
-		Samples: []prompb.Sample{{
-			Value:     321,
-			Timestamp: mockTime,
-		}},
-	},
-}
-
+// The following variables hold expected TimeSeries values to be used in
+// ConvertToTimeSeries tests.
 var wantSumCheckpointSet = []*prompb.TimeSeries{
 	{
 		Labels: []*prompb.Label{
@@ -151,7 +132,7 @@ var wantSumCheckpointSet = []*prompb.TimeSeries{
 			},
 		},
 		Samples: []prompb.Sample{{
-			Value:     321,
+			Value:     15,
 			Timestamp: mockTime,
 		}},
 	},
@@ -170,7 +151,7 @@ var wantLastValueCheckpointSet = []*prompb.TimeSeries{
 			},
 		},
 		Samples: []prompb.Sample{{
-			Value:     123,
+			Value:     5,
 			Timestamp: mockTime,
 		}},
 	},
@@ -212,12 +193,12 @@ var wantMMSCCheckpointSet = []*prompb.TimeSeries{
 	{
 		Labels: []*prompb.Label{
 			{
-				Name:  "__name__",
-				Value: "metric_name_max",
-			},
-			{
 				Name:  "R",
 				Value: "V",
+			},
+			{
+				Name:  "__name__",
+				Value: "metric_name_max",
 			},
 		},
 		Samples: []prompb.Sample{{
@@ -252,7 +233,7 @@ var wantDistributionCheckpointSet = []*prompb.TimeSeries{
 			},
 			{
 				Name:  "__name__",
-				Value: "metric_name",
+				Value: "metric_name_sum",
 			},
 		},
 		Samples: []prompb.Sample{{
@@ -279,12 +260,12 @@ var wantDistributionCheckpointSet = []*prompb.TimeSeries{
 	{
 		Labels: []*prompb.Label{
 			{
-				Name:  "__name__",
-				Value: "metric_name_max",
-			},
-			{
 				Name:  "R",
 				Value: "V",
+			},
+			{
+				Name:  "__name__",
+				Value: "metric_name_max",
 			},
 		},
 		Samples: []prompb.Sample{{
@@ -336,7 +317,7 @@ var wantDistributionCheckpointSet = []*prompb.TimeSeries{
 			},
 			{
 				Name:  "__name__",
-				Value: "metric_name_count",
+				Value: "metric_name",
 			},
 			{
 				Name:  "quantile",
@@ -356,7 +337,7 @@ var wantDistributionCheckpointSet = []*prompb.TimeSeries{
 			},
 			{
 				Name:  "__name__",
-				Value: "metric_name_count",
+				Value: "metric_name",
 			},
 			{
 				Name:  "quantile",
