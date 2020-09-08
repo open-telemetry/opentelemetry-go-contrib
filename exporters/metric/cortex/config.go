@@ -110,7 +110,7 @@ func (c *Config) Validate() error {
 		c.PushInterval = 10 * time.Second
 	}
 	if c.Quantiles == nil {
-		c.Quantiles = []float64{0, 0.25, 0.5, 0.75, 1}
+		c.Quantiles = []float64{0.5, 0.9, 0.95, 0.99}
 	}
 
 	return nil
