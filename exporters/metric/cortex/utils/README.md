@@ -19,8 +19,6 @@ if err != nil {
 // Use newly created Config struct!
 ```
 
-
-
 ## Functionality
 
 Users should use this module if they wish to use YAML files to configure the exporter. The
@@ -57,3 +55,67 @@ HTTP client settings. For example, the client can be used to set up custom authe
 `WithFilesystem` allows users to specify which filesystem `Viper` should search for the
 YAML file in. This `Option` is used in the `config_utils_test.go` to search an in-memory
 filesystem for created test files.
+
+## Supported YAML Properties
+
+The YAML file can contain the following properties. This is sourced from the Prometheus
+Configuration
+[documentation](https://prometheus.io/docs/prometheus/latest/configuration/configuration/#remote_write).
+
+```yaml
+# The URL of the endpoint to send samples to.
+url: <string>
+
+# Timeout for requests to the remote write endpoint.
+[ remote_timeout: <duration> | default = 30s ]
+
+# Name of the remote write config, which if specified must be unique among remote write configs. The name will be used in metrics and logging in place of a generated value to help users distinguish between remote write configs.
+[ name: <string>]
+
+# Sets the `Authorization` header on every remote write request with the
+# configured username and password.
+# password and password_file are mutually exclusive.
+basic_auth:
+  [ username: <string>]
+  [ password: <string>]
+  [ password_file: <string> ]
+
+# Sets the `Authorization` header on every remote write request with
+# the configured bearer token. It is mutually exclusive with `bearer_token_file`.
+[ bearer_token: <string> ]
+
+# Sets the `Authorization` header on every remote write request with the bearer token
+# read from the configured file. It is mutually exclusive with `bearer_token`.
+[ bearer_token_file: /path/to/bearer/token/file ]
+
+# Configures the remote write request's TLS settings.
+tls_config:
+  # CA certificate to validate API server certificate with.
+  [ ca_file: <filename>]
+
+  # Certificate and key files for client cert authentication to the   server.
+  [ cert_file: <filename> ]
+  [ key_file: <filename> ]
+
+  # ServerName extension to indicate the name of the server.
+  # https://tools.ietf.org/html/rfc4366#section-3.1
+  [ server_name: <string> ]
+
+  # Disable validation of the server certificate.
+  [ insecure_skip_verify: <boolean> ]
+
+# Optional proxy URL.
+[ proxy_url: <string>]
+
+# Quantiles for Distribution aggregations
+[ quantiles: ]
+  - <string>
+  - <string>
+  - ...
+
+# Histogram Buckets
+[ histogram_buckets: ]
+  - <string>
+  - <string>
+  - ...
+```
