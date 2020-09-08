@@ -35,7 +35,7 @@ Table of Contents
 ## Installation
 
 ```bash
-go get -u go.opentelemetry.io/otel/exporters/metric/cortex
+go get -u go.opentelemetry.io/contrib/exporters/metric/cortex
 ```
 
 ## Setting up the Exporter
