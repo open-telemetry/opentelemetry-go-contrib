@@ -46,7 +46,7 @@ if err != nil {
     return err
 }
 
-// Make instruments and record data.
+// Make instruments and record data using `global.MeterProvider`.
 ```
 
 ## Configuring the Exporter
