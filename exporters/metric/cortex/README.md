@@ -296,7 +296,7 @@ and an export happens between each increment. If the exports happen like so:
   SUCCESS FAIL FAIL SUCCESS SUCCESS
   1       2    3    4       5
 ```
-the received data will be:
+Then the received data will be:
 ```
 1 2 5
 ```
