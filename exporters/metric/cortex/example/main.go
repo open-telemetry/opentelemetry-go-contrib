@@ -30,16 +30,15 @@ import (
 )
 
 func main() {
-	// Create a new Config
+	// Create a new Config struct.
 	config, err := utils.NewConfig("config.yml")
 	if err != nil {
 		fmt.Printf("Error: %v", err)
 	}
 	fmt.Println("Success: Created Config struct")
 
-	// Create and install the exporter
-	// Optionally, set the push interval to 5 seconds
-	// Optionally, add a resource to the controller
+	// Create and install the exporter. Additionally, set the push interval to 5 seconds
+	// and add a resource to the controller.
 	pusher, err := cortex.InstallNewPipeline(*config, push.WithPeriod(5*time.Second), push.WithResource(resource.New(label.String("R", "V"))))
 	if err != nil {
 		fmt.Printf("Error: %v", err)
@@ -51,6 +50,7 @@ func main() {
 	meter := pusher.Provider().Meter("example")
 	ctx := context.Background()
 
+	// Create instruments.
 	recorder := metric.Must(meter).NewInt64ValueRecorder(
 		"pipeline.valuerecorder",
 		metric.WithDescription("Records values"),
