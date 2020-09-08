@@ -35,6 +35,15 @@ func (l *Labeler) Add(ls ...label.KeyValue) {
 	l.labels = append(l.labels, ls...)
 }
 
+// Labels returns a copy of the labels added to the Labeler.
+func (l *Labeler) Get() []label.KeyValue {
+	l.mu.Lock()
+	defer l.mu.Unlock()
+	ret := make([]label.KeyValue, len(l.labels))
+	copy(ret, l.labels)
+	return ret
+}
+
 type labelerContextKeyType int
 
 const lablelerContextKey labelerContextKeyType = 0
