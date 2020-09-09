@@ -62,11 +62,12 @@ var validConfig = Config{
 		"x-prometheus-remote-write-version": "0.1.0",
 		"tenant-id":                         "123",
 	},
-	Client: http.DefaultClient,
+	Client:    http.DefaultClient,
+	Quantiles: []float64{0, 0.25, 0.5, 0.75, 1},
 }
 
 var testResource = resource.New(label.String("R", "V"))
-var mockTime int64 = time.Time{}.Unix()
+var mockTime int64 = int64(time.Nanosecond) * time.Time{}.UnixNano() / int64(time.Millisecond)
 
 func TestExportKindFor(t *testing.T) {
 	exporter := Exporter{}
@@ -94,20 +95,14 @@ func TestConvertToTimeSeries(t *testing.T) {
 		wantLength int
 	}{
 		{
-			name:       "validCheckpointSet",
-			input:      getValidCheckpointSet(t),
-			want:       wantValidCheckpointSet,
-			wantLength: 1,
-		},
-		{
 			name:       "convertFromSum",
-			input:      getSumCheckpoint(t, 321),
+			input:      getSumCheckpoint(t, 1, 2, 3, 4, 5),
 			want:       wantSumCheckpointSet,
 			wantLength: 1,
 		},
 		{
 			name:       "convertFromLastValue",
-			input:      getLastValueCheckpoint(t, 123),
+			input:      getLastValueCheckpoint(t, 1, 2, 3, 4, 5),
 			want:       wantLastValueCheckpointSet,
 			wantLength: 1,
 		},
@@ -136,9 +131,36 @@ func TestConvertToTimeSeries(t *testing.T) {
 			got, err := exporter.ConvertToTimeSeries(tt.input)
 			want := tt.want
 
+			// Check for errors and for the correct number of timeseries.
 			assert.Nil(t, err, "ConvertToTimeSeries error")
 			assert.Len(t, got, tt.wantLength, "Incorrect number of timeseries")
-			cmp.Equal(got, want)
+
+			// The TimeSeries cannot be compared easily using assert.ElementsMatch or
+			// cmp.Equal since both the ordering of the timeseries and the ordering of the
+			// labels inside each timeseries can change. To get around this, all the
+			// labels and samples are added to maps first. There aren't many labels or
+			// samples, so this nested loop shouldn't be a bottleneck.
+			gotLabels := make(map[string]bool)
+			wantLabels := make(map[string]bool)
+			gotSamples := make(map[string]bool)
+			wantSamples := make(map[string]bool)
+
+			for i := 0; i < len(got); i++ {
+				for _, label := range got[i].Labels {
+					gotLabels[label.String()] = true
+				}
+				for _, label := range want[i].Labels {
+					wantLabels[label.String()] = true
+				}
+				for _, sample := range got[i].Samples {
+					gotSamples[sample.String()] = true
+				}
+				for _, sample := range want[i].Samples {
+					wantSamples[sample.String()] = true
+				}
+			}
+			assert.Equal(t, gotLabels, wantLabels)
+			assert.Equal(t, gotSamples, wantSamples)
 		})
 	}
 }
@@ -254,7 +276,7 @@ func verifyExporterRequest(req *http.Request) error {
 		return fmt.Errorf("Request does not contain the three required headers")
 	}
 
-	// Check body format and headers.
+	// Check whether request body is in the correct format.
 	compressed, err := ioutil.ReadAll(req.Body)
 	if err != nil {
 		return fmt.Errorf("Failed to read request body")
@@ -267,6 +289,29 @@ func verifyExporterRequest(req *http.Request) error {
 	err = proto.Unmarshal(uncompressed, wr)
 	if err != nil {
 		return fmt.Errorf("Failed to unmarshal message into WriteRequest struct")
+	}
+
+	// Check whether the request contains the correct data.
+	expectedWriteRequest := &prompb.WriteRequest{
+		Timeseries: []*prompb.TimeSeries{
+			{
+				Samples: []prompb.Sample{
+					{
+						Value:     float64(123),
+						Timestamp: int64(time.Nanosecond) * time.Time{}.UnixNano() / int64(time.Millisecond),
+					},
+				},
+				Labels: []*prompb.Label{
+					{
+						Name:  "__name__",
+						Value: "test_name",
+					},
+				},
+			},
+		},
+	}
+	if !cmp.Equal(wr, expectedWriteRequest) {
+		return fmt.Errorf("request does not contain the expected contents")
 	}
 
 	return nil
@@ -297,9 +342,9 @@ func TestSendRequest(t *testing.T) {
 	}
 
 	// Set up a test server to receive the request. The server responds with a 400 Bad
-	// Request status code if any headers are missing or if the body is not of the correct
-	// format. Additionally, the server can respond with status code 404 Not Found to
-	// simulate send failures.
+	// Request status code if any headers are missing or if the body does not have the
+	// correct contents. Additionally, the server can respond with status code 404 Not
+	// Found to simulate send failures.
 	handler := func(rw http.ResponseWriter, req *http.Request) {
 		err := verifyExporterRequest(req)
 		if err != nil {
@@ -307,7 +352,8 @@ func TestSendRequest(t *testing.T) {
 			return
 		}
 
-		// Return a status code 400 if header isStatusNotFound is "true", 200 otherwise.
+		// Return a status code 400 if header isStatusNotFound is "true". Otherwise,
+		// return status code 200.
 		if req.Header.Get("isStatusNotFound") == "true" {
 			rw.WriteHeader(http.StatusNotFound)
 		} else {
@@ -327,8 +373,26 @@ func TestSendRequest(t *testing.T) {
 			}
 			exporter := Exporter{*test.config}
 
-			// Create an empty Snappy-compressed message.
-			msg, err := exporter.buildMessage([]*prompb.TimeSeries{})
+			// Create a test TimeSeries struct.
+			timeSeries := []*prompb.TimeSeries{
+				{
+					Samples: []prompb.Sample{
+						{
+							Value:     float64(123),
+							Timestamp: int64(time.Nanosecond) * time.Time{}.UnixNano() / int64(time.Millisecond),
+						},
+					},
+					Labels: []*prompb.Label{
+						{
+							Name:  "__name__",
+							Value: "test_name",
+						},
+					},
+				},
+			}
+
+			// Create a Snappy-compressed message.
+			msg, err := exporter.buildMessage(timeSeries)
 			require.NoError(t, err)
 
 			// Create a http POST request with the compressed message.
