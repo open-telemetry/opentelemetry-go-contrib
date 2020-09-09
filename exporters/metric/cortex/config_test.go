@@ -91,6 +91,18 @@ func TestValidate(t *testing.T) {
 			expectedConfig: nil,
 			expectedError:  cortex.ErrConflictingAuthorization,
 		},
+		{
+			testName:       "Config with Invalid Quantiles",
+			config:         &exampleInvalidQuantilesConfig,
+			expectedConfig: nil,
+			expectedError:  cortex.ErrInvalidQuantiles,
+		},
+		{
+			testName:       "Config with Valid Quantiles",
+			config:         &exampleValidQuantilesConfig,
+			expectedConfig: &validatedQuantilesConfig,
+			expectedError:  nil,
+		},
 	}
 	for _, test := range tests {
 		t.Run(test.testName, func(t *testing.T) {

@@ -98,6 +98,22 @@ func TestNewConfig(t *testing.T) {
 			expectedConfig: nil,
 			expectedError:  cortex.ErrTwoBearerTokens,
 		},
+		{
+			testName:       "Custom Quantiles",
+			yamlByteString: quantilesYAML,
+			fileName:       "config.yml",
+			directoryPath:  "/test",
+			expectedConfig: &customQuantilesConfig,
+			expectedError:  nil,
+		},
+		{
+			testName:       "Custom Histogram Boundaries",
+			yamlByteString: bucketBoundariesYAML,
+			fileName:       "config.yml",
+			directoryPath:  "/test",
+			expectedConfig: &customBucketBoundariesConfig,
+			expectedError:  nil,
+		},
 	}
 
 	for _, test := range tests {
