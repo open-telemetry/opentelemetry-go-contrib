@@ -12,9 +12,6 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-// Remove when #310 is resolved.
-// +build !386
-
 package cortex
 
 import (
