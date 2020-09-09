@@ -60,6 +60,8 @@ func ExampleNewHandler() {
 		otelhttp.WithRouteTag("/hello/:name", http.HandlerFunc(
 			func(w http.ResponseWriter, r *http.Request) {
 				ctx := r.Context()
+				labeler, _ := otelhttp.LabelerFromContext(ctx)
+
 				var name string
 				// Wrap another function in its own span
 				if err := func(ctx context.Context) error {
@@ -72,6 +74,7 @@ func ExampleNewHandler() {
 				}(ctx); err != nil {
 					log.Println("error figuring out name: ", err)
 					http.Error(w, err.Error(), http.StatusInternalServerError)
+					labeler.Add(label.Bool("error", true))
 					return
 				}
 
@@ -79,12 +82,14 @@ func ExampleNewHandler() {
 				if err != nil {
 					log.Println("error reading body: ", err)
 					w.WriteHeader(http.StatusBadRequest)
+					labeler.Add(label.Bool("error", true))
 					return
 				}
 
 				n, err := io.WriteString(w, "Hello, "+name+"!\nYou sent me this:\n"+string(d))
 				if err != nil {
 					log.Printf("error writing reply after %d bytes: %s", n, err)
+					labeler.Add(label.Bool("error", true))
 				}
 			}),
 		),

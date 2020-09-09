@@ -50,6 +50,9 @@ func TestHandlerBasics(t *testing.T) {
 
 	h := NewHandler(
 		http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+			l, _ := LabelerFromContext(r.Context())
+			l.Add(label.String("test", "label"))
+
 			if _, err := io.WriteString(w, "hello world"); err != nil {
 				t.Fatal(err)
 			}
@@ -73,6 +76,7 @@ func TestHandlerBasics(t *testing.T) {
 		semconv.HTTPSchemeHTTP,
 		semconv.HTTPHostKey.String(r.Host),
 		semconv.HTTPFlavorKey.String(fmt.Sprintf("1.%d", r.ProtoMinor)),
+		label.String("test", "label"),
 	}
 
 	assertMetricLabels(t, labelsToVerify, meterimpl.MeasurementBatches)
