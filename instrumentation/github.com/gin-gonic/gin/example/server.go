@@ -15,7 +15,6 @@
 package main
 
 import (
-	"context"
 	"html/template"
 	"log"
 	"net/http"
@@ -42,7 +41,7 @@ func main() {
 	r.SetHTMLTemplate(tmpl)
 	r.GET("/users/:id", func(c *gin.Context) {
 		id := c.Param("id")
-		name := getUser(c.Request.Context(), id)
+		name := getUser(c, id)
 		gintrace.HTML(c, http.StatusOK, tmplName, gin.H{
 			"name": name,
 			"id":   id,
@@ -69,8 +68,10 @@ func initTracer() {
 	otelglobal.SetTraceProvider(tp)
 }
 
-func getUser(ctx context.Context, id string) string {
-	_, span := tracer.Start(ctx, "getUser", oteltrace.WithAttributes(label.String("id", id)))
+func getUser(c *gin.Context, id string) string {
+	// Pass the built-in `context.Context` object from http.Request to OpenTelemetry APIs
+	// where required. It is available from gin.Context.Request.Context()
+	_, span := tracer.Start(c.Request.Context(), "getUser", oteltrace.WithAttributes(label.String("id", id)))
 	defer span.End()
 	if id == "123" {
 		return "gintrace tester"
