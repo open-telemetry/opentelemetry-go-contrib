@@ -41,6 +41,9 @@ var (
 	// ErrNoBasicAuthPassword occurs when no password or password file was provided for
 	// basic authentication.
 	ErrNoBasicAuthPassword = fmt.Errorf("no password or password file provided for basic authentication")
+
+	// ErrInvalidQuantiles occurs when the supplied quantiles are not between 0 and 1.
+	ErrInvalidQuantiles = fmt.Errorf("cannot have quantiles that are less than 0 or greater than 1")
 )
 
 // Config contains properties the Exporter uses to export metrics data to Cortex.
@@ -86,6 +89,15 @@ func (c *Config) Validate() error {
 		return ErrTwoBearerTokens
 	}
 
+	// Verify that provided quantiles are between 0 and 1.
+	if c.Quantiles != nil {
+		for _, quantile := range c.Quantiles {
+			if quantile < 0 || quantile > 1 {
+				return ErrInvalidQuantiles
+			}
+		}
+	}
+
 	// Add default values for missing properties.
 	if c.Endpoint == "" {
 		c.Endpoint = "/api/prom/push"
@@ -96,6 +108,9 @@ func (c *Config) Validate() error {
 	// Default time interval between pushes for the push controller is 10s.
 	if c.PushInterval == 0 {
 		c.PushInterval = 10 * time.Second
+	}
+	if c.Quantiles == nil {
+		c.Quantiles = []float64{0.5, 0.9, 0.95, 0.99}
 	}
 
 	return nil
