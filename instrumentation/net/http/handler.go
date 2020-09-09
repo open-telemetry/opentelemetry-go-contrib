@@ -165,13 +165,16 @@ func (h *Handler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		},
 	})
 
+	labeler := &Labeler{}
+	ctx = injectLabeler(ctx, labeler)
+
 	h.handler.ServeHTTP(w, r.WithContext(ctx))
 
 	setAfterServeAttributes(span, bw.read, rww.written, rww.statusCode, bw.err, rww.err)
 
 	// Add request metrics
 
-	labels := semconv.HTTPServerMetricAttributesFromHTTPRequest(h.operation, r)
+	labels := append(labeler.Get(), semconv.HTTPServerMetricAttributesFromHTTPRequest(h.operation, r)...)
 
 	h.counters[RequestContentLength].Add(ctx, bw.read, labels...)
 	h.counters[ResponseContentLength].Add(ctx, rww.written, labels...)
