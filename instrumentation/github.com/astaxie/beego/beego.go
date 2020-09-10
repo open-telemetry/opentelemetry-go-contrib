@@ -64,7 +64,7 @@ func defaultSpanNameFormatter(operation string, req *http.Request) string {
 // Parameter service should describe the name of the (virtual) server handling the request.
 // The OTelBeegoMiddleWare can be configured using the provided Options.
 func NewOTelBeegoMiddleWare(service string, options ...Option) beego.MiddleWare {
-	cfg := configure(options...)
+	cfg := newConfig(options...)
 
 	httpOptions := []otelhttp.Option{
 		otelhttp.WithTracerProvider(cfg.tracerProvider),

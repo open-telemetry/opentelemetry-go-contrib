@@ -27,7 +27,7 @@ import (
 // configuration enabling tracing for queries, batch queries, and connection attempts.
 // You may use additional observers and disable specific tracing using the provided `TracedSessionOption`s.
 func NewSessionWithTracing(ctx context.Context, cluster *gocql.ClusterConfig, options ...TracedSessionOption) (*gocql.Session, error) {
-	config := configure(options...)
+	config := newConfig(options...)
 	instruments := newInstruments(config.meterProvider)
 	tracer := config.tracerProvider.Tracer(
 		instrumentationName,
