@@ -47,7 +47,7 @@ func (m *monitor) Started(ctx context.Context, evt *event.CommandStartedEvent) {
 		ResourceName("mongo." + evt.CommandName),
 		DBInstance(evt.DatabaseName),
 		DBStatement(string(b)),
-		DBType("mongo"),
+		DBSystem("mongodb"),
 		PeerHostname(hostname),
 		PeerPort(port),
 	}

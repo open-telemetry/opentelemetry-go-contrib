@@ -19,7 +19,7 @@ import "go.opentelemetry.io/otel/label"
 const (
 	DBApplicationKey = label.Key("db.application")
 	DBNameKey        = label.Key("db.name")
-	DBTypeKey        = label.Key("db.type")
+	DBSystemKey      = label.Key("db.system")
 	DBInstanceKey    = label.Key("db.instance")
 	DBUserKey        = label.Key("db.user")
 	DBStatementKey   = label.Key("db.statement")
@@ -35,9 +35,9 @@ func DBName(dbName string) label.KeyValue {
 	return DBNameKey.String(dbName)
 }
 
-// DBType indicates the type of Database.
-func DBType(dbType string) label.KeyValue {
-	return DBTypeKey.String(dbType)
+// DBSystem indicates the system of Database.
+func DBSystem(dbType string) label.KeyValue {
+	return DBSystemKey.String(dbType)
 }
 
 // DBInstance indicates the instance name of Database.
