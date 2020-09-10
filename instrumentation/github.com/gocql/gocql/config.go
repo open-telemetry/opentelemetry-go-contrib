@@ -123,7 +123,7 @@ func WithConnectInstrumentation(enabled bool) TracedSessionOption {
 
 // ------------------------------------------ Private Functions
 
-func newConfig(options ...TracedSessionOption) *TracedSessionConfig {
+func newTracedSessionConfig(options ...TracedSessionOption) *TracedSessionConfig {
 	config := &TracedSessionConfig{
 		tracerProvider:    global.TraceProvider(),
 		meterProvider:     global.MeterProvider(),
