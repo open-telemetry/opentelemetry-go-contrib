@@ -72,5 +72,5 @@ func Test(t *testing.T) {
 	assert.Equal(t, port, s.Attributes[PeerPortKey].AsString())
 	assert.Contains(t, s.Attributes[DBStatementKey].AsString(), `"test-item":"test-value"`)
 	assert.Equal(t, "test-database", s.Attributes[DBInstanceKey].AsString())
-	assert.Equal(t, "mongo", s.Attributes[DBTypeKey].AsString())
+	assert.Equal(t, "mongodb", s.Attributes[DBSystemKey].AsString())
 }
