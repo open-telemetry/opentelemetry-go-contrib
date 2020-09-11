@@ -53,12 +53,12 @@ func NewTransport(base http.RoundTripper, opts ...Option) *Transport {
 	}
 
 	c := newConfig(append(defaultOpts, opts...)...)
-	t.configure(c)
+	t.applyConfig(c)
 
 	return &t
 }
 
-func (t *Transport) configure(c *config) {
+func (t *Transport) applyConfig(c *config) {
 	t.tracer = c.Tracer
 	t.propagators = c.Propagators
 	t.spanStartOptions = c.SpanStartOptions

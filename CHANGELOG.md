@@ -20,6 +20,8 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
   `labstack/echo`, `emicklei/go-restful`, `bradfitz/gomemcache`, `Shopify/sarama`, `net/http` and `beego`. (#303)
 - Update instrumentation guidelines about uniform provider options. Also, update style guide. (#303)
 - Make config struct of instrumentation unexported. (#303)
+- Instrumentations have been updated to adhere to the [configuration style guide's](https://github.com/open-telemetry/opentelemetry-go/blob/master/CONTRIBUTING.md#config)
+   updated recommendation to use `newConfig()` instead of `configure()`. (#336)
 
 ## [0.11.0] - 2020-08-25
 
