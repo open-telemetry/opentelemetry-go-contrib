@@ -89,7 +89,7 @@ func WithSpanNameFormatter(f SpanNameFormatter) OptionFunc {
 
 // ------------------------------------------ Private Functions
 
-func configure(options ...Option) *config {
+func newConfig(options ...Option) *config {
 	config := &config{
 		tracerProvider: global.TraceProvider(),
 		meterProvider:  global.MeterProvider(),

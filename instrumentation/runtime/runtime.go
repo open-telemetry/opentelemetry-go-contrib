@@ -86,8 +86,8 @@ func (o metricProviderOption) ApplyRuntime(c *config) {
 	c.MeterProvider = o.Provider
 }
 
-// configure computes a config from the supplied Options.
-func configure(opts ...Option) config {
+// newConfig computes a config from the supplied Options.
+func newConfig(opts ...Option) config {
 	c := config{
 		MeterProvider:               global.MeterProvider(),
 		MinimumReadMemStatsInterval: DefaultMinimumReadMemStatsInterval,
@@ -100,7 +100,7 @@ func configure(opts ...Option) config {
 
 // Start initializes reporting of runtime metrics using the supplied config.
 func Start(opts ...Option) error {
-	c := configure(opts...)
+	c := newConfig(opts...)
 	if c.MinimumReadMemStatsInterval < 0 {
 		c.MinimumReadMemStatsInterval = DefaultMinimumReadMemStatsInterval
 	}
