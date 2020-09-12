@@ -19,10 +19,6 @@ import "go.opentelemetry.io/otel/label"
 const (
 	TargetHostKey  = label.Key("out.host")
 	TargetPortKey  = label.Key("out.port")
-	HTTPMethodKey  = label.Key("http.method")
-	HTTPCodeKey    = label.Key("http.code")
-	HTTPURLKey     = label.Key("http.url")
-	SpanTypeKey    = label.Key("span.type")
 	ServiceNameKey = label.Key("service.name")
 	DBOperationKey = label.Key("db.operation")
 	ErrorKey       = label.Key("error")
@@ -37,26 +33,6 @@ func TargetHost(targetHost string) label.KeyValue {
 // TargetPort sets the target host port.
 func TargetPort(targetPort string) label.KeyValue {
 	return TargetPortKey.String(targetPort)
-}
-
-// HTTPMethod specifies the HTTP method used in a span.
-func HTTPMethod(httpMethod string) label.KeyValue {
-	return HTTPMethodKey.String(httpMethod)
-}
-
-// HTTPCode sets the HTTP status code as a attribute.
-func HTTPCode(httpCode string) label.KeyValue {
-	return HTTPCodeKey.String(httpCode)
-}
-
-// HTTPURL sets the HTTP URL for a span.
-func HTTPURL(httpURL string) label.KeyValue {
-	return HTTPURLKey.String(httpURL)
-}
-
-// SpanType defines the Span type (web, db, cache).
-func SpanType(spanType string) label.KeyValue {
-	return SpanTypeKey.String(spanType)
 }
 
 // ServiceName defines the Service name for this Span.
