@@ -13,6 +13,7 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 - Benchmark tests for the gRPC instrumentation. (#296)
 - Integration testing for the gRPC instrumentation. (#297)
 - Allow custom labels to be added to net/http metrics. (#306)
+- Added B3 propagator, moving it out of open.telemetry.io/otel repo. (#344)
 
 ### Changed
 
