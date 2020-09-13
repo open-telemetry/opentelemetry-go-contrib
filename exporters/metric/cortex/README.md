@@ -31,6 +31,8 @@ Table of Contents
       * [Instrument to Aggregation Mapping](#instrument-to-aggregation-mapping)
       * [Error Handling](#error-handling)
       * [Retry Logic](#retry-logic)
+      * [Design Document](#design-document)
+      * [Future Enhancements](#future-enhancements)
 
 ## Installation
 
@@ -182,7 +184,6 @@ tls_config:
   - ...
 ```
 </details>
-<br>
 
 ## Securing the Exporter
 
@@ -274,8 +275,6 @@ that instruments are mapped to aggregations as shown in the table below.
 | UpDownSumObserver | Sum         |
 | ValueObserver     | Histogram   |
 
-</br>
-
 Although only the `Sum` and `Histogram` aggregations are currently being used, the
 exporter supports 5 different aggregations:
 1. `Sum`
@@ -283,7 +282,6 @@ exporter supports 5 different aggregations:
 3. `MinMaxSumCount`
 4. `Distribution`
 5. `Histogram`
-
 
 ## Error Handling
 In general, errors are returned to the calling function / method. Eventually, errors make
@@ -309,3 +307,16 @@ Then the received data will be:
 ```
 
 The end result is the same since the aggregations are cumulative.
+
+## Design Document
+
+[Design Document](https://github.com/open-o11y/docs/blob/master/go-prometheus-remote-write/design-doc.md)
+
+The document is not in this module as it contains large images which will increase the
+size of the overall repo significantly.
+
+## Future Enhancements
+* Add configuration option for different selectors 
+
+   Users may not want to use the default Histogram selector and should be able to choose
+  which selector they want to use.

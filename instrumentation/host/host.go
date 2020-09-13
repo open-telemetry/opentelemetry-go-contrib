@@ -84,8 +84,8 @@ var (
 	LabelNetworkReceive  = []label.KeyValue{label.String("direction", "receive")}
 )
 
-// configure computes a config from a list of Options.
-func configure(opts ...Option) config {
+// newConfig computes a config from a list of Options.
+func newConfig(opts ...Option) config {
 	c := config{
 		MeterProvider: global.MeterProvider(),
 	}
@@ -97,7 +97,7 @@ func configure(opts ...Option) config {
 
 // Start initializes reporting of host metrics using the supplied config.
 func Start(opts ...Option) error {
-	c := configure(opts...)
+	c := newConfig(opts...)
 	if c.MeterProvider == nil {
 		c.MeterProvider = global.MeterProvider()
 	}
