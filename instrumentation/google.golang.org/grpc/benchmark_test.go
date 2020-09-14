@@ -40,7 +40,7 @@ func benchmark(b *testing.B, cOpt []grpc.DialOption, sOpt []grpc.ServerOption) {
 	defer l.Close()
 
 	s := grpc.NewServer(sOpt...)
-	pb.RegisterTestServiceServer(s, interop.NewTestServer())
+	pb.RegisterTestServiceService(s, interop.NewTestServer())
 	go func() {
 		if err := s.Serve(l); err != nil {
 			panic(err)
