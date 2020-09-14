@@ -67,7 +67,7 @@ func Test(t *testing.T) {
 
 	s := spans[0]
 	assert.Equal(t, "mongo", s.Attributes[ServiceNameKey].AsString())
-	assert.Equal(t, "mongo.insert", s.Attributes[ResourceNameKey].AsString())
+	assert.Equal(t, "insert", s.Attributes[DBOperationKey].AsString())
 	assert.Equal(t, hostname, s.Attributes[PeerHostnameKey].AsString())
 	assert.Equal(t, port, s.Attributes[PeerPortKey].AsString())
 	assert.Contains(t, s.Attributes[DBStatementKey].AsString(), `"test-item":"test-value"`)
