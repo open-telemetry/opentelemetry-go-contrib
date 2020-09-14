@@ -5,165 +5,324 @@
 
 version: 2
 updates:
-  - package-ecosystem: "github-actions"
+  -
+    package-ecosystem: "github-actions"
     # Workflow files stored in the
     # default location of `.github/workflows`
     directory: "/"
+    labels:
+      - dependencies
+      - actions
+      - "Skip Changelog"
     schedule:
       interval: "weekly"
       day: "sunday"
-  - package-ecosystem: "gomod"
+  -
+    package-ecosystem: "gomod"
     directory: "/"
+    labels:
+      - dependencies
+      - go
+      - "Skip Changelog"
     schedule:
       interval: "weekly"
       day: "sunday"
-  - package-ecosystem: "gomod"
+  -
+    package-ecosystem: "gomod"
     directory: "/detectors/aws"
+    labels:
+      - dependencies
+      - go
+      - "Skip Changelog"
     schedule:
       interval: "weekly"
       day: "sunday"
-  - package-ecosystem: "gomod"
+  -
+    package-ecosystem: "gomod"
     directory: "/detectors/gcp"
+    labels:
+      - dependencies
+      - go
+      - "Skip Changelog"
     schedule:
       interval: "weekly"
       day: "sunday"
-  - package-ecosystem: "gomod"
+  -
+    package-ecosystem: "gomod"
     directory: "/exporters/metric/cortex"
+    labels:
+      - dependencies
+      - go
+      - "Skip Changelog"
     schedule:
       interval: "weekly"
       day: "sunday"
-  - package-ecosystem: "gomod"
+  -
+    package-ecosystem: "gomod"
     directory: "/exporters/metric/cortex/example"
+    labels:
+      - dependencies
+      - go
+      - "Skip Changelog"
     schedule:
       interval: "weekly"
       day: "sunday"
-  - package-ecosystem: "gomod"
+  -
+    package-ecosystem: "gomod"
     directory: "/exporters/metric/cortex/utils"
+    labels:
+      - dependencies
+      - go
+      - "Skip Changelog"
     schedule:
       interval: "weekly"
       day: "sunday"
-  - package-ecosystem: "gomod"
+  -
+    package-ecosystem: "gomod"
     directory: "/exporters/metric/datadog"
+    labels:
+      - dependencies
+      - go
+      - "Skip Changelog"
     schedule:
       interval: "weekly"
       day: "sunday"
-  - package-ecosystem: "gomod"
+  -
+    package-ecosystem: "gomod"
     directory: "/exporters/metric/dogstatsd"
+    labels:
+      - dependencies
+      - go
+      - "Skip Changelog"
     schedule:
       interval: "weekly"
       day: "sunday"
-  - package-ecosystem: "gomod"
+  -
+    package-ecosystem: "gomod"
     directory: "/instrumentation/github.com/astaxie/beego"
+    labels:
+      - dependencies
+      - go
+      - "Skip Changelog"
     schedule:
       interval: "weekly"
       day: "sunday"
-  - package-ecosystem: "gomod"
+  -
+    package-ecosystem: "gomod"
     directory: "/instrumentation/github.com/astaxie/beego/example"
+    labels:
+      - dependencies
+      - go
+      - "Skip Changelog"
     schedule:
       interval: "weekly"
       day: "sunday"
-  - package-ecosystem: "gomod"
+  -
+    package-ecosystem: "gomod"
     directory: "/instrumentation/github.com/bradfitz/gomemcache"
+    labels:
+      - dependencies
+      - go
+      - "Skip Changelog"
     schedule:
       interval: "weekly"
       day: "sunday"
-  - package-ecosystem: "gomod"
+  -
+    package-ecosystem: "gomod"
     directory: "/instrumentation/github.com/emicklei/go-restful"
+    labels:
+      - dependencies
+      - go
+      - "Skip Changelog"
     schedule:
       interval: "weekly"
       day: "sunday"
-  - package-ecosystem: "gomod"
+  -
+    package-ecosystem: "gomod"
     directory: "/instrumentation/github.com/gin-gonic/gin"
+    labels:
+      - dependencies
+      - go
+      - "Skip Changelog"
     schedule:
       interval: "weekly"
       day: "sunday"
-  - package-ecosystem: "gomod"
+  -
+    package-ecosystem: "gomod"
     directory: "/instrumentation/github.com/gocql/gocql"
+    labels:
+      - dependencies
+      - go
+      - "Skip Changelog"
     schedule:
       interval: "weekly"
       day: "sunday"
-  - package-ecosystem: "gomod"
+  -
+    package-ecosystem: "gomod"
     directory: "/instrumentation/github.com/gocql/gocql/example"
+    labels:
+      - dependencies
+      - go
+      - "Skip Changelog"
     schedule:
       interval: "weekly"
       day: "sunday"
-  - package-ecosystem: "gomod"
+  -
+    package-ecosystem: "gomod"
     directory: "/instrumentation/github.com/gorilla/mux"
+    labels:
+      - dependencies
+      - go
+      - "Skip Changelog"
     schedule:
       interval: "weekly"
       day: "sunday"
-  - package-ecosystem: "gomod"
+  -
+    package-ecosystem: "gomod"
     directory: "/instrumentation/github.com/labstack/echo"
+    labels:
+      - dependencies
+      - go
+      - "Skip Changelog"
     schedule:
       interval: "weekly"
       day: "sunday"
-  - package-ecosystem: "gomod"
+  -
+    package-ecosystem: "gomod"
     directory: "/instrumentation/github.com/Shopify/sarama"
+    labels:
+      - dependencies
+      - go
+      - "Skip Changelog"
     schedule:
       interval: "weekly"
       day: "sunday"
-  - package-ecosystem: "gomod"
+  -
+    package-ecosystem: "gomod"
     directory: "/instrumentation/github.com/Shopify/sarama/example"
+    labels:
+      - dependencies
+      - go
+      - "Skip Changelog"
     schedule:
       interval: "weekly"
       day: "sunday"
-  - package-ecosystem: "gomod"
+  -
+    package-ecosystem: "gomod"
     directory: "/instrumentation/go.mongodb.org/mongo-driver"
+    labels:
+      - dependencies
+      - go
+      - "Skip Changelog"
     schedule:
       interval: "weekly"
       day: "sunday"
-  - package-ecosystem: "gomod"
+  -
+    package-ecosystem: "gomod"
     directory: "/instrumentation/google.golang.org/grpc"
+    labels:
+      - dependencies
+      - go
+      - "Skip Changelog"
     schedule:
       interval: "weekly"
       day: "sunday"
-  - package-ecosystem: "gomod"
+  -
+    package-ecosystem: "gomod"
     directory: "/instrumentation/google.golang.org/grpc/example"
+    labels:
+      - dependencies
+      - go
+      - "Skip Changelog"
     schedule:
       interval: "weekly"
       day: "sunday"
-  - package-ecosystem: "gomod"
+  -
+    package-ecosystem: "gomod"
     directory: "/instrumentation/gopkg.in/macaron.v1"
+    labels:
+      - dependencies
+      - go
+      - "Skip Changelog"
     schedule:
       interval: "weekly"
       day: "sunday"
-  - package-ecosystem: "gomod"
+  -
+    package-ecosystem: "gomod"
     directory: "/instrumentation/host"
+    labels:
+      - dependencies
+      - go
+      - "Skip Changelog"
     schedule:
       interval: "weekly"
       day: "sunday"
-  - package-ecosystem: "gomod"
+  -
+    package-ecosystem: "gomod"
     directory: "/instrumentation/net/http"
+    labels:
+      - dependencies
+      - go
+      - "Skip Changelog"
     schedule:
       interval: "weekly"
       day: "sunday"
-  - package-ecosystem: "gomod"
+  -
+    package-ecosystem: "gomod"
     directory: "/instrumentation/net/http/example"
+    labels:
+      - dependencies
+      - go
+      - "Skip Changelog"
     schedule:
       interval: "weekly"
       day: "sunday"
-  - package-ecosystem: "gomod"
+  -
+    package-ecosystem: "gomod"
     directory: "/instrumentation/net/http/httptrace"
+    labels:
+      - dependencies
+      - go
+      - "Skip Changelog"
     schedule:
       interval: "weekly"
       day: "sunday"
-  - package-ecosystem: "gomod"
+  -
+    package-ecosystem: "gomod"
     directory: "/instrumentation/net/http/httptrace/example"
+    labels:
+      - dependencies
+      - go
+      - "Skip Changelog"
     schedule:
       interval: "weekly"
       day: "sunday"
-  - package-ecosystem: "gomod"
+  -
+    package-ecosystem: "gomod"
     directory: "/instrumentation/runtime"
+    labels:
+      - dependencies
+      - go
+      - "Skip Changelog"
     schedule:
       interval: "weekly"
       day: "sunday"
-  - package-ecosystem: "gomod"
+  -
+    package-ecosystem: "gomod"
     directory: "/propagators"
+    labels:
+      - dependencies
+      - go
+      - "Skip Changelog"
     schedule:
       interval: "weekly"
       day: "sunday"
   - package-ecosystem: "gomod"
     directory: "/tools"
+    labels:
+      - dependencies
+      - go
+      - "Skip Changelog"
     schedule:
       interval: "weekly"
       day: "sunday"
