@@ -12,7 +12,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package mongo
+package otelmongo
 
 import (
 	"go.opentelemetry.io/otel/api/global"
@@ -20,7 +20,7 @@ import (
 )
 
 const (
-	defaultTracerName = "go.opentelemetry.io/contrib/instrumentation/go.mongodb.org/mongo-driver"
+	defaultTracerName = "go.opentelemetry.io/contrib/instrumentation/go.mongodb.org/mongo-driver/mongo/otelmongo"
 )
 
 // config is used to configure the mongo tracer.

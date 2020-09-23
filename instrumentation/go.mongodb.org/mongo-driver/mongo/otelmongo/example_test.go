@@ -12,7 +12,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package mongo_test
+package otelmongo_test
 
 import (
 	"context"
@@ -21,13 +21,13 @@ import (
 	"go.mongodb.org/mongo-driver/mongo"
 	"go.mongodb.org/mongo-driver/mongo/options"
 
-	mongotrace "go.opentelemetry.io/contrib/instrumentation/go.mongodb.org/mongo-driver"
+	"go.opentelemetry.io/contrib/instrumentation/go.mongodb.org/mongo-driver/mongo/otelmongo"
 )
 
 func Example() {
 	// connect to MongoDB
 	opts := options.Client()
-	opts.Monitor = mongotrace.NewMonitor("test-service")
+	opts.Monitor = otelmongo.NewMonitor("test-service")
 	opts.ApplyURI("mongodb://localhost:27017")
 	client, err := mongo.Connect(context.Background(), opts)
 	if err != nil {
