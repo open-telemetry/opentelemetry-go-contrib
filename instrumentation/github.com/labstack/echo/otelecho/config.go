@@ -12,7 +12,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package echo
+package otelecho
 
 import (
 	otelpropagation "go.opentelemetry.io/otel/api/propagation"

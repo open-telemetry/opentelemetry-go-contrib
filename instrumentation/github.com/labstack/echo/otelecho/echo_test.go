@@ -14,7 +14,7 @@
 
 // Based on https://github.com/DataDog/dd-trace-go/blob/8fb554ff7cf694267f9077ae35e27ce4689ed8b6/contrib/gin-gonic/gin/gintrace_test.go
 
-package echo
+package otelecho
 
 import (
 	"context"
@@ -49,7 +49,7 @@ func TestChildSpanFromGlobalTracer(t *testing.T) {
 		spanTracer := span.Tracer()
 		mockTracer, ok := spanTracer.(*mocktrace.Tracer)
 		require.True(t, ok)
-		assert.Equal(t, "go.opentelemetry.io/contrib/instrumentation/github.com/labstack/echo", mockTracer.Name)
+		assert.Equal(t, "go.opentelemetry.io/contrib/instrumentation/github.com/labstack/echo/otelecho", mockTracer.Name)
 		return c.NoContent(200)
 	})
 

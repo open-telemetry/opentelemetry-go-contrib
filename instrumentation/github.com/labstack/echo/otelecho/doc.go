@@ -12,9 +12,9 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-// Package echo provides functions to trace the labstack/echo package
+// Package otelecho instruments the labstack/echo package
 // (https://github.com/labstack/echo).
 //
-// Currently only the routing of a received message can be
-// instrumented. To do so, use the Middleware function.
-package echo // import "go.opentelemetry.io/contrib/instrumentation/github.com/labstack/echo"
+// Currently only the routing of a received message can be instrumented. To do
+// so, use the Middleware function.
+package otelecho // import "go.opentelemetry.io/contrib/instrumentation/github.com/labstack/echo/otelecho"

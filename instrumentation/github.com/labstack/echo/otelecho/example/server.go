@@ -21,7 +21,7 @@ import (
 
 	"github.com/labstack/echo/v4"
 
-	echotrace "go.opentelemetry.io/contrib/instrumentation/github.com/labstack/echo"
+	"go.opentelemetry.io/contrib/instrumentation/github.com/labstack/echo/otelecho"
 	otelglobal "go.opentelemetry.io/otel/api/global"
 	oteltrace "go.opentelemetry.io/otel/api/trace"
 	"go.opentelemetry.io/otel/exporters/stdout"
@@ -34,7 +34,7 @@ var tracer = otelglobal.Tracer("gin-server")
 func main() {
 	initTracer()
 	r := echo.New()
-	r.Use(echotrace.Middleware("my-server"))
+	r.Use(otelecho.Middleware("my-server"))
 
 	r.GET("/users/:id", func(c echo.Context) error {
 		id := c.Param("id")
@@ -72,7 +72,7 @@ func getUser(ctx context.Context, id string) string {
 	_, span := tracer.Start(ctx, "getUser", oteltrace.WithAttributes(label.String("id", id)))
 	defer span.End()
 	if id == "123" {
-		return "echotrace tester"
+		return "otelecho tester"
 	}
 	return "unknown"
 }

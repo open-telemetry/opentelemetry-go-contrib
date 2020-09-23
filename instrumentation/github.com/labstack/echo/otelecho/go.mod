@@ -1,8 +1,8 @@
-module go.opentelemetry.io/contrib/instrumentation/github.com/labstack/echo
+module go.opentelemetry.io/contrib/instrumentation/github.com/labstack/echo/otelecho
 
 go 1.14
 
-replace go.opentelemetry.io/contrib => ../../../..
+replace go.opentelemetry.io/contrib => ../../../../../
 
 require (
 	github.com/labstack/echo/v4 v4.1.17
