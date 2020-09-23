@@ -22,11 +22,11 @@ import (
 	"net"
 	"time"
 
-	"go.opentelemetry.io/contrib/instrumentation/google.golang.org/grpc/example/api"
-	"go.opentelemetry.io/contrib/instrumentation/google.golang.org/grpc/example/config"
+	"go.opentelemetry.io/contrib/instrumentation/google.golang.org/grpc/otelgrpc/example/api"
+	"go.opentelemetry.io/contrib/instrumentation/google.golang.org/grpc/otelgrpc/example/config"
 	"go.opentelemetry.io/otel/api/global"
 
-	grpcotel "go.opentelemetry.io/contrib/instrumentation/google.golang.org/grpc"
+	"go.opentelemetry.io/contrib/instrumentation/google.golang.org/grpc/otelgrpc"
 
 	"google.golang.org/grpc"
 )
@@ -118,8 +118,8 @@ func main() {
 	}
 
 	s := grpc.NewServer(
-		grpc.UnaryInterceptor(grpcotel.UnaryServerInterceptor(global.Tracer(""))),
-		grpc.StreamInterceptor(grpcotel.StreamServerInterceptor(global.Tracer(""))),
+		grpc.UnaryInterceptor(otelgrpc.UnaryServerInterceptor(global.Tracer(""))),
+		grpc.StreamInterceptor(otelgrpc.StreamServerInterceptor(global.Tracer(""))),
 	)
 
 	api.RegisterHelloServiceServer(s, &server{})

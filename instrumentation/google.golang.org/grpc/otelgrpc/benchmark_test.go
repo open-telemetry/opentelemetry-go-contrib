@@ -12,7 +12,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package grpc_test
+package otelgrpc_test
 
 import (
 	"context"
@@ -24,13 +24,13 @@ import (
 	pb "google.golang.org/grpc/interop/grpc_testing"
 	"google.golang.org/grpc/test/bufconn"
 
-	otelgrpc "go.opentelemetry.io/contrib/instrumentation/google.golang.org/grpc"
+	"go.opentelemetry.io/contrib/instrumentation/google.golang.org/grpc/otelgrpc"
 	"go.opentelemetry.io/otel/api/trace/tracetest"
 )
 
 const (
 	bufSize  = 2048
-	instName = "go.opentelemetry.io/contrib/instrumentation/google.golang.org/grpc"
+	instName = "go.opentelemetry.io/contrib/instrumentation/google.golang.org/grpc/otelgrpc"
 )
 
 var tracer = tracetest.NewProvider().Tracer(instName)
