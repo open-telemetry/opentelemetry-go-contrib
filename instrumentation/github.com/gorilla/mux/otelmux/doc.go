@@ -12,9 +12,8 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-// Package mux provides functions to trace the gorilla/mux package
-// (https://github.com/gorilla/mux).
+// Package otelmux instruments the github.com/gorilla/mux package.
 //
-// Currently only the routing of a received message can be
-// instrumented. To do it, use the Middleware function.
-package mux // import "go.opentelemetry.io/contrib/instrumentation/github.com/gorilla/mux"
+// Currently only the routing of a received message can be instrumented. To do
+// it, use the Middleware function.
+package otelmux // import "go.opentelemetry.io/contrib/instrumentation/github.com/gorilla/mux/otelmux"

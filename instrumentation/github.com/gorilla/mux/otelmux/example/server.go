@@ -22,7 +22,7 @@ import (
 
 	"github.com/gorilla/mux"
 
-	muxtrace "go.opentelemetry.io/contrib/instrumentation/github.com/gorilla/mux"
+	"go.opentelemetry.io/contrib/instrumentation/github.com/gorilla/mux/otelmux"
 	otelglobal "go.opentelemetry.io/otel/api/global"
 	oteltrace "go.opentelemetry.io/otel/api/trace"
 	"go.opentelemetry.io/otel/exporters/stdout"
@@ -35,7 +35,7 @@ var tracer = otelglobal.Tracer("mux-server")
 func main() {
 	initTracer()
 	r := mux.NewRouter()
-	r.Use(muxtrace.Middleware("my-server"))
+	r.Use(otelmux.Middleware("my-server"))
 	r.HandleFunc("/users/{id:[0-9]+}", http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		vars := mux.Vars(r)
 		id := vars["id"]
@@ -69,7 +69,7 @@ func getUser(ctx context.Context, id string) string {
 	_, span := tracer.Start(ctx, "getUser", oteltrace.WithAttributes(label.String("id", id)))
 	defer span.End()
 	if id == "123" {
-		return "muxtrace tester"
+		return "otelmux tester"
 	}
 	return "unknown"
 }
