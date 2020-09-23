@@ -12,7 +12,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package gocql
+package otelgocql
 
 import (
 	"go.opentelemetry.io/otel/label"
@@ -54,7 +54,7 @@ const (
 	cassConnectName    = "New Connection"
 
 	// instrumentationName is the name of the instrumentation package.
-	instrumentationName = "go.opentelemetry.io/contrib/instrumentation/github.com/gocql/gocql"
+	instrumentationName = "go.opentelemetry.io/contrib/instrumentation/github.com/gocql/gocql/otelgocql"
 )
 
 // ------------------------------------------ Connection-level Attributes

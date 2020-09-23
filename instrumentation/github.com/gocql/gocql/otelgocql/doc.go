@@ -12,7 +12,5 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-// Package gocql provides functions to instrument the gocql/gocql package
-// (https://github.com/gocql/gocql).
-//
-package gocql // import "go.opentelemetry.io/contrib/instrumentation/github.com/gocql/gocql"
+// Package otelgocql instruments the github.com/gocql/gocql package.
+package otelgocql // import "go.opentelemetry.io/contrib/instrumentation/github.com/gocql/gocql/otelgocql"
