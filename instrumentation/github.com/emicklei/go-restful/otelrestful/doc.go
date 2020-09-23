@@ -12,7 +12,9 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-// Package go-restful provides functions to trace the emicklei/go-restful/v3
+// Package otelrestful instruments github.com/emicklei/go-restful.
+//
+// Instrumentation is provided to trace the emicklei/go-restful/v3
 // package (https://github.com/emicklei/go-restful).
 //
 // Instrumentation of an incoming request is achieved via a go-restful
@@ -20,4 +22,4 @@
 //   * the container level
 //   * webservice level
 //   * route level
-package restful // import "go.opentelemetry.io/contrib/instrumentation/github.com/emicklei/go-restful"
+package otelrestful // import "go.opentelemetry.io/contrib/instrumentation/github.com/emicklei/go-restful/otelrestful"

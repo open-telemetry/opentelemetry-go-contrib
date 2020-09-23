@@ -12,7 +12,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package restful
+package otelrestful
 
 import (
 	"github.com/emicklei/go-restful/v3"
@@ -24,7 +24,7 @@ import (
 )
 
 const (
-	tracerName    = "go.opentelemetry.io/contrib/instrumentation/github.com/emicklei/go-restful"
+	tracerName    = "go.opentelemetry.io/contrib/instrumentation/github.com/emicklei/go-restful/otelrestful"
 	tracerVersion = "1.0"
 )
 

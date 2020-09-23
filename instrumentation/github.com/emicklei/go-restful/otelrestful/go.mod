@@ -1,8 +1,8 @@
-module go.opentelemetry.io/contrib/instrumentation/github.com/emicklei/go-restful
+module go.opentelemetry.io/contrib/instrumentation/github.com/emicklei/go-restful/otelrestful
 
 go 1.14
 
-replace go.opentelemetry.io/contrib => ../../../..
+replace go.opentelemetry.io/contrib => ../../../../..
 
 require (
 	github.com/emicklei/go-restful/v3 v3.3.1

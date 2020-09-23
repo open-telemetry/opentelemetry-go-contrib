@@ -12,7 +12,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package restful_test
+package otelrestful_test
 
 import (
 	"context"
@@ -24,7 +24,7 @@ import (
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 
-	restfultrace "go.opentelemetry.io/contrib/instrumentation/github.com/emicklei/go-restful"
+	"go.opentelemetry.io/contrib/instrumentation/github.com/emicklei/go-restful/otelrestful"
 
 	mocktrace "go.opentelemetry.io/contrib/internal/trace"
 	otelglobal "go.opentelemetry.io/otel/api/global"
@@ -33,7 +33,7 @@ import (
 	otelkv "go.opentelemetry.io/otel/label"
 )
 
-const tracerName = "go.opentelemetry.io/contrib/instrumentation/github.com/emicklei/go-restful"
+const tracerName = "go.opentelemetry.io/contrib/instrumentation/github.com/emicklei/go-restful/otelrestful"
 
 func TestChildSpanFromGlobalTracer(t *testing.T) {
 	otelglobal.SetTraceProvider(&mocktrace.Provider{})
@@ -53,7 +53,7 @@ func TestChildSpanFromGlobalTracer(t *testing.T) {
 		Returns(200, "OK", nil).
 		Returns(404, "Not Found", nil))
 	container := restful.NewContainer()
-	container.Filter(restfultrace.OTelFilter("my-service"))
+	container.Filter(otelrestful.OTelFilter("my-service"))
 	container.Add(ws)
 
 	r := httptest.NewRequest("GET", "/user/123", nil)
@@ -79,7 +79,7 @@ func TestChildSpanFromCustomTracer(t *testing.T) {
 	ws.Route(ws.GET("/user/{id}").To(handlerFunc))
 
 	container := restful.NewContainer()
-	container.Filter(restfultrace.OTelFilter("my-service", restfultrace.WithTracerProvider(provider)))
+	container.Filter(otelrestful.OTelFilter("my-service", otelrestful.WithTracerProvider(provider)))
 	container.Add(ws)
 
 	r := httptest.NewRequest("GET", "/user/123", nil)
@@ -98,7 +98,7 @@ func TestChildSpanNames(t *testing.T) {
 	ws.Route(ws.GET("/user/{id:[0-9]+}").To(handlerFunc))
 
 	container := restful.NewContainer()
-	container.Filter(restfultrace.OTelFilter("foobar", restfultrace.WithTracerProvider(provider)))
+	container.Filter(otelrestful.OTelFilter("foobar", otelrestful.WithTracerProvider(provider)))
 	container.Add(ws)
 
 	ws.Route(ws.GET("/book/{title}").To(func(req *restful.Request, resp *restful.Response) {
@@ -174,7 +174,7 @@ func TestPropagationWithGlobalPropagators(t *testing.T) {
 	ws.Route(ws.GET("/user/{id}").To(handlerFunc))
 
 	container := restful.NewContainer()
-	container.Filter(restfultrace.OTelFilter("foobar", restfultrace.WithTracerProvider(provider)))
+	container.Filter(otelrestful.OTelFilter("foobar", otelrestful.WithTracerProvider(provider)))
 	container.Add(ws)
 
 	container.ServeHTTP(w, r)
@@ -206,9 +206,9 @@ func TestPropagationWithCustomPropagators(t *testing.T) {
 	ws.Route(ws.GET("/user/{id}").To(handlerFunc))
 
 	container := restful.NewContainer()
-	container.Filter(restfultrace.OTelFilter("foobar",
-		restfultrace.WithTracerProvider(provider),
-		restfultrace.WithPropagators(props)))
+	container.Filter(otelrestful.OTelFilter("foobar",
+		otelrestful.WithTracerProvider(provider),
+		otelrestful.WithPropagators(props)))
 	container.Add(ws)
 
 	container.ServeHTTP(w, r)
@@ -232,15 +232,15 @@ func TestMultiFilters(t *testing.T) {
 	ws1 := &restful.WebService{}
 	ws1.Path("/user")
 	ws1.Route(ws1.GET("/{id}").
-		Filter(restfultrace.OTelFilter("my-service", restfultrace.WithTracerProvider(provider))).
+		Filter(otelrestful.OTelFilter("my-service", otelrestful.WithTracerProvider(provider))).
 		To(wrappedFunc(tracerName)))
 	ws1.Route(ws1.GET("/{id}/books").
-		Filter(restfultrace.OTelFilter("book-service", restfultrace.WithTracerProvider(provider))).
+		Filter(otelrestful.OTelFilter("book-service", otelrestful.WithTracerProvider(provider))).
 		To(wrappedFunc(tracerName)))
 
 	ws2 := &restful.WebService{}
 	ws2.Path("/library")
-	ws2.Filter(restfultrace.OTelFilter("library-service", restfultrace.WithTracerProvider(provider)))
+	ws2.Filter(otelrestful.OTelFilter("library-service", otelrestful.WithTracerProvider(provider)))
 	ws2.Route(ws2.GET("/{name}").To(wrappedFunc(tracerName)))
 
 	container := restful.NewContainer()

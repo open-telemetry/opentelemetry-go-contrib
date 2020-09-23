@@ -21,7 +21,7 @@ import (
 
 	"github.com/emicklei/go-restful/v3"
 
-	restfultrace "go.opentelemetry.io/contrib/instrumentation/github.com/emicklei/go-restful"
+	"go.opentelemetry.io/contrib/instrumentation/github.com/emicklei/go-restful/otelrestful"
 	otelglobal "go.opentelemetry.io/otel/api/global"
 	oteltrace "go.opentelemetry.io/otel/api/trace"
 	"go.opentelemetry.io/otel/exporters/stdout"
@@ -52,7 +52,7 @@ func main() {
 	initTracer()
 	u := UserResource{}
 	// create the Otel filter
-	filter := restfultrace.OTelFilter("my-service")
+	filter := otelrestful.OTelFilter("my-service")
 	// use it
 	restful.DefaultContainer.Filter(filter)
 	restful.DefaultContainer.Add(u.WebService())

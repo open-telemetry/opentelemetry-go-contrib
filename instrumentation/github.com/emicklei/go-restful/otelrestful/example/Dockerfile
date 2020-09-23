@@ -13,7 +13,7 @@
 # limitations under the License.
 FROM golang:1.14-alpine AS base
 COPY . /src/
-WORKDIR /src/instrumentation/github.com/emicklei/go-restful
+WORKDIR /src/instrumentation/github.com/emicklei/go-restful/otelrestful
 
 FROM base AS go-restful-server
 RUN go install ./example/server.go
