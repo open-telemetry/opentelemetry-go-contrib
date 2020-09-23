@@ -16,7 +16,7 @@ services:
   gomemcache-client:
     build:
       dockerfile: $PWD/Dockerfile
-      context: ../../../../..
+      context: ../../../../../../..
     command:
       - "/bin/sh"
       - "-c"

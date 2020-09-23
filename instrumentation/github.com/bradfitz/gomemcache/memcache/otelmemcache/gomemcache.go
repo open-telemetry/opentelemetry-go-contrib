@@ -12,7 +12,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package gomemcache
+package otelmemcache
 
 import (
 	"context"
@@ -27,7 +27,7 @@ import (
 )
 
 const (
-	defaultTracerName  = "go.opentelemetry.io/contrib/instrumentation/github.com/bradfitz/gomemcache"
+	defaultTracerName  = "go.opentelemetry.io/contrib/instrumentation/github.com/bradfitz/gomemcache/memcache/otelmemcache"
 	defaultServiceName = "memcached"
 )
 

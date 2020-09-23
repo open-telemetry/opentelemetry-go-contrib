@@ -12,9 +12,11 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-// Package gomemcache provides tracing instrumentation for
-// the memcached client (https://github.com/bradfitz/gomemcache).
+// Package otelmemcache instruments github.com/bradfitz/gomemcache/memcache.
 //
-// The instrumentation works by wrapping the memcache client by calling `NewClientWithTracing` and
-// tracing it's every operation.
-package gomemcache // import "go.opentelemetry.io/contrib/instrumentation/github.com/bradfitz/gomemcache"
+// This instrumentation provided is tracing instrumentation for the memcached
+// client.
+//
+// The instrumentation works by wrapping the memcached client by calling
+// `NewClientWithTracing` and tracing it's every operation.
+package otelmemcache // import "go.opentelemetry.io/contrib/instrumentation/github.com/bradfitz/gomemcache/memcache/otelmemcache"

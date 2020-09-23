@@ -21,8 +21,7 @@ import (
 
 	"github.com/bradfitz/gomemcache/memcache"
 
-	"go.opentelemetry.io/contrib/instrumentation/github.com/bradfitz/gomemcache"
-	otelgomemcache "go.opentelemetry.io/contrib/instrumentation/github.com/bradfitz/gomemcache"
+	"go.opentelemetry.io/contrib/instrumentation/github.com/bradfitz/gomemcache/memcache/otelmemcache"
 	oteltrace "go.opentelemetry.io/otel/api/trace"
 
 	oteltracestdout "go.opentelemetry.io/otel/exporters/stdout"
@@ -35,11 +34,11 @@ func main() {
 	tp := initTracer()
 	ctx := context.Background()
 
-	c := otelgomemcache.NewClientWithTracing(
+	c := otelmemcache.NewClientWithTracing(
 		memcache.New(
 			host+":"+port,
 		),
-		gomemcache.WithTracerProvider(tp),
+		otelmemcache.WithTracerProvider(tp),
 	)
 
 	ctx, s := tp.Tracer("example-tracer").Start(ctx, "test-operations")
@@ -47,7 +46,7 @@ func main() {
 	s.End()
 }
 
-func doMemcacheOperations(ctx context.Context, c *otelgomemcache.Client) {
+func doMemcacheOperations(ctx context.Context, c *otelmemcache.Client) {
 	cc := c.WithContext(ctx)
 
 	err := cc.Add(&memcache.Item{
