@@ -14,7 +14,7 @@
 
 // Based on https://github.com/DataDog/dd-trace-go/blob/8fb554ff7cf694267f9077ae35e27ce4689ed8b6/contrib/gin-gonic/gin/gintrace.go
 
-package gin
+package otelgin
 
 import (
 	"fmt"
@@ -34,7 +34,7 @@ import (
 
 const (
 	tracerKey  = "otel-go-contrib-tracer"
-	tracerName = "go.opentelemetry.io/contrib/instrumentation/github.com/gin-gonic/gin"
+	tracerName = "go.opentelemetry.io/contrib/instrumentation/github.com/gin-gonic/gin/otelgin"
 )
 
 // Middleware returns middleware that will trace incoming requests.

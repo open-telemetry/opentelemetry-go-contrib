@@ -11,29 +11,10 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
-version: "3.7"
-services:
-  gin-client:
-    image: golang:alpine
-    networks:
-      - example
-    command:
-      - "/bin/sh"
-      - "-c"
-      - "wget http://gin-server:8080/users/123 && cat 123"
-    depends_on:
-      - gin-server
-  gin-server:
-    build:
-      dockerfile: $PWD/Dockerfile
-      context: ../../../../..
-    ports:
-      - "8080:80"
-    command:
-      - "/bin/sh"
-      - "-c"
-      - "/go/bin/server"
-    networks:
-      - example
-networks:
-  example:
+FROM golang:alpine AS base
+COPY . /src/
+WORKDIR /src/instrumentation/github.com/gin-gonic/gin/otelgin
+
+FROM base AS gin-server
+RUN go install ./example/server.go
+CMD ["/go/bin/server"]

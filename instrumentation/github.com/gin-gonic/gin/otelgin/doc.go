@@ -12,11 +12,10 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-// Package gin provides functions to trace the gin-gonic/gin package
-// (https://github.com/gin-gonic/gin).
+// Package otelgin instruments the github.com/gin-gonic/gin package.
 //
 // Currently there are two ways the code can be instrumented. One is
-// instrumenting the routing of a received message (the Middleware
-// function) and instrumenting the response generation through
-// template evaluation (the HTML function).
-package gin // import "go.opentelemetry.io/contrib/instrumentation/github.com/gin-gonic/gin"
+// instrumenting the routing of a received message (the Middleware function)
+// and instrumenting the response generation through template evaluation (the
+// HTML function).
+package otelgin // import "go.opentelemetry.io/contrib/instrumentation/github.com/gin-gonic/gin/otelgin"

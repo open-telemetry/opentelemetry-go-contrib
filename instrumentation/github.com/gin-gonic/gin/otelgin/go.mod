@@ -1,8 +1,8 @@
-module go.opentelemetry.io/contrib/instrumentation/github.com/gin-gonic/gin
+module go.opentelemetry.io/contrib/instrumentation/github.com/gin-gonic/gin/otelgin
 
 go 1.14
 
-replace go.opentelemetry.io/contrib => ../../../..
+replace go.opentelemetry.io/contrib => ../../../../../
 
 require (
 	github.com/gin-gonic/gin v1.6.3

@@ -21,7 +21,7 @@ import (
 
 	"github.com/gin-gonic/gin"
 
-	gintrace "go.opentelemetry.io/contrib/instrumentation/github.com/gin-gonic/gin"
+	"go.opentelemetry.io/contrib/instrumentation/github.com/gin-gonic/gin/otelgin"
 	otelglobal "go.opentelemetry.io/otel/api/global"
 	oteltrace "go.opentelemetry.io/otel/api/trace"
 	"go.opentelemetry.io/otel/exporters/stdout"
@@ -34,7 +34,7 @@ var tracer = otelglobal.Tracer("gin-server")
 func main() {
 	initTracer()
 	r := gin.New()
-	r.Use(gintrace.Middleware("my-server"))
+	r.Use(otelgin.Middleware("my-server"))
 	tmplName := "user"
 	tmplStr := "user {{ .name }} (id {{ .id }})\n"
 	tmpl := template.Must(template.New(tmplName).Parse(tmplStr))
@@ -42,7 +42,7 @@ func main() {
 	r.GET("/users/:id", func(c *gin.Context) {
 		id := c.Param("id")
 		name := getUser(c, id)
-		gintrace.HTML(c, http.StatusOK, tmplName, gin.H{
+		otelgin.HTML(c, http.StatusOK, tmplName, gin.H{
 			"name": name,
 			"id":   id,
 		})
@@ -74,7 +74,7 @@ func getUser(c *gin.Context, id string) string {
 	_, span := tracer.Start(c.Request.Context(), "getUser", oteltrace.WithAttributes(label.String("id", id)))
 	defer span.End()
 	if id == "123" {
-		return "gintrace tester"
+		return "otelgin tester"
 	}
 	return "unknown"
 }
