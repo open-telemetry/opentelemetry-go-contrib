@@ -31,8 +31,8 @@ import (
 	"go.opentelemetry.io/otel/api/global"
 	"go.opentelemetry.io/otel/api/propagation"
 
-	saramatrace "go.opentelemetry.io/contrib/instrumentation/github.com/Shopify/sarama"
-	"go.opentelemetry.io/contrib/instrumentation/github.com/Shopify/sarama/example"
+	"go.opentelemetry.io/contrib/instrumentation/github.com/Shopify/sarama/otelsarama"
+	"go.opentelemetry.io/contrib/instrumentation/github.com/Shopify/sarama/otelsarama/example"
 )
 
 var (
@@ -66,7 +66,7 @@ func main() {
 		Key:   sarama.StringEncoder("random_number"),
 		Value: sarama.StringEncoder(fmt.Sprintf("%d", rand.Intn(1000))),
 	}
-	propagation.InjectHTTP(ctx, global.Propagators(), saramatrace.NewProducerMessageCarrier(&msg))
+	propagation.InjectHTTP(ctx, global.Propagators(), otelsarama.NewProducerMessageCarrier(&msg))
 
 	producer.Input() <- &msg
 	successMsg := <-producer.Successes()
@@ -91,7 +91,7 @@ func newAccessLogProducer(brokerList []string) sarama.AsyncProducer {
 	}
 
 	// Wrap instrumentation
-	producer = saramatrace.WrapAsyncProducer(config, producer)
+	producer = otelsarama.WrapAsyncProducer(config, producer)
 
 	// We will log to STDOUT if we're not able to produce messages.
 	go func() {

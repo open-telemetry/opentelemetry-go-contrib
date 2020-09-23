@@ -12,7 +12,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package sarama
+package otelsarama
 
 import (
 	"go.opentelemetry.io/otel/api/global"
@@ -22,7 +22,7 @@ import (
 )
 
 const (
-	defaultTracerName = "go.opentelemetry.io/contrib/instrumentation/github.com/Shopify/sarama"
+	defaultTracerName = "go.opentelemetry.io/contrib/instrumentation/github.com/Shopify/sarama/otelsarama"
 
 	kafkaPartitionKey = label.Key("messaging.kafka.partition")
 )

@@ -46,7 +46,7 @@ services:
   kafka-producer:
     build:
       dockerfile: $PWD/producer/Dockerfile
-      context: ../../../../..
+      context: ../../../../../..
     command:
       - "/bin/sh"
       - "-c"
@@ -60,7 +60,7 @@ services:
   kafka-consumer:
     build:
       dockerfile: $PWD/consumer/Dockerfile
-      context: ../../../../..
+      context: ../../../../../..
     command:
       - "/bin/sh"
       - "-c"

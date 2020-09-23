@@ -12,9 +12,12 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package sarama
-
-// TODO: add test for consumer group
-// Currently, sarama does not have a mock consumer group, so it's hard to
-// write a unit test.
-// Related PR: https://github.com/Shopify/sarama/pull/1750
+// Package otelsarama instruments the github.com/Shopify/sarama package.
+//
+// The consumer's span will be created as a child of the producer's span.
+//
+// Context propagation only works on Kafka versions higher than 0.11.0.0 which supports record headers.
+// (https://archive.apache.org/dist/kafka/0.11.0.0/RELEASE_NOTES.html)
+//
+// Based on: https://github.com/DataDog/dd-trace-go/tree/v1/contrib/Shopify/sarama
+package otelsarama // import "go.opentelemetry.io/contrib/instrumentation/github.com/Shopify/sarama/otelsarama"

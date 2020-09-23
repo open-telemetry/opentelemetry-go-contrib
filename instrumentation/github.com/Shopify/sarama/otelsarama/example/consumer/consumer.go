@@ -29,8 +29,8 @@ import (
 	"go.opentelemetry.io/otel/api/trace"
 	"go.opentelemetry.io/otel/semconv"
 
-	saramatrace "go.opentelemetry.io/contrib/instrumentation/github.com/Shopify/sarama"
-	"go.opentelemetry.io/contrib/instrumentation/github.com/Shopify/sarama/example"
+	"go.opentelemetry.io/contrib/instrumentation/github.com/Shopify/sarama/otelsarama"
+	"go.opentelemetry.io/contrib/instrumentation/github.com/Shopify/sarama/otelsarama/example"
 )
 
 var (
@@ -57,7 +57,7 @@ func main() {
 func startConsumerGroup(brokerList []string) {
 	consumerGroupHandler := Consumer{}
 	// Wrap instrumentation
-	handler := saramatrace.WrapConsumerGroupHandler(&consumerGroupHandler)
+	handler := otelsarama.WrapConsumerGroupHandler(&consumerGroupHandler)
 
 	config := sarama.NewConfig()
 	config.Version = sarama.V2_5_0_0
@@ -77,7 +77,7 @@ func startConsumerGroup(brokerList []string) {
 
 func printMessage(msg *sarama.ConsumerMessage) {
 	// Extract tracing info from message
-	ctx := propagation.ExtractHTTP(context.Background(), global.Propagators(), saramatrace.NewConsumerMessageCarrier(msg))
+	ctx := propagation.ExtractHTTP(context.Background(), global.Propagators(), otelsarama.NewConsumerMessageCarrier(msg))
 
 	tr := global.Tracer("consumer")
 	_, span := tr.Start(ctx, "consume message", trace.WithAttributes(
