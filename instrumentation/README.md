@@ -8,21 +8,22 @@ In order to ensure the maintainability and discoverability of instrumentation pa
 
 ### Packaging
 
-All instrumentation packages MUST be of the form:
+All instrumentation packages SHOULD be of the form:
 
 ```
-go.opentelemetry.io/contrib/instrumentation/{PACKAGE}
+go.opentelemetry.io/contrib/instrumentation/{IMPORT_PATH}/otel{PACKAGE_NAME}
 ```
 
-Where `{PACKAGE}` is the name of the package being instrumented.
+Where the [`{IMPORT_PATH}`](https://golang.org/ref/spec#ImportPath) and [`{PACKAGE_NAME}`](https://golang.org/ref/spec#PackageName) are the standard Go identifiers for the package being instrumented.
 
 For example:
 
-- `go.opentelemetry.io/contrib/instrumentation/github.com/gorilla/mux`
-- `go.opentelemetry.io/contrib/instrumentation/gopkg.in/macaron.v1`
-- `go.opentelemetry.io/contrib/instrumentation/database/sql`
+- `go.opentelemetry.io/contrib/instrumentation/github.com/gorilla/mux/otelmux`
+- `go.opentelemetry.io/contrib/instrumentation/gopkg.in/macaron.v1/otelmacaron`
+- `go.opentelemetry.io/contrib/instrumentation/database/sql/otelsql`
 
-Consequentially, this means that all instrumentation MUST be contained in a sub-directory structure matching the package name.
+Exceptions to this rule do exist.
+For example, the [runtime](./runtime) instrumentation does not instrument a Go package and does not fit this structure.
 
 ### Contents
 
