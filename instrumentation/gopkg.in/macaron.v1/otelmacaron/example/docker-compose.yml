@@ -11,10 +11,31 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
-FROM golang:alpine AS base
-COPY . /src/
-WORKDIR /src/instrumentation/macaron
-
-FROM base AS macaron-server
-RUN go install ./example/server.go
-CMD ["/go/bin/server"]
+version: "3.7"
+services:
+  macaron-client:
+    image: golang:alpine
+    networks:
+      - example
+    command:
+      - "/bin/sh"
+      - "-c"
+      - "wget http://macaron-server:8080/users/123 && cat 123"
+    depends_on:
+      - macaron-server
+  macaron-server:
+    build:
+      dockerfile: $PWD/Dockerfile
+      context: ../../../../..
+    ports:
+      - "8080:80"
+    command:
+      - "/bin/sh"
+      - "-c"
+      - "/go/bin/server"
+    networks:
+      - example
+    environment:
+      - PORT=80
+networks:
+  example:

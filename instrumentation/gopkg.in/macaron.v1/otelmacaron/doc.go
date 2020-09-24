@@ -12,9 +12,8 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-// Package macaron provides functions to trace the macaron.v1 package
-// (https://github.com/go-macaron/macaron).
+// Package otelmacaron instruments gopkg.in/macaron.v1.
 //
-// Currently only the routing of a received message can be
-// instrumented. To do it, use the Middleware function.
-package macaron // import "go.opentelemetry.io/contrib/instrumentation/gopkg.in/macaron.v1"
+// Currently only the routing of a received message can be instrumented. To do
+// it, use the Middleware function.
+package otelmacaron // import "go.opentelemetry.io/contrib/instrumentation/gopkg.in/macaron.v1/otelmacaron"

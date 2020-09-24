@@ -12,7 +12,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package macaron
+package otelmacaron
 
 import (
 	"go.opentelemetry.io/otel/api/propagation"
@@ -30,8 +30,8 @@ type Option func(*config)
 
 // WithTracer specifies a tracer to use for creating spans. If none is
 // specified, a tracer named
-// "go.opentelemetry.io/contrib/instrumentation/gopkg.in/macaron.v1" from the global
-// provider is used.
+// "go.opentelemetry.io/contrib/instrumentation/gopkg.in/macaron.v1/otelmacaron"
+// from the global provider is used.
 func WithTracer(tracer trace.Tracer) Option {
 	return func(cfg *config) {
 		cfg.Tracer = tracer

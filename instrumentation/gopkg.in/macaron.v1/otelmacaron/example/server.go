@@ -20,7 +20,7 @@ import (
 
 	"gopkg.in/macaron.v1"
 
-	macarontrace "go.opentelemetry.io/contrib/instrumentation/gopkg.in/macaron.v1"
+	"go.opentelemetry.io/contrib/instrumentation/gopkg.in/macaron.v1/otelmacaron"
 
 	otelglobal "go.opentelemetry.io/otel/api/global"
 	oteltrace "go.opentelemetry.io/otel/api/trace"
@@ -34,7 +34,7 @@ var tracer = otelglobal.Tracer("macaron-server")
 func main() {
 	initTracer()
 	m := macaron.Classic()
-	m.Use(macarontrace.Middleware("my-server"))
+	m.Use(otelmacaron.Middleware("my-server"))
 	m.Get("/users/:id", func(ctx *macaron.Context) string {
 		id := ctx.Params("id")
 		name := getUser(ctx.Req.Context(), id)
@@ -65,7 +65,7 @@ func getUser(ctx context.Context, id string) string {
 	_, span := tracer.Start(ctx, "getUser", oteltrace.WithAttributes(label.String("id", id)))
 	defer span.End()
 	if id == "123" {
-		return "macarontrace tester"
+		return "otelmacaron tester"
 	}
 	return "unknown"
 }

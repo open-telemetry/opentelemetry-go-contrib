@@ -12,7 +12,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package macaron
+package otelmacaron
 
 import (
 	"fmt"
@@ -27,7 +27,7 @@ import (
 )
 
 const (
-	tracerName = "go.opentelemetry.io/contrib/instrumentation/gopkg.in/macaron.v1"
+	tracerName = "go.opentelemetry.io/contrib/instrumentation/gopkg.in/macaron.v1/otelmacaron"
 )
 
 // Middleware returns a macaron Handler to trace requests to the server.
