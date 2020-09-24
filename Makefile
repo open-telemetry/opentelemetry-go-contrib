@@ -60,7 +60,7 @@ test-gocql:
 	  set -e; \
 	  docker run --name cass-integ --rm -p 9042:9042 -d cassandra:3; \
 	  CMD=cassandra IMG_NAME=cass-integ ./.circleci/wait.sh; \
-	  (cd instrumentation/github.com/gocql/gocql && \
+	  (cd instrumentation/github.com/gocql/gocql/otelgocql && \
 	    $(GOTEST_WITH_COVERAGE) . && \
 	    go tool cover -html=coverage.txt -o coverage.html); \
 	  docker stop cass-integ; \
@@ -72,7 +72,7 @@ test-mongo-driver:
 	  set -e; \
 	  docker run --name mongo-integ --rm -p 27017:27017 -d mongo; \
 	  CMD=mongo IMG_NAME=mongo-integ ./.circleci/wait.sh; \
-	  (cd instrumentation/go.mongodb.org/mongo-driver && \
+	  (cd instrumentation/go.mongodb.org/mongo-driver/mongo/otelmongo && \
 	    $(GOTEST_WITH_COVERAGE) . && \
 	    go tool cover -html=coverage.txt -o coverage.html); \
 	  docker stop mongo-integ; \
@@ -84,7 +84,7 @@ test-gomemcache:
 	  set -e; \
 	  docker run --name gomemcache-integ --rm -p 11211:11211 -d memcached; \
 	  CMD=gomemcache IMG_NAME=gomemcache-integ  ./.circleci/wait.sh; \
-	  (cd instrumentation/github.com/bradfitz/gomemcache && \
+	  (cd instrumentation/github.com/bradfitz/gomemcache/memcache/otelmemcache && \
 	    $(GOTEST_WITH_COVERAGE) . && \
 	    go tool cover -html=coverage.txt -o coverage.html); \
 	  docker stop gomemcache-integ ; \
