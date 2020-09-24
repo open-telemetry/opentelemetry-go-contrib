@@ -23,6 +23,20 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 - Make config struct of instrumentation unexported. (#303)
 - Instrumentations have been updated to adhere to the [configuration style guide's](https://github.com/open-telemetry/opentelemetry-go/blob/master/CONTRIBUTING.md#config)
    updated recommendation to use `newConfig()` instead of `configure()`. (#336)
+- A new instrumentation naming scheme is implemented to avoid package name conflicts for instrumented packages while still remaining discoverable. (#359)
+  - `google.golang.org/grpc` -> `google.golang.org/grpc/otelgrpc`
+  - `go.mongodb.org/mongo-driver` -> `go.mongodb.org/mongo-driver/mongo/otelmongo`
+  - `net/http` -> `net/http/otelhttp`
+  - `net/http/httptrace` -> `net/http/httptrace/otelhttptrace`
+  - `github.com/labstack/echo` -> `github.com/labstack/echo/otelecho`
+  - `github.com/bradfitz/gomemcache` -> `github.com/bradfitz/gomemcache/memcache/otelmemcache`
+  - `github.com/gin-gonic/gin` -> `github.com/gin-gonic/gin/otelgin`
+  - `github.com/gocql/gocql` -> `github.com/gocql/gocql/otelgocql`
+  - `github.com/emicklei/go-restful` -> `github.com/emicklei/go-restful/otelrestful`
+  - `github.com/Shopify/sarama` -> `github.com/Shopify/sarama/otelsarama`
+  - `github.com/gorilla/mux` -> `github.com/gorilla/mux/otelmux`
+  - `github.com/astaxie/beego` -> `github.com/astaxie/beego/otelbeego`
+  - `gopkg.in/macaron.v1` -> `gopkg.in/macaron.v1/otelmacaron`
 
 ## [0.11.0] - 2020-08-25
 
