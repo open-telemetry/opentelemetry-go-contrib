@@ -99,7 +99,7 @@ updates:
       day: "sunday"
   -
     package-ecosystem: "gomod"
-    directory: "/instrumentation/github.com/astaxie/beego"
+    directory: "/instrumentation/github.com/astaxie/beego/otelbeego"
     labels:
       - dependencies
       - go
@@ -109,7 +109,7 @@ updates:
       day: "sunday"
   -
     package-ecosystem: "gomod"
-    directory: "/instrumentation/github.com/astaxie/beego/example"
+    directory: "/instrumentation/github.com/astaxie/beego/otelbeego/example"
     labels:
       - dependencies
       - go
@@ -119,7 +119,7 @@ updates:
       day: "sunday"
   -
     package-ecosystem: "gomod"
-    directory: "/instrumentation/github.com/bradfitz/gomemcache"
+    directory: "/instrumentation/github.com/bradfitz/gomemcache/memcache/otelmemcache"
     labels:
       - dependencies
       - go
@@ -129,7 +129,7 @@ updates:
       day: "sunday"
   -
     package-ecosystem: "gomod"
-    directory: "/instrumentation/github.com/emicklei/go-restful"
+    directory: "/instrumentation/github.com/emicklei/go-restful/otelrestful"
     labels:
       - dependencies
       - go
@@ -139,7 +139,7 @@ updates:
       day: "sunday"
   -
     package-ecosystem: "gomod"
-    directory: "/instrumentation/github.com/gin-gonic/gin"
+    directory: "/instrumentation/github.com/gin-gonic/gin/otelgin"
     labels:
       - dependencies
       - go
@@ -149,7 +149,7 @@ updates:
       day: "sunday"
   -
     package-ecosystem: "gomod"
-    directory: "/instrumentation/github.com/gocql/gocql"
+    directory: "/instrumentation/github.com/gocql/gocql/otelgocql"
     labels:
       - dependencies
       - go
@@ -159,7 +159,7 @@ updates:
       day: "sunday"
   -
     package-ecosystem: "gomod"
-    directory: "/instrumentation/github.com/gocql/gocql/example"
+    directory: "/instrumentation/github.com/gocql/gocql/otelgocql/example"
     labels:
       - dependencies
       - go
@@ -169,7 +169,7 @@ updates:
       day: "sunday"
   -
     package-ecosystem: "gomod"
-    directory: "/instrumentation/github.com/gorilla/mux"
+    directory: "/instrumentation/github.com/gorilla/mux/otelmux"
     labels:
       - dependencies
       - go
@@ -179,7 +179,7 @@ updates:
       day: "sunday"
   -
     package-ecosystem: "gomod"
-    directory: "/instrumentation/github.com/labstack/echo"
+    directory: "/instrumentation/github.com/labstack/echo/otelecho"
     labels:
       - dependencies
       - go
@@ -189,7 +189,7 @@ updates:
       day: "sunday"
   -
     package-ecosystem: "gomod"
-    directory: "/instrumentation/github.com/Shopify/sarama"
+    directory: "/instrumentation/github.com/Shopify/sarama/otelsarama"
     labels:
       - dependencies
       - go
@@ -199,7 +199,7 @@ updates:
       day: "sunday"
   -
     package-ecosystem: "gomod"
-    directory: "/instrumentation/github.com/Shopify/sarama/example"
+    directory: "/instrumentation/github.com/Shopify/sarama/otelsarama/example"
     labels:
       - dependencies
       - go
@@ -209,7 +209,7 @@ updates:
       day: "sunday"
   -
     package-ecosystem: "gomod"
-    directory: "/instrumentation/go.mongodb.org/mongo-driver"
+    directory: "/instrumentation/go.mongodb.org/mongo-driver/mongo/otelmongo"
     labels:
       - dependencies
       - go
@@ -219,7 +219,7 @@ updates:
       day: "sunday"
   -
     package-ecosystem: "gomod"
-    directory: "/instrumentation/google.golang.org/grpc"
+    directory: "/instrumentation/google.golang.org/grpc/otelgrpc"
     labels:
       - dependencies
       - go
@@ -229,7 +229,7 @@ updates:
       day: "sunday"
   -
     package-ecosystem: "gomod"
-    directory: "/instrumentation/google.golang.org/grpc/example"
+    directory: "/instrumentation/google.golang.org/grpc/otelgrpc/example"
     labels:
       - dependencies
       - go
@@ -239,7 +239,7 @@ updates:
       day: "sunday"
   -
     package-ecosystem: "gomod"
-    directory: "/instrumentation/gopkg.in/macaron.v1"
+    directory: "/instrumentation/gopkg.in/macaron.v1/otelmacaron"
     labels:
       - dependencies
       - go
@@ -259,7 +259,7 @@ updates:
       day: "sunday"
   -
     package-ecosystem: "gomod"
-    directory: "/instrumentation/net/http"
+    directory: "/instrumentation/net/http/otelhttp"
     labels:
       - dependencies
       - go
@@ -269,7 +269,7 @@ updates:
       day: "sunday"
   -
     package-ecosystem: "gomod"
-    directory: "/instrumentation/net/http/example"
+    directory: "/instrumentation/net/http/otelhttp/example"
     labels:
       - dependencies
       - go
@@ -279,7 +279,7 @@ updates:
       day: "sunday"
   -
     package-ecosystem: "gomod"
-    directory: "/instrumentation/net/http/httptrace"
+    directory: "/instrumentation/net/http/httptrace/otelhttptrace"
     labels:
       - dependencies
       - go
@@ -289,7 +289,7 @@ updates:
       day: "sunday"
   -
     package-ecosystem: "gomod"
-    directory: "/instrumentation/net/http/httptrace/example"
+    directory: "/instrumentation/net/http/httptrace/otelhttptrace/example"
     labels:
       - dependencies
       - go
