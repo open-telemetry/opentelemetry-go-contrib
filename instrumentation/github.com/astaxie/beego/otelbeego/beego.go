@@ -12,7 +12,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package beego
+package otelbeego
 
 import (
 	"context"
@@ -20,7 +20,7 @@ import (
 
 	"go.opentelemetry.io/otel/codes"
 
-	otelhttp "go.opentelemetry.io/contrib/instrumentation/net/http"
+	"go.opentelemetry.io/contrib/instrumentation/net/http/otelhttp"
 	"go.opentelemetry.io/otel/api/trace"
 
 	"github.com/astaxie/beego"
@@ -28,12 +28,12 @@ import (
 
 // OTelBeegoHandler implements the http.Handler interface and provides
 // trace and metrics to beego web apps.
-type OTelBeegoHandler struct {
+type Handler struct {
 	http.Handler
 }
 
 // ServerHTTP calls the configured handler to serve HTTP for req to rr.
-func (o *OTelBeegoHandler) ServeHTTP(rr http.ResponseWriter, req *http.Request) {
+func (o *Handler) ServeHTTP(rr http.ResponseWriter, req *http.Request) {
 	ctx := beego.BeeApp.Handlers.GetContext()
 	defer beego.BeeApp.Handlers.GiveBackContext(ctx)
 	ctx.Reset(rr, req)
@@ -84,7 +84,7 @@ func NewOTelBeegoMiddleWare(service string, options ...Option) beego.MiddleWare 
 	}
 
 	return func(handler http.Handler) http.Handler {
-		return &OTelBeegoHandler{
+		return &Handler{
 			otelhttp.NewHandler(
 				handler,
 				service,

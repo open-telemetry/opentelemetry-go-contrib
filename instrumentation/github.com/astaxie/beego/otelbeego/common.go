@@ -12,7 +12,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package beego
+package otelbeego
 
 import (
 	"net/http"
@@ -25,7 +25,7 @@ import (
 const (
 	// packageName is the name of the this package, and is used as the default tracer
 	// and meter names.
-	packageName = "go.opentelemetry.io/contrib/instrumentation/github.com/astaxie/beego"
+	packageName = "go.opentelemetry.io/contrib/instrumentation/github.com/astaxie/beego/otelbeego"
 
 	ctxRouteTemplateKey = contextKey("x-opentelemetry-route-template")
 

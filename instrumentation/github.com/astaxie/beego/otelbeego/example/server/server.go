@@ -19,7 +19,7 @@ import (
 
 	"github.com/astaxie/beego"
 
-	otelbeego "go.opentelemetry.io/contrib/instrumentation/github.com/astaxie/beego"
+	"go.opentelemetry.io/contrib/instrumentation/github.com/astaxie/beego/otelbeego"
 
 	"go.opentelemetry.io/otel/api/global"
 	"go.opentelemetry.io/otel/api/trace"

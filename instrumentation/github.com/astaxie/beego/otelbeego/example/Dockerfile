@@ -14,7 +14,7 @@
 
 FROM golang:1.14-alpine AS base
 COPY . /src/
-WORKDIR /src/instrumentation/github.com/astaxie/beego/example
+WORKDIR /src/instrumentation/github.com/astaxie/beego/otelbeego/example
 
 FROM base AS example-beego-server
 RUN go install ./server/server.go

@@ -17,7 +17,7 @@ services:
   beego-server:
     build:
       dockerfile: $PWD/Dockerfile
-      context: ../../../../..
+      context: ../../../../../..
       target: example-beego-server
     command: ["/go/bin/server", "-zipkin", "zipkin:9411"]
     ports:
@@ -26,7 +26,7 @@ services:
   http-client:
     build:
       dockerfile: $PWD/Dockerfile
-      context: ../../../../..
+      context: ../../../../../..
       target: example-http-client
     command: ["/go/bin/client", "-server", "http://beego-server:7777/hello"]
     depends_on:
