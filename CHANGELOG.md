@@ -37,6 +37,7 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
   - `github.com/gorilla/mux` -> `github.com/gorilla/mux/otelmux`
   - `github.com/astaxie/beego` -> `github.com/astaxie/beego/otelbeego`
   - `gopkg.in/macaron.v1` -> `gopkg.in/macaron.v1/otelmacaron`
+- Rename `OTelBeegoHandler` to `Handler` in the `go.opentelemetry.io/contrib/instrumentation/github.com/astaxie/beego/otelbeego` package. (#359)
 
 ## [0.11.0] - 2020-08-25
 
