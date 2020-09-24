@@ -9,6 +9,6 @@ Thumbs.db
 coverage.*
 
 exporters/metric/cortex/example/example
-instrumentation/github.com/gocql/gocql/example/example
-instrumentation/google.golang.org/grpc/example/server/server
-instrumentation/google.golang.org/grpc/example/client/client
+instrumentation/github.com/gocql/gocql/otelgocql/example/example
+instrumentation/google.golang.org/grpc/otelgrpc/example/server/server
+instrumentation/google.golang.org/grpc/otelgrpc/example/client/client
