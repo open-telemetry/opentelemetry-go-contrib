@@ -7,7 +7,7 @@ require (
 	github.com/stretchr/testify v1.6.1
 	go.opentelemetry.io/contrib v0.12.0
 	go.opentelemetry.io/contrib/instrumentation/net/http/otelhttp v0.12.0
-	go.opentelemetry.io/contrib/propagators v0.0.0-20200924185937-b313ddb2989e
+	go.opentelemetry.io/contrib/propagators v0.12.0
 	go.opentelemetry.io/otel v0.12.0
 	golang.org/x/net v0.0.0-20200707034311-ab3426394381 // indirect
 	golang.org/x/sys v0.0.0-20200803210538-64077c9b5642 // indirect
@@ -18,5 +18,5 @@ require (
 replace (
 	go.opentelemetry.io/contrib => ../../../../..
 	go.opentelemetry.io/contrib/instrumentation/net/http/otelhttp => ../../../../net/http/otelhttp
-	go.opentelemetry.io/contrib/propagators/b3 => ../../../../../propagators/b3
+	go.opentelemetry.io/contrib/propagators => ../../../../../propagators
 )
