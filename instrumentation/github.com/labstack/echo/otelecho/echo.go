@@ -40,7 +40,7 @@ func Middleware(service string, opts ...Option) echo.MiddlewareFunc {
 		opt(&cfg)
 	}
 	if cfg.TracerProvider == nil {
-		cfg.TracerProvider = otelglobal.TraceProvider()
+		cfg.TracerProvider = otelglobal.TracerProvider()
 	}
 	tracer := cfg.TracerProvider.Tracer(
 		tracerName,
@@ -59,7 +59,7 @@ func Middleware(service string, opts ...Option) echo.MiddlewareFunc {
 				c.SetRequest(request)
 			}()
 			ctx := otelpropagation.ExtractHTTP(savedCtx, cfg.Propagators, request.Header)
-			opts := []oteltrace.StartOption{
+			opts := []oteltrace.SpanOption{
 				oteltrace.WithAttributes(semconv.NetAttributesFromHTTPRequest("tcp", request)...),
 				oteltrace.WithAttributes(semconv.EndUserAttributesFromHTTPRequest(request)...),
 				oteltrace.WithAttributes(semconv.HTTPServerAttributesFromHTTPRequest(service, c.Path(), request)...),

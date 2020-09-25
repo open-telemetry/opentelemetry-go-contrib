@@ -105,13 +105,13 @@ func NewExportPipeline(config Config, options ...push.Option) (*push.Controller,
 	return pusher, nil
 }
 
-// InstallNewPipeline registers a push Controller's Provider globally.
+// InstallNewPipeline registers a push Controller's MeterProvider globally.
 func InstallNewPipeline(config Config, options ...push.Option) (*push.Controller, error) {
 	pusher, err := NewExportPipeline(config, options...)
 	if err != nil {
 		return nil, err
 	}
-	global.SetMeterProvider(pusher.Provider())
+	global.SetMeterProvider(pusher.MeterProvider())
 	return pusher, nil
 }
 

@@ -18,7 +18,7 @@ import (
 	"context"
 	"net/http"
 
-	"go.opentelemetry.io/otel/api/correlation"
+	"go.opentelemetry.io/otel/api/baggage"
 	"go.opentelemetry.io/otel/api/global"
 	"go.opentelemetry.io/otel/api/propagation"
 	"go.opentelemetry.io/otel/api/trace"
@@ -60,7 +60,7 @@ func Extract(ctx context.Context, req *http.Request, opts ...Option) ([]label.Ke
 	)
 
 	var correlationCtxLabels []label.KeyValue
-	correlation.MapFromContext(ctx).Foreach(func(lbl label.KeyValue) bool {
+	baggage.MapFromContext(ctx).Foreach(func(lbl label.KeyValue) bool {
 		correlationCtxLabels = append(correlationCtxLabels, lbl)
 		return true
 	})

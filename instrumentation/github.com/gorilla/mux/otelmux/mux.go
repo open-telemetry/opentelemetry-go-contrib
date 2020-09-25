@@ -42,7 +42,7 @@ func Middleware(service string, opts ...Option) mux.MiddlewareFunc {
 		opt(&cfg)
 	}
 	if cfg.TracerProvider == nil {
-		cfg.TracerProvider = otelglobal.TraceProvider()
+		cfg.TracerProvider = otelglobal.TracerProvider()
 	}
 	tracer := cfg.TracerProvider.Tracer(
 		tracerName,
@@ -134,7 +134,7 @@ func (tw traceware) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	if spanName == "" {
 		spanName = fmt.Sprintf("HTTP %s route not found", r.Method)
 	}
-	opts := []oteltrace.StartOption{
+	opts := []oteltrace.SpanOption{
 		oteltrace.WithAttributes(semconv.NetAttributesFromHTTPRequest("tcp", r)...),
 		oteltrace.WithAttributes(semconv.EndUserAttributesFromHTTPRequest(r)...),
 		oteltrace.WithAttributes(semconv.HTTPServerAttributesFromHTTPRequest(tw.service, routeStr, r)...),

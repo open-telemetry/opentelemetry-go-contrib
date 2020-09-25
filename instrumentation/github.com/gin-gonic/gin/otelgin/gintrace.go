@@ -46,7 +46,7 @@ func Middleware(service string, opts ...Option) gin.HandlerFunc {
 		opt(&cfg)
 	}
 	if cfg.TracerProvider == nil {
-		cfg.TracerProvider = otelglobal.TraceProvider()
+		cfg.TracerProvider = otelglobal.TracerProvider()
 	}
 	tracer := cfg.TracerProvider.Tracer(
 		tracerName,
@@ -62,7 +62,7 @@ func Middleware(service string, opts ...Option) gin.HandlerFunc {
 			c.Request = c.Request.WithContext(savedCtx)
 		}()
 		ctx := otelpropagation.ExtractHTTP(savedCtx, cfg.Propagators, c.Request.Header)
-		opts := []oteltrace.StartOption{
+		opts := []oteltrace.SpanOption{
 			oteltrace.WithAttributes(semconv.NetAttributesFromHTTPRequest("tcp", c.Request)...),
 			oteltrace.WithAttributes(semconv.EndUserAttributesFromHTTPRequest(c.Request)...),
 			oteltrace.WithAttributes(semconv.HTTPServerAttributesFromHTTPRequest(service, c.FullPath(), c.Request)...),
@@ -103,7 +103,7 @@ func HTML(c *gin.Context, code int, name string, obj interface{}) {
 		tracer, ok = tracerInterface.(oteltrace.Tracer)
 	}
 	if !ok {
-		tracer = otelglobal.TraceProvider().Tracer(
+		tracer = otelglobal.TracerProvider().Tracer(
 			tracerName,
 			oteltrace.WithInstrumentationVersion(otelcontrib.SemVersion()),
 		)

@@ -19,7 +19,7 @@ import (
 
 	"google.golang.org/grpc/metadata"
 
-	"go.opentelemetry.io/otel/api/correlation"
+	"go.opentelemetry.io/otel/api/baggage"
 	"go.opentelemetry.io/otel/api/global"
 	"go.opentelemetry.io/otel/api/propagation"
 	"go.opentelemetry.io/otel/api/trace"
@@ -86,7 +86,7 @@ func Extract(ctx context.Context, metadata *metadata.MD, opts ...Option) ([]labe
 
 	spanContext := trace.RemoteSpanContextFromContext(ctx)
 	var correlationCtxLabels []label.KeyValue
-	correlation.MapFromContext(ctx).Foreach(func(l label.KeyValue) bool {
+	baggage.MapFromContext(ctx).Foreach(func(l label.KeyValue) bool {
 		correlationCtxLabels = append(correlationCtxLabels, l)
 		return true
 	})

@@ -43,7 +43,7 @@ var (
 
 func TestWrapPartitionConsumer(t *testing.T) {
 	// Mock provider
-	provider, mt := newProviderAndTracer()
+	provider, mt := NewTracerProviderAndTracer()
 
 	// Mock partition consumer controller
 	consumer := mocks.NewConsumer(t, sarama.NewConfig())
@@ -60,7 +60,7 @@ func TestWrapPartitionConsumer(t *testing.T) {
 
 func TestWrapConsumer(t *testing.T) {
 	// Mock provider
-	provider, mt := newProviderAndTracer()
+	provider, mt := NewTracerProviderAndTracer()
 
 	// Mock partition consumer controller
 	mockConsumer := mocks.NewConsumer(t, sarama.NewConfig())
@@ -166,7 +166,7 @@ func TestConsumerConsumePartitionWithError(t *testing.T) {
 
 func BenchmarkWrapPartitionConsumer(b *testing.B) {
 	// Mock provider
-	provider, _ := newProviderAndTracer()
+	provider, _ := NewTracerProviderAndTracer()
 
 	mockPartitionConsumer, partitionConsumer := createMockPartitionConsumer(b)
 

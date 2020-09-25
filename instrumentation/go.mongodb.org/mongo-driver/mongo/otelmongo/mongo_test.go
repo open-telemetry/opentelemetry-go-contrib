@@ -36,7 +36,7 @@ func TestMain(m *testing.M) {
 }
 
 func Test(t *testing.T) {
-	provider, mt := mocktracer.NewProviderAndTracer(defaultTracerName)
+	provider, mt := mocktracer.NewTracerProviderAndTracer(defaultTracerName)
 
 	hostname, port := "localhost", "27017"
 

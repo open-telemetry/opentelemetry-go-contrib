@@ -24,7 +24,7 @@ import (
 	"github.com/google/go-cmp/cmp"
 
 	"go.opentelemetry.io/contrib/instrumentation/net/http/httptrace/otelhttptrace"
-	"go.opentelemetry.io/otel/api/correlation"
+	"go.opentelemetry.io/otel/api/baggage"
 	"go.opentelemetry.io/otel/api/propagation"
 	"go.opentelemetry.io/otel/api/trace/tracetest"
 	"go.opentelemetry.io/otel/label"
@@ -32,7 +32,7 @@ import (
 )
 
 func TestRoundtrip(t *testing.T) {
-	tr := tracetest.NewProvider().Tracer("httptrace/client")
+	tr := tracetest.NewTracerProvider().Tracer("httptrace/client")
 
 	var expectedAttrs map[label.Key]string
 	expectedCorrs := map[label.Key]string{label.Key("foo"): "bar"}
@@ -96,7 +96,7 @@ func TestRoundtrip(t *testing.T) {
 	err := func(ctx context.Context) error {
 		ctx, span := tr.Start(ctx, "test")
 		defer span.End()
-		ctx = correlation.ContextWithMap(ctx, correlation.NewMap(correlation.MapUpdate{SingleKV: label.Key("foo").String("bar")}))
+		ctx = baggage.ContextWithMap(ctx, baggage.NewMap(baggage.MapUpdate{SingleKV: label.Key("foo").String("bar")}))
 		req, _ := http.NewRequest("GET", ts.URL, strings.NewReader("foo"))
 		otelhttptrace.Inject(ctx, req)
 
@@ -114,14 +114,14 @@ func TestRoundtrip(t *testing.T) {
 }
 
 func TestSpecifyPropagators(t *testing.T) {
-	tr := tracetest.NewProvider().Tracer("httptrace/client")
+	tr := tracetest.NewTracerProvider().Tracer("httptrace/client")
 
 	expectedCorrs := map[label.Key]string{label.Key("foo"): "bar"}
 
 	// Mock http server
 	ts := httptest.NewServer(
 		http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-			_, corrs, span := otelhttptrace.Extract(r.Context(), r, otelhttptrace.WithPropagators(propagation.New(propagation.WithExtractors(correlation.DefaultHTTPPropagator()))))
+			_, corrs, span := otelhttptrace.Extract(r.Context(), r, otelhttptrace.WithPropagators(propagation.New(propagation.WithExtractors(baggage.DefaultHTTPPropagator()))))
 
 			actualCorrs := make(map[label.Key]string)
 			for _, corr := range corrs {
@@ -148,9 +148,9 @@ func TestSpecifyPropagators(t *testing.T) {
 	err := func(ctx context.Context) error {
 		ctx, span := tr.Start(ctx, "test")
 		defer span.End()
-		ctx = correlation.ContextWithMap(ctx, correlation.NewMap(correlation.MapUpdate{SingleKV: label.Key("foo").String("bar")}))
+		ctx = baggage.ContextWithMap(ctx, baggage.NewMap(baggage.MapUpdate{SingleKV: label.Key("foo").String("bar")}))
 		req, _ := http.NewRequest("GET", ts.URL, nil)
-		otelhttptrace.Inject(ctx, req, otelhttptrace.WithPropagators(propagation.New(propagation.WithInjectors(correlation.DefaultHTTPPropagator()))))
+		otelhttptrace.Inject(ctx, req, otelhttptrace.WithPropagators(propagation.New(propagation.WithInjectors(baggage.DefaultHTTPPropagator()))))
 
 		res, err := client.Do(req)
 		if err != nil {

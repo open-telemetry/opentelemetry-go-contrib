@@ -27,14 +27,14 @@ import (
 	"go.opentelemetry.io/contrib/internal/trace/parent"
 )
 
-type Provider struct {
+type TracerProvider struct {
 	tracersLock sync.Mutex
 	tracers     map[string]*Tracer
 }
 
-var _ oteltrace.Provider = &Provider{}
+var _ oteltrace.TracerProvider = &TracerProvider{}
 
-func (p *Provider) Tracer(name string, _ ...oteltrace.TracerOption) oteltrace.Tracer {
+func (p *TracerProvider) Tracer(name string, _ ...oteltrace.TracerOption) oteltrace.Tracer {
 	p.tracersLock.Lock()
 	defer p.tracersLock.Unlock()
 	if p.tracers == nil {
@@ -94,15 +94,6 @@ func (mt *Tracer) addEndedSpan(span *Span) {
 	mt.endedSpansLock.Unlock()
 }
 
-// WithSpan does nothing except creating a new span and executing the
-// body.
-func (mt *Tracer) WithSpan(ctx context.Context, name string, body func(context.Context) error, opts ...oteltrace.StartOption) error {
-	ctx, span := mt.Start(ctx, name, opts...)
-	defer span.End()
-
-	return body(ctx)
-}
-
 // Start starts a new Span and puts it into the context.
 //
 // The function generates a new random TraceID if either there is no
@@ -111,10 +102,10 @@ func (mt *Tracer) WithSpan(ctx context.Context, name string, body func(context.C
 // parent SpanContext.
 //
 // Currently no other StartOption has any effect here.
-func (mt *Tracer) Start(ctx context.Context, name string, o ...oteltrace.StartOption) (context.Context, oteltrace.Span) {
-	var opts oteltrace.StartConfig
+func (mt *Tracer) Start(ctx context.Context, name string, o ...oteltrace.SpanOption) (context.Context, oteltrace.Span) {
+	var opts oteltrace.SpanConfig
 	for _, op := range o {
-		op(&opts)
+		op.Apply(&opts)
 	}
 	var span *Span
 	var sc oteltrace.SpanContext
@@ -159,9 +150,9 @@ func (mt *Tracer) Start(ctx context.Context, name string, o ...oteltrace.StartOp
 	return oteltrace.ContextWithSpan(ctx, span), span
 }
 
-// NewProviderAndTracer return mock provider and tracer.
-func NewProviderAndTracer(tracerName string) (*Provider, *Tracer) {
-	var provider Provider
+// NewTracerProviderAndTracer return mock provider and tracer.
+func NewTracerProviderAndTracer(tracerName string) (*TracerProvider, *Tracer) {
+	var provider TracerProvider
 	tracer := provider.Tracer(tracerName)
 
 	return &provider, tracer.(*Tracer)

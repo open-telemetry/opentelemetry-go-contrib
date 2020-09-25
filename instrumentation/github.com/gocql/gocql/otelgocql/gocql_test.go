@@ -130,7 +130,7 @@ func TestQuery(t *testing.T) {
 		ctx,
 		cluster,
 		WithTracerProvider(tracerProvider),
-		WithMeterProvider(controller.Provider()),
+		WithMeterProvider(controller.MeterProvider()),
 		WithConnectInstrumentation(false),
 	)
 	require.NoError(t, err)
@@ -252,7 +252,7 @@ func TestBatch(t *testing.T) {
 		ctx,
 		cluster,
 		WithTracerProvider(tracerProvider),
-		WithMeterProvider(controller.Provider()),
+		WithMeterProvider(controller.MeterProvider()),
 		WithConnectInstrumentation(false),
 	)
 	require.NoError(t, err)
@@ -350,7 +350,7 @@ func TestConnection(t *testing.T) {
 		ctx,
 		cluster,
 		WithTracerProvider(tracerProvider),
-		WithMeterProvider(controller.Provider()),
+		WithMeterProvider(controller.MeterProvider()),
 		WithConnectObserver(connectObserver),
 	)
 	require.NoError(t, err)

@@ -42,7 +42,7 @@ type Handler struct {
 	tracer            trace.Tracer
 	meter             metric.Meter
 	propagators       propagation.Propagators
-	spanStartOptions  []trace.StartOption
+	spanStartOptions  []trace.SpanOption
 	readEvent         bool
 	writeEvent        bool
 	filters           []Filter
@@ -121,7 +121,7 @@ func (h *Handler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		}
 	}
 
-	opts := append([]trace.StartOption{
+	opts := append([]trace.SpanOption{
 		trace.WithAttributes(semconv.NetAttributesFromHTTPRequest("tcp", r)...),
 		trace.WithAttributes(semconv.EndUserAttributesFromHTTPRequest(r)...),
 		trace.WithAttributes(semconv.HTTPServerAttributesFromHTTPRequest(h.operation, "", r)...),

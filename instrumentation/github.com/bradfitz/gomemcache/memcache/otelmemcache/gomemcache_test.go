@@ -101,8 +101,8 @@ func TestOperationWithCacheMissError(t *testing.T) {
 }
 
 // tests require running memcached instance
-func initClientWithMockTracerProvider(t *testing.T) (*Client, *mocktracer.Provider) {
-	mt := &mocktracer.Provider{}
+func initClientWithMockTracerProvider(t *testing.T) (*Client, *mocktracer.TracerProvider) {
+	mt := &mocktracer.TracerProvider{}
 	host, port := "localhost", "11211"
 
 	mc := memcache.New(host + ":" + port)

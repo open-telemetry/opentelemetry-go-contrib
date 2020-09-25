@@ -33,7 +33,7 @@ type Transport struct {
 
 	tracer            trace.Tracer
 	propagators       propagation.Propagators
-	spanStartOptions  []trace.StartOption
+	spanStartOptions  []trace.SpanOption
 	filters           []Filter
 	spanNameFormatter func(string, *http.Request) string
 }
@@ -81,7 +81,7 @@ func (t *Transport) RoundTrip(r *http.Request) (*http.Response, error) {
 		}
 	}
 
-	opts := append([]trace.StartOption{}, t.spanStartOptions...) // start with the configured options
+	opts := append([]trace.SpanOption{}, t.spanStartOptions...) // start with the configured options
 
 	ctx, span := t.tracer.Start(r.Context(), t.spanNameFormatter("", r), opts...)
 

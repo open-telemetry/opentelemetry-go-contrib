@@ -47,7 +47,7 @@ func main() {
 	fmt.Println("Success: Installed Exporter Pipeline")
 
 	// Create a counter and a value recorder
-	meter := pusher.Provider().Meter("example")
+	meter := pusher.MeterProvider().Meter("example")
 	ctx := context.Background()
 
 	// Create instruments.

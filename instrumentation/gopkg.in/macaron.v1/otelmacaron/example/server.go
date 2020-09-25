@@ -51,14 +51,14 @@ func initTracer() {
 	cfg := sdktrace.Config{
 		DefaultSampler: sdktrace.AlwaysSample(),
 	}
-	tp, err := sdktrace.NewProvider(
+	tp := sdktrace.NewTracerProvider(
 		sdktrace.WithConfig(cfg),
 		sdktrace.WithSyncer(exporter),
 	)
 	if err != nil {
 		log.Fatal(err)
 	}
-	otelglobal.SetTraceProvider(tp)
+	otelglobal.SetTracerProvider(tp)
 }
 
 func getUser(ctx context.Context, id string) string {

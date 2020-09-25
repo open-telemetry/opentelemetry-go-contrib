@@ -33,14 +33,14 @@ type config struct {
 	Tracer            trace.Tracer
 	Meter             metric.Meter
 	Propagators       propagation.Propagators
-	SpanStartOptions  []trace.StartOption
+	SpanStartOptions  []trace.SpanOption
 	ReadEvent         bool
 	WriteEvent        bool
 	Filters           []Filter
 	SpanNameFormatter func(string, *http.Request) string
 
-	TracerProvider trace.Provider
-	MeterProvider  metric.Provider
+	TracerProvider trace.TracerProvider
+	MeterProvider  metric.MeterProvider
 }
 
 // Option Interface used for setting *optional* config properties
@@ -60,7 +60,7 @@ func (o OptionFunc) Apply(c *config) {
 func newConfig(opts ...Option) *config {
 	c := &config{
 		Propagators:    global.Propagators(),
-		TracerProvider: global.TraceProvider(),
+		TracerProvider: global.TracerProvider(),
 		MeterProvider:  global.MeterProvider(),
 	}
 	for _, opt := range opts {
@@ -75,7 +75,7 @@ func newConfig(opts ...Option) *config {
 
 // WithTracerProvider specifies a tracer provider to use for creating a tracer.
 // If none is specified, the global provider is used.
-func WithTracerProvider(provider trace.Provider) Option {
+func WithTracerProvider(provider trace.TracerProvider) Option {
 	return OptionFunc(func(cfg *config) {
 		cfg.TracerProvider = provider
 	})
@@ -83,7 +83,7 @@ func WithTracerProvider(provider trace.Provider) Option {
 
 // WithMeterProvider specifies a meter provider to use for creating a meter.
 // If none is specified, the global provider is used.
-func WithMeterProvider(provider metric.Provider) Option {
+func WithMeterProvider(provider metric.MeterProvider) Option {
 	return OptionFunc(func(cfg *config) {
 		cfg.MeterProvider = provider
 	})
@@ -108,8 +108,8 @@ func WithPropagators(ps propagation.Propagators) Option {
 }
 
 // WithSpanOptions configures an additional set of
-// trace.StartOptions, which are applied to each new span.
-func WithSpanOptions(opts ...trace.StartOption) Option {
+// trace.SpanOptions, which are applied to each new span.
+func WithSpanOptions(opts ...trace.SpanOption) Option {
 	return OptionFunc(func(c *config) {
 		c.SpanStartOptions = append(c.SpanStartOptions, opts...)
 	})

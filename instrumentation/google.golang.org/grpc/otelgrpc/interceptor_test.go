@@ -88,7 +88,7 @@ func TestUnaryClientInterceptor(t *testing.T) {
 	}
 
 	sr := NewSpanRecorder()
-	tp := tracetest.NewProvider(tracetest.WithSpanRecorder(sr))
+	tp := tracetest.NewTracerProvider(tracetest.WithSpanRecorder(sr))
 	tracer := tp.Tracer("grpc/client")
 	unaryInterceptor := UnaryClientInterceptor(tracer)
 
@@ -258,7 +258,7 @@ func TestStreamClientInterceptor(t *testing.T) {
 
 	// tracer
 	sr := NewSpanRecorder()
-	tp := tracetest.NewProvider(tracetest.WithSpanRecorder(sr))
+	tp := tracetest.NewTracerProvider(tracetest.WithSpanRecorder(sr))
 	tracer := tp.Tracer("grpc/Server")
 	streamCI := StreamClientInterceptor(tracer)
 
@@ -342,7 +342,7 @@ func TestStreamClientInterceptor(t *testing.T) {
 
 func TestServerInterceptorError(t *testing.T) {
 	sr := NewSpanRecorder()
-	tp := tracetest.NewProvider(tracetest.WithSpanRecorder(sr))
+	tp := tracetest.NewTracerProvider(tracetest.WithSpanRecorder(sr))
 	tracer := tp.Tracer("grpc/Server")
 	usi := UnaryServerInterceptor(tracer)
 	deniedErr := status.Error(codes.PermissionDenied, "PERMISSION_DENIED_TEXT")

@@ -39,7 +39,7 @@ func OTelFilter(service string, opts ...Option) restful.FilterFunction {
 		opt(&cfg)
 	}
 	if cfg.TracerProvider == nil {
-		cfg.TracerProvider = otelglobal.TraceProvider()
+		cfg.TracerProvider = otelglobal.TracerProvider()
 	}
 	tracer := cfg.TracerProvider.Tracer(tracerName, oteltrace.WithInstrumentationVersion(tracerVersion))
 	if cfg.Propagators == nil {
@@ -51,7 +51,7 @@ func OTelFilter(service string, opts ...Option) restful.FilterFunction {
 		route := req.SelectedRoutePath()
 		spanName := route
 
-		opts := []oteltrace.StartOption{
+		opts := []oteltrace.SpanOption{
 			oteltrace.WithAttributes(semconv.NetAttributesFromHTTPRequest("tcp", r)...),
 			oteltrace.WithAttributes(semconv.EndUserAttributesFromHTTPRequest(r)...),
 			oteltrace.WithAttributes(semconv.HTTPServerAttributesFromHTTPRequest(service, route, r)...),

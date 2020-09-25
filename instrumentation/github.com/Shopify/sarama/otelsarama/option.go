@@ -28,7 +28,7 @@ const (
 )
 
 type config struct {
-	TracerProvider trace.Provider
+	TracerProvider trace.TracerProvider
 	Propagators    otelpropagation.Propagators
 
 	Tracer trace.Tracer
@@ -38,7 +38,7 @@ type config struct {
 func newConfig(opts ...Option) config {
 	cfg := config{
 		Propagators:    global.Propagators(),
-		TracerProvider: global.TraceProvider(),
+		TracerProvider: global.TracerProvider(),
 	}
 	for _, opt := range opts {
 		opt(&cfg)
@@ -54,7 +54,7 @@ type Option func(*config)
 
 // WithTracerProvider specifies a tracer provider to use for creating a tracer.
 // If none is specified, the global provider is used.
-func WithTracerProvider(provider trace.Provider) Option {
+func WithTracerProvider(provider trace.TracerProvider) Option {
 	return func(cfg *config) {
 		cfg.TracerProvider = provider
 	}

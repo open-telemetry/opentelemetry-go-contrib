@@ -68,7 +68,7 @@ func (w *consumerMessagesDispatcherWrapper) Run() {
 			semconv.MessagingMessageIDKey.String(strconv.FormatInt(msg.Offset, 10)),
 			kafkaPartitionKey.Int32(msg.Partition),
 		}
-		opts := []trace.StartOption{
+		opts := []trace.SpanOption{
 			trace.WithAttributes(attrs...),
 			trace.WithSpanKind(trace.SpanKindConsumer),
 		}

@@ -39,6 +39,7 @@ import (
 
 	mockmeter "go.opentelemetry.io/contrib/internal/metric"
 	mocktrace "go.opentelemetry.io/contrib/internal/trace"
+	"go.opentelemetry.io/contrib/propagators/b3"
 )
 
 // ------------------------------------------ Mock Trace Provider
@@ -203,9 +204,9 @@ func TestWithFilters(t *testing.T) {
 
 func TestSpanFromContextDefaultProvider(t *testing.T) {
 	defer replaceBeego()
-	_, provider := mockmeter.NewProvider()
+	_, provider := mockmeter.NewMeterProvider()
 	global.SetMeterProvider(provider)
-	global.SetTraceProvider(NewTracerProvider())
+	global.SetTracerProvider(NewTracerProvider())
 	router := beego.NewControllerRegister()
 	router.Get("/hello-with-span", func(ctx *beegoCtx.Context) {
 		assertSpanFromContext(ctx.Request.Context(), t)
@@ -225,7 +226,7 @@ func TestSpanFromContextDefaultProvider(t *testing.T) {
 
 func TestSpanFromContextCustomProvider(t *testing.T) {
 	defer replaceBeego()
-	_, provider := mockmeter.NewProvider()
+	_, provider := mockmeter.NewMeterProvider()
 	router := beego.NewControllerRegister()
 	router.Get("/hello-with-span", func(ctx *beegoCtx.Context) {
 		assertSpanFromContext(ctx.Request.Context(), t)
@@ -250,7 +251,7 @@ func TestSpanFromContextCustomProvider(t *testing.T) {
 func TestStatic(t *testing.T) {
 	defer replaceBeego()
 	tracerProvider := NewTracerProvider()
-	meterimpl, meterProvider := mockmeter.NewProvider()
+	meterimpl, meterProvider := mockmeter.NewMeterProvider()
 	file, err := ioutil.TempFile("", "static-*.html")
 	require.NoError(t, err)
 	defer os.Remove(file.Name())
@@ -348,7 +349,7 @@ func TestRender(t *testing.T) {
 
 func runTest(t *testing.T, tc *testCase, url string) {
 	tracerProvider := NewTracerProvider()
-	meterimpl, meterProvider := mockmeter.NewProvider()
+	meterimpl, meterProvider := mockmeter.NewMeterProvider()
 	addTestRoutes(t)
 	defer replaceBeego()
 
@@ -503,8 +504,8 @@ var testCases = []*testCase{
 		path:   "/",
 		options: []Option{
 			WithPropagators(prop.New(
-				prop.WithExtractors(trace.B3{}),
-				prop.WithInjectors(trace.B3{}),
+				prop.WithExtractors(b3.B3{}),
+				prop.WithInjectors(b3.B3{}),
 			)),
 		},
 		hasSpan:            true,

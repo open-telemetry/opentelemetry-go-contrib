@@ -20,7 +20,7 @@ import (
 
 type config struct {
 	serviceName    string
-	tracerProvider oteltrace.Provider
+	tracerProvider oteltrace.TracerProvider
 }
 
 // Option is used to configure the client.
@@ -28,7 +28,7 @@ type Option func(*config)
 
 // WithTracerProvider specifies a tracer provider to use for creating a tracer.
 // If none is specified, the global provider is used.
-func WithTracerProvider(provider oteltrace.Provider) Option {
+func WithTracerProvider(provider oteltrace.TracerProvider) Option {
 	return func(cfg *config) {
 		cfg.tracerProvider = provider
 	}
