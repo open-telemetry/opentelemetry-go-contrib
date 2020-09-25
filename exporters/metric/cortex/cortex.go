@@ -381,7 +381,7 @@ func convertFromHistogram(record metric.Record, histogram aggregation.Histogram)
 
 // createLabelSet combines labels from a Record, resource, and extra labels to create a
 // slice of prompb.Label.
-func createLabelSet(record metric.Record, extraLabels ...label.KeyValue) []*prompb.Label {
+func createLabelSet(record metric.Record, extraLabels ...label.KeyValue) []prompb.Label {
 	// Map ensure no duplicate label names.
 	labelMap := map[string]prompb.Label{}
 
@@ -415,10 +415,10 @@ func createLabelSet(record metric.Record, extraLabels ...label.KeyValue) []*prom
 	}
 
 	// Create slice of labels from labelMap and return
-	res := make([]*prompb.Label, 0, len(labelMap))
+	res := make([]prompb.Label, 0, len(labelMap))
 	for _, lb := range labelMap {
 		currentLabel := lb
-		res = append(res, &currentLabel)
+		res = append(res, currentLabel)
 	}
 
 	return res
@@ -454,8 +454,12 @@ func (e *Exporter) addHeaders(req *http.Request) error {
 // buildMessage creates a Snappy-compressed protobuf message from a slice of TimeSeries.
 func (e *Exporter) buildMessage(timeseries []*prompb.TimeSeries) ([]byte, error) {
 	// Wrap the TimeSeries as a WriteRequest since Cortex requires it.
+	ts := make([]prompb.TimeSeries, len(timeseries))
+	for i, t := range timeseries {
+		ts[i] = *t
+	}
 	writeRequest := &prompb.WriteRequest{
-		Timeseries: timeseries,
+		Timeseries: ts,
 	}
 
 	// Convert the struct to a slice of bytes and then compress it.

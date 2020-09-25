@@ -293,7 +293,7 @@ func verifyExporterRequest(req *http.Request) error {
 
 	// Check whether the request contains the correct data.
 	expectedWriteRequest := &prompb.WriteRequest{
-		Timeseries: []*prompb.TimeSeries{
+		Timeseries: []prompb.TimeSeries{
 			{
 				Samples: []prompb.Sample{
 					{
@@ -301,7 +301,7 @@ func verifyExporterRequest(req *http.Request) error {
 						Timestamp: int64(time.Nanosecond) * time.Time{}.UnixNano() / int64(time.Millisecond),
 					},
 				},
-				Labels: []*prompb.Label{
+				Labels: []prompb.Label{
 					{
 						Name:  "__name__",
 						Value: "test_name",
@@ -382,7 +382,7 @@ func TestSendRequest(t *testing.T) {
 							Timestamp: int64(time.Nanosecond) * time.Time{}.UnixNano() / int64(time.Millisecond),
 						},
 					},
-					Labels: []*prompb.Label{
+					Labels: []prompb.Label{
 						{
 							Name:  "__name__",
 							Value: "test_name",

@@ -121,7 +121,7 @@ func getHistogramCheckpoint(t *testing.T) export.CheckpointSet {
 // ConvertToTimeSeries tests.
 var wantSumCheckpointSet = []*prompb.TimeSeries{
 	{
-		Labels: []*prompb.Label{
+		Labels: []prompb.Label{
 			{
 				Name:  "R",
 				Value: "V",
@@ -140,7 +140,7 @@ var wantSumCheckpointSet = []*prompb.TimeSeries{
 
 var wantLastValueCheckpointSet = []*prompb.TimeSeries{
 	{
-		Labels: []*prompb.Label{
+		Labels: []prompb.Label{
 			{
 				Name:  "R",
 				Value: "V",
@@ -159,7 +159,7 @@ var wantLastValueCheckpointSet = []*prompb.TimeSeries{
 
 var wantMMSCCheckpointSet = []*prompb.TimeSeries{
 	{
-		Labels: []*prompb.Label{
+		Labels: []prompb.Label{
 			{
 				Name:  "R",
 				Value: "V",
@@ -175,7 +175,7 @@ var wantMMSCCheckpointSet = []*prompb.TimeSeries{
 		}},
 	},
 	{
-		Labels: []*prompb.Label{
+		Labels: []prompb.Label{
 			{
 				Name:  "R",
 				Value: "V",
@@ -191,7 +191,7 @@ var wantMMSCCheckpointSet = []*prompb.TimeSeries{
 		}},
 	},
 	{
-		Labels: []*prompb.Label{
+		Labels: []prompb.Label{
 			{
 				Name:  "R",
 				Value: "V",
@@ -207,7 +207,7 @@ var wantMMSCCheckpointSet = []*prompb.TimeSeries{
 		}},
 	},
 	{
-		Labels: []*prompb.Label{
+		Labels: []prompb.Label{
 			{
 				Name:  "R",
 				Value: "V",
@@ -226,7 +226,7 @@ var wantMMSCCheckpointSet = []*prompb.TimeSeries{
 
 var wantDistributionCheckpointSet = []*prompb.TimeSeries{
 	{
-		Labels: []*prompb.Label{
+		Labels: []prompb.Label{
 			{
 				Name:  "R",
 				Value: "V",
@@ -242,7 +242,7 @@ var wantDistributionCheckpointSet = []*prompb.TimeSeries{
 		}},
 	},
 	{
-		Labels: []*prompb.Label{
+		Labels: []prompb.Label{
 			{
 				Name:  "R",
 				Value: "V",
@@ -258,7 +258,7 @@ var wantDistributionCheckpointSet = []*prompb.TimeSeries{
 		}},
 	},
 	{
-		Labels: []*prompb.Label{
+		Labels: []prompb.Label{
 			{
 				Name:  "R",
 				Value: "V",
@@ -274,7 +274,7 @@ var wantDistributionCheckpointSet = []*prompb.TimeSeries{
 		}},
 	},
 	{
-		Labels: []*prompb.Label{
+		Labels: []prompb.Label{
 			{
 				Name:  "R",
 				Value: "V",
@@ -290,7 +290,7 @@ var wantDistributionCheckpointSet = []*prompb.TimeSeries{
 		}},
 	},
 	{
-		Labels: []*prompb.Label{
+		Labels: []prompb.Label{
 			{
 				Name:  "R",
 				Value: "V",
@@ -310,7 +310,7 @@ var wantDistributionCheckpointSet = []*prompb.TimeSeries{
 		}},
 	},
 	{
-		Labels: []*prompb.Label{
+		Labels: []prompb.Label{
 			{
 				Name:  "R",
 				Value: "V",
@@ -330,7 +330,7 @@ var wantDistributionCheckpointSet = []*prompb.TimeSeries{
 		}},
 	},
 	{
-		Labels: []*prompb.Label{
+		Labels: []prompb.Label{
 			{
 				Name:  "R",
 				Value: "V",
@@ -353,7 +353,7 @@ var wantDistributionCheckpointSet = []*prompb.TimeSeries{
 
 var wantHistogramCheckpointSet = []*prompb.TimeSeries{
 	{
-		Labels: []*prompb.Label{
+		Labels: []prompb.Label{
 			{
 				Name:  "R",
 				Value: "V",
@@ -369,7 +369,7 @@ var wantHistogramCheckpointSet = []*prompb.TimeSeries{
 		}},
 	},
 	{
-		Labels: []*prompb.Label{
+		Labels: []prompb.Label{
 			{
 				Name:  "R",
 				Value: "V",
@@ -385,7 +385,7 @@ var wantHistogramCheckpointSet = []*prompb.TimeSeries{
 		}},
 	},
 	{
-		Labels: []*prompb.Label{
+		Labels: []prompb.Label{
 			{
 				Name:  "R",
 				Value: "V",
@@ -405,7 +405,7 @@ var wantHistogramCheckpointSet = []*prompb.TimeSeries{
 		}},
 	},
 	{
-		Labels: []*prompb.Label{
+		Labels: []prompb.Label{
 			{
 				Name:  "R",
 				Value: "V",
@@ -425,7 +425,7 @@ var wantHistogramCheckpointSet = []*prompb.TimeSeries{
 		}},
 	},
 	{
-		Labels: []*prompb.Label{
+		Labels: []prompb.Label{
 			{
 				Name:  "R",
 				Value: "V",
@@ -445,7 +445,7 @@ var wantHistogramCheckpointSet = []*prompb.TimeSeries{
 		}},
 	},
 	{
-		Labels: []*prompb.Label{
+		Labels: []prompb.Label{
 			{
 				Name:  "R",
 				Value: "V",
