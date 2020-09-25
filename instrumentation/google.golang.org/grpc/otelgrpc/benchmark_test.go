@@ -33,7 +33,7 @@ const (
 	instName = "go.opentelemetry.io/contrib/instrumentation/google.golang.org/grpc/otelgrpc"
 )
 
-var tracer = tracetest.NewProvider().Tracer(instName)
+var tracer = tracetest.NewTracerProvider().Tracer(instName)
 
 func benchmark(b *testing.B, cOpt []grpc.DialOption, sOpt []grpc.ServerOption) {
 	l := bufconn.Listen(bufSize)

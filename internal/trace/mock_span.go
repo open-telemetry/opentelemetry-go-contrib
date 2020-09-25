@@ -76,7 +76,7 @@ func (ms *Span) SetAttributes(attributes ...label.KeyValue) {
 }
 
 // End puts the span into tracers ended spans.
-func (ms *Span) End(options ...oteltrace.EndOption) {
+func (ms *Span) End(options ...oteltrace.SpanOption) {
 	ms.tracer.addEndedSpan(ms)
 }
 

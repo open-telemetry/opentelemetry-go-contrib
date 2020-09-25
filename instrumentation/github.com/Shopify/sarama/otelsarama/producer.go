@@ -239,7 +239,7 @@ func startProducerSpan(cfg config, version sarama.KafkaVersion, msg *sarama.Prod
 		semconv.MessagingDestinationKindKeyTopic,
 		semconv.MessagingDestinationKey.String(msg.Topic),
 	}
-	opts := []trace.StartOption{
+	opts := []trace.SpanOption{
 		trace.WithAttributes(attrs...),
 		trace.WithSpanKind(trace.SpanKindProducer),
 	}

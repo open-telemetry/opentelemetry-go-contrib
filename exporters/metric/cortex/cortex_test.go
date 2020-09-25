@@ -189,13 +189,13 @@ func TestNewExportPipeline(t *testing.T) {
 }
 
 // TestInstallNewPipeline checks whether InstallNewPipeline successfully returns a push
-// Controller and whether that controller's Provider is registered globally.
+// Controller and whether that controller's MeterProvider is registered globally.
 func TestInstallNewPipeline(t *testing.T) {
 	pusher, err := InstallNewPipeline(validConfig)
 	if err != nil {
 		t.Fatalf("Failed to create install pipeline with error %v", err)
 	}
-	if global.MeterProvider() != pusher.Provider() {
+	if global.MeterProvider() != pusher.MeterProvider() {
 		t.Fatalf("Failed to register push Controller provider globally")
 	}
 }

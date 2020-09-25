@@ -29,7 +29,7 @@ import (
 	"google.golang.org/grpc/peer"
 	"google.golang.org/grpc/status"
 
-	"go.opentelemetry.io/otel/api/correlation"
+	"go.opentelemetry.io/otel/api/baggage"
 	"go.opentelemetry.io/otel/api/trace"
 	"go.opentelemetry.io/otel/codes"
 	"go.opentelemetry.io/otel/label"
@@ -293,7 +293,7 @@ func UnaryServerInterceptor(tracer trace.Tracer, opts ...Option) grpc.UnaryServe
 		metadataCopy := requestMetadata.Copy()
 
 		entries, spanCtx := Extract(ctx, &metadataCopy, opts...)
-		ctx = correlation.ContextWithMap(ctx, correlation.NewMap(correlation.MapUpdate{
+		ctx = baggage.ContextWithMap(ctx, baggage.NewMap(baggage.MapUpdate{
 			MultiKV: entries,
 		}))
 
@@ -377,7 +377,7 @@ func StreamServerInterceptor(tracer trace.Tracer, opts ...Option) grpc.StreamSer
 		metadataCopy := requestMetadata.Copy()
 
 		entries, spanCtx := Extract(ctx, &metadataCopy, opts...)
-		ctx = correlation.ContextWithMap(ctx, correlation.NewMap(correlation.MapUpdate{
+		ctx = baggage.ContextWithMap(ctx, baggage.NewMap(baggage.MapUpdate{
 			MultiKV: entries,
 		}))
 

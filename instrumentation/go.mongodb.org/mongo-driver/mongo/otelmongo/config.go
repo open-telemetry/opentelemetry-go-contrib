@@ -25,7 +25,7 @@ const (
 
 // config is used to configure the mongo tracer.
 type config struct {
-	TracerProvider trace.Provider
+	TracerProvider trace.TracerProvider
 
 	Tracer trace.Tracer
 }
@@ -33,7 +33,7 @@ type config struct {
 // newConfig returns a config with all Options set.
 func newConfig(opts ...Option) config {
 	cfg := config{
-		TracerProvider: global.TraceProvider(),
+		TracerProvider: global.TracerProvider(),
 	}
 	for _, opt := range opts {
 		opt(&cfg)
@@ -48,7 +48,7 @@ type Option func(*config)
 
 // WithTracerProvider specifies a tracer provider to use for creating a tracer.
 // If none is specified, the global provider is used.
-func WithTracerProvider(provider trace.Provider) Option {
+func WithTracerProvider(provider trace.TracerProvider) Option {
 	return func(cfg *config) {
 		cfg.TracerProvider = provider
 	}

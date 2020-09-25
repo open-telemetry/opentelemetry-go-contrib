@@ -29,7 +29,7 @@ import (
 func TestBasicFilter(t *testing.T) {
 	rr := httptest.NewRecorder()
 
-	provider, tracer := mocktrace.NewProviderAndTracer(instrumentationName)
+	provider, tracer := mocktrace.NewTracerProviderAndTracer(instrumentationName)
 
 	h := NewHandler(
 		http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
@@ -98,7 +98,7 @@ func TestSpanNameFormatter(t *testing.T) {
 		t.Run(tc.name, func(t *testing.T) {
 			rr := httptest.NewRecorder()
 
-			provider, tracer := mocktrace.NewProviderAndTracer(instrumentationName)
+			provider, tracer := mocktrace.NewTracerProviderAndTracer(instrumentationName)
 			handler := http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 				if _, err := io.WriteString(w, "hello world"); err != nil {
 					t.Fatal(err)

@@ -73,16 +73,16 @@ func doCalls(cOpt []grpc.DialOption, sOpt []grpc.ServerOption) error {
 
 func TestInterceptors(t *testing.T) {
 	clientUnarySR := new(tracetest.StandardSpanRecorder)
-	clientUnaryTracer := tracetest.NewProvider(tracetest.WithSpanRecorder(clientUnarySR)).Tracer("TestUnaryClientInterceptor")
+	clientUnaryTracer := tracetest.NewTracerProvider(tracetest.WithSpanRecorder(clientUnarySR)).Tracer("TestUnaryClientInterceptor")
 
 	clientStreamSR := new(tracetest.StandardSpanRecorder)
-	clientStreamTracer := tracetest.NewProvider(tracetest.WithSpanRecorder(clientStreamSR)).Tracer("TestStreamClientInterceptor")
+	clientStreamTracer := tracetest.NewTracerProvider(tracetest.WithSpanRecorder(clientStreamSR)).Tracer("TestStreamClientInterceptor")
 
 	serverUnarySR := new(tracetest.StandardSpanRecorder)
-	serverUnaryTracer := tracetest.NewProvider(tracetest.WithSpanRecorder(serverUnarySR)).Tracer("TestUnaryServerInterceptor")
+	serverUnaryTracer := tracetest.NewTracerProvider(tracetest.WithSpanRecorder(serverUnarySR)).Tracer("TestUnaryServerInterceptor")
 
 	serverStreamSR := new(tracetest.StandardSpanRecorder)
-	serverStreamTracer := tracetest.NewProvider(tracetest.WithSpanRecorder(serverStreamSR)).Tracer("TestStreamServerInterceptor")
+	serverStreamTracer := tracetest.NewTracerProvider(tracetest.WithSpanRecorder(serverStreamSR)).Tracer("TestStreamServerInterceptor")
 
 	assert.NoError(t, doCalls(
 		[]grpc.DialOption{

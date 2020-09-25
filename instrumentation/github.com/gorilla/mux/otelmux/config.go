@@ -21,7 +21,7 @@ import (
 
 // config is used to configure the mux middleware.
 type config struct {
-	TracerProvider oteltrace.Provider
+	TracerProvider oteltrace.TracerProvider
 	Propagators    otelpropagation.Propagators
 }
 
@@ -39,7 +39,7 @@ func WithPropagators(propagators otelpropagation.Propagators) Option {
 
 // WithTracerProvider specifies a tracer provider to use for creating a tracer.
 // If none is specified, the global provider is used.
-func WithTracerProvider(provider oteltrace.Provider) Option {
+func WithTracerProvider(provider oteltrace.TracerProvider) Option {
 	return func(cfg *config) {
 		cfg.TracerProvider = provider
 	}

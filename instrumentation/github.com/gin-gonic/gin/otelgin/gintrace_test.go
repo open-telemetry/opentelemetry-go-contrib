@@ -31,6 +31,7 @@ import (
 	"go.opentelemetry.io/otel/codes"
 
 	mocktrace "go.opentelemetry.io/contrib/internal/trace"
+	b3prop "go.opentelemetry.io/contrib/propagators/b3"
 	otelglobal "go.opentelemetry.io/otel/api/global"
 	otelpropagation "go.opentelemetry.io/otel/api/propagation"
 	oteltrace "go.opentelemetry.io/otel/api/trace"
@@ -42,7 +43,7 @@ func init() {
 }
 
 func TestChildSpanFromGlobalTracer(t *testing.T) {
-	otelglobal.SetTraceProvider(&mocktrace.Provider{})
+	otelglobal.SetTracerProvider(&mocktrace.TracerProvider{})
 
 	router := gin.New()
 	router.Use(Middleware("foobar"))
@@ -63,7 +64,7 @@ func TestChildSpanFromGlobalTracer(t *testing.T) {
 }
 
 func TestChildSpanFromCustomTracer(t *testing.T) {
-	provider, _ := mocktrace.NewProviderAndTracer(tracerName)
+	provider, _ := mocktrace.NewTracerProviderAndTracer(tracerName)
 
 	router := gin.New()
 	router.Use(Middleware("foobar", WithTracerProvider(provider)))
@@ -84,7 +85,7 @@ func TestChildSpanFromCustomTracer(t *testing.T) {
 }
 
 func TestTrace200(t *testing.T) {
-	provider, tracer := mocktrace.NewProviderAndTracer(tracerName)
+	provider, tracer := mocktrace.NewTracerProviderAndTracer(tracerName)
 
 	router := gin.New()
 	router.Use(Middleware("foobar", WithTracerProvider(provider)))
@@ -119,7 +120,7 @@ func TestTrace200(t *testing.T) {
 }
 
 func TestError(t *testing.T) {
-	provider, tracer := mocktrace.NewProviderAndTracer(tracerName)
+	provider, tracer := mocktrace.NewTracerProviderAndTracer(tracerName)
 
 	// setup
 	router := gin.New()
@@ -149,7 +150,7 @@ func TestError(t *testing.T) {
 }
 
 func TestHTML(t *testing.T) {
-	provider, tracer := mocktrace.NewProviderAndTracer(tracerName)
+	provider, tracer := mocktrace.NewTracerProviderAndTracer(tracerName)
 
 	// setup
 	router := gin.New()
@@ -191,7 +192,7 @@ func TestGetSpanNotInstrumented(t *testing.T) {
 	router.GET("/ping", func(c *gin.Context) {
 		// Assert we don't have a span on the context.
 		span := oteltrace.SpanFromContext(c.Request.Context())
-		_, ok := span.(oteltrace.NoopSpan)
+		ok := !span.SpanContext().IsValid()
 		assert.True(t, ok)
 		_, _ = c.Writer.Write([]byte("ok"))
 	})
@@ -203,7 +204,7 @@ func TestGetSpanNotInstrumented(t *testing.T) {
 }
 
 func TestPropagationWithGlobalPropagators(t *testing.T) {
-	provider, tracer := mocktrace.NewProviderAndTracer(tracerName)
+	provider, tracer := mocktrace.NewTracerProviderAndTracer(tracerName)
 
 	r := httptest.NewRequest("GET", "/user/123", nil)
 	w := httptest.NewRecorder()
@@ -225,8 +226,8 @@ func TestPropagationWithGlobalPropagators(t *testing.T) {
 }
 
 func TestPropagationWithCustomPropagators(t *testing.T) {
-	provider, tracer := mocktrace.NewProviderAndTracer(tracerName)
-	b3 := oteltrace.B3{}
+	provider, tracer := mocktrace.NewTracerProviderAndTracer(tracerName)
+	b3 := b3prop.B3{}
 	props := otelpropagation.New(
 		otelpropagation.WithExtractors(b3),
 		otelpropagation.WithInjectors(b3),

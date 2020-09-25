@@ -8,8 +8,8 @@ replace go.opentelemetry.io/contrib/instrumentation/github.com/Shopify/sarama/ot
 
 require (
 	github.com/Shopify/sarama v1.27.0
-	go.opentelemetry.io/contrib/instrumentation/github.com/Shopify/sarama/otelsarama v0.11.0
-	go.opentelemetry.io/otel v0.11.0
-	go.opentelemetry.io/otel/exporters/stdout v0.11.0
-	go.opentelemetry.io/otel/sdk v0.11.0
+	go.opentelemetry.io/contrib/instrumentation/github.com/Shopify/sarama/otelsarama v0.12.0
+	go.opentelemetry.io/otel v0.12.0
+	go.opentelemetry.io/otel/exporters/stdout v0.12.0
+	go.opentelemetry.io/otel/sdk v0.12.0
 )

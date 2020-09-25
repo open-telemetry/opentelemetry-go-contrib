@@ -34,8 +34,8 @@ import (
 	mocktracer "go.opentelemetry.io/contrib/internal/trace"
 )
 
-func newProviderAndTracer() (*mocktracer.Provider, *mocktracer.Tracer) {
-	var provider mocktracer.Provider
+func NewTracerProviderAndTracer() (*mocktracer.TracerProvider, *mocktracer.Tracer) {
+	var provider mocktracer.TracerProvider
 	tracer := provider.Tracer(defaultTracerName)
 
 	return &provider, tracer.(*mocktracer.Tracer)
@@ -45,7 +45,7 @@ func TestWrapSyncProducer(t *testing.T) {
 	var err error
 
 	// Mock provider
-	provider, mt := newProviderAndTracer()
+	provider, mt := NewTracerProviderAndTracer()
 
 	cfg := newSaramaConfig()
 	// Mock sync producer
@@ -163,7 +163,7 @@ func TestWrapAsyncProducer(t *testing.T) {
 
 	t.Run("without successes config", func(t *testing.T) {
 		// Mock provider
-		provider, mt := newProviderAndTracer()
+		provider, mt := NewTracerProviderAndTracer()
 
 		cfg := newSaramaConfig()
 		mockAsyncProducer := mocks.NewAsyncProducer(t, cfg)
@@ -230,7 +230,7 @@ func TestWrapAsyncProducer(t *testing.T) {
 
 	t.Run("with successes config", func(t *testing.T) {
 		// Mock provider
-		provider, mt := newProviderAndTracer()
+		provider, mt := NewTracerProviderAndTracer()
 
 		// Set producer with successes config
 		cfg := newSaramaConfig()
@@ -308,7 +308,7 @@ func TestWrapAsyncProducer(t *testing.T) {
 
 func TestWrapAsyncProducerError(t *testing.T) {
 	// Mock provider
-	provider, mt := newProviderAndTracer()
+	provider, mt := NewTracerProviderAndTracer()
 
 	// Set producer with successes config
 	cfg := newSaramaConfig()
@@ -342,7 +342,7 @@ func newSaramaConfig() *sarama.Config {
 
 func BenchmarkWrapSyncProducer(b *testing.B) {
 	// Mock provider
-	provider, _ := newProviderAndTracer()
+	provider, _ := NewTracerProviderAndTracer()
 
 	cfg := newSaramaConfig()
 	// Mock sync producer
@@ -383,7 +383,7 @@ func BenchmarkMockSyncProducer(b *testing.B) {
 
 func BenchmarkWrapAsyncProducer(b *testing.B) {
 	// Mock provider
-	provider, _ := newProviderAndTracer()
+	provider, _ := NewTracerProviderAndTracer()
 
 	cfg := newSaramaConfig()
 	cfg.Producer.Return.Successes = true

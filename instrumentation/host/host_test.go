@@ -61,7 +61,7 @@ func getMetric(impl *metric.MeterImpl, name string, lbl label.KeyValue) float64 
 }
 
 func TestHostCPU(t *testing.T) {
-	impl, provider := metric.NewProvider()
+	impl, provider := metric.NewMeterProvider()
 	err := host.Start(
 		host.WithMeterProvider(provider),
 	)
@@ -135,7 +135,7 @@ func TestHostCPU(t *testing.T) {
 }
 
 func TestHostMemory(t *testing.T) {
-	impl, provider := metric.NewProvider()
+	impl, provider := metric.NewMeterProvider()
 	err := host.Start(
 		host.WithMeterProvider(provider),
 	)
@@ -220,7 +220,7 @@ func sendBytes(t *testing.T, count int) error {
 }
 
 func TestHostNetwork(t *testing.T) {
-	impl, provider := metric.NewProvider()
+	impl, provider := metric.NewMeterProvider()
 	err := host.Start(
 		host.WithMeterProvider(provider),
 	)

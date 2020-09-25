@@ -43,8 +43,8 @@ func assertMetricLabels(t *testing.T, expectedLabels []label.KeyValue, measureme
 func TestHandlerBasics(t *testing.T) {
 	rr := httptest.NewRecorder()
 
-	tracerProvider, tracer := mocktrace.NewProviderAndTracer(instrumentationName)
-	meterimpl, meterProvider := mockmeter.NewProvider()
+	tracerProvider, tracer := mocktrace.NewTracerProviderAndTracer(instrumentationName)
+	meterimpl, meterProvider := mockmeter.NewMeterProvider()
 
 	operation := "test_handler"
 
@@ -102,7 +102,7 @@ func TestHandlerBasics(t *testing.T) {
 func TestHandlerNoWrite(t *testing.T) {
 	rr := httptest.NewRecorder()
 
-	tracerProvider, tracer := mocktrace.NewProviderAndTracer(instrumentationName)
+	tracerProvider, tracer := mocktrace.NewTracerProviderAndTracer(instrumentationName)
 
 	operation := "test_handler"
 	var span trace.Span
@@ -141,7 +141,7 @@ func TestHandlerNoWrite(t *testing.T) {
 func TestResponseWriterOptionalInterfaces(t *testing.T) {
 	rr := httptest.NewRecorder()
 
-	tracerProvider, _ := mocktrace.NewProviderAndTracer(instrumentationName)
+	tracerProvider, _ := mocktrace.NewTracerProviderAndTracer(instrumentationName)
 
 	// ResponseRecorder implements the Flusher interface. Make sure the
 	// wrapped ResponseWriter passed to the handler still implements

@@ -49,7 +49,7 @@ func Middleware(service string, opts ...Option) macaron.Handler {
 		}()
 
 		ctx := otelpropagation.ExtractHTTP(savedCtx, cfg.Propagators, c.Req.Header)
-		opts := []oteltrace.StartOption{
+		opts := []oteltrace.SpanOption{
 			oteltrace.WithAttributes(semconv.NetAttributesFromHTTPRequest("tcp", c.Req.Request)...),
 			oteltrace.WithAttributes(semconv.EndUserAttributesFromHTTPRequest(c.Req.Request)...),
 			oteltrace.WithAttributes(semconv.HTTPServerAttributesFromHTTPRequest(service, "", c.Req.Request)...),

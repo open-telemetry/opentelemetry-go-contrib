@@ -61,7 +61,7 @@ func ExampleExporter() {
 		pusher := push.New(processor, exp, push.WithPeriod(time.Second*10))
 		defer pusher.Stop()
 		pusher.Start()
-		global.SetMeterProvider(pusher.Provider())
+		global.SetMeterProvider(pusher.MeterProvider())
 		meter := global.Meter("marwandist")
 		m := metric.Must(meter).NewInt64ValueRecorder("myrecorder")
 		meter.RecordBatch(context.Background(), []label.KeyValue{label.Int("l", 1)},

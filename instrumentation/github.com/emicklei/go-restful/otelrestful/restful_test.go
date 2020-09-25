@@ -27,6 +27,7 @@ import (
 	"go.opentelemetry.io/contrib/instrumentation/github.com/emicklei/go-restful/otelrestful"
 
 	mocktrace "go.opentelemetry.io/contrib/internal/trace"
+	b3prop "go.opentelemetry.io/contrib/propagators/b3"
 	otelglobal "go.opentelemetry.io/otel/api/global"
 	otelpropagation "go.opentelemetry.io/otel/api/propagation"
 	oteltrace "go.opentelemetry.io/otel/api/trace"
@@ -36,7 +37,7 @@ import (
 const tracerName = "go.opentelemetry.io/contrib/instrumentation/github.com/emicklei/go-restful/otelrestful"
 
 func TestChildSpanFromGlobalTracer(t *testing.T) {
-	otelglobal.SetTraceProvider(&mocktrace.Provider{})
+	otelglobal.SetTracerProvider(&mocktrace.TracerProvider{})
 
 	handlerFunc := func(req *restful.Request, resp *restful.Response) {
 		span := oteltrace.SpanFromContext(req.Request.Context())
@@ -63,7 +64,7 @@ func TestChildSpanFromGlobalTracer(t *testing.T) {
 }
 
 func TestChildSpanFromCustomTracer(t *testing.T) {
-	provider, _ := mocktrace.NewProviderAndTracer(tracerName)
+	provider, _ := mocktrace.NewTracerProviderAndTracer(tracerName)
 
 	handlerFunc := func(req *restful.Request, resp *restful.Response) {
 		span := oteltrace.SpanFromContext(req.Request.Context())
@@ -89,7 +90,7 @@ func TestChildSpanFromCustomTracer(t *testing.T) {
 }
 
 func TestChildSpanNames(t *testing.T) {
-	provider, tracer := mocktrace.NewProviderAndTracer(tracerName)
+	provider, tracer := mocktrace.NewTracerProviderAndTracer(tracerName)
 
 	handlerFunc := func(req *restful.Request, resp *restful.Response) {
 		resp.WriteHeader(http.StatusOK)
@@ -138,7 +139,7 @@ func TestChildSpanNames(t *testing.T) {
 func TestGetSpanNotInstrumented(t *testing.T) {
 	handlerFunc := func(req *restful.Request, resp *restful.Response) {
 		span := oteltrace.SpanFromContext(req.Request.Context())
-		_, ok := span.(oteltrace.NoopSpan)
+		ok := !span.SpanContext().IsValid()
 		assert.True(t, ok)
 		resp.WriteHeader(http.StatusOK)
 	}
@@ -154,7 +155,7 @@ func TestGetSpanNotInstrumented(t *testing.T) {
 }
 
 func TestPropagationWithGlobalPropagators(t *testing.T) {
-	provider, tracer := mocktrace.NewProviderAndTracer(tracerName)
+	provider, tracer := mocktrace.NewTracerProviderAndTracer(tracerName)
 
 	r := httptest.NewRequest("GET", "/user/123", nil)
 	w := httptest.NewRecorder()
@@ -181,8 +182,8 @@ func TestPropagationWithGlobalPropagators(t *testing.T) {
 }
 
 func TestPropagationWithCustomPropagators(t *testing.T) {
-	provider, tracer := mocktrace.NewProviderAndTracer(tracerName)
-	b3 := oteltrace.B3{}
+	provider, tracer := mocktrace.NewTracerProviderAndTracer(tracerName)
+	b3 := b3prop.B3{}
 	props := otelpropagation.New(
 		otelpropagation.WithExtractors(b3),
 		otelpropagation.WithInjectors(b3),
@@ -215,7 +216,7 @@ func TestPropagationWithCustomPropagators(t *testing.T) {
 }
 
 func TestMultiFilters(t *testing.T) {
-	provider, _ := mocktrace.NewProviderAndTracer(tracerName)
+	provider, _ := mocktrace.NewTracerProviderAndTracer(tracerName)
 
 	wrappedFunc := func(tracerName string) restful.RouteFunction {
 		return func(req *restful.Request, resp *restful.Response) {

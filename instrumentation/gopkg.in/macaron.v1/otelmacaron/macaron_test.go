@@ -25,6 +25,7 @@ import (
 	"gopkg.in/macaron.v1"
 
 	mocktrace "go.opentelemetry.io/contrib/internal/trace"
+	b3prop "go.opentelemetry.io/contrib/propagators/b3"
 	otelglobal "go.opentelemetry.io/otel/api/global"
 	otelpropagation "go.opentelemetry.io/otel/api/propagation"
 	oteltrace "go.opentelemetry.io/otel/api/trace"
@@ -32,7 +33,7 @@ import (
 )
 
 func TestChildSpanFromGlobalTracer(t *testing.T) {
-	otelglobal.SetTraceProvider(&mocktrace.Provider{})
+	otelglobal.SetTracerProvider(&mocktrace.TracerProvider{})
 
 	m := macaron.Classic()
 	m.Use(Middleware("foobar"))
@@ -125,7 +126,7 @@ func TestGetSpanNotInstrumented(t *testing.T) {
 	m := macaron.Classic()
 	m.Get("/user/:id", func(ctx *macaron.Context) {
 		span := oteltrace.SpanFromContext(ctx.Req.Request.Context())
-		_, ok := span.(oteltrace.NoopSpan)
+		ok := !span.SpanContext().IsValid()
 		assert.True(t, ok)
 		ctx.Resp.WriteHeader(http.StatusOK)
 	})
@@ -161,7 +162,7 @@ func TestPropagationWithGlobalPropagators(t *testing.T) {
 
 func TestPropagationWithCustomPropagators(t *testing.T) {
 	tracer := mocktrace.NewTracer("test-tracer")
-	b3 := oteltrace.B3{}
+	b3 := b3prop.B3{}
 	props := otelpropagation.New(
 		otelpropagation.WithExtractors(b3),
 		otelpropagation.WithInjectors(b3),
