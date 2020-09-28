@@ -10,6 +10,10 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 
 ## [0.12.0] - 2020-09-25
 
+### Changed
+
+- Replace `WithTracer` with `WithTracerProvider` in the `go.opentelemetry.io/contrib/instrumentation/gopkg.in/macaron.v1/otelmacaron` instrumentation. (#374)
+
 ### Added
 
 - Benchmark tests for the gRPC instrumentation. (#296)
