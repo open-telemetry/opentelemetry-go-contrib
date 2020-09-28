@@ -33,7 +33,7 @@ const (
 	instName = "go.opentelemetry.io/contrib/instrumentation/google.golang.org/grpc/otelgrpc"
 )
 
-var tracer = tracetest.NewTracerProvider().Tracer(instName)
+var tracerProvider = tracetest.NewTracerProvider()
 
 func benchmark(b *testing.B, cOpt []grpc.DialOption, sOpt []grpc.ServerOption) {
 	l := bufconn.Listen(bufSize)
@@ -85,24 +85,32 @@ func BenchmarkNoInstrumentation(b *testing.B) {
 
 func BenchmarkUnaryServerInterceptor(b *testing.B) {
 	benchmark(b, nil, []grpc.ServerOption{
-		grpc.UnaryInterceptor(otelgrpc.UnaryServerInterceptor(tracer)),
+		grpc.UnaryInterceptor(otelgrpc.UnaryServerInterceptor(
+			otelgrpc.WithTracerProvider(tracerProvider),
+		)),
 	})
 }
 
 func BenchmarkStreamServerInterceptor(b *testing.B) {
 	benchmark(b, nil, []grpc.ServerOption{
-		grpc.StreamInterceptor(otelgrpc.StreamServerInterceptor(tracer)),
+		grpc.StreamInterceptor(otelgrpc.StreamServerInterceptor(
+			otelgrpc.WithTracerProvider(tracerProvider),
+		)),
 	})
 }
 
 func BenchmarkUnaryClientInterceptor(b *testing.B) {
 	benchmark(b, []grpc.DialOption{
-		grpc.WithUnaryInterceptor(otelgrpc.UnaryClientInterceptor(tracer)),
+		grpc.WithUnaryInterceptor(otelgrpc.UnaryClientInterceptor(
+			otelgrpc.WithTracerProvider(tracerProvider),
+		)),
 	}, nil)
 }
 
 func BenchmarkStreamClientInterceptor(b *testing.B) {
 	benchmark(b, []grpc.DialOption{
-		grpc.WithStreamInterceptor(otelgrpc.StreamClientInterceptor(tracer)),
+		grpc.WithStreamInterceptor(otelgrpc.StreamClientInterceptor(
+			otelgrpc.WithTracerProvider(tracerProvider),
+		)),
 	}, nil)
 }
