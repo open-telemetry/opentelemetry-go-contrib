@@ -28,10 +28,7 @@ import (
 	"go.opentelemetry.io/otel/api/trace/tracetest"
 )
 
-const (
-	bufSize  = 2048
-	instName = "go.opentelemetry.io/contrib/instrumentation/google.golang.org/grpc/otelgrpc"
-)
+const bufSize = 2048
 
 var tracerProvider = tracetest.NewTracerProvider()
 
