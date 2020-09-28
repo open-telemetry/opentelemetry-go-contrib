@@ -22,7 +22,6 @@ import (
 
 	"go.opentelemetry.io/contrib/instrumentation/google.golang.org/grpc/otelgrpc/example/api"
 	"go.opentelemetry.io/contrib/instrumentation/google.golang.org/grpc/otelgrpc/example/config"
-	"go.opentelemetry.io/otel/api/global"
 
 	"go.opentelemetry.io/contrib/instrumentation/google.golang.org/grpc/otelgrpc"
 
@@ -35,8 +34,8 @@ func main() {
 
 	var conn *grpc.ClientConn
 	conn, err := grpc.Dial(":7777", grpc.WithInsecure(),
-		grpc.WithUnaryInterceptor(otelgrpc.UnaryClientInterceptor(global.Tracer(""))),
-		grpc.WithStreamInterceptor(otelgrpc.StreamClientInterceptor(global.Tracer(""))),
+		grpc.WithUnaryInterceptor(otelgrpc.UnaryClientInterceptor()),
+		grpc.WithStreamInterceptor(otelgrpc.StreamClientInterceptor()),
 	)
 
 	if err != nil {
