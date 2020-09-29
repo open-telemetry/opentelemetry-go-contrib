@@ -208,10 +208,14 @@ func extractMultiple(traceID, spanID, parentSpanID, sampled, flags string) (trac
 		return empty, errInvalidSampledHeader
 	}
 
-	// The only accepted value for Flags is "1". This will set Debug to
-	// true. All other values and omission of header will be ignored.
+	// The only accepted value for Flags is "1". This will set Debug bitmask and
+	// sampled bitmask to 1 since debug implicitly means sampled. All other
+	// values and omission of header will be ignored. According to the spec. User
+	// shouldn't send X-B3-Sampled header along with X-B3-Flags header. Thus we will
+	// ignore X-B3-Sampled header when X-B3-Flags header is sent and valid.
 	if flags == "1" {
-		sc.TraceFlags |= trace.FlagsDebug
+		sc.TraceFlags |= trace.FlagsDebug | trace.FlagsSampled
+		sc.TraceFlags &= ^trace.FlagsDeferred
 	}
 
 	if traceID != "" {
@@ -331,7 +335,7 @@ func extractSingle(contextHeader string) (trace.SpanContext, error) {
 	case "":
 		sc.TraceFlags = trace.FlagsDeferred
 	case "d":
-		sc.TraceFlags = trace.FlagsDebug
+		sc.TraceFlags = trace.FlagsDebug | trace.FlagsSampled
 	case "1":
 		sc.TraceFlags = trace.FlagsSampled
 	case "0":
