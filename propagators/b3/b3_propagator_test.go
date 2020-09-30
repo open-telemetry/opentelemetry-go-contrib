@@ -56,12 +56,12 @@ func TestExtractMultiple(t *testing.T) {
 		},
 		{
 			"", "", "", "", "1",
-			trace.SpanContext{TraceFlags: trace.FlagsDeferred | trace.FlagsDebug},
+			trace.SpanContext{TraceFlags: trace.FlagsSampled | trace.FlagsDebug},
 			nil,
 		},
 		{
 			"", "", "", "0", "1",
-			trace.SpanContext{TraceFlags: trace.FlagsDebug},
+			trace.SpanContext{TraceFlags: trace.FlagsDebug | trace.FlagsSampled},
 			nil,
 		},
 		{
@@ -214,7 +214,7 @@ func TestExtractSingle(t *testing.T) {
 	}{
 		{"0", trace.SpanContext{}, nil},
 		{"1", trace.SpanContext{TraceFlags: trace.FlagsSampled}, nil},
-		{"d", trace.SpanContext{TraceFlags: trace.FlagsDebug}, nil},
+		{"d", trace.SpanContext{TraceFlags: trace.FlagsDebug | trace.FlagsSampled}, nil},
 		{"a", empty, errInvalidSampledByte},
 		{"3", empty, errInvalidSampledByte},
 		{"000000000000007b", empty, errInvalidScope},
