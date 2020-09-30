@@ -2,6 +2,35 @@
 
 Code contained in this directory contains instrumentation for 3rd-party Go packages and some packages from the standard library.
 
+## Instrumentation Packages
+
+The following instrumentation packages are provided for popular Go packages and use-cases.
+
+| Instrumentation Package | Metrics | Traces |
+| :---------------------: | :-----: | :----: |
+| [github.com/astaxie/beego](./github.com/astaxie/beego/otelbeego) | ✓ | ✓ |
+| [github.com/bradfitz/gomemcache](./github.com/bradfitz/gomemcache/memcache/otelmemcache) |  | ✓ |
+| [github.com/emicklei/go-restful](./github.com/emicklei/go-restful/otelrestful) |  | ✓ |
+| [github.com/gin-gonic/gin](./github.com/gin-gonic/gin/otelgin) |  | ✓ |
+| [github.com/gocql/gocql](./github.com/gocql/gocql/otelgocql) | ✓ | ✓ |
+| [github.com/gorilla/mux](./github.com/gorilla/mux/otelmux) |  | ✓ |
+| [github.com/labstack/echo](./github.com/labstack/echo/otelecho) |  | ✓ |
+| [github.com/Shopify/sarama](./github.com/Shopify/sarama/otelsarama) |  | ✓ |
+| [go.mongodb.org/mongo-driver](./go.mongodb.org/mongo-driver/mongo/otelmongo) |  | ✓ |
+| [google.golang.org/grpc](./google.golang.org/grpc/otelgrpc) |  | ✓ |
+| [gopkg.in/macaron.v1](./gopkg.in/macaron.v1/otelmacaron) |  | ✓ |
+| [host](./host) | ✓ |  |
+| [net/http](./net/http/otelhttp) | ✓ | ✓ |
+| [net/http/httptrace](./net/http/httptrace/otelhttptrace) |  | ✓ |
+| [runtime](./runtime) | ✓ |  |
+
+
+Additionally, these are the known instrumentation packages that exist outside of this repository for popular Go packages.
+
+| Package Name | Documentation | Notes |
+| :----------: | :-----------: | :---: |
+| [`github.com/go-redis/redis/v8/redisext`](https://github.com/go-redis/redis/blob/v8.0.0-beta.5/redisext/otel.go) | [Go Docs](https://pkg.go.dev/github.com/go-redis/redis/v8@v8.0.0-beta.5.0.20200614113957-5b4d00c217b0/redisext?tab=doc) | Trace only; add the hook found [here](https://github.com/go-redis/redis/blob/v8.0.0-beta.5/redisext/otel.go) to your go-redis client. |
+
 ## Organization
 
 In order to ensure the maintainability and discoverability of instrumentation packages, the following guidelines MUST be followed.
@@ -40,11 +69,3 @@ Additionally the following guidelines for package composition need to be followe
   Also, packages MUST use the default `TracerProvider`, `MeterProvider`, and `Propagators` supplied by the `global` package if no optional one is provided.
 - All instrumentation packages MUST NOT provide an option to accept a `Tracer` or `Meter`.
 - All instrumentation packages MUST create any used `Tracer` or `Meter` with a name matching the instrumentation package name.
-
-## Additional Instrumentation Packages
-
-Below are additional instrumentation packages outside of the opentelemetry-go-contrib repo:
-
-| Package Name | Documentation | Notes |
-| :----------: | :-----------: | :---: |
-| [`github.com/go-redis/redis/v8/redisext`](https://github.com/go-redis/redis/blob/v8.0.0-beta.5/redisext/otel.go) | [Go Docs](https://pkg.go.dev/github.com/go-redis/redis/v8@v8.0.0-beta.5.0.20200614113957-5b4d00c217b0/redisext?tab=doc) | Trace only; add the hook found [here](https://github.com/go-redis/redis/blob/v8.0.0-beta.5/redisext/otel.go) to your go-redis client. |
