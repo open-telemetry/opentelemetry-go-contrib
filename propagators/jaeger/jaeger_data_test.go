@@ -192,4 +192,78 @@ var invalidExtractHeaders = []extractTest{
 			jaegerHeader + "not": fmt.Sprintf("%s:%s:0:1", traceID32Str, spanIDStr),
 		},
 	},
+	{
+		name: "empty header value",
+		headers: map[string]string{
+			jaegerHeader: "",
+		},
+	},
+}
+
+type injectTest struct {
+	name        string
+	sc          trace.SpanContext
+	wantHeaders map[string]string
+}
+
+var injectHeaders = []injectTest{
+	{
+		name: "sampled",
+		sc: trace.SpanContext{
+			TraceID:    traceID,
+			SpanID:     spanID,
+			TraceFlags: trace.FlagsSampled,
+		},
+		wantHeaders: map[string]string{
+			jaegerHeader: fmt.Sprintf("%s:%s:0:1", traceID32Str, spanIDStr),
+		},
+	},
+	{
+		name: "debug",
+		sc: trace.SpanContext{
+			TraceID:    traceID,
+			SpanID:     spanID,
+			TraceFlags: trace.FlagsSampled | trace.FlagsDebug,
+		},
+		wantHeaders: map[string]string{
+			jaegerHeader: fmt.Sprintf("%s:%s:0:3", traceID32Str, spanIDStr),
+		},
+	},
+	{
+		name: "not sampled",
+		sc: trace.SpanContext{
+			TraceID: traceID,
+			SpanID:  spanID,
+		},
+		wantHeaders: map[string]string{
+			jaegerHeader: fmt.Sprintf("%s:%s:0:0", traceID32Str, spanIDStr),
+		},
+	},
+}
+
+var invalidInjectHeaders = []injectTest{
+	{
+		name: "empty",
+		sc:   trace.SpanContext{},
+	},
+	{
+		name: "missing traceID",
+		sc: trace.SpanContext{
+			SpanID:     spanID,
+			TraceFlags: trace.FlagsSampled,
+		},
+	},
+	{
+		name: "missing spanID",
+		sc: trace.SpanContext{
+			TraceID:    traceID,
+			TraceFlags: trace.FlagsSampled,
+		},
+	},
+	{
+		name: "missing both traceID and spanID",
+		sc: trace.SpanContext{
+			TraceFlags: trace.FlagsSampled,
+		},
+	},
 }

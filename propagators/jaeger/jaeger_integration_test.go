@@ -21,9 +21,15 @@ import (
 
 	"github.com/google/go-cmp/cmp"
 
+	mocktracer "go.opentelemetry.io/contrib/internal/trace"
 	"go.opentelemetry.io/contrib/propagators/jaeger"
 	"go.opentelemetry.io/otel/api/propagation"
 	"go.opentelemetry.io/otel/api/trace"
+)
+
+var (
+	mockTracer  = mocktracer.NewTracer("")
+	_, mockSpan = mockTracer.Start(context.Background(), "")
 )
 
 func TestExtractJaeger(t *testing.T) {
@@ -57,6 +63,55 @@ func TestExtractJaeger(t *testing.T) {
 				resSc := trace.RemoteSpanContextFromContext(ctx)
 				if diff := cmp.Diff(resSc, tc.expected); diff != "" {
 					t.Errorf("%s: %s: -got +want %s", tg.name, tc.name, diff)
+				}
+			})
+		}
+	}
+}
+
+type testSpan struct {
+	trace.Span
+	sc trace.SpanContext
+}
+
+func (s testSpan) SpanContext() trace.SpanContext {
+	return s.sc
+}
+
+func TestInjectJaeger(t *testing.T) {
+	testGroup := []struct {
+		name      string
+		testcases []injectTest
+	}{
+		{
+			name:      "valid test case",
+			testcases: injectHeaders,
+		},
+		{
+			name:      "invalid test case",
+			testcases: invalidInjectHeaders,
+		},
+	}
+
+	for _, tg := range testGroup {
+		for _, tc := range tg.testcases {
+			propagator := jaeger.Jaeger{}
+			t.Run(tc.name, func(t *testing.T) {
+				req, _ := http.NewRequest("GET", "http://example.com", nil)
+				ctx := trace.ContextWithSpan(
+					context.Background(),
+					testSpan{
+						Span: mockSpan,
+						sc:   tc.sc,
+					},
+				)
+				propagator.Inject(ctx, req.Header)
+
+				for h, v := range tc.wantHeaders {
+					result, want := req.Header.Get(h), v
+					if diff := cmp.Diff(result, want); diff != "" {
+						t.Errorf("%s: %s, header=%s: -got +want %s", tg.name, tc.name, h, diff)
+					}
 				}
 			})
 		}

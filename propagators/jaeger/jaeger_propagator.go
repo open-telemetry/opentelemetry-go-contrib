@@ -44,7 +44,6 @@ const (
 var (
 	empty = trace.EmptySpanContext()
 
-	errEmptyContext             = errors.New("empty context found in Jaeger propagation")
 	errMalformedTraceContextVal = errors.New("header value of uber-trace-id should contain four different part separated by : ")
 	errInvalidTraceIDLength     = errors.New("invalid trace id length, must be either 16 or 32")
 	errMalformedTraceID         = errors.New("cannot decode trace id from header, should be a string of hex, lowercase trace id can't be all zero")
@@ -73,7 +72,9 @@ func (jaeger Jaeger) Inject(ctx context.Context, supplier propagation.HTTPSuppli
 		headers = append(headers, fmt.Sprintf("%x", flagsNotSampled))
 	}
 
-	supplier.Set(jaegerHeader, strings.Join(headers, separator))
+	if len(headers) == 4 {
+		supplier.Set(jaegerHeader, strings.Join(headers, separator))
+	}
 }
 
 func (jaeger Jaeger) Extract(ctx context.Context, supplier propagation.HTTPSupplier) context.Context {
@@ -89,10 +90,6 @@ func (jaeger Jaeger) Extract(ctx context.Context, supplier propagation.HTTPSuppl
 }
 
 func extract(headerVal string) (trace.SpanContext, error) {
-	if headerVal == "" {
-		return empty, errEmptyContext
-	}
-
 	var (
 		sc  = trace.SpanContext{}
 		err error
