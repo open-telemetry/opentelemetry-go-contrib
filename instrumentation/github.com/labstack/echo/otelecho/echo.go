@@ -89,7 +89,7 @@ func Middleware(service string, opts ...Option) echo.MiddlewareFunc {
 			span.SetAttributes(attrs...)
 			span.SetStatus(spanStatus, spanMessage)
 
-			return err
+			return nil
 		}
 	}
 }
