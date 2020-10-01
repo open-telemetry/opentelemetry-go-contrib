@@ -84,6 +84,7 @@ func (t *Transport) RoundTrip(r *http.Request) (*http.Response, error) {
 	opts := append([]trace.SpanOption{}, t.spanStartOptions...) // start with the configured options
 
 	ctx, span := t.tracer.Start(r.Context(), t.spanNameFormatter("", r), opts...)
+	defer span.End()
 
 	r = r.WithContext(ctx)
 	span.SetAttributes(semconv.HTTPClientAttributesFromHTTPRequest(r)...)
@@ -92,7 +93,6 @@ func (t *Transport) RoundTrip(r *http.Request) (*http.Response, error) {
 	res, err := t.rt.RoundTrip(r)
 	if err != nil {
 		span.RecordError(ctx, err, trace.WithErrorStatus(codes.Internal))
-		span.End()
 		return res, err
 	}
 
