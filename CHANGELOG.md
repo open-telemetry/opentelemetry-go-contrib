@@ -8,6 +8,10 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 
 ## [Unreleased]
 
+### Fixed
+
+- The import comment in `go.opentelemetry.io/contrib/instrumentation/net/http/otelhttp` is now correctly quoted. (#379)
+
 ## [0.12.0] - 2020-09-25
 
 ### Added
