@@ -134,8 +134,6 @@ github.com/stretchr/testify v1.3.0/go.mod h1:M5WIy9Dh21IEIfnGCwXGc5bZfKNJtfHm1UV
 github.com/stretchr/testify v1.4.0/go.mod h1:j7eGeouHqKxXV5pUuKE4zz7dFj8WfuZ+81PSLYec5m4=
 github.com/stretchr/testify v1.6.1 h1:hDPOHmpOpP40lSULcqw7IrRb/u7w6RpDC9399XyoNd0=
 github.com/stretchr/testify v1.6.1/go.mod h1:6Fq8oRcR53rry900zMqJjRRixrwX3KX962/h/Wwjteg=
-go.opentelemetry.io/contrib v0.12.0 h1:vLtYifaYQD8i9ncT07vLqUmo2RivECfpNJ2kv3YKnK0=
-go.opentelemetry.io/contrib v0.12.0/go.mod h1:onlxH6TKFRkW2Xgc5IO37kPYz3v7wMzh/FrBxsQxCt4=
 go.opentelemetry.io/otel v0.12.0 h1:bwWaPd/h2q+U6KdKaAiOS5GLwOMd1LDt9iNaeyIoAI8=
 go.opentelemetry.io/otel v0.12.0/go.mod h1:dlSNewoRYikTkotEnxdmuBHgzT+k/idJSfDv/FxEnOY=
 go.opentelemetry.io/otel/exporters/metric/prometheus v0.12.0 h1:QHLoNZWJ5j6Hn8AUV3fe95Qg6khcMx33Gzp9I1tnKlM=

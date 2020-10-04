@@ -2,6 +2,12 @@ module go.opentelemetry.io/opentelemetry-go-contrib/instrumentation/gopkg.in/mac
 
 go 1.14
 
+replace (
+	go.opentelemetry.io/contrib => ../../../../../
+	go.opentelemetry.io/contrib/instrumentation/gopkg.in/macaron.v1/otelmacaron => ../
+	go.opentelemetry.io/contrib/propagators => ../../../../../propagators
+)
+
 require (
 	go.opentelemetry.io/contrib/instrumentation/gopkg.in/macaron.v1/otelmacaron v0.12.0
 	go.opentelemetry.io/otel v0.12.0
