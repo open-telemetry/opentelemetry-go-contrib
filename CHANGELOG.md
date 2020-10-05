@@ -14,6 +14,7 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 
 ### Fixed
 
+- The `go.opentelemetry.io/contrib/instrumentation/github.com/labstack/echo/otelecho.Middleware` no longer sends duplicate errors to the global `ErrorHandler`. (#377, #364)
 - The import comment in `go.opentelemetry.io/contrib/instrumentation/net/http/otelhttp` is now correctly quoted. (#379)
 
 ## [0.12.0] - 2020-09-25
@@ -123,7 +124,6 @@ This release upgrades its [go.opentelemetry.io/otel](https://github.com/open-tel
 - Bump github.com/emicklei/go-restful/v3 from 3.0.0 to 3.2.0 in /instrumentation/github.com/emicklei/go-restful. (#133)
 - Update dependabot configuration to correctly check all included packages. (#131)
 - Update `RELEASING.md` with correct `tag.sh` command. (#130)
-
 
 ## [0.8.0] - 2020-07-10
 
