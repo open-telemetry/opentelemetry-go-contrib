@@ -144,7 +144,7 @@ var extractHeaders = []extractTest{
 		wantSc: trace.SpanContext{
 			TraceID:    traceID,
 			SpanID:     spanID,
-			TraceFlags: trace.FlagsDeferred | trace.FlagsDebug,
+			TraceFlags: trace.FlagsSampled | trace.FlagsDebug,
 		},
 	},
 	{
@@ -163,8 +163,7 @@ var extractHeaders = []extractTest{
 	},
 	{
 		// spec explicitly states "Debug implies an accept decision, so don't
-		// also send the X-B3-Sampled header", make sure sampling is
-		// deferred.
+		// also send the X-B3-Sampled header", make sure sampling is set in this case.
 		name: "multiple: debug flag set and sampling state is deny",
 		headers: map[string]string{
 			b3TraceID: traceIDStr,
@@ -175,7 +174,7 @@ var extractHeaders = []extractTest{
 		wantSc: trace.SpanContext{
 			TraceID:    traceID,
 			SpanID:     spanID,
-			TraceFlags: trace.FlagsDebug,
+			TraceFlags: trace.FlagsDebug | trace.FlagsSampled,
 		},
 	},
 	{
@@ -251,7 +250,7 @@ var extractHeaders = []extractTest{
 		wantSc: trace.SpanContext{
 			TraceID:    traceID,
 			SpanID:     spanID,
-			TraceFlags: trace.FlagsDebug,
+			TraceFlags: trace.FlagsDebug | trace.FlagsSampled,
 		},
 	},
 	{
