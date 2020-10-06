@@ -52,8 +52,7 @@ var (
 	errMalformedFlag            = errors.New("cannot decode flag")
 )
 
-type Jaeger struct {
-}
+type Jaeger struct{}
 
 var _ propagation.HTTPPropagator = &Jaeger{}
 
@@ -72,9 +71,7 @@ func (jaeger Jaeger) Inject(ctx context.Context, supplier propagation.HTTPSuppli
 		headers = append(headers, fmt.Sprintf("%x", flagsNotSampled))
 	}
 
-	if len(headers) == 4 {
-		supplier.Set(jaegerHeader, strings.Join(headers, separator))
-	}
+	supplier.Set(jaegerHeader, strings.Join(headers, separator))
 }
 
 func (jaeger Jaeger) Extract(ctx context.Context, supplier propagation.HTTPSupplier) context.Context {
@@ -128,7 +125,7 @@ func extract(headerVal string) (trace.SpanContext, error) {
 		}
 	}
 
-	// skip third part as it is desecrated
+	// skip third part as it is deprecated
 
 	// extract flag
 	if parts[3] != "" {

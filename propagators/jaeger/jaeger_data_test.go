@@ -21,7 +21,7 @@ import (
 )
 
 const (
-	traceID16Str = "0000000000000000a3ce929d0e0e4736"
+	traceID16Str = "a3ce929d0e0e4736"
 	traceID32Str = "0000000000000000a3ce929d0e0e4736"
 	spanIDStr    = "00f067aa0ba902b7"
 	jaegerHeader = "uber-trace-id"
