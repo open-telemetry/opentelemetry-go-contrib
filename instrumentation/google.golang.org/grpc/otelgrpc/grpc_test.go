@@ -27,7 +27,6 @@ import (
 	"google.golang.org/grpc/test/bufconn"
 
 	"go.opentelemetry.io/contrib/instrumentation/google.golang.org/grpc/otelgrpc"
-	"go.opentelemetry.io/otel/api/trace"
 	"go.opentelemetry.io/otel/api/trace/tracetest"
 	"go.opentelemetry.io/otel/label"
 	"go.opentelemetry.io/otel/semconv"
@@ -73,51 +72,50 @@ func doCalls(cOpt []grpc.DialOption, sOpt []grpc.ServerOption) error {
 
 func TestInterceptors(t *testing.T) {
 	clientUnarySR := new(tracetest.StandardSpanRecorder)
-	clientUnaryTracer := tracetest.NewTracerProvider(tracetest.WithSpanRecorder(clientUnarySR)).Tracer("TestUnaryClientInterceptor")
+	clientUnaryTP := tracetest.NewTracerProvider(tracetest.WithSpanRecorder(clientUnarySR))
 
 	clientStreamSR := new(tracetest.StandardSpanRecorder)
-	clientStreamTracer := tracetest.NewTracerProvider(tracetest.WithSpanRecorder(clientStreamSR)).Tracer("TestStreamClientInterceptor")
+	clientStreamTP := tracetest.NewTracerProvider(tracetest.WithSpanRecorder(clientStreamSR))
 
 	serverUnarySR := new(tracetest.StandardSpanRecorder)
-	serverUnaryTracer := tracetest.NewTracerProvider(tracetest.WithSpanRecorder(serverUnarySR)).Tracer("TestUnaryServerInterceptor")
+	serverUnaryTP := tracetest.NewTracerProvider(tracetest.WithSpanRecorder(serverUnarySR))
 
 	serverStreamSR := new(tracetest.StandardSpanRecorder)
-	serverStreamTracer := tracetest.NewTracerProvider(tracetest.WithSpanRecorder(serverStreamSR)).Tracer("TestStreamServerInterceptor")
+	serverStreamTP := tracetest.NewTracerProvider(tracetest.WithSpanRecorder(serverStreamSR))
 
 	assert.NoError(t, doCalls(
 		[]grpc.DialOption{
-			grpc.WithUnaryInterceptor(otelgrpc.UnaryClientInterceptor(clientUnaryTracer)),
-			grpc.WithStreamInterceptor(otelgrpc.StreamClientInterceptor(clientStreamTracer)),
+			grpc.WithUnaryInterceptor(otelgrpc.UnaryClientInterceptor(otelgrpc.WithTracerProvider(clientUnaryTP))),
+			grpc.WithStreamInterceptor(otelgrpc.StreamClientInterceptor(otelgrpc.WithTracerProvider(clientStreamTP))),
 		},
 		[]grpc.ServerOption{
-			grpc.UnaryInterceptor(otelgrpc.UnaryServerInterceptor(serverUnaryTracer)),
-			grpc.StreamInterceptor(otelgrpc.StreamServerInterceptor(serverStreamTracer)),
+			grpc.UnaryInterceptor(otelgrpc.UnaryServerInterceptor(otelgrpc.WithTracerProvider(serverUnaryTP))),
+			grpc.StreamInterceptor(otelgrpc.StreamServerInterceptor(otelgrpc.WithTracerProvider(serverStreamTP))),
 		},
 	))
 
 	t.Run("UnaryClientSpans", func(t *testing.T) {
-		checkUnaryClientSpans(t, clientUnaryTracer, clientUnarySR.Completed())
+		checkUnaryClientSpans(t, clientUnarySR.Completed())
 	})
 
 	t.Run("StreamClientSpans", func(t *testing.T) {
-		checkStreamClientSpans(t, clientStreamTracer, clientStreamSR.Completed())
+		checkStreamClientSpans(t, clientStreamSR.Completed())
 	})
 
 	t.Run("UnaryServerSpans", func(t *testing.T) {
-		checkUnaryServerSpans(t, serverUnaryTracer, serverUnarySR.Completed())
+		checkUnaryServerSpans(t, serverUnarySR.Completed())
 	})
 
 	t.Run("StreamServerSpans", func(t *testing.T) {
-		checkStreamServerSpans(t, serverStreamTracer, serverStreamSR.Completed())
+		checkStreamServerSpans(t, serverStreamSR.Completed())
 	})
 }
 
-func checkUnaryClientSpans(t *testing.T, tracer trace.Tracer, spans []*tracetest.Span) {
+func checkUnaryClientSpans(t *testing.T, spans []*tracetest.Span) {
 	require.Len(t, spans, 2)
 
 	emptySpan := spans[0]
 	assert.True(t, emptySpan.Ended())
-	assert.Equal(t, tracer, emptySpan.Tracer())
 	assert.Equal(t, "grpc.testing.TestService/EmptyCall", emptySpan.Name())
 	assert.Equal(t, []tracetest.Event{
 		{
@@ -145,7 +143,6 @@ func checkUnaryClientSpans(t *testing.T, tracer trace.Tracer, spans []*tracetest
 
 	largeSpan := spans[1]
 	assert.True(t, largeSpan.Ended())
-	assert.Equal(t, tracer, largeSpan.Tracer())
 	assert.Equal(t, "grpc.testing.TestService/UnaryCall", largeSpan.Name())
 	assert.Equal(t, []tracetest.Event{
 		{
@@ -174,12 +171,11 @@ func checkUnaryClientSpans(t *testing.T, tracer trace.Tracer, spans []*tracetest
 	}, largeSpan.Attributes())
 }
 
-func checkStreamClientSpans(t *testing.T, tracer trace.Tracer, spans []*tracetest.Span) {
+func checkStreamClientSpans(t *testing.T, spans []*tracetest.Span) {
 	require.Len(t, spans, 3)
 
 	streamInput := spans[0]
 	assert.True(t, streamInput.Ended())
-	assert.Equal(t, tracer, streamInput.Tracer())
 	assert.Equal(t, "grpc.testing.TestService/StreamingInputCall", streamInput.Name())
 	// sizes from reqSizes in "google.golang.org/grpc/interop".
 	assert.Equal(t, []tracetest.Event{
@@ -225,7 +221,6 @@ func checkStreamClientSpans(t *testing.T, tracer trace.Tracer, spans []*tracetes
 
 	streamOutput := spans[1]
 	assert.True(t, streamOutput.Ended())
-	assert.Equal(t, tracer, streamOutput.Tracer())
 	assert.Equal(t, "grpc.testing.TestService/StreamingOutputCall", streamOutput.Name())
 	// sizes from respSizes in "google.golang.org/grpc/interop".
 	assert.Equal(t, []tracetest.Event{
@@ -278,7 +273,6 @@ func checkStreamClientSpans(t *testing.T, tracer trace.Tracer, spans []*tracetes
 
 	pingPong := spans[2]
 	assert.True(t, pingPong.Ended())
-	assert.Equal(t, tracer, pingPong.Tracer())
 	assert.Equal(t, "grpc.testing.TestService/FullDuplexCall", pingPong.Name())
 	assert.Equal(t, []tracetest.Event{
 		{
@@ -353,12 +347,11 @@ func checkStreamClientSpans(t *testing.T, tracer trace.Tracer, spans []*tracetes
 	}, pingPong.Attributes())
 }
 
-func checkStreamServerSpans(t *testing.T, tracer trace.Tracer, spans []*tracetest.Span) {
+func checkStreamServerSpans(t *testing.T, spans []*tracetest.Span) {
 	require.Len(t, spans, 3)
 
 	streamInput := spans[0]
 	assert.True(t, streamInput.Ended())
-	assert.Equal(t, tracer, streamInput.Tracer())
 	assert.Equal(t, "grpc.testing.TestService/StreamingInputCall", streamInput.Name())
 	// sizes from reqSizes in "google.golang.org/grpc/interop".
 	assert.Equal(t, []tracetest.Event{
@@ -411,7 +404,6 @@ func checkStreamServerSpans(t *testing.T, tracer trace.Tracer, spans []*tracetes
 
 	streamOutput := spans[1]
 	assert.True(t, streamOutput.Ended())
-	assert.Equal(t, tracer, streamOutput.Tracer())
 	assert.Equal(t, "grpc.testing.TestService/StreamingOutputCall", streamOutput.Name())
 	// sizes from respSizes in "google.golang.org/grpc/interop".
 	assert.Equal(t, []tracetest.Event{
@@ -464,7 +456,6 @@ func checkStreamServerSpans(t *testing.T, tracer trace.Tracer, spans []*tracetes
 
 	pingPong := spans[2]
 	assert.True(t, pingPong.Ended())
-	assert.Equal(t, tracer, pingPong.Tracer())
 	assert.Equal(t, "grpc.testing.TestService/FullDuplexCall", pingPong.Name())
 	assert.Equal(t, []tracetest.Event{
 		{
@@ -539,12 +530,11 @@ func checkStreamServerSpans(t *testing.T, tracer trace.Tracer, spans []*tracetes
 	}, pingPong.Attributes())
 }
 
-func checkUnaryServerSpans(t *testing.T, tracer trace.Tracer, spans []*tracetest.Span) {
+func checkUnaryServerSpans(t *testing.T, spans []*tracetest.Span) {
 	require.Len(t, spans, 2)
 
 	emptySpan := spans[0]
 	assert.True(t, emptySpan.Ended())
-	assert.Equal(t, tracer, emptySpan.Tracer())
 	assert.Equal(t, "grpc.testing.TestService/EmptyCall", emptySpan.Name())
 	assert.Equal(t, []tracetest.Event{
 		{
@@ -572,7 +562,6 @@ func checkUnaryServerSpans(t *testing.T, tracer trace.Tracer, spans []*tracetest
 
 	largeSpan := spans[1]
 	assert.True(t, largeSpan.Ended())
-	assert.Equal(t, tracer, largeSpan.Tracer())
 	assert.Equal(t, "grpc.testing.TestService/UnaryCall", largeSpan.Name())
 	assert.Equal(t, []tracetest.Event{
 		{

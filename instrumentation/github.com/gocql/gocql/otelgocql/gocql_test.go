@@ -25,69 +25,24 @@ import (
 
 	"github.com/stretchr/testify/require"
 
+	"go.opentelemetry.io/otel/api/metric"
 	"go.opentelemetry.io/otel/api/trace"
 	"go.opentelemetry.io/otel/semconv"
-
-	"go.opentelemetry.io/otel/sdk/metric/controller/push"
-	"go.opentelemetry.io/otel/sdk/metric/processor/basic"
-	"go.opentelemetry.io/otel/sdk/metric/selector/simple"
 
 	"github.com/gocql/gocql"
 	"github.com/stretchr/testify/assert"
 
+	mockmeter "go.opentelemetry.io/contrib/internal/metric"
 	mocktracer "go.opentelemetry.io/contrib/internal/trace"
 	"go.opentelemetry.io/contrib/internal/util"
 
-	"go.opentelemetry.io/otel/api/metric"
 	"go.opentelemetry.io/otel/label"
-	export "go.opentelemetry.io/otel/sdk/export/metric"
-	"go.opentelemetry.io/otel/sdk/export/metric/aggregation"
 )
 
 const (
 	keyspace  string = "gotest"
 	tableName string = "test_table"
 )
-
-var exporter *mockExporter
-
-// mockExporter provides an exporter to access metrics
-// used for testing puporses only.
-type mockExporter struct {
-	t       *testing.T
-	records []export.Record
-}
-
-func (mockExporter) ExportKindFor(*metric.Descriptor, aggregation.Kind) export.ExportKind {
-	return export.PassThroughExporter
-}
-
-func (e *mockExporter) Export(_ context.Context, set export.CheckpointSet) error {
-	if err := set.ForEach(e, func(record export.Record) error {
-		e.records = append(e.records, record)
-		return nil
-	}); err != nil {
-		e.t.Fatal(err)
-		return err
-	}
-	return nil
-}
-
-// mockExportPipeline returns a push controller with a mockExporter.
-func mockExportPipeline(t *testing.T) *push.Controller {
-	var records []export.Record
-	exporter = &mockExporter{t, records}
-	controller := push.New(
-		basic.New(
-			simple.NewWithExactDistribution(),
-			exporter,
-		),
-		exporter,
-		push.WithPeriod(1*time.Second),
-	)
-	controller.Start()
-	return controller
-}
 
 type mockTracerProvider struct {
 	tracer *mocktracer.Tracer
@@ -112,17 +67,18 @@ func (m *mockConnectObserver) ObserveConnect(observedConnect gocql.ObservedConne
 }
 
 type testRecord struct {
-	Name      string
-	MeterName string
-	Labels    []label.KeyValue
-	Number    metric.Number
+	name       string
+	meterName  string
+	labels     []label.KeyValue
+	number     metric.Number
+	numberKind metric.NumberKind
 }
 
 func TestQuery(t *testing.T) {
-	controller := getController(t)
 	defer afterEach()
 	cluster := getCluster()
 	tracerProvider := newTracerProvider()
+	meterImpl, meterProvider := mockmeter.NewMeterProvider()
 
 	ctx, parentSpan := tracerProvider.tracer.Start(context.Background(), "gocql-test")
 
@@ -130,7 +86,7 @@ func TestQuery(t *testing.T) {
 		ctx,
 		cluster,
 		WithTracerProvider(tracerProvider),
-		WithMeterProvider(controller.MeterProvider()),
+		WithMeterProvider(meterProvider),
 		WithConnectInstrumentation(false),
 	)
 	require.NoError(t, err)
@@ -169,14 +125,13 @@ func TestQuery(t *testing.T) {
 	}
 
 	// Check metrics
-	controller.Stop()
-
-	require.Len(t, exporter.records, 3)
+	actual := obtainTestRecords(meterImpl.MeasurementBatches)
+	require.Len(t, actual, 3)
 	expected := []testRecord{
 		{
-			Name:      "db.cassandra.queries",
-			MeterName: instrumentationName,
-			Labels: []label.KeyValue{
+			name:      "db.cassandra.queries",
+			meterName: instrumentationName,
+			labels: []label.KeyValue{
 				cassDBSystem(),
 				cassPeerIP("127.0.0.1"),
 				cassPeerPort(9042),
@@ -186,12 +141,12 @@ func TestQuery(t *testing.T) {
 				cassKeyspace(keyspace),
 				cassStatement(insertStmt),
 			},
-			Number: 1,
+			number: 1,
 		},
 		{
-			Name:      "db.cassandra.rows",
-			MeterName: instrumentationName,
-			Labels: []label.KeyValue{
+			name:      "db.cassandra.rows",
+			meterName: instrumentationName,
+			labels: []label.KeyValue{
 				cassDBSystem(),
 				cassPeerIP("127.0.0.1"),
 				cassPeerPort(9042),
@@ -200,12 +155,12 @@ func TestQuery(t *testing.T) {
 				cassHostState("UP"),
 				cassKeyspace(keyspace),
 			},
-			Number: 0,
+			number: 0,
 		},
 		{
-			Name:      "db.cassandra.latency",
-			MeterName: instrumentationName,
-			Labels: []label.KeyValue{
+			name:      "db.cassandra.latency",
+			meterName: instrumentationName,
+			labels: []label.KeyValue{
 				cassDBSystem(),
 				cassPeerIP("127.0.0.1"),
 				cassPeerPort(9042),
@@ -217,34 +172,30 @@ func TestQuery(t *testing.T) {
 		},
 	}
 
-	for _, record := range exporter.records {
-		name := record.Descriptor().Name()
-		agg := record.Aggregation()
-		switch name {
+	for _, record := range actual {
+		switch record.name {
 		case "db.cassandra.queries":
 			recordEqual(t, expected[0], record)
-			numberEqual(t, expected[0].Number, agg)
+			assert.Equal(t, expected[0].number, record.number)
 		case "db.cassandra.rows":
 			recordEqual(t, expected[1], record)
-			numberEqual(t, expected[1].Number, agg)
+			assert.Equal(t, expected[1].number, record.number)
 		case "db.cassandra.latency":
 			recordEqual(t, expected[2], record)
 			// The latency will vary, so just check that it exists
-			if _, ok := agg.(aggregation.MinMaxSumCount); !ok {
-				t.Fatal("missing aggregation in latency record")
-			}
+			assert.True(t, !record.number.IsZero(record.numberKind))
 		default:
-			t.Fatalf("wrong metric %s", name)
+			t.Fatalf("wrong metric %s", record.name)
 		}
 	}
 
 }
 
 func TestBatch(t *testing.T) {
-	controller := getController(t)
 	defer afterEach()
 	cluster := getCluster()
 	tracerProvider := newTracerProvider()
+	meterImpl, meterProvider := mockmeter.NewMeterProvider()
 
 	ctx, parentSpan := tracerProvider.tracer.Start(context.Background(), "gocql-test")
 
@@ -252,7 +203,7 @@ func TestBatch(t *testing.T) {
 		ctx,
 		cluster,
 		WithTracerProvider(tracerProvider),
-		WithMeterProvider(controller.MeterProvider()),
+		WithMeterProvider(meterProvider),
 		WithConnectInstrumentation(false),
 	)
 	require.NoError(t, err)
@@ -285,15 +236,14 @@ func TestBatch(t *testing.T) {
 		assertConnectionLevelAttributes(t, span)
 	}
 
-	controller.Stop()
-
 	// Check metrics
-	require.Len(t, exporter.records, 2)
+	actual := obtainTestRecords(meterImpl.MeasurementBatches)
+	require.Len(t, actual, 2)
 	expected := []testRecord{
 		{
-			Name:      "db.cassandra.batch.queries",
-			MeterName: instrumentationName,
-			Labels: []label.KeyValue{
+			name:      "db.cassandra.batch.queries",
+			meterName: instrumentationName,
+			labels: []label.KeyValue{
 				cassDBSystem(),
 				cassPeerIP("127.0.0.1"),
 				cassPeerPort(9042),
@@ -302,12 +252,12 @@ func TestBatch(t *testing.T) {
 				cassHostState("UP"),
 				cassKeyspace(keyspace),
 			},
-			Number: 1,
+			number: 1,
 		},
 		{
-			Name:      "db.cassandra.latency",
-			MeterName: instrumentationName,
-			Labels: []label.KeyValue{
+			name:      "db.cassandra.latency",
+			meterName: instrumentationName,
+			labels: []label.KeyValue{
 				cassDBSystem(),
 				cassPeerIP("127.0.0.1"),
 				cassPeerPort(9042),
@@ -319,30 +269,26 @@ func TestBatch(t *testing.T) {
 		},
 	}
 
-	for _, record := range exporter.records {
-		name := record.Descriptor().Name()
-		agg := record.Aggregation()
-		switch name {
+	for _, record := range actual {
+		switch record.name {
 		case "db.cassandra.batch.queries":
 			recordEqual(t, expected[0], record)
-			numberEqual(t, expected[0].Number, agg)
+			assert.Equal(t, expected[0].number, record.number)
 		case "db.cassandra.latency":
 			recordEqual(t, expected[1], record)
-			if _, ok := agg.(aggregation.MinMaxSumCount); !ok {
-				t.Fatal("missing aggregation in latency record")
-			}
+			assert.True(t, !record.number.IsZero(record.numberKind))
 		default:
-			t.Fatalf("wrong metric %s", name)
+			t.Fatalf("wrong metric %s", record.name)
 		}
 	}
 
 }
 
 func TestConnection(t *testing.T) {
-	controller := getController(t)
 	defer afterEach()
 	cluster := getCluster()
 	tracerProvider := newTracerProvider()
+	meterImpl, meterProvider := mockmeter.NewMeterProvider()
 	connectObserver := &mockConnectObserver{0}
 	ctx := context.Background()
 
@@ -350,7 +296,7 @@ func TestConnection(t *testing.T) {
 		ctx,
 		cluster,
 		WithTracerProvider(tracerProvider),
-		WithMeterProvider(controller.MeterProvider()),
+		WithMeterProvider(meterProvider),
 		WithConnectObserver(connectObserver),
 	)
 	require.NoError(t, err)
@@ -361,8 +307,6 @@ func TestConnection(t *testing.T) {
 
 	assert.Less(t, 0, connectObserver.callCount)
 
-	controller.Stop()
-
 	// Verify the span attributes
 	for _, span := range spans {
 		assert.Equal(t, cassConnectName, span.Name)
@@ -371,11 +315,12 @@ func TestConnection(t *testing.T) {
 	}
 
 	// Verify the metrics
+	actual := obtainTestRecords(meterImpl.MeasurementBatches)
 	expected := []testRecord{
 		{
-			Name:      "db.cassandra.connections",
-			MeterName: instrumentationName,
-			Labels: []label.KeyValue{
+			name:      "db.cassandra.connections",
+			meterName: instrumentationName,
+			labels: []label.KeyValue{
 				cassDBSystem(),
 				cassPeerIP("127.0.0.1"),
 				cassPeerPort(9042),
@@ -386,13 +331,12 @@ func TestConnection(t *testing.T) {
 		},
 	}
 
-	for _, record := range exporter.records {
-		name := record.Descriptor().Name()
-		switch name {
+	for _, record := range actual {
+		switch record.name {
 		case "db.cassandra.connections":
 			recordEqual(t, expected[0], record)
 		default:
-			t.Fatalf("wrong metric %s", name)
+			t.Fatalf("wrong metric %s", record.name)
 		}
 	}
 }
@@ -435,21 +379,36 @@ func getCluster() *gocql.ClusterConfig {
 	return cluster
 }
 
-// getController returns the push controller for the mock
-// export pipeline.
-func getController(t *testing.T) *push.Controller {
-	controller := mockExportPipeline(t)
-	return controller
+// obtainTestRecords creates a slice of testRecord with values
+// obtained from measurements
+func obtainTestRecords(mbs []mockmeter.Batch) []testRecord {
+	var records []testRecord
+	for _, mb := range mbs {
+		for _, m := range mb.Measurements {
+			records = append(
+				records,
+				testRecord{
+					name:       m.Instrument.Descriptor().Name(),
+					meterName:  m.Instrument.Descriptor().InstrumentationName(),
+					labels:     mb.Labels,
+					number:     m.Number,
+					numberKind: m.Instrument.Descriptor().NumberKind(),
+				},
+			)
+		}
+	}
+
+	return records
 }
 
 // recordEqual checks that the given metric name and instrumentation names are equal.
-func recordEqual(t *testing.T, expected testRecord, actual export.Record) {
-	descriptor := actual.Descriptor()
-	assert.Equal(t, expected.Name, descriptor.Name())
-	assert.Equal(t, expected.MeterName, descriptor.InstrumentationName())
-	require.Len(t, actual.Labels().ToSlice(), len(expected.Labels))
-	for _, label := range expected.Labels {
-		actualValue, ok := actual.Labels().Value(label.Key)
+func recordEqual(t *testing.T, expected testRecord, actual testRecord) {
+	assert.Equal(t, expected.name, actual.name)
+	assert.Equal(t, expected.meterName, actual.meterName)
+	require.Len(t, actual.labels, len(expected.labels))
+	actualSet := label.NewSet(actual.labels...)
+	for _, label := range expected.labels {
+		actualValue, ok := actualSet.Value(label.Key)
 		assert.True(t, ok)
 		assert.NotNil(t, actualValue)
 		// Can't test equality of host id
@@ -458,34 +417,6 @@ func recordEqual(t *testing.T, expected testRecord, actual export.Record) {
 		} else {
 			assert.NotEmpty(t, actualValue)
 		}
-	}
-}
-
-func numberEqual(t *testing.T, expected metric.Number, agg aggregation.Aggregation) {
-	kind := agg.Kind()
-	switch kind {
-	case aggregation.SumKind:
-		if sum, ok := agg.(aggregation.Sum); !ok {
-			t.Fatal("missing sum value")
-		} else {
-			if num, err := sum.Sum(); err == nil {
-				assert.Equal(t, expected, num)
-			} else {
-				t.Fatal("missing value")
-			}
-		}
-	case aggregation.ExactKind:
-		if mmsc, ok := agg.(aggregation.MinMaxSumCount); !ok {
-			t.Fatal("missing aggregation")
-		} else {
-			if max, err := mmsc.Max(); err == nil {
-				assert.Equal(t, expected, max)
-			} else {
-				t.Fatal("missing sum")
-			}
-		}
-	default:
-		t.Fatalf("unexpected kind %s", kind)
 	}
 }
 

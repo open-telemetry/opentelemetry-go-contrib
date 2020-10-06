@@ -2,6 +2,12 @@ module go.opentelemetry.io/contrib/instrumentation/github.com/astaxie/beego/otel
 
 go 1.14
 
+replace (
+	go.opentelemetry.io/contrib => ../../../../..
+	go.opentelemetry.io/contrib/instrumentation/net/http/otelhttp => ../../../../net/http/otelhttp
+	go.opentelemetry.io/contrib/propagators => ../../../../../propagators
+)
+
 require (
 	github.com/astaxie/beego v1.12.2
 	github.com/stretchr/testify v1.6.1
@@ -13,10 +19,4 @@ require (
 	golang.org/x/sys v0.0.0-20200803210538-64077c9b5642 // indirect
 	golang.org/x/text v0.3.3 // indirect
 	google.golang.org/protobuf v1.25.0 // indirect
-)
-
-replace (
-	go.opentelemetry.io/contrib => ../../../../..
-	go.opentelemetry.io/contrib/instrumentation/net/http/otelhttp => ../../../../net/http/otelhttp
-	go.opentelemetry.io/contrib/propagators => ../../../../../propagators
 )
