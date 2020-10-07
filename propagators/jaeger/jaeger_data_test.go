@@ -22,14 +22,15 @@ import (
 
 const (
 	traceID16Str = "a3ce929d0e0e4736"
-	traceID32Str = "0000000000000000a3ce929d0e0e4736"
+	traceID32Str = "a1ce929d0e0e4736a3ce929d0e0e4736"
 	spanIDStr    = "00f067aa0ba902b7"
 	jaegerHeader = "uber-trace-id"
 )
 
 var (
-	traceID = trace.ID{0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0xa3, 0xce, 0x92, 0x9d, 0x0e, 0x0e, 0x47, 0x36}
-	spanID  = trace.SpanID{0x00, 0xf0, 0x67, 0xaa, 0x0b, 0xa9, 0x02, 0xb7}
+	traceID16 = trace.ID{0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0xa3, 0xce, 0x92, 0x9d, 0x0e, 0x0e, 0x47, 0x36}
+	traceID32 = trace.ID{0xa1, 0xce, 0x92, 0x9d, 0x0e, 0x0e, 0x47, 0x36, 0xa3, 0xce, 0x92, 0x9d, 0x0e, 0x0e, 0x47, 0x36}
+	spanID    = trace.SpanID{0x00, 0xf0, 0x67, 0xaa, 0x0b, 0xa9, 0x02, 0xb7}
 )
 
 type extractTest struct {
@@ -50,7 +51,7 @@ var extractHeaders = []extractTest{
 			jaegerHeader: fmt.Sprintf("%s:%s:0:0", traceID32Str, spanIDStr),
 		},
 		trace.SpanContext{
-			TraceID: traceID,
+			TraceID: traceID32,
 			SpanID:  spanID,
 		},
 	},
@@ -60,7 +61,7 @@ var extractHeaders = []extractTest{
 			jaegerHeader: fmt.Sprintf("%s:%s:0:1", traceID32Str, spanIDStr),
 		},
 		trace.SpanContext{
-			TraceID:    traceID,
+			TraceID:    traceID32,
 			SpanID:     spanID,
 			TraceFlags: trace.FlagsSampled,
 		},
@@ -71,7 +72,7 @@ var extractHeaders = []extractTest{
 			jaegerHeader: fmt.Sprintf("%s:%s:0:3", traceID32Str, spanIDStr),
 		},
 		trace.SpanContext{
-			TraceID:    traceID,
+			TraceID:    traceID32,
 			SpanID:     spanID,
 			TraceFlags: trace.FlagsSampled | trace.FlagsDebug,
 		},
@@ -82,7 +83,7 @@ var extractHeaders = []extractTest{
 			jaegerHeader: fmt.Sprintf("%s:%s:0:2", traceID32Str, spanIDStr),
 		},
 		trace.SpanContext{
-			TraceID: traceID,
+			TraceID: traceID32,
 			SpanID:  spanID,
 		},
 	},
@@ -92,7 +93,7 @@ var extractHeaders = []extractTest{
 			jaegerHeader: fmt.Sprintf("%s:%s:0:00001", traceID32Str, spanIDStr),
 		},
 		trace.SpanContext{
-			TraceID:    traceID,
+			TraceID:    traceID32,
 			SpanID:     spanID,
 			TraceFlags: trace.FlagsSampled,
 		},
@@ -103,7 +104,7 @@ var extractHeaders = []extractTest{
 			jaegerHeader: fmt.Sprintf("%s:%s:0:ff", traceID32Str, spanIDStr),
 		},
 		trace.SpanContext{
-			TraceID:    traceID,
+			TraceID:    traceID32,
 			SpanID:     spanID,
 			TraceFlags: trace.FlagsDebug | trace.FlagsSampled,
 		},
@@ -114,7 +115,7 @@ var extractHeaders = []extractTest{
 			jaegerHeader: fmt.Sprintf("%s:%s:0:1", traceID16Str, spanIDStr),
 		},
 		trace.SpanContext{
-			TraceID:    traceID,
+			TraceID:    traceID16,
 			SpanID:     spanID,
 			TraceFlags: trace.FlagsSampled,
 		},
@@ -125,7 +126,7 @@ var extractHeaders = []extractTest{
 			jaegerHeader: fmt.Sprintf("%s:%s:0:1", traceID32Str, spanIDStr),
 		},
 		trace.SpanContext{
-			TraceID:    traceID,
+			TraceID:    traceID32,
 			SpanID:     spanID,
 			TraceFlags: trace.FlagsSampled,
 		},
@@ -136,7 +137,7 @@ var extractHeaders = []extractTest{
 			jaegerHeader: fmt.Sprintf("%s:%s:whatever:1", traceID32Str, spanIDStr),
 		},
 		trace.SpanContext{
-			TraceID:    traceID,
+			TraceID:    traceID32,
 			SpanID:     spanID,
 			TraceFlags: trace.FlagsSampled,
 		},
@@ -210,7 +211,7 @@ var injectHeaders = []injectTest{
 	{
 		name: "sampled",
 		sc: trace.SpanContext{
-			TraceID:    traceID,
+			TraceID:    traceID32,
 			SpanID:     spanID,
 			TraceFlags: trace.FlagsSampled,
 		},
@@ -221,7 +222,7 @@ var injectHeaders = []injectTest{
 	{
 		name: "debug",
 		sc: trace.SpanContext{
-			TraceID:    traceID,
+			TraceID:    traceID32,
 			SpanID:     spanID,
 			TraceFlags: trace.FlagsSampled | trace.FlagsDebug,
 		},
@@ -232,7 +233,7 @@ var injectHeaders = []injectTest{
 	{
 		name: "not sampled",
 		sc: trace.SpanContext{
-			TraceID: traceID,
+			TraceID: traceID32,
 			SpanID:  spanID,
 		},
 		wantHeaders: map[string]string{
@@ -256,7 +257,7 @@ var invalidInjectHeaders = []injectTest{
 	{
 		name: "missing spanID",
 		sc: trace.SpanContext{
-			TraceID:    traceID,
+			TraceID:    traceID32,
 			TraceFlags: trace.FlagsSampled,
 		},
 	},
