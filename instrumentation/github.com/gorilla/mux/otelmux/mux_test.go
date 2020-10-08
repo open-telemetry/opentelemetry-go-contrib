@@ -211,11 +211,6 @@ func (rw *testResponseWriter) Push(target string, opts *http.PushOptions) error 
 	return nil
 }
 
-// implement CloseNotifier
-func (rw *testResponseWriter) CloseNotify() <-chan bool {
-	return nil
-}
-
 // implement Flusher
 func (rw *testResponseWriter) Flush() {
 }
@@ -224,7 +219,6 @@ func (rw *testResponseWriter) Flush() {
 func (rw *testResponseWriter) ReadFrom(r io.Reader) (n int64, err error) {
 	return 0, nil
 }
-
 
 func TestResponseWriterInterfaces(t *testing.T) {
 	// make sure the recordingResponseWriter preserves interfaces implemented by the wrapped writer
@@ -235,7 +229,6 @@ func TestResponseWriterInterfaces(t *testing.T) {
 	router.HandleFunc("/user/{id}", http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		assert.Implements(t, (*http.Hijacker)(nil), w)
 		assert.Implements(t, (*http.Pusher)(nil), w)
-		assert.Implements(t, (*http.CloseNotifier)(nil), w)
 		assert.Implements(t, (*http.Flusher)(nil), w)
 		assert.Implements(t, (*io.ReaderFrom)(nil), w)
 		w.WriteHeader(http.StatusOK)
