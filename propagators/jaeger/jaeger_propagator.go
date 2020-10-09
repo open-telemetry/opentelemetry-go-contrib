@@ -52,10 +52,17 @@ var (
 	errMalformedFlag            = errors.New("cannot decode flag")
 )
 
+// Jaeger propagator serializes SpanContext to/from Jaeger Headers
+//
+// Jaeger format:
+//
+// uber-trace-id: {trace-id}:{span-id}:{parent-span-id}:{flags}
 type Jaeger struct{}
 
 var _ propagation.HTTPPropagator = &Jaeger{}
 
+// Inject injects a context to the supplier following jaeger format.
+// The parent span ID is set to an dummy parent span id as the most implementations do.
 func (jaeger Jaeger) Inject(ctx context.Context, supplier propagation.HTTPSupplier) {
 	sc := trace.SpanFromContext(ctx).SpanContext()
 	headers := []string{}
@@ -74,6 +81,7 @@ func (jaeger Jaeger) Inject(ctx context.Context, supplier propagation.HTTPSuppli
 	supplier.Set(jaegerHeader, strings.Join(headers, separator))
 }
 
+// Extract extracts a context from the supplier if it contains Jaeger headers.
 func (jaeger Jaeger) Extract(ctx context.Context, supplier propagation.HTTPSupplier) context.Context {
 	// extract tracing information
 	if h := supplier.Get(jaegerHeader); h != "" {
