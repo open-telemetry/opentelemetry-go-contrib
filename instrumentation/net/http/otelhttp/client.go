@@ -42,7 +42,7 @@ func Head(ctx context.Context, url string) (resp *http.Response, err error) {
 	return otelDefaultClient.Do(req)
 }
 
-// Convenience replacement for http.Post
+// Post is a convenient replacement for http.Post that adds a span around the request.
 func Post(ctx context.Context, url, contentType string, body io.Reader) (resp *http.Response, err error) {
 	req, err := http.NewRequestWithContext(ctx, "POST", url, body)
 	if err != nil {
