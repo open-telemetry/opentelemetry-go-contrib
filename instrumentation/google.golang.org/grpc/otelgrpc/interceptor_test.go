@@ -89,8 +89,7 @@ func TestUnaryClientInterceptor(t *testing.T) {
 
 	sr := NewSpanRecorder()
 	tp := tracetest.NewTracerProvider(tracetest.WithSpanRecorder(sr))
-	tracer := tp.Tracer("grpc/client")
-	unaryInterceptor := UnaryClientInterceptor(tracer)
+	unaryInterceptor := UnaryClientInterceptor(WithTracerProvider(tp))
 
 	req := &mockProtoMessage{}
 	reply := &mockProtoMessage{}
@@ -259,8 +258,7 @@ func TestStreamClientInterceptor(t *testing.T) {
 	// tracer
 	sr := NewSpanRecorder()
 	tp := tracetest.NewTracerProvider(tracetest.WithSpanRecorder(sr))
-	tracer := tp.Tracer("grpc/Server")
-	streamCI := StreamClientInterceptor(tracer)
+	streamCI := StreamClientInterceptor(WithTracerProvider(tp))
 
 	var mockClStr mockClientStream
 	method := "/github.com.serviceName/bar"
@@ -343,8 +341,7 @@ func TestStreamClientInterceptor(t *testing.T) {
 func TestServerInterceptorError(t *testing.T) {
 	sr := NewSpanRecorder()
 	tp := tracetest.NewTracerProvider(tracetest.WithSpanRecorder(sr))
-	tracer := tp.Tracer("grpc/Server")
-	usi := UnaryServerInterceptor(tracer)
+	usi := UnaryServerInterceptor(WithTracerProvider(tp))
 	deniedErr := status.Error(codes.PermissionDenied, "PERMISSION_DENIED_TEXT")
 	handler := func(_ context.Context, _ interface{}) (interface{}, error) {
 		return nil, deniedErr
