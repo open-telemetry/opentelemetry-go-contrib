@@ -33,7 +33,7 @@ func Get(ctx context.Context, url string) (resp *http.Response, err error) {
 	return otelDefaultClient.Do(req)
 }
 
-// Convenience replacement for http.Head
+// Head is a convenient replacement for http.Head that adds a span around the request.
 func Head(ctx context.Context, url string) (resp *http.Response, err error) {
 	req, err := http.NewRequestWithContext(ctx, "HEAD", url, nil)
 	if err != nil {
