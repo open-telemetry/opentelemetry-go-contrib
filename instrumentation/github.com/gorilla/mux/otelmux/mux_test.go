@@ -15,7 +15,10 @@
 package otelmux
 
 import (
+	"bufio"
 	"context"
+	"io"
+	"net"
 	"net/http"
 	"net/http/httptest"
 	"testing"
@@ -179,6 +182,61 @@ func TestPropagationWithCustomPropagators(t *testing.T) {
 		assert.Equal(t, pspan.SpanContext().SpanID, mspan.ParentSpanID)
 		w.WriteHeader(http.StatusOK)
 	}))
+
+	router.ServeHTTP(w, r)
+}
+
+type testResponseWriter struct {
+	writer http.ResponseWriter
+}
+
+func (rw *testResponseWriter) Header() http.Header {
+	return rw.writer.Header()
+}
+func (rw *testResponseWriter) Write(b []byte) (int, error) {
+	return rw.writer.Write(b)
+}
+func (rw *testResponseWriter) WriteHeader(statusCode int) {
+	rw.writer.WriteHeader(statusCode)
+}
+
+// implement Hijacker
+func (rw *testResponseWriter) Hijack() (net.Conn, *bufio.ReadWriter, error) {
+	return nil, nil, nil
+}
+
+// implement Pusher
+func (rw *testResponseWriter) Push(target string, opts *http.PushOptions) error {
+	return nil
+}
+
+// implement Flusher
+func (rw *testResponseWriter) Flush() {
+}
+
+// implement io.ReaderFrom
+func (rw *testResponseWriter) ReadFrom(r io.Reader) (n int64, err error) {
+	return 0, nil
+}
+
+func TestResponseWriterInterfaces(t *testing.T) {
+	// make sure the recordingResponseWriter preserves interfaces implemented by the wrapped writer
+	provider, _ := mocktrace.NewTracerProviderAndTracer(tracerName)
+
+	router := mux.NewRouter()
+	router.Use(Middleware("foobar", WithTracerProvider(provider)))
+	router.HandleFunc("/user/{id}", http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		assert.Implements(t, (*http.Hijacker)(nil), w)
+		assert.Implements(t, (*http.Pusher)(nil), w)
+		assert.Implements(t, (*http.Flusher)(nil), w)
+		assert.Implements(t, (*io.ReaderFrom)(nil), w)
+		w.WriteHeader(http.StatusOK)
+	}))
+
+	r := httptest.NewRequest("GET", "/user/123", nil)
+	w := &testResponseWriter{
+		writer: httptest.NewRecorder(),
+	}
 
 	router.ServeHTTP(w, r)
 }
