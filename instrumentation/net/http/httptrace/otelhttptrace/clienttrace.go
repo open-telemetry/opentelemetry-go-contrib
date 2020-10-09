@@ -117,7 +117,7 @@ func (ct *clientTracer) end(hook string, err error, attrs ...label.KeyValue) {
 	if ctx, ok := ct.activeHooks[hook]; ok {
 		span := trace.SpanFromContext(ctx)
 		if err != nil {
-			span.SetStatus(codes.Unknown, err.Error())
+			span.SetStatus(codes.Error, err.Error())
 		}
 		span.SetAttributes(attrs...)
 		span.End()
@@ -128,7 +128,7 @@ func (ct *clientTracer) end(hook string, err error, attrs ...label.KeyValue) {
 		// Yes, it's backwards. v0v
 		ctx, span := ct.tr.Start(ct.getParentContext(hook), hook, trace.WithAttributes(attrs...), trace.WithSpanKind(trace.SpanKindClient))
 		if err != nil {
-			span.SetStatus(codes.Unknown, err.Error())
+			span.SetStatus(codes.Error, err.Error())
 		}
 		ct.activeHooks[hook] = ctx
 	}
@@ -211,7 +211,7 @@ func (ct *clientTracer) wroteHeaders() {
 
 func (ct *clientTracer) wroteRequest(info httptrace.WroteRequestInfo) {
 	if info.Err != nil {
-		ct.root.SetStatus(codes.Unknown, info.Err.Error())
+		ct.root.SetStatus(codes.Error, info.Err.Error())
 	}
 	ct.end("http.send", info.Err)
 }

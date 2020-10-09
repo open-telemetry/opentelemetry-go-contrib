@@ -23,7 +23,6 @@ import (
 
 	mocktracer "go.opentelemetry.io/contrib/internal/trace"
 	"go.opentelemetry.io/contrib/propagators/b3"
-	"go.opentelemetry.io/otel/api/propagation"
 	"go.opentelemetry.io/otel/api/trace"
 )
 
@@ -49,7 +48,6 @@ func TestExtractB3(t *testing.T) {
 
 	for _, tg := range testGroup {
 		propagator := b3.B3{}
-		props := propagation.New(propagation.WithExtractors(propagator))
 
 		for _, tt := range tg.tests {
 			t.Run(tt.name, func(t *testing.T) {
@@ -59,7 +57,7 @@ func TestExtractB3(t *testing.T) {
 				}
 
 				ctx := context.Background()
-				ctx = propagation.ExtractHTTP(ctx, props, req.Header)
+				ctx = propagator.Extract(ctx, req.Header)
 				gotSc := trace.RemoteSpanContextFromContext(ctx)
 				if diff := cmp.Diff(gotSc, tt.wantSc); diff != "" {
 					t.Errorf("%s: %s: -got +want %s", tg.name, tt.name, diff)
@@ -124,7 +122,7 @@ func TestInjectB3(t *testing.T) {
 	}
 }
 
-func TestB3Propagator_GetAllKeys(t *testing.T) {
+func TestB3Propagator_Fields(t *testing.T) {
 	tests := []struct {
 		name       string
 		propagator b3.B3
@@ -171,8 +169,8 @@ func TestB3Propagator_GetAllKeys(t *testing.T) {
 	}
 
 	for _, test := range tests {
-		if diff := cmp.Diff(test.propagator.GetAllKeys(), test.want); diff != "" {
-			t.Errorf("%s: GetAllKeys: -got +want %s", test.name, diff)
+		if diff := cmp.Diff(test.propagator.Fields(), test.want); diff != "" {
+			t.Errorf("%s: Fields: -got +want %s", test.name, diff)
 		}
 	}
 }

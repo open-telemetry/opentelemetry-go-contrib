@@ -36,7 +36,7 @@ func TestNewConfig(t *testing.T) {
 			expected: config{
 				TracerProvider: global.TracerProvider(),
 				Tracer:         global.TracerProvider().Tracer(defaultTracerName),
-				Propagators:    global.Propagators(),
+				Propagators:    global.TextMapPropagator(),
 			},
 		},
 		{

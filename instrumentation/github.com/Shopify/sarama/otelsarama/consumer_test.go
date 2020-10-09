@@ -24,10 +24,11 @@ import (
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 
+	"go.opentelemetry.io/otel"
 	"go.opentelemetry.io/otel/api/global"
-	"go.opentelemetry.io/otel/api/propagation"
 	"go.opentelemetry.io/otel/api/trace"
 	"go.opentelemetry.io/otel/label"
+	otelpropagators "go.opentelemetry.io/otel/propagators"
 	"go.opentelemetry.io/otel/semconv"
 
 	mocktracer "go.opentelemetry.io/contrib/internal/trace"
@@ -37,9 +38,12 @@ const (
 	topic = "test-topic"
 )
 
-var (
-	propagators = global.Propagators()
-)
+var propagators otel.TextMapPropagator
+
+func init() {
+	global.SetTextMapPropagator(otelpropagators.TraceContext{})
+	propagators = global.TextMapPropagator()
+}
 
 func TestWrapPartitionConsumer(t *testing.T) {
 	// Mock provider
@@ -80,7 +84,7 @@ func consumeAndCheck(t *testing.T, mt *mocktracer.Tracer, mockPartitionConsumer 
 	// Create message with span context
 	ctx, _ := mt.Start(context.Background(), "")
 	message := sarama.ConsumerMessage{Key: []byte("foo")}
-	propagation.InjectHTTP(ctx, propagators, NewConsumerMessageCarrier(&message))
+	propagators.Inject(ctx, NewConsumerMessageCarrier(&message))
 
 	// Produce message
 	mockPartitionConsumer.YieldMessage(&message)
@@ -137,7 +141,7 @@ func consumeAndCheck(t *testing.T, mt *mocktracer.Tracer, mockPartitionConsumer 
 
 			assert.Equal(t, expected.parentSpanID, span.ParentSpanID)
 
-			remoteSpanFromMessage := trace.RemoteSpanContextFromContext(propagation.ExtractHTTP(context.Background(), propagators, NewConsumerMessageCarrier(msgList[i])))
+			remoteSpanFromMessage := trace.RemoteSpanContextFromContext(propagators.Extract(context.Background(), NewConsumerMessageCarrier(msgList[i])))
 			assert.Equal(t, span.SpanContext(), remoteSpanFromMessage,
 				"span context should be injected into the consumer message headers")
 

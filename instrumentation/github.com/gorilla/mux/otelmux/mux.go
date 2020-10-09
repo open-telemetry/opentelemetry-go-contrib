@@ -22,9 +22,9 @@ import (
 	"github.com/gorilla/mux"
 
 	otelcontrib "go.opentelemetry.io/contrib"
+	"go.opentelemetry.io/otel"
 
 	otelglobal "go.opentelemetry.io/otel/api/global"
-	otelpropagation "go.opentelemetry.io/otel/api/propagation"
 	oteltrace "go.opentelemetry.io/otel/api/trace"
 	"go.opentelemetry.io/otel/semconv"
 )
@@ -49,7 +49,7 @@ func Middleware(service string, opts ...Option) mux.MiddlewareFunc {
 		oteltrace.WithInstrumentationVersion(otelcontrib.SemVersion()),
 	)
 	if cfg.Propagators == nil {
-		cfg.Propagators = otelglobal.Propagators()
+		cfg.Propagators = otelglobal.TextMapPropagator()
 	}
 	return func(handler http.Handler) http.Handler {
 		return traceware{
@@ -64,7 +64,7 @@ func Middleware(service string, opts ...Option) mux.MiddlewareFunc {
 type traceware struct {
 	service     string
 	tracer      oteltrace.Tracer
-	propagators otelpropagation.Propagators
+	propagators otel.TextMapPropagator
 	handler     http.Handler
 }
 
@@ -117,7 +117,7 @@ func putRRW(rrw *recordingResponseWriter) {
 // ServeHTTP implements the http.Handler interface. It does the actual
 // tracing of the request.
 func (tw traceware) ServeHTTP(w http.ResponseWriter, r *http.Request) {
-	ctx := otelpropagation.ExtractHTTP(r.Context(), tw.propagators, r.Header)
+	ctx := tw.propagators.Extract(r.Context(), r.Header)
 	spanName := ""
 	route := mux.CurrentRoute(r)
 	if route != nil {

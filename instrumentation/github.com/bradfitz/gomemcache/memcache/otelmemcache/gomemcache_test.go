@@ -96,7 +96,7 @@ func TestOperationWithCacheMissError(t *testing.T) {
 	}
 	assert.Equal(t, expectedLabelMap, spans[0].Attributes)
 
-	assert.Equal(t, codes.NotFound, spans[0].Status)
+	assert.Equal(t, codes.Error, spans[0].Status)
 	assert.Equal(t, err.Error(), spans[0].StatusMessage)
 }
 

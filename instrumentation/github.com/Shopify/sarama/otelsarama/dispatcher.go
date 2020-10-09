@@ -20,7 +20,6 @@ import (
 
 	"github.com/Shopify/sarama"
 
-	"go.opentelemetry.io/otel/api/propagation"
 	"go.opentelemetry.io/otel/api/trace"
 	"go.opentelemetry.io/otel/label"
 	"go.opentelemetry.io/otel/semconv"
@@ -57,7 +56,7 @@ func (w *consumerMessagesDispatcherWrapper) Run() {
 	for msg := range msgs {
 		// Extract a span context from message to link.
 		carrier := NewConsumerMessageCarrier(msg)
-		parentSpanContext := propagation.ExtractHTTP(context.Background(), w.cfg.Propagators, carrier)
+		parentSpanContext := w.cfg.Propagators.Extract(context.Background(), carrier)
 
 		// Create a span.
 		attrs := []label.KeyValue{
@@ -75,7 +74,7 @@ func (w *consumerMessagesDispatcherWrapper) Run() {
 		newCtx, span := w.cfg.Tracer.Start(parentSpanContext, "kafka.consume", opts...)
 
 		// Inject current span context, so consumers can use it to propagate span.
-		propagation.InjectHTTP(newCtx, w.cfg.Propagators, carrier)
+		w.cfg.Propagators.Inject(newCtx, carrier)
 
 		// Send messages back to user.
 		w.messages <- msg

@@ -26,7 +26,6 @@ import (
 
 	"go.opentelemetry.io/otel/codes"
 
-	"go.opentelemetry.io/otel/api/propagation"
 	"go.opentelemetry.io/otel/api/trace"
 	"go.opentelemetry.io/otel/label"
 	"go.opentelemetry.io/otel/semconv"
@@ -57,7 +56,7 @@ func TestWrapSyncProducer(t *testing.T) {
 	// Create message with span context
 	ctx, _ := mt.Start(context.Background(), "")
 	messageWithSpanContext := sarama.ProducerMessage{Topic: topic, Key: sarama.StringEncoder("foo")}
-	propagation.InjectHTTP(ctx, propagators, NewProducerMessageCarrier(&messageWithSpanContext))
+	propagators.Inject(ctx, NewProducerMessageCarrier(&messageWithSpanContext))
 
 	// Expected
 	expectedList := []struct {
@@ -142,7 +141,7 @@ func TestWrapSyncProducer(t *testing.T) {
 		}
 
 		// Check tracing propagation
-		remoteSpanFromMessage := trace.RemoteSpanContextFromContext(propagation.ExtractHTTP(context.Background(), propagators, NewProducerMessageCarrier(msg)))
+		remoteSpanFromMessage := trace.RemoteSpanContextFromContext(propagators.Extract(context.Background(), NewProducerMessageCarrier(msg)))
 		assert.True(t, remoteSpanFromMessage.IsValid())
 	}
 }
@@ -152,7 +151,7 @@ func TestWrapAsyncProducer(t *testing.T) {
 	createMessages := func(mt *mocktracer.Tracer) []*sarama.ProducerMessage {
 		ctx, _ := mt.Start(context.Background(), "")
 		messageWithSpanContext := sarama.ProducerMessage{Topic: topic, Key: sarama.StringEncoder("foo")}
-		propagation.InjectHTTP(ctx, propagators, NewProducerMessageCarrier(&messageWithSpanContext))
+		propagators.Inject(ctx, NewProducerMessageCarrier(&messageWithSpanContext))
 		mt.EndedSpans()
 
 		return []*sarama.ProducerMessage{
@@ -223,7 +222,7 @@ func TestWrapAsyncProducer(t *testing.T) {
 			}
 
 			// Check tracing propagation
-			remoteSpanFromMessage := trace.RemoteSpanContextFromContext(propagation.ExtractHTTP(context.Background(), propagators, NewProducerMessageCarrier(msg)))
+			remoteSpanFromMessage := trace.RemoteSpanContextFromContext(propagators.Extract(context.Background(), NewProducerMessageCarrier(msg)))
 			assert.True(t, remoteSpanFromMessage.IsValid())
 		}
 	})
@@ -300,7 +299,7 @@ func TestWrapAsyncProducer(t *testing.T) {
 			assert.Equal(t, i, msg.Metadata)
 
 			// Check tracing propagation
-			remoteSpanFromMessage := trace.RemoteSpanContextFromContext(propagation.ExtractHTTP(context.Background(), propagators, NewProducerMessageCarrier(msg)))
+			remoteSpanFromMessage := trace.RemoteSpanContextFromContext(propagators.Extract(context.Background(), NewProducerMessageCarrier(msg)))
 			assert.True(t, remoteSpanFromMessage.IsValid())
 		}
 	})
@@ -330,7 +329,7 @@ func TestWrapAsyncProducerError(t *testing.T) {
 
 	span := spanList[0]
 
-	assert.Equal(t, codes.Internal, span.Status)
+	assert.Equal(t, codes.Error, span.Status)
 	assert.Equal(t, "test", span.StatusMessage)
 }
 

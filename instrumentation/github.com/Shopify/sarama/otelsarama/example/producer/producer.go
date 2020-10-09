@@ -29,7 +29,6 @@ import (
 	"go.opentelemetry.io/otel/codes"
 
 	"go.opentelemetry.io/otel/api/global"
-	"go.opentelemetry.io/otel/api/propagation"
 
 	"go.opentelemetry.io/contrib/instrumentation/github.com/Shopify/sarama/otelsarama"
 	"go.opentelemetry.io/contrib/instrumentation/github.com/Shopify/sarama/otelsarama/example"
@@ -66,7 +65,7 @@ func main() {
 		Key:   sarama.StringEncoder("random_number"),
 		Value: sarama.StringEncoder(fmt.Sprintf("%d", rand.Intn(1000))),
 	}
-	propagation.InjectHTTP(ctx, global.Propagators(), otelsarama.NewProducerMessageCarrier(&msg))
+	global.TextMapPropagator().Inject(ctx, otelsarama.NewProducerMessageCarrier(&msg))
 
 	producer.Input() <- &msg
 	successMsg := <-producer.Successes()
@@ -74,7 +73,7 @@ func main() {
 
 	err := producer.Close()
 	if err != nil {
-		span.SetStatus(codes.Internal, err.Error())
+		span.SetStatus(codes.Error, err.Error())
 		log.Fatalln("Failed to close producer:", err)
 	}
 }
