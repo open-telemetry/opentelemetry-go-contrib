@@ -21,7 +21,7 @@ import (
 	"strconv"
 	"strings"
 
-	"go.opentelemetry.io/otel/api/propagation"
+	"go.opentelemetry.io/otel"
 	"go.opentelemetry.io/otel/api/trace"
 )
 
@@ -59,11 +59,11 @@ var (
 // uber-trace-id: {trace-id}:{span-id}:{parent-span-id}:{flags}
 type Jaeger struct{}
 
-var _ propagation.HTTPPropagator = &Jaeger{}
+var _ otel.TextMapPropagator = &Jaeger{}
 
-// Inject injects a context to the supplier following jaeger format.
+// Inject injects a context to the carrier following jaeger format.
 // The parent span ID is set to an dummy parent span id as the most implementations do.
-func (jaeger Jaeger) Inject(ctx context.Context, supplier propagation.HTTPSupplier) {
+func (jaeger Jaeger) Inject(ctx context.Context, carrier otel.TextMapCarrier) {
 	sc := trace.SpanFromContext(ctx).SpanContext()
 	headers := []string{}
 	if !sc.TraceID.IsValid() || !sc.SpanID.IsValid() {
@@ -78,13 +78,13 @@ func (jaeger Jaeger) Inject(ctx context.Context, supplier propagation.HTTPSuppli
 		headers = append(headers, fmt.Sprintf("%x", flagsNotSampled))
 	}
 
-	supplier.Set(jaegerHeader, strings.Join(headers, separator))
+	carrier.Set(jaegerHeader, strings.Join(headers, separator))
 }
 
-// Extract extracts a context from the supplier if it contains Jaeger headers.
-func (jaeger Jaeger) Extract(ctx context.Context, supplier propagation.HTTPSupplier) context.Context {
+// Extract extracts a context from the carrier if it contains Jaeger headers.
+func (jaeger Jaeger) Extract(ctx context.Context, carrier otel.TextMapCarrier) context.Context {
 	// extract tracing information
-	if h := supplier.Get(jaegerHeader); h != "" {
+	if h := carrier.Get(jaegerHeader); h != "" {
 		sc, err := extract(h)
 		if err == nil && sc.IsValid() {
 			return trace.ContextWithRemoteSpanContext(ctx, sc)
@@ -155,6 +155,6 @@ func extract(headerVal string) (trace.SpanContext, error) {
 	return sc, nil
 }
 
-func (jaeger Jaeger) GetAllKeys() []string {
+func (jaeger Jaeger) Fields() []string {
 	return []string{jaegerHeader}
 }
