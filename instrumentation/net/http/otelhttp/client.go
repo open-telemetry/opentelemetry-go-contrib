@@ -24,7 +24,7 @@ import (
 
 var otelDefaultClient = &http.Client{Transport: NewTransport(http.DefaultTransport)}
 
-// Convenience replacement for http.Get
+// Get is a convenient replacement for http.Get that adds a span around the request.
 func Get(ctx context.Context, url string) (resp *http.Response, err error) {
 	req, err := http.NewRequestWithContext(ctx, "GET", url, nil)
 	if err != nil {
