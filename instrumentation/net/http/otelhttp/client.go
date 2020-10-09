@@ -52,7 +52,7 @@ func Post(ctx context.Context, url, contentType string, body io.Reader) (resp *h
 	return otelDefaultClient.Do(req)
 }
 
-// Convenience replacement for http.PostForm
+// PostForm is a convenient replacement for http.PostForm that adds a span around the request.
 func PostForm(ctx context.Context, url string, data url.Values) (resp *http.Response, err error) {
 	return Post(ctx, url, "application/x-www-form-urlencoded", strings.NewReader(data.Encode()))
 }
