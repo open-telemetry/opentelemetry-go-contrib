@@ -24,7 +24,7 @@ import (
 
 var otelDefaultClient = &http.Client{Transport: NewTransport(http.DefaultTransport)}
 
-// Convenience replacement for http.Get
+// Get is a convenient replacement for http.Get that adds a span around the request.
 func Get(ctx context.Context, url string) (resp *http.Response, err error) {
 	req, err := http.NewRequestWithContext(ctx, "GET", url, nil)
 	if err != nil {
@@ -33,7 +33,7 @@ func Get(ctx context.Context, url string) (resp *http.Response, err error) {
 	return otelDefaultClient.Do(req)
 }
 
-// Convenience replacement for http.Head
+// Head is a convenient replacement for http.Head that adds a span around the request.
 func Head(ctx context.Context, url string) (resp *http.Response, err error) {
 	req, err := http.NewRequestWithContext(ctx, "HEAD", url, nil)
 	if err != nil {
@@ -42,7 +42,7 @@ func Head(ctx context.Context, url string) (resp *http.Response, err error) {
 	return otelDefaultClient.Do(req)
 }
 
-// Convenience replacement for http.Post
+// Post is a convenient replacement for http.Post that adds a span around the request.
 func Post(ctx context.Context, url, contentType string, body io.Reader) (resp *http.Response, err error) {
 	req, err := http.NewRequestWithContext(ctx, "POST", url, body)
 	if err != nil {
@@ -52,7 +52,7 @@ func Post(ctx context.Context, url, contentType string, body io.Reader) (resp *h
 	return otelDefaultClient.Do(req)
 }
 
-// Convenience replacement for http.PostForm
+// PostForm is a convenient replacement for http.PostForm that adds a span around the request.
 func PostForm(ctx context.Context, url string, data url.Values) (resp *http.Response, err error) {
 	return Post(ctx, url, "application/x-www-form-urlencoded", strings.NewReader(data.Encode()))
 }
