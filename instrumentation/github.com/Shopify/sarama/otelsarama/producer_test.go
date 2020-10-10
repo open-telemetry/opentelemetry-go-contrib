@@ -28,6 +28,7 @@ import (
 
 	"go.opentelemetry.io/otel/api/trace"
 	"go.opentelemetry.io/otel/label"
+	otelpropagators "go.opentelemetry.io/otel/propagators"
 	"go.opentelemetry.io/otel/semconv"
 
 	mocktracer "go.opentelemetry.io/contrib/internal/trace"
@@ -41,6 +42,7 @@ func NewTracerProviderAndTracer() (*mocktracer.TracerProvider, *mocktracer.Trace
 }
 
 func TestWrapSyncProducer(t *testing.T) {
+	propagators := otelpropagators.TraceContext{}
 	var err error
 
 	// Mock provider
@@ -51,7 +53,7 @@ func TestWrapSyncProducer(t *testing.T) {
 	mockSyncProducer := mocks.NewSyncProducer(t, cfg)
 
 	// Wrap sync producer
-	syncProducer := WrapSyncProducer(cfg, mockSyncProducer, WithTracerProvider(provider))
+	syncProducer := WrapSyncProducer(cfg, mockSyncProducer, WithTracerProvider(provider), WithPropagators(propagators))
 
 	// Create message with span context
 	ctx, _ := mt.Start(context.Background(), "")
@@ -147,6 +149,7 @@ func TestWrapSyncProducer(t *testing.T) {
 }
 
 func TestWrapAsyncProducer(t *testing.T) {
+	propagators := otelpropagators.TraceContext{}
 	// Create message with span context
 	createMessages := func(mt *mocktracer.Tracer) []*sarama.ProducerMessage {
 		ctx, _ := mt.Start(context.Background(), "")
@@ -166,7 +169,7 @@ func TestWrapAsyncProducer(t *testing.T) {
 
 		cfg := newSaramaConfig()
 		mockAsyncProducer := mocks.NewAsyncProducer(t, cfg)
-		ap := WrapAsyncProducer(cfg, mockAsyncProducer, WithTracerProvider(provider))
+		ap := WrapAsyncProducer(cfg, mockAsyncProducer, WithTracerProvider(provider), WithPropagators(propagators))
 
 		msgList := createMessages(mt)
 		// Send message
@@ -236,7 +239,7 @@ func TestWrapAsyncProducer(t *testing.T) {
 		cfg.Producer.Return.Successes = true
 
 		mockAsyncProducer := mocks.NewAsyncProducer(t, cfg)
-		ap := WrapAsyncProducer(cfg, mockAsyncProducer, WithTracerProvider(provider))
+		ap := WrapAsyncProducer(cfg, mockAsyncProducer, WithTracerProvider(provider), WithPropagators(propagators))
 
 		msgList := createMessages(mt)
 		// Send message
@@ -306,6 +309,7 @@ func TestWrapAsyncProducer(t *testing.T) {
 }
 
 func TestWrapAsyncProducerError(t *testing.T) {
+	propagators := otelpropagators.TraceContext{}
 	// Mock provider
 	provider, mt := NewTracerProviderAndTracer()
 
@@ -314,7 +318,7 @@ func TestWrapAsyncProducerError(t *testing.T) {
 	cfg.Producer.Return.Successes = true
 
 	mockAsyncProducer := mocks.NewAsyncProducer(t, cfg)
-	ap := WrapAsyncProducer(cfg, mockAsyncProducer, WithTracerProvider(provider))
+	ap := WrapAsyncProducer(cfg, mockAsyncProducer, WithTracerProvider(provider), WithPropagators(propagators))
 
 	mockAsyncProducer.ExpectInputAndFail(errors.New("test"))
 	ap.Input() <- &sarama.ProducerMessage{Topic: topic, Key: sarama.StringEncoder("foo2")}

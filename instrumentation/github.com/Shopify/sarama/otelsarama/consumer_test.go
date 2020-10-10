@@ -24,8 +24,6 @@ import (
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 
-	"go.opentelemetry.io/otel"
-	"go.opentelemetry.io/otel/api/global"
 	"go.opentelemetry.io/otel/api/trace"
 	"go.opentelemetry.io/otel/label"
 	otelpropagators "go.opentelemetry.io/otel/propagators"
@@ -38,14 +36,8 @@ const (
 	topic = "test-topic"
 )
 
-var propagators otel.TextMapPropagator
-
-func init() {
-	global.SetTextMapPropagator(otelpropagators.TraceContext{})
-	propagators = global.TextMapPropagator()
-}
-
 func TestWrapPartitionConsumer(t *testing.T) {
+	propagators := otelpropagators.TraceContext{}
 	// Mock provider
 	provider, mt := NewTracerProviderAndTracer()
 
@@ -57,12 +49,13 @@ func TestWrapPartitionConsumer(t *testing.T) {
 	partitionConsumer, err := consumer.ConsumePartition(topic, 0, 0)
 	require.NoError(t, err)
 
-	partitionConsumer = WrapPartitionConsumer(partitionConsumer, WithTracerProvider(provider))
+	partitionConsumer = WrapPartitionConsumer(partitionConsumer, WithTracerProvider(provider), WithPropagators(propagators))
 
 	consumeAndCheck(t, mt, mockPartitionConsumer, partitionConsumer)
 }
 
 func TestWrapConsumer(t *testing.T) {
+	propagators := otelpropagators.TraceContext{}
 	// Mock provider
 	provider, mt := NewTracerProviderAndTracer()
 
@@ -71,7 +64,7 @@ func TestWrapConsumer(t *testing.T) {
 	mockPartitionConsumer := mockConsumer.ExpectConsumePartition(topic, 0, 0)
 
 	// Wrap consumer
-	consumer := WrapConsumer(mockConsumer, WithTracerProvider(provider))
+	consumer := WrapConsumer(mockConsumer, WithTracerProvider(provider), WithPropagators(propagators))
 
 	// Create partition consumer
 	partitionConsumer, err := consumer.ConsumePartition(topic, 0, 0)
@@ -84,6 +77,7 @@ func consumeAndCheck(t *testing.T, mt *mocktracer.Tracer, mockPartitionConsumer 
 	// Create message with span context
 	ctx, _ := mt.Start(context.Background(), "")
 	message := sarama.ConsumerMessage{Key: []byte("foo")}
+	propagators := otelpropagators.TraceContext{}
 	propagators.Inject(ctx, NewConsumerMessageCarrier(&message))
 
 	// Produce message
