@@ -29,10 +29,11 @@ import (
 
 	mocktrace "go.opentelemetry.io/contrib/internal/trace"
 	b3prop "go.opentelemetry.io/contrib/propagators/b3"
+	"go.opentelemetry.io/otel"
 	otelglobal "go.opentelemetry.io/otel/api/global"
-	otelpropagation "go.opentelemetry.io/otel/api/propagation"
 	oteltrace "go.opentelemetry.io/otel/api/trace"
 	"go.opentelemetry.io/otel/label"
+	"go.opentelemetry.io/otel/propagators"
 )
 
 func TestChildSpanFromGlobalTracer(t *testing.T) {
@@ -137,12 +138,13 @@ func TestGetSpanNotInstrumented(t *testing.T) {
 
 func TestPropagationWithGlobalPropagators(t *testing.T) {
 	provider, tracer := mocktrace.NewTracerProviderAndTracer(tracerName)
+	otelglobal.SetTextMapPropagator(propagators.TraceContext{})
 
 	r := httptest.NewRequest("GET", "/user/123", nil)
 	w := httptest.NewRecorder()
 
 	ctx, pspan := tracer.Start(context.Background(), "test")
-	otelpropagation.InjectHTTP(ctx, otelglobal.Propagators(), r.Header)
+	otelglobal.TextMapPropagator().Inject(ctx, r.Header)
 
 	router := mux.NewRouter()
 	router.Use(Middleware("foobar", WithTracerProvider(provider)))
@@ -156,25 +158,22 @@ func TestPropagationWithGlobalPropagators(t *testing.T) {
 	}))
 
 	router.ServeHTTP(w, r)
+	otelglobal.SetTextMapPropagator(otel.NewCompositeTextMapPropagator())
 }
 
 func TestPropagationWithCustomPropagators(t *testing.T) {
 	provider, tracer := mocktrace.NewTracerProviderAndTracer(tracerName)
 
 	b3 := b3prop.B3{}
-	props := otelpropagation.New(
-		otelpropagation.WithExtractors(b3),
-		otelpropagation.WithInjectors(b3),
-	)
 
 	r := httptest.NewRequest("GET", "/user/123", nil)
 	w := httptest.NewRecorder()
 
 	ctx, pspan := tracer.Start(context.Background(), "test")
-	otelpropagation.InjectHTTP(ctx, props, r.Header)
+	b3.Inject(ctx, r.Header)
 
 	router := mux.NewRouter()
-	router.Use(Middleware("foobar", WithTracerProvider(provider), WithPropagators(props)))
+	router.Use(Middleware("foobar", WithTracerProvider(provider), WithPropagators(b3)))
 	router.HandleFunc("/user/{id}", http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		span := oteltrace.SpanFromContext(r.Context())
 		mspan, ok := span.(*mocktrace.Span)

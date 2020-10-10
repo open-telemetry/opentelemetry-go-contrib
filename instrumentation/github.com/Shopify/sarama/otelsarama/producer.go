@@ -22,7 +22,6 @@ import (
 
 	"go.opentelemetry.io/otel/codes"
 
-	"go.opentelemetry.io/otel/api/propagation"
 	"go.opentelemetry.io/otel/api/trace"
 	"go.opentelemetry.io/otel/label"
 	"go.opentelemetry.io/otel/semconv"
@@ -231,7 +230,7 @@ func WrapAsyncProducer(saramaConfig *sarama.Config, p sarama.AsyncProducer, opts
 func startProducerSpan(cfg config, version sarama.KafkaVersion, msg *sarama.ProducerMessage) trace.Span {
 	// If there's a span context in the message, use that as the parent context.
 	carrier := NewProducerMessageCarrier(msg)
-	ctx := propagation.ExtractHTTP(context.Background(), cfg.Propagators, carrier)
+	ctx := cfg.Propagators.Extract(context.Background(), carrier)
 
 	// Create a span.
 	attrs := []label.KeyValue{
@@ -247,7 +246,7 @@ func startProducerSpan(cfg config, version sarama.KafkaVersion, msg *sarama.Prod
 
 	if version.IsAtLeast(sarama.V0_11_0_0) {
 		// Inject current span context, so consumers can use it to propagate span.
-		propagation.InjectHTTP(ctx, cfg.Propagators, carrier)
+		cfg.Propagators.Inject(ctx, carrier)
 	}
 
 	return span
@@ -259,7 +258,7 @@ func finishProducerSpan(span trace.Span, partition int32, offset int64, err erro
 		kafkaPartitionKey.Int32(partition),
 	)
 	if err != nil {
-		span.SetStatus(codes.Internal, err.Error())
+		span.SetStatus(codes.Error, err.Error())
 	}
 	span.End()
 }

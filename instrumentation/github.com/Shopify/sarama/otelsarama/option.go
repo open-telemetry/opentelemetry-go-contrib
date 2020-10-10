@@ -15,8 +15,8 @@
 package otelsarama
 
 import (
+	"go.opentelemetry.io/otel"
 	"go.opentelemetry.io/otel/api/global"
-	otelpropagation "go.opentelemetry.io/otel/api/propagation"
 	"go.opentelemetry.io/otel/api/trace"
 	"go.opentelemetry.io/otel/label"
 )
@@ -29,7 +29,7 @@ const (
 
 type config struct {
 	TracerProvider trace.TracerProvider
-	Propagators    otelpropagation.Propagators
+	Propagators    otel.TextMapPropagator
 
 	Tracer trace.Tracer
 }
@@ -37,7 +37,7 @@ type config struct {
 // newConfig returns a config with all Options set.
 func newConfig(opts ...Option) config {
 	cfg := config{
-		Propagators:    global.Propagators(),
+		Propagators:    global.TextMapPropagator(),
 		TracerProvider: global.TracerProvider(),
 	}
 	for _, opt := range opts {
@@ -63,7 +63,7 @@ func WithTracerProvider(provider trace.TracerProvider) Option {
 // WithPropagators specifies propagators to use for extracting
 // information from the HTTP requests. If none are specified, global
 // ones will be used.
-func WithPropagators(propagators otelpropagation.Propagators) Option {
+func WithPropagators(propagators otel.TextMapPropagator) Option {
 	return func(cfg *config) {
 		cfg.Propagators = propagators
 	}

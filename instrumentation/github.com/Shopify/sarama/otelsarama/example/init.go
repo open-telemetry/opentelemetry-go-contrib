@@ -17,8 +17,10 @@ package example
 import (
 	"log"
 
+	"go.opentelemetry.io/otel"
 	otelglobal "go.opentelemetry.io/otel/api/global"
 	"go.opentelemetry.io/otel/exporters/stdout"
+	"go.opentelemetry.io/otel/propagators"
 	sdktrace "go.opentelemetry.io/otel/sdk/trace"
 )
 
@@ -42,4 +44,5 @@ func InitTracer() {
 		log.Fatal(err)
 	}
 	otelglobal.SetTracerProvider(tp)
+	otelglobal.SetTextMapPropagator(otel.NewCompositeTextMapPropagator(propagators.TraceContext{}))
 }

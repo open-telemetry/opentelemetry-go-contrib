@@ -15,14 +15,14 @@
 package otelmux
 
 import (
-	otelpropagation "go.opentelemetry.io/otel/api/propagation"
+	"go.opentelemetry.io/otel"
 	oteltrace "go.opentelemetry.io/otel/api/trace"
 )
 
 // config is used to configure the mux middleware.
 type config struct {
 	TracerProvider oteltrace.TracerProvider
-	Propagators    otelpropagation.Propagators
+	Propagators    otel.TextMapPropagator
 }
 
 // Option specifies instrumentation configuration options.
@@ -31,7 +31,7 @@ type Option func(*config)
 // WithPropagators specifies propagators to use for extracting
 // information from the HTTP requests. If none are specified, global
 // ones will be used.
-func WithPropagators(propagators otelpropagation.Propagators) Option {
+func WithPropagators(propagators otel.TextMapPropagator) Option {
 	return func(cfg *config) {
 		cfg.Propagators = propagators
 	}

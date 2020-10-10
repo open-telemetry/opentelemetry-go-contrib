@@ -18,7 +18,6 @@ import (
 	"github.com/emicklei/go-restful/v3"
 
 	otelglobal "go.opentelemetry.io/otel/api/global"
-	otelpropagation "go.opentelemetry.io/otel/api/propagation"
 	oteltrace "go.opentelemetry.io/otel/api/trace"
 	"go.opentelemetry.io/otel/semconv"
 )
@@ -43,11 +42,11 @@ func OTelFilter(service string, opts ...Option) restful.FilterFunction {
 	}
 	tracer := cfg.TracerProvider.Tracer(tracerName, oteltrace.WithInstrumentationVersion(tracerVersion))
 	if cfg.Propagators == nil {
-		cfg.Propagators = otelglobal.Propagators()
+		cfg.Propagators = otelglobal.TextMapPropagator()
 	}
 	return func(req *restful.Request, resp *restful.Response, chain *restful.FilterChain) {
 		r := req.Request
-		ctx := otelpropagation.ExtractHTTP(r.Context(), cfg.Propagators, r.Header)
+		ctx := cfg.Propagators.Extract(r.Context(), r.Header)
 		route := req.SelectedRoutePath()
 		spanName := route
 

@@ -19,9 +19,8 @@ import (
 
 	"google.golang.org/grpc/metadata"
 
-	"go.opentelemetry.io/otel/api/baggage"
+	"go.opentelemetry.io/otel"
 	"go.opentelemetry.io/otel/api/global"
-	"go.opentelemetry.io/otel/api/propagation"
 	"go.opentelemetry.io/otel/api/trace"
 	"go.opentelemetry.io/otel/label"
 )
@@ -31,7 +30,7 @@ const instrumentationName = "go.opentelemetry.io/contrib/instrumentation/google.
 
 // config is a group of options for this instrumentation.
 type config struct {
-	Propagators    propagation.Propagators
+	Propagators    otel.TextMapPropagator
 	TracerProvider trace.TracerProvider
 }
 
@@ -43,7 +42,7 @@ type Option interface {
 // newConfig returns a config configured with all the passed Options.
 func newConfig(opts []Option) *config {
 	c := &config{
-		Propagators:    global.Propagators(),
+		Propagators:    global.TextMapPropagator(),
 		TracerProvider: global.TracerProvider(),
 	}
 	for _, o := range opts {
@@ -52,7 +51,7 @@ func newConfig(opts []Option) *config {
 	return c
 }
 
-type propagatorsOption struct{ p propagation.Propagators }
+type propagatorsOption struct{ p otel.TextMapPropagator }
 
 func (o propagatorsOption) Apply(c *config) {
 	c.Propagators = o.p
@@ -60,7 +59,7 @@ func (o propagatorsOption) Apply(c *config) {
 
 // WithPropagators returns an Option to use the Propagators when extracting
 // and injecting trace context from requests.
-func WithPropagators(p propagation.Propagators) Option {
+func WithPropagators(p otel.TextMapPropagator) Option {
 	return propagatorsOption{p: p}
 }
 
@@ -97,7 +96,7 @@ func (s *metadataSupplier) Set(key string, value string) {
 // requests.
 func Inject(ctx context.Context, metadata *metadata.MD, opts ...Option) {
 	c := newConfig(opts)
-	propagation.InjectHTTP(ctx, c.Propagators, &metadataSupplier{
+	c.Propagators.Inject(ctx, &metadataSupplier{
 		metadata: metadata,
 	})
 }
@@ -107,16 +106,11 @@ func Inject(ctx context.Context, metadata *metadata.MD, opts ...Option) {
 // This function is meant to be used on incoming requests.
 func Extract(ctx context.Context, metadata *metadata.MD, opts ...Option) ([]label.KeyValue, trace.SpanContext) {
 	c := newConfig(opts)
-	ctx = propagation.ExtractHTTP(ctx, c.Propagators, &metadataSupplier{
+	ctx = c.Propagators.Extract(ctx, &metadataSupplier{
 		metadata: metadata,
 	})
 
-	spanContext := trace.RemoteSpanContextFromContext(ctx)
-	var correlationCtxLabels []label.KeyValue
-	baggage.MapFromContext(ctx).Foreach(func(l label.KeyValue) bool {
-		correlationCtxLabels = append(correlationCtxLabels, l)
-		return true
-	})
+	labelSet := otel.Baggage(ctx)
 
-	return correlationCtxLabels, spanContext
+	return (&labelSet).ToSlice(), trace.RemoteSpanContextFromContext(ctx)
 }

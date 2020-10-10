@@ -23,19 +23,19 @@ import (
 // maps memcache error to appropriate error code; otherwise returns status OK
 func memcacheErrToStatusCode(err error) codes.Code {
 	if err == nil {
-		return codes.OK
+		return codes.Ok
 	}
 
 	switch err {
 	case memcache.ErrCacheMiss, memcache.ErrNotStored, memcache.ErrNoStats:
-		return codes.NotFound
+		return codes.Error
 	case memcache.ErrCASConflict:
-		return codes.AlreadyExists
+		return codes.Error
 	case memcache.ErrServerError:
-		return codes.Internal
+		return codes.Error
 	case memcache.ErrMalformedKey:
-		return codes.InvalidArgument
+		return codes.Error
 	default:
-		return codes.Unknown
+		return codes.Unset
 	}
 }

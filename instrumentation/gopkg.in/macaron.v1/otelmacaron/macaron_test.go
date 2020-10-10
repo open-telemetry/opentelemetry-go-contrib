@@ -25,11 +25,12 @@ import (
 	"gopkg.in/macaron.v1"
 
 	b3prop "go.opentelemetry.io/contrib/propagators/b3"
+	"go.opentelemetry.io/otel"
 	otelglobal "go.opentelemetry.io/otel/api/global"
-	otelpropagation "go.opentelemetry.io/otel/api/propagation"
 	oteltrace "go.opentelemetry.io/otel/api/trace"
 	"go.opentelemetry.io/otel/api/trace/tracetest"
 	"go.opentelemetry.io/otel/label"
+	"go.opentelemetry.io/otel/propagators"
 )
 
 func TestChildSpanFromGlobalTracer(t *testing.T) {
@@ -120,12 +121,13 @@ func TestGetSpanNotInstrumented(t *testing.T) {
 
 func TestPropagationWithGlobalPropagators(t *testing.T) {
 	tracer := tracetest.NewTracerProvider().Tracer("test-tracer")
+	otelglobal.SetTextMapPropagator(propagators.TraceContext{})
 
 	r := httptest.NewRequest("GET", "/user/123", nil)
 	w := httptest.NewRecorder()
 
 	ctx, pspan := tracer.Start(context.Background(), "test")
-	otelpropagation.InjectHTTP(ctx, otelglobal.Propagators(), r.Header)
+	otelglobal.TextMapPropagator().Inject(ctx, r.Header)
 
 	m := macaron.Classic()
 	m.Use(Middleware("foobar"))
@@ -139,25 +141,22 @@ func TestPropagationWithGlobalPropagators(t *testing.T) {
 	})
 
 	m.ServeHTTP(w, r)
+	otelglobal.SetTextMapPropagator(otel.NewCompositeTextMapPropagator())
 }
 
 func TestPropagationWithCustomPropagators(t *testing.T) {
 	tp := tracetest.NewTracerProvider()
 	tracer := tp.Tracer("test-tracer")
 	b3 := b3prop.B3{}
-	props := otelpropagation.New(
-		otelpropagation.WithExtractors(b3),
-		otelpropagation.WithInjectors(b3),
-	)
 
 	r := httptest.NewRequest("GET", "/user/123", nil)
 	w := httptest.NewRecorder()
 
 	ctx, pspan := tracer.Start(context.Background(), "test")
-	otelpropagation.InjectHTTP(ctx, props, r.Header)
+	b3.Inject(ctx, r.Header)
 
 	m := macaron.Classic()
-	m.Use(Middleware("foobar", WithTracerProvider(tp), WithPropagators(props)))
+	m.Use(Middleware("foobar", WithTracerProvider(tp), WithPropagators(b3)))
 	m.Get("/user/:id", func(ctx *macaron.Context) {
 		span := oteltrace.SpanFromContext(ctx.Req.Request.Context())
 		mspan, ok := span.(*tracetest.Span)
