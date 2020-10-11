@@ -18,9 +18,9 @@ import (
 	"context"
 	"net/http"
 	"net/http/httptest"
+	"net/url"
 	"strings"
 	"testing"
-	"net/url"
 
 	"go.opentelemetry.io/otel/api/global"
 
@@ -45,27 +45,27 @@ func TestConvenienceWrappers(t *testing.T) {
 	}))
 	defer ts.Close()
 
-	context,span := tracer.Start(context.Background(), "parent")
+	context, span := tracer.Start(context.Background(), "parent")
 	defer span.End()
 
-	_, err := Get(context, ts.URL);
+	_, err := Get(context, ts.URL)
 	if err != nil {
 		t.Fatal(err)
 	}
 
-	_, err = Head(context, ts.URL);
+	_, err = Head(context, ts.URL)
 	if err != nil {
 		t.Fatal(err)
 	}
 
-	_, err = Post(context, ts.URL, "text/plain", strings.NewReader("test"));
+	_, err = Post(context, ts.URL, "text/plain", strings.NewReader("test"))
 	if err != nil {
 		t.Fatal(err)
 	}
 
 	form := make(url.Values)
 	form.Set("foo", "bar")
-	_, err = PostForm(context, ts.URL, form);
+	_, err = PostForm(context, ts.URL, form)
 	if err != nil {
 		t.Fatal(err)
 	}
