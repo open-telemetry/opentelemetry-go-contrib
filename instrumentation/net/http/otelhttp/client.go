@@ -22,15 +22,14 @@ import (
 	"strings"
 )
 
-var otelDefaultClient = &http.Client{Transport: NewTransport(http.DefaultTransport)}
-
 // Get is a convenient replacement for http.Get that adds a span around the request.
 func Get(ctx context.Context, url string) (resp *http.Response, err error) {
 	req, err := http.NewRequestWithContext(ctx, "GET", url, nil)
 	if err != nil {
 		return nil, err
 	}
-	return otelDefaultClient.Do(req)
+	client := http.Client{Transport: NewTransport(http.DefaultTransport)}
+	return client.Do(req)
 }
 
 // Head is a convenient replacement for http.Head that adds a span around the request.
@@ -39,7 +38,8 @@ func Head(ctx context.Context, url string) (resp *http.Response, err error) {
 	if err != nil {
 		return nil, err
 	}
-	return otelDefaultClient.Do(req)
+	client := http.Client{Transport: NewTransport(http.DefaultTransport)}
+	return client.Do(req)
 }
 
 // Post is a convenient replacement for http.Post that adds a span around the request.
@@ -49,7 +49,8 @@ func Post(ctx context.Context, url, contentType string, body io.Reader) (resp *h
 		return nil, err
 	}
 	req.Header.Set("Content-Type", contentType)
-	return otelDefaultClient.Do(req)
+	client := http.Client{Transport: NewTransport(http.DefaultTransport)}
+	return client.Do(req)
 }
 
 // PostForm is a convenient replacement for http.PostForm that adds a span around the request.
