@@ -1,7 +1,7 @@
 package main
 
 import (
-	"bitbucket.org/observability/obsvs-go/instrumentation/github.com/aws/aws-sdk-go/service/common"
+	"bitbucket.org/observability/obsvs-go/instrumentation/github.com/aws/aws-sdk-go/service/config"
 	"bytes"
 	"context"
 	"fmt"
@@ -11,8 +11,6 @@ import (
 	"github.com/aws/aws-sdk-go/aws/request"
 	"github.com/aws/aws-sdk-go/service/s3"
 	"github.com/aws/aws-sdk-go/service/s3/s3iface"
-	"go.opentelemetry.io/otel/api/baggage"
-	"go.opentelemetry.io/otel/api/global"
 	otelmetric "go.opentelemetry.io/otel/api/metric"
 	oteltrace "go.opentelemetry.io/otel/api/trace"
 	oteltracestdout "go.opentelemetry.io/otel/exporters/stdout"
@@ -50,16 +48,21 @@ func main() {
 	tracerProvider := initTracer()
 	meterProvider := initMeter()
 
-	client := obsvsS3.NewInstrumentedS3Client(&mockS3Client{}, common.WithTracerProvider(tracerProvider), common.WithMetricProvider(meterProvider))
-	tracer := global.Tracer("test-tracer")
+	client := obsvsS3.NewInstrumentedS3Client(
+		&mockS3Client{},
+		config.WithTracerProvider(tracerProvider),
+		config.WithMetricProvider(meterProvider),
+		config.WithSpanCorrelationInMetrics(true),
+	)
+	tracer := tracerProvider.Tracer("http-tracer")
 
-	outerContext := baggage.NewContext(context.Background())
 	outerSpanCtx, span := tracer.Start(
-		outerContext,
+		context.Background(),
 		"http_request_served",
 	)
+	span.End()
 
-	_, _ = client.PutObjectWithContext(outerContext, &s3.PutObjectInput{
+	_, _ = client.PutObjectWithContext(outerSpanCtx, &s3.PutObjectInput{
 		Bucket: aws.String("test-bucket"),
 		Key:    aws.String("010101"),
 		Body:   bytes.NewReader([]byte("foo")),
@@ -76,6 +79,8 @@ func main() {
 		Bucket: aws.String("test-bucket"),
 		Key:    aws.String("010101"),
 	})
+
+	time.Sleep(time.Second * 15)
 }
 
 func initTracer() oteltrace.TracerProvider {

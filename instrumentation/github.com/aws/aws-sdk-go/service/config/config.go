@@ -1,4 +1,4 @@
-package common
+package config
 
 import (
 	otelmetric "go.opentelemetry.io/otel/api/metric"
@@ -8,9 +8,10 @@ import (
 
 // Config is used to configure the aws sdk instrumentation.
 type Config struct {
-	TracerProvider oteltrace.TracerProvider
-	MetricProvider otelmetric.MeterProvider
-	Propagators    otelpropagation.Propagators
+	TracerProvider           oteltrace.TracerProvider
+	MetricProvider           otelmetric.MeterProvider
+	Propagators              otelpropagation.Propagators
+	SpanCorrelationInMetrics bool
 }
 
 // Option specifies instrumentation configuration options.
@@ -38,5 +39,12 @@ func WithTracerProvider(provider oteltrace.TracerProvider) Option {
 func WithMetricProvider(provider otelmetric.MeterProvider) Option {
 	return func(cfg *Config) {
 		cfg.MetricProvider = provider
+	}
+}
+
+// WithSpanCorrelationInMetrics specifies whether span id and trace id should be attached to metrics as labels
+func WithSpanCorrelationInMetrics(v bool) Option {
+	return func(cfg *Config) {
+		cfg.SpanCorrelationInMetrics = v
 	}
 }

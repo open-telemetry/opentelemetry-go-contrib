@@ -1,10 +1,11 @@
 package otels3
 
 import (
+	"bitbucket.org/observability/obsvs-go/instrumentation/github.com/aws/aws-sdk-go/service/config"
+	"bitbucket.org/observability/obsvs-go/instrumentation/github.com/aws/aws-sdk-go/service/helper"
 	"fmt"
 	"time"
 
-	"bitbucket.org/observability/obsvs-go/instrumentation/github.com/aws/aws-sdk-go/service/common"
 	"github.com/aws/aws-sdk-go/aws"
 	"github.com/aws/aws-sdk-go/aws/request"
 	"github.com/aws/aws-sdk-go/service/s3"
@@ -17,11 +18,12 @@ import (
 
 type instrumentedS3 struct {
 	s3iface.S3API
-	tracer      trace.Tracer
-	meter       metric.Meter
-	propagators propagation.Propagators
-	counters    *counters
-	recorders   *recorders
+	tracer                   trace.Tracer
+	meter                    metric.Meter
+	propagators              propagation.Propagators
+	counters                 *counters
+	recorders                *recorders
+	spanCorrelationInMetrics bool
 }
 
 type counters struct {
@@ -54,10 +56,14 @@ func (s *instrumentedS3) PutObjectWithContext(ctx aws.Context, input *s3.PutObje
 		attrs = append(attrs, labelStatusSuccess)
 	}
 
+	if s.spanCorrelationInMetrics {
+		attrs = helper.AppendSpanAndTraceIDFromSpan(attrs, span)
+	}
+
 	s.recorders.operationDuration.Record(
 		spanCtx,
 		float64(time.Since(startTime).Microseconds()),
-		common.AppendSpanAndTraceIDFromSpan(attrs, span)...,
+		attrs...,
 	)
 	s.counters.operation.Add(ctx, 1, attrs...)
 
@@ -86,10 +92,14 @@ func (s *instrumentedS3) GetObjectWithContext(ctx aws.Context, input *s3.GetObje
 		attrs = append(attrs, labelStatusSuccess)
 	}
 
+	if s.spanCorrelationInMetrics {
+		attrs = helper.AppendSpanAndTraceIDFromSpan(attrs, span)
+	}
+
 	s.recorders.operationDuration.Record(
 		spanCtx,
 		float64(time.Since(startTime).Microseconds()),
-		common.AppendSpanAndTraceIDFromSpan(attrs, span)...,
+		attrs...,
 	)
 	s.counters.operation.Add(ctx, 1, attrs...)
 
@@ -118,10 +128,14 @@ func (s *instrumentedS3) DeleteObjectWithContext(ctx aws.Context, input *s3.Dele
 		attrs = append(attrs, labelStatusSuccess)
 	}
 
+	if s.spanCorrelationInMetrics {
+		attrs = helper.AppendSpanAndTraceIDFromSpan(attrs, span)
+	}
+
 	s.recorders.operationDuration.Record(
 		spanCtx,
 		float64(time.Since(startTime).Microseconds()),
-		common.AppendSpanAndTraceIDFromSpan(attrs, span)...,
+		attrs...,
 	)
 	s.counters.operation.Add(ctx, 1, attrs...)
 
@@ -138,8 +152,8 @@ func createRecorders(meter metric.Meter) *recorders {
 	return &recorders{operationDuration: execTimeRecorder}
 }
 
-func NewInstrumentedS3Client(s s3iface.S3API, opts ...common.Option) s3iface.S3API {
-	cfg := common.Config{}
+func NewInstrumentedS3Client(s s3iface.S3API, opts ...config.Option) s3iface.S3API {
+	cfg := config.Config{}
 	for _, opt := range opts {
 		opt(&cfg)
 	}
@@ -161,11 +175,12 @@ func NewInstrumentedS3Client(s s3iface.S3API, opts ...common.Option) s3iface.S3A
 	}
 
 	return &instrumentedS3{
-		S3API:       s,
-		meter:       meter,
-		tracer:      tracer,
-		propagators: cfg.Propagators,
-		counters:    createCounters(meter),
-		recorders:   createRecorders(meter),
+		S3API:                    s,
+		meter:                    meter,
+		tracer:                   tracer,
+		propagators:              cfg.Propagators,
+		counters:                 createCounters(meter),
+		recorders:                createRecorders(meter),
+		spanCorrelationInMetrics: cfg.SpanCorrelationInMetrics,
 	}
 }
