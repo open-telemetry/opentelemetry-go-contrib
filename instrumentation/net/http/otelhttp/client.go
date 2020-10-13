@@ -22,6 +22,9 @@ import (
 	"strings"
 )
 
+// DefaultClient is the default Client and is used by Get, Head, Post and PostForm.
+// Some changes in OTel might not affect the DefaultClient, such as setting a new global propagator.
+// Setting up a new client to apply changes.
 var DefaultClient = &http.Client{Transport: NewTransport(http.DefaultTransport)}
 
 // Get is a convenient replacement for http.Get that adds a span around the request.
