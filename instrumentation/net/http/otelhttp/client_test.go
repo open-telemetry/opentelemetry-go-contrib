@@ -29,9 +29,7 @@ import (
 
 func TestConvenienceWrappers(t *testing.T) {
 	provider, tracer := mocktrace.NewTracerProviderAndTracer(instrumentationName)
-	oldProvider := global.TracerProvider()
 	global.SetTracerProvider(provider)
-	defer global.SetTracerProvider(oldProvider)
 
 	content := []byte("Hello, world!")
 
