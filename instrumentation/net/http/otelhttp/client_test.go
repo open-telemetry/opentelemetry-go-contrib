@@ -46,26 +46,34 @@ func TestConvenienceWrappers(t *testing.T) {
 	context, span := tracer.Start(context.Background(), "parent")
 	defer span.End()
 
-	_, err := Get(context, ts.URL)
+	res, err := Get(context, ts.URL)
 	if err != nil {
 		t.Fatal(err)
 	}
+	res.Body.Close()
 
-	_, err = Head(context, ts.URL)
+	res, err = Head(context, ts.URL)
 	if err != nil {
 		t.Fatal(err)
 	}
+	res.Body.Close()
 
-	_, err = Post(context, ts.URL, "text/plain", strings.NewReader("test"))
+	res, err = Post(context, ts.URL, "text/plain", strings.NewReader("test"))
 	if err != nil {
 		t.Fatal(err)
 	}
+	res.Body.Close()
 
 	form := make(url.Values)
 	form.Set("foo", "bar")
-	_, err = PostForm(context, ts.URL, form)
+	res, err = PostForm(context, ts.URL, form)
 	if err != nil {
 		t.Fatal(err)
+	}
+	res.Body.Close()
+
+	if len(tracer.EndedSpans()) != 4 {
+		t.Fatal("expected 4 client spans")
 	}
 
 }
