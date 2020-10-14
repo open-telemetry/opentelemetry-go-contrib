@@ -77,7 +77,7 @@ func (gce *GCE) Detect(ctx context.Context) (*resource.Resource, error) {
 	if hostname, err := os.Hostname(); hasProblem(err) {
 		errInfo = append(errInfo, err.Error())
 	} else if hostname != "" {
-		labels = append(labels, semconv.HostHostNameKey.String(hostname))
+		labels = append(labels, semconv.HostNameKey.String(hostname))
 	}
 
 	if hostType, err := metadata.Get("instance/machine-type"); hasProblem(err) {

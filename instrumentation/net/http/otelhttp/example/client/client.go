@@ -26,11 +26,12 @@ import (
 
 	"go.opentelemetry.io/contrib/instrumentation/net/http/otelhttp"
 
-	"go.opentelemetry.io/otel/api/baggage"
+	"go.opentelemetry.io/otel"
 	"go.opentelemetry.io/otel/api/global"
 	"go.opentelemetry.io/otel/api/trace"
 	"go.opentelemetry.io/otel/exporters/stdout"
 	"go.opentelemetry.io/otel/label"
+	"go.opentelemetry.io/otel/propagators"
 	sdktrace "go.opentelemetry.io/otel/sdk/trace"
 	"go.opentelemetry.io/otel/semconv"
 )
@@ -51,6 +52,7 @@ func initTracer() {
 		log.Fatal(err)
 	}
 	global.SetTracerProvider(tp)
+	global.SetTextMapPropagator(otel.NewCompositeTextMapPropagator(propagators.TraceContext{}, propagators.Baggage{}))
 }
 
 func main() {
@@ -60,7 +62,7 @@ func main() {
 
 	client := http.Client{Transport: otelhttp.NewTransport(http.DefaultTransport)}
 
-	ctx := baggage.NewContext(context.Background(),
+	ctx := otel.ContextWithBaggageValues(context.Background(),
 		label.String("username", "donuts"),
 	)
 

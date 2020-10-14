@@ -21,9 +21,12 @@ import (
 
 	"go.opentelemetry.io/contrib/instrumentation/net/http/otelhttp"
 
+	"go.opentelemetry.io/otel"
 	"go.opentelemetry.io/otel/api/global"
 	"go.opentelemetry.io/otel/api/trace"
 	"go.opentelemetry.io/otel/exporters/stdout"
+	"go.opentelemetry.io/otel/label"
+	"go.opentelemetry.io/otel/propagators"
 	"go.opentelemetry.io/otel/sdk/resource"
 	sdktrace "go.opentelemetry.io/otel/sdk/trace"
 	"go.opentelemetry.io/otel/semconv"
@@ -46,15 +49,19 @@ func initTracer() {
 		log.Fatal(err)
 	}
 	global.SetTracerProvider(tp)
+	global.SetTextMapPropagator(otel.NewCompositeTextMapPropagator(propagators.TraceContext{}, propagators.Baggage{}))
 }
 
 func main() {
 	initTracer()
 
+	uk := label.Key("username")
+
 	helloHandler := func(w http.ResponseWriter, req *http.Request) {
 		ctx := req.Context()
 		span := trace.SpanFromContext(ctx)
-		span.AddEvent(ctx, "handling this...")
+		username := otel.BaggageValue(ctx, uk)
+		span.AddEvent(ctx, "handling this...", uk.String(username.AsString()))
 
 		_, _ = io.WriteString(w, "Hello, world!\n")
 	}

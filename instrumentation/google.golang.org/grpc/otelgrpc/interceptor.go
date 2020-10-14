@@ -29,7 +29,7 @@ import (
 	"google.golang.org/grpc/peer"
 	"google.golang.org/grpc/status"
 
-	"go.opentelemetry.io/otel/api/baggage"
+	"go.opentelemetry.io/otel"
 	"go.opentelemetry.io/otel/api/trace"
 	"go.opentelemetry.io/otel/codes"
 	"go.opentelemetry.io/otel/label"
@@ -103,7 +103,7 @@ func UnaryClientInterceptor(opts ...Option) grpc.UnaryClientInterceptor {
 
 		if err != nil {
 			s, _ := status.FromError(err)
-			span.SetStatus(codes.Code(s.Code()), s.Message())
+			span.SetStatus(codes.Error, s.Message())
 		}
 
 		return err
@@ -282,7 +282,7 @@ func StreamClientInterceptor(opts ...Option) grpc.StreamClientInterceptor {
 
 			if err != nil {
 				s, _ := status.FromError(err)
-				span.SetStatus(codes.Code(s.Code()), s.Message())
+				span.SetStatus(codes.Error, s.Message())
 			}
 
 			span.End()
@@ -305,9 +305,7 @@ func UnaryServerInterceptor(opts ...Option) grpc.UnaryServerInterceptor {
 		metadataCopy := requestMetadata.Copy()
 
 		entries, spanCtx := Extract(ctx, &metadataCopy, opts...)
-		ctx = baggage.ContextWithMap(ctx, baggage.NewMap(baggage.MapUpdate{
-			MultiKV: entries,
-		}))
+		ctx = otel.ContextWithBaggageValues(ctx, entries...)
 
 		tracer := newConfig(opts).TracerProvider.Tracer(
 			instrumentationName,
@@ -328,7 +326,7 @@ func UnaryServerInterceptor(opts ...Option) grpc.UnaryServerInterceptor {
 		resp, err := handler(ctx, req)
 		if err != nil {
 			s, _ := status.FromError(err)
-			span.SetStatus(codes.Code(s.Code()), s.Message())
+			span.SetStatus(codes.Error, s.Message())
 			messageSent.Event(ctx, 1, s.Proto())
 		} else {
 			messageSent.Event(ctx, 1, resp)
@@ -394,9 +392,7 @@ func StreamServerInterceptor(opts ...Option) grpc.StreamServerInterceptor {
 		metadataCopy := requestMetadata.Copy()
 
 		entries, spanCtx := Extract(ctx, &metadataCopy, opts...)
-		ctx = baggage.ContextWithMap(ctx, baggage.NewMap(baggage.MapUpdate{
-			MultiKV: entries,
-		}))
+		ctx = otel.ContextWithBaggageValues(ctx, entries...)
 
 		tracer := newConfig(opts).TracerProvider.Tracer(
 			instrumentationName,
@@ -416,7 +412,7 @@ func StreamServerInterceptor(opts ...Option) grpc.StreamServerInterceptor {
 
 		if err != nil {
 			s, _ := status.FromError(err)
-			span.SetStatus(codes.Code(s.Code()), s.Message())
+			span.SetStatus(codes.Error, s.Message())
 		}
 
 		return err

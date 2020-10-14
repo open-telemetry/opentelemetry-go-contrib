@@ -26,8 +26,8 @@ import (
 	"strings"
 	"testing"
 
+	"go.opentelemetry.io/otel"
 	"go.opentelemetry.io/otel/api/global"
-	prop "go.opentelemetry.io/otel/api/propagation"
 	"go.opentelemetry.io/otel/api/trace"
 	"go.opentelemetry.io/otel/label"
 	"go.opentelemetry.io/otel/semconv"
@@ -503,10 +503,7 @@ var testCases = []*testCase{
 		method: http.MethodGet,
 		path:   "/",
 		options: []Option{
-			WithPropagators(prop.New(
-				prop.WithExtractors(b3.B3{}),
-				prop.WithInjectors(b3.B3{}),
-			)),
+			WithPropagators(otel.NewCompositeTextMapPropagator(b3.B3{})),
 		},
 		hasSpan:            true,
 		expectedSpanName:   "/",

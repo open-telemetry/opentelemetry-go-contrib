@@ -25,6 +25,7 @@ import (
 	"github.com/stretchr/testify/assert"
 
 	"go.opentelemetry.io/otel/codes"
+	"go.opentelemetry.io/otel/propagators"
 
 	"go.opentelemetry.io/otel/api/trace"
 	"go.opentelemetry.io/otel/label"
@@ -59,6 +60,7 @@ func TestHandlerBasics(t *testing.T) {
 		}), operation,
 		WithTracerProvider(tracerProvider),
 		WithMeterProvider(meterProvider),
+		WithPropagators(propagators.TraceContext{}),
 	)
 
 	r, err := http.NewRequest(http.MethodGet, "http://localhost/", strings.NewReader("foo"))
@@ -112,6 +114,7 @@ func TestHandlerNoWrite(t *testing.T) {
 			span = trace.SpanFromContext(r.Context())
 		}), operation,
 		WithTracerProvider(tracerProvider),
+		WithPropagators(propagators.TraceContext{}),
 	)
 
 	r, err := http.NewRequest(http.MethodGet, "http://localhost/", nil)
@@ -130,7 +133,7 @@ func TestHandlerNoWrite(t *testing.T) {
 		t.Fatalf("got %d, expected %d", got, expected)
 	}
 	if mockSpan, ok := span.(*mocktrace.Span); ok {
-		if got, expected := mockSpan.Status, codes.OK; got != expected {
+		if got, expected := mockSpan.Status, codes.Unset; got != expected {
 			t.Fatalf("got %q, expected %q", got, expected)
 		}
 	} else {

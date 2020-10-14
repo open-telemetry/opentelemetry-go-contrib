@@ -103,7 +103,7 @@ func Render(c *beego.Controller) error {
 	err := c.Render()
 	if err != nil {
 		span.RecordError(ctx, err)
-		span.SetStatus(codes.Internal, "template failure")
+		span.SetStatus(codes.Error, "template failure")
 	}
 	return err
 }
@@ -118,7 +118,7 @@ func RenderString(c *beego.Controller) (string, error) {
 	str, err := c.RenderString()
 	if err != nil {
 		span.RecordError(ctx, err)
-		span.SetStatus(codes.Internal, "render string failure")
+		span.SetStatus(codes.Error, "render string failure")
 	}
 	return str, err
 }
@@ -133,7 +133,7 @@ func RenderBytes(c *beego.Controller) ([]byte, error) {
 	bytes, err := c.RenderBytes()
 	if err != nil {
 		span.RecordError(ctx, err)
-		span.SetStatus(codes.Internal, "render bytes failure")
+		span.SetStatus(codes.Error, "render bytes failure")
 	}
 	return bytes, err
 }

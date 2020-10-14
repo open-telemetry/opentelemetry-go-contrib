@@ -19,12 +19,13 @@ import (
 	"net/http"
 	"sync"
 
+	"github.com/felixge/httpsnoop"
 	"github.com/gorilla/mux"
 
 	otelcontrib "go.opentelemetry.io/contrib"
+	"go.opentelemetry.io/otel"
 
 	otelglobal "go.opentelemetry.io/otel/api/global"
-	otelpropagation "go.opentelemetry.io/otel/api/propagation"
 	oteltrace "go.opentelemetry.io/otel/api/trace"
 	"go.opentelemetry.io/otel/semconv"
 )
@@ -49,7 +50,7 @@ func Middleware(service string, opts ...Option) mux.MiddlewareFunc {
 		oteltrace.WithInstrumentationVersion(otelcontrib.SemVersion()),
 	)
 	if cfg.Propagators == nil {
-		cfg.Propagators = otelglobal.Propagators()
+		cfg.Propagators = otelglobal.TextMapPropagator()
 	}
 	return func(handler http.Handler) http.Handler {
 		return traceware{
@@ -64,7 +65,7 @@ func Middleware(service string, opts ...Option) mux.MiddlewareFunc {
 type traceware struct {
 	service     string
 	tracer      oteltrace.Tracer
-	propagators otelpropagation.Propagators
+	propagators otel.TextMapPropagator
 	handler     http.Handler
 }
 
@@ -72,27 +73,6 @@ type recordingResponseWriter struct {
 	writer  http.ResponseWriter
 	written bool
 	status  int
-}
-
-func (w *recordingResponseWriter) Header() http.Header {
-	return w.writer.Header()
-}
-
-func (w *recordingResponseWriter) Write(slice []byte) (int, error) {
-	w.writeHeader(http.StatusOK)
-	return w.writer.Write(slice)
-}
-
-func (w *recordingResponseWriter) WriteHeader(statusCode int) {
-	w.writeHeader(statusCode)
-	w.writer.WriteHeader(statusCode)
-}
-
-func (w *recordingResponseWriter) writeHeader(statusCode int) {
-	if !w.written {
-		w.written = true
-		w.status = statusCode
-	}
 }
 
 var rrwPool = &sync.Pool{
@@ -105,7 +85,26 @@ func getRRW(writer http.ResponseWriter) *recordingResponseWriter {
 	rrw := rrwPool.Get().(*recordingResponseWriter)
 	rrw.written = false
 	rrw.status = 0
-	rrw.writer = writer
+	rrw.writer = httpsnoop.Wrap(writer, httpsnoop.Hooks{
+		Write: func(next httpsnoop.WriteFunc) httpsnoop.WriteFunc {
+			return func(b []byte) (int, error) {
+				if !rrw.written {
+					rrw.written = true
+					rrw.status = http.StatusOK
+				}
+				return next(b)
+			}
+		},
+		WriteHeader: func(next httpsnoop.WriteHeaderFunc) httpsnoop.WriteHeaderFunc {
+			return func(statusCode int) {
+				if !rrw.written {
+					rrw.written = true
+					rrw.status = statusCode
+				}
+				next(statusCode)
+			}
+		},
+	})
 	return rrw
 }
 
@@ -117,7 +116,7 @@ func putRRW(rrw *recordingResponseWriter) {
 // ServeHTTP implements the http.Handler interface. It does the actual
 // tracing of the request.
 func (tw traceware) ServeHTTP(w http.ResponseWriter, r *http.Request) {
-	ctx := otelpropagation.ExtractHTTP(r.Context(), tw.propagators, r.Header)
+	ctx := tw.propagators.Extract(r.Context(), r.Header)
 	spanName := ""
 	route := mux.CurrentRoute(r)
 	if route != nil {
@@ -145,7 +144,7 @@ func (tw traceware) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	r2 := r.WithContext(ctx)
 	rrw := getRRW(w)
 	defer putRRW(rrw)
-	tw.handler.ServeHTTP(rrw, r2)
+	tw.handler.ServeHTTP(rrw.writer, r2)
 	attrs := semconv.HTTPAttributesFromHTTPStatusCode(rrw.status)
 	spanStatus, spanMessage := semconv.SpanStatusFromHTTPStatusCode(rrw.status)
 	span.SetAttributes(attrs...)

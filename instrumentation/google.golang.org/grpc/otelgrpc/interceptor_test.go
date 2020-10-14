@@ -354,7 +354,7 @@ func TestServerInterceptorError(t *testing.T) {
 	if !ok {
 		t.Fatalf("failed to export error span")
 	}
-	assert.Equal(t, span.StatusCode(), otelcodes.PermissionDenied)
+	assert.Equal(t, span.StatusCode(), otelcodes.Error)
 	assert.Contains(t, deniedErr.Error(), span.StatusMessage())
 	assert.Len(t, span.Events(), 2)
 	assert.Equal(t, map[label.Key]label.Value{
