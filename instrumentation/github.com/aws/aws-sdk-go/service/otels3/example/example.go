@@ -1,7 +1,7 @@
 package main
 
 import (
-	"bitbucket.org/observability/obsvs-go/instrumentation/github.com/aws/aws-sdk-go/service/config"
+	" go.opentelemetry.io/contrib/instrumentation/github.com/aws/aws-sdk-go/service/config"
 	"bytes"
 	"context"
 	"fmt"
@@ -20,7 +20,7 @@ import (
 	"go.opentelemetry.io/otel/sdk/metric/selector/simple"
 	sdktrace "go.opentelemetry.io/otel/sdk/trace"
 
-	obsvsS3 "bitbucket.org/observability/obsvs-go/instrumentation/github.com/aws/aws-sdk-go/service/otels3"
+	obsvsS3 " go.opentelemetry.io/contrib/instrumentation/github.com/aws/aws-sdk-go/service/otels3"
 )
 
 type mockS3Client struct {

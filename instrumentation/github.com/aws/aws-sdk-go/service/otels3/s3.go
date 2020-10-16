@@ -1,9 +1,10 @@
 package otels3
 
 import (
-	"bitbucket.org/observability/obsvs-go/instrumentation/github.com/aws/aws-sdk-go/service/config"
-	"bitbucket.org/observability/obsvs-go/instrumentation/github.com/aws/aws-sdk-go/service/helper"
 	"fmt"
+	"go.opentelemetry.io/contrib/instrumentation/github.com/aws/aws-sdk-go/service/config"
+	"go.opentelemetry.io/contrib/instrumentation/github.com/aws/aws-sdk-go/service/helper"
+	"go.opentelemetry.io/otel"
 	"time"
 
 	"github.com/aws/aws-sdk-go/aws"
@@ -12,7 +13,6 @@ import (
 	"github.com/aws/aws-sdk-go/service/s3/s3iface"
 	"go.opentelemetry.io/otel/api/global"
 	"go.opentelemetry.io/otel/api/metric"
-	"go.opentelemetry.io/otel/api/propagation"
 	"go.opentelemetry.io/otel/api/trace"
 )
 
@@ -20,7 +20,7 @@ type instrumentedS3 struct {
 	s3iface.S3API
 	tracer                   trace.Tracer
 	meter                    metric.Meter
-	propagators              propagation.Propagators
+	propagators              otel.TextMapPropagator
 	counters                 *counters
 	recorders                *recorders
 	spanCorrelationInMetrics bool
@@ -171,7 +171,7 @@ func NewInstrumentedS3Client(s s3iface.S3API, opts ...config.Option) s3iface.S3A
 	)
 
 	if cfg.Propagators == nil {
-		cfg.Propagators = global.Propagators()
+		cfg.Propagators = global.TextMapPropagator()
 	}
 
 	return &instrumentedS3{
