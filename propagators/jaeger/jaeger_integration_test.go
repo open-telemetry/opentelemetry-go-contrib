@@ -21,13 +21,13 @@ import (
 
 	"github.com/google/go-cmp/cmp"
 
-	mocktracer "go.opentelemetry.io/contrib/internal/trace"
 	"go.opentelemetry.io/contrib/propagators/jaeger"
 	"go.opentelemetry.io/otel/api/trace"
+	"go.opentelemetry.io/otel/api/trace/tracetest"
 )
 
 var (
-	mockTracer  = mocktracer.NewTracer("")
+	mockTracer  = tracetest.NewTracerProvider().Tracer("")
 	_, mockSpan = mockTracer.Start(context.Background(), "")
 )
 
