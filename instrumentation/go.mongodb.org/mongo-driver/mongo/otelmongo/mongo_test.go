@@ -35,10 +35,8 @@ func TestMain(m *testing.M) {
 }
 
 func Test(t *testing.T) {
-	sr := &tracetest.StandardSpanRecorder{}
-	provider := tracetest.NewTracerProvider(
-		tracetest.WithSpanRecorder(sr),
-	)
+	sr := new(tracetest.StandardSpanRecorder)
+	provider := tracetest.NewTracerProvider(tracetest.WithSpanRecorder(sr))
 
 	hostname, port := "localhost", "27017"
 

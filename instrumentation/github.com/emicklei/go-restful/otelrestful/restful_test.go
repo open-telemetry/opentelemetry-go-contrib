@@ -90,10 +90,8 @@ func TestChildSpanFromCustomTracer(t *testing.T) {
 }
 
 func TestChildSpanNames(t *testing.T) {
-	sr := &tracetest.StandardSpanRecorder{}
-	provider := tracetest.NewTracerProvider(
-		tracetest.WithSpanRecorder(sr),
-	)
+	sr := new(tracetest.StandardSpanRecorder)
+	provider := tracetest.NewTracerProvider(tracetest.WithSpanRecorder(sr))
 
 	handlerFunc := func(req *restful.Request, resp *restful.Response) {
 		resp.WriteHeader(http.StatusOK)
@@ -217,10 +215,8 @@ func TestPropagationWithCustomPropagators(t *testing.T) {
 }
 
 func TestMultiFilters(t *testing.T) {
-	sr := &tracetest.StandardSpanRecorder{}
-	provider := tracetest.NewTracerProvider(
-		tracetest.WithSpanRecorder(sr),
-	)
+	sr := new(tracetest.StandardSpanRecorder)
+	provider := tracetest.NewTracerProvider(tracetest.WithSpanRecorder(sr))
 
 	wrappedFunc := func(tracerName string) restful.RouteFunction {
 		return func(req *restful.Request, resp *restful.Response) {

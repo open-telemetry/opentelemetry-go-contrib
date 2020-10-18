@@ -84,10 +84,8 @@ func TestChildSpanFromCustomTracer(t *testing.T) {
 }
 
 func TestTrace200(t *testing.T) {
-	sr := &tracetest.StandardSpanRecorder{}
-	provider := tracetest.NewTracerProvider(
-		tracetest.WithSpanRecorder(sr),
-	)
+	sr := new(tracetest.StandardSpanRecorder)
+	provider := tracetest.NewTracerProvider(tracetest.WithSpanRecorder(sr))
 
 	router := echo.New()
 	router.Use(Middleware("foobar", WithTracerProvider(provider)))
@@ -122,10 +120,8 @@ func TestTrace200(t *testing.T) {
 }
 
 func TestError(t *testing.T) {
-	sr := &tracetest.StandardSpanRecorder{}
-	provider := tracetest.NewTracerProvider(
-		tracetest.WithSpanRecorder(sr),
-	)
+	sr := new(tracetest.StandardSpanRecorder)
+	provider := tracetest.NewTracerProvider(tracetest.WithSpanRecorder(sr))
 
 	// setup
 	router := echo.New()
@@ -188,10 +184,8 @@ func TestGetSpanNotInstrumented(t *testing.T) {
 }
 
 func TestPropagationWithGlobalPropagators(t *testing.T) {
-	sr := &tracetest.StandardSpanRecorder{}
-	provider := tracetest.NewTracerProvider(
-		tracetest.WithSpanRecorder(sr),
-	)
+	sr := new(tracetest.StandardSpanRecorder)
+	provider := tracetest.NewTracerProvider(tracetest.WithSpanRecorder(sr))
 	otelglobal.SetTextMapPropagator(propagators.TraceContext{})
 
 	r := httptest.NewRequest("GET", "/user/123", nil)
@@ -216,10 +210,8 @@ func TestPropagationWithGlobalPropagators(t *testing.T) {
 }
 
 func TestPropagationWithCustomPropagators(t *testing.T) {
-	sr := &tracetest.StandardSpanRecorder{}
-	provider := tracetest.NewTracerProvider(
-		tracetest.WithSpanRecorder(sr),
-	)
+	sr := new(tracetest.StandardSpanRecorder)
+	provider := tracetest.NewTracerProvider(tracetest.WithSpanRecorder(sr))
 
 	b3 := b3prop.B3{}
 

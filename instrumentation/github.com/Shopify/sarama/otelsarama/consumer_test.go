@@ -39,10 +39,8 @@ const (
 func TestWrapPartitionConsumer(t *testing.T) {
 	propagators := otelpropagators.TraceContext{}
 	// Mock provider
-	sr := &tracetest.StandardSpanRecorder{}
-	provider := tracetest.NewTracerProvider(
-		tracetest.WithSpanRecorder(sr),
-	)
+	sr := new(tracetest.StandardSpanRecorder)
+	provider := tracetest.NewTracerProvider(tracetest.WithSpanRecorder(sr))
 
 	// Mock partition consumer controller
 	consumer := mocks.NewConsumer(t, sarama.NewConfig())
@@ -60,10 +58,8 @@ func TestWrapPartitionConsumer(t *testing.T) {
 func TestWrapConsumer(t *testing.T) {
 	propagators := otelpropagators.TraceContext{}
 	// Mock provider
-	sr := &tracetest.StandardSpanRecorder{}
-	provider := tracetest.NewTracerProvider(
-		tracetest.WithSpanRecorder(sr),
-	)
+	sr := new(tracetest.StandardSpanRecorder)
+	provider := tracetest.NewTracerProvider(tracetest.WithSpanRecorder(sr))
 
 	// Mock partition consumer controller
 	mockConsumer := mocks.NewConsumer(t, sarama.NewConfig())

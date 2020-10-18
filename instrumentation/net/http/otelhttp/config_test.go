@@ -29,7 +29,7 @@ import (
 func TestBasicFilter(t *testing.T) {
 	rr := httptest.NewRecorder()
 
-	spanRecorder := &tracetest.StandardSpanRecorder{}
+	spanRecorder := new(tracetest.StandardSpanRecorder)
 	provider := tracetest.NewTracerProvider(
 		tracetest.WithSpanRecorder(spanRecorder),
 	)
@@ -101,7 +101,7 @@ func TestSpanNameFormatter(t *testing.T) {
 		t.Run(tc.name, func(t *testing.T) {
 			rr := httptest.NewRecorder()
 
-			spanRecorder := &tracetest.StandardSpanRecorder{}
+			spanRecorder := new(tracetest.StandardSpanRecorder)
 			provider := tracetest.NewTracerProvider(
 				tracetest.WithSpanRecorder(spanRecorder),
 			)

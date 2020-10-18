@@ -37,10 +37,8 @@ func TestWrapSyncProducer(t *testing.T) {
 	var err error
 
 	// Mock provider
-	sr := &tracetest.StandardSpanRecorder{}
-	provider := tracetest.NewTracerProvider(
-		tracetest.WithSpanRecorder(sr),
-	)
+	sr := new(tracetest.StandardSpanRecorder)
+	provider := tracetest.NewTracerProvider(tracetest.WithSpanRecorder(sr))
 
 	cfg := newSaramaConfig()
 	// Mock sync producer
@@ -159,7 +157,7 @@ func TestWrapAsyncProducer(t *testing.T) {
 
 	t.Run("without successes config", func(t *testing.T) {
 		// Mock provider
-		sr := &tracetest.StandardSpanRecorder{}
+		sr := new(tracetest.StandardSpanRecorder)
 		provider := tracetest.NewTracerProvider(
 			tracetest.WithSpanRecorder(sr),
 		)
@@ -229,7 +227,7 @@ func TestWrapAsyncProducer(t *testing.T) {
 
 	t.Run("with successes config", func(t *testing.T) {
 		// Mock provider
-		sr := &tracetest.StandardSpanRecorder{}
+		sr := new(tracetest.StandardSpanRecorder)
 		provider := tracetest.NewTracerProvider(
 			tracetest.WithSpanRecorder(sr),
 		)
@@ -311,10 +309,8 @@ func TestWrapAsyncProducer(t *testing.T) {
 func TestWrapAsyncProducerError(t *testing.T) {
 	propagators := otelpropagators.TraceContext{}
 	// Mock provider
-	sr := &tracetest.StandardSpanRecorder{}
-	provider := tracetest.NewTracerProvider(
-		tracetest.WithSpanRecorder(sr),
-	)
+	sr := new(tracetest.StandardSpanRecorder)
+	provider := tracetest.NewTracerProvider(tracetest.WithSpanRecorder(sr))
 
 	// Set producer with successes config
 	cfg := newSaramaConfig()

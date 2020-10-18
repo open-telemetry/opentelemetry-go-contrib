@@ -104,7 +104,7 @@ func initClientWithSpanRecorder(t *testing.T) (*Client, *tracetest.StandardSpanR
 	mc := memcache.New(host + ":" + port)
 	require.NoError(t, clearDB(mc))
 
-	sr := &tracetest.StandardSpanRecorder{}
+	sr := new(tracetest.StandardSpanRecorder)
 	c := NewClientWithTracing(
 		mc,
 		WithTracerProvider(

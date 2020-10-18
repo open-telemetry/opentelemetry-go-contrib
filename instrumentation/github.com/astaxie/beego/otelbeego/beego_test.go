@@ -233,10 +233,8 @@ func TestSpanFromContextCustomProvider(t *testing.T) {
 
 func TestStatic(t *testing.T) {
 	defer replaceBeego()
-	spanRecorder := &tracetest.StandardSpanRecorder{}
-	tracerProvider := tracetest.NewTracerProvider(
-		tracetest.WithSpanRecorder(spanRecorder),
-	)
+	sr := new(tracetest.StandardSpanRecorder)
+	tracerProvider := tracetest.NewTracerProvider(tracetest.WithSpanRecorder(sr))
 	meterimpl, meterProvider := metrictest.NewMeterProvider()
 	file, err := ioutil.TempFile("", "static-*.html")
 	require.NoError(t, err)
@@ -265,7 +263,7 @@ func TestStatic(t *testing.T) {
 	body, err := ioutil.ReadAll(rr.Result().Body)
 	require.NoError(t, err)
 	require.Equal(t, "<h1>Hello, world!</h1>", string(body))
-	spans := spanRecorder.Completed()
+	spans := sr.Completed()
 	require.Len(t, spans, 1)
 	assertSpan(t, spans[0], tc)
 	assertMetrics(t, meterimpl.MeasurementBatches, tc)
@@ -295,10 +293,8 @@ func TestRender(t *testing.T) {
 	beego.SetViewsPath(dir)
 	_, tplName = filepath.Split(file.Name())
 
-	spanRecorder := &tracetest.StandardSpanRecorder{}
-	tracerProvider := tracetest.NewTracerProvider(
-		tracetest.WithSpanRecorder(spanRecorder),
-	)
+	sr := new(tracetest.StandardSpanRecorder)
+	tracerProvider := tracetest.NewTracerProvider(tracetest.WithSpanRecorder(sr))
 
 	mw := NewOTelBeegoMiddleWare(
 		middleWareName,
@@ -314,7 +310,7 @@ func TestRender(t *testing.T) {
 		require.NoError(t, err)
 	}
 
-	spans := spanRecorder.Completed()
+	spans := sr.Completed()
 	require.Len(t, spans, 6) // 3 HTTP requests, each creating 2 spans
 	for _, span := range spans {
 		switch span.Name() {
@@ -337,10 +333,8 @@ func TestRender(t *testing.T) {
 // ------------------------------------------ Utilities
 
 func runTest(t *testing.T, tc *testCase, url string) {
-	spanRecorder := &tracetest.StandardSpanRecorder{}
-	tracerProvider := tracetest.NewTracerProvider(
-		tracetest.WithSpanRecorder(spanRecorder),
-	)
+	sr := new(tracetest.StandardSpanRecorder)
+	tracerProvider := tracetest.NewTracerProvider(tracetest.WithSpanRecorder(sr))
 	meterimpl, meterProvider := metrictest.NewMeterProvider()
 	addTestRoutes(t)
 	defer replaceBeego()
@@ -373,7 +367,7 @@ func runTest(t *testing.T, tc *testCase, url string) {
 	require.NoError(t, json.Unmarshal(body, &message))
 	require.Equal(t, tc.expectedResponse, message)
 
-	spans := spanRecorder.Completed()
+	spans := sr.Completed()
 	if tc.hasSpan {
 		require.Len(t, spans, 1)
 		assertSpan(t, spans[0], tc)

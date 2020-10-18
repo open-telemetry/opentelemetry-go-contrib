@@ -85,10 +85,8 @@ func TestChildSpanFromCustomTracer(t *testing.T) {
 }
 
 func TestTrace200(t *testing.T) {
-	sr := &tracetest.StandardSpanRecorder{}
-	provider := tracetest.NewTracerProvider(
-		tracetest.WithSpanRecorder(sr),
-	)
+	sr := new(tracetest.StandardSpanRecorder)
+	provider := tracetest.NewTracerProvider(tracetest.WithSpanRecorder(sr))
 
 	router := gin.New()
 	router.Use(Middleware("foobar", WithTracerProvider(provider)))
@@ -123,10 +121,8 @@ func TestTrace200(t *testing.T) {
 }
 
 func TestError(t *testing.T) {
-	sr := &tracetest.StandardSpanRecorder{}
-	provider := tracetest.NewTracerProvider(
-		tracetest.WithSpanRecorder(sr),
-	)
+	sr := new(tracetest.StandardSpanRecorder)
+	provider := tracetest.NewTracerProvider(tracetest.WithSpanRecorder(sr))
 
 	// setup
 	router := gin.New()
@@ -156,10 +152,8 @@ func TestError(t *testing.T) {
 }
 
 func TestHTML(t *testing.T) {
-	sr := &tracetest.StandardSpanRecorder{}
-	provider := tracetest.NewTracerProvider(
-		tracetest.WithSpanRecorder(sr),
-	)
+	sr := new(tracetest.StandardSpanRecorder)
+	provider := tracetest.NewTracerProvider(tracetest.WithSpanRecorder(sr))
 
 	// setup
 	router := gin.New()
@@ -213,10 +207,8 @@ func TestGetSpanNotInstrumented(t *testing.T) {
 }
 
 func TestPropagationWithGlobalPropagators(t *testing.T) {
-	sr := &tracetest.StandardSpanRecorder{}
-	provider := tracetest.NewTracerProvider(
-		tracetest.WithSpanRecorder(sr),
-	)
+	sr := new(tracetest.StandardSpanRecorder)
+	provider := tracetest.NewTracerProvider(tracetest.WithSpanRecorder(sr))
 	otelglobal.SetTextMapPropagator(b3prop.B3{})
 
 	r := httptest.NewRequest("GET", "/user/123", nil)
@@ -240,10 +232,8 @@ func TestPropagationWithGlobalPropagators(t *testing.T) {
 }
 
 func TestPropagationWithCustomPropagators(t *testing.T) {
-	sr := &tracetest.StandardSpanRecorder{}
-	provider := tracetest.NewTracerProvider(
-		tracetest.WithSpanRecorder(sr),
-	)
+	sr := new(tracetest.StandardSpanRecorder)
+	provider := tracetest.NewTracerProvider(tracetest.WithSpanRecorder(sr))
 	b3 := b3prop.B3{}
 
 	r := httptest.NewRequest("GET", "/user/123", nil)

@@ -60,7 +60,7 @@ type testRecord struct {
 func TestQuery(t *testing.T) {
 	defer afterEach()
 	cluster := getCluster()
-	sr := &tracetest.StandardSpanRecorder{}
+	sr := new(tracetest.StandardSpanRecorder)
 	tracerProvider := tracetest.NewTracerProvider(tracetest.WithSpanRecorder(sr))
 	meterImpl, meterProvider := metrictest.NewMeterProvider()
 
@@ -178,7 +178,7 @@ func TestQuery(t *testing.T) {
 func TestBatch(t *testing.T) {
 	defer afterEach()
 	cluster := getCluster()
-	sr := &tracetest.StandardSpanRecorder{}
+	sr := new(tracetest.StandardSpanRecorder)
 	tracerProvider := tracetest.NewTracerProvider(tracetest.WithSpanRecorder(sr))
 	meterImpl, meterProvider := metrictest.NewMeterProvider()
 
@@ -272,7 +272,7 @@ func TestBatch(t *testing.T) {
 func TestConnection(t *testing.T) {
 	defer afterEach()
 	cluster := getCluster()
-	sr := &tracetest.StandardSpanRecorder{}
+	sr := new(tracetest.StandardSpanRecorder)
 	tracerProvider := tracetest.NewTracerProvider(tracetest.WithSpanRecorder(sr))
 	meterImpl, meterProvider := metrictest.NewMeterProvider()
 	connectObserver := &mockConnectObserver{0}
