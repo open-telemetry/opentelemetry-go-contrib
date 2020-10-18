@@ -19,21 +19,19 @@ import (
 	"testing"
 	"time"
 
-	"go.opentelemetry.io/otel/api/trace/tracetest"
-	"go.opentelemetry.io/otel/semconv"
-
+	"github.com/golang/protobuf/proto" //nolint:staticcheck
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
-
-	"github.com/golang/protobuf/proto" //nolint:staticcheck
 
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/metadata"
 	"google.golang.org/grpc/status"
 
+	"go.opentelemetry.io/otel/api/trace/tracetest"
 	otelcodes "go.opentelemetry.io/otel/codes"
 	"go.opentelemetry.io/otel/label"
+	"go.opentelemetry.io/otel/semconv"
 )
 
 type SpanRecorder struct {

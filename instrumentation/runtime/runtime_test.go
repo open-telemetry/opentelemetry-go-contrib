@@ -23,7 +23,7 @@ import (
 	"github.com/stretchr/testify/require"
 
 	"go.opentelemetry.io/contrib/instrumentation/runtime"
-	"go.opentelemetry.io/contrib/internal/metric"
+	"go.opentelemetry.io/otel/api/metric/metrictest"
 )
 
 func TestRuntime(t *testing.T) {
@@ -34,7 +34,7 @@ func TestRuntime(t *testing.T) {
 	time.Sleep(time.Second)
 }
 
-func getGCCount(impl *metric.MeterImpl) int {
+func getGCCount(impl *metrictest.MeterImpl) int {
 	for _, b := range impl.MeasurementBatches {
 		for _, m := range b.Measurements {
 			if m.Instrument.Descriptor().Name() == "runtime.go.gc.count" {
@@ -52,7 +52,7 @@ func testMinimumInterval(t *testing.T, shouldHappen bool, opts ...runtime.Option
 	goruntime.ReadMemStats(&mstats0)
 	baseline := int(mstats0.NumGC)
 
-	impl, provider := metric.NewMeterProvider()
+	impl, provider := metrictest.NewMeterProvider()
 
 	err := runtime.Start(
 		append(
