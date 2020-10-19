@@ -136,21 +136,17 @@ func Test_instrumentedS3_PutObjectWithContext(t *testing.T) {
 			assert.Equal(t, "storage.operation.duration_μs", mockedMeterImp.MeasurementBatches[0].Measurements[0].Instrument.Descriptor().Name())
 			assert.Equal(t, "storage.s3.operation", mockedMeterImp.MeasurementBatches[1].Measurements[0].Instrument.Descriptor().Name())
 
-			if tt.fields.spanCorrelationInMetrics {
-				traceID := spans[0].SpanContext().TraceID.String()
-				spanID := spans[0].SpanContext().SpanID.String()
+			for _, measurementBatch := range mockedMeterImp.MeasurementBatches {
+				if tt.fields.spanCorrelationInMetrics {
+					traceID := spans[0].SpanContext().TraceID.String()
+					spanID := spans[0].SpanContext().SpanID.String()
 
-				assert.Equal(t, traceID, getLabelValFromMeasurementBatch("trace.id", mockedMeterImp.MeasurementBatches[0]).AsString())
-				assert.Equal(t, spanID, getLabelValFromMeasurementBatch("span.id", mockedMeterImp.MeasurementBatches[0]).AsString())
-
-				assert.Equal(t, traceID, getLabelValFromMeasurementBatch("trace.id", mockedMeterImp.MeasurementBatches[1]).AsString())
-				assert.Equal(t, spanID, getLabelValFromMeasurementBatch("span.id", mockedMeterImp.MeasurementBatches[1]).AsString())
-			} else {
-				assert.Nil(t, getLabelValFromMeasurementBatch("trace.id", mockedMeterImp.MeasurementBatches[0]))
-				assert.Nil(t, getLabelValFromMeasurementBatch("span.id", mockedMeterImp.MeasurementBatches[0]))
-
-				assert.Nil(t, getLabelValFromMeasurementBatch("trace.id", mockedMeterImp.MeasurementBatches[1]))
-				assert.Nil(t, getLabelValFromMeasurementBatch("span.id", mockedMeterImp.MeasurementBatches[1]))
+					assert.Equal(t, traceID, getLabelValFromMeasurementBatch("trace.id", measurementBatch).AsString())
+					assert.Equal(t, spanID, getLabelValFromMeasurementBatch("span.id", measurementBatch).AsString())
+				} else {
+					assert.Nil(t, getLabelValFromMeasurementBatch("trace.id", measurementBatch))
+					assert.Nil(t, getLabelValFromMeasurementBatch("span.id", measurementBatch))
+				}
 			}
 		})
 	}
