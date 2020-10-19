@@ -157,7 +157,7 @@ func createRecorders(meter metric.Meter) *recorders {
 }
 
 func NewInstrumentedS3Client(s s3iface.S3API, opts ...config.Option) (s3iface.S3API, error) {
-	if reflect.ValueOf(s).IsNil() {
+	if s == nil || reflect.ValueOf(s).IsNil() {
 		return &instrumentedS3{}, fmt.Errorf("interface must be set")
 	}
 
