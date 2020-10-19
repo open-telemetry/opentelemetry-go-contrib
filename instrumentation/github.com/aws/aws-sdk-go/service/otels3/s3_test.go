@@ -460,6 +460,7 @@ func Test_instrumentedS3_NewInstrumentedS3Client(t *testing.T) {
 			},
 			verifyFunc: func(t *testing.T, got s3iface.S3API, err error) {
 				assert.NotNil(t, err, "error should not be nil")
+				assert.Equal(t, err.Error(), "interface must be set")
 				assert.Equal(t, got, &instrumentedS3{})
 			},
 		},

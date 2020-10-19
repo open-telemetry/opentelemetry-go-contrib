@@ -15,6 +15,7 @@
 package otels3
 
 import (
+	"errors"
 	"fmt"
 	"reflect"
 	"time"
