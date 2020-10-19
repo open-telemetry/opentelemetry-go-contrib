@@ -8,6 +8,10 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 
 ## [Unreleased]
 
+## Changed
+
+- Replace internal tracer and meter helpers by helpers from `go.opentelemetry.io/otel`. (#414)
+
 ## Fixed
 
 - `/detectors/aws` no longer fails if instance metadata is not available (e.g. not running in AWS) (#401)
