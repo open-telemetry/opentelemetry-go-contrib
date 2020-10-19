@@ -416,7 +416,7 @@ func Test_instrumentedS3_NewInstrumentedS3Client(t *testing.T) {
 		verifyFunc func(t *testing.T, got s3iface.S3API, err error)
 	}{
 		{
-			name: "NewInstrumentedS3Client should return",
+			name: "NewInstrumentedS3Client should return a new client",
 			args: args{
 				s: s3MockClient,
 				opts: []config.Option{
