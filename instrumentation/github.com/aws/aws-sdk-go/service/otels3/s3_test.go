@@ -24,18 +24,17 @@ import (
 	"github.com/aws/aws-sdk-go/service/s3/s3iface"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/mock"
-	"go.opentelemetry.io/contrib/instrumentation/github.com/aws/aws-sdk-go/service/config"
 
+	"go.opentelemetry.io/contrib/instrumentation/github.com/aws/aws-sdk-go/service/config"
 	"go.opentelemetry.io/contrib/instrumentation/github.com/aws/aws-sdk-go/service/otels3/mocks"
 	mockmetric "go.opentelemetry.io/contrib/internal/metric"
 	mocktrace "go.opentelemetry.io/contrib/internal/trace"
+	"go.opentelemetry.io/otel/api/global"
+	"go.opentelemetry.io/otel/api/trace"
 	"go.opentelemetry.io/otel/label"
 
 	"reflect"
 	"testing"
-
-	"go.opentelemetry.io/otel/api/global"
-	"go.opentelemetry.io/otel/api/trace"
 )
 
 var (
