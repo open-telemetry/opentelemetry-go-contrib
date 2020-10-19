@@ -9,10 +9,12 @@ import (
 	"github.com/aws/aws-sdk-go/service/s3"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/mock"
+	"go.opentelemetry.io/contrib/instrumentation/github.com/aws/aws-sdk-go/service/config"
 	"go.opentelemetry.io/contrib/instrumentation/github.com/aws/aws-sdk-go/service/otels3/mocks"
 	mockmetric "go.opentelemetry.io/contrib/internal/metric"
 	mocktrace "go.opentelemetry.io/contrib/internal/trace"
 	"go.opentelemetry.io/otel/label"
+	otelpropagators "go.opentelemetry.io/otel/propagators"
 
 	"reflect"
 	"testing"
@@ -297,6 +299,104 @@ func Test_instrumentedS3_DeleteObjectWithContext(t *testing.T) {
 					assert.Nil(t, getLabelValFromMeasurementBatch("span.id", measurementBatch))
 				}
 			}
+		})
+	}
+}
+
+func Test_instrumentedS3_NewInstrumentedS3Client(t *testing.T) {
+	type fields struct {
+		spanCorrelationInMetrics bool
+		mockSetup                func(s3Client *mock.Mock) (expectedReturn interface{})
+	}
+	type args struct {
+		s    *mocks.S3Client
+		opts []config.Option
+	}
+
+	tracerProvider, _ := mocktrace.NewTracerProviderAndTracer(instrumentationName)
+	tracer := global.TracerProvider().Tracer(instrumentationName)
+	_, meterProvider := mockmetric.NewMeterProvider()
+	meter := meterProvider.Meter(instrumentationName)
+	mockedPropagators2 := otelpropagators.TraceContext{}
+	s3MockClient := &mocks.S3Client{}
+
+	tests := []struct {
+		name    string
+		fields  fields
+		args    args
+		wantErr bool
+	}{
+		{
+			name: "instrumentedS3.NewInstrumentedS3Client should be delegated to S3.NewInstrumentedS3Client with mock tracer/metrics/propagator when config set",
+			fields: fields{
+				spanCorrelationInMetrics: true,
+				mockSetup: func(m *mock.Mock) (expectedReturn interface{}) {
+					expectedReturn = instrumentedS3{
+						S3API:                    s3MockClient,
+						meter:                    meter,  //diff
+						tracer:                   tracer, //diff
+						propagators:              mockedPropagators2,
+						counters:                 createCounters(meter),  //diff
+						recorders:                createRecorders(meter), //diff
+						spanCorrelationInMetrics: true,
+					}
+					m.On("NewInstrumentedS3Client", mock.Anything, mock.Anything).Return(expectedReturn, nil)
+					return
+				},
+			},
+			args: args{
+				s: s3MockClient,
+				opts: []config.Option{
+					config.WithTracerProvider(tracerProvider),
+					config.WithMetricProvider(meterProvider),
+					config.WithSpanCorrelationInMetrics(true),
+					config.WithPropagators(mockedPropagators2),
+				},
+			},
+			wantErr: false,
+		},
+		{
+			name: "instrumentedS3.NewInstrumentedS3Client should be delegated to S3.NewInstrumentedS3Client with default tracer/metrics/propagator when config not set",
+			fields: fields{
+				spanCorrelationInMetrics: false,
+				mockSetup: func(m *mock.Mock) (expectedReturn interface{}) {
+					expectedReturn = instrumentedS3{}
+					m.On("NewInstrumentedS3Client", mock.Anything, mock.Anything).Return(expectedReturn, nil)
+					return
+				},
+			},
+			args: args{
+				s:    s3MockClient,
+				opts: nil,
+			},
+			wantErr: false,
+		},
+	}
+
+	for _, tt := range tests {
+		tt := tt
+		t.Run(tt.name, func(t *testing.T) {
+			t.Parallel()
+			s3Mock := tt.args.s
+			expectedReturn := tt.fields.mockSetup(&s3Mock.S3API.Mock)
+			got := NewInstrumentedS3Client(s3Mock, tt.args.opts...)
+			// if !reflect.DeepEqual(got, expectedReturn) {
+			// 	t.Errorf("NewInstrumentedS3Client() got = %v, want %v", got, expectedReturn)
+			// }
+
+			if tt.args.opts != nil {
+				assert.Equal(t, got.(*instrumentedS3).spanCorrelationInMetrics, expectedReturn.(instrumentedS3).spanCorrelationInMetrics)
+				assert.Equal(t, got.(*instrumentedS3).propagators, expectedReturn.(instrumentedS3).propagators)
+				assert.Equal(t, got.(*instrumentedS3).S3API, expectedReturn.(instrumentedS3).S3API)
+			} else {
+
+			}
+
+			// assert.NotNil(t, got.(*instrumentedS3).propagators, "counters should not be nil")
+			// assert.NotNil(t, got.(*instrumentedS3).meter, "meter should not be nil")
+			assert.NotNil(t, got.(*instrumentedS3).counters, "counters should not be nil")
+			assert.NotNil(t, got.(*instrumentedS3).recorders, "recorders should not be nil")
+			assert.NotNil(t, got.(*instrumentedS3).tracer, "tracer should not be nil")
 		})
 	}
 }
