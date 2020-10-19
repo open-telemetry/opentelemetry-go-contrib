@@ -21,19 +21,20 @@ import (
 	"github.com/aws/aws-sdk-go/aws"
 	"github.com/aws/aws-sdk-go/aws/request"
 	"github.com/aws/aws-sdk-go/service/s3"
+	"github.com/aws/aws-sdk-go/service/s3/s3iface"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/mock"
 
+	"go.opentelemetry.io/contrib/instrumentation/github.com/aws/aws-sdk-go/service/config"
 	"go.opentelemetry.io/contrib/instrumentation/github.com/aws/aws-sdk-go/service/otels3/mocks"
 	mockmetric "go.opentelemetry.io/contrib/internal/metric"
 	mocktrace "go.opentelemetry.io/contrib/internal/trace"
+	"go.opentelemetry.io/otel/api/global"
+	"go.opentelemetry.io/otel/api/trace"
 	"go.opentelemetry.io/otel/label"
 
 	"reflect"
 	"testing"
-
-	"go.opentelemetry.io/otel/api/global"
-	"go.opentelemetry.io/otel/api/trace"
 )
 
 var (
@@ -294,6 +295,183 @@ func Test_instrumentedS3_GetObjectWithContext(t *testing.T) {
 			assertMetrics(t, mockedMeterImp)
 
 			assertSpanCorrelationInMetrics(t, tt.fields.spanCorrelationInMetrics, mockedMeterImp, spans[0])
+		})
+	}
+}
+
+func Test_instrumentedS3_DeleteObjectWithContext(t *testing.T) {
+	type fields struct {
+		spanCorrelationInMetrics bool
+		mockSetup                func(s3Client *mock.Mock) (expectedReturn interface{})
+	}
+	type args struct {
+		ctx   aws.Context
+		input *s3.DeleteObjectInput
+		opts  []request.Option
+	}
+	tests := []struct {
+		name    string
+		fields  fields
+		args    args
+		wantErr bool
+	}{
+		{
+			name: "instrumentedS3.DeleteObjectWithContext should be delegated to S3.DeleteObjectWithContext while metrics and spans are linked",
+			fields: fields{
+				spanCorrelationInMetrics: true,
+				mockSetup: func(m *mock.Mock) (expectedReturn interface{}) {
+					expectedReturn = &s3.DeleteObjectOutput{}
+					m.On("DeleteObjectWithContext", mock.Anything, mock.Anything).Return(expectedReturn, nil)
+					return
+				},
+			},
+			args: args{
+				ctx: context.Background(),
+				input: &s3.DeleteObjectInput{
+					Bucket: aws.String(s3bucket),
+				},
+				opts: nil,
+			},
+			wantErr: false,
+		},
+		{
+			name: "instrumentedS3.DeleteObjectWithContext should be delegated to S3.DeleteObjectWithContext while metrics and spans are NOT linked",
+			fields: fields{
+				spanCorrelationInMetrics: false,
+				mockSetup: func(m *mock.Mock) (expectedReturn interface{}) {
+					expectedReturn = &s3.DeleteObjectOutput{}
+					m.On("DeleteObjectWithContext", mock.Anything, mock.Anything).Return(expectedReturn, nil)
+					return
+				},
+			},
+			args: args{
+				ctx: context.Background(),
+				input: &s3.DeleteObjectInput{
+					Bucket: aws.String(s3bucket),
+				},
+				opts: nil,
+			},
+			wantErr: false,
+		},
+	}
+	for _, tt := range tests {
+		tt := tt
+		t.Run(tt.name, func(t *testing.T) {
+			t.Parallel()
+			_, mockedTracer := mocktrace.NewTracerProviderAndTracer(instrumentationName)
+			mockedMeterImp, mockedMeter := mockmetric.NewMeter()
+			mockedCounters := createCounters(mockedMeter)
+			mockedRecorders := createRecorders(mockedMeter)
+			mockedPropagators := global.TextMapPropagator()
+
+			s3Mock := &mocks.S3Client{}
+			s := &instrumentedS3{
+				S3API:                    s3Mock,
+				tracer:                   mockedTracer,
+				meter:                    mockedMeter,
+				propagators:              mockedPropagators,
+				counters:                 mockedCounters,
+				recorders:                mockedRecorders,
+				spanCorrelationInMetrics: tt.fields.spanCorrelationInMetrics,
+			}
+			expectedReturn := tt.fields.mockSetup(&s3Mock.S3API.Mock)
+			got, err := s.DeleteObjectWithContext(tt.args.ctx, tt.args.input)
+			if (err != nil) != tt.wantErr {
+				t.Errorf("DeleteObjectWithContext() error = %v, wantErr %v", err, tt.wantErr)
+				return
+			}
+			if !reflect.DeepEqual(got, expectedReturn) {
+				t.Errorf("DeleteObjectWithContext() got = %v, want %v", got, expectedReturn)
+			}
+			spans := mockedTracer.EndedSpans()
+			assert.Equal(t, 1, len(spans))
+			assert.Equal(t, trace.SpanKindClient, spans[0].Kind)
+			assert.Equal(t, s3StorageSystemValue, getLabelValFromSpan(storageSystemKey, *spans[0]).AsString())
+			assert.Equal(t, *tt.args.input.Bucket, getLabelValFromSpan(storageDestinationKey, *spans[0]).AsString())
+			assert.Equal(t, operationDeleteObject, getLabelValFromSpan(storageOperationKey, *spans[0]).AsString())
+
+			// In Meter we have one duration recorder, one operation counter
+			assert.Equal(t, 2, len(mockedMeterImp.MeasurementBatches))
+
+			assertMetrics(t, mockedMeterImp)
+
+			assertSpanCorrelationInMetrics(t, tt.fields.spanCorrelationInMetrics, mockedMeterImp, spans[0])
+		})
+	}
+}
+
+func Test_instrumentedS3_NewInstrumentedS3Client(t *testing.T) {
+	type args struct {
+		s    s3iface.S3API
+		opts []config.Option
+	}
+	tracerProvider, _ := mocktrace.NewTracerProviderAndTracer(instrumentationName)
+	_, meterProvider := mockmetric.NewMeterProvider()
+	mockedPropagator := global.TextMapPropagator()
+	s3MockClient := &mocks.S3Client{}
+
+	tests := []struct {
+		name       string
+		args       args
+		verifyFunc func(t *testing.T, got s3iface.S3API, err error)
+	}{
+		{
+			name: "NewInstrumentedS3Client should return a new client",
+			args: args{
+				s: s3MockClient,
+				opts: []config.Option{
+					config.WithTracerProvider(tracerProvider),
+					config.WithMetricProvider(meterProvider),
+					config.WithPropagators(mockedPropagator),
+					config.WithSpanCorrelationInMetrics(true),
+				},
+			},
+			verifyFunc: func(t *testing.T, got s3iface.S3API, err error) {
+				assert.Nil(t, err, "error should be nil")
+				assert.Equal(t, got.(*instrumentedS3).spanCorrelationInMetrics, true)
+				assert.Equal(t, got.(*instrumentedS3).propagators, mockedPropagator)
+				assert.Equal(t, got.(*instrumentedS3).S3API, s3MockClient)
+				assert.NotNil(t, got.(*instrumentedS3).meter, "meter should not be nil")
+				assert.NotNil(t, got.(*instrumentedS3).tracer, "tracer should not be nil")
+				assert.NotNil(t, got.(*instrumentedS3).counters, "counters should not be nil")
+				assert.NotNil(t, got.(*instrumentedS3).recorders, "recorders should not be nil")
+			},
+		},
+		{
+			name: "NewInstrumentedS3Client with no options should return a new client with default values",
+			args: args{
+				s:    s3MockClient,
+				opts: nil,
+			},
+			verifyFunc: func(t *testing.T, got s3iface.S3API, err error) {
+				assert.Nil(t, err, "error should be nil")
+				assert.Equal(t, got.(*instrumentedS3).propagators, global.TextMapPropagator())
+				assert.NotNil(t, got.(*instrumentedS3).meter, "meter should not be nil")
+				assert.NotNil(t, got.(*instrumentedS3).tracer, "tracer should not be nil")
+				assert.NotNil(t, got.(*instrumentedS3).counters, "counters should not be nil")
+				assert.NotNil(t, got.(*instrumentedS3).recorders, "recorders should not be nil")
+				assert.Equal(t, got.(*instrumentedS3).S3API, s3MockClient)
+			},
+		},
+		{
+			name: "NewInstrumentedS3Client with no s3 interface should return error",
+			args: args{
+				opts: nil,
+			},
+			verifyFunc: func(t *testing.T, got s3iface.S3API, err error) {
+				assert.NotNil(t, err, "error should not be nil")
+				assert.Equal(t, err.Error(), "interface must be set")
+				assert.Equal(t, got, &instrumentedS3{})
+			},
+		},
+	}
+
+	for _, tt := range tests {
+		tt := tt
+		t.Run(tt.name, func(t *testing.T) {
+			t.Parallel()
+			got, err := NewInstrumentedS3Client(tt.args.s, tt.args.opts...)
+			tt.verifyFunc(t, got, err)
 		})
 	}
 }

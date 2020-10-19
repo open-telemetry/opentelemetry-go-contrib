@@ -15,7 +15,9 @@
 package otels3
 
 import (
+	"errors"
 	"fmt"
+	"reflect"
 	"time"
 
 	"go.opentelemetry.io/contrib/instrumentation/github.com/aws/aws-sdk-go/service/config"
@@ -170,7 +172,11 @@ func createRecorders(meter metric.Meter) *recorders {
 	return &recorders{operationDuration: execTimeRecorder}
 }
 
-func NewInstrumentedS3Client(s s3iface.S3API, opts ...config.Option) s3iface.S3API {
+func NewInstrumentedS3Client(s s3iface.S3API, opts ...config.Option) (s3iface.S3API, error) {
+	if s == nil || reflect.ValueOf(s).IsNil() {
+		return &instrumentedS3{}, errors.New("interface must be set")
+	}
+
 	cfg := config.Config{}
 	for _, opt := range opts {
 		opt(&cfg)
@@ -196,5 +202,5 @@ func NewInstrumentedS3Client(s s3iface.S3API, opts ...config.Option) s3iface.S3A
 		counters:                 createCounters(meter),
 		recorders:                createRecorders(meter),
 		spanCorrelationInMetrics: cfg.SpanCorrelationInMetrics,
-	}
+	}, nil
 }
