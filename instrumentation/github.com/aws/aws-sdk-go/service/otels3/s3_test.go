@@ -438,7 +438,7 @@ func Test_instrumentedS3_NewInstrumentedS3Client(t *testing.T) {
 			},
 		},
 		{
-			name: "NewInstrumentedS3Client with no options should return default values",
+			name: "NewInstrumentedS3Client with no options should return a new client with default values",
 			args: args{
 				s:    s3MockClient,
 				opts: nil,
