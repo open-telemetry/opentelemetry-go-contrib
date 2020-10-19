@@ -69,7 +69,7 @@ func Test_instrumentedS3_PutObjectWithContext(t *testing.T) {
 			args: args{
 				ctx: context.Background(),
 				input: &s3.PutObjectInput{
-					Bucket: &s3bucket,
+					Bucket: aws.String(s3bucket),
 				},
 				opts: nil,
 			},
@@ -88,7 +88,7 @@ func Test_instrumentedS3_PutObjectWithContext(t *testing.T) {
 			args: args{
 				ctx: context.Background(),
 				input: &s3.PutObjectInput{
-					Bucket: &s3bucket,
+					Bucket: aws.String(s3bucket),
 				},
 				opts: nil,
 			},
@@ -99,7 +99,7 @@ func Test_instrumentedS3_PutObjectWithContext(t *testing.T) {
 		tt := tt
 		t.Run(tt.name, func(t *testing.T) {
 			t.Parallel()
-			_, mockedTracer := mocktrace.NewTracerProviderAndTracer("github.com/aws/aws-sdk-go/aws/service/s3")
+			_, mockedTracer := mocktrace.NewTracerProviderAndTracer(instrumentationName)
 			mockedMeterImp, mockedMeter := mockmetric.NewMeter()
 			mockedCounters := createCounters(mockedMeter)
 			mockedRecorders := createRecorders(mockedMeter)

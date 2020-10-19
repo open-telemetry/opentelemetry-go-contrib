@@ -16,6 +16,8 @@ import (
 	"go.opentelemetry.io/otel/api/trace"
 )
 
+var instrumentationName = "github.com/aws/aws-sdk-go/aws/service/s3"
+
 type instrumentedS3 struct {
 	s3iface.S3API
 	tracer                   trace.Tracer
@@ -160,15 +162,11 @@ func NewInstrumentedS3Client(s s3iface.S3API, opts ...config.Option) s3iface.S3A
 	if cfg.TracerProvider == nil {
 		cfg.TracerProvider = global.TracerProvider()
 	}
-	tracer := cfg.TracerProvider.Tracer(
-		"github.com/aws/aws-sdk-go/aws/service/s3",
-	)
+	tracer := cfg.TracerProvider.Tracer(instrumentationName)
 	if cfg.MetricProvider == nil {
 		cfg.MetricProvider = global.MeterProvider()
 	}
-	meter := cfg.MetricProvider.Meter(
-		"github.com/aws/aws-sdk-go/aws/service/s3",
-	)
+	meter := cfg.MetricProvider.Meter(instrumentationName)
 
 	if cfg.Propagators == nil {
 		cfg.Propagators = global.TextMapPropagator()
