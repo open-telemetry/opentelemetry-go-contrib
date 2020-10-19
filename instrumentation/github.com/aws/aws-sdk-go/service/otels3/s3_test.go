@@ -153,8 +153,7 @@ func Test_instrumentedS3_PutObjectWithContext(t *testing.T) {
 			//check all metric names are found
 			for metricName, metricFound := range metricsFound {
 				if metricFound == false {
-					err := fmt.Sprintf("metric not found: %s", metricName)
-					panic(err)
+					assert.True(t, metricFound, fmt.Sprintf("should find metric %s", metricName))
 				}
 			}
 
