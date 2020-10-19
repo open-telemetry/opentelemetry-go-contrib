@@ -6,7 +6,6 @@ import (
 	"github.com/aws/aws-sdk-go/aws"
 	"github.com/aws/aws-sdk-go/aws/request"
 	"github.com/aws/aws-sdk-go/service/s3"
-	"github.com/aws/aws-sdk-go/service/s3/s3iface"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/mock"
 	"go.opentelemetry.io/contrib/instrumentation/github.com/aws/aws-sdk-go/service/otels3/mocks"
@@ -18,7 +17,6 @@ import (
 	"testing"
 
 	"go.opentelemetry.io/otel/api/global"
-	"go.opentelemetry.io/otel/api/metric"
 	"go.opentelemetry.io/otel/api/trace"
 )
 
@@ -44,9 +42,6 @@ func getLabelValFromSpan(key label.Key, span mocktrace.Span) *label.Value {
 
 func Test_instrumentedS3_PutObjectWithContext(t *testing.T) {
 	type fields struct {
-		S3API                    s3iface.S3API
-		tracer                   trace.Tracer
-		meter                    metric.Meter
 		spanCorrelationInMetrics bool
 		mockSetup                func(s3Client *mock.Mock) (expectedReturn interface{})
 	}
@@ -64,7 +59,6 @@ func Test_instrumentedS3_PutObjectWithContext(t *testing.T) {
 		{
 			name: "instrumentedS3.PutObjectWithContext should be delegated to S3.PutObjectWithContext while metrics and spans are linked",
 			fields: fields{
-				S3API:                    &mocks.S3Client{},
 				spanCorrelationInMetrics: true,
 				mockSetup: func(m *mock.Mock) (expectedReturn interface{}) {
 					expectedReturn = &s3.PutObjectOutput{}
@@ -84,7 +78,6 @@ func Test_instrumentedS3_PutObjectWithContext(t *testing.T) {
 		{
 			name: "instrumentedS3.PutObjectWithContext should be delegated to S3.PutObjectWithContext while metrics and spans are NOT linked",
 			fields: fields{
-				S3API:                    &mocks.S3Client{},
 				spanCorrelationInMetrics: false,
 				mockSetup: func(m *mock.Mock) (expectedReturn interface{}) {
 					expectedReturn = &s3.PutObjectOutput{}
