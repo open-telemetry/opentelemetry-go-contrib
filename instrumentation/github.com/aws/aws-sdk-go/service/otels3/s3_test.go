@@ -394,38 +394,9 @@ func Test_instrumentedS3_DeleteObjectWithContext(t *testing.T) {
 			// In Meter we have one duration recorder, one operation counter
 			assert.Equal(t, 2, len(mockedMeterImp.MeasurementBatches))
 
-			metricsFound := map[string]bool{
-				"storage.operation.duration_μs": false,
-				"storage.s3.operation":          false,
-			}
-			// iterate over metrics to get names
-			for _, measurementBatch := range mockedMeterImp.MeasurementBatches {
-				for _, measurement := range measurementBatch.Measurements {
-					metricName := measurement.Instrument.Descriptor().Name()
-					//check if we are looking for this metric name, if so, mark as found
-					if _, ok := metricsFound[metricName]; ok {
-						metricsFound[metricName] = true
-					}
-				}
-			}
+			assertMetrics(t, mockedMeterImp)
 
-			//check all metric names are found
-			for metricName, metricFound := range metricsFound {
-				assert.True(t, metricFound, fmt.Sprintf("should find metric %s", metricName))
-			}
-
-			for _, measurementBatch := range mockedMeterImp.MeasurementBatches {
-				if tt.fields.spanCorrelationInMetrics {
-					traceID := spans[0].SpanContext().TraceID.String()
-					spanID := spans[0].SpanContext().SpanID.String()
-
-					assert.Equal(t, traceID, getLabelValFromMeasurementBatch("trace.id", measurementBatch).AsString())
-					assert.Equal(t, spanID, getLabelValFromMeasurementBatch("span.id", measurementBatch).AsString())
-				} else {
-					assert.Nil(t, getLabelValFromMeasurementBatch("trace.id", measurementBatch))
-					assert.Nil(t, getLabelValFromMeasurementBatch("span.id", measurementBatch))
-				}
-			}
+			assertSpanCorrelationInMetrics(t, tt.fields.spanCorrelationInMetrics, mockedMeterImp, spans[0])
 		})
 	}
 }
