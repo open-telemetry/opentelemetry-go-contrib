@@ -379,10 +379,11 @@ func Test_instrumentedS3_NewInstrumentedS3Client(t *testing.T) {
 			t.Parallel()
 			s3Mock := tt.args.s
 			expectedReturn := tt.fields.mockSetup(&s3Mock.S3API.Mock)
-			got := NewInstrumentedS3Client(s3Mock, tt.args.opts...)
-			// if !reflect.DeepEqual(got, expectedReturn) {
-			// 	t.Errorf("NewInstrumentedS3Client() got = %v, want %v", got, expectedReturn)
-			// }
+			got, err := NewInstrumentedS3Client(s3Mock, tt.args.opts...)
+			if (err != nil) != tt.wantErr {
+				t.Errorf("NewInstrumentedS3Client() error = %v, wantErr %v", err, tt.wantErr)
+				return
+			}
 
 			if tt.args.opts != nil {
 				assert.Equal(t, got.(*instrumentedS3).spanCorrelationInMetrics, expectedReturn.(instrumentedS3).spanCorrelationInMetrics)
