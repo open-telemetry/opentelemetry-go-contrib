@@ -72,7 +72,7 @@ func main() {
 	)
 
 	if err != nil {
-		return
+		panic(err)
 	}
 
 	tracer := tracerProvider.Tracer("http-tracer")
