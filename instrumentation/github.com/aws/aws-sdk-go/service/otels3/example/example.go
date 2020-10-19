@@ -64,12 +64,17 @@ func main() {
 	tracerProvider := initTracer()
 	meterProvider := initMeter()
 
-	client := obsvsS3.NewInstrumentedS3Client(
+	client, err := obsvsS3.NewInstrumentedS3Client(
 		&mockS3Client{},
 		config.WithTracerProvider(tracerProvider),
 		config.WithMetricProvider(meterProvider),
 		config.WithSpanCorrelationInMetrics(true),
 	)
+
+	if err != nil {
+		return
+	}
+
 	tracer := tracerProvider.Tracer("http-tracer")
 
 	outerSpanCtx, span := tracer.Start(
