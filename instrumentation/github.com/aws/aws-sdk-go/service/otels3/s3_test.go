@@ -1,3 +1,17 @@
+// Copyright The OpenTelemetry Authors
+//
+// Licensed under the Apache License, Version 2.0 (the "License");
+// you may not use this file except in compliance with the License.
+// You may obtain a copy of the License at
+//
+//     http://www.apache.org/licenses/LICENSE-2.0
+//
+// Unless required by applicable law or agreed to in writing, software
+// distributed under the License is distributed on an "AS IS" BASIS,
+// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+// See the License for the specific language governing permissions and
+// limitations under the License.
+
 package otels3
 
 import (
@@ -11,6 +25,7 @@ import (
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/mock"
 	"go.opentelemetry.io/contrib/instrumentation/github.com/aws/aws-sdk-go/service/config"
+
 	"go.opentelemetry.io/contrib/instrumentation/github.com/aws/aws-sdk-go/service/otels3/mocks"
 	mockmetric "go.opentelemetry.io/contrib/internal/metric"
 	mocktrace "go.opentelemetry.io/contrib/internal/trace"
@@ -41,6 +56,46 @@ func getLabelValFromSpan(key label.Key, span mocktrace.Span) *label.Value {
 		return &value
 	}
 	return nil
+}
+
+func assertMetrics(t *testing.T, mockedMeterImp *mockmetric.MeterImpl) {
+	// In Meter we have one duration recorder, one operation counter
+	assert.Equal(t, 2, len(mockedMeterImp.MeasurementBatches))
+
+	metricsFound := map[string]bool{
+		"storage.operation.duration_μs": false,
+		"storage.s3.operation":          false,
+	}
+	// iterate over metrics to get names
+	for _, measurementBatch := range mockedMeterImp.MeasurementBatches {
+		for _, measurement := range measurementBatch.Measurements {
+			metricName := measurement.Instrument.Descriptor().Name()
+			//check if we are looking for this metric name, if so, mark as found
+			if _, ok := metricsFound[metricName]; ok {
+				metricsFound[metricName] = true
+			}
+		}
+	}
+
+	//check all metric names are found
+	for metricName, metricFound := range metricsFound {
+		assert.True(t, metricFound, fmt.Sprintf("should find metric %s", metricName))
+	}
+}
+
+func assertSpanCorrelationInMetrics(t *testing.T, spanCorrelationInMetrics bool, mockedMeterImp *mockmetric.MeterImpl, span *mocktrace.Span) {
+	for _, measurementBatch := range mockedMeterImp.MeasurementBatches {
+		if spanCorrelationInMetrics {
+			traceID := span.SpanContext().TraceID.String()
+			spanID := span.SpanContext().SpanID.String()
+
+			assert.Equal(t, traceID, getLabelValFromMeasurementBatch("trace.id", measurementBatch).AsString())
+			assert.Equal(t, spanID, getLabelValFromMeasurementBatch("span.id", measurementBatch).AsString())
+		} else {
+			assert.Nil(t, getLabelValFromMeasurementBatch("trace.id", measurementBatch))
+			assert.Nil(t, getLabelValFromMeasurementBatch("span.id", measurementBatch))
+		}
+	}
 }
 
 func Test_instrumentedS3_PutObjectWithContext(t *testing.T) {
@@ -137,38 +192,110 @@ func Test_instrumentedS3_PutObjectWithContext(t *testing.T) {
 			// In Meter we have one duration recorder, one operation counter
 			assert.Equal(t, 2, len(mockedMeterImp.MeasurementBatches))
 
-			metricsFound := map[string]bool{
-				"storage.operation.duration_μs": false,
-				"storage.s3.operation":          false,
-			}
-			// iterate over metrics to get names
-			for _, measurementBatch := range mockedMeterImp.MeasurementBatches {
-				for _, measurement := range measurementBatch.Measurements {
-					metricName := measurement.Instrument.Descriptor().Name()
-					//check if we are looking for this metric name, if so, mark as found
-					if _, ok := metricsFound[metricName]; ok {
-						metricsFound[metricName] = true
-					}
-				}
-			}
+			assertMetrics(t, mockedMeterImp)
 
-			//check all metric names are found
-			for metricName, metricFound := range metricsFound {
-				assert.True(t, metricFound, fmt.Sprintf("should find metric %s", metricName))
-			}
+			assertSpanCorrelationInMetrics(t, tt.fields.spanCorrelationInMetrics, mockedMeterImp, spans[0])
+		})
+	}
+}
 
-			for _, measurementBatch := range mockedMeterImp.MeasurementBatches {
-				if tt.fields.spanCorrelationInMetrics {
-					traceID := spans[0].SpanContext().TraceID.String()
-					spanID := spans[0].SpanContext().SpanID.String()
+func Test_instrumentedS3_GetObjectWithContext(t *testing.T) {
+	type fields struct {
+		spanCorrelationInMetrics bool
+		mockSetup                func(s3Client *mock.Mock) (expectedReturn interface{})
+	}
+	type args struct {
+		ctx   aws.Context
+		input *s3.GetObjectInput
+		opts  []request.Option
+	}
+	tests := []struct {
+		name    string
+		fields  fields
+		args    args
+		wantErr bool
+	}{
+		{
+			name: "instrumentedS3.GetObjectWithContext should be delegated to S3.GetObjectWithContext while metrics and spans are linked",
+			fields: fields{
+				spanCorrelationInMetrics: true,
+				mockSetup: func(m *mock.Mock) (expectedReturn interface{}) {
+					expectedReturn = &s3.GetObjectOutput{}
+					m.On("GetObjectWithContext", mock.Anything, mock.Anything).Return(expectedReturn, nil)
+					return
+				},
+			},
+			args: args{
+				ctx: context.Background(),
+				input: &s3.GetObjectInput{
+					Bucket: aws.String(s3bucket),
+				},
+				opts: nil,
+			},
+			wantErr: false,
+		},
+		{
+			name: "instrumentedS3.GetObjectWithContext should be delegated to S3.GetObjectWithContext while metrics and spans are NOT linked",
+			fields: fields{
+				spanCorrelationInMetrics: false,
+				mockSetup: func(m *mock.Mock) (expectedReturn interface{}) {
+					expectedReturn = &s3.GetObjectOutput{}
+					m.On("GetObjectWithContext", mock.Anything, mock.Anything).Return(expectedReturn, nil)
+					return
+				},
+			},
+			args: args{
+				ctx: context.Background(),
+				input: &s3.GetObjectInput{
+					Bucket: aws.String(s3bucket),
+				},
+				opts: nil,
+			},
+			wantErr: false,
+		},
+	}
+	for _, tt := range tests {
+		tt := tt
+		t.Run(tt.name, func(t *testing.T) {
+			t.Parallel()
+			_, mockedTracer := mocktrace.NewTracerProviderAndTracer(instrumentationName)
+			mockedMeterImp, mockedMeter := mockmetric.NewMeter()
+			mockedCounters := createCounters(mockedMeter)
+			mockedRecorders := createRecorders(mockedMeter)
+			mockedPropagators := global.TextMapPropagator()
 
-					assert.Equal(t, traceID, getLabelValFromMeasurementBatch("trace.id", measurementBatch).AsString())
-					assert.Equal(t, spanID, getLabelValFromMeasurementBatch("span.id", measurementBatch).AsString())
-				} else {
-					assert.Nil(t, getLabelValFromMeasurementBatch("trace.id", measurementBatch))
-					assert.Nil(t, getLabelValFromMeasurementBatch("span.id", measurementBatch))
-				}
+			s3Mock := &mocks.S3Client{}
+			s := &instrumentedS3{
+				S3API:                    s3Mock,
+				tracer:                   mockedTracer,
+				meter:                    mockedMeter,
+				propagators:              mockedPropagators,
+				counters:                 mockedCounters,
+				recorders:                mockedRecorders,
+				spanCorrelationInMetrics: tt.fields.spanCorrelationInMetrics,
 			}
+			expectedReturn := tt.fields.mockSetup(&s3Mock.S3API.Mock)
+			got, err := s.GetObjectWithContext(tt.args.ctx, tt.args.input)
+			if (err != nil) != tt.wantErr {
+				t.Errorf("GetObjectWithContext() error = %v, wantErr %v", err, tt.wantErr)
+				return
+			}
+			if !reflect.DeepEqual(got, expectedReturn) {
+				t.Errorf("GetObjectWithContext() got = %v, want %v", got, expectedReturn)
+			}
+			spans := mockedTracer.EndedSpans()
+			assert.Equal(t, 1, len(spans))
+			assert.Equal(t, trace.SpanKindClient, spans[0].Kind)
+			assert.Equal(t, s3StorageSystemValue, getLabelValFromSpan(storageSystemKey, *spans[0]).AsString())
+			assert.Equal(t, *tt.args.input.Bucket, getLabelValFromSpan(storageDestinationKey, *spans[0]).AsString())
+			assert.Equal(t, operationGetObject, getLabelValFromSpan(storageOperationKey, *spans[0]).AsString())
+
+			// In Meter we have one duration recorder, one operation counter
+			assert.Equal(t, 2, len(mockedMeterImp.MeasurementBatches))
+
+			assertMetrics(t, mockedMeterImp)
+
+			assertSpanCorrelationInMetrics(t, tt.fields.spanCorrelationInMetrics, mockedMeterImp, spans[0])
 		})
 	}
 }
