@@ -152,9 +152,7 @@ func Test_instrumentedS3_PutObjectWithContext(t *testing.T) {
 
 			//check all metric names are found
 			for metricName, metricFound := range metricsFound {
-				if metricFound == false {
-					assert.True(t, metricFound, fmt.Sprintf("should find metric %s", metricName))
-				}
+				assert.True(t, metricFound, fmt.Sprintf("should find metric %s", metricName))
 			}
 
 			for _, measurementBatch := range mockedMeterImp.MeasurementBatches {
