@@ -2,6 +2,7 @@ package otels3
 
 import (
 	"context"
+	"fmt"
 
 	"github.com/aws/aws-sdk-go/aws"
 	"github.com/aws/aws-sdk-go/aws/request"
@@ -133,24 +134,38 @@ func Test_instrumentedS3_PutObjectWithContext(t *testing.T) {
 
 			// In Meter we have one duration recorder, one operation counter
 			assert.Equal(t, 2, len(mockedMeterImp.MeasurementBatches))
-			assert.Equal(t, "storage.operation.duration_μs", mockedMeterImp.MeasurementBatches[0].Measurements[0].Instrument.Descriptor().Name())
-			assert.Equal(t, "storage.s3.operation", mockedMeterImp.MeasurementBatches[1].Measurements[0].Instrument.Descriptor().Name())
 
-			if tt.fields.spanCorrelationInMetrics {
-				traceID := spans[0].SpanContext().TraceID.String()
-				spanID := spans[0].SpanContext().SpanID.String()
+			metricsFound := map[string]bool{
+				"storage.operation.duration_μs": false,
+				"storage.s3.operation":          false,
+			}
+			// iterate over metrics to get names
+			for _, measurementBatch := range mockedMeterImp.MeasurementBatches {
+				for _, measurement := range measurementBatch.Measurements {
+					metricName := measurement.Instrument.Descriptor().Name()
+					//check if we are looking for this metric name, if so, mark as found
+					if _, ok := metricsFound[metricName]; ok {
+						metricsFound[metricName] = true
+					}
+				}
+			}
 
-				assert.Equal(t, traceID, getLabelValFromMeasurementBatch("trace.id", mockedMeterImp.MeasurementBatches[0]).AsString())
-				assert.Equal(t, spanID, getLabelValFromMeasurementBatch("span.id", mockedMeterImp.MeasurementBatches[0]).AsString())
+			//check all metric names are found
+			for metricName, metricFound := range metricsFound {
+				assert.True(t, metricFound, fmt.Sprintf("should find metric %s", metricName))
+			}
 
-				assert.Equal(t, traceID, getLabelValFromMeasurementBatch("trace.id", mockedMeterImp.MeasurementBatches[1]).AsString())
-				assert.Equal(t, spanID, getLabelValFromMeasurementBatch("span.id", mockedMeterImp.MeasurementBatches[1]).AsString())
-			} else {
-				assert.Nil(t, getLabelValFromMeasurementBatch("trace.id", mockedMeterImp.MeasurementBatches[0]))
-				assert.Nil(t, getLabelValFromMeasurementBatch("span.id", mockedMeterImp.MeasurementBatches[0]))
+			for _, measurementBatch := range mockedMeterImp.MeasurementBatches {
+				if tt.fields.spanCorrelationInMetrics {
+					traceID := spans[0].SpanContext().TraceID.String()
+					spanID := spans[0].SpanContext().SpanID.String()
 
-				assert.Nil(t, getLabelValFromMeasurementBatch("trace.id", mockedMeterImp.MeasurementBatches[1]))
-				assert.Nil(t, getLabelValFromMeasurementBatch("span.id", mockedMeterImp.MeasurementBatches[1]))
+					assert.Equal(t, traceID, getLabelValFromMeasurementBatch("trace.id", measurementBatch).AsString())
+					assert.Equal(t, spanID, getLabelValFromMeasurementBatch("span.id", measurementBatch).AsString())
+				} else {
+					assert.Nil(t, getLabelValFromMeasurementBatch("trace.id", measurementBatch))
+					assert.Nil(t, getLabelValFromMeasurementBatch("span.id", measurementBatch))
+				}
 			}
 		})
 	}
