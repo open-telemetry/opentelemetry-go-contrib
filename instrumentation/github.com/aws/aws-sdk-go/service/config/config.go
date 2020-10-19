@@ -1,8 +1,8 @@
 package config
 
 import (
+	"go.opentelemetry.io/otel"
 	otelmetric "go.opentelemetry.io/otel/api/metric"
-	otelpropagation "go.opentelemetry.io/otel/api/propagation"
 	oteltrace "go.opentelemetry.io/otel/api/trace"
 )
 
@@ -10,7 +10,7 @@ import (
 type Config struct {
 	TracerProvider           oteltrace.TracerProvider
 	MetricProvider           otelmetric.MeterProvider
-	Propagators              otelpropagation.Propagators
+	Propagators              otel.TextMapPropagator
 	SpanCorrelationInMetrics bool
 }
 
@@ -20,7 +20,7 @@ type Option func(*Config)
 // WithPropagators specifies propagators to use for extracting
 // information from the HTTP requests. If none are specified, global
 // ones will be used.
-func WithPropagators(propagators otelpropagation.Propagators) Option {
+func WithPropagators(propagators otel.TextMapPropagator) Option {
 	return func(cfg *Config) {
 		cfg.Propagators = propagators
 	}
