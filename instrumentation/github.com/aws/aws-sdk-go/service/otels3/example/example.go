@@ -26,6 +26,7 @@ import (
 	"github.com/aws/aws-sdk-go/aws/request"
 	"github.com/aws/aws-sdk-go/service/s3"
 	"github.com/aws/aws-sdk-go/service/s3/s3iface"
+
 	otelmetric "go.opentelemetry.io/otel/api/metric"
 	oteltrace "go.opentelemetry.io/otel/api/trace"
 	oteltracestdout "go.opentelemetry.io/otel/exporters/stdout"
