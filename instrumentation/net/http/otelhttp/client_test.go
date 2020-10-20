@@ -24,6 +24,8 @@ import (
 
 	"go.opentelemetry.io/otel/api/global"
 
+	"github.com/stretchr/testify/assert"
+
 	mocktrace "go.opentelemetry.io/contrib/internal/trace"
 )
 
@@ -34,9 +36,6 @@ func TestConvenienceWrappers(t *testing.T) {
 	content := []byte("Hello, world!")
 
 	ts := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		if r.Header.Get("traceparent") == "" {
-			t.Fatal("Expected traceparent header")
-		}
 		if _, err := w.Write(content); err != nil {
 			t.Fatal(err)
 		}
@@ -72,8 +71,10 @@ func TestConvenienceWrappers(t *testing.T) {
 	}
 	res.Body.Close()
 
-	if len(tracer.EndedSpans()) != 4 {
-		t.Fatal("expected 4 client spans")
-	}
-
+	spans := tracer.EndedSpans()
+	assert.Equal(t, 4, len(spans))
+	assert.Equal(t, "GET", spans[0].Name)
+	assert.Equal(t, "HEAD", spans[1].Name)
+	assert.Equal(t, "POST", spans[2].Name)
+	assert.Equal(t, "POST", spans[3].Name)
 }
