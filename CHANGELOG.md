@@ -8,6 +8,10 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 
 ## [Unreleased]
 
+## Added
+
+- Instrumentation for the S3 client github.com/aws/aws-sdk-go/aws/service/s3
+
 ## Fixed
 
 - `/detectors/aws` no longer fails if instance metadata is not available (e.g. not running in AWS) (#401)
