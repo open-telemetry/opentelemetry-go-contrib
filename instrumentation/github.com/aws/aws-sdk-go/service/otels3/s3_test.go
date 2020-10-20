@@ -17,6 +17,8 @@ package otels3
 import (
 	"context"
 	"fmt"
+	"reflect"
+	"testing"
 
 	"github.com/aws/aws-sdk-go/aws"
 	"github.com/aws/aws-sdk-go/aws/request"
@@ -32,9 +34,6 @@ import (
 	"go.opentelemetry.io/otel/api/global"
 	"go.opentelemetry.io/otel/api/trace"
 	"go.opentelemetry.io/otel/label"
-
-	"reflect"
-	"testing"
 )
 
 var (
