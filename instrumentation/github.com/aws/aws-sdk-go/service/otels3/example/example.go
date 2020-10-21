@@ -20,13 +20,13 @@ import (
 	"fmt"
 	"time"
 
-	"go.opentelemetry.io/contrib/instrumentation/github.com/aws/aws-sdk-go/service/config"
-
 	"github.com/aws/aws-sdk-go/aws"
 	"github.com/aws/aws-sdk-go/aws/request"
 	"github.com/aws/aws-sdk-go/service/s3"
 	"github.com/aws/aws-sdk-go/service/s3/s3iface"
 
+	"go.opentelemetry.io/contrib/instrumentation/github.com/aws/aws-sdk-go/service/config"
+	obsvsS3 "go.opentelemetry.io/contrib/instrumentation/github.com/aws/aws-sdk-go/service/otels3"
 	otelmetric "go.opentelemetry.io/otel/api/metric"
 	oteltrace "go.opentelemetry.io/otel/api/trace"
 	oteltracestdout "go.opentelemetry.io/otel/exporters/stdout"
@@ -35,8 +35,6 @@ import (
 	processor "go.opentelemetry.io/otel/sdk/metric/processor/basic"
 	"go.opentelemetry.io/otel/sdk/metric/selector/simple"
 	sdktrace "go.opentelemetry.io/otel/sdk/trace"
-
-	obsvsS3 "go.opentelemetry.io/contrib/instrumentation/github.com/aws/aws-sdk-go/service/otels3"
 )
 
 type mockS3Client struct {
