@@ -8,6 +8,10 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 
 ## [Unreleased]
 
+### Added
+
+- `otelhttp.{Get,Head,Post,PostForm}` convenience wrappers for their `http` counterparts. (#390)
+
 ## Fixed
 
 - `/detectors/aws` no longer fails if instance metadata is not available (e.g. not running in AWS) (#401)
@@ -25,10 +29,6 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 - The `go.opentelemetry.io/contrib/instrumentation/gopkg.in/macaron.v1/otelmacaron` instrumentation now accepts a `TracerProvider` rather than a `Tracer`. (#374)
 - Remove `go.opentelemetry.io/otel/sdk` dependency from instrumentation. (#381)
 - Use `httpsnoop` in `go.opentelemetry.io/contrib/instrumentation/github.com/gorilla/mux/otelmux` to ensure `http.ResponseWriter` additional interfaces are preserved. (#388)
-
-### Added
-
-- `otelhttp.{Get,Head,Post,PostForm}` convenience wrappers for their `http` counterparts. (#390)
 
 ### Fixed
 
