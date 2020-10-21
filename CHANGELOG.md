@@ -8,21 +8,22 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 
 ## [Unreleased]
 
-## Added
+### Added
 
+- `otelhttp.{Get,Head,Post,PostForm}` convenience wrappers for their `http` counterparts. (#390)
 - Instrumentation for the S3 client github.com/aws/aws-sdk-go/aws/service/s3
 
-## Fixed
+### Fixed
 
 - `/detectors/aws` no longer fails if instance metadata is not available (e.g. not running in AWS) (#401)
 
 ## [0.13.0] - 2020-10-09
 
-## Added
+### Added
 
 - A Jaeger propagator. (#375)
 
-## Changed
+### Changed
 
 - The `go.opentelemetry.io/contrib/instrumentation/google.golang.org/grpc/otelgrpc` package instrumentation no longer accepts a `Tracer` as an argument to the interceptor function.
    Instead, a new `WithTracerProvider` option is added to configure the `TracerProvider` used when creating the `Tracer` for the instrumentation. (#373)
