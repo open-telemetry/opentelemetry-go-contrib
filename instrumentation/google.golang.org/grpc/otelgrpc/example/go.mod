@@ -8,7 +8,7 @@ replace (
 )
 
 require (
-	github.com/golang/protobuf v1.4.2
+	github.com/golang/protobuf v1.4.3
 	go.opentelemetry.io/contrib/instrumentation/google.golang.org/grpc/otelgrpc v0.13.0
 	go.opentelemetry.io/otel v0.13.0
 	go.opentelemetry.io/otel/exporters/stdout v0.13.0
