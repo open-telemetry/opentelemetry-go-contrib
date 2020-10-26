@@ -14,6 +14,12 @@ Collection of 3rd-party instrumentation and exporters for [OpenTelemetry-Go](htt
 - [Propagators](./propagators/): Packages providing Opentelemetry context propagators for 3rd-party propagation formats.
 - [Detectors](./detectors/): Packages providing OpenTelemetry resource detectors for 3rd-party cloud computing environments.
 
+## Project Status
+
+This project is currently in a pre-GA phase. Our progress towards a GA release
+candidate is tracked in [this project
+board](https://github.com/orgs/open-telemetry/projects/5).
+
 ## Contributing
 
 For information on how to contribute, consult [the contributing guidelines](./CONTRIBUTING.md)
