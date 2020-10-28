@@ -147,7 +147,6 @@ func TestWrapAsyncProducer(t *testing.T) {
 		ctx, _ := mt.Start(context.Background(), "")
 		messageWithSpanContext := sarama.ProducerMessage{Topic: topic, Key: sarama.StringEncoder("foo")}
 		propagators.Inject(ctx, NewProducerMessageCarrier(&messageWithSpanContext))
-		// mt.EndedSpans()
 
 		return []*sarama.ProducerMessage{
 			&messageWithSpanContext,
