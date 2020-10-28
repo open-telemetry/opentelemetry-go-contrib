@@ -14,7 +14,6 @@ import (
 type statTransport struct {
 	meter          metric.Meter
 	base           *Transport
-	labels         label.Set
 	counters       map[string]metric.Int64Counter
 	valueRecorders map[string]metric.Float64ValueRecorder
 }
@@ -28,7 +27,7 @@ type tracker struct {
 	body              io.ReadCloser
 	statusCode        int
 	endOnce           sync.Once
-	labels            label.Set
+	labels            *label.Set
 
 	counters       map[string]metric.Int64Counter
 	valueRecorders map[string]metric.Float64ValueRecorder
@@ -81,7 +80,7 @@ func (trans *statTransport) applyConfig(c *config) {
 
 // RoundTrip implements http.RoundTripper, delegating to Base and recording stats for the request.
 func (trans *statTransport) RoundTrip(req *http.Request) (*http.Response, error) {
-	trans.labels = label.NewSet(
+	labels := label.NewSet(
 		KeyClientHost.String(req.Host),
 		Host.String(req.Host),
 		KeyClientPath.String(req.URL.Path),
@@ -96,6 +95,7 @@ func (trans *statTransport) RoundTrip(req *http.Request) (*http.Response, error)
 		ctx:            ctx,
 		counters:       trans.counters,
 		valueRecorders: trans.valueRecorders,
+		labels:         &labels,
 	}
 	if req.Body == nil {
 		// TODO: Handle cases where ContentLength is not set.
@@ -103,7 +103,7 @@ func (trans *statTransport) RoundTrip(req *http.Request) (*http.Response, error)
 	} else if req.ContentLength > 0 {
 		track.reqSize = req.ContentLength
 	}
-	trans.counters[ClientRequestCount].Add(ctx, 1, trans.labels.ToSlice()...)
+	trans.counters[ClientRequestCount].Add(ctx, 1, labels.ToSlice()...)
 
 	// Perform request.
 	resp, err := trans.base.RoundTrip(req)
