@@ -35,6 +35,7 @@ type Span struct {
 	StatusMessage string
 	ParentSpanID  oteltrace.SpanID
 	Links         map[oteltrace.SpanContext][]label.KeyValue
+	Events        []Event
 }
 
 var _ oteltrace.Span = (*Span)(nil)
@@ -51,7 +52,7 @@ func (ms *Span) SpanContext() oteltrace.SpanContext {
 
 // IsRecording always returns false for Span.
 func (ms *Span) IsRecording() bool {
-	return false
+	return true
 }
 
 // SetStatus sets the Status member.
@@ -94,10 +95,17 @@ func (ms *Span) Tracer() oteltrace.Tracer {
 	return ms.tracer
 }
 
-// AddEvent does nothing.
+// AddEvent adds an event to the span.
 func (ms *Span) AddEvent(ctx context.Context, name string, attrs ...label.KeyValue) {
+	ms.AddEventWithTimestamp(ctx, time.Now(), name, attrs...)
 }
 
-// AddEvent does nothing.
+// AddEventWithTimestamp adds an event with a custom timestamp
+// to the span.
 func (ms *Span) AddEventWithTimestamp(ctx context.Context, timestamp time.Time, name string, attrs ...label.KeyValue) {
+	ms.Events = append(ms.Events, Event{
+		Message:    name,
+		Attributes: attrs,
+		Time:       timestamp,
+	})
 }
