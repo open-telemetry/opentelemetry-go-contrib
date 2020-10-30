@@ -22,13 +22,12 @@ import (
 	"strings"
 	"sync"
 
-	"go.opentelemetry.io/otel/semconv"
-
-	"go.opentelemetry.io/otel/codes"
-
+	"go.opentelemetry.io/contrib"
 	"go.opentelemetry.io/otel/api/global"
 	"go.opentelemetry.io/otel/api/trace"
+	"go.opentelemetry.io/otel/codes"
 	"go.opentelemetry.io/otel/label"
+	"go.opentelemetry.io/otel/semconv"
 )
 
 var (
@@ -69,7 +68,10 @@ func NewClientTrace(ctx context.Context) *httptrace.ClientTrace {
 		activeHooks: make(map[string]context.Context),
 	}
 
-	ct.tr = global.Tracer("go.opentelemetry.io/otel/instrumentation/httptrace")
+	ct.tr = global.TracerProvider().Tracer(
+		"go.opentelemetry.io/otel/instrumentation/httptrace",
+		trace.WithInstrumentationVersion(contrib.SemVersion()),
+	)
 
 	return &httptrace.ClientTrace{
 		GetConn:              ct.getConn,
@@ -117,7 +119,7 @@ func (ct *clientTracer) end(hook string, err error, attrs ...label.KeyValue) {
 	if ctx, ok := ct.activeHooks[hook]; ok {
 		span := trace.SpanFromContext(ctx)
 		if err != nil {
-			span.SetStatus(codes.Unknown, err.Error())
+			span.SetStatus(codes.Error, err.Error())
 		}
 		span.SetAttributes(attrs...)
 		span.End()
@@ -128,7 +130,7 @@ func (ct *clientTracer) end(hook string, err error, attrs ...label.KeyValue) {
 		// Yes, it's backwards. v0v
 		ctx, span := ct.tr.Start(ct.getParentContext(hook), hook, trace.WithAttributes(attrs...), trace.WithSpanKind(trace.SpanKindClient))
 		if err != nil {
-			span.SetStatus(codes.Unknown, err.Error())
+			span.SetStatus(codes.Error, err.Error())
 		}
 		ct.activeHooks[hook] = ctx
 	}
@@ -211,7 +213,7 @@ func (ct *clientTracer) wroteHeaders() {
 
 func (ct *clientTracer) wroteRequest(info httptrace.WroteRequestInfo) {
 	if info.Err != nil {
-		ct.root.SetStatus(codes.Unknown, info.Err.Error())
+		ct.root.SetStatus(codes.Error, info.Err.Error())
 	}
 	ct.end("http.send", info.Err)
 }

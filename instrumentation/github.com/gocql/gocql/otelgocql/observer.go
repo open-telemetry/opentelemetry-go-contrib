@@ -73,7 +73,7 @@ func (o *OTelQueryObserver) ObserveQuery(ctx context.Context, observedQuery gocq
 		ctx, span := o.tracer.Start(
 			ctx,
 			observedQuery.Statement,
-			trace.WithStartTime(observedQuery.Start),
+			trace.WithTimestamp(observedQuery.Start),
 			trace.WithAttributes(attributes...),
 			trace.WithSpanKind(trace.SpanKindClient),
 		)
@@ -100,7 +100,7 @@ func (o *OTelQueryObserver) ObserveQuery(ctx context.Context, observedQuery gocq
 			)
 		}
 
-		span.End(trace.WithEndTime(observedQuery.End))
+		span.End(trace.WithTimestamp(observedQuery.End))
 
 		inst.queryRows.Record(
 			ctx,
@@ -135,7 +135,7 @@ func (o *OTelBatchObserver) ObserveBatch(ctx context.Context, observedBatch gocq
 		ctx, span := o.tracer.Start(
 			ctx,
 			cassBatchQueryName,
-			trace.WithStartTime(observedBatch.Start),
+			trace.WithTimestamp(observedBatch.Start),
 			trace.WithAttributes(attributes...),
 			trace.WithSpanKind(trace.SpanKindClient),
 		)
@@ -158,7 +158,7 @@ func (o *OTelBatchObserver) ObserveBatch(ctx context.Context, observedBatch gocq
 			)
 		}
 
-		span.End(trace.WithEndTime(observedBatch.End))
+		span.End(trace.WithTimestamp(observedBatch.End))
 
 		inst.latency.Record(
 			ctx,
@@ -183,7 +183,7 @@ func (o *OTelConnectObserver) ObserveConnect(observedConnect gocql.ObservedConne
 		_, span := o.tracer.Start(
 			o.ctx,
 			cassConnectName,
-			trace.WithStartTime(observedConnect.Start),
+			trace.WithTimestamp(observedConnect.Start),
 			trace.WithAttributes(attributes...),
 			trace.WithSpanKind(trace.SpanKindClient),
 		)
@@ -203,7 +203,7 @@ func (o *OTelConnectObserver) ObserveConnect(observedConnect gocql.ObservedConne
 			)
 		}
 
-		span.End(trace.WithEndTime(observedConnect.End))
+		span.End(trace.WithTimestamp(observedConnect.End))
 	}
 
 	if o.observer != nil {

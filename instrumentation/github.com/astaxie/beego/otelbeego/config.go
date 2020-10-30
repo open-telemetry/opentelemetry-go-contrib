@@ -15,18 +15,18 @@
 package otelbeego
 
 import (
+	"go.opentelemetry.io/otel"
 	"go.opentelemetry.io/otel/api/global"
 	"go.opentelemetry.io/otel/api/metric"
-	"go.opentelemetry.io/otel/api/propagation"
 	"go.opentelemetry.io/otel/api/trace"
 )
 
 // config provides configuration for the beego OpenTelemetry
 // middleware. Configuration is modified using the provided Options.
 type config struct {
-	tracerProvider trace.Provider
-	meterProvider  metric.Provider
-	propagators    propagation.Propagators
+	tracerProvider trace.TracerProvider
+	meterProvider  metric.MeterProvider
+	propagators    otel.TextMapPropagator
 	filters        []Filter
 	formatter      SpanNameFormatter
 }
@@ -49,7 +49,7 @@ func (o OptionFunc) Apply(c *config) {
 
 // WithTracerProvider specifies a tracer provider to use for creating a tracer.
 // If none is specified, the global provider is used.
-func WithTracerProvider(provider trace.Provider) Option {
+func WithTracerProvider(provider trace.TracerProvider) Option {
 	return OptionFunc(func(cfg *config) {
 		cfg.tracerProvider = provider
 	})
@@ -57,7 +57,7 @@ func WithTracerProvider(provider trace.Provider) Option {
 
 // WithMeterProvider specifies a meter provider to use for creating a meter.
 // If none is specified, the global provider is used.
-func WithMeterProvider(provider metric.Provider) Option {
+func WithMeterProvider(provider metric.MeterProvider) Option {
 	return OptionFunc(func(cfg *config) {
 		cfg.meterProvider = provider
 	})
@@ -65,7 +65,7 @@ func WithMeterProvider(provider metric.Provider) Option {
 
 // WithPropagators sets the propagators used in the middleware.
 // Defaults to global.Propagators().
-func WithPropagators(propagators propagation.Propagators) OptionFunc {
+func WithPropagators(propagators otel.TextMapPropagator) OptionFunc {
 	return OptionFunc(func(c *config) {
 		c.propagators = propagators
 	})
@@ -91,9 +91,9 @@ func WithSpanNameFormatter(f SpanNameFormatter) OptionFunc {
 
 func newConfig(options ...Option) *config {
 	config := &config{
-		tracerProvider: global.TraceProvider(),
+		tracerProvider: global.TracerProvider(),
 		meterProvider:  global.MeterProvider(),
-		propagators:    global.Propagators(),
+		propagators:    global.TextMapPropagator(),
 		filters:        []Filter{},
 		formatter:      defaultSpanNameFormatter,
 	}

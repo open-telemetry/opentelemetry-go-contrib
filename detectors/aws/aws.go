@@ -16,8 +16,10 @@ package aws
 
 import (
 	"context"
-	"errors"
+	"fmt"
+	"net/http"
 
+	"github.com/aws/aws-sdk-go/aws/awserr"
 	"github.com/aws/aws-sdk-go/aws/ec2metadata"
 	"github.com/aws/aws-sdk-go/aws/session"
 
@@ -27,21 +29,28 @@ import (
 )
 
 // AWS collects resource information of AWS computing instances
-type AWS struct{}
+type AWS struct {
+	c client
+}
+
+type client interface {
+	Available() bool
+	GetInstanceIdentityDocument() (ec2metadata.EC2InstanceIdentityDocument, error)
+	GetMetadata(p string) (string, error)
+}
 
 // compile time assertion that AWS implements the resource.Detector interface.
 var _ resource.Detector = (*AWS)(nil)
 
 // Detect detects associated resources when running in AWS environment.
 func (aws *AWS) Detect(ctx context.Context) (*resource.Resource, error) {
-	session, err := session.NewSession()
+	client, err := aws.client()
 	if err != nil {
 		return nil, err
 	}
 
-	client := ec2metadata.New(session)
 	if !client.Available() {
-		return nil, errors.New("unavailable EC2 client")
+		return nil, nil
 	}
 
 	doc, err := client.GetInstanceIdentityDocument()
@@ -52,9 +61,60 @@ func (aws *AWS) Detect(ctx context.Context) (*resource.Resource, error) {
 	labels := []label.KeyValue{
 		semconv.CloudProviderAWS,
 		semconv.CloudRegionKey.String(doc.Region),
+		semconv.CloudZoneKey.String(doc.AvailabilityZone),
 		semconv.CloudAccountIDKey.String(doc.AccountID),
 		semconv.HostIDKey.String(doc.InstanceID),
+		semconv.HostImageIDKey.String(doc.ImageID),
+		semconv.HostTypeKey.String(doc.InstanceType),
 	}
 
-	return resource.New(labels...), nil
+	m := &metadata{client: client}
+	m.add(semconv.HostNameKey, "hostname")
+
+	labels = append(labels, m.labels...)
+
+	if len(m.errs) > 0 {
+		err = fmt.Errorf("%w: %s", resource.ErrPartialResource, m.errs)
+	}
+
+	return resource.New(labels...), err
+}
+
+func (aws *AWS) client() (client, error) {
+	if aws.c != nil {
+		return aws.c, nil
+	}
+
+	s, err := session.NewSession()
+	if err != nil {
+		return nil, err
+	}
+
+	return ec2metadata.New(s), nil
+}
+
+type metadata struct {
+	client client
+	errs   []error
+	labels []label.KeyValue
+}
+
+func (m *metadata) add(k label.Key, n string) {
+	v, err := m.client.GetMetadata(n)
+	if err == nil {
+		m.labels = append(m.labels, k.String(v))
+		return
+	}
+
+	rf, ok := err.(awserr.RequestFailure)
+	if !ok {
+		m.errs = append(m.errs, fmt.Errorf("%q: %w", n, err))
+		return
+	}
+
+	if rf.StatusCode() == http.StatusNotFound {
+		return
+	}
+
+	m.errs = append(m.errs, fmt.Errorf("%q: %d %s", n, rf.StatusCode(), rf.Code()))
 }

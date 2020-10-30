@@ -26,7 +26,6 @@ import (
 	otelcontrib "go.opentelemetry.io/contrib"
 
 	otelglobal "go.opentelemetry.io/otel/api/global"
-	otelpropagation "go.opentelemetry.io/otel/api/propagation"
 	oteltrace "go.opentelemetry.io/otel/api/trace"
 	"go.opentelemetry.io/otel/label"
 	"go.opentelemetry.io/otel/semconv"
@@ -46,14 +45,14 @@ func Middleware(service string, opts ...Option) gin.HandlerFunc {
 		opt(&cfg)
 	}
 	if cfg.TracerProvider == nil {
-		cfg.TracerProvider = otelglobal.TraceProvider()
+		cfg.TracerProvider = otelglobal.TracerProvider()
 	}
 	tracer := cfg.TracerProvider.Tracer(
 		tracerName,
 		oteltrace.WithInstrumentationVersion(otelcontrib.SemVersion()),
 	)
 	if cfg.Propagators == nil {
-		cfg.Propagators = otelglobal.Propagators()
+		cfg.Propagators = otelglobal.TextMapPropagator()
 	}
 	return func(c *gin.Context) {
 		c.Set(tracerKey, tracer)
@@ -61,8 +60,8 @@ func Middleware(service string, opts ...Option) gin.HandlerFunc {
 		defer func() {
 			c.Request = c.Request.WithContext(savedCtx)
 		}()
-		ctx := otelpropagation.ExtractHTTP(savedCtx, cfg.Propagators, c.Request.Header)
-		opts := []oteltrace.StartOption{
+		ctx := cfg.Propagators.Extract(savedCtx, c.Request.Header)
+		opts := []oteltrace.SpanOption{
 			oteltrace.WithAttributes(semconv.NetAttributesFromHTTPRequest("tcp", c.Request)...),
 			oteltrace.WithAttributes(semconv.EndUserAttributesFromHTTPRequest(c.Request)...),
 			oteltrace.WithAttributes(semconv.HTTPServerAttributesFromHTTPRequest(service, c.FullPath(), c.Request)...),
@@ -103,7 +102,7 @@ func HTML(c *gin.Context, code int, name string, obj interface{}) {
 		tracer, ok = tracerInterface.(oteltrace.Tracer)
 	}
 	if !ok {
-		tracer = otelglobal.TraceProvider().Tracer(
+		tracer = otelglobal.TracerProvider().Tracer(
 			tracerName,
 			oteltrace.WithInstrumentationVersion(otelcontrib.SemVersion()),
 		)
@@ -118,7 +117,7 @@ func HTML(c *gin.Context, code int, name string, obj interface{}) {
 		if r := recover(); r != nil {
 			err := fmt.Errorf("error rendering template:%s: %s", name, r)
 			span.RecordError(ctx, err)
-			span.SetStatus(codes.Internal, "template failure")
+			span.SetStatus(codes.Error, "template failure")
 			span.End()
 			panic(r)
 		} else {

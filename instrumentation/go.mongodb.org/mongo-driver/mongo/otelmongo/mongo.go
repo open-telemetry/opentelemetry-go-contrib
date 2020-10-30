@@ -51,7 +51,7 @@ func (m *monitor) Started(ctx context.Context, evt *event.CommandStartedEvent) {
 		PeerHostname(hostname),
 		PeerPort(port),
 	}
-	opts := []trace.StartOption{
+	opts := []trace.SpanOption{
 		trace.WithAttributes(attrs...),
 	}
 	_, span := m.cfg.Tracer.Start(ctx, "mongodb.query", opts...)

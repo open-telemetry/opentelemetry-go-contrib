@@ -36,8 +36,8 @@ func (sr *SpanRecorder) OnEnd(span *tracetest.Span)   { (*sr)[span.Name()] = spa
 
 func TestHTTPRequestWithClientTrace(t *testing.T) {
 	sr := SpanRecorder{}
-	tp := tracetest.NewProvider(tracetest.WithSpanRecorder(&sr))
-	global.SetTraceProvider(tp)
+	tp := tracetest.NewTracerProvider(tracetest.WithSpanRecorder(&sr))
+	global.SetTracerProvider(tp)
 	tr := tp.Tracer("httptrace/client")
 
 	// Mock http server
@@ -136,8 +136,8 @@ func (sr *MultiSpanRecorder) OnEnd(span *tracetest.Span) {
 
 func TestConcurrentConnectionStart(t *testing.T) {
 	sr := MultiSpanRecorder{}
-	global.SetTraceProvider(
-		tracetest.NewProvider(tracetest.WithSpanRecorder(&sr)),
+	global.SetTracerProvider(
+		tracetest.NewTracerProvider(tracetest.WithSpanRecorder(&sr)),
 	)
 	ct := otelhttptrace.NewClientTrace(context.Background())
 	tts := []struct {
@@ -224,8 +224,8 @@ func TestConcurrentConnectionStart(t *testing.T) {
 
 func TestEndBeforeStartCreatesSpan(t *testing.T) {
 	sr := MultiSpanRecorder{}
-	global.SetTraceProvider(
-		tracetest.NewProvider(tracetest.WithSpanRecorder(&sr)),
+	global.SetTracerProvider(
+		tracetest.NewTracerProvider(tracetest.WithSpanRecorder(&sr)),
 	)
 
 	ct := otelhttptrace.NewClientTrace(context.Background())

@@ -17,8 +17,10 @@ package example
 import (
 	"log"
 
+	"go.opentelemetry.io/otel"
 	otelglobal "go.opentelemetry.io/otel/api/global"
 	"go.opentelemetry.io/otel/exporters/stdout"
+	"go.opentelemetry.io/otel/propagators"
 	sdktrace "go.opentelemetry.io/otel/sdk/trace"
 )
 
@@ -34,12 +36,13 @@ func InitTracer() {
 	cfg := sdktrace.Config{
 		DefaultSampler: sdktrace.AlwaysSample(),
 	}
-	tp, err := sdktrace.NewProvider(
+	tp := sdktrace.NewTracerProvider(
 		sdktrace.WithConfig(cfg),
 		sdktrace.WithSyncer(exporter),
 	)
 	if err != nil {
 		log.Fatal(err)
 	}
-	otelglobal.SetTraceProvider(tp)
+	otelglobal.SetTracerProvider(tp)
+	otelglobal.SetTextMapPropagator(otel.NewCompositeTextMapPropagator(propagators.TraceContext{}))
 }

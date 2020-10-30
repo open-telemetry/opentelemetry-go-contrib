@@ -24,10 +24,9 @@ import (
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 
-	"go.opentelemetry.io/otel/api/global"
-	"go.opentelemetry.io/otel/api/propagation"
 	"go.opentelemetry.io/otel/api/trace"
 	"go.opentelemetry.io/otel/label"
+	otelpropagators "go.opentelemetry.io/otel/propagators"
 	"go.opentelemetry.io/otel/semconv"
 
 	mocktracer "go.opentelemetry.io/contrib/internal/trace"
@@ -37,13 +36,10 @@ const (
 	topic = "test-topic"
 )
 
-var (
-	propagators = global.Propagators()
-)
-
 func TestWrapPartitionConsumer(t *testing.T) {
+	propagators := otelpropagators.TraceContext{}
 	// Mock provider
-	provider, mt := newProviderAndTracer()
+	provider, mt := NewTracerProviderAndTracer()
 
 	// Mock partition consumer controller
 	consumer := mocks.NewConsumer(t, sarama.NewConfig())
@@ -53,21 +49,22 @@ func TestWrapPartitionConsumer(t *testing.T) {
 	partitionConsumer, err := consumer.ConsumePartition(topic, 0, 0)
 	require.NoError(t, err)
 
-	partitionConsumer = WrapPartitionConsumer(partitionConsumer, WithTracerProvider(provider))
+	partitionConsumer = WrapPartitionConsumer(partitionConsumer, WithTracerProvider(provider), WithPropagators(propagators))
 
 	consumeAndCheck(t, mt, mockPartitionConsumer, partitionConsumer)
 }
 
 func TestWrapConsumer(t *testing.T) {
+	propagators := otelpropagators.TraceContext{}
 	// Mock provider
-	provider, mt := newProviderAndTracer()
+	provider, mt := NewTracerProviderAndTracer()
 
 	// Mock partition consumer controller
 	mockConsumer := mocks.NewConsumer(t, sarama.NewConfig())
 	mockPartitionConsumer := mockConsumer.ExpectConsumePartition(topic, 0, 0)
 
 	// Wrap consumer
-	consumer := WrapConsumer(mockConsumer, WithTracerProvider(provider))
+	consumer := WrapConsumer(mockConsumer, WithTracerProvider(provider), WithPropagators(propagators))
 
 	// Create partition consumer
 	partitionConsumer, err := consumer.ConsumePartition(topic, 0, 0)
@@ -80,7 +77,8 @@ func consumeAndCheck(t *testing.T, mt *mocktracer.Tracer, mockPartitionConsumer 
 	// Create message with span context
 	ctx, _ := mt.Start(context.Background(), "")
 	message := sarama.ConsumerMessage{Key: []byte("foo")}
-	propagation.InjectHTTP(ctx, propagators, NewConsumerMessageCarrier(&message))
+	propagators := otelpropagators.TraceContext{}
+	propagators.Inject(ctx, NewConsumerMessageCarrier(&message))
 
 	// Produce message
 	mockPartitionConsumer.YieldMessage(&message)
@@ -137,7 +135,7 @@ func consumeAndCheck(t *testing.T, mt *mocktracer.Tracer, mockPartitionConsumer 
 
 			assert.Equal(t, expected.parentSpanID, span.ParentSpanID)
 
-			remoteSpanFromMessage := trace.RemoteSpanContextFromContext(propagation.ExtractHTTP(context.Background(), propagators, NewConsumerMessageCarrier(msgList[i])))
+			remoteSpanFromMessage := trace.RemoteSpanContextFromContext(propagators.Extract(context.Background(), NewConsumerMessageCarrier(msgList[i])))
 			assert.Equal(t, span.SpanContext(), remoteSpanFromMessage,
 				"span context should be injected into the consumer message headers")
 
@@ -166,7 +164,7 @@ func TestConsumerConsumePartitionWithError(t *testing.T) {
 
 func BenchmarkWrapPartitionConsumer(b *testing.B) {
 	// Mock provider
-	provider, _ := newProviderAndTracer()
+	provider, _ := NewTracerProviderAndTracer()
 
 	mockPartitionConsumer, partitionConsumer := createMockPartitionConsumer(b)
 

@@ -15,8 +15,9 @@
 package otelsarama
 
 import (
+	"go.opentelemetry.io/contrib"
+	"go.opentelemetry.io/otel"
 	"go.opentelemetry.io/otel/api/global"
-	otelpropagation "go.opentelemetry.io/otel/api/propagation"
 	"go.opentelemetry.io/otel/api/trace"
 	"go.opentelemetry.io/otel/label"
 )
@@ -28,8 +29,8 @@ const (
 )
 
 type config struct {
-	TracerProvider trace.Provider
-	Propagators    otelpropagation.Propagators
+	TracerProvider trace.TracerProvider
+	Propagators    otel.TextMapPropagator
 
 	Tracer trace.Tracer
 }
@@ -37,14 +38,17 @@ type config struct {
 // newConfig returns a config with all Options set.
 func newConfig(opts ...Option) config {
 	cfg := config{
-		Propagators:    global.Propagators(),
-		TracerProvider: global.TraceProvider(),
+		Propagators:    global.TextMapPropagator(),
+		TracerProvider: global.TracerProvider(),
 	}
 	for _, opt := range opts {
 		opt(&cfg)
 	}
 
-	cfg.Tracer = cfg.TracerProvider.Tracer(defaultTracerName)
+	cfg.Tracer = cfg.TracerProvider.Tracer(
+		defaultTracerName,
+		trace.WithInstrumentationVersion(contrib.SemVersion()),
+	)
 
 	return cfg
 }
@@ -54,7 +58,7 @@ type Option func(*config)
 
 // WithTracerProvider specifies a tracer provider to use for creating a tracer.
 // If none is specified, the global provider is used.
-func WithTracerProvider(provider trace.Provider) Option {
+func WithTracerProvider(provider trace.TracerProvider) Option {
 	return func(cfg *config) {
 		cfg.TracerProvider = provider
 	}
@@ -63,7 +67,7 @@ func WithTracerProvider(provider trace.Provider) Option {
 // WithPropagators specifies propagators to use for extracting
 // information from the HTTP requests. If none are specified, global
 // ones will be used.
-func WithPropagators(propagators otelpropagation.Propagators) Option {
+func WithPropagators(propagators otel.TextMapPropagator) Option {
 	return func(cfg *config) {
 		cfg.Propagators = propagators
 	}

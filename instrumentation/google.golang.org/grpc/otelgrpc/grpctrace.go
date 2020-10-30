@@ -19,34 +19,60 @@ import (
 
 	"google.golang.org/grpc/metadata"
 
-	"go.opentelemetry.io/otel/api/correlation"
+	"go.opentelemetry.io/otel"
 	"go.opentelemetry.io/otel/api/global"
-	"go.opentelemetry.io/otel/api/propagation"
 	"go.opentelemetry.io/otel/api/trace"
 	"go.opentelemetry.io/otel/label"
 )
 
-// Option is a function that allows configuration of the grpc Extract()
-// and Inject() functions
-type Option func(*config)
+// instrumentationName is the name of this instrumentation package.
+const instrumentationName = "go.opentelemetry.io/contrib/instrumentation/google.golang.org/grpc/otelgrpc"
 
+// config is a group of options for this instrumentation.
 type config struct {
-	propagators propagation.Propagators
+	Propagators    otel.TextMapPropagator
+	TracerProvider trace.TracerProvider
 }
 
+// Option applies an option value for a config.
+type Option interface {
+	Apply(*config)
+}
+
+// newConfig returns a config configured with all the passed Options.
 func newConfig(opts []Option) *config {
-	c := &config{propagators: global.Propagators()}
+	c := &config{
+		Propagators:    global.TextMapPropagator(),
+		TracerProvider: global.TracerProvider(),
+	}
 	for _, o := range opts {
-		o(c)
+		o.Apply(c)
 	}
 	return c
 }
 
-// WithPropagators sets the propagators to use for Extraction and Injection
-func WithPropagators(props propagation.Propagators) Option {
-	return func(c *config) {
-		c.propagators = props
-	}
+type propagatorsOption struct{ p otel.TextMapPropagator }
+
+func (o propagatorsOption) Apply(c *config) {
+	c.Propagators = o.p
+}
+
+// WithPropagators returns an Option to use the Propagators when extracting
+// and injecting trace context from requests.
+func WithPropagators(p otel.TextMapPropagator) Option {
+	return propagatorsOption{p: p}
+}
+
+type tracerProviderOption struct{ tp trace.TracerProvider }
+
+func (o tracerProviderOption) Apply(c *config) {
+	c.TracerProvider = o.tp
+}
+
+// WithTracerProvider returns an Option to use the TracerProvider when
+// creating a Tracer.
+func WithTracerProvider(tp trace.TracerProvider) Option {
+	return tracerProviderOption{tp: tp}
 }
 
 type metadataSupplier struct {
@@ -70,7 +96,7 @@ func (s *metadataSupplier) Set(key string, value string) {
 // requests.
 func Inject(ctx context.Context, metadata *metadata.MD, opts ...Option) {
 	c := newConfig(opts)
-	propagation.InjectHTTP(ctx, c.propagators, &metadataSupplier{
+	c.Propagators.Inject(ctx, &metadataSupplier{
 		metadata: metadata,
 	})
 }
@@ -80,16 +106,11 @@ func Inject(ctx context.Context, metadata *metadata.MD, opts ...Option) {
 // This function is meant to be used on incoming requests.
 func Extract(ctx context.Context, metadata *metadata.MD, opts ...Option) ([]label.KeyValue, trace.SpanContext) {
 	c := newConfig(opts)
-	ctx = propagation.ExtractHTTP(ctx, c.propagators, &metadataSupplier{
+	ctx = c.Propagators.Extract(ctx, &metadataSupplier{
 		metadata: metadata,
 	})
 
-	spanContext := trace.RemoteSpanContextFromContext(ctx)
-	var correlationCtxLabels []label.KeyValue
-	correlation.MapFromContext(ctx).Foreach(func(l label.KeyValue) bool {
-		correlationCtxLabels = append(correlationCtxLabels, l)
-		return true
-	})
+	labelSet := otel.Baggage(ctx)
 
-	return correlationCtxLabels, spanContext
+	return (&labelSet).ToSlice(), trace.RemoteSpanContextFromContext(ctx)
 }

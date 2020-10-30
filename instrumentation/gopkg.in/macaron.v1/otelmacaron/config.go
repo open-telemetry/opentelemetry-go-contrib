@@ -15,34 +15,54 @@
 package otelmacaron
 
 import (
-	"go.opentelemetry.io/otel/api/propagation"
+	"go.opentelemetry.io/otel"
+	"go.opentelemetry.io/otel/api/global"
 	"go.opentelemetry.io/otel/api/trace"
 )
 
-// config is a helper struct to configure Macaron options
+// config is a group of options for this instrumentation.
 type config struct {
-	Tracer      trace.Tracer
-	Propagators propagation.Propagators
+	TracerProvider trace.TracerProvider
+	Propagators    otel.TextMapPropagator
 }
 
-// Option specifies instrumentation configuration options.
-type Option func(*config)
-
-// WithTracer specifies a tracer to use for creating spans. If none is
-// specified, a tracer named
-// "go.opentelemetry.io/contrib/instrumentation/gopkg.in/macaron.v1/otelmacaron"
-// from the global provider is used.
-func WithTracer(tracer trace.Tracer) Option {
-	return func(cfg *config) {
-		cfg.Tracer = tracer
-	}
+// Option applies an option value for a config.
+type Option interface {
+	Apply(*config)
 }
 
-// WithPropagators specifies propagators to use for extracting
-// information from the HTTP requests. If none are specified, global
-// ones will be used.
-func WithPropagators(propagators propagation.Propagators) Option {
-	return func(cfg *config) {
-		cfg.Propagators = propagators
+// newConfig returns a config configured with all the passed Options.
+func newConfig(opts []Option) *config {
+	c := &config{
+		Propagators:    global.TextMapPropagator(),
+		TracerProvider: global.TracerProvider(),
 	}
+	for _, o := range opts {
+		o.Apply(c)
+	}
+	return c
+}
+
+type propagatorsOption struct{ p otel.TextMapPropagator }
+
+func (o propagatorsOption) Apply(c *config) {
+	c.Propagators = o.p
+}
+
+// WithPropagators returns an Option to use the Propagators when extracting
+// and injecting trace context from HTTP requests.
+func WithPropagators(p otel.TextMapPropagator) Option {
+	return propagatorsOption{p: p}
+}
+
+type tracerProviderOption struct{ tp trace.TracerProvider }
+
+func (o tracerProviderOption) Apply(c *config) {
+	c.TracerProvider = o.tp
+}
+
+// WithTracerProvider returns an Option to use the TracerProvider when
+// creating a Tracer.
+func WithTracerProvider(tp trace.TracerProvider) Option {
+	return tracerProviderOption{tp: tp}
 }

@@ -22,7 +22,6 @@ import (
 	otelcontrib "go.opentelemetry.io/contrib"
 
 	otelglobal "go.opentelemetry.io/otel/api/global"
-	otelpropagation "go.opentelemetry.io/otel/api/propagation"
 	oteltrace "go.opentelemetry.io/otel/api/trace"
 	"go.opentelemetry.io/otel/label"
 	"go.opentelemetry.io/otel/semconv"
@@ -40,14 +39,14 @@ func Middleware(service string, opts ...Option) echo.MiddlewareFunc {
 		opt(&cfg)
 	}
 	if cfg.TracerProvider == nil {
-		cfg.TracerProvider = otelglobal.TraceProvider()
+		cfg.TracerProvider = otelglobal.TracerProvider()
 	}
 	tracer := cfg.TracerProvider.Tracer(
 		tracerName,
 		oteltrace.WithInstrumentationVersion(otelcontrib.SemVersion()),
 	)
 	if cfg.Propagators == nil {
-		cfg.Propagators = otelglobal.Propagators()
+		cfg.Propagators = otelglobal.TextMapPropagator()
 	}
 	return func(next echo.HandlerFunc) echo.HandlerFunc {
 		return func(c echo.Context) error {
@@ -58,8 +57,8 @@ func Middleware(service string, opts ...Option) echo.MiddlewareFunc {
 				request = request.WithContext(savedCtx)
 				c.SetRequest(request)
 			}()
-			ctx := otelpropagation.ExtractHTTP(savedCtx, cfg.Propagators, request.Header)
-			opts := []oteltrace.StartOption{
+			ctx := cfg.Propagators.Extract(savedCtx, request.Header)
+			opts := []oteltrace.SpanOption{
 				oteltrace.WithAttributes(semconv.NetAttributesFromHTTPRequest("tcp", request)...),
 				oteltrace.WithAttributes(semconv.EndUserAttributesFromHTTPRequest(request)...),
 				oteltrace.WithAttributes(semconv.HTTPServerAttributesFromHTTPRequest(service, c.Path(), request)...),
@@ -89,7 +88,7 @@ func Middleware(service string, opts ...Option) echo.MiddlewareFunc {
 			span.SetAttributes(attrs...)
 			span.SetStatus(spanStatus, spanMessage)
 
-			return err
+			return nil
 		}
 	}
 }

@@ -29,11 +29,13 @@ import (
 	"google.golang.org/grpc/peer"
 	"google.golang.org/grpc/status"
 
-	"go.opentelemetry.io/otel/api/correlation"
+	"go.opentelemetry.io/otel"
 	"go.opentelemetry.io/otel/api/trace"
 	"go.opentelemetry.io/otel/codes"
 	"go.opentelemetry.io/otel/label"
 	"go.opentelemetry.io/otel/semconv"
+
+	otelcontrib "go.opentelemetry.io/contrib"
 )
 
 type messageType label.KeyValue
@@ -63,7 +65,7 @@ var (
 
 // UnaryClientInterceptor returns a grpc.UnaryClientInterceptor suitable
 // for use in a grpc.Dial call.
-func UnaryClientInterceptor(tracer trace.Tracer, opts ...Option) grpc.UnaryClientInterceptor {
+func UnaryClientInterceptor(opts ...Option) grpc.UnaryClientInterceptor {
 	return func(
 		ctx context.Context,
 		method string,
@@ -74,6 +76,11 @@ func UnaryClientInterceptor(tracer trace.Tracer, opts ...Option) grpc.UnaryClien
 	) error {
 		requestMetadata, _ := metadata.FromOutgoingContext(ctx)
 		metadataCopy := requestMetadata.Copy()
+
+		tracer := newConfig(opts).TracerProvider.Tracer(
+			instrumentationName,
+			trace.WithInstrumentationVersion(otelcontrib.SemVersion()),
+		)
 
 		name, attr := spanInfo(method, cc.Target())
 		var span trace.Span
@@ -96,7 +103,7 @@ func UnaryClientInterceptor(tracer trace.Tracer, opts ...Option) grpc.UnaryClien
 
 		if err != nil {
 			s, _ := status.FromError(err)
-			span.SetStatus(codes.Code(s.Code()), s.Message())
+			span.SetStatus(codes.Error, s.Message())
 		}
 
 		return err
@@ -236,7 +243,7 @@ func (w *clientStream) sendStreamEvent(eventType streamEventType, err error) {
 
 // StreamClientInterceptor returns a grpc.StreamClientInterceptor suitable
 // for use in a grpc.Dial call.
-func StreamClientInterceptor(tracer trace.Tracer, opts ...Option) grpc.StreamClientInterceptor {
+func StreamClientInterceptor(opts ...Option) grpc.StreamClientInterceptor {
 	return func(
 		ctx context.Context,
 		desc *grpc.StreamDesc,
@@ -247,6 +254,11 @@ func StreamClientInterceptor(tracer trace.Tracer, opts ...Option) grpc.StreamCli
 	) (grpc.ClientStream, error) {
 		requestMetadata, _ := metadata.FromOutgoingContext(ctx)
 		metadataCopy := requestMetadata.Copy()
+
+		tracer := newConfig(opts).TracerProvider.Tracer(
+			instrumentationName,
+			trace.WithInstrumentationVersion(otelcontrib.SemVersion()),
+		)
 
 		name, attr := spanInfo(method, cc.Target())
 		var span trace.Span
@@ -270,7 +282,7 @@ func StreamClientInterceptor(tracer trace.Tracer, opts ...Option) grpc.StreamCli
 
 			if err != nil {
 				s, _ := status.FromError(err)
-				span.SetStatus(codes.Code(s.Code()), s.Message())
+				span.SetStatus(codes.Error, s.Message())
 			}
 
 			span.End()
@@ -282,7 +294,7 @@ func StreamClientInterceptor(tracer trace.Tracer, opts ...Option) grpc.StreamCli
 
 // UnaryServerInterceptor returns a grpc.UnaryServerInterceptor suitable
 // for use in a grpc.NewServer call.
-func UnaryServerInterceptor(tracer trace.Tracer, opts ...Option) grpc.UnaryServerInterceptor {
+func UnaryServerInterceptor(opts ...Option) grpc.UnaryServerInterceptor {
 	return func(
 		ctx context.Context,
 		req interface{},
@@ -293,9 +305,12 @@ func UnaryServerInterceptor(tracer trace.Tracer, opts ...Option) grpc.UnaryServe
 		metadataCopy := requestMetadata.Copy()
 
 		entries, spanCtx := Extract(ctx, &metadataCopy, opts...)
-		ctx = correlation.ContextWithMap(ctx, correlation.NewMap(correlation.MapUpdate{
-			MultiKV: entries,
-		}))
+		ctx = otel.ContextWithBaggageValues(ctx, entries...)
+
+		tracer := newConfig(opts).TracerProvider.Tracer(
+			instrumentationName,
+			trace.WithInstrumentationVersion(otelcontrib.SemVersion()),
+		)
 
 		name, attr := spanInfo(info.FullMethod, peerFromCtx(ctx))
 		ctx, span := tracer.Start(
@@ -311,7 +326,7 @@ func UnaryServerInterceptor(tracer trace.Tracer, opts ...Option) grpc.UnaryServe
 		resp, err := handler(ctx, req)
 		if err != nil {
 			s, _ := status.FromError(err)
-			span.SetStatus(codes.Code(s.Code()), s.Message())
+			span.SetStatus(codes.Error, s.Message())
 			messageSent.Event(ctx, 1, s.Proto())
 		} else {
 			messageSent.Event(ctx, 1, resp)
@@ -364,7 +379,7 @@ func wrapServerStream(ctx context.Context, ss grpc.ServerStream) *serverStream {
 
 // StreamServerInterceptor returns a grpc.StreamServerInterceptor suitable
 // for use in a grpc.NewServer call.
-func StreamServerInterceptor(tracer trace.Tracer, opts ...Option) grpc.StreamServerInterceptor {
+func StreamServerInterceptor(opts ...Option) grpc.StreamServerInterceptor {
 	return func(
 		srv interface{},
 		ss grpc.ServerStream,
@@ -377,9 +392,12 @@ func StreamServerInterceptor(tracer trace.Tracer, opts ...Option) grpc.StreamSer
 		metadataCopy := requestMetadata.Copy()
 
 		entries, spanCtx := Extract(ctx, &metadataCopy, opts...)
-		ctx = correlation.ContextWithMap(ctx, correlation.NewMap(correlation.MapUpdate{
-			MultiKV: entries,
-		}))
+		ctx = otel.ContextWithBaggageValues(ctx, entries...)
+
+		tracer := newConfig(opts).TracerProvider.Tracer(
+			instrumentationName,
+			trace.WithInstrumentationVersion(otelcontrib.SemVersion()),
+		)
 
 		name, attr := spanInfo(info.FullMethod, peerFromCtx(ctx))
 		ctx, span := tracer.Start(
@@ -394,7 +412,7 @@ func StreamServerInterceptor(tracer trace.Tracer, opts ...Option) grpc.StreamSer
 
 		if err != nil {
 			s, _ := status.FromError(err)
-			span.SetStatus(codes.Code(s.Code()), s.Message())
+			span.SetStatus(codes.Error, s.Message())
 		}
 
 		return err

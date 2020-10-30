@@ -10,6 +10,45 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 
 ### Added
 
+- `otelhttp.{Get,Head,Post,PostForm}` convenience wrappers for their `http` counterparts. (#390)
+
+### Changed
+
+- Add semantic version to `Tracer` / `Meter` created by instrumentation packages `otelsaram`, `otelrestful`, `otelmongo`, `otelhttp` and `otelhttptrace`. (#412)
+- Update instrumentation guidelines about tracer / meter semantic version. (#412)
+
+## Fixed
+
+- `/detectors/aws` no longer fails if instance metadata is not available (e.g. not running in AWS) (#401)
+
+## [0.13.0] - 2020-10-09
+
+## Added
+
+- A Jaeger propagator. (#375)
+
+## Changed
+
+- The `go.opentelemetry.io/contrib/instrumentation/google.golang.org/grpc/otelgrpc` package instrumentation no longer accepts a `Tracer` as an argument to the interceptor function.
+   Instead, a new `WithTracerProvider` option is added to configure the `TracerProvider` used when creating the `Tracer` for the instrumentation. (#373)
+- The `go.opentelemetry.io/contrib/instrumentation/gopkg.in/macaron.v1/otelmacaron` instrumentation now accepts a `TracerProvider` rather than a `Tracer`. (#374)
+- Remove `go.opentelemetry.io/otel/sdk` dependency from instrumentation. (#381)
+- Use `httpsnoop` in `go.opentelemetry.io/contrib/instrumentation/github.com/gorilla/mux/otelmux` to ensure `http.ResponseWriter` additional interfaces are preserved. (#388)
+
+### Fixed
+
+- The `go.opentelemetry.io/contrib/instrumentation/github.com/labstack/echo/otelecho.Middleware` no longer sends duplicate errors to the global `ErrorHandler`. (#377, #364)
+- The import comment in `go.opentelemetry.io/contrib/instrumentation/net/http/otelhttp` is now correctly quoted. (#379)
+- The B3 propagator sets the sample bitmask when the sampling decision is `debug`. (#369)
+
+## [0.12.0] - 2020-09-25
+
+### Changed
+
+- Replace `WithTracer` with `WithTracerProvider` in the `go.opentelemetry.io/contrib/instrumentation/gopkg.in/macaron.v1/otelmacaron` instrumentation. (#374)
+
+### Added
+
 - Benchmark tests for the gRPC instrumentation. (#296)
 - Integration testing for the gRPC instrumentation. (#297)
 - Allow custom labels to be added to net/http metrics. (#306)
@@ -114,7 +153,6 @@ This release upgrades its [go.opentelemetry.io/otel](https://github.com/open-tel
 - Update dependabot configuration to correctly check all included packages. (#131)
 - Update `RELEASING.md` with correct `tag.sh` command. (#130)
 
-
 ## [0.8.0] - 2020-07-10
 
 This release upgrades its [go.opentelemetry.io/otel](https://github.com/open-telemetry/opentelemetry-go/releases/tag/v0.8.0) dependency to v0.8.0, includes minor fixes, and new instrumentation.
@@ -184,7 +222,9 @@ First official tagged release of `contrib` repository.
 - Prefix support for dogstatsd (#34)
 - Update Go Runtime package to use batch observer (#44)
 
-[Unreleased]: https://github.com/open-telemetry/opentelemetry-go-contrib/compare/v0.11.0...HEAD
+[Unreleased]: https://github.com/open-telemetry/opentelemetry-go-contrib/compare/v0.13.0...HEAD
+[0.13.0]: https://github.com/open-telemetry/opentelemetry-go-contrib/releases/tag/v0.13.0
+[0.12.0]: https://github.com/open-telemetry/opentelemetry-go-contrib/releases/tag/v0.12.0
 [0.11.0]: https://github.com/open-telemetry/opentelemetry-go-contrib/releases/tag/v0.11.0
 [0.10.1]: https://github.com/open-telemetry/opentelemetry-go-contrib/releases/tag/v0.10.1
 [0.10.0]: https://github.com/open-telemetry/opentelemetry-go-contrib/releases/tag/v0.10.0

@@ -88,9 +88,8 @@ func TestUnaryClientInterceptor(t *testing.T) {
 	}
 
 	sr := NewSpanRecorder()
-	tp := tracetest.NewProvider(tracetest.WithSpanRecorder(sr))
-	tracer := tp.Tracer("grpc/client")
-	unaryInterceptor := UnaryClientInterceptor(tracer)
+	tp := tracetest.NewTracerProvider(tracetest.WithSpanRecorder(sr))
+	unaryInterceptor := UnaryClientInterceptor(WithTracerProvider(tp))
 
 	req := &mockProtoMessage{}
 	reply := &mockProtoMessage{}
@@ -258,9 +257,8 @@ func TestStreamClientInterceptor(t *testing.T) {
 
 	// tracer
 	sr := NewSpanRecorder()
-	tp := tracetest.NewProvider(tracetest.WithSpanRecorder(sr))
-	tracer := tp.Tracer("grpc/Server")
-	streamCI := StreamClientInterceptor(tracer)
+	tp := tracetest.NewTracerProvider(tracetest.WithSpanRecorder(sr))
+	streamCI := StreamClientInterceptor(WithTracerProvider(tp))
 
 	var mockClStr mockClientStream
 	method := "/github.com.serviceName/bar"
@@ -342,9 +340,8 @@ func TestStreamClientInterceptor(t *testing.T) {
 
 func TestServerInterceptorError(t *testing.T) {
 	sr := NewSpanRecorder()
-	tp := tracetest.NewProvider(tracetest.WithSpanRecorder(sr))
-	tracer := tp.Tracer("grpc/Server")
-	usi := UnaryServerInterceptor(tracer)
+	tp := tracetest.NewTracerProvider(tracetest.WithSpanRecorder(sr))
+	usi := UnaryServerInterceptor(WithTracerProvider(tp))
 	deniedErr := status.Error(codes.PermissionDenied, "PERMISSION_DENIED_TEXT")
 	handler := func(_ context.Context, _ interface{}) (interface{}, error) {
 		return nil, deniedErr
@@ -357,7 +354,7 @@ func TestServerInterceptorError(t *testing.T) {
 	if !ok {
 		t.Fatalf("failed to export error span")
 	}
-	assert.Equal(t, span.StatusCode(), otelcodes.PermissionDenied)
+	assert.Equal(t, span.StatusCode(), otelcodes.Error)
 	assert.Contains(t, deniedErr.Error(), span.StatusMessage())
 	assert.Len(t, span.Events(), 2)
 	assert.Equal(t, map[label.Key]label.Value{

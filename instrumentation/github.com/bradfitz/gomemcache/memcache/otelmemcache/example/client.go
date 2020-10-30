@@ -73,7 +73,7 @@ func doMemcacheOperations(ctx context.Context, c *otelmemcache.Client) {
 	}
 }
 
-func initTracer() oteltrace.Provider {
+func initTracer() oteltrace.TracerProvider {
 	exporter, err := oteltracestdout.NewExporter(oteltracestdout.WithPrettyPrint())
 	if err != nil {
 		log.Fatal(err)
@@ -81,7 +81,7 @@ func initTracer() oteltrace.Provider {
 	cfg := sdktrace.Config{
 		DefaultSampler: sdktrace.AlwaysSample(),
 	}
-	tp, err := sdktrace.NewProvider(
+	tp := sdktrace.NewTracerProvider(
 		sdktrace.WithConfig(cfg),
 		sdktrace.WithSyncer(exporter),
 	)

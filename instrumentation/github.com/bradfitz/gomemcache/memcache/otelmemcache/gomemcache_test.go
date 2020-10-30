@@ -96,13 +96,13 @@ func TestOperationWithCacheMissError(t *testing.T) {
 	}
 	assert.Equal(t, expectedLabelMap, spans[0].Attributes)
 
-	assert.Equal(t, codes.NotFound, spans[0].Status)
+	assert.Equal(t, codes.Error, spans[0].Status)
 	assert.Equal(t, err.Error(), spans[0].StatusMessage)
 }
 
 // tests require running memcached instance
-func initClientWithMockTracerProvider(t *testing.T) (*Client, *mocktracer.Provider) {
-	mt := &mocktracer.Provider{}
+func initClientWithMockTracerProvider(t *testing.T) (*Client, *mocktracer.TracerProvider) {
+	mt := &mocktracer.TracerProvider{}
 	host, port := "localhost", "11211"
 
 	mc := memcache.New(host + ":" + port)

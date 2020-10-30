@@ -20,36 +20,30 @@ import (
 
 	"gopkg.in/macaron.v1"
 
-	otelglobal "go.opentelemetry.io/otel/api/global"
-	otelpropagation "go.opentelemetry.io/otel/api/propagation"
 	oteltrace "go.opentelemetry.io/otel/api/trace"
 	"go.opentelemetry.io/otel/semconv"
+
+	otelcontrib "go.opentelemetry.io/contrib"
 )
 
-const (
-	tracerName = "go.opentelemetry.io/contrib/instrumentation/gopkg.in/macaron.v1/otelmacaron"
-)
+// instrumentationName is the name of this instrumentation package.
+const instrumentationName = "go.opentelemetry.io/contrib/instrumentation/gopkg.in/macaron.v1/otelmacaron"
 
 // Middleware returns a macaron Handler to trace requests to the server.
 func Middleware(service string, opts ...Option) macaron.Handler {
-	cfg := config{}
-	for _, opt := range opts {
-		opt(&cfg)
-	}
-	if cfg.Tracer == nil {
-		cfg.Tracer = otelglobal.Tracer(tracerName)
-	}
-	if cfg.Propagators == nil {
-		cfg.Propagators = otelglobal.Propagators()
-	}
+	cfg := newConfig(opts)
+	tracer := cfg.TracerProvider.Tracer(
+		instrumentationName,
+		oteltrace.WithInstrumentationVersion(otelcontrib.SemVersion()),
+	)
 	return func(res http.ResponseWriter, req *http.Request, c *macaron.Context) {
 		savedCtx := c.Req.Request.Context()
 		defer func() {
 			c.Req.Request = c.Req.Request.WithContext(savedCtx)
 		}()
 
-		ctx := otelpropagation.ExtractHTTP(savedCtx, cfg.Propagators, c.Req.Header)
-		opts := []oteltrace.StartOption{
+		ctx := cfg.Propagators.Extract(savedCtx, c.Req.Header)
+		opts := []oteltrace.SpanOption{
 			oteltrace.WithAttributes(semconv.NetAttributesFromHTTPRequest("tcp", c.Req.Request)...),
 			oteltrace.WithAttributes(semconv.EndUserAttributesFromHTTPRequest(c.Req.Request)...),
 			oteltrace.WithAttributes(semconv.HTTPServerAttributesFromHTTPRequest(service, "", c.Req.Request)...),
@@ -60,7 +54,7 @@ func Middleware(service string, opts ...Option) macaron.Handler {
 		if spanName == "" {
 			spanName = fmt.Sprintf("HTTP %s route not found", c.Req.Method)
 		}
-		ctx, span := cfg.Tracer.Start(ctx, spanName, opts...)
+		ctx, span := tracer.Start(ctx, spanName, opts...)
 		defer span.End()
 
 		// pass the span through the request context

@@ -17,7 +17,6 @@ package host_test
 import (
 	"context"
 	"os"
-	"runtime"
 	"testing"
 	"time"
 
@@ -61,7 +60,7 @@ func getMetric(impl *metric.MeterImpl, name string, lbl label.KeyValue) float64 
 }
 
 func TestHostCPU(t *testing.T) {
-	impl, provider := metric.NewProvider()
+	impl, provider := metric.NewMeterProvider()
 	err := host.Start(
 		host.WithMeterProvider(provider),
 	)
@@ -135,52 +134,39 @@ func TestHostCPU(t *testing.T) {
 }
 
 func TestHostMemory(t *testing.T) {
-	impl, provider := metric.NewProvider()
+	impl, provider := metric.NewMeterProvider()
 	err := host.Start(
 		host.WithMeterProvider(provider),
 	)
 	assert.NoError(t, err)
 
 	ctx := context.Background()
-	hostBefore, err := mem.VirtualMemoryWithContext(ctx)
+	vMem, err := mem.VirtualMemoryWithContext(ctx)
 	require.NoError(t, err)
-
-	slice := make([]byte, 100*1024*1024)
-	defer runtime.KeepAlive(slice)
-	for i := range slice {
-		slice[i] = byte(i)
-	}
-
-	// As we are going to read the /proc file system for this info, sleep a while:
-	time.Sleep(time.Second)
 
 	impl.RunAsyncInstruments()
 
-	hostAfter, err := mem.VirtualMemoryWithContext(ctx)
-	require.NoError(t, err)
-
 	hostUsed := getMetric(impl, "system.memory.usage", host.LabelMemoryUsed[0])
+	assert.Greater(t, hostUsed, 0.0)
+	assert.LessOrEqual(t, hostUsed, float64(vMem.Total))
+
 	hostAvailable := getMetric(impl, "system.memory.usage", host.LabelMemoryAvailable[0])
+	assert.GreaterOrEqual(t, hostAvailable, 0.0)
+	assert.Less(t, hostAvailable, float64(vMem.Total))
 
 	hostUsedUtil := getMetric(impl, "system.memory.utilization", host.LabelMemoryUsed[0])
+	assert.Greater(t, hostUsedUtil, 0.0)
+	assert.LessOrEqual(t, hostUsedUtil, 1.0)
+
 	hostAvailableUtil := getMetric(impl, "system.memory.utilization", host.LabelMemoryAvailable[0])
+	assert.GreaterOrEqual(t, hostAvailableUtil, 0.0)
+	assert.Less(t, hostAvailableUtil, 1.0)
 
-	beforeTotal := hostBefore.Available + hostBefore.Used
-	afterTotal := hostAfter.Available + hostAfter.Used
-	measureTotal := hostUsed + hostAvailable
-
-	// Tolerance is 5%
-	const tolerance = 0.05
-
-	// Check that the sum of used and available doesn't change:
-	require.InEpsilon(t, float64(beforeTotal), measureTotal, tolerance)
-	require.InEpsilon(t, float64(afterTotal), measureTotal, tolerance)
-
-	// Check that the implied total is equal from both Used and Available metrics:
-	require.InEpsilon(t, hostUsed/hostUsedUtil, hostAvailable/hostAvailableUtil, tolerance)
-
-	// Check that utilization sums to 1.0:
-	require.InEpsilon(t, 1.0, hostUsedUtil+hostAvailableUtil, tolerance)
+	if hostUsed > hostAvailable {
+		assert.Greater(t, hostUsedUtil, hostAvailableUtil)
+	} else {
+		assert.Less(t, hostUsedUtil, hostAvailableUtil)
+	}
 }
 
 func sendBytes(t *testing.T, count int) error {
@@ -220,7 +206,7 @@ func sendBytes(t *testing.T, count int) error {
 }
 
 func TestHostNetwork(t *testing.T) {
-	impl, provider := metric.NewProvider()
+	impl, provider := metric.NewMeterProvider()
 	err := host.Start(
 		host.WithMeterProvider(provider),
 	)

@@ -17,16 +17,13 @@ package otelrestful
 import (
 	"github.com/emicklei/go-restful/v3"
 
+	"go.opentelemetry.io/contrib"
 	otelglobal "go.opentelemetry.io/otel/api/global"
-	otelpropagation "go.opentelemetry.io/otel/api/propagation"
 	oteltrace "go.opentelemetry.io/otel/api/trace"
 	"go.opentelemetry.io/otel/semconv"
 )
 
-const (
-	tracerName    = "go.opentelemetry.io/contrib/instrumentation/github.com/emicklei/go-restful/otelrestful"
-	tracerVersion = "1.0"
-)
+const tracerName = "go.opentelemetry.io/contrib/instrumentation/github.com/emicklei/go-restful/otelrestful"
 
 // OTelFilter returns a restful.FilterFunction which will trace an incoming request.
 //
@@ -39,19 +36,22 @@ func OTelFilter(service string, opts ...Option) restful.FilterFunction {
 		opt(&cfg)
 	}
 	if cfg.TracerProvider == nil {
-		cfg.TracerProvider = otelglobal.TraceProvider()
+		cfg.TracerProvider = otelglobal.TracerProvider()
 	}
-	tracer := cfg.TracerProvider.Tracer(tracerName, oteltrace.WithInstrumentationVersion(tracerVersion))
+	tracer := cfg.TracerProvider.Tracer(
+		tracerName,
+		oteltrace.WithInstrumentationVersion(contrib.SemVersion()),
+	)
 	if cfg.Propagators == nil {
-		cfg.Propagators = otelglobal.Propagators()
+		cfg.Propagators = otelglobal.TextMapPropagator()
 	}
 	return func(req *restful.Request, resp *restful.Response, chain *restful.FilterChain) {
 		r := req.Request
-		ctx := otelpropagation.ExtractHTTP(r.Context(), cfg.Propagators, r.Header)
+		ctx := cfg.Propagators.Extract(r.Context(), r.Header)
 		route := req.SelectedRoutePath()
 		spanName := route
 
-		opts := []oteltrace.StartOption{
+		opts := []oteltrace.SpanOption{
 			oteltrace.WithAttributes(semconv.NetAttributesFromHTTPRequest("tcp", r)...),
 			oteltrace.WithAttributes(semconv.EndUserAttributesFromHTTPRequest(r)...),
 			oteltrace.WithAttributes(semconv.HTTPServerAttributesFromHTTPRequest(service, route, r)...),

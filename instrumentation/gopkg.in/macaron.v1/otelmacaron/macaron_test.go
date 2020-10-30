@@ -24,48 +24,28 @@ import (
 	"github.com/stretchr/testify/require"
 	"gopkg.in/macaron.v1"
 
-	mocktrace "go.opentelemetry.io/contrib/internal/trace"
+	b3prop "go.opentelemetry.io/contrib/propagators/b3"
+	"go.opentelemetry.io/otel"
 	otelglobal "go.opentelemetry.io/otel/api/global"
-	otelpropagation "go.opentelemetry.io/otel/api/propagation"
 	oteltrace "go.opentelemetry.io/otel/api/trace"
+	"go.opentelemetry.io/otel/api/trace/tracetest"
 	"go.opentelemetry.io/otel/label"
+	"go.opentelemetry.io/otel/propagators"
 )
 
 func TestChildSpanFromGlobalTracer(t *testing.T) {
-	otelglobal.SetTraceProvider(&mocktrace.Provider{})
+	otelglobal.SetTracerProvider(tracetest.NewTracerProvider())
 
 	m := macaron.Classic()
 	m.Use(Middleware("foobar"))
 	m.Get("/user/:id", func(ctx *macaron.Context) {
 		span := oteltrace.SpanFromContext(ctx.Req.Request.Context())
-		_, ok := span.(*mocktrace.Span)
+		_, ok := span.(*tracetest.Span)
 		assert.True(t, ok)
 		spanTracer := span.Tracer()
-		mockTracer, ok := spanTracer.(*mocktrace.Tracer)
+		mockTracer, ok := spanTracer.(*tracetest.Tracer)
 		require.True(t, ok)
-		assert.Equal(t, "go.opentelemetry.io/contrib/instrumentation/gopkg.in/macaron.v1/otelmacaron", mockTracer.Name)
-		ctx.Resp.WriteHeader(http.StatusOK)
-	})
-
-	r := httptest.NewRequest("GET", "/user/123", nil)
-	w := httptest.NewRecorder()
-
-	m.ServeHTTP(w, r)
-}
-
-func TestChildSpanFromCustomTracer(t *testing.T) {
-	tracer := mocktrace.NewTracer("test-tracer")
-
-	m := macaron.Classic()
-	m.Use(Middleware("foobar", WithTracer(tracer)))
-	m.Get("/user/:id", func(ctx *macaron.Context) {
-		span := oteltrace.SpanFromContext(ctx.Req.Request.Context())
-		_, ok := span.(*mocktrace.Span)
-		assert.True(t, ok)
-		spanTracer := span.Tracer()
-		mockTracer, ok := spanTracer.(*mocktrace.Tracer)
-		require.True(t, ok)
-		assert.Equal(t, "test-tracer", mockTracer.Name)
+		assert.Equal(t, instrumentationName, mockTracer.Name)
 		ctx.Resp.WriteHeader(http.StatusOK)
 	})
 
@@ -76,10 +56,11 @@ func TestChildSpanFromCustomTracer(t *testing.T) {
 }
 
 func TestChildSpanNames(t *testing.T) {
-	tracer := mocktrace.NewTracer("test-tracer")
+	sr := new(tracetest.StandardSpanRecorder)
+	tp := tracetest.NewTracerProvider(tracetest.WithSpanRecorder(sr))
 
 	m := macaron.Classic()
-	m.Use(Middleware("foobar", WithTracer(tracer)))
+	m.Use(Middleware("foobar", WithTracerProvider(tp)))
 	m.Get("/user/:id", func(ctx *macaron.Context) {
 		ctx.Resp.WriteHeader(http.StatusOK)
 	})
@@ -93,30 +74,32 @@ func TestChildSpanNames(t *testing.T) {
 	r := httptest.NewRequest("GET", "/user/123", nil)
 	w := httptest.NewRecorder()
 	m.ServeHTTP(w, r)
-	spans := tracer.EndedSpans()
-	require.Len(t, spans, 1)
-	span := spans[0]
-	assert.Equal(t, "/user/123", span.Name) // TODO: span name should show router template, eg /user/:id
-	assert.Equal(t, oteltrace.SpanKindServer, span.Kind)
-	assert.Equal(t, label.StringValue("foobar"), span.Attributes["http.server_name"])
-	assert.Equal(t, label.IntValue(http.StatusOK), span.Attributes["http.status_code"])
-	assert.Equal(t, label.StringValue("GET"), span.Attributes["http.method"])
-	assert.Equal(t, label.StringValue("/user/123"), span.Attributes["http.target"])
-	// TODO: span name should show router template, eg /user/:id
-	//assert.Equal(t, label.StringValue("/user/:id"), span.Attributes["http.route"])
 
 	r = httptest.NewRequest("GET", "/book/foo", nil)
 	w = httptest.NewRecorder()
 	m.ServeHTTP(w, r)
-	spans = tracer.EndedSpans()
-	require.Len(t, spans, 1)
-	span = spans[0]
-	assert.Equal(t, "/book/foo", span.Name) // TODO: span name should show router template, eg /book/:title
-	assert.Equal(t, oteltrace.SpanKindServer, span.Kind)
-	assert.Equal(t, label.StringValue("foobar"), span.Attributes["http.server_name"])
-	assert.Equal(t, label.IntValue(http.StatusOK), span.Attributes["http.status_code"])
-	assert.Equal(t, label.StringValue("GET"), span.Attributes["http.method"])
-	assert.Equal(t, label.StringValue("/book/foo"), span.Attributes["http.target"])
+
+	spans := sr.Completed()
+	require.Len(t, spans, 2)
+	span := spans[0]
+	assert.Equal(t, "/user/123", span.Name()) // TODO: span name should show router template, eg /user/:id
+	assert.Equal(t, oteltrace.SpanKindServer, span.SpanKind())
+	attrs := span.Attributes()
+	assert.Equal(t, label.StringValue("foobar"), attrs["http.server_name"])
+	assert.Equal(t, label.IntValue(http.StatusOK), attrs["http.status_code"])
+	assert.Equal(t, label.StringValue("GET"), attrs["http.method"])
+	assert.Equal(t, label.StringValue("/user/123"), attrs["http.target"])
+	// TODO: span name should show router template, eg /user/:id
+	//assert.Equal(t, label.StringValue("/user/:id"), span.Attributes["http.route"])
+
+	span = spans[1]
+	assert.Equal(t, "/book/foo", span.Name()) // TODO: span name should show router template, eg /book/:title
+	assert.Equal(t, oteltrace.SpanKindServer, span.SpanKind())
+	attrs = span.Attributes()
+	assert.Equal(t, label.StringValue("foobar"), attrs["http.server_name"])
+	assert.Equal(t, label.IntValue(http.StatusOK), attrs["http.status_code"])
+	assert.Equal(t, label.StringValue("GET"), attrs["http.method"])
+	assert.Equal(t, label.StringValue("/book/foo"), attrs["http.target"])
 	// TODO: span name should show router template, eg /book/:title
 	//assert.Equal(t, label.StringValue("/book/:title"), span.Attributes["http.route"])
 }
@@ -125,7 +108,7 @@ func TestGetSpanNotInstrumented(t *testing.T) {
 	m := macaron.Classic()
 	m.Get("/user/:id", func(ctx *macaron.Context) {
 		span := oteltrace.SpanFromContext(ctx.Req.Request.Context())
-		_, ok := span.(oteltrace.NoopSpan)
+		ok := !span.SpanContext().IsValid()
 		assert.True(t, ok)
 		ctx.Resp.WriteHeader(http.StatusOK)
 	})
@@ -137,50 +120,49 @@ func TestGetSpanNotInstrumented(t *testing.T) {
 }
 
 func TestPropagationWithGlobalPropagators(t *testing.T) {
-	tracer := mocktrace.NewTracer("test-tracer")
+	tracer := tracetest.NewTracerProvider().Tracer("test-tracer")
+	otelglobal.SetTextMapPropagator(propagators.TraceContext{})
 
 	r := httptest.NewRequest("GET", "/user/123", nil)
 	w := httptest.NewRecorder()
 
 	ctx, pspan := tracer.Start(context.Background(), "test")
-	otelpropagation.InjectHTTP(ctx, otelglobal.Propagators(), r.Header)
+	otelglobal.TextMapPropagator().Inject(ctx, r.Header)
 
 	m := macaron.Classic()
-	m.Use(Middleware("foobar", WithTracer(tracer)))
+	m.Use(Middleware("foobar"))
 	m.Get("/user/:id", func(ctx *macaron.Context) {
 		span := oteltrace.SpanFromContext(ctx.Req.Request.Context())
-		mspan, ok := span.(*mocktrace.Span)
+		mspan, ok := span.(*tracetest.Span)
 		require.True(t, ok)
 		assert.Equal(t, pspan.SpanContext().TraceID, mspan.SpanContext().TraceID)
-		assert.Equal(t, pspan.SpanContext().SpanID, mspan.ParentSpanID)
+		assert.Equal(t, pspan.SpanContext().SpanID, mspan.ParentSpanID())
 		ctx.Resp.WriteHeader(http.StatusOK)
 	})
 
 	m.ServeHTTP(w, r)
+	otelglobal.SetTextMapPropagator(otel.NewCompositeTextMapPropagator())
 }
 
 func TestPropagationWithCustomPropagators(t *testing.T) {
-	tracer := mocktrace.NewTracer("test-tracer")
-	b3 := oteltrace.B3{}
-	props := otelpropagation.New(
-		otelpropagation.WithExtractors(b3),
-		otelpropagation.WithInjectors(b3),
-	)
+	tp := tracetest.NewTracerProvider()
+	tracer := tp.Tracer("test-tracer")
+	b3 := b3prop.B3{}
 
 	r := httptest.NewRequest("GET", "/user/123", nil)
 	w := httptest.NewRecorder()
 
 	ctx, pspan := tracer.Start(context.Background(), "test")
-	otelpropagation.InjectHTTP(ctx, props, r.Header)
+	b3.Inject(ctx, r.Header)
 
 	m := macaron.Classic()
-	m.Use(Middleware("foobar", WithTracer(tracer), WithPropagators(props)))
+	m.Use(Middleware("foobar", WithTracerProvider(tp), WithPropagators(b3)))
 	m.Get("/user/:id", func(ctx *macaron.Context) {
 		span := oteltrace.SpanFromContext(ctx.Req.Request.Context())
-		mspan, ok := span.(*mocktrace.Span)
+		mspan, ok := span.(*tracetest.Span)
 		require.True(t, ok)
 		assert.Equal(t, pspan.SpanContext().TraceID, mspan.SpanContext().TraceID)
-		assert.Equal(t, pspan.SpanContext().SpanID, mspan.ParentSpanID)
+		assert.Equal(t, pspan.SpanContext().SpanID, mspan.ParentSpanID())
 		ctx.Resp.WriteHeader(http.StatusOK)
 	})
 

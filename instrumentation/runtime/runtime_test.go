@@ -52,7 +52,7 @@ func testMinimumInterval(t *testing.T, shouldHappen bool, opts ...runtime.Option
 	goruntime.ReadMemStats(&mstats0)
 	baseline := int(mstats0.NumGC)
 
-	impl, provider := metric.NewProvider()
+	impl, provider := metric.NewMeterProvider()
 
 	err := runtime.Start(
 		append(

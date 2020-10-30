@@ -15,7 +15,10 @@
 package otelmux
 
 import (
+	"bufio"
 	"context"
+	"io"
+	"net"
 	"net/http"
 	"net/http/httptest"
 	"testing"
@@ -25,14 +28,16 @@ import (
 	"github.com/stretchr/testify/require"
 
 	mocktrace "go.opentelemetry.io/contrib/internal/trace"
+	b3prop "go.opentelemetry.io/contrib/propagators/b3"
+	"go.opentelemetry.io/otel"
 	otelglobal "go.opentelemetry.io/otel/api/global"
-	otelpropagation "go.opentelemetry.io/otel/api/propagation"
 	oteltrace "go.opentelemetry.io/otel/api/trace"
 	"go.opentelemetry.io/otel/label"
+	"go.opentelemetry.io/otel/propagators"
 )
 
 func TestChildSpanFromGlobalTracer(t *testing.T) {
-	otelglobal.SetTraceProvider(&mocktrace.Provider{})
+	otelglobal.SetTracerProvider(&mocktrace.TracerProvider{})
 
 	router := mux.NewRouter()
 	router.Use(Middleware("foobar"))
@@ -54,7 +59,7 @@ func TestChildSpanFromGlobalTracer(t *testing.T) {
 }
 
 func TestChildSpanFromCustomTracer(t *testing.T) {
-	provider, _ := mocktrace.NewProviderAndTracer(tracerName)
+	provider, _ := mocktrace.NewTracerProviderAndTracer(tracerName)
 
 	router := mux.NewRouter()
 	router.Use(Middleware("foobar", WithTracerProvider(provider)))
@@ -76,7 +81,7 @@ func TestChildSpanFromCustomTracer(t *testing.T) {
 }
 
 func TestChildSpanNames(t *testing.T) {
-	provider, tracer := mocktrace.NewProviderAndTracer(tracerName)
+	provider, tracer := mocktrace.NewTracerProviderAndTracer(tracerName)
 
 	router := mux.NewRouter()
 	router.Use(Middleware("foobar", WithTracerProvider(provider)))
@@ -120,7 +125,7 @@ func TestGetSpanNotInstrumented(t *testing.T) {
 	router := mux.NewRouter()
 	router.HandleFunc("/user/{id}", http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		span := oteltrace.SpanFromContext(r.Context())
-		_, ok := span.(oteltrace.NoopSpan)
+		ok := !span.SpanContext().IsValid()
 		assert.True(t, ok)
 		w.WriteHeader(http.StatusOK)
 	}))
@@ -132,13 +137,14 @@ func TestGetSpanNotInstrumented(t *testing.T) {
 }
 
 func TestPropagationWithGlobalPropagators(t *testing.T) {
-	provider, tracer := mocktrace.NewProviderAndTracer(tracerName)
+	provider, tracer := mocktrace.NewTracerProviderAndTracer(tracerName)
+	otelglobal.SetTextMapPropagator(propagators.TraceContext{})
 
 	r := httptest.NewRequest("GET", "/user/123", nil)
 	w := httptest.NewRecorder()
 
 	ctx, pspan := tracer.Start(context.Background(), "test")
-	otelpropagation.InjectHTTP(ctx, otelglobal.Propagators(), r.Header)
+	otelglobal.TextMapPropagator().Inject(ctx, r.Header)
 
 	router := mux.NewRouter()
 	router.Use(Middleware("foobar", WithTracerProvider(provider)))
@@ -152,25 +158,22 @@ func TestPropagationWithGlobalPropagators(t *testing.T) {
 	}))
 
 	router.ServeHTTP(w, r)
+	otelglobal.SetTextMapPropagator(otel.NewCompositeTextMapPropagator())
 }
 
 func TestPropagationWithCustomPropagators(t *testing.T) {
-	provider, tracer := mocktrace.NewProviderAndTracer(tracerName)
+	provider, tracer := mocktrace.NewTracerProviderAndTracer(tracerName)
 
-	b3 := oteltrace.B3{}
-	props := otelpropagation.New(
-		otelpropagation.WithExtractors(b3),
-		otelpropagation.WithInjectors(b3),
-	)
+	b3 := b3prop.B3{}
 
 	r := httptest.NewRequest("GET", "/user/123", nil)
 	w := httptest.NewRecorder()
 
 	ctx, pspan := tracer.Start(context.Background(), "test")
-	otelpropagation.InjectHTTP(ctx, props, r.Header)
+	b3.Inject(ctx, r.Header)
 
 	router := mux.NewRouter()
-	router.Use(Middleware("foobar", WithTracerProvider(provider), WithPropagators(props)))
+	router.Use(Middleware("foobar", WithTracerProvider(provider), WithPropagators(b3)))
 	router.HandleFunc("/user/{id}", http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		span := oteltrace.SpanFromContext(r.Context())
 		mspan, ok := span.(*mocktrace.Span)
@@ -179,6 +182,61 @@ func TestPropagationWithCustomPropagators(t *testing.T) {
 		assert.Equal(t, pspan.SpanContext().SpanID, mspan.ParentSpanID)
 		w.WriteHeader(http.StatusOK)
 	}))
+
+	router.ServeHTTP(w, r)
+}
+
+type testResponseWriter struct {
+	writer http.ResponseWriter
+}
+
+func (rw *testResponseWriter) Header() http.Header {
+	return rw.writer.Header()
+}
+func (rw *testResponseWriter) Write(b []byte) (int, error) {
+	return rw.writer.Write(b)
+}
+func (rw *testResponseWriter) WriteHeader(statusCode int) {
+	rw.writer.WriteHeader(statusCode)
+}
+
+// implement Hijacker
+func (rw *testResponseWriter) Hijack() (net.Conn, *bufio.ReadWriter, error) {
+	return nil, nil, nil
+}
+
+// implement Pusher
+func (rw *testResponseWriter) Push(target string, opts *http.PushOptions) error {
+	return nil
+}
+
+// implement Flusher
+func (rw *testResponseWriter) Flush() {
+}
+
+// implement io.ReaderFrom
+func (rw *testResponseWriter) ReadFrom(r io.Reader) (n int64, err error) {
+	return 0, nil
+}
+
+func TestResponseWriterInterfaces(t *testing.T) {
+	// make sure the recordingResponseWriter preserves interfaces implemented by the wrapped writer
+	provider, _ := mocktrace.NewTracerProviderAndTracer(tracerName)
+
+	router := mux.NewRouter()
+	router.Use(Middleware("foobar", WithTracerProvider(provider)))
+	router.HandleFunc("/user/{id}", http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		assert.Implements(t, (*http.Hijacker)(nil), w)
+		assert.Implements(t, (*http.Pusher)(nil), w)
+		assert.Implements(t, (*http.Flusher)(nil), w)
+		assert.Implements(t, (*io.ReaderFrom)(nil), w)
+		w.WriteHeader(http.StatusOK)
+	}))
+
+	r := httptest.NewRequest("GET", "/user/123", nil)
+	w := &testResponseWriter{
+		writer: httptest.NewRecorder(),
+	}
 
 	router.ServeHTTP(w, r)
 }

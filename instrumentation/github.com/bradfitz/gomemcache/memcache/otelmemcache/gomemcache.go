@@ -59,7 +59,7 @@ func NewClientWithTracing(client *memcache.Client, opts ...Option) *Client {
 	}
 
 	if cfg.tracerProvider == nil {
-		cfg.tracerProvider = otelglobal.TraceProvider()
+		cfg.tracerProvider = otelglobal.TracerProvider()
 	}
 
 	return &Client{
@@ -91,7 +91,7 @@ func (c *Client) attrsByOperationAndItemKey(operation operation, key ...string) 
 
 // Starts span with appropriate span kind and attributes
 func (c *Client) startSpan(operationName operation, itemKey ...string) oteltrace.Span {
-	opts := []oteltrace.StartOption{
+	opts := []oteltrace.SpanOption{
 		// for database client calls, always use CLIENT span kind
 		oteltrace.WithSpanKind(oteltrace.SpanKindClient),
 		oteltrace.WithAttributes(

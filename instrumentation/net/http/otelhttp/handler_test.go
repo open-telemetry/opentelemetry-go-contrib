@@ -25,6 +25,7 @@ import (
 	"github.com/stretchr/testify/assert"
 
 	"go.opentelemetry.io/otel/codes"
+	"go.opentelemetry.io/otel/propagators"
 
 	"go.opentelemetry.io/otel/api/trace"
 	"go.opentelemetry.io/otel/label"
@@ -43,8 +44,8 @@ func assertMetricLabels(t *testing.T, expectedLabels []label.KeyValue, measureme
 func TestHandlerBasics(t *testing.T) {
 	rr := httptest.NewRecorder()
 
-	tracerProvider, tracer := mocktrace.NewProviderAndTracer(instrumentationName)
-	meterimpl, meterProvider := mockmeter.NewProvider()
+	tracerProvider, tracer := mocktrace.NewTracerProviderAndTracer(instrumentationName)
+	meterimpl, meterProvider := mockmeter.NewMeterProvider()
 
 	operation := "test_handler"
 
@@ -59,6 +60,7 @@ func TestHandlerBasics(t *testing.T) {
 		}), operation,
 		WithTracerProvider(tracerProvider),
 		WithMeterProvider(meterProvider),
+		WithPropagators(propagators.TraceContext{}),
 	)
 
 	r, err := http.NewRequest(http.MethodGet, "http://localhost/", strings.NewReader("foo"))
@@ -102,7 +104,7 @@ func TestHandlerBasics(t *testing.T) {
 func TestHandlerNoWrite(t *testing.T) {
 	rr := httptest.NewRecorder()
 
-	tracerProvider, tracer := mocktrace.NewProviderAndTracer(instrumentationName)
+	tracerProvider, tracer := mocktrace.NewTracerProviderAndTracer(instrumentationName)
 
 	operation := "test_handler"
 	var span trace.Span
@@ -112,6 +114,7 @@ func TestHandlerNoWrite(t *testing.T) {
 			span = trace.SpanFromContext(r.Context())
 		}), operation,
 		WithTracerProvider(tracerProvider),
+		WithPropagators(propagators.TraceContext{}),
 	)
 
 	r, err := http.NewRequest(http.MethodGet, "http://localhost/", nil)
@@ -130,7 +133,7 @@ func TestHandlerNoWrite(t *testing.T) {
 		t.Fatalf("got %d, expected %d", got, expected)
 	}
 	if mockSpan, ok := span.(*mocktrace.Span); ok {
-		if got, expected := mockSpan.Status, codes.OK; got != expected {
+		if got, expected := mockSpan.Status, codes.Unset; got != expected {
 			t.Fatalf("got %q, expected %q", got, expected)
 		}
 	} else {
@@ -141,7 +144,7 @@ func TestHandlerNoWrite(t *testing.T) {
 func TestResponseWriterOptionalInterfaces(t *testing.T) {
 	rr := httptest.NewRecorder()
 
-	tracerProvider, _ := mocktrace.NewProviderAndTracer(instrumentationName)
+	tracerProvider, _ := mocktrace.NewTracerProviderAndTracer(instrumentationName)
 
 	// ResponseRecorder implements the Flusher interface. Make sure the
 	// wrapped ResponseWriter passed to the handler still implements

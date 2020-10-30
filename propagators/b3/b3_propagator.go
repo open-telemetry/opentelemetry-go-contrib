@@ -19,7 +19,7 @@ import (
 	"errors"
 	"strings"
 
-	"go.opentelemetry.io/otel/api/propagation"
+	"go.opentelemetry.io/otel"
 	"go.opentelemetry.io/otel/api/trace"
 )
 
@@ -96,12 +96,12 @@ type B3 struct {
 	InjectEncoding Encoding
 }
 
-var _ propagation.HTTPPropagator = B3{}
+var _ otel.TextMapPropagator = B3{}
 
-// Inject injects a context into the supplier as B3 headers.
+// Inject injects a context into the carrier as B3 headers.
 // The parent span ID is omitted because it is not tracked in the
 // SpanContext.
-func (b3 B3) Inject(ctx context.Context, supplier propagation.HTTPSupplier) {
+func (b3 B3) Inject(ctx context.Context, carrier otel.TextMapCarrier) {
 	sc := trace.SpanFromContext(ctx).SpanContext()
 
 	if b3.InjectEncoding.supports(B3SingleHeader) {
@@ -120,37 +120,37 @@ func (b3 B3) Inject(ctx context.Context, supplier propagation.HTTPSupplier) {
 			}
 		}
 
-		supplier.Set(b3ContextHeader, strings.Join(header, "-"))
+		carrier.Set(b3ContextHeader, strings.Join(header, "-"))
 	}
 
 	if b3.InjectEncoding.supports(B3MultipleHeader) || b3.InjectEncoding == B3Unspecified {
 		if sc.TraceID.IsValid() && sc.SpanID.IsValid() {
-			supplier.Set(b3TraceIDHeader, sc.TraceID.String())
-			supplier.Set(b3SpanIDHeader, sc.SpanID.String())
+			carrier.Set(b3TraceIDHeader, sc.TraceID.String())
+			carrier.Set(b3SpanIDHeader, sc.SpanID.String())
 		}
 
 		if sc.TraceFlags&trace.FlagsDebug == trace.FlagsDebug {
 			// Since Debug implies deferred, don't also send "X-B3-Sampled".
-			supplier.Set(b3DebugFlagHeader, "1")
+			carrier.Set(b3DebugFlagHeader, "1")
 		} else if !(sc.TraceFlags&trace.FlagsDeferred == trace.FlagsDeferred) {
 			if sc.IsSampled() {
-				supplier.Set(b3SampledHeader, "1")
+				carrier.Set(b3SampledHeader, "1")
 			} else {
-				supplier.Set(b3SampledHeader, "0")
+				carrier.Set(b3SampledHeader, "0")
 			}
 		}
 	}
 }
 
-// Extract extracts a context from the supplier if it contains B3 headers.
-func (b3 B3) Extract(ctx context.Context, supplier propagation.HTTPSupplier) context.Context {
+// Extract extracts a context from the carrier if it contains B3 headers.
+func (b3 B3) Extract(ctx context.Context, carrier otel.TextMapCarrier) context.Context {
 	var (
 		sc  trace.SpanContext
 		err error
 	)
 
 	// Default to Single Header if a valid value exists.
-	if h := supplier.Get(b3ContextHeader); h != "" {
+	if h := carrier.Get(b3ContextHeader); h != "" {
 		sc, err = extractSingle(h)
 		if err == nil && sc.IsValid() {
 			return trace.ContextWithRemoteSpanContext(ctx, sc)
@@ -159,11 +159,11 @@ func (b3 B3) Extract(ctx context.Context, supplier propagation.HTTPSupplier) con
 	}
 
 	var (
-		traceID      = supplier.Get(b3TraceIDHeader)
-		spanID       = supplier.Get(b3SpanIDHeader)
-		parentSpanID = supplier.Get(b3ParentSpanIDHeader)
-		sampled      = supplier.Get(b3SampledHeader)
-		debugFlag    = supplier.Get(b3DebugFlagHeader)
+		traceID      = carrier.Get(b3TraceIDHeader)
+		spanID       = carrier.Get(b3SpanIDHeader)
+		parentSpanID = carrier.Get(b3ParentSpanIDHeader)
+		sampled      = carrier.Get(b3SampledHeader)
+		debugFlag    = carrier.Get(b3DebugFlagHeader)
 	)
 	sc, err = extractMultiple(traceID, spanID, parentSpanID, sampled, debugFlag)
 	if err != nil || !sc.IsValid() {
@@ -172,7 +172,7 @@ func (b3 B3) Extract(ctx context.Context, supplier propagation.HTTPSupplier) con
 	return trace.ContextWithRemoteSpanContext(ctx, sc)
 }
 
-func (b3 B3) GetAllKeys() []string {
+func (b3 B3) Fields() []string {
 	header := []string{}
 	if b3.InjectEncoding.supports(B3SingleHeader) {
 		header = append(header, b3ContextHeader)
@@ -208,10 +208,14 @@ func extractMultiple(traceID, spanID, parentSpanID, sampled, flags string) (trac
 		return empty, errInvalidSampledHeader
 	}
 
-	// The only accepted value for Flags is "1". This will set Debug to
-	// true. All other values and omission of header will be ignored.
+	// The only accepted value for Flags is "1". This will set Debug bitmask and
+	// sampled bitmask to 1 since debug implicitly means sampled. All other
+	// values and omission of header will be ignored. According to the spec. User
+	// shouldn't send X-B3-Sampled header along with X-B3-Flags header. Thus we will
+	// ignore X-B3-Sampled header when X-B3-Flags header is sent and valid.
 	if flags == "1" {
-		sc.TraceFlags |= trace.FlagsDebug
+		sc.TraceFlags |= trace.FlagsDebug | trace.FlagsSampled
+		sc.TraceFlags &= ^trace.FlagsDeferred
 	}
 
 	if traceID != "" {
@@ -331,7 +335,7 @@ func extractSingle(contextHeader string) (trace.SpanContext, error) {
 	case "":
 		sc.TraceFlags = trace.FlagsDeferred
 	case "d":
-		sc.TraceFlags = trace.FlagsDebug
+		sc.TraceFlags = trace.FlagsDebug | trace.FlagsSampled
 	case "1":
 		sc.TraceFlags = trace.FlagsSampled
 	case "0":

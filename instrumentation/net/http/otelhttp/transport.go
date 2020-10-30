@@ -19,7 +19,7 @@ import (
 	"io"
 	"net/http"
 
-	"go.opentelemetry.io/otel/api/propagation"
+	"go.opentelemetry.io/otel"
 	"go.opentelemetry.io/otel/api/trace"
 	"go.opentelemetry.io/otel/semconv"
 
@@ -32,8 +32,8 @@ type Transport struct {
 	rt http.RoundTripper
 
 	tracer            trace.Tracer
-	propagators       propagation.Propagators
-	spanStartOptions  []trace.StartOption
+	propagators       otel.TextMapPropagator
+	spanStartOptions  []trace.SpanOption
 	filters           []Filter
 	spanNameFormatter func(string, *http.Request) string
 }
@@ -81,17 +81,17 @@ func (t *Transport) RoundTrip(r *http.Request) (*http.Response, error) {
 		}
 	}
 
-	opts := append([]trace.StartOption{}, t.spanStartOptions...) // start with the configured options
+	opts := append([]trace.SpanOption{}, t.spanStartOptions...) // start with the configured options
 
 	ctx, span := t.tracer.Start(r.Context(), t.spanNameFormatter("", r), opts...)
 
 	r = r.WithContext(ctx)
 	span.SetAttributes(semconv.HTTPClientAttributesFromHTTPRequest(r)...)
-	propagation.InjectHTTP(ctx, t.propagators, r.Header)
+	t.propagators.Inject(ctx, r.Header)
 
 	res, err := t.rt.RoundTrip(r)
 	if err != nil {
-		span.RecordError(ctx, err, trace.WithErrorStatus(codes.Internal))
+		span.RecordError(ctx, err, trace.WithErrorStatus(codes.Error))
 		span.End()
 		return res, err
 	}
@@ -120,7 +120,7 @@ func (wb *wrappedBody) Read(b []byte) (int, error) {
 	case io.EOF:
 		wb.span.End()
 	default:
-		wb.span.RecordError(wb.ctx, err, trace.WithErrorStatus(codes.Internal))
+		wb.span.RecordError(wb.ctx, err, trace.WithErrorStatus(codes.Error))
 	}
 	return n, err
 }

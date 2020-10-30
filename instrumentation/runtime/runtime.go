@@ -23,7 +23,7 @@ import (
 	"go.opentelemetry.io/contrib"
 	"go.opentelemetry.io/otel/api/global"
 	"go.opentelemetry.io/otel/api/metric"
-	"go.opentelemetry.io/otel/api/unit"
+	"go.opentelemetry.io/otel/unit"
 )
 
 // Runtime reports the work-in-progress conventional runtime metrics specified by OpenTelemetry
@@ -39,9 +39,9 @@ type config struct {
 	// are ignored.
 	MinimumReadMemStatsInterval time.Duration
 
-	// MeterProvider sets the metric.Provider.  If nil, the global
+	// MeterProvider sets the metric.MeterProvider.  If nil, the global
 	// Provider will be used.
-	MeterProvider metric.Provider
+	MeterProvider metric.MeterProvider
 }
 
 // Option supports configuring optional settings for runtime metrics.
@@ -73,17 +73,17 @@ func (o minimumReadMemStatsIntervalOption) ApplyRuntime(c *config) {
 }
 
 // WithMeterProvider sets the Metric implementation to use for
-// reporting.  If this option is not used, the global metric.Provider
+// reporting.  If this option is not used, the global metric.MeterProvider
 // will be used.  `provider` must be non-nil.
-func WithMeterProvider(provider metric.Provider) Option {
+func WithMeterProvider(provider metric.MeterProvider) Option {
 	return metricProviderOption{provider}
 }
 
-type metricProviderOption struct{ metric.Provider }
+type metricProviderOption struct{ metric.MeterProvider }
 
 // ApplyRuntime implements Option.
 func (o metricProviderOption) ApplyRuntime(c *config) {
-	c.MeterProvider = o.Provider
+	c.MeterProvider = o.MeterProvider
 }
 
 // newConfig computes a config from the supplied Options.

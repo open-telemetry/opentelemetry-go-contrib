@@ -19,7 +19,9 @@ import (
 
 	"github.com/stretchr/testify/assert"
 
+	"go.opentelemetry.io/contrib"
 	"go.opentelemetry.io/otel/api/global"
+	"go.opentelemetry.io/otel/api/trace"
 )
 
 func TestNewConfig(t *testing.T) {
@@ -31,12 +33,12 @@ func TestNewConfig(t *testing.T) {
 		{
 			name: "with provider",
 			opts: []Option{
-				WithTracerProvider(global.TraceProvider()),
+				WithTracerProvider(global.TracerProvider()),
 			},
 			expected: config{
-				TracerProvider: global.TraceProvider(),
-				Tracer:         global.TraceProvider().Tracer(defaultTracerName),
-				Propagators:    global.Propagators(),
+				TracerProvider: global.TracerProvider(),
+				Tracer:         global.TracerProvider().Tracer(defaultTracerName, trace.WithInstrumentationVersion(contrib.SemVersion())),
+				Propagators:    global.TextMapPropagator(),
 			},
 		},
 		{
@@ -45,8 +47,8 @@ func TestNewConfig(t *testing.T) {
 				WithPropagators(nil),
 			},
 			expected: config{
-				TracerProvider: global.TraceProvider(),
-				Tracer:         global.TraceProvider().Tracer(defaultTracerName),
+				TracerProvider: global.TracerProvider(),
+				Tracer:         global.TracerProvider().Tracer(defaultTracerName, trace.WithInstrumentationVersion(contrib.SemVersion())),
 				Propagators:    nil,
 			},
 		},

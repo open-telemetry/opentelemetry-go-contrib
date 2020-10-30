@@ -28,8 +28,8 @@ import (
 	"go.opentelemetry.io/contrib"
 	"go.opentelemetry.io/otel/api/global"
 	"go.opentelemetry.io/otel/api/metric"
-	"go.opentelemetry.io/otel/api/unit"
 	"go.opentelemetry.io/otel/label"
+	"go.opentelemetry.io/otel/unit"
 )
 
 // Host reports the work-in-progress conventional host metrics specified by OpenTelemetry
@@ -40,9 +40,9 @@ type host struct {
 
 // config contains optional settings for reporting host metrics.
 type config struct {
-	// MeterProvider sets the metric.Provider.  If nil, the global
+	// MeterProvider sets the metric.MeterProvider.  If nil, the global
 	// Provider will be used.
-	MeterProvider metric.Provider
+	MeterProvider metric.MeterProvider
 }
 
 // Option supports configuring optional settings for host metrics.
@@ -52,17 +52,17 @@ type Option interface {
 }
 
 // WithMeterProvider sets the Metric implementation to use for
-// reporting.  If this option is not used, the global metric.Provider
+// reporting.  If this option is not used, the global metric.MeterProvider
 // will be used.  `provider` must be non-nil.
-func WithMeterProvider(provider metric.Provider) Option {
+func WithMeterProvider(provider metric.MeterProvider) Option {
 	return metricProviderOption{provider}
 }
 
-type metricProviderOption struct{ metric.Provider }
+type metricProviderOption struct{ metric.MeterProvider }
 
 // ApplyHost implements Option.
 func (o metricProviderOption) ApplyHost(c *config) {
-	c.MeterProvider = o.Provider
+	c.MeterProvider = o.MeterProvider
 }
 
 var (

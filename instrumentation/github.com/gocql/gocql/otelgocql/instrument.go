@@ -19,7 +19,7 @@ import (
 
 	otelcontrib "go.opentelemetry.io/contrib"
 	"go.opentelemetry.io/otel/api/metric"
-	"go.opentelemetry.io/otel/api/unit"
+	"go.opentelemetry.io/otel/unit"
 )
 
 type instruments struct {
@@ -42,7 +42,7 @@ type instruments struct {
 
 // newInstruments will create instruments using a meter
 // from the given provider p.
-func newInstruments(p metric.Provider) *instruments {
+func newInstruments(p metric.MeterProvider) *instruments {
 	meter := p.Meter(
 		instrumentationName,
 		metric.WithInstrumentationVersion(otelcontrib.SemVersion()),

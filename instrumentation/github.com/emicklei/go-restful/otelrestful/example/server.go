@@ -68,15 +68,15 @@ func initTracer() {
 	cfg := sdktrace.Config{
 		DefaultSampler: sdktrace.AlwaysSample(),
 	}
-	tp, err := sdktrace.NewProvider(
+	tp := sdktrace.NewTracerProvider(
 		sdktrace.WithConfig(cfg),
 		sdktrace.WithSyncer(exporter),
 	)
 	if err != nil {
 		log.Fatal(err)
 	}
-	otelglobal.SetTraceProvider(tp)
-	tracer = otelglobal.TraceProvider().Tracer("go-restful-server", oteltrace.WithInstrumentationVersion("0.1"))
+	otelglobal.SetTracerProvider(tp)
+	tracer = otelglobal.TracerProvider().Tracer("go-restful-server", oteltrace.WithInstrumentationVersion("0.1"))
 }
 
 func (u UserResource) getUser(req *restful.Request, resp *restful.Response) {
