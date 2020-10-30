@@ -17,6 +17,7 @@ package otelhttp
 import (
 	"net/http"
 
+	"go.opentelemetry.io/contrib"
 	"go.opentelemetry.io/otel"
 	"go.opentelemetry.io/otel/api/global"
 	"go.opentelemetry.io/otel/api/metric"
@@ -67,8 +68,14 @@ func newConfig(opts ...Option) *config {
 		opt.Apply(c)
 	}
 
-	c.Tracer = c.TracerProvider.Tracer(instrumentationName)
-	c.Meter = c.MeterProvider.Meter(instrumentationName)
+	c.Tracer = c.TracerProvider.Tracer(
+		instrumentationName,
+		trace.WithInstrumentationVersion(contrib.SemVersion()),
+	)
+	c.Meter = c.MeterProvider.Meter(
+		instrumentationName,
+		metric.WithInstrumentationVersion(contrib.SemVersion()),
+	)
 
 	return c
 }
