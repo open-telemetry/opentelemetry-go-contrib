@@ -67,7 +67,6 @@ func main() {
 		Bucket: aws.String("test-bucket"),
 		Key:    aws.String("bar"),
 	})
-
 	_, _ = client.DeleteObjectWithContext(outerSpanCtx, &s3.DeleteObjectInput{
 		Bucket: aws.String("test-bucket"),
 		Key:    aws.String("010101"),
