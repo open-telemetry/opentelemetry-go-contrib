@@ -12,4 +12,6 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
+// package otels3 provides instrumentation for the s3 client github.com/aws/aws-sdk-go/aws/service/s3.
+// It provides wrappers to the interface, adding tracing and duration metrics.
 package otels3
