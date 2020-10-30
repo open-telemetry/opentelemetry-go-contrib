@@ -17,16 +17,14 @@ package main
 import (
 	"bytes"
 	"context"
-	"fmt"
 	"time"
 
 	"github.com/aws/aws-sdk-go/aws"
-	"github.com/aws/aws-sdk-go/aws/request"
 	"github.com/aws/aws-sdk-go/service/s3"
-	"github.com/aws/aws-sdk-go/service/s3/s3iface"
 
 	"go.opentelemetry.io/contrib/instrumentation/github.com/aws/aws-sdk-go/service/config"
 	obsvsS3 "go.opentelemetry.io/contrib/instrumentation/github.com/aws/aws-sdk-go/service/otels3"
+	mocks "go.opentelemetry.io/contrib/instrumentation/github.com/aws/aws-sdk-go/service/otels3/mocks"
 	otelmetric "go.opentelemetry.io/otel/api/metric"
 	oteltrace "go.opentelemetry.io/otel/api/trace"
 	oteltracestdout "go.opentelemetry.io/otel/exporters/stdout"
@@ -37,33 +35,12 @@ import (
 	sdktrace "go.opentelemetry.io/otel/sdk/trace"
 )
 
-type mockS3Client struct {
-	s3iface.S3API
-}
-
-func (s *mockS3Client) PutObjectWithContext(ctx aws.Context, input *s3.PutObjectInput, opts ...request.Option) (*s3.PutObjectOutput, error) {
-	return &s3.PutObjectOutput{}, nil
-}
-
-func (s *mockS3Client) GetObjectWithContext(ctx aws.Context, input *s3.GetObjectInput, opts ...request.Option) (*s3.GetObjectOutput, error) {
-	return &s3.GetObjectOutput{}, nil
-}
-
-func (s *mockS3Client) DeleteObjectWithContext(ctx aws.Context, input *s3.DeleteObjectInput, opts ...request.Option) (*s3.DeleteObjectOutput, error) {
-	return &s3.DeleteObjectOutput{}, nil
-}
-
-func (s *mockS3Client) DeleteObject(input *s3.DeleteObjectInput) (*s3.DeleteObjectOutput, error) {
-	fmt.Printf("UnInstrumentedMethod `DeleteObject` called")
-	return &s3.DeleteObjectOutput{}, nil
-}
-
 func main() {
 	tracerProvider := initTracer()
 	meterProvider := initMeter()
 
 	client, err := obsvsS3.NewInstrumentedS3Client(
-		&mockS3Client{},
+		&mocks.MockS3Client{},
 		config.WithTracerProvider(tracerProvider),
 		config.WithMetricProvider(meterProvider),
 		config.WithSpanCorrelationInMetrics(true),
