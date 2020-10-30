@@ -68,10 +68,6 @@ func main() {
 		Key:    aws.String("bar"),
 	})
 
-	fmt.Println("Sleep 15")
-
-	time.Sleep(time.Second * 15)
-
 	_, _ = client.DeleteObjectWithContext(outerSpanCtx, &s3.DeleteObjectInput{
 		Bucket: aws.String("test-bucket"),
 		Key:    aws.String("010101"),
