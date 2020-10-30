@@ -12,6 +12,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
+// Package helper provides functionality to extract span/trace ids
 package helper
 
 import (
@@ -19,11 +20,11 @@ import (
 	"go.opentelemetry.io/otel/label"
 )
 
+// AppendSpanAndTraceIDFromSpan extracts the trace id and span id from a span using the context field.
+// It returns a list of attributes with the span id and trace id appended.
 func AppendSpanAndTraceIDFromSpan(attrs []label.KeyValue, span trace.Span) []label.KeyValue {
-	linkSpanAttr := []label.KeyValue{
+	return append(attrs,
 		label.String("span.id", span.SpanContext().SpanID.String()),
 		label.String("trace.id", span.SpanContext().TraceID.String()),
-	}
-
-	return append(linkSpanAttr, attrs...)
+	)
 }

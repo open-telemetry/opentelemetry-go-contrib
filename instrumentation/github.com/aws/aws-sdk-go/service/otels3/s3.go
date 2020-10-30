@@ -53,6 +53,7 @@ type recorders struct {
 	operationDuration metric.Float64ValueRecorder
 }
 
+// PutObjectWithContext invokes the PutObjectWithContext function with tracing instrumented
 func (s *instrumentedS3) PutObjectWithContext(ctx aws.Context, input *s3.PutObjectInput, opts ...request.Option) (*s3.PutObjectOutput, error) {
 	startTime := time.Now()
 	destination := aws.StringValue(input.Bucket)
@@ -89,6 +90,7 @@ func (s *instrumentedS3) PutObjectWithContext(ctx aws.Context, input *s3.PutObje
 	return output, err
 }
 
+// GetObjectWithContext invokes the GetObjectWithContext function with tracing instrumented
 func (s *instrumentedS3) GetObjectWithContext(ctx aws.Context, input *s3.GetObjectInput, opts ...request.Option) (*s3.GetObjectOutput, error) {
 	startTime := time.Now()
 	destination := aws.StringValue(input.Bucket)
@@ -125,6 +127,7 @@ func (s *instrumentedS3) GetObjectWithContext(ctx aws.Context, input *s3.GetObje
 	return output, err
 }
 
+// DeleteObjectWithContext invokes the DeleteObjectWithContext function with tracing instrumented
 func (s *instrumentedS3) DeleteObjectWithContext(ctx aws.Context, input *s3.DeleteObjectInput, opts ...request.Option) (*s3.DeleteObjectOutput, error) {
 	startTime := time.Now()
 	destination := aws.StringValue(input.Bucket)
@@ -171,27 +174,23 @@ func createRecorders(meter metric.Meter) *recorders {
 	return &recorders{operationDuration: execTimeRecorder}
 }
 
+// NewInstrumentedS3Client returns an instrumentedS3 object
+// containing configuration options and an S3 interface
 func NewInstrumentedS3Client(s s3iface.S3API, opts ...config.Option) (s3iface.S3API, error) {
 	if s == nil || reflect.ValueOf(s).IsNil() {
 		return &instrumentedS3{}, errors.New("interface must be set")
 	}
 
-	cfg := config.Config{}
-	for _, opt := range opts {
-		opt(&cfg)
+	cfg := config.Config{
+		TracerProvider: global.TracerProvider(),
+		MetricProvider: global.MeterProvider(),
+		Propagators:    global.TextMapPropagator(),
 	}
-	if cfg.TracerProvider == nil {
-		cfg.TracerProvider = global.TracerProvider()
+	for _, opt := range opts {
+		opt.Apply(&cfg)
 	}
 	tracer := cfg.TracerProvider.Tracer(instrumentationName)
-	if cfg.MetricProvider == nil {
-		cfg.MetricProvider = global.MeterProvider()
-	}
 	meter := cfg.MetricProvider.Meter(instrumentationName)
-
-	if cfg.Propagators == nil {
-		cfg.Propagators = global.TextMapPropagator()
-	}
 
 	return &instrumentedS3{
 		S3API:                    s,
