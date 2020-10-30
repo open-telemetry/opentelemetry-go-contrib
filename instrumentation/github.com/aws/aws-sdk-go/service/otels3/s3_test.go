@@ -25,7 +25,6 @@ import (
 	"github.com/aws/aws-sdk-go/service/s3"
 	"github.com/aws/aws-sdk-go/service/s3/s3iface"
 	"github.com/stretchr/testify/assert"
-	"github.com/stretchr/testify/mock"
 
 	"go.opentelemetry.io/contrib/instrumentation/github.com/aws/aws-sdk-go/service/config"
 	"go.opentelemetry.io/contrib/instrumentation/github.com/aws/aws-sdk-go/service/otels3/mocks"
@@ -99,7 +98,7 @@ func assertSpanCorrelationInMetrics(t *testing.T, spanCorrelationInMetrics bool,
 func Test_instrumentedS3_PutObjectWithContext(t *testing.T) {
 	type fields struct {
 		spanCorrelationInMetrics bool
-		mockSetup                func(s3Client *mock.Mock) (expectedReturn interface{})
+		mockSetup                func() (expectedReturn interface{})
 	}
 	type args struct {
 		ctx   aws.Context
@@ -116,9 +115,8 @@ func Test_instrumentedS3_PutObjectWithContext(t *testing.T) {
 			name: "instrumentedS3.PutObjectWithContext should be delegated to S3.PutObjectWithContext while metrics and spans are linked",
 			fields: fields{
 				spanCorrelationInMetrics: true,
-				mockSetup: func(m *mock.Mock) (expectedReturn interface{}) {
+				mockSetup: func() (expectedReturn interface{}) {
 					expectedReturn = &s3.PutObjectOutput{}
-					m.On("PutObjectWithContext", mock.Anything, mock.Anything).Return(expectedReturn, nil)
 					return
 				},
 			},
@@ -135,9 +133,8 @@ func Test_instrumentedS3_PutObjectWithContext(t *testing.T) {
 			name: "instrumentedS3.PutObjectWithContext should be delegated to S3.PutObjectWithContext while metrics and spans are NOT linked",
 			fields: fields{
 				spanCorrelationInMetrics: false,
-				mockSetup: func(m *mock.Mock) (expectedReturn interface{}) {
+				mockSetup: func() (expectedReturn interface{}) {
 					expectedReturn = &s3.PutObjectOutput{}
-					m.On("PutObjectWithContext", mock.Anything, mock.Anything).Return(expectedReturn, nil)
 					return
 				},
 			},
@@ -161,7 +158,7 @@ func Test_instrumentedS3_PutObjectWithContext(t *testing.T) {
 			mockedRecorders := createRecorders(mockedMeter)
 			mockedPropagators := global.TextMapPropagator()
 
-			s3Mock := &mocks.S3Client{}
+			s3Mock := &mocks.MockS3Client{}
 			s := &instrumentedS3{
 				S3API:                    s3Mock,
 				tracer:                   mockedTracer,
@@ -171,7 +168,7 @@ func Test_instrumentedS3_PutObjectWithContext(t *testing.T) {
 				recorders:                mockedRecorders,
 				spanCorrelationInMetrics: tt.fields.spanCorrelationInMetrics,
 			}
-			expectedReturn := tt.fields.mockSetup(&s3Mock.S3API.Mock)
+			expectedReturn := tt.fields.mockSetup()
 			got, err := s.PutObjectWithContext(tt.args.ctx, tt.args.input)
 			if (err != nil) != tt.wantErr {
 				t.Errorf("PutObjectWithContext() error = %v, wantErr %v", err, tt.wantErr)
@@ -200,7 +197,7 @@ func Test_instrumentedS3_PutObjectWithContext(t *testing.T) {
 func Test_instrumentedS3_GetObjectWithContext(t *testing.T) {
 	type fields struct {
 		spanCorrelationInMetrics bool
-		mockSetup                func(s3Client *mock.Mock) (expectedReturn interface{})
+		mockSetup                func() (expectedReturn interface{})
 	}
 	type args struct {
 		ctx   aws.Context
@@ -217,9 +214,8 @@ func Test_instrumentedS3_GetObjectWithContext(t *testing.T) {
 			name: "instrumentedS3.GetObjectWithContext should be delegated to S3.GetObjectWithContext while metrics and spans are linked",
 			fields: fields{
 				spanCorrelationInMetrics: true,
-				mockSetup: func(m *mock.Mock) (expectedReturn interface{}) {
+				mockSetup: func() (expectedReturn interface{}) {
 					expectedReturn = &s3.GetObjectOutput{}
-					m.On("GetObjectWithContext", mock.Anything, mock.Anything).Return(expectedReturn, nil)
 					return
 				},
 			},
@@ -236,9 +232,8 @@ func Test_instrumentedS3_GetObjectWithContext(t *testing.T) {
 			name: "instrumentedS3.GetObjectWithContext should be delegated to S3.GetObjectWithContext while metrics and spans are NOT linked",
 			fields: fields{
 				spanCorrelationInMetrics: false,
-				mockSetup: func(m *mock.Mock) (expectedReturn interface{}) {
+				mockSetup: func() (expectedReturn interface{}) {
 					expectedReturn = &s3.GetObjectOutput{}
-					m.On("GetObjectWithContext", mock.Anything, mock.Anything).Return(expectedReturn, nil)
 					return
 				},
 			},
@@ -262,7 +257,7 @@ func Test_instrumentedS3_GetObjectWithContext(t *testing.T) {
 			mockedRecorders := createRecorders(mockedMeter)
 			mockedPropagators := global.TextMapPropagator()
 
-			s3Mock := &mocks.S3Client{}
+			s3Mock := &mocks.MockS3Client{}
 			s := &instrumentedS3{
 				S3API:                    s3Mock,
 				tracer:                   mockedTracer,
@@ -272,7 +267,7 @@ func Test_instrumentedS3_GetObjectWithContext(t *testing.T) {
 				recorders:                mockedRecorders,
 				spanCorrelationInMetrics: tt.fields.spanCorrelationInMetrics,
 			}
-			expectedReturn := tt.fields.mockSetup(&s3Mock.S3API.Mock)
+			expectedReturn := tt.fields.mockSetup()
 			got, err := s.GetObjectWithContext(tt.args.ctx, tt.args.input)
 			if (err != nil) != tt.wantErr {
 				t.Errorf("GetObjectWithContext() error = %v, wantErr %v", err, tt.wantErr)
@@ -301,7 +296,7 @@ func Test_instrumentedS3_GetObjectWithContext(t *testing.T) {
 func Test_instrumentedS3_DeleteObjectWithContext(t *testing.T) {
 	type fields struct {
 		spanCorrelationInMetrics bool
-		mockSetup                func(s3Client *mock.Mock) (expectedReturn interface{})
+		mockSetup                func() (expectedReturn interface{})
 	}
 	type args struct {
 		ctx   aws.Context
@@ -318,9 +313,8 @@ func Test_instrumentedS3_DeleteObjectWithContext(t *testing.T) {
 			name: "instrumentedS3.DeleteObjectWithContext should be delegated to S3.DeleteObjectWithContext while metrics and spans are linked",
 			fields: fields{
 				spanCorrelationInMetrics: true,
-				mockSetup: func(m *mock.Mock) (expectedReturn interface{}) {
+				mockSetup: func() (expectedReturn interface{}) {
 					expectedReturn = &s3.DeleteObjectOutput{}
-					m.On("DeleteObjectWithContext", mock.Anything, mock.Anything).Return(expectedReturn, nil)
 					return
 				},
 			},
@@ -337,9 +331,8 @@ func Test_instrumentedS3_DeleteObjectWithContext(t *testing.T) {
 			name: "instrumentedS3.DeleteObjectWithContext should be delegated to S3.DeleteObjectWithContext while metrics and spans are NOT linked",
 			fields: fields{
 				spanCorrelationInMetrics: false,
-				mockSetup: func(m *mock.Mock) (expectedReturn interface{}) {
+				mockSetup: func() (expectedReturn interface{}) {
 					expectedReturn = &s3.DeleteObjectOutput{}
-					m.On("DeleteObjectWithContext", mock.Anything, mock.Anything).Return(expectedReturn, nil)
 					return
 				},
 			},
@@ -363,7 +356,7 @@ func Test_instrumentedS3_DeleteObjectWithContext(t *testing.T) {
 			mockedRecorders := createRecorders(mockedMeter)
 			mockedPropagators := global.TextMapPropagator()
 
-			s3Mock := &mocks.S3Client{}
+			s3Mock := &mocks.MockS3Client{}
 			s := &instrumentedS3{
 				S3API:                    s3Mock,
 				tracer:                   mockedTracer,
@@ -373,7 +366,7 @@ func Test_instrumentedS3_DeleteObjectWithContext(t *testing.T) {
 				recorders:                mockedRecorders,
 				spanCorrelationInMetrics: tt.fields.spanCorrelationInMetrics,
 			}
-			expectedReturn := tt.fields.mockSetup(&s3Mock.S3API.Mock)
+			expectedReturn := tt.fields.mockSetup()
 			got, err := s.DeleteObjectWithContext(tt.args.ctx, tt.args.input)
 			if (err != nil) != tt.wantErr {
 				t.Errorf("DeleteObjectWithContext() error = %v, wantErr %v", err, tt.wantErr)
@@ -407,7 +400,7 @@ func Test_instrumentedS3_NewInstrumentedS3Client(t *testing.T) {
 	tracerProvider, _ := mocktrace.NewTracerProviderAndTracer(instrumentationName)
 	_, meterProvider := mockmetric.NewMeterProvider()
 	mockedPropagator := global.TextMapPropagator()
-	s3MockClient := &mocks.S3Client{}
+	s3MockClient := &mocks.MockS3Client{}
 
 	tests := []struct {
 		name       string
