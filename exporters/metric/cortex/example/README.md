@@ -32,9 +32,7 @@ Installation instructions can be found in the Docker
    * Look for a gear icon on the left sidebar and select Data Sources
 
 4. Add a new Prometheus Data Source
-   * Use
-     [http://host.docker.internal:9009/api/prom/](http://host.docker.internal:9009/api/prom/)
-     as the URL
+   * Use http://docker-host:9009/api/prom/ as the URL
    * Optionally, set the scrape interval to 3s to make updates appear quickly
    * Click `Save & Test`
   
