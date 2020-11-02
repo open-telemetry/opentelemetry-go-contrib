@@ -38,10 +38,7 @@ const (
 
 // Client HTTP metrics
 const (
-	ClientRequestCount          = "http.client.request_count"           // Incoming request count total
-	ClientRequestContentLength  = "http.client.request_content_length"  // Incoming request bytes total
-	ClientResponseContentLength = "http.client.response_content_length" // Incoming response bytes total
-	ClientRoundTripLatency      = "http.client.roundtrip_latency"       // Incoming end to end duration, microseconds
+	ClientRequestDuration = "http.client.duration" // Incoming end to end duration, microseconds
 )
 
 // Filter is a predicate used to determine whether a given http.request should

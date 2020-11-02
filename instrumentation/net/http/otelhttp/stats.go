@@ -16,6 +16,7 @@ package otelhttp
 
 import (
 	"context"
+	"go.opentelemetry.io/otel/unit"
 	"io"
 	"net/http"
 	"sync"
@@ -28,22 +29,17 @@ import (
 type statTransport struct {
 	meter          metric.Meter
 	base           *Transport
-	counters       map[string]metric.Int64Counter
 	valueRecorders map[string]metric.Float64ValueRecorder
 }
 
 type tracker struct {
-	ctx               context.Context
-	respSize          int64
-	respContentLength int64
-	reqSize           int64
-	start             time.Time
-	body              io.ReadCloser
-	statusCode        int
-	endOnce           sync.Once
-	labels            *label.Set
+	ctx        context.Context
+	start      time.Time
+	body       io.ReadCloser
+	statusCode int
+	endOnce    sync.Once
+	labels     *label.Set
 
-	counters       map[string]metric.Int64Counter
 	valueRecorders map[string]metric.Float64ValueRecorder
 }
 
@@ -51,12 +47,17 @@ type tracker struct {
 // and Method are applied to all measures. StatusCode is not applied to
 // ClientRequestCount or ServerRequestCount, since it is recorded before the status is known.
 var (
+	// Method is the HTTP method of the request, capitalized (GET, POST, etc.).
+	Method = label.Key("http.method")
 	// Host is the value of the HTTP Host header.
 	//
 	// The value of this tag can be controlled by the HTTP client, so you need
 	// to watch out for potentially generating high-cardinality labels in your
 	// metrics backend if you use this tag in views.
 	Host = label.Key("http.host")
+
+	// Scheme is the URI scheme identifying the used protocol: "http" or "https"
+	Scheme = label.Key("http.scheme")
 
 	// StatusCode is the numeric HTTP response status code,
 	// or "error" if a transport error occurred and no status code was read.
@@ -68,9 +69,6 @@ var (
 	// to watch out for potentially generating high-cardinality labels in your
 	// metrics backend if you use this tag in views.
 	Path = label.Key("http.path")
-
-	// Method is the HTTP method of the request, capitalized (GET, POST, etc.).
-	Method = label.Key("http.method")
 )
 
 // Client tag keys.
@@ -83,6 +81,8 @@ var (
 	KeyClientStatus = label.Key("http_client_status")
 	// KeyClientHost is the value of the request Host header.
 	KeyClientHost = label.Key("http_client_host")
+	// KeyClientScheme is the URI scheme identifying the used protocol: "http" or "https"
+	KeyClientScheme = label.Key("http_client_host")
 )
 
 func (trans *statTransport) applyConfig(c *config) {
@@ -95,41 +95,33 @@ func (trans *statTransport) applyConfig(c *config) {
 // RoundTrip implements http.RoundTripper, delegating to Base and recording stats for the request.
 func (trans *statTransport) RoundTrip(req *http.Request) (*http.Response, error) {
 	labels := label.NewSet(
-		KeyClientHost.String(req.Host),
-		Host.String(req.Host),
-		KeyClientPath.String(req.URL.Path),
-		Path.String(req.URL.Path),
-		KeyClientMethod.String(req.Method),
+		// conform open-telemetry label definition
 		Method.String(req.Method),
+		Host.String(req.Host),
+		Scheme.String(req.URL.Scheme),
+		Path.String(req.URL.Path),
+		// for prometheus
+		KeyClientMethod.String(req.Method),
+		KeyClientHost.String(req.Host),
+		KeyClientScheme.String(req.URL.Scheme),
+		KeyClientPath.String(req.URL.Path),
 	)
 
 	ctx := req.Context()
 	track := &tracker{
 		start:          time.Now(),
 		ctx:            ctx,
-		counters:       trans.counters,
 		valueRecorders: trans.valueRecorders,
 		labels:         &labels,
 	}
-	if req.Body == nil {
-		// TODO: Handle cases where ContentLength is not set.
-		track.reqSize = -1
-	} else if req.ContentLength > 0 {
-		track.reqSize = req.ContentLength
-	}
-	trans.counters[ClientRequestCount].Add(ctx, 1, labels.ToSlice()...)
 
 	// Perform request.
 	resp, err := trans.base.RoundTrip(req)
-
 	if err != nil {
 		track.statusCode = http.StatusInternalServerError
 		track.end()
 	} else {
 		track.statusCode = resp.StatusCode
-		if req.Method != "HEAD" {
-			track.respContentLength = resp.ContentLength
-		}
 		if resp.Body == nil {
 			track.end()
 		} else {
@@ -164,25 +156,16 @@ func wrappedBodyIO(wrapper io.ReadCloser, body io.ReadCloser) io.ReadCloser {
 }
 
 func (trans *statTransport) createMeasures() {
-	trans.counters = make(map[string]metric.Int64Counter)
 	trans.valueRecorders = make(map[string]metric.Float64ValueRecorder)
 
-	clientRequestCountCounter, err := trans.meter.NewInt64Counter(ClientRequestCount)
+	requestDurationMeasure, err := trans.meter.NewFloat64ValueRecorder(
+		ClientRequestDuration,
+		metric.WithDescription("measure the duration of the outbound HTTP request"),
+		metric.WithUnit(unit.Milliseconds),
+	)
 	handleErr(err)
 
-	requestBytesCounter, err := trans.meter.NewInt64Counter(ClientRequestContentLength)
-	handleErr(err)
-
-	responseBytesCounter, err := trans.meter.NewInt64Counter(ClientResponseContentLength)
-	handleErr(err)
-
-	serverLatencyMeasure, err := trans.meter.NewFloat64ValueRecorder(ClientRoundTripLatency)
-	handleErr(err)
-
-	trans.counters[ClientRequestCount] = clientRequestCountCounter
-	trans.counters[ClientRequestContentLength] = requestBytesCounter
-	trans.counters[ClientResponseContentLength] = responseBytesCounter
-	trans.valueRecorders[ClientRoundTripLatency] = serverLatencyMeasure
+	trans.valueRecorders[ClientRequestDuration] = requestDurationMeasure
 }
 
 var _ io.ReadCloser = (*tracker)(nil)
@@ -190,27 +173,20 @@ var _ io.ReadCloser = (*tracker)(nil)
 func (t *tracker) end() {
 	t.endOnce.Do(func() {
 		latencyMs := float64(time.Since(t.start)) / float64(time.Millisecond)
-		respSize := t.respSize
-		if t.respSize == 0 && t.respContentLength > 0 {
-			respSize = t.respContentLength
-		}
 		labels := label.NewSet(
-			append(t.labels.ToSlice(), StatusCode.Int(t.statusCode),
-				KeyClientStatus.Int(t.statusCode))...,
+			append(t.labels.ToSlice(),
+				StatusCode.Int(t.statusCode),
+				KeyClientStatus.Int(t.statusCode),
+			)...,
 		)
 		ls := labels.ToSlice()
 
-		t.counters[ClientResponseContentLength].Add(t.ctx, respSize, ls...)
-		t.valueRecorders[ClientRoundTripLatency].Record(t.ctx, latencyMs, ls...)
-		if t.reqSize >= 0 {
-			t.counters[ClientRequestContentLength].Add(t.ctx, respSize, ls...)
-		}
+		t.valueRecorders[ClientRequestDuration].Record(t.ctx, latencyMs, ls...)
 	})
 }
 
 func (t *tracker) Read(b []byte) (int, error) {
 	n, err := t.body.Read(b)
-	t.respSize += int64(n)
 	switch err {
 	case nil:
 		return n, nil
