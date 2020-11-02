@@ -16,11 +16,12 @@ package otelhttp
 
 import (
 	"context"
-	"go.opentelemetry.io/otel/unit"
 	"io"
 	"net/http"
 	"sync"
 	"time"
+
+	"go.opentelemetry.io/otel/unit"
 
 	"go.opentelemetry.io/otel/api/metric"
 	"go.opentelemetry.io/otel/label"
