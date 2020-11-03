@@ -56,7 +56,7 @@ func main() {
 		context.Background(),
 		"http_request_served",
 	)
-	span.End()
+	defer span.End()
 
 	_, _ = client.PutObjectWithContext(outerSpanCtx, &s3.PutObjectInput{
 		Bucket: aws.String("test-bucket"),

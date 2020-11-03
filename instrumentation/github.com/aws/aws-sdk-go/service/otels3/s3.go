@@ -63,7 +63,6 @@ func (s *instrumentedS3) PutObjectWithContext(ctx aws.Context, input *s3.PutObje
 		ctx,
 		fmt.Sprintf("%s.%s", destination, operationPutObject),
 		trace.WithSpanKind(trace.SpanKindClient),
-		trace.WithTimestamp(startTime),
 		trace.WithAttributes(attrs...),
 	)
 	defer span.End()
@@ -100,7 +99,6 @@ func (s *instrumentedS3) GetObjectWithContext(ctx aws.Context, input *s3.GetObje
 		ctx,
 		fmt.Sprintf("%s.%s", destination, operationGetObject),
 		trace.WithSpanKind(trace.SpanKindClient),
-		trace.WithTimestamp(startTime),
 		trace.WithAttributes(attrs...),
 	)
 	defer span.End()
@@ -137,7 +135,6 @@ func (s *instrumentedS3) DeleteObjectWithContext(ctx aws.Context, input *s3.Dele
 		ctx,
 		fmt.Sprintf("%s.%s", destination, operationDeleteObject),
 		trace.WithSpanKind(trace.SpanKindClient),
-		trace.WithTimestamp(startTime),
 		trace.WithAttributes(attrs...),
 	)
 	defer span.End()

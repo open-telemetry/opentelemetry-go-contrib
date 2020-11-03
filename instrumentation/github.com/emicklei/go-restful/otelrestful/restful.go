@@ -17,15 +17,13 @@ package otelrestful
 import (
 	"github.com/emicklei/go-restful/v3"
 
+	"go.opentelemetry.io/contrib"
 	otelglobal "go.opentelemetry.io/otel/api/global"
 	oteltrace "go.opentelemetry.io/otel/api/trace"
 	"go.opentelemetry.io/otel/semconv"
 )
 
-const (
-	tracerName    = "go.opentelemetry.io/contrib/instrumentation/github.com/emicklei/go-restful/otelrestful"
-	tracerVersion = "1.0"
-)
+const tracerName = "go.opentelemetry.io/contrib/instrumentation/github.com/emicklei/go-restful/otelrestful"
 
 // OTelFilter returns a restful.FilterFunction which will trace an incoming request.
 //
@@ -40,7 +38,10 @@ func OTelFilter(service string, opts ...Option) restful.FilterFunction {
 	if cfg.TracerProvider == nil {
 		cfg.TracerProvider = otelglobal.TracerProvider()
 	}
-	tracer := cfg.TracerProvider.Tracer(tracerName, oteltrace.WithInstrumentationVersion(tracerVersion))
+	tracer := cfg.TracerProvider.Tracer(
+		tracerName,
+		oteltrace.WithInstrumentationVersion(contrib.SemVersion()),
+	)
 	if cfg.Propagators == nil {
 		cfg.Propagators = otelglobal.TextMapPropagator()
 	}
