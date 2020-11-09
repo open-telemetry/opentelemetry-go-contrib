@@ -9,5 +9,5 @@ require (
 	github.com/stretchr/testify v1.6.1
 	go.opentelemetry.io/contrib v0.13.0
 	go.opentelemetry.io/otel v0.13.0
-	google.golang.org/grpc v1.33.1
+	google.golang.org/grpc v1.33.2
 )
