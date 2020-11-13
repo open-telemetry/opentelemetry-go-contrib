@@ -172,7 +172,7 @@ registry-links-check:
 				TYPE="exporter"; \
 			fi; \
 			if $$(echo "$$f" | grep -q "detectors"); then \
-				TYPE="tools"; \
+				TYPE="detector"; \
 			fi; \
 			NAME=$$(echo "$$f" | sed -e 's/.*\///' -e 's/.*otel//'); \
 			LINK=$(CONTRIB_REPO_URL)/$$(echo "$$f" | sed -e 's/..//' -e 's/\/otel.*$$//'); \
@@ -182,8 +182,7 @@ registry-links-check:
 		done; \
 	); \
 	if [ -n "$$checkRes" ]; then \
-		echo "registry link check failed for the following packages:"; echo "$${checkRes}"; \
-		exit 1; \
+		echo "WARNING: registry link check failed for the following packages:"; echo "$${checkRes}"; \
 	fi
 
 .PHONY: dependabot-check
