@@ -36,9 +36,10 @@ const (
 	ServerLatency         = "http.server.duration"                // Incoming end to end duration, microseconds
 )
 
-// Client HTTP metrics
+// Client HTTP metric instrument names
 const (
-	ClientRequestDuration = "http.client.duration" // Incoming end to end duration, microseconds
+	// clientRequestDuration is the name of the instrument that measures the duration of outbound HTTP requests.
+	clientRequestDuration = "http.client.duration"
 )
 
 // Filter is a predicate used to determine whether a given http.request should
