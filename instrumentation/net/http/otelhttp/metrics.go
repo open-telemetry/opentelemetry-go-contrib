@@ -16,11 +16,12 @@ package otelhttp
 
 import (
 	"context"
-	"go.opentelemetry.io/otel/semconv"
 	"io"
 	"net/http"
 	"sync"
 	"time"
+
+	"go.opentelemetry.io/otel/semconv"
 
 	"go.opentelemetry.io/otel/unit"
 
@@ -35,11 +36,11 @@ type metricsTransport struct {
 }
 
 type tracker struct {
-	ctx        context.Context
-	start      time.Time
-	body       io.ReadCloser
-	endOnce    sync.Once
-	labels     []label.KeyValue
+	ctx     context.Context
+	start   time.Time
+	body    io.ReadCloser
+	endOnce sync.Once
+	labels  []label.KeyValue
 
 	// recorders
 	clientDurationRecorder metric.Float64ValueRecorder
