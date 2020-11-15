@@ -9,7 +9,8 @@ replace (
 )
 
 require (
-	github.com/emicklei/go-restful/v3 v3.3.3
+	github.com/emicklei/go-restful/v3 v3.4.0
+	github.com/json-iterator/go v1.1.10 // indirect
 	go.opentelemetry.io/contrib/instrumentation/github.com/emicklei/go-restful/otelrestful v0.13.0
 	go.opentelemetry.io/otel v0.13.0
 	go.opentelemetry.io/otel/exporters/stdout v0.13.0
