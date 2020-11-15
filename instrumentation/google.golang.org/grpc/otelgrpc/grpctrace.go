@@ -25,8 +25,12 @@ import (
 	"go.opentelemetry.io/otel/label"
 )
 
-// instrumentationName is the name of this instrumentation package.
-const instrumentationName = "go.opentelemetry.io/contrib/instrumentation/google.golang.org/grpc/otelgrpc"
+const (
+	// instrumentationName is the name of this instrumentation package.
+	instrumentationName = "go.opentelemetry.io/contrib/instrumentation/google.golang.org/grpc/otelgrpc"
+	// GRPCStatusCodeKey is convention for numeric status code of a gRPC request.
+	GRPCStatusCodeKey = label.Key("rpc.grpc.status_code")
+)
 
 // config is a group of options for this instrumentation.
 type config struct {
