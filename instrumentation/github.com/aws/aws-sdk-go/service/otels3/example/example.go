@@ -42,7 +42,7 @@ func main() {
 	client, err := obsvsS3.NewInstrumentedS3Client(
 		&mocks.MockS3Client{},
 		config.WithTracerProvider(tracerProvider),
-		config.WithMetricProvider(meterProvider),
+		config.WithMeterProvider(meterProvider),
 		config.WithSpanCorrelationInMetrics(true),
 	)
 

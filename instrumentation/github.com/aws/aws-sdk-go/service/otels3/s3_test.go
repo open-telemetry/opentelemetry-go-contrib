@@ -413,7 +413,7 @@ func Test_instrumentedS3_NewInstrumentedS3Client(t *testing.T) {
 				s: s3MockClient,
 				opts: []config.Option{
 					config.WithTracerProvider(tracerProvider),
-					config.WithMetricProvider(meterProvider),
+					config.WithMeterProvider(meterProvider),
 					config.WithPropagators(mockedPropagator),
 					config.WithSpanCorrelationInMetrics(true),
 				},
