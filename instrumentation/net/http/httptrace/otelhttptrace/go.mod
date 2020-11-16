@@ -3,7 +3,7 @@ module go.opentelemetry.io/contrib/instrumentation/net/http/httptrace/otelhttptr
 go 1.14
 
 require (
-	github.com/google/go-cmp v0.5.2
+	github.com/google/go-cmp v0.5.3
 	github.com/stretchr/testify v1.6.1
 	go.opentelemetry.io/contrib v0.13.0
 	go.opentelemetry.io/otel v0.13.0
