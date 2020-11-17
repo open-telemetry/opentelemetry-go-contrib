@@ -21,6 +21,15 @@ services:
       - .:/app
     working_dir: /app
     command: go run main.go
+    depends_on:
+      - docker-host
+      - cortex
+  docker-host:
+    image: qoomon/docker-host
+    cap_add: [ 'NET_ADMIN', 'NET_RAW' ]
+    restart: on-failure
+    environment:
+      - PORTS=9009
   cortex:
     image: quay.io/cortexproject/cortex:v1.3.0-rc.1
     command:

@@ -12,7 +12,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-url: http://host.docker.internal:9009/api/prom/push
+url: http://docker-host:9009/api/prom/push
 remote_timeout: 30s
 push_interval: 2s
 name: Test
