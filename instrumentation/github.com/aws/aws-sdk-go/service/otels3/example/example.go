@@ -43,7 +43,7 @@ func main() {
 		&mocks.MockS3Client{},
 		config.WithTracerProvider(tracerProvider),
 		config.WithMeterProvider(meterProvider),
-		config.WithSpanCorrelationInMetrics(true),
+		config.WithSpanCorrelation(true),
 	)
 
 	if err != nil {

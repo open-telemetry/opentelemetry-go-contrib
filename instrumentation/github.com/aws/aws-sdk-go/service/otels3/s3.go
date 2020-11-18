@@ -25,7 +25,8 @@ import (
 	"github.com/aws/aws-sdk-go/service/s3"
 	"github.com/aws/aws-sdk-go/service/s3/s3iface"
 
-	"go.opentelemetry.io/contrib/instrumentation/github.com/aws/aws-sdk-go/service/config"
+	//"github.com/tommy-muehle/go-mnd/config"
+
 	"go.opentelemetry.io/contrib/instrumentation/github.com/aws/aws-sdk-go/service/helper"
 	"go.opentelemetry.io/otel"
 	"go.opentelemetry.io/otel/api/global"
@@ -37,12 +38,12 @@ var instrumentationName = "github.com/aws/aws-sdk-go/aws/service/s3"
 
 type instrumentedS3 struct {
 	s3iface.S3API
-	tracer                   trace.Tracer
-	meter                    metric.Meter
-	propagators              otel.TextMapPropagator
-	counters                 *counters
-	recorders                *recorders
-	spanCorrelationInMetrics bool
+	tracer          trace.Tracer
+	meter           metric.Meter
+	propagators     otel.TextMapPropagator
+	counters        *counters
+	recorders       *recorders
+	spanCorrelation bool
 }
 
 type counters struct {
@@ -53,7 +54,7 @@ type recorders struct {
 	operationDuration metric.Float64ValueRecorder
 }
 
-// PutObjectWithContext invokes the PutObjectWithContext function with tracing instrumented
+// PutObjectWithContext invokes the PutObjectWithContext function with tracing instrumented.
 func (s *instrumentedS3) PutObjectWithContext(ctx aws.Context, input *s3.PutObjectInput, opts ...request.Option) (*s3.PutObjectOutput, error) {
 	startTime := time.Now()
 	destination := aws.StringValue(input.Bucket)
@@ -75,7 +76,7 @@ func (s *instrumentedS3) PutObjectWithContext(ctx aws.Context, input *s3.PutObje
 		attrs = append(attrs, labelStatusSuccess)
 	}
 
-	if s.spanCorrelationInMetrics {
+	if s.spanCorrelation {
 		attrs = helper.AppendSpanAndTraceIDFromSpan(attrs, span)
 	}
 
@@ -111,7 +112,7 @@ func (s *instrumentedS3) GetObjectWithContext(ctx aws.Context, input *s3.GetObje
 		attrs = append(attrs, labelStatusSuccess)
 	}
 
-	if s.spanCorrelationInMetrics {
+	if s.spanCorrelation {
 		attrs = helper.AppendSpanAndTraceIDFromSpan(attrs, span)
 	}
 
@@ -147,7 +148,7 @@ func (s *instrumentedS3) DeleteObjectWithContext(ctx aws.Context, input *s3.Dele
 		attrs = append(attrs, labelStatusSuccess)
 	}
 
-	if s.spanCorrelationInMetrics {
+	if s.spanCorrelation {
 		attrs = helper.AppendSpanAndTraceIDFromSpan(attrs, span)
 	}
 
@@ -162,40 +163,40 @@ func (s *instrumentedS3) DeleteObjectWithContext(ctx aws.Context, input *s3.Dele
 }
 
 func createCounters(meter metric.Meter) *counters {
-	operationCounter, _ := meter.NewInt64Counter("storage.s3.operation")
+	operationCounter, _ := meter.NewInt64Counter("aws.s3.operation")
 	return &counters{operation: operationCounter}
 }
 
 func createRecorders(meter metric.Meter) *recorders {
-	execTimeRecorder, _ := meter.NewFloat64ValueRecorder("storage.operation.duration_μs")
+	execTimeRecorder, _ := meter.NewFloat64ValueRecorder("aws.s3.operation.duration")
 	return &recorders{operationDuration: execTimeRecorder}
 }
 
 // NewInstrumentedS3Client returns an instrumentedS3 object
 // containing configuration options and an S3 interface
-func NewInstrumentedS3Client(s s3iface.S3API, opts ...config.Option) (s3iface.S3API, error) {
+func NewInstrumentedS3Client(s s3iface.S3API, opts ...Option) (s3iface.S3API, error) {
 	if s == nil || reflect.ValueOf(s).IsNil() {
 		return &instrumentedS3{}, errors.New("interface must be set")
 	}
 
-	cfg := config.Config{
+	cfg := config{
 		TracerProvider: global.TracerProvider(),
 		MetricProvider: global.MeterProvider(),
 		Propagators:    global.TextMapPropagator(),
 	}
 	for _, opt := range opts {
-		opt.Apply(&cfg)
+		opt.apply(&cfg)
 	}
 	tracer := cfg.TracerProvider.Tracer(instrumentationName)
 	meter := cfg.MetricProvider.Meter(instrumentationName)
 
 	return &instrumentedS3{
-		S3API:                    s,
-		meter:                    meter,
-		tracer:                   tracer,
-		propagators:              cfg.Propagators,
-		counters:                 createCounters(meter),
-		recorders:                createRecorders(meter),
-		spanCorrelationInMetrics: cfg.SpanCorrelationInMetrics,
+		S3API:           s,
+		meter:           meter,
+		tracer:          tracer,
+		propagators:     cfg.Propagators,
+		counters:        createCounters(meter),
+		recorders:       createRecorders(meter),
+		spanCorrelation: cfg.SpanCorrelation,
 	}, nil
 }
