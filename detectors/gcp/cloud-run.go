@@ -29,7 +29,8 @@ import (
 // CloudRun collects resource information of Cloud Run instance.
 type CloudRun struct{}
 
-// compile time assertion that GCE implements the resource.Detector interface.
+// compile time assertion that CloudRun implements the resource.Detector
+// interface.
 var _ resource.Detector = (*CloudRun)(nil)
 
 // Detect detects associated resources when running on Cloud Run hosts.
