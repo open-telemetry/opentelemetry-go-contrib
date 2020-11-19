@@ -26,18 +26,45 @@ import (
 	"go.opentelemetry.io/otel/semconv"
 )
 
+type metadataClient interface {
+	ProjectID() (string, error)
+	Get(string) (string, error)
+	InstanceID() (string, error)
+}
+
 // CloudRun collects resource information of Cloud Run instance.
-type CloudRun struct{}
+type CloudRun struct {
+	mc     metadataClient
+	onGCE  func() bool
+	getenv func(string) string
+}
 
 // compile time assertion that CloudRun implements the resource.Detector
 // interface.
 var _ resource.Detector = (*CloudRun)(nil)
 
+// NewCloudRun creates a CloudRun detector
+// Specify nil to use the default metadata client.
+func NewCloudRun() *CloudRun {
+	return &CloudRun{
+		mc:     metadata.NewClient(nil),
+		onGCE:  metadata.OnGCE,
+		getenv: os.Getenv,
+	}
+}
+
+// for test only
+func (c *CloudRun) setupForTest(mc metadataClient, ongce func() bool, getenv func(string) string) {
+	c.mc = mc
+	c.onGCE = ongce
+	c.getenv = getenv
+}
+
 // Detect detects associated resources when running on Cloud Run hosts.
-func (cloudrun *CloudRun) Detect(ctx context.Context) (*resource.Resource, error) {
+func (c *CloudRun) Detect(ctx context.Context) (*resource.Resource, error) {
 	// .OnGCE is actually testing whether the metadata server is available.
 	// Metadata server is supported on Cloud Run.
-	if !metadata.OnGCE() {
+	if !c.onGCE() {
 		return nil, nil
 	}
 
@@ -47,19 +74,19 @@ func (cloudrun *CloudRun) Detect(ctx context.Context) (*resource.Resource, error
 
 	var errInfo []string
 
-	if projectID, err := metadata.ProjectID(); hasProblem(err) {
+	if projectID, err := c.mc.ProjectID(); hasProblem(err) {
 		errInfo = append(errInfo, err.Error())
 	} else if projectID != "" {
 		labels = append(labels, semconv.CloudAccountIDKey.String(projectID))
 	}
 
-	if region, err := metadata.Get("instance/region"); hasProblem(err) {
+	if region, err := c.mc.Get("instance/region"); hasProblem(err) {
 		errInfo = append(errInfo, err.Error())
 	} else if region != "" {
 		labels = append(labels, semconv.CloudRegionKey.String(region))
 	}
 
-	if instanceID, err := metadata.InstanceID(); hasProblem(err) {
+	if instanceID, err := c.mc.InstanceID(); hasProblem(err) {
 		errInfo = append(errInfo, err.Error())
 	} else if instanceID != "" {
 		labels = append(labels, semconv.ServiceInstanceIDKey.String(instanceID))
@@ -69,7 +96,7 @@ func (cloudrun *CloudRun) Detect(ctx context.Context) (*resource.Resource, error
 	// See https://cloud.google.com/run/docs/reference/container-contract
 	// The same K_SERVICE value ultimately maps to both `namespace` and
 	// `job` label of `generic_task` metric type.
-	if service := os.Getenv("K_SERVICE"); service == "" {
+	if service := c.getenv("K_SERVICE"); service == "" {
 		errInfo = append(errInfo, "envvar K_SERVICE contains empty string.")
 	} else {
 		labels = append(labels,
