@@ -44,7 +44,6 @@ type CloudRun struct {
 var _ resource.Detector = (*CloudRun)(nil)
 
 // NewCloudRun creates a CloudRun detector.
-// Specify nil to use the default metadata client.
 func NewCloudRun() *CloudRun {
 	return &CloudRun{
 		mc:     metadata.NewClient(nil),

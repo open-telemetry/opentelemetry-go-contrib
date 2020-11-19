@@ -63,7 +63,7 @@ func (c *client) ProjectID() (string, error) {
 
 var _ metadataClient = (*client)(nil)
 
-func TestCloudRunDetector_NotOnGCE(t *testing.T) {
+func TestCloudRunDetectorNotOnGCE(t *testing.T) {
 	ctx := context.Background()
 	c := NewCloudRun()
 	c.setupForTest(nil, notOnGCE, getenv(nil))
@@ -73,7 +73,7 @@ func TestCloudRunDetector_NotOnGCE(t *testing.T) {
 	}
 }
 
-func TestCloudRunDetector_ExpectSuccess(t *testing.T) {
+func TestCloudRunDetectorExpectSuccess(t *testing.T) {
 	ctx := context.Background()
 
 	metadata := map[string]string{
@@ -102,7 +102,7 @@ func TestCloudRunDetector_ExpectSuccess(t *testing.T) {
 	}
 }
 
-func TestCloudRunDetector_ExpectFail(t *testing.T) {
+func TestCloudRunDetectorExpectFail(t *testing.T) {
 	ctx := context.Background()
 
 	tests := []struct {
