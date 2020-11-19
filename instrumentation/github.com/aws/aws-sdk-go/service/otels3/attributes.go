@@ -21,9 +21,9 @@ const (
 	operationGetObject    = "GetObject"
 	operationDeleteObject = "DeleteObject"
 
-	storageOperationKey   = label.Key("storage.operation")
-	storageDestinationKey = label.Key("storage.destination")
-	storageSystemKey      = label.Key("storage.system")
+	storageOperationKey   = label.Key("aws.s3.operation")
+	storageDestinationKey = label.Key("aws.s3.destination")
+	storageSystemKey      = label.Key("aws.s3.system")
 
 	s3StorageSystemValue = "s3"
 

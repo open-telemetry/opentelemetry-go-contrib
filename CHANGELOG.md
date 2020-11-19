@@ -11,7 +11,7 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 ### Added
 
 - `otelhttp.{Get,Head,Post,PostForm}` convenience wrappers for their `http` counterparts. (#390)
-- Instrumentation for the S3 client github.com/aws/aws-sdk-go/aws/service/s3
+- Instrumentation for the AWS S3 client `github.com/aws/aws-sdk-go/aws/service/s3`. (#416)
 
 ### Changed
 
