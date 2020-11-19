@@ -25,8 +25,6 @@ import (
 	"github.com/aws/aws-sdk-go/service/s3"
 	"github.com/aws/aws-sdk-go/service/s3/s3iface"
 
-	//"github.com/tommy-muehle/go-mnd/config"
-
 	"go.opentelemetry.io/contrib/instrumentation/github.com/aws/aws-sdk-go/service/helper"
 	"go.opentelemetry.io/otel"
 	"go.opentelemetry.io/otel/api/global"
@@ -85,6 +83,7 @@ func (s *instrumentedS3) PutObjectWithContext(ctx aws.Context, input *s3.PutObje
 		float64(time.Since(startTime).Microseconds()),
 		attrs...,
 	)
+	//append spand if and trace id to metrics on latency on gauge
 	s.counters.operation.Add(ctx, 1, attrs...)
 
 	return output, err

@@ -34,7 +34,7 @@ type Option interface {
 	apply(*config)
 }
 
-// OptionFunc provides a wrapper for specifying options in function format
+// optionFunc provides a wrapper for specifying options in function format
 type optionFunc func(*config)
 
 // Apply will set the option in the provided config.

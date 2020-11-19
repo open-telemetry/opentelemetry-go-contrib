@@ -26,7 +26,6 @@ import (
 	"github.com/aws/aws-sdk-go/service/s3/s3iface"
 	"github.com/stretchr/testify/assert"
 
-	"go.opentelemetry.io/contrib/instrumentation/github.com/aws/aws-sdk-go/service/config"
 	"go.opentelemetry.io/contrib/instrumentation/github.com/aws/aws-sdk-go/service/otels3/mocks"
 	mockmetric "go.opentelemetry.io/contrib/internal/metric"
 	mocktrace "go.opentelemetry.io/contrib/internal/trace"
@@ -60,8 +59,8 @@ func assertMetrics(t *testing.T, mockedMeterImp *mockmetric.MeterImpl) {
 	assert.Equal(t, 2, len(mockedMeterImp.MeasurementBatches))
 
 	metricsFound := map[string]bool{
-		"storage.operation.duration_μs": false,
-		"storage.s3.operation":          false,
+		"aws.s3.operation.duration": false,
+		"aws.s3.operation":          false,
 	}
 	// iterate over metrics to get names
 	for _, measurementBatch := range mockedMeterImp.MeasurementBatches {
@@ -166,7 +165,7 @@ func Test_instrumentedS3_PutObjectWithContext(t *testing.T) {
 				propagators:     mockedPropagators,
 				counters:        mockedCounters,
 				recorders:       mockedRecorders,
-				spanCorrelation: tt.fields.SpanCorrelation,
+				spanCorrelation: tt.fields.spanCorrelation,
 			}
 			expectedReturn := tt.fields.mockSetup()
 			got, err := s.PutObjectWithContext(tt.args.ctx, tt.args.input)
@@ -395,7 +394,7 @@ func Test_instrumentedS3_DeleteObjectWithContext(t *testing.T) {
 func Test_instrumentedS3_NewInstrumentedS3Client(t *testing.T) {
 	type args struct {
 		s    s3iface.S3API
-		opts []config.Option
+		opts []Option
 	}
 	tracerProvider, _ := mocktrace.NewTracerProviderAndTracer(instrumentationName)
 	_, meterProvider := mockmetric.NewMeterProvider()
@@ -411,11 +410,11 @@ func Test_instrumentedS3_NewInstrumentedS3Client(t *testing.T) {
 			name: "NewInstrumentedS3Client should return a new client",
 			args: args{
 				s: s3MockClient,
-				opts: []config.Option{
-					config.WithTracerProvider(tracerProvider),
-					config.WithMeterProvider(meterProvider),
-					config.WithPropagators(mockedPropagator),
-					config.WithSpanCorrelation(true),
+				opts: []Option{
+					WithTracerProvider(tracerProvider),
+					WithMeterProvider(meterProvider),
+					WithPropagators(mockedPropagator),
+					WithSpanCorrelation(true),
 				},
 			},
 			verifyFunc: func(t *testing.T, got s3iface.S3API, err error) {
