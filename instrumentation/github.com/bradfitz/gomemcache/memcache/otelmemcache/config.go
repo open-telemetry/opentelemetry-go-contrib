@@ -15,7 +15,7 @@
 package otelmemcache
 
 import (
-	oteltrace "go.opentelemetry.io/otel/api/trace"
+	oteltrace "go.opentelemetry.io/otel/trace"
 )
 
 type config struct {

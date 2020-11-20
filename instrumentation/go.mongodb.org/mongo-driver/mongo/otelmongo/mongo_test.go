@@ -26,7 +26,7 @@ import (
 	"go.mongodb.org/mongo-driver/mongo/options"
 
 	"go.opentelemetry.io/contrib/internal/util"
-	"go.opentelemetry.io/otel/api/trace/tracetest"
+	"go.opentelemetry.io/otel/oteltest"
 )
 
 func TestMain(m *testing.M) {
@@ -35,8 +35,8 @@ func TestMain(m *testing.M) {
 }
 
 func Test(t *testing.T) {
-	sr := new(tracetest.StandardSpanRecorder)
-	provider := tracetest.NewTracerProvider(tracetest.WithSpanRecorder(sr))
+	sr := new(oteltest.StandardSpanRecorder)
+	provider := oteltest.NewTracerProvider(oteltest.WithSpanRecorder(sr))
 
 	hostname, port := "localhost", "27017"
 

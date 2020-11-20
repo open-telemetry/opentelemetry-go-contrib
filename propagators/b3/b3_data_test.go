@@ -18,7 +18,7 @@ import (
 	"fmt"
 
 	"go.opentelemetry.io/contrib/propagators/b3"
-	"go.opentelemetry.io/otel/api/trace"
+	"go.opentelemetry.io/otel/trace"
 )
 
 const (
@@ -42,9 +42,9 @@ var (
 	traceID64bitPadded = mustTraceIDFromHex("0000000000000000a3ce929d0e0e4736")
 )
 
-func mustTraceIDFromHex(s string) (t trace.ID) {
+func mustTraceIDFromHex(s string) (t trace.TraceID) {
 	var err error
-	t, err = trace.IDFromHex(s)
+	t, err = trace.TraceIDFromHex(s)
 	if err != nil {
 		panic(err)
 	}
@@ -70,7 +70,7 @@ var extractHeaders = []extractTest{
 	{
 		name:    "empty",
 		headers: map[string]string{},
-		wantSc:  trace.EmptySpanContext(),
+		wantSc:  trace.SpanContext{},
 	},
 	{
 		name: "multiple: sampling state defer",
@@ -196,7 +196,7 @@ var extractHeaders = []extractTest{
 		headers: map[string]string{
 			b3Sampled: "0",
 		},
-		wantSc: trace.EmptySpanContext(),
+		wantSc: trace.SpanContext{},
 	},
 	{
 		name: "multiple: left-padding 64-bit traceID",
@@ -269,7 +269,7 @@ var extractHeaders = []extractTest{
 		headers: map[string]string{
 			b3Context: "0",
 		},
-		wantSc: trace.EmptySpanContext(),
+		wantSc: trace.SpanContext{},
 	},
 	{
 		name: "single: left-padding 64-bit traceID",

@@ -28,12 +28,11 @@ import (
 	"github.com/stretchr/testify/require"
 
 	"go.opentelemetry.io/contrib/internal/util"
-	"go.opentelemetry.io/otel/api/metric"
-	"go.opentelemetry.io/otel/api/metric/metrictest"
-	"go.opentelemetry.io/otel/api/trace"
-	"go.opentelemetry.io/otel/api/trace/tracetest"
 	"go.opentelemetry.io/otel/label"
+	"go.opentelemetry.io/otel/metric/number"
+	"go.opentelemetry.io/otel/oteltest"
 	"go.opentelemetry.io/otel/semconv"
+	"go.opentelemetry.io/otel/trace"
 )
 
 const (
@@ -53,16 +52,16 @@ type testRecord struct {
 	name       string
 	meterName  string
 	labels     []label.KeyValue
-	number     metric.Number
-	numberKind metric.NumberKind
+	number     number.Number
+	numberKind number.Kind
 }
 
 func TestQuery(t *testing.T) {
 	defer afterEach()
 	cluster := getCluster()
-	sr := new(tracetest.StandardSpanRecorder)
-	tracerProvider := tracetest.NewTracerProvider(tracetest.WithSpanRecorder(sr))
-	meterImpl, meterProvider := metrictest.NewMeterProvider()
+	sr := new(oteltest.StandardSpanRecorder)
+	tracerProvider := oteltest.NewTracerProvider(oteltest.WithSpanRecorder(sr))
+	meterImpl, meterProvider := oteltest.NewMeterProvider()
 
 	ctx, parentSpan := tracerProvider.Tracer(instrumentationName).Start(context.Background(), "gocql-test")
 
@@ -178,9 +177,9 @@ func TestQuery(t *testing.T) {
 func TestBatch(t *testing.T) {
 	defer afterEach()
 	cluster := getCluster()
-	sr := new(tracetest.StandardSpanRecorder)
-	tracerProvider := tracetest.NewTracerProvider(tracetest.WithSpanRecorder(sr))
-	meterImpl, meterProvider := metrictest.NewMeterProvider()
+	sr := new(oteltest.StandardSpanRecorder)
+	tracerProvider := oteltest.NewTracerProvider(oteltest.WithSpanRecorder(sr))
+	meterImpl, meterProvider := oteltest.NewMeterProvider()
 
 	ctx, parentSpan := tracerProvider.Tracer(instrumentationName).Start(context.Background(), "gocql-test")
 
@@ -272,9 +271,9 @@ func TestBatch(t *testing.T) {
 func TestConnection(t *testing.T) {
 	defer afterEach()
 	cluster := getCluster()
-	sr := new(tracetest.StandardSpanRecorder)
-	tracerProvider := tracetest.NewTracerProvider(tracetest.WithSpanRecorder(sr))
-	meterImpl, meterProvider := metrictest.NewMeterProvider()
+	sr := new(oteltest.StandardSpanRecorder)
+	tracerProvider := oteltest.NewTracerProvider(oteltest.WithSpanRecorder(sr))
+	meterImpl, meterProvider := oteltest.NewMeterProvider()
 	connectObserver := &mockConnectObserver{0}
 	ctx := context.Background()
 
@@ -343,7 +342,7 @@ func TestHostOrIP(t *testing.T) {
 	require.Empty(t, attribute.Value.AsString())
 }
 
-func assertConnectionLevelAttributes(t *testing.T, span *tracetest.Span) {
+func assertConnectionLevelAttributes(t *testing.T, span *oteltest.Span) {
 	assert.Equal(t, span.Attributes()[semconv.DBSystemKey].AsString(),
 		semconv.DBSystemCassandra.Value.AsString(),
 	)
@@ -367,7 +366,7 @@ func getCluster() *gocql.ClusterConfig {
 
 // obtainTestRecords creates a slice of testRecord with values
 // obtained from measurements
-func obtainTestRecords(mbs []metrictest.Batch) []testRecord {
+func obtainTestRecords(mbs []oteltest.Batch) []testRecord {
 	var records []testRecord
 	for _, mb := range mbs {
 		for _, m := range mb.Measurements {

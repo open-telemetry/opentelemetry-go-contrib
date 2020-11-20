@@ -22,14 +22,14 @@ import (
 	"go.opentelemetry.io/contrib/instrumentation/net/http/otelhttp"
 
 	"go.opentelemetry.io/otel"
-	"go.opentelemetry.io/otel/api/global"
-	"go.opentelemetry.io/otel/api/trace"
+	"go.opentelemetry.io/otel/baggage"
 	"go.opentelemetry.io/otel/exporters/stdout"
 	"go.opentelemetry.io/otel/label"
-	"go.opentelemetry.io/otel/propagators"
+	"go.opentelemetry.io/otel/propagation"
 	"go.opentelemetry.io/otel/sdk/resource"
 	sdktrace "go.opentelemetry.io/otel/sdk/trace"
 	"go.opentelemetry.io/otel/semconv"
+	"go.opentelemetry.io/otel/trace"
 )
 
 func initTracer() {
@@ -44,12 +44,12 @@ func initTracer() {
 	// In a production application, use sdktrace.ProbabilitySampler with a desired probability.
 	tp := sdktrace.NewTracerProvider(sdktrace.WithConfig(sdktrace.Config{DefaultSampler: sdktrace.AlwaysSample()}),
 		sdktrace.WithSyncer(exporter),
-		sdktrace.WithResource(resource.New(semconv.ServiceNameKey.String("ExampleService"))))
+		sdktrace.WithResource(resource.NewWithAttributes(semconv.ServiceNameKey.String("ExampleService"))))
 	if err != nil {
 		log.Fatal(err)
 	}
-	global.SetTracerProvider(tp)
-	global.SetTextMapPropagator(otel.NewCompositeTextMapPropagator(propagators.TraceContext{}, propagators.Baggage{}))
+	otel.SetTracerProvider(tp)
+	otel.SetTextMapPropagator(propagation.NewCompositeTextMapPropagator(propagation.TraceContext{}, propagation.Baggage{}))
 }
 
 func main() {
@@ -60,8 +60,8 @@ func main() {
 	helloHandler := func(w http.ResponseWriter, req *http.Request) {
 		ctx := req.Context()
 		span := trace.SpanFromContext(ctx)
-		username := otel.BaggageValue(ctx, uk)
-		span.AddEvent(ctx, "handling this...", uk.String(username.AsString()))
+		username := baggage.Value(ctx, uk)
+		span.AddEvent("handling this...", trace.WithAttributes(uk.String(username.AsString())))
 
 		_, _ = io.WriteString(w, "Hello, world!\n")
 	}

@@ -18,9 +18,8 @@ import (
 	"log"
 
 	"go.opentelemetry.io/otel"
-	"go.opentelemetry.io/otel/api/global"
 	"go.opentelemetry.io/otel/exporters/stdout"
-	"go.opentelemetry.io/otel/propagators"
+	"go.opentelemetry.io/otel/propagation"
 	sdktrace "go.opentelemetry.io/otel/sdk/trace"
 )
 
@@ -37,6 +36,6 @@ func Init() {
 	if err != nil {
 		log.Fatal(err)
 	}
-	global.SetTracerProvider(tp)
-	global.SetTextMapPropagator(otel.NewCompositeTextMapPropagator(propagators.TraceContext{}, propagators.Baggage{}))
+	otel.SetTracerProvider(tp)
+	otel.SetTextMapPropagator(propagation.NewCompositeTextMapPropagator(propagation.TraceContext{}, propagation.Baggage{}))
 }

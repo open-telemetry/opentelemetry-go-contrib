@@ -20,9 +20,9 @@ import (
 	"testing"
 	"time"
 
-	"go.opentelemetry.io/otel/api/trace/tracetest"
 	"go.opentelemetry.io/otel/codes"
 	"go.opentelemetry.io/otel/label"
+	"go.opentelemetry.io/otel/oteltest"
 	"go.opentelemetry.io/otel/semconv"
 
 	"github.com/golang/protobuf/proto" //nolint:staticcheck
@@ -37,22 +37,22 @@ import (
 
 type SpanRecorder struct {
 	mu    sync.RWMutex
-	spans map[string]*tracetest.Span
+	spans map[string]*oteltest.Span
 }
 
 func NewSpanRecorder() *SpanRecorder {
-	return &SpanRecorder{spans: make(map[string]*tracetest.Span)}
+	return &SpanRecorder{spans: make(map[string]*oteltest.Span)}
 }
 
-func (sr *SpanRecorder) OnStart(span *tracetest.Span) {}
+func (sr *SpanRecorder) OnStart(span *oteltest.Span) {}
 
-func (sr *SpanRecorder) OnEnd(span *tracetest.Span) {
+func (sr *SpanRecorder) OnEnd(span *oteltest.Span) {
 	sr.mu.Lock()
 	defer sr.mu.Unlock()
 	sr.spans[span.Name()] = span
 }
 
-func (sr *SpanRecorder) Get(name string) (*tracetest.Span, bool) {
+func (sr *SpanRecorder) Get(name string) (*oteltest.Span, bool) {
 	sr.mu.RLock()
 	defer sr.mu.RUnlock()
 	s, ok := sr.spans[name]
@@ -93,7 +93,7 @@ func TestUnaryClientInterceptor(t *testing.T) {
 	}
 
 	sr := NewSpanRecorder()
-	tp := tracetest.NewTracerProvider(tracetest.WithSpanRecorder(sr))
+	tp := oteltest.NewTracerProvider(oteltest.WithSpanRecorder(sr))
 	unaryInterceptor := UnaryClientInterceptor(WithTracerProvider(tp))
 
 	req := &mockProtoMessage{}
@@ -271,7 +271,7 @@ func TestUnaryClientInterceptor(t *testing.T) {
 	}
 }
 
-func eventAttrMap(events []tracetest.Event) []map[label.Key]label.Value {
+func eventAttrMap(events []oteltest.Event) []map[label.Key]label.Value {
 	maps := make([]map[label.Key]label.Value, len(events))
 	for i, event := range events {
 		maps[i] = event.Attributes
@@ -299,7 +299,7 @@ func TestStreamClientInterceptor(t *testing.T) {
 
 	// tracer
 	sr := NewSpanRecorder()
-	tp := tracetest.NewTracerProvider(tracetest.WithSpanRecorder(sr))
+	tp := oteltest.NewTracerProvider(oteltest.WithSpanRecorder(sr))
 	streamCI := StreamClientInterceptor(WithTracerProvider(tp))
 
 	var mockClStr mockClientStream
@@ -339,7 +339,7 @@ func TestStreamClientInterceptor(t *testing.T) {
 	_ = streamClient.RecvMsg(reply)
 
 	// added retry because span end is called in separate go routine
-	var span *tracetest.Span
+	var span *oteltest.Span
 	for retry := 0; retry < 5; retry++ {
 		span, ok = sr.Get(name)
 		if ok {
@@ -383,7 +383,7 @@ func TestStreamClientInterceptor(t *testing.T) {
 
 func TestServerInterceptorError(t *testing.T) {
 	sr := NewSpanRecorder()
-	tp := tracetest.NewTracerProvider(tracetest.WithSpanRecorder(sr))
+	tp := oteltest.NewTracerProvider(oteltest.WithSpanRecorder(sr))
 	usi := UnaryServerInterceptor(WithTracerProvider(tp))
 	deniedErr := status.Error(grpc_codes.PermissionDenied, "PERMISSION_DENIED_TEXT")
 	handler := func(_ context.Context, _ interface{}) (interface{}, error) {

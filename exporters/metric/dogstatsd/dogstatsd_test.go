@@ -22,8 +22,9 @@ import (
 	"github.com/stretchr/testify/require"
 
 	"go.opentelemetry.io/contrib/exporters/metric/dogstatsd"
-	"go.opentelemetry.io/otel/api/metric"
 	"go.opentelemetry.io/otel/label"
+	"go.opentelemetry.io/otel/metric"
+	"go.opentelemetry.io/otel/metric/number"
 	"go.opentelemetry.io/otel/sdk/export/metric/metrictest"
 	"go.opentelemetry.io/otel/sdk/metric/aggregator/sum"
 	"go.opentelemetry.io/otel/sdk/resource"
@@ -74,13 +75,13 @@ func TestDogstatsLabels(t *testing.T) {
 	}
 	for _, tc := range cases {
 		t.Run(tc.name, func(t *testing.T) {
-			res := resource.New(tc.resources...)
+			res := resource.NewWithAttributes(tc.resources...)
 			ctx := context.Background()
 			checkpointSet := metrictest.NewCheckpointSet(res)
 
-			desc := metric.NewDescriptor("test.name", metric.CounterKind, metric.Int64NumberKind)
+			desc := metric.NewDescriptor("test.name", metric.CounterInstrumentKind, number.Int64Kind)
 			cagg, cckpt := metrictest.Unslice2(sum.New(2))
-			require.NoError(t, cagg.Update(ctx, metric.NewInt64Number(123), &desc))
+			require.NoError(t, cagg.Update(ctx, number.NewInt64Number(123), &desc))
 			require.NoError(t, cagg.SynchronizedMove(cckpt, &desc))
 
 			checkpointSet.Add(&desc, cckpt, tc.labels...)

@@ -22,12 +22,12 @@ import (
 	"github.com/google/go-cmp/cmp"
 
 	"go.opentelemetry.io/contrib/propagators/jaeger"
-	"go.opentelemetry.io/otel/api/trace"
-	"go.opentelemetry.io/otel/api/trace/tracetest"
+	"go.opentelemetry.io/otel/oteltest"
+	"go.opentelemetry.io/otel/trace"
 )
 
 var (
-	mockTracer  = tracetest.NewTracerProvider().Tracer("")
+	mockTracer  = oteltest.NewTracerProvider().Tracer("")
 	_, mockSpan = mockTracer.Start(context.Background(), "")
 )
 

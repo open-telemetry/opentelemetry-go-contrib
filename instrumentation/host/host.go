@@ -26,9 +26,9 @@ import (
 	"github.com/shirou/gopsutil/process"
 
 	"go.opentelemetry.io/contrib"
-	"go.opentelemetry.io/otel/api/global"
-	"go.opentelemetry.io/otel/api/metric"
+	"go.opentelemetry.io/otel"
 	"go.opentelemetry.io/otel/label"
+	"go.opentelemetry.io/otel/metric"
 	"go.opentelemetry.io/otel/unit"
 )
 
@@ -87,7 +87,7 @@ var (
 // newConfig computes a config from a list of Options.
 func newConfig(opts ...Option) config {
 	c := config{
-		MeterProvider: global.MeterProvider(),
+		MeterProvider: otel.GetMeterProvider(),
 	}
 	for _, opt := range opts {
 		opt.ApplyHost(&c)
@@ -99,7 +99,7 @@ func newConfig(opts ...Option) config {
 func Start(opts ...Option) error {
 	c := newConfig(opts...)
 	if c.MeterProvider == nil {
-		c.MeterProvider = global.MeterProvider()
+		c.MeterProvider = otel.GetMeterProvider()
 	}
 	h := &host{
 		meter: c.MeterProvider.Meter(
@@ -146,33 +146,33 @@ func (h *host) register() error {
 		// specific metrics that are not universal.
 		processTimes, err := proc.TimesWithContext(ctx)
 		if err != nil {
-			global.Handle(err)
+			otel.Handle(err)
 			return
 		}
 
 		hostTimeSlice, err := cpu.TimesWithContext(ctx, false)
 		if err != nil {
-			global.Handle(err)
+			otel.Handle(err)
 			return
 		}
 		if len(hostTimeSlice) != 1 {
-			global.Handle(fmt.Errorf("host CPU usage: incorrect summary count"))
+			otel.Handle(fmt.Errorf("host CPU usage: incorrect summary count"))
 			return
 		}
 
 		vmStats, err := mem.VirtualMemoryWithContext(ctx)
 		if err != nil {
-			global.Handle(err)
+			otel.Handle(err)
 			return
 		}
 
 		ioStats, err := net.IOCountersWithContext(ctx, false)
 		if err != nil {
-			global.Handle(err)
+			otel.Handle(err)
 			return
 		}
 		if len(ioStats) != 1 {
-			global.Handle(fmt.Errorf("host network usage: incorrect summary count"))
+			otel.Handle(fmt.Errorf("host network usage: incorrect summary count"))
 			return
 		}
 

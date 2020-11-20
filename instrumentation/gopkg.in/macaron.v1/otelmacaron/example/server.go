@@ -23,15 +23,14 @@ import (
 	"go.opentelemetry.io/contrib/instrumentation/gopkg.in/macaron.v1/otelmacaron"
 
 	"go.opentelemetry.io/otel"
-	otelglobal "go.opentelemetry.io/otel/api/global"
-	oteltrace "go.opentelemetry.io/otel/api/trace"
 	"go.opentelemetry.io/otel/exporters/stdout"
 	"go.opentelemetry.io/otel/label"
-	"go.opentelemetry.io/otel/propagators"
+	"go.opentelemetry.io/otel/propagation"
 	sdktrace "go.opentelemetry.io/otel/sdk/trace"
+	oteltrace "go.opentelemetry.io/otel/trace"
 )
 
-var tracer = otelglobal.Tracer("macaron-server")
+var tracer = otel.Tracer("macaron-server")
 
 func main() {
 	initTracer()
@@ -60,8 +59,8 @@ func initTracer() {
 	if err != nil {
 		log.Fatal(err)
 	}
-	otelglobal.SetTracerProvider(tp)
-	otelglobal.SetTextMapPropagator(otel.NewCompositeTextMapPropagator(propagators.TraceContext{}, propagators.Baggage{}))
+	otel.SetTracerProvider(tp)
+	otel.SetTextMapPropagator(propagation.NewCompositeTextMapPropagator(propagation.TraceContext{}, propagation.Baggage{}))
 }
 
 func getUser(ctx context.Context, id string) string {

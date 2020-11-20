@@ -22,15 +22,15 @@ import (
 	"strings"
 	"testing"
 
-	"go.opentelemetry.io/otel/api/trace/tracetest"
-
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
+
+	"go.opentelemetry.io/otel/oteltest"
 )
 
 func TestConvenienceWrappers(t *testing.T) {
-	sr := new(tracetest.StandardSpanRecorder)
-	provider := tracetest.NewTracerProvider(tracetest.WithSpanRecorder(sr))
+	sr := new(oteltest.StandardSpanRecorder)
+	provider := oteltest.NewTracerProvider(oteltest.WithSpanRecorder(sr))
 	orig := DefaultClient
 	DefaultClient = &http.Client{
 		Transport: NewTransport(

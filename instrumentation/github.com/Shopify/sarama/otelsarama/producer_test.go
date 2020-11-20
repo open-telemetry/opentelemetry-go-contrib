@@ -24,21 +24,21 @@ import (
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 
-	oteltrace "go.opentelemetry.io/otel/api/trace"
-	"go.opentelemetry.io/otel/api/trace/tracetest"
 	"go.opentelemetry.io/otel/codes"
 	"go.opentelemetry.io/otel/label"
-	otelpropagators "go.opentelemetry.io/otel/propagators"
+	"go.opentelemetry.io/otel/oteltest"
+	"go.opentelemetry.io/otel/propagation"
 	"go.opentelemetry.io/otel/semconv"
+	oteltrace "go.opentelemetry.io/otel/trace"
 )
 
 func TestWrapSyncProducer(t *testing.T) {
-	propagators := otelpropagators.TraceContext{}
+	propagators := propagation.TraceContext{}
 	var err error
 
 	// Mock provider
-	sr := new(tracetest.StandardSpanRecorder)
-	provider := tracetest.NewTracerProvider(tracetest.WithSpanRecorder(sr))
+	sr := new(oteltest.StandardSpanRecorder)
+	provider := oteltest.NewTracerProvider(oteltest.WithSpanRecorder(sr))
 
 	cfg := newSaramaConfig()
 	// Mock sync producer
@@ -141,7 +141,7 @@ func TestWrapSyncProducer(t *testing.T) {
 }
 
 func TestWrapAsyncProducer(t *testing.T) {
-	propagators := otelpropagators.TraceContext{}
+	propagators := propagation.TraceContext{}
 	// Create message with span context
 	createMessages := func(mt oteltrace.Tracer) []*sarama.ProducerMessage {
 		ctx, _ := mt.Start(context.Background(), "")
@@ -156,9 +156,9 @@ func TestWrapAsyncProducer(t *testing.T) {
 
 	t.Run("without successes config", func(t *testing.T) {
 		// Mock provider
-		sr := new(tracetest.StandardSpanRecorder)
-		provider := tracetest.NewTracerProvider(
-			tracetest.WithSpanRecorder(sr),
+		sr := new(oteltest.StandardSpanRecorder)
+		provider := oteltest.NewTracerProvider(
+			oteltest.WithSpanRecorder(sr),
 		)
 
 		cfg := newSaramaConfig()
@@ -226,9 +226,9 @@ func TestWrapAsyncProducer(t *testing.T) {
 
 	t.Run("with successes config", func(t *testing.T) {
 		// Mock provider
-		sr := new(tracetest.StandardSpanRecorder)
-		provider := tracetest.NewTracerProvider(
-			tracetest.WithSpanRecorder(sr),
+		sr := new(oteltest.StandardSpanRecorder)
+		provider := oteltest.NewTracerProvider(
+			oteltest.WithSpanRecorder(sr),
 		)
 
 		// Set producer with successes config
@@ -306,10 +306,10 @@ func TestWrapAsyncProducer(t *testing.T) {
 }
 
 func TestWrapAsyncProducerError(t *testing.T) {
-	propagators := otelpropagators.TraceContext{}
+	propagators := propagation.TraceContext{}
 	// Mock provider
-	sr := new(tracetest.StandardSpanRecorder)
-	provider := tracetest.NewTracerProvider(tracetest.WithSpanRecorder(sr))
+	sr := new(oteltest.StandardSpanRecorder)
+	provider := oteltest.NewTracerProvider(oteltest.WithSpanRecorder(sr))
 
 	// Set producer with successes config
 	cfg := newSaramaConfig()
@@ -343,7 +343,7 @@ func newSaramaConfig() *sarama.Config {
 
 func BenchmarkWrapSyncProducer(b *testing.B) {
 	// Mock provider
-	provider := tracetest.NewTracerProvider()
+	provider := oteltest.NewTracerProvider()
 
 	cfg := newSaramaConfig()
 	// Mock sync producer
@@ -384,7 +384,7 @@ func BenchmarkMockSyncProducer(b *testing.B) {
 
 func BenchmarkWrapAsyncProducer(b *testing.B) {
 	// Mock provider
-	provider := tracetest.NewTracerProvider()
+	provider := oteltest.NewTracerProvider()
 
 	cfg := newSaramaConfig()
 	cfg.Producer.Return.Successes = true

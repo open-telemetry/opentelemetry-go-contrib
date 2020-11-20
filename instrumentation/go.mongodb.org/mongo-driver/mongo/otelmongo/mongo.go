@@ -20,8 +20,8 @@ import (
 	"strings"
 	"sync"
 
-	"go.opentelemetry.io/otel/api/trace"
 	"go.opentelemetry.io/otel/label"
+	"go.opentelemetry.io/otel/trace"
 
 	"go.mongodb.org/mongo-driver/bson"
 	"go.mongodb.org/mongo-driver/event"

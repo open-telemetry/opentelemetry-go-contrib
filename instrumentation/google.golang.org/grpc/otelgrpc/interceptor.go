@@ -30,11 +30,11 @@ import (
 	"google.golang.org/grpc/peer"
 	"google.golang.org/grpc/status"
 
-	"go.opentelemetry.io/otel"
-	"go.opentelemetry.io/otel/api/trace"
+	"go.opentelemetry.io/otel/baggage"
 	"go.opentelemetry.io/otel/codes"
 	"go.opentelemetry.io/otel/label"
 	"go.opentelemetry.io/otel/semconv"
+	"go.opentelemetry.io/otel/trace"
 
 	otelcontrib "go.opentelemetry.io/contrib"
 )
@@ -46,16 +46,16 @@ type messageType label.KeyValue
 func (m messageType) Event(ctx context.Context, id int, message interface{}) {
 	span := trace.SpanFromContext(ctx)
 	if p, ok := message.(proto.Message); ok {
-		span.AddEvent(ctx, "message",
+		span.AddEvent("message", trace.WithAttributes(
 			label.KeyValue(m),
 			semconv.RPCMessageIDKey.Int(id),
 			semconv.RPCMessageUncompressedSizeKey.Int(proto.Size(p)),
-		)
+		))
 	} else {
-		span.AddEvent(ctx, "message",
+		span.AddEvent("message", trace.WithAttributes(
 			label.KeyValue(m),
 			semconv.RPCMessageIDKey.Int(id),
-		)
+		))
 	}
 }
 
@@ -312,7 +312,7 @@ func UnaryServerInterceptor(opts ...Option) grpc.UnaryServerInterceptor {
 		metadataCopy := requestMetadata.Copy()
 
 		entries, spanCtx := Extract(ctx, &metadataCopy, opts...)
-		ctx = otel.ContextWithBaggageValues(ctx, entries...)
+		ctx = baggage.ContextWithValues(ctx, entries...)
 
 		tracer := newConfig(opts).TracerProvider.Tracer(
 			instrumentationName,
@@ -401,7 +401,7 @@ func StreamServerInterceptor(opts ...Option) grpc.StreamServerInterceptor {
 		metadataCopy := requestMetadata.Copy()
 
 		entries, spanCtx := Extract(ctx, &metadataCopy, opts...)
-		ctx = otel.ContextWithBaggageValues(ctx, entries...)
+		ctx = baggage.ContextWithValues(ctx, entries...)
 
 		tracer := newConfig(opts).TracerProvider.Tracer(
 			instrumentationName,

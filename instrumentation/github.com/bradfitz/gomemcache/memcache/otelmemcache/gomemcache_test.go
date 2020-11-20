@@ -23,11 +23,11 @@ import (
 	"github.com/stretchr/testify/require"
 
 	"go.opentelemetry.io/contrib/internal/util"
-	oteltrace "go.opentelemetry.io/otel/api/trace"
-	"go.opentelemetry.io/otel/api/trace/tracetest"
 	"go.opentelemetry.io/otel/codes"
 	"go.opentelemetry.io/otel/label"
+	"go.opentelemetry.io/otel/oteltest"
 	"go.opentelemetry.io/otel/semconv"
+	oteltrace "go.opentelemetry.io/otel/trace"
 )
 
 func TestMain(m *testing.M) {
@@ -98,18 +98,18 @@ func TestOperationWithCacheMissError(t *testing.T) {
 }
 
 // tests require running memcached instance
-func initClientWithSpanRecorder(t *testing.T) (*Client, *tracetest.StandardSpanRecorder) {
+func initClientWithSpanRecorder(t *testing.T) (*Client, *oteltest.StandardSpanRecorder) {
 	host, port := "localhost", "11211"
 
 	mc := memcache.New(host + ":" + port)
 	require.NoError(t, clearDB(mc))
 
-	sr := new(tracetest.StandardSpanRecorder)
+	sr := new(oteltest.StandardSpanRecorder)
 	c := NewClientWithTracing(
 		mc,
 		WithTracerProvider(
-			tracetest.NewTracerProvider(
-				tracetest.WithSpanRecorder(sr),
+			oteltest.NewTracerProvider(
+				oteltest.WithSpanRecorder(sr),
 			),
 		),
 	)
