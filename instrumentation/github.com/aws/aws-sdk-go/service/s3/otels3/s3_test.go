@@ -26,7 +26,7 @@ import (
 	"github.com/aws/aws-sdk-go/service/s3/s3iface"
 	"github.com/stretchr/testify/assert"
 
-	"go.opentelemetry.io/contrib/instrumentation/github.com/aws/aws-sdk-go/service/otels3/mocks"
+	"go.opentelemetry.io/contrib/instrumentation/github.com/aws/aws-sdk-go/service/s3/otels3/mocks"
 	mockmetric "go.opentelemetry.io/contrib/internal/metric"
 	mocktrace "go.opentelemetry.io/contrib/internal/trace"
 	"go.opentelemetry.io/otel/api/global"
@@ -85,11 +85,11 @@ func assertSpanCorrelation(t *testing.T, spanCorrelation bool, mockedMeterImp *m
 			traceID := span.SpanContext().TraceID.String()
 			spanID := span.SpanContext().SpanID.String()
 
-			assert.Equal(t, traceID, getLabelValFromMeasurementBatch("trace.id", measurementBatch).AsString())
-			assert.Equal(t, spanID, getLabelValFromMeasurementBatch("span.id", measurementBatch).AsString())
+			assert.Equal(t, traceID, getLabelValFromMeasurementBatch("event.traceId", measurementBatch).AsString())
+			assert.Equal(t, spanID, getLabelValFromMeasurementBatch("event.spanId", measurementBatch).AsString())
 		} else {
-			assert.Nil(t, getLabelValFromMeasurementBatch("trace.id", measurementBatch))
-			assert.Nil(t, getLabelValFromMeasurementBatch("span.id", measurementBatch))
+			assert.Nil(t, getLabelValFromMeasurementBatch("event.traceId", measurementBatch))
+			assert.Nil(t, getLabelValFromMeasurementBatch("event.spanId", measurementBatch))
 		}
 	}
 }

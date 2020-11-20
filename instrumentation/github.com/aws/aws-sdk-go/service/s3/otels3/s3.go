@@ -25,11 +25,11 @@ import (
 	"github.com/aws/aws-sdk-go/service/s3"
 	"github.com/aws/aws-sdk-go/service/s3/s3iface"
 
-	"go.opentelemetry.io/contrib/instrumentation/github.com/aws/aws-sdk-go/service/helper"
 	"go.opentelemetry.io/otel"
 	"go.opentelemetry.io/otel/api/global"
 	"go.opentelemetry.io/otel/api/metric"
 	"go.opentelemetry.io/otel/api/trace"
+	"go.opentelemetry.io/otel/codes"
 )
 
 var instrumentationName = "github.com/aws/aws-sdk-go/aws/service/s3"
@@ -64,18 +64,21 @@ func (s *instrumentedS3) PutObjectWithContext(ctx aws.Context, input *s3.PutObje
 		trace.WithSpanKind(trace.SpanKindClient),
 		trace.WithAttributes(attrs...),
 	)
-	defer span.End()
 
 	output, err := s.S3API.PutObjectWithContext(ctx, input, opts...)
+	callReturnTime := trace.WithTimestamp(time.Now())
+	defer span.End(callReturnTime)
 
 	if err != nil {
 		attrs = append(attrs, labelStatusFailure)
+		span.SetStatus(codes.Ok, err.Error())
 	} else {
 		attrs = append(attrs, labelStatusSuccess)
+		span.SetStatus(codes.Ok, "")
 	}
 
 	if s.spanCorrelation {
-		attrs = helper.AppendSpanAndTraceIDFromSpan(attrs, span)
+		attrs = appendSpanAndTraceIDFromSpan(attrs, span)
 	}
 
 	s.recorders.operationDuration.Record(
@@ -101,18 +104,21 @@ func (s *instrumentedS3) GetObjectWithContext(ctx aws.Context, input *s3.GetObje
 		trace.WithSpanKind(trace.SpanKindClient),
 		trace.WithAttributes(attrs...),
 	)
-	defer span.End()
 
 	output, err := s.S3API.GetObjectWithContext(ctx, input, opts...)
+	callReturnTime := trace.WithTimestamp(time.Now())
+	defer span.End(callReturnTime)
 
 	if err != nil {
 		attrs = append(attrs, labelStatusFailure)
+		span.SetStatus(codes.Ok, err.Error())
 	} else {
 		attrs = append(attrs, labelStatusSuccess)
+		span.SetStatus(codes.Ok, "")
 	}
 
 	if s.spanCorrelation {
-		attrs = helper.AppendSpanAndTraceIDFromSpan(attrs, span)
+		attrs = appendSpanAndTraceIDFromSpan(attrs, span)
 	}
 
 	s.recorders.operationDuration.Record(
@@ -137,18 +143,21 @@ func (s *instrumentedS3) DeleteObjectWithContext(ctx aws.Context, input *s3.Dele
 		trace.WithSpanKind(trace.SpanKindClient),
 		trace.WithAttributes(attrs...),
 	)
-	defer span.End()
 
 	output, err := s.S3API.DeleteObjectWithContext(ctx, input, opts...)
+	callReturnTime := trace.WithTimestamp(time.Now())
+	defer span.End(callReturnTime)
 
 	if err != nil {
 		attrs = append(attrs, labelStatusFailure)
+		span.SetStatus(codes.Ok, err.Error())
 	} else {
 		attrs = append(attrs, labelStatusSuccess)
+		span.SetStatus(codes.Ok, "")
 	}
 
 	if s.spanCorrelation {
-		attrs = helper.AppendSpanAndTraceIDFromSpan(attrs, span)
+		attrs = appendSpanAndTraceIDFromSpan(attrs, span)
 	}
 
 	s.recorders.operationDuration.Record(

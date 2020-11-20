@@ -22,8 +22,8 @@ import (
 	"github.com/aws/aws-sdk-go/aws"
 	"github.com/aws/aws-sdk-go/service/s3"
 
-	obsvsS3 "go.opentelemetry.io/contrib/instrumentation/github.com/aws/aws-sdk-go/service/otels3"
-	mocks "go.opentelemetry.io/contrib/instrumentation/github.com/aws/aws-sdk-go/service/otels3/mocks"
+	obsvsS3 "go.opentelemetry.io/contrib/instrumentation/github.com/aws/aws-sdk-go/service/s3/otels3"
+	mocks "go.opentelemetry.io/contrib/instrumentation/github.com/aws/aws-sdk-go/service/s3/otels3/mocks"
 	otelmetric "go.opentelemetry.io/otel/api/metric"
 	oteltrace "go.opentelemetry.io/otel/api/trace"
 	oteltracestdout "go.opentelemetry.io/otel/exporters/stdout"
