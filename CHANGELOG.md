@@ -8,9 +8,12 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 
 ## [Unreleased]
 
+## [0.14.0] - 2020-11-20
+
 ### Added
 
 - `otelhttp.{Get,Head,Post,PostForm}` convenience wrappers for their `http` counterparts. (#390)
+- The AWS detector now adds the cloud zone, host image ID, host type, and host name to the returned `Resource`. (#410)
 
 ### Changed
 
@@ -22,6 +25,8 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 ## Fixed
 
 - `/detectors/aws` no longer fails if instance metadata is not available (e.g. not running in AWS) (#401)
+- The AWS detector now returns a partial resource and an appropriate error if it encounters an error part way through determining a `Resource` identity. (#410)
+- The `host` instrumentation unit test has been updated to not depend on the system it runs on. (#426)
 
 ## [0.13.0] - 2020-10-09
 
@@ -224,7 +229,8 @@ First official tagged release of `contrib` repository.
 - Prefix support for dogstatsd (#34)
 - Update Go Runtime package to use batch observer (#44)
 
-[Unreleased]: https://github.com/open-telemetry/opentelemetry-go-contrib/compare/v0.13.0...HEAD
+[Unreleased]: https://github.com/open-telemetry/opentelemetry-go-contrib/compare/v0.14.0...HEAD
+[0.14.0]: https://github.com/open-telemetry/opentelemetry-go-contrib/releases/tag/v0.14.0
 [0.13.0]: https://github.com/open-telemetry/opentelemetry-go-contrib/releases/tag/v0.13.0
 [0.12.0]: https://github.com/open-telemetry/opentelemetry-go-contrib/releases/tag/v0.12.0
 [0.11.0]: https://github.com/open-telemetry/opentelemetry-go-contrib/releases/tag/v0.11.0
