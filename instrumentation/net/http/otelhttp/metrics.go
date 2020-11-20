@@ -108,7 +108,7 @@ func (trans *metricsTransport) createMeasures() {
 	var err error
 	trans.clientDurationRecorder, err = trans.meter.NewFloat64ValueRecorder(
 		clientRequestDuration,
-		metric.WithDescription("measure the duration of the outbound HTTP request"),
+		metric.WithDescription("measures the duration of the outbound HTTP request"),
 		metric.WithUnit(unit.Milliseconds),
 	)
 	handleErr(err)
