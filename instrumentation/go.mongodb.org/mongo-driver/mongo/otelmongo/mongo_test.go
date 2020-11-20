@@ -20,14 +20,13 @@ import (
 	"testing"
 	"time"
 
-	mocktracer "go.opentelemetry.io/contrib/internal/trace"
-	"go.opentelemetry.io/contrib/internal/util"
-
+	"github.com/stretchr/testify/assert"
 	"go.mongodb.org/mongo-driver/bson"
 	"go.mongodb.org/mongo-driver/mongo"
 	"go.mongodb.org/mongo-driver/mongo/options"
 
-	"github.com/stretchr/testify/assert"
+	"go.opentelemetry.io/contrib/internal/util"
+	"go.opentelemetry.io/otel/api/trace/tracetest"
 )
 
 func TestMain(m *testing.M) {
@@ -36,14 +35,15 @@ func TestMain(m *testing.M) {
 }
 
 func Test(t *testing.T) {
-	provider, mt := mocktracer.NewTracerProviderAndTracer(defaultTracerName)
+	sr := new(tracetest.StandardSpanRecorder)
+	provider := tracetest.NewTracerProvider(tracetest.WithSpanRecorder(sr))
 
 	hostname, port := "localhost", "27017"
 
 	ctx, cancel := context.WithTimeout(context.Background(), time.Second*3)
 	defer cancel()
 
-	ctx, span := mt.Start(ctx, "mongodb-test")
+	ctx, span := provider.Tracer(defaultTracerName).Start(ctx, "mongodb-test")
 
 	addr := "mongodb://localhost:27017/?connect=direct"
 	opts := options.Client()
@@ -61,16 +61,16 @@ func Test(t *testing.T) {
 
 	span.End()
 
-	spans := mt.EndedSpans()
+	spans := sr.Completed()
 	assert.Len(t, spans, 2)
 	assert.Equal(t, spans[0].SpanContext().TraceID, spans[1].SpanContext().TraceID)
 
 	s := spans[0]
-	assert.Equal(t, "mongo", s.Attributes[ServiceNameKey].AsString())
-	assert.Equal(t, "insert", s.Attributes[DBOperationKey].AsString())
-	assert.Equal(t, hostname, s.Attributes[PeerHostnameKey].AsString())
-	assert.Equal(t, port, s.Attributes[PeerPortKey].AsString())
-	assert.Contains(t, s.Attributes[DBStatementKey].AsString(), `"test-item":"test-value"`)
-	assert.Equal(t, "test-database", s.Attributes[DBInstanceKey].AsString())
-	assert.Equal(t, "mongodb", s.Attributes[DBSystemKey].AsString())
+	assert.Equal(t, "mongo", s.Attributes()[ServiceNameKey].AsString())
+	assert.Equal(t, "insert", s.Attributes()[DBOperationKey].AsString())
+	assert.Equal(t, hostname, s.Attributes()[PeerHostnameKey].AsString())
+	assert.Equal(t, port, s.Attributes()[PeerPortKey].AsString())
+	assert.Contains(t, s.Attributes()[DBStatementKey].AsString(), `"test-item":"test-value"`)
+	assert.Equal(t, "test-database", s.Attributes()[DBInstanceKey].AsString())
+	assert.Equal(t, "mongodb", s.Attributes()[DBSystemKey].AsString())
 }

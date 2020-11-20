@@ -23,13 +23,16 @@ import (
 
 	"github.com/stretchr/testify/assert"
 
-	mocktrace "go.opentelemetry.io/contrib/internal/trace"
+	"go.opentelemetry.io/otel/api/trace/tracetest"
 )
 
 func TestBasicFilter(t *testing.T) {
 	rr := httptest.NewRecorder()
 
-	provider, tracer := mocktrace.NewTracerProviderAndTracer(instrumentationName)
+	spanRecorder := new(tracetest.StandardSpanRecorder)
+	provider := tracetest.NewTracerProvider(
+		tracetest.WithSpanRecorder(spanRecorder),
+	)
 
 	h := NewHandler(
 		http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
@@ -54,8 +57,8 @@ func TestBasicFilter(t *testing.T) {
 	if got := rr.Header().Get("Traceparent"); got != "" {
 		t.Fatal("expected empty trace header")
 	}
-	if got, expected := tracer.StartSpanID, uint64(0); got != expected {
-		t.Fatalf("got %d, expected %d", got, expected)
+	if got, expected := len(spanRecorder.Completed()), 0; got != expected {
+		t.Fatalf("got %d recorded spans, expected %d", got, expected)
 	}
 	d, err := ioutil.ReadAll(rr.Result().Body)
 	if err != nil {
@@ -98,7 +101,10 @@ func TestSpanNameFormatter(t *testing.T) {
 		t.Run(tc.name, func(t *testing.T) {
 			rr := httptest.NewRecorder()
 
-			provider, tracer := mocktrace.NewTracerProviderAndTracer(instrumentationName)
+			spanRecorder := new(tracetest.StandardSpanRecorder)
+			provider := tracetest.NewTracerProvider(
+				tracetest.WithSpanRecorder(spanRecorder),
+			)
 			handler := http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 				if _, err := io.WriteString(w, "hello world"); err != nil {
 					t.Fatal(err)
@@ -119,9 +125,9 @@ func TestSpanNameFormatter(t *testing.T) {
 				t.Fatalf("got %d, expected %d", got, expected)
 			}
 
-			spans := tracer.EndedSpans()
+			spans := spanRecorder.Completed()
 			if assert.Len(t, spans, 1) {
-				assert.Equal(t, tc.expected, spans[0].Name)
+				assert.Equal(t, tc.expected, spans[0].Name())
 			}
 		})
 	}

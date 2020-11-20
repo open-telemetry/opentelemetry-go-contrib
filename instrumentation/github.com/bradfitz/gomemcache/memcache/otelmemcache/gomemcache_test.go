@@ -18,17 +18,16 @@ import (
 	"os"
 	"testing"
 
-	mocktracer "go.opentelemetry.io/contrib/internal/trace"
-	"go.opentelemetry.io/contrib/internal/util"
-	oteltrace "go.opentelemetry.io/otel/api/trace"
-	"go.opentelemetry.io/otel/label"
-	"go.opentelemetry.io/otel/semconv"
-
 	"github.com/bradfitz/gomemcache/memcache"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 
+	"go.opentelemetry.io/contrib/internal/util"
+	oteltrace "go.opentelemetry.io/otel/api/trace"
+	"go.opentelemetry.io/otel/api/trace/tracetest"
 	"go.opentelemetry.io/otel/codes"
+	"go.opentelemetry.io/otel/label"
+	"go.opentelemetry.io/otel/semconv"
 )
 
 func TestMain(m *testing.M) {
@@ -49,7 +48,7 @@ func TestNewClientWithTracing(t *testing.T) {
 }
 
 func TestOperation(t *testing.T) {
-	c, mtp := initClientWithMockTracerProvider(t)
+	c, sr := initClientWithSpanRecorder(t)
 
 	mi := &memcache.Item{
 		Key:   "foo",
@@ -58,12 +57,11 @@ func TestOperation(t *testing.T) {
 	err := c.Add(mi)
 	require.NoError(t, err)
 
-	mt := mtp.Tracer(defaultTracerName).(*mocktracer.Tracer)
-	spans := mt.EndedSpans()
+	spans := sr.Completed()
 	assert.Len(t, spans, 1)
-	assert.Equal(t, oteltrace.SpanKindClient, spans[0].Kind)
-	assert.Equal(t, string(operationAdd), spans[0].Name)
-	assert.Len(t, spans[0].Attributes, 4)
+	assert.Equal(t, oteltrace.SpanKindClient, spans[0].SpanKind())
+	assert.Equal(t, string(operationAdd), spans[0].Name())
+	assert.Len(t, spans[0].Attributes(), 4)
 
 	expectedLabelMap := map[label.Key]label.Value{
 		semconv.ServiceNameKey:                              semconv.ServiceNameKey.String(defaultServiceName).Value,
@@ -71,22 +69,21 @@ func TestOperation(t *testing.T) {
 		memcacheDBOperation(operationAdd).Key:               memcacheDBOperation(operationAdd).Value,
 		label.Key(memcacheDBItemKeyName).String(mi.Key).Key: label.Key(memcacheDBItemKeyName).String(mi.Key).Value,
 	}
-	assert.Equal(t, expectedLabelMap, spans[0].Attributes)
+	assert.Equal(t, expectedLabelMap, spans[0].Attributes())
 }
 
 func TestOperationWithCacheMissError(t *testing.T) {
 	key := "foo"
-	c, mtp := initClientWithMockTracerProvider(t)
+	c, sr := initClientWithSpanRecorder(t)
 
 	_, err := c.Get(key)
 	assert.Error(t, err)
 
-	mt := mtp.Tracer(defaultTracerName).(*mocktracer.Tracer)
-	spans := mt.EndedSpans()
+	spans := sr.Completed()
 	assert.Len(t, spans, 1)
-	assert.Equal(t, oteltrace.SpanKindClient, spans[0].Kind)
-	assert.Equal(t, string(operationGet), spans[0].Name)
-	assert.Len(t, spans[0].Attributes, 4)
+	assert.Equal(t, oteltrace.SpanKindClient, spans[0].SpanKind())
+	assert.Equal(t, string(operationGet), spans[0].Name())
+	assert.Len(t, spans[0].Attributes(), 4)
 
 	expectedLabelMap := map[label.Key]label.Value{
 		semconv.ServiceNameKey:                           semconv.ServiceNameKey.String(defaultServiceName).Value,
@@ -94,26 +91,30 @@ func TestOperationWithCacheMissError(t *testing.T) {
 		memcacheDBOperation(operationGet).Key:            memcacheDBOperation(operationGet).Value,
 		label.Key(memcacheDBItemKeyName).String(key).Key: label.Key(memcacheDBItemKeyName).String(key).Value,
 	}
-	assert.Equal(t, expectedLabelMap, spans[0].Attributes)
+	assert.Equal(t, expectedLabelMap, spans[0].Attributes())
 
-	assert.Equal(t, codes.Error, spans[0].Status)
-	assert.Equal(t, err.Error(), spans[0].StatusMessage)
+	assert.Equal(t, codes.Error, spans[0].StatusCode())
+	assert.Equal(t, err.Error(), spans[0].StatusMessage())
 }
 
 // tests require running memcached instance
-func initClientWithMockTracerProvider(t *testing.T) (*Client, *mocktracer.TracerProvider) {
-	mt := &mocktracer.TracerProvider{}
+func initClientWithSpanRecorder(t *testing.T) (*Client, *tracetest.StandardSpanRecorder) {
 	host, port := "localhost", "11211"
 
 	mc := memcache.New(host + ":" + port)
 	require.NoError(t, clearDB(mc))
 
+	sr := new(tracetest.StandardSpanRecorder)
 	c := NewClientWithTracing(
 		mc,
-		WithTracerProvider(mt),
+		WithTracerProvider(
+			tracetest.NewTracerProvider(
+				tracetest.WithSpanRecorder(sr),
+			),
+		),
 	)
 
-	return c, mt
+	return c, sr
 }
 
 func clearDB(c *memcache.Client) error {

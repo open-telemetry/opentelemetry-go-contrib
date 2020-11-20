@@ -29,7 +29,7 @@ import (
 	otelpropagators "go.opentelemetry.io/otel/propagators"
 	"go.opentelemetry.io/otel/semconv"
 
-	mocktracer "go.opentelemetry.io/contrib/internal/trace"
+	"go.opentelemetry.io/otel/api/trace/tracetest"
 )
 
 const (
@@ -39,7 +39,8 @@ const (
 func TestWrapPartitionConsumer(t *testing.T) {
 	propagators := otelpropagators.TraceContext{}
 	// Mock provider
-	provider, mt := NewTracerProviderAndTracer()
+	sr := new(tracetest.StandardSpanRecorder)
+	provider := tracetest.NewTracerProvider(tracetest.WithSpanRecorder(sr))
 
 	// Mock partition consumer controller
 	consumer := mocks.NewConsumer(t, sarama.NewConfig())
@@ -51,13 +52,14 @@ func TestWrapPartitionConsumer(t *testing.T) {
 
 	partitionConsumer = WrapPartitionConsumer(partitionConsumer, WithTracerProvider(provider), WithPropagators(propagators))
 
-	consumeAndCheck(t, mt, mockPartitionConsumer, partitionConsumer)
+	consumeAndCheck(t, provider.Tracer(defaultTracerName), sr.Completed, mockPartitionConsumer, partitionConsumer)
 }
 
 func TestWrapConsumer(t *testing.T) {
 	propagators := otelpropagators.TraceContext{}
 	// Mock provider
-	provider, mt := NewTracerProviderAndTracer()
+	sr := new(tracetest.StandardSpanRecorder)
+	provider := tracetest.NewTracerProvider(tracetest.WithSpanRecorder(sr))
 
 	// Mock partition consumer controller
 	mockConsumer := mocks.NewConsumer(t, sarama.NewConfig())
@@ -70,10 +72,10 @@ func TestWrapConsumer(t *testing.T) {
 	partitionConsumer, err := consumer.ConsumePartition(topic, 0, 0)
 	require.NoError(t, err)
 
-	consumeAndCheck(t, mt, mockPartitionConsumer, partitionConsumer)
+	consumeAndCheck(t, provider.Tracer(defaultTracerName), sr.Completed, mockPartitionConsumer, partitionConsumer)
 }
 
-func consumeAndCheck(t *testing.T, mt *mocktracer.Tracer, mockPartitionConsumer *mocks.PartitionConsumer, partitionConsumer sarama.PartitionConsumer) {
+func consumeAndCheck(t *testing.T, mt trace.Tracer, complFn func() []*tracetest.Span, mockPartitionConsumer *mocks.PartitionConsumer, partitionConsumer sarama.PartitionConsumer) {
 	// Create message with span context
 	ctx, _ := mt.Start(context.Background(), "")
 	message := sarama.ConsumerMessage{Key: []byte("foo")}
@@ -93,7 +95,7 @@ func consumeAndCheck(t *testing.T, mt *mocktracer.Tracer, mockPartitionConsumer 
 	<-partitionConsumer.Messages()
 
 	// Check spans length
-	spans := mt.EndedSpans()
+	spans := complFn()
 	assert.Len(t, spans, 2)
 
 	expectedList := []struct {
@@ -133,17 +135,17 @@ func consumeAndCheck(t *testing.T, mt *mocktracer.Tracer, mockPartitionConsumer 
 		t.Run(fmt.Sprint("index", i), func(t *testing.T) {
 			span := spans[i]
 
-			assert.Equal(t, expected.parentSpanID, span.ParentSpanID)
+			assert.Equal(t, expected.parentSpanID, span.ParentSpanID())
 
 			remoteSpanFromMessage := trace.RemoteSpanContextFromContext(propagators.Extract(context.Background(), NewConsumerMessageCarrier(msgList[i])))
 			assert.Equal(t, span.SpanContext(), remoteSpanFromMessage,
 				"span context should be injected into the consumer message headers")
 
-			assert.Equal(t, "kafka.consume", span.Name)
-			assert.Equal(t, expected.kind, span.Kind)
+			assert.Equal(t, "kafka.consume", span.Name())
+			assert.Equal(t, expected.kind, span.SpanKind())
 			assert.Equal(t, expected.msgKey, msgList[i].Key)
 			for _, k := range expected.labelList {
-				assert.Equal(t, k.Value, span.Attributes[k.Key], k.Key)
+				assert.Equal(t, k.Value, span.Attributes()[k.Key], k.Key)
 			}
 		})
 	}
@@ -164,7 +166,7 @@ func TestConsumerConsumePartitionWithError(t *testing.T) {
 
 func BenchmarkWrapPartitionConsumer(b *testing.B) {
 	// Mock provider
-	provider, _ := NewTracerProviderAndTracer()
+	provider := tracetest.NewTracerProvider()
 
 	mockPartitionConsumer, partitionConsumer := createMockPartitionConsumer(b)
 

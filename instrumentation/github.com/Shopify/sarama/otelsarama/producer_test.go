@@ -24,29 +24,21 @@ import (
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 
+	oteltrace "go.opentelemetry.io/otel/api/trace"
+	"go.opentelemetry.io/otel/api/trace/tracetest"
 	"go.opentelemetry.io/otel/codes"
-
-	"go.opentelemetry.io/otel/api/trace"
 	"go.opentelemetry.io/otel/label"
 	otelpropagators "go.opentelemetry.io/otel/propagators"
 	"go.opentelemetry.io/otel/semconv"
-
-	mocktracer "go.opentelemetry.io/contrib/internal/trace"
 )
-
-func NewTracerProviderAndTracer() (*mocktracer.TracerProvider, *mocktracer.Tracer) {
-	var provider mocktracer.TracerProvider
-	tracer := provider.Tracer(defaultTracerName)
-
-	return &provider, tracer.(*mocktracer.Tracer)
-}
 
 func TestWrapSyncProducer(t *testing.T) {
 	propagators := otelpropagators.TraceContext{}
 	var err error
 
 	// Mock provider
-	provider, mt := NewTracerProviderAndTracer()
+	sr := new(tracetest.StandardSpanRecorder)
+	provider := tracetest.NewTracerProvider(tracetest.WithSpanRecorder(sr))
 
 	cfg := newSaramaConfig()
 	// Mock sync producer
@@ -56,15 +48,15 @@ func TestWrapSyncProducer(t *testing.T) {
 	syncProducer := WrapSyncProducer(cfg, mockSyncProducer, WithTracerProvider(provider), WithPropagators(propagators))
 
 	// Create message with span context
-	ctx, _ := mt.Start(context.Background(), "")
+	ctx, _ := provider.Tracer(defaultTracerName).Start(context.Background(), "")
 	messageWithSpanContext := sarama.ProducerMessage{Topic: topic, Key: sarama.StringEncoder("foo")}
 	propagators.Inject(ctx, NewProducerMessageCarrier(&messageWithSpanContext))
 
 	// Expected
 	expectedList := []struct {
 		labelList    []label.KeyValue
-		parentSpanID trace.SpanID
-		kind         trace.SpanKind
+		parentSpanID oteltrace.SpanID
+		kind         oteltrace.SpanKind
 	}{
 		{
 			labelList: []label.KeyValue{
@@ -74,8 +66,8 @@ func TestWrapSyncProducer(t *testing.T) {
 				semconv.MessagingMessageIDKey.String("1"),
 				kafkaPartitionKey.Int32(0),
 			},
-			parentSpanID: trace.SpanFromContext(ctx).SpanContext().SpanID,
-			kind:         trace.SpanKindProducer,
+			parentSpanID: oteltrace.SpanFromContext(ctx).SpanContext().SpanID,
+			kind:         oteltrace.SpanKindProducer,
 		},
 		{
 			labelList: []label.KeyValue{
@@ -85,7 +77,7 @@ func TestWrapSyncProducer(t *testing.T) {
 				semconv.MessagingMessageIDKey.String("2"),
 				kafkaPartitionKey.Int32(0),
 			},
-			kind: trace.SpanKindProducer,
+			kind: oteltrace.SpanKindProducer,
 		},
 		{
 			labelList: []label.KeyValue{
@@ -97,7 +89,7 @@ func TestWrapSyncProducer(t *testing.T) {
 				//semconv.MessagingMessageIDKey.String("3"),
 				kafkaPartitionKey.Int32(0),
 			},
-			kind: trace.SpanKindProducer,
+			kind: oteltrace.SpanKindProducer,
 		},
 		{
 			labelList: []label.KeyValue{
@@ -107,7 +99,7 @@ func TestWrapSyncProducer(t *testing.T) {
 				//semconv.MessagingMessageIDKey.String("4"),
 				kafkaPartitionKey.Int32(0),
 			},
-			kind: trace.SpanKindProducer,
+			kind: oteltrace.SpanKindProducer,
 		},
 	}
 	for i := 0; i < len(expectedList); i++ {
@@ -128,22 +120,22 @@ func TestWrapSyncProducer(t *testing.T) {
 	// Send messages
 	require.NoError(t, syncProducer.SendMessages(msgList[2:]))
 
-	spanList := mt.EndedSpans()
+	spanList := sr.Completed()
 	for i, expected := range expectedList {
 		span := spanList[i]
 		msg := msgList[i]
 
 		// Check span
 		assert.True(t, span.SpanContext().IsValid())
-		assert.Equal(t, expected.parentSpanID, span.ParentSpanID)
-		assert.Equal(t, "kafka.produce", span.Name)
-		assert.Equal(t, expected.kind, span.Kind)
+		assert.Equal(t, expected.parentSpanID, span.ParentSpanID())
+		assert.Equal(t, "kafka.produce", span.Name())
+		assert.Equal(t, expected.kind, span.SpanKind())
 		for _, k := range expected.labelList {
-			assert.Equal(t, k.Value, span.Attributes[k.Key], k.Key)
+			assert.Equal(t, k.Value, span.Attributes()[k.Key], k.Key)
 		}
 
 		// Check tracing propagation
-		remoteSpanFromMessage := trace.RemoteSpanContextFromContext(propagators.Extract(context.Background(), NewProducerMessageCarrier(msg)))
+		remoteSpanFromMessage := oteltrace.RemoteSpanContextFromContext(propagators.Extract(context.Background(), NewProducerMessageCarrier(msg)))
 		assert.True(t, remoteSpanFromMessage.IsValid())
 	}
 }
@@ -151,11 +143,10 @@ func TestWrapSyncProducer(t *testing.T) {
 func TestWrapAsyncProducer(t *testing.T) {
 	propagators := otelpropagators.TraceContext{}
 	// Create message with span context
-	createMessages := func(mt *mocktracer.Tracer) []*sarama.ProducerMessage {
+	createMessages := func(mt oteltrace.Tracer) []*sarama.ProducerMessage {
 		ctx, _ := mt.Start(context.Background(), "")
 		messageWithSpanContext := sarama.ProducerMessage{Topic: topic, Key: sarama.StringEncoder("foo")}
 		propagators.Inject(ctx, NewProducerMessageCarrier(&messageWithSpanContext))
-		mt.EndedSpans()
 
 		return []*sarama.ProducerMessage{
 			&messageWithSpanContext,
@@ -165,13 +156,16 @@ func TestWrapAsyncProducer(t *testing.T) {
 
 	t.Run("without successes config", func(t *testing.T) {
 		// Mock provider
-		provider, mt := NewTracerProviderAndTracer()
+		sr := new(tracetest.StandardSpanRecorder)
+		provider := tracetest.NewTracerProvider(
+			tracetest.WithSpanRecorder(sr),
+		)
 
 		cfg := newSaramaConfig()
 		mockAsyncProducer := mocks.NewAsyncProducer(t, cfg)
 		ap := WrapAsyncProducer(cfg, mockAsyncProducer, WithTracerProvider(provider), WithPropagators(propagators))
 
-		msgList := createMessages(mt)
+		msgList := createMessages(provider.Tracer(defaultTracerName))
 		// Send message
 		for _, msg := range msgList {
 			mockAsyncProducer.ExpectInputAndSucceed()
@@ -181,13 +175,13 @@ func TestWrapAsyncProducer(t *testing.T) {
 		err := ap.Close()
 		require.NoError(t, err)
 
-		spanList := mt.EndedSpans()
+		spanList := sr.Completed()
 
 		// Expected
 		expectedList := []struct {
 			labelList    []label.KeyValue
-			parentSpanID trace.SpanID
-			kind         trace.SpanKind
+			parentSpanID oteltrace.SpanID
+			kind         oteltrace.SpanKind
 		}{
 			{
 				labelList: []label.KeyValue{
@@ -197,8 +191,8 @@ func TestWrapAsyncProducer(t *testing.T) {
 					semconv.MessagingMessageIDKey.String("0"),
 					kafkaPartitionKey.Int32(0),
 				},
-				parentSpanID: trace.SpanID{0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x1},
-				kind:         trace.SpanKindProducer,
+				parentSpanID: oteltrace.SpanID{0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x2},
+				kind:         oteltrace.SpanKindProducer,
 			},
 			{
 				labelList: []label.KeyValue{
@@ -208,7 +202,7 @@ func TestWrapAsyncProducer(t *testing.T) {
 					semconv.MessagingMessageIDKey.String("0"),
 					kafkaPartitionKey.Int32(0),
 				},
-				kind: trace.SpanKindProducer,
+				kind: oteltrace.SpanKindProducer,
 			},
 		}
 		for i, expected := range expectedList {
@@ -217,22 +211,25 @@ func TestWrapAsyncProducer(t *testing.T) {
 
 			// Check span
 			assert.True(t, span.SpanContext().IsValid())
-			assert.Equal(t, expected.parentSpanID, span.ParentSpanID)
-			assert.Equal(t, "kafka.produce", span.Name)
-			assert.Equal(t, expected.kind, span.Kind)
+			assert.Equal(t, expected.parentSpanID, span.ParentSpanID())
+			assert.Equal(t, "kafka.produce", span.Name())
+			assert.Equal(t, expected.kind, span.SpanKind())
 			for _, k := range expected.labelList {
-				assert.Equal(t, k.Value, span.Attributes[k.Key], k.Key)
+				assert.Equal(t, k.Value, span.Attributes()[k.Key], k.Key)
 			}
 
 			// Check tracing propagation
-			remoteSpanFromMessage := trace.RemoteSpanContextFromContext(propagators.Extract(context.Background(), NewProducerMessageCarrier(msg)))
+			remoteSpanFromMessage := oteltrace.RemoteSpanContextFromContext(propagators.Extract(context.Background(), NewProducerMessageCarrier(msg)))
 			assert.True(t, remoteSpanFromMessage.IsValid())
 		}
 	})
 
 	t.Run("with successes config", func(t *testing.T) {
 		// Mock provider
-		provider, mt := NewTracerProviderAndTracer()
+		sr := new(tracetest.StandardSpanRecorder)
+		provider := tracetest.NewTracerProvider(
+			tracetest.WithSpanRecorder(sr),
+		)
 
 		// Set producer with successes config
 		cfg := newSaramaConfig()
@@ -241,7 +238,7 @@ func TestWrapAsyncProducer(t *testing.T) {
 		mockAsyncProducer := mocks.NewAsyncProducer(t, cfg)
 		ap := WrapAsyncProducer(cfg, mockAsyncProducer, WithTracerProvider(provider), WithPropagators(propagators))
 
-		msgList := createMessages(mt)
+		msgList := createMessages(provider.Tracer(defaultTracerName))
 		// Send message
 		for i, msg := range msgList {
 			mockAsyncProducer.ExpectInputAndSucceed()
@@ -255,13 +252,13 @@ func TestWrapAsyncProducer(t *testing.T) {
 		err := ap.Close()
 		require.NoError(t, err)
 
-		spanList := mt.EndedSpans()
+		spanList := sr.Completed()
 
 		// Expected
 		expectedList := []struct {
 			labelList    []label.KeyValue
-			parentSpanID trace.SpanID
-			kind         trace.SpanKind
+			parentSpanID oteltrace.SpanID
+			kind         oteltrace.SpanKind
 		}{
 			{
 				labelList: []label.KeyValue{
@@ -271,8 +268,8 @@ func TestWrapAsyncProducer(t *testing.T) {
 					semconv.MessagingMessageIDKey.String("1"),
 					kafkaPartitionKey.Int32(0),
 				},
-				parentSpanID: trace.SpanID{0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x1},
-				kind:         trace.SpanKindProducer,
+				parentSpanID: oteltrace.SpanID{0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x2},
+				kind:         oteltrace.SpanKindProducer,
 			},
 			{
 				labelList: []label.KeyValue{
@@ -282,7 +279,7 @@ func TestWrapAsyncProducer(t *testing.T) {
 					semconv.MessagingMessageIDKey.String("2"),
 					kafkaPartitionKey.Int32(0),
 				},
-				kind: trace.SpanKindProducer,
+				kind: oteltrace.SpanKindProducer,
 			},
 		}
 		for i, expected := range expectedList {
@@ -291,18 +288,18 @@ func TestWrapAsyncProducer(t *testing.T) {
 
 			// Check span
 			assert.True(t, span.SpanContext().IsValid())
-			assert.Equal(t, expected.parentSpanID, span.ParentSpanID)
-			assert.Equal(t, "kafka.produce", span.Name)
-			assert.Equal(t, expected.kind, span.Kind)
+			assert.Equal(t, expected.parentSpanID, span.ParentSpanID())
+			assert.Equal(t, "kafka.produce", span.Name())
+			assert.Equal(t, expected.kind, span.SpanKind())
 			for _, k := range expected.labelList {
-				assert.Equal(t, k.Value, span.Attributes[k.Key], k.Key)
+				assert.Equal(t, k.Value, span.Attributes()[k.Key], k.Key)
 			}
 
 			// Check metadata
 			assert.Equal(t, i, msg.Metadata)
 
 			// Check tracing propagation
-			remoteSpanFromMessage := trace.RemoteSpanContextFromContext(propagators.Extract(context.Background(), NewProducerMessageCarrier(msg)))
+			remoteSpanFromMessage := oteltrace.RemoteSpanContextFromContext(propagators.Extract(context.Background(), NewProducerMessageCarrier(msg)))
 			assert.True(t, remoteSpanFromMessage.IsValid())
 		}
 	})
@@ -311,7 +308,8 @@ func TestWrapAsyncProducer(t *testing.T) {
 func TestWrapAsyncProducerError(t *testing.T) {
 	propagators := otelpropagators.TraceContext{}
 	// Mock provider
-	provider, mt := NewTracerProviderAndTracer()
+	sr := new(tracetest.StandardSpanRecorder)
+	provider := tracetest.NewTracerProvider(tracetest.WithSpanRecorder(sr))
 
 	// Set producer with successes config
 	cfg := newSaramaConfig()
@@ -328,13 +326,13 @@ func TestWrapAsyncProducerError(t *testing.T) {
 
 	ap.AsyncClose()
 
-	spanList := mt.EndedSpans()
+	spanList := sr.Completed()
 	assert.Len(t, spanList, 1)
 
 	span := spanList[0]
 
-	assert.Equal(t, codes.Error, span.Status)
-	assert.Equal(t, "test", span.StatusMessage)
+	assert.Equal(t, codes.Error, span.StatusCode())
+	assert.Equal(t, "test", span.StatusMessage())
 }
 
 func newSaramaConfig() *sarama.Config {
@@ -345,7 +343,7 @@ func newSaramaConfig() *sarama.Config {
 
 func BenchmarkWrapSyncProducer(b *testing.B) {
 	// Mock provider
-	provider, _ := NewTracerProviderAndTracer()
+	provider := tracetest.NewTracerProvider()
 
 	cfg := newSaramaConfig()
 	// Mock sync producer
@@ -386,7 +384,7 @@ func BenchmarkMockSyncProducer(b *testing.B) {
 
 func BenchmarkWrapAsyncProducer(b *testing.B) {
 	// Mock provider
-	provider, _ := NewTracerProviderAndTracer()
+	provider := tracetest.NewTracerProvider()
 
 	cfg := newSaramaConfig()
 	cfg.Producer.Return.Successes = true
