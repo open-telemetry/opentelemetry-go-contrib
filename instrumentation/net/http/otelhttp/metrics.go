@@ -29,7 +29,7 @@ import (
 	"go.opentelemetry.io/otel/label"
 )
 
-type metricsTransport struct {
+type instrumentedTransport struct {
 	meter                  metric.Meter
 	base                   *Transport
 	clientDurationRecorder metric.Float64ValueRecorder
@@ -42,11 +42,10 @@ type tracker struct {
 	endOnce sync.Once
 	labels  []label.KeyValue
 
-	// recorders
 	clientDurationRecorder metric.Float64ValueRecorder
 }
 
-func (trans *metricsTransport) applyConfig(c *config) {
+func (trans *instrumentedTransport) applyConfig(c *config) {
 	trans.base.applyConfig(c)
 
 	trans.meter = c.Meter
@@ -54,7 +53,7 @@ func (trans *metricsTransport) applyConfig(c *config) {
 }
 
 // RoundTrip implements http.RoundTripper, delegating to Base and recording stats for the request.
-func (trans *metricsTransport) RoundTrip(req *http.Request) (*http.Response, error) {
+func (trans *instrumentedTransport) RoundTrip(req *http.Request) (*http.Response, error) {
 	labels := semconv.HTTPClientAttributesFromHTTPRequest(req)
 
 	ctx := req.Context()
@@ -64,13 +63,12 @@ func (trans *metricsTransport) RoundTrip(req *http.Request) (*http.Response, err
 		clientDurationRecorder: trans.clientDurationRecorder,
 	}
 
-	// Perform request.;
 	resp, err := trans.base.RoundTrip(req)
 	if err != nil {
 		tracker.labels = append(labels, semconv.HTTPAttributesFromHTTPStatusCode(http.StatusInternalServerError)...)
 		tracker.end()
 	} else {
-		tracker.labels = append(labels, semconv.HTTPAttributesFromHTTPStatusCode(http.StatusInternalServerError)...)
+		tracker.labels = append(labels, semconv.HTTPAttributesFromHTTPStatusCode(resp.StatusCode)...)
 		if resp.Body == nil {
 			tracker.end()
 		} else {
@@ -85,26 +83,16 @@ func (trans *metricsTransport) RoundTrip(req *http.Request) (*http.Response, err
 // Body and only implements the same combination of additional
 // interfaces as the original.
 func wrappedBodyIO(wrapper io.ReadCloser, body io.ReadCloser) io.ReadCloser {
-	wr, i0 := body.(io.Writer)
-	switch {
-	case !i0:
-		return struct {
-			io.ReadCloser
-		}{wrapper}
-
-	case i0:
+	if wr, ok := body.(io.Writer); ok {
 		return struct {
 			io.ReadCloser
 			io.Writer
 		}{wrapper, wr}
-	default:
-		return struct {
-			io.ReadCloser
-		}{wrapper}
 	}
+	return wrapper
 }
 
-func (trans *metricsTransport) createMeasures() {
+func (trans *instrumentedTransport) createMeasures() {
 	var err error
 	trans.clientDurationRecorder, err = trans.meter.NewFloat64ValueRecorder(
 		clientRequestDuration,
@@ -135,9 +123,6 @@ func (tracker *tracker) Read(b []byte) (int, error) {
 }
 
 func (tracker *tracker) Close() error {
-	// Invoking endSpan on Close will help catch the cases
-	// in which a read returned a non-nil error, we set the
-	// span status but didn't end the span.
 	tracker.end()
 	return tracker.body.Close()
 }

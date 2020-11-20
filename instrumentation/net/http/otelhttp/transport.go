@@ -43,7 +43,7 @@ var _ http.RoundTripper = &Transport{}
 // NewTransport wraps the provided http.RoundTripper with one that
 // starts a span and injects the span context into the outbound request headers.
 func NewTransport(base http.RoundTripper, opts ...Option) http.RoundTripper {
-	t := metricsTransport{
+	t := instrumentedTransport{
 		base: &Transport{
 			rt: base,
 		},
