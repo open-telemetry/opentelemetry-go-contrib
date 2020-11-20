@@ -12,9 +12,9 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-// Package otelkafka instruments the gopkg.in/confluentinc/confluent-kafka-go.v1/kafka package.
+// Package otelkafka instruments the github.com/confluentinc/confluent-kafka-go package.
 //
 // The consumer's span will be created as a child of the producer's span.
 //
 // Based on: https://github.com/DataDog/dd-trace-go/tree/v1/contrib/confluentinc/confluent-kafka-go/kafka
-package otelkafka // import "go.opentelemetry.io/contrib/instrumentation/gopkg.in/confluentinc/confluent-kafka-go/kafka/otelkafka"
+package otelkafka // import "go.opentelemetry.io/contrib/instrumentation/github.com/confluentinc/confluent-kafka-go/kafka/otelkafka"

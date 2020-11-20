@@ -409,7 +409,7 @@ updates:
 
   -
     package-ecosystem: "gomod"
-    directory: "/instrumentation/gopkg.in/confluentinc/confluent-kafka-go/kafka/otelkafka"
+    directory: "/instrumentation/github.com/confluentinc/confluent-kafka-go/kafka/otelkafka"
     labels:
       - dependencies
       - go
@@ -419,7 +419,7 @@ updates:
       day: "sunday"
   -
     package-ecosystem: "gomod"
-    directory: "/instrumentation/gopkg.in/confluentinc/confluent-kafka-go/kafka/otelkafka/example"
+    directory: "/instrumentation/github.com/confluentinc/confluent-kafka-go/kafka/otelkafka/example"
     labels:
       - dependencies
       - go

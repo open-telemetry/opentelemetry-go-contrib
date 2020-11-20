@@ -15,7 +15,7 @@
 package otelkafka
 
 import (
-	"gopkg.in/confluentinc/confluent-kafka-go.v1/kafka"
+	"github.com/confluentinc/confluent-kafka-go/kafka"
 
 	"go.opentelemetry.io/otel"
 )

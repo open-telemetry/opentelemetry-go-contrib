@@ -19,10 +19,10 @@ import (
 	"fmt"
 	"log"
 
-	"gopkg.in/confluentinc/confluent-kafka-go.v1/kafka"
+	"go.opentelemetry.io/contrib/instrumentation/github.com/confluentinc/confluent-kafka-go/kafka/otelkafka"
+	"go.opentelemetry.io/contrib/instrumentation/github.com/confluentinc/confluent-kafka-go/kafka/otelkafka/example"
 
-	"go.opentelemetry.io/contrib/instrumentation/gopkg.in/confluentinc/confluent-kafka-go/kafka/otelkafka"
-	"go.opentelemetry.io/contrib/instrumentation/gopkg.in/confluentinc/confluent-kafka-go/kafka/otelkafka/example"
+	"github.com/confluentinc/confluent-kafka-go/kafka"
 )
 
 func main() {

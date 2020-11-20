@@ -24,7 +24,7 @@ import (
 )
 
 const (
-	tracerName = "go.opentelemetry.io/contrib/instrumentation/gopkg.in/confluentinc/confluent-kafka-go/kafka/otelkafka"
+	tracerName = "go.opentelemetry.io/contrib/instrumentation/github.com/confluentinc/confluent-kafka-go/kafka/otelkafka"
 )
 
 type config struct {
