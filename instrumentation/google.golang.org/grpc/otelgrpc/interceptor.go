@@ -25,6 +25,7 @@ import (
 	"github.com/golang/protobuf/proto" //nolint:staticcheck
 
 	"google.golang.org/grpc"
+	grpc_codes "google.golang.org/grpc/codes"
 	"google.golang.org/grpc/metadata"
 	"google.golang.org/grpc/peer"
 	"google.golang.org/grpc/status"
@@ -104,6 +105,9 @@ func UnaryClientInterceptor(opts ...Option) grpc.UnaryClientInterceptor {
 		if err != nil {
 			s, _ := status.FromError(err)
 			span.SetStatus(codes.Error, s.Message())
+			span.SetAttributes(statusCodeAttr(s.Code()))
+		} else {
+			span.SetAttributes(statusCodeAttr(grpc_codes.OK))
 		}
 
 		return err
@@ -283,6 +287,9 @@ func StreamClientInterceptor(opts ...Option) grpc.StreamClientInterceptor {
 			if err != nil {
 				s, _ := status.FromError(err)
 				span.SetStatus(codes.Error, s.Message())
+				span.SetAttributes(statusCodeAttr(s.Code()))
+			} else {
+				span.SetAttributes(statusCodeAttr(grpc_codes.OK))
 			}
 
 			span.End()
@@ -327,8 +334,10 @@ func UnaryServerInterceptor(opts ...Option) grpc.UnaryServerInterceptor {
 		if err != nil {
 			s, _ := status.FromError(err)
 			span.SetStatus(codes.Error, s.Message())
+			span.SetAttributes(statusCodeAttr(s.Code()))
 			messageSent.Event(ctx, 1, s.Proto())
 		} else {
+			span.SetAttributes(statusCodeAttr(grpc_codes.OK))
 			messageSent.Event(ctx, 1, resp)
 		}
 
@@ -413,6 +422,9 @@ func StreamServerInterceptor(opts ...Option) grpc.StreamServerInterceptor {
 		if err != nil {
 			s, _ := status.FromError(err)
 			span.SetStatus(codes.Error, s.Message())
+			span.SetAttributes(statusCodeAttr(s.Code()))
+		} else {
+			span.SetAttributes(statusCodeAttr(grpc_codes.OK))
 		}
 
 		return err
@@ -474,4 +486,9 @@ func parseFullMethod(fullMethod string) (string, []label.KeyValue) {
 		attrs = append(attrs, semconv.RPCMethodKey.String(method))
 	}
 	return name, attrs
+}
+
+// statusCodeAttr returns status code attribute based on given gRPC code
+func statusCodeAttr(c grpc_codes.Code) label.KeyValue {
+	return GRPCStatusCodeKey.Uint32(uint32(c))
 }
