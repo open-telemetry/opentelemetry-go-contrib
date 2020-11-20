@@ -42,12 +42,6 @@ func (detectorUtils *MockDetectorUtils) fetchString(httpMethod string, URL strin
 	return args.String(0), args.Error(1)
 }
 
-// Mock function for getK8sCredHeader()
-func (detectorUtils *MockDetectorUtils) getK8sCredHeader() (string, error) {
-	args := detectorUtils.Called()
-	return args.String(0), args.Error(1)
-}
-
 // Mock function for getContainerID()
 func (detectorUtils *MockDetectorUtils) getContainerID() (string, error) {
 	args := detectorUtils.Called()

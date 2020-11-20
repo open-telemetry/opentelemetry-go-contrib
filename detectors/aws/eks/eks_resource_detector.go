@@ -47,7 +47,6 @@ const (
 type detectorUtils interface {
 	fileExists(filename string) bool
 	fetchString(httpMethod string, URL string) (string, error)
-	getK8sCredHeader() (string, error)
 	getContainerID() (string, error)
 }
 
@@ -142,7 +141,7 @@ func (eksUtils eksDetectorUtils) fetchString(httpMethod string, URL string) (str
 		return "", err
 	}
 
-	authHeader, err := eksUtils.getK8sCredHeader()
+	authHeader, err := getK8sCredHeader()
 	if hasProblem(err) {
 		return "", err
 	}
@@ -178,8 +177,7 @@ func (eksUtils eksDetectorUtils) fetchString(httpMethod string, URL string) (str
 	return string(body), nil
 }
 
-// getK8sCredHeader is implementing the detectorUtils interface
-func (eksUtils eksDetectorUtils) getK8sCredHeader() (string, error) {
+func getK8sCredHeader() (string, error) {
 	content, err := ioutil.ReadFile(k8sTokenPath)
 	if hasProblem(err) {
 		return "", err
