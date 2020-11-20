@@ -16,6 +16,7 @@ package otelsarama
 
 import (
 	"github.com/Shopify/sarama"
+
 	"go.opentelemetry.io/otel/propagation"
 )
 
