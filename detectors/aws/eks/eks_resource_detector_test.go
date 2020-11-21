@@ -92,8 +92,7 @@ func TestNotEks(t *testing.T) {
 	detectorUtils.On("fileExists", k8sTokenPath).Return(false)
 
 	// Expected resource object
-	eksResourceLabels := []label.KeyValue{}
-	expectedResource := resource.New(eksResourceLabels...)
+	expectedResource := resource.Empty()
 
 	// Call EKS Resource detector to detect resources
 	eksResourceDetector := ResourceDetector{detectorUtils}

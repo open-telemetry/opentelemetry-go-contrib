@@ -76,16 +76,16 @@ var _ detectorUtils = (*eksDetectorUtils)(nil)
 // Detect detects associated resources when running with AWS EKS.
 func (detector *ResourceDetector) Detect(ctx context.Context) (*resource.Resource, error) {
 
-	labels := []label.KeyValue{}
-
 	isEks, err := isEks(detector.utils)
 	if hasProblem(err) {
 		return nil, err
 	}
 
 	if !isEks {
-		return resource.New(labels...), nil
+		return resource.Empty(), nil
 	}
+
+	labels := []label.KeyValue{}
 
 	clusterName, err := getClusterName(detector.utils)
 	if hasProblem(err) {
