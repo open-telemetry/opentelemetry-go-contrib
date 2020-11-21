@@ -15,7 +15,8 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 - `otelhttp.{Get,Head,Post,PostForm}` convenience wrappers for their `http` counterparts. (#390)
 - The AWS detector now adds the cloud zone, host image ID, host type, and host name to the returned `Resource`. (#410)
 - Add Amazon ECS Resource Detector for AWS X-Ray. (#466)
-
+- Add propagator for AWS X-Ray (#462)
+  
 ### Changed
 
 - Add semantic version to `Tracer` / `Meter` created by instrumentation packages `otelsaram`, `otelrestful`, `otelmongo`, `otelhttp` and `otelhttptrace`. (#412)
