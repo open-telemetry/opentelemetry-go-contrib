@@ -15,7 +15,6 @@
 package eks
 
 import (
-	"bufio"
 	"context"
 	"crypto/tls"
 	"crypto/x509"
@@ -25,6 +24,7 @@ import (
 	"log"
 	"net/http"
 	"os"
+	"strings"
 	"time"
 
 	"go.opentelemetry.io/otel/label"
@@ -204,37 +204,17 @@ func getClusterName(utils detectorUtils) (string, error) {
 
 // getContainerID is implementing the detectorUtils interface
 func (eksUtils eksDetectorUtils) getContainerID() (string, error) {
-	content, err := readFile(defaultCgroupPath)
-	if hasProblem(err) {
+	fileData, err := ioutil.ReadFile(defaultCgroupPath)
+	if err != nil {
 		return "", err
 	}
-
-	for _, line := range content {
-		if lineLength := len(line); lineLength > containerIDLength {
-			return line[lineLength-containerIDLength:], nil
+	splitData := strings.Split(strings.TrimSpace(string(fileData)), "\n")
+	for _, str := range splitData {
+		if len(str) > containerIDLength {
+			return str[len(str)-containerIDLength:], nil
 		}
 	}
-
-	return "", nil
-}
-
-func readFile(fileName string) ([]string, error) {
-	file, err := os.Open(fileName)
-	if hasProblem(err) {
-		return nil, err
-	}
-	defer file.Close()
-
-	scanner := bufio.NewScanner(file)
-	scanner.Split(bufio.ScanLines)
-
-	var text []string
-
-	for scanner.Scan() {
-		text = append(text, scanner.Text())
-	}
-
-	return text, nil
+	return "", err
 }
 
 func hasProblem(err error) bool {
