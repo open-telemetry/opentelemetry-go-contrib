@@ -23,15 +23,15 @@ import (
 
 	"github.com/stretchr/testify/assert"
 
-	"go.opentelemetry.io/otel/api/trace/tracetest"
+	"go.opentelemetry.io/otel/oteltest"
 )
 
 func TestBasicFilter(t *testing.T) {
 	rr := httptest.NewRecorder()
 
-	spanRecorder := new(tracetest.StandardSpanRecorder)
-	provider := tracetest.NewTracerProvider(
-		tracetest.WithSpanRecorder(spanRecorder),
+	spanRecorder := new(oteltest.StandardSpanRecorder)
+	provider := oteltest.NewTracerProvider(
+		oteltest.WithSpanRecorder(spanRecorder),
 	)
 
 	h := NewHandler(
@@ -101,9 +101,9 @@ func TestSpanNameFormatter(t *testing.T) {
 		t.Run(tc.name, func(t *testing.T) {
 			rr := httptest.NewRecorder()
 
-			spanRecorder := new(tracetest.StandardSpanRecorder)
-			provider := tracetest.NewTracerProvider(
-				tracetest.WithSpanRecorder(spanRecorder),
+			spanRecorder := new(oteltest.StandardSpanRecorder)
+			provider := oteltest.NewTracerProvider(
+				oteltest.WithSpanRecorder(spanRecorder),
 			)
 			handler := http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 				if _, err := io.WriteString(w, "hello world"); err != nil {

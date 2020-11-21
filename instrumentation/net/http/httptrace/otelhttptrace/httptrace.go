@@ -19,10 +19,11 @@ import (
 	"net/http"
 
 	"go.opentelemetry.io/otel"
-	"go.opentelemetry.io/otel/api/global"
-	"go.opentelemetry.io/otel/api/trace"
+	"go.opentelemetry.io/otel/baggage"
 	"go.opentelemetry.io/otel/label"
+	"go.opentelemetry.io/otel/propagation"
 	"go.opentelemetry.io/otel/semconv"
+	"go.opentelemetry.io/otel/trace"
 )
 
 // Option is a function that allows configuration of the httptrace Extract()
@@ -30,11 +31,11 @@ import (
 type Option func(*config)
 
 type config struct {
-	propagators otel.TextMapPropagator
+	propagators propagation.TextMapPropagator
 }
 
 func newConfig(opts []Option) *config {
-	c := &config{propagators: global.TextMapPropagator()}
+	c := &config{propagators: otel.GetTextMapPropagator()}
 	for _, o := range opts {
 		o(c)
 	}
@@ -42,7 +43,7 @@ func newConfig(opts []Option) *config {
 }
 
 // WithPropagators sets the propagators to use for Extraction and Injection
-func WithPropagators(props otel.TextMapPropagator) Option {
+func WithPropagators(props propagation.TextMapPropagator) Option {
 	return func(c *config) {
 		c.propagators = props
 	}
@@ -58,7 +59,7 @@ func Extract(ctx context.Context, req *http.Request, opts ...Option) ([]label.Ke
 		semconv.NetAttributesFromHTTPRequest("tcp", req)...,
 	)
 
-	labels := otel.Baggage(ctx)
+	labels := baggage.Set(ctx)
 	return attrs, (&labels).ToSlice(), trace.RemoteSpanContextFromContext(ctx)
 }
 

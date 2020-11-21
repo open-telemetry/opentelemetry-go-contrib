@@ -27,24 +27,23 @@ import (
 	"go.opentelemetry.io/contrib/instrumentation/github.com/emicklei/go-restful/otelrestful"
 	b3prop "go.opentelemetry.io/contrib/propagators/b3"
 	"go.opentelemetry.io/otel"
-	otelglobal "go.opentelemetry.io/otel/api/global"
-	oteltrace "go.opentelemetry.io/otel/api/trace"
-	"go.opentelemetry.io/otel/api/trace/tracetest"
 	otelkv "go.opentelemetry.io/otel/label"
-	"go.opentelemetry.io/otel/propagators"
+	"go.opentelemetry.io/otel/oteltest"
+	"go.opentelemetry.io/otel/propagation"
+	oteltrace "go.opentelemetry.io/otel/trace"
 )
 
 const tracerName = "go.opentelemetry.io/contrib/instrumentation/github.com/emicklei/go-restful/otelrestful"
 
 func TestChildSpanFromGlobalTracer(t *testing.T) {
-	otelglobal.SetTracerProvider(tracetest.NewTracerProvider())
+	otel.SetTracerProvider(oteltest.NewTracerProvider())
 
 	handlerFunc := func(req *restful.Request, resp *restful.Response) {
 		span := oteltrace.SpanFromContext(req.Request.Context())
-		_, ok := span.(*tracetest.Span)
+		_, ok := span.(*oteltest.Span)
 		assert.True(t, ok)
 		spanTracer := span.Tracer()
-		mockTracer, ok := spanTracer.(*tracetest.Tracer)
+		mockTracer, ok := spanTracer.(*oteltest.Tracer)
 		require.True(t, ok)
 		assert.Equal(t, tracerName, mockTracer.Name)
 		resp.WriteHeader(http.StatusOK)
@@ -64,14 +63,14 @@ func TestChildSpanFromGlobalTracer(t *testing.T) {
 }
 
 func TestChildSpanFromCustomTracer(t *testing.T) {
-	provider := tracetest.NewTracerProvider()
+	provider := oteltest.NewTracerProvider()
 
 	handlerFunc := func(req *restful.Request, resp *restful.Response) {
 		span := oteltrace.SpanFromContext(req.Request.Context())
-		_, ok := span.(*tracetest.Span)
+		_, ok := span.(*oteltest.Span)
 		assert.True(t, ok)
 		spanTracer := span.Tracer()
-		mockTracer, ok := spanTracer.(*tracetest.Tracer)
+		mockTracer, ok := spanTracer.(*oteltest.Tracer)
 		require.True(t, ok)
 		assert.Equal(t, tracerName, mockTracer.Name)
 		resp.WriteHeader(http.StatusOK)
@@ -90,8 +89,8 @@ func TestChildSpanFromCustomTracer(t *testing.T) {
 }
 
 func TestChildSpanNames(t *testing.T) {
-	sr := new(tracetest.StandardSpanRecorder)
-	provider := tracetest.NewTracerProvider(tracetest.WithSpanRecorder(sr))
+	sr := new(oteltest.StandardSpanRecorder)
+	provider := oteltest.NewTracerProvider(oteltest.WithSpanRecorder(sr))
 
 	handlerFunc := func(req *restful.Request, resp *restful.Response) {
 		resp.WriteHeader(http.StatusOK)
@@ -156,18 +155,18 @@ func TestGetSpanNotInstrumented(t *testing.T) {
 }
 
 func TestPropagationWithGlobalPropagators(t *testing.T) {
-	provider := tracetest.NewTracerProvider()
-	otelglobal.SetTextMapPropagator(propagators.TraceContext{})
+	provider := oteltest.NewTracerProvider()
+	otel.SetTextMapPropagator(propagation.TraceContext{})
 
 	r := httptest.NewRequest("GET", "/user/123", nil)
 	w := httptest.NewRecorder()
 
 	ctx, pspan := provider.Tracer(tracerName).Start(context.Background(), "test")
-	otelglobal.TextMapPropagator().Inject(ctx, r.Header)
+	otel.GetTextMapPropagator().Inject(ctx, r.Header)
 
 	handlerFunc := func(req *restful.Request, resp *restful.Response) {
 		span := oteltrace.SpanFromContext(req.Request.Context())
-		mspan, ok := span.(*tracetest.Span)
+		mspan, ok := span.(*oteltest.Span)
 		require.True(t, ok)
 		assert.Equal(t, pspan.SpanContext().TraceID, mspan.SpanContext().TraceID)
 		assert.Equal(t, pspan.SpanContext().SpanID, mspan.ParentSpanID())
@@ -181,11 +180,11 @@ func TestPropagationWithGlobalPropagators(t *testing.T) {
 	container.Add(ws)
 
 	container.ServeHTTP(w, r)
-	otelglobal.SetTextMapPropagator(otel.NewCompositeTextMapPropagator())
+	otel.SetTextMapPropagator(propagation.NewCompositeTextMapPropagator())
 }
 
 func TestPropagationWithCustomPropagators(t *testing.T) {
-	provider := tracetest.NewTracerProvider()
+	provider := oteltest.NewTracerProvider()
 	b3 := b3prop.B3{}
 
 	r := httptest.NewRequest("GET", "/user/123", nil)
@@ -196,7 +195,7 @@ func TestPropagationWithCustomPropagators(t *testing.T) {
 
 	handlerFunc := func(req *restful.Request, resp *restful.Response) {
 		span := oteltrace.SpanFromContext(req.Request.Context())
-		mspan, ok := span.(*tracetest.Span)
+		mspan, ok := span.(*oteltest.Span)
 		require.True(t, ok)
 		assert.Equal(t, pspan.SpanContext().TraceID, mspan.SpanContext().TraceID)
 		assert.Equal(t, pspan.SpanContext().SpanID, mspan.ParentSpanID())
@@ -215,16 +214,16 @@ func TestPropagationWithCustomPropagators(t *testing.T) {
 }
 
 func TestMultiFilters(t *testing.T) {
-	sr := new(tracetest.StandardSpanRecorder)
-	provider := tracetest.NewTracerProvider(tracetest.WithSpanRecorder(sr))
+	sr := new(oteltest.StandardSpanRecorder)
+	provider := oteltest.NewTracerProvider(oteltest.WithSpanRecorder(sr))
 
 	wrappedFunc := func(tracerName string) restful.RouteFunction {
 		return func(req *restful.Request, resp *restful.Response) {
 			span := oteltrace.SpanFromContext(req.Request.Context())
-			_, ok := span.(*tracetest.Span)
+			_, ok := span.(*oteltest.Span)
 			assert.True(t, ok)
 			spanTracer := span.Tracer()
-			mockTracer, ok := spanTracer.(*tracetest.Tracer)
+			mockTracer, ok := spanTracer.(*oteltest.Tracer)
 			require.True(t, ok)
 			assert.Equal(t, tracerName, mockTracer.Name)
 			resp.WriteHeader(http.StatusOK)

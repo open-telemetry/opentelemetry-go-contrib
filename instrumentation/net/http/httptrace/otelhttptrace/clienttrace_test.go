@@ -24,20 +24,20 @@ import (
 	"github.com/stretchr/testify/require"
 
 	"go.opentelemetry.io/contrib/instrumentation/net/http/httptrace/otelhttptrace"
-	"go.opentelemetry.io/otel/api/global"
-	"go.opentelemetry.io/otel/api/trace/tracetest"
+	"go.opentelemetry.io/otel"
 	"go.opentelemetry.io/otel/label"
+	"go.opentelemetry.io/otel/oteltest"
 )
 
-type SpanRecorder map[string]*tracetest.Span
+type SpanRecorder map[string]*oteltest.Span
 
-func (sr *SpanRecorder) OnStart(span *tracetest.Span) {}
-func (sr *SpanRecorder) OnEnd(span *tracetest.Span)   { (*sr)[span.Name()] = span }
+func (sr *SpanRecorder) OnStart(span *oteltest.Span) {}
+func (sr *SpanRecorder) OnEnd(span *oteltest.Span)   { (*sr)[span.Name()] = span }
 
 func TestHTTPRequestWithClientTrace(t *testing.T) {
 	sr := SpanRecorder{}
-	tp := tracetest.NewTracerProvider(tracetest.WithSpanRecorder(&sr))
-	global.SetTracerProvider(tp)
+	tp := oteltest.NewTracerProvider(oteltest.WithSpanRecorder(&sr))
+	otel.SetTracerProvider(tp)
 	tr := tp.Tracer("httptrace/client")
 
 	// Mock http server
@@ -126,18 +126,18 @@ func TestHTTPRequestWithClientTrace(t *testing.T) {
 	}
 }
 
-type MultiSpanRecorder map[string][]*tracetest.Span
+type MultiSpanRecorder map[string][]*oteltest.Span
 
-func (sr *MultiSpanRecorder) Reset()                       { (*sr) = MultiSpanRecorder{} }
-func (sr *MultiSpanRecorder) OnStart(span *tracetest.Span) {}
-func (sr *MultiSpanRecorder) OnEnd(span *tracetest.Span) {
+func (sr *MultiSpanRecorder) Reset()                      { (*sr) = MultiSpanRecorder{} }
+func (sr *MultiSpanRecorder) OnStart(span *oteltest.Span) {}
+func (sr *MultiSpanRecorder) OnEnd(span *oteltest.Span) {
 	(*sr)[span.Name()] = append((*sr)[span.Name()], span)
 }
 
 func TestConcurrentConnectionStart(t *testing.T) {
 	sr := MultiSpanRecorder{}
-	global.SetTracerProvider(
-		tracetest.NewTracerProvider(tracetest.WithSpanRecorder(&sr)),
+	otel.SetTracerProvider(
+		oteltest.NewTracerProvider(oteltest.WithSpanRecorder(&sr)),
 	)
 	ct := otelhttptrace.NewClientTrace(context.Background())
 	tts := []struct {
@@ -224,8 +224,8 @@ func TestConcurrentConnectionStart(t *testing.T) {
 
 func TestEndBeforeStartCreatesSpan(t *testing.T) {
 	sr := MultiSpanRecorder{}
-	global.SetTracerProvider(
-		tracetest.NewTracerProvider(tracetest.WithSpanRecorder(&sr)),
+	otel.SetTracerProvider(
+		oteltest.NewTracerProvider(oteltest.WithSpanRecorder(&sr)),
 	)
 
 	ct := otelhttptrace.NewClientTrace(context.Background())

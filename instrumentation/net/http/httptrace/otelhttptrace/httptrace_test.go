@@ -24,20 +24,20 @@ import (
 	"github.com/google/go-cmp/cmp"
 
 	"go.opentelemetry.io/contrib/instrumentation/net/http/httptrace/otelhttptrace"
-	"go.opentelemetry.io/otel"
-	"go.opentelemetry.io/otel/api/trace/tracetest"
+	"go.opentelemetry.io/otel/baggage"
 	"go.opentelemetry.io/otel/label"
-	"go.opentelemetry.io/otel/propagators"
+	"go.opentelemetry.io/otel/oteltest"
+	"go.opentelemetry.io/otel/propagation"
 	"go.opentelemetry.io/otel/semconv"
 )
 
 func TestRoundtrip(t *testing.T) {
-	tr := tracetest.NewTracerProvider().Tracer("httptrace/client")
+	tr := oteltest.NewTracerProvider().Tracer("httptrace/client")
 
 	var expectedAttrs map[label.Key]string
 	expectedCorrs := map[label.Key]string{label.Key("foo"): "bar"}
 
-	props := otelhttptrace.WithPropagators(otel.NewCompositeTextMapPropagator(propagators.TraceContext{}, propagators.Baggage{}))
+	props := otelhttptrace.WithPropagators(propagation.NewCompositeTextMapPropagator(propagation.TraceContext{}, propagation.Baggage{}))
 
 	// Mock http server
 	ts := httptest.NewServer(
@@ -98,7 +98,7 @@ func TestRoundtrip(t *testing.T) {
 	err := func(ctx context.Context) error {
 		ctx, span := tr.Start(ctx, "test")
 		defer span.End()
-		ctx = otel.ContextWithBaggageValues(ctx, label.String("foo", "bar"))
+		ctx = baggage.ContextWithValues(ctx, label.String("foo", "bar"))
 		req, _ := http.NewRequest("GET", ts.URL, strings.NewReader("foo"))
 		otelhttptrace.Inject(ctx, req, props)
 
@@ -116,14 +116,14 @@ func TestRoundtrip(t *testing.T) {
 }
 
 func TestSpecifyPropagators(t *testing.T) {
-	tr := tracetest.NewTracerProvider().Tracer("httptrace/client")
+	tr := oteltest.NewTracerProvider().Tracer("httptrace/client")
 
 	expectedCorrs := map[label.Key]string{label.Key("foo"): "bar"}
 
 	// Mock http server
 	ts := httptest.NewServer(
 		http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-			_, corrs, span := otelhttptrace.Extract(r.Context(), r, otelhttptrace.WithPropagators(propagators.Baggage{}))
+			_, corrs, span := otelhttptrace.Extract(r.Context(), r, otelhttptrace.WithPropagators(propagation.Baggage{}))
 
 			actualCorrs := make(map[label.Key]string)
 			for _, corr := range corrs {
@@ -150,9 +150,9 @@ func TestSpecifyPropagators(t *testing.T) {
 	err := func(ctx context.Context) error {
 		ctx, span := tr.Start(ctx, "test")
 		defer span.End()
-		ctx = otel.ContextWithBaggageValues(ctx, label.String("foo", "bar"))
+		ctx = baggage.ContextWithValues(ctx, label.String("foo", "bar"))
 		req, _ := http.NewRequest("GET", ts.URL, nil)
-		otelhttptrace.Inject(ctx, req, otelhttptrace.WithPropagators(propagators.Baggage{}))
+		otelhttptrace.Inject(ctx, req, otelhttptrace.WithPropagators(propagation.Baggage{}))
 
 		res, err := client.Do(req)
 		if err != nil {

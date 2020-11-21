@@ -24,12 +24,11 @@ import (
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 
-	"go.opentelemetry.io/otel/api/trace"
 	"go.opentelemetry.io/otel/label"
-	otelpropagators "go.opentelemetry.io/otel/propagators"
+	"go.opentelemetry.io/otel/oteltest"
+	"go.opentelemetry.io/otel/propagation"
 	"go.opentelemetry.io/otel/semconv"
-
-	"go.opentelemetry.io/otel/api/trace/tracetest"
+	"go.opentelemetry.io/otel/trace"
 )
 
 const (
@@ -37,10 +36,10 @@ const (
 )
 
 func TestWrapPartitionConsumer(t *testing.T) {
-	propagators := otelpropagators.TraceContext{}
+	propagators := propagation.TraceContext{}
 	// Mock provider
-	sr := new(tracetest.StandardSpanRecorder)
-	provider := tracetest.NewTracerProvider(tracetest.WithSpanRecorder(sr))
+	sr := new(oteltest.StandardSpanRecorder)
+	provider := oteltest.NewTracerProvider(oteltest.WithSpanRecorder(sr))
 
 	// Mock partition consumer controller
 	consumer := mocks.NewConsumer(t, sarama.NewConfig())
@@ -56,10 +55,10 @@ func TestWrapPartitionConsumer(t *testing.T) {
 }
 
 func TestWrapConsumer(t *testing.T) {
-	propagators := otelpropagators.TraceContext{}
+	propagators := propagation.TraceContext{}
 	// Mock provider
-	sr := new(tracetest.StandardSpanRecorder)
-	provider := tracetest.NewTracerProvider(tracetest.WithSpanRecorder(sr))
+	sr := new(oteltest.StandardSpanRecorder)
+	provider := oteltest.NewTracerProvider(oteltest.WithSpanRecorder(sr))
 
 	// Mock partition consumer controller
 	mockConsumer := mocks.NewConsumer(t, sarama.NewConfig())
@@ -75,11 +74,11 @@ func TestWrapConsumer(t *testing.T) {
 	consumeAndCheck(t, provider.Tracer(defaultTracerName), sr.Completed, mockPartitionConsumer, partitionConsumer)
 }
 
-func consumeAndCheck(t *testing.T, mt trace.Tracer, complFn func() []*tracetest.Span, mockPartitionConsumer *mocks.PartitionConsumer, partitionConsumer sarama.PartitionConsumer) {
+func consumeAndCheck(t *testing.T, mt trace.Tracer, complFn func() []*oteltest.Span, mockPartitionConsumer *mocks.PartitionConsumer, partitionConsumer sarama.PartitionConsumer) {
 	// Create message with span context
 	ctx, _ := mt.Start(context.Background(), "")
 	message := sarama.ConsumerMessage{Key: []byte("foo")}
-	propagators := otelpropagators.TraceContext{}
+	propagators := propagation.TraceContext{}
 	propagators.Inject(ctx, NewConsumerMessageCarrier(&message))
 
 	// Produce message
@@ -166,7 +165,7 @@ func TestConsumerConsumePartitionWithError(t *testing.T) {
 
 func BenchmarkWrapPartitionConsumer(b *testing.B) {
 	// Mock provider
-	provider := tracetest.NewTracerProvider()
+	provider := oteltest.NewTracerProvider()
 
 	mockPartitionConsumer, partitionConsumer := createMockPartitionConsumer(b)
 

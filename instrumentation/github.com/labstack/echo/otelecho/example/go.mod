@@ -10,8 +10,8 @@ replace (
 
 require (
 	github.com/labstack/echo/v4 v4.1.17
-	go.opentelemetry.io/contrib/instrumentation/github.com/labstack/echo/otelecho v0.13.0
-	go.opentelemetry.io/otel v0.13.0
-	go.opentelemetry.io/otel/exporters/stdout v0.13.0
-	go.opentelemetry.io/otel/sdk v0.13.0
+	go.opentelemetry.io/contrib/instrumentation/github.com/labstack/echo/otelecho v0.14.0
+	go.opentelemetry.io/otel v0.14.0
+	go.opentelemetry.io/otel/exporters/stdout v0.14.0
+	go.opentelemetry.io/otel/sdk v0.14.0
 )

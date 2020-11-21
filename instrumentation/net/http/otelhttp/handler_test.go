@@ -24,16 +24,15 @@ import (
 
 	"github.com/stretchr/testify/assert"
 
-	"go.opentelemetry.io/otel/api/metric/metrictest"
-	"go.opentelemetry.io/otel/api/trace"
-	"go.opentelemetry.io/otel/api/trace/tracetest"
 	"go.opentelemetry.io/otel/codes"
 	"go.opentelemetry.io/otel/label"
-	"go.opentelemetry.io/otel/propagators"
+	"go.opentelemetry.io/otel/oteltest"
+	"go.opentelemetry.io/otel/propagation"
 	"go.opentelemetry.io/otel/semconv"
+	"go.opentelemetry.io/otel/trace"
 )
 
-func assertMetricLabels(t *testing.T, expectedLabels []label.KeyValue, measurementBatches []metrictest.Batch) {
+func assertMetricLabels(t *testing.T, expectedLabels []label.KeyValue, measurementBatches []oteltest.Batch) {
 	for _, batch := range measurementBatches {
 		assert.ElementsMatch(t, expectedLabels, batch.Labels)
 	}
@@ -42,11 +41,11 @@ func assertMetricLabels(t *testing.T, expectedLabels []label.KeyValue, measureme
 func TestHandlerBasics(t *testing.T) {
 	rr := httptest.NewRecorder()
 
-	spanRecorder := new(tracetest.StandardSpanRecorder)
-	provider := tracetest.NewTracerProvider(
-		tracetest.WithSpanRecorder(spanRecorder),
+	spanRecorder := new(oteltest.StandardSpanRecorder)
+	provider := oteltest.NewTracerProvider(
+		oteltest.WithSpanRecorder(spanRecorder),
 	)
-	meterimpl, meterProvider := metrictest.NewMeterProvider()
+	meterimpl, meterProvider := oteltest.NewMeterProvider()
 
 	operation := "test_handler"
 
@@ -61,7 +60,7 @@ func TestHandlerBasics(t *testing.T) {
 		}), operation,
 		WithTracerProvider(provider),
 		WithMeterProvider(meterProvider),
-		WithPropagators(propagators.TraceContext{}),
+		WithPropagators(propagation.TraceContext{}),
 	)
 
 	r, err := http.NewRequest(http.MethodGet, "http://localhost/", strings.NewReader("foo"))
@@ -111,7 +110,7 @@ func TestHandlerBasics(t *testing.T) {
 
 func TestHandlerNoWrite(t *testing.T) {
 	rr := httptest.NewRecorder()
-	provider := tracetest.NewTracerProvider()
+	provider := oteltest.NewTracerProvider()
 
 	operation := "test_handler"
 	var span trace.Span
@@ -121,7 +120,7 @@ func TestHandlerNoWrite(t *testing.T) {
 			span = trace.SpanFromContext(r.Context())
 		}), operation,
 		WithTracerProvider(provider),
-		WithPropagators(propagators.TraceContext{}),
+		WithPropagators(propagation.TraceContext{}),
 	)
 
 	r, err := http.NewRequest(http.MethodGet, "http://localhost/", nil)
@@ -140,7 +139,7 @@ func TestHandlerNoWrite(t *testing.T) {
 	if got, expected := span.SpanContext().SpanID, expectSpanID; got != expected {
 		t.Fatalf("got %d, expected %d", got, expected)
 	}
-	if mockSpan, ok := span.(*tracetest.Span); ok {
+	if mockSpan, ok := span.(*oteltest.Span); ok {
 		if got, expected := mockSpan.StatusCode(), codes.Unset; got != expected {
 			t.Fatalf("got %q, expected %q", got, expected)
 		}
@@ -152,7 +151,7 @@ func TestHandlerNoWrite(t *testing.T) {
 func TestResponseWriterOptionalInterfaces(t *testing.T) {
 	rr := httptest.NewRecorder()
 
-	provider := tracetest.NewTracerProvider()
+	provider := oteltest.NewTracerProvider()
 
 	// ResponseRecorder implements the Flusher interface. Make sure the
 	// wrapped ResponseWriter passed to the handler still implements
