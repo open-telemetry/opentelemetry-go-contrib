@@ -48,6 +48,7 @@ func (detectorUtils *MockDetectorUtils) getContainerID() (string, error) {
 	return args.String(0), args.Error(1)
 }
 
+// Tests EKS resource detector running in EKS environment
 func TestEks(t *testing.T) {
 
 	detectorUtils := new(MockDetectorUtils)
@@ -74,6 +75,7 @@ func TestEks(t *testing.T) {
 	detectorUtils.AssertExpectations(t)
 }
 
+// Tests EKS resource detector not running in EKS environment
 func TestNotEks(t *testing.T) {
 
 	detectorUtils := new(MockDetectorUtils)

@@ -75,7 +75,7 @@ var _ resource.Detector = (*ResourceDetector)(nil)
 // Compile time assertion that eksDetectorUtils implements the detectorUtils interface.
 var _ detectorUtils = (*eksDetectorUtils)(nil)
 
-// Detect function detects associated resources when running in Amazon EKS environment.
+// Detect function collects associated resource attributes when running in Amazon EKS environment.
 func (detector *ResourceDetector) Detect(ctx context.Context) (*resource.Resource, error) {
 
 	isEks, err := isEks(detector.utils)
@@ -134,7 +134,8 @@ func isK8s(utils detectorUtils) bool {
 	return utils.fileExists(k8sTokenPath) && utils.fileExists(k8sCertPath)
 }
 
-// eksDetectorUtils is implementing the detectorUtils interface
+// fileExists checks if a file with a given filename exists
+// this function implements the detectorUtils interface
 func (eksUtils eksDetectorUtils) fileExists(filename string) bool {
 	info, err := os.Stat(filename)
 	if os.IsNotExist(err) {
@@ -143,28 +144,32 @@ func (eksUtils eksDetectorUtils) fileExists(filename string) bool {
 	return !info.IsDir()
 }
 
-// fetchString is implementing the detectorUtils interface
+// fetchString executes an HTTP request with a given HTTP Method and URL string
+// this function implements the detectorUtils interface
 func (eksUtils eksDetectorUtils) fetchString(httpMethod string, URL string) (string, error) {
+
+	// Create new HTTP request object
 	request, err := http.NewRequest(httpMethod, URL, nil)
 	if err != nil {
 		return "", fmt.Errorf("failed to create new HTTP request with method=%s, URL=%s", httpMethod, URL)
 	}
 
+	// Set HTTP request header with authentication credentials
 	authHeader, err := getK8sCredHeader()
 	if err != nil {
 		return "", err
 	}
-
 	request.Header.Set("Authorization", authHeader)
 
+	// Get certificate
 	caCert, err := ioutil.ReadFile(k8sCertPath)
 	if err != nil {
 		return "", fmt.Errorf("failed to read file with path %s", k8sCertPath)
 	}
-
 	caCertPool := x509.NewCertPool()
 	caCertPool.AppendCertsFromPEM(caCert)
 
+	// Set HTTP request timeout and add certificate
 	client := &http.Client{
 		Timeout: millisecondTimeOut * time.Millisecond,
 		Transport: &http.Transport{
@@ -174,11 +179,13 @@ func (eksUtils eksDetectorUtils) fetchString(httpMethod string, URL string) (str
 		},
 	}
 
+	// Execute HTTP request
 	response, err := client.Do(request)
 	if err != nil {
 		return "", fmt.Errorf("failed to execute HTTP request with method=%s, URL=%s", httpMethod, URL)
 	}
 
+	// Retrieve response body from HTTP request
 	body, err := ioutil.ReadAll(response.Body)
 	if err != nil {
 		return "", fmt.Errorf("failed to read response from HTTP request with method=%s, URL=%s", httpMethod, URL)
@@ -187,6 +194,7 @@ func (eksUtils eksDetectorUtils) fetchString(httpMethod string, URL string) (str
 	return string(body), nil
 }
 
+// getK8sCredHeader retrieves the kubernetes credential information
 func getK8sCredHeader() (string, error) {
 	content, err := ioutil.ReadFile(k8sTokenPath)
 	if err != nil {
@@ -196,12 +204,14 @@ func getK8sCredHeader() (string, error) {
 	return "Bearer " + string(content), nil
 }
 
+// getClusterName retrieves the clusterName resource attribute
 func getClusterName(utils detectorUtils) (string, error) {
 	resp, err := utils.fetchString("GET", k8sSvcURL + cwConfigmapPath)
 	if err != nil {
 		return "", fmt.Errorf("getClusterName() error: %s", err.Error())
 	}
 
+	// parse JSON object returned from HTTP request
 	var parsedResp JSONResponse
 	err = json.Unmarshal([]byte(resp), &parsedResp)
 	if err != nil {
@@ -212,12 +222,17 @@ func getClusterName(utils detectorUtils) (string, error) {
 	return clusterName, nil
 }
 
-// getContainerID is implementing the detectorUtils interface
+// getContainerID retrieves the containerID resource attribute
+// this function implements the detectorUtils interface
 func (eksUtils eksDetectorUtils) getContainerID() (string, error) {
+
+	// Read file
 	fileData, err := ioutil.ReadFile(defaultCgroupPath)
 	if err != nil {
 		return "", fmt.Errorf("getContainerID() error: cannot read file with path %s", defaultCgroupPath)
 	}
+
+	// Retrieve containerID from file
 	splitData := strings.Split(strings.TrimSpace(string(fileData)), "\n")
 	for _, str := range splitData {
 		if len(str) > containerIDLength {
