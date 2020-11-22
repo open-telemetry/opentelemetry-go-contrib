@@ -21,7 +21,6 @@ import (
 	"encoding/json"
 	"fmt"
 	"io/ioutil"
-	"log"
 	"net/http"
 	"os"
 	"strings"
@@ -80,7 +79,7 @@ var _ detectorUtils = (*eksDetectorUtils)(nil)
 func (detector *ResourceDetector) Detect(ctx context.Context) (*resource.Resource, error) {
 
 	isEks, err := isEks(detector.utils)
-	if hasProblem(err) {
+	if err != nil {
 		return nil, err
 	}
 
@@ -94,7 +93,7 @@ func (detector *ResourceDetector) Detect(ctx context.Context) (*resource.Resourc
 
 	// Get clusterName and append to labels
 	clusterName, err := getClusterName(detector.utils)
-	if hasProblem(err) {
+	if err != nil {
 		return nil, err
 	}
 	if clusterName != "" {
@@ -103,7 +102,7 @@ func (detector *ResourceDetector) Detect(ctx context.Context) (*resource.Resourc
 
 	// Get containerID and append to labels
 	containerID, err := detector.utils.getContainerID()
-	if hasProblem(err) {
+	if err != nil {
 		return nil, err
 	}
 	if containerID != "" {
@@ -123,8 +122,8 @@ func isEks(utils detectorUtils) (bool, error) {
 
 	// Make HTTP GET request
 	awsAuth, err := utils.fetchString("GET", k8sSvcURL+authConfigmapPath)
-	if hasProblem(err) {
-		return false, err
+	if err != nil {
+		return false, fmt.Errorf("isEks() error: %s", err.Error())
 	}
 
 	return awsAuth != "", nil
@@ -137,7 +136,6 @@ func isK8s(utils detectorUtils) bool {
 
 // eksDetectorUtils is implementing the detectorUtils interface
 func (eksUtils eksDetectorUtils) fileExists(filename string) bool {
-	fmt.Println("REAL HIT")
 	info, err := os.Stat(filename)
 	if os.IsNotExist(err) {
 		return false
@@ -148,19 +146,20 @@ func (eksUtils eksDetectorUtils) fileExists(filename string) bool {
 // fetchString is implementing the detectorUtils interface
 func (eksUtils eksDetectorUtils) fetchString(httpMethod string, URL string) (string, error) {
 	request, err := http.NewRequest(httpMethod, URL, nil)
-	if hasProblem(err) {
-		return "", err
+	if err != nil {
+		return "", fmt.Errorf("failed to create new HTTP request with method=%s, URL=%s", httpMethod, URL)
 	}
 
 	authHeader, err := getK8sCredHeader()
-	if hasProblem(err) {
+	if err != nil {
 		return "", err
 	}
+
 	request.Header.Set("Authorization", authHeader)
 
 	caCert, err := ioutil.ReadFile(k8sCertPath)
-	if hasProblem(err) {
-		return "", err
+	if err != nil {
+		return "", fmt.Errorf("failed to read file with path %s", k8sCertPath)
 	}
 
 	caCertPool := x509.NewCertPool()
@@ -176,13 +175,13 @@ func (eksUtils eksDetectorUtils) fetchString(httpMethod string, URL string) (str
 	}
 
 	response, err := client.Do(request)
-	if hasProblem(err) {
-		return "", err
+	if err != nil {
+		return "", fmt.Errorf("failed to execute HTTP request with method=%s, URL=%s", httpMethod, URL)
 	}
 
 	body, err := ioutil.ReadAll(response.Body)
-	if hasProblem(err) {
-		return "", err
+	if err != nil {
+		return "", fmt.Errorf("failed to read response from HTTP request with method=%s, URL=%s", httpMethod, URL)
 	}
 
 	return string(body), nil
@@ -190,8 +189,8 @@ func (eksUtils eksDetectorUtils) fetchString(httpMethod string, URL string) (str
 
 func getK8sCredHeader() (string, error) {
 	content, err := ioutil.ReadFile(k8sTokenPath)
-	if hasProblem(err) {
-		return "", err
+	if err != nil {
+		return "", fmt.Errorf("getK8sCredHeader() error: cannot read file with path %s", k8sTokenPath)
 	}
 
 	return "Bearer " + string(content), nil
@@ -199,14 +198,14 @@ func getK8sCredHeader() (string, error) {
 
 func getClusterName(utils detectorUtils) (string, error) {
 	resp, err := utils.fetchString("GET", k8sSvcURL+cwConfigmapPath)
-	if hasProblem(err) {
-		return "", err
+	if err != nil {
+		return "", fmt.Errorf("getClusterName() error: %s", err.Error())
 	}
 
 	var parsedResp JSONResponse
 	err = json.Unmarshal([]byte(resp), &parsedResp)
-	if hasProblem(err) {
-		return "", err
+	if err != nil {
+		return "", fmt.Errorf("getClusterName() error: cannot parse JSON %s", resp)
 	}
 	clusterName := parsedResp.Data.ClusterName
 
@@ -217,7 +216,7 @@ func getClusterName(utils detectorUtils) (string, error) {
 func (eksUtils eksDetectorUtils) getContainerID() (string, error) {
 	fileData, err := ioutil.ReadFile(defaultCgroupPath)
 	if err != nil {
-		return "", err
+		return "", fmt.Errorf("getContainerID() error: cannot read file with path %s", defaultCgroupPath)
 	}
 	splitData := strings.Split(strings.TrimSpace(string(fileData)), "\n")
 	for _, str := range splitData {
@@ -225,13 +224,5 @@ func (eksUtils eksDetectorUtils) getContainerID() (string, error) {
 			return str[len(str)-containerIDLength:], nil
 		}
 	}
-	return "", err
-}
-
-func hasProblem(err error) bool {
-	if err == nil {
-		return false
-	}
-	log.Fatalln(err)
-	return true
+	return "", fmt.Errorf("getContainerID() error: cannot read containerID from file %s", defaultCgroupPath)
 }
