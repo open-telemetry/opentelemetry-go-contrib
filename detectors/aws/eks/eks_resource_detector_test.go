@@ -52,13 +52,6 @@ func TestEks(t *testing.T) {
 
 	detectorUtils := new(MockDetectorUtils)
 
-	// Set EKS resource detector variables
-	k8sTokenPath := "/var/run/secrets/kubernetes.io/serviceaccount/token"
-	k8sCertPath := "/var/run/secrets/kubernetes.io/serviceaccount/ca.crt"
-	k8sSvcURL := "https://kubernetes.default.svc"
-	authConfigmapPath := "/api/v1/namespaces/kube-system/configmaps/aws-auth"
-	cwConfigmapPath := "/api/v1/namespaces/amazon-cloudwatch/configmaps/cluster-info"
-
 	// Mock functions and set expectations
 	detectorUtils.On("fileExists", k8sTokenPath).Return(true)
 	detectorUtils.On("fileExists", k8sCertPath).Return(true)
