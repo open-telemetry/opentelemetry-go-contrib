@@ -17,9 +17,9 @@ package otelgocql
 import (
 	"github.com/gocql/gocql"
 
-	"go.opentelemetry.io/otel/api/global"
-	"go.opentelemetry.io/otel/api/metric"
-	"go.opentelemetry.io/otel/api/trace"
+	"go.opentelemetry.io/otel"
+	"go.opentelemetry.io/otel/metric"
+	"go.opentelemetry.io/otel/trace"
 )
 
 // TracedSessionConfig provides configuration for sessions
@@ -90,7 +90,7 @@ func WithTracerProvider(provider trace.TracerProvider) TracedSessionOption {
 
 // WithMeterProvider will set the meter provider used to get a meter
 // for creating instruments.
-// Defaults to global.MeterProvider().
+// Defaults to otel.GetMeterProvider().
 func WithMeterProvider(provider metric.MeterProvider) TracedSessionOption {
 	return TracedSessionOptionFunc(func(c *TracedSessionConfig) {
 		c.meterProvider = provider
@@ -125,8 +125,8 @@ func WithConnectInstrumentation(enabled bool) TracedSessionOption {
 
 func newTracedSessionConfig(options ...TracedSessionOption) *TracedSessionConfig {
 	config := &TracedSessionConfig{
-		tracerProvider:    global.TracerProvider(),
-		meterProvider:     global.MeterProvider(),
+		tracerProvider:    otel.GetTracerProvider(),
+		meterProvider:     otel.GetMeterProvider(),
 		instrumentQuery:   true,
 		instrumentBatch:   true,
 		instrumentConnect: true,

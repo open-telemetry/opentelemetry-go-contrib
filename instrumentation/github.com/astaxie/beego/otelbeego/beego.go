@@ -21,7 +21,7 @@ import (
 	"go.opentelemetry.io/otel/codes"
 
 	"go.opentelemetry.io/contrib/instrumentation/net/http/otelhttp"
-	"go.opentelemetry.io/otel/api/trace"
+	"go.opentelemetry.io/otel/trace"
 
 	"github.com/astaxie/beego"
 )
@@ -98,11 +98,11 @@ func NewOTelBeegoMiddleWare(service string, options ...Option) beego.MiddleWare 
 // if you want to add a child span for the rendering of a template file.
 // Disable autorender before use, and call this function explicitly.
 func Render(c *beego.Controller) error {
-	ctx, span := span(c, renderTemplateSpanName)
+	_, span := span(c, renderTemplateSpanName)
 	defer span.End()
 	err := c.Render()
 	if err != nil {
-		span.RecordError(ctx, err)
+		span.RecordError(err)
 		span.SetStatus(codes.Error, "template failure")
 	}
 	return err
@@ -113,11 +113,11 @@ func Render(c *beego.Controller) error {
 // its string representation.
 // Disable autorender before use, and call this function explicitly.
 func RenderString(c *beego.Controller) (string, error) {
-	ctx, span := span(c, renderStringSpanName)
+	_, span := span(c, renderStringSpanName)
 	defer span.End()
 	str, err := c.RenderString()
 	if err != nil {
-		span.RecordError(ctx, err)
+		span.RecordError(err)
 		span.SetStatus(codes.Error, "render string failure")
 	}
 	return str, err
@@ -128,11 +128,11 @@ func RenderString(c *beego.Controller) (string, error) {
 // byte representation.
 // Disable autorender before use, and call this function explicitly.
 func RenderBytes(c *beego.Controller) ([]byte, error) {
-	ctx, span := span(c, renderBytesSpanName)
+	_, span := span(c, renderBytesSpanName)
 	defer span.End()
 	bytes, err := c.RenderBytes()
 	if err != nil {
-		span.RecordError(ctx, err)
+		span.RecordError(err)
 		span.SetStatus(codes.Error, "render bytes failure")
 	}
 	return bytes, err
