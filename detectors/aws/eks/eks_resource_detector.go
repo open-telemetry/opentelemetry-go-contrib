@@ -221,7 +221,7 @@ func (eksUtils eksDetectorUtils) getContainerID() (string, error) {
 	splitData := strings.Split(strings.TrimSpace(string(fileData)), "\n")
 	for _, str := range splitData {
 		if len(str) > containerIDLength {
-			return str[len(str)-containerIDLength:], nil
+			return str[len(str) - containerIDLength:], nil
 		}
 	}
 	return "", fmt.Errorf("getContainerID() error: cannot read containerID from file %s", defaultCgroupPath)
