@@ -50,19 +50,22 @@ type detectorUtils interface {
 	getContainerID() (string, error)
 }
 
+// This struct will implement the detectorUtils interface
 type eksDetectorUtils struct{}
 
-// ResourceDetector for detecting resources running on EKS
+// ResourceDetector for detecting resources running on Amazon EKS
 type ResourceDetector struct {
 	utils detectorUtils
 }
 
 // JSONResponse is used to parse the JSON response returned from calling HTTP GET to EKS
+// eg. {"data":{"cluster.name":"my-cluster"}}
 type JSONResponse struct {
 	Data DataObject `json:"data"`
 }
 
 // DataObject is used to parse the data attribute inside the JSON response returned from calling HTTP GET to EKS
+// eg. {"data":{"cluster.name":"my-cluster"}}
 type DataObject struct {
 	ClusterName string `json:"cluster.name"`
 }
@@ -73,7 +76,7 @@ var _ resource.Detector = (*ResourceDetector)(nil)
 // Compile time assertion that eksDetectorUtils implements the detectorUtils interface.
 var _ detectorUtils = (*eksDetectorUtils)(nil)
 
-// Detect detects associated resources when running with AWS EKS.
+// Detect function detects associated resources when running in Amazon EKS environment.
 func (detector *ResourceDetector) Detect(ctx context.Context) (*resource.Resource, error) {
 
 	isEks, err := isEks(detector.utils)
@@ -81,12 +84,15 @@ func (detector *ResourceDetector) Detect(ctx context.Context) (*resource.Resourc
 		return nil, err
 	}
 
+	// Return empty resource object if not running in EKS
 	if !isEks {
 		return resource.Empty(), nil
 	}
 
+	// Create variable to hold resource attributes
 	labels := []label.KeyValue{}
 
+	// Get clusterName and append to labels
 	clusterName, err := getClusterName(detector.utils)
 	if hasProblem(err) {
 		return nil, err
@@ -95,6 +101,7 @@ func (detector *ResourceDetector) Detect(ctx context.Context) (*resource.Resourc
 		labels = append(labels, semconv.K8SClusterNameKey.String(clusterName))
 	}
 
+	// Get containerID and append to labels
 	containerID, err := detector.utils.getContainerID()
 	if hasProblem(err) {
 		return nil, err
@@ -103,15 +110,18 @@ func (detector *ResourceDetector) Detect(ctx context.Context) (*resource.Resourc
 		labels = append(labels, semconv.ContainerIDKey.String(containerID))
 	}
 
+	// Return new resource object with clusterName and containerID as attributes
 	return resource.New(labels...), nil
 
 }
 
+// isEks checks if the current environment is running in EKS
 func isEks(utils detectorUtils) (bool, error) {
 	if !isK8s(utils) {
 		return false, nil
 	}
 
+	// Make HTTP GET request
 	awsAuth, err := utils.fetchString("GET", k8sSvcURL+authConfigmapPath)
 	if hasProblem(err) {
 		return false, err
@@ -120,6 +130,7 @@ func isEks(utils detectorUtils) (bool, error) {
 	return awsAuth != "", nil
 }
 
+// isK8s checks if the current environment is running in a Kubernetes environment
 func isK8s(utils detectorUtils) bool {
 	return utils.fileExists(k8sTokenPath) && utils.fileExists(k8sCertPath)
 }
