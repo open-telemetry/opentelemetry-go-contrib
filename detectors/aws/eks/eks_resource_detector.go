@@ -121,7 +121,7 @@ func isEks(utils detectorUtils) (bool, error) {
 	}
 
 	// Make HTTP GET request
-	awsAuth, err := utils.fetchString("GET", k8sSvcURL + authConfigmapPath)
+	awsAuth, err := utils.fetchString("GET", k8sSvcURL+authConfigmapPath)
 	if err != nil {
 		return false, fmt.Errorf("isEks() error: %s", err.Error())
 	}
@@ -206,7 +206,7 @@ func getK8sCredHeader() (string, error) {
 
 // getClusterName retrieves the clusterName resource attribute
 func getClusterName(utils detectorUtils) (string, error) {
-	resp, err := utils.fetchString("GET", k8sSvcURL + cwConfigmapPath)
+	resp, err := utils.fetchString("GET", k8sSvcURL+cwConfigmapPath)
 	if err != nil {
 		return "", fmt.Errorf("getClusterName() error: %s", err.Error())
 	}
@@ -236,7 +236,7 @@ func (eksUtils eksDetectorUtils) getContainerID() (string, error) {
 	splitData := strings.Split(strings.TrimSpace(string(fileData)), "\n")
 	for _, str := range splitData {
 		if len(str) > containerIDLength {
-			return str[len(str) - containerIDLength:], nil
+			return str[len(str)-containerIDLength:], nil
 		}
 	}
 	return "", fmt.Errorf("getContainerID() error: cannot read containerID from file %s", defaultCgroupPath)
