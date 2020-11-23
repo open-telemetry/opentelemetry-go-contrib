@@ -43,7 +43,7 @@ var (
 
 // Create interface for methods needing to be mocked
 type detectorUtils interface {
-	getHostName() (string, error)
+	getContainerName() (string, error)
 	getContainerID() (string, error)
 }
 
@@ -69,7 +69,7 @@ func (detector *ResourceDetector) Detect(ctx context.Context) (*resource.Resourc
 	if len(metadataURIV3) == 0 && len(metadataURIV4) == 0 {
 		return empty, errNotOnECS
 	}
-	hostName, err := detector.utils.getHostName()
+	hostName, err := detector.utils.getContainerName()
 	if err != nil {
 		return empty, err
 	}
@@ -101,6 +101,6 @@ func (ecsUtils ecsDetectorUtils) getContainerID() (string, error) {
 }
 
 // returns host name reported by the kernel
-func (ecsUtils ecsDetectorUtils) getHostName() (string, error) {
+func (ecsUtils ecsDetectorUtils) getContainerName() (string, error) {
 	return os.Hostname()
 }

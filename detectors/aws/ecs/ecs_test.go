@@ -16,7 +16,6 @@ package ecs
 
 import (
 	"context"
-	"fmt"
 	"os"
 	"testing"
 
@@ -35,11 +34,10 @@ type MockDetectorUtils struct {
 
 func (detectorUtils *MockDetectorUtils) getContainerID() (string, error) {
 	args := detectorUtils.Called()
-	fmt.Println("hit")
 	return args.String(0), args.Error(1)
 }
 
-func (detectorUtils *MockDetectorUtils) getHostName() (string, error) {
+func (detectorUtils *MockDetectorUtils) getContainerName() (string, error) {
 	args := detectorUtils.Called()
 	return args.String(0), args.Error(1)
 }
@@ -52,7 +50,7 @@ func TestDetect(t *testing.T) {
 
 	detectorUtils := new(MockDetectorUtils)
 
-	detectorUtils.On("getHostName").Return("container-Name", nil)
+	detectorUtils.On("getContainerName").Return("container-Name", nil)
 	detectorUtils.On("getContainerID").Return("0123456789A", nil)
 
 	labels := []label.KeyValue{
@@ -73,7 +71,7 @@ func TestDetectCannotReadContainerID(t *testing.T) {
 	os.Setenv(metadataV4EnvVar, "4")
 	detectorUtils := new(MockDetectorUtils)
 
-	detectorUtils.On("getHostName").Return("container-Name", nil)
+	detectorUtils.On("getContainerName").Return("container-Name", nil)
 	detectorUtils.On("getContainerID").Return("", errCannotReadContainerID)
 
 	detector := ResourceDetector{detectorUtils}
