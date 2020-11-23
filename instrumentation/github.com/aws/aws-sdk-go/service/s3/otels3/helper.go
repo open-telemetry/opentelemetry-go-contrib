@@ -15,8 +15,8 @@
 package otels3
 
 import (
-	"go.opentelemetry.io/otel/api/trace"
 	"go.opentelemetry.io/otel/label"
+	"go.opentelemetry.io/otel/trace"
 )
 
 // appendSpanAndTraceIDFromSpan extracts the trace id and span id from a span using the context field.

@@ -26,19 +26,19 @@ import (
 	"github.com/aws/aws-sdk-go/service/s3/s3iface"
 
 	"go.opentelemetry.io/otel"
-	"go.opentelemetry.io/otel/api/global"
-	"go.opentelemetry.io/otel/api/metric"
-	"go.opentelemetry.io/otel/api/trace"
 	"go.opentelemetry.io/otel/codes"
+	"go.opentelemetry.io/otel/metric"
+	"go.opentelemetry.io/otel/propagation"
+	"go.opentelemetry.io/otel/trace"
 )
 
-var instrumentationName = "github.com/aws/aws-sdk-go/aws/service/s3"
+var instrumentationName = "go.opentelemetry.io/contrib/instrumentation/github.com/aws/aws-sdk-go/service/s3/otels3"
 
 type instrumentedS3 struct {
 	s3iface.S3API
 	tracer          trace.Tracer
 	meter           metric.Meter
-	propagators     otel.TextMapPropagator
+	propagators     propagation.TextMapPropagator
 	counters        *counters
 	recorders       *recorders
 	spanCorrelation bool
@@ -188,9 +188,9 @@ func NewInstrumentedS3Client(s s3iface.S3API, opts ...Option) (s3iface.S3API, er
 	}
 
 	cfg := config{
-		TracerProvider: global.TracerProvider(),
-		MetricProvider: global.MeterProvider(),
-		Propagators:    global.TextMapPropagator(),
+		TracerProvider: otel.GetTracerProvider(),
+		MetricProvider: otel.GetMeterProvider(),
+		Propagators:    otel.GetTextMapPropagator(),
 	}
 	for _, opt := range opts {
 		opt.apply(&cfg)

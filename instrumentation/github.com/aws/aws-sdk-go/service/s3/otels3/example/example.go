@@ -24,14 +24,14 @@ import (
 
 	obsvsS3 "go.opentelemetry.io/contrib/instrumentation/github.com/aws/aws-sdk-go/service/s3/otels3"
 	mocks "go.opentelemetry.io/contrib/instrumentation/github.com/aws/aws-sdk-go/service/s3/otels3/mocks"
-	otelmetric "go.opentelemetry.io/otel/api/metric"
-	oteltrace "go.opentelemetry.io/otel/api/trace"
 	oteltracestdout "go.opentelemetry.io/otel/exporters/stdout"
-	"go.opentelemetry.io/otel/sdk/export/metric"
+	otelmetric "go.opentelemetry.io/otel/metric"
+	metricsdk "go.opentelemetry.io/otel/sdk/export/metric"
 	"go.opentelemetry.io/otel/sdk/metric/controller/push"
 	processor "go.opentelemetry.io/otel/sdk/metric/processor/basic"
 	"go.opentelemetry.io/otel/sdk/metric/selector/simple"
 	sdktrace "go.opentelemetry.io/otel/sdk/trace"
+	oteltrace "go.opentelemetry.io/otel/trace"
 )
 
 func main() {
@@ -95,7 +95,7 @@ func initMeter() otelmetric.MeterProvider {
 	selector := simple.NewWithExactDistribution()
 	exporter, _ := oteltracestdout.NewExporter(oteltracestdout.WithPrettyPrint())
 	pusher := push.New(
-		processor.New(selector, metric.PassThroughExporter),
+		processor.New(selector, metricsdk.StatelessExportKindSelector()),
 		exporter,
 	)
 	pusher.Start()
