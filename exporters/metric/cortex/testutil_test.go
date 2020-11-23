@@ -20,7 +20,8 @@ import (
 	"github.com/prometheus/prometheus/prompb"
 	"github.com/stretchr/testify/require"
 
-	"go.opentelemetry.io/otel/api/metric"
+	"go.opentelemetry.io/otel/metric"
+	"go.opentelemetry.io/otel/metric/number"
 	export "go.opentelemetry.io/otel/sdk/export/metric"
 	"go.opentelemetry.io/otel/sdk/export/metric/metrictest"
 	"go.opentelemetry.io/otel/sdk/metric/aggregator/aggregatortest"
@@ -35,12 +36,12 @@ import (
 func getSumCheckpoint(t *testing.T, values ...int64) export.CheckpointSet {
 	// Create checkpoint set with resource and descriptor
 	checkpointSet := metrictest.NewCheckpointSet(testResource)
-	desc := metric.NewDescriptor("metric_name", metric.CounterKind, metric.Int64NumberKind)
+	desc := metric.NewDescriptor("metric_name", metric.CounterInstrumentKind, number.Int64Kind)
 
 	// Create aggregation, add value, and update checkpointset
 	agg, ckpt := metrictest.Unslice2(sum.New(2))
 	for _, value := range values {
-		aggregatortest.CheckedUpdate(t, agg, metric.NewInt64Number(value), &desc)
+		aggregatortest.CheckedUpdate(t, agg, number.NewInt64Number(value), &desc)
 	}
 	require.NoError(t, agg.SynchronizedMove(ckpt, &desc))
 	checkpointSet.Add(&desc, ckpt)
@@ -52,12 +53,12 @@ func getSumCheckpoint(t *testing.T, values ...int64) export.CheckpointSet {
 func getLastValueCheckpoint(t *testing.T, values ...int64) export.CheckpointSet {
 	// Create checkpoint set with resource and descriptor
 	checkpointSet := metrictest.NewCheckpointSet(testResource)
-	desc := metric.NewDescriptor("metric_name", metric.ValueObserverKind, metric.Int64NumberKind)
+	desc := metric.NewDescriptor("metric_name", metric.ValueObserverInstrumentKind, number.Int64Kind)
 
 	// Create aggregation, add value, and update checkpointset
 	agg, ckpt := metrictest.Unslice2(lastvalue.New(2))
 	for _, value := range values {
-		aggregatortest.CheckedUpdate(t, agg, metric.NewInt64Number(value), &desc)
+		aggregatortest.CheckedUpdate(t, agg, number.NewInt64Number(value), &desc)
 	}
 	require.NoError(t, agg.SynchronizedMove(ckpt, &desc))
 	checkpointSet.Add(&desc, ckpt)
@@ -69,12 +70,12 @@ func getLastValueCheckpoint(t *testing.T, values ...int64) export.CheckpointSet 
 func getMMSCCheckpoint(t *testing.T, values ...float64) export.CheckpointSet {
 	// Create checkpoint set with resource and descriptor
 	checkpointSet := metrictest.NewCheckpointSet(testResource)
-	desc := metric.NewDescriptor("metric_name", metric.ValueRecorderKind, metric.Float64NumberKind)
+	desc := metric.NewDescriptor("metric_name", metric.ValueRecorderInstrumentKind, number.Float64Kind)
 
 	// Create aggregation, add value, and update checkpointset
 	agg, ckpt := metrictest.Unslice2(minmaxsumcount.New(2, &desc))
 	for _, value := range values {
-		aggregatortest.CheckedUpdate(t, agg, metric.NewFloat64Number(value), &desc)
+		aggregatortest.CheckedUpdate(t, agg, number.NewFloat64Number(value), &desc)
 	}
 	require.NoError(t, agg.SynchronizedMove(ckpt, &desc))
 	checkpointSet.Add(&desc, ckpt)
@@ -86,12 +87,12 @@ func getMMSCCheckpoint(t *testing.T, values ...float64) export.CheckpointSet {
 func getDistributionCheckpoint(t *testing.T) export.CheckpointSet {
 	// Create checkpoint set with resource and descriptor
 	checkpointSet := metrictest.NewCheckpointSet(testResource)
-	desc := metric.NewDescriptor("metric_name", metric.ValueRecorderKind, metric.Float64NumberKind)
+	desc := metric.NewDescriptor("metric_name", metric.ValueRecorderInstrumentKind, number.Float64Kind)
 
 	// Create aggregation, add value, and update checkpointset
 	agg, ckpt := metrictest.Unslice2(array.New(2))
 	for i := 0; i < 1000; i++ {
-		aggregatortest.CheckedUpdate(t, agg, metric.NewFloat64Number(float64(i)+0.5), &desc)
+		aggregatortest.CheckedUpdate(t, agg, number.NewFloat64Number(float64(i)+0.5), &desc)
 	}
 	require.NoError(t, agg.SynchronizedMove(ckpt, &desc))
 	checkpointSet.Add(&desc, ckpt)
@@ -103,13 +104,13 @@ func getDistributionCheckpoint(t *testing.T) export.CheckpointSet {
 func getHistogramCheckpoint(t *testing.T) export.CheckpointSet {
 	// Create checkpoint set with resource and descriptor
 	checkpointSet := metrictest.NewCheckpointSet(testResource)
-	desc := metric.NewDescriptor("metric_name", metric.ValueRecorderKind, metric.Float64NumberKind)
+	desc := metric.NewDescriptor("metric_name", metric.ValueRecorderInstrumentKind, number.Float64Kind)
 
 	// Create aggregation, add value, and update checkpointset
 	boundaries := []float64{100, 500, 900}
 	agg, ckpt := metrictest.Unslice2(histogram.New(2, &desc, boundaries))
 	for i := 0; i < 1000; i++ {
-		aggregatortest.CheckedUpdate(t, agg, metric.NewFloat64Number(float64(i)+0.5), &desc)
+		aggregatortest.CheckedUpdate(t, agg, number.NewFloat64Number(float64(i)+0.5), &desc)
 	}
 	require.NoError(t, agg.SynchronizedMove(ckpt, &desc))
 	checkpointSet.Add(&desc, ckpt)

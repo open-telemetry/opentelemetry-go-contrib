@@ -22,13 +22,12 @@ import (
 	"go.opentelemetry.io/contrib/instrumentation/github.com/astaxie/beego/otelbeego"
 
 	"go.opentelemetry.io/otel"
-	"go.opentelemetry.io/otel/api/global"
-	"go.opentelemetry.io/otel/api/trace"
 	"go.opentelemetry.io/otel/exporters/stdout"
-	"go.opentelemetry.io/otel/propagators"
+	"go.opentelemetry.io/otel/propagation"
 	"go.opentelemetry.io/otel/sdk/resource"
 	sdktrace "go.opentelemetry.io/otel/sdk/trace"
 	"go.opentelemetry.io/otel/semconv"
+	"go.opentelemetry.io/otel/trace"
 )
 
 type ExampleController struct {
@@ -38,7 +37,7 @@ type ExampleController struct {
 func (c *ExampleController) Get() {
 	ctx := c.Ctx.Request.Context()
 	span := trace.SpanFromContext(ctx)
-	span.AddEvent(ctx, "handling this...")
+	span.AddEvent("handling this...")
 	c.Ctx.WriteString("Hello, world!")
 }
 
@@ -62,12 +61,12 @@ func initTracer() {
 	// In a production application, use sdktrace.ProbabilitySampler with a desired probability.
 	tp := sdktrace.NewTracerProvider(sdktrace.WithConfig(sdktrace.Config{DefaultSampler: sdktrace.AlwaysSample()}),
 		sdktrace.WithSyncer(exporter),
-		sdktrace.WithResource(resource.New(semconv.ServiceNameKey.String("ExampleService"))))
+		sdktrace.WithResource(resource.NewWithAttributes(semconv.ServiceNameKey.String("ExampleService"))))
 	if err != nil {
 		log.Fatal(err)
 	}
-	global.SetTracerProvider(tp)
-	global.SetTextMapPropagator(otel.NewCompositeTextMapPropagator(propagators.TraceContext{}, propagators.Baggage{}))
+	otel.SetTracerProvider(tp)
+	otel.SetTextMapPropagator(propagation.NewCompositeTextMapPropagator(propagation.TraceContext{}, propagation.Baggage{}))
 }
 
 func main() {
