@@ -12,7 +12,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package aws
+package ecs
 
 import (
 	"context"
@@ -32,9 +32,6 @@ type MockDetectorUtils struct {
 	mock.Mock
 }
 
-type private struct {
-}
-
 func (detectorUtils *MockDetectorUtils) getContainerID() (string, error) {
 	args := detectorUtils.Called()
 	return args.String(0), args.Error(1)
@@ -50,11 +47,11 @@ func TestDetect(t *testing.T) {
 		semconv.ContainerNameKey.String("container-Name"),
 		semconv.ContainerIDKey.String("0123456789A"),
 	}
-	expectedResource := resource.New(labels...)
+	expectedResource, err := resource.New(labels...)
 
 	//Call ECS Resource detector to detect resources
-	ecsDetector := ECS{}
-	resource, _ := ecsDetector.Detect(context.TODO())
+	ecs := ECS{}
+	resource, _ := ecs.Detect(context.TODO())
 
 	assert.Equal(t, resource.Attributes(), expectedResource.Attributes(), "Resource returned is incorrect")
 }

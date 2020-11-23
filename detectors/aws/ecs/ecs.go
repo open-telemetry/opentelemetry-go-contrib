@@ -12,7 +12,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package aws
+package ecs
 
 import (
 	"context"
@@ -45,10 +45,9 @@ var (
 type ECS struct{}
 
 // compile time assertion that AwsEksResourceDetector implements the resource.Detector interface.
-
 var _ resource.Detector = (*ECS)(nil)
 
-// Detect detects associated resources when running on ECS environment.
+// Detect finds associated resources when running on ECS environment.
 func (ecs *ECS) Detect(ctx context.Context) (*resource.Resource, error) {
 	metadataUri := os.Getenv(tmde3EnvVar)
 	metadataUriV4 := os.Getenv(tmde4EnvVar)
@@ -72,6 +71,7 @@ func (ecs *ECS) Detect(ctx context.Context) (*resource.Resource, error) {
 	return resource.New(labels...), nil
 }
 
+// Reads default C Group path and returns docker container ID
 func getContainerID() (string, error) {
 	fileData, err := ioutil.ReadFile(defaultCgroupPath)
 	if err != nil {
