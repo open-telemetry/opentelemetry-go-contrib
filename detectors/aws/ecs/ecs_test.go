@@ -16,6 +16,7 @@ package ecs
 
 import (
 	"context"
+	"fmt"
 	"os"
 	"testing"
 
@@ -34,32 +35,58 @@ type MockDetectorUtils struct {
 
 func (detectorUtils *MockDetectorUtils) getContainerID() (string, error) {
 	args := detectorUtils.Called()
+	fmt.Println("hit")
+	return args.String(0), args.Error(1)
+}
+
+func (detectorUtils *MockDetectorUtils) getHostName() (string, error) {
+	args := detectorUtils.Called()
 	return args.String(0), args.Error(1)
 }
 
 func TestDetect(t *testing.T) {
+	os.Clearenv()
+	os.Setenv(tmde3EnvVar, "3")
+	os.Setenv(tmde4EnvVar, "4")
+
 	detectorUtils := new(MockDetectorUtils)
 
-	detectorUtils.On("Hostname").Return("container-Name")
+	detectorUtils.On("getHostName").Return("container-Name", nil)
 	detectorUtils.On("getContainerID").Return("0123456789A", nil)
 
 	labels := []label.KeyValue{
 		semconv.ContainerNameKey.String("container-Name"),
 		semconv.ContainerIDKey.String("0123456789A"),
 	}
-	expectedResource, err := resource.New(labels...)
+	expectedResource := resource.NewWithAttributes(labels...)
 
 	//Call ECS Resource detector to detect resources
-	ecs := ECS{}
-	resource, _ := ecs.Detect(context.TODO())
+	detector := ResourceDetector{detectorUtils}
+	resource, _ := detector.Detect(context.Background())
 
-	assert.Equal(t, resource.Attributes(), expectedResource.Attributes(), "Resource returned is incorrect")
+	assert.Equal(t, resource, expectedResource, "Resource returned is incorrect")
 }
 
-func TestNotOnEcs(t *testing.T) {
+func TestDetectCannotReadContainerID(t *testing.T) {
 	os.Clearenv()
-	ecs := ECS{}
-	resource, err := ecs.Detect(context.TODO())
+	os.Setenv(tmde3EnvVar, "3")
+	os.Setenv(tmde4EnvVar, "4")
+	detectorUtils := new(MockDetectorUtils)
+
+	detectorUtils.On("getHostName").Return("container-Name", nil)
+	detectorUtils.On("getContainerID").Return("", errCannotReadContainerID)
+
+	detector := ResourceDetector{detectorUtils}
+	resource, err := detector.Detect(context.Background())
+
+	assert.Equal(t, errCannotReadContainerID, err)
+	assert.Equal(t, 0, len(resource.Attributes()))
+}
+
+func TestReturnsIfNoEnvVars(t *testing.T) {
+	os.Clearenv()
+	detector := ResourceDetector{}
+	resource, err := detector.Detect(context.Background())
 
 	assert.Equal(t, errNotOnECS, err)
 	assert.Equal(t, 0, len(resource.Attributes()))

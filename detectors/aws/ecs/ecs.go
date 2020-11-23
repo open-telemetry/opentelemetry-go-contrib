@@ -36,30 +36,44 @@ const (
 
 var (
 	empty                    = resource.Empty()
-	errCannotReadContainerId = errors.New("failed to read container ID from cGroupFile")
+	errCannotReadContainerID = errors.New("failed to read container ID from cGroupFile")
 	errCannotReadCGroupFile  = errors.New("ECS resource detector failed to read cGroupFile")
 	errNotOnECS              = errors.New("process is not on ECS, cannot detect environment variables from ECS")
 )
 
-// ecs collects resource information from Elastic Container Service environment
-type ECS struct{}
+// Create interface for methods needing to be mocked
+type detectorUtils interface {
+	getHostName() (string, error)
+	getContainerID() (string, error)
+}
 
-// compile time assertion that AwsEksResourceDetector implements the resource.Detector interface.
-var _ resource.Detector = (*ECS)(nil)
+// struct implements detectorUtils interface
+type ecsDetectorUtils struct{}
+
+// resource detector collects resource information from Elastic Container Service environment
+type ResourceDetector struct {
+	utils detectorUtils
+}
+
+// compile time assertion that ecsDetectorUtils implements detectorUtils interface
+var _ detectorUtils = (*ecsDetectorUtils)(nil)
+
+// compile time assertion that resource detector implements the resource.Detector interface.
+var _ resource.Detector = (*ResourceDetector)(nil)
 
 // Detect finds associated resources when running on ECS environment.
-func (ecs *ECS) Detect(ctx context.Context) (*resource.Resource, error) {
-	metadataUri := os.Getenv(tmde3EnvVar)
-	metadataUriV4 := os.Getenv(tmde4EnvVar)
+func (detector *ResourceDetector) Detect(ctx context.Context) (*resource.Resource, error) {
+	metadataURIV3 := os.Getenv(tmde3EnvVar)
+	metadataURIV4 := os.Getenv(tmde4EnvVar)
 
-	if len(metadataUri) == 0 && len(metadataUriV4) == 0 {
+	if len(metadataURIV3) == 0 && len(metadataURIV4) == 0 {
 		return empty, errNotOnECS
 	}
-	hostName, err := os.Hostname()
+	hostName, err := detector.utils.getHostName()
 	if err != nil {
 		return empty, err
 	}
-	containerID, err := getContainerID()
+	containerID, err := detector.utils.getContainerID()
 	if err != nil {
 		return empty, err
 	}
@@ -68,11 +82,11 @@ func (ecs *ECS) Detect(ctx context.Context) (*resource.Resource, error) {
 		semconv.ContainerIDKey.String(containerID),
 	}
 
-	return resource.New(labels...), nil
+	return resource.NewWithAttributes(labels...), nil
 }
 
-// Reads default C Group path and returns docker container ID
-func getContainerID() (string, error) {
+// returns docker container ID from default c group path
+func (ecsUtils ecsDetectorUtils) getContainerID() (string, error) {
 	fileData, err := ioutil.ReadFile(defaultCgroupPath)
 	if err != nil {
 		return "", errCannotReadCGroupFile
@@ -83,5 +97,10 @@ func getContainerID() (string, error) {
 			return str[len(str)-containerIDLength:], nil
 		}
 	}
-	return "", errCannotReadContainerId
+	return "", errCannotReadContainerID
+}
+
+// returns host name reported by the kernel
+func (ecsUtils ecsDetectorUtils) getHostName() (string, error) {
+	return os.Hostname()
 }
