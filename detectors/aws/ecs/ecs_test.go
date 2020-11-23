@@ -47,8 +47,8 @@ func (detectorUtils *MockDetectorUtils) getHostName() (string, error) {
 //succesfully return resource when process is running on Amazon ECS environment
 func TestDetect(t *testing.T) {
 	os.Clearenv()
-	os.Setenv(tmde3EnvVar, "3")
-	os.Setenv(tmde4EnvVar, "4")
+	os.Setenv(metadataV3EnvVar, "3")
+	os.Setenv(metadataV4EnvVar, "4")
 
 	detectorUtils := new(MockDetectorUtils)
 
@@ -69,8 +69,8 @@ func TestDetect(t *testing.T) {
 //returns empty resource when detector cannot read container ID
 func TestDetectCannotReadContainerID(t *testing.T) {
 	os.Clearenv()
-	os.Setenv(tmde3EnvVar, "3")
-	os.Setenv(tmde4EnvVar, "4")
+	os.Setenv(metadataV3EnvVar, "3")
+	os.Setenv(metadataV4EnvVar, "4")
 	detectorUtils := new(MockDetectorUtils)
 
 	detectorUtils.On("getHostName").Return("container-Name", nil)

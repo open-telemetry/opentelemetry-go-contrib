@@ -28,8 +28,8 @@ import (
 
 const (
 	TypeStr           = "ecs"
-	tmde3EnvVar       = "ECS_CONTAINER_METADATA_URI"
-	tmde4EnvVar       = "ECS_CONTAINER_METADATA_URI_V4"
+	metadataV3EnvVar  = "ECS_CONTAINER_METADATA_URI"
+	metadataV4EnvVar  = "ECS_CONTAINER_METADATA_URI_V4"
 	containerIDLength = 64
 	defaultCgroupPath = "/proc/self/cgroup"
 )
@@ -63,8 +63,8 @@ var _ resource.Detector = (*ResourceDetector)(nil)
 
 // Detect finds associated resources when running on ECS environment.
 func (detector *ResourceDetector) Detect(ctx context.Context) (*resource.Resource, error) {
-	metadataURIV3 := os.Getenv(tmde3EnvVar)
-	metadataURIV4 := os.Getenv(tmde4EnvVar)
+	metadataURIV3 := os.Getenv(metadataV3EnvVar)
+	metadataURIV4 := os.Getenv(metadataV4EnvVar)
 
 	if len(metadataURIV3) == 0 && len(metadataURIV4) == 0 {
 		return empty, errNotOnECS
