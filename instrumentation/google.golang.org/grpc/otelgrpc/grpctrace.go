@@ -20,9 +20,10 @@ import (
 	"google.golang.org/grpc/metadata"
 
 	"go.opentelemetry.io/otel"
-	"go.opentelemetry.io/otel/api/global"
-	"go.opentelemetry.io/otel/api/trace"
+	"go.opentelemetry.io/otel/baggage"
 	"go.opentelemetry.io/otel/label"
+	"go.opentelemetry.io/otel/propagation"
+	"go.opentelemetry.io/otel/trace"
 )
 
 const (
@@ -34,7 +35,7 @@ const (
 
 // config is a group of options for this instrumentation.
 type config struct {
-	Propagators    otel.TextMapPropagator
+	Propagators    propagation.TextMapPropagator
 	TracerProvider trace.TracerProvider
 }
 
@@ -46,8 +47,8 @@ type Option interface {
 // newConfig returns a config configured with all the passed Options.
 func newConfig(opts []Option) *config {
 	c := &config{
-		Propagators:    global.TextMapPropagator(),
-		TracerProvider: global.TracerProvider(),
+		Propagators:    otel.GetTextMapPropagator(),
+		TracerProvider: otel.GetTracerProvider(),
 	}
 	for _, o := range opts {
 		o.Apply(c)
@@ -55,7 +56,7 @@ func newConfig(opts []Option) *config {
 	return c
 }
 
-type propagatorsOption struct{ p otel.TextMapPropagator }
+type propagatorsOption struct{ p propagation.TextMapPropagator }
 
 func (o propagatorsOption) Apply(c *config) {
 	c.Propagators = o.p
@@ -63,7 +64,7 @@ func (o propagatorsOption) Apply(c *config) {
 
 // WithPropagators returns an Option to use the Propagators when extracting
 // and injecting trace context from requests.
-func WithPropagators(p otel.TextMapPropagator) Option {
+func WithPropagators(p propagation.TextMapPropagator) Option {
 	return propagatorsOption{p: p}
 }
 
@@ -114,7 +115,7 @@ func Extract(ctx context.Context, metadata *metadata.MD, opts ...Option) ([]labe
 		metadata: metadata,
 	})
 
-	labelSet := otel.Baggage(ctx)
+	labelSet := baggage.Set(ctx)
 
 	return (&labelSet).ToSlice(), trace.RemoteSpanContextFromContext(ctx)
 }

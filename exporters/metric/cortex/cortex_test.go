@@ -30,7 +30,7 @@ import (
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 
-	"go.opentelemetry.io/otel/api/global"
+	"go.opentelemetry.io/otel"
 	"go.opentelemetry.io/otel/label"
 	"go.opentelemetry.io/otel/sdk/export/metric"
 	export "go.opentelemetry.io/otel/sdk/export/metric"
@@ -66,13 +66,13 @@ var validConfig = Config{
 	Quantiles: []float64{0, 0.25, 0.5, 0.75, 1},
 }
 
-var testResource = resource.New(label.String("R", "V"))
+var testResource = resource.NewWithAttributes(label.String("R", "V"))
 var mockTime int64 = int64(time.Nanosecond) * time.Time{}.UnixNano() / int64(time.Millisecond)
 
 func TestExportKindFor(t *testing.T) {
 	exporter := Exporter{}
 	got := exporter.ExportKindFor(nil, aggregation.Kind(rune(0)))
-	want := metric.CumulativeExporter
+	want := metric.CumulativeExportKind
 
 	if got != want {
 		t.Errorf("ExportKindFor() =  %q, want %q", got, want)
@@ -195,7 +195,7 @@ func TestInstallNewPipeline(t *testing.T) {
 	if err != nil {
 		t.Fatalf("Failed to create install pipeline with error %v", err)
 	}
-	if global.MeterProvider() != pusher.MeterProvider() {
+	if otel.GetMeterProvider() != pusher.MeterProvider() {
 		t.Fatalf("Failed to register push Controller provider globally")
 	}
 }

@@ -23,40 +23,22 @@ import (
 	"testing"
 	"time"
 
-	"github.com/stretchr/testify/require"
-
-	"go.opentelemetry.io/otel/api/metric"
-	"go.opentelemetry.io/otel/api/trace"
-	"go.opentelemetry.io/otel/semconv"
-
 	"github.com/gocql/gocql"
 	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 
-	mockmeter "go.opentelemetry.io/contrib/internal/metric"
-	mocktracer "go.opentelemetry.io/contrib/internal/trace"
 	"go.opentelemetry.io/contrib/internal/util"
-
 	"go.opentelemetry.io/otel/label"
+	"go.opentelemetry.io/otel/metric/number"
+	"go.opentelemetry.io/otel/oteltest"
+	"go.opentelemetry.io/otel/semconv"
+	"go.opentelemetry.io/otel/trace"
 )
 
 const (
 	keyspace  string = "gotest"
 	tableName string = "test_table"
 )
-
-type mockTracerProvider struct {
-	tracer *mocktracer.Tracer
-}
-
-func (p *mockTracerProvider) Tracer(name string, options ...trace.TracerOption) trace.Tracer {
-	return p.tracer
-}
-
-func newTracerProvider() *mockTracerProvider {
-	return &mockTracerProvider{
-		mocktracer.NewTracer(instrumentationName),
-	}
-}
 
 type mockConnectObserver struct {
 	callCount int
@@ -70,17 +52,18 @@ type testRecord struct {
 	name       string
 	meterName  string
 	labels     []label.KeyValue
-	number     metric.Number
-	numberKind metric.NumberKind
+	number     number.Number
+	numberKind number.Kind
 }
 
 func TestQuery(t *testing.T) {
 	defer afterEach()
 	cluster := getCluster()
-	tracerProvider := newTracerProvider()
-	meterImpl, meterProvider := mockmeter.NewMeterProvider()
+	sr := new(oteltest.StandardSpanRecorder)
+	tracerProvider := oteltest.NewTracerProvider(oteltest.WithSpanRecorder(sr))
+	meterImpl, meterProvider := oteltest.NewMeterProvider()
 
-	ctx, parentSpan := tracerProvider.tracer.Start(context.Background(), "gocql-test")
+	ctx, parentSpan := tracerProvider.Tracer(instrumentationName).Start(context.Background(), "gocql-test")
 
 	session, err := NewSessionWithTracing(
 		ctx,
@@ -103,7 +86,7 @@ func TestQuery(t *testing.T) {
 	parentSpan.End()
 
 	// Get the spans and ensure that they are child spans to the local parent
-	spans := tracerProvider.tracer.EndedSpans()
+	spans := sr.Completed()
 
 	// Collect all the connection spans
 	// total spans:
@@ -114,12 +97,12 @@ func TestQuery(t *testing.T) {
 	// Verify attributes are correctly added to the spans. Omit the one local span
 	for _, span := range spans[0 : len(spans)-1] {
 
-		switch span.Name {
+		switch span.Name() {
 		case insertStmt:
-			assert.Equal(t, insertStmt, span.Attributes[semconv.DBStatementKey].AsString())
-			assert.Equal(t, parentSpan.SpanContext().SpanID.String(), span.ParentSpanID.String())
+			assert.Equal(t, insertStmt, span.Attributes()[semconv.DBStatementKey].AsString())
+			assert.Equal(t, parentSpan.SpanContext().SpanID.String(), span.ParentSpanID().String())
 		default:
-			t.Fatalf("unexpected span name %s", span.Name)
+			t.Fatalf("unexpected span name %s", span.Name())
 		}
 		assertConnectionLevelAttributes(t, span)
 	}
@@ -194,10 +177,11 @@ func TestQuery(t *testing.T) {
 func TestBatch(t *testing.T) {
 	defer afterEach()
 	cluster := getCluster()
-	tracerProvider := newTracerProvider()
-	meterImpl, meterProvider := mockmeter.NewMeterProvider()
+	sr := new(oteltest.StandardSpanRecorder)
+	tracerProvider := oteltest.NewTracerProvider(oteltest.WithSpanRecorder(sr))
+	meterImpl, meterProvider := oteltest.NewMeterProvider()
 
-	ctx, parentSpan := tracerProvider.tracer.Start(context.Background(), "gocql-test")
+	ctx, parentSpan := tracerProvider.Tracer(instrumentationName).Start(context.Background(), "gocql-test")
 
 	session, err := NewSessionWithTracing(
 		ctx,
@@ -222,16 +206,16 @@ func TestBatch(t *testing.T) {
 
 	parentSpan.End()
 
-	spans := tracerProvider.tracer.EndedSpans()
+	spans := sr.Completed()
 	// total spans:
 	// 1 span for the query
 	// 1 span for the local span
 	if assert.Len(t, spans, 2) {
 		span := spans[0]
-		assert.Equal(t, cassBatchQueryName, span.Name)
-		assert.Equal(t, parentSpan.SpanContext().SpanID, span.ParentSpanID)
+		assert.Equal(t, cassBatchQueryName, span.Name())
+		assert.Equal(t, parentSpan.SpanContext().SpanID, span.ParentSpanID())
 		assert.Equal(t, "db.cassandra.batch.query",
-			span.Attributes[semconv.DBOperationKey].AsString(),
+			span.Attributes()[semconv.DBOperationKey].AsString(),
 		)
 		assertConnectionLevelAttributes(t, span)
 	}
@@ -287,8 +271,9 @@ func TestBatch(t *testing.T) {
 func TestConnection(t *testing.T) {
 	defer afterEach()
 	cluster := getCluster()
-	tracerProvider := newTracerProvider()
-	meterImpl, meterProvider := mockmeter.NewMeterProvider()
+	sr := new(oteltest.StandardSpanRecorder)
+	tracerProvider := oteltest.NewTracerProvider(oteltest.WithSpanRecorder(sr))
+	meterImpl, meterProvider := oteltest.NewMeterProvider()
 	connectObserver := &mockConnectObserver{0}
 	ctx := context.Background()
 
@@ -303,14 +288,14 @@ func TestConnection(t *testing.T) {
 	defer session.Close()
 	require.NoError(t, session.AwaitSchemaAgreement(ctx))
 
-	spans := tracerProvider.tracer.EndedSpans()
+	spans := sr.Completed()
 
 	assert.Less(t, 0, connectObserver.callCount)
 
 	// Verify the span attributes
 	for _, span := range spans {
-		assert.Equal(t, cassConnectName, span.Name)
-		assert.Equal(t, "db.cassandra.connect", span.Attributes[semconv.DBOperationKey].AsString())
+		assert.Equal(t, cassConnectName, span.Name())
+		assert.Equal(t, "db.cassandra.connect", span.Attributes()[semconv.DBOperationKey].AsString())
 		assertConnectionLevelAttributes(t, span)
 	}
 
@@ -357,16 +342,16 @@ func TestHostOrIP(t *testing.T) {
 	require.Empty(t, attribute.Value.AsString())
 }
 
-func assertConnectionLevelAttributes(t *testing.T, span *mocktracer.Span) {
-	assert.Equal(t, span.Attributes[semconv.DBSystemKey].AsString(),
+func assertConnectionLevelAttributes(t *testing.T, span *oteltest.Span) {
+	assert.Equal(t, span.Attributes()[semconv.DBSystemKey].AsString(),
 		semconv.DBSystemCassandra.Value.AsString(),
 	)
-	assert.Equal(t, "127.0.0.1", span.Attributes[semconv.NetPeerIPKey].AsString())
-	assert.Equal(t, int32(9042), span.Attributes[semconv.NetPeerPortKey].AsInt32())
-	assert.Contains(t, span.Attributes, cassVersionKey)
-	assert.Contains(t, span.Attributes, cassHostIDKey)
-	assert.Equal(t, "up", strings.ToLower(span.Attributes[cassHostStateKey].AsString()))
-	assert.Equal(t, trace.SpanKindClient, span.Kind)
+	assert.Equal(t, "127.0.0.1", span.Attributes()[semconv.NetPeerIPKey].AsString())
+	assert.Equal(t, int32(9042), span.Attributes()[semconv.NetPeerPortKey].AsInt32())
+	assert.Contains(t, span.Attributes(), cassVersionKey)
+	assert.Contains(t, span.Attributes(), cassHostIDKey)
+	assert.Equal(t, "up", strings.ToLower(span.Attributes()[cassHostStateKey].AsString()))
+	assert.Equal(t, trace.SpanKindClient, span.SpanKind())
 }
 
 // getCluster creates a gocql ClusterConfig with the appropriate
@@ -381,7 +366,7 @@ func getCluster() *gocql.ClusterConfig {
 
 // obtainTestRecords creates a slice of testRecord with values
 // obtained from measurements
-func obtainTestRecords(mbs []mockmeter.Batch) []testRecord {
+func obtainTestRecords(mbs []oteltest.Batch) []testRecord {
 	var records []testRecord
 	for _, mb := range mbs {
 		for _, m := range mb.Measurements {

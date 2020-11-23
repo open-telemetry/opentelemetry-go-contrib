@@ -20,9 +20,9 @@ import (
 
 	"github.com/Shopify/sarama"
 
-	"go.opentelemetry.io/otel/api/trace"
 	"go.opentelemetry.io/otel/label"
 	"go.opentelemetry.io/otel/semconv"
+	"go.opentelemetry.io/otel/trace"
 )
 
 type consumerMessagesDispatcher interface {

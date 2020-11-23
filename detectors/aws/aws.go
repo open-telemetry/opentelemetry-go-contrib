@@ -77,7 +77,7 @@ func (aws *AWS) Detect(ctx context.Context) (*resource.Resource, error) {
 		err = fmt.Errorf("%w: %s", resource.ErrPartialResource, m.errs)
 	}
 
-	return resource.New(labels...), err
+	return resource.NewWithAttributes(labels...), err
 }
 
 func (aws *AWS) client() (client, error) {

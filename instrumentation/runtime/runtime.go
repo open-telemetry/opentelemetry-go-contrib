@@ -21,8 +21,8 @@ import (
 	"time"
 
 	"go.opentelemetry.io/contrib"
-	"go.opentelemetry.io/otel/api/global"
-	"go.opentelemetry.io/otel/api/metric"
+	"go.opentelemetry.io/otel"
+	"go.opentelemetry.io/otel/metric"
 	"go.opentelemetry.io/otel/unit"
 )
 
@@ -89,7 +89,7 @@ func (o metricProviderOption) ApplyRuntime(c *config) {
 // newConfig computes a config from the supplied Options.
 func newConfig(opts ...Option) config {
 	c := config{
-		MeterProvider:               global.MeterProvider(),
+		MeterProvider:               otel.GetMeterProvider(),
 		MinimumReadMemStatsInterval: DefaultMinimumReadMemStatsInterval,
 	}
 	for _, opt := range opts {
@@ -105,7 +105,7 @@ func Start(opts ...Option) error {
 		c.MinimumReadMemStatsInterval = DefaultMinimumReadMemStatsInterval
 	}
 	if c.MeterProvider == nil {
-		c.MeterProvider = global.MeterProvider()
+		c.MeterProvider = otel.GetMeterProvider()
 	}
 	r := &runtime{
 		meter: c.MeterProvider.Meter(

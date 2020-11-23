@@ -39,7 +39,7 @@ import (
 	"github.com/gocql/gocql"
 
 	"go.opentelemetry.io/contrib/instrumentation/github.com/gocql/gocql/otelgocql"
-	"go.opentelemetry.io/otel/api/global"
+	"go.opentelemetry.io/otel"
 	"go.opentelemetry.io/otel/exporters/metric/prometheus"
 	zipkintrace "go.opentelemetry.io/otel/exporters/trace/zipkin"
 )
@@ -53,7 +53,7 @@ func main() {
 	initTracer()
 	initDb()
 
-	ctx, span := global.Tracer(
+	ctx, span := otel.Tracer(
 		"go.opentelemetry.io/contrib/instrumentation/github.com/gocql/gocql/otelgocql/example",
 	).Start(context.Background(), "begin example")
 

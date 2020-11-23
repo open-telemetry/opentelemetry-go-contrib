@@ -21,8 +21,8 @@ import (
 	"time"
 
 	"go.opentelemetry.io/contrib/exporters/metric/cortex"
-	"go.opentelemetry.io/otel/api/metric"
 	"go.opentelemetry.io/otel/label"
+	"go.opentelemetry.io/otel/metric"
 	"go.opentelemetry.io/otel/sdk/metric/controller/push"
 	"go.opentelemetry.io/otel/sdk/resource"
 
@@ -39,7 +39,7 @@ func main() {
 
 	// Create and install the exporter. Additionally, set the push interval to 5 seconds
 	// and add a resource to the controller.
-	pusher, err := cortex.InstallNewPipeline(*config, push.WithPeriod(5*time.Second), push.WithResource(resource.New(label.String("R", "V"))))
+	pusher, err := cortex.InstallNewPipeline(*config, push.WithPeriod(5*time.Second), push.WithResource(resource.NewWithAttributes(label.String("R", "V"))))
 	if err != nil {
 		fmt.Printf("Error: %v", err)
 	}

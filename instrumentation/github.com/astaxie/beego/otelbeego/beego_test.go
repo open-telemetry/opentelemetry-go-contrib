@@ -26,37 +26,18 @@ import (
 	"strings"
 	"testing"
 
+	"go.opentelemetry.io/contrib/propagators/b3"
 	"go.opentelemetry.io/otel"
-	"go.opentelemetry.io/otel/api/global"
-	"go.opentelemetry.io/otel/api/trace"
 	"go.opentelemetry.io/otel/label"
+	"go.opentelemetry.io/otel/oteltest"
+	"go.opentelemetry.io/otel/propagation"
 	"go.opentelemetry.io/otel/semconv"
-
-	"github.com/stretchr/testify/require"
+	"go.opentelemetry.io/otel/trace"
 
 	"github.com/astaxie/beego"
 	beegoCtx "github.com/astaxie/beego/context"
-
-	mockmeter "go.opentelemetry.io/contrib/internal/metric"
-	mocktrace "go.opentelemetry.io/contrib/internal/trace"
-	"go.opentelemetry.io/contrib/propagators/b3"
+	"github.com/stretchr/testify/require"
 )
-
-// ------------------------------------------ Mock Trace Provider
-
-type MockTracerProvider struct {
-	tracer *mocktrace.Tracer
-}
-
-func (m *MockTracerProvider) Tracer(name string, options ...trace.TracerOption) trace.Tracer {
-	return m.tracer
-}
-
-func NewTracerProvider() *MockTracerProvider {
-	return &MockTracerProvider{
-		tracer: mocktrace.NewTracer(packageName),
-	}
-}
 
 // ------------------------------------------ Test Controller
 
@@ -204,9 +185,10 @@ func TestWithFilters(t *testing.T) {
 
 func TestSpanFromContextDefaultProvider(t *testing.T) {
 	defer replaceBeego()
-	_, provider := mockmeter.NewMeterProvider()
-	global.SetMeterProvider(provider)
-	global.SetTracerProvider(NewTracerProvider())
+	_, provider := oteltest.NewMeterProvider()
+	otel.SetMeterProvider(provider)
+	otel.SetTracerProvider(oteltest.NewTracerProvider())
+
 	router := beego.NewControllerRegister()
 	router.Get("/hello-with-span", func(ctx *beegoCtx.Context) {
 		assertSpanFromContext(ctx.Request.Context(), t)
@@ -226,7 +208,7 @@ func TestSpanFromContextDefaultProvider(t *testing.T) {
 
 func TestSpanFromContextCustomProvider(t *testing.T) {
 	defer replaceBeego()
-	_, provider := mockmeter.NewMeterProvider()
+	_, provider := oteltest.NewMeterProvider()
 	router := beego.NewControllerRegister()
 	router.Get("/hello-with-span", func(ctx *beegoCtx.Context) {
 		assertSpanFromContext(ctx.Request.Context(), t)
@@ -239,7 +221,7 @@ func TestSpanFromContextCustomProvider(t *testing.T) {
 
 	mw := NewOTelBeegoMiddleWare(
 		middleWareName,
-		WithTracerProvider(NewTracerProvider()),
+		WithTracerProvider(oteltest.NewTracerProvider()),
 		WithMeterProvider(provider),
 	)
 
@@ -250,8 +232,9 @@ func TestSpanFromContextCustomProvider(t *testing.T) {
 
 func TestStatic(t *testing.T) {
 	defer replaceBeego()
-	tracerProvider := NewTracerProvider()
-	meterimpl, meterProvider := mockmeter.NewMeterProvider()
+	sr := new(oteltest.StandardSpanRecorder)
+	tracerProvider := oteltest.NewTracerProvider(oteltest.WithSpanRecorder(sr))
+	meterimpl, meterProvider := oteltest.NewMeterProvider()
 	file, err := ioutil.TempFile("", "static-*.html")
 	require.NoError(t, err)
 	defer os.Remove(file.Name())
@@ -279,7 +262,7 @@ func TestStatic(t *testing.T) {
 	body, err := ioutil.ReadAll(rr.Result().Body)
 	require.NoError(t, err)
 	require.Equal(t, "<h1>Hello, world!</h1>", string(body))
-	spans := tracerProvider.tracer.EndedSpans()
+	spans := sr.Completed()
 	require.Len(t, spans, 1)
 	assertSpan(t, spans[0], tc)
 	assertMetrics(t, meterimpl.MeasurementBatches, tc)
@@ -309,7 +292,8 @@ func TestRender(t *testing.T) {
 	beego.SetViewsPath(dir)
 	_, tplName = filepath.Split(file.Name())
 
-	tracerProvider := NewTracerProvider()
+	sr := new(oteltest.StandardSpanRecorder)
+	tracerProvider := oteltest.NewTracerProvider(oteltest.WithSpanRecorder(sr))
 
 	mw := NewOTelBeegoMiddleWare(
 		middleWareName,
@@ -325,20 +309,20 @@ func TestRender(t *testing.T) {
 		require.NoError(t, err)
 	}
 
-	spans := tracerProvider.tracer.EndedSpans()
+	spans := sr.Completed()
 	require.Len(t, spans, 6) // 3 HTTP requests, each creating 2 spans
 	for _, span := range spans {
-		switch span.Name {
+		switch span.Name() {
 		case "/template/render":
 		case "/template/renderstring":
 		case "/template/renderbytes":
 			continue
 		case renderTemplateSpanName:
-			require.Equal(t, tplName, span.Attributes[templateKey].AsString())
+			require.Equal(t, tplName, span.Attributes()[templateKey].AsString())
 		case renderStringSpanName:
-			require.Equal(t, tplName, span.Attributes[templateKey].AsString())
+			require.Equal(t, tplName, span.Attributes()[templateKey].AsString())
 		case renderBytesSpanName:
-			require.Equal(t, tplName, span.Attributes[templateKey].AsString())
+			require.Equal(t, tplName, span.Attributes()[templateKey].AsString())
 		default:
 			t.Fatal("unexpected span name")
 		}
@@ -348,8 +332,9 @@ func TestRender(t *testing.T) {
 // ------------------------------------------ Utilities
 
 func runTest(t *testing.T, tc *testCase, url string) {
-	tracerProvider := NewTracerProvider()
-	meterimpl, meterProvider := mockmeter.NewMeterProvider()
+	sr := new(oteltest.StandardSpanRecorder)
+	tracerProvider := oteltest.NewTracerProvider(oteltest.WithSpanRecorder(sr))
+	meterimpl, meterProvider := oteltest.NewMeterProvider()
 	addTestRoutes(t)
 	defer replaceBeego()
 
@@ -381,7 +366,7 @@ func runTest(t *testing.T, tc *testCase, url string) {
 	require.NoError(t, json.Unmarshal(body, &message))
 	require.Equal(t, tc.expectedResponse, message)
 
-	spans := tracerProvider.tracer.EndedSpans()
+	spans := sr.Completed()
 	if tc.hasSpan {
 		require.Len(t, spans, 1)
 		assertSpan(t, spans[0], tc)
@@ -399,14 +384,14 @@ func defaultAttributes() []label.KeyValue {
 	}
 }
 
-func assertSpan(t *testing.T, span *mocktrace.Span, tc *testCase) {
-	require.Equal(t, tc.expectedSpanName, span.Name)
+func assertSpan(t *testing.T, span *oteltest.Span, tc *testCase) {
+	require.Equal(t, tc.expectedSpanName, span.Name())
 	for _, att := range tc.expectedAttributes {
-		require.Equal(t, att.Value.AsInterface(), span.Attributes[att.Key].AsInterface())
+		require.Equal(t, att.Value.AsInterface(), span.Attributes()[att.Key].AsInterface())
 	}
 }
 
-func assertMetrics(t *testing.T, batches []mockmeter.Batch, tc *testCase) {
+func assertMetrics(t *testing.T, batches []oteltest.Batch, tc *testCase) {
 	for _, batch := range batches {
 		for _, att := range tc.expectedAttributes {
 			require.Contains(t, batch.Labels, att)
@@ -416,12 +401,12 @@ func assertMetrics(t *testing.T, batches []mockmeter.Batch, tc *testCase) {
 
 func assertSpanFromContext(ctx context.Context, t *testing.T) {
 	span := trace.SpanFromContext(ctx)
-	_, ok := span.(*mocktrace.Span)
+	_, ok := span.(*oteltest.Span)
 	require.True(t, ok)
 	spanTracer := span.Tracer()
-	mockTracer, ok := spanTracer.(*mocktrace.Tracer)
+	mockTracer, ok := spanTracer.(*oteltest.Tracer)
 	require.True(t, ok)
-	require.Equal(t, packageName, mockTracer.Name)
+	require.NotEmpty(t, mockTracer.Name)
 }
 
 // ------------------------------------------ Test Cases
@@ -503,7 +488,7 @@ var testCases = []*testCase{
 		method: http.MethodGet,
 		path:   "/",
 		options: []Option{
-			WithPropagators(otel.NewCompositeTextMapPropagator(b3.B3{})),
+			WithPropagators(propagation.NewCompositeTextMapPropagator(b3.B3{})),
 		},
 		hasSpan:            true,
 		expectedSpanName:   "/",
