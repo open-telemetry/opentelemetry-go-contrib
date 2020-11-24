@@ -16,8 +16,8 @@ package otelmongo
 
 import (
 	"go.opentelemetry.io/contrib"
-	"go.opentelemetry.io/otel/api/global"
-	"go.opentelemetry.io/otel/api/trace"
+	"go.opentelemetry.io/otel"
+	"go.opentelemetry.io/otel/trace"
 )
 
 const defaultTracerName = "go.opentelemetry.io/contrib/instrumentation/go.mongodb.org/mongo-driver/mongo/otelmongo"
@@ -32,7 +32,7 @@ type config struct {
 // newConfig returns a config with all Options set.
 func newConfig(opts ...Option) config {
 	cfg := config{
-		TracerProvider: global.TracerProvider(),
+		TracerProvider: otel.GetTracerProvider(),
 	}
 	for _, opt := range opts {
 		opt(&cfg)

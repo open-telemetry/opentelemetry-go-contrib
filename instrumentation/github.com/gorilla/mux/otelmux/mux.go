@@ -25,9 +25,9 @@ import (
 	otelcontrib "go.opentelemetry.io/contrib"
 	"go.opentelemetry.io/otel"
 
-	otelglobal "go.opentelemetry.io/otel/api/global"
-	oteltrace "go.opentelemetry.io/otel/api/trace"
+	"go.opentelemetry.io/otel/propagation"
 	"go.opentelemetry.io/otel/semconv"
+	oteltrace "go.opentelemetry.io/otel/trace"
 )
 
 const (
@@ -43,14 +43,14 @@ func Middleware(service string, opts ...Option) mux.MiddlewareFunc {
 		opt(&cfg)
 	}
 	if cfg.TracerProvider == nil {
-		cfg.TracerProvider = otelglobal.TracerProvider()
+		cfg.TracerProvider = otel.GetTracerProvider()
 	}
 	tracer := cfg.TracerProvider.Tracer(
 		tracerName,
 		oteltrace.WithInstrumentationVersion(otelcontrib.SemVersion()),
 	)
 	if cfg.Propagators == nil {
-		cfg.Propagators = otelglobal.TextMapPropagator()
+		cfg.Propagators = otel.GetTextMapPropagator()
 	}
 	return func(handler http.Handler) http.Handler {
 		return traceware{
@@ -65,7 +65,7 @@ func Middleware(service string, opts ...Option) mux.MiddlewareFunc {
 type traceware struct {
 	service     string
 	tracer      oteltrace.Tracer
-	propagators otel.TextMapPropagator
+	propagators propagation.TextMapPropagator
 	handler     http.Handler
 }
 

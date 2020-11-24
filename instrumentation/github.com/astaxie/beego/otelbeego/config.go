@@ -16,9 +16,9 @@ package otelbeego
 
 import (
 	"go.opentelemetry.io/otel"
-	"go.opentelemetry.io/otel/api/global"
-	"go.opentelemetry.io/otel/api/metric"
-	"go.opentelemetry.io/otel/api/trace"
+	"go.opentelemetry.io/otel/metric"
+	"go.opentelemetry.io/otel/propagation"
+	"go.opentelemetry.io/otel/trace"
 )
 
 // config provides configuration for the beego OpenTelemetry
@@ -26,7 +26,7 @@ import (
 type config struct {
 	tracerProvider trace.TracerProvider
 	meterProvider  metric.MeterProvider
-	propagators    otel.TextMapPropagator
+	propagators    propagation.TextMapPropagator
 	filters        []Filter
 	formatter      SpanNameFormatter
 }
@@ -65,7 +65,7 @@ func WithMeterProvider(provider metric.MeterProvider) Option {
 
 // WithPropagators sets the propagators used in the middleware.
 // Defaults to global.Propagators().
-func WithPropagators(propagators otel.TextMapPropagator) OptionFunc {
+func WithPropagators(propagators propagation.TextMapPropagator) OptionFunc {
 	return OptionFunc(func(c *config) {
 		c.propagators = propagators
 	})
@@ -91,9 +91,9 @@ func WithSpanNameFormatter(f SpanNameFormatter) OptionFunc {
 
 func newConfig(options ...Option) *config {
 	config := &config{
-		tracerProvider: global.TracerProvider(),
-		meterProvider:  global.MeterProvider(),
-		propagators:    global.TextMapPropagator(),
+		tracerProvider: otel.GetTracerProvider(),
+		meterProvider:  otel.GetMeterProvider(),
+		propagators:    otel.GetTextMapPropagator(),
 		filters:        []Filter{},
 		formatter:      defaultSpanNameFormatter,
 	}

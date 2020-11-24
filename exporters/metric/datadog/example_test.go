@@ -26,9 +26,9 @@ import (
 	"github.com/DataDog/sketches-go/ddsketch"
 
 	"go.opentelemetry.io/contrib/exporters/metric/datadog"
-	"go.opentelemetry.io/otel/api/global"
-	"go.opentelemetry.io/otel/api/metric"
+	"go.opentelemetry.io/otel"
 	"go.opentelemetry.io/otel/label"
+	"go.opentelemetry.io/otel/metric"
 	"go.opentelemetry.io/otel/sdk/metric/controller/push"
 	"go.opentelemetry.io/otel/sdk/metric/processor/basic"
 	"go.opentelemetry.io/otel/sdk/metric/selector/simple"
@@ -61,8 +61,8 @@ func ExampleExporter() {
 		pusher := push.New(processor, exp, push.WithPeriod(time.Second*10))
 		defer pusher.Stop()
 		pusher.Start()
-		global.SetMeterProvider(pusher.MeterProvider())
-		meter := global.Meter("marwandist")
+		otel.SetMeterProvider(pusher.MeterProvider())
+		meter := otel.Meter("marwandist")
 		m := metric.Must(meter).NewInt64ValueRecorder("myrecorder")
 		meter.RecordBatch(context.Background(), []label.KeyValue{label.Int("l", 1)},
 			m.Measurement(1), m.Measurement(50), m.Measurement(100))

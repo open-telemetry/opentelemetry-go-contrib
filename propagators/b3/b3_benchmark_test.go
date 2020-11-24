@@ -20,7 +20,7 @@ import (
 	"testing"
 
 	"go.opentelemetry.io/contrib/propagators/b3"
-	"go.opentelemetry.io/otel/api/trace"
+	"go.opentelemetry.io/otel/trace"
 )
 
 func BenchmarkExtractB3(b *testing.B) {

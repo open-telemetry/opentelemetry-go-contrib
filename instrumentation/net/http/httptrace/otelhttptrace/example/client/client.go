@@ -29,13 +29,13 @@ import (
 	"go.opentelemetry.io/contrib/instrumentation/net/http/otelhttp"
 
 	"go.opentelemetry.io/otel"
-	"go.opentelemetry.io/otel/api/global"
-	"go.opentelemetry.io/otel/api/trace"
+	"go.opentelemetry.io/otel/baggage"
 	"go.opentelemetry.io/otel/exporters/stdout"
 	"go.opentelemetry.io/otel/label"
-	"go.opentelemetry.io/otel/propagators"
+	"go.opentelemetry.io/otel/propagation"
 	sdktrace "go.opentelemetry.io/otel/sdk/trace"
 	"go.opentelemetry.io/otel/semconv"
+	"go.opentelemetry.io/otel/trace"
 )
 
 func initTracer() {
@@ -53,8 +53,8 @@ func initTracer() {
 	if err != nil {
 		log.Fatal(err)
 	}
-	global.SetTracerProvider(tp)
-	global.SetTextMapPropagator(otel.NewCompositeTextMapPropagator(propagators.TraceContext{}, propagators.Baggage{}))
+	otel.SetTracerProvider(tp)
+	otel.SetTextMapPropagator(propagation.NewCompositeTextMapPropagator(propagation.TraceContext{}, propagation.Baggage{}))
 }
 
 func main() {
@@ -64,13 +64,13 @@ func main() {
 
 	client := http.Client{Transport: otelhttp.NewTransport(http.DefaultTransport)}
 
-	ctx := otel.ContextWithBaggageValues(context.Background(),
+	ctx := baggage.ContextWithValues(context.Background(),
 		label.String("username", "donuts"),
 	)
 
 	var body []byte
 
-	tr := global.Tracer("example/client")
+	tr := otel.Tracer("example/client")
 	err := func(ctx context.Context) error {
 		ctx, span := tr.Start(ctx, "say hello", trace.WithAttributes(semconv.PeerServiceKey.String("ExampleService")))
 		defer span.End()
