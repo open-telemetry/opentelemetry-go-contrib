@@ -16,13 +16,13 @@ package b3_test
 
 import (
 	"go.opentelemetry.io/contrib/propagators/b3"
-	"go.opentelemetry.io/otel/api/global"
+	"go.opentelemetry.io/otel"
 )
 
 func ExampleB3() {
 	b3 := b3.B3{}
 	// Register the B3 propagator globally.
-	global.SetTextMapPropagator(b3)
+	otel.SetTextMapPropagator(b3)
 }
 
 func ExampleB3_injectEncoding() {
@@ -31,5 +31,5 @@ func ExampleB3_injectEncoding() {
 	b3 := b3.B3{
 		InjectEncoding: b3.B3MultipleHeader | b3.B3SingleHeader,
 	}
-	global.SetTextMapPropagator(b3)
+	otel.SetTextMapPropagator(b3)
 }

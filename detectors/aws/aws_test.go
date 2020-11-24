@@ -90,7 +90,7 @@ func TestAWS_Detect(t *testing.T) {
 			Fields: fields{
 				Client: &clientMock{available: true, idDoc: usWestInst, metadata: map[string]meta{}},
 			},
-			Want: want{Resource: resource.New(usWestIDLabels...)},
+			Want: want{Resource: resource.NewWithAttributes(usWestIDLabels...)},
 		},
 		"Hostname Response Error": {
 			Fields: fields{
@@ -105,7 +105,7 @@ func TestAWS_Detect(t *testing.T) {
 			Want: want{
 				Error:    `partial resource: ["hostname": 500 EC2MetadataError]`,
 				Partial:  true,
-				Resource: resource.New(usWestIDLabels...),
+				Resource: resource.NewWithAttributes(usWestIDLabels...),
 			},
 		},
 		"Hostname General Error": {
@@ -121,7 +121,7 @@ func TestAWS_Detect(t *testing.T) {
 			Want: want{
 				Error:    `partial resource: ["hostname": unknown error]`,
 				Partial:  true,
-				Resource: resource.New(usWestIDLabels...),
+				Resource: resource.NewWithAttributes(usWestIDLabels...),
 			},
 		},
 		"All Available": {
@@ -134,7 +134,7 @@ func TestAWS_Detect(t *testing.T) {
 					},
 				},
 			},
-			Want: want{Resource: resource.New(
+			Want: want{Resource: resource.NewWithAttributes(
 				semconv.CloudProviderAWS,
 				semconv.CloudRegionKey.String("us-west-2"),
 				semconv.CloudZoneKey.String("us-west-2b"),

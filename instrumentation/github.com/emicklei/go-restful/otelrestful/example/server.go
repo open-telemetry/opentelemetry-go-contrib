@@ -22,11 +22,11 @@ import (
 	"github.com/emicklei/go-restful/v3"
 
 	"go.opentelemetry.io/contrib/instrumentation/github.com/emicklei/go-restful/otelrestful"
-	otelglobal "go.opentelemetry.io/otel/api/global"
-	oteltrace "go.opentelemetry.io/otel/api/trace"
+	"go.opentelemetry.io/otel"
 	"go.opentelemetry.io/otel/exporters/stdout"
 	otelkv "go.opentelemetry.io/otel/label"
 	sdktrace "go.opentelemetry.io/otel/sdk/trace"
+	oteltrace "go.opentelemetry.io/otel/trace"
 )
 
 var tracer oteltrace.Tracer
@@ -75,8 +75,8 @@ func initTracer() {
 	if err != nil {
 		log.Fatal(err)
 	}
-	otelglobal.SetTracerProvider(tp)
-	tracer = otelglobal.TracerProvider().Tracer("go-restful-server", oteltrace.WithInstrumentationVersion("0.1"))
+	otel.SetTracerProvider(tp)
+	tracer = otel.GetTracerProvider().Tracer("go-restful-server", oteltrace.WithInstrumentationVersion("0.1"))
 }
 
 func (u UserResource) getUser(req *restful.Request, resp *restful.Response) {
