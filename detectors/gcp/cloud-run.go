@@ -110,11 +110,15 @@ func (c *CloudRun) Detect(ctx context.Context) (*resource.Resource, error) {
 			semconv.ServiceNameKey.String(service),
 		)
 	}
+	resource, err := resource.New(ctx, resource.WithAttributes(labels...))
+	if err != nil {
+		errInfo = append(errInfo, err.Error())
+	}
 
 	var aggregatedErr error
 	if len(errInfo) > 0 {
 		aggregatedErr = fmt.Errorf("detecting Cloud Run resources: %s", errInfo)
 	}
 
-	return resource.New(labels...), aggregatedErr
+	return resource, aggregatedErr
 }

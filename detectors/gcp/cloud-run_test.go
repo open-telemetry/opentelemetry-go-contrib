@@ -84,14 +84,20 @@ func TestCloudRunDetectorExpectSuccess(t *testing.T) {
 	envvars := map[string]string{
 		"K_SERVICE": "x-service",
 	}
-	want := resource.New(
-		label.String("cloud.account.id", "foo"),
-		label.String("cloud.provider", "gcp"),
-		label.String("cloud.region", "utopia"),
-		label.String("service.instance.id", "bar"),
-		label.String("service.name", "x-service"),
-		label.String("service.namespace", "cloud-run-managed"),
+	want, err := resource.New(
+		ctx,
+		resource.WithAttributes(
+			label.String("cloud.account.id", "foo"),
+			label.String("cloud.provider", "gcp"),
+			label.String("cloud.region", "utopia"),
+			label.String("service.instance.id", "bar"),
+			label.String("service.name", "x-service"),
+			label.String("service.namespace", "cloud-run-managed"),
+		),
 	)
+	if err != nil {
+		t.Fatalf("failed to create a resource: %v", err)
+	}
 	c := NewCloudRun()
 	c.setupForTest(&client{m: metadata}, onGCE, getenv(envvars))
 
