@@ -90,7 +90,7 @@ func TestCloudRunDetectorExpectSuccess(t *testing.T) {
 		label.String("cloud.region", "utopia"),
 		label.String("service.instance.id", "bar"),
 		label.String("service.name", "x-service"),
-		label.String("service.namespace", "x-service"),
+		label.String("service.namespace", "cloud-run-managed"),
 	)
 	c := NewCloudRun()
 	c.setupForTest(&client{m: metadata}, onGCE, getenv(envvars))

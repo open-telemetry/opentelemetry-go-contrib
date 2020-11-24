@@ -26,6 +26,8 @@ import (
 	"go.opentelemetry.io/otel/semconv"
 )
 
+const serviceNamespace = "cloud-run-managed"
+
 type metadataClient interface {
 	ProjectID() (string, error)
 	Get(string) (string, error)
@@ -60,6 +62,9 @@ func (c *CloudRun) setupForTest(mc metadataClient, ongce func() bool, getenv fun
 }
 
 // Detect detects associated resources when running on Cloud Run hosts.
+// NOTE: the service.namespace label is currently hardcoded to be
+// "cloud-run-managed". This may change in the future, please do not rely on
+// this behavior yet.
 func (c *CloudRun) Detect(ctx context.Context) (*resource.Resource, error) {
 	// .OnGCE is actually testing whether the metadata server is available.
 	// Metadata server is supported on Cloud Run.
@@ -99,7 +104,7 @@ func (c *CloudRun) Detect(ctx context.Context) (*resource.Resource, error) {
 		errInfo = append(errInfo, "envvar K_SERVICE contains empty string.")
 	} else {
 		labels = append(labels,
-			semconv.ServiceNamespaceKey.String(service),
+			semconv.ServiceNamespaceKey.String(serviceNamespace),
 			semconv.ServiceNameKey.String(service),
 		)
 	}
