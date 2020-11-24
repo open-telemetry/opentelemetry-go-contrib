@@ -72,7 +72,7 @@ func (s *instrumentedS3) PutObjectWithContext(ctx aws.Context, input *s3.PutObje
 	if err != nil {
 		attrs = append(attrs, labelStatusFailure)
 		span.SetAttributes(labelStatusFailure)
-		span.SetStatus(codes.Ok, err.Error())
+		span.SetStatus(codes.Error, err.Error())
 	} else {
 		attrs = append(attrs, labelStatusSuccess)
 		span.SetAttributes(labelStatusSuccess)
@@ -114,7 +114,7 @@ func (s *instrumentedS3) GetObjectWithContext(ctx aws.Context, input *s3.GetObje
 	if err != nil {
 		attrs = append(attrs, labelStatusFailure)
 		span.SetAttributes(labelStatusFailure)
-		span.SetStatus(codes.Ok, err.Error())
+		span.SetStatus(codes.Error, err.Error())
 	} else {
 		attrs = append(attrs, labelStatusSuccess)
 		span.SetAttributes(labelStatusSuccess)
@@ -155,7 +155,7 @@ func (s *instrumentedS3) DeleteObjectWithContext(ctx aws.Context, input *s3.Dele
 	if err != nil {
 		attrs = append(attrs, labelStatusFailure)
 		span.SetAttributes(labelStatusFailure)
-		span.SetStatus(codes.Ok, err.Error())
+		span.SetStatus(codes.Error, err.Error())
 	} else {
 		attrs = append(attrs, labelStatusSuccess)
 		span.SetAttributes(labelStatusSuccess)
