@@ -182,7 +182,7 @@ func createCounters(meter metric.Meter) *counters {
 }
 
 func createRecorders(meter metric.Meter) *recorders {
-	execTimeRecorder, _ := meter.NewFloat64ValueRecorder("aws.s3.operation.duration")
+	execTimeRecorder, _ := meter.NewFloat64ValueRecorder("aws.s3.operation.duration", metric.WithUnit("μs"))
 	return &recorders{operationDuration: execTimeRecorder}
 }
 
