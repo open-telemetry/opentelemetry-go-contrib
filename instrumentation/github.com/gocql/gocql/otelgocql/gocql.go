@@ -20,7 +20,7 @@ import (
 	"github.com/gocql/gocql"
 
 	otelcontrib "go.opentelemetry.io/contrib"
-	"go.opentelemetry.io/otel/api/trace"
+	"go.opentelemetry.io/otel/trace"
 )
 
 // NewSessionWithTracing creates a new session using the given cluster

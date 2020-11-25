@@ -25,15 +25,16 @@ import (
 	"github.com/golang/protobuf/proto" //nolint:staticcheck
 
 	"google.golang.org/grpc"
+	grpc_codes "google.golang.org/grpc/codes"
 	"google.golang.org/grpc/metadata"
 	"google.golang.org/grpc/peer"
 	"google.golang.org/grpc/status"
 
-	"go.opentelemetry.io/otel"
-	"go.opentelemetry.io/otel/api/trace"
+	"go.opentelemetry.io/otel/baggage"
 	"go.opentelemetry.io/otel/codes"
 	"go.opentelemetry.io/otel/label"
 	"go.opentelemetry.io/otel/semconv"
+	"go.opentelemetry.io/otel/trace"
 
 	otelcontrib "go.opentelemetry.io/contrib"
 )
@@ -45,16 +46,16 @@ type messageType label.KeyValue
 func (m messageType) Event(ctx context.Context, id int, message interface{}) {
 	span := trace.SpanFromContext(ctx)
 	if p, ok := message.(proto.Message); ok {
-		span.AddEvent(ctx, "message",
+		span.AddEvent("message", trace.WithAttributes(
 			label.KeyValue(m),
 			semconv.RPCMessageIDKey.Int(id),
 			semconv.RPCMessageUncompressedSizeKey.Int(proto.Size(p)),
-		)
+		))
 	} else {
-		span.AddEvent(ctx, "message",
+		span.AddEvent("message", trace.WithAttributes(
 			label.KeyValue(m),
 			semconv.RPCMessageIDKey.Int(id),
-		)
+		))
 	}
 }
 
@@ -104,6 +105,9 @@ func UnaryClientInterceptor(opts ...Option) grpc.UnaryClientInterceptor {
 		if err != nil {
 			s, _ := status.FromError(err)
 			span.SetStatus(codes.Error, s.Message())
+			span.SetAttributes(statusCodeAttr(s.Code()))
+		} else {
+			span.SetAttributes(statusCodeAttr(grpc_codes.OK))
 		}
 
 		return err
@@ -283,6 +287,9 @@ func StreamClientInterceptor(opts ...Option) grpc.StreamClientInterceptor {
 			if err != nil {
 				s, _ := status.FromError(err)
 				span.SetStatus(codes.Error, s.Message())
+				span.SetAttributes(statusCodeAttr(s.Code()))
+			} else {
+				span.SetAttributes(statusCodeAttr(grpc_codes.OK))
 			}
 
 			span.End()
@@ -305,7 +312,7 @@ func UnaryServerInterceptor(opts ...Option) grpc.UnaryServerInterceptor {
 		metadataCopy := requestMetadata.Copy()
 
 		entries, spanCtx := Extract(ctx, &metadataCopy, opts...)
-		ctx = otel.ContextWithBaggageValues(ctx, entries...)
+		ctx = baggage.ContextWithValues(ctx, entries...)
 
 		tracer := newConfig(opts).TracerProvider.Tracer(
 			instrumentationName,
@@ -327,8 +334,10 @@ func UnaryServerInterceptor(opts ...Option) grpc.UnaryServerInterceptor {
 		if err != nil {
 			s, _ := status.FromError(err)
 			span.SetStatus(codes.Error, s.Message())
+			span.SetAttributes(statusCodeAttr(s.Code()))
 			messageSent.Event(ctx, 1, s.Proto())
 		} else {
+			span.SetAttributes(statusCodeAttr(grpc_codes.OK))
 			messageSent.Event(ctx, 1, resp)
 		}
 
@@ -392,7 +401,7 @@ func StreamServerInterceptor(opts ...Option) grpc.StreamServerInterceptor {
 		metadataCopy := requestMetadata.Copy()
 
 		entries, spanCtx := Extract(ctx, &metadataCopy, opts...)
-		ctx = otel.ContextWithBaggageValues(ctx, entries...)
+		ctx = baggage.ContextWithValues(ctx, entries...)
 
 		tracer := newConfig(opts).TracerProvider.Tracer(
 			instrumentationName,
@@ -413,6 +422,9 @@ func StreamServerInterceptor(opts ...Option) grpc.StreamServerInterceptor {
 		if err != nil {
 			s, _ := status.FromError(err)
 			span.SetStatus(codes.Error, s.Message())
+			span.SetAttributes(statusCodeAttr(s.Code()))
+		} else {
+			span.SetAttributes(statusCodeAttr(grpc_codes.OK))
 		}
 
 		return err
@@ -474,4 +486,9 @@ func parseFullMethod(fullMethod string) (string, []label.KeyValue) {
 		attrs = append(attrs, semconv.RPCMethodKey.String(method))
 	}
 	return name, attrs
+}
+
+// statusCodeAttr returns status code attribute based on given gRPC code
+func statusCodeAttr(c grpc_codes.Code) label.KeyValue {
+	return GRPCStatusCodeKey.Uint32(uint32(c))
 }

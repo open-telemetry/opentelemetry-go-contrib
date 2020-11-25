@@ -91,7 +91,7 @@ func (gce *GCE) Detect(ctx context.Context) (*resource.Resource, error) {
 		aggregatedErr = fmt.Errorf("detecting GCE resources: %s", errInfo)
 	}
 
-	return resource.New(labels...), aggregatedErr
+	return resource.NewWithAttributes(labels...), aggregatedErr
 }
 
 // hasProblem checks if the err is not nil or for missing resources

@@ -19,11 +19,11 @@ import (
 
 	"github.com/stretchr/testify/assert"
 
-	"go.opentelemetry.io/otel/api/trace"
+	"go.opentelemetry.io/otel/trace"
 )
 
 var (
-	traceID    = trace.ID{0, 0, 0, 0, 0, 0, 0, 0x7b, 0, 0, 0, 0, 0, 0, 0x1, 0xc8}
+	traceID    = trace.TraceID{0, 0, 0, 0, 0, 0, 0, 0x7b, 0, 0, 0, 0, 0, 0, 0x1, 0xc8}
 	traceIDStr = "000000000000007b00000000000001c8"
 	spanID     = trace.SpanID{0, 0, 0, 0, 0, 0, 0, 0x7b}
 	spanIDStr  = "000000000000007b"
@@ -116,7 +116,7 @@ func TestExtractMultiple(t *testing.T) {
 		{
 			"00000000000001c8", spanIDStr, "", "0", "",
 			trace.SpanContext{
-				TraceID: trace.ID{0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0x1, 0xc8},
+				TraceID: trace.TraceID{0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0x1, 0xc8},
 				SpanID:  spanID,
 			},
 			nil,
@@ -223,7 +223,7 @@ func TestExtractSingle(t *testing.T) {
 		{
 			"00000000000001c8-000000000000007b",
 			trace.SpanContext{
-				TraceID:    trace.ID{0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0x1, 0xc8},
+				TraceID:    trace.TraceID{0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0x1, 0xc8},
 				SpanID:     spanID,
 				TraceFlags: trace.FlagsDeferred,
 			},

@@ -17,13 +17,13 @@
 package otelgin
 
 import (
-	"go.opentelemetry.io/otel"
-	oteltrace "go.opentelemetry.io/otel/api/trace"
+	"go.opentelemetry.io/otel/propagation"
+	oteltrace "go.opentelemetry.io/otel/trace"
 )
 
 type config struct {
 	TracerProvider oteltrace.TracerProvider
-	Propagators    otel.TextMapPropagator
+	Propagators    propagation.TextMapPropagator
 }
 
 // Option specifies instrumentation configuration options.
@@ -32,7 +32,7 @@ type Option func(*config)
 // WithPropagators specifies propagators to use for extracting
 // information from the HTTP requests. If none are specified, global
 // ones will be used.
-func WithPropagators(propagators otel.TextMapPropagator) Option {
+func WithPropagators(propagators propagation.TextMapPropagator) Option {
 	return func(cfg *config) {
 		cfg.Propagators = propagators
 	}

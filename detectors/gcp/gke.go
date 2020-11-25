@@ -61,7 +61,7 @@ func (gke *GKE) Detect(ctx context.Context) (*resource.Resource, error) {
 		labels = append(labels, semconv.K8SClusterNameKey.String(clusterName))
 	}
 
-	k8sLabelRes := resource.New(labels...)
+	k8sLabelRes := resource.NewWithAttributes(labels...)
 	var aggregatedErr error
 	if len(errInfo) > 0 {
 		aggregatedErr = fmt.Errorf("detecting GKE resources: %s", errInfo)
