@@ -26,19 +26,18 @@ import (
 	"github.com/aws/aws-sdk-go/service/s3/s3iface"
 	"github.com/stretchr/testify/assert"
 
-	"go.opentelemetry.io/contrib/instrumentation/github.com/aws/aws-sdk-go/service/otels3/mocks"
-	mockmetric "go.opentelemetry.io/contrib/internal/metric"
-	mocktrace "go.opentelemetry.io/contrib/internal/trace"
-	"go.opentelemetry.io/otel/api/global"
-	"go.opentelemetry.io/otel/api/trace"
+	"go.opentelemetry.io/contrib/instrumentation/github.com/aws/aws-sdk-go/service/s3/otels3/mocks"
+	"go.opentelemetry.io/otel"
 	"go.opentelemetry.io/otel/label"
+	oteltest "go.opentelemetry.io/otel/oteltest"
+	"go.opentelemetry.io/otel/trace"
 )
 
 var (
 	s3bucket = "s3bucket"
 )
 
-func getLabelValFromMeasurementBatch(key label.Key, batch mockmetric.Batch) *label.Value {
+func getLabelValFromMeasurementBatch(key label.Key, batch oteltest.Batch) *label.Value {
 	for _, label := range batch.Labels {
 		if label.Key == key {
 			return &label.Value
@@ -47,14 +46,14 @@ func getLabelValFromMeasurementBatch(key label.Key, batch mockmetric.Batch) *lab
 	return nil
 }
 
-func getLabelValFromSpan(key label.Key, span mocktrace.Span) *label.Value {
-	if value, ok := span.Attributes[key]; ok {
+func getLabelValFromSpan(key label.Key, span []*oteltest.Span) *label.Value {
+	if value, ok := span[0].Attributes()[key]; ok {
 		return &value
 	}
 	return nil
 }
 
-func assertMetrics(t *testing.T, mockedMeterImp *mockmetric.MeterImpl) {
+func assertMetrics(t *testing.T, mockedMeterImp *oteltest.MeterImpl) {
 	// In Meter we have one duration recorder, one operation counter
 	assert.Equal(t, 2, len(mockedMeterImp.MeasurementBatches))
 
@@ -79,17 +78,17 @@ func assertMetrics(t *testing.T, mockedMeterImp *mockmetric.MeterImpl) {
 	}
 }
 
-func assertSpanCorrelation(t *testing.T, spanCorrelation bool, mockedMeterImp *mockmetric.MeterImpl, span *mocktrace.Span) {
+func assertSpanCorrelation(t *testing.T, spanCorrelation bool, mockedMeterImp *oteltest.MeterImpl, span []*oteltest.Span) {
 	for _, measurementBatch := range mockedMeterImp.MeasurementBatches {
 		if spanCorrelation {
-			traceID := span.SpanContext().TraceID.String()
-			spanID := span.SpanContext().SpanID.String()
+			traceID := span[0].SpanContext().TraceID.String()
+			spanID := span[0].SpanContext().SpanID.String()
 
-			assert.Equal(t, traceID, getLabelValFromMeasurementBatch("trace.id", measurementBatch).AsString())
-			assert.Equal(t, spanID, getLabelValFromMeasurementBatch("span.id", measurementBatch).AsString())
+			assert.Equal(t, traceID, getLabelValFromMeasurementBatch("event.traceId", measurementBatch).AsString())
+			assert.Equal(t, spanID, getLabelValFromMeasurementBatch("event.spanId", measurementBatch).AsString())
 		} else {
-			assert.Nil(t, getLabelValFromMeasurementBatch("trace.id", measurementBatch))
-			assert.Nil(t, getLabelValFromMeasurementBatch("span.id", measurementBatch))
+			assert.Nil(t, getLabelValFromMeasurementBatch("event.traceId", measurementBatch))
+			assert.Nil(t, getLabelValFromMeasurementBatch("event.spanId", measurementBatch))
 		}
 	}
 }
@@ -151,11 +150,13 @@ func Test_instrumentedS3_PutObjectWithContext(t *testing.T) {
 		tt := tt
 		t.Run(tt.name, func(t *testing.T) {
 			t.Parallel()
-			_, mockedTracer := mocktrace.NewTracerProviderAndTracer(instrumentationName)
-			mockedMeterImp, mockedMeter := mockmetric.NewMeter()
+			sr := new(oteltest.StandardSpanRecorder)
+			tracerProvider := oteltest.NewTracerProvider(oteltest.WithSpanRecorder(sr))
+			mockedTracer := tracerProvider.Tracer(instrumentationName)
+			mockedMeterImp, mockedMeter := oteltest.NewMeter()
 			mockedCounters := createCounters(mockedMeter)
 			mockedRecorders := createRecorders(mockedMeter)
-			mockedPropagators := global.TextMapPropagator()
+			mockedPropagators := otel.GetTextMapPropagator()
 
 			s3Mock := &mocks.MockS3Client{}
 			s := &instrumentedS3{
@@ -176,19 +177,19 @@ func Test_instrumentedS3_PutObjectWithContext(t *testing.T) {
 			if !reflect.DeepEqual(got, expectedReturn) {
 				t.Errorf("PutObjectWithContext() got = %v, want %v", got, expectedReturn)
 			}
-			spans := mockedTracer.EndedSpans()
+			spans := sr.Completed()
 			assert.Equal(t, 1, len(spans))
-			assert.Equal(t, trace.SpanKindClient, spans[0].Kind)
-			assert.Equal(t, s3StorageSystemValue, getLabelValFromSpan(storageSystemKey, *spans[0]).AsString())
-			assert.Equal(t, *tt.args.input.Bucket, getLabelValFromSpan(storageDestinationKey, *spans[0]).AsString())
-			assert.Equal(t, operationPutObject, getLabelValFromSpan(storageOperationKey, *spans[0]).AsString())
+			assert.Equal(t, trace.SpanKindClient, spans[0].SpanKind())
+			assert.Equal(t, s3StorageSystemValue, getLabelValFromSpan(storageSystemKey, spans).AsString())
+			assert.Equal(t, *tt.args.input.Bucket, getLabelValFromSpan(storageDestinationKey, spans).AsString())
+			assert.Equal(t, operationPutObject, getLabelValFromSpan(storageOperationKey, spans).AsString())
 
 			// In Meter we have one duration recorder, one operation counter
 			assert.Equal(t, 2, len(mockedMeterImp.MeasurementBatches))
 
 			assertMetrics(t, mockedMeterImp)
 
-			assertSpanCorrelation(t, tt.fields.spanCorrelation, mockedMeterImp, spans[0])
+			assertSpanCorrelation(t, tt.fields.spanCorrelation, mockedMeterImp, spans)
 		})
 	}
 }
@@ -250,11 +251,13 @@ func Test_instrumentedS3_GetObjectWithContext(t *testing.T) {
 		tt := tt
 		t.Run(tt.name, func(t *testing.T) {
 			t.Parallel()
-			_, mockedTracer := mocktrace.NewTracerProviderAndTracer(instrumentationName)
-			mockedMeterImp, mockedMeter := mockmetric.NewMeter()
+			sr := new(oteltest.StandardSpanRecorder)
+			tracerProvider := oteltest.NewTracerProvider(oteltest.WithSpanRecorder(sr))
+			mockedTracer := tracerProvider.Tracer(instrumentationName)
+			mockedMeterImp, mockedMeter := oteltest.NewMeter()
 			mockedCounters := createCounters(mockedMeter)
 			mockedRecorders := createRecorders(mockedMeter)
-			mockedPropagators := global.TextMapPropagator()
+			mockedPropagators := otel.GetTextMapPropagator()
 
 			s3Mock := &mocks.MockS3Client{}
 			s := &instrumentedS3{
@@ -275,19 +278,19 @@ func Test_instrumentedS3_GetObjectWithContext(t *testing.T) {
 			if !reflect.DeepEqual(got, expectedReturn) {
 				t.Errorf("GetObjectWithContext() got = %v, want %v", got, expectedReturn)
 			}
-			spans := mockedTracer.EndedSpans()
+			spans := sr.Completed()
 			assert.Equal(t, 1, len(spans))
-			assert.Equal(t, trace.SpanKindClient, spans[0].Kind)
-			assert.Equal(t, s3StorageSystemValue, getLabelValFromSpan(storageSystemKey, *spans[0]).AsString())
-			assert.Equal(t, *tt.args.input.Bucket, getLabelValFromSpan(storageDestinationKey, *spans[0]).AsString())
-			assert.Equal(t, operationGetObject, getLabelValFromSpan(storageOperationKey, *spans[0]).AsString())
+			assert.Equal(t, trace.SpanKindClient, spans[0].SpanKind())
+			assert.Equal(t, s3StorageSystemValue, getLabelValFromSpan(storageSystemKey, spans).AsString())
+			assert.Equal(t, *tt.args.input.Bucket, getLabelValFromSpan(storageDestinationKey, spans).AsString())
+			assert.Equal(t, operationGetObject, getLabelValFromSpan(storageOperationKey, spans).AsString())
 
 			// In Meter we have one duration recorder, one operation counter
 			assert.Equal(t, 2, len(mockedMeterImp.MeasurementBatches))
 
 			assertMetrics(t, mockedMeterImp)
 
-			assertSpanCorrelation(t, tt.fields.spanCorrelation, mockedMeterImp, spans[0])
+			assertSpanCorrelation(t, tt.fields.spanCorrelation, mockedMeterImp, spans)
 		})
 	}
 }
@@ -349,11 +352,13 @@ func Test_instrumentedS3_DeleteObjectWithContext(t *testing.T) {
 		tt := tt
 		t.Run(tt.name, func(t *testing.T) {
 			t.Parallel()
-			_, mockedTracer := mocktrace.NewTracerProviderAndTracer(instrumentationName)
-			mockedMeterImp, mockedMeter := mockmetric.NewMeter()
+			sr := new(oteltest.StandardSpanRecorder)
+			tracerProvider := oteltest.NewTracerProvider(oteltest.WithSpanRecorder(sr))
+			mockedTracer := tracerProvider.Tracer(instrumentationName)
+			mockedMeterImp, mockedMeter := oteltest.NewMeter()
 			mockedCounters := createCounters(mockedMeter)
 			mockedRecorders := createRecorders(mockedMeter)
-			mockedPropagators := global.TextMapPropagator()
+			mockedPropagators := otel.GetTextMapPropagator()
 
 			s3Mock := &mocks.MockS3Client{}
 			s := &instrumentedS3{
@@ -374,19 +379,19 @@ func Test_instrumentedS3_DeleteObjectWithContext(t *testing.T) {
 			if !reflect.DeepEqual(got, expectedReturn) {
 				t.Errorf("DeleteObjectWithContext() got = %v, want %v", got, expectedReturn)
 			}
-			spans := mockedTracer.EndedSpans()
+			spans := sr.Completed()
 			assert.Equal(t, 1, len(spans))
-			assert.Equal(t, trace.SpanKindClient, spans[0].Kind)
-			assert.Equal(t, s3StorageSystemValue, getLabelValFromSpan(storageSystemKey, *spans[0]).AsString())
-			assert.Equal(t, *tt.args.input.Bucket, getLabelValFromSpan(storageDestinationKey, *spans[0]).AsString())
-			assert.Equal(t, operationDeleteObject, getLabelValFromSpan(storageOperationKey, *spans[0]).AsString())
+			assert.Equal(t, trace.SpanKindClient, spans[0].SpanKind())
+			assert.Equal(t, s3StorageSystemValue, getLabelValFromSpan(storageSystemKey, spans).AsString())
+			assert.Equal(t, *tt.args.input.Bucket, getLabelValFromSpan(storageDestinationKey, spans).AsString())
+			assert.Equal(t, operationDeleteObject, getLabelValFromSpan(storageOperationKey, spans).AsString())
 
 			// In Meter we have one duration recorder, one operation counter
 			assert.Equal(t, 2, len(mockedMeterImp.MeasurementBatches))
 
 			assertMetrics(t, mockedMeterImp)
 
-			assertSpanCorrelation(t, tt.fields.spanCorrelation, mockedMeterImp, spans[0])
+			assertSpanCorrelation(t, tt.fields.spanCorrelation, mockedMeterImp, spans)
 		})
 	}
 }
@@ -396,9 +401,9 @@ func Test_instrumentedS3_NewInstrumentedS3Client(t *testing.T) {
 		s    s3iface.S3API
 		opts []Option
 	}
-	tracerProvider, _ := mocktrace.NewTracerProviderAndTracer(instrumentationName)
-	_, meterProvider := mockmetric.NewMeterProvider()
-	mockedPropagator := global.TextMapPropagator()
+	tracerProvider := oteltest.NewTracerProvider()
+	_, meterProvider := oteltest.NewMeterProvider()
+	mockedPropagator := otel.GetTextMapPropagator()
 	s3MockClient := &mocks.MockS3Client{}
 
 	tests := []struct {
@@ -436,7 +441,7 @@ func Test_instrumentedS3_NewInstrumentedS3Client(t *testing.T) {
 			},
 			verifyFunc: func(t *testing.T, got s3iface.S3API, err error) {
 				assert.Nil(t, err, "error should be nil")
-				assert.Equal(t, got.(*instrumentedS3).propagators, global.TextMapPropagator())
+				assert.Equal(t, got.(*instrumentedS3).propagators, otel.GetTextMapPropagator())
 				assert.NotNil(t, got.(*instrumentedS3).meter, "meter should not be nil")
 				assert.NotNil(t, got.(*instrumentedS3).tracer, "tracer should not be nil")
 				assert.NotNil(t, got.(*instrumentedS3).counters, "counters should not be nil")

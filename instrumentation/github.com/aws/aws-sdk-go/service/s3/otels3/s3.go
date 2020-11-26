@@ -25,20 +25,20 @@ import (
 	"github.com/aws/aws-sdk-go/service/s3"
 	"github.com/aws/aws-sdk-go/service/s3/s3iface"
 
-	"go.opentelemetry.io/contrib/instrumentation/github.com/aws/aws-sdk-go/service/helper"
 	"go.opentelemetry.io/otel"
-	"go.opentelemetry.io/otel/api/global"
-	"go.opentelemetry.io/otel/api/metric"
-	"go.opentelemetry.io/otel/api/trace"
+	"go.opentelemetry.io/otel/codes"
+	"go.opentelemetry.io/otel/metric"
+	"go.opentelemetry.io/otel/propagation"
+	"go.opentelemetry.io/otel/trace"
 )
 
-var instrumentationName = "github.com/aws/aws-sdk-go/aws/service/s3"
+var instrumentationName = "go.opentelemetry.io/contrib/instrumentation/github.com/aws/aws-sdk-go/service/s3/otels3"
 
 type instrumentedS3 struct {
 	s3iface.S3API
 	tracer          trace.Tracer
 	meter           metric.Meter
-	propagators     otel.TextMapPropagator
+	propagators     propagation.TextMapPropagator
 	counters        *counters
 	recorders       *recorders
 	spanCorrelation bool
@@ -64,18 +64,23 @@ func (s *instrumentedS3) PutObjectWithContext(ctx aws.Context, input *s3.PutObje
 		trace.WithSpanKind(trace.SpanKindClient),
 		trace.WithAttributes(attrs...),
 	)
-	defer span.End()
 
 	output, err := s.S3API.PutObjectWithContext(ctx, input, opts...)
+	callReturnTime := trace.WithTimestamp(time.Now())
+	defer span.End(callReturnTime)
 
 	if err != nil {
 		attrs = append(attrs, labelStatusFailure)
+		span.SetAttributes(labelStatusFailure)
+		span.SetStatus(codes.Error, err.Error())
 	} else {
 		attrs = append(attrs, labelStatusSuccess)
+		span.SetAttributes(labelStatusSuccess)
+		span.SetStatus(codes.Ok, "")
 	}
 
 	if s.spanCorrelation {
-		attrs = helper.AppendSpanAndTraceIDFromSpan(attrs, span)
+		attrs = appendSpanAndTraceIDFromSpan(attrs, span)
 	}
 
 	s.recorders.operationDuration.Record(
@@ -101,18 +106,23 @@ func (s *instrumentedS3) GetObjectWithContext(ctx aws.Context, input *s3.GetObje
 		trace.WithSpanKind(trace.SpanKindClient),
 		trace.WithAttributes(attrs...),
 	)
-	defer span.End()
 
 	output, err := s.S3API.GetObjectWithContext(ctx, input, opts...)
+	callReturnTime := trace.WithTimestamp(time.Now())
+	defer span.End(callReturnTime)
 
 	if err != nil {
 		attrs = append(attrs, labelStatusFailure)
+		span.SetAttributes(labelStatusFailure)
+		span.SetStatus(codes.Error, err.Error())
 	} else {
 		attrs = append(attrs, labelStatusSuccess)
+		span.SetAttributes(labelStatusSuccess)
+		span.SetStatus(codes.Ok, "")
 	}
 
 	if s.spanCorrelation {
-		attrs = helper.AppendSpanAndTraceIDFromSpan(attrs, span)
+		attrs = appendSpanAndTraceIDFromSpan(attrs, span)
 	}
 
 	s.recorders.operationDuration.Record(
@@ -137,18 +147,23 @@ func (s *instrumentedS3) DeleteObjectWithContext(ctx aws.Context, input *s3.Dele
 		trace.WithSpanKind(trace.SpanKindClient),
 		trace.WithAttributes(attrs...),
 	)
-	defer span.End()
 
 	output, err := s.S3API.DeleteObjectWithContext(ctx, input, opts...)
+	callReturnTime := trace.WithTimestamp(time.Now())
+	defer span.End(callReturnTime)
 
 	if err != nil {
 		attrs = append(attrs, labelStatusFailure)
+		span.SetAttributes(labelStatusFailure)
+		span.SetStatus(codes.Error, err.Error())
 	} else {
 		attrs = append(attrs, labelStatusSuccess)
+		span.SetAttributes(labelStatusSuccess)
+		span.SetStatus(codes.Ok, "")
 	}
 
 	if s.spanCorrelation {
-		attrs = helper.AppendSpanAndTraceIDFromSpan(attrs, span)
+		attrs = appendSpanAndTraceIDFromSpan(attrs, span)
 	}
 
 	s.recorders.operationDuration.Record(
@@ -167,7 +182,7 @@ func createCounters(meter metric.Meter) *counters {
 }
 
 func createRecorders(meter metric.Meter) *recorders {
-	execTimeRecorder, _ := meter.NewFloat64ValueRecorder("aws.s3.operation.duration")
+	execTimeRecorder, _ := meter.NewFloat64ValueRecorder("aws.s3.operation.duration", metric.WithUnit("μs"))
 	return &recorders{operationDuration: execTimeRecorder}
 }
 
@@ -179,9 +194,9 @@ func NewInstrumentedS3Client(s s3iface.S3API, opts ...Option) (s3iface.S3API, er
 	}
 
 	cfg := config{
-		TracerProvider: global.TracerProvider(),
-		MetricProvider: global.MeterProvider(),
-		Propagators:    global.TextMapPropagator(),
+		TracerProvider: otel.GetTracerProvider(),
+		MetricProvider: otel.GetMeterProvider(),
+		Propagators:    otel.GetTextMapPropagator(),
 	}
 	for _, opt := range opts {
 		opt.apply(&cfg)

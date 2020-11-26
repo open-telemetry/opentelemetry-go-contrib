@@ -319,7 +319,7 @@ updates:
       day: "sunday"
   -
     package-ecosystem: "gomod"
-    directory: "/instrumentation/github.com/aws/aws-sdk-go/service/otels3/example"
+    directory: "/instrumentation/github.com/aws/aws-sdk-go/service/s3/otels3/example"
     labels:
       - dependencies
       - go
