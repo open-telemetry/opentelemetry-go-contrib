@@ -123,7 +123,7 @@ func isEks(utils detectorUtils) (bool, error) {
 	// Make HTTP GET request
 	awsAuth, err := utils.fetchString(http.MethodGet, k8sSvcURL+authConfigmapPath)
 	if err != nil {
-		return false, fmt.Errorf("isEks() error: %s", err.Error())
+		return false, fmt.Errorf("isEks() error retrieving auth configmap: %w", err.Error())
 	}
 
 	return awsAuth != "", nil
