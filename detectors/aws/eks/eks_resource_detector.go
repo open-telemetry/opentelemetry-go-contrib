@@ -215,7 +215,7 @@ func getClusterName(utils detectorUtils) (string, error) {
 	var parsedResp JSONResponse
 	err = json.Unmarshal([]byte(resp), &parsedResp)
 	if err != nil {
-		return "", fmt.Errorf("getClusterName() error: cannot parse JSON %s", resp)
+		return "", fmt.Errorf("getClusterName() error: cannot parse JSON: %w", w)
 	}
 	clusterName := parsedResp.Data.ClusterName
 
