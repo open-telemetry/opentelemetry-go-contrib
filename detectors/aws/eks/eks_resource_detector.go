@@ -208,7 +208,7 @@ func getK8sCredHeader() (string, error) {
 func getClusterName(utils detectorUtils) (string, error) {
 	resp, err := utils.fetchString("GET", k8sSvcURL+cwConfigmapPath)
 	if err != nil {
-		return "", fmt.Errorf("getClusterName() error: %s", err.Error())
+		return "", fmt.Errorf("getClusterName() error: %w", err)
 	}
 
 	// parse JSON object returned from HTTP request
