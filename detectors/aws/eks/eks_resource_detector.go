@@ -182,7 +182,7 @@ func (eksUtils eksDetectorUtils) fetchString(httpMethod string, URL string) (str
 	// Execute HTTP request
 	response, err := client.Do(request)
 	if err != nil {
-		return "", fmt.Errorf("failed to execute HTTP request with method=%s, URL=%s", httpMethod, URL)
+		return "", fmt.Errorf("failed to execute HTTP request with method=%s, URL=%s: %w", httpMethod, URL, err)
 	}
 
 	// Retrieve response body from HTTP request
