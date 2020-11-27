@@ -32,14 +32,14 @@ import (
 )
 
 const (
-	k8sSvcURL          = "https://kubernetes.default.svc"
-	k8sTokenPath       = "/var/run/secrets/kubernetes.io/serviceaccount/token"
-	k8sCertPath        = "/var/run/secrets/kubernetes.io/serviceaccount/ca.crt"
-	authConfigmapPath  = "/api/v1/namespaces/kube-system/configmaps/aws-auth"
-	cwConfigmapPath    = "/api/v1/namespaces/amazon-cloudwatch/configmaps/cluster-info"
-	defaultCgroupPath  = "/proc/self/cgroup"
-	containerIDLength  = 64
-	millisecondTimeOut = 2000
+	k8sSvcURL         = "https://kubernetes.default.svc"
+	k8sTokenPath      = "/var/run/secrets/kubernetes.io/serviceaccount/token"
+	k8sCertPath       = "/var/run/secrets/kubernetes.io/serviceaccount/ca.crt"
+	authConfigmapPath = "/api/v1/namespaces/kube-system/configmaps/aws-auth"
+	cwConfigmapPath   = "/api/v1/namespaces/amazon-cloudwatch/configmaps/cluster-info"
+	defaultCgroupPath = "/proc/self/cgroup"
+	containerIDLength = 64
+	timeoutMillis     = 2000
 )
 
 // Create interface for functions that need to be mocked
@@ -164,7 +164,7 @@ func (eksUtils eksDetectorUtils) fetchString(httpMethod string, URL string) (str
 
 	// Set HTTP request timeout and add certificate
 	client := &http.Client{
-		Timeout: millisecondTimeOut * time.Millisecond,
+		Timeout: timeoutMillis * time.Millisecond,
 		Transport: &http.Transport{
 			TLSClientConfig: &tls.Config{
 				RootCAs: caCertPool,
