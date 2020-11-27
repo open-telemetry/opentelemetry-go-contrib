@@ -57,15 +57,8 @@ type ResourceDetector struct {
 	utils detectorUtils
 }
 
-// JSONResponse is used to parse the JSON response returned from calling HTTP GET to EKS
-// eg. {"data":{"cluster.name":"my-cluster"}}
-type JSONResponse struct {
-	Data DataObject `json:"data"`
-}
-
-// DataObject is used to parse the data attribute inside the JSON response returned from calling HTTP GET to EKS
-// eg. {"data":{"cluster.name":"my-cluster"}}
-type DataObject struct {
+// This struct will help unmarshal clustername from JSON response
+type data struct {
 	ClusterName string `json:"cluster.name"`
 }
 
@@ -212,12 +205,18 @@ func getClusterName(utils detectorUtils) (string, error) {
 	}
 
 	// parse JSON object returned from HTTP request
-	var parsedResp JSONResponse
-	err = json.Unmarshal([]byte(resp), &parsedResp)
+	var respmap map[string]json.RawMessage
+	err = json.Unmarshal([]byte(resp), &respmap)
 	if err != nil {
 		return "", fmt.Errorf("getClusterName() error: cannot parse JSON: %w", err)
 	}
-	clusterName := parsedResp.Data.ClusterName
+	var d data
+	err = json.Unmarshal(respmap["data"], &d)
+	if err != nil {
+		return "", fmt.Errorf("getClusterName() error: cannot parse JSON: %w", err)
+	}
+
+	clusterName := d.ClusterName
 
 	return clusterName, nil
 }
