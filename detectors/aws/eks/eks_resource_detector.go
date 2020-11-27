@@ -123,7 +123,7 @@ func isEks(utils detectorUtils) (bool, error) {
 	// Make HTTP GET request
 	awsAuth, err := utils.fetchString(http.MethodGet, k8sSvcURL+authConfigmapPath)
 	if err != nil {
-		return false, fmt.Errorf("isEks() error retrieving auth configmap: %w", err.Error())
+		return false, fmt.Errorf("isEks() error retrieving auth configmap: %w", err)
 	}
 
 	return awsAuth != "", nil
@@ -215,7 +215,7 @@ func getClusterName(utils detectorUtils) (string, error) {
 	var parsedResp JSONResponse
 	err = json.Unmarshal([]byte(resp), &parsedResp)
 	if err != nil {
-		return "", fmt.Errorf("getClusterName() error: cannot parse JSON: %w", w)
+		return "", fmt.Errorf("getClusterName() error: cannot parse JSON: %w", err)
 	}
 	clusterName := parsedResp.Data.ClusterName
 
