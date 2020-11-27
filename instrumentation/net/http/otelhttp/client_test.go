@@ -22,16 +22,23 @@ import (
 	"strings"
 	"testing"
 
-	"go.opentelemetry.io/otel/api/global"
-
 	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 
-	mocktrace "go.opentelemetry.io/contrib/internal/trace"
+	"go.opentelemetry.io/otel/oteltest"
 )
 
 func TestConvenienceWrappers(t *testing.T) {
-	provider, tracer := mocktrace.NewTracerProviderAndTracer(instrumentationName)
-	global.SetTracerProvider(provider)
+	sr := new(oteltest.StandardSpanRecorder)
+	provider := oteltest.NewTracerProvider(oteltest.WithSpanRecorder(sr))
+	orig := DefaultClient
+	DefaultClient = &http.Client{
+		Transport: NewTransport(
+			http.DefaultTransport,
+			WithTracerProvider(provider),
+		),
+	}
+	defer func() { DefaultClient = orig }()
 
 	content := []byte("Hello, world!")
 
@@ -42,22 +49,20 @@ func TestConvenienceWrappers(t *testing.T) {
 	}))
 	defer ts.Close()
 
-	context, span := tracer.Start(context.Background(), "parent")
-	defer span.End()
-
-	res, err := Get(context, ts.URL)
+	ctx := context.Background()
+	res, err := Get(ctx, ts.URL)
 	if err != nil {
 		t.Fatal(err)
 	}
 	res.Body.Close()
 
-	res, err = Head(context, ts.URL)
+	res, err = Head(ctx, ts.URL)
 	if err != nil {
 		t.Fatal(err)
 	}
 	res.Body.Close()
 
-	res, err = Post(context, ts.URL, "text/plain", strings.NewReader("test"))
+	res, err = Post(ctx, ts.URL, "text/plain", strings.NewReader("test"))
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -65,16 +70,16 @@ func TestConvenienceWrappers(t *testing.T) {
 
 	form := make(url.Values)
 	form.Set("foo", "bar")
-	res, err = PostForm(context, ts.URL, form)
+	res, err = PostForm(ctx, ts.URL, form)
 	if err != nil {
 		t.Fatal(err)
 	}
 	res.Body.Close()
 
-	spans := tracer.EndedSpans()
-	assert.Equal(t, 4, len(spans))
-	assert.Equal(t, "GET", spans[0].Name)
-	assert.Equal(t, "HEAD", spans[1].Name)
-	assert.Equal(t, "POST", spans[2].Name)
-	assert.Equal(t, "POST", spans[3].Name)
+	spans := sr.Completed()
+	require.Equal(t, 4, len(spans))
+	assert.Equal(t, "GET", spans[0].Name())
+	assert.Equal(t, "HEAD", spans[1].Name())
+	assert.Equal(t, "POST", spans[2].Name())
+	assert.Equal(t, "POST", spans[3].Name())
 }

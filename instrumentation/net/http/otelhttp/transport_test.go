@@ -22,21 +22,20 @@ import (
 	"net/http/httptest"
 	"testing"
 
-	"go.opentelemetry.io/otel/api/trace"
-	"go.opentelemetry.io/otel/propagators"
-
-	mocktrace "go.opentelemetry.io/contrib/internal/trace"
+	"go.opentelemetry.io/otel/oteltest"
+	"go.opentelemetry.io/otel/propagation"
+	"go.opentelemetry.io/otel/trace"
 )
 
 func TestTransportBasics(t *testing.T) {
-	prop := propagators.TraceContext{}
-	provider, tracer := mocktrace.NewTracerProviderAndTracer(instrumentationName)
+	prop := propagation.TraceContext{}
+	provider := oteltest.NewTracerProvider()
 	content := []byte("Hello, world!")
 
 	ts := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		ctx := prop.Extract(r.Context(), r.Header)
 		span := trace.RemoteSpanContextFromContext(ctx)
-		tgtID, err := trace.SpanIDFromHex(fmt.Sprintf("%016x", tracer.StartSpanID))
+		tgtID, err := trace.SpanIDFromHex(fmt.Sprintf("%016x", uint(2)))
 		if err != nil {
 			t.Fatalf("Error converting id to SpanID: %s", err.Error())
 		}

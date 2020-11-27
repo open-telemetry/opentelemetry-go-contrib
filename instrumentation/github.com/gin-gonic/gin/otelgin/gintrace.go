@@ -21,14 +21,14 @@ import (
 
 	"github.com/gin-gonic/gin"
 
+	"go.opentelemetry.io/otel"
 	"go.opentelemetry.io/otel/codes"
 
 	otelcontrib "go.opentelemetry.io/contrib"
 
-	otelglobal "go.opentelemetry.io/otel/api/global"
-	oteltrace "go.opentelemetry.io/otel/api/trace"
 	"go.opentelemetry.io/otel/label"
 	"go.opentelemetry.io/otel/semconv"
+	oteltrace "go.opentelemetry.io/otel/trace"
 )
 
 const (
@@ -45,14 +45,14 @@ func Middleware(service string, opts ...Option) gin.HandlerFunc {
 		opt(&cfg)
 	}
 	if cfg.TracerProvider == nil {
-		cfg.TracerProvider = otelglobal.TracerProvider()
+		cfg.TracerProvider = otel.GetTracerProvider()
 	}
 	tracer := cfg.TracerProvider.Tracer(
 		tracerName,
 		oteltrace.WithInstrumentationVersion(otelcontrib.SemVersion()),
 	)
 	if cfg.Propagators == nil {
-		cfg.Propagators = otelglobal.TextMapPropagator()
+		cfg.Propagators = otel.GetTextMapPropagator()
 	}
 	return func(c *gin.Context) {
 		c.Set(tracerKey, tracer)
@@ -102,7 +102,7 @@ func HTML(c *gin.Context, code int, name string, obj interface{}) {
 		tracer, ok = tracerInterface.(oteltrace.Tracer)
 	}
 	if !ok {
-		tracer = otelglobal.TracerProvider().Tracer(
+		tracer = otel.GetTracerProvider().Tracer(
 			tracerName,
 			oteltrace.WithInstrumentationVersion(otelcontrib.SemVersion()),
 		)
@@ -112,11 +112,11 @@ func HTML(c *gin.Context, code int, name string, obj interface{}) {
 		c.Request = c.Request.WithContext(savedContext)
 	}()
 	opt := oteltrace.WithAttributes(label.String("go.template", name))
-	ctx, span := tracer.Start(savedContext, "gin.renderer.html", opt)
+	_, span := tracer.Start(savedContext, "gin.renderer.html", opt)
 	defer func() {
 		if r := recover(); r != nil {
 			err := fmt.Errorf("error rendering template:%s: %s", name, r)
-			span.RecordError(ctx, err)
+			span.RecordError(err)
 			span.SetStatus(codes.Error, "template failure")
 			span.End()
 			panic(r)

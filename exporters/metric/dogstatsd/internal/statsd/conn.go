@@ -27,7 +27,8 @@ import (
 	"net/url"
 	"strconv"
 
-	"go.opentelemetry.io/otel/api/metric"
+	"go.opentelemetry.io/otel/metric"
+	"go.opentelemetry.io/otel/metric/number"
 	export "go.opentelemetry.io/otel/sdk/export/metric"
 	"go.opentelemetry.io/otel/sdk/export/metric/aggregation"
 	"go.opentelemetry.io/otel/sdk/resource"
@@ -164,7 +165,7 @@ func dial(endpoint string) (net.Conn, error) {
 
 // ExportKindFor returns export.DeltaExporter for statsd-derived exporters
 func (e *Exporter) ExportKindFor(*metric.Descriptor, aggregation.Kind) export.ExportKind {
-	return export.DeltaExporter
+	return export.DeltaExportKind
 }
 
 // Export is common code for any statsd-based metric.Exporter implementation.
@@ -293,7 +294,7 @@ func (e *Exporter) formatMetric(rec export.Record, pos int, buf *bytes.Buffer) e
 
 // formatSingleStat encodes a single item of statsd data followed by a
 // newline.
-func (e *Exporter) formatSingleStat(rec export.Record, res *resource.Resource, val metric.Number, fmtStr string, buf *bytes.Buffer) {
+func (e *Exporter) formatSingleStat(rec export.Record, res *resource.Resource, val number.Number, fmtStr string, buf *bytes.Buffer) {
 	if e.config.Prefix != "" {
 		_, _ = buf.WriteString(e.config.Prefix)
 	}
@@ -306,13 +307,13 @@ func (e *Exporter) formatSingleStat(rec export.Record, res *resource.Resource, v
 	_, _ = buf.WriteRune('\n')
 }
 
-func writeNumber(buf *bytes.Buffer, num metric.Number, kind metric.NumberKind) {
+func writeNumber(buf *bytes.Buffer, num number.Number, kind number.Kind) {
 	var tmp [128]byte
 	var conv []byte
 	switch kind {
-	case metric.Int64NumberKind:
+	case number.Int64Kind:
 		conv = strconv.AppendInt(tmp[:0], num.AsInt64(), 10)
-	case metric.Float64NumberKind:
+	case number.Float64Kind:
 		conv = strconv.AppendFloat(tmp[:0], num.AsFloat64(), 'g', -1, 64)
 	}
 	_, _ = buf.Write(conv)

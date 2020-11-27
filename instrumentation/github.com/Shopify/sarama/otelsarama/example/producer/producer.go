@@ -26,9 +26,8 @@ import (
 
 	"github.com/Shopify/sarama"
 
+	"go.opentelemetry.io/otel"
 	"go.opentelemetry.io/otel/codes"
-
-	"go.opentelemetry.io/otel/api/global"
 
 	"go.opentelemetry.io/contrib/instrumentation/github.com/Shopify/sarama/otelsarama"
 	"go.opentelemetry.io/contrib/instrumentation/github.com/Shopify/sarama/otelsarama/example"
@@ -55,7 +54,7 @@ func main() {
 	rand.Seed(time.Now().Unix())
 
 	// Create root span
-	tr := global.Tracer("producer")
+	tr := otel.Tracer("producer")
 	ctx, span := tr.Start(context.Background(), "produce message")
 	defer span.End()
 
@@ -65,7 +64,7 @@ func main() {
 		Key:   sarama.StringEncoder("random_number"),
 		Value: sarama.StringEncoder(fmt.Sprintf("%d", rand.Intn(1000))),
 	}
-	global.TextMapPropagator().Inject(ctx, otelsarama.NewProducerMessageCarrier(&msg))
+	otel.GetTextMapPropagator().Inject(ctx, otelsarama.NewProducerMessageCarrier(&msg))
 
 	producer.Input() <- &msg
 	successMsg := <-producer.Successes()
