@@ -151,7 +151,7 @@ func (eksUtils eksDetectorUtils) fetchString(httpMethod string, URL string) (str
 	// Create new HTTP request object
 	request, err := http.NewRequest(httpMethod, URL, nil)
 	if err != nil {
-		return "", fmt.Errorf("failed to create new HTTP request with method=%s, URL=%s", httpMethod, URL)
+		return "", fmt.Errorf("failed to create new HTTP request with method=%s, URL=%s: %w", httpMethod, URL, err)
 	}
 
 	// Set HTTP request header with authentication credentials
