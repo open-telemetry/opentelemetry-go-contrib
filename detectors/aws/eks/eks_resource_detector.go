@@ -188,7 +188,7 @@ func (eksUtils eksDetectorUtils) fetchString(httpMethod string, URL string) (str
 	// Retrieve response body from HTTP request
 	body, err := ioutil.ReadAll(response.Body)
 	if err != nil {
-		return "", fmt.Errorf("failed to read response from HTTP request with method=%s, URL=%s", httpMethod, URL)
+		return "", fmt.Errorf("failed to read response from HTTP request with method=%s, URL=%s: %w", httpMethod, URL, err)
 	}
 
 	return string(body), nil
