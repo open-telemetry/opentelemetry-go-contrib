@@ -19,8 +19,8 @@ import (
 	"errors"
 	"strings"
 
-	"go.opentelemetry.io/otel"
-	"go.opentelemetry.io/otel/api/trace"
+	"go.opentelemetry.io/otel/propagation"
+	"go.opentelemetry.io/otel/trace"
 )
 
 const (
@@ -45,7 +45,7 @@ const (
 )
 
 var (
-	empty                  = trace.EmptySpanContext()
+	empty                  = trace.SpanContext{}
 	errInvalidTraceHeader  = errors.New("invalid X-Amzn-Trace-Id header value, should contain 3 different part separated by ;")
 	errMalformedTraceID    = errors.New("cannot decode trace id from header, should be a string of hex, lowercase trace id can't be all zero")
 	errInvalidSpanIDLength = errors.New("invalid span id length, must be 16")
@@ -59,10 +59,10 @@ var (
 type Xray struct{}
 
 // Asserts that the propagator implements the otel.textMapPropagator interface
-var _ otel.TextMapPropagator = &Xray{}
+var _ propagation.TextMapPropagator = &Xray{}
 
 // Inject injects a context to the carrier following AWS X-Ray format.
-func (awsxray Xray) Inject(ctx context.Context, carrier otel.TextMapCarrier) {
+func (awsxray Xray) Inject(ctx context.Context, carrier propagation.TextMapCarrier) {
 	sc := trace.SpanFromContext(ctx).SpanContext()
 	headers := []string{}
 	if !sc.TraceID.IsValid() || !sc.SpanID.IsValid() {
@@ -84,7 +84,7 @@ func (awsxray Xray) Inject(ctx context.Context, carrier otel.TextMapCarrier) {
 }
 
 // Extract gets a context from the carrier if it contains AWS X-Ray headers.
-func (awsxray Xray) Extract(ctx context.Context, carrier otel.TextMapCarrier) context.Context {
+func (awsxray Xray) Extract(ctx context.Context, carrier propagation.TextMapCarrier) context.Context {
 	// extract tracing information
 	if header := carrier.Get(traceHeaderKey); header != "" {
 		sc, err := extract(header)
@@ -165,7 +165,7 @@ func parseTraceID(xrayTraceID string) (trace.ID, error) {
 	uniquePart := xrayTraceID[traceIDDelimitterIndex2+1 : traceIDLength]
 
 	result := epochPart + uniquePart
-	return trace.IDFromHex(result)
+	return trace.TraceIDFromHex(result)
 }
 
 // parseTraceFlag returns traceFlag
