@@ -18,6 +18,7 @@ import (
 	"context"
 	"fmt"
 	"log"
+	"os"
 
 	"go.opentelemetry.io/contrib/instrumentation/github.com/confluentinc/confluent-kafka-go/kafka/otelkafka"
 	"go.opentelemetry.io/contrib/instrumentation/github.com/confluentinc/confluent-kafka-go/kafka/otelkafka/example"
@@ -29,7 +30,7 @@ func main() {
 	// Initialize Tracer
 	example.InitTracer()
 
-	kafkaConfig := &kafka.ConfigMap{"bootstrap.servers": "localhost"}
+	kafkaConfig := &kafka.ConfigMap{"bootstrap.servers": os.Getenv("KAFKA_PEERS"),}
 	p, err := otelkafka.NewProducer(
 		kafkaConfig, otelkafka.WithContext(context.Background()),
 		otelkafka.WithTracerProvider(example.TraceProvider),
