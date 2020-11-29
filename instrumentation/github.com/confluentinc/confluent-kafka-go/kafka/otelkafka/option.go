@@ -16,8 +16,9 @@ package otelkafka
 
 import (
 	"context"
-
 	otelcontrib "go.opentelemetry.io/contrib"
+	"go.opentelemetry.io/otel/propagators"
+
 	"go.opentelemetry.io/otel"
 	otelglobal "go.opentelemetry.io/otel/api/global"
 	oteltrace "go.opentelemetry.io/otel/api/trace"
@@ -25,6 +26,9 @@ import (
 
 const (
 	tracerName = "go.opentelemetry.io/contrib/instrumentation/github.com/confluentinc/confluent-kafka-go/kafka/otelkafka"
+
+	kafkaPartitionField  = "messaging.kafka.partition"
+	kafkaMessageKeyField = "messaging.kafka.message_key"
 )
 
 type config struct {
@@ -35,8 +39,14 @@ type config struct {
 }
 
 func newConfig(opts ...Option) *config {
-	cfg := &config{
-		ctx: context.Background(),
+	cfg := &config{}
+
+	for _, opt := range opts {
+		opt(cfg)
+	}
+
+	if cfg.ctx == nil {
+		cfg.ctx = context.Background()
 	}
 
 	if cfg.TracerProvider == nil {
@@ -44,17 +54,16 @@ func newConfig(opts ...Option) *config {
 	}
 
 	if cfg.Propagators == nil {
-		cfg.Propagators = otelglobal.TextMapPropagator()
+		cfg.Propagators = otel.NewCompositeTextMapPropagator(propagators.TraceContext{}, propagators.Baggage{})
 	}
 
-	for _, opt := range opts {
-		opt(cfg)
+	if cfg.Tracer == nil {
+		cfg.Tracer = cfg.TracerProvider.Tracer(
+			tracerName,
+			oteltrace.WithInstrumentationVersion(otelcontrib.SemVersion()),
+		)
 	}
 
-	cfg.Tracer = cfg.TracerProvider.Tracer(
-		tracerName,
-		oteltrace.WithInstrumentationVersion(otelcontrib.SemVersion()),
-	)
 	return cfg
 }
 
@@ -81,5 +90,12 @@ func WithTracerProvider(provider oteltrace.TracerProvider) Option {
 func WithContext(ctx context.Context) Option {
 	return func(cfg *config) {
 		cfg.ctx = ctx
+	}
+}
+
+// WithTracer sets the config tracer
+func WithTracer(tracer oteltrace.Tracer) Option {
+	return func(cfg *config) {
+		cfg.Tracer = tracer
 	}
 }

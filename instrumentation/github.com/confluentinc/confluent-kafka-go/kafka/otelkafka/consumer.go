@@ -97,8 +97,8 @@ func (c *Consumer) startSpan(msg *kafka.Message) oteltrace.Span {
 			semconv.MessagingOperationReceive,
 			semconv.MessagingDestinationKindKeyTopic,
 			semconv.MessagingDestinationKey.String(*msg.TopicPartition.Topic),
-			label.Key("messaging.kafka.message_key").String(string(msg.Key)),
-			label.Key("messaging.kafka.partition").Int32(msg.TopicPartition.Partition)),
+			label.Key(kafkaMessageKeyField).String(string(msg.Key)),
+			label.Key(kafkaPartitionField).Int32(msg.TopicPartition.Partition)),
 	}
 
 	// Start a span using parentSpanContext
