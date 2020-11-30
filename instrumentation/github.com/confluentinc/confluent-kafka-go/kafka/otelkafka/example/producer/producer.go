@@ -30,7 +30,7 @@ func main() {
 	// Initialize Tracer
 	example.InitTracer()
 
-	kafkaConfig := &kafka.ConfigMap{"bootstrap.servers": os.Getenv("KAFKA_PEERS"),}
+	kafkaConfig := &kafka.ConfigMap{"bootstrap.servers": os.Getenv("KAFKA_PEERS")}
 	p, err := otelkafka.NewProducer(
 		kafkaConfig, otelkafka.WithContext(context.Background()),
 		otelkafka.WithTracerProvider(example.TraceProvider),

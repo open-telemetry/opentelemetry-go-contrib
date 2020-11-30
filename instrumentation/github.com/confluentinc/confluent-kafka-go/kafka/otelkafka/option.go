@@ -16,6 +16,7 @@ package otelkafka
 
 import (
 	"context"
+
 	otelcontrib "go.opentelemetry.io/contrib"
 	"go.opentelemetry.io/otel/propagators"
 
