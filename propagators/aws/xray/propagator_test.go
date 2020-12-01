@@ -12,7 +12,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package aws
+package xray
 
 import (
 	"strings"
@@ -24,14 +24,13 @@ import (
 )
 
 var (
-	traceID                   = trace.TraceID{0x8a, 0x3c, 0x60, 0xf7, 0xd1, 0x88, 0xf8, 0xfa, 0x79, 0xd4, 0x8a, 0x39, 0x1a, 0x77, 0x8f, 0xa6}
-	xrayTraceID               = "1-8a3c60f7-d188f8fa79d48a391a778fa6"
-	parentID64Str             = "53995c3f42cd8ad8"
-	parentSpanID              = trace.SpanID{0x53, 0x99, 0x5c, 0x3f, 0x42, 0xcd, 0x8a, 0xd8}
-	zeroSpanIDStr             = "0000000000000000"
-	zeroTraceIDStr            = "1-00000000-000000000000000000000000"
-	invalidTraceHeaderID      = "1b00000000b000000000000000000000000"
-	wrongVersionTraceHeaderID = "5b00000000b000000000000000000000000"
+	traceID                    = trace.TraceID{0x8a, 0x3c, 0x60, 0xf7, 0xd1, 0x88, 0xf8, 0xfa, 0x79, 0xd4, 0x8a, 0x39, 0x1a, 0x77, 0x8f, 0xa6}
+	xrayTraceID                = "1-8a3c60f7-d188f8fa79d48a391a778fa6"
+	xrayTraceIDIncorrectLength = "1-82138-1203123"
+	parentID64Str              = "53995c3f42cd8ad8"
+	parentSpanID               = trace.SpanID{0x53, 0x99, 0x5c, 0x3f, 0x42, 0xcd, 0x8a, 0xd8}
+	zeroSpanIDStr              = "0000000000000000"
+	wrongVersionTraceHeaderID  = "5b00000000b000000000000000000000000"
 )
 
 func TestAwsXrayExtract(t *testing.T) {
@@ -61,24 +60,19 @@ func TestAwsXrayExtract(t *testing.T) {
 			nil,
 		},
 		{
-			zeroTraceIDStr, parentID64Str, isSampled,
-			trace.SpanContext{},
-			errMalformedTraceID,
-		},
-		{
 			xrayTraceID, zeroSpanIDStr, isSampled,
 			trace.SpanContext{},
 			errInvalidSpanIDLength,
 		},
 		{
-			invalidTraceHeaderID, parentID64Str, isSampled,
+			xrayTraceIDIncorrectLength, parentID64Str, isSampled,
 			trace.SpanContext{},
-			errMalformedTraceID,
+			errLengthTraceIDHeader,
 		},
 		{
 			wrongVersionTraceHeaderID, parentID64Str, isSampled,
 			trace.SpanContext{},
-			errMalformedTraceID,
+			errInvalidTraceIDVersion,
 		},
 	}
 
