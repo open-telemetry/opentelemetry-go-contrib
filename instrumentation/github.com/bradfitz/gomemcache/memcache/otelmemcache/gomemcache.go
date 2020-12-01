@@ -70,7 +70,6 @@ func NewClientWithTracing(client *memcache.Client, opts ...Option) *Client {
 // of the operation name and item key(s) (if available)
 func (c *Client) attrsByOperationAndItemKey(operation operation, key ...string) []label.KeyValue {
 	labels := []label.KeyValue{
-		semconv.ServiceNameKey.String(c.cfg.serviceName),
 		memcacheDBSystem(),
 		memcacheDBOperation(operation),
 	}
@@ -104,7 +103,7 @@ func (c *Client) startSpan(operationName operation, itemKey ...string) oteltrace
 // Ends span and, if applicable, sets error status
 func endSpan(s oteltrace.Span, err error) {
 	if err != nil {
-		s.SetStatus(memcacheErrToStatusCode(err), err.Error())
+		s.SetStatus(codes.Error, err.Error())
 	}
 	s.End()
 }
