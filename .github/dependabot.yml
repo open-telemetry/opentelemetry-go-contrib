@@ -417,6 +417,16 @@ updates:
     schedule:
       interval: "weekly"
       day: "sunday"
+  -
+    package-ecosystem: "gomod"
+    directory: "/propagators/opencensus/examples"
+    labels:
+      - dependencies
+      - go
+      - "Skip Changelog"
+    schedule:
+      interval: "weekly"
+      day: "sunday"
   - package-ecosystem: "gomod"
     directory: "/tools"
     labels:
