@@ -53,7 +53,7 @@ var (
 	errInvalidSpanIDLength   = errors.New("invalid span ID length, must be 16")
 )
 
-// Propagator serializes Span Context to/from AWS X-Ray headers
+// Propagator serializes Span Context to/from AWS X-Ray headers.
 //
 // Example AWS X-Ray format:
 //
