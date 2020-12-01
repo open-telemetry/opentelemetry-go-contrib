@@ -21,20 +21,18 @@ import (
 
 	"go.opentelemetry.io/contrib"
 	"go.opentelemetry.io/otel"
+	"go.opentelemetry.io/otel/codes"
 	"go.opentelemetry.io/otel/label"
-	"go.opentelemetry.io/otel/semconv"
 	oteltrace "go.opentelemetry.io/otel/trace"
 )
 
 const (
-	defaultTracerName  = "go.opentelemetry.io/contrib/instrumentation/github.com/bradfitz/gomemcache/memcache/otelmemcache"
-	defaultServiceName = "memcached"
+	tracerName = "go.opentelemetry.io/contrib/instrumentation/github.com/bradfitz/gomemcache/memcache/otelmemcache"
 )
 
 // Client is a wrapper around *memcache.Client.
 type Client struct {
 	*memcache.Client
-	cfg    *config
 	tracer oteltrace.Tracer
 	ctx    context.Context
 }
@@ -49,24 +47,19 @@ type Client struct {
 // error code and message, if an error occurs). Optionally, client context can
 // be set before an operation with the WithContext method.
 func NewClientWithTracing(client *memcache.Client, opts ...Option) *Client {
-	cfg := &config{}
+	var tp oteltrace.TracerProvider
 	for _, o := range opts {
-		o(cfg)
+		tp = o
 	}
 
-	if cfg.serviceName == "" {
-		cfg.serviceName = defaultServiceName
-	}
-
-	if cfg.tracerProvider == nil {
-		cfg.tracerProvider = otel.GetTracerProvider()
+	if tp == nil {
+		tp = otel.GetTracerProvider()
 	}
 
 	return &Client{
 		client,
-		cfg,
-		cfg.tracerProvider.Tracer(
-			defaultTracerName,
+		tp.Tracer(
+			tracerName,
 			oteltrace.WithInstrumentationVersion(contrib.SemVersion()),
 		),
 		context.Background(),
@@ -121,7 +114,6 @@ func (c *Client) WithContext(ctx context.Context) *Client {
 	cc := c.Client
 	return &Client{
 		Client: cc,
-		cfg:    c.cfg,
 		tracer: c.tracer,
 		ctx:    ctx,
 	}
