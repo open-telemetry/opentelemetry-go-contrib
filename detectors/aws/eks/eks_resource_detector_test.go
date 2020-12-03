@@ -77,7 +77,7 @@ func TestEks(t *testing.T) {
 }
 
 // Tests EKS resource detector not running in EKS environment
-func TestNotEks(t *testing.T) {
+func TestNotEKS(t *testing.T) {
 
 	detectorUtils := new(MockDetectorUtils)
 
