@@ -68,7 +68,7 @@ var _ resource.Detector = (*ResourceDetector)(nil)
 // Compile time assertion that eksDetectorUtils implements the detectorUtils interface.
 var _ detectorUtils = (*eksDetectorUtils)(nil)
 
-// Detect function collects associated resource attributes when running in Amazon EKS environment.
+// Detect returns a Resource describing the Amazon EKS environment being run in.
 func (detector *ResourceDetector) Detect(ctx context.Context) (*resource.Resource, error) {
 
 	isEks, err := isEks(detector.utils)
