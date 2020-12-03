@@ -81,7 +81,6 @@ func TestNotEKS(t *testing.T) {
 
 	detectorUtils := new(MockDetectorUtils)
 
-	// Set EKS resource detector variables
 	k8sTokenPath := "/var/run/secrets/kubernetes.io/serviceaccount/token"
 
 	// Mock functions and set expectations
