@@ -133,8 +133,7 @@ func (eksUtils eksDetectorUtils) fileExists(filename string) bool {
 	return err == nil && !info.IsDir()
 }
 
-// fetchString executes an HTTP request with a given HTTP Method and URL string
-// this function implements the detectorUtils interface
+// fetchString executes an HTTP request with a given HTTP Method and URL string.
 func (eksUtils eksDetectorUtils) fetchString(httpMethod string, URL string) (string, error) {
 
 	// Create new HTTP request object
