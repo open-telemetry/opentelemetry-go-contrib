@@ -135,8 +135,6 @@ func (eksUtils eksDetectorUtils) fileExists(filename string) bool {
 
 // fetchString executes an HTTP request with a given HTTP Method and URL string.
 func (eksUtils eksDetectorUtils) fetchString(httpMethod string, URL string) (string, error) {
-
-	// Create new HTTP request object
 	request, err := http.NewRequest(httpMethod, URL, nil)
 	if err != nil {
 		return "", fmt.Errorf("failed to create new HTTP request with method=%s, URL=%s: %w", httpMethod, URL, err)
