@@ -71,7 +71,7 @@ var _ detectorUtils = (*eksDetectorUtils)(nil)
 // Detect returns a Resource describing the Amazon EKS environment being run in.
 func (detector *ResourceDetector) Detect(ctx context.Context) (*resource.Resource, error) {
 
-	isEks, err := isEks(detector.utils)
+	isEks, err := isEKS(detector.utils)
 	if err != nil {
 		return nil, err
 	}
@@ -103,7 +103,7 @@ func (detector *ResourceDetector) Detect(ctx context.Context) (*resource.Resourc
 	}
 
 	// Return new resource object with clusterName and containerID as attributes
-	return resource.New(labels...), nil
+	return resource.NewWithAttributes(labels...), nil
 
 }
 
