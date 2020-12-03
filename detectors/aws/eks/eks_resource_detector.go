@@ -42,7 +42,7 @@ const (
 	timeoutMillis     = 2000
 )
 
-// Create interface for functions that need to be mocked
+// detectorUtils is used for testing the ResourceDetector by abstracting functions that rely on external systems.
 type detectorUtils interface {
 	fileExists(filename string) bool
 	fetchString(httpMethod string, URL string) (string, error)
