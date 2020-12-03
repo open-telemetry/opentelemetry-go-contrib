@@ -108,7 +108,7 @@ func (detector *ResourceDetector) Detect(ctx context.Context) (*resource.Resourc
 }
 
 // isEks checks if the current environment is running in EKS
-func isEks(utils detectorUtils) (bool, error) {
+func isEKS(utils detectorUtils) (bool, error) {
 	if !isK8s(utils) {
 		return false, nil
 	}
