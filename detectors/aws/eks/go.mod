@@ -1,4 +1,4 @@
-module github.com/wilguo/opentelemetry-go-contrib/detectors/aws/eks
+module go.opentelemetry.io/contrib/detectors/aws/eks
 
 go 1.15
 
