@@ -215,8 +215,6 @@ func getClusterName(utils detectorUtils) (string, error) {
 
 // getContainerID returns the containerID if currently running within a container.
 func (eksUtils eksDetectorUtils) getContainerID() (string, error) {
-
-	// Read file
 	fileData, err := ioutil.ReadFile(defaultCgroupPath)
 	if err != nil {
 		return "", fmt.Errorf("getContainerID() error: cannot read file with path %s: %w", defaultCgroupPath, err)
