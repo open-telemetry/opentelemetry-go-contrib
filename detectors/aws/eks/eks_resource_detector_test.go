@@ -69,7 +69,8 @@ func TestEks(t *testing.T) {
 
 	// Call EKS Resource detector to detect resources
 	eksResourceDetector := ResourceDetector{detectorUtils}
-	resourceObj, _ := eksResourceDetector.Detect(context.Background())
+	resourceObj, err := eksResourceDetector.Detect(context.Background())
+	require.NoError(t, err)
 
 	assert.Equal(t, expectedResource, resourceObj, "Resource object returned is incorrect")
 	detectorUtils.AssertExpectations(t)
