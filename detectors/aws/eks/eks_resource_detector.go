@@ -179,7 +179,7 @@ func (eksUtils eksDetectorUtils) fetchString(httpMethod string, URL string) (str
 	return string(body), nil
 }
 
-// getK8sCredHeader retrieves the kubernetes credential information
+// getK8sCredHeader retrieves the kubernetes credential information.
 func getK8sCredHeader() (string, error) {
 	content, err := ioutil.ReadFile(k8sTokenPath)
 	if err != nil {
