@@ -127,8 +127,7 @@ func isK8s(utils detectorUtils) bool {
 	return utils.fileExists(k8sTokenPath) && utils.fileExists(k8sCertPath)
 }
 
-// fileExists checks if a file with a given filename exists
-// this function implements the detectorUtils interface
+// fileExists checks if a file with a given filename exists.
 func (eksUtils eksDetectorUtils) fileExists(filename string) bool {
 	info, err := os.Stat(filename)
 	if os.IsNotExist(err) {
