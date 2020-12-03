@@ -213,8 +213,7 @@ func getClusterName(utils detectorUtils) (string, error) {
 	return clusterName, nil
 }
 
-// getContainerID retrieves the containerID resource attribute
-// this function implements the detectorUtils interface
+// getContainerID returns the containerID if currently running within a container.
 func (eksUtils eksDetectorUtils) getContainerID() (string, error) {
 
 	// Read file
