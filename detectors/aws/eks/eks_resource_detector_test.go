@@ -86,13 +86,8 @@ func TestNotEKS(t *testing.T) {
 	// Mock functions and set expectations
 	detectorUtils.On("fileExists", k8sTokenPath).Return(false)
 
-	// Expected resource object
-	expectedResource := resource.Empty()
-
-	// Call EKS Resource detector to detect resources
-	eksResourceDetector := ResourceDetector{detectorUtils}
-	resourceObj, _ := eksResourceDetector.Detect(context.Background())
-
-	assert.Equal(t, expectedResource, resourceObj, "Resource object should be empty")
+	r, err := ResourceDetector{detectorUtils}.Detect(context.Background())
+	require.NoError(t, err)
+	assert.Equal(t, resource.Empty(), r, "Resource object should be empty")
 	detectorUtils.AssertExpectations(t)
 }
