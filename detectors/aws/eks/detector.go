@@ -23,6 +23,7 @@ import (
 	"io/ioutil"
 	"net/http"
 	"os"
+	"regexp"
 	"strings"
 	"time"
 
@@ -220,10 +221,12 @@ func (eksUtils eksDetectorUtils) getContainerID() (string, error) {
 		return "", fmt.Errorf("getContainerID() error: cannot read file with path %s: %w", defaultCgroupPath, err)
 	}
 
+	r, _ := regexp.Compile(`^.*/docker/(.+)$`)
+
 	// Retrieve containerID from file
 	splitData := strings.Split(strings.TrimSpace(string(fileData)), "\n")
 	for _, str := range splitData {
-		if len(str) > containerIDLength {
+		if isMatch := r.MatchString(str); isMatch {
 			return str[len(str)-containerIDLength:], nil
 		}
 	}
