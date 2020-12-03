@@ -130,10 +130,7 @@ func isK8s(utils detectorUtils) bool {
 // fileExists checks if a file with a given filename exists.
 func (eksUtils eksDetectorUtils) fileExists(filename string) bool {
 	info, err := os.Stat(filename)
-	if os.IsNotExist(err) {
-		return false
-	}
-	return !info.IsDir()
+	return err == nil && !info.IsDir()
 }
 
 // fetchString executes an HTTP request with a given HTTP Method and URL string
