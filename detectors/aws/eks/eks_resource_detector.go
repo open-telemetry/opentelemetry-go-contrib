@@ -165,7 +165,6 @@ func (eksUtils eksDetectorUtils) fetchString(httpMethod string, URL string) (str
 		},
 	}
 
-	// Execute HTTP request
 	response, err := client.Do(request)
 	if err != nil || response.StatusCode != http.StatusOK {
 		return "", fmt.Errorf("failed to execute HTTP request with method=%s, URL=%s, Status Code=%d: %w", httpMethod, URL, response.StatusCode, err)
