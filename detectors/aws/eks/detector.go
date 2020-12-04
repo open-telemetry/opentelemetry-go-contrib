@@ -221,7 +221,10 @@ func (eksUtils eksDetectorUtils) getContainerID() (string, error) {
 		return "", fmt.Errorf("getContainerID() error: cannot read file with path %s: %w", defaultCgroupPath, err)
 	}
 
-	r, _ := regexp.Compile(`^.*/docker/(.+)$`)
+	r, err := regexp.Compile(`^.*/docker/(.+)$`)
+	if err != nil {
+		return "", err
+	}
 
 	// Retrieve containerID from file
 	splitData := strings.Split(strings.TrimSpace(string(fileData)), "\n")
