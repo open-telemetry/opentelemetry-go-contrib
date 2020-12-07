@@ -29,6 +29,16 @@ updates:
       day: "sunday"
   -
     package-ecosystem: "gomod"
+    directory: "/detectors/aws/eks"
+    labels:
+      - dependencies
+      - go
+      - "Skip Changelog"
+    schedule:
+      interval: "weekly"
+      day: "sunday"
+  -
+    package-ecosystem: "gomod"
     directory: "/detectors/aws"
     labels:
       - dependencies
@@ -410,6 +420,16 @@ updates:
   -
     package-ecosystem: "gomod"
     directory: "/propagators/opencensus"
+    labels:
+      - dependencies
+      - go
+      - "Skip Changelog"
+    schedule:
+      interval: "weekly"
+      day: "sunday"
+  -
+    package-ecosystem: "gomod"
+    directory: "/propagators/opencensus/examples"
     labels:
       - dependencies
       - go
