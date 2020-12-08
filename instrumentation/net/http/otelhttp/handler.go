@@ -140,6 +140,9 @@ func (h *Handler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 
 	var bw *bodyWrapper
 	isReqBodyNil := r.Body == nil
+	// if request body is nil we don't want to mutate the body as we will affect
+	// the identity of it in a unforeseeable way because we assert ReadCloser
+	// fullfills a certain interface.
 	if !isReqBodyNil {
 		bw = &bodyWrapper{ReadCloser: r.Body, record: readRecordFunc}
 		r.Body = bw
