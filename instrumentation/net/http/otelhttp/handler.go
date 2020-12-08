@@ -137,8 +137,13 @@ func (h *Handler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 			span.AddEvent("read", trace.WithAttributes(ReadBytesKey.Int64(n)))
 		}
 	}
-	bw := bodyWrapper{ReadCloser: r.Body, record: readRecordFunc}
-	r.Body = &bw
+
+	var bw *bodyWrapper
+	isReqBodyNil := r.Body == nil
+	if !isReqBodyNil {
+		bw = &bodyWrapper{ReadCloser: r.Body, record: readRecordFunc}
+		r.Body = bw
+	}
 
 	writeRecordFunc := func(int64) {}
 	if h.writeEvent {
@@ -170,13 +175,21 @@ func (h *Handler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 
 	h.handler.ServeHTTP(w, r.WithContext(ctx))
 
-	setAfterServeAttributes(span, bw.read, rww.written, rww.statusCode, bw.err, rww.err)
+	if isReqBodyNil {
+		setAfterServeAttributes(span, 0, rww.written, rww.statusCode, nil, rww.err)
+	} else {
+		setAfterServeAttributes(span, bw.read, rww.written, rww.statusCode, bw.err, rww.err)
+	}
 
 	// Add request metrics
 
 	labels := append(labeler.Get(), semconv.HTTPServerMetricAttributesFromHTTPRequest(h.operation, r)...)
+	if bw == nil {
+		h.counters[RequestContentLength].Add(ctx, 0, labels...)
+	} else {
+		h.counters[RequestContentLength].Add(ctx, bw.read, labels...)
+	}
 
-	h.counters[RequestContentLength].Add(ctx, bw.read, labels...)
 	h.counters[ResponseContentLength].Add(ctx, rww.written, labels...)
 
 	elapsedTime := time.Since(requestStartTime).Microseconds()
