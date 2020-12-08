@@ -56,13 +56,6 @@ func NewCloudRun() *CloudRun {
 	}
 }
 
-// for test only
-func (c *CloudRun) setupForTest(mc metadataClient, ongce func() bool, getenv func(string) string) {
-	c.mc = mc
-	c.onGCE = ongce
-	c.getenv = getenv
-}
-
 // Detect detects associated resources when running on Cloud Run hosts.
 // NOTE: the service.namespace label is currently hardcoded to be
 // "cloud-run-managed". This may change in the future, please do not rely on

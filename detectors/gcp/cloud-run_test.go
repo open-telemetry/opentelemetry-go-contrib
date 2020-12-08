@@ -43,6 +43,12 @@ type client struct {
 	m map[string]string
 }
 
+func setupForTest(c *CloudRun, mc metadataClient, ongce func() bool, getenv func(string) string) {
+	c.mc = mc
+	c.onGCE = ongce
+	c.getenv = getenv
+}
+
 func (c *client) Get(s string) (string, error) {
 	got, ok := c.m[s]
 	if !ok {
@@ -66,7 +72,7 @@ var _ metadataClient = (*client)(nil)
 func TestCloudRunDetectorNotOnGCE(t *testing.T) {
 	ctx := context.Background()
 	c := NewCloudRun()
-	c.setupForTest(nil, notOnGCE, getenv(nil))
+	setupForTest(c, nil, notOnGCE, getenv(nil))
 
 	if res, err := c.Detect(ctx); res != nil || err != nil {
 		t.Errorf("Expect c.Detect(ctx) to return (nil, nil), got (%v, %v)", res, err)
@@ -99,7 +105,7 @@ func TestCloudRunDetectorExpectSuccess(t *testing.T) {
 		t.Fatalf("failed to create a resource: %v", err)
 	}
 	c := NewCloudRun()
-	c.setupForTest(&client{m: metadata}, onGCE, getenv(envvars))
+	setupForTest(c, &client{m: metadata}, onGCE, getenv(envvars))
 
 	if res, err := c.Detect(ctx); err != nil {
 		t.Fatalf("got unexpected failure: %v", err)
@@ -158,7 +164,7 @@ func TestCloudRunDetectorExpectFail(t *testing.T) {
 	for _, test := range tests {
 		t.Run(test.name, func(t *testing.T) {
 			c := NewCloudRun()
-			c.setupForTest(&client{m: test.metadata}, onGCE, getenv(test.envvars))
+			setupForTest(c, &client{m: test.metadata}, onGCE, getenv(test.envvars))
 
 			if res, err := c.Detect(ctx); err == nil {
 				t.Errorf("Expect c.Detect(ctx) to return error, got nil (resource: %v)", res)
