@@ -69,6 +69,7 @@ func (c *CloudRun) Detect(ctx context.Context) (*resource.Resource, error) {
 
 	labels := []label.KeyValue{
 		semconv.CloudProviderGCP,
+		semconv.ServiceNamespaceKey.String(serviceNamespace),
 	}
 
 	var errInfo []string
@@ -93,15 +94,10 @@ func (c *CloudRun) Detect(ctx context.Context) (*resource.Resource, error) {
 
 	// Part of Cloud Run container runtime contract.
 	// See https://cloud.google.com/run/docs/reference/container-contract
-	// The same K_SERVICE value ultimately maps to both `namespace` and
-	// `job` label of `generic_task` metric type.
 	if service := c.getenv("K_SERVICE"); service == "" {
 		errInfo = append(errInfo, "envvar K_SERVICE contains empty string.")
 	} else {
-		labels = append(labels,
-			semconv.ServiceNamespaceKey.String(serviceNamespace),
-			semconv.ServiceNameKey.String(service),
-		)
+		labels = append(labels, semconv.ServiceNameKey.String(service))
 	}
 	resource, err := resource.New(ctx, resource.WithAttributes(labels...))
 	if err != nil {
