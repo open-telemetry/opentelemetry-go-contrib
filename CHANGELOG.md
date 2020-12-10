@@ -11,6 +11,7 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 ### Added
 
 - Amazon EKS resource detector. (#465)
+- A new `gcp.CloudRun` detector for detecting resource from a Cloud Run instance. (#455)
 
 ## [0.14.0] - 2020-11-20
 
@@ -20,7 +21,7 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 - The AWS detector now adds the cloud zone, host image ID, host type, and host name to the returned `Resource`. (#410)
 - Add Amazon ECS Resource Detector for AWS X-Ray. (#466)
 - Add propagator for AWS X-Ray (#462)
-  
+
 ### Changed
 
 - Add semantic version to `Tracer` / `Meter` created by instrumentation packages `otelsaram`, `otelrestful`, `otelmongo`, `otelhttp` and `otelhttptrace`. (#412)
