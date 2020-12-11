@@ -14,6 +14,7 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 
 - A new Amazon EKS resource detector. (#465)
 - A new `gcp.CloudRun` detector for detecting resource from a Cloud Run instance. (#455)
+- A new AWS X-Ray ID Generator (#459)
 
 ## [0.14.0] - 2020-11-20
 
