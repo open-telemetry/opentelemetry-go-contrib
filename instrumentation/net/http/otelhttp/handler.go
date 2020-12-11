@@ -138,13 +138,13 @@ func (h *Handler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		}
 	}
 
-	var bw *bodyWrapper
-	isReqBodyNil := r.Body == nil
-	// if request body is nil we don't want to mutate the body as we will affect
+	var bw = bodyWrapper{}
+	// if request body is nil we don't want to mutate the body as it will affect
 	// the identity of it in a unforeseeable way because we assert ReadCloser
-	// fullfills a certain interface.
-	if !isReqBodyNil {
-		bw = &bodyWrapper{ReadCloser: r.Body, record: readRecordFunc}
+	// fullfills a certain interface and it is indeed nil.
+	if r.Body != nil {
+		bw.ReadCloser = r.Body
+		bw.recorder = readRecordFunc
 		r.Body = bw
 	}
 
@@ -178,20 +178,12 @@ func (h *Handler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 
 	h.handler.ServeHTTP(w, r.WithContext(ctx))
 
-	if isReqBodyNil {
-		setAfterServeAttributes(span, 0, rww.written, rww.statusCode, nil, rww.err)
-	} else {
-		setAfterServeAttributes(span, bw.read, rww.written, rww.statusCode, bw.err, rww.err)
-	}
+	setAfterServeAttributes(span, bw.read, rww.written, rww.statusCode, bw.err, rww.err)
 
 	// Add request metrics
 
 	labels := append(labeler.Get(), semconv.HTTPServerMetricAttributesFromHTTPRequest(h.operation, r)...)
-	if bw == nil {
-		h.counters[RequestContentLength].Add(ctx, 0, labels...)
-	} else {
-		h.counters[RequestContentLength].Add(ctx, bw.read, labels...)
-	}
+	h.counters[RequestContentLength].Add(ctx, bw.read, labels...)
 
 	h.counters[ResponseContentLength].Add(ctx, rww.written, labels...)
 
