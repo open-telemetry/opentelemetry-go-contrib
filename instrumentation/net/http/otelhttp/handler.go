@@ -180,8 +180,7 @@ func (h *Handler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 
 	setAfterServeAttributes(span, bw.read, rww.written, rww.statusCode, bw.err, rww.err)
 
-	// Add request metrics
-
+	// Add metrics
 	labels := append(labeler.Get(), semconv.HTTPServerMetricAttributesFromHTTPRequest(h.operation, r)...)
 	h.counters[RequestContentLength].Add(ctx, bw.read, labels...)
 	h.counters[ResponseContentLength].Add(ctx, rww.written, labels...)
