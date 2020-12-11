@@ -9,6 +9,6 @@ require (
 	github.com/grpc-ecosystem/grpc-gateway v1.14.6 // indirect
 	github.com/prometheus/prometheus v2.5.0+incompatible
 	github.com/stretchr/testify v1.6.1
-	go.opentelemetry.io/otel v0.14.0
-	go.opentelemetry.io/otel/sdk v0.14.0
+	go.opentelemetry.io/otel v0.15.0
+	go.opentelemetry.io/otel/sdk v0.15.0
 )
