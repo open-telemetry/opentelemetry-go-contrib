@@ -38,6 +38,14 @@ const (
 // compile time assertion
 var _ endpoint.Failer = failedResponse{}
 
+type customError struct {
+	message string
+}
+
+func (e customError) Error() string {
+	return e.message
+}
+
 type failedResponse struct {
 	err error
 }
@@ -162,5 +170,99 @@ func TestEndpointMiddleware(t *testing.T) {
 		assert.Equal(t, codes.Unset, span.StatusCode())
 		assert.Equal(t, attribute.StringValue("value"), span.Attributes()["key"])
 		assert.Equal(t, attribute.StringValue("value2"), span.Attributes()["key2"])
+	})
+
+	t.Run("Error", func(t *testing.T) {
+		sr := new(oteltest.SpanRecorder)
+		provider := oteltest.NewTracerProvider(oteltest.WithSpanRecorder(sr))
+
+		mw := EndpointMiddleware(
+			WithTracerProvider(provider),
+		)
+
+		ctx := context.Background()
+
+		_, _ = mw(func(_ context.Context, req interface{}) (interface{}, error) {
+			return nil, customError{"something went wrong"}
+		})(ctx, nil)
+
+		spans := sr.Completed()
+		require.Len(t, spans, 1)
+
+		span := spans[0]
+
+		assert.Equal(t, defaultSpanName, span.Name())
+		assert.Equal(t, trace.SpanKindServer, span.SpanKind())
+		assert.Equal(t, codes.Error, span.StatusCode())
+
+		events := span.Events()
+		require.Len(t, events, 1)
+
+		assert.Equal(t, "error", events[0].Name)
+		assert.Equal(t, attribute.StringValue("go.opentelemetry.io/contrib/instrumentation/github.com/go-kit/kit/otelkit.customError"), events[0].Attributes["error.type"])
+		assert.Equal(t, attribute.StringValue("something went wrong"), events[0].Attributes["error.message"])
+	})
+
+	t.Run("BusinessError", func(t *testing.T) {
+		sr := new(oteltest.SpanRecorder)
+		provider := oteltest.NewTracerProvider(oteltest.WithSpanRecorder(sr))
+
+		mw := EndpointMiddleware(
+			WithTracerProvider(provider),
+		)
+
+		ctx := context.Background()
+
+		_, _ = mw(func(_ context.Context, req interface{}) (interface{}, error) {
+			return failedResponse{err: customError{"some business error"}}, nil
+		})(ctx, nil)
+
+		spans := sr.Completed()
+		require.Len(t, spans, 1)
+
+		span := spans[0]
+
+		assert.Equal(t, defaultSpanName, span.Name())
+		assert.Equal(t, trace.SpanKindServer, span.SpanKind())
+		assert.Equal(t, codes.Error, span.StatusCode())
+
+		events := span.Events()
+		require.Len(t, events, 1)
+
+		assert.Equal(t, "error", events[0].Name)
+		assert.Equal(t, attribute.StringValue("go.opentelemetry.io/contrib/instrumentation/github.com/go-kit/kit/otelkit.customError"), events[0].Attributes["error.type"])
+		assert.Equal(t, attribute.StringValue("some business error"), events[0].Attributes["error.message"])
+	})
+
+	t.Run("IgnoredBusinessError", func(t *testing.T) {
+		sr := new(oteltest.SpanRecorder)
+		provider := oteltest.NewTracerProvider(oteltest.WithSpanRecorder(sr))
+
+		mw := EndpointMiddleware(
+			WithTracerProvider(provider),
+			WithIgnoreBusinessError(true),
+		)
+
+		ctx := context.Background()
+
+		_, _ = mw(func(_ context.Context, req interface{}) (interface{}, error) {
+			return failedResponse{err: customError{"some business error"}}, nil
+		})(ctx, nil)
+
+		spans := sr.Completed()
+		require.Len(t, spans, 1)
+
+		span := spans[0]
+
+		assert.Equal(t, defaultSpanName, span.Name())
+		assert.Equal(t, trace.SpanKindServer, span.SpanKind())
+		assert.Equal(t, codes.Unset, span.StatusCode())
+
+		events := span.Events()
+		require.Len(t, events, 1)
+
+		assert.Equal(t, "error", events[0].Name)
+		assert.Equal(t, attribute.StringValue("go.opentelemetry.io/contrib/instrumentation/github.com/go-kit/kit/otelkit.customError"), events[0].Attributes["error.type"])
+		assert.Equal(t, attribute.StringValue("some business error"), events[0].Attributes["error.message"])
 	})
 }
