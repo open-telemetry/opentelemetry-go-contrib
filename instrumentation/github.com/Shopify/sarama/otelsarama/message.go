@@ -17,11 +17,11 @@ package otelsarama
 import (
 	"github.com/Shopify/sarama"
 
-	"go.opentelemetry.io/otel"
+	"go.opentelemetry.io/otel/propagation"
 )
 
-var _ otel.TextMapCarrier = (*ProducerMessageCarrier)(nil)
-var _ otel.TextMapCarrier = (*ConsumerMessageCarrier)(nil)
+var _ propagation.TextMapCarrier = (*ProducerMessageCarrier)(nil)
+var _ propagation.TextMapCarrier = (*ConsumerMessageCarrier)(nil)
 
 // ProducerMessageCarrier injects and extracts traces from a sarama.ProducerMessage.
 type ProducerMessageCarrier struct {
