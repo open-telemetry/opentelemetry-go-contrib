@@ -43,8 +43,6 @@ gopkg.in/check.v1 v0.0.0-20161208181325-20d25e280405 h1:yhCVgyC4o1eVCa2tZl7eS0r+
 gopkg.in/check.v1 v0.0.0-20161208181325-20d25e280405/go.mod h1:Co6ibVJAznAaIkqp8huTwlJQCZ016jof/cbN4VW5Yz0=
 gopkg.in/ini.v1 v1.46.0 h1:VeDZbLYGaupuvIrsYCEOe/L/2Pcs5n7hdO1ZTjporag=
 gopkg.in/ini.v1 v1.46.0/go.mod h1:pNLf8WUiyNEtQjuu5G5vTm06TEv9tsIgeAvK8hOrP4k=
-gopkg.in/macaron.v1 v1.3.9 h1:Dw+DDRYdXgQyEsPlfAfKz+UA5qVUrH3KPD7JhmZ9MFc=
-gopkg.in/macaron.v1 v1.3.9/go.mod h1:uMZCFccv9yr5TipIalVOyAyZQuOH3OkmXvgcWwhJuP4=
 gopkg.in/macaron.v1 v1.4.0 h1:RJHC09fAnQ8tuGUiZNjG0uyL1BWSdSWd9SpufIcEArQ=
 gopkg.in/macaron.v1 v1.4.0/go.mod h1:uMZCFccv9yr5TipIalVOyAyZQuOH3OkmXvgcWwhJuP4=
 gopkg.in/yaml.v3 v3.0.0-20200313102051-9f266ea9e77c h1:dUUwHk2QECo/6vqA44rthZ8ie2QXMNeKRTHCNY2nXvo=
