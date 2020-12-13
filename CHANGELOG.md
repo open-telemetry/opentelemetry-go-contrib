@@ -8,6 +8,10 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 
 ## [Unreleased]
 
+### Added
+
+- Add registry link check to `Makefile` and pre-release script. (#446)
+
 ## [0.15.0] - 2020-12-11
 
 ### Added
