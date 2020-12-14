@@ -68,7 +68,7 @@ func TestTraceIDIsNotNil(t *testing.T) {
 	assert.False(t, bytes.Equal(traceID[:], nilTraceID[:]), "TraceID cannot be empty.")
 }
 
-func TestSpanIdIsValidLength(t *testing.T) {
+func TestSpanIDIsValidLength(t *testing.T) {
 	idg := NewIDGenerator()
 	ctx := context.Background()
 	traceID, spanID1 := idg.NewIDs(ctx)
