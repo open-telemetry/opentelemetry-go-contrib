@@ -43,7 +43,7 @@ func TestTraceIDIsUnique(t *testing.T) {
 	assert.NotEqual(t, traceID1.String(), traceID2.String(), "TraceID should be unique")
 }
 
-func TestTraceIdTimeStampInBounds(t *testing.T) {
+func TestTraceIDTimestampInBounds(t *testing.T) {
 
 	idg := NewIDGenerator()
 
