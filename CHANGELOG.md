@@ -8,9 +8,16 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 
 ## [Unreleased]
 
+## [0.15.1] - 2020-12-14
+
 ### Added
 
 - Add registry link check to `Makefile` and pre-release script. (#446)
+- A new AWS X-Ray ID Generator (#459)
+
+### Fixed
+
+- Fixes the body replacement in otelhttp to not to mutate a nil body. (#484)
 
 ## [0.15.0] - 2020-12-11
 
@@ -18,7 +25,6 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 
 - A new Amazon EKS resource detector. (#465)
 - A new `gcp.CloudRun` detector for detecting resource from a Cloud Run instance. (#455)
-- A new AWS X-Ray ID Generator (#459)
 
 ## [0.14.0] - 2020-11-20
 
