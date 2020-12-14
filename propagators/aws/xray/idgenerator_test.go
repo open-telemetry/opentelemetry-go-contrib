@@ -27,7 +27,7 @@ import (
 	"go.opentelemetry.io/otel/trace"
 )
 
-func TestTraceIdIsValidLength(t *testing.T) {
+func TestTraceIDIsValidLength(t *testing.T) {
 	idg := NewIDGenerator()
 	traceID, _ := idg.NewIDs(context.Background())
 
