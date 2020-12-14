@@ -11,8 +11,18 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 ### Added
 
 - Instrumentation for the AWS S3 client `github.com/aws/aws-sdk-go/aws/service/s3`. (#416)
+
+## [0.15.1] - 2020-12-14
+
+### Added
+
 - Amazon EKS resource detector. (#465)
 - Add registry link check to `Makefile` and pre-release script. (#446)
+- A new AWS X-Ray ID Generator (#459)
+
+### Fixed
+
+- Fixes the body replacement in otelhttp to not to mutate a nil body. (#484)
 
 ## [0.15.0] - 2020-12-11
 
@@ -244,7 +254,8 @@ First official tagged release of `contrib` repository.
 - Prefix support for dogstatsd (#34)
 - Update Go Runtime package to use batch observer (#44)
 
-[Unreleased]: https://github.com/open-telemetry/opentelemetry-go-contrib/compare/v0.15.0...HEAD
+[Unreleased]: https://github.com/open-telemetry/opentelemetry-go-contrib/compare/v0.15.1...HEAD
+[0.15.1]: https://github.com/open-telemetry/opentelemetry-go-contrib/releases/tag/v0.15.1
 [0.15.0]: https://github.com/open-telemetry/opentelemetry-go-contrib/releases/tag/v0.15.0
 [0.14.0]: https://github.com/open-telemetry/opentelemetry-go-contrib/releases/tag/v0.14.0
 [0.13.0]: https://github.com/open-telemetry/opentelemetry-go-contrib/releases/tag/v0.13.0
