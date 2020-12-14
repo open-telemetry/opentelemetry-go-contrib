@@ -8,11 +8,14 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 
 ## [Unreleased]
 
+### Added
+
+- Instrumentation for the AWS S3 client `github.com/aws/aws-sdk-go/aws/service/s3`. (#416)
+
 ## [0.15.1] - 2020-12-14
 
 ### Added
 
-- Instrumentation for the AWS S3 client `github.com/aws/aws-sdk-go/aws/service/s3`. (#416)
 - Amazon EKS resource detector. (#465)
 - Add registry link check to `Makefile` and pre-release script. (#446)
 - A new AWS X-Ray ID Generator (#459)
