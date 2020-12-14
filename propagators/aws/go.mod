@@ -1,4 +1,4 @@
-module github.com/open-o11y/opentelemetry-go-contrib-PR/propagators/aws
+module go.opentelemetry.io/contrib/propagators/aws
 
 go 1.15
 
