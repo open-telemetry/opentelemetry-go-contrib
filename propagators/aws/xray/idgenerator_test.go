@@ -35,7 +35,7 @@ func TestTraceIDIsValidLength(t *testing.T) {
 	assert.Equal(t, len(traceID.String()), expectedTraceIDLength, "TraceID has incorrect length.")
 }
 
-func TestTraceIdIsUnique(t *testing.T) {
+func TestTraceIDIsUnique(t *testing.T) {
 	idg := NewIDGenerator()
 	traceID1, _ := idg.NewIDs(context.Background())
 	traceID2, _ := idg.NewIDs(context.Background())
