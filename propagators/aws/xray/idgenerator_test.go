@@ -79,7 +79,7 @@ func TestSpanIDIsValidLength(t *testing.T) {
 	assert.Equal(t, len(spanID2.String()), expectedSpanIDLength, "SpanID has incorrect length")
 }
 
-func TestSpanIdIsUnique(t *testing.T) {
+func TestSpanIDIsUnique(t *testing.T) {
 	idg := NewIDGenerator()
 	ctx := context.Background()
 	traceID, spanID1 := idg.NewIDs(ctx)
