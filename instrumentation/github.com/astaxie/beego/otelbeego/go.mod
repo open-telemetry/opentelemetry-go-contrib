@@ -9,7 +9,7 @@ replace (
 )
 
 require (
-	github.com/astaxie/beego v1.12.2
+	github.com/astaxie/beego v1.12.3
 	github.com/stretchr/testify v1.6.1
 	go.opentelemetry.io/contrib/instrumentation/net/http/otelhttp v0.15.0
 	go.opentelemetry.io/contrib/propagators v0.15.0
