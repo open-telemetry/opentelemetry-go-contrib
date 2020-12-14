@@ -60,7 +60,7 @@ func TestTraceIDTimestampInBounds(t *testing.T) {
 	assert.LessOrEqual(t, currentTime, nextTime, "TraceID is generated incorrectly with the wrong timestamp.")
 }
 
-func TestTraceIdIsNotNil(t *testing.T) {
+func TestTraceIDIsNotNil(t *testing.T) {
 	var nilTraceID trace.TraceID
 	idg := NewIDGenerator()
 	traceID, _ := idg.NewIDs(context.Background())
