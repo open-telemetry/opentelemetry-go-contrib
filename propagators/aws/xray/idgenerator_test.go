@@ -92,7 +92,7 @@ func TestSpanIDIsUnique(t *testing.T) {
 	assert.NotEqual(t, spanID3.String(), spanID4.String(), "SpanID should be unique")
 }
 
-func TestSpanIdIsNotNil(t *testing.T) {
+func TestSpanIDIsNotNil(t *testing.T) {
 	var nilSpanID trace.SpanID
 	idg := NewIDGenerator()
 	ctx := context.Background()
