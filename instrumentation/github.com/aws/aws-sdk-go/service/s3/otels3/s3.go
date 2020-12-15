@@ -36,12 +36,12 @@ var instrumentationName = "go.opentelemetry.io/contrib/instrumentation/github.co
 
 type instrumentedS3 struct {
 	s3iface.S3API
-	tracer          trace.Tracer
-	meter           metric.Meter
-	propagators     propagation.TextMapPropagator
-	counters        *counters
-	recorders       *recorders
-	spanCorrelation bool
+	tracer            trace.Tracer
+	meter             metric.Meter
+	textMapPropagator propagation.TextMapPropagator
+	counters          *counters
+	recorders         *recorders
+	spanCorrelation   bool
 }
 
 type counters struct {
@@ -52,7 +52,7 @@ type recorders struct {
 	operationDuration metric.Float64ValueRecorder
 }
 
-// PutObjectWithContext invokes the PutObjectWithContext function with tracing instrumented.
+// PutObjectWithContext wraps the embedded PutObjectWithContext method with telemetry signal instrumentation.
 func (s *instrumentedS3) PutObjectWithContext(ctx aws.Context, input *s3.PutObjectInput, opts ...request.Option) (*s3.PutObjectOutput, error) {
 	startTime := time.Now()
 	destination := aws.StringValue(input.Bucket)
@@ -88,13 +88,12 @@ func (s *instrumentedS3) PutObjectWithContext(ctx aws.Context, input *s3.PutObje
 		float64(time.Since(startTime).Microseconds()),
 		attrs...,
 	)
-	//append spand if and trace id to metrics on latency on gauge
 	s.counters.operation.Add(ctx, 1, attrs...)
 
 	return output, err
 }
 
-// GetObjectWithContext invokes the GetObjectWithContext function with tracing instrumented
+// GetObjectWithContext wraps the embedded GetObjectWithContext method with telemetry signal instrumentation.
 func (s *instrumentedS3) GetObjectWithContext(ctx aws.Context, input *s3.GetObjectInput, opts ...request.Option) (*s3.GetObjectOutput, error) {
 	startTime := time.Now()
 	destination := aws.StringValue(input.Bucket)
@@ -135,7 +134,7 @@ func (s *instrumentedS3) GetObjectWithContext(ctx aws.Context, input *s3.GetObje
 	return output, err
 }
 
-// DeleteObjectWithContext invokes the DeleteObjectWithContext function with tracing instrumented
+// DeleteObjectWithContext wraps the embedded DeleteObjectWithContext method with telemetry signal instrumentation.
 func (s *instrumentedS3) DeleteObjectWithContext(ctx aws.Context, input *s3.DeleteObjectInput, opts ...request.Option) (*s3.DeleteObjectOutput, error) {
 	startTime := time.Now()
 	destination := aws.StringValue(input.Bucket)
@@ -193,23 +192,23 @@ func NewInstrumentedS3Client(s s3iface.S3API, opts ...Option) (s3iface.S3API, er
 	}
 
 	cfg := config{
-		TracerProvider: otel.GetTracerProvider(),
-		MetricProvider: otel.GetMeterProvider(),
-		Propagators:    otel.GetTextMapPropagator(),
+		TracerProvider:    otel.GetTracerProvider(),
+		MeterProvider:     otel.GetMeterProvider(),
+		TextMapPropagator: otel.GetTextMapPropagator(),
 	}
 	for _, opt := range opts {
 		opt.apply(&cfg)
 	}
 	tracer := cfg.TracerProvider.Tracer(instrumentationName)
-	meter := cfg.MetricProvider.Meter(instrumentationName)
+	meter := cfg.MeterProvider.Meter(instrumentationName)
 
 	return &instrumentedS3{
-		S3API:           s,
-		meter:           meter,
-		tracer:          tracer,
-		propagators:     cfg.Propagators,
-		counters:        createCounters(meter),
-		recorders:       createRecorders(meter),
-		spanCorrelation: cfg.SpanCorrelation,
+		S3API:             s,
+		meter:             meter,
+		tracer:            tracer,
+		textMapPropagator: cfg.TextMapPropagator,
+		counters:          createCounters(meter),
+		recorders:         createRecorders(meter),
+		spanCorrelation:   cfg.SpanCorrelation,
 	}, nil
 }

@@ -16,7 +16,6 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 
 ### Added
 
-- Amazon EKS resource detector. (#465)
 - Add registry link check to `Makefile` and pre-release script. (#446)
 - A new AWS X-Ray ID Generator (#459)
 
@@ -55,11 +54,11 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 
 ## [0.13.0] - 2020-10-09
 
-### Added
+## Added
 
 - A Jaeger propagator. (#375)
 
-### Changed
+## Changed
 
 - The `go.opentelemetry.io/contrib/instrumentation/google.golang.org/grpc/otelgrpc` package instrumentation no longer accepts a `Tracer` as an argument to the interceptor function.
    Instead, a new `WithTracerProvider` option is added to configure the `TracerProvider` used when creating the `Tracer` for the instrumentation. (#373)
