@@ -186,8 +186,7 @@ func createRecorders(meter metric.Meter) *recorders {
 	return &recorders{operationDuration: execTimeRecorder}
 }
 
-// NewInstrumentedS3Client returns an instrumentedS3 object
-// containing configuration options and an S3 interface
+// NewInstrumentedS3Client returns an instrumentation wrapped s.
 func NewInstrumentedS3Client(s s3iface.S3API, opts ...Option) (s3iface.S3API, error) {
 	if s == nil || reflect.ValueOf(s).IsNil() {
 		return &instrumentedS3{}, errors.New("interface must be set")
