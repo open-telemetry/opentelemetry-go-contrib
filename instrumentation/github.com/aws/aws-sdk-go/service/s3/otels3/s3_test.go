@@ -160,13 +160,13 @@ func Test_instrumentedS3_PutObjectWithContext(t *testing.T) {
 
 			s3Mock := &mocks.MockS3Client{}
 			s := &instrumentedS3{
-				S3API:           s3Mock,
-				tracer:          mockedTracer,
-				meter:           mockedMeter,
-				propagators:     mockedPropagators,
-				counters:        mockedCounters,
-				recorders:       mockedRecorders,
-				spanCorrelation: tt.fields.spanCorrelation,
+				S3API:             s3Mock,
+				tracer:            mockedTracer,
+				meter:             mockedMeter,
+				textMapPropagator: mockedPropagators,
+				counters:          mockedCounters,
+				recorders:         mockedRecorders,
+				spanCorrelation:   tt.fields.spanCorrelation,
 			}
 			expectedReturn := tt.fields.mockSetup()
 			got, err := s.PutObjectWithContext(tt.args.ctx, tt.args.input)
@@ -261,13 +261,13 @@ func Test_instrumentedS3_GetObjectWithContext(t *testing.T) {
 
 			s3Mock := &mocks.MockS3Client{}
 			s := &instrumentedS3{
-				S3API:           s3Mock,
-				tracer:          mockedTracer,
-				meter:           mockedMeter,
-				propagators:     mockedPropagators,
-				counters:        mockedCounters,
-				recorders:       mockedRecorders,
-				spanCorrelation: tt.fields.spanCorrelation,
+				S3API:             s3Mock,
+				tracer:            mockedTracer,
+				meter:             mockedMeter,
+				textMapPropagator: mockedPropagators,
+				counters:          mockedCounters,
+				recorders:         mockedRecorders,
+				spanCorrelation:   tt.fields.spanCorrelation,
 			}
 			expectedReturn := tt.fields.mockSetup()
 			got, err := s.GetObjectWithContext(tt.args.ctx, tt.args.input)
@@ -362,13 +362,13 @@ func Test_instrumentedS3_DeleteObjectWithContext(t *testing.T) {
 
 			s3Mock := &mocks.MockS3Client{}
 			s := &instrumentedS3{
-				S3API:           s3Mock,
-				tracer:          mockedTracer,
-				meter:           mockedMeter,
-				propagators:     mockedPropagators,
-				counters:        mockedCounters,
-				recorders:       mockedRecorders,
-				spanCorrelation: tt.fields.spanCorrelation,
+				S3API:             s3Mock,
+				tracer:            mockedTracer,
+				meter:             mockedMeter,
+				textMapPropagator: mockedPropagators,
+				counters:          mockedCounters,
+				recorders:         mockedRecorders,
+				spanCorrelation:   tt.fields.spanCorrelation,
 			}
 			expectedReturn := tt.fields.mockSetup()
 			got, err := s.DeleteObjectWithContext(tt.args.ctx, tt.args.input)
@@ -418,14 +418,14 @@ func Test_instrumentedS3_NewInstrumentedS3Client(t *testing.T) {
 				opts: []Option{
 					WithTracerProvider(tracerProvider),
 					WithMeterProvider(meterProvider),
-					WithPropagators(mockedPropagator),
+					WithTextMapPropagator(mockedPropagator),
 					WithSpanCorrelation(true),
 				},
 			},
 			verifyFunc: func(t *testing.T, got s3iface.S3API, err error) {
 				assert.Nil(t, err, "error should be nil")
 				assert.Equal(t, got.(*instrumentedS3).spanCorrelation, true)
-				assert.Equal(t, got.(*instrumentedS3).propagators, mockedPropagator)
+				assert.Equal(t, got.(*instrumentedS3).textMapPropagator, mockedPropagator)
 				assert.Equal(t, got.(*instrumentedS3).S3API, s3MockClient)
 				assert.NotNil(t, got.(*instrumentedS3).meter, "meter should not be nil")
 				assert.NotNil(t, got.(*instrumentedS3).tracer, "tracer should not be nil")
@@ -441,7 +441,7 @@ func Test_instrumentedS3_NewInstrumentedS3Client(t *testing.T) {
 			},
 			verifyFunc: func(t *testing.T, got s3iface.S3API, err error) {
 				assert.Nil(t, err, "error should be nil")
-				assert.Equal(t, got.(*instrumentedS3).propagators, otel.GetTextMapPropagator())
+				assert.Equal(t, got.(*instrumentedS3).textMapPropagator, otel.GetTextMapPropagator())
 				assert.NotNil(t, got.(*instrumentedS3).meter, "meter should not be nil")
 				assert.NotNil(t, got.(*instrumentedS3).tracer, "tracer should not be nil")
 				assert.NotNil(t, got.(*instrumentedS3).counters, "counters should not be nil")

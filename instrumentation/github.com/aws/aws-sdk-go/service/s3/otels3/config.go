@@ -20,53 +20,53 @@ import (
 	oteltrace "go.opentelemetry.io/otel/trace"
 )
 
-// Config provides options for the AWS SDK instrumentation.
+// config is the configuration for the AWS SDK instrumentation.
 type config struct {
-	TracerProvider  oteltrace.TracerProvider
-	MetricProvider  otelmetric.MeterProvider
-	Propagators     propagation.TextMapPropagator
-	SpanCorrelation bool
+	TracerProvider    oteltrace.TracerProvider
+	MeterProvider     otelmetric.MeterProvider
+	TextMapPropagator propagation.TextMapPropagator
+	SpanCorrelation   bool
 }
 
-// Option interface used for setting instrumentation configuration options.
+// Option sets instrumentation configuration options.
 type Option interface {
 	apply(*config)
 }
 
-// optionFunc provides a wrapper for specifying options in function format
+// optionFunc provides a wrapper for specifying options as a function.
 type optionFunc func(*config)
 
-// Apply will set the option in the provided config.
+// apply sets the appropriate option in cfg.
 func (o optionFunc) apply(cfg *config) {
 	o(cfg)
 }
 
-// WithPropagators specifies propagators to use for extracting
-// information from the HTTP requests. If none are specified, global
-// ones will be used.
-func WithPropagators(propagators propagation.TextMapPropagator) Option {
+// WithTextMapPropagator specifies the TextMapPropagator to extract
+// information from the HTTP requests with. If none is provided, the global
+// TextMapPropagator will be used.
+func WithTextMapPropagator(textMapPropagator propagation.TextMapPropagator) Option {
 	return optionFunc(func(cfg *config) {
-		cfg.Propagators = propagators
+		cfg.TextMapPropagator = textMapPropagator
 	})
 }
 
-// WithTracerProvider specifies a TracerProvider to use for creating a Tracer.
-// If none is specified, the global provider is used.
+// WithTracerProvider specifies the TracerProvider used to create a Tracer for
+// this instrumentation. If none is provided, the global TracerProvider is used.
 func WithTracerProvider(provider oteltrace.TracerProvider) Option {
 	return optionFunc(func(cfg *config) {
 		cfg.TracerProvider = provider
 	})
 }
 
-// WithMeterProvider specifies a MeterProvider to use for creating a Meter.
-// If none is specified, the global provider is used.
+// WithMeterProvider specifies the MeterProvider used to create a Meter for
+// this instrumentation. If none is provided, the global MeterProvider is used.
 func WithMeterProvider(provider otelmetric.MeterProvider) Option {
 	return optionFunc(func(cfg *config) {
-		cfg.MetricProvider = provider
+		cfg.MeterProvider = provider
 	})
 }
 
-// WithSpanCorrelation specifies whether span ID and trace ID should be added to metric event as attributes.
+// WithSpanCorrelation specifies whether span ID and trace ID should be added to metric events as attributes.
 func WithSpanCorrelation(v bool) Option {
 	return optionFunc(func(cfg *config) {
 		cfg.SpanCorrelation = v
