@@ -11,7 +11,7 @@ require (
 	github.com/felixge/httpsnoop v1.0.1
 	github.com/gorilla/mux v1.8.0
 	github.com/stretchr/testify v1.6.1
-	go.opentelemetry.io/contrib v0.14.0
-	go.opentelemetry.io/contrib/propagators v0.14.0
-	go.opentelemetry.io/otel v0.14.0
+	go.opentelemetry.io/contrib v0.15.1
+	go.opentelemetry.io/contrib/propagators v0.15.1
+	go.opentelemetry.io/otel v0.15.0
 )

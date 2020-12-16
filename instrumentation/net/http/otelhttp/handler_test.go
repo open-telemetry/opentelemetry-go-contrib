@@ -176,3 +176,29 @@ func TestResponseWriterOptionalInterfaces(t *testing.T) {
 		t.Fatal("http.Flusher interface not exposed")
 	}
 }
+
+// This use case is important as we make sure the body isn't mutated
+// when it is nil. This is a common use case for tests where the request
+// is directly passed to the handler.
+func TestHandlerReadingNilBodySuccess(t *testing.T) {
+	rr := httptest.NewRecorder()
+
+	provider := oteltest.NewTracerProvider()
+
+	h := NewHandler(
+		http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+			if r.Body != nil {
+				_, err := ioutil.ReadAll(r.Body)
+				assert.NotNil(t, err)
+			}
+		}), "test_handler",
+		WithTracerProvider(provider),
+	)
+
+	r, err := http.NewRequest(http.MethodGet, "http://localhost/", nil)
+	if err != nil {
+		t.Fatal(err)
+	}
+	h.ServeHTTP(rr, r)
+	assert.Equal(t, 200, rr.Result().StatusCode)
+}
