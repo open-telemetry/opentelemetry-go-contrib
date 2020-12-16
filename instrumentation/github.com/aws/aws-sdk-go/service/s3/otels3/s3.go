@@ -27,6 +27,7 @@ import (
 
 	"go.opentelemetry.io/otel"
 	"go.opentelemetry.io/otel/codes"
+	"go.opentelemetry.io/otel/label"
 	"go.opentelemetry.io/otel/metric"
 	"go.opentelemetry.io/otel/propagation"
 	"go.opentelemetry.io/otel/trace"
@@ -52,6 +53,16 @@ type recorders struct {
 	operationDuration metric.Float64ValueRecorder
 }
 
+// appendSpanAndTraceIDFromSpan extracts the trace id and span id from a span using the context field.
+// It returns a list of attributes with the span id and trace id appended to the original slice.
+// Any modification on the original slice will modify the returned slice.
+func appendSpanAndTraceIDFromSpan(attrs []label.KeyValue, span trace.Span) []label.KeyValue {
+	return append(attrs,
+		label.String("event.spanId", span.SpanContext().SpanID.String()),
+		label.String("event.traceId", span.SpanContext().TraceID.String()),
+	)
+}
+
 // PutObjectWithContext wraps the embedded PutObjectWithContext method with telemetry signal instrumentation.
 func (s *instrumentedS3) PutObjectWithContext(ctx aws.Context, input *s3.PutObjectInput, opts ...request.Option) (*s3.PutObjectOutput, error) {
 	startTime := time.Now()
@@ -66,8 +77,8 @@ func (s *instrumentedS3) PutObjectWithContext(ctx aws.Context, input *s3.PutObje
 	)
 
 	output, err := s.S3API.PutObjectWithContext(ctx, input, opts...)
-	callReturnTime := trace.WithTimestamp(time.Now())
-	defer span.End(callReturnTime)
+	callReturnTime := time.Now()
+	defer span.End(trace.WithTimestamp(callReturnTime))
 
 	if err != nil {
 		attrs = append(attrs, labelStatusFailure)
@@ -85,7 +96,7 @@ func (s *instrumentedS3) PutObjectWithContext(ctx aws.Context, input *s3.PutObje
 
 	s.recorders.operationDuration.Record(
 		spanCtx,
-		float64(time.Since(startTime).Microseconds()),
+		float64(callReturnTime.Sub(startTime).Microseconds()),
 		attrs...,
 	)
 	s.counters.operation.Add(ctx, 1, attrs...)
@@ -107,8 +118,8 @@ func (s *instrumentedS3) GetObjectWithContext(ctx aws.Context, input *s3.GetObje
 	)
 
 	output, err := s.S3API.GetObjectWithContext(ctx, input, opts...)
-	callReturnTime := trace.WithTimestamp(time.Now())
-	defer span.End(callReturnTime)
+	callReturnTime := time.Now()
+	defer span.End(trace.WithTimestamp(callReturnTime))
 
 	if err != nil {
 		attrs = append(attrs, labelStatusFailure)
@@ -126,7 +137,7 @@ func (s *instrumentedS3) GetObjectWithContext(ctx aws.Context, input *s3.GetObje
 
 	s.recorders.operationDuration.Record(
 		spanCtx,
-		float64(time.Since(startTime).Microseconds()),
+		float64(callReturnTime.Sub(startTime).Microseconds()),
 		attrs...,
 	)
 	s.counters.operation.Add(ctx, 1, attrs...)
@@ -148,8 +159,8 @@ func (s *instrumentedS3) DeleteObjectWithContext(ctx aws.Context, input *s3.Dele
 	)
 
 	output, err := s.S3API.DeleteObjectWithContext(ctx, input, opts...)
-	callReturnTime := trace.WithTimestamp(time.Now())
-	defer span.End(callReturnTime)
+	callReturnTime := time.Now()
+	defer span.End(trace.WithTimestamp(callReturnTime))
 
 	if err != nil {
 		attrs = append(attrs, labelStatusFailure)
@@ -167,7 +178,7 @@ func (s *instrumentedS3) DeleteObjectWithContext(ctx aws.Context, input *s3.Dele
 
 	s.recorders.operationDuration.Record(
 		spanCtx,
-		float64(time.Since(startTime).Microseconds()),
+		float64(callReturnTime.Sub(startTime).Microseconds()),
 		attrs...,
 	)
 	s.counters.operation.Add(ctx, 1, attrs...)
@@ -176,12 +187,18 @@ func (s *instrumentedS3) DeleteObjectWithContext(ctx aws.Context, input *s3.Dele
 }
 
 func createCounters(meter metric.Meter) *counters {
-	operationCounter, _ := meter.NewInt64Counter("aws.s3.operation")
+	operationCounter, err := meter.NewInt64Counter("aws.s3.operation")
+	if err != nil {
+		otel.Handle(err)
+	}
 	return &counters{operation: operationCounter}
 }
 
 func createRecorders(meter metric.Meter) *recorders {
-	execTimeRecorder, _ := meter.NewFloat64ValueRecorder("aws.s3.operation.duration", metric.WithUnit("μs"))
+	execTimeRecorder, err := meter.NewFloat64ValueRecorder("aws.s3.operation.duration", metric.WithUnit("μs"))
+	if err != nil {
+		otel.Handle(err)
+	}
 	return &recorders{operationDuration: execTimeRecorder}
 }
 
