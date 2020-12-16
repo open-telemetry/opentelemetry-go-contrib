@@ -47,18 +47,18 @@ type Client struct {
 // error code and message, if an error occurs). Optionally, client context can
 // be set before an operation with the WithContext method.
 func NewClientWithTracing(client *memcache.Client, opts ...Option) *Client {
-	var tp oteltrace.TracerProvider
+	cfg := &config{}
 	for _, o := range opts {
-		tp = o
+		o(cfg)
 	}
 
-	if tp == nil {
-		tp = otel.GetTracerProvider()
+	if cfg.tracerProvider == nil {
+		cfg.tracerProvider = otel.GetTracerProvider()
 	}
 
 	return &Client{
 		client,
-		tp.Tracer(
+		cfg.tracerProvider.Tracer(
 			tracerName,
 			oteltrace.WithInstrumentationVersion(contrib.SemVersion()),
 		),

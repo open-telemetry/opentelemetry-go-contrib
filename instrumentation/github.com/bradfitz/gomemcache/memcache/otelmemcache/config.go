@@ -18,11 +18,17 @@ import (
 	oteltrace "go.opentelemetry.io/otel/trace"
 )
 
+type config struct {
+	tracerProvider oteltrace.TracerProvider
+}
+
 // Option is used to configure the client.
-type Option oteltrace.TracerProvider
+type Option func(*config)
 
 // WithTracerProvider specifies a tracer provider to use for creating a tracer.
 // If none is specified, the global provider is used.
 func WithTracerProvider(provider oteltrace.TracerProvider) Option {
-	return provider
+	return func(cfg *config) {
+		cfg.tracerProvider = provider
+	}
 }
