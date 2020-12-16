@@ -26,7 +26,6 @@ import (
 	"github.com/aws/aws-sdk-go/service/s3/s3iface"
 	"github.com/stretchr/testify/assert"
 
-	"go.opentelemetry.io/contrib/instrumentation/github.com/aws/aws-sdk-go/service/s3/otels3/mocks"
 	"go.opentelemetry.io/otel"
 	"go.opentelemetry.io/otel/label"
 	oteltest "go.opentelemetry.io/otel/oteltest"
@@ -158,7 +157,7 @@ func Test_instrumentedS3_PutObjectWithContext(t *testing.T) {
 			mockedRecorders := createRecorders(mockedMeter)
 			mockedPropagators := otel.GetTextMapPropagator()
 
-			s3Mock := &mocks.MockS3Client{}
+			s3Mock := &mockS3Client{}
 			s := &instrumentedS3{
 				S3API:             s3Mock,
 				tracer:            mockedTracer,
@@ -259,7 +258,7 @@ func Test_instrumentedS3_GetObjectWithContext(t *testing.T) {
 			mockedRecorders := createRecorders(mockedMeter)
 			mockedPropagators := otel.GetTextMapPropagator()
 
-			s3Mock := &mocks.MockS3Client{}
+			s3Mock := &mockS3Client{}
 			s := &instrumentedS3{
 				S3API:             s3Mock,
 				tracer:            mockedTracer,
@@ -360,7 +359,7 @@ func Test_instrumentedS3_DeleteObjectWithContext(t *testing.T) {
 			mockedRecorders := createRecorders(mockedMeter)
 			mockedPropagators := otel.GetTextMapPropagator()
 
-			s3Mock := &mocks.MockS3Client{}
+			s3Mock := &mockS3Client{}
 			s := &instrumentedS3{
 				S3API:             s3Mock,
 				tracer:            mockedTracer,
@@ -404,7 +403,7 @@ func Test_instrumentedS3_NewInstrumentedS3Client(t *testing.T) {
 	tracerProvider := oteltest.NewTracerProvider()
 	_, meterProvider := oteltest.NewMeterProvider()
 	mockedPropagator := otel.GetTextMapPropagator()
-	s3MockClient := &mocks.MockS3Client{}
+	s3MockClient := &mockS3Client{}
 
 	tests := []struct {
 		name       string
