@@ -21,9 +21,9 @@ import (
 
 	"github.com/aws/aws-sdk-go/aws"
 	"github.com/aws/aws-sdk-go/service/s3"
+	"github.com/aws/aws-sdk-go/service/s3/s3iface"
 
 	obsvsS3 "go.opentelemetry.io/contrib/instrumentation/github.com/aws/aws-sdk-go/service/s3/otels3"
-	mocks "go.opentelemetry.io/contrib/instrumentation/github.com/aws/aws-sdk-go/service/s3/otels3/mocks"
 	oteltracestdout "go.opentelemetry.io/otel/exporters/stdout"
 	otelmetric "go.opentelemetry.io/otel/metric"
 	metricsdk "go.opentelemetry.io/otel/sdk/export/metric"
@@ -39,7 +39,7 @@ func main() {
 	meterProvider := initMeter()
 
 	client, err := obsvsS3.NewInstrumentedS3Client(
-		&mocks.MockS3Client{},
+		&struct{ s3iface.S3API }{},
 		obsvsS3.WithTracerProvider(tracerProvider),
 		obsvsS3.WithMeterProvider(meterProvider),
 		obsvsS3.WithSpanCorrelation(true),
