@@ -54,6 +54,8 @@ jobs:
     steps:
       - name: Checkout Repo
         uses: actions/checkout@v2
+        with:
+          fetch-depth: 0
       - run: mkdir -p $TEST_RESULTS
       - name: Integration test ${{ matrix.target }}
         run: |
