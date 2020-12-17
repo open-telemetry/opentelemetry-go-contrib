@@ -152,7 +152,7 @@ func NewRawExporter(ffurl, serviceName string, opts ...Option) (*Exporter, error
 		return nil, errors.New("fluent instance url cannot be empty")
 	}
 
-	client, err := newReconnectingTCPConn(ffurl, 10*time.Second, net.ResolveTCPAddr, net.DialTCP)
+	client, err := newReconnectingTCPConn(ffurl, 10*time.Second, net.ResolveTCPAddr, net.DialTCP, o.logger)
 	if err != nil {
 		return nil, err
 	}

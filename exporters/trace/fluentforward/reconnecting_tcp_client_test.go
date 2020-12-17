@@ -67,8 +67,6 @@ func newTCPConn() (*net.TCPConn, error) {
 
 func TestNewResolvedTCPConn(t *testing.T) {
 
-	// url := "localhost:24224"
-
 	mockServer := startMockFluentServer(t)
 	defer mockServer.Close()
 
@@ -92,9 +90,49 @@ func TestNewResolvedTCPConn(t *testing.T) {
 		Return(clientConn, nil).
 		Once()
 
-	conn, err := newReconnectingTCPConn(url, time.Hour, resolver.ResolveTCPAddr, dialer.DialTCP)
+	conn, err := newReconnectingTCPConn(url, time.Hour, resolver.ResolveTCPAddr, dialer.DialTCP, nil)
 	assert.NoError(t, err)
 	require.NotNil(t, conn)
+
+	err = conn.Close()
+	assert.NoError(t, err)
+
+	// assert the actual connection was closed
+	assert.Error(t, clientConn.Close())
+
+	resolver.AssertExpectations(t)
+	dialer.AssertExpectations(t)
+}
+
+func TestConnWrites(t *testing.T) {
+	mockServer := startMockFluentServer(t)
+	defer mockServer.Close()
+
+	clientConn, err := newTCPConn()
+	require.NoError(t, err)
+	mockTCPAddr := &net.TCPAddr{
+		IP:   net.IPv4(1, 2, 3, 4),
+		Port: 24224,
+	}
+
+	resolver := mockResolver{}
+	resolver.
+		On("ResolveTCPAddr", "tcp", url).
+		Return(mockTCPAddr, nil).
+		Once()
+
+	dialer := mockDialer{}
+	dialer.
+		On("DialTCP", "tcp", (*net.TCPAddr)(nil), mockTCPAddr).
+		Return(clientConn, nil).
+		Once()
+
+	conn, err := newReconnectingTCPConn(url, time.Hour, resolver.ResolveTCPAddr, dialer.DialTCP, nil)
+	assert.NoError(t, err)
+	require.NotNil(t, conn)
+
+	_, err = conn.Write([]byte("Test string"))
+	require.NoError(t, err)
 
 	err = conn.Close()
 	assert.NoError(t, err)
