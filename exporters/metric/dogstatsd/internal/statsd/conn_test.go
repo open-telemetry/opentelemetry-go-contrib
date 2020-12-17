@@ -25,8 +25,9 @@ import (
 	"github.com/stretchr/testify/require"
 
 	"go.opentelemetry.io/contrib/exporters/metric/dogstatsd/internal/statsd"
-	"go.opentelemetry.io/otel/api/metric"
 	"go.opentelemetry.io/otel/label"
+	"go.opentelemetry.io/otel/metric"
+	"go.opentelemetry.io/otel/metric/number"
 	export "go.opentelemetry.io/otel/sdk/export/metric"
 	"go.opentelemetry.io/otel/sdk/export/metric/metrictest"
 	aggtest "go.opentelemetry.io/otel/sdk/metric/aggregator/aggregatortest"
@@ -37,7 +38,7 @@ import (
 	"go.opentelemetry.io/otel/unit"
 )
 
-var testResource = resource.New(label.String("host", "value"))
+var testResource = resource.NewWithAttributes(label.String("host", "value"))
 
 // withTagsAdapter tests a dogstatsd-style statsd exporter.
 type withTagsAdapter struct {
@@ -115,9 +116,9 @@ timer.B.D:%s|ms
 		adapter := ao.adapter
 		expected := ao.expected
 		t.Run(fmt.Sprintf("%T", adapter), func(t *testing.T) {
-			for _, nkind := range []metric.NumberKind{
-				metric.Float64NumberKind,
-				metric.Int64NumberKind,
+			for _, nkind := range []number.Kind{
+				number.Float64Kind,
+				number.Int64Kind,
 			} {
 				t.Run(nkind.String(), func(t *testing.T) {
 					ctx := context.Background()
@@ -133,20 +134,20 @@ timer.B.D:%s|ms
 
 					checkpointSet := metrictest.NewCheckpointSet(testResource)
 					cdesc := metric.NewDescriptor(
-						"counter", metric.CounterKind, nkind)
+						"counter", metric.CounterInstrumentKind, nkind)
 					gdesc := metric.NewDescriptor(
-						"observer", metric.ValueObserverKind, nkind)
+						"observer", metric.ValueObserverInstrumentKind, nkind)
 					mdesc := metric.NewDescriptor(
-						"measure", metric.ValueRecorderKind, nkind)
+						"measure", metric.ValueRecorderInstrumentKind, nkind)
 					tdesc := metric.NewDescriptor(
-						"timer", metric.ValueRecorderKind, nkind, metric.WithUnit(unit.Milliseconds))
+						"timer", metric.ValueRecorderInstrumentKind, nkind, metric.WithUnit(unit.Milliseconds))
 
 					labels := []label.KeyValue{
 						label.String("A", "B"),
 						label.String("C", "D"),
 					}
 					const value = 123.456
-					val := number(t, nkind, value)
+					val := newNumber(t, nkind, value)
 
 					cagg, cckpt := metrictest.Unslice2(sum.New(2))
 					gagg, gckpt := metrictest.Unslice2(lastvalue.New(2))
@@ -172,7 +173,7 @@ timer.B.D:%s|ms
 					require.Nil(t, err)
 
 					var vfmt string
-					if nkind == metric.Int64NumberKind {
+					if nkind == number.Int64Kind {
 						fv := value
 						vfmt = strconv.FormatInt(int64(fv), 10)
 					} else {
@@ -187,13 +188,13 @@ timer.B.D:%s|ms
 	}
 }
 
-func number(t *testing.T, kind metric.NumberKind, value float64) metric.Number {
+func newNumber(t *testing.T, kind number.Kind, value float64) number.Number {
 	t.Helper()
 	switch kind {
-	case metric.Int64NumberKind:
-		return metric.NewInt64Number(int64(value))
-	case metric.Float64NumberKind:
-		return metric.NewFloat64Number(value)
+	case number.Int64Kind:
+		return number.NewInt64Number(int64(value))
+	case number.Float64Kind:
+		return number.NewFloat64Number(value)
 	}
 	panic("invalid number kind")
 }
@@ -321,7 +322,7 @@ func TestPacketSplit(t *testing.T) {
 			}
 
 			checkpointSet := metrictest.NewCheckpointSet(testResource)
-			desc := metric.NewDescriptor("counter", metric.CounterKind, metric.Int64NumberKind)
+			desc := metric.NewDescriptor("counter", metric.CounterInstrumentKind, number.Int64Kind)
 
 			var expected []string
 
@@ -334,7 +335,7 @@ func TestPacketSplit(t *testing.T) {
 				expect := fmt.Sprint("counter:100|c|#", encoded, "\n")
 				expected = append(expected, expect)
 				agg, ckpt := metrictest.Unslice2(sum.New(2))
-				aggtest.CheckedUpdate(t, agg, metric.NewInt64Number(100), &desc)
+				aggtest.CheckedUpdate(t, agg, number.NewInt64Number(100), &desc)
 				require.NoError(t, agg.SynchronizedMove(ckpt, &desc))
 				checkpointSet.Add(&desc, ckpt, labels...)
 			})
@@ -361,12 +362,12 @@ func TestArraySplit(t *testing.T) {
 	}
 
 	checkpointSet := metrictest.NewCheckpointSet(testResource)
-	desc := metric.NewDescriptor("measure", metric.ValueRecorderKind, metric.Int64NumberKind)
+	desc := metric.NewDescriptor("measure", metric.ValueRecorderInstrumentKind, number.Int64Kind)
 
 	agg, ckpt := metrictest.Unslice2(array.New(2))
 
 	for i := 0; i < 1024; i++ {
-		aggtest.CheckedUpdate(t, agg, metric.NewInt64Number(100), &desc)
+		aggtest.CheckedUpdate(t, agg, number.NewInt64Number(100), &desc)
 	}
 	require.NoError(t, agg.SynchronizedMove(ckpt, &desc))
 	checkpointSet.Add(&desc, ckpt)
@@ -396,10 +397,10 @@ func TestPrefix(t *testing.T) {
 	}
 
 	checkpointSet := metrictest.NewCheckpointSet(testResource)
-	desc := metric.NewDescriptor("measure", metric.ValueRecorderKind, metric.Int64NumberKind)
+	desc := metric.NewDescriptor("measure", metric.ValueRecorderInstrumentKind, number.Int64Kind)
 
 	agg, ckpt := metrictest.Unslice2(array.New(2))
-	aggtest.CheckedUpdate(t, agg, metric.NewInt64Number(100), &desc)
+	aggtest.CheckedUpdate(t, agg, number.NewInt64Number(100), &desc)
 	require.NoError(t, agg.SynchronizedMove(ckpt, &desc))
 	checkpointSet.Add(&desc, ckpt)
 

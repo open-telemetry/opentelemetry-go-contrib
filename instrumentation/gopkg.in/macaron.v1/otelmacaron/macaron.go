@@ -20,8 +20,8 @@ import (
 
 	"gopkg.in/macaron.v1"
 
-	oteltrace "go.opentelemetry.io/otel/api/trace"
 	"go.opentelemetry.io/otel/semconv"
+	oteltrace "go.opentelemetry.io/otel/trace"
 
 	otelcontrib "go.opentelemetry.io/contrib"
 )

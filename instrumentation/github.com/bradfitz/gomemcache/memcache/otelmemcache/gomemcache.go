@@ -20,10 +20,10 @@ import (
 	"github.com/bradfitz/gomemcache/memcache"
 
 	"go.opentelemetry.io/contrib"
-	otelglobal "go.opentelemetry.io/otel/api/global"
-	oteltrace "go.opentelemetry.io/otel/api/trace"
+	"go.opentelemetry.io/otel"
 	"go.opentelemetry.io/otel/label"
 	"go.opentelemetry.io/otel/semconv"
+	oteltrace "go.opentelemetry.io/otel/trace"
 )
 
 const (
@@ -59,7 +59,7 @@ func NewClientWithTracing(client *memcache.Client, opts ...Option) *Client {
 	}
 
 	if cfg.tracerProvider == nil {
-		cfg.tracerProvider = otelglobal.TracerProvider()
+		cfg.tracerProvider = otel.GetTracerProvider()
 	}
 
 	return &Client{

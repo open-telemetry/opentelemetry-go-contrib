@@ -22,8 +22,8 @@ import (
 	"net/http"
 	"strings"
 
-	"go.opentelemetry.io/otel/api/trace"
 	"go.opentelemetry.io/otel/label"
+	"go.opentelemetry.io/otel/trace"
 
 	"go.opentelemetry.io/contrib/instrumentation/net/http/otelhttp"
 )

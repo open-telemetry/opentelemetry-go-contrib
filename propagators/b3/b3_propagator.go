@@ -19,8 +19,8 @@ import (
 	"errors"
 	"strings"
 
-	"go.opentelemetry.io/otel"
-	"go.opentelemetry.io/otel/api/trace"
+	"go.opentelemetry.io/otel/propagation"
+	"go.opentelemetry.io/otel/trace"
 )
 
 const (
@@ -44,7 +44,7 @@ const (
 )
 
 var (
-	empty = trace.EmptySpanContext()
+	empty = trace.SpanContext{}
 
 	errInvalidSampledByte        = errors.New("invalid B3 Sampled found")
 	errInvalidSampledHeader      = errors.New("invalid B3 Sampled header found")
@@ -96,12 +96,12 @@ type B3 struct {
 	InjectEncoding Encoding
 }
 
-var _ otel.TextMapPropagator = B3{}
+var _ propagation.TextMapPropagator = B3{}
 
 // Inject injects a context into the carrier as B3 headers.
 // The parent span ID is omitted because it is not tracked in the
 // SpanContext.
-func (b3 B3) Inject(ctx context.Context, carrier otel.TextMapCarrier) {
+func (b3 B3) Inject(ctx context.Context, carrier propagation.TextMapCarrier) {
 	sc := trace.SpanFromContext(ctx).SpanContext()
 
 	if b3.InjectEncoding.supports(B3SingleHeader) {
@@ -143,7 +143,7 @@ func (b3 B3) Inject(ctx context.Context, carrier otel.TextMapCarrier) {
 }
 
 // Extract extracts a context from the carrier if it contains B3 headers.
-func (b3 B3) Extract(ctx context.Context, carrier otel.TextMapCarrier) context.Context {
+func (b3 B3) Extract(ctx context.Context, carrier propagation.TextMapCarrier) context.Context {
 	var (
 		sc  trace.SpanContext
 		err error
@@ -225,7 +225,7 @@ func extractMultiple(traceID, spanID, parentSpanID, sampled, flags string) (trac
 			// Pad 64-bit trace IDs.
 			id = b3TraceIDPadding + traceID
 		}
-		if sc.TraceID, err = trace.IDFromHex(id); err != nil {
+		if sc.TraceID, err = trace.TraceIDFromHex(id); err != nil {
 			return empty, errInvalidTraceIDHeader
 		}
 	}
@@ -290,7 +290,7 @@ func extractSingle(contextHeader string) (trace.SpanContext, error) {
 			return empty, errInvalidTraceIDValue
 		}
 		var err error
-		sc.TraceID, err = trace.IDFromHex(traceID)
+		sc.TraceID, err = trace.TraceIDFromHex(traceID)
 		if err != nil {
 			return empty, errInvalidTraceIDValue
 		}

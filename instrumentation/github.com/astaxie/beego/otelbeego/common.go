@@ -23,10 +23,6 @@ import (
 // ------------------------------------------ Constants
 
 const (
-	// packageName is the name of the this package, and is used as the default tracer
-	// and meter names.
-	packageName = "go.opentelemetry.io/contrib/instrumentation/github.com/astaxie/beego/otelbeego"
-
 	ctxRouteTemplateKey = contextKey("x-opentelemetry-route-template")
 
 	renderTemplateSpanName = "beego.render.template"
