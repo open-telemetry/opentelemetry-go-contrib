@@ -40,6 +40,11 @@ type monitor struct {
 }
 
 func (m *monitor) Started(ctx context.Context, evt *event.CommandStartedEvent) {
+
+	if strings.ToLower(evt.CommandName) == "ping" && !m.cfg.Ping {
+		return
+	}
+
 	hostname, port := peerInfo(evt)
 	b, _ := bson.MarshalExtJSON(evt.Command, false, false)
 	attrs := []label.KeyValue{
