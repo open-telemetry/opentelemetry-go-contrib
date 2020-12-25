@@ -494,3 +494,23 @@ updates:
     schedule:
       interval: "weekly"
       day: "sunday"
+  -
+    package-ecosystem: "gomod"
+    directory: "/instrumentation/github.com/containerd/ttrpc/otelttrpc"
+    labels:
+      - dependencies
+      - go
+      - "Skip Changelog"
+    schedule:
+      interval: "weekly"
+      day: "sunday"
+  -
+    package-ecosystem: "gomod"
+    directory: "/instrumentation/github.com/containerd/ttrpc/otelttrpc/example"
+    labels:
+      - dependencies
+      - go
+      - "Skip Changelog"
+    schedule:
+      interval: "weekly"
+      day: "sunday"
