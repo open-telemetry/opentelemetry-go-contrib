@@ -15,6 +15,8 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 - Add registry link check to `Makefile` and pre-release script. (#446)
 - A new AWS X-Ray ID Generator (#459)
 - Migrate CircleCI jobs to GitHub Actions (#476)
+- Add CodeQL GitHub Action (#TBD)
+
 ### Fixed
 
 - Fixes the body replacement in otelhttp to not to mutate a nil body. (#484)
