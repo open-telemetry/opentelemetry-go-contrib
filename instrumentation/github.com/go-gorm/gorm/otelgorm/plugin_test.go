@@ -23,9 +23,10 @@ import (
 
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
-	"go.opentelemetry.io/contrib/internal/util"
 	"gorm.io/driver/sqlite"
 	"gorm.io/gorm"
+
+	"go.opentelemetry.io/contrib/internal/util"
 
 	"go.opentelemetry.io/otel/oteltest"
 )

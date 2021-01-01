@@ -97,6 +97,15 @@ test-gomemcache:
 	  docker stop gomemcache-integ ; \
 	fi
 
+.PHONY: test-gorm
+test-gorm:
+	@if ./.circleci/should_build.sh gorm; then \
+	  set -e; \
+	  (cd instrumentation/github.com/go-gorm/gorm/otelgorm && \
+	    $(GOTEST_WITH_COVERAGE) . && \
+	    go tool cover -html=coverage.txt -o coverage.html); \
+	fi
+
 .PHONY: check-clean-work-tree
 check-clean-work-tree:
 	@if ! git diff --quiet; then \
