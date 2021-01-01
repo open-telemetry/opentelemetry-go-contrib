@@ -25,7 +25,7 @@ type Product struct {
 	Price uint
 }
 
-func ExampleNewSessionWithTracing() {
+func ExampleNewPlugin() {
 	// Initialize db connection
 	db, err := gorm.Open(sqlite.Open("test.db"), &gorm.Config{})
 	if err != nil {
@@ -42,7 +42,10 @@ func ExampleNewSessionWithTracing() {
 	}
 
 	// Migrate the schema
-	db.AutoMigrate(&Product{})
+	err = db.AutoMigrate(&Product{})
+	if err != nil {
+		panic(err.Error())
+	}
 
 	// Create
 	db.Create(&Product{Code: "D42", Price: 100})

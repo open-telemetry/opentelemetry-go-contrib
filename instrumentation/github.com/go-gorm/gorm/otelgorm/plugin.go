@@ -1,11 +1,27 @@
+// Copyright The OpenTelemetry Authors
+//
+// Licensed under the Apache License, Version 2.0 (the "License");
+// you may not use this file except in compliance with the License.
+// You may obtain a copy of the License at
+//
+//     http://www.apache.org/licenses/LICENSE-2.0
+//
+// Unless required by applicable law or agreed to in writing, software
+// distributed under the License is distributed on an "AS IS" BASIS,
+// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+// See the License for the specific language governing permissions and
+// limitations under the License.
+
 package otelgorm
 
 import (
 	"fmt"
 
+	"gorm.io/gorm"
+
+	"go.opentelemetry.io/contrib"
 	"go.opentelemetry.io/otel"
 	oteltrace "go.opentelemetry.io/otel/trace"
-	"gorm.io/gorm"
 )
 
 const (
@@ -14,21 +30,22 @@ const (
 
 	callBackBeforeName = "otel:before"
 	callBackAfterName  = "otel:after"
-	spanName           = "gorm_sql_query"
 )
 
 type gormHookFunc func(tx *gorm.DB)
 
-type otelPlugin struct{
-	cfg *config
+type OtelPlugin struct {
+	cfg    *config
 	tracer oteltrace.Tracer
 }
 
-func (op *otelPlugin) Name() string {
+func (op *OtelPlugin) Name() string {
 	return "OpenTelemetryPlugin"
 }
 
-func NewPlugin(opts ...Option) *otelPlugin {
+// NewPlugin initialize a new gorm.DB plugin that traces queries
+// You may pass optional Options to the function
+func NewPlugin(opts ...Option) *OtelPlugin {
 	cfg := &config{}
 	for _, o := range opts {
 		o(cfg)
@@ -42,8 +59,12 @@ func NewPlugin(opts ...Option) *otelPlugin {
 		cfg.tracerProvider = otel.GetTracerProvider()
 	}
 
-	return &otelPlugin{
+	return &OtelPlugin{
 		cfg: cfg,
+		tracer: cfg.tracerProvider.Tracer(
+			defaultTracerName,
+			oteltrace.WithInstrumentationVersion(contrib.SemVersion()),
+		),
 	}
 }
 
@@ -51,7 +72,15 @@ type registerCallback interface {
 	Register(name string, fn func(*gorm.DB)) error
 }
 
-func (op *otelPlugin) Initialize(db *gorm.DB) error {
+func beforeName(name string) string {
+	return callBackBeforeName + "_" + name
+}
+
+func afterName(name string) string {
+	return callBackAfterName + "_" + name
+}
+
+func (op *OtelPlugin) Initialize(db *gorm.DB) error {
 	registerHooks := []struct {
 		callback registerCallback
 		hook     gormHookFunc
