@@ -23,6 +23,7 @@ import (
 
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
+	"go.opentelemetry.io/contrib/internal/util"
 	"gorm.io/driver/sqlite"
 	"gorm.io/gorm"
 
@@ -224,4 +225,9 @@ func TestPlugin(t *testing.T) {
 		})
 	}
 
+}
+
+func TestMain(m *testing.M) {
+	util.IntegrationShouldRun("test-gorm")
+	os.Exit(m.Run())
 }

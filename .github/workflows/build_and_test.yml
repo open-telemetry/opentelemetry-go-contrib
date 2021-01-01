@@ -49,7 +49,7 @@ jobs:
   integration:
     strategy:
       matrix:
-        target: [test-gocql, test-mongo-driver, test-gomemcache]
+        target: [test-gocql, test-mongo-driver, test-gomemcache, test-gorm]
     runs-on: ubuntu-latest
     steps:
       - name: Checkout Repo
