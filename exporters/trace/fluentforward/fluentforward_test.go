@@ -40,7 +40,7 @@ func TestInstallNewPipeline(t *testing.T) {
 	instance := startMockFluentServer(t)
 	defer instance.Close()
 
-	err := InstallNewPipeline(url, serviceName)
+	err := InstallNewPipeline(url, serviceName, 10)
 	assert.NoError(t, err)
 }
 
@@ -85,6 +85,7 @@ func TestNewExportPipeline(t *testing.T) {
 			tp, err := NewExportPipeline(
 				url,
 				serviceName,
+				10,
 				tc.options...,
 			)
 			assert.NoError(t, err)
@@ -107,6 +108,7 @@ func TestNewRawExporter(t *testing.T) {
 	exp, err := NewRawExporter(
 		url,
 		serviceName,
+		10,
 	)
 
 	assert.NoError(t, err)
@@ -114,7 +116,7 @@ func TestNewRawExporter(t *testing.T) {
 }
 
 func TestNewRawExporterShouldFailInvalidURL(t *testing.T) {
-	exp, err := NewRawExporter("", serviceName)
+	exp, err := NewRawExporter("", serviceName, 0)
 	assert.Error(t, err)
 	assert.EqualError(t, err, "fluent instance url cannot be empty")
 	assert.Nil(t, exp)
@@ -141,7 +143,7 @@ func TestExportSpans(t *testing.T) {
 		},
 	}
 
-	exp, err := NewRawExporter(url, serviceName)
+	exp, err := NewRawExporter(url, serviceName, 0)
 	assert.NoError(t, err)
 	ctx := context.Background()
 

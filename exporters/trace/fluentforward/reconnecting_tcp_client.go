@@ -19,11 +19,13 @@ import (
 	"log"
 	"net"
 	"sync"
+	"sync/atomic"
 	"time"
 )
 
 type reconnectingTCPConn struct {
 	ffurl       string
+	bufferBytes int64
 	resolveFunc resolveFunc
 	dialFunc    dialFunc
 	logger      *log.Logger
@@ -150,4 +152,24 @@ func (c *reconnectingTCPConn) Close() error {
 	}
 
 	return nil
+}
+
+// SetWriteBuffer defers to the net.tcpConn SetWriteBuffer implementation wrapped with a RLock. if no conn is currently held
+// and SetWriteBuffer is called store bufferBytes to be set for new conns
+func (c *reconnectingTCPConn) SetWriteBuffer(bytes int) error {
+	var err error
+
+	c.connMtx.RLock()
+	conn := c.conn
+	c.connMtx.RUnlock()
+
+	if conn != nil {
+		err = c.conn.SetWriteBuffer(bytes)
+	}
+
+	if err == nil {
+		atomic.StoreInt64(&c.bufferBytes, int64(bytes))
+	}
+
+	return err
 }
