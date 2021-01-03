@@ -27,6 +27,9 @@ type config struct {
 	TracerProvider trace.TracerProvider
 
 	Tracer trace.Tracer
+
+	// Ping, if set to true, will enable the creation of spans on Ping requests.
+	Ping bool
 }
 
 // newConfig returns a config with all Options set.
@@ -53,5 +56,12 @@ type Option func(*config)
 func WithTracerProvider(provider trace.TracerProvider) Option {
 	return func(cfg *config) {
 		cfg.TracerProvider = provider
+	}
+}
+
+// WithPing if set to true, will enable the creation of spans on Ping requests.
+func WithPing(b bool) Option {
+	return func(cfg *config) {
+		cfg.Ping = b
 	}
 }
