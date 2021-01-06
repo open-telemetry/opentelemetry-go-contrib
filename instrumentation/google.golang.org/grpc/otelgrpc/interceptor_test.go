@@ -271,6 +271,32 @@ func TestUnaryClientInterceptor(t *testing.T) {
 	}
 }
 
+func TestFilteredUnaryClientInterceptor(t *testing.T) {
+	clientConn, err := grpc.Dial("fake:connection", grpc.WithInsecure())
+	if err != nil {
+		t.Fatalf("failed to create client connection: %v", err)
+	}
+
+	sr := NewSpanRecorder()
+	tp := oteltest.NewTracerProvider(oteltest.WithSpanRecorder(sr))
+	unaryInterceptor := UnaryClientInterceptor(
+		WithTracerProvider(tp),
+		WithFilter(func(ctx context.Context, method string) bool {
+			return false
+		}),
+	)
+
+	req := &mockProtoMessage{}
+	reply := &mockProtoMessage{}
+	uniInterceptorInvoker := &mockUICInvoker{}
+
+	err = unaryInterceptor(context.Background(), "/github.com.serviceName/bar", req, reply, clientConn, uniInterceptorInvoker.invoker)
+	assert.NoError(t, err)
+
+	_, ok := sr.Get("github.com.serviceName/bar")
+	assert.False(t, ok, "expected to filter span github.com.serviceName/bar")
+}
+
 func eventAttrMap(events []oteltest.Event) []map[label.Key]label.Value {
 	maps := make([]map[label.Key]label.Value, len(events))
 	for i, event := range events {

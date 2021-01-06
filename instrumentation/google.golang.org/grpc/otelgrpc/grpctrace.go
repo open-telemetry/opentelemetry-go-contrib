@@ -35,6 +35,7 @@ const (
 
 // config is a group of options for this instrumentation.
 type config struct {
+	Filters        []Filter
 	Propagators    propagation.TextMapPropagator
 	TracerProvider trace.TracerProvider
 }
@@ -54,6 +55,21 @@ func newConfig(opts []Option) *config {
 		o.Apply(c)
 	}
 	return c
+}
+
+// Filter is a predicate used to determine whether a given gRPC request should
+// be traced. A Filter must return true if the request should be traced.
+type Filter func(ctx context.Context, fullMethodName string) bool
+
+type filtersOption struct{ f []Filter }
+
+func (o filtersOption) Apply(c *config) {
+	c.Filters = append(c.Filters, o.f...)
+}
+
+// WithFilter returns an Option that applies a filtering to intercepted requests
+func WithFilter(f ...Filter) Option {
+	return filtersOption{f: f}
 }
 
 type propagatorsOption struct{ p propagation.TextMapPropagator }
