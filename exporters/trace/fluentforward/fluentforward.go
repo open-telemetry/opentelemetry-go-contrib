@@ -68,7 +68,7 @@ type SpanData struct {
 	StatusMessage                 string                    `msgpack:"statusMessage"`              // Human readable error message
 	InstrumentationLibraryName    string                    `msgpack:"instrumentationLibraryName"` // Instrumentation library used to provide instrumentation
 	InstrumentationLibraryVersion string                    `msgpack:"instrumentationLibraryVersion"`
-	Resource                      string                    `msgpack:"resource,omitempty"` // Contains attributes representing an entity that produced this span
+	Resource                      map[label.Key]interface{} `msgpack:"resource,omitempty"` // Contains attributes representing an entity that produced this span
 }
 
 // An event is a time-stamped annotation of the span that has user supplied text description and key-value pairs
@@ -210,7 +210,7 @@ func (e *Exporter) ExportSpans(ctx context.Context, sds []*export.SpanData) erro
 		spans.EndTime = span.EndTime.UnixNano()
 		spans.InstrumentationLibraryName = span.InstrumentationLibrary.Name
 		spans.InstrumentationLibraryVersion = span.InstrumentationLibrary.Version
-		spans.Resource = span.Resource.String()
+		spans.Resource = attributesToMap(span.Resource.Attributes())
 
 		spans.MessageEvents = eventsToSlice(span.MessageEvents)
 		spans.DroppedMessageEventCount = span.DroppedMessageEventCount
