@@ -56,8 +56,7 @@ test-with-coverage:
 	    go tool cover -html=coverage.out -o coverage.html); \
 	  [ -f "$${dir}/coverage.out" ] && cat "$${dir}/coverage.out" >> coverage.txt; \
 	done; \
-	sed -i.bak -e '2,$$ { /^mode: /d; }' coverage.txt; \
-	ls -l
+	sed -i '' -e '2,$$ { /^mode: /d; }' coverage.txt
 
 .PHONY: ci
 ci: precommit check-clean-work-tree test-with-coverage test-386
