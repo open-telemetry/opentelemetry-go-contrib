@@ -34,8 +34,7 @@ jobs:
         run: |
           make ci
           mkdir -p $TEST_RESULTS
-          find . -name 'coverage.html' > "${TEST_RESULTS}/coverage.lst"
-          tar -n -cf - -T "${TEST_RESULTS}/coverage.lst" | tar -C "${TEST_RESULTS}" -xvf -
+          cp coverage.{txt,html} $TEST_RESULTS
       - uses: codecov/codecov-action@v1
         with:
           file: ./coverage.txt
