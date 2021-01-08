@@ -8,6 +8,12 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 
 ## [Unreleased]
 
+## [0.15.2] - 2021-01-02
+
+### Fixed
+
+- Fix typo in echo example package
+
 ## [0.15.1] - 2020-12-14
 
 ### Added
