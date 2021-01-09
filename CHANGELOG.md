@@ -8,6 +8,10 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 
 ## [Unreleased]
 
+### Fixed
+
+- Fix module path for AWS ECS resource detector (#517)
+
 ## [0.15.1] - 2020-12-14
 
 ### Added
