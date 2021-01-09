@@ -1,4 +1,4 @@
-module github.com/kkelvinlo/opentelemetry-go-contrib/detectors/aws/ecs
+module go.opentelemetry.io/contrib/detectors/aws/ecs
 
 go 1.15
 
