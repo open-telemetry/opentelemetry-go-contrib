@@ -26,8 +26,8 @@ import (
 
 var tracer = otel.Tracer("amqp")
 
-func StartProducerSpan(hdrs amqp.Table, ctx context.Context) trace.Span {
-	c := amqpHeadersCarrier(hdrs)
+func StartProducerSpan(ctx context.Context, headers amqp.Table) trace.Span {
+	c := amqpHeadersCarrier(headers)
 	otel.GetTextMapPropagator().Extract(ctx, c)
 
 	attrs := []label.KeyValue{
@@ -38,7 +38,7 @@ func StartProducerSpan(hdrs amqp.Table, ctx context.Context) trace.Span {
 		trace.WithSpanKind(trace.SpanKindProducer),
 	}
 
-	ctx, span := tracer.Start(ctx, "amqp.producer", opts...)
+	_, span := tracer.Start(ctx, "amqp.producer", opts...)
 
 	return span
 }
@@ -50,8 +50,8 @@ func EndProducerSpan(span trace.Span, err error) {
 	span.End()
 }
 
-func StartConsumerSpan(hdrs amqp.Table, ctx context.Context) (trace.Span, context.Context) {
-	c := amqpHeadersCarrier(hdrs)
+func StartConsumerSpan(ctx context.Context, headers amqp.Table) (trace.Span, context.Context) {
+	c := amqpHeadersCarrier(headers)
 
 	otel.GetTextMapPropagator().Extract(ctx, c)
 	opts := []trace.SpanOption{
