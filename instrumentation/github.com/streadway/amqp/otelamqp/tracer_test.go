@@ -28,7 +28,7 @@ func TestStartConsumerSpan(t *testing.T) {
 	otel.SetTracerProvider(oteltest.NewTracerProvider())
 
 	hdrs := amqp.Table{}
-	consumerSpan, _ := StartConsumerSpan(hdrs, context.Background())
+	consumerSpan, _ := StartConsumerSpan(context.Background(), hdrs)
 	_, ok := consumerSpan.(*oteltest.Span)
 	assert.True(t, ok)
 	spanTracer := consumerSpan.Tracer()
@@ -41,7 +41,7 @@ func TestStartProducerSpan(t *testing.T) {
 	otel.SetTracerProvider(oteltest.NewTracerProvider())
 
 	hdrs := amqp.Table{}
-	producerSpan := StartProducerSpan(hdrs, context.Background())
+	producerSpan := StartProducerSpan(context.Background(), hdrs)
 	_, ok := producerSpan.(*oteltest.Span)
 	assert.True(t, ok)
 	spanTracer := producerSpan.Tracer()
@@ -49,4 +49,3 @@ func TestStartProducerSpan(t *testing.T) {
 	require.True(t, ok)
 	assert.Equal(t, "amqp", mockTracer.Name)
 }
-
