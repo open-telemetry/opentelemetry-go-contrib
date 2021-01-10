@@ -21,9 +21,10 @@ import (
 	"go.opentelemetry.io/contrib/instrumentation/github.com/streadway/amqp/otelamqp"
 	"go.opentelemetry.io/contrib/instrumentation/github.com/streadway/amqp/otelamqp/example"
 )
+
 func failOnError(err error, msg string) {
 	if err != nil {
-		fmt.Println( err)
+		fmt.Println(err)
 	}
 }
 func main() {
@@ -55,7 +56,7 @@ func main() {
 		ContentType: "text/plain",
 		Body:        []byte(body),
 	}
-	span := otelamqp.StartProducerSpan(publishing.Headers, context.Background())
+	span := otelamqp.StartProducerSpan(context.Background(), publishing.Headers)
 
 	err = ch.Publish(
 		"",     // exchange
