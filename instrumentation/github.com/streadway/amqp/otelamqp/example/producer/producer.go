@@ -2,16 +2,23 @@ package main
 
 import (
 	"context"
+	"fmt"
 	"github.com/streadway/amqp"
 	"go.opentelemetry.io/contrib/instrumentation/github.com/streadway/amqp/otelamqp"
 	"go.opentelemetry.io/contrib/instrumentation/github.com/streadway/amqp/otelamqp/example"
 )
-
+func failOnError(err error, msg string) {
+	if err != nil {
+		fmt.Println( err)
+	}
+}
 func main() {
 	example.InitTracer()
 
 	//Make a connection
-	conn, _ := amqp.Dial("amqp://guest:guest@localhost:5672/")
+	conn, err := amqp.Dial("amqp://guest:guest@rabbitmq:5672/")
+	failOnError(err, "Failed to connect to RabbitMQ")
+
 	defer conn.Close()
 
 	//Ccreate a channel
