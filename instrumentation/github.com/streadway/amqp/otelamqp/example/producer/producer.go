@@ -41,7 +41,7 @@ func main() {
 	defer ch.Close()
 
 	//Declare a queue
-	q, err := ch.QueueDeclare(
+	q, _ := ch.QueueDeclare(
 		"hello", // name of the queue
 		false,   // should the message be persistent? also queue will survive if the cluster gets reset
 		false,   // autodelete if there's no consumers (like queues that have anonymous names, often used with fanout exchange)
