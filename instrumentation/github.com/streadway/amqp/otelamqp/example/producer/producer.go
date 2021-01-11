@@ -17,7 +17,9 @@ package main
 import (
 	"context"
 	"fmt"
+
 	"github.com/streadway/amqp"
+
 	"go.opentelemetry.io/contrib/instrumentation/github.com/streadway/amqp/otelamqp"
 	"go.opentelemetry.io/contrib/instrumentation/github.com/streadway/amqp/otelamqp/example"
 )

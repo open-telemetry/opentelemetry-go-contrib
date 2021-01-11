@@ -14,8 +14,11 @@
 
 package otelamqp
 
-import "testing"
-import "github.com/stretchr/testify/assert"
+import (
+	"testing"
+
+	"github.com/stretchr/testify/assert"
+)
 
 func TestPropagation(t *testing.T) {
 	data := map[string]interface{}{

@@ -16,12 +16,14 @@ package otelamqp
 
 import (
 	"context"
+	"testing"
+
 	"github.com/streadway/amqp"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
+
 	"go.opentelemetry.io/otel"
 	"go.opentelemetry.io/otel/oteltest"
-	"testing"
 )
 
 func TestStartConsumerSpan(t *testing.T) {
