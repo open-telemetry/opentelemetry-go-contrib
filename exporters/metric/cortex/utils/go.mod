@@ -8,5 +8,5 @@ require (
 	github.com/spf13/afero v1.5.1
 	github.com/spf13/viper v1.7.1
 	github.com/stretchr/testify v1.6.1
-	go.opentelemetry.io/contrib/exporters/metric/cortex v0.15.1
+	go.opentelemetry.io/contrib/exporters/metric/cortex v0.16.0
 )

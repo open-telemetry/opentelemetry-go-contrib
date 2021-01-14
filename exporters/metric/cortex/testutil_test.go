@@ -25,7 +25,7 @@ import (
 	export "go.opentelemetry.io/otel/sdk/export/metric"
 	"go.opentelemetry.io/otel/sdk/export/metric/metrictest"
 	"go.opentelemetry.io/otel/sdk/metric/aggregator/aggregatortest"
-	"go.opentelemetry.io/otel/sdk/metric/aggregator/array"
+	"go.opentelemetry.io/otel/sdk/metric/aggregator/exact"
 	"go.opentelemetry.io/otel/sdk/metric/aggregator/histogram"
 	"go.opentelemetry.io/otel/sdk/metric/aggregator/lastvalue"
 	"go.opentelemetry.io/otel/sdk/metric/aggregator/minmaxsumcount"
@@ -90,7 +90,7 @@ func getDistributionCheckpoint(t *testing.T) export.CheckpointSet {
 	desc := metric.NewDescriptor("metric_name", metric.ValueRecorderInstrumentKind, number.Float64Kind)
 
 	// Create aggregation, add value, and update checkpointset
-	agg, ckpt := metrictest.Unslice2(array.New(2))
+	agg, ckpt := metrictest.Unslice2(exact.New(2))
 	for i := 0; i < 1000; i++ {
 		aggregatortest.CheckedUpdate(t, agg, number.NewFloat64Number(float64(i)+0.5), &desc)
 	}
