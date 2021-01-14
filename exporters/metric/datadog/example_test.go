@@ -151,7 +151,6 @@ func (s TestUDPServer) ReadPackets(
 				if nerr, ok := err.(*net.OpError); ok && nerr.Timeout() {
 					timeouts++
 					if time.Duration(timeouts)*readTimeout > maxIdleTime {
-						close(doneChan)
 						return
 					}
 					continue
