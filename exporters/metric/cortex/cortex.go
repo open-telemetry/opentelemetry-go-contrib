@@ -278,32 +278,32 @@ func convertFromHistogram(record metric.Record, histogram aggregation.Histogram)
 		return nil, err
 	}
 
-	var totalCount uint64
+	var totalCount int64
 	// counts maps from the bucket upper-bound to the cumulative count.
 	// The bucket with upper-bound +inf is not included.
-	counts := make(map[float64]uint64, len(buckets.Boundaries))
+	counts := make(map[float64]int64, len(buckets.Boundaries))
 	for i, boundary := range buckets.Boundaries {
 		// Add bucket count to totalCount and record in map
-		totalCount += buckets.Counts[i]
+		totalCount += int64(buckets.Counts[i])
 		counts[boundary] = totalCount
 
 		// Add upper boundary as a label. e.g. {le="5"}
 		boundaryStr := strconv.FormatFloat(boundary, 'f', -1, 64)
 
 		// Create timeSeries and append
-		boundaryTimeSeries := createTimeSeries(record, number.NewInt64Number(int64(totalCount)), number.Float64Kind, label.String("__name__", metricName), label.String("le", boundaryStr))
+		boundaryTimeSeries := createTimeSeries(record, number.NewInt64Number(totalCount), number.Int64Kind, label.String("__name__", metricName), label.String("le", boundaryStr))
 		timeSeries = append(timeSeries, boundaryTimeSeries)
 	}
 
 	// Include the +inf boundary in the total count
-	totalCount += buckets.Counts[len(buckets.Counts)-1]
+	totalCount += int64(buckets.Counts[len(buckets.Counts)-1])
 
 	// Create a timeSeries for the +inf bucket and total count
 	// These are the same and are both required by Prometheus-based backends
 
-	upperBoundTimeSeries := createTimeSeries(record, number.NewInt64Number(int64(totalCount)), number.Float64Kind, label.String("__name__", metricName), label.String("le", "+inf"))
+	upperBoundTimeSeries := createTimeSeries(record, number.NewInt64Number(totalCount), number.Int64Kind, label.String("__name__", metricName), label.String("le", "+inf"))
 
-	countTimeSeries := createTimeSeries(record, number.NewInt64Number(int64(totalCount)), number.Float64Kind, label.String("__name__", metricName+"_count"))
+	countTimeSeries := createTimeSeries(record, number.NewInt64Number(totalCount), number.Int64Kind, label.String("__name__", metricName+"_count"))
 
 	timeSeries = append(timeSeries, upperBoundTimeSeries)
 	timeSeries = append(timeSeries, countTimeSeries)
