@@ -113,12 +113,6 @@ func TestConvertToTimeSeries(t *testing.T) {
 			wantLength: 4,
 		},
 		{
-			name:       "convertFromDistribution",
-			input:      getDistributionCheckpoint(t),
-			want:       wantDistributionCheckpointSet,
-			wantLength: 7,
-		},
-		{
 			name:       "convertFromHistogram",
 			input:      getHistogramCheckpoint(t),
 			want:       wantHistogramCheckpointSet,
@@ -159,8 +153,8 @@ func TestConvertToTimeSeries(t *testing.T) {
 					wantSamples[sample.String()] = true
 				}
 			}
-			assert.Equal(t, gotLabels, wantLabels)
-			assert.Equal(t, gotSamples, wantSamples)
+			assert.Equal(t, wantLabels, gotLabels)
+			assert.Equal(t, wantSamples, gotSamples)
 		})
 	}
 }

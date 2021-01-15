@@ -4,11 +4,11 @@ go 1.14
 
 require (
 	go.opencensus.io v0.22.6-0.20201102222123-380f4078db9f
-	go.opentelemetry.io/contrib/instrumentation/google.golang.org/grpc/otelgrpc v0.15.1
-	go.opentelemetry.io/contrib/propagation/opencensus v0.15.1
-	go.opentelemetry.io/otel v0.15.0
-	go.opentelemetry.io/otel/exporters/stdout v0.15.0
-	go.opentelemetry.io/otel/sdk v0.15.0
+	go.opentelemetry.io/contrib/instrumentation/google.golang.org/grpc/otelgrpc v0.16.0
+	go.opentelemetry.io/contrib/propagation/opencensus v0.16.0
+	go.opentelemetry.io/otel v0.16.0
+	go.opentelemetry.io/otel/exporters/stdout v0.16.0
+	go.opentelemetry.io/otel/sdk v0.16.0
 	google.golang.org/grpc v1.34.0
 )
 

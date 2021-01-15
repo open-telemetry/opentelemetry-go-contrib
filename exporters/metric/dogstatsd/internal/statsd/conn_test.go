@@ -31,7 +31,7 @@ import (
 	export "go.opentelemetry.io/otel/sdk/export/metric"
 	"go.opentelemetry.io/otel/sdk/export/metric/metrictest"
 	aggtest "go.opentelemetry.io/otel/sdk/metric/aggregator/aggregatortest"
-	"go.opentelemetry.io/otel/sdk/metric/aggregator/array"
+	"go.opentelemetry.io/otel/sdk/metric/aggregator/exact"
 	"go.opentelemetry.io/otel/sdk/metric/aggregator/lastvalue"
 	"go.opentelemetry.io/otel/sdk/metric/aggregator/sum"
 	"go.opentelemetry.io/otel/sdk/resource"
@@ -151,8 +151,8 @@ timer.B.D:%s|ms
 
 					cagg, cckpt := metrictest.Unslice2(sum.New(2))
 					gagg, gckpt := metrictest.Unslice2(lastvalue.New(2))
-					magg, mckpt := metrictest.Unslice2(array.New(2))
-					tagg, tckpt := metrictest.Unslice2(array.New(2))
+					magg, mckpt := metrictest.Unslice2(exact.New(2))
+					tagg, tckpt := metrictest.Unslice2(exact.New(2))
 
 					aggtest.CheckedUpdate(t, cagg, val, &cdesc)
 					aggtest.CheckedUpdate(t, gagg, val, &gdesc)
@@ -348,7 +348,7 @@ func TestPacketSplit(t *testing.T) {
 	}
 }
 
-func TestArraySplit(t *testing.T) {
+func TestExactSplit(t *testing.T) {
 	ctx := context.Background()
 	writer := &testWriter{}
 	config := statsd.Config{
@@ -364,7 +364,7 @@ func TestArraySplit(t *testing.T) {
 	checkpointSet := metrictest.NewCheckpointSet(testResource)
 	desc := metric.NewDescriptor("measure", metric.ValueRecorderInstrumentKind, number.Int64Kind)
 
-	agg, ckpt := metrictest.Unslice2(array.New(2))
+	agg, ckpt := metrictest.Unslice2(exact.New(2))
 
 	for i := 0; i < 1024; i++ {
 		aggtest.CheckedUpdate(t, agg, number.NewInt64Number(100), &desc)
@@ -399,7 +399,7 @@ func TestPrefix(t *testing.T) {
 	checkpointSet := metrictest.NewCheckpointSet(testResource)
 	desc := metric.NewDescriptor("measure", metric.ValueRecorderInstrumentKind, number.Int64Kind)
 
-	agg, ckpt := metrictest.Unslice2(array.New(2))
+	agg, ckpt := metrictest.Unslice2(exact.New(2))
 	aggtest.CheckedUpdate(t, agg, number.NewInt64Number(100), &desc)
 	require.NoError(t, agg.SynchronizedMove(ckpt, &desc))
 	checkpointSet.Add(&desc, ckpt)

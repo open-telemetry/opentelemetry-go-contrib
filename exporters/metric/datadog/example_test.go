@@ -23,13 +23,12 @@ import (
 	"time"
 
 	"github.com/DataDog/datadog-go/statsd"
-	"github.com/DataDog/sketches-go/ddsketch"
 
 	"go.opentelemetry.io/contrib/exporters/metric/datadog"
 	"go.opentelemetry.io/otel"
 	"go.opentelemetry.io/otel/label"
 	"go.opentelemetry.io/otel/metric"
-	"go.opentelemetry.io/otel/sdk/metric/controller/push"
+	controller "go.opentelemetry.io/otel/sdk/metric/controller/basic"
 	"go.opentelemetry.io/otel/sdk/metric/processor/basic"
 	"go.opentelemetry.io/otel/sdk/metric/selector/simple"
 )
@@ -40,7 +39,7 @@ type TestUDPServer struct {
 
 func ExampleExporter() {
 	const testHostPort = ":8159"
-	selector := simple.NewWithSketchDistribution(ddsketch.NewDefaultConfig())
+	selector := simple.NewWithInexpensiveDistribution()
 	exp, err := datadog.NewExporter(datadog.Options{
 		StatsAddr:     testHostPort,
 		Tags:          []string{"env:dev"},
@@ -58,9 +57,13 @@ func ExampleExporter() {
 	go func() {
 		defer exp.Close()
 		processor := basic.New(selector, exp)
-		pusher := push.New(processor, exp, push.WithPeriod(time.Second*10))
-		defer pusher.Stop()
-		pusher.Start()
+		pusher := controller.New(processor, controller.WithPusher(exp), controller.WithCollectPeriod(time.Second*10))
+		ctx := context.Background()
+		err := pusher.Start(ctx)
+		if err != nil {
+			panic(err)
+		}
+		defer func() { handleErr(pusher.Stop(ctx)) }()
 		otel.SetMeterProvider(pusher.MeterProvider())
 		meter := otel.Meter("marwandist")
 		m := metric.Must(meter).NewInt64ValueRecorder("myrecorder")
@@ -149,7 +152,6 @@ func (s TestUDPServer) ReadPackets(
 				if nerr, ok := err.(*net.OpError); ok && nerr.Timeout() {
 					timeouts++
 					if time.Duration(timeouts)*readTimeout > maxIdleTime {
-						close(doneChan)
 						return
 					}
 					continue
@@ -159,5 +161,11 @@ func (s TestUDPServer) ReadPackets(
 			}
 
 		}
+	}
+}
+
+func handleErr(err error) {
+	if err != nil {
+		fmt.Println("Encountered error: ", err.Error())
 	}
 }

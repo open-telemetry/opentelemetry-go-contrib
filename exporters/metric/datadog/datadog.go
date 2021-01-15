@@ -116,7 +116,7 @@ func (e *Exporter) Export(ctx context.Context, cs export.CheckpointSet) error {
 				f = e.client.Distribution
 			}
 			for _, n := range numbers {
-				if err := f(name, metricValue(r.Descriptor().NumberKind(), n), tags, rate); err != nil {
+				if err := f(name, metricValue(r.Descriptor().NumberKind(), n.Number), tags, rate); err != nil {
 					return fmt.Errorf("error submitting %s point: %w", name, err)
 				}
 			}
@@ -134,16 +134,6 @@ func (e *Exporter) Export(ctx context.Context, cs export.CheckpointSet) error {
 					name: name + ".max",
 					f:    agg.Max,
 				},
-			}
-			if dist, ok := agg.(aggregation.Distribution); ok {
-				recs = append(recs,
-					record{name: name + ".median", f: func() (number.Number, error) {
-						return dist.Quantile(0.5)
-					}},
-					record{name: name + ".p95", f: func() (number.Number, error) {
-						return dist.Quantile(0.95)
-					}},
-				)
 			}
 			for _, rec := range recs {
 				val, err := rec.f()

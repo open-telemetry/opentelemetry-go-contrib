@@ -59,7 +59,7 @@ func TestExtractJaeger(t *testing.T) {
 				ctx := context.Background()
 				ctx = propagator.Extract(ctx, req.Header)
 				resSc := trace.RemoteSpanContextFromContext(ctx)
-				if diff := cmp.Diff(resSc, tc.expected); diff != "" {
+				if diff := cmp.Diff(resSc, tc.expected, cmp.AllowUnexported(trace.TraceState{})); diff != "" {
 					t.Errorf("%s: %s: -got +want %s", tg.name, tc.name, diff)
 				}
 			})
