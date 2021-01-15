@@ -58,11 +58,12 @@ func ExampleExporter() {
 		defer exp.Close()
 		processor := basic.New(selector, exp)
 		pusher := controller.New(processor, controller.WithPusher(exp), controller.WithCollectPeriod(time.Second*10))
-		defer handleErr(pusher.Stop(context.Background()))
-		err := pusher.Start(context.Background())
+		ctx := context.Background()
+		err := pusher.Start(ctx)
 		if err != nil {
 			panic(err)
 		}
+		defer func() { handleErr(pusher.Stop(ctx)) }()
 		otel.SetMeterProvider(pusher.MeterProvider())
 		meter := otel.Meter("marwandist")
 		m := metric.Must(meter).NewInt64ValueRecorder("myrecorder")
