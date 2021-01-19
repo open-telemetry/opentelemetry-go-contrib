@@ -497,7 +497,7 @@ updates:
       day: "sunday"
   -
     package-ecosystem: "gomod"
-    directory: "/instrumentation/github.com/uber-go/otelzap"
+    directory: "/instrumentation/github.com/uber-go/zap/otelzap"
     labels:
       - dependencies
       - go
@@ -507,7 +507,7 @@ updates:
       day: "sunday"
   -
     package-ecosystem: "gomod"
-    directory: "/instrumentation/github.com/uber-go/otelzap/example"
+    directory: "/instrumentation/github.com/uber-go/zap/otelzap/example"
     labels:
       - dependencies
       - go
