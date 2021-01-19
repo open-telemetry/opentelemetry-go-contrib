@@ -8,6 +8,9 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 
 ## [Unreleased]
 
+### Added
+- github.com/uber-go/zap integration. (#518)
+
 ### Removed
 
 - Remove service name from `otelmongodb` configuration and span attributes. (#763)

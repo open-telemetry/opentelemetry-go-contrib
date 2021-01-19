@@ -24,6 +24,11 @@ import (
 	"go.uber.org/zap/zapcore"
 )
 
+var (
+	logLevel = otellabel.Key("log.level")
+	logMsg   = otellabel.Key("log.msg")
+)
+
 // DebugWithContext logs on debug level and trace based on the context span if it exists.
 func DebugWithContext(ctx context.Context, log string, fields ...zapcore.Field) {
 	DebugWithSpan(oteltrace.SpanFromContext(ctx), log, fields...)
@@ -32,7 +37,7 @@ func DebugWithContext(ctx context.Context, log string, fields ...zapcore.Field) 
 // DebugWithSpan logs on debug level and add the logs on the trace if span exists.
 func DebugWithSpan(span oteltrace.Span, log string, fields ...zapcore.Field) {
 	Debug(log, fields...)
-	logSpan(span, log, fields...)
+	logSpan(span, log, zapcore.DebugLevel, fields...)
 }
 
 // Debug logs on debug level.
@@ -48,7 +53,7 @@ func InfoWithContext(ctx context.Context, log string, fields ...zapcore.Field) {
 // InfoWithSpan logs on info level and add the logs on the trace if span exists.
 func InfoWithSpan(span oteltrace.Span, log string, fields ...zapcore.Field) {
 	Info(log, fields...)
-	logSpan(span, log, fields...)
+	logSpan(span, log, zapcore.InfoLevel, fields...)
 
 }
 
@@ -65,8 +70,7 @@ func WarnWithContext(ctx context.Context, log string, fields ...zapcore.Field) {
 // WarnWithSpan logs on warn level and add the logs on the trace if span exists.
 func WarnWithSpan(span oteltrace.Span, log string, fields ...zapcore.Field) {
 	Warn(log, fields...)
-	logSpan(span, log, fields...)
-
+	logSpan(span, log, zapcore.WarnLevel, fields...)
 }
 
 // Warn logs on warn level.
@@ -82,14 +86,13 @@ func ErrorWithContext(ctx context.Context, log string, fields ...zapcore.Field) 
 // ErrorWithSpan logs on error level and add the logs on the trace if span exists.
 func ErrorWithSpan(span oteltrace.Span, log string, fields ...zapcore.Field) {
 	Error(log, fields...)
-	logSpan(span, log, fields...)
+	logSpan(span, log, zapcore.ErrorLevel, fields...)
 }
 
 // Error logs on error level.
 func Error(log string, fields ...zapcore.Field) {
 	zap.L().Error(log, fields...)
 }
-
 
 // DPanicWithContext logs on dPanic level and trace based on the context span if it exists.
 func DPanicWithContext(ctx context.Context, log string, fields ...zapcore.Field) {
@@ -98,7 +101,7 @@ func DPanicWithContext(ctx context.Context, log string, fields ...zapcore.Field)
 
 // DPanicWithSpan logs on dPanic level and add the logs on the trace if span exists.
 func DPanicWithSpan(span oteltrace.Span, log string, fields ...zapcore.Field) {
-	logSpan(span, log, fields...)
+	logSpan(span, log, zapcore.DPanicLevel, fields...)
 	DPanic(log, fields...)
 }
 
@@ -114,7 +117,7 @@ func PanicWithContext(ctx context.Context, log string, fields ...zapcore.Field) 
 
 // PanicWithSpan logs on panic level and add the logs on the trace if span exists.
 func PanicWithSpan(span oteltrace.Span, log string, fields ...zapcore.Field) {
-	logSpan(span, log, fields...)
+	logSpan(span, log, zapcore.PanicLevel, fields...)
 	Panic(log, fields...)
 }
 
@@ -130,7 +133,7 @@ func FatalWithContext(ctx context.Context, log string, fields ...zapcore.Field) 
 
 // FatalWithSpan logs on fatal level and add the logs on the trace if span exists.
 func FatalWithSpan(span oteltrace.Span, log string, fields ...zapcore.Field) {
-	logSpan(span, log, fields...)
+	logSpan(span, log, zapcore.FatalLevel, fields...)
 	Fatal(log, fields...)
 }
 
@@ -139,15 +142,17 @@ func Fatal(log string, fields ...zapcore.Field) {
 	zap.L().Fatal(log, fields...)
 }
 
-func logSpan(span oteltrace.Span, log string, fields ...zapcore.Field) {
-	if span != nil {
-		attrs := make([]otellabel.KeyValue, len(fields)+1)
-		if log != "" {
-			attrs = append(attrs, otellabel.String("event", log))
-		}
+func logSpan(span oteltrace.Span, log string, lvl zapcore.Level, fields ...zapcore.Field) {
+	if span != nil && span.IsRecording() {
+		attrs := make([]otellabel.KeyValue, 0, len(fields)+2)
+		attrs = append(attrs,
+			logMsg.String(log),
+			logLevel.String(lvl.CapitalString()))
+
 		if len(fields) > 0 {
 			attrs = append(attrs, zapFieldsToOtel(fields...)...)
 		}
-		span.SetAttributes(attrs...)
+
+		span.AddEvent("log", oteltrace.WithAttributes(attrs...))
 	}
 }
