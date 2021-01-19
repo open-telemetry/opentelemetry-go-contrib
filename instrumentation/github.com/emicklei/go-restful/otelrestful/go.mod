@@ -10,7 +10,7 @@ replace (
 require (
 	github.com/emicklei/go-restful/v3 v3.4.0
 	github.com/json-iterator/go v1.1.10 // indirect
-	github.com/stretchr/testify v1.6.1
+	github.com/stretchr/testify v1.7.0
 	go.opentelemetry.io/contrib v0.16.0
 	go.opentelemetry.io/contrib/propagators v0.16.0
 	go.opentelemetry.io/otel v0.16.0
