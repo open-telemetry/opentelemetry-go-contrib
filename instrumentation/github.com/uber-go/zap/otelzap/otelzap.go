@@ -18,10 +18,11 @@ package otelzap
 import (
 	"context"
 
-	otellabel "go.opentelemetry.io/otel/label"
-	oteltrace "go.opentelemetry.io/otel/trace"
 	"go.uber.org/zap"
 	"go.uber.org/zap/zapcore"
+
+	otellabel "go.opentelemetry.io/otel/label"
+	oteltrace "go.opentelemetry.io/otel/trace"
 )
 
 var (

@@ -20,12 +20,12 @@ import (
 	"testing"
 
 	"github.com/stretchr/testify/require"
-	"go.opentelemetry.io/otel/label"
-	"go.opentelemetry.io/otel/oteltest"
 	"go.uber.org/zap"
 	"go.uber.org/zap/zapcore"
-)
 
+	"go.opentelemetry.io/otel/label"
+	"go.opentelemetry.io/otel/oteltest"
+)
 
 func TestWithContext(t *testing.T) {
 	tests := []struct {
@@ -50,8 +50,8 @@ func TestWithContext(t *testing.T) {
 			},
 			require: func(event oteltest.Event) {
 				require.EqualValues(t, map[label.Key]label.Value{
-					logMsg: label.StringValue("test_warn"),
-					logLevel: label.StringValue(zapcore.WarnLevel.CapitalString()),
+					logMsg:          label.StringValue("test_warn"),
+					logLevel:        label.StringValue(zapcore.WarnLevel.CapitalString()),
 					"test_warn_key": label.StringValue("test_warn_value"),
 				}, event.Attributes)
 			},
@@ -62,8 +62,8 @@ func TestWithContext(t *testing.T) {
 			},
 			require: func(event oteltest.Event) {
 				require.EqualValues(t, map[label.Key]label.Value{
-					logMsg: label.StringValue("test_error"),
-					logLevel: label.StringValue(zapcore.ErrorLevel.CapitalString()),
+					logMsg:           label.StringValue("test_error"),
+					logLevel:         label.StringValue(zapcore.ErrorLevel.CapitalString()),
 					"test_error_key": label.StringValue("test_error_value"),
 				}, event.Attributes)
 			},

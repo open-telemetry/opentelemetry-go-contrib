@@ -19,9 +19,10 @@ import (
 	"testing"
 	"time"
 
-	otellabel "go.opentelemetry.io/otel/label"
 	"go.uber.org/zap"
 	"go.uber.org/zap/zapcore"
+
+	otellabel "go.opentelemetry.io/otel/label"
 )
 
 const testKey = "testkey"
