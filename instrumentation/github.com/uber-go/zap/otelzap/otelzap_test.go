@@ -20,11 +20,10 @@ import (
 	"testing"
 
 	"github.com/stretchr/testify/require"
-	"go.uber.org/zap"
-	"go.uber.org/zap/zapcore"
-
 	"go.opentelemetry.io/otel/label"
 	"go.opentelemetry.io/otel/oteltest"
+	"go.uber.org/zap"
+	"go.uber.org/zap/zapcore"
 )
 
 func TestWithContext(t *testing.T) {
@@ -68,9 +67,46 @@ func TestWithContext(t *testing.T) {
 				}, event.Attributes)
 			},
 		},
+		{
+			log: func(ctx context.Context) {
+				DPanicWithContext(ctx, "test_dpanic", zap.String("test_dpanic_key", "test_dpanic_value"))
+			},
+			require: func(event oteltest.Event) {
+				require.EqualValues(t, map[label.Key]label.Value{
+					logMsg:           label.StringValue("test_dpanic"),
+					logLevel:         label.StringValue(zapcore.DPanicLevel.CapitalString()),
+					"test_dpanic_key": label.StringValue("test_dpanic_value"),
+				}, event.Attributes)
+			},
+		},
+		// TODO: find a way around panic and fatal
+		//{
+		//	log: func(ctx context.Context) {
+		//		PanicWithContext(ctx, "test_panic", zap.String("test_panic_key", "test_panic_value"))
+		//	},
+		//	require: func(event oteltest.Event) {
+		//		require.EqualValues(t, map[label.Key]label.Value{
+		//			logMsg:           label.StringValue("test_panic"),
+		//			logLevel:         label.StringValue(zapcore.PanicLevel.CapitalString()),
+		//			"test_panic_key": label.StringValue("test_panic_value"),
+		//		}, event.Attributes)
+		//	},
+		//},
+		//{
+		//	log: func(ctx context.Context) {
+		//		FatalWithContext(ctx, "test_fatal", zap.String("test_fatal_key", "test_fatal_value"))
+		//	},
+		//	require: func(event oteltest.Event) {
+		//		require.EqualValues(t, map[label.Key]label.Value{
+		//			logMsg:           label.StringValue("test_fatal"),
+		//			logLevel:         label.StringValue(zapcore.PanicLevel.CapitalString()),
+		//			"test_fatal_key": label.StringValue("test_fatal_value"),
+		//		}, event.Attributes)
+		//	},
+		//},
 	}
 
-	log := zap.NewExample()
+	log := zap.NewNop()
 	zap.ReplaceGlobals(log)
 
 	tp := oteltest.NewTracerProvider()
