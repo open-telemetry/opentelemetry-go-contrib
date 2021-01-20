@@ -20,10 +20,11 @@ import (
 	"testing"
 
 	"github.com/stretchr/testify/require"
-	"go.opentelemetry.io/otel/label"
-	"go.opentelemetry.io/otel/oteltest"
 	"go.uber.org/zap"
 	"go.uber.org/zap/zapcore"
+
+	"go.opentelemetry.io/otel/label"
+	"go.opentelemetry.io/otel/oteltest"
 )
 
 func TestWithContext(t *testing.T) {
@@ -73,8 +74,8 @@ func TestWithContext(t *testing.T) {
 			},
 			require: func(event oteltest.Event) {
 				require.EqualValues(t, map[label.Key]label.Value{
-					logMsg:           label.StringValue("test_dpanic"),
-					logLevel:         label.StringValue(zapcore.DPanicLevel.CapitalString()),
+					logMsg:            label.StringValue("test_dpanic"),
+					logLevel:          label.StringValue(zapcore.DPanicLevel.CapitalString()),
 					"test_dpanic_key": label.StringValue("test_dpanic_value"),
 				}, event.Attributes)
 			},
