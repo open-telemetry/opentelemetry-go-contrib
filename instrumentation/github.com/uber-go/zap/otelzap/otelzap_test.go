@@ -34,6 +34,18 @@ func TestWithContext(t *testing.T) {
 	}{
 		{
 			log: func(ctx context.Context) {
+				DebugWithContext(ctx, "test_debug", zap.String("test_debug_key", "test_debug_value"))
+			},
+			require: func(event oteltest.Event) {
+				require.EqualValues(t, map[label.Key]label.Value{
+					logMsg:           label.StringValue("test_debug"),
+					logLevel:         label.StringValue(zapcore.DebugLevel.CapitalString()),
+					"test_debug_key": label.StringValue("test_debug_value"),
+				}, event.Attributes)
+			},
+		},
+		{
+			log: func(ctx context.Context) {
 				InfoWithContext(ctx, "test_info", zap.String("test_info_key", "test_info_value"))
 			},
 			require: func(event oteltest.Event) {

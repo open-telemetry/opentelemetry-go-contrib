@@ -16,6 +16,7 @@
 package otelzap
 
 import (
+	"errors"
 	"testing"
 	"time"
 
@@ -99,6 +100,17 @@ func TestZapFieldsToOtelKVConversion(t *testing.T) {
 		{
 			zapField: zap.Bool(testKey, true),
 			otelKV:   otellabel.Bool(testKey, true),
+		},
+		{
+			zapField: zap.Error(errors.New("test error")),
+			otelKV:   otellabel.String("error", "test error"),
+		},
+		{
+			zapField: zap.Field{
+				Key:  testKey,
+				Type: zapcore.UnknownType,
+			},
+			otelKV: otellabel.String(testKey, "<nil>"),
 		},
 	}
 
