@@ -22,11 +22,11 @@ import (
 	"github.com/felixge/httpsnoop"
 
 	"go.opentelemetry.io/otel"
-	"go.opentelemetry.io/otel/api/global"
-	"go.opentelemetry.io/otel/api/metric"
-	"go.opentelemetry.io/otel/api/trace"
 	"go.opentelemetry.io/otel/label"
+	"go.opentelemetry.io/otel/metric"
+	"go.opentelemetry.io/otel/propagation"
 	"go.opentelemetry.io/otel/semconv"
+	"go.opentelemetry.io/otel/trace"
 )
 
 var _ http.Handler = &Handler{}
@@ -41,7 +41,7 @@ type Handler struct {
 
 	tracer            trace.Tracer
 	meter             metric.Meter
-	propagators       otel.TextMapPropagator
+	propagators       propagation.TextMapPropagator
 	spanStartOptions  []trace.SpanOption
 	readEvent         bool
 	writeEvent        bool
@@ -88,7 +88,7 @@ func (h *Handler) configure(c *config) {
 
 func handleErr(err error) {
 	if err != nil {
-		global.Handle(err)
+		otel.Handle(err)
 	}
 }
 
@@ -134,16 +134,24 @@ func (h *Handler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	readRecordFunc := func(int64) {}
 	if h.readEvent {
 		readRecordFunc = func(n int64) {
-			span.AddEvent(ctx, "read", ReadBytesKey.Int64(n))
+			span.AddEvent("read", trace.WithAttributes(ReadBytesKey.Int64(n)))
 		}
 	}
-	bw := bodyWrapper{ReadCloser: r.Body, record: readRecordFunc}
-	r.Body = &bw
+
+	var bw bodyWrapper
+	// if request body is nil we don't want to mutate the body as it will affect
+	// the identity of it in a unforeseeable way because we assert ReadCloser
+	// fullfills a certain interface and it is indeed nil.
+	if r.Body != nil {
+		bw.ReadCloser = r.Body
+		bw.record = readRecordFunc
+		r.Body = &bw
+	}
 
 	writeRecordFunc := func(int64) {}
 	if h.writeEvent {
 		writeRecordFunc = func(n int64) {
-			span.AddEvent(ctx, "write", WroteBytesKey.Int64(n))
+			span.AddEvent("write", trace.WithAttributes(WroteBytesKey.Int64(n)))
 		}
 	}
 
@@ -172,10 +180,8 @@ func (h *Handler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 
 	setAfterServeAttributes(span, bw.read, rww.written, rww.statusCode, bw.err, rww.err)
 
-	// Add request metrics
-
+	// Add metrics
 	labels := append(labeler.Get(), semconv.HTTPServerMetricAttributesFromHTTPRequest(h.operation, r)...)
-
 	h.counters[RequestContentLength].Add(ctx, bw.read, labels...)
 	h.counters[ResponseContentLength].Add(ctx, rww.written, labels...)
 

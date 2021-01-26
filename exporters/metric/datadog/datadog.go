@@ -21,8 +21,9 @@ import (
 
 	"github.com/DataDog/datadog-go/statsd"
 
-	"go.opentelemetry.io/otel/api/metric"
 	"go.opentelemetry.io/otel/label"
+	"go.opentelemetry.io/otel/metric"
+	"go.opentelemetry.io/otel/metric/number"
 	export "go.opentelemetry.io/otel/sdk/export/metric"
 	"go.opentelemetry.io/otel/sdk/export/metric/aggregation"
 )
@@ -89,7 +90,7 @@ func defaultFormatter(namespace, name string) string {
 
 // ExportKindFor returns export.DeltaExporter for statsd-derived exporters
 func (e *Exporter) ExportKindFor(*metric.Descriptor, aggregation.Kind) export.ExportKind {
-	return export.DeltaExporter
+	return export.DeltaExportKind
 }
 
 func (e *Exporter) Export(ctx context.Context, cs export.CheckpointSet) error {
@@ -115,14 +116,14 @@ func (e *Exporter) Export(ctx context.Context, cs export.CheckpointSet) error {
 				f = e.client.Distribution
 			}
 			for _, n := range numbers {
-				if err := f(name, metricValue(r.Descriptor().NumberKind(), n), tags, rate); err != nil {
+				if err := f(name, metricValue(r.Descriptor().NumberKind(), n.Number), tags, rate); err != nil {
 					return fmt.Errorf("error submitting %s point: %w", name, err)
 				}
 			}
 		case aggregation.MinMaxSumCount:
 			type record struct {
 				name string
-				f    func() (metric.Number, error)
+				f    func() (number.Number, error)
 			}
 			recs := []record{
 				{
@@ -133,16 +134,6 @@ func (e *Exporter) Export(ctx context.Context, cs export.CheckpointSet) error {
 					name: name + ".max",
 					f:    agg.Max,
 				},
-			}
-			if dist, ok := agg.(aggregation.Distribution); ok {
-				recs = append(recs,
-					record{name: name + ".median", f: func() (metric.Number, error) {
-						return dist.Quantile(0.5)
-					}},
-					record{name: name + ".p95", f: func() (metric.Number, error) {
-						return dist.Quantile(0.95)
-					}},
-				)
 			}
 			for _, rec := range recs {
 				val, err := rec.f()
@@ -194,12 +185,12 @@ func sanitizeString(str string) string {
 	return reg.ReplaceAllString(str, "_")
 }
 
-func metricValue(kind metric.NumberKind, number metric.Number) float64 {
+func metricValue(kind number.Kind, num number.Number) float64 {
 	switch kind {
-	case metric.Float64NumberKind:
-		return number.AsFloat64()
-	case metric.Int64NumberKind:
-		return float64(number.AsInt64())
+	case number.Float64Kind:
+		return num.AsFloat64()
+	case number.Int64Kind:
+		return float64(num.AsInt64())
 	}
-	return float64(number)
+	return float64(num)
 }

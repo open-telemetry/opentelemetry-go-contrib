@@ -21,13 +21,13 @@ import (
 
 	"github.com/google/go-cmp/cmp"
 
-	mocktracer "go.opentelemetry.io/contrib/internal/trace"
 	"go.opentelemetry.io/contrib/propagators/jaeger"
-	"go.opentelemetry.io/otel/api/trace"
+	"go.opentelemetry.io/otel/oteltest"
+	"go.opentelemetry.io/otel/trace"
 )
 
 var (
-	mockTracer  = mocktracer.NewTracer("")
+	mockTracer  = oteltest.NewTracerProvider().Tracer("")
 	_, mockSpan = mockTracer.Start(context.Background(), "")
 )
 
@@ -59,7 +59,7 @@ func TestExtractJaeger(t *testing.T) {
 				ctx := context.Background()
 				ctx = propagator.Extract(ctx, req.Header)
 				resSc := trace.RemoteSpanContextFromContext(ctx)
-				if diff := cmp.Diff(resSc, tc.expected); diff != "" {
+				if diff := cmp.Diff(resSc, tc.expected, cmp.AllowUnexported(trace.TraceState{})); diff != "" {
 					t.Errorf("%s: %s: -got +want %s", tg.name, tc.name, diff)
 				}
 			})

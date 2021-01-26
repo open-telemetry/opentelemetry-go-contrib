@@ -22,8 +22,8 @@ import (
 
 	"github.com/gocql/gocql"
 
-	"go.opentelemetry.io/otel/api/trace"
 	"go.opentelemetry.io/otel/label"
+	"go.opentelemetry.io/otel/trace"
 )
 
 // OTelQueryObserver implements the gocql.QueryObserver interface

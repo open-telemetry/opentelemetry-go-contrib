@@ -22,13 +22,14 @@ import (
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	"google.golang.org/grpc"
+	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/interop"
 	pb "google.golang.org/grpc/interop/grpc_testing"
 	"google.golang.org/grpc/test/bufconn"
 
 	"go.opentelemetry.io/contrib/instrumentation/google.golang.org/grpc/otelgrpc"
-	"go.opentelemetry.io/otel/api/trace/tracetest"
 	"go.opentelemetry.io/otel/label"
+	"go.opentelemetry.io/otel/oteltest"
 	"go.opentelemetry.io/otel/semconv"
 )
 
@@ -37,7 +38,7 @@ func doCalls(cOpt []grpc.DialOption, sOpt []grpc.ServerOption) error {
 	defer l.Close()
 
 	s := grpc.NewServer(sOpt...)
-	pb.RegisterTestServiceService(s, interop.NewTestServer())
+	pb.RegisterTestServiceServer(s, interop.NewTestServer())
 	go func() {
 		if err := s.Serve(l); err != nil {
 			panic(err)
@@ -71,17 +72,17 @@ func doCalls(cOpt []grpc.DialOption, sOpt []grpc.ServerOption) error {
 }
 
 func TestInterceptors(t *testing.T) {
-	clientUnarySR := new(tracetest.StandardSpanRecorder)
-	clientUnaryTP := tracetest.NewTracerProvider(tracetest.WithSpanRecorder(clientUnarySR))
+	clientUnarySR := new(oteltest.StandardSpanRecorder)
+	clientUnaryTP := oteltest.NewTracerProvider(oteltest.WithSpanRecorder(clientUnarySR))
 
-	clientStreamSR := new(tracetest.StandardSpanRecorder)
-	clientStreamTP := tracetest.NewTracerProvider(tracetest.WithSpanRecorder(clientStreamSR))
+	clientStreamSR := new(oteltest.StandardSpanRecorder)
+	clientStreamTP := oteltest.NewTracerProvider(oteltest.WithSpanRecorder(clientStreamSR))
 
-	serverUnarySR := new(tracetest.StandardSpanRecorder)
-	serverUnaryTP := tracetest.NewTracerProvider(tracetest.WithSpanRecorder(serverUnarySR))
+	serverUnarySR := new(oteltest.StandardSpanRecorder)
+	serverUnaryTP := oteltest.NewTracerProvider(oteltest.WithSpanRecorder(serverUnarySR))
 
-	serverStreamSR := new(tracetest.StandardSpanRecorder)
-	serverStreamTP := tracetest.NewTracerProvider(tracetest.WithSpanRecorder(serverStreamSR))
+	serverStreamSR := new(oteltest.StandardSpanRecorder)
+	serverStreamTP := oteltest.NewTracerProvider(oteltest.WithSpanRecorder(serverStreamSR))
 
 	assert.NoError(t, doCalls(
 		[]grpc.DialOption{
@@ -111,13 +112,13 @@ func TestInterceptors(t *testing.T) {
 	})
 }
 
-func checkUnaryClientSpans(t *testing.T, spans []*tracetest.Span) {
+func checkUnaryClientSpans(t *testing.T, spans []*oteltest.Span) {
 	require.Len(t, spans, 2)
 
 	emptySpan := spans[0]
 	assert.True(t, emptySpan.Ended())
 	assert.Equal(t, "grpc.testing.TestService/EmptyCall", emptySpan.Name())
-	assert.Equal(t, []tracetest.Event{
+	assert.Equal(t, []oteltest.Event{
 		{
 			Name: "message",
 			Attributes: map[label.Key]label.Value{
@@ -136,15 +137,16 @@ func checkUnaryClientSpans(t *testing.T, spans []*tracetest.Span) {
 		},
 	}, noTimestamp(emptySpan.Events()))
 	assert.Equal(t, map[label.Key]label.Value{
-		semconv.RPCMethodKey:      label.StringValue("EmptyCall"),
-		semconv.RPCServiceKey:     label.StringValue("grpc.testing.TestService"),
-		semconv.RPCSystemGRPC.Key: semconv.RPCSystemGRPC.Value,
+		semconv.RPCMethodKey:       label.StringValue("EmptyCall"),
+		semconv.RPCServiceKey:      label.StringValue("grpc.testing.TestService"),
+		semconv.RPCSystemGRPC.Key:  semconv.RPCSystemGRPC.Value,
+		otelgrpc.GRPCStatusCodeKey: label.Uint32Value(uint32(codes.OK)),
 	}, emptySpan.Attributes())
 
 	largeSpan := spans[1]
 	assert.True(t, largeSpan.Ended())
 	assert.Equal(t, "grpc.testing.TestService/UnaryCall", largeSpan.Name())
-	assert.Equal(t, []tracetest.Event{
+	assert.Equal(t, []oteltest.Event{
 		{
 			Name: "message",
 			Attributes: map[label.Key]label.Value{
@@ -165,20 +167,21 @@ func checkUnaryClientSpans(t *testing.T, spans []*tracetest.Span) {
 		},
 	}, noTimestamp(largeSpan.Events()))
 	assert.Equal(t, map[label.Key]label.Value{
-		semconv.RPCMethodKey:      label.StringValue("UnaryCall"),
-		semconv.RPCServiceKey:     label.StringValue("grpc.testing.TestService"),
-		semconv.RPCSystemGRPC.Key: semconv.RPCSystemGRPC.Value,
+		semconv.RPCMethodKey:       label.StringValue("UnaryCall"),
+		semconv.RPCServiceKey:      label.StringValue("grpc.testing.TestService"),
+		semconv.RPCSystemGRPC.Key:  semconv.RPCSystemGRPC.Value,
+		otelgrpc.GRPCStatusCodeKey: label.Uint32Value(uint32(codes.OK)),
 	}, largeSpan.Attributes())
 }
 
-func checkStreamClientSpans(t *testing.T, spans []*tracetest.Span) {
+func checkStreamClientSpans(t *testing.T, spans []*oteltest.Span) {
 	require.Len(t, spans, 3)
 
 	streamInput := spans[0]
 	assert.True(t, streamInput.Ended())
 	assert.Equal(t, "grpc.testing.TestService/StreamingInputCall", streamInput.Name())
 	// sizes from reqSizes in "google.golang.org/grpc/interop".
-	assert.Equal(t, []tracetest.Event{
+	assert.Equal(t, []oteltest.Event{
 		{
 			Name: "message",
 			Attributes: map[label.Key]label.Value{
@@ -214,16 +217,17 @@ func checkStreamClientSpans(t *testing.T, spans []*tracetest.Span) {
 		// client does not record an event for the server response.
 	}, noTimestamp(streamInput.Events()))
 	assert.Equal(t, map[label.Key]label.Value{
-		semconv.RPCMethodKey:      label.StringValue("StreamingInputCall"),
-		semconv.RPCServiceKey:     label.StringValue("grpc.testing.TestService"),
-		semconv.RPCSystemGRPC.Key: semconv.RPCSystemGRPC.Value,
+		semconv.RPCMethodKey:       label.StringValue("StreamingInputCall"),
+		semconv.RPCServiceKey:      label.StringValue("grpc.testing.TestService"),
+		semconv.RPCSystemGRPC.Key:  semconv.RPCSystemGRPC.Value,
+		otelgrpc.GRPCStatusCodeKey: label.Uint32Value(uint32(codes.OK)),
 	}, streamInput.Attributes())
 
 	streamOutput := spans[1]
 	assert.True(t, streamOutput.Ended())
 	assert.Equal(t, "grpc.testing.TestService/StreamingOutputCall", streamOutput.Name())
 	// sizes from respSizes in "google.golang.org/grpc/interop".
-	assert.Equal(t, []tracetest.Event{
+	assert.Equal(t, []oteltest.Event{
 		{
 			Name: "message",
 			Attributes: map[label.Key]label.Value{
@@ -266,15 +270,16 @@ func checkStreamClientSpans(t *testing.T, spans []*tracetest.Span) {
 		},
 	}, noTimestamp(streamOutput.Events()))
 	assert.Equal(t, map[label.Key]label.Value{
-		semconv.RPCMethodKey:      label.StringValue("StreamingOutputCall"),
-		semconv.RPCServiceKey:     label.StringValue("grpc.testing.TestService"),
-		semconv.RPCSystemGRPC.Key: semconv.RPCSystemGRPC.Value,
+		semconv.RPCMethodKey:       label.StringValue("StreamingOutputCall"),
+		semconv.RPCServiceKey:      label.StringValue("grpc.testing.TestService"),
+		semconv.RPCSystemGRPC.Key:  semconv.RPCSystemGRPC.Value,
+		otelgrpc.GRPCStatusCodeKey: label.Uint32Value(uint32(codes.OK)),
 	}, streamOutput.Attributes())
 
 	pingPong := spans[2]
 	assert.True(t, pingPong.Ended())
 	assert.Equal(t, "grpc.testing.TestService/FullDuplexCall", pingPong.Name())
-	assert.Equal(t, []tracetest.Event{
+	assert.Equal(t, []oteltest.Event{
 		{
 			Name: "message",
 			Attributes: map[label.Key]label.Value{
@@ -341,20 +346,21 @@ func checkStreamClientSpans(t *testing.T, spans []*tracetest.Span) {
 		},
 	}, noTimestamp(pingPong.Events()))
 	assert.Equal(t, map[label.Key]label.Value{
-		semconv.RPCMethodKey:      label.StringValue("FullDuplexCall"),
-		semconv.RPCServiceKey:     label.StringValue("grpc.testing.TestService"),
-		semconv.RPCSystemGRPC.Key: semconv.RPCSystemGRPC.Value,
+		semconv.RPCMethodKey:       label.StringValue("FullDuplexCall"),
+		semconv.RPCServiceKey:      label.StringValue("grpc.testing.TestService"),
+		semconv.RPCSystemGRPC.Key:  semconv.RPCSystemGRPC.Value,
+		otelgrpc.GRPCStatusCodeKey: label.Uint32Value(uint32(codes.OK)),
 	}, pingPong.Attributes())
 }
 
-func checkStreamServerSpans(t *testing.T, spans []*tracetest.Span) {
+func checkStreamServerSpans(t *testing.T, spans []*oteltest.Span) {
 	require.Len(t, spans, 3)
 
 	streamInput := spans[0]
 	assert.True(t, streamInput.Ended())
 	assert.Equal(t, "grpc.testing.TestService/StreamingInputCall", streamInput.Name())
 	// sizes from reqSizes in "google.golang.org/grpc/interop".
-	assert.Equal(t, []tracetest.Event{
+	assert.Equal(t, []oteltest.Event{
 		{
 			Name: "message",
 			Attributes: map[label.Key]label.Value{
@@ -397,16 +403,17 @@ func checkStreamServerSpans(t *testing.T, spans []*tracetest.Span) {
 		},
 	}, noTimestamp(streamInput.Events()))
 	assert.Equal(t, map[label.Key]label.Value{
-		semconv.RPCMethodKey:      label.StringValue("StreamingInputCall"),
-		semconv.RPCServiceKey:     label.StringValue("grpc.testing.TestService"),
-		semconv.RPCSystemGRPC.Key: semconv.RPCSystemGRPC.Value,
+		semconv.RPCMethodKey:       label.StringValue("StreamingInputCall"),
+		semconv.RPCServiceKey:      label.StringValue("grpc.testing.TestService"),
+		semconv.RPCSystemGRPC.Key:  semconv.RPCSystemGRPC.Value,
+		otelgrpc.GRPCStatusCodeKey: label.Uint32Value(uint32(codes.OK)),
 	}, streamInput.Attributes())
 
 	streamOutput := spans[1]
 	assert.True(t, streamOutput.Ended())
 	assert.Equal(t, "grpc.testing.TestService/StreamingOutputCall", streamOutput.Name())
 	// sizes from respSizes in "google.golang.org/grpc/interop".
-	assert.Equal(t, []tracetest.Event{
+	assert.Equal(t, []oteltest.Event{
 		{
 			Name: "message",
 			Attributes: map[label.Key]label.Value{
@@ -449,15 +456,16 @@ func checkStreamServerSpans(t *testing.T, spans []*tracetest.Span) {
 		},
 	}, noTimestamp(streamOutput.Events()))
 	assert.Equal(t, map[label.Key]label.Value{
-		semconv.RPCMethodKey:      label.StringValue("StreamingOutputCall"),
-		semconv.RPCServiceKey:     label.StringValue("grpc.testing.TestService"),
-		semconv.RPCSystemGRPC.Key: semconv.RPCSystemGRPC.Value,
+		semconv.RPCMethodKey:       label.StringValue("StreamingOutputCall"),
+		semconv.RPCServiceKey:      label.StringValue("grpc.testing.TestService"),
+		semconv.RPCSystemGRPC.Key:  semconv.RPCSystemGRPC.Value,
+		otelgrpc.GRPCStatusCodeKey: label.Uint32Value(uint32(codes.OK)),
 	}, streamOutput.Attributes())
 
 	pingPong := spans[2]
 	assert.True(t, pingPong.Ended())
 	assert.Equal(t, "grpc.testing.TestService/FullDuplexCall", pingPong.Name())
-	assert.Equal(t, []tracetest.Event{
+	assert.Equal(t, []oteltest.Event{
 		{
 			Name: "message",
 			Attributes: map[label.Key]label.Value{
@@ -524,19 +532,20 @@ func checkStreamServerSpans(t *testing.T, spans []*tracetest.Span) {
 		},
 	}, noTimestamp(pingPong.Events()))
 	assert.Equal(t, map[label.Key]label.Value{
-		semconv.RPCMethodKey:      label.StringValue("FullDuplexCall"),
-		semconv.RPCServiceKey:     label.StringValue("grpc.testing.TestService"),
-		semconv.RPCSystemGRPC.Key: semconv.RPCSystemGRPC.Value,
+		semconv.RPCMethodKey:       label.StringValue("FullDuplexCall"),
+		semconv.RPCServiceKey:      label.StringValue("grpc.testing.TestService"),
+		semconv.RPCSystemGRPC.Key:  semconv.RPCSystemGRPC.Value,
+		otelgrpc.GRPCStatusCodeKey: label.Uint32Value(uint32(codes.OK)),
 	}, pingPong.Attributes())
 }
 
-func checkUnaryServerSpans(t *testing.T, spans []*tracetest.Span) {
+func checkUnaryServerSpans(t *testing.T, spans []*oteltest.Span) {
 	require.Len(t, spans, 2)
 
 	emptySpan := spans[0]
 	assert.True(t, emptySpan.Ended())
 	assert.Equal(t, "grpc.testing.TestService/EmptyCall", emptySpan.Name())
-	assert.Equal(t, []tracetest.Event{
+	assert.Equal(t, []oteltest.Event{
 		{
 			Name: "message",
 			Attributes: map[label.Key]label.Value{
@@ -555,15 +564,16 @@ func checkUnaryServerSpans(t *testing.T, spans []*tracetest.Span) {
 		},
 	}, noTimestamp(emptySpan.Events()))
 	assert.Equal(t, map[label.Key]label.Value{
-		semconv.RPCMethodKey:      label.StringValue("EmptyCall"),
-		semconv.RPCServiceKey:     label.StringValue("grpc.testing.TestService"),
-		semconv.RPCSystemGRPC.Key: semconv.RPCSystemGRPC.Value,
+		semconv.RPCMethodKey:       label.StringValue("EmptyCall"),
+		semconv.RPCServiceKey:      label.StringValue("grpc.testing.TestService"),
+		semconv.RPCSystemGRPC.Key:  semconv.RPCSystemGRPC.Value,
+		otelgrpc.GRPCStatusCodeKey: label.Uint32Value(uint32(codes.OK)),
 	}, emptySpan.Attributes())
 
 	largeSpan := spans[1]
 	assert.True(t, largeSpan.Ended())
 	assert.Equal(t, "grpc.testing.TestService/UnaryCall", largeSpan.Name())
-	assert.Equal(t, []tracetest.Event{
+	assert.Equal(t, []oteltest.Event{
 		{
 			Name: "message",
 			Attributes: map[label.Key]label.Value{
@@ -584,16 +594,17 @@ func checkUnaryServerSpans(t *testing.T, spans []*tracetest.Span) {
 		},
 	}, noTimestamp(largeSpan.Events()))
 	assert.Equal(t, map[label.Key]label.Value{
-		semconv.RPCMethodKey:      label.StringValue("UnaryCall"),
-		semconv.RPCServiceKey:     label.StringValue("grpc.testing.TestService"),
-		semconv.RPCSystemGRPC.Key: semconv.RPCSystemGRPC.Value,
+		semconv.RPCMethodKey:       label.StringValue("UnaryCall"),
+		semconv.RPCServiceKey:      label.StringValue("grpc.testing.TestService"),
+		semconv.RPCSystemGRPC.Key:  semconv.RPCSystemGRPC.Value,
+		otelgrpc.GRPCStatusCodeKey: label.Uint32Value(uint32(codes.OK)),
 	}, largeSpan.Attributes())
 }
 
-func noTimestamp(events []tracetest.Event) []tracetest.Event {
-	out := make([]tracetest.Event, 0, len(events))
+func noTimestamp(events []oteltest.Event) []oteltest.Event {
+	out := make([]oteltest.Event, 0, len(events))
 	for _, e := range events {
-		out = append(out, tracetest.Event{
+		out = append(out, oteltest.Event{
 			Name:       e.Name,
 			Attributes: e.Attributes,
 		})

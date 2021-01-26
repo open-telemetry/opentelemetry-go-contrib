@@ -22,7 +22,7 @@ import (
 	"github.com/bradfitz/gomemcache/memcache"
 
 	"go.opentelemetry.io/contrib/instrumentation/github.com/bradfitz/gomemcache/memcache/otelmemcache"
-	oteltrace "go.opentelemetry.io/otel/api/trace"
+	oteltrace "go.opentelemetry.io/otel/trace"
 
 	oteltracestdout "go.opentelemetry.io/otel/exporters/stdout"
 	sdktrace "go.opentelemetry.io/otel/sdk/trace"

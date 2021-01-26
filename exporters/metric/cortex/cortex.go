@@ -27,14 +27,15 @@ import (
 	"github.com/golang/snappy"
 	"github.com/prometheus/prometheus/prompb"
 
-	"go.opentelemetry.io/otel/api/global"
-	apimetric "go.opentelemetry.io/otel/api/metric"
+	"go.opentelemetry.io/otel"
 	"go.opentelemetry.io/otel/label"
+	apimetric "go.opentelemetry.io/otel/metric"
+	"go.opentelemetry.io/otel/metric/number"
 	"go.opentelemetry.io/otel/sdk/export/metric"
 	export "go.opentelemetry.io/otel/sdk/export/metric"
 	"go.opentelemetry.io/otel/sdk/export/metric/aggregation"
-	"go.opentelemetry.io/otel/sdk/metric/controller/push"
-	"go.opentelemetry.io/otel/sdk/metric/processor/basic"
+	controller "go.opentelemetry.io/otel/sdk/metric/controller/basic"
+	processor "go.opentelemetry.io/otel/sdk/metric/processor/basic"
 	"go.opentelemetry.io/otel/sdk/metric/selector/simple"
 )
 
@@ -45,7 +46,7 @@ type Exporter struct {
 
 // ExportKindFor returns CumulativeExporter so the Processor correctly aggregates data
 func (e *Exporter) ExportKindFor(*apimetric.Descriptor, aggregation.Kind) metric.ExportKind {
-	return metric.CumulativeExporter
+	return metric.CumulativeExportKind
 }
 
 // Export forwards metrics to Cortex from the SDK
@@ -87,31 +88,30 @@ func NewRawExporter(config Config) (*Exporter, error) {
 
 // NewExportPipeline sets up a complete export pipeline with a push Controller and
 // Exporter.
-func NewExportPipeline(config Config, options ...push.Option) (*push.Controller, error) {
+func NewExportPipeline(config Config, options ...controller.Option) (*controller.Controller, error) {
 	exporter, err := NewRawExporter(config)
 	if err != nil {
 		return nil, err
 	}
 
-	pusher := push.New(
-		basic.New(
+	pusher := controller.New(
+		processor.New(
 			simple.NewWithHistogramDistribution(config.HistogramBoundaries),
 			exporter,
 		),
-		exporter,
-		options...,
+		append(options, controller.WithPusher(exporter))...,
 	)
-	pusher.Start()
-	return pusher, nil
+
+	return pusher, pusher.Start(context.TODO())
 }
 
 // InstallNewPipeline registers a push Controller's MeterProvider globally.
-func InstallNewPipeline(config Config, options ...push.Option) (*push.Controller, error) {
+func InstallNewPipeline(config Config, options ...controller.Option) (*controller.Controller, error) {
 	pusher, err := NewExportPipeline(config, options...)
 	if err != nil {
 		return nil, err
 	}
-	global.SetMeterProvider(pusher.MeterProvider())
+	otel.SetMeterProvider(pusher.MeterProvider())
 	return pusher, nil
 }
 
@@ -129,20 +129,12 @@ func (e *Exporter) ConvertToTimeSeries(checkpointSet export.CheckpointSet) ([]*p
 
 		// The following section uses loose type checking to determine how to
 		// convert aggregations to timeseries. More "expensive" timeseries are
-		// checked first. For example, because a Distribution has a Sum value,
-		// we must check for Distribution first or else only the Sum would be
-		// converted and the other values like Quantiles would not be.
+		// checked first.
 		//
 		// See the Aggregator Kind for more information
 		// https://github.com/open-telemetry/opentelemetry-go/blob/master/sdk/export/metric/aggregation/aggregation.go#L123-L138
 		if histogram, ok := agg.(aggregation.Histogram); ok {
 			tSeries, err := convertFromHistogram(record, histogram)
-			if err != nil {
-				return err
-			}
-			timeSeries = append(timeSeries, tSeries...)
-		} else if distribution, ok := agg.(aggregation.Distribution); ok && len(e.config.Quantiles) != 0 {
-			tSeries, err := convertFromDistribution(record, distribution, e.config.Quantiles)
 			if err != nil {
 				return err
 			}
@@ -183,7 +175,7 @@ func (e *Exporter) ConvertToTimeSeries(checkpointSet export.CheckpointSet) ([]*p
 }
 
 // createTimeSeries is a helper function to create a timeseries from a value and labels
-func createTimeSeries(record metric.Record, value apimetric.Number, valueNumberKind apimetric.NumberKind, extraLabels ...label.KeyValue) *prompb.TimeSeries {
+func createTimeSeries(record metric.Record, value number.Number, valueNumberKind number.Kind, extraLabels ...label.KeyValue) *prompb.TimeSeries {
 	sample := prompb.Sample{
 		Value:     value.CoerceToFloat64(valueNumberKind),
 		Timestamp: int64(time.Nanosecond) * record.EndTime().UnixNano() / int64(time.Millisecond),
@@ -256,7 +248,7 @@ func convertFromMinMaxSumCount(record metric.Record, minMaxSumCount aggregation.
 		return nil, err
 	}
 	name = sanitize(record.Descriptor().Name() + "_count")
-	countTimeSeries := createTimeSeries(record, apimetric.NewInt64Number(count), apimetric.Int64NumberKind, label.String("__name__", name))
+	countTimeSeries := createTimeSeries(record, number.NewInt64Number(int64(count)), number.Int64Kind, label.String("__name__", name))
 
 	// Return all timeSeries
 	tSeries := []*prompb.TimeSeries{
@@ -264,66 +256,6 @@ func convertFromMinMaxSumCount(record metric.Record, minMaxSumCount aggregation.
 	}
 
 	return tSeries, nil
-}
-
-// convertFromDistribution returns len(quantiles) number of TimeSeries in a distribution.
-func convertFromDistribution(record metric.Record, distribution aggregation.Distribution, quantiles []float64) ([]*prompb.TimeSeries, error) {
-	var timeSeries []*prompb.TimeSeries
-	metricName := sanitize(record.Descriptor().Name())
-	numberKind := record.Descriptor().NumberKind()
-
-	// Convert Min
-	min, err := distribution.Min()
-	if err != nil {
-		return nil, err
-	}
-	name := sanitize(metricName + "_min")
-	minTimeSeries := createTimeSeries(record, min, numberKind, label.String("__name__", name))
-	timeSeries = append(timeSeries, minTimeSeries)
-
-	// Convert Max
-	max, err := distribution.Max()
-	if err != nil {
-		return nil, err
-	}
-	name = sanitize(metricName + "_max")
-	maxTimeSeries := createTimeSeries(record, max, numberKind, label.String("__name__", name))
-	timeSeries = append(timeSeries, maxTimeSeries)
-
-	// Convert Sum
-	sum, err := distribution.Sum()
-	if err != nil {
-		return nil, err
-	}
-	name = sanitize(metricName + "_sum")
-	sumTimeSeries := createTimeSeries(record, sum, numberKind, label.String("__name__", name))
-	timeSeries = append(timeSeries, sumTimeSeries)
-
-	// Convert Count
-	count, err := distribution.Count()
-	if err != nil {
-		return nil, err
-	}
-	name = sanitize(record.Descriptor().Name() + "_count")
-	countTimeSeries := createTimeSeries(record, apimetric.NewInt64Number(count), apimetric.Int64NumberKind, label.String("__name__", name))
-	timeSeries = append(timeSeries, countTimeSeries)
-
-	// For each configured quantile, get the value and create a timeseries
-	for _, q := range quantiles {
-		value, err := distribution.Quantile(q)
-		if err != nil {
-			return nil, err
-		}
-
-		// Add quantile as a label. e.g. {quantile="0.5"}
-		quantileStr := strconv.FormatFloat(q, 'f', -1, 64)
-
-		// Create TimeSeries
-		tSeries := createTimeSeries(record, value, numberKind, label.String("__name__", metricName), label.String("quantile", quantileStr))
-		timeSeries = append(timeSeries, tSeries)
-	}
-
-	return timeSeries, nil
 }
 
 // convertFromHistogram returns len(histogram.Buckets) timeseries for a histogram aggregation
@@ -352,26 +284,26 @@ func convertFromHistogram(record metric.Record, histogram aggregation.Histogram)
 	counts := make(map[float64]float64, len(buckets.Boundaries))
 	for i, boundary := range buckets.Boundaries {
 		// Add bucket count to totalCount and record in map
-		totalCount += buckets.Counts[i]
+		totalCount += float64(buckets.Counts[i])
 		counts[boundary] = totalCount
 
 		// Add upper boundary as a label. e.g. {le="5"}
 		boundaryStr := strconv.FormatFloat(boundary, 'f', -1, 64)
 
 		// Create timeSeries and append
-		boundaryTimeSeries := createTimeSeries(record, apimetric.NewFloat64Number(totalCount), apimetric.Float64NumberKind, label.String("__name__", metricName), label.String("le", boundaryStr))
+		boundaryTimeSeries := createTimeSeries(record, number.NewFloat64Number(totalCount), number.Float64Kind, label.String("__name__", metricName), label.String("le", boundaryStr))
 		timeSeries = append(timeSeries, boundaryTimeSeries)
 	}
 
 	// Include the +inf boundary in the total count
-	totalCount += buckets.Counts[len(buckets.Counts)-1]
+	totalCount += float64(buckets.Counts[len(buckets.Counts)-1])
 
 	// Create a timeSeries for the +inf bucket and total count
 	// These are the same and are both required by Prometheus-based backends
 
-	upperBoundTimeSeries := createTimeSeries(record, apimetric.NewFloat64Number(totalCount), apimetric.Float64NumberKind, label.String("__name__", metricName), label.String("le", "+inf"))
+	upperBoundTimeSeries := createTimeSeries(record, number.NewFloat64Number(totalCount), number.Float64Kind, label.String("__name__", metricName), label.String("le", "+inf"))
 
-	countTimeSeries := createTimeSeries(record, apimetric.NewFloat64Number(totalCount), apimetric.Float64NumberKind, label.String("__name__", metricName+"_count"))
+	countTimeSeries := createTimeSeries(record, number.NewFloat64Number(totalCount), number.Float64Kind, label.String("__name__", metricName+"_count"))
 
 	timeSeries = append(timeSeries, upperBoundTimeSeries)
 	timeSeries = append(timeSeries, countTimeSeries)

@@ -25,19 +25,19 @@ import (
 	"google.golang.org/grpc/test/bufconn"
 
 	"go.opentelemetry.io/contrib/instrumentation/google.golang.org/grpc/otelgrpc"
-	"go.opentelemetry.io/otel/api/trace/tracetest"
+	"go.opentelemetry.io/otel/oteltest"
 )
 
 const bufSize = 2048
 
-var tracerProvider = tracetest.NewTracerProvider()
+var tracerProvider = oteltest.NewTracerProvider()
 
 func benchmark(b *testing.B, cOpt []grpc.DialOption, sOpt []grpc.ServerOption) {
 	l := bufconn.Listen(bufSize)
 	defer l.Close()
 
 	s := grpc.NewServer(sOpt...)
-	pb.RegisterTestServiceService(s, interop.NewTestServer())
+	pb.RegisterTestServiceServer(s, interop.NewTestServer())
 	go func() {
 		if err := s.Serve(l); err != nil {
 			panic(err)

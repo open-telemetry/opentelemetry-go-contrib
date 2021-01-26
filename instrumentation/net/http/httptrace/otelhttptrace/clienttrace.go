@@ -22,13 +22,12 @@ import (
 	"strings"
 	"sync"
 
-	"go.opentelemetry.io/otel/semconv"
-
+	"go.opentelemetry.io/contrib"
+	"go.opentelemetry.io/otel"
 	"go.opentelemetry.io/otel/codes"
-
-	"go.opentelemetry.io/otel/api/global"
-	"go.opentelemetry.io/otel/api/trace"
 	"go.opentelemetry.io/otel/label"
+	"go.opentelemetry.io/otel/semconv"
+	"go.opentelemetry.io/otel/trace"
 )
 
 var (
@@ -69,7 +68,10 @@ func NewClientTrace(ctx context.Context) *httptrace.ClientTrace {
 		activeHooks: make(map[string]context.Context),
 	}
 
-	ct.tr = global.Tracer("go.opentelemetry.io/otel/instrumentation/httptrace")
+	ct.tr = otel.GetTracerProvider().Tracer(
+		"go.opentelemetry.io/otel/instrumentation/httptrace",
+		trace.WithInstrumentationVersion(contrib.SemVersion()),
+	)
 
 	return &httptrace.ClientTrace{
 		GetConn:              ct.getConn,
@@ -217,18 +219,18 @@ func (ct *clientTracer) wroteRequest(info httptrace.WroteRequestInfo) {
 }
 
 func (ct *clientTracer) got100Continue() {
-	ct.span("http.receive").AddEvent(ct.Context, "GOT 100 - Continue")
+	ct.span("http.receive").AddEvent("GOT 100 - Continue")
 }
 
 func (ct *clientTracer) wait100Continue() {
-	ct.span("http.receive").AddEvent(ct.Context, "GOT 100 - Wait")
+	ct.span("http.receive").AddEvent("GOT 100 - Wait")
 }
 
 func (ct *clientTracer) got1xxResponse(code int, header textproto.MIMEHeader) error {
-	ct.span("http.receive").AddEvent(ct.Context, "GOT 1xx",
+	ct.span("http.receive").AddEvent("GOT 1xx", trace.WithAttributes(
 		HTTPStatus.Int(code),
 		HTTPHeaderMIME.String(sm2s(header)),
-	)
+	))
 	return nil
 }
 

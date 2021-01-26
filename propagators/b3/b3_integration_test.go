@@ -21,13 +21,13 @@ import (
 
 	"github.com/google/go-cmp/cmp"
 
-	mocktracer "go.opentelemetry.io/contrib/internal/trace"
 	"go.opentelemetry.io/contrib/propagators/b3"
-	"go.opentelemetry.io/otel/api/trace"
+	"go.opentelemetry.io/otel/oteltest"
+	"go.opentelemetry.io/otel/trace"
 )
 
 var (
-	mockTracer  = mocktracer.NewTracer("")
+	mockTracer  = oteltest.NewTracerProvider().Tracer("")
 	_, mockSpan = mockTracer.Start(context.Background(), "")
 )
 
@@ -59,7 +59,7 @@ func TestExtractB3(t *testing.T) {
 				ctx := context.Background()
 				ctx = propagator.Extract(ctx, req.Header)
 				gotSc := trace.RemoteSpanContextFromContext(ctx)
-				if diff := cmp.Diff(gotSc, tt.wantSc); diff != "" {
+				if diff := cmp.Diff(gotSc, tt.wantSc, cmp.AllowUnexported(trace.TraceState{})); diff != "" {
 					t.Errorf("%s: %s: -got +want %s", tg.name, tt.name, diff)
 				}
 			})

@@ -25,9 +25,9 @@ import (
 	"time"
 
 	"go.opentelemetry.io/contrib/exporters/metric/dogstatsd"
-	"go.opentelemetry.io/otel/api/metric"
 	"go.opentelemetry.io/otel/label"
-	"go.opentelemetry.io/otel/sdk/metric/controller/push"
+	"go.opentelemetry.io/otel/metric"
+	controller "go.opentelemetry.io/otel/sdk/metric/controller/basic"
 	"go.opentelemetry.io/otel/sdk/resource"
 )
 
@@ -67,7 +67,7 @@ func ExampleNew() {
 		// In real code, use the URL field:
 		//
 		// URL: fmt.Sprint("unix://", path),
-	}, push.WithPeriod(time.Minute), push.WithResource(resource.New(label.String("host", "name"))))
+	}, controller.WithCollectPeriod(time.Minute), controller.WithResource(resource.NewWithAttributes(label.String("host", "name"))))
 	if err != nil {
 		log.Fatal("Could not initialize dogstatsd exporter:", err)
 	}
@@ -88,7 +88,10 @@ func ExampleNew() {
 	values.Record(ctx, 150, key.String("value"))
 
 	// Flush the exporter, close the pipe, and wait for the reader.
-	pusher.Stop()
+	err = pusher.Stop(context.Background())
+	if err != nil {
+		panic(err)
+	}
 	writer.Close()
 	wg.Wait()
 

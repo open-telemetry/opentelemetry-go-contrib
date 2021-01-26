@@ -15,13 +15,12 @@
 package otelmongo
 
 import (
-	"go.opentelemetry.io/otel/api/global"
-	"go.opentelemetry.io/otel/api/trace"
+	"go.opentelemetry.io/contrib"
+	"go.opentelemetry.io/otel"
+	"go.opentelemetry.io/otel/trace"
 )
 
-const (
-	defaultTracerName = "go.opentelemetry.io/contrib/instrumentation/go.mongodb.org/mongo-driver/mongo/otelmongo"
-)
+const defaultTracerName = "go.opentelemetry.io/contrib/instrumentation/go.mongodb.org/mongo-driver/mongo/otelmongo"
 
 // config is used to configure the mongo tracer.
 type config struct {
@@ -33,13 +32,16 @@ type config struct {
 // newConfig returns a config with all Options set.
 func newConfig(opts ...Option) config {
 	cfg := config{
-		TracerProvider: global.TracerProvider(),
+		TracerProvider: otel.GetTracerProvider(),
 	}
 	for _, opt := range opts {
 		opt(&cfg)
 	}
 
-	cfg.Tracer = cfg.TracerProvider.Tracer(defaultTracerName)
+	cfg.Tracer = cfg.TracerProvider.Tracer(
+		defaultTracerName,
+		trace.WithInstrumentationVersion(contrib.SemVersion()),
+	)
 	return cfg
 }
 
