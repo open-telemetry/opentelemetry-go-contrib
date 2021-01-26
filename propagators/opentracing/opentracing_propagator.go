@@ -14,12 +14,13 @@
 
 package opentracing
 
-// TODO: support baggage
-
 import (
 	"context"
 	"errors"
+	"fmt"
 	"strings"
+
+	"go.opentelemetry.io/otel/baggage"
 
 	"go.opentelemetry.io/otel/propagation"
 	"go.opentelemetry.io/otel/trace"
@@ -67,6 +68,14 @@ func (ot OpenTracing) Inject(ctx context.Context, carrier propagation.TextMapCar
 		carrier.Set(sampledHeader, "0")
 	}
 
+	m := baggage.Set(ctx)
+	mi := m.Iter()
+
+	for mi.Next() {
+		label := mi.Label()
+		carrier.Set(fmt.Sprintf("ot-baggage-%s", label.Key), label.Value.Emit())
+	}
+
 }
 
 // Extract extracts a context from the carrier if it contains OpenTracing headers.
@@ -85,6 +94,10 @@ func (ot OpenTracing) Extract(ctx context.Context, carrier propagation.TextMapCa
 	if err != nil || !sc.IsValid() {
 		return ctx
 	}
+	// TODO: implement extracting baggage
+	//
+	// this currently is not achievable without an implementation of `keys`
+	// on the carrier
 	return trace.ContextWithRemoteSpanContext(ctx, sc)
 }
 

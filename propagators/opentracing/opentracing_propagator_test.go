@@ -128,7 +128,6 @@ func TestOpenTracing_Extract(t *testing.T) {
 	}
 
 	for _, test := range testData {
-		// headerVal := strings.Join([]string{}, separator)
 		sc, err := extract(test.traceID, test.spanID, test.sampled)
 
 		info := []interface{}{

@@ -22,6 +22,7 @@ import (
 	"github.com/google/go-cmp/cmp"
 
 	"go.opentelemetry.io/contrib/propagators/opentracing"
+	"go.opentelemetry.io/otel/baggage"
 	"go.opentelemetry.io/otel/oteltest"
 	"go.opentelemetry.io/otel/trace"
 )
@@ -62,6 +63,18 @@ func TestExtractOpenTracing(t *testing.T) {
 				if diff := cmp.Diff(resSc, tc.expected, cmp.AllowUnexported(trace.TraceState{})); diff != "" {
 					t.Errorf("%s: %s: -got +want %s", tg.name, tc.name, diff)
 				}
+				m := baggage.Set(ctx)
+				mi := tc.baggage.Iter()
+				for mi.Next() {
+					label := mi.Label()
+					val, ok := m.Value(label.Key)
+					if !ok {
+						t.Errorf("%s: %s: expected key '%s'", tg.name, tc.name, label.Key)
+					}
+					if diff := cmp.Diff(label.Value.AsString(), val.AsString()); diff != "" {
+						t.Errorf("%s: %s: -got +want %s", tg.name, tc.name, diff)
+					}
+				}
 			})
 		}
 	}
@@ -96,8 +109,12 @@ func TestInjectOpenTracing(t *testing.T) {
 			propagator := opentracing.OpenTracing{}
 			t.Run(tc.name, func(t *testing.T) {
 				req, _ := http.NewRequest("GET", "http://example.com", nil)
-				ctx := trace.ContextWithSpan(
-					context.Background(),
+
+				ctx := baggage.ContextWithValues(context.Background(),
+					tc.baggage...,
+				)
+				ctx = trace.ContextWithSpan(
+					ctx,
 					testSpan{
 						Span: mockSpan,
 						sc:   tc.sc,

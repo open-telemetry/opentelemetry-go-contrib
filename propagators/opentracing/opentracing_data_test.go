@@ -15,28 +15,41 @@
 package opentracing_test
 
 import (
+	"go.opentelemetry.io/otel/label"
 	"go.opentelemetry.io/otel/trace"
 )
 
 const (
-	traceID16Str  = "a3ce929d0e0e4736"
-	traceID32Str  = "a1ce929d0e0e4736a3ce929d0e0e4736"
-	spanIDStr     = "00f067aa0ba902b7"
-	traceIDHeader = "ot-tracer-traceid"
-	spanIDHeader  = "ot-tracer-spanid"
-	sampledHeader = "ot-tracer-sampled"
+	traceID16Str   = "a3ce929d0e0e4736"
+	traceID32Str   = "a1ce929d0e0e4736a3ce929d0e0e4736"
+	spanIDStr      = "00f067aa0ba902b7"
+	traceIDHeader  = "ot-tracer-traceid"
+	spanIDHeader   = "ot-tracer-spanid"
+	sampledHeader  = "ot-tracer-sampled"
+	baggageKey     = "test"
+	baggageValue   = "value123"
+	baggageHeader  = "ot-baggage-test"
+	baggageKey2    = "test2"
+	baggageValue2  = "value456"
+	baggageHeader2 = "ot-baggage-test2"
 )
 
 var (
-	traceID16 = trace.TraceID{0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0xa3, 0xce, 0x92, 0x9d, 0x0e, 0x0e, 0x47, 0x36}
-	traceID32 = trace.TraceID{0xa1, 0xce, 0x92, 0x9d, 0x0e, 0x0e, 0x47, 0x36, 0xa3, 0xce, 0x92, 0x9d, 0x0e, 0x0e, 0x47, 0x36}
-	spanID    = trace.SpanID{0x00, 0xf0, 0x67, 0xaa, 0x0b, 0xa9, 0x02, 0xb7}
+	traceID16    = trace.TraceID{0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0xa3, 0xce, 0x92, 0x9d, 0x0e, 0x0e, 0x47, 0x36}
+	traceID32    = trace.TraceID{0xa1, 0xce, 0x92, 0x9d, 0x0e, 0x0e, 0x47, 0x36, 0xa3, 0xce, 0x92, 0x9d, 0x0e, 0x0e, 0x47, 0x36}
+	spanID       = trace.SpanID{0x00, 0xf0, 0x67, 0xaa, 0x0b, 0xa9, 0x02, 0xb7}
+	emptyBaggage = &label.Set{}
+	baggageSet   = label.NewSet(
+		label.String(baggageKey, baggageValue),
+		label.String(baggageKey2, baggageValue2),
+	)
 )
 
 type extractTest struct {
 	name     string
 	headers  map[string]string
 	expected trace.SpanContext
+	baggage  *label.Set
 }
 
 var extractHeaders = []extractTest{
@@ -44,6 +57,7 @@ var extractHeaders = []extractTest{
 		"empty",
 		map[string]string{},
 		trace.SpanContext{},
+		emptyBaggage,
 	},
 	{
 		"sampling state not sample",
@@ -56,6 +70,7 @@ var extractHeaders = []extractTest{
 			TraceID: traceID32,
 			SpanID:  spanID,
 		},
+		emptyBaggage,
 	},
 	{
 		"sampling state sampled",
@@ -63,12 +78,16 @@ var extractHeaders = []extractTest{
 			traceIDHeader: traceID32Str,
 			spanIDHeader:  spanIDStr,
 			sampledHeader: "1",
+			baggageHeader: baggageValue,
 		},
 		trace.SpanContext{
 			TraceID:    traceID32,
 			SpanID:     spanID,
 			TraceFlags: trace.FlagsSampled,
 		},
+		emptyBaggage,
+		// TODO: once baggage extraction is supported, re-enable this
+		// &baggageSet,
 	},
 	{
 		"left padding 64 bit trace ID",
@@ -82,6 +101,7 @@ var extractHeaders = []extractTest{
 			SpanID:     spanID,
 			TraceFlags: trace.FlagsSampled,
 		},
+		emptyBaggage,
 	},
 	{
 		"128 bit trace ID",
@@ -95,6 +115,7 @@ var extractHeaders = []extractTest{
 			SpanID:     spanID,
 			TraceFlags: trace.FlagsSampled,
 		},
+		emptyBaggage,
 	},
 }
 
@@ -163,6 +184,7 @@ type injectTest struct {
 	name        string
 	sc          trace.SpanContext
 	wantHeaders map[string]string
+	baggage     []label.KeyValue
 }
 
 var injectHeaders = []injectTest{
@@ -185,10 +207,16 @@ var injectHeaders = []injectTest{
 			TraceID: traceID32,
 			SpanID:  spanID,
 		},
+		baggage: []label.KeyValue{
+			label.String(baggageKey, baggageValue),
+			label.String(baggageKey2, baggageValue2),
+		},
 		wantHeaders: map[string]string{
-			traceIDHeader: traceID16Str,
-			spanIDHeader:  spanIDStr,
-			sampledHeader: "0",
+			traceIDHeader:  traceID16Str,
+			spanIDHeader:   spanIDStr,
+			sampledHeader:  "0",
+			baggageHeader:  baggageValue,
+			baggageHeader2: baggageValue2,
 		},
 	},
 }
