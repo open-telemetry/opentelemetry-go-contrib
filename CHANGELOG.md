@@ -10,6 +10,10 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 
 ## [0.16.0] - 2021-01-13
 
+### Added
+
+- Tracing instrumentation for database/sql. (#505)
+
 ### Fixed
 
 - Fix module path for AWS ECS resource detector (#517)
