@@ -20,11 +20,11 @@ import (
 
 	"github.com/stretchr/testify/assert"
 
-	"go.opentelemetry.io/otel/api/trace"
+	"go.opentelemetry.io/otel/trace"
 )
 
 var (
-	traceID        = trace.ID{0, 0, 0, 0, 0, 0, 0, 0, 0x7b, 0, 0, 0, 0, 0, 0x1, 0xc8}
+	traceID        = trace.TraceID{0, 0, 0, 0, 0, 0, 0, 0, 0x7b, 0, 0, 0, 0, 0, 0x1, 0xc8}
 	traceID128Str  = "00000000000000007b000000000001c8"
 	zeroTraceIDStr = "00000000000000000000000000000000"
 	traceID64Str   = "7b000000000001c8"

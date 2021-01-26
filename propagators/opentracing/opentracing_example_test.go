@@ -16,11 +16,11 @@ package opentracing_test
 
 import (
 	"go.opentelemetry.io/contrib/propagators/opentracing"
-	"go.opentelemetry.io/otel/api/global"
+	"go.opentelemetry.io/otel"
 )
 
 func ExampleOpenTracing() {
 	ot := opentracing.OpenTracing{}
 	// register ot propagator
-	global.SetTextMapPropagator(ot)
+	otel.SetTextMapPropagator(ot)
 }

@@ -21,8 +21,8 @@ import (
 	"errors"
 	"strings"
 
-	"go.opentelemetry.io/otel"
-	"go.opentelemetry.io/otel/api/trace"
+	"go.opentelemetry.io/otel/propagation"
+	"go.opentelemetry.io/otel/trace"
 )
 
 const (
@@ -37,7 +37,7 @@ const (
 )
 
 var (
-	empty = trace.EmptySpanContext()
+	empty = trace.SpanContext{}
 
 	errInvalidSampledHeader = errors.New("invalid OpenTracing Sampled header found")
 	errInvalidTraceIDHeader = errors.New("invalid OpenTracing traceID header found")
@@ -49,11 +49,11 @@ var (
 type OpenTracing struct {
 }
 
-var _ otel.TextMapPropagator = OpenTracing{}
+var _ propagation.TextMapPropagator = OpenTracing{}
 
 // Inject injects a context into the carrier as OpenTracing headers.
 // NOTE: In order to interop with systems that use the OpenTracing header format, trace ids MUST be 64-bits
-func (ot OpenTracing) Inject(ctx context.Context, carrier otel.TextMapCarrier) {
+func (ot OpenTracing) Inject(ctx context.Context, carrier propagation.TextMapCarrier) {
 	sc := trace.SpanFromContext(ctx).SpanContext()
 
 	if sc.TraceID.IsValid() && sc.SpanID.IsValid() {
@@ -70,7 +70,7 @@ func (ot OpenTracing) Inject(ctx context.Context, carrier otel.TextMapCarrier) {
 }
 
 // Extract extracts a context from the carrier if it contains OpenTracing headers.
-func (ot OpenTracing) Extract(ctx context.Context, carrier otel.TextMapCarrier) context.Context {
+func (ot OpenTracing) Extract(ctx context.Context, carrier propagation.TextMapCarrier) context.Context {
 	var (
 		sc  trace.SpanContext
 		err error
@@ -119,7 +119,7 @@ func extract(traceID, spanID, sampled string) (trace.SpanContext, error) {
 			// Pad 64-bit trace IDs.
 			id = otTraceIDPadding + traceID
 		}
-		if sc.TraceID, err = trace.IDFromHex(id); err != nil {
+		if sc.TraceID, err = trace.TraceIDFromHex(id); err != nil {
 			return empty, errInvalidTraceIDHeader
 		}
 	}
