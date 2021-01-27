@@ -39,10 +39,11 @@ var (
 	traceID32    = trace.TraceID{0xa1, 0xce, 0x92, 0x9d, 0x0e, 0x0e, 0x47, 0x36, 0xa3, 0xce, 0x92, 0x9d, 0x0e, 0x0e, 0x47, 0x36}
 	spanID       = trace.SpanID{0x00, 0xf0, 0x67, 0xaa, 0x0b, 0xa9, 0x02, 0xb7}
 	emptyBaggage = &label.Set{}
-	baggageSet   = label.NewSet(
-		label.String(baggageKey, baggageValue),
-		label.String(baggageKey2, baggageValue2),
-	)
+	// TODO: once baggage extraction is supported, re-enable this
+	// baggageSet   = label.NewSet(
+	// 	label.String(baggageKey, baggageValue),
+	// 	label.String(baggageKey2, baggageValue2),
+	// )
 )
 
 type extractTest struct {
