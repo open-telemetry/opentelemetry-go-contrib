@@ -38,7 +38,7 @@ func (c *otConnector) Connect(ctx context.Context) (connection driver.Conn, err 
 	if err != nil {
 		return nil, err
 	}
-	return newConn(connection, c.otDriver), nil
+	return newConn(connection, c.otDriver.cfg), nil
 }
 
 func (c *otConnector) Driver() driver.Driver {

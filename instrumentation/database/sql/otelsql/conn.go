@@ -37,15 +37,13 @@ var (
 
 type otConn struct {
 	driver.Conn
-	otDriver *otDriver
-	cfg      config
+	cfg config
 }
 
-func newConn(conn driver.Conn, otDriver *otDriver) *otConn {
+func newConn(conn driver.Conn, cfg config) *otConn {
 	return &otConn{
-		Conn:     conn,
-		otDriver: otDriver,
-		cfg:      otDriver.cfg,
+		Conn: conn,
+		cfg:  cfg,
 	}
 }
 
@@ -55,7 +53,7 @@ func (c *otConn) Ping(ctx context.Context) (err error) {
 		return driver.ErrSkip
 	}
 
-	if c.otDriver.cfg.SpanOptions.Ping {
+	if c.cfg.SpanOptions.Ping {
 		var span trace.Span
 		ctx, span = c.cfg.Tracer.Start(ctx, c.cfg.SpanNameFormatter.Format(ctx, MethodConnPing, ""),
 			trace.WithSpanKind(trace.SpanKindClient),
@@ -164,13 +162,13 @@ func (c *otConn) BeginTx(ctx context.Context, opts driver.TxOptions) (tx driver.
 		return nil, driver.ErrSkip
 	}
 
-	ctx, span := c.cfg.Tracer.Start(ctx, c.cfg.SpanNameFormatter.Format(ctx, MethodConnBeginTx, ""),
+	beginTxCtx, span := c.cfg.Tracer.Start(ctx, c.cfg.SpanNameFormatter.Format(ctx, MethodConnBeginTx, ""),
 		trace.WithSpanKind(trace.SpanKindClient),
 		trace.WithAttributes(c.cfg.Attributes...),
 	)
 	defer span.End()
 
-	tx, err = connBeginTx.BeginTx(ctx, opts)
+	tx, err = connBeginTx.BeginTx(beginTxCtx, opts)
 	if err != nil {
 		recordSpanError(span, c.cfg.SpanOptions, err)
 		return nil, err

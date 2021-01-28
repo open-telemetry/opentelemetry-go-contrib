@@ -24,6 +24,8 @@ import (
 
 var registerLock sync.Mutex
 
+var maxDriverSlot = 1000
+
 // Register initializes and registers our OTel wrapped database driver
 // identified by its driverName, using provided Option.
 // It is possible to register multiple wrappers for the same database driver if
@@ -51,10 +53,10 @@ func Register(driverName string, dbSystem string, options ...Option) (string, er
 	// configurations, but potentially the same underlying database driver, we
 	// cycle through to find available driver names.
 	driverName = driverName + "-otelsql-"
-	for i := int64(0); i < 1000; i++ {
+	for i := 0; i < maxDriverSlot; i++ {
 		var (
 			found   = false
-			regName = driverName + strconv.FormatInt(i, 10)
+			regName = driverName + strconv.FormatInt(int64(i), 10)
 		)
 		for _, name := range sql.Drivers() {
 			if name == regName {
