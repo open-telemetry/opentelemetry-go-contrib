@@ -51,10 +51,6 @@ func NewPlugin(opts ...Option) *OtelPlugin {
 		o(cfg)
 	}
 
-	if cfg.serviceName == "" {
-		cfg.serviceName = defaultServiceName
-	}
-
 	if cfg.tracerProvider == nil {
 		cfg.tracerProvider = otel.GetTracerProvider()
 	}

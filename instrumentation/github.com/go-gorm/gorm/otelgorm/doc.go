@@ -12,7 +12,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-// Package otelgin instruments the github.com/gin-gonic/gin package.
+// Package otelgorm instruments the gorm.io/gorm package.
 //
 // Currently there are two ways the code can be instrumented. One is
 // instrumenting the routing of a received message (the Middleware function)
