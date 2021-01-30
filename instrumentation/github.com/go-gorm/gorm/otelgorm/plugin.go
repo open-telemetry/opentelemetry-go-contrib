@@ -25,7 +25,7 @@ import (
 )
 
 const (
-	defaultTracerName  = "go.opentelemetry.io/contrib/instrumentation/github.com/go-gorm/gorm/otelgorm"
+	defaultTracerName = "go.opentelemetry.io/contrib/instrumentation/github.com/go-gorm/gorm/otelgorm"
 
 	callBackBeforeName = "otel:before"
 	callBackAfterName  = "otel:after"
