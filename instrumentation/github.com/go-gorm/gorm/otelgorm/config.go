@@ -32,4 +32,3 @@ func WithTracerProvider(provider oteltrace.TracerProvider) Option {
 		cfg.tracerProvider = provider
 	}
 }
-
