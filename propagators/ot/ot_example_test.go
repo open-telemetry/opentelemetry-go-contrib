@@ -20,7 +20,7 @@ import (
 )
 
 func ExampleOT() {
-	ot_propagator := ot.OT{}
+	otPropagator := ot.OT{}
 	// register ot propagator
-	otel.SetTextMapPropagator(ot_propagator)
+	otel.SetTextMapPropagator(otPropagator)
 }
