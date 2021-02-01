@@ -46,7 +46,7 @@ var (
 	errInvalidScope         = errors.New("require either both traceID and spanID or none")
 )
 
-// OT propagator serializes SpanContext to/from OT Headers.
+// OT propagator serializes SpanContext to/from ot-trace-* headers.
 type OT struct {
 }
 
