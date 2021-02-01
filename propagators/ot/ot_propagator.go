@@ -12,7 +12,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package opentracing
+package ot
 
 import (
 	"context"
@@ -27,7 +27,7 @@ import (
 )
 
 const (
-	// Default OpenTracing Header names.
+	// Default OT Header names.
 	traceIDHeader = "ot-tracer-traceid"
 	spanIDHeader  = "ot-tracer-spanid"
 	sampledHeader = "ot-tracer-sampled"
@@ -40,21 +40,21 @@ const (
 var (
 	empty = trace.SpanContext{}
 
-	errInvalidSampledHeader = errors.New("invalid OpenTracing Sampled header found")
-	errInvalidTraceIDHeader = errors.New("invalid OpenTracing traceID header found")
-	errInvalidSpanIDHeader  = errors.New("invalid OpenTracing spanID header found")
+	errInvalidSampledHeader = errors.New("invalid OT Sampled header found")
+	errInvalidTraceIDHeader = errors.New("invalid OT traceID header found")
+	errInvalidSpanIDHeader  = errors.New("invalid OT spanID header found")
 	errInvalidScope         = errors.New("require either both traceID and spanID or none")
 )
 
-// OpenTracing propagator serializes SpanContext to/from OpenTracing Headers.
-type OpenTracing struct {
+// OT propagator serializes SpanContext to/from OT Headers.
+type OT struct {
 }
 
-var _ propagation.TextMapPropagator = OpenTracing{}
+var _ propagation.TextMapPropagator = OT{}
 
-// Inject injects a context into the carrier as OpenTracing headers.
-// NOTE: In order to interop with systems that use the OpenTracing header format, trace ids MUST be 64-bits
-func (ot OpenTracing) Inject(ctx context.Context, carrier propagation.TextMapCarrier) {
+// Inject injects a context into the carrier as OT headers.
+// NOTE: In order to interop with systems that use the OT header format, trace ids MUST be 64-bits
+func (o OT) Inject(ctx context.Context, carrier propagation.TextMapCarrier) {
 	sc := trace.SpanFromContext(ctx).SpanContext()
 
 	if sc.TraceID.IsValid() && sc.SpanID.IsValid() {
@@ -78,8 +78,8 @@ func (ot OpenTracing) Inject(ctx context.Context, carrier propagation.TextMapCar
 
 }
 
-// Extract extracts a context from the carrier if it contains OpenTracing headers.
-func (ot OpenTracing) Extract(ctx context.Context, carrier propagation.TextMapCarrier) context.Context {
+// Extract extracts a context from the carrier if it contains OT headers.
+func (o OT) Extract(ctx context.Context, carrier propagation.TextMapCarrier) context.Context {
 	var (
 		sc  trace.SpanContext
 		err error
@@ -101,11 +101,11 @@ func (ot OpenTracing) Extract(ctx context.Context, carrier propagation.TextMapCa
 	return trace.ContextWithRemoteSpanContext(ctx, sc)
 }
 
-func (ot OpenTracing) Fields() []string {
+func (o OT) Fields() []string {
 	return []string{traceIDHeader, spanIDHeader, sampledHeader}
 }
 
-// extract reconstructs a SpanContext from header values based on OpenTracing
+// extract reconstructs a SpanContext from header values based on OT
 // headers.
 func extract(traceID, spanID, sampled string) (trace.SpanContext, error) {
 	var (

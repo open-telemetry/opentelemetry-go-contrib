@@ -12,7 +12,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package opentracing_test
+package ot_test
 
 import (
 	"context"
@@ -21,7 +21,7 @@ import (
 
 	"github.com/google/go-cmp/cmp"
 
-	"go.opentelemetry.io/contrib/propagators/opentracing"
+	"go.opentelemetry.io/contrib/propagators/ot"
 	"go.opentelemetry.io/otel/baggage"
 	"go.opentelemetry.io/otel/oteltest"
 	"go.opentelemetry.io/otel/trace"
@@ -32,7 +32,7 @@ var (
 	_, mockSpan = mockTracer.Start(context.Background(), "")
 )
 
-func TestExtractOpenTracing(t *testing.T) {
+func TestExtractOT(t *testing.T) {
 	testGroup := []struct {
 		name      string
 		testcases []extractTest
@@ -48,7 +48,7 @@ func TestExtractOpenTracing(t *testing.T) {
 	}
 
 	for _, tg := range testGroup {
-		propagator := opentracing.OpenTracing{}
+		propagator := ot.OT{}
 
 		for _, tc := range tg.testcases {
 			t.Run(tc.name, func(t *testing.T) {
@@ -89,7 +89,7 @@ func (s testSpan) SpanContext() trace.SpanContext {
 	return s.sc
 }
 
-func TestInjectOpenTracing(t *testing.T) {
+func TestInjectOT(t *testing.T) {
 	testGroup := []struct {
 		name      string
 		testcases []injectTest
@@ -106,7 +106,7 @@ func TestInjectOpenTracing(t *testing.T) {
 
 	for _, tg := range testGroup {
 		for _, tc := range tg.testcases {
-			propagator := opentracing.OpenTracing{}
+			propagator := ot.OT{}
 			t.Run(tc.name, func(t *testing.T) {
 				req, _ := http.NewRequest("GET", "http://example.com", nil)
 

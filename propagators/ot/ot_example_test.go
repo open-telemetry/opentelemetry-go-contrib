@@ -12,5 +12,15 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-// This package implements the OpenTracing propagator
-package opentracing // import "go.opentelemetry.io/contrib/propagators/opentracing"
+package ot_test
+
+import (
+	"go.opentelemetry.io/contrib/propagators/ot"
+	"go.opentelemetry.io/otel"
+)
+
+func ExampleOT() {
+	ot_propagator := ot.OT{}
+	// register ot propagator
+	otel.SetTextMapPropagator(ot_propagator)
+}

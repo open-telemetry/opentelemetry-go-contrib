@@ -12,7 +12,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package opentracing
+package ot
 
 import (
 	"fmt"
@@ -33,7 +33,7 @@ var (
 	spanIDStr      = "000000000000007b"
 )
 
-func TestOpenTracing_Extract(t *testing.T) {
+func TestOT_Extract(t *testing.T) {
 	testData := []struct {
 		traceID  string
 		spanID   string
