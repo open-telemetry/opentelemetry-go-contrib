@@ -60,6 +60,9 @@ func (o OT) Inject(ctx context.Context, carrier propagation.TextMapCarrier) {
 	if sc.TraceID.IsValid() && sc.SpanID.IsValid() {
 		carrier.Set(traceIDHeader, sc.TraceID.String()[len(sc.TraceID.String())-traceID64BitsWidth:])
 		carrier.Set(spanIDHeader, sc.SpanID.String())
+	} else {
+		// don't bother injecting anything if both trace/span IDs are not valid
+		return
 	}
 
 	if sc.IsSampled() {
