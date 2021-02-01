@@ -97,7 +97,8 @@ func (o OT) Extract(ctx context.Context, carrier propagation.TextMapCarrier) con
 	// TODO: implement extracting baggage
 	//
 	// this currently is not achievable without an implementation of `keys`
-	// on the carrier
+	// on the carrier, see:
+	// https://github.com/open-telemetry/opentelemetry-go/issues/1493
 	return trace.ContextWithRemoteSpanContext(ctx, sc)
 }
 
