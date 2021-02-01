@@ -12,5 +12,5 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-// This package implements the OpenTracing propagator
+// This package implements the ot-tracer-* propagator used by Basic Tracer implementation from the OpenTracing  project
 package ot // import "go.opentelemetry.io/contrib/propagators/ot"
