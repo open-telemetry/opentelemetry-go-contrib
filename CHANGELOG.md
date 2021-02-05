@@ -8,9 +8,15 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 
 ## [Unreleased]
 
+
 ### Fixed
 
 - Added failure message for AWS ECS resource detector for better debugging (#568)
+
+### Changed
+
+- Rename project default branch from `master` to `main`.
+
 
 ## [0.16.0] - 2021-01-13
 
