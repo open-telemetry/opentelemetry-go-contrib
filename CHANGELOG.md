@@ -8,6 +8,10 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 
 ## [Unreleased]
 
+### Added
+
+- Adding `ot-tracer` propagator (#562)
+
 ## [0.16.0] - 2021-01-13
 
 ### Fixed
