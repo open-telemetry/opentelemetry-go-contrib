@@ -52,7 +52,7 @@ Instruments
   - [ ] Added to the [OpenTelemetry Registry](https://opentelemetry.io/registry/)
   - [ ] README included for the module describing high-level purpose.
   - [ ] Complete documentation of all public API including package documentation.
-  - [ ] [Instrumentation documentation](https://github.com/open-telemetry/opentelemetry-go-contrib/blob/master/instrumentation/README.md#instrumentation-packages) updated.
+  - [ ] [Instrumentation documentation](https://github.com/open-telemetry/opentelemetry-go-contrib/blob/main/instrumentation/README.md#instrumentation-packages) updated.
 - Examples
   - [ ] `Dockerfile` file to build example application.
   - [ ] `docker-compose.yml` to run example in a docker environment to demonstrate instrumentation.
