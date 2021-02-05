@@ -35,11 +35,11 @@ const (
 )
 
 var (
-	empty                    = resource.Empty()
-	errCannotReadContainerID = errors.New("failed to read container ID from cGroupFile")
-	errCannotReadContainerName    = errors.New("failed to read hostname")
-	errCannotReadCGroupFile  = errors.New("ECS resource detector failed to read cGroupFile")
-	errNotOnECS              = errors.New("process is not on ECS, cannot detect environment variables from ECS")
+	empty                      = resource.Empty()
+	errCannotReadContainerID   = errors.New("failed to read container ID from cGroupFile")
+	errCannotReadContainerName = errors.New("failed to read hostname")
+	errCannotReadCGroupFile    = errors.New("ECS resource detector failed to read cGroupFile")
+	errNotOnECS                = errors.New("process is not on ECS, cannot detect environment variables from ECS")
 )
 
 // Create interface for methods needing to be mocked
