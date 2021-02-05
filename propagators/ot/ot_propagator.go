@@ -57,13 +57,13 @@ var _ propagation.TextMapPropagator = OT{}
 func (o OT) Inject(ctx context.Context, carrier propagation.TextMapCarrier) {
 	sc := trace.SpanFromContext(ctx).SpanContext()
 
-	if sc.TraceID.IsValid() && sc.SpanID.IsValid() {
-		carrier.Set(traceIDHeader, sc.TraceID.String()[len(sc.TraceID.String())-traceID64BitsWidth:])
-		carrier.Set(spanIDHeader, sc.SpanID.String())
-	} else {
-		// don't bother injecting anything if both trace/span IDs are not valid
+	if !sc.TraceID.IsValid() || !sc.SpanID.IsValid() {
+		// don't bother injecting anything if either trace or span IDs are not valid
 		return
 	}
+
+	carrier.Set(traceIDHeader, sc.TraceID.String()[len(sc.TraceID.String())-traceID64BitsWidth:])
+	carrier.Set(spanIDHeader, sc.SpanID.String())
 
 	if sc.IsSampled() {
 		carrier.Set(sampledHeader, "1")
