@@ -43,17 +43,17 @@ var (
 )
 
 // Create interface for methods needing to be mocked
-type detectorUtils interface {
+type detectorUtilsResources interface {
 	getContainerName() (string, error)
 	getContainerID() (string, error)
 }
 
 // struct implements detectorUtils interface
-type EcsDetectorUtils struct{}
+type DetectorUtils struct{}
 
 // resource detector collects resource information from Elastic Container Service environment
 type ResourceDetector struct {
-	Utils detectorUtils
+	Utils detectorUtilsResources
 }
 
 // Detect finds associated resources when running on ECS environment.
@@ -81,7 +81,7 @@ func (detector *ResourceDetector) Detect(ctx context.Context) (*resource.Resourc
 }
 
 // returns docker container ID from default c group path
-func (ecsUtils EcsDetectorUtils) getContainerID() (string, error) {
+func (ecsUtils DetectorUtils) getContainerID() (string, error) {
 	fileData, err := ioutil.ReadFile(defaultCgroupPath)
 	if err != nil {
 		return "", errCannotReadCGroupFile
@@ -96,7 +96,7 @@ func (ecsUtils EcsDetectorUtils) getContainerID() (string, error) {
 }
 
 // returns host name reported by the kernel
-func (ecsUtils EcsDetectorUtils) getContainerName() (string, error) {
+func (ecsUtils DetectorUtils) getContainerName() (string, error) {
 	hostName, err := os.Hostname()
 	if err != nil {
 		return "", errCannotReadContainerName
