@@ -6,7 +6,7 @@ it is aimed at Cortex, it should work with other backends that ingest data with 
 API.
 
 This exporter is push-based and integrates with the OpenTelemetry Go SDK's [push
-Controller](https://github.com/open-telemetry/opentelemetry-go/blob/master/sdk/metric/controller/push/push.go).
+Controller](https://github.com/open-telemetry/opentelemetry-go/blob/main/sdk/metric/controller/push/push.go).
 The Controller periodically collects data and passes it to this exporter. The exporter
 then converts this data into
 [`TimeSeries`](https://prometheus.io/docs/concepts/data_model/), a format that Cortex
@@ -310,7 +310,7 @@ The end result is the same since the aggregations are cumulative.
 
 ## Design Document
 
-[Design Document](https://github.com/open-o11y/docs/blob/master/go-prometheus-remote-write/design-doc.md)
+[Design Document](https://github.com/open-o11y/docs/blob/main/go-prometheus-remote-write/design-doc.md)
 
 The document is not in this module as it contains large images which will increase the
 size of the overall repo significantly.

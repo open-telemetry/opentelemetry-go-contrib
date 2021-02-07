@@ -132,7 +132,7 @@ func (e *Exporter) ConvertToTimeSeries(checkpointSet export.CheckpointSet) ([]*p
 		// checked first.
 		//
 		// See the Aggregator Kind for more information
-		// https://github.com/open-telemetry/opentelemetry-go/blob/master/sdk/export/metric/aggregation/aggregation.go#L123-L138
+		// https://github.com/open-telemetry/opentelemetry-go/blob/main/sdk/export/metric/aggregation/aggregation.go#L123-L138
 		if histogram, ok := agg.(aggregation.Histogram); ok {
 			tSeries, err := convertFromHistogram(record, histogram)
 			if err != nil {

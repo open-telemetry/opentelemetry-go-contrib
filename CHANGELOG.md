@@ -8,6 +8,14 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 
 ## [Unreleased]
 
+### Added
+
+- Add `ot-tracer` propagator (#562)
+
+### Changed
+
+- Rename project default branch from `master` to `main`.
+
 ### Fixed
 
 - Added failure message for AWS ECS resource detector for better debugging (#568)
