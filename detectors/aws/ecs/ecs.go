@@ -48,7 +48,7 @@ type detectorUtilsResources interface {
 	getContainerID() (string, error)
 }
 
-// struct implements detectorUtils interface
+// struct implements detectorUtilsResources interface
 type DetectorUtils struct{}
 
 // resource detector collects resource information from Elastic Container Service environment
