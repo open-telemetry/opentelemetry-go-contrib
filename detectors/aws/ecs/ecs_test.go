@@ -98,6 +98,23 @@ func TestDetectCannotReadContainerName(t *testing.T) {
 	assert.Equal(t, 0, len(res.Attributes()))
 }
 
+//returns empty resource when detector cannot read container Name
+func TestDetectCannotReadContainerName(t *testing.T) {
+	os.Clearenv()
+	os.Setenv(metadataV3EnvVar, "3")
+	os.Setenv(metadataV4EnvVar, "4")
+	detectorUtils := new(MockDetectorUtils)
+
+	detectorUtils.On("getContainerName").Return("", errCannotReadContainerName)
+	detectorUtils.On("getContainerID").Return("0123456789A", nil)
+
+	detector := ResourceDetector{detectorUtils}
+	resource, err := detector.Detect(context.Background())
+
+	assert.Equal(t, errCannotReadContainerName, err)
+	assert.Equal(t, 0, len(resource.Attributes()))
+}
+
 //returns empty resource when process is not running ECS
 func TestReturnsIfNoEnvVars(t *testing.T) {
 	os.Clearenv()
