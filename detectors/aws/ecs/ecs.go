@@ -49,18 +49,12 @@ type detectorUtils interface {
 }
 
 // struct implements detectorUtils interface
-type ecsDetectorUtils struct{}
+type EcsDetectorUtils struct{}
 
 // resource detector collects resource information from Elastic Container Service environment
 type ResourceDetector struct {
-	utils detectorUtils
+	Utils detectorUtils
 }
-
-// compile time assertion that ecsDetectorUtils implements detectorUtils interface
-var _ detectorUtils = (*ecsDetectorUtils)(nil)
-
-// compile time assertion that resource detector implements the resource.Detector interface.
-var _ resource.Detector = (*ResourceDetector)(nil)
 
 // Detect finds associated resources when running on ECS environment.
 func (detector *ResourceDetector) Detect(ctx context.Context) (*resource.Resource, error) {
@@ -70,11 +64,11 @@ func (detector *ResourceDetector) Detect(ctx context.Context) (*resource.Resourc
 	if len(metadataURIV3) == 0 && len(metadataURIV4) == 0 {
 		return empty, errNotOnECS
 	}
-	hostName, err := detector.utils.getContainerName()
+	hostName, err := detector.Utils.getContainerName()
 	if err != nil {
 		return empty, err
 	}
-	containerID, err := detector.utils.getContainerID()
+	containerID, err := detector.Utils.getContainerID()
 	if err != nil {
 		return empty, err
 	}
@@ -87,7 +81,7 @@ func (detector *ResourceDetector) Detect(ctx context.Context) (*resource.Resourc
 }
 
 // returns docker container ID from default c group path
-func (ecsUtils ecsDetectorUtils) getContainerID() (string, error) {
+func (ecsUtils EcsDetectorUtils) getContainerID() (string, error) {
 	fileData, err := ioutil.ReadFile(defaultCgroupPath)
 	if err != nil {
 		return "", errCannotReadCGroupFile
@@ -102,7 +96,7 @@ func (ecsUtils ecsDetectorUtils) getContainerID() (string, error) {
 }
 
 // returns host name reported by the kernel
-func (ecsUtils ecsDetectorUtils) getContainerName() (string, error) {
+func (ecsUtils EcsDetectorUtils) getContainerName() (string, error) {
 	hostName, err := os.Hostname()
 	if err != nil {
 		return "", errCannotReadContainerName
