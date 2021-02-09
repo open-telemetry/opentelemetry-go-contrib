@@ -63,8 +63,8 @@ var _ detectorUtilsResources = (*DetectorUtils)(nil)
 var _ resource.Detector = (*resourceDetector)(nil)
 
 // returns resource detector struct
-func NewResourceDetector(detectorUtils detectorUtilsResources) resourceDetector{
-	return resourceDetector{utils: detectorUtils}
+func NewResourceDetector(detectorUtils detectorUtilsResources) resource.Detector {
+	return &resourceDetector{utils: detectorUtils}
 }
 
 // Detect finds associated resources when running on ECS environment.
