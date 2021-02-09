@@ -19,7 +19,7 @@ import (
 	"os"
 	"testing"
 
-	"github.com/bmizerany/assert"
+	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/mock"
 
 	"go.opentelemetry.io/otel/label"
