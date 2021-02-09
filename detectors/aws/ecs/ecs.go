@@ -52,23 +52,34 @@ type detectorUtilsResources interface {
 type DetectorUtils struct{}
 
 // resource detector collects resource information from Elastic Container Service environment
-type ResourceDetector struct {
-	Utils detectorUtilsResources
+type resourceDetector struct {
+	utils detectorUtilsResources
+}
+
+// compile time assertion that ecsDetectorUtils implements detectorUtilsResources interface
+var _ detectorUtilsResources = (*DetectorUtils)(nil)
+
+// compile time assertion that resource detector implements the resource.Detector interface.
+var _ resource.Detector = (*resourceDetector)(nil)
+
+// returns resource detector struct
+func NewResourceDetector(detectorUtils detectorUtilsResources) resourceDetector{
+	return resourceDetector{utils: detectorUtils}
 }
 
 // Detect finds associated resources when running on ECS environment.
-func (detector *ResourceDetector) Detect(ctx context.Context) (*resource.Resource, error) {
+func (detector *resourceDetector) Detect(ctx context.Context) (*resource.Resource, error) {
 	metadataURIV3 := os.Getenv(metadataV3EnvVar)
 	metadataURIV4 := os.Getenv(metadataV4EnvVar)
 
 	if len(metadataURIV3) == 0 && len(metadataURIV4) == 0 {
 		return empty, errNotOnECS
 	}
-	hostName, err := detector.Utils.getContainerName()
+	hostName, err := detector.utils.getContainerName()
 	if err != nil {
 		return empty, err
 	}
-	containerID, err := detector.Utils.getContainerID()
+	containerID, err := detector.utils.getContainerID()
 	if err != nil {
 		return empty, err
 	}

@@ -58,7 +58,7 @@ func TestDetect(t *testing.T) {
 		semconv.ContainerIDKey.String("0123456789A"),
 	}
 	expectedResource := resource.NewWithAttributes(labels...)
-	detector := ResourceDetector{detectorUtils}
+	detector := NewResourceDetector(detectorUtils)
 	res, _ := detector.Detect(context.Background())
 
 	assert.Equal(t, res, expectedResource, "Resource returned is incorrect")
@@ -74,7 +74,7 @@ func TestDetectCannotReadContainerID(t *testing.T) {
 	detectorUtils.On("getContainerName").Return("container-Name", nil)
 	detectorUtils.On("getContainerID").Return("", errCannotReadContainerID)
 
-	detector := ResourceDetector{detectorUtils}
+	detector := NewResourceDetector(detectorUtils)
 	res, err := detector.Detect(context.Background())
 
 	assert.Equal(t, errCannotReadContainerID, err)
@@ -91,7 +91,7 @@ func TestDetectCannotReadContainerName(t *testing.T) {
 	detectorUtils.On("getContainerName").Return("", errCannotReadContainerName)
 	detectorUtils.On("getContainerID").Return("0123456789A", nil)
 
-	detector := ResourceDetector{detectorUtils}
+	detector := NewResourceDetector(detectorUtils)
 	res, err := detector.Detect(context.Background())
 
 	assert.Equal(t, errCannotReadContainerName, err)
@@ -101,7 +101,7 @@ func TestDetectCannotReadContainerName(t *testing.T) {
 //returns empty resource when process is not running ECS
 func TestReturnsIfNoEnvVars(t *testing.T) {
 	os.Clearenv()
-	detector := ResourceDetector{}
+	detector := NewResourceDetector(nil)
 	res, err := detector.Detect(context.Background())
 
 	assert.Equal(t, errNotOnECS, err)
