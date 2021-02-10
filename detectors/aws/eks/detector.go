@@ -43,7 +43,7 @@ const (
 	timeoutMillis     = 2000
 )
 
-// detectorUtils is used for testing the ResourceDetector by abstracting functions that rely on external systems.
+// detectorUtils is used for testing the resourceDetector by abstracting functions that rely on external systems.
 type detectorUtils interface {
 	fileExists(filename string) bool
 	fetchString(httpMethod string, URL string) (string, error)
@@ -53,7 +53,7 @@ type detectorUtils interface {
 // This struct will implement the detectorUtils interface
 type eksDetectorUtils struct{}
 
-// ResourceDetector for detecting resources running on Amazon EKS
+// resourceDetector for detecting resources running on Amazon EKS
 type resourceDetector struct {
 	utils detectorUtils
 }
@@ -63,7 +63,7 @@ type data struct {
 	ClusterName string `json:"cluster.name"`
 }
 
-// Compile time assertion that ResourceDetector implements the resource.Detector interface.
+// Compile time assertion that resourceDetector implements the resource.Detector interface.
 var _ resource.Detector = (*resourceDetector)(nil)
 
 // Compile time assertion that eksDetectorUtils implements the detectorUtils interface.
