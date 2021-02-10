@@ -69,7 +69,7 @@ var _ resource.Detector = (*resourceDetector)(nil)
 // Compile time assertion that eksDetectorUtils implements the detectorUtils interface.
 var _ detectorUtils = (*eksDetectorUtils)(nil)
 
-// NewResourceDetector returns a resource detector that will detect AWS ECS resources.
+// NewResourceDetector returns a resource detector that will detect AWS EKS resources.
 func NewResourceDetector() resource.Detector {
 	return &resourceDetector{utils: eksDetectorUtils{}}
 }
