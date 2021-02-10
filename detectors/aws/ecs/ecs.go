@@ -43,28 +43,28 @@ var (
 )
 
 // Create interface for methods needing to be mocked
-type detectorUtilsResources interface {
+type detectorUtils interface {
 	getContainerName() (string, error)
 	getContainerID() (string, error)
 }
 
-// struct implements detectorUtilsResources interface
-type DetectorUtils struct{}
+// struct implements detectorUtils interface
+type ecsDetectorUtils struct{}
 
 // resource detector collects resource information from Elastic Container Service environment
 type resourceDetector struct {
-	utils detectorUtilsResources
+	utils detectorUtils
 }
 
-// compile time assertion that ecsDetectorUtils implements detectorUtilsResources interface
-var _ detectorUtilsResources = (*DetectorUtils)(nil)
+// compile time assertion that ecsDetectorUtils implements detectorUtils interface
+var _ detectorUtils = (*ecsDetectorUtils)(nil)
 
 // compile time assertion that resource detector implements the resource.Detector interface.
 var _ resource.Detector = (*resourceDetector)(nil)
 
-// returns resource detector struct
-func NewResourceDetector(detectorUtils detectorUtilsResources) resource.Detector {
-	return &resourceDetector{utils: detectorUtils}
+// NewResourceDetector returns a resource detector that will detect AWS ECS resources.
+func NewResourceDetector() resource.Detector {
+	return &resourceDetector{utils: ecsDetectorUtils{}}
 }
 
 // Detect finds associated resources when running on ECS environment.
@@ -92,7 +92,7 @@ func (detector *resourceDetector) Detect(ctx context.Context) (*resource.Resourc
 }
 
 // returns docker container ID from default c group path
-func (ecsUtils DetectorUtils) getContainerID() (string, error) {
+func (ecsUtils ecsDetectorUtils) getContainerID() (string, error) {
 	fileData, err := ioutil.ReadFile(defaultCgroupPath)
 	if err != nil {
 		return "", errCannotReadCGroupFile
@@ -107,7 +107,7 @@ func (ecsUtils DetectorUtils) getContainerID() (string, error) {
 }
 
 // returns host name reported by the kernel
-func (ecsUtils DetectorUtils) getContainerName() (string, error) {
+func (ecsUtils ecsDetectorUtils) getContainerName() (string, error) {
 	hostName, err := os.Hostname()
 	if err != nil {
 		return "", errCannotReadContainerName
