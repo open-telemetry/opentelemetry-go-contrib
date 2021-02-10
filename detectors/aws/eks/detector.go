@@ -54,7 +54,7 @@ type detectorUtils interface {
 type eksDetectorUtils struct{}
 
 // ResourceDetector for detecting resources running on Amazon EKS
-type ResourceDetector struct {
+type resourceDetector struct {
 	utils detectorUtils
 }
 
@@ -64,13 +64,18 @@ type data struct {
 }
 
 // Compile time assertion that ResourceDetector implements the resource.Detector interface.
-var _ resource.Detector = (*ResourceDetector)(nil)
+var _ resource.Detector = (*resourceDetector)(nil)
 
 // Compile time assertion that eksDetectorUtils implements the detectorUtils interface.
 var _ detectorUtils = (*eksDetectorUtils)(nil)
 
+// NewResourceDetector returns a resource detector that will detect AWS ECS resources.
+func NewResourceDetector() resource.Detector {
+	return &resourceDetector{utils: eksDetectorUtils{}}
+}
+
 // Detect returns a Resource describing the Amazon EKS environment being run in.
-func (detector *ResourceDetector) Detect(ctx context.Context) (*resource.Resource, error) {
+func (detector *resourceDetector) Detect(ctx context.Context) (*resource.Resource, error) {
 
 	isEks, err := isEKS(detector.utils)
 	if err != nil {
