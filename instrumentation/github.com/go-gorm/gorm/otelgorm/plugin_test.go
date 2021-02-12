@@ -26,8 +26,6 @@ import (
 	"gorm.io/driver/sqlite"
 	"gorm.io/gorm"
 
-	"go.opentelemetry.io/contrib/internal/util"
-
 	"go.opentelemetry.io/otel/oteltest"
 )
 
@@ -87,12 +85,13 @@ func closeDB(db *gorm.DB) {
 func TestPlugin(t *testing.T) {
 
 	testCases := []struct {
-		name         string
-		testOp       func(db *gorm.DB) *gorm.DB
-		spans        int
-		targetSpan   int
-		sqlOp        string
-		affectedRows int64
+		name           string
+		testOp         func(db *gorm.DB) *gorm.DB
+		spans          int
+		targetSpan     int
+		expectSpanName string
+		sqlOp          string
+		affectedRows   int64
 	}{
 		{
 			"create (insert) row",
@@ -101,6 +100,7 @@ func TestPlugin(t *testing.T) {
 			},
 			2,
 			0,
+			"INSERT db.test_models",
 			"INSERT",
 			1,
 		},
@@ -117,6 +117,7 @@ func TestPlugin(t *testing.T) {
 			},
 			3,
 			1,
+			"UPDATE db.test_models",
 			"UPDATE",
 			1,
 		},
@@ -132,6 +133,7 @@ func TestPlugin(t *testing.T) {
 			},
 			3,
 			1,
+			"DELETE db.test_models",
 			"DELETE",
 			1,
 		},
@@ -147,6 +149,7 @@ func TestPlugin(t *testing.T) {
 			},
 			3,
 			1,
+			"SELECT db.test_models",
 			"SELECT",
 			1,
 		},
@@ -164,6 +167,7 @@ func TestPlugin(t *testing.T) {
 			},
 			3,
 			1,
+			"SELECT db.test_models",
 			"SELECT",
 			-1,
 		},
@@ -181,6 +185,7 @@ func TestPlugin(t *testing.T) {
 			},
 			3,
 			1,
+			"SELECT db.test_models",
 			"SELECT",
 			-1,
 		},
@@ -196,7 +201,7 @@ func TestPlugin(t *testing.T) {
 			sr := new(oteltest.StandardSpanRecorder)
 			provider := oteltest.NewTracerProvider(oteltest.WithSpanRecorder(sr))
 
-			plugin := NewPlugin(WithTracerProvider(provider))
+			plugin := NewPlugin(WithTracerProvider(provider), WithDBName("db"))
 
 			err = db.Use(plugin)
 			assert.NoError(tt, err)
@@ -218,7 +223,7 @@ func TestPlugin(t *testing.T) {
 			s := spans[tc.targetSpan]
 
 			assert.Equal(tt, spans[0].SpanContext().TraceID, spans[1].SpanContext().TraceID)
-			assert.Equal(tt, spanName, s.Name())
+			assert.Equal(tt, s.Name(), tc.expectSpanName)
 			assert.Equal(tt, "test_models", s.Attributes()[dbTableKey].AsString())
 			assert.Equal(tt, tc.sqlOp, s.Attributes()[dbOperationKey].AsString())
 			assert.Equal(tt, tc.affectedRows, s.Attributes()[dbCountKey].AsInt64())
@@ -229,6 +234,6 @@ func TestPlugin(t *testing.T) {
 }
 
 func TestMain(m *testing.M) {
-	util.IntegrationShouldRun("test-gorm")
+	//util.IntegrationShouldRun("test-gorm")
 	os.Exit(m.Run())
 }

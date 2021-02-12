@@ -19,6 +19,7 @@ import (
 )
 
 type config struct {
+	dbName         string
 	tracerProvider oteltrace.TracerProvider
 }
 
@@ -30,5 +31,13 @@ type Option func(*config)
 func WithTracerProvider(provider oteltrace.TracerProvider) Option {
 	return func(cfg *config) {
 		cfg.tracerProvider = provider
+	}
+}
+
+// WithDBName specified the database name to be used in span names
+// since its not possible to extract this information from gorm
+func WithDBName(name string) Option {
+	return func(cfg *config) {
+		cfg.dbName = name
 	}
 }

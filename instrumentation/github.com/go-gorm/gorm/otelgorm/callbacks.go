@@ -15,6 +15,7 @@
 package otelgorm
 
 import (
+	"fmt"
 	"strings"
 
 	"gorm.io/gorm"
@@ -26,8 +27,6 @@ import (
 )
 
 const (
-	spanName = "gorm.query"
-
 	dbTableKey     = label.Key("db.table")
 	dbCountKey     = label.Key("db.count")
 	dbOperationKey = semconv.DBOperationKey
@@ -50,9 +49,35 @@ func dbOperation(op string) label.KeyValue {
 	return dbOperationKey.String(op)
 }
 
-func (op *OtelPlugin) before(tx *gorm.DB) {
-	tx.Statement.Context, _ = op.tracer.
-		Start(tx.Statement.Context, spanName, oteltrace.WithSpanKind(oteltrace.SpanKindClient))
+func (op *OtelPlugin) spanName(tx *gorm.DB, operation string) string {
+	query := extractQuery(tx)
+	operation = operationForQuery(query, operation)
+
+	target := op.cfg.dbName
+	if target == "" {
+		target = tx.Dialector.Name()
+	}
+
+	if tx.Statement.Table != "" {
+		target += "." + tx.Statement.Table
+	}
+
+	return fmt.Sprintf("%s %s", operation, target)
+}
+
+func operationForQuery(query string, op string) string {
+	if op != "" {
+		return op
+	}
+
+	return strings.ToUpper(strings.Split(query, " ")[0])
+}
+
+func (op *OtelPlugin) before(operation string) gormHookFunc {
+	return func(tx *gorm.DB) {
+		tx.Statement.Context, _ = op.tracer.
+			Start(tx.Statement.Context, op.spanName(tx, operation), oteltrace.WithSpanKind(oteltrace.SpanKindClient))
+	}
 }
 
 func extractQuery(tx *gorm.DB) string {
@@ -75,9 +100,7 @@ func (op *OtelPlugin) after(operation string) gormHookFunc {
 
 		// extract the db operation
 		query := extractQuery(tx)
-		if operation == "" {
-			operation = strings.ToUpper(strings.Split(query, " ")[0])
-		}
+		operation = operationForQuery(query, operation)
 
 		if tx.Statement.Table != "" {
 			span.SetAttributes(dbTable(tx.Statement.Table))
