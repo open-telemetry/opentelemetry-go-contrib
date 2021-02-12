@@ -58,7 +58,7 @@ func (op *OtelPlugin) spanName(tx *gorm.DB, operation string) string {
 		target = tx.Dialector.Name()
 	}
 
-	if tx.Statement.Table != "" {
+	if tx.Statement != nil && tx.Statement.Table != "" {
 		target += "." + tx.Statement.Table
 	}
 
