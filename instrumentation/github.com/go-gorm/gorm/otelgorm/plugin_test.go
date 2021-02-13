@@ -26,6 +26,8 @@ import (
 	"gorm.io/driver/sqlite"
 	"gorm.io/gorm"
 
+	"go.opentelemetry.io/contrib/internal/util"
+
 	"go.opentelemetry.io/otel/oteltest"
 )
 
@@ -234,6 +236,6 @@ func TestPlugin(t *testing.T) {
 }
 
 func TestMain(m *testing.M) {
-	//util.IntegrationShouldRun("test-gorm")
+	util.IntegrationShouldRun("test-gorm")
 	os.Exit(m.Run())
 }
