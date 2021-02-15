@@ -29,6 +29,7 @@ import (
 	"go.opentelemetry.io/otel"
 	"go.opentelemetry.io/otel/label"
 	"go.opentelemetry.io/otel/metric"
+	"go.opentelemetry.io/otel/metric/global"
 	"go.opentelemetry.io/otel/unit"
 )
 
@@ -87,7 +88,7 @@ var (
 // newConfig computes a config from a list of Options.
 func newConfig(opts ...Option) config {
 	c := config{
-		MeterProvider: otel.GetMeterProvider(),
+		MeterProvider: global.GetMeterProvider(),
 	}
 	for _, opt := range opts {
 		opt.ApplyHost(&c)
@@ -99,7 +100,7 @@ func newConfig(opts ...Option) config {
 func Start(opts ...Option) error {
 	c := newConfig(opts...)
 	if c.MeterProvider == nil {
-		c.MeterProvider = otel.GetMeterProvider()
+		c.MeterProvider = global.GetMeterProvider()
 	}
 	h := &host{
 		meter: c.MeterProvider.Meter(
