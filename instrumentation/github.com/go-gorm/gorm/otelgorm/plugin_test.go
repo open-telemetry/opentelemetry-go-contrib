@@ -228,7 +228,7 @@ func TestPlugin(t *testing.T) {
 			assert.Equal(tt, s.Name(), tc.expectSpanName)
 			assert.Equal(tt, "test_models", s.Attributes()[dbTableKey].AsString())
 			assert.Equal(tt, tc.sqlOp, s.Attributes()[dbOperationKey].AsString())
-			assert.Equal(tt, tc.affectedRows, s.Attributes()[dbCountKey].AsInt64())
+			assert.Equal(tt, tc.affectedRows, s.Attributes()[dbRowsAffectedKey].AsInt64())
 			assert.Contains(tt, s.Attributes()[dbStatementKey].AsString(), tc.sqlOp)
 		})
 	}

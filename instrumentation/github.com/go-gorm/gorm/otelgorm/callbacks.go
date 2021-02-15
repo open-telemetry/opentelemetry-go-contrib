@@ -27,10 +27,10 @@ import (
 )
 
 const (
-	dbTableKey     = label.Key("db.table")
-	dbCountKey     = label.Key("db.count")
-	dbOperationKey = semconv.DBOperationKey
-	dbStatementKey = semconv.DBStatementKey
+	dbTableKey        = label.Key("db.sql.table")
+	dbRowsAffectedKey = label.Key("db.rows_affected")
+	dbOperationKey    = semconv.DBOperationKey
+	dbStatementKey    = semconv.DBStatementKey
 )
 
 func dbTable(name string) label.KeyValue {
@@ -42,7 +42,7 @@ func dbStatement(stmt string) label.KeyValue {
 }
 
 func dbCount(n int64) label.KeyValue {
-	return dbCountKey.Int64(n)
+	return dbRowsAffectedKey.Int64(n)
 }
 
 func dbOperation(op string) label.KeyValue {
