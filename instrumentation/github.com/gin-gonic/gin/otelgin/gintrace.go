@@ -18,6 +18,7 @@ package otelgin
 
 import (
 	"fmt"
+	"net/http"
 
 	"github.com/gin-gonic/gin"
 
@@ -33,8 +34,14 @@ import (
 
 const (
 	tracerKey  = "otel-go-contrib-tracer"
+	skippedKey = "otel-go-contrib-skipped"
 	tracerName = "go.opentelemetry.io/contrib/instrumentation/github.com/gin-gonic/gin/otelgin"
 )
+
+// FilterFunc allows to skip tracing the incoming requests based on
+// request characteristics. Returns true means the filter rule is hit
+// and this request will not be recorded.
+type FilterFunc func(req *http.Request) bool
 
 // Middleware returns middleware that will trace incoming requests.
 // The service parameter should describe the name of the (virtual)
@@ -55,6 +62,13 @@ func Middleware(service string, opts ...Option) gin.HandlerFunc {
 		cfg.Propagators = otel.GetTextMapPropagator()
 	}
 	return func(c *gin.Context) {
+		for _, filter := range cfg.Filters {
+			if filter(c.Request) {
+				c.Set(skippedKey, true)
+				c.Next()
+				return
+			}
+		}
 		c.Set(tracerKey, tracer)
 		savedCtx := c.Request.Context()
 		defer func() {
@@ -96,6 +110,10 @@ func Middleware(service string, opts ...Option) gin.HandlerFunc {
 // gin.Context.HTML function - it invokes the original function after
 // setting up the span.
 func HTML(c *gin.Context, code int, name string, obj interface{}) {
+	if c.GetBool(skippedKey) {
+		c.HTML(code, name, obj)
+		return
+	}
 	var tracer oteltrace.Tracer
 	tracerInterface, ok := c.Get(tracerKey)
 	if ok {

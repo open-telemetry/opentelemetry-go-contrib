@@ -22,6 +22,7 @@ import (
 	"html/template"
 	"net/http"
 	"net/http/httptest"
+	"sync"
 	"testing"
 
 	"github.com/gin-gonic/gin"
@@ -253,4 +254,62 @@ func TestPropagationWithCustomPropagators(t *testing.T) {
 	})
 
 	router.ServeHTTP(w, r)
+}
+
+type mockTracerProvider struct {
+	*oteltest.TracerProvider
+	tracersMu sync.Mutex
+	tracers   map[string]*mockTracer
+}
+
+type mockTracer struct {
+	oteltrace.Tracer
+	tracerStartCount int
+}
+
+func (mtp *mockTracerProvider) Tracer(instName string, opts ...oteltrace.TracerOption) oteltrace.Tracer {
+	mtp.tracersMu.Lock()
+	defer mtp.tracersMu.Unlock()
+	t, ok := mtp.tracers[instName]
+	if !ok {
+		realTracer := mtp.TracerProvider.Tracer(instName, opts...)
+		t = &mockTracer{
+			Tracer:           realTracer,
+			tracerStartCount: 0,
+		}
+		mtp.tracers[instName] = t
+	}
+	return t
+}
+
+func (mt *mockTracer) Start(ctx context.Context, spanName string, opts ...oteltrace.SpanOption) (context.Context, oteltrace.Span) {
+	mt.tracerStartCount++
+	return mt.Tracer.Start(ctx, spanName, opts...)
+}
+
+func TestFilter(t *testing.T) {
+	otel.SetTracerProvider(&mockTracerProvider{TracerProvider: oteltest.NewTracerProvider(), tracers: make(map[string]*mockTracer)})
+	uaFilter := FilterFunc(func(req *http.Request) bool {
+		return req.UserAgent() == "some scanner"
+	})
+	router := gin.New()
+	router.Use(Middleware("foobar", WithFilter(uaFilter)))
+	// add a template
+	tmpl := template.Must(template.New("hello").Parse("hello {{.}}"))
+	router.SetHTMLTemplate(tmpl)
+	router.GET("/filter-test", func(c *gin.Context) {
+		HTML(c, 200, "hello", "world")
+	})
+	hitReq := httptest.NewRequest("GET", "/filter-test", nil)
+	hitReq.Header.Set("User-Agent", "some scanner")
+	w := httptest.NewRecorder()
+	router.ServeHTTP(w, hitReq)
+	tracerInterface := otel.Tracer(tracerName)
+	mt, ok := tracerInterface.(*mockTracer)
+	require.True(t, ok)
+	assert.Equal(t, 0, mt.tracerStartCount)
+	noHitReq := httptest.NewRequest("GET", "/filter-test", nil)
+	noHitReq.Header.Set("User-Agent", "normal UA")
+	router.ServeHTTP(w, noHitReq)
+	assert.Equal(t, 2, mt.tracerStartCount)
 }
