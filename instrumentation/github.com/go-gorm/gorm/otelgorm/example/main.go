@@ -58,7 +58,6 @@ func initTracer() oteltrace.TracerProvider {
 }
 
 func doGormOperations(ctx context.Context, db *gorm.DB) {
-
 	p := &Product{Code: "D42", Price: 100}
 
 	db = db.WithContext(ctx)
@@ -91,11 +90,9 @@ func doGormOperations(ctx context.Context, db *gorm.DB) {
 
 	// this select should fail due to invalid table
 	db.Exec("SELECT * FROM not_found")
-
 }
 
 func main() {
-
 	tp := initTracer()
 	ctx := context.Background()
 
