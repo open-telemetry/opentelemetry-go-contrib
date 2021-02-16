@@ -15,7 +15,7 @@
 package otelgrpc
 
 // gRPC tracing middleware
-// https://github.com/open-telemetry/opentelemetry-specification/blob/master/specification/trace/semantic_conventions/rpc.md
+// https://github.com/open-telemetry/opentelemetry-specification/blob/main/specification/trace/semantic_conventions/rpc.md
 import (
 	"context"
 	"io"
