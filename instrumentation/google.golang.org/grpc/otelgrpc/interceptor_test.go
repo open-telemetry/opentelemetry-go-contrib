@@ -29,7 +29,7 @@ import (
 	"github.com/golang/protobuf/proto" //nolint:staticcheck
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
-
+	"go.uber.org/goleak"
 	"google.golang.org/grpc"
 	grpc_codes "google.golang.org/grpc/codes"
 	"google.golang.org/grpc/metadata"
@@ -92,6 +92,7 @@ func TestUnaryClientInterceptor(t *testing.T) {
 	if err != nil {
 		t.Fatalf("failed to create client connection: %v", err)
 	}
+	defer clientConn.Close()
 
 	sr := NewSpanRecorder()
 	tp := oteltest.NewTracerProvider(oteltest.WithSpanRecorder(sr))
@@ -297,6 +298,7 @@ func TestStreamClientInterceptor(t *testing.T) {
 	if err != nil {
 		t.Fatalf("failed to create client connection: %v", err)
 	}
+	defer clientConn.Close()
 
 	// tracer
 	sr := NewSpanRecorder()
@@ -384,10 +386,13 @@ func TestStreamClientInterceptor(t *testing.T) {
 
 // TestStreamClientInterceptorWithError tests a situation that streamer returns an error.
 func TestStreamClientInterceptorWithError(t *testing.T) {
+	defer goleak.VerifyNone(t)
+
 	clientConn, err := grpc.Dial("fake:connection", grpc.WithInsecure())
 	if err != nil {
 		t.Fatalf("failed to create client connection: %v", err)
 	}
+	defer clientConn.Close()
 
 	// tracer
 	sr := NewSpanRecorder()
