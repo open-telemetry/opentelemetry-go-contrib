@@ -8,6 +8,14 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 
 ## [Unreleased]
 
+### Fixed
+
+- `otelmemcache` no longer sets span status to OK instead of leaving it unset. (#477)
+
+### Removed
+
+- Remove service name from `otelmemcache` configuration and span attributes. (#477)
+
 ## [0.17.0] - 2021-02-15
 
 ### Added
