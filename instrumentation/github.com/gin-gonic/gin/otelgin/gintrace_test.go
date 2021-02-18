@@ -289,8 +289,8 @@ func (mt *mockTracer) Start(ctx context.Context, spanName string, opts ...oteltr
 
 func TestFilter(t *testing.T) {
 	otel.SetTracerProvider(&mockTracerProvider{TracerProvider: oteltest.NewTracerProvider(), tracers: make(map[string]*mockTracer)})
-	uaFilter := FilterFunc(func(req *http.Request) bool {
-		return req.UserAgent() == "some scanner"
+	uaFilter := Filter(func(req *http.Request) bool {
+		return req.UserAgent() != "some scanner"
 	})
 	router := gin.New()
 	router.Use(Middleware("foobar", WithFilter(uaFilter)))

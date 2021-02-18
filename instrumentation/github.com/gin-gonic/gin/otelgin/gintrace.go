@@ -38,10 +38,10 @@ const (
 	tracerName = "go.opentelemetry.io/contrib/instrumentation/github.com/gin-gonic/gin/otelgin"
 )
 
-// FilterFunc allows to skip tracing the incoming requests based on
-// request characteristics. Returns true means the filter rule is hit
-// and this request will not be recorded.
-type FilterFunc func(req *http.Request) bool
+// Filter allows to skip tracing the incoming requests based on
+// request characteristics. Returns false means this request will
+// not be recorded.
+type Filter func(req *http.Request) bool
 
 // Middleware returns middleware that will trace incoming requests.
 // The service parameter should describe the name of the (virtual)
@@ -63,7 +63,7 @@ func Middleware(service string, opts ...Option) gin.HandlerFunc {
 	}
 	return func(c *gin.Context) {
 		for _, filter := range cfg.Filters {
-			if filter(c.Request) {
+			if !filter(c.Request) {
 				c.Set(skippedKey, true)
 				c.Next()
 				return

@@ -24,7 +24,7 @@ import (
 type config struct {
 	TracerProvider oteltrace.TracerProvider
 	Propagators    propagation.TextMapPropagator
-	Filters        []FilterFunc
+	Filters        []Filter
 }
 
 // Option specifies instrumentation configuration options.
@@ -48,8 +48,8 @@ func WithTracerProvider(provider oteltrace.TracerProvider) Option {
 }
 
 // WithFilter add a filter func which returns true to skip recording the tracing.
-// When multiple filters are added, anyone of them returns true will result the skip
-func WithFilter(filters ...FilterFunc) Option {
+// When multiple filters are added, anyone of them returns false will result the skip
+func WithFilter(filters ...Filter) Option {
 	return func(cfg *config) {
 		cfg.Filters = append(cfg.Filters, filters...)
 	}
