@@ -273,7 +273,7 @@ func (e *Exporter) formatMetric(rec export.Record, pos int, buf *bytes.Buffer) e
 		if err != nil {
 			return err
 		}
-		e.formatSingleStat(rec, res, points[pos], format, buf)
+		e.formatSingleStat(rec, res, points[pos].Number, format, buf)
 
 	} else if sum, ok := agg.(aggregation.Sum); ok {
 		sum, err := sum.Sum()

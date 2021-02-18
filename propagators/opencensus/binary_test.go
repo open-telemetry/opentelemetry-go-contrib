@@ -20,6 +20,8 @@ import (
 	"net/http"
 	"testing"
 
+	"github.com/google/go-cmp/cmp"
+
 	"go.opentelemetry.io/otel/oteltest"
 	"go.opentelemetry.io/otel/trace"
 )
@@ -145,8 +147,8 @@ func TestExtract(t *testing.T) {
 			ctx := context.Background()
 			ctx = prop.Extract(ctx, req.Header)
 			gotSc := trace.RemoteSpanContextFromContext(ctx)
-			if gotSc != tt.wantSc {
-				t.Errorf("Got SpanContext: %+v, wanted %+v", gotSc, tt.wantSc)
+			if diff := cmp.Diff(gotSc, tt.wantSc, cmp.AllowUnexported(trace.TraceState{})); diff != "" {
+				t.Errorf("%s: -got +want %s", tt.desc, diff)
 			}
 		})
 	}

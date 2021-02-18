@@ -25,7 +25,6 @@ import (
 	export "go.opentelemetry.io/otel/sdk/export/metric"
 	"go.opentelemetry.io/otel/sdk/export/metric/metrictest"
 	"go.opentelemetry.io/otel/sdk/metric/aggregator/aggregatortest"
-	"go.opentelemetry.io/otel/sdk/metric/aggregator/array"
 	"go.opentelemetry.io/otel/sdk/metric/aggregator/histogram"
 	"go.opentelemetry.io/otel/sdk/metric/aggregator/lastvalue"
 	"go.opentelemetry.io/otel/sdk/metric/aggregator/minmaxsumcount"
@@ -83,23 +82,6 @@ func getMMSCCheckpoint(t *testing.T, values ...float64) export.CheckpointSet {
 	return checkpointSet
 }
 
-// getDistributionCheckpoint returns a checkpoint set with a distribution aggregation record
-func getDistributionCheckpoint(t *testing.T) export.CheckpointSet {
-	// Create checkpoint set with resource and descriptor
-	checkpointSet := metrictest.NewCheckpointSet(testResource)
-	desc := metric.NewDescriptor("metric_name", metric.ValueRecorderInstrumentKind, number.Float64Kind)
-
-	// Create aggregation, add value, and update checkpointset
-	agg, ckpt := metrictest.Unslice2(array.New(2))
-	for i := 0; i < 1000; i++ {
-		aggregatortest.CheckedUpdate(t, agg, number.NewFloat64Number(float64(i)+0.5), &desc)
-	}
-	require.NoError(t, agg.SynchronizedMove(ckpt, &desc))
-	checkpointSet.Add(&desc, ckpt)
-
-	return checkpointSet
-}
-
 // getHistogramCheckpoint returns a checkpoint set with a histogram aggregation record
 func getHistogramCheckpoint(t *testing.T) export.CheckpointSet {
 	// Create checkpoint set with resource and descriptor
@@ -108,7 +90,7 @@ func getHistogramCheckpoint(t *testing.T) export.CheckpointSet {
 
 	// Create aggregation, add value, and update checkpointset
 	boundaries := []float64{100, 500, 900}
-	agg, ckpt := metrictest.Unslice2(histogram.New(2, &desc, boundaries))
+	agg, ckpt := metrictest.Unslice2(histogram.New(2, &desc, histogram.WithExplicitBoundaries(boundaries)))
 	for i := 0; i < 1000; i++ {
 		aggregatortest.CheckedUpdate(t, agg, number.NewFloat64Number(float64(i)+0.5), &desc)
 	}
@@ -220,133 +202,6 @@ var wantMMSCCheckpointSet = []*prompb.TimeSeries{
 		},
 		Samples: []prompb.Sample{{
 			Value:     2,
-			Timestamp: mockTime,
-		}},
-	},
-}
-
-var wantDistributionCheckpointSet = []*prompb.TimeSeries{
-	{
-		Labels: []*prompb.Label{
-			{
-				Name:  "R",
-				Value: "V",
-			},
-			{
-				Name:  "__name__",
-				Value: "metric_name_sum",
-			},
-		},
-		Samples: []prompb.Sample{{
-			Value:     500000,
-			Timestamp: mockTime,
-		}},
-	},
-	{
-		Labels: []*prompb.Label{
-			{
-				Name:  "R",
-				Value: "V",
-			},
-			{
-				Name:  "__name__",
-				Value: "metric_name_min",
-			},
-		},
-		Samples: []prompb.Sample{{
-			Value:     0.5,
-			Timestamp: mockTime,
-		}},
-	},
-	{
-		Labels: []*prompb.Label{
-			{
-				Name:  "R",
-				Value: "V",
-			},
-			{
-				Name:  "__name__",
-				Value: "metric_name_max",
-			},
-		},
-		Samples: []prompb.Sample{{
-			Value:     999.5,
-			Timestamp: mockTime,
-		}},
-	},
-	{
-		Labels: []*prompb.Label{
-			{
-				Name:  "R",
-				Value: "V",
-			},
-			{
-				Name:  "__name__",
-				Value: "metric_name_count",
-			},
-		},
-		Samples: []prompb.Sample{{
-			Value:     1000,
-			Timestamp: mockTime,
-		}},
-	},
-	{
-		Labels: []*prompb.Label{
-			{
-				Name:  "R",
-				Value: "V",
-			},
-			{
-				Name:  "__name__",
-				Value: "metric_name",
-			},
-			{
-				Name:  "quantile",
-				Value: "0.5",
-			},
-		},
-		Samples: []prompb.Sample{{
-			Value:     500.5,
-			Timestamp: mockTime,
-		}},
-	},
-	{
-		Labels: []*prompb.Label{
-			{
-				Name:  "R",
-				Value: "V",
-			},
-			{
-				Name:  "__name__",
-				Value: "metric_name",
-			},
-			{
-				Name:  "quantile",
-				Value: "0.9",
-			},
-		},
-		Samples: []prompb.Sample{{
-			Value:     900.5,
-			Timestamp: mockTime,
-		}},
-	},
-	{
-		Labels: []*prompb.Label{
-			{
-				Name:  "R",
-				Value: "V",
-			},
-			{
-				Name:  "__name__",
-				Value: "metric_name",
-			},
-			{
-				Name:  "quantile",
-				Value: "0.99",
-			},
-		},
-		Samples: []prompb.Sample{{
-			Value:     990.5,
 			Timestamp: mockTime,
 		}},
 	},

@@ -30,8 +30,8 @@ import (
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 
-	"go.opentelemetry.io/otel"
 	"go.opentelemetry.io/otel/label"
+	"go.opentelemetry.io/otel/metric/global"
 	"go.opentelemetry.io/otel/sdk/export/metric"
 	export "go.opentelemetry.io/otel/sdk/export/metric"
 	"go.opentelemetry.io/otel/sdk/export/metric/aggregation"
@@ -113,12 +113,6 @@ func TestConvertToTimeSeries(t *testing.T) {
 			wantLength: 4,
 		},
 		{
-			name:       "convertFromDistribution",
-			input:      getDistributionCheckpoint(t),
-			want:       wantDistributionCheckpointSet,
-			wantLength: 7,
-		},
-		{
 			name:       "convertFromHistogram",
 			input:      getHistogramCheckpoint(t),
 			want:       wantHistogramCheckpointSet,
@@ -159,8 +153,8 @@ func TestConvertToTimeSeries(t *testing.T) {
 					wantSamples[sample.String()] = true
 				}
 			}
-			assert.Equal(t, gotLabels, wantLabels)
-			assert.Equal(t, gotSamples, wantSamples)
+			assert.Equal(t, wantLabels, gotLabels)
+			assert.Equal(t, wantSamples, gotSamples)
 		})
 	}
 }
@@ -195,7 +189,7 @@ func TestInstallNewPipeline(t *testing.T) {
 	if err != nil {
 		t.Fatalf("Failed to create install pipeline with error %v", err)
 	}
-	if otel.GetMeterProvider() != pusher.MeterProvider() {
+	if global.GetMeterProvider() != pusher.MeterProvider() {
 		t.Fatalf("Failed to register push Controller provider globally")
 	}
 }

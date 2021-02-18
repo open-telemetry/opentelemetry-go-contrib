@@ -29,6 +29,6 @@
 //   system.memory.utilization  state=used|available
 //   system.network.io          direction=transmit|receive
 //
-// See https://github.com/open-telemetry/oteps/blob/master/text/0119-standard-system-metrics.md
+// See https://github.com/open-telemetry/oteps/blob/main/text/0119-standard-system-metrics.md
 // for the definition of these metric instruments.
 package host // import "go.opentelemetry.io/contrib/instrumentation/host"

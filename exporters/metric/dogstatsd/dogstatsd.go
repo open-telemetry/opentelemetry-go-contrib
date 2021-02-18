@@ -16,12 +16,13 @@ package dogstatsd // import "go.opentelemetry.io/contrib/exporters/metric/dogsta
 
 import (
 	"bytes"
+	"context"
 	"time"
 
 	"go.opentelemetry.io/contrib/exporters/metric/dogstatsd/internal/statsd"
-	"go.opentelemetry.io/otel"
+	"go.opentelemetry.io/otel/metric/global"
 	export "go.opentelemetry.io/otel/sdk/export/metric"
-	"go.opentelemetry.io/otel/sdk/metric/controller/push"
+	controller "go.opentelemetry.io/otel/sdk/metric/controller/basic"
 	"go.opentelemetry.io/otel/sdk/metric/processor/basic"
 	"go.opentelemetry.io/otel/sdk/metric/selector/simple"
 	"go.opentelemetry.io/otel/sdk/resource"
@@ -69,18 +70,18 @@ func NewRawExporter(config Config) (*Exporter, error) {
 // 	}
 // 	defer pipeline.Stop()
 // 	... Done
-func InstallNewPipeline(config Config) (*push.Controller, error) {
-	controller, err := NewExportPipeline(config, push.WithPeriod(time.Minute))
+func InstallNewPipeline(config Config) (*controller.Controller, error) {
+	controller, err := NewExportPipeline(config, controller.WithCollectPeriod(time.Minute))
 	if err != nil {
 		return controller, err
 	}
-	otel.SetMeterProvider(controller.MeterProvider())
+	global.SetMeterProvider(controller.MeterProvider())
 	return controller, err
 }
 
 // NewExportPipeline sets up a complete export pipeline with the recommended setup,
 // chaining a NewRawExporter into the recommended selectors and batchers.
-func NewExportPipeline(config Config, opts ...push.Option) (*push.Controller, error) {
+func NewExportPipeline(config Config, opts ...controller.Option) (*controller.Controller, error) {
 	exporter, err := NewRawExporter(config)
 	if err != nil {
 		return nil, err
@@ -93,10 +94,9 @@ func NewExportPipeline(config Config, opts ...push.Option) (*push.Controller, er
 	// set of labels as dogstatsd tags.
 	processor := basic.New(selector, exporter)
 
-	pusher := push.New(processor, exporter, opts...)
-	pusher.Start()
+	pusher := controller.New(processor, append(opts, controller.WithPusher(exporter))...)
 
-	return pusher, nil
+	return pusher, pusher.Start(context.Background())
 }
 
 // AppendName is part of the stats-internal adapter interface.

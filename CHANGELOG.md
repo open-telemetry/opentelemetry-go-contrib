@@ -15,12 +15,37 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 ### Removed
 
 - Remove service name from `otelmemcache` configuration and span attributes. (#477)
+
+## [0.17.0] - 2021-02-15
+
+### Added
+
+- Add `ot-tracer` propagator (#562)
+
+### Changed
+
+- Rename project default branch from `master` to `main`.
+
+### Fixed
+
+- Added failure message for AWS ECS resource detector for better debugging (#568)
+- Goroutine leak in gRPC StreamClientInterceptor while streamer returns an error. (#581)
+
+## [0.16.0] - 2021-01-13
+
+### Fixed
+
+- Fix module path for AWS ECS resource detector (#517)
+
 ## [0.15.1] - 2020-12-14
 
 ### Added
 
 - Add registry link check to `Makefile` and pre-release script. (#446)
 - A new AWS X-Ray ID Generator (#459)
+- Migrate CircleCI jobs to GitHub Actions (#476)
+- Add CodeQL GitHub Action (#506)
+- Add gosec workflow to GitHub Actions (#507)
 
 ### Fixed
 
@@ -256,7 +281,9 @@ First official tagged release of `contrib` repository.
 - Prefix support for dogstatsd (#34)
 - Update Go Runtime package to use batch observer (#44)
 
-[Unreleased]: https://github.com/open-telemetry/opentelemetry-go-contrib/compare/v0.15.1...HEAD
+[Unreleased]: https://github.com/open-telemetry/opentelemetry-go-contrib/compare/v0.17.0...HEAD
+[0.17.0]: https://github.com/open-telemetry/opentelemetry-go-contrib/releases/tag/v0.17.0
+[0.16.0]: https://github.com/open-telemetry/opentelemetry-go-contrib/releases/tag/v0.16.0
 [0.15.1]: https://github.com/open-telemetry/opentelemetry-go-contrib/releases/tag/v0.15.1
 [0.15.0]: https://github.com/open-telemetry/opentelemetry-go-contrib/releases/tag/v0.15.0
 [0.14.0]: https://github.com/open-telemetry/opentelemetry-go-contrib/releases/tag/v0.14.0

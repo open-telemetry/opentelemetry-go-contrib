@@ -15,14 +15,14 @@
 package otelgrpc
 
 // gRPC tracing middleware
-// https://github.com/open-telemetry/opentelemetry-specification/blob/master/specification/trace/semantic_conventions/rpc.md
+// https://github.com/open-telemetry/opentelemetry-specification/blob/main/specification/trace/semantic_conventions/rpc.md
 import (
 	"context"
 	"io"
 	"net"
 	"strings"
 
-	"github.com/golang/protobuf/proto" //nolint:staticcheck
+	"github.com/golang/protobuf/proto" // nolint:staticcheck
 
 	"google.golang.org/grpc"
 	grpc_codes "google.golang.org/grpc/codes"
@@ -277,12 +277,17 @@ func StreamClientInterceptor(opts ...Option) grpc.StreamClientInterceptor {
 		ctx = metadata.NewOutgoingContext(ctx, metadataCopy)
 
 		s, err := streamer(ctx, desc, cc, method, callOpts...)
+		if err != nil {
+			grpcStatus, _ := status.FromError(err)
+			span.SetStatus(codes.Error, grpcStatus.Message())
+			span.SetAttributes(statusCodeAttr(grpcStatus.Code()))
+			span.End()
+			return s, err
+		}
 		stream := wrapClientStream(s, desc)
 
 		go func() {
-			if err == nil {
-				err = <-stream.finished
-			}
+			err := <-stream.finished
 
 			if err != nil {
 				s, _ := status.FromError(err)
@@ -295,7 +300,7 @@ func StreamClientInterceptor(opts ...Option) grpc.StreamClientInterceptor {
 			span.End()
 		}()
 
-		return stream, err
+		return stream, nil
 	}
 }
 

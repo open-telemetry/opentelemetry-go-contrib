@@ -19,7 +19,7 @@ import (
 	"os"
 	"testing"
 
-	"github.com/bmizerany/assert"
+	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/mock"
 
 	"go.opentelemetry.io/otel/label"
@@ -45,8 +45,8 @@ func (detectorUtils *MockDetectorUtils) getContainerName() (string, error) {
 //succesfully return resource when process is running on Amazon ECS environment
 func TestDetect(t *testing.T) {
 	os.Clearenv()
-	os.Setenv(metadataV3EnvVar, "3")
-	os.Setenv(metadataV4EnvVar, "4")
+	_ = os.Setenv(metadataV3EnvVar, "3")
+	_ = os.Setenv(metadataV4EnvVar, "4")
 
 	detectorUtils := new(MockDetectorUtils)
 
@@ -58,35 +58,52 @@ func TestDetect(t *testing.T) {
 		semconv.ContainerIDKey.String("0123456789A"),
 	}
 	expectedResource := resource.NewWithAttributes(labels...)
-	detector := ResourceDetector{detectorUtils}
-	resource, _ := detector.Detect(context.Background())
+	detector := &resourceDetector{utils: detectorUtils}
+	res, _ := detector.Detect(context.Background())
 
-	assert.Equal(t, resource, expectedResource, "Resource returned is incorrect")
+	assert.Equal(t, res, expectedResource, "Resource returned is incorrect")
 }
 
 //returns empty resource when detector cannot read container ID
 func TestDetectCannotReadContainerID(t *testing.T) {
 	os.Clearenv()
-	os.Setenv(metadataV3EnvVar, "3")
-	os.Setenv(metadataV4EnvVar, "4")
+	_ = os.Setenv(metadataV3EnvVar, "3")
+	_ = os.Setenv(metadataV4EnvVar, "4")
 	detectorUtils := new(MockDetectorUtils)
 
 	detectorUtils.On("getContainerName").Return("container-Name", nil)
 	detectorUtils.On("getContainerID").Return("", errCannotReadContainerID)
 
-	detector := ResourceDetector{detectorUtils}
-	resource, err := detector.Detect(context.Background())
+	detector := &resourceDetector{utils: detectorUtils}
+	res, err := detector.Detect(context.Background())
 
 	assert.Equal(t, errCannotReadContainerID, err)
-	assert.Equal(t, 0, len(resource.Attributes()))
+	assert.Equal(t, 0, len(res.Attributes()))
+}
+
+//returns empty resource when detector cannot read container Name
+func TestDetectCannotReadContainerName(t *testing.T) {
+	os.Clearenv()
+	_ = os.Setenv(metadataV3EnvVar, "3")
+	_ = os.Setenv(metadataV4EnvVar, "4")
+	detectorUtils := new(MockDetectorUtils)
+
+	detectorUtils.On("getContainerName").Return("", errCannotReadContainerName)
+	detectorUtils.On("getContainerID").Return("0123456789A", nil)
+
+	detector := &resourceDetector{utils: detectorUtils}
+	res, err := detector.Detect(context.Background())
+
+	assert.Equal(t, errCannotReadContainerName, err)
+	assert.Equal(t, 0, len(res.Attributes()))
 }
 
 //returns empty resource when process is not running ECS
 func TestReturnsIfNoEnvVars(t *testing.T) {
 	os.Clearenv()
-	detector := ResourceDetector{}
-	resource, err := detector.Detect(context.Background())
+	detector := &resourceDetector{utils: nil}
+	res, err := detector.Detect(context.Background())
 
 	assert.Equal(t, errNotOnECS, err)
-	assert.Equal(t, 0, len(resource.Attributes()))
+	assert.Equal(t, 0, len(res.Attributes()))
 }
