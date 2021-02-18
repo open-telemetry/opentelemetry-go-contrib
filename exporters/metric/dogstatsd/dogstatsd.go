@@ -20,7 +20,7 @@ import (
 	"time"
 
 	"go.opentelemetry.io/contrib/exporters/metric/dogstatsd/internal/statsd"
-	"go.opentelemetry.io/otel"
+	"go.opentelemetry.io/otel/metric/global"
 	export "go.opentelemetry.io/otel/sdk/export/metric"
 	controller "go.opentelemetry.io/otel/sdk/metric/controller/basic"
 	"go.opentelemetry.io/otel/sdk/metric/processor/basic"
@@ -75,7 +75,7 @@ func InstallNewPipeline(config Config) (*controller.Controller, error) {
 	if err != nil {
 		return controller, err
 	}
-	otel.SetMeterProvider(controller.MeterProvider())
+	global.SetMeterProvider(controller.MeterProvider())
 	return controller, err
 }
 
