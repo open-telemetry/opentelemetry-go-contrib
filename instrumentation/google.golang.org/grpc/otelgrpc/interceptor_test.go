@@ -15,6 +15,7 @@ package otelgrpc
 
 import (
 	"context"
+	"errors"
 	"strings"
 	"sync"
 	"testing"
@@ -28,7 +29,7 @@ import (
 	"github.com/golang/protobuf/proto" //nolint:staticcheck
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
-
+	"go.uber.org/goleak"
 	"google.golang.org/grpc"
 	grpc_codes "google.golang.org/grpc/codes"
 	"google.golang.org/grpc/metadata"
@@ -91,6 +92,7 @@ func TestUnaryClientInterceptor(t *testing.T) {
 	if err != nil {
 		t.Fatalf("failed to create client connection: %v", err)
 	}
+	defer clientConn.Close()
 
 	sr := NewSpanRecorder()
 	tp := oteltest.NewTracerProvider(oteltest.WithSpanRecorder(sr))
@@ -296,6 +298,7 @@ func TestStreamClientInterceptor(t *testing.T) {
 	if err != nil {
 		t.Fatalf("failed to create client connection: %v", err)
 	}
+	defer clientConn.Close()
 
 	// tracer
 	sr := NewSpanRecorder()
@@ -379,6 +382,57 @@ func TestStreamClientInterceptor(t *testing.T) {
 
 	// ensure CloseSend can be subsequently called
 	_ = streamClient.CloseSend()
+}
+
+// TestStreamClientInterceptorWithError tests a situation that streamer returns an error.
+func TestStreamClientInterceptorWithError(t *testing.T) {
+	defer goleak.VerifyNone(t)
+
+	clientConn, err := grpc.Dial("fake:connection", grpc.WithInsecure())
+	if err != nil {
+		t.Fatalf("failed to create client connection: %v", err)
+	}
+	defer clientConn.Close()
+
+	// tracer
+	sr := NewSpanRecorder()
+	tp := oteltest.NewTracerProvider(oteltest.WithSpanRecorder(sr))
+	streamCI := StreamClientInterceptor(WithTracerProvider(tp))
+
+	var mockClStr mockClientStream
+	method := "/github.com.serviceName/bar"
+	name := "github.com.serviceName/bar"
+
+	streamClient, err := streamCI(
+		context.Background(),
+		&grpc.StreamDesc{ServerStreams: true},
+		clientConn,
+		method,
+		func(ctx context.Context,
+			desc *grpc.StreamDesc,
+			cc *grpc.ClientConn,
+			method string,
+			opts ...grpc.CallOption) (grpc.ClientStream, error) {
+			mockClStr = mockClientStream{Desc: desc, Ctx: ctx}
+			return mockClStr, errors.New("test")
+		},
+	)
+	require.Error(t, err, "initialize grpc stream client")
+	assert.IsType(t, mockClientStream{}, streamClient)
+
+	span, ok := sr.Get(name)
+	require.True(t, ok, "missing span %s", name)
+
+	expectedAttr := map[label.Key]label.Value{
+		semconv.RPCSystemKey:   label.StringValue("grpc"),
+		GRPCStatusCodeKey:      label.Uint32Value(uint32(grpc_codes.Unknown)),
+		semconv.RPCServiceKey:  label.StringValue("github.com.serviceName"),
+		semconv.RPCMethodKey:   label.StringValue("bar"),
+		semconv.NetPeerIPKey:   label.StringValue("fake"),
+		semconv.NetPeerPortKey: label.StringValue("connection"),
+	}
+	assert.Equal(t, expectedAttr, span.Attributes())
+	assert.Equal(t, codes.Error, span.StatusCode())
 }
 
 func TestServerInterceptorError(t *testing.T) {

@@ -21,6 +21,7 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 ### Fixed
 
 - Added failure message for AWS ECS resource detector for better debugging (#568)
+- Goroutine leak in gRPC StreamClientInterceptor while streamer returns an error. (#581)
 
 ## [0.16.0] - 2021-01-13
 
