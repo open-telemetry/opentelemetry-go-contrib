@@ -27,13 +27,14 @@ import (
 	"github.com/golang/snappy"
 	"github.com/prometheus/prometheus/prompb"
 
-	"go.opentelemetry.io/otel"
 	"go.opentelemetry.io/otel/label"
 	apimetric "go.opentelemetry.io/otel/metric"
+	"go.opentelemetry.io/otel/metric/global"
 	"go.opentelemetry.io/otel/metric/number"
 	"go.opentelemetry.io/otel/sdk/export/metric"
 	export "go.opentelemetry.io/otel/sdk/export/metric"
 	"go.opentelemetry.io/otel/sdk/export/metric/aggregation"
+	"go.opentelemetry.io/otel/sdk/metric/aggregator/histogram"
 	controller "go.opentelemetry.io/otel/sdk/metric/controller/basic"
 	processor "go.opentelemetry.io/otel/sdk/metric/processor/basic"
 	"go.opentelemetry.io/otel/sdk/metric/selector/simple"
@@ -96,7 +97,9 @@ func NewExportPipeline(config Config, options ...controller.Option) (*controller
 
 	pusher := controller.New(
 		processor.New(
-			simple.NewWithHistogramDistribution(config.HistogramBoundaries),
+			simple.NewWithHistogramDistribution(
+				histogram.WithExplicitBoundaries(config.HistogramBoundaries),
+			),
 			exporter,
 		),
 		append(options, controller.WithPusher(exporter))...,
@@ -111,7 +114,7 @@ func InstallNewPipeline(config Config, options ...controller.Option) (*controlle
 	if err != nil {
 		return nil, err
 	}
-	otel.SetMeterProvider(pusher.MeterProvider())
+	global.SetMeterProvider(pusher.MeterProvider())
 	return pusher, nil
 }
 
