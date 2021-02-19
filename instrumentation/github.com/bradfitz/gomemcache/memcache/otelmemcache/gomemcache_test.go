@@ -26,7 +26,6 @@ import (
 	"go.opentelemetry.io/otel/codes"
 	"go.opentelemetry.io/otel/label"
 	"go.opentelemetry.io/otel/oteltest"
-	"go.opentelemetry.io/otel/semconv"
 	oteltrace "go.opentelemetry.io/otel/trace"
 )
 
@@ -41,10 +40,7 @@ func TestNewClientWithTracing(t *testing.T) {
 	)
 
 	assert.NotNil(t, c.Client)
-	assert.NotNil(t, c.cfg)
-	assert.NotNil(t, c.cfg.tracerProvider)
 	assert.NotNil(t, c.tracer)
-	assert.Equal(t, defaultServiceName, c.cfg.serviceName)
 }
 
 func TestOperation(t *testing.T) {
@@ -61,10 +57,9 @@ func TestOperation(t *testing.T) {
 	assert.Len(t, spans, 1)
 	assert.Equal(t, oteltrace.SpanKindClient, spans[0].SpanKind())
 	assert.Equal(t, string(operationAdd), spans[0].Name())
-	assert.Len(t, spans[0].Attributes(), 4)
+	assert.Len(t, spans[0].Attributes(), 3)
 
 	expectedLabelMap := map[label.Key]label.Value{
-		semconv.ServiceNameKey:                              semconv.ServiceNameKey.String(defaultServiceName).Value,
 		memcacheDBSystem().Key:                              memcacheDBSystem().Value,
 		memcacheDBOperation(operationAdd).Key:               memcacheDBOperation(operationAdd).Value,
 		label.Key(memcacheDBItemKeyName).String(mi.Key).Key: label.Key(memcacheDBItemKeyName).String(mi.Key).Value,
@@ -83,10 +78,9 @@ func TestOperationWithCacheMissError(t *testing.T) {
 	assert.Len(t, spans, 1)
 	assert.Equal(t, oteltrace.SpanKindClient, spans[0].SpanKind())
 	assert.Equal(t, string(operationGet), spans[0].Name())
-	assert.Len(t, spans[0].Attributes(), 4)
+	assert.Len(t, spans[0].Attributes(), 3)
 
 	expectedLabelMap := map[label.Key]label.Value{
-		semconv.ServiceNameKey:                           semconv.ServiceNameKey.String(defaultServiceName).Value,
 		memcacheDBSystem().Key:                           memcacheDBSystem().Value,
 		memcacheDBOperation(operationGet).Key:            memcacheDBOperation(operationGet).Value,
 		label.Key(memcacheDBItemKeyName).String(key).Key: label.Key(memcacheDBItemKeyName).String(key).Value,

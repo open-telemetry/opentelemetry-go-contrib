@@ -21,20 +21,18 @@ import (
 
 	"go.opentelemetry.io/contrib"
 	"go.opentelemetry.io/otel"
+	"go.opentelemetry.io/otel/codes"
 	"go.opentelemetry.io/otel/label"
-	"go.opentelemetry.io/otel/semconv"
 	oteltrace "go.opentelemetry.io/otel/trace"
 )
 
 const (
-	defaultTracerName  = "go.opentelemetry.io/contrib/instrumentation/github.com/bradfitz/gomemcache/memcache/otelmemcache"
-	defaultServiceName = "memcached"
+	tracerName = "go.opentelemetry.io/contrib/instrumentation/github.com/bradfitz/gomemcache/memcache/otelmemcache"
 )
 
 // Client is a wrapper around *memcache.Client.
 type Client struct {
 	*memcache.Client
-	cfg    *config
 	tracer oteltrace.Tracer
 	ctx    context.Context
 }
@@ -54,19 +52,14 @@ func NewClientWithTracing(client *memcache.Client, opts ...Option) *Client {
 		o(cfg)
 	}
 
-	if cfg.serviceName == "" {
-		cfg.serviceName = defaultServiceName
-	}
-
 	if cfg.tracerProvider == nil {
 		cfg.tracerProvider = otel.GetTracerProvider()
 	}
 
 	return &Client{
 		client,
-		cfg,
 		cfg.tracerProvider.Tracer(
-			defaultTracerName,
+			tracerName,
 			oteltrace.WithInstrumentationVersion(contrib.SemVersion()),
 		),
 		context.Background(),
@@ -77,7 +70,6 @@ func NewClientWithTracing(client *memcache.Client, opts ...Option) *Client {
 // of the operation name and item key(s) (if available)
 func (c *Client) attrsByOperationAndItemKey(operation operation, key ...string) []label.KeyValue {
 	labels := []label.KeyValue{
-		semconv.ServiceNameKey.String(c.cfg.serviceName),
 		memcacheDBSystem(),
 		memcacheDBOperation(operation),
 	}
@@ -111,7 +103,7 @@ func (c *Client) startSpan(operationName operation, itemKey ...string) oteltrace
 // Ends span and, if applicable, sets error status
 func endSpan(s oteltrace.Span, err error) {
 	if err != nil {
-		s.SetStatus(memcacheErrToStatusCode(err), err.Error())
+		s.SetStatus(codes.Error, err.Error())
 	}
 	s.End()
 }
@@ -121,7 +113,6 @@ func (c *Client) WithContext(ctx context.Context) *Client {
 	cc := c.Client
 	return &Client{
 		Client: cc,
-		cfg:    c.cfg,
 		tracer: c.tracer,
 		ctx:    ctx,
 	}

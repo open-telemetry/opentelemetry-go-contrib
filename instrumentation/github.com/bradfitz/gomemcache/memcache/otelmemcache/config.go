@@ -19,7 +19,6 @@ import (
 )
 
 type config struct {
-	serviceName    string
 	tracerProvider oteltrace.TracerProvider
 }
 
@@ -31,12 +30,5 @@ type Option func(*config)
 func WithTracerProvider(provider oteltrace.TracerProvider) Option {
 	return func(cfg *config) {
 		cfg.tracerProvider = provider
-	}
-}
-
-// WithServiceName sets the service name.
-func WithServiceName(serviceName string) Option {
-	return func(cfg *config) {
-		cfg.serviceName = serviceName
 	}
 }
