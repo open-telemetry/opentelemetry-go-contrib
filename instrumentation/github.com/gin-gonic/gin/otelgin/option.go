@@ -47,7 +47,7 @@ func WithTracerProvider(provider oteltrace.TracerProvider) Option {
 	}
 }
 
-// WithFilter add a filter func which returns true to skip recording the tracing.
+// WithFilter add a filter func which returns false to skip recording the tracing.
 // When multiple filters are added, anyone of them returns false will result the skip
 func WithFilter(filters ...Filter) Option {
 	return func(cfg *config) {
