@@ -8,6 +8,10 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 
 ## [Unreleased]
 
+### Added
+
+- Tracing instrumentation for database/sql. (#505)
+
 ### Fixed
 
 - `otelmemcache` no longer sets span status to OK instead of leaving it unset. (#477)
@@ -21,7 +25,6 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 ### Added
 
 - Add `ot-tracer` propagator (#562)
-- Tracing instrumentation for database/sql. (#505)
 
 ### Changed
 
