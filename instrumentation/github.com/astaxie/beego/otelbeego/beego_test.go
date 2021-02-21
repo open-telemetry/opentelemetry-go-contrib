@@ -29,6 +29,7 @@ import (
 	"go.opentelemetry.io/contrib/propagators/b3"
 	"go.opentelemetry.io/otel"
 	"go.opentelemetry.io/otel/label"
+	"go.opentelemetry.io/otel/metric/global"
 	"go.opentelemetry.io/otel/oteltest"
 	"go.opentelemetry.io/otel/propagation"
 	"go.opentelemetry.io/otel/semconv"
@@ -186,7 +187,7 @@ func TestWithFilters(t *testing.T) {
 func TestSpanFromContextDefaultProvider(t *testing.T) {
 	defer replaceBeego()
 	_, provider := oteltest.NewMeterProvider()
-	otel.SetMeterProvider(provider)
+	global.SetMeterProvider(provider)
 	otel.SetTracerProvider(oteltest.NewTracerProvider())
 
 	router := beego.NewControllerRegister()

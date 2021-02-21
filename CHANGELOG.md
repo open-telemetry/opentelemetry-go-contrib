@@ -8,6 +8,16 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 
 ## [Unreleased]
 
+### Fixed
+
+- `otelmemcache` no longer sets span status to OK instead of leaving it unset. (#477)
+
+### Removed
+
+- Remove service name from `otelmemcache` configuration and span attributes. (#477)
+
+## [0.17.0] - 2021-02-15
+
 ### Added
 
 - Add `ot-tracer` propagator (#562)
@@ -20,6 +30,7 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 ### Fixed
 
 - Added failure message for AWS ECS resource detector for better debugging (#568)
+- Goroutine leak in gRPC StreamClientInterceptor while streamer returns an error. (#581)
 
 ## [0.16.0] - 2021-01-13
 
@@ -271,7 +282,8 @@ First official tagged release of `contrib` repository.
 - Prefix support for dogstatsd (#34)
 - Update Go Runtime package to use batch observer (#44)
 
-[Unreleased]: https://github.com/open-telemetry/opentelemetry-go-contrib/compare/v0.16.0...HEAD
+[Unreleased]: https://github.com/open-telemetry/opentelemetry-go-contrib/compare/v0.17.0...HEAD
+[0.17.0]: https://github.com/open-telemetry/opentelemetry-go-contrib/releases/tag/v0.17.0
 [0.16.0]: https://github.com/open-telemetry/opentelemetry-go-contrib/releases/tag/v0.16.0
 [0.15.1]: https://github.com/open-telemetry/opentelemetry-go-contrib/releases/tag/v0.15.1
 [0.15.0]: https://github.com/open-telemetry/opentelemetry-go-contrib/releases/tag/v0.15.0

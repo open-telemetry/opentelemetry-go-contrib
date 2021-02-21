@@ -30,8 +30,8 @@ import (
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 
-	"go.opentelemetry.io/otel"
 	"go.opentelemetry.io/otel/label"
+	"go.opentelemetry.io/otel/metric/global"
 	"go.opentelemetry.io/otel/sdk/export/metric"
 	export "go.opentelemetry.io/otel/sdk/export/metric"
 	"go.opentelemetry.io/otel/sdk/export/metric/aggregation"
@@ -189,7 +189,7 @@ func TestInstallNewPipeline(t *testing.T) {
 	if err != nil {
 		t.Fatalf("Failed to create install pipeline with error %v", err)
 	}
-	if otel.GetMeterProvider() != pusher.MeterProvider() {
+	if global.GetMeterProvider() != pusher.MeterProvider() {
 		t.Fatalf("Failed to register push Controller provider globally")
 	}
 }

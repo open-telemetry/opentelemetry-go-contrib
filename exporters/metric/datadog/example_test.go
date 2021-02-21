@@ -25,9 +25,9 @@ import (
 	"github.com/DataDog/datadog-go/statsd"
 
 	"go.opentelemetry.io/contrib/exporters/metric/datadog"
-	"go.opentelemetry.io/otel"
 	"go.opentelemetry.io/otel/label"
 	"go.opentelemetry.io/otel/metric"
+	"go.opentelemetry.io/otel/metric/global"
 	controller "go.opentelemetry.io/otel/sdk/metric/controller/basic"
 	"go.opentelemetry.io/otel/sdk/metric/processor/basic"
 	"go.opentelemetry.io/otel/sdk/metric/selector/simple"
@@ -64,8 +64,8 @@ func ExampleExporter() {
 			panic(err)
 		}
 		defer func() { handleErr(pusher.Stop(ctx)) }()
-		otel.SetMeterProvider(pusher.MeterProvider())
-		meter := otel.Meter("marwandist")
+		global.SetMeterProvider(pusher.MeterProvider())
+		meter := global.Meter("marwandist")
 		m := metric.Must(meter).NewInt64ValueRecorder("myrecorder")
 		meter.RecordBatch(context.Background(), []label.KeyValue{label.Int("l", 1)},
 			m.Measurement(1), m.Measurement(50), m.Measurement(100))
