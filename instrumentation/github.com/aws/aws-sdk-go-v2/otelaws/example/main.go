@@ -34,7 +34,7 @@ func initTracer() {
 	var err error
 	exp, err := stdout.NewExporter(stdout.WithPrettyPrint())
 	if err != nil {
-		fmt.Println("failed to initialize stdout exporter %+v\n", err)
+		fmt.Printf("failed to initialize stdout exporter %v\n", err)
 		return
 	}
 	bsp := sdktrace.NewBatchSpanProcessor(exp)
