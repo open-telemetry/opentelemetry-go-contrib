@@ -85,7 +85,10 @@ func TestAppendOtelMiddlewares(t *testing.T) {
 		server := httptest.NewServer(http.HandlerFunc(
 			func(w http.ResponseWriter, r *http.Request) {
 				w.WriteHeader(c.responseStatus)
-				w.Write(c.responseBody)
+				_, err := w.Write(c.responseBody)
+				if err != nil {
+					t.Fatal(err)
+				}
 			}))
 		defer server.Close()
 
