@@ -71,14 +71,14 @@ func AppendOtelMiddlewares(apiOptions *[]func(*middleware.Stack) error, opts ...
 		cfg.Propagators = otel.GetTextMapPropagator()
 	}
 
-	awsTracer :=  cfg.TracerProvider.Tracer(
+	awsTracer := cfg.TracerProvider.Tracer(
 		instrumentationName,
 		trace.WithInstrumentationVersion(contrib.SemVersion()),
 	)
 
 	*apiOptions = append(*apiOptions,
 		func(stack *middleware.Stack) error {
-			return stack.Initialize.Add(middleware.InitializeMiddlewareFunc("OtelSpanCreator", func (
+			return stack.Initialize.Add(middleware.InitializeMiddlewareFunc("OtelSpanCreator", func(
 				ctx context.Context, in middleware.InitializeInput, next middleware.InitializeHandler) (
 				out middleware.InitializeOutput, metadata middleware.Metadata, err error) {
 
@@ -104,9 +104,9 @@ func AppendOtelMiddlewares(apiOptions *[]func(*middleware.Stack) error, opts ...
 				middleware.After)
 		},
 		func(stack *middleware.Stack) error {
-			return stack.Deserialize.Add(middleware.DeserializeMiddlewareFunc("OtelSpanDecorator", func (
+			return stack.Deserialize.Add(middleware.DeserializeMiddlewareFunc("OtelSpanDecorator", func(
 				ctx context.Context, in middleware.DeserializeInput, next middleware.DeserializeHandler) (
-				out middleware.DeserializeOutput, metadata middleware.Metadata, err error, ) {
+				out middleware.DeserializeOutput, metadata middleware.Metadata, err error) {
 				out, metadata, err = next.HandleDeserialize(ctx, in)
 				resp, ok := out.RawResponse.(*smithyhttp.Response)
 				if !ok {
@@ -126,5 +126,5 @@ func AppendOtelMiddlewares(apiOptions *[]func(*middleware.Stack) error, opts ...
 				return out, metadata, err
 			}),
 				middleware.Before)
-		},)
+		})
 }

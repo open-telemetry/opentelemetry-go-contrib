@@ -46,8 +46,8 @@ func TestAppendOtelMiddlewares(t *testing.T) {
 		  </Messages>
 		  <RequestId>b25f48e8-84fd-11e6-80d9-574e0c4664cb</RequestId>
 		</InvalidChangeBatch>`),
-			expectedError:     "Error",
-			expectedRequestID: "b25f48e8-84fd-11e6-80d9-574e0c4664cb",
+			expectedError:      "Error",
+			expectedRequestID:  "b25f48e8-84fd-11e6-80d9-574e0c4664cb",
 			expectedStatusCode: 500,
 		},
 
@@ -63,8 +63,8 @@ func TestAppendOtelMiddlewares(t *testing.T) {
 		  <RequestId>1234567890A</RequestId>
 		</ErrorResponse>
 		`),
-			expectedError:     "Error",
-			expectedRequestID: "1234567890A",
+			expectedError:      "Error",
+			expectedRequestID:  "1234567890A",
 			expectedStatusCode: 500,
 		},
 
@@ -114,8 +114,10 @@ func TestAppendOtelMiddlewares(t *testing.T) {
 					Comment: aws.String("mock"),
 				},
 				HostedZoneId: aws.String("zone"),
-			}, func(options *route53.Options) {AppendOtelMiddlewares(
-				&options.APIOptions, WithTracerProvider(provider), WithPropagators(b3.B3{}))})
+			}, func(options *route53.Options) {
+				AppendOtelMiddlewares(
+					&options.APIOptions, WithTracerProvider(provider), WithPropagators(b3.B3{}))
+			})
 
 			spans := sr.Completed()
 			assert.Len(t, spans, 1)
@@ -125,11 +127,11 @@ func TestAppendOtelMiddlewares(t *testing.T) {
 				t.Fatalf("Span Kind is not SpanKindClient.")
 			}
 
-			if  e, a := c.expectedError, span.StatusCode().String(); err != nil && !strings.EqualFold(e, a) {
+			if e, a := c.expectedError, span.StatusCode().String(); err != nil && !strings.EqualFold(e, a) {
 				t.Fatalf("Span Error is missing.")
 			}
 
-			if  e, a := c.expectedStatusCode, span.Attributes()["http.status_code"].AsInt64(); e != int(a) {
+			if e, a := c.expectedStatusCode, span.Attributes()["http.status_code"].AsInt64(); e != int(a) {
 				t.Fatalf("expected status code to be %v, got %v", e, a)
 			}
 
