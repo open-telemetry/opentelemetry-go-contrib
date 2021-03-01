@@ -16,17 +16,19 @@ package otelaws
 
 import (
 	"context"
-	"github.com/aws/aws-sdk-go-v2/aws"
-	"github.com/aws/aws-sdk-go-v2/service/route53"
-	"github.com/aws/aws-sdk-go-v2/service/route53/types"
-	"github.com/stretchr/testify/assert"
-	"go.opentelemetry.io/contrib/propagators/b3"
-	"go.opentelemetry.io/otel/oteltest"
-	"go.opentelemetry.io/otel/trace"
 	"net/http"
 	"net/http/httptest"
 	"strings"
 	"testing"
+
+	"github.com/aws/aws-sdk-go-v2/aws"
+	"github.com/aws/aws-sdk-go-v2/service/route53"
+	"github.com/aws/aws-sdk-go-v2/service/route53/types"
+	"github.com/stretchr/testify/assert"
+
+	"go.opentelemetry.io/contrib/propagators/b3"
+	"go.opentelemetry.io/otel/oteltest"
+	"go.opentelemetry.io/otel/trace"
 )
 
 func TestAppendOtelMiddlewares(t *testing.T) {

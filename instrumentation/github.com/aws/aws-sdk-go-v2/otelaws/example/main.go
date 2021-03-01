@@ -17,10 +17,12 @@ package main
 import (
 	"context"
 	"fmt"
+
 	"github.com/aws/aws-sdk-go-v2/aws"
 	awsConfig "github.com/aws/aws-sdk-go-v2/config"
 	"github.com/aws/aws-sdk-go-v2/service/dynamodb"
 	"github.com/aws/aws-sdk-go-v2/service/s3"
+
 	"go.opentelemetry.io/contrib/instrumentation/github.com/aws/aws-sdk-go-v2/otelaws"
 	"go.opentelemetry.io/otel"
 	"go.opentelemetry.io/otel/exporters/stdout"
@@ -49,7 +51,6 @@ func initTracer() {
 	otel.SetTracerProvider(tp)
 
 }
-
 
 func main() {
 	initTracer()
