@@ -77,7 +77,7 @@ func main() {
 	input := &s3.ListBucketsInput{}
 	result, err := s3Client.ListBuckets(ctx, input)
 	if err != nil {
-		fmt.Println("Got an error retrieving buckets:", err)
+		fmt.Printf("Got an error retrieving buckets, %v", err)
 		return
 	}
 
@@ -92,7 +92,7 @@ func main() {
 		Limit: aws.Int32(5),
 	})
 	if err != nil {
-		fmt.Println("failed to list tables, %+v", err)
+		fmt.Printf("failed to list tables, %v", err)
 		return
 	}
 
