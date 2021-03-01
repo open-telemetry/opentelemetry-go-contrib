@@ -34,7 +34,7 @@ func initTracer() {
 	var err error
 	exp, err := stdout.NewExporter(stdout.WithPrettyPrint())
 	if err != nil {
-		fmt.Println("failed to initialize stdout exporter %v\n", err)
+		fmt.Println("failed to initialize stdout exporter %+v\n", err)
 		return
 	}
 	bsp := sdktrace.NewBatchSpanProcessor(exp)
@@ -92,7 +92,7 @@ func main() {
 		Limit: aws.Int32(5),
 	})
 	if err != nil {
-		fmt.Println("failed to list tables, %v", err)
+		fmt.Println("failed to list tables, %+v", err)
 		return
 	}
 
