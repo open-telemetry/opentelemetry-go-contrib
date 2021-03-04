@@ -58,7 +58,7 @@ func (c ProducerMessageCarrier) Set(key, val string) {
 	})
 }
 
-// Keys returns a list of all key identifiers in the carrier.
+// Keys returns a slice of all key identifiers in the carrier.
 func (c ProducerMessageCarrier) Keys() []string {
 	out := make([]string, len(c.msg.Headers))
 	for i, h := range c.msg.Headers {
@@ -102,7 +102,7 @@ func (c ConsumerMessageCarrier) Set(key, val string) {
 	})
 }
 
-// Keys returns a list of all key identifiers in the carrier.
+// Keys returns a slice of all key identifiers in the carrier.
 func (c ConsumerMessageCarrier) Keys() []string {
 	out := make([]string, len(c.msg.Headers))
 	for i, h := range c.msg.Headers {

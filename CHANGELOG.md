@@ -13,7 +13,7 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 ### Fixed
 
 - `otelmemcache` no longer sets span status to OK instead of leaving it unset. (#477)
-- Fix goroutine leak in gRPC `StreamClientInterceptor` (#581)
+- Fix goroutine leak in gRPC `StreamClientInterceptor`. (#581)
 
 ### Removed
 
