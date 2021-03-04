@@ -29,7 +29,7 @@ import (
 
 	b3prop "go.opentelemetry.io/contrib/propagators/b3"
 	"go.opentelemetry.io/otel"
-	"go.opentelemetry.io/otel/label"
+	"go.opentelemetry.io/otel/attribute"
 	"go.opentelemetry.io/otel/oteltest"
 	"go.opentelemetry.io/otel/propagation"
 	oteltrace "go.opentelemetry.io/otel/trace"
@@ -80,7 +80,7 @@ func TestChildSpanFromCustomTracer(t *testing.T) {
 }
 
 func TestChildSpanNames(t *testing.T) {
-	sr := new(oteltest.StandardSpanRecorder)
+	sr := new(oteltest.SpanRecorder)
 	provider := oteltest.NewTracerProvider(oteltest.WithSpanRecorder(sr))
 
 	router := mux.NewRouter()
@@ -100,11 +100,11 @@ func TestChildSpanNames(t *testing.T) {
 	span := spans[0]
 	assert.Equal(t, "/user/{id:[0-9]+}", span.Name())
 	assert.Equal(t, oteltrace.SpanKindServer, span.SpanKind())
-	assert.Equal(t, label.StringValue("foobar"), span.Attributes()["http.server_name"])
-	assert.Equal(t, label.IntValue(http.StatusOK), span.Attributes()["http.status_code"])
-	assert.Equal(t, label.StringValue("GET"), span.Attributes()["http.method"])
-	assert.Equal(t, label.StringValue("/user/123"), span.Attributes()["http.target"])
-	assert.Equal(t, label.StringValue("/user/{id:[0-9]+}"), span.Attributes()["http.route"])
+	assert.Equal(t, attribute.StringValue("foobar"), span.Attributes()["http.server_name"])
+	assert.Equal(t, attribute.IntValue(http.StatusOK), span.Attributes()["http.status_code"])
+	assert.Equal(t, attribute.StringValue("GET"), span.Attributes()["http.method"])
+	assert.Equal(t, attribute.StringValue("/user/123"), span.Attributes()["http.target"])
+	assert.Equal(t, attribute.StringValue("/user/{id:[0-9]+}"), span.Attributes()["http.route"])
 
 	r = httptest.NewRequest("GET", "/book/foo", nil)
 	w = httptest.NewRecorder()
@@ -114,11 +114,11 @@ func TestChildSpanNames(t *testing.T) {
 	span = spans[1]
 	assert.Equal(t, "/book/{title}", span.Name())
 	assert.Equal(t, oteltrace.SpanKindServer, span.SpanKind())
-	assert.Equal(t, label.StringValue("foobar"), span.Attributes()["http.server_name"])
-	assert.Equal(t, label.IntValue(http.StatusOK), span.Attributes()["http.status_code"])
-	assert.Equal(t, label.StringValue("GET"), span.Attributes()["http.method"])
-	assert.Equal(t, label.StringValue("/book/foo"), span.Attributes()["http.target"])
-	assert.Equal(t, label.StringValue("/book/{title}"), span.Attributes()["http.route"])
+	assert.Equal(t, attribute.StringValue("foobar"), span.Attributes()["http.server_name"])
+	assert.Equal(t, attribute.IntValue(http.StatusOK), span.Attributes()["http.status_code"])
+	assert.Equal(t, attribute.StringValue("GET"), span.Attributes()["http.method"])
+	assert.Equal(t, attribute.StringValue("/book/foo"), span.Attributes()["http.target"])
+	assert.Equal(t, attribute.StringValue("/book/{title}"), span.Attributes()["http.route"])
 }
 
 func TestGetSpanNotInstrumented(t *testing.T) {
@@ -137,7 +137,7 @@ func TestGetSpanNotInstrumented(t *testing.T) {
 }
 
 func TestPropagationWithGlobalPropagators(t *testing.T) {
-	sr := new(oteltest.StandardSpanRecorder)
+	sr := new(oteltest.SpanRecorder)
 	provider := oteltest.NewTracerProvider(oteltest.WithSpanRecorder(sr))
 	otel.SetTextMapPropagator(propagation.TraceContext{})
 
@@ -145,7 +145,7 @@ func TestPropagationWithGlobalPropagators(t *testing.T) {
 	w := httptest.NewRecorder()
 
 	ctx, pspan := provider.Tracer(tracerName).Start(context.Background(), "test")
-	otel.GetTextMapPropagator().Inject(ctx, r.Header)
+	otel.GetTextMapPropagator().Inject(ctx, propagation.HeaderCarrier(r.Header))
 
 	router := mux.NewRouter()
 	router.Use(Middleware("foobar", WithTracerProvider(provider)))
@@ -163,7 +163,7 @@ func TestPropagationWithGlobalPropagators(t *testing.T) {
 }
 
 func TestPropagationWithCustomPropagators(t *testing.T) {
-	sr := new(oteltest.StandardSpanRecorder)
+	sr := new(oteltest.SpanRecorder)
 	provider := oteltest.NewTracerProvider(oteltest.WithSpanRecorder(sr))
 
 	b3 := b3prop.B3{}
@@ -172,7 +172,7 @@ func TestPropagationWithCustomPropagators(t *testing.T) {
 	w := httptest.NewRecorder()
 
 	ctx, pspan := provider.Tracer(tracerName).Start(context.Background(), "test")
-	b3.Inject(ctx, r.Header)
+	b3.Inject(ctx, propagation.HeaderCarrier(r.Header))
 
 	router := mux.NewRouter()
 	router.Use(Middleware("foobar", WithTracerProvider(provider), WithPropagators(b3)))

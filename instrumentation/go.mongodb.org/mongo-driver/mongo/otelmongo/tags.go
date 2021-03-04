@@ -14,43 +14,43 @@
 
 package otelmongo
 
-import "go.opentelemetry.io/otel/label"
+import "go.opentelemetry.io/otel/attribute"
 
 const (
-	TargetHostKey  = label.Key("out.host")
-	TargetPortKey  = label.Key("out.port")
-	ServiceNameKey = label.Key("service.name")
-	DBOperationKey = label.Key("db.operation")
-	ErrorKey       = label.Key("error")
-	ErrorMsgKey    = label.Key("error.msg")
+	TargetHostKey  = attribute.Key("out.host")
+	TargetPortKey  = attribute.Key("out.port")
+	ServiceNameKey = attribute.Key("service.name")
+	DBOperationKey = attribute.Key("db.operation")
+	ErrorKey       = attribute.Key("error")
+	ErrorMsgKey    = attribute.Key("error.msg")
 )
 
 // TargetHost sets the target host address.
-func TargetHost(targetHost string) label.KeyValue {
+func TargetHost(targetHost string) attribute.KeyValue {
 	return TargetHostKey.String(targetHost)
 }
 
 // TargetPort sets the target host port.
-func TargetPort(targetPort string) label.KeyValue {
+func TargetPort(targetPort string) attribute.KeyValue {
 	return TargetPortKey.String(targetPort)
 }
 
 // ServiceName defines the Service name for this Span.
-func ServiceName(serviceName string) label.KeyValue {
+func ServiceName(serviceName string) attribute.KeyValue {
 	return ServiceNameKey.String(serviceName)
 }
 
 // DBOperation defines the name of the operation.
-func DBOperation(operation string) label.KeyValue {
+func DBOperation(operation string) attribute.KeyValue {
 	return DBOperationKey.String(operation)
 }
 
 // Error specifies whether an error occurred.
-func Error(err bool) label.KeyValue {
+func Error(err bool) attribute.KeyValue {
 	return ErrorKey.Bool(err)
 }
 
 // ErrorMsg specifies the error message.
-func ErrorMsg(errorMsg string) label.KeyValue {
+func ErrorMsg(errorMsg string) attribute.KeyValue {
 	return ErrorMsgKey.String(errorMsg)
 }

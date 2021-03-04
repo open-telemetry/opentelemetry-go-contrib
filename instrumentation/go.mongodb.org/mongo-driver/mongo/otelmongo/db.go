@@ -14,43 +14,43 @@
 
 package otelmongo
 
-import "go.opentelemetry.io/otel/label"
+import "go.opentelemetry.io/otel/attribute"
 
 const (
-	DBApplicationKey = label.Key("db.application")
-	DBNameKey        = label.Key("db.name")
-	DBSystemKey      = label.Key("db.system")
-	DBInstanceKey    = label.Key("db.instance")
-	DBUserKey        = label.Key("db.user")
-	DBStatementKey   = label.Key("db.statement")
+	DBApplicationKey = attribute.Key("db.application")
+	DBNameKey        = attribute.Key("db.name")
+	DBSystemKey      = attribute.Key("db.system")
+	DBInstanceKey    = attribute.Key("db.instance")
+	DBUserKey        = attribute.Key("db.user")
+	DBStatementKey   = attribute.Key("db.statement")
 )
 
 // DBApplication indicates the application using the database.
-func DBApplication(dbApplication string) label.KeyValue {
+func DBApplication(dbApplication string) attribute.KeyValue {
 	return DBApplicationKey.String(dbApplication)
 }
 
 // DBName indicates the database name.
-func DBName(dbName string) label.KeyValue {
+func DBName(dbName string) attribute.KeyValue {
 	return DBNameKey.String(dbName)
 }
 
 // DBSystem indicates the system of Database.
-func DBSystem(dbType string) label.KeyValue {
+func DBSystem(dbType string) attribute.KeyValue {
 	return DBSystemKey.String(dbType)
 }
 
 // DBInstance indicates the instance name of Database.
-func DBInstance(dbInstance string) label.KeyValue {
+func DBInstance(dbInstance string) attribute.KeyValue {
 	return DBInstanceKey.String(dbInstance)
 }
 
 // DBUser indicates the user name of Database, e.g. "readonly_user" or "reporting_user".
-func DBUser(dbUser string) label.KeyValue {
+func DBUser(dbUser string) attribute.KeyValue {
 	return DBUserKey.String(dbUser)
 }
 
 // DBStatement records a database statement for the given database type.
-func DBStatement(dbStatement string) label.KeyValue {
+func DBStatement(dbStatement string) attribute.KeyValue {
 	return DBStatementKey.String(dbStatement)
 }

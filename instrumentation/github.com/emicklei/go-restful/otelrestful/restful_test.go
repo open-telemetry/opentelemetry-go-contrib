@@ -27,7 +27,7 @@ import (
 	"go.opentelemetry.io/contrib/instrumentation/github.com/emicklei/go-restful/otelrestful"
 	b3prop "go.opentelemetry.io/contrib/propagators/b3"
 	"go.opentelemetry.io/otel"
-	otelkv "go.opentelemetry.io/otel/label"
+	otelkv "go.opentelemetry.io/otel/attribute"
 	"go.opentelemetry.io/otel/oteltest"
 	"go.opentelemetry.io/otel/propagation"
 	oteltrace "go.opentelemetry.io/otel/trace"
@@ -89,7 +89,7 @@ func TestChildSpanFromCustomTracer(t *testing.T) {
 }
 
 func TestChildSpanNames(t *testing.T) {
-	sr := new(oteltest.StandardSpanRecorder)
+	sr := new(oteltest.SpanRecorder)
 	provider := oteltest.NewTracerProvider(oteltest.WithSpanRecorder(sr))
 
 	handlerFunc := func(req *restful.Request, resp *restful.Response) {
@@ -162,7 +162,7 @@ func TestPropagationWithGlobalPropagators(t *testing.T) {
 	w := httptest.NewRecorder()
 
 	ctx, pspan := provider.Tracer(tracerName).Start(context.Background(), "test")
-	otel.GetTextMapPropagator().Inject(ctx, r.Header)
+	otel.GetTextMapPropagator().Inject(ctx, propagation.HeaderCarrier(r.Header))
 
 	handlerFunc := func(req *restful.Request, resp *restful.Response) {
 		span := oteltrace.SpanFromContext(req.Request.Context())
@@ -191,7 +191,7 @@ func TestPropagationWithCustomPropagators(t *testing.T) {
 	w := httptest.NewRecorder()
 
 	ctx, pspan := provider.Tracer(tracerName).Start(context.Background(), "test")
-	b3.Inject(ctx, r.Header)
+	b3.Inject(ctx, propagation.HeaderCarrier(r.Header))
 
 	handlerFunc := func(req *restful.Request, resp *restful.Response) {
 		span := oteltrace.SpanFromContext(req.Request.Context())
@@ -214,7 +214,7 @@ func TestPropagationWithCustomPropagators(t *testing.T) {
 }
 
 func TestMultiFilters(t *testing.T) {
-	sr := new(oteltest.StandardSpanRecorder)
+	sr := new(oteltest.SpanRecorder)
 	provider := oteltest.NewTracerProvider(oteltest.WithSpanRecorder(sr))
 
 	wrappedFunc := func(tracerName string) restful.RouteFunction {

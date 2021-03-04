@@ -27,7 +27,7 @@ import (
 	"github.com/golang/snappy"
 	"github.com/prometheus/prometheus/prompb"
 
-	"go.opentelemetry.io/otel/label"
+	"go.opentelemetry.io/otel/attribute"
 	apimetric "go.opentelemetry.io/otel/metric"
 	"go.opentelemetry.io/otel/metric/global"
 	"go.opentelemetry.io/otel/metric/number"
@@ -177,18 +177,18 @@ func (e *Exporter) ConvertToTimeSeries(checkpointSet export.CheckpointSet) ([]*p
 	return timeSeries, nil
 }
 
-// createTimeSeries is a helper function to create a timeseries from a value and labels
-func createTimeSeries(record metric.Record, value number.Number, valueNumberKind number.Kind, extraLabels ...label.KeyValue) *prompb.TimeSeries {
+// createTimeSeries is a helper function to create a timeseries from a value and attributes
+func createTimeSeries(record metric.Record, value number.Number, valueNumberKind number.Kind, extraAttributes ...attribute.KeyValue) *prompb.TimeSeries {
 	sample := prompb.Sample{
 		Value:     value.CoerceToFloat64(valueNumberKind),
 		Timestamp: int64(time.Nanosecond) * record.EndTime().UnixNano() / int64(time.Millisecond),
 	}
 
-	labels := createLabelSet(record, extraLabels...)
+	attributes := createLabelSet(record, extraAttributes...)
 
 	return &prompb.TimeSeries{
 		Samples: []prompb.Sample{sample},
-		Labels:  labels,
+		Labels:  attributes,
 	}
 }
 
@@ -200,11 +200,11 @@ func convertFromSum(record metric.Record, sum aggregation.Sum) (*prompb.TimeSeri
 		return nil, err
 	}
 
-	// Create TimeSeries. Note that Cortex requires the name label to be in the format
+	// Create TimeSeries. Note that Cortex requires the name attribute to be in the format
 	// "__name__". This is the case for all time series created by this exporter.
 	name := sanitize(record.Descriptor().Name())
 	numberKind := record.Descriptor().NumberKind()
-	tSeries := createTimeSeries(record, value, numberKind, label.String("__name__", name))
+	tSeries := createTimeSeries(record, value, numberKind, attribute.String("__name__", name))
 
 	return tSeries, nil
 }
@@ -220,7 +220,7 @@ func convertFromLastValue(record metric.Record, lastValue aggregation.LastValue)
 	// Create TimeSeries
 	name := sanitize(record.Descriptor().Name())
 	numberKind := record.Descriptor().NumberKind()
-	tSeries := createTimeSeries(record, value, numberKind, label.String("__name__", name))
+	tSeries := createTimeSeries(record, value, numberKind, attribute.String("__name__", name))
 
 	return tSeries, nil
 }
@@ -235,7 +235,7 @@ func convertFromMinMaxSumCount(record metric.Record, minMaxSumCount aggregation.
 		return nil, err
 	}
 	name := sanitize(record.Descriptor().Name() + "_min")
-	minTimeSeries := createTimeSeries(record, min, numberKind, label.String("__name__", name))
+	minTimeSeries := createTimeSeries(record, min, numberKind, attribute.String("__name__", name))
 
 	// Convert Max
 	max, err := minMaxSumCount.Max()
@@ -243,7 +243,7 @@ func convertFromMinMaxSumCount(record metric.Record, minMaxSumCount aggregation.
 		return nil, err
 	}
 	name = sanitize(record.Descriptor().Name() + "_max")
-	maxTimeSeries := createTimeSeries(record, max, numberKind, label.String("__name__", name))
+	maxTimeSeries := createTimeSeries(record, max, numberKind, attribute.String("__name__", name))
 
 	// Convert Count
 	count, err := minMaxSumCount.Count()
@@ -251,7 +251,7 @@ func convertFromMinMaxSumCount(record metric.Record, minMaxSumCount aggregation.
 		return nil, err
 	}
 	name = sanitize(record.Descriptor().Name() + "_count")
-	countTimeSeries := createTimeSeries(record, number.NewInt64Number(int64(count)), number.Int64Kind, label.String("__name__", name))
+	countTimeSeries := createTimeSeries(record, number.NewInt64Number(int64(count)), number.Int64Kind, attribute.String("__name__", name))
 
 	// Return all timeSeries
 	tSeries := []*prompb.TimeSeries{
@@ -272,7 +272,7 @@ func convertFromHistogram(record metric.Record, histogram aggregation.Histogram)
 	if err != nil {
 		return nil, err
 	}
-	sumTimeSeries := createTimeSeries(record, sum, numberKind, label.String("__name__", metricName+"_sum"))
+	sumTimeSeries := createTimeSeries(record, sum, numberKind, attribute.String("__name__", metricName+"_sum"))
 	timeSeries = append(timeSeries, sumTimeSeries)
 
 	// Handle Histogram buckets
@@ -290,11 +290,11 @@ func convertFromHistogram(record metric.Record, histogram aggregation.Histogram)
 		totalCount += float64(buckets.Counts[i])
 		counts[boundary] = totalCount
 
-		// Add upper boundary as a label. e.g. {le="5"}
+		// Add upper boundary as a attribute. e.g. {le="5"}
 		boundaryStr := strconv.FormatFloat(boundary, 'f', -1, 64)
 
 		// Create timeSeries and append
-		boundaryTimeSeries := createTimeSeries(record, number.NewFloat64Number(totalCount), number.Float64Kind, label.String("__name__", metricName), label.String("le", boundaryStr))
+		boundaryTimeSeries := createTimeSeries(record, number.NewFloat64Number(totalCount), number.Float64Kind, attribute.String("__name__", metricName), attribute.String("le", boundaryStr))
 		timeSeries = append(timeSeries, boundaryTimeSeries)
 	}
 
@@ -304,9 +304,9 @@ func convertFromHistogram(record metric.Record, histogram aggregation.Histogram)
 	// Create a timeSeries for the +inf bucket and total count
 	// These are the same and are both required by Prometheus-based backends
 
-	upperBoundTimeSeries := createTimeSeries(record, number.NewFloat64Number(totalCount), number.Float64Kind, label.String("__name__", metricName), label.String("le", "+inf"))
+	upperBoundTimeSeries := createTimeSeries(record, number.NewFloat64Number(totalCount), number.Float64Kind, attribute.String("__name__", metricName), attribute.String("le", "+inf"))
 
-	countTimeSeries := createTimeSeries(record, number.NewFloat64Number(totalCount), number.Float64Kind, label.String("__name__", metricName+"_count"))
+	countTimeSeries := createTimeSeries(record, number.NewFloat64Number(totalCount), number.Float64Kind, attribute.String("__name__", metricName+"_count"))
 
 	timeSeries = append(timeSeries, upperBoundTimeSeries)
 	timeSeries = append(timeSeries, countTimeSeries)
@@ -314,34 +314,34 @@ func convertFromHistogram(record metric.Record, histogram aggregation.Histogram)
 	return timeSeries, nil
 }
 
-// createLabelSet combines labels from a Record, resource, and extra labels to create a
+// createLabelSet combines attributes from a Record, resource, and extra attributes to create a
 // slice of prompb.Label.
-func createLabelSet(record metric.Record, extraLabels ...label.KeyValue) []*prompb.Label {
+func createLabelSet(record metric.Record, extraAttributes ...attribute.KeyValue) []*prompb.Label {
 	// Map ensure no duplicate label names.
 	labelMap := map[string]prompb.Label{}
 
-	// mergeLabels merges Record and Resource labels into a single set, giving precedence
-	// to the record's labels.
-	mi := label.NewMergeIterator(record.Labels(), record.Resource().LabelSet())
+	// mergeAttributes merges Record and Resource attributes into a single set, giving precedence
+	// to the record's attributes.
+	mi := attribute.NewMergeIterator(record.Labels(), record.Resource().LabelSet())
 	for mi.Next() {
-		label := mi.Label()
-		key := string(label.Key)
+		attribute := mi.Label()
+		key := string(attribute.Key)
 		labelMap[key] = prompb.Label{
 			Name:  sanitize(key),
-			Value: label.Value.Emit(),
+			Value: attribute.Value.Emit(),
 		}
 	}
 
-	// Add extra labels created by the exporter like the metric name or labels to
+	// Add extra attributes created by the exporter like the metric name or attributes to
 	// represent histogram buckets.
-	for _, label := range extraLabels {
-		// Ensure label doesn't exist. If it does, notify user that a user created label
+	for _, attribute := range extraAttributes {
+		// Ensure attribute doesn't exist. If it does, notify user that a user created attribute
 		// is being overwritten by a Prometheus reserved label (e.g. 'le' for histograms)
-		key := string(label.Key)
-		value := label.Value.AsString()
+		key := string(attribute.Key)
+		value := attribute.Value.AsString()
 		_, found := labelMap[key]
 		if found {
-			log.Printf("Label %s is overwritten. Check if Prometheus reserved labels are used.\n", key)
+			log.Printf("Attribute %s is overwritten. Check if Prometheus reserved labels are used.\n", key)
 		}
 		labelMap[key] = prompb.Label{
 			Name:  key,

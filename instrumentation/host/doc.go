@@ -19,9 +19,9 @@
 // alternative for processes that want to record the same information
 // without an agent.
 //
-// The metric events produced are listed here with label dimensions.
+// The metric events produced are listed here with attribute dimensions.
 //
-//   Name			Label
+//   Name			Attribute
 // ----------------------------------------------------------------------
 //   process.cpu.time           state=user|system
 //   system.cpu.time            state=user|system|other|idle
