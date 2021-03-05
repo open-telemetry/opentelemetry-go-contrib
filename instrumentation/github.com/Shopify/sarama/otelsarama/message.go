@@ -58,6 +58,15 @@ func (c ProducerMessageCarrier) Set(key, val string) {
 	})
 }
 
+// Keys returns a slice of all key identifiers in the carrier.
+func (c ProducerMessageCarrier) Keys() []string {
+	out := make([]string, len(c.msg.Headers))
+	for i, h := range c.msg.Headers {
+		out[i] = string(h.Key)
+	}
+	return out
+}
+
 // ConsumerMessageCarrier injects and extracts traces from a sarama.ConsumerMessage.
 type ConsumerMessageCarrier struct {
 	msg *sarama.ConsumerMessage
@@ -91,4 +100,13 @@ func (c ConsumerMessageCarrier) Set(key, val string) {
 		Key:   []byte(key),
 		Value: []byte(val),
 	})
+}
+
+// Keys returns a slice of all key identifiers in the carrier.
+func (c ConsumerMessageCarrier) Keys() []string {
+	out := make([]string, len(c.msg.Headers))
+	for i, h := range c.msg.Headers {
+		out[i] = string(h.Key)
+	}
+	return out
 }

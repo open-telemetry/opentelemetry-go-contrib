@@ -27,7 +27,7 @@ import (
 
 	"go.opentelemetry.io/contrib"
 	"go.opentelemetry.io/otel"
-	"go.opentelemetry.io/otel/label"
+	"go.opentelemetry.io/otel/attribute"
 	"go.opentelemetry.io/otel/metric"
 	"go.opentelemetry.io/otel/metric/global"
 	"go.opentelemetry.io/otel/unit"
@@ -67,22 +67,22 @@ func (o metricProviderOption) ApplyHost(c *config) {
 }
 
 var (
-	// Label sets for CPU time measurements.
+	// Attribute sets for CPU time measurements.
 
-	LabelCPUTimeUser   = []label.KeyValue{label.String("state", "user")}
-	LabelCPUTimeSystem = []label.KeyValue{label.String("state", "system")}
-	LabelCPUTimeOther  = []label.KeyValue{label.String("state", "other")}
-	LabelCPUTimeIdle   = []label.KeyValue{label.String("state", "idle")}
+	AttributeCPUTimeUser   = []attribute.KeyValue{attribute.String("state", "user")}
+	AttributeCPUTimeSystem = []attribute.KeyValue{attribute.String("state", "system")}
+	AttributeCPUTimeOther  = []attribute.KeyValue{attribute.String("state", "other")}
+	AttributeCPUTimeIdle   = []attribute.KeyValue{attribute.String("state", "idle")}
 
-	// Label sets used for Memory measurements.
+	// Attribute sets used for Memory measurements.
 
-	LabelMemoryAvailable = []label.KeyValue{label.String("state", "available")}
-	LabelMemoryUsed      = []label.KeyValue{label.String("state", "used")}
+	AttributeMemoryAvailable = []attribute.KeyValue{attribute.String("state", "available")}
+	AttributeMemoryUsed      = []attribute.KeyValue{attribute.String("state", "used")}
 
-	// Label sets used for Network measurements.
+	// Attribute sets used for Network measurements.
 
-	LabelNetworkTransmit = []label.KeyValue{label.String("direction", "transmit")}
-	LabelNetworkReceive  = []label.KeyValue{label.String("direction", "receive")}
+	AttributeNetworkTransmit = []attribute.KeyValue{attribute.String("direction", "transmit")}
+	AttributeNetworkReceive  = []attribute.KeyValue{attribute.String("direction", "receive")}
 )
 
 // newConfig computes a config from a list of Options.
@@ -178,13 +178,13 @@ func (h *host) register() error {
 		}
 
 		// Process CPU time
-		result.Observe(LabelCPUTimeUser, processCPUTime.Observation(processTimes.User))
-		result.Observe(LabelCPUTimeSystem, processCPUTime.Observation(processTimes.System))
+		result.Observe(AttributeCPUTimeUser, processCPUTime.Observation(processTimes.User))
+		result.Observe(AttributeCPUTimeSystem, processCPUTime.Observation(processTimes.System))
 
 		// Host CPU time
 		hostTime := hostTimeSlice[0]
-		result.Observe(LabelCPUTimeUser, hostCPUTime.Observation(hostTime.User))
-		result.Observe(LabelCPUTimeSystem, hostCPUTime.Observation(hostTime.System))
+		result.Observe(AttributeCPUTimeUser, hostCPUTime.Observation(hostTime.User))
+		result.Observe(AttributeCPUTimeSystem, hostCPUTime.Observation(hostTime.System))
 
 		// TODO(#244): "other" is a placeholder for actually dealing
 		// with these states.  Do users actually want this
@@ -201,18 +201,18 @@ func (h *host) register() error {
 			hostTime.Guest +
 			hostTime.GuestNice
 
-		result.Observe(LabelCPUTimeOther, hostCPUTime.Observation(other))
-		result.Observe(LabelCPUTimeIdle, hostCPUTime.Observation(hostTime.Idle))
+		result.Observe(AttributeCPUTimeOther, hostCPUTime.Observation(other))
+		result.Observe(AttributeCPUTimeIdle, hostCPUTime.Observation(hostTime.Idle))
 
 		// Host memory usage
-		result.Observe(LabelMemoryUsed, hostMemoryUsage.Observation(int64(vmStats.Used)))
-		result.Observe(LabelMemoryAvailable, hostMemoryUsage.Observation(int64(vmStats.Available)))
+		result.Observe(AttributeMemoryUsed, hostMemoryUsage.Observation(int64(vmStats.Used)))
+		result.Observe(AttributeMemoryAvailable, hostMemoryUsage.Observation(int64(vmStats.Available)))
 
 		// Host memory utilization
-		result.Observe(LabelMemoryUsed,
+		result.Observe(AttributeMemoryUsed,
 			hostMemoryUtilization.Observation(float64(vmStats.Used)/float64(vmStats.Total)),
 		)
-		result.Observe(LabelMemoryAvailable,
+		result.Observe(AttributeMemoryAvailable,
 			hostMemoryUtilization.Observation(float64(vmStats.Available)/float64(vmStats.Total)),
 		)
 
@@ -221,8 +221,8 @@ func (h *host) register() error {
 		// TODO: These can be broken down by network
 		// interface, with similar questions to those posed
 		// about per-CPU measurements above.
-		result.Observe(LabelNetworkTransmit, networkIOUsage.Observation(int64(ioStats[0].BytesSent)))
-		result.Observe(LabelNetworkReceive, networkIOUsage.Observation(int64(ioStats[0].BytesRecv)))
+		result.Observe(AttributeNetworkTransmit, networkIOUsage.Observation(int64(ioStats[0].BytesSent)))
+		result.Observe(AttributeNetworkReceive, networkIOUsage.Observation(int64(ioStats[0].BytesRecv)))
 	})
 
 	// TODO: .time units are in seconds, but "unit" package does
@@ -232,7 +232,7 @@ func (h *host) register() error {
 		"process.cpu.time",
 		metric.WithUnit("s"),
 		metric.WithDescription(
-			"Accumulated CPU time spent by this process labeled by state (User, System, ...)",
+			"Accumulated CPU time spent by this process attributeed by state (User, System, ...)",
 		),
 	); err != nil {
 		return err
@@ -242,7 +242,7 @@ func (h *host) register() error {
 		"system.cpu.time",
 		metric.WithUnit("s"),
 		metric.WithDescription(
-			"Accumulated CPU time spent by this host labeled by state (User, System, Other, Idle)",
+			"Accumulated CPU time spent by this host attributeed by state (User, System, Other, Idle)",
 		),
 	); err != nil {
 		return err
@@ -252,7 +252,7 @@ func (h *host) register() error {
 		"system.memory.usage",
 		metric.WithUnit(unit.Bytes),
 		metric.WithDescription(
-			"Memory usage of this process labeled by memory state (Used, Available)",
+			"Memory usage of this process attributeed by memory state (Used, Available)",
 		),
 	); err != nil {
 		return err
@@ -262,7 +262,7 @@ func (h *host) register() error {
 		"system.memory.utilization",
 		metric.WithUnit(unit.Dimensionless),
 		metric.WithDescription(
-			"Memory utilization of this process labeled by memory state (Used, Available)",
+			"Memory utilization of this process attributeed by memory state (Used, Available)",
 		),
 	); err != nil {
 		return err
@@ -272,7 +272,7 @@ func (h *host) register() error {
 		"system.network.io",
 		metric.WithUnit(unit.Bytes),
 		metric.WithDescription(
-			"Bytes transferred labeled by direction (Transmit, Receive)",
+			"Bytes transferred attributeed by direction (Transmit, Receive)",
 		),
 	); err != nil {
 		return err

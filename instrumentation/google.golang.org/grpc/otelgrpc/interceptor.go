@@ -30,16 +30,16 @@ import (
 	"google.golang.org/grpc/peer"
 	"google.golang.org/grpc/status"
 
+	"go.opentelemetry.io/otel/attribute"
 	"go.opentelemetry.io/otel/baggage"
 	"go.opentelemetry.io/otel/codes"
-	"go.opentelemetry.io/otel/label"
 	"go.opentelemetry.io/otel/semconv"
 	"go.opentelemetry.io/otel/trace"
 
 	otelcontrib "go.opentelemetry.io/contrib"
 )
 
-type messageType label.KeyValue
+type messageType attribute.KeyValue
 
 // Event adds an event of the messageType to the span associated with the
 // passed context with id and size (if message is a proto message).
@@ -47,13 +47,13 @@ func (m messageType) Event(ctx context.Context, id int, message interface{}) {
 	span := trace.SpanFromContext(ctx)
 	if p, ok := message.(proto.Message); ok {
 		span.AddEvent("message", trace.WithAttributes(
-			label.KeyValue(m),
+			attribute.KeyValue(m),
 			semconv.RPCMessageIDKey.Int(id),
 			semconv.RPCMessageUncompressedSizeKey.Int(proto.Size(p)),
 		))
 	} else {
 		span.AddEvent("message", trace.WithAttributes(
-			label.KeyValue(m),
+			attribute.KeyValue(m),
 			semconv.RPCMessageIDKey.Int(id),
 		))
 	}
@@ -438,8 +438,8 @@ func StreamServerInterceptor(opts ...Option) grpc.StreamServerInterceptor {
 
 // spanInfo returns a span name and all appropriate attributes from the gRPC
 // method and peer address.
-func spanInfo(fullMethod, peerAddress string) (string, []label.KeyValue) {
-	attrs := []label.KeyValue{semconv.RPCSystemGRPC}
+func spanInfo(fullMethod, peerAddress string) (string, []attribute.KeyValue) {
+	attrs := []attribute.KeyValue{semconv.RPCSystemGRPC}
 	name, mAttrs := parseFullMethod(fullMethod)
 	attrs = append(attrs, mAttrs...)
 	attrs = append(attrs, peerAttr(peerAddress)...)
@@ -447,17 +447,17 @@ func spanInfo(fullMethod, peerAddress string) (string, []label.KeyValue) {
 }
 
 // peerAttr returns attributes about the peer address.
-func peerAttr(addr string) []label.KeyValue {
+func peerAttr(addr string) []attribute.KeyValue {
 	host, port, err := net.SplitHostPort(addr)
 	if err != nil {
-		return []label.KeyValue(nil)
+		return []attribute.KeyValue(nil)
 	}
 
 	if host == "" {
 		host = "127.0.0.1"
 	}
 
-	return []label.KeyValue{
+	return []attribute.KeyValue{
 		semconv.NetPeerIPKey.String(host),
 		semconv.NetPeerPortKey.String(port),
 	}
@@ -473,17 +473,17 @@ func peerFromCtx(ctx context.Context) string {
 }
 
 // parseFullMethod returns a span name following the OpenTelemetry semantic
-// conventions as well as all applicable span label.KeyValue attributes based
+// conventions as well as all applicable span attribute.KeyValue attributes based
 // on a gRPC's FullMethod.
-func parseFullMethod(fullMethod string) (string, []label.KeyValue) {
+func parseFullMethod(fullMethod string) (string, []attribute.KeyValue) {
 	name := strings.TrimLeft(fullMethod, "/")
 	parts := strings.SplitN(name, "/", 2)
 	if len(parts) != 2 {
 		// Invalid format, does not follow `/package.service/method`.
-		return name, []label.KeyValue(nil)
+		return name, []attribute.KeyValue(nil)
 	}
 
-	var attrs []label.KeyValue
+	var attrs []attribute.KeyValue
 	if service := parts[0]; service != "" {
 		attrs = append(attrs, semconv.RPCServiceKey.String(service))
 	}
@@ -494,6 +494,6 @@ func parseFullMethod(fullMethod string) (string, []label.KeyValue) {
 }
 
 // statusCodeAttr returns status code attribute based on given gRPC code
-func statusCodeAttr(c grpc_codes.Code) label.KeyValue {
-	return GRPCStatusCodeKey.Uint32(uint32(c))
+func statusCodeAttr(c grpc_codes.Code) attribute.KeyValue {
+	return GRPCStatusCodeKey.Int64(int64(c))
 }

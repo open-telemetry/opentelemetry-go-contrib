@@ -21,7 +21,7 @@ import (
 
 	"cloud.google.com/go/compute/metadata"
 
-	"go.opentelemetry.io/otel/label"
+	"go.opentelemetry.io/otel/attribute"
 	"go.opentelemetry.io/otel/sdk/resource"
 	"go.opentelemetry.io/otel/semconv"
 )
@@ -46,26 +46,26 @@ func (gke *GKE) Detect(ctx context.Context) (*resource.Resource, error) {
 		errInfo = append(errInfo, err.Error())
 	}
 
-	labels := []label.KeyValue{
+	attributes := []attribute.KeyValue{
 		semconv.K8SNamespaceNameKey.String(os.Getenv("NAMESPACE")),
 		semconv.K8SPodNameKey.String(os.Getenv("HOSTNAME")),
 	}
 
 	if containerName := os.Getenv("CONTAINER_NAME"); containerName != "" {
-		labels = append(labels, semconv.ContainerNameKey.String(containerName))
+		attributes = append(attributes, semconv.ContainerNameKey.String(containerName))
 	}
 
 	if clusterName, err := metadata.InstanceAttributeValue("cluster-name"); hasProblem(err) {
 		errInfo = append(errInfo, err.Error())
 	} else if clusterName != "" {
-		labels = append(labels, semconv.K8SClusterNameKey.String(clusterName))
+		attributes = append(attributes, semconv.K8SClusterNameKey.String(clusterName))
 	}
 
-	k8sLabelRes := resource.NewWithAttributes(labels...)
+	k8sattributeRes := resource.NewWithAttributes(attributes...)
 	var aggregatedErr error
 	if len(errInfo) > 0 {
 		aggregatedErr = fmt.Errorf("detecting GKE resources: %s", errInfo)
 	}
 
-	return resource.Merge(gceLablRes, k8sLabelRes), aggregatedErr
+	return resource.Merge(gceLablRes, k8sattributeRes), aggregatedErr
 }

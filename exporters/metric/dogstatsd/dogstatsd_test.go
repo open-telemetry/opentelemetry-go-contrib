@@ -22,7 +22,7 @@ import (
 	"github.com/stretchr/testify/require"
 
 	"go.opentelemetry.io/contrib/exporters/metric/dogstatsd"
-	"go.opentelemetry.io/otel/label"
+	"go.opentelemetry.io/otel/attribute"
 	"go.opentelemetry.io/otel/metric"
 	"go.opentelemetry.io/otel/metric/number"
 	"go.opentelemetry.io/otel/sdk/export/metric/metrictest"
@@ -30,47 +30,47 @@ import (
 	"go.opentelemetry.io/otel/sdk/resource"
 )
 
-// TestDogstatsLabels that labels are formatted in the correct style,
+// TestDogstatsAttributes that attributes are formatted in the correct style,
 // including Resources.
-func TestDogstatsLabels(t *testing.T) {
+func TestDogstatsAttributes(t *testing.T) {
 	type testCase struct {
-		name      string
-		resources []label.KeyValue
-		labels    []label.KeyValue
-		expected  string
+		name       string
+		resources  []attribute.KeyValue
+		attributes []attribute.KeyValue
+		expected   string
 	}
 
-	labels := func(labels ...label.KeyValue) []label.KeyValue { return labels }
+	attributes := func(attributes ...attribute.KeyValue) []attribute.KeyValue { return attributes }
 
 	cases := []testCase{
 		{
-			name:      "no labels",
-			resources: nil,
-			labels:    nil,
-			expected:  "test.name:123|c\n",
+			name:       "no attributes",
+			resources:  nil,
+			attributes: nil,
+			expected:   "test.name:123|c\n",
 		},
 		{
-			name:      "only resources",
-			resources: labels(label.String("R", "S")),
-			labels:    nil,
-			expected:  "test.name:123|c|#R:S\n",
+			name:       "only resources",
+			resources:  attributes(attribute.String("R", "S")),
+			attributes: nil,
+			expected:   "test.name:123|c|#R:S\n",
 		},
 		{
-			name:      "only labels",
-			resources: nil,
-			labels:    labels(label.String("A", "B")),
-			expected:  "test.name:123|c|#A:B\n",
+			name:       "only attributes",
+			resources:  nil,
+			attributes: attributes(attribute.String("A", "B")),
+			expected:   "test.name:123|c|#A:B\n",
 		},
 		{
-			name:      "both resources and labels",
-			resources: labels(label.String("R", "S")),
-			labels:    labels(label.String("A", "B")),
-			expected:  "test.name:123|c|#R:S,A:B\n",
+			name:       "both resources and attributes",
+			resources:  attributes(attribute.String("R", "S")),
+			attributes: attributes(attribute.String("A", "B")),
+			expected:   "test.name:123|c|#R:S,A:B\n",
 		},
 		{
-			resources: labels(label.String("A", "R")),
-			labels:    labels(label.String("A", "B")),
-			expected:  "test.name:123|c|#A:R,A:B\n",
+			resources:  attributes(attribute.String("A", "R")),
+			attributes: attributes(attribute.String("A", "B")),
+			expected:   "test.name:123|c|#A:R,A:B\n",
 		},
 	}
 	for _, tc := range cases {
@@ -84,7 +84,7 @@ func TestDogstatsLabels(t *testing.T) {
 			require.NoError(t, cagg.Update(ctx, number.NewInt64Number(123), &desc))
 			require.NoError(t, cagg.SynchronizedMove(cckpt, &desc))
 
-			checkpointSet.Add(&desc, cckpt, tc.labels...)
+			checkpointSet.Add(&desc, cckpt, tc.attributes...)
 
 			var buf bytes.Buffer
 			exp, err := dogstatsd.NewRawExporter(dogstatsd.Config{

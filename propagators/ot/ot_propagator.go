@@ -75,8 +75,8 @@ func (o OT) Inject(ctx context.Context, carrier propagation.TextMapCarrier) {
 	mi := m.Iter()
 
 	for mi.Next() {
-		label := mi.Label()
-		carrier.Set(fmt.Sprintf("ot-baggage-%s", label.Key), label.Value.Emit())
+		attribute := mi.Attribute()
+		carrier.Set(fmt.Sprintf("ot-baggage-%s", attribute.Key), attribute.Value.Emit())
 	}
 
 }

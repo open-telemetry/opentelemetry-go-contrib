@@ -35,7 +35,7 @@ func TestMain(m *testing.M) {
 }
 
 func Test(t *testing.T) {
-	sr := new(oteltest.StandardSpanRecorder)
+	sr := new(oteltest.SpanRecorder)
 	provider := oteltest.NewTracerProvider(oteltest.WithSpanRecorder(sr))
 
 	hostname, port := "localhost", "27017"

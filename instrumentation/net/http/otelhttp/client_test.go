@@ -29,7 +29,7 @@ import (
 )
 
 func TestConvenienceWrappers(t *testing.T) {
-	sr := new(oteltest.StandardSpanRecorder)
+	sr := new(oteltest.SpanRecorder)
 	provider := oteltest.NewTracerProvider(oteltest.WithSpanRecorder(sr))
 	orig := DefaultClient
 	DefaultClient = &http.Client{

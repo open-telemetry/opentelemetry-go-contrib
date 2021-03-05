@@ -19,6 +19,7 @@ import (
 
 	"go.opentelemetry.io/contrib"
 	"go.opentelemetry.io/otel"
+	"go.opentelemetry.io/otel/propagation"
 	"go.opentelemetry.io/otel/semconv"
 	oteltrace "go.opentelemetry.io/otel/trace"
 )
@@ -47,7 +48,7 @@ func OTelFilter(service string, opts ...Option) restful.FilterFunction {
 	}
 	return func(req *restful.Request, resp *restful.Response, chain *restful.FilterChain) {
 		r := req.Request
-		ctx := cfg.Propagators.Extract(r.Context(), r.Header)
+		ctx := cfg.Propagators.Extract(r.Context(), propagation.HeaderCarrier(r.Header))
 		route := req.SelectedRoutePath()
 		spanName := route
 

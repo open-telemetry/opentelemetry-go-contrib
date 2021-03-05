@@ -24,24 +24,24 @@ import (
 
 	"github.com/stretchr/testify/assert"
 
+	"go.opentelemetry.io/otel/attribute"
 	"go.opentelemetry.io/otel/codes"
-	"go.opentelemetry.io/otel/label"
 	"go.opentelemetry.io/otel/oteltest"
 	"go.opentelemetry.io/otel/propagation"
 	"go.opentelemetry.io/otel/semconv"
 	"go.opentelemetry.io/otel/trace"
 )
 
-func assertMetricLabels(t *testing.T, expectedLabels []label.KeyValue, measurementBatches []oteltest.Batch) {
+func assertMetricAttributes(t *testing.T, expectedAttributes []attribute.KeyValue, measurementBatches []oteltest.Batch) {
 	for _, batch := range measurementBatches {
-		assert.ElementsMatch(t, expectedLabels, batch.Labels)
+		assert.ElementsMatch(t, expectedAttributes, batch.Labels)
 	}
 }
 
 func TestHandlerBasics(t *testing.T) {
 	rr := httptest.NewRecorder()
 
-	spanRecorder := new(oteltest.StandardSpanRecorder)
+	spanRecorder := new(oteltest.SpanRecorder)
 	provider := oteltest.NewTracerProvider(
 		oteltest.WithSpanRecorder(spanRecorder),
 	)
@@ -52,7 +52,7 @@ func TestHandlerBasics(t *testing.T) {
 	h := NewHandler(
 		http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 			l, _ := LabelerFromContext(r.Context())
-			l.Add(label.String("test", "label"))
+			l.Add(attribute.String("test", "attribute"))
 
 			if _, err := io.WriteString(w, "hello world"); err != nil {
 				t.Fatal(err)
@@ -73,15 +73,15 @@ func TestHandlerBasics(t *testing.T) {
 		t.Fatalf("got 0 recorded measurements, expected 1 or more")
 	}
 
-	labelsToVerify := []label.KeyValue{
+	attributesToVerify := []attribute.KeyValue{
 		semconv.HTTPServerNameKey.String(operation),
 		semconv.HTTPSchemeHTTP,
 		semconv.HTTPHostKey.String(r.Host),
 		semconv.HTTPFlavorKey.String(fmt.Sprintf("1.%d", r.ProtoMinor)),
-		label.String("test", "label"),
+		attribute.String("test", "attribute"),
 	}
 
-	assertMetricLabels(t, labelsToVerify, meterimpl.MeasurementBatches)
+	assertMetricAttributes(t, attributesToVerify, meterimpl.MeasurementBatches)
 
 	if got, expected := rr.Result().StatusCode, http.StatusOK; got != expected {
 		t.Fatalf("got %d, expected %d", got, expected)

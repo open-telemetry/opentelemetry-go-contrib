@@ -22,7 +22,7 @@ import (
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/mock"
 
-	"go.opentelemetry.io/otel/label"
+	"go.opentelemetry.io/otel/attribute"
 	"go.opentelemetry.io/otel/sdk/resource"
 	"go.opentelemetry.io/otel/semconv"
 )
@@ -53,11 +53,11 @@ func TestDetect(t *testing.T) {
 	detectorUtils.On("getContainerName").Return("container-Name", nil)
 	detectorUtils.On("getContainerID").Return("0123456789A", nil)
 
-	labels := []label.KeyValue{
+	attributes := []attribute.KeyValue{
 		semconv.ContainerNameKey.String("container-Name"),
 		semconv.ContainerIDKey.String("0123456789A"),
 	}
-	expectedResource := resource.NewWithAttributes(labels...)
+	expectedResource := resource.NewWithAttributes(attributes...)
 	detector := &resourceDetector{utils: detectorUtils}
 	res, _ := detector.Detect(context.Background())
 
