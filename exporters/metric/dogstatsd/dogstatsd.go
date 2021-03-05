@@ -32,7 +32,7 @@ type (
 	Config = statsd.Config
 
 	// Exporter implements a dogstatsd-format statsd exporter,
-	// which encodes label sets as independent fields in the
+	// which encodes attribute sets as independent fields in the
 	// output.
 	//
 	// TODO: find a link for this syntax.  It's been copied out of
@@ -42,7 +42,7 @@ type (
 	Exporter struct {
 		*statsd.Exporter
 
-		labelEncoder *LabelEncoder
+		attributeEncoder *AttributeEncoder
 	}
 )
 
@@ -53,7 +53,7 @@ var (
 // NewRawExporter returns a new Dogstatsd-syntax exporter for use in a pipeline.
 func NewRawExporter(config Config) (*Exporter, error) {
 	exp := &Exporter{
-		labelEncoder: NewLabelEncoder(),
+		attributeEncoder: NewAttributeEncoder(),
 	}
 
 	var err error
@@ -91,7 +91,7 @@ func NewExportPipeline(config Config, opts ...controller.Option) (*controller.Co
 	selector := simple.NewWithExactDistribution()
 
 	// The basic processor ensures that the exporter sees the full
-	// set of labels as dogstatsd tags.
+	// set of attributes as dogstatsd tags.
 	processor := basic.New(selector, exporter)
 
 	pusher := controller.New(processor, append(opts, controller.WithPusher(exporter))...)
@@ -106,11 +106,11 @@ func (*Exporter) AppendName(rec export.Record, buf *bytes.Buffer) {
 
 // AppendTags is part of the stats-internal adapter interface.
 func (e *Exporter) AppendTags(rec export.Record, res *resource.Resource, buf *bytes.Buffer) {
-	rencoded := res.Encoded(e.labelEncoder)
-	lencoded := rec.Labels().Encoded(e.labelEncoder)
+	rencoded := res.Encoded(e.attributeEncoder)
+	lencoded := rec.Labels().Encoded(e.attributeEncoder)
 
 	// Note: We do not de-duplicate tag-keys between resources and
-	// event labels here.  Instead, include resources first so
+	// event attributes here.  Instead, include resources first so
 	// that the receiver can apply OTel's last-value-wins
 	// semantcis, if desired.
 	rlen := len(rencoded)

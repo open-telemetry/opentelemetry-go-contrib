@@ -29,9 +29,9 @@ import (
 	"go.opentelemetry.io/contrib/instrumentation/net/http/otelhttp"
 
 	"go.opentelemetry.io/otel"
+	"go.opentelemetry.io/otel/attribute"
 	"go.opentelemetry.io/otel/baggage"
 	"go.opentelemetry.io/otel/exporters/stdout"
-	"go.opentelemetry.io/otel/label"
 	"go.opentelemetry.io/otel/propagation"
 	sdktrace "go.opentelemetry.io/otel/sdk/trace"
 	"go.opentelemetry.io/otel/semconv"
@@ -65,7 +65,7 @@ func main() {
 	client := http.Client{Transport: otelhttp.NewTransport(http.DefaultTransport)}
 
 	ctx := baggage.ContextWithValues(context.Background(),
-		label.String("username", "donuts"),
+		attribute.String("username", "donuts"),
 	)
 
 	var body []byte

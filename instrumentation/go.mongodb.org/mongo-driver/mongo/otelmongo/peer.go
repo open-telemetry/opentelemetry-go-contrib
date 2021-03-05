@@ -14,21 +14,21 @@
 
 package otelmongo
 
-import "go.opentelemetry.io/otel/label"
+import "go.opentelemetry.io/otel/attribute"
 
 const (
 	// PeerHostname records the host name of the peer.
-	PeerHostnameKey = label.Key("peer.hostname")
+	PeerHostnameKey = attribute.Key("peer.hostname")
 	// PeerPort records the port number of the peer.
-	PeerPortKey = label.Key("peer.port")
+	PeerPortKey = attribute.Key("peer.port")
 )
 
 // PeerHostname records the host name of the peer.
-func PeerHostname(peerHostname string) label.KeyValue {
+func PeerHostname(peerHostname string) attribute.KeyValue {
 	return PeerHostnameKey.String(peerHostname)
 }
 
 // PeerPort records the port number of the peer.
-func PeerPort(peerport string) label.KeyValue {
+func PeerPort(peerport string) attribute.KeyValue {
 	return PeerPortKey.String(peerport)
 }

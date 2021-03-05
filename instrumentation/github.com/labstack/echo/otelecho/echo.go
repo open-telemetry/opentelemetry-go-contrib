@@ -22,7 +22,8 @@ import (
 	otelcontrib "go.opentelemetry.io/contrib"
 	"go.opentelemetry.io/otel"
 
-	"go.opentelemetry.io/otel/label"
+	"go.opentelemetry.io/otel/attribute"
+	"go.opentelemetry.io/otel/propagation"
 	"go.opentelemetry.io/otel/semconv"
 	oteltrace "go.opentelemetry.io/otel/trace"
 )
@@ -57,7 +58,7 @@ func Middleware(service string, opts ...Option) echo.MiddlewareFunc {
 				request = request.WithContext(savedCtx)
 				c.SetRequest(request)
 			}()
-			ctx := cfg.Propagators.Extract(savedCtx, request.Header)
+			ctx := cfg.Propagators.Extract(savedCtx, propagation.HeaderCarrier(request.Header))
 			opts := []oteltrace.SpanOption{
 				oteltrace.WithAttributes(semconv.NetAttributesFromHTTPRequest("tcp", request)...),
 				oteltrace.WithAttributes(semconv.EndUserAttributesFromHTTPRequest(request)...),
@@ -78,7 +79,7 @@ func Middleware(service string, opts ...Option) echo.MiddlewareFunc {
 			// serve the request to the next middleware
 			err := next(c)
 			if err != nil {
-				span.SetAttributes(label.String("echo.error", err.Error()))
+				span.SetAttributes(attribute.String("echo.error", err.Error()))
 				// invokes the registered HTTP error handler
 				c.Error(err)
 			}

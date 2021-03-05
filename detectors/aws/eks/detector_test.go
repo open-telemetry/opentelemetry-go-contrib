@@ -22,7 +22,7 @@ import (
 	"github.com/stretchr/testify/mock"
 	"github.com/stretchr/testify/require"
 
-	"go.opentelemetry.io/otel/label"
+	"go.opentelemetry.io/otel/attribute"
 	"go.opentelemetry.io/otel/sdk/resource"
 	"go.opentelemetry.io/otel/semconv"
 )
@@ -62,7 +62,7 @@ func TestEks(t *testing.T) {
 	detectorUtils.On("getContainerID").Return("0123456789A", nil)
 
 	// Expected resource object
-	eksResourceLabels := []label.KeyValue{
+	eksResourceLabels := []attribute.KeyValue{
 		semconv.K8SClusterNameKey.String("my-cluster"),
 		semconv.ContainerIDKey.String("0123456789A"),
 	}
