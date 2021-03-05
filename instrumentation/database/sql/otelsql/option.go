@@ -15,7 +15,7 @@
 package otelsql
 
 import (
-	"go.opentelemetry.io/otel/label"
+	"go.opentelemetry.io/otel/attribute"
 	"go.opentelemetry.io/otel/trace"
 )
 
@@ -43,7 +43,7 @@ func WithTracerProvider(provider trace.TracerProvider) Option {
 }
 
 // WithAttributes specifies attributes that will be set to each span.
-func WithAttributes(attributes ...label.KeyValue) Option {
+func WithAttributes(attributes ...attribute.KeyValue) Option {
 	return OptionFunc(func(cfg *config) {
 		cfg.Attributes = attributes
 	})

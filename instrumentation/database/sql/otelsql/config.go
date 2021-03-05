@@ -18,7 +18,7 @@ import (
 	"context"
 
 	"go.opentelemetry.io/otel"
-	"go.opentelemetry.io/otel/label"
+	"go.opentelemetry.io/otel/attribute"
 	"go.opentelemetry.io/otel/semconv"
 	"go.opentelemetry.io/otel/trace"
 
@@ -43,7 +43,7 @@ type config struct {
 	DBSystem string
 
 	// Attributes will be set to each span.
-	Attributes []label.KeyValue
+	Attributes []attribute.KeyValue
 
 	// SpanNameFormatter will be called to produce span's name.
 	// Default use method as span name

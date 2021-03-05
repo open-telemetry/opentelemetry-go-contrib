@@ -20,7 +20,7 @@ import (
 	"github.com/stretchr/testify/assert"
 
 	"go.opentelemetry.io/otel"
-	"go.opentelemetry.io/otel/label"
+	"go.opentelemetry.io/otel/attribute"
 	"go.opentelemetry.io/otel/semconv"
 	"go.opentelemetry.io/otel/trace"
 
@@ -37,7 +37,7 @@ func TestNewConfig(t *testing.T) {
 		),
 		SpanOptions: SpanOptions{Ping: true},
 		DBSystem:    "db",
-		Attributes: []label.KeyValue{
+		Attributes: []attribute.KeyValue{
 			semconv.DBSystemKey.String(cfg.DBSystem),
 		},
 		SpanNameFormatter: &defaultSpanNameFormatter{},

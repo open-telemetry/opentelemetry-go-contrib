@@ -19,7 +19,7 @@ import (
 
 	"github.com/stretchr/testify/assert"
 
-	"go.opentelemetry.io/otel/label"
+	"go.opentelemetry.io/otel/attribute"
 	"go.opentelemetry.io/otel/oteltest"
 )
 
@@ -39,12 +39,12 @@ func TestOptions(t *testing.T) {
 		{
 			name: "WithAttributes",
 			option: WithAttributes(
-				label.String("foo", "bar"),
-				label.String("foo2", "bar2"),
+				attribute.String("foo", "bar"),
+				attribute.String("foo2", "bar2"),
 			),
-			expectedConfig: config{Attributes: []label.KeyValue{
-				label.String("foo", "bar"),
-				label.String("foo2", "bar2"),
+			expectedConfig: config{Attributes: []attribute.KeyValue{
+				attribute.String("foo", "bar"),
+				attribute.String("foo2", "bar2"),
 			}},
 		},
 		{

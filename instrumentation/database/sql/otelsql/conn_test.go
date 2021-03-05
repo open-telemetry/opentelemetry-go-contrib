@@ -23,8 +23,8 @@ import (
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 
+	"go.opentelemetry.io/otel/attribute"
 	"go.opentelemetry.io/otel/codes"
-	"go.opentelemetry.io/otel/label"
 	"go.opentelemetry.io/otel/oteltest"
 	"go.opentelemetry.io/otel/semconv"
 	"go.opentelemetry.io/otel/trace"
@@ -236,7 +236,7 @@ func TestOtConn_ExecContext(t *testing.T) {
 			span := spanList[1]
 			assert.True(t, span.Ended())
 			assert.Equal(t, trace.SpanKindClient, span.SpanKind())
-			assert.Equal(t, attributesListToMap(append([]label.KeyValue{semconv.DBStatementKey.String("query")},
+			assert.Equal(t, attributesListToMap(append([]attribute.KeyValue{semconv.DBStatementKey.String("query")},
 				cfg.Attributes...)), span.Attributes())
 			assert.Equal(t, string(MethodConnExec), span.Name())
 			assert.Equal(t, dummySpan.SpanContext().TraceID, span.SpanContext().TraceID)
@@ -291,7 +291,7 @@ func TestOtConn_QueryContext(t *testing.T) {
 			span := spanList[1]
 			assert.True(t, span.Ended())
 			assert.Equal(t, trace.SpanKindClient, span.SpanKind())
-			assert.Equal(t, attributesListToMap(append([]label.KeyValue{semconv.DBStatementKey.String("query")},
+			assert.Equal(t, attributesListToMap(append([]attribute.KeyValue{semconv.DBStatementKey.String("query")},
 				cfg.Attributes...)), span.Attributes())
 			assert.Equal(t, string(MethodConnQuery), span.Name())
 			assert.Equal(t, dummySpan.SpanContext().TraceID, span.SpanContext().TraceID)
@@ -352,7 +352,7 @@ func TestOtConn_PrepareContext(t *testing.T) {
 			span := spanList[1]
 			assert.True(t, span.Ended())
 			assert.Equal(t, trace.SpanKindClient, span.SpanKind())
-			assert.Equal(t, attributesListToMap(append([]label.KeyValue{semconv.DBStatementKey.String("query")},
+			assert.Equal(t, attributesListToMap(append([]attribute.KeyValue{semconv.DBStatementKey.String("query")},
 				cfg.Attributes...)), span.Attributes())
 			assert.Equal(t, string(MethodConnPrepare), span.Name())
 			assert.Equal(t, dummySpan.SpanContext().TraceID, span.SpanContext().TraceID)

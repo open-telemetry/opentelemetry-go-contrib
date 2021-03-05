@@ -23,8 +23,8 @@ import (
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 
+	"go.opentelemetry.io/otel/attribute"
 	"go.opentelemetry.io/otel/codes"
-	"go.opentelemetry.io/otel/label"
 	"go.opentelemetry.io/otel/trace"
 )
 
@@ -57,7 +57,7 @@ func (m *mockTx) Rollback() error {
 
 var _ driver.Tx = (*mockTx)(nil)
 
-var defaultLabel = label.Key("test").String("foo")
+var defaultattribute = attribute.Key("test").String("foo")
 
 func TestOtTx_Commit(t *testing.T) {
 	testCases := []struct {

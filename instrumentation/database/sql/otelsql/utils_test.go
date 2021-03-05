@@ -22,8 +22,8 @@ import (
 
 	"github.com/stretchr/testify/assert"
 
+	"go.opentelemetry.io/otel/attribute"
 	"go.opentelemetry.io/otel/codes"
-	"go.opentelemetry.io/otel/label"
 	"go.opentelemetry.io/otel/oteltest"
 	"go.opentelemetry.io/otel/trace"
 )
@@ -78,8 +78,8 @@ func TestRecordSpanError(t *testing.T) {
 	}
 }
 
-func newTracerProvider() (*oteltest.StandardSpanRecorder, *oteltest.TracerProvider) {
-	var sr oteltest.StandardSpanRecorder
+func newTracerProvider() (*oteltest.SpanRecorder, *oteltest.TracerProvider) {
+	var sr oteltest.SpanRecorder
 	provider := oteltest.NewTracerProvider(
 		oteltest.WithSpanRecorder(&sr),
 	)
@@ -95,16 +95,16 @@ func createDummySpan(ctx context.Context, tracer trace.Tracer) (context.Context,
 func newMockConfig(tracer trace.Tracer) config {
 	return config{
 		Tracer:            tracer,
-		Attributes:        []label.KeyValue{defaultLabel},
+		Attributes:        []attribute.KeyValue{defaultattribute},
 		SpanNameFormatter: &defaultSpanNameFormatter{},
 	}
 }
 
-func attributesListToMap(labels []label.KeyValue) map[label.Key]label.Value {
-	attributes := make(map[label.Key]label.Value)
+func attributesListToMap(attributes []attribute.KeyValue) map[attribute.Key]attribute.Value {
+	attributesMap := make(map[attribute.Key]attribute.Value)
 
-	for _, v := range labels {
-		attributes[v.Key] = v.Value
+	for _, v := range attributes {
+		attributesMap[v.Key] = v.Value
 	}
-	return attributes
+	return attributesMap
 }

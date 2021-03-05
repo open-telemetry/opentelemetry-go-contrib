@@ -21,7 +21,7 @@ import (
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 
-	"go.opentelemetry.io/otel/label"
+	"go.opentelemetry.io/otel/attribute"
 	"go.opentelemetry.io/otel/semconv"
 )
 
@@ -32,7 +32,7 @@ func init() {
 
 func TestRegister(t *testing.T) {
 	driverName, err := Register("test-driver", "test-db",
-		WithAttributes(label.String("foo", "bar")),
+		WithAttributes(attribute.String("foo", "bar")),
 	)
 	require.NoError(t, err)
 	assert.Equal(t, "test-driver-otelsql-0", driverName)
@@ -43,9 +43,9 @@ func TestRegister(t *testing.T) {
 	otelDriver, ok := db.Driver().(*otDriver)
 	require.True(t, ok)
 	assert.Equal(t, &mockDriver{openConnectorCount: 2}, otelDriver.driver)
-	assert.ElementsMatch(t, []label.KeyValue{
+	assert.ElementsMatch(t, []attribute.KeyValue{
 		semconv.DBSystemKey.String("test-db"),
-		label.String("foo", "bar"),
+		attribute.String("foo", "bar"),
 	}, otelDriver.cfg.Attributes)
 
 	// Exceed max slot count
@@ -55,15 +55,15 @@ func TestRegister(t *testing.T) {
 
 func TestWrapDriver(t *testing.T) {
 	driver := WrapDriver(newMockDriver(false), "test-db",
-		WithAttributes(label.String("foo", "bar")),
+		WithAttributes(attribute.String("foo", "bar")),
 	)
 
 	// Expected driver
 	otelDriver, ok := driver.(*otDriver)
 	require.True(t, ok)
 	assert.Equal(t, &mockDriver{}, otelDriver.driver)
-	assert.ElementsMatch(t, []label.KeyValue{
+	assert.ElementsMatch(t, []attribute.KeyValue{
 		semconv.DBSystemKey.String("test-db"),
-		label.String("foo", "bar"),
+		attribute.String("foo", "bar"),
 	}, otelDriver.cfg.Attributes)
 }
