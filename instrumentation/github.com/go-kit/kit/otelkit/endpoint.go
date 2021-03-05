@@ -88,14 +88,9 @@ func EndpointMiddleware(options ...Option) endpoint.Middleware {
 					if lberr, ok := err.(lb.RetryError); ok {
 						// Handle errors originating from lb.Retry.
 						for idx, rawErr := range lberr.RawErrors {
-							span.AddEvent(
-								"error",
-								trace.WithAttributes(
-									attribute.String("error.type", "gokit.lb.retry"),
-									attribute.Int("gokit.lb.retry.count", idx+1),
-									attribute.String("error.message", rawErr.Error()),
-								),
-							)
+							span.RecordError(rawErr, trace.WithAttributes(
+								attribute.Int("gokit.lb.retry.count", idx+1),
+							))
 						}
 
 						span.RecordError(lberr.Final)
