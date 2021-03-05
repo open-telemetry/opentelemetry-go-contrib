@@ -23,6 +23,7 @@ The following instrumentation packages are provided for popular Go packages and 
 | [net/http](./net/http/otelhttp) | ✓ | ✓ |
 | [net/http/httptrace](./net/http/httptrace/otelhttptrace) |  | ✓ |
 | [runtime](./runtime) | ✓ |  |
+| [database/sql](./database/sql/otelsql) |  | ✓ |
 
 
 Additionally, these are the known instrumentation packages that exist outside of this repository for popular Go packages.
