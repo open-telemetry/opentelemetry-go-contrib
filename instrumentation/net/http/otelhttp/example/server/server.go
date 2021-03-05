@@ -22,9 +22,9 @@ import (
 	"go.opentelemetry.io/contrib/instrumentation/net/http/otelhttp"
 
 	"go.opentelemetry.io/otel"
+	"go.opentelemetry.io/otel/attribute"
 	"go.opentelemetry.io/otel/baggage"
 	"go.opentelemetry.io/otel/exporters/stdout"
-	"go.opentelemetry.io/otel/label"
 	"go.opentelemetry.io/otel/propagation"
 	"go.opentelemetry.io/otel/sdk/resource"
 	sdktrace "go.opentelemetry.io/otel/sdk/trace"
@@ -55,7 +55,7 @@ func initTracer() {
 func main() {
 	initTracer()
 
-	uk := label.Key("username")
+	uk := attribute.Key("username")
 
 	helloHandler := func(w http.ResponseWriter, req *http.Request) {
 		ctx := req.Context()

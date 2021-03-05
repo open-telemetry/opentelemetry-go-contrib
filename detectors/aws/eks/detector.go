@@ -27,7 +27,7 @@ import (
 	"strings"
 	"time"
 
-	"go.opentelemetry.io/otel/label"
+	"go.opentelemetry.io/otel/attribute"
 	"go.opentelemetry.io/otel/sdk/resource"
 	"go.opentelemetry.io/otel/semconv"
 )
@@ -88,28 +88,28 @@ func (detector *resourceDetector) Detect(ctx context.Context) (*resource.Resourc
 	}
 
 	// Create variable to hold resource attributes
-	labels := []label.KeyValue{}
+	attributes := []attribute.KeyValue{}
 
-	// Get clusterName and append to labels
+	// Get clusterName and append to attributes
 	clusterName, err := getClusterName(detector.utils)
 	if err != nil {
 		return nil, err
 	}
 	if clusterName != "" {
-		labels = append(labels, semconv.K8SClusterNameKey.String(clusterName))
+		attributes = append(attributes, semconv.K8SClusterNameKey.String(clusterName))
 	}
 
-	// Get containerID and append to labels
+	// Get containerID and append to attributes
 	containerID, err := detector.utils.getContainerID()
 	if err != nil {
 		return nil, err
 	}
 	if containerID != "" {
-		labels = append(labels, semconv.ContainerIDKey.String(containerID))
+		attributes = append(attributes, semconv.ContainerIDKey.String(containerID))
 	}
 
 	// Return new resource object with clusterName and containerID as attributes
-	return resource.NewWithAttributes(labels...), nil
+	return resource.NewWithAttributes(attributes...), nil
 
 }
 

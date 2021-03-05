@@ -23,6 +23,7 @@ import (
 
 	"go.opentelemetry.io/contrib/propagators/b3"
 	"go.opentelemetry.io/otel/oteltest"
+	"go.opentelemetry.io/otel/propagation"
 	"go.opentelemetry.io/otel/trace"
 )
 
@@ -57,7 +58,7 @@ func TestExtractB3(t *testing.T) {
 				}
 
 				ctx := context.Background()
-				ctx = propagator.Extract(ctx, req.Header)
+				ctx = propagator.Extract(ctx, propagation.HeaderCarrier(req.Header))
 				gotSc := trace.RemoteSpanContextFromContext(ctx)
 				if diff := cmp.Diff(gotSc, tt.wantSc, cmp.AllowUnexported(trace.TraceState{})); diff != "" {
 					t.Errorf("%s: %s: -got +want %s", tg.name, tt.name, diff)
@@ -103,7 +104,7 @@ func TestInjectB3(t *testing.T) {
 						sc:   tt.sc,
 					},
 				)
-				propagator.Inject(ctx, req.Header)
+				propagator.Inject(ctx, propagation.HeaderCarrier(req.Header))
 
 				for h, v := range tt.wantHeaders {
 					got, want := req.Header.Get(h), v

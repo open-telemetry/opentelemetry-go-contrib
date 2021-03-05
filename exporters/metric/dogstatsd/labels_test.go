@@ -20,30 +20,30 @@ import (
 	"github.com/stretchr/testify/require"
 
 	"go.opentelemetry.io/contrib/exporters/metric/dogstatsd"
-	"go.opentelemetry.io/otel/label"
+	"go.opentelemetry.io/otel/attribute"
 )
 
-var testLabels = []label.KeyValue{
-	label.String("A", "B"),
-	label.String("C", "D"),
-	label.Float64("E", 1.5),
+var testAttributes = []attribute.KeyValue{
+	attribute.String("A", "B"),
+	attribute.String("C", "D"),
+	attribute.Float64("E", 1.5),
 }
 
-func TestLabelSyntax(t *testing.T) {
-	encoder := dogstatsd.NewLabelEncoder()
+func TestAttributeSyntax(t *testing.T) {
+	encoder := dogstatsd.NewAttributeEncoder()
 
-	labels := label.NewSet(testLabels...)
-	require.Equal(t, `A:B,C:D,E:1.5`, encoder.Encode(labels.Iter()))
+	attributes := attribute.NewSet(testAttributes...)
+	require.Equal(t, `A:B,C:D,E:1.5`, encoder.Encode(attributes.Iter()))
 
-	kvs := []label.KeyValue{
-		label.String("A", "B"),
+	kvs := []attribute.KeyValue{
+		attribute.String("A", "B"),
 	}
-	labels = label.NewSet(kvs...)
-	require.Equal(t, `A:B`, encoder.Encode(labels.Iter()))
+	attributes = attribute.NewSet(kvs...)
+	require.Equal(t, `A:B`, encoder.Encode(attributes.Iter()))
 
-	labels = label.NewSet()
-	require.Equal(t, "", encoder.Encode(labels.Iter()))
+	attributes = attribute.NewSet()
+	require.Equal(t, "", encoder.Encode(attributes.Iter()))
 
-	labels = label.Set{}
-	require.Equal(t, "", encoder.Encode(labels.Iter()))
+	attributes = attribute.Set{}
+	require.Equal(t, "", encoder.Encode(attributes.Iter()))
 }

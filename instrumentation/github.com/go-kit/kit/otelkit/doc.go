@@ -12,30 +12,11 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package otelmemcache
-
-import (
-	"github.com/bradfitz/gomemcache/memcache"
-
-	"go.opentelemetry.io/otel/codes"
-)
-
-// maps memcache error to appropriate error code; otherwise returns status OK
-func memcacheErrToStatusCode(err error) codes.Code {
-	if err == nil {
-		return codes.Ok
-	}
-
-	switch err {
-	case memcache.ErrCacheMiss, memcache.ErrNotStored, memcache.ErrNoStats:
-		return codes.Error
-	case memcache.ErrCASConflict:
-		return codes.Error
-	case memcache.ErrServerError:
-		return codes.Error
-	case memcache.ErrMalformedKey:
-		return codes.Error
-	default:
-		return codes.Unset
-	}
-}
+// Package otelkit instruments the github.com/go-kit/kit package.
+//
+// Compared to other instrumentation libraries provided by go-kit itself,
+// this package only provides instrumentation for the endpoint layer.
+// For instrumenting the transport layer,
+// look at the instrumentation libraries provided by go.opentelemetry.io/contrib.
+// Learn more about go-kit's layers at https://gokit.io/faq/#architecture-and-design.
+package otelkit // import "go.opentelemetry.io/contrib/instrumentation/github.com/go-kit/kit/otelkit"

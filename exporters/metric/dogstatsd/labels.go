@@ -18,26 +18,26 @@ import (
 	"bytes"
 	"sync"
 
-	"go.opentelemetry.io/otel/label"
+	"go.opentelemetry.io/otel/attribute"
 )
 
-// LabelEncoder encodes metric labels in the dogstatsd syntax.
+// AttributeEncoder encodes metric attributes in the dogstatsd syntax.
 //
 // TODO: find a link for this syntax.  It's been copied out of code,
 // not a specification:
 //
 // https://github.com/stripe/veneur/blob/master/sinks/datadog/datadog.go
-type LabelEncoder struct {
+type AttributeEncoder struct {
 	pool sync.Pool
 }
 
-var _ label.Encoder = &LabelEncoder{}
-var leID = label.NewEncoderID()
+var _ attribute.Encoder = &AttributeEncoder{}
+var leID = attribute.NewEncoderID()
 
-// NewLabelEncoder returns a new encoder for dogstatsd-syntax metric
-// labels.
-func NewLabelEncoder() *LabelEncoder {
-	return &LabelEncoder{
+// NewAttributeEncoder returns a new encoder for dogstatsd-syntax metric
+// attributes.
+func NewAttributeEncoder() *AttributeEncoder {
+	return &AttributeEncoder{
 		pool: sync.Pool{
 			New: func() interface{} {
 				return &bytes.Buffer{}
@@ -47,18 +47,18 @@ func NewLabelEncoder() *LabelEncoder {
 }
 
 // Encode emits a string like "|#key1:value1,key2:value2".
-func (e *LabelEncoder) Encode(iter label.Iterator) string {
+func (e *AttributeEncoder) Encode(iter attribute.Iterator) string {
 	buf := e.pool.Get().(*bytes.Buffer)
 	defer e.pool.Put(buf)
 	buf.Reset()
 
 	for iter.Next() {
-		e.encodeOne(buf, iter.Label())
+		e.encodeOne(buf, iter.Attribute())
 	}
 	return buf.String()
 }
 
-func (e *LabelEncoder) encodeOne(buf *bytes.Buffer, kv label.KeyValue) {
+func (e *AttributeEncoder) encodeOne(buf *bytes.Buffer, kv attribute.KeyValue) {
 	if buf.Len() != 0 {
 		_, _ = buf.WriteRune(',')
 	}
@@ -67,6 +67,6 @@ func (e *LabelEncoder) encodeOne(buf *bytes.Buffer, kv label.KeyValue) {
 	_, _ = buf.WriteString(kv.Value.Emit())
 }
 
-func (*LabelEncoder) ID() label.EncoderID {
+func (*AttributeEncoder) ID() attribute.EncoderID {
 	return leID
 }

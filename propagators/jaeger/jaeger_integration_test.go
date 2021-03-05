@@ -23,6 +23,7 @@ import (
 
 	"go.opentelemetry.io/contrib/propagators/jaeger"
 	"go.opentelemetry.io/otel/oteltest"
+	"go.opentelemetry.io/otel/propagation"
 	"go.opentelemetry.io/otel/trace"
 )
 
@@ -57,7 +58,7 @@ func TestExtractJaeger(t *testing.T) {
 				}
 
 				ctx := context.Background()
-				ctx = propagator.Extract(ctx, req.Header)
+				ctx = propagator.Extract(ctx, propagation.HeaderCarrier(req.Header))
 				resSc := trace.RemoteSpanContextFromContext(ctx)
 				if diff := cmp.Diff(resSc, tc.expected, cmp.AllowUnexported(trace.TraceState{})); diff != "" {
 					t.Errorf("%s: %s: -got +want %s", tg.name, tc.name, diff)
@@ -103,7 +104,7 @@ func TestInjectJaeger(t *testing.T) {
 						sc:   tc.sc,
 					},
 				)
-				propagator.Inject(ctx, req.Header)
+				propagator.Inject(ctx, propagation.HeaderCarrier(req.Header))
 
 				for h, v := range tc.wantHeaders {
 					result, want := req.Header.Get(h), v

@@ -22,7 +22,7 @@ import (
 	"net/http"
 	"strings"
 
-	"go.opentelemetry.io/otel/label"
+	"go.opentelemetry.io/otel/attribute"
 	"go.opentelemetry.io/otel/trace"
 
 	"go.opentelemetry.io/contrib/instrumentation/net/http/otelhttp"
@@ -50,7 +50,7 @@ func ExampleNewHandler() {
 		case "":
 			err = fmt.Errorf("expected /hello/:name in %q", s)
 		default:
-			trace.SpanFromContext(ctx).SetAttributes(label.String("name", pp[1]))
+			trace.SpanFromContext(ctx).SetAttributes(attribute.String("name", pp[1]))
 		}
 		return pp[1], err
 	}
@@ -74,7 +74,7 @@ func ExampleNewHandler() {
 				}(ctx); err != nil {
 					log.Println("error figuring out name: ", err)
 					http.Error(w, err.Error(), http.StatusInternalServerError)
-					labeler.Add(label.Bool("error", true))
+					labeler.Add(attribute.Bool("error", true))
 					return
 				}
 
@@ -82,14 +82,14 @@ func ExampleNewHandler() {
 				if err != nil {
 					log.Println("error reading body: ", err)
 					w.WriteHeader(http.StatusBadRequest)
-					labeler.Add(label.Bool("error", true))
+					labeler.Add(attribute.Bool("error", true))
 					return
 				}
 
 				n, err := io.WriteString(w, "Hello, "+name+"!\nYou sent me this:\n"+string(d))
 				if err != nil {
 					log.Printf("error writing reply after %d bytes: %s", n, err)
-					labeler.Add(label.Bool("error", true))
+					labeler.Add(attribute.Bool("error", true))
 				}
 			}),
 		),
