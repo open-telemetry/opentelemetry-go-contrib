@@ -23,6 +23,7 @@ import (
 	"github.com/google/go-cmp/cmp"
 
 	"go.opentelemetry.io/otel/oteltest"
+	"go.opentelemetry.io/otel/propagation"
 	"go.opentelemetry.io/otel/trace"
 )
 
@@ -96,7 +97,7 @@ func TestInject(t *testing.T) {
 				ctx = trace.ContextWithRemoteSpanContext(ctx, tt.sc)
 				ctx, _ = mockTracer.Start(ctx, "inject")
 			}
-			prop.Inject(ctx, req.Header)
+			prop.Inject(ctx, propagation.HeaderCarrier(req.Header))
 
 			gotHeader := req.Header.Get("grpc-trace-bin")
 			if gotHeader != tt.wantHeader {
@@ -145,7 +146,7 @@ func TestExtract(t *testing.T) {
 			req.Header.Set("grpc-trace-bin", tt.header)
 
 			ctx := context.Background()
-			ctx = prop.Extract(ctx, req.Header)
+			ctx = prop.Extract(ctx, propagation.HeaderCarrier(req.Header))
 			gotSc := trace.RemoteSpanContextFromContext(ctx)
 			if diff := cmp.Diff(gotSc, tt.wantSc, cmp.AllowUnexported(trace.TraceState{})); diff != "" {
 				t.Errorf("%s: -got +want %s", tt.desc, diff)

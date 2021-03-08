@@ -26,7 +26,7 @@ import (
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 
-	"go.opentelemetry.io/otel/label"
+	"go.opentelemetry.io/otel/attribute"
 	"go.opentelemetry.io/otel/sdk/resource"
 	"go.opentelemetry.io/otel/semconv"
 )
@@ -61,7 +61,7 @@ func TestAWS_Detect(t *testing.T) {
 		return doc, nil
 	}
 
-	usWestIDLabels := []label.KeyValue{
+	usWestIDLabels := []attribute.KeyValue{
 		semconv.CloudProviderAWS,
 		semconv.CloudRegionKey.String("us-west-2"),
 		semconv.CloudZoneKey.String("us-west-2b"),

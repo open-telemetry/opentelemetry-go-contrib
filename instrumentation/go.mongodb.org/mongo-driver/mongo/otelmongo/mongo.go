@@ -20,7 +20,7 @@ import (
 	"strings"
 	"sync"
 
-	"go.opentelemetry.io/otel/label"
+	"go.opentelemetry.io/otel/attribute"
 	"go.opentelemetry.io/otel/trace"
 
 	"go.mongodb.org/mongo-driver/bson"
@@ -42,7 +42,7 @@ type monitor struct {
 func (m *monitor) Started(ctx context.Context, evt *event.CommandStartedEvent) {
 	hostname, port := peerInfo(evt)
 	b, _ := bson.MarshalExtJSON(evt.Command, false, false)
-	attrs := []label.KeyValue{
+	attrs := []attribute.KeyValue{
 		ServiceName(m.serviceName),
 		DBOperation(evt.CommandName),
 		DBInstance(evt.DatabaseName),

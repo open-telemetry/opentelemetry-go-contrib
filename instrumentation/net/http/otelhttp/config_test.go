@@ -29,7 +29,7 @@ import (
 func TestBasicFilter(t *testing.T) {
 	rr := httptest.NewRecorder()
 
-	spanRecorder := new(oteltest.StandardSpanRecorder)
+	spanRecorder := new(oteltest.SpanRecorder)
 	provider := oteltest.NewTracerProvider(
 		oteltest.WithSpanRecorder(spanRecorder),
 	)
@@ -101,7 +101,7 @@ func TestSpanNameFormatter(t *testing.T) {
 		t.Run(tc.name, func(t *testing.T) {
 			rr := httptest.NewRecorder()
 
-			spanRecorder := new(oteltest.StandardSpanRecorder)
+			spanRecorder := new(oteltest.SpanRecorder)
 			provider := oteltest.NewTracerProvider(
 				oteltest.WithSpanRecorder(spanRecorder),
 			)

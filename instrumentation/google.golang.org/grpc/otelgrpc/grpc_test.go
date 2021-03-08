@@ -28,7 +28,7 @@ import (
 	"google.golang.org/grpc/test/bufconn"
 
 	"go.opentelemetry.io/contrib/instrumentation/google.golang.org/grpc/otelgrpc"
-	"go.opentelemetry.io/otel/label"
+	"go.opentelemetry.io/otel/attribute"
 	"go.opentelemetry.io/otel/oteltest"
 	"go.opentelemetry.io/otel/semconv"
 )
@@ -72,16 +72,16 @@ func doCalls(cOpt []grpc.DialOption, sOpt []grpc.ServerOption) error {
 }
 
 func TestInterceptors(t *testing.T) {
-	clientUnarySR := new(oteltest.StandardSpanRecorder)
+	clientUnarySR := new(oteltest.SpanRecorder)
 	clientUnaryTP := oteltest.NewTracerProvider(oteltest.WithSpanRecorder(clientUnarySR))
 
-	clientStreamSR := new(oteltest.StandardSpanRecorder)
+	clientStreamSR := new(oteltest.SpanRecorder)
 	clientStreamTP := oteltest.NewTracerProvider(oteltest.WithSpanRecorder(clientStreamSR))
 
-	serverUnarySR := new(oteltest.StandardSpanRecorder)
+	serverUnarySR := new(oteltest.SpanRecorder)
 	serverUnaryTP := oteltest.NewTracerProvider(oteltest.WithSpanRecorder(serverUnarySR))
 
-	serverStreamSR := new(oteltest.StandardSpanRecorder)
+	serverStreamSR := new(oteltest.SpanRecorder)
 	serverStreamTP := oteltest.NewTracerProvider(oteltest.WithSpanRecorder(serverStreamSR))
 
 	assert.NoError(t, doCalls(
@@ -121,26 +121,26 @@ func checkUnaryClientSpans(t *testing.T, spans []*oteltest.Span) {
 	assert.Equal(t, []oteltest.Event{
 		{
 			Name: "message",
-			Attributes: map[label.Key]label.Value{
-				semconv.RPCMessageIDKey:               label.IntValue(1),
-				semconv.RPCMessageTypeKey:             label.StringValue("SENT"),
-				semconv.RPCMessageUncompressedSizeKey: label.IntValue(0),
+			Attributes: map[attribute.Key]attribute.Value{
+				semconv.RPCMessageIDKey:               attribute.IntValue(1),
+				semconv.RPCMessageTypeKey:             attribute.StringValue("SENT"),
+				semconv.RPCMessageUncompressedSizeKey: attribute.IntValue(0),
 			},
 		},
 		{
 			Name: "message",
-			Attributes: map[label.Key]label.Value{
-				semconv.RPCMessageIDKey:               label.IntValue(1),
-				semconv.RPCMessageTypeKey:             label.StringValue("RECEIVED"),
-				semconv.RPCMessageUncompressedSizeKey: label.IntValue(0),
+			Attributes: map[attribute.Key]attribute.Value{
+				semconv.RPCMessageIDKey:               attribute.IntValue(1),
+				semconv.RPCMessageTypeKey:             attribute.StringValue("RECEIVED"),
+				semconv.RPCMessageUncompressedSizeKey: attribute.IntValue(0),
 			},
 		},
 	}, noTimestamp(emptySpan.Events()))
-	assert.Equal(t, map[label.Key]label.Value{
-		semconv.RPCMethodKey:       label.StringValue("EmptyCall"),
-		semconv.RPCServiceKey:      label.StringValue("grpc.testing.TestService"),
+	assert.Equal(t, map[attribute.Key]attribute.Value{
+		semconv.RPCMethodKey:       attribute.StringValue("EmptyCall"),
+		semconv.RPCServiceKey:      attribute.StringValue("grpc.testing.TestService"),
 		semconv.RPCSystemGRPC.Key:  semconv.RPCSystemGRPC.Value,
-		otelgrpc.GRPCStatusCodeKey: label.Uint32Value(uint32(codes.OK)),
+		otelgrpc.GRPCStatusCodeKey: attribute.Int64Value(int64(codes.OK)),
 	}, emptySpan.Attributes())
 
 	largeSpan := spans[1]
@@ -149,28 +149,28 @@ func checkUnaryClientSpans(t *testing.T, spans []*oteltest.Span) {
 	assert.Equal(t, []oteltest.Event{
 		{
 			Name: "message",
-			Attributes: map[label.Key]label.Value{
-				semconv.RPCMessageIDKey:   label.IntValue(1),
-				semconv.RPCMessageTypeKey: label.StringValue("SENT"),
+			Attributes: map[attribute.Key]attribute.Value{
+				semconv.RPCMessageIDKey:   attribute.IntValue(1),
+				semconv.RPCMessageTypeKey: attribute.StringValue("SENT"),
 				// largeReqSize from "google.golang.org/grpc/interop" + 12 (overhead).
-				semconv.RPCMessageUncompressedSizeKey: label.IntValue(271840),
+				semconv.RPCMessageUncompressedSizeKey: attribute.IntValue(271840),
 			},
 		},
 		{
 			Name: "message",
-			Attributes: map[label.Key]label.Value{
-				semconv.RPCMessageIDKey:   label.IntValue(1),
-				semconv.RPCMessageTypeKey: label.StringValue("RECEIVED"),
+			Attributes: map[attribute.Key]attribute.Value{
+				semconv.RPCMessageIDKey:   attribute.IntValue(1),
+				semconv.RPCMessageTypeKey: attribute.StringValue("RECEIVED"),
 				// largeRespSize from "google.golang.org/grpc/interop" + 8 (overhead).
-				semconv.RPCMessageUncompressedSizeKey: label.IntValue(314167),
+				semconv.RPCMessageUncompressedSizeKey: attribute.IntValue(314167),
 			},
 		},
 	}, noTimestamp(largeSpan.Events()))
-	assert.Equal(t, map[label.Key]label.Value{
-		semconv.RPCMethodKey:       label.StringValue("UnaryCall"),
-		semconv.RPCServiceKey:      label.StringValue("grpc.testing.TestService"),
+	assert.Equal(t, map[attribute.Key]attribute.Value{
+		semconv.RPCMethodKey:       attribute.StringValue("UnaryCall"),
+		semconv.RPCServiceKey:      attribute.StringValue("grpc.testing.TestService"),
 		semconv.RPCSystemGRPC.Key:  semconv.RPCSystemGRPC.Value,
-		otelgrpc.GRPCStatusCodeKey: label.Uint32Value(uint32(codes.OK)),
+		otelgrpc.GRPCStatusCodeKey: attribute.Int64Value(int64(codes.OK)),
 	}, largeSpan.Attributes())
 }
 
@@ -184,43 +184,43 @@ func checkStreamClientSpans(t *testing.T, spans []*oteltest.Span) {
 	assert.Equal(t, []oteltest.Event{
 		{
 			Name: "message",
-			Attributes: map[label.Key]label.Value{
-				semconv.RPCMessageIDKey:               label.IntValue(1),
-				semconv.RPCMessageTypeKey:             label.StringValue("SENT"),
-				semconv.RPCMessageUncompressedSizeKey: label.IntValue(27190),
+			Attributes: map[attribute.Key]attribute.Value{
+				semconv.RPCMessageIDKey:               attribute.IntValue(1),
+				semconv.RPCMessageTypeKey:             attribute.StringValue("SENT"),
+				semconv.RPCMessageUncompressedSizeKey: attribute.IntValue(27190),
 			},
 		},
 		{
 			Name: "message",
-			Attributes: map[label.Key]label.Value{
-				semconv.RPCMessageIDKey:               label.IntValue(2),
-				semconv.RPCMessageTypeKey:             label.StringValue("SENT"),
-				semconv.RPCMessageUncompressedSizeKey: label.IntValue(12),
+			Attributes: map[attribute.Key]attribute.Value{
+				semconv.RPCMessageIDKey:               attribute.IntValue(2),
+				semconv.RPCMessageTypeKey:             attribute.StringValue("SENT"),
+				semconv.RPCMessageUncompressedSizeKey: attribute.IntValue(12),
 			},
 		},
 		{
 			Name: "message",
-			Attributes: map[label.Key]label.Value{
-				semconv.RPCMessageIDKey:               label.IntValue(3),
-				semconv.RPCMessageTypeKey:             label.StringValue("SENT"),
-				semconv.RPCMessageUncompressedSizeKey: label.IntValue(1834),
+			Attributes: map[attribute.Key]attribute.Value{
+				semconv.RPCMessageIDKey:               attribute.IntValue(3),
+				semconv.RPCMessageTypeKey:             attribute.StringValue("SENT"),
+				semconv.RPCMessageUncompressedSizeKey: attribute.IntValue(1834),
 			},
 		},
 		{
 			Name: "message",
-			Attributes: map[label.Key]label.Value{
-				semconv.RPCMessageIDKey:               label.IntValue(4),
-				semconv.RPCMessageTypeKey:             label.StringValue("SENT"),
-				semconv.RPCMessageUncompressedSizeKey: label.IntValue(45912),
+			Attributes: map[attribute.Key]attribute.Value{
+				semconv.RPCMessageIDKey:               attribute.IntValue(4),
+				semconv.RPCMessageTypeKey:             attribute.StringValue("SENT"),
+				semconv.RPCMessageUncompressedSizeKey: attribute.IntValue(45912),
 			},
 		},
 		// client does not record an event for the server response.
 	}, noTimestamp(streamInput.Events()))
-	assert.Equal(t, map[label.Key]label.Value{
-		semconv.RPCMethodKey:       label.StringValue("StreamingInputCall"),
-		semconv.RPCServiceKey:      label.StringValue("grpc.testing.TestService"),
+	assert.Equal(t, map[attribute.Key]attribute.Value{
+		semconv.RPCMethodKey:       attribute.StringValue("StreamingInputCall"),
+		semconv.RPCServiceKey:      attribute.StringValue("grpc.testing.TestService"),
 		semconv.RPCSystemGRPC.Key:  semconv.RPCSystemGRPC.Value,
-		otelgrpc.GRPCStatusCodeKey: label.Uint32Value(uint32(codes.OK)),
+		otelgrpc.GRPCStatusCodeKey: attribute.Int64Value(int64(codes.OK)),
 	}, streamInput.Attributes())
 
 	streamOutput := spans[1]
@@ -230,50 +230,50 @@ func checkStreamClientSpans(t *testing.T, spans []*oteltest.Span) {
 	assert.Equal(t, []oteltest.Event{
 		{
 			Name: "message",
-			Attributes: map[label.Key]label.Value{
-				semconv.RPCMessageIDKey:               label.IntValue(1),
-				semconv.RPCMessageTypeKey:             label.StringValue("SENT"),
-				semconv.RPCMessageUncompressedSizeKey: label.IntValue(21),
+			Attributes: map[attribute.Key]attribute.Value{
+				semconv.RPCMessageIDKey:               attribute.IntValue(1),
+				semconv.RPCMessageTypeKey:             attribute.StringValue("SENT"),
+				semconv.RPCMessageUncompressedSizeKey: attribute.IntValue(21),
 			},
 		},
 		{
 			Name: "message",
-			Attributes: map[label.Key]label.Value{
-				semconv.RPCMessageIDKey:               label.IntValue(1),
-				semconv.RPCMessageTypeKey:             label.StringValue("RECEIVED"),
-				semconv.RPCMessageUncompressedSizeKey: label.IntValue(31423),
+			Attributes: map[attribute.Key]attribute.Value{
+				semconv.RPCMessageIDKey:               attribute.IntValue(1),
+				semconv.RPCMessageTypeKey:             attribute.StringValue("RECEIVED"),
+				semconv.RPCMessageUncompressedSizeKey: attribute.IntValue(31423),
 			},
 		},
 		{
 			Name: "message",
-			Attributes: map[label.Key]label.Value{
-				semconv.RPCMessageIDKey:               label.IntValue(2),
-				semconv.RPCMessageTypeKey:             label.StringValue("RECEIVED"),
-				semconv.RPCMessageUncompressedSizeKey: label.IntValue(13),
+			Attributes: map[attribute.Key]attribute.Value{
+				semconv.RPCMessageIDKey:               attribute.IntValue(2),
+				semconv.RPCMessageTypeKey:             attribute.StringValue("RECEIVED"),
+				semconv.RPCMessageUncompressedSizeKey: attribute.IntValue(13),
 			},
 		},
 		{
 			Name: "message",
-			Attributes: map[label.Key]label.Value{
-				semconv.RPCMessageIDKey:               label.IntValue(3),
-				semconv.RPCMessageTypeKey:             label.StringValue("RECEIVED"),
-				semconv.RPCMessageUncompressedSizeKey: label.IntValue(2659),
+			Attributes: map[attribute.Key]attribute.Value{
+				semconv.RPCMessageIDKey:               attribute.IntValue(3),
+				semconv.RPCMessageTypeKey:             attribute.StringValue("RECEIVED"),
+				semconv.RPCMessageUncompressedSizeKey: attribute.IntValue(2659),
 			},
 		},
 		{
 			Name: "message",
-			Attributes: map[label.Key]label.Value{
-				semconv.RPCMessageIDKey:               label.IntValue(4),
-				semconv.RPCMessageTypeKey:             label.StringValue("RECEIVED"),
-				semconv.RPCMessageUncompressedSizeKey: label.IntValue(58987),
+			Attributes: map[attribute.Key]attribute.Value{
+				semconv.RPCMessageIDKey:               attribute.IntValue(4),
+				semconv.RPCMessageTypeKey:             attribute.StringValue("RECEIVED"),
+				semconv.RPCMessageUncompressedSizeKey: attribute.IntValue(58987),
 			},
 		},
 	}, noTimestamp(streamOutput.Events()))
-	assert.Equal(t, map[label.Key]label.Value{
-		semconv.RPCMethodKey:       label.StringValue("StreamingOutputCall"),
-		semconv.RPCServiceKey:      label.StringValue("grpc.testing.TestService"),
+	assert.Equal(t, map[attribute.Key]attribute.Value{
+		semconv.RPCMethodKey:       attribute.StringValue("StreamingOutputCall"),
+		semconv.RPCServiceKey:      attribute.StringValue("grpc.testing.TestService"),
 		semconv.RPCSystemGRPC.Key:  semconv.RPCSystemGRPC.Value,
-		otelgrpc.GRPCStatusCodeKey: label.Uint32Value(uint32(codes.OK)),
+		otelgrpc.GRPCStatusCodeKey: attribute.Int64Value(int64(codes.OK)),
 	}, streamOutput.Attributes())
 
 	pingPong := spans[2]
@@ -282,74 +282,74 @@ func checkStreamClientSpans(t *testing.T, spans []*oteltest.Span) {
 	assert.Equal(t, []oteltest.Event{
 		{
 			Name: "message",
-			Attributes: map[label.Key]label.Value{
-				semconv.RPCMessageIDKey:               label.IntValue(1),
-				semconv.RPCMessageTypeKey:             label.StringValue("SENT"),
-				semconv.RPCMessageUncompressedSizeKey: label.IntValue(27196),
+			Attributes: map[attribute.Key]attribute.Value{
+				semconv.RPCMessageIDKey:               attribute.IntValue(1),
+				semconv.RPCMessageTypeKey:             attribute.StringValue("SENT"),
+				semconv.RPCMessageUncompressedSizeKey: attribute.IntValue(27196),
 			},
 		},
 		{
 			Name: "message",
-			Attributes: map[label.Key]label.Value{
-				semconv.RPCMessageIDKey:               label.IntValue(1),
-				semconv.RPCMessageTypeKey:             label.StringValue("RECEIVED"),
-				semconv.RPCMessageUncompressedSizeKey: label.IntValue(31423),
+			Attributes: map[attribute.Key]attribute.Value{
+				semconv.RPCMessageIDKey:               attribute.IntValue(1),
+				semconv.RPCMessageTypeKey:             attribute.StringValue("RECEIVED"),
+				semconv.RPCMessageUncompressedSizeKey: attribute.IntValue(31423),
 			},
 		},
 		{
 			Name: "message",
-			Attributes: map[label.Key]label.Value{
-				semconv.RPCMessageIDKey:               label.IntValue(2),
-				semconv.RPCMessageTypeKey:             label.StringValue("SENT"),
-				semconv.RPCMessageUncompressedSizeKey: label.IntValue(16),
+			Attributes: map[attribute.Key]attribute.Value{
+				semconv.RPCMessageIDKey:               attribute.IntValue(2),
+				semconv.RPCMessageTypeKey:             attribute.StringValue("SENT"),
+				semconv.RPCMessageUncompressedSizeKey: attribute.IntValue(16),
 			},
 		},
 		{
 			Name: "message",
-			Attributes: map[label.Key]label.Value{
-				semconv.RPCMessageIDKey:               label.IntValue(2),
-				semconv.RPCMessageTypeKey:             label.StringValue("RECEIVED"),
-				semconv.RPCMessageUncompressedSizeKey: label.IntValue(13),
+			Attributes: map[attribute.Key]attribute.Value{
+				semconv.RPCMessageIDKey:               attribute.IntValue(2),
+				semconv.RPCMessageTypeKey:             attribute.StringValue("RECEIVED"),
+				semconv.RPCMessageUncompressedSizeKey: attribute.IntValue(13),
 			},
 		},
 		{
 			Name: "message",
-			Attributes: map[label.Key]label.Value{
-				semconv.RPCMessageIDKey:               label.IntValue(3),
-				semconv.RPCMessageTypeKey:             label.StringValue("SENT"),
-				semconv.RPCMessageUncompressedSizeKey: label.IntValue(1839),
+			Attributes: map[attribute.Key]attribute.Value{
+				semconv.RPCMessageIDKey:               attribute.IntValue(3),
+				semconv.RPCMessageTypeKey:             attribute.StringValue("SENT"),
+				semconv.RPCMessageUncompressedSizeKey: attribute.IntValue(1839),
 			},
 		},
 		{
 			Name: "message",
-			Attributes: map[label.Key]label.Value{
-				semconv.RPCMessageIDKey:               label.IntValue(3),
-				semconv.RPCMessageTypeKey:             label.StringValue("RECEIVED"),
-				semconv.RPCMessageUncompressedSizeKey: label.IntValue(2659),
+			Attributes: map[attribute.Key]attribute.Value{
+				semconv.RPCMessageIDKey:               attribute.IntValue(3),
+				semconv.RPCMessageTypeKey:             attribute.StringValue("RECEIVED"),
+				semconv.RPCMessageUncompressedSizeKey: attribute.IntValue(2659),
 			},
 		},
 		{
 			Name: "message",
-			Attributes: map[label.Key]label.Value{
-				semconv.RPCMessageIDKey:               label.IntValue(4),
-				semconv.RPCMessageTypeKey:             label.StringValue("SENT"),
-				semconv.RPCMessageUncompressedSizeKey: label.IntValue(45918),
+			Attributes: map[attribute.Key]attribute.Value{
+				semconv.RPCMessageIDKey:               attribute.IntValue(4),
+				semconv.RPCMessageTypeKey:             attribute.StringValue("SENT"),
+				semconv.RPCMessageUncompressedSizeKey: attribute.IntValue(45918),
 			},
 		},
 		{
 			Name: "message",
-			Attributes: map[label.Key]label.Value{
-				semconv.RPCMessageIDKey:               label.IntValue(4),
-				semconv.RPCMessageTypeKey:             label.StringValue("RECEIVED"),
-				semconv.RPCMessageUncompressedSizeKey: label.IntValue(58987),
+			Attributes: map[attribute.Key]attribute.Value{
+				semconv.RPCMessageIDKey:               attribute.IntValue(4),
+				semconv.RPCMessageTypeKey:             attribute.StringValue("RECEIVED"),
+				semconv.RPCMessageUncompressedSizeKey: attribute.IntValue(58987),
 			},
 		},
 	}, noTimestamp(pingPong.Events()))
-	assert.Equal(t, map[label.Key]label.Value{
-		semconv.RPCMethodKey:       label.StringValue("FullDuplexCall"),
-		semconv.RPCServiceKey:      label.StringValue("grpc.testing.TestService"),
+	assert.Equal(t, map[attribute.Key]attribute.Value{
+		semconv.RPCMethodKey:       attribute.StringValue("FullDuplexCall"),
+		semconv.RPCServiceKey:      attribute.StringValue("grpc.testing.TestService"),
 		semconv.RPCSystemGRPC.Key:  semconv.RPCSystemGRPC.Value,
-		otelgrpc.GRPCStatusCodeKey: label.Uint32Value(uint32(codes.OK)),
+		otelgrpc.GRPCStatusCodeKey: attribute.Int64Value(int64(codes.OK)),
 	}, pingPong.Attributes())
 }
 
@@ -363,50 +363,50 @@ func checkStreamServerSpans(t *testing.T, spans []*oteltest.Span) {
 	assert.Equal(t, []oteltest.Event{
 		{
 			Name: "message",
-			Attributes: map[label.Key]label.Value{
-				semconv.RPCMessageIDKey:               label.IntValue(1),
-				semconv.RPCMessageTypeKey:             label.StringValue("RECEIVED"),
-				semconv.RPCMessageUncompressedSizeKey: label.IntValue(27190),
+			Attributes: map[attribute.Key]attribute.Value{
+				semconv.RPCMessageIDKey:               attribute.IntValue(1),
+				semconv.RPCMessageTypeKey:             attribute.StringValue("RECEIVED"),
+				semconv.RPCMessageUncompressedSizeKey: attribute.IntValue(27190),
 			},
 		},
 		{
 			Name: "message",
-			Attributes: map[label.Key]label.Value{
-				semconv.RPCMessageIDKey:               label.IntValue(2),
-				semconv.RPCMessageTypeKey:             label.StringValue("RECEIVED"),
-				semconv.RPCMessageUncompressedSizeKey: label.IntValue(12),
+			Attributes: map[attribute.Key]attribute.Value{
+				semconv.RPCMessageIDKey:               attribute.IntValue(2),
+				semconv.RPCMessageTypeKey:             attribute.StringValue("RECEIVED"),
+				semconv.RPCMessageUncompressedSizeKey: attribute.IntValue(12),
 			},
 		},
 		{
 			Name: "message",
-			Attributes: map[label.Key]label.Value{
-				semconv.RPCMessageIDKey:               label.IntValue(3),
-				semconv.RPCMessageTypeKey:             label.StringValue("RECEIVED"),
-				semconv.RPCMessageUncompressedSizeKey: label.IntValue(1834),
+			Attributes: map[attribute.Key]attribute.Value{
+				semconv.RPCMessageIDKey:               attribute.IntValue(3),
+				semconv.RPCMessageTypeKey:             attribute.StringValue("RECEIVED"),
+				semconv.RPCMessageUncompressedSizeKey: attribute.IntValue(1834),
 			},
 		},
 		{
 			Name: "message",
-			Attributes: map[label.Key]label.Value{
-				semconv.RPCMessageIDKey:               label.IntValue(4),
-				semconv.RPCMessageTypeKey:             label.StringValue("RECEIVED"),
-				semconv.RPCMessageUncompressedSizeKey: label.IntValue(45912),
+			Attributes: map[attribute.Key]attribute.Value{
+				semconv.RPCMessageIDKey:               attribute.IntValue(4),
+				semconv.RPCMessageTypeKey:             attribute.StringValue("RECEIVED"),
+				semconv.RPCMessageUncompressedSizeKey: attribute.IntValue(45912),
 			},
 		},
 		{
 			Name: "message",
-			Attributes: map[label.Key]label.Value{
-				semconv.RPCMessageIDKey:               label.IntValue(1),
-				semconv.RPCMessageTypeKey:             label.StringValue("SENT"),
-				semconv.RPCMessageUncompressedSizeKey: label.IntValue(4),
+			Attributes: map[attribute.Key]attribute.Value{
+				semconv.RPCMessageIDKey:               attribute.IntValue(1),
+				semconv.RPCMessageTypeKey:             attribute.StringValue("SENT"),
+				semconv.RPCMessageUncompressedSizeKey: attribute.IntValue(4),
 			},
 		},
 	}, noTimestamp(streamInput.Events()))
-	assert.Equal(t, map[label.Key]label.Value{
-		semconv.RPCMethodKey:       label.StringValue("StreamingInputCall"),
-		semconv.RPCServiceKey:      label.StringValue("grpc.testing.TestService"),
+	assert.Equal(t, map[attribute.Key]attribute.Value{
+		semconv.RPCMethodKey:       attribute.StringValue("StreamingInputCall"),
+		semconv.RPCServiceKey:      attribute.StringValue("grpc.testing.TestService"),
 		semconv.RPCSystemGRPC.Key:  semconv.RPCSystemGRPC.Value,
-		otelgrpc.GRPCStatusCodeKey: label.Uint32Value(uint32(codes.OK)),
+		otelgrpc.GRPCStatusCodeKey: attribute.Int64Value(int64(codes.OK)),
 	}, streamInput.Attributes())
 
 	streamOutput := spans[1]
@@ -416,50 +416,50 @@ func checkStreamServerSpans(t *testing.T, spans []*oteltest.Span) {
 	assert.Equal(t, []oteltest.Event{
 		{
 			Name: "message",
-			Attributes: map[label.Key]label.Value{
-				semconv.RPCMessageIDKey:               label.IntValue(1),
-				semconv.RPCMessageTypeKey:             label.StringValue("RECEIVED"),
-				semconv.RPCMessageUncompressedSizeKey: label.IntValue(21),
+			Attributes: map[attribute.Key]attribute.Value{
+				semconv.RPCMessageIDKey:               attribute.IntValue(1),
+				semconv.RPCMessageTypeKey:             attribute.StringValue("RECEIVED"),
+				semconv.RPCMessageUncompressedSizeKey: attribute.IntValue(21),
 			},
 		},
 		{
 			Name: "message",
-			Attributes: map[label.Key]label.Value{
-				semconv.RPCMessageIDKey:               label.IntValue(1),
-				semconv.RPCMessageTypeKey:             label.StringValue("SENT"),
-				semconv.RPCMessageUncompressedSizeKey: label.IntValue(31423),
+			Attributes: map[attribute.Key]attribute.Value{
+				semconv.RPCMessageIDKey:               attribute.IntValue(1),
+				semconv.RPCMessageTypeKey:             attribute.StringValue("SENT"),
+				semconv.RPCMessageUncompressedSizeKey: attribute.IntValue(31423),
 			},
 		},
 		{
 			Name: "message",
-			Attributes: map[label.Key]label.Value{
-				semconv.RPCMessageIDKey:               label.IntValue(2),
-				semconv.RPCMessageTypeKey:             label.StringValue("SENT"),
-				semconv.RPCMessageUncompressedSizeKey: label.IntValue(13),
+			Attributes: map[attribute.Key]attribute.Value{
+				semconv.RPCMessageIDKey:               attribute.IntValue(2),
+				semconv.RPCMessageTypeKey:             attribute.StringValue("SENT"),
+				semconv.RPCMessageUncompressedSizeKey: attribute.IntValue(13),
 			},
 		},
 		{
 			Name: "message",
-			Attributes: map[label.Key]label.Value{
-				semconv.RPCMessageIDKey:               label.IntValue(3),
-				semconv.RPCMessageTypeKey:             label.StringValue("SENT"),
-				semconv.RPCMessageUncompressedSizeKey: label.IntValue(2659),
+			Attributes: map[attribute.Key]attribute.Value{
+				semconv.RPCMessageIDKey:               attribute.IntValue(3),
+				semconv.RPCMessageTypeKey:             attribute.StringValue("SENT"),
+				semconv.RPCMessageUncompressedSizeKey: attribute.IntValue(2659),
 			},
 		},
 		{
 			Name: "message",
-			Attributes: map[label.Key]label.Value{
-				semconv.RPCMessageIDKey:               label.IntValue(4),
-				semconv.RPCMessageTypeKey:             label.StringValue("SENT"),
-				semconv.RPCMessageUncompressedSizeKey: label.IntValue(58987),
+			Attributes: map[attribute.Key]attribute.Value{
+				semconv.RPCMessageIDKey:               attribute.IntValue(4),
+				semconv.RPCMessageTypeKey:             attribute.StringValue("SENT"),
+				semconv.RPCMessageUncompressedSizeKey: attribute.IntValue(58987),
 			},
 		},
 	}, noTimestamp(streamOutput.Events()))
-	assert.Equal(t, map[label.Key]label.Value{
-		semconv.RPCMethodKey:       label.StringValue("StreamingOutputCall"),
-		semconv.RPCServiceKey:      label.StringValue("grpc.testing.TestService"),
+	assert.Equal(t, map[attribute.Key]attribute.Value{
+		semconv.RPCMethodKey:       attribute.StringValue("StreamingOutputCall"),
+		semconv.RPCServiceKey:      attribute.StringValue("grpc.testing.TestService"),
 		semconv.RPCSystemGRPC.Key:  semconv.RPCSystemGRPC.Value,
-		otelgrpc.GRPCStatusCodeKey: label.Uint32Value(uint32(codes.OK)),
+		otelgrpc.GRPCStatusCodeKey: attribute.Int64Value(int64(codes.OK)),
 	}, streamOutput.Attributes())
 
 	pingPong := spans[2]
@@ -468,74 +468,74 @@ func checkStreamServerSpans(t *testing.T, spans []*oteltest.Span) {
 	assert.Equal(t, []oteltest.Event{
 		{
 			Name: "message",
-			Attributes: map[label.Key]label.Value{
-				semconv.RPCMessageIDKey:               label.IntValue(1),
-				semconv.RPCMessageTypeKey:             label.StringValue("RECEIVED"),
-				semconv.RPCMessageUncompressedSizeKey: label.IntValue(27196),
+			Attributes: map[attribute.Key]attribute.Value{
+				semconv.RPCMessageIDKey:               attribute.IntValue(1),
+				semconv.RPCMessageTypeKey:             attribute.StringValue("RECEIVED"),
+				semconv.RPCMessageUncompressedSizeKey: attribute.IntValue(27196),
 			},
 		},
 		{
 			Name: "message",
-			Attributes: map[label.Key]label.Value{
-				semconv.RPCMessageIDKey:               label.IntValue(1),
-				semconv.RPCMessageTypeKey:             label.StringValue("SENT"),
-				semconv.RPCMessageUncompressedSizeKey: label.IntValue(31423),
+			Attributes: map[attribute.Key]attribute.Value{
+				semconv.RPCMessageIDKey:               attribute.IntValue(1),
+				semconv.RPCMessageTypeKey:             attribute.StringValue("SENT"),
+				semconv.RPCMessageUncompressedSizeKey: attribute.IntValue(31423),
 			},
 		},
 		{
 			Name: "message",
-			Attributes: map[label.Key]label.Value{
-				semconv.RPCMessageIDKey:               label.IntValue(2),
-				semconv.RPCMessageTypeKey:             label.StringValue("RECEIVED"),
-				semconv.RPCMessageUncompressedSizeKey: label.IntValue(16),
+			Attributes: map[attribute.Key]attribute.Value{
+				semconv.RPCMessageIDKey:               attribute.IntValue(2),
+				semconv.RPCMessageTypeKey:             attribute.StringValue("RECEIVED"),
+				semconv.RPCMessageUncompressedSizeKey: attribute.IntValue(16),
 			},
 		},
 		{
 			Name: "message",
-			Attributes: map[label.Key]label.Value{
-				semconv.RPCMessageIDKey:               label.IntValue(2),
-				semconv.RPCMessageTypeKey:             label.StringValue("SENT"),
-				semconv.RPCMessageUncompressedSizeKey: label.IntValue(13),
+			Attributes: map[attribute.Key]attribute.Value{
+				semconv.RPCMessageIDKey:               attribute.IntValue(2),
+				semconv.RPCMessageTypeKey:             attribute.StringValue("SENT"),
+				semconv.RPCMessageUncompressedSizeKey: attribute.IntValue(13),
 			},
 		},
 		{
 			Name: "message",
-			Attributes: map[label.Key]label.Value{
-				semconv.RPCMessageIDKey:               label.IntValue(3),
-				semconv.RPCMessageTypeKey:             label.StringValue("RECEIVED"),
-				semconv.RPCMessageUncompressedSizeKey: label.IntValue(1839),
+			Attributes: map[attribute.Key]attribute.Value{
+				semconv.RPCMessageIDKey:               attribute.IntValue(3),
+				semconv.RPCMessageTypeKey:             attribute.StringValue("RECEIVED"),
+				semconv.RPCMessageUncompressedSizeKey: attribute.IntValue(1839),
 			},
 		},
 		{
 			Name: "message",
-			Attributes: map[label.Key]label.Value{
-				semconv.RPCMessageIDKey:               label.IntValue(3),
-				semconv.RPCMessageTypeKey:             label.StringValue("SENT"),
-				semconv.RPCMessageUncompressedSizeKey: label.IntValue(2659),
+			Attributes: map[attribute.Key]attribute.Value{
+				semconv.RPCMessageIDKey:               attribute.IntValue(3),
+				semconv.RPCMessageTypeKey:             attribute.StringValue("SENT"),
+				semconv.RPCMessageUncompressedSizeKey: attribute.IntValue(2659),
 			},
 		},
 		{
 			Name: "message",
-			Attributes: map[label.Key]label.Value{
-				semconv.RPCMessageIDKey:               label.IntValue(4),
-				semconv.RPCMessageTypeKey:             label.StringValue("RECEIVED"),
-				semconv.RPCMessageUncompressedSizeKey: label.IntValue(45918),
+			Attributes: map[attribute.Key]attribute.Value{
+				semconv.RPCMessageIDKey:               attribute.IntValue(4),
+				semconv.RPCMessageTypeKey:             attribute.StringValue("RECEIVED"),
+				semconv.RPCMessageUncompressedSizeKey: attribute.IntValue(45918),
 			},
 		},
 		{
 			Name: "message",
-			Attributes: map[label.Key]label.Value{
-				semconv.RPCMessageIDKey:               label.IntValue(4),
-				semconv.RPCMessageTypeKey:             label.StringValue("SENT"),
-				semconv.RPCMessageUncompressedSizeKey: label.IntValue(58987),
+			Attributes: map[attribute.Key]attribute.Value{
+				semconv.RPCMessageIDKey:               attribute.IntValue(4),
+				semconv.RPCMessageTypeKey:             attribute.StringValue("SENT"),
+				semconv.RPCMessageUncompressedSizeKey: attribute.IntValue(58987),
 			},
 		},
 	}, noTimestamp(pingPong.Events()))
-	assert.Equal(t, map[label.Key]label.Value{
-		semconv.RPCMethodKey:       label.StringValue("FullDuplexCall"),
-		semconv.RPCServiceKey:      label.StringValue("grpc.testing.TestService"),
+	assert.Equal(t, map[attribute.Key]attribute.Value{
+		semconv.RPCMethodKey:       attribute.StringValue("FullDuplexCall"),
+		semconv.RPCServiceKey:      attribute.StringValue("grpc.testing.TestService"),
 		semconv.RPCSystemGRPC.Key:  semconv.RPCSystemGRPC.Value,
-		otelgrpc.GRPCStatusCodeKey: label.Uint32Value(uint32(codes.OK)),
+		otelgrpc.GRPCStatusCodeKey: attribute.Int64Value(int64(codes.OK)),
 	}, pingPong.Attributes())
 }
 
@@ -548,26 +548,26 @@ func checkUnaryServerSpans(t *testing.T, spans []*oteltest.Span) {
 	assert.Equal(t, []oteltest.Event{
 		{
 			Name: "message",
-			Attributes: map[label.Key]label.Value{
-				semconv.RPCMessageIDKey:               label.IntValue(1),
-				semconv.RPCMessageTypeKey:             label.StringValue("RECEIVED"),
-				semconv.RPCMessageUncompressedSizeKey: label.IntValue(0),
+			Attributes: map[attribute.Key]attribute.Value{
+				semconv.RPCMessageIDKey:               attribute.IntValue(1),
+				semconv.RPCMessageTypeKey:             attribute.StringValue("RECEIVED"),
+				semconv.RPCMessageUncompressedSizeKey: attribute.IntValue(0),
 			},
 		},
 		{
 			Name: "message",
-			Attributes: map[label.Key]label.Value{
-				semconv.RPCMessageIDKey:               label.IntValue(1),
-				semconv.RPCMessageTypeKey:             label.StringValue("SENT"),
-				semconv.RPCMessageUncompressedSizeKey: label.IntValue(0),
+			Attributes: map[attribute.Key]attribute.Value{
+				semconv.RPCMessageIDKey:               attribute.IntValue(1),
+				semconv.RPCMessageTypeKey:             attribute.StringValue("SENT"),
+				semconv.RPCMessageUncompressedSizeKey: attribute.IntValue(0),
 			},
 		},
 	}, noTimestamp(emptySpan.Events()))
-	assert.Equal(t, map[label.Key]label.Value{
-		semconv.RPCMethodKey:       label.StringValue("EmptyCall"),
-		semconv.RPCServiceKey:      label.StringValue("grpc.testing.TestService"),
+	assert.Equal(t, map[attribute.Key]attribute.Value{
+		semconv.RPCMethodKey:       attribute.StringValue("EmptyCall"),
+		semconv.RPCServiceKey:      attribute.StringValue("grpc.testing.TestService"),
 		semconv.RPCSystemGRPC.Key:  semconv.RPCSystemGRPC.Value,
-		otelgrpc.GRPCStatusCodeKey: label.Uint32Value(uint32(codes.OK)),
+		otelgrpc.GRPCStatusCodeKey: attribute.Int64Value(int64(codes.OK)),
 	}, emptySpan.Attributes())
 
 	largeSpan := spans[1]
@@ -576,28 +576,28 @@ func checkUnaryServerSpans(t *testing.T, spans []*oteltest.Span) {
 	assert.Equal(t, []oteltest.Event{
 		{
 			Name: "message",
-			Attributes: map[label.Key]label.Value{
-				semconv.RPCMessageIDKey:   label.IntValue(1),
-				semconv.RPCMessageTypeKey: label.StringValue("RECEIVED"),
+			Attributes: map[attribute.Key]attribute.Value{
+				semconv.RPCMessageIDKey:   attribute.IntValue(1),
+				semconv.RPCMessageTypeKey: attribute.StringValue("RECEIVED"),
 				// largeReqSize from "google.golang.org/grpc/interop" + 12 (overhead).
-				semconv.RPCMessageUncompressedSizeKey: label.IntValue(271840),
+				semconv.RPCMessageUncompressedSizeKey: attribute.IntValue(271840),
 			},
 		},
 		{
 			Name: "message",
-			Attributes: map[label.Key]label.Value{
-				semconv.RPCMessageIDKey:   label.IntValue(1),
-				semconv.RPCMessageTypeKey: label.StringValue("SENT"),
+			Attributes: map[attribute.Key]attribute.Value{
+				semconv.RPCMessageIDKey:   attribute.IntValue(1),
+				semconv.RPCMessageTypeKey: attribute.StringValue("SENT"),
 				// largeRespSize from "google.golang.org/grpc/interop" + 8 (overhead).
-				semconv.RPCMessageUncompressedSizeKey: label.IntValue(314167),
+				semconv.RPCMessageUncompressedSizeKey: attribute.IntValue(314167),
 			},
 		},
 	}, noTimestamp(largeSpan.Events()))
-	assert.Equal(t, map[label.Key]label.Value{
-		semconv.RPCMethodKey:       label.StringValue("UnaryCall"),
-		semconv.RPCServiceKey:      label.StringValue("grpc.testing.TestService"),
+	assert.Equal(t, map[attribute.Key]attribute.Value{
+		semconv.RPCMethodKey:       attribute.StringValue("UnaryCall"),
+		semconv.RPCServiceKey:      attribute.StringValue("grpc.testing.TestService"),
 		semconv.RPCSystemGRPC.Key:  semconv.RPCSystemGRPC.Value,
-		otelgrpc.GRPCStatusCodeKey: label.Uint32Value(uint32(codes.OK)),
+		otelgrpc.GRPCStatusCodeKey: attribute.Int64Value(int64(codes.OK)),
 	}, largeSpan.Attributes())
 }
 

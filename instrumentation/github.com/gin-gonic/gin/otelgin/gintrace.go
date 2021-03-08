@@ -26,7 +26,8 @@ import (
 
 	otelcontrib "go.opentelemetry.io/contrib"
 
-	"go.opentelemetry.io/otel/label"
+	"go.opentelemetry.io/otel/attribute"
+	"go.opentelemetry.io/otel/propagation"
 	"go.opentelemetry.io/otel/semconv"
 	oteltrace "go.opentelemetry.io/otel/trace"
 )
@@ -60,7 +61,7 @@ func Middleware(service string, opts ...Option) gin.HandlerFunc {
 		defer func() {
 			c.Request = c.Request.WithContext(savedCtx)
 		}()
-		ctx := cfg.Propagators.Extract(savedCtx, c.Request.Header)
+		ctx := cfg.Propagators.Extract(savedCtx, propagation.HeaderCarrier(c.Request.Header))
 		opts := []oteltrace.SpanOption{
 			oteltrace.WithAttributes(semconv.NetAttributesFromHTTPRequest("tcp", c.Request)...),
 			oteltrace.WithAttributes(semconv.EndUserAttributesFromHTTPRequest(c.Request)...),
@@ -86,7 +87,7 @@ func Middleware(service string, opts ...Option) gin.HandlerFunc {
 		span.SetAttributes(attrs...)
 		span.SetStatus(spanStatus, spanMessage)
 		if len(c.Errors) > 0 {
-			span.SetAttributes(label.String("gin.errors", c.Errors.String()))
+			span.SetAttributes(attribute.String("gin.errors", c.Errors.String()))
 		}
 	}
 }
@@ -111,7 +112,7 @@ func HTML(c *gin.Context, code int, name string, obj interface{}) {
 	defer func() {
 		c.Request = c.Request.WithContext(savedContext)
 	}()
-	opt := oteltrace.WithAttributes(label.String("go.template", name))
+	opt := oteltrace.WithAttributes(attribute.String("go.template", name))
 	_, span := tracer.Start(savedContext, "gin.renderer.html", opt)
 	defer func() {
 		if r := recover(); r != nil {
