@@ -16,6 +16,7 @@ package otelamqp
 
 import (
 	"context"
+
 	"github.com/streadway/amqp"
 
 	"go.opentelemetry.io/otel"
