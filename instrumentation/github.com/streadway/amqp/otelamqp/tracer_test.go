@@ -17,8 +17,9 @@ package otelamqp
 import (
 	"context"
 	"errors"
-	"go.opentelemetry.io/otel/codes"
 	"testing"
+
+	"go.opentelemetry.io/otel/codes"
 
 	"github.com/streadway/amqp"
 	"github.com/stretchr/testify/assert"

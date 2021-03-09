@@ -23,8 +23,8 @@ import (
 
 	"go.opentelemetry.io/contrib/instrumentation/github.com/gin-gonic/gin/otelgin"
 	"go.opentelemetry.io/otel"
+	"go.opentelemetry.io/otel/attribute"
 	"go.opentelemetry.io/otel/exporters/stdout"
-	"go.opentelemetry.io/otel/label"
 	"go.opentelemetry.io/otel/propagation"
 	sdktrace "go.opentelemetry.io/otel/sdk/trace"
 	oteltrace "go.opentelemetry.io/otel/trace"
@@ -73,7 +73,7 @@ func initTracer() {
 func getUser(c *gin.Context, id string) string {
 	// Pass the built-in `context.Context` object from http.Request to OpenTelemetry APIs
 	// where required. It is available from gin.Context.Request.Context()
-	_, span := tracer.Start(c.Request.Context(), "getUser", oteltrace.WithAttributes(label.String("id", id)))
+	_, span := tracer.Start(c.Request.Context(), "getUser", oteltrace.WithAttributes(attribute.String("id", id)))
 	defer span.End()
 	if id == "123" {
 		return "otelgin tester"

@@ -15,6 +15,8 @@
 package main
 
 import (
+	"context"
+	"fmt"
 	"log"
 	"os"
 	"os/signal"
@@ -22,14 +24,13 @@ import (
 	"time"
 
 	"go.opentelemetry.io/otel/exporters/stdout"
-	"go.opentelemetry.io/otel/sdk/metric/controller/push"
+	controller "go.opentelemetry.io/otel/sdk/metric/controller/basic"
 
 	"go.opentelemetry.io/contrib/instrumentation/runtime"
 )
 
-func initMeter() *push.Controller {
+func initMeter() *controller.Controller {
 	pusher, err := stdout.InstallNewPipeline([]stdout.Option{
-		stdout.WithQuantiles([]float64{0.5}),
 		stdout.WithPrettyPrint(),
 	}, nil)
 	if err != nil {
@@ -39,7 +40,7 @@ func initMeter() *push.Controller {
 }
 
 func main() {
-	defer initMeter().Stop()
+	defer handleErr(initMeter().Stop(context.Background()))
 
 	if err := runtime.Start(
 		runtime.WithMinimumReadMemStatsInterval(time.Second),
@@ -50,4 +51,10 @@ func main() {
 	stopChan := make(chan os.Signal, 1)
 	signal.Notify(stopChan, syscall.SIGTERM, syscall.SIGINT)
 	<-stopChan
+}
+
+func handleErr(err error) {
+	if err != nil {
+		fmt.Println("Encountered error: ", err.Error())
+	}
 }

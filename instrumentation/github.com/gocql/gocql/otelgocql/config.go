@@ -19,6 +19,7 @@ import (
 
 	"go.opentelemetry.io/otel"
 	"go.opentelemetry.io/otel/metric"
+	"go.opentelemetry.io/otel/metric/global"
 	"go.opentelemetry.io/otel/trace"
 )
 
@@ -90,7 +91,7 @@ func WithTracerProvider(provider trace.TracerProvider) TracedSessionOption {
 
 // WithMeterProvider will set the meter provider used to get a meter
 // for creating instruments.
-// Defaults to otel.GetMeterProvider().
+// Defaults to global.GetMeterProvider().
 func WithMeterProvider(provider metric.MeterProvider) TracedSessionOption {
 	return TracedSessionOptionFunc(func(c *TracedSessionConfig) {
 		c.meterProvider = provider
@@ -126,7 +127,7 @@ func WithConnectInstrumentation(enabled bool) TracedSessionOption {
 func newTracedSessionConfig(options ...TracedSessionOption) *TracedSessionConfig {
 	config := &TracedSessionConfig{
 		tracerProvider:    otel.GetTracerProvider(),
-		meterProvider:     otel.GetMeterProvider(),
+		meterProvider:     global.GetMeterProvider(),
 		instrumentQuery:   true,
 		instrumentBatch:   true,
 		instrumentConnect: true,

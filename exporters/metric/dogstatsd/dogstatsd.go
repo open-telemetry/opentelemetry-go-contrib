@@ -16,12 +16,13 @@ package dogstatsd // import "go.opentelemetry.io/contrib/exporters/metric/dogsta
 
 import (
 	"bytes"
+	"context"
 	"time"
 
 	"go.opentelemetry.io/contrib/exporters/metric/dogstatsd/internal/statsd"
-	"go.opentelemetry.io/otel"
+	"go.opentelemetry.io/otel/metric/global"
 	export "go.opentelemetry.io/otel/sdk/export/metric"
-	"go.opentelemetry.io/otel/sdk/metric/controller/push"
+	controller "go.opentelemetry.io/otel/sdk/metric/controller/basic"
 	"go.opentelemetry.io/otel/sdk/metric/processor/basic"
 	"go.opentelemetry.io/otel/sdk/metric/selector/simple"
 	"go.opentelemetry.io/otel/sdk/resource"
@@ -31,7 +32,7 @@ type (
 	Config = statsd.Config
 
 	// Exporter implements a dogstatsd-format statsd exporter,
-	// which encodes label sets as independent fields in the
+	// which encodes attribute sets as independent fields in the
 	// output.
 	//
 	// TODO: find a link for this syntax.  It's been copied out of
@@ -41,7 +42,7 @@ type (
 	Exporter struct {
 		*statsd.Exporter
 
-		labelEncoder *LabelEncoder
+		attributeEncoder *AttributeEncoder
 	}
 )
 
@@ -52,7 +53,7 @@ var (
 // NewRawExporter returns a new Dogstatsd-syntax exporter for use in a pipeline.
 func NewRawExporter(config Config) (*Exporter, error) {
 	exp := &Exporter{
-		labelEncoder: NewLabelEncoder(),
+		attributeEncoder: NewAttributeEncoder(),
 	}
 
 	var err error
@@ -69,18 +70,18 @@ func NewRawExporter(config Config) (*Exporter, error) {
 // 	}
 // 	defer pipeline.Stop()
 // 	... Done
-func InstallNewPipeline(config Config) (*push.Controller, error) {
-	controller, err := NewExportPipeline(config, push.WithPeriod(time.Minute))
+func InstallNewPipeline(config Config) (*controller.Controller, error) {
+	controller, err := NewExportPipeline(config, controller.WithCollectPeriod(time.Minute))
 	if err != nil {
 		return controller, err
 	}
-	otel.SetMeterProvider(controller.MeterProvider())
+	global.SetMeterProvider(controller.MeterProvider())
 	return controller, err
 }
 
 // NewExportPipeline sets up a complete export pipeline with the recommended setup,
 // chaining a NewRawExporter into the recommended selectors and batchers.
-func NewExportPipeline(config Config, opts ...push.Option) (*push.Controller, error) {
+func NewExportPipeline(config Config, opts ...controller.Option) (*controller.Controller, error) {
 	exporter, err := NewRawExporter(config)
 	if err != nil {
 		return nil, err
@@ -90,13 +91,12 @@ func NewExportPipeline(config Config, opts ...push.Option) (*push.Controller, er
 	selector := simple.NewWithExactDistribution()
 
 	// The basic processor ensures that the exporter sees the full
-	// set of labels as dogstatsd tags.
+	// set of attributes as dogstatsd tags.
 	processor := basic.New(selector, exporter)
 
-	pusher := push.New(processor, exporter, opts...)
-	pusher.Start()
+	pusher := controller.New(processor, append(opts, controller.WithPusher(exporter))...)
 
-	return pusher, nil
+	return pusher, pusher.Start(context.Background())
 }
 
 // AppendName is part of the stats-internal adapter interface.
@@ -106,11 +106,11 @@ func (*Exporter) AppendName(rec export.Record, buf *bytes.Buffer) {
 
 // AppendTags is part of the stats-internal adapter interface.
 func (e *Exporter) AppendTags(rec export.Record, res *resource.Resource, buf *bytes.Buffer) {
-	rencoded := res.Encoded(e.labelEncoder)
-	lencoded := rec.Labels().Encoded(e.labelEncoder)
+	rencoded := res.Encoded(e.attributeEncoder)
+	lencoded := rec.Labels().Encoded(e.attributeEncoder)
 
 	// Note: We do not de-duplicate tag-keys between resources and
-	// event labels here.  Instead, include resources first so
+	// event attributes here.  Instead, include resources first so
 	// that the receiver can apply OTel's last-value-wins
 	// semantcis, if desired.
 	rlen := len(rencoded)

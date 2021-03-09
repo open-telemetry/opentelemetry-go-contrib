@@ -31,8 +31,7 @@ func TestPropagation(t *testing.T) {
 }
 
 func TestPropagationWhenEmpty(t *testing.T) {
-	data := map[string]interface{}{
-	}
+	data := map[string]interface{}{}
 	c := amqpHeadersCarrier(data)
 
 	assert.Equal(t, "", c.Get("c"))

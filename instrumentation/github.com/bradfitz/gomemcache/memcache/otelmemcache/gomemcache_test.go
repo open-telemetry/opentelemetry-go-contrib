@@ -23,10 +23,9 @@ import (
 	"github.com/stretchr/testify/require"
 
 	"go.opentelemetry.io/contrib/internal/util"
+	"go.opentelemetry.io/otel/attribute"
 	"go.opentelemetry.io/otel/codes"
-	"go.opentelemetry.io/otel/label"
 	"go.opentelemetry.io/otel/oteltest"
-	"go.opentelemetry.io/otel/semconv"
 	oteltrace "go.opentelemetry.io/otel/trace"
 )
 
@@ -41,10 +40,7 @@ func TestNewClientWithTracing(t *testing.T) {
 	)
 
 	assert.NotNil(t, c.Client)
-	assert.NotNil(t, c.cfg)
-	assert.NotNil(t, c.cfg.tracerProvider)
 	assert.NotNil(t, c.tracer)
-	assert.Equal(t, defaultServiceName, c.cfg.serviceName)
 }
 
 func TestOperation(t *testing.T) {
@@ -61,15 +57,14 @@ func TestOperation(t *testing.T) {
 	assert.Len(t, spans, 1)
 	assert.Equal(t, oteltrace.SpanKindClient, spans[0].SpanKind())
 	assert.Equal(t, string(operationAdd), spans[0].Name())
-	assert.Len(t, spans[0].Attributes(), 4)
+	assert.Len(t, spans[0].Attributes(), 3)
 
-	expectedLabelMap := map[label.Key]label.Value{
-		semconv.ServiceNameKey:                              semconv.ServiceNameKey.String(defaultServiceName).Value,
-		memcacheDBSystem().Key:                              memcacheDBSystem().Value,
-		memcacheDBOperation(operationAdd).Key:               memcacheDBOperation(operationAdd).Value,
-		label.Key(memcacheDBItemKeyName).String(mi.Key).Key: label.Key(memcacheDBItemKeyName).String(mi.Key).Value,
+	expectedAttributeMap := map[attribute.Key]attribute.Value{
+		memcacheDBSystem().Key:                                  memcacheDBSystem().Value,
+		memcacheDBOperation(operationAdd).Key:                   memcacheDBOperation(operationAdd).Value,
+		attribute.Key(memcacheDBItemKeyName).String(mi.Key).Key: attribute.Key(memcacheDBItemKeyName).String(mi.Key).Value,
 	}
-	assert.Equal(t, expectedLabelMap, spans[0].Attributes())
+	assert.Equal(t, expectedAttributeMap, spans[0].Attributes())
 }
 
 func TestOperationWithCacheMissError(t *testing.T) {
@@ -83,28 +78,27 @@ func TestOperationWithCacheMissError(t *testing.T) {
 	assert.Len(t, spans, 1)
 	assert.Equal(t, oteltrace.SpanKindClient, spans[0].SpanKind())
 	assert.Equal(t, string(operationGet), spans[0].Name())
-	assert.Len(t, spans[0].Attributes(), 4)
+	assert.Len(t, spans[0].Attributes(), 3)
 
-	expectedLabelMap := map[label.Key]label.Value{
-		semconv.ServiceNameKey:                           semconv.ServiceNameKey.String(defaultServiceName).Value,
-		memcacheDBSystem().Key:                           memcacheDBSystem().Value,
-		memcacheDBOperation(operationGet).Key:            memcacheDBOperation(operationGet).Value,
-		label.Key(memcacheDBItemKeyName).String(key).Key: label.Key(memcacheDBItemKeyName).String(key).Value,
+	expectedAttributeMap := map[attribute.Key]attribute.Value{
+		memcacheDBSystem().Key:                               memcacheDBSystem().Value,
+		memcacheDBOperation(operationGet).Key:                memcacheDBOperation(operationGet).Value,
+		attribute.Key(memcacheDBItemKeyName).String(key).Key: attribute.Key(memcacheDBItemKeyName).String(key).Value,
 	}
-	assert.Equal(t, expectedLabelMap, spans[0].Attributes())
+	assert.Equal(t, expectedAttributeMap, spans[0].Attributes())
 
 	assert.Equal(t, codes.Error, spans[0].StatusCode())
 	assert.Equal(t, err.Error(), spans[0].StatusMessage())
 }
 
 // tests require running memcached instance
-func initClientWithSpanRecorder(t *testing.T) (*Client, *oteltest.StandardSpanRecorder) {
+func initClientWithSpanRecorder(t *testing.T) (*Client, *oteltest.SpanRecorder) {
 	host, port := "localhost", "11211"
 
 	mc := memcache.New(host + ":" + port)
 	require.NoError(t, clearDB(mc))
 
-	sr := new(oteltest.StandardSpanRecorder)
+	sr := new(oteltest.SpanRecorder)
 	c := NewClientWithTracing(
 		mc,
 		WithTracerProvider(

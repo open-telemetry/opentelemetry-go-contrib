@@ -17,7 +17,7 @@ package otelsarama
 import (
 	"go.opentelemetry.io/contrib"
 	"go.opentelemetry.io/otel"
-	"go.opentelemetry.io/otel/label"
+	"go.opentelemetry.io/otel/attribute"
 	"go.opentelemetry.io/otel/propagation"
 	"go.opentelemetry.io/otel/trace"
 )
@@ -25,7 +25,7 @@ import (
 const (
 	defaultTracerName = "go.opentelemetry.io/contrib/instrumentation/github.com/Shopify/sarama/otelsarama"
 
-	kafkaPartitionKey = label.Key("messaging.kafka.partition")
+	kafkaPartitionKey = attribute.Key("messaging.kafka.partition")
 )
 
 type config struct {

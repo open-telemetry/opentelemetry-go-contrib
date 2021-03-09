@@ -21,7 +21,7 @@ import (
 
 	"github.com/DataDog/datadog-go/statsd"
 
-	"go.opentelemetry.io/otel/label"
+	"go.opentelemetry.io/otel/attribute"
 	"go.opentelemetry.io/otel/metric"
 	"go.opentelemetry.io/otel/metric/number"
 	export "go.opentelemetry.io/otel/sdk/export/metric"
@@ -98,11 +98,11 @@ func (e *Exporter) Export(ctx context.Context, cs export.CheckpointSet) error {
 		// TODO: Use the Resource() method
 		agg := r.Aggregation()
 		name := e.sanitizeMetricName(r.Descriptor().InstrumentationName(), r.Descriptor().Name())
-		itr := label.NewMergeIterator(r.Labels(), r.Resource().LabelSet())
+		itr := attribute.NewMergeIterator(r.Labels(), r.Resource().LabelSet())
 		tags := append([]string{}, e.opts.Tags...)
 		for itr.Next() {
-			label := itr.Label()
-			tag := string(label.Key) + ":" + label.Value.Emit()
+			attribute := itr.Label()
+			tag := string(attribute.Key) + ":" + attribute.Value.Emit()
 			tags = append(tags, tag)
 		}
 		switch agg := agg.(type) {
@@ -116,7 +116,7 @@ func (e *Exporter) Export(ctx context.Context, cs export.CheckpointSet) error {
 				f = e.client.Distribution
 			}
 			for _, n := range numbers {
-				if err := f(name, metricValue(r.Descriptor().NumberKind(), n), tags, rate); err != nil {
+				if err := f(name, metricValue(r.Descriptor().NumberKind(), n.Number), tags, rate); err != nil {
 					return fmt.Errorf("error submitting %s point: %w", name, err)
 				}
 			}
@@ -134,16 +134,6 @@ func (e *Exporter) Export(ctx context.Context, cs export.CheckpointSet) error {
 					name: name + ".max",
 					f:    agg.Max,
 				},
-			}
-			if dist, ok := agg.(aggregation.Distribution); ok {
-				recs = append(recs,
-					record{name: name + ".median", f: func() (number.Number, error) {
-						return dist.Quantile(0.5)
-					}},
-					record{name: name + ".p95", f: func() (number.Number, error) {
-						return dist.Quantile(0.95)
-					}},
-				)
 			}
 			for _, rec := range recs {
 				val, err := rec.f()

@@ -16,12 +16,11 @@ package otelamqp
 
 import (
 	"context"
-
 	"github.com/streadway/amqp"
 
 	"go.opentelemetry.io/otel"
+	"go.opentelemetry.io/otel/attribute"
 	"go.opentelemetry.io/otel/codes"
-	"go.opentelemetry.io/otel/label"
 	"go.opentelemetry.io/otel/semconv"
 	"go.opentelemetry.io/otel/trace"
 )
@@ -30,9 +29,9 @@ var tracer = otel.Tracer("amqp")
 
 func StartProducerSpan(ctx context.Context, headers amqp.Table) trace.Span {
 	c := amqpHeadersCarrier(headers)
-	otel.GetTextMapPropagator().Extract(ctx, c)
+	extCtx := otel.GetTextMapPropagator().Extract(ctx, c)
 
-	attrs := []label.KeyValue{
+	attrs := []attribute.KeyValue{
 		semconv.MessagingSystemKey.String("amqp"),
 	}
 	opts := []trace.SpanOption{
@@ -40,8 +39,12 @@ func StartProducerSpan(ctx context.Context, headers amqp.Table) trace.Span {
 		trace.WithSpanKind(trace.SpanKindProducer),
 	}
 
-	_, span := tracer.Start(ctx, "amqp.producer", opts...)
+	spanCtx, span := tracer.Start(extCtx, "amqp.producer", opts...)
 
+	if spanCtx != nil {
+		// Inject current span context, so consumers can use it to propagate span.
+		otel.GetTextMapPropagator().Inject(ctx, c)
+	}
 	return span
 }
 

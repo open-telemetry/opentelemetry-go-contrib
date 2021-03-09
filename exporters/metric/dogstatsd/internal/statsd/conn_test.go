@@ -25,24 +25,24 @@ import (
 	"github.com/stretchr/testify/require"
 
 	"go.opentelemetry.io/contrib/exporters/metric/dogstatsd/internal/statsd"
-	"go.opentelemetry.io/otel/label"
+	"go.opentelemetry.io/otel/attribute"
 	"go.opentelemetry.io/otel/metric"
 	"go.opentelemetry.io/otel/metric/number"
 	export "go.opentelemetry.io/otel/sdk/export/metric"
 	"go.opentelemetry.io/otel/sdk/export/metric/metrictest"
 	aggtest "go.opentelemetry.io/otel/sdk/metric/aggregator/aggregatortest"
-	"go.opentelemetry.io/otel/sdk/metric/aggregator/array"
+	"go.opentelemetry.io/otel/sdk/metric/aggregator/exact"
 	"go.opentelemetry.io/otel/sdk/metric/aggregator/lastvalue"
 	"go.opentelemetry.io/otel/sdk/metric/aggregator/sum"
 	"go.opentelemetry.io/otel/sdk/resource"
 	"go.opentelemetry.io/otel/unit"
 )
 
-var testResource = resource.NewWithAttributes(label.String("host", "value"))
+var testResource = resource.NewWithAttributes(attribute.String("host", "value"))
 
 // withTagsAdapter tests a dogstatsd-style statsd exporter.
 type withTagsAdapter struct {
-	label.Encoder
+	attribute.Encoder
 }
 
 func (*withTagsAdapter) AppendName(rec export.Record, buf *bytes.Buffer) {
@@ -57,7 +57,7 @@ func (ta *withTagsAdapter) AppendTags(rec export.Record, _ *resource.Resource, b
 func newWithTagsAdapter() *withTagsAdapter {
 	return &withTagsAdapter{
 		// Note: This uses non-statsd syntax.  (No problem.)
-		label.DefaultEncoder(),
+		attribute.DefaultEncoder(),
 	}
 }
 
@@ -71,7 +71,7 @@ func (*noTagsAdapter) AppendName(rec export.Record, buf *bytes.Buffer) {
 
 	iter := rec.Labels().Iter()
 	for iter.Next() {
-		tag := iter.Label()
+		tag := iter.Attribute()
 		_, _ = buf.WriteString(".")
 		_, _ = buf.WriteString(tag.Value.Emit())
 	}
@@ -142,17 +142,17 @@ timer.B.D:%s|ms
 					tdesc := metric.NewDescriptor(
 						"timer", metric.ValueRecorderInstrumentKind, nkind, metric.WithUnit(unit.Milliseconds))
 
-					labels := []label.KeyValue{
-						label.String("A", "B"),
-						label.String("C", "D"),
+					attributes := []attribute.KeyValue{
+						attribute.String("A", "B"),
+						attribute.String("C", "D"),
 					}
 					const value = 123.456
 					val := newNumber(t, nkind, value)
 
 					cagg, cckpt := metrictest.Unslice2(sum.New(2))
 					gagg, gckpt := metrictest.Unslice2(lastvalue.New(2))
-					magg, mckpt := metrictest.Unslice2(array.New(2))
-					tagg, tckpt := metrictest.Unslice2(array.New(2))
+					magg, mckpt := metrictest.Unslice2(exact.New(2))
+					tagg, tckpt := metrictest.Unslice2(exact.New(2))
 
 					aggtest.CheckedUpdate(t, cagg, val, &cdesc)
 					aggtest.CheckedUpdate(t, gagg, val, &gdesc)
@@ -164,10 +164,10 @@ timer.B.D:%s|ms
 					require.NoError(t, magg.SynchronizedMove(mckpt, &mdesc))
 					require.NoError(t, tagg.SynchronizedMove(tckpt, &tdesc))
 
-					checkpointSet.Add(&cdesc, cckpt, labels...)
-					checkpointSet.Add(&gdesc, gckpt, labels...)
-					checkpointSet.Add(&mdesc, mckpt, labels...)
-					checkpointSet.Add(&tdesc, tckpt, labels...)
+					checkpointSet.Add(&cdesc, cckpt, attributes...)
+					checkpointSet.Add(&gdesc, gckpt, attributes...)
+					checkpointSet.Add(&mdesc, mckpt, attributes...)
+					checkpointSet.Add(&tdesc, tckpt, attributes...)
 
 					err = exp.Export(ctx, checkpointSet)
 					require.Nil(t, err)
@@ -199,10 +199,10 @@ func newNumber(t *testing.T, kind number.Kind, value float64) number.Number {
 	panic("invalid number kind")
 }
 
-func makeLabels(offset, nkeys int) []label.KeyValue {
-	r := make([]label.KeyValue, nkeys)
+func makeAttributes(offset, nkeys int) []attribute.KeyValue {
+	r := make([]attribute.KeyValue, nkeys)
 	for i := range r {
-		r[i] = label.String(fmt.Sprint("k", offset+i), fmt.Sprint("v", offset+i))
+		r[i] = attribute.String(fmt.Sprint("k", offset+i), fmt.Sprint("v", offset+i))
 	}
 	return r
 }
@@ -328,16 +328,16 @@ func TestPacketSplit(t *testing.T) {
 
 			offset := 0
 			tcase.setup(func(nkeys int) {
-				labels := makeLabels(offset, nkeys)
+				attributes := makeAttributes(offset, nkeys)
 				offset += nkeys
-				elabels := label.NewSet(labels...)
-				encoded := adapter.Encoder.Encode(elabels.Iter())
+				eattributes := attribute.NewSet(attributes...)
+				encoded := adapter.Encoder.Encode(eattributes.Iter())
 				expect := fmt.Sprint("counter:100|c|#", encoded, "\n")
 				expected = append(expected, expect)
 				agg, ckpt := metrictest.Unslice2(sum.New(2))
 				aggtest.CheckedUpdate(t, agg, number.NewInt64Number(100), &desc)
 				require.NoError(t, agg.SynchronizedMove(ckpt, &desc))
-				checkpointSet.Add(&desc, ckpt, labels...)
+				checkpointSet.Add(&desc, ckpt, attributes...)
 			})
 
 			err = exp.Export(ctx, checkpointSet)
@@ -348,7 +348,7 @@ func TestPacketSplit(t *testing.T) {
 	}
 }
 
-func TestArraySplit(t *testing.T) {
+func TestExactSplit(t *testing.T) {
 	ctx := context.Background()
 	writer := &testWriter{}
 	config := statsd.Config{
@@ -364,7 +364,7 @@ func TestArraySplit(t *testing.T) {
 	checkpointSet := metrictest.NewCheckpointSet(testResource)
 	desc := metric.NewDescriptor("measure", metric.ValueRecorderInstrumentKind, number.Int64Kind)
 
-	agg, ckpt := metrictest.Unslice2(array.New(2))
+	agg, ckpt := metrictest.Unslice2(exact.New(2))
 
 	for i := 0; i < 1024; i++ {
 		aggtest.CheckedUpdate(t, agg, number.NewInt64Number(100), &desc)
@@ -399,7 +399,7 @@ func TestPrefix(t *testing.T) {
 	checkpointSet := metrictest.NewCheckpointSet(testResource)
 	desc := metric.NewDescriptor("measure", metric.ValueRecorderInstrumentKind, number.Int64Kind)
 
-	agg, ckpt := metrictest.Unslice2(array.New(2))
+	agg, ckpt := metrictest.Unslice2(exact.New(2))
 	aggtest.CheckedUpdate(t, agg, number.NewInt64Number(100), &desc)
 	require.NoError(t, agg.SynchronizedMove(ckpt, &desc))
 	checkpointSet.Add(&desc, ckpt)

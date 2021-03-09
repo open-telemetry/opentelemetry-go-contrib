@@ -26,7 +26,7 @@ import (
 
 	b3prop "go.opentelemetry.io/contrib/propagators/b3"
 	"go.opentelemetry.io/otel"
-	"go.opentelemetry.io/otel/label"
+	"go.opentelemetry.io/otel/attribute"
 	"go.opentelemetry.io/otel/oteltest"
 	"go.opentelemetry.io/otel/propagation"
 	oteltrace "go.opentelemetry.io/otel/trace"
@@ -55,7 +55,7 @@ func TestChildSpanFromGlobalTracer(t *testing.T) {
 }
 
 func TestChildSpanNames(t *testing.T) {
-	sr := new(oteltest.StandardSpanRecorder)
+	sr := new(oteltest.SpanRecorder)
 	tp := oteltest.NewTracerProvider(oteltest.WithSpanRecorder(sr))
 
 	m := macaron.Classic()
@@ -84,23 +84,23 @@ func TestChildSpanNames(t *testing.T) {
 	assert.Equal(t, "/user/123", span.Name()) // TODO: span name should show router template, eg /user/:id
 	assert.Equal(t, oteltrace.SpanKindServer, span.SpanKind())
 	attrs := span.Attributes()
-	assert.Equal(t, label.StringValue("foobar"), attrs["http.server_name"])
-	assert.Equal(t, label.IntValue(http.StatusOK), attrs["http.status_code"])
-	assert.Equal(t, label.StringValue("GET"), attrs["http.method"])
-	assert.Equal(t, label.StringValue("/user/123"), attrs["http.target"])
+	assert.Equal(t, attribute.StringValue("foobar"), attrs["http.server_name"])
+	assert.Equal(t, attribute.IntValue(http.StatusOK), attrs["http.status_code"])
+	assert.Equal(t, attribute.StringValue("GET"), attrs["http.method"])
+	assert.Equal(t, attribute.StringValue("/user/123"), attrs["http.target"])
 	// TODO: span name should show router template, eg /user/:id
-	//assert.Equal(t, label.StringValue("/user/:id"), span.Attributes["http.route"])
+	//assert.Equal(t, attribute.StringValue("/user/:id"), span.Attributes["http.route"])
 
 	span = spans[1]
 	assert.Equal(t, "/book/foo", span.Name()) // TODO: span name should show router template, eg /book/:title
 	assert.Equal(t, oteltrace.SpanKindServer, span.SpanKind())
 	attrs = span.Attributes()
-	assert.Equal(t, label.StringValue("foobar"), attrs["http.server_name"])
-	assert.Equal(t, label.IntValue(http.StatusOK), attrs["http.status_code"])
-	assert.Equal(t, label.StringValue("GET"), attrs["http.method"])
-	assert.Equal(t, label.StringValue("/book/foo"), attrs["http.target"])
+	assert.Equal(t, attribute.StringValue("foobar"), attrs["http.server_name"])
+	assert.Equal(t, attribute.IntValue(http.StatusOK), attrs["http.status_code"])
+	assert.Equal(t, attribute.StringValue("GET"), attrs["http.method"])
+	assert.Equal(t, attribute.StringValue("/book/foo"), attrs["http.target"])
 	// TODO: span name should show router template, eg /book/:title
-	//assert.Equal(t, label.StringValue("/book/:title"), span.Attributes["http.route"])
+	//assert.Equal(t, attribute.StringValue("/book/:title"), span.Attributes["http.route"])
 }
 
 func TestGetSpanNotInstrumented(t *testing.T) {
@@ -126,7 +126,7 @@ func TestPropagationWithGlobalPropagators(t *testing.T) {
 	w := httptest.NewRecorder()
 
 	ctx, pspan := tracer.Start(context.Background(), "test")
-	otel.GetTextMapPropagator().Inject(ctx, r.Header)
+	otel.GetTextMapPropagator().Inject(ctx, propagation.HeaderCarrier(r.Header))
 
 	m := macaron.Classic()
 	m.Use(Middleware("foobar"))
@@ -152,7 +152,7 @@ func TestPropagationWithCustomPropagators(t *testing.T) {
 	w := httptest.NewRecorder()
 
 	ctx, pspan := tracer.Start(context.Background(), "test")
-	b3.Inject(ctx, r.Header)
+	b3.Inject(ctx, propagation.HeaderCarrier(r.Header))
 
 	m := macaron.Classic()
 	m.Use(Middleware("foobar", WithTracerProvider(tp), WithPropagators(b3)))

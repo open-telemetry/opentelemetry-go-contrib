@@ -27,15 +27,16 @@ import (
 	"github.com/golang/snappy"
 	"github.com/prometheus/prometheus/prompb"
 
-	"go.opentelemetry.io/otel"
-	"go.opentelemetry.io/otel/label"
+	"go.opentelemetry.io/otel/attribute"
 	apimetric "go.opentelemetry.io/otel/metric"
+	"go.opentelemetry.io/otel/metric/global"
 	"go.opentelemetry.io/otel/metric/number"
 	"go.opentelemetry.io/otel/sdk/export/metric"
 	export "go.opentelemetry.io/otel/sdk/export/metric"
 	"go.opentelemetry.io/otel/sdk/export/metric/aggregation"
-	"go.opentelemetry.io/otel/sdk/metric/controller/push"
-	"go.opentelemetry.io/otel/sdk/metric/processor/basic"
+	"go.opentelemetry.io/otel/sdk/metric/aggregator/histogram"
+	controller "go.opentelemetry.io/otel/sdk/metric/controller/basic"
+	processor "go.opentelemetry.io/otel/sdk/metric/processor/basic"
 	"go.opentelemetry.io/otel/sdk/metric/selector/simple"
 )
 
@@ -88,31 +89,32 @@ func NewRawExporter(config Config) (*Exporter, error) {
 
 // NewExportPipeline sets up a complete export pipeline with a push Controller and
 // Exporter.
-func NewExportPipeline(config Config, options ...push.Option) (*push.Controller, error) {
+func NewExportPipeline(config Config, options ...controller.Option) (*controller.Controller, error) {
 	exporter, err := NewRawExporter(config)
 	if err != nil {
 		return nil, err
 	}
 
-	pusher := push.New(
-		basic.New(
-			simple.NewWithHistogramDistribution(config.HistogramBoundaries),
+	pusher := controller.New(
+		processor.New(
+			simple.NewWithHistogramDistribution(
+				histogram.WithExplicitBoundaries(config.HistogramBoundaries),
+			),
 			exporter,
 		),
-		exporter,
-		options...,
+		append(options, controller.WithPusher(exporter))...,
 	)
-	pusher.Start()
-	return pusher, nil
+
+	return pusher, pusher.Start(context.TODO())
 }
 
 // InstallNewPipeline registers a push Controller's MeterProvider globally.
-func InstallNewPipeline(config Config, options ...push.Option) (*push.Controller, error) {
+func InstallNewPipeline(config Config, options ...controller.Option) (*controller.Controller, error) {
 	pusher, err := NewExportPipeline(config, options...)
 	if err != nil {
 		return nil, err
 	}
-	otel.SetMeterProvider(pusher.MeterProvider())
+	global.SetMeterProvider(pusher.MeterProvider())
 	return pusher, nil
 }
 
@@ -130,20 +132,12 @@ func (e *Exporter) ConvertToTimeSeries(checkpointSet export.CheckpointSet) ([]*p
 
 		// The following section uses loose type checking to determine how to
 		// convert aggregations to timeseries. More "expensive" timeseries are
-		// checked first. For example, because a Distribution has a Sum value,
-		// we must check for Distribution first or else only the Sum would be
-		// converted and the other values like Quantiles would not be.
+		// checked first.
 		//
 		// See the Aggregator Kind for more information
-		// https://github.com/open-telemetry/opentelemetry-go/blob/master/sdk/export/metric/aggregation/aggregation.go#L123-L138
+		// https://github.com/open-telemetry/opentelemetry-go/blob/main/sdk/export/metric/aggregation/aggregation.go#L123-L138
 		if histogram, ok := agg.(aggregation.Histogram); ok {
 			tSeries, err := convertFromHistogram(record, histogram)
-			if err != nil {
-				return err
-			}
-			timeSeries = append(timeSeries, tSeries...)
-		} else if distribution, ok := agg.(aggregation.Distribution); ok && len(e.config.Quantiles) != 0 {
-			tSeries, err := convertFromDistribution(record, distribution, e.config.Quantiles)
 			if err != nil {
 				return err
 			}
@@ -183,18 +177,18 @@ func (e *Exporter) ConvertToTimeSeries(checkpointSet export.CheckpointSet) ([]*p
 	return timeSeries, nil
 }
 
-// createTimeSeries is a helper function to create a timeseries from a value and labels
-func createTimeSeries(record metric.Record, value number.Number, valueNumberKind number.Kind, extraLabels ...label.KeyValue) *prompb.TimeSeries {
+// createTimeSeries is a helper function to create a timeseries from a value and attributes
+func createTimeSeries(record metric.Record, value number.Number, valueNumberKind number.Kind, extraAttributes ...attribute.KeyValue) *prompb.TimeSeries {
 	sample := prompb.Sample{
 		Value:     value.CoerceToFloat64(valueNumberKind),
 		Timestamp: int64(time.Nanosecond) * record.EndTime().UnixNano() / int64(time.Millisecond),
 	}
 
-	labels := createLabelSet(record, extraLabels...)
+	attributes := createLabelSet(record, extraAttributes...)
 
 	return &prompb.TimeSeries{
 		Samples: []prompb.Sample{sample},
-		Labels:  labels,
+		Labels:  attributes,
 	}
 }
 
@@ -206,11 +200,11 @@ func convertFromSum(record metric.Record, sum aggregation.Sum) (*prompb.TimeSeri
 		return nil, err
 	}
 
-	// Create TimeSeries. Note that Cortex requires the name label to be in the format
+	// Create TimeSeries. Note that Cortex requires the name attribute to be in the format
 	// "__name__". This is the case for all time series created by this exporter.
 	name := sanitize(record.Descriptor().Name())
 	numberKind := record.Descriptor().NumberKind()
-	tSeries := createTimeSeries(record, value, numberKind, label.String("__name__", name))
+	tSeries := createTimeSeries(record, value, numberKind, attribute.String("__name__", name))
 
 	return tSeries, nil
 }
@@ -226,7 +220,7 @@ func convertFromLastValue(record metric.Record, lastValue aggregation.LastValue)
 	// Create TimeSeries
 	name := sanitize(record.Descriptor().Name())
 	numberKind := record.Descriptor().NumberKind()
-	tSeries := createTimeSeries(record, value, numberKind, label.String("__name__", name))
+	tSeries := createTimeSeries(record, value, numberKind, attribute.String("__name__", name))
 
 	return tSeries, nil
 }
@@ -241,7 +235,7 @@ func convertFromMinMaxSumCount(record metric.Record, minMaxSumCount aggregation.
 		return nil, err
 	}
 	name := sanitize(record.Descriptor().Name() + "_min")
-	minTimeSeries := createTimeSeries(record, min, numberKind, label.String("__name__", name))
+	minTimeSeries := createTimeSeries(record, min, numberKind, attribute.String("__name__", name))
 
 	// Convert Max
 	max, err := minMaxSumCount.Max()
@@ -249,7 +243,7 @@ func convertFromMinMaxSumCount(record metric.Record, minMaxSumCount aggregation.
 		return nil, err
 	}
 	name = sanitize(record.Descriptor().Name() + "_max")
-	maxTimeSeries := createTimeSeries(record, max, numberKind, label.String("__name__", name))
+	maxTimeSeries := createTimeSeries(record, max, numberKind, attribute.String("__name__", name))
 
 	// Convert Count
 	count, err := minMaxSumCount.Count()
@@ -257,7 +251,7 @@ func convertFromMinMaxSumCount(record metric.Record, minMaxSumCount aggregation.
 		return nil, err
 	}
 	name = sanitize(record.Descriptor().Name() + "_count")
-	countTimeSeries := createTimeSeries(record, number.NewInt64Number(count), number.Int64Kind, label.String("__name__", name))
+	countTimeSeries := createTimeSeries(record, number.NewInt64Number(int64(count)), number.Int64Kind, attribute.String("__name__", name))
 
 	// Return all timeSeries
 	tSeries := []*prompb.TimeSeries{
@@ -265,66 +259,6 @@ func convertFromMinMaxSumCount(record metric.Record, minMaxSumCount aggregation.
 	}
 
 	return tSeries, nil
-}
-
-// convertFromDistribution returns len(quantiles) number of TimeSeries in a distribution.
-func convertFromDistribution(record metric.Record, distribution aggregation.Distribution, quantiles []float64) ([]*prompb.TimeSeries, error) {
-	var timeSeries []*prompb.TimeSeries
-	metricName := sanitize(record.Descriptor().Name())
-	numberKind := record.Descriptor().NumberKind()
-
-	// Convert Min
-	min, err := distribution.Min()
-	if err != nil {
-		return nil, err
-	}
-	name := sanitize(metricName + "_min")
-	minTimeSeries := createTimeSeries(record, min, numberKind, label.String("__name__", name))
-	timeSeries = append(timeSeries, minTimeSeries)
-
-	// Convert Max
-	max, err := distribution.Max()
-	if err != nil {
-		return nil, err
-	}
-	name = sanitize(metricName + "_max")
-	maxTimeSeries := createTimeSeries(record, max, numberKind, label.String("__name__", name))
-	timeSeries = append(timeSeries, maxTimeSeries)
-
-	// Convert Sum
-	sum, err := distribution.Sum()
-	if err != nil {
-		return nil, err
-	}
-	name = sanitize(metricName + "_sum")
-	sumTimeSeries := createTimeSeries(record, sum, numberKind, label.String("__name__", name))
-	timeSeries = append(timeSeries, sumTimeSeries)
-
-	// Convert Count
-	count, err := distribution.Count()
-	if err != nil {
-		return nil, err
-	}
-	name = sanitize(record.Descriptor().Name() + "_count")
-	countTimeSeries := createTimeSeries(record, number.NewInt64Number(count), number.Int64Kind, label.String("__name__", name))
-	timeSeries = append(timeSeries, countTimeSeries)
-
-	// For each configured quantile, get the value and create a timeseries
-	for _, q := range quantiles {
-		value, err := distribution.Quantile(q)
-		if err != nil {
-			return nil, err
-		}
-
-		// Add quantile as a label. e.g. {quantile="0.5"}
-		quantileStr := strconv.FormatFloat(q, 'f', -1, 64)
-
-		// Create TimeSeries
-		tSeries := createTimeSeries(record, value, numberKind, label.String("__name__", metricName), label.String("quantile", quantileStr))
-		timeSeries = append(timeSeries, tSeries)
-	}
-
-	return timeSeries, nil
 }
 
 // convertFromHistogram returns len(histogram.Buckets) timeseries for a histogram aggregation
@@ -338,7 +272,7 @@ func convertFromHistogram(record metric.Record, histogram aggregation.Histogram)
 	if err != nil {
 		return nil, err
 	}
-	sumTimeSeries := createTimeSeries(record, sum, numberKind, label.String("__name__", metricName+"_sum"))
+	sumTimeSeries := createTimeSeries(record, sum, numberKind, attribute.String("__name__", metricName+"_sum"))
 	timeSeries = append(timeSeries, sumTimeSeries)
 
 	// Handle Histogram buckets
@@ -353,26 +287,26 @@ func convertFromHistogram(record metric.Record, histogram aggregation.Histogram)
 	counts := make(map[float64]float64, len(buckets.Boundaries))
 	for i, boundary := range buckets.Boundaries {
 		// Add bucket count to totalCount and record in map
-		totalCount += buckets.Counts[i]
+		totalCount += float64(buckets.Counts[i])
 		counts[boundary] = totalCount
 
-		// Add upper boundary as a label. e.g. {le="5"}
+		// Add upper boundary as a attribute. e.g. {le="5"}
 		boundaryStr := strconv.FormatFloat(boundary, 'f', -1, 64)
 
 		// Create timeSeries and append
-		boundaryTimeSeries := createTimeSeries(record, number.NewFloat64Number(totalCount), number.Float64Kind, label.String("__name__", metricName), label.String("le", boundaryStr))
+		boundaryTimeSeries := createTimeSeries(record, number.NewFloat64Number(totalCount), number.Float64Kind, attribute.String("__name__", metricName), attribute.String("le", boundaryStr))
 		timeSeries = append(timeSeries, boundaryTimeSeries)
 	}
 
 	// Include the +inf boundary in the total count
-	totalCount += buckets.Counts[len(buckets.Counts)-1]
+	totalCount += float64(buckets.Counts[len(buckets.Counts)-1])
 
 	// Create a timeSeries for the +inf bucket and total count
 	// These are the same and are both required by Prometheus-based backends
 
-	upperBoundTimeSeries := createTimeSeries(record, number.NewFloat64Number(totalCount), number.Float64Kind, label.String("__name__", metricName), label.String("le", "+inf"))
+	upperBoundTimeSeries := createTimeSeries(record, number.NewFloat64Number(totalCount), number.Float64Kind, attribute.String("__name__", metricName), attribute.String("le", "+inf"))
 
-	countTimeSeries := createTimeSeries(record, number.NewFloat64Number(totalCount), number.Float64Kind, label.String("__name__", metricName+"_count"))
+	countTimeSeries := createTimeSeries(record, number.NewFloat64Number(totalCount), number.Float64Kind, attribute.String("__name__", metricName+"_count"))
 
 	timeSeries = append(timeSeries, upperBoundTimeSeries)
 	timeSeries = append(timeSeries, countTimeSeries)
@@ -380,34 +314,34 @@ func convertFromHistogram(record metric.Record, histogram aggregation.Histogram)
 	return timeSeries, nil
 }
 
-// createLabelSet combines labels from a Record, resource, and extra labels to create a
+// createLabelSet combines attributes from a Record, resource, and extra attributes to create a
 // slice of prompb.Label.
-func createLabelSet(record metric.Record, extraLabels ...label.KeyValue) []*prompb.Label {
+func createLabelSet(record metric.Record, extraAttributes ...attribute.KeyValue) []*prompb.Label {
 	// Map ensure no duplicate label names.
 	labelMap := map[string]prompb.Label{}
 
-	// mergeLabels merges Record and Resource labels into a single set, giving precedence
-	// to the record's labels.
-	mi := label.NewMergeIterator(record.Labels(), record.Resource().LabelSet())
+	// mergeAttributes merges Record and Resource attributes into a single set, giving precedence
+	// to the record's attributes.
+	mi := attribute.NewMergeIterator(record.Labels(), record.Resource().LabelSet())
 	for mi.Next() {
-		label := mi.Label()
-		key := string(label.Key)
+		attribute := mi.Label()
+		key := string(attribute.Key)
 		labelMap[key] = prompb.Label{
 			Name:  sanitize(key),
-			Value: label.Value.Emit(),
+			Value: attribute.Value.Emit(),
 		}
 	}
 
-	// Add extra labels created by the exporter like the metric name or labels to
+	// Add extra attributes created by the exporter like the metric name or attributes to
 	// represent histogram buckets.
-	for _, label := range extraLabels {
-		// Ensure label doesn't exist. If it does, notify user that a user created label
+	for _, attribute := range extraAttributes {
+		// Ensure attribute doesn't exist. If it does, notify user that a user created attribute
 		// is being overwritten by a Prometheus reserved label (e.g. 'le' for histograms)
-		key := string(label.Key)
-		value := label.Value.AsString()
+		key := string(attribute.Key)
+		value := attribute.Value.AsString()
 		_, found := labelMap[key]
 		if found {
-			log.Printf("Label %s is overwritten. Check if Prometheus reserved labels are used.\n", key)
+			log.Printf("Attribute %s is overwritten. Check if Prometheus reserved labels are used.\n", key)
 		}
 		labelMap[key] = prompb.Label{
 			Name:  key,

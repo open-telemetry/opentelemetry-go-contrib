@@ -12,30 +12,15 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package otelmemcache
+package ot_test
 
 import (
-	"github.com/bradfitz/gomemcache/memcache"
-
-	"go.opentelemetry.io/otel/codes"
+	"go.opentelemetry.io/contrib/propagators/ot"
+	"go.opentelemetry.io/otel"
 )
 
-// maps memcache error to appropriate error code; otherwise returns status OK
-func memcacheErrToStatusCode(err error) codes.Code {
-	if err == nil {
-		return codes.Ok
-	}
-
-	switch err {
-	case memcache.ErrCacheMiss, memcache.ErrNotStored, memcache.ErrNoStats:
-		return codes.Error
-	case memcache.ErrCASConflict:
-		return codes.Error
-	case memcache.ErrServerError:
-		return codes.Error
-	case memcache.ErrMalformedKey:
-		return codes.Error
-	default:
-		return codes.Unset
-	}
+func ExampleOT() {
+	otPropagator := ot.OT{}
+	// register ot propagator
+	otel.SetTextMapPropagator(otPropagator)
 }

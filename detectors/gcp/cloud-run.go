@@ -21,7 +21,7 @@ import (
 
 	"cloud.google.com/go/compute/metadata"
 
-	"go.opentelemetry.io/otel/label"
+	"go.opentelemetry.io/otel/attribute"
 	"go.opentelemetry.io/otel/sdk/resource"
 	"go.opentelemetry.io/otel/semconv"
 )
@@ -57,7 +57,7 @@ func NewCloudRun() *CloudRun {
 }
 
 // Detect detects associated resources when running on Cloud Run hosts.
-// NOTE: the service.namespace label is currently hardcoded to be
+// NOTE: the service.namespace attribute is currently hardcoded to be
 // "cloud-run-managed". This may change in the future, please do not rely on
 // this behavior yet.
 func (c *CloudRun) Detect(ctx context.Context) (*resource.Resource, error) {
@@ -67,7 +67,7 @@ func (c *CloudRun) Detect(ctx context.Context) (*resource.Resource, error) {
 		return nil, nil
 	}
 
-	labels := []label.KeyValue{
+	attributes := []attribute.KeyValue{
 		semconv.CloudProviderGCP,
 		semconv.ServiceNamespaceKey.String(serviceNamespace),
 	}
@@ -77,19 +77,19 @@ func (c *CloudRun) Detect(ctx context.Context) (*resource.Resource, error) {
 	if projectID, err := c.mc.ProjectID(); hasProblem(err) {
 		errInfo = append(errInfo, err.Error())
 	} else if projectID != "" {
-		labels = append(labels, semconv.CloudAccountIDKey.String(projectID))
+		attributes = append(attributes, semconv.CloudAccountIDKey.String(projectID))
 	}
 
 	if region, err := c.mc.Get("instance/region"); hasProblem(err) {
 		errInfo = append(errInfo, err.Error())
 	} else if region != "" {
-		labels = append(labels, semconv.CloudRegionKey.String(region))
+		attributes = append(attributes, semconv.CloudRegionKey.String(region))
 	}
 
 	if instanceID, err := c.mc.InstanceID(); hasProblem(err) {
 		errInfo = append(errInfo, err.Error())
 	} else if instanceID != "" {
-		labels = append(labels, semconv.ServiceInstanceIDKey.String(instanceID))
+		attributes = append(attributes, semconv.ServiceInstanceIDKey.String(instanceID))
 	}
 
 	// Part of Cloud Run container runtime contract.
@@ -97,9 +97,9 @@ func (c *CloudRun) Detect(ctx context.Context) (*resource.Resource, error) {
 	if service := c.getenv("K_SERVICE"); service == "" {
 		errInfo = append(errInfo, "envvar K_SERVICE contains empty string.")
 	} else {
-		labels = append(labels, semconv.ServiceNameKey.String(service))
+		attributes = append(attributes, semconv.ServiceNameKey.String(service))
 	}
-	resource, err := resource.New(ctx, resource.WithAttributes(labels...))
+	resource, err := resource.New(ctx, resource.WithAttributes(attributes...))
 	if err != nil {
 		errInfo = append(errInfo, err.Error())
 	}

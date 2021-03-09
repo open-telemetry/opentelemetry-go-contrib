@@ -31,3 +31,13 @@ func (c amqpHeadersCarrier) Get(key string) string {
 func (c amqpHeadersCarrier) Set(key, val string) {
 	c[key] = val
 }
+
+// Keys returns a slice of all key identifiers in the carrier.
+func (c amqpHeadersCarrier) Keys() []string {
+	out := make([]string, len(c))
+
+	for k := range c {
+		out = append(out, k)
+	}
+	return out
+}
