@@ -16,6 +16,8 @@ package otelamqp
 
 import (
 	"context"
+	"errors"
+	"go.opentelemetry.io/otel/codes"
 	"testing"
 
 	"github.com/streadway/amqp"
@@ -50,4 +52,56 @@ func TestStartProducerSpan(t *testing.T) {
 	mockTracer, ok := spanTracer.(*oteltest.Tracer)
 	require.True(t, ok)
 	assert.Equal(t, "amqp", mockTracer.Name)
+}
+
+func TestEndConsumerSpan(t *testing.T) {
+	otel.SetTracerProvider(oteltest.NewTracerProvider())
+	hdrs := amqp.Table{}
+	consumerSpan, _ := StartConsumerSpan(context.Background(), hdrs)
+
+	EndConsumerSpan(consumerSpan, nil)
+	span, ok := consumerSpan.(*oteltest.Span)
+	assert.True(t, ok)
+	spanTracer := consumerSpan.Tracer()
+	mockTracer, ok := spanTracer.(*oteltest.Tracer)
+	require.True(t, ok)
+	require.True(t, span.Ended())
+	assert.Equal(t, "amqp", mockTracer.Name)
+}
+
+func TestEndConsumerSpanWhenError(t *testing.T) {
+	otel.SetTracerProvider(oteltest.NewTracerProvider())
+	hdrs := amqp.Table{}
+	consumerSpan, _ := StartConsumerSpan(context.Background(), hdrs)
+
+	EndConsumerSpan(consumerSpan, errors.New("error"))
+	span, ok := consumerSpan.(*oteltest.Span)
+	assert.True(t, ok)
+	assert.Equal(t, codes.Error, span.StatusCode())
+}
+
+func TestEndProducerSpan(t *testing.T) {
+	otel.SetTracerProvider(oteltest.NewTracerProvider())
+	hdrs := amqp.Table{}
+	producerSpan := StartProducerSpan(context.Background(), hdrs)
+
+	EndConsumerSpan(producerSpan, nil)
+	span, ok := producerSpan.(*oteltest.Span)
+	assert.True(t, ok)
+	spanTracer := producerSpan.Tracer()
+	mockTracer, ok := spanTracer.(*oteltest.Tracer)
+	require.True(t, ok)
+	require.True(t, span.Ended())
+	assert.Equal(t, "amqp", mockTracer.Name)
+}
+
+func TestEndProducerSpanWhenError(t *testing.T) {
+	otel.SetTracerProvider(oteltest.NewTracerProvider())
+	hdrs := amqp.Table{}
+	consumerSpan := StartProducerSpan(context.Background(), hdrs)
+
+	EndProducerSpan(consumerSpan, errors.New("error"))
+	span, ok := consumerSpan.(*oteltest.Span)
+	assert.True(t, ok)
+	assert.Equal(t, codes.Error, span.StatusCode())
 }

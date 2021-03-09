@@ -29,3 +29,11 @@ func TestPropagation(t *testing.T) {
 
 	assert.Equal(t, "d", c.Get("c"))
 }
+
+func TestPropagationWhenEmpty(t *testing.T) {
+	data := map[string]interface{}{
+	}
+	c := amqpHeadersCarrier(data)
+
+	assert.Equal(t, "", c.Get("c"))
+}
