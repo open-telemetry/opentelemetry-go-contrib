@@ -21,7 +21,7 @@ import (
 
 	"github.com/google/go-cmp/cmp"
 
-	"go.opentelemetry.io/otel/label"
+	"go.opentelemetry.io/otel/attribute"
 	"go.opentelemetry.io/otel/sdk/resource"
 )
 
@@ -93,12 +93,12 @@ func TestCloudRunDetectorExpectSuccess(t *testing.T) {
 	want, err := resource.New(
 		ctx,
 		resource.WithAttributes(
-			label.String("cloud.account.id", "foo"),
-			label.String("cloud.provider", "gcp"),
-			label.String("cloud.region", "utopia"),
-			label.String("service.instance.id", "bar"),
-			label.String("service.name", "x-service"),
-			label.String("service.namespace", "cloud-run-managed"),
+			attribute.String("cloud.account.id", "foo"),
+			attribute.String("cloud.provider", "gcp"),
+			attribute.String("cloud.region", "utopia"),
+			attribute.String("service.instance.id", "bar"),
+			attribute.String("service.name", "x-service"),
+			attribute.String("service.namespace", "cloud-run-managed"),
 		),
 	)
 	if err != nil {

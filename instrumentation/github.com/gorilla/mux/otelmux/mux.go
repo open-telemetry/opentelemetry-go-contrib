@@ -116,7 +116,7 @@ func putRRW(rrw *recordingResponseWriter) {
 // ServeHTTP implements the http.Handler interface. It does the actual
 // tracing of the request.
 func (tw traceware) ServeHTTP(w http.ResponseWriter, r *http.Request) {
-	ctx := tw.propagators.Extract(r.Context(), r.Header)
+	ctx := tw.propagators.Extract(r.Context(), propagation.HeaderCarrier(r.Header))
 	spanName := ""
 	route := mux.CurrentRoute(r)
 	if route != nil {

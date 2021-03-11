@@ -28,7 +28,7 @@ import (
 	"github.com/stretchr/testify/require"
 
 	"go.opentelemetry.io/contrib/internal/util"
-	"go.opentelemetry.io/otel/label"
+	"go.opentelemetry.io/otel/attribute"
 	"go.opentelemetry.io/otel/metric/number"
 	"go.opentelemetry.io/otel/oteltest"
 	"go.opentelemetry.io/otel/semconv"
@@ -51,7 +51,7 @@ func (m *mockConnectObserver) ObserveConnect(observedConnect gocql.ObservedConne
 type testRecord struct {
 	name       string
 	meterName  string
-	labels     []label.KeyValue
+	attributes []attribute.KeyValue
 	number     number.Number
 	numberKind number.Kind
 }
@@ -59,7 +59,7 @@ type testRecord struct {
 func TestQuery(t *testing.T) {
 	defer afterEach()
 	cluster := getCluster()
-	sr := new(oteltest.StandardSpanRecorder)
+	sr := new(oteltest.SpanRecorder)
 	tracerProvider := oteltest.NewTracerProvider(oteltest.WithSpanRecorder(sr))
 	meterImpl, meterProvider := oteltest.NewMeterProvider()
 
@@ -114,7 +114,7 @@ func TestQuery(t *testing.T) {
 		{
 			name:      "db.cassandra.queries",
 			meterName: instrumentationName,
-			labels: []label.KeyValue{
+			attributes: []attribute.KeyValue{
 				cassDBSystem(),
 				cassPeerIP("127.0.0.1"),
 				cassPeerPort(9042),
@@ -129,7 +129,7 @@ func TestQuery(t *testing.T) {
 		{
 			name:      "db.cassandra.rows",
 			meterName: instrumentationName,
-			labels: []label.KeyValue{
+			attributes: []attribute.KeyValue{
 				cassDBSystem(),
 				cassPeerIP("127.0.0.1"),
 				cassPeerPort(9042),
@@ -143,7 +143,7 @@ func TestQuery(t *testing.T) {
 		{
 			name:      "db.cassandra.latency",
 			meterName: instrumentationName,
-			labels: []label.KeyValue{
+			attributes: []attribute.KeyValue{
 				cassDBSystem(),
 				cassPeerIP("127.0.0.1"),
 				cassPeerPort(9042),
@@ -177,7 +177,7 @@ func TestQuery(t *testing.T) {
 func TestBatch(t *testing.T) {
 	defer afterEach()
 	cluster := getCluster()
-	sr := new(oteltest.StandardSpanRecorder)
+	sr := new(oteltest.SpanRecorder)
 	tracerProvider := oteltest.NewTracerProvider(oteltest.WithSpanRecorder(sr))
 	meterImpl, meterProvider := oteltest.NewMeterProvider()
 
@@ -227,7 +227,7 @@ func TestBatch(t *testing.T) {
 		{
 			name:      "db.cassandra.batch.queries",
 			meterName: instrumentationName,
-			labels: []label.KeyValue{
+			attributes: []attribute.KeyValue{
 				cassDBSystem(),
 				cassPeerIP("127.0.0.1"),
 				cassPeerPort(9042),
@@ -241,7 +241,7 @@ func TestBatch(t *testing.T) {
 		{
 			name:      "db.cassandra.latency",
 			meterName: instrumentationName,
-			labels: []label.KeyValue{
+			attributes: []attribute.KeyValue{
 				cassDBSystem(),
 				cassPeerIP("127.0.0.1"),
 				cassPeerPort(9042),
@@ -271,7 +271,7 @@ func TestBatch(t *testing.T) {
 func TestConnection(t *testing.T) {
 	defer afterEach()
 	cluster := getCluster()
-	sr := new(oteltest.StandardSpanRecorder)
+	sr := new(oteltest.SpanRecorder)
 	tracerProvider := oteltest.NewTracerProvider(oteltest.WithSpanRecorder(sr))
 	meterImpl, meterProvider := oteltest.NewMeterProvider()
 	connectObserver := &mockConnectObserver{0}
@@ -305,7 +305,7 @@ func TestConnection(t *testing.T) {
 		{
 			name:      "db.cassandra.connections",
 			meterName: instrumentationName,
-			labels: []label.KeyValue{
+			attributes: []attribute.KeyValue{
 				cassDBSystem(),
 				cassPeerIP("127.0.0.1"),
 				cassPeerPort(9042),
@@ -347,7 +347,7 @@ func assertConnectionLevelAttributes(t *testing.T, span *oteltest.Span) {
 		semconv.DBSystemCassandra.Value.AsString(),
 	)
 	assert.Equal(t, "127.0.0.1", span.Attributes()[semconv.NetPeerIPKey].AsString())
-	assert.Equal(t, int32(9042), span.Attributes()[semconv.NetPeerPortKey].AsInt32())
+	assert.Equal(t, int64(9042), span.Attributes()[semconv.NetPeerPortKey].AsInt64())
 	assert.Contains(t, span.Attributes(), cassVersionKey)
 	assert.Contains(t, span.Attributes(), cassHostIDKey)
 	assert.Equal(t, "up", strings.ToLower(span.Attributes()[cassHostStateKey].AsString()))
@@ -375,7 +375,7 @@ func obtainTestRecords(mbs []oteltest.Batch) []testRecord {
 				testRecord{
 					name:       m.Instrument.Descriptor().Name(),
 					meterName:  m.Instrument.Descriptor().InstrumentationName(),
-					labels:     mb.Labels,
+					attributes: mb.Labels,
 					number:     m.Number,
 					numberKind: m.Instrument.Descriptor().NumberKind(),
 				},
@@ -390,15 +390,15 @@ func obtainTestRecords(mbs []oteltest.Batch) []testRecord {
 func recordEqual(t *testing.T, expected testRecord, actual testRecord) {
 	assert.Equal(t, expected.name, actual.name)
 	assert.Equal(t, expected.meterName, actual.meterName)
-	require.Len(t, actual.labels, len(expected.labels))
-	actualSet := label.NewSet(actual.labels...)
-	for _, label := range expected.labels {
-		actualValue, ok := actualSet.Value(label.Key)
+	require.Len(t, actual.attributes, len(expected.attributes))
+	actualSet := attribute.NewSet(actual.attributes...)
+	for _, attribute := range expected.attributes {
+		actualValue, ok := actualSet.Value(attribute.Key)
 		assert.True(t, ok)
 		assert.NotNil(t, actualValue)
 		// Can't test equality of host id
-		if label.Key != cassHostIDKey && label.Key != cassVersionKey {
-			assert.Equal(t, label.Value, actualValue)
+		if attribute.Key != cassHostIDKey && attribute.Key != cassVersionKey {
+			assert.Equal(t, attribute.Value, actualValue)
 		} else {
 			assert.NotEmpty(t, actualValue)
 		}

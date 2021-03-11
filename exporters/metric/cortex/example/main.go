@@ -21,7 +21,7 @@ import (
 	"time"
 
 	"go.opentelemetry.io/contrib/exporters/metric/cortex"
-	"go.opentelemetry.io/otel/label"
+	"go.opentelemetry.io/otel/attribute"
 	"go.opentelemetry.io/otel/metric"
 	controller "go.opentelemetry.io/otel/sdk/metric/controller/basic"
 	"go.opentelemetry.io/otel/sdk/resource"
@@ -39,7 +39,7 @@ func main() {
 
 	// Create and install the exporter. Additionally, set the push interval to 5 seconds
 	// and add a resource to the controller.
-	pusher, err := cortex.InstallNewPipeline(*config, controller.WithCollectPeriod(5*time.Second), controller.WithResource(resource.NewWithAttributes(label.String("R", "V"))))
+	pusher, err := cortex.InstallNewPipeline(*config, controller.WithCollectPeriod(5*time.Second), controller.WithResource(resource.NewWithAttributes(attribute.String("R", "V"))))
 	if err != nil {
 		fmt.Printf("Error: %v", err)
 	}
@@ -71,8 +71,8 @@ func main() {
 		time.Sleep(1 * time.Second)
 		randomValue := random.Intn(100)
 		value := int64(randomValue * 10)
-		recorder.Record(ctx, value, label.String("key", "value"))
-		counter.Add(ctx, int64(randomValue), label.String("key", "value"))
+		recorder.Record(ctx, value, attribute.String("key", "value"))
+		counter.Add(ctx, int64(randomValue), attribute.String("key", "value"))
 		fmt.Printf("Adding %d to counter and recording %d in recorder\n", randomValue, value)
 	}
 

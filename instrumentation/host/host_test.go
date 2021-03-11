@@ -30,21 +30,21 @@ import (
 	"github.com/stretchr/testify/require"
 
 	"go.opentelemetry.io/contrib/instrumentation/host"
-	"go.opentelemetry.io/otel/label"
+	"go.opentelemetry.io/otel/attribute"
 	"go.opentelemetry.io/otel/oteltest"
 )
 
-func getMetric(impl *oteltest.MeterImpl, name string, lbl label.KeyValue) float64 {
+func getMetric(impl *oteltest.MeterImpl, name string, lbl attribute.KeyValue) float64 {
 	for _, b := range impl.MeasurementBatches {
-		foundLabel := false
+		foundAttribute := false
 		for _, haveLabel := range b.Labels {
 			if haveLabel != lbl {
 				continue
 			}
-			foundLabel = true
+			foundAttribute = true
 			break
 		}
-		if !foundLabel {
+		if !foundAttribute {
 			continue
 		}
 
@@ -89,11 +89,11 @@ func TestHostCPU(t *testing.T) {
 
 	impl.RunAsyncInstruments()
 
-	processUser := getMetric(impl, "process.cpu.time", host.LabelCPUTimeUser[0])
-	processSystem := getMetric(impl, "process.cpu.time", host.LabelCPUTimeSystem[0])
+	processUser := getMetric(impl, "process.cpu.time", host.AttributeCPUTimeUser[0])
+	processSystem := getMetric(impl, "process.cpu.time", host.AttributeCPUTimeSystem[0])
 
-	hostUser := getMetric(impl, "system.cpu.time", host.LabelCPUTimeUser[0])
-	hostSystem := getMetric(impl, "system.cpu.time", host.LabelCPUTimeSystem[0])
+	hostUser := getMetric(impl, "system.cpu.time", host.AttributeCPUTimeUser[0])
+	hostSystem := getMetric(impl, "system.cpu.time", host.AttributeCPUTimeSystem[0])
 
 	processAfter, err := proc.TimesWithContext(ctx)
 	require.NoError(t, err)
@@ -146,19 +146,19 @@ func TestHostMemory(t *testing.T) {
 
 	impl.RunAsyncInstruments()
 
-	hostUsed := getMetric(impl, "system.memory.usage", host.LabelMemoryUsed[0])
+	hostUsed := getMetric(impl, "system.memory.usage", host.AttributeMemoryUsed[0])
 	assert.Greater(t, hostUsed, 0.0)
 	assert.LessOrEqual(t, hostUsed, float64(vMem.Total))
 
-	hostAvailable := getMetric(impl, "system.memory.usage", host.LabelMemoryAvailable[0])
+	hostAvailable := getMetric(impl, "system.memory.usage", host.AttributeMemoryAvailable[0])
 	assert.GreaterOrEqual(t, hostAvailable, 0.0)
 	assert.Less(t, hostAvailable, float64(vMem.Total))
 
-	hostUsedUtil := getMetric(impl, "system.memory.utilization", host.LabelMemoryUsed[0])
+	hostUsedUtil := getMetric(impl, "system.memory.utilization", host.AttributeMemoryUsed[0])
 	assert.Greater(t, hostUsedUtil, 0.0)
 	assert.LessOrEqual(t, hostUsedUtil, 1.0)
 
-	hostAvailableUtil := getMetric(impl, "system.memory.utilization", host.LabelMemoryAvailable[0])
+	hostAvailableUtil := getMetric(impl, "system.memory.utilization", host.AttributeMemoryAvailable[0])
 	assert.GreaterOrEqual(t, hostAvailableUtil, 0.0)
 	assert.Less(t, hostAvailableUtil, 1.0)
 
@@ -228,8 +228,8 @@ func TestHostNetwork(t *testing.T) {
 	hostAfter, err := net.IOCountersWithContext(ctx, false)
 	require.NoError(t, err)
 
-	hostTransmit := getMetric(impl, "system.network.io", host.LabelNetworkTransmit[0])
-	hostReceive := getMetric(impl, "system.network.io", host.LabelNetworkReceive[0])
+	hostTransmit := getMetric(impl, "system.network.io", host.AttributeNetworkTransmit[0])
+	hostReceive := getMetric(impl, "system.network.io", host.AttributeNetworkReceive[0])
 
 	// Check that the network transmit/receive used is greater than before:
 	require.LessOrEqual(t, uint64(howMuch), hostAfter[0].BytesSent-hostBefore[0].BytesSent)

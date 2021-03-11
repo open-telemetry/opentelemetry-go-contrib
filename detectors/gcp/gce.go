@@ -22,7 +22,7 @@ import (
 
 	"cloud.google.com/go/compute/metadata"
 
-	"go.opentelemetry.io/otel/label"
+	"go.opentelemetry.io/otel/attribute"
 	"go.opentelemetry.io/otel/sdk/resource"
 	"go.opentelemetry.io/otel/semconv"
 )
@@ -39,7 +39,7 @@ func (gce *GCE) Detect(ctx context.Context) (*resource.Resource, error) {
 		return nil, nil
 	}
 
-	labels := []label.KeyValue{
+	attributes := []attribute.KeyValue{
 		semconv.CloudProviderGCP,
 	}
 
@@ -48,13 +48,13 @@ func (gce *GCE) Detect(ctx context.Context) (*resource.Resource, error) {
 	if projectID, err := metadata.ProjectID(); hasProblem(err) {
 		errInfo = append(errInfo, err.Error())
 	} else if projectID != "" {
-		labels = append(labels, semconv.CloudAccountIDKey.String(projectID))
+		attributes = append(attributes, semconv.CloudAccountIDKey.String(projectID))
 	}
 
 	if zone, err := metadata.Zone(); hasProblem(err) {
 		errInfo = append(errInfo, err.Error())
 	} else if zone != "" {
-		labels = append(labels, semconv.CloudZoneKey.String(zone))
+		attributes = append(attributes, semconv.CloudZoneKey.String(zone))
 
 		splitArr := strings.SplitN(zone, "-", 3)
 		if len(splitArr) == 3 {
@@ -65,25 +65,25 @@ func (gce *GCE) Detect(ctx context.Context) (*resource.Resource, error) {
 	if instanceID, err := metadata.InstanceID(); hasProblem(err) {
 		errInfo = append(errInfo, err.Error())
 	} else if instanceID != "" {
-		labels = append(labels, semconv.HostIDKey.String(instanceID))
+		attributes = append(attributes, semconv.HostIDKey.String(instanceID))
 	}
 
 	if name, err := metadata.InstanceName(); hasProblem(err) {
 		errInfo = append(errInfo, err.Error())
 	} else if name != "" {
-		labels = append(labels, semconv.HostNameKey.String(name))
+		attributes = append(attributes, semconv.HostNameKey.String(name))
 	}
 
 	if hostname, err := os.Hostname(); hasProblem(err) {
 		errInfo = append(errInfo, err.Error())
 	} else if hostname != "" {
-		labels = append(labels, semconv.HostNameKey.String(hostname))
+		attributes = append(attributes, semconv.HostNameKey.String(hostname))
 	}
 
 	if hostType, err := metadata.Get("instance/machine-type"); hasProblem(err) {
 		errInfo = append(errInfo, err.Error())
 	} else if hostType != "" {
-		labels = append(labels, semconv.HostTypeKey.String(hostType))
+		attributes = append(attributes, semconv.HostTypeKey.String(hostType))
 	}
 
 	var aggregatedErr error
@@ -91,7 +91,7 @@ func (gce *GCE) Detect(ctx context.Context) (*resource.Resource, error) {
 		aggregatedErr = fmt.Errorf("detecting GCE resources: %s", errInfo)
 	}
 
-	return resource.NewWithAttributes(labels...), aggregatedErr
+	return resource.NewWithAttributes(attributes...), aggregatedErr
 }
 
 // hasProblem checks if the err is not nil or for missing resources

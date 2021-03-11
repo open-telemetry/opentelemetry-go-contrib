@@ -30,7 +30,7 @@ import (
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 
-	"go.opentelemetry.io/otel/label"
+	"go.opentelemetry.io/otel/attribute"
 	"go.opentelemetry.io/otel/metric/global"
 	"go.opentelemetry.io/otel/sdk/export/metric"
 	export "go.opentelemetry.io/otel/sdk/export/metric"
@@ -66,7 +66,7 @@ var validConfig = Config{
 	Quantiles: []float64{0, 0.25, 0.5, 0.75, 1},
 }
 
-var testResource = resource.NewWithAttributes(label.String("R", "V"))
+var testResource = resource.NewWithAttributes(attribute.String("R", "V"))
 var mockTime int64 = int64(time.Nanosecond) * time.Time{}.UnixNano() / int64(time.Millisecond)
 
 func TestExportKindFor(t *testing.T) {
@@ -131,20 +131,20 @@ func TestConvertToTimeSeries(t *testing.T) {
 
 			// The TimeSeries cannot be compared easily using assert.ElementsMatch or
 			// cmp.Equal since both the ordering of the timeseries and the ordering of the
-			// labels inside each timeseries can change. To get around this, all the
-			// labels and samples are added to maps first. There aren't many labels or
+			// attributes inside each timeseries can change. To get around this, all the
+			// attributes and samples are added to maps first. There aren't many attributes or
 			// samples, so this nested loop shouldn't be a bottleneck.
-			gotLabels := make(map[string]bool)
-			wantLabels := make(map[string]bool)
+			gotAttributes := make(map[string]bool)
+			wantAttributes := make(map[string]bool)
 			gotSamples := make(map[string]bool)
 			wantSamples := make(map[string]bool)
 
 			for i := 0; i < len(got); i++ {
-				for _, label := range got[i].Labels {
-					gotLabels[label.String()] = true
+				for _, attribute := range got[i].Labels {
+					gotAttributes[attribute.String()] = true
 				}
-				for _, label := range want[i].Labels {
-					wantLabels[label.String()] = true
+				for _, attribute := range want[i].Labels {
+					wantAttributes[attribute.String()] = true
 				}
 				for _, sample := range got[i].Samples {
 					gotSamples[sample.String()] = true
@@ -153,7 +153,7 @@ func TestConvertToTimeSeries(t *testing.T) {
 					wantSamples[sample.String()] = true
 				}
 			}
-			assert.Equal(t, wantLabels, gotLabels)
+			assert.Equal(t, wantAttributes, gotAttributes)
 			assert.Equal(t, wantSamples, gotSamples)
 		})
 	}

@@ -20,8 +20,8 @@ import (
 	"google.golang.org/grpc/metadata"
 
 	"go.opentelemetry.io/otel"
+	"go.opentelemetry.io/otel/attribute"
 	"go.opentelemetry.io/otel/baggage"
-	"go.opentelemetry.io/otel/label"
 	"go.opentelemetry.io/otel/propagation"
 	"go.opentelemetry.io/otel/trace"
 )
@@ -30,7 +30,7 @@ const (
 	// instrumentationName is the name of this instrumentation package.
 	instrumentationName = "go.opentelemetry.io/contrib/instrumentation/google.golang.org/grpc/otelgrpc"
 	// GRPCStatusCodeKey is convention for numeric status code of a gRPC request.
-	GRPCStatusCodeKey = label.Key("rpc.grpc.status_code")
+	GRPCStatusCodeKey = attribute.Key("rpc.grpc.status_code")
 )
 
 // config is a group of options for this instrumentation.
@@ -84,6 +84,9 @@ type metadataSupplier struct {
 	metadata *metadata.MD
 }
 
+// assert that metadataSupplier implements the TextMapCarrier interface
+var _ propagation.TextMapCarrier = &metadataSupplier{}
+
 func (s *metadataSupplier) Get(key string) string {
 	values := s.metadata.Get(key)
 	if len(values) == 0 {
@@ -94,6 +97,14 @@ func (s *metadataSupplier) Get(key string) string {
 
 func (s *metadataSupplier) Set(key string, value string) {
 	s.metadata.Set(key, value)
+}
+
+func (s *metadataSupplier) Keys() []string {
+	out := make([]string, 0, len(*s.metadata))
+	for key := range *s.metadata {
+		out = append(out, key)
+	}
+	return out
 }
 
 // Inject injects correlation context and span context into the gRPC
@@ -109,13 +120,13 @@ func Inject(ctx context.Context, metadata *metadata.MD, opts ...Option) {
 // Extract returns the correlation context and span context that
 // another service encoded in the gRPC metadata object with Inject.
 // This function is meant to be used on incoming requests.
-func Extract(ctx context.Context, metadata *metadata.MD, opts ...Option) ([]label.KeyValue, trace.SpanContext) {
+func Extract(ctx context.Context, metadata *metadata.MD, opts ...Option) ([]attribute.KeyValue, trace.SpanContext) {
 	c := newConfig(opts)
 	ctx = c.Propagators.Extract(ctx, &metadataSupplier{
 		metadata: metadata,
 	})
 
-	labelSet := baggage.Set(ctx)
+	attributeSet := baggage.Set(ctx)
 
-	return (&labelSet).ToSlice(), trace.RemoteSpanContextFromContext(ctx)
+	return (&attributeSet).ToSlice(), trace.RemoteSpanContextFromContext(ctx)
 }

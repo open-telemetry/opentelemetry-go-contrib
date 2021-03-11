@@ -24,8 +24,8 @@ import (
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 
+	"go.opentelemetry.io/otel/attribute"
 	"go.opentelemetry.io/otel/codes"
-	"go.opentelemetry.io/otel/label"
 	"go.opentelemetry.io/otel/oteltest"
 	"go.opentelemetry.io/otel/propagation"
 	"go.opentelemetry.io/otel/semconv"
@@ -37,7 +37,7 @@ func TestWrapSyncProducer(t *testing.T) {
 	var err error
 
 	// Mock provider
-	sr := new(oteltest.StandardSpanRecorder)
+	sr := new(oteltest.SpanRecorder)
 	provider := oteltest.NewTracerProvider(oteltest.WithSpanRecorder(sr))
 
 	cfg := newSaramaConfig()
@@ -54,50 +54,50 @@ func TestWrapSyncProducer(t *testing.T) {
 
 	// Expected
 	expectedList := []struct {
-		labelList    []label.KeyValue
-		parentSpanID oteltrace.SpanID
-		kind         oteltrace.SpanKind
+		attributeList []attribute.KeyValue
+		parentSpanID  oteltrace.SpanID
+		kind          oteltrace.SpanKind
 	}{
 		{
-			labelList: []label.KeyValue{
+			attributeList: []attribute.KeyValue{
 				semconv.MessagingSystemKey.String("kafka"),
 				semconv.MessagingDestinationKindKeyTopic,
 				semconv.MessagingDestinationKey.String(topic),
 				semconv.MessagingMessageIDKey.String("1"),
-				kafkaPartitionKey.Int32(0),
+				kafkaPartitionKey.Int64(0),
 			},
 			parentSpanID: oteltrace.SpanFromContext(ctx).SpanContext().SpanID,
 			kind:         oteltrace.SpanKindProducer,
 		},
 		{
-			labelList: []label.KeyValue{
+			attributeList: []attribute.KeyValue{
 				semconv.MessagingSystemKey.String("kafka"),
 				semconv.MessagingDestinationKindKeyTopic,
 				semconv.MessagingDestinationKey.String(topic),
 				semconv.MessagingMessageIDKey.String("2"),
-				kafkaPartitionKey.Int32(0),
+				kafkaPartitionKey.Int64(0),
 			},
 			kind: oteltrace.SpanKindProducer,
 		},
 		{
-			labelList: []label.KeyValue{
+			attributeList: []attribute.KeyValue{
 				semconv.MessagingSystemKey.String("kafka"),
 				semconv.MessagingDestinationKindKeyTopic,
 				semconv.MessagingDestinationKey.String(topic),
 				// TODO: The mock sync producer of sarama does not handle the offset while sending messages
 				// https://github.com/Shopify/sarama/pull/1747
 				//semconv.MessagingMessageIDKey.String("3"),
-				kafkaPartitionKey.Int32(0),
+				kafkaPartitionKey.Int64(0),
 			},
 			kind: oteltrace.SpanKindProducer,
 		},
 		{
-			labelList: []label.KeyValue{
+			attributeList: []attribute.KeyValue{
 				semconv.MessagingSystemKey.String("kafka"),
 				semconv.MessagingDestinationKindKeyTopic,
 				semconv.MessagingDestinationKey.String(topic),
 				//semconv.MessagingMessageIDKey.String("4"),
-				kafkaPartitionKey.Int32(0),
+				kafkaPartitionKey.Int64(0),
 			},
 			kind: oteltrace.SpanKindProducer,
 		},
@@ -130,7 +130,7 @@ func TestWrapSyncProducer(t *testing.T) {
 		assert.Equal(t, expected.parentSpanID, span.ParentSpanID())
 		assert.Equal(t, "kafka.produce", span.Name())
 		assert.Equal(t, expected.kind, span.SpanKind())
-		for _, k := range expected.labelList {
+		for _, k := range expected.attributeList {
 			assert.Equal(t, k.Value, span.Attributes()[k.Key], k.Key)
 		}
 
@@ -156,7 +156,7 @@ func TestWrapAsyncProducer(t *testing.T) {
 
 	t.Run("without successes config", func(t *testing.T) {
 		// Mock provider
-		sr := new(oteltest.StandardSpanRecorder)
+		sr := new(oteltest.SpanRecorder)
 		provider := oteltest.NewTracerProvider(
 			oteltest.WithSpanRecorder(sr),
 		)
@@ -179,28 +179,28 @@ func TestWrapAsyncProducer(t *testing.T) {
 
 		// Expected
 		expectedList := []struct {
-			labelList    []label.KeyValue
-			parentSpanID oteltrace.SpanID
-			kind         oteltrace.SpanKind
+			attributeList []attribute.KeyValue
+			parentSpanID  oteltrace.SpanID
+			kind          oteltrace.SpanKind
 		}{
 			{
-				labelList: []label.KeyValue{
+				attributeList: []attribute.KeyValue{
 					semconv.MessagingSystemKey.String("kafka"),
 					semconv.MessagingDestinationKindKeyTopic,
 					semconv.MessagingDestinationKey.String(topic),
 					semconv.MessagingMessageIDKey.String("0"),
-					kafkaPartitionKey.Int32(0),
+					kafkaPartitionKey.Int64(0),
 				},
 				parentSpanID: oteltrace.SpanID{0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x2},
 				kind:         oteltrace.SpanKindProducer,
 			},
 			{
-				labelList: []label.KeyValue{
+				attributeList: []attribute.KeyValue{
 					semconv.MessagingSystemKey.String("kafka"),
 					semconv.MessagingDestinationKindKeyTopic,
 					semconv.MessagingDestinationKey.String(topic),
 					semconv.MessagingMessageIDKey.String("0"),
-					kafkaPartitionKey.Int32(0),
+					kafkaPartitionKey.Int64(0),
 				},
 				kind: oteltrace.SpanKindProducer,
 			},
@@ -214,7 +214,7 @@ func TestWrapAsyncProducer(t *testing.T) {
 			assert.Equal(t, expected.parentSpanID, span.ParentSpanID())
 			assert.Equal(t, "kafka.produce", span.Name())
 			assert.Equal(t, expected.kind, span.SpanKind())
-			for _, k := range expected.labelList {
+			for _, k := range expected.attributeList {
 				assert.Equal(t, k.Value, span.Attributes()[k.Key], k.Key)
 			}
 
@@ -226,7 +226,7 @@ func TestWrapAsyncProducer(t *testing.T) {
 
 	t.Run("with successes config", func(t *testing.T) {
 		// Mock provider
-		sr := new(oteltest.StandardSpanRecorder)
+		sr := new(oteltest.SpanRecorder)
 		provider := oteltest.NewTracerProvider(
 			oteltest.WithSpanRecorder(sr),
 		)
@@ -256,28 +256,28 @@ func TestWrapAsyncProducer(t *testing.T) {
 
 		// Expected
 		expectedList := []struct {
-			labelList    []label.KeyValue
-			parentSpanID oteltrace.SpanID
-			kind         oteltrace.SpanKind
+			attributeList []attribute.KeyValue
+			parentSpanID  oteltrace.SpanID
+			kind          oteltrace.SpanKind
 		}{
 			{
-				labelList: []label.KeyValue{
+				attributeList: []attribute.KeyValue{
 					semconv.MessagingSystemKey.String("kafka"),
 					semconv.MessagingDestinationKindKeyTopic,
 					semconv.MessagingDestinationKey.String(topic),
 					semconv.MessagingMessageIDKey.String("1"),
-					kafkaPartitionKey.Int32(0),
+					kafkaPartitionKey.Int64(0),
 				},
 				parentSpanID: oteltrace.SpanID{0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x2},
 				kind:         oteltrace.SpanKindProducer,
 			},
 			{
-				labelList: []label.KeyValue{
+				attributeList: []attribute.KeyValue{
 					semconv.MessagingSystemKey.String("kafka"),
 					semconv.MessagingDestinationKindKeyTopic,
 					semconv.MessagingDestinationKey.String(topic),
 					semconv.MessagingMessageIDKey.String("2"),
-					kafkaPartitionKey.Int32(0),
+					kafkaPartitionKey.Int64(0),
 				},
 				kind: oteltrace.SpanKindProducer,
 			},
@@ -291,7 +291,7 @@ func TestWrapAsyncProducer(t *testing.T) {
 			assert.Equal(t, expected.parentSpanID, span.ParentSpanID())
 			assert.Equal(t, "kafka.produce", span.Name())
 			assert.Equal(t, expected.kind, span.SpanKind())
-			for _, k := range expected.labelList {
+			for _, k := range expected.attributeList {
 				assert.Equal(t, k.Value, span.Attributes()[k.Key], k.Key)
 			}
 
@@ -308,7 +308,7 @@ func TestWrapAsyncProducer(t *testing.T) {
 func TestWrapAsyncProducerError(t *testing.T) {
 	propagators := propagation.TraceContext{}
 	// Mock provider
-	sr := new(oteltest.StandardSpanRecorder)
+	sr := new(oteltest.SpanRecorder)
 	provider := oteltest.NewTracerProvider(oteltest.WithSpanRecorder(sr))
 
 	// Set producer with successes config
