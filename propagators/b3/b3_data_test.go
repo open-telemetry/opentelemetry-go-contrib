@@ -541,9 +541,7 @@ var injectHeader = []injectTest{
 			TraceFlags: trace.FlagsSampled,
 		},
 		wantHeaders: map[string]string{
-			b3TraceID: traceIDStr,
-			b3SpanID:  spanIDStr,
-			b3Sampled: "1",
+			b3Context: fmt.Sprintf("%s-%s-%s", traceIDStr, spanIDStr, "1"),
 		},
 		doNotWantHeaders: []string{
 			b3ParentSpanID,
@@ -558,9 +556,7 @@ var injectHeader = []injectTest{
 			SpanID:  spanID,
 		},
 		wantHeaders: map[string]string{
-			b3TraceID: traceIDStr,
-			b3SpanID:  spanIDStr,
-			b3Sampled: "0",
+			b3Context: fmt.Sprintf("%s-%s-%s", traceIDStr, spanIDStr, "0"),
 		},
 		doNotWantHeaders: []string{
 			b3ParentSpanID,
@@ -576,8 +572,7 @@ var injectHeader = []injectTest{
 			TraceFlags: trace.FlagsDeferred,
 		},
 		wantHeaders: map[string]string{
-			b3TraceID: traceIDStr,
-			b3SpanID:  spanIDStr,
+			b3Context: fmt.Sprintf("%s-%s", traceIDStr, spanIDStr),
 		},
 		doNotWantHeaders: []string{
 			b3Sampled,
@@ -592,7 +587,7 @@ var injectHeader = []injectTest{
 			TraceFlags: trace.FlagsSampled,
 		},
 		wantHeaders: map[string]string{
-			b3Sampled: "1",
+			b3Context: "1",
 		},
 		doNotWantHeaders: []string{
 			b3TraceID,
@@ -610,9 +605,7 @@ var injectHeader = []injectTest{
 			TraceFlags: trace.FlagsDebug,
 		},
 		wantHeaders: map[string]string{
-			b3TraceID: traceIDStr,
-			b3SpanID:  spanIDStr,
-			b3Flags:   "1",
+			b3Context: fmt.Sprintf("%s-%s-%s", traceIDStr, spanIDStr, "d"),
 		},
 		doNotWantHeaders: []string{
 			b3Sampled,
@@ -628,9 +621,7 @@ var injectHeader = []injectTest{
 			TraceFlags: trace.FlagsSampled | trace.FlagsDebug,
 		},
 		wantHeaders: map[string]string{
-			b3TraceID: traceIDStr,
-			b3SpanID:  spanIDStr,
-			b3Flags:   "1",
+			b3Context: fmt.Sprintf("%s-%s-%s", traceIDStr, spanIDStr, "d"),
 		},
 		doNotWantHeaders: []string{
 			b3Sampled,
