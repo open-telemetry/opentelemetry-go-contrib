@@ -54,7 +54,7 @@ func TestAppendOtelMiddlewares(t *testing.T) {
 		},
 
 		"standardRestXMLError": {
-			responseStatus: 500,
+			responseStatus: 404,
 			responseBody: []byte(`<?xml version="1.0"?>
 		<ErrorResponse xmlns="http://route53.amazonaws.com/doc/2016-09-07/">
 		  <Error>
@@ -67,7 +67,7 @@ func TestAppendOtelMiddlewares(t *testing.T) {
 		`),
 			expectedError:      "Error",
 			expectedRequestID:  "1234567890A",
-			expectedStatusCode: 500,
+			expectedStatusCode: 404,
 		},
 
 		"Success response": {
@@ -95,7 +95,7 @@ func TestAppendOtelMiddlewares(t *testing.T) {
 		defer server.Close()
 
 		t.Run(name, func(t *testing.T) {
-			sr := new(oteltest.StandardSpanRecorder)
+			sr := new(oteltest.SpanRecorder)
 			provider := oteltest.NewTracerProvider(oteltest.WithSpanRecorder(sr))
 
 			svc := route53.NewFromConfig(aws.Config{
@@ -117,7 +117,7 @@ func TestAppendOtelMiddlewares(t *testing.T) {
 				},
 				HostedZoneId: aws.String("zone"),
 			}, func(options *route53.Options) {
-				AppendOtelMiddlewares(
+				AppendMiddlewares(
 					&options.APIOptions, WithTracerProvider(provider), WithPropagators(b3.B3{}))
 			})
 

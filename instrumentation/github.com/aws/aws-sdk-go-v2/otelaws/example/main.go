@@ -71,7 +71,7 @@ func main() {
 	}
 
 	// instrument all aws clients
-	otelaws.AppendOtelMiddlewares(&cfg.APIOptions)
+	otelaws.AppendMiddlewares(&cfg.APIOptions)
 
 	// S3
 	s3Client := s3.NewFromConfig(cfg)
