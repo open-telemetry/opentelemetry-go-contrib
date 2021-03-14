@@ -468,3 +468,54 @@ func TestSpanStatus(t *testing.T) {
 		})
 	}
 }
+
+func TestWithRouteTag(t *testing.T) {
+	route := "/some/route"
+
+	spanRecorder := tracetest.NewSpanRecorder()
+	tracerProvider := sdktrace.NewTracerProvider()
+	tracerProvider.RegisterSpanProcessor(spanRecorder)
+
+	metricReader := metric.NewManualReader()
+	meterProvider := metric.NewMeterProvider(metric.WithReader(metricReader))
+
+	h := otelhttp.NewHandler(
+		otelhttp.WithRouteTag(
+			route,
+			http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+				w.WriteHeader(http.StatusTeapot)
+			}),
+		),
+		"test_handler",
+		otelhttp.WithTracerProvider(tracerProvider),
+		otelhttp.WithMeterProvider(meterProvider),
+	)
+
+	h.ServeHTTP(httptest.NewRecorder(), httptest.NewRequest(http.MethodGet, "/", nil))
+	expectedAttribute := semconv.HTTPRouteKey.String(route)
+
+	require.Len(t, spanRecorder.Ended(), 1, "should emit a span")
+	span := spanRecorder.Ended()[0]
+	require.Contains(t, span.Attributes(), expectedAttribute, "should add route to span attributes")
+
+	rm := metricdata.ResourceMetrics{}
+	err := metricReader.Collect(context.Background(), &rm)
+	require.NoError(t, err)
+	require.Len(t, rm.ScopeMetrics, 1, "should emit metrics for one scope")
+	scopeMetrics := rm.ScopeMetrics[0]
+
+	for _, m := range scopeMetrics.Metrics {
+		switch d := m.Data.(type) {
+		case metricdata.Sum[int64]:
+			require.Len(t, d.DataPoints, 1, "metric '%v' should have exactly one data point", m.Name)
+			require.Contains(t, d.DataPoints[0].Attributes.ToSlice(), expectedAttribute, "should add route to attributes for metric '%v'", m.Name)
+
+		case metricdata.Histogram[float64]:
+			require.Len(t, d.DataPoints, 1, "metric '%v' should have exactly one data point", m.Name)
+			require.Contains(t, d.DataPoints[0].Attributes.ToSlice(), expectedAttribute, "should add route to attributes for metric '%v'", m.Name)
+
+		default:
+			require.Fail(t, "metric has unexpected data type", "metric '%v' has unexpected data type %T", m.Name, m.Data)
+		}
+	}
+}

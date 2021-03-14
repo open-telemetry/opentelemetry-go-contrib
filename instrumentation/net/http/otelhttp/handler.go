@@ -257,8 +257,14 @@ func setAfterServeAttributes(span trace.Span, read, wrote int64, statusCode int,
 // RouteKey Tag.
 func WithRouteTag(route string, h http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		attr := semconv.HTTPRouteKey.String(route)
+
 		span := trace.SpanFromContext(r.Context())
-		span.SetAttributes(semconv.HTTPRoute(route))
+		span.SetAttributes(attr)
+
+		labeler, _ := LabelerFromContext(r.Context())
+		labeler.Add(attr)
+
 		h.ServeHTTP(w, r)
 	})
 }
