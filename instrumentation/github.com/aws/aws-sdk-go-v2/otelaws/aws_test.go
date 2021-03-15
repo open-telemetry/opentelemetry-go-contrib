@@ -125,6 +125,10 @@ func TestAppendOtelMiddlewares(t *testing.T) {
 			assert.Len(t, spans, 1)
 			span := spans[0]
 
+			if span.Name() != "Route 53" {
+				t.Fatalf("Span Name is not 'Route 53'.")
+			}
+
 			if span.SpanKind() != trace.SpanKindClient {
 				t.Fatalf("Span Kind is not SpanKindClient.")
 			}

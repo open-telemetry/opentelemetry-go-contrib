@@ -43,7 +43,7 @@ func (m oTelMiddlewares) initializeMiddleware(stack *middleware.Stack) error {
 		opts := []trace.SpanOption{
 			trace.WithSpanKind(trace.SpanKindClient),
 		}
-		ctx, span := m.tracer.Start(ctx, v2Middleware.GetServiceID(ctx), opts...)
+		ctx, span := m.tracer.Start(ctx, "AWS", opts...)
 		defer span.End()
 
 		out, metadata, err = next.HandleInitialize(ctx, in)
@@ -68,6 +68,7 @@ func (m oTelMiddlewares) deserializeMiddleware(stack *middleware.Stack) error {
 		}
 
 		span := trace.SpanFromContext(ctx)
+		span.SetName(v2Middleware.GetServiceID(ctx))
 		span.SetAttributes(semconv.HTTPStatusCodeKey.Int(resp.StatusCode),
 			ServiceAttr(v2Middleware.GetServiceID(ctx)),
 			RegionAttr(v2Middleware.GetRegion(ctx)),
