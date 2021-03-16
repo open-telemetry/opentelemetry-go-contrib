@@ -56,21 +56,25 @@ func (m oTelMiddlewares) spanCreator(stack *middleware.Stack) error {
 		middleware.Before)
 }
 
-func (m oTelMiddlewares) spanNameSetter(stack *middleware.Stack) error {
-	return stack.Initialize.Add(middleware.InitializeMiddlewareFunc("OtelSpanNameSetter", func(
+func (m oTelMiddlewares) initializeSpanDecorator(stack *middleware.Stack) error {
+	return stack.Initialize.Add(middleware.InitializeMiddlewareFunc("OtelInitializeSpanDecorator", func(
 		ctx context.Context, in middleware.InitializeInput, next middleware.InitializeHandler) (
 		out middleware.InitializeOutput, metadata middleware.Metadata, err error) {
 
 		span := trace.SpanFromContext(ctx)
 		span.SetName(v2Middleware.GetServiceID(ctx))
 
+		span.SetAttributes(ServiceAttr(v2Middleware.GetServiceID(ctx)),
+			RegionAttr(v2Middleware.GetRegion(ctx)),
+			OperationAttr(v2Middleware.GetOperationName(ctx)))
+
 		return next.HandleInitialize(ctx, in)
 	}),
 		middleware.After)
 }
 
-func (m oTelMiddlewares) spanAttrsDecorator(stack *middleware.Stack) error {
-	return stack.Deserialize.Add(middleware.DeserializeMiddlewareFunc("OtelSpanAttrsDecorator", func(
+func (m oTelMiddlewares) deserializeSpanDecorator(stack *middleware.Stack) error {
+	return stack.Deserialize.Add(middleware.DeserializeMiddlewareFunc("OtelDeserializeSpanDecorator", func(
 		ctx context.Context, in middleware.DeserializeInput, next middleware.DeserializeHandler) (
 		out middleware.DeserializeOutput, metadata middleware.Metadata, err error) {
 		out, metadata, err = next.HandleDeserialize(ctx, in)
@@ -81,10 +85,7 @@ func (m oTelMiddlewares) spanAttrsDecorator(stack *middleware.Stack) error {
 		}
 
 		span := trace.SpanFromContext(ctx)
-		span.SetAttributes(semconv.HTTPStatusCodeKey.Int(resp.StatusCode),
-			ServiceAttr(v2Middleware.GetServiceID(ctx)),
-			RegionAttr(v2Middleware.GetRegion(ctx)),
-			OperationAttr(v2Middleware.GetOperationName(ctx)))
+		span.SetAttributes(semconv.HTTPStatusCodeKey.Int(resp.StatusCode))
 
 		requestID, ok := v2Middleware.GetRequestIDMetadata(metadata)
 		if ok {
@@ -110,5 +111,5 @@ func AppendMiddlewares(apiOptions *[]func(*middleware.Stack) error, opts ...Opti
 
 	m := oTelMiddlewares{tracer: cfg.TracerProvider.Tracer(tracerName,
 		trace.WithInstrumentationVersion(contrib.SemVersion()))}
-	*apiOptions = append(*apiOptions, m.spanCreator, m.spanNameSetter, m.spanAttrsDecorator)
+	*apiOptions = append(*apiOptions, m.spanCreator, m.initializeSpanDecorator, m.deserializeSpanDecorator)
 }
