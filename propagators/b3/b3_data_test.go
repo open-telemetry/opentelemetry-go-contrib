@@ -545,6 +545,9 @@ var injectHeader = []injectTest{
 		},
 		doNotWantHeaders: []string{
 			b3ParentSpanID,
+			b3TraceID,
+			b3SpanID,
+			b3Sampled,
 			b3Flags,
 			b3Context,
 		},
@@ -560,6 +563,9 @@ var injectHeader = []injectTest{
 		},
 		doNotWantHeaders: []string{
 			b3ParentSpanID,
+			b3TraceID,
+			b3SpanID,
+			b3Sampled,
 			b3Flags,
 			b3Context,
 		},
@@ -576,6 +582,8 @@ var injectHeader = []injectTest{
 		},
 		doNotWantHeaders: []string{
 			b3Sampled,
+			b3TraceID,
+			b3SpanID,
 			b3ParentSpanID,
 			b3Flags,
 			b3Context,
@@ -609,6 +617,8 @@ var injectHeader = []injectTest{
 		},
 		doNotWantHeaders: []string{
 			b3Sampled,
+			traceIDStr,
+			spanIDStr,
 			b3ParentSpanID,
 			b3Context,
 		},
@@ -625,6 +635,9 @@ var injectHeader = []injectTest{
 		},
 		doNotWantHeaders: []string{
 			b3Sampled,
+			traceIDStr,
+			spanIDStr,
+			b3Flags,
 			b3ParentSpanID,
 			b3Context,
 		},
