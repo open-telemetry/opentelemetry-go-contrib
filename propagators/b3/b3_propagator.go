@@ -104,7 +104,7 @@ var _ propagation.TextMapPropagator = B3{}
 func (b3 B3) Inject(ctx context.Context, carrier propagation.TextMapCarrier) {
 	sc := trace.SpanFromContext(ctx).SpanContext()
 
-	if b3.InjectEncoding.supports(B3SingleHeader) {
+	if b3.InjectEncoding.supports(B3SingleHeader) || b3.InjectEncoding == B3Unspecified {
 		header := []string{}
 		if sc.TraceID.IsValid() && sc.SpanID.IsValid() {
 			header = append(header, sc.TraceID.String(), sc.SpanID.String())
@@ -123,7 +123,7 @@ func (b3 B3) Inject(ctx context.Context, carrier propagation.TextMapCarrier) {
 		carrier.Set(b3ContextHeader, strings.Join(header, "-"))
 	}
 
-	if b3.InjectEncoding.supports(B3MultipleHeader) || b3.InjectEncoding == B3Unspecified {
+	if b3.InjectEncoding.supports(B3MultipleHeader) {
 		if sc.TraceID.IsValid() && sc.SpanID.IsValid() {
 			carrier.Set(b3TraceIDHeader, sc.TraceID.String())
 			carrier.Set(b3SpanIDHeader, sc.SpanID.String())
