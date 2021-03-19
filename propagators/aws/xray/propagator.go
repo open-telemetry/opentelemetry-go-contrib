@@ -66,15 +66,15 @@ var _ propagation.TextMapPropagator = &Propagator{}
 // Inject injects a context to the carrier following AWS X-Ray format.
 func (xray Propagator) Inject(ctx context.Context, carrier propagation.TextMapCarrier) {
 	sc := trace.SpanFromContext(ctx).SpanContext()
-	if !sc.TraceID.IsValid() || !sc.SpanID.IsValid() {
+	if !sc.TraceID().IsValid() || !sc.SpanID().IsValid() {
 		return
 	}
-	otTraceID := sc.TraceID.String()
+	otTraceID := sc.TraceID().String()
 	xrayTraceID := traceIDVersion + traceIDDelimiter + otTraceID[0:traceIDFirstPartLength] +
 		traceIDDelimiter + otTraceID[traceIDFirstPartLength:]
-	parentID := sc.SpanID
+	parentID := sc.SpanID()
 	samplingFlag := notSampled
-	if sc.TraceFlags == traceFlagSampled {
+	if sc.TraceFlags() == traceFlagSampled {
 		samplingFlag = isSampled
 	}
 	headers := []string{traceIDKey, kvDelimiter, xrayTraceID, traceHeaderDelimiter, parentIDKey,
@@ -98,7 +98,7 @@ func (xray Propagator) Extract(ctx context.Context, carrier propagation.TextMapC
 // extract extracts Span Context from context.
 func extract(headerVal string) (trace.SpanContext, error) {
 	var (
-		sc             = trace.SpanContext{}
+		scc            = trace.SpanContextConfig{}
 		err            error
 		delimiterIndex int
 		part           string
@@ -120,22 +120,22 @@ func extract(headerVal string) (trace.SpanContext, error) {
 		}
 		value := part[equalsIndex+1:]
 		if strings.HasPrefix(part, traceIDKey) {
-			sc.TraceID, err = parseTraceID(value)
+			scc.TraceID, err = parseTraceID(value)
 			if err != nil {
 				return empty, err
 			}
 		} else if strings.HasPrefix(part, parentIDKey) {
 			//extract parentId
-			sc.SpanID, err = trace.SpanIDFromHex(value)
+			scc.SpanID, err = trace.SpanIDFromHex(value)
 			if err != nil {
 				return empty, errInvalidSpanIDLength
 			}
 		} else if strings.HasPrefix(part, sampleFlagKey) {
 			//extract traceflag
-			sc.TraceFlags = parseTraceFlag(value)
+			scc.TraceFlags = parseTraceFlag(value)
 		}
 	}
-	return sc, nil
+	return trace.NewSpanContext(scc), nil
 }
 
 // indexOf returns position of the first occurrence of a substr in str starting at pos index.
@@ -150,15 +150,15 @@ func indexOf(str string, substr string, pos int) int {
 // parseTraceID returns trace ID if  valid else return invalid trace ID.
 func parseTraceID(xrayTraceID string) (trace.TraceID, error) {
 	if len(xrayTraceID) != traceIDLength {
-		return empty.TraceID, errLengthTraceIDHeader
+		return empty.TraceID(), errLengthTraceIDHeader
 	}
 	if !strings.HasPrefix(xrayTraceID, traceIDVersion) {
-		return empty.TraceID, errInvalidTraceIDVersion
+		return empty.TraceID(), errInvalidTraceIDVersion
 	}
 
 	if xrayTraceID[traceIDDelimitterIndex1:traceIDDelimitterIndex1+1] != traceIDDelimiter ||
 		xrayTraceID[traceIDDelimitterIndex2:traceIDDelimitterIndex2+1] != traceIDDelimiter {
-		return empty.TraceID, errMalformedTraceID
+		return empty.TraceID(), errMalformedTraceID
 	}
 
 	epochPart := xrayTraceID[traceIDDelimitterIndex1+1 : traceIDDelimitterIndex2]

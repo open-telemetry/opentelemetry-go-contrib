@@ -66,7 +66,7 @@ func TestWrapSyncProducer(t *testing.T) {
 				semconv.MessagingMessageIDKey.String("1"),
 				kafkaPartitionKey.Int64(0),
 			},
-			parentSpanID: oteltrace.SpanFromContext(ctx).SpanContext().SpanID,
+			parentSpanID: oteltrace.SpanContextFromContext(ctx).SpanID(),
 			kind:         oteltrace.SpanKindProducer,
 		},
 		{

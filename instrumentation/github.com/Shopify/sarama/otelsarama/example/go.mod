@@ -9,9 +9,9 @@ replace (
 
 require (
 	github.com/Shopify/sarama v1.28.0
-	go.opentelemetry.io/contrib/instrumentation/github.com/Shopify/sarama/otelsarama v0.18.0
-	go.opentelemetry.io/otel v0.18.0
-	go.opentelemetry.io/otel/exporters/stdout v0.18.0
-	go.opentelemetry.io/otel/sdk v0.18.0
-	go.opentelemetry.io/otel/trace v0.18.0
+	go.opentelemetry.io/contrib/instrumentation/github.com/Shopify/sarama/otelsarama v0.19.0
+	go.opentelemetry.io/otel v0.19.0
+	go.opentelemetry.io/otel/exporters/stdout v0.19.0
+	go.opentelemetry.io/otel/sdk v0.19.0
+	go.opentelemetry.io/otel/trace v0.19.0
 )

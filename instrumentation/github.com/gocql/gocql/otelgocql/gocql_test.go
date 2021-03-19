@@ -100,7 +100,7 @@ func TestQuery(t *testing.T) {
 		switch span.Name() {
 		case insertStmt:
 			assert.Equal(t, insertStmt, span.Attributes()[semconv.DBStatementKey].AsString())
-			assert.Equal(t, parentSpan.SpanContext().SpanID.String(), span.ParentSpanID().String())
+			assert.Equal(t, parentSpan.SpanContext().SpanID().String(), span.ParentSpanID().String())
 		default:
 			t.Fatalf("unexpected span name %s", span.Name())
 		}

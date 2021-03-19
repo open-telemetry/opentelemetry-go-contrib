@@ -102,7 +102,7 @@ func NewExportPipeline(config Config, options ...controller.Option) (*controller
 			),
 			exporter,
 		),
-		append(options, controller.WithPusher(exporter))...,
+		append(options, controller.WithExporter(exporter))...,
 	)
 
 	return pusher, pusher.Start(context.TODO())
@@ -322,7 +322,7 @@ func createLabelSet(record metric.Record, extraAttributes ...attribute.KeyValue)
 
 	// mergeAttributes merges Record and Resource attributes into a single set, giving precedence
 	// to the record's attributes.
-	mi := attribute.NewMergeIterator(record.Labels(), record.Resource().LabelSet())
+	mi := attribute.NewMergeIterator(record.Labels(), record.Resource().Set())
 	for mi.Next() {
 		attribute := mi.Label()
 		key := string(attribute.Key)

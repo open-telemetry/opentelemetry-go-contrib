@@ -61,9 +61,17 @@ func TestExtractOT(t *testing.T) {
 				ctx := context.Background()
 				ctx = propagator.Extract(ctx, propagation.HeaderCarrier(req.Header))
 				resSc := trace.RemoteSpanContextFromContext(ctx)
-				if diff := cmp.Diff(resSc, tc.expected, cmp.AllowUnexported(trace.TraceState{})); diff != "" {
+
+				comparer := cmp.Comparer(func(a, b trace.SpanContext) bool {
+					// Do not compare remote field, it is unset on empty
+					// SpanContext.
+					newA := a.WithRemote(b.IsRemote())
+					return newA.Equal(b)
+				})
+				if diff := cmp.Diff(resSc, trace.NewSpanContext(tc.expected), comparer); diff != "" {
 					t.Errorf("%s: %s: -got +want %s", tg.name, tc.name, diff)
 				}
+
 				m := baggage.Set(ctx)
 				mi := tc.baggage.Iter()
 				for mi.Next() {
@@ -118,7 +126,7 @@ func TestInjectOT(t *testing.T) {
 					ctx,
 					testSpan{
 						Span: mockSpan,
-						sc:   tc.sc,
+						sc:   trace.NewSpanContext(tc.sc),
 					},
 				)
 				propagator.Inject(ctx, propagation.HeaderCarrier(req.Header))
