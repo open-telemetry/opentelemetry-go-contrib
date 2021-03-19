@@ -16,6 +16,7 @@ package otelaws
 
 import (
 	"context"
+	"time"
 
 	v2Middleware "github.com/aws/aws-sdk-go-v2/aws/middleware"
 	"github.com/aws/smithy-go/middleware"
@@ -31,19 +32,36 @@ const (
 	tracerName = "go.opentelemetry.io/contrib/instrumentation/github.com/aws/aws-sdk-go-v2/otelaws"
 )
 
+type spanTimestampKey struct{}
+
 type oTelMiddlewares struct {
 	tracer trace.Tracer
 }
 
-func (m oTelMiddlewares) spanCreator(stack *middleware.Stack) error {
-	return stack.Initialize.Add(middleware.InitializeMiddlewareFunc("OtelSpanCreator", func(
+func (m oTelMiddlewares) initializeMiddlewareBefore(stack *middleware.Stack) error {
+	return stack.Initialize.Add(middleware.InitializeMiddlewareFunc("OtelInitializeMiddlewareBefore", func(
+		ctx context.Context, in middleware.InitializeInput, next middleware.InitializeHandler) (
+		out middleware.InitializeOutput, metadata middleware.Metadata, err error) {
+
+		ctx = context.WithValue(ctx, spanTimestampKey{}, time.Now())
+		return next.HandleInitialize(ctx, in)
+	}),
+		middleware.Before)
+}
+
+func (m oTelMiddlewares) initializeMiddlewareAfter(stack *middleware.Stack) error {
+	return stack.Initialize.Add(middleware.InitializeMiddlewareFunc("OtelInitializeMiddlewareAfter", func(
 		ctx context.Context, in middleware.InitializeInput, next middleware.InitializeHandler) (
 		out middleware.InitializeOutput, metadata middleware.Metadata, err error) {
 
 		opts := []trace.SpanOption{
+			trace.WithTimestamp(ctx.Value(spanTimestampKey{}).(time.Time)),
 			trace.WithSpanKind(trace.SpanKindClient),
+			trace.WithAttributes(ServiceAttr(v2Middleware.GetServiceID(ctx)),
+				RegionAttr(v2Middleware.GetRegion(ctx)),
+				OperationAttr(v2Middleware.GetOperationName(ctx))),
 		}
-		ctx, span := m.tracer.Start(ctx, "AWS", opts...)
+		ctx, span := m.tracer.Start(ctx, v2Middleware.GetServiceID(ctx), opts...)
 		defer span.End()
 
 		out, metadata, err = next.HandleInitialize(ctx, in)
@@ -53,28 +71,11 @@ func (m oTelMiddlewares) spanCreator(stack *middleware.Stack) error {
 
 		return out, metadata, err
 	}),
-		middleware.Before)
-}
-
-func (m oTelMiddlewares) initializeSpanDecorator(stack *middleware.Stack) error {
-	return stack.Initialize.Add(middleware.InitializeMiddlewareFunc("OtelInitializeSpanDecorator", func(
-		ctx context.Context, in middleware.InitializeInput, next middleware.InitializeHandler) (
-		out middleware.InitializeOutput, metadata middleware.Metadata, err error) {
-
-		span := trace.SpanFromContext(ctx)
-		span.SetName(v2Middleware.GetServiceID(ctx))
-
-		span.SetAttributes(ServiceAttr(v2Middleware.GetServiceID(ctx)),
-			RegionAttr(v2Middleware.GetRegion(ctx)),
-			OperationAttr(v2Middleware.GetOperationName(ctx)))
-
-		return next.HandleInitialize(ctx, in)
-	}),
 		middleware.After)
 }
 
-func (m oTelMiddlewares) deserializeSpanDecorator(stack *middleware.Stack) error {
-	return stack.Deserialize.Add(middleware.DeserializeMiddlewareFunc("OtelDeserializeSpanDecorator", func(
+func (m oTelMiddlewares) deserializeMiddleware(stack *middleware.Stack) error {
+	return stack.Deserialize.Add(middleware.DeserializeMiddlewareFunc("OtelDeserializeMiddleware", func(
 		ctx context.Context, in middleware.DeserializeInput, next middleware.DeserializeHandler) (
 		out middleware.DeserializeOutput, metadata middleware.Metadata, err error) {
 		out, metadata, err = next.HandleDeserialize(ctx, in)
@@ -111,5 +112,5 @@ func AppendMiddlewares(apiOptions *[]func(*middleware.Stack) error, opts ...Opti
 
 	m := oTelMiddlewares{tracer: cfg.TracerProvider.Tracer(tracerName,
 		trace.WithInstrumentationVersion(contrib.SemVersion()))}
-	*apiOptions = append(*apiOptions, m.spanCreator, m.initializeSpanDecorator, m.deserializeSpanDecorator)
+	*apiOptions = append(*apiOptions, m.initializeMiddlewareBefore, m.initializeMiddlewareAfter, m.deserializeMiddleware)
 }
