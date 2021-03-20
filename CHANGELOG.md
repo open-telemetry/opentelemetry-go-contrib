@@ -8,6 +8,10 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 
 ## [Unreleased]
 
+### Changed
+
+- Add route tag to metrics as well as traces when using `otelhttp.WithRouteTag()`. (#615)
+
 ## [0.18.0] - 2021-03-04
 
 ### Fixed

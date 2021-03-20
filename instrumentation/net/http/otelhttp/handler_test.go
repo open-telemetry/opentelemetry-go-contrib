@@ -38,6 +38,16 @@ func assertMetricAttributes(t *testing.T, expectedAttributes []attribute.KeyValu
 	}
 }
 
+func assertTraceAttributes(t *testing.T, expectedAttributes []attribute.KeyValue, span *oteltest.Span) {
+	var actualAttributes []attribute.KeyValue
+
+	for key, value := range span.Attributes() {
+		actualAttributes = append(actualAttributes, attribute.KeyValue{Key: key, Value: value})
+	}
+
+	assert.Subset(t, actualAttributes, expectedAttributes, "Expected trace to have standard attributes")
+}
+
 func TestHandlerBasics(t *testing.T) {
 	rr := httptest.NewRecorder()
 
@@ -48,16 +58,20 @@ func TestHandlerBasics(t *testing.T) {
 	meterimpl, meterProvider := oteltest.NewMeterProvider()
 
 	operation := "test_handler"
+	routeKey := "/hello"
+
+	handlerFunc := http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		l, _ := LabelerFromContext(r.Context())
+		l.Add(attribute.String("test", "attribute"))
+
+		if _, err := io.WriteString(w, "hello world"); err != nil {
+			t.Fatal(err)
+		}
+	})
 
 	h := NewHandler(
-		http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-			l, _ := LabelerFromContext(r.Context())
-			l.Add(attribute.String("test", "attribute"))
-
-			if _, err := io.WriteString(w, "hello world"); err != nil {
-				t.Fatal(err)
-			}
-		}), operation,
+		WithRouteTag(routeKey, handlerFunc),
+		operation,
 		WithTracerProvider(provider),
 		WithMeterProvider(meterProvider),
 		WithPropagators(propagation.TraceContext{}),
@@ -73,15 +87,20 @@ func TestHandlerBasics(t *testing.T) {
 		t.Fatalf("got 0 recorded measurements, expected 1 or more")
 	}
 
-	attributesToVerify := []attribute.KeyValue{
+	sharedAttributesToVerify := []attribute.KeyValue{
 		semconv.HTTPServerNameKey.String(operation),
 		semconv.HTTPSchemeHTTP,
 		semconv.HTTPHostKey.String(r.Host),
 		semconv.HTTPFlavorKey.String(fmt.Sprintf("1.%d", r.ProtoMinor)),
-		attribute.String("test", "attribute"),
+		semconv.HTTPRouteKey.String(routeKey),
 	}
 
-	assertMetricAttributes(t, attributesToVerify, meterimpl.MeasurementBatches)
+	metricAttributesToVerify := append(
+		sharedAttributesToVerify,
+		attribute.String("test", "attribute"),
+	)
+
+	assertMetricAttributes(t, metricAttributesToVerify, meterimpl.MeasurementBatches)
 
 	if got, expected := rr.Result().StatusCode, http.StatusOK; got != expected {
 		t.Fatalf("got %d, expected %d", got, expected)
@@ -98,6 +117,7 @@ func TestHandlerBasics(t *testing.T) {
 	if got, expected := spans[0].SpanContext().SpanID, expectSpanID; got != expected {
 		t.Fatalf("got %d, expected %d", got, expected)
 	}
+	assertTraceAttributes(t, sharedAttributesToVerify, spans[0])
 
 	d, err := ioutil.ReadAll(rr.Result().Body)
 	if err != nil {
