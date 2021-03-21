@@ -24,16 +24,16 @@ type config struct {
 	Propagators    propagation.TextMapPropagator
 }
 
-// Option Interface used for setting *optional* config properties
+// Option applies an option value.
 type Option interface {
 	Apply(*config)
 }
 
 // OptionFunc provides a convenience wrapper for simple Options
 // that can be represented as functions.
-type OptionFunc func(*config)
+type optionFunc func(*config)
 
-func (o OptionFunc) Apply(c *config) {
+func (o optionFunc) Apply(c *config) {
 	o(c)
 }
 
@@ -41,15 +41,15 @@ func (o OptionFunc) Apply(c *config) {
 // information from the HTTP requests. If none are specified, global
 // ones will be used.
 func WithPropagators(propagators propagation.TextMapPropagator) Option {
-	return OptionFunc(func(cfg *config) {
+	return optionFunc(func(cfg *config) {
 		cfg.Propagators = propagators
 	})
 }
 
 // WithTracerProvider specifies a tracer provider to use for creating a tracer.
-// If none is specified, the global provider is used.
+// If none is specified, the global TracerProvider is used.
 func WithTracerProvider(provider trace.TracerProvider) Option {
-	return OptionFunc(func(cfg *config) {
+	return optionFunc(func(cfg *config) {
 		cfg.TracerProvider = provider
 	})
 }

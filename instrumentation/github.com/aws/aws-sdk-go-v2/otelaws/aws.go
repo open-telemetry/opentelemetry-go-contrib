@@ -34,12 +34,12 @@ const (
 
 type spanTimestampKey struct{}
 
-type oTelMiddlewares struct {
+type otelMiddlewares struct {
 	tracer trace.Tracer
 }
 
-func (m oTelMiddlewares) initializeMiddlewareBefore(stack *middleware.Stack) error {
-	return stack.Initialize.Add(middleware.InitializeMiddlewareFunc("OtelInitializeMiddlewareBefore", func(
+func (m otelMiddlewares) initializeMiddlewareBefore(stack *middleware.Stack) error {
+	return stack.Initialize.Add(middleware.InitializeMiddlewareFunc("OTelInitializeMiddlewareBefore", func(
 		ctx context.Context, in middleware.InitializeInput, next middleware.InitializeHandler) (
 		out middleware.InitializeOutput, metadata middleware.Metadata, err error) {
 
@@ -49,19 +49,20 @@ func (m oTelMiddlewares) initializeMiddlewareBefore(stack *middleware.Stack) err
 		middleware.Before)
 }
 
-func (m oTelMiddlewares) initializeMiddlewareAfter(stack *middleware.Stack) error {
-	return stack.Initialize.Add(middleware.InitializeMiddlewareFunc("OtelInitializeMiddlewareAfter", func(
+func (m otelMiddlewares) initializeMiddlewareAfter(stack *middleware.Stack) error {
+	return stack.Initialize.Add(middleware.InitializeMiddlewareFunc("OTelInitializeMiddlewareAfter", func(
 		ctx context.Context, in middleware.InitializeInput, next middleware.InitializeHandler) (
 		out middleware.InitializeOutput, metadata middleware.Metadata, err error) {
 
+		serviceID := v2Middleware.GetServiceID(ctx)
 		opts := []trace.SpanOption{
 			trace.WithTimestamp(ctx.Value(spanTimestampKey{}).(time.Time)),
 			trace.WithSpanKind(trace.SpanKindClient),
-			trace.WithAttributes(ServiceAttr(v2Middleware.GetServiceID(ctx)),
+			trace.WithAttributes(ServiceAttr(serviceID),
 				RegionAttr(v2Middleware.GetRegion(ctx)),
 				OperationAttr(v2Middleware.GetOperationName(ctx))),
 		}
-		ctx, span := m.tracer.Start(ctx, v2Middleware.GetServiceID(ctx), opts...)
+		ctx, span := m.tracer.Start(ctx, serviceID, opts...)
 		defer span.End()
 
 		out, metadata, err = next.HandleInitialize(ctx, in)
@@ -74,8 +75,8 @@ func (m oTelMiddlewares) initializeMiddlewareAfter(stack *middleware.Stack) erro
 		middleware.After)
 }
 
-func (m oTelMiddlewares) deserializeMiddleware(stack *middleware.Stack) error {
-	return stack.Deserialize.Add(middleware.DeserializeMiddlewareFunc("OtelDeserializeMiddleware", func(
+func (m otelMiddlewares) deserializeMiddleware(stack *middleware.Stack) error {
+	return stack.Deserialize.Add(middleware.DeserializeMiddlewareFunc("OTelDeserializeMiddleware", func(
 		ctx context.Context, in middleware.DeserializeInput, next middleware.DeserializeHandler) (
 		out middleware.DeserializeOutput, metadata middleware.Metadata, err error) {
 		out, metadata, err = next.HandleDeserialize(ctx, in)
@@ -98,7 +99,7 @@ func (m oTelMiddlewares) deserializeMiddleware(stack *middleware.Stack) error {
 		middleware.Before)
 }
 
-// AppendOtelMiddlewares attaches otel middlewares to aws go sdk v2 for instrumentation.
+// AppendMiddlewares attaches otel middlewares to aws go sdk v2 for instrumentation.
 // Otel middlewares can be appended to either all aws clients or a specific operation.
 // Please see more details in https://aws.github.io/aws-sdk-go-v2/docs/middleware/
 func AppendMiddlewares(apiOptions *[]func(*middleware.Stack) error, opts ...Option) {
@@ -110,7 +111,7 @@ func AppendMiddlewares(apiOptions *[]func(*middleware.Stack) error, opts ...Opti
 		opt.Apply(&cfg)
 	}
 
-	m := oTelMiddlewares{tracer: cfg.TracerProvider.Tracer(tracerName,
+	m := otelMiddlewares{tracer: cfg.TracerProvider.Tracer(tracerName,
 		trace.WithInstrumentationVersion(contrib.SemVersion()))}
 	*apiOptions = append(*apiOptions, m.initializeMiddlewareBefore, m.initializeMiddlewareAfter, m.deserializeMiddleware)
 }
