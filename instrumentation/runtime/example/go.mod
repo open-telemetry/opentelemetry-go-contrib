@@ -9,6 +9,6 @@ replace (
 
 require (
 	go.opentelemetry.io/contrib/instrumentation/runtime v0.18.0
-	go.opentelemetry.io/otel/exporters/stdout v0.18.0
-	go.opentelemetry.io/otel/sdk/metric v0.18.0
+	go.opentelemetry.io/otel/exporters/stdout v0.19.0
+	go.opentelemetry.io/otel/sdk/metric v0.19.0
 )
