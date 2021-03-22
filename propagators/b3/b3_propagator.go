@@ -92,7 +92,7 @@ const (
 type B3 struct {
 	// InjectEncoding are the B3 encodings used when injecting trace
 	// information. If no encoding is specified (i.e. `B3Unspecified`)
-	// `B3MultipleHeader` will be used as the default.
+	// `B3SingleHeader` will be used as the default.
 	InjectEncoding Encoding
 }
 
