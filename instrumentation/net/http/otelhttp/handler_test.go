@@ -95,7 +95,7 @@ func TestHandlerBasics(t *testing.T) {
 		t.Fatalf("got %d spans, expected %d", got, expected)
 	}
 	expectSpanID := trace.SpanID{0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x2} // we expect the span ID to be incremented by one
-	if got, expected := spans[0].SpanContext().SpanID, expectSpanID; got != expected {
+	if got, expected := spans[0].SpanContext().SpanID(), expectSpanID; got != expected {
 		t.Fatalf("got %d, expected %d", got, expected)
 	}
 
@@ -136,7 +136,7 @@ func TestHandlerNoWrite(t *testing.T) {
 		t.Fatal("expected empty trace header")
 	}
 	expectSpanID := trace.SpanID{0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x2} // we expect the span ID to be incremented by one
-	if got, expected := span.SpanContext().SpanID, expectSpanID; got != expected {
+	if got, expected := span.SpanContext().SpanID(), expectSpanID; got != expected {
 		t.Fatalf("got %d, expected %d", got, expected)
 	}
 	if mockSpan, ok := span.(*oteltest.Span); ok {

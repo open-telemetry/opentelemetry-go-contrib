@@ -49,7 +49,7 @@ var (
 type extractTest struct {
 	name     string
 	headers  map[string]string
-	expected trace.SpanContext
+	expected trace.SpanContextConfig
 	baggage  *attribute.Set
 }
 
@@ -57,7 +57,7 @@ var extractHeaders = []extractTest{
 	{
 		"empty",
 		map[string]string{},
-		trace.SpanContext{},
+		trace.SpanContextConfig{},
 		emptyBaggage,
 	},
 	{
@@ -67,7 +67,7 @@ var extractHeaders = []extractTest{
 			spanIDHeader:  spanIDStr,
 			sampledHeader: "0",
 		},
-		trace.SpanContext{
+		trace.SpanContextConfig{
 			TraceID: traceID32,
 			SpanID:  spanID,
 		},
@@ -81,7 +81,7 @@ var extractHeaders = []extractTest{
 			sampledHeader: "1",
 			baggageHeader: baggageValue,
 		},
-		trace.SpanContext{
+		trace.SpanContextConfig{
 			TraceID:    traceID32,
 			SpanID:     spanID,
 			TraceFlags: trace.FlagsSampled,
@@ -97,7 +97,7 @@ var extractHeaders = []extractTest{
 			spanIDHeader:  spanIDStr,
 			sampledHeader: "1",
 		},
-		trace.SpanContext{
+		trace.SpanContextConfig{
 			TraceID:    traceID16,
 			SpanID:     spanID,
 			TraceFlags: trace.FlagsSampled,
@@ -111,7 +111,7 @@ var extractHeaders = []extractTest{
 			spanIDHeader:  spanIDStr,
 			sampledHeader: "1",
 		},
-		trace.SpanContext{
+		trace.SpanContextConfig{
 			TraceID:    traceID32,
 			SpanID:     spanID,
 			TraceFlags: trace.FlagsSampled,
@@ -183,7 +183,7 @@ var invalidExtractHeaders = []extractTest{
 
 type injectTest struct {
 	name        string
-	sc          trace.SpanContext
+	sc          trace.SpanContextConfig
 	wantHeaders map[string]string
 	baggage     []attribute.KeyValue
 }
@@ -191,7 +191,7 @@ type injectTest struct {
 var injectHeaders = []injectTest{
 	{
 		name: "sampled",
-		sc: trace.SpanContext{
+		sc: trace.SpanContextConfig{
 			TraceID:    traceID32,
 			SpanID:     spanID,
 			TraceFlags: trace.FlagsSampled,
@@ -204,7 +204,7 @@ var injectHeaders = []injectTest{
 	},
 	{
 		name: "not sampled",
-		sc: trace.SpanContext{
+		sc: trace.SpanContextConfig{
 			TraceID: traceID32,
 			SpanID:  spanID,
 		},
@@ -225,25 +225,25 @@ var injectHeaders = []injectTest{
 var invalidInjectHeaders = []injectTest{
 	{
 		name: "empty",
-		sc:   trace.SpanContext{},
+		sc:   trace.SpanContextConfig{},
 	},
 	{
 		name: "missing traceID",
-		sc: trace.SpanContext{
+		sc: trace.SpanContextConfig{
 			SpanID:     spanID,
 			TraceFlags: trace.FlagsSampled,
 		},
 	},
 	{
 		name: "missing spanID",
-		sc: trace.SpanContext{
+		sc: trace.SpanContextConfig{
 			TraceID:    traceID32,
 			TraceFlags: trace.FlagsSampled,
 		},
 	},
 	{
 		name: "missing both traceID and spanID",
-		sc: trace.SpanContext{
+		sc: trace.SpanContextConfig{
 			TraceFlags: trace.FlagsSampled,
 		},
 	},

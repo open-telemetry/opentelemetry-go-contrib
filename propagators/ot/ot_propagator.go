@@ -57,13 +57,13 @@ var _ propagation.TextMapPropagator = OT{}
 func (o OT) Inject(ctx context.Context, carrier propagation.TextMapCarrier) {
 	sc := trace.SpanFromContext(ctx).SpanContext()
 
-	if !sc.TraceID.IsValid() || !sc.SpanID.IsValid() {
+	if !sc.TraceID().IsValid() || !sc.SpanID().IsValid() {
 		// don't bother injecting anything if either trace or span IDs are not valid
 		return
 	}
 
-	carrier.Set(traceIDHeader, sc.TraceID.String()[len(sc.TraceID.String())-traceID64BitsWidth:])
-	carrier.Set(spanIDHeader, sc.SpanID.String())
+	carrier.Set(traceIDHeader, sc.TraceID().String()[len(sc.TraceID().String())-traceID64BitsWidth:])
+	carrier.Set(spanIDHeader, sc.SpanID().String())
 
 	if sc.IsSampled() {
 		carrier.Set(sampledHeader, "1")
@@ -115,16 +115,16 @@ func extract(traceID, spanID, sampled string) (trace.SpanContext, error) {
 	var (
 		err           error
 		requiredCount int
-		sc            = trace.SpanContext{}
+		scc           = trace.SpanContextConfig{}
 	)
 
 	switch strings.ToLower(sampled) {
 	case "0", "false":
 		// Zero value for TraceFlags sample bit is unset.
 	case "1", "true":
-		sc.TraceFlags = trace.FlagsSampled
+		scc.TraceFlags = trace.FlagsSampled
 	case "":
-		sc.TraceFlags = trace.FlagsDeferred
+		scc.TraceFlags = trace.FlagsDeferred
 	default:
 		return empty, errInvalidSampledHeader
 	}
@@ -136,14 +136,14 @@ func extract(traceID, spanID, sampled string) (trace.SpanContext, error) {
 			// Pad 64-bit trace IDs.
 			id = otTraceIDPadding + traceID
 		}
-		if sc.TraceID, err = trace.TraceIDFromHex(id); err != nil {
+		if scc.TraceID, err = trace.TraceIDFromHex(id); err != nil {
 			return empty, errInvalidTraceIDHeader
 		}
 	}
 
 	if spanID != "" {
 		requiredCount++
-		if sc.SpanID, err = trace.SpanIDFromHex(spanID); err != nil {
+		if scc.SpanID, err = trace.SpanIDFromHex(spanID); err != nil {
 			return empty, errInvalidSpanIDHeader
 		}
 	}
@@ -152,5 +152,5 @@ func extract(traceID, spanID, sampled string) (trace.SpanContext, error) {
 		return empty, errInvalidScope
 	}
 
-	return sc, nil
+	return trace.NewSpanContext(scc), nil
 }

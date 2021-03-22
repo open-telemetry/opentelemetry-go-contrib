@@ -126,7 +126,7 @@ func TestHTTPRequestWithClientTrace(t *testing.T) {
 		if tl.parent != "" {
 			parent, ok := getSpanFromRecorder(sr, tl.parent)
 			if assert.True(t, ok) {
-				assert.Equal(t, span.ParentSpanID(), parent.SpanContext().SpanID)
+				assert.Equal(t, span.ParentSpanID(), parent.SpanContext().SpanID())
 			}
 		}
 		if len(tl.attributes) > 0 {

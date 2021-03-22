@@ -106,13 +106,13 @@ func (b3 B3) Inject(ctx context.Context, carrier propagation.TextMapCarrier) {
 
 	if b3.InjectEncoding.supports(B3SingleHeader) || b3.InjectEncoding == B3Unspecified {
 		header := []string{}
-		if sc.TraceID.IsValid() && sc.SpanID.IsValid() {
-			header = append(header, sc.TraceID.String(), sc.SpanID.String())
+		if sc.TraceID().IsValid() && sc.SpanID().IsValid() {
+			header = append(header, sc.TraceID().String(), sc.SpanID().String())
 		}
 
-		if sc.TraceFlags&trace.FlagsDebug == trace.FlagsDebug {
+		if sc.TraceFlags()&trace.FlagsDebug == trace.FlagsDebug {
 			header = append(header, "d")
-		} else if !(sc.TraceFlags&trace.FlagsDeferred == trace.FlagsDeferred) {
+		} else if !(sc.TraceFlags()&trace.FlagsDeferred == trace.FlagsDeferred) {
 			if sc.IsSampled() {
 				header = append(header, "1")
 			} else {
@@ -124,15 +124,15 @@ func (b3 B3) Inject(ctx context.Context, carrier propagation.TextMapCarrier) {
 	}
 
 	if b3.InjectEncoding.supports(B3MultipleHeader) {
-		if sc.TraceID.IsValid() && sc.SpanID.IsValid() {
-			carrier.Set(b3TraceIDHeader, sc.TraceID.String())
-			carrier.Set(b3SpanIDHeader, sc.SpanID.String())
+		if sc.TraceID().IsValid() && sc.SpanID().IsValid() {
+			carrier.Set(b3TraceIDHeader, sc.TraceID().String())
+			carrier.Set(b3SpanIDHeader, sc.SpanID().String())
 		}
 
-		if sc.TraceFlags&trace.FlagsDebug == trace.FlagsDebug {
+		if sc.TraceFlags()&trace.FlagsDebug == trace.FlagsDebug {
 			// Since Debug implies deferred, don't also send "X-B3-Sampled".
 			carrier.Set(b3DebugFlagHeader, "1")
-		} else if !(sc.TraceFlags&trace.FlagsDeferred == trace.FlagsDeferred) {
+		} else if !(sc.TraceFlags()&trace.FlagsDeferred == trace.FlagsDeferred) {
 			if sc.IsSampled() {
 				carrier.Set(b3SampledHeader, "1")
 			} else {
@@ -191,7 +191,7 @@ func extractMultiple(traceID, spanID, parentSpanID, sampled, flags string) (trac
 	var (
 		err           error
 		requiredCount int
-		sc            = trace.SpanContext{}
+		scc           = trace.SpanContextConfig{}
 	)
 
 	// correct values for an existing sampled header are "0" and "1".
@@ -201,9 +201,9 @@ func extractMultiple(traceID, spanID, parentSpanID, sampled, flags string) (trac
 	case "0", "false":
 		// Zero value for TraceFlags sample bit is unset.
 	case "1", "true":
-		sc.TraceFlags = trace.FlagsSampled
+		scc.TraceFlags = trace.FlagsSampled
 	case "":
-		sc.TraceFlags = trace.FlagsDeferred
+		scc.TraceFlags = trace.FlagsDeferred
 	default:
 		return empty, errInvalidSampledHeader
 	}
@@ -214,8 +214,8 @@ func extractMultiple(traceID, spanID, parentSpanID, sampled, flags string) (trac
 	// shouldn't send X-B3-Sampled header along with X-B3-Flags header. Thus we will
 	// ignore X-B3-Sampled header when X-B3-Flags header is sent and valid.
 	if flags == "1" {
-		sc.TraceFlags |= trace.FlagsDebug | trace.FlagsSampled
-		sc.TraceFlags &= ^trace.FlagsDeferred
+		scc.TraceFlags |= trace.FlagsDebug | trace.FlagsSampled
+		scc.TraceFlags &= ^trace.FlagsDeferred
 	}
 
 	if traceID != "" {
@@ -225,14 +225,14 @@ func extractMultiple(traceID, spanID, parentSpanID, sampled, flags string) (trac
 			// Pad 64-bit trace IDs.
 			id = b3TraceIDPadding + traceID
 		}
-		if sc.TraceID, err = trace.TraceIDFromHex(id); err != nil {
+		if scc.TraceID, err = trace.TraceIDFromHex(id); err != nil {
 			return empty, errInvalidTraceIDHeader
 		}
 	}
 
 	if spanID != "" {
 		requiredCount++
-		if sc.SpanID, err = trace.SpanIDFromHex(spanID); err != nil {
+		if scc.SpanID, err = trace.SpanIDFromHex(spanID); err != nil {
 			return empty, errInvalidSpanIDHeader
 		}
 	}
@@ -251,7 +251,7 @@ func extractMultiple(traceID, spanID, parentSpanID, sampled, flags string) (trac
 		}
 	}
 
-	return sc, nil
+	return trace.NewSpanContext(scc), nil
 }
 
 // extractSingle reconstructs a SpanContext from contextHeader based on a B3
@@ -264,7 +264,7 @@ func extractSingle(contextHeader string) (trace.SpanContext, error) {
 	}
 
 	var (
-		sc       = trace.SpanContext{}
+		scc      = trace.SpanContextConfig{}
 		sampling string
 	)
 
@@ -290,13 +290,13 @@ func extractSingle(contextHeader string) (trace.SpanContext, error) {
 			return empty, errInvalidTraceIDValue
 		}
 		var err error
-		sc.TraceID, err = trace.TraceIDFromHex(traceID)
+		scc.TraceID, err = trace.TraceIDFromHex(traceID)
 		if err != nil {
 			return empty, errInvalidTraceIDValue
 		}
 		pos += separatorWidth // {traceID}-
 
-		sc.SpanID, err = trace.SpanIDFromHex(contextHeader[pos : pos+spanIDWidth])
+		scc.SpanID, err = trace.SpanIDFromHex(contextHeader[pos : pos+spanIDWidth])
 		if err != nil {
 			return empty, errInvalidSpanIDValue
 		}
@@ -333,16 +333,16 @@ func extractSingle(contextHeader string) (trace.SpanContext, error) {
 	}
 	switch sampling {
 	case "":
-		sc.TraceFlags = trace.FlagsDeferred
+		scc.TraceFlags = trace.FlagsDeferred
 	case "d":
-		sc.TraceFlags = trace.FlagsDebug | trace.FlagsSampled
+		scc.TraceFlags = trace.FlagsDebug | trace.FlagsSampled
 	case "1":
-		sc.TraceFlags = trace.FlagsSampled
+		scc.TraceFlags = trace.FlagsSampled
 	case "0":
 		// Zero value for TraceFlags sample bit is unset.
 	default:
 		return empty, errInvalidSampledByte
 	}
 
-	return sc, nil
+	return trace.NewSpanContext(scc), nil
 }
