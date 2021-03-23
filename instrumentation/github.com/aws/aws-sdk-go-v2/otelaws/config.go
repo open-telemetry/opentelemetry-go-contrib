@@ -15,13 +15,11 @@
 package otelaws
 
 import (
-	"go.opentelemetry.io/otel/propagation"
 	"go.opentelemetry.io/otel/trace"
 )
 
 type config struct {
 	TracerProvider trace.TracerProvider
-	Propagators    propagation.TextMapPropagator
 }
 
 // Option applies an option value.
@@ -35,15 +33,6 @@ type optionFunc func(*config)
 
 func (o optionFunc) Apply(c *config) {
 	o(c)
-}
-
-// WithPropagators specifies propagators to use for extracting
-// information from the HTTP requests. If none are specified, global
-// ones will be used.
-func WithPropagators(propagators propagation.TextMapPropagator) Option {
-	return optionFunc(func(cfg *config) {
-		cfg.Propagators = propagators
-	})
 }
 
 // WithTracerProvider specifies a tracer provider to use for creating a tracer.

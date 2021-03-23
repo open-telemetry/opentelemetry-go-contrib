@@ -100,11 +100,10 @@ func (m otelMiddlewares) deserializeMiddleware(stack *middleware.Stack) error {
 }
 
 // AppendMiddlewares attaches otel middlewares to aws go sdk v2 for instrumentation.
-// Otel middlewares can be appended to either all aws clients or a specific operation.
+// OTel middlewares can be appended to either all aws clients or a specific operation.
 // Please see more details in https://aws.github.io/aws-sdk-go-v2/docs/middleware/
 func AppendMiddlewares(apiOptions *[]func(*middleware.Stack) error, opts ...Option) {
 	cfg := config{
-		Propagators:    otel.GetTextMapPropagator(),
 		TracerProvider: otel.GetTracerProvider(),
 	}
 	for _, opt := range opts {
