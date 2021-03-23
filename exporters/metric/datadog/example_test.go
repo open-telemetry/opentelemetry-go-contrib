@@ -57,7 +57,7 @@ func ExampleExporter() {
 	go func() {
 		defer exp.Close()
 		processor := basic.New(selector, exp)
-		pusher := controller.New(processor, controller.WithPusher(exp), controller.WithCollectPeriod(time.Second*10))
+		pusher := controller.New(processor, controller.WithExporter(exp), controller.WithCollectPeriod(time.Second*10))
 		ctx := context.Background()
 		err := pusher.Start(ctx)
 		if err != nil {
@@ -98,7 +98,7 @@ func ExampleExporter() {
 	}
 
 	// Output:
-	// myrecorder.max:100|g|#env:dev,l:1,service.name:unknown_service:datadog.test,telemetry.sdk.language:go,telemetry.sdk.name:opentelemetry,telemetry.sdk.version:0.18.0
+	// myrecorder.max:100|g|#env:dev,l:1,service.name:unknown_service:datadog.test,telemetry.sdk.language:go,telemetry.sdk.name:opentelemetry,telemetry.sdk.version:0.19.0
 	//
 }
 

@@ -9,9 +9,9 @@ require (
 	github.com/go-ole/go-ole v1.2.4 // indirect
 	github.com/shirou/gopsutil v2.20.9+incompatible
 	github.com/stretchr/testify v1.7.0
-	go.opentelemetry.io/contrib v0.18.0
-	go.opentelemetry.io/otel v0.18.0
-	go.opentelemetry.io/otel/metric v0.18.0
-	go.opentelemetry.io/otel/oteltest v0.18.0
+	go.opentelemetry.io/contrib v0.19.0
+	go.opentelemetry.io/otel v0.19.0
+	go.opentelemetry.io/otel/metric v0.19.0
+	go.opentelemetry.io/otel/oteltest v0.19.0
 	golang.org/x/sys v0.0.0-20190215142949-d0b11bdaac8a // indirect
 )

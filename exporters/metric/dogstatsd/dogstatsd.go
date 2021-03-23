@@ -94,7 +94,7 @@ func NewExportPipeline(config Config, opts ...controller.Option) (*controller.Co
 	// set of attributes as dogstatsd tags.
 	processor := basic.New(selector, exporter)
 
-	pusher := controller.New(processor, append(opts, controller.WithPusher(exporter))...)
+	pusher := controller.New(processor, append(opts, controller.WithExporter(exporter))...)
 
 	return pusher, pusher.Start(context.Background())
 }

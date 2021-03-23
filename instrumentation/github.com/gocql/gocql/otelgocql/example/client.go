@@ -136,10 +136,7 @@ func initMetrics() {
 }
 
 func initTracer() {
-	if err := zipkintrace.InstallNewPipeline(
-		"http://localhost:9411/api/v2/spans",
-		"zipkin-example",
-	); err != nil {
+	if err := zipkintrace.InstallNewPipeline("http://localhost:9411/api/v2/spans"); err != nil {
 		log.Fatalf("failed to create span traceExporter, %v", err)
 	}
 }

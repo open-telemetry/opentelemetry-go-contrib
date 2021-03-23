@@ -50,17 +50,17 @@ func TestInject(t *testing.T) {
 	prop := Binary{}
 	for _, tt := range []struct {
 		desc       string
-		sc         trace.SpanContext
+		scc        trace.SpanContextConfig
 		wantHeader string
 	}{
 		{
 			desc:       "empty",
-			sc:         trace.SpanContext{},
+			scc:        trace.SpanContextConfig{},
 			wantHeader: "",
 		},
 		{
 			desc: "valid spancontext, sampled",
-			sc: trace.SpanContext{
+			scc: trace.SpanContextConfig{
 				TraceID:    traceID,
 				SpanID:     spanID,
 				TraceFlags: trace.FlagsSampled,
@@ -69,7 +69,7 @@ func TestInject(t *testing.T) {
 		},
 		{
 			desc: "valid spancontext, not sampled",
-			sc: trace.SpanContext{
+			scc: trace.SpanContextConfig{
 				TraceID: traceID,
 				SpanID:  spanID,
 			},
@@ -77,7 +77,7 @@ func TestInject(t *testing.T) {
 		},
 		{
 			desc: "valid spancontext, with unsupported bit set in traceflags",
-			sc: trace.SpanContext{
+			scc: trace.SpanContextConfig{
 				TraceID:    traceID,
 				SpanID:     spanID,
 				TraceFlags: 0xff,
@@ -86,15 +86,15 @@ func TestInject(t *testing.T) {
 		},
 		{
 			desc:       "invalid spancontext",
-			sc:         trace.SpanContext{},
+			scc:        trace.SpanContextConfig{},
 			wantHeader: "",
 		},
 	} {
 		t.Run(tt.desc, func(t *testing.T) {
 			req, _ := http.NewRequest("GET", "http://example.com", nil)
 			ctx := context.Background()
-			if tt.sc.IsValid() {
-				ctx = trace.ContextWithRemoteSpanContext(ctx, tt.sc)
+			if sc := trace.NewSpanContext(tt.scc); sc.IsValid() {
+				ctx = trace.ContextWithRemoteSpanContext(ctx, sc)
 				ctx, _ = mockTracer.Start(ctx, "inject")
 			}
 			prop.Inject(ctx, propagation.HeaderCarrier(req.Header))
@@ -109,24 +109,24 @@ func TestInject(t *testing.T) {
 func TestExtract(t *testing.T) {
 	prop := Binary{}
 	for _, tt := range []struct {
-		desc   string
-		header string
-		wantSc trace.SpanContext
+		desc    string
+		header  string
+		wantScc trace.SpanContextConfig
 	}{
 		{
-			desc:   "empty",
-			header: "",
-			wantSc: trace.SpanContext{},
+			desc:    "empty",
+			header:  "",
+			wantScc: trace.SpanContextConfig{},
 		},
 		{
-			desc:   "header not binary",
-			header: "5435j345io34t5904w3jt894j3t854w89tp95jgt9",
-			wantSc: trace.SpanContext{},
+			desc:    "header not binary",
+			header:  "5435j345io34t5904w3jt894j3t854w89tp95jgt9",
+			wantScc: trace.SpanContextConfig{},
 		},
 		{
 			desc:   "valid binary header",
 			header: fmt.Sprintf(headerFmt, "\x02", "\x00"),
-			wantSc: trace.SpanContext{
+			wantScc: trace.SpanContextConfig{
 				TraceID: traceID,
 				SpanID:  childSpanID,
 			},
@@ -134,7 +134,7 @@ func TestExtract(t *testing.T) {
 		{
 			desc:   "valid binary and sampled",
 			header: fmt.Sprintf(headerFmt, "\x02", "\x01"),
-			wantSc: trace.SpanContext{
+			wantScc: trace.SpanContextConfig{
 				TraceID:    traceID,
 				SpanID:     childSpanID,
 				TraceFlags: trace.FlagsSampled,
@@ -148,7 +148,13 @@ func TestExtract(t *testing.T) {
 			ctx := context.Background()
 			ctx = prop.Extract(ctx, propagation.HeaderCarrier(req.Header))
 			gotSc := trace.RemoteSpanContextFromContext(ctx)
-			if diff := cmp.Diff(gotSc, tt.wantSc, cmp.AllowUnexported(trace.TraceState{})); diff != "" {
+			comparer := cmp.Comparer(func(a, b trace.SpanContext) bool {
+				// Do not compare remote field, it is unset on empty
+				// SpanContext.
+				newA := a.WithRemote(b.IsRemote())
+				return newA.Equal(b)
+			})
+			if diff := cmp.Diff(gotSc, trace.NewSpanContext(tt.wantScc), comparer); diff != "" {
 				t.Errorf("%s: -got +want %s", tt.desc, diff)
 			}
 		})
