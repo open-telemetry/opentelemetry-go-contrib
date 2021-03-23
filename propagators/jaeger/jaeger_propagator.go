@@ -66,10 +66,10 @@ var _ propagation.TextMapPropagator = &Jaeger{}
 func (jaeger Jaeger) Inject(ctx context.Context, carrier propagation.TextMapCarrier) {
 	sc := trace.SpanFromContext(ctx).SpanContext()
 	headers := []string{}
-	if !sc.TraceID.IsValid() || !sc.SpanID.IsValid() {
+	if !sc.TraceID().IsValid() || !sc.SpanID().IsValid() {
 		return
 	}
-	headers = append(headers, sc.TraceID.String(), sc.SpanID.String(), deprecatedParentSpanID)
+	headers = append(headers, sc.TraceID().String(), sc.SpanID().String(), deprecatedParentSpanID)
 	if sc.IsDebug() {
 		headers = append(headers, fmt.Sprintf("%x", flagsDebug|flagsSampled))
 	} else if sc.IsSampled() {
@@ -96,7 +96,7 @@ func (jaeger Jaeger) Extract(ctx context.Context, carrier propagation.TextMapCar
 
 func extract(headerVal string) (trace.SpanContext, error) {
 	var (
-		sc  = trace.SpanContext{}
+		scc = trace.SpanContextConfig{}
 		err error
 	)
 
@@ -115,7 +115,7 @@ func extract(headerVal string) (trace.SpanContext, error) {
 		if len(id) == traceID64bitsWidth {
 			id = traceIDPadding + id
 		}
-		sc.TraceID, err = trace.TraceIDFromHex(id)
+		scc.TraceID, err = trace.TraceIDFromHex(id)
 		if err != nil {
 			return empty, errMalformedTraceID
 		}
@@ -127,7 +127,7 @@ func extract(headerVal string) (trace.SpanContext, error) {
 		if len(id) != spanIDWidth {
 			return empty, errInvalidSpanIDLength
 		}
-		sc.SpanID, err = trace.SpanIDFromHex(id)
+		scc.SpanID, err = trace.SpanIDFromHex(id)
 		if err != nil {
 			return empty, errMalformedSpanID
 		}
@@ -145,14 +145,14 @@ func extract(headerVal string) (trace.SpanContext, error) {
 		if flag&flagsSampled == flagsSampled {
 			// if sample bit is set, we check if debug bit is also set
 			if flag&flagsDebug == flagsDebug {
-				sc.TraceFlags |= trace.FlagsSampled | trace.FlagsDebug
+				scc.TraceFlags |= trace.FlagsSampled | trace.FlagsDebug
 			} else {
-				sc.TraceFlags |= trace.FlagsSampled
+				scc.TraceFlags |= trace.FlagsSampled
 			}
 		}
 		// ignore other bit, including firehose since we don't have corresponding flag in trace context.
 	}
-	return sc, nil
+	return trace.NewSpanContext(scc), nil
 }
 
 func (jaeger Jaeger) Fields() []string {

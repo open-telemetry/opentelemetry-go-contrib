@@ -38,12 +38,12 @@ func TestOT_Extract(t *testing.T) {
 		traceID  string
 		spanID   string
 		sampled  string
-		expected trace.SpanContext
+		expected trace.SpanContextConfig
 		err      error
 	}{
 		{
 			traceID128Str, spanIDStr, "1",
-			trace.SpanContext{
+			trace.SpanContextConfig{
 				TraceID:    traceID,
 				SpanID:     spanID,
 				TraceFlags: trace.FlagsSampled,
@@ -52,7 +52,7 @@ func TestOT_Extract(t *testing.T) {
 		},
 		{
 			traceID64Str, spanIDStr, "1",
-			trace.SpanContext{
+			trace.SpanContextConfig{
 				TraceID:    traceID,
 				SpanID:     spanID,
 				TraceFlags: trace.FlagsSampled,
@@ -61,7 +61,7 @@ func TestOT_Extract(t *testing.T) {
 		},
 		{
 			traceID128Str, spanIDStr, "",
-			trace.SpanContext{
+			trace.SpanContextConfig{
 				TraceID:    traceID,
 				SpanID:     spanID,
 				TraceFlags: trace.FlagsDeferred,
@@ -71,7 +71,7 @@ func TestOT_Extract(t *testing.T) {
 		{
 			// if we didn't set sampled bit when debug bit is 1, then assuming it's not sampled
 			traceID128Str, spanIDStr, "0",
-			trace.SpanContext{
+			trace.SpanContextConfig{
 				TraceID:    traceID,
 				SpanID:     spanID,
 				TraceFlags: 0x00,
@@ -80,7 +80,7 @@ func TestOT_Extract(t *testing.T) {
 		},
 		{
 			traceID128Str, spanIDStr, "1",
-			trace.SpanContext{
+			trace.SpanContextConfig{
 				TraceID:    traceID,
 				SpanID:     spanID,
 				TraceFlags: trace.FlagsSampled,
@@ -89,40 +89,40 @@ func TestOT_Extract(t *testing.T) {
 		},
 		{
 			fmt.Sprintf("%32s", "This_is_a_string_len_64"), spanIDStr, "1",
-			trace.SpanContext{},
+			trace.SpanContextConfig{},
 			errInvalidTraceIDHeader,
 		},
 		{
 			"000000000007b00000000000001c8", spanIDStr, "1",
-			trace.SpanContext{},
+			trace.SpanContextConfig{},
 			errInvalidTraceIDHeader,
 		},
 		{
 			traceID128Str, fmt.Sprintf("%16s", "wiredspanid"), "1",
-			trace.SpanContext{},
+			trace.SpanContextConfig{},
 			errInvalidSpanIDHeader,
 		},
 		{
 			traceID128Str, "0000000000010", "1",
-			trace.SpanContext{},
+			trace.SpanContextConfig{},
 			errInvalidSpanIDHeader,
 		},
 		{
 			// reject invalid traceID(0) and spanID(0)
 			zeroTraceIDStr, zeroSpanIDStr, "1",
-			trace.SpanContext{},
+			trace.SpanContextConfig{},
 			errInvalidTraceIDHeader,
 		},
 		{
 			// reject invalid spanID(0)
 			traceID128Str, zeroSpanIDStr, "1",
-			trace.SpanContext{},
+			trace.SpanContextConfig{},
 			errInvalidSpanIDHeader,
 		},
 		{
 			// reject invalid spanID(0)
 			traceID128Str, spanIDStr, "invalid",
-			trace.SpanContext{},
+			trace.SpanContextConfig{},
 			errInvalidSampledHeader,
 		},
 	}
@@ -141,6 +141,6 @@ func TestOT_Extract(t *testing.T) {
 			continue
 		}
 
-		assert.Equal(t, test.expected, sc, info...)
+		assert.Equal(t, trace.NewSpanContext(test.expected), sc, info...)
 	}
 }

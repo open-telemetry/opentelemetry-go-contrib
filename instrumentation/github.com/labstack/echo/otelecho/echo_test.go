@@ -199,8 +199,8 @@ func TestPropagationWithGlobalPropagators(t *testing.T) {
 		span := oteltrace.SpanFromContext(c.Request().Context())
 		mspan, ok := span.(*oteltest.Span)
 		require.True(t, ok)
-		assert.Equal(t, pspan.SpanContext().TraceID, mspan.SpanContext().TraceID)
-		assert.Equal(t, pspan.SpanContext().SpanID, mspan.ParentSpanID())
+		assert.Equal(t, pspan.SpanContext().TraceID(), mspan.SpanContext().TraceID())
+		assert.Equal(t, pspan.SpanContext().SpanID(), mspan.ParentSpanID())
 		return c.NoContent(200)
 	})
 
@@ -226,8 +226,8 @@ func TestPropagationWithCustomPropagators(t *testing.T) {
 		span := oteltrace.SpanFromContext(c.Request().Context())
 		mspan, ok := span.(*oteltest.Span)
 		require.True(t, ok)
-		assert.Equal(t, pspan.SpanContext().TraceID, mspan.SpanContext().TraceID)
-		assert.Equal(t, pspan.SpanContext().SpanID, mspan.ParentSpanID())
+		assert.Equal(t, pspan.SpanContext().TraceID(), mspan.SpanContext().TraceID())
+		assert.Equal(t, pspan.SpanContext().SpanID(), mspan.ParentSpanID())
 		return c.NoContent(200)
 	})
 

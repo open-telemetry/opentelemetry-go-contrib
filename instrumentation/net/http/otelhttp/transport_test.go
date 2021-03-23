@@ -39,8 +39,8 @@ func TestTransportBasics(t *testing.T) {
 		if err != nil {
 			t.Fatalf("Error converting id to SpanID: %s", err.Error())
 		}
-		if span.SpanID != tgtID {
-			t.Fatalf("testing remote SpanID: got %s, expected %s", span.SpanID, tgtID)
+		if span.SpanID() != tgtID {
+			t.Fatalf("testing remote SpanID: got %s, expected %s", span.SpanID(), tgtID)
 		}
 		if _, err := w.Write(content); err != nil {
 			t.Fatal(err)

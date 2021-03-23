@@ -112,7 +112,7 @@ func consumeAndCheck(t *testing.T, mt trace.Tracer, complFn func() []*oteltest.S
 				semconv.MessagingMessageIDKey.String("1"),
 				kafkaPartitionKey.Int64(0),
 			},
-			parentSpanID: trace.SpanFromContext(ctx).SpanContext().SpanID,
+			parentSpanID: trace.SpanContextFromContext(ctx).SpanID(),
 			kind:         trace.SpanKindConsumer,
 			msgKey:       []byte("foo"),
 		},
@@ -136,9 +136,14 @@ func consumeAndCheck(t *testing.T, mt trace.Tracer, complFn func() []*oteltest.S
 
 			assert.Equal(t, expected.parentSpanID, span.ParentSpanID())
 
-			remoteSpanFromMessage := trace.RemoteSpanContextFromContext(propagators.Extract(context.Background(), NewConsumerMessageCarrier(msgList[i])))
-			assert.Equal(t, span.SpanContext(), remoteSpanFromMessage,
-				"span context should be injected into the consumer message headers")
+			var sc trace.SpanContext
+			if i == 0 {
+				sc = trace.RemoteSpanContextFromContext(propagators.Extract(context.Background(), NewConsumerMessageCarrier(msgList[i])))
+			} else {
+				sc = trace.RemoteSpanContextFromContext(propagators.Extract(context.Background(), NewConsumerMessageCarrier(msgList[i])))
+				sc = sc.WithRemote(false)
+			}
+			assert.Equal(t, sc, span.SpanContext())
 
 			assert.Equal(t, "kafka.consume", span.Name())
 			assert.Equal(t, expected.kind, span.SpanKind())
