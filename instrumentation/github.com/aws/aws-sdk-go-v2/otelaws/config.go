@@ -27,7 +27,7 @@ type Option interface {
 	Apply(*config)
 }
 
-// OptionFunc provides a convenience wrapper for simple Options
+// optionFunc provides a convenience wrapper for simple Options
 // that can be represented as functions.
 type optionFunc func(*config)
 
