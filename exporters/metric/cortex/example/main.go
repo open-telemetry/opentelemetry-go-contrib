@@ -45,7 +45,9 @@ func main() {
 	}
 
 	ctx := context.Background()
-	defer handleErr(pusher.Stop(ctx))
+	defer func() {
+		handleErr(pusher.Stop(ctx))
+	}()
 	fmt.Println("Success: Installed Exporter Pipeline")
 
 	// Create a counter and a value recorder
