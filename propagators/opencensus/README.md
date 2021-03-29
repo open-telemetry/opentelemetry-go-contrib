@@ -11,7 +11,7 @@ A GRPC client and server that use OpenCensus cannot easily migrate to OpenTeleme
 To add the binary propagation format with otelgrpc, use the WithPropagators option to the otelgrpc Interceptors:
 
 ```golang
-import "go.opentelemetry.io/contrib/propagation/opencensus"
+import "go.opentelemetry.io/contrib/propagators/opencensus"
 
 opt := otelgrpc.WithPropagators(opencensus.Binary{})
 ```
