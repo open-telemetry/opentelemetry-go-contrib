@@ -27,6 +27,8 @@ type config struct {
 	TracerProvider trace.TracerProvider
 
 	Tracer trace.Tracer
+
+	CommandLoggingDisabled bool
 }
 
 // newConfig returns a config with all Options set.
@@ -53,5 +55,13 @@ type Option func(*config)
 func WithTracerProvider(provider trace.TracerProvider) Option {
 	return func(cfg *config) {
 		cfg.TracerProvider = provider
+	}
+}
+
+// WithCommandLoggingDisabled specifies if tracing of the mongo command is disabled or not.
+// If none is specified, logging of the mongo command is enabled.
+func WithCommandLoggingDisabled(disabled bool) Option {
+	return func(cfg *config) {
+		cfg.CommandLoggingDisabled = disabled
 	}
 }
