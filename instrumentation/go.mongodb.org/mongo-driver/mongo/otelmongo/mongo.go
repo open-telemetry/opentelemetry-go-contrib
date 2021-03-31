@@ -50,7 +50,7 @@ func (m *monitor) Started(ctx context.Context, evt *event.CommandStartedEvent) {
 		PeerHostname(hostname),
 		PeerPort(port),
 	}
-	if !m.cfg.CommandLoggingDisabled {
+	if !m.cfg.CommandAttributeDisabled {
 		b, _ := bson.MarshalExtJSON(evt.Command, false, false)
 		attrs = append(attrs, DBStatement(string(b)))
 	}

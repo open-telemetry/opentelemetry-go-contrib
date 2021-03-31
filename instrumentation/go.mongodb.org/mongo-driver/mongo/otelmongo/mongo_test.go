@@ -36,16 +36,16 @@ func TestMain(m *testing.M) {
 
 func Test(t *testing.T) {
 	tt := []struct {
-		title                  string
-		commandLoggingDisabled bool
+		title                    string
+		commandAttributeDisabled bool
 	}{
 		{
-			title:                  "should successfully trace spans",
-			commandLoggingDisabled: false,
+			title:                    "should successfully trace spans",
+			commandAttributeDisabled: false,
 		},
 		{
-			title:                  "should successfully trace spans without the statement when command logging is disabled",
-			commandLoggingDisabled: true,
+			title:                    "should successfully trace spans without the statement when command logging is disabled",
+			commandAttributeDisabled: true,
 		},
 	}
 
@@ -63,7 +63,7 @@ func Test(t *testing.T) {
 
 			addr := "mongodb://localhost:27017/?connect=direct"
 			opts := options.Client()
-			opts.Monitor = NewMonitor("mongo", WithTracerProvider(provider), WithCommandLoggingDisabled(tc.commandLoggingDisabled))
+			opts.Monitor = NewMonitor("mongo", WithTracerProvider(provider), WithCommandAttributeDisabled(tc.commandAttributeDisabled))
 			opts.ApplyURI(addr)
 			client, err := mongo.Connect(ctx, opts)
 			if err != nil {
@@ -86,7 +86,7 @@ func Test(t *testing.T) {
 			assert.Equal(t, "insert", s.Attributes()[DBOperationKey].AsString())
 			assert.Equal(t, hostname, s.Attributes()[PeerHostnameKey].AsString())
 			assert.Equal(t, port, s.Attributes()[PeerPortKey].AsString())
-			if tc.commandLoggingDisabled {
+			if tc.commandAttributeDisabled {
 				assert.NotContains(t, s.Attributes()[DBStatementKey].AsString(), `"test-item":"test-value"`)
 			} else {
 				assert.Contains(t, s.Attributes()[DBStatementKey].AsString(), `"test-item":"test-value"`)
