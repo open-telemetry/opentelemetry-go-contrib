@@ -58,8 +58,8 @@ func WithTracerProvider(provider trace.TracerProvider) Option {
 	}
 }
 
-// WithCommandLoggingDisabled specifies if tracing of the mongo command is disabled or not.
-// If none is specified, logging of the mongo command is enabled.
+// WithCommandLoggingDisabled specifies if tracing of the MongoDB command is disabled or not.
+// If none is specified, logging of the MongoDB command is enabled.
 func WithCommandAttributeDisabled(disabled bool) Option {
 	return func(cfg *config) {
 		cfg.CommandLoggingDisabled = disabled
