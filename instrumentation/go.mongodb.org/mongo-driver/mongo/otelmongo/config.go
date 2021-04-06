@@ -58,8 +58,8 @@ func WithTracerProvider(provider trace.TracerProvider) Option {
 	}
 }
 
-// WithCommandAttributeDisabled specifies if tracing of the MongoDB command is disabled or not.
-// If none is specified, tracing of the MongoDB command is enabled.
+// WithCommandAttributeDisabled specifies if the MongoDB command is added as an attribute to Spans or not.
+// The MongoDB command will be added as an attribute to Spans by default if this option is not provided.
 func WithCommandAttributeDisabled(disabled bool) Option {
 	return func(cfg *config) {
 		cfg.CommandAttributeDisabled = disabled
