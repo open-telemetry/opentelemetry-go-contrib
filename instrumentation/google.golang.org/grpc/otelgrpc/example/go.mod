@@ -14,5 +14,5 @@ require (
 	go.opentelemetry.io/otel/exporters/stdout v0.19.0
 	go.opentelemetry.io/otel/sdk v0.19.0
 	golang.org/x/net v0.0.0-20200707034311-ab3426394381
-	google.golang.org/grpc v1.36.1
+	google.golang.org/grpc v1.37.0
 )
