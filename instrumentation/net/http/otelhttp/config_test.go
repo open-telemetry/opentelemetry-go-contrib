@@ -40,6 +40,7 @@ func TestBasicFilter(t *testing.T) {
 				t.Fatal(err)
 			}
 		}), "test_handler",
+		WithNop(),
 		WithTracerProvider(provider),
 		WithFilter(func(r *http.Request) bool {
 			return false

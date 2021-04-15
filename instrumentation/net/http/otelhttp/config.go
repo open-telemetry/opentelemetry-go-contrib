@@ -81,6 +81,13 @@ func newConfig(opts ...Option) *config {
 	return c
 }
 
+// WithNop returns a no operation option.
+// It can be used for easier extensibilty.
+func WithNop() Option {
+	return OptionFunc(func(*config) {
+	})
+}
+
 // WithTracerProvider specifies a tracer provider to use for creating a tracer.
 // If none is specified, the global provider is used.
 func WithTracerProvider(provider trace.TracerProvider) Option {
