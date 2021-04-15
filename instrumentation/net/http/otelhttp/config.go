@@ -45,7 +45,7 @@ type config struct {
 	MeterProvider  metric.MeterProvider
 }
 
-// Option Interface used for setting *optional* config properties
+// Option interface used for setting optional config properties.
 type Option interface {
 	apply(*config)
 }
