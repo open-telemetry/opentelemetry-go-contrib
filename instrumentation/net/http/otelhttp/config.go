@@ -29,51 +29,51 @@ const (
 	instrumentationName = "go.opentelemetry.io/contrib/instrumentation/net/http/otelhttp"
 )
 
-// config represents the configuration options available for the http.Handler
+// Config represents the configuration options available for the http.Handler
 // and http.Transport types.
-type config struct {
-	Tracer            trace.Tracer
-	Meter             metric.Meter
-	Propagators       propagation.TextMapPropagator
-	SpanStartOptions  []trace.SpanOption
-	ReadEvent         bool
-	WriteEvent        bool
-	Filters           []Filter
-	SpanNameFormatter func(string, *http.Request) string
+type Config struct {
+	tracer            trace.Tracer
+	meter             metric.Meter
+	propagators       propagation.TextMapPropagator
+	spanStartOptions  []trace.SpanOption
+	readEvent         bool
+	writeEvent        bool
+	filters           []Filter
+	spanNameFormatter func(string, *http.Request) string
 
-	TracerProvider trace.TracerProvider
-	MeterProvider  metric.MeterProvider
+	tracerProvider trace.TracerProvider
+	meterProvider  metric.MeterProvider
 }
 
 // Option Interface used for setting *optional* config properties
 type Option interface {
-	Apply(*config)
+	Apply(*Config)
 }
 
 // OptionFunc provides a convenience wrapper for simple Options
 // that can be represented as functions.
-type OptionFunc func(*config)
+type OptionFunc func(*Config)
 
-func (o OptionFunc) Apply(c *config) {
+func (o OptionFunc) Apply(c *Config) {
 	o(c)
 }
 
 // newConfig creates a new config struct and applies opts to it.
-func newConfig(opts ...Option) *config {
-	c := &config{
-		Propagators:    otel.GetTextMapPropagator(),
-		TracerProvider: otel.GetTracerProvider(),
-		MeterProvider:  global.GetMeterProvider(),
+func newConfig(opts ...Option) *Config {
+	c := &Config{
+		propagators:    otel.GetTextMapPropagator(),
+		tracerProvider: otel.GetTracerProvider(),
+		meterProvider:  global.GetMeterProvider(),
 	}
 	for _, opt := range opts {
 		opt.Apply(c)
 	}
 
-	c.Tracer = c.TracerProvider.Tracer(
+	c.tracer = c.tracerProvider.Tracer(
 		instrumentationName,
 		trace.WithInstrumentationVersion(contrib.SemVersion()),
 	)
-	c.Meter = c.MeterProvider.Meter(
+	c.meter = c.meterProvider.Meter(
 		instrumentationName,
 		metric.WithInstrumentationVersion(contrib.SemVersion()),
 	)
@@ -84,16 +84,16 @@ func newConfig(opts ...Option) *config {
 // WithTracerProvider specifies a tracer provider to use for creating a tracer.
 // If none is specified, the global provider is used.
 func WithTracerProvider(provider trace.TracerProvider) Option {
-	return OptionFunc(func(cfg *config) {
-		cfg.TracerProvider = provider
+	return OptionFunc(func(cfg *Config) {
+		cfg.tracerProvider = provider
 	})
 }
 
 // WithMeterProvider specifies a meter provider to use for creating a meter.
 // If none is specified, the global provider is used.
 func WithMeterProvider(provider metric.MeterProvider) Option {
-	return OptionFunc(func(cfg *config) {
-		cfg.MeterProvider = provider
+	return OptionFunc(func(cfg *Config) {
+		cfg.meterProvider = provider
 	})
 }
 
@@ -101,24 +101,24 @@ func WithMeterProvider(provider metric.MeterProvider) Option {
 // span context. If this option is not provided, then the association is a child
 // association instead of a link.
 func WithPublicEndpoint() Option {
-	return OptionFunc(func(c *config) {
-		c.SpanStartOptions = append(c.SpanStartOptions, trace.WithNewRoot())
+	return OptionFunc(func(c *Config) {
+		c.spanStartOptions = append(c.spanStartOptions, trace.WithNewRoot())
 	})
 }
 
 // WithPropagators configures specific propagators. If this
 // option isn't specified then
 func WithPropagators(ps propagation.TextMapPropagator) Option {
-	return OptionFunc(func(c *config) {
-		c.Propagators = ps
+	return OptionFunc(func(c *Config) {
+		c.propagators = ps
 	})
 }
 
 // WithSpanOptions configures an additional set of
 // trace.SpanOptions, which are applied to each new span.
 func WithSpanOptions(opts ...trace.SpanOption) Option {
-	return OptionFunc(func(c *config) {
-		c.SpanStartOptions = append(c.SpanStartOptions, opts...)
+	return OptionFunc(func(c *Config) {
+		c.spanStartOptions = append(c.spanStartOptions, opts...)
 	})
 }
 
@@ -129,8 +129,8 @@ func WithSpanOptions(opts ...trace.SpanOption) Option {
 // Filters will be invoked for each processed request, it is advised to make them
 // simple and fast.
 func WithFilter(f Filter) Option {
-	return OptionFunc(func(c *config) {
-		c.Filters = append(c.Filters, f)
+	return OptionFunc(func(c *Config) {
+		c.filters = append(c.filters, f)
 	})
 }
 
@@ -152,13 +152,13 @@ const (
 //     * WriteEvents: Record the number of bytes written after every http.ResponeWriter.Write
 //       using the WriteBytesKey
 func WithMessageEvents(events ...event) Option {
-	return OptionFunc(func(c *config) {
+	return OptionFunc(func(c *Config) {
 		for _, e := range events {
 			switch e {
 			case ReadEvents:
-				c.ReadEvent = true
+				c.readEvent = true
 			case WriteEvents:
-				c.WriteEvent = true
+				c.writeEvent = true
 			}
 		}
 	})
@@ -167,7 +167,7 @@ func WithMessageEvents(events ...event) Option {
 // WithSpanNameFormatter takes a function that will be called on every
 // request and the returned string will become the Span Name
 func WithSpanNameFormatter(f func(operation string, r *http.Request) string) Option {
-	return OptionFunc(func(c *config) {
-		c.SpanNameFormatter = f
+	return OptionFunc(func(c *Config) {
+		c.spanNameFormatter = f
 	})
 }

@@ -63,12 +63,12 @@ func NewTransport(base http.RoundTripper, opts ...Option) *Transport {
 	return &t
 }
 
-func (t *Transport) applyConfig(c *config) {
-	t.tracer = c.Tracer
-	t.propagators = c.Propagators
-	t.spanStartOptions = c.SpanStartOptions
-	t.filters = c.Filters
-	t.spanNameFormatter = c.SpanNameFormatter
+func (t *Transport) applyConfig(c *Config) {
+	t.tracer = c.tracer
+	t.propagators = c.propagators
+	t.spanStartOptions = c.spanStartOptions
+	t.filters = c.filters
+	t.spanNameFormatter = c.spanNameFormatter
 }
 
 func defaultTransportFormatter(_ string, r *http.Request) string {

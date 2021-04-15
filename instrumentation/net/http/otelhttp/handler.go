@@ -75,15 +75,15 @@ func NewHandler(handler http.Handler, operation string, opts ...Option) http.Han
 	return &h
 }
 
-func (h *Handler) configure(c *config) {
-	h.tracer = c.Tracer
-	h.meter = c.Meter
-	h.propagators = c.Propagators
-	h.spanStartOptions = c.SpanStartOptions
-	h.readEvent = c.ReadEvent
-	h.writeEvent = c.WriteEvent
-	h.filters = c.Filters
-	h.spanNameFormatter = c.SpanNameFormatter
+func (h *Handler) configure(c *Config) {
+	h.tracer = c.tracer
+	h.meter = c.meter
+	h.propagators = c.propagators
+	h.spanStartOptions = c.spanStartOptions
+	h.readEvent = c.readEvent
+	h.writeEvent = c.writeEvent
+	h.filters = c.filters
+	h.spanNameFormatter = c.spanNameFormatter
 }
 
 func handleErr(err error) {
