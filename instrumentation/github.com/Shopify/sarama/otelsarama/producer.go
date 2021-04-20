@@ -152,7 +152,7 @@ func WrapAsyncProducer(saramaConfig *sarama.Config, p sarama.AsyncProducer, opts
 		// cannot be closed.
 		defer func() {
 			for _, mc := range producerMessageContexts {
-				finishProducerSpan(mc.span, 0, 0, nil)
+				mc.span.End()
 			}
 		}()
 		defer close(wrapped.successes)
@@ -194,7 +194,7 @@ func WrapAsyncProducer(saramaConfig *sarama.Config, p sarama.AsyncProducer, opts
 					// If returning successes isn't enabled, we just finish the
 					// span right away because there's no way to know when it will
 					// be done.
-					finishProducerSpan(span, msg.Partition, msg.Offset, nil)
+					span.End()
 				}
 			case msg, ok := <-p.Successes():
 				if !ok {
