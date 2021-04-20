@@ -18,6 +18,7 @@ import (
 	"context"
 	"errors"
 	"testing"
+	"time"
 
 	"github.com/Shopify/sarama"
 	"github.com/Shopify/sarama/mocks"
@@ -188,8 +189,6 @@ func TestWrapAsyncProducer(t *testing.T) {
 					semconv.MessagingSystemKey.String("kafka"),
 					semconv.MessagingDestinationKindTopic,
 					semconv.MessagingDestinationKey.String(topic),
-					semconv.MessagingMessageIDKey.String("0"),
-					kafkaPartitionKey.Int64(0),
 				},
 				parentSpanID: oteltrace.SpanID{0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x2},
 				kind:         oteltrace.SpanKindProducer,
@@ -199,8 +198,6 @@ func TestWrapAsyncProducer(t *testing.T) {
 					semconv.MessagingSystemKey.String("kafka"),
 					semconv.MessagingDestinationKindTopic,
 					semconv.MessagingDestinationKey.String(topic),
-					semconv.MessagingMessageIDKey.String("0"),
-					kafkaPartitionKey.Int64(0),
 				},
 				kind: oteltrace.SpanKindProducer,
 			},
@@ -333,6 +330,99 @@ func TestWrapAsyncProducerError(t *testing.T) {
 
 	assert.Equal(t, codes.Error, span.StatusCode())
 	assert.Equal(t, "test", span.StatusMessage())
+}
+
+func TestWrapAsyncProducer_ConcurrencyEdgeCases(t *testing.T) {
+	newAsyncProducer := func() sarama.AsyncProducer {
+		cfg := newSaramaConfig()
+		var ap sarama.AsyncProducer = mocks.NewAsyncProducer(t, cfg)
+		ap = WrapAsyncProducer(cfg, ap) // you can comment this line to ensure that sarama is working in the same way
+		return ap
+	}
+
+	t.Run("closes Successes and Error after Close", func(t *testing.T) {
+		timeout := time.NewTimer(time.Minute)
+		defer timeout.Stop()
+		p := newAsyncProducer()
+
+		p.Close()
+
+		select {
+		case <-timeout.C:
+			t.Error("timeout - Successes channel was not closed")
+		case _, ok := <-p.Successes():
+			if ok {
+				t.Error("message was send to Successes channel instead of being closed")
+			}
+		}
+
+		select {
+		case <-timeout.C:
+			t.Error("timeout - Errors channel was not closed")
+		case _, ok := <-p.Errors():
+			if ok {
+				t.Error("message was send to Errors channel instead of being closed")
+			}
+		}
+	})
+
+	t.Run("closes Successes and Error after AsyncClose", func(t *testing.T) {
+		timeout := time.NewTimer(time.Minute)
+		defer timeout.Stop()
+		p := newAsyncProducer()
+
+		p.AsyncClose()
+
+		select {
+		case <-timeout.C:
+			t.Error("timeout - Successes channel was not closed")
+		case _, ok := <-p.Successes():
+			if ok {
+				t.Error("message was send to Successes channel instead of being closed")
+			}
+		}
+
+		select {
+		case <-timeout.C:
+			t.Error("timeout - Errors channel was not closed")
+		case _, ok := <-p.Errors():
+			if ok {
+				t.Error("message was send to Errors channel instead of being closed")
+			}
+		}
+	})
+
+	t.Run("panic when sending to Input after Close", func(t *testing.T) {
+		p := newAsyncProducer()
+		p.Close()
+		assert.Panics(t, func() {
+			p.Input() <- &sarama.ProducerMessage{Key: sarama.StringEncoder("foo")}
+		})
+	})
+
+	t.Run("panic when sending to Input after AsyncClose", func(t *testing.T) {
+		p := newAsyncProducer()
+		p.AsyncClose()
+		assert.Panics(t, func() {
+			p.Input() <- &sarama.ProducerMessage{Key: sarama.StringEncoder("foo")}
+		})
+	})
+
+	t.Run("panic when calling Close after AsyncClose", func(t *testing.T) {
+		p := newAsyncProducer()
+		p.AsyncClose()
+		assert.Panics(t, func() {
+			p.Close()
+		})
+	})
+
+	t.Run("panic when calling AsyncClose after Close", func(t *testing.T) {
+		p := newAsyncProducer()
+		p.Close()
+		assert.Panics(t, func() {
+			p.AsyncClose()
+		})
+	})
 }
 
 func newSaramaConfig() *sarama.Config {
