@@ -16,7 +16,6 @@ package otelhttp
 
 import (
 	"context"
-	"fmt"
 	"io"
 	"net/http"
 
@@ -66,7 +65,7 @@ func (t *Transport) applyConfig(c *config) {
 }
 
 func defaultTransportFormatter(_ string, r *http.Request) string {
-	return fmt.Sprintf("HTTP %s", r.Method)
+	return "HTTP " + r.Method
 }
 
 // RoundTrip creates a Span and propagates its context via the provided request's headers
