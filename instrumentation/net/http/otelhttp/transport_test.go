@@ -17,7 +17,6 @@ package otelhttp
 import (
 	"bytes"
 	"fmt"
-	"io"
 	"io/ioutil"
 	"net/http"
 	"net/http/httptest"
@@ -187,7 +186,7 @@ func TestTransportUsesFormatter(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	io.Copy(ioutil.Discard, res.Body)
+	//io.Copy(ioutil.Discard, res.Body)
 	res.Body.Close()
 
 	spans := spanRecorder.Completed()
