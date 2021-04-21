@@ -185,8 +185,6 @@ func TestTransportUsesFormatter(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-
-	//io.Copy(ioutil.Discard, res.Body)
 	res.Body.Close()
 
 	spans := spanRecorder.Completed()
