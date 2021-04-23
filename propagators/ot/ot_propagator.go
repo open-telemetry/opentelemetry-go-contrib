@@ -124,7 +124,7 @@ func extract(traceID, spanID, sampled string) (trace.SpanContext, error) {
 	case "1", "true":
 		scc.TraceFlags = trace.FlagsSampled
 	case "":
-		scc.TraceFlags = trace.FlagsDeferred
+		// Zero value for TraceFlags sample bit is unset.
 	default:
 		return empty, errInvalidSampledHeader
 	}
