@@ -169,7 +169,7 @@ func parseTraceID(xrayTraceID string) (trace.TraceID, error) {
 }
 
 // parseTraceFlag returns a parsed trace flag.
-func parseTraceFlag(xraySampledFlag string) byte {
+func parseTraceFlag(xraySampledFlag string) trace.TraceFlags {
 	if len(xraySampledFlag) == sampledFlagLength && xraySampledFlag != isSampled {
 		return traceFlagNone
 	}

@@ -15,6 +15,7 @@
 package jaeger
 
 import (
+	"context"
 	"fmt"
 	"strings"
 	"testing"
@@ -42,6 +43,7 @@ func TestJaeger_Extract(t *testing.T) {
 		flags        string
 		expected     trace.SpanContextConfig
 		err          error
+		debug        bool
 	}{
 		{
 			traceID128Str, spanIDStr, deprecatedParentSpanID, "1",
@@ -51,6 +53,7 @@ func TestJaeger_Extract(t *testing.T) {
 				TraceFlags: trace.FlagsSampled,
 			},
 			nil,
+			false,
 		},
 		{
 			traceID64Str, spanIDStr, deprecatedParentSpanID, "1",
@@ -60,15 +63,17 @@ func TestJaeger_Extract(t *testing.T) {
 				TraceFlags: trace.FlagsSampled,
 			},
 			nil,
+			false,
 		},
 		{
 			traceID128Str, spanIDStr, deprecatedParentSpanID, "3",
 			trace.SpanContextConfig{
 				TraceID:    traceID,
 				SpanID:     spanID,
-				TraceFlags: trace.FlagsSampled | trace.FlagsDebug,
+				TraceFlags: trace.FlagsSampled,
 			},
 			nil,
+			true,
 		},
 		{
 			// if we didn't set sampled bit when debug bit is 1, then assuming it's not sampled
@@ -79,6 +84,7 @@ func TestJaeger_Extract(t *testing.T) {
 				TraceFlags: 0x00,
 			},
 			nil,
+			false,
 		},
 		{
 			// ignore firehose bit since we don't really have this feature in otel span context
@@ -89,6 +95,7 @@ func TestJaeger_Extract(t *testing.T) {
 				TraceFlags: 0x00,
 			},
 			nil,
+			false,
 		},
 		{
 			traceID128Str, spanIDStr, deprecatedParentSpanID, "9",
@@ -98,6 +105,7 @@ func TestJaeger_Extract(t *testing.T) {
 				TraceFlags: trace.FlagsSampled,
 			},
 			nil,
+			false,
 		},
 		{
 			traceID128Str, spanIDStr, "wired stuff", "1",
@@ -107,44 +115,51 @@ func TestJaeger_Extract(t *testing.T) {
 				TraceFlags: trace.FlagsSampled,
 			},
 			nil,
+			false,
 		},
 		{
 			fmt.Sprintf("%32s", "This_is_a_string_len_64"), spanIDStr, deprecatedParentSpanID, "1",
 			trace.SpanContextConfig{},
 			errMalformedTraceID,
+			false,
 		},
 		{
 			"000000000007b00000000000001c8", spanIDStr, deprecatedParentSpanID, "1",
 			trace.SpanContextConfig{},
 			errInvalidTraceIDLength,
+			false,
 		},
 		{
 			traceID128Str, fmt.Sprintf("%16s", "wiredspanid"), deprecatedParentSpanID, "1",
 			trace.SpanContextConfig{},
 			errMalformedSpanID,
+			false,
 		},
 		{
 			traceID128Str, "0000000000010", deprecatedParentSpanID, "1",
 			trace.SpanContextConfig{},
 			errInvalidSpanIDLength,
+			false,
 		},
 		{
 			// reject invalid traceID(0) and spanID(0)
 			zeroTraceIDStr, zeroSpanIDStr, deprecatedParentSpanID, "1",
 			trace.SpanContextConfig{},
 			errMalformedTraceID,
+			false,
 		},
 		{
 			// reject invalid traceID(0) and spanID(0)
 			traceID128Str, zeroSpanIDStr, deprecatedParentSpanID, "1",
 			trace.SpanContextConfig{},
 			errMalformedSpanID,
+			false,
 		},
 	}
 
 	for _, test := range testData {
 		headerVal := strings.Join([]string{test.traceID, test.spanID, test.parentSpanID, test.flags}, separator)
-		sc, err := extract(headerVal)
+		ctx, sc, err := extract(context.Background(), headerVal)
 
 		info := []interface{}{
 			"trace ID: %q, span ID: %q, parent span ID: %q, sampled: %q, flags: %q",
@@ -159,5 +174,6 @@ func TestJaeger_Extract(t *testing.T) {
 		}
 
 		assert.Equal(t, trace.NewSpanContext(test.expected), sc, info...)
+		assert.Equal(t, test.debug, debugFromContext(ctx))
 	}
 }

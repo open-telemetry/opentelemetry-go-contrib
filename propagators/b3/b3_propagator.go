@@ -167,7 +167,8 @@ func (b3 B3) Extract(ctx context.Context, carrier propagation.TextMapCarrier) co
 	)
 	ctx, sc, err = extractMultiple(ctx, traceID, spanID, parentSpanID, sampled, debugFlag)
 	if err != nil || !sc.IsValid() {
-		return ctx
+		// clear the deferred flag if we don't have a valid SpanContext
+		return withDeferred(ctx, false)
 	}
 	return trace.ContextWithRemoteSpanContext(ctx, sc)
 }
@@ -337,6 +338,7 @@ func extractSingle(ctx context.Context, contextHeader string) (context.Context, 
 		ctx = withDeferred(ctx, true)
 	case "d":
 		ctx = withDebug(ctx, true)
+		scc.TraceFlags = trace.FlagsSampled
 	case "1":
 		scc.TraceFlags = trace.FlagsSampled
 	case "0":

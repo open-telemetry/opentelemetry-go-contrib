@@ -12,15 +12,14 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package b3
+package jaeger
 
 import "context"
 
-type b3KeyType int
+type jaegerKeyType int
 
 const (
-	debugKey b3KeyType = iota
-	deferredKey
+	debugKey jaegerKeyType = iota
 )
 
 // withDebug returns a copy of parent with debug set as the debug flag value .
@@ -37,24 +36,6 @@ func debugFromContext(ctx context.Context) bool {
 	}
 	if debug, ok := ctx.Value(debugKey).(bool); ok {
 		return debug
-	}
-	return false
-}
-
-// withDeferred returns a copy of parent with deferred set as the deferred flag value .
-func withDeferred(parent context.Context, deferred bool) context.Context {
-	return context.WithValue(parent, deferredKey, deferred)
-}
-
-// deferredFromContext returns the deferred value stored in ctx.
-//
-// If no deferred value is stored in ctx false is returned.
-func deferredFromContext(ctx context.Context) bool {
-	if ctx == nil {
-		return false
-	}
-	if deferred, ok := ctx.Value(deferredKey).(bool); ok {
-		return deferred
 	}
 	return false
 }
