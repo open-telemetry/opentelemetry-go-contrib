@@ -41,16 +41,20 @@ type monitor struct {
 
 func (m *monitor) Started(ctx context.Context, evt *event.CommandStartedEvent) {
 	hostname, port := peerInfo(evt)
-	b, _ := bson.MarshalExtJSON(evt.Command, false, false)
+
 	attrs := []attribute.KeyValue{
 		ServiceName(m.serviceName),
 		DBOperation(evt.CommandName),
 		DBInstance(evt.DatabaseName),
-		DBStatement(string(b)),
 		DBSystem("mongodb"),
 		PeerHostname(hostname),
 		PeerPort(port),
 	}
+	if !m.cfg.CommandAttributeDisabled {
+		b, _ := bson.MarshalExtJSON(evt.Command, false, false)
+		attrs = append(attrs, DBStatement(string(b)))
+	}
+
 	opts := []trace.SpanOption{
 		trace.WithAttributes(attrs...),
 	}

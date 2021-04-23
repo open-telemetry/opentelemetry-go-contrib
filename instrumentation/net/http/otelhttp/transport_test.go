@@ -75,6 +75,54 @@ func TestTransportBasics(t *testing.T) {
 	}
 }
 
+func TestNilTransport(t *testing.T) {
+	prop := propagation.TraceContext{}
+	provider := oteltest.NewTracerProvider()
+	content := []byte("Hello, world!")
+
+	ts := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		ctx := prop.Extract(r.Context(), propagation.HeaderCarrier(r.Header))
+		span := trace.RemoteSpanContextFromContext(ctx)
+		tgtID, err := trace.SpanIDFromHex(fmt.Sprintf("%016x", uint(2)))
+		if err != nil {
+			t.Fatalf("Error converting id to SpanID: %s", err.Error())
+		}
+		if span.SpanID() != tgtID {
+			t.Fatalf("testing remote SpanID: got %s, expected %s", span.SpanID(), tgtID)
+		}
+		if _, err := w.Write(content); err != nil {
+			t.Fatal(err)
+		}
+	}))
+	defer ts.Close()
+
+	r, err := http.NewRequest(http.MethodGet, ts.URL, nil)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	tr := NewTransport(
+		nil,
+		WithTracerProvider(provider),
+		WithPropagators(prop),
+	)
+
+	c := http.Client{Transport: tr}
+	res, err := c.Do(r)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	body, err := ioutil.ReadAll(res.Body)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	if !bytes.Equal(body, content) {
+		t.Fatalf("unexpected content: got %s, expected %s", body, content)
+	}
+}
+
 func TestTransportFormatter(t *testing.T) {
 
 	var httpMethods = []struct {
