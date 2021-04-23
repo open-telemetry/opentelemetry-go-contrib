@@ -41,10 +41,6 @@ const (
 	traceID128BitsWidth = 128 / 4 // 32 hex character Trace ID.
 	spanIDWidth         = 16      // 16 hex character ID.
 	parentSpanIDWidth   = 16      // 16 hex character ID.
-
-	// B3 status flags.
-	flagDeferred = 1 << 0 // Deferred flag
-	flagDebug    = 1 << 1 // Debug flag
 )
 
 var (
