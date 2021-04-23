@@ -138,9 +138,9 @@ func consumeAndCheck(t *testing.T, mt trace.Tracer, complFn func() []*oteltest.S
 
 			var sc trace.SpanContext
 			if i == 0 {
-				sc = trace.RemoteSpanContextFromContext(propagators.Extract(context.Background(), NewConsumerMessageCarrier(msgList[i])))
+				sc = trace.SpanContextFromContext(propagators.Extract(context.Background(), NewConsumerMessageCarrier(msgList[i])))
 			} else {
-				sc = trace.RemoteSpanContextFromContext(propagators.Extract(context.Background(), NewConsumerMessageCarrier(msgList[i])))
+				sc = trace.SpanContextFromContext(propagators.Extract(context.Background(), NewConsumerMessageCarrier(msgList[i])))
 				sc = sc.WithRemote(false)
 			}
 			assert.Equal(t, sc, span.SpanContext())
