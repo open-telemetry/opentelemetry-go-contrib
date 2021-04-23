@@ -23,7 +23,7 @@ const (
 	deferredKey
 )
 
-// withDebug returns a copy of parentwith debug set as the debug flag value .
+// withDebug returns a copy of parent with debug set as the debug flag value .
 func withDebug(parent context.Context, debug bool) context.Context {
 	return context.WithValue(parent, debugKey, debug)
 }
@@ -41,7 +41,7 @@ func debugFromContext(ctx context.Context) bool {
 	return false
 }
 
-// withDeferred returns a copy of parentwith deferred set as the deferred flag value .
+// withDeferred returns a copy of parent with deferred set as the deferred flag value .
 func withDeferred(parent context.Context, deferred bool) context.Context {
 	return context.WithValue(parent, deferredKey, deferred)
 }
