@@ -19,6 +19,8 @@ import (
 	"net/http"
 	"testing"
 
+	"github.com/stretchr/testify/assert"
+
 	"github.com/google/go-cmp/cmp"
 
 	"go.opentelemetry.io/contrib/propagators/b3"
@@ -70,6 +72,8 @@ func TestExtractB3(t *testing.T) {
 				if diff := cmp.Diff(gotSc, trace.NewSpanContext(tt.wantScc), comparer); diff != "" {
 					t.Errorf("%s: %s: -got +want %s", tg.name, tt.name, diff)
 				}
+				assert.Equal(t, tt.debug, b3.DebugFromContext(ctx))
+				assert.Equal(t, tt.deferred, b3.DeferredFromContext(ctx))
 			})
 		}
 	}
@@ -111,6 +115,8 @@ func TestInjectB3(t *testing.T) {
 						sc:   trace.NewSpanContext(tt.scc),
 					},
 				)
+				ctx = b3.WithDebug(ctx, tt.debug)
+				ctx = b3.WithDeferred(ctx, tt.deferred)
 				propagator.Inject(ctx, propagation.HeaderCarrier(req.Header))
 
 				for h, v := range tt.wantHeaders {

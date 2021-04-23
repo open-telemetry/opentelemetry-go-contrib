@@ -61,9 +61,11 @@ func mustSpanIDFromHex(s string) (t trace.SpanID) {
 }
 
 type extractTest struct {
-	name    string
-	headers map[string]string
-	wantScc trace.SpanContextConfig
+	name     string
+	headers  map[string]string
+	wantScc  trace.SpanContextConfig
+	debug    bool
+	deferred bool
 }
 
 var extractHeaders = []extractTest{
@@ -79,10 +81,10 @@ var extractHeaders = []extractTest{
 			b3SpanID:  spanIDStr,
 		},
 		wantScc: trace.SpanContextConfig{
-			TraceID:    traceID,
-			SpanID:     spanID,
-			TraceFlags: trace.FlagsDeferred,
+			TraceID: traceID,
+			SpanID:  spanID,
 		},
+		deferred: true,
 	},
 	{
 		name: "multiple: sampling state deny",
@@ -144,8 +146,9 @@ var extractHeaders = []extractTest{
 		wantScc: trace.SpanContextConfig{
 			TraceID:    traceID,
 			SpanID:     spanID,
-			TraceFlags: trace.FlagsSampled | trace.FlagsDebug,
+			TraceFlags: trace.FlagsSampled,
 		},
+		debug: true,
 	},
 	{
 		name: "multiple: debug flag set to not 1 (ignored)",
@@ -174,8 +177,9 @@ var extractHeaders = []extractTest{
 		wantScc: trace.SpanContextConfig{
 			TraceID:    traceID,
 			SpanID:     spanID,
-			TraceFlags: trace.FlagsDebug | trace.FlagsSampled,
+			TraceFlags: trace.FlagsSampled,
 		},
+		debug: true,
 	},
 	{
 		name: "multiple: with parent span id",
@@ -205,10 +209,10 @@ var extractHeaders = []extractTest{
 			b3SpanID:  spanIDStr,
 		},
 		wantScc: trace.SpanContextConfig{
-			TraceID:    traceID64bitPadded,
-			SpanID:     spanID,
-			TraceFlags: trace.FlagsDeferred,
+			TraceID: traceID64bitPadded,
+			SpanID:  spanID,
 		},
+		deferred: true,
 	},
 	{
 		name: "single: sampling state defer",
@@ -216,10 +220,10 @@ var extractHeaders = []extractTest{
 			b3Context: fmt.Sprintf("%s-%s", traceIDStr, spanIDStr),
 		},
 		wantScc: trace.SpanContextConfig{
-			TraceID:    traceID,
-			SpanID:     spanID,
-			TraceFlags: trace.FlagsDeferred,
+			TraceID: traceID,
+			SpanID:  spanID,
 		},
+		deferred: true,
 	},
 	{
 		name: "single: sampling state deny",
@@ -250,8 +254,9 @@ var extractHeaders = []extractTest{
 		wantScc: trace.SpanContextConfig{
 			TraceID:    traceID,
 			SpanID:     spanID,
-			TraceFlags: trace.FlagsDebug | trace.FlagsSampled,
+			TraceFlags: trace.FlagsSampled,
 		},
+		debug: true,
 	},
 	{
 		name: "single: with parent span id",
@@ -277,10 +282,10 @@ var extractHeaders = []extractTest{
 			b3Context: fmt.Sprintf("a3ce929d0e0e4736-%s", spanIDStr),
 		},
 		wantScc: trace.SpanContextConfig{
-			TraceID:    traceID64bitPadded,
-			SpanID:     spanID,
-			TraceFlags: trace.FlagsDeferred,
+			TraceID: traceID64bitPadded,
+			SpanID:  spanID,
 		},
+		deferred: true,
 	},
 	{
 		name: "both single and multiple: single priority",
@@ -530,6 +535,8 @@ type injectTest struct {
 	scc              trace.SpanContextConfig
 	wantHeaders      map[string]string
 	doNotWantHeaders []string
+	debug            bool
+	deferred         bool
 }
 
 var injectHeader = []injectTest{
@@ -573,9 +580,8 @@ var injectHeader = []injectTest{
 	{
 		name: "none: unset sampled",
 		scc: trace.SpanContextConfig{
-			TraceID:    traceID,
-			SpanID:     spanID,
-			TraceFlags: trace.FlagsDeferred,
+			TraceID: traceID,
+			SpanID:  spanID,
 		},
 		wantHeaders: map[string]string{
 			b3Context: fmt.Sprintf("%s-%s", traceIDStr, spanIDStr),
@@ -588,6 +594,7 @@ var injectHeader = []injectTest{
 			b3Flags,
 			b3Context,
 		},
+		deferred: true,
 	},
 	{
 		name: "none: sampled only",
@@ -608,9 +615,8 @@ var injectHeader = []injectTest{
 	{
 		name: "none: debug",
 		scc: trace.SpanContextConfig{
-			TraceID:    traceID,
-			SpanID:     spanID,
-			TraceFlags: trace.FlagsDebug,
+			TraceID: traceID,
+			SpanID:  spanID,
 		},
 		wantHeaders: map[string]string{
 			b3Context: fmt.Sprintf("%s-%s-%s", traceIDStr, spanIDStr, "d"),
@@ -622,13 +628,14 @@ var injectHeader = []injectTest{
 			b3ParentSpanID,
 			b3Context,
 		},
+		debug: true,
 	},
 	{
 		name: "none: debug omitting sample",
 		scc: trace.SpanContextConfig{
 			TraceID:    traceID,
 			SpanID:     spanID,
-			TraceFlags: trace.FlagsSampled | trace.FlagsDebug,
+			TraceFlags: trace.FlagsSampled,
 		},
 		wantHeaders: map[string]string{
 			b3Context: fmt.Sprintf("%s-%s-%s", traceIDStr, spanIDStr, "d"),
@@ -641,6 +648,7 @@ var injectHeader = []injectTest{
 			b3ParentSpanID,
 			b3Context,
 		},
+		debug: true,
 	},
 	{
 		name:     "multiple: sampled",
@@ -683,9 +691,8 @@ var injectHeader = []injectTest{
 		name:     "multiple: unset sampled",
 		encoding: b3.B3MultipleHeader,
 		scc: trace.SpanContextConfig{
-			TraceID:    traceID,
-			SpanID:     spanID,
-			TraceFlags: trace.FlagsDeferred,
+			TraceID: traceID,
+			SpanID:  spanID,
 		},
 		wantHeaders: map[string]string{
 			b3TraceID: traceIDStr,
@@ -697,6 +704,7 @@ var injectHeader = []injectTest{
 			b3Flags,
 			b3Context,
 		},
+		deferred: true,
 	},
 	{
 		name:     "multiple: sampled only",
@@ -719,9 +727,8 @@ var injectHeader = []injectTest{
 		name:     "multiple: debug",
 		encoding: b3.B3MultipleHeader,
 		scc: trace.SpanContextConfig{
-			TraceID:    traceID,
-			SpanID:     spanID,
-			TraceFlags: trace.FlagsDebug,
+			TraceID: traceID,
+			SpanID:  spanID,
 		},
 		wantHeaders: map[string]string{
 			b3TraceID: traceIDStr,
@@ -733,6 +740,7 @@ var injectHeader = []injectTest{
 			b3ParentSpanID,
 			b3Context,
 		},
+		debug: true,
 	},
 	{
 		name:     "multiple: debug omitting sample",
@@ -740,7 +748,7 @@ var injectHeader = []injectTest{
 		scc: trace.SpanContextConfig{
 			TraceID:    traceID,
 			SpanID:     spanID,
-			TraceFlags: trace.FlagsSampled | trace.FlagsDebug,
+			TraceFlags: trace.FlagsSampled,
 		},
 		wantHeaders: map[string]string{
 			b3TraceID: traceIDStr,
@@ -752,6 +760,7 @@ var injectHeader = []injectTest{
 			b3ParentSpanID,
 			b3Context,
 		},
+		debug: true,
 	},
 	{
 		name:     "single: sampled",
@@ -794,9 +803,8 @@ var injectHeader = []injectTest{
 		name:     "single: unset sampled",
 		encoding: b3.B3SingleHeader,
 		scc: trace.SpanContextConfig{
-			TraceID:    traceID,
-			SpanID:     spanID,
-			TraceFlags: trace.FlagsDeferred,
+			TraceID: traceID,
+			SpanID:  spanID,
 		},
 		wantHeaders: map[string]string{
 			b3Context: fmt.Sprintf("%s-%s", traceIDStr, spanIDStr),
@@ -808,6 +816,7 @@ var injectHeader = []injectTest{
 			b3ParentSpanID,
 			b3Flags,
 		},
+		deferred: true,
 	},
 	{
 		name:     "single: sampled only",
@@ -831,9 +840,8 @@ var injectHeader = []injectTest{
 		name:     "single: debug",
 		encoding: b3.B3SingleHeader,
 		scc: trace.SpanContextConfig{
-			TraceID:    traceID,
-			SpanID:     spanID,
-			TraceFlags: trace.FlagsDebug,
+			TraceID: traceID,
+			SpanID:  spanID,
 		},
 		wantHeaders: map[string]string{
 			b3Context: fmt.Sprintf("%s-%s-d", traceIDStr, spanIDStr),
@@ -846,6 +854,7 @@ var injectHeader = []injectTest{
 			b3ParentSpanID,
 			b3Context,
 		},
+		debug: true,
 	},
 	{
 		name:     "single: debug omitting sample",
@@ -853,7 +862,7 @@ var injectHeader = []injectTest{
 		scc: trace.SpanContextConfig{
 			TraceID:    traceID,
 			SpanID:     spanID,
-			TraceFlags: trace.FlagsSampled | trace.FlagsDebug,
+			TraceFlags: trace.FlagsSampled,
 		},
 		wantHeaders: map[string]string{
 			b3Context: fmt.Sprintf("%s-%s-d", traceIDStr, spanIDStr),
@@ -866,6 +875,7 @@ var injectHeader = []injectTest{
 			b3ParentSpanID,
 			b3Context,
 		},
+		debug: true,
 	},
 	{
 		name:     "single+multiple: sampled",
@@ -908,9 +918,8 @@ var injectHeader = []injectTest{
 		name:     "single+multiple: unset sampled",
 		encoding: b3.B3SingleHeader | b3.B3MultipleHeader,
 		scc: trace.SpanContextConfig{
-			TraceID:    traceID,
-			SpanID:     spanID,
-			TraceFlags: trace.FlagsDeferred,
+			TraceID: traceID,
+			SpanID:  spanID,
 		},
 		wantHeaders: map[string]string{
 			b3TraceID: traceIDStr,
@@ -922,6 +931,7 @@ var injectHeader = []injectTest{
 			b3ParentSpanID,
 			b3Flags,
 		},
+		deferred: true,
 	},
 	{
 		name:     "single+multiple: sampled only",
@@ -944,9 +954,8 @@ var injectHeader = []injectTest{
 		name:     "single+multiple: debug",
 		encoding: b3.B3SingleHeader | b3.B3MultipleHeader,
 		scc: trace.SpanContextConfig{
-			TraceID:    traceID,
-			SpanID:     spanID,
-			TraceFlags: trace.FlagsDebug,
+			TraceID: traceID,
+			SpanID:  spanID,
 		},
 		wantHeaders: map[string]string{
 			b3TraceID: traceIDStr,
@@ -958,6 +967,7 @@ var injectHeader = []injectTest{
 			b3Sampled,
 			b3ParentSpanID,
 		},
+		debug: true,
 	},
 	{
 		name:     "single+multiple: debug omitting sample",
@@ -965,7 +975,7 @@ var injectHeader = []injectTest{
 		scc: trace.SpanContextConfig{
 			TraceID:    traceID,
 			SpanID:     spanID,
-			TraceFlags: trace.FlagsSampled | trace.FlagsDebug,
+			TraceFlags: trace.FlagsSampled,
 		},
 		wantHeaders: map[string]string{
 			b3TraceID: traceIDStr,
@@ -977,6 +987,7 @@ var injectHeader = []injectTest{
 			b3Sampled,
 			b3ParentSpanID,
 		},
+		debug: true,
 	},
 }
 
