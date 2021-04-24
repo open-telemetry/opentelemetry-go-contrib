@@ -135,7 +135,7 @@ func TestWrapSyncProducer(t *testing.T) {
 		}
 
 		// Check tracing propagation
-		remoteSpanFromMessage := oteltrace.RemoteSpanContextFromContext(propagators.Extract(context.Background(), NewProducerMessageCarrier(msg)))
+		remoteSpanFromMessage := oteltrace.SpanContextFromContext(propagators.Extract(context.Background(), NewProducerMessageCarrier(msg)))
 		assert.True(t, remoteSpanFromMessage.IsValid())
 	}
 }
@@ -219,7 +219,7 @@ func TestWrapAsyncProducer(t *testing.T) {
 			}
 
 			// Check tracing propagation
-			remoteSpanFromMessage := oteltrace.RemoteSpanContextFromContext(propagators.Extract(context.Background(), NewProducerMessageCarrier(msg)))
+			remoteSpanFromMessage := oteltrace.SpanContextFromContext(propagators.Extract(context.Background(), NewProducerMessageCarrier(msg)))
 			assert.True(t, remoteSpanFromMessage.IsValid())
 		}
 	})
@@ -299,7 +299,7 @@ func TestWrapAsyncProducer(t *testing.T) {
 			assert.Equal(t, i, msg.Metadata)
 
 			// Check tracing propagation
-			remoteSpanFromMessage := oteltrace.RemoteSpanContextFromContext(propagators.Extract(context.Background(), NewProducerMessageCarrier(msg)))
+			remoteSpanFromMessage := oteltrace.SpanContextFromContext(propagators.Extract(context.Background(), NewProducerMessageCarrier(msg)))
 			assert.True(t, remoteSpanFromMessage.IsValid())
 		}
 	})

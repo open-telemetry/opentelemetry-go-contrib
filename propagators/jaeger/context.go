@@ -12,17 +12,30 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-// Package contrib contains common values used across all
-// instrumentation, exporter, and detector contributions.
-package contrib // import "go.opentelemetry.io/contrib"
+package jaeger
 
-// Version is the current release version of OpenTelemetry Contrib in use.
-func Version() string {
-	return "0.20.0"
-	// This string is updated by the pre_release.sh script during release
+import "context"
+
+type jaegerKeyType int
+
+const (
+	debugKey jaegerKeyType = iota
+)
+
+// withDebug returns a copy of parent with debug set as the debug flag value .
+func withDebug(parent context.Context, debug bool) context.Context {
+	return context.WithValue(parent, debugKey, debug)
 }
 
-// SemVersion is the semantic version to be supplied to tracer/meter creation.
-func SemVersion() string {
-	return "semver:" + Version()
+// debugFromContext returns the debug value stored in ctx.
+//
+// If no debug value is stored in ctx false is returned.
+func debugFromContext(ctx context.Context) bool {
+	if ctx == nil {
+		return false
+	}
+	if debug, ok := ctx.Value(debugKey).(bool); ok {
+		return debug
+	}
+	return false
 }

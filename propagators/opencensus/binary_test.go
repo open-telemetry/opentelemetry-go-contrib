@@ -147,7 +147,7 @@ func TestExtract(t *testing.T) {
 
 			ctx := context.Background()
 			ctx = prop.Extract(ctx, propagation.HeaderCarrier(req.Header))
-			gotSc := trace.RemoteSpanContextFromContext(ctx)
+			gotSc := trace.SpanContextFromContext(ctx)
 			comparer := cmp.Comparer(func(a, b trace.SpanContext) bool {
 				// Do not compare remote field, it is unset on empty
 				// SpanContext.
