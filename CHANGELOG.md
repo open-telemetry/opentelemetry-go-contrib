@@ -10,6 +10,10 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 
 ## [0.20.0] - 2021-04-23
 
+### Added
+
+- `99designs/gqlgen` trace instrumentation (#760)
+
 ### Changed
 
 - The `go.opentelemetry.io/contrib/instrumentation/go.mongodb.org/mongo-driver/mongo/otelmongo` instrumentation now accepts a `WithCommandAttributeDisabled`, 
