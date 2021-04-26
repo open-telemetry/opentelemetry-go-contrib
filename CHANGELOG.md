@@ -10,7 +10,7 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 
 ### Added
 
-- `99designs/gqlgen` trace instrumentation
+- `99designs/gqlgen` trace instrumentation. (#761)
 
 ## [0.20.0] - 2021-04-23
 
