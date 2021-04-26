@@ -119,6 +119,24 @@ updates:
       day: "sunday"
   -
     package-ecosystem: "gomod"
+    directory: "/instrumentation/github.com/99designs/gqlgen/otelgqlgen"
+    labels:
+      - dependencies
+      - go
+      - "Skip Changelog"
+    schedule:
+      interval: "weekly"
+      day: "sunday"
+  - package-ecosystem: "gomod"
+    directory: "/instrumentation/github.com/99designs/gqlgen/otelgqlgen/example"
+    labels:
+      - dependencies
+      - go
+      - "Skip Changelog"
+    schedule:
+      interval: "weekly"
+  -
+    package-ecosystem: "gomod"
     directory: "/instrumentation/github.com/astaxie/beego/otelbeego"
     labels:
       - dependencies
