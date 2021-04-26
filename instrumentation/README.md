@@ -8,6 +8,7 @@ The following instrumentation packages are provided for popular Go packages and 
 
 | Instrumentation Package | Metrics | Traces |
 | :---------------------: | :-----: | :----: |
+| [github.com/99designs/gqlgen](./github.com/99designs/gqlgen/otelgqlgen) |  | ✓ |
 | [github.com/astaxie/beego](./github.com/astaxie/beego/otelbeego) | ✓ | ✓ |
 | [github.com/bradfitz/gomemcache](./github.com/bradfitz/gomemcache/memcache/otelmemcache) |  | ✓ |
 | [github.com/emicklei/go-restful](./github.com/emicklei/go-restful/otelrestful) |  | ✓ |
