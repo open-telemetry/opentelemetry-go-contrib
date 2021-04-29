@@ -60,7 +60,7 @@ func Extract(ctx context.Context, req *http.Request, opts ...Option) ([]attribut
 	)
 
 	attributes := baggage.Set(ctx)
-	return attrs, (&attributes).ToSlice(), trace.RemoteSpanContextFromContext(ctx)
+	return attrs, (&attributes).ToSlice(), trace.SpanContextFromContext(ctx)
 }
 
 func Inject(ctx context.Context, req *http.Request, opts ...Option) {

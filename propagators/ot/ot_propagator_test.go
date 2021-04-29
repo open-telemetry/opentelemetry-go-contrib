@@ -64,7 +64,7 @@ func TestOT_Extract(t *testing.T) {
 			trace.SpanContextConfig{
 				TraceID:    traceID,
 				SpanID:     spanID,
-				TraceFlags: trace.FlagsDeferred,
+				TraceFlags: 0x00,
 			},
 			nil,
 		},

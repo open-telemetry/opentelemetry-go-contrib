@@ -12,17 +12,9 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-// Package contrib contains common values used across all
-// instrumentation, exporter, and detector contributions.
-package contrib // import "go.opentelemetry.io/contrib"
+package jaeger
 
-// Version is the current release version of OpenTelemetry Contrib in use.
-func Version() string {
-	return "0.20.0"
-	// This string is updated by the pre_release.sh script during release
-}
-
-// SemVersion is the semantic version to be supplied to tracer/meter creation.
-func SemVersion() string {
-	return "semver:" + Version()
-}
+var (
+	WithDebug        = withDebug
+	DebugFromContext = debugFromContext
+)

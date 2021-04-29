@@ -37,6 +37,7 @@ type extractTest struct {
 	name     string
 	headers  map[string]string
 	expected trace.SpanContextConfig
+	debug    bool
 }
 
 var extractHeaders = []extractTest{
@@ -44,6 +45,7 @@ var extractHeaders = []extractTest{
 		"empty",
 		map[string]string{},
 		trace.SpanContextConfig{},
+		false,
 	},
 	{
 		"sampling state not sample",
@@ -54,6 +56,7 @@ var extractHeaders = []extractTest{
 			TraceID: traceID32,
 			SpanID:  spanID,
 		},
+		false,
 	},
 	{
 		"sampling state sampled",
@@ -65,6 +68,7 @@ var extractHeaders = []extractTest{
 			SpanID:     spanID,
 			TraceFlags: trace.FlagsSampled,
 		},
+		false,
 	},
 	{
 		"sampling state debug",
@@ -74,8 +78,9 @@ var extractHeaders = []extractTest{
 		trace.SpanContextConfig{
 			TraceID:    traceID32,
 			SpanID:     spanID,
-			TraceFlags: trace.FlagsSampled | trace.FlagsDebug,
+			TraceFlags: trace.FlagsSampled,
 		},
+		true,
 	},
 	{
 		"sampling state debug but sampled bit didn't set, result in not sampled decision",
@@ -86,6 +91,7 @@ var extractHeaders = []extractTest{
 			TraceID: traceID32,
 			SpanID:  spanID,
 		},
+		false,
 	},
 	{
 		"flag can be various length",
@@ -97,6 +103,7 @@ var extractHeaders = []extractTest{
 			SpanID:     spanID,
 			TraceFlags: trace.FlagsSampled,
 		},
+		false,
 	},
 	{
 		"flag can be hex numbers",
@@ -106,8 +113,9 @@ var extractHeaders = []extractTest{
 		trace.SpanContextConfig{
 			TraceID:    traceID32,
 			SpanID:     spanID,
-			TraceFlags: trace.FlagsDebug | trace.FlagsSampled,
+			TraceFlags: trace.FlagsSampled,
 		},
+		true,
 	},
 	{
 		"left padding 64 bit trace ID",
@@ -119,6 +127,7 @@ var extractHeaders = []extractTest{
 			SpanID:     spanID,
 			TraceFlags: trace.FlagsSampled,
 		},
+		false,
 	},
 	{
 		"128 bit trace ID",
@@ -130,6 +139,7 @@ var extractHeaders = []extractTest{
 			SpanID:     spanID,
 			TraceFlags: trace.FlagsSampled,
 		},
+		false,
 	},
 	{
 		"ignore parent span id",
@@ -141,6 +151,7 @@ var extractHeaders = []extractTest{
 			SpanID:     spanID,
 			TraceFlags: trace.FlagsSampled,
 		},
+		false,
 	},
 }
 
@@ -205,6 +216,7 @@ type injectTest struct {
 	name        string
 	scc         trace.SpanContextConfig
 	wantHeaders map[string]string
+	debug       bool
 }
 
 var injectHeaders = []injectTest{
@@ -224,11 +236,12 @@ var injectHeaders = []injectTest{
 		scc: trace.SpanContextConfig{
 			TraceID:    traceID32,
 			SpanID:     spanID,
-			TraceFlags: trace.FlagsSampled | trace.FlagsDebug,
+			TraceFlags: trace.FlagsSampled,
 		},
 		wantHeaders: map[string]string{
 			jaegerHeader: fmt.Sprintf("%s:%s:0:3", traceID32Str, spanIDStr),
 		},
+		debug: true,
 	},
 	{
 		name: "not sampled",

@@ -128,5 +128,5 @@ func Extract(ctx context.Context, metadata *metadata.MD, opts ...Option) ([]attr
 
 	attributeSet := baggage.Set(ctx)
 
-	return (&attributeSet).ToSlice(), trace.RemoteSpanContextFromContext(ctx)
+	return (&attributeSet).ToSlice(), trace.SpanContextFromContext(ctx)
 }

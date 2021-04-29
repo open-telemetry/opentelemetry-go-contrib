@@ -29,7 +29,7 @@ import (
 // GKE collects resource information of GKE computing instances
 type GKE struct{}
 
-// compile time assertion that GCE implements the resource.Detector interface.
+// compile time assertion that GKE implements the resource.Detector interface.
 var _ resource.Detector = (*GKE)(nil)
 
 // Detect detects associated resources when running in GKE environment.
