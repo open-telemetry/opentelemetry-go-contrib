@@ -35,7 +35,6 @@ type spanKey struct {
 type monitor struct {
 	sync.Mutex
 	spans       map[spanKey]trace.Span
-	serviceName string
 	cfg         config
 }
 
@@ -43,7 +42,6 @@ func (m *monitor) Started(ctx context.Context, evt *event.CommandStartedEvent) {
 	hostname, port := peerInfo(evt)
 
 	attrs := []attribute.KeyValue{
-		ServiceName(m.serviceName),
 		DBOperation(evt.CommandName),
 		DBInstance(evt.DatabaseName),
 		DBSystem("mongodb"),
@@ -100,11 +98,10 @@ func (m *monitor) Finished(evt *event.CommandFinishedEvent, err error) {
 }
 
 // NewMonitor creates a new mongodb event CommandMonitor.
-func NewMonitor(serviceName string, opts ...Option) *event.CommandMonitor {
+func NewMonitor(opts ...Option) *event.CommandMonitor {
 	cfg := newConfig(opts...)
 	m := &monitor{
 		spans:       make(map[spanKey]trace.Span),
-		serviceName: serviceName,
 		cfg:         cfg,
 	}
 	return &event.CommandMonitor{
