@@ -34,8 +34,8 @@ type spanKey struct {
 
 type monitor struct {
 	sync.Mutex
-	spans       map[spanKey]trace.Span
-	cfg         config
+	spans map[spanKey]trace.Span
+	cfg   config
 }
 
 func (m *monitor) Started(ctx context.Context, evt *event.CommandStartedEvent) {
@@ -101,8 +101,8 @@ func (m *monitor) Finished(evt *event.CommandFinishedEvent, err error) {
 func NewMonitor(opts ...Option) *event.CommandMonitor {
 	cfg := newConfig(opts...)
 	m := &monitor{
-		spans:       make(map[spanKey]trace.Span),
-		cfg:         cfg,
+		spans: make(map[spanKey]trace.Span),
+		cfg:   cfg,
 	}
 	return &event.CommandMonitor{
 		Started:   m.Started,
