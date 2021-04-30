@@ -203,7 +203,7 @@ func TestTransportUsesFormatter(t *testing.T) {
 
 	ts := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		ctx := prop.Extract(r.Context(), propagation.HeaderCarrier(r.Header))
-		span := trace.RemoteSpanContextFromContext(ctx)
+		span := trace.SpanContextFromContext(ctx)
 		tgtID, err := trace.SpanIDFromHex(fmt.Sprintf("%016x", uint(2)))
 		if err != nil {
 			t.Fatalf("Error converting id to SpanID: %s", err.Error())
