@@ -26,6 +26,7 @@ import (
 	"go.opentelemetry.io/otel/semconv"
 	"go.opentelemetry.io/otel/trace"
 
+	"go.mongodb.org/mongo-driver/bson"
 	"go.mongodb.org/mongo-driver/bson/bsontype"
 	"go.mongodb.org/mongo-driver/event"
 )
@@ -42,10 +43,7 @@ type monitor struct {
 }
 
 func (m *monitor) Started(ctx context.Context, evt *event.CommandStartedEvent) {
-	var (
-		collection string
-		spanName string
-	)
+	var spanName string
 
 	hostname, port := peerInfo(evt)
 
@@ -57,8 +55,8 @@ func (m *monitor) Started(ctx context.Context, evt *event.CommandStartedEvent) {
 		semconv.NetPeerPortKey.Int(port),
 		semconv.NetTransportTCP,
 	}
-	if coll, err := evt.Command.LookupErr(evt.CommandName); err == nil && coll.Type == bsontype.String {
-		collection = coll.StringValue()
+	collection, err := extractCollection(evt)
+	if err == nil && collection != "" {
 		spanName = collection + "."
 		attrs = append(attrs, semconv.DBMongoDBCollectionKey.String(collection))
 	}
@@ -104,6 +102,28 @@ func (m *monitor) Finished(evt *event.CommandFinishedEvent, err error) {
 	}
 
 	span.End()
+}
+
+// extractCollection extracts the collection for the given mongodb command event.
+// Algorithmically, this is the first key/value string pair in the bson document
+// where the key == operation (e.g. key == "insert").
+// For database meta-level operations, such a key does not exist.
+func extractCollection(evt *event.CommandStartedEvent) (string, error) {
+	const maxKeysToExamine = 4
+	for idx := 0; idx < maxKeysToExamine; idx++ {
+		elt, err := evt.Command.IndexErr(uint(idx))
+		if err != nil {
+			return "", err
+		}
+		if key, err := elt.KeyErr(); err == nil && key == evt.CommandName {
+			var v bson.RawValue
+			if v, err = elt.ValueErr(); err != nil || v.Type != bsontype.String {
+				return "", err
+			}
+			return v.StringValue(), nil
+		}
+	}
+	return "", fmt.Errorf("collection name not found")
 }
 
 // NewMonitor creates a new mongodb event CommandMonitor.
