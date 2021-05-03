@@ -63,7 +63,7 @@ func Test(t *testing.T) {
 
 			addr := "mongodb://localhost:27017/?connect=direct"
 			opts := options.Client()
-			opts.Monitor = NewMonitor("mongo", WithTracerProvider(provider), WithCommandAttributeDisabled(tc.commandAttributeDisabled))
+			opts.Monitor = NewMonitor(WithTracerProvider(provider), WithCommandAttributeDisabled(tc.commandAttributeDisabled))
 			opts.ApplyURI(addr)
 			client, err := mongo.Connect(ctx, opts)
 			if err != nil {
@@ -79,10 +79,9 @@ func Test(t *testing.T) {
 
 			spans := sr.Completed()
 			assert.Len(t, spans, 2)
-			assert.Equal(t, spans[0].SpanContext().TraceID, spans[1].SpanContext().TraceID)
+			assert.Equal(t, spans[0].SpanContext().TraceID(), spans[1].SpanContext().TraceID())
 
 			s := spans[0]
-			assert.Equal(t, "mongo", s.Attributes()[ServiceNameKey].AsString())
 			assert.Equal(t, "insert", s.Attributes()[DBOperationKey].AsString())
 			assert.Equal(t, hostname, s.Attributes()[PeerHostnameKey].AsString())
 			assert.Equal(t, port, s.Attributes()[PeerPortKey].AsString())
