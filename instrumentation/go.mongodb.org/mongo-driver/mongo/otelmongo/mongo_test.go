@@ -44,12 +44,12 @@ type validator struct {
 func TestDBOperation(t *testing.T) {
 	tt := []struct {
 		title      string
-		op         func(context.Context, *mongo.Database) (interface{}, error)
+		operation  func(context.Context, *mongo.Database) (interface{}, error)
 		validators []validator
 	}{
 		{
 			title: "insert",
-			op: func(ctx context.Context, db *mongo.Database) (interface{}, error) {
+			operation: func(ctx context.Context, db *mongo.Database) (interface{}, error) {
 				return db.Collection("test-collection").InsertOne(ctx, bson.D{{Key: "test-item", Value: "test-value"}})
 			},
 			validators: []validator{
@@ -60,7 +60,7 @@ func TestDBOperation(t *testing.T) {
 		},
 		{
 			title: "delete",
-			op: func(ctx context.Context, db *mongo.Database) (interface{}, error) {
+			operation: func(ctx context.Context, db *mongo.Database) (interface{}, error) {
 				return db.Collection("test-collection").DeleteOne(ctx, bson.D{{Key: "test-item"}})
 			},
 			validators: []validator{
@@ -71,7 +71,7 @@ func TestDBOperation(t *testing.T) {
 		},
 		{
 			title: "listCollectionNames",
-			op: func(ctx context.Context, db *mongo.Database) (interface{}, error) {
+			operation: func(ctx context.Context, db *mongo.Database) (interface{}, error) {
 				return db.ListCollectionNames(ctx, bson.D{})
 			},
 			validators: []validator{
@@ -92,14 +92,14 @@ func TestDBOperation(t *testing.T) {
 
 			addr := "mongodb://localhost:27017/?connect=direct"
 			opts := options.Client()
-			opts.Monitor = NewMonitor(WithTracerProvider(provider), WithCommandAttributeDisabled(tc.commandAttributeDisabled))
+			opts.Monitor = NewMonitor(WithTracerProvider(provider))
 			opts.ApplyURI(addr)
 			client, err := mongo.Connect(ctx, opts)
 			if err != nil {
 				t.Fatal(err)
 			}
 
-			_, err = tc.op(ctx, client.Database("test-database"))
+			_, err = tc.operation(ctx, client.Database("test-database"))
 			if err != nil {
 				t.Error(err)
 			}
@@ -119,11 +119,6 @@ func TestDBOperation(t *testing.T) {
 			assert.Equal(t, int64(27017), s.Attributes()["net.peer.port"].AsInt64())
 			assert.Equal(t, "IP.TCP", s.Attributes()["net.transport"].AsString())
 			assert.Equal(t, "test-database", s.Attributes()["db.name"].AsString())
-			if tc.commandAttributeDisabled {
-				assert.NotContains(t, s.Attributes()[DBStatementKey].AsString(), `"test-item":"test-value"`)
-			} else {
-				assert.Contains(t, s.Attributes()[DBStatementKey].AsString(), `"test-item":"test-value"`)
-			}
 			for _, v := range tc.validators {
 				assert.Equal(t, v.expected, v.accessor(s))
 			}
