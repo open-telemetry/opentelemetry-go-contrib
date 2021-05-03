@@ -17,13 +17,16 @@ package otelmongo
 import (
 	"context"
 	"fmt"
+	"strconv"
 	"strings"
 	"sync"
 
 	"go.opentelemetry.io/otel/attribute"
+	"go.opentelemetry.io/otel/codes"
+	"go.opentelemetry.io/otel/semconv"
 	"go.opentelemetry.io/otel/trace"
 
-	"go.mongodb.org/mongo-driver/bson"
+	"go.mongodb.org/mongo-driver/bson/bsontype"
 	"go.mongodb.org/mongo-driver/event"
 )
 
@@ -39,24 +42,31 @@ type monitor struct {
 }
 
 func (m *monitor) Started(ctx context.Context, evt *event.CommandStartedEvent) {
+	var (
+		collection string
+		spanName string
+	)
+
 	hostname, port := peerInfo(evt)
 
 	attrs := []attribute.KeyValue{
-		DBOperation(evt.CommandName),
-		DBInstance(evt.DatabaseName),
-		DBSystem("mongodb"),
-		PeerHostname(hostname),
-		PeerPort(port),
+		semconv.DBSystemMongodb,
+		semconv.DBOperationKey.String(evt.CommandName),
+		semconv.DBNameKey.String(evt.DatabaseName),
+		semconv.NetPeerNameKey.String(hostname),
+		semconv.NetPeerPortKey.Int(port),
+		semconv.NetTransportTCP,
 	}
-	if !m.cfg.CommandAttributeDisabled {
-		b, _ := bson.MarshalExtJSON(evt.Command, false, false)
-		attrs = append(attrs, DBStatement(string(b)))
+	if coll, err := evt.Command.LookupErr(evt.CommandName); err == nil && coll.Type == bsontype.String {
+		collection = coll.StringValue()
+		spanName = collection + "."
+		attrs = append(attrs, semconv.DBMongoDBCollectionKey.String(collection))
 	}
 
 	opts := []trace.SpanStartOption{
 		trace.WithAttributes(attrs...),
 	}
-	_, span := m.cfg.Tracer.Start(ctx, "mongodb.query", opts...)
+	_, span := m.cfg.Tracer.Start(ctx, spanName, opts...)
 	key := spanKey{
 		ConnectionID: evt.ConnectionID,
 		RequestID:    evt.RequestID,
@@ -90,8 +100,7 @@ func (m *monitor) Finished(evt *event.CommandFinishedEvent, err error) {
 	}
 
 	if err != nil {
-		span.SetAttributes(Error(true))
-		span.SetAttributes(ErrorMsg(err.Error()))
+		span.SetStatus(codes.Error, err.Error())
 	}
 
 	span.End()
@@ -111,14 +120,14 @@ func NewMonitor(opts ...Option) *event.CommandMonitor {
 	}
 }
 
-func peerInfo(evt *event.CommandStartedEvent) (hostname, port string) {
+func peerInfo(evt *event.CommandStartedEvent) (hostname string, port int) {
 	hostname = evt.ConnectionID
-	port = "27017"
+	port = 27017
 	if idx := strings.IndexByte(hostname, '['); idx >= 0 {
 		hostname = hostname[:idx]
 	}
 	if idx := strings.IndexByte(hostname, ':'); idx >= 0 {
-		port = hostname[idx+1:]
+		port = func(p int, e error) int { return p }(strconv.Atoi(hostname[idx+1:]))
 		hostname = hostname[:idx]
 	}
 	return hostname, port

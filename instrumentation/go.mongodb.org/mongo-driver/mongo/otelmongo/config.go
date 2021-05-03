@@ -27,8 +27,6 @@ type config struct {
 	TracerProvider trace.TracerProvider
 
 	Tracer trace.Tracer
-
-	CommandAttributeDisabled bool
 }
 
 // newConfig returns a config with all Options set.
