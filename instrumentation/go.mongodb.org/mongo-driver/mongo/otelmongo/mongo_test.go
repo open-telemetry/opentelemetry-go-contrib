@@ -21,6 +21,9 @@ import (
 	"time"
 
 	"github.com/stretchr/testify/assert"
+	"go.mongodb.org/mongo-driver/bson"
+	"go.mongodb.org/mongo-driver/mongo"
+	"go.mongodb.org/mongo-driver/mongo/options"
 
 	"go.opentelemetry.io/contrib/internal/util"
 	"go.opentelemetry.io/otel/codes"
@@ -41,7 +44,7 @@ func TestDBCrudOperation(t *testing.T) {
 			return assert.Equal(t, "test-collection.insert", s.Name())
 		},
 		func(s *oteltest.Span) bool {
-			return assert.Equal(t,"insert", s.Attributes()["db.operation"].AsString())
+			return assert.Equal(t, "insert", s.Attributes()["db.operation"].AsString())
 		},
 		func(s *oteltest.Span) bool {
 			return assert.Equal(t, "test-collection", s.Attributes()["db.mongodb.collection"].AsString())
@@ -135,9 +138,9 @@ func TestDBCrudOperation(t *testing.T) {
 }
 func TestDBCollectionAttribute(t *testing.T) {
 	tt := []struct {
-		title          string
-		operation      func(context.Context, *mongo.Database) (interface{}, error)
-		validators     []validator
+		title      string
+		operation  func(context.Context, *mongo.Database) (interface{}, error)
+		validators []validator
 	}{
 		{
 			title: "delete",
