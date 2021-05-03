@@ -8,6 +8,10 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 
 ## [Unreleased]
 
+### Fixed
+
+- Dockerfile based examples of instrumentation to run with go-1.16 (#)
+
 ## [0.20.0] - 2021-04-23
 
 ### Changed

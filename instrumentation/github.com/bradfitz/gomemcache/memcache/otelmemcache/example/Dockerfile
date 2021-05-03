@@ -13,8 +13,8 @@
 # limitations under the License.
 FROM golang:1.14-alpine AS base
 COPY . /src/
-WORKDIR /src/instrumentation/github.com/bradfitz/gomemcache/memcache/otelmemcache
+WORKDIR /src/instrumentation/github.com/bradfitz/gomemcache/memcache/otelmemcache/example
 
 FROM base AS memcache-client
-RUN go install ./example/client.go
+RUN go install ./client.go
 CMD ["/go/bin/client"]

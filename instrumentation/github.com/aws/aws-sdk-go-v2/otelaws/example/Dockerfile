@@ -13,8 +13,8 @@
 # limitations under the License.
 FROM golang:1.14-alpine AS base
 COPY . /src/
-WORKDIR /src/instrumentation/github.com/aws/aws-sdk-go-v2/otelaws
+WORKDIR /src/instrumentation/github.com/aws/aws-sdk-go-v2/otelaws/example
 
 FROM base AS aws-client
-RUN go install ./example/main.go
+RUN go install ./main.go
 CMD ["/go/bin/main"]
