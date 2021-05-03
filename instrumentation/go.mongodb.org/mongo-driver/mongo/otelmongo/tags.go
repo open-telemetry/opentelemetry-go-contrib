@@ -19,7 +19,6 @@ import "go.opentelemetry.io/otel/attribute"
 const (
 	TargetHostKey  = attribute.Key("out.host")
 	TargetPortKey  = attribute.Key("out.port")
-	ServiceNameKey = attribute.Key("service.name")
 	DBOperationKey = attribute.Key("db.operation")
 	ErrorKey       = attribute.Key("error")
 	ErrorMsgKey    = attribute.Key("error.msg")
@@ -33,11 +32,6 @@ func TargetHost(targetHost string) attribute.KeyValue {
 // TargetPort sets the target host port.
 func TargetPort(targetPort string) attribute.KeyValue {
 	return TargetPortKey.String(targetPort)
-}
-
-// ServiceName defines the Service name for this Span.
-func ServiceName(serviceName string) attribute.KeyValue {
-	return ServiceNameKey.String(serviceName)
 }
 
 // DBOperation defines the name of the operation.
