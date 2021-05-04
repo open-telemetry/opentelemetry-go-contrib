@@ -8,12 +8,12 @@ replace (
 )
 
 require (
-	github.com/felixge/httpsnoop v1.0.1
+	github.com/felixge/httpsnoop v1.0.2
 	github.com/gorilla/mux v1.8.0
 	github.com/stretchr/testify v1.7.0
-	go.opentelemetry.io/contrib v0.18.0
-	go.opentelemetry.io/contrib/propagators v0.18.0
-	go.opentelemetry.io/otel v0.18.0
-	go.opentelemetry.io/otel/oteltest v0.18.0
-	go.opentelemetry.io/otel/trace v0.18.0
+	go.opentelemetry.io/contrib v0.20.0
+	go.opentelemetry.io/contrib/propagators v0.20.0
+	go.opentelemetry.io/otel v0.20.0
+	go.opentelemetry.io/otel/oteltest v0.20.0
+	go.opentelemetry.io/otel/trace v0.20.0
 )

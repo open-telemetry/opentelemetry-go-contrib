@@ -29,7 +29,7 @@ import (
 )
 
 func initMeter() *controller.Controller {
-	pusher, err := stdout.InstallNewPipeline([]stdout.Option{
+	_, pusher, err := stdout.InstallNewPipeline([]stdout.Option{
 		stdout.WithPrettyPrint(),
 	}, nil)
 	if err != nil {

@@ -38,12 +38,12 @@ func TestAwsXrayExtract(t *testing.T) {
 		traceID      string
 		parentSpanID string
 		samplingFlag string
-		expected     trace.SpanContext
+		expected     trace.SpanContextConfig
 		err          error
 	}{
 		{
 			xrayTraceID, parentID64Str, notSampled,
-			trace.SpanContext{
+			trace.SpanContextConfig{
 				TraceID:    traceID,
 				SpanID:     parentSpanID,
 				TraceFlags: traceFlagNone,
@@ -52,7 +52,7 @@ func TestAwsXrayExtract(t *testing.T) {
 		},
 		{
 			xrayTraceID, parentID64Str, isSampled,
-			trace.SpanContext{
+			trace.SpanContextConfig{
 				TraceID:    traceID,
 				SpanID:     parentSpanID,
 				TraceFlags: traceFlagSampled,
@@ -61,17 +61,17 @@ func TestAwsXrayExtract(t *testing.T) {
 		},
 		{
 			xrayTraceID, zeroSpanIDStr, isSampled,
-			trace.SpanContext{},
+			trace.SpanContextConfig{},
 			errInvalidSpanIDLength,
 		},
 		{
 			xrayTraceIDIncorrectLength, parentID64Str, isSampled,
-			trace.SpanContext{},
+			trace.SpanContextConfig{},
 			errLengthTraceIDHeader,
 		},
 		{
 			wrongVersionTraceHeaderID, parentID64Str, isSampled,
-			trace.SpanContext{},
+			trace.SpanContextConfig{},
 			errInvalidTraceIDVersion,
 		},
 	}
@@ -93,6 +93,6 @@ func TestAwsXrayExtract(t *testing.T) {
 			continue
 		}
 
-		assert.Equal(t, test.expected, sc, info...)
+		assert.Equal(t, trace.NewSpanContext(test.expected), sc, info...)
 	}
 }

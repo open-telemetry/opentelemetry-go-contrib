@@ -58,7 +58,7 @@ func main() {
 	}
 	tp := sdktrace.NewTracerProvider(
 		sdktrace.WithSyncer(otExporter),
-		sdktrace.WithConfig(sdktrace.Config{DefaultSampler: sdktrace.AlwaysSample()}),
+		sdktrace.WithSampler(sdktrace.AlwaysSample()),
 	)
 	otel.SetTracerProvider(tp)
 

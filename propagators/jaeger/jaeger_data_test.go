@@ -36,111 +36,122 @@ var (
 type extractTest struct {
 	name     string
 	headers  map[string]string
-	expected trace.SpanContext
+	expected trace.SpanContextConfig
+	debug    bool
 }
 
 var extractHeaders = []extractTest{
 	{
 		"empty",
 		map[string]string{},
-		trace.SpanContext{},
+		trace.SpanContextConfig{},
+		false,
 	},
 	{
 		"sampling state not sample",
 		map[string]string{
 			jaegerHeader: fmt.Sprintf("%s:%s:0:0", traceID32Str, spanIDStr),
 		},
-		trace.SpanContext{
+		trace.SpanContextConfig{
 			TraceID: traceID32,
 			SpanID:  spanID,
 		},
+		false,
 	},
 	{
 		"sampling state sampled",
 		map[string]string{
 			jaegerHeader: fmt.Sprintf("%s:%s:0:1", traceID32Str, spanIDStr),
 		},
-		trace.SpanContext{
+		trace.SpanContextConfig{
 			TraceID:    traceID32,
 			SpanID:     spanID,
 			TraceFlags: trace.FlagsSampled,
 		},
+		false,
 	},
 	{
 		"sampling state debug",
 		map[string]string{
 			jaegerHeader: fmt.Sprintf("%s:%s:0:3", traceID32Str, spanIDStr),
 		},
-		trace.SpanContext{
+		trace.SpanContextConfig{
 			TraceID:    traceID32,
 			SpanID:     spanID,
-			TraceFlags: trace.FlagsSampled | trace.FlagsDebug,
+			TraceFlags: trace.FlagsSampled,
 		},
+		true,
 	},
 	{
 		"sampling state debug but sampled bit didn't set, result in not sampled decision",
 		map[string]string{
 			jaegerHeader: fmt.Sprintf("%s:%s:0:2", traceID32Str, spanIDStr),
 		},
-		trace.SpanContext{
+		trace.SpanContextConfig{
 			TraceID: traceID32,
 			SpanID:  spanID,
 		},
+		false,
 	},
 	{
 		"flag can be various length",
 		map[string]string{
 			jaegerHeader: fmt.Sprintf("%s:%s:0:00001", traceID32Str, spanIDStr),
 		},
-		trace.SpanContext{
+		trace.SpanContextConfig{
 			TraceID:    traceID32,
 			SpanID:     spanID,
 			TraceFlags: trace.FlagsSampled,
 		},
+		false,
 	},
 	{
 		"flag can be hex numbers",
 		map[string]string{
 			jaegerHeader: fmt.Sprintf("%s:%s:0:ff", traceID32Str, spanIDStr),
 		},
-		trace.SpanContext{
+		trace.SpanContextConfig{
 			TraceID:    traceID32,
 			SpanID:     spanID,
-			TraceFlags: trace.FlagsDebug | trace.FlagsSampled,
+			TraceFlags: trace.FlagsSampled,
 		},
+		true,
 	},
 	{
 		"left padding 64 bit trace ID",
 		map[string]string{
 			jaegerHeader: fmt.Sprintf("%s:%s:0:1", traceID16Str, spanIDStr),
 		},
-		trace.SpanContext{
+		trace.SpanContextConfig{
 			TraceID:    traceID16,
 			SpanID:     spanID,
 			TraceFlags: trace.FlagsSampled,
 		},
+		false,
 	},
 	{
 		"128 bit trace ID",
 		map[string]string{
 			jaegerHeader: fmt.Sprintf("%s:%s:0:1", traceID32Str, spanIDStr),
 		},
-		trace.SpanContext{
+		trace.SpanContextConfig{
 			TraceID:    traceID32,
 			SpanID:     spanID,
 			TraceFlags: trace.FlagsSampled,
 		},
+		false,
 	},
 	{
 		"ignore parent span id",
 		map[string]string{
 			jaegerHeader: fmt.Sprintf("%s:%s:whatever:1", traceID32Str, spanIDStr),
 		},
-		trace.SpanContext{
+		trace.SpanContextConfig{
 			TraceID:    traceID32,
 			SpanID:     spanID,
 			TraceFlags: trace.FlagsSampled,
 		},
+		false,
 	},
 }
 
@@ -203,14 +214,15 @@ var invalidExtractHeaders = []extractTest{
 
 type injectTest struct {
 	name        string
-	sc          trace.SpanContext
+	scc         trace.SpanContextConfig
 	wantHeaders map[string]string
+	debug       bool
 }
 
 var injectHeaders = []injectTest{
 	{
 		name: "sampled",
-		sc: trace.SpanContext{
+		scc: trace.SpanContextConfig{
 			TraceID:    traceID32,
 			SpanID:     spanID,
 			TraceFlags: trace.FlagsSampled,
@@ -221,18 +233,19 @@ var injectHeaders = []injectTest{
 	},
 	{
 		name: "debug",
-		sc: trace.SpanContext{
+		scc: trace.SpanContextConfig{
 			TraceID:    traceID32,
 			SpanID:     spanID,
-			TraceFlags: trace.FlagsSampled | trace.FlagsDebug,
+			TraceFlags: trace.FlagsSampled,
 		},
 		wantHeaders: map[string]string{
 			jaegerHeader: fmt.Sprintf("%s:%s:0:3", traceID32Str, spanIDStr),
 		},
+		debug: true,
 	},
 	{
 		name: "not sampled",
-		sc: trace.SpanContext{
+		scc: trace.SpanContextConfig{
 			TraceID: traceID32,
 			SpanID:  spanID,
 		},
@@ -245,25 +258,25 @@ var injectHeaders = []injectTest{
 var invalidInjectHeaders = []injectTest{
 	{
 		name: "empty",
-		sc:   trace.SpanContext{},
+		scc:  trace.SpanContextConfig{},
 	},
 	{
 		name: "missing traceID",
-		sc: trace.SpanContext{
+		scc: trace.SpanContextConfig{
 			SpanID:     spanID,
 			TraceFlags: trace.FlagsSampled,
 		},
 	},
 	{
 		name: "missing spanID",
-		sc: trace.SpanContext{
+		scc: trace.SpanContextConfig{
 			TraceID:    traceID32,
 			TraceFlags: trace.FlagsSampled,
 		},
 	},
 	{
 		name: "missing both traceID and spanID",
-		sc: trace.SpanContext{
+		scc: trace.SpanContextConfig{
 			TraceFlags: trace.FlagsSampled,
 		},
 	},

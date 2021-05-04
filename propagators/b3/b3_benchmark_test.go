@@ -80,7 +80,7 @@ func BenchmarkInjectB3(b *testing.B) {
 				req, _ := http.NewRequest("GET", "http://example.com", nil)
 				ctx := trace.ContextWithSpan(
 					context.Background(),
-					testSpan{sc: tt.sc},
+					testSpan{sc: trace.NewSpanContext(tt.scc)},
 				)
 				b.ReportAllocs()
 				b.ResetTimer()

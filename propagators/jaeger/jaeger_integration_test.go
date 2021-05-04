@@ -19,6 +19,8 @@ import (
 	"net/http"
 	"testing"
 
+	"github.com/stretchr/testify/assert"
+
 	"github.com/google/go-cmp/cmp"
 
 	"go.opentelemetry.io/contrib/propagators/jaeger"
@@ -59,10 +61,17 @@ func TestExtractJaeger(t *testing.T) {
 
 				ctx := context.Background()
 				ctx = propagator.Extract(ctx, propagation.HeaderCarrier(req.Header))
-				resSc := trace.RemoteSpanContextFromContext(ctx)
-				if diff := cmp.Diff(resSc, tc.expected, cmp.AllowUnexported(trace.TraceState{})); diff != "" {
+				resSc := trace.SpanContextFromContext(ctx)
+				comparer := cmp.Comparer(func(a, b trace.SpanContext) bool {
+					// Do not compare remote field, it is unset on empty
+					// SpanContext.
+					newA := a.WithRemote(b.IsRemote())
+					return newA.Equal(b)
+				})
+				if diff := cmp.Diff(resSc, trace.NewSpanContext(tc.expected), comparer); diff != "" {
 					t.Errorf("%s: %s: -got +want %s", tg.name, tc.name, diff)
 				}
+				assert.Equal(t, tc.debug, jaeger.DebugFromContext(ctx))
 			})
 		}
 	}
@@ -98,10 +107,10 @@ func TestInjectJaeger(t *testing.T) {
 			t.Run(tc.name, func(t *testing.T) {
 				req, _ := http.NewRequest("GET", "http://example.com", nil)
 				ctx := trace.ContextWithSpan(
-					context.Background(),
+					jaeger.WithDebug(context.Background(), tc.debug),
 					testSpan{
 						Span: mockSpan,
-						sc:   tc.sc,
+						sc:   trace.NewSpanContext(tc.scc),
 					},
 				)
 				propagator.Inject(ctx, propagation.HeaderCarrier(req.Header))
