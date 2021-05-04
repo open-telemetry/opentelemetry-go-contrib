@@ -10,7 +10,11 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 
 ### Fixed
 
-- Dockerfile based examples of instrumentation now run with go-1.16. (#767)
+- Dockerfile based examples for `otelgin` and `otelmacaron`. (#767)
+
+### Removed
+
+- Remove service name from `otelmongodb` configuration and span attributes. (#763)
 
 ## [0.20.0] - 2021-04-23
 
@@ -26,6 +30,7 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 ### Changed
 
 - Upgrade to v0.19.0 of `go.opentelemetry.io/otel`.
+- Fix Span names created in HTTP Instrumentation package to conform with guidelines. (#757)
 
 ## [0.18.0] - 2021-03-04
 
