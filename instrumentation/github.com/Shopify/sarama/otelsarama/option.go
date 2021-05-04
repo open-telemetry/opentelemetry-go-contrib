@@ -29,8 +29,9 @@ const (
 )
 
 type config struct {
-	TracerProvider trace.TracerProvider
-	Propagators    propagation.TextMapPropagator
+	TracerProvider     trace.TracerProvider
+	Propagators        propagation.TextMapPropagator
+	AllowRootSpanStart bool
 
 	Tracer trace.Tracer
 }
@@ -38,8 +39,9 @@ type config struct {
 // newConfig returns a config with all Options set.
 func newConfig(opts ...Option) config {
 	cfg := config{
-		Propagators:    otel.GetTextMapPropagator(),
-		TracerProvider: otel.GetTracerProvider(),
+		Propagators:        otel.GetTextMapPropagator(),
+		TracerProvider:     otel.GetTracerProvider(),
+		AllowRootSpanStart: true,
 	}
 	for _, opt := range opts {
 		opt(&cfg)
@@ -70,5 +72,15 @@ func WithTracerProvider(provider trace.TracerProvider) Option {
 func WithPropagators(propagators propagation.TextMapPropagator) Option {
 	return func(cfg *config) {
 		cfg.Propagators = propagators
+	}
+}
+
+// WithAllowRootSpanStart specifies whether the instrumentation is allowed to
+// initiate a span if none is propagated by the current message.  This is
+// useful when you want to control instrumentation of select kafka messages
+// without creating excessive overhead when there is a large message volume.
+func WithAllowRootSpanStart(allow bool) Option {
+	return func(cfg *config) {
+		cfg.AllowRootSpanStart = allow
 	}
 }
