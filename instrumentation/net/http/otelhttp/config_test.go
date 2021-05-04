@@ -85,7 +85,7 @@ func TestSpanNameFormatter(t *testing.T) {
 		{
 			name:      "default transport formatter",
 			formatter: defaultTransportFormatter,
-			expected:  http.MethodGet,
+			expected:  "HTTP GET",
 		},
 		{
 			name: "custom formatter",

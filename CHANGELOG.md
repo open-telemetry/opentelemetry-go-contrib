@@ -26,6 +26,7 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 ### Changed
 
 - Upgrade to v0.19.0 of `go.opentelemetry.io/otel`.
+- Fix Span names created in HTTP Instrumentation package to conform with guidelines. (#757)
 
 ## [0.18.0] - 2021-03-04
 
