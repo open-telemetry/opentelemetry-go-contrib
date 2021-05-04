@@ -25,10 +25,7 @@ import (
 	"go.opentelemetry.io/contrib/internal/util"
 	"go.opentelemetry.io/otel/codes"
 	"go.opentelemetry.io/otel/oteltest"
-
-	"go.mongodb.org/mongo-driver/bson"
-	"go.mongodb.org/mongo-driver/mongo"
-	"go.mongodb.org/mongo-driver/mongo/options"
+	"go.opentelemetry.io/otel/trace"
 )
 
 func TestMain(m *testing.M) {
@@ -36,52 +33,59 @@ func TestMain(m *testing.M) {
 	os.Exit(m.Run())
 }
 
-type validator struct {
-	expected interface{}
-	accessor func(*oteltest.Span) interface{}
-}
+type validator func(*oteltest.Span) bool
 
-func TestDBOperation(t *testing.T) {
+func TestDBCrudOperation(t *testing.T) {
+	commonValidators := []validator{
+		func(s *oteltest.Span) bool {
+			return assert.Equal(t, "test-collection.insert", s.Name())
+		},
+		func(s *oteltest.Span) bool {
+			return assert.Equal(t,"insert", s.Attributes()["db.operation"].AsString())
+		},
+		func(s *oteltest.Span) bool {
+			return assert.Equal(t, "test-collection", s.Attributes()["db.mongodb.collection"].AsString())
+		},
+		func(s *oteltest.Span) bool {
+			return assert.Equal(t, codes.Unset, s.StatusCode())
+		},
+	}
+
 	tt := []struct {
-		title      string
-		operation  func(context.Context, *mongo.Database) (interface{}, error)
-		validators []validator
+		title          string
+		operation      func(context.Context, *mongo.Database) (interface{}, error)
+		excludeCommand bool
+		validators     []validator
 	}{
 		{
 			title: "insert",
 			operation: func(ctx context.Context, db *mongo.Database) (interface{}, error) {
 				return db.Collection("test-collection").InsertOne(ctx, bson.D{{Key: "test-item", Value: "test-value"}})
 			},
-			validators: []validator{
-				{"test-collection.insert", func(s *oteltest.Span) interface{} { return s.Name() }},
-				{"insert", func(s *oteltest.Span) interface{} { return s.Attributes()["db.operation"].AsString() }},
-				{"test-collection", func(s *oteltest.Span) interface{} { return s.Attributes()["db.mongodb.collection"].AsString() }},
-			},
+			excludeCommand: false,
+			validators: append(commonValidators, func(s *oteltest.Span) bool {
+				return assert.Contains(t, s.Attributes()["db.statement"].AsString(), `"test-item":"test-value"`)
+			}),
 		},
 		{
-			title: "delete",
+			title: "insert",
 			operation: func(ctx context.Context, db *mongo.Database) (interface{}, error) {
-				return db.Collection("test-collection").DeleteOne(ctx, bson.D{{Key: "test-item"}})
+				return db.Collection("test-collection").InsertOne(ctx, bson.D{{Key: "test-item", Value: "test-value"}})
 			},
-			validators: []validator{
-				{"test-collection.delete", func(s *oteltest.Span) interface{} { return s.Name() }},
-				{"delete", func(s *oteltest.Span) interface{} { return s.Attributes()["db.operation"].AsString() }},
-				{"test-collection", func(s *oteltest.Span) interface{} { return s.Attributes()["db.mongodb.collection"].AsString() }},
-			},
-		},
-		{
-			title: "listCollectionNames",
-			operation: func(ctx context.Context, db *mongo.Database) (interface{}, error) {
-				return db.ListCollectionNames(ctx, bson.D{})
-			},
-			validators: []validator{
-				{"listCollections", func(s *oteltest.Span) interface{} { return s.Name() }},
-				{"listCollections", func(s *oteltest.Span) interface{} { return s.Attributes()["db.operation"].AsString() }},
-			},
+			excludeCommand: true,
+			validators: append(commonValidators, func(s *oteltest.Span) bool {
+				return assert.NotContains(t, s.Attributes()["db.statement"].AsString(), `"test-item":"test-value"`)
+			}),
 		},
 	}
 	for _, tc := range tt {
-		t.Run(tc.title, func(t *testing.T) {
+		title := tc.title
+		if tc.excludeCommand {
+			title = title + "/excludeCommand"
+		} else {
+			title = title + "/includeCommand"
+		}
+		t.Run(title, func(t *testing.T) {
 			sr := new(oteltest.SpanRecorder)
 			provider := oteltest.NewTracerProvider(oteltest.WithSpanRecorder(sr))
 
@@ -92,7 +96,7 @@ func TestDBOperation(t *testing.T) {
 
 			addr := "mongodb://localhost:27017/?connect=direct"
 			opts := options.Client()
-			opts.Monitor = NewMonitor(WithTracerProvider(provider))
+			opts.Monitor = NewMonitor(WithTracerProvider(provider), WithCommandAttributeDisabled(tc.excludeCommand))
 			opts.ApplyURI(addr)
 			client, err := mongo.Connect(ctx, opts)
 			if err != nil {
@@ -112,17 +116,112 @@ func TestDBOperation(t *testing.T) {
 			}
 			assert.Len(t, spans, 2)
 			assert.Equal(t, spans[0].SpanContext().TraceID(), spans[1].SpanContext().TraceID())
+			assert.Equal(t, spans[0].ParentSpanID(), spans[1].SpanContext().SpanID())
+			assert.Equal(t, span.SpanContext().SpanID(), spans[1].SpanContext().SpanID())
 
 			s := spans[0]
+			assert.Equal(t, trace.SpanKindClient, s.SpanKind())
 			assert.Equal(t, "mongodb", s.Attributes()["db.system"].AsString())
 			assert.Equal(t, "localhost", s.Attributes()["net.peer.name"].AsString())
 			assert.Equal(t, int64(27017), s.Attributes()["net.peer.port"].AsInt64())
 			assert.Equal(t, "IP.TCP", s.Attributes()["net.transport"].AsString())
 			assert.Equal(t, "test-database", s.Attributes()["db.name"].AsString())
 			for _, v := range tc.validators {
-				assert.Equal(t, v.expected, v.accessor(s))
+				assert.True(t, v(s))
 			}
-			assert.Equal(t, codes.Unset, s.StatusCode())
+		})
+	}
+
+}
+func TestDBCollectionAttribute(t *testing.T) {
+	tt := []struct {
+		title          string
+		operation      func(context.Context, *mongo.Database) (interface{}, error)
+		validators     []validator
+	}{
+		{
+			title: "delete",
+			operation: func(ctx context.Context, db *mongo.Database) (interface{}, error) {
+				return db.Collection("test-collection").DeleteOne(ctx, bson.D{{Key: "test-item"}})
+			},
+			validators: []validator{
+				func(s *oteltest.Span) bool {
+					return assert.Equal(t, "test-collection.delete", s.Name())
+				},
+				func(s *oteltest.Span) bool {
+					return assert.Equal(t, "delete", s.Attributes()["db.operation"].AsString())
+				},
+				func(s *oteltest.Span) bool {
+					return assert.Equal(t, "test-collection", s.Attributes()["db.mongodb.collection"].AsString())
+				},
+				func(s *oteltest.Span) bool {
+					return assert.Equal(t, codes.Unset, s.StatusCode())
+				},
+			},
+		},
+		{
+			title: "listCollectionNames",
+			operation: func(ctx context.Context, db *mongo.Database) (interface{}, error) {
+				return db.ListCollectionNames(ctx, bson.D{})
+			},
+			validators: []validator{
+				func(s *oteltest.Span) bool {
+					return assert.Equal(t, "listCollections", s.Name())
+				},
+				func(s *oteltest.Span) bool {
+					return assert.Equal(t, "listCollections", s.Attributes()["db.operation"].AsString())
+				},
+				func(s *oteltest.Span) bool {
+					return assert.Equal(t, codes.Unset, s.StatusCode())
+				},
+			},
+		},
+	}
+	for _, tc := range tt {
+		t.Run(tc.title, func(t *testing.T) {
+			sr := new(oteltest.SpanRecorder)
+			provider := oteltest.NewTracerProvider(oteltest.WithSpanRecorder(sr))
+
+			ctx, cancel := context.WithTimeout(context.Background(), time.Second*3)
+			defer cancel()
+
+			ctx, span := provider.Tracer(defaultTracerName).Start(ctx, "mongodb-test")
+
+			addr := "mongodb://localhost:27017/?connect=direct"
+			opts := options.Client()
+			opts.Monitor = NewMonitor(WithTracerProvider(provider), WithCommandAttributeDisabled(true))
+			opts.ApplyURI(addr)
+			client, err := mongo.Connect(ctx, opts)
+			if err != nil {
+				t.Fatal(err)
+			}
+
+			_, err = tc.operation(ctx, client.Database("test-database"))
+			if err != nil {
+				t.Error(err)
+			}
+
+			span.End()
+
+			spans := sr.Completed()
+			if !assert.Len(t, spans, 2, "expected 2 spans, received %d", len(spans)) {
+				t.FailNow()
+			}
+			assert.Len(t, spans, 2)
+			assert.Equal(t, spans[0].SpanContext().TraceID(), spans[1].SpanContext().TraceID())
+			assert.Equal(t, spans[0].ParentSpanID(), spans[1].SpanContext().SpanID())
+			assert.Equal(t, span.SpanContext().SpanID(), spans[1].SpanContext().SpanID())
+
+			s := spans[0]
+			assert.Equal(t, trace.SpanKindClient, s.SpanKind())
+			assert.Equal(t, "mongodb", s.Attributes()["db.system"].AsString())
+			assert.Equal(t, "localhost", s.Attributes()["net.peer.name"].AsString())
+			assert.Equal(t, int64(27017), s.Attributes()["net.peer.port"].AsInt64())
+			assert.Equal(t, "IP.TCP", s.Attributes()["net.transport"].AsString())
+			assert.Equal(t, "test-database", s.Attributes()["db.name"].AsString())
+			for _, v := range tc.validators {
+				assert.True(t, v(s))
+			}
 
 		})
 	}

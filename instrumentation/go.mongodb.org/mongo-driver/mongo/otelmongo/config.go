@@ -27,6 +27,8 @@ type config struct {
 	TracerProvider trace.TracerProvider
 
 	Tracer trace.Tracer
+
+	CommandAttributeDisabled bool
 }
 
 // newConfig returns a config with all Options set.
@@ -70,4 +72,12 @@ func WithCommandAttributeDisabled(disabled bool) Option {
 	return optionFunc(func(cfg *config) {
 		cfg.CommandAttributeDisabled = disabled
 	})
+}
+
+// WithCommandAttributeDisabled specifies if the MongoDB command is added as an attribute to Spans or not.
+// The MongoDB command will be added as an attribute to Spans by default if this option is not provided.
+func WithCommandAttributeDisabled(disabled bool) Option {
+	return func(cfg *config) {
+		cfg.CommandAttributeDisabled = disabled
+	}
 }

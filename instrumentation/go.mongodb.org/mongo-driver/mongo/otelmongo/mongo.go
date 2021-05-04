@@ -55,13 +55,16 @@ func (m *monitor) Started(ctx context.Context, evt *event.CommandStartedEvent) {
 		semconv.NetPeerPortKey.Int(port),
 		semconv.NetTransportTCP,
 	}
-	collection, err := extractCollection(evt)
-	if err == nil && collection != "" {
+	if !m.cfg.CommandAttributeDisabled {
+		attrs = append(attrs, semconv.DBStatementKey.String(sanitizeCommand(evt.Command)))
+	}
+	if collection, err := extractCollection(evt); err == nil && collection != "" {
 		spanName = collection + "."
 		attrs = append(attrs, semconv.DBMongoDBCollectionKey.String(collection))
 	}
 
 	opts := []trace.SpanStartOption{
+		trace.WithSpanKind(trace.SpanKindClient),
 		trace.WithAttributes(attrs...),
 	}
 	_, span := m.cfg.Tracer.Start(ctx, spanName, opts...)
@@ -104,24 +107,28 @@ func (m *monitor) Finished(evt *event.CommandFinishedEvent, err error) {
 	span.End()
 }
 
+// TODO sanitize values where possible
+// TODO limit maximum size
+func sanitizeCommand(command bson.Raw) string {
+	b, _ := bson.MarshalExtJSON(command, false, false)
+	return string(b)
+}
+
 // extractCollection extracts the collection for the given mongodb command event.
-// Algorithmically, this is the first key/value string pair in the bson document
-// where the key == operation (e.g. key == "insert").
-// For database meta-level operations, such a key does not exist.
+// For CRUD operations, this is the first key/value string pair in the bson
+// document where key == "<operation>" (e.g. key == "insert").
+// For database meta-level operations, such a key may not exist.
 func extractCollection(evt *event.CommandStartedEvent) (string, error) {
-	const maxKeysToExamine = 4
-	for idx := 0; idx < maxKeysToExamine; idx++ {
-		elt, err := evt.Command.IndexErr(uint(idx))
-		if err != nil {
+	elt, err := evt.Command.IndexErr(0)
+	if err != nil {
+		return "", err
+	}
+	if key, err := elt.KeyErr(); err == nil && key == evt.CommandName {
+		var v bson.RawValue
+		if v, err = elt.ValueErr(); err != nil || v.Type != bsontype.String {
 			return "", err
 		}
-		if key, err := elt.KeyErr(); err == nil && key == evt.CommandName {
-			var v bson.RawValue
-			if v, err = elt.ValueErr(); err != nil || v.Type != bsontype.String {
-				return "", err
-			}
-			return v.StringValue(), nil
-		}
+		return v.StringValue(), nil
 	}
 	return "", fmt.Errorf("collection name not found")
 }
