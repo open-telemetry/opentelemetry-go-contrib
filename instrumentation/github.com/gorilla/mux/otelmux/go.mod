@@ -8,7 +8,7 @@ replace (
 )
 
 require (
-	github.com/felixge/httpsnoop v1.0.1
+	github.com/felixge/httpsnoop v1.0.2
 	github.com/gorilla/mux v1.8.0
 	github.com/stretchr/testify v1.7.0
 	go.opentelemetry.io/contrib v0.20.0

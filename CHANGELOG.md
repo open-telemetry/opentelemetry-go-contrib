@@ -8,6 +8,10 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 
 ## [Unreleased]
 
+### Removed
+
+- Remove service name from `otelmongodb` configuration and span attributes. (#763)
+
 ## [0.20.0] - 2021-04-23
 
 ### Changed
