@@ -6,7 +6,7 @@ replace go.opentelemetry.io/contrib => ../../../../..
 
 require (
 	github.com/stretchr/testify v1.7.0
-	go.mongodb.org/mongo-driver v1.5.1
+	go.mongodb.org/mongo-driver v1.5.2
 	go.opentelemetry.io/contrib v0.20.0
 	go.opentelemetry.io/otel v0.20.0
 	go.opentelemetry.io/otel/oteltest v0.20.0
