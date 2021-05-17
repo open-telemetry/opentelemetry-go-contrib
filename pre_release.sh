@@ -71,7 +71,7 @@ if [ -n "${OTEL_TAG}" ]; then
     TMPDIR=$(mktemp -d "/tmp/otel-contrib.XXXXXX") || exit 1
     trap "rm -fr ${TMPDIR}" EXIT
     (cd "${TMPDIR}" && go mod init tagtest)
-    # requires go 1.14 for support of '-modfile'
+    # requires go 1.15 for support of '-modfile'
     if ! go get -modfile="${TMPDIR}/go.mod" -d -v "go.opentelemetry.io/otel@${OTEL_TAG}"; then
         printf "go.opentelemetry.io/otel %s does not exist. Please supply a valid tag\n" "${OTEL_TAG}"
         exit 1
