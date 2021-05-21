@@ -9,7 +9,7 @@ replace (
 )
 
 require (
-	github.com/labstack/echo/v4 v4.2.2
+	github.com/labstack/echo/v4 v4.3.0
 	go.opentelemetry.io/contrib/instrumentation/github.com/labstack/echo/otelecho v0.20.0
 	go.opentelemetry.io/otel v0.20.0
 	go.opentelemetry.io/otel/exporters/stdout v0.20.0
