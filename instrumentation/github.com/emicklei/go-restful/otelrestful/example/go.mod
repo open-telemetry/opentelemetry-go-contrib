@@ -1,6 +1,6 @@
 module go.opentelemetry.io/opentelemetry-go-contrib/instrumentation/github.com/emicklei/go-restful/otelrestful/example
 
-go 1.14
+go 1.15
 
 replace (
 	go.opentelemetry.io/contrib => ../../../../../../
