@@ -21,6 +21,20 @@ This project is currently in a pre-GA phase. Our progress towards a GA release
 candidate is tracked in [this project
 board](https://github.com/orgs/open-telemetry/projects/5).
 
+### Compatibility
+
+This project is tested on the following systems.
+
+| OS      | Go Version | Architecture |
+| ------- | ---------- | ------------ |
+| Ubuntu  | 1.16       | amd64        |
+| Ubuntu  | 1.15       | amd64        |
+| Ubuntu  | 1.16       | 386          |
+| Ubuntu  | 1.15       | 386          |
+
+While this project should work for other systems, no compatibility guarantees
+are made for those systems currently.
+
 ## Contributing
 
 For information on how to contribute, consult [the contributing guidelines](./CONTRIBUTING.md)
