@@ -24,6 +24,7 @@ import (
 )
 
 const (
+	// KafkaTopic name.
 	KafkaTopic = "sarama-instrumentation-example"
 )
 

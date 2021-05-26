@@ -26,7 +26,7 @@ import (
 	"github.com/astaxie/beego"
 )
 
-// OTelBeegoHandler implements the http.Handler interface and provides
+// Handler implements the http.Handler interface and provides
 // trace and metrics to beego web apps.
 type Handler struct {
 	http.Handler

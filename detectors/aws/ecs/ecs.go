@@ -27,6 +27,7 @@ import (
 )
 
 const (
+	// TypeStr is AWS ECS type.
 	TypeStr           = "ecs"
 	metadataV3EnvVar  = "ECS_CONTAINER_METADATA_URI"
 	metadataV4EnvVar  = "ECS_CONTAINER_METADATA_URI_V4"

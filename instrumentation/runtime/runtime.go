@@ -150,11 +150,7 @@ func (r *runtime) register() error {
 		return err
 	}
 
-	if err := r.registerMemStats(); err != nil {
-		return err
-	}
-
-	return nil
+	return r.registerMemStats()
 }
 
 func (r *runtime) registerMemStats() error {
