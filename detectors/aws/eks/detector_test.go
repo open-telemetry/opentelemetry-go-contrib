@@ -38,8 +38,8 @@ func (detectorUtils *MockDetectorUtils) fileExists(filename string) bool {
 }
 
 // Mock function for fetchString()
-func (detectorUtils *MockDetectorUtils) fetchString(httpMethod string, URL string) (string, error) {
-	args := detectorUtils.Called(httpMethod, URL)
+func (detectorUtils *MockDetectorUtils) fetchString(httpMethod string, URL string, API string) (string, error) {
+	args := detectorUtils.Called(httpMethod, URL, API)
 	return args.String(0), args.Error(1)
 }
 
@@ -57,8 +57,8 @@ func TestEks(t *testing.T) {
 	// Mock functions and set expectations
 	detectorUtils.On("fileExists", k8sTokenPath).Return(true)
 	detectorUtils.On("fileExists", k8sCertPath).Return(true)
-	detectorUtils.On("fetchString", "GET", k8sSvcURL+authConfigmapPath).Return("not empty", nil)
-	detectorUtils.On("fetchString", "GET", k8sSvcURL+cwConfigmapPath).Return(`{"data":{"cluster.name":"my-cluster"}}`, nil)
+	detectorUtils.On("fetchString", "GET", k8sSvcURL, authConfigmapPath).Return("not empty", nil)
+	detectorUtils.On("fetchString", "GET", k8sSvcURL, cwConfigmapPath).Return(`{"data":{"cluster.name":"my-cluster"}}`, nil)
 	detectorUtils.On("getContainerID").Return("0123456789A", nil)
 
 	// Expected resource object

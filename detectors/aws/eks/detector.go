@@ -16,8 +16,6 @@ package eks
 
 import (
 	"context"
-	"crypto/tls"
-	"crypto/x509"
 	"encoding/json"
 	"fmt"
 	"io/ioutil"
@@ -25,7 +23,10 @@ import (
 	"os"
 	"regexp"
 	"strings"
-	"time"
+
+	"k8s.io/client-go/kubernetes"
+	"k8s.io/client-go/rest"
+	certutil "k8s.io/client-go/util/cert"
 
 	"go.opentelemetry.io/otel/attribute"
 	"go.opentelemetry.io/otel/sdk/resource"
@@ -40,13 +41,12 @@ const (
 	cwConfigmapPath   = "/api/v1/namespaces/amazon-cloudwatch/configmaps/cluster-info"
 	defaultCgroupPath = "/proc/self/cgroup"
 	containerIDLength = 64
-	timeoutMillis     = 2000
 )
 
 // detectorUtils is used for testing the resourceDetector by abstracting functions that rely on external systems.
 type detectorUtils interface {
 	fileExists(filename string) bool
-	fetchString(httpMethod string, URL string) (string, error)
+	fetchString(httpMethod string, URL string, API string) (string, error)
 	getContainerID() (string, error)
 }
 
@@ -120,7 +120,7 @@ func isEKS(utils detectorUtils) (bool, error) {
 	}
 
 	// Make HTTP GET request
-	awsAuth, err := utils.fetchString(http.MethodGet, k8sSvcURL+authConfigmapPath)
+	awsAuth, err := utils.fetchString(http.MethodGet, k8sSvcURL, authConfigmapPath)
 	if err != nil {
 		return false, fmt.Errorf("isEks() error retrieving auth configmap: %w", err)
 	}
@@ -139,50 +139,34 @@ func (eksUtils eksDetectorUtils) fileExists(filename string) bool {
 	return err == nil && !info.IsDir()
 }
 
-// fetchString executes an HTTP request with a given HTTP Method and URL string.
-func (eksUtils eksDetectorUtils) fetchString(httpMethod string, URL string) (string, error) {
-	request, err := http.NewRequest(httpMethod, URL, nil)
+// fetchString executes an HTTP Kubernetes client request with a given HTTP Method and URL string.
+func (eksUtils eksDetectorUtils) fetchString(httpMethod string, URL string, API string) (string, error) {
+	// Get cluster configuration
+	confs, err := getClusterConfig(URL)
 	if err != nil {
-		return "", fmt.Errorf("failed to create new HTTP request with method=%s, URL=%s: %w", httpMethod, URL, err)
+		return "", fmt.Errorf("failed to create config with method=%s, URL=%s: %w", httpMethod, URL, err)
 	}
 
-	// Set HTTP request header with authentication credentials
-	authHeader, err := getK8sCredHeader()
+	// Create clientset using generated configuration
+	clientset, err := kubernetes.NewForConfig(confs)
 	if err != nil {
-		return "", err
-	}
-	request.Header.Set("Authorization", authHeader)
-
-	// Get certificate
-	caCert, err := ioutil.ReadFile(k8sCertPath)
-	if err != nil {
-		return "", fmt.Errorf("failed to read file with path %s", k8sCertPath)
-	}
-	caCertPool := x509.NewCertPool()
-	caCertPool.AppendCertsFromPEM(caCert)
-
-	// Set HTTP request timeout and add certificate
-	client := &http.Client{
-		Timeout: timeoutMillis * time.Millisecond,
-		Transport: &http.Transport{
-			TLSClientConfig: &tls.Config{
-				RootCAs: caCertPool,
-			},
-		},
+		return "", fmt.Errorf("failed to create clientset for Kubernetes client")
 	}
 
-	response, err := client.Do(request)
-	if err != nil || response.StatusCode != http.StatusOK {
-		return "", fmt.Errorf("failed to execute HTTP request with method=%s, URL=%s, Status Code=%d: %w", httpMethod, URL, response.StatusCode, err)
+	// Execute HTTP request
+	if httpMethod == "GET" {
+		body, err := clientset.RESTClient().
+			Get().
+			AbsPath(API).
+			DoRaw(context.TODO())
+		if err != nil {
+			return "", fmt.Errorf("failed to execute HTTP request with method=%s, URL=%s: %w", httpMethod, URL+API, err)
+		}
+
+		return string(body), nil
 	}
 
-	// Retrieve response body from HTTP request
-	body, err := ioutil.ReadAll(response.Body)
-	if err != nil {
-		return "", fmt.Errorf("failed to read response from HTTP request with method=%s, URL=%s: %w", httpMethod, URL, err)
-	}
-
-	return string(body), nil
+	return "", fmt.Errorf("invalid HTTP request with method=%s, URL=%s", httpMethod, URL)
 }
 
 // getK8sCredHeader retrieves the kubernetes credential information.
@@ -195,9 +179,34 @@ func getK8sCredHeader() (string, error) {
 	return "Bearer " + string(content), nil
 }
 
+// getClusterConfig retrieves the cluster configuration
+func getClusterConfig(URL string) (*rest.Config, error) {
+
+	authHeader, err := getK8sCredHeader()
+	if err != nil {
+		return nil, err
+	}
+
+	tlsClientConfig := rest.TLSClientConfig{}
+
+	if _, err := certutil.NewPool(k8sCertPath); err != nil {
+		return nil, fmt.Errorf("failed to read file with path %s", k8sCertPath)
+	}
+
+	tlsClientConfig.CAFile = k8sCertPath
+
+	return &rest.Config{
+		Host:            URL,
+		TLSClientConfig: tlsClientConfig,
+		BearerToken:     authHeader,
+		BearerTokenFile: k8sTokenPath,
+	}, nil
+
+}
+
 // getClusterName retrieves the clusterName resource attribute
 func getClusterName(utils detectorUtils) (string, error) {
-	resp, err := utils.fetchString("GET", k8sSvcURL+cwConfigmapPath)
+	resp, err := utils.fetchString("GET", k8sSvcURL, cwConfigmapPath)
 	if err != nil {
 		return "", fmt.Errorf("getClusterName() error: %w", err)
 	}
