@@ -12,30 +12,12 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package otelmemcache
+package b3
 
-import (
-	"github.com/bradfitz/gomemcache/memcache"
+var (
+	WithDebug        = withDebug
+	DebugFromContext = debugFromContext
 
-	"go.opentelemetry.io/otel/codes"
+	WithDeferred        = withDeferred
+	DeferredFromContext = deferredFromContext
 )
-
-// maps memcache error to appropriate error code; otherwise returns status OK
-func memcacheErrToStatusCode(err error) codes.Code {
-	if err == nil {
-		return codes.Ok
-	}
-
-	switch err {
-	case memcache.ErrCacheMiss, memcache.ErrNotStored, memcache.ErrNoStats:
-		return codes.Error
-	case memcache.ErrCASConflict:
-		return codes.Error
-	case memcache.ErrServerError:
-		return codes.Error
-	case memcache.ErrMalformedKey:
-		return codes.Error
-	default:
-		return codes.Unset
-	}
-}

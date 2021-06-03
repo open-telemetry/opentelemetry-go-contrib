@@ -23,7 +23,7 @@ import (
 	"github.com/aws/aws-sdk-go/aws/ec2metadata"
 	"github.com/aws/aws-sdk-go/aws/session"
 
-	"go.opentelemetry.io/otel/label"
+	"go.opentelemetry.io/otel/attribute"
 	"go.opentelemetry.io/otel/sdk/resource"
 	"go.opentelemetry.io/otel/semconv"
 )
@@ -58,7 +58,7 @@ func (aws *AWS) Detect(ctx context.Context) (*resource.Resource, error) {
 		return nil, err
 	}
 
-	labels := []label.KeyValue{
+	attributes := []attribute.KeyValue{
 		semconv.CloudProviderAWS,
 		semconv.CloudRegionKey.String(doc.Region),
 		semconv.CloudZoneKey.String(doc.AvailabilityZone),
@@ -71,13 +71,13 @@ func (aws *AWS) Detect(ctx context.Context) (*resource.Resource, error) {
 	m := &metadata{client: client}
 	m.add(semconv.HostNameKey, "hostname")
 
-	labels = append(labels, m.labels...)
+	attributes = append(attributes, m.attributes...)
 
 	if len(m.errs) > 0 {
 		err = fmt.Errorf("%w: %s", resource.ErrPartialResource, m.errs)
 	}
 
-	return resource.NewWithAttributes(labels...), err
+	return resource.NewWithAttributes(attributes...), err
 }
 
 func (aws *AWS) client() (client, error) {
@@ -94,15 +94,15 @@ func (aws *AWS) client() (client, error) {
 }
 
 type metadata struct {
-	client client
-	errs   []error
-	labels []label.KeyValue
+	client     client
+	errs       []error
+	attributes []attribute.KeyValue
 }
 
-func (m *metadata) add(k label.Key, n string) {
+func (m *metadata) add(k attribute.Key, n string) {
 	v, err := m.client.GetMetadata(n)
 	if err == nil {
-		m.labels = append(m.labels, k.String(v))
+		m.attributes = append(m.attributes, k.String(v))
 		return
 	}
 

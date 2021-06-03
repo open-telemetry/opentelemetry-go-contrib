@@ -15,7 +15,7 @@
 package ot_test
 
 import (
-	"go.opentelemetry.io/otel/label"
+	"go.opentelemetry.io/otel/attribute"
 	"go.opentelemetry.io/otel/trace"
 )
 
@@ -38,26 +38,26 @@ var (
 	traceID16    = trace.TraceID{0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0xa3, 0xce, 0x92, 0x9d, 0x0e, 0x0e, 0x47, 0x36}
 	traceID32    = trace.TraceID{0xa1, 0xce, 0x92, 0x9d, 0x0e, 0x0e, 0x47, 0x36, 0xa3, 0xce, 0x92, 0x9d, 0x0e, 0x0e, 0x47, 0x36}
 	spanID       = trace.SpanID{0x00, 0xf0, 0x67, 0xaa, 0x0b, 0xa9, 0x02, 0xb7}
-	emptyBaggage = &label.Set{}
+	emptyBaggage = &attribute.Set{}
 	// TODO: once baggage extraction is supported, re-enable this
-	// baggageSet   = label.NewSet(
-	// 	label.String(baggageKey, baggageValue),
-	// 	label.String(baggageKey2, baggageValue2),
+	// baggageSet   = attribute.NewSet(
+	// 	attribute.String(baggageKey, baggageValue),
+	// 	attribute.String(baggageKey2, baggageValue2),
 	// )
 )
 
 type extractTest struct {
 	name     string
 	headers  map[string]string
-	expected trace.SpanContext
-	baggage  *label.Set
+	expected trace.SpanContextConfig
+	baggage  *attribute.Set
 }
 
 var extractHeaders = []extractTest{
 	{
 		"empty",
 		map[string]string{},
-		trace.SpanContext{},
+		trace.SpanContextConfig{},
 		emptyBaggage,
 	},
 	{
@@ -67,7 +67,7 @@ var extractHeaders = []extractTest{
 			spanIDHeader:  spanIDStr,
 			sampledHeader: "0",
 		},
-		trace.SpanContext{
+		trace.SpanContextConfig{
 			TraceID: traceID32,
 			SpanID:  spanID,
 		},
@@ -81,7 +81,7 @@ var extractHeaders = []extractTest{
 			sampledHeader: "1",
 			baggageHeader: baggageValue,
 		},
-		trace.SpanContext{
+		trace.SpanContextConfig{
 			TraceID:    traceID32,
 			SpanID:     spanID,
 			TraceFlags: trace.FlagsSampled,
@@ -97,7 +97,7 @@ var extractHeaders = []extractTest{
 			spanIDHeader:  spanIDStr,
 			sampledHeader: "1",
 		},
-		trace.SpanContext{
+		trace.SpanContextConfig{
 			TraceID:    traceID16,
 			SpanID:     spanID,
 			TraceFlags: trace.FlagsSampled,
@@ -111,7 +111,7 @@ var extractHeaders = []extractTest{
 			spanIDHeader:  spanIDStr,
 			sampledHeader: "1",
 		},
-		trace.SpanContext{
+		trace.SpanContextConfig{
 			TraceID:    traceID32,
 			SpanID:     spanID,
 			TraceFlags: trace.FlagsSampled,
@@ -183,15 +183,15 @@ var invalidExtractHeaders = []extractTest{
 
 type injectTest struct {
 	name        string
-	sc          trace.SpanContext
+	sc          trace.SpanContextConfig
 	wantHeaders map[string]string
-	baggage     []label.KeyValue
+	baggage     []attribute.KeyValue
 }
 
 var injectHeaders = []injectTest{
 	{
 		name: "sampled",
-		sc: trace.SpanContext{
+		sc: trace.SpanContextConfig{
 			TraceID:    traceID32,
 			SpanID:     spanID,
 			TraceFlags: trace.FlagsSampled,
@@ -204,13 +204,13 @@ var injectHeaders = []injectTest{
 	},
 	{
 		name: "not sampled",
-		sc: trace.SpanContext{
+		sc: trace.SpanContextConfig{
 			TraceID: traceID32,
 			SpanID:  spanID,
 		},
-		baggage: []label.KeyValue{
-			label.String(baggageKey, baggageValue),
-			label.String(baggageKey2, baggageValue2),
+		baggage: []attribute.KeyValue{
+			attribute.String(baggageKey, baggageValue),
+			attribute.String(baggageKey2, baggageValue2),
 		},
 		wantHeaders: map[string]string{
 			traceIDHeader:  traceID16Str,
@@ -225,25 +225,25 @@ var injectHeaders = []injectTest{
 var invalidInjectHeaders = []injectTest{
 	{
 		name: "empty",
-		sc:   trace.SpanContext{},
+		sc:   trace.SpanContextConfig{},
 	},
 	{
 		name: "missing traceID",
-		sc: trace.SpanContext{
+		sc: trace.SpanContextConfig{
 			SpanID:     spanID,
 			TraceFlags: trace.FlagsSampled,
 		},
 	},
 	{
 		name: "missing spanID",
-		sc: trace.SpanContext{
+		sc: trace.SpanContextConfig{
 			TraceID:    traceID32,
 			TraceFlags: trace.FlagsSampled,
 		},
 	},
 	{
 		name: "missing both traceID and spanID",
-		sc: trace.SpanContext{
+		sc: trace.SpanContextConfig{
 			TraceFlags: trace.FlagsSampled,
 		},
 	},

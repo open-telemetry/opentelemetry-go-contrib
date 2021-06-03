@@ -7,8 +7,6 @@ Traces client and server calls via interceptors.
 Only required if the service definition (.proto) changes.
 
 ```sh
-cd ./example/grpc
-
 # protobuf v1.3.2
 protoc -I api --go_out=plugins=grpc,paths=source_relative:./api api/hello-service.proto
 ```
@@ -16,8 +14,6 @@ protoc -I api --go_out=plugins=grpc,paths=source_relative:./api api/hello-servic
 ### Run server
 
 ```sh
-cd ./example/grpc
-
 go run ./server
 ```
 

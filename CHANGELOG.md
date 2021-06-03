@@ -8,6 +8,43 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 
 ## [Unreleased]
 
+### Changed
+
+- Supported minimum version of Go bumped from 1.14 to 1.15. (#787)
+
+### Removed
+
+- Remove service name from `otelmongodb` configuration and span attributes. (#763)
+
+## [0.20.0] - 2021-04-23
+
+### Changed
+
+- The `go.opentelemetry.io/contrib/instrumentation/go.mongodb.org/mongo-driver/mongo/otelmongo` instrumentation now accepts a `WithCommandAttributeDisabled`, 
+   so the caller can specify whether to opt-out of tracing the mongo command. (#712)
+- Upgrade to v0.20.0 of `go.opentelemetry.io/otel`. (#758)
+- The B3 and Jaeger propagators now store their debug or deferred state in the context.Context instead of the SpanContext. (#758)
+
+## [0.19.0] - 2021-03-19
+
+### Changed
+
+- Upgrade to v0.19.0 of `go.opentelemetry.io/otel`.
+- Fix Span names created in HTTP Instrumentation package to conform with guidelines. (#757)
+
+## [0.18.0] - 2021-03-04
+
+### Fixed
+
+- `otelmemcache` no longer sets span status to OK instead of leaving it unset. (#477)
+- Fix goroutine leak in gRPC `StreamClientInterceptor`. (#581)
+
+### Removed
+
+- Remove service name from `otelmemcache` configuration and span attributes. (#477)
+
+## [0.17.0] - 2021-02-15
+
 ### Added
 
 - Add `ot-tracer` propagator (#562)
@@ -19,6 +56,7 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 ### Fixed
 
 - Added failure message for AWS ECS resource detector for better debugging (#568)
+- Goroutine leak in gRPC StreamClientInterceptor while streamer returns an error. (#581)
 
 ## [0.16.0] - 2021-01-13
 
@@ -270,7 +308,11 @@ First official tagged release of `contrib` repository.
 - Prefix support for dogstatsd (#34)
 - Update Go Runtime package to use batch observer (#44)
 
-[Unreleased]: https://github.com/open-telemetry/opentelemetry-go-contrib/compare/v0.16.0...HEAD
+[Unreleased]: https://github.com/open-telemetry/opentelemetry-go-contrib/compare/v0.20.0...HEAD
+[0.20.0]: https://github.com/open-telemetry/opentelemetry-go-contrib/releases/tag/v0.20.0
+[0.19.0]: https://github.com/open-telemetry/opentelemetry-go-contrib/releases/tag/v0.19.0
+[0.18.0]: https://github.com/open-telemetry/opentelemetry-go-contrib/releases/tag/v0.18.0
+[0.17.0]: https://github.com/open-telemetry/opentelemetry-go-contrib/releases/tag/v0.17.0
 [0.16.0]: https://github.com/open-telemetry/opentelemetry-go-contrib/releases/tag/v0.16.0
 [0.15.1]: https://github.com/open-telemetry/opentelemetry-go-contrib/releases/tag/v0.15.1
 [0.15.0]: https://github.com/open-telemetry/opentelemetry-go-contrib/releases/tag/v0.15.0

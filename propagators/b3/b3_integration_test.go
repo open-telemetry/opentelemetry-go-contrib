@@ -19,10 +19,13 @@ import (
 	"net/http"
 	"testing"
 
+	"github.com/stretchr/testify/assert"
+
 	"github.com/google/go-cmp/cmp"
 
 	"go.opentelemetry.io/contrib/propagators/b3"
 	"go.opentelemetry.io/otel/oteltest"
+	"go.opentelemetry.io/otel/propagation"
 	"go.opentelemetry.io/otel/trace"
 )
 
@@ -57,11 +60,20 @@ func TestExtractB3(t *testing.T) {
 				}
 
 				ctx := context.Background()
-				ctx = propagator.Extract(ctx, req.Header)
-				gotSc := trace.RemoteSpanContextFromContext(ctx)
-				if diff := cmp.Diff(gotSc, tt.wantSc, cmp.AllowUnexported(trace.TraceState{})); diff != "" {
+				ctx = propagator.Extract(ctx, propagation.HeaderCarrier(req.Header))
+				gotSc := trace.SpanContextFromContext(ctx)
+
+				comparer := cmp.Comparer(func(a, b trace.SpanContext) bool {
+					// Do not compare remote field, it is unset on empty
+					// SpanContext.
+					newA := a.WithRemote(b.IsRemote())
+					return newA.Equal(b)
+				})
+				if diff := cmp.Diff(gotSc, trace.NewSpanContext(tt.wantScc), comparer); diff != "" {
 					t.Errorf("%s: %s: -got +want %s", tg.name, tt.name, diff)
 				}
+				assert.Equal(t, tt.debug, b3.DebugFromContext(ctx))
+				assert.Equal(t, tt.deferred, b3.DeferredFromContext(ctx))
 			})
 		}
 	}
@@ -100,10 +112,12 @@ func TestInjectB3(t *testing.T) {
 					context.Background(),
 					testSpan{
 						Span: mockSpan,
-						sc:   tt.sc,
+						sc:   trace.NewSpanContext(tt.scc),
 					},
 				)
-				propagator.Inject(ctx, req.Header)
+				ctx = b3.WithDebug(ctx, tt.debug)
+				ctx = b3.WithDeferred(ctx, tt.deferred)
+				propagator.Inject(ctx, propagation.HeaderCarrier(req.Header))
 
 				for h, v := range tt.wantHeaders {
 					got, want := req.Header.Get(h), v

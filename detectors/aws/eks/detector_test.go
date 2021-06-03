@@ -18,11 +18,11 @@ import (
 	"context"
 	"testing"
 
-	"github.com/bmizerany/assert"
+	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/mock"
 	"github.com/stretchr/testify/require"
 
-	"go.opentelemetry.io/otel/label"
+	"go.opentelemetry.io/otel/attribute"
 	"go.opentelemetry.io/otel/sdk/resource"
 	"go.opentelemetry.io/otel/semconv"
 )
@@ -62,14 +62,14 @@ func TestEks(t *testing.T) {
 	detectorUtils.On("getContainerID").Return("0123456789A", nil)
 
 	// Expected resource object
-	eksResourceLabels := []label.KeyValue{
+	eksResourceLabels := []attribute.KeyValue{
 		semconv.K8SClusterNameKey.String("my-cluster"),
 		semconv.ContainerIDKey.String("0123456789A"),
 	}
 	expectedResource := resource.NewWithAttributes(eksResourceLabels...)
 
 	// Call EKS Resource detector to detect resources
-	eksResourceDetector := ResourceDetector{detectorUtils}
+	eksResourceDetector := resourceDetector{detectorUtils}
 	resourceObj, err := eksResourceDetector.Detect(context.Background())
 	require.NoError(t, err)
 
@@ -87,7 +87,7 @@ func TestNotEKS(t *testing.T) {
 	// Mock functions and set expectations
 	detectorUtils.On("fileExists", k8sTokenPath).Return(false)
 
-	detector := ResourceDetector{detectorUtils}
+	detector := resourceDetector{detectorUtils}
 	r, err := detector.Detect(context.Background())
 	require.NoError(t, err)
 	assert.Equal(t, resource.Empty(), r, "Resource object should be empty")

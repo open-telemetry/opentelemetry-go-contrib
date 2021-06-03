@@ -70,6 +70,42 @@ func TestProducerMessageCarrierSet(t *testing.T) {
 	})
 }
 
+func TestProducerMessageCarrierKeys(t *testing.T) {
+	testCases := []struct {
+		name     string
+		carrier  ProducerMessageCarrier
+		expected []string
+	}{
+		{
+			name: "one",
+			carrier: ProducerMessageCarrier{msg: &sarama.ProducerMessage{Headers: []sarama.RecordHeader{
+				{Key: []byte("foo"), Value: []byte("bar")},
+			}}},
+			expected: []string{"foo"},
+		},
+		{
+			name:     "none",
+			carrier:  ProducerMessageCarrier{msg: &sarama.ProducerMessage{Headers: []sarama.RecordHeader{}}},
+			expected: []string{},
+		},
+		{
+			name: "many",
+			carrier: ProducerMessageCarrier{msg: &sarama.ProducerMessage{Headers: []sarama.RecordHeader{
+				{Key: []byte("foo"), Value: []byte("bar")},
+				{Key: []byte("baz"), Value: []byte("quux")},
+			}}},
+			expected: []string{"foo", "baz"},
+		},
+	}
+
+	for _, tc := range testCases {
+		t.Run(tc.name, func(t *testing.T) {
+			result := tc.carrier.Keys()
+			assert.Equal(t, tc.expected, result)
+		})
+	}
+}
+
 func TestConsumerMessageCarrierGet(t *testing.T) {
 	testCases := []struct {
 		name     string
@@ -117,4 +153,40 @@ func TestConsumerMessageCarrierSet(t *testing.T) {
 		{Key: []byte("foo2"), Value: []byte("bar3")},
 		{Key: []byte("foo3"), Value: []byte("bar4")},
 	})
+}
+
+func TestConsumerMessageCarrierKeys(t *testing.T) {
+	testCases := []struct {
+		name     string
+		carrier  ConsumerMessageCarrier
+		expected []string
+	}{
+		{
+			name: "one",
+			carrier: ConsumerMessageCarrier{msg: &sarama.ConsumerMessage{Headers: []*sarama.RecordHeader{
+				{Key: []byte("foo"), Value: []byte("bar")},
+			}}},
+			expected: []string{"foo"},
+		},
+		{
+			name:     "none",
+			carrier:  ConsumerMessageCarrier{msg: &sarama.ConsumerMessage{Headers: []*sarama.RecordHeader{}}},
+			expected: []string{},
+		},
+		{
+			name: "many",
+			carrier: ConsumerMessageCarrier{msg: &sarama.ConsumerMessage{Headers: []*sarama.RecordHeader{
+				{Key: []byte("foo"), Value: []byte("bar")},
+				{Key: []byte("baz"), Value: []byte("quux")},
+			}}},
+			expected: []string{"foo", "baz"},
+		},
+	}
+
+	for _, tc := range testCases {
+		t.Run(tc.name, func(t *testing.T) {
+			result := tc.carrier.Keys()
+			assert.Equal(t, tc.expected, result)
+		})
+	}
 }

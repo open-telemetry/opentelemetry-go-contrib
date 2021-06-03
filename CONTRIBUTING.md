@@ -9,7 +9,7 @@ See the [public meeting
 notes](https://docs.google.com/document/d/1A63zSWX0x2CyCK_LoNhmQC4rqhLpYXJzXbEPDUQ2n6w/edit#heading=h.9tngw7jdwd6b)
 for a summary description of past meetings. To request edit access,
 join the meeting or get in touch on
-[Gitter](https://gitter.im/open-telemetry/opentelemetry-go).
+[Slack](https://cloud-native.slack.com/archives/C01NPAXACKT).
 
 ## Development
 
@@ -75,7 +75,13 @@ A PR is considered to be **ready to merge** when:
 
 * It has received two approvals from Approvers/Maintainers (at
   different companies).
-* Major feedback items are resolved.
+* Feedback has been addressed.
+* Any substantive changes to your PR will require that you clear any prior
+  Approval reviews, this includes changes resulting from other feedback. Unless
+  the approver explicitly stated that their approval will persist across
+  changes it should be assumed that the PR needs their review again. Other
+  project members (e.g. approvers, maintainers) can help with this if there are
+  any questions or if you forget to clear reviews.
 * It has been open for review for at least one working day. This gives
   people reasonable time to review.
 * Trivial change (typo, cosmetic, doc, etc.) doesn't have to wait for
@@ -112,11 +118,12 @@ should be its own module. A contrib package may contain more than one go package
 
 Approvers:
 
-- [Liz Fong-Jones](https://github.com/lizthegrey), Honeycomb
 - [Evan Torrie](https://github.com/evantorrie), Verizon Media
 - [Josh MacDonald](https://github.com/jmacd), LightStep
 - [Sam Xie](https://github.com/XSAM)
 - [David Ashpole](https://github.com/dashpole), Google
+- [Gustavo Silva Paiva](https://github.com/paivagustavo), LightStep
+- [Aaron Clawson](https://github.com/MadVikingGod)
 
 Maintainers:
 

@@ -90,7 +90,7 @@ func getHistogramCheckpoint(t *testing.T) export.CheckpointSet {
 
 	// Create aggregation, add value, and update checkpointset
 	boundaries := []float64{100, 500, 900}
-	agg, ckpt := metrictest.Unslice2(histogram.New(2, &desc, boundaries))
+	agg, ckpt := metrictest.Unslice2(histogram.New(2, &desc, histogram.WithExplicitBoundaries(boundaries)))
 	for i := 0; i < 1000; i++ {
 		aggregatortest.CheckedUpdate(t, agg, number.NewFloat64Number(float64(i)+0.5), &desc)
 	}

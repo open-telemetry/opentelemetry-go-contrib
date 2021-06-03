@@ -20,6 +20,7 @@ import (
 	"testing"
 
 	"go.opentelemetry.io/contrib/propagators/b3"
+	"go.opentelemetry.io/otel/propagation"
 	"go.opentelemetry.io/otel/trace"
 )
 
@@ -50,7 +51,7 @@ func BenchmarkExtractB3(b *testing.B) {
 				b.ReportAllocs()
 				b.ResetTimer()
 				for i := 0; i < b.N; i++ {
-					_ = propagator.Extract(ctx, req.Header)
+					_ = propagator.Extract(ctx, propagation.HeaderCarrier(req.Header))
 				}
 			})
 		}
@@ -79,12 +80,12 @@ func BenchmarkInjectB3(b *testing.B) {
 				req, _ := http.NewRequest("GET", "http://example.com", nil)
 				ctx := trace.ContextWithSpan(
 					context.Background(),
-					testSpan{sc: tt.sc},
+					testSpan{sc: trace.NewSpanContext(tt.scc)},
 				)
 				b.ReportAllocs()
 				b.ResetTimer()
 				for i := 0; i < b.N; i++ {
-					propagator.Inject(ctx, req.Header)
+					propagator.Inject(ctx, propagation.HeaderCarrier(req.Header))
 				}
 			})
 		}

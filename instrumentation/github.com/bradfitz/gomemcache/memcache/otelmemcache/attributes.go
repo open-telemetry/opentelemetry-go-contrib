@@ -15,7 +15,7 @@
 package otelmemcache
 
 import (
-	"go.opentelemetry.io/otel/label"
+	"go.opentelemetry.io/otel/attribute"
 	"go.opentelemetry.io/otel/semconv"
 )
 
@@ -37,18 +37,18 @@ const (
 
 	mamcacheDBSystemValue = "memcached"
 
-	memcacheDBItemKeyName label.Key = "db.memcached.item"
+	memcacheDBItemKeyName attribute.Key = "db.memcached.item"
 )
 
-func memcacheDBSystem() label.KeyValue {
+func memcacheDBSystem() attribute.KeyValue {
 	return semconv.DBSystemKey.String(mamcacheDBSystemValue)
 }
 
-func memcacheDBOperation(opName operation) label.KeyValue {
+func memcacheDBOperation(opName operation) attribute.KeyValue {
 	return semconv.DBOperationKey.String(string(opName))
 }
 
-func memcacheDBItemKeys(itemKeys ...string) label.KeyValue {
+func memcacheDBItemKeys(itemKeys ...string) attribute.KeyValue {
 	if len(itemKeys) > 1 {
 		return memcacheDBItemKeyName.Array(itemKeys)
 	}

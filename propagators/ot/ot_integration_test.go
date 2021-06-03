@@ -24,6 +24,7 @@ import (
 	"go.opentelemetry.io/contrib/propagators/ot"
 	"go.opentelemetry.io/otel/baggage"
 	"go.opentelemetry.io/otel/oteltest"
+	"go.opentelemetry.io/otel/propagation"
 	"go.opentelemetry.io/otel/trace"
 )
 
@@ -58,20 +59,28 @@ func TestExtractOT(t *testing.T) {
 				}
 
 				ctx := context.Background()
-				ctx = propagator.Extract(ctx, req.Header)
-				resSc := trace.RemoteSpanContextFromContext(ctx)
-				if diff := cmp.Diff(resSc, tc.expected, cmp.AllowUnexported(trace.TraceState{})); diff != "" {
+				ctx = propagator.Extract(ctx, propagation.HeaderCarrier(req.Header))
+				resSc := trace.SpanContextFromContext(ctx)
+
+				comparer := cmp.Comparer(func(a, b trace.SpanContext) bool {
+					// Do not compare remote field, it is unset on empty
+					// SpanContext.
+					newA := a.WithRemote(b.IsRemote())
+					return newA.Equal(b)
+				})
+				if diff := cmp.Diff(resSc, trace.NewSpanContext(tc.expected), comparer); diff != "" {
 					t.Errorf("%s: %s: -got +want %s", tg.name, tc.name, diff)
 				}
+
 				m := baggage.Set(ctx)
 				mi := tc.baggage.Iter()
 				for mi.Next() {
-					label := mi.Label()
-					val, ok := m.Value(label.Key)
+					attribute := mi.Attribute()
+					val, ok := m.Value(attribute.Key)
 					if !ok {
-						t.Errorf("%s: %s: expected key '%s'", tg.name, tc.name, label.Key)
+						t.Errorf("%s: %s: expected key '%s'", tg.name, tc.name, attribute.Key)
 					}
-					if diff := cmp.Diff(label.Value.AsString(), val.AsString()); diff != "" {
+					if diff := cmp.Diff(attribute.Value.AsString(), val.AsString()); diff != "" {
 						t.Errorf("%s: %s: -got +want %s", tg.name, tc.name, diff)
 					}
 				}
@@ -117,10 +126,10 @@ func TestInjectOT(t *testing.T) {
 					ctx,
 					testSpan{
 						Span: mockSpan,
-						sc:   tc.sc,
+						sc:   trace.NewSpanContext(tc.sc),
 					},
 				)
-				propagator.Inject(ctx, req.Header)
+				propagator.Inject(ctx, propagation.HeaderCarrier(req.Header))
 
 				for h, v := range tc.wantHeaders {
 					result, want := req.Header.Get(h), v

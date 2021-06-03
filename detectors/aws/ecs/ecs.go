@@ -21,7 +21,7 @@ import (
 	"os"
 	"strings"
 
-	"go.opentelemetry.io/otel/label"
+	"go.opentelemetry.io/otel/attribute"
 	"go.opentelemetry.io/otel/sdk/resource"
 	"go.opentelemetry.io/otel/semconv"
 )
@@ -83,12 +83,12 @@ func (detector *resourceDetector) Detect(ctx context.Context) (*resource.Resourc
 	if err != nil {
 		return empty, err
 	}
-	labels := []label.KeyValue{
+	attributes := []attribute.KeyValue{
 		semconv.ContainerNameKey.String(hostName),
 		semconv.ContainerIDKey.String(containerID),
 	}
 
-	return resource.NewWithAttributes(labels...), nil
+	return resource.NewWithAttributes(attributes...), nil
 }
 
 // returns docker container ID from default c group path

@@ -1,6 +1,6 @@
 module go.opentelemetry.io/contrib/instrumentation/github.com/gocql/gocql/otelgocql/example
 
-go 1.14
+go 1.15
 
 replace (
 	go.opentelemetry.io/contrib => ../../../../../../
@@ -9,8 +9,8 @@ replace (
 
 require (
 	github.com/gocql/gocql v0.0.0-20200624222514-34081eda590e
-	go.opentelemetry.io/contrib/instrumentation/github.com/gocql/gocql/otelgocql v0.16.0
-	go.opentelemetry.io/otel v0.16.0
-	go.opentelemetry.io/otel/exporters/metric/prometheus v0.16.0
-	go.opentelemetry.io/otel/exporters/trace/zipkin v0.16.0
+	go.opentelemetry.io/contrib/instrumentation/github.com/gocql/gocql/otelgocql v0.20.0
+	go.opentelemetry.io/otel v0.20.0
+	go.opentelemetry.io/otel/exporters/metric/prometheus v0.20.0
+	go.opentelemetry.io/otel/exporters/trace/zipkin v0.20.0
 )

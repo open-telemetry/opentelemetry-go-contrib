@@ -28,7 +28,8 @@ import (
 
 	"go.opentelemetry.io/contrib/propagators/b3"
 	"go.opentelemetry.io/otel"
-	"go.opentelemetry.io/otel/label"
+	"go.opentelemetry.io/otel/attribute"
+	"go.opentelemetry.io/otel/metric/global"
 	"go.opentelemetry.io/otel/oteltest"
 	"go.opentelemetry.io/otel/propagation"
 	"go.opentelemetry.io/otel/semconv"
@@ -186,7 +187,7 @@ func TestWithFilters(t *testing.T) {
 func TestSpanFromContextDefaultProvider(t *testing.T) {
 	defer replaceBeego()
 	_, provider := oteltest.NewMeterProvider()
-	otel.SetMeterProvider(provider)
+	global.SetMeterProvider(provider)
 	otel.SetTracerProvider(oteltest.NewTracerProvider())
 
 	router := beego.NewControllerRegister()
@@ -232,7 +233,7 @@ func TestSpanFromContextCustomProvider(t *testing.T) {
 
 func TestStatic(t *testing.T) {
 	defer replaceBeego()
-	sr := new(oteltest.StandardSpanRecorder)
+	sr := new(oteltest.SpanRecorder)
 	tracerProvider := oteltest.NewTracerProvider(oteltest.WithSpanRecorder(sr))
 	meterimpl, meterProvider := oteltest.NewMeterProvider()
 	file, err := ioutil.TempFile("", "static-*.html")
@@ -292,7 +293,7 @@ func TestRender(t *testing.T) {
 	beego.SetViewsPath(dir)
 	_, tplName = filepath.Split(file.Name())
 
-	sr := new(oteltest.StandardSpanRecorder)
+	sr := new(oteltest.SpanRecorder)
 	tracerProvider := oteltest.NewTracerProvider(oteltest.WithSpanRecorder(sr))
 
 	mw := NewOTelBeegoMiddleWare(
@@ -332,7 +333,7 @@ func TestRender(t *testing.T) {
 // ------------------------------------------ Utilities
 
 func runTest(t *testing.T, tc *testCase, url string) {
-	sr := new(oteltest.StandardSpanRecorder)
+	sr := new(oteltest.SpanRecorder)
 	tracerProvider := oteltest.NewTracerProvider(oteltest.WithSpanRecorder(sr))
 	meterimpl, meterProvider := oteltest.NewMeterProvider()
 	addTestRoutes(t)
@@ -376,8 +377,8 @@ func runTest(t *testing.T, tc *testCase, url string) {
 	assertMetrics(t, meterimpl.MeasurementBatches, tc)
 }
 
-func defaultAttributes() []label.KeyValue {
-	return []label.KeyValue{
+func defaultAttributes() []attribute.KeyValue {
+	return []attribute.KeyValue{
 		semconv.HTTPServerNameKey.String(middleWareName),
 		semconv.HTTPSchemeHTTP,
 		semconv.HTTPHostKey.String("localhost"),
@@ -424,7 +425,7 @@ type testCase struct {
 	expectedSpanName   string
 	expectedHTTPStatus int
 	expectedResponse   testReply
-	expectedAttributes []label.KeyValue
+	expectedAttributes []attribute.KeyValue
 }
 
 var testCases = []*testCase{
@@ -437,7 +438,7 @@ var testCases = []*testCase{
 		expectedSpanName:   "/",
 		expectedHTTPStatus: http.StatusOK,
 		expectedResponse:   testReply{Message: defaultReply},
-		expectedAttributes: []label.KeyValue{},
+		expectedAttributes: []attribute.KeyValue{},
 	},
 	{
 		name:               "GET/1__All default options",
@@ -448,7 +449,7 @@ var testCases = []*testCase{
 		expectedSpanName:   "/:id",
 		expectedHTTPStatus: http.StatusOK,
 		expectedResponse:   testReply{Message: defaultReply},
-		expectedAttributes: []label.KeyValue{},
+		expectedAttributes: []attribute.KeyValue{},
 	},
 	{
 		name:               "POST/greet?name=test__All default options",
@@ -459,7 +460,7 @@ var testCases = []*testCase{
 		expectedSpanName:   "/greet",
 		expectedHTTPStatus: http.StatusOK,
 		expectedResponse:   testReply{Message: "test said hello."},
-		expectedAttributes: []label.KeyValue{},
+		expectedAttributes: []attribute.KeyValue{},
 	},
 	{
 		name:               "DELETE/__All default options",
@@ -470,7 +471,7 @@ var testCases = []*testCase{
 		expectedSpanName:   "/",
 		expectedHTTPStatus: http.StatusAccepted,
 		expectedResponse:   testReply{Message: "success"},
-		expectedAttributes: []label.KeyValue{},
+		expectedAttributes: []attribute.KeyValue{},
 	},
 	{
 		name:               "PUT/__All default options",
@@ -481,7 +482,7 @@ var testCases = []*testCase{
 		expectedSpanName:   "/",
 		expectedHTTPStatus: http.StatusAccepted,
 		expectedResponse:   testReply{Message: "successfully put"},
-		expectedAttributes: []label.KeyValue{},
+		expectedAttributes: []attribute.KeyValue{},
 	},
 	{
 		name:   "GET/__Custom propagators",
@@ -494,7 +495,7 @@ var testCases = []*testCase{
 		expectedSpanName:   "/",
 		expectedHTTPStatus: http.StatusOK,
 		expectedResponse:   testReply{Message: defaultReply},
-		expectedAttributes: []label.KeyValue{},
+		expectedAttributes: []attribute.KeyValue{},
 	},
 	{
 		name:   "GET/__Custom filter filtering route",
@@ -525,7 +526,7 @@ var testCases = []*testCase{
 		expectedSpanName:   "/",
 		expectedHTTPStatus: http.StatusOK,
 		expectedResponse:   testReply{Message: defaultReply},
-		expectedAttributes: []label.KeyValue{},
+		expectedAttributes: []attribute.KeyValue{},
 	},
 	{
 		name:               "POST/greet__Default options, bad request",
@@ -536,7 +537,7 @@ var testCases = []*testCase{
 		expectedSpanName:   "/greet",
 		expectedHTTPStatus: http.StatusBadRequest,
 		expectedResponse:   testReply{Err: "missing query param \"name\""},
-		expectedAttributes: []label.KeyValue{},
+		expectedAttributes: []attribute.KeyValue{},
 	},
 	{
 		name:   "POST/greet?name=test__Custom span name formatter",
@@ -551,7 +552,7 @@ var testCases = []*testCase{
 		expectedSpanName:   customSpanName,
 		expectedHTTPStatus: http.StatusOK,
 		expectedResponse:   testReply{Message: "test said hello."},
-		expectedAttributes: []label.KeyValue{},
+		expectedAttributes: []attribute.KeyValue{},
 	},
 	{
 		name:   "POST/greet?name=test__Custom span name formatter and custom filter",
@@ -568,6 +569,6 @@ var testCases = []*testCase{
 		hasSpan:            false,
 		expectedHTTPStatus: http.StatusOK,
 		expectedResponse:   testReply{Message: "test said hello."},
-		expectedAttributes: []label.KeyValue{},
+		expectedAttributes: []attribute.KeyValue{},
 	},
 }

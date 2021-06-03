@@ -27,7 +27,7 @@ import (
 	"strings"
 	"time"
 
-	"go.opentelemetry.io/otel/label"
+	"go.opentelemetry.io/otel/attribute"
 	"go.opentelemetry.io/otel/sdk/resource"
 	"go.opentelemetry.io/otel/semconv"
 )
@@ -43,7 +43,7 @@ const (
 	timeoutMillis     = 2000
 )
 
-// detectorUtils is used for testing the ResourceDetector by abstracting functions that rely on external systems.
+// detectorUtils is used for testing the resourceDetector by abstracting functions that rely on external systems.
 type detectorUtils interface {
 	fileExists(filename string) bool
 	fetchString(httpMethod string, URL string) (string, error)
@@ -53,8 +53,8 @@ type detectorUtils interface {
 // This struct will implement the detectorUtils interface
 type eksDetectorUtils struct{}
 
-// ResourceDetector for detecting resources running on Amazon EKS
-type ResourceDetector struct {
+// resourceDetector for detecting resources running on Amazon EKS
+type resourceDetector struct {
 	utils detectorUtils
 }
 
@@ -63,14 +63,19 @@ type data struct {
 	ClusterName string `json:"cluster.name"`
 }
 
-// Compile time assertion that ResourceDetector implements the resource.Detector interface.
-var _ resource.Detector = (*ResourceDetector)(nil)
+// Compile time assertion that resourceDetector implements the resource.Detector interface.
+var _ resource.Detector = (*resourceDetector)(nil)
 
 // Compile time assertion that eksDetectorUtils implements the detectorUtils interface.
 var _ detectorUtils = (*eksDetectorUtils)(nil)
 
+// NewResourceDetector returns a resource detector that will detect AWS EKS resources.
+func NewResourceDetector() resource.Detector {
+	return &resourceDetector{utils: eksDetectorUtils{}}
+}
+
 // Detect returns a Resource describing the Amazon EKS environment being run in.
-func (detector *ResourceDetector) Detect(ctx context.Context) (*resource.Resource, error) {
+func (detector *resourceDetector) Detect(ctx context.Context) (*resource.Resource, error) {
 
 	isEks, err := isEKS(detector.utils)
 	if err != nil {
@@ -83,28 +88,28 @@ func (detector *ResourceDetector) Detect(ctx context.Context) (*resource.Resourc
 	}
 
 	// Create variable to hold resource attributes
-	labels := []label.KeyValue{}
+	attributes := []attribute.KeyValue{}
 
-	// Get clusterName and append to labels
+	// Get clusterName and append to attributes
 	clusterName, err := getClusterName(detector.utils)
 	if err != nil {
 		return nil, err
 	}
 	if clusterName != "" {
-		labels = append(labels, semconv.K8SClusterNameKey.String(clusterName))
+		attributes = append(attributes, semconv.K8SClusterNameKey.String(clusterName))
 	}
 
-	// Get containerID and append to labels
+	// Get containerID and append to attributes
 	containerID, err := detector.utils.getContainerID()
 	if err != nil {
 		return nil, err
 	}
 	if containerID != "" {
-		labels = append(labels, semconv.ContainerIDKey.String(containerID))
+		attributes = append(attributes, semconv.ContainerIDKey.String(containerID))
 	}
 
 	// Return new resource object with clusterName and containerID as attributes
-	return resource.NewWithAttributes(labels...), nil
+	return resource.NewWithAttributes(attributes...), nil
 
 }
 

@@ -29,7 +29,7 @@ import (
 )
 
 func TestConvenienceWrappers(t *testing.T) {
-	sr := new(oteltest.StandardSpanRecorder)
+	sr := new(oteltest.SpanRecorder)
 	provider := oteltest.NewTracerProvider(oteltest.WithSpanRecorder(sr))
 	orig := DefaultClient
 	DefaultClient = &http.Client{
@@ -78,8 +78,8 @@ func TestConvenienceWrappers(t *testing.T) {
 
 	spans := sr.Completed()
 	require.Equal(t, 4, len(spans))
-	assert.Equal(t, "GET", spans[0].Name())
-	assert.Equal(t, "HEAD", spans[1].Name())
-	assert.Equal(t, "POST", spans[2].Name())
-	assert.Equal(t, "POST", spans[3].Name())
+	assert.Equal(t, "HTTP GET", spans[0].Name())
+	assert.Equal(t, "HTTP HEAD", spans[1].Name())
+	assert.Equal(t, "HTTP POST", spans[2].Name())
+	assert.Equal(t, "HTTP POST", spans[3].Name())
 }

@@ -40,7 +40,14 @@ var _ http.RoundTripper = &Transport{}
 
 // NewTransport wraps the provided http.RoundTripper with one that
 // starts a span and injects the span context into the outbound request headers.
+//
+// If the provided http.RoundTripper is nil, http.DefaultTransport will be used
+// as the base http.RoundTripper
 func NewTransport(base http.RoundTripper, opts ...Option) *Transport {
+	if base == nil {
+		base = http.DefaultTransport
+	}
+
 	t := Transport{
 		rt: base,
 	}
@@ -65,7 +72,7 @@ func (t *Transport) applyConfig(c *config) {
 }
 
 func defaultTransportFormatter(_ string, r *http.Request) string {
-	return r.Method
+	return "HTTP " + r.Method
 }
 
 // RoundTrip creates a Span and propagates its context via the provided request's headers
@@ -85,7 +92,7 @@ func (t *Transport) RoundTrip(r *http.Request) (*http.Response, error) {
 
 	r = r.WithContext(ctx)
 	span.SetAttributes(semconv.HTTPClientAttributesFromHTTPRequest(r)...)
-	t.propagators.Inject(ctx, r.Header)
+	t.propagators.Inject(ctx, propagation.HeaderCarrier(r.Header))
 
 	res, err := t.rt.RoundTrip(r)
 	if err != nil {

@@ -23,8 +23,8 @@ import (
 
 	"go.opentelemetry.io/contrib/instrumentation/github.com/emicklei/go-restful/otelrestful"
 	"go.opentelemetry.io/otel"
+	"go.opentelemetry.io/otel/attribute"
 	"go.opentelemetry.io/otel/exporters/stdout"
-	otelkv "go.opentelemetry.io/otel/label"
 	sdktrace "go.opentelemetry.io/otel/sdk/trace"
 	oteltrace "go.opentelemetry.io/otel/trace"
 )
@@ -65,11 +65,8 @@ func initTracer() {
 	if err != nil {
 		log.Fatal(err)
 	}
-	cfg := sdktrace.Config{
-		DefaultSampler: sdktrace.AlwaysSample(),
-	}
 	tp := sdktrace.NewTracerProvider(
-		sdktrace.WithConfig(cfg),
+		sdktrace.WithSampler(sdktrace.AlwaysSample()),
 		sdktrace.WithSyncer(exporter),
 	)
 	if err != nil {
@@ -81,7 +78,7 @@ func initTracer() {
 
 func (u UserResource) getUser(req *restful.Request, resp *restful.Response) {
 	uid := req.PathParameter("user-id")
-	_, span := tracer.Start(req.Request.Context(), "getUser", oteltrace.WithAttributes(otelkv.String("id", uid)))
+	_, span := tracer.Start(req.Request.Context(), "getUser", oteltrace.WithAttributes(attribute.String("id", uid)))
 	defer span.End()
 	id, err := strconv.Atoi(uid)
 	if err == nil && id >= 100 {

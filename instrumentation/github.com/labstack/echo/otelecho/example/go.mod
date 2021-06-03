@@ -1,6 +1,6 @@
 module go.opentelemetry.io/opentelemetry-go-contrib/instrumentation/github.com/labstack/echo/otelecho/example
 
-go 1.14
+go 1.15
 
 replace (
 	go.opentelemetry.io/contrib => ../../../../../../
@@ -9,9 +9,10 @@ replace (
 )
 
 require (
-	github.com/labstack/echo/v4 v4.1.17
-	go.opentelemetry.io/contrib/instrumentation/github.com/labstack/echo/otelecho v0.16.0
-	go.opentelemetry.io/otel v0.16.0
-	go.opentelemetry.io/otel/exporters/stdout v0.16.0
-	go.opentelemetry.io/otel/sdk v0.16.0
+	github.com/labstack/echo/v4 v4.3.0
+	go.opentelemetry.io/contrib/instrumentation/github.com/labstack/echo/otelecho v0.20.0
+	go.opentelemetry.io/otel v0.20.0
+	go.opentelemetry.io/otel/exporters/stdout v0.20.0
+	go.opentelemetry.io/otel/sdk v0.20.0
+	go.opentelemetry.io/otel/trace v0.20.0
 )
