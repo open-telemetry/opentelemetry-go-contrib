@@ -16,11 +16,12 @@ package xray
 
 import (
 	"context"
+	"testing"
+
 	"go.opentelemetry.io/otel"
 	"go.opentelemetry.io/otel/attribute"
 	sdktrace "go.opentelemetry.io/otel/sdk/trace"
 	"go.opentelemetry.io/otel/trace"
-	"testing"
 )
 
 var tracer = otel.Tracer("sample-app")
