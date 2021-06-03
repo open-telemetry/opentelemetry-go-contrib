@@ -27,6 +27,12 @@ import (
 	"go.opentelemetry.io/otel/trace"
 )
 
+func generateNewTraceID() trace.TraceID {
+	idg := NewIDGenerator()
+	traceID, _ := idg.NewIDs(context.Background())
+	return traceID
+}
+
 func TestTraceIDIsValidLength(t *testing.T) {
 	idg := NewIDGenerator()
 	traceID, _ := idg.NewIDs(context.Background())
@@ -101,4 +107,10 @@ func TestSpanIDIsNotNil(t *testing.T) {
 
 	assert.False(t, bytes.Equal(spanID1[:], nilSpanID[:]), "SpanID cannot be empty.")
 	assert.False(t, bytes.Equal(spanID2[:], nilSpanID[:]), "SpanID cannot be empty.")
+}
+
+func BenchmarkIDGenerator(b *testing.B) {
+	for i := 0; i < b.N; i++ {
+		generateNewTraceID()
+	}
 }

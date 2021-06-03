@@ -15,6 +15,10 @@
 package xray
 
 import (
+	"context"
+	"go.opentelemetry.io/otel"
+	"go.opentelemetry.io/otel/propagation"
+	"net/http"
 	"strings"
 	"testing"
 
@@ -94,5 +98,34 @@ func TestAwsXrayExtract(t *testing.T) {
 		}
 
 		assert.Equal(t, trace.NewSpanContext(test.expected), sc, info...)
+	}
+}
+
+func BenchmarkPropagatorExtract(b *testing.B) {
+	propagator := Propagator{}
+
+	ctx := context.Background()
+	req, _ := http.NewRequest("GET", "http://example.com", nil)
+
+	req.Header.Set("Root", "1-8a3c60f7-d188f8fa79d48a391a778fa6")
+	req.Header.Set("Parent", "53995c3f42cd8ad8")
+	req.Header.Set("Sampled", "1")
+
+	b.ResetTimer()
+	for i := 0; i < b.N; i++ {
+		_ = propagator.Extract(ctx, propagation.HeaderCarrier(req.Header))
+	}
+}
+
+func BenchmarkPropagatorInject(b *testing.B) {
+	propagator := Propagator{}
+	tracer := otel.Tracer("test")
+
+	req, _ := http.NewRequest("GET", "http://example.com", nil)
+	ctx, _ := tracer.Start(context.Background(), "Parent operation...")
+
+	b.ResetTimer()
+	for i := 0; i < b.N; i++ {
+		propagator.Inject(ctx, propagation.HeaderCarrier(req.Header))
 	}
 }
