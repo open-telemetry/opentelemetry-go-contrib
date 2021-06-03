@@ -38,9 +38,9 @@ func (detectorUtils *MockDetectorUtils) fileExists(filename string) bool {
 }
 
 // Mock function for getConfigMap()
-func (detectorUtils *MockDetectorUtils) getConfigMap(httpMethod string, API string) (string, error) {
-	args := detectorUtils.Called(httpMethod, API)
-	return args.String(0), args.Error(1)
+func (detectorUtils *MockDetectorUtils) getConfigMap(_ context.Context, namespace string, name string) (map[string]string, error) {
+	args := detectorUtils.Called(namespace, name)
+	return args.Get(0).(map[string]string), args.Error(1)
 }
 
 // Mock function for getContainerID()
@@ -51,14 +51,13 @@ func (detectorUtils *MockDetectorUtils) getContainerID() (string, error) {
 
 // Tests EKS resource detector running in EKS environment
 func TestEks(t *testing.T) {
-
 	detectorUtils := new(MockDetectorUtils)
 
 	// Mock functions and set expectations
 	detectorUtils.On("fileExists", k8sTokenPath).Return(true)
 	detectorUtils.On("fileExists", k8sCertPath).Return(true)
-	detectorUtils.On("getConfigMap", "GET", authConfigmapPath).Return("not empty", nil)
-	detectorUtils.On("getConfigMap", "GET", cwConfigmapPath).Return(`{"data":{"cluster.name":"my-cluster"}}`, nil)
+	detectorUtils.On("getConfigMap", authConfigmapNS, authConfigmapName).Return(map[string]string{"not": "nil"}, nil)
+	detectorUtils.On("getConfigMap", cwConfigmapNS, cwConfigmapName).Return(map[string]string{"cluster.name": "my-cluster"}, nil)
 	detectorUtils.On("getContainerID").Return("0123456789A", nil)
 
 	// Expected resource object
@@ -69,7 +68,7 @@ func TestEks(t *testing.T) {
 	expectedResource := resource.NewWithAttributes(eksResourceLabels...)
 
 	// Call EKS Resource detector to detect resources
-	eksResourceDetector := resourceDetector{detectorUtils}
+	eksResourceDetector := resourceDetector{utils: detectorUtils}
 	resourceObj, err := eksResourceDetector.Detect(context.Background())
 	require.NoError(t, err)
 
@@ -79,7 +78,6 @@ func TestEks(t *testing.T) {
 
 // Tests EKS resource detector not running in EKS environment
 func TestNotEKS(t *testing.T) {
-
 	detectorUtils := new(MockDetectorUtils)
 
 	k8sTokenPath := "/var/run/secrets/kubernetes.io/serviceaccount/token"
@@ -87,7 +85,7 @@ func TestNotEKS(t *testing.T) {
 	// Mock functions and set expectations
 	detectorUtils.On("fileExists", k8sTokenPath).Return(false)
 
-	detector := resourceDetector{detectorUtils}
+	detector := resourceDetector{utils: detectorUtils}
 	r, err := detector.Detect(context.Background())
 	require.NoError(t, err)
 	assert.Equal(t, resource.Empty(), r, "Resource object should be empty")

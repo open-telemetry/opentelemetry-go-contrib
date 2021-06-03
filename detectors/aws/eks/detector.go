@@ -16,14 +16,13 @@ package eks
 
 import (
 	"context"
-	"encoding/json"
 	"fmt"
 	"io/ioutil"
-	"net/http"
 	"os"
 	"regexp"
 	"strings"
 
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/client-go/kubernetes"
 	"k8s.io/client-go/rest"
 
@@ -35,8 +34,10 @@ import (
 const (
 	k8sTokenPath      = "/var/run/secrets/kubernetes.io/serviceaccount/token"
 	k8sCertPath       = "/var/run/secrets/kubernetes.io/serviceaccount/ca.crt"
-	authConfigmapPath = "/api/v1/namespaces/kube-system/configmaps/aws-auth"
-	cwConfigmapPath   = "/api/v1/namespaces/amazon-cloudwatch/configmaps/cluster-info"
+	authConfigmapNS   = "kube-system"
+	authConfigmapName = "aws-auth"
+	cwConfigmapNS     = "amazon-cloudwatch"
+	cwConfigmapName   = "cluster-info"
 	defaultCgroupPath = "/proc/self/cgroup"
 	containerIDLength = 64
 )
@@ -44,7 +45,7 @@ const (
 // detectorUtils is used for testing the resourceDetector by abstracting functions that rely on external systems.
 type detectorUtils interface {
 	fileExists(filename string) bool
-	getConfigMap(httpMethod string, API string) (string, error)
+	getConfigMap(ctx context.Context, namespace string, name string) (map[string]string, error)
 	getContainerID() (string, error)
 }
 
@@ -56,11 +57,7 @@ type eksDetectorUtils struct {
 // resourceDetector for detecting resources running on Amazon EKS
 type resourceDetector struct {
 	utils detectorUtils
-}
-
-// This struct will help unmarshal clustername from JSON response
-type data struct {
-	ClusterName string `json:"cluster.name"`
+	err   error
 }
 
 // Compile time assertion that resourceDetector implements the resource.Detector interface.
@@ -71,12 +68,17 @@ var _ detectorUtils = (*eksDetectorUtils)(nil)
 
 // NewResourceDetector returns a resource detector that will detect AWS EKS resources.
 func NewResourceDetector() resource.Detector {
-	return &resourceDetector{utils: eksDetectorUtils{}}
+	utils, err := newK8sDetectorUtils()
+	return &resourceDetector{utils: utils, err: err}
 }
 
 // Detect returns a Resource describing the Amazon EKS environment being run in.
 func (detector *resourceDetector) Detect(ctx context.Context) (*resource.Resource, error) {
-	isEks, err := isEKS(detector.utils)
+	if detector.err != nil {
+		return nil, detector.err
+	}
+
+	isEks, err := isEKS(ctx, detector.utils)
 	if err != nil {
 		return nil, err
 	}
@@ -90,7 +92,7 @@ func (detector *resourceDetector) Detect(ctx context.Context) (*resource.Resourc
 	attributes := []attribute.KeyValue{}
 
 	// Get clusterName and append to attributes
-	clusterName, err := getClusterName(detector.utils)
+	clusterName, err := getClusterName(ctx, detector.utils)
 	if err != nil {
 		return nil, err
 	}
@@ -109,39 +111,38 @@ func (detector *resourceDetector) Detect(ctx context.Context) (*resource.Resourc
 
 	// Return new resource object with clusterName and containerID as attributes
 	return resource.NewWithAttributes(attributes...), nil
-
 }
 
 // isEKS checks if the current environment is running in EKS.
-func isEKS(utils detectorUtils) (bool, error) {
+func isEKS(ctx context.Context, utils detectorUtils) (bool, error) {
 	if !isK8s(utils) {
 		return false, nil
 	}
 
 	// Make HTTP GET request
-	awsAuth, err := utils.getConfigMap(http.MethodGet, authConfigmapPath)
+	awsAuth, err := utils.getConfigMap(ctx, authConfigmapNS, authConfigmapName)
 	if err != nil {
 		return false, fmt.Errorf("isEks() error retrieving auth configmap: %w", err)
 	}
 
-	return awsAuth != "", nil
+	return awsAuth != nil, nil
 }
 
-// getClientset creates the Kubernetes clientset
-func getClientset() (*kubernetes.Clientset, error) {
+// newK8sDetectorUtils creates the Kubernetes clientset
+func newK8sDetectorUtils() (*eksDetectorUtils, error) {
 	// Get cluster configuration
 	confs, err := rest.InClusterConfig()
 	if err != nil {
-		return &kubernetes.Clientset{}, fmt.Errorf("failed to create config: %w", err)
+		return nil, fmt.Errorf("failed to create config: %w", err)
 	}
 
 	// Create clientset using generated configuration
 	clientset, err := kubernetes.NewForConfig(confs)
 	if err != nil {
-		return &kubernetes.Clientset{}, fmt.Errorf("failed to create clientset for Kubernetes client")
+		return nil, fmt.Errorf("failed to create clientset for Kubernetes client")
 	}
 
-	return clientset, nil
+	return &eksDetectorUtils{clientset: clientset}, nil
 }
 
 // isK8s checks if the current environment is running in a Kubernetes environment
@@ -155,55 +156,24 @@ func (eksUtils eksDetectorUtils) fileExists(filename string) bool {
 	return err == nil && !info.IsDir()
 }
 
-// getConfigMap retieves the configuration map from the config map API path
-func (eksUtils eksDetectorUtils) getConfigMap(httpMethod string, API string) (string, error) {
-	// Create Kubernetes clientset if not created
-	if eksUtils.clientset == nil {
-		clientset, err := getClientset()
-		if err != nil {
-			return "", fmt.Errorf("failed to create clientset: %w", err)
-		}
-		eksUtils.clientset = clientset
+// getConfigMap retrieves the configuration map from the k8s API
+func (eksUtils eksDetectorUtils) getConfigMap(ctx context.Context, namespace string, name string) (map[string]string, error) {
+	cm, err := eksUtils.clientset.CoreV1().ConfigMaps(namespace).Get(ctx, name, metav1.GetOptions{})
+	if err != nil {
+		return nil, fmt.Errorf("failed to retrieve ConfigMap %s/%s: %w", namespace, name, err)
 	}
 
-	// Execute HTTP request
-	if httpMethod == "GET" {
-		body, err := eksUtils.clientset.RESTClient().
-			Get().
-			AbsPath(API).
-			DoRaw(context.TODO())
-		if err != nil {
-			return "", fmt.Errorf("failed to execute HTTP request with method=%s, API=%s: %w", httpMethod, API, err)
-		}
-
-		return string(body), nil
-	}
-
-	return "", fmt.Errorf("invalid HTTP request with method=%s", httpMethod)
+	return cm.Data, nil
 }
 
 // getClusterName retrieves the clusterName resource attribute
-func getClusterName(utils detectorUtils) (string, error) {
-	resp, err := utils.getConfigMap("GET", cwConfigmapPath)
+func getClusterName(ctx context.Context, utils detectorUtils) (string, error) {
+	resp, err := utils.getConfigMap(ctx, cwConfigmapNS, cwConfigmapName)
 	if err != nil {
 		return "", fmt.Errorf("getClusterName() error: %w", err)
 	}
 
-	// parse JSON object returned from HTTP request
-	var respmap map[string]json.RawMessage
-	err = json.Unmarshal([]byte(resp), &respmap)
-	if err != nil {
-		return "", fmt.Errorf("getClusterName() error: cannot parse JSON: %w", err)
-	}
-	var d data
-	err = json.Unmarshal(respmap["data"], &d)
-	if err != nil {
-		return "", fmt.Errorf("getClusterName() error: cannot parse JSON: %w", err)
-	}
-
-	clusterName := d.ClusterName
-
-	return clusterName, nil
+	return resp["cluster.name"], nil
 }
 
 // getContainerID returns the containerID if currently running within a container.
@@ -213,6 +183,7 @@ func (eksUtils eksDetectorUtils) getContainerID() (string, error) {
 		return "", fmt.Errorf("getContainerID() error: cannot read file with path %s: %w", defaultCgroupPath, err)
 	}
 
+	// is this going to stop working with 1.20 when Docker is deprecated?
 	r, err := regexp.Compile(`^.*/docker/(.+)$`)
 	if err != nil {
 		return "", err
