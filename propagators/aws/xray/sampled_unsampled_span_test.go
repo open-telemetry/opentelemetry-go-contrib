@@ -110,7 +110,7 @@ func addAttributesToUnSampledSpan() {
 	span.SetAttributes(attribute.Key("example attribute 2").String("value 2"))
 }
 
-func init() {
+func initialization() {
 	idg := NewIDGenerator()
 
 	tp := sdktrace.NewTracerProvider(
@@ -123,49 +123,73 @@ func init() {
 }
 
 func BenchmarkStartAndEndSampledSpan(b *testing.B) {
+	initialization()
 	for i := 0; i < b.N; i++ {
 		startAndEndSampledSpan()
 	}
+	otel.SetTracerProvider(otel.GetTracerProvider())
+	otel.SetTextMapPropagator(otel.GetTextMapPropagator())
 }
 
 func BenchmarkStartAndEndNestedSampledSpan(b *testing.B) {
+	initialization()
 	for i := 0; i < b.N; i++ {
 		startAndEndNestedSampledSpan()
 	}
+	otel.SetTracerProvider(otel.GetTracerProvider())
+	otel.SetTextMapPropagator(otel.GetTextMapPropagator())
 }
 
 func BenchmarkGetCurrentSampledSpan(b *testing.B) {
+	initialization()
 	for i := 0; i < b.N; i++ {
 		getCurrentSampledSpan()
 	}
+	otel.SetTracerProvider(otel.GetTracerProvider())
+	otel.SetTextMapPropagator(otel.GetTextMapPropagator())
 }
 
 func BenchmarkAddAttributesToSampledSpan(b *testing.B) {
+	initialization()
 	for i := 0; i < b.N; i++ {
 		addAttributesToSampledSpan()
 	}
+	otel.SetTracerProvider(otel.GetTracerProvider())
+	otel.SetTextMapPropagator(otel.GetTextMapPropagator())
 }
 
 func BenchmarkStartAndEndUnSampledSpan(b *testing.B) {
+	initialization()
 	for i := 0; i < b.N; i++ {
 		startAndEndUnSampledSpan()
 	}
+	otel.SetTracerProvider(otel.GetTracerProvider())
+	otel.SetTextMapPropagator(otel.GetTextMapPropagator())
 }
 
 func BenchmarkStartAndEndNestedUnSampledSpan(b *testing.B) {
+	initialization()
 	for i := 0; i < b.N; i++ {
 		startAndEndNestedUnSampledSpan()
 	}
+	otel.SetTracerProvider(otel.GetTracerProvider())
+	otel.SetTextMapPropagator(otel.GetTextMapPropagator())
 }
 
 func BenchmarkGetCurrentUnSampledSpan(b *testing.B) {
+	initialization()
 	for i := 0; i < b.N; i++ {
 		getCurrentUnSampledSpan()
 	}
+	otel.SetTracerProvider(otel.GetTracerProvider())
+	otel.SetTextMapPropagator(otel.GetTextMapPropagator())
 }
 
 func BenchmarkAddAttributesToUnSampledSpan(b *testing.B) {
+	initialization()
 	for i := 0; i < b.N; i++ {
 		addAttributesToUnSampledSpan()
 	}
+	otel.SetTracerProvider(otel.GetTracerProvider())
+	otel.SetTextMapPropagator(otel.GetTextMapPropagator())
 }
