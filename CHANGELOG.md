@@ -12,6 +12,10 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 
 - Dockerfile based examples for `otelgin` and `otelmacaron`. (#767)
 
+### Changed
+
+- Supported minimum version of Go bumped from 1.14 to 1.15. (#787)
+
 ### Removed
 
 - Remove service name from `otelmongodb` configuration and span attributes. (#763)
