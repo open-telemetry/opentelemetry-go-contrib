@@ -13,8 +13,8 @@
 # limitations under the License.
 FROM golang:alpine AS base
 COPY . /src/
-WORKDIR /src/instrumentation/gopkg.in/macaron.v1/otelmacaron
+WORKDIR /src/instrumentation/gopkg.in/macaron.v1/otelmacaron/example
 
 FROM base AS macaron-server
-RUN go install ./example/server.go
+RUN go install ./server.go
 CMD ["/go/bin/server"]
