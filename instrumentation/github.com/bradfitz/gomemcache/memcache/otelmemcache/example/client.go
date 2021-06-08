@@ -82,9 +82,6 @@ func initTracer() oteltrace.TracerProvider {
 		sdktrace.WithSampler(sdktrace.AlwaysSample()),
 		sdktrace.WithSyncer(exporter),
 	)
-	if err != nil {
-		log.Fatal(err)
-	}
 
 	return tp
 }

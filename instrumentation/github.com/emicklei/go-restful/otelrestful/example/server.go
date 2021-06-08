@@ -69,9 +69,6 @@ func initTracer() {
 		sdktrace.WithSampler(sdktrace.AlwaysSample()),
 		sdktrace.WithSyncer(exporter),
 	)
-	if err != nil {
-		log.Fatal(err)
-	}
 	otel.SetTracerProvider(tp)
 	tracer = otel.GetTracerProvider().Tracer("go-restful-server", oteltrace.WithInstrumentationVersion("0.1"))
 }
