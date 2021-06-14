@@ -66,6 +66,7 @@ func (o metricProviderOption) ApplyHost(c *config) {
 	c.MeterProvider = o.MeterProvider
 }
 
+// Attribute sets.
 var (
 	// Attribute sets for CPU time measurements.
 
