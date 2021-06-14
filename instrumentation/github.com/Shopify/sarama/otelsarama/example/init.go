@@ -24,6 +24,7 @@ import (
 )
 
 const (
+	// KafkaTopic name.
 	KafkaTopic = "sarama-instrumentation-example"
 )
 
@@ -36,9 +37,6 @@ func InitTracer() {
 		sdktrace.WithSampler(sdktrace.AlwaysSample()),
 		sdktrace.WithSyncer(exporter),
 	)
-	if err != nil {
-		log.Fatal(err)
-	}
 	otel.SetTracerProvider(tp)
 	otel.SetTextMapPropagator(propagation.NewCompositeTextMapPropagator(propagation.TraceContext{}))
 }

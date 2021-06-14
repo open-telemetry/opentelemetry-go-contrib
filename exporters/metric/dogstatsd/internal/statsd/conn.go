@@ -91,6 +91,7 @@ const (
 var (
 	_ export.Exporter = &Exporter{}
 
+	//nolint:revive // ignoring missing comments for unexported sentinel errors in an internal package.
 	ErrInvalidScheme = fmt.Errorf("invalid statsd transport")
 )
 
