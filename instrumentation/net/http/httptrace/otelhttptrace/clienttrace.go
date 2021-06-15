@@ -30,6 +30,7 @@ import (
 	"go.opentelemetry.io/otel/trace"
 )
 
+// HTTP attributes.
 var (
 	HTTPStatus     = attribute.Key("http.status")
 	HTTPHeaderMIME = attribute.Key("http.mime")

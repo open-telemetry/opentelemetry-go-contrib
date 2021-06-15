@@ -63,9 +63,6 @@ func initTracer() {
 		sdktrace.WithSampler(sdktrace.AlwaysSample()),
 		sdktrace.WithSyncer(exporter),
 		sdktrace.WithResource(resource.NewWithAttributes(semconv.ServiceNameKey.String("ExampleService"))))
-	if err != nil {
-		log.Fatal(err)
-	}
 	otel.SetTracerProvider(tp)
 	otel.SetTextMapPropagator(propagation.NewCompositeTextMapPropagator(propagation.TraceContext{}, propagation.Baggage{}))
 }

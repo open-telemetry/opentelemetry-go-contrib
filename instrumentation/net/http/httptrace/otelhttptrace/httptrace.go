@@ -49,7 +49,7 @@ func WithPropagators(props propagation.TextMapPropagator) Option {
 	}
 }
 
-// Returns the Attributes, Context Entries, and SpanContext that were encoded by Inject.
+// Extract returns the Attributes, Context Entries, and SpanContext that were encoded by Inject.
 func Extract(ctx context.Context, req *http.Request, opts ...Option) ([]attribute.KeyValue, []attribute.KeyValue, trace.SpanContext) {
 	c := newConfig(opts)
 	ctx = c.propagators.Extract(ctx, propagation.HeaderCarrier(req.Header))

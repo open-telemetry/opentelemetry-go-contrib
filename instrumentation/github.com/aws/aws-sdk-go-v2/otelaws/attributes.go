@@ -16,6 +16,7 @@ package otelaws
 
 import "go.opentelemetry.io/otel/attribute"
 
+// AWS attributes.
 const (
 	OperationKey attribute.Key = "aws.operation"
 	RegionKey    attribute.Key = "aws.region"

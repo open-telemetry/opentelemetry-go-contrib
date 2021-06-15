@@ -67,7 +67,7 @@ var validConfig = Config{
 }
 
 var testResource = resource.NewWithAttributes(attribute.String("R", "V"))
-var mockTime int64 = int64(time.Nanosecond) * time.Time{}.UnixNano() / int64(time.Millisecond)
+var mockTime = int64(time.Nanosecond) * time.Time{}.UnixNano() / int64(time.Millisecond)
 
 func TestExportKindFor(t *testing.T) {
 	exporter := Exporter{}
