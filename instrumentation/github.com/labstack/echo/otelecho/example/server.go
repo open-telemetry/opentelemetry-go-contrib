@@ -33,7 +33,12 @@ import (
 var tracer = otel.Tracer("gin-server")
 
 func main() {
-	initTracer()
+	tp := initTracer()
+	defer func() {
+		if err := tp.Shutdown(context.Background()); err != nil {
+			log.Printf("Error shutting down tracer provider: %v", err)
+		}
+	}()
 	r := echo.New()
 	r.Use(otelecho.Middleware("my-server"))
 
@@ -51,17 +56,18 @@ func main() {
 	_ = r.Start(":8080")
 }
 
-func initTracer() {
+func initTracer() *sdktrace.TracerProvider {
 	exporter, err := stdout.NewExporter(stdout.WithPrettyPrint())
 	if err != nil {
 		log.Fatal(err)
 	}
 	tp := sdktrace.NewTracerProvider(
 		sdktrace.WithSampler(sdktrace.AlwaysSample()),
-		sdktrace.WithSyncer(exporter),
+		sdktrace.WithBatcher(exporter),
 	)
 	otel.SetTracerProvider(tp)
 	otel.SetTextMapPropagator(propagation.NewCompositeTextMapPropagator(propagation.TraceContext{}, propagation.Baggage{}))
+	return tp
 }
 
 func getUser(ctx context.Context, id string) string {

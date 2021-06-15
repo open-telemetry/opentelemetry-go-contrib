@@ -15,6 +15,7 @@
 package main
 
 import (
+	"context"
 	"html/template"
 	"log"
 	"net/http"
@@ -33,7 +34,12 @@ import (
 var tracer = otel.Tracer("gin-server")
 
 func main() {
-	initTracer()
+	tp := initTracer()
+	defer func() {
+		if err := tp.Shutdown(context.Background()); err != nil {
+			log.Printf("Error shutting down tracer provider: %v", err)
+		}
+	}()
 	r := gin.New()
 	r.Use(otelgin.Middleware("my-server"))
 	tmplName := "user"
@@ -51,17 +57,18 @@ func main() {
 	_ = r.Run(":8080")
 }
 
-func initTracer() {
+func initTracer() *sdktrace.TracerProvider {
 	exporter, err := stdout.NewExporter(stdout.WithPrettyPrint())
 	if err != nil {
 		log.Fatal(err)
 	}
 	tp := sdktrace.NewTracerProvider(
 		sdktrace.WithSampler(sdktrace.AlwaysSample()),
-		sdktrace.WithSyncer(exporter),
+		sdktrace.WithBatcher(exporter),
 	)
 	otel.SetTracerProvider(tp)
 	otel.SetTextMapPropagator(propagation.NewCompositeTextMapPropagator(propagation.TraceContext{}, propagation.Baggage{}))
+	return tp
 }
 
 func getUser(c *gin.Context, id string) string {
