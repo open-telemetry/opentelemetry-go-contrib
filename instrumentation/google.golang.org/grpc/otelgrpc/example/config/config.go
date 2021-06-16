@@ -24,15 +24,16 @@ import (
 )
 
 // Init configures an OpenTelemetry exporter and trace provider
-func Init() {
+func Init() *sdktrace.TracerProvider {
 	exporter, err := stdout.NewExporter(stdout.WithPrettyPrint())
 	if err != nil {
 		log.Fatal(err)
 	}
 	tp := sdktrace.NewTracerProvider(
 		sdktrace.WithSampler(sdktrace.AlwaysSample()),
-		sdktrace.WithSyncer(exporter),
+		sdktrace.WithBatcher(exporter),
 	)
 	otel.SetTracerProvider(tp)
 	otel.SetTextMapPropagator(propagation.NewCompositeTextMapPropagator(propagation.TraceContext{}, propagation.Baggage{}))
+	return tp
 }

@@ -57,9 +57,14 @@ func main() {
 		log.Fatal(err)
 	}
 	tp := sdktrace.NewTracerProvider(
-		sdktrace.WithSyncer(otExporter),
+		sdktrace.WithBatcher(otExporter),
 		sdktrace.WithSampler(sdktrace.AlwaysSample()),
 	)
+	defer func() {
+		if err := tp.Shutdown(context.Background()); err != nil {
+			log.Printf("Error shutting down tracer provider: %v", err)
+		}
+	}()
 	otel.SetTracerProvider(tp)
 
 	// Set up a new server with the OpenCensus

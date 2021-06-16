@@ -28,15 +28,16 @@ const (
 	KafkaTopic = "sarama-instrumentation-example"
 )
 
-func InitTracer() {
+func InitTracer() *sdktrace.TracerProvider {
 	exporter, err := stdout.NewExporter(stdout.WithPrettyPrint())
 	if err != nil {
 		log.Fatal(err)
 	}
 	tp := sdktrace.NewTracerProvider(
 		sdktrace.WithSampler(sdktrace.AlwaysSample()),
-		sdktrace.WithSyncer(exporter),
+		sdktrace.WithBatcher(exporter),
 	)
 	otel.SetTracerProvider(tp)
 	otel.SetTextMapPropagator(propagation.NewCompositeTextMapPropagator(propagation.TraceContext{}))
+	return tp
 }
