@@ -72,17 +72,14 @@ func TestExtractOT(t *testing.T) {
 					t.Errorf("%s: %s: -got +want %s", tg.name, tc.name, diff)
 				}
 
-				m := baggage.Set(ctx)
-				mi := tc.baggage.Iter()
-				for mi.Next() {
-					attribute := mi.Attribute()
-					val, ok := m.Value(attribute.Key)
-					if !ok {
-						t.Errorf("%s: %s: expected key '%s'", tg.name, tc.name, attribute.Key)
-					}
-					if diff := cmp.Diff(attribute.Value.AsString(), val.AsString()); diff != "" {
-						t.Errorf("%s: %s: -got +want %s", tg.name, tc.name, diff)
-					}
+				members := baggage.FromContext(ctx).Members()
+				actualBaggage := map[string]string{}
+				for _, m := range members {
+					actualBaggage[m.Key()] = m.Value()
+				}
+
+				if diff := cmp.Diff(tc.baggage, actualBaggage); tc.baggage != nil && diff != "" {
+					t.Errorf("%s: %s: -got +want %s", tg.name, tc.name, diff)
 				}
 			})
 		}
@@ -119,9 +116,19 @@ func TestInjectOT(t *testing.T) {
 			t.Run(tc.name, func(t *testing.T) {
 				req, _ := http.NewRequest("GET", "http://example.com", nil)
 
-				ctx := baggage.ContextWithValues(context.Background(),
-					tc.baggage...,
-				)
+				members := []baggage.Member{}
+				for k, v := range tc.baggage {
+					m, err := baggage.NewMember(k, v)
+					if err != nil {
+						t.Errorf("%s: %s, unexpected error creating baggage member: %s", tg.name, tc.name, err.Error())
+					}
+					members = append(members, m)
+				}
+				bag, err := baggage.New(members...)
+				if err != nil {
+					t.Errorf("%s: %s, unexpected error creating baggage: %s", tg.name, tc.name, err.Error())
+				}
+				ctx := baggage.ContextWithBaggage(context.Background(), bag)
 				ctx = trace.ContextWithSpan(
 					ctx,
 					testSpan{

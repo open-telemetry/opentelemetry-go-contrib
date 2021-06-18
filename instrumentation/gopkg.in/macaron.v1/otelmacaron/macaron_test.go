@@ -41,10 +41,6 @@ func TestChildSpanFromGlobalTracer(t *testing.T) {
 		span := oteltrace.SpanFromContext(ctx.Req.Request.Context())
 		_, ok := span.(*oteltest.Span)
 		assert.True(t, ok)
-		spanTracer := span.Tracer()
-		mockTracer, ok := spanTracer.(*oteltest.Tracer)
-		require.True(t, ok)
-		assert.Equal(t, instrumentationName, mockTracer.Name)
 		ctx.Resp.WriteHeader(http.StatusOK)
 	})
 

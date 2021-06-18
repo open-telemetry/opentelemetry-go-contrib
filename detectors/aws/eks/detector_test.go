@@ -24,7 +24,7 @@ import (
 
 	"go.opentelemetry.io/otel/attribute"
 	"go.opentelemetry.io/otel/sdk/resource"
-	"go.opentelemetry.io/otel/semconv"
+	semconv "go.opentelemetry.io/otel/semconv/v1.4.0"
 )
 
 type MockDetectorUtils struct {
@@ -65,7 +65,7 @@ func TestEks(t *testing.T) {
 		semconv.K8SClusterNameKey.String("my-cluster"),
 		semconv.ContainerIDKey.String("0123456789A"),
 	}
-	expectedResource := resource.NewWithAttributes(eksResourceLabels...)
+	expectedResource := resource.NewWithAttributes(semconv.SchemaURL, eksResourceLabels...)
 
 	// Call EKS Resource detector to detect resources
 	eksResourceDetector := resourceDetector{utils: detectorUtils}

@@ -44,10 +44,6 @@ func TestChildSpanFromGlobalTracer(t *testing.T) {
 		span := oteltrace.SpanFromContext(r.Context())
 		_, ok := span.(*oteltest.Span)
 		assert.True(t, ok)
-		spanTracer := span.Tracer()
-		mockTracer, ok := spanTracer.(*oteltest.Tracer)
-		require.True(t, ok)
-		assert.Equal(t, "go.opentelemetry.io/contrib/instrumentation/github.com/gorilla/mux/otelmux", mockTracer.Name)
 		w.WriteHeader(http.StatusOK)
 	}))
 
@@ -66,10 +62,6 @@ func TestChildSpanFromCustomTracer(t *testing.T) {
 		span := oteltrace.SpanFromContext(r.Context())
 		_, ok := span.(*oteltest.Span)
 		assert.True(t, ok)
-		spanTracer := span.Tracer()
-		mockTracer, ok := spanTracer.(*oteltest.Tracer)
-		require.True(t, ok)
-		assert.Equal(t, tracerName, mockTracer.Name)
 		w.WriteHeader(http.StatusOK)
 	}))
 

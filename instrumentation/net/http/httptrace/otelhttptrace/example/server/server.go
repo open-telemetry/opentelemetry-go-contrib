@@ -25,18 +25,18 @@ import (
 	"go.opentelemetry.io/otel"
 	"go.opentelemetry.io/otel/attribute"
 	"go.opentelemetry.io/otel/baggage"
-	"go.opentelemetry.io/otel/exporters/stdout"
+	stdout "go.opentelemetry.io/otel/exporters/stdout/stdouttrace"
 	"go.opentelemetry.io/otel/propagation"
 	"go.opentelemetry.io/otel/sdk/resource"
 	sdktrace "go.opentelemetry.io/otel/sdk/trace"
-	"go.opentelemetry.io/otel/semconv"
+	semconv "go.opentelemetry.io/otel/semconv/v1.4.0"
 	"go.opentelemetry.io/otel/trace"
 )
 
 func initTracer() *sdktrace.TracerProvider {
 	// Create stdout exporter to be able to retrieve
 	// the collected spans.
-	exporter, err := stdout.NewExporter(stdout.WithPrettyPrint())
+	exporter, err := stdout.New(stdout.WithPrettyPrint())
 	if err != nil {
 		log.Fatal(err)
 	}
@@ -46,7 +46,7 @@ func initTracer() *sdktrace.TracerProvider {
 	tp := sdktrace.NewTracerProvider(
 		sdktrace.WithSampler(sdktrace.AlwaysSample()),
 		sdktrace.WithBatcher(exporter),
-		sdktrace.WithResource(resource.NewWithAttributes(semconv.ServiceNameKey.String("ExampleService"))),
+		sdktrace.WithResource(resource.NewWithAttributes(semconv.SchemaURL, semconv.ServiceNameKey.String("ExampleService"))),
 	)
 	otel.SetTracerProvider(tp)
 	otel.SetTextMapPropagator(propagation.NewCompositeTextMapPropagator(propagation.TraceContext{}, propagation.Baggage{}))
@@ -66,8 +66,8 @@ func main() {
 	helloHandler := func(w http.ResponseWriter, req *http.Request) {
 		ctx := req.Context()
 		span := trace.SpanFromContext(ctx)
-		username := baggage.Value(ctx, uk)
-		span.AddEvent("handling this...", trace.WithAttributes(uk.String(username.AsString())))
+		bag := baggage.FromContext(ctx)
+		span.AddEvent("handling this...", trace.WithAttributes(uk.String(bag.Member("username").Value())))
 
 		_, _ = io.WriteString(w, "Hello, world!\n")
 	}

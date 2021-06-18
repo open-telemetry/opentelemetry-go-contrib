@@ -24,7 +24,7 @@ import (
 
 	"go.opentelemetry.io/otel/attribute"
 	"go.opentelemetry.io/otel/sdk/resource"
-	"go.opentelemetry.io/otel/semconv"
+	semconv "go.opentelemetry.io/otel/semconv/v1.4.0"
 )
 
 // GCE collects resource information of GCE computing instances
@@ -54,7 +54,7 @@ func (gce *GCE) Detect(ctx context.Context) (*resource.Resource, error) {
 	if zone, err := metadata.Zone(); hasProblem(err) {
 		errInfo = append(errInfo, err.Error())
 	} else if zone != "" {
-		attributes = append(attributes, semconv.CloudZoneKey.String(zone))
+		attributes = append(attributes, semconv.CloudAvailabilityZoneKey.String(zone))
 
 		splitArr := strings.SplitN(zone, "-", 3)
 		if len(splitArr) == 3 {
@@ -91,7 +91,7 @@ func (gce *GCE) Detect(ctx context.Context) (*resource.Resource, error) {
 		aggregatedErr = fmt.Errorf("detecting GCE resources: %s", errInfo)
 	}
 
-	return resource.NewWithAttributes(attributes...), aggregatedErr
+	return resource.NewWithAttributes(semconv.SchemaURL, attributes...), aggregatedErr
 }
 
 // hasProblem checks if the err is not nil or for missing resources

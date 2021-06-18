@@ -23,7 +23,7 @@ import (
 	"go.opentelemetry.io/contrib"
 	"go.opentelemetry.io/otel/metric"
 	"go.opentelemetry.io/otel/metric/global"
-	"go.opentelemetry.io/otel/unit"
+	"go.opentelemetry.io/otel/metric/unit"
 )
 
 // Runtime reports the work-in-progress conventional runtime metrics specified by OpenTelemetry

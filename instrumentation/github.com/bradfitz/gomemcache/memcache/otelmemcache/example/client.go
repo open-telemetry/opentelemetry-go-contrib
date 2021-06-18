@@ -23,7 +23,7 @@ import (
 
 	"go.opentelemetry.io/contrib/instrumentation/github.com/bradfitz/gomemcache/memcache/otelmemcache"
 
-	oteltracestdout "go.opentelemetry.io/otel/exporters/stdout"
+	oteltracestdout "go.opentelemetry.io/otel/exporters/stdout/stdouttrace"
 	sdktrace "go.opentelemetry.io/otel/sdk/trace"
 )
 
@@ -78,7 +78,7 @@ func doMemcacheOperations(ctx context.Context, c *otelmemcache.Client) {
 }
 
 func initTracer() *sdktrace.TracerProvider {
-	exporter, err := oteltracestdout.NewExporter(oteltracestdout.WithPrettyPrint())
+	exporter, err := oteltracestdout.New(oteltracestdout.WithPrettyPrint())
 	if err != nil {
 		log.Fatal(err)
 	}

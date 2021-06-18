@@ -8,6 +8,8 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 
 ## [Unreleased]
 
+## [0.21.0] - 2021-06-18
+
 ### Fixed
 
 - Dockerfile based examples for `otelgin` and `otelmacaron`. (#767)
@@ -313,7 +315,8 @@ First official tagged release of `contrib` repository.
 - Prefix support for dogstatsd (#34)
 - Update Go Runtime package to use batch observer (#44)
 
-[Unreleased]: https://github.com/open-telemetry/opentelemetry-go-contrib/compare/v0.20.0...HEAD
+[Unreleased]: https://github.com/open-telemetry/opentelemetry-go-contrib/compare/v0.21.0...HEAD
+[0.21.0]: https://github.com/open-telemetry/opentelemetry-go-contrib/releases/tag/v0.21.0
 [0.20.0]: https://github.com/open-telemetry/opentelemetry-go-contrib/releases/tag/v0.20.0
 [0.19.0]: https://github.com/open-telemetry/opentelemetry-go-contrib/releases/tag/v0.19.0
 [0.18.0]: https://github.com/open-telemetry/opentelemetry-go-contrib/releases/tag/v0.18.0

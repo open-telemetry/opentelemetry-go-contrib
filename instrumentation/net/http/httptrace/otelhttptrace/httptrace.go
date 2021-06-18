@@ -22,7 +22,7 @@ import (
 	"go.opentelemetry.io/otel/attribute"
 	"go.opentelemetry.io/otel/baggage"
 	"go.opentelemetry.io/otel/propagation"
-	"go.opentelemetry.io/otel/semconv"
+	semconv "go.opentelemetry.io/otel/semconv/v1.4.0"
 	"go.opentelemetry.io/otel/trace"
 )
 
@@ -50,7 +50,7 @@ func WithPropagators(props propagation.TextMapPropagator) Option {
 }
 
 // Extract returns the Attributes, Context Entries, and SpanContext that were encoded by Inject.
-func Extract(ctx context.Context, req *http.Request, opts ...Option) ([]attribute.KeyValue, []attribute.KeyValue, trace.SpanContext) {
+func Extract(ctx context.Context, req *http.Request, opts ...Option) ([]attribute.KeyValue, baggage.Baggage, trace.SpanContext) {
 	c := newConfig(opts)
 	ctx = c.propagators.Extract(ctx, propagation.HeaderCarrier(req.Header))
 
@@ -59,8 +59,7 @@ func Extract(ctx context.Context, req *http.Request, opts ...Option) ([]attribut
 		semconv.NetAttributesFromHTTPRequest("tcp", req)...,
 	)
 
-	attributes := baggage.Set(ctx)
-	return attrs, (&attributes).ToSlice(), trace.SpanContextFromContext(ctx)
+	return attrs, baggage.FromContext(ctx), trace.SpanContextFromContext(ctx)
 }
 
 func Inject(ctx context.Context, req *http.Request, opts ...Option) {
