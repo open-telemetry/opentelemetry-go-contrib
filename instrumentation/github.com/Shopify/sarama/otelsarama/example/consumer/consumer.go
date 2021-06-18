@@ -25,7 +25,7 @@ import (
 	"github.com/Shopify/sarama"
 
 	"go.opentelemetry.io/otel"
-	"go.opentelemetry.io/otel/semconv"
+	semconv "go.opentelemetry.io/otel/semconv/v1.4.0"
 	"go.opentelemetry.io/otel/trace"
 
 	"go.opentelemetry.io/contrib/instrumentation/github.com/Shopify/sarama/otelsarama"

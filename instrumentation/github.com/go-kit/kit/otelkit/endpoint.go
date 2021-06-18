@@ -71,7 +71,7 @@ func EndpointMiddleware(options ...Option) endpoint.Middleware {
 				spanName = defaultSpanName
 			}
 
-			opts := []trace.SpanOption{
+			opts := []trace.SpanStartOption{
 				trace.WithAttributes(cfg.Attributes...),
 				trace.WithSpanKind(trace.SpanKindServer),
 			}

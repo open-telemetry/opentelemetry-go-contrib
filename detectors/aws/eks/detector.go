@@ -28,7 +28,7 @@ import (
 
 	"go.opentelemetry.io/otel/attribute"
 	"go.opentelemetry.io/otel/sdk/resource"
-	"go.opentelemetry.io/otel/semconv"
+	semconv "go.opentelemetry.io/otel/semconv/v1.4.0"
 )
 
 const (
@@ -110,7 +110,7 @@ func (detector *resourceDetector) Detect(ctx context.Context) (*resource.Resourc
 	}
 
 	// Return new resource object with clusterName and containerID as attributes
-	return resource.NewWithAttributes(attributes...), nil
+	return resource.NewWithAttributes(semconv.SchemaURL, attributes...), nil
 }
 
 // isEKS checks if the current environment is running in EKS.

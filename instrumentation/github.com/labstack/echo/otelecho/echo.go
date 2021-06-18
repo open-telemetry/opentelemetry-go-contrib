@@ -24,7 +24,7 @@ import (
 
 	"go.opentelemetry.io/otel/attribute"
 	"go.opentelemetry.io/otel/propagation"
-	"go.opentelemetry.io/otel/semconv"
+	semconv "go.opentelemetry.io/otel/semconv/v1.4.0"
 	oteltrace "go.opentelemetry.io/otel/trace"
 )
 
@@ -59,7 +59,7 @@ func Middleware(service string, opts ...Option) echo.MiddlewareFunc {
 				c.SetRequest(request)
 			}()
 			ctx := cfg.Propagators.Extract(savedCtx, propagation.HeaderCarrier(request.Header))
-			opts := []oteltrace.SpanOption{
+			opts := []oteltrace.SpanStartOption{
 				oteltrace.WithAttributes(semconv.NetAttributesFromHTTPRequest("tcp", request)...),
 				oteltrace.WithAttributes(semconv.EndUserAttributesFromHTTPRequest(request)...),
 				oteltrace.WithAttributes(semconv.HTTPServerAttributesFromHTTPRequest(service, c.Path(), request)...),

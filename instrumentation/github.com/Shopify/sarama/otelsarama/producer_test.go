@@ -28,7 +28,7 @@ import (
 	"go.opentelemetry.io/otel/codes"
 	"go.opentelemetry.io/otel/oteltest"
 	"go.opentelemetry.io/otel/propagation"
-	"go.opentelemetry.io/otel/semconv"
+	semconv "go.opentelemetry.io/otel/semconv/v1.4.0"
 	oteltrace "go.opentelemetry.io/otel/trace"
 )
 
@@ -61,7 +61,7 @@ func TestWrapSyncProducer(t *testing.T) {
 		{
 			attributeList: []attribute.KeyValue{
 				semconv.MessagingSystemKey.String("kafka"),
-				semconv.MessagingDestinationKindKeyTopic,
+				semconv.MessagingDestinationKindTopic,
 				semconv.MessagingDestinationKey.String(topic),
 				semconv.MessagingMessageIDKey.String("1"),
 				kafkaPartitionKey.Int64(0),
@@ -72,7 +72,7 @@ func TestWrapSyncProducer(t *testing.T) {
 		{
 			attributeList: []attribute.KeyValue{
 				semconv.MessagingSystemKey.String("kafka"),
-				semconv.MessagingDestinationKindKeyTopic,
+				semconv.MessagingDestinationKindTopic,
 				semconv.MessagingDestinationKey.String(topic),
 				semconv.MessagingMessageIDKey.String("2"),
 				kafkaPartitionKey.Int64(0),
@@ -82,7 +82,7 @@ func TestWrapSyncProducer(t *testing.T) {
 		{
 			attributeList: []attribute.KeyValue{
 				semconv.MessagingSystemKey.String("kafka"),
-				semconv.MessagingDestinationKindKeyTopic,
+				semconv.MessagingDestinationKindTopic,
 				semconv.MessagingDestinationKey.String(topic),
 				// TODO: The mock sync producer of sarama does not handle the offset while sending messages
 				// https://github.com/Shopify/sarama/pull/1747
@@ -94,7 +94,7 @@ func TestWrapSyncProducer(t *testing.T) {
 		{
 			attributeList: []attribute.KeyValue{
 				semconv.MessagingSystemKey.String("kafka"),
-				semconv.MessagingDestinationKindKeyTopic,
+				semconv.MessagingDestinationKindTopic,
 				semconv.MessagingDestinationKey.String(topic),
 				//semconv.MessagingMessageIDKey.String("4"),
 				kafkaPartitionKey.Int64(0),
@@ -186,7 +186,7 @@ func TestWrapAsyncProducer(t *testing.T) {
 			{
 				attributeList: []attribute.KeyValue{
 					semconv.MessagingSystemKey.String("kafka"),
-					semconv.MessagingDestinationKindKeyTopic,
+					semconv.MessagingDestinationKindTopic,
 					semconv.MessagingDestinationKey.String(topic),
 					semconv.MessagingMessageIDKey.String("0"),
 					kafkaPartitionKey.Int64(0),
@@ -197,7 +197,7 @@ func TestWrapAsyncProducer(t *testing.T) {
 			{
 				attributeList: []attribute.KeyValue{
 					semconv.MessagingSystemKey.String("kafka"),
-					semconv.MessagingDestinationKindKeyTopic,
+					semconv.MessagingDestinationKindTopic,
 					semconv.MessagingDestinationKey.String(topic),
 					semconv.MessagingMessageIDKey.String("0"),
 					kafkaPartitionKey.Int64(0),
@@ -263,7 +263,7 @@ func TestWrapAsyncProducer(t *testing.T) {
 			{
 				attributeList: []attribute.KeyValue{
 					semconv.MessagingSystemKey.String("kafka"),
-					semconv.MessagingDestinationKindKeyTopic,
+					semconv.MessagingDestinationKindTopic,
 					semconv.MessagingDestinationKey.String(topic),
 					semconv.MessagingMessageIDKey.String("1"),
 					kafkaPartitionKey.Int64(0),
@@ -274,7 +274,7 @@ func TestWrapAsyncProducer(t *testing.T) {
 			{
 				attributeList: []attribute.KeyValue{
 					semconv.MessagingSystemKey.String("kafka"),
-					semconv.MessagingDestinationKindKeyTopic,
+					semconv.MessagingDestinationKindTopic,
 					semconv.MessagingDestinationKey.String(topic),
 					semconv.MessagingMessageIDKey.String("2"),
 					kafkaPartitionKey.Int64(0),

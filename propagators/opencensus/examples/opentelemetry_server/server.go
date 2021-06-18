@@ -28,7 +28,7 @@ import (
 	"go.opentelemetry.io/contrib/instrumentation/google.golang.org/grpc/otelgrpc"
 	"go.opentelemetry.io/contrib/propagation/opencensus"
 	"go.opentelemetry.io/otel"
-	"go.opentelemetry.io/otel/exporters/stdout"
+	stdout "go.opentelemetry.io/otel/exporters/stdout/stdouttrace"
 	sdktrace "go.opentelemetry.io/otel/sdk/trace"
 )
 
@@ -52,7 +52,7 @@ func main() {
 	}
 
 	log.Println("Registering OpenTelemetry stdout exporter.")
-	otExporter, err := stdout.NewExporter(stdout.WithPrettyPrint())
+	otExporter, err := stdout.New(stdout.WithPrettyPrint())
 	if err != nil {
 		log.Fatal(err)
 	}
