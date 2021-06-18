@@ -102,4 +102,3 @@ func BenchmarkAddAttributesToSampledSpan(b *testing.B) {
 		addAttributesToSampledSpan()
 	}
 }
-
