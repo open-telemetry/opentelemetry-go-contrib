@@ -16,6 +16,7 @@ package otelmongo
 
 import "go.opentelemetry.io/otel/attribute"
 
+// Mongo tag attributes.
 const (
 	TargetHostKey  = attribute.Key("out.host")
 	TargetPortKey  = attribute.Key("out.port")

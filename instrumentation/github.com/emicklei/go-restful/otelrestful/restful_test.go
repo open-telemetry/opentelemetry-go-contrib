@@ -42,10 +42,6 @@ func TestChildSpanFromGlobalTracer(t *testing.T) {
 		span := oteltrace.SpanFromContext(req.Request.Context())
 		_, ok := span.(*oteltest.Span)
 		assert.True(t, ok)
-		spanTracer := span.Tracer()
-		mockTracer, ok := spanTracer.(*oteltest.Tracer)
-		require.True(t, ok)
-		assert.Equal(t, tracerName, mockTracer.Name)
 		resp.WriteHeader(http.StatusOK)
 	}
 	ws := &restful.WebService{}
@@ -69,10 +65,6 @@ func TestChildSpanFromCustomTracer(t *testing.T) {
 		span := oteltrace.SpanFromContext(req.Request.Context())
 		_, ok := span.(*oteltest.Span)
 		assert.True(t, ok)
-		spanTracer := span.Tracer()
-		mockTracer, ok := spanTracer.(*oteltest.Tracer)
-		require.True(t, ok)
-		assert.Equal(t, tracerName, mockTracer.Name)
 		resp.WriteHeader(http.StatusOK)
 	}
 	ws := &restful.WebService{}
@@ -222,10 +214,6 @@ func TestMultiFilters(t *testing.T) {
 			span := oteltrace.SpanFromContext(req.Request.Context())
 			_, ok := span.(*oteltest.Span)
 			assert.True(t, ok)
-			spanTracer := span.Tracer()
-			mockTracer, ok := spanTracer.(*oteltest.Tracer)
-			require.True(t, ok)
-			assert.Equal(t, tracerName, mockTracer.Name)
 			resp.WriteHeader(http.StatusOK)
 		}
 	}

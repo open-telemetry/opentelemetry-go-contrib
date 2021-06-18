@@ -26,10 +26,11 @@ import (
 	"go.opentelemetry.io/otel"
 	"go.opentelemetry.io/otel/attribute"
 	"go.opentelemetry.io/otel/codes"
-	"go.opentelemetry.io/otel/semconv"
+	semconv "go.opentelemetry.io/otel/semconv/v1.4.0"
 	"go.opentelemetry.io/otel/trace"
 )
 
+// HTTP attributes.
 var (
 	HTTPStatus     = attribute.Key("http.status")
 	HTTPHeaderMIME = attribute.Key("http.mime")

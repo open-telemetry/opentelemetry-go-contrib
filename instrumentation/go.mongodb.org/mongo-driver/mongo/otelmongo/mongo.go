@@ -53,7 +53,7 @@ func (m *monitor) Started(ctx context.Context, evt *event.CommandStartedEvent) {
 		attrs = append(attrs, DBStatement(string(b)))
 	}
 
-	opts := []trace.SpanOption{
+	opts := []trace.SpanStartOption{
 		trace.WithAttributes(attrs...),
 	}
 	_, span := m.cfg.Tracer.Start(ctx, "mongodb.query", opts...)

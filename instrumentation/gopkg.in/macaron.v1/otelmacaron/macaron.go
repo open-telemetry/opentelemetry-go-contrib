@@ -21,7 +21,7 @@ import (
 	"gopkg.in/macaron.v1"
 
 	"go.opentelemetry.io/otel/propagation"
-	"go.opentelemetry.io/otel/semconv"
+	semconv "go.opentelemetry.io/otel/semconv/v1.4.0"
 	oteltrace "go.opentelemetry.io/otel/trace"
 
 	otelcontrib "go.opentelemetry.io/contrib"
@@ -44,7 +44,7 @@ func Middleware(service string, opts ...Option) macaron.Handler {
 		}()
 
 		ctx := cfg.Propagators.Extract(savedCtx, propagation.HeaderCarrier(c.Req.Header))
-		opts := []oteltrace.SpanOption{
+		opts := []oteltrace.SpanStartOption{
 			oteltrace.WithAttributes(semconv.NetAttributesFromHTTPRequest("tcp", c.Req.Request)...),
 			oteltrace.WithAttributes(semconv.EndUserAttributesFromHTTPRequest(c.Req.Request)...),
 			oteltrace.WithAttributes(semconv.HTTPServerAttributesFromHTTPRequest(service, "", c.Req.Request)...),

@@ -23,7 +23,7 @@ import (
 	"go.opentelemetry.io/contrib"
 	"go.opentelemetry.io/otel/metric"
 	"go.opentelemetry.io/otel/metric/global"
-	"go.opentelemetry.io/otel/unit"
+	"go.opentelemetry.io/otel/metric/unit"
 )
 
 // Runtime reports the work-in-progress conventional runtime metrics specified by OpenTelemetry
@@ -150,11 +150,7 @@ func (r *runtime) register() error {
 		return err
 	}
 
-	if err := r.registerMemStats(); err != nil {
-		return err
-	}
-
-	return nil
+	return r.registerMemStats()
 }
 
 func (r *runtime) registerMemStats() error {

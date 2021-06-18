@@ -36,6 +36,7 @@ import (
 	export "go.opentelemetry.io/otel/sdk/export/metric"
 	"go.opentelemetry.io/otel/sdk/export/metric/aggregation"
 	"go.opentelemetry.io/otel/sdk/resource"
+	semconv "go.opentelemetry.io/otel/semconv/v1.4.0"
 )
 
 // ValidConfig is a Config struct that should cause no errors.
@@ -66,8 +67,8 @@ var validConfig = Config{
 	Quantiles: []float64{0, 0.25, 0.5, 0.75, 1},
 }
 
-var testResource = resource.NewWithAttributes(attribute.String("R", "V"))
-var mockTime int64 = int64(time.Nanosecond) * time.Time{}.UnixNano() / int64(time.Millisecond)
+var testResource = resource.NewWithAttributes(semconv.SchemaURL, attribute.String("R", "V"))
+var mockTime = int64(time.Nanosecond) * time.Time{}.UnixNano() / int64(time.Millisecond)
 
 func TestExportKindFor(t *testing.T) {
 	exporter := Exporter{}

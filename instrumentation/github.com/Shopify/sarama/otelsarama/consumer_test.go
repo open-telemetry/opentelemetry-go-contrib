@@ -27,7 +27,7 @@ import (
 	"go.opentelemetry.io/otel/attribute"
 	"go.opentelemetry.io/otel/oteltest"
 	"go.opentelemetry.io/otel/propagation"
-	"go.opentelemetry.io/otel/semconv"
+	semconv "go.opentelemetry.io/otel/semconv/v1.4.0"
 	"go.opentelemetry.io/otel/trace"
 )
 
@@ -106,7 +106,7 @@ func consumeAndCheck(t *testing.T, mt trace.Tracer, complFn func() []*oteltest.S
 		{
 			attributeList: []attribute.KeyValue{
 				semconv.MessagingSystemKey.String("kafka"),
-				semconv.MessagingDestinationKindKeyTopic,
+				semconv.MessagingDestinationKindTopic,
 				semconv.MessagingDestinationKey.String("test-topic"),
 				semconv.MessagingOperationReceive,
 				semconv.MessagingMessageIDKey.String("1"),
@@ -119,7 +119,7 @@ func consumeAndCheck(t *testing.T, mt trace.Tracer, complFn func() []*oteltest.S
 		{
 			attributeList: []attribute.KeyValue{
 				semconv.MessagingSystemKey.String("kafka"),
-				semconv.MessagingDestinationKindKeyTopic,
+				semconv.MessagingDestinationKindTopic,
 				semconv.MessagingDestinationKey.String("test-topic"),
 				semconv.MessagingOperationReceive,
 				semconv.MessagingMessageIDKey.String("2"),
