@@ -68,49 +68,7 @@ func addAttributesToSampledSpan() {
 	span.SetAttributes(attribute.Key("example attribute 2").String("value 2"))
 }
 
-func startAndEndUnSampledSpan() {
-	var span trace.Span
-	_, span = tracer.Start(
-		context.Background(),
-		"Example Trace",
-	)
-
-	defer span.End()
-}
-
-func startAndEndNestedUnSampledSpan() {
-	var span trace.Span
-	ctx, span := tracer.Start(context.Background(), "Parent operation...")
-	defer span.End()
-
-	_, span = tracer.Start(ctx, "Sub operation...")
-	defer span.End()
-}
-
-func getCurrentUnSampledSpan() trace.Span {
-	var span trace.Span
-	ctx, span := tracer.Start(
-		context.Background(),
-		"Example Trace",
-	)
-	defer span.End()
-
-	return trace.SpanFromContext(ctx)
-}
-
-func addAttributesToUnSampledSpan() {
-	var span trace.Span
-	_, span = tracer.Start(
-		context.Background(),
-		"Example Trace",
-	)
-	defer span.End()
-
-	span.SetAttributes(attribute.Key("example attribute 1").String("value 1"))
-	span.SetAttributes(attribute.Key("example attribute 2").String("value 2"))
-}
-
-func initialization() func() {
+func init() {
 	idg := NewIDGenerator()
 
 	tp := sdktrace.NewTracerProvider(
@@ -118,86 +76,30 @@ func initialization() func() {
 		sdktrace.WithIDGenerator(idg),
 	)
 
-	curTp := otel.GetTracerProvider()
-	curProp := otel.GetTextMapPropagator()
-
 	otel.SetTracerProvider(tp)
-	otel.SetTextMapPropagator(Propagator{})
-
-	return func() {
-		otel.SetTracerProvider(curTp)
-		otel.SetTextMapPropagator(curProp)
-	}
 }
 
 func BenchmarkStartAndEndSampledSpan(b *testing.B) {
-	restore := initialization()
-	defer restore()
-
 	for i := 0; i < b.N; i++ {
 		startAndEndSampledSpan()
 	}
 }
 
 func BenchmarkStartAndEndNestedSampledSpan(b *testing.B) {
-	restore := initialization()
-	defer restore()
-
 	for i := 0; i < b.N; i++ {
 		startAndEndNestedSampledSpan()
 	}
 }
 
 func BenchmarkGetCurrentSampledSpan(b *testing.B) {
-	restore := initialization()
-	defer restore()
-
 	for i := 0; i < b.N; i++ {
 		getCurrentSampledSpan()
 	}
 }
 
 func BenchmarkAddAttributesToSampledSpan(b *testing.B) {
-	restore := initialization()
-	defer restore()
-
 	for i := 0; i < b.N; i++ {
 		addAttributesToSampledSpan()
 	}
 }
 
-func BenchmarkStartAndEndUnSampledSpan(b *testing.B) {
-	restore := initialization()
-	defer restore()
-
-	for i := 0; i < b.N; i++ {
-		startAndEndUnSampledSpan()
-	}
-}
-
-func BenchmarkStartAndEndNestedUnSampledSpan(b *testing.B) {
-	restore := initialization()
-	defer restore()
-
-	for i := 0; i < b.N; i++ {
-		startAndEndNestedUnSampledSpan()
-	}
-}
-
-func BenchmarkGetCurrentUnSampledSpan(b *testing.B) {
-	restore := initialization()
-	defer restore()
-
-	for i := 0; i < b.N; i++ {
-		getCurrentUnSampledSpan()
-	}
-}
-
-func BenchmarkAddAttributesToUnSampledSpan(b *testing.B) {
-	restore := initialization()
-	defer restore()
-
-	for i := 0; i < b.N; i++ {
-		addAttributesToUnSampledSpan()
-	}
-}
