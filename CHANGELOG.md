@@ -8,6 +8,11 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 
 ## [Unreleased]
 
+### Fixed
+
+- Fix race conditions in `otelsarama.WrapAsyncProducer`.
+  The `messaging.message_id` and `messaging.kafka.partition` attributes are now not set if a message was not processed. (#755)
+
 ## [0.21.0] - 2021-06-18
 
 ### Fixed
