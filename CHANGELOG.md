@@ -8,6 +8,11 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 
 ## [Unreleased]
 
+### Fixed
+
+- Fix deadlocks and race conditions in `otelsarama.WrapAsyncProducer`.
+  The `messaging.message_id` and `messaging.kafka.partition` attributes are now not set if a message was not processed. (#754)
+
 ## [0.21.0] - 2021-06-18
 
 ### Fixed
@@ -22,10 +27,6 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 ### Removed
 
 - Remove service name from `otelmongodb` configuration and span attributes. (#763)
-
-### Fixed
-
-- Fix deadlocks and race conditions in Sarama instrumentation. (#754)
 
 ## [0.20.0] - 2021-04-23
 
