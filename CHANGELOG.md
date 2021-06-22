@@ -10,6 +10,10 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 
 ## [0.21.0] - 2021-06-18
 
+### Added
+
+- Add total requests counter by response status code for the `net/http` instrumentation. (#771)
+
 ### Fixed
 
 - Dockerfile based examples for `otelgin` and `otelmacaron`. (#767)
