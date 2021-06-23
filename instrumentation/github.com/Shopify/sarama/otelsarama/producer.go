@@ -37,7 +37,7 @@ type syncProducer struct {
 func (p *syncProducer) SendMessage(msg *sarama.ProducerMessage) (partition int32, offset int64, err error) {
 	span := startProducerSpan(p.cfg, p.saramaConfig.Version, msg)
 	partition, offset, err = p.SyncProducer.SendMessage(msg)
-	finishProducerSpan(span, partition, offset, err)
+	span.Finish(partition, offset, err)
 	return partition, offset, err
 }
 
@@ -45,13 +45,13 @@ func (p *syncProducer) SendMessage(msg *sarama.ProducerMessage) (partition int32
 func (p *syncProducer) SendMessages(msgs []*sarama.ProducerMessage) error {
 	// Although there's only one call made to the SyncProducer, the messages are
 	// treated individually, so we create a span for each one
-	spans := make([]trace.Span, len(msgs))
+	spans := make([]producerSpan, len(msgs))
 	for i, msg := range msgs {
 		spans[i] = startProducerSpan(p.cfg, p.saramaConfig.Version, msg)
 	}
 	err := p.SyncProducer.SendMessages(msgs)
 	for i, span := range spans {
-		finishProducerSpan(span, msgs[i].Partition, msgs[i].Offset, err)
+		span.Finish(msgs[i].Partition, msgs[i].Offset, err)
 	}
 	return err
 }
@@ -121,7 +121,7 @@ func (p *asyncProducer) Close() error {
 }
 
 type producerMessageContext struct {
-	span           trace.Span
+	span           producerSpan
 	metadataBackup interface{}
 }
 
@@ -152,7 +152,7 @@ func WrapAsyncProducer(saramaConfig *sarama.Config, p sarama.AsyncProducer, opts
 		// cannot be closed.
 		defer func() {
 			for _, mc := range producerMessageContexts {
-				finishProducerSpan(mc.span, 0, 0, nil)
+				mc.span.Finish(0, 0, nil)
 			}
 		}()
 		defer close(wrapped.successes)
@@ -188,13 +188,14 @@ func WrapAsyncProducer(saramaConfig *sarama.Config, p sarama.AsyncProducer, opts
 				msg.Metadata = span.SpanContext().SpanID()
 
 				p.Input() <- msg
+
 				if saramaConfig.Producer.Return.Successes {
 					producerMessageContexts[msg.Metadata] = mc
 				} else {
 					// If returning successes isn't enabled, we just finish the
 					// span right away because there's no way to know when it will
 					// be done.
-					finishProducerSpan(span, msg.Partition, msg.Offset, nil)
+					span.Finish(msg.Partition, msg.Offset, nil)
 				}
 			case msg, ok := <-p.Successes():
 				if !ok {
@@ -204,7 +205,7 @@ func WrapAsyncProducer(saramaConfig *sarama.Config, p sarama.AsyncProducer, opts
 				key := msg.Metadata
 				if mc, ok := producerMessageContexts[key]; ok {
 					delete(producerMessageContexts, key)
-					finishProducerSpan(mc.span, msg.Partition, msg.Offset, nil)
+					mc.span.Finish(msg.Partition, msg.Offset, nil)
 
 					// Restore message metadata
 					msg.Metadata = mc.metadataBackup
@@ -218,7 +219,7 @@ func WrapAsyncProducer(saramaConfig *sarama.Config, p sarama.AsyncProducer, opts
 				key := err.Msg.Metadata
 				if mc, ok := producerMessageContexts[key]; ok {
 					delete(producerMessageContexts, key)
-					finishProducerSpan(mc.span, err.Msg.Partition, err.Msg.Offset, err.Err)
+					mc.span.Finish(err.Msg.Partition, err.Msg.Offset, err.Err)
 				}
 				wrapped.errors <- err
 			}
@@ -227,10 +228,20 @@ func WrapAsyncProducer(saramaConfig *sarama.Config, p sarama.AsyncProducer, opts
 	return wrapped
 }
 
-func startProducerSpan(cfg config, version sarama.KafkaVersion, msg *sarama.ProducerMessage) trace.Span {
+// producerSpan is a simple wrapper around trace.Span (which can be nil) that
+// simplifies the logic in the wrapper in the case that no span is really present.
+type producerSpan struct {
+	trace.Span
+}
+
+func startProducerSpan(cfg config, version sarama.KafkaVersion, msg *sarama.ProducerMessage) producerSpan {
 	// If there's a span context in the message, use that as the parent context.
 	carrier := NewProducerMessageCarrier(msg)
 	ctx := cfg.Propagators.Extract(context.Background(), carrier)
+
+	if !cfg.AllowRootSpanStart && !trace.SpanContextFromContext(ctx).IsValid() {
+		return producerSpan{}
+	}
 
 	// Create a span.
 	attrs := []attribute.KeyValue{
@@ -249,10 +260,21 @@ func startProducerSpan(cfg config, version sarama.KafkaVersion, msg *sarama.Prod
 		cfg.Propagators.Inject(ctx, carrier)
 	}
 
-	return span
+	return producerSpan{span}
 }
 
-func finishProducerSpan(span trace.Span, partition int32, offset int64, err error) {
+func (span producerSpan) SpanContext() trace.SpanContext {
+	if span.Span != nil {
+		return span.Span.SpanContext()
+	}
+	return trace.SpanContext{}
+}
+
+func (span producerSpan) Finish(partition int32, offset int64, err error) {
+	if span.Span == nil {
+		return
+	}
+
 	span.SetAttributes(
 		semconv.MessagingMessageIDKey.String(strconv.FormatInt(offset, 10)),
 		kafkaPartitionKey.Int64(int64(partition)),

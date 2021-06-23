@@ -36,9 +36,10 @@ func TestNewConfig(t *testing.T) {
 				WithTracerProvider(otel.GetTracerProvider()),
 			},
 			expected: config{
-				TracerProvider: otel.GetTracerProvider(),
-				Tracer:         otel.GetTracerProvider().Tracer(defaultTracerName, trace.WithInstrumentationVersion(contrib.SemVersion())),
-				Propagators:    otel.GetTextMapPropagator(),
+				TracerProvider:     otel.GetTracerProvider(),
+				Tracer:             otel.GetTracerProvider().Tracer(defaultTracerName, trace.WithInstrumentationVersion(contrib.SemVersion())),
+				Propagators:        otel.GetTextMapPropagator(),
+				AllowRootSpanStart: true,
 			},
 		},
 		{
@@ -47,9 +48,10 @@ func TestNewConfig(t *testing.T) {
 				WithPropagators(nil),
 			},
 			expected: config{
-				TracerProvider: otel.GetTracerProvider(),
-				Tracer:         otel.GetTracerProvider().Tracer(defaultTracerName, trace.WithInstrumentationVersion(contrib.SemVersion())),
-				Propagators:    nil,
+				TracerProvider:     otel.GetTracerProvider(),
+				Tracer:             otel.GetTracerProvider().Tracer(defaultTracerName, trace.WithInstrumentationVersion(contrib.SemVersion())),
+				Propagators:        nil,
+				AllowRootSpanStart: true,
 			},
 		},
 	}

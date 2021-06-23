@@ -303,6 +303,76 @@ func TestWrapAsyncProducer(t *testing.T) {
 			assert.True(t, remoteSpanFromMessage.IsValid())
 		}
 	})
+
+	t.Run("with AllowRootSpanStart=false", func(t *testing.T) {
+		// Mock provider
+		sr := new(oteltest.SpanRecorder)
+		provider := oteltest.NewTracerProvider(
+			oteltest.WithSpanRecorder(sr),
+		)
+
+		// Set producer with successes config
+		cfg := newSaramaConfig()
+		cfg.Producer.Return.Successes = true
+
+		mockAsyncProducer := mocks.NewAsyncProducer(t, cfg)
+		ap := WrapAsyncProducer(cfg, mockAsyncProducer,
+			WithTracerProvider(provider),
+			WithPropagators(propagators),
+			WithAllowRootSpanStart(false))
+
+		msgList := createMessages(provider.Tracer(defaultTracerName))
+		// Send message
+		for i, msg := range msgList {
+			mockAsyncProducer.ExpectInputAndSucceed()
+			// Add metadata to msg
+			msg.Metadata = i
+			ap.Input() <- msg
+			newMsg := <-ap.Successes()
+			assert.Equal(t, newMsg, msg)
+		}
+
+		spanList := sr.Completed()
+		assert.Len(t, spanList, 1)
+
+		expectedList := []struct {
+			attributeList []attribute.KeyValue
+			parentSpanID  oteltrace.SpanID
+			kind          oteltrace.SpanKind
+		}{
+			{
+				attributeList: []attribute.KeyValue{
+					semconv.MessagingSystemKey.String("kafka"),
+					semconv.MessagingDestinationKindKeyTopic,
+					semconv.MessagingDestinationKey.String(topic),
+					semconv.MessagingMessageIDKey.String("1"),
+					kafkaPartitionKey.Int64(0),
+				},
+				parentSpanID: oteltrace.SpanID{0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x2},
+				kind:         oteltrace.SpanKindProducer,
+			},
+		}
+		for i, expected := range expectedList {
+			span := spanList[i]
+			msg := msgList[i]
+
+			// Check span
+			assert.True(t, span.SpanContext().IsValid())
+			assert.Equal(t, expected.parentSpanID, span.ParentSpanID())
+			assert.Equal(t, "kafka.produce", span.Name())
+			assert.Equal(t, expected.kind, span.SpanKind())
+			for _, k := range expected.attributeList {
+				assert.Equal(t, k.Value, span.Attributes()[k.Key], k.Key)
+			}
+
+			// Check metadata
+			assert.Equal(t, i, msg.Metadata)
+
+			// Check tracing propagation
+			remoteSpanFromMessage := oteltrace.SpanContextFromContext(propagators.Extract(context.Background(), NewProducerMessageCarrier(msg)))
+			assert.True(t, remoteSpanFromMessage.IsValid())
+		}
+	})
 }
 
 func TestWrapAsyncProducerError(t *testing.T) {
