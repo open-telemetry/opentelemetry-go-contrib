@@ -225,3 +225,24 @@ func TestPropagationWithCustomPropagators(t *testing.T) {
 
 	router.ServeHTTP(w, r)
 }
+
+func TestSkipper(t *testing.T) {
+	r := httptest.NewRequest("GET", "/ping", nil)
+	w := httptest.NewRecorder()
+
+	skipper := func(c echo.Context) bool {
+		return c.Request().RequestURI == "/ping"
+	}
+
+	router := echo.New()
+	router.Use(Middleware("foobar", WithSkipper(skipper)))
+	router.GET("/ping", func(c echo.Context) error {
+		span := oteltrace.SpanFromContext(c.Request().Context())
+		assert.False(t, span.SpanContext().HasSpanID())
+		assert.False(t, span.SpanContext().HasTraceID())
+		return c.NoContent(200)
+	})
+
+	router.ServeHTTP(w, r)
+
+}
