@@ -17,6 +17,7 @@ package otelsarama
 import (
 	"context"
 	"errors"
+	"sync"
 	"testing"
 	"time"
 
@@ -330,6 +331,60 @@ func TestWrapAsyncProducerError(t *testing.T) {
 
 	assert.Equal(t, codes.Error, span.StatusCode())
 	assert.Equal(t, "test", span.StatusMessage())
+}
+
+func TestWrapAsyncProducer_DrainsSuccessesAndErrorsChannels(t *testing.T) {
+	// Mock provider
+	sr := new(oteltest.SpanRecorder)
+	provider := oteltest.NewTracerProvider(oteltest.WithSpanRecorder(sr))
+
+	// Set producer with successes config and fill it with successes and errors
+	cfg := newSaramaConfig()
+	cfg.Producer.Return.Successes = true
+
+	mockAsyncProducer := mocks.NewAsyncProducer(t, cfg)
+	ap := WrapAsyncProducer(cfg, mockAsyncProducer, WithTracerProvider(provider))
+
+	wantInput := 5
+	for i := 0; i < wantInput; i++ {
+		mockAsyncProducer.ExpectInputAndSucceed()
+		ap.Input() <- &sarama.ProducerMessage{Topic: topic, Key: sarama.StringEncoder("foo2")}
+	}
+
+	wantErrros := 3
+	for i := 0; i < wantErrros; i++ {
+		mockAsyncProducer.ExpectInputAndFail(errors.New("test"))
+		ap.Input() <- &sarama.ProducerMessage{Topic: topic, Key: sarama.StringEncoder("foo2")}
+	}
+
+	ap.AsyncClose()
+
+	// Ensure it is possible to read Successes and Errors after AsyncClose
+	var wg sync.WaitGroup
+
+	gotInput := 0
+	wg.Add(1)
+	go func() {
+		defer wg.Done()
+		for range ap.Successes() {
+			gotInput++
+		}
+	}()
+
+	gotErrors := 0
+	wg.Add(1)
+	go func() {
+		defer wg.Done()
+		for range ap.Errors() {
+			gotErrors++
+		}
+	}()
+
+	wg.Wait()
+	spanList := sr.Completed()
+	assert.Equal(t, wantInput, gotInput, "should read all successes")
+	assert.Equal(t, wantErrros, gotErrors, "should read all errors")
+	assert.Len(t, spanList, wantInput+wantErrros, "should record all spans")
 }
 
 func TestAsyncProducer_ConcurrencyEdgeCases(t *testing.T) {
