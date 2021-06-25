@@ -101,7 +101,6 @@ func (p *asyncProducer) Errors() <-chan *sarama.ProducerError {
 func (p *asyncProducer) AsyncClose() {
 	close(p.input)
 	close(p.closeAsyncSig)
-
 }
 
 // Close shuts down the producer and waits for any buffered messages to be
