@@ -498,7 +498,6 @@ func TestAsyncProducer_ConcurrencyEdgeCases(t *testing.T) {
 			})
 		})
 	}
-
 }
 
 func newSaramaConfig() *sarama.Config {
