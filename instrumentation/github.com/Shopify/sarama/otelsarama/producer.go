@@ -147,7 +147,7 @@ func WrapAsyncProducer(saramaConfig *sarama.Config, p sarama.AsyncProducer, opts
 		producerMessageContexts = make(map[interface{}]producerMessageContext)
 	)
 
-	// spawn producer goroutine
+	// Spawn Input producer goroutine.
 	go func() {
 		for {
 			select {
@@ -187,51 +187,58 @@ func WrapAsyncProducer(saramaConfig *sarama.Config, p sarama.AsyncProducer, opts
 		}
 	}()
 
-	// spawn consumer goroutine
+	// Spawn spans cleanup goroutine.
+	// Sarama will consume all the successes and errors by itself while closing,
+	// so we need to end these these spans ourseleves.
+	cleanupCh := make(chan struct{}, 2)
 	go func() {
-		// Clear all spans.
-		// Sarama will consume all the successes and errors by itself while closing,
-		// so our `Successes()` and `Errors()` may get nothing and those remaining spans
-		// cannot be closed.
+		// wait until both consumer goroutines are closed
+		<-cleanupCh
+		<-cleanupCh
+		// end all remaining spans
+		mtx.Lock()
+		for _, mc := range producerMessageContexts {
+			mc.span.End()
+		}
+		mtx.Unlock()
+	}()
+
+	// Spawn Successes consumer goroutine.
+	go func() {
 		defer func() {
+			close(wrapped.successes)
+			cleanupCh <- struct{}{}
+		}()
+		for msg := range p.Successes() {
+			key := msg.Metadata
 			mtx.Lock()
-			for _, mc := range producerMessageContexts {
-				mc.span.End()
+			if mc, ok := producerMessageContexts[key]; ok {
+				delete(producerMessageContexts, key)
+				finishProducerSpan(mc.span, msg.Partition, msg.Offset, nil)
+
+				// Restore message metadata
+				msg.Metadata = mc.metadataBackup
 			}
 			mtx.Unlock()
-		}()
-		defer close(wrapped.successes)
-		defer close(wrapped.errors)
-		for {
-			select {
-			case msg, ok := <-p.Successes():
-				if !ok {
-					return // producer was closed, so exit
-				}
-				key := msg.Metadata
-				mtx.Lock()
-				if mc, ok := producerMessageContexts[key]; ok {
-					delete(producerMessageContexts, key)
-					finishProducerSpan(mc.span, msg.Partition, msg.Offset, nil)
+			wrapped.successes <- msg
+		}
+	}()
 
-					// Restore message metadata
-					msg.Metadata = mc.metadataBackup
-				}
-				mtx.Unlock()
-				wrapped.successes <- msg
-			case err, ok := <-p.Errors():
-				if !ok {
-					continue // give a chance to get all Successes messages
-				}
-				key := err.Msg.Metadata
-				mtx.Lock()
-				if mc, ok := producerMessageContexts[key]; ok {
-					delete(producerMessageContexts, key)
-					finishProducerSpan(mc.span, err.Msg.Partition, err.Msg.Offset, err.Err)
-				}
-				mtx.Unlock()
-				wrapped.errors <- err
+	// Spawn Errors consumer goroutine.
+	go func() {
+		defer func() {
+			close(wrapped.errors)
+			cleanupCh <- struct{}{}
+		}()
+		for errMsg := range p.Errors() {
+			key := errMsg.Msg.Metadata
+			mtx.Lock()
+			if mc, ok := producerMessageContexts[key]; ok {
+				delete(producerMessageContexts, key)
+				finishProducerSpan(mc.span, errMsg.Msg.Partition, errMsg.Msg.Offset, errMsg.Err)
 			}
+			mtx.Unlock()
+			wrapped.errors <- errMsg
 		}
 	}()
 
