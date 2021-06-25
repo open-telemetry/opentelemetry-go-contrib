@@ -186,27 +186,16 @@ func WrapAsyncProducer(saramaConfig *sarama.Config, p sarama.AsyncProducer, opts
 		}
 	}()
 
-	// Spawn spans cleanup goroutine.
 	// Sarama will consume all the successes and errors by itself while closing,
 	// so we need to end these these spans ourseleves.
-	cleanupCh := make(chan struct{}, 2)
-	go func() {
-		// wait until both consumer goroutines are closed
-		<-cleanupCh
-		<-cleanupCh
-		// end all remaining spans
-		mtx.Lock()
-		for _, mc := range producerMessageContexts {
-			mc.span.End()
-		}
-		mtx.Unlock()
-	}()
+	var cleanupWg sync.WaitGroup
 
 	// Spawn Successes consumer goroutine.
+	cleanupWg.Add(1)
 	go func() {
 		defer func() {
 			close(wrapped.successes)
-			cleanupCh <- struct{}{}
+			cleanupWg.Done()
 		}()
 		for msg := range p.Successes() {
 			key := msg.Metadata
@@ -222,10 +211,11 @@ func WrapAsyncProducer(saramaConfig *sarama.Config, p sarama.AsyncProducer, opts
 	}()
 
 	// Spawn Errors consumer goroutine.
+	cleanupWg.Add(1)
 	go func() {
 		defer func() {
 			close(wrapped.errors)
-			cleanupCh <- struct{}{}
+			cleanupWg.Done()
 		}()
 		for errMsg := range p.Errors() {
 			key := errMsg.Msg.Metadata
@@ -238,6 +228,18 @@ func WrapAsyncProducer(saramaConfig *sarama.Config, p sarama.AsyncProducer, opts
 			mtx.Unlock()
 			wrapped.errors <- errMsg
 		}
+	}()
+
+	// Spawn spans cleanup goroutine.
+	go func() {
+		// wait until both consumer goroutines are closed
+		cleanupWg.Wait()
+		// end all remaining spans
+		mtx.Lock()
+		for _, mc := range producerMessageContexts {
+			mc.span.End()
+		}
+		mtx.Unlock()
 	}()
 
 	return wrapped
