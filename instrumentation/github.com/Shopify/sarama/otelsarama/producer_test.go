@@ -332,97 +332,116 @@ func TestWrapAsyncProducerError(t *testing.T) {
 	assert.Equal(t, "test", span.StatusMessage())
 }
 
-func TestWrapAsyncProducer_ConcurrencyEdgeCases(t *testing.T) {
-	newAsyncProducer := func() sarama.AsyncProducer {
-		cfg := newSaramaConfig()
-		var ap sarama.AsyncProducer = mocks.NewAsyncProducer(t, cfg)
-		ap = WrapAsyncProducer(cfg, ap) // you can comment this line to ensure that sarama is working in the same way
-		return ap
+func TestAsyncProducer_ConcurrencyEdgeCases(t *testing.T) {
+	cfg := newSaramaConfig()
+	testCases := []struct {
+		name             string
+		newAsyncProducer func(t *testing.T) sarama.AsyncProducer
+	}{
+		{
+			name: "original",
+			newAsyncProducer: func(t *testing.T) sarama.AsyncProducer {
+				return mocks.NewAsyncProducer(t, cfg)
+			},
+		},
+		{
+			name: "wrapped",
+			newAsyncProducer: func(t *testing.T) sarama.AsyncProducer {
+				var ap sarama.AsyncProducer = mocks.NewAsyncProducer(t, cfg)
+				ap = WrapAsyncProducer(cfg, ap)
+				return ap
+			},
+		},
 	}
 
-	t.Run("closes Successes and Error after Close", func(t *testing.T) {
-		timeout := time.NewTimer(time.Minute)
-		defer timeout.Stop()
-		p := newAsyncProducer()
+	for _, tc := range testCases {
+		t.Run(tc.name, func(t *testing.T) {
+			t.Run("closes Successes and Error after Close", func(t *testing.T) {
+				timeout := time.NewTimer(time.Minute)
+				defer timeout.Stop()
+				p := tc.newAsyncProducer(t)
 
-		p.Close()
+				p.Close()
 
-		select {
-		case <-timeout.C:
-			t.Error("timeout - Successes channel was not closed")
-		case _, ok := <-p.Successes():
-			if ok {
-				t.Error("message was send to Successes channel instead of being closed")
-			}
-		}
+				select {
+				case <-timeout.C:
+					t.Error("timeout - Successes channel was not closed")
+				case _, ok := <-p.Successes():
+					if ok {
+						t.Error("message was send to Successes channel instead of being closed")
+					}
+				}
 
-		select {
-		case <-timeout.C:
-			t.Error("timeout - Errors channel was not closed")
-		case _, ok := <-p.Errors():
-			if ok {
-				t.Error("message was send to Errors channel instead of being closed")
-			}
-		}
-	})
+				select {
+				case <-timeout.C:
+					t.Error("timeout - Errors channel was not closed")
+				case _, ok := <-p.Errors():
+					if ok {
+						t.Error("message was send to Errors channel instead of being closed")
+					}
+				}
+			})
 
-	t.Run("closes Successes and Error after AsyncClose", func(t *testing.T) {
-		timeout := time.NewTimer(time.Minute)
-		defer timeout.Stop()
-		p := newAsyncProducer()
+			t.Run("closes Successes and Error after AsyncClose", func(t *testing.T) {
+				timeout := time.NewTimer(time.Minute)
+				defer timeout.Stop()
+				p := tc.newAsyncProducer(t)
 
-		p.AsyncClose()
+				p.AsyncClose()
 
-		select {
-		case <-timeout.C:
-			t.Error("timeout - Successes channel was not closed")
-		case _, ok := <-p.Successes():
-			if ok {
-				t.Error("message was send to Successes channel instead of being closed")
-			}
-		}
+				select {
+				case <-timeout.C:
+					t.Error("timeout - Successes channel was not closed")
+				case _, ok := <-p.Successes():
+					if ok {
+						t.Error("message was send to Successes channel instead of being closed")
+					}
+				}
 
-		select {
-		case <-timeout.C:
-			t.Error("timeout - Errors channel was not closed")
-		case _, ok := <-p.Errors():
-			if ok {
-				t.Error("message was send to Errors channel instead of being closed")
-			}
-		}
-	})
+				select {
+				case <-timeout.C:
+					t.Error("timeout - Errors channel was not closed")
+				case _, ok := <-p.Errors():
+					if ok {
+						t.Error("message was send to Errors channel instead of being closed")
+					}
+				}
+			})
 
-	t.Run("panic when sending to Input after Close", func(t *testing.T) {
-		p := newAsyncProducer()
-		p.Close()
-		assert.Panics(t, func() {
-			p.Input() <- &sarama.ProducerMessage{Key: sarama.StringEncoder("foo")}
+			t.Run("panic when sending to Input after Close", func(t *testing.T) {
+				p := tc.newAsyncProducer(t)
+				p.Close()
+				assert.Panics(t, func() {
+					p.Input() <- &sarama.ProducerMessage{Key: sarama.StringEncoder("foo")}
+				})
+			})
+
+			t.Run("panic when sending to Input after AsyncClose", func(t *testing.T) {
+				p := tc.newAsyncProducer(t)
+				p.AsyncClose()
+				assert.Panics(t, func() {
+					p.Input() <- &sarama.ProducerMessage{Key: sarama.StringEncoder("foo")}
+				})
+			})
+
+			t.Run("panic when calling Close after AsyncClose", func(t *testing.T) {
+				p := tc.newAsyncProducer(t)
+				p.AsyncClose()
+				assert.Panics(t, func() {
+					p.Close()
+				})
+			})
+
+			t.Run("panic when calling AsyncClose after Close", func(t *testing.T) {
+				p := tc.newAsyncProducer(t)
+				p.Close()
+				assert.Panics(t, func() {
+					p.AsyncClose()
+				})
+			})
 		})
-	})
+	}
 
-	t.Run("panic when sending to Input after AsyncClose", func(t *testing.T) {
-		p := newAsyncProducer()
-		p.AsyncClose()
-		assert.Panics(t, func() {
-			p.Input() <- &sarama.ProducerMessage{Key: sarama.StringEncoder("foo")}
-		})
-	})
-
-	t.Run("panic when calling Close after AsyncClose", func(t *testing.T) {
-		p := newAsyncProducer()
-		p.AsyncClose()
-		assert.Panics(t, func() {
-			p.Close()
-		})
-	})
-
-	t.Run("panic when calling AsyncClose after Close", func(t *testing.T) {
-		p := newAsyncProducer()
-		p.Close()
-		assert.Panics(t, func() {
-			p.AsyncClose()
-		})
-	})
 }
 
 func newSaramaConfig() *sarama.Config {
