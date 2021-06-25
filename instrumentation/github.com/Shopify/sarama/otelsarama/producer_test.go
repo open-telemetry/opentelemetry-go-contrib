@@ -317,10 +317,12 @@ func TestWrapAsyncProducerError(t *testing.T) {
 	ap := WrapAsyncProducer(cfg, mockAsyncProducer, WithTracerProvider(provider), WithPropagators(propagators))
 
 	mockAsyncProducer.ExpectInputAndFail(errors.New("test"))
-	ap.Input() <- &sarama.ProducerMessage{Topic: topic, Key: sarama.StringEncoder("foo2")}
+	metadata := "test metadata"
+	ap.Input() <- &sarama.ProducerMessage{Topic: topic, Key: sarama.StringEncoder("foo2"), Metadata: metadata}
 
 	err := <-ap.Errors()
 	require.Error(t, err)
+	assert.Equal(t, metadata, err.Msg.Metadata, "should preseve metadata")
 
 	ap.AsyncClose()
 

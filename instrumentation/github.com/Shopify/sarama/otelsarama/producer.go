@@ -215,9 +215,7 @@ func WrapAsyncProducer(saramaConfig *sarama.Config, p sarama.AsyncProducer, opts
 			if mc, ok := producerMessageContexts[key]; ok {
 				delete(producerMessageContexts, key)
 				finishProducerSpan(mc.span, msg.Partition, msg.Offset, nil)
-
-				// Restore message metadata
-				msg.Metadata = mc.metadataBackup
+				msg.Metadata = mc.metadataBackup // Restore message metadata
 			}
 			mtx.Unlock()
 			wrapped.successes <- msg
@@ -236,6 +234,7 @@ func WrapAsyncProducer(saramaConfig *sarama.Config, p sarama.AsyncProducer, opts
 			if mc, ok := producerMessageContexts[key]; ok {
 				delete(producerMessageContexts, key)
 				finishProducerSpan(mc.span, errMsg.Msg.Partition, errMsg.Msg.Offset, errMsg.Err)
+				errMsg.Msg.Metadata = mc.metadataBackup // Restore message metadata
 			}
 			mtx.Unlock()
 			wrapped.errors <- errMsg
