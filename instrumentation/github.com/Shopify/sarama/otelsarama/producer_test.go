@@ -347,8 +347,8 @@ func TestWrapAsyncProducer_DrainsSuccessesAndErrorsChannels(t *testing.T) {
 	mockAsyncProducer := mocks.NewAsyncProducer(t, cfg)
 	ap := WrapAsyncProducer(cfg, mockAsyncProducer, WithTracerProvider(provider))
 
-	wantInput := 5
-	for i := 0; i < wantInput; i++ {
+	wantSuccesses := 5
+	for i := 0; i < wantSuccesses; i++ {
 		mockAsyncProducer.ExpectInputAndSucceed()
 		ap.Input() <- &sarama.ProducerMessage{Topic: topic, Key: sarama.StringEncoder("foo2")}
 	}
@@ -364,12 +364,12 @@ func TestWrapAsyncProducer_DrainsSuccessesAndErrorsChannels(t *testing.T) {
 	// Ensure it is possible to read Successes and Errors after AsyncClose
 	var wg sync.WaitGroup
 
-	gotInput := 0
+	gotSuccesses := 0
 	wg.Add(1)
 	go func() {
 		defer wg.Done()
 		for range ap.Successes() {
-			gotInput++
+			gotSuccesses++
 		}
 	}()
 
@@ -384,9 +384,9 @@ func TestWrapAsyncProducer_DrainsSuccessesAndErrorsChannels(t *testing.T) {
 
 	wg.Wait()
 	spanList := sr.Completed()
-	assert.Equal(t, wantInput, gotInput, "should read all successes")
+	assert.Equal(t, wantSuccesses, gotSuccesses, "should read all successes")
 	assert.Equal(t, wantErrros, gotErrors, "should read all errors")
-	assert.Len(t, spanList, wantInput+wantErrros, "should record all spans")
+	assert.Len(t, spanList, wantSuccesses+wantErrros, "should record all spans")
 }
 
 func TestAsyncProducer_ConcurrencyEdgeCases(t *testing.T) {
