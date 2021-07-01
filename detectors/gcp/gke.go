@@ -23,7 +23,7 @@ import (
 
 	"go.opentelemetry.io/otel/attribute"
 	"go.opentelemetry.io/otel/sdk/resource"
-	"go.opentelemetry.io/otel/semconv"
+	semconv "go.opentelemetry.io/otel/semconv/v1.4.0"
 )
 
 // GKE collects resource information of GKE computing instances
@@ -61,11 +61,17 @@ func (gke *GKE) Detect(ctx context.Context) (*resource.Resource, error) {
 		attributes = append(attributes, semconv.K8SClusterNameKey.String(clusterName))
 	}
 
-	k8sattributeRes := resource.NewWithAttributes(attributes...)
+	k8sattributeRes := resource.NewWithAttributes(semconv.SchemaURL, attributes...)
+
+	res, err := resource.Merge(gceLablRes, k8sattributeRes)
+	if err != nil {
+		errInfo = append(errInfo, err.Error())
+	}
+
 	var aggregatedErr error
 	if len(errInfo) > 0 {
 		aggregatedErr = fmt.Errorf("detecting GKE resources: %s", errInfo)
 	}
 
-	return resource.Merge(gceLablRes, k8sattributeRes), aggregatedErr
+	return res, aggregatedErr
 }

@@ -1,6 +1,6 @@
 module go.opentelemetry.io/opentelemetry-go-contrib/instrumentation/github.com/bradfitz/gomemcache/memcache/otelmemcache/example
 
-go 1.14
+go 1.15
 
 replace (
 	go.opentelemetry.io/contrib => ../../../../../../../
@@ -9,8 +9,7 @@ replace (
 
 require (
 	github.com/bradfitz/gomemcache v0.0.0-20190913173617-a41fca850d0b
-	go.opentelemetry.io/contrib/instrumentation/github.com/bradfitz/gomemcache/memcache/otelmemcache v0.20.0
-	go.opentelemetry.io/otel/exporters/stdout v0.20.0
-	go.opentelemetry.io/otel/sdk v0.20.0
-	go.opentelemetry.io/otel/trace v0.20.0
+	go.opentelemetry.io/contrib/instrumentation/github.com/bradfitz/gomemcache/memcache/otelmemcache v0.21.0
+	go.opentelemetry.io/otel/exporters/stdout/stdouttrace v1.0.0-RC1
+	go.opentelemetry.io/otel/sdk v1.0.0-RC1
 )

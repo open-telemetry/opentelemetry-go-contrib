@@ -69,10 +69,6 @@ func TestEndpointMiddleware(t *testing.T) {
 			span := trace.SpanFromContext(ctx)
 			_, ok := span.(*oteltest.Span)
 			assert.True(t, ok)
-			spanTracer := span.Tracer()
-			mockTracer, ok := spanTracer.(*oteltest.Tracer)
-			require.True(t, ok)
-			assert.Equal(t, "go.opentelemetry.io/contrib/instrumentation/github.com/go-kit/kit/otelkit", mockTracer.Name)
 
 			return nil, nil
 		}

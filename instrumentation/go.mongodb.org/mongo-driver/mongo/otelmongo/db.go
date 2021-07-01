@@ -16,6 +16,7 @@ package otelmongo
 
 import "go.opentelemetry.io/otel/attribute"
 
+// Mongo DB attributes.
 const (
 	DBApplicationKey = attribute.Key("db.application")
 	DBNameKey        = attribute.Key("db.name")

@@ -23,10 +23,11 @@ import (
 
 	"go.opentelemetry.io/otel/attribute"
 	"go.opentelemetry.io/otel/sdk/resource"
-	"go.opentelemetry.io/otel/semconv"
+	semconv "go.opentelemetry.io/otel/semconv/v1.4.0"
 )
 
 const (
+	// TypeStr is AWS ECS type.
 	TypeStr           = "ecs"
 	metadataV3EnvVar  = "ECS_CONTAINER_METADATA_URI"
 	metadataV4EnvVar  = "ECS_CONTAINER_METADATA_URI_V4"
@@ -88,7 +89,7 @@ func (detector *resourceDetector) Detect(ctx context.Context) (*resource.Resourc
 		semconv.ContainerIDKey.String(containerID),
 	}
 
-	return resource.NewWithAttributes(attributes...), nil
+	return resource.NewWithAttributes(semconv.SchemaURL, attributes...), nil
 }
 
 // returns docker container ID from default c group path

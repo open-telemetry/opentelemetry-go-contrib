@@ -12,28 +12,41 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package config
+package xray
 
 import (
-	"log"
+	"context"
+	"testing"
 
-	"go.opentelemetry.io/otel"
-	stdout "go.opentelemetry.io/otel/exporters/stdout/stdouttrace"
-	"go.opentelemetry.io/otel/propagation"
 	sdktrace "go.opentelemetry.io/otel/sdk/trace"
+	"go.opentelemetry.io/otel/trace"
 )
 
-// Init configures an OpenTelemetry exporter and trace provider
-func Init() *sdktrace.TracerProvider {
-	exporter, err := stdout.New(stdout.WithPrettyPrint())
-	if err != nil {
-		log.Fatal(err)
-	}
-	tp := sdktrace.NewTracerProvider(
+var tracer trace.Tracer
+
+func init() {
+	idg := NewIDGenerator()
+
+	tracer = sdktrace.NewTracerProvider(
 		sdktrace.WithSampler(sdktrace.AlwaysSample()),
-		sdktrace.WithBatcher(exporter),
-	)
-	otel.SetTracerProvider(tp)
-	otel.SetTextMapPropagator(propagation.NewCompositeTextMapPropagator(propagation.TraceContext{}, propagation.Baggage{}))
-	return tp
+		sdktrace.WithIDGenerator(idg),
+	).Tracer("sample-app")
+}
+
+func BenchmarkStartAndEndSampledSpan(b *testing.B) {
+	for i := 0; i < b.N; i++ {
+		_, span := tracer.Start(context.Background(), "Example Trace")
+		span.End()
+	}
+}
+
+func BenchmarkStartAndEndNestedSampledSpan(b *testing.B) {
+	ctx, parent := tracer.Start(context.Background(), "Parent operation...")
+	defer parent.End()
+
+	b.ResetTimer()
+	for i := 0; i < b.N; i++ {
+		_, span := tracer.Start(ctx, "Sub operation...")
+		span.End()
+	}
 }

@@ -65,7 +65,7 @@ func ExampleNewHandler() {
 				var name string
 				// Wrap another function in its own span
 				if err := func(ctx context.Context) error {
-					ctx, span := trace.SpanFromContext(ctx).Tracer().Start(ctx, "figureOutName")
+					ctx, span := trace.SpanFromContext(ctx).TracerProvider().Tracer("exampleTracer").Start(ctx, "figureOutName")
 					defer span.End()
 
 					var err error

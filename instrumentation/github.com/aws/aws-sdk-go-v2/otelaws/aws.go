@@ -25,7 +25,7 @@ import (
 	"go.opentelemetry.io/contrib"
 	"go.opentelemetry.io/otel"
 	"go.opentelemetry.io/otel/codes"
-	"go.opentelemetry.io/otel/semconv"
+	semconv "go.opentelemetry.io/otel/semconv/v1.4.0"
 	"go.opentelemetry.io/otel/trace"
 )
 
@@ -56,14 +56,13 @@ func (m otelMiddlewares) initializeMiddlewareAfter(stack *middleware.Stack) erro
 		out middleware.InitializeOutput, metadata middleware.Metadata, err error) {
 
 		serviceID := v2Middleware.GetServiceID(ctx)
-		opts := []trace.SpanOption{
+		ctx, span := m.tracer.Start(ctx, serviceID,
 			trace.WithTimestamp(ctx.Value(spanTimestampKey{}).(time.Time)),
 			trace.WithSpanKind(trace.SpanKindClient),
 			trace.WithAttributes(ServiceAttr(serviceID),
 				RegionAttr(v2Middleware.GetRegion(ctx)),
 				OperationAttr(v2Middleware.GetOperationName(ctx))),
-		}
-		ctx, span := m.tracer.Start(ctx, serviceID, opts...)
+		)
 		defer span.End()
 
 		out, metadata, err = next.HandleInitialize(ctx, in)

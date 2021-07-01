@@ -23,7 +23,7 @@ import (
 	"go.opentelemetry.io/otel/attribute"
 	"go.opentelemetry.io/otel/codes"
 	"go.opentelemetry.io/otel/oteltest"
-	"go.opentelemetry.io/otel/semconv"
+	semconv "go.opentelemetry.io/otel/semconv/v1.4.0"
 
 	"github.com/golang/protobuf/proto" //nolint:staticcheck
 	"github.com/stretchr/testify/assert"
@@ -111,14 +111,14 @@ func TestUnaryClientInterceptor(t *testing.T) {
 			},
 			eventsAttr: []map[attribute.Key]attribute.Value{
 				{
-					semconv.RPCMessageTypeKey:             attribute.StringValue("SENT"),
-					semconv.RPCMessageIDKey:               attribute.IntValue(1),
-					semconv.RPCMessageUncompressedSizeKey: attribute.IntValue(proto.Size(proto.Message(req))),
+					RPCMessageTypeKey:             attribute.StringValue("SENT"),
+					RPCMessageIDKey:               attribute.IntValue(1),
+					RPCMessageUncompressedSizeKey: attribute.IntValue(proto.Size(proto.Message(req))),
 				},
 				{
-					semconv.RPCMessageTypeKey:             attribute.StringValue("RECEIVED"),
-					semconv.RPCMessageIDKey:               attribute.IntValue(1),
-					semconv.RPCMessageUncompressedSizeKey: attribute.IntValue(proto.Size(proto.Message(reply))),
+					RPCMessageTypeKey:             attribute.StringValue("RECEIVED"),
+					RPCMessageIDKey:               attribute.IntValue(1),
+					RPCMessageUncompressedSizeKey: attribute.IntValue(proto.Size(proto.Message(reply))),
 				},
 			},
 		},
@@ -135,14 +135,14 @@ func TestUnaryClientInterceptor(t *testing.T) {
 			},
 			eventsAttr: []map[attribute.Key]attribute.Value{
 				{
-					semconv.RPCMessageTypeKey:             attribute.StringValue("SENT"),
-					semconv.RPCMessageIDKey:               attribute.IntValue(1),
-					semconv.RPCMessageUncompressedSizeKey: attribute.IntValue(proto.Size(proto.Message(req))),
+					RPCMessageTypeKey:             attribute.StringValue("SENT"),
+					RPCMessageIDKey:               attribute.IntValue(1),
+					RPCMessageUncompressedSizeKey: attribute.IntValue(proto.Size(proto.Message(req))),
 				},
 				{
-					semconv.RPCMessageTypeKey:             attribute.StringValue("RECEIVED"),
-					semconv.RPCMessageIDKey:               attribute.IntValue(1),
-					semconv.RPCMessageUncompressedSizeKey: attribute.IntValue(proto.Size(proto.Message(reply))),
+					RPCMessageTypeKey:             attribute.StringValue("RECEIVED"),
+					RPCMessageIDKey:               attribute.IntValue(1),
+					RPCMessageUncompressedSizeKey: attribute.IntValue(proto.Size(proto.Message(reply))),
 				},
 			},
 		},
@@ -159,14 +159,14 @@ func TestUnaryClientInterceptor(t *testing.T) {
 			},
 			eventsAttr: []map[attribute.Key]attribute.Value{
 				{
-					semconv.RPCMessageTypeKey:             attribute.StringValue("SENT"),
-					semconv.RPCMessageIDKey:               attribute.IntValue(1),
-					semconv.RPCMessageUncompressedSizeKey: attribute.IntValue(proto.Size(proto.Message(req))),
+					RPCMessageTypeKey:             attribute.StringValue("SENT"),
+					RPCMessageIDKey:               attribute.IntValue(1),
+					RPCMessageUncompressedSizeKey: attribute.IntValue(proto.Size(proto.Message(req))),
 				},
 				{
-					semconv.RPCMessageTypeKey:             attribute.StringValue("RECEIVED"),
-					semconv.RPCMessageIDKey:               attribute.IntValue(1),
-					semconv.RPCMessageUncompressedSizeKey: attribute.IntValue(proto.Size(proto.Message(reply))),
+					RPCMessageTypeKey:             attribute.StringValue("RECEIVED"),
+					RPCMessageIDKey:               attribute.IntValue(1),
+					RPCMessageUncompressedSizeKey: attribute.IntValue(proto.Size(proto.Message(reply))),
 				},
 			},
 		},
@@ -184,14 +184,14 @@ func TestUnaryClientInterceptor(t *testing.T) {
 			},
 			eventsAttr: []map[attribute.Key]attribute.Value{
 				{
-					semconv.RPCMessageTypeKey:             attribute.StringValue("SENT"),
-					semconv.RPCMessageIDKey:               attribute.IntValue(1),
-					semconv.RPCMessageUncompressedSizeKey: attribute.IntValue(proto.Size(proto.Message(req))),
+					RPCMessageTypeKey:             attribute.StringValue("SENT"),
+					RPCMessageIDKey:               attribute.IntValue(1),
+					RPCMessageUncompressedSizeKey: attribute.IntValue(proto.Size(proto.Message(req))),
 				},
 				{
-					semconv.RPCMessageTypeKey:             attribute.StringValue("RECEIVED"),
-					semconv.RPCMessageIDKey:               attribute.IntValue(1),
-					semconv.RPCMessageUncompressedSizeKey: attribute.IntValue(proto.Size(proto.Message(reply))),
+					RPCMessageTypeKey:             attribute.StringValue("RECEIVED"),
+					RPCMessageIDKey:               attribute.IntValue(1),
+					RPCMessageUncompressedSizeKey: attribute.IntValue(proto.Size(proto.Message(reply))),
 				},
 			},
 			expectErr: true,
@@ -207,14 +207,14 @@ func TestUnaryClientInterceptor(t *testing.T) {
 			},
 			eventsAttr: []map[attribute.Key]attribute.Value{
 				{
-					semconv.RPCMessageTypeKey:             attribute.StringValue("SENT"),
-					semconv.RPCMessageIDKey:               attribute.IntValue(1),
-					semconv.RPCMessageUncompressedSizeKey: attribute.IntValue(proto.Size(proto.Message(req))),
+					RPCMessageTypeKey:             attribute.StringValue("SENT"),
+					RPCMessageIDKey:               attribute.IntValue(1),
+					RPCMessageUncompressedSizeKey: attribute.IntValue(proto.Size(proto.Message(req))),
 				},
 				{
-					semconv.RPCMessageTypeKey:             attribute.StringValue("RECEIVED"),
-					semconv.RPCMessageIDKey:               attribute.IntValue(1),
-					semconv.RPCMessageUncompressedSizeKey: attribute.IntValue(proto.Size(proto.Message(reply))),
+					RPCMessageTypeKey:             attribute.StringValue("RECEIVED"),
+					RPCMessageIDKey:               attribute.IntValue(1),
+					RPCMessageUncompressedSizeKey: attribute.IntValue(proto.Size(proto.Message(reply))),
 				},
 			},
 		},
@@ -231,14 +231,14 @@ func TestUnaryClientInterceptor(t *testing.T) {
 			},
 			eventsAttr: []map[attribute.Key]attribute.Value{
 				{
-					semconv.RPCMessageTypeKey:             attribute.StringValue("SENT"),
-					semconv.RPCMessageIDKey:               attribute.IntValue(1),
-					semconv.RPCMessageUncompressedSizeKey: attribute.IntValue(proto.Size(proto.Message(req))),
+					RPCMessageTypeKey:             attribute.StringValue("SENT"),
+					RPCMessageIDKey:               attribute.IntValue(1),
+					RPCMessageUncompressedSizeKey: attribute.IntValue(proto.Size(proto.Message(req))),
 				},
 				{
-					semconv.RPCMessageTypeKey:             attribute.StringValue("RECEIVED"),
-					semconv.RPCMessageIDKey:               attribute.IntValue(1),
-					semconv.RPCMessageUncompressedSizeKey: attribute.IntValue(proto.Size(proto.Message(reply))),
+					RPCMessageTypeKey:             attribute.StringValue("RECEIVED"),
+					RPCMessageIDKey:               attribute.IntValue(1),
+					RPCMessageUncompressedSizeKey: attribute.IntValue(proto.Size(proto.Message(reply))),
 				},
 			},
 		},
@@ -356,10 +356,10 @@ func TestStreamClientInterceptor(t *testing.T) {
 		msgID := i/2 + 1
 		validate := func(eventName string, attrs map[attribute.Key]attribute.Value) {
 			for k, v := range attrs {
-				if k == semconv.RPCMessageTypeKey && v.AsString() != eventName {
+				if k == RPCMessageTypeKey && v.AsString() != eventName {
 					t.Errorf("invalid event on index: %d expecting %s event, receive %s event", i, eventName, v.AsString())
 				}
-				if k == semconv.RPCMessageIDKey && v != attribute.IntValue(msgID) {
+				if k == RPCMessageIDKey && v != attribute.IntValue(msgID) {
 					t.Errorf("invalid id for message event expected %d received %d", msgID, v.AsInt64())
 				}
 			}

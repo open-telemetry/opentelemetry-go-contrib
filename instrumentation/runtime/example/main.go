@@ -23,19 +23,29 @@ import (
 	"syscall"
 	"time"
 
-	"go.opentelemetry.io/otel/exporters/stdout"
+	stdout "go.opentelemetry.io/otel/exporters/stdout/stdoutmetric"
+	"go.opentelemetry.io/otel/metric/global"
 	controller "go.opentelemetry.io/otel/sdk/metric/controller/basic"
+	processor "go.opentelemetry.io/otel/sdk/metric/processor/basic"
+	"go.opentelemetry.io/otel/sdk/metric/selector/simple"
 
 	"go.opentelemetry.io/contrib/instrumentation/runtime"
 )
 
 func initMeter() *controller.Controller {
-	_, pusher, err := stdout.InstallNewPipeline([]stdout.Option{
-		stdout.WithPrettyPrint(),
-	}, nil)
+	exporter, err := stdout.New(stdout.WithPrettyPrint())
 	if err != nil {
 		log.Panicf("failed to initialize metric stdout exporter %v", err)
 	}
+	pusher := controller.New(
+		processor.New(
+			simple.NewWithInexpensiveDistribution(),
+			exporter,
+		),
+		controller.WithExporter(exporter),
+	)
+	pusher.Start(context.Background()) //nolint:errcheck
+	global.SetMeterProvider(pusher.MeterProvider())
 	return pusher
 }
 

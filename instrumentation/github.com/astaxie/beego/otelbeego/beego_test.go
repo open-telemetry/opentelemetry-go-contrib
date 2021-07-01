@@ -30,9 +30,10 @@ import (
 	"go.opentelemetry.io/otel"
 	"go.opentelemetry.io/otel/attribute"
 	"go.opentelemetry.io/otel/metric/global"
+	"go.opentelemetry.io/otel/metric/metrictest"
 	"go.opentelemetry.io/otel/oteltest"
 	"go.opentelemetry.io/otel/propagation"
-	"go.opentelemetry.io/otel/semconv"
+	semconv "go.opentelemetry.io/otel/semconv/v1.4.0"
 	"go.opentelemetry.io/otel/trace"
 
 	"github.com/astaxie/beego"
@@ -186,7 +187,7 @@ func TestWithFilters(t *testing.T) {
 
 func TestSpanFromContextDefaultProvider(t *testing.T) {
 	defer replaceBeego()
-	_, provider := oteltest.NewMeterProvider()
+	_, provider := metrictest.NewMeterProvider()
 	global.SetMeterProvider(provider)
 	otel.SetTracerProvider(oteltest.NewTracerProvider())
 
@@ -209,7 +210,7 @@ func TestSpanFromContextDefaultProvider(t *testing.T) {
 
 func TestSpanFromContextCustomProvider(t *testing.T) {
 	defer replaceBeego()
-	_, provider := oteltest.NewMeterProvider()
+	_, provider := metrictest.NewMeterProvider()
 	router := beego.NewControllerRegister()
 	router.Get("/hello-with-span", func(ctx *beegoCtx.Context) {
 		assertSpanFromContext(ctx.Request.Context(), t)
@@ -235,7 +236,7 @@ func TestStatic(t *testing.T) {
 	defer replaceBeego()
 	sr := new(oteltest.SpanRecorder)
 	tracerProvider := oteltest.NewTracerProvider(oteltest.WithSpanRecorder(sr))
-	meterimpl, meterProvider := oteltest.NewMeterProvider()
+	meterimpl, meterProvider := metrictest.NewMeterProvider()
 	file, err := ioutil.TempFile("", "static-*.html")
 	require.NoError(t, err)
 	defer os.Remove(file.Name())
@@ -335,7 +336,7 @@ func TestRender(t *testing.T) {
 func runTest(t *testing.T, tc *testCase, url string) {
 	sr := new(oteltest.SpanRecorder)
 	tracerProvider := oteltest.NewTracerProvider(oteltest.WithSpanRecorder(sr))
-	meterimpl, meterProvider := oteltest.NewMeterProvider()
+	meterimpl, meterProvider := metrictest.NewMeterProvider()
 	addTestRoutes(t)
 	defer replaceBeego()
 
@@ -392,7 +393,7 @@ func assertSpan(t *testing.T, span *oteltest.Span, tc *testCase) {
 	}
 }
 
-func assertMetrics(t *testing.T, batches []oteltest.Batch, tc *testCase) {
+func assertMetrics(t *testing.T, batches []metrictest.Batch, tc *testCase) {
 	for _, batch := range batches {
 		for _, att := range tc.expectedAttributes {
 			require.Contains(t, batch.Labels, att)
@@ -404,7 +405,7 @@ func assertSpanFromContext(ctx context.Context, t *testing.T) {
 	span := trace.SpanFromContext(ctx)
 	_, ok := span.(*oteltest.Span)
 	require.True(t, ok)
-	spanTracer := span.Tracer()
+	spanTracer := span.TracerProvider().Tracer("go.opentelemetry.io/contrib/instrumentation/github/astaxie/beego/otelbeego")
 	mockTracer, ok := spanTracer.(*oteltest.Tracer)
 	require.True(t, ok)
 	require.NotEmpty(t, mockTracer.Name)
