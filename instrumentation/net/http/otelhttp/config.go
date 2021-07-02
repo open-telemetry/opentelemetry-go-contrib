@@ -45,16 +45,16 @@ type config struct {
 	MeterProvider  metric.MeterProvider
 }
 
-// Option Interface used for setting *optional* config properties
+// Option interface used for setting optional config properties.
 type Option interface {
-	Apply(*config)
+	apply(*config)
 }
 
 // OptionFunc provides a convenience wrapper for simple Options
 // that can be represented as functions.
 type OptionFunc func(*config)
 
-func (o OptionFunc) Apply(c *config) {
+func (o OptionFunc) apply(c *config) {
 	o(c)
 }
 
@@ -66,7 +66,7 @@ func newConfig(opts ...Option) *config {
 		MeterProvider:  global.GetMeterProvider(),
 	}
 	for _, opt := range opts {
-		opt.Apply(c)
+		opt.apply(c)
 	}
 
 	c.Tracer = c.TracerProvider.Tracer(
