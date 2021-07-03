@@ -19,7 +19,7 @@ import (
 	"fmt"
 	"log"
 
-	oteltracestdout "go.opentelemetry.io/otel/exporters/stdout"
+	"go.opentelemetry.io/otel/exporters/stdout/stdouttrace"
 	sdktrace "go.opentelemetry.io/otel/sdk/trace"
 
 	"gorm.io/driver/sqlite"
@@ -37,7 +37,7 @@ type Product struct {
 const dbName = "test.db"
 
 func initTracer() *sdktrace.TracerProvider {
-	exporter, err := oteltracestdout.NewExporter(oteltracestdout.WithPrettyPrint())
+	exporter, err := stdouttrace.New(stdouttrace.WithPrettyPrint())
 	if err != nil {
 		log.Fatal(err)
 	}
