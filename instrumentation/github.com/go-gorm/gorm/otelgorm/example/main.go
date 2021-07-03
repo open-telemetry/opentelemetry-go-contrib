@@ -19,8 +19,6 @@ import (
 	"fmt"
 	"log"
 
-	oteltrace "go.opentelemetry.io/otel/trace"
-
 	oteltracestdout "go.opentelemetry.io/otel/exporters/stdout"
 	sdktrace "go.opentelemetry.io/otel/sdk/trace"
 
@@ -38,16 +36,14 @@ type Product struct {
 
 const dbName = "test.db"
 
-func initTracer() oteltrace.TracerProvider {
+func initTracer() *sdktrace.TracerProvider {
 	exporter, err := oteltracestdout.NewExporter(oteltracestdout.WithPrettyPrint())
 	if err != nil {
 		log.Fatal(err)
 	}
-	cfg := sdktrace.Config{
-		DefaultSampler: sdktrace.AlwaysSample(),
-	}
+
 	tp := sdktrace.NewTracerProvider(
-		sdktrace.WithConfig(cfg),
+		sdktrace.WithSampler(sdktrace.AlwaysSample()),
 		sdktrace.WithBatcher(exporter),
 	)
 	if err != nil {

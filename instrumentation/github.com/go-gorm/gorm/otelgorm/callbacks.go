@@ -20,32 +20,32 @@ import (
 
 	"gorm.io/gorm"
 
+	"go.opentelemetry.io/otel/attribute"
 	"go.opentelemetry.io/otel/codes"
-	"go.opentelemetry.io/otel/label"
 	"go.opentelemetry.io/otel/semconv"
 	oteltrace "go.opentelemetry.io/otel/trace"
 )
 
 const (
-	dbTableKey        = label.Key("db.sql.table")
-	dbRowsAffectedKey = label.Key("db.rows_affected")
+	dbTableKey        = attribute.Key("db.sql.table")
+	dbRowsAffectedKey = attribute.Key("db.rows_affected")
 	dbOperationKey    = semconv.DBOperationKey
 	dbStatementKey    = semconv.DBStatementKey
 )
 
-func dbTable(name string) label.KeyValue {
+func dbTable(name string) attribute.KeyValue {
 	return dbTableKey.String(name)
 }
 
-func dbStatement(stmt string) label.KeyValue {
+func dbStatement(stmt string) attribute.KeyValue {
 	return dbStatementKey.String(stmt)
 }
 
-func dbCount(n int64) label.KeyValue {
+func dbCount(n int64) attribute.KeyValue {
 	return dbRowsAffectedKey.Int64(n)
 }
 
-func dbOperation(op string) label.KeyValue {
+func dbOperation(op string) attribute.KeyValue {
 	return dbOperationKey.String(op)
 }
 

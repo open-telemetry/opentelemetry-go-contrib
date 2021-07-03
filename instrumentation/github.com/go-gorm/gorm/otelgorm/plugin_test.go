@@ -200,7 +200,7 @@ func TestPlugin(t *testing.T) {
 
 			assert.NoError(tt, err)
 
-			sr := new(oteltest.StandardSpanRecorder)
+			sr := new(oteltest.SpanRecorder)
 			provider := oteltest.NewTracerProvider(oteltest.WithSpanRecorder(sr))
 
 			plugin := NewPlugin(WithTracerProvider(provider), WithDBName("db"))
