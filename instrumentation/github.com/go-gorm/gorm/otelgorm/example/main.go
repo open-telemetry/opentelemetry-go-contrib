@@ -48,7 +48,7 @@ func initTracer() oteltrace.TracerProvider {
 	}
 	tp := sdktrace.NewTracerProvider(
 		sdktrace.WithConfig(cfg),
-		sdktrace.WithSyncer(exporter),
+		sdktrace.WithBatcher(exporter),
 	)
 	if err != nil {
 		log.Fatal(err)
