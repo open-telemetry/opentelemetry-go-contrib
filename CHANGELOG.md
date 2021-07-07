@@ -8,6 +8,10 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 
 ## [Unreleased]
 
+### Changed
+
+- The `b3.B3.InjectEncoding` field has been unexported. Use `b3.New(b3.WithInjectEncoding(encoding))` instead. (#868)
+
 ### Fixed
 
 - Fix deadlocks and race conditions in `otelsarama.WrapAsyncProducer`.

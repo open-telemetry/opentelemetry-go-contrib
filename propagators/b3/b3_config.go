@@ -54,12 +54,22 @@ const (
 	B3Unspecified Encoding = 0
 	// B3MultipleHeader is a B3 encoding that uses multiple headers to
 	// transmit tracing information all prefixed with `x-b3-`.
+	//    x-b3-traceid: {TraceId}
+	//    x-b3-parentspanid: {ParentSpanId}
+	//    x-b3-spanid: {SpanId}
+	//    x-b3-sampled: {SamplingState}
+	//    x-b3-flags: {DebugFlag}
 	B3MultipleHeader Encoding = 1 << iota
 	// B3SingleHeader is a B3 encoding that uses a single header named `b3`
 	// to transmit tracing information.
+	//    b3: {TraceId}-{SpanId}-{SamplingState}-{ParentSpanId}
 	B3SingleHeader
 )
 
+// WithInjectEncoding sets what headers the propagors should set.
+// The encoding is interpreted as a bitmask. Therefore
+//   WithInjectEncoding(B3SingleHeader | B3MultipleHeader)
+// is going to set `b3` and `x-b3-*` headers.
 func WithInjectEncoding(encoding Encoding) Option {
 	return optionFunc(func(c *config) {
 		c.InjectEncoding = encoding

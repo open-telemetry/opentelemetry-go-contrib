@@ -61,6 +61,16 @@ var (
 )
 
 // B3 propagator serializes SpanContext to/from B3 Headers.
+// A Single Header propagator is used by default.
+// Use New function to a non-default instance of this propagator.
+type B3 struct {
+	cfg config
+}
+
+var _ propagation.TextMapPropagator = B3{}
+
+// New creates a B3 implementation of propagation.TextMapPropagator.
+// B3 propagator serializes SpanContext to/from B3 Headers.
 // This propagator supports both versions of B3 headers,
 //  1. Single Header:
 //    b3: {TraceId}-{SpanId}-{SamplingState}-{ParentSpanId}
@@ -71,12 +81,6 @@ var (
 //    x-b3-sampled: {SamplingState}
 //    x-b3-flags: {DebugFlag}
 // The Single Header propagator is used by default.
-type B3 struct {
-	cfg config
-}
-
-var _ propagation.TextMapPropagator = B3{}
-
 func New(opts ...Option) propagation.TextMapPropagator {
 	cfg := newConfig(opts...)
 	return B3{
