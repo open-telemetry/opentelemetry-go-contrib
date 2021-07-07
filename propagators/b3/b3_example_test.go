@@ -28,8 +28,6 @@ func ExampleB3() {
 func ExampleB3_injectEncoding() {
 	// Create a B3 propagator configured to inject context with both multiple
 	// and single header B3 HTTP encoding.
-	b3 := b3.B3{
-		InjectEncoding: b3.B3MultipleHeader | b3.B3SingleHeader,
-	}
+	b3 := b3.New(b3.WithInjectEncoding(b3.B3MultipleHeader | b3.B3SingleHeader))
 	otel.SetTextMapPropagator(b3)
 }

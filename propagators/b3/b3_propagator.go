@@ -60,25 +60,6 @@ var (
 	errInvalidParentSpanIDValue  = errors.New("invalid B3 ParentSpanID value found")
 )
 
-// Encoding is a bitmask representation of the B3 encoding type.
-type Encoding uint8
-
-// supports returns if e has o bit(s) set.
-func (e Encoding) supports(o Encoding) bool {
-	return e&o == o
-}
-
-const (
-	// B3MultipleHeader is a B3 encoding that uses multiple headers to
-	// transmit tracing information all prefixed with `x-b3-`.
-	B3MultipleHeader Encoding = 1 << iota
-	// B3SingleHeader is a B3 encoding that uses a single header named `b3`
-	// to transmit tracing information.
-	B3SingleHeader
-	// B3Unspecified is an unspecified B3 encoding.
-	B3Unspecified Encoding = 0
-)
-
 // B3 propagator serializes SpanContext to/from B3 Headers.
 // This propagator supports both versions of B3 headers,
 //  1. Single Header:
@@ -89,14 +70,19 @@ const (
 //    x-b3-spanid: {SpanId}
 //    x-b3-sampled: {SamplingState}
 //    x-b3-flags: {DebugFlag}
+// The Single Header propagator is used by default.
 type B3 struct {
-	// InjectEncoding are the B3 encodings used when injecting trace
-	// information. If no encoding is specified (i.e. `B3Unspecified`)
-	// `B3SingleHeader` will be used as the default.
-	InjectEncoding Encoding
+	cfg config
 }
 
 var _ propagation.TextMapPropagator = B3{}
+
+func New(opts ...Option) propagation.TextMapPropagator {
+	cfg := newConfig(opts...)
+	return B3{
+		cfg: *cfg,
+	}
+}
 
 // Inject injects a context into the carrier as B3 headers.
 // The parent span ID is omitted because it is not tracked in the
@@ -104,7 +90,7 @@ var _ propagation.TextMapPropagator = B3{}
 func (b3 B3) Inject(ctx context.Context, carrier propagation.TextMapCarrier) {
 	sc := trace.SpanFromContext(ctx).SpanContext()
 
-	if b3.InjectEncoding.supports(B3SingleHeader) || b3.InjectEncoding == B3Unspecified {
+	if b3.cfg.InjectEncoding.supports(B3SingleHeader) || b3.cfg.InjectEncoding == B3Unspecified {
 		header := []string{}
 		if sc.TraceID().IsValid() && sc.SpanID().IsValid() {
 			header = append(header, sc.TraceID().String(), sc.SpanID().String())
@@ -123,7 +109,7 @@ func (b3 B3) Inject(ctx context.Context, carrier propagation.TextMapCarrier) {
 		carrier.Set(b3ContextHeader, strings.Join(header, "-"))
 	}
 
-	if b3.InjectEncoding.supports(B3MultipleHeader) {
+	if b3.cfg.InjectEncoding.supports(B3MultipleHeader) {
 		if sc.TraceID().IsValid() && sc.SpanID().IsValid() {
 			carrier.Set(b3TraceIDHeader, sc.TraceID().String())
 			carrier.Set(b3SpanIDHeader, sc.SpanID().String())
@@ -175,10 +161,10 @@ func (b3 B3) Extract(ctx context.Context, carrier propagation.TextMapCarrier) co
 
 func (b3 B3) Fields() []string {
 	header := []string{}
-	if b3.InjectEncoding.supports(B3SingleHeader) {
+	if b3.cfg.InjectEncoding.supports(B3SingleHeader) {
 		header = append(header, b3ContextHeader)
 	}
-	if b3.InjectEncoding.supports(B3MultipleHeader) || b3.InjectEncoding == B3Unspecified {
+	if b3.cfg.InjectEncoding.supports(B3MultipleHeader) || b3.cfg.InjectEncoding == B3Unspecified {
 		header = append(header, b3TraceIDHeader, b3SpanIDHeader, b3SampledHeader, b3DebugFlagHeader)
 	}
 	return header
