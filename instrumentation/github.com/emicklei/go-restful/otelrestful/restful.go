@@ -34,7 +34,7 @@ const tracerName = "go.opentelemetry.io/contrib/instrumentation/github.com/emick
 func OTelFilter(service string, opts ...Option) restful.FilterFunction {
 	cfg := config{}
 	for _, opt := range opts {
-		opt(&cfg)
+		opt.apply(&cfg)
 	}
 	if cfg.TracerProvider == nil {
 		cfg.TracerProvider = otel.GetTracerProvider()
