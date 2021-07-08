@@ -52,7 +52,7 @@ For example:
 - `go.opentelemetry.io/contrib/instrumentation/gopkg.in/macaron.v1/otelmacaron`
 - `go.opentelemetry.io/contrib/instrumentation/database/sql/otelsql`
 
-The following packages are an exception to this rule do exist as they doe not instrument a Go package:
+The following packages are an exception to this rule as they do not instrument a Go package:
 
 - [host](./host)
 - [runtime](./runtime)
