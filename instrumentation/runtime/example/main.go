@@ -43,6 +43,7 @@ func initMeter() *controller.Controller {
 			exporter,
 		),
 		controller.WithExporter(exporter),
+		controller.WithCollectPeriod(time.Second*3),
 	)
 	pusher.Start(context.Background()) //nolint:errcheck
 	global.SetMeterProvider(pusher.MeterProvider())
@@ -50,7 +51,10 @@ func initMeter() *controller.Controller {
 }
 
 func main() {
-	defer handleErr(initMeter().Stop(context.Background()))
+	pusher := initMeter()
+	defer func(pusher *controller.Controller, ctx context.Context) {
+		handleErr(pusher.Stop(ctx))
+	}(pusher, context.Background())
 
 	if err := runtime.Start(
 		runtime.WithMinimumReadMemStatsInterval(time.Second),
