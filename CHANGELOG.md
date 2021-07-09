@@ -12,6 +12,10 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 
 - Add `WithTracerProvider` option for `otelhttptrace.NewClientTrace`. (#1128)
 
+### Changed
+
+- The `Transport`, `Handler`, and HTTP client convenience wrappers in the `go.opentelemetry.io/contrib/instrumentation/net/http/otelhttp` package now use the `TracerProvider` from the parent context if one exists and none was explicitly set when configuring the instrumentation. (#873)
+
 
 ## [1.0.0/0.25.0] - 2021-10-06
 
