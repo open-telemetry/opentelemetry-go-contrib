@@ -16,12 +16,15 @@ package otelhttp
 
 import (
 	"bytes"
+	"context"
 	"fmt"
 	"io/ioutil"
 	"net/http"
 	"net/http/httptest"
 	"testing"
 
+	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 	"go.opentelemetry.io/otel/oteltest"
 	"go.opentelemetry.io/otel/propagation"
 	"go.opentelemetry.io/otel/trace"
@@ -242,4 +245,49 @@ func TestTransportUsesFormatter(t *testing.T) {
 		t.Fatalf("unexpected name: got %s, expected %s", spanName, expectedName)
 	}
 
+}
+
+func TestTransportRequestWithTraceContext(t *testing.T) {
+	spanRecorder := new(oteltest.SpanRecorder)
+	provider := oteltest.NewTracerProvider(
+		oteltest.WithSpanRecorder(spanRecorder),
+	)
+	content := []byte("Hello, world!")
+
+	ts := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		_, err := w.Write(content)
+		require.NoError(t, err)
+	}))
+	defer ts.Close()
+
+	tracer := provider.Tracer("")
+	ctx, span := tracer.Start(context.Background(), "test_span")
+
+	r, err := http.NewRequest(http.MethodGet, ts.URL, nil)
+	require.NoError(t, err)
+
+	r = r.WithContext(ctx)
+
+	tr := NewTransport(
+		http.DefaultTransport,
+	)
+
+	c := http.Client{Transport: tr}
+	res, err := c.Do(r)
+	require.NoError(t, err)
+
+	span.End()
+
+	body, err := ioutil.ReadAll(res.Body)
+	require.NoError(t, err)
+
+	require.Equal(t, content, body)
+
+	spans := spanRecorder.Completed()
+	require.Len(t, spans, 2)
+
+	assert.Equal(t, "test_span", spans[0].Name())
+	assert.Equal(t, "HTTP GET", spans[1].Name())
+	assert.NotEmpty(t, spans[1].ParentSpanID())
+	assert.Equal(t, spans[0].SpanContext().SpanID(), spans[1].ParentSpanID())
 }

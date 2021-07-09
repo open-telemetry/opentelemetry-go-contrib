@@ -14,6 +14,7 @@
 package otelhttp
 
 import (
+	"context"
 	"fmt"
 	"io"
 	"io/ioutil"
@@ -23,6 +24,7 @@ import (
 	"testing"
 
 	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 
 	"go.opentelemetry.io/otel/attribute"
 	"go.opentelemetry.io/otel/codes"
@@ -202,4 +204,38 @@ func TestHandlerReadingNilBodySuccess(t *testing.T) {
 	}
 	h.ServeHTTP(rr, r)
 	assert.Equal(t, 200, rr.Result().StatusCode)
+}
+
+func TestHandlerRequestWithTraceContext(t *testing.T) {
+	rr := httptest.NewRecorder()
+
+	h := NewHandler(
+		http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+			_, err := w.Write([]byte("hello world"))
+			require.NoError(t, err)
+		}), "test_handler")
+
+	r, err := http.NewRequest(http.MethodGet, "http://localhost/", nil)
+	require.NoError(t, err)
+
+	spanRecorder := new(oteltest.SpanRecorder)
+	provider := oteltest.NewTracerProvider(
+		oteltest.WithSpanRecorder(spanRecorder),
+	)
+	tracer := provider.Tracer("")
+	ctx, span := tracer.Start(context.Background(), "test_request")
+	r = r.WithContext(ctx)
+
+	h.ServeHTTP(rr, r)
+	assert.Equal(t, 200, rr.Result().StatusCode)
+
+	span.End()
+
+	spans := spanRecorder.Completed()
+	require.Len(t, spans, 2)
+
+	assert.Equal(t, "test_handler", spans[0].Name())
+	assert.Equal(t, "test_request", spans[1].Name())
+	assert.NotEmpty(t, spans[0].ParentSpanID())
+	assert.Equal(t, spans[1].SpanContext().SpanID(), spans[0].ParentSpanID())
 }
