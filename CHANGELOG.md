@@ -8,6 +8,10 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 
 ## [Unreleased]
 
+### Added
+
+- `otelhttp.Transport`, `otelhttp.Handler` and HTTP client convenience wrappers now pick up the correct `TracerProvider` from the parent span in context if none was manually set in constructor. (#873)
+
 ### Fixed
 
 - Fix deadlocks and race conditions in `otelsarama.WrapAsyncProducer`.
