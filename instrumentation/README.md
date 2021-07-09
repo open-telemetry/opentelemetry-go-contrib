@@ -53,7 +53,7 @@ For example:
 - `go.opentelemetry.io/contrib/instrumentation/database/sql/otelsql`
 
 Exceptions to this rule exist.
-For example, the [runtime](./runtime) and [host](./host) instrumentation do not instrument any Go package and do therefore do not fit this structure.
+For example, the [runtime](./runtime) and [host](./host) instrumentation do not instrument any Go package and therefore do not fit this structure.
 
 ### Contents
 
