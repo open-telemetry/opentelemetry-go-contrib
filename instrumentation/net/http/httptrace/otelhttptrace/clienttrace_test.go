@@ -243,3 +243,36 @@ func TestEndBeforeStartCreatesSpan(t *testing.T) {
 	spans := getSpansFromRecorder(sr, name)
 	require.Len(t, spans, 1)
 }
+
+func TestHTTPRequestWithTraceContext(t *testing.T) {
+	sr := &oteltest.SpanRecorder{}
+	tp := oteltest.NewTracerProvider(oteltest.WithSpanRecorder(sr))
+
+	// Mock http server
+	ts := httptest.NewServer(
+		http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		}),
+	)
+	defer ts.Close()
+
+	ctx, span := tp.Tracer("").Start(context.Background(), "parent_span")
+
+	req, _ := http.NewRequest("GET", ts.URL, nil)
+	req = req.WithContext(httptrace.WithClientTrace(req.Context(), otelhttptrace.NewClientTrace(ctx)))
+
+	client := ts.Client()
+	res, err := client.Do(req)
+	require.NoError(t, err)
+	_ = res.Body.Close()
+
+	span.End()
+
+	parent, ok := getSpanFromRecorder(sr, "parent_span")
+	require.True(t, ok)
+
+	getconn, ok := getSpanFromRecorder(sr, "http.getconn")
+	require.True(t, ok)
+
+	require.Equal(t, parent.SpanContext().TraceID(), getconn.SpanContext().TraceID())
+	require.Equal(t, parent.SpanContext().SpanID(), getconn.ParentSpanID())
+}

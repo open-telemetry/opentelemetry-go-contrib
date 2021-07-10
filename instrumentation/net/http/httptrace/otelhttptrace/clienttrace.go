@@ -69,7 +69,14 @@ func NewClientTrace(ctx context.Context) *httptrace.ClientTrace {
 		activeHooks: make(map[string]context.Context),
 	}
 
-	ct.tr = otel.GetTracerProvider().Tracer(
+	var tp trace.TracerProvider
+	if span := trace.SpanFromContext(ctx); span.SpanContext().IsValid() {
+		tp = span.TracerProvider()
+	} else {
+		tp = otel.GetTracerProvider()
+	}
+
+	ct.tr = tp.Tracer(
 		"go.opentelemetry.io/otel/instrumentation/httptrace",
 		trace.WithInstrumentationVersion(contrib.SemVersion()),
 	)
