@@ -14,10 +14,8 @@
 
 // Package otelgorm instruments the gorm.io/gorm package.
 //
-// Currently there are two ways the code can be instrumented. One is
-// instrumenting the routing of a received message (the Middleware function)
-// and instrumenting the response generation through template evaluation (the
-// HTML function).
+// The package will instrument all CRUD operations. It will trace the query and the query result
+// including additional data like target query table (where available) and affected row count.
 package otelgorm
 
 //

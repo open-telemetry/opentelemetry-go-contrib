@@ -91,6 +91,11 @@ func doGormOperations(ctx context.Context, db *gorm.DB) {
 func main() {
 	tp := initTracer()
 	ctx := context.Background()
+	defer func() {
+		if err := tp.Shutdown(context.Background()); err != nil {
+			log.Printf("Error shutting down tracer provider: %v", err)
+		}
+	}()
 
 	// Initialize db connection
 	db, err := gorm.Open(sqlite.Open(dbName), &gorm.Config{})

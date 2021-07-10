@@ -99,7 +99,7 @@ test-gomemcache:
 
 .PHONY: test-gorm
 test-gorm:
-	@if ./.circleci/should_build.sh gorm; then \
+	@if ./tools/should_build.sh gorm; then \
 	  set -e; \
 	  (cd instrumentation/github.com/go-gorm/gorm/otelgorm && \
 	    $(GOTEST_WITH_COVERAGE) . && \
