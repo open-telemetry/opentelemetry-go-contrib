@@ -146,9 +146,8 @@ type clientTracer struct {
 // Proxy-Authorization, Cookie, and Set-Cookie.
 func NewClientTrace(ctx context.Context, opts ...ClientTraceOption) *httptrace.ClientTrace {
 	ct := &clientTracer{
-		Context:        ctx,
-		tracerProvider: otel.GetTracerProvider(),
-		activeHooks:    make(map[string]context.Context),
+		Context:     ctx,
+		activeHooks: make(map[string]context.Context),
 		redactedHeaders: map[string]struct{}{
 			"authorization":       {},
 			"www-authenticate":    {},
@@ -160,6 +159,13 @@ func NewClientTrace(ctx context.Context, opts ...ClientTraceOption) *httptrace.C
 		addHeaders: true,
 		useSpans:   true,
 	}
+
+	if span := trace.SpanFromContext(ctx); span.SpanContext().IsValid() {
+		ct.tracerProvider = span.TracerProvider()
+	} else {
+		ct.tracerProvider = otel.GetTracerProvider()
+	}
+
 	for _, opt := range opts {
 		opt.apply(ct)
 	}
