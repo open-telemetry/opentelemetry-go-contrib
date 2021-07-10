@@ -21,6 +21,7 @@ import (
 	"io/ioutil"
 	"net/http"
 	"net/http/httptest"
+	"net/http/httptrace"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
@@ -290,4 +291,66 @@ func TestTransportRequestWithTraceContext(t *testing.T) {
 	assert.Equal(t, "HTTP GET", spans[1].Name())
 	assert.NotEmpty(t, spans[1].ParentSpanID())
 	assert.Equal(t, spans[0].SpanContext().SpanID(), spans[1].ParentSpanID())
+}
+
+func TestWithHTTPTrace(t *testing.T) {
+	spanRecorder := new(oteltest.SpanRecorder)
+	provider := oteltest.NewTracerProvider(
+		oteltest.WithSpanRecorder(spanRecorder),
+	)
+	content := []byte("Hello, world!")
+
+	ts := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		_, err := w.Write(content)
+		require.NoError(t, err)
+	}))
+	defer ts.Close()
+
+	tracer := provider.Tracer("")
+	ctx, span := tracer.Start(context.Background(), "test_span")
+
+	r, err := http.NewRequest(http.MethodGet, ts.URL, nil)
+	require.NoError(t, err)
+
+	r = r.WithContext(ctx)
+
+	clientTracer := func(ctx context.Context) *httptrace.ClientTrace {
+		var span trace.Span
+		return &httptrace.ClientTrace{
+			GetConn: func(_ string) {
+				_, span = trace.SpanFromContext(ctx).TracerProvider().Tracer("").Start(ctx, "httptrace.GetConn")
+			},
+			GotConn: func(_ httptrace.GotConnInfo) {
+				if span != nil {
+					span.End()
+				}
+			},
+		}
+	}
+
+	tr := NewTransport(
+		http.DefaultTransport,
+		WithClientTrace(clientTracer),
+	)
+
+	c := http.Client{Transport: tr}
+	res, err := c.Do(r)
+	require.NoError(t, err)
+
+	span.End()
+
+	body, err := ioutil.ReadAll(res.Body)
+	require.NoError(t, err)
+
+	require.Equal(t, content, body)
+
+	spans := spanRecorder.Completed()
+	require.Len(t, spans, 3)
+
+	assert.Equal(t, "httptrace.GetConn", spans[0].Name())
+	assert.Equal(t, "test_span", spans[1].Name())
+	assert.Equal(t, "HTTP GET", spans[2].Name())
+	assert.NotEmpty(t, spans[1].ParentSpanID())
+	assert.Equal(t, spans[2].SpanContext().SpanID(), spans[0].ParentSpanID())
+	assert.Equal(t, spans[1].SpanContext().SpanID(), spans[2].ParentSpanID())
 }
