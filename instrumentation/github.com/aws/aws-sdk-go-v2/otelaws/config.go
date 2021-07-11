@@ -24,14 +24,14 @@ type config struct {
 
 // Option applies an option value.
 type Option interface {
-	Apply(*config)
+	apply(*config)
 }
 
 // optionFunc provides a convenience wrapper for simple Options
 // that can be represented as functions.
 type optionFunc func(*config)
 
-func (o optionFunc) Apply(c *config) {
+func (o optionFunc) apply(c *config) {
 	o(c)
 }
 
