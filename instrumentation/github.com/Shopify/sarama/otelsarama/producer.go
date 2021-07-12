@@ -168,10 +168,8 @@ func WrapAsyncProducer(saramaConfig *sarama.Config, p sarama.AsyncProducer, opts
 					span:           span,
 				}
 
-				// Specific metadata with span id
+				// Remember specific metadata with span id
 				msg.Metadata = span.SpanContext().SpanID()
-
-				p.Input() <- msg
 				if saramaConfig.Producer.Return.Successes {
 					mtx.Lock()
 					producerMessageContexts[msg.Metadata] = mc
@@ -182,6 +180,8 @@ func WrapAsyncProducer(saramaConfig *sarama.Config, p sarama.AsyncProducer, opts
 					// be done.
 					mc.span.End()
 				}
+
+				p.Input() <- msg
 			}
 		}
 	}()
