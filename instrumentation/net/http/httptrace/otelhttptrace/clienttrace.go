@@ -73,22 +73,65 @@ func WithoutSubSpans() ClientTraceOption {
 	}
 }
 
+// WithRedactedHeaders will be replaced by fixed '****' values for the header
+// names provided.  These are in addition to the sensitive headers already
+// redacted by default: Authorization, WWW-Authenticate, Proxy-Authenticate
+// Proxy-Authorization, Cookie, Set-Cookie
+func WithRedactedHeaders(headers ...string) ClientTraceOption {
+	return func(ct *clientTracer) {
+		for _, header := range headers {
+			ct.redactedHeaders[strings.ToLower(header)] = struct{}{}
+		}
+	}
+}
+
+// WithoutHeaders will disable adding span attributes for the http headers
+// and values.
+func WithoutHeaders() ClientTraceOption {
+	return func(ct *clientTracer) {
+		ct.addHeaders = false
+	}
+}
+
+// WithInsecureHeaders will add span attributes for all http headers *INCLUDING*
+// the sensitive headers that are redacted by default.  The attribute values
+// will include the raw un-redacted text.  This might be useful for
+// debugging authentication related issues, but should not be used for
+// production deployments.
+func WithInsecureHeaders() ClientTraceOption {
+	return func(ct *clientTracer) {
+		ct.addHeaders = true
+		ct.redactedHeaders = nil
+	}
+}
+
 type clientTracer struct {
 	context.Context
 
 	tr trace.Tracer
 
-	activeHooks map[string]context.Context
-	root        trace.Span
-	mtx         sync.Mutex
-	useSpans    bool
+	activeHooks     map[string]context.Context
+	root            trace.Span
+	mtx             sync.Mutex
+	redactedHeaders map[string]struct{}
+	addHeaders      bool
+	useSpans        bool
 }
 
 func NewClientTrace(ctx context.Context, opts ...ClientTraceOption) *httptrace.ClientTrace {
 	ct := &clientTracer{
 		Context:     ctx,
 		activeHooks: make(map[string]context.Context),
-		useSpans:    true,
+		redactedHeaders: map[string]struct{}{
+			"authorization":       {},
+			"www-authenticate":    {},
+			"proxy-authenticate":  {},
+			"proxy-authorization": {},
+			"cookie":              {},
+			"set-cookie":          {},
+		},
+		addHeaders: true,
+		useSpans:   true,
 	}
 	for _, opt := range opts {
 		opt(ct)
@@ -258,7 +301,15 @@ func (ct *clientTracer) wroteHeaderField(k string, v []string) {
 	if ct.useSpans && ct.span("http.headers") == nil {
 		ct.start("http.headers", "http.headers")
 	}
-	ct.root.SetAttributes(attribute.String("http."+strings.ToLower(k), sliceToString(v)))
+	if !ct.addHeaders {
+		return
+	}
+	k = strings.ToLower(k)
+	value := sliceToString(v)
+	if _, ok := ct.redactedHeaders[k]; ok {
+		value = "****"
+	}
+	ct.root.SetAttributes(attribute.String("http."+k, value))
 }
 
 func (ct *clientTracer) wroteHeaders() {

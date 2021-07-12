@@ -14,9 +14,13 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
   The `messaging.message_id` and `messaging.kafka.partition` attributes are now not set if a message was not processed. (#754) (#755)
 - Fix `otelsarama.WrapAsyncProducer` so that the messages from the `Errors` channel contain the original `Metadata`. (#754)
 
+### Added
+
+- Options `WithoutSubSpans`, `WithRedactedHeaders`, `WithoutHeaders`, and `WithInsecureHeaders` added to `NewClientTrace` in the `instrumentation/net/http/httptrace/otelhttptrace` package. (#879)
+
 ### Changed
 
-- Added `WithoutSubSpans` option to `NewClientTrace` in the `instrumentation/net/http/httptrace/otelhttptrace` package (#879)
+- `instrumentation/net/http/httptrace/otelhttptrace` will now redact known sensitive headers by default. (#879)
 
 ## [0.21.0] - 2021-06-18
 

@@ -255,7 +255,7 @@ func TestEndBeforeStartCreatesSpan(t *testing.T) {
 	require.Len(t, spans, 1)
 }
 
-func TestWithoutSubSpans(t *testing.T) {
+func TestClientTraceOptions(t *testing.T) {
 	sr := &oteltest.SpanRecorder{}
 	otel.SetTracerProvider(
 		oteltest.NewTracerProvider(oteltest.WithSpanRecorder(sr)),
@@ -268,6 +268,8 @@ func TestWithoutSubSpans(t *testing.T) {
 	)
 	defer ts.Close()
 	address := ts.Listener.Addr().String()
+
+	// Test WithoutSubSpans
 
 	ctx := context.Background()
 	ctx = httptrace.WithClientTrace(ctx,
@@ -293,6 +295,7 @@ func TestWithoutSubSpans(t *testing.T) {
 	)
 	req, err = http.NewRequestWithContext(ctx, http.MethodGet, ts.URL, nil)
 	req.Header.Set("User-Agent", "oteltest/1.1")
+	req.Header.Set("Authorization", "Bearer token123")
 	require.NoError(t, err)
 	resp, err = ts.Client().Do(req)
 	require.NoError(t, err)
@@ -303,7 +306,7 @@ func TestWithoutSubSpans(t *testing.T) {
 	recSpan := sr.Completed()[0]
 
 	gotAttributes := recSpan.Attributes()
-	require.Len(t, gotAttributes, 3)
+	require.Len(t, gotAttributes, 4)
 	assert.Equal(t,
 		attribute.StringValue("gzip"),
 		gotAttributes[attribute.Key("http.accept-encoding")],
@@ -311,6 +314,11 @@ func TestWithoutSubSpans(t *testing.T) {
 	assert.Equal(t,
 		attribute.StringValue("oteltest/1.1"),
 		gotAttributes[attribute.Key("http.user-agent")],
+	)
+	// verify redacted auth headers
+	assert.Equal(t,
+		attribute.StringValue("****"),
+		gotAttributes[attribute.Key("http.authorization")],
 	)
 	assert.Equal(t,
 		attribute.StringValue(address),
@@ -364,4 +372,74 @@ func TestWithoutSubSpans(t *testing.T) {
 			})
 		}
 	}
+
+	// Test WithRedactedHeaders
+
+	ctx, span = otel.Tracer("oteltest").Start(context.Background(), "root")
+	ctx = httptrace.WithClientTrace(ctx,
+		otelhttptrace.NewClientTrace(ctx,
+			otelhttptrace.WithoutSubSpans(),
+			otelhttptrace.WithRedactedHeaders("user-agent"),
+		),
+	)
+	req, err = http.NewRequestWithContext(ctx, http.MethodGet, ts.URL, nil)
+	require.NoError(t, err)
+	resp, err = ts.Client().Do(req)
+	require.NoError(t, err)
+	resp.Body.Close()
+	span.End()
+	require.Len(t, sr.Completed(), 2)
+	recSpan = sr.Completed()[1]
+
+	gotAttributes = recSpan.Attributes()
+	assert.Equal(t,
+		attribute.StringValue("****"),
+		gotAttributes[attribute.Key("http.user-agent")],
+	)
+
+	// Test WithoutHeaders
+
+	ctx, span = otel.Tracer("oteltest").Start(context.Background(), "root")
+	ctx = httptrace.WithClientTrace(ctx,
+		otelhttptrace.NewClientTrace(ctx,
+			otelhttptrace.WithoutSubSpans(),
+			otelhttptrace.WithoutHeaders(),
+		),
+	)
+	req, err = http.NewRequestWithContext(ctx, http.MethodGet, ts.URL, nil)
+	require.NoError(t, err)
+	resp, err = ts.Client().Do(req)
+	require.NoError(t, err)
+	resp.Body.Close()
+	span.End()
+	require.Len(t, sr.Completed(), 3)
+	recSpan = sr.Completed()[2]
+
+	gotAttributes = recSpan.Attributes()
+	require.Len(t, gotAttributes, 0)
+
+	// Test WithInsecureHeaders
+
+	ctx, span = otel.Tracer("oteltest").Start(context.Background(), "root")
+	ctx = httptrace.WithClientTrace(ctx,
+		otelhttptrace.NewClientTrace(ctx,
+			otelhttptrace.WithoutSubSpans(),
+			otelhttptrace.WithInsecureHeaders(),
+		),
+	)
+	req, err = http.NewRequestWithContext(ctx, http.MethodGet, ts.URL, nil)
+	req.Header.Set("Authorization", "Bearer token123")
+	require.NoError(t, err)
+	resp, err = ts.Client().Do(req)
+	require.NoError(t, err)
+	resp.Body.Close()
+	span.End()
+	require.Len(t, sr.Completed(), 4)
+	recSpan = sr.Completed()[3]
+
+	gotAttributes = recSpan.Attributes()
+	assert.Equal(t,
+		attribute.StringValue("Bearer token123"),
+		gotAttributes[attribute.Key("http.authorization")],
+	)
 }
