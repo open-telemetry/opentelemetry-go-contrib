@@ -8,11 +8,16 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 
 ## [Unreleased]
 
+### Added
+
+- Add `WithoutSubSpans`, `WithRedactedHeaders`, `WithoutHeaders`, and `WithInsecureHeaders` options for `otelhttptrace.NewClientTrace`. (#879)
+
 ### Changed
 
 - Split `go.opentelemetry.io/contrib/propagators` module into `b3`, `jaeger`, `ot` modules. (#985)
 - `otelmongodb` span attributes, name and span status now conform to specification. (#769)
 - Migrated EC2 resource detector support from root module `go.opentelemetry.io/contrib/detectors/aws` to a separate EC2 resource detector module `go.opentelemetry.io/contrib/detectors/aws/ec2` (#1017)
+- `otelhttptrace.NewClientTrace` now redacts known sensitive headers by default. (#879)
 
 ### Fixed
 
@@ -34,10 +39,6 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 - Fix deadlocks and race conditions in `otelsarama.WrapAsyncProducer`.
   The `messaging.message_id` and `messaging.kafka.partition` attributes are now not set if a message was not processed. (#754) (#755) (#881)
 - Fix `otelsarama.WrapAsyncProducer` so that the messages from the `Errors` channel contain the original `Metadata`. (#754)
-
-### Changed
-
-- Added `WithoutSubSpans` option to `NewClientTrace` in the `instrumentation/net/http/httptrace/otelhttptrace` package (#879)
 
 ## [0.21.0] - 2021-06-18
 

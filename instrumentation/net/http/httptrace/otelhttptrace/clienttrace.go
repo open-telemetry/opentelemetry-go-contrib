@@ -62,15 +62,55 @@ func parentHook(hook string) string {
 
 // ClientTraceOption allows customizations to how the httptrace.Client
 // collects information.
-type ClientTraceOption func(*clientTracer)
+type ClientTraceOption interface {
+	apply(*clientTracer)
+}
 
-// WithoutSubSpans will modify the httptrace.Client to only collect data
+type clientTraceOptionFunc func(*clientTracer)
+
+func (fn clientTraceOptionFunc) apply(c *clientTracer) {
+	fn(c)
+}
+
+// WithoutSubSpans will modify the httptrace.ClientTrace to only collect data
 // as Events and Attributes on a span found in the context.  By default
 // sub-spans will be generated.
 func WithoutSubSpans() ClientTraceOption {
-	return func(ct *clientTracer) {
+	return clientTraceOptionFunc(func(ct *clientTracer) {
 		ct.useSpans = false
-	}
+	})
+}
+
+// WithRedactedHeaders will be replaced by fixed '****' values for the header
+// names provided.  These are in addition to the sensitive headers already
+// redacted by default: Authorization, WWW-Authenticate, Proxy-Authenticate
+// Proxy-Authorization, Cookie, Set-Cookie
+func WithRedactedHeaders(headers ...string) ClientTraceOption {
+	return clientTraceOptionFunc(func(ct *clientTracer) {
+		for _, header := range headers {
+			ct.redactedHeaders[strings.ToLower(header)] = struct{}{}
+		}
+	})
+}
+
+// WithoutHeaders will disable adding span attributes for the http headers
+// and values.
+func WithoutHeaders() ClientTraceOption {
+	return clientTraceOptionFunc(func(ct *clientTracer) {
+		ct.addHeaders = false
+	})
+}
+
+// WithInsecureHeaders will add span attributes for all http headers *INCLUDING*
+// the sensitive headers that are redacted by default.  The attribute values
+// will include the raw un-redacted text.  This might be useful for
+// debugging authentication related issues, but should not be used for
+// production deployments.
+func WithInsecureHeaders() ClientTraceOption {
+	return clientTraceOptionFunc(func(ct *clientTracer) {
+		ct.addHeaders = true
+		ct.redactedHeaders = nil
+	})
 }
 
 type clientTracer struct {
@@ -78,20 +118,38 @@ type clientTracer struct {
 
 	tr trace.Tracer
 
-	activeHooks map[string]context.Context
-	root        trace.Span
-	mtx         sync.Mutex
-	useSpans    bool
+	activeHooks     map[string]context.Context
+	root            trace.Span
+	mtx             sync.Mutex
+	redactedHeaders map[string]struct{}
+	addHeaders      bool
+	useSpans        bool
 }
 
+// NewClientTrace returns an httptrace.ClientTrace implementation that will
+// record OpenTelemetry spans for requests made by an http.Client. By default
+// several spans will be added to the trace for various stages of a request
+// (dns, connection, tls, etc). Also by default, all HTTP headers will be
+// added as attributes to spans, although several headers will be automatically
+// redacted: Authorization, WWW-Authenticate, Proxy-Authenticate,
+// Proxy-Authorization, Cookie, and Set-Cookie.
 func NewClientTrace(ctx context.Context, opts ...ClientTraceOption) *httptrace.ClientTrace {
 	ct := &clientTracer{
 		Context:     ctx,
 		activeHooks: make(map[string]context.Context),
-		useSpans:    true,
+		redactedHeaders: map[string]struct{}{
+			"authorization":       {},
+			"www-authenticate":    {},
+			"proxy-authenticate":  {},
+			"proxy-authorization": {},
+			"cookie":              {},
+			"set-cookie":          {},
+		},
+		addHeaders: true,
+		useSpans:   true,
 	}
 	for _, opt := range opts {
-		opt(ct)
+		opt.apply(ct)
 	}
 
 	ct.tr = otel.GetTracerProvider().Tracer(
@@ -258,7 +316,15 @@ func (ct *clientTracer) wroteHeaderField(k string, v []string) {
 	if ct.useSpans && ct.span("http.headers") == nil {
 		ct.start("http.headers", "http.headers")
 	}
-	ct.root.SetAttributes(attribute.String("http."+strings.ToLower(k), sliceToString(v)))
+	if !ct.addHeaders {
+		return
+	}
+	k = strings.ToLower(k)
+	value := sliceToString(v)
+	if _, ok := ct.redactedHeaders[k]; ok {
+		value = "****"
+	}
+	ct.root.SetAttributes(attribute.String("http."+k, value))
 }
 
 func (ct *clientTracer) wroteHeaders() {
