@@ -168,7 +168,7 @@ func WrapAsyncProducer(saramaConfig *sarama.Config, p sarama.AsyncProducer, opts
 					span:           span,
 				}
 
-				// Remember specific metadata with span id
+				// Remember metadata using span ID as a cache key
 				msg.Metadata = span.SpanContext().SpanID()
 				if saramaConfig.Producer.Return.Successes {
 					mtx.Lock()
