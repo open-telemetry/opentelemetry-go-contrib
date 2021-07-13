@@ -48,6 +48,7 @@ precommit: dependabot-check license-check generate build lint test
 .PHONY: test-with-coverage
 test-with-coverage:
 	set -e; \
+	export CGO_ENABLED=1
 	printf "" > coverage.txt; \
 	for dir in $(ALL_COVERAGE_MOD_DIRS); do \
 	  echo "go test ./... + coverage in $${dir}"; \
