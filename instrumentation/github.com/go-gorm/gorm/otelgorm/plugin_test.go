@@ -26,8 +26,6 @@ import (
 	"gorm.io/driver/sqlite"
 	"gorm.io/gorm"
 
-	"go.opentelemetry.io/contrib/internal/util"
-
 	"go.opentelemetry.io/otel/oteltest"
 )
 
@@ -224,11 +222,11 @@ func TestPlugin(t *testing.T) {
 			require.Len(t, spans, tc.spans)
 			s := spans[tc.targetSpan]
 
-			assert.Equal(tt, spans[0].SpanContext().TraceID, spans[1].SpanContext().TraceID)
-			assert.Equal(tt, s.Name(), tc.expectSpanName)
-			assert.Equal(tt, "test_models", s.Attributes()[dbTableKey].AsString())
-			assert.Equal(tt, tc.sqlOp, s.Attributes()[dbOperationKey].AsString())
-			assert.Equal(tt, tc.affectedRows, s.Attributes()[dbRowsAffectedKey].AsInt64())
+			assert.Equal(tt, spans[0].SpanContext().TraceID(), spans[1].SpanContext().TraceID(), "should record spans under the same trace")
+			assert.Equal(tt, s.Name(), tc.expectSpanName, "span name should match the query")
+			assert.Equal(tt, "test_models", s.Attributes()[dbTableKey].AsString(), "table attribute should point at the queried table")
+			assert.Equal(tt, tc.sqlOp, s.Attributes()[dbOperationKey].AsString(), "operation attribute should equal the sql operation")
+			assert.Equal(tt, tc.affectedRows, s.Attributes()[dbRowsAffectedKey].AsInt64(), "affected rows attribute should be set correctly")
 			assert.Contains(tt, s.Attributes()[dbStatementKey].AsString(), tc.sqlOp)
 		})
 	}
@@ -236,6 +234,5 @@ func TestPlugin(t *testing.T) {
 }
 
 func TestMain(m *testing.M) {
-	util.IntegrationShouldRun("test-gorm")
 	os.Exit(m.Run())
 }
