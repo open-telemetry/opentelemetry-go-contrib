@@ -1,6 +1,6 @@
 module go.opentelemetry.io/opentelemetry-go-contrib/instrumentation/github.com/gofiber/fiber/otelfiber/example
 
-go 1.16
+go 1.15
 
 replace (
 	go.opentelemetry.io/contrib => ../../../../../../
