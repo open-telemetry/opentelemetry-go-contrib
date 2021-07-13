@@ -17,5 +17,3 @@
 // The package will instrument all CRUD operations. It will trace the query and the query result
 // including additional data like target query table (where available) and affected row count.
 package otelgorm
-
-//

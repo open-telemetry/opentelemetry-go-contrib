@@ -52,7 +52,7 @@ func (op *OtelPlugin) Name() string {
 func NewPlugin(opts ...Option) *OtelPlugin {
 	cfg := &config{}
 	for _, o := range opts {
-		o(cfg)
+		o.apply(cfg)
 	}
 
 	if cfg.tracerProvider == nil {
