@@ -16,7 +16,6 @@ package otelfiber
 
 import (
 	"context"
-	"fmt"
 	"net/http"
 
 	"github.com/gofiber/fiber/v2"
@@ -96,10 +95,6 @@ func Middleware(service string, opts ...Option) fiber.Handler {
 		// update with c.Route().Path after c.Next() is called
 		// to get pathRaw
 		spanName := c.Path()
-		if spanName == "" {
-			spanName = fmt.Sprintf("HTTP %s route not found", c.Path())
-		}
-
 		ctx, span := tracer.Start(ctx, spanName, opts...)
 		defer span.End()
 
