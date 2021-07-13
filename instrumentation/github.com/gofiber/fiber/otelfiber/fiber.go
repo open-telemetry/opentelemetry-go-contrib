@@ -39,7 +39,7 @@ const (
 func Middleware(service string, opts ...Option) fiber.Handler {
 	cfg := config{}
 	for _, opt := range opts {
-		opt(&cfg)
+		opt.apply(&cfg)
 	}
 	if cfg.TracerProvider == nil {
 		cfg.TracerProvider = otel.GetTracerProvider()
@@ -76,17 +76,21 @@ func Middleware(service string, opts ...Option) fiber.Handler {
 
 		ctx := cfg.Propagators.Extract(savedCtx, propagation.HeaderCarrier(reqHeader))
 		opts := []oteltrace.SpanStartOption{
-			oteltrace.WithAttributes(semconv.HTTPServerNameKey.String(service),
+			oteltrace.WithAttributes(
+				semconv.HTTPServerNameKey.String(service),
 				semconv.HTTPMethodKey.String(c.Method()),
 				semconv.HTTPTargetKey.String(string(c.Request().RequestURI())),
 				semconv.HTTPURLKey.String(c.OriginalURL()),
 				semconv.NetHostIPKey.String(c.IP()),
+				semconv.NetHostNameKey.String(c.Hostname()),
 				semconv.HTTPUserAgentKey.String(string(c.Request().Header.UserAgent())),
 				semconv.HTTPRequestContentLengthKey.Int(c.Request().Header.ContentLength()),
 				semconv.HTTPSchemeKey.String(c.Protocol()),
-				semconv.HTTPClientIPKey.String(c.IP()),
 				semconv.NetTransportTCP),
 			oteltrace.WithSpanKind(oteltrace.SpanKindServer),
+		}
+		if len(c.IPs()) > 0 {
+			opts = append(opts, oteltrace.WithAttributes(semconv.HTTPClientIPKey.String(c.IPs()[0])))
 		}
 		// temporary set to c.Path() first
 		// update with c.Route().Path after c.Next() is called
