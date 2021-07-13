@@ -9,7 +9,7 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 ## [Unreleased]
 ### Added
 
-- `gofiber/fiber` trace instrumentation (#880)
+- Trace instrumentation for the `github.com/gofiber/fiber` package. (#880)
 
 ### Fixed
 
