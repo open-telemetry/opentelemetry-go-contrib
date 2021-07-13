@@ -76,16 +76,16 @@ func Middleware(service string, opts ...Option) fiber.Handler {
 
 		ctx := cfg.Propagators.Extract(savedCtx, propagation.HeaderCarrier(reqHeader))
 		opts := []oteltrace.SpanStartOption{
-			oteltrace.WithAttributes(semconv.HTTPServerNameKey.String(service)),
-			oteltrace.WithAttributes(semconv.HTTPMethodKey.String(c.Method())),
-			oteltrace.WithAttributes(semconv.HTTPTargetKey.String(string(c.Request().RequestURI()))),
-			oteltrace.WithAttributes(semconv.HTTPURLKey.String(c.OriginalURL())),
-			oteltrace.WithAttributes(semconv.NetHostIPKey.String(c.IP())),
-			oteltrace.WithAttributes(semconv.HTTPUserAgentKey.String(string(c.Request().Header.UserAgent()))),
-			oteltrace.WithAttributes(semconv.HTTPRequestContentLengthKey.Int(c.Request().Header.ContentLength())),
-			oteltrace.WithAttributes(semconv.HTTPSchemeKey.String(c.Protocol())),
-			oteltrace.WithAttributes(semconv.HTTPClientIPKey.String(c.IP())),
-			oteltrace.WithAttributes(semconv.NetTransportTCP),
+			oteltrace.WithAttributes(semconv.HTTPServerNameKey.String(service),
+				semconv.HTTPMethodKey.String(c.Method()),
+				semconv.HTTPTargetKey.String(string(c.Request().RequestURI())),
+				semconv.HTTPURLKey.String(c.OriginalURL()),
+				semconv.NetHostIPKey.String(c.IP()),
+				semconv.HTTPUserAgentKey.String(string(c.Request().Header.UserAgent())),
+				semconv.HTTPRequestContentLengthKey.Int(c.Request().Header.ContentLength()),
+				semconv.HTTPSchemeKey.String(c.Protocol()),
+				semconv.HTTPClientIPKey.String(c.IP()),
+				semconv.NetTransportTCP),
 			oteltrace.WithSpanKind(oteltrace.SpanKindServer),
 		}
 		// temporary set to c.Path() first

@@ -20,7 +20,7 @@ services:
     command:
       - "/bin/sh"
       - "-c"
-      - "wget http://echo-server:3000/users/123 && cat 123"
+      - "wget http://fiber-server:3000/users/123 && cat 123"
     depends_on:
       - fiber-server
   fiber-server:

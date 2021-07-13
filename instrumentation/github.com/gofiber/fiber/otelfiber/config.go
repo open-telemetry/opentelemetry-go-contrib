@@ -19,7 +19,7 @@ import (
 	oteltrace "go.opentelemetry.io/otel/trace"
 )
 
-// config is used to configure the mux middleware.
+// config is used to configure the Fiber middleware.
 type config struct {
 	TracerProvider oteltrace.TracerProvider
 	Propagators    propagation.TextMapPropagator
