@@ -19,6 +19,7 @@ package otelfiber
 import (
 	"context"
 	"errors"
+	semconv "go.opentelemetry.io/otel/semconv/v1.4.0"
 	"net/http"
 	"net/http/httptest"
 	"testing"
@@ -28,58 +29,60 @@ import (
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 
+	b3prop "go.opentelemetry.io/contrib/propagators/b3"
 	"go.opentelemetry.io/otel"
+	"go.opentelemetry.io/otel/attribute"
 	"go.opentelemetry.io/otel/codes"
 	"go.opentelemetry.io/otel/oteltest"
 	"go.opentelemetry.io/otel/propagation"
-	semconv "go.opentelemetry.io/otel/semconv/v1.4.0"
-
-	b3prop "go.opentelemetry.io/contrib/propagators/b3"
-	"go.opentelemetry.io/otel/attribute"
 	oteltrace "go.opentelemetry.io/otel/trace"
 )
 
 func TestChildSpanFromGlobalTracer(t *testing.T) {
 	otel.SetTracerProvider(oteltest.NewTracerProvider())
 
+	var gotSpan oteltrace.Span
+
 	app := fiber.New()
 	app.Use(Middleware("foobar"))
 	app.Get("/user/:id", func(ctx *fiber.Ctx) error {
-		span := oteltrace.SpanFromContext(ctx.UserContext())
-		_, ok := span.(*oteltest.Span)
-		assert.True(t, ok)
+		gotSpan = oteltrace.SpanFromContext(ctx.UserContext())
 		return ctx.SendStatus(http.StatusNoContent)
 	})
 
 	_, _ = app.Test(httptest.NewRequest("GET", "/user/123", nil))
+
+	_, ok := gotSpan.(*oteltest.Span)
+	assert.True(t, ok)
 }
 
 func TestChildSpanFromCustomTracer(t *testing.T) {
 	provider := oteltest.NewTracerProvider()
+	var gotSpan oteltrace.Span
 
 	app := fiber.New()
 	app.Use(Middleware("foobar", WithTracerProvider(provider)))
 	app.Get("/user/:id", func(ctx *fiber.Ctx) error {
-		span := oteltrace.SpanFromContext(ctx.UserContext())
-		_, ok := span.(*oteltest.Span)
-		assert.True(t, ok)
+		gotSpan = oteltrace.SpanFromContext(ctx.UserContext())
 		return ctx.SendStatus(http.StatusNoContent)
 	})
 
 	_, _ = app.Test(httptest.NewRequest("GET", "/user/123", nil))
+
+	_, ok := gotSpan.(*oteltest.Span)
+	assert.True(t, ok)
 }
 
 func TestTrace200(t *testing.T) {
 	sr := new(oteltest.SpanRecorder)
 	provider := oteltest.NewTracerProvider(oteltest.WithSpanRecorder(sr))
 
+	var gotSpan oteltrace.Span
+
 	app := fiber.New()
 	app.Use(Middleware("foobar", WithTracerProvider(provider)))
 	app.Get("/user/:id", func(ctx *fiber.Ctx) error {
-		span := oteltrace.SpanFromContext(ctx.UserContext())
-		mspan, ok := span.(*oteltest.Span)
-		require.True(t, ok)
-		assert.Equal(t, attribute.StringValue("foobar"), mspan.Attributes()[semconv.HTTPServerNameKey])
+		gotSpan = oteltrace.SpanFromContext(ctx.UserContext())
 		id := ctx.Params("id")
 		return ctx.SendString(id)
 	})
@@ -88,6 +91,10 @@ func TestTrace200(t *testing.T) {
 
 	// do and verify the request
 	require.Equal(t, http.StatusOK, resp.StatusCode)
+
+	mspan, ok := gotSpan.(*oteltest.Span)
+	require.True(t, ok)
+	assert.Equal(t, attribute.StringValue("foobar"), mspan.Attributes()[semconv.HTTPServerNameKey])
 
 	// verify traces look good
 	spans := sr.Completed()
@@ -134,7 +141,7 @@ func TestErrorOnlyHandledOnce(t *testing.T) {
 	app := fiber.New(fiber.Config{
 		ErrorHandler: func(ctx *fiber.Ctx, err error) error {
 			timesHandlingError++
-			return ctx.Status(http.StatusInternalServerError).SendString(err.Error())
+			return fiber.NewError(http.StatusInternalServerError, err.Error())
 		},
 	})
 	app.Use(Middleware("test-service"))
@@ -147,22 +154,27 @@ func TestErrorOnlyHandledOnce(t *testing.T) {
 }
 
 func TestGetSpanNotInstrumented(t *testing.T) {
+	var gotSpan oteltrace.Span
+
 	app := fiber.New()
 	app.Get("/ping", func(ctx *fiber.Ctx) error {
 		// Assert we don't have a span on the context.
-		span := oteltrace.SpanFromContext(ctx.UserContext())
-		ok := !span.SpanContext().IsValid()
-		assert.True(t, ok)
+		gotSpan = oteltrace.SpanFromContext(ctx.UserContext())
 		return ctx.SendString("ok")
 	})
 	resp, _ := app.Test(httptest.NewRequest("GET", "/ping", nil))
 	assert.Equal(t, http.StatusOK, resp.StatusCode)
+
+	ok := !gotSpan.SpanContext().IsValid()
+	assert.True(t, ok)
 }
 
 func TestPropagationWithGlobalPropagators(t *testing.T) {
 	sr := new(oteltest.SpanRecorder)
 	provider := oteltest.NewTracerProvider(oteltest.WithSpanRecorder(sr))
 	otel.SetTextMapPropagator(propagation.TraceContext{})
+	defer otel.SetTextMapPropagator(propagation.NewCompositeTextMapPropagator())
+	var gotSpan oteltrace.Span
 
 	r := httptest.NewRequest("GET", "/user/123", nil)
 
@@ -172,22 +184,22 @@ func TestPropagationWithGlobalPropagators(t *testing.T) {
 	app := fiber.New()
 	app.Use(Middleware("foobar", WithTracerProvider(provider)))
 	app.Get("/user/:id", func(ctx *fiber.Ctx) error {
-		span := oteltrace.SpanFromContext(ctx.UserContext())
-		mspan, ok := span.(*oteltest.Span)
-		require.True(t, ok)
-		assert.Equal(t, pspan.SpanContext().TraceID(), mspan.SpanContext().TraceID())
-		assert.Equal(t, pspan.SpanContext().SpanID(), mspan.ParentSpanID())
+		gotSpan = oteltrace.SpanFromContext(ctx.UserContext())
 		return ctx.SendStatus(http.StatusNoContent)
 	})
 
 	_, _ = app.Test(r)
 
-	otel.SetTextMapPropagator(propagation.NewCompositeTextMapPropagator())
+	mspan, ok := gotSpan.(*oteltest.Span)
+	require.True(t, ok)
+	assert.Equal(t, pspan.SpanContext().TraceID(), mspan.SpanContext().TraceID())
+	assert.Equal(t, pspan.SpanContext().SpanID(), mspan.ParentSpanID())
 }
 
 func TestPropagationWithCustomPropagators(t *testing.T) {
 	sr := new(oteltest.SpanRecorder)
 	provider := oteltest.NewTracerProvider(oteltest.WithSpanRecorder(sr))
+	var gotSpan oteltrace.Span
 
 	b3 := b3prop.B3{}
 
@@ -199,13 +211,14 @@ func TestPropagationWithCustomPropagators(t *testing.T) {
 	app := fiber.New()
 	app.Use(Middleware("foobar", WithTracerProvider(provider), WithPropagators(b3)))
 	app.Get("/user/:id", func(ctx *fiber.Ctx) error {
-		span := oteltrace.SpanFromContext(ctx.UserContext())
-		mspan, ok := span.(*oteltest.Span)
-		require.True(t, ok)
-		assert.Equal(t, pspan.SpanContext().TraceID(), mspan.SpanContext().TraceID())
-		assert.Equal(t, pspan.SpanContext().SpanID(), mspan.ParentSpanID())
+		gotSpan = oteltrace.SpanFromContext(ctx.UserContext())
 		return ctx.SendStatus(http.StatusNoContent)
 	})
 
 	_, _ = app.Test(r)
+
+	mspan, ok := gotSpan.(*oteltest.Span)
+	require.True(t, ok)
+	assert.Equal(t, pspan.SpanContext().TraceID(), mspan.SpanContext().TraceID())
+	assert.Equal(t, pspan.SpanContext().SpanID(), mspan.ParentSpanID())
 }
