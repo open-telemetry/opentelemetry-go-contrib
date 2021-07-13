@@ -62,15 +62,7 @@ func Middleware(service string, opts ...Option) fiber.Handler {
 
 		reqHeader := make(http.Header)
 		c.Request().Header.VisitAll(func(k, v []byte) {
-			sk := string(k)
-			sv := string(v)
-
-			switch sk {
-			case fiber.HeaderTransferEncoding:
-				reqHeader[fiber.HeaderTransferEncoding] = append(reqHeader[fiber.HeaderTransferEncoding], sv)
-			default:
-				reqHeader[sk] = []string{sv}
-			}
+			reqHeader.Add(string(k), string(v))
 		})
 
 		ctx := cfg.Propagators.Extract(savedCtx, propagation.HeaderCarrier(reqHeader))
@@ -110,6 +102,7 @@ func Middleware(service string, opts ...Option) fiber.Handler {
 		if err != nil {
 			span.SetAttributes(attribute.String("fiber.error", err.Error()))
 			// invokes the registered HTTP error handler
+			// to get the correct response status code
 			_ = c.App().Config().ErrorHandler(c, err)
 		}
 
