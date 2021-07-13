@@ -34,15 +34,15 @@ type config struct {
 
 // Option applies a configuration to the given config.
 type Option interface {
-	Apply(*config)
+	apply(*config)
 }
 
-// OptionFunc is a function type that applies a particular
+// optionFunc is a function type that applies a particular
 // configuration to the beego middleware in question.
-type OptionFunc func(c *config)
+type optionFunc func(c *config)
 
 // Apply will apply the option to the config, c.
-func (o OptionFunc) Apply(c *config) {
+func (o optionFunc) apply(c *config) {
 	o(c)
 }
 
@@ -51,7 +51,7 @@ func (o OptionFunc) Apply(c *config) {
 // WithTracerProvider specifies a tracer provider to use for creating a tracer.
 // If none is specified, the global provider is used.
 func WithTracerProvider(provider trace.TracerProvider) Option {
-	return OptionFunc(func(cfg *config) {
+	return optionFunc(func(cfg *config) {
 		cfg.tracerProvider = provider
 	})
 }
@@ -59,31 +59,31 @@ func WithTracerProvider(provider trace.TracerProvider) Option {
 // WithMeterProvider specifies a meter provider to use for creating a meter.
 // If none is specified, the global provider is used.
 func WithMeterProvider(provider metric.MeterProvider) Option {
-	return OptionFunc(func(cfg *config) {
+	return optionFunc(func(cfg *config) {
 		cfg.meterProvider = provider
 	})
 }
 
 // WithPropagators sets the propagators used in the middleware.
 // Defaults to global.Propagators().
-func WithPropagators(propagators propagation.TextMapPropagator) OptionFunc {
-	return OptionFunc(func(c *config) {
+func WithPropagators(propagators propagation.TextMapPropagator) Option {
+	return optionFunc(func(c *config) {
 		c.propagators = propagators
 	})
 }
 
 // WithFilter adds the given filter for use in the middleware.
 // Defaults to no filters.
-func WithFilter(f Filter) OptionFunc {
-	return OptionFunc(func(c *config) {
+func WithFilter(f Filter) Option {
+	return optionFunc(func(c *config) {
 		c.filters = append(c.filters, f)
 	})
 }
 
 // WithSpanNameFormatter sets the formatter to be used to format
 // span names. Defaults to the path template.
-func WithSpanNameFormatter(f SpanNameFormatter) OptionFunc {
-	return OptionFunc(func(c *config) {
+func WithSpanNameFormatter(f SpanNameFormatter) Option {
+	return optionFunc(func(c *config) {
 		c.formatter = f
 	})
 }
@@ -99,7 +99,7 @@ func newConfig(options ...Option) *config {
 		formatter:      defaultSpanNameFormatter,
 	}
 	for _, option := range options {
-		option.Apply(config)
+		option.apply(config)
 	}
 	return config
 }

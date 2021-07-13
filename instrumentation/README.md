@@ -52,8 +52,8 @@ For example:
 - `go.opentelemetry.io/contrib/instrumentation/gopkg.in/macaron.v1/otelmacaron`
 - `go.opentelemetry.io/contrib/instrumentation/database/sql/otelsql`
 
-Exceptions to this rule do exist.
-For example, the [runtime](./runtime) instrumentation does not instrument a Go package and does not fit this structure.
+Exceptions to this rule exist.
+For example, the [runtime](./runtime) and [host](./host) instrumentation do not instrument any Go package and therefore do not fit this structure.
 
 ### Contents
 

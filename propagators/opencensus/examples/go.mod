@@ -9,7 +9,7 @@ require (
 	go.opentelemetry.io/otel v1.0.0-RC1
 	go.opentelemetry.io/otel/exporters/stdout/stdouttrace v1.0.0-RC1
 	go.opentelemetry.io/otel/sdk v1.0.0-RC1
-	google.golang.org/grpc v1.38.0
+	google.golang.org/grpc v1.39.0
 )
 
 replace (
