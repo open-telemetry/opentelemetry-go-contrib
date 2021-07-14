@@ -213,7 +213,7 @@ func wrapClientStream(ctx context.Context, s grpc.ClientStream, desc *grpc.Strea
 
 		for {
 			select {
-			case event := <- events:
+			case event := <-events:
 				switch event.Type {
 				case closeEvent:
 					state |= clientClosedState
