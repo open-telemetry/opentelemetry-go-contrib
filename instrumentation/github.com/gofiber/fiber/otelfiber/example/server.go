@@ -20,6 +20,7 @@ import (
 	"log"
 
 	"github.com/gofiber/fiber/v2"
+
 	"go.opentelemetry.io/contrib/instrumentation/github.com/gofiber/fiber/otelfiber"
 	"go.opentelemetry.io/otel"
 	"go.opentelemetry.io/otel/attribute"

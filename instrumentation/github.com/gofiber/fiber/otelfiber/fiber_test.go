@@ -19,10 +19,11 @@ package otelfiber
 import (
 	"context"
 	"errors"
-	semconv "go.opentelemetry.io/otel/semconv/v1.4.0"
 	"net/http"
 	"net/http/httptest"
 	"testing"
+
+	semconv "go.opentelemetry.io/otel/semconv/v1.4.0"
 
 	"github.com/gofiber/fiber/v2"
 
