@@ -410,7 +410,7 @@ func TestStreamClientInterceptorCancelContext(t *testing.T) {
 	)
 	require.NoError(t, err, "initialize grpc stream client")
 	_, ok := getSpanFromRecorder(sr, name)
-	require.False(t, ok, "span should ended while stream is open")
+	require.False(t, ok, "span should not ended while stream is open")
 
 	req := &mockProtoMessage{}
 	reply := &mockProtoMessage{}
