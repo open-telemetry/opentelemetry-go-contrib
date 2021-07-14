@@ -30,9 +30,12 @@ jobs:
           cache-name: cache-go-mod
         with:
           path: /home/runner/go/pkg/mod
-          key: go-pkg-mod-{{ checksum "go.sum" }}
+          key: go-pkg-mod-${{ hashFiles('**/go.sum') }}
+          restore-keys: |
+            go-pkg-mod-
       - name: Precommit and Coverage Report
         run: |
+          printenv
           make ci
           mkdir -p $TEST_RESULTS
           cp coverage.{txt,html} $TEST_RESULTS

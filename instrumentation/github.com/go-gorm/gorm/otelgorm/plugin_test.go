@@ -192,11 +192,10 @@ func TestPlugin(t *testing.T) {
 	}
 
 	for _, tc := range testCases {
-		t.Run(tc.name, func(tt *testing.T) {
+		t.Run(tc.name, func(t *testing.T) {
 			db, err := initDB()
+			require.NoError(t, err, "should initialize DB")
 			defer closeDB(db)
-
-			assert.NoError(tt, err)
 
 			sr := new(oteltest.SpanRecorder)
 			provider := oteltest.NewTracerProvider(oteltest.WithSpanRecorder(sr))
@@ -204,7 +203,7 @@ func TestPlugin(t *testing.T) {
 			plugin := NewPlugin(WithTracerProvider(provider), WithDBName("db"))
 
 			err = db.Use(plugin)
-			assert.NoError(tt, err)
+			require.NoError(t, err, "should apply plugin")
 
 			ctx, cancel := context.WithTimeout(context.Background(), time.Second*3)
 			defer cancel()
@@ -214,7 +213,7 @@ func TestPlugin(t *testing.T) {
 			db = db.WithContext(ctx)
 			// Create
 			dbOp := tc.testOp(db)
-			assert.NoError(tt, dbOp.Error)
+			assert.NoError(t, dbOp.Error)
 
 			span.End()
 
@@ -222,12 +221,12 @@ func TestPlugin(t *testing.T) {
 			require.Len(t, spans, tc.spans)
 			s := spans[tc.targetSpan]
 
-			assert.Equal(tt, spans[0].SpanContext().TraceID(), spans[1].SpanContext().TraceID(), "should record spans under the same trace")
-			assert.Equal(tt, s.Name(), tc.expectSpanName, "span name should match the query")
-			assert.Equal(tt, "test_models", s.Attributes()[dbTableKey].AsString(), "table attribute should point at the queried table")
-			assert.Equal(tt, tc.sqlOp, s.Attributes()[dbOperationKey].AsString(), "operation attribute should equal the sql operation")
-			assert.Equal(tt, tc.affectedRows, s.Attributes()[dbRowsAffectedKey].AsInt64(), "affected rows attribute should be set correctly")
-			assert.Contains(tt, s.Attributes()[dbStatementKey].AsString(), tc.sqlOp)
+			assert.Equal(t, spans[0].SpanContext().TraceID(), spans[1].SpanContext().TraceID(), "should record spans under the same trace")
+			assert.Equal(t, s.Name(), tc.expectSpanName, "span name should match the query")
+			assert.Equal(t, "test_models", s.Attributes()[dbTableKey].AsString(), "table attribute should point at the queried table")
+			assert.Equal(t, tc.sqlOp, s.Attributes()[dbOperationKey].AsString(), "operation attribute should equal the sql operation")
+			assert.Equal(t, tc.affectedRows, s.Attributes()[dbRowsAffectedKey].AsInt64(), "affected rows attribute should be set correctly")
+			assert.Contains(t, s.Attributes()[dbStatementKey].AsString(), tc.sqlOp)
 		})
 	}
 
