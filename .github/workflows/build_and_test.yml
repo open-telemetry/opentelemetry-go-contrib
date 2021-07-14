@@ -36,7 +36,6 @@ jobs:
             go-pkg-mod-
       - name: Precommit and Coverage Report
         run: |
-          printenv
           make ci
           mkdir -p $TEST_RESULTS
           cp coverage.{txt,html} $TEST_RESULTS
