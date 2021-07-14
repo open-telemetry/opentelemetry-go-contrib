@@ -83,6 +83,9 @@ func closeDB(db *gorm.DB) {
 }
 
 func TestPlugin(t *testing.T) {
+	if os.Getenv("GOARCH") == "386" {
+		t.Skip("Do not run when GOARCH=386")
+	}
 
 	testCases := []struct {
 		name           string
@@ -230,8 +233,4 @@ func TestPlugin(t *testing.T) {
 		})
 	}
 
-}
-
-func TestMain(m *testing.M) {
-	os.Exit(m.Run())
 }
