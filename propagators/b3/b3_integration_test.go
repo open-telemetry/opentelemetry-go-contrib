@@ -105,7 +105,7 @@ func TestInjectB3(t *testing.T) {
 
 	for _, tg := range testGroup {
 		for _, tt := range tg.tests {
-			propagator := b3.B3{InjectEncoding: tt.encoding}
+			propagator := b3.New(b3.WithInjectEncoding(tt.encoding))
 			t.Run(tt.name, func(t *testing.T) {
 				req, _ := http.NewRequest("GET", "http://example.com", nil)
 				ctx := trace.ContextWithSpan(
@@ -139,7 +139,7 @@ func TestInjectB3(t *testing.T) {
 func TestB3Propagator_Fields(t *testing.T) {
 	tests := []struct {
 		name       string
-		propagator b3.B3
+		propagator propagation.TextMapPropagator
 		want       []string
 	}{
 		{
@@ -154,7 +154,7 @@ func TestB3Propagator_Fields(t *testing.T) {
 		},
 		{
 			name:       "B3MultipleHeader encoding specified",
-			propagator: b3.B3{InjectEncoding: b3.B3MultipleHeader},
+			propagator: b3.New(b3.WithInjectEncoding(b3.B3MultipleHeader)),
 			want: []string{
 				b3TraceID,
 				b3SpanID,
@@ -164,14 +164,14 @@ func TestB3Propagator_Fields(t *testing.T) {
 		},
 		{
 			name:       "B3SingleHeader encoding specified",
-			propagator: b3.B3{InjectEncoding: b3.B3SingleHeader},
+			propagator: b3.New(b3.WithInjectEncoding(b3.B3SingleHeader)),
 			want: []string{
 				b3Context,
 			},
 		},
 		{
 			name:       "B3SingleHeader and B3MultipleHeader encoding specified",
-			propagator: b3.B3{InjectEncoding: b3.B3SingleHeader | b3.B3MultipleHeader},
+			propagator: b3.New(b3.WithInjectEncoding(b3.B3SingleHeader | b3.B3MultipleHeader)),
 			want: []string{
 				b3Context,
 				b3TraceID,
