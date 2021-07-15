@@ -50,49 +50,57 @@ type config struct {
 }
 
 // Option configures an EndpointMiddleware.
-type Option func(*config)
+type Option interface {
+	apply(*config)
+}
+
+type optionFunc func(*config)
+
+func (o optionFunc) apply(c *config) {
+	o(c)
+}
 
 // WithTracerProvider specifies a tracer provider to use for creating a tracer.
 // If none is specified, the global provider is used.
 func WithTracerProvider(provider trace.TracerProvider) Option {
-	return func(o *config) {
+	return optionFunc(func(o *config) {
 		o.TracerProvider = provider
-	}
+	})
 }
 
 // WithIgnoreBusinessError if set to true will not treat a business error
 // identified through the endpoint.Failer interface as a span error.
 func WithIgnoreBusinessError(val bool) Option {
-	return func(o *config) {
+	return optionFunc(func(o *config) {
 		o.IgnoreBusinessError = val
-	}
+	})
 }
 
 // WithOperation sets an operation name for an endpoint.
 // Use this when you register a middleware for each endpoint.
 func WithOperation(operation string) Option {
-	return func(o *config) {
+	return optionFunc(func(o *config) {
 		o.Operation = operation
-	}
+	})
 }
 
 // WithOperationGetter sets an operation name getter function in config.
 func WithOperationGetter(fn func(ctx context.Context, name string) string) Option {
-	return func(o *config) {
+	return optionFunc(func(o *config) {
 		o.GetOperation = fn
-	}
+	})
 }
 
 // WithAttributes sets the default attributes for the spans created by the Endpoint tracer.
 func WithAttributes(attrs ...attribute.KeyValue) Option {
-	return func(o *config) {
+	return optionFunc(func(o *config) {
 		o.Attributes = attrs
-	}
+	})
 }
 
 // WithAttributeGetter extracts additional attributes from the context.
 func WithAttributeGetter(fn func(ctx context.Context) []attribute.KeyValue) Option {
-	return func(o *config) {
+	return optionFunc(func(o *config) {
 		o.GetAttributes = fn
-	}
+	})
 }

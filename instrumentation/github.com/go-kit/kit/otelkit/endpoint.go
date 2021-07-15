@@ -45,7 +45,7 @@ func EndpointMiddleware(options ...Option) endpoint.Middleware {
 	cfg := &config{}
 
 	for _, o := range options {
-		o(cfg)
+		o.apply(cfg)
 	}
 
 	if cfg.TracerProvider == nil {
