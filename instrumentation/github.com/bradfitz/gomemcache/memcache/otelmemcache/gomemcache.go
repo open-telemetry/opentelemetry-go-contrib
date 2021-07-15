@@ -49,7 +49,7 @@ type Client struct {
 func NewClientWithTracing(client *memcache.Client, opts ...Option) *Client {
 	cfg := &config{}
 	for _, o := range opts {
-		o(cfg)
+		o.apply(cfg)
 	}
 
 	if cfg.tracerProvider == nil {

@@ -23,12 +23,20 @@ type config struct {
 }
 
 // Option is used to configure the client.
-type Option func(*config)
+type Option interface {
+	apply(*config)
+}
+
+type optionFunc func(*config)
+
+func (o optionFunc) apply(c *config) {
+	o(c)
+}
 
 // WithTracerProvider specifies a tracer provider to use for creating a tracer.
 // If none is specified, the global provider is used.
 func WithTracerProvider(provider oteltrace.TracerProvider) Option {
-	return func(cfg *config) {
+	return optionFunc(func(cfg *config) {
 		cfg.tracerProvider = provider
-	}
+	})
 }
