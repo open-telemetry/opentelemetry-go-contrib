@@ -26,29 +26,29 @@ import (
 // NewSessionWithTracing creates a new session using the given cluster
 // configuration enabling tracing for queries, batch queries, and connection attempts.
 // You may use additional observers and disable specific tracing using the provided `TracedSessionOption`s.
-func NewSessionWithTracing(ctx context.Context, cluster *gocql.ClusterConfig, options ...TracedSessionOption) (*gocql.Session, error) {
-	config := newTracedSessionConfig(options...)
-	instruments := newInstruments(config.meterProvider)
-	tracer := config.tracerProvider.Tracer(
+func NewSessionWithTracing(ctx context.Context, cluster *gocql.ClusterConfig, options ...Option) (*gocql.Session, error) {
+	cfg := newConfig(options...)
+	instruments := newInstruments(cfg.meterProvider)
+	tracer := cfg.tracerProvider.Tracer(
 		instrumentationName,
 		trace.WithInstrumentationVersion(otelcontrib.SemVersion()),
 	)
 	cluster.QueryObserver = &OTelQueryObserver{
-		enabled:  config.instrumentQuery,
-		observer: config.queryObserver,
+		enabled:  cfg.instrumentQuery,
+		observer: cfg.queryObserver,
 		tracer:   tracer,
 		inst:     instruments,
 	}
 	cluster.BatchObserver = &OTelBatchObserver{
-		enabled:  config.instrumentBatch,
-		observer: config.batchObserver,
+		enabled:  cfg.instrumentBatch,
+		observer: cfg.batchObserver,
 		tracer:   tracer,
 		inst:     instruments,
 	}
 	cluster.ConnectObserver = &OTelConnectObserver{
 		ctx:      ctx,
-		enabled:  config.instrumentConnect,
-		observer: config.connectObserver,
+		enabled:  cfg.instrumentConnect,
+		observer: cfg.connectObserver,
 		tracer:   tracer,
 		inst:     instruments,
 	}
