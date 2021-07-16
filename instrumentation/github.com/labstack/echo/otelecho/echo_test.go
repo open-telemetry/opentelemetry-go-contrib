@@ -54,6 +54,7 @@ func TestChildSpanFromGlobalTracer(t *testing.T) {
 	w := httptest.NewRecorder()
 
 	router.ServeHTTP(w, r)
+	assert.Equal(t, http.StatusOK, w.Result().StatusCode, "should call the 'user' handler")
 }
 
 func TestChildSpanFromCustomTracer(t *testing.T) {
@@ -72,6 +73,7 @@ func TestChildSpanFromCustomTracer(t *testing.T) {
 	w := httptest.NewRecorder()
 
 	router.ServeHTTP(w, r)
+	assert.Equal(t, http.StatusOK, w.Result().StatusCode, "should call the 'user' handler")
 }
 
 func TestTrace200(t *testing.T) {
@@ -198,6 +200,7 @@ func TestPropagationWithGlobalPropagators(t *testing.T) {
 
 	router.ServeHTTP(w, r)
 	otel.SetTextMapPropagator(propagation.NewCompositeTextMapPropagator())
+	assert.Equal(t, http.StatusOK, w.Result().StatusCode, "should call the 'user' handler")
 }
 
 func TestPropagationWithCustomPropagators(t *testing.T) {
@@ -224,6 +227,7 @@ func TestPropagationWithCustomPropagators(t *testing.T) {
 	})
 
 	router.ServeHTTP(w, r)
+	assert.Equal(t, http.StatusOK, w.Result().StatusCode, "should call the 'user' handler")
 }
 
 func TestSkipper(t *testing.T) {
@@ -244,5 +248,5 @@ func TestSkipper(t *testing.T) {
 	})
 
 	router.ServeHTTP(w, r)
-
+	assert.Equal(t, http.StatusOK, w.Result().StatusCode, "should call the 'ping' handler")
 }
