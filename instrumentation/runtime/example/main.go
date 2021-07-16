@@ -16,11 +16,9 @@ package main
 
 import (
 	"context"
-	"fmt"
 	"log"
 	"os"
 	"os/signal"
-	"syscall"
 	"time"
 
 	stdout "go.opentelemetry.io/otel/exporters/stdout/stdoutmetric"
@@ -32,10 +30,10 @@ import (
 	"go.opentelemetry.io/contrib/instrumentation/runtime"
 )
 
-func initMeter() *controller.Controller {
+func main() {
 	exporter, err := stdout.New(stdout.WithPrettyPrint())
 	if err != nil {
-		log.Panicf("failed to initialize metric stdout exporter %v", err)
+		log.Fatalln("failed to initialize metric stdout exporter:", err)
 	}
 	pusher := controller.New(
 		processor.New(
@@ -43,28 +41,44 @@ func initMeter() *controller.Controller {
 			exporter,
 		),
 		controller.WithExporter(exporter),
+		controller.WithCollectPeriod(3*time.Second),
 	)
-	pusher.Start(context.Background()) //nolint:errcheck
+	if err := pusher.Start(context.Background()); err != nil {
+		log.Fatalln("failed to start the metric controller:", err)
+	}
 	global.SetMeterProvider(pusher.MeterProvider())
-	return pusher
-}
-
-func main() {
-	defer handleErr(initMeter().Stop(context.Background()))
 
 	if err := runtime.Start(
 		runtime.WithMinimumReadMemStatsInterval(time.Second),
 	); err != nil {
-		panic(err)
+		log.Fatalln("failed to start runtime instrumentation:", err)
 	}
 
-	stopChan := make(chan os.Signal, 1)
-	signal.Notify(stopChan, syscall.SIGTERM, syscall.SIGINT)
-	<-stopChan
+	ctx, cancel := newOSSignalContext()
+	defer cancel()
+
+	<-ctx.Done()
+
+	if err := pusher.Stop(context.Background()); err != nil {
+		log.Fatalln("failed to stop the metric controller:", err)
+	}
 }
 
-func handleErr(err error) {
-	if err != nil {
-		fmt.Println("Encountered error: ", err.Error())
+func newOSSignalContext() (context.Context, func()) {
+	// trap Ctrl+C and call cancel on the context
+	ctx, cancel := context.WithCancel(context.Background())
+	c := make(chan os.Signal, 1)
+	signal.Notify(c, os.Interrupt)
+	go func() {
+		select {
+		case <-c:
+			cancel()
+		case <-ctx.Done():
+		}
+	}()
+
+	return ctx, func() {
+		signal.Stop(c)
+		cancel()
 	}
 }
