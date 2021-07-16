@@ -4,6 +4,7 @@ on:
     branches:
       - main
   pull_request:
+  workflow_dispatch:
 env:
   TEST_RESULTS: /tmp/test-results # path to where test results will be saved
 jobs:
@@ -24,13 +25,12 @@ jobs:
         run: |
           echo "GOPATH=$(go env GOPATH)" >> $GITHUB_ENV
           echo "$(go env GOPATH)/bin" >> $GITHUB_PATH
-      - name: restore cache
-        uses: actions/cache@v2.1.6
-        env:
-          cache-name: cache-go-mod
+      - uses: actions/cache@v2.1.6
         with:
-          path: /home/runner/go/pkg/mod
-          key: go-pkg-mod-{{ checksum "go.sum" }}
+          path: ~/go/pkg/mod
+          key: go-pkg-mod-v2-${{ hashFiles('**/go.sum') }}
+          restore-keys: |
+            go-pkg-mod-v2-
       - name: Precommit and Coverage Report
         run: |
           make ci
