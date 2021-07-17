@@ -82,7 +82,19 @@ func TestHandlerBasics(t *testing.T) {
 		attribute.String("test", "attribute"),
 	}
 
-	assertMetricAttributes(t, attributesToVerify, meterimpl.MeasurementBatches)
+	var statusCodeBatch oteltest.Batch
+	var measurementBatches []oteltest.Batch
+	for _, batch := range meterimpl.MeasurementBatches {
+		batchName := batch.Measurements[0].Instrument.Descriptor().Name()
+		if batchName == RequestCount {
+			statusCodeBatch = batch
+			continue
+		}
+		measurementBatches = append(measurementBatches, batch)
+	}
+
+	assertMetricAttributes(t, attributesToVerify, measurementBatches)
+	assert.ElementsMatch(t, append(attributesToVerify, semconv.HTTPStatusCodeKey.Int(200)), statusCodeBatch.Labels)
 
 	if got, expected := rr.Result().StatusCode, http.StatusOK; got != expected {
 		t.Fatalf("got %d, expected %d", got, expected)
