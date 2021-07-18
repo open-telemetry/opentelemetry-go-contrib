@@ -15,7 +15,9 @@
 package otelhttp
 
 import (
+	"context"
 	"net/http"
+	"net/http/httptrace"
 
 	"go.opentelemetry.io/contrib"
 	"go.opentelemetry.io/otel"
@@ -40,6 +42,7 @@ type config struct {
 	WriteEvent        bool
 	Filters           []Filter
 	SpanNameFormatter func(string, *http.Request) string
+	ClientTrace       func(context.Context) *httptrace.ClientTrace
 
 	TracerProvider trace.TracerProvider
 	MeterProvider  metric.MeterProvider
@@ -59,18 +62,17 @@ func (o optionFunc) apply(c *config) {
 // newConfig creates a new config struct and applies opts to it.
 func newConfig(opts ...Option) *config {
 	c := &config{
-		Propagators:    otel.GetTextMapPropagator(),
-		TracerProvider: otel.GetTracerProvider(),
-		MeterProvider:  global.GetMeterProvider(),
+		Propagators:   otel.GetTextMapPropagator(),
+		MeterProvider: global.GetMeterProvider(),
 	}
 	for _, opt := range opts {
 		opt.apply(c)
 	}
 
-	c.Tracer = c.TracerProvider.Tracer(
-		instrumentationName,
-		trace.WithInstrumentationVersion(contrib.SemVersion()),
-	)
+	// Tracer is only initialized if manually specified. Otherwise, can be passed with the tracing context.
+	if c.TracerProvider != nil {
+		c.Tracer = newTracer(c.TracerProvider)
+	}
 	c.Meter = c.MeterProvider.Meter(
 		instrumentationName,
 		metric.WithInstrumentationVersion(contrib.SemVersion()),
@@ -167,5 +169,13 @@ func WithMessageEvents(events ...event) Option {
 func WithSpanNameFormatter(f func(operation string, r *http.Request) string) Option {
 	return optionFunc(func(c *config) {
 		c.SpanNameFormatter = f
+	})
+}
+
+// WithClientTrace takes a function that returns client trace instance that will be
+// applied to the requests sent through the otelhttp Transport.
+func WithClientTrace(f func(context.Context) *httptrace.ClientTrace) Option {
+	return optionFunc(func(c *config) {
+		c.ClientTrace = f
 	})
 }

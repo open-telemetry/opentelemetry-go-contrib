@@ -18,7 +18,9 @@ import (
 	"context"
 	"io"
 	"net/http"
+	"net/http/httptrace"
 
+	"go.opentelemetry.io/otel"
 	"go.opentelemetry.io/otel/propagation"
 	semconv "go.opentelemetry.io/otel/semconv/v1.4.0"
 	"go.opentelemetry.io/otel/trace"
@@ -34,6 +36,7 @@ type Transport struct {
 	spanStartOptions  []trace.SpanStartOption
 	filters           []Filter
 	spanNameFormatter func(string, *http.Request) string
+	clientTrace       func(context.Context) *httptrace.ClientTrace
 }
 
 var _ http.RoundTripper = &Transport{}
@@ -69,6 +72,7 @@ func (t *Transport) applyConfig(c *config) {
 	t.spanStartOptions = c.SpanStartOptions
 	t.filters = c.Filters
 	t.spanNameFormatter = c.SpanNameFormatter
+	t.clientTrace = c.ClientTrace
 }
 
 func defaultTransportFormatter(_ string, r *http.Request) string {
@@ -86,9 +90,23 @@ func (t *Transport) RoundTrip(r *http.Request) (*http.Response, error) {
 		}
 	}
 
+	tracer := t.tracer
+
+	if tracer == nil {
+		if span := trace.SpanFromContext(r.Context()); span.SpanContext().IsValid() {
+			tracer = newTracer(span.TracerProvider())
+		} else {
+			tracer = newTracer(otel.GetTracerProvider())
+		}
+	}
+
 	opts := append([]trace.SpanStartOption{}, t.spanStartOptions...) // start with the configured options
 
-	ctx, span := t.tracer.Start(r.Context(), t.spanNameFormatter("", r), opts...)
+	ctx, span := tracer.Start(r.Context(), t.spanNameFormatter("", r), opts...)
+
+	if t.clientTrace != nil {
+		ctx = httptrace.WithClientTrace(ctx, t.clientTrace(ctx))
+	}
 
 	r = r.WithContext(ctx)
 	span.SetAttributes(semconv.HTTPClientAttributesFromHTTPRequest(r)...)

@@ -83,3 +83,35 @@ func TestConvenienceWrappers(t *testing.T) {
 	assert.Equal(t, "HTTP POST", spans[2].Name())
 	assert.Equal(t, "HTTP POST", spans[3].Name())
 }
+
+func TestClientWithTraceContext(t *testing.T) {
+	sr := new(oteltest.SpanRecorder)
+	provider := oteltest.NewTracerProvider(oteltest.WithSpanRecorder(sr))
+
+	tracer := provider.Tracer("")
+	ctx, span := tracer.Start(context.Background(), "http requests")
+
+	content := []byte("Hello, world!")
+
+	ts := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		if _, err := w.Write(content); err != nil {
+			t.Fatal(err)
+		}
+	}))
+	defer ts.Close()
+
+	res, err := Get(ctx, ts.URL)
+	if err != nil {
+		t.Fatal(err)
+	}
+	res.Body.Close()
+
+	span.End()
+
+	spans := sr.Completed()
+	require.Equal(t, 2, len(spans))
+	assert.Equal(t, "HTTP GET", spans[0].Name())
+	assert.Equal(t, "http requests", spans[1].Name())
+	assert.NotEmpty(t, spans[0].ParentSpanID())
+	assert.Equal(t, spans[1].SpanContext().SpanID(), spans[0].ParentSpanID())
+}
