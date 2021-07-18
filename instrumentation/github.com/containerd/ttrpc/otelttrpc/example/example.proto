@@ -1,0 +1,27 @@
+syntax = "proto3";
+
+package ttrpc.example.v1;
+
+import "google/protobuf/empty.proto";
+import "gogoproto/gogo.proto";
+
+option go_package = "github.com/containerd/ttrpc/example;example";
+
+service Example {
+	rpc Method1(Method1Request) returns (Method1Response);
+	rpc Method2(Method1Request) returns (google.protobuf.Empty);
+}
+
+message Method1Request {
+	string foo = 1;
+	string bar = 2;
+}
+
+message Method1Response {
+	string foo = 1;
+	string bar = 2;
+}
+
+message Method2Request {
+	string action = 1;
+}
