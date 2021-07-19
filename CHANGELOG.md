@@ -8,6 +8,10 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 
 ## [Unreleased]
 
+### Added
+
+- Add `zpages` first iteration (#894)
+
 ### Fixed
 
 - Fix deadlocks and race conditions in `otelsarama.WrapAsyncProducer`.
