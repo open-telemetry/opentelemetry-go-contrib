@@ -46,8 +46,7 @@ type config struct {
 
 // Option supports configuring optional settings for runtime metrics.
 type Option interface {
-	// ApplyRuntime updates *config.
-	ApplyRuntime(*config)
+	apply(*config)
 }
 
 // DefaultMinimumReadMemStatsInterval is the default minimum interval
@@ -65,8 +64,7 @@ func WithMinimumReadMemStatsInterval(d time.Duration) Option {
 
 type minimumReadMemStatsIntervalOption time.Duration
 
-// ApplyRuntime implements Option.
-func (o minimumReadMemStatsIntervalOption) ApplyRuntime(c *config) {
+func (o minimumReadMemStatsIntervalOption) apply(c *config) {
 	if o >= 0 {
 		c.MinimumReadMemStatsInterval = time.Duration(o)
 	}
@@ -81,8 +79,7 @@ func WithMeterProvider(provider metric.MeterProvider) Option {
 
 type metricProviderOption struct{ metric.MeterProvider }
 
-// ApplyRuntime implements Option.
-func (o metricProviderOption) ApplyRuntime(c *config) {
+func (o metricProviderOption) apply(c *config) {
 	c.MeterProvider = o.MeterProvider
 }
 
@@ -93,7 +90,7 @@ func newConfig(opts ...Option) config {
 		MinimumReadMemStatsInterval: DefaultMinimumReadMemStatsInterval,
 	}
 	for _, opt := range opts {
-		opt.ApplyRuntime(&c)
+		opt.apply(&c)
 	}
 	return c
 }
