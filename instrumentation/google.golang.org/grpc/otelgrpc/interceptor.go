@@ -122,8 +122,7 @@ type streamEvent struct {
 }
 
 const (
-	closeEvent streamEventType = iota
-	receiveEndEvent
+	receiveEndEvent streamEventType = iota
 	errorEvent
 )
 
@@ -188,17 +187,10 @@ func (w *clientStream) CloseSend() error {
 
 	if err != nil {
 		w.sendStreamEvent(errorEvent, err)
-	} else {
-		w.sendStreamEvent(closeEvent, nil)
 	}
 
 	return err
 }
-
-const (
-	clientClosedState byte = 1 << iota
-	receiveEndedState
-)
 
 func wrapClientStream(s grpc.ClientStream, desc *grpc.StreamDesc) *clientStream {
 	events := make(chan streamEvent)
@@ -208,22 +200,13 @@ func wrapClientStream(s grpc.ClientStream, desc *grpc.StreamDesc) *clientStream 
 	go func() {
 		defer close(eventsDone)
 
-		// Both streams have to be closed
-		state := byte(0)
-
 		for event := range events {
 			switch event.Type {
-			case closeEvent:
-				state |= clientClosedState
 			case receiveEndEvent:
-				state |= receiveEndedState
+				finished <- nil
+				return
 			case errorEvent:
 				finished <- event.Err
-				return
-			}
-
-			if state == clientClosedState|receiveEndedState {
-				finished <- nil
 				return
 			}
 		}
