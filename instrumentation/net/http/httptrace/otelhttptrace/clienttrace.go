@@ -32,10 +32,17 @@ import (
 
 // HTTP attributes.
 var (
-	HTTPStatus     = attribute.Key("http.status")
-	HTTPHeaderMIME = attribute.Key("http.mime")
-	HTTPRemoteAddr = attribute.Key("http.remote")
-	HTTPLocalAddr  = attribute.Key("http.local")
+	HTTPStatus                 = attribute.Key("http.status")
+	HTTPHeaderMIME             = attribute.Key("http.mime")
+	HTTPRemoteAddr             = attribute.Key("http.remote")
+	HTTPLocalAddr              = attribute.Key("http.local")
+	HTTPConnectionReused       = attribute.Key("http.conn.reused")
+	HTTPConnectionWasIdle      = attribute.Key("http.conn.wasidle")
+	HTTPConnectionIdleTime     = attribute.Key("http.conn.idletime")
+	HTTPConnectionStartNetwork = attribute.Key("http.conn.start.network")
+	HTTPConnectionDoneNetwork  = attribute.Key("http.conn.done.network")
+	HTTPConnectionDoneAddr     = attribute.Key("http.conn.done.addr")
+	HTTPDNSAddrs               = attribute.Key("http.dns.addrs")
 )
 
 var (
@@ -53,20 +60,81 @@ func parentHook(hook string) string {
 	return hookMap[hook]
 }
 
+// ClientTraceOption allows customizations to how the httptrace.Client
+// collects information.
+type ClientTraceOption func(*clientTracer)
+
+// WithoutSubSpans will modify the httptrace.Client to only collect data
+// as Events and Attributes on a span found in the context.  By default
+// sub-spans will be generated.
+func WithoutSubSpans() ClientTraceOption {
+	return func(ct *clientTracer) {
+		ct.useSpans = false
+	}
+}
+
+// WithRedactedHeaders will be replaced by fixed '****' values for the header
+// names provided.  These are in addition to the sensitive headers already
+// redacted by default: Authorization, WWW-Authenticate, Proxy-Authenticate
+// Proxy-Authorization, Cookie, Set-Cookie
+func WithRedactedHeaders(headers ...string) ClientTraceOption {
+	return func(ct *clientTracer) {
+		for _, header := range headers {
+			ct.redactedHeaders[strings.ToLower(header)] = struct{}{}
+		}
+	}
+}
+
+// WithoutHeaders will disable adding span attributes for the http headers
+// and values.
+func WithoutHeaders() ClientTraceOption {
+	return func(ct *clientTracer) {
+		ct.addHeaders = false
+	}
+}
+
+// WithInsecureHeaders will add span attributes for all http headers *INCLUDING*
+// the sensitive headers that are redacted by default.  The attribute values
+// will include the raw un-redacted text.  This might be useful for
+// debugging authentication related issues, but should not be used for
+// production deployments.
+func WithInsecureHeaders() ClientTraceOption {
+	return func(ct *clientTracer) {
+		ct.addHeaders = true
+		ct.redactedHeaders = nil
+	}
+}
+
 type clientTracer struct {
 	context.Context
 
 	tr trace.Tracer
 
-	activeHooks map[string]context.Context
-	root        trace.Span
-	mtx         sync.Mutex
+	activeHooks     map[string]context.Context
+	root            trace.Span
+	mtx             sync.Mutex
+	redactedHeaders map[string]struct{}
+	addHeaders      bool
+	useSpans        bool
 }
 
-func NewClientTrace(ctx context.Context) *httptrace.ClientTrace {
+func NewClientTrace(ctx context.Context, opts ...ClientTraceOption) *httptrace.ClientTrace {
 	ct := &clientTracer{
 		Context:     ctx,
 		activeHooks: make(map[string]context.Context),
+		redactedHeaders: map[string]struct{}{
+			"authorization":       {},
+			"www-authenticate":    {},
+			"proxy-authenticate":  {},
+			"proxy-authorization": {},
+			"cookie":              {},
+			"set-cookie":          {},
+		},
+		addHeaders: true,
+		useSpans:   true,
+	}
+	for _, opt := range opts {
+		opt(ct)
 	}
 
 	ct.tr = otel.GetTracerProvider().Tracer(
@@ -95,6 +163,14 @@ func NewClientTrace(ctx context.Context) *httptrace.ClientTrace {
 }
 
 func (ct *clientTracer) start(hook, spanName string, attrs ...attribute.KeyValue) {
+	if !ct.useSpans {
+		if ct.root == nil {
+			ct.root = trace.SpanFromContext(ct.Context)
+		}
+		ct.root.AddEvent(hook+".start", trace.WithAttributes(attrs...))
+		return
+	}
+
 	ct.mtx.Lock()
 	defer ct.mtx.Unlock()
 
@@ -115,6 +191,14 @@ func (ct *clientTracer) start(hook, spanName string, attrs ...attribute.KeyValue
 }
 
 func (ct *clientTracer) end(hook string, err error, attrs ...attribute.KeyValue) {
+	if !ct.useSpans {
+		if err != nil {
+			attrs = append(attrs, attribute.String(hook+".error", err.Error()))
+		}
+		ct.root.AddEvent(hook+".done", trace.WithAttributes(attrs...))
+		return
+	}
+
 	ct.mtx.Lock()
 	defer ct.mtx.Unlock()
 	if ctx, ok := ct.activeHooks[hook]; ok {
@@ -159,11 +243,16 @@ func (ct *clientTracer) getConn(host string) {
 }
 
 func (ct *clientTracer) gotConn(info httptrace.GotConnInfo) {
-	ct.end("http.getconn",
-		nil,
+	attrs := []attribute.KeyValue{
 		HTTPRemoteAddr.String(info.Conn.RemoteAddr().String()),
 		HTTPLocalAddr.String(info.Conn.LocalAddr().String()),
-	)
+		HTTPConnectionReused.Bool(info.Reused),
+		HTTPConnectionWasIdle.Bool(info.WasIdle),
+	}
+	if info.WasIdle {
+		attrs = append(attrs, HTTPConnectionIdleTime.String(info.IdleTime.String()))
+	}
+	ct.end("http.getconn", nil, attrs...)
 }
 
 func (ct *clientTracer) putIdleConn(err error) {
@@ -179,15 +268,25 @@ func (ct *clientTracer) dnsStart(info httptrace.DNSStartInfo) {
 }
 
 func (ct *clientTracer) dnsDone(info httptrace.DNSDoneInfo) {
-	ct.end("http.dns", info.Err)
+	var addrs []string
+	for _, netAddr := range info.Addrs {
+		addrs = append(addrs, netAddr.String())
+	}
+	ct.end("http.dns", info.Err, HTTPDNSAddrs.String(sliceToString(addrs)))
 }
 
 func (ct *clientTracer) connectStart(network, addr string) {
-	ct.start("http.connect."+addr, "http.connect", HTTPRemoteAddr.String(addr))
+	ct.start("http.connect."+addr, "http.connect",
+		HTTPRemoteAddr.String(addr),
+		HTTPConnectionStartNetwork.String(network),
+	)
 }
 
 func (ct *clientTracer) connectDone(network, addr string, err error) {
-	ct.end("http.connect."+addr, err)
+	ct.end("http.connect."+addr, err,
+		HTTPConnectionDoneAddr.String(addr),
+		HTTPConnectionDoneNetwork.String(network),
+	)
 }
 
 func (ct *clientTracer) tlsHandshakeStart() {
@@ -199,14 +298,22 @@ func (ct *clientTracer) tlsHandshakeDone(_ tls.ConnectionState, err error) {
 }
 
 func (ct *clientTracer) wroteHeaderField(k string, v []string) {
-	if ct.span("http.headers") == nil {
+	if ct.useSpans && ct.span("http.headers") == nil {
 		ct.start("http.headers", "http.headers")
 	}
-	ct.root.SetAttributes(attribute.String("http."+strings.ToLower(k), sliceToString(v)))
+	if !ct.addHeaders {
+		return
+	}
+	k = strings.ToLower(k)
+	value := sliceToString(v)
+	if _, ok := ct.redactedHeaders[k]; ok {
+		value = "****"
+	}
+	ct.root.SetAttributes(attribute.String("http."+k, value))
 }
 
 func (ct *clientTracer) wroteHeaders() {
-	if ct.span("http.headers") != nil {
+	if ct.useSpans && ct.span("http.headers") != nil {
 		ct.end("http.headers", nil)
 	}
 	ct.start("http.send", "http.send")
@@ -220,15 +327,27 @@ func (ct *clientTracer) wroteRequest(info httptrace.WroteRequestInfo) {
 }
 
 func (ct *clientTracer) got100Continue() {
-	ct.span("http.receive").AddEvent("GOT 100 - Continue")
+	span := ct.root
+	if ct.useSpans {
+		span = ct.span("http.receive")
+	}
+	span.AddEvent("GOT 100 - Continue")
 }
 
 func (ct *clientTracer) wait100Continue() {
-	ct.span("http.receive").AddEvent("GOT 100 - Wait")
+	span := ct.root
+	if ct.useSpans {
+		span = ct.span("http.receive")
+	}
+	span.AddEvent("GOT 100 - Wait")
 }
 
 func (ct *clientTracer) got1xxResponse(code int, header textproto.MIMEHeader) error {
-	ct.span("http.receive").AddEvent("GOT 1xx", trace.WithAttributes(
+	span := ct.root
+	if ct.useSpans {
+		span = ct.span("http.receive")
+	}
+	span.AddEvent("GOT 1xx", trace.WithAttributes(
 		HTTPStatus.Int(code),
 		HTTPHeaderMIME.String(sm2s(header)),
 	))
