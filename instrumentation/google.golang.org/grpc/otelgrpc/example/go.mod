@@ -13,6 +13,6 @@ require (
 	go.opentelemetry.io/otel v1.0.0-RC1
 	go.opentelemetry.io/otel/exporters/stdout/stdouttrace v1.0.0-RC1
 	go.opentelemetry.io/otel/sdk v1.0.0-RC1
-	golang.org/x/net v0.0.0-20200707034311-ab3426394381
-	google.golang.org/grpc v1.38.0
+	golang.org/x/net v0.0.0-20200822124328-c89045814202
+	google.golang.org/grpc v1.39.0
 )
