@@ -200,7 +200,7 @@ const (
 	receiveEndedState
 )
 
-func wrapClientStream(s grpc.ClientStream, desc *grpc.StreamDesc) *clientStream {
+func wrapClientStream(ctx context.Context, s grpc.ClientStream, desc *grpc.StreamDesc) *clientStream {
 	events := make(chan streamEvent)
 	eventsDone := make(chan struct{})
 	finished := make(chan error)
@@ -211,19 +211,25 @@ func wrapClientStream(s grpc.ClientStream, desc *grpc.StreamDesc) *clientStream 
 		// Both streams have to be closed
 		state := byte(0)
 
-		for event := range events {
-			switch event.Type {
-			case closeEvent:
-				state |= clientClosedState
-			case receiveEndEvent:
-				state |= receiveEndedState
-			case errorEvent:
-				finished <- event.Err
-				return
-			}
+		for {
+			select {
+			case event := <-events:
+				switch event.Type {
+				case closeEvent:
+					state |= clientClosedState
+				case receiveEndEvent:
+					state |= receiveEndedState
+				case errorEvent:
+					finished <- event.Err
+					return
+				}
+				if state == clientClosedState|receiveEndedState {
+					finished <- nil
+					return
+				}
 
-			if state == clientClosedState|receiveEndedState {
-				finished <- nil
+			case <-ctx.Done():
+				finished <- ctx.Err()
 				return
 			}
 		}
@@ -284,7 +290,7 @@ func StreamClientInterceptor(opts ...Option) grpc.StreamClientInterceptor {
 			span.End()
 			return s, err
 		}
-		stream := wrapClientStream(s, desc)
+		stream := wrapClientStream(ctx, s, desc)
 
 		go func() {
 			err := <-stream.finished
