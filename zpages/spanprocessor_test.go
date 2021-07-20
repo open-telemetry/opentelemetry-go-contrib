@@ -31,7 +31,7 @@ import (
 	"go.opentelemetry.io/otel/trace"
 )
 
-func TestSpanProcessor_DoNothing(t *testing.T) {
+func TestSpanProcessorDoNothing(t *testing.T) {
 	zsp := NewSpanProcessor()
 	assert.NoError(t, zsp.ForceFlush(context.Background()))
 	assert.NoError(t, zsp.Shutdown(context.Background()))
@@ -87,7 +87,7 @@ func TestSpanProcessor(t *testing.T) {
 	assert.LessOrEqual(t, 1, numLatencySamples)
 }
 
-func TestSpanProcessor_Fuzzer(t *testing.T) {
+func TestSpanProcessorFuzzer(t *testing.T) {
 	zsp := NewSpanProcessor()
 	tracerProvider := sdktrace.NewTracerProvider(
 		sdktrace.WithSampler(sdktrace.AlwaysSample()),
@@ -150,7 +150,7 @@ func TestSpanProcessor_Fuzzer(t *testing.T) {
 	wg.Wait()
 }
 
-func TestSpanProcessor_NegativeLatency(t *testing.T) {
+func TestSpanProcessorNegativeLatency(t *testing.T) {
 	zsp := NewSpanProcessor()
 	ts := &testSpan{
 		spanContext: trace.NewSpanContext(trace.SpanContextConfig{
@@ -180,7 +180,7 @@ func TestSpanProcessor_NegativeLatency(t *testing.T) {
 	assert.Equal(t, 1, spansPM["test"].latencySpans[0])
 }
 
-func TestSpanProcessor_SpansByLatency_WrongIndex(t *testing.T) {
+func TestSpanProcessorSpansByLatencyWrongIndex(t *testing.T) {
 	zsp := NewSpanProcessor()
 	tracerProvider := sdktrace.NewTracerProvider(
 		sdktrace.WithSampler(sdktrace.AlwaysSample()),

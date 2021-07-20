@@ -68,7 +68,7 @@ func (b *bucket) len() int {
 	return b.nextIndex
 }
 
-// spans returns the ith span in the bucket.
+// spans returns the spans in this bucket.
 func (b *bucket) spans() []sdktrace.ReadOnlySpan {
 	return append([]sdktrace.ReadOnlySpan(nil), b.buffer[0:b.len()]...)
 }

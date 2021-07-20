@@ -83,7 +83,7 @@ func TestBucket(t *testing.T) {
 	}
 }
 
-func TestBucket_AddSample(t *testing.T) {
+func TestBucketAddSample(t *testing.T) {
 	bkt := newBucket(defaultBucketCapacity)
 	assert.Equal(t, 0, bkt.len())
 
@@ -96,7 +96,7 @@ func TestBucket_AddSample(t *testing.T) {
 	}
 }
 
-func TestBucket_ZeroCapacity(t *testing.T) {
+func TestBucketZeroCapacity(t *testing.T) {
 	bkt := newBucket(0)
 	assert.Equal(t, 0, bkt.len())
 	bkt.add(&testSpan{endTime: time.Unix(1, 0)})

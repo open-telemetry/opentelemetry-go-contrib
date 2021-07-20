@@ -24,14 +24,14 @@ import (
 
 var testDurations = []time.Duration{1 * time.Second}
 
-func TestBoundaries_NumBuckets(t *testing.T) {
+func TestBoundariesNumBuckets(t *testing.T) {
 	assert.Equal(t, 1, newBoundaries(nil).numBuckets())
 	assert.Equal(t, 1, newBoundaries([]time.Duration{}).numBuckets())
 	assert.Equal(t, 2, newBoundaries(testDurations).numBuckets())
 	assert.Equal(t, 9, defaultBoundaries.numBuckets())
 }
 
-func TestBoundaries_GetBucketIndex(t *testing.T) {
+func TestBoundariesGetBucketIndex(t *testing.T) {
 	assert.Equal(t, 0, newBoundaries(testDurations).getBucketIndex(zeroDuration))
 	assert.Equal(t, 0, newBoundaries(testDurations).getBucketIndex(500*time.Millisecond))
 	assert.Equal(t, 1, newBoundaries(testDurations).getBucketIndex(1500*time.Millisecond))
