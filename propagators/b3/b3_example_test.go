@@ -20,7 +20,7 @@ import (
 )
 
 func ExampleB3() {
-	b3 := b3.B3{}
+	b3 := b3.New()
 	// Register the B3 propagator globally.
 	otel.SetTextMapPropagator(b3)
 }

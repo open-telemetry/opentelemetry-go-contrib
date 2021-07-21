@@ -50,7 +50,7 @@ func TestExtractB3(t *testing.T) {
 	}
 
 	for _, tg := range testGroup {
-		propagator := b3.B3{}
+		propagator := b3.New()
 
 		for _, tt := range tg.tests {
 			t.Run(tt.name, func(t *testing.T) {
@@ -144,7 +144,7 @@ func TestB3Propagator_Fields(t *testing.T) {
 	}{
 		{
 			name:       "no encoding specified",
-			propagator: b3.B3{},
+			propagator: b3.New(),
 			want: []string{
 				b3TraceID,
 				b3SpanID,

@@ -40,7 +40,7 @@ func BenchmarkExtractB3(b *testing.B) {
 	}
 
 	for _, tg := range testGroup {
-		propagator := b3.B3{}
+		propagator := b3.New()
 		for _, tt := range tg.tests {
 			traceBenchmark(tg.name+"/"+tt.name, b, func(b *testing.B) {
 				ctx := context.Background()

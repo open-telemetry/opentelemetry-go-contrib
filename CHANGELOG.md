@@ -10,7 +10,8 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 
 ### Changed
 
-- The `b3.B3.InjectEncoding` field has been unexported. Use `b3.New(b3.WithInjectEncoding(encoding))` instead. (#868)
+- The `b3.B3` type has been removed.
+  `b3.New()` and `b3.WithInjectEncoding(encoding)` are added to replace it. (#868)
 
 ### Fixed
 

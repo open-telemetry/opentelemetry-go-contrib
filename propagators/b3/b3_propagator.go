@@ -60,14 +60,11 @@ var (
 	errInvalidParentSpanIDValue  = errors.New("invalid B3 ParentSpanID value found")
 )
 
-// B3 propagator serializes SpanContext to/from B3 Headers.
-// A Single Header propagator is used by default.
-// Use New function to a non-default instance of this propagator.
-type B3 struct {
+type propagator struct {
 	cfg config
 }
 
-var _ propagation.TextMapPropagator = B3{}
+var _ propagation.TextMapPropagator = propagator{}
 
 // New creates a B3 implementation of propagation.TextMapPropagator.
 // B3 propagator serializes SpanContext to/from B3 Headers.
@@ -83,7 +80,7 @@ var _ propagation.TextMapPropagator = B3{}
 // The Single Header propagator is used by default.
 func New(opts ...Option) propagation.TextMapPropagator {
 	cfg := newConfig(opts...)
-	return B3{
+	return propagator{
 		cfg: *cfg,
 	}
 }
@@ -91,7 +88,7 @@ func New(opts ...Option) propagation.TextMapPropagator {
 // Inject injects a context into the carrier as B3 headers.
 // The parent span ID is omitted because it is not tracked in the
 // SpanContext.
-func (b3 B3) Inject(ctx context.Context, carrier propagation.TextMapCarrier) {
+func (b3 propagator) Inject(ctx context.Context, carrier propagation.TextMapCarrier) {
 	sc := trace.SpanFromContext(ctx).SpanContext()
 
 	if b3.cfg.InjectEncoding.supports(B3SingleHeader) || b3.cfg.InjectEncoding == B3Unspecified {
@@ -133,7 +130,7 @@ func (b3 B3) Inject(ctx context.Context, carrier propagation.TextMapCarrier) {
 }
 
 // Extract extracts a context from the carrier if it contains B3 headers.
-func (b3 B3) Extract(ctx context.Context, carrier propagation.TextMapCarrier) context.Context {
+func (b3 propagator) Extract(ctx context.Context, carrier propagation.TextMapCarrier) context.Context {
 	var (
 		sc  trace.SpanContext
 		err error
@@ -163,7 +160,7 @@ func (b3 B3) Extract(ctx context.Context, carrier propagation.TextMapCarrier) co
 	return trace.ContextWithRemoteSpanContext(ctx, sc)
 }
 
-func (b3 B3) Fields() []string {
+func (b3 propagator) Fields() []string {
 	header := []string{}
 	if b3.cfg.InjectEncoding.supports(B3SingleHeader) {
 		header = append(header, b3ContextHeader)
