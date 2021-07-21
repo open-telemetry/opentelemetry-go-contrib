@@ -108,7 +108,7 @@ func AppendMiddlewares(apiOptions *[]func(*middleware.Stack) error, opts ...Opti
 		TracerProvider: otel.GetTracerProvider(),
 	}
 	for _, opt := range opts {
-		opt.Apply(&cfg)
+		opt.apply(&cfg)
 	}
 
 	m := otelMiddlewares{tracer: cfg.TracerProvider.Tracer(tracerName,
