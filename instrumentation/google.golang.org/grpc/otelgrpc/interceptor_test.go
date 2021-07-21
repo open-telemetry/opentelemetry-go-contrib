@@ -463,6 +463,59 @@ func TestStreamClientInterceptorOnUnidirectionalClientServerStream(t *testing.T)
 	}
 }
 
+// TestStreamClientInterceptorCancelContext tests a cancel context situation.
+// There should be no goleaks
+func TestStreamClientInterceptorCancelContext(t *testing.T) {
+	defer goleak.VerifyNone(t)
+	clientConn, err := grpc.Dial("fake:connection", grpc.WithInsecure())
+	if err != nil {
+		t.Fatalf("failed to create client connection: %v", err)
+	}
+	defer clientConn.Close()
+
+	// tracer
+	sr := NewSpanRecorder()
+	tp := oteltest.NewTracerProvider(oteltest.WithSpanRecorder(sr))
+	streamCI := StreamClientInterceptor(WithTracerProvider(tp))
+
+	var mockClStr *mockClientStream
+	method := "/github.com.serviceName/bar"
+	name := "github.com.serviceName/bar"
+
+	// create a context with cancel
+	cancelCtx, cancel := context.WithCancel(context.Background())
+	defer cancel()
+	streamClient, err := streamCI(
+		cancelCtx,
+		&grpc.StreamDesc{ServerStreams: true},
+		clientConn,
+		method,
+		func(ctx context.Context,
+			desc *grpc.StreamDesc,
+			cc *grpc.ClientConn,
+			method string,
+			opts ...grpc.CallOption) (grpc.ClientStream, error) {
+			mockClStr = &mockClientStream{Desc: desc, Ctx: ctx}
+			return mockClStr, nil
+		},
+	)
+	require.NoError(t, err, "initialize grpc stream client")
+	_, ok := getSpanFromRecorder(sr, name)
+	require.False(t, ok, "span should not ended while stream is open")
+
+	req := &mockProtoMessage{}
+	reply := &mockProtoMessage{}
+
+	// send and receive fake data
+	for i := 0; i < 10; i++ {
+		_ = streamClient.SendMsg(req)
+		_ = streamClient.RecvMsg(reply)
+	}
+
+	// close client stream
+	_ = streamClient.CloseSend()
+}
+
 // TestStreamClientInterceptorWithError tests a situation that streamer returns an error.
 func TestStreamClientInterceptorWithError(t *testing.T) {
 	defer goleak.VerifyNone(t)
