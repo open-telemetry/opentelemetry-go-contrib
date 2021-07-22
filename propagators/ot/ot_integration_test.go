@@ -23,14 +23,8 @@ import (
 
 	"go.opentelemetry.io/contrib/propagators/ot"
 	"go.opentelemetry.io/otel/baggage"
-	"go.opentelemetry.io/otel/oteltest"
 	"go.opentelemetry.io/otel/propagation"
 	"go.opentelemetry.io/otel/trace"
-)
-
-var (
-	mockTracer  = oteltest.NewTracerProvider().Tracer("")
-	_, mockSpan = mockTracer.Start(context.Background(), "")
 )
 
 func TestExtractOT(t *testing.T) {
@@ -53,13 +47,13 @@ func TestExtractOT(t *testing.T) {
 
 		for _, tc := range tg.testcases {
 			t.Run(tc.name, func(t *testing.T) {
-				req, _ := http.NewRequest("GET", "http://example.com", nil)
+				h := make(http.Header, len(tc.headers))
 				for k, v := range tc.headers {
-					req.Header.Set(k, v)
+					h.Set(k, v)
 				}
 
 				ctx := context.Background()
-				ctx = propagator.Extract(ctx, propagation.HeaderCarrier(req.Header))
+				ctx = propagator.Extract(ctx, propagation.HeaderCarrier(h))
 				resSc := trace.SpanContextFromContext(ctx)
 
 				comparer := cmp.Comparer(func(a, b trace.SpanContext) bool {
@@ -86,15 +80,6 @@ func TestExtractOT(t *testing.T) {
 	}
 }
 
-type testSpan struct {
-	trace.Span
-	sc trace.SpanContext
-}
-
-func (s testSpan) SpanContext() trace.SpanContext {
-	return s.sc
-}
-
 func TestInjectOT(t *testing.T) {
 	testGroup := []struct {
 		name      string
@@ -114,8 +99,6 @@ func TestInjectOT(t *testing.T) {
 		for _, tc := range tg.testcases {
 			propagator := ot.OT{}
 			t.Run(tc.name, func(t *testing.T) {
-				req, _ := http.NewRequest("GET", "http://example.com", nil)
-
 				members := []baggage.Member{}
 				for k, v := range tc.baggage {
 					m, err := baggage.NewMember(k, v)
@@ -129,17 +112,12 @@ func TestInjectOT(t *testing.T) {
 					t.Errorf("%s: %s, unexpected error creating baggage: %s", tg.name, tc.name, err.Error())
 				}
 				ctx := baggage.ContextWithBaggage(context.Background(), bag)
-				ctx = trace.ContextWithSpan(
-					ctx,
-					testSpan{
-						Span: mockSpan,
-						sc:   trace.NewSpanContext(tc.sc),
-					},
-				)
-				propagator.Inject(ctx, propagation.HeaderCarrier(req.Header))
+				ctx = trace.ContextWithSpanContext(ctx, trace.NewSpanContext(tc.sc))
+				header := http.Header{}
+				propagator.Inject(ctx, propagation.HeaderCarrier(header))
 
 				for h, v := range tc.wantHeaders {
-					result, want := req.Header.Get(h), v
+					result, want := header.Get(h), v
 					if diff := cmp.Diff(result, want); diff != "" {
 						t.Errorf("%s: %s, header=%s: -got +want %s", tg.name, tc.name, h, diff)
 					}
