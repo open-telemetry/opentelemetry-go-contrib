@@ -39,6 +39,16 @@ updates:
       day: "sunday"
   -
     package-ecosystem: "gomod"
+    directory: "/detectors/aws/lambda"
+    labels:
+      - dependencies
+      - go
+      - "Skip Changelog"
+    schedule:
+      interval: "weekly"
+      day: "sunday"
+  -
+    package-ecosystem: "gomod"
     directory: "/detectors/aws"
     labels:
       - dependencies
@@ -155,6 +165,16 @@ updates:
           schedule:
             interval: "weekly"
             day: "sunday"
+  -
+    package-ecosystem: "gomod"
+    directory: "/instrumentation/github.com/aws/aws-lambda-go/otellambda"
+    labels:
+      - dependencies
+      - go
+      - "Skip Changelog"
+    schedule:
+      interval: "weekly"
+      day: "sunday"
   -
     package-ecosystem: "gomod"
     directory: "/instrumentation/github.com/bradfitz/gomemcache/memcache/otelmemcache"
