@@ -8,6 +8,10 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 
 ## [Unreleased]
 
+### Added
+
+- Add the `zpages` span processor. (#894)
+
 ### Changed
 
 - The `b3.B3` type has been removed.
