@@ -32,7 +32,7 @@ type Flusher interface {
 
 type noopFlusher struct{}
 
-func (*noopFlusher) ForceFlush(context.Context) error{return nil}
+func (*noopFlusher) ForceFlush(context.Context) error { return nil }
 
 // Compile time check our noopFlusher implements FLusher
 var _ Flusher = &noopFlusher{}
@@ -88,7 +88,7 @@ func validateReturns(handler reflect.Type) error {
 	switch n := handler.NumOut(); {
 	case n > 2:
 		return fmt.Errorf("handler may not return more than two values")
-	case n > 1:
+	case n == 2:
 		if !handler.Out(1).Implements(errorType) {
 			return fmt.Errorf("handler returns two values, but the second does not implement error")
 		}
@@ -102,7 +102,7 @@ func validateReturns(handler reflect.Type) error {
 }
 
 // Wraps and calls customer lambda handler then unpacks response as necessary
-func wrapperInternals(handlerFunc interface{}, event reflect.Value, ctx context.Context, takesContext bool) (interface{}, error) {
+func wrapperInternals(ctx context.Context, handlerFunc interface{}, event reflect.Value, takesContext bool) (interface{}, error) {
 	wrappedLambdaHandler := reflect.ValueOf(wrapper(handlerFunc))
 
 	argsWrapped := []reflect.Value{reflect.ValueOf(ctx), event, reflect.ValueOf(takesContext)}
@@ -147,7 +147,7 @@ func payloadToEvent(eventType reflect.Type, payload interface{}) (reflect.Value,
 func LambdaHandlerWrapper(handlerFunc interface{}, options ...InstrumentationOption) interface{} {
 	o := InstrumentationOptions{
 		TracerProvider: otel.GetTracerProvider(),
-		Flusher:       &noopFlusher{},
+		Flusher:        &noopFlusher{},
 	}
 	for _, opt := range options {
 		opt(&o)
@@ -177,7 +177,7 @@ func LambdaHandlerWrapper(handlerFunc interface{}, options ...InstrumentationOpt
 		return func(ctx context.Context) (interface{}, error) {
 			var temp *interface{}
 			event := reflect.ValueOf(temp)
-			return wrapperInternals(handlerFunc, event, ctx, takesContext)
+			return wrapperInternals(ctx, handlerFunc, event, takesContext)
 		}
 	} else { // customer either takes both context and payload or just payload
 		return func(ctx context.Context, payload interface{}) (interface{}, error) {
@@ -185,7 +185,7 @@ func LambdaHandlerWrapper(handlerFunc interface{}, options ...InstrumentationOpt
 			if err != nil {
 				return nil, err
 			}
-			return wrapperInternals(handlerFunc, event.Elem(), ctx, takesContext)
+			return wrapperInternals(ctx, handlerFunc, event.Elem(), takesContext)
 		}
 	}
 }
@@ -280,7 +280,7 @@ func (h wrappedHandler) Invoke(ctx context.Context, payload []byte) ([]byte, err
 func HandlerWrapper(handler lambda.Handler, options ...InstrumentationOption) lambda.Handler {
 	o := InstrumentationOptions{
 		TracerProvider: otel.GetTracerProvider(),
-		Flusher:       &noopFlusher{},
+		Flusher:        &noopFlusher{},
 	}
 	for _, opt := range options {
 		opt(&o)
@@ -312,15 +312,15 @@ func tracingBegin(ctx context.Context) (context.Context, trace.Span) {
 	}
 	if lc != nil {
 		ctxRequestID := lc.AwsRequestID
-		attributes = append(attributes, attribute.KeyValue{Key: semconv.FaaSExecutionKey, Value: attribute.StringValue(ctxRequestID)})
+		attributes = append(attributes, semconv.FaaSExecutionKey.String(ctxRequestID))
 
 		// Resource attrs added as span attr due to static tp
 		// being created without meaningful context
 		ctxFunctionArn := lc.InvokedFunctionArn
-		attributes = append(attributes, attribute.KeyValue{Key: semconv.FaaSIDKey, Value: attribute.StringValue(ctxFunctionArn)})
+		attributes = append(attributes, semconv.FaaSIDKey.String(ctxFunctionArn))
 		arnParts := strings.Split(ctxFunctionArn, ":")
 		if len(arnParts) >= 5 {
-			attributes = append(attributes, attribute.KeyValue{Key: semconv.CloudAccountIDKey, Value: attribute.StringValue(arnParts[4])})
+			attributes = append(attributes, semconv.CloudAccountIDKey.String(arnParts[4]))
 		}
 	}
 

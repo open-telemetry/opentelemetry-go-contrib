@@ -70,7 +70,6 @@ func (mc mapCarrier) Keys() []string {
 	return keys
 }
 
-
 type mockIdGenerator struct {
 	sync.Mutex
 	traceCount int
@@ -102,7 +101,7 @@ func (h emptyHandler) Invoke(_ context.Context, _ []byte) ([]byte, error) {
 
 var _ lambda.Handler = emptyHandler{}
 
-func initMockTracerProvider() (trace.TracerProvider, *tracetest.InMemoryExporter) {
+func initMockTracerProvider() (*sdktrace.TracerProvider, *tracetest.InMemoryExporter) {
 	ctx := context.Background()
 
 	exp := tracetest.NewInMemoryExporter()
@@ -187,7 +186,7 @@ func TestLambdaHandlerWrapperTracing(t *testing.T) {
 		return "hello world", nil
 	}
 
-	wrapped := otellambda.LambdaHandlerWrapper(customerHandler, otellambda.WithTracerProvider(tp))
+	wrapped := otellambda.LambdaHandlerWrapper(customerHandler, otellambda.WithTracerProvider(tp), otellambda.WithFlusher(tp))
 	wrappedCallable := reflect.ValueOf(wrapped)
 	resp := wrappedCallable.Call([]reflect.Value{reflect.ValueOf(mockContext)})
 	assert.Len(t, resp, 2)
@@ -203,7 +202,7 @@ func TestHandlerWrapperTracing(t *testing.T) {
 	setEnvVars()
 	tp, memExporter := initMockTracerProvider()
 
-	wrapped := otellambda.HandlerWrapper(emptyHandler{}, otellambda.WithTracerProvider(tp))
+	wrapped := otellambda.HandlerWrapper(emptyHandler{}, otellambda.WithTracerProvider(tp), otellambda.WithFlusher(tp))
 	_, err := wrapped.Invoke(mockContext, nil)
 	assert.NoError(t, err)
 
