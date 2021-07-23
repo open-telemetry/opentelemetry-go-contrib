@@ -7,19 +7,15 @@ import (
 	"log"
 	"os"
 	"reflect"
-	"runtime"
 	"strings"
 
 	"github.com/aws/aws-lambda-go/lambda"
 	"github.com/aws/aws-lambda-go/lambdacontext"
 
-	lambdadetector "go.opentelemetry.io/contrib/detectors/aws/lambda"
 	"go.opentelemetry.io/contrib/propagators/aws/xray"
 	"go.opentelemetry.io/otel"
 	"go.opentelemetry.io/otel/attribute"
-	"go.opentelemetry.io/otel/exporters/otlp/otlptrace/otlptracegrpc"
 	"go.opentelemetry.io/otel/propagation"
-	sdktrace "go.opentelemetry.io/otel/sdk/trace"
 	semconv "go.opentelemetry.io/otel/semconv/v1.4.0"
 	"go.opentelemetry.io/otel/trace"
 )
@@ -28,38 +24,37 @@ const (
 	tracerName = "go.opentelemetry.io/contrib/instrumentation/github.com/aws/aws-lambda-go/otellambda"
 )
 
-var tp *sdktrace.TracerProvider
 var errorLogger = log.New(log.Writer(), "OTel Lambda Error: ", 0)
 
-func init() {
-	otel.SetTextMapPropagator(xray.Propagator{})
+type Flusher interface {
+	ForceFlush(context.Context) error
 }
 
-func initTracerProvider() {
-	ctx := context.Background()
+type noopFlusher struct{}
 
-	exp, err := otlptracegrpc.New(ctx, otlptracegrpc.WithInsecure())
-	if err != nil {
-		errorLogger.Printf("failed to initialize exporter: %v\n", err)
-		return
-	}
+func (*noopFlusher) ForceFlush(context.Context) error{return nil}
 
-	detector := lambdadetector.NewResourceDetector()
-	res, err := detector.Detect(ctx)
-	if err != nil {
-		errorLogger.Printf("failed to detect lambda resources: %v\n", err)
-		return
-	}
+// Compile time check our noopFlusher implements FLusher
+var _ Flusher = &noopFlusher{}
 
-	tp = sdktrace.NewTracerProvider(
-		sdktrace.WithBatcher(exp),
-		sdktrace.WithIDGenerator(xray.NewIDGenerator()),
-		sdktrace.WithResource(res),
-	)
+type InstrumentationOption func(o *InstrumentationOptions)
 
-	// Set the traceprovider
-	otel.SetTracerProvider(tp)
+type InstrumentationOptions struct {
+	// TracerProvider is the TracerProvider which will be used
+	// to create instrumentation spans
+	// The default value of TracerProvider the global otel TracerProvider
+	// returned by otel.GetTracerProvider()
+	TracerProvider trace.TracerProvider
+
+	// Flusher is the mechanism used to flush any unexported spans
+	// each Lambda Invocation to avoid spans being unexported for long
+	// when periods of time if Lambda freezes the execution environment
+	// The default value of Flusher is a noop Flusher, using this
+	// default can result in long data delays in asynchronous settings
+	Flusher Flusher
 }
+
+var configuration InstrumentationOptions
 
 func errorHandler(e error) func(context.Context, interface{}) (interface{}, error) {
 	return func(context.Context, interface{}) (interface{}, error) {
@@ -149,7 +144,16 @@ func payloadToEvent(eventType reflect.Type, payload interface{}) (reflect.Value,
 }
 
 // LambdaHandlerWrapper Provides a lambda handler which wraps customer lambda handler with OTel Tracing
-func LambdaHandlerWrapper(handlerFunc interface{}) interface{} {
+func LambdaHandlerWrapper(handlerFunc interface{}, options ...InstrumentationOption) interface{} {
+	o := InstrumentationOptions{
+		TracerProvider: otel.GetTracerProvider(),
+		Flusher:       &noopFlusher{},
+	}
+	for _, opt := range options {
+		opt(&o)
+	}
+	configuration = o
+
 	if handlerFunc == nil {
 		return errorHandler(fmt.Errorf("handler is nil"))
 	}
@@ -275,7 +279,16 @@ func (h wrappedHandler) Invoke(ctx context.Context, payload []byte) ([]byte, err
 }
 
 // HandlerWrapper Provides a Handler which wraps customer Handler with OTel Tracing
-func HandlerWrapper(handler lambda.Handler) lambda.Handler {
+func HandlerWrapper(handler lambda.Handler, options ...InstrumentationOption) lambda.Handler {
+	o := InstrumentationOptions{
+		TracerProvider: otel.GetTracerProvider(),
+		Flusher:       &noopFlusher{},
+	}
+	for _, opt := range options {
+		opt(&o)
+	}
+	configuration = o
+
 	return wrappedHandler{handler: handler}
 }
 
@@ -288,64 +301,55 @@ func tracingBegin(ctx context.Context) (context.Context, trace.Span) {
 	propagator := xray.Propagator{}
 	ctx = propagator.Extract(ctx, mc)
 
-	// If tracer provider initialization failed we
-	// will attempt to initialize once per invocation
-	if tp == nil {
-		initTracerProvider()
+	// Get a named tracer with package path as its name.
+	tracer := configuration.TracerProvider.Tracer(tracerName)
+
+	var span trace.Span
+	spanName := os.Getenv("AWS_LAMBDA_FUNCTION_NAME")
+
+	var attributes []attribute.KeyValue
+	lc, ok := lambdacontext.FromContext(ctx)
+	if !ok {
+		errorLogger.Println("failed to load lambda context from context, ensure tracing enabled in Lambda")
+	}
+	if lc != nil {
+		ctxRequestID := lc.AwsRequestID
+		attributes = append(attributes, attribute.KeyValue{Key: semconv.FaaSExecutionKey, Value: attribute.StringValue(ctxRequestID)})
+
+		// Resource attrs added as span attr due to static tp
+		// being created without meaningful context
+		ctxFunctionArn := lc.InvokedFunctionArn
+		attributes = append(attributes, attribute.KeyValue{Key: semconv.FaaSIDKey, Value: attribute.StringValue(ctxFunctionArn)})
+		arnParts := strings.Split(ctxFunctionArn, ":")
+		if len(arnParts) >= 5 {
+			attributes = append(attributes, attribute.KeyValue{Key: semconv.CloudAccountIDKey, Value: attribute.StringValue(arnParts[4])})
+		}
 	}
 
-	// if tracer provider successfully initializes then
-	// we add tracing, otherwise do customer business
-	// logic with no tracing
-	if tp != nil {
-		// Get a named tracer with package path as its name.
-		tracer := tp.Tracer(tracerName)
+	ctx, span = tracer.Start(ctx, spanName, trace.WithSpanKind(trace.SpanKindServer), trace.WithAttributes(attributes...))
 
-		var span trace.Span
-		spanName := os.Getenv("AWS_LAMBDA_FUNCTION_NAME")
-
-		var attributes []attribute.KeyValue
-		lc, ok := lambdacontext.FromContext(ctx)
-		if !ok {
-			errorLogger.Println("failed to load lambda context from context, ensure tracing enabled in Lambda")
-		}
-		if lc != nil {
-			ctxRequestID := lc.AwsRequestID
-			attributes = append(attributes, attribute.KeyValue{Key: semconv.FaaSExecutionKey, Value: attribute.StringValue(ctxRequestID)})
-
-			// Resource attrs added as span attr due to static tp
-			// being created without meaningful context
-			ctxFunctionArn := lc.InvokedFunctionArn
-			attributes = append(attributes, attribute.KeyValue{Key: semconv.FaaSIDKey, Value: attribute.StringValue(ctxFunctionArn)})
-			arnParts := strings.Split(ctxFunctionArn, ":")
-			if len(arnParts) >= 5 {
-				attributes = append(attributes, attribute.KeyValue{Key: semconv.CloudAccountIDKey, Value: attribute.StringValue(arnParts[4])})
-			}
-		}
-
-		ctx, span = tracer.Start(ctx, spanName, trace.WithSpanKind(trace.SpanKindServer), trace.WithAttributes(attributes...))
-
-		return ctx, span
-	}
-	return ctx, nil
+	return ctx, span
 }
 
 // Logic to wrap up OTel Tracing
 func tracingEnd(ctx context.Context, span trace.Span) {
-	if tp != nil {
-		// span will be valid if tp is not nil
-		span.End()
+	span.End()
 
-		// yield processor to attempt to attempt to ensure
-		// all spans have been consumed and are ready to be
-		// flushed - see https://github.com/open-telemetry/opentelemetry-go/issues/2080
-		// to be removed upon resolution of above issue
-		runtime.Gosched()
+	// force flush any tracing data since lambda may freeze
+	err := configuration.Flusher.ForceFlush(ctx)
+	if err != nil {
+		errorLogger.Println("failed to force a flush, lambda may freeze before instrumentation exported: ", err)
+	}
+}
 
-		// force flush any tracing data since lambda may freeze
-		err := tp.ForceFlush(ctx)
-		if err != nil {
-			errorLogger.Println("failed to force a flush, lambda may freeze before instrumentation exported: ", err)
-		}
+func WithTracerProvider(tracerProvider trace.TracerProvider) InstrumentationOption {
+	return func(o *InstrumentationOptions) {
+		o.TracerProvider = tracerProvider
+	}
+}
+
+func WithFlusher(flusher Flusher) InstrumentationOption {
+	return func(o *InstrumentationOptions) {
+		o.Flusher = flusher
 	}
 }
