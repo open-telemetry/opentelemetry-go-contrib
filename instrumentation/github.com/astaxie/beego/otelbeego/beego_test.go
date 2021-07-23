@@ -490,7 +490,7 @@ var testCases = []*testCase{
 		method: http.MethodGet,
 		path:   "/",
 		options: []Option{
-			WithPropagators(propagation.NewCompositeTextMapPropagator(b3.B3{})),
+			WithPropagators(propagation.NewCompositeTextMapPropagator(b3.New())),
 		},
 		hasSpan:            true,
 		expectedSpanName:   "/",

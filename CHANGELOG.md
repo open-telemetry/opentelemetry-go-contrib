@@ -12,6 +12,11 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 
 - Add the `zpages` span processor. (#894)
 
+### Changed
+
+- The `b3.B3` type has been removed.
+  `b3.New()` and `b3.WithInjectEncoding(encoding)` are added to replace it. (#868)
+
 ### Fixed
 
 - Fix deadlocks and race conditions in `otelsarama.WrapAsyncProducer`.
