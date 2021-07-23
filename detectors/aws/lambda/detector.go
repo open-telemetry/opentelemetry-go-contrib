@@ -46,7 +46,7 @@ func NewResourceDetector() resource.Detector {
 	return &resourceDetector{}
 }
 
-// Detect collects resources available when running on lambda
+// Detect collects resource attributes available when running on lambda
 func (detector *resourceDetector) Detect(context.Context) (*resource.Resource, error) {
 
 	// Lambda resources come from ENV
