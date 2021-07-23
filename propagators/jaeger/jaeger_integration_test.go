@@ -24,14 +24,8 @@ import (
 	"github.com/google/go-cmp/cmp"
 
 	"go.opentelemetry.io/contrib/propagators/jaeger"
-	"go.opentelemetry.io/otel/oteltest"
 	"go.opentelemetry.io/otel/propagation"
 	"go.opentelemetry.io/otel/trace"
-)
-
-var (
-	mockTracer  = oteltest.NewTracerProvider().Tracer("")
-	_, mockSpan = mockTracer.Start(context.Background(), "")
 )
 
 func TestExtractJaeger(t *testing.T) {
@@ -54,13 +48,13 @@ func TestExtractJaeger(t *testing.T) {
 
 		for _, tc := range tg.testcases {
 			t.Run(tc.name, func(t *testing.T) {
-				req, _ := http.NewRequest("GET", "http://example.com", nil)
+				header := make(http.Header, len(tc.headers))
 				for k, v := range tc.headers {
-					req.Header.Set(k, v)
+					header.Set(k, v)
 				}
 
 				ctx := context.Background()
-				ctx = propagator.Extract(ctx, propagation.HeaderCarrier(req.Header))
+				ctx = propagator.Extract(ctx, propagation.HeaderCarrier(header))
 				resSc := trace.SpanContextFromContext(ctx)
 				comparer := cmp.Comparer(func(a, b trace.SpanContext) bool {
 					// Do not compare remote field, it is unset on empty
@@ -75,15 +69,6 @@ func TestExtractJaeger(t *testing.T) {
 			})
 		}
 	}
-}
-
-type testSpan struct {
-	trace.Span
-	sc trace.SpanContext
-}
-
-func (s testSpan) SpanContext() trace.SpanContext {
-	return s.sc
 }
 
 func TestInjectJaeger(t *testing.T) {
@@ -105,18 +90,15 @@ func TestInjectJaeger(t *testing.T) {
 		for _, tc := range tg.testcases {
 			propagator := jaeger.Jaeger{}
 			t.Run(tc.name, func(t *testing.T) {
-				req, _ := http.NewRequest("GET", "http://example.com", nil)
-				ctx := trace.ContextWithSpan(
+				header := http.Header{}
+				ctx := trace.ContextWithSpanContext(
 					jaeger.WithDebug(context.Background(), tc.debug),
-					testSpan{
-						Span: mockSpan,
-						sc:   trace.NewSpanContext(tc.scc),
-					},
+					trace.NewSpanContext(tc.scc),
 				)
-				propagator.Inject(ctx, propagation.HeaderCarrier(req.Header))
+				propagator.Inject(ctx, propagation.HeaderCarrier(header))
 
 				for h, v := range tc.wantHeaders {
-					result, want := req.Header.Get(h), v
+					result, want := header.Get(h), v
 					if diff := cmp.Diff(result, want); diff != "" {
 						t.Errorf("%s: %s, header=%s: -got +want %s", tg.name, tc.name, h, diff)
 					}
