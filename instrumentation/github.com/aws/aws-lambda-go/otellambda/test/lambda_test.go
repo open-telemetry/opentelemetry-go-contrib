@@ -63,11 +63,9 @@ func (mc mapCarrier) Set(key string, value string) {
 
 // Keys lists the keys stored in this carrier.
 func (mc mapCarrier) Keys() []string {
-	keys := make([]string, len(mc))
-	i := 0
+	keys := make([]string, 0, len(mc))
 	for k := range mc {
-		keys[i] = k
-		i++
+		keys = append(keys, k)
 	}
 	return keys
 }
