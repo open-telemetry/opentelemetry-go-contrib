@@ -18,6 +18,7 @@ import (
 	"fmt"
 
 	"github.com/labstack/echo/v4"
+	"github.com/labstack/echo/v4/middleware"
 
 	otelcontrib "go.opentelemetry.io/contrib"
 	"go.opentelemetry.io/otel"
@@ -49,8 +50,17 @@ func Middleware(service string, opts ...Option) echo.MiddlewareFunc {
 	if cfg.Propagators == nil {
 		cfg.Propagators = otel.GetTextMapPropagator()
 	}
+
+	if cfg.Skipper == nil {
+		cfg.Skipper = middleware.DefaultSkipper
+	}
+
 	return func(next echo.HandlerFunc) echo.HandlerFunc {
 		return func(c echo.Context) error {
+			if cfg.Skipper(c) {
+				return next(c)
+			}
+
 			c.Set(tracerKey, tracer)
 			request := c.Request()
 			savedCtx := request.Context()

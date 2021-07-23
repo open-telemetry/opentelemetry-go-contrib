@@ -15,6 +15,8 @@
 package otelecho
 
 import (
+	"github.com/labstack/echo/v4/middleware"
+
 	"go.opentelemetry.io/otel/propagation"
 	oteltrace "go.opentelemetry.io/otel/trace"
 )
@@ -23,6 +25,7 @@ import (
 type config struct {
 	TracerProvider oteltrace.TracerProvider
 	Propagators    propagation.TextMapPropagator
+	Skipper        middleware.Skipper
 }
 
 // Option specifies instrumentation configuration options.
@@ -50,5 +53,12 @@ func WithPropagators(propagators propagation.TextMapPropagator) Option {
 func WithTracerProvider(provider oteltrace.TracerProvider) Option {
 	return optionFunc(func(cfg *config) {
 		cfg.TracerProvider = provider
+	})
+}
+
+//WithSkipper specifies a skipper for allowing requests to skip generating spans.
+func WithSkipper(skipper middleware.Skipper) Option {
+	return optionFunc(func(cfg *config) {
+		cfg.Skipper = skipper
 	})
 }
