@@ -25,159 +25,88 @@ import (
 
 	"github.com/gorilla/mux"
 	"github.com/stretchr/testify/assert"
-	"github.com/stretchr/testify/require"
-
-	b3prop "go.opentelemetry.io/contrib/propagators/b3"
 	"go.opentelemetry.io/otel"
-	"go.opentelemetry.io/otel/attribute"
-	"go.opentelemetry.io/otel/oteltest"
 	"go.opentelemetry.io/otel/propagation"
-	oteltrace "go.opentelemetry.io/otel/trace"
+	"go.opentelemetry.io/otel/trace"
 )
 
-func TestChildSpanFromGlobalTracer(t *testing.T) {
-	otel.SetTracerProvider(oteltest.NewTracerProvider())
+var sc = trace.NewSpanContext(trace.SpanContextConfig{
+	TraceID:    [16]byte{1},
+	SpanID:     [8]byte{1},
+	Remote:     true,
+	TraceFlags: trace.FlagsSampled,
+})
 
+func TestPassthroughSpanFromGlobalTracer(t *testing.T) {
+	var called bool
 	router := mux.NewRouter()
 	router.Use(Middleware("foobar"))
+	// The default global TracerProvider provides "pass through" spans for any
+	// span context in the incoming request context.
 	router.HandleFunc("/user/{id}", http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		span := oteltrace.SpanFromContext(r.Context())
-		_, ok := span.(*oteltest.Span)
-		assert.True(t, ok)
+		called = true
+		got := trace.SpanFromContext(r.Context()).SpanContext()
+		assert.Equal(t, sc, got)
 		w.WriteHeader(http.StatusOK)
 	}))
 
 	r := httptest.NewRequest("GET", "/user/123", nil)
+	r = r.WithContext(trace.ContextWithRemoteSpanContext(context.Background(), sc))
 	w := httptest.NewRecorder()
 
 	router.ServeHTTP(w, r)
-}
-
-func TestChildSpanFromCustomTracer(t *testing.T) {
-	provider := oteltest.NewTracerProvider()
-
-	router := mux.NewRouter()
-	router.Use(Middleware("foobar", WithTracerProvider(provider)))
-	router.HandleFunc("/user/{id}", http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		span := oteltrace.SpanFromContext(r.Context())
-		_, ok := span.(*oteltest.Span)
-		assert.True(t, ok)
-		w.WriteHeader(http.StatusOK)
-	}))
-
-	r := httptest.NewRequest("GET", "/user/123", nil)
-	w := httptest.NewRecorder()
-
-	router.ServeHTTP(w, r)
-}
-
-func TestChildSpanNames(t *testing.T) {
-	sr := new(oteltest.SpanRecorder)
-	provider := oteltest.NewTracerProvider(oteltest.WithSpanRecorder(sr))
-
-	router := mux.NewRouter()
-	router.Use(Middleware("foobar", WithTracerProvider(provider)))
-	router.HandleFunc("/user/{id:[0-9]+}", http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		w.WriteHeader(http.StatusOK)
-	}))
-	router.HandleFunc("/book/{title}", http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		_, _ = w.Write(([]byte)("ok"))
-	}))
-
-	r := httptest.NewRequest("GET", "/user/123", nil)
-	w := httptest.NewRecorder()
-	router.ServeHTTP(w, r)
-	spans := sr.Completed()
-	require.Len(t, spans, 1)
-	span := spans[0]
-	assert.Equal(t, "/user/{id:[0-9]+}", span.Name())
-	assert.Equal(t, oteltrace.SpanKindServer, span.SpanKind())
-	assert.Equal(t, attribute.StringValue("foobar"), span.Attributes()["http.server_name"])
-	assert.Equal(t, attribute.IntValue(http.StatusOK), span.Attributes()["http.status_code"])
-	assert.Equal(t, attribute.StringValue("GET"), span.Attributes()["http.method"])
-	assert.Equal(t, attribute.StringValue("/user/123"), span.Attributes()["http.target"])
-	assert.Equal(t, attribute.StringValue("/user/{id:[0-9]+}"), span.Attributes()["http.route"])
-
-	r = httptest.NewRequest("GET", "/book/foo", nil)
-	w = httptest.NewRecorder()
-	router.ServeHTTP(w, r)
-	spans = sr.Completed()
-	require.Len(t, spans, 2)
-	span = spans[1]
-	assert.Equal(t, "/book/{title}", span.Name())
-	assert.Equal(t, oteltrace.SpanKindServer, span.SpanKind())
-	assert.Equal(t, attribute.StringValue("foobar"), span.Attributes()["http.server_name"])
-	assert.Equal(t, attribute.IntValue(http.StatusOK), span.Attributes()["http.status_code"])
-	assert.Equal(t, attribute.StringValue("GET"), span.Attributes()["http.method"])
-	assert.Equal(t, attribute.StringValue("/book/foo"), span.Attributes()["http.target"])
-	assert.Equal(t, attribute.StringValue("/book/{title}"), span.Attributes()["http.route"])
-}
-
-func TestGetSpanNotInstrumented(t *testing.T) {
-	router := mux.NewRouter()
-	router.HandleFunc("/user/{id}", http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		span := oteltrace.SpanFromContext(r.Context())
-		ok := !span.SpanContext().IsValid()
-		assert.True(t, ok)
-		w.WriteHeader(http.StatusOK)
-	}))
-
-	r := httptest.NewRequest("GET", "/user/123", nil)
-	w := httptest.NewRecorder()
-
-	router.ServeHTTP(w, r)
+	assert.True(t, called, "failed to run test")
 }
 
 func TestPropagationWithGlobalPropagators(t *testing.T) {
-	sr := new(oteltest.SpanRecorder)
-	provider := oteltest.NewTracerProvider(oteltest.WithSpanRecorder(sr))
-	otel.SetTextMapPropagator(propagation.TraceContext{})
+	defer func(p propagation.TextMapPropagator) {
+		otel.SetTextMapPropagator(p)
+	}(otel.GetTextMapPropagator())
+
+	prop := propagation.TraceContext{}
+	otel.SetTextMapPropagator(prop)
 
 	r := httptest.NewRequest("GET", "/user/123", nil)
 	w := httptest.NewRecorder()
 
-	ctx, pspan := provider.Tracer(tracerName).Start(context.Background(), "test")
+	ctx := trace.ContextWithRemoteSpanContext(context.Background(), sc)
 	otel.GetTextMapPropagator().Inject(ctx, propagation.HeaderCarrier(r.Header))
 
+	var called bool
 	router := mux.NewRouter()
-	router.Use(Middleware("foobar", WithTracerProvider(provider)))
+	router.Use(Middleware("foobar"))
 	router.HandleFunc("/user/{id}", http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		span := oteltrace.SpanFromContext(r.Context())
-		mspan, ok := span.(*oteltest.Span)
-		require.True(t, ok)
-		assert.Equal(t, pspan.SpanContext().TraceID(), mspan.SpanContext().TraceID())
-		assert.Equal(t, pspan.SpanContext().SpanID(), mspan.ParentSpanID())
+		called = true
+		span := trace.SpanFromContext(r.Context())
+		assert.Equal(t, sc, span.SpanContext())
 		w.WriteHeader(http.StatusOK)
 	}))
 
 	router.ServeHTTP(w, r)
-	otel.SetTextMapPropagator(propagation.NewCompositeTextMapPropagator())
+	assert.True(t, called, "failed to run test")
 }
 
 func TestPropagationWithCustomPropagators(t *testing.T) {
-	sr := new(oteltest.SpanRecorder)
-	provider := oteltest.NewTracerProvider(oteltest.WithSpanRecorder(sr))
-
-	b3 := b3prop.B3{}
+	prop := propagation.TraceContext{}
 
 	r := httptest.NewRequest("GET", "/user/123", nil)
 	w := httptest.NewRecorder()
 
-	ctx, pspan := provider.Tracer(tracerName).Start(context.Background(), "test")
-	b3.Inject(ctx, propagation.HeaderCarrier(r.Header))
+	ctx := trace.ContextWithRemoteSpanContext(context.Background(), sc)
+	prop.Inject(ctx, propagation.HeaderCarrier(r.Header))
 
+	var called bool
 	router := mux.NewRouter()
-	router.Use(Middleware("foobar", WithTracerProvider(provider), WithPropagators(b3)))
+	router.Use(Middleware("foobar", WithPropagators(prop)))
 	router.HandleFunc("/user/{id}", http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		span := oteltrace.SpanFromContext(r.Context())
-		mspan, ok := span.(*oteltest.Span)
-		require.True(t, ok)
-		assert.Equal(t, pspan.SpanContext().TraceID(), mspan.SpanContext().TraceID())
-		assert.Equal(t, pspan.SpanContext().SpanID(), mspan.ParentSpanID())
+		called = true
+		span := trace.SpanFromContext(r.Context())
+		assert.Equal(t, sc, span.SpanContext())
 		w.WriteHeader(http.StatusOK)
 	}))
 
 	router.ServeHTTP(w, r)
+	assert.True(t, called, "failed to run test")
 }
 
 type testResponseWriter struct {
@@ -215,10 +144,8 @@ func (rw *testResponseWriter) ReadFrom(r io.Reader) (n int64, err error) {
 
 func TestResponseWriterInterfaces(t *testing.T) {
 	// make sure the recordingResponseWriter preserves interfaces implemented by the wrapped writer
-	provider := oteltest.NewTracerProvider()
-
 	router := mux.NewRouter()
-	router.Use(Middleware("foobar", WithTracerProvider(provider)))
+	router.Use(Middleware("foobar"))
 	router.HandleFunc("/user/{id}", http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		assert.Implements(t, (*http.Hijacker)(nil), w)
 		assert.Implements(t, (*http.Pusher)(nil), w)
