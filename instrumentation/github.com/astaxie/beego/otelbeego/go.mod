@@ -14,7 +14,7 @@ require (
 	go.opentelemetry.io/contrib/instrumentation/net/http/otelhttp v0.21.0
 	go.opentelemetry.io/contrib/propagators v0.21.0
 	go.opentelemetry.io/otel v1.0.0-RC1
-	go.opentelemetry.io/otel/metric v0.21.0
+	go.opentelemetry.io/otel/metric v0.22.0
 	go.opentelemetry.io/otel/oteltest v1.0.0-RC1
 	go.opentelemetry.io/otel/trace v1.0.0-RC1
 	golang.org/x/net v0.0.0-20200707034311-ab3426394381 // indirect
