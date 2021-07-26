@@ -200,7 +200,8 @@ func TestLambdaHandlerWrapperTracing(t *testing.T) {
 		return "hello world", nil
 	}
 
-	wrapped := otellambda.LambdaHandlerWrapper(customerHandler, otellambda.WithTracerProvider(tp), otellambda.WithFlusher(tp))
+	// No flusher needed as SimpleSpanProcessor is synchronous
+	wrapped := otellambda.WrapLambdaHandler(customerHandler, otellambda.WithTracerProvider(tp))
 	wrappedCallable := reflect.ValueOf(wrapped)
 	resp := wrappedCallable.Call([]reflect.Value{reflect.ValueOf(mockContext)})
 	assert.Len(t, resp, 2)
@@ -216,7 +217,8 @@ func TestHandlerWrapperTracing(t *testing.T) {
 	setEnvVars()
 	tp, memExporter := initMockTracerProvider()
 
-	wrapped := otellambda.HandlerWrapper(emptyHandler{}, otellambda.WithTracerProvider(tp), otellambda.WithFlusher(tp))
+	// No flusher needed as SimpleSpanProcessor is synchronous
+	wrapped := otellambda.WrapHandler(emptyHandler{}, otellambda.WithTracerProvider(tp))
 	_, err := wrapped.Invoke(mockContext, nil)
 	assert.NoError(t, err)
 

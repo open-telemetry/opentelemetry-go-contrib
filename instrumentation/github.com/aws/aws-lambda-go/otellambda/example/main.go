@@ -110,5 +110,5 @@ func main() {
 	// Downstream spans use global tracer provider
 	otel.SetTracerProvider(tp)
 
-	lambda.Start(otellambda.LambdaHandlerWrapper(lambda_handler, otellambda.WithTracerProvider(tp), otellambda.WithFlusher(tp)))
+	lambda.Start(otellambda.WrapLambdaHandler(lambda_handler, otellambda.WithTracerProvider(tp), otellambda.WithFlusher(tp)))
 }

@@ -131,7 +131,7 @@ func TestLambdaHandlerSignatures(t *testing.T) {
 	for i, testCase := range testCases {
 		testCase := testCase
 		t.Run(fmt.Sprintf("testCase[%d] %s", i, testCase.name), func(t *testing.T) {
-			lambdaHandler := LambdaHandlerWrapper(testCase.handler)
+			lambdaHandler := WrapLambdaHandler(testCase.handler)
 			handler := reflect.ValueOf(lambdaHandler)
 			resp := handler.Call(testCase.args)
 			assert.Equal(t, 2, len(resp))
@@ -228,7 +228,7 @@ func TestHandlerInvokes(t *testing.T) {
 	for i, testCase := range testCases {
 		testCase := testCase
 		t.Run(fmt.Sprintf("lambdaHandlerTestCase[%d] %s", i, testCase.name), func(t *testing.T) {
-			lambdaHandler := LambdaHandlerWrapper(testCase.handler)
+			lambdaHandler := WrapLambdaHandler(testCase.handler)
 			handler := reflect.ValueOf(lambdaHandler)
 			handlerType := handler.Type()
 
@@ -253,7 +253,7 @@ func TestHandlerInvokes(t *testing.T) {
 	for i, testCase := range testCases {
 		testCase := testCase
 		t.Run(fmt.Sprintf("handlerTestCase[%d] %s", i, testCase.name), func(t *testing.T) {
-			handler := HandlerWrapper(lambda.NewHandler(testCase.handler))
+			handler := WrapHandler(lambda.NewHandler(testCase.handler))
 			inputPayload, _ := json.Marshal(testCase.input)
 			response, err := handler.Invoke(mockContext, inputPayload)
 			if testCase.expected.err != nil {
@@ -272,7 +272,7 @@ func BenchmarkLambdaHandlerWrapper(b *testing.B) {
 	customerHandler := func(ctx context.Context, payload int) error {
 		return nil
 	}
-	wrapped := LambdaHandlerWrapper(customerHandler)
+	wrapped := WrapLambdaHandler(customerHandler)
 	wrappedCallable := reflect.ValueOf(wrapped)
 	ctx := reflect.ValueOf(mockContext)
 	payload := reflect.ValueOf(0)
@@ -287,7 +287,7 @@ func BenchmarkLambdaHandlerWrapper(b *testing.B) {
 func BenchmarkHandlerWrapper(b *testing.B) {
 	setEnvVars()
 
-	wrapped := HandlerWrapper(emptyHandler{})
+	wrapped := WrapHandler(emptyHandler{})
 
 	b.ResetTimer()
 	for i := 0; i < b.N; i++ {
