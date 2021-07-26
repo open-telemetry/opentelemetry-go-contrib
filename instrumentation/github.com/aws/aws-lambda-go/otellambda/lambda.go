@@ -64,6 +64,7 @@ type InstrumentationOptions struct {
 }
 
 var configuration InstrumentationOptions
+var resourceAttributesToAddAsSpanAttributes []attribute.KeyValue
 
 // basic implementation of TextMapCarrier
 // which wraps the default map type
@@ -115,14 +116,19 @@ func tracingBegin(ctx context.Context) (context.Context, trace.Span) {
 		ctxRequestID := lc.AwsRequestID
 		attributes = append(attributes, semconv.FaaSExecutionKey.String(ctxRequestID))
 
-		// Resource attrs added as span attr due to static tp
-		// being created without meaningful context
-		ctxFunctionArn := lc.InvokedFunctionArn
-		attributes = append(attributes, semconv.FaaSIDKey.String(ctxFunctionArn))
-		arnParts := strings.Split(ctxFunctionArn, ":")
-		if len(arnParts) >= 5 {
-			attributes = append(attributes, semconv.CloudAccountIDKey.String(arnParts[4]))
+		// Some resource attrs added as span attrs because lambda
+		// resource detectors are created before a lambda
+		// invocation and therefore lack lambdacontext.
+		// Create these attrs upon first invocation
+		if resourceAttributesToAddAsSpanAttributes == nil {
+			ctxFunctionArn := lc.InvokedFunctionArn
+			attributes = append(attributes, semconv.FaaSIDKey.String(ctxFunctionArn))
+			arnParts := strings.Split(ctxFunctionArn, ":")
+			if len(arnParts) >= 5 {
+				attributes = append(attributes, semconv.CloudAccountIDKey.String(arnParts[4]))
+			}
 		}
+		attributes = append(attributes, resourceAttributesToAddAsSpanAttributes...)
 	}
 
 	ctx, span = tracer.Start(ctx, spanName, trace.WithSpanKind(trace.SpanKindServer), trace.WithAttributes(attributes...))
