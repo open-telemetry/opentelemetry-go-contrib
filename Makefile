@@ -44,7 +44,7 @@ $(TOOLS_DIR)/stringer: $(TOOLS_MOD_DIR)/go.mod $(TOOLS_MOD_DIR)/go.sum $(TOOLS_M
 	cd $(TOOLS_MOD_DIR) && \
 	go build -o $(TOOLS_DIR)/stringer golang.org/x/tools/cmd/stringer
 
-precommit: dependabot-check license-check generate build lint test
+precommit: dependabot-check license-check generate lint build test
 
 .PHONY: test-with-coverage
 test-with-coverage:
