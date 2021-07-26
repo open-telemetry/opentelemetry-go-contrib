@@ -6,7 +6,9 @@ import (
 	"fmt"
 	"reflect"
 
+	"go.opentelemetry.io/contrib"
 	"go.opentelemetry.io/otel"
+	"go.opentelemetry.io/otel/trace"
 )
 
 
@@ -107,6 +109,8 @@ func WrapLambdaHandler(handlerFunc interface{}, options ...InstrumentationOption
 		opt(&o)
 	}
 	configuration = o
+	// Get a named tracer with package path as its name.
+	tracer = configuration.TracerProvider.Tracer(tracerName, trace.WithInstrumentationVersion(contrib.SemVersion()))
 
 	if handlerFunc == nil {
 		return errorHandler(fmt.Errorf("handler is nil"))

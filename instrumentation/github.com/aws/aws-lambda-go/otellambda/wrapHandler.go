@@ -5,7 +5,9 @@ import (
 
 	"github.com/aws/aws-lambda-go/lambda"
 
+	"go.opentelemetry.io/contrib"
 	"go.opentelemetry.io/otel"
+	"go.opentelemetry.io/otel/trace"
 )
 
 type wrappedHandler struct {
@@ -39,6 +41,8 @@ func WrapHandler(handler lambda.Handler, options ...InstrumentationOption) lambd
 		opt(&o)
 	}
 	configuration = o
+	// Get a named tracer with package path as its name.
+	tracer = configuration.TracerProvider.Tracer(tracerName, trace.WithInstrumentationVersion(contrib.SemVersion()))
 
 	return wrappedHandler{handler: handler}
 }

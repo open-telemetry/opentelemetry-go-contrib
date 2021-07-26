@@ -17,8 +17,6 @@ github.com/stretchr/testify v1.6.1/go.mod h1:6Fq8oRcR53rry900zMqJjRRixrwX3KX962/
 github.com/stretchr/testify v1.7.0 h1:nwc3DEeHmmLAfoZucVR881uASk0Mfjw8xYJ99tb5CcY=
 github.com/stretchr/testify v1.7.0/go.mod h1:6Fq8oRcR53rry900zMqJjRRixrwX3KX962/h/Wwjteg=
 github.com/urfave/cli/v2 v2.2.0/go.mod h1:SE9GqnLQmjVa0iPEY0f1w3ygNIYcIJ0OKPMoW2caLfQ=
-go.opentelemetry.io/contrib/propagators/aws v0.21.0 h1:UwLcaHxOxKQjoxbnaIs1CMyHOx0a+s+X6Op48pJD758=
-go.opentelemetry.io/contrib/propagators/aws v0.21.0/go.mod h1:f57X7xnBA3tv9ci/zq3KqkEAWBdXoSthcRRgGlpCxSI=
 go.opentelemetry.io/otel v1.0.0-RC1 h1:4CeoX93DNTWt8awGK9JmNXzF9j7TyOu9upscEdtcdXc=
 go.opentelemetry.io/otel v1.0.0-RC1/go.mod h1:x9tRa9HK4hSSq7jf2TKbqFbtt58/TGk0f9XiEYISI1I=
 go.opentelemetry.io/otel/oteltest v1.0.0-RC1 h1:G685iP3XiskCwk/z0eIabL55XUl2gk0cljhGk9sB0Yk=

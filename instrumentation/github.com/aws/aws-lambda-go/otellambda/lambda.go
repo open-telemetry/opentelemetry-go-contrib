@@ -65,6 +65,7 @@ type InstrumentationOptions struct {
 
 var configuration InstrumentationOptions
 var resourceAttributesToAddAsSpanAttributes []attribute.KeyValue
+var tracer trace.Tracer
 
 // basic implementation of TextMapCarrier
 // which wraps the default map type
@@ -100,9 +101,6 @@ func tracingBegin(ctx context.Context) (context.Context, trace.Span) {
 	mc.Set("X-Amzn-Trace-Id", xrayTraceId)
 	propagator := xray.Propagator{}
 	ctx = propagator.Extract(ctx, mc)
-
-	// Get a named tracer with package path as its name.
-	tracer := configuration.TracerProvider.Tracer(tracerName)
 
 	var span trace.Span
 	spanName := os.Getenv("AWS_LAMBDA_FUNCTION_NAME")
