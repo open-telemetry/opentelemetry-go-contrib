@@ -99,8 +99,8 @@ func payloadToEvent(eventType reflect.Type, payload interface{}) (reflect.Value,
 	return event, nil
 }
 
-// WrapLambdaHandler Provides a lambda handler which wraps customer lambda handler with OTel Tracing
-func WrapLambdaHandler(handlerFunc interface{}, options ...InstrumentationOption) interface{} {
+// WrapHandlerFunction Provides a lambda handler which wraps customer lambda handler with OTel Tracing
+func WrapHandlerFunction(handlerFunc interface{}, options ...InstrumentationOption) interface{} {
 	o := InstrumentationOptions{
 		TracerProvider: otel.GetTracerProvider(),
 		Flusher:        &noopFlusher{},

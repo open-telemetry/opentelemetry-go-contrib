@@ -202,7 +202,7 @@ func TestLambdaHandlerWrapperTracing(t *testing.T) {
 	}
 
 	// No flusher needed as SimpleSpanProcessor is synchronous
-	wrapped := otellambda.WrapLambdaHandler(customerHandler, otellambda.WithTracerProvider(tp))
+	wrapped := otellambda.WrapHandlerFunction(customerHandler, otellambda.WithTracerProvider(tp))
 	wrappedCallable := reflect.ValueOf(wrapped)
 	resp := wrappedCallable.Call([]reflect.Value{reflect.ValueOf(mockContext)})
 	assert.Len(t, resp, 2)

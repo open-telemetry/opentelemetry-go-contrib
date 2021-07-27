@@ -131,7 +131,7 @@ func TestLambdaHandlerSignatures(t *testing.T) {
 	for i, testCase := range testCases {
 		testCase := testCase
 		t.Run(fmt.Sprintf("testCase[%d] %s", i, testCase.name), func(t *testing.T) {
-			lambdaHandler := WrapLambdaHandler(testCase.handler)
+			lambdaHandler := WrapHandlerFunction(testCase.handler)
 			handler := reflect.ValueOf(lambdaHandler)
 			resp := handler.Call(testCase.args)
 			assert.Equal(t, 2, len(resp))
@@ -228,7 +228,7 @@ func TestHandlerInvokes(t *testing.T) {
 	for i, testCase := range testCases {
 		testCase := testCase
 		t.Run(fmt.Sprintf("lambdaHandlerTestCase[%d] %s", i, testCase.name), func(t *testing.T) {
-			lambdaHandler := WrapLambdaHandler(testCase.handler)
+			lambdaHandler := WrapHandlerFunction(testCase.handler)
 			handler := reflect.ValueOf(lambdaHandler)
 			handlerType := handler.Type()
 
@@ -272,7 +272,7 @@ func BenchmarkLambdaHandlerWrapper(b *testing.B) {
 	customerHandler := func(ctx context.Context, payload int) error {
 		return nil
 	}
-	wrapped := WrapLambdaHandler(customerHandler)
+	wrapped := WrapHandlerFunction(customerHandler)
 	wrappedCallable := reflect.ValueOf(wrapped)
 	ctx := reflect.ValueOf(mockContext)
 	payload := reflect.ValueOf(0)
