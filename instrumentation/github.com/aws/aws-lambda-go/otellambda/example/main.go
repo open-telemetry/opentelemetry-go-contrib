@@ -32,7 +32,7 @@ import (
 	"net/http"
 )
 
-func lambda_handler(ctx context.Context)  error {
+func lambda_handler(ctx context.Context) error {
 	// init aws config
 	cfg, err := awsConfig.LoadDefaultConfig(ctx)
 	if err != nil {
@@ -54,7 +54,6 @@ func lambda_handler(ctx context.Context)  error {
 	for _, bucket := range result.Buckets {
 		fmt.Println(*bucket.Name + ": " + bucket.CreationDate.Format("2006-01-02 15:04:05 Monday"))
 	}
-
 
 	// HTTP
 	orig := otelhttp.DefaultClient
@@ -110,5 +109,5 @@ func main() {
 	// Downstream spans use global tracer provider
 	otel.SetTracerProvider(tp)
 
-	lambda.Start(otellambda.WrapLambdaHandler(lambda_handler, otellambda.WithTracerProvider(tp), otellambda.WithFlusher(tp)))
+	lambda.Start(otellambda.WrapHandlerFunction(lambda_handler, otellambda.WithTracerProvider(tp), otellambda.WithFlusher(tp)))
 }

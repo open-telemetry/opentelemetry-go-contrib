@@ -193,7 +193,7 @@ func assertStubEqualsIgnoreTime(t *testing.T, expected tracetest.SpanStub, actua
 	assert.Equal(t, expected.InstrumentationLibrary, actual.InstrumentationLibrary)
 }
 
-func TestLambdaHandlerWrapperTracing(t *testing.T) {
+func TestWrapHandlerFunctionTracing(t *testing.T) {
 	setEnvVars()
 	tp, memExporter := initMockTracerProvider()
 
@@ -214,7 +214,7 @@ func TestLambdaHandlerWrapperTracing(t *testing.T) {
 	assertStubEqualsIgnoreTime(t, expectedSpanStub, stub)
 }
 
-func TestHandlerWrapperTracing(t *testing.T) {
+func TestWrapHandlerTracing(t *testing.T) {
 	setEnvVars()
 	tp, memExporter := initMockTracerProvider()
 

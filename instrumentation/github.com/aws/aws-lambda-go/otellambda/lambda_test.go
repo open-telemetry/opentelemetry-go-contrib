@@ -42,7 +42,6 @@ var (
 	mockContext = lambdacontext.NewContext(context.TODO(), &mockLambdaContext)
 )
 
-
 type emptyHandler struct{}
 
 func (h emptyHandler) Invoke(_ context.Context, _ []byte) ([]byte, error) {
@@ -266,7 +265,7 @@ func TestHandlerInvokes(t *testing.T) {
 	}
 }
 
-func BenchmarkLambdaHandlerWrapper(b *testing.B) {
+func BenchmarkWrapHandlerFunction(b *testing.B) {
 	setEnvVars()
 
 	customerHandler := func(ctx context.Context, payload int) error {
@@ -284,7 +283,7 @@ func BenchmarkLambdaHandlerWrapper(b *testing.B) {
 	}
 }
 
-func BenchmarkHandlerWrapper(b *testing.B) {
+func BenchmarkWrapHandler(b *testing.B) {
 	setEnvVars()
 
 	wrapped := WrapHandler(emptyHandler{})
