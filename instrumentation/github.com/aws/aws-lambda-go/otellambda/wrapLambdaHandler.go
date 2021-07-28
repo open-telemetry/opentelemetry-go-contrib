@@ -25,6 +25,12 @@ import (
 	"go.opentelemetry.io/otel/trace"
 )
 
+// wrappedHandlerFunction is a struct which only holds an instrumentor and is
+// able to instrument invocations of the user's lambda handler function
+type wrappedHandlerFunction struct {
+	instrumentor instrumentor
+}
+
 func errorHandler(e error) func(context.Context, interface{}) (interface{}, error) {
 	return func(context.Context, interface{}) (interface{}, error) {
 		return nil, e
@@ -71,8 +77,8 @@ func validateReturns(handler reflect.Type) error {
 }
 
 // Wraps and calls customer lambda handler then unpacks response as necessary
-func wrapperInternals(ctx context.Context, handlerFunc interface{}, eventJSON []byte, event reflect.Value, takesContext bool) (interface{}, error) {
-	wrappedLambdaHandler := reflect.ValueOf(wrapper(handlerFunc))
+func (whf *wrappedHandlerFunction) wrapperInternals(ctx context.Context, handlerFunc interface{}, eventJSON []byte, event reflect.Value, takesContext bool) (interface{}, error) {
+	wrappedLambdaHandler := reflect.ValueOf(whf.wrapper(handlerFunc))
 
 	argsWrapped := []reflect.Value{reflect.ValueOf(ctx), reflect.ValueOf(eventJSON), event, reflect.ValueOf(takesContext)}
 	response := wrappedLambdaHandler.Call(argsWrapped)[0].Interface().([]reflect.Value)
@@ -93,19 +99,23 @@ func wrapperInternals(ctx context.Context, handlerFunc interface{}, eventJSON []
 }
 
 // WrapHandlerFunction Provides a lambda handler which wraps customer lambda handler with OTel Tracing
-func WrapHandlerFunction(handlerFunc interface{}, options ...InstrumentationOption) interface{} {
-	o := InstrumentationOptions{
+func WrapHandlerFunction(handlerFunc interface{}, options ...Option) interface{} {
+	cfg := config{
 		TracerProvider:                 otel.GetTracerProvider(),
 		Flusher:                        &noopFlusher{},
-		EventToTextMapCarrierConverter: noopEventToTextMapCarrierConverter,
+		EventToTextMapCarrierConverter: emptyEventToTextMapCarrierConverter,
 		Propagator:                     otel.GetTextMapPropagator(),
 	}
 	for _, opt := range options {
-		opt(&o)
+		opt.apply(&cfg)
 	}
-	configuration = o
+
+	i := instrumentor{}
+	i.configuration = cfg
 	// Get a named tracer with package path as its name.
-	tracer = configuration.TracerProvider.Tracer(tracerName, trace.WithInstrumentationVersion(contrib.SemVersion()))
+	i.tracer = i.configuration.TracerProvider.Tracer(tracerName, trace.WithInstrumentationVersion(contrib.SemVersion()))
+
+	whf := wrappedHandlerFunction{instrumentor: i}
 
 	if handlerFunc == nil {
 		return errorHandler(fmt.Errorf("handler is nil"))
@@ -130,7 +140,7 @@ func WrapHandlerFunction(handlerFunc interface{}, options ...InstrumentationOpti
 		return func(ctx context.Context) (interface{}, error) {
 			var temp *interface{}
 			event := reflect.ValueOf(temp)
-			return wrapperInternals(ctx, handlerFunc, []byte{}, event, takesContext)
+			return whf.wrapperInternals(ctx, handlerFunc, []byte{}, event, takesContext)
 		}
 	}
 
@@ -153,16 +163,16 @@ func WrapHandlerFunction(handlerFunc interface{}, options ...InstrumentationOpti
 			return nil, err
 		}
 
-		return wrapperInternals(ctx, handlerFunc, remarshalledPayload, event.Elem(), takesContext)
+		return whf.wrapperInternals(ctx, handlerFunc, remarshalledPayload, event.Elem(), takesContext)
 	}
 }
 
 // Adds OTel span surrounding customer handler call
-func wrapper(handlerFunc interface{}) func(ctx context.Context, eventJSON []byte, event interface{}, takesContext bool) []reflect.Value {
+func (whf *wrappedHandlerFunction) wrapper(handlerFunc interface{}) func(ctx context.Context, eventJSON []byte, event interface{}, takesContext bool) []reflect.Value {
 	return func(ctx context.Context, eventJSON []byte, event interface{}, takesContext bool) []reflect.Value {
 
-		ctx, span := tracingBegin(ctx, eventJSON)
-		defer tracingEnd(ctx, span)
+		ctx, span := whf.instrumentor.tracingBegin(ctx, eventJSON)
+		defer whf.instrumentor.tracingEnd(ctx, span)
 
 		handler := reflect.ValueOf(handlerFunc)
 		var args []reflect.Value

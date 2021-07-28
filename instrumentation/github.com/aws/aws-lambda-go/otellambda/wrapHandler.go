@@ -24,8 +24,12 @@ import (
 	"go.opentelemetry.io/otel/trace"
 )
 
+// wrappedHandler is a struct which holds an instrumentor
+// as well as the user's original lambda.Handler and is
+// able to instrument invocations of the user's lambda.Handler
 type wrappedHandler struct {
-	handler lambda.Handler
+	instrumentor instrumentor
+	handler      lambda.Handler
 }
 
 // Compile time check our Handler implements lambda.Handler
@@ -33,8 +37,8 @@ var _ lambda.Handler = wrappedHandler{}
 
 // Invoke adds OTel span surrounding customer Handler invocation
 func (h wrappedHandler) Invoke(ctx context.Context, payload []byte) ([]byte, error) {
-	ctx, span := tracingBegin(ctx, payload)
-	defer tracingEnd(ctx, span)
+	ctx, span := h.instrumentor.tracingBegin(ctx, payload)
+	defer h.instrumentor.tracingEnd(ctx, span)
 
 	response, err := h.handler.Invoke(ctx, payload)
 	if err != nil {
@@ -45,19 +49,21 @@ func (h wrappedHandler) Invoke(ctx context.Context, payload []byte) ([]byte, err
 }
 
 // WrapHandler Provides a Handler which wraps customer Handler with OTel Tracing
-func WrapHandler(handler lambda.Handler, options ...InstrumentationOption) lambda.Handler {
-	o := InstrumentationOptions{
+func WrapHandler(handler lambda.Handler, options ...Option) lambda.Handler {
+	cfg := config{
 		TracerProvider:                 otel.GetTracerProvider(),
 		Flusher:                        &noopFlusher{},
-		EventToTextMapCarrierConverter: noopEventToTextMapCarrierConverter,
+		EventToTextMapCarrierConverter: emptyEventToTextMapCarrierConverter,
 		Propagator:                     otel.GetTextMapPropagator(),
 	}
 	for _, opt := range options {
-		opt(&o)
+		opt.apply(&cfg)
 	}
-	configuration = o
-	// Get a named tracer with package path as its name.
-	tracer = configuration.TracerProvider.Tracer(tracerName, trace.WithInstrumentationVersion(contrib.SemVersion()))
 
-	return wrappedHandler{handler: handler}
+	i := instrumentor{}
+	i.configuration = cfg
+	// Get a named tracer with package path as its name.
+	i.tracer = i.configuration.TracerProvider.Tracer(tracerName, trace.WithInstrumentationVersion(contrib.SemVersion()))
+
+	return wrappedHandler{instrumentor: i, handler: handler}
 }
