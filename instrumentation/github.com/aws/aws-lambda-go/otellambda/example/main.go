@@ -58,17 +58,22 @@ func lambdaHandler(ctx context.Context) error {
 	}
 
 	// HTTP
-	orig := otelhttp.DefaultClient
-	otelhttp.DefaultClient = &http.Client{
+	client := &http.Client{
 		Transport: otelhttp.NewTransport(
 			http.DefaultTransport,
 			otelhttp.WithTracerProvider(otel.GetTracerProvider()),
 		),
 	}
-	defer func() { otelhttp.DefaultClient = orig }()
-	res, err := otelhttp.Get(ctx, "https://api.github.com/repos/open-telemetry/opentelemetry-go/releases/latest")
+	req, err := http.NewRequestWithContext(ctx, http.MethodGet, "https://api.github.com/repos/open-telemetry/opentelemetry-go/releases/latest", nil)
 	if err != nil {
-		fmt.Printf("failed to make http request, %v\n", err)
+		fmt.Printf("failed to create http request, %v\n", err)
+		return err
+	}
+
+	res, err := client.Do(req)
+	if err != nil {
+		fmt.Printf("failed to do http request, %v\n", err)
+		return err
 	}
 
 	defer func(Body io.ReadCloser) {
