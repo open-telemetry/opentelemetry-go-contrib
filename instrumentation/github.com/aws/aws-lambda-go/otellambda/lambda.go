@@ -22,7 +22,6 @@ import (
 
 	"github.com/aws/aws-lambda-go/lambdacontext"
 
-	"go.opentelemetry.io/contrib/propagators/aws/xray"
 	"go.opentelemetry.io/otel/attribute"
 	"go.opentelemetry.io/otel/propagation"
 	semconv "go.opentelemetry.io/otel/semconv/v1.4.0"
@@ -46,6 +45,12 @@ func (*noopFlusher) ForceFlush(context.Context) error { return nil }
 // Compile time check our noopFlusher implements FLusher
 var _ Flusher = &noopFlusher{}
 
+type EventToTextMapCarrierConverter func([]byte) propagation.TextMapCarrier
+
+func noopEventToTextMapCarrierConverter([]byte) propagation.TextMapCarrier {
+	return propagation.HeaderCarrier{}
+}
+
 type InstrumentationOption func(o *InstrumentationOptions)
 
 type InstrumentationOptions struct {
@@ -61,46 +66,30 @@ type InstrumentationOptions struct {
 	// The default value of Flusher is a noop Flusher, using this
 	// default can result in long data delays in asynchronous settings
 	Flusher Flusher
+
+	// eventToTextMapCarrierConverter is the mechanism used to retrieve the TraceID
+	// from the event or environment and generate a TextMapCarrier which
+	// can then be used by a Propagator to extract the TraceID into our context
+	// The default value of eventToTextMapCarrierConverter returns an empty
+	// HeaderCarrier, using this default will cause all spans to be not be traced
+	EventToTextMapCarrierConverter EventToTextMapCarrierConverter
+
+	// Propagator is the Propagator which will be used
+	// to extrract Trace info into the context
+	// The default value of Propagator the global otel Propagator
+	// returned by otel.GetTextMapPropagator()
+	Propagator propagation.TextMapPropagator
 }
 
 var configuration InstrumentationOptions
 var resourceAttributesToAddAsSpanAttributes []attribute.KeyValue
 var tracer trace.Tracer
 
-// basic implementation of TextMapCarrier
-// which wraps the default map type
-type mapCarrier map[string]string
-
-// Get returns the value associated with the passed key.
-func (mc mapCarrier) Get(key string) string {
-	return mc[key]
-}
-
-// Set stores the key-value pair.
-func (mc mapCarrier) Set(key string, value string) {
-	mc[key] = value
-}
-
-// Keys lists the keys stored in this carrier.
-func (mc mapCarrier) Keys() []string {
-	keys := make([]string, 0, len(mc))
-	for k := range mc {
-		keys = append(keys, k)
-	}
-	return keys
-}
-
-// Compile time check our mapCarrier implements propagation.TextMapCarrier
-var _ propagation.TextMapCarrier = mapCarrier{}
-
 // Logic to start OTel Tracing
-func tracingBegin(ctx context.Context) (context.Context, trace.Span) {
+func tracingBegin(ctx context.Context, eventJSON []byte) (context.Context, trace.Span) {
 	// Add trace id to context
-	xrayTraceId := os.Getenv("_X_AMZN_TRACE_ID")
-	mc := mapCarrier{}
-	mc.Set("X-Amzn-Trace-Id", xrayTraceId)
-	propagator := xray.Propagator{}
-	ctx = propagator.Extract(ctx, mc)
+	mc := configuration.EventToTextMapCarrierConverter(eventJSON)
+	ctx = configuration.Propagator.Extract(ctx, mc)
 
 	var span trace.Span
 	spanName := os.Getenv("AWS_LAMBDA_FUNCTION_NAME")
@@ -154,5 +143,17 @@ func WithTracerProvider(tracerProvider trace.TracerProvider) InstrumentationOpti
 func WithFlusher(flusher Flusher) InstrumentationOption {
 	return func(o *InstrumentationOptions) {
 		o.Flusher = flusher
+	}
+}
+
+func WithEventToTextMapCarrierConverter(eventToTextMapCarrierConverter EventToTextMapCarrierConverter) InstrumentationOption {
+	return func(o *InstrumentationOptions) {
+		o.EventToTextMapCarrierConverter = eventToTextMapCarrierConverter
+	}
+}
+
+func WithPropagator(propagator propagation.TextMapPropagator) InstrumentationOption {
+	return func(o *InstrumentationOptions) {
+		o.Propagator = propagator
 	}
 }

@@ -1,3 +1,17 @@
+// Copyright The OpenTelemetry Authors
+//
+// Licensed under the Apache License, Version 2.0 (the "License");
+// you may not use this file except in compliance with the License.
+// You may obtain a copy of the License at
+//
+//     http://www.apache.org/licenses/LICENSE-2.0
+//
+// Unless required by applicable law or agreed to in writing, software
+// distributed under the License is distributed on an "AS IS" BASIS,
+// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+// See the License for the specific language governing permissions and
+// limitations under the License.
+
 package otellambda
 
 import (
@@ -10,7 +24,6 @@ import (
 	"go.opentelemetry.io/otel"
 	"go.opentelemetry.io/otel/trace"
 )
-
 
 func errorHandler(e error) func(context.Context, interface{}) (interface{}, error) {
 	return func(context.Context, interface{}) (interface{}, error) {
@@ -58,10 +71,10 @@ func validateReturns(handler reflect.Type) error {
 }
 
 // Wraps and calls customer lambda handler then unpacks response as necessary
-func wrapperInternals(ctx context.Context, handlerFunc interface{}, event reflect.Value, takesContext bool) (interface{}, error) {
+func wrapperInternals(ctx context.Context, handlerFunc interface{}, eventJSON []byte, event reflect.Value, takesContext bool) (interface{}, error) {
 	wrappedLambdaHandler := reflect.ValueOf(wrapper(handlerFunc))
 
-	argsWrapped := []reflect.Value{reflect.ValueOf(ctx), event, reflect.ValueOf(takesContext)}
+	argsWrapped := []reflect.Value{reflect.ValueOf(ctx), reflect.ValueOf(eventJSON), event, reflect.ValueOf(takesContext)}
 	response := wrappedLambdaHandler.Call(argsWrapped)[0].Interface().([]reflect.Value)
 
 	// convert return values into (interface{}, error)
@@ -79,31 +92,13 @@ func wrapperInternals(ctx context.Context, handlerFunc interface{}, event reflec
 	return val, err
 }
 
-// converts the given payload to the correct event type
-func payloadToEvent(eventType reflect.Type, payload interface{}) (reflect.Value, error) {
-	event := reflect.New(eventType)
-
-	// lambda SDK normally unmarshalls to customer event type, however
-	// with the wrapper the SDK unmarshalls to map[string]interface{}
-	// due to our use of reflection. Therefore we must convert this map
-	// to customer's desired event, we do so by simply re-marshalling then
-	// unmarshalling to the desired event type
-	remarshalledPayload, err := json.Marshal(payload)
-	if err != nil {
-		return reflect.Value{}, err
-	}
-
-	if err := json.Unmarshal(remarshalledPayload, event.Interface()); err != nil {
-		return reflect.Value{}, err
-	}
-	return event, nil
-}
-
 // WrapHandlerFunction Provides a lambda handler which wraps customer lambda handler with OTel Tracing
 func WrapHandlerFunction(handlerFunc interface{}, options ...InstrumentationOption) interface{} {
 	o := InstrumentationOptions{
-		TracerProvider: otel.GetTracerProvider(),
-		Flusher:        &noopFlusher{},
+		TracerProvider:                 otel.GetTracerProvider(),
+		Flusher:                        &noopFlusher{},
+		EventToTextMapCarrierConverter: noopEventToTextMapCarrierConverter,
+		Propagator:                     otel.GetTextMapPropagator(),
 	}
 	for _, opt := range options {
 		opt(&o)
@@ -135,24 +130,38 @@ func WrapHandlerFunction(handlerFunc interface{}, options ...InstrumentationOpti
 		return func(ctx context.Context) (interface{}, error) {
 			var temp *interface{}
 			event := reflect.ValueOf(temp)
-			return wrapperInternals(ctx, handlerFunc, event, takesContext)
+			return wrapperInternals(ctx, handlerFunc, []byte{}, event, takesContext)
 		}
-	} else { // customer either takes both context and payload or just payload
-		return func(ctx context.Context, payload interface{}) (interface{}, error) {
-			event, err := payloadToEvent(handlerType.In(handlerType.NumIn()-1), payload)
-			if err != nil {
-				return nil, err
-			}
-			return wrapperInternals(ctx, handlerFunc, event.Elem(), takesContext)
+	}
+
+	// customer either takes both context and payload or just payload
+	return func(ctx context.Context, payload interface{}) (interface{}, error) {
+		event := reflect.New(handlerType.In(handlerType.NumIn() - 1))
+
+		// lambda SDK normally unmarshalls to customer event type, however
+		// with the wrapper the SDK unmarshalls to map[string]interface{}
+		// due to our use of reflection. Therefore we must convert this map
+		// to customer's desired event, we do so by simply re-marshaling then
+		// unmarshalling to the desired event type. The remarshalledPayload
+		// will also be used by users using custom propagators
+		remarshalledPayload, err := json.Marshal(payload)
+		if err != nil {
+			return nil, err
 		}
+
+		if err := json.Unmarshal(remarshalledPayload, event.Interface()); err != nil {
+			return nil, err
+		}
+
+		return wrapperInternals(ctx, handlerFunc, remarshalledPayload, event.Elem(), takesContext)
 	}
 }
 
 // Adds OTel span surrounding customer handler call
-func wrapper(handlerFunc interface{}) func(ctx context.Context, event interface{}, takesContext bool) []reflect.Value {
-	return func(ctx context.Context, event interface{}, takesContext bool) []reflect.Value {
+func wrapper(handlerFunc interface{}) func(ctx context.Context, eventJSON []byte, event interface{}, takesContext bool) []reflect.Value {
+	return func(ctx context.Context, eventJSON []byte, event interface{}, takesContext bool) []reflect.Value {
 
-		ctx, span := tracingBegin(ctx)
+		ctx, span := tracingBegin(ctx, eventJSON)
 		defer tracingEnd(ctx, span)
 
 		handler := reflect.ValueOf(handlerFunc)
@@ -186,4 +195,3 @@ func eventExists(event interface{}) bool {
 	}
 	return true
 }
-

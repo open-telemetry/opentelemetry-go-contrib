@@ -18,9 +18,13 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"io"
+	"net/http"
+
 	"github.com/aws/aws-lambda-go/lambda"
 	awsConfig "github.com/aws/aws-sdk-go-v2/config"
 	"github.com/aws/aws-sdk-go-v2/service/s3"
+
 	lambdadetector "go.opentelemetry.io/contrib/detectors/aws/lambda"
 	"go.opentelemetry.io/contrib/instrumentation/github.com/aws/aws-lambda-go/otellambda"
 	"go.opentelemetry.io/contrib/instrumentation/github.com/aws/aws-sdk-go-v2/otelaws"
@@ -28,11 +32,9 @@ import (
 	"go.opentelemetry.io/otel"
 	"go.opentelemetry.io/otel/exporters/stdout/stdouttrace"
 	sdktrace "go.opentelemetry.io/otel/sdk/trace"
-	"io"
-	"net/http"
 )
 
-func lambda_handler(ctx context.Context) error {
+func lambdaHandler(ctx context.Context) error {
 	// init aws config
 	cfg, err := awsConfig.LoadDefaultConfig(ctx)
 	if err != nil {
@@ -109,5 +111,5 @@ func main() {
 	// Downstream spans use global tracer provider
 	otel.SetTracerProvider(tp)
 
-	lambda.Start(otellambda.WrapHandlerFunction(lambda_handler, otellambda.WithTracerProvider(tp), otellambda.WithFlusher(tp)))
+	lambda.Start(otellambda.WrapHandlerFunction(lambdaHandler, otellambda.WithTracerProvider(tp)))
 }
