@@ -18,30 +18,26 @@ import (
 	"log"
 
 	"go.opentelemetry.io/otel"
-	"go.opentelemetry.io/otel/exporters/stdout"
+	stdout "go.opentelemetry.io/otel/exporters/stdout/stdouttrace"
 	"go.opentelemetry.io/otel/propagation"
 	sdktrace "go.opentelemetry.io/otel/sdk/trace"
 )
 
 const (
+	// KafkaTopic name.
 	KafkaTopic = "sarama-instrumentation-example"
 )
 
-func InitTracer() {
-	exporter, err := stdout.NewExporter(stdout.WithPrettyPrint())
+func InitTracer() *sdktrace.TracerProvider {
+	exporter, err := stdout.New(stdout.WithPrettyPrint())
 	if err != nil {
 		log.Fatal(err)
-	}
-	cfg := sdktrace.Config{
-		DefaultSampler: sdktrace.AlwaysSample(),
 	}
 	tp := sdktrace.NewTracerProvider(
-		sdktrace.WithConfig(cfg),
-		sdktrace.WithSyncer(exporter),
+		sdktrace.WithSampler(sdktrace.AlwaysSample()),
+		sdktrace.WithBatcher(exporter),
 	)
-	if err != nil {
-		log.Fatal(err)
-	}
 	otel.SetTracerProvider(tp)
 	otel.SetTextMapPropagator(propagation.NewCompositeTextMapPropagator(propagation.TraceContext{}))
+	return tp
 }

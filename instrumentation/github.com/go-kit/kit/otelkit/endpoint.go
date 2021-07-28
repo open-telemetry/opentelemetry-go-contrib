@@ -45,7 +45,7 @@ func EndpointMiddleware(options ...Option) endpoint.Middleware {
 	cfg := &config{}
 
 	for _, o := range options {
-		o(cfg)
+		o.apply(cfg)
 	}
 
 	if cfg.TracerProvider == nil {
@@ -71,7 +71,7 @@ func EndpointMiddleware(options ...Option) endpoint.Middleware {
 				spanName = defaultSpanName
 			}
 
-			opts := []trace.SpanOption{
+			opts := []trace.SpanStartOption{
 				trace.WithAttributes(cfg.Attributes...),
 				trace.WithSpanKind(trace.SpanKindServer),
 			}
@@ -94,12 +94,14 @@ func EndpointMiddleware(options ...Option) endpoint.Middleware {
 						}
 
 						span.RecordError(lberr.Final)
+						span.SetStatus(codes.Error, lberr.Error())
 
 						return
 					}
 
 					// generic error
 					span.RecordError(err)
+					span.SetStatus(codes.Error, err.Error())
 
 					return
 				}
@@ -111,8 +113,8 @@ func EndpointMiddleware(options ...Option) endpoint.Middleware {
 				if res, ok := response.(endpoint.Failer); ok && res.Failed() != nil {
 					span.RecordError(res.Failed())
 
-					if cfg.IgnoreBusinessError {
-						span.SetStatus(codes.Unset, "")
+					if !cfg.IgnoreBusinessError {
+						span.SetStatus(codes.Error, res.Failed().Error())
 					}
 
 					return

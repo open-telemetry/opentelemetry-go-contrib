@@ -23,14 +23,8 @@ import (
 
 	"go.opentelemetry.io/contrib/propagators/ot"
 	"go.opentelemetry.io/otel/baggage"
-	"go.opentelemetry.io/otel/oteltest"
 	"go.opentelemetry.io/otel/propagation"
 	"go.opentelemetry.io/otel/trace"
-)
-
-var (
-	mockTracer  = oteltest.NewTracerProvider().Tracer("")
-	_, mockSpan = mockTracer.Start(context.Background(), "")
 )
 
 func TestExtractOT(t *testing.T) {
@@ -53,41 +47,37 @@ func TestExtractOT(t *testing.T) {
 
 		for _, tc := range tg.testcases {
 			t.Run(tc.name, func(t *testing.T) {
-				req, _ := http.NewRequest("GET", "http://example.com", nil)
+				h := make(http.Header, len(tc.headers))
 				for k, v := range tc.headers {
-					req.Header.Set(k, v)
+					h.Set(k, v)
 				}
 
 				ctx := context.Background()
-				ctx = propagator.Extract(ctx, propagation.HeaderCarrier(req.Header))
-				resSc := trace.RemoteSpanContextFromContext(ctx)
-				if diff := cmp.Diff(resSc, tc.expected, cmp.AllowUnexported(trace.TraceState{})); diff != "" {
+				ctx = propagator.Extract(ctx, propagation.HeaderCarrier(h))
+				resSc := trace.SpanContextFromContext(ctx)
+
+				comparer := cmp.Comparer(func(a, b trace.SpanContext) bool {
+					// Do not compare remote field, it is unset on empty
+					// SpanContext.
+					newA := a.WithRemote(b.IsRemote())
+					return newA.Equal(b)
+				})
+				if diff := cmp.Diff(resSc, trace.NewSpanContext(tc.expected), comparer); diff != "" {
 					t.Errorf("%s: %s: -got +want %s", tg.name, tc.name, diff)
 				}
-				m := baggage.Set(ctx)
-				mi := tc.baggage.Iter()
-				for mi.Next() {
-					attribute := mi.Attribute()
-					val, ok := m.Value(attribute.Key)
-					if !ok {
-						t.Errorf("%s: %s: expected key '%s'", tg.name, tc.name, attribute.Key)
-					}
-					if diff := cmp.Diff(attribute.Value.AsString(), val.AsString()); diff != "" {
-						t.Errorf("%s: %s: -got +want %s", tg.name, tc.name, diff)
-					}
+
+				members := baggage.FromContext(ctx).Members()
+				actualBaggage := map[string]string{}
+				for _, m := range members {
+					actualBaggage[m.Key()] = m.Value()
+				}
+
+				if diff := cmp.Diff(tc.baggage, actualBaggage); tc.baggage != nil && diff != "" {
+					t.Errorf("%s: %s: -got +want %s", tg.name, tc.name, diff)
 				}
 			})
 		}
 	}
-}
-
-type testSpan struct {
-	trace.Span
-	sc trace.SpanContext
-}
-
-func (s testSpan) SpanContext() trace.SpanContext {
-	return s.sc
 }
 
 func TestInjectOT(t *testing.T) {
@@ -109,22 +99,25 @@ func TestInjectOT(t *testing.T) {
 		for _, tc := range tg.testcases {
 			propagator := ot.OT{}
 			t.Run(tc.name, func(t *testing.T) {
-				req, _ := http.NewRequest("GET", "http://example.com", nil)
-
-				ctx := baggage.ContextWithValues(context.Background(),
-					tc.baggage...,
-				)
-				ctx = trace.ContextWithSpan(
-					ctx,
-					testSpan{
-						Span: mockSpan,
-						sc:   tc.sc,
-					},
-				)
-				propagator.Inject(ctx, propagation.HeaderCarrier(req.Header))
+				members := []baggage.Member{}
+				for k, v := range tc.baggage {
+					m, err := baggage.NewMember(k, v)
+					if err != nil {
+						t.Errorf("%s: %s, unexpected error creating baggage member: %s", tg.name, tc.name, err.Error())
+					}
+					members = append(members, m)
+				}
+				bag, err := baggage.New(members...)
+				if err != nil {
+					t.Errorf("%s: %s, unexpected error creating baggage: %s", tg.name, tc.name, err.Error())
+				}
+				ctx := baggage.ContextWithBaggage(context.Background(), bag)
+				ctx = trace.ContextWithSpanContext(ctx, trace.NewSpanContext(tc.sc))
+				header := http.Header{}
+				propagator.Inject(ctx, propagation.HeaderCarrier(header))
 
 				for h, v := range tc.wantHeaders {
-					result, want := req.Header.Get(h), v
+					result, want := header.Get(h), v
 					if diff := cmp.Diff(result, want); diff != "" {
 						t.Errorf("%s: %s, header=%s: -got +want %s", tg.name, tc.name, h, diff)
 					}

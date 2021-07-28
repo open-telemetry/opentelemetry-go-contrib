@@ -11,10 +11,10 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
-FROM golang:1.14-alpine AS base
+FROM golang:1.15-alpine AS base
 COPY . /src/
-WORKDIR /src/instrumentation/github.com/emicklei/go-restful/otelrestful
+WORKDIR /src/instrumentation/github.com/emicklei/go-restful/otelrestful/example
 
 FROM base AS go-restful-server
-RUN go install ./example/server.go
+RUN go install ./server.go
 CMD ["/go/bin/server"]

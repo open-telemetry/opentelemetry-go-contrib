@@ -34,24 +34,26 @@ type spanKey struct {
 
 type monitor struct {
 	sync.Mutex
-	spans       map[spanKey]trace.Span
-	serviceName string
-	cfg         config
+	spans map[spanKey]trace.Span
+	cfg   config
 }
 
 func (m *monitor) Started(ctx context.Context, evt *event.CommandStartedEvent) {
 	hostname, port := peerInfo(evt)
-	b, _ := bson.MarshalExtJSON(evt.Command, false, false)
+
 	attrs := []attribute.KeyValue{
-		ServiceName(m.serviceName),
 		DBOperation(evt.CommandName),
 		DBInstance(evt.DatabaseName),
-		DBStatement(string(b)),
 		DBSystem("mongodb"),
 		PeerHostname(hostname),
 		PeerPort(port),
 	}
-	opts := []trace.SpanOption{
+	if !m.cfg.CommandAttributeDisabled {
+		b, _ := bson.MarshalExtJSON(evt.Command, false, false)
+		attrs = append(attrs, DBStatement(string(b)))
+	}
+
+	opts := []trace.SpanStartOption{
 		trace.WithAttributes(attrs...),
 	}
 	_, span := m.cfg.Tracer.Start(ctx, "mongodb.query", opts...)
@@ -96,12 +98,11 @@ func (m *monitor) Finished(evt *event.CommandFinishedEvent, err error) {
 }
 
 // NewMonitor creates a new mongodb event CommandMonitor.
-func NewMonitor(serviceName string, opts ...Option) *event.CommandMonitor {
+func NewMonitor(opts ...Option) *event.CommandMonitor {
 	cfg := newConfig(opts...)
 	m := &monitor{
-		spans:       make(map[spanKey]trace.Span),
-		serviceName: serviceName,
-		cfg:         cfg,
+		spans: make(map[spanKey]trace.Span),
+		cfg:   cfg,
 	}
 	return &event.CommandMonitor{
 		Started:   m.Started,

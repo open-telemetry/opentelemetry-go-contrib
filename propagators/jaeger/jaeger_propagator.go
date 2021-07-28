@@ -66,11 +66,11 @@ var _ propagation.TextMapPropagator = &Jaeger{}
 func (jaeger Jaeger) Inject(ctx context.Context, carrier propagation.TextMapCarrier) {
 	sc := trace.SpanFromContext(ctx).SpanContext()
 	headers := []string{}
-	if !sc.TraceID.IsValid() || !sc.SpanID.IsValid() {
+	if !sc.TraceID().IsValid() || !sc.SpanID().IsValid() {
 		return
 	}
-	headers = append(headers, sc.TraceID.String(), sc.SpanID.String(), deprecatedParentSpanID)
-	if sc.IsDebug() {
+	headers = append(headers, sc.TraceID().String(), sc.SpanID().String(), deprecatedParentSpanID)
+	if debugFromContext(ctx) {
 		headers = append(headers, fmt.Sprintf("%x", flagsDebug|flagsSampled))
 	} else if sc.IsSampled() {
 		headers = append(headers, fmt.Sprintf("%x", flagsSampled))
@@ -85,7 +85,7 @@ func (jaeger Jaeger) Inject(ctx context.Context, carrier propagation.TextMapCarr
 func (jaeger Jaeger) Extract(ctx context.Context, carrier propagation.TextMapCarrier) context.Context {
 	// extract tracing information
 	if h := carrier.Get(jaegerHeader); h != "" {
-		sc, err := extract(h)
+		ctx, sc, err := extract(ctx, h)
 		if err == nil && sc.IsValid() {
 			return trace.ContextWithRemoteSpanContext(ctx, sc)
 		}
@@ -94,30 +94,30 @@ func (jaeger Jaeger) Extract(ctx context.Context, carrier propagation.TextMapCar
 	return ctx
 }
 
-func extract(headerVal string) (trace.SpanContext, error) {
+func extract(ctx context.Context, headerVal string) (context.Context, trace.SpanContext, error) {
 	var (
-		sc  = trace.SpanContext{}
+		scc = trace.SpanContextConfig{}
 		err error
 	)
 
 	parts := strings.Split(headerVal, separator)
 	if len(parts) != 4 {
-		return empty, errMalformedTraceContextVal
+		return ctx, empty, errMalformedTraceContextVal
 	}
 
 	// extract trace ID
 	if parts[0] != "" {
 		id := parts[0]
 		if len(id) != traceID128bitsWidth && len(id) != traceID64bitsWidth {
-			return empty, errInvalidTraceIDLength
+			return ctx, empty, errInvalidTraceIDLength
 		}
 		// padding when length is 16
 		if len(id) == traceID64bitsWidth {
 			id = traceIDPadding + id
 		}
-		sc.TraceID, err = trace.TraceIDFromHex(id)
+		scc.TraceID, err = trace.TraceIDFromHex(id)
 		if err != nil {
-			return empty, errMalformedTraceID
+			return ctx, empty, errMalformedTraceID
 		}
 	}
 
@@ -125,11 +125,11 @@ func extract(headerVal string) (trace.SpanContext, error) {
 	if parts[1] != "" {
 		id := parts[1]
 		if len(id) != spanIDWidth {
-			return empty, errInvalidSpanIDLength
+			return ctx, empty, errInvalidSpanIDLength
 		}
-		sc.SpanID, err = trace.SpanIDFromHex(id)
+		scc.SpanID, err = trace.SpanIDFromHex(id)
 		if err != nil {
-			return empty, errMalformedSpanID
+			return ctx, empty, errMalformedSpanID
 		}
 	}
 
@@ -140,19 +140,20 @@ func extract(headerVal string) (trace.SpanContext, error) {
 		flagStr := parts[3]
 		flag, err := strconv.ParseInt(flagStr, 16, 64)
 		if err != nil {
-			return empty, errMalformedFlag
+			return ctx, empty, errMalformedFlag
 		}
 		if flag&flagsSampled == flagsSampled {
 			// if sample bit is set, we check if debug bit is also set
 			if flag&flagsDebug == flagsDebug {
-				sc.TraceFlags |= trace.FlagsSampled | trace.FlagsDebug
+				scc.TraceFlags |= trace.FlagsSampled
+				ctx = withDebug(ctx, true)
 			} else {
-				sc.TraceFlags |= trace.FlagsSampled
+				scc.TraceFlags |= trace.FlagsSampled
 			}
 		}
 		// ignore other bit, including firehose since we don't have corresponding flag in trace context.
 	}
-	return sc, nil
+	return ctx, trace.NewSpanContext(scc), nil
 }
 
 func (jaeger Jaeger) Fields() []string {

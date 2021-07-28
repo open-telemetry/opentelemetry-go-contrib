@@ -15,8 +15,13 @@
 package xray
 
 import (
+	"context"
+	"net/http"
 	"strings"
 	"testing"
+
+	"go.opentelemetry.io/otel"
+	"go.opentelemetry.io/otel/propagation"
 
 	"github.com/stretchr/testify/assert"
 
@@ -38,12 +43,12 @@ func TestAwsXrayExtract(t *testing.T) {
 		traceID      string
 		parentSpanID string
 		samplingFlag string
-		expected     trace.SpanContext
+		expected     trace.SpanContextConfig
 		err          error
 	}{
 		{
 			xrayTraceID, parentID64Str, notSampled,
-			trace.SpanContext{
+			trace.SpanContextConfig{
 				TraceID:    traceID,
 				SpanID:     parentSpanID,
 				TraceFlags: traceFlagNone,
@@ -52,7 +57,7 @@ func TestAwsXrayExtract(t *testing.T) {
 		},
 		{
 			xrayTraceID, parentID64Str, isSampled,
-			trace.SpanContext{
+			trace.SpanContextConfig{
 				TraceID:    traceID,
 				SpanID:     parentSpanID,
 				TraceFlags: traceFlagSampled,
@@ -61,17 +66,17 @@ func TestAwsXrayExtract(t *testing.T) {
 		},
 		{
 			xrayTraceID, zeroSpanIDStr, isSampled,
-			trace.SpanContext{},
+			trace.SpanContextConfig{},
 			errInvalidSpanIDLength,
 		},
 		{
 			xrayTraceIDIncorrectLength, parentID64Str, isSampled,
-			trace.SpanContext{},
+			trace.SpanContextConfig{},
 			errLengthTraceIDHeader,
 		},
 		{
 			wrongVersionTraceHeaderID, parentID64Str, isSampled,
-			trace.SpanContext{},
+			trace.SpanContextConfig{},
 			errInvalidTraceIDVersion,
 		},
 	}
@@ -93,6 +98,35 @@ func TestAwsXrayExtract(t *testing.T) {
 			continue
 		}
 
-		assert.Equal(t, test.expected, sc, info...)
+		assert.Equal(t, trace.NewSpanContext(test.expected), sc, info...)
+	}
+}
+
+func BenchmarkPropagatorExtract(b *testing.B) {
+	propagator := Propagator{}
+
+	ctx := context.Background()
+	req, _ := http.NewRequest("GET", "http://example.com", nil)
+
+	req.Header.Set("Root", "1-8a3c60f7-d188f8fa79d48a391a778fa6")
+	req.Header.Set("Parent", "53995c3f42cd8ad8")
+	req.Header.Set("Sampled", "1")
+
+	b.ResetTimer()
+	for i := 0; i < b.N; i++ {
+		_ = propagator.Extract(ctx, propagation.HeaderCarrier(req.Header))
+	}
+}
+
+func BenchmarkPropagatorInject(b *testing.B) {
+	propagator := Propagator{}
+	tracer := otel.Tracer("test")
+
+	req, _ := http.NewRequest("GET", "http://example.com", nil)
+	ctx, _ := tracer.Start(context.Background(), "Parent operation...")
+
+	b.ResetTimer()
+	for i := 0; i < b.N; i++ {
+		propagator.Inject(ctx, propagation.HeaderCarrier(req.Header))
 	}
 }

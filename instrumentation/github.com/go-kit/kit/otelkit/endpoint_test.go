@@ -69,10 +69,6 @@ func TestEndpointMiddleware(t *testing.T) {
 			span := trace.SpanFromContext(ctx)
 			_, ok := span.(*oteltest.Span)
 			assert.True(t, ok)
-			spanTracer := span.Tracer()
-			mockTracer, ok := spanTracer.(*oteltest.Tracer)
-			require.True(t, ok)
-			assert.Equal(t, "go.opentelemetry.io/contrib/instrumentation/github.com/go-kit/kit/otelkit", mockTracer.Name)
 
 			return nil, nil
 		}
@@ -198,9 +194,9 @@ func TestEndpointMiddleware(t *testing.T) {
 		events := span.Events()
 		require.Len(t, events, 1)
 
-		assert.Equal(t, "error", events[0].Name)
-		assert.Equal(t, attribute.StringValue("go.opentelemetry.io/contrib/instrumentation/github.com/go-kit/kit/otelkit.customError"), events[0].Attributes["error.type"])
-		assert.Equal(t, attribute.StringValue("something went wrong"), events[0].Attributes["error.message"])
+		assert.Equal(t, "exception", events[0].Name)
+		assert.Equal(t, attribute.StringValue("go.opentelemetry.io/contrib/instrumentation/github.com/go-kit/kit/otelkit.customError"), events[0].Attributes["exception.type"])
+		assert.Equal(t, attribute.StringValue("something went wrong"), events[0].Attributes["exception.message"])
 	})
 
 	t.Run("BusinessError", func(t *testing.T) {
@@ -229,9 +225,9 @@ func TestEndpointMiddleware(t *testing.T) {
 		events := span.Events()
 		require.Len(t, events, 1)
 
-		assert.Equal(t, "error", events[0].Name)
-		assert.Equal(t, attribute.StringValue("go.opentelemetry.io/contrib/instrumentation/github.com/go-kit/kit/otelkit.customError"), events[0].Attributes["error.type"])
-		assert.Equal(t, attribute.StringValue("some business error"), events[0].Attributes["error.message"])
+		assert.Equal(t, "exception", events[0].Name)
+		assert.Equal(t, attribute.StringValue("go.opentelemetry.io/contrib/instrumentation/github.com/go-kit/kit/otelkit.customError"), events[0].Attributes["exception.type"])
+		assert.Equal(t, attribute.StringValue("some business error"), events[0].Attributes["exception.message"])
 	})
 
 	t.Run("IgnoredBusinessError", func(t *testing.T) {
@@ -261,8 +257,8 @@ func TestEndpointMiddleware(t *testing.T) {
 		events := span.Events()
 		require.Len(t, events, 1)
 
-		assert.Equal(t, "error", events[0].Name)
-		assert.Equal(t, attribute.StringValue("go.opentelemetry.io/contrib/instrumentation/github.com/go-kit/kit/otelkit.customError"), events[0].Attributes["error.type"])
-		assert.Equal(t, attribute.StringValue("some business error"), events[0].Attributes["error.message"])
+		assert.Equal(t, "exception", events[0].Name)
+		assert.Equal(t, attribute.StringValue("go.opentelemetry.io/contrib/instrumentation/github.com/go-kit/kit/otelkit.customError"), events[0].Attributes["exception.type"])
+		assert.Equal(t, attribute.StringValue("some business error"), events[0].Attributes["exception.message"])
 	})
 }

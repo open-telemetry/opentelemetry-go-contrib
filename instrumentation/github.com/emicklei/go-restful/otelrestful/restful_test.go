@@ -42,10 +42,6 @@ func TestChildSpanFromGlobalTracer(t *testing.T) {
 		span := oteltrace.SpanFromContext(req.Request.Context())
 		_, ok := span.(*oteltest.Span)
 		assert.True(t, ok)
-		spanTracer := span.Tracer()
-		mockTracer, ok := spanTracer.(*oteltest.Tracer)
-		require.True(t, ok)
-		assert.Equal(t, tracerName, mockTracer.Name)
 		resp.WriteHeader(http.StatusOK)
 	}
 	ws := &restful.WebService{}
@@ -69,10 +65,6 @@ func TestChildSpanFromCustomTracer(t *testing.T) {
 		span := oteltrace.SpanFromContext(req.Request.Context())
 		_, ok := span.(*oteltest.Span)
 		assert.True(t, ok)
-		spanTracer := span.Tracer()
-		mockTracer, ok := spanTracer.(*oteltest.Tracer)
-		require.True(t, ok)
-		assert.Equal(t, tracerName, mockTracer.Name)
 		resp.WriteHeader(http.StatusOK)
 	}
 	ws := &restful.WebService{}
@@ -168,8 +160,8 @@ func TestPropagationWithGlobalPropagators(t *testing.T) {
 		span := oteltrace.SpanFromContext(req.Request.Context())
 		mspan, ok := span.(*oteltest.Span)
 		require.True(t, ok)
-		assert.Equal(t, pspan.SpanContext().TraceID, mspan.SpanContext().TraceID)
-		assert.Equal(t, pspan.SpanContext().SpanID, mspan.ParentSpanID())
+		assert.Equal(t, pspan.SpanContext().TraceID(), mspan.SpanContext().TraceID())
+		assert.Equal(t, pspan.SpanContext().SpanID(), mspan.ParentSpanID())
 		w.WriteHeader(http.StatusOK)
 	}
 	ws := &restful.WebService{}
@@ -185,7 +177,7 @@ func TestPropagationWithGlobalPropagators(t *testing.T) {
 
 func TestPropagationWithCustomPropagators(t *testing.T) {
 	provider := oteltest.NewTracerProvider()
-	b3 := b3prop.B3{}
+	b3 := b3prop.New()
 
 	r := httptest.NewRequest("GET", "/user/123", nil)
 	w := httptest.NewRecorder()
@@ -197,8 +189,8 @@ func TestPropagationWithCustomPropagators(t *testing.T) {
 		span := oteltrace.SpanFromContext(req.Request.Context())
 		mspan, ok := span.(*oteltest.Span)
 		require.True(t, ok)
-		assert.Equal(t, pspan.SpanContext().TraceID, mspan.SpanContext().TraceID)
-		assert.Equal(t, pspan.SpanContext().SpanID, mspan.ParentSpanID())
+		assert.Equal(t, pspan.SpanContext().TraceID(), mspan.SpanContext().TraceID())
+		assert.Equal(t, pspan.SpanContext().SpanID(), mspan.ParentSpanID())
 		w.WriteHeader(http.StatusOK)
 	}
 	ws := &restful.WebService{}
@@ -222,10 +214,6 @@ func TestMultiFilters(t *testing.T) {
 			span := oteltrace.SpanFromContext(req.Request.Context())
 			_, ok := span.(*oteltest.Span)
 			assert.True(t, ok)
-			spanTracer := span.Tracer()
-			mockTracer, ok := spanTracer.(*oteltest.Tracer)
-			require.True(t, ok)
-			assert.Equal(t, tracerName, mockTracer.Name)
 			resp.WriteHeader(http.StatusOK)
 		}
 	}

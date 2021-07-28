@@ -28,6 +28,7 @@ import (
 	"go.opentelemetry.io/otel/attribute"
 	"go.opentelemetry.io/otel/metric"
 	"go.opentelemetry.io/otel/metric/number"
+	"go.opentelemetry.io/otel/metric/unit"
 	export "go.opentelemetry.io/otel/sdk/export/metric"
 	"go.opentelemetry.io/otel/sdk/export/metric/metrictest"
 	aggtest "go.opentelemetry.io/otel/sdk/metric/aggregator/aggregatortest"
@@ -35,10 +36,10 @@ import (
 	"go.opentelemetry.io/otel/sdk/metric/aggregator/lastvalue"
 	"go.opentelemetry.io/otel/sdk/metric/aggregator/sum"
 	"go.opentelemetry.io/otel/sdk/resource"
-	"go.opentelemetry.io/otel/unit"
+	semconv "go.opentelemetry.io/otel/semconv/v1.4.0"
 )
 
-var testResource = resource.NewWithAttributes(attribute.String("host", "value"))
+var testResource = resource.NewWithAttributes(semconv.SchemaURL, attribute.String("host", "value"))
 
 // withTagsAdapter tests a dogstatsd-style statsd exporter.
 type withTagsAdapter struct {

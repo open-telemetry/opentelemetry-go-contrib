@@ -11,7 +11,7 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        go_version: [1.14, 1.15]
+        go_version: [1.15, 1.16]
     runs-on: ubuntu-latest
     steps:
       - name: Checkout Repo
@@ -25,7 +25,7 @@ jobs:
           echo "GOPATH=$(go env GOPATH)" >> $GITHUB_ENV
           echo "$(go env GOPATH)/bin" >> $GITHUB_PATH
       - name: restore cache
-        uses: actions/cache@v2.1.4
+        uses: actions/cache@v2.1.6
         env:
           cache-name: cache-go-mod
         with:
@@ -36,7 +36,7 @@ jobs:
           make ci
           mkdir -p $TEST_RESULTS
           cp coverage.{txt,html} $TEST_RESULTS
-      - uses: codecov/codecov-action@v1
+      - uses: codecov/codecov-action@v2.0.2
         with:
           file: ./coverage.txt
           fail_ci_if_error: true

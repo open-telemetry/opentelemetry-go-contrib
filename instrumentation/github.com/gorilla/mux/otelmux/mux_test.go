@@ -44,10 +44,6 @@ func TestChildSpanFromGlobalTracer(t *testing.T) {
 		span := oteltrace.SpanFromContext(r.Context())
 		_, ok := span.(*oteltest.Span)
 		assert.True(t, ok)
-		spanTracer := span.Tracer()
-		mockTracer, ok := spanTracer.(*oteltest.Tracer)
-		require.True(t, ok)
-		assert.Equal(t, "go.opentelemetry.io/contrib/instrumentation/github.com/gorilla/mux/otelmux", mockTracer.Name)
 		w.WriteHeader(http.StatusOK)
 	}))
 
@@ -66,10 +62,6 @@ func TestChildSpanFromCustomTracer(t *testing.T) {
 		span := oteltrace.SpanFromContext(r.Context())
 		_, ok := span.(*oteltest.Span)
 		assert.True(t, ok)
-		spanTracer := span.Tracer()
-		mockTracer, ok := spanTracer.(*oteltest.Tracer)
-		require.True(t, ok)
-		assert.Equal(t, tracerName, mockTracer.Name)
 		w.WriteHeader(http.StatusOK)
 	}))
 
@@ -153,8 +145,8 @@ func TestPropagationWithGlobalPropagators(t *testing.T) {
 		span := oteltrace.SpanFromContext(r.Context())
 		mspan, ok := span.(*oteltest.Span)
 		require.True(t, ok)
-		assert.Equal(t, pspan.SpanContext().TraceID, mspan.SpanContext().TraceID)
-		assert.Equal(t, pspan.SpanContext().SpanID, mspan.ParentSpanID())
+		assert.Equal(t, pspan.SpanContext().TraceID(), mspan.SpanContext().TraceID())
+		assert.Equal(t, pspan.SpanContext().SpanID(), mspan.ParentSpanID())
 		w.WriteHeader(http.StatusOK)
 	}))
 
@@ -166,7 +158,7 @@ func TestPropagationWithCustomPropagators(t *testing.T) {
 	sr := new(oteltest.SpanRecorder)
 	provider := oteltest.NewTracerProvider(oteltest.WithSpanRecorder(sr))
 
-	b3 := b3prop.B3{}
+	b3 := b3prop.New()
 
 	r := httptest.NewRequest("GET", "/user/123", nil)
 	w := httptest.NewRecorder()
@@ -180,8 +172,8 @@ func TestPropagationWithCustomPropagators(t *testing.T) {
 		span := oteltrace.SpanFromContext(r.Context())
 		mspan, ok := span.(*oteltest.Span)
 		require.True(t, ok)
-		assert.Equal(t, pspan.SpanContext().TraceID, mspan.SpanContext().TraceID)
-		assert.Equal(t, pspan.SpanContext().SpanID, mspan.ParentSpanID())
+		assert.Equal(t, pspan.SpanContext().TraceID(), mspan.SpanContext().TraceID())
+		assert.Equal(t, pspan.SpanContext().SpanID(), mspan.ParentSpanID())
 		w.WriteHeader(http.StatusOK)
 	}))
 

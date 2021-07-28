@@ -24,7 +24,7 @@ import (
 
 	"go.opentelemetry.io/otel"
 	"go.opentelemetry.io/otel/attribute"
-	"go.opentelemetry.io/otel/exporters/stdout"
+	stdout "go.opentelemetry.io/otel/exporters/stdout/stdouttrace"
 	"go.opentelemetry.io/otel/propagation"
 	sdktrace "go.opentelemetry.io/otel/sdk/trace"
 	oteltrace "go.opentelemetry.io/otel/trace"
@@ -33,7 +33,12 @@ import (
 var tracer = otel.Tracer("macaron-server")
 
 func main() {
-	initTracer()
+	tp := initTracer()
+	defer func() {
+		if err := tp.Shutdown(context.Background()); err != nil {
+			log.Printf("Error shutting down tracer provider: %v", err)
+		}
+	}()
 	m := macaron.Classic()
 	m.Use(otelmacaron.Middleware("my-server"))
 	m.Get("/users/:id", func(ctx *macaron.Context) string {
@@ -44,23 +49,18 @@ func main() {
 	m.Run()
 }
 
-func initTracer() {
-	exporter, err := stdout.NewExporter(stdout.WithPrettyPrint())
+func initTracer() *sdktrace.TracerProvider {
+	exporter, err := stdout.New(stdout.WithPrettyPrint())
 	if err != nil {
 		log.Fatal(err)
-	}
-	cfg := sdktrace.Config{
-		DefaultSampler: sdktrace.AlwaysSample(),
 	}
 	tp := sdktrace.NewTracerProvider(
-		sdktrace.WithConfig(cfg),
-		sdktrace.WithSyncer(exporter),
+		sdktrace.WithSampler(sdktrace.AlwaysSample()),
+		sdktrace.WithBatcher(exporter),
 	)
-	if err != nil {
-		log.Fatal(err)
-	}
 	otel.SetTracerProvider(tp)
 	otel.SetTextMapPropagator(propagation.NewCompositeTextMapPropagator(propagation.TraceContext{}, propagation.Baggage{}))
+	return tp
 }
 
 func getUser(ctx context.Context, id string) string {

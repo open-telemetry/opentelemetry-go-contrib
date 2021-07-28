@@ -35,42 +35,63 @@ func TestMain(m *testing.M) {
 }
 
 func Test(t *testing.T) {
-	sr := new(oteltest.SpanRecorder)
-	provider := oteltest.NewTracerProvider(oteltest.WithSpanRecorder(sr))
-
-	hostname, port := "localhost", "27017"
-
-	ctx, cancel := context.WithTimeout(context.Background(), time.Second*3)
-	defer cancel()
-
-	ctx, span := provider.Tracer(defaultTracerName).Start(ctx, "mongodb-test")
-
-	addr := "mongodb://localhost:27017/?connect=direct"
-	opts := options.Client()
-	opts.Monitor = NewMonitor("mongo", WithTracerProvider(provider))
-	opts.ApplyURI(addr)
-	client, err := mongo.Connect(ctx, opts)
-	if err != nil {
-		t.Fatal(err)
+	tt := []struct {
+		title                    string
+		commandAttributeDisabled bool
+	}{
+		{
+			title:                    "should successfully trace spans",
+			commandAttributeDisabled: false,
+		},
+		{
+			title:                    "should successfully trace spans without the statement when command logging is disabled",
+			commandAttributeDisabled: true,
+		},
 	}
 
-	_, err = client.Database("test-database").Collection("test-collection").InsertOne(ctx, bson.D{{Key: "test-item", Value: "test-value"}})
-	if err != nil {
-		t.Fatal(err)
+	for _, tc := range tt {
+		t.Run(tc.title, func(t *testing.T) {
+			sr := new(oteltest.SpanRecorder)
+			provider := oteltest.NewTracerProvider(oteltest.WithSpanRecorder(sr))
+
+			hostname, port := "localhost", "27017"
+
+			ctx, cancel := context.WithTimeout(context.Background(), time.Second*3)
+			defer cancel()
+
+			ctx, span := provider.Tracer(defaultTracerName).Start(ctx, "mongodb-test")
+
+			addr := "mongodb://localhost:27017/?connect=direct"
+			opts := options.Client()
+			opts.Monitor = NewMonitor(WithTracerProvider(provider), WithCommandAttributeDisabled(tc.commandAttributeDisabled))
+			opts.ApplyURI(addr)
+			client, err := mongo.Connect(ctx, opts)
+			if err != nil {
+				t.Fatal(err)
+			}
+
+			_, err = client.Database("test-database").Collection("test-collection").InsertOne(ctx, bson.D{{Key: "test-item", Value: "test-value"}})
+			if err != nil {
+				t.Fatal(err)
+			}
+
+			span.End()
+
+			spans := sr.Completed()
+			assert.Len(t, spans, 2)
+			assert.Equal(t, spans[0].SpanContext().TraceID(), spans[1].SpanContext().TraceID())
+
+			s := spans[0]
+			assert.Equal(t, "insert", s.Attributes()[DBOperationKey].AsString())
+			assert.Equal(t, hostname, s.Attributes()[PeerHostnameKey].AsString())
+			assert.Equal(t, port, s.Attributes()[PeerPortKey].AsString())
+			if tc.commandAttributeDisabled {
+				assert.NotContains(t, s.Attributes()[DBStatementKey].AsString(), `"test-item":"test-value"`)
+			} else {
+				assert.Contains(t, s.Attributes()[DBStatementKey].AsString(), `"test-item":"test-value"`)
+			}
+			assert.Equal(t, "test-database", s.Attributes()[DBInstanceKey].AsString())
+			assert.Equal(t, "mongodb", s.Attributes()[DBSystemKey].AsString())
+		})
 	}
-
-	span.End()
-
-	spans := sr.Completed()
-	assert.Len(t, spans, 2)
-	assert.Equal(t, spans[0].SpanContext().TraceID, spans[1].SpanContext().TraceID)
-
-	s := spans[0]
-	assert.Equal(t, "mongo", s.Attributes()[ServiceNameKey].AsString())
-	assert.Equal(t, "insert", s.Attributes()[DBOperationKey].AsString())
-	assert.Equal(t, hostname, s.Attributes()[PeerHostnameKey].AsString())
-	assert.Equal(t, port, s.Attributes()[PeerPortKey].AsString())
-	assert.Contains(t, s.Attributes()[DBStatementKey].AsString(), `"test-item":"test-value"`)
-	assert.Equal(t, "test-database", s.Attributes()[DBInstanceKey].AsString())
-	assert.Equal(t, "mongodb", s.Attributes()[DBSystemKey].AsString())
 }

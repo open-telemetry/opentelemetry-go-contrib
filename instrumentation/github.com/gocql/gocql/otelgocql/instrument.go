@@ -19,7 +19,7 @@ import (
 
 	otelcontrib "go.opentelemetry.io/contrib"
 	"go.opentelemetry.io/otel/metric"
-	"go.opentelemetry.io/otel/unit"
+	"go.opentelemetry.io/otel/metric/unit"
 )
 
 type instruments struct {

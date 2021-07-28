@@ -30,7 +30,7 @@ import (
 	"go.opentelemetry.io/otel/attribute"
 	"go.opentelemetry.io/otel/metric"
 	"go.opentelemetry.io/otel/metric/global"
-	"go.opentelemetry.io/otel/unit"
+	"go.opentelemetry.io/otel/metric/unit"
 )
 
 // Host reports the work-in-progress conventional host metrics specified by OpenTelemetry
@@ -48,8 +48,7 @@ type config struct {
 
 // Option supports configuring optional settings for host metrics.
 type Option interface {
-	// ApplyHost updates *config.
-	ApplyHost(*config)
+	apply(*config)
 }
 
 // WithMeterProvider sets the Metric implementation to use for
@@ -61,11 +60,11 @@ func WithMeterProvider(provider metric.MeterProvider) Option {
 
 type metricProviderOption struct{ metric.MeterProvider }
 
-// ApplyHost implements Option.
-func (o metricProviderOption) ApplyHost(c *config) {
+func (o metricProviderOption) apply(c *config) {
 	c.MeterProvider = o.MeterProvider
 }
 
+// Attribute sets.
 var (
 	// Attribute sets for CPU time measurements.
 
@@ -91,7 +90,7 @@ func newConfig(opts ...Option) config {
 		MeterProvider: global.GetMeterProvider(),
 	}
 	for _, opt := range opts {
-		opt.ApplyHost(&c)
+		opt.apply(&c)
 	}
 	return c
 }

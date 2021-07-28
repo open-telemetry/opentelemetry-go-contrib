@@ -28,6 +28,7 @@ import (
 	"go.opentelemetry.io/otel/sdk/export/metric/metrictest"
 	"go.opentelemetry.io/otel/sdk/metric/aggregator/sum"
 	"go.opentelemetry.io/otel/sdk/resource"
+	semconv "go.opentelemetry.io/otel/semconv/v1.4.0"
 )
 
 // TestDogstatsAttributes that attributes are formatted in the correct style,
@@ -75,7 +76,7 @@ func TestDogstatsAttributes(t *testing.T) {
 	}
 	for _, tc := range cases {
 		t.Run(tc.name, func(t *testing.T) {
-			res := resource.NewWithAttributes(tc.resources...)
+			res := resource.NewWithAttributes(semconv.SchemaURL, tc.resources...)
 			ctx := context.Background()
 			checkpointSet := metrictest.NewCheckpointSet(res)
 

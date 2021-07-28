@@ -25,7 +25,7 @@ import (
 	"go.opentelemetry.io/contrib/instrumentation/github.com/gorilla/mux/otelmux"
 	"go.opentelemetry.io/otel"
 	"go.opentelemetry.io/otel/attribute"
-	"go.opentelemetry.io/otel/exporters/stdout"
+	stdout "go.opentelemetry.io/otel/exporters/stdout/stdouttrace"
 	"go.opentelemetry.io/otel/propagation"
 	sdktrace "go.opentelemetry.io/otel/sdk/trace"
 	oteltrace "go.opentelemetry.io/otel/trace"
@@ -34,7 +34,12 @@ import (
 var tracer = otel.Tracer("mux-server")
 
 func main() {
-	initTracer()
+	tp := initTracer()
+	defer func() {
+		if err := tp.Shutdown(context.Background()); err != nil {
+			log.Printf("Error shutting down tracer provider: %v", err)
+		}
+	}()
 	r := mux.NewRouter()
 	r.Use(otelmux.Middleware("my-server"))
 	r.HandleFunc("/users/{id:[0-9]+}", http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
@@ -48,23 +53,18 @@ func main() {
 	_ = http.ListenAndServe(":8080", nil)
 }
 
-func initTracer() {
-	exporter, err := stdout.NewExporter(stdout.WithPrettyPrint())
+func initTracer() *sdktrace.TracerProvider {
+	exporter, err := stdout.New(stdout.WithPrettyPrint())
 	if err != nil {
 		log.Fatal(err)
-	}
-	cfg := sdktrace.Config{
-		DefaultSampler: sdktrace.AlwaysSample(),
 	}
 	tp := sdktrace.NewTracerProvider(
-		sdktrace.WithConfig(cfg),
-		sdktrace.WithSyncer(exporter),
+		sdktrace.WithSampler(sdktrace.AlwaysSample()),
+		sdktrace.WithBatcher(exporter),
 	)
-	if err != nil {
-		log.Fatal(err)
-	}
 	otel.SetTracerProvider(tp)
 	otel.SetTextMapPropagator(propagation.NewCompositeTextMapPropagator(propagation.TraceContext{}, propagation.Baggage{}))
+	return tp
 }
 
 func getUser(ctx context.Context, id string) string {

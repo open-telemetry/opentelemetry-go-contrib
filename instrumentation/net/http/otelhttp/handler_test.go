@@ -26,13 +26,14 @@ import (
 
 	"go.opentelemetry.io/otel/attribute"
 	"go.opentelemetry.io/otel/codes"
+	"go.opentelemetry.io/otel/metric/metrictest"
 	"go.opentelemetry.io/otel/oteltest"
 	"go.opentelemetry.io/otel/propagation"
-	"go.opentelemetry.io/otel/semconv"
+	semconv "go.opentelemetry.io/otel/semconv/v1.4.0"
 	"go.opentelemetry.io/otel/trace"
 )
 
-func assertMetricAttributes(t *testing.T, expectedAttributes []attribute.KeyValue, measurementBatches []oteltest.Batch) {
+func assertMetricAttributes(t *testing.T, expectedAttributes []attribute.KeyValue, measurementBatches []metrictest.Batch) {
 	for _, batch := range measurementBatches {
 		assert.ElementsMatch(t, expectedAttributes, batch.Labels)
 	}
@@ -45,7 +46,7 @@ func TestHandlerBasics(t *testing.T) {
 	provider := oteltest.NewTracerProvider(
 		oteltest.WithSpanRecorder(spanRecorder),
 	)
-	meterimpl, meterProvider := oteltest.NewMeterProvider()
+	meterimpl, meterProvider := metrictest.NewMeterProvider()
 
 	operation := "test_handler"
 
@@ -95,7 +96,7 @@ func TestHandlerBasics(t *testing.T) {
 		t.Fatalf("got %d spans, expected %d", got, expected)
 	}
 	expectSpanID := trace.SpanID{0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x2} // we expect the span ID to be incremented by one
-	if got, expected := spans[0].SpanContext().SpanID, expectSpanID; got != expected {
+	if got, expected := spans[0].SpanContext().SpanID(), expectSpanID; got != expected {
 		t.Fatalf("got %d, expected %d", got, expected)
 	}
 
@@ -136,7 +137,7 @@ func TestHandlerNoWrite(t *testing.T) {
 		t.Fatal("expected empty trace header")
 	}
 	expectSpanID := trace.SpanID{0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x2} // we expect the span ID to be incremented by one
-	if got, expected := span.SpanContext().SpanID, expectSpanID; got != expected {
+	if got, expected := span.SpanContext().SpanID(), expectSpanID; got != expected {
 		t.Fatalf("got %d, expected %d", got, expected)
 	}
 	if mockSpan, ok := span.(*oteltest.Span); ok {

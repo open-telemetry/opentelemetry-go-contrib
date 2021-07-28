@@ -49,7 +49,7 @@ type Client struct {
 func NewClientWithTracing(client *memcache.Client, opts ...Option) *Client {
 	cfg := &config{}
 	for _, o := range opts {
-		o(cfg)
+		o.apply(cfg)
 	}
 
 	if cfg.tracerProvider == nil {
@@ -83,7 +83,7 @@ func (c *Client) attrsByOperationAndItemKey(operation operation, key ...string) 
 
 // Starts span with appropriate span kind and attributes
 func (c *Client) startSpan(operationName operation, itemKey ...string) oteltrace.Span {
-	opts := []oteltrace.SpanOption{
+	opts := []oteltrace.SpanStartOption{
 		// for database client calls, always use CLIENT span kind
 		oteltrace.WithSpanKind(oteltrace.SpanKindClient),
 		oteltrace.WithAttributes(

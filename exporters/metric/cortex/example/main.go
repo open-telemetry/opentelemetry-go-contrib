@@ -25,6 +25,7 @@ import (
 	"go.opentelemetry.io/otel/metric"
 	controller "go.opentelemetry.io/otel/sdk/metric/controller/basic"
 	"go.opentelemetry.io/otel/sdk/resource"
+	semconv "go.opentelemetry.io/otel/semconv/v1.4.0"
 
 	"go.opentelemetry.io/contrib/exporters/metric/cortex/utils"
 )
@@ -39,13 +40,15 @@ func main() {
 
 	// Create and install the exporter. Additionally, set the push interval to 5 seconds
 	// and add a resource to the controller.
-	pusher, err := cortex.InstallNewPipeline(*config, controller.WithCollectPeriod(5*time.Second), controller.WithResource(resource.NewWithAttributes(attribute.String("R", "V"))))
+	pusher, err := cortex.InstallNewPipeline(*config, controller.WithCollectPeriod(5*time.Second), controller.WithResource(resource.NewWithAttributes(semconv.SchemaURL, attribute.String("R", "V"))))
 	if err != nil {
 		fmt.Printf("Error: %v", err)
 	}
 
 	ctx := context.Background()
-	defer handleErr(pusher.Stop(ctx))
+	defer func() {
+		handleErr(pusher.Stop(ctx))
+	}()
 	fmt.Println("Success: Installed Exporter Pipeline")
 
 	// Create a counter and a value recorder
