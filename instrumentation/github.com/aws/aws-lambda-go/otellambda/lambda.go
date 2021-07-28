@@ -42,7 +42,7 @@ type noopFlusher struct{}
 
 func (*noopFlusher) ForceFlush(context.Context) error { return nil }
 
-// Compile time check our noopFlusher implements FLusher
+// Compile time check our noopFlusher implements Flusher
 var _ Flusher = &noopFlusher{}
 
 type EventToTextMapCarrierConverter func([]byte) propagation.TextMapCarrier
