@@ -19,10 +19,6 @@ import (
 	"encoding/json"
 	"fmt"
 	"reflect"
-
-	"go.opentelemetry.io/contrib"
-	"go.opentelemetry.io/otel"
-	"go.opentelemetry.io/otel/trace"
 )
 
 // wrappedHandlerFunction is a struct which only holds an instrumentor and is
@@ -100,22 +96,7 @@ func (whf *wrappedHandlerFunction) wrapperInternals(ctx context.Context, handler
 
 // WrapHandlerFunction Provides a lambda handler which wraps customer lambda handler with OTel Tracing
 func WrapHandlerFunction(handlerFunc interface{}, options ...Option) interface{} {
-	cfg := config{
-		TracerProvider:                 otel.GetTracerProvider(),
-		Flusher:                        &noopFlusher{},
-		EventToTextMapCarrierConverter: emptyEventToTextMapCarrierConverter,
-		Propagator:                     otel.GetTextMapPropagator(),
-	}
-	for _, opt := range options {
-		opt.apply(&cfg)
-	}
-
-	i := instrumentor{}
-	i.configuration = cfg
-	// Get a named tracer with package path as its name.
-	i.tracer = i.configuration.TracerProvider.Tracer(tracerName, trace.WithInstrumentationVersion(contrib.SemVersion()))
-
-	whf := wrappedHandlerFunction{instrumentor: i}
+	whf := wrappedHandlerFunction{instrumentor: newInstrumentor(options...)}
 
 	if handlerFunc == nil {
 		return errorHandler(fmt.Errorf("handler is nil"))

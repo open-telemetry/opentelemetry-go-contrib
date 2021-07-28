@@ -18,10 +18,6 @@ import (
 	"context"
 
 	"github.com/aws/aws-lambda-go/lambda"
-
-	"go.opentelemetry.io/contrib"
-	"go.opentelemetry.io/otel"
-	"go.opentelemetry.io/otel/trace"
 )
 
 // wrappedHandler is a struct which holds an instrumentor
@@ -50,20 +46,5 @@ func (h wrappedHandler) Invoke(ctx context.Context, payload []byte) ([]byte, err
 
 // WrapHandler Provides a Handler which wraps customer Handler with OTel Tracing
 func WrapHandler(handler lambda.Handler, options ...Option) lambda.Handler {
-	cfg := config{
-		TracerProvider:                 otel.GetTracerProvider(),
-		Flusher:                        &noopFlusher{},
-		EventToTextMapCarrierConverter: emptyEventToTextMapCarrierConverter,
-		Propagator:                     otel.GetTextMapPropagator(),
-	}
-	for _, opt := range options {
-		opt.apply(&cfg)
-	}
-
-	i := instrumentor{}
-	i.configuration = cfg
-	// Get a named tracer with package path as its name.
-	i.tracer = i.configuration.TracerProvider.Tracer(tracerName, trace.WithInstrumentationVersion(contrib.SemVersion()))
-
-	return wrappedHandler{instrumentor: i, handler: handler}
+	return wrappedHandler{instrumentor: newInstrumentor(options...), handler: handler}
 }

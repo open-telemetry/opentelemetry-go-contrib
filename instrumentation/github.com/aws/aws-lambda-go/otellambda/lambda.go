@@ -22,6 +22,8 @@ import (
 
 	"github.com/aws/aws-lambda-go/lambdacontext"
 
+	"go.opentelemetry.io/contrib"
+	"go.opentelemetry.io/otel"
 	"go.opentelemetry.io/otel/attribute"
 	semconv "go.opentelemetry.io/otel/semconv/v1.4.0"
 	"go.opentelemetry.io/otel/trace"
@@ -34,9 +36,25 @@ const (
 var errorLogger = log.New(log.Writer(), "OTel Lambda Error: ", 0)
 
 type instrumentor struct {
-	configuration                           config
-	resourceAttributesToAddAsSpanAttributes []attribute.KeyValue
-	tracer                                  trace.Tracer
+	configuration config
+	resAttrs      []attribute.KeyValue
+	tracer        trace.Tracer
+}
+
+func newInstrumentor(opts ...Option) instrumentor {
+	cfg := config{
+		TracerProvider:                 otel.GetTracerProvider(),
+		Flusher:                        &noopFlusher{},
+		EventToTextMapCarrierConverter: emptyEventToTextMapCarrierConverter,
+		Propagator:                     otel.GetTextMapPropagator(),
+	}
+	for _, opt := range opts {
+		opt.apply(&cfg)
+	}
+
+	return instrumentor{configuration: cfg,
+					  tracer: cfg.TracerProvider.Tracer(tracerName, trace.WithInstrumentationVersion(contrib.SemVersion())),
+					  resAttrs: []attribute.KeyValue{}}
 }
 
 // Logic to start OTel Tracing
@@ -61,7 +79,7 @@ func (i *instrumentor) tracingBegin(ctx context.Context, eventJSON []byte) (cont
 		// resource detectors are created before a lambda
 		// invocation and therefore lack lambdacontext.
 		// Create these attrs upon first invocation
-		if i.resourceAttributesToAddAsSpanAttributes == nil {
+		if len(i.resAttrs) == 0 {
 			ctxFunctionArn := lc.InvokedFunctionArn
 			attributes = append(attributes, semconv.FaaSIDKey.String(ctxFunctionArn))
 			arnParts := strings.Split(ctxFunctionArn, ":")
@@ -69,7 +87,7 @@ func (i *instrumentor) tracingBegin(ctx context.Context, eventJSON []byte) (cont
 				attributes = append(attributes, semconv.CloudAccountIDKey.String(arnParts[4]))
 			}
 		}
-		attributes = append(attributes, i.resourceAttributesToAddAsSpanAttributes...)
+		attributes = append(attributes, i.resAttrs...)
 	}
 
 	ctx, span = i.tracer.Start(ctx, spanName, trace.WithSpanKind(trace.SpanKindServer), trace.WithAttributes(attributes...))
