@@ -43,24 +43,24 @@ type instrumentor struct {
 
 func newInstrumentor(opts ...Option) instrumentor {
 	cfg := config{
-		TracerProvider:                 otel.GetTracerProvider(),
-		Flusher:                        &noopFlusher{},
-		EventToTextMapCarrierConverter: emptyEventToTextMapCarrierConverter,
-		Propagator:                     otel.GetTextMapPropagator(),
+		TracerProvider: otel.GetTracerProvider(),
+		Flusher:        &noopFlusher{},
+		EventToCarrier: emptyEventToCarrier,
+		Propagator:     otel.GetTextMapPropagator(),
 	}
 	for _, opt := range opts {
 		opt.apply(&cfg)
 	}
 
 	return instrumentor{configuration: cfg,
-					  tracer: cfg.TracerProvider.Tracer(tracerName, trace.WithInstrumentationVersion(contrib.SemVersion())),
-					  resAttrs: []attribute.KeyValue{}}
+		tracer:   cfg.TracerProvider.Tracer(tracerName, trace.WithInstrumentationVersion(contrib.SemVersion())),
+		resAttrs: []attribute.KeyValue{}}
 }
 
 // Logic to start OTel Tracing
 func (i *instrumentor) tracingBegin(ctx context.Context, eventJSON []byte) (context.Context, trace.Span) {
 	// Add trace id to context
-	mc := i.configuration.EventToTextMapCarrierConverter(eventJSON)
+	mc := i.configuration.EventToCarrier(eventJSON)
 	ctx = i.configuration.Propagator.Extract(ctx, mc)
 
 	var span trace.Span

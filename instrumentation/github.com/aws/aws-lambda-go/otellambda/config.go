@@ -38,20 +38,20 @@ func (*noopFlusher) ForceFlush(context.Context) error { return nil }
 // Compile time check our noopFlusher implements Flusher
 var _ Flusher = &noopFlusher{}
 
-// An EventToTextMapCarrierConverter defines how the instrumentation should
+// An EventToCarrier function defines how the instrumentation should
 // prepare a TextMapCarrier for the configured propagator to read from. This
 // extra step is necessary because Lambda does not have HTTP headers to read
 // from and instead stores the headers it was invoked with (including TraceID, etc.)
 // as part of the invocation event. If using the AWS XRay tracing then the
 // trace information is instead stored in the Lambda environment.
-type EventToTextMapCarrierConverter func(eventJSON []byte) propagation.TextMapCarrier
+type EventToCarrier func(eventJSON []byte) propagation.TextMapCarrier
 
-func emptyEventToTextMapCarrierConverter([]byte) propagation.TextMapCarrier {
+func emptyEventToCarrier([]byte) propagation.TextMapCarrier {
 	return propagation.HeaderCarrier{}
 }
 
-// Compile time check our emptyEventToTextMapCarrierConverter implements EventToTextMapCarrierConverter
-var _ EventToTextMapCarrierConverter = emptyEventToTextMapCarrierConverter
+// Compile time check our emptyEventToCarrier implements EventToCarrier
+var _ EventToCarrier = emptyEventToCarrier
 
 type Option interface {
 	apply(*config)
@@ -77,12 +77,13 @@ type config struct {
 	// default can result in long data delays in asynchronous settings
 	Flusher Flusher
 
-	// EventToTextMapCarrierConverter is the mechanism used to retrieve the TraceID
+	// EventToCarrier is the mechanism used to retrieve the TraceID
 	// from the event or environment and generate a TextMapCarrier which
 	// can then be used by a Propagator to extract the TraceID into our context
-	// The default value of eventToTextMapCarrierConverter returns an empty
-	// HeaderCarrier, using this default will cause all spans to be not be traced
-	EventToTextMapCarrierConverter EventToTextMapCarrierConverter
+	// The default value of eventToCarrier is emptyEventToCarrier which returns
+	// an empty HeaderCarrier, using this default will cause new spans to be part
+	// of a new Trace and have no parent past our Lambda instrumentation span
+	EventToCarrier EventToCarrier
 
 	// Propagator is the Propagator which will be used
 	// to extract Trace info into the context
@@ -103,9 +104,9 @@ func WithFlusher(flusher Flusher) Option {
 	})
 }
 
-func WithEventToTextMapCarrierConverter(eventToTextMapCarrierConverter EventToTextMapCarrierConverter) Option {
+func WithEventToCarrier(eventToCarrier EventToCarrier) Option {
 	return optionFunc(func(c *config) {
-		c.EventToTextMapCarrierConverter = eventToTextMapCarrierConverter
+		c.EventToCarrier = eventToCarrier
 	})
 }
 

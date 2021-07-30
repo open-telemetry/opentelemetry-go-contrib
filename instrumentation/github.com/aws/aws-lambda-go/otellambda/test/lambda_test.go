@@ -342,12 +342,12 @@ var (
 	}
 )
 
-func mockRequestToTextMapCarrierConverter(eventJSON []byte) propagation.TextMapCarrier {
+func mockRequestCarrier(eventJSON []byte) propagation.TextMapCarrier {
 	var event mockRequest
 	err := json.Unmarshal(eventJSON, &event)
 	if err != nil {
 		fmt.Println("event type: ", reflect.TypeOf(event))
-		panic("This TextMapCarrierConverter only supports events of type mockRequest")
+		panic("mockRequestCarrier only supports events of type mockRequest")
 	}
 	return propagation.HeaderCarrier{mockPropagatorKey: []string{event.Headers[mockPropagatorKey]}}
 }
@@ -365,7 +365,7 @@ func TestWrapHandlerFunctionTracingWithMockPropagator(t *testing.T) {
 	wrapped := otellambda.WrapHandlerFunction(customerHandler,
 		otellambda.WithTracerProvider(tp),
 		otellambda.WithPropagator(mockPropagator{}),
-		otellambda.WithEventToTextMapCarrierConverter(mockRequestToTextMapCarrierConverter))
+		otellambda.WithEventToCarrier(mockRequestCarrier))
 
 	wrappedCallable := reflect.ValueOf(wrapped)
 	resp := wrappedCallable.Call([]reflect.Value{reflect.ValueOf(mockPropagatorTestsContext), reflect.ValueOf(mockPropagatorTestsEvent)})
@@ -386,7 +386,7 @@ func TestWrapHandlerTracingWithMockPropagator(t *testing.T) {
 	wrapped := otellambda.WrapHandler(emptyHandler{},
 		otellambda.WithTracerProvider(tp),
 		otellambda.WithPropagator(mockPropagator{}),
-		otellambda.WithEventToTextMapCarrierConverter(mockRequestToTextMapCarrierConverter))
+		otellambda.WithEventToCarrier(mockRequestCarrier))
 
 	payload, _ := json.Marshal(mockPropagatorTestsEvent)
 	_, err := wrapped.Invoke(mockPropagatorTestsContext, payload)
