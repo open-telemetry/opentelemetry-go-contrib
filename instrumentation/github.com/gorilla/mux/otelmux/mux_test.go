@@ -158,7 +158,7 @@ func TestPropagationWithCustomPropagators(t *testing.T) {
 	sr := new(oteltest.SpanRecorder)
 	provider := oteltest.NewTracerProvider(oteltest.WithSpanRecorder(sr))
 
-	b3 := b3prop.B3{}
+	b3 := b3prop.New()
 
 	r := httptest.NewRequest("GET", "/user/123", nil)
 	w := httptest.NewRecorder()

@@ -40,7 +40,7 @@ func BenchmarkExtractB3(b *testing.B) {
 	}
 
 	for _, tg := range testGroup {
-		propagator := b3.B3{}
+		propagator := b3.New()
 		for _, tt := range tg.tests {
 			traceBenchmark(tg.name+"/"+tt.name, b, func(b *testing.B) {
 				ctx := context.Background()
@@ -75,7 +75,7 @@ func BenchmarkInjectB3(b *testing.B) {
 
 	for _, tg := range testGroup {
 		for _, tt := range tg.tests {
-			propagator := b3.B3{InjectEncoding: tt.encoding}
+			propagator := b3.New(b3.WithInjectEncoding(tt.encoding))
 			traceBenchmark(tg.name+"/"+tt.name, b, func(b *testing.B) {
 				req, _ := http.NewRequest("GET", "http://example.com", nil)
 				ctx := trace.ContextWithSpan(
