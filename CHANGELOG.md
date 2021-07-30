@@ -12,6 +12,7 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 
 - Add instrumentation for the `github.com/aws/aws-lambda-go` package. (#882)
 - Add resource detector for AWS Lambda. (#882)
+- Add optional AWS X-Ray configuration module for AWS Lambda Instrumentation (#930)
 
 ## [0.22.0] - 2021-07-26
 
