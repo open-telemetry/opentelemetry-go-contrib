@@ -23,7 +23,7 @@ import (
 
 	"go.opentelemetry.io/otel/attribute"
 	"go.opentelemetry.io/otel/codes"
-	"go.opentelemetry.io/otel/semconv"
+	semconv "go.opentelemetry.io/otel/semconv/v1.4.0"
 	"go.opentelemetry.io/otel/trace"
 
 	"go.mongodb.org/mongo-driver/bson"
@@ -48,7 +48,7 @@ func (m *monitor) Started(ctx context.Context, evt *event.CommandStartedEvent) {
 	hostname, port := peerInfo(evt)
 
 	attrs := []attribute.KeyValue{
-		semconv.DBSystemMongodb,
+		semconv.DBSystemMongoDB,
 		semconv.DBOperationKey.String(evt.CommandName),
 		semconv.DBNameKey.String(evt.DatabaseName),
 		semconv.NetPeerNameKey.String(hostname),
@@ -62,7 +62,7 @@ func (m *monitor) Started(ctx context.Context, evt *event.CommandStartedEvent) {
 		spanName = collection + "."
 		attrs = append(attrs, semconv.DBMongoDBCollectionKey.String(collection))
 	}
-
+	spanName += evt.CommandName
 	opts := []trace.SpanStartOption{
 		trace.WithSpanKind(trace.SpanKindClient),
 		trace.WithAttributes(attrs...),

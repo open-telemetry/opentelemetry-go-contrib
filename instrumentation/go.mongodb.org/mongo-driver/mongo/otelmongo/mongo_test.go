@@ -41,7 +41,7 @@ type validator func(*oteltest.Span) bool
 func TestDBCrudOperation(t *testing.T) {
 	commonValidators := []validator{
 		func(s *oteltest.Span) bool {
-			return assert.Equal(t, "test-collection.insert", s.Name())
+			return assert.Equal(t, "test-collection.insert", s.Name(), "expected %s", s.Name())
 		},
 		func(s *oteltest.Span) bool {
 			return assert.Equal(t, "insert", s.Attributes()["db.operation"].AsString())
@@ -127,7 +127,7 @@ func TestDBCrudOperation(t *testing.T) {
 			assert.Equal(t, "mongodb", s.Attributes()["db.system"].AsString())
 			assert.Equal(t, "localhost", s.Attributes()["net.peer.name"].AsString())
 			assert.Equal(t, int64(27017), s.Attributes()["net.peer.port"].AsInt64())
-			assert.Equal(t, "IP.TCP", s.Attributes()["net.transport"].AsString())
+			assert.Equal(t, "ip_tcp", s.Attributes()["net.transport"].AsString())
 			assert.Equal(t, "test-database", s.Attributes()["db.name"].AsString())
 			for _, v := range tc.validators {
 				assert.True(t, v(s))
@@ -220,7 +220,7 @@ func TestDBCollectionAttribute(t *testing.T) {
 			assert.Equal(t, "mongodb", s.Attributes()["db.system"].AsString())
 			assert.Equal(t, "localhost", s.Attributes()["net.peer.name"].AsString())
 			assert.Equal(t, int64(27017), s.Attributes()["net.peer.port"].AsInt64())
-			assert.Equal(t, "IP.TCP", s.Attributes()["net.transport"].AsString())
+			assert.Equal(t, "ip_tcp", s.Attributes()["net.transport"].AsString())
 			assert.Equal(t, "test-database", s.Attributes()["db.name"].AsString())
 			for _, v := range tc.validators {
 				assert.True(t, v(s))
