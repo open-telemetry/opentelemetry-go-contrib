@@ -1,0 +1,69 @@
+// Copyright The OpenTelemetry Authors
+//
+// Licensed under the Apache License, Version 2.0 (the "License");
+// you may not use this file except in compliance with the License.
+// You may obtain a copy of the License at
+//
+//     http://www.apache.org/licenses/LICENSE-2.0
+//
+// Unless required by applicable law or agreed to in writing, software
+// distributed under the License is distributed on an "AS IS" BASIS,
+// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+// See the License for the specific language governing permissions and
+// limitations under the License.
+
+package jaeger_remote // import "go.opentelemetry.io/contrib/samplers/jaeger_remote"
+
+import "time"
+
+type config struct {
+	service             string
+	endpoint            string
+	pollingInterval     time.Duration
+	initialSamplingRate float64
+}
+
+func defaultConfig() *config {
+	return &config{
+		service:             "",
+		endpoint:            "localhost:5778",
+		pollingInterval:     defaultPollingInterval,
+		initialSamplingRate: defaultSamplingRate,
+	}
+}
+
+type Option interface {
+	apply(config *config)
+}
+
+type optionFunc func(config *config)
+
+var _ Option = optionFunc(nil)
+
+func (fn optionFunc) apply(config *config) {
+	fn(config)
+}
+
+func WithService(service string) Option {
+	return optionFunc(func(config *config) {
+		config.service = service
+	})
+}
+
+func WithEndpoint(endpoint string) Option {
+	return optionFunc(func(config *config) {
+		config.endpoint = endpoint
+	})
+}
+
+func WithPollingInterval(pollingInterval time.Duration) Option {
+	return optionFunc(func(config *config) {
+		config.pollingInterval = pollingInterval
+	})
+}
+
+func WithInitialSamplingRate(initialSamplingRate float64) Option {
+	return optionFunc(func(config *config) {
+		config.initialSamplingRate = initialSamplingRate
+	})
+}
