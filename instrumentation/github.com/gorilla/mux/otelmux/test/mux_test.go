@@ -15,7 +15,6 @@
 package test
 
 import (
-	"context"
 	"net/http"
 	"net/http/httptest"
 	"testing"
@@ -27,27 +26,16 @@ import (
 	"go.opentelemetry.io/contrib/instrumentation/github.com/gorilla/mux/otelmux"
 	"go.opentelemetry.io/otel/attribute"
 	sdktrace "go.opentelemetry.io/otel/sdk/trace"
+	"go.opentelemetry.io/otel/sdk/trace/tracetest"
 	"go.opentelemetry.io/otel/trace"
 )
-
-type spanRecorder struct {
-	Completed []sdktrace.ReadOnlySpan
-}
-
-func (sr *spanRecorder) OnEnd(span sdktrace.ReadOnlySpan) {
-	sr.Completed = append(sr.Completed, span)
-}
-
-func (sr *spanRecorder) OnStart(context.Context, sdktrace.ReadWriteSpan) {}
-func (sr *spanRecorder) ForceFlush(context.Context) error                { return nil }
-func (sr *spanRecorder) Shutdown(context.Context) error                  { return nil }
 
 func ok(w http.ResponseWriter, _ *http.Request) {
 	w.WriteHeader(http.StatusOK)
 }
 
 func TestSDKIntegration(t *testing.T) {
-	sr := new(spanRecorder)
+	sr := tracetest.NewSpanRecorder()
 	provider := sdktrace.NewTracerProvider()
 	provider.RegisterSpanProcessor(sr)
 
@@ -62,8 +50,8 @@ func TestSDKIntegration(t *testing.T) {
 	router.ServeHTTP(w, r0)
 	router.ServeHTTP(w, r1)
 
-	require.Len(t, sr.Completed, 2)
-	assertSpan(t, sr.Completed[0],
+	require.Len(t, sr.Ended(), 2)
+	assertSpan(t, sr.Ended()[0],
 		"/user/{id:[0-9]+}",
 		trace.SpanKindServer,
 		attribute.String("http.server_name", "foobar"),
@@ -72,7 +60,7 @@ func TestSDKIntegration(t *testing.T) {
 		attribute.String("http.target", "/user/123"),
 		attribute.String("http.route", "/user/{id:[0-9]+}"),
 	)
-	assertSpan(t, sr.Completed[1],
+	assertSpan(t, sr.Ended()[1],
 		"/book/{title}",
 		trace.SpanKindServer,
 		attribute.String("http.server_name", "foobar"),
