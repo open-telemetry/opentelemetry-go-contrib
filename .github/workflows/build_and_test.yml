@@ -58,6 +58,8 @@ jobs:
           fetch-depth: 0
       - run: mkdir -p $TEST_RESULTS
       - name: Integration test ${{ matrix.target }}
+        env:
+          INTEGRATION: ${{ matrix.target }}
         run: |
           make ${{ matrix.target }}
           find . -name 'coverage.html' > "${TEST_RESULTS}/coverage.lst"
