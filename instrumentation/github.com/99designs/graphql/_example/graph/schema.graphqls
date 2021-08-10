@@ -1,0 +1,11 @@
+# GraphQL schema example
+#
+# https://gqlgen.com/getting-started/
+
+type Pong {
+  id: String!
+}
+
+type Query {
+  ping: Pong!
+}
