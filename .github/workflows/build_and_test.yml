@@ -36,7 +36,7 @@ jobs:
           make ci
           mkdir -p $TEST_RESULTS
           cp coverage.{txt,html} $TEST_RESULTS
-      - uses: codecov/codecov-action@v1
+      - uses: codecov/codecov-action@v2.0.2
         with:
           file: ./coverage.txt
           fail_ci_if_error: true
@@ -58,6 +58,8 @@ jobs:
           fetch-depth: 0
       - run: mkdir -p $TEST_RESULTS
       - name: Integration test ${{ matrix.target }}
+        env:
+          INTEGRATION: ${{ matrix.target }}
         run: |
           make ${{ matrix.target }}
           find . -name 'coverage.html' > "${TEST_RESULTS}/coverage.lst"

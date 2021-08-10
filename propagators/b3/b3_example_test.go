@@ -19,17 +19,15 @@ import (
 	"go.opentelemetry.io/otel"
 )
 
-func ExampleB3() {
-	b3 := b3.B3{}
+func ExampleNew() {
+	b3 := b3.New()
 	// Register the B3 propagator globally.
 	otel.SetTextMapPropagator(b3)
 }
 
-func ExampleB3_injectEncoding() {
+func ExampleNew_injectEncoding() {
 	// Create a B3 propagator configured to inject context with both multiple
 	// and single header B3 HTTP encoding.
-	b3 := b3.B3{
-		InjectEncoding: b3.B3MultipleHeader | b3.B3SingleHeader,
-	}
+	b3 := b3.New(b3.WithInjectEncoding(b3.B3MultipleHeader | b3.B3SingleHeader))
 	otel.SetTextMapPropagator(b3)
 }

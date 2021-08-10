@@ -54,6 +54,7 @@ func TestChildSpanFromGlobalTracer(t *testing.T) {
 	w := httptest.NewRecorder()
 
 	router.ServeHTTP(w, r)
+	assert.Equal(t, http.StatusOK, w.Result().StatusCode, "should call the 'user' handler")
 }
 
 func TestChildSpanFromCustomTracer(t *testing.T) {
@@ -72,6 +73,7 @@ func TestChildSpanFromCustomTracer(t *testing.T) {
 	w := httptest.NewRecorder()
 
 	router.ServeHTTP(w, r)
+	assert.Equal(t, http.StatusOK, w.Result().StatusCode, "should call the 'user' handler")
 }
 
 func TestTrace200(t *testing.T) {
@@ -198,13 +200,14 @@ func TestPropagationWithGlobalPropagators(t *testing.T) {
 
 	router.ServeHTTP(w, r)
 	otel.SetTextMapPropagator(propagation.NewCompositeTextMapPropagator())
+	assert.Equal(t, http.StatusOK, w.Result().StatusCode, "should call the 'user' handler")
 }
 
 func TestPropagationWithCustomPropagators(t *testing.T) {
 	sr := new(oteltest.SpanRecorder)
 	provider := oteltest.NewTracerProvider(oteltest.WithSpanRecorder(sr))
 
-	b3 := b3prop.B3{}
+	b3 := b3prop.New()
 
 	r := httptest.NewRequest("GET", "/user/123", nil)
 	w := httptest.NewRecorder()
@@ -224,4 +227,26 @@ func TestPropagationWithCustomPropagators(t *testing.T) {
 	})
 
 	router.ServeHTTP(w, r)
+	assert.Equal(t, http.StatusOK, w.Result().StatusCode, "should call the 'user' handler")
+}
+
+func TestSkipper(t *testing.T) {
+	r := httptest.NewRequest("GET", "/ping", nil)
+	w := httptest.NewRecorder()
+
+	skipper := func(c echo.Context) bool {
+		return c.Request().RequestURI == "/ping"
+	}
+
+	router := echo.New()
+	router.Use(Middleware("foobar", WithSkipper(skipper)))
+	router.GET("/ping", func(c echo.Context) error {
+		span := oteltrace.SpanFromContext(c.Request().Context())
+		assert.False(t, span.SpanContext().HasSpanID())
+		assert.False(t, span.SpanContext().HasTraceID())
+		return c.NoContent(200)
+	})
+
+	router.ServeHTTP(w, r)
+	assert.Equal(t, http.StatusOK, w.Result().StatusCode, "should call the 'ping' handler")
 }
