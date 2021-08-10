@@ -12,7 +12,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package otelgrpc_test
+package test
 
 import (
 	"context"
@@ -32,6 +32,8 @@ import (
 	"go.opentelemetry.io/otel/oteltest"
 	semconv "go.opentelemetry.io/otel/semconv/v1.4.0"
 )
+
+const bufSize = 2048
 
 func doCalls(cOpt []grpc.DialOption, sOpt []grpc.ServerOption) error {
 	l := bufconn.Listen(bufSize)

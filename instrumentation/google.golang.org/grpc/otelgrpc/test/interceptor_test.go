@@ -11,7 +11,8 @@
 // WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 // See the License for the specific language governing permissions and
 // limitations under the License.
-package otelgrpc
+
+package test
 
 import (
 	"context"
@@ -21,6 +22,8 @@ import (
 	"testing"
 	"time"
 
+	"go.opentelemetry.io/contrib/instrumentation/google.golang.org/grpc/otelgrpc"
+	"go.opentelemetry.io/contrib/instrumentation/google.golang.org/grpc/otelgrpc/internal"
 	"go.opentelemetry.io/otel/attribute"
 	"go.opentelemetry.io/otel/codes"
 	"go.opentelemetry.io/otel/oteltest"
@@ -85,7 +88,7 @@ func TestUnaryClientInterceptor(t *testing.T) {
 
 	sr := NewSpanRecorder()
 	tp := oteltest.NewTracerProvider(oteltest.WithSpanRecorder(sr))
-	unaryInterceptor := UnaryClientInterceptor(WithTracerProvider(tp))
+	unaryInterceptor := otelgrpc.UnaryClientInterceptor(otelgrpc.WithTracerProvider(tp))
 
 	req := &mockProtoMessage{}
 	reply := &mockProtoMessage{}
@@ -103,23 +106,23 @@ func TestUnaryClientInterceptor(t *testing.T) {
 			method: "/github.com.serviceName/bar",
 			name:   "github.com.serviceName/bar",
 			expectedAttr: map[attribute.Key]attribute.Value{
-				semconv.RPCSystemKey:   attribute.StringValue("grpc"),
-				semconv.RPCServiceKey:  attribute.StringValue("github.com.serviceName"),
-				semconv.RPCMethodKey:   attribute.StringValue("bar"),
-				GRPCStatusCodeKey:      attribute.Int64Value(0),
-				semconv.NetPeerIPKey:   attribute.StringValue("fake"),
-				semconv.NetPeerPortKey: attribute.StringValue("connection"),
+				semconv.RPCSystemKey:       attribute.StringValue("grpc"),
+				semconv.RPCServiceKey:      attribute.StringValue("github.com.serviceName"),
+				semconv.RPCMethodKey:       attribute.StringValue("bar"),
+				otelgrpc.GRPCStatusCodeKey: attribute.Int64Value(0),
+				semconv.NetPeerIPKey:       attribute.StringValue("fake"),
+				semconv.NetPeerPortKey:     attribute.StringValue("connection"),
 			},
 			eventsAttr: []map[attribute.Key]attribute.Value{
 				{
-					RPCMessageTypeKey:             attribute.StringValue("SENT"),
-					RPCMessageIDKey:               attribute.IntValue(1),
-					RPCMessageUncompressedSizeKey: attribute.IntValue(proto.Size(proto.Message(req))),
+					otelgrpc.RPCMessageTypeKey:             attribute.StringValue("SENT"),
+					otelgrpc.RPCMessageIDKey:               attribute.IntValue(1),
+					otelgrpc.RPCMessageUncompressedSizeKey: attribute.IntValue(proto.Size(proto.Message(req))),
 				},
 				{
-					RPCMessageTypeKey:             attribute.StringValue("RECEIVED"),
-					RPCMessageIDKey:               attribute.IntValue(1),
-					RPCMessageUncompressedSizeKey: attribute.IntValue(proto.Size(proto.Message(reply))),
+					otelgrpc.RPCMessageTypeKey:             attribute.StringValue("RECEIVED"),
+					otelgrpc.RPCMessageIDKey:               attribute.IntValue(1),
+					otelgrpc.RPCMessageUncompressedSizeKey: attribute.IntValue(proto.Size(proto.Message(reply))),
 				},
 			},
 		},
@@ -127,23 +130,23 @@ func TestUnaryClientInterceptor(t *testing.T) {
 			method: "/serviceName/bar",
 			name:   "serviceName/bar",
 			expectedAttr: map[attribute.Key]attribute.Value{
-				semconv.RPCSystemKey:   attribute.StringValue("grpc"),
-				semconv.RPCServiceKey:  attribute.StringValue("serviceName"),
-				semconv.RPCMethodKey:   attribute.StringValue("bar"),
-				GRPCStatusCodeKey:      attribute.Int64Value(0),
-				semconv.NetPeerIPKey:   attribute.StringValue("fake"),
-				semconv.NetPeerPortKey: attribute.StringValue("connection"),
+				semconv.RPCSystemKey:       attribute.StringValue("grpc"),
+				semconv.RPCServiceKey:      attribute.StringValue("serviceName"),
+				semconv.RPCMethodKey:       attribute.StringValue("bar"),
+				otelgrpc.GRPCStatusCodeKey: attribute.Int64Value(0),
+				semconv.NetPeerIPKey:       attribute.StringValue("fake"),
+				semconv.NetPeerPortKey:     attribute.StringValue("connection"),
 			},
 			eventsAttr: []map[attribute.Key]attribute.Value{
 				{
-					RPCMessageTypeKey:             attribute.StringValue("SENT"),
-					RPCMessageIDKey:               attribute.IntValue(1),
-					RPCMessageUncompressedSizeKey: attribute.IntValue(proto.Size(proto.Message(req))),
+					otelgrpc.RPCMessageTypeKey:             attribute.StringValue("SENT"),
+					otelgrpc.RPCMessageIDKey:               attribute.IntValue(1),
+					otelgrpc.RPCMessageUncompressedSizeKey: attribute.IntValue(proto.Size(proto.Message(req))),
 				},
 				{
-					RPCMessageTypeKey:             attribute.StringValue("RECEIVED"),
-					RPCMessageIDKey:               attribute.IntValue(1),
-					RPCMessageUncompressedSizeKey: attribute.IntValue(proto.Size(proto.Message(reply))),
+					otelgrpc.RPCMessageTypeKey:             attribute.StringValue("RECEIVED"),
+					otelgrpc.RPCMessageIDKey:               attribute.IntValue(1),
+					otelgrpc.RPCMessageUncompressedSizeKey: attribute.IntValue(proto.Size(proto.Message(reply))),
 				},
 			},
 		},
@@ -151,23 +154,23 @@ func TestUnaryClientInterceptor(t *testing.T) {
 			method: "serviceName/bar",
 			name:   "serviceName/bar",
 			expectedAttr: map[attribute.Key]attribute.Value{
-				semconv.RPCSystemKey:   attribute.StringValue("grpc"),
-				semconv.RPCServiceKey:  attribute.StringValue("serviceName"),
-				semconv.RPCMethodKey:   attribute.StringValue("bar"),
-				GRPCStatusCodeKey:      attribute.Int64Value(int64(grpc_codes.OK)),
-				semconv.NetPeerIPKey:   attribute.StringValue("fake"),
-				semconv.NetPeerPortKey: attribute.StringValue("connection"),
+				semconv.RPCSystemKey:       attribute.StringValue("grpc"),
+				semconv.RPCServiceKey:      attribute.StringValue("serviceName"),
+				semconv.RPCMethodKey:       attribute.StringValue("bar"),
+				otelgrpc.GRPCStatusCodeKey: attribute.Int64Value(int64(grpc_codes.OK)),
+				semconv.NetPeerIPKey:       attribute.StringValue("fake"),
+				semconv.NetPeerPortKey:     attribute.StringValue("connection"),
 			},
 			eventsAttr: []map[attribute.Key]attribute.Value{
 				{
-					RPCMessageTypeKey:             attribute.StringValue("SENT"),
-					RPCMessageIDKey:               attribute.IntValue(1),
-					RPCMessageUncompressedSizeKey: attribute.IntValue(proto.Size(proto.Message(req))),
+					otelgrpc.RPCMessageTypeKey:             attribute.StringValue("SENT"),
+					otelgrpc.RPCMessageIDKey:               attribute.IntValue(1),
+					otelgrpc.RPCMessageUncompressedSizeKey: attribute.IntValue(proto.Size(proto.Message(req))),
 				},
 				{
-					RPCMessageTypeKey:             attribute.StringValue("RECEIVED"),
-					RPCMessageIDKey:               attribute.IntValue(1),
-					RPCMessageUncompressedSizeKey: attribute.IntValue(proto.Size(proto.Message(reply))),
+					otelgrpc.RPCMessageTypeKey:             attribute.StringValue("RECEIVED"),
+					otelgrpc.RPCMessageIDKey:               attribute.IntValue(1),
+					otelgrpc.RPCMessageUncompressedSizeKey: attribute.IntValue(proto.Size(proto.Message(reply))),
 				},
 			},
 		},
@@ -176,23 +179,23 @@ func TestUnaryClientInterceptor(t *testing.T) {
 			name:             "serviceName/bar_error",
 			expectedSpanCode: codes.Error,
 			expectedAttr: map[attribute.Key]attribute.Value{
-				semconv.RPCSystemKey:   attribute.StringValue("grpc"),
-				semconv.RPCServiceKey:  attribute.StringValue("serviceName"),
-				semconv.RPCMethodKey:   attribute.StringValue("bar_error"),
-				GRPCStatusCodeKey:      attribute.Int64Value(int64(grpc_codes.Internal)),
-				semconv.NetPeerIPKey:   attribute.StringValue("fake"),
-				semconv.NetPeerPortKey: attribute.StringValue("connection"),
+				semconv.RPCSystemKey:       attribute.StringValue("grpc"),
+				semconv.RPCServiceKey:      attribute.StringValue("serviceName"),
+				semconv.RPCMethodKey:       attribute.StringValue("bar_error"),
+				otelgrpc.GRPCStatusCodeKey: attribute.Int64Value(int64(grpc_codes.Internal)),
+				semconv.NetPeerIPKey:       attribute.StringValue("fake"),
+				semconv.NetPeerPortKey:     attribute.StringValue("connection"),
 			},
 			eventsAttr: []map[attribute.Key]attribute.Value{
 				{
-					RPCMessageTypeKey:             attribute.StringValue("SENT"),
-					RPCMessageIDKey:               attribute.IntValue(1),
-					RPCMessageUncompressedSizeKey: attribute.IntValue(proto.Size(proto.Message(req))),
+					otelgrpc.RPCMessageTypeKey:             attribute.StringValue("SENT"),
+					otelgrpc.RPCMessageIDKey:               attribute.IntValue(1),
+					otelgrpc.RPCMessageUncompressedSizeKey: attribute.IntValue(proto.Size(proto.Message(req))),
 				},
 				{
-					RPCMessageTypeKey:             attribute.StringValue("RECEIVED"),
-					RPCMessageIDKey:               attribute.IntValue(1),
-					RPCMessageUncompressedSizeKey: attribute.IntValue(proto.Size(proto.Message(reply))),
+					otelgrpc.RPCMessageTypeKey:             attribute.StringValue("RECEIVED"),
+					otelgrpc.RPCMessageIDKey:               attribute.IntValue(1),
+					otelgrpc.RPCMessageUncompressedSizeKey: attribute.IntValue(proto.Size(proto.Message(reply))),
 				},
 			},
 			expectErr: true,
@@ -201,21 +204,21 @@ func TestUnaryClientInterceptor(t *testing.T) {
 			method: "invalidName",
 			name:   "invalidName",
 			expectedAttr: map[attribute.Key]attribute.Value{
-				semconv.RPCSystemKey:   attribute.StringValue("grpc"),
-				GRPCStatusCodeKey:      attribute.Int64Value(0),
-				semconv.NetPeerIPKey:   attribute.StringValue("fake"),
-				semconv.NetPeerPortKey: attribute.StringValue("connection"),
+				semconv.RPCSystemKey:       attribute.StringValue("grpc"),
+				otelgrpc.GRPCStatusCodeKey: attribute.Int64Value(0),
+				semconv.NetPeerIPKey:       attribute.StringValue("fake"),
+				semconv.NetPeerPortKey:     attribute.StringValue("connection"),
 			},
 			eventsAttr: []map[attribute.Key]attribute.Value{
 				{
-					RPCMessageTypeKey:             attribute.StringValue("SENT"),
-					RPCMessageIDKey:               attribute.IntValue(1),
-					RPCMessageUncompressedSizeKey: attribute.IntValue(proto.Size(proto.Message(req))),
+					otelgrpc.RPCMessageTypeKey:             attribute.StringValue("SENT"),
+					otelgrpc.RPCMessageIDKey:               attribute.IntValue(1),
+					otelgrpc.RPCMessageUncompressedSizeKey: attribute.IntValue(proto.Size(proto.Message(req))),
 				},
 				{
-					RPCMessageTypeKey:             attribute.StringValue("RECEIVED"),
-					RPCMessageIDKey:               attribute.IntValue(1),
-					RPCMessageUncompressedSizeKey: attribute.IntValue(proto.Size(proto.Message(reply))),
+					otelgrpc.RPCMessageTypeKey:             attribute.StringValue("RECEIVED"),
+					otelgrpc.RPCMessageIDKey:               attribute.IntValue(1),
+					otelgrpc.RPCMessageUncompressedSizeKey: attribute.IntValue(proto.Size(proto.Message(reply))),
 				},
 			},
 		},
@@ -223,23 +226,23 @@ func TestUnaryClientInterceptor(t *testing.T) {
 			method: "/github.com.foo.serviceName_123/method",
 			name:   "github.com.foo.serviceName_123/method",
 			expectedAttr: map[attribute.Key]attribute.Value{
-				semconv.RPCSystemKey:   attribute.StringValue("grpc"),
-				GRPCStatusCodeKey:      attribute.Int64Value(0),
-				semconv.RPCServiceKey:  attribute.StringValue("github.com.foo.serviceName_123"),
-				semconv.RPCMethodKey:   attribute.StringValue("method"),
-				semconv.NetPeerIPKey:   attribute.StringValue("fake"),
-				semconv.NetPeerPortKey: attribute.StringValue("connection"),
+				semconv.RPCSystemKey:       attribute.StringValue("grpc"),
+				otelgrpc.GRPCStatusCodeKey: attribute.Int64Value(0),
+				semconv.RPCServiceKey:      attribute.StringValue("github.com.foo.serviceName_123"),
+				semconv.RPCMethodKey:       attribute.StringValue("method"),
+				semconv.NetPeerIPKey:       attribute.StringValue("fake"),
+				semconv.NetPeerPortKey:     attribute.StringValue("connection"),
 			},
 			eventsAttr: []map[attribute.Key]attribute.Value{
 				{
-					RPCMessageTypeKey:             attribute.StringValue("SENT"),
-					RPCMessageIDKey:               attribute.IntValue(1),
-					RPCMessageUncompressedSizeKey: attribute.IntValue(proto.Size(proto.Message(req))),
+					otelgrpc.RPCMessageTypeKey:             attribute.StringValue("SENT"),
+					otelgrpc.RPCMessageIDKey:               attribute.IntValue(1),
+					otelgrpc.RPCMessageUncompressedSizeKey: attribute.IntValue(proto.Size(proto.Message(req))),
 				},
 				{
-					RPCMessageTypeKey:             attribute.StringValue("RECEIVED"),
-					RPCMessageIDKey:               attribute.IntValue(1),
-					RPCMessageUncompressedSizeKey: attribute.IntValue(proto.Size(proto.Message(reply))),
+					otelgrpc.RPCMessageTypeKey:             attribute.StringValue("RECEIVED"),
+					otelgrpc.RPCMessageIDKey:               attribute.IntValue(1),
+					otelgrpc.RPCMessageUncompressedSizeKey: attribute.IntValue(proto.Size(proto.Message(reply))),
 				},
 			},
 		},
@@ -313,7 +316,7 @@ func createInterceptedStreamClient(t *testing.T, method string, opts clientStrea
 	// tracer
 	sr := NewSpanRecorder()
 	tp := oteltest.NewTracerProvider(oteltest.WithSpanRecorder(sr))
-	streamCI := StreamClientInterceptor(WithTracerProvider(tp))
+	streamCI := otelgrpc.StreamClientInterceptor(otelgrpc.WithTracerProvider(tp))
 
 	streamClient, err := streamCI(
 		context.Background(),
@@ -368,12 +371,12 @@ func TestStreamClientInterceptorOnBIDIStream(t *testing.T) {
 	require.True(t, ok, "missing span %s", name)
 
 	expectedAttr := map[attribute.Key]attribute.Value{
-		semconv.RPCSystemKey:   attribute.StringValue("grpc"),
-		GRPCStatusCodeKey:      attribute.Int64Value(int64(grpc_codes.OK)),
-		semconv.RPCServiceKey:  attribute.StringValue("github.com.serviceName"),
-		semconv.RPCMethodKey:   attribute.StringValue("bar"),
-		semconv.NetPeerIPKey:   attribute.StringValue("fake"),
-		semconv.NetPeerPortKey: attribute.StringValue("connection"),
+		semconv.RPCSystemKey:       attribute.StringValue("grpc"),
+		otelgrpc.GRPCStatusCodeKey: attribute.Int64Value(int64(grpc_codes.OK)),
+		semconv.RPCServiceKey:      attribute.StringValue("github.com.serviceName"),
+		semconv.RPCMethodKey:       attribute.StringValue("bar"),
+		semconv.NetPeerIPKey:       attribute.StringValue("fake"),
+		semconv.NetPeerPortKey:     attribute.StringValue("connection"),
 	}
 	assert.Equal(t, expectedAttr, span.Attributes())
 
@@ -383,10 +386,10 @@ func TestStreamClientInterceptorOnBIDIStream(t *testing.T) {
 		msgID := i/2 + 1
 		validate := func(eventName string, attrs map[attribute.Key]attribute.Value) {
 			for k, v := range attrs {
-				if k == RPCMessageTypeKey && v.AsString() != eventName {
+				if k == otelgrpc.RPCMessageTypeKey && v.AsString() != eventName {
 					t.Errorf("invalid event on index: %d expecting %s event, receive %s event", i, eventName, v.AsString())
 				}
-				if k == RPCMessageIDKey && v != attribute.IntValue(msgID) {
+				if k == otelgrpc.RPCMessageIDKey && v != attribute.IntValue(msgID) {
 					t.Errorf("invalid id for message event expected %d received %d", msgID, v.AsInt64())
 				}
 			}
@@ -435,12 +438,12 @@ func TestStreamClientInterceptorOnUnidirectionalClientServerStream(t *testing.T)
 	require.True(t, ok, "missing span %s", name)
 
 	expectedAttr := map[attribute.Key]attribute.Value{
-		semconv.RPCSystemKey:   attribute.StringValue("grpc"),
-		GRPCStatusCodeKey:      attribute.Int64Value(int64(grpc_codes.OK)),
-		semconv.RPCServiceKey:  attribute.StringValue("github.com.serviceName"),
-		semconv.RPCMethodKey:   attribute.StringValue("bar"),
-		semconv.NetPeerIPKey:   attribute.StringValue("fake"),
-		semconv.NetPeerPortKey: attribute.StringValue("connection"),
+		semconv.RPCSystemKey:       attribute.StringValue("grpc"),
+		otelgrpc.GRPCStatusCodeKey: attribute.Int64Value(int64(grpc_codes.OK)),
+		semconv.RPCServiceKey:      attribute.StringValue("github.com.serviceName"),
+		semconv.RPCMethodKey:       attribute.StringValue("bar"),
+		semconv.NetPeerIPKey:       attribute.StringValue("fake"),
+		semconv.NetPeerPortKey:     attribute.StringValue("connection"),
 	}
 	assert.Equal(t, expectedAttr, span.Attributes())
 
@@ -451,10 +454,10 @@ func TestStreamClientInterceptorOnUnidirectionalClientServerStream(t *testing.T)
 		msgID := i + 1
 		validate := func(eventName string, attrs map[attribute.Key]attribute.Value) {
 			for k, v := range attrs {
-				if k == RPCMessageTypeKey && v.AsString() != eventName {
+				if k == otelgrpc.RPCMessageTypeKey && v.AsString() != eventName {
 					t.Errorf("invalid event on index: %d expecting %s event, receive %s event", i, eventName, v.AsString())
 				}
-				if k == RPCMessageIDKey && v != attribute.IntValue(msgID) {
+				if k == otelgrpc.RPCMessageIDKey && v != attribute.IntValue(msgID) {
 					t.Errorf("invalid id for message event expected %d received %d", msgID, v.AsInt64())
 				}
 			}
@@ -476,7 +479,7 @@ func TestStreamClientInterceptorCancelContext(t *testing.T) {
 	// tracer
 	sr := NewSpanRecorder()
 	tp := oteltest.NewTracerProvider(oteltest.WithSpanRecorder(sr))
-	streamCI := StreamClientInterceptor(WithTracerProvider(tp))
+	streamCI := otelgrpc.StreamClientInterceptor(otelgrpc.WithTracerProvider(tp))
 
 	var mockClStr *mockClientStream
 	method := "/github.com.serviceName/bar"
@@ -529,7 +532,7 @@ func TestStreamClientInterceptorWithError(t *testing.T) {
 	// tracer
 	sr := NewSpanRecorder()
 	tp := oteltest.NewTracerProvider(oteltest.WithSpanRecorder(sr))
-	streamCI := StreamClientInterceptor(WithTracerProvider(tp))
+	streamCI := otelgrpc.StreamClientInterceptor(otelgrpc.WithTracerProvider(tp))
 
 	var mockClStr *mockClientStream
 	method := "/github.com.serviceName/bar"
@@ -556,12 +559,12 @@ func TestStreamClientInterceptorWithError(t *testing.T) {
 	require.True(t, ok, "missing span %s", name)
 
 	expectedAttr := map[attribute.Key]attribute.Value{
-		semconv.RPCSystemKey:   attribute.StringValue("grpc"),
-		GRPCStatusCodeKey:      attribute.Int64Value(int64(grpc_codes.Unknown)),
-		semconv.RPCServiceKey:  attribute.StringValue("github.com.serviceName"),
-		semconv.RPCMethodKey:   attribute.StringValue("bar"),
-		semconv.NetPeerIPKey:   attribute.StringValue("fake"),
-		semconv.NetPeerPortKey: attribute.StringValue("connection"),
+		semconv.RPCSystemKey:       attribute.StringValue("grpc"),
+		otelgrpc.GRPCStatusCodeKey: attribute.Int64Value(int64(grpc_codes.Unknown)),
+		semconv.RPCServiceKey:      attribute.StringValue("github.com.serviceName"),
+		semconv.RPCMethodKey:       attribute.StringValue("bar"),
+		semconv.NetPeerIPKey:       attribute.StringValue("fake"),
+		semconv.NetPeerPortKey:     attribute.StringValue("connection"),
 	}
 	assert.Equal(t, expectedAttr, span.Attributes())
 	assert.Equal(t, codes.Error, span.StatusCode())
@@ -570,7 +573,7 @@ func TestStreamClientInterceptorWithError(t *testing.T) {
 func TestServerInterceptorError(t *testing.T) {
 	sr := NewSpanRecorder()
 	tp := oteltest.NewTracerProvider(oteltest.WithSpanRecorder(sr))
-	usi := UnaryServerInterceptor(WithTracerProvider(tp))
+	usi := otelgrpc.UnaryServerInterceptor(otelgrpc.WithTracerProvider(tp))
 	deniedErr := status.Error(grpc_codes.PermissionDenied, "PERMISSION_DENIED_TEXT")
 	handler := func(_ context.Context, _ interface{}) (interface{}, error) {
 		return nil, deniedErr
@@ -585,7 +588,7 @@ func TestServerInterceptorError(t *testing.T) {
 	}
 	assert.Equal(t, codes.Error, span.StatusCode())
 	assert.Contains(t, deniedErr.Error(), span.StatusMessage())
-	codeAttr, ok := span.Attributes()[GRPCStatusCodeKey]
+	codeAttr, ok := span.Attributes()[otelgrpc.GRPCStatusCodeKey]
 	assert.True(t, ok, "attributes contain gRPC status code")
 	assert.Equal(t, attribute.Int64Value(int64(grpc_codes.PermissionDenied)), codeAttr)
 	assert.Len(t, span.Events(), 2)
@@ -651,7 +654,7 @@ func TestParseFullMethod(t *testing.T) {
 	}
 
 	for _, test := range tests {
-		n, a := parseFullMethod(test.fullMethod)
+		n, a := internal.ParseFullMethod(test.fullMethod)
 		assert.Equal(t, test.name, n)
 		assert.Equal(t, test.attr, a)
 	}
