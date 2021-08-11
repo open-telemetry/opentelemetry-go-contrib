@@ -13,6 +13,10 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 - Add instrumentation for the `github.com/aws/aws-lambda-go` package. (#882)
 - Add resource detector for AWS Lambda. (#882)
 
+### Changed
+
+- `otelmongodb` span attributes, name and span status now conform to specification. (#769)
+
 ## [0.22.0] - 2021-07-26
 
 ### Added
