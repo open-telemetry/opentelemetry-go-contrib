@@ -19,6 +19,7 @@ import (
 	"errors"
 	"io"
 	"strings"
+	"sync"
 	"testing"
 	"time"
 
@@ -27,7 +28,6 @@ import (
 	"go.opentelemetry.io/otel/attribute"
 	"go.opentelemetry.io/otel/codes"
 	"go.opentelemetry.io/otel/sdk/trace"
-	"go.opentelemetry.io/otel/sdk/trace/tracetest"
 	semconv "go.opentelemetry.io/otel/semconv/v1.4.0"
 
 	"github.com/golang/protobuf/proto" //nolint:staticcheck
@@ -40,7 +40,61 @@ import (
 	"google.golang.org/grpc/status"
 )
 
-func getSpanFromRecorder(sr *tracetest.SpanRecorder, name string) (trace.ReadOnlySpan, bool) {
+type SpanRecorder struct {
+	startedMu sync.RWMutex
+	started   []trace.ReadWriteSpan
+
+	endedMu sync.RWMutex
+	ended   []trace.ReadOnlySpan
+}
+
+func NewSpanRecorder() *SpanRecorder {
+	return new(SpanRecorder)
+}
+
+// OnStart records started spans.
+func (sr *SpanRecorder) OnStart(_ context.Context, s trace.ReadWriteSpan) {
+	sr.startedMu.Lock()
+	defer sr.startedMu.Unlock()
+	sr.started = append(sr.started, s)
+}
+
+// OnEnd records completed spans.
+func (sr *SpanRecorder) OnEnd(s trace.ReadOnlySpan) {
+	sr.endedMu.Lock()
+	defer sr.endedMu.Unlock()
+	sr.ended = append(sr.ended, s)
+}
+
+// Shutdown does nothing.
+func (sr *SpanRecorder) Shutdown(context.Context) error {
+	return nil
+}
+
+// ForceFlush does nothing.
+func (sr *SpanRecorder) ForceFlush(context.Context) error {
+	return nil
+}
+
+// Started returns a copy of all started spans that have been recorded.
+func (sr *SpanRecorder) Started() []trace.ReadWriteSpan {
+	sr.startedMu.RLock()
+	defer sr.startedMu.RUnlock()
+	dst := make([]trace.ReadWriteSpan, len(sr.started))
+	copy(dst, sr.started)
+	return dst
+}
+
+// Ended returns a copy of all ended spans that have been recorded.
+func (sr *SpanRecorder) Ended() []trace.ReadOnlySpan {
+	sr.endedMu.RLock()
+	defer sr.endedMu.RUnlock()
+	dst := make([]trace.ReadOnlySpan, len(sr.ended))
+	copy(dst, sr.ended)
+	return dst
+}
+
+func getSpanFromRecorder(sr *SpanRecorder, name string) (trace.ReadOnlySpan, bool) {
 	for _, s := range sr.Ended() {
 		if s.Name() == name {
 			return s, true
@@ -83,7 +137,7 @@ func TestUnaryClientInterceptor(t *testing.T) {
 	}
 	defer clientConn.Close()
 
-	sr := tracetest.NewSpanRecorder()
+	sr := NewSpanRecorder()
 	tp := trace.NewTracerProvider(trace.WithSpanProcessor(sr))
 	unaryInterceptor := otelgrpc.UnaryClientInterceptor(otelgrpc.WithTracerProvider(tp))
 
@@ -305,7 +359,7 @@ func newMockClientStream(opts clientStreamOpts) *mockClientStream {
 	return &mockClientStream{msgs: msgs}
 }
 
-func createInterceptedStreamClient(t *testing.T, method string, opts clientStreamOpts) (grpc.ClientStream, *tracetest.SpanRecorder) {
+func createInterceptedStreamClient(t *testing.T, method string, opts clientStreamOpts) (grpc.ClientStream, *SpanRecorder) {
 	mockStream := newMockClientStream(opts)
 	clientConn, err := grpc.Dial("fake:connection", grpc.WithInsecure())
 	if err != nil {
@@ -314,7 +368,7 @@ func createInterceptedStreamClient(t *testing.T, method string, opts clientStrea
 	defer clientConn.Close()
 
 	// tracer
-	sr := tracetest.NewSpanRecorder()
+	sr := NewSpanRecorder()
 	tp := trace.NewTracerProvider(trace.WithSpanProcessor(sr))
 	streamCI := otelgrpc.StreamClientInterceptor(otelgrpc.WithTracerProvider(tp))
 
@@ -479,7 +533,7 @@ func TestStreamClientInterceptorCancelContext(t *testing.T) {
 	defer clientConn.Close()
 
 	// tracer
-	sr := tracetest.NewSpanRecorder()
+	sr := NewSpanRecorder()
 	tp := trace.NewTracerProvider(trace.WithSpanProcessor(sr))
 	streamCI := otelgrpc.StreamClientInterceptor(otelgrpc.WithTracerProvider(tp))
 
@@ -532,7 +586,7 @@ func TestStreamClientInterceptorWithError(t *testing.T) {
 	defer clientConn.Close()
 
 	// tracer
-	sr := tracetest.NewSpanRecorder()
+	sr := NewSpanRecorder()
 	tp := trace.NewTracerProvider(trace.WithSpanProcessor(sr))
 	streamCI := otelgrpc.StreamClientInterceptor(otelgrpc.WithTracerProvider(tp))
 
@@ -573,7 +627,7 @@ func TestStreamClientInterceptorWithError(t *testing.T) {
 }
 
 func TestServerInterceptorError(t *testing.T) {
-	sr := tracetest.NewSpanRecorder()
+	sr := NewSpanRecorder()
 	tp := trace.NewTracerProvider(trace.WithSpanProcessor(sr))
 	usi := otelgrpc.UnaryServerInterceptor(otelgrpc.WithTracerProvider(tp))
 	deniedErr := status.Error(grpc_codes.PermissionDenied, "PERMISSION_DENIED_TEXT")
