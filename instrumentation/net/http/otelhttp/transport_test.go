@@ -310,7 +310,7 @@ func TestWrappedBodyReadErrorStatus(t *testing.T) {
 	)
 	tracer := provider.Tracer("")
 	ctx := context.Background()
-	ctx, span := tracer.Start(ctx, "test")
+	_, span := tracer.Start(ctx, "test")
 
 	// Create our wrapper.
 	wb := wrappedBody{
