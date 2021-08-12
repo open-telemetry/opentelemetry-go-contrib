@@ -25,7 +25,7 @@ import (
 
 	"go.opentelemetry.io/contrib/instrumentation/github.com/aws/aws-sdk-go-v2/otelaws"
 	"go.opentelemetry.io/otel"
-	"go.opentelemetry.io/otel/exporters/stdout"
+	stdout "go.opentelemetry.io/otel/exporters/stdout/stdouttrace"
 	sdktrace "go.opentelemetry.io/otel/sdk/trace"
 	"go.opentelemetry.io/otel/trace"
 )
@@ -34,7 +34,7 @@ var tp *sdktrace.TracerProvider
 
 func initTracer() {
 	var err error
-	exp, err := stdout.NewExporter(stdout.WithPrettyPrint())
+	exp, err := stdout.New(stdout.WithPrettyPrint())
 	if err != nil {
 		fmt.Printf("failed to initialize stdout exporter %v\n", err)
 		return

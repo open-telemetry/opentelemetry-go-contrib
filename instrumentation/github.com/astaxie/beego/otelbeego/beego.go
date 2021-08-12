@@ -141,7 +141,7 @@ func RenderBytes(c *beego.Controller) ([]byte, error) {
 func span(c *beego.Controller, spanName string) (context.Context, trace.Span) {
 	ctx := c.Ctx.Request.Context()
 	span := trace.SpanFromContext(ctx)
-	tracer := span.Tracer()
+	tracer := span.TracerProvider().Tracer("go.opentelemetry.io/contrib/instrumentation/github/astaxie/beego/otelbeego")
 	return tracer.Start(
 		ctx,
 		spanName,

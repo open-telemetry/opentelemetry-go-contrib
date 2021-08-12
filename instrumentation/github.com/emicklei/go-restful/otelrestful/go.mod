@@ -8,12 +8,12 @@ replace (
 )
 
 require (
-	github.com/emicklei/go-restful/v3 v3.5.1
+	github.com/emicklei/go-restful/v3 v3.5.2
 	github.com/json-iterator/go v1.1.10 // indirect
 	github.com/stretchr/testify v1.7.0
-	go.opentelemetry.io/contrib v0.20.0
-	go.opentelemetry.io/contrib/propagators v0.20.0
-	go.opentelemetry.io/otel v0.20.0
-	go.opentelemetry.io/otel/oteltest v0.20.0
-	go.opentelemetry.io/otel/trace v0.20.0
+	go.opentelemetry.io/contrib v0.22.0
+	go.opentelemetry.io/contrib/propagators v0.22.0
+	go.opentelemetry.io/otel v1.0.0-RC2
+	go.opentelemetry.io/otel/oteltest v1.0.0-RC2
+	go.opentelemetry.io/otel/trace v1.0.0-RC2
 )

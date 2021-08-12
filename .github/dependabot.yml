@@ -138,23 +138,23 @@ updates:
       interval: "weekly"
       day: "sunday"
   - package-ecosystem: "gomod"
-      directory: "/instrumentation/github.com/aws/aws-sdk-go-v2/otelaws"
-      labels:
-        - dependencies
-        - go
-        - "Skip Changelog"
-      schedule:
-        interval: "weekly"
-        day: "sunday"
-        - package-ecosystem: "gomod"
-          directory: "/instrumentation/github.com/aws/aws-sdk-go-v2/otelaws/example"
-          labels:
-            - dependencies
-            - go
-            - "Skip Changelog"
-          schedule:
-            interval: "weekly"
-            day: "sunday"
+    directory: "/instrumentation/github.com/aws/aws-sdk-go-v2/otelaws"
+    labels:
+      - dependencies
+      - go
+      - "Skip Changelog"
+    schedule:
+      interval: "weekly"
+      day: "sunday"
+  - package-ecosystem: "gomod"
+    directory: "/instrumentation/github.com/aws/aws-sdk-go-v2/otelaws/example"
+    labels:
+      - dependencies
+      - go
+      - "Skip Changelog"
+    schedule:
+      interval: "weekly"
+      day: "sunday"
   -
     package-ecosystem: "gomod"
     directory: "/instrumentation/github.com/bradfitz/gomemcache/memcache/otelmemcache"
@@ -248,6 +248,16 @@ updates:
   -
     package-ecosystem: "gomod"
     directory: "/instrumentation/github.com/gorilla/mux/otelmux/example"
+    labels:
+      - dependencies
+      - go
+      - "Skip Changelog"
+    schedule:
+      interval: "weekly"
+      day: "sunday"
+  -
+    package-ecosystem: "gomod"
+    directory: "/instrumentation/github.com/gorilla/mux/otelmux/test"
     labels:
       - dependencies
       - go
@@ -487,6 +497,16 @@ updates:
   -
     package-ecosystem: "gomod"
     directory: "/instrumentation/github.com/go-kit/kit/otelkit/example"
+    labels:
+      - dependencies
+      - go
+      - "Skip Changelog"
+    schedule:
+      interval: "weekly"
+      day: "sunday"
+  -
+    package-ecosystem: "gomod"
+    directory: "/zpages"
     labels:
       - dependencies
       - go

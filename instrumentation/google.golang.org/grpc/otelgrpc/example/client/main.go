@@ -30,7 +30,12 @@ import (
 )
 
 func main() {
-	config.Init()
+	tp := config.Init()
+	defer func() {
+		if err := tp.Shutdown(context.Background()); err != nil {
+			log.Printf("Error shutting down tracer provider: %v", err)
+		}
+	}()
 
 	var conn *grpc.ClientConn
 	conn, err := grpc.Dial(":7777", grpc.WithInsecure(),

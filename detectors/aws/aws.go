@@ -25,7 +25,7 @@ import (
 
 	"go.opentelemetry.io/otel/attribute"
 	"go.opentelemetry.io/otel/sdk/resource"
-	"go.opentelemetry.io/otel/semconv"
+	semconv "go.opentelemetry.io/otel/semconv/v1.4.0"
 )
 
 // AWS collects resource information of AWS computing instances
@@ -61,7 +61,7 @@ func (aws *AWS) Detect(ctx context.Context) (*resource.Resource, error) {
 	attributes := []attribute.KeyValue{
 		semconv.CloudProviderAWS,
 		semconv.CloudRegionKey.String(doc.Region),
-		semconv.CloudZoneKey.String(doc.AvailabilityZone),
+		semconv.CloudAvailabilityZoneKey.String(doc.AvailabilityZone),
 		semconv.CloudAccountIDKey.String(doc.AccountID),
 		semconv.HostIDKey.String(doc.InstanceID),
 		semconv.HostImageIDKey.String(doc.ImageID),
@@ -77,7 +77,7 @@ func (aws *AWS) Detect(ctx context.Context) (*resource.Resource, error) {
 		err = fmt.Errorf("%w: %s", resource.ErrPartialResource, m.errs)
 	}
 
-	return resource.NewWithAttributes(attributes...), err
+	return resource.NewWithAttributes(semconv.SchemaURL, attributes...), err
 }
 
 func (aws *AWS) client() (client, error) {

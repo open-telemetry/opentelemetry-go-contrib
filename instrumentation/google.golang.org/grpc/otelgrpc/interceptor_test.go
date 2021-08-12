@@ -16,6 +16,7 @@ package otelgrpc
 import (
 	"context"
 	"errors"
+	"io"
 	"strings"
 	"testing"
 	"time"
@@ -23,7 +24,7 @@ import (
 	"go.opentelemetry.io/otel/attribute"
 	"go.opentelemetry.io/otel/codes"
 	"go.opentelemetry.io/otel/oteltest"
-	"go.opentelemetry.io/otel/semconv"
+	semconv "go.opentelemetry.io/otel/semconv/v1.4.0"
 
 	"github.com/golang/protobuf/proto" //nolint:staticcheck
 	"github.com/stretchr/testify/assert"
@@ -111,14 +112,14 @@ func TestUnaryClientInterceptor(t *testing.T) {
 			},
 			eventsAttr: []map[attribute.Key]attribute.Value{
 				{
-					semconv.RPCMessageTypeKey:             attribute.StringValue("SENT"),
-					semconv.RPCMessageIDKey:               attribute.IntValue(1),
-					semconv.RPCMessageUncompressedSizeKey: attribute.IntValue(proto.Size(proto.Message(req))),
+					RPCMessageTypeKey:             attribute.StringValue("SENT"),
+					RPCMessageIDKey:               attribute.IntValue(1),
+					RPCMessageUncompressedSizeKey: attribute.IntValue(proto.Size(proto.Message(req))),
 				},
 				{
-					semconv.RPCMessageTypeKey:             attribute.StringValue("RECEIVED"),
-					semconv.RPCMessageIDKey:               attribute.IntValue(1),
-					semconv.RPCMessageUncompressedSizeKey: attribute.IntValue(proto.Size(proto.Message(reply))),
+					RPCMessageTypeKey:             attribute.StringValue("RECEIVED"),
+					RPCMessageIDKey:               attribute.IntValue(1),
+					RPCMessageUncompressedSizeKey: attribute.IntValue(proto.Size(proto.Message(reply))),
 				},
 			},
 		},
@@ -135,14 +136,14 @@ func TestUnaryClientInterceptor(t *testing.T) {
 			},
 			eventsAttr: []map[attribute.Key]attribute.Value{
 				{
-					semconv.RPCMessageTypeKey:             attribute.StringValue("SENT"),
-					semconv.RPCMessageIDKey:               attribute.IntValue(1),
-					semconv.RPCMessageUncompressedSizeKey: attribute.IntValue(proto.Size(proto.Message(req))),
+					RPCMessageTypeKey:             attribute.StringValue("SENT"),
+					RPCMessageIDKey:               attribute.IntValue(1),
+					RPCMessageUncompressedSizeKey: attribute.IntValue(proto.Size(proto.Message(req))),
 				},
 				{
-					semconv.RPCMessageTypeKey:             attribute.StringValue("RECEIVED"),
-					semconv.RPCMessageIDKey:               attribute.IntValue(1),
-					semconv.RPCMessageUncompressedSizeKey: attribute.IntValue(proto.Size(proto.Message(reply))),
+					RPCMessageTypeKey:             attribute.StringValue("RECEIVED"),
+					RPCMessageIDKey:               attribute.IntValue(1),
+					RPCMessageUncompressedSizeKey: attribute.IntValue(proto.Size(proto.Message(reply))),
 				},
 			},
 		},
@@ -159,14 +160,14 @@ func TestUnaryClientInterceptor(t *testing.T) {
 			},
 			eventsAttr: []map[attribute.Key]attribute.Value{
 				{
-					semconv.RPCMessageTypeKey:             attribute.StringValue("SENT"),
-					semconv.RPCMessageIDKey:               attribute.IntValue(1),
-					semconv.RPCMessageUncompressedSizeKey: attribute.IntValue(proto.Size(proto.Message(req))),
+					RPCMessageTypeKey:             attribute.StringValue("SENT"),
+					RPCMessageIDKey:               attribute.IntValue(1),
+					RPCMessageUncompressedSizeKey: attribute.IntValue(proto.Size(proto.Message(req))),
 				},
 				{
-					semconv.RPCMessageTypeKey:             attribute.StringValue("RECEIVED"),
-					semconv.RPCMessageIDKey:               attribute.IntValue(1),
-					semconv.RPCMessageUncompressedSizeKey: attribute.IntValue(proto.Size(proto.Message(reply))),
+					RPCMessageTypeKey:             attribute.StringValue("RECEIVED"),
+					RPCMessageIDKey:               attribute.IntValue(1),
+					RPCMessageUncompressedSizeKey: attribute.IntValue(proto.Size(proto.Message(reply))),
 				},
 			},
 		},
@@ -184,14 +185,14 @@ func TestUnaryClientInterceptor(t *testing.T) {
 			},
 			eventsAttr: []map[attribute.Key]attribute.Value{
 				{
-					semconv.RPCMessageTypeKey:             attribute.StringValue("SENT"),
-					semconv.RPCMessageIDKey:               attribute.IntValue(1),
-					semconv.RPCMessageUncompressedSizeKey: attribute.IntValue(proto.Size(proto.Message(req))),
+					RPCMessageTypeKey:             attribute.StringValue("SENT"),
+					RPCMessageIDKey:               attribute.IntValue(1),
+					RPCMessageUncompressedSizeKey: attribute.IntValue(proto.Size(proto.Message(req))),
 				},
 				{
-					semconv.RPCMessageTypeKey:             attribute.StringValue("RECEIVED"),
-					semconv.RPCMessageIDKey:               attribute.IntValue(1),
-					semconv.RPCMessageUncompressedSizeKey: attribute.IntValue(proto.Size(proto.Message(reply))),
+					RPCMessageTypeKey:             attribute.StringValue("RECEIVED"),
+					RPCMessageIDKey:               attribute.IntValue(1),
+					RPCMessageUncompressedSizeKey: attribute.IntValue(proto.Size(proto.Message(reply))),
 				},
 			},
 			expectErr: true,
@@ -207,14 +208,14 @@ func TestUnaryClientInterceptor(t *testing.T) {
 			},
 			eventsAttr: []map[attribute.Key]attribute.Value{
 				{
-					semconv.RPCMessageTypeKey:             attribute.StringValue("SENT"),
-					semconv.RPCMessageIDKey:               attribute.IntValue(1),
-					semconv.RPCMessageUncompressedSizeKey: attribute.IntValue(proto.Size(proto.Message(req))),
+					RPCMessageTypeKey:             attribute.StringValue("SENT"),
+					RPCMessageIDKey:               attribute.IntValue(1),
+					RPCMessageUncompressedSizeKey: attribute.IntValue(proto.Size(proto.Message(req))),
 				},
 				{
-					semconv.RPCMessageTypeKey:             attribute.StringValue("RECEIVED"),
-					semconv.RPCMessageIDKey:               attribute.IntValue(1),
-					semconv.RPCMessageUncompressedSizeKey: attribute.IntValue(proto.Size(proto.Message(reply))),
+					RPCMessageTypeKey:             attribute.StringValue("RECEIVED"),
+					RPCMessageIDKey:               attribute.IntValue(1),
+					RPCMessageUncompressedSizeKey: attribute.IntValue(proto.Size(proto.Message(reply))),
 				},
 			},
 		},
@@ -231,14 +232,14 @@ func TestUnaryClientInterceptor(t *testing.T) {
 			},
 			eventsAttr: []map[attribute.Key]attribute.Value{
 				{
-					semconv.RPCMessageTypeKey:             attribute.StringValue("SENT"),
-					semconv.RPCMessageIDKey:               attribute.IntValue(1),
-					semconv.RPCMessageUncompressedSizeKey: attribute.IntValue(proto.Size(proto.Message(req))),
+					RPCMessageTypeKey:             attribute.StringValue("SENT"),
+					RPCMessageIDKey:               attribute.IntValue(1),
+					RPCMessageUncompressedSizeKey: attribute.IntValue(proto.Size(proto.Message(req))),
 				},
 				{
-					semconv.RPCMessageTypeKey:             attribute.StringValue("RECEIVED"),
-					semconv.RPCMessageIDKey:               attribute.IntValue(1),
-					semconv.RPCMessageUncompressedSizeKey: attribute.IntValue(proto.Size(proto.Message(reply))),
+					RPCMessageTypeKey:             attribute.StringValue("RECEIVED"),
+					RPCMessageIDKey:               attribute.IntValue(1),
+					RPCMessageUncompressedSizeKey: attribute.IntValue(proto.Size(proto.Message(reply))),
 				},
 			},
 		},
@@ -272,16 +273,37 @@ func eventAttrMap(events []oteltest.Event) []map[attribute.Key]attribute.Value {
 type mockClientStream struct {
 	Desc *grpc.StreamDesc
 	Ctx  context.Context
+	msgs []mockProtoMessage
 }
 
-func (mockClientStream) SendMsg(m interface{}) error  { return nil }
-func (mockClientStream) RecvMsg(m interface{}) error  { return nil }
+func (mockClientStream) SendMsg(m interface{}) error { return nil }
+func (c *mockClientStream) RecvMsg(m interface{}) error {
+	if len(c.msgs) == 0 {
+		return io.EOF
+	}
+	c.msgs = c.msgs[1:]
+	return nil
+}
 func (mockClientStream) CloseSend() error             { return nil }
 func (c mockClientStream) Context() context.Context   { return c.Ctx }
 func (mockClientStream) Header() (metadata.MD, error) { return nil, nil }
 func (mockClientStream) Trailer() metadata.MD         { return nil }
 
-func TestStreamClientInterceptor(t *testing.T) {
+type clientStreamOpts struct {
+	NumRecvMsgs          int
+	DisableServerStreams bool
+}
+
+func newMockClientStream(opts clientStreamOpts) *mockClientStream {
+	var msgs []mockProtoMessage
+	for i := 0; i < opts.NumRecvMsgs; i++ {
+		msgs = append(msgs, mockProtoMessage{})
+	}
+	return &mockClientStream{msgs: msgs}
+}
+
+func createInterceptedStreamClient(t *testing.T, method string, opts clientStreamOpts) (grpc.ClientStream, *oteltest.SpanRecorder) {
+	mockStream := newMockClientStream(opts)
 	clientConn, err := grpc.Dial("fake:connection", grpc.WithInsecure())
 	if err != nil {
 		t.Fatalf("failed to create client connection: %v", err)
@@ -293,13 +315,9 @@ func TestStreamClientInterceptor(t *testing.T) {
 	tp := oteltest.NewTracerProvider(oteltest.WithSpanRecorder(sr))
 	streamCI := StreamClientInterceptor(WithTracerProvider(tp))
 
-	var mockClStr mockClientStream
-	method := "/github.com.serviceName/bar"
-	name := "github.com.serviceName/bar"
-
 	streamClient, err := streamCI(
 		context.Background(),
-		&grpc.StreamDesc{ServerStreams: true},
+		&grpc.StreamDesc{ServerStreams: !opts.DisableServerStreams},
 		clientConn,
 		method,
 		func(ctx context.Context,
@@ -307,13 +325,23 @@ func TestStreamClientInterceptor(t *testing.T) {
 			cc *grpc.ClientConn,
 			method string,
 			opts ...grpc.CallOption) (grpc.ClientStream, error) {
-			mockClStr = mockClientStream{Desc: desc, Ctx: ctx}
-			return mockClStr, nil
+			mockStream.Desc = desc
+			mockStream.Ctx = ctx
+			return mockStream, nil
 		},
 	)
 	require.NoError(t, err, "initialize grpc stream client")
+	return streamClient, sr
+}
+
+func TestStreamClientInterceptorOnBIDIStream(t *testing.T) {
+	defer goleak.VerifyNone(t)
+
+	method := "/github.com.serviceName/bar"
+	name := "github.com.serviceName/bar"
+	streamClient, sr := createInterceptedStreamClient(t, method, clientStreamOpts{NumRecvMsgs: 10})
 	_, ok := getSpanFromRecorder(sr, name)
-	require.False(t, ok, "span should ended while stream is open")
+	require.False(t, ok, "span should not end while stream is open")
 
 	req := &mockProtoMessage{}
 	reply := &mockProtoMessage{}
@@ -324,10 +352,9 @@ func TestStreamClientInterceptor(t *testing.T) {
 		_ = streamClient.RecvMsg(reply)
 	}
 
-	// close client and server stream
-	_ = streamClient.CloseSend()
-	mockClStr.Desc.ServerStreams = false
-	_ = streamClient.RecvMsg(reply)
+	// The stream has been exhausted so next read should get a EOF and the stream should be considered closed.
+	err := streamClient.RecvMsg(reply)
+	require.Equal(t, io.EOF, err)
 
 	// added retry because span end is called in separate go routine
 	var span *oteltest.Span
@@ -356,10 +383,10 @@ func TestStreamClientInterceptor(t *testing.T) {
 		msgID := i/2 + 1
 		validate := func(eventName string, attrs map[attribute.Key]attribute.Value) {
 			for k, v := range attrs {
-				if k == semconv.RPCMessageTypeKey && v.AsString() != eventName {
+				if k == RPCMessageTypeKey && v.AsString() != eventName {
 					t.Errorf("invalid event on index: %d expecting %s event, receive %s event", i, eventName, v.AsString())
 				}
-				if k == semconv.RPCMessageIDKey && v != attribute.IntValue(msgID) {
+				if k == RPCMessageIDKey && v != attribute.IntValue(msgID) {
 					t.Errorf("invalid id for message event expected %d received %d", msgID, v.AsInt64())
 				}
 			}
@@ -369,6 +396,123 @@ func TestStreamClientInterceptor(t *testing.T) {
 	}
 
 	// ensure CloseSend can be subsequently called
+	_ = streamClient.CloseSend()
+}
+
+func TestStreamClientInterceptorOnUnidirectionalClientServerStream(t *testing.T) {
+	defer goleak.VerifyNone(t)
+
+	method := "/github.com.serviceName/bar"
+	name := "github.com.serviceName/bar"
+	opts := clientStreamOpts{NumRecvMsgs: 1, DisableServerStreams: true}
+	streamClient, sr := createInterceptedStreamClient(t, method, opts)
+	_, ok := getSpanFromRecorder(sr, name)
+	require.False(t, ok, "span should not end while stream is open")
+
+	req := &mockProtoMessage{}
+	reply := &mockProtoMessage{}
+
+	// send fake data
+	for i := 0; i < 10; i++ {
+		_ = streamClient.SendMsg(req)
+	}
+
+	// A real user would call CloseAndRecv() on the generated client which would generate a sequence of CloseSend()
+	// and RecvMsg() calls.
+	_ = streamClient.CloseSend()
+	err := streamClient.RecvMsg(reply)
+	require.Nil(t, err)
+
+	// added retry because span end is called in separate go routine
+	var span *oteltest.Span
+	for retry := 0; retry < 5; retry++ {
+		span, ok = getSpanFromRecorder(sr, name)
+		if ok {
+			break
+		}
+		time.Sleep(time.Second * 1)
+	}
+	require.True(t, ok, "missing span %s", name)
+
+	expectedAttr := map[attribute.Key]attribute.Value{
+		semconv.RPCSystemKey:   attribute.StringValue("grpc"),
+		GRPCStatusCodeKey:      attribute.Int64Value(int64(grpc_codes.OK)),
+		semconv.RPCServiceKey:  attribute.StringValue("github.com.serviceName"),
+		semconv.RPCMethodKey:   attribute.StringValue("bar"),
+		semconv.NetPeerIPKey:   attribute.StringValue("fake"),
+		semconv.NetPeerPortKey: attribute.StringValue("connection"),
+	}
+	assert.Equal(t, expectedAttr, span.Attributes())
+
+	// Note that there's no "RECEIVED" event generated for the server response. This is a bug.
+	events := span.Events()
+	require.Len(t, events, 10)
+	for i := 0; i < 10; i++ {
+		msgID := i + 1
+		validate := func(eventName string, attrs map[attribute.Key]attribute.Value) {
+			for k, v := range attrs {
+				if k == RPCMessageTypeKey && v.AsString() != eventName {
+					t.Errorf("invalid event on index: %d expecting %s event, receive %s event", i, eventName, v.AsString())
+				}
+				if k == RPCMessageIDKey && v != attribute.IntValue(msgID) {
+					t.Errorf("invalid id for message event expected %d received %d", msgID, v.AsInt64())
+				}
+			}
+		}
+		validate("SENT", events[i].Attributes)
+	}
+}
+
+// TestStreamClientInterceptorCancelContext tests a cancel context situation.
+// There should be no goleaks
+func TestStreamClientInterceptorCancelContext(t *testing.T) {
+	defer goleak.VerifyNone(t)
+	clientConn, err := grpc.Dial("fake:connection", grpc.WithInsecure())
+	if err != nil {
+		t.Fatalf("failed to create client connection: %v", err)
+	}
+	defer clientConn.Close()
+
+	// tracer
+	sr := NewSpanRecorder()
+	tp := oteltest.NewTracerProvider(oteltest.WithSpanRecorder(sr))
+	streamCI := StreamClientInterceptor(WithTracerProvider(tp))
+
+	var mockClStr *mockClientStream
+	method := "/github.com.serviceName/bar"
+	name := "github.com.serviceName/bar"
+
+	// create a context with cancel
+	cancelCtx, cancel := context.WithCancel(context.Background())
+	defer cancel()
+	streamClient, err := streamCI(
+		cancelCtx,
+		&grpc.StreamDesc{ServerStreams: true},
+		clientConn,
+		method,
+		func(ctx context.Context,
+			desc *grpc.StreamDesc,
+			cc *grpc.ClientConn,
+			method string,
+			opts ...grpc.CallOption) (grpc.ClientStream, error) {
+			mockClStr = &mockClientStream{Desc: desc, Ctx: ctx}
+			return mockClStr, nil
+		},
+	)
+	require.NoError(t, err, "initialize grpc stream client")
+	_, ok := getSpanFromRecorder(sr, name)
+	require.False(t, ok, "span should not ended while stream is open")
+
+	req := &mockProtoMessage{}
+	reply := &mockProtoMessage{}
+
+	// send and receive fake data
+	for i := 0; i < 10; i++ {
+		_ = streamClient.SendMsg(req)
+		_ = streamClient.RecvMsg(reply)
+	}
+
+	// close client stream
 	_ = streamClient.CloseSend()
 }
 
@@ -387,7 +531,7 @@ func TestStreamClientInterceptorWithError(t *testing.T) {
 	tp := oteltest.NewTracerProvider(oteltest.WithSpanRecorder(sr))
 	streamCI := StreamClientInterceptor(WithTracerProvider(tp))
 
-	var mockClStr mockClientStream
+	var mockClStr *mockClientStream
 	method := "/github.com.serviceName/bar"
 	name := "github.com.serviceName/bar"
 
@@ -401,12 +545,12 @@ func TestStreamClientInterceptorWithError(t *testing.T) {
 			cc *grpc.ClientConn,
 			method string,
 			opts ...grpc.CallOption) (grpc.ClientStream, error) {
-			mockClStr = mockClientStream{Desc: desc, Ctx: ctx}
+			mockClStr = &mockClientStream{Desc: desc, Ctx: ctx}
 			return mockClStr, errors.New("test")
 		},
 	)
 	require.Error(t, err, "initialize grpc stream client")
-	assert.IsType(t, mockClientStream{}, streamClient)
+	assert.IsType(t, &mockClientStream{}, streamClient)
 
 	span, ok := getSpanFromRecorder(sr, name)
 	require.True(t, ok, "missing span %s", name)

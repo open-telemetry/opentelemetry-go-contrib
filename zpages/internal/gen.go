@@ -12,23 +12,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package otelmongo
+package internal
 
-import "go.opentelemetry.io/otel/attribute"
-
-const (
-	// PeerHostnameKey records the host name of the peer.
-	PeerHostnameKey = attribute.Key("peer.hostname")
-	// PeerPortKey records the port number of the peer.
-	PeerPortKey = attribute.Key("peer.port")
-)
-
-// PeerHostname records the host name of the peer.
-func PeerHostname(peerHostname string) attribute.KeyValue {
-	return PeerHostnameKey.String(peerHostname)
-}
-
-// PeerPort records the port number of the peer.
-func PeerPort(peerport string) attribute.KeyValue {
-	return PeerPortKey.String(peerport)
-}
+// go get https://github.com/mjibson/esc.git
+//go:generate esc -pkg internal -o resources.go templates/

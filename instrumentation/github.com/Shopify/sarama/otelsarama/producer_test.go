@@ -17,7 +17,9 @@ package otelsarama
 import (
 	"context"
 	"errors"
+	"sync"
 	"testing"
+	"time"
 
 	"github.com/Shopify/sarama"
 	"github.com/Shopify/sarama/mocks"
@@ -28,7 +30,7 @@ import (
 	"go.opentelemetry.io/otel/codes"
 	"go.opentelemetry.io/otel/oteltest"
 	"go.opentelemetry.io/otel/propagation"
-	"go.opentelemetry.io/otel/semconv"
+	semconv "go.opentelemetry.io/otel/semconv/v1.4.0"
 	oteltrace "go.opentelemetry.io/otel/trace"
 )
 
@@ -61,7 +63,7 @@ func TestWrapSyncProducer(t *testing.T) {
 		{
 			attributeList: []attribute.KeyValue{
 				semconv.MessagingSystemKey.String("kafka"),
-				semconv.MessagingDestinationKindKeyTopic,
+				semconv.MessagingDestinationKindTopic,
 				semconv.MessagingDestinationKey.String(topic),
 				semconv.MessagingMessageIDKey.String("1"),
 				kafkaPartitionKey.Int64(0),
@@ -72,7 +74,7 @@ func TestWrapSyncProducer(t *testing.T) {
 		{
 			attributeList: []attribute.KeyValue{
 				semconv.MessagingSystemKey.String("kafka"),
-				semconv.MessagingDestinationKindKeyTopic,
+				semconv.MessagingDestinationKindTopic,
 				semconv.MessagingDestinationKey.String(topic),
 				semconv.MessagingMessageIDKey.String("2"),
 				kafkaPartitionKey.Int64(0),
@@ -82,7 +84,7 @@ func TestWrapSyncProducer(t *testing.T) {
 		{
 			attributeList: []attribute.KeyValue{
 				semconv.MessagingSystemKey.String("kafka"),
-				semconv.MessagingDestinationKindKeyTopic,
+				semconv.MessagingDestinationKindTopic,
 				semconv.MessagingDestinationKey.String(topic),
 				// TODO: The mock sync producer of sarama does not handle the offset while sending messages
 				// https://github.com/Shopify/sarama/pull/1747
@@ -94,7 +96,7 @@ func TestWrapSyncProducer(t *testing.T) {
 		{
 			attributeList: []attribute.KeyValue{
 				semconv.MessagingSystemKey.String("kafka"),
-				semconv.MessagingDestinationKindKeyTopic,
+				semconv.MessagingDestinationKindTopic,
 				semconv.MessagingDestinationKey.String(topic),
 				//semconv.MessagingMessageIDKey.String("4"),
 				kafkaPartitionKey.Int64(0),
@@ -186,10 +188,8 @@ func TestWrapAsyncProducer(t *testing.T) {
 			{
 				attributeList: []attribute.KeyValue{
 					semconv.MessagingSystemKey.String("kafka"),
-					semconv.MessagingDestinationKindKeyTopic,
+					semconv.MessagingDestinationKindTopic,
 					semconv.MessagingDestinationKey.String(topic),
-					semconv.MessagingMessageIDKey.String("0"),
-					kafkaPartitionKey.Int64(0),
 				},
 				parentSpanID: oteltrace.SpanID{0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x2},
 				kind:         oteltrace.SpanKindProducer,
@@ -197,10 +197,8 @@ func TestWrapAsyncProducer(t *testing.T) {
 			{
 				attributeList: []attribute.KeyValue{
 					semconv.MessagingSystemKey.String("kafka"),
-					semconv.MessagingDestinationKindKeyTopic,
+					semconv.MessagingDestinationKindTopic,
 					semconv.MessagingDestinationKey.String(topic),
-					semconv.MessagingMessageIDKey.String("0"),
-					kafkaPartitionKey.Int64(0),
 				},
 				kind: oteltrace.SpanKindProducer,
 			},
@@ -263,7 +261,7 @@ func TestWrapAsyncProducer(t *testing.T) {
 			{
 				attributeList: []attribute.KeyValue{
 					semconv.MessagingSystemKey.String("kafka"),
-					semconv.MessagingDestinationKindKeyTopic,
+					semconv.MessagingDestinationKindTopic,
 					semconv.MessagingDestinationKey.String(topic),
 					semconv.MessagingMessageIDKey.String("1"),
 					kafkaPartitionKey.Int64(0),
@@ -274,7 +272,7 @@ func TestWrapAsyncProducer(t *testing.T) {
 			{
 				attributeList: []attribute.KeyValue{
 					semconv.MessagingSystemKey.String("kafka"),
-					semconv.MessagingDestinationKindKeyTopic,
+					semconv.MessagingDestinationKindTopic,
 					semconv.MessagingDestinationKey.String(topic),
 					semconv.MessagingMessageIDKey.String("2"),
 					kafkaPartitionKey.Int64(0),
@@ -319,10 +317,12 @@ func TestWrapAsyncProducerError(t *testing.T) {
 	ap := WrapAsyncProducer(cfg, mockAsyncProducer, WithTracerProvider(provider), WithPropagators(propagators))
 
 	mockAsyncProducer.ExpectInputAndFail(errors.New("test"))
-	ap.Input() <- &sarama.ProducerMessage{Topic: topic, Key: sarama.StringEncoder("foo2")}
+	metadata := "test metadata"
+	ap.Input() <- &sarama.ProducerMessage{Topic: topic, Key: sarama.StringEncoder("foo2"), Metadata: metadata}
 
 	err := <-ap.Errors()
 	require.Error(t, err)
+	assert.Equal(t, metadata, err.Msg.Metadata, "should preseve metadata")
 
 	ap.AsyncClose()
 
@@ -333,6 +333,171 @@ func TestWrapAsyncProducerError(t *testing.T) {
 
 	assert.Equal(t, codes.Error, span.StatusCode())
 	assert.Equal(t, "test", span.StatusMessage())
+}
+
+func TestWrapAsyncProducer_DrainsSuccessesAndErrorsChannels(t *testing.T) {
+	// Mock provider
+	sr := new(oteltest.SpanRecorder)
+	provider := oteltest.NewTracerProvider(oteltest.WithSpanRecorder(sr))
+
+	// Set producer with successes config and fill it with successes and errors
+	cfg := newSaramaConfig()
+	cfg.Producer.Return.Successes = true
+
+	mockAsyncProducer := mocks.NewAsyncProducer(t, cfg)
+	ap := WrapAsyncProducer(cfg, mockAsyncProducer, WithTracerProvider(provider))
+
+	wantSuccesses := 5
+	for i := 0; i < wantSuccesses; i++ {
+		mockAsyncProducer.ExpectInputAndSucceed()
+		ap.Input() <- &sarama.ProducerMessage{Topic: topic, Key: sarama.StringEncoder("foo2")}
+	}
+
+	wantErrros := 3
+	for i := 0; i < wantErrros; i++ {
+		mockAsyncProducer.ExpectInputAndFail(errors.New("test"))
+		ap.Input() <- &sarama.ProducerMessage{Topic: topic, Key: sarama.StringEncoder("foo2")}
+	}
+
+	ap.AsyncClose()
+
+	// Ensure it is possible to read Successes and Errors after AsyncClose
+	var wg sync.WaitGroup
+
+	gotSuccesses := 0
+	wg.Add(1)
+	go func() {
+		defer wg.Done()
+		for range ap.Successes() {
+			gotSuccesses++
+		}
+	}()
+
+	gotErrors := 0
+	wg.Add(1)
+	go func() {
+		defer wg.Done()
+		for range ap.Errors() {
+			gotErrors++
+		}
+	}()
+
+	wg.Wait()
+	spanList := sr.Completed()
+	assert.Equal(t, wantSuccesses, gotSuccesses, "should read all successes")
+	assert.Equal(t, wantErrros, gotErrors, "should read all errors")
+	assert.Len(t, spanList, wantSuccesses+wantErrros, "should record all spans")
+}
+
+func TestAsyncProducer_ConcurrencyEdgeCases(t *testing.T) {
+	cfg := newSaramaConfig()
+	testCases := []struct {
+		name             string
+		newAsyncProducer func(t *testing.T) sarama.AsyncProducer
+	}{
+		{
+			name: "original",
+			newAsyncProducer: func(t *testing.T) sarama.AsyncProducer {
+				return mocks.NewAsyncProducer(t, cfg)
+			},
+		},
+		{
+			name: "wrapped",
+			newAsyncProducer: func(t *testing.T) sarama.AsyncProducer {
+				var ap sarama.AsyncProducer = mocks.NewAsyncProducer(t, cfg)
+				ap = WrapAsyncProducer(cfg, ap)
+				return ap
+			},
+		},
+	}
+
+	for _, tc := range testCases {
+		t.Run(tc.name, func(t *testing.T) {
+			t.Run("closes Successes and Error after Close", func(t *testing.T) {
+				timeout := time.NewTimer(time.Minute)
+				defer timeout.Stop()
+				p := tc.newAsyncProducer(t)
+
+				p.Close()
+
+				select {
+				case <-timeout.C:
+					t.Error("timeout - Successes channel was not closed")
+				case _, ok := <-p.Successes():
+					if ok {
+						t.Error("message was send to Successes channel instead of being closed")
+					}
+				}
+
+				select {
+				case <-timeout.C:
+					t.Error("timeout - Errors channel was not closed")
+				case _, ok := <-p.Errors():
+					if ok {
+						t.Error("message was send to Errors channel instead of being closed")
+					}
+				}
+			})
+
+			t.Run("closes Successes and Error after AsyncClose", func(t *testing.T) {
+				timeout := time.NewTimer(time.Minute)
+				defer timeout.Stop()
+				p := tc.newAsyncProducer(t)
+
+				p.AsyncClose()
+
+				select {
+				case <-timeout.C:
+					t.Error("timeout - Successes channel was not closed")
+				case _, ok := <-p.Successes():
+					if ok {
+						t.Error("message was send to Successes channel instead of being closed")
+					}
+				}
+
+				select {
+				case <-timeout.C:
+					t.Error("timeout - Errors channel was not closed")
+				case _, ok := <-p.Errors():
+					if ok {
+						t.Error("message was send to Errors channel instead of being closed")
+					}
+				}
+			})
+
+			t.Run("panic when sending to Input after Close", func(t *testing.T) {
+				p := tc.newAsyncProducer(t)
+				p.Close()
+				assert.Panics(t, func() {
+					p.Input() <- &sarama.ProducerMessage{Key: sarama.StringEncoder("foo")}
+				})
+			})
+
+			t.Run("panic when sending to Input after AsyncClose", func(t *testing.T) {
+				p := tc.newAsyncProducer(t)
+				p.AsyncClose()
+				assert.Panics(t, func() {
+					p.Input() <- &sarama.ProducerMessage{Key: sarama.StringEncoder("foo")}
+				})
+			})
+
+			t.Run("panic when calling Close after AsyncClose", func(t *testing.T) {
+				p := tc.newAsyncProducer(t)
+				p.AsyncClose()
+				assert.Panics(t, func() {
+					p.Close()
+				})
+			})
+
+			t.Run("panic when calling AsyncClose after Close", func(t *testing.T) {
+				p := tc.newAsyncProducer(t)
+				p.Close()
+				assert.Panics(t, func() {
+					p.AsyncClose()
+				})
+			})
+		})
+	}
 }
 
 func newSaramaConfig() *sarama.Config {

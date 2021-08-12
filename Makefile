@@ -21,9 +21,10 @@ ifeq ($(UNAME_S),Darwin)
 endif
 
 
+GO = go
 GOTEST_MIN = go test -v -timeout 30s
 GOTEST = $(GOTEST_MIN) -race
-GOTEST_WITH_COVERAGE = $(GOTEST) -coverprofile=coverage.out -covermode=atomic -coverpkg=./...
+GOTEST_WITH_COVERAGE = $(GOTEST) -coverprofile=coverage.out -covermode=atomic -coverpkg=go.opentelemetry.io/contrib/...
 
 .DEFAULT_GOAL := precommit
 
@@ -39,14 +40,18 @@ $(TOOLS_DIR)/misspell: $(TOOLS_MOD_DIR)/go.mod $(TOOLS_MOD_DIR)/go.sum $(TOOLS_M
 	cd $(TOOLS_MOD_DIR) && \
 	go build -o $(TOOLS_DIR)/misspell github.com/client9/misspell/cmd/misspell
 
+$(TOOLS_DIR)/gocovmerge: $(TOOLS_MOD_DIR)/go.mod $(TOOLS_MOD_DIR)/go.sum $(TOOLS_MOD_DIR)/tools.go
+	cd $(TOOLS_MOD_DIR) && \
+	go build -o $(TOOLS_DIR)/gocovmerge github.com/wadey/gocovmerge
+
 $(TOOLS_DIR)/stringer: $(TOOLS_MOD_DIR)/go.mod $(TOOLS_MOD_DIR)/go.sum $(TOOLS_MOD_DIR)/tools.go
 	cd $(TOOLS_MOD_DIR) && \
 	go build -o $(TOOLS_DIR)/stringer golang.org/x/tools/cmd/stringer
 
-precommit: dependabot-check license-check generate build lint test
+precommit: dependabot-check license-check generate lint build test
 
 .PHONY: test-with-coverage
-test-with-coverage:
+test-with-coverage: $(TOOLS_DIR)/gocovmerge
 	set -e; \
 	printf "" > coverage.txt; \
 	for dir in $(ALL_COVERAGE_MOD_DIRS); do \
@@ -54,9 +59,8 @@ test-with-coverage:
 	  (cd "$${dir}" && \
 	    $(GOTEST_WITH_COVERAGE) ./... && \
 	    go tool cover -html=coverage.out -o coverage.html); \
-	  [ -f "$${dir}/coverage.out" ] && cat "$${dir}/coverage.out" >> coverage.txt; \
 	done; \
-	sed -i.bak -e '2,$$ { /^mode: /d; }' coverage.txt && rm coverage.txt.bak
+	$(TOOLS_DIR)/gocovmerge $$(find . -name coverage.out) > coverage.txt
 
 .PHONY: ci
 ci: precommit check-clean-work-tree test-with-coverage test-386
@@ -138,7 +142,7 @@ test-386:
 	fi
 
 .PHONY: lint
-lint: $(TOOLS_DIR)/golangci-lint $(TOOLS_DIR)/misspell
+lint: $(TOOLS_DIR)/golangci-lint $(TOOLS_DIR)/misspell lint-modules
 	set -e; for dir in $(ALL_GO_MOD_DIRS); do \
 	  echo "golangci-lint in $${dir}"; \
 	  (cd "$${dir}" && \
@@ -146,10 +150,13 @@ lint: $(TOOLS_DIR)/golangci-lint $(TOOLS_DIR)/misspell
 	    $(TOOLS_DIR)/golangci-lint run); \
 	done
 	$(TOOLS_DIR)/misspell -w $(ALL_DOCS)
+
+.PHONY: lint-modules
+lint-modules:
 	set -e; for dir in $(ALL_GO_MOD_DIRS) $(TOOLS_MOD_DIR); do \
-	  echo "go mod tidy in $${dir}"; \
+	  echo "$(GO) mod tidy in $${dir}"; \
 	  (cd "$${dir}" && \
-	    go mod tidy); \
+	    $(GO) mod tidy); \
 	done
 
 .PHONY: generate

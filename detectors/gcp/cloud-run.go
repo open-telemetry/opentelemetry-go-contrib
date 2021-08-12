@@ -23,7 +23,7 @@ import (
 
 	"go.opentelemetry.io/otel/attribute"
 	"go.opentelemetry.io/otel/sdk/resource"
-	"go.opentelemetry.io/otel/semconv"
+	semconv "go.opentelemetry.io/otel/semconv/v1.4.0"
 )
 
 const serviceNamespace = "cloud-run-managed"
@@ -99,15 +99,12 @@ func (c *CloudRun) Detect(ctx context.Context) (*resource.Resource, error) {
 	} else {
 		attributes = append(attributes, semconv.ServiceNameKey.String(service))
 	}
-	resource, err := resource.New(ctx, resource.WithAttributes(attributes...))
-	if err != nil {
-		errInfo = append(errInfo, err.Error())
-	}
+	res := resource.NewWithAttributes(semconv.SchemaURL, attributes...)
 
 	var aggregatedErr error
 	if len(errInfo) > 0 {
 		aggregatedErr = fmt.Errorf("detecting Cloud Run resources: %s", errInfo)
 	}
 
-	return resource, aggregatedErr
+	return res, aggregatedErr
 }

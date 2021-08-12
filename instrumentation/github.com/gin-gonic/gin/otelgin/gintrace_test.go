@@ -51,10 +51,6 @@ func TestChildSpanFromGlobalTracer(t *testing.T) {
 		span := oteltrace.SpanFromContext(c.Request.Context())
 		_, ok := span.(*oteltest.Span)
 		assert.True(t, ok)
-		spanTracer := span.Tracer()
-		mockTracer, ok := spanTracer.(*oteltest.Tracer)
-		require.True(t, ok)
-		assert.Equal(t, "go.opentelemetry.io/contrib/instrumentation/github.com/gin-gonic/gin/otelgin", mockTracer.Name)
 	})
 
 	r := httptest.NewRequest("GET", "/user/123", nil)
@@ -72,10 +68,6 @@ func TestChildSpanFromCustomTracer(t *testing.T) {
 		span := oteltrace.SpanFromContext(c.Request.Context())
 		_, ok := span.(*oteltest.Span)
 		assert.True(t, ok)
-		spanTracer := span.Tracer()
-		mockTracer, ok := spanTracer.(*oteltest.Tracer)
-		require.True(t, ok)
-		assert.Equal(t, tracerName, mockTracer.Name)
 	})
 
 	r := httptest.NewRequest("GET", "/user/123", nil)
@@ -209,7 +201,7 @@ func TestGetSpanNotInstrumented(t *testing.T) {
 func TestPropagationWithGlobalPropagators(t *testing.T) {
 	sr := new(oteltest.SpanRecorder)
 	provider := oteltest.NewTracerProvider(oteltest.WithSpanRecorder(sr))
-	otel.SetTextMapPropagator(b3prop.B3{})
+	otel.SetTextMapPropagator(b3prop.New())
 
 	r := httptest.NewRequest("GET", "/user/123", nil)
 	w := httptest.NewRecorder()
@@ -234,7 +226,7 @@ func TestPropagationWithGlobalPropagators(t *testing.T) {
 func TestPropagationWithCustomPropagators(t *testing.T) {
 	sr := new(oteltest.SpanRecorder)
 	provider := oteltest.NewTracerProvider(oteltest.WithSpanRecorder(sr))
-	b3 := b3prop.B3{}
+	b3 := b3prop.New()
 
 	r := httptest.NewRequest("GET", "/user/123", nil)
 	w := httptest.NewRecorder()

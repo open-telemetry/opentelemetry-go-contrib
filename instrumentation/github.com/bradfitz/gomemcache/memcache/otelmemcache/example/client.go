@@ -22,9 +22,8 @@ import (
 	"github.com/bradfitz/gomemcache/memcache"
 
 	"go.opentelemetry.io/contrib/instrumentation/github.com/bradfitz/gomemcache/memcache/otelmemcache"
-	oteltrace "go.opentelemetry.io/otel/trace"
 
-	oteltracestdout "go.opentelemetry.io/otel/exporters/stdout"
+	oteltracestdout "go.opentelemetry.io/otel/exporters/stdout/stdouttrace"
 	sdktrace "go.opentelemetry.io/otel/sdk/trace"
 )
 
@@ -32,6 +31,11 @@ func main() {
 	var host, port = os.Getenv("HOST"), "11211"
 
 	tp := initTracer()
+	defer func() {
+		if err := tp.Shutdown(context.Background()); err != nil {
+			log.Printf("Error shutting down tracer provider: %v", err)
+		}
+	}()
 	ctx := context.Background()
 
 	c := otelmemcache.NewClientWithTracing(
@@ -73,14 +77,14 @@ func doMemcacheOperations(ctx context.Context, c *otelmemcache.Client) {
 	}
 }
 
-func initTracer() oteltrace.TracerProvider {
-	exporter, err := oteltracestdout.NewExporter(oteltracestdout.WithPrettyPrint())
+func initTracer() *sdktrace.TracerProvider {
+	exporter, err := oteltracestdout.New(oteltracestdout.WithPrettyPrint())
 	if err != nil {
 		log.Fatal(err)
 	}
 	tp := sdktrace.NewTracerProvider(
 		sdktrace.WithSampler(sdktrace.AlwaysSample()),
-		sdktrace.WithSyncer(exporter),
+		sdktrace.WithBatcher(exporter),
 	)
 
 	return tp

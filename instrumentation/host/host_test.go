@@ -16,11 +16,10 @@ package host_test
 
 import (
 	"context"
+	gonet "net"
 	"os"
 	"testing"
 	"time"
-
-	gonet "net"
 
 	"github.com/shirou/gopsutil/cpu"
 	"github.com/shirou/gopsutil/mem"
@@ -31,10 +30,10 @@ import (
 
 	"go.opentelemetry.io/contrib/instrumentation/host"
 	"go.opentelemetry.io/otel/attribute"
-	"go.opentelemetry.io/otel/oteltest"
+	"go.opentelemetry.io/otel/metric/metrictest"
 )
 
-func getMetric(impl *oteltest.MeterImpl, name string, lbl attribute.KeyValue) float64 {
+func getMetric(impl *metrictest.MeterImpl, name string, lbl attribute.KeyValue) float64 {
 	for _, b := range impl.MeasurementBatches {
 		foundAttribute := false
 		for _, haveLabel := range b.Labels {
@@ -60,7 +59,7 @@ func getMetric(impl *oteltest.MeterImpl, name string, lbl attribute.KeyValue) fl
 }
 
 func TestHostCPU(t *testing.T) {
-	impl, provider := oteltest.NewMeterProvider()
+	impl, provider := metrictest.NewMeterProvider()
 	err := host.Start(
 		host.WithMeterProvider(provider),
 	)
@@ -134,7 +133,7 @@ func TestHostCPU(t *testing.T) {
 }
 
 func TestHostMemory(t *testing.T) {
-	impl, provider := oteltest.NewMeterProvider()
+	impl, provider := metrictest.NewMeterProvider()
 	err := host.Start(
 		host.WithMeterProvider(provider),
 	)
@@ -206,7 +205,7 @@ func sendBytes(t *testing.T, count int) error {
 }
 
 func TestHostNetwork(t *testing.T) {
-	impl, provider := oteltest.NewMeterProvider()
+	impl, provider := metrictest.NewMeterProvider()
 	err := host.Start(
 		host.WithMeterProvider(provider),
 	)

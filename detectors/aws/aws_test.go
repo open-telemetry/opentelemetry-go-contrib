@@ -28,7 +28,7 @@ import (
 
 	"go.opentelemetry.io/otel/attribute"
 	"go.opentelemetry.io/otel/sdk/resource"
-	"go.opentelemetry.io/otel/semconv"
+	semconv "go.opentelemetry.io/otel/semconv/v1.4.0"
 )
 
 func TestAWS_Detect(t *testing.T) {
@@ -64,7 +64,7 @@ func TestAWS_Detect(t *testing.T) {
 	usWestIDLabels := []attribute.KeyValue{
 		semconv.CloudProviderAWS,
 		semconv.CloudRegionKey.String("us-west-2"),
-		semconv.CloudZoneKey.String("us-west-2b"),
+		semconv.CloudAvailabilityZoneKey.String("us-west-2b"),
 		semconv.CloudAccountIDKey.String("123456789012"),
 		semconv.HostIDKey.String("i-1234567890abcdef0"),
 		semconv.HostImageIDKey.String("ami-5fb8c835"),
@@ -90,7 +90,7 @@ func TestAWS_Detect(t *testing.T) {
 			Fields: fields{
 				Client: &clientMock{available: true, idDoc: usWestInst, metadata: map[string]meta{}},
 			},
-			Want: want{Resource: resource.NewWithAttributes(usWestIDLabels...)},
+			Want: want{Resource: resource.NewWithAttributes(semconv.SchemaURL, usWestIDLabels...)},
 		},
 		"Hostname Response Error": {
 			Fields: fields{
@@ -105,7 +105,7 @@ func TestAWS_Detect(t *testing.T) {
 			Want: want{
 				Error:    `partial resource: ["hostname": 500 EC2MetadataError]`,
 				Partial:  true,
-				Resource: resource.NewWithAttributes(usWestIDLabels...),
+				Resource: resource.NewWithAttributes(semconv.SchemaURL, usWestIDLabels...),
 			},
 		},
 		"Hostname General Error": {
@@ -121,7 +121,7 @@ func TestAWS_Detect(t *testing.T) {
 			Want: want{
 				Error:    `partial resource: ["hostname": unknown error]`,
 				Partial:  true,
-				Resource: resource.NewWithAttributes(usWestIDLabels...),
+				Resource: resource.NewWithAttributes(semconv.SchemaURL, usWestIDLabels...),
 			},
 		},
 		"All Available": {
@@ -135,9 +135,10 @@ func TestAWS_Detect(t *testing.T) {
 				},
 			},
 			Want: want{Resource: resource.NewWithAttributes(
+				semconv.SchemaURL,
 				semconv.CloudProviderAWS,
 				semconv.CloudRegionKey.String("us-west-2"),
-				semconv.CloudZoneKey.String("us-west-2b"),
+				semconv.CloudAvailabilityZoneKey.String("us-west-2b"),
 				semconv.CloudAccountIDKey.String("123456789012"),
 				semconv.HostIDKey.String("i-1234567890abcdef0"),
 				semconv.HostImageIDKey.String("ami-5fb8c835"),

@@ -40,8 +40,15 @@ import (
 
 	"go.opentelemetry.io/contrib/instrumentation/github.com/gocql/gocql/otelgocql"
 	"go.opentelemetry.io/otel"
-	"go.opentelemetry.io/otel/exporters/metric/prometheus"
-	zipkintrace "go.opentelemetry.io/otel/exporters/trace/zipkin"
+	"go.opentelemetry.io/otel/exporters/prometheus"
+	zipkintrace "go.opentelemetry.io/otel/exporters/zipkin"
+	"go.opentelemetry.io/otel/metric/global"
+	export "go.opentelemetry.io/otel/sdk/export/metric"
+	"go.opentelemetry.io/otel/sdk/metric/aggregator/histogram"
+	controller "go.opentelemetry.io/otel/sdk/metric/controller/basic"
+	processor "go.opentelemetry.io/otel/sdk/metric/processor/basic"
+	"go.opentelemetry.io/otel/sdk/metric/selector/simple"
+	"go.opentelemetry.io/otel/sdk/trace"
 )
 
 const keyspace = "gocql_integration_example"
@@ -50,7 +57,8 @@ var wg sync.WaitGroup
 
 func main() {
 	initMetrics()
-	initTracer()
+	tp := initTracer()
+	defer func() { tp.Shutdown(context.Background()) }() //nolint:errcheck
 	initDb()
 
 	ctx, span := otel.Tracer(
@@ -110,10 +118,21 @@ func main() {
 
 func initMetrics() {
 	// Start prometheus
-	metricExporter, err := prometheus.InstallNewPipeline(prometheus.Config{})
+	pusher := controller.New(
+		processor.New(
+			simple.NewWithHistogramDistribution(
+				histogram.WithExplicitBoundaries([]float64{0.001, 0.01, 0.1, 0.5, 1, 2, 5, 10}),
+			),
+			export.CumulativeExportKindSelector(),
+			processor.WithMemory(true),
+		),
+	)
+	metricExporter, err := prometheus.New(prometheus.Config{}, pusher)
 	if err != nil {
 		log.Fatalf("failed to install metric exporter, %v", err)
 	}
+	global.SetMeterProvider(metricExporter.MeterProvider())
+
 	server := http.Server{Addr: ":2222"}
 	http.HandleFunc("/", metricExporter.ServeHTTP)
 	go func() {
@@ -132,13 +151,23 @@ func initMetrics() {
 		} else {
 			log.Print("gracefully shutting down server")
 		}
+		err := pusher.Stop(context.Background())
+		if err != nil {
+			log.Printf("error stopping metric controller: %s", err)
+		}
 	}()
 }
 
-func initTracer() {
-	if err := zipkintrace.InstallNewPipeline("http://localhost:9411/api/v2/spans"); err != nil {
-		log.Fatalf("failed to create span traceExporter, %v", err)
+func initTracer() *trace.TracerProvider {
+	exporter, err := zipkintrace.New("http://localhost:9411/api/v2/spans")
+	if err != nil {
+		log.Fatalf("failed to create zipkin exporter: %s", err)
 	}
+
+	tp := trace.NewTracerProvider(trace.WithBatcher(exporter))
+	otel.SetTracerProvider(tp)
+
+	return tp
 }
 
 func initDb() {

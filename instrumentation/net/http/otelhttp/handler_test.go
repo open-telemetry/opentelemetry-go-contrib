@@ -26,13 +26,14 @@ import (
 
 	"go.opentelemetry.io/otel/attribute"
 	"go.opentelemetry.io/otel/codes"
+	"go.opentelemetry.io/otel/metric/metrictest"
 	"go.opentelemetry.io/otel/oteltest"
 	"go.opentelemetry.io/otel/propagation"
-	"go.opentelemetry.io/otel/semconv"
+	semconv "go.opentelemetry.io/otel/semconv/v1.4.0"
 	"go.opentelemetry.io/otel/trace"
 )
 
-func assertMetricAttributes(t *testing.T, expectedAttributes []attribute.KeyValue, measurementBatches []oteltest.Batch) {
+func assertMetricAttributes(t *testing.T, expectedAttributes []attribute.KeyValue, measurementBatches []metrictest.Batch) {
 	for _, batch := range measurementBatches {
 		assert.ElementsMatch(t, expectedAttributes, batch.Labels)
 	}
@@ -45,7 +46,7 @@ func TestHandlerBasics(t *testing.T) {
 	provider := oteltest.NewTracerProvider(
 		oteltest.WithSpanRecorder(spanRecorder),
 	)
-	meterimpl, meterProvider := oteltest.NewMeterProvider()
+	meterimpl, meterProvider := metrictest.NewMeterProvider()
 
 	operation := "test_handler"
 

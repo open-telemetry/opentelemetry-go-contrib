@@ -19,8 +19,9 @@ import (
 	"io"
 	"net/http"
 
+	"go.opentelemetry.io/otel/codes"
 	"go.opentelemetry.io/otel/propagation"
-	"go.opentelemetry.io/otel/semconv"
+	semconv "go.opentelemetry.io/otel/semconv/v1.4.0"
 	"go.opentelemetry.io/otel/trace"
 )
 
@@ -31,7 +32,7 @@ type Transport struct {
 
 	tracer            trace.Tracer
 	propagators       propagation.TextMapPropagator
-	spanStartOptions  []trace.SpanOption
+	spanStartOptions  []trace.SpanStartOption
 	filters           []Filter
 	spanNameFormatter func(string, *http.Request) string
 }
@@ -86,7 +87,7 @@ func (t *Transport) RoundTrip(r *http.Request) (*http.Response, error) {
 		}
 	}
 
-	opts := append([]trace.SpanOption{}, t.spanStartOptions...) // start with the configured options
+	opts := append([]trace.SpanStartOption{}, t.spanStartOptions...) // start with the configured options
 
 	ctx, span := t.tracer.Start(r.Context(), t.spanNameFormatter("", r), opts...)
 
@@ -97,6 +98,7 @@ func (t *Transport) RoundTrip(r *http.Request) (*http.Response, error) {
 	res, err := t.rt.RoundTrip(r)
 	if err != nil {
 		span.RecordError(err)
+		span.SetStatus(codes.Error, err.Error())
 		span.End()
 		return res, err
 	}
@@ -126,6 +128,7 @@ func (wb *wrappedBody) Read(b []byte) (int, error) {
 		wb.span.End()
 	default:
 		wb.span.RecordError(err)
+		wb.span.SetStatus(codes.Error, err.Error())
 	}
 	return n, err
 }
