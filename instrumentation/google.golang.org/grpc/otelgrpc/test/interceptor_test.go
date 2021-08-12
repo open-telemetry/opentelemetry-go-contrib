@@ -28,6 +28,7 @@ import (
 	"go.opentelemetry.io/otel/attribute"
 	"go.opentelemetry.io/otel/codes"
 	"go.opentelemetry.io/otel/sdk/trace"
+	"go.opentelemetry.io/otel/sdk/trace/tracetest"
 	semconv "go.opentelemetry.io/otel/semconv/v1.4.0"
 
 	"github.com/golang/protobuf/proto" //nolint:staticcheck
@@ -94,7 +95,7 @@ func (sr *SpanRecorder) Ended() []trace.ReadOnlySpan {
 	return dst
 }
 
-func getSpanFromRecorder(sr *SpanRecorder, name string) (trace.ReadOnlySpan, bool) {
+func getSpanFromRecorder(sr *tracetest.SpanRecorder, name string) (trace.ReadOnlySpan, bool) {
 	for _, s := range sr.Ended() {
 		if s.Name() == name {
 			return s, true
@@ -137,7 +138,7 @@ func TestUnaryClientInterceptor(t *testing.T) {
 	}
 	defer clientConn.Close()
 
-	sr := NewSpanRecorder()
+	sr := tracetest.NewSpanRecorder()
 	tp := trace.NewTracerProvider(trace.WithSpanProcessor(sr))
 	unaryInterceptor := otelgrpc.UnaryClientInterceptor(otelgrpc.WithTracerProvider(tp))
 
@@ -359,7 +360,7 @@ func newMockClientStream(opts clientStreamOpts) *mockClientStream {
 	return &mockClientStream{msgs: msgs}
 }
 
-func createInterceptedStreamClient(t *testing.T, method string, opts clientStreamOpts) (grpc.ClientStream, *SpanRecorder) {
+func createInterceptedStreamClient(t *testing.T, method string, opts clientStreamOpts) (grpc.ClientStream, *tracetest.SpanRecorder) {
 	mockStream := newMockClientStream(opts)
 	clientConn, err := grpc.Dial("fake:connection", grpc.WithInsecure())
 	if err != nil {
@@ -368,7 +369,7 @@ func createInterceptedStreamClient(t *testing.T, method string, opts clientStrea
 	defer clientConn.Close()
 
 	// tracer
-	sr := NewSpanRecorder()
+	sr := tracetest.NewSpanRecorder()
 	tp := trace.NewTracerProvider(trace.WithSpanProcessor(sr))
 	streamCI := otelgrpc.StreamClientInterceptor(otelgrpc.WithTracerProvider(tp))
 
@@ -533,7 +534,7 @@ func TestStreamClientInterceptorCancelContext(t *testing.T) {
 	defer clientConn.Close()
 
 	// tracer
-	sr := NewSpanRecorder()
+	sr := tracetest.NewSpanRecorder()
 	tp := trace.NewTracerProvider(trace.WithSpanProcessor(sr))
 	streamCI := otelgrpc.StreamClientInterceptor(otelgrpc.WithTracerProvider(tp))
 
@@ -586,7 +587,7 @@ func TestStreamClientInterceptorWithError(t *testing.T) {
 	defer clientConn.Close()
 
 	// tracer
-	sr := NewSpanRecorder()
+	sr := tracetest.NewSpanRecorder()
 	tp := trace.NewTracerProvider(trace.WithSpanProcessor(sr))
 	streamCI := otelgrpc.StreamClientInterceptor(otelgrpc.WithTracerProvider(tp))
 
@@ -627,7 +628,7 @@ func TestStreamClientInterceptorWithError(t *testing.T) {
 }
 
 func TestServerInterceptorError(t *testing.T) {
-	sr := NewSpanRecorder()
+	sr := tracetest.NewSpanRecorder()
 	tp := trace.NewTracerProvider(trace.WithSpanProcessor(sr))
 	usi := otelgrpc.UnaryServerInterceptor(otelgrpc.WithTracerProvider(tp))
 	deniedErr := status.Error(grpc_codes.PermissionDenied, "PERMISSION_DENIED_TEXT")

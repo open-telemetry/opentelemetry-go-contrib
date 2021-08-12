@@ -30,6 +30,7 @@ import (
 	"go.opentelemetry.io/contrib/instrumentation/google.golang.org/grpc/otelgrpc"
 	"go.opentelemetry.io/otel/attribute"
 	"go.opentelemetry.io/otel/sdk/trace"
+	"go.opentelemetry.io/otel/sdk/trace/tracetest"
 	semconv "go.opentelemetry.io/otel/semconv/v1.4.0"
 )
 
@@ -74,16 +75,16 @@ func doCalls(cOpt []grpc.DialOption, sOpt []grpc.ServerOption) error {
 }
 
 func TestInterceptors(t *testing.T) {
-	clientUnarySR := NewSpanRecorder()
+	clientUnarySR := tracetest.NewSpanRecorder()
 	clientUnaryTP := trace.NewTracerProvider(trace.WithSpanProcessor(clientUnarySR))
 
-	clientStreamSR := NewSpanRecorder()
+	clientStreamSR := tracetest.NewSpanRecorder()
 	clientStreamTP := trace.NewTracerProvider(trace.WithSpanProcessor(clientStreamSR))
 
-	serverUnarySR := NewSpanRecorder()
+	serverUnarySR := tracetest.NewSpanRecorder()
 	serverUnaryTP := trace.NewTracerProvider(trace.WithSpanProcessor(serverUnarySR))
 
-	serverStreamSR := NewSpanRecorder()
+	serverStreamSR := tracetest.NewSpanRecorder()
 	serverStreamTP := trace.NewTracerProvider(trace.WithSpanProcessor(serverStreamSR))
 
 	assert.NoError(t, doCalls(
