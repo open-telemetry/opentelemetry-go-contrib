@@ -16,6 +16,10 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 
 - Fix span not marked as error in `otelhttp.Transport` when `RoundTrip` fails with an error. (#950)
 
+### Added
+
+- Add optional AWS X-Ray configuration module for AWS Lambda Instrumentation (#930)
+
 ## [0.22.0] - 2021-07-26
 
 ### Added
