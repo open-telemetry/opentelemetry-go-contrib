@@ -16,12 +16,15 @@ package otelhttp
 
 import (
 	"bytes"
+	"context"
 	"fmt"
 	"io/ioutil"
 	"net/http"
 	"net/http/httptest"
+	"strings"
 	"testing"
 
+	"go.opentelemetry.io/otel/codes"
 	"go.opentelemetry.io/otel/oteltest"
 	"go.opentelemetry.io/otel/propagation"
 	"go.opentelemetry.io/otel/trace"
@@ -242,4 +245,100 @@ func TestTransportUsesFormatter(t *testing.T) {
 		t.Fatalf("unexpected name: got %s, expected %s", spanName, expectedName)
 	}
 
+}
+
+func TestTransportErrorStatus(t *testing.T) {
+	// Prepare tracing stuff.
+	spanRecorder := new(oteltest.SpanRecorder)
+	provider := oteltest.NewTracerProvider(
+		oteltest.WithSpanRecorder(spanRecorder),
+	)
+
+	// Run a server and stop to make sure nothing is listening and force the error.
+	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {}))
+	server.Close()
+
+	// Create our Transport and make request.
+	tr := NewTransport(
+		http.DefaultTransport,
+		WithTracerProvider(provider),
+	)
+	c := http.Client{Transport: tr}
+	r, err := http.NewRequest(http.MethodGet, server.URL, nil)
+	if err != nil {
+		t.Fatal(err)
+	}
+	_, err = c.Do(r)
+	if err == nil {
+		t.Fatal("transport should have returned an error, it didn't")
+	}
+
+	// Check span.
+	gotSpans := spanRecorder.Completed()
+	if len(gotSpans) != 1 {
+		t.Fatalf("expected 1 span; got: %d", len(gotSpans))
+	}
+
+	spanEnded := gotSpans[0].Ended()
+	if !spanEnded {
+		t.Errorf("span should be ended; it isn't")
+	}
+
+	spanStatusCode := gotSpans[0].StatusCode()
+	if spanStatusCode != codes.Error {
+		t.Errorf("expected error status code on span; got: %q", spanStatusCode)
+	}
+
+	spanStatusMessage := gotSpans[0].StatusMessage()
+	if !strings.Contains(spanStatusMessage, "connect: connection refused") {
+		t.Errorf("expected error status message on span; got: %q", spanStatusMessage)
+	}
+}
+
+type testErrorReadCloser struct{}
+
+func (testErrorReadCloser) Read(p []byte) (n int, err error) { return 0, fmt.Errorf("something") }
+func (testErrorReadCloser) Close() error                     { return nil }
+
+func TestWrappedBodyReadErrorStatus(t *testing.T) {
+	// Prepare tracing stuff.
+	spanRecorder := new(oteltest.SpanRecorder)
+	provider := oteltest.NewTracerProvider(
+		oteltest.WithSpanRecorder(spanRecorder),
+	)
+	tracer := provider.Tracer("")
+	ctx := context.Background()
+	_, span := tracer.Start(ctx, "test")
+
+	// Create our wrapper.
+	wb := wrappedBody{
+		span: span,
+		body: testErrorReadCloser{},
+	}
+	_, err := wb.Read([]byte{})
+	if err == nil {
+		t.Fatalf("expected error while reading")
+	}
+	wb.Close()
+
+	// Check span.
+	gotSpans := spanRecorder.Completed()
+	if len(gotSpans) != 1 {
+		t.Fatalf("expected 1 span; got: %d", len(gotSpans))
+	}
+
+	spanEnded := gotSpans[0].Ended()
+	if !spanEnded {
+		t.Errorf("span should be ended; it isn't")
+	}
+
+	spanStatusCode := gotSpans[0].StatusCode()
+	if spanStatusCode != codes.Error {
+		t.Errorf("expected error status code on span; got: %q", spanStatusCode)
+	}
+
+	spanStatusMessage := gotSpans[0].StatusMessage()
+	if !strings.Contains(spanStatusMessage, "something") {
+		t.Errorf("expected error status message on span; got: %q", spanStatusMessage)
+	}
 }
