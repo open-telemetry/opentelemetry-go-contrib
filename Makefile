@@ -24,7 +24,7 @@ endif
 GO = go
 GOTEST_MIN = go test -v -timeout 30s
 GOTEST = $(GOTEST_MIN) -race
-GOTEST_WITH_COVERAGE = $(GOTEST) -coverprofile=coverage.out -covermode=atomic -coverpkg=./...
+GOTEST_WITH_COVERAGE = $(GOTEST) -coverprofile=coverage.out -covermode=atomic -coverpkg=go.opentelemetry.io/contrib/...
 
 .DEFAULT_GOAL := precommit
 
