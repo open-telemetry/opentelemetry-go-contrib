@@ -15,7 +15,6 @@
 package test
 
 import (
-	"fmt"
 	"net/http"
 	"net/http/httptest"
 	"strings"
@@ -23,97 +22,23 @@ import (
 
 	"go.opentelemetry.io/contrib/instrumentation/net/http/otelhttp"
 	"go.opentelemetry.io/otel/codes"
-	"go.opentelemetry.io/otel/oteltest"
 	"go.opentelemetry.io/otel/propagation"
+	sdktrace "go.opentelemetry.io/otel/sdk/trace"
+	"go.opentelemetry.io/otel/sdk/trace/tracetest"
 	"go.opentelemetry.io/otel/trace"
 )
 
-func TestTransportFormatter(t *testing.T) {
-	var httpMethods = []struct {
-		name     string
-		method   string
-		expected string
-	}{
-		{
-			"GET method",
-			http.MethodGet,
-			"HTTP GET",
-		},
-		{
-			"HEAD method",
-			http.MethodHead,
-			"HTTP HEAD",
-		},
-		{
-			"POST method",
-			http.MethodPost,
-			"HTTP POST",
-		},
-		{
-			"PUT method",
-			http.MethodPut,
-			"HTTP PUT",
-		},
-		{
-			"PATCH method",
-			http.MethodPatch,
-			"HTTP PATCH",
-		},
-		{
-			"DELETE method",
-			http.MethodDelete,
-			"HTTP DELETE",
-		},
-		{
-			"CONNECT method",
-			http.MethodConnect,
-			"HTTP CONNECT",
-		},
-		{
-			"OPTIONS method",
-			http.MethodOptions,
-			"HTTP OPTIONS",
-		},
-		{
-			"TRACE method",
-			http.MethodTrace,
-			"HTTP TRACE",
-		},
-	}
-
-	for _, tc := range httpMethods {
-		t.Run(tc.name, func(t *testing.T) {
-			r, err := http.NewRequest(tc.method, "http://localhost/", nil)
-			if err != nil {
-				t.Fatal(err)
-			}
-			formattedName := "HTTP " + r.Method
-
-			if formattedName != tc.expected {
-				t.Fatalf("unexpected name: got %s, expected %s", formattedName, tc.expected)
-			}
-		})
-	}
-
-}
-
 func TestTransportUsesFormatter(t *testing.T) {
 	prop := propagation.TraceContext{}
-	spanRecorder := new(oteltest.SpanRecorder)
-	provider := oteltest.NewTracerProvider(
-		oteltest.WithSpanRecorder(spanRecorder),
-	)
+	spanRecorder := tracetest.NewSpanRecorder()
+	provider := sdktrace.NewTracerProvider(sdktrace.WithSpanProcessor(spanRecorder))
 	content := []byte("Hello, world!")
 
 	ts := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		ctx := prop.Extract(r.Context(), propagation.HeaderCarrier(r.Header))
 		span := trace.SpanContextFromContext(ctx)
-		tgtID, err := trace.SpanIDFromHex(fmt.Sprintf("%016x", uint(2)))
-		if err != nil {
-			t.Fatalf("Error converting id to SpanID: %s", err.Error())
-		}
-		if span.SpanID() != tgtID {
-			t.Fatalf("testing remote SpanID: got %s, expected %s", span.SpanID(), tgtID)
+		if !span.IsValid() {
+			t.Fatalf("invalid span wrapping handler: %#v", span)
 		}
 		if _, err := w.Write(content); err != nil {
 			t.Fatal(err)
@@ -139,7 +64,7 @@ func TestTransportUsesFormatter(t *testing.T) {
 	}
 	res.Body.Close()
 
-	spans := spanRecorder.Completed()
+	spans := spanRecorder.Ended()
 	spanName := spans[0].Name()
 	expectedName := "HTTP GET"
 	if spanName != expectedName {
@@ -150,10 +75,8 @@ func TestTransportUsesFormatter(t *testing.T) {
 
 func TestTransportErrorStatus(t *testing.T) {
 	// Prepare tracing stuff.
-	spanRecorder := new(oteltest.SpanRecorder)
-	provider := oteltest.NewTracerProvider(
-		oteltest.WithSpanRecorder(spanRecorder),
-	)
+	spanRecorder := tracetest.NewSpanRecorder()
+	provider := sdktrace.NewTracerProvider(sdktrace.WithSpanProcessor(spanRecorder))
 
 	// Run a server and stop to make sure nothing is listening and force the error.
 	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {}))
@@ -175,23 +98,21 @@ func TestTransportErrorStatus(t *testing.T) {
 	}
 
 	// Check span.
-	gotSpans := spanRecorder.Completed()
-	if len(gotSpans) != 1 {
-		t.Fatalf("expected 1 span; got: %d", len(gotSpans))
+	spans := spanRecorder.Ended()
+	if len(spans) != 1 {
+		t.Fatalf("expected 1 span; got: %d", len(spans))
 	}
+	span := spans[0]
 
-	spanEnded := gotSpans[0].Ended()
-	if !spanEnded {
+	if span.EndTime().IsZero() {
 		t.Errorf("span should be ended; it isn't")
 	}
 
-	spanStatusCode := gotSpans[0].StatusCode()
-	if spanStatusCode != codes.Error {
-		t.Errorf("expected error status code on span; got: %q", spanStatusCode)
+	if got := span.Status().Code; got != codes.Error {
+		t.Errorf("expected error status code on span; got: %q", got)
 	}
 
-	spanStatusMessage := gotSpans[0].StatusMessage()
-	if !strings.Contains(spanStatusMessage, "connect: connection refused") {
-		t.Errorf("expected error status message on span; got: %q", spanStatusMessage)
+	if got := span.Status().Description; !strings.Contains(got, "connect: connection refused") {
+		t.Errorf("expected error status message on span; got: %q", got)
 	}
 }

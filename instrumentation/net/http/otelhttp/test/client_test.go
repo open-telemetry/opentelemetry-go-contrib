@@ -26,12 +26,13 @@ import (
 	"github.com/stretchr/testify/require"
 
 	"go.opentelemetry.io/contrib/instrumentation/net/http/otelhttp"
-	"go.opentelemetry.io/otel/oteltest"
+	"go.opentelemetry.io/otel/sdk/trace"
+	"go.opentelemetry.io/otel/sdk/trace/tracetest"
 )
 
 func TestConvenienceWrappers(t *testing.T) {
-	sr := new(oteltest.SpanRecorder)
-	provider := oteltest.NewTracerProvider(oteltest.WithSpanRecorder(sr))
+	sr := tracetest.NewSpanRecorder()
+	provider := trace.NewTracerProvider(trace.WithSpanProcessor(sr))
 	orig := otelhttp.DefaultClient
 	otelhttp.DefaultClient = &http.Client{
 		Transport: otelhttp.NewTransport(
@@ -77,7 +78,7 @@ func TestConvenienceWrappers(t *testing.T) {
 	}
 	res.Body.Close()
 
-	spans := sr.Completed()
+	spans := sr.Ended()
 	require.Equal(t, 4, len(spans))
 	assert.Equal(t, "HTTP GET", spans[0].Name())
 	assert.Equal(t, "HTTP HEAD", spans[1].Name())

@@ -30,6 +30,75 @@ import (
 	"go.opentelemetry.io/otel/trace"
 )
 
+func TestTransportFormatter(t *testing.T) {
+	var httpMethods = []struct {
+		name     string
+		method   string
+		expected string
+	}{
+		{
+			"GET method",
+			http.MethodGet,
+			"HTTP GET",
+		},
+		{
+			"HEAD method",
+			http.MethodHead,
+			"HTTP HEAD",
+		},
+		{
+			"POST method",
+			http.MethodPost,
+			"HTTP POST",
+		},
+		{
+			"PUT method",
+			http.MethodPut,
+			"HTTP PUT",
+		},
+		{
+			"PATCH method",
+			http.MethodPatch,
+			"HTTP PATCH",
+		},
+		{
+			"DELETE method",
+			http.MethodDelete,
+			"HTTP DELETE",
+		},
+		{
+			"CONNECT method",
+			http.MethodConnect,
+			"HTTP CONNECT",
+		},
+		{
+			"OPTIONS method",
+			http.MethodOptions,
+			"HTTP OPTIONS",
+		},
+		{
+			"TRACE method",
+			http.MethodTrace,
+			"HTTP TRACE",
+		},
+	}
+
+	for _, tc := range httpMethods {
+		t.Run(tc.name, func(t *testing.T) {
+			r, err := http.NewRequest(tc.method, "http://localhost/", nil)
+			if err != nil {
+				t.Fatal(err)
+			}
+			formattedName := "HTTP " + r.Method
+
+			if formattedName != tc.expected {
+				t.Fatalf("unexpected name: got %s, expected %s", formattedName, tc.expected)
+			}
+		})
+	}
+
+}
+
 func TestTransportBasics(t *testing.T) {
 	prop := propagation.TraceContext{}
 	content := []byte("Hello, world!")

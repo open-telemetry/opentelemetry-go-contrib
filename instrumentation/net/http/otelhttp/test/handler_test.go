@@ -28,10 +28,10 @@ import (
 	"go.opentelemetry.io/contrib/instrumentation/net/http/otelhttp"
 	"go.opentelemetry.io/otel/attribute"
 	"go.opentelemetry.io/otel/metric/metrictest"
-	"go.opentelemetry.io/otel/oteltest"
 	"go.opentelemetry.io/otel/propagation"
+	sdktrace "go.opentelemetry.io/otel/sdk/trace"
+	"go.opentelemetry.io/otel/sdk/trace/tracetest"
 	semconv "go.opentelemetry.io/otel/semconv/v1.4.0"
-	"go.opentelemetry.io/otel/trace"
 )
 
 func assertMetricAttributes(t *testing.T, expectedAttributes []attribute.KeyValue, measurementBatches []metrictest.Batch) {
@@ -43,10 +43,9 @@ func assertMetricAttributes(t *testing.T, expectedAttributes []attribute.KeyValu
 func TestHandlerBasics(t *testing.T) {
 	rr := httptest.NewRecorder()
 
-	spanRecorder := new(oteltest.SpanRecorder)
-	provider := oteltest.NewTracerProvider(
-		oteltest.WithSpanRecorder(spanRecorder),
-	)
+	spanRecorder := tracetest.NewSpanRecorder()
+	provider := sdktrace.NewTracerProvider(sdktrace.WithSpanProcessor(spanRecorder))
+
 	meterimpl, meterProvider := metrictest.NewMeterProvider()
 
 	operation := "test_handler"
@@ -92,13 +91,12 @@ func TestHandlerBasics(t *testing.T) {
 		t.Fatal("expected non empty trace header")
 	}
 
-	spans := spanRecorder.Completed()
+	spans := spanRecorder.Ended()
 	if got, expected := len(spans), 1; got != expected {
 		t.Fatalf("got %d spans, expected %d", got, expected)
 	}
-	expectSpanID := trace.SpanID{0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x2} // we expect the span ID to be incremented by one
-	if got, expected := spans[0].SpanContext().SpanID(), expectSpanID; got != expected {
-		t.Fatalf("got %d, expected %d", got, expected)
+	if !spans[0].SpanContext().IsValid() {
+		t.Fatalf("invalid span created: %#v", spans[0].SpanContext())
 	}
 
 	d, err := ioutil.ReadAll(rr.Result().Body)
