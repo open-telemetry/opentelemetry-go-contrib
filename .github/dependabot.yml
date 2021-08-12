@@ -397,6 +397,16 @@ updates:
       day: "sunday"
   -
     package-ecosystem: "gomod"
+    directory: "/instrumentation/net/http/otelhttp/test"
+    labels:
+      - dependencies
+      - go
+      - "Skip Changelog"
+    schedule:
+      interval: "weekly"
+      day: "sunday"
+  -
+    package-ecosystem: "gomod"
     directory: "/instrumentation/net/http/httptrace/otelhttptrace"
     labels:
       - dependencies
