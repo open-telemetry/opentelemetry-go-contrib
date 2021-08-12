@@ -12,7 +12,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package otelhttp
+package test
 
 import (
 	"io"
@@ -23,6 +23,7 @@ import (
 
 	"github.com/stretchr/testify/assert"
 
+	"go.opentelemetry.io/contrib/instrumentation/net/http/otelhttp"
 	"go.opentelemetry.io/otel/oteltest"
 )
 
@@ -34,14 +35,14 @@ func TestBasicFilter(t *testing.T) {
 		oteltest.WithSpanRecorder(spanRecorder),
 	)
 
-	h := NewHandler(
+	h := otelhttp.NewHandler(
 		http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 			if _, err := io.WriteString(w, "hello world"); err != nil {
 				t.Fatal(err)
 			}
 		}), "test_handler",
-		WithTracerProvider(provider),
-		WithFilter(func(r *http.Request) bool {
+		otelhttp.WithTracerProvider(provider),
+		otelhttp.WithFilter(func(r *http.Request) bool {
 			return false
 		}),
 	)
@@ -77,15 +78,19 @@ func TestSpanNameFormatter(t *testing.T) {
 		expected  string
 	}{
 		{
-			name:      "default handler formatter",
-			formatter: defaultHandlerFormatter,
+			name: "default handler formatter",
+			formatter: func(operation string, _ *http.Request) string {
+				return operation
+			},
 			operation: "test_operation",
 			expected:  "test_operation",
 		},
 		{
-			name:      "default transport formatter",
-			formatter: defaultTransportFormatter,
-			expected:  "HTTP GET",
+			name: "default transport formatter",
+			formatter: func(_ string, r *http.Request) string {
+				return "HTTP " + r.Method
+			},
+			expected: "HTTP GET",
 		},
 		{
 			name: "custom formatter",
@@ -110,11 +115,11 @@ func TestSpanNameFormatter(t *testing.T) {
 					t.Fatal(err)
 				}
 			})
-			h := NewHandler(
+			h := otelhttp.NewHandler(
 				handler,
 				tc.operation,
-				WithTracerProvider(provider),
-				WithSpanNameFormatter(tc.formatter),
+				otelhttp.WithTracerProvider(provider),
+				otelhttp.WithSpanNameFormatter(tc.formatter),
 			)
 			r, err := http.NewRequest(http.MethodGet, "http://localhost/hello", nil)
 			if err != nil {

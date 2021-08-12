@@ -12,7 +12,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package otelhttp
+package test
 
 import (
 	"context"
@@ -25,20 +25,21 @@ import (
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 
+	"go.opentelemetry.io/contrib/instrumentation/net/http/otelhttp"
 	"go.opentelemetry.io/otel/oteltest"
 )
 
 func TestConvenienceWrappers(t *testing.T) {
 	sr := new(oteltest.SpanRecorder)
 	provider := oteltest.NewTracerProvider(oteltest.WithSpanRecorder(sr))
-	orig := DefaultClient
-	DefaultClient = &http.Client{
-		Transport: NewTransport(
+	orig := otelhttp.DefaultClient
+	otelhttp.DefaultClient = &http.Client{
+		Transport: otelhttp.NewTransport(
 			http.DefaultTransport,
-			WithTracerProvider(provider),
+			otelhttp.WithTracerProvider(provider),
 		),
 	}
-	defer func() { DefaultClient = orig }()
+	defer func() { otelhttp.DefaultClient = orig }()
 
 	content := []byte("Hello, world!")
 
@@ -50,19 +51,19 @@ func TestConvenienceWrappers(t *testing.T) {
 	defer ts.Close()
 
 	ctx := context.Background()
-	res, err := Get(ctx, ts.URL)
+	res, err := otelhttp.Get(ctx, ts.URL)
 	if err != nil {
 		t.Fatal(err)
 	}
 	res.Body.Close()
 
-	res, err = Head(ctx, ts.URL)
+	res, err = otelhttp.Head(ctx, ts.URL)
 	if err != nil {
 		t.Fatal(err)
 	}
 	res.Body.Close()
 
-	res, err = Post(ctx, ts.URL, "text/plain", strings.NewReader("test"))
+	res, err = otelhttp.Post(ctx, ts.URL, "text/plain", strings.NewReader("test"))
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -70,7 +71,7 @@ func TestConvenienceWrappers(t *testing.T) {
 
 	form := make(url.Values)
 	form.Set("foo", "bar")
-	res, err = PostForm(ctx, ts.URL, form)
+	res, err = otelhttp.PostForm(ctx, ts.URL, form)
 	if err != nil {
 		t.Fatal(err)
 	}
