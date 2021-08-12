@@ -249,7 +249,6 @@ func TestTransportUsesFormatter(t *testing.T) {
 
 func TestTransportErrorStatus(t *testing.T) {
 	// Prepare tracing stuff.
-	prop := propagation.TraceContext{}
 	spanRecorder := new(oteltest.SpanRecorder)
 	provider := oteltest.NewTracerProvider(
 		oteltest.WithSpanRecorder(spanRecorder),
@@ -263,7 +262,6 @@ func TestTransportErrorStatus(t *testing.T) {
 	tr := NewTransport(
 		http.DefaultTransport,
 		WithTracerProvider(provider),
-		WithPropagators(prop),
 	)
 	c := http.Client{Transport: tr}
 	r, err := http.NewRequest(http.MethodGet, server.URL, nil)
@@ -283,17 +281,17 @@ func TestTransportErrorStatus(t *testing.T) {
 
 	spanEnded := gotSpans[0].Ended()
 	if !spanEnded {
-		t.Fatalf("span should be ended; it isn't")
+		t.Errorf("span should be ended; it isn't")
 	}
 
 	spanStatusCode := gotSpans[0].StatusCode()
 	if spanStatusCode != codes.Error {
-		t.Fatalf("expected error status code on span; got: %q", spanStatusCode)
+		t.Errorf("expected error status code on span; got: %q", spanStatusCode)
 	}
 
 	spanStatusMessage := gotSpans[0].StatusMessage()
 	if !strings.Contains(spanStatusMessage, "connect: connection refused") {
-		t.Fatalf("expected error status message on span; got: %q", spanStatusMessage)
+		t.Errorf("expected error status message on span; got: %q", spanStatusMessage)
 	}
 }
 
@@ -331,16 +329,16 @@ func TestWrappedBodyReadErrorStatus(t *testing.T) {
 
 	spanEnded := gotSpans[0].Ended()
 	if !spanEnded {
-		t.Fatalf("span should be ended; it isn't")
+		t.Errorf("span should be ended; it isn't")
 	}
 
 	spanStatusCode := gotSpans[0].StatusCode()
 	if spanStatusCode != codes.Error {
-		t.Fatalf("expected error status code on span; got: %q", spanStatusCode)
+		t.Errorf("expected error status code on span; got: %q", spanStatusCode)
 	}
 
 	spanStatusMessage := gotSpans[0].StatusMessage()
 	if !strings.Contains(spanStatusMessage, "something") {
-		t.Fatalf("expected error status message on span; got: %q", spanStatusMessage)
+		t.Errorf("expected error status message on span; got: %q", spanStatusMessage)
 	}
 }
