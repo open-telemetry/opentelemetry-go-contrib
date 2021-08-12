@@ -25,11 +25,6 @@ import (
 	"go.opentelemetry.io/otel/sdk/trace"
 )
 
-const (
-	defaultPollingInterval = time.Minute
-	defaultSamplingRate    = 0.001
-)
-
 type sampler struct {
 	pollingInterval time.Duration
 

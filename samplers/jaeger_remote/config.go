@@ -16,6 +16,11 @@ package jaeger_remote // import "go.opentelemetry.io/contrib/samplers/jaeger_rem
 
 import "time"
 
+const (
+	defaultPollingInterval = time.Minute
+	defaultSamplingRate    = 0.001
+)
+
 type config struct {
 	service             string
 	endpoint            string
@@ -26,7 +31,7 @@ type config struct {
 func defaultConfig() *config {
 	return &config{
 		service:             "",
-		endpoint:            "localhost:5778",
+		endpoint:            "http://localhost:5778",
 		pollingInterval:     defaultPollingInterval,
 		initialSamplingRate: defaultSamplingRate,
 	}
@@ -50,18 +55,24 @@ func WithService(service string) Option {
 	})
 }
 
+// WithEndpoint sets the endpoint to retrieve the sampling strategy from.
+// Defaults to http://localhost:5778
 func WithEndpoint(endpoint string) Option {
 	return optionFunc(func(config *config) {
 		config.endpoint = endpoint
 	})
 }
 
+// WithPollingInterval sets the interval to poll for the sampling strategy
+// file. Defaults to 1 minute.
 func WithPollingInterval(pollingInterval time.Duration) Option {
 	return optionFunc(func(config *config) {
 		config.pollingInterval = pollingInterval
 	})
 }
 
+// WithInitialSamplingRate sets the sampling rate the sampler starts with,
+// before it has fetched the strategy file. Defaults to 0.001.
 func WithInitialSamplingRate(initialSamplingRate float64) Option {
 	return optionFunc(func(config *config) {
 		config.initialSamplingRate = initialSamplingRate
