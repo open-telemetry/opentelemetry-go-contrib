@@ -8,6 +8,14 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 
 ## [Unreleased]
 
+### Changed
+
+- `otelmongodb` span attributes, name and span status now conform to specification. (#769)
+
+### Fixed
+
+- Fix span not marked as error in `otelhttp.Transport` when `RoundTrip` fails with an error. (#950)
+
 ## [0.22.0] - 2021-07-26
 
 ### Added

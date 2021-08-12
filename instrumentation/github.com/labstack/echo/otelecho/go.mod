@@ -8,7 +8,7 @@ replace (
 )
 
 require (
-	github.com/labstack/echo/v4 v4.4.0
+	github.com/labstack/echo/v4 v4.5.0
 	github.com/stretchr/testify v1.7.0
 	go.opentelemetry.io/contrib v0.22.0
 	go.opentelemetry.io/contrib/propagators v0.22.0
