@@ -5,7 +5,6 @@ go 1.15
 replace (
 	go.opentelemetry.io/contrib => ../../../../../../
 	go.opentelemetry.io/contrib/instrumentation/github.com/gorilla/mux/otelmux => ../
-	go.opentelemetry.io/contrib/propagators => ../../../../../../propagators
 )
 
 require (

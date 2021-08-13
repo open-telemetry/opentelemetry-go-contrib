@@ -2,10 +2,7 @@ module go.opentelemetry.io/contrib/instrumentation/github.com/aws/aws-sdk-go-v2/
 
 go 1.15
 
-replace (
-	go.opentelemetry.io/contrib => ../../../../../
-	go.opentelemetry.io/contrib/propagators => ../../../../../propagators
-)
+replace go.opentelemetry.io/contrib => ../../../../../
 
 require (
 	github.com/aws/aws-sdk-go-v2 v1.2.0
