@@ -21,83 +21,13 @@ import (
 	"testing"
 
 	"github.com/stretchr/testify/assert"
-	"github.com/stretchr/testify/require"
 	"gopkg.in/macaron.v1"
 
 	b3prop "go.opentelemetry.io/contrib/propagators/b3"
 	"go.opentelemetry.io/otel"
-	"go.opentelemetry.io/otel/attribute"
-	"go.opentelemetry.io/otel/oteltest"
 	"go.opentelemetry.io/otel/propagation"
 	oteltrace "go.opentelemetry.io/otel/trace"
 )
-
-func TestChildSpanFromGlobalTracer(t *testing.T) {
-	otel.SetTracerProvider(oteltest.NewTracerProvider())
-
-	m := macaron.Classic()
-	m.Use(Middleware("foobar"))
-	m.Get("/user/:id", func(ctx *macaron.Context) {
-		span := oteltrace.SpanFromContext(ctx.Req.Request.Context())
-		_, ok := span.(*oteltest.Span)
-		assert.True(t, ok)
-		ctx.Resp.WriteHeader(http.StatusOK)
-	})
-
-	r := httptest.NewRequest("GET", "/user/123", nil)
-	w := httptest.NewRecorder()
-
-	m.ServeHTTP(w, r)
-}
-
-func TestChildSpanNames(t *testing.T) {
-	sr := new(oteltest.SpanRecorder)
-	tp := oteltest.NewTracerProvider(oteltest.WithSpanRecorder(sr))
-
-	m := macaron.Classic()
-	m.Use(Middleware("foobar", WithTracerProvider(tp)))
-	m.Get("/user/:id", func(ctx *macaron.Context) {
-		ctx.Resp.WriteHeader(http.StatusOK)
-	})
-	m.Get("/book/:title", func(ctx *macaron.Context) {
-		_, err := ctx.Resp.Write(([]byte)("ok"))
-		if err != nil {
-			t.Error(err)
-		}
-	})
-
-	r := httptest.NewRequest("GET", "/user/123", nil)
-	w := httptest.NewRecorder()
-	m.ServeHTTP(w, r)
-
-	r = httptest.NewRequest("GET", "/book/foo", nil)
-	w = httptest.NewRecorder()
-	m.ServeHTTP(w, r)
-
-	spans := sr.Completed()
-	require.Len(t, spans, 2)
-	span := spans[0]
-	assert.Equal(t, "/user/123", span.Name()) // TODO: span name should show router template, eg /user/:id
-	assert.Equal(t, oteltrace.SpanKindServer, span.SpanKind())
-	attrs := span.Attributes()
-	assert.Equal(t, attribute.StringValue("foobar"), attrs["http.server_name"])
-	assert.Equal(t, attribute.IntValue(http.StatusOK), attrs["http.status_code"])
-	assert.Equal(t, attribute.StringValue("GET"), attrs["http.method"])
-	assert.Equal(t, attribute.StringValue("/user/123"), attrs["http.target"])
-	// TODO: span name should show router template, eg /user/:id
-	//assert.Equal(t, attribute.StringValue("/user/:id"), span.Attributes["http.route"])
-
-	span = spans[1]
-	assert.Equal(t, "/book/foo", span.Name()) // TODO: span name should show router template, eg /book/:title
-	assert.Equal(t, oteltrace.SpanKindServer, span.SpanKind())
-	attrs = span.Attributes()
-	assert.Equal(t, attribute.StringValue("foobar"), attrs["http.server_name"])
-	assert.Equal(t, attribute.IntValue(http.StatusOK), attrs["http.status_code"])
-	assert.Equal(t, attribute.StringValue("GET"), attrs["http.method"])
-	assert.Equal(t, attribute.StringValue("/book/foo"), attrs["http.target"])
-	// TODO: span name should show router template, eg /book/:title
-	//assert.Equal(t, attribute.StringValue("/book/:title"), span.Attributes["http.route"])
-}
 
 func TestGetSpanNotInstrumented(t *testing.T) {
 	m := macaron.Classic()
