@@ -227,9 +227,7 @@ func TestConcurrentConnectionStart(t *testing.T) {
 
 			var gotRemotes []attribute.KeyValue
 			for _, span := range spans {
-				for _, a := range span.Attributes() {
-					gotRemotes = append(gotRemotes, a)
-				}
+				gotRemotes = append(gotRemotes, span.Attributes()...)
 			}
 			assert.ElementsMatch(t, expectedRemotes, gotRemotes)
 		})
