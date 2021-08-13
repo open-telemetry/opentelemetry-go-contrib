@@ -32,6 +32,7 @@ import (
 	"go.opentelemetry.io/otel/codes"
 	"go.opentelemetry.io/otel/oteltest"
 	"go.opentelemetry.io/otel/propagation"
+	"go.opentelemetry.io/otel/trace"
 
 	b3prop "go.opentelemetry.io/contrib/propagators/b3"
 	"go.opentelemetry.io/otel/attribute"
@@ -177,24 +178,27 @@ func TestGetSpanNotInstrumented(t *testing.T) {
 }
 
 func TestPropagationWithGlobalPropagators(t *testing.T) {
-	sr := new(oteltest.SpanRecorder)
-	provider := oteltest.NewTracerProvider(oteltest.WithSpanRecorder(sr))
+	provider := trace.NewNoopTracerProvider()
 	otel.SetTextMapPropagator(propagation.TraceContext{})
 
 	r := httptest.NewRequest("GET", "/user/123", nil)
 	w := httptest.NewRecorder()
 
-	ctx, pspan := provider.Tracer(tracerName).Start(context.Background(), "test")
+	ctx := context.Background()
+	sc := trace.NewSpanContext(trace.SpanContextConfig{
+		TraceID: trace.TraceID{0x01},
+		SpanID:  trace.SpanID{0x01},
+	})
+	ctx = trace.ContextWithRemoteSpanContext(ctx, sc)
+	ctx, _ = provider.Tracer(tracerName).Start(ctx, "test")
 	otel.GetTextMapPropagator().Inject(ctx, propagation.HeaderCarrier(r.Header))
 
 	router := echo.New()
 	router.Use(Middleware("foobar", WithTracerProvider(provider)))
 	router.GET("/user/:id", func(c echo.Context) error {
 		span := oteltrace.SpanFromContext(c.Request().Context())
-		mspan, ok := span.(*oteltest.Span)
-		require.True(t, ok)
-		assert.Equal(t, pspan.SpanContext().TraceID(), mspan.SpanContext().TraceID())
-		assert.Equal(t, pspan.SpanContext().SpanID(), mspan.ParentSpanID())
+		assert.Equal(t, sc.TraceID(), span.SpanContext().TraceID())
+		assert.Equal(t, sc.SpanID(), span.SpanContext().SpanID())
 		return c.NoContent(200)
 	})
 
@@ -204,25 +208,28 @@ func TestPropagationWithGlobalPropagators(t *testing.T) {
 }
 
 func TestPropagationWithCustomPropagators(t *testing.T) {
-	sr := new(oteltest.SpanRecorder)
-	provider := oteltest.NewTracerProvider(oteltest.WithSpanRecorder(sr))
+	provider := trace.NewNoopTracerProvider()
 
 	b3 := b3prop.New()
 
 	r := httptest.NewRequest("GET", "/user/123", nil)
 	w := httptest.NewRecorder()
 
-	ctx, pspan := provider.Tracer(tracerName).Start(context.Background(), "test")
+	ctx := context.Background()
+	sc := trace.NewSpanContext(trace.SpanContextConfig{
+		TraceID: trace.TraceID{0x01},
+		SpanID:  trace.SpanID{0x01},
+	})
+	ctx = trace.ContextWithRemoteSpanContext(ctx, sc)
+	ctx, _ = provider.Tracer(tracerName).Start(ctx, "test")
 	b3.Inject(ctx, propagation.HeaderCarrier(r.Header))
 
 	router := echo.New()
 	router.Use(Middleware("foobar", WithTracerProvider(provider), WithPropagators(b3)))
 	router.GET("/user/:id", func(c echo.Context) error {
 		span := oteltrace.SpanFromContext(c.Request().Context())
-		mspan, ok := span.(*oteltest.Span)
-		require.True(t, ok)
-		assert.Equal(t, pspan.SpanContext().TraceID(), mspan.SpanContext().TraceID())
-		assert.Equal(t, pspan.SpanContext().SpanID(), mspan.ParentSpanID())
+		assert.Equal(t, sc.TraceID(), span.SpanContext().TraceID())
+		assert.Equal(t, sc.SpanID(), span.SpanContext().SpanID())
 		return c.NoContent(200)
 	})
 
