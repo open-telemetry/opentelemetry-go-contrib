@@ -154,12 +154,6 @@ func TestSpecifyPropagators(t *testing.T) {
 	defer ts.Close()
 
 	client := ts.Client()
-	ctx := context.Background()
-	sc := trace.NewSpanContext(trace.SpanContextConfig{
-		TraceID: trace.TraceID{0x01},
-		SpanID:  trace.SpanID{0x01},
-	})
-	ctx = trace.ContextWithRemoteSpanContext(ctx, sc)
 	err := func(ctx context.Context) error {
 		ctx, span := tr.Start(ctx, "test")
 		defer span.End()
