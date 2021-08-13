@@ -10,8 +10,8 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 
 ### Added
 
-- Add instrumentation for the `github.com/aws/aws-lambda-go` package. (#882)
-- Add resource detector for AWS Lambda. (#882)
+- Add instrumentation for the `github.com/aws/aws-lambda-go` package. (#983)
+- Add resource detector for AWS Lambda. (#983)
 
 ### Changed
 
