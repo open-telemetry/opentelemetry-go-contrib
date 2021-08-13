@@ -9,7 +9,7 @@ import (
 	"github.com/stretchr/testify/assert"
 )
 
-func Test_samplingStrategyFetcher_Fetch(t *testing.T) {
+func Test_samplingStrategyFetcherImpl_Fetch(t *testing.T) {
 	tests := []struct {
 		name               string
 		responseStatusCode int

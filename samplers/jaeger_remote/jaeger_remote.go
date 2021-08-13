@@ -29,6 +29,7 @@ type sampler struct {
 	pollingInterval time.Duration
 
 	fetcher samplingStrategyFetcher
+	parser  samplingStrategyParser
 
 	sync.RWMutex
 	lastStrategyResponse jaeger_api_v2.SamplingStrategyResponse
@@ -57,23 +58,29 @@ func (s *sampler) pollSamplingStrategies() {
 	}
 }
 
-// updateSamplingStrategies fetches the sampling strategy from backend server.
+// updateSamplingStrategies fetches the sampling strategy from backend server
+// and updates the sampler if it has changed.
 // This function is called automatically on a timer.
 func (s *sampler) updateSamplingStrategies() error {
-	strategies, err := s.fetcher.Fetch()
+	strategyResponse, err := s.fetcher.Fetch()
 	if err != nil {
 		return fmt.Errorf("fetching failed: %w", err)
 	}
 
-	if !s.hasChanges(strategies) {
+	if !s.hasChanges(strategyResponse) {
 		return nil
 	}
 
-	err = s.loadSamplingStrategies(strategies)
+	sampler, err := s.parser.Parse(strategyResponse)
 	if err != nil {
-		return fmt.Errorf("loading failed: %w", err)
+		return fmt.Errorf("parsing failed: %w", err)
 	}
 
+	s.Lock()
+	defer s.Unlock()
+
+	s.lastStrategyResponse = strategyResponse
+	s.sampler = sampler
 	return nil
 }
 
@@ -85,31 +92,6 @@ func (s *sampler) hasChanges(other jaeger_api_v2.SamplingStrategyResponse) bool 
 		s.lastStrategyResponse.ProbabilisticSampling != other.ProbabilisticSampling ||
 		s.lastStrategyResponse.RateLimitingSampling != other.RateLimitingSampling ||
 		s.lastStrategyResponse.OperationSampling != other.OperationSampling
-}
-
-func (s *sampler) loadSamplingStrategies(strategies jaeger_api_v2.SamplingStrategyResponse) error {
-	// TODO add support for rate limiting
-	if strategies.StrategyType != jaeger_api_v2.SamplingStrategyType_PROBABILISTIC {
-		return fmt.Errorf("only strategy type PROBABILISTC is supported, got %s", strategies.StrategyType)
-	}
-	// TODO add support for per operation sampling
-	if strategies.OperationSampling != nil {
-		return fmt.Errorf("per operation sampling is not supported")
-	}
-
-	// TODO should we implement this validation ourselves?
-	if strategies.ProbabilisticSampling == nil {
-		return fmt.Errorf("strategy is probabilistic, but struct is empty")
-	}
-
-	s.Lock()
-	defer s.Unlock()
-
-	s.lastStrategyResponse = strategies
-
-	s.sampler = trace.TraceIDRatioBased(strategies.ProbabilisticSampling.SamplingRate)
-
-	return nil
 }
 
 // New returns a "go.opentelemetry.io/otel/sdk/trace".Sampler that consults a
@@ -130,6 +112,7 @@ func New(options ...Option) trace.Sampler {
 				Timeout: 10 * time.Second,
 			},
 		},
+		parser:          samplingStrategyParseImpl{},
 		pollingInterval: cfg.pollingInterval,
 		sampler:         trace.TraceIDRatioBased(cfg.initialSamplingRate),
 	}

@@ -22,7 +22,7 @@ import (
 	"go.opentelemetry.io/otel/sdk/trace"
 )
 
-func TestJaegerRemoteSampler_ShouldSample_probabilistic(t *testing.T) {
+func Test_sampler_ShouldSample_probabilistic(t *testing.T) {
 	genProbabilisticStrategy := func(fraction float64) jaeger_api_v2.SamplingStrategyResponse {
 		return jaeger_api_v2.SamplingStrategyResponse{
 			StrategyType: jaeger_api_v2.SamplingStrategyType_PROBABILISTIC,
@@ -35,7 +35,11 @@ func TestJaegerRemoteSampler_ShouldSample_probabilistic(t *testing.T) {
 	jaegerRemoteSampler := New().(*sampler)
 
 	// set fraction to 0, this should drop every trace
-	err := jaegerRemoteSampler.loadSamplingStrategies(genProbabilisticStrategy(0))
+	jaegerRemoteSampler.fetcher = mockStrategyFetcher{
+		response: genProbabilisticStrategy(0),
+	}
+
+	err := jaegerRemoteSampler.updateSamplingStrategies()
 	assert.NoError(t, err)
 
 	traceID := [16]byte{0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1}
@@ -46,7 +50,11 @@ func TestJaegerRemoteSampler_ShouldSample_probabilistic(t *testing.T) {
 	assert.Equal(t, trace.Drop, result.Decision)
 
 	// set fraction to 0, this should sample every trace
-	err = jaegerRemoteSampler.loadSamplingStrategies(genProbabilisticStrategy(1))
+	jaegerRemoteSampler.fetcher = mockStrategyFetcher{
+		response: genProbabilisticStrategy(1),
+	}
+
+	err = jaegerRemoteSampler.updateSamplingStrategies()
 	assert.NoError(t, err)
 
 	traceID = [16]byte{0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 2}
@@ -57,64 +65,25 @@ func TestJaegerRemoteSampler_ShouldSample_probabilistic(t *testing.T) {
 	assert.Equal(t, trace.RecordAndSample, result.Decision)
 }
 
-func TestJaegerRemoteSampler_ShouldSample_rateLimiting(t *testing.T) {
-	rateLimitingStrategy := jaeger_api_v2.SamplingStrategyResponse{
-		StrategyType: jaeger_api_v2.SamplingStrategyType_RATE_LIMITING,
-		RateLimitingSampling: &jaeger_api_v2.RateLimitingSamplingStrategy{
-			MaxTracesPerSecond: 100,
-		},
-	}
-
-	jaegerRemoteSampler := New().(*sampler)
-
-	err := jaegerRemoteSampler.loadSamplingStrategies(rateLimitingStrategy)
-	assert.Error(t, err)
-}
-
-func TestJaegerRemoteSampler_ShouldSample_perOperation(t *testing.T) {
-	perOperationStrategy := jaeger_api_v2.SamplingStrategyResponse{
-		StrategyType: jaeger_api_v2.SamplingStrategyType_PROBABILISTIC,
-		ProbabilisticSampling: &jaeger_api_v2.ProbabilisticSamplingStrategy{
-			SamplingRate: 1,
-		},
-		OperationSampling: &jaeger_api_v2.PerOperationSamplingStrategies{
-			DefaultSamplingProbability: 0.1,
-			PerOperationStrategies: []*jaeger_api_v2.OperationSamplingStrategy{
-				{
-					Operation: "test",
-					ProbabilisticSampling: &jaeger_api_v2.ProbabilisticSamplingStrategy{
-						SamplingRate: 1,
-					},
-				},
-			},
-		},
-	}
-
-	jaegerRemoteSampler := New().(*sampler)
-
-	err := jaegerRemoteSampler.loadSamplingStrategies(perOperationStrategy)
-	assert.Error(t, err)
-}
-
-func TestJaegerRemoteSampler_updateSamplingStrategies(t *testing.T) {
+func Test_sampler_updateSamplingStrategies(t *testing.T) {
 	jaegerRemoteSampler := New().(*sampler)
 
 	defaultSampler := trace.TraceIDRatioBased(defaultSamplingRate)
 	assert.Equal(t, defaultSampler, jaegerRemoteSampler.sampler)
 
 	tests := []struct {
-		name        string
-		strategy    jaeger_api_v2.SamplingStrategyResponse
-		expectedErr string
-		sampler     trace.Sampler
+		name      string
+		strategy  jaeger_api_v2.SamplingStrategyResponse
+		expectErr bool
+		sampler   trace.Sampler
 	}{
 		{
-			name:     "update strategy without changes",
+			name:     "no change, sampler stays the same",
 			strategy: jaeger_api_v2.SamplingStrategyResponse{},
 			sampler:  defaultSampler,
 		},
 		{
-			name: "update strategy with PROBABILISTIC and sampling rate 0.8",
+			name: "new strategy, sampler is updated",
 			strategy: jaeger_api_v2.SamplingStrategyResponse{
 				StrategyType: jaeger_api_v2.SamplingStrategyType_PROBABILISTIC,
 				ProbabilisticSampling: &jaeger_api_v2.ProbabilisticSamplingStrategy{
@@ -124,18 +93,18 @@ func TestJaegerRemoteSampler_updateSamplingStrategies(t *testing.T) {
 			sampler: trace.TraceIDRatioBased(0.8),
 		},
 		{
-			name: "update strategy with RATE_LIMITING",
+			name: "strategy with RATE_LIMITING, update fails and sampler stays the same",
 			strategy: jaeger_api_v2.SamplingStrategyResponse{
 				StrategyType: jaeger_api_v2.SamplingStrategyType_RATE_LIMITING,
 				RateLimitingSampling: &jaeger_api_v2.RateLimitingSamplingStrategy{
 					MaxTracesPerSecond: 100,
 				},
 			},
-			expectedErr: "loading failed: only strategy type PROBABILISTC is supported, got RATE_LIMITING",
-			sampler:     trace.TraceIDRatioBased(0.8),
+			expectErr: true,
+			sampler:   trace.TraceIDRatioBased(0.8),
 		},
 		{
-			name: "update strategy with per operation sampling",
+			name: "strategy with per operation sampling, update fails and sampler stays the same",
 			strategy: jaeger_api_v2.SamplingStrategyResponse{
 				StrategyType: jaeger_api_v2.SamplingStrategyType_PROBABILISTIC,
 				ProbabilisticSampling: &jaeger_api_v2.ProbabilisticSamplingStrategy{
@@ -145,8 +114,8 @@ func TestJaegerRemoteSampler_updateSamplingStrategies(t *testing.T) {
 					DefaultSamplingProbability: 1,
 				},
 			},
-			expectedErr: "loading failed: per operation sampling is not supported",
-			sampler:     trace.TraceIDRatioBased(0.8),
+			expectErr: true,
+			sampler:   trace.TraceIDRatioBased(0.8),
 		},
 	}
 	for _, tt := range tests {
@@ -156,13 +125,12 @@ func TestJaegerRemoteSampler_updateSamplingStrategies(t *testing.T) {
 			}
 
 			err := jaegerRemoteSampler.updateSamplingStrategies()
-			// TODO this feels awkward
-			if tt.expectedErr != "" {
-				assert.EqualError(t, err, tt.expectedErr)
+
+			if tt.expectErr {
+				assert.Error(t, err)
 			} else {
 				assert.NoError(t, err)
 			}
-
 			assert.Equal(t, tt.sampler, jaegerRemoteSampler.sampler)
 		})
 	}
@@ -172,6 +140,8 @@ type mockStrategyFetcher struct {
 	response jaeger_api_v2.SamplingStrategyResponse
 	err      error
 }
+
+var _ samplingStrategyFetcher = mockStrategyFetcher{}
 
 func (m mockStrategyFetcher) Fetch() (jaeger_api_v2.SamplingStrategyResponse, error) {
 	return m.response, m.err

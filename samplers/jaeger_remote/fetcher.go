@@ -36,7 +36,7 @@ type samplingStrategyFetcherImpl struct {
 
 var _ samplingStrategyFetcher = samplingStrategyFetcherImpl{}
 
-func (f samplingStrategyFetcherImpl) Fetch() (s jaeger_api_v2.SamplingStrategyResponse, err error) {
+func (f samplingStrategyFetcherImpl) Fetch() (strategyResponse jaeger_api_v2.SamplingStrategyResponse, err error) {
 	uri := f.endpoint + "?service=" + url.QueryEscape(f.serviceName)
 
 	resp, err := f.httpClient.Get(uri)
@@ -51,9 +51,9 @@ func (f samplingStrategyFetcherImpl) Fetch() (s jaeger_api_v2.SamplingStrategyRe
 	}
 
 	if resp.StatusCode != http.StatusOK {
-		return s, fmt.Errorf("request failed (%d): %s", resp.StatusCode, body)
+		return strategyResponse, fmt.Errorf("request failed (%d): %s", resp.StatusCode, body)
 	}
 
-	err = json.Unmarshal(body, &s)
+	err = json.Unmarshal(body, &strategyResponse)
 	return
 }
