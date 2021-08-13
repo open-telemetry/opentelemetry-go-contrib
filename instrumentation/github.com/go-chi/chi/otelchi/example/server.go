@@ -26,8 +26,10 @@ import (
 	"go.opentelemetry.io/otel"
 	"go.opentelemetry.io/otel/attribute"
 	"go.opentelemetry.io/otel/propagation"
+	semconv "go.opentelemetry.io/otel/semconv/v1.4.0"
 
 	stdout "go.opentelemetry.io/otel/exporters/stdout/stdouttrace"
+	"go.opentelemetry.io/otel/sdk/resource"
 	sdktrace "go.opentelemetry.io/otel/sdk/trace"
 	oteltrace "go.opentelemetry.io/otel/trace"
 )
@@ -67,9 +69,20 @@ func initTracerProvider() *sdktrace.TracerProvider {
 	if err != nil {
 		log.Fatal(err)
 	}
+	res, err := resource.New(
+		context.Background(),
+		resource.WithAttributes(
+			// the service name used to display traces in backends
+			semconv.ServiceNameKey.String("mux-server"),
+		),
+	)
+	if err != nil {
+		log.Fatalf("unable to initialize resource due: %v", err)
+	}
 	return sdktrace.NewTracerProvider(
 		sdktrace.WithSampler(sdktrace.AlwaysSample()),
 		sdktrace.WithBatcher(exporter),
+		sdktrace.WithResource(res),
 	)
 }
 
