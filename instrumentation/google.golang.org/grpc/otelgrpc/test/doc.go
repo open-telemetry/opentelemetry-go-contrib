@@ -12,23 +12,11 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package otelmongo
+/*
+Package test validates the otelgrpc instrumentation with the default SDK.
 
-import "go.opentelemetry.io/otel/attribute"
-
-const (
-	// PeerHostnameKey records the host name of the peer.
-	PeerHostnameKey = attribute.Key("peer.hostname")
-	// PeerPortKey records the port number of the peer.
-	PeerPortKey = attribute.Key("peer.port")
-)
-
-// PeerHostname records the host name of the peer.
-func PeerHostname(peerHostname string) attribute.KeyValue {
-	return PeerHostnameKey.String(peerHostname)
-}
-
-// PeerPort records the port number of the peer.
-func PeerPort(peerport string) attribute.KeyValue {
-	return PeerPortKey.String(peerport)
-}
+This package is in a separate module from the instrumentation it tests to
+isolate the dependency of the default SDK and not impose this as a transitive
+dependency for users.
+*/
+package test

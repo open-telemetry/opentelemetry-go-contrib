@@ -12,13 +12,11 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-// +build tools
+/*
+Package test validates the otelmux instrumentation with the default SDK.
 
-package tools
-
-import (
-	_ "github.com/client9/misspell/cmd/misspell"
-	_ "github.com/golangci/golangci-lint/cmd/golangci-lint"
-	_ "github.com/wadey/gocovmerge"
-	_ "golang.org/x/tools/cmd/stringer"
-)
+This package is in a separate module from the instrumentation it tests to
+isolate the dependency of the default SDK and not impose this as a transitive
+dependency for users.
+*/
+package test
