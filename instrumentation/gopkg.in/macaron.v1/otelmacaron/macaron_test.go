@@ -115,49 +115,58 @@ func TestGetSpanNotInstrumented(t *testing.T) {
 }
 
 func TestPropagationWithGlobalPropagators(t *testing.T) {
-	tracer := oteltest.NewTracerProvider().Tracer("test-tracer")
+	tracer := oteltrace.NewNoopTracerProvider().Tracer("test-tracer")
 	otel.SetTextMapPropagator(propagation.TraceContext{})
+	otel.SetTracerProvider(oteltrace.NewNoopTracerProvider())
 
 	r := httptest.NewRequest("GET", "/user/123", nil)
 	w := httptest.NewRecorder()
 
-	ctx, pspan := tracer.Start(context.Background(), "test")
+	ctx := context.Background()
+	sc := oteltrace.NewSpanContext(oteltrace.SpanContextConfig{
+		TraceID: oteltrace.TraceID{0x01},
+		SpanID:  oteltrace.SpanID{0x01},
+	})
+	ctx = oteltrace.ContextWithRemoteSpanContext(ctx, sc)
+	ctx, _ = tracer.Start(ctx, "test")
 	otel.GetTextMapPropagator().Inject(ctx, propagation.HeaderCarrier(r.Header))
 
 	m := macaron.Classic()
 	m.Use(Middleware("foobar"))
 	m.Get("/user/:id", func(ctx *macaron.Context) {
 		span := oteltrace.SpanFromContext(ctx.Req.Request.Context())
-		mspan, ok := span.(*oteltest.Span)
-		require.True(t, ok)
-		assert.Equal(t, pspan.SpanContext().TraceID(), mspan.SpanContext().TraceID())
-		assert.Equal(t, pspan.SpanContext().SpanID(), mspan.ParentSpanID())
+		assert.Equal(t, sc.TraceID(), span.SpanContext().TraceID())
+		assert.Equal(t, sc.SpanID(), span.SpanContext().SpanID())
 		ctx.Resp.WriteHeader(http.StatusOK)
 	})
 
 	m.ServeHTTP(w, r)
-	otel.SetTextMapPropagator(propagation.NewCompositeTextMapPropagator())
 }
 
 func TestPropagationWithCustomPropagators(t *testing.T) {
-	tp := oteltest.NewTracerProvider()
+	tp := oteltrace.NewNoopTracerProvider()
+	otel.SetTracerProvider(tp)
 	tracer := tp.Tracer("test-tracer")
 	b3 := b3prop.New()
 
 	r := httptest.NewRequest("GET", "/user/123", nil)
 	w := httptest.NewRecorder()
 
-	ctx, pspan := tracer.Start(context.Background(), "test")
+	ctx := context.Background()
+	sc := oteltrace.NewSpanContext(oteltrace.SpanContextConfig{
+		TraceID: oteltrace.TraceID{0x01},
+		SpanID:  oteltrace.SpanID{0x01},
+	})
+	ctx = oteltrace.ContextWithRemoteSpanContext(ctx, sc)
+	ctx, _ = tracer.Start(ctx, "test")
 	b3.Inject(ctx, propagation.HeaderCarrier(r.Header))
 
 	m := macaron.Classic()
 	m.Use(Middleware("foobar", WithTracerProvider(tp), WithPropagators(b3)))
 	m.Get("/user/:id", func(ctx *macaron.Context) {
 		span := oteltrace.SpanFromContext(ctx.Req.Request.Context())
-		mspan, ok := span.(*oteltest.Span)
-		require.True(t, ok)
-		assert.Equal(t, pspan.SpanContext().TraceID(), mspan.SpanContext().TraceID())
-		assert.Equal(t, pspan.SpanContext().SpanID(), mspan.ParentSpanID())
+		assert.Equal(t, sc.TraceID(), span.SpanContext().TraceID())
+		assert.Equal(t, sc.SpanID(), span.SpanContext().SpanID())
 		ctx.Resp.WriteHeader(http.StatusOK)
 	})
 
