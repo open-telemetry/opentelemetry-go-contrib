@@ -24,7 +24,7 @@ endif
 GO = go
 GOTEST_MIN = go test -v -timeout 30s
 GOTEST = $(GOTEST_MIN) -race
-GOTEST_WITH_COVERAGE = $(GOTEST) -coverprofile=coverage.out -covermode=atomic -coverpkg=./...
+GOTEST_WITH_COVERAGE = $(GOTEST) -coverprofile=coverage.out -covermode=atomic -coverpkg=go.opentelemetry.io/contrib/...
 
 .DEFAULT_GOAL := precommit
 
@@ -40,6 +40,10 @@ $(TOOLS_DIR)/misspell: $(TOOLS_MOD_DIR)/go.mod $(TOOLS_MOD_DIR)/go.sum $(TOOLS_M
 	cd $(TOOLS_MOD_DIR) && \
 	go build -o $(TOOLS_DIR)/misspell github.com/client9/misspell/cmd/misspell
 
+$(TOOLS_DIR)/gocovmerge: $(TOOLS_MOD_DIR)/go.mod $(TOOLS_MOD_DIR)/go.sum $(TOOLS_MOD_DIR)/tools.go
+	cd $(TOOLS_MOD_DIR) && \
+	go build -o $(TOOLS_DIR)/gocovmerge github.com/wadey/gocovmerge
+
 $(TOOLS_DIR)/stringer: $(TOOLS_MOD_DIR)/go.mod $(TOOLS_MOD_DIR)/go.sum $(TOOLS_MOD_DIR)/tools.go
 	cd $(TOOLS_MOD_DIR) && \
 	go build -o $(TOOLS_DIR)/stringer golang.org/x/tools/cmd/stringer
@@ -47,7 +51,7 @@ $(TOOLS_DIR)/stringer: $(TOOLS_MOD_DIR)/go.mod $(TOOLS_MOD_DIR)/go.sum $(TOOLS_M
 precommit: dependabot-check license-check generate lint build test
 
 .PHONY: test-with-coverage
-test-with-coverage:
+test-with-coverage: $(TOOLS_DIR)/gocovmerge
 	set -e; \
 	printf "" > coverage.txt; \
 	for dir in $(ALL_COVERAGE_MOD_DIRS); do \
@@ -55,9 +59,8 @@ test-with-coverage:
 	  (cd "$${dir}" && \
 	    $(GOTEST_WITH_COVERAGE) ./... && \
 	    go tool cover -html=coverage.out -o coverage.html); \
-	  [ -f "$${dir}/coverage.out" ] && cat "$${dir}/coverage.out" >> coverage.txt; \
 	done; \
-	sed -i.bak -e '2,$$ { /^mode: /d; }' coverage.txt && rm coverage.txt.bak
+	$(TOOLS_DIR)/gocovmerge $$(find . -name coverage.out) > coverage.txt
 
 .PHONY: ci
 ci: precommit check-clean-work-tree test-with-coverage test-386
