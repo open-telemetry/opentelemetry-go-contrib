@@ -8,10 +8,11 @@ replace (
 )
 
 require (
-	github.com/aws/aws-sdk-go-v2 v1.2.0
+	github.com/aws/aws-sdk-go-v2 v1.8.0
 	github.com/aws/aws-sdk-go-v2/config v1.1.1
-	github.com/aws/aws-sdk-go-v2/service/dynamodb v1.1.1
-	github.com/aws/aws-sdk-go-v2/service/s3 v1.2.0
+	github.com/aws/aws-sdk-go-v2/internal/ini v1.2.0 // indirect
+	github.com/aws/aws-sdk-go-v2/service/dynamodb v1.4.2
+	github.com/aws/aws-sdk-go-v2/service/s3 v1.12.0
 	go.opentelemetry.io/contrib/instrumentation/github.com/aws/aws-sdk-go-v2/otelaws v0.22.0
 	go.opentelemetry.io/otel v1.0.0-RC2
 	go.opentelemetry.io/otel/exporters/stdout/stdouttrace v1.0.0-RC2
