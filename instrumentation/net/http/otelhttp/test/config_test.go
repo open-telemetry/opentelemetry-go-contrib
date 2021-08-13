@@ -12,7 +12,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package otelhttp
+package test
 
 import (
 	"io"
@@ -23,25 +23,25 @@ import (
 
 	"github.com/stretchr/testify/assert"
 
-	"go.opentelemetry.io/otel/oteltest"
+	"go.opentelemetry.io/contrib/instrumentation/net/http/otelhttp"
+	"go.opentelemetry.io/otel/sdk/trace"
+	"go.opentelemetry.io/otel/sdk/trace/tracetest"
 )
 
 func TestBasicFilter(t *testing.T) {
 	rr := httptest.NewRecorder()
 
-	spanRecorder := new(oteltest.SpanRecorder)
-	provider := oteltest.NewTracerProvider(
-		oteltest.WithSpanRecorder(spanRecorder),
-	)
+	spanRecorder := tracetest.NewSpanRecorder()
+	provider := trace.NewTracerProvider(trace.WithSpanProcessor(spanRecorder))
 
-	h := NewHandler(
+	h := otelhttp.NewHandler(
 		http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 			if _, err := io.WriteString(w, "hello world"); err != nil {
 				t.Fatal(err)
 			}
 		}), "test_handler",
-		WithTracerProvider(provider),
-		WithFilter(func(r *http.Request) bool {
+		otelhttp.WithTracerProvider(provider),
+		otelhttp.WithFilter(func(r *http.Request) bool {
 			return false
 		}),
 	)
@@ -57,7 +57,7 @@ func TestBasicFilter(t *testing.T) {
 	if got := rr.Header().Get("Traceparent"); got != "" {
 		t.Fatal("expected empty trace header")
 	}
-	if got, expected := len(spanRecorder.Completed()), 0; got != expected {
+	if got, expected := len(spanRecorder.Ended()), 0; got != expected {
 		t.Fatalf("got %d recorded spans, expected %d", got, expected)
 	}
 	d, err := ioutil.ReadAll(rr.Result().Body)
@@ -77,15 +77,19 @@ func TestSpanNameFormatter(t *testing.T) {
 		expected  string
 	}{
 		{
-			name:      "default handler formatter",
-			formatter: defaultHandlerFormatter,
+			name: "default handler formatter",
+			formatter: func(operation string, _ *http.Request) string {
+				return operation
+			},
 			operation: "test_operation",
 			expected:  "test_operation",
 		},
 		{
-			name:      "default transport formatter",
-			formatter: defaultTransportFormatter,
-			expected:  "HTTP GET",
+			name: "default transport formatter",
+			formatter: func(_ string, r *http.Request) string {
+				return "HTTP " + r.Method
+			},
+			expected: "HTTP GET",
 		},
 		{
 			name: "custom formatter",
@@ -101,20 +105,18 @@ func TestSpanNameFormatter(t *testing.T) {
 		t.Run(tc.name, func(t *testing.T) {
 			rr := httptest.NewRecorder()
 
-			spanRecorder := new(oteltest.SpanRecorder)
-			provider := oteltest.NewTracerProvider(
-				oteltest.WithSpanRecorder(spanRecorder),
-			)
+			spanRecorder := tracetest.NewSpanRecorder()
+			provider := trace.NewTracerProvider(trace.WithSpanProcessor(spanRecorder))
 			handler := http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 				if _, err := io.WriteString(w, "hello world"); err != nil {
 					t.Fatal(err)
 				}
 			})
-			h := NewHandler(
+			h := otelhttp.NewHandler(
 				handler,
 				tc.operation,
-				WithTracerProvider(provider),
-				WithSpanNameFormatter(tc.formatter),
+				otelhttp.WithTracerProvider(provider),
+				otelhttp.WithSpanNameFormatter(tc.formatter),
 			)
 			r, err := http.NewRequest(http.MethodGet, "http://localhost/hello", nil)
 			if err != nil {
@@ -125,7 +127,7 @@ func TestSpanNameFormatter(t *testing.T) {
 				t.Fatalf("got %d, expected %d", got, expected)
 			}
 
-			spans := spanRecorder.Completed()
+			spans := spanRecorder.Ended()
 			if assert.Len(t, spans, 1) {
 				assert.Equal(t, tc.expected, spans[0].Name())
 			}
