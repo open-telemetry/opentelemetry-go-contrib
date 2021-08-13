@@ -17,117 +17,21 @@ package otelhttp
 import (
 	"bytes"
 	"context"
-	"fmt"
+	"errors"
+	"io"
 	"io/ioutil"
 	"net/http"
 	"net/http/httptest"
-	"strings"
 	"testing"
 
+	"github.com/stretchr/testify/assert"
+
 	"go.opentelemetry.io/otel/codes"
-	"go.opentelemetry.io/otel/oteltest"
 	"go.opentelemetry.io/otel/propagation"
 	"go.opentelemetry.io/otel/trace"
 )
 
-func TestTransportBasics(t *testing.T) {
-	prop := propagation.TraceContext{}
-	provider := oteltest.NewTracerProvider()
-	content := []byte("Hello, world!")
-
-	ts := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		ctx := prop.Extract(r.Context(), propagation.HeaderCarrier(r.Header))
-		span := trace.SpanContextFromContext(ctx)
-		tgtID, err := trace.SpanIDFromHex(fmt.Sprintf("%016x", uint(2)))
-		if err != nil {
-			t.Fatalf("Error converting id to SpanID: %s", err.Error())
-		}
-		if span.SpanID() != tgtID {
-			t.Fatalf("testing remote SpanID: got %s, expected %s", span.SpanID(), tgtID)
-		}
-		if _, err := w.Write(content); err != nil {
-			t.Fatal(err)
-		}
-	}))
-	defer ts.Close()
-
-	r, err := http.NewRequest(http.MethodGet, ts.URL, nil)
-	if err != nil {
-		t.Fatal(err)
-	}
-
-	tr := NewTransport(
-		http.DefaultTransport,
-		WithTracerProvider(provider),
-		WithPropagators(prop),
-	)
-
-	c := http.Client{Transport: tr}
-	res, err := c.Do(r)
-	if err != nil {
-		t.Fatal(err)
-	}
-
-	body, err := ioutil.ReadAll(res.Body)
-	if err != nil {
-		t.Fatal(err)
-	}
-
-	if !bytes.Equal(body, content) {
-		t.Fatalf("unexpected content: got %s, expected %s", body, content)
-	}
-}
-
-func TestNilTransport(t *testing.T) {
-	prop := propagation.TraceContext{}
-	provider := oteltest.NewTracerProvider()
-	content := []byte("Hello, world!")
-
-	ts := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		ctx := prop.Extract(r.Context(), propagation.HeaderCarrier(r.Header))
-		span := trace.SpanContextFromContext(ctx)
-		tgtID, err := trace.SpanIDFromHex(fmt.Sprintf("%016x", uint(2)))
-		if err != nil {
-			t.Fatalf("Error converting id to SpanID: %s", err.Error())
-		}
-		if span.SpanID() != tgtID {
-			t.Fatalf("testing remote SpanID: got %s, expected %s", span.SpanID(), tgtID)
-		}
-		if _, err := w.Write(content); err != nil {
-			t.Fatal(err)
-		}
-	}))
-	defer ts.Close()
-
-	r, err := http.NewRequest(http.MethodGet, ts.URL, nil)
-	if err != nil {
-		t.Fatal(err)
-	}
-
-	tr := NewTransport(
-		nil,
-		WithTracerProvider(provider),
-		WithPropagators(prop),
-	)
-
-	c := http.Client{Transport: tr}
-	res, err := c.Do(r)
-	if err != nil {
-		t.Fatal(err)
-	}
-
-	body, err := ioutil.ReadAll(res.Body)
-	if err != nil {
-		t.Fatal(err)
-	}
-
-	if !bytes.Equal(body, content) {
-		t.Fatalf("unexpected content: got %s, expected %s", body, content)
-	}
-}
-
 func TestTransportFormatter(t *testing.T) {
-
 	var httpMethods = []struct {
 		name     string
 		method   string
@@ -186,7 +90,7 @@ func TestTransportFormatter(t *testing.T) {
 			if err != nil {
 				t.Fatal(err)
 			}
-			formattedName := defaultTransportFormatter("", r)
+			formattedName := "HTTP " + r.Method
 
 			if formattedName != tc.expected {
 				t.Fatalf("unexpected name: got %s, expected %s", formattedName, tc.expected)
@@ -196,23 +100,22 @@ func TestTransportFormatter(t *testing.T) {
 
 }
 
-func TestTransportUsesFormatter(t *testing.T) {
+func TestTransportBasics(t *testing.T) {
 	prop := propagation.TraceContext{}
-	spanRecorder := new(oteltest.SpanRecorder)
-	provider := oteltest.NewTracerProvider(
-		oteltest.WithSpanRecorder(spanRecorder),
-	)
 	content := []byte("Hello, world!")
+
+	ctx := context.Background()
+	sc := trace.NewSpanContext(trace.SpanContextConfig{
+		TraceID: trace.TraceID{0x01},
+		SpanID:  trace.SpanID{0x01},
+	})
+	ctx = trace.ContextWithRemoteSpanContext(ctx, sc)
 
 	ts := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		ctx := prop.Extract(r.Context(), propagation.HeaderCarrier(r.Header))
 		span := trace.SpanContextFromContext(ctx)
-		tgtID, err := trace.SpanIDFromHex(fmt.Sprintf("%016x", uint(2)))
-		if err != nil {
-			t.Fatalf("Error converting id to SpanID: %s", err.Error())
-		}
-		if span.SpanID() != tgtID {
-			t.Fatalf("testing remote SpanID: got %s, expected %s", span.SpanID(), tgtID)
+		if span.SpanID() != sc.SpanID() {
+			t.Fatalf("testing remote SpanID: got %s, expected %s", span.SpanID(), sc.SpanID())
 		}
 		if _, err := w.Write(content); err != nil {
 			t.Fatal(err)
@@ -220,125 +123,166 @@ func TestTransportUsesFormatter(t *testing.T) {
 	}))
 	defer ts.Close()
 
-	r, err := http.NewRequest(http.MethodGet, ts.URL, nil)
+	r, err := http.NewRequestWithContext(ctx, http.MethodGet, ts.URL, nil)
 	if err != nil {
 		t.Fatal(err)
 	}
 
-	tr := NewTransport(
-		http.DefaultTransport,
-		WithTracerProvider(provider),
-		WithPropagators(prop),
-	)
+	tr := NewTransport(http.DefaultTransport, WithPropagators(prop))
 
 	c := http.Client{Transport: tr}
 	res, err := c.Do(r)
 	if err != nil {
 		t.Fatal(err)
 	}
-	res.Body.Close()
 
-	spans := spanRecorder.Completed()
-	spanName := spans[0].Name()
-	expectedName := "HTTP GET"
-	if spanName != expectedName {
-		t.Fatalf("unexpected name: got %s, expected %s", spanName, expectedName)
-	}
-
-}
-
-func TestTransportErrorStatus(t *testing.T) {
-	// Prepare tracing stuff.
-	spanRecorder := new(oteltest.SpanRecorder)
-	provider := oteltest.NewTracerProvider(
-		oteltest.WithSpanRecorder(spanRecorder),
-	)
-
-	// Run a server and stop to make sure nothing is listening and force the error.
-	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {}))
-	server.Close()
-
-	// Create our Transport and make request.
-	tr := NewTransport(
-		http.DefaultTransport,
-		WithTracerProvider(provider),
-	)
-	c := http.Client{Transport: tr}
-	r, err := http.NewRequest(http.MethodGet, server.URL, nil)
+	body, err := ioutil.ReadAll(res.Body)
 	if err != nil {
 		t.Fatal(err)
 	}
-	_, err = c.Do(r)
-	if err == nil {
-		t.Fatal("transport should have returned an error, it didn't")
-	}
 
-	// Check span.
-	gotSpans := spanRecorder.Completed()
-	if len(gotSpans) != 1 {
-		t.Fatalf("expected 1 span; got: %d", len(gotSpans))
-	}
-
-	spanEnded := gotSpans[0].Ended()
-	if !spanEnded {
-		t.Errorf("span should be ended; it isn't")
-	}
-
-	spanStatusCode := gotSpans[0].StatusCode()
-	if spanStatusCode != codes.Error {
-		t.Errorf("expected error status code on span; got: %q", spanStatusCode)
-	}
-
-	spanStatusMessage := gotSpans[0].StatusMessage()
-	if !strings.Contains(spanStatusMessage, "connect: connection refused") {
-		t.Errorf("expected error status message on span; got: %q", spanStatusMessage)
+	if !bytes.Equal(body, content) {
+		t.Fatalf("unexpected content: got %s, expected %s", body, content)
 	}
 }
 
-type testErrorReadCloser struct{}
+func TestNilTransport(t *testing.T) {
+	prop := propagation.TraceContext{}
+	content := []byte("Hello, world!")
 
-func (testErrorReadCloser) Read(p []byte) (n int, err error) { return 0, fmt.Errorf("something") }
-func (testErrorReadCloser) Close() error                     { return nil }
-
-func TestWrappedBodyReadErrorStatus(t *testing.T) {
-	// Prepare tracing stuff.
-	spanRecorder := new(oteltest.SpanRecorder)
-	provider := oteltest.NewTracerProvider(
-		oteltest.WithSpanRecorder(spanRecorder),
-	)
-	tracer := provider.Tracer("")
 	ctx := context.Background()
-	_, span := tracer.Start(ctx, "test")
+	sc := trace.NewSpanContext(trace.SpanContextConfig{
+		TraceID: trace.TraceID{0x01},
+		SpanID:  trace.SpanID{0x01},
+	})
+	ctx = trace.ContextWithRemoteSpanContext(ctx, sc)
 
-	// Create our wrapper.
-	wb := wrappedBody{
-		span: span,
-		body: testErrorReadCloser{},
+	ts := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		ctx := prop.Extract(r.Context(), propagation.HeaderCarrier(r.Header))
+		span := trace.SpanContextFromContext(ctx)
+		if span.SpanID() != sc.SpanID() {
+			t.Fatalf("testing remote SpanID: got %s, expected %s", span.SpanID(), sc.SpanID())
+		}
+		if _, err := w.Write(content); err != nil {
+			t.Fatal(err)
+		}
+	}))
+	defer ts.Close()
+
+	r, err := http.NewRequestWithContext(ctx, http.MethodGet, ts.URL, nil)
+	if err != nil {
+		t.Fatal(err)
 	}
-	_, err := wb.Read([]byte{})
+
+	tr := NewTransport(nil, WithPropagators(prop))
+
+	c := http.Client{Transport: tr}
+	res, err := c.Do(r)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	body, err := ioutil.ReadAll(res.Body)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	if !bytes.Equal(body, content) {
+		t.Fatalf("unexpected content: got %s, expected %s", body, content)
+	}
+}
+
+const readSize = 42
+
+type readCloser struct {
+	readErr, closeErr error
+}
+
+func (rc readCloser) Read(p []byte) (n int, err error) {
+	return readSize, rc.readErr
+}
+func (rc readCloser) Close() error {
+	return rc.closeErr
+}
+
+type span struct {
+	trace.Span
+
+	ended       bool
+	recordedErr error
+
+	statusCode codes.Code
+	statusDesc string
+}
+
+func (s *span) End(...trace.SpanEndOption) {
+	s.ended = true
+}
+
+func (s *span) RecordError(err error, _ ...trace.EventOption) {
+	s.recordedErr = err
+}
+
+func (s *span) SetStatus(c codes.Code, d string) {
+	s.statusCode, s.statusDesc = c, d
+}
+
+func (s *span) assert(t *testing.T, ended bool, err error, c codes.Code, d string) {
+	if ended {
+		assert.True(t, s.ended, "not ended")
+	} else {
+		assert.False(t, s.ended, "ended")
+	}
+
 	if err == nil {
-		t.Fatalf("expected error while reading")
-	}
-	wb.Close()
-
-	// Check span.
-	gotSpans := spanRecorder.Completed()
-	if len(gotSpans) != 1 {
-		t.Fatalf("expected 1 span; got: %d", len(gotSpans))
+		assert.NoError(t, s.recordedErr, "recorded an error")
+	} else {
+		assert.Equal(t, err, s.recordedErr)
 	}
 
-	spanEnded := gotSpans[0].Ended()
-	if !spanEnded {
-		t.Errorf("span should be ended; it isn't")
-	}
+	assert.Equal(t, c, s.statusCode, "status codes not equal")
+	assert.Equal(t, d, s.statusDesc, "status description not equal")
+}
 
-	spanStatusCode := gotSpans[0].StatusCode()
-	if spanStatusCode != codes.Error {
-		t.Errorf("expected error status code on span; got: %q", spanStatusCode)
-	}
+func TestWrappedBodyRead(t *testing.T) {
+	s := new(span)
+	wb := &wrappedBody{span: trace.Span(s), body: readCloser{}}
+	n, err := wb.Read([]byte{})
+	assert.Equal(t, readSize, n, "wrappedBody returned wrong bytes")
+	assert.NoError(t, err)
+	s.assert(t, false, nil, codes.Unset, "")
+}
 
-	spanStatusMessage := gotSpans[0].StatusMessage()
-	if !strings.Contains(spanStatusMessage, "something") {
-		t.Errorf("expected error status message on span; got: %q", spanStatusMessage)
-	}
+func TestWrappedBodyReadEOFError(t *testing.T) {
+	s := new(span)
+	wb := &wrappedBody{span: trace.Span(s), body: readCloser{readErr: io.EOF}}
+	n, err := wb.Read([]byte{})
+	assert.Equal(t, readSize, n, "wrappedBody returned wrong bytes")
+	assert.Equal(t, io.EOF, err)
+	s.assert(t, true, nil, codes.Unset, "")
+}
+
+func TestWrappedBodyReadError(t *testing.T) {
+	s := new(span)
+	expectedErr := errors.New("test")
+	wb := &wrappedBody{span: trace.Span(s), body: readCloser{readErr: expectedErr}}
+	n, err := wb.Read([]byte{})
+	assert.Equal(t, readSize, n, "wrappedBody returned wrong bytes")
+	assert.Equal(t, expectedErr, err)
+	s.assert(t, false, expectedErr, codes.Error, expectedErr.Error())
+}
+
+func TestWrappedBodyClose(t *testing.T) {
+	s := new(span)
+	wb := &wrappedBody{span: trace.Span(s), body: readCloser{}}
+	assert.NoError(t, wb.Close())
+	s.assert(t, true, nil, codes.Unset, "")
+}
+
+func TestWrappedBodyCloseError(t *testing.T) {
+	s := new(span)
+	expectedErr := errors.New("test")
+	wb := &wrappedBody{span: trace.Span(s), body: readCloser{closeErr: expectedErr}}
+	assert.Equal(t, expectedErr, wb.Close())
+	s.assert(t, true, nil, codes.Unset, "")
 }
