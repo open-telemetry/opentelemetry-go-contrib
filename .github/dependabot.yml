@@ -217,6 +217,16 @@ updates:
       day: "sunday"
   -
     package-ecosystem: "gomod"
+    directory: "/instrumentation/github.com/gin-gonic/gin/otelgin/test"
+    labels:
+      - dependencies
+      - go
+      - "Skip Changelog"
+    schedule:
+      interval: "weekly"
+      day: "sunday"
+  -
+    package-ecosystem: "gomod"
     directory: "/instrumentation/github.com/gocql/gocql/otelgocql"
     labels:
       - dependencies
