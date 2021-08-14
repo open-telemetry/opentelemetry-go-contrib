@@ -337,6 +337,16 @@ updates:
       day: "sunday"
   -
     package-ecosystem: "gomod"
+    directory: "/instrumentation/google.golang.org/grpc/otelgrpc/test"
+    labels:
+      - dependencies
+      - go
+      - "Skip Changelog"
+    schedule:
+      interval: "weekly"
+      day: "sunday"
+  -
+    package-ecosystem: "gomod"
     directory: "/instrumentation/gopkg.in/macaron.v1/otelmacaron"
     labels:
       - dependencies
@@ -388,6 +398,16 @@ updates:
   -
     package-ecosystem: "gomod"
     directory: "/instrumentation/net/http/otelhttp/example"
+    labels:
+      - dependencies
+      - go
+      - "Skip Changelog"
+    schedule:
+      interval: "weekly"
+      day: "sunday"
+  -
+    package-ecosystem: "gomod"
+    directory: "/instrumentation/net/http/otelhttp/test"
     labels:
       - dependencies
       - go
