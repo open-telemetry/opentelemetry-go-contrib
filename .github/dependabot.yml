@@ -457,7 +457,7 @@ updates:
       day: "sunday"
   -
     package-ecosystem: "gomod"
-    directory: "/propagators"
+    directory: "/propagators/aws"
     labels:
       - dependencies
       - go
@@ -467,7 +467,17 @@ updates:
       day: "sunday"
   -
     package-ecosystem: "gomod"
-    directory: "/propagators/aws"
+    directory: "/propagators/b3"
+    labels:
+      - dependencies
+      - go
+      - "Skip Changelog"
+    schedule:
+      interval: "weekly"
+      day: "sunday"
+  -
+    package-ecosystem: "gomod"
+    directory: "/propagators/jaeger"
     labels:
       - dependencies
       - go
@@ -488,6 +498,16 @@ updates:
   -
     package-ecosystem: "gomod"
     directory: "/propagators/opencensus/examples"
+    labels:
+      - dependencies
+      - go
+      - "Skip Changelog"
+    schedule:
+      interval: "weekly"
+      day: "sunday"
+  -
+    package-ecosystem: "gomod"
+    directory: "/propagators/ot"
     labels:
       - dependencies
       - go
