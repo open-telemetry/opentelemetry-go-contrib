@@ -1,8 +1,6 @@
-module go.opentelemetry.io/contrib/propagators
+module go.opentelemetry.io/contrib/propagators/jaeger
 
 go 1.15
-
-replace go.opentelemetry.io/contrib => ./..
 
 require (
 	github.com/google/go-cmp v0.5.6
