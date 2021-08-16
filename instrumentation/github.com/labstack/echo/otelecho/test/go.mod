@@ -12,3 +12,5 @@ require (
 )
 
 replace go.opentelemetry.io/contrib/instrumentation/github.com/labstack/echo/otelecho => ../
+
+replace go.opentelemetry.io/contrib/propagators/b3 => ../../../../../../propagators/b3
