@@ -12,3 +12,5 @@ require (
 )
 
 replace go.opentelemetry.io/contrib/instrumentation/gopkg.in/macaron.v1/otelmacaron => ../
+
+replace go.opentelemetry.io/contrib/propagators/b3 => ../../../../../propagators/b3
