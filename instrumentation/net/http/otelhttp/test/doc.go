@@ -12,8 +12,11 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-// This module contains all of its functionality in its subpackages.
-// This top-level package is to allow clients to pull in all propagator
-// implementations at once using
-//    require go.opentelemetry.io/contrib/propagators
-package propagators
+/*
+Package test validates the otelhttp instrumentation with the default SDK.
+
+This package is in a separate module from the instrumentation it tests to
+isolate the dependency of the default SDK and not impose this as a transitive
+dependency for users.
+*/
+package test
