@@ -2,10 +2,7 @@ module go.opentelemetry.io/contrib/instrumentation/github.com/gorilla/mux/otelmu
 
 go 1.15
 
-replace (
-	go.opentelemetry.io/contrib => ../../../../..
-	go.opentelemetry.io/contrib/propagators => ../../../../../propagators
-)
+replace go.opentelemetry.io/contrib => ../../../../..
 
 require (
 	github.com/felixge/httpsnoop v1.0.2

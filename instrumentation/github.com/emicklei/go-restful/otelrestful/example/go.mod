@@ -5,7 +5,7 @@ go 1.15
 replace (
 	go.opentelemetry.io/contrib => ../../../../../../
 	go.opentelemetry.io/contrib/instrumentation/github.com/emicklei/go-restful/otelrestful => ../
-	go.opentelemetry.io/contrib/propagators => ../../../../../../propagators
+	go.opentelemetry.io/contrib/propagators/b3 => ../../../../../../propagators/b3
 )
 
 require (
