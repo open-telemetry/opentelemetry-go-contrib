@@ -12,7 +12,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package jaeger_remote // import "go.opentelemetry.io/contrib/samplers/jaeger_remote"
+package jaegerremote // import "go.opentelemetry.io/contrib/samplers/jaeger_remote"
 
 import "time"
 

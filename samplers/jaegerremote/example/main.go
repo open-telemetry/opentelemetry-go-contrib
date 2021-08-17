@@ -1,3 +1,17 @@
+// Copyright The OpenTelemetry Authors
+//
+// Licensed under the Apache License, Version 2.0 (the "License");
+// you may not use this file except in compliance with the License.
+// You may obtain a copy of the License at
+//
+//     http://www.apache.org/licenses/LICENSE-2.0
+//
+// Unless required by applicable law or agreed to in writing, software
+// distributed under the License is distributed on an "AS IS" BASIS,
+// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+// See the License for the specific language governing permissions and
+// limitations under the License.
+
 package main
 
 import (
@@ -7,7 +21,7 @@ import (
 	"syscall"
 	"time"
 
-	"go.opentelemetry.io/contrib/samplers/jaeger_remote"
+	"go.opentelemetry.io/contrib/samplers/jaegerremote"
 	"go.opentelemetry.io/otel"
 	"go.opentelemetry.io/otel/exporters/stdout/stdouttrace"
 	"go.opentelemetry.io/otel/sdk/trace"
@@ -18,11 +32,11 @@ func main() {
 		stdouttrace.WithoutTimestamps(),
 	)
 
-	jaegerRemoteSampler := jaeger_remote.New(
+	jaegerRemoteSampler := jaegerremote.New(
 		// decrease polling interval to get quicker feedback
-		jaeger_remote.WithPollingInterval(10*time.Second),
+		jaegerremote.WithPollingInterval(10*time.Second),
 		// once the strategy is fetched, sample rate will drop
-		jaeger_remote.WithInitialSamplingRate(1),
+		jaegerremote.WithInitialSamplingRate(1),
 	)
 
 	tp := trace.NewTracerProvider(
@@ -34,7 +48,7 @@ func main() {
 	go generateSpans()
 
 	// wait until program is interrupted
-	c := make(chan os.Signal)
+	c := make(chan os.Signal, 1)
 	signal.Notify(c, os.Interrupt, syscall.SIGTERM)
 	<-c
 }

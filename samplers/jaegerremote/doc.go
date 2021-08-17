@@ -12,5 +12,5 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-// Package jaeger_remote implements the Jaeger Remote protocol.
-package jaeger_remote // import "go.opentelemetry.io/contrib/samplers/jaeger_remote"
+// Package jaegerremote implements the Jaeger Remote protocol.
+package jaegerremote // import "go.opentelemetry.io/contrib/samplers/jaegerremote"

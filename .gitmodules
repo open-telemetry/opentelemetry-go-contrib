@@ -1,3 +1,3 @@
-[submodule "samplers/jaeger_remote/jaeger-idl"]
-	path = samplers/jaeger_remote/jaeger-idl
+[submodule "samplers/jaegerremote/jaeger-idl"]
+	path = samplers/jaegerremote/jaeger-idl
 	url = https://github.com/jaegertracing/jaeger-idl

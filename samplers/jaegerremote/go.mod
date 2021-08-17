@@ -1,4 +1,4 @@
-module go.opentelemetry.io/contrib/samplers/jaeger_remote
+module go.opentelemetry.io/contrib/samplers/jaegerremote
 
 go 1.16
 

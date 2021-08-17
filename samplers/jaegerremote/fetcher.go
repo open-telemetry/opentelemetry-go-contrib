@@ -12,7 +12,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package jaeger_remote // import "go.opentelemetry.io/contrib/samplers/jaeger_remote"
+package jaegerremote // import "go.opentelemetry.io/contrib/samplers/jaeger_remote"
 
 import (
 	"encoding/json"
@@ -21,7 +21,7 @@ import (
 	"net/http"
 	"net/url"
 
-	jaeger_api_v2 "go.opentelemetry.io/contrib/samplers/jaeger_remote/internal/proto-gen/jaeger-idl/proto/api_v2"
+	jaeger_api_v2 "go.opentelemetry.io/contrib/samplers/jaegerremote/internal/proto-gen/jaeger-idl/proto/api_v2"
 )
 
 type samplingStrategyFetcher interface {
