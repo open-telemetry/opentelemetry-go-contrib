@@ -64,7 +64,7 @@ test-gocql:
 	  set -e; \
 	  docker run --name cass-integ --rm -p 9042:9042 -d cassandra:3; \
 	  CMD=cassandra IMG_NAME=cass-integ ./tools/wait.sh; \
-	  (cd instrumentation/github.com/gocql/gocql/otelgocql && \
+	  (cd instrumentation/github.com/gocql/gocql/otelgocql/test/ && \
 	    $(GOTEST_WITH_COVERAGE) . && \
 	    go tool cover -html=coverage.out -o coverage.html); \
 	  docker stop cass-integ; \
