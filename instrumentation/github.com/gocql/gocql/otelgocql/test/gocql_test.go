@@ -216,7 +216,7 @@ func TestBatch(t *testing.T) {
 	if assert.Len(t, spans, 2) {
 		span := spans[0]
 		assert.Equal(t, internal.CassBatchQueryName, span.Name())
-		assert.Equal(t, parentSpan.SpanContext().SpanID, span.Parent().SpanID())
+		assert.Equal(t, parentSpan.SpanContext().SpanID(), span.Parent().SpanID())
 		assert.Contains(t, span.Attributes(), semconv.DBOperationKey.String("db.cassandra.batch.query"))
 		assertConnectionLevelAttributes(t, span)
 	}
@@ -348,10 +348,15 @@ func assertConnectionLevelAttributes(t *testing.T, span sdktrace.ReadOnlySpan) {
 	assert.Contains(t, attrs, semconv.DBSystemCassandra)
 	assert.Contains(t, attrs, semconv.NetPeerIPKey.String("127.0.0.1"))
 	assert.Contains(t, attrs, semconv.NetPeerPortKey.Int64(9042))
-	assert.Contains(t, attrs, internal.CassVersionKey)
-	assert.Contains(t, attrs, internal.CassHostIDKey)
-	assert.Contains(t, attrs, internal.CassHostStateKey.String("up"))
+	assert.Contains(t, attrs, internal.CassHostStateKey.String("UP"))
 	assert.Equal(t, trace.SpanKindClient, span.SpanKind())
+
+	keys := make(map[attribute.Key]struct{}, len(attrs))
+	for _, a := range attrs {
+		keys[a.Key] = struct{}{}
+	}
+	assert.Contains(t, keys, internal.CassVersionKey)
+	assert.Contains(t, keys, internal.CassHostIDKey)
 }
 
 // getCluster creates a gocql ClusterConfig with the appropriate
