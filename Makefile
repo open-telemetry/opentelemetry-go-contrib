@@ -13,7 +13,7 @@ CONTRIB_REPO_URL = https://github.com/open-telemetry/opentelemetry-go-contrib/tr
 GO = go
 GOTEST_MIN = go test -v -timeout 30s
 GOTEST = $(GOTEST_MIN) -race
-GOTEST_WITH_COVERAGE = $(GOTEST) -coverprofile=coverage.out -covermode=atomic -coverpkg=go.opentelemetry.io/contrib/...
+GOTEST_WITH_COVERAGE = $(GOTEST) -coverprofile=coverage.out -covermode=atomic
 
 .DEFAULT_GOAL := precommit
 
@@ -44,9 +44,13 @@ test-with-coverage: $(TOOLS_DIR)/gocovmerge
 	set -e; \
 	printf "" > coverage.txt; \
 	for dir in $(ALL_COVERAGE_MOD_DIRS); do \
-	  echo "go test ./... + coverage in $${dir}"; \
-	  (cd "$${dir}" && \
-	    $(GOTEST_WITH_COVERAGE) ./... && \
+	  CMD="$(GOTEST_WITH_COVERAGE)"; \
+	  echo "$$dir" | \
+	    grep -q 'test$$' && \
+	    CMD="$$CMD -coverpkg=go.opentelemetry.io/contrib/$$( dirname "$$dir" | sed -e "s/^\.\///g" )/..."; \
+	  echo "$$CMD $$dir/..."; \
+	  (cd "$$dir" && \
+	    $$CMD ./... && \
 	    go tool cover -html=coverage.out -o coverage.html); \
 	done; \
 	$(TOOLS_DIR)/gocovmerge $$(find . -name coverage.out) > coverage.txt
