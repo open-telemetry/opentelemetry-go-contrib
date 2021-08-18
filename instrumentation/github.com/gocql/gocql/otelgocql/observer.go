@@ -16,12 +16,11 @@ package otelgocql
 
 import (
 	"context"
-	"log"
-	"net"
 	"time"
 
 	"github.com/gocql/gocql"
 
+	"go.opentelemetry.io/contrib/instrumentation/github.com/gocql/gocql/otelgocql/internal"
 	"go.opentelemetry.io/otel/attribute"
 	"go.opentelemetry.io/otel/trace"
 )
@@ -64,10 +63,10 @@ func (o *OTelQueryObserver) ObserveQuery(ctx context.Context, observedQuery gocq
 		inst := o.inst
 
 		attributes := includeKeyValues(host,
-			cassKeyspace(keyspace),
-			cassStatement(observedQuery.Statement),
-			cassRowsReturned(observedQuery.Rows),
-			cassQueryAttempts(observedQuery.Metrics.Attempts),
+			internal.CassKeyspace(keyspace),
+			internal.CassStatement(observedQuery.Statement),
+			internal.CassRowsReturned(observedQuery.Rows),
+			internal.CassQueryAttempts(observedQuery.Metrics.Attempts),
 		)
 
 		ctx, span := o.tracer.Start(
@@ -79,14 +78,14 @@ func (o *OTelQueryObserver) ObserveQuery(ctx context.Context, observedQuery gocq
 		)
 
 		if observedQuery.Err != nil {
-			span.SetAttributes(cassErrMsg(observedQuery.Err.Error()))
+			span.SetAttributes(internal.CassErrMsg(observedQuery.Err.Error()))
 			inst.queryCount.Add(
 				ctx,
 				1,
 				includeKeyValues(host,
-					cassKeyspace(keyspace),
-					cassStatement(observedQuery.Statement),
-					cassErrMsg(observedQuery.Err.Error()),
+					internal.CassKeyspace(keyspace),
+					internal.CassStatement(observedQuery.Statement),
+					internal.CassErrMsg(observedQuery.Err.Error()),
 				)...,
 			)
 		} else {
@@ -94,8 +93,8 @@ func (o *OTelQueryObserver) ObserveQuery(ctx context.Context, observedQuery gocq
 				ctx,
 				1,
 				includeKeyValues(host,
-					cassKeyspace(keyspace),
-					cassStatement(observedQuery.Statement),
+					internal.CassKeyspace(keyspace),
+					internal.CassStatement(observedQuery.Statement),
 				)...,
 			)
 		}
@@ -105,12 +104,12 @@ func (o *OTelQueryObserver) ObserveQuery(ctx context.Context, observedQuery gocq
 		inst.queryRows.Record(
 			ctx,
 			int64(observedQuery.Rows),
-			includeKeyValues(host, cassKeyspace(keyspace))...,
+			includeKeyValues(host, internal.CassKeyspace(keyspace))...,
 		)
 		inst.latency.Record(
 			ctx,
 			nanoToMilliseconds(observedQuery.Metrics.TotalLatency),
-			includeKeyValues(host, cassKeyspace(keyspace))...,
+			includeKeyValues(host, internal.CassKeyspace(keyspace))...,
 		)
 	}
 
@@ -127,34 +126,34 @@ func (o *OTelBatchObserver) ObserveBatch(ctx context.Context, observedBatch gocq
 		inst := o.inst
 
 		attributes := includeKeyValues(host,
-			cassKeyspace(keyspace),
-			cassBatchQueryOperation(),
-			cassBatchQueries(len(observedBatch.Statements)),
+			internal.CassKeyspace(keyspace),
+			internal.CassBatchQueryOperation(),
+			internal.CassBatchQueries(len(observedBatch.Statements)),
 		)
 
 		ctx, span := o.tracer.Start(
 			ctx,
-			cassBatchQueryName,
+			internal.CassBatchQueryName,
 			trace.WithTimestamp(observedBatch.Start),
 			trace.WithAttributes(attributes...),
 			trace.WithSpanKind(trace.SpanKindClient),
 		)
 
 		if observedBatch.Err != nil {
-			span.SetAttributes(cassErrMsg(observedBatch.Err.Error()))
+			span.SetAttributes(internal.CassErrMsg(observedBatch.Err.Error()))
 			inst.batchCount.Add(
 				ctx,
 				1,
 				includeKeyValues(host,
-					cassKeyspace(keyspace),
-					cassErrMsg(observedBatch.Err.Error()),
+					internal.CassKeyspace(keyspace),
+					internal.CassErrMsg(observedBatch.Err.Error()),
 				)...,
 			)
 		} else {
 			inst.batchCount.Add(
 				ctx,
 				1,
-				includeKeyValues(host, cassKeyspace(keyspace))...,
+				includeKeyValues(host, internal.CassKeyspace(keyspace))...,
 			)
 		}
 
@@ -163,7 +162,7 @@ func (o *OTelBatchObserver) ObserveBatch(ctx context.Context, observedBatch gocq
 		inst.latency.Record(
 			ctx,
 			nanoToMilliseconds(observedBatch.Metrics.TotalLatency),
-			includeKeyValues(host, cassKeyspace(keyspace))...,
+			includeKeyValues(host, internal.CassKeyspace(keyspace))...,
 		)
 	}
 
@@ -178,22 +177,22 @@ func (o *OTelConnectObserver) ObserveConnect(observedConnect gocql.ObservedConne
 		host := observedConnect.Host
 		inst := o.inst
 
-		attributes := includeKeyValues(host, cassConnectOperation())
+		attributes := includeKeyValues(host, internal.CassConnectOperation())
 
 		_, span := o.tracer.Start(
 			o.ctx,
-			cassConnectName,
+			internal.CassConnectName,
 			trace.WithTimestamp(observedConnect.Start),
 			trace.WithAttributes(attributes...),
 			trace.WithSpanKind(trace.SpanKindClient),
 		)
 
 		if observedConnect.Err != nil {
-			span.SetAttributes(cassErrMsg(observedConnect.Err.Error()))
+			span.SetAttributes(internal.CassErrMsg(observedConnect.Err.Error()))
 			inst.connectionCount.Add(
 				o.ctx,
 				1,
-				includeKeyValues(host, cassErrMsg(observedConnect.Err.Error()))...,
+				includeKeyValues(host, internal.CassErrMsg(observedConnect.Err.Error()))...,
 			)
 		} else {
 			inst.connectionCount.Add(
@@ -219,30 +218,14 @@ func (o *OTelConnectObserver) ObserveConnect(observedConnect gocql.ObservedConne
 // generated by this instrumentation integration.
 func includeKeyValues(host *gocql.HostInfo, values ...attribute.KeyValue) []attribute.KeyValue {
 	connectionLevelAttributes := []attribute.KeyValue{
-		cassDBSystem(),
-		hostOrIP(host.HostnameAndPort()),
-		cassPeerPort(host.Port()),
-		cassVersion(host.Version().String()),
-		cassHostID(host.HostID()),
-		cassHostState(host.State().String()),
+		internal.CassDBSystem(),
+		internal.HostOrIP(host.HostnameAndPort()),
+		internal.CassPeerPort(host.Port()),
+		internal.CassVersion(host.Version().String()),
+		internal.CassHostID(host.HostID()),
+		internal.CassHostState(host.State().String()),
 	}
 	return append(connectionLevelAttributes, values...)
-}
-
-// hostOrIP returns a KeyValue pair for the hostname
-// retrieved from gocql.HostInfo.HostnameAndPort(). If the hostname
-// is returned as a resolved IP address (as is the case for localhost),
-// then the KeyValue will have the key net.peer.ip.
-// If the hostname is the proper DNS name, then the key will be net.peer.name.
-func hostOrIP(hostnameAndPort string) attribute.KeyValue {
-	hostname, _, err := net.SplitHostPort(hostnameAndPort)
-	if err != nil {
-		log.Printf("failed to parse hostname from port, %v", err)
-	}
-	if parse := net.ParseIP(hostname); parse != nil {
-		return cassPeerIP(parse.String())
-	}
-	return cassPeerName(hostname)
 }
 
 // nanoToMilliseconds converts nanoseconds to milliseconds.
