@@ -11,7 +11,8 @@
 // WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 // See the License for the specific language governing permissions and
 // limitations under the License.
-package otelhttptrace_test
+
+package test
 
 import (
 	"context"
@@ -26,11 +27,12 @@ import (
 	"go.opentelemetry.io/contrib/instrumentation/net/http/httptrace/otelhttptrace"
 	"go.opentelemetry.io/otel"
 	"go.opentelemetry.io/otel/attribute"
-	"go.opentelemetry.io/otel/oteltest"
+	"go.opentelemetry.io/otel/sdk/trace"
+	"go.opentelemetry.io/otel/sdk/trace/tracetest"
 )
 
-func getSpanFromRecorder(sr *oteltest.SpanRecorder, name string) (*oteltest.Span, bool) {
-	for _, s := range sr.Completed() {
+func getSpanFromRecorder(sr *tracetest.SpanRecorder, name string) (trace.ReadOnlySpan, bool) {
+	for _, s := range sr.Ended() {
 		if s.Name() == name {
 			return s, true
 		}
@@ -38,9 +40,9 @@ func getSpanFromRecorder(sr *oteltest.SpanRecorder, name string) (*oteltest.Span
 	return nil, false
 }
 
-func getSpansFromRecorder(sr *oteltest.SpanRecorder, name string) []*oteltest.Span {
-	ret := []*oteltest.Span{}
-	for _, s := range sr.Completed() {
+func getSpansFromRecorder(sr *tracetest.SpanRecorder, name string) []trace.ReadOnlySpan {
+	var ret []trace.ReadOnlySpan
+	for _, s := range sr.Ended() {
 		if s.Name() == name {
 			ret = append(ret, s)
 		}
@@ -49,8 +51,8 @@ func getSpansFromRecorder(sr *oteltest.SpanRecorder, name string) []*oteltest.Sp
 }
 
 func TestHTTPRequestWithClientTrace(t *testing.T) {
-	sr := &oteltest.SpanRecorder{}
-	tp := oteltest.NewTracerProvider(oteltest.WithSpanRecorder(sr))
+	sr := tracetest.NewSpanRecorder()
+	tp := trace.NewTracerProvider(trace.WithSpanProcessor(sr))
 	otel.SetTracerProvider(tp)
 	tr := tp.Tracer("httptrace/client")
 
@@ -83,21 +85,21 @@ func TestHTTPRequestWithClientTrace(t *testing.T) {
 
 	testLen := []struct {
 		name       string
-		attributes map[attribute.Key]attribute.Value
+		attributes []attribute.KeyValue
 		parent     string
 	}{
 		{
 			name: "http.connect",
-			attributes: map[attribute.Key]attribute.Value{
-				attribute.Key("http.remote"): attribute.StringValue(address.String()),
+			attributes: []attribute.KeyValue{
+				attribute.Key("http.remote").String(address.String()),
 			},
 			parent: "http.getconn",
 		},
 		{
 			name: "http.getconn",
-			attributes: map[attribute.Key]attribute.Value{
-				attribute.Key("http.remote"): attribute.StringValue(address.String()),
-				attribute.Key("http.host"):   attribute.StringValue(address.String()),
+			attributes: []attribute.KeyValue{
+				attribute.Key("http.remote").String(address.String()),
+				attribute.Key("http.host").String(address.String()),
 			},
 			parent: "test",
 		},
@@ -126,7 +128,7 @@ func TestHTTPRequestWithClientTrace(t *testing.T) {
 		if tl.parent != "" {
 			parent, ok := getSpanFromRecorder(sr, tl.parent)
 			if assert.True(t, ok) {
-				assert.Equal(t, span.ParentSpanID(), parent.SpanContext().SpanID())
+				assert.Equal(t, span.Parent().SpanID(), parent.SpanContext().SpanID())
 			}
 		}
 		if len(tl.attributes) > 0 {
@@ -134,10 +136,17 @@ func TestHTTPRequestWithClientTrace(t *testing.T) {
 			if tl.name == "http.getconn" {
 				// http.local attribute uses a non-deterministic port.
 				local := attribute.Key("http.local")
-				assert.Contains(t, attrs, local)
-				delete(attrs, local)
+				var contains bool
+				for i, a := range attrs {
+					if a.Key == local {
+						attrs = append(attrs[:i], attrs[i+1:]...)
+						contains = true
+						break
+					}
+				}
+				assert.True(t, contains, "missing http.local attribute")
 			}
-			assert.Equal(t, tl.attributes, attrs)
+			assert.ElementsMatch(t, tl.attributes, attrs)
 		}
 	}
 }
@@ -209,20 +218,16 @@ func TestConcurrentConnectionStart(t *testing.T) {
 	}
 	for _, tt := range tts {
 		t.Run(tt.name, func(t *testing.T) {
-			// sr.Reset()
-			sr := &oteltest.SpanRecorder{}
-			otel.SetTracerProvider(
-				oteltest.NewTracerProvider(oteltest.WithSpanRecorder(sr)),
-			)
+			sr := tracetest.NewSpanRecorder()
+			tp := trace.NewTracerProvider(trace.WithSpanProcessor(sr))
+			otel.SetTracerProvider(tp)
 			tt.run(otelhttptrace.NewClientTrace(context.Background()))
 			spans := getSpansFromRecorder(sr, "http.connect")
 			require.Len(t, spans, 2)
 
 			var gotRemotes []attribute.KeyValue
 			for _, span := range spans {
-				for k, v := range span.Attributes() {
-					gotRemotes = append(gotRemotes, attribute.Any(string(k), v.AsInterface()))
-				}
+				gotRemotes = append(gotRemotes, span.Attributes()...)
 			}
 			assert.ElementsMatch(t, expectedRemotes, gotRemotes)
 		})
@@ -230,10 +235,9 @@ func TestConcurrentConnectionStart(t *testing.T) {
 }
 
 func TestEndBeforeStartCreatesSpan(t *testing.T) {
-	sr := &oteltest.SpanRecorder{}
-	otel.SetTracerProvider(
-		oteltest.NewTracerProvider(oteltest.WithSpanRecorder(sr)),
-	)
+	sr := tracetest.NewSpanRecorder()
+	tp := trace.NewTracerProvider(trace.WithSpanProcessor(sr))
+	otel.SetTracerProvider(tp)
 
 	ct := otelhttptrace.NewClientTrace(context.Background())
 	ct.DNSDone(httptrace.DNSDoneInfo{})
