@@ -10,17 +10,6 @@ ALL_COVERAGE_MOD_DIRS := $(shell find . -type f -name 'go.mod' -exec dirname {} 
 REGISTRY_BASE_URL = https://raw.githubusercontent.com/open-telemetry/opentelemetry.io/main/content/en/registry
 CONTRIB_REPO_URL = https://github.com/open-telemetry/opentelemetry-go-contrib/tree/main
 
-# Mac OS Catalina 10.5.x doesn't support 386. Hence skip 386 test
-SKIP_386_TEST = false
-UNAME_S := $(shell uname -s)
-ifeq ($(UNAME_S),Darwin)
-	SW_VERS := $(shell sw_vers -productVersion)
-	ifeq ($(shell echo $(SW_VERS) | egrep '^(10.1[5-9]|1[1-9]|[2-9])'), $(SW_VERS))
-		SKIP_386_TEST = true
-	endif
-endif
-
-
 GO = go
 GOTEST_MIN = go test -v -timeout 30s
 GOTEST = $(GOTEST_MIN) -race
@@ -67,7 +56,7 @@ test-with-coverage: $(TOOLS_DIR)/gocovmerge
 	$(TOOLS_DIR)/gocovmerge $$(find . -name coverage.out) > coverage.txt
 
 .PHONY: ci
-ci: precommit check-clean-work-tree test-with-coverage test-386
+ci: precommit check-clean-work-tree test-with-coverage
 
 .PHONY: test-gocql
 test-gocql:
@@ -133,17 +122,13 @@ test:
 	    $(GOTEST) ./...); \
 	done
 
-.PHONY: test-386
-test-386:
-	if [ $(SKIP_386_TEST) = true ] ; then \
-		echo "skipping the test for GOARCH 386 as it is not supported on the current OS"; \
-  else \
-    set -e; for dir in $(ALL_GO_MOD_DIRS); do \
-        echo "go test ./... GOARCH 386 in $${dir}"; \
-        (cd "$${dir}" && \
-          GOARCH=386 $(GOTEST_MIN) ./...); \
-	  done; \
-	fi
+.PHONY: test-short
+test-short:
+	set -e; for dir in $(ALL_GO_MOD_DIRS); do \
+	  echo "go test ./... + race in $${dir}"; \
+	  (cd "$${dir}" && \
+	    $(GOTEST_MIN) -short ./...); \
+	done
 
 .PHONY: lint
 lint: $(TOOLS_DIR)/golangci-lint $(TOOLS_DIR)/misspell lint-modules
