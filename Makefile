@@ -64,9 +64,10 @@ test-gocql:
 	  set -e; \
 	  docker run --name cass-integ --rm -p 9042:9042 -d cassandra:3; \
 	  CMD=cassandra IMG_NAME=cass-integ ./tools/wait.sh; \
-	  (cd instrumentation/github.com/gocql/gocql/otelgocql && \
-	    $(GOTEST_WITH_COVERAGE) . && \
+	  (cd instrumentation/github.com/gocql/gocql/otelgocql/test/ && \
+	    $(GOTEST_WITH_COVERAGE) -coverpkg=go.opentelemetry.io/contrib/instrumentation/github.com/gocql/gocql/otelgocql/...  ./... && \
 	    go tool cover -html=coverage.out -o coverage.html); \
+	  cp ./instrumentation/github.com/gocql/gocql/otelgocql/test/coverage.out ./; \
 	  docker stop cass-integ; \
 	fi
 
@@ -76,9 +77,10 @@ test-mongo-driver:
 	  set -e; \
 	  docker run --name mongo-integ --rm -p 27017:27017 -d mongo; \
 	  CMD=mongo IMG_NAME=mongo-integ ./tools/wait.sh; \
-	  (cd instrumentation/go.mongodb.org/mongo-driver/mongo/otelmongo && \
-	    $(GOTEST_WITH_COVERAGE) . && \
+	  (cd instrumentation/go.mongodb.org/mongo-driver/mongo/otelmongo/test && \
+	    $(GOTEST_WITH_COVERAGE) -coverpkg=go.opentelemetry.io/contrib/instrumentation/go.mongodb.org/mongo-driver/mongo/otelmongo/...  ./... && \
 	    go tool cover -html=coverage.out -o coverage.html); \
+	  cp ./instrumentation/go.mongodb.org/mongo-driver/mongo/otelmongo/test/coverage.out ./; \
 	  docker stop mongo-integ; \
 	fi
 
@@ -88,10 +90,11 @@ test-gomemcache:
 	  set -e; \
 	  docker run --name gomemcache-integ --rm -p 11211:11211 -d memcached; \
 	  CMD=gomemcache IMG_NAME=gomemcache-integ  ./tools/wait.sh; \
-	  (cd instrumentation/github.com/bradfitz/gomemcache/memcache/otelmemcache && \
-	    $(GOTEST_WITH_COVERAGE) . && \
+	  (cd instrumentation/github.com/bradfitz/gomemcache/memcache/otelmemcache/test && \
+	    $(GOTEST_WITH_COVERAGE) -coverpkg=go.opentelemetry.io/contrib/instrumentation/github.com/bradfitz/gomemcache/memcache/otelmemcache/...  ./... && \
 	    go tool cover -html=coverage.out -o coverage.html); \
 	  docker stop gomemcache-integ ; \
+	  cp ./instrumentation/github.com/bradfitz/gomemcache/memcache/otelmemcache/test/coverage.out ./; \
 	fi
 
 .PHONY: check-clean-work-tree
