@@ -12,7 +12,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package otelkit
+package test
 
 import (
 	"context"
@@ -22,10 +22,12 @@ import (
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 
+	"go.opentelemetry.io/contrib/instrumentation/github.com/go-kit/kit/otelkit"
 	"go.opentelemetry.io/otel"
 	"go.opentelemetry.io/otel/attribute"
 	"go.opentelemetry.io/otel/codes"
-	"go.opentelemetry.io/otel/oteltest"
+	sdktrace "go.opentelemetry.io/otel/sdk/trace"
+	"go.opentelemetry.io/otel/sdk/trace/tracetest"
 	"go.opentelemetry.io/otel/trace"
 )
 
@@ -61,56 +63,54 @@ func passEndpoint(_ context.Context, req interface{}) (interface{}, error) {
 
 func TestEndpointMiddleware(t *testing.T) {
 	t.Run("GlobalTracer", func(t *testing.T) {
-		otel.SetTracerProvider(oteltest.NewTracerProvider())
+		sr := tracetest.NewSpanRecorder()
+		otel.SetTracerProvider(sdktrace.NewTracerProvider(sdktrace.WithSpanProcessor(sr)))
 
-		mw := EndpointMiddleware()
+		mw := otelkit.EndpointMiddleware()
 
 		e := func(ctx context.Context, _ interface{}) (interface{}, error) {
-			span := trace.SpanFromContext(ctx)
-			_, ok := span.(*oteltest.Span)
-			assert.True(t, ok)
-
 			return nil, nil
 		}
 
 		_, _ = mw(e)(context.Background(), nil)
+		assert.Len(t, sr.Ended(), 1)
 	})
 
 	t.Run("DefaultOperationAndAttributes", func(t *testing.T) {
-		sr := new(oteltest.SpanRecorder)
-		provider := oteltest.NewTracerProvider(oteltest.WithSpanRecorder(sr))
+		sr := tracetest.NewSpanRecorder()
+		provider := sdktrace.NewTracerProvider(sdktrace.WithSpanProcessor(sr))
 
-		mw := EndpointMiddleware(
-			WithTracerProvider(provider),
-			WithOperation("operation"),
-			WithAttributes(attribute.String("key", "value")),
+		mw := otelkit.EndpointMiddleware(
+			otelkit.WithTracerProvider(provider),
+			otelkit.WithOperation("operation"),
+			otelkit.WithAttributes(attribute.String("key", "value")),
 		)
 
 		_, _ = mw(passEndpoint)(context.Background(), nil)
 
-		spans := sr.Completed()
+		spans := sr.Ended()
 		require.Len(t, spans, 1)
 
 		span := spans[0]
 
 		assert.Equal(t, "operation", span.Name())
 		assert.Equal(t, trace.SpanKindServer, span.SpanKind())
-		assert.Equal(t, codes.Unset, span.StatusCode())
-		assert.Equal(t, attribute.StringValue("value"), span.Attributes()["key"])
+		assert.Equal(t, codes.Unset, span.Status().Code)
+		assert.Contains(t, span.Attributes(), attribute.String("key", "value"))
 	})
 
 	t.Run("OperationAndAttributesFromContext", func(t *testing.T) {
-		sr := new(oteltest.SpanRecorder)
-		provider := oteltest.NewTracerProvider(oteltest.WithSpanRecorder(sr))
+		sr := tracetest.NewSpanRecorder()
+		provider := sdktrace.NewTracerProvider(sdktrace.WithSpanProcessor(sr))
 
-		mw := EndpointMiddleware(
-			WithTracerProvider(provider),
-			WithOperationGetter(func(ctx context.Context, name string) string {
+		mw := otelkit.EndpointMiddleware(
+			otelkit.WithTracerProvider(provider),
+			otelkit.WithOperationGetter(func(ctx context.Context, name string) string {
 				operation, _ := ctx.Value(operationKey).(string)
 
 				return operation
 			}),
-			WithAttributeGetter(func(ctx context.Context) []attribute.KeyValue {
+			otelkit.WithAttributeGetter(func(ctx context.Context) []attribute.KeyValue {
 				return []attribute.KeyValue{
 					attribute.String("key", "value"),
 				}
@@ -121,31 +121,31 @@ func TestEndpointMiddleware(t *testing.T) {
 
 		_, _ = mw(passEndpoint)(ctx, nil)
 
-		spans := sr.Completed()
+		spans := sr.Ended()
 		require.Len(t, spans, 1)
 
 		span := spans[0]
 
 		assert.Equal(t, "operation", span.Name())
 		assert.Equal(t, trace.SpanKindServer, span.SpanKind())
-		assert.Equal(t, codes.Unset, span.StatusCode())
-		assert.Equal(t, attribute.StringValue("value"), span.Attributes()["key"])
+		assert.Equal(t, codes.Unset, span.Status().Code)
+		assert.Contains(t, span.Attributes(), attribute.String("key", "value"))
 	})
 
 	t.Run("Overrides", func(t *testing.T) {
-		sr := new(oteltest.SpanRecorder)
-		provider := oteltest.NewTracerProvider(oteltest.WithSpanRecorder(sr))
+		sr := tracetest.NewSpanRecorder()
+		provider := sdktrace.NewTracerProvider(sdktrace.WithSpanProcessor(sr))
 
-		mw := EndpointMiddleware(
-			WithTracerProvider(provider),
-			WithOperation("operations"),
-			WithOperationGetter(func(ctx context.Context, name string) string {
+		mw := otelkit.EndpointMiddleware(
+			otelkit.WithTracerProvider(provider),
+			otelkit.WithOperation("operations"),
+			otelkit.WithOperationGetter(func(ctx context.Context, name string) string {
 				operation, _ := ctx.Value(operationKey).(string)
 
 				return operation
 			}),
-			WithAttributes(attribute.String("key", "value")),
-			WithAttributeGetter(func(ctx context.Context) []attribute.KeyValue {
+			otelkit.WithAttributes(attribute.String("key", "value")),
+			otelkit.WithAttributeGetter(func(ctx context.Context) []attribute.KeyValue {
 				return []attribute.KeyValue{
 					attribute.String("key2", "value2"),
 				}
@@ -156,24 +156,24 @@ func TestEndpointMiddleware(t *testing.T) {
 
 		_, _ = mw(passEndpoint)(ctx, nil)
 
-		spans := sr.Completed()
+		spans := sr.Ended()
 		require.Len(t, spans, 1)
 
 		span := spans[0]
 
 		assert.Equal(t, "other_operation", span.Name())
 		assert.Equal(t, trace.SpanKindServer, span.SpanKind())
-		assert.Equal(t, codes.Unset, span.StatusCode())
-		assert.Equal(t, attribute.StringValue("value"), span.Attributes()["key"])
-		assert.Equal(t, attribute.StringValue("value2"), span.Attributes()["key2"])
+		assert.Equal(t, codes.Unset, span.Status().Code)
+		assert.Contains(t, span.Attributes(), attribute.String("key", "value"))
+		assert.Contains(t, span.Attributes(), attribute.String("key2", "value2"))
 	})
 
 	t.Run("Error", func(t *testing.T) {
-		sr := new(oteltest.SpanRecorder)
-		provider := oteltest.NewTracerProvider(oteltest.WithSpanRecorder(sr))
+		sr := tracetest.NewSpanRecorder()
+		provider := sdktrace.NewTracerProvider(sdktrace.WithSpanProcessor(sr))
 
-		mw := EndpointMiddleware(
-			WithTracerProvider(provider),
+		mw := otelkit.EndpointMiddleware(
+			otelkit.WithTracerProvider(provider),
 		)
 
 		ctx := context.Background()
@@ -182,29 +182,29 @@ func TestEndpointMiddleware(t *testing.T) {
 			return nil, customError{"something went wrong"}
 		})(ctx, nil)
 
-		spans := sr.Completed()
+		spans := sr.Ended()
 		require.Len(t, spans, 1)
 
 		span := spans[0]
 
-		assert.Equal(t, defaultSpanName, span.Name())
+		assert.Equal(t, "gokit/endpoint", span.Name())
 		assert.Equal(t, trace.SpanKindServer, span.SpanKind())
-		assert.Equal(t, codes.Error, span.StatusCode())
+		assert.Equal(t, codes.Error, span.Status().Code)
 
 		events := span.Events()
 		require.Len(t, events, 1)
 
 		assert.Equal(t, "exception", events[0].Name)
-		assert.Equal(t, attribute.StringValue("go.opentelemetry.io/contrib/instrumentation/github.com/go-kit/kit/otelkit.customError"), events[0].Attributes["exception.type"])
-		assert.Equal(t, attribute.StringValue("something went wrong"), events[0].Attributes["exception.message"])
+		assert.Contains(t, events[0].Attributes, attribute.String("exception.type", "go.opentelemetry.io/contrib/instrumentation/github.com/go-kit/kit/otelkit/test.customError"))
+		assert.Contains(t, events[0].Attributes, attribute.String("exception.message", "something went wrong"))
 	})
 
 	t.Run("BusinessError", func(t *testing.T) {
-		sr := new(oteltest.SpanRecorder)
-		provider := oteltest.NewTracerProvider(oteltest.WithSpanRecorder(sr))
+		sr := tracetest.NewSpanRecorder()
+		provider := sdktrace.NewTracerProvider(sdktrace.WithSpanProcessor(sr))
 
-		mw := EndpointMiddleware(
-			WithTracerProvider(provider),
+		mw := otelkit.EndpointMiddleware(
+			otelkit.WithTracerProvider(provider),
 		)
 
 		ctx := context.Background()
@@ -213,30 +213,30 @@ func TestEndpointMiddleware(t *testing.T) {
 			return failedResponse{err: customError{"some business error"}}, nil
 		})(ctx, nil)
 
-		spans := sr.Completed()
+		spans := sr.Ended()
 		require.Len(t, spans, 1)
 
 		span := spans[0]
 
-		assert.Equal(t, defaultSpanName, span.Name())
+		assert.Equal(t, "gokit/endpoint", span.Name())
 		assert.Equal(t, trace.SpanKindServer, span.SpanKind())
-		assert.Equal(t, codes.Error, span.StatusCode())
+		assert.Equal(t, codes.Error, span.Status().Code)
 
 		events := span.Events()
 		require.Len(t, events, 1)
 
 		assert.Equal(t, "exception", events[0].Name)
-		assert.Equal(t, attribute.StringValue("go.opentelemetry.io/contrib/instrumentation/github.com/go-kit/kit/otelkit.customError"), events[0].Attributes["exception.type"])
-		assert.Equal(t, attribute.StringValue("some business error"), events[0].Attributes["exception.message"])
+		assert.Contains(t, events[0].Attributes, attribute.String("exception.type", "go.opentelemetry.io/contrib/instrumentation/github.com/go-kit/kit/otelkit/test.customError"))
+		assert.Contains(t, events[0].Attributes, attribute.String("exception.message", "some business error"))
 	})
 
 	t.Run("IgnoredBusinessError", func(t *testing.T) {
-		sr := new(oteltest.SpanRecorder)
-		provider := oteltest.NewTracerProvider(oteltest.WithSpanRecorder(sr))
+		sr := tracetest.NewSpanRecorder()
+		provider := sdktrace.NewTracerProvider(sdktrace.WithSpanProcessor(sr))
 
-		mw := EndpointMiddleware(
-			WithTracerProvider(provider),
-			WithIgnoreBusinessError(true),
+		mw := otelkit.EndpointMiddleware(
+			otelkit.WithTracerProvider(provider),
+			otelkit.WithIgnoreBusinessError(true),
 		)
 
 		ctx := context.Background()
@@ -245,20 +245,20 @@ func TestEndpointMiddleware(t *testing.T) {
 			return failedResponse{err: customError{"some business error"}}, nil
 		})(ctx, nil)
 
-		spans := sr.Completed()
+		spans := sr.Ended()
 		require.Len(t, spans, 1)
 
 		span := spans[0]
 
-		assert.Equal(t, defaultSpanName, span.Name())
+		assert.Equal(t, "gokit/endpoint", span.Name())
 		assert.Equal(t, trace.SpanKindServer, span.SpanKind())
-		assert.Equal(t, codes.Unset, span.StatusCode())
+		assert.Equal(t, codes.Unset, span.Status().Code)
 
 		events := span.Events()
 		require.Len(t, events, 1)
 
 		assert.Equal(t, "exception", events[0].Name)
-		assert.Equal(t, attribute.StringValue("go.opentelemetry.io/contrib/instrumentation/github.com/go-kit/kit/otelkit.customError"), events[0].Attributes["exception.type"])
-		assert.Equal(t, attribute.StringValue("some business error"), events[0].Attributes["exception.message"])
+		assert.Contains(t, events[0].Attributes, attribute.String("exception.type", "go.opentelemetry.io/contrib/instrumentation/github.com/go-kit/kit/otelkit/test.customError"))
+		assert.Contains(t, events[0].Attributes, attribute.String("exception.message", "some business error"))
 	})
 }
