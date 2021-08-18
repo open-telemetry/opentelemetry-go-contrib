@@ -47,10 +47,10 @@ test-with-coverage: $(TOOLS_DIR)/gocovmerge
 	  CMD="$(GOTEST_WITH_COVERAGE)"; \
 	  echo "$$dir" | \
 	    grep -q 'test$$' && \
-		CMD="$$CMD -coverpkg=go.opentelemetry.io/contrib/$$( dirname "$$dir" | sed -e "s/^\.\///g" )/..."; \
+	    CMD="$$CMD -coverpkg=go.opentelemetry.io/contrib/$$( dirname "$$dir" | sed -e "s/^\.\///g" )/..."; \
 	  echo "$$CMD $$dir/..."; \
 	  (cd "$$dir" && \
-	    "$$CMD ./..." && \
+	    $$CMD ./... && \
 	    go tool cover -html=coverage.out -o coverage.html); \
 	done; \
 	$(TOOLS_DIR)/gocovmerge $$(find . -name coverage.out) > coverage.txt
