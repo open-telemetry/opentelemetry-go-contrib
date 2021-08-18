@@ -15,10 +15,7 @@
 package main
 
 import (
-	"context"
-	"os"
-	"os/signal"
-	"syscall"
+	"fmt"
 	"time"
 
 	"go.opentelemetry.io/contrib/samplers/jaegerremote"
@@ -28,39 +25,24 @@ import (
 )
 
 func main() {
-	exporter, _ := stdouttrace.New(
-		stdouttrace.WithoutTimestamps(),
+	jaegerRemoteSampler := jaegerremote.New(
+		jaegerremote.WithService("foo"),
+		jaegerremote.WithEndpoint("http://localhost:5778"),
+		jaegerremote.WithPollingInterval(10*time.Second), // decrease polling interval to get quicker feedback
+		jaegerremote.WithInitialSamplingRate(0.5),
 	)
 
-	jaegerRemoteSampler := jaegerremote.New(
-		// decrease polling interval to get quicker feedback
-		jaegerremote.WithPollingInterval(10*time.Second),
-		// once the strategy is fetched, sample rate will drop
-		jaegerremote.WithInitialSamplingRate(1),
-	)
+	exporter, _ := stdouttrace.New()
 
 	tp := trace.NewTracerProvider(
 		trace.WithSampler(jaegerRemoteSampler),
-		trace.WithSyncer(exporter), // for production usage, use trace.WithBatcher(exp)
+		trace.WithSyncer(exporter), // for production usage, use trace.WithBatcher(exporter)
 	)
 	otel.SetTracerProvider(tp)
 
-	go generateSpans()
-
-	// wait until program is interrupted
-	c := make(chan os.Signal, 1)
-	signal.Notify(c, os.Interrupt, syscall.SIGTERM)
-	<-c
-}
-
-func generateSpans() {
-	tracer := otel.GetTracerProvider().Tracer("example")
-
+	ticker := time.Tick(time.Second)
 	for {
-		_, span := tracer.Start(context.Background(), "span created at "+time.Now().String())
-		time.Sleep(100 * time.Millisecond)
-		span.End()
-
-		time.Sleep(900 * time.Millisecond)
+		<-ticker
+		fmt.Println(jaegerRemoteSampler.Description())
 	}
 }

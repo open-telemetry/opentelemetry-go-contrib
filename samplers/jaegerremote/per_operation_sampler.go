@@ -16,6 +16,7 @@ package jaegerremote
 
 import (
 	"fmt"
+	"strings"
 
 	jaeger_api_v2 "go.opentelemetry.io/contrib/samplers/jaegerremote/internal/proto-gen/jaeger-idl/proto/api_v2"
 	"go.opentelemetry.io/otel/sdk/trace"
@@ -37,7 +38,13 @@ func (p *perOperationSampler) ShouldSample(parameters trace.SamplingParameters) 
 }
 
 func (p *perOperationSampler) Description() string {
-	return fmt.Sprintf("PerOperationSampler(default=%s,perOperation=%v", p.defaultSampler.Description(), p.operationMap)
+	var ops []string
+	for op, sampler := range p.operationMap {
+		ops = append(ops, fmt.Sprintf("%s:%s", op, sampler.Description()))
+	}
+	mapStr := strings.Join(ops, ",")
+
+	return fmt.Sprintf("PerOperationSampler{default=%s,perOperation={%v}}", p.defaultSampler.Description(), mapStr)
 }
 
 func newPerOperationSampler(strategies *jaeger_api_v2.PerOperationSamplingStrategies) trace.Sampler {
