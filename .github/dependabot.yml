@@ -165,6 +165,15 @@ updates:
     schedule:
       interval: "weekly"
       day: "sunday"
+  - package-ecosystem: "gomod"
+    directory: "/instrumentation/github.com/aws/aws-sdk-go-v2/otelaws/test"
+    labels:
+      - dependencies
+      - go
+      - "Skip Changelog"
+    schedule:
+      interval: "weekly"
+      day: "sunday"
   -
     package-ecosystem: "gomod"
     directory: "/instrumentation/github.com/bradfitz/gomemcache/memcache/otelmemcache"

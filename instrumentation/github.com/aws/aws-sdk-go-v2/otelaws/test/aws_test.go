@@ -12,21 +12,25 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package otelaws
+package test
 
 import (
 	"context"
 	"net/http"
 	"net/http/httptest"
-	"strings"
 	"testing"
 
 	"github.com/aws/aws-sdk-go-v2/aws"
 	"github.com/aws/aws-sdk-go-v2/service/route53"
 	"github.com/aws/aws-sdk-go-v2/service/route53/types"
 	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 
-	"go.opentelemetry.io/otel/oteltest"
+	"go.opentelemetry.io/contrib/instrumentation/github.com/aws/aws-sdk-go-v2/otelaws"
+	"go.opentelemetry.io/otel/attribute"
+	"go.opentelemetry.io/otel/codes"
+	sdktrace "go.opentelemetry.io/otel/sdk/trace"
+	"go.opentelemetry.io/otel/sdk/trace/tracetest"
 	"go.opentelemetry.io/otel/trace"
 )
 
@@ -35,7 +39,7 @@ func TestAppendMiddlewares(t *testing.T) {
 		responseStatus     int
 		responseBody       []byte
 		expectedRegion     string
-		expectedError      string
+		expectedError      codes.Code
 		expectedRequestID  string
 		expectedStatusCode int
 	}{
@@ -49,7 +53,7 @@ func TestAppendMiddlewares(t *testing.T) {
 		  <RequestId>b25f48e8-84fd-11e6-80d9-574e0c4664cb</RequestId>
 		</InvalidChangeBatch>`),
 			expectedRegion:     "us-east-1",
-			expectedError:      "Error",
+			expectedError:      codes.Error,
 			expectedRequestID:  "b25f48e8-84fd-11e6-80d9-574e0c4664cb",
 			expectedStatusCode: 500,
 		},
@@ -67,7 +71,7 @@ func TestAppendMiddlewares(t *testing.T) {
 		</ErrorResponse>
 		`),
 			expectedRegion:     "us-west-1",
-			expectedError:      "Error",
+			expectedError:      codes.Error,
 			expectedRequestID:  "1234567890A",
 			expectedStatusCode: 404,
 		},
@@ -98,8 +102,8 @@ func TestAppendMiddlewares(t *testing.T) {
 		defer server.Close()
 
 		t.Run(name, func(t *testing.T) {
-			sr := new(oteltest.SpanRecorder)
-			provider := oteltest.NewTracerProvider(oteltest.WithSpanRecorder(sr))
+			sr := tracetest.NewSpanRecorder()
+			provider := sdktrace.NewTracerProvider(sdktrace.WithSpanProcessor(sr))
 
 			svc := route53.NewFromConfig(aws.Config{
 				Region: c.expectedRegion,
@@ -120,45 +124,30 @@ func TestAppendMiddlewares(t *testing.T) {
 				},
 				HostedZoneId: aws.String("zone"),
 			}, func(options *route53.Options) {
-				AppendMiddlewares(
-					&options.APIOptions, WithTracerProvider(provider))
+				otelaws.AppendMiddlewares(
+					&options.APIOptions, otelaws.WithTracerProvider(provider))
 			})
+			if c.expectedError == codes.Unset {
+				assert.NoError(t, err)
+			} else {
+				assert.NotNil(t, err)
+			}
 
-			spans := sr.Completed()
-			assert.Len(t, spans, 1)
+			spans := sr.Ended()
+			require.Len(t, spans, 1)
 			span := spans[0]
 
-			if e, a := "Route 53", span.Name(); !strings.EqualFold(e, a) {
-				t.Errorf("expected span name to be %s, got %s", e, a)
+			assert.Equal(t, "Route 53", span.Name())
+			assert.Equal(t, trace.SpanKindClient, span.SpanKind())
+			assert.Equal(t, c.expectedError, span.Status().Code)
+			attrs := span.Attributes()
+			assert.Contains(t, attrs, attribute.Int("http.status_code", c.expectedStatusCode))
+			if c.expectedRequestID != "" {
+				assert.Contains(t, attrs, attribute.String("aws.request_id", c.expectedRequestID))
 			}
-
-			if e, a := trace.SpanKindClient, span.SpanKind(); e != a {
-				t.Errorf("expected span kind to be %v, got %v", e, a)
-			}
-
-			if e, a := c.expectedError, span.StatusCode().String(); err != nil && !strings.EqualFold(e, a) {
-				t.Errorf("Span Error is missing.")
-			}
-
-			if e, a := c.expectedStatusCode, span.Attributes()["http.status_code"].AsInt64(); e != int(a) {
-				t.Errorf("expected status code to be %v, got %v", e, a)
-			}
-
-			if e, a := c.expectedRequestID, span.Attributes()["aws.request_id"].AsString(); !strings.EqualFold(e, a) {
-				t.Errorf("expected request id to be %s, got %s", e, a)
-			}
-
-			if e, a := "Route 53", span.Attributes()["aws.service"].AsString(); !strings.EqualFold(e, a) {
-				t.Errorf("expected service to be %s, got %s", e, a)
-			}
-
-			if e, a := c.expectedRegion, span.Attributes()["aws.region"].AsString(); !strings.EqualFold(e, a) {
-				t.Errorf("expected region to be %s, got %s", e, a)
-			}
-
-			if e, a := "ChangeResourceRecordSets", span.Attributes()["aws.operation"].AsString(); !strings.EqualFold(e, a) {
-				t.Errorf("expected operation to be %s, got %s", e, a)
-			}
+			assert.Contains(t, attrs, attribute.String("aws.service", "Route 53"))
+			assert.Contains(t, attrs, attribute.String("aws.region", c.expectedRegion))
+			assert.Contains(t, attrs, attribute.String("aws.operation", "ChangeResourceRecordSets"))
 		})
 
 	}
