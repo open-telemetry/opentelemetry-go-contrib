@@ -177,6 +177,16 @@ updates:
       day: "sunday"
   -
     package-ecosystem: "gomod"
+    directory: "/instrumentation/github.com/bradfitz/gomemcache/memcache/otelmemcache/test"
+    labels:
+      - dependencies
+      - go
+      - "Skip Changelog"
+    schedule:
+      interval: "weekly"
+      day: "sunday"
+  -
+    package-ecosystem: "gomod"
     directory: "/instrumentation/github.com/emicklei/go-restful/otelrestful"
     labels:
       - dependencies
@@ -597,6 +607,16 @@ updates:
   -
     package-ecosystem: "gomod"
     directory: "/instrumentation/github.com/go-kit/kit/otelkit/example"
+    labels:
+      - dependencies
+      - go
+      - "Skip Changelog"
+    schedule:
+      interval: "weekly"
+      day: "sunday"
+  -
+    package-ecosystem: "gomod"
+    directory: "/instrumentation/github.com/go-kit/kit/otelkit/test"
     labels:
       - dependencies
       - go
