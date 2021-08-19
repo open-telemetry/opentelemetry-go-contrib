@@ -12,20 +12,8 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package otelmemcache
+package internal
 
-import (
-	"testing"
+import "go.opentelemetry.io/otel/attribute"
 
-	"github.com/bradfitz/gomemcache/memcache"
-	"github.com/stretchr/testify/assert"
-)
-
-func TestNewClientWithTracing(t *testing.T) {
-	c := NewClientWithTracing(
-		memcache.New(),
-	)
-
-	assert.NotNil(t, c.Client)
-	assert.NotNil(t, c.tracer)
-}
+const KafkaPartitionKey = attribute.Key("messaging.kafka.partition")

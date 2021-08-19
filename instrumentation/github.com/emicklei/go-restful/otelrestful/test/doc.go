@@ -12,20 +12,11 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package otelmemcache
+/*
+Package test validates the otelrestful instrumentation with the default SDK.
 
-import (
-	"testing"
-
-	"github.com/bradfitz/gomemcache/memcache"
-	"github.com/stretchr/testify/assert"
-)
-
-func TestNewClientWithTracing(t *testing.T) {
-	c := NewClientWithTracing(
-		memcache.New(),
-	)
-
-	assert.NotNil(t, c.Client)
-	assert.NotNil(t, c.tracer)
-}
+This package is in a separate module from the instrumentation it tests to
+isolate the dependency of the default SDK and not impose this as a transitive
+dependency for users.
+*/
+package test
