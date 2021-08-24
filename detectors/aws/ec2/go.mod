@@ -1,4 +1,4 @@
-module go.opentelemetry.io/contrib/detectors/aws
+module go.opentelemetry.io/contrib/detectors/aws/ec2
 
 go 1.15
 
