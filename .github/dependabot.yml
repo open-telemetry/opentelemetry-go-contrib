@@ -39,7 +39,7 @@ updates:
       day: "sunday"
   -
     package-ecosystem: "gomod"
-    directory: "/detectors/aws"
+    directory: "/detectors/aws/ec2"
     labels:
       - dependencies
       - go
