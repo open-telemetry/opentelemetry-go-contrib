@@ -11,31 +11,12 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
-version: "3.7"
-services:
-  gql-client:
-    image: alpine:3.14
-    networks:
-      - example
-    command:
-      - "/bin/sh"
-      - "-c"
-      - "/hack/query.sh gql-server "
-    volumes:
-      - .:/hack
-    depends_on:
-      - gql-server
-  gql-server:
-    build:
-      dockerfile: $PWD/Dockerfile
-      context: ../
-    ports:
-      - "8080:8080"
-    command:
-      - "/bin/sh"
-      - "-c"
-      - "/go/bin/server"
-    networks:
-      - example
-networks:
-  example:
+
+#!/usr/bin/env sh
+wget  "http://${1}:8080/query" \
+--header 'Accept-Encoding: gzip, deflate, br' \
+--header 'Content-Type: application/json' \
+--header 'Accept: application/json' \
+--header 'Connection: keep-alive'  \
+--header 'DNT: 1' \
+--post-data '{"query":"query ping {\n  ping{\n    id\n  }\n}"}'

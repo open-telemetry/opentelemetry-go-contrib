@@ -35,7 +35,7 @@ resolver:
 # gqlgen will search for any type names in the schema in these go packages
 # if they match it will use them, otherwise it will generate them.
 autobind:
-  - "go.opentelemetry.io/opentelemetry-go-contrib/instrumentation/github.com/99designs/graphql/_example/graph/model"
+  - "go.opentelemetry.io/opentelemetry-go-contrib/instrumentation/github.com/99designs/gqlgen/otelgqlgen/_example/graph/model"
 
 # This section declares type mapping between the GraphQL and go type systems
 #
