@@ -9,7 +9,6 @@ resource, err := ec2ResourceDetector.Detect(context.Background())
 ```
 
 EC2 resource detector captures following EC2 instance environment attributes
-
 ```
 region
 availability_zone
@@ -18,6 +17,7 @@ host.id
 host.image.id
 host.type
 ```
+
 ## ECS
 Sample code snippet to initialize ECS resource detector
 ```
@@ -45,4 +45,3 @@ EKS resource detector captures following EKS environment attributes
 k8s.cluster.name
 container.id
 ```
-
