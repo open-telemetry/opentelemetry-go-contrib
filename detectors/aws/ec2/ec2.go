@@ -28,8 +28,42 @@ import (
 	semconv "go.opentelemetry.io/otel/semconv/v1.4.0"
 )
 
-// AWS collects resource information of AWS computing instances
-type AWS struct {
+type config struct {
+	c client
+}
+
+// newConfig returns an appropriately configured config.
+func newConfig(options ...Option) *config {
+	c := new(config)
+	for _, option := range options {
+		option.apply(c)
+	}
+
+	return c
+}
+
+type Option interface {
+	apply(*config)
+}
+
+type optionFunc func(*config)
+
+func (fn optionFunc) apply(c *config) {
+	fn(c)
+}
+
+func WithClient(t client) Option {
+	return optionFunc(func(c *config) {
+		c.c = t
+	})
+}
+
+func (cfg *config) GetClient() client {
+	return cfg.c
+}
+
+// resource detector collects resource information from EC2 environment
+type resourceDetector struct {
 	c client
 }
 
@@ -39,12 +73,21 @@ type client interface {
 	GetMetadata(p string) (string, error)
 }
 
-// compile time assertion that AWS implements the resource.Detector interface.
-var _ resource.Detector = (*AWS)(nil)
+// compile time assertion that resourceDetector implements the resource.Detector interface.
+var _ resource.Detector = (*resourceDetector)(nil)
+
+//NewResourceDetector returns a resource detector that will detect AWS EC2 resources.
+func NewResourceDetector(opts ...Option) resource.Detector {
+	if opts != nil {
+		c := newConfig(opts...)
+		return &resourceDetector{c.GetClient()}
+	}
+	return &resourceDetector{nil}
+}
 
 // Detect detects associated resources when running in AWS environment.
-func (aws *AWS) Detect(ctx context.Context) (*resource.Resource, error) {
-	client, err := aws.client()
+func (detector *resourceDetector) Detect(ctx context.Context) (*resource.Resource, error) {
+	client, err := detector.client()
 	if err != nil {
 		return nil, err
 	}
@@ -80,9 +123,9 @@ func (aws *AWS) Detect(ctx context.Context) (*resource.Resource, error) {
 	return resource.NewWithAttributes(semconv.SchemaURL, attributes...), err
 }
 
-func (aws *AWS) client() (client, error) {
-	if aws.c != nil {
-		return aws.c, nil
+func (detector *resourceDetector) client() (client, error) {
+	if detector.c != nil {
+		return detector.c, nil
 	}
 
 	s, err := session.NewSession()

@@ -154,9 +154,9 @@ func TestAWS_Detect(t *testing.T) {
 		t.Run(name, func(t *testing.T) {
 			t.Parallel()
 
-			aws := AWS{c: tt.Fields.Client}
+			ec2ResourceDetector := NewResourceDetector(WithClient(tt.Fields.Client))
 
-			r, err := aws.Detect(context.Background())
+			r, err := ec2ResourceDetector.Detect(context.Background())
 
 			assert.Equal(t, tt.Want.Resource, r, "Resource")
 
