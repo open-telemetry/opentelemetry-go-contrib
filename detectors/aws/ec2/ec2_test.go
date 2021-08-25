@@ -33,7 +33,7 @@ import (
 
 func TestAWS_Detect(t *testing.T) {
 	type fields struct {
-		Client client
+		Client Client
 	}
 
 	type want struct {

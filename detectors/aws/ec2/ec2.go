@@ -29,7 +29,7 @@ import (
 )
 
 type config struct {
-	c client
+	c Client
 }
 
 // newConfig returns an appropriately configured config.
@@ -52,22 +52,24 @@ func (fn optionFunc) apply(c *config) {
 	fn(c)
 }
 
-func WithClient(t client) Option {
+// WithClient sets the ec2metadata client in config
+func WithClient(t Client) Option {
 	return optionFunc(func(c *config) {
 		c.c = t
 	})
 }
 
-func (cfg *config) GetClient() client {
+func (cfg *config) getClient() Client {
 	return cfg.c
 }
 
 // resource detector collects resource information from EC2 environment
 type resourceDetector struct {
-	c client
+	c Client
 }
 
-type client interface {
+// Client implements methods to capture EC2 environment metadata information
+type Client interface {
 	Available() bool
 	GetInstanceIdentityDocument() (ec2metadata.EC2InstanceIdentityDocument, error)
 	GetMetadata(p string) (string, error)
@@ -78,11 +80,8 @@ var _ resource.Detector = (*resourceDetector)(nil)
 
 //NewResourceDetector returns a resource detector that will detect AWS EC2 resources.
 func NewResourceDetector(opts ...Option) resource.Detector {
-	if opts != nil {
-		c := newConfig(opts...)
-		return &resourceDetector{c.GetClient()}
-	}
-	return &resourceDetector{nil}
+	c := newConfig(opts...)
+	return &resourceDetector{c.getClient()}
 }
 
 // Detect detects associated resources when running in AWS environment.
@@ -123,7 +122,7 @@ func (detector *resourceDetector) Detect(ctx context.Context) (*resource.Resourc
 	return resource.NewWithAttributes(semconv.SchemaURL, attributes...), err
 }
 
-func (detector *resourceDetector) client() (client, error) {
+func (detector *resourceDetector) client() (Client, error) {
 	if detector.c != nil {
 		return detector.c, nil
 	}
@@ -137,7 +136,7 @@ func (detector *resourceDetector) client() (client, error) {
 }
 
 type metadata struct {
-	client     client
+	client     Client
 	errs       []error
 	attributes []attribute.KeyValue
 }
