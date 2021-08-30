@@ -89,7 +89,10 @@ func (detector *resourceDetector) Detect(ctx context.Context) (*resource.Resourc
 	}
 
 	// Create variable to hold resource attributes
-	attributes := []attribute.KeyValue{}
+	attributes := []attribute.KeyValue{
+		semconv.CloudProviderAWS,
+		semconv.CloudPlatformAWSEKS,
+	}
 
 	// Get clusterName and append to attributes
 	clusterName, err := getClusterName(ctx, detector.utils)
