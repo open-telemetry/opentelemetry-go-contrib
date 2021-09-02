@@ -121,6 +121,7 @@ func TestForSingleFieldTrace(t *testing.T) {
 	assert.Equal(t, "echo", spanField)
 }
 
+/*
 func TestForTwoFieldTraces(t *testing.T) {
 	query := "query Echo($message1: String!, $message2: String!) { echo (message: $message1)\\necho2 (message: $message2) }"
 	vars := "{\"message1\": \"Hello\", \"message2\": \"World\"}}"
@@ -145,6 +146,7 @@ func TestForTwoFieldTraces(t *testing.T) {
 	assert.Equal(t, fieldSpans, 2)
 	assert.True(t, hasRequestSpan)
 }
+*/
 
 func TestForValidationTraceWithError(t *testing.T) {
 	query := "query { nonExistingFieldToTriggerValidationError }"
