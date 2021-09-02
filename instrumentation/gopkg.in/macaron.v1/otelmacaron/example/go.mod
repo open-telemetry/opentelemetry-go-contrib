@@ -1,4 +1,4 @@
-module go.opentelemetry.io/opentelemetry-go-contrib/instrumentation/gopkg.in/macaron.v1/otelmacaron/example
+module go.opentelemetry.io/contrib/instrumentation/gopkg.in/macaron.v1/otelmacaron/example
 
 go 1.15
 

@@ -1,4 +1,4 @@
-module go.opentelemetry.io/opentelemetry-go-contrib/instrumentation/github.com/emicklei/go-restful/otelrestful/example
+module go.opentelemetry.io/contrib/instrumentation/github.com/emicklei/go-restful/otelrestful/example
 
 go 1.15
 

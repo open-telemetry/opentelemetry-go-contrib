@@ -1,4 +1,4 @@
-module go.opentelemetry.io/contrib/instrumentation/astaxie/beego/example
+module go.opentelemetry.io/contrib/instrumentation/github.com/astaxie/beego/otelbeego/example
 
 go 1.15
 
