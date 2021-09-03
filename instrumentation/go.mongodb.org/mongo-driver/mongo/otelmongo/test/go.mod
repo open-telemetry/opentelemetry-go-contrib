@@ -11,3 +11,8 @@ require (
 	go.opentelemetry.io/otel/sdk v1.0.0-RC3
 	go.opentelemetry.io/otel/trace v1.0.0-RC3
 )
+
+replace (
+	go.opentelemetry.io/contrib/instrumentation/go.mongodb.org/mongo-driver/mongo/otelmongo => ../
+	go.opentelemetry.io/contrib => ../../../../../..
+)

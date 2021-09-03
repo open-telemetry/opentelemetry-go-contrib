@@ -70,7 +70,12 @@ func TestDBCrudOperation(t *testing.T) {
 			},
 			excludeCommand: false,
 			validators: append(commonValidators, func(s sdktrace.ReadOnlySpan) bool {
-				return assert.Contains(t, s.Attributes(), attribute.String("db.statement", `"test-item":"test-value"`))
+				for _, attr := range s.Attributes() {
+					if attr.Key == "db.statement" {
+						return assert.Contains(t, attr.Value.AsString(), `"test-item":"test-value"`)
+					}
+				}
+				return false
 			}),
 		},
 		{
@@ -80,7 +85,12 @@ func TestDBCrudOperation(t *testing.T) {
 			},
 			excludeCommand: true,
 			validators: append(commonValidators, func(s sdktrace.ReadOnlySpan) bool {
-				return assert.Contains(t, s.Attributes(), attribute.String("db.statement", `"test-item":"test-value"`))
+				for _, attr := range s.Attributes() {
+					if attr.Key == "db.statement" {
+						return false
+					}
+				}
+				return true
 			}),
 		},
 	}
