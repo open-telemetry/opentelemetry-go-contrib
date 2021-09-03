@@ -13,6 +13,6 @@ require (
 )
 
 replace (
-	go.opentelemetry.io/contrib/instrumentation/go.mongodb.org/mongo-driver/mongo/otelmongo => ../
 	go.opentelemetry.io/contrib => ../../../../../..
+	go.opentelemetry.io/contrib/instrumentation/go.mongodb.org/mongo-driver/mongo/otelmongo => ../
 )
