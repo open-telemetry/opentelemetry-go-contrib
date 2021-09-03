@@ -60,6 +60,7 @@ func (aws *AWS) Detect(ctx context.Context) (*resource.Resource, error) {
 
 	attributes := []attribute.KeyValue{
 		semconv.CloudProviderAWS,
+		semconv.CloudPlatformAWSEC2,
 		semconv.CloudRegionKey.String(doc.Region),
 		semconv.CloudAvailabilityZoneKey.String(doc.AvailabilityZone),
 		semconv.CloudAccountIDKey.String(doc.AccountID),
