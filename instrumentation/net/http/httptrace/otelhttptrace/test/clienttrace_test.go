@@ -91,6 +91,9 @@ func TestHTTPRequestWithClientTrace(t *testing.T) {
 		{
 			name: "http.connect",
 			attributes: []attribute.KeyValue{
+				attribute.Key("http.conn.done.addr").String(address.String()),
+				attribute.Key("http.conn.done.network").String("tcp"),
+				attribute.Key("http.conn.start.network").String("tcp"),
 				attribute.Key("http.remote").String(address.String()),
 			},
 			parent: "http.getconn",
@@ -100,6 +103,8 @@ func TestHTTPRequestWithClientTrace(t *testing.T) {
 			attributes: []attribute.KeyValue{
 				attribute.Key("http.remote").String(address.String()),
 				attribute.Key("http.host").String(address.String()),
+				attribute.Key("http.conn.reused").Bool(false),
+				attribute.Key("http.conn.wasidle").Bool(false),
 			},
 			parent: "test",
 		},
@@ -214,7 +219,13 @@ func TestConcurrentConnectionStart(t *testing.T) {
 
 	expectedRemotes := []attribute.KeyValue{
 		attribute.String("http.remote", "127.0.0.1:3000"),
+		attribute.String("http.conn.start.network", "tcp"),
+		attribute.String("http.conn.done.addr", "127.0.0.1:3000"),
+		attribute.String("http.conn.done.network", "tcp"),
 		attribute.String("http.remote", "[::1]:3000"),
+		attribute.String("http.conn.start.network", "tcp"),
+		attribute.String("http.conn.done.addr", "[::1]:3000"),
+		attribute.String("http.conn.done.network", "tcp"),
 	}
 	for _, tt := range tts {
 		t.Run(tt.name, func(t *testing.T) {
@@ -246,4 +257,217 @@ func TestEndBeforeStartCreatesSpan(t *testing.T) {
 	name := "http.dns"
 	spans := getSpansFromRecorder(sr, name)
 	require.Len(t, spans, 1)
+}
+
+type clientTraceTestFixture struct {
+	Address      string
+	URL          string
+	Client       *http.Client
+	SpanRecorder *tracetest.SpanRecorder
+}
+
+func prepareClientTraceTest(t *testing.T) clientTraceTestFixture {
+	fixture := clientTraceTestFixture{}
+	fixture.SpanRecorder = tracetest.NewSpanRecorder()
+	otel.SetTracerProvider(
+		trace.NewTracerProvider(trace.WithSpanProcessor(fixture.SpanRecorder)),
+	)
+
+	ts := httptest.NewServer(
+		http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		}),
+	)
+	t.Cleanup(ts.Close)
+	fixture.Client = ts.Client()
+	fixture.URL = ts.URL
+	fixture.Address = ts.Listener.Addr().String()
+	return fixture
+}
+
+func TestWithoutSubSpans(t *testing.T) {
+	fixture := prepareClientTraceTest(t)
+
+	ctx := context.Background()
+	ctx = httptrace.WithClientTrace(ctx,
+		otelhttptrace.NewClientTrace(ctx,
+			otelhttptrace.WithoutSubSpans(),
+		),
+	)
+	req, err := http.NewRequestWithContext(ctx, http.MethodGet, fixture.URL, nil)
+	require.NoError(t, err)
+	resp, err := fixture.Client.Do(req)
+	require.NoError(t, err)
+	resp.Body.Close()
+	// no spans created because we were just using background context without span
+	require.Len(t, fixture.SpanRecorder.Ended(), 0)
+
+	// Start again with a "real" span in the context, now tracing should add
+	// events and annotations.
+	ctx, span := otel.Tracer("oteltest").Start(context.Background(), "root")
+	ctx = httptrace.WithClientTrace(ctx,
+		otelhttptrace.NewClientTrace(ctx,
+			otelhttptrace.WithoutSubSpans(),
+		),
+	)
+	req, err = http.NewRequestWithContext(ctx, http.MethodGet, fixture.URL, nil)
+	req.Header.Set("User-Agent", "oteltest/1.1")
+	req.Header.Set("Authorization", "Bearer token123")
+	require.NoError(t, err)
+	resp, err = fixture.Client.Do(req)
+	require.NoError(t, err)
+	resp.Body.Close()
+	span.End()
+	// we just have the one span we created
+	require.Len(t, fixture.SpanRecorder.Ended(), 1)
+	recSpan := fixture.SpanRecorder.Ended()[0]
+
+	gotAttributes := recSpan.Attributes()
+	require.Len(t, gotAttributes, 4)
+	assert.Equal(t,
+		[]attribute.KeyValue{
+			attribute.Key("http.host").String(fixture.Address),
+			attribute.Key("http.user-agent").String("oteltest/1.1"),
+			attribute.Key("http.authorization").String("****"),
+			attribute.Key("http.accept-encoding").String("gzip"),
+		},
+		gotAttributes,
+	)
+
+	type attrMap = map[attribute.Key]attribute.Value
+	expectedEvents := []struct {
+		Event       string
+		VerifyAttrs func(t *testing.T, got attrMap)
+	}{
+		{"http.getconn.start", func(t *testing.T, got attrMap) {
+			assert.Equal(t,
+				attribute.StringValue(fixture.Address),
+				got[attribute.Key("http.host")],
+			)
+		}},
+		{"http.getconn.done", func(t *testing.T, got attrMap) {
+			// value is dynamic, just verify we have the attribute
+			assert.Contains(t, got, attribute.Key("http.conn.idletime"))
+			assert.Equal(t,
+				attribute.BoolValue(true),
+				got[attribute.Key("http.conn.reused")],
+			)
+			assert.Equal(t,
+				attribute.BoolValue(true),
+				got[attribute.Key("http.conn.wasidle")],
+			)
+			assert.Equal(t,
+				attribute.StringValue(fixture.Address),
+				got[attribute.Key("http.remote")],
+			)
+			// value is dynamic, just verify we have the attribute
+			assert.Contains(t, got, attribute.Key("http.local"))
+		}},
+		{"http.send.start", nil},
+		{"http.send.done", nil},
+		{"http.receive.start", nil},
+		{"http.receive.done", nil},
+	}
+	require.Len(t, recSpan.Events(), len(expectedEvents))
+	for i, e := range recSpan.Events() {
+		attrs := attrMap{}
+		for _, a := range e.Attributes {
+			attrs[a.Key] = a.Value
+		}
+		expected := expectedEvents[i]
+		assert.Equal(t, expected.Event, e.Name)
+		if expected.VerifyAttrs == nil {
+			assert.Nil(t, e.Attributes, "Event %q has no attributes", e.Name)
+		} else {
+			e := e // make loop var lexical
+			t.Run(e.Name, func(t *testing.T) {
+				expected.VerifyAttrs(t, attrs)
+			})
+		}
+	}
+}
+
+func TestWithRedactedHeaders(t *testing.T) {
+	fixture := prepareClientTraceTest(t)
+
+	ctx, span := otel.Tracer("oteltest").Start(context.Background(), "root")
+	ctx = httptrace.WithClientTrace(ctx,
+		otelhttptrace.NewClientTrace(ctx,
+			otelhttptrace.WithoutSubSpans(),
+			otelhttptrace.WithRedactedHeaders("user-agent"),
+		),
+	)
+	req, err := http.NewRequestWithContext(ctx, http.MethodGet, fixture.URL, nil)
+	require.NoError(t, err)
+	resp, err := fixture.Client.Do(req)
+	require.NoError(t, err)
+	resp.Body.Close()
+	span.End()
+	require.Len(t, fixture.SpanRecorder.Ended(), 1)
+	recSpan := fixture.SpanRecorder.Ended()[0]
+
+	gotAttributes := recSpan.Attributes()
+	assert.Equal(t,
+		[]attribute.KeyValue{
+			attribute.Key("http.host").String(fixture.Address),
+			attribute.Key("http.user-agent").String("****"),
+			attribute.Key("http.accept-encoding").String("gzip"),
+		},
+		gotAttributes,
+	)
+}
+
+func TestWithoutHeaders(t *testing.T) {
+	fixture := prepareClientTraceTest(t)
+
+	ctx, span := otel.Tracer("oteltest").Start(context.Background(), "root")
+	ctx = httptrace.WithClientTrace(ctx,
+		otelhttptrace.NewClientTrace(ctx,
+			otelhttptrace.WithoutSubSpans(),
+			otelhttptrace.WithoutHeaders(),
+		),
+	)
+	req, err := http.NewRequestWithContext(ctx, http.MethodGet, fixture.URL, nil)
+	require.NoError(t, err)
+	resp, err := fixture.Client.Do(req)
+	require.NoError(t, err)
+	resp.Body.Close()
+	span.End()
+	require.Len(t, fixture.SpanRecorder.Ended(), 1)
+	recSpan := fixture.SpanRecorder.Ended()[0]
+
+	gotAttributes := recSpan.Attributes()
+	require.Len(t, gotAttributes, 0)
+}
+
+func TestWithInsecureHeaders(t *testing.T) {
+	fixture := prepareClientTraceTest(t)
+
+	ctx, span := otel.Tracer("oteltest").Start(context.Background(), "root")
+	ctx = httptrace.WithClientTrace(ctx,
+		otelhttptrace.NewClientTrace(ctx,
+			otelhttptrace.WithoutSubSpans(),
+			otelhttptrace.WithInsecureHeaders(),
+		),
+	)
+	req, err := http.NewRequestWithContext(ctx, http.MethodGet, fixture.URL, nil)
+	req.Header.Set("User-Agent", "oteltest/1.1")
+	req.Header.Set("Authorization", "Bearer token123")
+	require.NoError(t, err)
+	resp, err := fixture.Client.Do(req)
+	require.NoError(t, err)
+	resp.Body.Close()
+	span.End()
+	require.Len(t, fixture.SpanRecorder.Ended(), 1)
+	recSpan := fixture.SpanRecorder.Ended()[0]
+
+	gotAttributes := recSpan.Attributes()
+	assert.Equal(t,
+		[]attribute.KeyValue{
+			attribute.Key("http.host").String(fixture.Address),
+			attribute.Key("http.user-agent").String("oteltest/1.1"),
+			attribute.Key("http.authorization").String("Bearer token123"),
+			attribute.Key("http.accept-encoding").String("gzip"),
+		},
+		gotAttributes,
+	)
 }
