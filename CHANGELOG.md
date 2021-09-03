@@ -11,6 +11,7 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 ### Added
 
 - Add `WithoutSubSpans`, `WithRedactedHeaders`, `WithoutHeaders`, and `WithInsecureHeaders` options for `otelhttptrace.NewClientTrace`. (#879)
+- Add instrumentation for `graph-gophers/graphql-go` GraphQL server. (#85)
 
 ### Changed
 
