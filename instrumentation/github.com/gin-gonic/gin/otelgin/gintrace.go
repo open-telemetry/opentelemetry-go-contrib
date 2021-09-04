@@ -74,6 +74,7 @@ func Middleware(service string, opts ...Option) gin.HandlerFunc {
 		}
 		ctx, span := tracer.Start(ctx, spanName, opts...)
 		defer span.End()
+		cfg.Propagators.Inject(ctx, propagation.HeaderCarrier(c.Writer.Header()))
 
 		// pass the span through the request context
 		c.Request = c.Request.WithContext(ctx)
