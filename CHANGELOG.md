@@ -19,6 +19,7 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 - Migrated EC2 resource detector support from root module `go.opentelemetry.io/contrib/detectors/aws` to a separate EC2 resource detector module `go.opentelemetry.io/contrib/detectors/aws/ec2` (#1017)
 - Add `cloud.provider` and `cloud.platform` to AWS detectors. (#1043)
 - `otelhttptrace.NewClientTrace` now redacts known sensitive headers by default. (#879)
+- Add inject response header gin middleware. (#1049)
 
 ### Fixed
 
