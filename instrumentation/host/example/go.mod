@@ -1,4 +1,4 @@
-module go.opentelemetry.io/opentelemetry-go-contrib/instrumentation/host/example
+module go.opentelemetry.io/contrib/instrumentation/host/example
 
 go 1.15
 
