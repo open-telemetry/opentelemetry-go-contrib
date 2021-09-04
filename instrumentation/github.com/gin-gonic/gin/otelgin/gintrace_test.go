@@ -106,3 +106,38 @@ func TestPropagationWithCustomPropagators(t *testing.T) {
 
 	router.ServeHTTP(w, r)
 }
+
+func TestPropagationWithTraceResponse(t *testing.T) {
+	header := make(http.Header)
+	provider := trace.NewNoopTracerProvider()
+	b3 := b3prop.New()
+
+	r := httptest.NewRequest("GET", "/user/123", nil)
+	w := httptest.NewRecorder()
+
+	ctx := context.Background()
+	sc := trace.NewSpanContext(trace.SpanContextConfig{
+		TraceID: trace.TraceID{0x01},
+		SpanID:  trace.SpanID{0x01},
+	})
+	ctx = trace.ContextWithRemoteSpanContext(ctx, sc)
+	ctx, _ = provider.Tracer(tracerName).Start(ctx, "test")
+	b3.Inject(ctx, propagation.HeaderCarrier(r.Header))
+	b3.Inject(ctx, propagation.HeaderCarrier(header))
+
+	router := gin.New()
+	router.Use(Middleware("foobar", WithTracerProvider(provider), WithPropagators(b3)))
+	router.GET("/user/:id", func(c *gin.Context) {
+		span := oteltrace.SpanFromContext(c.Request.Context())
+		assert.Equal(t, sc.TraceID(), span.SpanContext().TraceID())
+		assert.Equal(t, sc.SpanID(), span.SpanContext().SpanID())
+	})
+
+	router.ServeHTTP(w, r)
+	response := w.Result()
+	traceresponse := make(http.Header)
+	b3.Extract(ctx, propagation.HeaderCarrier(traceresponse))
+	for key := range header {
+		assert.Equal(t, header.Get(key), response.Header.Get(key))
+	}
+}
