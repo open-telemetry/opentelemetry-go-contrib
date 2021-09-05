@@ -31,6 +31,7 @@ import (
 	controller "go.opentelemetry.io/otel/sdk/metric/controller/basic"
 	"go.opentelemetry.io/otel/sdk/metric/processor/basic"
 	"go.opentelemetry.io/otel/sdk/metric/selector/simple"
+	semconv "go.opentelemetry.io/otel/semconv/v1.4.0"
 )
 
 type TestUDPServer struct {
@@ -67,7 +68,7 @@ func ExampleExporter() {
 		global.SetMeterProvider(pusher.MeterProvider())
 		meter := global.Meter("marwandist")
 		m := metric.Must(meter).NewInt64Histogram("myrecorder")
-		meter.RecordBatch(context.Background(), []attribute.KeyValue{attribute.Int("l", 1)},
+		meter.RecordBatch(context.Background(), []attribute.KeyValue{attribute.Int("l", 1), semconv.ServiceNameKey.String("ExampleExporter")},
 			m.Measurement(1), m.Measurement(50), m.Measurement(100))
 	}()
 
@@ -98,7 +99,7 @@ func ExampleExporter() {
 	}
 
 	// Output:
-	// myrecorder.max:100|g|#env:dev,l:1,service.name:unknown_service:datadog.test,telemetry.sdk.language:go,telemetry.sdk.name:opentelemetry,telemetry.sdk.version:1.0.0-RC3
+	// myrecorder.max:100|g|#env:dev,l:1,service.name:ExampleExporter,telemetry.sdk.language:go,telemetry.sdk.name:opentelemetry,telemetry.sdk.version:1.0.0-RC3
 	//
 }
 
