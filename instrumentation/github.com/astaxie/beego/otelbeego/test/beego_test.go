@@ -233,12 +233,12 @@ func TestRender(t *testing.T) {
 		"<body>This is a template test. Hello {{.name}}</body></html>"
 
 	// Create a temp directory to hold a view
-	dir, err := ioutil.TempDir(".", "views")
+	dir, err := ioutil.TempDir("", "views")
 	defer os.RemoveAll(dir)
 	require.NoError(t, err)
 
 	// Create the view
-	file, err := ioutil.TempFile("./"+dir, "*index.tpl")
+	file, err := ioutil.TempFile(dir, "*index.tpl")
 	require.NoError(t, err)
 	_, err = file.WriteString(htmlStr)
 	require.NoError(t, err)

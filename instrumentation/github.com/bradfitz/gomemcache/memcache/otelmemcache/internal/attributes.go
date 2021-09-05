@@ -50,7 +50,7 @@ func MemcacheDBOperation(opName Operation) attribute.KeyValue {
 
 func MemcacheDBItemKeys(itemKeys ...string) attribute.KeyValue {
 	if len(itemKeys) > 1 {
-		return MemcacheDBItemKeyName.Array(itemKeys)
+		return MemcacheDBItemKeyName.StringSlice(itemKeys)
 	}
 
 	return MemcacheDBItemKeyName.String(itemKeys[0])
