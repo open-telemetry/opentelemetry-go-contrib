@@ -29,6 +29,7 @@ import (
 	"github.com/vektah/gqlparser/v2"
 	"github.com/vektah/gqlparser/v2/ast"
 	"github.com/vektah/gqlparser/v2/gqlerror"
+
 	"go.opentelemetry.io/otel"
 	"go.opentelemetry.io/otel/oteltest"
 	oteltrace "go.opentelemetry.io/otel/trace"
