@@ -24,14 +24,8 @@ import (
 	"github.com/google/go-cmp/cmp"
 
 	"go.opentelemetry.io/contrib/propagators/b3"
-	"go.opentelemetry.io/otel/oteltest"
 	"go.opentelemetry.io/otel/propagation"
 	"go.opentelemetry.io/otel/trace"
-)
-
-var (
-	mockTracer  = oteltest.NewTracerProvider().Tracer("")
-	_, mockSpan = mockTracer.Start(context.Background(), "")
 )
 
 func TestExtractB3(t *testing.T) {
@@ -50,17 +44,17 @@ func TestExtractB3(t *testing.T) {
 	}
 
 	for _, tg := range testGroup {
-		propagator := b3.B3{}
+		propagator := b3.New()
 
 		for _, tt := range tg.tests {
 			t.Run(tt.name, func(t *testing.T) {
-				req, _ := http.NewRequest("GET", "http://example.com", nil)
+				header := make(http.Header, len(tt.headers))
 				for h, v := range tt.headers {
-					req.Header.Set(h, v)
+					header.Set(h, v)
 				}
 
 				ctx := context.Background()
-				ctx = propagator.Extract(ctx, propagation.HeaderCarrier(req.Header))
+				ctx = propagator.Extract(ctx, propagation.HeaderCarrier(header))
 				gotSc := trace.SpanContextFromContext(ctx)
 
 				comparer := cmp.Comparer(func(a, b trace.SpanContext) bool {
@@ -105,28 +99,25 @@ func TestInjectB3(t *testing.T) {
 
 	for _, tg := range testGroup {
 		for _, tt := range tg.tests {
-			propagator := b3.B3{InjectEncoding: tt.encoding}
+			propagator := b3.New(b3.WithInjectEncoding(tt.encoding))
 			t.Run(tt.name, func(t *testing.T) {
-				req, _ := http.NewRequest("GET", "http://example.com", nil)
-				ctx := trace.ContextWithSpan(
+				header := http.Header{}
+				ctx := trace.ContextWithSpanContext(
 					context.Background(),
-					testSpan{
-						Span: mockSpan,
-						sc:   trace.NewSpanContext(tt.scc),
-					},
+					trace.NewSpanContext(tt.scc),
 				)
 				ctx = b3.WithDebug(ctx, tt.debug)
 				ctx = b3.WithDeferred(ctx, tt.deferred)
-				propagator.Inject(ctx, propagation.HeaderCarrier(req.Header))
+				propagator.Inject(ctx, propagation.HeaderCarrier(header))
 
 				for h, v := range tt.wantHeaders {
-					got, want := req.Header.Get(h), v
+					got, want := header.Get(h), v
 					if diff := cmp.Diff(got, want); diff != "" {
 						t.Errorf("%s: %s, header=%s: -got +want %s", tg.name, tt.name, h, diff)
 					}
 				}
 				for _, h := range tt.doNotWantHeaders {
-					v, gotOk := req.Header[h]
+					v, gotOk := header[h]
 					if diff := cmp.Diff(gotOk, false); diff != "" {
 						t.Errorf("%s: %s, header=%s: -got +want %s, value=%s", tg.name, tt.name, h, diff, v)
 					}
@@ -139,12 +130,12 @@ func TestInjectB3(t *testing.T) {
 func TestB3Propagator_Fields(t *testing.T) {
 	tests := []struct {
 		name       string
-		propagator b3.B3
+		propagator propagation.TextMapPropagator
 		want       []string
 	}{
 		{
 			name:       "no encoding specified",
-			propagator: b3.B3{},
+			propagator: b3.New(),
 			want: []string{
 				b3TraceID,
 				b3SpanID,
@@ -154,7 +145,7 @@ func TestB3Propagator_Fields(t *testing.T) {
 		},
 		{
 			name:       "B3MultipleHeader encoding specified",
-			propagator: b3.B3{InjectEncoding: b3.B3MultipleHeader},
+			propagator: b3.New(b3.WithInjectEncoding(b3.B3MultipleHeader)),
 			want: []string{
 				b3TraceID,
 				b3SpanID,
@@ -164,14 +155,14 @@ func TestB3Propagator_Fields(t *testing.T) {
 		},
 		{
 			name:       "B3SingleHeader encoding specified",
-			propagator: b3.B3{InjectEncoding: b3.B3SingleHeader},
+			propagator: b3.New(b3.WithInjectEncoding(b3.B3SingleHeader)),
 			want: []string{
 				b3Context,
 			},
 		},
 		{
 			name:       "B3SingleHeader and B3MultipleHeader encoding specified",
-			propagator: b3.B3{InjectEncoding: b3.B3SingleHeader | b3.B3MultipleHeader},
+			propagator: b3.New(b3.WithInjectEncoding(b3.B3SingleHeader | b3.B3MultipleHeader)),
 			want: []string{
 				b3Context,
 				b3TraceID,

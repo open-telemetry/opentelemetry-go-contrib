@@ -24,7 +24,7 @@ import (
 
 	"go.opentelemetry.io/otel/attribute"
 	"go.opentelemetry.io/otel/sdk/resource"
-	"go.opentelemetry.io/otel/semconv"
+	semconv "go.opentelemetry.io/otel/semconv/v1.4.0"
 )
 
 type MockDetectorUtils struct {
@@ -37,10 +37,10 @@ func (detectorUtils *MockDetectorUtils) fileExists(filename string) bool {
 	return args.Bool(0)
 }
 
-// Mock function for fetchString()
-func (detectorUtils *MockDetectorUtils) fetchString(httpMethod string, URL string) (string, error) {
-	args := detectorUtils.Called(httpMethod, URL)
-	return args.String(0), args.Error(1)
+// Mock function for getConfigMap()
+func (detectorUtils *MockDetectorUtils) getConfigMap(_ context.Context, namespace string, name string) (map[string]string, error) {
+	args := detectorUtils.Called(namespace, name)
+	return args.Get(0).(map[string]string), args.Error(1)
 }
 
 // Mock function for getContainerID()
@@ -51,25 +51,26 @@ func (detectorUtils *MockDetectorUtils) getContainerID() (string, error) {
 
 // Tests EKS resource detector running in EKS environment
 func TestEks(t *testing.T) {
-
 	detectorUtils := new(MockDetectorUtils)
 
 	// Mock functions and set expectations
 	detectorUtils.On("fileExists", k8sTokenPath).Return(true)
 	detectorUtils.On("fileExists", k8sCertPath).Return(true)
-	detectorUtils.On("fetchString", "GET", k8sSvcURL+authConfigmapPath).Return("not empty", nil)
-	detectorUtils.On("fetchString", "GET", k8sSvcURL+cwConfigmapPath).Return(`{"data":{"cluster.name":"my-cluster"}}`, nil)
+	detectorUtils.On("getConfigMap", authConfigmapNS, authConfigmapName).Return(map[string]string{"not": "nil"}, nil)
+	detectorUtils.On("getConfigMap", cwConfigmapNS, cwConfigmapName).Return(map[string]string{"cluster.name": "my-cluster"}, nil)
 	detectorUtils.On("getContainerID").Return("0123456789A", nil)
 
 	// Expected resource object
 	eksResourceLabels := []attribute.KeyValue{
+		semconv.CloudProviderAWS,
+		semconv.CloudPlatformAWSEKS,
 		semconv.K8SClusterNameKey.String("my-cluster"),
 		semconv.ContainerIDKey.String("0123456789A"),
 	}
-	expectedResource := resource.NewWithAttributes(eksResourceLabels...)
+	expectedResource := resource.NewWithAttributes(semconv.SchemaURL, eksResourceLabels...)
 
 	// Call EKS Resource detector to detect resources
-	eksResourceDetector := resourceDetector{detectorUtils}
+	eksResourceDetector := resourceDetector{utils: detectorUtils}
 	resourceObj, err := eksResourceDetector.Detect(context.Background())
 	require.NoError(t, err)
 
@@ -79,7 +80,6 @@ func TestEks(t *testing.T) {
 
 // Tests EKS resource detector not running in EKS environment
 func TestNotEKS(t *testing.T) {
-
 	detectorUtils := new(MockDetectorUtils)
 
 	k8sTokenPath := "/var/run/secrets/kubernetes.io/serviceaccount/token"
@@ -87,7 +87,7 @@ func TestNotEKS(t *testing.T) {
 	// Mock functions and set expectations
 	detectorUtils.On("fileExists", k8sTokenPath).Return(false)
 
-	detector := resourceDetector{detectorUtils}
+	detector := resourceDetector{utils: detectorUtils}
 	r, err := detector.Detect(context.Background())
 	require.NoError(t, err)
 	assert.Equal(t, resource.Empty(), r, "Resource object should be empty")

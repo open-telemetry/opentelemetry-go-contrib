@@ -18,13 +18,14 @@ import (
 	"fmt"
 
 	"github.com/labstack/echo/v4"
+	"github.com/labstack/echo/v4/middleware"
 
 	otelcontrib "go.opentelemetry.io/contrib"
 	"go.opentelemetry.io/otel"
 
 	"go.opentelemetry.io/otel/attribute"
 	"go.opentelemetry.io/otel/propagation"
-	"go.opentelemetry.io/otel/semconv"
+	semconv "go.opentelemetry.io/otel/semconv/v1.4.0"
 	oteltrace "go.opentelemetry.io/otel/trace"
 )
 
@@ -37,7 +38,7 @@ const (
 func Middleware(service string, opts ...Option) echo.MiddlewareFunc {
 	cfg := config{}
 	for _, opt := range opts {
-		opt(&cfg)
+		opt.apply(&cfg)
 	}
 	if cfg.TracerProvider == nil {
 		cfg.TracerProvider = otel.GetTracerProvider()
@@ -49,8 +50,17 @@ func Middleware(service string, opts ...Option) echo.MiddlewareFunc {
 	if cfg.Propagators == nil {
 		cfg.Propagators = otel.GetTextMapPropagator()
 	}
+
+	if cfg.Skipper == nil {
+		cfg.Skipper = middleware.DefaultSkipper
+	}
+
 	return func(next echo.HandlerFunc) echo.HandlerFunc {
 		return func(c echo.Context) error {
+			if cfg.Skipper(c) {
+				return next(c)
+			}
+
 			c.Set(tracerKey, tracer)
 			request := c.Request()
 			savedCtx := request.Context()
@@ -59,7 +69,7 @@ func Middleware(service string, opts ...Option) echo.MiddlewareFunc {
 				c.SetRequest(request)
 			}()
 			ctx := cfg.Propagators.Extract(savedCtx, propagation.HeaderCarrier(request.Header))
-			opts := []oteltrace.SpanOption{
+			opts := []oteltrace.SpanStartOption{
 				oteltrace.WithAttributes(semconv.NetAttributesFromHTTPRequest("tcp", request)...),
 				oteltrace.WithAttributes(semconv.EndUserAttributesFromHTTPRequest(request)...),
 				oteltrace.WithAttributes(semconv.HTTPServerAttributesFromHTTPRequest(service, c.Path(), request)...),
