@@ -74,6 +74,25 @@ func TestChildSpanFromCustomTracer(t *testing.T) {
 	srv.ServeHTTP(w, r)
 }
 
+func TestChildSpanWithComplexityExtension(t *testing.T) {
+	srv := newMockServer(func(ctx context.Context) (interface{}, error) {
+		span := oteltrace.SpanFromContext(ctx)
+		_, ok := span.(*oteltest.Span)
+		assert.True(t, ok)
+		spanTracer := span.Tracer()
+		mockTracer, ok := spanTracer.(*oteltest.Tracer)
+		require.True(t, ok)
+		assert.Equal(t, tracerName, mockTracer.Name)
+		return &graphql.Response{Data: []byte(`{"name":"test"}`)}, nil
+	})
+	srv.Use(Middleware("foobar", WithComplexityExtensionName("APQ")))
+
+	r := httptest.NewRequest("GET", "/foo?query={name}", nil)
+	w := httptest.NewRecorder()
+
+	srv.ServeHTTP(w, r)
+}
+
 func TestGetSpanNotInstrumented(t *testing.T) {
 	srv := newMockServer(func(ctx context.Context) (interface{}, error) {
 		span := oteltrace.SpanFromContext(ctx)
