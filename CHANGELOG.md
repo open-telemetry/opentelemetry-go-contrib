@@ -10,6 +10,7 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 
 ### Added
 
+- Add `github.com/99designs/gqlgen` trace instrumentation. (#761)
 - Add `WithoutSubSpans`, `WithRedactedHeaders`, `WithoutHeaders`, and `WithInsecureHeaders` options for `otelhttptrace.NewClientTrace`. (#879)
 
 ### Changed

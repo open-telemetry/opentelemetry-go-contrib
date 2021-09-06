@@ -53,8 +53,7 @@ func (a Tracer) Validate(_ graphql.ExecutableSchema) error {
 }
 
 func (a Tracer) InterceptResponse(ctx context.Context, next graphql.ResponseHandler) *graphql.Response {
-	tracer := otel.Tracer(tracerName)
-	ctx, span := tracer.Start(ctx, operationName(ctx))
+	ctx, span := a.tracer.Start(ctx, operationName(ctx))
 	defer span.End()
 	if !span.IsRecording() {
 		return next(ctx)
@@ -89,8 +88,7 @@ func (a Tracer) InterceptResponse(ctx context.Context, next graphql.ResponseHand
 
 func (a Tracer) InterceptField(ctx context.Context, next graphql.Resolver) (interface{}, error) {
 	fc := graphql.GetFieldContext(ctx)
-	tracer := otel.Tracer(tracerName)
-	ctx, span := tracer.Start(ctx, fc.Field.ObjectDefinition.Name+"/"+fc.Field.Name)
+	ctx, span := a.tracer.Start(ctx, fc.Field.ObjectDefinition.Name+"/"+fc.Field.Name)
 	defer span.End()
 	if !span.IsRecording() {
 		return next(ctx)
