@@ -28,7 +28,7 @@ import (
 
 const (
 	tracerName      = "go.opentelemetry.io/contrib/instrumentation/github.com/99designs/gqlgen/otelgqlgen"
-	extencionName   = "OpenTelemetry"
+	extensionName   = "OpenTelemetry"
 	complexityLimit = "ComplexityLimit"
 )
 
@@ -45,7 +45,7 @@ var _ interface {
 } = Tracer{}
 
 func (a Tracer) ExtensionName() string {
-	return extencionName
+	return extensionName
 }
 
 func (a Tracer) Validate(_ graphql.ExecutableSchema) error {

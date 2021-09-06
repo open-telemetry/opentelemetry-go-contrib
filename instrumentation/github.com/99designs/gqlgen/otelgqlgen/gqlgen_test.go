@@ -16,6 +16,8 @@ package otelgqlgen
 
 import (
 	"context"
+	"fmt"
+	"net/http"
 	"net/http/httptest"
 	"testing"
 
@@ -26,7 +28,7 @@ import (
 	"github.com/stretchr/testify/require"
 	"github.com/vektah/gqlparser/v2"
 	"github.com/vektah/gqlparser/v2/ast"
-
+	"github.com/vektah/gqlparser/v2/gqlerror"
 	"go.opentelemetry.io/otel"
 	"go.opentelemetry.io/otel/oteltest"
 	oteltrace "go.opentelemetry.io/otel/trace"
@@ -51,6 +53,8 @@ func TestChildSpanFromGlobalTracer(t *testing.T) {
 	w := httptest.NewRecorder()
 
 	srv.ServeHTTP(w, r)
+
+	assert.Equal(t, http.StatusOK, w.Code, w.Body.String())
 }
 
 func TestChildSpanFromCustomTracer(t *testing.T) {
@@ -72,9 +76,13 @@ func TestChildSpanFromCustomTracer(t *testing.T) {
 	w := httptest.NewRecorder()
 
 	srv.ServeHTTP(w, r)
+
+	assert.Equal(t, http.StatusOK, w.Code, w.Body.String())
 }
 
 func TestChildSpanWithComplexityExtension(t *testing.T) {
+	otel.SetTracerProvider(oteltest.NewTracerProvider())
+
 	srv := newMockServer(func(ctx context.Context) (interface{}, error) {
 		span := oteltrace.SpanFromContext(ctx)
 		_, ok := span.(*oteltest.Span)
@@ -83,6 +91,7 @@ func TestChildSpanWithComplexityExtension(t *testing.T) {
 		mockTracer, ok := spanTracer.(*oteltest.Tracer)
 		require.True(t, ok)
 		assert.Equal(t, tracerName, mockTracer.Name)
+
 		return &graphql.Response{Data: []byte(`{"name":"test"}`)}, nil
 	})
 	srv.Use(Middleware("foobar", WithComplexityExtensionName("APQ")))
@@ -91,6 +100,8 @@ func TestChildSpanWithComplexityExtension(t *testing.T) {
 	w := httptest.NewRecorder()
 
 	srv.ServeHTTP(w, r)
+
+	assert.Equal(t, http.StatusOK, w.Code, w.Body.String())
 }
 
 func TestGetSpanNotInstrumented(t *testing.T) {
@@ -105,6 +116,43 @@ func TestGetSpanNotInstrumented(t *testing.T) {
 	w := httptest.NewRecorder()
 
 	srv.ServeHTTP(w, r)
+
+	assert.Equal(t, http.StatusOK, w.Code, w.Body.String())
+}
+
+func TestChildSpanFromGlobalTracerWithError(t *testing.T) {
+	otel.SetTracerProvider(oteltest.NewTracerProvider())
+
+	srv := newMockServerError(func(ctx context.Context) (interface{}, error) {
+		span := oteltrace.SpanFromContext(ctx)
+		_, ok := span.(*oteltest.Span)
+		assert.True(t, ok)
+		spanTracer := span.Tracer()
+		mockTracer, ok := spanTracer.(*oteltest.Tracer)
+		require.True(t, ok)
+		assert.Equal(t, tracerName, mockTracer.Name)
+
+		return &graphql.Response{Data: []byte(`{"name":"test"}`)}, nil
+	})
+	srv.Use(Middleware("foobar"))
+	var gqlErrors gqlerror.List
+	var respErrors gqlerror.List
+	srv.AroundResponses(func(ctx context.Context, next graphql.ResponseHandler) *graphql.Response {
+		resp := next(ctx)
+		gqlErrors = graphql.GetErrors(ctx)
+		respErrors = resp.Errors
+		return resp
+	})
+
+	r := httptest.NewRequest("GET", "/foo?query={name}", nil)
+	w := httptest.NewRecorder()
+
+	srv.ServeHTTP(w, r)
+
+	assert.Equal(t, http.StatusOK, w.Code, w.Body.String())
+	assert.Equal(t, 1, len(gqlErrors))
+	assert.Equal(t, 1, len(respErrors))
+	assert.Equal(t, gqlErrors, respErrors)
 }
 
 // newMockServer provides a server for use in resolver error tests that isn't relying on generated code.
@@ -150,6 +198,63 @@ func newMockServer(resolver func(ctx context.Context) (interface{}, error)) *han
 							},
 						},
 					})
+					res, err := graphql.GetOperationContext(ctx).ResolverMiddleware(ctx, resolver)
+					if err != nil {
+						panic(err)
+					}
+					return res.(*graphql.Response)
+				}
+			default:
+				return graphql.OneShot(graphql.ErrorResponse(ctx, "unsupported GraphQL operation"))
+			}
+		},
+		SchemaFunc: func() *ast.Schema {
+			return schema
+		},
+	})
+	srv.AddTransport(&transport.GET{})
+
+	return srv
+}
+
+// newMockServerError provides a server for use in resolver error tests that isn't relying on generated code.
+// It isnt a perfect reproduction of a generated server, but it aims to be good enough to
+// test the handler package without relying on codegen.
+func newMockServerError(resolver func(ctx context.Context) (interface{}, error)) *handler.Server {
+	schema := gqlparser.MustLoadSchema(&ast.Source{Input: `
+		type Query {
+			name: String!
+		}
+	`})
+	srv := handler.New(&graphql.ExecutableSchemaMock{
+		ExecFunc: func(ctx context.Context) graphql.ResponseHandler {
+			rc := graphql.GetOperationContext(ctx)
+			switch rc.Operation.Operation {
+			case ast.Query:
+				ran := false
+				return func(ctx context.Context) *graphql.Response {
+					if ran {
+						return nil
+					}
+					ran = true
+					// Field execution happens inside the generated code, lets simulate some of it.
+					ctx = graphql.WithFieldContext(ctx, &graphql.FieldContext{
+						Object: "Query",
+						Field: graphql.CollectedField{
+							Field: &ast.Field{
+								Name:       "name",
+								Alias:      "alias",
+								Definition: schema.Types["Query"].Fields.ForName("name"),
+								ObjectDefinition: &ast.Definition{
+									Kind:        "kind",
+									Description: "description",
+									Name:        "name",
+								},
+							},
+						},
+					})
+					graphql.AddError(ctx, fmt.Errorf("resolver error"))
+
 					res, err := graphql.GetOperationContext(ctx).ResolverMiddleware(ctx, resolver)
 					if err != nil {
 						panic(err)
