@@ -37,7 +37,7 @@ func newConfig(opts ...Option) config {
 		TracerProvider: otel.GetTracerProvider(),
 	}
 	for _, opt := range opts {
-		opt(&cfg)
+		opt.apply(&cfg)
 	}
 
 	cfg.Tracer = cfg.TracerProvider.Tracer(
@@ -48,20 +48,28 @@ func newConfig(opts ...Option) config {
 }
 
 // Option specifies instrumentation configuration options.
-type Option func(*config)
+type Option interface {
+	apply(*config)
+}
+
+type optionFunc func(*config)
+
+func (o optionFunc) apply(c *config) {
+	o(c)
+}
 
 // WithTracerProvider specifies a tracer provider to use for creating a tracer.
 // If none is specified, the global provider is used.
 func WithTracerProvider(provider trace.TracerProvider) Option {
-	return func(cfg *config) {
+	return optionFunc(func(cfg *config) {
 		cfg.TracerProvider = provider
-	}
+	})
 }
 
 // WithCommandAttributeDisabled specifies if the MongoDB command is added as an attribute to Spans or not.
 // The MongoDB command will be added as an attribute to Spans by default if this option is not provided.
 func WithCommandAttributeDisabled(disabled bool) Option {
-	return func(cfg *config) {
+	return optionFunc(func(cfg *config) {
 		cfg.CommandAttributeDisabled = disabled
-	}
+	})
 }

@@ -11,10 +11,10 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
-FROM golang:1.14-alpine AS base
+FROM golang:1.15-alpine AS base
 COPY . /src/
-WORKDIR /src/instrumentation/github.com/aws/aws-sdk-go-v2/otelaws
+WORKDIR /src/instrumentation/github.com/aws/aws-sdk-go-v2/otelaws/example
 
 FROM base AS aws-client
-RUN go install ./example/main.go
+RUN go install ./main.go
 CMD ["/go/bin/main"]

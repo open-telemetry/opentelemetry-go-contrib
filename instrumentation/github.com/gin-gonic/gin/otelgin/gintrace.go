@@ -28,7 +28,7 @@ import (
 
 	"go.opentelemetry.io/otel/attribute"
 	"go.opentelemetry.io/otel/propagation"
-	"go.opentelemetry.io/otel/semconv"
+	semconv "go.opentelemetry.io/otel/semconv/v1.4.0"
 	oteltrace "go.opentelemetry.io/otel/trace"
 )
 
@@ -43,7 +43,7 @@ const (
 func Middleware(service string, opts ...Option) gin.HandlerFunc {
 	cfg := config{}
 	for _, opt := range opts {
-		opt(&cfg)
+		opt.apply(&cfg)
 	}
 	if cfg.TracerProvider == nil {
 		cfg.TracerProvider = otel.GetTracerProvider()
@@ -62,7 +62,7 @@ func Middleware(service string, opts ...Option) gin.HandlerFunc {
 			c.Request = c.Request.WithContext(savedCtx)
 		}()
 		ctx := cfg.Propagators.Extract(savedCtx, propagation.HeaderCarrier(c.Request.Header))
-		opts := []oteltrace.SpanOption{
+		opts := []oteltrace.SpanStartOption{
 			oteltrace.WithAttributes(semconv.NetAttributesFromHTTPRequest("tcp", c.Request)...),
 			oteltrace.WithAttributes(semconv.EndUserAttributesFromHTTPRequest(c.Request)...),
 			oteltrace.WithAttributes(semconv.HTTPServerAttributesFromHTTPRequest(service, c.FullPath(), c.Request)...),

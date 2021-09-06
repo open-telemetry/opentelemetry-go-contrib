@@ -29,6 +29,7 @@ import (
 	"go.opentelemetry.io/otel/metric"
 	controller "go.opentelemetry.io/otel/sdk/metric/controller/basic"
 	"go.opentelemetry.io/otel/sdk/resource"
+	semconv "go.opentelemetry.io/otel/semconv/v1.4.0"
 )
 
 func ExampleNew() {
@@ -67,7 +68,7 @@ func ExampleNew() {
 		// In real code, use the URL field:
 		//
 		// URL: fmt.Sprint("unix://", path),
-	}, controller.WithCollectPeriod(time.Minute), controller.WithResource(resource.NewWithAttributes(attribute.String("host", "name"))))
+	}, controller.WithCollectPeriod(time.Minute), controller.WithResource(resource.NewWithAttributes(semconv.SchemaURL, attribute.String("host", "name"))))
 	if err != nil {
 		log.Fatal("Could not initialize dogstatsd exporter:", err)
 	}

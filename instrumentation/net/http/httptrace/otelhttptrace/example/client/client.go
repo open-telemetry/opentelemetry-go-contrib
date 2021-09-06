@@ -20,7 +20,6 @@ import (
 	"fmt"
 	"io/ioutil"
 	"log"
-
 	"net/http"
 	"net/http/httptrace"
 	"time"
@@ -29,19 +28,18 @@ import (
 	"go.opentelemetry.io/contrib/instrumentation/net/http/otelhttp"
 
 	"go.opentelemetry.io/otel"
-	"go.opentelemetry.io/otel/attribute"
 	"go.opentelemetry.io/otel/baggage"
-	"go.opentelemetry.io/otel/exporters/stdout"
+	stdout "go.opentelemetry.io/otel/exporters/stdout/stdouttrace"
 	"go.opentelemetry.io/otel/propagation"
 	sdktrace "go.opentelemetry.io/otel/sdk/trace"
-	"go.opentelemetry.io/otel/semconv"
+	semconv "go.opentelemetry.io/otel/semconv/v1.4.0"
 	"go.opentelemetry.io/otel/trace"
 )
 
-func initTracer() {
+func initTracer() *sdktrace.TracerProvider {
 	// Create stdout exporter to be able to retrieve
 	// the collected spans.
-	exporter, err := stdout.NewExporter(stdout.WithPrettyPrint())
+	exporter, err := stdout.New(stdout.WithPrettyPrint())
 	if err != nil {
 		log.Fatal(err)
 	}
@@ -50,25 +48,27 @@ func initTracer() {
 	// In a production application, use sdktrace.ProbabilitySampler with a desired probability.
 	tp := sdktrace.NewTracerProvider(
 		sdktrace.WithSampler(sdktrace.AlwaysSample()),
-		sdktrace.WithSyncer(exporter),
+		sdktrace.WithBatcher(exporter),
 	)
-	if err != nil {
-		log.Fatal(err)
-	}
 	otel.SetTracerProvider(tp)
 	otel.SetTextMapPropagator(propagation.NewCompositeTextMapPropagator(propagation.TraceContext{}, propagation.Baggage{}))
+	return tp
 }
 
 func main() {
-	initTracer()
+	tp := initTracer()
+	defer func() {
+		if err := tp.Shutdown(context.Background()); err != nil {
+			log.Printf("Error shutting down tracer provider: %v", err)
+		}
+	}()
 	url := flag.String("server", "http://localhost:7777/hello", "server url")
 	flag.Parse()
 
 	client := http.Client{Transport: otelhttp.NewTransport(http.DefaultTransport)}
 
-	ctx := baggage.ContextWithValues(context.Background(),
-		attribute.String("username", "donuts"),
-	)
+	bag, _ := baggage.Parse("username=donuts")
+	ctx := baggage.ContextWithBaggage(context.Background(), bag)
 
 	var body []byte
 

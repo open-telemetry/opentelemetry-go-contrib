@@ -26,7 +26,7 @@ import (
 	"go.opentelemetry.io/otel"
 
 	"go.opentelemetry.io/otel/propagation"
-	"go.opentelemetry.io/otel/semconv"
+	semconv "go.opentelemetry.io/otel/semconv/v1.4.0"
 	oteltrace "go.opentelemetry.io/otel/trace"
 )
 
@@ -40,7 +40,7 @@ const (
 func Middleware(service string, opts ...Option) mux.MiddlewareFunc {
 	cfg := config{}
 	for _, opt := range opts {
-		opt(&cfg)
+		opt.apply(&cfg)
 	}
 	if cfg.TracerProvider == nil {
 		cfg.TracerProvider = otel.GetTracerProvider()
@@ -133,7 +133,7 @@ func (tw traceware) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	if spanName == "" {
 		spanName = fmt.Sprintf("HTTP %s route not found", r.Method)
 	}
-	opts := []oteltrace.SpanOption{
+	opts := []oteltrace.SpanStartOption{
 		oteltrace.WithAttributes(semconv.NetAttributesFromHTTPRequest("tcp", r)...),
 		oteltrace.WithAttributes(semconv.EndUserAttributesFromHTTPRequest(r)...),
 		oteltrace.WithAttributes(semconv.HTTPServerAttributesFromHTTPRequest(tw.service, routeStr, r)...),

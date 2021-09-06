@@ -24,7 +24,7 @@ import (
 
 	"go.opentelemetry.io/otel/attribute"
 	"go.opentelemetry.io/otel/sdk/resource"
-	"go.opentelemetry.io/otel/semconv"
+	semconv "go.opentelemetry.io/otel/semconv/v1.4.0"
 )
 
 // Create interface for functions that need to be mocked
@@ -54,10 +54,12 @@ func TestDetect(t *testing.T) {
 	detectorUtils.On("getContainerID").Return("0123456789A", nil)
 
 	attributes := []attribute.KeyValue{
+		semconv.CloudProviderAWS,
+		semconv.CloudPlatformAWSECS,
 		semconv.ContainerNameKey.String("container-Name"),
 		semconv.ContainerIDKey.String("0123456789A"),
 	}
-	expectedResource := resource.NewWithAttributes(attributes...)
+	expectedResource := resource.NewWithAttributes(semconv.SchemaURL, attributes...)
 	detector := &resourceDetector{utils: detectorUtils}
 	res, _ := detector.Detect(context.Background())
 

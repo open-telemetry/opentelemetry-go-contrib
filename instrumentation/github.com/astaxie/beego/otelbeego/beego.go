@@ -20,13 +20,14 @@ import (
 
 	"go.opentelemetry.io/otel/codes"
 
+	"go.opentelemetry.io/contrib/instrumentation/github.com/astaxie/beego/otelbeego/internal"
 	"go.opentelemetry.io/contrib/instrumentation/net/http/otelhttp"
 	"go.opentelemetry.io/otel/trace"
 
 	"github.com/astaxie/beego"
 )
 
-// OTelBeegoHandler implements the http.Handler interface and provides
+// Handler implements the http.Handler interface and provides
 // trace and metrics to beego web apps.
 type Handler struct {
 	http.Handler
@@ -40,7 +41,7 @@ func (o *Handler) ServeHTTP(rr http.ResponseWriter, req *http.Request) {
 	// use the beego context to try to find a route template
 	if router, found := beego.BeeApp.Handlers.FindRouter(ctx); found {
 		// if found, save it to the context
-		reqCtx := context.WithValue(req.Context(), ctxRouteTemplateKey, router.GetPattern())
+		reqCtx := context.WithValue(req.Context(), internal.CtxRouteTemplateKey, router.GetPattern())
 		req = req.WithContext(reqCtx)
 	}
 	o.Handler.ServeHTTP(rr, req)
@@ -50,7 +51,7 @@ func (o *Handler) ServeHTTP(rr http.ResponseWriter, req *http.Request) {
 // integration. Returns the route path template, or the URL path if the current path
 // is not associated with a router.
 func defaultSpanNameFormatter(operation string, req *http.Request) string {
-	if val := req.Context().Value(ctxRouteTemplateKey); val != nil {
+	if val := req.Context().Value(internal.CtxRouteTemplateKey); val != nil {
 		str, ok := val.(string)
 		if ok {
 			return str
@@ -98,7 +99,7 @@ func NewOTelBeegoMiddleWare(service string, options ...Option) beego.MiddleWare 
 // if you want to add a child span for the rendering of a template file.
 // Disable autorender before use, and call this function explicitly.
 func Render(c *beego.Controller) error {
-	_, span := span(c, renderTemplateSpanName)
+	_, span := span(c, internal.RenderTemplateSpanName)
 	defer span.End()
 	err := c.Render()
 	if err != nil {
@@ -113,7 +114,7 @@ func Render(c *beego.Controller) error {
 // its string representation.
 // Disable autorender before use, and call this function explicitly.
 func RenderString(c *beego.Controller) (string, error) {
-	_, span := span(c, renderStringSpanName)
+	_, span := span(c, internal.RenderStringSpanName)
 	defer span.End()
 	str, err := c.RenderString()
 	if err != nil {
@@ -128,7 +129,7 @@ func RenderString(c *beego.Controller) (string, error) {
 // byte representation.
 // Disable autorender before use, and call this function explicitly.
 func RenderBytes(c *beego.Controller) ([]byte, error) {
-	_, span := span(c, renderBytesSpanName)
+	_, span := span(c, internal.RenderBytesSpanName)
 	defer span.End()
 	bytes, err := c.RenderBytes()
 	if err != nil {
@@ -141,7 +142,7 @@ func RenderBytes(c *beego.Controller) ([]byte, error) {
 func span(c *beego.Controller, spanName string) (context.Context, trace.Span) {
 	ctx := c.Ctx.Request.Context()
 	span := trace.SpanFromContext(ctx)
-	tracer := span.Tracer()
+	tracer := span.TracerProvider().Tracer("go.opentelemetry.io/contrib/instrumentation/github/astaxie/beego/otelbeego")
 	return tracer.Start(
 		ctx,
 		spanName,

@@ -16,7 +16,7 @@ version: "3"
 
 services:
   app:
-    image: golang:1.14-alpine
+    image: golang:1.15-alpine
     volumes:
       - .:/app
     working_dir: /app
