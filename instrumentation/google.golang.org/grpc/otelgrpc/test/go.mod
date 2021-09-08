@@ -12,4 +12,7 @@ require (
 	google.golang.org/grpc v1.40.0
 )
 
-replace go.opentelemetry.io/contrib/instrumentation/google.golang.org/grpc/otelgrpc => ../
+replace (
+	go.opentelemetry.io/contrib => ../../../../../
+	go.opentelemetry.io/contrib/instrumentation/google.golang.org/grpc/otelgrpc => ../
+)
