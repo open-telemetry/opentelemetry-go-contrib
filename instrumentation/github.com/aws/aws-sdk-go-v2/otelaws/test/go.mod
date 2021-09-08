@@ -12,4 +12,5 @@ require (
 	go.opentelemetry.io/otel/trace v1.0.0-RC3
 )
 
-replace go.opentelemetry.io/contrib/instrumentation/github.com/aws/aws-sdk-go-v2/otelaws/test => ../
+replace go.opentelemetry.io/contrib/instrumentation/github.com/aws/aws-sdk-go-v2/otelaws => ../
+replace go.opentelemetry.io/contrib => ../../../../../../
