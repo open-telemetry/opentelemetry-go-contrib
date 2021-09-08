@@ -18,7 +18,6 @@ import (
 	"bytes"
 	"context"
 	"fmt"
-	"strconv"
 	"strings"
 	"testing"
 
@@ -28,16 +27,53 @@ import (
 	"go.opentelemetry.io/otel/attribute"
 	"go.opentelemetry.io/otel/metric"
 	"go.opentelemetry.io/otel/metric/number"
-	"go.opentelemetry.io/otel/metric/unit"
 	export "go.opentelemetry.io/otel/sdk/export/metric"
-	"go.opentelemetry.io/otel/sdk/export/metric/metrictest"
-	aggtest "go.opentelemetry.io/otel/sdk/metric/aggregator/aggregatortest"
 	"go.opentelemetry.io/otel/sdk/metric/aggregator/exact"
 	"go.opentelemetry.io/otel/sdk/metric/aggregator/lastvalue"
 	"go.opentelemetry.io/otel/sdk/metric/aggregator/sum"
+	controller "go.opentelemetry.io/otel/sdk/metric/controller/basic"
+	processor "go.opentelemetry.io/otel/sdk/metric/processor/basic"
 	"go.opentelemetry.io/otel/sdk/resource"
 	semconv "go.opentelemetry.io/otel/semconv/v1.4.0"
 )
+
+func testMeter(t *testing.T, exp export.Exporter) (context.Context, metric.Meter, *controller.Controller) {
+	aggSel := testAggregatorSelector{}
+	proc := processor.New(aggSel, export.CumulativeExportKindSelector())
+	cont := controller.New(proc,
+		controller.WithResource(testResource),
+		controller.WithExporter(exp),
+	)
+	ctx := context.Background()
+
+	return ctx, cont.MeterProvider().Meter("test"), cont
+}
+
+type testAggregatorSelector struct {
+}
+
+func (testAggregatorSelector) AggregatorFor(desc *metric.Descriptor, aggPtrs ...*export.Aggregator) {
+	switch {
+	case strings.HasSuffix(desc.Name(), "counter"):
+		aggs := sum.New(len(aggPtrs))
+		for i := range aggPtrs {
+			*aggPtrs[i] = &aggs[i]
+		}
+	case strings.HasSuffix(desc.Name(), "gauge"):
+		aggs := lastvalue.New(len(aggPtrs))
+		for i := range aggPtrs {
+			*aggPtrs[i] = &aggs[i]
+		}
+	case strings.HasSuffix(desc.Name(), "histogram") ||
+		strings.HasSuffix(desc.Name(), "timer"):
+		aggs := exact.New(len(aggPtrs))
+		for i := range aggPtrs {
+			*aggPtrs[i] = &aggs[i]
+		}
+	default:
+		panic(fmt.Sprint("Invalid instrument name for test AggregatorSelector: ", desc.Name()))
+	}
+}
 
 var testResource = resource.NewWithAttributes(semconv.SchemaURL, attribute.String("host", "value"))
 
@@ -97,22 +133,28 @@ func (w *testWriter) Write(b []byte) (int, error) {
 func TestBasicFormat(t *testing.T) {
 	type adapterOutput struct {
 		adapter  statsd.Adapter
-		expected string
+		expected []string
 	}
 
-	for _, ao := range []adapterOutput{{
-		adapter: newWithTagsAdapter(),
-		expected: `counter:%s|c|#A=B,C=D
-observer:%s|g|#A=B,C=D
-measure:%s|h|#A=B,C=D
-timer:%s|ms|#A=B,C=D
-`}, {
-		adapter: newNoTagsAdapter(),
-		expected: `counter.B.D:%s|c
-observer.B.D:%s|g
-measure.B.D:%s|h
-timer.B.D:%s|ms
-`},
+	for _, ao := range []adapterOutput{
+		{
+			adapter: newWithTagsAdapter(),
+			expected: []string{
+				"counter:%s|c|#A=B,C=D",
+				"gauge:%s|g|#A=B,C=D",
+				"histogram:%s|h|#A=B,C=D",
+				"timer:%s|ms|#A=B,C=D",
+			},
+		},
+		{
+			adapter: newNoTagsAdapter(),
+			expected: []string{
+				"counter.B.D:%s|c",
+				"gauge.B.D:%s|g",
+				"histogram.B.D:%s|h",
+				"timer.B.D:%s|ms",
+			},
+		},
 	} {
 		adapter := ao.adapter
 		expected := ao.expected
@@ -122,7 +164,6 @@ timer.B.D:%s|ms
 				number.Int64Kind,
 			} {
 				t.Run(nkind.String(), func(t *testing.T) {
-					ctx := context.Background()
 					writer := &testWriter{}
 					config := statsd.Config{
 						Writer:        writer,
@@ -132,282 +173,270 @@ timer.B.D:%s|ms
 					if err != nil {
 						t.Fatal("New error: ", err)
 					}
-
-					checkpointSet := metrictest.NewCheckpointSet(testResource)
-					cdesc := metric.NewDescriptor(
-						"counter", metric.CounterInstrumentKind, nkind)
-					gdesc := metric.NewDescriptor(
-						"observer", metric.ValueObserverInstrumentKind, nkind)
-					mdesc := metric.NewDescriptor(
-						"measure", metric.ValueRecorderInstrumentKind, nkind)
-					tdesc := metric.NewDescriptor(
-						"timer", metric.ValueRecorderInstrumentKind, nkind, metric.WithUnit(unit.Milliseconds))
+					ctx, meter, cont := testMeter(t, exp)
+					require.NoError(t, cont.Start(ctx))
 
 					attributes := []attribute.KeyValue{
 						attribute.String("A", "B"),
 						attribute.String("C", "D"),
 					}
-					const value = 123.456
-					val := newNumber(t, nkind, value)
 
-					cagg, cckpt := metrictest.Unslice2(sum.New(2))
-					gagg, gckpt := metrictest.Unslice2(lastvalue.New(2))
-					magg, mckpt := metrictest.Unslice2(exact.New(2))
-					tagg, tckpt := metrictest.Unslice2(exact.New(2))
-
-					aggtest.CheckedUpdate(t, cagg, val, &cdesc)
-					aggtest.CheckedUpdate(t, gagg, val, &gdesc)
-					aggtest.CheckedUpdate(t, magg, val, &mdesc)
-					aggtest.CheckedUpdate(t, tagg, val, &tdesc)
-
-					require.NoError(t, cagg.SynchronizedMove(cckpt, &cdesc))
-					require.NoError(t, gagg.SynchronizedMove(gckpt, &gdesc))
-					require.NoError(t, magg.SynchronizedMove(mckpt, &mdesc))
-					require.NoError(t, tagg.SynchronizedMove(tckpt, &tdesc))
-
-					checkpointSet.Add(&cdesc, cckpt, attributes...)
-					checkpointSet.Add(&gdesc, gckpt, attributes...)
-					checkpointSet.Add(&mdesc, mckpt, attributes...)
-					checkpointSet.Add(&tdesc, tckpt, attributes...)
-
-					err = exp.Export(ctx, checkpointSet)
-					require.Nil(t, err)
-
-					var vfmt string
 					if nkind == number.Int64Kind {
-						fv := value
-						vfmt = strconv.FormatInt(int64(fv), 10)
+						counter := metric.Must(meter).NewInt64Counter("counter")
+						_ = metric.Must(meter).NewInt64GaugeObserver("gauge",
+							func(_ context.Context, res metric.Int64ObserverResult) {
+								res.Observe(2, attributes...)
+							})
+						histo := metric.Must(meter).NewInt64Histogram("histogram")
+						timer := metric.Must(meter).NewInt64Histogram("timer", metric.WithUnit("ms"))
+						counter.Add(ctx, 2, attributes...)
+						histo.Record(ctx, 2, attributes...)
+						timer.Record(ctx, 2, attributes...)
 					} else {
-						vfmt = strconv.FormatFloat(value, 'g', -1, 64)
+						counter := metric.Must(meter).NewFloat64Counter("counter")
+						_ = metric.Must(meter).NewFloat64GaugeObserver("gauge",
+							func(_ context.Context, res metric.Float64ObserverResult) {
+								res.Observe(2, attributes...)
+							})
+						histo := metric.Must(meter).NewFloat64Histogram("histogram")
+						timer := metric.Must(meter).NewFloat64Histogram("timer", metric.WithUnit("ms"))
+						counter.Add(ctx, 2, attributes...)
+						histo.Record(ctx, 2, attributes...)
+						timer.Record(ctx, 2, attributes...)
 					}
 
+					require.NoError(t, cont.Stop(ctx))
 					require.Equal(t, 1, len(writer.vec))
-					require.Equal(t, fmt.Sprintf(expected, vfmt, vfmt, vfmt, vfmt), writer.vec[0])
+
+					// Note we do not know the order metrics will be sent.
+					wantStrings := map[string]bool{}
+					haveStrings := map[string]bool{}
+
+					for _, wt := range expected {
+						wantStrings[fmt.Sprintf(wt, "2")] = true
+					}
+					for _, hv := range strings.Split(writer.vec[0], "\n") {
+						if len(hv) != 0 {
+							haveStrings[hv] = true
+						}
+					}
+
+					require.EqualValues(t, wantStrings, haveStrings)
+
 				})
 			}
 		})
 	}
 }
 
-func newNumber(t *testing.T, kind number.Kind, value float64) number.Number {
-	t.Helper()
-	switch kind {
-	case number.Int64Kind:
-		return number.NewInt64Number(int64(value))
-	case number.Float64Kind:
-		return number.NewFloat64Number(value)
-	}
-	panic("invalid number kind")
-}
+// func makeAttributes(offset, nkeys int) []attribute.KeyValue {
+// 	r := make([]attribute.KeyValue, nkeys)
+// 	for i := range r {
+// 		r[i] = attribute.String(fmt.Sprint("k", offset+i), fmt.Sprint("v", offset+i))
+// 	}
+// 	return r
+// }
 
-func makeAttributes(offset, nkeys int) []attribute.KeyValue {
-	r := make([]attribute.KeyValue, nkeys)
-	for i := range r {
-		r[i] = attribute.String(fmt.Sprint("k", offset+i), fmt.Sprint("v", offset+i))
-	}
-	return r
-}
+// type splitTestCase struct {
+// 	name  string
+// 	setup func(add func(int))
+// 	check func(expected, got []string, t *testing.T)
+// }
 
-type splitTestCase struct {
-	name  string
-	setup func(add func(int))
-	check func(expected, got []string, t *testing.T)
-}
+// var splitTestCases = []splitTestCase{
+// 	// These test use the number of keys to control where packets
+// 	// are split.
+// 	{"Simple",
+// 		func(add func(int)) {
+// 			add(1)
+// 			add(1000)
+// 			add(1)
+// 		},
+// 		func(expected, got []string, t *testing.T) {
+// 			require.EqualValues(t, expected, got)
+// 		},
+// 	},
+// 	{"LastBig",
+// 		func(add func(int)) {
+// 			add(1)
+// 			add(1)
+// 			add(1000)
+// 		},
+// 		func(expected, got []string, t *testing.T) {
+// 			require.Equal(t, 2, len(got))
+// 			require.EqualValues(t, []string{
+// 				expected[0] + expected[1],
+// 				expected[2],
+// 			}, got)
+// 		},
+// 	},
+// 	{"FirstBig",
+// 		func(add func(int)) {
+// 			add(1000)
+// 			add(1)
+// 			add(1)
+// 			add(1000)
+// 			add(1)
+// 			add(1)
+// 		},
+// 		func(expected, got []string, t *testing.T) {
+// 			require.Equal(t, 4, len(got))
+// 			require.EqualValues(t, []string{
+// 				expected[0],
+// 				expected[1] + expected[2],
+// 				expected[3],
+// 				expected[4] + expected[5],
+// 			}, got)
+// 		},
+// 	},
+// 	{"OneBig",
+// 		func(add func(int)) {
+// 			add(1000)
+// 		},
+// 		func(expected, got []string, t *testing.T) {
+// 			require.EqualValues(t, expected, got)
+// 		},
+// 	},
+// 	{"LastSmall",
+// 		func(add func(int)) {
+// 			add(1000)
+// 			add(1)
+// 		},
+// 		func(expected, got []string, t *testing.T) {
+// 			require.EqualValues(t, expected, got)
+// 		},
+// 	},
+// 	{"Overflow",
+// 		func(add func(int)) {
+// 			for i := 0; i < 1000; i++ {
+// 				add(1)
+// 			}
+// 		},
+// 		func(expected, got []string, t *testing.T) {
+// 			require.Less(t, 1, len(got))
+// 			require.Equal(t, strings.Join(expected, ""), strings.Join(got, ""))
+// 		},
+// 	},
+// 	{"Empty",
+// 		func(add func(int)) {
+// 		},
+// 		func(expected, got []string, t *testing.T) {
+// 			require.Equal(t, 0, len(got))
+// 		},
+// 	},
+// 	{"AllBig",
+// 		func(add func(int)) {
+// 			add(1000)
+// 			add(1000)
+// 			add(1000)
+// 		},
+// 		func(expected, got []string, t *testing.T) {
+// 			require.EqualValues(t, expected, got)
+// 		},
+// 	},
+// }
 
-var splitTestCases = []splitTestCase{
-	// These test use the number of keys to control where packets
-	// are split.
-	{"Simple",
-		func(add func(int)) {
-			add(1)
-			add(1000)
-			add(1)
-		},
-		func(expected, got []string, t *testing.T) {
-			require.EqualValues(t, expected, got)
-		},
-	},
-	{"LastBig",
-		func(add func(int)) {
-			add(1)
-			add(1)
-			add(1000)
-		},
-		func(expected, got []string, t *testing.T) {
-			require.Equal(t, 2, len(got))
-			require.EqualValues(t, []string{
-				expected[0] + expected[1],
-				expected[2],
-			}, got)
-		},
-	},
-	{"FirstBig",
-		func(add func(int)) {
-			add(1000)
-			add(1)
-			add(1)
-			add(1000)
-			add(1)
-			add(1)
-		},
-		func(expected, got []string, t *testing.T) {
-			require.Equal(t, 4, len(got))
-			require.EqualValues(t, []string{
-				expected[0],
-				expected[1] + expected[2],
-				expected[3],
-				expected[4] + expected[5],
-			}, got)
-		},
-	},
-	{"OneBig",
-		func(add func(int)) {
-			add(1000)
-		},
-		func(expected, got []string, t *testing.T) {
-			require.EqualValues(t, expected, got)
-		},
-	},
-	{"LastSmall",
-		func(add func(int)) {
-			add(1000)
-			add(1)
-		},
-		func(expected, got []string, t *testing.T) {
-			require.EqualValues(t, expected, got)
-		},
-	},
-	{"Overflow",
-		func(add func(int)) {
-			for i := 0; i < 1000; i++ {
-				add(1)
-			}
-		},
-		func(expected, got []string, t *testing.T) {
-			require.Less(t, 1, len(got))
-			require.Equal(t, strings.Join(expected, ""), strings.Join(got, ""))
-		},
-	},
-	{"Empty",
-		func(add func(int)) {
-		},
-		func(expected, got []string, t *testing.T) {
-			require.Equal(t, 0, len(got))
-		},
-	},
-	{"AllBig",
-		func(add func(int)) {
-			add(1000)
-			add(1000)
-			add(1000)
-		},
-		func(expected, got []string, t *testing.T) {
-			require.EqualValues(t, expected, got)
-		},
-	},
-}
+// func TestPacketSplit(t *testing.T) {
+// 	for _, tcase := range splitTestCases {
+// 		t.Run(tcase.name, func(t *testing.T) {
+// 			ctx := context.Background()
+// 			writer := &testWriter{}
+// 			config := statsd.Config{
+// 				Writer:        writer,
+// 				MaxPacketSize: 1024,
+// 			}
+// 			adapter := newWithTagsAdapter()
+// 			exp, err := statsd.NewExporter(config, adapter)
+// 			if err != nil {
+// 				t.Fatal("New error: ", err)
+// 			}
 
-func TestPacketSplit(t *testing.T) {
-	for _, tcase := range splitTestCases {
-		t.Run(tcase.name, func(t *testing.T) {
-			ctx := context.Background()
-			writer := &testWriter{}
-			config := statsd.Config{
-				Writer:        writer,
-				MaxPacketSize: 1024,
-			}
-			adapter := newWithTagsAdapter()
-			exp, err := statsd.NewExporter(config, adapter)
-			if err != nil {
-				t.Fatal("New error: ", err)
-			}
+// 			checkpointSet := metrictest.NewCheckpointSet(testResource)
+// 			desc := metric.NewDescriptor("counter", metric.CounterInstrumentKind, number.Int64Kind)
 
-			checkpointSet := metrictest.NewCheckpointSet(testResource)
-			desc := metric.NewDescriptor("counter", metric.CounterInstrumentKind, number.Int64Kind)
+// 			var expected []string
 
-			var expected []string
+// 			offset := 0
+// 			tcase.setup(func(nkeys int) {
+// 				attributes := makeAttributes(offset, nkeys)
+// 				offset += nkeys
+// 				eattributes := attribute.NewSet(attributes...)
+// 				encoded := adapter.Encoder.Encode(eattributes.Iter())
+// 				expect := fmt.Sprint("counter:100|c|#", encoded, "\n")
+// 				expected = append(expected, expect)
+// 				agg, ckpt := metrictest.Unslice2(sum.New(2))
+// 				aggtest.CheckedUpdate(t, agg, number.NewInt64Number(100), &desc)
+// 				require.NoError(t, agg.SynchronizedMove(ckpt, &desc))
+// 				checkpointSet.Add(&desc, ckpt, attributes...)
+// 			})
 
-			offset := 0
-			tcase.setup(func(nkeys int) {
-				attributes := makeAttributes(offset, nkeys)
-				offset += nkeys
-				eattributes := attribute.NewSet(attributes...)
-				encoded := adapter.Encoder.Encode(eattributes.Iter())
-				expect := fmt.Sprint("counter:100|c|#", encoded, "\n")
-				expected = append(expected, expect)
-				agg, ckpt := metrictest.Unslice2(sum.New(2))
-				aggtest.CheckedUpdate(t, agg, number.NewInt64Number(100), &desc)
-				require.NoError(t, agg.SynchronizedMove(ckpt, &desc))
-				checkpointSet.Add(&desc, ckpt, attributes...)
-			})
+// 			err = exp.Export(ctx, checkpointSet)
+// 			require.Nil(t, err)
 
-			err = exp.Export(ctx, checkpointSet)
-			require.Nil(t, err)
+// 			tcase.check(expected, writer.vec, t)
+// 		})
+// 	}
+// }
 
-			tcase.check(expected, writer.vec, t)
-		})
-	}
-}
+// func TestExactSplit(t *testing.T) {
+// 	ctx := context.Background()
+// 	writer := &testWriter{}
+// 	config := statsd.Config{
+// 		Writer:        writer,
+// 		MaxPacketSize: 1024,
+// 	}
+// 	adapter := newWithTagsAdapter()
+// 	exp, err := statsd.NewExporter(config, adapter)
+// 	if err != nil {
+// 		t.Fatal("New error: ", err)
+// 	}
 
-func TestExactSplit(t *testing.T) {
-	ctx := context.Background()
-	writer := &testWriter{}
-	config := statsd.Config{
-		Writer:        writer,
-		MaxPacketSize: 1024,
-	}
-	adapter := newWithTagsAdapter()
-	exp, err := statsd.NewExporter(config, adapter)
-	if err != nil {
-		t.Fatal("New error: ", err)
-	}
+// 	checkpointSet := metrictest.NewCheckpointSet(testResource)
+// 	desc := metric.NewDescriptor("measure", metric.ValueRecorderInstrumentKind, number.Int64Kind)
 
-	checkpointSet := metrictest.NewCheckpointSet(testResource)
-	desc := metric.NewDescriptor("measure", metric.ValueRecorderInstrumentKind, number.Int64Kind)
+// 	agg, ckpt := metrictest.Unslice2(exact.New(2))
 
-	agg, ckpt := metrictest.Unslice2(exact.New(2))
+// 	for i := 0; i < 1024; i++ {
+// 		aggtest.CheckedUpdate(t, agg, number.NewInt64Number(100), &desc)
+// 	}
+// 	require.NoError(t, agg.SynchronizedMove(ckpt, &desc))
+// 	checkpointSet.Add(&desc, ckpt)
 
-	for i := 0; i < 1024; i++ {
-		aggtest.CheckedUpdate(t, agg, number.NewInt64Number(100), &desc)
-	}
-	require.NoError(t, agg.SynchronizedMove(ckpt, &desc))
-	checkpointSet.Add(&desc, ckpt)
+// 	err = exp.Export(ctx, checkpointSet)
+// 	require.Nil(t, err)
 
-	err = exp.Export(ctx, checkpointSet)
-	require.Nil(t, err)
+// 	require.Greater(t, len(writer.vec), 1)
 
-	require.Greater(t, len(writer.vec), 1)
+// 	for _, result := range writer.vec {
+// 		require.LessOrEqual(t, len(result), config.MaxPacketSize)
+// 	}
+// }
 
-	for _, result := range writer.vec {
-		require.LessOrEqual(t, len(result), config.MaxPacketSize)
-	}
-}
+// func TestPrefix(t *testing.T) {
+// 	ctx := context.Background()
+// 	writer := &testWriter{}
+// 	config := statsd.Config{
+// 		Writer:        writer,
+// 		MaxPacketSize: 1024,
+// 		Prefix:        "veryspecial.",
+// 	}
+// 	adapter := newWithTagsAdapter()
+// 	exp, err := statsd.NewExporter(config, adapter)
+// 	if err != nil {
+// 		t.Fatal("New error: ", err)
+// 	}
 
-func TestPrefix(t *testing.T) {
-	ctx := context.Background()
-	writer := &testWriter{}
-	config := statsd.Config{
-		Writer:        writer,
-		MaxPacketSize: 1024,
-		Prefix:        "veryspecial.",
-	}
-	adapter := newWithTagsAdapter()
-	exp, err := statsd.NewExporter(config, adapter)
-	if err != nil {
-		t.Fatal("New error: ", err)
-	}
+// 	checkpointSet := metrictest.NewCheckpointSet(testResource)
+// 	desc := metric.NewDescriptor("measure", metric.ValueRecorderInstrumentKind, number.Int64Kind)
 
-	checkpointSet := metrictest.NewCheckpointSet(testResource)
-	desc := metric.NewDescriptor("measure", metric.ValueRecorderInstrumentKind, number.Int64Kind)
+// 	agg, ckpt := metrictest.Unslice2(exact.New(2))
+// 	aggtest.CheckedUpdate(t, agg, number.NewInt64Number(100), &desc)
+// 	require.NoError(t, agg.SynchronizedMove(ckpt, &desc))
+// 	checkpointSet.Add(&desc, ckpt)
 
-	agg, ckpt := metrictest.Unslice2(exact.New(2))
-	aggtest.CheckedUpdate(t, agg, number.NewInt64Number(100), &desc)
-	require.NoError(t, agg.SynchronizedMove(ckpt, &desc))
-	checkpointSet.Add(&desc, ckpt)
+// 	err = exp.Export(ctx, checkpointSet)
+// 	require.Nil(t, err)
 
-	err = exp.Export(ctx, checkpointSet)
-	require.Nil(t, err)
-
-	require.Equal(t, `veryspecial.measure:100|h|#
-`, strings.Join(writer.vec, ""))
-}
+// 	require.Equal(t, `veryspecial.measure:100|h|#
+// `, strings.Join(writer.vec, ""))
+// }
