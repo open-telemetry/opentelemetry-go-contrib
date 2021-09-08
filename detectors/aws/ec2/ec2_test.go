@@ -63,6 +63,7 @@ func TestAWS_Detect(t *testing.T) {
 
 	usWestIDLabels := []attribute.KeyValue{
 		semconv.CloudProviderAWS,
+		semconv.CloudPlatformAWSEC2,
 		semconv.CloudRegionKey.String("us-west-2"),
 		semconv.CloudAvailabilityZoneKey.String("us-west-2b"),
 		semconv.CloudAccountIDKey.String("123456789012"),
@@ -137,6 +138,7 @@ func TestAWS_Detect(t *testing.T) {
 			Want: want{Resource: resource.NewWithAttributes(
 				semconv.SchemaURL,
 				semconv.CloudProviderAWS,
+				semconv.CloudPlatformAWSEC2,
 				semconv.CloudRegionKey.String("us-west-2"),
 				semconv.CloudAvailabilityZoneKey.String("us-west-2b"),
 				semconv.CloudAccountIDKey.String("123456789012"),

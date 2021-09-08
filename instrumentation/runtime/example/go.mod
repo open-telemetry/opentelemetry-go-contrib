@@ -1,4 +1,4 @@
-module go.opentelemetry.io/opentelemetry-go-contrib/instrumentation/runtime/example
+module go.opentelemetry.io/contrib/instrumentation/runtime/example
 
 go 1.15
 

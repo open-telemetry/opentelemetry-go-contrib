@@ -102,6 +102,7 @@ func (detector *resourceDetector) Detect(ctx context.Context) (*resource.Resourc
 
 	attributes := []attribute.KeyValue{
 		semconv.CloudProviderAWS,
+		semconv.CloudPlatformAWSEC2,
 		semconv.CloudRegionKey.String(doc.Region),
 		semconv.CloudAvailabilityZoneKey.String(doc.AvailabilityZone),
 		semconv.CloudAccountIDKey.String(doc.AccountID),
