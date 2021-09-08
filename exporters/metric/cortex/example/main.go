@@ -55,7 +55,7 @@ func main() {
 	meter := pusher.MeterProvider().Meter("example")
 
 	// Create instruments.
-	recorder := metric.Must(meter).NewInt64ValueRecorder(
+	recorder := metric.Must(meter).NewInt64Histogram(
 		"example.valuerecorder",
 		metric.WithDescription("Records values"),
 	)
@@ -64,7 +64,7 @@ func main() {
 		"example.counter",
 		metric.WithDescription("Counts things"),
 	)
-	fmt.Println("Success: Created Int64ValueRecorder and Int64Counter instruments!")
+	fmt.Println("Success: Created Int64.Int64Histogram and Int64Counter instruments!")
 
 	// Record random values to the instruments in a loop
 	fmt.Println("Starting to write data to the instruments!")

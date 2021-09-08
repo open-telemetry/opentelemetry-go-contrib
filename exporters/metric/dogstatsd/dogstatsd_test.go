@@ -17,18 +17,24 @@ package dogstatsd_test
 import (
 	"bytes"
 	"context"
+	"errors"
+	"sync"
 	"testing"
+	"time"
 
 	"github.com/stretchr/testify/require"
+
+	"go.opentelemetry.io/otel/metric/sdkapi"
+	export "go.opentelemetry.io/otel/sdk/export/metric"
+	"go.opentelemetry.io/otel/sdk/export/metric/aggregation"
+	"go.opentelemetry.io/otel/sdk/resource"
+	semconv "go.opentelemetry.io/otel/semconv/v1.4.0"
 
 	"go.opentelemetry.io/contrib/exporters/metric/dogstatsd"
 	"go.opentelemetry.io/otel/attribute"
 	"go.opentelemetry.io/otel/metric"
 	"go.opentelemetry.io/otel/metric/number"
-	"go.opentelemetry.io/otel/sdk/export/metric/metrictest"
 	"go.opentelemetry.io/otel/sdk/metric/aggregator/sum"
-	"go.opentelemetry.io/otel/sdk/resource"
-	semconv "go.opentelemetry.io/otel/semconv/v1.4.0"
 )
 
 // TestDogstatsAttributes that attributes are formatted in the correct style,
@@ -76,16 +82,16 @@ func TestDogstatsAttributes(t *testing.T) {
 	}
 	for _, tc := range cases {
 		t.Run(tc.name, func(t *testing.T) {
-			res := resource.NewWithAttributes(semconv.SchemaURL, tc.resources...)
 			ctx := context.Background()
-			checkpointSet := metrictest.NewCheckpointSet(res)
+			cpSet := newCheckpointSet()
 
-			desc := metric.NewDescriptor("test.name", metric.CounterInstrumentKind, number.Int64Kind)
-			cagg, cckpt := metrictest.Unslice2(sum.New(2))
+			desc := metric.NewDescriptor("test.name", sdkapi.CounterInstrumentKind, number.Int64Kind)
+			sums := sum.New(2)
+			cagg, cckpt := &sums[0], &sums[1]
 			require.NoError(t, cagg.Update(ctx, number.NewInt64Number(123), &desc))
 			require.NoError(t, cagg.SynchronizedMove(cckpt, &desc))
 
-			checkpointSet.Add(&desc, cckpt, tc.attributes...)
+			cpSet.add(&desc, cckpt, tc.attributes...)
 
 			var buf bytes.Buffer
 			exp, err := dogstatsd.NewRawExporter(dogstatsd.Config{
@@ -93,10 +99,55 @@ func TestDogstatsAttributes(t *testing.T) {
 			})
 			require.Nil(t, err)
 
-			err = exp.Export(ctx, checkpointSet)
+			err = exp.Export(ctx, resource.NewWithAttributes(semconv.SchemaURL, tc.resources...), cpSet)
 			require.Nil(t, err)
 
 			require.Equal(t, tc.expected, buf.String())
 		})
 	}
+}
+
+type mapkey struct {
+	desc     *metric.Descriptor
+	distinct attribute.Distinct
+}
+
+type checkpointSet struct {
+	// RWMutex implements locking for the `CheckpointSet` interface.
+	sync.RWMutex
+	records map[mapkey]export.Record
+	updates []export.Record
+}
+
+func newCheckpointSet() *checkpointSet {
+	return &checkpointSet{
+		records: make(map[mapkey]export.Record),
+	}
+}
+
+// Add a new record to a CheckpointSet.
+func (p *checkpointSet) add(desc *metric.Descriptor, newAgg export.Aggregator, labels ...attribute.KeyValue) (agg export.Aggregator, added bool) {
+	elabels := attribute.NewSet(labels...)
+
+	key := mapkey{
+		desc:     desc,
+		distinct: elabels.Equivalent(),
+	}
+	if record, ok := p.records[key]; ok {
+		return record.Aggregation().(export.Aggregator), false
+	}
+
+	rec := export.NewRecord(desc, &elabels, newAgg.Aggregation(), time.Time{}, time.Time{})
+	p.updates = append(p.updates, rec)
+	p.records[key] = rec
+	return newAgg, true
+}
+
+func (p *checkpointSet) ForEach(_ export.ExportKindSelector, f func(export.Record) error) error {
+	for _, r := range p.updates {
+		if err := f(r); err != nil && !errors.Is(err, aggregation.ErrNoData) {
+			return err
+		}
+	}
+	return nil
 }

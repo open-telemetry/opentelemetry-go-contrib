@@ -31,12 +31,13 @@ import (
 	"github.com/stretchr/testify/require"
 
 	"go.opentelemetry.io/otel/attribute"
+	"go.opentelemetry.io/otel/sdk/resource"
+	semconv "go.opentelemetry.io/otel/semconv/v1.4.0"
+
 	"go.opentelemetry.io/otel/metric/global"
 	"go.opentelemetry.io/otel/sdk/export/metric"
 	export "go.opentelemetry.io/otel/sdk/export/metric"
 	"go.opentelemetry.io/otel/sdk/export/metric/aggregation"
-	"go.opentelemetry.io/otel/sdk/resource"
-	semconv "go.opentelemetry.io/otel/semconv/v1.4.0"
 )
 
 // ValidConfig is a Config struct that should cause no errors.
@@ -123,7 +124,7 @@ func TestConvertToTimeSeries(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			got, err := exporter.ConvertToTimeSeries(tt.input)
+			got, err := exporter.ConvertToTimeSeries(testResource, tt.input)
 			want := tt.want
 
 			// Check for errors and for the correct number of timeseries.

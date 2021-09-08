@@ -15,15 +15,21 @@
 package cortex
 
 import (
+	"errors"
+	"sync"
 	"testing"
+	"time"
 
 	"github.com/prometheus/prometheus/prompb"
 	"github.com/stretchr/testify/require"
 
+	"go.opentelemetry.io/otel/attribute"
+	"go.opentelemetry.io/otel/metric/sdkapi"
+	"go.opentelemetry.io/otel/sdk/export/metric/aggregation"
+
 	"go.opentelemetry.io/otel/metric"
 	"go.opentelemetry.io/otel/metric/number"
 	export "go.opentelemetry.io/otel/sdk/export/metric"
-	"go.opentelemetry.io/otel/sdk/export/metric/metrictest"
 	"go.opentelemetry.io/otel/sdk/metric/aggregator/aggregatortest"
 	"go.opentelemetry.io/otel/sdk/metric/aggregator/histogram"
 	"go.opentelemetry.io/otel/sdk/metric/aggregator/lastvalue"
@@ -34,70 +40,74 @@ import (
 // getSumCheckpoint returns a checkpoint set with a sum aggregation record
 func getSumCheckpoint(t *testing.T, values ...int64) export.CheckpointSet {
 	// Create checkpoint set with resource and descriptor
-	checkpointSet := metrictest.NewCheckpointSet(testResource)
-	desc := metric.NewDescriptor("metric_name", metric.CounterInstrumentKind, number.Int64Kind)
+	cpSet := newCheckpointSet()
+	desc := metric.NewDescriptor("metric_name", sdkapi.CounterInstrumentKind, number.Int64Kind)
 
 	// Create aggregation, add value, and update checkpointset
-	agg, ckpt := metrictest.Unslice2(sum.New(2))
+	sums := sum.New(2)
+	agg, ckpt := &sums[0], &sums[1]
 	for _, value := range values {
 		aggregatortest.CheckedUpdate(t, agg, number.NewInt64Number(value), &desc)
 	}
 	require.NoError(t, agg.SynchronizedMove(ckpt, &desc))
-	checkpointSet.Add(&desc, ckpt)
+	cpSet.add(&desc, ckpt)
 
-	return checkpointSet
+	return cpSet
 }
 
 // getLastValueCheckpoint returns a checkpoint set with a last value aggregation record
 func getLastValueCheckpoint(t *testing.T, values ...int64) export.CheckpointSet {
 	// Create checkpoint set with resource and descriptor
-	checkpointSet := metrictest.NewCheckpointSet(testResource)
-	desc := metric.NewDescriptor("metric_name", metric.ValueObserverInstrumentKind, number.Int64Kind)
+	cpSet := newCheckpointSet()
+	desc := metric.NewDescriptor("metric_name", sdkapi.GaugeObserverInstrumentKind, number.Int64Kind)
 
 	// Create aggregation, add value, and update checkpointset
-	agg, ckpt := metrictest.Unslice2(lastvalue.New(2))
+	lastvalues := lastvalue.New(2)
+	agg, ckpt := &lastvalues[0], &lastvalues[1]
 	for _, value := range values {
 		aggregatortest.CheckedUpdate(t, agg, number.NewInt64Number(value), &desc)
 	}
 	require.NoError(t, agg.SynchronizedMove(ckpt, &desc))
-	checkpointSet.Add(&desc, ckpt)
+	cpSet.add(&desc, ckpt)
 
-	return checkpointSet
+	return cpSet
 }
 
 // getMMSCCheckpoint returns a checkpoint set with a minmaxsumcount aggregation record
 func getMMSCCheckpoint(t *testing.T, values ...float64) export.CheckpointSet {
 	// Create checkpoint set with resource and descriptor
-	checkpointSet := metrictest.NewCheckpointSet(testResource)
-	desc := metric.NewDescriptor("metric_name", metric.ValueRecorderInstrumentKind, number.Float64Kind)
+	cpSet := newCheckpointSet()
+	desc := metric.NewDescriptor("metric_name", sdkapi.HistogramInstrumentKind, number.Float64Kind)
 
 	// Create aggregation, add value, and update checkpointset
-	agg, ckpt := metrictest.Unslice2(minmaxsumcount.New(2, &desc))
+	minmaxsumcounts := minmaxsumcount.New(2, &desc)
+	agg, ckpt := &minmaxsumcounts[0], &minmaxsumcounts[1]
 	for _, value := range values {
 		aggregatortest.CheckedUpdate(t, agg, number.NewFloat64Number(value), &desc)
 	}
 	require.NoError(t, agg.SynchronizedMove(ckpt, &desc))
-	checkpointSet.Add(&desc, ckpt)
+	cpSet.add(&desc, ckpt)
 
-	return checkpointSet
+	return cpSet
 }
 
 // getHistogramCheckpoint returns a checkpoint set with a histogram aggregation record
 func getHistogramCheckpoint(t *testing.T) export.CheckpointSet {
 	// Create checkpoint set with resource and descriptor
-	checkpointSet := metrictest.NewCheckpointSet(testResource)
-	desc := metric.NewDescriptor("metric_name", metric.ValueRecorderInstrumentKind, number.Float64Kind)
+	cpSet := newCheckpointSet()
+	desc := metric.NewDescriptor("metric_name", sdkapi.HistogramInstrumentKind, number.Float64Kind)
 
 	// Create aggregation, add value, and update checkpointset
 	boundaries := []float64{100, 500, 900}
-	agg, ckpt := metrictest.Unslice2(histogram.New(2, &desc, histogram.WithExplicitBoundaries(boundaries)))
+	histograms := histogram.New(2, &desc, histogram.WithExplicitBoundaries(boundaries))
+	agg, ckpt := &histograms[0], &histograms[1]
 	for i := 0; i < 1000; i++ {
 		aggregatortest.CheckedUpdate(t, agg, number.NewFloat64Number(float64(i)+0.5), &desc)
 	}
 	require.NoError(t, agg.SynchronizedMove(ckpt, &desc))
-	checkpointSet.Add(&desc, ckpt)
+	cpSet.add(&desc, ckpt)
 
-	return checkpointSet
+	return cpSet
 }
 
 // The following variables hold expected TimeSeries values to be used in
@@ -320,4 +330,49 @@ var wantHistogramCheckpointSet = []*prompb.TimeSeries{
 			Timestamp: mockTime,
 		}},
 	},
+}
+
+type mapkey struct {
+	desc     *metric.Descriptor
+	distinct attribute.Distinct
+}
+
+type checkpointSet struct {
+	// RWMutex implements locking for the `CheckpointSet` interface.
+	sync.RWMutex
+	records map[mapkey]export.Record
+	updates []export.Record
+}
+
+func newCheckpointSet() *checkpointSet {
+	return &checkpointSet{
+		records: make(map[mapkey]export.Record),
+	}
+}
+
+// Add a new record to a CheckpointSet.
+func (p *checkpointSet) add(desc *metric.Descriptor, newAgg export.Aggregator, labels ...attribute.KeyValue) (agg export.Aggregator, added bool) {
+	elabels := attribute.NewSet(labels...)
+
+	key := mapkey{
+		desc:     desc,
+		distinct: elabels.Equivalent(),
+	}
+	if record, ok := p.records[key]; ok {
+		return record.Aggregation().(export.Aggregator), false
+	}
+
+	rec := export.NewRecord(desc, &elabels, newAgg.Aggregation(), time.Time{}, time.Time{})
+	p.updates = append(p.updates, rec)
+	p.records[key] = rec
+	return newAgg, true
+}
+
+func (p *checkpointSet) ForEach(_ export.ExportKindSelector, f func(export.Record) error) error {
+	for _, r := range p.updates {
+		if err := f(r); err != nil && !errors.Is(err, aggregation.ErrNoData) {
+			return err
+		}
+	}
+	return nil
 }

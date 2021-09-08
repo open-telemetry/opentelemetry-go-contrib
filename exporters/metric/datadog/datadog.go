@@ -21,6 +21,8 @@ import (
 
 	"github.com/DataDog/datadog-go/statsd"
 
+	"go.opentelemetry.io/otel/sdk/resource"
+
 	"go.opentelemetry.io/otel/attribute"
 	"go.opentelemetry.io/otel/metric"
 	"go.opentelemetry.io/otel/metric/number"
@@ -93,12 +95,12 @@ func (e *Exporter) ExportKindFor(*metric.Descriptor, aggregation.Kind) export.Ex
 	return export.DeltaExportKind
 }
 
-func (e *Exporter) Export(ctx context.Context, cs export.CheckpointSet) error {
+func (e *Exporter) Export(ctx context.Context, res *resource.Resource, cs export.CheckpointSet) error {
 	return cs.ForEach(e, func(r export.Record) error {
 		// TODO: Use the Resource() method
 		agg := r.Aggregation()
 		name := e.sanitizeMetricName(r.Descriptor().InstrumentationName(), r.Descriptor().Name())
-		itr := attribute.NewMergeIterator(r.Labels(), r.Resource().Set())
+		itr := attribute.NewMergeIterator(r.Labels(), res.Set())
 		tags := append([]string{}, e.opts.Tags...)
 		for itr.Next() {
 			attribute := itr.Label()

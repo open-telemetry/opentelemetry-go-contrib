@@ -17,12 +17,19 @@ package statsd_test
 import (
 	"bytes"
 	"context"
+	"errors"
 	"fmt"
 	"strconv"
 	"strings"
+	"sync"
 	"testing"
+	"time"
 
 	"github.com/stretchr/testify/require"
+
+	"go.opentelemetry.io/otel/metric/sdkapi"
+	"go.opentelemetry.io/otel/sdk/export/metric/aggregation"
+	semconv "go.opentelemetry.io/otel/semconv/v1.4.0"
 
 	"go.opentelemetry.io/contrib/exporters/metric/dogstatsd/internal/statsd"
 	"go.opentelemetry.io/otel/attribute"
@@ -30,16 +37,12 @@ import (
 	"go.opentelemetry.io/otel/metric/number"
 	"go.opentelemetry.io/otel/metric/unit"
 	export "go.opentelemetry.io/otel/sdk/export/metric"
-	"go.opentelemetry.io/otel/sdk/export/metric/metrictest"
 	aggtest "go.opentelemetry.io/otel/sdk/metric/aggregator/aggregatortest"
 	"go.opentelemetry.io/otel/sdk/metric/aggregator/exact"
 	"go.opentelemetry.io/otel/sdk/metric/aggregator/lastvalue"
 	"go.opentelemetry.io/otel/sdk/metric/aggregator/sum"
 	"go.opentelemetry.io/otel/sdk/resource"
-	semconv "go.opentelemetry.io/otel/semconv/v1.4.0"
 )
-
-var testResource = resource.NewWithAttributes(semconv.SchemaURL, attribute.String("host", "value"))
 
 // withTagsAdapter tests a dogstatsd-style statsd exporter.
 type withTagsAdapter struct {
@@ -94,6 +97,8 @@ func (w *testWriter) Write(b []byte) (int, error) {
 	return len(b), nil
 }
 
+var testResource = resource.NewWithAttributes(semconv.SchemaURL, attribute.String("R", "V"))
+
 func TestBasicFormat(t *testing.T) {
 	type adapterOutput struct {
 		adapter  statsd.Adapter
@@ -133,15 +138,15 @@ timer.B.D:%s|ms
 						t.Fatal("New error: ", err)
 					}
 
-					checkpointSet := metrictest.NewCheckpointSet(testResource)
+					cpSet := newCheckpointSet()
 					cdesc := metric.NewDescriptor(
-						"counter", metric.CounterInstrumentKind, nkind)
+						"counter", sdkapi.CounterInstrumentKind, nkind)
 					gdesc := metric.NewDescriptor(
-						"observer", metric.ValueObserverInstrumentKind, nkind)
+						"observer", sdkapi.GaugeObserverInstrumentKind, nkind)
 					mdesc := metric.NewDescriptor(
-						"measure", metric.ValueRecorderInstrumentKind, nkind)
+						"measure", sdkapi.HistogramInstrumentKind, nkind)
 					tdesc := metric.NewDescriptor(
-						"timer", metric.ValueRecorderInstrumentKind, nkind, metric.WithUnit(unit.Milliseconds))
+						"timer", sdkapi.HistogramInstrumentKind, nkind, metric.WithUnit(unit.Milliseconds))
 
 					attributes := []attribute.KeyValue{
 						attribute.String("A", "B"),
@@ -150,10 +155,14 @@ timer.B.D:%s|ms
 					const value = 123.456
 					val := newNumber(t, nkind, value)
 
-					cagg, cckpt := metrictest.Unslice2(sum.New(2))
-					gagg, gckpt := metrictest.Unslice2(lastvalue.New(2))
-					magg, mckpt := metrictest.Unslice2(exact.New(2))
-					tagg, tckpt := metrictest.Unslice2(exact.New(2))
+					sums := sum.New(2)
+					cagg, cckpt := &sums[0], &sums[1]
+					lastvalues := lastvalue.New(2)
+					gagg, gckpt := &lastvalues[0], &lastvalues[1]
+					exactsM := exact.New(2)
+					magg, mckpt := &exactsM[0], &exactsM[1]
+					exactsT := exact.New(2)
+					tagg, tckpt := &exactsT[0], &exactsT[1]
 
 					aggtest.CheckedUpdate(t, cagg, val, &cdesc)
 					aggtest.CheckedUpdate(t, gagg, val, &gdesc)
@@ -165,12 +174,12 @@ timer.B.D:%s|ms
 					require.NoError(t, magg.SynchronizedMove(mckpt, &mdesc))
 					require.NoError(t, tagg.SynchronizedMove(tckpt, &tdesc))
 
-					checkpointSet.Add(&cdesc, cckpt, attributes...)
-					checkpointSet.Add(&gdesc, gckpt, attributes...)
-					checkpointSet.Add(&mdesc, mckpt, attributes...)
-					checkpointSet.Add(&tdesc, tckpt, attributes...)
+					cpSet.add(&cdesc, cckpt, attributes...)
+					cpSet.add(&gdesc, gckpt, attributes...)
+					cpSet.add(&mdesc, mckpt, attributes...)
+					cpSet.add(&tdesc, tckpt, attributes...)
 
-					err = exp.Export(ctx, checkpointSet)
+					err = exp.Export(ctx, testResource, cpSet)
 					require.Nil(t, err)
 
 					var vfmt string
@@ -322,8 +331,8 @@ func TestPacketSplit(t *testing.T) {
 				t.Fatal("New error: ", err)
 			}
 
-			checkpointSet := metrictest.NewCheckpointSet(testResource)
-			desc := metric.NewDescriptor("counter", metric.CounterInstrumentKind, number.Int64Kind)
+			cpSet := newCheckpointSet()
+			desc := metric.NewDescriptor("counter", sdkapi.CounterInstrumentKind, number.Int64Kind)
 
 			var expected []string
 
@@ -335,13 +344,14 @@ func TestPacketSplit(t *testing.T) {
 				encoded := adapter.Encoder.Encode(eattributes.Iter())
 				expect := fmt.Sprint("counter:100|c|#", encoded, "\n")
 				expected = append(expected, expect)
-				agg, ckpt := metrictest.Unslice2(sum.New(2))
+				sums := sum.New(2)
+				agg, ckpt := &sums[0], &sums[1]
 				aggtest.CheckedUpdate(t, agg, number.NewInt64Number(100), &desc)
 				require.NoError(t, agg.SynchronizedMove(ckpt, &desc))
-				checkpointSet.Add(&desc, ckpt, attributes...)
+				cpSet.add(&desc, ckpt, attributes...)
 			})
 
-			err = exp.Export(ctx, checkpointSet)
+			err = exp.Export(ctx, testResource, cpSet)
 			require.Nil(t, err)
 
 			tcase.check(expected, writer.vec, t)
@@ -362,18 +372,19 @@ func TestExactSplit(t *testing.T) {
 		t.Fatal("New error: ", err)
 	}
 
-	checkpointSet := metrictest.NewCheckpointSet(testResource)
-	desc := metric.NewDescriptor("measure", metric.ValueRecorderInstrumentKind, number.Int64Kind)
+	cpSet := newCheckpointSet()
+	desc := metric.NewDescriptor("measure", sdkapi.HistogramInstrumentKind, number.Int64Kind)
 
-	agg, ckpt := metrictest.Unslice2(exact.New(2))
+	exactsM := exact.New(2)
+	agg, ckpt := &exactsM[0], &exactsM[1]
 
 	for i := 0; i < 1024; i++ {
 		aggtest.CheckedUpdate(t, agg, number.NewInt64Number(100), &desc)
 	}
 	require.NoError(t, agg.SynchronizedMove(ckpt, &desc))
-	checkpointSet.Add(&desc, ckpt)
+	cpSet.add(&desc, ckpt)
 
-	err = exp.Export(ctx, checkpointSet)
+	err = exp.Export(ctx, testResource, cpSet)
 	require.Nil(t, err)
 
 	require.Greater(t, len(writer.vec), 1)
@@ -397,17 +408,63 @@ func TestPrefix(t *testing.T) {
 		t.Fatal("New error: ", err)
 	}
 
-	checkpointSet := metrictest.NewCheckpointSet(testResource)
-	desc := metric.NewDescriptor("measure", metric.ValueRecorderInstrumentKind, number.Int64Kind)
+	cpSet := newCheckpointSet()
+	desc := metric.NewDescriptor("measure", sdkapi.HistogramInstrumentKind, number.Int64Kind)
 
-	agg, ckpt := metrictest.Unslice2(exact.New(2))
+	exactsM := exact.New(2)
+	agg, ckpt := &exactsM[0], &exactsM[1]
 	aggtest.CheckedUpdate(t, agg, number.NewInt64Number(100), &desc)
 	require.NoError(t, agg.SynchronizedMove(ckpt, &desc))
-	checkpointSet.Add(&desc, ckpt)
+	cpSet.add(&desc, ckpt)
 
-	err = exp.Export(ctx, checkpointSet)
+	err = exp.Export(ctx, testResource, cpSet)
 	require.Nil(t, err)
 
 	require.Equal(t, `veryspecial.measure:100|h|#
 `, strings.Join(writer.vec, ""))
+}
+
+type mapkey struct {
+	desc     *metric.Descriptor
+	distinct attribute.Distinct
+}
+
+type checkpointSet struct {
+	// RWMutex implements locking for the `CheckpointSet` interface.
+	sync.RWMutex
+	records map[mapkey]export.Record
+	updates []export.Record
+}
+
+func newCheckpointSet() *checkpointSet {
+	return &checkpointSet{
+		records: make(map[mapkey]export.Record),
+	}
+}
+
+// Add a new record to a CheckpointSet.
+func (p *checkpointSet) add(desc *metric.Descriptor, newAgg export.Aggregator, labels ...attribute.KeyValue) (agg export.Aggregator, added bool) {
+	elabels := attribute.NewSet(labels...)
+
+	key := mapkey{
+		desc:     desc,
+		distinct: elabels.Equivalent(),
+	}
+	if record, ok := p.records[key]; ok {
+		return record.Aggregation().(export.Aggregator), false
+	}
+
+	rec := export.NewRecord(desc, &elabels, newAgg.Aggregation(), time.Time{}, time.Time{})
+	p.updates = append(p.updates, rec)
+	p.records[key] = rec
+	return newAgg, true
+}
+
+func (p *checkpointSet) ForEach(_ export.ExportKindSelector, f func(export.Record) error) error {
+	for _, r := range p.updates {
+		if err := f(r); err != nil && !errors.Is(err, aggregation.ErrNoData) {
+			return err
+		}
+	}
+	return nil
 }
