@@ -66,10 +66,13 @@ go.opentelemetry.io/otel/bridge/opencensus v0.23.0 h1:j1OcDOE9ZI+WEXrYaeUMY81cOj
 go.opentelemetry.io/otel/bridge/opencensus v0.23.0/go.mod h1:gJfSkAyFGyqmC9y9DNws07HDetzMYAdxtvr26uWmI4E=
 go.opentelemetry.io/otel/exporters/stdout/stdouttrace v1.0.0-RC3 h1:ewSzc2SagdOx0up5xZPigXh1n3SLsNEslc5edHRBVcs=
 go.opentelemetry.io/otel/exporters/stdout/stdouttrace v1.0.0-RC3/go.mod h1:Oxmrmpdvm6lM3tkYmHKGWAhi9+9c2rrAEbwSDn0Bvv8=
+go.opentelemetry.io/otel/internal/metric v0.23.0 h1:mPfzm9Iqhw7G2nDBmUAjFTfPqLZPbOW2k7QI57ITbaI=
 go.opentelemetry.io/otel/internal/metric v0.23.0/go.mod h1:z+RPiDJe30YnCrOhFGivwBS+DU1JU/PiLKkk4re2DNY=
+go.opentelemetry.io/otel/metric v0.23.0 h1:mYCcDxi60P4T27/0jchIDFa1WHEfQeU3zH9UEMpnj2c=
 go.opentelemetry.io/otel/metric v0.23.0/go.mod h1:G/Nn9InyNnIv7J6YVkQfpc0JCfKBNJaERBGw08nqmVQ=
 go.opentelemetry.io/otel/sdk v1.0.0-RC3 h1:iRMkET+EmJUn5mW0hJzygBraXRmrUwzbOtNvTCh/oKs=
 go.opentelemetry.io/otel/sdk v1.0.0-RC3/go.mod h1:78H6hyg2fka0NYT9fqGuFLvly2yCxiBXDJAgLKo/2Us=
+go.opentelemetry.io/otel/sdk/export/metric v0.23.0 h1:7NeoKPPx6NdZBVHLEp/LY5Lq85Ff1WNZnuJkuRy+azw=
 go.opentelemetry.io/otel/sdk/export/metric v0.23.0/go.mod h1:SuMiREmKVRIwFKq73zvGTvwFpxb/ZAYkMfyqMoOtDqs=
 go.opentelemetry.io/otel/trace v1.0.0-RC3 h1:9F0ayEvlxv8BmNmPbU005WK7hC+7KbOazCPZjNa1yME=
 go.opentelemetry.io/otel/trace v1.0.0-RC3/go.mod h1:VUt2TUYd8S2/ZRX09ZDFZQwn2RqfMB5MzO17jBojGxo=
