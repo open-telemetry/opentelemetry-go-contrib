@@ -115,13 +115,13 @@ func (h *host) register() error {
 	var (
 		err error
 
-		processCPUTime metric.Float64SumObserver
-		hostCPUTime    metric.Float64SumObserver
+		processCPUTime metric.Float64UpDownCounterObserver
+		hostCPUTime    metric.Float64UpDownCounterObserver
 
-		hostMemoryUsage       metric.Int64UpDownSumObserver
-		hostMemoryUtilization metric.Float64UpDownSumObserver
+		hostMemoryUsage       metric.Int64UpDownCounterObserver
+		hostMemoryUtilization metric.Float64UpDownCounterObserver
 
-		networkIOUsage metric.Int64SumObserver
+		networkIOUsage metric.Int64UpDownCounterObserver
 
 		// lock prevents a race between batch observer and instrument registration.
 		lock sync.Mutex
@@ -227,7 +227,7 @@ func (h *host) register() error {
 	// TODO: .time units are in seconds, but "unit" package does
 	// not include this string.
 	// https://github.com/open-telemetry/opentelemetry-specification/issues/705
-	if processCPUTime, err = batchObserver.NewFloat64SumObserver(
+	if processCPUTime, err = batchObserver.NewFloat64UpDownCounterObserver(
 		"process.cpu.time",
 		metric.WithUnit("s"),
 		metric.WithDescription(
@@ -237,7 +237,7 @@ func (h *host) register() error {
 		return err
 	}
 
-	if hostCPUTime, err = batchObserver.NewFloat64SumObserver(
+	if hostCPUTime, err = batchObserver.NewFloat64UpDownCounterObserver(
 		"system.cpu.time",
 		metric.WithUnit("s"),
 		metric.WithDescription(
@@ -247,7 +247,7 @@ func (h *host) register() error {
 		return err
 	}
 
-	if hostMemoryUsage, err = batchObserver.NewInt64UpDownSumObserver(
+	if hostMemoryUsage, err = batchObserver.NewInt64UpDownCounterObserver(
 		"system.memory.usage",
 		metric.WithUnit(unit.Bytes),
 		metric.WithDescription(
@@ -257,7 +257,7 @@ func (h *host) register() error {
 		return err
 	}
 
-	if hostMemoryUtilization, err = batchObserver.NewFloat64UpDownSumObserver(
+	if hostMemoryUtilization, err = batchObserver.NewFloat64UpDownCounterObserver(
 		"system.memory.utilization",
 		metric.WithUnit(unit.Dimensionless),
 		metric.WithDescription(
@@ -267,7 +267,7 @@ func (h *host) register() error {
 		return err
 	}
 
-	if networkIOUsage, err = batchObserver.NewInt64SumObserver(
+	if networkIOUsage, err = batchObserver.NewInt64UpDownCounterObserver(
 		"system.network.io",
 		metric.WithUnit(unit.Bytes),
 		metric.WithDescription(
