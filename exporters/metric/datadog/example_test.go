@@ -66,7 +66,7 @@ func ExampleExporter() {
 		defer func() { handleErr(pusher.Stop(ctx)) }()
 		global.SetMeterProvider(pusher.MeterProvider())
 		meter := global.Meter("marwandist")
-		m := metric.Must(meter).NewInt64ValueRecorder("myrecorder")
+		m := metric.Must(meter).NewInt64Histogram("myrecorder")
 		meter.RecordBatch(context.Background(), []attribute.KeyValue{attribute.Int("l", 1)},
 			m.Measurement(1), m.Measurement(50), m.Measurement(100))
 	}()

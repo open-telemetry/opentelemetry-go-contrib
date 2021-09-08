@@ -17,9 +17,10 @@ package statsd_test
 import (
 	"bytes"
 	"context"
+	"errors"
 	"fmt"
-	"strconv"
 	"strings"
+	"sync"
 	"testing"
 
 	"github.com/stretchr/testify/require"
@@ -28,16 +29,54 @@ import (
 	"go.opentelemetry.io/otel/attribute"
 	"go.opentelemetry.io/otel/metric"
 	"go.opentelemetry.io/otel/metric/number"
-	"go.opentelemetry.io/otel/metric/unit"
 	export "go.opentelemetry.io/otel/sdk/export/metric"
-	"go.opentelemetry.io/otel/sdk/export/metric/metrictest"
-	aggtest "go.opentelemetry.io/otel/sdk/metric/aggregator/aggregatortest"
+	"go.opentelemetry.io/otel/sdk/export/metric/aggregation"
 	"go.opentelemetry.io/otel/sdk/metric/aggregator/exact"
 	"go.opentelemetry.io/otel/sdk/metric/aggregator/lastvalue"
 	"go.opentelemetry.io/otel/sdk/metric/aggregator/sum"
+	controller "go.opentelemetry.io/otel/sdk/metric/controller/basic"
+	processor "go.opentelemetry.io/otel/sdk/metric/processor/basic"
 	"go.opentelemetry.io/otel/sdk/resource"
 	semconv "go.opentelemetry.io/otel/semconv/v1.4.0"
 )
+
+func testMeter(t *testing.T, exp export.Exporter) (context.Context, metric.Meter, *processor.Processor, *controller.Controller) {
+	aggSel := testAggregatorSelector{}
+	proc := processor.New(aggSel, export.CumulativeExportKindSelector())
+	cont := controller.New(proc,
+		controller.WithResource(testResource),
+		controller.WithExporter(exp),
+	)
+	ctx := context.Background()
+
+	return ctx, cont.MeterProvider().Meter("test"), proc, cont
+}
+
+type testAggregatorSelector struct {
+}
+
+func (testAggregatorSelector) AggregatorFor(desc *metric.Descriptor, aggPtrs ...*export.Aggregator) {
+	switch {
+	case strings.HasSuffix(desc.Name(), "counter"):
+		aggs := sum.New(len(aggPtrs))
+		for i := range aggPtrs {
+			*aggPtrs[i] = &aggs[i]
+		}
+	case strings.HasSuffix(desc.Name(), "gauge"):
+		aggs := lastvalue.New(len(aggPtrs))
+		for i := range aggPtrs {
+			*aggPtrs[i] = &aggs[i]
+		}
+	case strings.HasSuffix(desc.Name(), "histogram") ||
+		strings.HasSuffix(desc.Name(), "timer"):
+		aggs := exact.New(len(aggPtrs))
+		for i := range aggPtrs {
+			*aggPtrs[i] = &aggs[i]
+		}
+	default:
+		panic(fmt.Sprint("Invalid instrument name for test AggregatorSelector: ", desc.Name()))
+	}
+}
 
 var testResource = resource.NewWithAttributes(semconv.SchemaURL, attribute.String("host", "value"))
 
@@ -97,22 +136,28 @@ func (w *testWriter) Write(b []byte) (int, error) {
 func TestBasicFormat(t *testing.T) {
 	type adapterOutput struct {
 		adapter  statsd.Adapter
-		expected string
+		expected []string
 	}
 
-	for _, ao := range []adapterOutput{{
-		adapter: newWithTagsAdapter(),
-		expected: `counter:%s|c|#A=B,C=D
-observer:%s|g|#A=B,C=D
-measure:%s|h|#A=B,C=D
-timer:%s|ms|#A=B,C=D
-`}, {
-		adapter: newNoTagsAdapter(),
-		expected: `counter.B.D:%s|c
-observer.B.D:%s|g
-measure.B.D:%s|h
-timer.B.D:%s|ms
-`},
+	for _, ao := range []adapterOutput{
+		{
+			adapter: newWithTagsAdapter(),
+			expected: []string{
+				"counter:%s|c|#A=B,C=D",
+				"gauge:%s|g|#A=B,C=D",
+				"histogram:%s|h|#A=B,C=D",
+				"timer:%s|ms|#A=B,C=D",
+			},
+		},
+		{
+			adapter: newNoTagsAdapter(),
+			expected: []string{
+				"counter.B.D:%s|c",
+				"gauge.B.D:%s|g",
+				"histogram.B.D:%s|h",
+				"timer.B.D:%s|ms",
+			},
+		},
 	} {
 		adapter := ao.adapter
 		expected := ao.expected
@@ -122,7 +167,6 @@ timer.B.D:%s|ms
 				number.Int64Kind,
 			} {
 				t.Run(nkind.String(), func(t *testing.T) {
-					ctx := context.Background()
 					writer := &testWriter{}
 					config := statsd.Config{
 						Writer:        writer,
@@ -132,72 +176,89 @@ timer.B.D:%s|ms
 					if err != nil {
 						t.Fatal("New error: ", err)
 					}
-
-					checkpointSet := metrictest.NewCheckpointSet(testResource)
-					cdesc := metric.NewDescriptor(
-						"counter", metric.CounterInstrumentKind, nkind)
-					gdesc := metric.NewDescriptor(
-						"observer", metric.ValueObserverInstrumentKind, nkind)
-					mdesc := metric.NewDescriptor(
-						"measure", metric.ValueRecorderInstrumentKind, nkind)
-					tdesc := metric.NewDescriptor(
-						"timer", metric.ValueRecorderInstrumentKind, nkind, metric.WithUnit(unit.Milliseconds))
+					ctx, meter, _, cont := testMeter(t, exp)
+					require.NoError(t, cont.Start(ctx))
 
 					attributes := []attribute.KeyValue{
 						attribute.String("A", "B"),
 						attribute.String("C", "D"),
 					}
-					const value = 123.456
-					val := newNumber(t, nkind, value)
 
-					cagg, cckpt := metrictest.Unslice2(sum.New(2))
-					gagg, gckpt := metrictest.Unslice2(lastvalue.New(2))
-					magg, mckpt := metrictest.Unslice2(exact.New(2))
-					tagg, tckpt := metrictest.Unslice2(exact.New(2))
-
-					aggtest.CheckedUpdate(t, cagg, val, &cdesc)
-					aggtest.CheckedUpdate(t, gagg, val, &gdesc)
-					aggtest.CheckedUpdate(t, magg, val, &mdesc)
-					aggtest.CheckedUpdate(t, tagg, val, &tdesc)
-
-					require.NoError(t, cagg.SynchronizedMove(cckpt, &cdesc))
-					require.NoError(t, gagg.SynchronizedMove(gckpt, &gdesc))
-					require.NoError(t, magg.SynchronizedMove(mckpt, &mdesc))
-					require.NoError(t, tagg.SynchronizedMove(tckpt, &tdesc))
-
-					checkpointSet.Add(&cdesc, cckpt, attributes...)
-					checkpointSet.Add(&gdesc, gckpt, attributes...)
-					checkpointSet.Add(&mdesc, mckpt, attributes...)
-					checkpointSet.Add(&tdesc, tckpt, attributes...)
-
-					err = exp.Export(ctx, checkpointSet)
-					require.Nil(t, err)
-
-					var vfmt string
 					if nkind == number.Int64Kind {
-						fv := value
-						vfmt = strconv.FormatInt(int64(fv), 10)
+						counter := metric.Must(meter).NewInt64Counter("counter")
+						_ = metric.Must(meter).NewInt64GaugeObserver("gauge",
+							func(_ context.Context, res metric.Int64ObserverResult) {
+								res.Observe(2, attributes...)
+							})
+						histo := metric.Must(meter).NewInt64Histogram("histogram")
+						timer := metric.Must(meter).NewInt64Histogram("timer", metric.WithUnit("ms"))
+						counter.Add(ctx, 2, attributes...)
+						histo.Record(ctx, 2, attributes...)
+						timer.Record(ctx, 2, attributes...)
 					} else {
-						vfmt = strconv.FormatFloat(value, 'g', -1, 64)
+						counter := metric.Must(meter).NewFloat64Counter("counter")
+						_ = metric.Must(meter).NewFloat64GaugeObserver("gauge",
+							func(_ context.Context, res metric.Float64ObserverResult) {
+								res.Observe(2, attributes...)
+							})
+						histo := metric.Must(meter).NewFloat64Histogram("histogram")
+						timer := metric.Must(meter).NewFloat64Histogram("timer", metric.WithUnit("ms"))
+						counter.Add(ctx, 2, attributes...)
+						histo.Record(ctx, 2, attributes...)
+						timer.Record(ctx, 2, attributes...)
 					}
 
+					require.NoError(t, cont.Stop(ctx))
 					require.Equal(t, 1, len(writer.vec))
-					require.Equal(t, fmt.Sprintf(expected, vfmt, vfmt, vfmt, vfmt), writer.vec[0])
+
+					// Note we do not know the order metrics will be sent.
+					wantStrings := map[string]bool{}
+					haveStrings := map[string]bool{}
+
+					for _, wt := range expected {
+						wantStrings[fmt.Sprintf(wt, "2")] = true
+					}
+					for _, hv := range strings.Split(writer.vec[0], "\n") {
+						if len(hv) != 0 {
+							haveStrings[hv] = true
+						}
+					}
+
+					require.EqualValues(t, wantStrings, haveStrings)
+
 				})
 			}
 		})
 	}
 }
 
-func newNumber(t *testing.T, kind number.Kind, value float64) number.Number {
-	t.Helper()
-	switch kind {
-	case number.Int64Kind:
-		return number.NewInt64Number(int64(value))
-	case number.Float64Kind:
-		return number.NewFloat64Number(value)
+// Note: this test requires an reader interface with ordered delivery,
+// which the SDK does not provide.  these test helpers could become
+// part of "processortest" after
+// https://github.com/open-telemetry/opentelemetry-go/pull/2197
+// merges.
+
+type orderedReader struct {
+	// RWMutex implements locking for the `CheckpointSet` interface.
+	sync.RWMutex
+	ordered []export.CheckpointSet
+}
+
+func newOrderedReader() *orderedReader {
+	return &orderedReader{}
+}
+
+func (p *orderedReader) add(c export.CheckpointSet) {
+	p.ordered = append(p.ordered, c)
+}
+
+func (p *orderedReader) ForEach(k export.ExportKindSelector, f func(export.Record) error) error {
+	for _, r := range p.ordered {
+		if err := r.ForEach(k, f); err != nil && !errors.Is(err, aggregation.ErrNoData) {
+			return err
+		}
 	}
-	panic("invalid number kind")
+	return nil
 }
 
 func makeAttributes(offset, nkeys int) []attribute.KeyValue {
@@ -214,13 +275,15 @@ type splitTestCase struct {
 	check func(expected, got []string, t *testing.T)
 }
 
+const large = 1000
+
 var splitTestCases = []splitTestCase{
 	// These test use the number of keys to control where packets
 	// are split.
 	{"Simple",
 		func(add func(int)) {
 			add(1)
-			add(1000)
+			add(large)
 			add(1)
 		},
 		func(expected, got []string, t *testing.T) {
@@ -231,7 +294,7 @@ var splitTestCases = []splitTestCase{
 		func(add func(int)) {
 			add(1)
 			add(1)
-			add(1000)
+			add(large)
 		},
 		func(expected, got []string, t *testing.T) {
 			require.Equal(t, 2, len(got))
@@ -243,10 +306,10 @@ var splitTestCases = []splitTestCase{
 	},
 	{"FirstBig",
 		func(add func(int)) {
-			add(1000)
+			add(large)
 			add(1)
 			add(1)
-			add(1000)
+			add(large)
 			add(1)
 			add(1)
 		},
@@ -262,7 +325,7 @@ var splitTestCases = []splitTestCase{
 	},
 	{"OneBig",
 		func(add func(int)) {
-			add(1000)
+			add(large)
 		},
 		func(expected, got []string, t *testing.T) {
 			require.EqualValues(t, expected, got)
@@ -270,7 +333,7 @@ var splitTestCases = []splitTestCase{
 	},
 	{"LastSmall",
 		func(add func(int)) {
-			add(1000)
+			add(large)
 			add(1)
 		},
 		func(expected, got []string, t *testing.T) {
@@ -279,7 +342,7 @@ var splitTestCases = []splitTestCase{
 	},
 	{"Overflow",
 		func(add func(int)) {
-			for i := 0; i < 1000; i++ {
+			for i := 0; i < large; i++ {
 				add(1)
 			}
 		},
@@ -297,9 +360,9 @@ var splitTestCases = []splitTestCase{
 	},
 	{"AllBig",
 		func(add func(int)) {
-			add(1000)
-			add(1000)
-			add(1000)
+			add(large)
+			add(large)
+			add(large)
 		},
 		func(expected, got []string, t *testing.T) {
 			require.EqualValues(t, expected, got)
@@ -322,8 +385,7 @@ func TestPacketSplit(t *testing.T) {
 				t.Fatal("New error: ", err)
 			}
 
-			checkpointSet := metrictest.NewCheckpointSet(testResource)
-			desc := metric.NewDescriptor("counter", metric.CounterInstrumentKind, number.Int64Kind)
+			orderedReader := newOrderedReader()
 
 			var expected []string
 
@@ -335,13 +397,18 @@ func TestPacketSplit(t *testing.T) {
 				encoded := adapter.Encoder.Encode(eattributes.Iter())
 				expect := fmt.Sprint("counter:100|c|#", encoded, "\n")
 				expected = append(expected, expect)
-				agg, ckpt := metrictest.Unslice2(sum.New(2))
-				aggtest.CheckedUpdate(t, agg, number.NewInt64Number(100), &desc)
-				require.NoError(t, agg.SynchronizedMove(ckpt, &desc))
-				checkpointSet.Add(&desc, ckpt, attributes...)
+
+				ctx, meter, proc, cont := testMeter(t, nil)
+
+				counter := metric.Must(meter).NewInt64Counter("counter")
+				counter.Add(ctx, 100, attributes...)
+
+				require.NoError(t, cont.Collect(ctx))
+
+				orderedReader.add(proc.CheckpointSet())
 			})
 
-			err = exp.Export(ctx, checkpointSet)
+			err = exp.Export(ctx, testResource, orderedReader)
 			require.Nil(t, err)
 
 			tcase.check(expected, writer.vec, t)
@@ -350,7 +417,6 @@ func TestPacketSplit(t *testing.T) {
 }
 
 func TestExactSplit(t *testing.T) {
-	ctx := context.Background()
 	writer := &testWriter{}
 	config := statsd.Config{
 		Writer:        writer,
@@ -362,19 +428,15 @@ func TestExactSplit(t *testing.T) {
 		t.Fatal("New error: ", err)
 	}
 
-	checkpointSet := metrictest.NewCheckpointSet(testResource)
-	desc := metric.NewDescriptor("measure", metric.ValueRecorderInstrumentKind, number.Int64Kind)
-
-	agg, ckpt := metrictest.Unslice2(exact.New(2))
+	ctx, meter, _, cont := testMeter(t, exp)
+	histo := metric.Must(meter).NewInt64Histogram("histogram")
+	require.NoError(t, cont.Start(ctx))
 
 	for i := 0; i < 1024; i++ {
-		aggtest.CheckedUpdate(t, agg, number.NewInt64Number(100), &desc)
+		histo.Record(ctx, 100)
 	}
-	require.NoError(t, agg.SynchronizedMove(ckpt, &desc))
-	checkpointSet.Add(&desc, ckpt)
 
-	err = exp.Export(ctx, checkpointSet)
-	require.Nil(t, err)
+	require.NoError(t, cont.Stop(ctx))
 
 	require.Greater(t, len(writer.vec), 1)
 
@@ -384,7 +446,6 @@ func TestExactSplit(t *testing.T) {
 }
 
 func TestPrefix(t *testing.T) {
-	ctx := context.Background()
 	writer := &testWriter{}
 	config := statsd.Config{
 		Writer:        writer,
@@ -397,17 +458,14 @@ func TestPrefix(t *testing.T) {
 		t.Fatal("New error: ", err)
 	}
 
-	checkpointSet := metrictest.NewCheckpointSet(testResource)
-	desc := metric.NewDescriptor("measure", metric.ValueRecorderInstrumentKind, number.Int64Kind)
+	ctx, meter, _, cont := testMeter(t, exp)
+	histo := metric.Must(meter).NewInt64Histogram("histogram")
+	require.NoError(t, cont.Start(ctx))
 
-	agg, ckpt := metrictest.Unslice2(exact.New(2))
-	aggtest.CheckedUpdate(t, agg, number.NewInt64Number(100), &desc)
-	require.NoError(t, agg.SynchronizedMove(ckpt, &desc))
-	checkpointSet.Add(&desc, ckpt)
+	histo.Record(ctx, 100)
 
-	err = exp.Export(ctx, checkpointSet)
-	require.Nil(t, err)
+	require.NoError(t, cont.Stop(ctx))
 
-	require.Equal(t, `veryspecial.measure:100|h|#
+	require.Equal(t, `veryspecial.histogram:100|h|#
 `, strings.Join(writer.vec, ""))
 }
