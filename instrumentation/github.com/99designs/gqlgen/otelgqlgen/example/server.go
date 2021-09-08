@@ -22,11 +22,12 @@ import (
 	"github.com/99designs/gqlgen/graphql/handler"
 	"github.com/99designs/gqlgen/graphql/playground"
 
+	"go.opentelemetry.io/otel/exporters/stdout/stdouttrace"
+
 	"go.opentelemetry.io/contrib/instrumentation/github.com/99designs/gqlgen/otelgqlgen"
 	"go.opentelemetry.io/opentelemetry-go-contrib/instrumentation/github.com/99designs/gqlgen/otelgqlgen/example/graph"
 	"go.opentelemetry.io/opentelemetry-go-contrib/instrumentation/github.com/99designs/gqlgen/otelgqlgen/example/graph/generated"
 	"go.opentelemetry.io/otel"
-	"go.opentelemetry.io/otel/exporters/stdout"
 	"go.opentelemetry.io/otel/propagation"
 	sdktrace "go.opentelemetry.io/otel/sdk/trace"
 )
@@ -54,13 +55,16 @@ func main() {
 }
 
 func initTracer() {
-	exporter, err := stdout.NewExporter(stdout.WithPrettyPrint())
+	traceExporter, err := stdouttrace.New(
+		stdouttrace.WithPrettyPrint(),
+	)
 	if err != nil {
-		log.Fatal(err)
+		log.Fatalf("failed to initialize stdouttrace export pipeline: %v", err)
 	}
+
 	tp := sdktrace.NewTracerProvider(
 		sdktrace.WithSampler(sdktrace.AlwaysSample()),
-		sdktrace.WithSyncer(exporter),
+		sdktrace.WithSyncer(traceExporter),
 	)
 
 	otel.SetTracerProvider(tp)

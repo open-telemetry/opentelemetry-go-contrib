@@ -19,33 +19,40 @@ import (
 	"fmt"
 	"net/http"
 	"net/http/httptest"
+	"strings"
 	"testing"
 
 	"github.com/99designs/gqlgen/graphql"
 	"github.com/99designs/gqlgen/graphql/handler"
+	"github.com/99designs/gqlgen/graphql/handler/extension"
 	"github.com/99designs/gqlgen/graphql/handler/transport"
 	"github.com/stretchr/testify/assert"
-	"github.com/stretchr/testify/require"
 	"github.com/vektah/gqlparser/v2"
 	"github.com/vektah/gqlparser/v2/ast"
 	"github.com/vektah/gqlparser/v2/gqlerror"
 
 	"go.opentelemetry.io/otel"
-	"go.opentelemetry.io/otel/oteltest"
-	oteltrace "go.opentelemetry.io/otel/trace"
+	sdktrace "go.opentelemetry.io/otel/sdk/trace"
+	"go.opentelemetry.io/otel/sdk/trace/tracetest"
+	"go.opentelemetry.io/otel/trace"
+)
+
+const (
+	testQueryName     = "NamedQuery"
+	namelessQueryName = "nameless-operation"
+	testComplexity    = 5
 )
 
 func TestChildSpanFromGlobalTracer(t *testing.T) {
-	otel.SetTracerProvider(oteltest.NewTracerProvider())
+	spanRecorder := tracetest.NewSpanRecorder()
+	provider := sdktrace.NewTracerProvider(sdktrace.WithSpanProcessor(spanRecorder))
+	otel.SetTracerProvider(provider)
 
 	srv := newMockServer(func(ctx context.Context) (interface{}, error) {
-		span := oteltrace.SpanFromContext(ctx)
-		_, ok := span.(*oteltest.Span)
-		assert.True(t, ok)
-		spanTracer := span.Tracer()
-		mockTracer, ok := spanTracer.(*oteltest.Tracer)
-		require.True(t, ok)
-		assert.Equal(t, tracerName, mockTracer.Name)
+		span := trace.SpanContextFromContext(ctx)
+		if !span.IsValid() {
+			t.Fatalf("invalid span wrapping handler: %#v", span)
+		}
 		return &graphql.Response{Data: []byte(`{"name":"test"}`)}, nil
 	})
 	srv.Use(Middleware("foobar"))
@@ -55,20 +62,46 @@ func TestChildSpanFromGlobalTracer(t *testing.T) {
 
 	srv.ServeHTTP(w, r)
 
+	testSpans(t, spanRecorder, namelessQueryName)
+
+	assert.Equal(t, http.StatusOK, w.Code, w.Body.String())
+}
+
+func TestChildSpanFromGlobalTracerWithNamed(t *testing.T) {
+	spanRecorder := tracetest.NewSpanRecorder()
+	provider := sdktrace.NewTracerProvider(sdktrace.WithSpanProcessor(spanRecorder))
+	otel.SetTracerProvider(provider)
+
+	srv := newMockServer(func(ctx context.Context) (interface{}, error) {
+		span := trace.SpanContextFromContext(ctx)
+		if !span.IsValid() {
+			t.Fatalf("invalid span wrapping handler: %#v", span)
+		}
+		return &graphql.Response{Data: []byte(`{"name":"test"}`)}, nil
+	})
+	srv.Use(Middleware("foobar"))
+
+	body := strings.NewReader(fmt.Sprintf("{\"operationName\":\"%s\",\"variables\":{},\"query\":\"query %s {\\n  name\\n}\\n\"}", testQueryName, testQueryName))
+	r := httptest.NewRequest("POST", "/foo", body)
+	r.Header.Set("Content-Type", "application/json")
+	w := httptest.NewRecorder()
+
+	srv.ServeHTTP(w, r)
+
+	testSpans(t, spanRecorder, testQueryName)
+
 	assert.Equal(t, http.StatusOK, w.Code, w.Body.String())
 }
 
 func TestChildSpanFromCustomTracer(t *testing.T) {
-	provider := oteltest.NewTracerProvider()
+	spanRecorder := tracetest.NewSpanRecorder()
+	provider := sdktrace.NewTracerProvider(sdktrace.WithSpanProcessor(spanRecorder))
 
 	srv := newMockServer(func(ctx context.Context) (interface{}, error) {
-		span := oteltrace.SpanFromContext(ctx)
-		_, ok := span.(*oteltest.Span)
-		assert.True(t, ok)
-		spanTracer := span.Tracer()
-		mockTracer, ok := spanTracer.(*oteltest.Tracer)
-		require.True(t, ok)
-		assert.Equal(t, tracerName, mockTracer.Name)
+		span := trace.SpanContextFromContext(ctx)
+		if !span.IsValid() {
+			t.Fatalf("invalid span wrapping handler: %#v", span)
+		}
 		return &graphql.Response{Data: []byte(`{"name":"test"}`)}, nil
 	})
 	srv.Use(Middleware("foobar", WithTracerProvider(provider)))
@@ -78,21 +111,21 @@ func TestChildSpanFromCustomTracer(t *testing.T) {
 
 	srv.ServeHTTP(w, r)
 
+	testSpans(t, spanRecorder, namelessQueryName)
+
 	assert.Equal(t, http.StatusOK, w.Code, w.Body.String())
 }
 
 func TestChildSpanWithComplexityExtension(t *testing.T) {
-	otel.SetTracerProvider(oteltest.NewTracerProvider())
+	spanRecorder := tracetest.NewSpanRecorder()
+	provider := sdktrace.NewTracerProvider(sdktrace.WithSpanProcessor(spanRecorder))
+	otel.SetTracerProvider(provider)
 
 	srv := newMockServer(func(ctx context.Context) (interface{}, error) {
-		span := oteltrace.SpanFromContext(ctx)
-		_, ok := span.(*oteltest.Span)
-		assert.True(t, ok)
-		spanTracer := span.Tracer()
-		mockTracer, ok := spanTracer.(*oteltest.Tracer)
-		require.True(t, ok)
-		assert.Equal(t, tracerName, mockTracer.Name)
-
+		span := trace.SpanContextFromContext(ctx)
+		if !span.IsValid() {
+			t.Fatalf("invalid span wrapping handler: %#v", span)
+		}
 		return &graphql.Response{Data: []byte(`{"name":"test"}`)}, nil
 	})
 	srv.Use(Middleware("foobar", WithComplexityExtensionName("APQ")))
@@ -102,14 +135,21 @@ func TestChildSpanWithComplexityExtension(t *testing.T) {
 
 	srv.ServeHTTP(w, r)
 
+	testSpans(t, spanRecorder, namelessQueryName)
+
 	assert.Equal(t, http.StatusOK, w.Code, w.Body.String())
 }
 
 func TestGetSpanNotInstrumented(t *testing.T) {
+	spanRecorder := tracetest.NewSpanRecorder()
+	provider := sdktrace.NewTracerProvider(sdktrace.WithSpanProcessor(spanRecorder))
+	otel.SetTracerProvider(provider)
+
 	srv := newMockServer(func(ctx context.Context) (interface{}, error) {
-		span := oteltrace.SpanFromContext(ctx)
-		ok := !span.SpanContext().IsValid()
-		assert.True(t, ok)
+		span := trace.SpanContextFromContext(ctx)
+		if span.IsValid() {
+			t.Fatalf("unexpected span: %#v", span)
+		}
 		return &graphql.Response{Data: []byte(`{"name":"test"}`)}, nil
 	})
 
@@ -122,17 +162,15 @@ func TestGetSpanNotInstrumented(t *testing.T) {
 }
 
 func TestChildSpanFromGlobalTracerWithError(t *testing.T) {
-	otel.SetTracerProvider(oteltest.NewTracerProvider())
+	spanRecorder := tracetest.NewSpanRecorder()
+	provider := sdktrace.NewTracerProvider(sdktrace.WithSpanProcessor(spanRecorder))
+	otel.SetTracerProvider(provider)
 
 	srv := newMockServerError(func(ctx context.Context) (interface{}, error) {
-		span := oteltrace.SpanFromContext(ctx)
-		_, ok := span.(*oteltest.Span)
-		assert.True(t, ok)
-		spanTracer := span.Tracer()
-		mockTracer, ok := spanTracer.(*oteltest.Tracer)
-		require.True(t, ok)
-		assert.Equal(t, tracerName, mockTracer.Name)
-
+		span := trace.SpanContextFromContext(ctx)
+		if !span.IsValid() {
+			t.Fatalf("invalid span wrapping handler: %#v", span)
+		}
 		return &graphql.Response{Data: []byte(`{"name":"test"}`)}, nil
 	})
 	srv.Use(Middleware("foobar"))
@@ -152,11 +190,45 @@ func TestChildSpanFromGlobalTracerWithError(t *testing.T) {
 
 	assert.Equal(t, http.StatusOK, w.Code, w.Body.String())
 	assert.Equal(t, 1, len(gqlErrors))
-	assert.Equal(t, 1, len(respErrors))
 	assert.Equal(t, gqlErrors, respErrors)
 }
 
-// newMockServer provides a server for use in resolver error tests that isn't relying on generated code.
+func TestChildSpanFromGlobalTracerWithComplexity(t *testing.T) {
+	spanRecorder := tracetest.NewSpanRecorder()
+	provider := sdktrace.NewTracerProvider(sdktrace.WithSpanProcessor(spanRecorder))
+	otel.SetTracerProvider(provider)
+
+	srv := newMockServer(func(ctx context.Context) (interface{}, error) {
+		span := trace.SpanContextFromContext(ctx)
+		if !span.IsValid() {
+			t.Fatalf("invalid span wrapping handler: %#v", span)
+		}
+		return &graphql.Response{Data: []byte(`{"name":"test"}`)}, nil
+	})
+	srv.Use(Middleware("foobar"))
+	srv.Use(extension.FixedComplexityLimit(testComplexity))
+
+	r := httptest.NewRequest("GET", "/foo?query={name}", nil)
+	w := httptest.NewRecorder()
+
+	srv.ServeHTTP(w, r)
+
+	testSpans(t, spanRecorder, namelessQueryName)
+	// second span because it's response span where stored RequestComplexityLimit attribute
+	attributes := spanRecorder.Ended()[1].Attributes()
+	var found bool
+	for _, a := range attributes {
+		if a.Key == RequestComplexityLimitKey {
+			found = true
+			assert.Equal(t, int(a.Value.AsInt64()), testComplexity)
+		}
+	}
+
+	assert.True(t, found)
+	assert.Equal(t, http.StatusOK, w.Code, w.Body.String())
+}
+
+// newMockServer provides a server for use in resolver tests that isn't relying on generated code.
 // It isn't a perfect reproduction of a generated server, but it aims to be good enough to
 // test the handler package without relying on codegen.
 func newMockServer(resolver func(ctx context.Context) (interface{}, error)) *handler.Server {
@@ -212,8 +284,12 @@ func newMockServer(resolver func(ctx context.Context) (interface{}, error)) *han
 		SchemaFunc: func() *ast.Schema {
 			return schema
 		},
+		ComplexityFunc: func(typeName string, fieldName string, childComplexity int, args map[string]interface{}) (int, bool) {
+			return childComplexity, true
+		},
 	})
 	srv.AddTransport(&transport.GET{})
+	srv.AddTransport(&transport.POST{})
 
 	return srv
 }
@@ -273,4 +349,19 @@ func newMockServerError(resolver func(ctx context.Context) (interface{}, error))
 	srv.AddTransport(&transport.GET{})
 
 	return srv
+}
+
+func testSpans(t *testing.T, spanRecorder *tracetest.SpanRecorder, spanName string) {
+	spans := spanRecorder.Ended()
+	if got, expected := len(spans), 2; got != expected {
+		t.Fatalf("got %d spans, expected %d", got, expected)
+	}
+	responseSpan := spans[1]
+	if !responseSpan.SpanContext().IsValid() {
+		t.Fatalf("invalid span created: %#v", responseSpan.SpanContext())
+	}
+
+	if responseSpan.Name() != spanName {
+		t.Errorf("expected name on span %s; got: %q", spanName, responseSpan.Name())
+	}
 }
