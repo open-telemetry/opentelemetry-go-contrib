@@ -14,4 +14,5 @@ require (
 )
 
 replace go.opentelemetry.io/contrib/instrumentation/github.com/gocql/gocql/otelgocql => ../
+
 replace go.opentelemetry.io/contrib => ../../../../../../

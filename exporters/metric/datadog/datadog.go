@@ -20,6 +20,7 @@ import (
 	"regexp"
 
 	"github.com/DataDog/datadog-go/statsd"
+
 	"go.opentelemetry.io/otel/sdk/resource"
 
 	"go.opentelemetry.io/otel/attribute"

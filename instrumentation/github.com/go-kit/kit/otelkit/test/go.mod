@@ -12,4 +12,5 @@ require (
 )
 
 replace go.opentelemetry.io/contrib/instrumentation/github.com/go-kit/kit/otelkit => ../
+
 replace go.opentelemetry.io/contrib => ../../../../../../

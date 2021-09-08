@@ -446,7 +446,6 @@ func TestExactSplit(t *testing.T) {
 }
 
 func TestPrefix(t *testing.T) {
-	ctx := context.Background()
 	writer := &testWriter{}
 	config := statsd.Config{
 		Writer:        writer,

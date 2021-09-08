@@ -12,6 +12,6 @@ require (
 )
 
 replace (
-	go.opentelemetry.io/contrib/instrumentation/net/http/otelhttp => ../
 	go.opentelemetry.io/contrib => ../../../../../
+	go.opentelemetry.io/contrib/instrumentation/net/http/otelhttp => ../
 )

@@ -13,4 +13,5 @@ require (
 )
 
 replace go.opentelemetry.io/contrib/instrumentation/github.com/aws/aws-sdk-go-v2/otelaws => ../
+
 replace go.opentelemetry.io/contrib => ../../../../../../
