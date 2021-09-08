@@ -1,6 +1,6 @@
 module go.opentelemetry.io/opentelemetry-go-contrib/instrumentation/github.com/99designs/gqlgen/otelgqlgen/example
 
-go 1.14
+go 1.15
 
 replace (
 	go.opentelemetry.io/contrib => ../../../../../../

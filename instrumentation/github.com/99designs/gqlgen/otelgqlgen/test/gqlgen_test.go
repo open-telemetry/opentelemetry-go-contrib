@@ -31,6 +31,8 @@ import (
 	"github.com/vektah/gqlparser/v2/ast"
 	"github.com/vektah/gqlparser/v2/gqlerror"
 
+	"go.opentelemetry.io/contrib/instrumentation/github.com/99designs/gqlgen/otelgqlgen"
+
 	"go.opentelemetry.io/otel"
 	sdktrace "go.opentelemetry.io/otel/sdk/trace"
 	"go.opentelemetry.io/otel/sdk/trace/tracetest"
@@ -55,7 +57,7 @@ func TestChildSpanFromGlobalTracer(t *testing.T) {
 		}
 		return &graphql.Response{Data: []byte(`{"name":"test"}`)}, nil
 	})
-	srv.Use(Middleware("foobar"))
+	srv.Use(otelgqlgen.Middleware("foobar"))
 
 	r := httptest.NewRequest("GET", "/foo?query={name}", nil)
 	w := httptest.NewRecorder()
@@ -79,7 +81,7 @@ func TestChildSpanFromGlobalTracerWithNamed(t *testing.T) {
 		}
 		return &graphql.Response{Data: []byte(`{"name":"test"}`)}, nil
 	})
-	srv.Use(Middleware("foobar"))
+	srv.Use(otelgqlgen.Middleware("foobar"))
 
 	body := strings.NewReader(fmt.Sprintf("{\"operationName\":\"%s\",\"variables\":{},\"query\":\"query %s {\\n  name\\n}\\n\"}", testQueryName, testQueryName))
 	r := httptest.NewRequest("POST", "/foo", body)
@@ -104,7 +106,7 @@ func TestChildSpanFromCustomTracer(t *testing.T) {
 		}
 		return &graphql.Response{Data: []byte(`{"name":"test"}`)}, nil
 	})
-	srv.Use(Middleware("foobar", WithTracerProvider(provider)))
+	srv.Use(otelgqlgen.Middleware("foobar", otelgqlgen.WithTracerProvider(provider)))
 
 	r := httptest.NewRequest("GET", "/foo?query={name}", nil)
 	w := httptest.NewRecorder()
@@ -128,7 +130,7 @@ func TestChildSpanWithComplexityExtension(t *testing.T) {
 		}
 		return &graphql.Response{Data: []byte(`{"name":"test"}`)}, nil
 	})
-	srv.Use(Middleware("foobar", WithComplexityExtensionName("APQ")))
+	srv.Use(otelgqlgen.Middleware("foobar", otelgqlgen.WithComplexityExtensionName("APQ")))
 
 	r := httptest.NewRequest("GET", "/foo?query={name}", nil)
 	w := httptest.NewRecorder()
@@ -173,7 +175,7 @@ func TestChildSpanFromGlobalTracerWithError(t *testing.T) {
 		}
 		return &graphql.Response{Data: []byte(`{"name":"test"}`)}, nil
 	})
-	srv.Use(Middleware("foobar"))
+	srv.Use(otelgqlgen.Middleware("foobar"))
 	var gqlErrors gqlerror.List
 	var respErrors gqlerror.List
 	srv.AroundResponses(func(ctx context.Context, next graphql.ResponseHandler) *graphql.Response {
@@ -205,7 +207,7 @@ func TestChildSpanFromGlobalTracerWithComplexity(t *testing.T) {
 		}
 		return &graphql.Response{Data: []byte(`{"name":"test"}`)}, nil
 	})
-	srv.Use(Middleware("foobar"))
+	srv.Use(otelgqlgen.Middleware("foobar"))
 	srv.Use(extension.FixedComplexityLimit(testComplexity))
 
 	r := httptest.NewRequest("GET", "/foo?query={name}", nil)
@@ -218,7 +220,7 @@ func TestChildSpanFromGlobalTracerWithComplexity(t *testing.T) {
 	attributes := spanRecorder.Ended()[1].Attributes()
 	var found bool
 	for _, a := range attributes {
-		if a.Key == RequestComplexityLimitKey {
+		if a.Key == otelgqlgen.RequestComplexityLimitKey {
 			found = true
 			assert.Equal(t, int(a.Value.AsInt64()), testComplexity)
 		}
