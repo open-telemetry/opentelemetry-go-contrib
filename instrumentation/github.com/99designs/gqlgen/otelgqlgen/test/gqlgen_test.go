@@ -32,7 +32,6 @@ import (
 	"github.com/vektah/gqlparser/v2/gqlerror"
 
 	"go.opentelemetry.io/contrib/instrumentation/github.com/99designs/gqlgen/otelgqlgen"
-
 	"go.opentelemetry.io/otel"
 	sdktrace "go.opentelemetry.io/otel/sdk/trace"
 	"go.opentelemetry.io/otel/sdk/trace/tracetest"
@@ -220,7 +219,7 @@ func TestChildSpanFromGlobalTracerWithComplexity(t *testing.T) {
 	attributes := spanRecorder.Ended()[1].Attributes()
 	var found bool
 	for _, a := range attributes {
-		if a.Key == otelgqlgen.RequestComplexityLimitKey {
+		if a.Key == ("gql.request.complexityLimit") {
 			found = true
 			assert.Equal(t, int(a.Value.AsInt64()), testComplexity)
 		}

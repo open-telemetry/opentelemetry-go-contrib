@@ -24,32 +24,32 @@ import (
 )
 
 const (
-	RequestVariablesPrefix        = "request.variables"
-	ResolverArgsPrefix            = "resolver.args"
-	ResolverErrorPrefix           = "resolver.error"
-	RequestQueryKey               = attribute.Key("request.query")
-	RequestComplexityLimitKey     = attribute.Key("request.complexityLimit")
-	RequestOperationComplexityKey = attribute.Key("request.operationComplexity")
-	ResolverPathKey               = attribute.Key("resolver.path")
-	ResolverObjectKey             = attribute.Key("resolver.object")
-	ResolverFieldKey              = attribute.Key("resolver.field")
-	ResolverAliasKey              = attribute.Key("resolver.alias")
-	ResolverHasErrorKey           = attribute.Key("resolver.hasError")
+	requestVariablesPrefix        = "gql.request.variables"
+	resolverArgsPrefix            = "gql.resolver.args"
+	resolverErrorPrefix           = "gql.resolver.error"
+	requestQueryKey               = attribute.Key("gql.request.query")
+	requestComplexityLimitKey     = attribute.Key("gql.request.complexityLimit")
+	requestOperationComplexityKey = attribute.Key("gql.request.operationComplexity")
+	resolverPathKey               = attribute.Key("gql.resolver.path")
+	resolverObjectKey             = attribute.Key("gql.resolver.object")
+	resolverFieldKey              = attribute.Key("gql.resolver.field")
+	resolverAliasKey              = attribute.Key("gql.resolver.alias")
+	resolverHasErrorKey           = attribute.Key("gql.resolver.hasError")
 )
 
 // RequestQuery sets the request query.
 func RequestQuery(requestQuery string) attribute.KeyValue {
-	return RequestQueryKey.String(requestQuery)
+	return requestQueryKey.String(requestQuery)
 }
 
 // RequestComplexityLimit sets the complexity limit.
 func RequestComplexityLimit(complexityLimit int64) attribute.KeyValue {
-	return RequestComplexityLimitKey.Int64(complexityLimit)
+	return requestComplexityLimitKey.Int64(complexityLimit)
 }
 
 // RequestOperationComplexity sets the operation complexity.
 func RequestOperationComplexity(complexityLimit int64) attribute.KeyValue {
-	return RequestOperationComplexityKey.Int64(complexityLimit)
+	return requestOperationComplexityKey.Int64(complexityLimit)
 }
 
 // RequestVariables sets request variables.
@@ -57,7 +57,7 @@ func RequestVariables(requestVariables map[string]interface{}) []attribute.KeyVa
 	variables := make([]attribute.KeyValue, 0, len(requestVariables))
 	for k, v := range requestVariables {
 		variables = append(variables,
-			attribute.String(fmt.Sprintf("%s.%s", RequestVariablesPrefix, k), fmt.Sprintf("%+v", v)),
+			attribute.String(fmt.Sprintf("%s.%s", requestVariablesPrefix, k), fmt.Sprintf("%+v", v)),
 		)
 	}
 	return variables
@@ -65,22 +65,22 @@ func RequestVariables(requestVariables map[string]interface{}) []attribute.KeyVa
 
 // ResolverPath sets resolver path.
 func ResolverPath(resolverPath string) attribute.KeyValue {
-	return ResolverPathKey.String(resolverPath)
+	return resolverPathKey.String(resolverPath)
 }
 
 // ResolverObject sets resolver object.
 func ResolverObject(resolverObject string) attribute.KeyValue {
-	return ResolverObjectKey.String(resolverObject)
+	return resolverObjectKey.String(resolverObject)
 }
 
 // ResolverField sets resolver field.
 func ResolverField(resolverField string) attribute.KeyValue {
-	return ResolverFieldKey.String(resolverField)
+	return resolverFieldKey.String(resolverField)
 }
 
 // ResolverAlias sets resolver alias.
 func ResolverAlias(resolverAlias string) attribute.KeyValue {
-	return ResolverAliasKey.String(resolverAlias)
+	return resolverAliasKey.String(resolverAlias)
 }
 
 // ResolverArgs sets resolver args.
@@ -89,7 +89,7 @@ func ResolverArgs(argList ast.ArgumentList) []attribute.KeyValue {
 
 	for _, arg := range argList {
 		if arg.Value != nil {
-			args = append(args, attribute.String(fmt.Sprintf("%s.%s", ResolverArgsPrefix, arg.Name), arg.Value.String()))
+			args = append(args, attribute.String(fmt.Sprintf("%s.%s", resolverArgsPrefix, arg.Name), arg.Value.String()))
 		}
 	}
 
@@ -102,10 +102,10 @@ func ResolverErrors(errorList gqlerror.List) []attribute.KeyValue {
 	for idx, err := range errorList {
 		errors = append(
 			errors,
-			ResolverHasErrorKey.Bool(true),
-			ResolverHasErrorKey.Int64(int64(len(errorList))),
-			attribute.String(fmt.Sprintf("%s.%d.message", ResolverErrorPrefix, idx), err.Error()),
-			attribute.String(fmt.Sprintf("%s.%d.kind", ResolverErrorPrefix, idx), fmt.Sprintf("%T", err)),
+			resolverHasErrorKey.Bool(true),
+			resolverHasErrorKey.Int64(int64(len(errorList))),
+			attribute.String(fmt.Sprintf("%s.%d.message", resolverErrorPrefix, idx), err.Error()),
+			attribute.String(fmt.Sprintf("%s.%d.kind", resolverErrorPrefix, idx), fmt.Sprintf("%T", err)),
 		)
 	}
 
