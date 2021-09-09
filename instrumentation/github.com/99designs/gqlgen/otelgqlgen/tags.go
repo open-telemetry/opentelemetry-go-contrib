@@ -27,7 +27,6 @@ const (
 	RequestVariablesPrefix        = "request.variables"
 	ResolverArgsPrefix            = "resolver.args"
 	ResolverErrorPrefix           = "resolver.error"
-	ServiceNameKey                = attribute.Key("service.name")
 	RequestQueryKey               = attribute.Key("request.query")
 	RequestComplexityLimitKey     = attribute.Key("request.complexityLimit")
 	RequestOperationComplexityKey = attribute.Key("request.operationComplexity")
@@ -36,13 +35,7 @@ const (
 	ResolverFieldKey              = attribute.Key("resolver.field")
 	ResolverAliasKey              = attribute.Key("resolver.alias")
 	ResolverHasErrorKey           = attribute.Key("resolver.hasError")
-	ResolverErrorCountKey         = attribute.Key("resolver.errorCount")
 )
-
-// ServiceName defines the service name for this span.
-func ServiceName(serviceName string) attribute.KeyValue {
-	return ServiceNameKey.String(serviceName)
-}
 
 // RequestQuery sets the request query.
 func RequestQuery(requestQuery string) attribute.KeyValue {

@@ -19,9 +19,19 @@ See [./example](./example).
 The instrumentation can be used with:
 
 - Custom provider, default is global.
-  [`WithTracerProvider`](https://pkg.go.dev/go.opentelemetry.io/contrib/instrumentation/github.com/99designs/gqlgen/otelgqlgen#WithTracerProvider) option.
+  [`WithTracerProvider`](https://pkg.go.dev/go.opentelemetry.io/contrib/instrumentation/github.com/99designs/gqlgen/otelgqlgen#WithTracerProvider)
+  option.
 - Complexity extension, default is ComplexityLimit.
-  [`WithComplexityExtensionName`](https://pkg.go.dev/go.opentelemetry.io/contrib/instrumentation/github.com/99designs/gqlgen/otelgqlgen#WithComplexityExtensionName) option.
+  [`WithComplexityExtensionName`](https://pkg.go.dev/go.opentelemetry.io/contrib/instrumentation/github.com/99designs/gqlgen/otelgqlgen#WithComplexityExtensionName)
+  option.
+
+### Environment Variables
+
+The following environment variables can be used to override the default configuration.
+
+| Environment variable   | Option | Default value    |
+| ---------------------- | ------ | ---------------- |
+| `OTEL_SERVICE_NAME`    |        | `GraphQLService` |
 
 ## References
 
