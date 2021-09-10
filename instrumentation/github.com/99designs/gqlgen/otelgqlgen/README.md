@@ -25,14 +25,6 @@ The instrumentation can be used with:
   [`WithComplexityExtensionName`](https://pkg.go.dev/go.opentelemetry.io/contrib/instrumentation/github.com/99designs/gqlgen/otelgqlgen#WithComplexityExtensionName)
   option.
 
-### Environment Variables
-
-The following environment variables can be used to override the default configuration.
-
-| Environment variable   | Option | Default value    |
-| ---------------------- | ------ | ---------------- |
-| `OTEL_SERVICE_NAME`    |        | `GraphQLService` |
-
 ## References
 
 - [GraphQL](https://graphql.org/)

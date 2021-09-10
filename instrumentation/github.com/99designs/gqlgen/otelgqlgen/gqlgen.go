@@ -16,7 +16,6 @@ package otelgqlgen
 
 import (
 	"context"
-	"os"
 
 	"github.com/99designs/gqlgen/graphql"
 	"github.com/99designs/gqlgen/graphql/handler/extension"
@@ -24,15 +23,13 @@ import (
 	otelcontrib "go.opentelemetry.io/contrib"
 	"go.opentelemetry.io/otel"
 	"go.opentelemetry.io/otel/codes"
-	semconv "go.opentelemetry.io/otel/semconv/v1.4.0"
 	oteltrace "go.opentelemetry.io/otel/trace"
 )
 
 const (
-	tracerName         = "go.opentelemetry.io/contrib/instrumentation/github.com/99designs/gqlgen/otelgqlgen"
-	extensionName      = "OpenTelemetry"
-	complexityLimit    = "ComplexityLimit"
-	defaultServiceName = "GraphQLService"
+	tracerName      = "go.opentelemetry.io/contrib/instrumentation/github.com/99designs/gqlgen/otelgqlgen"
+	extensionName   = "OpenTelemetry"
+	complexityLimit = "ComplexityLimit"
 )
 
 type Tracer struct {
@@ -64,12 +61,7 @@ func (a Tracer) InterceptResponse(ctx context.Context, next graphql.ResponseHand
 
 	oc := graphql.GetOperationContext(ctx)
 
-	serviceName := os.Getenv("OTEL_SERVICE_NAME")
-	if serviceName == "" {
-		serviceName = defaultServiceName
-	}
 	span.SetAttributes(
-		semconv.ServiceNameKey.String(serviceName),
 		RequestQuery(oc.RawQuery),
 	)
 	complexityExtension := a.complexityExtensionName
