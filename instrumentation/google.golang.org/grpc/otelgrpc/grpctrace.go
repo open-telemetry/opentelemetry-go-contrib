@@ -22,6 +22,8 @@ import (
 	"go.opentelemetry.io/otel"
 	"go.opentelemetry.io/otel/attribute"
 	"go.opentelemetry.io/otel/baggage"
+	"go.opentelemetry.io/otel/metric"
+	"go.opentelemetry.io/otel/metric/global"
 	"go.opentelemetry.io/otel/propagation"
 	"go.opentelemetry.io/otel/trace"
 )
@@ -37,6 +39,7 @@ const (
 type config struct {
 	Propagators    propagation.TextMapPropagator
 	TracerProvider trace.TracerProvider
+	MeterProvider  metric.MeterProvider
 }
 
 // Option applies an option value for a config.
@@ -49,6 +52,7 @@ func newConfig(opts []Option) *config {
 	c := &config{
 		Propagators:    otel.GetTextMapPropagator(),
 		TracerProvider: otel.GetTracerProvider(),
+		MeterProvider:  global.MeterProvider(),
 	}
 	for _, o := range opts {
 		o.apply(c)
@@ -82,6 +86,18 @@ func (o tracerProviderOption) apply(c *config) {
 // creating a Tracer.
 func WithTracerProvider(tp trace.TracerProvider) Option {
 	return tracerProviderOption{tp: tp}
+}
+
+func (o meterProviderOption) apply(c *config) {
+	c.MeterProvider = o.mp
+}
+
+type meterProviderOption struct{ mp metric.MeterProvider }
+
+// WithMeterProvider returns an Option to use the MeterProvider when
+// creating a Meter.
+func WithMeterProvider(mp metric.MeterProvider) Option {
+	return meterProviderOption{mp: mp}
 }
 
 type metadataSupplier struct {
