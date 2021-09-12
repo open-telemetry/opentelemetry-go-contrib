@@ -16,6 +16,7 @@ package otelgqlgen
 
 import (
 	"context"
+	"fmt"
 
 	"github.com/99designs/gqlgen/graphql"
 	"github.com/99designs/gqlgen/graphql/handler/extension"
@@ -83,7 +84,14 @@ func (a Tracer) InterceptResponse(ctx context.Context, next graphql.ResponseHand
 
 	span.SetAttributes(RequestVariables(oc.Variables)...)
 
-	return next(ctx)
+	resp := next(ctx)
+	if len(resp.Errors) > 0 {
+		span.SetStatus(codes.Error, resp.Errors.Error())
+		span.RecordError(fmt.Errorf(resp.Errors.Error()))
+		span.SetAttributes(ResolverErrors(resp.Errors)...)
+	}
+
+	return resp
 }
 
 func (a Tracer) InterceptField(ctx context.Context, next graphql.Resolver) (interface{}, error) {
@@ -110,6 +118,7 @@ func (a Tracer) InterceptField(ctx context.Context, next graphql.Resolver) (inte
 	errList := graphql.GetFieldErrors(ctx, fc)
 	if len(errList) != 0 {
 		span.SetStatus(codes.Error, errList.Error())
+		span.RecordError(fmt.Errorf(errList.Error()))
 		span.SetAttributes(ResolverErrors(errList)...)
 	}
 

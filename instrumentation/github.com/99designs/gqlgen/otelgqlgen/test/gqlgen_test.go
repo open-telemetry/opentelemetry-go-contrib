@@ -30,6 +30,7 @@ import (
 	"github.com/vektah/gqlparser/v2"
 	"github.com/vektah/gqlparser/v2/ast"
 	"github.com/vektah/gqlparser/v2/gqlerror"
+	"go.opentelemetry.io/otel/codes"
 
 	"go.opentelemetry.io/contrib/instrumentation/github.com/99designs/gqlgen/otelgqlgen"
 	"go.opentelemetry.io/otel"
@@ -63,7 +64,7 @@ func TestChildSpanFromGlobalTracer(t *testing.T) {
 
 	srv.ServeHTTP(w, r)
 
-	testSpans(t, spanRecorder, namelessQueryName)
+	testSpans(t, spanRecorder, namelessQueryName, codes.Unset)
 
 	assert.Equal(t, http.StatusOK, w.Code, w.Body.String())
 }
@@ -89,7 +90,7 @@ func TestChildSpanFromGlobalTracerWithNamed(t *testing.T) {
 
 	srv.ServeHTTP(w, r)
 
-	testSpans(t, spanRecorder, testQueryName)
+	testSpans(t, spanRecorder, testQueryName, codes.Unset)
 
 	assert.Equal(t, http.StatusOK, w.Code, w.Body.String())
 }
@@ -112,7 +113,7 @@ func TestChildSpanFromCustomTracer(t *testing.T) {
 
 	srv.ServeHTTP(w, r)
 
-	testSpans(t, spanRecorder, namelessQueryName)
+	testSpans(t, spanRecorder, namelessQueryName, codes.Unset)
 
 	assert.Equal(t, http.StatusOK, w.Code, w.Body.String())
 }
@@ -136,7 +137,7 @@ func TestChildSpanWithComplexityExtension(t *testing.T) {
 
 	srv.ServeHTTP(w, r)
 
-	testSpans(t, spanRecorder, namelessQueryName)
+	testSpans(t, spanRecorder, namelessQueryName, codes.Unset)
 
 	assert.Equal(t, http.StatusOK, w.Code, w.Body.String())
 }
@@ -189,6 +190,8 @@ func TestChildSpanFromGlobalTracerWithError(t *testing.T) {
 
 	srv.ServeHTTP(w, r)
 
+	testSpans(t, spanRecorder, namelessQueryName, codes.Error)
+
 	assert.Equal(t, http.StatusOK, w.Code, w.Body.String())
 	assert.Equal(t, 1, len(gqlErrors))
 	assert.Equal(t, gqlErrors, respErrors)
@@ -214,7 +217,7 @@ func TestChildSpanFromGlobalTracerWithComplexity(t *testing.T) {
 
 	srv.ServeHTTP(w, r)
 
-	testSpans(t, spanRecorder, namelessQueryName)
+	testSpans(t, spanRecorder, namelessQueryName, codes.Unset)
 	// second span because it's response span where stored RequestComplexityLimit attribute
 	attributes := spanRecorder.Ended()[1].Attributes()
 	var found bool
@@ -352,7 +355,7 @@ func newMockServerError(resolver func(ctx context.Context) (interface{}, error))
 	return srv
 }
 
-func testSpans(t *testing.T, spanRecorder *tracetest.SpanRecorder, spanName string) {
+func testSpans(t *testing.T, spanRecorder *tracetest.SpanRecorder, spanName string, spanCode codes.Code) {
 	spans := spanRecorder.Ended()
 	if got, expected := len(spans), 2; got != expected {
 		t.Fatalf("got %d spans, expected %d", got, expected)
@@ -364,5 +367,9 @@ func testSpans(t *testing.T, spanRecorder *tracetest.SpanRecorder, spanName stri
 
 	if responseSpan.Name() != spanName {
 		t.Errorf("expected name on span %s; got: %q", spanName, responseSpan.Name())
+	}
+
+	for _, s := range spanRecorder.Ended() {
+		assert.Equal(t, s.Status().Code, spanCode)
 	}
 }
