@@ -82,7 +82,7 @@ func ExampleNew() {
 
 	// Create and update a single counter:
 	counter := metric.Must(meter).NewInt64Counter("a.counter")
-	values := metric.Must(meter).NewInt64ValueRecorder("a.values")
+	values := metric.Must(meter).NewInt64Histogram("a.values")
 
 	values.Record(ctx, 50, key.String("value"))
 	counter.Add(ctx, 100, key.String("value"))

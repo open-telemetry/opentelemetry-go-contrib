@@ -116,7 +116,7 @@ func Start(opts ...Option) error {
 
 func (r *runtime) register() error {
 	startTime := time.Now()
-	if _, err := r.meter.NewInt64SumObserver(
+	if _, err := r.meter.NewInt64CounterObserver(
 		"runtime.uptime",
 		func(_ context.Context, result metric.Int64ObserverResult) {
 			result.Observe(time.Since(startTime).Milliseconds())
@@ -127,7 +127,7 @@ func (r *runtime) register() error {
 		return err
 	}
 
-	if _, err := r.meter.NewInt64UpDownSumObserver(
+	if _, err := r.meter.NewInt64UpDownCounterObserver(
 		"runtime.go.goroutines",
 		func(_ context.Context, result metric.Int64ObserverResult) {
 			result.Observe(int64(goruntime.NumGoroutine()))
@@ -137,7 +137,7 @@ func (r *runtime) register() error {
 		return err
 	}
 
-	if _, err := r.meter.NewInt64SumObserver(
+	if _, err := r.meter.NewInt64CounterObserver(
 		"runtime.go.cgo.calls",
 		func(_ context.Context, result metric.Int64ObserverResult) {
 			result.Observe(goruntime.NumCgoCall())
@@ -154,21 +154,21 @@ func (r *runtime) registerMemStats() error {
 	var (
 		err error
 
-		heapAlloc    metric.Int64UpDownSumObserver
-		heapIdle     metric.Int64UpDownSumObserver
-		heapInuse    metric.Int64UpDownSumObserver
-		heapObjects  metric.Int64UpDownSumObserver
-		heapReleased metric.Int64UpDownSumObserver
-		heapSys      metric.Int64UpDownSumObserver
-		liveObjects  metric.Int64UpDownSumObserver
+		heapAlloc    metric.Int64UpDownCounterObserver
+		heapIdle     metric.Int64UpDownCounterObserver
+		heapInuse    metric.Int64UpDownCounterObserver
+		heapObjects  metric.Int64UpDownCounterObserver
+		heapReleased metric.Int64UpDownCounterObserver
+		heapSys      metric.Int64UpDownCounterObserver
+		liveObjects  metric.Int64UpDownCounterObserver
 
 		// TODO: is ptrLookups useful? I've not seen a value
 		// other than zero.
-		ptrLookups metric.Int64SumObserver
+		ptrLookups metric.Int64CounterObserver
 
-		gcCount      metric.Int64SumObserver
-		pauseTotalNs metric.Int64SumObserver
-		gcPauseNs    metric.Int64ValueRecorder
+		gcCount      metric.Int64CounterObserver
+		pauseTotalNs metric.Int64CounterObserver
+		gcPauseNs    metric.Int64Histogram
 
 		lastNumGC    uint32
 		lastMemStats time.Time
@@ -210,7 +210,7 @@ func (r *runtime) registerMemStats() error {
 		lastNumGC = memStats.NumGC
 	})
 
-	if heapAlloc, err = batchObserver.NewInt64UpDownSumObserver(
+	if heapAlloc, err = batchObserver.NewInt64UpDownCounterObserver(
 		"runtime.go.mem.heap_alloc",
 		metric.WithUnit(unit.Bytes),
 		metric.WithDescription("Bytes of allocated heap objects"),
@@ -218,7 +218,7 @@ func (r *runtime) registerMemStats() error {
 		return err
 	}
 
-	if heapIdle, err = batchObserver.NewInt64UpDownSumObserver(
+	if heapIdle, err = batchObserver.NewInt64UpDownCounterObserver(
 		"runtime.go.mem.heap_idle",
 		metric.WithUnit(unit.Bytes),
 		metric.WithDescription("Bytes in idle (unused) spans"),
@@ -226,7 +226,7 @@ func (r *runtime) registerMemStats() error {
 		return err
 	}
 
-	if heapInuse, err = batchObserver.NewInt64UpDownSumObserver(
+	if heapInuse, err = batchObserver.NewInt64UpDownCounterObserver(
 		"runtime.go.mem.heap_inuse",
 		metric.WithUnit(unit.Bytes),
 		metric.WithDescription("Bytes in in-use spans"),
@@ -234,7 +234,7 @@ func (r *runtime) registerMemStats() error {
 		return err
 	}
 
-	if heapObjects, err = batchObserver.NewInt64UpDownSumObserver(
+	if heapObjects, err = batchObserver.NewInt64UpDownCounterObserver(
 		"runtime.go.mem.heap_objects",
 		metric.WithDescription("Number of allocated heap objects"),
 	); err != nil {
@@ -243,7 +243,7 @@ func (r *runtime) registerMemStats() error {
 
 	// FYI see https://github.com/golang/go/issues/32284 to help
 	// understand the meaning of this value.
-	if heapReleased, err = batchObserver.NewInt64UpDownSumObserver(
+	if heapReleased, err = batchObserver.NewInt64UpDownCounterObserver(
 		"runtime.go.mem.heap_released",
 		metric.WithUnit(unit.Bytes),
 		metric.WithDescription("Bytes of idle spans whose physical memory has been returned to the OS"),
@@ -251,7 +251,7 @@ func (r *runtime) registerMemStats() error {
 		return err
 	}
 
-	if heapSys, err = batchObserver.NewInt64UpDownSumObserver(
+	if heapSys, err = batchObserver.NewInt64UpDownCounterObserver(
 		"runtime.go.mem.heap_sys",
 		metric.WithUnit(unit.Bytes),
 		metric.WithDescription("Bytes of heap memory obtained from the OS"),
@@ -259,21 +259,21 @@ func (r *runtime) registerMemStats() error {
 		return err
 	}
 
-	if ptrLookups, err = batchObserver.NewInt64SumObserver(
+	if ptrLookups, err = batchObserver.NewInt64CounterObserver(
 		"runtime.go.mem.lookups",
 		metric.WithDescription("Number of pointer lookups performed by the runtime"),
 	); err != nil {
 		return err
 	}
 
-	if liveObjects, err = batchObserver.NewInt64UpDownSumObserver(
+	if liveObjects, err = batchObserver.NewInt64UpDownCounterObserver(
 		"runtime.go.mem.live_objects",
 		metric.WithDescription("Number of live objects is the number of cumulative Mallocs - Frees"),
 	); err != nil {
 		return err
 	}
 
-	if gcCount, err = batchObserver.NewInt64SumObserver(
+	if gcCount, err = batchObserver.NewInt64CounterObserver(
 		"runtime.go.gc.count",
 		metric.WithDescription("Number of completed garbage collection cycles"),
 	); err != nil {
@@ -283,7 +283,7 @@ func (r *runtime) registerMemStats() error {
 	// Note that the following could be derived as a sum of
 	// individual pauses, but we may lose individual pauses if the
 	// observation interval is too slow.
-	if pauseTotalNs, err = batchObserver.NewInt64SumObserver(
+	if pauseTotalNs, err = batchObserver.NewInt64CounterObserver(
 		"runtime.go.gc.pause_total_ns",
 		// TODO: nanoseconds units
 		metric.WithDescription("Cumulative nanoseconds in GC stop-the-world pauses since the program started"),
@@ -291,7 +291,7 @@ func (r *runtime) registerMemStats() error {
 		return err
 	}
 
-	if gcPauseNs, err = r.meter.NewInt64ValueRecorder(
+	if gcPauseNs, err = r.meter.NewInt64Histogram(
 		"runtime.go.gc.pause_ns",
 		// TODO: nanoseconds units
 		metric.WithDescription("Amount of nanoseconds in GC stop-the-world pauses"),
@@ -304,7 +304,7 @@ func (r *runtime) registerMemStats() error {
 
 func computeGCPauses(
 	ctx context.Context,
-	recorder *metric.Int64ValueRecorder,
+	recorder *metric.Int64Histogram,
 	circular []uint64,
 	lastNumGC, currentNumGC uint32,
 ) {
@@ -336,7 +336,7 @@ func computeGCPauses(
 
 func recordGCPauses(
 	ctx context.Context,
-	recorder *metric.Int64ValueRecorder,
+	recorder *metric.Int64Histogram,
 	pauses []uint64,
 ) {
 	for _, pause := range pauses {
