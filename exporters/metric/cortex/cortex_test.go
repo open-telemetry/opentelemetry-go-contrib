@@ -39,6 +39,8 @@ import (
 	semconv "go.opentelemetry.io/otel/semconv/v1.4.0"
 )
 
+var testResource = resource.NewWithAttributes(semconv.SchemaURL, attribute.String("R", "V"))
+
 // ValidConfig is a Config struct that should cause no errors.
 var validConfig = Config{
 	Endpoint:      "/api/prom/push",
@@ -67,9 +69,6 @@ var validConfig = Config{
 	Quantiles: []float64{0, 0.25, 0.5, 0.75, 1},
 }
 
-var testResource = resource.NewWithAttributes(semconv.SchemaURL, attribute.String("R", "V"))
-var mockTime = int64(time.Nanosecond) * time.Time{}.UnixNano() / int64(time.Millisecond)
-
 func TestExportKindFor(t *testing.T) {
 	exporter := Exporter{}
 	got := exporter.ExportKindFor(nil, aggregation.Kind(rune(0)))
@@ -87,6 +86,8 @@ func TestConvertToTimeSeries(t *testing.T) {
 			Quantiles: []float64{0.5, 0.9, .99},
 		},
 	}
+
+	startTime := time.Now()
 
 	// Test conversions based on aggregation type
 	tests := []struct {
@@ -121,9 +122,11 @@ func TestConvertToTimeSeries(t *testing.T) {
 		},
 	}
 
+	endTime := time.Now()
+
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			got, err := exporter.ConvertToTimeSeries(tt.input)
+			got, err := exporter.ConvertToTimeSeries(testResource, tt.input)
 			want := tt.want
 
 			// Check for errors and for the correct number of timeseries.
@@ -148,10 +151,13 @@ func TestConvertToTimeSeries(t *testing.T) {
 					wantAttributes[attribute.String()] = true
 				}
 				for _, sample := range got[i].Samples {
-					gotSamples[sample.String()] = true
+					gotSamples[fmt.Sprint(sample.Value)] = true
+
+					assert.LessOrEqual(t, toMillis(startTime), sample.Timestamp)
+					assert.GreaterOrEqual(t, toMillis(endTime), sample.Timestamp)
 				}
 				for _, sample := range want[i].Samples {
-					wantSamples[sample.String()] = true
+					wantSamples[fmt.Sprint(sample.Value)] = true
 				}
 			}
 			assert.Equal(t, wantAttributes, gotAttributes)
