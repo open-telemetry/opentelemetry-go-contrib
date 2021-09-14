@@ -23,7 +23,6 @@ import (
 	otelcontrib "go.opentelemetry.io/contrib"
 	"go.opentelemetry.io/otel"
 
-	"go.opentelemetry.io/otel/attribute"
 	"go.opentelemetry.io/otel/propagation"
 	semconv "go.opentelemetry.io/otel/semconv/v1.4.0"
 	oteltrace "go.opentelemetry.io/otel/trace"
@@ -100,7 +99,7 @@ func Middleware(service string, opts ...Option) fiber.Handler {
 		span.SetAttributes(semconv.HTTPRouteKey.String(c.Route().Path))
 
 		if err != nil {
-			span.SetAttributes(attribute.String("fiber.error", err.Error()))
+			span.RecordError(err)
 			// invokes the registered HTTP error handler
 			// to get the correct response status code
 			_ = c.App().Config().ErrorHandler(c, err)

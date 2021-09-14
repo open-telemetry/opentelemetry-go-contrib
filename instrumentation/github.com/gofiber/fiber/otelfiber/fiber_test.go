@@ -132,7 +132,7 @@ func TestError(t *testing.T) {
 	assert.Equal(t, "/server_err", span.Name())
 	assert.Equal(t, attribute.StringValue("foobar"), span.Attributes()["http.server_name"])
 	assert.Equal(t, attribute.IntValue(http.StatusInternalServerError), span.Attributes()["http.status_code"])
-	assert.Equal(t, attribute.StringValue("oh no"), span.Attributes()["fiber.error"])
+	assert.Equal(t, attribute.StringValue("oh no"), span.Events()[0].Attributes[semconv.ExceptionMessageKey])
 	// server errors set the status
 	assert.Equal(t, codes.Error, span.StatusCode())
 }
@@ -202,7 +202,7 @@ func TestPropagationWithCustomPropagators(t *testing.T) {
 	provider := oteltest.NewTracerProvider(oteltest.WithSpanRecorder(sr))
 	var gotSpan oteltrace.Span
 
-	b3 := b3prop.B3{}
+	b3 := b3prop.New()
 
 	r := httptest.NewRequest("GET", "/user/123", nil)
 
