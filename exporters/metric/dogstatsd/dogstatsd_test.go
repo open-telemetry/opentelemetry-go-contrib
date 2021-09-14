@@ -21,12 +21,14 @@ import (
 
 	"github.com/stretchr/testify/require"
 
+	export "go.opentelemetry.io/otel/sdk/export/metric"
+	controller "go.opentelemetry.io/otel/sdk/metric/controller/basic"
+	processor "go.opentelemetry.io/otel/sdk/metric/processor/basic"
+	"go.opentelemetry.io/otel/sdk/metric/processor/processortest"
+
 	"go.opentelemetry.io/contrib/exporters/metric/dogstatsd"
 	"go.opentelemetry.io/otel/attribute"
 	"go.opentelemetry.io/otel/metric"
-	"go.opentelemetry.io/otel/metric/number"
-	"go.opentelemetry.io/otel/sdk/export/metric/metrictest"
-	"go.opentelemetry.io/otel/sdk/metric/aggregator/sum"
 	"go.opentelemetry.io/otel/sdk/resource"
 	semconv "go.opentelemetry.io/otel/semconv/v1.4.0"
 )
@@ -48,44 +50,36 @@ func TestDogstatsAttributes(t *testing.T) {
 			name:       "no attributes",
 			resources:  nil,
 			attributes: nil,
-			expected:   "test.name:123|c\n",
+			expected:   "test.sum:123|c\n",
 		},
 		{
 			name:       "only resources",
 			resources:  attributes(attribute.String("R", "S")),
 			attributes: nil,
-			expected:   "test.name:123|c|#R:S\n",
+			expected:   "test.sum:123|c|#R:S\n",
 		},
 		{
 			name:       "only attributes",
 			resources:  nil,
 			attributes: attributes(attribute.String("A", "B")),
-			expected:   "test.name:123|c|#A:B\n",
+			expected:   "test.sum:123|c|#A:B\n",
 		},
 		{
 			name:       "both resources and attributes",
 			resources:  attributes(attribute.String("R", "S")),
 			attributes: attributes(attribute.String("A", "B")),
-			expected:   "test.name:123|c|#R:S,A:B\n",
+			expected:   "test.sum:123|c|#R:S,A:B\n",
 		},
 		{
 			resources:  attributes(attribute.String("A", "R")),
 			attributes: attributes(attribute.String("A", "B")),
-			expected:   "test.name:123|c|#A:R,A:B\n",
+			expected:   "test.sum:123|c|#A:R,A:B\n",
 		},
 	}
 	for _, tc := range cases {
 		t.Run(tc.name, func(t *testing.T) {
 			res := resource.NewWithAttributes(semconv.SchemaURL, tc.resources...)
 			ctx := context.Background()
-			checkpointSet := metrictest.NewCheckpointSet(res)
-
-			desc := metric.NewDescriptor("test.name", metric.CounterInstrumentKind, number.Int64Kind)
-			cagg, cckpt := metrictest.Unslice2(sum.New(2))
-			require.NoError(t, cagg.Update(ctx, number.NewInt64Number(123), &desc))
-			require.NoError(t, cagg.SynchronizedMove(cckpt, &desc))
-
-			checkpointSet.Add(&desc, cckpt, tc.attributes...)
 
 			var buf bytes.Buffer
 			exp, err := dogstatsd.NewRawExporter(dogstatsd.Config{
@@ -93,8 +87,18 @@ func TestDogstatsAttributes(t *testing.T) {
 			})
 			require.Nil(t, err)
 
-			err = exp.Export(ctx, checkpointSet)
-			require.Nil(t, err)
+			aggSel := processortest.AggregatorSelector()
+			proc := processor.New(aggSel, export.StatelessExportKindSelector())
+			cont := controller.New(proc,
+				controller.WithExporter(exp),
+				controller.WithResource(res),
+			)
+			require.NoError(t, cont.Start(ctx))
+			meter := cont.MeterProvider().Meter("test")
+			counter := metric.Must(meter).NewInt64Counter("test.sum")
+			counter.Add(ctx, 123, tc.attributes...)
+
+			require.NoError(t, cont.Stop(ctx))
 
 			require.Equal(t, tc.expected, buf.String())
 		})

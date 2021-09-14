@@ -22,14 +22,13 @@ import (
 
 	"github.com/google/go-cmp/cmp"
 
-	"go.opentelemetry.io/otel/oteltest"
 	"go.opentelemetry.io/otel/propagation"
 	"go.opentelemetry.io/otel/trace"
 )
 
 var (
 	traceID     = trace.TraceID([16]byte{14, 54, 12})
-	spanID      = trace.SpanID([8]byte{2, 8, 14, 20})
+	spanID      = trace.SpanID([8]byte{0, 0, 0, 0, 0, 0, 0, 1})
 	childSpanID = trace.SpanID([8]byte{0, 0, 0, 0, 0, 0, 0, 2})
 	headerFmt   = "\x00\x00\x0e6\f\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x01\x00\x00\x00\x00\x00\x00\x00%s\x02%s"
 )
@@ -46,7 +45,6 @@ func TestFields(t *testing.T) {
 }
 
 func TestInject(t *testing.T) {
-	mockTracer := oteltest.DefaultTracer()
 	prop := Binary{}
 	for _, tt := range []struct {
 		desc       string
@@ -65,7 +63,7 @@ func TestInject(t *testing.T) {
 				SpanID:     spanID,
 				TraceFlags: trace.FlagsSampled,
 			},
-			wantHeader: fmt.Sprintf(headerFmt, "\x02", "\x01"),
+			wantHeader: fmt.Sprintf(headerFmt, "\x01", "\x01"),
 		},
 		{
 			desc: "valid spancontext, not sampled",
@@ -73,7 +71,7 @@ func TestInject(t *testing.T) {
 				TraceID: traceID,
 				SpanID:  spanID,
 			},
-			wantHeader: fmt.Sprintf(headerFmt, "\x03", "\x00"),
+			wantHeader: fmt.Sprintf(headerFmt, "\x01", "\x00"),
 		},
 		{
 			desc: "valid spancontext, with unsupported bit set in traceflags",
@@ -82,7 +80,7 @@ func TestInject(t *testing.T) {
 				SpanID:     spanID,
 				TraceFlags: 0xff,
 			},
-			wantHeader: fmt.Sprintf(headerFmt, "\x04", "\x01"),
+			wantHeader: fmt.Sprintf(headerFmt, "\x01", "\x01"),
 		},
 		{
 			desc:       "invalid spancontext",
@@ -91,15 +89,14 @@ func TestInject(t *testing.T) {
 		},
 	} {
 		t.Run(tt.desc, func(t *testing.T) {
-			req, _ := http.NewRequest("GET", "http://example.com", nil)
+			header := http.Header{}
 			ctx := context.Background()
 			if sc := trace.NewSpanContext(tt.scc); sc.IsValid() {
 				ctx = trace.ContextWithRemoteSpanContext(ctx, sc)
-				ctx, _ = mockTracer.Start(ctx, "inject")
 			}
-			prop.Inject(ctx, propagation.HeaderCarrier(req.Header))
+			prop.Inject(ctx, propagation.HeaderCarrier(header))
 
-			gotHeader := req.Header.Get("grpc-trace-bin")
+			gotHeader := header.Get("grpc-trace-bin")
 			if gotHeader != tt.wantHeader {
 				t.Errorf("Got header = %q, want %q", gotHeader, tt.wantHeader)
 			}
@@ -142,11 +139,12 @@ func TestExtract(t *testing.T) {
 		},
 	} {
 		t.Run(tt.desc, func(t *testing.T) {
-			req, _ := http.NewRequest("GET", "http://example.com", nil)
-			req.Header.Set("grpc-trace-bin", tt.header)
+			header := http.Header{
+				http.CanonicalHeaderKey("grpc-trace-bin"): []string{tt.header},
+			}
 
 			ctx := context.Background()
-			ctx = prop.Extract(ctx, propagation.HeaderCarrier(req.Header))
+			ctx = prop.Extract(ctx, propagation.HeaderCarrier(header))
 			gotSc := trace.SpanContextFromContext(ctx)
 			comparer := cmp.Comparer(func(a, b trace.SpanContext) bool {
 				// Do not compare remote field, it is unset on empty

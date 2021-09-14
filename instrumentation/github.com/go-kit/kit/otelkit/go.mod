@@ -3,12 +3,10 @@ module go.opentelemetry.io/contrib/instrumentation/github.com/go-kit/kit/otelkit
 go 1.15
 
 require (
-	github.com/go-kit/kit v0.10.0
-	github.com/stretchr/testify v1.7.0
-	go.opentelemetry.io/contrib v0.21.0
-	go.opentelemetry.io/otel v1.0.0-RC1
-	go.opentelemetry.io/otel/oteltest v1.0.0-RC1
-	go.opentelemetry.io/otel/trace v1.0.0-RC1
+	github.com/go-kit/kit v0.11.0
+	go.opentelemetry.io/contrib v0.23.0
+	go.opentelemetry.io/otel v1.0.0-RC3
+	go.opentelemetry.io/otel/trace v1.0.0-RC3
 )
 
 replace go.opentelemetry.io/contrib => ../../../../../

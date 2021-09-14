@@ -17,26 +17,15 @@ package otelbeego
 import (
 	"net/http"
 
+	"go.opentelemetry.io/contrib/instrumentation/github.com/astaxie/beego/otelbeego/internal"
 	"go.opentelemetry.io/otel/attribute"
-)
-
-// ------------------------------------------ Constants
-
-const (
-	ctxRouteTemplateKey = contextKey("x-opentelemetry-route-template")
-
-	renderTemplateSpanName = "beego.render.template"
-	renderStringSpanName   = "beego.render.string"
-	renderBytesSpanName    = "beego.render.bytes"
-
-	templateKey = attribute.Key("go.template")
 )
 
 // ------------------------------------------ Attribute Functions
 
 // Template returns the template name as a KeyValue pair.
 func Template(name string) attribute.KeyValue {
-	return templateKey.String(name)
+	return internal.TemplateKey.String(name)
 }
 
 // ------------------------------------------ OTel HTTP Types
@@ -46,9 +35,3 @@ type Filter func(*http.Request) bool
 
 // SpanNameFormatter creates a custom span name from the operation and request object.
 type SpanNameFormatter func(operation string, req *http.Request) string
-
-// ------------------------------------------ Misc
-
-// contextKey is a key for a value in a context.Context,
-// used as it is not recommended to use basic types as keys.
-type contextKey string
