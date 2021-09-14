@@ -17,15 +17,16 @@ Therefore, to reach our goal, we have the following recommendations for where in
 2. A dedicated public repository
 3. Here in the opentelemetry-go-contrib repository
 
-Priority should be to included OpenTelemetry instrumentation in the package being instrumented.
-This will ensure the instrumentation reaches all package users, is maintained by developers that understand the package, and has the best chance to be continuously maintained.
+If possible, OpenTelemetry instrumentation should be included in the instrumented package.
+This will ensure the instrumentation reaches all package users, and is continuously maintained by developers that understand the package.
 
-If instrumentation cannot be directly included in the package it is targeting, it should be hosted in a dedicated public repository owned by its maintainer(s).
+If instrumentation cannot be directly included in the package it is instrumenting, it should be hosted in a dedicated public repository owned by its maintainer(s).
 This will appropriately assign maintenance responsibilities for the instrumentation and ensure these maintainers have the needed privilege to maintain the code.
 
 The last place instrumentation should be hosted is here in this repository.
 Maintaining instrumentation here hampers the development of OpenTelemetry for Go and therefore should be avoided.
 When instrumentation cannot be included in a target package and there is good reason to not host it in a separate and dedicated repository an [instrumentation request](https://github.com/open-telemetry/opentelemetry-go-contrib/issues/new/choose) should be filed.
+The instrumentation request needs to be accepted before any pull requests for the instrumentation can be considered for merging.
 
 Regardless of where instrumentation is hosted, it needs to be discoverable.
 The [OpenTelemetry registry](https://opentelemetry.io/registry/)
