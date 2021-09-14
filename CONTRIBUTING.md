@@ -31,11 +31,11 @@ It's recommended that you signal your intention to contribute in the issue track
 ### Style Guide
 
 * Code should conform to the [opentelemetry-go Style Guide](https://github.com/open-telemetry/opentelemetry-go/blob/main/CONTRIBUTING.md#style-guide).
-* Make sure to run `make precommit` - this will find and fix the code formatting.
+* Make sure to run `make precommit` - this will find and fix issues with the code formatting.
 
 ### Pull Requests
 
-All pull requests need to be make from [a fork](https://docs.github.com/en/get-started/quickstart/fork-a-repo) of this repository.
+All pull requests need to be made from [a fork](https://docs.github.com/en/get-started/quickstart/fork-a-repo) of this repository.
 Changes should be made using [the GitHub flow](https://guides.github.com/introduction/flow/) and submitted as a pull request to this repository.
 
 A pull request is considered ready to merge when the following criteria are meet.

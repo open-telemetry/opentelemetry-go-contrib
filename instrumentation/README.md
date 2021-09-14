@@ -30,7 +30,7 @@ The instrumentation request needs to be accepted before any pull requests for th
 
 Regardless of where instrumentation is hosted, it needs to be discoverable.
 The [OpenTelemetry registry](https://opentelemetry.io/registry/)
-This will ensure the instrumentation is discoverable.
+exists to ensure that instrumentation is discoverable.
 You can find out how to add instrumentation to the registry [here](https://github.com/open-telemetry/opentelemetry.io#adding-a-project-to-the-opentelemetry-registry).
 
 ## Instrumentation Packages
@@ -98,4 +98,4 @@ Additionally the following guidelines for package composition need to be followe
   Also, packages MUST use the default `TracerProvider`, `MeterProvider`, and `Propagators` supplied by the `global` package if no optional one is provided.
 - All instrumentation packages MUST NOT provide an option to accept a `Tracer` or `Meter`.
 - All instrumentation packages MUST create any used `Tracer` or `Meter` with a name matching the instrumentation package name.
-- All instrumentation packages MUST create any used `Tracer` or `Meter` with a semantic version corresponding to the version of this repository.
+- All instrumentation packages MUST create any used `Tracer` or `Meter` with a semantic version corresponding to the version of the module containing the instrumentation.
