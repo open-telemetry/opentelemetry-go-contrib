@@ -31,6 +31,7 @@ import (
 	controller "go.opentelemetry.io/otel/sdk/metric/controller/basic"
 	"go.opentelemetry.io/otel/sdk/metric/processor/basic"
 	"go.opentelemetry.io/otel/sdk/metric/selector/simple"
+	"go.opentelemetry.io/otel/sdk/resource"
 	semconv "go.opentelemetry.io/otel/semconv/v1.4.0"
 )
 
@@ -58,17 +59,20 @@ func ExampleExporter() {
 	go func() {
 		defer exp.Close()
 		processor := basic.New(selector, exp)
-		pusher := controller.New(processor, controller.WithExporter(exp), controller.WithCollectPeriod(time.Second*10))
+		pusher := controller.New(processor, controller.WithExporter(exp), controller.WithCollectPeriod(time.Second*10),
+			controller.WithResource(resource.Default()),
+			controller.WithResource(resource.NewSchemaless(semconv.ServiceNameKey.String("ExampleExporter"))))
 		ctx := context.Background()
 		err := pusher.Start(ctx)
 		if err != nil {
 			panic(err)
 		}
+
 		defer func() { handleErr(pusher.Stop(ctx)) }()
 		global.SetMeterProvider(pusher.MeterProvider())
 		meter := global.Meter("marwandist")
 		m := metric.Must(meter).NewInt64Histogram("myrecorder")
-		meter.RecordBatch(context.Background(), []attribute.KeyValue{attribute.Int("l", 1), semconv.ServiceNameKey.String("ExampleExporter")},
+		meter.RecordBatch(context.Background(), []attribute.KeyValue{attribute.Int("l", 1)},
 			m.Measurement(1), m.Measurement(50), m.Measurement(100))
 	}()
 
