@@ -12,5 +12,5 @@ require (
 	go.opentelemetry.io/contrib v0.23.0
 	go.opentelemetry.io/otel v1.0.0-RC3
 	go.opentelemetry.io/otel/metric v0.23.0
-	golang.org/x/sys v0.0.0-20190215142949-d0b11bdaac8a // indirect
+	golang.org/x/sys v0.0.0-20210303074136-134d130e1a04 // indirect
 )
