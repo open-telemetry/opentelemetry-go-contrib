@@ -34,7 +34,6 @@ const (
 )
 
 type Tracer struct {
-	serviceName             string
 	complexityExtensionName string
 	tracer                  oteltrace.Tracer
 }
@@ -128,7 +127,7 @@ func (a Tracer) InterceptField(ctx context.Context, next graphql.Resolver) (inte
 // Middleware sets up a handler to start tracing the incoming
 // requests.  The service parameter should describe the name of the
 // (virtual) server handling the request. extension parameter may be empty string.
-func Middleware(serviceName string, opts ...Option) Tracer {
+func Middleware(opts ...Option) Tracer {
 	cfg := config{}
 	for _, opt := range opts {
 		opt.apply(&cfg)
@@ -143,8 +142,7 @@ func Middleware(serviceName string, opts ...Option) Tracer {
 	)
 
 	return Tracer{
-		serviceName: serviceName,
-		tracer:      tracer,
+		tracer: tracer,
 	}
 
 }

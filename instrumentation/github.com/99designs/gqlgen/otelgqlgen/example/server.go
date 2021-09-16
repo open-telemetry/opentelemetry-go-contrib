@@ -45,7 +45,7 @@ func main() {
 	initTracer()
 
 	srv := handler.NewDefaultServer(generated.NewExecutableSchema(generated.Config{Resolvers: &graph.Resolver{Tracer: tracer}}))
-	srv.Use(otelgqlgen.Middleware("my-server"))
+	srv.Use(otelgqlgen.Middleware())
 
 	http.Handle("/", playground.Handler("GraphQL playground", "/query"))
 	http.Handle("/query", srv)
