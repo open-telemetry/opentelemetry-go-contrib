@@ -72,6 +72,8 @@ func WithTracerProvider(provider trace.TracerProvider) Option {
 // ones will be used.
 func WithPropagators(propagators propagation.TextMapPropagator) Option {
 	return optionFunc(func(cfg *config) {
-		cfg.Propagators = propagators
+		if propagators != nil {
+			cfg.Propagators = propagators
+		}
 	})
 }

@@ -108,7 +108,9 @@ func WithPublicEndpoint() Option {
 // option isn't specified, then the global TextMapPropagator is used.
 func WithPropagators(ps propagation.TextMapPropagator) Option {
 	return optionFunc(func(c *config) {
-		c.Propagators = ps
+		if ps != nil {
+			c.Propagators = ps
+		}
 	})
 }
 

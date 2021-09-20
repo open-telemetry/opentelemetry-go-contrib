@@ -68,7 +68,9 @@ func WithMeterProvider(provider metric.MeterProvider) Option {
 // Defaults to global.Propagators().
 func WithPropagators(propagators propagation.TextMapPropagator) Option {
 	return optionFunc(func(c *config) {
-		c.propagators = propagators
+		if propagators != nil {
+			c.propagators = propagators
+		}
 	})
 }
 
