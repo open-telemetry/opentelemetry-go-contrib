@@ -35,8 +35,6 @@ import (
 	"go.opentelemetry.io/otel/codes"
 	semconv "go.opentelemetry.io/otel/semconv/v1.4.0"
 	"go.opentelemetry.io/otel/trace"
-
-	otelcontrib "go.opentelemetry.io/contrib"
 )
 
 type messageType attribute.KeyValue
@@ -80,7 +78,7 @@ func UnaryClientInterceptor(opts ...Option) grpc.UnaryClientInterceptor {
 
 		tracer := newConfig(opts).TracerProvider.Tracer(
 			instrumentationName,
-			trace.WithInstrumentationVersion(otelcontrib.SemVersion()),
+			trace.WithInstrumentationVersion(SemVersion()),
 		)
 
 		name, attr := spanInfo(method, cc.Target())
@@ -250,7 +248,7 @@ func StreamClientInterceptor(opts ...Option) grpc.StreamClientInterceptor {
 
 		tracer := newConfig(opts).TracerProvider.Tracer(
 			instrumentationName,
-			trace.WithInstrumentationVersion(otelcontrib.SemVersion()),
+			trace.WithInstrumentationVersion(SemVersion()),
 		)
 
 		name, attr := spanInfo(method, cc.Target())
@@ -310,7 +308,7 @@ func UnaryServerInterceptor(opts ...Option) grpc.UnaryServerInterceptor {
 
 		tracer := newConfig(opts).TracerProvider.Tracer(
 			instrumentationName,
-			trace.WithInstrumentationVersion(otelcontrib.SemVersion()),
+			trace.WithInstrumentationVersion(SemVersion()),
 		)
 
 		name, attr := spanInfo(info.FullMethod, peerFromCtx(ctx))
@@ -399,7 +397,7 @@ func StreamServerInterceptor(opts ...Option) grpc.StreamServerInterceptor {
 
 		tracer := newConfig(opts).TracerProvider.Tracer(
 			instrumentationName,
-			trace.WithInstrumentationVersion(otelcontrib.SemVersion()),
+			trace.WithInstrumentationVersion(SemVersion()),
 		)
 
 		name, attr := spanInfo(info.FullMethod, peerFromCtx(ctx))
