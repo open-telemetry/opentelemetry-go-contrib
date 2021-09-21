@@ -8,7 +8,7 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 
 ## [Unreleased]
 
-## [0.24.0] - 2021-09-20
+## [0.24.0] - 2021-09-21
 
 Update dependency on the `go.opentelemetry.io/otel` project to `v1.0.0`.
 
