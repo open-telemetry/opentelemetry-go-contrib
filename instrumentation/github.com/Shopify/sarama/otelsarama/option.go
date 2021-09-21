@@ -62,7 +62,9 @@ func (fn optionFunc) apply(c *config) {
 // If none is specified, the global provider is used.
 func WithTracerProvider(provider trace.TracerProvider) Option {
 	return optionFunc(func(cfg *config) {
-		cfg.TracerProvider = provider
+		if provider != nil {
+			cfg.TracerProvider = provider
+		}
 	})
 }
 
@@ -71,6 +73,8 @@ func WithTracerProvider(provider trace.TracerProvider) Option {
 // ones will be used.
 func WithPropagators(propagators propagation.TextMapPropagator) Option {
 	return optionFunc(func(cfg *config) {
-		cfg.Propagators = propagators
+		if propagators != nil {
+			cfg.Propagators = propagators
+		}
 	})
 }

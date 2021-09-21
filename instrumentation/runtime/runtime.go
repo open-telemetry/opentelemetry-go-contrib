@@ -79,7 +79,9 @@ func WithMeterProvider(provider metric.MeterProvider) Option {
 type metricProviderOption struct{ metric.MeterProvider }
 
 func (o metricProviderOption) apply(c *config) {
-	c.MeterProvider = o.MeterProvider
+	if o.MeterProvider != nil {
+		c.MeterProvider = o.MeterProvider
+	}
 }
 
 // newConfig computes a config from the supplied Options.

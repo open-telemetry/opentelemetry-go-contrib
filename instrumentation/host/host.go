@@ -60,7 +60,9 @@ func WithMeterProvider(provider metric.MeterProvider) Option {
 type metricProviderOption struct{ metric.MeterProvider }
 
 func (o metricProviderOption) apply(c *config) {
-	c.MeterProvider = o.MeterProvider
+	if o.MeterProvider != nil {
+		c.MeterProvider = o.MeterProvider
+	}
 }
 
 // Attribute sets.

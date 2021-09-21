@@ -48,7 +48,7 @@ func TestNewConfig(t *testing.T) {
 			expected: config{
 				TracerProvider: otel.GetTracerProvider(),
 				Tracer:         otel.GetTracerProvider().Tracer(defaultTracerName, trace.WithInstrumentationVersion(SemVersion())),
-				Propagators:    nil,
+				Propagators:    otel.GetTextMapPropagator(),
 			},
 		},
 	}
