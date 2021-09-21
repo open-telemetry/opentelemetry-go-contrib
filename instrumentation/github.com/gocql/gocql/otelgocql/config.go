@@ -76,7 +76,9 @@ func WithConnectObserver(observer gocql.ConnectObserver) Option {
 // for creating spans. Defaults to TracerProvider()
 func WithTracerProvider(provider trace.TracerProvider) Option {
 	return optionFunc(func(c *config) {
-		c.tracerProvider = provider
+		if provider != nil {
+			c.tracerProvider = provider
+		}
 	})
 }
 
@@ -85,7 +87,9 @@ func WithTracerProvider(provider trace.TracerProvider) Option {
 // Defaults to global.GetMeterProvider().
 func WithMeterProvider(provider metric.MeterProvider) Option {
 	return optionFunc(func(c *config) {
-		c.meterProvider = provider
+		if provider != nil {
+			c.meterProvider = provider
+		}
 	})
 }
 
