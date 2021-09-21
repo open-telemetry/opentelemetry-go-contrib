@@ -59,7 +59,9 @@ func newConfig(opts []Option) *config {
 type propagatorsOption struct{ p propagation.TextMapPropagator }
 
 func (o propagatorsOption) apply(c *config) {
-	c.Propagators = o.p
+	if o.p != nil {
+		c.Propagators = o.p
+	}
 }
 
 // WithPropagators returns an Option to use the Propagators when extracting
