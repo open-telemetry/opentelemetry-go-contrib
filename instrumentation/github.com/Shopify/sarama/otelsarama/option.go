@@ -15,7 +15,6 @@
 package otelsarama
 
 import (
-	"go.opentelemetry.io/contrib"
 	"go.opentelemetry.io/otel"
 	"go.opentelemetry.io/otel/propagation"
 	"go.opentelemetry.io/otel/trace"
@@ -42,7 +41,7 @@ func newConfig(opts ...Option) config {
 
 	cfg.Tracer = cfg.TracerProvider.Tracer(
 		defaultTracerName,
-		trace.WithInstrumentationVersion(contrib.SemVersion()),
+		trace.WithInstrumentationVersion(SemVersion()),
 	)
 
 	return cfg

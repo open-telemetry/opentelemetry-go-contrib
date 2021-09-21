@@ -20,7 +20,6 @@ import (
 	"sync"
 	"time"
 
-	"go.opentelemetry.io/contrib"
 	"go.opentelemetry.io/otel/metric"
 	"go.opentelemetry.io/otel/metric/global"
 	"go.opentelemetry.io/otel/metric/unit"
@@ -109,7 +108,7 @@ func Start(opts ...Option) error {
 	r := &runtime{
 		meter: c.MeterProvider.Meter(
 			"go.opentelemetry.io/contrib/instrumentation/runtime",
-			metric.WithInstrumentationVersion(contrib.SemVersion()),
+			metric.WithInstrumentationVersion(SemVersion()),
 		),
 		config: c,
 	}

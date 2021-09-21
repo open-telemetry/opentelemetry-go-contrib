@@ -24,8 +24,6 @@ import (
 	"go.opentelemetry.io/otel"
 	"go.opentelemetry.io/otel/codes"
 
-	otelcontrib "go.opentelemetry.io/contrib"
-
 	"go.opentelemetry.io/otel/attribute"
 	"go.opentelemetry.io/otel/propagation"
 	semconv "go.opentelemetry.io/otel/semconv/v1.4.0"
@@ -50,7 +48,7 @@ func Middleware(service string, opts ...Option) gin.HandlerFunc {
 	}
 	tracer := cfg.TracerProvider.Tracer(
 		tracerName,
-		oteltrace.WithInstrumentationVersion(otelcontrib.SemVersion()),
+		oteltrace.WithInstrumentationVersion(SemVersion()),
 	)
 	if cfg.Propagators == nil {
 		cfg.Propagators = otel.GetTextMapPropagator()
@@ -105,7 +103,7 @@ func HTML(c *gin.Context, code int, name string, obj interface{}) {
 	if !ok {
 		tracer = otel.GetTracerProvider().Tracer(
 			tracerName,
-			oteltrace.WithInstrumentationVersion(otelcontrib.SemVersion()),
+			oteltrace.WithInstrumentationVersion(SemVersion()),
 		)
 	}
 	savedContext := c.Request.Context()

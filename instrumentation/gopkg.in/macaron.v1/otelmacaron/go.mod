@@ -9,9 +9,8 @@ replace (
 
 require (
 	github.com/stretchr/testify v1.7.0
-	go.opentelemetry.io/contrib v0.23.0
-	go.opentelemetry.io/contrib/propagators/b3 v0.23.0
-	go.opentelemetry.io/otel v1.0.0-RC3
-	go.opentelemetry.io/otel/trace v1.0.0-RC3
+	go.opentelemetry.io/contrib/propagators/b3 v0.24.0
+	go.opentelemetry.io/otel v1.0.0
+	go.opentelemetry.io/otel/trace v1.0.0
 	gopkg.in/macaron.v1 v1.4.0
 )
