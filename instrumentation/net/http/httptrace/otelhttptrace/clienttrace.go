@@ -22,7 +22,6 @@ import (
 	"strings"
 	"sync"
 
-	"go.opentelemetry.io/contrib"
 	"go.opentelemetry.io/otel"
 	"go.opentelemetry.io/otel/attribute"
 	"go.opentelemetry.io/otel/codes"
@@ -154,7 +153,7 @@ func NewClientTrace(ctx context.Context, opts ...ClientTraceOption) *httptrace.C
 
 	ct.tr = otel.GetTracerProvider().Tracer(
 		"go.opentelemetry.io/otel/instrumentation/httptrace",
-		trace.WithInstrumentationVersion(contrib.SemVersion()),
+		trace.WithInstrumentationVersion(SemVersion()),
 	)
 
 	return &httptrace.ClientTrace{
