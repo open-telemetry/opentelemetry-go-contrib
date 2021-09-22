@@ -147,6 +147,7 @@ type clientTracer struct {
 func NewClientTrace(ctx context.Context, opts ...ClientTraceOption) *httptrace.ClientTrace {
 	ct := &clientTracer{
 		Context:     ctx,
+		tracerProvider: otel.GetTracerProvider(),
 		activeHooks: make(map[string]context.Context),
 		redactedHeaders: map[string]struct{}{
 			"authorization":       {},
@@ -163,7 +164,6 @@ func NewClientTrace(ctx context.Context, opts ...ClientTraceOption) *httptrace.C
 		opt.apply(ct)
 	}
 
-	ct.tracerProvider = otel.GetTracerProvider()
 	ct.tr = ct.tracerProvider.Tracer(
 		"go.opentelemetry.io/otel/instrumentation/httptrace",
 		trace.WithInstrumentationVersion(SemVersion()),
