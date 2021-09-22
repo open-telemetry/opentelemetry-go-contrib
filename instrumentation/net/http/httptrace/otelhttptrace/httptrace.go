@@ -39,7 +39,6 @@ func (o optionFunc) apply(c *config) {
 }
 
 type config struct {
-	tracerProvider 	trace.TracerProvider
 	propagators 	propagation.TextMapPropagator
 }
 
@@ -49,16 +48,6 @@ func newConfig(opts []Option) *config {
 		o.apply(c)
 	}
 	return c
-}
-
-// WithTracerProvider specifies a tracer provider for creating a tracer.
-// The global provider is used if none is specified.
-func WithTracerProvider(provider trace.TracerProvider) Option {
-	return optionFunc(func(cfg *config) {
-		if provider != nil {
-			cfg.tracerProvider = provider
-		}
-	})
 }
 
 // WithPropagators sets the propagators to use for Extraction and Injection
