@@ -39,7 +39,7 @@ func (o optionFunc) apply(c *config) {
 }
 
 type config struct {
-	propagators 	propagation.TextMapPropagator
+	propagators propagation.TextMapPropagator
 }
 
 func newConfig(opts []Option) *config {
