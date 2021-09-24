@@ -125,7 +125,7 @@ func WithTracerProvider(provider trace.TracerProvider) ClientTraceOption {
 type clientTracer struct {
 	context.Context
 
-	tracerProvider 	trace.TracerProvider
+	tracerProvider trace.TracerProvider
 
 	tr trace.Tracer
 
@@ -146,9 +146,9 @@ type clientTracer struct {
 // Proxy-Authorization, Cookie, and Set-Cookie.
 func NewClientTrace(ctx context.Context, opts ...ClientTraceOption) *httptrace.ClientTrace {
 	ct := &clientTracer{
-		Context:     ctx,
+		Context:        ctx,
 		tracerProvider: otel.GetTracerProvider(),
-		activeHooks: make(map[string]context.Context),
+		activeHooks:    make(map[string]context.Context),
 		redactedHeaders: map[string]struct{}{
 			"authorization":       {},
 			"www-authenticate":    {},
