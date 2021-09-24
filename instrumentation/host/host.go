@@ -25,7 +25,6 @@ import (
 	"github.com/shirou/gopsutil/net"
 	"github.com/shirou/gopsutil/process"
 
-	"go.opentelemetry.io/contrib"
 	"go.opentelemetry.io/otel"
 	"go.opentelemetry.io/otel/attribute"
 	"go.opentelemetry.io/otel/metric"
@@ -61,7 +60,9 @@ func WithMeterProvider(provider metric.MeterProvider) Option {
 type metricProviderOption struct{ metric.MeterProvider }
 
 func (o metricProviderOption) apply(c *config) {
-	c.MeterProvider = o.MeterProvider
+	if o.MeterProvider != nil {
+		c.MeterProvider = o.MeterProvider
+	}
 }
 
 // Attribute sets.
@@ -104,7 +105,7 @@ func Start(opts ...Option) error {
 	h := &host{
 		meter: c.MeterProvider.Meter(
 			"go.opentelemetry.io/contrib/instrumentation/host",
-			metric.WithInstrumentationVersion(contrib.SemVersion()),
+			metric.WithInstrumentationVersion(SemVersion()),
 		),
 		config: c,
 	}

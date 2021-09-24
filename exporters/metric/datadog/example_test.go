@@ -103,7 +103,7 @@ func ExampleExporter() {
 	}
 
 	// Output:
-	// myrecorder.max:100|g|#env:dev,l:1,service.name:ExampleExporter,telemetry.sdk.language:go,telemetry.sdk.name:opentelemetry,telemetry.sdk.version:1.0.0-RC3
+	// myrecorder.max:100|g|#env:dev,l:1,service.name:ExampleExporter,telemetry.sdk.language:go,telemetry.sdk.name:opentelemetry,telemetry.sdk.version:1.0.0
 	//
 }
 

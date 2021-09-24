@@ -24,8 +24,6 @@ import (
 	"go.opentelemetry.io/otel/codes"
 	"go.opentelemetry.io/otel/trace"
 
-	otelcontrib "go.opentelemetry.io/contrib"
-
 	"github.com/go-kit/kit/endpoint"
 	"github.com/go-kit/kit/sd/lb"
 )
@@ -54,7 +52,7 @@ func EndpointMiddleware(options ...Option) endpoint.Middleware {
 
 	tracer := cfg.TracerProvider.Tracer(
 		tracerName,
-		trace.WithInstrumentationVersion(otelcontrib.SemVersion()),
+		trace.WithInstrumentationVersion(SemVersion()),
 	)
 
 	return func(next endpoint.Endpoint) endpoint.Endpoint {

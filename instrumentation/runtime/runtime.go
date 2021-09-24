@@ -20,7 +20,6 @@ import (
 	"sync"
 	"time"
 
-	"go.opentelemetry.io/contrib"
 	"go.opentelemetry.io/otel/metric"
 	"go.opentelemetry.io/otel/metric/global"
 	"go.opentelemetry.io/otel/metric/unit"
@@ -80,7 +79,9 @@ func WithMeterProvider(provider metric.MeterProvider) Option {
 type metricProviderOption struct{ metric.MeterProvider }
 
 func (o metricProviderOption) apply(c *config) {
-	c.MeterProvider = o.MeterProvider
+	if o.MeterProvider != nil {
+		c.MeterProvider = o.MeterProvider
+	}
 }
 
 // newConfig computes a config from the supplied Options.
@@ -107,7 +108,7 @@ func Start(opts ...Option) error {
 	r := &runtime{
 		meter: c.MeterProvider.Meter(
 			"go.opentelemetry.io/contrib/instrumentation/runtime",
-			metric.WithInstrumentationVersion(contrib.SemVersion()),
+			metric.WithInstrumentationVersion(SemVersion()),
 		),
 		config: c,
 	}

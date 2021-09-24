@@ -19,7 +19,6 @@ import (
 
 	"github.com/stretchr/testify/assert"
 
-	"go.opentelemetry.io/contrib"
 	"go.opentelemetry.io/otel"
 	"go.opentelemetry.io/otel/trace"
 )
@@ -37,7 +36,7 @@ func TestNewConfig(t *testing.T) {
 			},
 			expected: config{
 				TracerProvider: otel.GetTracerProvider(),
-				Tracer:         otel.GetTracerProvider().Tracer(defaultTracerName, trace.WithInstrumentationVersion(contrib.SemVersion())),
+				Tracer:         otel.GetTracerProvider().Tracer(defaultTracerName, trace.WithInstrumentationVersion(SemVersion())),
 				Propagators:    otel.GetTextMapPropagator(),
 			},
 		},
@@ -48,8 +47,8 @@ func TestNewConfig(t *testing.T) {
 			},
 			expected: config{
 				TracerProvider: otel.GetTracerProvider(),
-				Tracer:         otel.GetTracerProvider().Tracer(defaultTracerName, trace.WithInstrumentationVersion(contrib.SemVersion())),
-				Propagators:    nil,
+				Tracer:         otel.GetTracerProvider().Tracer(defaultTracerName, trace.WithInstrumentationVersion(SemVersion())),
+				Propagators:    otel.GetTextMapPropagator(),
 			},
 		},
 	}
