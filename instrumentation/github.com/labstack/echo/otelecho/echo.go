@@ -20,7 +20,6 @@ import (
 	"github.com/labstack/echo/v4"
 	"github.com/labstack/echo/v4/middleware"
 
-	otelcontrib "go.opentelemetry.io/contrib"
 	"go.opentelemetry.io/otel"
 
 	"go.opentelemetry.io/otel/attribute"
@@ -45,7 +44,7 @@ func Middleware(service string, opts ...Option) echo.MiddlewareFunc {
 	}
 	tracer := cfg.TracerProvider.Tracer(
 		tracerName,
-		oteltrace.WithInstrumentationVersion(otelcontrib.SemVersion()),
+		oteltrace.WithInstrumentationVersion(SemVersion()),
 	)
 	if cfg.Propagators == nil {
 		cfg.Propagators = otel.GetTextMapPropagator()

@@ -19,7 +19,6 @@ import (
 
 	"github.com/bradfitz/gomemcache/memcache"
 
-	"go.opentelemetry.io/contrib"
 	"go.opentelemetry.io/contrib/instrumentation/github.com/bradfitz/gomemcache/memcache/otelmemcache/internal"
 	"go.opentelemetry.io/otel"
 	"go.opentelemetry.io/otel/attribute"
@@ -61,7 +60,7 @@ func NewClientWithTracing(client *memcache.Client, opts ...Option) *Client {
 		client,
 		cfg.tracerProvider.Tracer(
 			tracerName,
-			oteltrace.WithInstrumentationVersion(contrib.SemVersion()),
+			oteltrace.WithInstrumentationVersion(SemVersion()),
 		),
 		context.Background(),
 	}
