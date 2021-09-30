@@ -78,7 +78,7 @@ func ExampleNew() {
 	key := attribute.Key("key")
 
 	// pusher implements the metric.MeterProvider interface:
-	meter := pusher.MeterProvider().Meter("example")
+	meter := pusher.Meter("example")
 
 	// Create and update a single counter:
 	counter := metric.Must(meter).NewInt64Counter("a.counter")

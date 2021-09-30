@@ -75,7 +75,7 @@ func InstallNewPipeline(config Config) (*controller.Controller, error) {
 	if err != nil {
 		return controller, err
 	}
-	global.SetMeterProvider(controller.MeterProvider())
+	global.SetMeterProvider(controller)
 	return controller, err
 }
 
@@ -92,7 +92,7 @@ func NewExportPipeline(config Config, opts ...controller.Option) (*controller.Co
 
 	// The basic processor ensures that the exporter sees the full
 	// set of attributes as dogstatsd tags.
-	processor := basic.New(selector, exporter)
+	processor := basic.NewFactory(selector, exporter)
 
 	pusher := controller.New(processor, append(opts, controller.WithExporter(exporter))...)
 
