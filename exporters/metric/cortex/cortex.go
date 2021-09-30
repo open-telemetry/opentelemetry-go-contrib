@@ -103,7 +103,7 @@ func NewExportPipeline(config Config, options ...controller.Option) (*controller
 		return nil, err
 	}
 
-	pusher := controller.New(
+	cont := controller.New(
 		processor.NewFactory(
 			simple.NewWithHistogramDistribution(
 				histogram.WithExplicitBoundaries(config.HistogramBoundaries),
@@ -113,17 +113,17 @@ func NewExportPipeline(config Config, options ...controller.Option) (*controller
 		append(options, controller.WithExporter(exporter))...,
 	)
 
-	return pusher, pusher.Start(context.TODO())
+	return cont, cont.Start(context.TODO())
 }
 
 // InstallNewPipeline registers a push Controller's MeterProvider globally.
 func InstallNewPipeline(config Config, options ...controller.Option) (*controller.Controller, error) {
-	pusher, err := NewExportPipeline(config, options...)
+	cont, err := NewExportPipeline(config, options...)
 	if err != nil {
 		return nil, err
 	}
-	global.SetMeterProvider(pusher)
-	return pusher, nil
+	global.SetMeterProvider(cont)
+	return cont, nil
 }
 
 // ConvertToTimeSeries converts a InstrumentationLibraryReader to a slice of TimeSeries pointers

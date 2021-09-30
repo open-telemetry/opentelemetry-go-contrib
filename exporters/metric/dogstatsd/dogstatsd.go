@@ -94,9 +94,9 @@ func NewExportPipeline(config Config, opts ...controller.Option) (*controller.Co
 	// set of attributes as dogstatsd tags.
 	processor := basic.NewFactory(selector, exporter)
 
-	pusher := controller.New(processor, append(opts, controller.WithExporter(exporter))...)
+	cont := controller.New(processor, append(opts, controller.WithExporter(exporter))...)
 
-	return pusher, pusher.Start(context.Background())
+	return cont, cont.Start(context.Background())
 }
 
 // AppendName is part of the stats-internal adapter interface.
