@@ -119,7 +119,7 @@ func main() {
 func initMetrics() {
 	// Start prometheus
 	pusher := controller.New(
-		processor.New(
+		processor.NewFactory(
 			simple.NewWithHistogramDistribution(
 				histogram.WithExplicitBoundaries([]float64{0.001, 0.01, 0.1, 0.5, 1, 2, 5, 10}),
 			),
