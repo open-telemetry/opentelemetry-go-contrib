@@ -52,7 +52,7 @@ func main() {
 	fmt.Println("Success: Installed Exporter Pipeline")
 
 	// Create a counter and a value recorder
-	meter := pusher.MeterProvider().Meter("example")
+	meter := pusher.Meter("example")
 
 	// Create instruments.
 	histogram := metric.Must(meter).NewInt64Histogram(
