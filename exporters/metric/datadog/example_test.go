@@ -56,15 +56,15 @@ func ExampleExporter() {
 
 	go func() {
 		defer exp.Close()
-		processor := basic.New(selector, exp)
-		pusher := controller.New(processor, controller.WithExporter(exp), controller.WithCollectPeriod(time.Second*10))
+		processor := basic.NewFactory(selector, exp)
+		cont := controller.New(processor, controller.WithExporter(exp), controller.WithCollectPeriod(time.Second*10))
 		ctx := context.Background()
-		err := pusher.Start(ctx)
+		err := cont.Start(ctx)
 		if err != nil {
 			panic(err)
 		}
-		defer func() { handleErr(pusher.Stop(ctx)) }()
-		global.SetMeterProvider(pusher.MeterProvider())
+		defer func() { handleErr(cont.Stop(ctx)) }()
+		global.SetMeterProvider(cont)
 		meter := global.Meter("marwandist")
 		m := metric.Must(meter).NewInt64Histogram("myrecorder")
 		meter.RecordBatch(context.Background(), []attribute.KeyValue{attribute.Int("l", 1)},
