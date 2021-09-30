@@ -404,11 +404,11 @@ func (e *Exporter) buildMessage(timeseries []prompb.TimeSeries) ([]byte, error) 
 
 	// Convert the struct to a slice of bytes and then compress it.
 	message := make([]byte, writeRequest.Size())
-	if written, err := writeRequest.MarshalToSizedBuffer(message); err != nil {
+	written, err := writeRequest.MarshalToSizedBuffer(message)
+	if err != nil {
 		return nil, err
-	} else {
-		message = message[:written]
 	}
+	message = message[:written]
 	compressed := snappy.Encode(nil, message)
 
 	return compressed, nil
