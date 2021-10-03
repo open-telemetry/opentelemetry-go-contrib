@@ -67,7 +67,7 @@ func TestHostCPU(t *testing.T) {
 
 	proc, err := process.NewProcess(int32(os.Getpid()))
 	if err != nil {
-		t.Errorf("could not find this process: %w", err)
+		t.Errorf("could not find this process: %v", err)
 	}
 
 	ctx := context.Background()
