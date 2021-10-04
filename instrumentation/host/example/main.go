@@ -36,7 +36,7 @@ func main() {
 		log.Fatalln("failed to initialize metric stdout exporter:", err)
 	}
 	pusher := controller.New(
-		processor.New(
+		processor.NewFactory(
 			simple.NewWithInexpensiveDistribution(),
 			exporter,
 		),
@@ -46,7 +46,7 @@ func main() {
 	if err := pusher.Start(context.Background()); err != nil {
 		log.Fatalln("failed to start the metric controller:", err)
 	}
-	global.SetMeterProvider(pusher.MeterProvider())
+	global.SetMeterProvider(pusher)
 
 	if err := host.Start(); err != nil {
 		log.Fatalln("failed to start host instrumentation:", err)
