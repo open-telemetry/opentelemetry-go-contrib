@@ -19,20 +19,22 @@ import (
 	"math/rand"
 	"testing"
 
-	histogram "github.com/jmacd/otlp-expo-histo"
 	"github.com/stretchr/testify/assert"
+	"go.opentelemetry.io/contrib/aggregators/histogram/exponential/mapping"
+	"go.opentelemetry.io/contrib/aggregators/histogram/exponential/mapping/logarithm"
+	"go.opentelemetry.io/contrib/aggregators/histogram/exponential/mapping/lookuptable"
 )
 
-func testCompatibility(t *testing.T, histoScale, testScale int) {
+func testCompatibility(t *testing.T, histoScale, testScale int32) {
 	src := rand.New(rand.NewSource(54979))
 	t.Run(fmt.Sprintf("compat_%d_%d", histoScale, testScale), func(t *testing.T) {
 		const trials = 1e5
 
-		ltm := histogram.NewLookupTableMapping(histoScale)
-		lgm := histogram.NewLogarithmMapping(histoScale)
+		ltm := lookuptable.NewLookupTableMapping(histoScale)
+		lgm := logarithm.NewLogarithmMapping(histoScale)
 
 		for i := 0; i < trials; i++ {
-			v := histogram.Scalb(1+src.Float64(), testScale)
+			v := mapping.Scalb(1+src.Float64(), testScale)
 
 			lti := ltm.MapToIndex(v)
 			lgi := lgm.MapToIndex(v)
@@ -44,8 +46,8 @@ func testCompatibility(t *testing.T, histoScale, testScale int) {
 		additional := int64(testScale) * size
 
 		for i := int64(0); i < size; i++ {
-			ltb := ltm.LowerBoundary(i + additional)
-			lgb := lgm.LowerBoundary(i + additional)
+			ltb, _ := ltm.LowerBoundary(i + additional)
+			lgb, _ := lgm.LowerBoundary(i + additional)
 
 			assert.InEpsilon(t, ltb, lgb, 0.000001, "hs %v ts %v sz %v add %v index %v ltb %v lgb %v", histoScale, testScale, size, additional, i+additional, ltb, lgb)
 		}
@@ -53,8 +55,8 @@ func testCompatibility(t *testing.T, histoScale, testScale int) {
 }
 
 func TestCompat0(t *testing.T) {
-	for scale := 3; scale <= 10; scale++ {
-		for tscale := -1; tscale <= 1; tscale++ {
+	for scale := int32(3); scale <= 10; scale++ {
+		for tscale := int32(-1); tscale <= 1; tscale++ {
 			testCompatibility(t, scale, tscale)
 		}
 	}

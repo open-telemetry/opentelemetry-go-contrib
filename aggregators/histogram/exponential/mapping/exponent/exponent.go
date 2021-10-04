@@ -45,7 +45,8 @@ func (e exponentMapping) MapToIndex(value float64) int64 {
 	return int64(exp >> -e.scale)
 }
 
-var ErrUnderflow = fmt.Errorf("")
+var ErrUnderflow = fmt.Errorf("underflow")
+var ErrOverflow = fmt.Errorf("overflow")
 
 func (e exponentMapping) LowerBoundary(index int64) (float64, error) {
 	unbiased := int64(index << -e.scale)
@@ -54,14 +55,16 @@ func (e exponentMapping) LowerBoundary(index int64) (float64, error) {
 
 	if unbiased < int64(mapping.MinNormalExponent) {
 		diff := mapping.MinNormalExponent - int32(unbiased)
-		if diff > mapping.MantissaWidth {
+		if diff > mapping.SignificandWidth {
 			return 0, ErrUnderflow
 		}
 		// the encoded exponent is zero
-		bits = uint64(1) << (mapping.MantissaWidth - diff)
+		bits = uint64(1) << (mapping.SignificandWidth - diff)
+	} else if unbiased > int64(mapping.MaxNormalExponent) {
+		return 0, ErrOverflow
 	} else {
 		exponent := unbiased + mapping.ExponentBias
-		bits = uint64(exponent << mapping.MantissaWidth)
+		bits = uint64(exponent << mapping.SignificandWidth)
 	}
 
 	return math.Float64frombits(bits), nil

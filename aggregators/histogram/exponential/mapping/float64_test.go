@@ -37,8 +37,6 @@ func TestFloat64Bits(t *testing.T) {
 
 	assert.Equal(t, int32(1022), GetExponent(0x1p+1022))
 
-	assert.Equal(t, SignedZeroSubnormalExponent, GetExponent(+0))
-	assert.Equal(t, SignedZeroSubnormalExponent, GetExponent(-0))
 	assert.Equal(t, int32(-1022), GetExponent(0x1p-1022))
 
 	// Subnormals below this point
@@ -46,12 +44,14 @@ func TestFloat64Bits(t *testing.T) {
 	assert.Equal(t, int32(-1024), GetExponent(0x1p-1024))
 	assert.Equal(t, int32(-1025), GetExponent(0x1p-1025))
 
-	for i := 0; i <= MantissaWidth; i++ {
+	for i := 0; i <= SignificandWidth; i++ {
 		assert.Equal(t, int32(-1022-i), GetExponent(0x1p-1022/float64(uint64(1)<<i)))
 	}
 
-	// Subnormals underflow eventually
-	assert.NotEqual(t, int32(-1022-53), GetExponent(0x1p-1022/float64(uint64(1)<<53)))
+	// This works b/c the raw significand is zero, so 64 leading zeros - 12 = 52
+	zero := 0x1p-1022 / float64(uint64(1)<<53)
+	assert.Equal(t, int32(-1022-53), GetExponent(zero))
+	assert.NotEqual(t, int32(-1022-54), GetExponent(0x1p-1022/float64(uint64(1)<<54)))
 }
 
 func TestGetExponent(t *testing.T) {
@@ -60,11 +60,7 @@ func TestGetExponent(t *testing.T) {
 		assert.Equal(t, x, GetExponent(Scalb(-1, x)))
 	}
 
-	// GetExponent and Scalb work for the special exponents
-	assert.Equal(t, SignedZeroSubnormalExponent, GetExponent(Scalb(1, SignedZeroSubnormalExponent)))
-	assert.Equal(t, SignedZeroSubnormalExponent, GetExponent(Scalb(-1, SignedZeroSubnormalExponent)))
-
-	// GetExponent and Scalb work for the special exponents
+	// GetExponent and Scalb work for the special exponents (good or bad)
 	assert.Equal(t, InfAndNaNExponent, GetExponent(Scalb(1, InfAndNaNExponent)))
 	assert.Equal(t, InfAndNaNExponent, GetExponent(Scalb(-1, InfAndNaNExponent)))
 

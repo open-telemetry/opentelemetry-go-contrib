@@ -20,25 +20,24 @@ import (
 )
 
 const (
-	// MantissaWidth is the size of an IEEE 754 double-precision
-	// floating-point mantissa.
-	MantissaWidth = 52
+	// SignificandWidth is the size of an IEEE 754 double-precision
+	// floating-point significand.
+	SignificandWidth = 52
 	// ExponentWidth is the size of an IEEE 754 double-precision
 	// floating-point exponent.
 	ExponentWidth = 11
 
-	// MantissaMask is the mask for the mantissa of an IEEE 754
-	// double-precision floating-point value.
-	MantissaMask = 1<<MantissaWidth - 1
+	// SignificandMask is the mask for the significand of an IEEE 754
+	// double-precision floating-point value: 0xFFFFFFFFFFFFF.
+	SignificandMask = 1<<SignificandWidth - 1
 
 	// ExponentBias is the exponent bias specified for encoding
-	// the IEEE 754 double-precision floating point exponent.
+	// the IEEE 754 double-precision floating point exponent: 1023.
 	ExponentBias = 1<<(ExponentWidth-1) - 1
 
 	// ExponentMask are set to 1 for the bits of an IEEE 754
-	// floating point exponent (as distinct from the mantissa and
-	// sign).
-	ExponentMask = ((1 << ExponentWidth) - 1) << MantissaWidth
+	// floating point exponent: 0x7FF0000000000000.
+	ExponentMask = ((1 << ExponentWidth) - 1) << SignificandWidth
 
 	// SignMask selects the sign bit of an IEEE 754 floating point
 	// number.
@@ -61,7 +60,7 @@ const (
 	InfAndNaNExponent int32 = ExponentBias + 1
 
 	// Smallest positive subnormal exponent:
-	MinSubnormalExponent int32 = MinNormalExponent - MantissaWidth
+	MinSubnormalExponent int32 = MinNormalExponent - SignificandWidth
 )
 
 // java.lang.Math.scalb(float f, int scaleFactor) returns f x
@@ -74,22 +73,25 @@ func Scalb(f float64, sf int32) float64 {
 	valueBits := math.Float64bits(f)
 
 	signBit := valueBits & SignMask
-	mantissa := MantissaMask & valueBits
+	significand := SignificandMask & valueBits
 
-	exponent := (int64(valueBits) & ExponentMask) >> MantissaWidth
+	exponent := (int64(valueBits) & ExponentMask) >> SignificandWidth
 	exponent += int64(sf)
 
-	return math.Float64frombits(signBit | uint64(exponent<<MantissaWidth) | mantissa)
+	return math.Float64frombits(signBit | uint64(exponent<<SignificandWidth) | significand)
 }
 
-// GetExponent extracts the 11-bit IEEE 754 exponent.
+// GetExponent extracts the normalized base-2 fractional exponent.
+// Let the value be represented as `1.significand x 2**exponent`,
+// this returns `exponent`.  Not defined for 0, Inf, or NaN values.
 func GetExponent(value float64) int32 {
-	valueBits := math.Float64bits(value)
-	rawExponent := (int64(valueBits) & ExponentMask) >> MantissaWidth
-	rawMantissa := valueBits & MantissaMask
-	if rawExponent == 0 && rawMantissa != 0 {
-		// Handle subnormals
-		rawExponent -= int64(bits.LeadingZeros64(rawMantissa) - 12)
+	rawBits := math.Float64bits(value)
+	rawExponent := (int64(rawBits) & ExponentMask) >> SignificandWidth
+	rawSignificand := rawBits & SignificandMask
+	if rawExponent == 0 {
+		// Handle subnormal values: rawSignificand cannot be zero
+		// unless value is zero.
+		rawExponent -= int64(bits.LeadingZeros64(rawSignificand) - 12)
 	}
 	return int32(rawExponent - ExponentBias)
 }

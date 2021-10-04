@@ -12,17 +12,19 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package histogram_test
+package benchmark
 
 import (
 	"fmt"
 	"math/rand"
 	"testing"
 
-	histogram "github.com/jmacd/otlp-expo-histo"
+	"go.opentelemetry.io/contrib/aggregators/histogram/exponential/mapping"
+	"go.opentelemetry.io/contrib/aggregators/histogram/exponential/mapping/logarithm"
+	"go.opentelemetry.io/contrib/aggregators/histogram/exponential/mapping/lookuptable"
 )
 
-func benchmarkHistogram(b *testing.B, name string, mapper histogram.Base2HistogramMapper, scale int) {
+func benchmarkHistogram(b *testing.B, name string, mapper mapping.Mapping, scale int32) {
 	b.Run(fmt.Sprintf("mapping_%s_%d", name, scale), func(b *testing.B) {
 		src := rand.New(rand.NewSource(54979))
 
@@ -34,14 +36,14 @@ func benchmarkHistogram(b *testing.B, name string, mapper histogram.Base2Histogr
 		src := rand.New(rand.NewSource(54979))
 
 		for i := 0; i < b.N; i++ {
-			_ = mapper.LowerBoundary(src.Int63())
+			_, _ = mapper.LowerBoundary(src.Int63())
 		}
 	})
 }
 
 func BenchmarkHistogram(b *testing.B) {
-	for _, scale := range []int{3, 10} {
-		benchmarkHistogram(b, "lookup", histogram.NewLookupTableMapping(scale), scale)
-		benchmarkHistogram(b, "logarithm", histogram.NewLogarithmMapping(scale), scale)
+	for _, scale := range []int32{3, 10} {
+		benchmarkHistogram(b, "lookup", lookuptable.NewLookupTableMapping(scale), scale)
+		benchmarkHistogram(b, "logarithm", logarithm.NewLogarithmMapping(scale), scale)
 	}
 }

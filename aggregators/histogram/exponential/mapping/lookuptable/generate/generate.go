@@ -27,7 +27,7 @@ import (
 	"syscall"
 	"time"
 
-	histogram "github.com/jmacd/otlp-expo-histo"
+	"go.opentelemetry.io/contrib/aggregators/histogram/exponential/mapping"
 )
 
 var startTime = time.Now()
@@ -188,13 +188,13 @@ func main() {
 	wg.Wait()
 
 	fmt.Printf(`
-package histogram
+package lookuptable
 
-// ExponentialConstants is a table of logarithms, exactly computed
+// exponentialConstants is a table of logarithms, exactly computed
 // with 52-bits of precision for use comparing with the significand
-// (i.e., mantissa) of an IEEE 754 double-width floating-point value.
+// (i.e., significand) of an IEEE 754 double-width floating-point value.
 // See OpenTelemetry OTEP 149 for details on this histogram.
-var ExponentialConstants = [%d]uint64{
+var exponentialConstants = [%d]uint64{
 `, size)
 
 	for pos, value := range thresholds {
@@ -202,7 +202,7 @@ var ExponentialConstants = [%d]uint64{
 			value,
 			pos,
 			size,
-			math.Float64frombits((uint64(histogram.ExponentBias)<<histogram.MantissaWidth)+value),
+			math.Float64frombits((uint64(mapping.ExponentBias)<<mapping.SignificandWidth)+value),
 		)
 	}
 	fmt.Printf(`}

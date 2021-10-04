@@ -12,15 +12,15 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package histogram_test
+package lookuptable
 
 import (
 	"math/big"
 	"math/rand"
 	"testing"
 
-	histogram "github.com/jmacd/otlp-expo-histo"
 	"github.com/stretchr/testify/assert"
+	"go.opentelemetry.io/contrib/aggregators/histogram/exponential/mapping"
 )
 
 var (
@@ -54,7 +54,7 @@ func ipow(b *big.Int, p int64) *big.Int {
 }
 
 func TestBoundariesAreExact(t *testing.T) {
-	input := histogram.ExponentialConstants
+	input := exponentialConstants
 	size := int64(len(input))
 
 	// Validate 25 random entries.
@@ -70,7 +70,7 @@ func TestBoundariesAreExact(t *testing.T) {
 		compareTo, _ := pow2(52*int(size) + position).Int(nil)
 
 		// Test that the mantissa is unchanged:
-		assert.Equal(t, x, normed.Uint64()&histogram.MantissaMask)
+		assert.Equal(t, x, normed.Uint64()&mapping.SignificandMask)
 
 		// normed^size should be greater or equal to the
 		// inclusive lower bound.  Test is (-1 < cmp())

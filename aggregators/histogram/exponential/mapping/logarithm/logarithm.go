@@ -12,10 +12,12 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package histogram
+package logarithm
 
 import (
 	"math"
+
+	"go.opentelemetry.io/contrib/aggregators/histogram/exponential/mapping"
 )
 
 // LogarithmMapping is a prototype for OTEP 149.  The Go
@@ -25,8 +27,8 @@ import (
 // https://github.com/newrelic-experimental/newrelic-sketch-java/blob/1ce245713603d61ba3a4510f6df930a5479cd3f6/src/main/java/com/newrelic/nrsketch/indexer/LogIndexer.java
 // for the equations used here.  Note there are even more options
 // implemented in that package.
-type LogarithmMapping struct {
-	scale int
+type logarithmMapping struct {
+	scale int32
 
 	// scaleFactor is used and computed as follows:
 	// index = log(value) / log(base)
@@ -42,28 +44,28 @@ type LogarithmMapping struct {
 	scaleFactor float64
 }
 
-var _ Base2HistogramMapper = &LogarithmMapping{}
+var _ mapping.Mapping = &logarithmMapping{}
 
-func NewLogarithmMapping(scale int) *LogarithmMapping {
-	return &LogarithmMapping{
+func NewLogarithmMapping(scale int32) mapping.Mapping {
+	return &logarithmMapping{
 		scale:       scale,
-		scaleFactor: Scalb(math.Log2E, scale),
+		scaleFactor: mapping.Scalb(math.Log2E, scale),
 	}
 }
 
-func (l *LogarithmMapping) MapToIndex(value float64) int64 {
+func (l *logarithmMapping) MapToIndex(value float64) int64 {
 	// Use Floor() to round toward -Inf.
 	return int64(math.Floor(math.Log(value) * l.scaleFactor))
 }
 
-func (l *LogarithmMapping) LowerBoundary(index int64) float64 {
+func (l *logarithmMapping) LowerBoundary(index int64) (float64, error) {
 	// result = base ^ index
 	// = (2^(2^-scale))^index
 	// = 2^(2^-scale * index)
 	// = 2^(index * 2^-scale))
-	return math.Exp2(Scalb(float64(index), -l.scale))
+	return math.Exp2(mapping.Scalb(float64(index), -l.scale)), nil
 }
 
-func (l *LogarithmMapping) UpperBoundary(index int64) float64 {
-	return l.LowerBoundary(index + 1)
+func (l *logarithmMapping) Scale() int32 {
+	return l.scale
 }
