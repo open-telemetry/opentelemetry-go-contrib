@@ -58,7 +58,7 @@ func ctxTest() (context.Context, func(*testing.T, context.Context)) {
 
 func TestSpanFromContextDefaultProvider(t *testing.T) {
 	defer replaceBeego()
-	_, provider := metrictest.NewMeterProvider()
+	provider := metrictest.NewMeterProvider()
 	global.SetMeterProvider(provider)
 	otel.SetTracerProvider(trace.NewNoopTracerProvider())
 
@@ -82,7 +82,7 @@ func TestSpanFromContextDefaultProvider(t *testing.T) {
 
 func TestSpanFromContextCustomProvider(t *testing.T) {
 	defer replaceBeego()
-	_, provider := metrictest.NewMeterProvider()
+	provider := metrictest.NewMeterProvider()
 	ctx, eval := ctxTest()
 	router := beego.NewControllerRegister()
 	router.Get("/hello-with-span", func(ctx *beegoCtx.Context) {
