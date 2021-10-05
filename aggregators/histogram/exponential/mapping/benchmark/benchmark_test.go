@@ -20,19 +20,23 @@ import (
 	"testing"
 
 	"go.opentelemetry.io/contrib/aggregators/histogram/exponential/mapping"
+	"go.opentelemetry.io/contrib/aggregators/histogram/exponential/mapping/exponent"
 	"go.opentelemetry.io/contrib/aggregators/histogram/exponential/mapping/logarithm"
 	"go.opentelemetry.io/contrib/aggregators/histogram/exponential/mapping/lookuptable"
 )
 
-func benchmarkHistogram(b *testing.B, name string, mapper mapping.Mapping, scale int32) {
-	b.Run(fmt.Sprintf("mapping_%s_%d", name, scale), func(b *testing.B) {
+func benchmarkMapping(b *testing.B, name string, mapper mapping.Mapping) {
+	b.Run(fmt.Sprintf("mapping_%s", name), func(b *testing.B) {
 		src := rand.New(rand.NewSource(54979))
 
 		for i := 0; i < b.N; i++ {
 			_ = mapper.MapToIndex(1 + src.Float64())
 		}
 	})
-	b.Run(fmt.Sprintf("boundary_%s_%d", name, scale), func(b *testing.B) {
+}
+
+func benchmarkBoundary(b *testing.B, name string, mapper mapping.Mapping) {
+	b.Run(fmt.Sprintf("boundary_%s", name), func(b *testing.B) {
 		src := rand.New(rand.NewSource(54979))
 
 		for i := 0; i < b.N; i++ {
@@ -41,9 +45,16 @@ func benchmarkHistogram(b *testing.B, name string, mapper mapping.Mapping, scale
 	})
 }
 
-func BenchmarkHistogram(b *testing.B) {
-	for _, scale := range []int32{3, 10} {
-		benchmarkHistogram(b, "lookup", lookuptable.NewLookupTableMapping(scale), scale)
-		benchmarkHistogram(b, "logarithm", logarithm.NewLogarithmMapping(scale), scale)
-	}
+func BenchmarkMapping(b *testing.B) {
+	// None of these have time complexity dependent on scale.
+	benchmarkMapping(b, "lookup", lookuptable.NewLookupTableMapping(10))
+	benchmarkMapping(b, "exponent", exponent.NewExponentMapping(-1))
+	benchmarkMapping(b, "logarithm", logarithm.NewLogarithmMapping(3))
+}
+
+func BenchmarkBoundary(b *testing.B) {
+	// None of these have time complexity dependent on scale.
+	benchmarkBoundary(b, "lookup", lookuptable.NewLookupTableMapping(10))
+	benchmarkBoundary(b, "exponent", exponent.NewExponentMapping(-1))
+	benchmarkBoundary(b, "logarithm", logarithm.NewLogarithmMapping(3))
 }

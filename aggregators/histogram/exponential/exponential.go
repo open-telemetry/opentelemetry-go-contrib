@@ -24,6 +24,9 @@ import (
 	export "go.opentelemetry.io/otel/sdk/export/metric"
 	"go.opentelemetry.io/otel/sdk/export/metric/aggregation"
 	"go.opentelemetry.io/otel/sdk/metric/aggregator"
+	"go.opentelemetry.io/contrib/aggregators/histogram/exponential/mapping"
+	"go.opentelemetry.io/contrib/aggregators/histogram/exponential/mapping/exponent"
+	"go.opentelemetry.io/contrib/aggregators/histogram/exponential/mapping/logarithm"
 )
 
 // Note: This code uses a Mutex to govern access to the exclusive
@@ -80,7 +83,7 @@ type (
 		zeroCount uint64
 		positive  buckets
 		negative  buckets
-		mapping   Mapping
+		mapping   mapping.Mapping
 	}
 
 	buckets struct {
@@ -94,7 +97,7 @@ type (
 var _ export.Aggregator = &Aggregator{}
 var _ aggregation.Sum = &Aggregator{}
 var _ aggregation.Count = &Aggregator{}
-var _ aggregation.ExponentialHistogram = &Aggregator{}
+// var _ aggregation.ExponentialHistogram = &Aggregator{}
 
 // WithMaxSize sets the maximimum number of buckets.
 func WithMaxSize(size int32) Option {
@@ -136,7 +139,8 @@ func (a *Aggregator) Aggregation() aggregation.Aggregation {
 
 // Kind returns aggregation.ExponentialHistogramKind.
 func (c *Aggregator) Kind() aggregation.Kind {
-	return aggregation.ExponentialHistogramKind
+	// return aggregation.ExponentialHistogramKind
+	return aggregation.HistogramKind
 }
 
 // SynchronizedMove implements export.Aggregator.
@@ -232,15 +236,15 @@ func (a *Aggregator) ZeroCount() uint64 {
 	return a.state.zeroCount
 }
 
-// Positive implements aggregation.ExponentialHistogram.
-func (a *Aggregator) Positive() aggregation.ExponentialBuckets {
-	return &a.state.positive
-}
+// // Positive implements aggregation.ExponentialHistogram.
+// func (a *Aggregator) Positive() aggregation.ExponentialBuckets {
+// 	return &a.state.positive
+// }
 
-// Negatiev implements aggregation.ExponentialHistogram.
-func (a *Aggregator) Negative() aggregation.ExponentialBuckets {
-	return &a.state.negative
-}
+// // Negatiev implements aggregation.ExponentialHistogram.
+// func (a *Aggregator) Negative() aggregation.ExponentialBuckets {
+// 	return &a.state.negative
+// }
 
 // Offset implements aggregation.ExponentialBucket.
 func (b *buckets) Offset() int32 {
@@ -311,6 +315,13 @@ func (b *buckets) clearState() {
 	}
 }
 
+func newMapping(scale int32) mapping.Mapping {
+	if scale <= 0 {
+		return exponent.NewExponentMapping(scale)
+	}
+	return logarithm.NewLogarithmMapping(scale)
+}
+
 // initialize enters the first value into a histogram and sets its
 // ideal scale.
 func (a *Aggregator) initialize(b *buckets, value float64) {
@@ -334,7 +345,7 @@ func (a *Aggregator) initialize(b *buckets, value float64) {
 // the default scale is ideal for normalized range [1,2) and a
 // non-zero exponent degrades scale in either direction from zero.
 func idealScale(value float64) int32 {
-	exponent := getExponent(value)
+	exponent := mapping.GetExponent(value)
 
 	scale := DefaultNormalScale
 	if exponent > 0 {
@@ -623,12 +634,12 @@ func (b *buckets) incrementBucket(bucketIndex int32, incr uint64) {
 // mergeBuckets translates index values from another histogram into
 // the corresponding buckets of this histogram.
 func (a *Aggregator) mergeBuckets(mine *buckets, other *Aggregator, theirs *buckets) {
-	scaleDiff := a.state.mapping.Scale() - other.state.mapping.Scale()
+	// scaleDiff := a.state.mapping.Scale() - other.state.mapping.Scale()
 
-	theirOffset := theirs.Offset()
-	for i := uint32(0); i < theirs.Len(); i++ {
-		// @@@
-		low, high, success := a.incrementIndexBy(mine, int64(theirOffset)<<scaleDiff, theirs.At(i))
-		theirOffset++
-	}
+	// theirOffset := theirs.Offset()
+	// for i := uint32(0); i < theirs.Len(); i++ {
+	// 	// @@@
+	// 	// low, high, success := a.incrementIndexBy(mine, int64(theirOffset)<<scaleDiff, theirs.At(i))
+	// 	theirOffset++
+	// }
 }

@@ -30,7 +30,12 @@ func testCompatibility(t *testing.T, histoScale, testScale int32) {
 	t.Run(fmt.Sprintf("compat_%d_%d", histoScale, testScale), func(t *testing.T) {
 		const trials = 1e5
 
-		ltm := lookuptable.NewLookupTableMapping(histoScale)
+		var ltm mappinbg.Mapping
+		if histoScale > 0 {
+			ltm = lookuptable.NewLookupTableMapping(histoScale)
+		} else {
+			ltm = exponent.NewExponentMapping(histoScale)
+		}
 		lgm := logarithm.NewLogarithmMapping(histoScale)
 
 		for i := 0; i < trials; i++ {
@@ -54,8 +59,16 @@ func testCompatibility(t *testing.T, histoScale, testScale int32) {
 	})
 }
 
-func TestCompat0(t *testing.T) {
+func TestCompatLookupTableMapping(t *testing.T) {
 	for scale := int32(3); scale <= 10; scale++ {
+		for tscale := int32(-1); tscale <= 1; tscale++ {
+			testCompatibility(t, scale, tscale)
+		}
+	}
+}
+
+func TestCompatExponentMapping(t *testing.T) {
+	for scale := int32(0); scale >= -4; scale-- {
 		for tscale := int32(-1); tscale <= 1; tscale++ {
 			testCompatibility(t, scale, tscale)
 		}

@@ -24,14 +24,20 @@ import (
 // exponentMapping is used for negative scales, effectively a
 // mapping of the base-2 logarithm of the exponent.
 type exponentMapping struct {
-	scale int32
+	scale          int32
+	underflowIndex int32
+	overflowIndex  int32
 }
 
 func NewExponentMapping(scale int32) mapping.Mapping {
 	if scale > 0 {
 		panic("requires scale <= 0")
 	}
-	return exponentMapping{scale}
+	return exponentMapping{
+		scale:          scale,
+		underflowIndex: (mapping.MinSubnormalExponent - 1) >> -scale,
+		overflowIndex:  (mapping.MaxNormalExponent + 1) >> -scale,
+	}
 }
 
 func (e exponentMapping) MapToIndex(value float64) int64 {
@@ -49,19 +55,21 @@ var ErrUnderflow = fmt.Errorf("underflow")
 var ErrOverflow = fmt.Errorf("overflow")
 
 func (e exponentMapping) LowerBoundary(index int64) (float64, error) {
+	if index <= int64(e.underflowIndex) {
+		return 0, ErrUnderflow
+	}
+	if index >= int64(e.overflowIndex) {
+		return 0, ErrOverflow
+	}
+
 	unbiased := int64(index << -e.scale)
 
 	var bits uint64
 
 	if unbiased < int64(mapping.MinNormalExponent) {
 		diff := mapping.MinNormalExponent - int32(unbiased)
-		if diff > mapping.SignificandWidth {
-			return 0, ErrUnderflow
-		}
-		// the encoded exponent is zero
-		bits = uint64(1) << (mapping.SignificandWidth - diff)
-	} else if unbiased > int64(mapping.MaxNormalExponent) {
-		return 0, ErrOverflow
+		shift := mapping.SignificandWidth - diff
+		bits = uint64(1) << shift
 	} else {
 		exponent := unbiased + mapping.ExponentBias
 		bits = uint64(exponent << mapping.SignificandWidth)
