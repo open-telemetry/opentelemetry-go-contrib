@@ -128,7 +128,7 @@ func InstallNewPipeline(config Config, options ...controller.Option) (*controlle
 // ConvertToTimeSeries converts a InstrumentationLibraryReader to a slice of TimeSeries pointers
 // Based on the aggregation type, ConvertToTimeSeries will call helper functions like
 // convertFromSum to generate the correct number of TimeSeries.
-func (e *Exporter) ConvertToTimeSeries(res *resource.Resource, checkpointSet export.InstrumentationLibraryReader) ([]*prompb.TimeSeries, error) {
+func (e *Exporter) ConvertToTimeSeries(res *resource.Resource, checkpointSet export.InstrumentationLibraryReader) ([]prompb.TimeSeries, error) {
 	var aggError error
 	var timeSeries []prompb.TimeSeries
 
