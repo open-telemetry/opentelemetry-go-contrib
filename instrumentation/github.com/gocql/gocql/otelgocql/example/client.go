@@ -118,8 +118,8 @@ func main() {
 
 func initMetrics() {
 	// Start prometheus
-	pusher := controller.New(
-		processor.New(
+	cont := controller.New(
+		processor.NewFactory(
 			simple.NewWithHistogramDistribution(
 				histogram.WithExplicitBoundaries([]float64{0.001, 0.01, 0.1, 0.5, 1, 2, 5, 10}),
 			),
@@ -127,7 +127,7 @@ func initMetrics() {
 			processor.WithMemory(true),
 		),
 	)
-	metricExporter, err := prometheus.New(prometheus.Config{}, pusher)
+	metricExporter, err := prometheus.New(prometheus.Config{}, cont)
 	if err != nil {
 		log.Fatalf("failed to install metric exporter, %v", err)
 	}
@@ -151,7 +151,7 @@ func initMetrics() {
 		} else {
 			log.Print("gracefully shutting down server")
 		}
-		err := pusher.Stop(context.Background())
+		err := cont.Stop(context.Background())
 		if err != nil {
 			log.Printf("error stopping metric controller: %s", err)
 		}

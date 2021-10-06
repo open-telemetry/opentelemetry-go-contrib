@@ -87,36 +87,35 @@ func TestConvertToTimeSeries(t *testing.T) {
 	}
 
 	startTime := time.Now()
-
 	// Test conversions based on aggregation type
 	tests := []struct {
 		name       string
-		input      export.CheckpointSet
+		input      export.InstrumentationLibraryReader
 		want       []*prompb.TimeSeries
 		wantLength int
 	}{
 		{
 			name:       "convertFromSum",
-			input:      getSumCheckpoint(t, 1, 2, 3, 4, 5),
-			want:       wantSumCheckpointSet,
+			input:      getSumReader(t, 1, 2, 3, 4, 5),
+			want:       wantSumTimeSeries,
 			wantLength: 1,
 		},
 		{
 			name:       "convertFromLastValue",
-			input:      getLastValueCheckpoint(t, 1, 2, 3, 4, 5),
-			want:       wantLastValueCheckpointSet,
+			input:      getLastValueReader(t, 1, 2, 3, 4, 5),
+			want:       wantLastValueTimeSeries,
 			wantLength: 1,
 		},
 		{
 			name:       "convertFromMinMaxSumCount",
-			input:      getMMSCCheckpoint(t, 123.456, 876.543),
-			want:       wantMMSCCheckpointSet,
+			input:      getMMSCReader(t, 123.456, 876.543),
+			want:       wantMMSCTimeSeries,
 			wantLength: 4,
 		},
 		{
 			name:       "convertFromHistogram",
-			input:      getHistogramCheckpoint(t),
-			want:       wantHistogramCheckpointSet,
+			input:      getHistogramReader(t),
+			want:       wantHistogramTimeSeries,
 			wantLength: 6,
 		},
 	}
@@ -191,11 +190,11 @@ func TestNewExportPipeline(t *testing.T) {
 // TestInstallNewPipeline checks whether InstallNewPipeline successfully returns a push
 // Controller and whether that controller's MeterProvider is registered globally.
 func TestInstallNewPipeline(t *testing.T) {
-	pusher, err := InstallNewPipeline(validConfig)
+	cont, err := InstallNewPipeline(validConfig)
 	if err != nil {
 		t.Fatalf("Failed to create install pipeline with error %v", err)
 	}
-	if global.GetMeterProvider() != pusher.MeterProvider() {
+	if global.GetMeterProvider() != cont {
 		t.Fatalf("Failed to register push Controller provider globally")
 	}
 }

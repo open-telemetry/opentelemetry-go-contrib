@@ -20,10 +20,10 @@ import (
 	"os"
 	"sync"
 
-	"github.com/shirou/gopsutil/cpu"
-	"github.com/shirou/gopsutil/mem"
-	"github.com/shirou/gopsutil/net"
-	"github.com/shirou/gopsutil/process"
+	"github.com/shirou/gopsutil/v3/cpu"
+	"github.com/shirou/gopsutil/v3/mem"
+	"github.com/shirou/gopsutil/v3/net"
+	"github.com/shirou/gopsutil/v3/process"
 
 	"go.opentelemetry.io/otel"
 	"go.opentelemetry.io/otel/attribute"
@@ -116,13 +116,13 @@ func (h *host) register() error {
 	var (
 		err error
 
-		processCPUTime metric.Float64UpDownCounterObserver
-		hostCPUTime    metric.Float64UpDownCounterObserver
+		processCPUTime metric.Float64CounterObserver
+		hostCPUTime    metric.Float64CounterObserver
 
-		hostMemoryUsage       metric.Int64UpDownCounterObserver
-		hostMemoryUtilization metric.Float64UpDownCounterObserver
+		hostMemoryUsage       metric.Int64GaugeObserver
+		hostMemoryUtilization metric.Float64GaugeObserver
 
-		networkIOUsage metric.Int64UpDownCounterObserver
+		networkIOUsage metric.Int64CounterObserver
 
 		// lock prevents a race between batch observer and instrument registration.
 		lock sync.Mutex
@@ -228,7 +228,7 @@ func (h *host) register() error {
 	// TODO: .time units are in seconds, but "unit" package does
 	// not include this string.
 	// https://github.com/open-telemetry/opentelemetry-specification/issues/705
-	if processCPUTime, err = batchObserver.NewFloat64UpDownCounterObserver(
+	if processCPUTime, err = batchObserver.NewFloat64CounterObserver(
 		"process.cpu.time",
 		metric.WithUnit("s"),
 		metric.WithDescription(
@@ -238,7 +238,7 @@ func (h *host) register() error {
 		return err
 	}
 
-	if hostCPUTime, err = batchObserver.NewFloat64UpDownCounterObserver(
+	if hostCPUTime, err = batchObserver.NewFloat64CounterObserver(
 		"system.cpu.time",
 		metric.WithUnit("s"),
 		metric.WithDescription(
@@ -248,17 +248,17 @@ func (h *host) register() error {
 		return err
 	}
 
-	if hostMemoryUsage, err = batchObserver.NewInt64UpDownCounterObserver(
+	if hostMemoryUsage, err = batchObserver.NewInt64GaugeObserver(
 		"system.memory.usage",
 		metric.WithUnit(unit.Bytes),
 		metric.WithDescription(
-			"Memory usage of this process attributeed by memory state (Used, Available)",
+			"Memory usage of this process attributed by memory state (Used, Available)",
 		),
 	); err != nil {
 		return err
 	}
 
-	if hostMemoryUtilization, err = batchObserver.NewFloat64UpDownCounterObserver(
+	if hostMemoryUtilization, err = batchObserver.NewFloat64GaugeObserver(
 		"system.memory.utilization",
 		metric.WithUnit(unit.Dimensionless),
 		metric.WithDescription(
@@ -268,7 +268,7 @@ func (h *host) register() error {
 		return err
 	}
 
-	if networkIOUsage, err = batchObserver.NewInt64UpDownCounterObserver(
+	if networkIOUsage, err = batchObserver.NewInt64CounterObserver(
 		"system.network.io",
 		metric.WithUnit(unit.Bytes),
 		metric.WithDescription(

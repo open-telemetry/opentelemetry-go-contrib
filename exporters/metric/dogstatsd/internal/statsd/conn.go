@@ -32,6 +32,7 @@ import (
 	"go.opentelemetry.io/otel/metric/unit"
 	export "go.opentelemetry.io/otel/sdk/export/metric"
 	"go.opentelemetry.io/otel/sdk/export/metric/aggregation"
+	"go.opentelemetry.io/otel/sdk/instrumentation"
 	"go.opentelemetry.io/otel/sdk/resource"
 )
 
@@ -170,49 +171,53 @@ func (e *Exporter) ExportKindFor(*metric.Descriptor, aggregation.Kind) export.Ex
 }
 
 // Export is common code for any statsd-based metric.Exporter implementation.
-func (e *Exporter) Export(_ context.Context, res *resource.Resource, checkpointSet export.CheckpointSet) error {
+func (e *Exporter) Export(_ context.Context, res *resource.Resource, ilReader export.InstrumentationLibraryReader) error {
 	buf := &e.buffer
 	buf.Reset()
 
 	var aggErr error
 	var sendErr error
 
-	aggErr = checkpointSet.ForEach(e, func(rec export.Record) error {
-		pts, err := e.countPoints(rec)
-		if err != nil {
-			return err
-		}
-		for pt := 0; pt < pts; pt++ {
-			before := buf.Len()
-
-			if err := e.formatMetric(rec, res, pt, buf); err != nil {
+	// Note: Instrumentation library/version/schema_url is not exported.
+	// Is there a specification for this?
+	aggErr = ilReader.ForEach(func(_ instrumentation.Library, reader export.Reader) error {
+		return reader.ForEach(e, func(rec export.Record) error {
+			pts, err := e.countPoints(rec)
+			if err != nil {
 				return err
 			}
+			for pt := 0; pt < pts; pt++ {
+				before := buf.Len()
 
-			if buf.Len() < e.config.MaxPacketSize {
-				continue
-			}
-			if before == 0 {
-				// A single metric >= packet size
-				if err := e.send(buf.Bytes()); err != nil && sendErr == nil {
+				if err := e.formatMetric(rec, res, pt, buf); err != nil {
+					return err
+				}
+
+				if buf.Len() < e.config.MaxPacketSize {
+					continue
+				}
+				if before == 0 {
+					// A single metric >= packet size
+					if err := e.send(buf.Bytes()); err != nil && sendErr == nil {
+						sendErr = err
+					}
+					buf.Reset()
+					continue
+				}
+
+				// Send and copy the leftover
+				if err := e.send(buf.Bytes()[:before]); err != nil && sendErr == nil {
 					sendErr = err
 				}
-				buf.Reset()
-				continue
+
+				leftover := buf.Len() - before
+
+				copy(buf.Bytes()[0:leftover], buf.Bytes()[before:])
+
+				buf.Truncate(leftover)
 			}
-
-			// Send and copy the leftover
-			if err := e.send(buf.Bytes()[:before]); err != nil && sendErr == nil {
-				sendErr = err
-			}
-
-			leftover := buf.Len() - before
-
-			copy(buf.Bytes()[0:leftover], buf.Bytes()[before:])
-
-			buf.Truncate(leftover)
-		}
-		return nil
+			return nil
+		})
 	})
 	if err := e.send(buf.Bytes()); err != nil && sendErr == nil {
 		sendErr = err

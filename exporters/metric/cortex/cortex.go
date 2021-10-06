@@ -33,6 +33,7 @@ import (
 	"go.opentelemetry.io/otel/sdk/export/metric"
 	export "go.opentelemetry.io/otel/sdk/export/metric"
 	"go.opentelemetry.io/otel/sdk/export/metric/aggregation"
+	"go.opentelemetry.io/otel/sdk/instrumentation"
 	"go.opentelemetry.io/otel/sdk/metric/aggregator/histogram"
 	controller "go.opentelemetry.io/otel/sdk/metric/controller/basic"
 	processor "go.opentelemetry.io/otel/sdk/metric/processor/basic"
@@ -57,7 +58,7 @@ func (e *Exporter) ExportKindFor(*apimetric.Descriptor, aggregation.Kind) metric
 }
 
 // Export forwards metrics to Cortex from the SDK
-func (e *Exporter) Export(_ context.Context, res *resource.Resource, checkpointSet metric.CheckpointSet) error {
+func (e *Exporter) Export(_ context.Context, res *resource.Resource, checkpointSet metric.InstrumentationLibraryReader) error {
 	timeseries, err := e.ConvertToTimeSeries(res, checkpointSet)
 	if err != nil {
 		return err
@@ -101,8 +102,8 @@ func NewExportPipeline(config Config, options ...controller.Option) (*controller
 		return nil, err
 	}
 
-	pusher := controller.New(
-		processor.New(
+	cont := controller.New(
+		processor.NewFactory(
 			simple.NewWithHistogramDistribution(
 				histogram.WithExplicitBoundaries(config.HistogramBoundaries),
 			),
@@ -111,72 +112,74 @@ func NewExportPipeline(config Config, options ...controller.Option) (*controller
 		append(options, controller.WithExporter(exporter))...,
 	)
 
-	return pusher, pusher.Start(context.TODO())
+	return cont, cont.Start(context.TODO())
 }
 
 // InstallNewPipeline registers a push Controller's MeterProvider globally.
 func InstallNewPipeline(config Config, options ...controller.Option) (*controller.Controller, error) {
-	pusher, err := NewExportPipeline(config, options...)
+	cont, err := NewExportPipeline(config, options...)
 	if err != nil {
 		return nil, err
 	}
-	global.SetMeterProvider(pusher.MeterProvider())
-	return pusher, nil
+	global.SetMeterProvider(cont)
+	return cont, nil
 }
 
-// ConvertToTimeSeries converts a CheckpointSet to a slice of TimeSeries pointers
+// ConvertToTimeSeries converts a InstrumentationLibraryReader to a slice of TimeSeries pointers
 // Based on the aggregation type, ConvertToTimeSeries will call helper functions like
 // convertFromSum to generate the correct number of TimeSeries.
-func (e *Exporter) ConvertToTimeSeries(res *resource.Resource, checkpointSet export.CheckpointSet) ([]prompb.TimeSeries, error) {
+func (e *Exporter) ConvertToTimeSeries(res *resource.Resource, checkpointSet export.InstrumentationLibraryReader) ([]*prompb.TimeSeries, error) {
 	var aggError error
 	var timeSeries []prompb.TimeSeries
 
 	// Iterate over each record in the checkpoint set and convert to TimeSeries
-	aggError = checkpointSet.ForEach(e, func(record metric.Record) error {
-		// Convert based on aggregation type
-		edata := exportData{
-			Resource: res,
-			Record:   record,
-		}
-		agg := record.Aggregation()
+	aggError = checkpointSet.ForEach(func(library instrumentation.Library, reader export.Reader) error {
+		return reader.ForEach(e, func(record metric.Record) error {
+			// Convert based on aggregation type
+			edata := exportData{
+				Resource: res,
+				Record:   record,
+			}
+			agg := record.Aggregation()
 
-		// The following section uses loose type checking to determine how to
-		// convert aggregations to timeseries. More "expensive" timeseries are
-		// checked first.
-		//
-		// See the Aggregator Kind for more information
-		// https://github.com/open-telemetry/opentelemetry-go/blob/main/sdk/export/metric/aggregation/aggregation.go#L123-L138
-		if histogram, ok := agg.(aggregation.Histogram); ok {
-			tSeries, err := convertFromHistogram(edata, histogram)
-			if err != nil {
-				return err
-			}
-			timeSeries = append(timeSeries, tSeries...)
-		} else if sum, ok := agg.(aggregation.Sum); ok {
-			tSeries, err := convertFromSum(edata, sum)
-			if err != nil {
-				return err
-			}
-			timeSeries = append(timeSeries, tSeries)
-			if minMaxSumCount, ok := agg.(aggregation.MinMaxSumCount); ok {
-				tSeries, err := convertFromMinMaxSumCount(edata, minMaxSumCount)
+			// The following section uses loose type checking to determine how to
+			// convert aggregations to timeseries. More "expensive" timeseries are
+			// checked first.
+			//
+			// See the Aggregator Kind for more information
+			// https://github.com/open-telemetry/opentelemetry-go/blob/main/sdk/export/metric/aggregation/aggregation.go#L123-L138
+			if histogram, ok := agg.(aggregation.Histogram); ok {
+				tSeries, err := convertFromHistogram(edata, histogram)
 				if err != nil {
 					return err
 				}
 				timeSeries = append(timeSeries, tSeries...)
+			} else if sum, ok := agg.(aggregation.Sum); ok {
+				tSeries, err := convertFromSum(edata, sum)
+				if err != nil {
+					return err
+				}
+				timeSeries = append(timeSeries, tSeries)
+				if minMaxSumCount, ok := agg.(aggregation.MinMaxSumCount); ok {
+					tSeries, err := convertFromMinMaxSumCount(edata, minMaxSumCount)
+					if err != nil {
+						return err
+					}
+					timeSeries = append(timeSeries, tSeries...)
+				}
+			} else if lastValue, ok := agg.(aggregation.LastValue); ok {
+				tSeries, err := convertFromLastValue(edata, lastValue)
+				if err != nil {
+					return err
+				}
+				timeSeries = append(timeSeries, tSeries)
+			} else {
+				// Report to the user when no conversion was found
+				fmt.Printf("No conversion found for record: %s\n", edata.Descriptor().Name())
 			}
-		} else if lastValue, ok := agg.(aggregation.LastValue); ok {
-			tSeries, err := convertFromLastValue(edata, lastValue)
-			if err != nil {
-				return err
-			}
-			timeSeries = append(timeSeries, tSeries)
-		} else {
-			// Report to the user when no conversion was found
-			fmt.Printf("No conversion found for record: %s\n", edata.Descriptor().Name())
-		}
 
-		return nil
+			return nil
+		})
 	})
 
 	// Check if error was returned in checkpointSet.ForEach()

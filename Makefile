@@ -37,6 +37,11 @@ $(TOOLS_DIR)/stringer: $(TOOLS_MOD_DIR)/go.mod $(TOOLS_MOD_DIR)/go.sum $(TOOLS_M
 	cd $(TOOLS_MOD_DIR) && \
 	go build -o $(TOOLS_DIR)/stringer golang.org/x/tools/cmd/stringer
 
+MULTIMOD=$(TOOLS_DIR)/multimod
+$(TOOLS_DIR)/multimod: $(TOOLS_MOD_DIR)/go.mod $(TOOLS_MOD_DIR)/go.sum $(TOOLS_MOD_DIR)/tools.go
+	cd $(TOOLS_MOD_DIR) && \
+	go build -o $(TOOLS_DIR)/multimod go.opentelemetry.io/build-tools/multimod
+
 precommit: dependabot-check license-check generate lint build test
 
 .PHONY: test-with-coverage
@@ -200,3 +205,21 @@ dependabot-check:
 		echo "missing go.mod dependabot check:"; echo "$$result"; \
 		exit 1; \
 	fi
+
+COREPATH ?= "../opentelemetry-go"
+.PHONY: sync-core
+sync-core: | $(MULTIMOD)
+	@[ ! -d $COREPATH ] || ( echo ">> Path to core repository must be set in COREPATH and must exist"; exit 1 )
+	$(MULTIMOD) verify && $(MULTIMOD) sync -a -o ${COREPATH}
+
+
+.PHONY: prerelease
+prerelease: | $(MULTIMOD)
+	@[ "${MODSET}" ] || ( echo ">> env var MODSET is not set"; exit 1 )
+	$(MULTIMOD) verify && $(MULTIMOD) prerelease -m ${MODSET}
+
+COMMIT ?= "HEAD"
+.PHONY: add-tags
+add-tags: | $(MULTIMOD)
+	@[ "${MODSET}" ] || ( echo ">> env var MODSET is not set"; exit 1 )
+	$(MULTIMOD) verify && $(MULTIMOD) tag -m ${MODSET} -c ${COMMIT}

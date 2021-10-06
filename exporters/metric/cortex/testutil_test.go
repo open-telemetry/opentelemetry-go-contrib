@@ -73,20 +73,20 @@ func (testAggregatorSelector) AggregatorFor(desc *metric.Descriptor, aggPtrs ...
 	}
 }
 
-func testMeter(t *testing.T) (context.Context, metric.Meter, *processor.Processor, *controller.Controller) {
+func testMeter(t *testing.T) (context.Context, metric.Meter, *controller.Controller) {
 	aggSel := testAggregatorSelector{}
-	proc := processor.New(aggSel, export.CumulativeExportKindSelector())
+	proc := processor.NewFactory(aggSel, export.CumulativeExportKindSelector())
 	cont := controller.New(proc,
 		controller.WithResource(testResource),
 	)
 	ctx := context.Background()
 
-	return ctx, cont.MeterProvider().Meter("test"), proc, cont
+	return ctx, cont.Meter("test"), cont
 }
 
-// getSumCheckpoint returns a checkpoint set with a sum aggregation record
-func getSumCheckpoint(t *testing.T, values ...int64) export.CheckpointSet {
-	ctx, meter, proc, cont := testMeter(t)
+// getSumReader returns a checkpoint set with a sum aggregation record
+func getSumReader(t *testing.T, values ...int64) export.InstrumentationLibraryReader {
+	ctx, meter, cont := testMeter(t)
 	counter := metric.Must(meter).NewInt64Counter("metric_sum")
 
 	for _, value := range values {
@@ -95,12 +95,12 @@ func getSumCheckpoint(t *testing.T, values ...int64) export.CheckpointSet {
 
 	require.NoError(t, cont.Collect(ctx))
 
-	return proc.CheckpointSet()
+	return cont
 }
 
-// getLastValueCheckpoint returns a checkpoint set with a last value aggregation record
-func getLastValueCheckpoint(t *testing.T, values ...int64) export.CheckpointSet {
-	ctx, meter, proc, cont := testMeter(t)
+// getLastValueReader returns a checkpoint set with a last value aggregation record
+func getLastValueReader(t *testing.T, values ...int64) export.InstrumentationLibraryReader {
+	ctx, meter, cont := testMeter(t)
 
 	_ = metric.Must(meter).NewInt64GaugeObserver("metric_lastvalue", func(ctx context.Context, res metric.Int64ObserverResult) {
 		for _, value := range values {
@@ -110,12 +110,12 @@ func getLastValueCheckpoint(t *testing.T, values ...int64) export.CheckpointSet 
 
 	require.NoError(t, cont.Collect(ctx))
 
-	return proc.CheckpointSet()
+	return cont
 }
 
-// getMMSCCheckpoint returns a checkpoint set with a minmaxsumcount aggregation record
-func getMMSCCheckpoint(t *testing.T, values ...float64) export.CheckpointSet {
-	ctx, meter, proc, cont := testMeter(t)
+// getMMSCReader returns a checkpoint set with a minmaxsumcount aggregation record
+func getMMSCReader(t *testing.T, values ...float64) export.InstrumentationLibraryReader {
+	ctx, meter, cont := testMeter(t)
 
 	histo := metric.Must(meter).NewFloat64Histogram("metric_mmsc")
 
@@ -125,12 +125,12 @@ func getMMSCCheckpoint(t *testing.T, values ...float64) export.CheckpointSet {
 
 	require.NoError(t, cont.Collect(ctx))
 
-	return proc.CheckpointSet()
+	return cont
 }
 
-// getHistogramCheckpoint returns a checkpoint set with a histogram aggregation record
-func getHistogramCheckpoint(t *testing.T) export.CheckpointSet {
-	ctx, meter, proc, cont := testMeter(t)
+// getHistogramReader returns a checkpoint set with a histogram aggregation record
+func getHistogramReader(t *testing.T) export.InstrumentationLibraryReader {
+	ctx, meter, cont := testMeter(t)
 
 	// Uses default boundaries
 	histo := metric.Must(meter).NewFloat64Histogram("metric_histogram")
@@ -141,12 +141,12 @@ func getHistogramCheckpoint(t *testing.T) export.CheckpointSet {
 
 	require.NoError(t, cont.Collect(ctx))
 
-	return proc.CheckpointSet()
+	return cont
 }
 
 // The following variables hold expected TimeSeries values to be used in
 // ConvertToTimeSeries tests.
-var wantSumCheckpointSet = []*prompb.TimeSeries{
+var wantSumTimeSeries = []*prompb.TimeSeries{
 	{
 		Labels: []prompb.Label{
 			{
@@ -165,7 +165,7 @@ var wantSumCheckpointSet = []*prompb.TimeSeries{
 	},
 }
 
-var wantLastValueCheckpointSet = []*prompb.TimeSeries{
+var wantLastValueTimeSeries = []*prompb.TimeSeries{
 	{
 		Labels: []prompb.Label{
 			{
@@ -184,7 +184,7 @@ var wantLastValueCheckpointSet = []*prompb.TimeSeries{
 	},
 }
 
-var wantMMSCCheckpointSet = []*prompb.TimeSeries{
+var wantMMSCTimeSeries = []*prompb.TimeSeries{
 	{
 		Labels: []prompb.Label{
 			{
@@ -251,7 +251,7 @@ var wantMMSCCheckpointSet = []*prompb.TimeSeries{
 	},
 }
 
-var wantHistogramCheckpointSet = []*prompb.TimeSeries{
+var wantHistogramTimeSeries = []*prompb.TimeSeries{
 	{
 		Labels: []prompb.Label{
 			{
