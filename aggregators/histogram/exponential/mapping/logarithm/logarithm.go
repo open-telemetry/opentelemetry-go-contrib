@@ -46,7 +46,7 @@ type logarithmMapping struct {
 
 var _ mapping.Mapping = &logarithmMapping{}
 
-func NewLogarithmMapping(scale int32) mapping.Mapping {
+func NewMapping(scale int32) mapping.Mapping {
 	return &logarithmMapping{
 		scale:       scale,
 		scaleFactor: mapping.Scalb(math.Log2E, scale),

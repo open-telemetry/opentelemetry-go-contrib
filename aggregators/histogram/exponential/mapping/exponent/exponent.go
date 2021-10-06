@@ -29,7 +29,7 @@ type exponentMapping struct {
 	overflowIndex  int32
 }
 
-func NewExponentMapping(scale int32) mapping.Mapping {
+func NewMapping(scale int32) mapping.Mapping {
 	if scale > 0 {
 		panic("requires scale <= 0")
 	}

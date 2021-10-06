@@ -39,7 +39,7 @@ type lookupTableMapping struct {
 
 var _ mapping.Mapping = &lookupTableMapping{}
 
-func NewLookupTableMapping(scale int32) mapping.Mapping {
+func NewMapping(scale int32) mapping.Mapping {
 	if scale < 0 {
 		// TODO: This logic does not work at negative scale
 		// factors.  No calculated arrays are needed for

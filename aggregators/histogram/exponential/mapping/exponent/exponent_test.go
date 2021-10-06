@@ -38,7 +38,7 @@ const (
 )
 
 func TestExponentMappingZero(t *testing.T) {
-	m := NewExponentMapping(0)
+	m := NewMapping(0)
 
 	for _, pair := range []expectMapping{
 		{4, 2},
@@ -55,7 +55,7 @@ func TestExponentMappingZero(t *testing.T) {
 }
 
 func TestExponentMappingNegOne(t *testing.T) {
-	m := NewExponentMapping(-1)
+	m := NewMapping(-1)
 
 	for _, pair := range []expectMapping{
 		{16, 2},
@@ -83,7 +83,7 @@ func TestExponentMappingNegOne(t *testing.T) {
 }
 
 func TestExponentMappingNegFour(t *testing.T) {
-	m := NewExponentMapping(-4)
+	m := NewMapping(-4)
 
 	for _, pair := range []expectMapping{
 		{float64(0x1), 0},
@@ -227,7 +227,7 @@ func TestExponentMappingInvalid(t *testing.T) {
 		{-1, -1e6},
 	} {
 		t.Run(fmt.Sprintf("%v_%d", pair.scale, pair.index), func(t *testing.T) {
-			m := NewExponentMapping(pair.scale)
+			m := NewMapping(pair.scale)
 			_, err := m.LowerBoundary(pair.index)
 			require.Error(t, err)
 		})

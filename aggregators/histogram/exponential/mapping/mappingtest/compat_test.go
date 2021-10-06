@@ -21,56 +21,54 @@ import (
 
 	"github.com/stretchr/testify/assert"
 	"go.opentelemetry.io/contrib/aggregators/histogram/exponential/mapping"
+	"go.opentelemetry.io/contrib/aggregators/histogram/exponential/mapping/exponent"
 	"go.opentelemetry.io/contrib/aggregators/histogram/exponential/mapping/logarithm"
 	"go.opentelemetry.io/contrib/aggregators/histogram/exponential/mapping/lookuptable"
 )
 
-func testCompatibility(t *testing.T, histoScale, testScale int32) {
+func testCompatibility(t *testing.T, histoScale int32) {
 	src := rand.New(rand.NewSource(54979))
-	t.Run(fmt.Sprintf("compat_%d_%d", histoScale, testScale), func(t *testing.T) {
+	t.Run(fmt.Sprintf("compat_%d", histoScale), func(t *testing.T) {
 		const trials = 1e5
 
-		var ltm mappinbg.Mapping
+		var ltm mapping.Mapping
 		if histoScale > 0 {
-			ltm = lookuptable.NewLookupTableMapping(histoScale)
+			ltm = lookuptable.NewMapping(histoScale)
 		} else {
-			ltm = exponent.NewExponentMapping(histoScale)
+			ltm = exponent.NewMapping(histoScale)
 		}
-		lgm := logarithm.NewLogarithmMapping(histoScale)
+		lgm := logarithm.NewMapping(histoScale)
 
 		for i := 0; i < trials; i++ {
-			v := mapping.Scalb(1+src.Float64(), testScale)
+			// Generate a random normalized number.
+			v := mapping.Scalb(
+				1+src.Float64(),
+				mapping.MinNormalExponent+int32(src.Intn(int(1+mapping.MaxNormalExponent-mapping.MinNormalExponent))))
 
 			lti := ltm.MapToIndex(v)
 			lgi := lgm.MapToIndex(v)
 
 			assert.Equal(t, lti, lgi)
-		}
 
-		size := int64(1) << histoScale
-		additional := int64(testScale) * size
+			ltb, err1 := ltm.LowerBoundary(lti)
+			lgb, err2 := lgm.LowerBoundary(lti)
 
-		for i := int64(0); i < size; i++ {
-			ltb, _ := ltm.LowerBoundary(i + additional)
-			lgb, _ := lgm.LowerBoundary(i + additional)
+			assert.NoError(t, err1)
+			assert.NoError(t, err2)
 
-			assert.InEpsilon(t, ltb, lgb, 0.000001, "hs %v ts %v sz %v add %v index %v ltb %v lgb %v", histoScale, testScale, size, additional, i+additional, ltb, lgb)
+			assert.InEpsilon(t, ltb, lgb, 0.000001)
 		}
 	})
 }
 
 func TestCompatLookupTableMapping(t *testing.T) {
 	for scale := int32(3); scale <= 10; scale++ {
-		for tscale := int32(-1); tscale <= 1; tscale++ {
-			testCompatibility(t, scale, tscale)
-		}
+		testCompatibility(t, scale)
 	}
 }
 
 func TestCompatExponentMapping(t *testing.T) {
 	for scale := int32(0); scale >= -4; scale-- {
-		for tscale := int32(-1); tscale <= 1; tscale++ {
-			testCompatibility(t, scale, tscale)
-		}
+		testCompatibility(t, scale)
 	}
 }

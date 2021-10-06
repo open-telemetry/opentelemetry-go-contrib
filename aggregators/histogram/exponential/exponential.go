@@ -19,14 +19,14 @@ import (
 	"math/bits"
 	"sync"
 
+	"go.opentelemetry.io/contrib/aggregators/histogram/exponential/mapping"
+	"go.opentelemetry.io/contrib/aggregators/histogram/exponential/mapping/exponent"
+	"go.opentelemetry.io/contrib/aggregators/histogram/exponential/mapping/logarithm"
 	"go.opentelemetry.io/otel/metric"
 	"go.opentelemetry.io/otel/metric/number"
 	export "go.opentelemetry.io/otel/sdk/export/metric"
 	"go.opentelemetry.io/otel/sdk/export/metric/aggregation"
 	"go.opentelemetry.io/otel/sdk/metric/aggregator"
-	"go.opentelemetry.io/contrib/aggregators/histogram/exponential/mapping"
-	"go.opentelemetry.io/contrib/aggregators/histogram/exponential/mapping/exponent"
-	"go.opentelemetry.io/contrib/aggregators/histogram/exponential/mapping/logarithm"
 )
 
 // Note: This code uses a Mutex to govern access to the exclusive
@@ -92,12 +92,17 @@ type (
 		indexStart int32
 		indexEnd   int32
 	}
+
+	highLow struct {
+		low  int64
+		high int64
+	}
 )
 
 var _ export.Aggregator = &Aggregator{}
 var _ aggregation.Sum = &Aggregator{}
 var _ aggregation.Count = &Aggregator{}
-// var _ aggregation.ExponentialHistogram = &Aggregator{}
+var _ aggregation.ExponentialHistogram = &Aggregator{}
 
 // WithMaxSize sets the maximimum number of buckets.
 func WithMaxSize(size int32) Option {
@@ -126,7 +131,9 @@ func New(cnt int, desc *metric.Descriptor, opts ...Option) []Aggregator {
 		aggs[i] = Aggregator{
 			kind:    desc.NumberKind(),
 			maxSize: cfg.maxSize,
-			state:   &state{},
+			state: &state{
+				mapping: newMapping(DefaultNormalScale),
+			},
 		}
 	}
 	return aggs
@@ -196,21 +203,25 @@ func (a *Aggregator) Update(_ context.Context, number number.Number, desc *metri
 	return nil
 }
 
-// Merge combines two histograms that have the same buckets into a single one.
-func (a *Aggregator) Merge(oa export.Aggregator, desc *metric.Descriptor) error {
-	o, _ := oa.(*Aggregator)
-	if o == nil {
-		return aggregator.NewInconsistentAggregatorError(a, oa)
+func int32min(a, b int32) int32 {
+	if a < b {
+		return a
 	}
+	return b
+}
 
-	a.state.sum += o.state.sum
-	a.state.count += o.state.count
-	a.state.zeroCount += o.state.zeroCount
+func int64min(a, b int64) int64 {
+	if a < b {
+		return a
+	}
+	return b
+}
 
-	a.mergeBuckets(&a.state.positive, o, &o.state.positive)
-	a.mergeBuckets(&a.state.negative, o, &o.state.negative)
-
-	return nil
+func int64max(a, b int64) int64 {
+	if a > b {
+		return a
+	}
+	return b
 }
 
 // Count implements aggregation.Sum.
@@ -236,15 +247,15 @@ func (a *Aggregator) ZeroCount() uint64 {
 	return a.state.zeroCount
 }
 
-// // Positive implements aggregation.ExponentialHistogram.
-// func (a *Aggregator) Positive() aggregation.ExponentialBuckets {
-// 	return &a.state.positive
-// }
+// Positive implements aggregation.ExponentialHistogram.
+func (a *Aggregator) Positive() aggregation.ExponentialBuckets {
+	return &a.state.positive
+}
 
-// // Negatiev implements aggregation.ExponentialHistogram.
-// func (a *Aggregator) Negative() aggregation.ExponentialBuckets {
-// 	return &a.state.negative
-// }
+// Negative implements aggregation.ExponentialHistogram.
+func (a *Aggregator) Negative() aggregation.ExponentialBuckets {
+	return &a.state.negative
+}
 
 // Offset implements aggregation.ExponentialBucket.
 func (b *buckets) Offset() int32 {
@@ -317,9 +328,9 @@ func (b *buckets) clearState() {
 
 func newMapping(scale int32) mapping.Mapping {
 	if scale <= 0 {
-		return exponent.NewExponentMapping(scale)
+		return exponent.NewMapping(scale)
 	}
-	return logarithm.NewLogarithmMapping(scale)
+	return logarithm.NewMapping(scale)
 }
 
 // initialize enters the first value into a histogram and sets its
@@ -356,6 +367,42 @@ func idealScale(value float64) int32 {
 	return scale
 }
 
+func (a *Aggregator) downscale(change int32) {
+	newScale := a.state.mapping.Scale() - change
+
+	a.state.positive.downscale(change)
+	a.state.negative.downscale(change)
+	a.state.mapping = newMapping(newScale)
+}
+
+// changeScale computes the required change of scale.
+//
+// sizeReq = (high-low+1) is the minimum size needed to fit the new
+// index at the current scale, i.e., the distance to the more-distant
+// extreme inclusive bucket.  We have that:
+//
+//   sizeReq >= maxSize
+//
+// Compute the shift equal to the number of times sizeReq must be
+// divided by two before sizeReq < maxSize.
+//
+// Note: this can be computed in a conservative way w/o use of a loop,
+// e.g.,
+//
+//   shift := 64-bits.LeadingZeros64((high-low+1)/int64(a.maxSize))
+//
+// however this under-counts by 1 some of the time depending on
+// alignment.
+func (a *Aggregator) changeScale(hl highLow) int32 {
+	var change int32
+	for hl.high-hl.low >= int64(a.maxSize) {
+		hl.high >>= 1
+		hl.low >>= 1
+		change++
+	}
+	return change
+}
+
 // size() reflects the allocated size of the array, not to be confused
 // with Len() which is the range of non-zero values.
 func (b *buckets) size() int32 {
@@ -383,44 +430,15 @@ func (a *Aggregator) update(b *buckets, value float64, incr uint64) {
 
 	index := a.state.mapping.MapToIndex(value)
 
-	low, high, success := a.incrementIndexBy(b, index, incr)
+	hl, success := a.incrementIndexBy(b, index, incr)
 	if success {
 		return
 	}
 
-	// sizeReq = (high-low+1) is the minimum size needed to fit
-	// the new index at the current scale, i.e., the distance to
-	// the more-distant extreme inclusive bucket.  We have that:
-	//
-	//   sizeReq >= maxSize
-	//
-	// Now compute the shift equal to the number of times sizeReq
-	// must be divided by two before sizeReq < maxSize.
-
-	// Note: this can be computed in a conservative way w/o use of
-	// a loop, e.g.,
-	//
-	//   shift := 64-bits.LeadingZeros64((high-low+1)/int64(a.maxSize))
-	//
-	// however this under-counts by 1 some of the time depending
-	// on alignment.
-
-	shift := int32(0)
-	for high-low >= int64(a.maxSize) {
-		high >>= 1
-		low >>= 1
-		shift++
-	}
-
-	newScale := a.state.mapping.Scale() - shift
-	change := a.state.mapping.Scale() - newScale
-
-	a.state.positive.downscale(change)
-	a.state.negative.downscale(change)
-	a.state.mapping = newMapping(newScale)
+	a.downscale(a.changeScale(hl))
 
 	index = a.state.mapping.MapToIndex(value)
-	_, _, success = a.incrementIndexBy(b, index, incr)
+	_, success = a.incrementIndexBy(b, index, incr)
 
 	if !success {
 		panic("downscale logic error")
@@ -430,17 +448,23 @@ func (a *Aggregator) update(b *buckets, value float64, incr uint64) {
 // increment determines if the index lies inside the current range
 // [indexStart, indexEnd] and, if not, returns the minimum size (up to
 // maxSize) will satisfy the new value.
-func (a *Aggregator) incrementIndexBy(b *buckets, index int64, incr uint64) (low, high int64, success bool) {
+func (a *Aggregator) incrementIndexBy(b *buckets, index int64, incr uint64) (highLow, bool) {
 	if index < int64(b.indexStart) {
 		if span := uint64(int64(b.indexEnd) - index); span >= uint64(a.maxSize) {
-			return index, int64(b.indexEnd), false // rescale needed
+			return highLow{
+				low:  index,
+				high: int64(b.indexEnd),
+			}, false // rescale needed
 		} else if span >= uint64(b.size()) {
 			a.grow(b, uint32(span+1))
 		}
 		b.indexStart = int32(index)
 	} else if index > int64(b.indexEnd) {
 		if span := uint64(index - int64(b.indexStart)); span >= uint64(a.maxSize) {
-			return int64(b.indexStart), index, false // rescale needed
+			return highLow{
+				low:  int64(b.indexStart),
+				high: index,
+			}, false // rescale needed
 		} else if span >= uint64(b.size()) {
 			a.grow(b, uint32(span+1))
 		}
@@ -455,7 +479,7 @@ func (a *Aggregator) incrementIndexBy(b *buckets, index int64, incr uint64) (low
 		bucketIndex += size
 	}
 	b.incrementBucket(bucketIndex, incr)
-	return 0, 0, true
+	return highLow{}, true
 }
 
 // grow resizes the backing array by doubling in size up to maxSize.
@@ -631,15 +655,79 @@ func (b *buckets) incrementBucket(bucketIndex int32, incr uint64) {
 	}
 }
 
+// Merge combines two histograms that have the same buckets into a single one.
+func (a *Aggregator) Merge(oa export.Aggregator, desc *metric.Descriptor) error {
+	o, _ := oa.(*Aggregator)
+	if o == nil {
+		return aggregator.NewInconsistentAggregatorError(a, oa)
+	}
+
+	a.state.sum += o.state.sum
+	a.state.count += o.state.count
+	a.state.zeroCount += o.state.zeroCount
+
+	minScale := int32min(a.Scale(), o.Scale())
+
+	hlp := a.highLowAtScale(&a.state.positive, minScale)
+	hlp = hlp.with(o.highLowAtScale(&o.state.positive, minScale))
+
+	hln := a.highLowAtScale(&a.state.negative, minScale)
+	hln = hln.with(o.highLowAtScale(&o.state.negative, minScale))
+
+	minScale -= a.changeScale(hlp)
+	minScale -= a.changeScale(hln)
+
+	a.downscale(a.Scale() - minScale)
+
+	a.mergeBuckets(&a.state.positive, o, &o.state.positive, minScale)
+	a.mergeBuckets(&a.state.negative, o, &o.state.negative, minScale)
+
+	return nil
+}
+
 // mergeBuckets translates index values from another histogram into
 // the corresponding buckets of this histogram.
-func (a *Aggregator) mergeBuckets(mine *buckets, other *Aggregator, theirs *buckets) {
-	// scaleDiff := a.state.mapping.Scale() - other.state.mapping.Scale()
+func (a *Aggregator) mergeBuckets(mine *buckets, other *Aggregator, theirs *buckets, scale int32) {
 
-	// theirOffset := theirs.Offset()
-	// for i := uint32(0); i < theirs.Len(); i++ {
-	// 	// @@@
-	// 	// low, high, success := a.incrementIndexBy(mine, int64(theirOffset)<<scaleDiff, theirs.At(i))
-	// 	theirOffset++
-	// }
+	theirOffset := theirs.Offset()
+	theirChange := other.Scale() - scale
+
+	for i := uint32(0); i < theirs.Len(); i++ {
+		_, success := a.incrementIndexBy(mine,
+			int64(theirOffset+int32(i))>>theirChange, theirs.At(i))
+		if !success {
+			panic("incorrect merge scale")
+		}
+	}
+}
+
+func (a *Aggregator) highLowAtScale(b *buckets, scale int32) highLow {
+	if b.Len() == 0 {
+		return highLow{
+			low:  0,
+			high: -1,
+		}
+	}
+	shift := a.Scale() - scale
+	return highLow{
+		low:  int64(b.indexStart >> shift),
+		high: int64(b.indexEnd >> shift),
+	}
+}
+
+func (h *highLow) with(o highLow) highLow {
+	if o.empty() {
+		return *h
+	}
+	if h.empty() {
+		return o
+	}
+	return highLow{
+		low:  int64min(h.low, o.low),
+		high: int64max(h.high, o.high),
+	}
+}
+
+func (h *highLow) empty() bool {
+	return h.low >= h.high
 }

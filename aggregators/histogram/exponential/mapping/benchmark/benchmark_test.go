@@ -47,14 +47,14 @@ func benchmarkBoundary(b *testing.B, name string, mapper mapping.Mapping) {
 
 func BenchmarkMapping(b *testing.B) {
 	// None of these have time complexity dependent on scale.
-	benchmarkMapping(b, "lookup", lookuptable.NewLookupTableMapping(10))
-	benchmarkMapping(b, "exponent", exponent.NewExponentMapping(-1))
-	benchmarkMapping(b, "logarithm", logarithm.NewLogarithmMapping(3))
+	benchmarkMapping(b, "lookup", lookuptable.NewMapping(10))
+	benchmarkMapping(b, "exponent", exponent.NewMapping(-1))
+	benchmarkMapping(b, "logarithm", logarithm.NewMapping(3))
 }
 
 func BenchmarkBoundary(b *testing.B) {
 	// None of these have time complexity dependent on scale.
-	benchmarkBoundary(b, "lookup", lookuptable.NewLookupTableMapping(10))
-	benchmarkBoundary(b, "exponent", exponent.NewExponentMapping(-1))
-	benchmarkBoundary(b, "logarithm", logarithm.NewLogarithmMapping(3))
+	benchmarkBoundary(b, "lookup", lookuptable.NewMapping(10))
+	benchmarkBoundary(b, "exponent", exponent.NewMapping(-1))
+	benchmarkBoundary(b, "logarithm", logarithm.NewMapping(3))
 }
