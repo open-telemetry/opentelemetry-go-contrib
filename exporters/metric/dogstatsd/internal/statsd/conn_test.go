@@ -416,10 +416,10 @@ func TestPacketSplit(t *testing.T) {
 
 				require.NoError(t, cont.Collect(ctx))
 
-				cont.ForEach(func(library instrumentation.Library, reader export.Reader) error {
+				require.NoError(t, cont.ForEach(func(library instrumentation.Library, reader export.Reader) error {
 					orderedReader.add(library, reader)
 					return nil
-				})
+				}))
 			})
 
 			err = exp.Export(ctx, testResource, orderedReader)
