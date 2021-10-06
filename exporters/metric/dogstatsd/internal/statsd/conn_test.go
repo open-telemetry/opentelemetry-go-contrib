@@ -31,6 +31,7 @@ import (
 	"go.opentelemetry.io/otel/metric/number"
 	export "go.opentelemetry.io/otel/sdk/export/metric"
 	"go.opentelemetry.io/otel/sdk/export/metric/aggregation"
+	"go.opentelemetry.io/otel/sdk/instrumentation"
 	"go.opentelemetry.io/otel/sdk/metric/aggregator/exact"
 	"go.opentelemetry.io/otel/sdk/metric/aggregator/lastvalue"
 	"go.opentelemetry.io/otel/sdk/metric/aggregator/sum"
@@ -40,16 +41,16 @@ import (
 	semconv "go.opentelemetry.io/otel/semconv/v1.4.0"
 )
 
-func testMeter(t *testing.T, exp export.Exporter) (context.Context, metric.Meter, *processor.Processor, *controller.Controller) {
+func testMeter(t *testing.T, exp export.Exporter) (context.Context, metric.Meter, *controller.Controller) {
 	aggSel := testAggregatorSelector{}
-	proc := processor.New(aggSel, export.CumulativeExportKindSelector())
+	proc := processor.NewFactory(aggSel, export.CumulativeExportKindSelector())
 	cont := controller.New(proc,
 		controller.WithResource(testResource),
 		controller.WithExporter(exp),
 	)
 	ctx := context.Background()
 
-	return ctx, cont.MeterProvider().Meter("test"), proc, cont
+	return ctx, cont.Meter("test"), cont
 }
 
 type testAggregatorSelector struct {
@@ -176,7 +177,7 @@ func TestBasicFormat(t *testing.T) {
 					if err != nil {
 						t.Fatal("New error: ", err)
 					}
-					ctx, meter, _, cont := testMeter(t, exp)
+					ctx, meter, cont := testMeter(t, exp)
 					require.NoError(t, cont.Start(ctx))
 
 					attributes := []attribute.KeyValue{
@@ -239,22 +240,32 @@ func TestBasicFormat(t *testing.T) {
 // merges.
 
 type orderedReader struct {
-	// RWMutex implements locking for the `CheckpointSet` interface.
+	// RWMutex implements locking for the `Reader` interface.
 	sync.RWMutex
-	ordered []export.CheckpointSet
+	ordered []libraryReader
 }
+
+type libraryReader struct {
+	library instrumentation.Library
+	reader  export.Reader
+}
+
+var _ export.InstrumentationLibraryReader = &orderedReader{}
 
 func newOrderedReader() *orderedReader {
 	return &orderedReader{}
 }
 
-func (p *orderedReader) add(c export.CheckpointSet) {
-	p.ordered = append(p.ordered, c)
+func (p *orderedReader) add(l instrumentation.Library, r export.Reader) {
+	p.ordered = append(p.ordered, libraryReader{
+		library: l,
+		reader:  r,
+	})
 }
 
-func (p *orderedReader) ForEach(k export.ExportKindSelector, f func(export.Record) error) error {
-	for _, r := range p.ordered {
-		if err := r.ForEach(k, f); err != nil && !errors.Is(err, aggregation.ErrNoData) {
+func (p *orderedReader) ForEach(f func(library instrumentation.Library, reader export.Reader) error) error {
+	for _, pair := range p.ordered {
+		if err := f(pair.library, pair.reader); err != nil && !errors.Is(err, aggregation.ErrNoData) {
 			return err
 		}
 	}
@@ -398,14 +409,17 @@ func TestPacketSplit(t *testing.T) {
 				expect := fmt.Sprint("counter:100|c|#", encoded, "\n")
 				expected = append(expected, expect)
 
-				ctx, meter, proc, cont := testMeter(t, nil)
+				ctx, meter, cont := testMeter(t, nil)
 
 				counter := metric.Must(meter).NewInt64Counter("counter")
 				counter.Add(ctx, 100, attributes...)
 
 				require.NoError(t, cont.Collect(ctx))
 
-				orderedReader.add(proc.CheckpointSet())
+				require.NoError(t, cont.ForEach(func(library instrumentation.Library, reader export.Reader) error {
+					orderedReader.add(library, reader)
+					return nil
+				}))
 			})
 
 			err = exp.Export(ctx, testResource, orderedReader)
@@ -428,7 +442,7 @@ func TestExactSplit(t *testing.T) {
 		t.Fatal("New error: ", err)
 	}
 
-	ctx, meter, _, cont := testMeter(t, exp)
+	ctx, meter, cont := testMeter(t, exp)
 	histo := metric.Must(meter).NewInt64Histogram("histogram")
 	require.NoError(t, cont.Start(ctx))
 
@@ -458,7 +472,7 @@ func TestPrefix(t *testing.T) {
 		t.Fatal("New error: ", err)
 	}
 
-	ctx, meter, _, cont := testMeter(t, exp)
+	ctx, meter, cont := testMeter(t, exp)
 	histo := metric.Must(meter).NewInt64Histogram("histogram")
 	require.NoError(t, cont.Start(ctx))
 

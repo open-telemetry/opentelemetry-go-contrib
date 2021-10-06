@@ -8,9 +8,17 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 
 ## [Unreleased]
 
+## [1.0.0/0.25.0] - 2021-10-06
+
+- Resource detectors and propagators (with the exception of `go.
+  opentelemetry.io/contrib/propagators/opencensus`) are now stable and 
+  released at v1.0.0.
+- Update dependency on the `go.opentelemetry.io/otel` project to `v1.0.1`.
+- Update dependency on `go.opentelemetry.io/otel/metric` to `v0.24.0`.
+
 ## [0.24.0] - 2021-09-21
 
-Update dependency on the `go.opentelemetry.io/otel` project to `v1.0.0`.
+- Update dependency on the `go.opentelemetry.io/otel` project to `v1.0.0`.
 
 ## [0.23.0] - 2021-09-08
 

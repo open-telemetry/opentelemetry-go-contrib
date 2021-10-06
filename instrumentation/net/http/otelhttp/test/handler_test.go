@@ -46,7 +46,7 @@ func TestHandlerBasics(t *testing.T) {
 	spanRecorder := tracetest.NewSpanRecorder()
 	provider := sdktrace.NewTracerProvider(sdktrace.WithSpanProcessor(spanRecorder))
 
-	meterimpl, meterProvider := metrictest.NewMeterProvider()
+	meterProvider := metrictest.NewMeterProvider()
 
 	operation := "test_handler"
 
@@ -70,7 +70,7 @@ func TestHandlerBasics(t *testing.T) {
 	}
 	h.ServeHTTP(rr, r)
 
-	if len(meterimpl.MeasurementBatches) == 0 {
+	if len(meterProvider.MeasurementBatches) == 0 {
 		t.Fatalf("got 0 recorded measurements, expected 1 or more")
 	}
 
@@ -82,7 +82,7 @@ func TestHandlerBasics(t *testing.T) {
 		attribute.String("test", "attribute"),
 	}
 
-	assertMetricAttributes(t, attributesToVerify, meterimpl.MeasurementBatches)
+	assertMetricAttributes(t, attributesToVerify, meterProvider.MeasurementBatches)
 
 	if got, expected := rr.Result().StatusCode, http.StatusOK; got != expected {
 		t.Fatalf("got %d, expected %d", got, expected)
