@@ -64,7 +64,7 @@ func TestQuery(t *testing.T) {
 	cluster := getCluster()
 	sr := tracetest.NewSpanRecorder()
 	tracerProvider := sdktrace.NewTracerProvider(sdktrace.WithSpanProcessor(sr))
-	meterImpl, meterProvider := metrictest.NewMeterProvider()
+	meterProvider := metrictest.NewMeterProvider()
 
 	ctx, parentSpan := tracerProvider.Tracer(internal.InstrumentationName).Start(context.Background(), "gocql-test")
 
@@ -111,7 +111,7 @@ func TestQuery(t *testing.T) {
 	}
 
 	// Check metrics
-	actual := obtainTestRecords(meterImpl.MeasurementBatches)
+	actual := obtainTestRecords(meterProvider.MeasurementBatches)
 	require.Len(t, actual, 3)
 	expected := []testRecord{
 		{
@@ -182,7 +182,7 @@ func TestBatch(t *testing.T) {
 	cluster := getCluster()
 	sr := tracetest.NewSpanRecorder()
 	tracerProvider := sdktrace.NewTracerProvider(sdktrace.WithSpanProcessor(sr))
-	meterImpl, meterProvider := metrictest.NewMeterProvider()
+	meterProvider := metrictest.NewMeterProvider()
 
 	ctx, parentSpan := tracerProvider.Tracer(internal.InstrumentationName).Start(context.Background(), "gocql-test")
 
@@ -222,7 +222,7 @@ func TestBatch(t *testing.T) {
 	}
 
 	// Check metrics
-	actual := obtainTestRecords(meterImpl.MeasurementBatches)
+	actual := obtainTestRecords(meterProvider.MeasurementBatches)
 	require.Len(t, actual, 2)
 	expected := []testRecord{
 		{
@@ -274,7 +274,7 @@ func TestConnection(t *testing.T) {
 	cluster := getCluster()
 	sr := tracetest.NewSpanRecorder()
 	tracerProvider := sdktrace.NewTracerProvider(sdktrace.WithSpanProcessor(sr))
-	meterImpl, meterProvider := metrictest.NewMeterProvider()
+	meterProvider := metrictest.NewMeterProvider()
 	connectObserver := &mockConnectObserver{0}
 	ctx := context.Background()
 
@@ -301,7 +301,7 @@ func TestConnection(t *testing.T) {
 	}
 
 	// Verify the metrics
-	actual := obtainTestRecords(meterImpl.MeasurementBatches)
+	actual := obtainTestRecords(meterProvider.MeasurementBatches)
 	expected := []testRecord{
 		{
 			name:      "db.cassandra.connections",
@@ -379,7 +379,7 @@ func obtainTestRecords(mbs []metrictest.Batch) []testRecord {
 				records,
 				testRecord{
 					name:       m.Instrument.Descriptor().Name(),
-					meterName:  m.Instrument.Descriptor().InstrumentationName(),
+					meterName:  mb.Library.InstrumentationName,
 					attributes: mb.Labels,
 					number:     m.Number,
 					numberKind: m.Instrument.Descriptor().NumberKind(),

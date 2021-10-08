@@ -88,13 +88,13 @@ func TestDogstatsAttributes(t *testing.T) {
 			require.Nil(t, err)
 
 			aggSel := processortest.AggregatorSelector()
-			proc := processor.New(aggSel, export.StatelessExportKindSelector())
+			proc := processor.NewFactory(aggSel, export.StatelessExportKindSelector())
 			cont := controller.New(proc,
 				controller.WithExporter(exp),
 				controller.WithResource(res),
 			)
 			require.NoError(t, cont.Start(ctx))
-			meter := cont.MeterProvider().Meter("test")
+			meter := cont.Meter("test")
 			counter := metric.Must(meter).NewInt64Counter("test.sum")
 			counter.Add(ctx, 123, tc.attributes...)
 
