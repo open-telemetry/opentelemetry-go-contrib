@@ -8,6 +8,11 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 
 ## [Unreleased]
 
+### Added
+
+- Add `WithTracerProvider` option for `otelhttptrace.NewClientTrace`. (#1128)
+
+
 ## [1.0.0/0.25.0] - 2021-10-06
 
 - Resource detectors and propagators (with the exception of `go.
@@ -15,6 +20,7 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
   released at v1.0.0.
 - Update dependency on the `go.opentelemetry.io/otel` project to `v1.0.1`.
 - Update dependency on `go.opentelemetry.io/otel/metric` to `v0.24.0`.
+
 
 ## [0.24.0] - 2021-09-21
 
