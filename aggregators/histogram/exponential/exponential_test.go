@@ -93,6 +93,33 @@ func TestSimpleSize4(t *testing.T) {
 	}
 }
 
+func TestAlternatingGrowth1(t *testing.T) {
+	ctx := context.Background()
+	agg := &New(1, &testDescriptor, WithMaxSize(4))[0]
+	agg.Update(ctx, number.NewFloat64Number(1), &testDescriptor)
+	agg.Update(ctx, number.NewFloat64Number(2), &testDescriptor)
+	agg.Update(ctx, number.NewFloat64Number(0.5), &testDescriptor)
+
+	require.Equal(t, int32(-1), agg.Positive().Offset())
+	require.Equal(t, int32(0), agg.Scale())
+	require.Equal(t, []uint64{1, 1, 1}, counts(agg.Positive()))
+}
+
+func TestAlternatingGrowth2(t *testing.T) {
+	ctx := context.Background()
+	agg := &New(1, &testDescriptor, WithMaxSize(4))[0]
+	agg.Update(ctx, number.NewFloat64Number(1), &testDescriptor)
+	agg.Update(ctx, number.NewFloat64Number(1), &testDescriptor)
+	agg.Update(ctx, number.NewFloat64Number(2), &testDescriptor)
+	agg.Update(ctx, number.NewFloat64Number(0.5), &testDescriptor)
+	agg.Update(ctx, number.NewFloat64Number(4), &testDescriptor)
+	agg.Update(ctx, number.NewFloat64Number(0.25), &testDescriptor)
+
+	require.Equal(t, int32(-1), agg.Positive().Offset())
+	require.Equal(t, int32(-1), agg.Scale())
+	require.Equal(t, []uint64{2, 3, 1}, counts(agg.Positive()))
+}
+
 // tests that every permutation of {1/2, 1, 2} with maxSize=2 results
 // in the same scale=-1 histogram.
 func TestScaleNegOneCentered(t *testing.T) {
@@ -259,7 +286,75 @@ func testExhaustive(t *testing.T, maxSize, offset, initScale int32) {
 	}
 }
 
-func TestMerge(t *testing.T) {
-	// @@@
-	// agg := New(1, &testDescriptor, WithMaxSize(4))[0]
+func TestMergeSimpleEven(t *testing.T) {
+	ctx := context.Background()
+	aggs := New(3, &testDescriptor, WithMaxSize(4))
+	for i := 0; i < 4; i++ {
+		f1 := float64(int64(1) << i)   // 1, 2, 4, 8
+		f2 := 1 / float64(int64(2)<<i) // 1/2, 1/4, 1/8, 1/16
+		n1 := number.NewFloat64Number(f1)
+		n2 := number.NewFloat64Number(f2)
+
+		aggs[0].Update(ctx, n1, &testDescriptor)
+		aggs[1].Update(ctx, n2, &testDescriptor)
+		aggs[2].Update(ctx, n1, &testDescriptor)
+		aggs[2].Update(ctx, n2, &testDescriptor)
+	}
+	require.Equal(t, int32(0), aggs[0].Scale())
+	require.Equal(t, int32(0), aggs[1].Scale())
+	require.Equal(t, int32(-1), aggs[2].Scale())
+
+	require.Equal(t, int32(0), aggs[0].Positive().Offset())
+	require.Equal(t, int32(-4), aggs[1].Positive().Offset())
+	require.Equal(t, int32(-2), aggs[2].Positive().Offset())
+
+	require.Equal(t, []uint64{1, 1, 1, 1}, counts(aggs[0].Positive()))
+	require.Equal(t, []uint64{1, 1, 1, 1}, counts(aggs[1].Positive()))
+	require.Equal(t, []uint64{2, 2, 2, 2}, counts(aggs[2].Positive()))
+
+	require.NoError(t, aggs[0].Merge(&aggs[1], &testDescriptor))
+
+	require.Equal(t, int32(-1), aggs[0].Scale())
+	require.Equal(t, int32(-1), aggs[2].Scale())
+
+	require.Equal(t, stateString(aggs[0]), stateString(aggs[2]))
+}
+
+func TestMergeSimpleOdd(t *testing.T) {
+	ctx := context.Background()
+	aggs := New(3, &testDescriptor, WithMaxSize(4))
+	for i := 0; i < 4; i++ {
+		f1 := float64(int64(1) << i)
+		f2 := 1 / float64(int64(1)<<i) // Diff from above test: 1 here vs 2 above.
+		n1 := number.NewFloat64Number(f1)
+		n2 := number.NewFloat64Number(f2)
+
+		aggs[0].Update(ctx, n1, &testDescriptor)
+		aggs[1].Update(ctx, n2, &testDescriptor)
+		aggs[2].Update(ctx, n1, &testDescriptor)
+		aggs[2].Update(ctx, n2, &testDescriptor)
+	}
+
+	require.Equal(t, uint64(4), aggs[0].state.count)
+	require.Equal(t, uint64(4), aggs[1].state.count)
+	require.Equal(t, uint64(8), aggs[2].state.count)
+
+	require.Equal(t, int32(0), aggs[0].Scale())
+	require.Equal(t, int32(0), aggs[1].Scale())
+	require.Equal(t, int32(-1), aggs[2].Scale())
+
+	require.Equal(t, int32(0), aggs[0].Positive().Offset())
+	require.Equal(t, int32(-3), aggs[1].Positive().Offset())
+	require.Equal(t, int32(-2), aggs[2].Positive().Offset())
+
+	require.Equal(t, []uint64{1, 1, 1, 1}, counts(aggs[0].Positive()))
+	require.Equal(t, []uint64{1, 1, 1, 1}, counts(aggs[1].Positive()))
+	require.Equal(t, []uint64{1, 2, 3, 2}, counts(aggs[2].Positive()))
+
+	require.NoError(t, aggs[0].Merge(&aggs[1], &testDescriptor))
+
+	require.Equal(t, int32(-1), aggs[0].Scale())
+	require.Equal(t, int32(-1), aggs[2].Scale())
+
+	require.Equal(t, stateString(aggs[0]), stateString(aggs[2]))
 }

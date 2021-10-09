@@ -10,5 +10,7 @@ require (
 )
 
 replace go.opentelemetry.io/otel/sdk/metric => ../../../../go/sdk/metric
+
 replace go.opentelemetry.io/otel/sdk/export/metric => ../../../../go/sdk/export/metric
+
 replace go.opentelemetry.io/otel/metric => ../../../../go/metric

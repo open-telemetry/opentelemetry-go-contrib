@@ -16,7 +16,9 @@ package exponential // import "go.opentelemetry.io/contrib/aggregators/histogram
 
 import (
 	"context"
+	"fmt"
 	"math/bits"
+	"strings"
 	"sync"
 
 	"go.opentelemetry.io/contrib/aggregators/histogram/exponential/mapping"
@@ -272,11 +274,12 @@ func (b *buckets) Len() uint32 {
 
 // At returns the count of the bucket at a position in the logical
 // array of counts.
-func (b *buckets) At(pos uint32) uint64 {
+func (b *buckets) At(pos0 uint32) uint64 {
+	pos := pos0
 	bias := uint32(b.indexBase - b.indexStart)
 
 	if pos < bias {
-		pos += b.Len()
+		pos += uint32(b.size())
 	}
 	pos -= bias
 
@@ -474,9 +477,9 @@ func (a *Aggregator) incrementIndexBy(b *buckets, index int64, incr uint64) (hig
 	size := int32(b.size())
 	bucketIndex := int32(index - int64(b.indexBase))
 	if bucketIndex >= size {
-		bucketIndex -= size
+		bucketIndex -= int32(b.size())
 	} else if bucketIndex < 0 {
-		bucketIndex += size
+		bucketIndex += int32(b.size())
 	}
 	b.incrementBucket(bucketIndex, incr)
 	return highLow{}, true
@@ -549,36 +552,47 @@ func (b *buckets) downscale(by int32) {
 // rotate shifts the backing array contents so that indexStart ==
 // indexBase to simplify the downscale logic.
 func (b *buckets) rotate() {
-	bias := b.indexBase - b.indexStart
+	bias := uint32(b.indexBase - b.indexStart)
 
 	if bias == 0 {
 		return
 	}
 
-	post := int32(b.Len()) - bias
+	move := b.Len()
+	size := uint32(b.size())
+	endpoint := size - bias
 
 	// Rotate the array so that indexBase == indexStart
 	b.indexBase = b.indexStart
+
 	switch counts := b.backing.(type) {
 	case []uint8:
-		for off := int32(0); off < post; {
-			copy(counts[off:off+bias], counts[post:])
-			off += bias
+		for start := uint32(0); start < move; {
+			for pos := endpoint; pos < size && start < move; pos++ {
+				counts[start], counts[pos] = counts[pos], counts[start]
+				start++
+			}
 		}
 	case []uint16:
-		for off := int32(0); off < post; {
-			copy(counts[off:off+bias], counts[post:])
-			off += bias
+		for start := uint32(0); start < move; {
+			for pos := endpoint; pos < size && start < move; pos++ {
+				counts[start], counts[pos] = counts[pos], counts[start]
+				start++
+			}
 		}
 	case []uint32:
-		for off := int32(0); off < post; {
-			copy(counts[off:off+bias], counts[post:])
-			off += bias
+		for start := uint32(0); start < move; {
+			for pos := endpoint; pos < size && start < move; pos++ {
+				counts[start], counts[pos] = counts[pos], counts[start]
+				start++
+			}
 		}
 	case []uint64:
-		for off := int32(0); off < post; {
-			copy(counts[off:off+bias], counts[post:])
-			off += bias
+		for start := uint32(0); start < move; {
+			for pos := endpoint; pos < size && start < move; pos++ {
+				counts[start], counts[pos] = counts[pos], counts[start]
+				start++
+			}
 		}
 	}
 }
@@ -674,8 +688,10 @@ func (a *Aggregator) Merge(oa export.Aggregator, desc *metric.Descriptor) error 
 	hln := a.highLowAtScale(&a.state.negative, minScale)
 	hln = hln.with(o.highLowAtScale(&o.state.negative, minScale))
 
-	minScale -= a.changeScale(hlp)
-	minScale -= a.changeScale(hln)
+	minScale = int32min(
+		minScale-a.changeScale(hlp),
+		minScale-a.changeScale(hln),
+	)
 
 	a.downscale(a.Scale() - minScale)
 
@@ -730,4 +746,48 @@ func (h *highLow) with(o highLow) highLow {
 
 func (h *highLow) empty() bool {
 	return h.low >= h.high
+}
+
+// TEST SUPPORT
+
+func stateString(a Aggregator) string {
+	s := a.state
+	b := func(b buckets) string {
+		var sb strings.Builder
+		sb.WriteString(fmt.Sprintln("[@", b.Offset()))
+		for i := uint32(0); i < b.Len(); i++ {
+			sb.WriteString(fmt.Sprintln(b.At(i)))
+		}
+		sb.WriteString("]\n")
+		return sb.String()
+	}
+	return fmt.Sprintf("sum %v\ncount %v\nzero %v\npos %s\nneg %s\n",
+		s.sum, s.count, s.zeroCount, b(s.positive), b(s.negative),
+	)
+}
+
+type show struct {
+	index int32
+	count uint64
+}
+
+func shows(b aggregation.ExponentialBuckets) (r []show) {
+	for i := uint32(0); i < b.Len(); i++ {
+		r = append(r, show{
+			index: b.Offset() + int32(i),
+			count: b.At(i),
+		})
+	}
+	return r
+}
+
+func counts(b aggregation.ExponentialBuckets) (r []uint64) {
+	for i := uint32(0); i < b.Len(); i++ {
+		r = append(r, b.At(i))
+	}
+	return r
+}
+
+func (s show) String() string {
+	return fmt.Sprint(s.index, "=", s.count)
 }
