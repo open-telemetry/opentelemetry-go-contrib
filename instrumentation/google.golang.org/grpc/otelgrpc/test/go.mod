@@ -8,7 +8,7 @@ require (
 	go.opentelemetry.io/contrib/instrumentation/google.golang.org/grpc/otelgrpc v0.25.0
 	go.opentelemetry.io/otel v1.0.1
 	go.opentelemetry.io/otel/sdk v1.0.1
-	go.uber.org/goleak v1.1.11
+	go.uber.org/goleak v1.1.12
 	google.golang.org/grpc v1.40.0
 )
 
