@@ -21,6 +21,7 @@ import (
 
 	"github.com/DataDog/datadog-go/statsd"
 
+	"go.opentelemetry.io/otel/sdk/instrumentation"
 	"go.opentelemetry.io/otel/sdk/resource"
 
 	"go.opentelemetry.io/otel/attribute"
@@ -95,75 +96,77 @@ func (e *Exporter) ExportKindFor(*metric.Descriptor, aggregation.Kind) export.Ex
 	return export.DeltaExportKind
 }
 
-func (e *Exporter) Export(ctx context.Context, res *resource.Resource, cs export.CheckpointSet) error {
-	return cs.ForEach(e, func(r export.Record) error {
-		// TODO: Use the Resource() method
-		agg := r.Aggregation()
-		name := e.sanitizeMetricName(r.Descriptor().InstrumentationName(), r.Descriptor().Name())
-		itr := attribute.NewMergeIterator(r.Labels(), res.Set())
-		tags := append([]string{}, e.opts.Tags...)
-		for itr.Next() {
-			attribute := itr.Label()
-			tag := string(attribute.Key) + ":" + attribute.Value.Emit()
-			tags = append(tags, tag)
-		}
-		switch agg := agg.(type) {
-		case aggregation.Points:
-			numbers, err := agg.Points()
-			if err != nil {
-				return fmt.Errorf("error getting Points for %s: %w", name, err)
+func (e *Exporter) Export(ctx context.Context, res *resource.Resource, ilr export.InstrumentationLibraryReader) error {
+	return ilr.ForEach(func(library instrumentation.Library, reader export.Reader) error {
+		return reader.ForEach(e, func(r export.Record) error {
+			// TODO: Use the Resource() method
+			agg := r.Aggregation()
+			name := e.sanitizeMetricName(library.Name, r.Descriptor().Name())
+			itr := attribute.NewMergeIterator(r.Labels(), res.Set())
+			tags := append([]string{}, e.opts.Tags...)
+			for itr.Next() {
+				attribute := itr.Label()
+				tag := string(attribute.Key) + ":" + attribute.Value.Emit()
+				tags = append(tags, tag)
 			}
-			f := e.client.Histogram
-			if e.opts.UseDistribution {
-				f = e.client.Distribution
-			}
-			for _, n := range numbers {
-				if err := f(name, metricValue(r.Descriptor().NumberKind(), n.Number), tags, rate); err != nil {
-					return fmt.Errorf("error submitting %s point: %w", name, err)
-				}
-			}
-		case aggregation.MinMaxSumCount:
-			type record struct {
-				name string
-				f    func() (number.Number, error)
-			}
-			recs := []record{
-				{
-					name: name + ".min",
-					f:    agg.Min,
-				},
-				{
-					name: name + ".max",
-					f:    agg.Max,
-				},
-			}
-			for _, rec := range recs {
-				val, err := rec.f()
+			switch agg := agg.(type) {
+			case aggregation.Points:
+				numbers, err := agg.Points()
 				if err != nil {
-					return fmt.Errorf("error getting MinMaxSumCount value for %s: %w", name, err)
+					return fmt.Errorf("error getting Points for %s: %w", name, err)
 				}
-				if err := e.client.Gauge(rec.name, metricValue(r.Descriptor().NumberKind(), val), tags, rate); err != nil {
+				f := e.client.Histogram
+				if e.opts.UseDistribution {
+					f = e.client.Distribution
+				}
+				for _, n := range numbers {
+					if err := f(name, metricValue(r.Descriptor().NumberKind(), n.Number), tags, rate); err != nil {
+						return fmt.Errorf("error submitting %s point: %w", name, err)
+					}
+				}
+			case aggregation.MinMaxSumCount:
+				type record struct {
+					name string
+					f    func() (number.Number, error)
+				}
+				recs := []record{
+					{
+						name: name + ".min",
+						f:    agg.Min,
+					},
+					{
+						name: name + ".max",
+						f:    agg.Max,
+					},
+				}
+				for _, rec := range recs {
+					val, err := rec.f()
+					if err != nil {
+						return fmt.Errorf("error getting MinMaxSumCount value for %s: %w", name, err)
+					}
+					if err := e.client.Gauge(rec.name, metricValue(r.Descriptor().NumberKind(), val), tags, rate); err != nil {
+						return fmt.Errorf("error submitting %s point: %w", name, err)
+					}
+				}
+			case aggregation.Sum:
+				val, err := agg.Sum()
+				if err != nil {
+					return fmt.Errorf("error getting Sum value for %s: %w", name, err)
+				}
+				if err := e.client.Count(name, val.AsInt64(), tags, rate); err != nil {
+					return fmt.Errorf("error submitting %s point: %w", name, err)
+				}
+			case aggregation.LastValue:
+				val, _, err := agg.LastValue()
+				if err != nil {
+					return fmt.Errorf("error getting LastValue for %s: %w", name, err)
+				}
+				if err := e.client.Gauge(name, metricValue(r.Descriptor().NumberKind(), val), tags, rate); err != nil {
 					return fmt.Errorf("error submitting %s point: %w", name, err)
 				}
 			}
-		case aggregation.Sum:
-			val, err := agg.Sum()
-			if err != nil {
-				return fmt.Errorf("error getting Sum value for %s: %w", name, err)
-			}
-			if err := e.client.Count(name, val.AsInt64(), tags, rate); err != nil {
-				return fmt.Errorf("error submitting %s point: %w", name, err)
-			}
-		case aggregation.LastValue:
-			val, _, err := agg.LastValue()
-			if err != nil {
-				return fmt.Errorf("error getting LastValue for %s: %w", name, err)
-			}
-			if err := e.client.Gauge(name, metricValue(r.Descriptor().NumberKind(), val), tags, rate); err != nil {
-				return fmt.Errorf("error submitting %s point: %w", name, err)
-			}
-		}
-		return nil
+			return nil
+		})
 	})
 }
 

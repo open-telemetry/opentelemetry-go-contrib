@@ -112,8 +112,20 @@ func WithInsecureHeaders() ClientTraceOption {
 	})
 }
 
+// WithTracerProvider specifies a tracer provider for creating a tracer.
+// The global provider is used if none is specified.
+func WithTracerProvider(provider trace.TracerProvider) ClientTraceOption {
+	return clientTraceOptionFunc(func(ct *clientTracer) {
+		if provider != nil {
+			ct.tracerProvider = provider
+		}
+	})
+}
+
 type clientTracer struct {
 	context.Context
+
+	tracerProvider trace.TracerProvider
 
 	tr trace.Tracer
 
@@ -134,8 +146,9 @@ type clientTracer struct {
 // Proxy-Authorization, Cookie, and Set-Cookie.
 func NewClientTrace(ctx context.Context, opts ...ClientTraceOption) *httptrace.ClientTrace {
 	ct := &clientTracer{
-		Context:     ctx,
-		activeHooks: make(map[string]context.Context),
+		Context:        ctx,
+		tracerProvider: otel.GetTracerProvider(),
+		activeHooks:    make(map[string]context.Context),
 		redactedHeaders: map[string]struct{}{
 			"authorization":       {},
 			"www-authenticate":    {},
@@ -151,7 +164,7 @@ func NewClientTrace(ctx context.Context, opts ...ClientTraceOption) *httptrace.C
 		opt.apply(ct)
 	}
 
-	ct.tr = otel.GetTracerProvider().Tracer(
+	ct.tr = ct.tracerProvider.Tracer(
 		"go.opentelemetry.io/otel/instrumentation/httptrace",
 		trace.WithInstrumentationVersion(SemVersion()),
 	)

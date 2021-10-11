@@ -189,7 +189,7 @@ func TestStatic(t *testing.T) {
 	defer replaceBeego()
 	sr := tracetest.NewSpanRecorder()
 	tracerProvider := trace.NewTracerProvider(trace.WithSpanProcessor(sr))
-	meterimpl, meterProvider := metrictest.NewMeterProvider()
+	meterProvider := metrictest.NewMeterProvider()
 	file, err := ioutil.TempFile("", "static-*.html")
 	require.NoError(t, err)
 	defer os.Remove(file.Name())
@@ -220,7 +220,7 @@ func TestStatic(t *testing.T) {
 	spans := sr.Ended()
 	require.Len(t, spans, 1)
 	assertSpan(t, spans[0], tc)
-	assertMetrics(t, meterimpl.MeasurementBatches, tc)
+	assertMetrics(t, meterProvider.MeasurementBatches, tc)
 }
 
 func TestRender(t *testing.T) {
@@ -287,7 +287,7 @@ func TestRender(t *testing.T) {
 func runTest(t *testing.T, tc *testCase, url string) {
 	sr := tracetest.NewSpanRecorder()
 	tracerProvider := trace.NewTracerProvider(trace.WithSpanProcessor(sr))
-	meterimpl, meterProvider := metrictest.NewMeterProvider()
+	meterProvider := metrictest.NewMeterProvider()
 	addTestRoutes(t)
 	defer replaceBeego()
 
@@ -326,7 +326,7 @@ func runTest(t *testing.T, tc *testCase, url string) {
 	} else {
 		require.Len(t, spans, 0)
 	}
-	assertMetrics(t, meterimpl.MeasurementBatches, tc)
+	assertMetrics(t, meterProvider.MeasurementBatches, tc)
 }
 
 func defaultAttributes() []attribute.KeyValue {
