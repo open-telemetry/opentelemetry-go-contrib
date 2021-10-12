@@ -148,7 +148,7 @@ func getHistogramReader(t *testing.T) export.InstrumentationLibraryReader {
 // ConvertToTimeSeries tests.
 var wantSumTimeSeries = []*prompb.TimeSeries{
 	{
-		Labels: []*prompb.Label{
+		Labels: []prompb.Label{
 			{
 				Name:  "R",
 				Value: "V",
@@ -167,7 +167,7 @@ var wantSumTimeSeries = []*prompb.TimeSeries{
 
 var wantLastValueTimeSeries = []*prompb.TimeSeries{
 	{
-		Labels: []*prompb.Label{
+		Labels: []prompb.Label{
 			{
 				Name:  "R",
 				Value: "V",
@@ -186,7 +186,7 @@ var wantLastValueTimeSeries = []*prompb.TimeSeries{
 
 var wantMMSCTimeSeries = []*prompb.TimeSeries{
 	{
-		Labels: []*prompb.Label{
+		Labels: []prompb.Label{
 			{
 				Name:  "R",
 				Value: "V",
@@ -202,7 +202,7 @@ var wantMMSCTimeSeries = []*prompb.TimeSeries{
 		}},
 	},
 	{
-		Labels: []*prompb.Label{
+		Labels: []prompb.Label{
 			{
 				Name:  "R",
 				Value: "V",
@@ -218,7 +218,7 @@ var wantMMSCTimeSeries = []*prompb.TimeSeries{
 		}},
 	},
 	{
-		Labels: []*prompb.Label{
+		Labels: []prompb.Label{
 			{
 				Name:  "R",
 				Value: "V",
@@ -234,7 +234,7 @@ var wantMMSCTimeSeries = []*prompb.TimeSeries{
 		}},
 	},
 	{
-		Labels: []*prompb.Label{
+		Labels: []prompb.Label{
 			{
 				Name:  "R",
 				Value: "V",
@@ -253,7 +253,7 @@ var wantMMSCTimeSeries = []*prompb.TimeSeries{
 
 var wantHistogramTimeSeries = []*prompb.TimeSeries{
 	{
-		Labels: []*prompb.Label{
+		Labels: []prompb.Label{
 			{
 				Name:  "R",
 				Value: "V",
@@ -269,7 +269,7 @@ var wantHistogramTimeSeries = []*prompb.TimeSeries{
 		}},
 	},
 	{
-		Labels: []*prompb.Label{
+		Labels: []prompb.Label{
 			{
 				Name:  "R",
 				Value: "V",
@@ -285,7 +285,7 @@ var wantHistogramTimeSeries = []*prompb.TimeSeries{
 		}},
 	},
 	{
-		Labels: []*prompb.Label{
+		Labels: []prompb.Label{
 			{
 				Name:  "R",
 				Value: "V",
@@ -305,7 +305,7 @@ var wantHistogramTimeSeries = []*prompb.TimeSeries{
 		}},
 	},
 	{
-		Labels: []*prompb.Label{
+		Labels: []prompb.Label{
 			{
 				Name:  "R",
 				Value: "V",
@@ -325,7 +325,7 @@ var wantHistogramTimeSeries = []*prompb.TimeSeries{
 		}},
 	},
 	{
-		Labels: []*prompb.Label{
+		Labels: []prompb.Label{
 			{
 				Name:  "R",
 				Value: "V",
@@ -345,7 +345,7 @@ var wantHistogramTimeSeries = []*prompb.TimeSeries{
 		}},
 	},
 	{
-		Labels: []*prompb.Label{
+		Labels: []prompb.Label{
 			{
 				Name:  "R",
 				Value: "V",
