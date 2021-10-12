@@ -23,7 +23,6 @@ import (
 	"strconv"
 	"time"
 
-	"github.com/gogo/protobuf/proto"
 	"github.com/golang/snappy"
 	"github.com/prometheus/prometheus/prompb"
 
@@ -129,9 +128,9 @@ func InstallNewPipeline(config Config, options ...controller.Option) (*controlle
 // ConvertToTimeSeries converts a InstrumentationLibraryReader to a slice of TimeSeries pointers
 // Based on the aggregation type, ConvertToTimeSeries will call helper functions like
 // convertFromSum to generate the correct number of TimeSeries.
-func (e *Exporter) ConvertToTimeSeries(res *resource.Resource, checkpointSet export.InstrumentationLibraryReader) ([]*prompb.TimeSeries, error) {
+func (e *Exporter) ConvertToTimeSeries(res *resource.Resource, checkpointSet export.InstrumentationLibraryReader) ([]prompb.TimeSeries, error) {
 	var aggError error
-	var timeSeries []*prompb.TimeSeries
+	var timeSeries []prompb.TimeSeries
 
 	// Iterate over each record in the checkpoint set and convert to TimeSeries
 	aggError = checkpointSet.ForEach(func(library instrumentation.Library, reader export.Reader) error {
@@ -192,7 +191,7 @@ func (e *Exporter) ConvertToTimeSeries(res *resource.Resource, checkpointSet exp
 }
 
 // createTimeSeries is a helper function to create a timeseries from a value and attributes
-func createTimeSeries(edata exportData, value number.Number, valueNumberKind number.Kind, extraAttributes ...attribute.KeyValue) *prompb.TimeSeries {
+func createTimeSeries(edata exportData, value number.Number, valueNumberKind number.Kind, extraAttributes ...attribute.KeyValue) prompb.TimeSeries {
 	sample := prompb.Sample{
 		Value:     value.CoerceToFloat64(valueNumberKind),
 		Timestamp: int64(time.Nanosecond) * edata.EndTime().UnixNano() / int64(time.Millisecond),
@@ -200,18 +199,18 @@ func createTimeSeries(edata exportData, value number.Number, valueNumberKind num
 
 	attributes := createLabelSet(edata, extraAttributes...)
 
-	return &prompb.TimeSeries{
+	return prompb.TimeSeries{
 		Samples: []prompb.Sample{sample},
 		Labels:  attributes,
 	}
 }
 
 // convertFromSum returns a single TimeSeries based on a Record with a Sum aggregation
-func convertFromSum(edata exportData, sum aggregation.Sum) (*prompb.TimeSeries, error) {
+func convertFromSum(edata exportData, sum aggregation.Sum) (prompb.TimeSeries, error) {
 	// Get Sum value
 	value, err := sum.Sum()
 	if err != nil {
-		return nil, err
+		return prompb.TimeSeries{}, err
 	}
 
 	// Create TimeSeries. Note that Cortex requires the name attribute to be in the format
@@ -224,11 +223,11 @@ func convertFromSum(edata exportData, sum aggregation.Sum) (*prompb.TimeSeries, 
 }
 
 // convertFromLastValue returns a single TimeSeries based on a Record with a LastValue aggregation
-func convertFromLastValue(edata exportData, lastValue aggregation.LastValue) (*prompb.TimeSeries, error) {
+func convertFromLastValue(edata exportData, lastValue aggregation.LastValue) (prompb.TimeSeries, error) {
 	// Get value
 	value, _, err := lastValue.LastValue()
 	if err != nil {
-		return nil, err
+		return prompb.TimeSeries{}, err
 	}
 
 	// Create TimeSeries
@@ -240,7 +239,7 @@ func convertFromLastValue(edata exportData, lastValue aggregation.LastValue) (*p
 }
 
 // convertFromMinMaxSumCount returns 4 TimeSeries for the min, max, sum, and count from the mmsc aggregation
-func convertFromMinMaxSumCount(edata exportData, minMaxSumCount aggregation.MinMaxSumCount) ([]*prompb.TimeSeries, error) {
+func convertFromMinMaxSumCount(edata exportData, minMaxSumCount aggregation.MinMaxSumCount) ([]prompb.TimeSeries, error) {
 	numberKind := edata.Descriptor().NumberKind()
 
 	// Convert Min
@@ -268,7 +267,7 @@ func convertFromMinMaxSumCount(edata exportData, minMaxSumCount aggregation.MinM
 	countTimeSeries := createTimeSeries(edata, number.NewInt64Number(int64(count)), number.Int64Kind, attribute.String("__name__", name))
 
 	// Return all timeSeries
-	tSeries := []*prompb.TimeSeries{
+	tSeries := []prompb.TimeSeries{
 		minTimeSeries, maxTimeSeries, countTimeSeries,
 	}
 
@@ -276,8 +275,8 @@ func convertFromMinMaxSumCount(edata exportData, minMaxSumCount aggregation.MinM
 }
 
 // convertFromHistogram returns len(histogram.Buckets) timeseries for a histogram aggregation
-func convertFromHistogram(edata exportData, histogram aggregation.Histogram) ([]*prompb.TimeSeries, error) {
-	var timeSeries []*prompb.TimeSeries
+func convertFromHistogram(edata exportData, histogram aggregation.Histogram) ([]prompb.TimeSeries, error) {
+	var timeSeries []prompb.TimeSeries
 	metricName := sanitize(edata.Descriptor().Name())
 	numberKind := edata.Descriptor().NumberKind()
 
@@ -330,7 +329,7 @@ func convertFromHistogram(edata exportData, histogram aggregation.Histogram) ([]
 
 // createLabelSet combines attributes from a Record, resource, and extra attributes to create a
 // slice of prompb.Label.
-func createLabelSet(edata exportData, extraAttributes ...attribute.KeyValue) []*prompb.Label {
+func createLabelSet(edata exportData, extraAttributes ...attribute.KeyValue) []prompb.Label {
 	// Map ensure no duplicate label names.
 	labelMap := map[string]prompb.Label{}
 
@@ -364,10 +363,9 @@ func createLabelSet(edata exportData, extraAttributes ...attribute.KeyValue) []*
 	}
 
 	// Create slice of labels from labelMap and return
-	res := make([]*prompb.Label, 0, len(labelMap))
+	res := make([]prompb.Label, 0, len(labelMap))
 	for _, lb := range labelMap {
-		currentLabel := lb
-		res = append(res, &currentLabel)
+		res = append(res, lb)
 	}
 
 	return res
@@ -401,17 +399,19 @@ func (e *Exporter) addHeaders(req *http.Request) error {
 }
 
 // buildMessage creates a Snappy-compressed protobuf message from a slice of TimeSeries.
-func (e *Exporter) buildMessage(timeseries []*prompb.TimeSeries) ([]byte, error) {
+func (e *Exporter) buildMessage(timeseries []prompb.TimeSeries) ([]byte, error) {
 	// Wrap the TimeSeries as a WriteRequest since Cortex requires it.
 	writeRequest := &prompb.WriteRequest{
 		Timeseries: timeseries,
 	}
 
 	// Convert the struct to a slice of bytes and then compress it.
-	message, err := proto.Marshal(writeRequest)
+	message := make([]byte, writeRequest.Size())
+	written, err := writeRequest.MarshalToSizedBuffer(message)
 	if err != nil {
 		return nil, err
 	}
+	message = message[:written]
 	compressed := snappy.Encode(nil, message)
 
 	return compressed, nil
