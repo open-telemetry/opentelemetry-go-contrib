@@ -93,7 +93,7 @@ jobs:
         mkdir $TEST_RESULTS
         cp coverage.{txt,html} $TEST_RESULTS
     - name: Upload coverage report
-      uses: codecov/codecov-action@v2.0.3
+      uses: codecov/codecov-action@v2.1.0
       with:
         file: ./coverage.txt
         fail_ci_if_error: true
@@ -180,7 +180,7 @@ jobs:
         find . -name 'coverage.html' > "${TEST_RESULTS}/coverage.lst"
         tar -n -cf - -T "${TEST_RESULTS}/coverage.lst" | tar -C "${TEST_RESULTS}" -xvf -
     - name: Upload coverage report
-      uses: codecov/codecov-action@v2.0.3
+      uses: codecov/codecov-action@v2.1.0
       if: hashFiles('coverage.out') != ''
       with:
         file: ./coverage.out
