@@ -66,9 +66,7 @@ func TestHostCPU(t *testing.T) {
 	assert.NoError(t, err)
 
 	proc, err := process.NewProcess(int32(os.Getpid()))
-	if err != nil {
-		t.Errorf("could not find this process: %w", err)
-	}
+	require.NoError(t, err)
 
 	ctx := context.Background()
 	processBefore, err := proc.TimesWithContext(ctx)
