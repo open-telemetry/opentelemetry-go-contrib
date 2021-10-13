@@ -15,7 +15,6 @@
 package otelmongo
 
 import (
-	"go.opentelemetry.io/contrib"
 	"go.opentelemetry.io/otel"
 	"go.opentelemetry.io/otel/trace"
 )
@@ -42,7 +41,7 @@ func newConfig(opts ...Option) config {
 
 	cfg.Tracer = cfg.TracerProvider.Tracer(
 		defaultTracerName,
-		trace.WithInstrumentationVersion(contrib.SemVersion()),
+		trace.WithInstrumentationVersion(SemVersion()),
 	)
 	return cfg
 }
@@ -62,7 +61,9 @@ func (o optionFunc) apply(c *config) {
 // If none is specified, the global provider is used.
 func WithTracerProvider(provider trace.TracerProvider) Option {
 	return optionFunc(func(cfg *config) {
-		cfg.TracerProvider = provider
+		if provider != nil {
+			cfg.TracerProvider = provider
+		}
 	})
 }
 

@@ -54,6 +54,8 @@ func TestDetect(t *testing.T) {
 	detectorUtils.On("getContainerID").Return("0123456789A", nil)
 
 	attributes := []attribute.KeyValue{
+		semconv.CloudProviderAWS,
+		semconv.CloudPlatformAWSECS,
 		semconv.ContainerNameKey.String("container-Name"),
 		semconv.ContainerIDKey.String("0123456789A"),
 	}

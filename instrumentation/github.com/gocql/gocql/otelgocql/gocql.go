@@ -19,7 +19,7 @@ import (
 
 	"github.com/gocql/gocql"
 
-	otelcontrib "go.opentelemetry.io/contrib"
+	"go.opentelemetry.io/contrib/instrumentation/github.com/gocql/gocql/otelgocql/internal"
 	"go.opentelemetry.io/otel/trace"
 )
 
@@ -30,8 +30,8 @@ func NewSessionWithTracing(ctx context.Context, cluster *gocql.ClusterConfig, op
 	cfg := newConfig(options...)
 	instruments := newInstruments(cfg.meterProvider)
 	tracer := cfg.tracerProvider.Tracer(
-		instrumentationName,
-		trace.WithInstrumentationVersion(otelcontrib.SemVersion()),
+		internal.InstrumentationName,
+		trace.WithInstrumentationVersion(SemVersion()),
 	)
 	cluster.QueryObserver = &OTelQueryObserver{
 		enabled:  cfg.instrumentQuery,

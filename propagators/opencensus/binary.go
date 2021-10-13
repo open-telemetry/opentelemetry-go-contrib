@@ -19,7 +19,7 @@ import (
 
 	ocpropagation "go.opencensus.io/trace/propagation"
 
-	"go.opentelemetry.io/otel/bridge/opencensus/utils"
+	"go.opentelemetry.io/otel/bridge/opencensus"
 	"go.opentelemetry.io/otel/propagation"
 	"go.opentelemetry.io/otel/trace"
 )
@@ -50,7 +50,7 @@ func (b Binary) Inject(ctx context.Context, carrier propagation.TextMapCarrier) 
 	if !sc.IsValid() {
 		return
 	}
-	h := ocpropagation.Binary(utils.OTelSpanContextToOC(sc))
+	h := ocpropagation.Binary(opencensus.OTelSpanContextToOC(sc))
 	carrier.Set(binaryHeader, string(h))
 }
 
@@ -77,7 +77,7 @@ func (b Binary) extract(carrier propagation.TextMapCarrier) trace.SpanContext {
 	if !ok {
 		return trace.SpanContext{}
 	}
-	return utils.OCSpanContextToOTel(ocContext)
+	return opencensus.OCSpanContextToOTel(ocContext)
 }
 
 // Fields returns the fields that this propagator modifies.

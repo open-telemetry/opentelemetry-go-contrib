@@ -22,7 +22,6 @@ import (
 	"github.com/aws/smithy-go/middleware"
 	smithyhttp "github.com/aws/smithy-go/transport/http"
 
-	"go.opentelemetry.io/contrib"
 	"go.opentelemetry.io/otel"
 	"go.opentelemetry.io/otel/codes"
 	semconv "go.opentelemetry.io/otel/semconv/v1.4.0"
@@ -112,6 +111,6 @@ func AppendMiddlewares(apiOptions *[]func(*middleware.Stack) error, opts ...Opti
 	}
 
 	m := otelMiddlewares{tracer: cfg.TracerProvider.Tracer(tracerName,
-		trace.WithInstrumentationVersion(contrib.SemVersion()))}
+		trace.WithInstrumentationVersion(SemVersion()))}
 	*apiOptions = append(*apiOptions, m.initializeMiddlewareBefore, m.initializeMiddlewareAfter, m.deserializeMiddleware)
 }

@@ -40,23 +40,23 @@ func main() {
 
 	// Create and install the exporter. Additionally, set the push interval to 5 seconds
 	// and add a resource to the controller.
-	pusher, err := cortex.InstallNewPipeline(*config, controller.WithCollectPeriod(5*time.Second), controller.WithResource(resource.NewWithAttributes(semconv.SchemaURL, attribute.String("R", "V"))))
+	cont, err := cortex.InstallNewPipeline(*config, controller.WithCollectPeriod(5*time.Second), controller.WithResource(resource.NewWithAttributes(semconv.SchemaURL, attribute.String("R", "V"))))
 	if err != nil {
 		fmt.Printf("Error: %v", err)
 	}
 
 	ctx := context.Background()
 	defer func() {
-		handleErr(pusher.Stop(ctx))
+		handleErr(cont.Stop(ctx))
 	}()
 	fmt.Println("Success: Installed Exporter Pipeline")
 
 	// Create a counter and a value recorder
-	meter := pusher.MeterProvider().Meter("example")
+	meter := cont.Meter("example")
 
 	// Create instruments.
-	recorder := metric.Must(meter).NewInt64ValueRecorder(
-		"example.valuerecorder",
+	histogram := metric.Must(meter).NewInt64Histogram(
+		"example.histogram",
 		metric.WithDescription("Records values"),
 	)
 
@@ -64,7 +64,7 @@ func main() {
 		"example.counter",
 		metric.WithDescription("Counts things"),
 	)
-	fmt.Println("Success: Created Int64ValueRecorder and Int64Counter instruments!")
+	fmt.Println("Success: Created Int64Histogram and Int64Counter instruments!")
 
 	// Record random values to the instruments in a loop
 	fmt.Println("Starting to write data to the instruments!")
@@ -74,9 +74,9 @@ func main() {
 		time.Sleep(1 * time.Second)
 		randomValue := random.Intn(100)
 		value := int64(randomValue * 10)
-		recorder.Record(ctx, value, attribute.String("key", "value"))
+		histogram.Record(ctx, value, attribute.String("key", "value"))
 		counter.Add(ctx, int64(randomValue), attribute.String("key", "value"))
-		fmt.Printf("Adding %d to counter and recording %d in recorder\n", randomValue, value)
+		fmt.Printf("Adding %d to counter and recording %d in histogram\n", randomValue, value)
 	}
 
 }

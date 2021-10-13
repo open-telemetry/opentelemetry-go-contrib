@@ -50,10 +50,11 @@ needed.
 ```go
 // Create a Config struct named `config`.
 
-pusher, err := cortex.InstallNewPipeline(config)
+controller, err := cortex.InstallNewPipeline(config)
 if err != nil {
     return err
 }
+defer controller.Stop(context.Background())
 
 // Make instruments and record data using `global.MeterProvider`.
 ```

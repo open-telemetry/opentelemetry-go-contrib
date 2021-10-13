@@ -15,18 +15,12 @@
 package otelsarama
 
 import (
-	"go.opentelemetry.io/contrib"
 	"go.opentelemetry.io/otel"
-	"go.opentelemetry.io/otel/attribute"
 	"go.opentelemetry.io/otel/propagation"
 	"go.opentelemetry.io/otel/trace"
 )
 
-const (
-	defaultTracerName = "go.opentelemetry.io/contrib/instrumentation/github.com/Shopify/sarama/otelsarama"
-
-	kafkaPartitionKey = attribute.Key("messaging.kafka.partition")
-)
+const defaultTracerName = "go.opentelemetry.io/contrib/instrumentation/github.com/Shopify/sarama/otelsarama"
 
 type config struct {
 	TracerProvider trace.TracerProvider
@@ -47,7 +41,7 @@ func newConfig(opts ...Option) config {
 
 	cfg.Tracer = cfg.TracerProvider.Tracer(
 		defaultTracerName,
-		trace.WithInstrumentationVersion(contrib.SemVersion()),
+		trace.WithInstrumentationVersion(SemVersion()),
 	)
 
 	return cfg
@@ -68,7 +62,9 @@ func (fn optionFunc) apply(c *config) {
 // If none is specified, the global provider is used.
 func WithTracerProvider(provider trace.TracerProvider) Option {
 	return optionFunc(func(cfg *config) {
-		cfg.TracerProvider = provider
+		if provider != nil {
+			cfg.TracerProvider = provider
+		}
 	})
 }
 
@@ -77,6 +73,8 @@ func WithTracerProvider(provider trace.TracerProvider) Option {
 // ones will be used.
 func WithPropagators(propagators propagation.TextMapPropagator) Option {
 	return optionFunc(func(cfg *config) {
-		cfg.Propagators = propagators
+		if propagators != nil {
+			cfg.Propagators = propagators
+		}
 	})
 }
