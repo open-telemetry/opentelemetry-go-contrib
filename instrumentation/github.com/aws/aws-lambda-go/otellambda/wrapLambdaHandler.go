@@ -94,8 +94,8 @@ func (whf *wrappedHandlerFunction) wrapperInternals(ctx context.Context, handler
 	return val, err
 }
 
-// WrapHandlerFunction Provides a lambda handler which wraps customer lambda handler with OTel Tracing
-func WrapHandlerFunction(handlerFunc interface{}, options ...Option) interface{} {
+// InstrumentHandler Provides a lambda handler which wraps customer lambda handler with OTel Tracing
+func InstrumentHandler(handlerFunc interface{}, options ...Option) interface{} {
 	whf := wrappedHandlerFunction{instrumentor: newInstrumentor(options...)}
 
 	if handlerFunc == nil {
