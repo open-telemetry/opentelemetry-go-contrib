@@ -10,6 +10,8 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 
 ### Added
 
+- Add instrumentation for the `github.com/aws/aws-lambda-go` package. (#983)
+- Add resource detector for AWS Lambda. (#983)
 - Add `WithTracerProvider` option for `otelhttptrace.NewClientTrace`. (#1128)
 
 
