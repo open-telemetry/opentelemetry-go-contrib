@@ -66,9 +66,9 @@ func (o OT) Inject(ctx context.Context, carrier propagation.TextMapCarrier) {
 	carrier.Set(spanIDHeader, sc.SpanID().String())
 
 	if sc.IsSampled() {
-		carrier.Set(sampledHeader, "1")
+		carrier.Set(sampledHeader, "true")
 	} else {
-		carrier.Set(sampledHeader, "0")
+		carrier.Set(sampledHeader, "false")
 	}
 
 	for _, m := range baggage.FromContext(ctx).Members() {

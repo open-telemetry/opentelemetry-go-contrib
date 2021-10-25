@@ -1,4 +1,4 @@
-module go.opentelemetry.io/opentelemetry-go-contrib/instrumentation/runtime/example
+module go.opentelemetry.io/contrib/instrumentation/runtime/example
 
 go 1.15
 
@@ -8,8 +8,8 @@ replace (
 )
 
 require (
-	go.opentelemetry.io/contrib/instrumentation/runtime v0.22.0
-	go.opentelemetry.io/otel/exporters/stdout/stdoutmetric v0.22.0
-	go.opentelemetry.io/otel/metric v0.22.0
-	go.opentelemetry.io/otel/sdk/metric v0.22.0
+	go.opentelemetry.io/contrib/instrumentation/runtime v0.25.0
+	go.opentelemetry.io/otel/exporters/stdout/stdoutmetric v0.24.0
+	go.opentelemetry.io/otel/metric v0.24.0
+	go.opentelemetry.io/otel/sdk/metric v0.24.0
 )

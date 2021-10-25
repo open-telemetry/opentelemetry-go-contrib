@@ -171,7 +171,7 @@ func assertStubEqualsIgnoreTime(t *testing.T, expected tracetest.SpanStub, actua
 	assert.Equal(t, expected.InstrumentationLibrary, actual.InstrumentationLibrary)
 }
 
-func TestWrapHandlerFunctionTracing(t *testing.T) {
+func TestInstrumentHandlerTracing(t *testing.T) {
 	setEnvVars()
 	tp, memExporter := initMockTracerProvider()
 
@@ -180,7 +180,7 @@ func TestWrapHandlerFunctionTracing(t *testing.T) {
 	}
 
 	// No flusher needed as SimpleSpanProcessor is synchronous
-	wrapped := otellambda.WrapHandlerFunction(customerHandler, otellambda.WithTracerProvider(tp))
+	wrapped := otellambda.InstrumentHandler(customerHandler, otellambda.WithTracerProvider(tp))
 	wrappedCallable := reflect.ValueOf(wrapped)
 	resp := wrappedCallable.Call([]reflect.Value{reflect.ValueOf(mockContext)})
 	assert.Len(t, resp, 2)
@@ -217,7 +217,7 @@ func (mf *mockFlusher) ForceFlush(context.Context) error {
 
 var _ otellambda.Flusher = &mockFlusher{}
 
-func TestWrapHandlerFunctionTracingWithFlusher(t *testing.T) {
+func TestInstrumentHandlerTracingWithFlusher(t *testing.T) {
 	setEnvVars()
 	tp, memExporter := initMockTracerProvider()
 
@@ -226,7 +226,7 @@ func TestWrapHandlerFunctionTracingWithFlusher(t *testing.T) {
 	}
 
 	flusher := mockFlusher{}
-	wrapped := otellambda.WrapHandlerFunction(customerHandler, otellambda.WithTracerProvider(tp), otellambda.WithFlusher(&flusher))
+	wrapped := otellambda.InstrumentHandler(customerHandler, otellambda.WithTracerProvider(tp), otellambda.WithFlusher(&flusher))
 	wrappedCallable := reflect.ValueOf(wrapped)
 	resp := wrappedCallable.Call([]reflect.Value{reflect.ValueOf(mockContext)})
 	assert.Len(t, resp, 2)
@@ -352,7 +352,7 @@ func mockRequestCarrier(eventJSON []byte) propagation.TextMapCarrier {
 	return propagation.HeaderCarrier{mockPropagatorKey: []string{event.Headers[mockPropagatorKey]}}
 }
 
-func TestWrapHandlerFunctionTracingWithMockPropagator(t *testing.T) {
+func TestInstrumentHandlerTracingWithMockPropagator(t *testing.T) {
 
 	setEnvVars()
 	tp, memExporter := initMockTracerProvider()
@@ -362,7 +362,7 @@ func TestWrapHandlerFunctionTracingWithMockPropagator(t *testing.T) {
 	}
 
 	// No flusher needed as SimpleSpanProcessor is synchronous
-	wrapped := otellambda.WrapHandlerFunction(customerHandler,
+	wrapped := otellambda.InstrumentHandler(customerHandler,
 		otellambda.WithTracerProvider(tp),
 		otellambda.WithPropagator(mockPropagator{}),
 		otellambda.WithEventToCarrier(mockRequestCarrier))

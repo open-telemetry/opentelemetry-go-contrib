@@ -17,8 +17,8 @@ package main
 import (
 	"context"
 	"encoding/json"
-	"fmt"
 	"io"
+	"log"
 	"net/http"
 
 	"github.com/aws/aws-lambda-go/lambda"
@@ -38,7 +38,7 @@ func lambdaHandler(ctx context.Context) error {
 	// init aws config
 	cfg, err := awsConfig.LoadDefaultConfig(ctx)
 	if err != nil {
-		panic("configuration error, " + err.Error())
+		return err
 	}
 
 	// instrument all aws clients
@@ -49,12 +49,12 @@ func lambdaHandler(ctx context.Context) error {
 	input := &s3.ListBucketsInput{}
 	result, err := s3Client.ListBuckets(ctx, input)
 	if err != nil {
-		fmt.Printf("Got an error retrieving buckets, %v", err)
+		return err
 	}
 
-	fmt.Println("Buckets:")
+	log.Println("Buckets:")
 	for _, bucket := range result.Buckets {
-		fmt.Println(*bucket.Name + ": " + bucket.CreationDate.Format("2006-01-02 15:04:05 Monday"))
+		log.Println(*bucket.Name + ": " + bucket.CreationDate.Format("2006-01-02 15:04:05 Monday"))
 	}
 
 	// HTTP
@@ -66,29 +66,29 @@ func lambdaHandler(ctx context.Context) error {
 	}
 	req, err := http.NewRequestWithContext(ctx, http.MethodGet, "https://api.github.com/repos/open-telemetry/opentelemetry-go/releases/latest", nil)
 	if err != nil {
-		fmt.Printf("failed to create http request, %v\n", err)
+		log.Printf("failed to create http request, %v\n", err)
 		return err
 	}
 
 	res, err := client.Do(req)
 	if err != nil {
-		fmt.Printf("failed to do http request, %v\n", err)
+		log.Printf("failed to do http request, %v\n", err)
 		return err
 	}
 
 	defer func(Body io.ReadCloser) {
 		err := Body.Close()
 		if err != nil {
-			fmt.Printf("failed to close http response body, %v\n", err)
+			log.Printf("failed to close http response body, %v\n", err)
 		}
 	}(res.Body)
 
 	var data map[string]interface{}
 	err = json.NewDecoder(res.Body).Decode(&data)
 	if err != nil {
-		fmt.Printf("failed to read http response body, %v\n", err)
+		log.Printf("failed to read http response body, %v\n", err)
 	}
-	fmt.Printf("Latest OTel Go Release is '%s'\n", data["name"])
+	log.Printf("Latest OTel Go Release is '%s'\n", data["name"])
 
 	return nil
 }
@@ -98,14 +98,15 @@ func main() {
 
 	exp, err := stdouttrace.New()
 	if err != nil {
-		fmt.Printf("failed to initialize stdout exporter %v\n", err)
+		log.Printf("failed to initialize stdout exporter %v\n", err)
 		return
 	}
 
 	detector := lambdadetector.NewResourceDetector()
 	res, err := detector.Detect(ctx)
 	if err != nil {
-		fmt.Printf("failed to detect lambda resources: %v\n", err)
+		log.Fatalf("failed to detect lambda resources: %v\n", err)
+		return
 	}
 
 	tp := sdktrace.NewTracerProvider(
@@ -116,5 +117,5 @@ func main() {
 	// Downstream spans use global tracer provider
 	otel.SetTracerProvider(tp)
 
-	lambda.Start(otellambda.WrapHandlerFunction(lambdaHandler, otellambda.WithTracerProvider(tp)))
+	lambda.Start(otellambda.InstrumentHandler(lambdaHandler, otellambda.WithTracerProvider(tp)))
 }

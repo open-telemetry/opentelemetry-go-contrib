@@ -24,6 +24,8 @@ import (
 	semconv "go.opentelemetry.io/otel/semconv/v1.4.0"
 )
 
+// For a complete list of reserved environment variables in Lambda, see:
+// https://docs.aws.amazon.com/lambda/latest/dg/configuration-envvars.html
 const (
 	lambdaFunctionNameEnvVar    = "AWS_LAMBDA_FUNCTION_NAME"
 	awsRegionEnvVar             = "AWS_REGION"

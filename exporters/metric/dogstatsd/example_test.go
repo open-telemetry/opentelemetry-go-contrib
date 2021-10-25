@@ -61,7 +61,7 @@ func ExampleNew() {
 	}()
 
 	// Create a meter
-	pusher, err := dogstatsd.NewExportPipeline(dogstatsd.Config{
+	cont, err := dogstatsd.NewExportPipeline(dogstatsd.Config{
 		// The Writer field provides test support.
 		Writer: writer,
 
@@ -77,19 +77,19 @@ func ExampleNew() {
 
 	key := attribute.Key("key")
 
-	// pusher implements the metric.MeterProvider interface:
-	meter := pusher.MeterProvider().Meter("example")
+	// cont implements the metric.MeterProvider interface:
+	meter := cont.Meter("example")
 
 	// Create and update a single counter:
 	counter := metric.Must(meter).NewInt64Counter("a.counter")
-	values := metric.Must(meter).NewInt64ValueRecorder("a.values")
+	values := metric.Must(meter).NewInt64Histogram("a.values")
 
 	values.Record(ctx, 50, key.String("value"))
 	counter.Add(ctx, 100, key.String("value"))
 	values.Record(ctx, 150, key.String("value"))
 
 	// Flush the exporter, close the pipe, and wait for the reader.
-	err = pusher.Stop(context.Background())
+	err = cont.Stop(context.Background())
 	if err != nil {
 		panic(err)
 	}

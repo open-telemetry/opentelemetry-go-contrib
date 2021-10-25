@@ -8,17 +8,44 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 
 ## [Unreleased]
 
+### Added
+
+- Add instrumentation for the `github.com/aws/aws-lambda-go` package. (#983)
+- Add resource detector for AWS Lambda. (#983)
+- Add `WithTracerProvider` option for `otelhttptrace.NewClientTrace`. (#1128)
+- Add optional AWS X-Ray configuration module for AWS Lambda Instrumentation (#930)
+
+
+## [1.0.0/0.25.0] - 2021-10-06
+
+- Resource detectors and propagators (with the exception of `go.
+  opentelemetry.io/contrib/propagators/opencensus`) are now stable and 
+  released at v1.0.0.
+- Update dependency on the `go.opentelemetry.io/otel` project to `v1.0.1`.
+- Update dependency on `go.opentelemetry.io/otel/metric` to `v0.24.0`.
+
+
+## [0.24.0] - 2021-09-21
+
+- Update dependency on the `go.opentelemetry.io/otel` project to `v1.0.0`.
+
+## [0.23.0] - 2021-09-08
+
+### Added
+
+- Add `WithoutSubSpans`, `WithRedactedHeaders`, `WithoutHeaders`, and `WithInsecureHeaders` options for `otelhttptrace.NewClientTrace`. (#879)
+
 ### Changed
 
+- Split `go.opentelemetry.io/contrib/propagators` module into `b3`, `jaeger`, `ot` modules. (#985)
 - `otelmongodb` span attributes, name and span status now conform to specification. (#769)
+- Migrated EC2 resource detector support from root module `go.opentelemetry.io/contrib/detectors/aws` to a separate EC2 resource detector module `go.opentelemetry.io/contrib/detectors/aws/ec2` (#1017)
+- Add `cloud.provider` and `cloud.platform` to AWS detectors. (#1043)
+- `otelhttptrace.NewClientTrace` now redacts known sensitive headers by default. (#879)
 
 ### Fixed
 
 - Fix span not marked as error in `otelhttp.Transport` when `RoundTrip` fails with an error. (#950)
-
-### Added
-
-- Add optional AWS X-Ray configuration module for AWS Lambda Instrumentation (#930)
 
 ## [0.22.0] - 2021-07-26
 
@@ -344,7 +371,9 @@ First official tagged release of `contrib` repository.
 - Prefix support for dogstatsd (#34)
 - Update Go Runtime package to use batch observer (#44)
 
-[Unreleased]: https://github.com/open-telemetry/opentelemetry-go-contrib/compare/v0.22.0...HEAD
+[Unreleased]: https://github.com/open-telemetry/opentelemetry-go-contrib/compare/v0.24.0...HEAD
+[0.24.0]: https://github.com/open-telemetry/opentelemetry-go-contrib/releases/tag/v0.24.0
+[0.23.0]: https://github.com/open-telemetry/opentelemetry-go-contrib/releases/tag/v0.23.0
 [0.22.0]: https://github.com/open-telemetry/opentelemetry-go-contrib/releases/tag/v0.22.0
 [0.21.0]: https://github.com/open-telemetry/opentelemetry-go-contrib/releases/tag/v0.21.0
 [0.20.0]: https://github.com/open-telemetry/opentelemetry-go-contrib/releases/tag/v0.20.0

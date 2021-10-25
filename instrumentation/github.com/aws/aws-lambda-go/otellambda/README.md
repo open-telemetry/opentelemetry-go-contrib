@@ -47,7 +47,7 @@ import "go.opentelemetry.io/contrib/instrumentation/github.com/aws/aws-lambda-go
 
 // wrap lambda handler function
 func main() {
-	lambda.Start(otellambda.WrapHandlerFunction(HandleRequest))
+	lambda.Start(otellambda.InstrumentHandler(HandleRequest))
 }
 ```
 
@@ -90,8 +90,8 @@ func main() {
     
 	tp := sdktrace.NewTracerProvider(
 		    sdktrace.WithBatcher(exp))
-    
-	lambda.Start(otellambda.WrapHandlerFunction(HandleRequest, 
+	
+	lambda.Start(otellambda.InstrumentHandler(HandleRequest,
 		                                    otellambda.WithTracerProvider(tp),
 		                                    otellambda.WithFlusher(tp),
 		                                    otellambda.WithEventToCarrier(mockEventToCarrier),
