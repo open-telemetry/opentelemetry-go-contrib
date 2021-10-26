@@ -26,10 +26,10 @@ module-sets:
       - go.opentelemetry.io/contrib/detectors/aws/ec2
       - go.opentelemetry.io/contrib/detectors/aws/ecs
       - go.opentelemetry.io/contrib/detectors/aws/eks
-      - go.opentelemetry.io/contrib/detectors/aws/lambda
   experimental-instrumentation:
     version: v0.25.0
     modules:
+      - go.opentelemetry.io/contrib/detectors/aws/lambda
       - go.opentelemetry.io/contrib/propagators/opencensus
       - go.opentelemetry.io/contrib/propagators/opencensus/examples
       - go.opentelemetry.io/contrib/instrumentation/gopkg.in/macaron.v1/otelmacaron
