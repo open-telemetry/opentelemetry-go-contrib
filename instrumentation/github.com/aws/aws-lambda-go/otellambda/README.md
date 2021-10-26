@@ -90,8 +90,8 @@ func main() {
     
 	tp := sdktrace.NewTracerProvider(
 		    sdktrace.WithBatcher(exp))
-    
-	lambda.Start(otellambda.InstrumentHandler(HandleRequest, 
+	
+	lambda.Start(otellambda.InstrumentHandler(HandleRequest,
 		                                    otellambda.WithTracerProvider(tp),
 		                                    otellambda.WithFlusher(tp),
 		                                    otellambda.WithEventToCarrier(mockEventToCarrier),
