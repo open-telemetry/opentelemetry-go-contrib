@@ -24,7 +24,6 @@ import (
 	"github.com/aws/aws-lambda-go/lambdacontext"
 	"github.com/stretchr/testify/assert"
 
-	"go.opentelemetry.io/contrib"
 	"go.opentelemetry.io/contrib/instrumentation/github.com/aws/aws-lambda-go/otellambda"
 	"go.opentelemetry.io/contrib/propagators/aws/xray"
 	"go.opentelemetry.io/otel/propagation"
@@ -84,7 +83,7 @@ var (
 		})
 
 	expectedSpans = v1trace.InstrumentationLibrarySpans{
-		InstrumentationLibrary: &v1common.InstrumentationLibrary{Name: "go.opentelemetry.io/contrib/instrumentation/github.com/aws/aws-lambda-go/otellambda", Version: contrib.SemVersion()},
+		InstrumentationLibrary: &v1common.InstrumentationLibrary{Name: "go.opentelemetry.io/contrib/instrumentation/github.com/aws/aws-lambda-go/otellambda", Version: otellambda.SemVersion()},
 		Spans: []*v1trace.Span{{
 			TraceId:           []byte{0x57, 0x59, 0xe9, 0x88, 0xbd, 0x86, 0x2e, 0x3f, 0xe1, 0xbe, 0x46, 0xa9, 0x94, 0x27, 0x27, 0x93},
 			SpanId:            nil,
