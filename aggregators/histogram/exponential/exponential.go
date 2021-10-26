@@ -16,9 +16,7 @@ package exponential // import "go.opentelemetry.io/contrib/aggregators/histogram
 
 import (
 	"context"
-	"fmt"
 	"math/bits"
-	"strings"
 	"sync"
 
 	"go.opentelemetry.io/contrib/aggregators/histogram/exponential/mapping"
@@ -746,48 +744,4 @@ func (h *highLow) with(o highLow) highLow {
 
 func (h *highLow) empty() bool {
 	return h.low >= h.high
-}
-
-// TEST SUPPORT
-
-func stateString(a Aggregator) string {
-	s := a.state
-	b := func(b buckets) string {
-		var sb strings.Builder
-		sb.WriteString(fmt.Sprintln("[@", b.Offset()))
-		for i := uint32(0); i < b.Len(); i++ {
-			sb.WriteString(fmt.Sprintln(b.At(i)))
-		}
-		sb.WriteString("]\n")
-		return sb.String()
-	}
-	return fmt.Sprintf("sum %v\ncount %v\nzero %v\npos %s\nneg %s\n",
-		s.sum, s.count, s.zeroCount, b(s.positive), b(s.negative),
-	)
-}
-
-type show struct {
-	index int32
-	count uint64
-}
-
-func shows(b aggregation.ExponentialBuckets) (r []show) {
-	for i := uint32(0); i < b.Len(); i++ {
-		r = append(r, show{
-			index: b.Offset() + int32(i),
-			count: b.At(i),
-		})
-	}
-	return r
-}
-
-func counts(b aggregation.ExponentialBuckets) (r []uint64) {
-	for i := uint32(0); i < b.Len(); i++ {
-		r = append(r, b.At(i))
-	}
-	return r
-}
-
-func (s show) String() string {
-	return fmt.Sprint(s.index, "=", s.count)
 }

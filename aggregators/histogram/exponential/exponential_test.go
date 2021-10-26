@@ -3,6 +3,7 @@ package exponential
 import (
 	"context"
 	"fmt"
+	"strings"
 	"testing"
 
 	"github.com/stretchr/testify/require"
@@ -11,6 +12,7 @@ import (
 	"go.opentelemetry.io/otel/metric/metrictest"
 	"go.opentelemetry.io/otel/metric/number"
 	"go.opentelemetry.io/otel/metric/sdkapi"
+	"go.opentelemetry.io/otel/sdk/export/metric/aggregation"
 )
 
 var (
@@ -18,6 +20,50 @@ var (
 	oneAndAHalf    = centerVal(normalMapping, int32(normalMapping.MapToIndex(1.5)))
 	testDescriptor = metrictest.NewDescriptor("name", sdkapi.HistogramInstrumentKind, number.Float64Kind)
 )
+
+// TEST SUPPORT
+
+func stateString(a Aggregator) string {
+	s := a.state
+	b := func(b buckets) string {
+		var sb strings.Builder
+		sb.WriteString(fmt.Sprintln("[@", b.Offset()))
+		for i := uint32(0); i < b.Len(); i++ {
+			sb.WriteString(fmt.Sprintln(b.At(i)))
+		}
+		sb.WriteString("]\n")
+		return sb.String()
+	}
+	return fmt.Sprintf("sum %v\ncount %v\nzero %v\npos %s\nneg %s\n",
+		s.sum, s.count, s.zeroCount, b(s.positive), b(s.negative),
+	)
+}
+
+type show struct {
+	index int32
+	count uint64
+}
+
+func shows(b aggregation.ExponentialBuckets) (r []show) {
+	for i := uint32(0); i < b.Len(); i++ {
+		r = append(r, show{
+			index: b.Offset() + int32(i),
+			count: b.At(i),
+		})
+	}
+	return r
+}
+
+func counts(b aggregation.ExponentialBuckets) (r []uint64) {
+	for i := uint32(0); i < b.Len(); i++ {
+		r = append(r, b.At(i))
+	}
+	return r
+}
+
+func (s show) String() string {
+	return fmt.Sprint(s.index, "=", s.count)
+}
 
 func centerVal(mapper mapping.Mapping, x int32) float64 {
 	lb, err1 := mapper.LowerBoundary(int64(x))
