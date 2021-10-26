@@ -29,6 +29,7 @@ module-sets:
   experimental-instrumentation:
     version: v0.25.0
     modules:
+      - go.opentelemetry.io/contrib/detectors/aws/lambda
       - go.opentelemetry.io/contrib/propagators/opencensus
       - go.opentelemetry.io/contrib/propagators/opencensus/examples
       - go.opentelemetry.io/contrib/instrumentation/gopkg.in/macaron.v1/otelmacaron
@@ -67,6 +68,9 @@ module-sets:
       - go.opentelemetry.io/contrib/instrumentation/github.com/astaxie/beego/otelbeego/example
       - go.opentelemetry.io/contrib/instrumentation/github.com/astaxie/beego/otelbeego/test
       - go.opentelemetry.io/contrib/instrumentation/github.com/aws/aws-lambda-go/otellambda/xrayconfig
+      - go.opentelemetry.io/contrib/instrumentation/github.com/aws/aws-lambda-go/otellambda
+      - go.opentelemetry.io/contrib/instrumentation/github.com/aws/aws-lambda-go/otellambda/example
+      - go.opentelemetry.io/contrib/instrumentation/github.com/aws/aws-lambda-go/otellambda/test
       - go.opentelemetry.io/contrib/instrumentation/github.com/aws/aws-sdk-go-v2/otelaws
       - go.opentelemetry.io/contrib/instrumentation/github.com/aws/aws-sdk-go-v2/otelaws/example
       - go.opentelemetry.io/contrib/instrumentation/github.com/aws/aws-sdk-go-v2/otelaws/test
