@@ -23,7 +23,6 @@ import (
 	lambdadetector "go.opentelemetry.io/contrib/detectors/aws/lambda"
 	"go.opentelemetry.io/contrib/instrumentation/github.com/aws/aws-lambda-go/otellambda"
 	"go.opentelemetry.io/contrib/propagators/aws/xray"
-	"go.opentelemetry.io/otel"
 	"go.opentelemetry.io/otel/exporters/otlp/otlptrace/otlptracegrpc"
 	"go.opentelemetry.io/otel/propagation"
 	sdktrace "go.opentelemetry.io/otel/sdk/trace"
@@ -77,9 +76,6 @@ func tracerProviderAndFlusher() ([]otellambda.Option, error) {
 		sdktrace.WithResource(res),
 	)
 
-	// set TracerProvider for downstream spans
-	otel.SetTracerProvider(tp)
-
 	return []otellambda.Option{otellambda.WithTracerProvider(tp), otellambda.WithFlusher(asyncSafeFlusher{tp: tp})}, nil
 }
 
@@ -93,9 +89,6 @@ func EventToCarrier() otellambda.Option {
 
 // Propagator returns an otellambda.Option to enable the xray.Propagator
 func Propagator() otellambda.Option {
-
-	// set Propagator for downstream spans
-	otel.SetTextMapPropagator(xray.Propagator{})
 
 	return otellambda.WithPropagator(xray.Propagator{})
 }
