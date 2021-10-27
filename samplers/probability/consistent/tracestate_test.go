@@ -23,64 +23,6 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
-func TestSplitProb(t *testing.T) {
-	require.Equal(t, -1, expFromFloat64(0.6))
-	require.Equal(t, -2, expFromFloat64(0.4))
-	require.Equal(t, 0.5, expToFloat64(-1))
-	require.Equal(t, 0.25, expToFloat64(-2))
-
-	for _, tc := range []struct {
-		in      float64
-		low     uint8
-		lowProb float64
-	}{
-		// Probability 0.75 corresponds with choosing S=1 (the
-		// "low" probability) 50% of the time and S=0 (the
-		// "high" probability) 50% of the time.
-		{0.75, 1, 0.5},
-		{0.6, 1, 0.8},
-		{0.9, 1, 0.2},
-
-		// Powers of 2 exactly
-		{1, 0, 1},
-		{0.5, 1, 1},
-		{0.25, 2, 1},
-
-		// Smaller numbers
-		{0.05, 5, 0.4},
-		{0.1, 4, 0.4}, // 0.1 == 0.4 * 1/16 + 0.6 * 1/8
-		{0.003, 9, 0.464},
-
-		// Special cases:
-		{0, 63, 1},
-	} {
-		low, high, lowProb := splitProb(tc.in)
-		require.Equal(t, tc.low, low, "got %v want %v", low, tc.low)
-		if lowProb != 1 {
-			require.Equal(t, tc.low-1, high, "got %v want %v", high, tc.low-1)
-		}
-		require.InEpsilon(t, tc.lowProb, lowProb, 1e-6, "got %v want %v", lowProb, tc.lowProb)
-	}
-}
-
-func TestDescription(t *testing.T) {
-	for _, tc := range []struct {
-		prob   float64
-		expect string
-	}{
-		{0.75, "ConsistentProbabilityBased{0.75}"},
-		{0.05, "ConsistentProbabilityBased{0.05}"},
-		{0.003, "ConsistentProbabilityBased{0.003}"},
-		{0.99999999, "ConsistentProbabilityBased{0.99999999}"},
-		{0.00000001, "ConsistentProbabilityBased{1e-08}"},
-		{1, "ConsistentProbabilityBased{1}"},
-		{0, "ConsistentProbabilityBased{0}"},
-	} {
-		s := ConsistentProbabilityBased(tc.prob)
-		require.Equal(t, tc.expect, s.Description())
-	}
-}
-
 func TestNewTraceState(t *testing.T) {
 	otts := newTraceState()
 	require.False(t, otts.hasPValue())
@@ -88,7 +30,7 @@ func TestNewTraceState(t *testing.T) {
 	require.Equal(t, "", otts.serialize())
 }
 
-func TestParseTraceState(t *testing.T) {
+func TestParseTraceStateUnsampled(t *testing.T) {
 	type testCase struct {
 		in         string
 		pval, rval uint8
@@ -96,6 +38,7 @@ func TestParseTraceState(t *testing.T) {
 	}
 	const notset = 255
 	for _, test := range []testCase{
+		// All are unsampled tests, i.e., `sampled` is not set in traceparent.
 		{"r:1;p:2", 2, 1, nil},
 		{"r:1;p:2;", 2, 1, nil},
 		{"p:2;r:1;", 2, 1, nil},
@@ -128,10 +71,70 @@ func TestParseTraceState(t *testing.T) {
 		{"p:-1", notset, notset, strconv.ErrSyntax}, // non-negative
 	} {
 		t.Run(strings.NewReplacer(":", "_", ";", "_").Replace(test.in), func(t *testing.T) {
-			otts, err := parseOTelTraceState(test.in)
+			// Note: passing isSampled=false as stated above.
+			otts, err := parseOTelTraceState(test.in, false)
 
 			if test.expectErr != nil {
 				require.True(t, errors.Is(err, test.expectErr), "not expecting %v", err)
+			}
+			if test.pval != notset {
+				require.True(t, otts.hasPValue())
+				require.Equal(t, test.pval, otts.pvalue)
+			} else {
+				require.False(t, otts.hasPValue(), "should have no p-value")
+			}
+			if test.rval != notset {
+				require.True(t, otts.hasRValue())
+				require.Equal(t, test.rval, otts.rvalue)
+			} else {
+				require.False(t, otts.hasRValue(), "should have no r-value")
+			}
+		})
+	}
+}
+
+func TestParseTraceStateSampled(t *testing.T) {
+	type testCase struct {
+		in         string
+		rval, pval uint8
+		expectErr  error
+	}
+	const notset = 255
+	for _, test := range []testCase{
+		// All are sampled tests, i.e., `sampled` is set in traceparent.
+		{"r:2;p:2", 2, 2, nil},
+		{"r:2;p:1", 2, 1, nil},
+		{"r:2;p:0", 2, 0, nil},
+
+		{"r:1;p:1", 1, 1, nil},
+		{"r:1;p:0", 1, 0, nil},
+
+		{"r:0;p:0", 0, 0, nil},
+
+		{"r:62;p:0", 62, 0, nil},
+		{"r:62;p:62", 62, 62, nil},
+
+		// The important special case:
+		{"r:0;p:63", 0, 63, nil},
+		{"r:2;p:63", 2, 63, nil},
+		{"r:62;p:63", 62, 63, nil},
+
+		// Inconsistencies cause unset p-value.
+		{"r:2;p:3", 2, notset, errTraceStateInconsistent},
+		{"r:2;p:4", 2, notset, errTraceStateInconsistent},
+		{"r:2;p:62", 2, notset, errTraceStateInconsistent},
+		{"r:0;p:1", 0, notset, errTraceStateInconsistent},
+		{"r:1;p:2", 1, notset, errTraceStateInconsistent},
+		{"r:61;p:62", 61, notset, errTraceStateInconsistent},
+	} {
+		t.Run(strings.NewReplacer(":", "_", ";", "_").Replace(test.in), func(t *testing.T) {
+			// Note: passing isSampled=true as stated above.
+			otts, err := parseOTelTraceState(test.in, true)
+
+			if test.expectErr != nil {
+				require.True(t, errors.Is(err, test.expectErr), "not expecting %v", err)
+			} else {
+				require.NoError(t, err)
 			}
 			if test.pval != notset {
 				require.True(t, otts.hasPValue())
