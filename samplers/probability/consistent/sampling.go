@@ -211,15 +211,20 @@ func (cs *consistentProbabilityBased) ShouldSample(p sdktrace.SamplingParameters
 		// A valid parent context.
 		// It does not matter if psc.IsSampled().
 		state = psc.TraceState()
+		otts.clearPValue()
 
 		var err error
 		otts, err = parseOTelTraceState(state.Get(traceStateKey))
 
 		if err != nil {
+			// Note: we've reset trace state.
 			otel.Handle(err)
 		}
 
-		// @@@ if !hasRandom() { }
+		if !otts.hasRValue() {
+			// Specification says to set r-value if missing.
+			otts.rvalue = cs.newR()
+		}
 	}
 
 	var decision sdktrace.SamplingDecision
@@ -242,6 +247,7 @@ func (cs *consistentProbabilityBased) ShouldSample(p sdktrace.SamplingParameters
 	state, err := state.Insert(traceStateKey, otts.serialize())
 	if err != nil {
 		otel.Handle(err)
+		// TODO: Spec how to handle this.
 	}
 
 	return sdktrace.SamplingResult{
@@ -273,6 +279,7 @@ func (otts otelTraceState) serialize() string {
 		_, _ = sb.WriteString(";")
 	}
 	res := sb.String()
+	// Disregard a trailing `;`
 	if len(res) != 0 {
 		res = res[:len(res)-1]
 	}
@@ -285,6 +292,8 @@ func parseError(key string, err error) error {
 
 func parseOTelTraceState(ts string) (otelTraceState, error) {
 	// TODO: Limits to apply from the spec?
+	// TODO: Key syntax
+	// TODO: Value syntax
 	otts := newTraceState()
 	for len(ts) > 0 {
 		eqPos := 0
@@ -304,7 +313,9 @@ func parseOTelTraceState(ts string) (otelTraceState, error) {
 		sepPos := 0
 
 		if key == pValueSubkey || key == rValueSubkey {
-
+			// See TODOs above.  Have one syntax check,
+			// then let ParseUint return ErrSyntax if need
+			// be.
 			for ; sepPos < len(tail); sepPos++ {
 				if tail[sepPos] >= '0' && tail[sepPos] <= '9' {
 					continue
@@ -334,9 +345,9 @@ func parseOTelTraceState(ts string) (otelTraceState, error) {
 		} else {
 			// Note: Spec valid character set for forward compatibility.
 			// Should this be the base64 characters?
-			// @@@@@@ @@@ lcalnum
 			for ; sepPos < len(tail); sepPos++ {
 				if tail[sepPos] >= '0' && tail[sepPos] <= '9' {
+					// See TODOs above.
 					continue
 				}
 			}
@@ -363,4 +374,12 @@ func (otts otelTraceState) hasRValue() bool {
 
 func (otts otelTraceState) hasPValue() bool {
 	return otts.pvalue <= pZeroValue
+}
+
+func (otts otelTraceState) clearRValue() {
+	otts.rvalue = pZeroValue
+}
+
+func (otts otelTraceState) clearPValue() {
+	otts.pvalue = pZeroValue + 1
 }
