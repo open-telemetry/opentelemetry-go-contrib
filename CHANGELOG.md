@@ -8,6 +8,10 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 
 ## [Unreleased]
 
+## [1.1.0/0.26.0] - 2021-10-27
+
+Update dependency on the `go.opentelemetry.io/otel` project to `v1.1.0`.
+
 ### Added
 
 - Add instrumentation for the `github.com/aws/aws-lambda-go` package. (#983)
@@ -15,15 +19,17 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 - Add `WithTracerProvider` option for `otelhttptrace.NewClientTrace`. (#1128)
 - Add optional AWS X-Ray configuration module for AWS Lambda Instrumentation (#984)
 
+### Fixed
+
+- The `go.opentelemetry.io/contrib/propagators/ot` propagator returns the words `true` or `false` for the `ot-tracer-sampled` header instead of numerical `0` and `1`. (#1358)
 
 ## [1.0.0/0.25.0] - 2021-10-06
 
 - Resource detectors and propagators (with the exception of `go.
-  opentelemetry.io/contrib/propagators/opencensus`) are now stable and 
+  opentelemetry.io/contrib/propagators/opencensus`) are now stable and
   released at v1.0.0.
 - Update dependency on the `go.opentelemetry.io/otel` project to `v1.0.1`.
 - Update dependency on `go.opentelemetry.io/otel/metric` to `v0.24.0`.
-
 
 ## [0.24.0] - 2021-09-21
 
@@ -83,7 +89,7 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 
 ### Changed
 
-- The `go.opentelemetry.io/contrib/instrumentation/go.mongodb.org/mongo-driver/mongo/otelmongo` instrumentation now accepts a `WithCommandAttributeDisabled`, 
+- The `go.opentelemetry.io/contrib/instrumentation/go.mongodb.org/mongo-driver/mongo/otelmongo` instrumentation now accepts a `WithCommandAttributeDisabled`,
    so the caller can specify whether to opt-out of tracing the mongo command. (#712)
 - Upgrade to v0.20.0 of `go.opentelemetry.io/otel`. (#758)
 - The B3 and Jaeger propagators now store their debug or deferred state in the context.Context instead of the SpanContext. (#758)
@@ -192,10 +198,6 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 
 ## [0.12.0] - 2020-09-25
 
-### Changed
-
-- Replace `WithTracer` with `WithTracerProvider` in the `go.opentelemetry.io/contrib/instrumentation/gopkg.in/macaron.v1/otelmacaron` instrumentation. (#374)
-
 ### Added
 
 - Benchmark tests for the gRPC instrumentation. (#296)
@@ -226,6 +228,7 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
   - `github.com/astaxie/beego` -> `github.com/astaxie/beego/otelbeego`
   - `gopkg.in/macaron.v1` -> `gopkg.in/macaron.v1/otelmacaron`
 - Rename `OTelBeegoHandler` to `Handler` in the `go.opentelemetry.io/contrib/instrumentation/github.com/astaxie/beego/otelbeego` package. (#359)
+- Replace `WithTracer` with `WithTracerProvider` in the `go.opentelemetry.io/contrib/instrumentation/gopkg.in/macaron.v1/otelmacaron` instrumentation. (#374)
 
 ## [0.11.0] - 2020-08-25
 
@@ -371,7 +374,9 @@ First official tagged release of `contrib` repository.
 - Prefix support for dogstatsd (#34)
 - Update Go Runtime package to use batch observer (#44)
 
-[Unreleased]: https://github.com/open-telemetry/opentelemetry-go-contrib/compare/v0.24.0...HEAD
+[Unreleased]: https://github.com/open-telemetry/opentelemetry-go-contrib/compare/v1.1.0...HEAD
+[1.1.0/0.26.0]: https://github.com/open-telemetry/opentelemetry-go-contrib/releases/tag/v1.1.0
+[1.0.0/0.25.0]: https://github.com/open-telemetry/opentelemetry-go-contrib/releases/tag/v1.0.0
 [0.24.0]: https://github.com/open-telemetry/opentelemetry-go-contrib/releases/tag/v0.24.0
 [0.23.0]: https://github.com/open-telemetry/opentelemetry-go-contrib/releases/tag/v0.23.0
 [0.22.0]: https://github.com/open-telemetry/opentelemetry-go-contrib/releases/tag/v0.22.0
