@@ -84,7 +84,9 @@ func (s consistentProbabilityBasedRandomSource) apply(cfg *consistentProbability
 // To respect the parent trace's `SampledFlag`, this sampler should be
 // used as the root delegate of a `Parent` sampler.
 func ConsistentProbabilityBased(fraction float64, opts ...ConsistentProbabilityBasedOption) sdktrace.Sampler {
-	cfg := consistentProbabilityBasedConfig{}
+	cfg := consistentProbabilityBasedConfig{
+		source: rand.NewSource(rand.Int63()),
+	}
 	for _, opt := range opts {
 		opt.apply(&cfg)
 	}

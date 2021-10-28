@@ -21,19 +21,33 @@ import (
 )
 
 func TestDescription(t *testing.T) {
+	const minProb = 0x1p-62 // 2.168404344971009e-19
+
 	for _, tc := range []struct {
 		prob   float64
 		expect string
 	}{
+		{1, "ConsistentProbabilityBased{1}"},
+		{0, "ConsistentProbabilityBased{0}"},
 		{0.75, "ConsistentProbabilityBased{0.75}"},
 		{0.05, "ConsistentProbabilityBased{0.05}"},
 		{0.003, "ConsistentProbabilityBased{0.003}"},
 		{0.99999999, "ConsistentProbabilityBased{0.99999999}"},
 		{0.00000001, "ConsistentProbabilityBased{1e-08}"},
-		{1, "ConsistentProbabilityBased{1}"},
-		{0, "ConsistentProbabilityBased{0}"},
+		{minProb, "ConsistentProbabilityBased{2.168404344971009e-19}"},
+		{minProb * 1.5, "ConsistentProbabilityBased{3.2526065174565133e-19}"},
+		{3e-19, "ConsistentProbabilityBased{3e-19}"},
+
+		// out-of-range > 1
+		{1.01, "ConsistentProbabilityBased{1}"},
+		{101.1, "ConsistentProbabilityBased{1}"},
+
+		// out-of-range < 2^-62
+		{-1, "ConsistentProbabilityBased{0}"},
+		{-0.001, "ConsistentProbabilityBased{0}"},
+		{minProb * 0.999, "ConsistentProbabilityBased{0}"},
 	} {
 		s := ConsistentProbabilityBased(tc.prob)
-		require.Equal(t, tc.expect, s.Description())
+		require.Equal(t, tc.expect, s.Description(), "%#v", tc.prob)
 	}
 }
