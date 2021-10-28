@@ -92,7 +92,7 @@ should be fine.
    using the `<commit-hash>` of the commit on the main branch for the merged
    Pull Request.
 
-   ```
+   ```sh
    make add-tags MODSET=<module set> COMMIT=<commit hash>
    ```
 
@@ -103,10 +103,9 @@ should be fine.
    `github.com/open-telemetry/opentelemetry-go-contrib.git`). Make sure you
    push all sub-modules as well.
 
-   ```
-   git push upstream <new tag>
-   git push upstream <submodules-path/new tag>
-   ...
+   ```sh
+   export VERSION="<version>"
+   for t in $( git tag -l | grep "$VERSION" ); do git push upstream "$t"; done
    ```
 
 ## Release
