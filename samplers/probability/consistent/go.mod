@@ -7,4 +7,5 @@ require (
 	go.opentelemetry.io/otel v1.1.0
 	go.opentelemetry.io/otel/sdk v1.1.0
 	go.opentelemetry.io/otel/trace v1.1.0
+	gonum.org/v1/gonum v0.9.3
 )
