@@ -198,7 +198,7 @@ var injectHeaders = []injectTest{
 		wantHeaders: map[string]string{
 			traceIDHeader: traceID16Str,
 			spanIDHeader:  spanIDStr,
-			sampledHeader: "1",
+			sampledHeader: "true",
 		},
 	},
 	{
@@ -214,7 +214,7 @@ var injectHeaders = []injectTest{
 		wantHeaders: map[string]string{
 			traceIDHeader:  traceID16Str,
 			spanIDHeader:   spanIDStr,
-			sampledHeader:  "0",
+			sampledHeader:  "false",
 			baggageHeader:  baggageValue,
 			baggageHeader2: baggageValue2,
 		},
