@@ -23,7 +23,6 @@ import (
 	"testing"
 	"time"
 
-	"github.com/gogo/protobuf/proto"
 	"github.com/golang/snappy"
 	"github.com/google/go-cmp/cmp"
 	"github.com/prometheus/prometheus/prompb"
@@ -38,6 +37,8 @@ import (
 	"go.opentelemetry.io/otel/sdk/resource"
 	semconv "go.opentelemetry.io/otel/semconv/v1.4.0"
 )
+
+var testResource = resource.NewWithAttributes(semconv.SchemaURL, attribute.String("R", "V"))
 
 // ValidConfig is a Config struct that should cause no errors.
 var validConfig = Config{
@@ -67,9 +68,6 @@ var validConfig = Config{
 	Quantiles: []float64{0, 0.25, 0.5, 0.75, 1},
 }
 
-var testResource = resource.NewWithAttributes(semconv.SchemaURL, attribute.String("R", "V"))
-var mockTime = int64(time.Nanosecond) * time.Time{}.UnixNano() / int64(time.Millisecond)
-
 func TestExportKindFor(t *testing.T) {
 	exporter := Exporter{}
 	got := exporter.ExportKindFor(nil, aggregation.Kind(rune(0)))
@@ -88,42 +86,45 @@ func TestConvertToTimeSeries(t *testing.T) {
 		},
 	}
 
+	startTime := time.Now()
 	// Test conversions based on aggregation type
 	tests := []struct {
 		name       string
-		input      export.CheckpointSet
+		input      export.InstrumentationLibraryReader
 		want       []*prompb.TimeSeries
 		wantLength int
 	}{
 		{
 			name:       "convertFromSum",
-			input:      getSumCheckpoint(t, 1, 2, 3, 4, 5),
-			want:       wantSumCheckpointSet,
+			input:      getSumReader(t, 1, 2, 3, 4, 5),
+			want:       wantSumTimeSeries,
 			wantLength: 1,
 		},
 		{
 			name:       "convertFromLastValue",
-			input:      getLastValueCheckpoint(t, 1, 2, 3, 4, 5),
-			want:       wantLastValueCheckpointSet,
+			input:      getLastValueReader(t, 1, 2, 3, 4, 5),
+			want:       wantLastValueTimeSeries,
 			wantLength: 1,
 		},
 		{
 			name:       "convertFromMinMaxSumCount",
-			input:      getMMSCCheckpoint(t, 123.456, 876.543),
-			want:       wantMMSCCheckpointSet,
+			input:      getMMSCReader(t, 123.456, 876.543),
+			want:       wantMMSCTimeSeries,
 			wantLength: 4,
 		},
 		{
 			name:       "convertFromHistogram",
-			input:      getHistogramCheckpoint(t),
-			want:       wantHistogramCheckpointSet,
+			input:      getHistogramReader(t),
+			want:       wantHistogramTimeSeries,
 			wantLength: 6,
 		},
 	}
 
+	endTime := time.Now()
+
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			got, err := exporter.ConvertToTimeSeries(tt.input)
+			got, err := exporter.ConvertToTimeSeries(testResource, tt.input)
 			want := tt.want
 
 			// Check for errors and for the correct number of timeseries.
@@ -148,10 +149,13 @@ func TestConvertToTimeSeries(t *testing.T) {
 					wantAttributes[attribute.String()] = true
 				}
 				for _, sample := range got[i].Samples {
-					gotSamples[sample.String()] = true
+					gotSamples[fmt.Sprint(sample.Value)] = true
+
+					assert.LessOrEqual(t, toMillis(startTime), sample.Timestamp)
+					assert.GreaterOrEqual(t, toMillis(endTime), sample.Timestamp)
 				}
 				for _, sample := range want[i].Samples {
-					wantSamples[sample.String()] = true
+					wantSamples[fmt.Sprint(sample.Value)] = true
 				}
 			}
 			assert.Equal(t, wantAttributes, gotAttributes)
@@ -186,11 +190,11 @@ func TestNewExportPipeline(t *testing.T) {
 // TestInstallNewPipeline checks whether InstallNewPipeline successfully returns a push
 // Controller and whether that controller's MeterProvider is registered globally.
 func TestInstallNewPipeline(t *testing.T) {
-	pusher, err := InstallNewPipeline(validConfig)
+	cont, err := InstallNewPipeline(validConfig)
 	if err != nil {
 		t.Fatalf("Failed to create install pipeline with error %v", err)
 	}
-	if global.GetMeterProvider() != pusher.MeterProvider() {
+	if global.GetMeterProvider() != cont {
 		t.Fatalf("Failed to register push Controller provider globally")
 	}
 }
@@ -224,7 +228,7 @@ func TestAddHeaders(t *testing.T) {
 // protobuf message.
 func TestBuildMessage(t *testing.T) {
 	exporter := Exporter{validConfig}
-	timeseries := []*prompb.TimeSeries{}
+	timeseries := []prompb.TimeSeries{}
 
 	// buildMessage returns the error that proto.Marshal() returns. Since the proto
 	// package has its own tests, buildMessage should work as expected as long as there
@@ -281,14 +285,14 @@ func verifyExporterRequest(req *http.Request) error {
 		return fmt.Errorf("Failed to uncompress request body")
 	}
 	wr := &prompb.WriteRequest{}
-	err = proto.Unmarshal(uncompressed, wr)
+	err = wr.Unmarshal(uncompressed)
 	if err != nil {
 		return fmt.Errorf("Failed to unmarshal message into WriteRequest struct")
 	}
 
 	// Check whether the request contains the correct data.
 	expectedWriteRequest := &prompb.WriteRequest{
-		Timeseries: []*prompb.TimeSeries{
+		Timeseries: []prompb.TimeSeries{
 			{
 				Samples: []prompb.Sample{
 					{
@@ -296,7 +300,7 @@ func verifyExporterRequest(req *http.Request) error {
 						Timestamp: int64(time.Nanosecond) * time.Time{}.UnixNano() / int64(time.Millisecond),
 					},
 				},
-				Labels: []*prompb.Label{
+				Labels: []prompb.Label{
 					{
 						Name:  "__name__",
 						Value: "test_name",
@@ -369,7 +373,7 @@ func TestSendRequest(t *testing.T) {
 			exporter := Exporter{*test.config}
 
 			// Create a test TimeSeries struct.
-			timeSeries := []*prompb.TimeSeries{
+			timeSeries := []prompb.TimeSeries{
 				{
 					Samples: []prompb.Sample{
 						{
@@ -377,7 +381,7 @@ func TestSendRequest(t *testing.T) {
 							Timestamp: int64(time.Nanosecond) * time.Time{}.UnixNano() / int64(time.Millisecond),
 						},
 					},
-					Labels: []*prompb.Label{
+					Labels: []prompb.Label{
 						{
 							Name:  "__name__",
 							Value: "test_name",

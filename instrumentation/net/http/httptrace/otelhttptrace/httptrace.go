@@ -53,7 +53,9 @@ func newConfig(opts []Option) *config {
 // WithPropagators sets the propagators to use for Extraction and Injection
 func WithPropagators(props propagation.TextMapPropagator) Option {
 	return optionFunc(func(c *config) {
-		c.propagators = props
+		if props != nil {
+			c.propagators = props
+		}
 	})
 }
 

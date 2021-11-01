@@ -85,6 +85,8 @@ func (detector *resourceDetector) Detect(ctx context.Context) (*resource.Resourc
 		return empty, err
 	}
 	attributes := []attribute.KeyValue{
+		semconv.CloudProviderAWS,
+		semconv.CloudPlatformAWSECS,
 		semconv.ContainerNameKey.String(hostName),
 		semconv.ContainerIDKey.String(containerID),
 	}

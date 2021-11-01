@@ -37,6 +37,8 @@ func (o optionFunc) apply(c *config) {
 // If none is specified, the global provider is used.
 func WithTracerProvider(provider oteltrace.TracerProvider) Option {
 	return optionFunc(func(cfg *config) {
-		cfg.tracerProvider = provider
+		if provider != nil {
+			cfg.tracerProvider = provider
+		}
 	})
 }

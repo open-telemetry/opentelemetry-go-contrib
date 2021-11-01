@@ -17,7 +17,6 @@ package otelhttp
 import (
 	"net/http"
 
-	"go.opentelemetry.io/contrib"
 	"go.opentelemetry.io/otel"
 	"go.opentelemetry.io/otel/metric"
 	"go.opentelemetry.io/otel/metric/global"
@@ -59,21 +58,21 @@ func (o optionFunc) apply(c *config) {
 // newConfig creates a new config struct and applies opts to it.
 func newConfig(opts ...Option) *config {
 	c := &config{
-		Propagators:    otel.GetTextMapPropagator(),
-		TracerProvider: otel.GetTracerProvider(),
-		MeterProvider:  global.GetMeterProvider(),
+		Propagators:   otel.GetTextMapPropagator(),
+		MeterProvider: global.GetMeterProvider(),
 	}
 	for _, opt := range opts {
 		opt.apply(c)
 	}
 
-	c.Tracer = c.TracerProvider.Tracer(
-		instrumentationName,
-		trace.WithInstrumentationVersion(contrib.SemVersion()),
-	)
+	// Tracer is only initialized if manually specified. Otherwise, can be passed with the tracing context.
+	if c.TracerProvider != nil {
+		c.Tracer = newTracer(c.TracerProvider)
+	}
+
 	c.Meter = c.MeterProvider.Meter(
 		instrumentationName,
-		metric.WithInstrumentationVersion(contrib.SemVersion()),
+		metric.WithInstrumentationVersion(SemVersion()),
 	)
 
 	return c
@@ -83,7 +82,9 @@ func newConfig(opts ...Option) *config {
 // If none is specified, the global provider is used.
 func WithTracerProvider(provider trace.TracerProvider) Option {
 	return optionFunc(func(cfg *config) {
-		cfg.TracerProvider = provider
+		if provider != nil {
+			cfg.TracerProvider = provider
+		}
 	})
 }
 
@@ -91,7 +92,9 @@ func WithTracerProvider(provider trace.TracerProvider) Option {
 // If none is specified, the global provider is used.
 func WithMeterProvider(provider metric.MeterProvider) Option {
 	return optionFunc(func(cfg *config) {
-		cfg.MeterProvider = provider
+		if provider != nil {
+			cfg.MeterProvider = provider
+		}
 	})
 }
 
@@ -108,7 +111,9 @@ func WithPublicEndpoint() Option {
 // option isn't specified, then the global TextMapPropagator is used.
 func WithPropagators(ps propagation.TextMapPropagator) Option {
 	return optionFunc(func(c *config) {
-		c.Propagators = ps
+		if ps != nil {
+			c.Propagators = ps
+		}
 	})
 }
 

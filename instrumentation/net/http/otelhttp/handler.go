@@ -48,7 +48,7 @@ type Handler struct {
 	filters           []Filter
 	spanNameFormatter func(string, *http.Request) string
 	counters          map[string]metric.Int64Counter
-	valueRecorders    map[string]metric.Int64ValueRecorder
+	valueRecorders    map[string]metric.Int64Histogram
 }
 
 func defaultHandlerFormatter(operation string, _ *http.Request) string {
@@ -94,7 +94,7 @@ func handleErr(err error) {
 
 func (h *Handler) createMeasures() {
 	h.counters = make(map[string]metric.Int64Counter)
-	h.valueRecorders = make(map[string]metric.Int64ValueRecorder)
+	h.valueRecorders = make(map[string]metric.Int64Histogram)
 
 	requestBytesCounter, err := h.meter.NewInt64Counter(RequestContentLength)
 	handleErr(err)
@@ -102,7 +102,7 @@ func (h *Handler) createMeasures() {
 	responseBytesCounter, err := h.meter.NewInt64Counter(ResponseContentLength)
 	handleErr(err)
 
-	serverLatencyMeasure, err := h.meter.NewInt64ValueRecorder(ServerLatency)
+	serverLatencyMeasure, err := h.meter.NewInt64Histogram(ServerLatency)
 	handleErr(err)
 
 	h.counters[RequestContentLength] = requestBytesCounter
@@ -127,8 +127,18 @@ func (h *Handler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		trace.WithAttributes(semconv.HTTPServerAttributesFromHTTPRequest(h.operation, "", r)...),
 	}, h.spanStartOptions...) // start with the configured options
 
+	tracer := h.tracer
+
+	if tracer == nil {
+		if span := trace.SpanFromContext(r.Context()); span.SpanContext().IsValid() {
+			tracer = newTracer(span.TracerProvider())
+		} else {
+			tracer = newTracer(otel.GetTracerProvider())
+		}
+	}
+
 	ctx := h.propagators.Extract(r.Context(), propagation.HeaderCarrier(r.Header))
-	ctx, span := h.tracer.Start(ctx, h.spanNameFormatter(h.operation, r), opts...)
+	ctx, span := tracer.Start(ctx, h.spanNameFormatter(h.operation, r), opts...)
 	defer span.End()
 
 	readRecordFunc := func(int64) {}

@@ -26,13 +26,13 @@ import (
 	"go.opentelemetry.io/contrib/instrumentation/net/http/httptrace/otelhttptrace"
 	"go.opentelemetry.io/otel/attribute"
 	"go.opentelemetry.io/otel/baggage"
-	"go.opentelemetry.io/otel/oteltest"
 	"go.opentelemetry.io/otel/propagation"
 	semconv "go.opentelemetry.io/otel/semconv/v1.4.0"
+	"go.opentelemetry.io/otel/trace"
 )
 
 func TestRoundtrip(t *testing.T) {
-	tr := oteltest.NewTracerProvider().Tracer("httptrace/client")
+	tr := trace.NewNoopTracerProvider().Tracer("httptrace/client")
 
 	var expectedAttrs map[attribute.Key]string
 	expectedCorrs := map[string]string{"foo": "bar"}
@@ -95,6 +95,12 @@ func TestRoundtrip(t *testing.T) {
 	}
 
 	client := ts.Client()
+	ctx := context.Background()
+	sc := trace.NewSpanContext(trace.SpanContextConfig{
+		TraceID: trace.TraceID{0x01},
+		SpanID:  trace.SpanID{0x01},
+	})
+	ctx = trace.ContextWithRemoteSpanContext(ctx, sc)
 	err := func(ctx context.Context) error {
 		ctx, span := tr.Start(ctx, "test")
 		defer span.End()
@@ -110,14 +116,14 @@ func TestRoundtrip(t *testing.T) {
 		_ = res.Body.Close()
 
 		return nil
-	}(context.Background())
+	}(ctx)
 	if err != nil {
 		panic("unexpected error in http request: " + err.Error())
 	}
 }
 
 func TestSpecifyPropagators(t *testing.T) {
-	tr := oteltest.NewTracerProvider().Tracer("httptrace/client")
+	tr := trace.NewNoopTracerProvider().Tracer("httptrace/client")
 
 	expectedCorrs := map[string]string{"foo": "bar"}
 

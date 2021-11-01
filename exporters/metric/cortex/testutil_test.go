@@ -15,240 +15,284 @@
 package cortex
 
 import (
+	"context"
+	"fmt"
+	"strings"
 	"testing"
+	"time"
 
 	"github.com/prometheus/prometheus/prompb"
 	"github.com/stretchr/testify/require"
 
 	"go.opentelemetry.io/otel/metric"
-	"go.opentelemetry.io/otel/metric/number"
 	export "go.opentelemetry.io/otel/sdk/export/metric"
-	"go.opentelemetry.io/otel/sdk/export/metric/metrictest"
-	"go.opentelemetry.io/otel/sdk/metric/aggregator/aggregatortest"
 	"go.opentelemetry.io/otel/sdk/metric/aggregator/histogram"
 	"go.opentelemetry.io/otel/sdk/metric/aggregator/lastvalue"
 	"go.opentelemetry.io/otel/sdk/metric/aggregator/minmaxsumcount"
 	"go.opentelemetry.io/otel/sdk/metric/aggregator/sum"
+	controller "go.opentelemetry.io/otel/sdk/metric/controller/basic"
+	processor "go.opentelemetry.io/otel/sdk/metric/processor/basic"
 )
 
-// getSumCheckpoint returns a checkpoint set with a sum aggregation record
-func getSumCheckpoint(t *testing.T, values ...int64) export.CheckpointSet {
-	// Create checkpoint set with resource and descriptor
-	checkpointSet := metrictest.NewCheckpointSet(testResource)
-	desc := metric.NewDescriptor("metric_name", metric.CounterInstrumentKind, number.Int64Kind)
-
-	// Create aggregation, add value, and update checkpointset
-	agg, ckpt := metrictest.Unslice2(sum.New(2))
-	for _, value := range values {
-		aggregatortest.CheckedUpdate(t, agg, number.NewInt64Number(value), &desc)
-	}
-	require.NoError(t, agg.SynchronizedMove(ckpt, &desc))
-	checkpointSet.Add(&desc, ckpt)
-
-	return checkpointSet
+// AggregatorFor is copied from the SDK's processortest package, the
+// only difference is it uses explicit histogram boundaries for the
+// test.  TODO: If the API supported Hints, this code could be retired
+// and the code below could use the hint to set the boundaries, this is
+// obnoxious.
+type testAggregatorSelector struct {
 }
 
-// getLastValueCheckpoint returns a checkpoint set with a last value aggregation record
-func getLastValueCheckpoint(t *testing.T, values ...int64) export.CheckpointSet {
-	// Create checkpoint set with resource and descriptor
-	checkpointSet := metrictest.NewCheckpointSet(testResource)
-	desc := metric.NewDescriptor("metric_name", metric.ValueObserverInstrumentKind, number.Int64Kind)
-
-	// Create aggregation, add value, and update checkpointset
-	agg, ckpt := metrictest.Unslice2(lastvalue.New(2))
-	for _, value := range values {
-		aggregatortest.CheckedUpdate(t, agg, number.NewInt64Number(value), &desc)
-	}
-	require.NoError(t, agg.SynchronizedMove(ckpt, &desc))
-	checkpointSet.Add(&desc, ckpt)
-
-	return checkpointSet
+var testHistogramBoundaries = []float64{
+	100, 500, 900,
 }
 
-// getMMSCCheckpoint returns a checkpoint set with a minmaxsumcount aggregation record
-func getMMSCCheckpoint(t *testing.T, values ...float64) export.CheckpointSet {
-	// Create checkpoint set with resource and descriptor
-	checkpointSet := metrictest.NewCheckpointSet(testResource)
-	desc := metric.NewDescriptor("metric_name", metric.ValueRecorderInstrumentKind, number.Float64Kind)
-
-	// Create aggregation, add value, and update checkpointset
-	agg, ckpt := metrictest.Unslice2(minmaxsumcount.New(2, &desc))
-	for _, value := range values {
-		aggregatortest.CheckedUpdate(t, agg, number.NewFloat64Number(value), &desc)
+func (testAggregatorSelector) AggregatorFor(desc *metric.Descriptor, aggPtrs ...*export.Aggregator) {
+	switch {
+	case strings.HasSuffix(desc.Name(), "_sum"):
+		aggs := sum.New(len(aggPtrs))
+		for i := range aggPtrs {
+			*aggPtrs[i] = &aggs[i]
+		}
+	case strings.HasSuffix(desc.Name(), "_mmsc"):
+		aggs := minmaxsumcount.New(len(aggPtrs), desc)
+		for i := range aggPtrs {
+			*aggPtrs[i] = &aggs[i]
+		}
+	case strings.HasSuffix(desc.Name(), "_lastvalue"):
+		aggs := lastvalue.New(len(aggPtrs))
+		for i := range aggPtrs {
+			*aggPtrs[i] = &aggs[i]
+		}
+	case strings.HasSuffix(desc.Name(), "_histogram"):
+		aggs := histogram.New(len(aggPtrs), desc, histogram.WithExplicitBoundaries(testHistogramBoundaries))
+		for i := range aggPtrs {
+			*aggPtrs[i] = &aggs[i]
+		}
+	default:
+		panic(fmt.Sprint("Invalid instrument name for test AggregatorSelector: ", desc.Name()))
 	}
-	require.NoError(t, agg.SynchronizedMove(ckpt, &desc))
-	checkpointSet.Add(&desc, ckpt)
-
-	return checkpointSet
 }
 
-// getHistogramCheckpoint returns a checkpoint set with a histogram aggregation record
-func getHistogramCheckpoint(t *testing.T) export.CheckpointSet {
-	// Create checkpoint set with resource and descriptor
-	checkpointSet := metrictest.NewCheckpointSet(testResource)
-	desc := metric.NewDescriptor("metric_name", metric.ValueRecorderInstrumentKind, number.Float64Kind)
+func testMeter(t *testing.T) (context.Context, metric.Meter, *controller.Controller) {
+	aggSel := testAggregatorSelector{}
+	proc := processor.NewFactory(aggSel, export.CumulativeExportKindSelector())
+	cont := controller.New(proc,
+		controller.WithResource(testResource),
+	)
+	ctx := context.Background()
 
-	// Create aggregation, add value, and update checkpointset
-	boundaries := []float64{100, 500, 900}
-	agg, ckpt := metrictest.Unslice2(histogram.New(2, &desc, histogram.WithExplicitBoundaries(boundaries)))
-	for i := 0; i < 1000; i++ {
-		aggregatortest.CheckedUpdate(t, agg, number.NewFloat64Number(float64(i)+0.5), &desc)
+	return ctx, cont.Meter("test"), cont
+}
+
+// getSumReader returns a checkpoint set with a sum aggregation record
+func getSumReader(t *testing.T, values ...int64) export.InstrumentationLibraryReader {
+	ctx, meter, cont := testMeter(t)
+	counter := metric.Must(meter).NewInt64Counter("metric_sum")
+
+	for _, value := range values {
+		counter.Add(ctx, value)
 	}
-	require.NoError(t, agg.SynchronizedMove(ckpt, &desc))
-	checkpointSet.Add(&desc, ckpt)
 
-	return checkpointSet
+	require.NoError(t, cont.Collect(ctx))
+
+	return cont
+}
+
+// getLastValueReader returns a checkpoint set with a last value aggregation record
+func getLastValueReader(t *testing.T, values ...int64) export.InstrumentationLibraryReader {
+	ctx, meter, cont := testMeter(t)
+
+	_ = metric.Must(meter).NewInt64GaugeObserver("metric_lastvalue", func(ctx context.Context, res metric.Int64ObserverResult) {
+		for _, value := range values {
+			res.Observe(value)
+		}
+	})
+
+	require.NoError(t, cont.Collect(ctx))
+
+	return cont
+}
+
+// getMMSCReader returns a checkpoint set with a minmaxsumcount aggregation record
+func getMMSCReader(t *testing.T, values ...float64) export.InstrumentationLibraryReader {
+	ctx, meter, cont := testMeter(t)
+
+	histo := metric.Must(meter).NewFloat64Histogram("metric_mmsc")
+
+	for _, value := range values {
+		histo.Record(ctx, value)
+	}
+
+	require.NoError(t, cont.Collect(ctx))
+
+	return cont
+}
+
+// getHistogramReader returns a checkpoint set with a histogram aggregation record
+func getHistogramReader(t *testing.T) export.InstrumentationLibraryReader {
+	ctx, meter, cont := testMeter(t)
+
+	// Uses default boundaries
+	histo := metric.Must(meter).NewFloat64Histogram("metric_histogram")
+
+	for value := 0.; value < 1000; value++ {
+		histo.Record(ctx, value+0.5)
+	}
+
+	require.NoError(t, cont.Collect(ctx))
+
+	return cont
 }
 
 // The following variables hold expected TimeSeries values to be used in
 // ConvertToTimeSeries tests.
-var wantSumCheckpointSet = []*prompb.TimeSeries{
+var wantSumTimeSeries = []*prompb.TimeSeries{
 	{
-		Labels: []*prompb.Label{
+		Labels: []prompb.Label{
 			{
 				Name:  "R",
 				Value: "V",
 			},
 			{
 				Name:  "__name__",
-				Value: "metric_name",
+				Value: "metric_sum",
 			},
 		},
 		Samples: []prompb.Sample{{
-			Value:     15,
-			Timestamp: mockTime,
+			Value: 15,
+			// Timestamp: this test verifies real timestamps
 		}},
 	},
 }
 
-var wantLastValueCheckpointSet = []*prompb.TimeSeries{
+var wantLastValueTimeSeries = []*prompb.TimeSeries{
 	{
-		Labels: []*prompb.Label{
+		Labels: []prompb.Label{
 			{
 				Name:  "R",
 				Value: "V",
 			},
 			{
 				Name:  "__name__",
-				Value: "metric_name",
+				Value: "metric_lastvalue",
 			},
 		},
 		Samples: []prompb.Sample{{
-			Value:     5,
-			Timestamp: mockTime,
+			Value: 5,
+			// Timestamp: this test verifies real timestamps
 		}},
 	},
 }
 
-var wantMMSCCheckpointSet = []*prompb.TimeSeries{
+var wantMMSCTimeSeries = []*prompb.TimeSeries{
 	{
-		Labels: []*prompb.Label{
+		Labels: []prompb.Label{
 			{
 				Name:  "R",
 				Value: "V",
 			},
 			{
 				Name:  "__name__",
-				Value: "metric_name",
+				Value: "metric_mmsc",
 			},
 		},
 		Samples: []prompb.Sample{{
-			Value:     999.999,
-			Timestamp: mockTime,
+			Value: 999.999,
+			// Timestamp: this test verifies real timestamps
 		}},
 	},
 	{
-		Labels: []*prompb.Label{
+		Labels: []prompb.Label{
 			{
 				Name:  "R",
 				Value: "V",
 			},
 			{
 				Name:  "__name__",
-				Value: "metric_name_min",
+				Value: "metric_mmsc_min",
 			},
 		},
 		Samples: []prompb.Sample{{
-			Value:     123.456,
-			Timestamp: mockTime,
+			Value: 123.456,
+			// Timestamp: this test verifies real timestamps
 		}},
 	},
 	{
-		Labels: []*prompb.Label{
+		Labels: []prompb.Label{
 			{
 				Name:  "R",
 				Value: "V",
 			},
 			{
 				Name:  "__name__",
-				Value: "metric_name_max",
+				Value: "metric_mmsc_max",
 			},
 		},
 		Samples: []prompb.Sample{{
-			Value:     876.543,
-			Timestamp: mockTime,
+			Value: 876.543,
+			// Timestamp: this test verifies real timestamps
 		}},
 	},
 	{
-		Labels: []*prompb.Label{
+		Labels: []prompb.Label{
 			{
 				Name:  "R",
 				Value: "V",
 			},
 			{
 				Name:  "__name__",
-				Value: "metric_name_count",
+				Value: "metric_mmsc_count",
 			},
 		},
 		Samples: []prompb.Sample{{
-			Value:     2,
-			Timestamp: mockTime,
+			Value: 2,
+			// Timestamp: this test verifies real timestamps
 		}},
 	},
 }
 
-var wantHistogramCheckpointSet = []*prompb.TimeSeries{
+var wantHistogramTimeSeries = []*prompb.TimeSeries{
 	{
-		Labels: []*prompb.Label{
+		Labels: []prompb.Label{
 			{
 				Name:  "R",
 				Value: "V",
 			},
 			{
 				Name:  "__name__",
-				Value: "metric_name_sum",
+				Value: "metric_histogram_sum",
 			},
 		},
 		Samples: []prompb.Sample{{
-			Value:     500000,
-			Timestamp: mockTime,
+			Value: 500000,
+			// Timestamp: this test verifies real timestamps
 		}},
 	},
 	{
-		Labels: []*prompb.Label{
+		Labels: []prompb.Label{
 			{
 				Name:  "R",
 				Value: "V",
 			},
 			{
 				Name:  "__name__",
-				Value: "metric_name_count",
+				Value: "metric_histogram_count",
 			},
 		},
 		Samples: []prompb.Sample{{
-			Value:     1000,
-			Timestamp: mockTime,
+			Value: 1000,
+			// Timestamp: this test verifies real timestamps
 		}},
 	},
 	{
-		Labels: []*prompb.Label{
+		Labels: []prompb.Label{
 			{
 				Name:  "R",
 				Value: "V",
 			},
 			{
 				Name:  "__name__",
-				Value: "metric_name",
+				Value: "metric_histogram",
 			},
 			{
 				Name:  "le",
@@ -256,19 +300,19 @@ var wantHistogramCheckpointSet = []*prompb.TimeSeries{
 			},
 		},
 		Samples: []prompb.Sample{{
-			Value:     100,
-			Timestamp: mockTime,
+			Value: 100,
+			// Timestamp: this test verifies real timestamps
 		}},
 	},
 	{
-		Labels: []*prompb.Label{
+		Labels: []prompb.Label{
 			{
 				Name:  "R",
 				Value: "V",
 			},
 			{
 				Name:  "__name__",
-				Value: "metric_name",
+				Value: "metric_histogram",
 			},
 			{
 				Name:  "le",
@@ -276,19 +320,19 @@ var wantHistogramCheckpointSet = []*prompb.TimeSeries{
 			},
 		},
 		Samples: []prompb.Sample{{
-			Value:     500,
-			Timestamp: mockTime,
+			Value: 500,
+			// Timestamp: this test verifies real timestamps
 		}},
 	},
 	{
-		Labels: []*prompb.Label{
+		Labels: []prompb.Label{
 			{
 				Name:  "R",
 				Value: "V",
 			},
 			{
 				Name:  "__name__",
-				Value: "metric_name",
+				Value: "metric_histogram",
 			},
 			{
 				Name:  "le",
@@ -296,19 +340,19 @@ var wantHistogramCheckpointSet = []*prompb.TimeSeries{
 			},
 		},
 		Samples: []prompb.Sample{{
-			Value:     900,
-			Timestamp: mockTime,
+			Value: 900,
+			// Timestamp: this test verifies real timestamps
 		}},
 	},
 	{
-		Labels: []*prompb.Label{
+		Labels: []prompb.Label{
 			{
 				Name:  "R",
 				Value: "V",
 			},
 			{
 				Name:  "__name__",
-				Value: "metric_name",
+				Value: "metric_histogram",
 			},
 			{
 				Name:  "le",
@@ -316,8 +360,12 @@ var wantHistogramCheckpointSet = []*prompb.TimeSeries{
 			},
 		},
 		Samples: []prompb.Sample{{
-			Value:     1000,
-			Timestamp: mockTime,
+			Value: 1000,
+			// Timestamp: this test verifies real timestamps
 		}},
 	},
+}
+
+func toMillis(t time.Time) int64 {
+	return t.UnixNano() / int64(time.Millisecond)
 }

@@ -35,18 +35,18 @@ func main() {
 	if err != nil {
 		log.Fatalln("failed to initialize metric stdout exporter:", err)
 	}
-	pusher := controller.New(
-		processor.New(
+	cont := controller.New(
+		processor.NewFactory(
 			simple.NewWithInexpensiveDistribution(),
 			exporter,
 		),
 		controller.WithExporter(exporter),
 		controller.WithCollectPeriod(3*time.Second),
 	)
-	if err := pusher.Start(context.Background()); err != nil {
+	if err := cont.Start(context.Background()); err != nil {
 		log.Fatalln("failed to start the metric controller:", err)
 	}
-	global.SetMeterProvider(pusher.MeterProvider())
+	global.SetMeterProvider(cont)
 
 	if err := runtime.Start(
 		runtime.WithMinimumReadMemStatsInterval(time.Second),
@@ -59,7 +59,7 @@ func main() {
 
 	<-ctx.Done()
 
-	if err := pusher.Stop(context.Background()); err != nil {
+	if err := cont.Stop(context.Background()); err != nil {
 		log.Fatalln("failed to stop the metric controller:", err)
 	}
 }
