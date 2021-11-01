@@ -2,18 +2,48 @@
 
 This package implements [Jaeger remote sampler](https://www.jaegertracing.io/docs/latest/sampling/#collector-sampling-configuration).
 
+## Example
+
+[example/](./example) shows how to host remote sampling strategies using the OpenTelemetry Collector.
+The Collector uses the Jaeger receiver to host the strategy file, note you do not need to send Jaeger to make use of the Jaeger remote sampling protocol. 
+
+Run the OpenTelemetry Collector using docker-compose:
+
+```shell
+$ docker-compose up -d
+```
+
+You can fetch the strategy file using curl:
+
+```shell
+$ curl 'localhost:5778/sampling?service=foo'
+$ curl 'localhost:5778/sampling?service=myService'
+```
+
+Run the Go program.
+This program will start with an initial sampling percentage of 50% and tries to fetch the sampling strategies from the OpenTelemetry Collector.
+
+```shell
+$ go run .
+JaegerRemoteSampler{TraceIDRatioBased{0.5}}
+JaegerRemoteSampler{TraceIDRatioBased{0.5}}
+JaegerRemoteSampler{TraceIDRatioBased{0.5}}
+JaegerRemoteSampler{TraceIDRatioBased{0.5}}
+JaegerRemoteSampler{TraceIDRatioBased{0.5}}
+JaegerRemoteSampler{TraceIDRatioBased{0.5}}
+JaegerRemoteSampler{TraceIDRatioBased{0.5}}
+JaegerRemoteSampler{TraceIDRatioBased{0.5}}
+JaegerRemoteSampler{TraceIDRatioBased{0.5}}
+JaegerRemoteSampler{TraceIDRatioBased{0.5}}
+JaegerRemoteSampler{PerOperationSampler{default=TraceIDRatioBased{0.8},perOperation={op1:TraceIDRatioBased{0.2},op2:TraceIDRatioBased{0.4}}}}
+JaegerRemoteSampler{PerOperationSampler{default=TraceIDRatioBased{0.8},perOperation={op1:TraceIDRatioBased{0.2},op2:TraceIDRatioBased{0.4}}}}
+```
+
 ## Update generated Jaeger code
 
-Files generated from jaeger-idl are checked in and usually do not have to be regenerated.
+Code is generated using the .proto files from [jaeger-idl](https://github.com/jaegertracing/jaeger-idl).
+In case [sampling.proto](./jaeger-idl/proto/api_v2/sampling.proto) is modified these have to be regenerated.
 
-* Make sure the jaeger-idl submodule is synchronised.
-  
-  ```
-  git submodule update --init jaeger-idl
-  ```
-
-*  Generate Go files from the .proto:
-
-  ```
-  make proto-gen
-  ```
+```shell
+$ make proto-gen
+```
