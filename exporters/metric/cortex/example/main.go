@@ -25,7 +25,7 @@ import (
 	"go.opentelemetry.io/otel/metric"
 	controller "go.opentelemetry.io/otel/sdk/metric/controller/basic"
 	"go.opentelemetry.io/otel/sdk/resource"
-	semconv "go.opentelemetry.io/otel/semconv/v1.4.0"
+	semconv "go.opentelemetry.io/otel/semconv/v1.7.0"
 
 	"go.opentelemetry.io/contrib/exporters/metric/cortex/utils"
 )
