@@ -324,6 +324,6 @@ func TestPowerOfTwoSampling(t *testing.T) {
 			expectLower = fmt.Sprintf("%.10g", res.expected[1])
 			expectUpper = "n/a"
 		}
-		t.Logf("| %d | %s | %s | %s | %s | %s |\n", idx, probability, pvalues, expectLower, expectUpper, expectUnsampled)
+		t.Logf("| %d | %s | %s | %s | %s | %s |\n", idx+1, probability, pvalues, expectLower, expectUpper, expectUnsampled)
 	}
 }
