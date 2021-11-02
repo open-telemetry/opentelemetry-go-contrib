@@ -49,6 +49,7 @@ func (fn optionFunc) apply(config *config) {
 	fn(config)
 }
 
+// WithService sets the service name to retrieve the sampling strategy for.
 func WithService(service string) Option {
 	return optionFunc(func(config *config) {
 		config.service = service

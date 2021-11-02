@@ -25,15 +25,13 @@ import (
 )
 
 func Test_samplingStrategyFetcherImpl_Fetch(t *testing.T) {
-	tests := []struct {
-		name               string
+	tests := map[string]struct {
 		responseStatusCode int
 		responseBody       string
 		expectedErr        string
 		expectedStrategy   jaeger_api_v2.SamplingStrategyResponse
 	}{
-		{
-			name:               "RequestOK",
+		"RequestOK": {
 			responseStatusCode: http.StatusOK,
 			responseBody: `{
   "strategyType": 0,
@@ -48,21 +46,19 @@ func Test_samplingStrategyFetcherImpl_Fetch(t *testing.T) {
 				},
 			},
 		},
-		{
-			name:               "RequestError",
+		"RequestError": {
 			responseStatusCode: http.StatusTooManyRequests,
 			responseBody:       "you are sending too many requests",
 			expectedErr:        "request failed (429): you are sending too many requests",
 		},
-		{
-			name:               "InvalidResponseData",
+		"InvalidResponseData": {
 			responseStatusCode: http.StatusOK,
 			responseBody:       `{"strategy`,
 			expectedErr:        "unexpected end of JSON input",
 		},
 	}
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
+	for name, tt := range tests {
+		t.Run(name, func(t *testing.T) {
 			server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 				assert.Equal(t, "/?service=foo", r.URL.RequestURI())
 

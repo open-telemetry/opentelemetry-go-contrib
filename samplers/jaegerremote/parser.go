@@ -30,14 +30,13 @@ type samplingStrategyParseImpl struct{}
 var _ samplingStrategyParser = samplingStrategyParseImpl{}
 
 func (p samplingStrategyParseImpl) Parse(strategies jaeger_api_v2.SamplingStrategyResponse) (trace.Sampler, error) {
-	perOperationSamplingStrategy := strategies.GetOperationSampling()
-	if perOperationSamplingStrategy != nil {
-		return newPerOperationSampler(perOperationSamplingStrategy), nil
+	if strategies.OperationSampling != nil {
+		return newPerOperationSampler(strategies.OperationSampling), nil
 	}
 
 	switch strategies.StrategyType {
 	case jaeger_api_v2.SamplingStrategyType_PROBABILISTIC:
-		return trace.TraceIDRatioBased(strategies.GetProbabilisticSampling().SamplingRate), nil
+		return trace.TraceIDRatioBased(strategies.ProbabilisticSampling.SamplingRate), nil
 	case jaeger_api_v2.SamplingStrategyType_RATE_LIMITING:
 		return nil, fmt.Errorf("strategy type RATE_LIMITING is not supported")
 	}

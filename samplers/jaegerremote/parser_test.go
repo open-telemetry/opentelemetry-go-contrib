@@ -24,14 +24,12 @@ import (
 )
 
 func Test_samplingStrategyParserImpl_Parse(t *testing.T) {
-	tests := []struct {
-		name             string
+	tests := map[string]struct {
 		samplingStrategy jaeger_api_v2.SamplingStrategyResponse
 		expectedErr      string
 		expectedSampler  trace.Sampler
 	}{
-		{
-			name: "PROBABILISTIC only",
+		"PROBABILISTIC only": {
 			samplingStrategy: jaeger_api_v2.SamplingStrategyResponse{
 				StrategyType: jaeger_api_v2.SamplingStrategyType_PROBABILISTIC,
 				ProbabilisticSampling: &jaeger_api_v2.ProbabilisticSamplingStrategy{
@@ -40,8 +38,7 @@ func Test_samplingStrategyParserImpl_Parse(t *testing.T) {
 			},
 			expectedSampler: trace.TraceIDRatioBased(0.5),
 		},
-		{
-			name: "RATE_LIMITING only",
+		"RATE_LIMITING only": {
 			samplingStrategy: jaeger_api_v2.SamplingStrategyResponse{
 				StrategyType: jaeger_api_v2.SamplingStrategyType_RATE_LIMITING,
 				RateLimitingSampling: &jaeger_api_v2.RateLimitingSamplingStrategy{
@@ -50,8 +47,7 @@ func Test_samplingStrategyParserImpl_Parse(t *testing.T) {
 			},
 			expectedErr: "strategy type RATE_LIMITING is not supported",
 		},
-		{
-			name: "PROBABILISTIC and per operation",
+		"PROBABILISTIC and per operation": {
 			samplingStrategy: jaeger_api_v2.SamplingStrategyResponse{
 				StrategyType: jaeger_api_v2.SamplingStrategyType_PROBABILISTIC,
 				ProbabilisticSampling: &jaeger_api_v2.ProbabilisticSamplingStrategy{
@@ -76,9 +72,15 @@ func Test_samplingStrategyParserImpl_Parse(t *testing.T) {
 				},
 			},
 		},
+		"Invalid strategy": {
+			samplingStrategy: jaeger_api_v2.SamplingStrategyResponse{
+				StrategyType: 13, // some invalid ID
+			},
+			expectedErr: "got unrecognized strategy type 13",
+		},
 	}
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
+	for name, tt := range tests {
+		t.Run(name, func(t *testing.T) {
 			parser := samplingStrategyParseImpl{}
 
 			sampler, err := parser.Parse(tt.samplingStrategy)

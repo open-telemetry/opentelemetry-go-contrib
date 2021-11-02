@@ -24,46 +24,58 @@ import (
 )
 
 func Test_sampler_ShouldSample_probabilistic(t *testing.T) {
-	genProbabilisticStrategy := func(fraction float64) jaeger_api_v2.SamplingStrategyResponse {
-		return jaeger_api_v2.SamplingStrategyResponse{
-			StrategyType: jaeger_api_v2.SamplingStrategyType_PROBABILISTIC,
-			ProbabilisticSampling: &jaeger_api_v2.ProbabilisticSamplingStrategy{
-				SamplingRate: fraction,
-			},
-		}
-	}
-
 	jaegerRemoteSampler := New().(*sampler)
 
 	// set fraction to 0, this should drop every trace
 	jaegerRemoteSampler.fetcher = mockStrategyFetcher{
-		response: genProbabilisticStrategy(0),
+		response: generateProbabilisticStrategy(0),
 	}
-
 	err := jaegerRemoteSampler.updateSamplingStrategies()
 	assert.NoError(t, err)
 
-	traceID := [16]byte{0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1}
-
 	result := jaegerRemoteSampler.ShouldSample(trace.SamplingParameters{
-		TraceID: traceID,
+		TraceID: [16]byte{0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1},
 	})
 	assert.Equal(t, trace.Drop, result.Decision)
 
-	// set fraction to 0, this should sample every trace
+	// set fraction to 1, this should sample every trace
 	jaegerRemoteSampler.fetcher = mockStrategyFetcher{
-		response: genProbabilisticStrategy(1),
+		response: generateProbabilisticStrategy(1),
 	}
-
 	err = jaegerRemoteSampler.updateSamplingStrategies()
 	assert.NoError(t, err)
 
-	traceID = [16]byte{0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 2}
-
 	result = jaegerRemoteSampler.ShouldSample(trace.SamplingParameters{
-		TraceID: traceID,
+		TraceID: [16]byte{0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 2},
 	})
 	assert.Equal(t, trace.RecordAndSample, result.Decision)
+}
+
+func Test_sampler_Description(t *testing.T) {
+	jaegerRemoteSampler := New().(*sampler)
+
+	// default strategy
+	assert.Equal(t, "JaegerRemoteSampler{TraceIDRatioBased{0.001}}", jaegerRemoteSampler.Description())
+
+	// load per operation strategy
+	jaegerRemoteSampler.fetcher = mockStrategyFetcher{
+		response: jaeger_api_v2.SamplingStrategyResponse{
+			OperationSampling: &jaeger_api_v2.PerOperationSamplingStrategies{
+				DefaultSamplingProbability: 0.2,
+				PerOperationStrategies: []*jaeger_api_v2.OperationSamplingStrategy{
+					{
+						Operation: "foo",
+						ProbabilisticSampling: &jaeger_api_v2.ProbabilisticSamplingStrategy{
+							SamplingRate: 1,
+						},
+					},
+				},
+			},
+		},
+	}
+	err := jaegerRemoteSampler.updateSamplingStrategies()
+	assert.NoError(t, err)
+	assert.Equal(t, "JaegerRemoteSampler{PerOperationSampler{default=TraceIDRatioBased{0.2},perOperation={foo:AlwaysOnSampler}}}", jaegerRemoteSampler.Description())
 }
 
 func Test_sampler_updateSamplingStrategies(t *testing.T) {
@@ -94,9 +106,9 @@ func Test_sampler_updateSamplingStrategies(t *testing.T) {
 			sampler: trace.TraceIDRatioBased(0.8),
 		},
 		{
-			name: "strategy with RATE_LIMITING, update fails and sampler stays the same",
+			name: "strategy with invalid strategy type, update fails and sampler stays the same",
 			strategy: jaeger_api_v2.SamplingStrategyResponse{
-				StrategyType: jaeger_api_v2.SamplingStrategyType_RATE_LIMITING,
+				StrategyType: 13,
 				RateLimitingSampling: &jaeger_api_v2.RateLimitingSamplingStrategy{
 					MaxTracesPerSecond: 100,
 				},
@@ -148,4 +160,13 @@ var _ samplingStrategyFetcher = mockStrategyFetcher{}
 
 func (m mockStrategyFetcher) Fetch() (jaeger_api_v2.SamplingStrategyResponse, error) {
 	return m.response, m.err
+}
+
+func generateProbabilisticStrategy(fraction float64) jaeger_api_v2.SamplingStrategyResponse {
+	return jaeger_api_v2.SamplingStrategyResponse{
+		StrategyType: jaeger_api_v2.SamplingStrategyType_PROBABILISTIC,
+		ProbabilisticSampling: &jaeger_api_v2.ProbabilisticSamplingStrategy{
+			SamplingRate: fraction,
+		},
+	}
 }
