@@ -218,6 +218,8 @@ func TestPowerOfTwoSampling(t *testing.T) {
 			degrees testDegrees
 
 			// seedIndex is the index into seedBank of the test seed.
+			// If this is -1 the code below will search for the smallest
+			// seed index that passes the test.
 			seedIndex int
 		}
 		testResult struct {
