@@ -11,6 +11,7 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 ### Changed
 
 - The `Transport`, `Handler`, and HTTP client convenience wrappers in the `go.opentelemetry.io/contrib/instrumentation/net/http/otelhttp` package now use the `TracerProvider` from the parent context if one exists and none was explicitly set when configuring the instrumentation. (#873)
+- Semantic conventions now use `go.opentelemetry.io/otel/semconv/v1.7.0"`. (#1385)
 
 ## [1.1.0/0.26.0] - 2021-10-28
 
