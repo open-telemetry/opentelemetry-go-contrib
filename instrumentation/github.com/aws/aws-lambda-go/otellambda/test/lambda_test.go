@@ -31,7 +31,6 @@ import (
 	"github.com/aws/aws-lambda-go/lambdacontext"
 	"github.com/stretchr/testify/assert"
 
-	"go.opentelemetry.io/contrib"
 	lambdadetector "go.opentelemetry.io/contrib/detectors/aws/lambda"
 	"go.opentelemetry.io/contrib/instrumentation/github.com/aws/aws-lambda-go/otellambda"
 	"go.opentelemetry.io/contrib/propagators/aws/xray"
@@ -41,7 +40,7 @@ import (
 	"go.opentelemetry.io/otel/sdk/resource"
 	sdktrace "go.opentelemetry.io/otel/sdk/trace"
 	"go.opentelemetry.io/otel/sdk/trace/tracetest"
-	semconv "go.opentelemetry.io/otel/semconv/v1.4.0"
+	semconv "go.opentelemetry.io/otel/semconv/v1.7.0"
 	"go.opentelemetry.io/otel/trace"
 )
 
@@ -150,7 +149,7 @@ var (
 			attribute.String("cloud.region", "us-texas-1"),
 			attribute.String("faas.name", "testFunction"),
 			attribute.String("faas.version", "$LATEST")),
-		InstrumentationLibrary: instrumentation.Library{Name: "go.opentelemetry.io/contrib/instrumentation/github.com/aws/aws-lambda-go/otellambda", Version: contrib.SemVersion()},
+		InstrumentationLibrary: instrumentation.Library{Name: "go.opentelemetry.io/contrib/instrumentation/github.com/aws/aws-lambda-go/otellambda", Version: otellambda.SemVersion()},
 	}
 )
 
@@ -338,7 +337,7 @@ var (
 			attribute.String("cloud.region", "us-texas-1"),
 			attribute.String("faas.name", "testFunction"),
 			attribute.String("faas.version", "$LATEST")),
-		InstrumentationLibrary: instrumentation.Library{Name: "go.opentelemetry.io/contrib/instrumentation/github.com/aws/aws-lambda-go/otellambda", Version: contrib.SemVersion()},
+		InstrumentationLibrary: instrumentation.Library{Name: "go.opentelemetry.io/contrib/instrumentation/github.com/aws/aws-lambda-go/otellambda", Version: otellambda.SemVersion()},
 	}
 )
 
