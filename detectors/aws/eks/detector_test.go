@@ -24,7 +24,7 @@ import (
 
 	"go.opentelemetry.io/otel/attribute"
 	"go.opentelemetry.io/otel/sdk/resource"
-	semconv "go.opentelemetry.io/otel/semconv/v1.4.0"
+	semconv "go.opentelemetry.io/otel/semconv/v1.7.0"
 )
 
 type MockDetectorUtils struct {
@@ -62,6 +62,8 @@ func TestEks(t *testing.T) {
 
 	// Expected resource object
 	eksResourceLabels := []attribute.KeyValue{
+		semconv.CloudProviderAWS,
+		semconv.CloudPlatformAWSEKS,
 		semconv.K8SClusterNameKey.String("my-cluster"),
 		semconv.ContainerIDKey.String("0123456789A"),
 	}

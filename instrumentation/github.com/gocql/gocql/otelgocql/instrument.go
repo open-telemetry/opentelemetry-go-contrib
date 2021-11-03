@@ -17,7 +17,6 @@ package otelgocql
 import (
 	"log"
 
-	otelcontrib "go.opentelemetry.io/contrib"
 	"go.opentelemetry.io/contrib/instrumentation/github.com/gocql/gocql/otelgocql/internal"
 	"go.opentelemetry.io/otel/metric"
 	"go.opentelemetry.io/otel/metric/unit"
@@ -28,7 +27,7 @@ type instruments struct {
 	queryCount metric.Int64Counter
 
 	// queryRows is the number of rows returned by a query.
-	queryRows metric.Int64ValueRecorder
+	queryRows metric.Int64Histogram
 
 	// batchCount is the number of batch queries executed.
 	batchCount metric.Int64Counter
@@ -38,7 +37,7 @@ type instruments struct {
 	connectionCount metric.Int64Counter
 
 	// latency is the sum of attempt latencies.
-	latency metric.Int64ValueRecorder
+	latency metric.Int64Histogram
 }
 
 // newInstruments will create instruments using a meter
@@ -46,7 +45,7 @@ type instruments struct {
 func newInstruments(p metric.MeterProvider) *instruments {
 	meter := p.Meter(
 		internal.InstrumentationName,
-		metric.WithInstrumentationVersion(otelcontrib.SemVersion()),
+		metric.WithInstrumentationVersion(SemVersion()),
 	)
 	instruments := &instruments{}
 	var err error
@@ -58,7 +57,7 @@ func newInstruments(p metric.MeterProvider) *instruments {
 		log.Printf("failed to create iQueryCount instrument, %v", err)
 	}
 
-	if instruments.queryRows, err = meter.NewInt64ValueRecorder(
+	if instruments.queryRows, err = meter.NewInt64Histogram(
 		"db.cassandra.rows",
 		metric.WithDescription("Number of rows returned from query"),
 	); err != nil {
@@ -79,7 +78,7 @@ func newInstruments(p metric.MeterProvider) *instruments {
 		log.Printf("failed to create iConnectionCount instrument, %v", err)
 	}
 
-	if instruments.latency, err = meter.NewInt64ValueRecorder(
+	if instruments.latency, err = meter.NewInt64Histogram(
 		"db.cassandra.latency",
 		metric.WithDescription("Sum of latency to host in milliseconds"),
 		metric.WithUnit(unit.Milliseconds),

@@ -15,6 +15,7 @@
 package test
 
 import (
+	"context"
 	"fmt"
 	"io"
 	"io/ioutil"
@@ -24,6 +25,7 @@ import (
 	"testing"
 
 	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 
 	"go.opentelemetry.io/contrib/instrumentation/net/http/otelhttp"
 	"go.opentelemetry.io/otel/attribute"
@@ -31,7 +33,7 @@ import (
 	"go.opentelemetry.io/otel/propagation"
 	sdktrace "go.opentelemetry.io/otel/sdk/trace"
 	"go.opentelemetry.io/otel/sdk/trace/tracetest"
-	semconv "go.opentelemetry.io/otel/semconv/v1.4.0"
+	semconv "go.opentelemetry.io/otel/semconv/v1.7.0"
 )
 
 func assertMetricAttributes(t *testing.T, expectedAttributes []attribute.KeyValue, measurementBatches []metrictest.Batch) {
@@ -46,7 +48,7 @@ func TestHandlerBasics(t *testing.T) {
 	spanRecorder := tracetest.NewSpanRecorder()
 	provider := sdktrace.NewTracerProvider(sdktrace.WithSpanProcessor(spanRecorder))
 
-	meterimpl, meterProvider := metrictest.NewMeterProvider()
+	meterProvider := metrictest.NewMeterProvider()
 
 	operation := "test_handler"
 
@@ -70,7 +72,7 @@ func TestHandlerBasics(t *testing.T) {
 	}
 	h.ServeHTTP(rr, r)
 
-	if len(meterimpl.MeasurementBatches) == 0 {
+	if len(meterProvider.MeasurementBatches) == 0 {
 		t.Fatalf("got 0 recorded measurements, expected 1 or more")
 	}
 
@@ -82,7 +84,7 @@ func TestHandlerBasics(t *testing.T) {
 		attribute.String("test", "attribute"),
 	}
 
-	assertMetricAttributes(t, attributesToVerify, meterimpl.MeasurementBatches)
+	assertMetricAttributes(t, attributesToVerify, meterProvider.MeasurementBatches)
 
 	if got, expected := rr.Result().StatusCode, http.StatusOK; got != expected {
 		t.Fatalf("got %d, expected %d", got, expected)
@@ -106,4 +108,38 @@ func TestHandlerBasics(t *testing.T) {
 	if got, expected := string(d), "hello world"; got != expected {
 		t.Fatalf("got %q, expected %q", got, expected)
 	}
+}
+
+func TestHandlerRequestWithTraceContext(t *testing.T) {
+	rr := httptest.NewRecorder()
+
+	h := otelhttp.NewHandler(
+		http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+			_, err := w.Write([]byte("hello world"))
+			require.NoError(t, err)
+		}), "test_handler")
+
+	r, err := http.NewRequest(http.MethodGet, "http://localhost/", nil)
+	require.NoError(t, err)
+
+	spanRecorder := tracetest.NewSpanRecorder()
+	provider := sdktrace.NewTracerProvider(
+		sdktrace.WithSpanProcessor(spanRecorder),
+	)
+	tracer := provider.Tracer("")
+	ctx, span := tracer.Start(context.Background(), "test_request")
+	r = r.WithContext(ctx)
+
+	h.ServeHTTP(rr, r)
+	assert.Equal(t, 200, rr.Result().StatusCode)
+
+	span.End()
+
+	spans := spanRecorder.Ended()
+	require.Len(t, spans, 2)
+
+	assert.Equal(t, "test_handler", spans[0].Name())
+	assert.Equal(t, "test_request", spans[1].Name())
+	assert.NotEmpty(t, spans[0].Parent().SpanID())
+	assert.Equal(t, spans[1].SpanContext().SpanID(), spans[0].Parent().SpanID())
 }

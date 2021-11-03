@@ -10,8 +10,7 @@ replace (
 require (
 	github.com/gin-gonic/gin v1.7.4
 	github.com/stretchr/testify v1.7.0
-	go.opentelemetry.io/contrib v0.22.0
-	go.opentelemetry.io/contrib/propagators/b3 v0.22.0
-	go.opentelemetry.io/otel v1.0.0-RC2
-	go.opentelemetry.io/otel/trace v1.0.0-RC2
+	go.opentelemetry.io/contrib/propagators/b3 v1.1.0
+	go.opentelemetry.io/otel v1.1.0
+	go.opentelemetry.io/otel/trace v1.1.0
 )

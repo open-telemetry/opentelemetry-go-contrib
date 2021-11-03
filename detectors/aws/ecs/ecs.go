@@ -23,7 +23,7 @@ import (
 
 	"go.opentelemetry.io/otel/attribute"
 	"go.opentelemetry.io/otel/sdk/resource"
-	semconv "go.opentelemetry.io/otel/semconv/v1.4.0"
+	semconv "go.opentelemetry.io/otel/semconv/v1.7.0"
 )
 
 const (
@@ -85,6 +85,8 @@ func (detector *resourceDetector) Detect(ctx context.Context) (*resource.Resourc
 		return empty, err
 	}
 	attributes := []attribute.KeyValue{
+		semconv.CloudProviderAWS,
+		semconv.CloudPlatformAWSECS,
 		semconv.ContainerNameKey.String(hostName),
 		semconv.ContainerIDKey.String(containerID),
 	}

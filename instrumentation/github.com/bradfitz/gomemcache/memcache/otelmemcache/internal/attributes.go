@@ -16,7 +16,7 @@ package internal
 
 import (
 	"go.opentelemetry.io/otel/attribute"
-	semconv "go.opentelemetry.io/otel/semconv/v1.4.0"
+	semconv "go.opentelemetry.io/otel/semconv/v1.7.0"
 )
 
 type Operation string
@@ -50,7 +50,7 @@ func MemcacheDBOperation(opName Operation) attribute.KeyValue {
 
 func MemcacheDBItemKeys(itemKeys ...string) attribute.KeyValue {
 	if len(itemKeys) > 1 {
-		return MemcacheDBItemKeyName.Array(itemKeys)
+		return MemcacheDBItemKeyName.StringSlice(itemKeys)
 	}
 
 	return MemcacheDBItemKeyName.String(itemKeys[0])

@@ -14,7 +14,7 @@ jobs:
     runs-on: ubuntu-latest
     steps:
     - name: Install Go
-      uses: actions/setup-go@v2.1.3
+      uses: actions/setup-go@v2.1.4
       with:
         go-version: ${{ env.DEFAULT_GO_VERSION }}
     - name: Checkout Repo
@@ -48,7 +48,7 @@ jobs:
     runs-on: ubuntu-latest
     steps:
     - name: Install Go
-      uses: actions/setup-go@v2.1.3
+      uses: actions/setup-go@v2.1.4
       with:
         go-version: ${{ env.DEFAULT_GO_VERSION }}
     - name: Checkout Repo
@@ -71,7 +71,7 @@ jobs:
     runs-on: ubuntu-latest
     steps:
     - name: Install Go
-      uses: actions/setup-go@v2.1.3
+      uses: actions/setup-go@v2.1.4
       with:
         go-version: ${{ env.DEFAULT_GO_VERSION }}
     - name: Checkout Repo
@@ -93,7 +93,7 @@ jobs:
         mkdir $TEST_RESULTS
         cp coverage.{txt,html} $TEST_RESULTS
     - name: Upload coverage report
-      uses: codecov/codecov-action@v2.0.2
+      uses: codecov/codecov-action@v2.1.0
       with:
         file: ./coverage.txt
         fail_ci_if_error: true
@@ -107,7 +107,7 @@ jobs:
   compatibility-test:
     strategy:
       matrix:
-        go-version: [1.16, 1.15]
+        go-version: [1.17, 1.16, 1.15]
         # TODO: support all of these.
         #os: [ubuntu-latest, macos-latest, windows-latest]
         os: [ubuntu-latest, macos-latest]
@@ -123,7 +123,7 @@ jobs:
     runs-on: ${{ matrix.os }}
     steps:
     - name: Install Go
-      uses: actions/setup-go@v2.1.3
+      uses: actions/setup-go@v2.1.4
       with:
         go-version: ${{ matrix.go-version }}
     - name: Checkout code
@@ -152,7 +152,7 @@ jobs:
     runs-on: ubuntu-latest
     steps:
     - name: Install Go
-      uses: actions/setup-go@v2.1.3
+      uses: actions/setup-go@v2.1.4
       with:
         go-version: ${{ env.DEFAULT_GO_VERSION }}
     - name: Checkout Repo
@@ -180,7 +180,7 @@ jobs:
         find . -name 'coverage.html' > "${TEST_RESULTS}/coverage.lst"
         tar -n -cf - -T "${TEST_RESULTS}/coverage.lst" | tar -C "${TEST_RESULTS}" -xvf -
     - name: Upload coverage report
-      uses: codecov/codecov-action@v2.0.2
+      uses: codecov/codecov-action@v2.1.0
       if: hashFiles('coverage.out') != ''
       with:
         file: ./coverage.out

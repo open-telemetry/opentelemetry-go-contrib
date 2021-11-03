@@ -34,8 +34,8 @@ func TestRuntime(t *testing.T) {
 	time.Sleep(time.Second)
 }
 
-func getGCCount(impl *metrictest.MeterImpl) int {
-	for _, b := range impl.MeasurementBatches {
+func getGCCount(provider *metrictest.MeterProvider) int {
+	for _, b := range provider.MeasurementBatches {
 		for _, m := range b.Measurements {
 			if m.Instrument.Descriptor().Name() == "runtime.go.gc.count" {
 				return int(m.Number.CoerceToInt64(m.Instrument.Descriptor().NumberKind()))
@@ -52,7 +52,7 @@ func testMinimumInterval(t *testing.T, shouldHappen bool, opts ...runtime.Option
 	goruntime.ReadMemStats(&mstats0)
 	baseline := int(mstats0.NumGC)
 
-	impl, provider := metrictest.NewMeterProvider()
+	provider := metrictest.NewMeterProvider()
 
 	err := runtime.Start(
 		append(
@@ -64,11 +64,11 @@ func testMinimumInterval(t *testing.T, shouldHappen bool, opts ...runtime.Option
 
 	goruntime.GC()
 
-	impl.RunAsyncInstruments()
+	provider.RunAsyncInstruments()
 
-	require.Equal(t, 1, getGCCount(impl)-baseline)
+	require.Equal(t, 1, getGCCount(provider)-baseline)
 
-	impl.MeasurementBatches = nil
+	provider.MeasurementBatches = nil
 
 	extra := 0
 	if shouldHappen {
@@ -79,9 +79,9 @@ func testMinimumInterval(t *testing.T, shouldHappen bool, opts ...runtime.Option
 	goruntime.GC()
 	goruntime.GC()
 
-	impl.RunAsyncInstruments()
+	provider.RunAsyncInstruments()
 
-	require.Equal(t, 1+extra, getGCCount(impl)-baseline)
+	require.Equal(t, 1+extra, getGCCount(provider)-baseline)
 }
 
 func TestDefaultMinimumInterval(t *testing.T) {

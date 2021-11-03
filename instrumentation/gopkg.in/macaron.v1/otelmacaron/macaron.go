@@ -21,10 +21,8 @@ import (
 	"gopkg.in/macaron.v1"
 
 	"go.opentelemetry.io/otel/propagation"
-	semconv "go.opentelemetry.io/otel/semconv/v1.4.0"
+	semconv "go.opentelemetry.io/otel/semconv/v1.7.0"
 	oteltrace "go.opentelemetry.io/otel/trace"
-
-	otelcontrib "go.opentelemetry.io/contrib"
 )
 
 // instrumentationName is the name of this instrumentation package.
@@ -35,7 +33,7 @@ func Middleware(service string, opts ...Option) macaron.Handler {
 	cfg := newConfig(opts)
 	tracer := cfg.TracerProvider.Tracer(
 		instrumentationName,
-		oteltrace.WithInstrumentationVersion(otelcontrib.SemVersion()),
+		oteltrace.WithInstrumentationVersion(SemVersion()),
 	)
 	return func(res http.ResponseWriter, req *http.Request, c *macaron.Context) {
 		savedCtx := c.Req.Request.Context()

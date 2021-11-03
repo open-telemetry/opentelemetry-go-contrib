@@ -12,13 +12,11 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-// Package contrib contains common values used across all
-// instrumentation, exporter, and detector contributions.
-package contrib // import "go.opentelemetry.io/contrib"
+package host
 
-// Version is the current release version of OpenTelemetry Contrib in use.
+// Version is the current release version of the host instrumentation.
 func Version() string {
-	return "0.22.0"
+	return "0.26.0"
 	// This string is updated by the pre_release.sh script during release
 }
 

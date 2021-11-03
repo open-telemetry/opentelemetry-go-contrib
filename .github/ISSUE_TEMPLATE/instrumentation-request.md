@@ -1,8 +1,8 @@
 ---
 name: Instrumentation Request
 about: Suggest instrumentation to include in this project
-title: Add Instrumentation for <package-name>
-labels: 'enhancement, area: instrumentation, release:after-ga'
+title: Request to Add Instrumentation for <package-name>
+labels: 'enhancement, area: instrumentation'
 assignees: ''
 
 ---
@@ -12,6 +12,10 @@ assignees: ''
 **Package Link**: <add link to package here>
 
 <describe how this package is commonly used>
+
+### Why can this instrumentation not be included in the package itself?
+
+### Why can this instrumentation not be hosted in a dedicated repository?
 
 ## Proposed Solution
 
