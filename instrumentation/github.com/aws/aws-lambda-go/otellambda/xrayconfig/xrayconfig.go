@@ -18,7 +18,6 @@ import (
 	"context"
 	"log"
 	"os"
-	"runtime"
 
 	lambdadetector "go.opentelemetry.io/contrib/detectors/aws/lambda"
 	"go.opentelemetry.io/contrib/instrumentation/github.com/aws/aws-lambda-go/otellambda"
@@ -33,20 +32,6 @@ var errorLogger = log.New(log.Writer(), "OTel Lambda XRay Configuration Error: "
 func xrayEventToCarrier([]byte) propagation.TextMapCarrier {
 	xrayTraceID := os.Getenv("_X_AMZN_TRACE_ID")
 	return propagation.HeaderCarrier{"X-Amzn-Trace-Id": []string{xrayTraceID}}
-}
-
-type asyncSafeFlusher struct {
-	tp *sdktrace.TracerProvider
-}
-
-func (f asyncSafeFlusher) ForceFlush(ctx context.Context) error {
-	// yield processor to attempt to ensure all spans have
-	// been consumed and are ready to be flushed
-	// - see https://github.com/open-telemetry/opentelemetry-go/issues/2080
-	// to be removed upon resolution of above issue
-	runtime.Gosched()
-
-	return f.tp.ForceFlush(ctx)
 }
 
 // tracerProviderAndFlusher returns a list of otellambda.Option(s) to
@@ -76,7 +61,11 @@ func tracerProviderAndFlusher() ([]otellambda.Option, error) {
 		sdktrace.WithResource(res),
 	)
 
-	return []otellambda.Option{otellambda.WithTracerProvider(tp), otellambda.WithFlusher(asyncSafeFlusher{tp: tp})}, nil
+	return []otellambda.Option{otellambda.WithTracerProvider(tp), AsyncSafeFlusher()}, nil
+}
+
+func AsyncSafeFlusher() otellambda.Option {
+	return otellambda.WithAsyncSafeFlusher()
 }
 
 // EventToCarrier returns an otellambda.Option to enable
