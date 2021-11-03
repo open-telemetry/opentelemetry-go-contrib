@@ -32,7 +32,6 @@ const (
 var (
 	errTraceStateSyntax       = fmt.Errorf("otel tracestate: %w", strconv.ErrSyntax)
 	errTraceStateInconsistent = fmt.Errorf("r-value and p-value are inconsistent")
-	errTraceStateSizeLimit    = fmt.Errorf("otel tracestate: size limit exceeded")
 )
 
 type otelTraceState struct {
@@ -172,17 +171,17 @@ func parseOTelTraceState(ts string, isSampled bool) (otelTraceState, error) {
 	otts.unknown = unknown
 
 	// Note: set R before P, so that P won't propagate if R has an error.
-	if value, err := parseNumber(rValueSubkey, rval, pZeroValue-1); err != nil {
+	value, err := parseNumber(rValueSubkey, rval, pZeroValue-1)
+	if err != nil {
 		return otts, err
-	} else {
-		otts.rvalue = value
 	}
+	otts.rvalue = value
 
-	if value, err := parseNumber(pValueSubkey, pval, pZeroValue); err != nil {
+	value, err = parseNumber(pValueSubkey, pval, pZeroValue)
+	if err != nil {
 		return otts, err
-	} else {
-		otts.pvalue = value
 	}
+	otts.pvalue = value
 
 	// Invariant checking: unset P when the values are inconsistent.
 	if otts.hasPValue() && otts.hasRValue() {

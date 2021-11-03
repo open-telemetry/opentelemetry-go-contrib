@@ -25,6 +25,7 @@ import (
 	"testing"
 
 	"github.com/stretchr/testify/require"
+
 	"go.opentelemetry.io/otel"
 	"go.opentelemetry.io/otel/attribute"
 	sdktrace "go.opentelemetry.io/otel/sdk/trace"
@@ -54,11 +55,10 @@ const (
 var (
 	populationSize = 1e6
 	trials         = 20
-	significance   = 1 / float64(trials)
 
 	// These may be computed using Gonum, e.g.,
 	// import "gonum.org/v1/gonum/stat/distuv"
-	// with significance = 0.05
+	// with significance = 1 / float64(trials) = 0.05
 	// chiSquaredDF1  = distuv.ChiSquared{K: 1}.Quantile(significance)
 	// chiSquaredDF2  = distuv.ChiSquared{K: 2}.Quantile(significance)
 	//
@@ -116,27 +116,27 @@ func TestSamplerDescription(t *testing.T) {
 		prob   float64
 		expect string
 	}{
-		{1, "ConsistentProbabilityBased{1}"},
-		{0, "ConsistentProbabilityBased{0}"},
-		{0.75, "ConsistentProbabilityBased{0.75}"},
-		{0.05, "ConsistentProbabilityBased{0.05}"},
-		{0.003, "ConsistentProbabilityBased{0.003}"},
-		{0.99999999, "ConsistentProbabilityBased{0.99999999}"},
-		{0.00000001, "ConsistentProbabilityBased{1e-08}"},
-		{minProb, "ConsistentProbabilityBased{2.168404344971009e-19}"},
-		{minProb * 1.5, "ConsistentProbabilityBased{3.2526065174565133e-19}"},
-		{3e-19, "ConsistentProbabilityBased{3e-19}"},
+		{1, "ProbabilityBased{1}"},
+		{0, "ProbabilityBased{0}"},
+		{0.75, "ProbabilityBased{0.75}"},
+		{0.05, "ProbabilityBased{0.05}"},
+		{0.003, "ProbabilityBased{0.003}"},
+		{0.99999999, "ProbabilityBased{0.99999999}"},
+		{0.00000001, "ProbabilityBased{1e-08}"},
+		{minProb, "ProbabilityBased{2.168404344971009e-19}"},
+		{minProb * 1.5, "ProbabilityBased{3.2526065174565133e-19}"},
+		{3e-19, "ProbabilityBased{3e-19}"},
 
 		// out-of-range > 1
-		{1.01, "ConsistentProbabilityBased{1}"},
-		{101.1, "ConsistentProbabilityBased{1}"},
+		{1.01, "ProbabilityBased{1}"},
+		{101.1, "ProbabilityBased{1}"},
 
 		// out-of-range < 2^-62
-		{-1, "ConsistentProbabilityBased{0}"},
-		{-0.001, "ConsistentProbabilityBased{0}"},
-		{minProb * 0.999, "ConsistentProbabilityBased{0}"},
+		{-1, "ProbabilityBased{0}"},
+		{-0.001, "ProbabilityBased{0}"},
+		{minProb * 0.999, "ProbabilityBased{0}"},
 	} {
-		s := ConsistentProbabilityBased(tc.prob)
+		s := ProbabilityBased(tc.prob)
 		require.Equal(t, tc.expect, s.Description(), "%#v", tc.prob)
 	}
 }
@@ -199,7 +199,7 @@ func TestSamplerBehavior(t *testing.T) {
 					otel.SetErrorHandler(handler)
 
 					src := rand.NewSource(99999199999)
-					sampler := ConsistentProbabilityBased(group.probability, WithRandomSource(src))
+					sampler := ProbabilityBased(group.probability, WithRandomSource(src))
 
 					traceID, _ := trace.TraceIDFromHex("4bf92f3577b34da6a3ce929d0e0e4736")
 					spanID, _ := trace.SpanIDFromHex("00f067aa0ba902b7")
@@ -281,7 +281,7 @@ func TestSamplerBehavior(t *testing.T) {
 func sampleTrials(t *testing.T, prob float64, degrees testDegrees, upperP pValue, source rand.Source) (float64, []float64) {
 	ctx := context.Background()
 
-	sampler := ConsistentProbabilityBased(
+	sampler := ProbabilityBased(
 		prob,
 		WithRandomSource(source),
 	)

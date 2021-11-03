@@ -28,7 +28,7 @@ type (
 	}
 )
 
-func ConsistentParentProbabilityBased(root sdktrace.Sampler, samplers ...sdktrace.ParentBasedSamplerOption) sdktrace.Sampler {
+func ParentProbabilityBased(root sdktrace.Sampler, samplers ...sdktrace.ParentBasedSamplerOption) sdktrace.Sampler {
 	return &parentProbabilitySampler{
 		delegate: sdktrace.ParentBased(root, samplers...),
 	}
@@ -64,9 +64,5 @@ func (p *parentProbabilitySampler) ShouldSample(params sdktrace.SamplingParamete
 }
 
 func (p *parentProbabilitySampler) Description() string {
-	s := p.delegate.Description()
-	if strings.HasPrefix(s, "ParentBased") {
-		s = s[len("ParentBased"):]
-	}
-	return "ConsistentParentProbabilityBased" + s
+	return "ParentProbabilityBased" + strings.TrimPrefix(p.delegate.Description(), "ParentBased")
 }

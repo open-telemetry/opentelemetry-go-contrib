@@ -26,7 +26,7 @@ import (
 )
 
 type (
-	ConsistentProbabilityBasedOption interface {
+	ProbabilityBasedOption interface {
 		apply(*consistentProbabilityBasedConfig)
 	}
 
@@ -64,7 +64,7 @@ type (
 // WithRandomSource sets the source of the random number used in this
 // prototype of OTEP 170, which assumes the randomness is not derived
 // from the TraceID.
-func WithRandomSource(source rand.Source) ConsistentProbabilityBasedOption {
+func WithRandomSource(source rand.Source) ProbabilityBasedOption {
 	return consistentProbabilityBasedRandomSource{source}
 }
 
@@ -72,7 +72,7 @@ func (s consistentProbabilityBasedRandomSource) apply(cfg *consistentProbability
 	cfg.source = s.Source
 }
 
-// ConsistentProbabilityBased samples a given fraction of traces.  Based on the
+// ProbabilityBased samples a given fraction of traces.  Based on the
 // OpenTelemetry specification, this Sampler supports only power-of-two
 // fractions.  When the input fraction is not a power of two, it will
 // be rounded down.
@@ -83,7 +83,7 @@ func (s consistentProbabilityBasedRandomSource) apply(cfg *consistentProbability
 //
 // To respect the parent trace's `SampledFlag`, this sampler should be
 // used as the root delegate of a `Parent` sampler.
-func ConsistentProbabilityBased(fraction float64, opts ...ConsistentProbabilityBasedOption) sdktrace.Sampler {
+func ProbabilityBased(fraction float64, opts ...ProbabilityBasedOption) sdktrace.Sampler {
 	cfg := consistentProbabilityBasedConfig{
 		source: rand.NewSource(rand.Int63()),
 	}
@@ -174,5 +174,5 @@ func (cs *consistentProbabilityBased) Description() string {
 		prob = cs.lowProb * expToFloat64(-int(cs.lowLAC))
 		prob += (1 - cs.lowProb) * expToFloat64(-int(cs.highLAC))
 	}
-	return fmt.Sprintf("ConsistentProbabilityBased{%g}", prob)
+	return fmt.Sprintf("ProbabilityBased{%g}", prob)
 }

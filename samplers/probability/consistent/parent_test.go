@@ -20,6 +20,7 @@ import (
 	"testing"
 
 	"github.com/stretchr/testify/require"
+
 	"go.opentelemetry.io/otel/attribute"
 	sdktrace "go.opentelemetry.io/otel/sdk/trace"
 	"go.opentelemetry.io/otel/trace"
@@ -29,14 +30,14 @@ func TestParentSamplerDescription(t *testing.T) {
 	opts := []sdktrace.ParentBasedSamplerOption{
 		sdktrace.WithRemoteParentNotSampled(sdktrace.AlwaysSample()),
 	}
-	root := ConsistentProbabilityBased(1)
+	root := ProbabilityBased(1)
 	compare := sdktrace.ParentBased(root, opts...)
-	parent := ConsistentParentProbabilityBased(root, opts...)
+	parent := ParentProbabilityBased(root, opts...)
 	require.Equal(t,
 		strings.Replace(
 			compare.Description(),
 			"ParentBased",
-			"ConsistentParentProbabilityBased",
+			"ParentProbabilityBased",
 			1,
 		),
 		parent.Description(),
@@ -48,7 +49,7 @@ func TestParentSamplerRootContext(t *testing.T) {
 }
 
 func TestParentSamplerValidContext(t *testing.T) {
-	parent := ConsistentParentProbabilityBased(sdktrace.NeverSample())
+	parent := ParentProbabilityBased(sdktrace.NeverSample())
 	type testCase struct {
 		in      string
 		sampled bool
@@ -113,7 +114,7 @@ func TestParentSamplerValidContext(t *testing.T) {
 }
 
 func TestParentSamplerInvalidContext(t *testing.T) {
-	parent := ConsistentParentProbabilityBased(sdktrace.NeverSample())
+	parent := ParentProbabilityBased(sdktrace.NeverSample())
 	type testCase struct {
 		in      string
 		sampled bool
