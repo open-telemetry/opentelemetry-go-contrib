@@ -27,7 +27,7 @@ import (
 	sdktrace "go.opentelemetry.io/otel/sdk/trace"
 )
 
-func TestDescription(t *testing.T) {
+func TestSamplerDescription(t *testing.T) {
 	const minProb = 0x1p-62 // 2.168404344971009e-19
 
 	for _, tc := range []struct {
@@ -218,7 +218,7 @@ func sampleTrials(t *testing.T, prob float64, degrees testDegrees, upperP pValue
 	return chi2, expected
 }
 
-func TestPowerOfTwoSampling(t *testing.T) {
+func TestStatisticalTest(t *testing.T) {
 	// This test is seeded with a "palindromic wing prime".
 	seedBankRng := rand.New(rand.NewSource(77777677777))
 	seedBank := make([]int64, 15) // N.B. Max=14 below.

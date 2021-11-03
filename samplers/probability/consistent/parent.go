@@ -37,17 +37,21 @@ func ConsistentParentProbabilityBased(root sdktrace.Sampler, samplers ...sdktrac
 func (p *parentProbabilitySampler) ShouldSample(params sdktrace.SamplingParameters) sdktrace.SamplingResult {
 	psc := trace.SpanContextFromContext(params.ParentContext)
 
-	if !psc.IsValid() {
-		return p.delegate.ShouldSample(params)
-	}
-
+	// Note: We do not check psc.IsValid(), i.e., we repair the tracestate
+	// with or without a parent TraceId and SpanId.
 	state := psc.TraceState()
 
 	otts, err := parseOTelTraceState(state.Get(traceStateKey), psc.IsSampled())
 
 	if err != nil {
 		otel.Handle(err)
-		state.Insert(traceStateKey, otts.serialize())
+		// Note: do not handle a second error in this path.
+		value := otts.serialize()
+		if len(value) > 0 {
+			state, _ = state.Insert(traceStateKey, value)
+		} else {
+			state = state.Delete(traceStateKey)
+		}
 
 		// Fix the broken tracestate before calling the delegate.
 		params.ParentContext =
