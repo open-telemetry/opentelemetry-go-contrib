@@ -21,11 +21,93 @@ import (
 	"math/rand"
 	"strconv"
 	"strings"
+	"sync"
 	"testing"
 
 	"github.com/stretchr/testify/require"
+	"go.opentelemetry.io/otel"
+	"go.opentelemetry.io/otel/attribute"
 	sdktrace "go.opentelemetry.io/otel/sdk/trace"
+	"go.opentelemetry.io/otel/trace"
 )
+
+type (
+	testDegrees int
+	pValue      int
+
+	testSpanRecorder struct {
+		lock  sync.Mutex
+		spans []sdktrace.ReadOnlySpan
+	}
+
+	testErrorHandler struct {
+		lock   sync.Mutex
+		errors []error
+	}
+)
+
+const (
+	oneDegree  testDegrees = 1
+	twoDegrees testDegrees = 2
+)
+
+var (
+	populationSize = 1e6
+	trials         = 20
+	significance   = 1 / float64(trials)
+
+	// These may be computed using Gonum, e.g.,
+	// import "gonum.org/v1/gonum/stat/distuv"
+	// with significance = 0.05
+	// chiSquaredDF1  = distuv.ChiSquared{K: 1}.Quantile(significance)
+	// chiSquaredDF2  = distuv.ChiSquared{K: 2}.Quantile(significance)
+	//
+	// These have been specified using significance = 0.05:
+	chiSquaredDF1 = 0.003932140000019522
+	chiSquaredDF2 = 0.1025865887751011
+
+	chiSquaredByDF = [3]float64{
+		0,
+		chiSquaredDF1,
+		chiSquaredDF2,
+	}
+)
+
+func parsePR(s string) (p, r string) {
+	for _, kvf := range strings.Split(s, ";") {
+		kv := strings.SplitN(kvf, ":", 2)
+		switch kv[0] {
+		case "p":
+			p = kv[1]
+		case "r":
+			r = kv[1]
+		}
+	}
+	return
+}
+
+func (tsr *testSpanRecorder) ExportSpans(ctx context.Context, spans []sdktrace.ReadOnlySpan) error {
+	tsr.lock.Lock()
+	defer tsr.lock.Unlock()
+	tsr.spans = append(tsr.spans, spans...)
+	return nil
+}
+
+func (tsr *testSpanRecorder) Shutdown(ctx context.Context) error {
+	return nil
+}
+
+func (eh *testErrorHandler) Handle(err error) {
+	eh.lock.Lock()
+	defer eh.lock.Unlock()
+	eh.errors = append(eh.errors, err)
+}
+
+func (eh *testErrorHandler) Errors() []error {
+	eh.lock.Lock()
+	defer eh.lock.Unlock()
+	return eh.errors
+}
 
 func TestSamplerDescription(t *testing.T) {
 	const minProb = 0x1p-62 // 2.168404344971009e-19
@@ -59,62 +141,141 @@ func TestSamplerDescription(t *testing.T) {
 	}
 }
 
-var (
-	populationSize = 1e6
-	trials         = 20
-	significance   = 1 / float64(trials)
+func getUnknowns(otts otelTraceState) string {
+	otts.pvalue = invalidValue
+	otts.rvalue = invalidValue
+	return otts.serialize()
+}
 
-	// These may be computed using Gonum, e.g.,
-	// import "gonum.org/v1/gonum/stat/distuv"
-	// with significance = 0.05
-	// chiSquaredDF1  = distuv.ChiSquared{K: 1}.Quantile(significance)
-	// chiSquaredDF2  = distuv.ChiSquared{K: 2}.Quantile(significance)
-	//
-	// These have been specified using significance = 0.05:
-	chiSquaredDF1 = 0.003932140000019522
-	chiSquaredDF2 = 0.1025865887751011
-
-	chiSquaredByDF = [3]float64{
-		0,
-		chiSquaredDF1,
-		chiSquaredDF2,
+func TestSamplerBehavior(t *testing.T) {
+	type testGroup struct {
+		probability float64
+		minP        uint8
+		maxP        uint8
 	}
-)
-
-type (
-	testDegrees int
-	pValue      int
-)
-
-const (
-	oneDegree  testDegrees = 1
-	twoDegrees testDegrees = 2
-)
-
-func parsePR(s string) (p, r string) {
-	for _, kvf := range strings.Split(s, ";") {
-		kv := strings.SplitN(kvf, ":", 2)
-		switch kv[0] {
-		case "p":
-			p = kv[1]
-		case "r":
-			r = kv[1]
-		}
+	type testCase struct {
+		isRoot        bool
+		parentSampled bool
+		ctxTracestate string
+		hasErrors     bool
 	}
-	return
-}
 
-type testSpanRecorder struct {
-	spans []sdktrace.ReadOnlySpan
-}
+	for _, group := range []testGroup{
+		{1.0, 0, 0},
+		{0.75, 0, 1},
+		{0.5, 1, 1},
+		{0, 63, 63},
+	} {
+		t.Run(fmt.Sprint(group.probability), func(t *testing.T) {
+			for _, test := range []testCase{
+				// roots do not care if the context is
+				// sampled, however preserve other
+				// otel tracestate keys
+				{true, false, "", false},
+				{true, false, "a:b", false},
 
-func (tsr *testSpanRecorder) ExportSpans(ctx context.Context, spans []sdktrace.ReadOnlySpan) error {
-	tsr.spans = append(tsr.spans, spans...)
-	return nil
-}
+				// non-roots insert r
+				{false, true, "", false},
+				{false, true, "a:b", false},
+				{false, false, "", false},
+				{false, false, "a:b", false},
 
-func (tsr *testSpanRecorder) Shutdown(ctx context.Context) error {
-	return nil
+				// error cases: r-p inconsistency
+				{false, true, "r:10;p:20", true},
+				{false, true, "r:10;p:20;a:b", true},
+				{false, false, "r:10;p:5", true},
+				{false, false, "r:10;p:5;a:b", true},
+
+				// error cases: out-of-range
+				{false, false, "r:100", true},
+				{false, false, "r:100;a:b", true},
+				{false, true, "r:100;p:100", true},
+				{false, true, "r:100;p:100;a:b", true},
+				{false, true, "r:10;p:100", true},
+				{false, true, "r:10;p:100;a:b", true},
+			} {
+				t.Run(testName(test.ctxTracestate), func(t *testing.T) {
+					handler := &testErrorHandler{}
+					otel.SetErrorHandler(handler)
+
+					src := rand.NewSource(99999199999)
+					sampler := ConsistentProbabilityBased(group.probability, WithRandomSource(src))
+
+					traceID, _ := trace.TraceIDFromHex("4bf92f3577b34da6a3ce929d0e0e4736")
+					spanID, _ := trace.SpanIDFromHex("00f067aa0ba902b7")
+
+					traceState := trace.TraceState{}
+					if test.ctxTracestate != "" {
+						var err error
+						traceState, err = traceState.Insert(traceStateKey, test.ctxTracestate)
+						require.NoError(t, err)
+					}
+
+					sccfg := trace.SpanContextConfig{
+						TraceState: traceState,
+					}
+
+					if !test.isRoot {
+						sccfg.TraceID = traceID
+						sccfg.SpanID = spanID
+					}
+
+					if test.parentSampled {
+						sccfg.TraceFlags = trace.FlagsSampled
+					}
+
+					parentCtx := trace.ContextWithSpanContext(
+						context.Background(),
+						trace.NewSpanContext(sccfg),
+					)
+
+					// Note: the error below is sometimes expected
+					testState, _ := parseOTelTraceState(test.ctxTracestate, test.parentSampled)
+					hasRValue := testState.hasRValue()
+
+					const repeats = 10
+					for i := 0; i < repeats; i++ {
+						result := sampler.ShouldSample(
+							sdktrace.SamplingParameters{
+								ParentContext: parentCtx,
+								TraceID:       traceID,
+								Name:          "test",
+								Kind:          trace.SpanKindServer,
+							},
+						)
+						sampled := result.Decision == sdktrace.RecordAndSample
+
+						// The result is deterministically random. Parse the tracestate
+						// to see that it is consistent.
+						otts, err := parseOTelTraceState(result.Tracestate.Get(traceStateKey), sampled)
+						require.NoError(t, err)
+						require.True(t, otts.hasRValue())
+						require.Equal(t, []attribute.KeyValue(nil), result.Attributes)
+
+						if otts.hasPValue() {
+							require.LessOrEqual(t, group.minP, otts.pvalue)
+							require.LessOrEqual(t, otts.pvalue, group.maxP)
+							require.Equal(t, sdktrace.RecordAndSample, result.Decision)
+						} else {
+							require.Equal(t, sdktrace.Drop, result.Decision)
+						}
+
+						require.Equal(t, getUnknowns(testState), getUnknowns(otts))
+
+						if hasRValue {
+							require.Equal(t, testState.rvalue, otts.rvalue)
+						}
+
+						if test.hasErrors {
+							require.Less(t, 0, len(handler.Errors()))
+						} else {
+							require.Equal(t, 0, len(handler.Errors()))
+						}
+					}
+				})
+			}
+		})
+	}
 }
 
 func sampleTrials(t *testing.T, prob float64, degrees testDegrees, upperP pValue, source rand.Source) (float64, []float64) {
@@ -218,8 +379,10 @@ func sampleTrials(t *testing.T, prob float64, degrees testDegrees, upperP pValue
 	return chi2, expected
 }
 
-func TestStatisticalTest(t *testing.T) {
-	// This test is seeded with a "palindromic wing prime".
+func TestSamplerStatistics(t *testing.T) {
+	if testing.Short() {
+		t.Skip("statistical test does not run in short mode")
+	}
 	seedBankRng := rand.New(rand.NewSource(77777677777))
 	seedBank := make([]int64, 15) // N.B. Max=14 below.
 	for i := range seedBank {
@@ -263,26 +426,26 @@ func TestStatisticalTest(t *testing.T) {
 	for _, test := range []testCase{
 		// Non-powers of two
 		{0.90000, 1, twoDegrees, 5},
-		// {0.60000, 1, twoDegrees, 14},
-		// {0.33000, 2, twoDegrees, 3},
-		// {0.13000, 3, twoDegrees, 2},
-		// {0.10000, 4, twoDegrees, 0},
-		// {0.05000, 5, twoDegrees, 0},
-		// {0.01700, 6, twoDegrees, 2},
-		// {0.01000, 7, twoDegrees, 3},
-		// {0.00500, 8, twoDegrees, 1},
-		// {0.00290, 9, twoDegrees, 1},
-		// {0.00100, 10, twoDegrees, 5},
-		// {0.00050, 11, twoDegrees, 1},
-		// {0.00026, 12, twoDegrees, 3},
-		// {0.00023, 13, twoDegrees, 0},
-		// {0.00010, 14, twoDegrees, 2},
+		{0.60000, 1, twoDegrees, 14},
+		{0.33000, 2, twoDegrees, 3},
+		{0.13000, 3, twoDegrees, 2},
+		{0.10000, 4, twoDegrees, 0},
+		{0.05000, 5, twoDegrees, 0},
+		{0.01700, 6, twoDegrees, 2},
+		{0.01000, 7, twoDegrees, 3},
+		{0.00500, 8, twoDegrees, 1},
+		{0.00290, 9, twoDegrees, 1},
+		{0.00100, 10, twoDegrees, 5},
+		{0.00050, 11, twoDegrees, 1},
+		{0.00026, 12, twoDegrees, 3},
+		{0.00023, 13, twoDegrees, 0},
+		{0.00010, 14, twoDegrees, 2},
 
 		// Powers of two
-		// {0x1p-1, 1, oneDegree, 0},
-		// {0x1p-4, 4, oneDegree, 2},
-		// {0x1p-7, 7, oneDegree, 3},
-		// {0x1p-10, 10, oneDegree, 0},
+		{0x1p-1, 1, oneDegree, 0},
+		{0x1p-4, 4, oneDegree, 2},
+		{0x1p-7, 7, oneDegree, 3},
+		{0x1p-10, 10, oneDegree, 0},
 		{0x1p-13, 13, oneDegree, 1},
 	} {
 		var expected []float64

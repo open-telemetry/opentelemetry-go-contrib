@@ -107,6 +107,10 @@ func parseOTelTraceState(ts string, isSampled bool) (otelTraceState, error) {
 	var pval, rval string
 	var unknown []string
 
+	if len(ts) == 0 {
+		return newTraceState(), nil
+	}
+
 	if len(ts) > traceStateSizeLimit {
 		return newTraceState(), errTraceStateSyntax
 	}

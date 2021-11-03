@@ -122,30 +122,21 @@ func (cs *consistentProbabilityBased) lowChoice() bool {
 // ShouldSample implements Sampler.
 func (cs *consistentProbabilityBased) ShouldSample(p sdktrace.SamplingParameters) sdktrace.SamplingResult {
 	psc := trace.SpanContextFromContext(p.ParentContext)
-	var otts otelTraceState
-	var state trace.TraceState
 
-	if !psc.IsValid() {
-		// A new root is happening.  Compute the r-value.
-		otts = newTraceState()
+	// Note: this ignores whether psc.IsValid() because this
+	// allows other otel trace state keys to pass through even
+	// for root decisions.
+	state := psc.TraceState()
+
+	otts, err := parseOTelTraceState(state.Get(traceStateKey), psc.IsSampled())
+	if err != nil {
+		// Note: a state.Insert(traceStateKey)
+		// follows, nothing else needs to be done here.
+		otel.Handle(err)
+	}
+
+	if !otts.hasRValue() {
 		otts.rvalue = cs.newR()
-	} else {
-		// A valid parent context.
-		state = psc.TraceState()
-
-		var err error
-		otts, err = parseOTelTraceState(state.Get(traceStateKey), psc.IsSampled())
-
-		if err != nil {
-			// Note: a state.Insert(traceStateKey)
-			// follows, nothing else needs to be done here.
-			otel.Handle(err)
-		}
-
-		if !otts.hasRValue() {
-			// Specification says to set r-value if missing.
-			otts.rvalue = cs.newR()
-		}
 	}
 
 	var decision sdktrace.SamplingDecision
@@ -159,19 +150,16 @@ func (cs *consistentProbabilityBased) ShouldSample(p sdktrace.SamplingParameters
 
 	if lac <= otts.rvalue {
 		decision = sdktrace.RecordAndSample
+		otts.pvalue = lac
 	} else {
 		decision = sdktrace.Drop
+		otts.pvalue = invalidValue
 	}
 
-	otts.pvalue = lac
-
-	state, err := state.Insert(traceStateKey, otts.serialize())
-	if err != nil {
-		otel.Handle(err)
-		// Note: see the note in
-		// "go.opentelemetry.io/otel/trace".TraceState.Insert()
-		// this is not a condition we're supposed to handle.
-	}
+	// Note: see the note in
+	// "go.opentelemetry.io/otel/trace".TraceState.Insert(). The
+	// error below is not a condition we're supposed to handle.
+	state, _ = state.Insert(traceStateKey, otts.serialize())
 
 	return sdktrace.SamplingResult{
 		Decision:   decision,
