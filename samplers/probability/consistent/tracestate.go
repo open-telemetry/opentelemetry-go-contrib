@@ -25,12 +25,14 @@ const (
 	pValueSubkey        = "p"
 	rValueSubkey        = "r"
 	pZeroValue          = 63
+	invalidValue        = pZeroValue + 1 // invalid for p or r
 	traceStateSizeLimit = 256
 )
 
 var (
 	errTraceStateSyntax       = fmt.Errorf("otel tracestate: %w", strconv.ErrSyntax)
 	errTraceStateInconsistent = fmt.Errorf("r-value and p-value are inconsistent")
+	errTraceStateSizeLimit    = fmt.Errorf("otel tracestate: size limit exceeded")
 )
 
 type otelTraceState struct {
@@ -41,8 +43,8 @@ type otelTraceState struct {
 
 func newTraceState() otelTraceState {
 	return otelTraceState{
-		rvalue: pZeroValue + 1, // out-of-range => !hasRValue()
-		pvalue: pZeroValue + 1, // out-of-range => !hasPValue()
+		rvalue: invalidValue, // out-of-range => !hasRValue()
+		pvalue: invalidValue, // out-of-range => !hasPValue()
 	}
 }
 
@@ -55,11 +57,11 @@ func (otts otelTraceState) serialize() string {
 	}
 
 	if otts.hasPValue() {
-		_, _ = sb.WriteString(fmt.Sprintf("p:%02d", otts.pvalue))
+		_, _ = sb.WriteString(fmt.Sprintf("p:%d", otts.pvalue))
 	}
 	if otts.hasRValue() {
 		semi()
-		_, _ = sb.WriteString(fmt.Sprintf("r:%02d", otts.rvalue))
+		_, _ = sb.WriteString(fmt.Sprintf("r:%d", otts.rvalue))
 	}
 	for _, unk := range otts.unknown {
 		ex := 0
@@ -67,12 +69,23 @@ func (otts otelTraceState) serialize() string {
 			ex = 1
 		}
 		if sb.Len()+ex+len(unk) > traceStateSizeLimit {
+			// Note: should this generate an explicit error?
 			break
 		}
 		semi()
 		_, _ = sb.WriteString(unk)
 	}
 	return sb.String()
+}
+
+func isValueByte(r byte) bool {
+	if isLCAlphaNum(r) {
+		return true
+	}
+	if isUCAlpha(r) {
+		return true
+	}
+	return r == '.' || r == '_' || r == '-'
 }
 
 func isLCAlphaNum(r byte) bool {
@@ -86,6 +99,10 @@ func isLCAlpha(r byte) bool {
 	return r >= 'a' && r <= 'z'
 }
 
+func isUCAlpha(r byte) bool {
+	return r >= 'A' && r <= 'Z'
+}
+
 func parseOTelTraceState(ts string, isSampled bool) (otelTraceState, error) {
 	var pval, rval string
 	var unknown []string
@@ -97,8 +114,10 @@ func parseOTelTraceState(ts string, isSampled bool) (otelTraceState, error) {
 	for len(ts) > 0 {
 		eqPos := 0
 		for ; eqPos < len(ts); eqPos++ {
-			if eqPos == 0 && isLCAlpha(ts[eqPos]) {
-				continue
+			if eqPos == 0 {
+				if isLCAlpha(ts[eqPos]) {
+					continue
+				}
 			} else if isLCAlphaNum(ts[eqPos]) {
 				continue
 			}
@@ -114,7 +133,7 @@ func parseOTelTraceState(ts string, isSampled bool) (otelTraceState, error) {
 		sepPos := 0
 
 		for ; sepPos < len(tail); sepPos++ {
-			if isLCAlphaNum(tail[sepPos]) {
+			if isValueByte(tail[sepPos]) {
 				continue
 			}
 			break
@@ -126,10 +145,10 @@ func parseOTelTraceState(ts string, isSampled bool) (otelTraceState, error) {
 		} else if key == rValueSubkey {
 			rval = tail[0:sepPos]
 		} else {
-			unknown = append(unknown, ts[0:sepPos])
+			unknown = append(unknown, ts[0:sepPos+eqPos+1])
 		}
 
-		if sepPos == 0 || (sepPos < len(tail) && tail[sepPos] != ';') {
+		if sepPos < len(tail) && tail[sepPos] != ';' {
 			return newTraceState(), errTraceStateSyntax
 		}
 
@@ -138,6 +157,11 @@ func parseOTelTraceState(ts string, isSampled bool) (otelTraceState, error) {
 		}
 
 		ts = tail[sepPos+1:]
+
+		// test for a trailing ;
+		if ts == "" {
+			return newTraceState(), errTraceStateSyntax
+		}
 	}
 
 	otts := newTraceState()
@@ -160,10 +184,10 @@ func parseOTelTraceState(ts string, isSampled bool) (otelTraceState, error) {
 	if otts.hasPValue() && otts.hasRValue() {
 		implied := otts.pvalue <= otts.rvalue || otts.pvalue == pZeroValue
 
-		if implied != isSampled {
-			otts.pvalue = pZeroValue + 1
+		if !isSampled || !implied {
 			// Note: the error ensures the parent-based
 			// sampler repairs the broken tracestate entry.
+			otts.pvalue = invalidValue
 			return otts, parseError(pValueSubkey, errTraceStateInconsistent)
 		}
 	}
