@@ -34,38 +34,43 @@ func xrayEventToCarrier([]byte) propagation.TextMapCarrier {
 	return propagation.HeaderCarrier{"X-Amzn-Trace-Id": []string{xrayTraceID}}
 }
 
+// PrepareTracerProvider returns a TracerProvider configured with exporter,
+// id generator and lambda resource detector to send trace data to AWS X-Ray via Collector
+func PrepareTracerProvider(ctx context.Context) (*sdktrace.TracerProvider, error) {
+	log.Println("creating trace exporter")
+	exp, err := otlptracegrpc.New(ctx, otlptracegrpc.WithInsecure())
+	if err != nil {
+		errorLogger.Println("failed to create exporter: ", err)
+		return nil, err
+	}
+
+	detector := lambdadetector.NewResourceDetector()
+	resource, err := detector.Detect(ctx)
+	if err != nil {
+		errorLogger.Println("failed to detect lambda resources: ", err)
+		return nil, err
+	}
+
+	return sdktrace.NewTracerProvider(
+		sdktrace.WithBatcher(exp),
+		sdktrace.WithIDGenerator(xray.NewIDGenerator()),
+		sdktrace.WithResource(resource),
+	), nil
+}
+
 // tracerProviderAndFlusher returns a list of otellambda.Option(s) to
 // enable using a TracerProvider configured for AWS XRay via a collector
 // and an otellambda.Flusher to flush this TracerProvider.
 // tracerProviderAndFlusher is not exported because it should not be used
 // without the provided EventToCarrier function and XRay Propagator
-func tracerProviderAndFlusher() ([]otellambda.Option, error) {
-	ctx := context.Background()
-
-	// Do not need transport security in Lambda because collector
-	// runs locally in Lambda execution environment
-	exp, err := otlptracegrpc.New(ctx, otlptracegrpc.WithInsecure())
+func tracerProviderAndFlusher(ctx context.Context) ([]otellambda.Option, *sdktrace.TracerProvider, error) {
+	tp, err := PrepareTracerProvider(ctx)
 	if err != nil {
-		return []otellambda.Option{}, err
+		errorLogger.Println("failed to prepare tracer provider: ", err)
+		return nil, nil, err
 	}
 
-	detector := lambdadetector.NewResourceDetector()
-	res, err := detector.Detect(ctx)
-	if err != nil {
-		return []otellambda.Option{}, err
-	}
-
-	tp := sdktrace.NewTracerProvider(
-		sdktrace.WithBatcher(exp),
-		sdktrace.WithIDGenerator(xray.NewIDGenerator()),
-		sdktrace.WithResource(res),
-	)
-
-	return []otellambda.Option{otellambda.WithTracerProvider(tp), AsyncSafeFlusher()}, nil
-}
-
-func AsyncSafeFlusher() otellambda.Option {
-	return otellambda.WithAsyncSafeFlusher()
+	return []otellambda.Option{otellambda.WithTracerProvider(tp), otellambda.WithAsyncSafeFlusher(tp)}, tp, nil
 }
 
 // EventToCarrier returns an otellambda.Option to enable
@@ -84,12 +89,12 @@ func Propagator() otellambda.Option {
 
 // AllRecommendedOptions returns a list of all otellambda.Option(s)
 // recommended for the otellambda package when using AWS XRay
-func AllRecommendedOptions() []otellambda.Option {
-	options, err := tracerProviderAndFlusher()
+func AllRecommendedOptions(ctx context.Context) ([]otellambda.Option, *sdktrace.TracerProvider) {
+	options, tp, err := tracerProviderAndFlusher(ctx)
 	if err != nil {
 		// should we fail to create the TracerProvider, do not alter otellambda's default configuration
 		errorLogger.Println("failed to create recommended configuration: ", err)
-		return []otellambda.Option{}
+		return []otellambda.Option{}, nil
 	}
-	return append(options, []otellambda.Option{EventToCarrier(), Propagator()}...)
+	return append(options, []otellambda.Option{EventToCarrier(), Propagator()}...), tp
 }

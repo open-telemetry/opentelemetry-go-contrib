@@ -16,9 +16,10 @@ package otellambda
 
 import (
 	"context"
+	"runtime"
+
 	"go.opentelemetry.io/otel/propagation"
 	"go.opentelemetry.io/otel/trace"
-	"runtime"
 )
 
 // A Flusher dictates how the instrumentation will attempt to flush
@@ -90,11 +91,11 @@ type config struct {
 	// The default value of Propagator the global otel Propagator
 	// returned by otel.GetTextMapPropagator()
 	Propagator propagation.TextMapPropagator
-
-	asyncSafeFlusher asyncSafeFlusher
 }
 
-type asyncSafeFlusher struct {}
+type asyncSafeFlusher struct {
+	flusher Flusher
+}
 
 func (f asyncSafeFlusher) ForceFlush(ctx context.Context) error {
 	// yield processor to attempt to ensure all spans have
@@ -103,7 +104,7 @@ func (f asyncSafeFlusher) ForceFlush(ctx context.Context) error {
 	// to be removed upon resolution of above issue
 	runtime.Gosched()
 
-	return f.ForceFlush(ctx)
+	return f.flusher.ForceFlush(ctx)
 }
 
 func WithTracerProvider(tracerProvider trace.TracerProvider) Option {
@@ -130,8 +131,8 @@ func WithPropagator(propagator propagation.TextMapPropagator) Option {
 	})
 }
 
-func WithAsyncSafeFlusher() Option {
+func WithAsyncSafeFlusher(f Flusher) Option {
 	return optionFunc(func(c *config) {
-		c.asyncSafeFlusher = asyncSafeFlusher{}
+		c.Flusher = asyncSafeFlusher{f}
 	})
 }
