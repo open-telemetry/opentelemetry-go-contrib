@@ -82,7 +82,7 @@ func Propagator() otellambda.Option {
 
 // AllRecommendedOptions returns a list of all otellambda.Option(s)
 // recommended for the otellambda package when using AWS XRay
-func AllRecommendedOptions(tp *sdktrace.TracerProvider) ([]otellambda.Option) {
+func AllRecommendedOptions(tp *sdktrace.TracerProvider) []otellambda.Option {
 	options, err := tracerProviderAndFlusher(tp)
 	if err != nil {
 		// should we fail to create the TracerProvider, do not alter otellambda's default configuration
