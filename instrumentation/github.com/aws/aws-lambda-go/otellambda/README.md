@@ -66,14 +66,14 @@ func main() {
 var someHeaderKey = "Key" // used by propagator and EventToCarrier function to identify trace header
 
 type mockHTTPRequest struct {
-Headers map[string][]string
-Body string
+    Headers map[string][]string
+    Body string
 }
 
 func mockEventToCarrier(eventJSON []byte) propagation.TextMapCarrier{
-var request mockHTTPRequest
-_ = json.unmarshal(eventJSON, &request)
-return propogation.HeaderCarrier{someHeaderKey: []string{request.Headers[someHeaderKey]}}
+    var request mockHTTPRequest
+    _ = json.unmarshal(eventJSON, &request)
+    return propogation.HeaderCarrier{someHeaderKey: []string{request.Headers[someHeaderKey]}}
 }
 
 type mockPropagator struct{}
@@ -82,20 +82,20 @@ type mockPropagator struct{}
 // Fields
 
 func HandleRequest(ctx context.Context, request mockHTTPRequest) error {
-return fmt.Sprintf("Hello %s!", request.Body ), nil
+    return fmt.Sprintf("Hello %s!", request.Body ), nil
 }
 
 func main() {
-exp, _ := stdouttrace.New()
+    exp, _ := stdouttrace.New()
 
-tp := sdktrace.NewTracerProvider(
-sdktrace.WithBatcher(exp))
+    tp := sdktrace.NewTracerProvider(
+    sdktrace.WithBatcher(exp))
 
-lambda.Start(otellambda.InstrumentHandler(HandleRequest,
-otellambda.WithTracerProvider(tp),
-otellambda.WithFlusher(tp),
-otellambda.WithEventToCarrier(mockEventToCarrier),
-otellambda.WithPropagator(mockPropagator{})))
+    lambda.Start(otellambda.InstrumentHandler(HandleRequest,
+                                                otellambda.WithTracerProvider(tp),
+                                                otellambda.WithFlusher(tp),
+                                                otellambda.WithEventToCarrier(mockEventToCarrier),
+                                                otellambda.WithPropagator(mockPropagator{})))
 }
 ```
 
