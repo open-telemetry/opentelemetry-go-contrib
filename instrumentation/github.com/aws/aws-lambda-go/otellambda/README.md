@@ -16,7 +16,7 @@ See [./example](https://github.com/open-telemetry/opentelemetry-go-contrib/tree/
 
 ## Usage
 
-Create a sample Lambda Go application such as below.
+Create a sample Lambda Go application instrumented by the `otellambda` package such as below.
 
 ```go
 package main
@@ -24,30 +24,57 @@ package main
 import (
 	"context"
 	"fmt"
+	
 	"github.com/aws/aws-lambda-go/lambda"
+	"go.opentelemetry.io/contrib/instrumentation/github.com/aws/aws-lambda-go/otellambda"
 )
 
-type MyEvent struct {
-	Name string `json:"name"`
-}
-
-func HandleRequest(ctx context.Context, name MyEvent) (string, error) {
-	return fmt.Sprintf("Hello %s!", name.Name ), nil
+func HandleRequest(ctx context.Context) (error) {
+	fmt.Println("Hello World!" )
+	return nil
 }
 
 func main() {
-	lambda.Start(HandleRequest)
+	ctx := context.Background()
+	lambda.Start(otellambda.InstrumentHandler(HandleRequest(ctx)))
 }
 ```
 
-Now use the provided wrapper to instrument your basic Lambda function:
-```go
-// Add import
-import "go.opentelemetry.io/contrib/instrumentation/github.com/aws/aws-lambda-go/otellambda"
+Now configure the instrumentation with the provided options to export traces to AWS X-Ray via [the OpenTelemetry Collector](https://github.com/open-telemetry/opentelemetry-collector) running as a Lambda Extension. Instructions for running the OTel Collector as a Lambda Extension can be found in the [AWS OpenTelemetry Documentation](https://aws-otel.github.io/docs/getting-started/lambda).
 
-// wrap lambda handler function
+```go
+// Add imports
+import (
+    "context"
+    "fmt"
+
+    "github.com/aws/aws-lambda-go/lambda"
+    "go.opentelemetry.io/contrib/propagators/aws/xray"
+    "go.opentelemetry.io/contrib/instrumentation/github.com/aws/aws-lambda-go/otellambda"
+    "go.opentelemetry.io/contrib/instrumentation/github.com/aws/aws-lambda-go/otellambda/xrayconfig"
+    "go.opentelemetry.io/otel"
+)
+
+// add options to WrapHandlerFunction call
 func main() {
-	lambda.Start(otellambda.InstrumentHandler(HandleRequest))
+    ctx := context.Background()
+
+    tp, err := xrayconfig.PrepareTracerProvider(ctx)
+    if err != nil {
+        fmt.Printf("error creating tracer provider: %v", err)
+    }
+
+    defer func(ctx context.Context) {
+        err := tp.Shutdown(ctx)
+        if err != nil {
+            fmt.Printf("error shutting down tracer provider: %v", err)
+        }
+    }(ctx)
+
+    otel.SetTracerProvider(tp)
+    otel.SetTextMapPropagator(xray.Propagator{})
+    
+    lambda.Start(otellambda.InstrumentHandler(HandleRequest(ctx), xrayconfig.AllRecommendedOptions(tp)...))
 }
 ```
 
@@ -59,45 +86,6 @@ func main() {
 | `WithFlusher` | `otellambda.Flusher`  | This instrumentation will call the `ForceFlush` method of its `Flusher` at the end of each invocation. Should you be using asynchronous logic (such as `sddktrace's BatchSpanProcessor`) it is very import for spans to be `ForceFlush`'ed before [Lambda freezes](https://docs.aws.amazon.com/lambda/latest/dg/runtimes-context.html) to avoid data delays. | `Flusher` with noop `ForceFlush`
 | `WithEventToCarrier` | `func(eventJSON []byte) propagation.TextMapCarrier{}` | Function for providing custom logic to support retrieving trace header from different event types that are handled by AWS Lambda (e.g., SQS, CloudWatch, Kinesis, API Gateway) and returning them in a `propagation.TextMapCarrier` which a Propagator can use to extract the trace header into the context. | Function which returns an empty `TextMapCarrier` - new spans will be part of a new Trace and have no parent past Lambda instrumentation span
 | `WithPropagator` | `propagation.Propagator` | The `Propagator` the instrumentation will use to extract trace information into the context. | `otel.GetTextMapPropagator()` |
-
-### Usage With Options Example
-
-```go
-var someHeaderKey = "Key" // used by propagator and EventToCarrier function to identify trace header
-
-type mockHTTPRequest struct {
-	Headers map[string][]string
-	Body string
-}
-
-func mockEventToCarrier(eventJSON []byte) propagation.TextMapCarrier{
-	var request mockHTTPRequest
-	_ = json.unmarshal(eventJSON, &request)
-	return propogation.HeaderCarrier{someHeaderKey: []string{request.Headers[someHeaderKey]}}
-}
-
-type mockPropagator struct{}
-// Extract - read from `someHeaderKey`
-// Inject
-// Fields
-
-func HandleRequest(ctx context.Context, request mockHTTPRequest) error {
-	return fmt.Sprintf("Hello %s!", request.Body ), nil
-}
-
-func main() {
-	exp, _ := stdouttrace.New()
-    
-	tp := sdktrace.NewTracerProvider(
-		    sdktrace.WithBatcher(exp))
-	
-	lambda.Start(otellambda.InstrumentHandler(HandleRequest,
-		                                    otellambda.WithTracerProvider(tp),
-		                                    otellambda.WithFlusher(tp),
-		                                    otellambda.WithEventToCarrier(mockEventToCarrier),
-		                                    otellambda.WithPropagator(mockPropagator{})))
-}
-```
 
 ## Useful links
 

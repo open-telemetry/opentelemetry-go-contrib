@@ -11,69 +11,6 @@ This module provides recommended configuration options for [`AWS Lambda Instrume
 go get -u go.opentelemetry.io/contrib/instrumentation/github.com/aws/aws-lambda-go/otellambda/xrayconfig
 ```
 
-## Usage
-
-Create a sample Lambda Go application instrumented by the `otellambda` package such as below.
-
-```go
-package main
-
-import (
-	"context"
-	"fmt"
-	
-	"github.com/aws/aws-lambda-go/lambda"
-	"go.opentelemetry.io/contrib/instrumentation/github.com/aws/aws-lambda-go/otellambda"
-)
-
-func HandleRequest(ctx context.Context) (error) {
-	fmt.Println("Hello World!" )
-	return nil
-}
-
-func main() {
-	ctx := context.Background()
-	lambda.Start(otellambda.InstrumentHandler(HandleRequest(ctx)))
-}
-```
-
-Now configure the instrumentation with the provided options to export traces to AWS X-Ray via [the OpenTelemetry Collector](https://github.com/open-telemetry/opentelemetry-collector) running as a Lambda Extension. Instructions for running the OTel Collector as a Lambda Extension can be found in the [AWS OpenTelemetry Documentation](https://aws-otel.github.io/docs/getting-started/lambda).
-
-```go
-// Add imports
-import (
-    "context"
-    "fmt"
-
-    "github.com/aws/aws-lambda-go/lambda"
-    "go.opentelemetry.io/contrib/propagators/aws/xray"
-    "go.opentelemetry.io/contrib/instrumentation/github.com/aws/aws-lambda-go/otellambda"
-    "go.opentelemetry.io/contrib/instrumentation/github.com/aws/aws-lambda-go/otellambda/xrayconfig"
-    "go.opentelemetry.io/otel"
-)
-
-// add options to WrapHandlerFunction call
-func main() {
-    ctx := context.Background()
-
-    tp, err := xrayconfig.PrepareTracerProvider(ctx)
-    if err != nil {
-        fmt.Printf("error creating tracer provider: %v", err)
-    }
-
-    defer func(ctx context.Context) {
-        err := tp.Shutdown(ctx)
-        if err != nil {
-            fmt.Printf("error shutting down tracer provider: %v", err)
-        }
-    }(ctx)
-
-    otel.SetTracerProvider(tp)
-    otel.SetTextMapPropagator(xray.Propagator{})
-    
-    lambda.Start(otellambda.InstrumentHandler(HandleRequest(ctx), xrayconfig.AllRecommendedOptions(tp)...))
-}
-```
 ## Recommended AWS Lambda Instrumentation Options
 
 | Instrumentation Option | Recommended Value | Exported As |
