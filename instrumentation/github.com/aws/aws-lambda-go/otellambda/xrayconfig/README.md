@@ -11,6 +11,44 @@ This module provides recommended configuration options for [`AWS Lambda Instrume
 go get -u go.opentelemetry.io/contrib/instrumentation/github.com/aws/aws-lambda-go/otellambda/xrayconfig
 ```
 
+## Usage
+
+Create a sample Lambda Go application instrumented by the `otellambda` package such as below.
+
+```go
+package main
+
+import (
+	"context"
+	"fmt"
+	"github.com/aws/aws-lambda-go/lambda"
+	"go.opentelemetry.io/contrib/instrumentation/github.com/aws/aws-lambda-go/otellambda"
+)
+
+type MyEvent struct {
+	Name string `json:"name"`
+}
+
+func HandleRequest(ctx context.Context, name MyEvent) (string, error) {
+	return fmt.Sprintf("Hello %s!", name.Name ), nil
+}
+
+func main() {
+	lambda.Start(otellambda.InstrumentHandler(HandleRequest))
+}
+```
+
+Now configure the instrumentation with the provided options to export traces to AWS X-Ray via [the OpenTelemetry Collector](https://github.com/open-telemetry/opentelemetry-collector) running as a Lambda Extension. Instructions for running the OTel Collector as a Lambda Extension can be found in the [AWS OpenTelemetry Documentation](https://aws-otel.github.io/docs/getting-started/lambda).
+
+```go
+// Add import
+import "go.opentelemetry.io/contrib/instrumentation/github.com/aws/aws-lambda-go/otellambda/xrayconfig"
+
+// add options to WrapHandlerFunction call
+func main() {
+	lambda.Start(otellambda.InstrumentHandler(HandleRequest, xrayconfig.AllRecommendedOptions()...))
+}
+```
 ## Recommended AWS Lambda Instrumentation Options
 
 | Instrumentation Option | Recommended Value | Exported As |
