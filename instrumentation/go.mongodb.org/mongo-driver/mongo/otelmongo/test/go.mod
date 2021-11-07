@@ -4,7 +4,7 @@ go 1.15
 
 require (
 	github.com/stretchr/testify v1.7.0
-	go.mongodb.org/mongo-driver v1.7.3
+	go.mongodb.org/mongo-driver v1.7.4
 	go.opentelemetry.io/contrib v1.1.1
 	go.opentelemetry.io/contrib/instrumentation/go.mongodb.org/mongo-driver/mongo/otelmongo v0.26.1
 	go.opentelemetry.io/otel v1.1.0
