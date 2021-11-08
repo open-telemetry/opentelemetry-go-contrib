@@ -18,6 +18,7 @@ import (
 	"fmt"
 	"time"
 
+	"github.com/davecgh/go-spew/spew"
 	"go.opentelemetry.io/contrib/samplers/jaegerremote"
 	"go.opentelemetry.io/otel"
 	"go.opentelemetry.io/otel/exporters/stdout/stdouttrace"
@@ -43,6 +44,11 @@ func main() {
 	ticker := time.Tick(time.Second)
 	for {
 		<-ticker
-		fmt.Println(jaegerRemoteSampler.Description())
+		fmt.Printf("\n* Jaeger Remote Sampler %v\n\n", time.Now())
+		spewCfg := spew.ConfigState{
+			Indent:                  "    ",
+			DisablePointerAddresses: true,
+		}
+		spewCfg.Dump(jaegerRemoteSampler)
 	}
 }

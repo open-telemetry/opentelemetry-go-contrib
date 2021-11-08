@@ -44,10 +44,7 @@ func (s *sampler) ShouldSample(p trace.SamplingParameters) trace.SamplingResult 
 }
 
 func (s *sampler) Description() string {
-	s.RLock()
-	defer s.RUnlock()
-
-	return fmt.Sprintf("JaegerRemoteSampler{%s}", s.sampler.Description())
+	return "JaegerRemoteSampler{}"
 }
 
 func (s *sampler) pollSamplingStrategies() {

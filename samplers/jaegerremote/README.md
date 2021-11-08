@@ -22,21 +22,10 @@ $ curl 'localhost:5778/sampling?service=myService'
 
 Run the Go program.
 This program will start with an initial sampling percentage of 50% and tries to fetch the sampling strategies from the OpenTelemetry Collector.
+It will print the entire Jaeger remote sampler structure every 10 seconds, this allows you to observe the internal sampler.
 
 ```shell
 $ go run .
-JaegerRemoteSampler{TraceIDRatioBased{0.5}}
-JaegerRemoteSampler{TraceIDRatioBased{0.5}}
-JaegerRemoteSampler{TraceIDRatioBased{0.5}}
-JaegerRemoteSampler{TraceIDRatioBased{0.5}}
-JaegerRemoteSampler{TraceIDRatioBased{0.5}}
-JaegerRemoteSampler{TraceIDRatioBased{0.5}}
-JaegerRemoteSampler{TraceIDRatioBased{0.5}}
-JaegerRemoteSampler{TraceIDRatioBased{0.5}}
-JaegerRemoteSampler{TraceIDRatioBased{0.5}}
-JaegerRemoteSampler{TraceIDRatioBased{0.5}}
-JaegerRemoteSampler{PerOperationSampler{default=TraceIDRatioBased{0.8},perOperation={op1:TraceIDRatioBased{0.2},op2:TraceIDRatioBased{0.4}}}}
-JaegerRemoteSampler{PerOperationSampler{default=TraceIDRatioBased{0.8},perOperation={op1:TraceIDRatioBased{0.2},op2:TraceIDRatioBased{0.4}}}}
 ```
 
 ## Update generated Jaeger code

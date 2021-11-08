@@ -54,28 +54,7 @@ func Test_sampler_ShouldSample_probabilistic(t *testing.T) {
 func Test_sampler_Description(t *testing.T) {
 	jaegerRemoteSampler := New().(*sampler)
 
-	// default strategy
-	assert.Equal(t, "JaegerRemoteSampler{TraceIDRatioBased{0.001}}", jaegerRemoteSampler.Description())
-
-	// load per operation strategy
-	jaegerRemoteSampler.fetcher = mockStrategyFetcher{
-		response: jaeger_api_v2.SamplingStrategyResponse{
-			OperationSampling: &jaeger_api_v2.PerOperationSamplingStrategies{
-				DefaultSamplingProbability: 0.2,
-				PerOperationStrategies: []*jaeger_api_v2.OperationSamplingStrategy{
-					{
-						Operation: "foo",
-						ProbabilisticSampling: &jaeger_api_v2.ProbabilisticSamplingStrategy{
-							SamplingRate: 1,
-						},
-					},
-				},
-			},
-		},
-	}
-	err := jaegerRemoteSampler.updateSamplingStrategies()
-	assert.NoError(t, err)
-	assert.Equal(t, "JaegerRemoteSampler{PerOperationSampler{default=TraceIDRatioBased{0.2},perOperation={foo:AlwaysOnSampler}}}", jaegerRemoteSampler.Description())
+	assert.Equal(t, "JaegerRemoteSampler{}", jaegerRemoteSampler.Description())
 }
 
 func Test_sampler_updateSamplingStrategies(t *testing.T) {
