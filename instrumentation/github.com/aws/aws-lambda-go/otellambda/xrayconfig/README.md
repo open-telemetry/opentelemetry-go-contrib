@@ -34,7 +34,7 @@ func HandleRequest(ctx context.Context, name MyEvent) (string, error) {
 }
 
 func main() {
-	lambda.Start(otellambda.WrapHandlerFunction(HandleRequest))
+	lambda.Start(otellambda.InstrumentHandler(HandleRequest))
 }
 ```
 
@@ -46,17 +46,17 @@ import "go.opentelemetry.io/contrib/instrumentation/github.com/aws/aws-lambda-go
 
 // add options to WrapHandlerFunction call
 func main() {
-	lambda.Start(otellambda.WrapHandlerFunction(HandleRequest, xrayconfig.AllRecommendedOptions()...))
+	lambda.Start(otellambda.InstrumentHandler(HandleRequest, xrayconfig.RecommendedOptions()...))
 }
 ```
 ## Recommended AWS Lambda Instrumentation Options
 
 | Instrumentation Option | Recommended Value | Exported As |
 | --- | --- | --- |
-| `WithTracerProvider` | An `sdktrace.TracerProvider` configured to export in batches to an OTel Collector running locally in Lambda | Not individually exported. Can only be used via `AllRecommendedOptions()`
-| `WithFlusher` | An `otellambda.Flusher` which yields before calling ForceFlush on the configured `sdktrace.TracerProvider`. Yielding mitigates data delays caused by asynchronous nature of batching TracerProvider when in Lambda | Not individually exported. Can only be used via `AllRecommendedOptions()`
-| `WithEventToCarrier` | Function which reads X-Ray TraceID from Lambda environment and inserts it into a `propagtation.TextMapCarrier` | Individually exported as `EventToCarrier()`, also included in `AllRecommendedOptions()`
-| `WithPropagator` | An `xray.propagator` | Individually exported as `EventToCarrier()`, also included in `AllRecommendedOptions()`
+| `WithTracerProvider` | An `sdktrace.TracerProvider` configured to export in batches to an OTel Collector running locally in Lambda | Not individually exported. Can only be used via `RecommendedOptions()`
+| `WithFlusher` | An `otellambda.Flusher` which yields before calling ForceFlush on the configured `sdktrace.TracerProvider`. Yielding mitigates data delays caused by asynchronous nature of batching TracerProvider when in Lambda | Not individually exported. Can only be used via `RecommendedOptions()`
+| `WithEventToCarrier` | Function which reads X-Ray TraceID from Lambda environment and inserts it into a `propagtation.TextMapCarrier` | Individually exported as `EventToCarrier()`, also included in `RecommendedOptions()`
+| `WithPropagator` | An `xray.propagator` | Individually exported as `Propagator()`, also included in `RecommendedOptions()`
 
 
 ## Useful links

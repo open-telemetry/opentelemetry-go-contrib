@@ -16,6 +16,7 @@ package otellambda
 
 import (
 	"context"
+	"runtime"
 
 	"go.opentelemetry.io/otel/propagation"
 	"go.opentelemetry.io/otel/trace"
@@ -37,6 +38,20 @@ func (*noopFlusher) ForceFlush(context.Context) error { return nil }
 
 // Compile time check our noopFlusher implements Flusher
 var _ Flusher = &noopFlusher{}
+
+type asyncSafeFlusher struct {
+	flusher Flusher
+}
+
+func (f asyncSafeFlusher) ForceFlush(ctx context.Context) error {
+	// yield processor to attempt to ensure all spans have
+	// been consumed and are ready to be flushed
+	// - see https://github.com/open-telemetry/opentelemetry-go/issues/2080
+	// to be removed upon resolution of above issue
+	runtime.Gosched()
+
+	return f.flusher.ForceFlush(ctx)
+}
 
 // An EventToCarrier function defines how the instrumentation should
 // prepare a TextMapCarrier for the configured propagator to read from. This
@@ -100,7 +115,7 @@ func WithTracerProvider(tracerProvider trace.TracerProvider) Option {
 
 func WithFlusher(flusher Flusher) Option {
 	return optionFunc(func(c *config) {
-		c.Flusher = flusher
+		c.Flusher = asyncSafeFlusher{flusher: flusher}
 	})
 }
 
