@@ -44,7 +44,7 @@ Now configure the instrumentation with the provided options to export traces to 
 // Add import
 import "go.opentelemetry.io/contrib/instrumentation/github.com/aws/aws-lambda-go/otellambda/xrayconfig"
 
-// add options to WrapHandlerFunction call
+// add options to InstrumentHandler call
 func main() {
 	lambda.Start(otellambda.InstrumentHandler(HandleRequest, xrayconfig.RecommendedOptions()...))
 }

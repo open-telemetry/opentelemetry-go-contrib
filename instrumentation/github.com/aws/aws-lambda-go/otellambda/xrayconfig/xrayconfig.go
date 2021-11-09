@@ -34,8 +34,9 @@ func xrayEventToCarrier([]byte) propagation.TextMapCarrier {
 	return propagation.HeaderCarrier{"X-Amzn-Trace-Id": []string{xrayTraceID}}
 }
 
-// NewTracerProvider returns a TracerProvider configured with exporter,
-// id generator and lambda resource detector to send trace data to AWS X-Ray via Collector
+// NewTracerProvider returns a TracerProvider configured with an exporter,
+// ID generator, and lambda resource detector to send trace data to AWS X-Ray
+// via a Collector instance listening on localhost
 func NewTracerProvider(ctx context.Context) (*sdktrace.TracerProvider, error) {
 	exp, err := otlptracegrpc.New(ctx, otlptracegrpc.WithInsecure())
 	if err != nil {
