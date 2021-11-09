@@ -24,10 +24,6 @@ import (
 
 	"go.opentelemetry.io/otel"
 	"go.opentelemetry.io/otel/attribute"
-
-	// import to call ForceFlush method of batch_span_processor.go
-	//https://github.com/open-telemetry/opentelemetry-go/blob/main/sdk/trace/batch_span_processor.go#L167
-	_ "go.opentelemetry.io/otel/sdk/trace"
 	semconv "go.opentelemetry.io/otel/semconv/v1.7.0"
 	"go.opentelemetry.io/otel/trace"
 )
