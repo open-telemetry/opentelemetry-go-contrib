@@ -166,7 +166,7 @@ func TestWrapEndToEnd(t *testing.T) {
 	}()
 	<-time.After(5 * time.Millisecond)
 
-	wrapped := otellambda.InstrumentHandler(customerHandler, RecommendedOptions(tp)...)
+	wrapped := otellambda.InstrumentHandler(customerHandler, WithRecommendedOptions(tp)...)
 	wrappedCallable := reflect.ValueOf(wrapped)
 	resp := wrappedCallable.Call([]reflect.Value{reflect.ValueOf(mockContext)})
 	assert.Len(t, resp, 2)

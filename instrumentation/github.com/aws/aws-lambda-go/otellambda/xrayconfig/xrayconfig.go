@@ -58,33 +58,21 @@ func NewTracerProvider(ctx context.Context) (*sdktrace.TracerProvider, error) {
 	), nil
 }
 
-// TracerProvider returns an otellambda.Option(s) to
-// enable using a TracerProvider configured for AWS XRay via a collector
-func TracerProvider(tp *sdktrace.TracerProvider) otellambda.Option {
-	return otellambda.WithTracerProvider(tp)
-}
-
-// Flusher returns an otellambda.Option(s) to
-// enable flushing any unexported spans during lambda invocation
-func Flusher(tp *sdktrace.TracerProvider) otellambda.Option {
-	return otellambda.WithFlusher(tp)
-}
-
 // EventToCarrier returns an otellambda.Option to enable
 // an otellambda.EventToCarrier function which reads the XRay trace
 // information from the environment and returns this information in
 // a propagation.HeaderCarrier
-func EventToCarrier() otellambda.Option {
+func WithEventToCarrier() otellambda.Option {
 	return otellambda.WithEventToCarrier(xrayEventToCarrier)
 }
 
 // Propagator returns an otellambda.Option to enable the xray.Propagator
-func Propagator() otellambda.Option {
+func WithPropagator() otellambda.Option {
 	return otellambda.WithPropagator(xray.Propagator{})
 }
 
-// RecommendedOptions returns a list of all otellambda.Option(s)
+// WithRecommendedOptions returns a list of all otellambda.Option(s)
 // recommended for the otellambda package when using AWS XRay
-func RecommendedOptions(tp *sdktrace.TracerProvider) []otellambda.Option {
-	return []otellambda.Option{EventToCarrier(), Propagator(), TracerProvider(tp), Flusher(tp)}
+func WithRecommendedOptions(tp *sdktrace.TracerProvider) []otellambda.Option {
+	return []otellambda.Option{WithEventToCarrier(), WithPropagator(), otellambda.WithTracerProvider(tp), otellambda.WithFlusher(tp)}
 }
