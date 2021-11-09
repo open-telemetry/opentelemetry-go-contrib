@@ -55,8 +55,8 @@ func main() {
 | --- | --- | --- |
 | `WithTracerProvider` | An `sdktrace.TracerProvider` configured to export in batches to an OTel Collector running locally in Lambda | Not individually exported. Can only be used via `WithRecommendedOptions()`
 | `WithFlusher` | An `otellambda.Flusher` which yields before calling ForceFlush on the configured `sdktrace.TracerProvider`. Yielding mitigates data delays caused by asynchronous nature of batching TracerProvider when in Lambda | Not individually exported. Can only be used via `WithRecommendedOptions()`
-| `WithEventToCarrier` | Function which reads X-Ray TraceID from Lambda environment and inserts it into a `propagtation.TextMapCarrier` | Individually exported as `EventToCarrier()`, also included in `WithRecommendedOptions()`
-| `WithPropagator` | An `xray.propagator` | Individually exported as `Propagator()`, also included in `WithRecommendedOptions()`
+| `WithEventToCarrier` | Function which reads X-Ray TraceID from Lambda environment and inserts it into a `propagtation.TextMapCarrier` | Individually exported as `WithEventToCarrier()`, also included in `WithRecommendedOptions()`
+| `WithPropagator` | An `xray.propagator` | Individually exported as `WithPropagator()`, also included in `WithRecommendedOptions()`
 
 
 ## Useful links

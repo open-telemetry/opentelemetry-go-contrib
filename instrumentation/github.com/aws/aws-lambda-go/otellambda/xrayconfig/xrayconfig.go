@@ -58,7 +58,7 @@ func NewTracerProvider(ctx context.Context) (*sdktrace.TracerProvider, error) {
 	), nil
 }
 
-// EventToCarrier returns an otellambda.Option to enable
+// WithEventToCarrier returns an otellambda.Option to enable
 // an otellambda.EventToCarrier function which reads the XRay trace
 // information from the environment and returns this information in
 // a propagation.HeaderCarrier
@@ -66,7 +66,7 @@ func WithEventToCarrier() otellambda.Option {
 	return otellambda.WithEventToCarrier(xrayEventToCarrier)
 }
 
-// Propagator returns an otellambda.Option to enable the xray.Propagator
+// WithPropagator returns an otellambda.Option to enable the xray.Propagator
 func WithPropagator() otellambda.Option {
 	return otellambda.WithPropagator(xray.Propagator{})
 }
