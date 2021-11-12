@@ -155,7 +155,10 @@ func TestWrapEndToEnd(t *testing.T) {
 	setEnvVars()
 
 	ctx := context.Background()
-	tp, _ := NewTracerProvider(ctx)
+	tp, err := NewTracerProvider(ctx)
+	if err != nil {
+		return
+	}
 
 	customerHandler := func() (string, error) {
 		return "hello world", nil

@@ -16,7 +16,6 @@ package xrayconfig
 
 import (
 	"context"
-	"log"
 	"os"
 
 	lambdadetector "go.opentelemetry.io/contrib/detectors/aws/lambda"
@@ -26,8 +25,6 @@ import (
 	"go.opentelemetry.io/otel/propagation"
 	sdktrace "go.opentelemetry.io/otel/sdk/trace"
 )
-
-var errorLogger = log.New(log.Writer(), "OTel Lambda XRay Configuration Error: ", 0)
 
 func xrayEventToCarrier([]byte) propagation.TextMapCarrier {
 	xrayTraceID := os.Getenv("_X_AMZN_TRACE_ID")
@@ -40,14 +37,12 @@ func xrayEventToCarrier([]byte) propagation.TextMapCarrier {
 func NewTracerProvider(ctx context.Context) (*sdktrace.TracerProvider, error) {
 	exp, err := otlptracegrpc.New(ctx, otlptracegrpc.WithInsecure())
 	if err != nil {
-		errorLogger.Println("failed to create exporter: ", err)
 		return nil, err
 	}
 
 	detector := lambdadetector.NewResourceDetector()
 	resource, err := detector.Detect(ctx)
 	if err != nil {
-		errorLogger.Println("failed to detect lambda resources: ", err)
 		return nil, err
 	}
 
