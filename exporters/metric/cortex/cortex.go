@@ -27,9 +27,9 @@ import (
 	"github.com/prometheus/prometheus/prompb"
 
 	"go.opentelemetry.io/otel/attribute"
-	apimetric "go.opentelemetry.io/otel/metric"
 	"go.opentelemetry.io/otel/metric/global"
 	"go.opentelemetry.io/otel/metric/number"
+	"go.opentelemetry.io/otel/metric/sdkapi"
 	"go.opentelemetry.io/otel/sdk/export/metric"
 	export "go.opentelemetry.io/otel/sdk/export/metric"
 	"go.opentelemetry.io/otel/sdk/export/metric/aggregation"
@@ -52,9 +52,9 @@ type exportData struct {
 	Resource *resource.Resource
 }
 
-// ExportKindFor returns CumulativeExporter so the Processor correctly aggregates data
-func (e *Exporter) ExportKindFor(*apimetric.Descriptor, aggregation.Kind) metric.ExportKind {
-	return metric.CumulativeExportKind
+// TemporalityFor returns CumulativeExporter so the Processor correctly aggregates data
+func (e *Exporter) TemporalityFor(*sdkapi.Descriptor, aggregation.Kind) aggregation.Temporality {
+	return aggregation.CumulativeTemporality
 }
 
 // Export forwards metrics to Cortex from the SDK
