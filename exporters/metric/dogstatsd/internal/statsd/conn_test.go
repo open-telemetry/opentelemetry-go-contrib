@@ -29,6 +29,7 @@ import (
 	"go.opentelemetry.io/otel/attribute"
 	"go.opentelemetry.io/otel/metric"
 	"go.opentelemetry.io/otel/metric/number"
+	"go.opentelemetry.io/otel/metric/sdkapi"
 	export "go.opentelemetry.io/otel/sdk/export/metric"
 	"go.opentelemetry.io/otel/sdk/export/metric/aggregation"
 	"go.opentelemetry.io/otel/sdk/instrumentation"
@@ -43,7 +44,7 @@ import (
 
 func testMeter(t *testing.T, exp export.Exporter) (context.Context, metric.Meter, *controller.Controller) {
 	aggSel := testAggregatorSelector{}
-	proc := processor.NewFactory(aggSel, export.CumulativeExportKindSelector())
+	proc := processor.NewFactory(aggSel, aggregation.CumulativeTemporalitySelector())
 	cont := controller.New(proc,
 		controller.WithResource(testResource),
 		controller.WithExporter(exp),
@@ -56,7 +57,7 @@ func testMeter(t *testing.T, exp export.Exporter) (context.Context, metric.Meter
 type testAggregatorSelector struct {
 }
 
-func (testAggregatorSelector) AggregatorFor(desc *metric.Descriptor, aggPtrs ...*export.Aggregator) {
+func (testAggregatorSelector) AggregatorFor(desc *sdkapi.Descriptor, aggPtrs ...*export.Aggregator) {
 	switch {
 	case strings.HasSuffix(desc.Name(), "counter"):
 		aggs := sum.New(len(aggPtrs))
