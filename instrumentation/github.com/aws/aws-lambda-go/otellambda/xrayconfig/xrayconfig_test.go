@@ -156,9 +156,7 @@ func TestWrapEndToEnd(t *testing.T) {
 
 	ctx := context.Background()
 	tp, err := NewTracerProvider(ctx)
-	if err != nil {
-		return
-	}
+	assert.NoError(t, err)
 
 	customerHandler := func() (string, error) {
 		return "hello world", nil
