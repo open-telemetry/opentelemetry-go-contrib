@@ -8,8 +8,8 @@ replace (
 )
 
 require (
-	go.opentelemetry.io/contrib/exporters/metric/cortex v0.26.1
-	go.opentelemetry.io/contrib/exporters/metric/cortex/utils v0.26.1
+	go.opentelemetry.io/contrib/exporters/metric/cortex v0.27.0
+	go.opentelemetry.io/contrib/exporters/metric/cortex/utils v0.27.0
 	go.opentelemetry.io/otel v1.2.0
 	go.opentelemetry.io/otel/metric v0.25.0
 	go.opentelemetry.io/otel/sdk v1.2.0
