@@ -28,8 +28,8 @@ github.com/aws/aws-sdk-go-v2/service/internal/presigned-url v1.5.0 h1:qGZWS/WgiF
 github.com/aws/aws-sdk-go-v2/service/internal/presigned-url v1.5.0/go.mod h1:Mq6AEc+oEjCUlBuLiK5YwW4shSOAKCQ3tXN0sQeYoBA=
 github.com/aws/aws-sdk-go-v2/service/internal/s3shared v1.9.0 h1:0BOlTqnNnrEO04oYKzDxMMe68t107pmIotn18HtVonY=
 github.com/aws/aws-sdk-go-v2/service/internal/s3shared v1.9.0/go.mod h1:xKCZ4YFSF2s4Hnb/J0TLeOsKuGzICzcElaOKNGrVnx4=
-github.com/aws/aws-sdk-go-v2/service/s3 v1.18.0 h1:7qgXYvv0ONAfmHYT2d/k7MdllM8xmcxRP7CF1Xyxdws=
-github.com/aws/aws-sdk-go-v2/service/s3 v1.18.0/go.mod h1:Gwz3aVctJe6mUY9T//bcALArPUaFmNAy2rTB9qN4No8=
+github.com/aws/aws-sdk-go-v2/service/s3 v1.19.0 h1:5mRAms4TjSTOGYsqKYte5kHr1PzpMJSyLThjF3J+hw0=
+github.com/aws/aws-sdk-go-v2/service/s3 v1.19.0/go.mod h1:Gwz3aVctJe6mUY9T//bcALArPUaFmNAy2rTB9qN4No8=
 github.com/aws/aws-sdk-go-v2/service/sso v1.5.0 h1:VnrCAJTp1bDxU79UuW/D4z7bwZ7xOc7JjDKpqXL/m04=
 github.com/aws/aws-sdk-go-v2/service/sso v1.5.0/go.mod h1:GsqaJOJeOfeYD88/2vHWKXegvDRofDqWwC5i48A2kgs=
 github.com/aws/aws-sdk-go-v2/service/sts v1.8.0 h1:7N7RsEVvUcvEg7jrWKU5AnSi4/6b6eY9+wG1g6W4ExE=
