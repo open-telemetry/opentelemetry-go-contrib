@@ -25,7 +25,9 @@ import (
 	"github.com/stretchr/testify/require"
 
 	"go.opentelemetry.io/otel/metric"
+	"go.opentelemetry.io/otel/metric/sdkapi"
 	export "go.opentelemetry.io/otel/sdk/export/metric"
+	"go.opentelemetry.io/otel/sdk/export/metric/aggregation"
 	"go.opentelemetry.io/otel/sdk/metric/aggregator/histogram"
 	"go.opentelemetry.io/otel/sdk/metric/aggregator/lastvalue"
 	"go.opentelemetry.io/otel/sdk/metric/aggregator/minmaxsumcount"
@@ -46,7 +48,7 @@ var testHistogramBoundaries = []float64{
 	100, 500, 900,
 }
 
-func (testAggregatorSelector) AggregatorFor(desc *metric.Descriptor, aggPtrs ...*export.Aggregator) {
+func (testAggregatorSelector) AggregatorFor(desc *sdkapi.Descriptor, aggPtrs ...*export.Aggregator) {
 	switch {
 	case strings.HasSuffix(desc.Name(), "_sum"):
 		aggs := sum.New(len(aggPtrs))
@@ -75,7 +77,7 @@ func (testAggregatorSelector) AggregatorFor(desc *metric.Descriptor, aggPtrs ...
 
 func testMeter(t *testing.T) (context.Context, metric.Meter, *controller.Controller) {
 	aggSel := testAggregatorSelector{}
-	proc := processor.NewFactory(aggSel, export.CumulativeExportKindSelector())
+	proc := processor.NewFactory(aggSel, aggregation.CumulativeTemporalitySelector())
 	cont := controller.New(proc,
 		controller.WithResource(testResource),
 	)

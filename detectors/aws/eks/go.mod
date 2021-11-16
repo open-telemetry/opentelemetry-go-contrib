@@ -4,8 +4,8 @@ go 1.15
 
 require (
 	github.com/stretchr/testify v1.7.0
-	go.opentelemetry.io/otel v1.1.0
-	go.opentelemetry.io/otel/sdk v1.1.0
+	go.opentelemetry.io/otel v1.2.0
+	go.opentelemetry.io/otel/sdk v1.2.0
 	k8s.io/apimachinery v0.21.3
 	k8s.io/client-go v0.21.3
 )
