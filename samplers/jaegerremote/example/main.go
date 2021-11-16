@@ -27,10 +27,10 @@ import (
 
 func main() {
 	jaegerRemoteSampler := jaegerremote.New(
-		jaegerremote.WithService("foo"),
-		jaegerremote.WithEndpoint("http://localhost:5778"),
-		jaegerremote.WithPollingInterval(10*time.Second), // decrease polling interval to get quicker feedback
-		jaegerremote.WithInitialSamplingRate(0.5),
+		"foo",
+		jaegerremote.WithSamplingServerURL("http://localhost:5778"),
+		jaegerremote.WithSamplingRefreshInterval(10*time.Second), // decrease polling interval to get quicker feedback
+		jaegerremote.WithInitialSampler(trace.TraceIDRatioBased(0.5)),
 	)
 
 	exporter, _ := stdouttrace.New()
