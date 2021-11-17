@@ -11,7 +11,7 @@ REGISTRY_BASE_URL = https://raw.githubusercontent.com/open-telemetry/opentelemet
 CONTRIB_REPO_URL = https://github.com/open-telemetry/opentelemetry-go-contrib/tree/main
 
 GO = go
-GOTEST_MIN = go test -v -timeout 30s
+GOTEST_MIN = go test -v -timeout 45s
 GOTEST = $(GOTEST_MIN) -race
 GOTEST_WITH_COVERAGE = $(GOTEST) -coverprofile=coverage.out -covermode=atomic
 
@@ -125,17 +125,17 @@ build:
 .PHONY: test
 test:
 	set -e; for dir in $(ALL_GO_MOD_DIRS); do \
-	  echo "go test ./... + race in $${dir}"; \
+	  echo "go test -short ./... in $${dir}"; \
 	  (cd "$${dir}" && \
-	    $(GOTEST) ./...); \
+	    $(GOTEST_MIN) -short ./...); \
 	done
 
 .PHONY: test-short
-test-short:
+test-long:
 	set -e; for dir in $(ALL_GO_MOD_DIRS); do \
 	  echo "go test ./... + race in $${dir}"; \
 	  (cd "$${dir}" && \
-	    $(GOTEST_MIN) -short ./...); \
+	    $(GOTEST) ./...); \
 	done
 
 .PHONY: lint

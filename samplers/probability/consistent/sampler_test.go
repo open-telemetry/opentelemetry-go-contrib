@@ -23,6 +23,7 @@ import (
 	"strings"
 	"sync"
 	"testing"
+	"time"
 
 	"github.com/stretchr/testify/require"
 
@@ -380,9 +381,7 @@ func sampleTrials(t *testing.T, prob float64, degrees testDegrees, upperP pValue
 }
 
 func TestSamplerStatistics(t *testing.T) {
-	if testing.Short() {
-		t.Skip("statistical test does not run in short mode")
-	}
+
 	seedBankRng := rand.New(rand.NewSource(77777677777))
 	seedBank := make([]int64, 15) // N.B. Max=14 below.
 	for i := range seedBank {
@@ -421,33 +420,42 @@ func TestSamplerStatistics(t *testing.T) {
 			expected []float64
 		}
 	)
-	var testSummary []testResult
+	var (
+		testSummary []testResult
 
-	for _, test := range []testCase{
-		// Non-powers of two
-		{0.90000, 1, twoDegrees, 5},
-		{0.60000, 1, twoDegrees, 14},
-		{0.33000, 2, twoDegrees, 3},
-		{0.13000, 3, twoDegrees, 2},
-		{0.10000, 4, twoDegrees, 0},
-		{0.05000, 5, twoDegrees, 0},
-		{0.01700, 6, twoDegrees, 2},
-		{0.01000, 7, twoDegrees, 3},
-		{0.00500, 8, twoDegrees, 1},
-		{0.00290, 9, twoDegrees, 1},
-		{0.00100, 10, twoDegrees, 5},
-		{0.00050, 11, twoDegrees, 1},
-		{0.00026, 12, twoDegrees, 3},
-		{0.00023, 13, twoDegrees, 0},
-		{0.00010, 14, twoDegrees, 2},
+		allTests = []testCase{
+			// Non-powers of two
+			{0.90000, 1, twoDegrees, 5},
+			{0.60000, 1, twoDegrees, 14},
+			{0.33000, 2, twoDegrees, 3},
+			{0.13000, 3, twoDegrees, 2},
+			{0.10000, 4, twoDegrees, 0},
+			{0.05000, 5, twoDegrees, 0},
+			{0.01700, 6, twoDegrees, 2},
+			{0.01000, 7, twoDegrees, 3},
+			{0.00500, 8, twoDegrees, 1},
+			{0.00290, 9, twoDegrees, 1},
+			{0.00100, 10, twoDegrees, 5},
+			{0.00050, 11, twoDegrees, 1},
+			{0.00026, 12, twoDegrees, 3},
+			{0.00023, 13, twoDegrees, 0},
+			{0.00010, 14, twoDegrees, 2},
 
-		// Powers of two
-		{0x1p-1, 1, oneDegree, 0},
-		{0x1p-4, 4, oneDegree, 2},
-		{0x1p-7, 7, oneDegree, 3},
-		{0x1p-10, 10, oneDegree, 0},
-		{0x1p-13, 13, oneDegree, 1},
-	} {
+			// Powers of two
+			{0x1p-1, 1, oneDegree, 0},
+			{0x1p-4, 4, oneDegree, 2},
+			{0x1p-7, 7, oneDegree, 3},
+			{0x1p-10, 10, oneDegree, 0},
+			{0x1p-13, 13, oneDegree, 1},
+		}
+	)
+
+	if testing.Short() {
+		one := rand.New(rand.NewSource(time.Now().UnixNano())).Intn(len(allTests))
+		allTests = allTests[one : one+1]
+	}
+
+	for _, test := range allTests {
 		var expected []float64
 		t.Run(fmt.Sprint(test.prob), func(t *testing.T) {
 			trySeedIndex := 0
