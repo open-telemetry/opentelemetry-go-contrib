@@ -11,7 +11,7 @@ REGISTRY_BASE_URL = https://raw.githubusercontent.com/open-telemetry/opentelemet
 CONTRIB_REPO_URL = https://github.com/open-telemetry/opentelemetry-go-contrib/tree/main
 
 GO = go
-GOTEST_TIMED = go test -timeout 60s
+GOTEST_TIMED = go test -timeout 90s
 GOTEST_RACE = $(GOTEST_TIMED) -race
 GOTEST_WITH_COVERAGE = $(GOTEST_RACE) -coverprofile=coverage.out -covermode=atomic
 
