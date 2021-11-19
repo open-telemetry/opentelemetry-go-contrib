@@ -99,8 +99,8 @@ func TestSamplerStatistics(t *testing.T) {
 	}
 
 	for _, test := range allTests {
-		var expected []float64
 		t.Run(fmt.Sprint(test.prob), func(t *testing.T) {
+			var expected []float64
 			trySeedIndex := 0
 
 			for {
@@ -149,10 +149,10 @@ func TestSamplerStatistics(t *testing.T) {
 					break
 				}
 			}
-		})
-		testSummary = append(testSummary, testResult{
-			test:     test,
-			expected: expected,
+			testSummary = append(testSummary, testResult{
+				test:     test,
+				expected: expected,
+			})
 		})
 	}
 
