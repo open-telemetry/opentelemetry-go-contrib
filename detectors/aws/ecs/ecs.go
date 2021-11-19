@@ -74,7 +74,7 @@ func (detector *resourceDetector) Detect(ctx context.Context) (*resource.Resourc
 	metadataURIV4 := os.Getenv(metadataV4EnvVar)
 
 	if len(metadataURIV3) == 0 && len(metadataURIV4) == 0 {
-		return empty, errNotOnECS
+		return nil, nil
 	}
 	hostName, err := detector.utils.getContainerName()
 	if err != nil {
