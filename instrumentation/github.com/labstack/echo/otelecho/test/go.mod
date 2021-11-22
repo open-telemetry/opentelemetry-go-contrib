@@ -1,6 +1,6 @@
 module go.opentelemetry.io/contrib/instrumentation/github.com/labstack/echo/otelecho/test
 
-go 1.15
+go 1.16
 
 require (
 	github.com/labstack/echo/v4 v4.6.1
