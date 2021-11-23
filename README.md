@@ -23,7 +23,7 @@ board](https://github.com/orgs/open-telemetry/projects/5).
 
 ### Compatibility
 
-OpenTelemetry-Go attempts to track the current supported versions of the
+OpenTelemetry-Go Contrib attempts to track the current supported versions of the
 [Go language](https://golang.org/doc/devel/release#policy). The release
 schedule after a new minor version of go is as follows:
 
