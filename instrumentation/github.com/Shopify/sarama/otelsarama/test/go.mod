@@ -1,6 +1,6 @@
 module go.opentelemetry.io/contrib/instrumentation/github.com/Shopify/sarama/otelsarama/test
 
-go 1.15
+go 1.16
 
 require (
 	github.com/Shopify/sarama v1.29.1

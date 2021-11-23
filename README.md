@@ -23,14 +23,20 @@ board](https://github.com/orgs/open-telemetry/projects/5).
 
 ### Compatibility
 
+OpenTelemetry-Go Contrib attempts to track the current supported versions of the
+[Go language](https://golang.org/doc/devel/release#policy). The release
+schedule after a new minor version of go is as follows:
+
+- The first release or one month, which ever is sooner, will add build steps for the new go version.
+- The first release after three months will remove support for the oldest go version.
+
 This project is tested on the following systems.
 
 | OS      | Go Version | Architecture |
 | ------- | ---------- | ------------ |
+| MacOS   | 1.16       | amd64        |
 | Ubuntu  | 1.16       | amd64        |
-| Ubuntu  | 1.15       | amd64        |
 | Ubuntu  | 1.16       | 386          |
-| Ubuntu  | 1.15       | 386          |
 
 While this project should work for other systems, no compatibility guarantees
 are made for those systems currently.
