@@ -7,5 +7,5 @@ require (
 	go.opentelemetry.io/otel v1.2.0
 	go.opentelemetry.io/otel/sdk v1.2.0
 	k8s.io/apimachinery v0.22.4
-	k8s.io/client-go v0.21.3
+	k8s.io/client-go v0.22.4
 )
