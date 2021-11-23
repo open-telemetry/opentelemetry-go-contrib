@@ -8,6 +8,10 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 
 ## [Unreleased]
 
+### Changed
+
+- Changed the project minimum supported Go version from 1.15 to 1.16. (#1442)
+
 ### Fixed
 
 - The `"go.opentelemetry.io/contrib/detector/aws/ecs".Detector` no longer errors if not running in ECS. (#1426, #1428)

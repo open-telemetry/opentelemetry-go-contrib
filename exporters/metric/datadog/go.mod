@@ -1,6 +1,6 @@
 module go.opentelemetry.io/contrib/exporters/metric/datadog
 
-go 1.15
+go 1.16
 
 require (
 	github.com/DataDog/datadog-go v3.7.2+incompatible
