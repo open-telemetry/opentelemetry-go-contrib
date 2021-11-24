@@ -31,7 +31,6 @@ import (
 )
 
 func ok(w http.ResponseWriter, _ *http.Request) {
-	w.WriteHeader(http.StatusOK)
 }
 
 func TestSDKIntegration(t *testing.T) {
