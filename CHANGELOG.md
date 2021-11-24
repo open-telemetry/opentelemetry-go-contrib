@@ -15,8 +15,9 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 ### Fixed
 
 - The `"go.opentelemetry.io/contrib/detector/aws/ecs".Detector` no longer errors if not running in ECS. (#1426, #1428)
-- `go.opentelemetry.io/contrib/instrumentation/github.com/gorilla/mux/otelmux` does not
-  require instrumented HTTP handlers to call `Write` nor `WriteHeader` anymore. (#1443)
+- `go.opentelemetry.io/contrib/instrumentation/github.com/gorilla/mux/otelmux`
+  does not require from instrumented HTTP handlers to call `Write` nor
+  `WriteHeader` anymore. (#1443)
 
 ## [1.2.0/0.27.0] - 2021-11-15
 
