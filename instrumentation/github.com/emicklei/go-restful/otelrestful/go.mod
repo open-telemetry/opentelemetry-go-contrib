@@ -8,7 +8,7 @@ replace (
 )
 
 require (
-	github.com/emicklei/go-restful/v3 v3.7.1
+	github.com/emicklei/go-restful/v3 v3.7.2
 	github.com/json-iterator/go v1.1.10 // indirect
 	github.com/stretchr/testify v1.7.0
 	go.opentelemetry.io/contrib/propagators/b3 v1.2.0
