@@ -8,7 +8,7 @@ replace (
 )
 
 require (
-	github.com/gin-gonic/gin v1.7.4
+	github.com/gin-gonic/gin v1.7.7
 	github.com/stretchr/testify v1.7.0
 	go.opentelemetry.io/contrib/propagators/b3 v1.2.0
 	go.opentelemetry.io/otel v1.2.0
