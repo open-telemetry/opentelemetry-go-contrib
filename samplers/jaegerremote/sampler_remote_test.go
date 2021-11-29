@@ -26,6 +26,7 @@ import (
 
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
+
 	jaeger_api_v2 "go.opentelemetry.io/contrib/samplers/jaegerremote/internal/proto-gen/jaeger-idl/proto/api_v2"
 	"go.opentelemetry.io/contrib/samplers/jaegerremote/internal/testutils"
 	"go.opentelemetry.io/otel/sdk/trace"
@@ -138,7 +139,7 @@ func TestRemoteSamplerOptionsDefaults(t *testing.T) {
 	assert.NotZero(t, options.samplingRefreshInterval)
 }
 
-func initAgent(t *testing.T) (*testutils.MockAgent, *JaegerRemoteSampler) {
+func initAgent(t *testing.T) (*testutils.MockAgent, *Sampler) {
 	agent, err := testutils.StartMockAgent()
 	require.NoError(t, err)
 

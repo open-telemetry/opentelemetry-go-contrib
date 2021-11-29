@@ -48,7 +48,7 @@ type samplingStrategyParser interface {
 	Parse(response []byte) (interface{}, error)
 }
 
-// samplerUpdater is used by JaegerRemoteSampler to apply sampling strategies,
+// samplerUpdater is used by Sampler to apply sampling strategies,
 // retrieved from remote config server, to the current sampler. The updater can modify
 // the sampler in-place if sampler supports it, or create a new one.
 //
@@ -56,15 +56,15 @@ type samplingStrategyParser interface {
 // updater must return modifiedSampler=nil to give other updaters a chance to inspect
 // the sampling strategy response.
 //
-// JaegerRemoteSampler invokes the updaters while holding a lock on the main sampler.
+// Sampler invokes the updaters while holding a lock on the main sampler.
 type samplerUpdater interface {
 	Update(sampler trace.Sampler, strategy interface{}) (modified trace.Sampler, err error)
 }
 
-// JaegerRemoteSampler is a delegating sampler that polls a remote server
+// Sampler is a delegating sampler that polls a remote server
 // for the appropriate sampling strategy, constructs a corresponding sampler and
 // delegates to it for sampling decisions.
-type JaegerRemoteSampler struct {
+type Sampler struct {
 	// These fields must be first in the struct because `sync/atomic` expects 64-bit alignment.
 	// Cf. https://github.com/uber/jaeger-client-go/issues/155, https://goo.gl/zW7dgq
 	closed int64 // 0 - not closed, 1 - closed
@@ -81,9 +81,9 @@ type JaegerRemoteSampler struct {
 func New(
 	serviceName string,
 	opts ...SamplerOption,
-) *JaegerRemoteSampler {
+) *Sampler {
 	options := new(samplerOptions).applyOptionsAndDefaults(opts...)
-	sampler := &JaegerRemoteSampler{
+	sampler := &Sampler{
 		samplerOptions: *options,
 		serviceName:    serviceName,
 		doneChan:       make(chan *sync.WaitGroup),
@@ -92,7 +92,7 @@ func New(
 	return sampler
 }
 
-func (s *JaegerRemoteSampler) ShouldSample(p trace.SamplingParameters) trace.SamplingResult {
+func (s *Sampler) ShouldSample(p trace.SamplingParameters) trace.SamplingResult {
 	s.RLock()
 	defer s.RUnlock()
 	return s.sampler.ShouldSample(p)
@@ -100,7 +100,7 @@ func (s *JaegerRemoteSampler) ShouldSample(p trace.SamplingParameters) trace.Sam
 
 // Close does a clean shutdown of the sampler, stopping any background
 // go-routines it may have started.
-func (s *JaegerRemoteSampler) Close() {
+func (s *Sampler) Close() {
 	if swapped := atomic.CompareAndSwapInt64(&s.closed, 0, 1); !swapped {
 		otel.Handle(fmt.Errorf("repeated attempt to close the sampler is ignored"))
 		return
@@ -112,17 +112,17 @@ func (s *JaegerRemoteSampler) Close() {
 	wg.Wait()
 }
 
-func (s *JaegerRemoteSampler) Description() string {
+func (s *Sampler) Description() string {
 	return "JaegerRemoteSampler{}"
 }
 
-func (s *JaegerRemoteSampler) pollController() {
+func (s *Sampler) pollController() {
 	ticker := time.NewTicker(s.samplingRefreshInterval)
 	defer ticker.Stop()
 	s.pollControllerWithTicker(ticker)
 }
 
-func (s *JaegerRemoteSampler) pollControllerWithTicker(ticker *time.Ticker) {
+func (s *Sampler) pollControllerWithTicker(ticker *time.Ticker) {
 	for {
 		select {
 		case <-ticker.C:
@@ -134,7 +134,7 @@ func (s *JaegerRemoteSampler) pollControllerWithTicker(ticker *time.Ticker) {
 	}
 }
 
-func (s *JaegerRemoteSampler) setSampler(sampler trace.Sampler) {
+func (s *Sampler) setSampler(sampler trace.Sampler) {
 	s.Lock()
 	defer s.Unlock()
 	s.sampler = sampler
@@ -142,7 +142,7 @@ func (s *JaegerRemoteSampler) setSampler(sampler trace.Sampler) {
 
 // UpdateSampler forces the sampler to fetch sampling strategy from backend server.
 // This function is called automatically on a timer, but can also be safely called manually, e.g. from tests.
-func (s *JaegerRemoteSampler) UpdateSampler() {
+func (s *Sampler) UpdateSampler() {
 	res, err := s.samplingFetcher.Fetch(s.serviceName)
 	if err != nil {
 		//s.logger.Infof("failed to fetch sampling strategy: %v", err)
@@ -164,7 +164,7 @@ func (s *JaegerRemoteSampler) UpdateSampler() {
 }
 
 // NB: this function should only be called while holding a Write lock
-func (s *JaegerRemoteSampler) updateSamplerViaUpdaters(strategy interface{}) error {
+func (s *Sampler) updateSamplerViaUpdaters(strategy interface{}) error {
 	for _, updater := range s.updaters {
 		sampler, err := updater.Update(s.sampler, strategy)
 		if err != nil {
@@ -180,7 +180,7 @@ func (s *JaegerRemoteSampler) updateSamplerViaUpdaters(strategy interface{}) err
 
 // -----------------------
 
-// probabilisticSamplerUpdater is used by JaegerRemoteSampler to parse sampling configuration.
+// probabilisticSamplerUpdater is used by Sampler to parse sampling configuration.
 type probabilisticSamplerUpdater struct{}
 
 // Update implements Update of samplerUpdater.
@@ -205,7 +205,7 @@ func (u *probabilisticSamplerUpdater) Update(sampler trace.Sampler, strategy int
 
 // -----------------------
 
-// rateLimitingSamplerUpdater is used by JaegerRemoteSampler to parse sampling configuration.
+// rateLimitingSamplerUpdater is used by Sampler to parse sampling configuration.
 type rateLimitingSamplerUpdater struct{}
 
 // Update implements Update of samplerUpdater.
@@ -229,7 +229,7 @@ func (u *rateLimitingSamplerUpdater) Update(sampler trace.Sampler, strategy inte
 
 // -----------------------
 
-// adaptiveSamplerUpdater is used by JaegerRemoteSampler to parse sampling configuration.
+// adaptiveSamplerUpdater is used by Sampler to parse sampling configuration.
 // Fields have the same meaning as in perOperationSamplerParams.
 type adaptiveSamplerUpdater struct {
 	MaxOperations            int
@@ -286,12 +286,7 @@ func (f *httpSamplingStrategyFetcher) Fetch(serviceName string) ([]byte, error) 
 	if err != nil {
 		return nil, err
 	}
-
-	defer func() {
-		if err := resp.Body.Close(); err != nil {
-			//f.logger.Error(fmt.Sprintf("failed to close HTTP response body: %+v", err))
-		}
-	}()
+	defer resp.Body.Close()
 
 	body, err := ioutil.ReadAll(resp.Body)
 	if err != nil {

@@ -48,7 +48,10 @@ func ReadJSON(resp *http.Response, out interface{}) error {
 	}
 
 	if out == nil {
-		io.Copy(ioutil.Discard, resp.Body)
+		_, err := io.Copy(ioutil.Discard, resp.Body)
+		if err != nil {
+			return err
+		}
 		return nil
 	}
 

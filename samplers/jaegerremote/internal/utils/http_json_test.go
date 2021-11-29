@@ -34,7 +34,8 @@ type testJSONStruct struct {
 func TestGetJSON(t *testing.T) {
 	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		w.Header().Add("Content-Type", "application/json")
-		w.Write([]byte("{\"name\": \"Bender\", \"age\": 3}"))
+		_, err := w.Write([]byte("{\"name\": \"Bender\", \"age\": 3}"))
+		assert.NoError(t, err)
 	}))
 	defer server.Close()
 
