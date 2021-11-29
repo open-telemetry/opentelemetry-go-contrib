@@ -15,6 +15,9 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 ### Fixed
 
 - The `"go.opentelemetry.io/contrib/detector/aws/ecs".Detector` no longer errors if not running in ECS. (#1426, #1428)
+- `go.opentelemetry.io/contrib/instrumentation/github.com/gorilla/mux/otelmux`
+  does not require instrumented HTTP handlers to call `Write` nor
+  `WriteHeader` anymore. (#1443)
 
 ## [1.2.0/0.27.0] - 2021-11-15
 
@@ -46,7 +49,7 @@ Update dependency on the `go.opentelemetry.io/otel` project to `v1.1.0`.
 - Add instrumentation for the `github.com/aws/aws-lambda-go` package. (#983)
 - Add resource detector for AWS Lambda. (#983)
 - Add `WithTracerProvider` option for `otelhttptrace.NewClientTrace`. (#1128)
-- Add optional AWS X-Ray configuration module for AWS Lambda Instrumentation (#984)
+- Add optional AWS X-Ray configuration module for AWS Lambda Instrumentation. (#984)
 
 ### Fixed
 
