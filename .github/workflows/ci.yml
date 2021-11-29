@@ -8,7 +8,7 @@ env:
   # path to where test results will be saved
   TEST_RESULTS: /tmp/test-results
   # Default minimum version of Go to support.
-  DEFAULT_GO_VERSION: 1.15
+  DEFAULT_GO_VERSION: 1.16
 jobs:
   lint:
     runs-on: ubuntu-latest
@@ -107,7 +107,7 @@ jobs:
   compatibility-test:
     strategy:
       matrix:
-        go-version: [1.17, 1.16, 1.15]
+        go-version: [1.17, 1.16]
         # TODO: support all of these.
         #os: [ubuntu-latest, macos-latest, windows-latest]
         os: [ubuntu-latest, macos-latest]

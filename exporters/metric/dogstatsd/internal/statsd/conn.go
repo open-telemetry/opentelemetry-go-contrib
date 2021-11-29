@@ -27,8 +27,8 @@ import (
 	"net/url"
 	"strconv"
 
-	"go.opentelemetry.io/otel/metric"
 	"go.opentelemetry.io/otel/metric/number"
+	"go.opentelemetry.io/otel/metric/sdkapi"
 	"go.opentelemetry.io/otel/metric/unit"
 	export "go.opentelemetry.io/otel/sdk/export/metric"
 	"go.opentelemetry.io/otel/sdk/export/metric/aggregation"
@@ -165,9 +165,9 @@ func dial(endpoint string) (net.Conn, error) {
 	return nil, ErrInvalidScheme
 }
 
-// ExportKindFor returns export.DeltaExporter for statsd-derived exporters
-func (e *Exporter) ExportKindFor(*metric.Descriptor, aggregation.Kind) export.ExportKind {
-	return export.DeltaExportKind
+// TemporalityFor returns export.DeltaExporter for statsd-derived exporters
+func (e *Exporter) TemporalityFor(*sdkapi.Descriptor, aggregation.Kind) aggregation.Temporality {
+	return aggregation.DeltaTemporality
 }
 
 // Export is common code for any statsd-based metric.Exporter implementation.
