@@ -1,6 +1,6 @@
 module go.opentelemetry.io/contrib/instrumentation/github.com/aws/aws-lambda-go/otellambda/test
 
-go 1.15
+go 1.16
 
 replace (
 	go.opentelemetry.io/contrib => ../../../../../..

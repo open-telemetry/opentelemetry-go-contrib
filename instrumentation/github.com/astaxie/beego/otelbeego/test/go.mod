@@ -1,6 +1,6 @@
 module go.opentelemetry.io/contrib/instrumentation/github.com/astaxie/beego/otelbeego/test
 
-go 1.15
+go 1.16
 
 require (
 	github.com/astaxie/beego v1.12.3
