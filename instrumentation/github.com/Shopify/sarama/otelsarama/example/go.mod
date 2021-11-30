@@ -1,6 +1,6 @@
 module go.opentelemetry.io/contrib/instrumentation/github.com/Shopify/sarama/otelsarama/example
 
-go 1.15
+go 1.16
 
 replace (
 	go.opentelemetry.io/contrib => ../../../../../../
