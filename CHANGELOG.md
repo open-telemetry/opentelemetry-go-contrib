@@ -11,6 +11,33 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 ### Changed
 
 - `otelhttptrace.NewClientTrace` now uses `TracerProvider` from the parent context if one exists and none was set with `WithTracerProvider` (#874)
+- Changed the project minimum supported Go version from 1.15 to 1.16. (#1442)
+
+### Fixed
+
+- The `"go.opentelemetry.io/contrib/detector/aws/ecs".Detector` no longer errors if not running in ECS. (#1426, #1428)
+- `go.opentelemetry.io/contrib/instrumentation/github.com/gorilla/mux/otelmux`
+  does not require instrumented HTTP handlers to call `Write` nor
+  `WriteHeader` anymore. (#1443)
+
+## [1.2.0/0.27.0] - 2021-11-15
+
+### Changed
+
+- Update dependency on the `go.opentelemetry.io/otel` project to `v1.2.0`.
+- `go.opentelemetry.io/contrib/instrumentation/github.com/aws/aws-lambda-go/otellambda/xrayconfig`
+  updated to ensure access to the `TracerProvider`.
+  - A `NewTracerProvider()` function is available to construct a recommended
+    `TracerProvider` configuration.
+  - `AllRecommendedOptions()` has been renamed to `WithRecommendedOptions()`
+    and takes a `TracerProvider` as an argument.
+  - `EventToCarrier()` and `Propagator()` are now `WithEventToCarrier()` and
+    `WithPropagator()` to reflect that they return `Option` implementations.
+
+## [1.1.1/0.26.1] - 2021-11-04
+
+### Changed
+
 - The `Transport`, `Handler`, and HTTP client convenience wrappers in the `go.opentelemetry.io/contrib/instrumentation/net/http/otelhttp` package now use the `TracerProvider` from the parent context if one exists and none was explicitly set when configuring the instrumentation. (#873)
 - Semantic conventions now use `go.opentelemetry.io/otel/semconv/v1.7.0"`. (#1385)
 
@@ -23,7 +50,7 @@ Update dependency on the `go.opentelemetry.io/otel` project to `v1.1.0`.
 - Add instrumentation for the `github.com/aws/aws-lambda-go` package. (#983)
 - Add resource detector for AWS Lambda. (#983)
 - Add `WithTracerProvider` option for `otelhttptrace.NewClientTrace`. (#1128)
-- Add optional AWS X-Ray configuration module for AWS Lambda Instrumentation (#984)
+- Add optional AWS X-Ray configuration module for AWS Lambda Instrumentation. (#984)
 
 ### Fixed
 
@@ -380,7 +407,9 @@ First official tagged release of `contrib` repository.
 - Prefix support for dogstatsd (#34)
 - Update Go Runtime package to use batch observer (#44)
 
-[Unreleased]: https://github.com/open-telemetry/opentelemetry-go-contrib/compare/v1.1.0...HEAD
+[Unreleased]: https://github.com/open-telemetry/opentelemetry-go-contrib/compare/v1.2.0...HEAD
+[1.2.0/0.27.0]: https://github.com/open-telemetry/opentelemetry-go-contrib/releases/tag/v1.2.0
+[1.1.1/0.26.1]: https://github.com/open-telemetry/opentelemetry-go-contrib/releases/tag/v1.1.1
 [1.1.0/0.26.0]: https://github.com/open-telemetry/opentelemetry-go-contrib/releases/tag/v1.1.0
 [1.0.0/0.25.0]: https://github.com/open-telemetry/opentelemetry-go-contrib/releases/tag/v1.0.0
 [0.24.0]: https://github.com/open-telemetry/opentelemetry-go-contrib/releases/tag/v0.24.0

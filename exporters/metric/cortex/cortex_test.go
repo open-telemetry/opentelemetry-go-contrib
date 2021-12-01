@@ -31,7 +31,6 @@ import (
 
 	"go.opentelemetry.io/otel/attribute"
 	"go.opentelemetry.io/otel/metric/global"
-	"go.opentelemetry.io/otel/sdk/export/metric"
 	export "go.opentelemetry.io/otel/sdk/export/metric"
 	"go.opentelemetry.io/otel/sdk/export/metric/aggregation"
 	"go.opentelemetry.io/otel/sdk/resource"
@@ -68,13 +67,13 @@ var validConfig = Config{
 	Quantiles: []float64{0, 0.25, 0.5, 0.75, 1},
 }
 
-func TestExportKindFor(t *testing.T) {
+func TestTemporalityFor(t *testing.T) {
 	exporter := Exporter{}
-	got := exporter.ExportKindFor(nil, aggregation.Kind(rune(0)))
-	want := metric.CumulativeExportKind
+	got := exporter.TemporalityFor(nil, aggregation.Kind(rune(0)))
+	want := aggregation.CumulativeTemporality
 
 	if got != want {
-		t.Errorf("ExportKindFor() =  %q, want %q", got, want)
+		t.Errorf("TemporalityFor() =  %q, want %q", got, want)
 	}
 }
 

@@ -154,6 +154,10 @@ func assertSpanEqualsIgnoreTimeAndSpanID(t *testing.T, expected *v1trace.Resourc
 func TestWrapEndToEnd(t *testing.T) {
 	setEnvVars()
 
+	ctx := context.Background()
+	tp, err := NewTracerProvider(ctx)
+	assert.NoError(t, err)
+
 	customerHandler := func() (string, error) {
 		return "hello world", nil
 	}
@@ -163,7 +167,7 @@ func TestWrapEndToEnd(t *testing.T) {
 	}()
 	<-time.After(5 * time.Millisecond)
 
-	wrapped := otellambda.InstrumentHandler(customerHandler, AllRecommendedOptions()...)
+	wrapped := otellambda.InstrumentHandler(customerHandler, WithRecommendedOptions(tp)...)
 	wrappedCallable := reflect.ValueOf(wrapped)
 	resp := wrappedCallable.Call([]reflect.Value{reflect.ValueOf(mockContext)})
 	assert.Len(t, resp, 2)

@@ -21,14 +21,13 @@ import (
 
 	"github.com/DataDog/datadog-go/statsd"
 
-	"go.opentelemetry.io/otel/sdk/instrumentation"
-	"go.opentelemetry.io/otel/sdk/resource"
-
 	"go.opentelemetry.io/otel/attribute"
-	"go.opentelemetry.io/otel/metric"
 	"go.opentelemetry.io/otel/metric/number"
+	"go.opentelemetry.io/otel/metric/sdkapi"
 	export "go.opentelemetry.io/otel/sdk/export/metric"
 	"go.opentelemetry.io/otel/sdk/export/metric/aggregation"
+	"go.opentelemetry.io/otel/sdk/instrumentation"
+	"go.opentelemetry.io/otel/sdk/resource"
 )
 
 const (
@@ -91,9 +90,9 @@ func defaultFormatter(namespace, name string) string {
 	return name
 }
 
-// ExportKindFor returns export.DeltaExporter for statsd-derived exporters
-func (e *Exporter) ExportKindFor(*metric.Descriptor, aggregation.Kind) export.ExportKind {
-	return export.DeltaExportKind
+// TemporalityFor returns export.DeltaExporter for statsd-derived exporters
+func (e *Exporter) TemporalityFor(*sdkapi.Descriptor, aggregation.Kind) aggregation.Temporality {
+	return aggregation.DeltaTemporality
 }
 
 func (e *Exporter) Export(ctx context.Context, res *resource.Resource, ilr export.InstrumentationLibraryReader) error {
