@@ -10,6 +10,7 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 
 ### Changed
 
+- `otelhttptrace.NewClientTrace` now uses `TracerProvider` from the parent context if one exists and none was set with `WithTracerProvider` (#874)
 - Changed the project minimum supported Go version from 1.15 to 1.16. (#1442)
 
 ### Fixed
