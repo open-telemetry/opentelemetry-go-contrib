@@ -24,7 +24,6 @@ import (
 
 	"github.com/DataDog/datadog-go/statsd"
 
-	"go.opentelemetry.io/contrib/exporters/metric/datadog"
 	"go.opentelemetry.io/otel/attribute"
 	"go.opentelemetry.io/otel/metric"
 	"go.opentelemetry.io/otel/metric/global"
@@ -33,6 +32,8 @@ import (
 	"go.opentelemetry.io/otel/sdk/metric/selector/simple"
 	"go.opentelemetry.io/otel/sdk/resource"
 	semconv "go.opentelemetry.io/otel/semconv/v1.4.0"
+
+	"go.opentelemetry.io/contrib/exporters/metric/datadog"
 )
 
 type TestUDPServer struct {
@@ -58,18 +59,18 @@ func ExampleExporter() {
 
 	go func() {
 		defer exp.Close()
-		processor := basic.New(selector, exp)
-		pusher := controller.New(processor, controller.WithExporter(exp), controller.WithCollectPeriod(time.Second*10),
+		processor := basic.NewFactory(selector, exp)
+		cont := controller.New(processor, controller.WithExporter(exp), controller.WithCollectPeriod(time.Second*10),
 			controller.WithResource(resource.Default()),
 			controller.WithResource(resource.NewSchemaless(semconv.ServiceNameKey.String("ExampleExporter"))))
 		ctx := context.Background()
-		err := pusher.Start(ctx)
+		err := cont.Start(ctx)
 		if err != nil {
 			panic(err)
 		}
 
-		defer func() { handleErr(pusher.Stop(ctx)) }()
-		global.SetMeterProvider(pusher.MeterProvider())
+		defer func() { handleErr(cont.Stop(ctx)) }()
+		global.SetMeterProvider(cont)
 		meter := global.Meter("marwandist")
 		m := metric.Must(meter).NewInt64Histogram("myrecorder")
 		meter.RecordBatch(context.Background(), []attribute.KeyValue{attribute.Int("l", 1)},
@@ -103,7 +104,7 @@ func ExampleExporter() {
 	}
 
 	// Output:
-	// myrecorder.max:100|g|#env:dev,l:1,service.name:ExampleExporter,telemetry.sdk.language:go,telemetry.sdk.name:opentelemetry,telemetry.sdk.version:1.0.0
+	// myrecorder.max:100|g|#env:dev,l:1,service.name:ExampleExporter,telemetry.sdk.language:go,telemetry.sdk.name:opentelemetry,telemetry.sdk.version:1.2.0
 	//
 }
 

@@ -23,17 +23,17 @@ import (
 	"strconv"
 	"time"
 
-	"github.com/gogo/protobuf/proto"
 	"github.com/golang/snappy"
 	"github.com/prometheus/prometheus/prompb"
 
 	"go.opentelemetry.io/otel/attribute"
-	apimetric "go.opentelemetry.io/otel/metric"
 	"go.opentelemetry.io/otel/metric/global"
 	"go.opentelemetry.io/otel/metric/number"
+	"go.opentelemetry.io/otel/metric/sdkapi"
 	"go.opentelemetry.io/otel/sdk/export/metric"
 	export "go.opentelemetry.io/otel/sdk/export/metric"
 	"go.opentelemetry.io/otel/sdk/export/metric/aggregation"
+	"go.opentelemetry.io/otel/sdk/instrumentation"
 	"go.opentelemetry.io/otel/sdk/metric/aggregator/histogram"
 	controller "go.opentelemetry.io/otel/sdk/metric/controller/basic"
 	processor "go.opentelemetry.io/otel/sdk/metric/processor/basic"
@@ -52,13 +52,13 @@ type exportData struct {
 	Resource *resource.Resource
 }
 
-// ExportKindFor returns CumulativeExporter so the Processor correctly aggregates data
-func (e *Exporter) ExportKindFor(*apimetric.Descriptor, aggregation.Kind) metric.ExportKind {
-	return metric.CumulativeExportKind
+// TemporalityFor returns CumulativeExporter so the Processor correctly aggregates data
+func (e *Exporter) TemporalityFor(*sdkapi.Descriptor, aggregation.Kind) aggregation.Temporality {
+	return aggregation.CumulativeTemporality
 }
 
 // Export forwards metrics to Cortex from the SDK
-func (e *Exporter) Export(_ context.Context, res *resource.Resource, checkpointSet metric.CheckpointSet) error {
+func (e *Exporter) Export(_ context.Context, res *resource.Resource, checkpointSet metric.InstrumentationLibraryReader) error {
 	timeseries, err := e.ConvertToTimeSeries(res, checkpointSet)
 	if err != nil {
 		return err
@@ -102,8 +102,8 @@ func NewExportPipeline(config Config, options ...controller.Option) (*controller
 		return nil, err
 	}
 
-	pusher := controller.New(
-		processor.New(
+	cont := controller.New(
+		processor.NewFactory(
 			simple.NewWithHistogramDistribution(
 				histogram.WithExplicitBoundaries(config.HistogramBoundaries),
 			),
@@ -112,72 +112,74 @@ func NewExportPipeline(config Config, options ...controller.Option) (*controller
 		append(options, controller.WithExporter(exporter))...,
 	)
 
-	return pusher, pusher.Start(context.TODO())
+	return cont, cont.Start(context.TODO())
 }
 
 // InstallNewPipeline registers a push Controller's MeterProvider globally.
 func InstallNewPipeline(config Config, options ...controller.Option) (*controller.Controller, error) {
-	pusher, err := NewExportPipeline(config, options...)
+	cont, err := NewExportPipeline(config, options...)
 	if err != nil {
 		return nil, err
 	}
-	global.SetMeterProvider(pusher.MeterProvider())
-	return pusher, nil
+	global.SetMeterProvider(cont)
+	return cont, nil
 }
 
-// ConvertToTimeSeries converts a CheckpointSet to a slice of TimeSeries pointers
+// ConvertToTimeSeries converts a InstrumentationLibraryReader to a slice of TimeSeries pointers
 // Based on the aggregation type, ConvertToTimeSeries will call helper functions like
 // convertFromSum to generate the correct number of TimeSeries.
-func (e *Exporter) ConvertToTimeSeries(res *resource.Resource, checkpointSet export.CheckpointSet) ([]*prompb.TimeSeries, error) {
+func (e *Exporter) ConvertToTimeSeries(res *resource.Resource, checkpointSet export.InstrumentationLibraryReader) ([]prompb.TimeSeries, error) {
 	var aggError error
-	var timeSeries []*prompb.TimeSeries
+	var timeSeries []prompb.TimeSeries
 
 	// Iterate over each record in the checkpoint set and convert to TimeSeries
-	aggError = checkpointSet.ForEach(e, func(record metric.Record) error {
-		// Convert based on aggregation type
-		edata := exportData{
-			Resource: res,
-			Record:   record,
-		}
-		agg := record.Aggregation()
+	aggError = checkpointSet.ForEach(func(library instrumentation.Library, reader export.Reader) error {
+		return reader.ForEach(e, func(record metric.Record) error {
+			// Convert based on aggregation type
+			edata := exportData{
+				Resource: res,
+				Record:   record,
+			}
+			agg := record.Aggregation()
 
-		// The following section uses loose type checking to determine how to
-		// convert aggregations to timeseries. More "expensive" timeseries are
-		// checked first.
-		//
-		// See the Aggregator Kind for more information
-		// https://github.com/open-telemetry/opentelemetry-go/blob/main/sdk/export/metric/aggregation/aggregation.go#L123-L138
-		if histogram, ok := agg.(aggregation.Histogram); ok {
-			tSeries, err := convertFromHistogram(edata, histogram)
-			if err != nil {
-				return err
-			}
-			timeSeries = append(timeSeries, tSeries...)
-		} else if sum, ok := agg.(aggregation.Sum); ok {
-			tSeries, err := convertFromSum(edata, sum)
-			if err != nil {
-				return err
-			}
-			timeSeries = append(timeSeries, tSeries)
-			if minMaxSumCount, ok := agg.(aggregation.MinMaxSumCount); ok {
-				tSeries, err := convertFromMinMaxSumCount(edata, minMaxSumCount)
+			// The following section uses loose type checking to determine how to
+			// convert aggregations to timeseries. More "expensive" timeseries are
+			// checked first.
+			//
+			// See the Aggregator Kind for more information
+			// https://github.com/open-telemetry/opentelemetry-go/blob/main/sdk/export/metric/aggregation/aggregation.go#L123-L138
+			if histogram, ok := agg.(aggregation.Histogram); ok {
+				tSeries, err := convertFromHistogram(edata, histogram)
 				if err != nil {
 					return err
 				}
 				timeSeries = append(timeSeries, tSeries...)
+			} else if sum, ok := agg.(aggregation.Sum); ok {
+				tSeries, err := convertFromSum(edata, sum)
+				if err != nil {
+					return err
+				}
+				timeSeries = append(timeSeries, tSeries)
+				if minMaxSumCount, ok := agg.(aggregation.MinMaxSumCount); ok {
+					tSeries, err := convertFromMinMaxSumCount(edata, minMaxSumCount)
+					if err != nil {
+						return err
+					}
+					timeSeries = append(timeSeries, tSeries...)
+				}
+			} else if lastValue, ok := agg.(aggregation.LastValue); ok {
+				tSeries, err := convertFromLastValue(edata, lastValue)
+				if err != nil {
+					return err
+				}
+				timeSeries = append(timeSeries, tSeries)
+			} else {
+				// Report to the user when no conversion was found
+				fmt.Printf("No conversion found for record: %s\n", edata.Descriptor().Name())
 			}
-		} else if lastValue, ok := agg.(aggregation.LastValue); ok {
-			tSeries, err := convertFromLastValue(edata, lastValue)
-			if err != nil {
-				return err
-			}
-			timeSeries = append(timeSeries, tSeries)
-		} else {
-			// Report to the user when no conversion was found
-			fmt.Printf("No conversion found for record: %s\n", edata.Descriptor().Name())
-		}
 
-		return nil
+			return nil
+		})
 	})
 
 	// Check if error was returned in checkpointSet.ForEach()
@@ -189,7 +191,7 @@ func (e *Exporter) ConvertToTimeSeries(res *resource.Resource, checkpointSet exp
 }
 
 // createTimeSeries is a helper function to create a timeseries from a value and attributes
-func createTimeSeries(edata exportData, value number.Number, valueNumberKind number.Kind, extraAttributes ...attribute.KeyValue) *prompb.TimeSeries {
+func createTimeSeries(edata exportData, value number.Number, valueNumberKind number.Kind, extraAttributes ...attribute.KeyValue) prompb.TimeSeries {
 	sample := prompb.Sample{
 		Value:     value.CoerceToFloat64(valueNumberKind),
 		Timestamp: int64(time.Nanosecond) * edata.EndTime().UnixNano() / int64(time.Millisecond),
@@ -197,18 +199,18 @@ func createTimeSeries(edata exportData, value number.Number, valueNumberKind num
 
 	attributes := createLabelSet(edata, extraAttributes...)
 
-	return &prompb.TimeSeries{
+	return prompb.TimeSeries{
 		Samples: []prompb.Sample{sample},
 		Labels:  attributes,
 	}
 }
 
 // convertFromSum returns a single TimeSeries based on a Record with a Sum aggregation
-func convertFromSum(edata exportData, sum aggregation.Sum) (*prompb.TimeSeries, error) {
+func convertFromSum(edata exportData, sum aggregation.Sum) (prompb.TimeSeries, error) {
 	// Get Sum value
 	value, err := sum.Sum()
 	if err != nil {
-		return nil, err
+		return prompb.TimeSeries{}, err
 	}
 
 	// Create TimeSeries. Note that Cortex requires the name attribute to be in the format
@@ -221,11 +223,11 @@ func convertFromSum(edata exportData, sum aggregation.Sum) (*prompb.TimeSeries, 
 }
 
 // convertFromLastValue returns a single TimeSeries based on a Record with a LastValue aggregation
-func convertFromLastValue(edata exportData, lastValue aggregation.LastValue) (*prompb.TimeSeries, error) {
+func convertFromLastValue(edata exportData, lastValue aggregation.LastValue) (prompb.TimeSeries, error) {
 	// Get value
 	value, _, err := lastValue.LastValue()
 	if err != nil {
-		return nil, err
+		return prompb.TimeSeries{}, err
 	}
 
 	// Create TimeSeries
@@ -237,7 +239,7 @@ func convertFromLastValue(edata exportData, lastValue aggregation.LastValue) (*p
 }
 
 // convertFromMinMaxSumCount returns 4 TimeSeries for the min, max, sum, and count from the mmsc aggregation
-func convertFromMinMaxSumCount(edata exportData, minMaxSumCount aggregation.MinMaxSumCount) ([]*prompb.TimeSeries, error) {
+func convertFromMinMaxSumCount(edata exportData, minMaxSumCount aggregation.MinMaxSumCount) ([]prompb.TimeSeries, error) {
 	numberKind := edata.Descriptor().NumberKind()
 
 	// Convert Min
@@ -265,7 +267,7 @@ func convertFromMinMaxSumCount(edata exportData, minMaxSumCount aggregation.MinM
 	countTimeSeries := createTimeSeries(edata, number.NewInt64Number(int64(count)), number.Int64Kind, attribute.String("__name__", name))
 
 	// Return all timeSeries
-	tSeries := []*prompb.TimeSeries{
+	tSeries := []prompb.TimeSeries{
 		minTimeSeries, maxTimeSeries, countTimeSeries,
 	}
 
@@ -273,8 +275,8 @@ func convertFromMinMaxSumCount(edata exportData, minMaxSumCount aggregation.MinM
 }
 
 // convertFromHistogram returns len(histogram.Buckets) timeseries for a histogram aggregation
-func convertFromHistogram(edata exportData, histogram aggregation.Histogram) ([]*prompb.TimeSeries, error) {
-	var timeSeries []*prompb.TimeSeries
+func convertFromHistogram(edata exportData, histogram aggregation.Histogram) ([]prompb.TimeSeries, error) {
+	var timeSeries []prompb.TimeSeries
 	metricName := sanitize(edata.Descriptor().Name())
 	numberKind := edata.Descriptor().NumberKind()
 
@@ -327,7 +329,7 @@ func convertFromHistogram(edata exportData, histogram aggregation.Histogram) ([]
 
 // createLabelSet combines attributes from a Record, resource, and extra attributes to create a
 // slice of prompb.Label.
-func createLabelSet(edata exportData, extraAttributes ...attribute.KeyValue) []*prompb.Label {
+func createLabelSet(edata exportData, extraAttributes ...attribute.KeyValue) []prompb.Label {
 	// Map ensure no duplicate label names.
 	labelMap := map[string]prompb.Label{}
 
@@ -361,10 +363,9 @@ func createLabelSet(edata exportData, extraAttributes ...attribute.KeyValue) []*
 	}
 
 	// Create slice of labels from labelMap and return
-	res := make([]*prompb.Label, 0, len(labelMap))
+	res := make([]prompb.Label, 0, len(labelMap))
 	for _, lb := range labelMap {
-		currentLabel := lb
-		res = append(res, &currentLabel)
+		res = append(res, lb)
 	}
 
 	return res
@@ -398,17 +399,19 @@ func (e *Exporter) addHeaders(req *http.Request) error {
 }
 
 // buildMessage creates a Snappy-compressed protobuf message from a slice of TimeSeries.
-func (e *Exporter) buildMessage(timeseries []*prompb.TimeSeries) ([]byte, error) {
+func (e *Exporter) buildMessage(timeseries []prompb.TimeSeries) ([]byte, error) {
 	// Wrap the TimeSeries as a WriteRequest since Cortex requires it.
 	writeRequest := &prompb.WriteRequest{
 		Timeseries: timeseries,
 	}
 
 	// Convert the struct to a slice of bytes and then compress it.
-	message, err := proto.Marshal(writeRequest)
+	message := make([]byte, writeRequest.Size())
+	written, err := writeRequest.MarshalToSizedBuffer(message)
 	if err != nil {
 		return nil, err
 	}
+	message = message[:written]
 	compressed := snappy.Encode(nil, message)
 
 	return compressed, nil

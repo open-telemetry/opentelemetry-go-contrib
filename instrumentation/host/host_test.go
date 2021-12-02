@@ -21,10 +21,10 @@ import (
 	"testing"
 	"time"
 
-	"github.com/shirou/gopsutil/cpu"
-	"github.com/shirou/gopsutil/mem"
-	"github.com/shirou/gopsutil/net"
-	"github.com/shirou/gopsutil/process"
+	"github.com/shirou/gopsutil/v3/cpu"
+	"github.com/shirou/gopsutil/v3/mem"
+	"github.com/shirou/gopsutil/v3/net"
+	"github.com/shirou/gopsutil/v3/process"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 
@@ -34,8 +34,8 @@ import (
 	"go.opentelemetry.io/contrib/instrumentation/host"
 )
 
-func getMetric(impl *metrictest.MeterImpl, name string, lbl attribute.KeyValue) float64 {
-	for _, b := range impl.MeasurementBatches {
+func getMetric(provider *metrictest.MeterProvider, name string, lbl attribute.KeyValue) float64 {
+	for _, b := range provider.MeasurementBatches {
 		foundAttribute := false
 		for _, haveLabel := range b.Labels {
 			if haveLabel != lbl {
@@ -60,16 +60,14 @@ func getMetric(impl *metrictest.MeterImpl, name string, lbl attribute.KeyValue) 
 }
 
 func TestHostCPU(t *testing.T) {
-	impl, provider := metrictest.NewMeterProvider()
+	provider := metrictest.NewMeterProvider()
 	err := host.Start(
 		host.WithMeterProvider(provider),
 	)
 	assert.NoError(t, err)
 
 	proc, err := process.NewProcess(int32(os.Getpid()))
-	if err != nil {
-		t.Errorf("could not find this process: %w", err)
-	}
+	require.NoError(t, err)
 
 	ctx := context.Background()
 	processBefore, err := proc.TimesWithContext(ctx)
@@ -87,13 +85,13 @@ func TestHostCPU(t *testing.T) {
 		require.NoError(t, err)
 	}
 
-	impl.RunAsyncInstruments()
+	provider.RunAsyncInstruments()
 
-	processUser := getMetric(impl, "process.cpu.time", host.AttributeCPUTimeUser[0])
-	processSystem := getMetric(impl, "process.cpu.time", host.AttributeCPUTimeSystem[0])
+	processUser := getMetric(provider, "process.cpu.time", host.AttributeCPUTimeUser[0])
+	processSystem := getMetric(provider, "process.cpu.time", host.AttributeCPUTimeSystem[0])
 
-	hostUser := getMetric(impl, "system.cpu.time", host.AttributeCPUTimeUser[0])
-	hostSystem := getMetric(impl, "system.cpu.time", host.AttributeCPUTimeSystem[0])
+	hostUser := getMetric(provider, "system.cpu.time", host.AttributeCPUTimeUser[0])
+	hostSystem := getMetric(provider, "system.cpu.time", host.AttributeCPUTimeSystem[0])
 
 	processAfter, err := proc.TimesWithContext(ctx)
 	require.NoError(t, err)
@@ -134,7 +132,7 @@ func TestHostCPU(t *testing.T) {
 }
 
 func TestHostMemory(t *testing.T) {
-	impl, provider := metrictest.NewMeterProvider()
+	provider := metrictest.NewMeterProvider()
 	err := host.Start(
 		host.WithMeterProvider(provider),
 	)
@@ -144,21 +142,21 @@ func TestHostMemory(t *testing.T) {
 	vMem, err := mem.VirtualMemoryWithContext(ctx)
 	require.NoError(t, err)
 
-	impl.RunAsyncInstruments()
+	provider.RunAsyncInstruments()
 
-	hostUsed := getMetric(impl, "system.memory.usage", host.AttributeMemoryUsed[0])
+	hostUsed := getMetric(provider, "system.memory.usage", host.AttributeMemoryUsed[0])
 	assert.Greater(t, hostUsed, 0.0)
 	assert.LessOrEqual(t, hostUsed, float64(vMem.Total))
 
-	hostAvailable := getMetric(impl, "system.memory.usage", host.AttributeMemoryAvailable[0])
+	hostAvailable := getMetric(provider, "system.memory.usage", host.AttributeMemoryAvailable[0])
 	assert.GreaterOrEqual(t, hostAvailable, 0.0)
 	assert.Less(t, hostAvailable, float64(vMem.Total))
 
-	hostUsedUtil := getMetric(impl, "system.memory.utilization", host.AttributeMemoryUsed[0])
+	hostUsedUtil := getMetric(provider, "system.memory.utilization", host.AttributeMemoryUsed[0])
 	assert.Greater(t, hostUsedUtil, 0.0)
 	assert.LessOrEqual(t, hostUsedUtil, 1.0)
 
-	hostAvailableUtil := getMetric(impl, "system.memory.utilization", host.AttributeMemoryAvailable[0])
+	hostAvailableUtil := getMetric(provider, "system.memory.utilization", host.AttributeMemoryAvailable[0])
 	assert.GreaterOrEqual(t, hostAvailableUtil, 0.0)
 	assert.Less(t, hostAvailableUtil, 1.0)
 
@@ -206,7 +204,7 @@ func sendBytes(t *testing.T, count int) error {
 }
 
 func TestHostNetwork(t *testing.T) {
-	impl, provider := metrictest.NewMeterProvider()
+	provider := metrictest.NewMeterProvider()
 	err := host.Start(
 		host.WithMeterProvider(provider),
 	)
@@ -229,9 +227,9 @@ func TestHostNetwork(t *testing.T) {
 			uint64(howMuch) <= hostAfter[0].BytesRecv-hostBefore[0].BytesRecv
 	}, 30*time.Second, time.Second/2)
 
-	impl.RunAsyncInstruments()
-	hostTransmit := getMetric(impl, "system.network.io", host.AttributeNetworkTransmit[0])
-	hostReceive := getMetric(impl, "system.network.io", host.AttributeNetworkReceive[0])
+	provider.RunAsyncInstruments()
+	hostTransmit := getMetric(provider, "system.network.io", host.AttributeNetworkTransmit[0])
+	hostReceive := getMetric(provider, "system.network.io", host.AttributeNetworkReceive[0])
 
 	// Check that the recorded measurements reflect the same change:
 	require.LessOrEqual(t, uint64(howMuch), uint64(hostTransmit)-hostBefore[0].BytesSent)

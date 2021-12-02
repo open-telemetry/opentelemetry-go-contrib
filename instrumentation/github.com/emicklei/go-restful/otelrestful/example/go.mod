@@ -1,6 +1,6 @@
 module go.opentelemetry.io/contrib/instrumentation/github.com/emicklei/go-restful/otelrestful/example
 
-go 1.15
+go 1.16
 
 replace (
 	go.opentelemetry.io/contrib => ../../../../../../
@@ -9,10 +9,10 @@ replace (
 )
 
 require (
-	github.com/emicklei/go-restful/v3 v3.5.2
-	go.opentelemetry.io/contrib/instrumentation/github.com/emicklei/go-restful/otelrestful v0.24.0
-	go.opentelemetry.io/otel v1.0.0
-	go.opentelemetry.io/otel/exporters/stdout/stdouttrace v1.0.0
-	go.opentelemetry.io/otel/sdk v1.0.0
-	go.opentelemetry.io/otel/trace v1.0.0
+	github.com/emicklei/go-restful/v3 v3.7.2
+	go.opentelemetry.io/contrib/instrumentation/github.com/emicklei/go-restful/otelrestful v0.27.0
+	go.opentelemetry.io/otel v1.2.0
+	go.opentelemetry.io/otel/exporters/stdout/stdouttrace v1.2.0
+	go.opentelemetry.io/otel/sdk v1.2.0
+	go.opentelemetry.io/otel/trace v1.2.0
 )

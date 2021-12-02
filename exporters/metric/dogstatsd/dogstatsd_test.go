@@ -21,16 +21,16 @@ import (
 
 	"github.com/stretchr/testify/require"
 
-	export "go.opentelemetry.io/otel/sdk/export/metric"
+	"go.opentelemetry.io/otel/attribute"
+	"go.opentelemetry.io/otel/metric"
+	"go.opentelemetry.io/otel/sdk/export/metric/aggregation"
 	controller "go.opentelemetry.io/otel/sdk/metric/controller/basic"
 	processor "go.opentelemetry.io/otel/sdk/metric/processor/basic"
 	"go.opentelemetry.io/otel/sdk/metric/processor/processortest"
+	"go.opentelemetry.io/otel/sdk/resource"
+	semconv "go.opentelemetry.io/otel/semconv/v1.7.0"
 
 	"go.opentelemetry.io/contrib/exporters/metric/dogstatsd"
-	"go.opentelemetry.io/otel/attribute"
-	"go.opentelemetry.io/otel/metric"
-	"go.opentelemetry.io/otel/sdk/resource"
-	semconv "go.opentelemetry.io/otel/semconv/v1.4.0"
 )
 
 // TestDogstatsAttributes that attributes are formatted in the correct style,
@@ -88,13 +88,13 @@ func TestDogstatsAttributes(t *testing.T) {
 			require.Nil(t, err)
 
 			aggSel := processortest.AggregatorSelector()
-			proc := processor.New(aggSel, export.StatelessExportKindSelector())
+			proc := processor.NewFactory(aggSel, aggregation.StatelessTemporalitySelector())
 			cont := controller.New(proc,
 				controller.WithExporter(exp),
 				controller.WithResource(res),
 			)
 			require.NoError(t, cont.Start(ctx))
-			meter := cont.MeterProvider().Meter("test")
+			meter := cont.Meter("test")
 			counter := metric.Must(meter).NewInt64Counter("test.sum")
 			counter.Add(ctx, 123, tc.attributes...)
 

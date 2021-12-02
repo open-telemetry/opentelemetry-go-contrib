@@ -24,7 +24,7 @@ import (
 
 	"go.opentelemetry.io/otel/attribute"
 	"go.opentelemetry.io/otel/sdk/resource"
-	semconv "go.opentelemetry.io/otel/semconv/v1.4.0"
+	semconv "go.opentelemetry.io/otel/semconv/v1.7.0"
 )
 
 // Create interface for functions that need to be mocked
@@ -106,6 +106,7 @@ func TestReturnsIfNoEnvVars(t *testing.T) {
 	detector := &resourceDetector{utils: nil}
 	res, err := detector.Detect(context.Background())
 
-	assert.Equal(t, errNotOnECS, err)
-	assert.Equal(t, 0, len(res.Attributes()))
+	// When not on ECS, the detector should return nil and not error.
+	assert.NoError(t, err, "failure to detect when not on platform must not be an error")
+	assert.Nil(t, res, "failure to detect should return a nil Resource to optimize merge")
 }

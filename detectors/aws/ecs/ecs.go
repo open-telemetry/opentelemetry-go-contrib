@@ -23,7 +23,7 @@ import (
 
 	"go.opentelemetry.io/otel/attribute"
 	"go.opentelemetry.io/otel/sdk/resource"
-	semconv "go.opentelemetry.io/otel/semconv/v1.4.0"
+	semconv "go.opentelemetry.io/otel/semconv/v1.7.0"
 )
 
 const (
@@ -40,7 +40,6 @@ var (
 	errCannotReadContainerID   = errors.New("failed to read container ID from cGroupFile")
 	errCannotReadContainerName = errors.New("failed to read hostname")
 	errCannotReadCGroupFile    = errors.New("ECS resource detector failed to read cGroupFile")
-	errNotOnECS                = errors.New("process is not on ECS, cannot detect environment variables from ECS")
 )
 
 // Create interface for methods needing to be mocked
@@ -74,7 +73,7 @@ func (detector *resourceDetector) Detect(ctx context.Context) (*resource.Resourc
 	metadataURIV4 := os.Getenv(metadataV4EnvVar)
 
 	if len(metadataURIV3) == 0 && len(metadataURIV4) == 0 {
-		return empty, errNotOnECS
+		return nil, nil
 	}
 	hostName, err := detector.utils.getContainerName()
 	if err != nil {

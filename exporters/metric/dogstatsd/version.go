@@ -16,7 +16,7 @@ package dogstatsd
 
 // Version is the current release version of the dogstatsd exporter.
 func Version() string {
-	return "0.23.0"
+	return "0.27.0"
 	// This string is updated by the pre_release.sh script during release
 }
 

@@ -1,6 +1,6 @@
 module go.opentelemetry.io/contrib/exporters/metric/cortex/example
 
-go 1.15
+go 1.16
 
 replace (
 	go.opentelemetry.io/contrib/exporters/metric/cortex => ../
@@ -8,10 +8,10 @@ replace (
 )
 
 require (
-	go.opentelemetry.io/contrib/exporters/metric/cortex v0.23.0
-	go.opentelemetry.io/contrib/exporters/metric/cortex/utils v0.23.0
-	go.opentelemetry.io/otel v1.0.0
-	go.opentelemetry.io/otel/metric v0.23.0
-	go.opentelemetry.io/otel/sdk v1.0.0
-	go.opentelemetry.io/otel/sdk/metric v0.23.0
+	go.opentelemetry.io/contrib/exporters/metric/cortex v0.27.0
+	go.opentelemetry.io/contrib/exporters/metric/cortex/utils v0.27.0
+	go.opentelemetry.io/otel v1.2.0
+	go.opentelemetry.io/otel/metric v0.25.0
+	go.opentelemetry.io/otel/sdk v1.2.0
+	go.opentelemetry.io/otel/sdk/metric v0.25.0
 )
