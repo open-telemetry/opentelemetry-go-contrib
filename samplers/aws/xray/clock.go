@@ -21,7 +21,6 @@ import (
 // Clock provides an interface to implement method for getting current time.
 type Clock interface {
 	Now() time.Time
-	Increment(int64, int64) time.Time
 }
 
 // DefaultClock is an implementation of Clock interface.
@@ -29,10 +28,5 @@ type DefaultClock struct{}
 
 // Now returns current time.
 func (t *DefaultClock) Now() time.Time {
-	return time.Now()
-}
-
-// This method returns the current time but can be used to provide different implementation
-func (t *DefaultClock) Increment(_, _ int64) time.Time {
 	return time.Now()
 }

@@ -23,7 +23,7 @@ type centralizedRule struct {
 	reservoir *centralizedReservoir
 
 	// sampling rule properties
-	*properties
+	ruleProperties *ruleProperties
 
 	// Number of requests matched against this rule
 	//requests float64
@@ -47,11 +47,11 @@ type centralizedRule struct {
 }
 
 // properties is the base set of properties that define a sampling rule.
-type properties struct {
+type ruleProperties struct {
 	ruleName      string
 	serviceType   string
 	resourceARN   string
-	attributes    interface{}
+	attributes    map[string]interface{}
 	serviceName   string
 	host          string
 	httpMethod    string

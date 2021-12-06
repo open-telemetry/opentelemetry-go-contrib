@@ -24,14 +24,14 @@ import (
 func TestCreateUserRule(t *testing.T) {
 	resARN := "*"
 	r1 := &centralizedRule{
-		properties: &properties{
+		ruleProperties: &ruleProperties{
 			ruleName: "r1",
 			priority: 5,
 		},
 	}
 
 	r3 := &centralizedRule{
-		properties: &properties{
+		ruleProperties: &ruleProperties{
 			ruleName: "r3",
 			priority: 7,
 		},
@@ -45,8 +45,8 @@ func TestCreateUserRule(t *testing.T) {
 	}
 
 	m := &centralizedManifest{
-		Rules: rules,
-		Index: index,
+		rules: rules,
+		index: index,
 	}
 
 	// Output of GetSamplingRules API and Input to putRule().
@@ -60,7 +60,7 @@ func TestCreateUserRule(t *testing.T) {
 	priority := int64(6)
 	serviceTye := "*"
 
-	ruleProperties := properties{
+	ruleProperties := ruleProperties{
 		serviceName:   serviceName,
 		httpMethod:    httpMethod,
 		urlPath:       urlPath,
@@ -83,10 +83,10 @@ func TestCreateUserRule(t *testing.T) {
 	}
 
 	exp := &centralizedRule{
-		reservoir:  cr,
-		properties: &ruleProperties,
-		clock:      clock,
-		rand:       rand,
+		reservoir:      cr,
+		ruleProperties: &ruleProperties,
+		clock:          clock,
+		rand:           rand,
 	}
 
 	// Add to manifest, index
@@ -95,19 +95,19 @@ func TestCreateUserRule(t *testing.T) {
 	assert.Equal(t, exp, r2)
 
 	// Assert new rule is present in index
-	r2, ok := m.Index["r2"]
+	r2, ok := m.index["r2"]
 	assert.True(t, ok)
 	assert.Equal(t, exp, r2)
 
 	// Assert new rule present at end of array. putRule() does not preserve order.
-	r2 = m.Rules[2]
+	r2 = m.rules[2]
 	assert.Equal(t, exp, r2)
 }
 
 // Assert that putRule() creates a new default rule and adds to manifest
 func TestCreateDefaultRule(t *testing.T) {
 	m := &centralizedManifest{
-		Index: map[string]*centralizedRule{},
+		index: map[string]*centralizedRule{},
 	}
 
 	// Output of GetSamplingRules API and Input to putRule().
@@ -119,7 +119,7 @@ func TestCreateDefaultRule(t *testing.T) {
 	clock := &DefaultClock{}
 	rand := &DefaultRand{}
 
-	p := &properties{
+	p := &ruleProperties{
 		ruleName:      ruleName,
 		reservoirSize: reservoirSize,
 		fixedRate:     fixedRate,
@@ -131,17 +131,17 @@ func TestCreateDefaultRule(t *testing.T) {
 	}
 
 	exp := &centralizedRule{
-		reservoir:  cr,
-		properties: p,
-		clock:      clock,
-		rand:       rand,
+		reservoir:      cr,
+		ruleProperties: p,
+		clock:          clock,
+		rand:           rand,
 	}
 
 	// Add to manifest
 	r, err := m.putRule(p)
 	assert.Nil(t, err)
 	assert.Equal(t, exp, r)
-	assert.Equal(t, exp, m.Default)
+	assert.Equal(t, exp, m.defaultRule)
 }
 
 // Assert that putRule() updates the default rule
@@ -151,7 +151,7 @@ func TestUpdateDefaultRule(t *testing.T) {
 
 	// Original default sampling rule
 	r := &centralizedRule{
-		properties: &properties{
+		ruleProperties: &ruleProperties{
 			ruleName:      "Default",
 			reservoirSize: 10,
 			fixedRate:     0.05,
@@ -164,7 +164,7 @@ func TestUpdateDefaultRule(t *testing.T) {
 	}
 
 	m := &centralizedManifest{
-		Default: r,
+		defaultRule: r,
 	}
 
 	// Output of GetSamplingRules API and Input to putRule().
@@ -173,7 +173,7 @@ func TestUpdateDefaultRule(t *testing.T) {
 	ruleName := "Default"
 
 	// Expected centralized sampling rule
-	p := &properties{
+	p := &ruleProperties{
 		ruleName:      ruleName,
 		reservoirSize: reservoirSize,
 		fixedRate:     fixedRate,
@@ -184,34 +184,37 @@ func TestUpdateDefaultRule(t *testing.T) {
 	}
 
 	exp := &centralizedRule{
-		reservoir:  cr,
-		properties: p,
-		clock:      clock,
-		rand:       rand,
+		reservoir:      cr,
+		ruleProperties: p,
+		clock:          clock,
+		rand:           rand,
 	}
 
 	// Update default rule in manifest
 	r, err := m.putRule(p)
 	assert.Nil(t, err)
 	assert.Equal(t, exp, r)
-	assert.Equal(t, exp, m.Default)
+	assert.Equal(t, exp, m.defaultRule)
 }
 
 // Assert that creating a user-defined rule which already exists is a no-op
 func TestCreateUserRuleNoOp(t *testing.T) {
 	resARN := "*"
 	serviceTye := ""
-	attributes := make([]interface{}, 2)
+	attributes := map[string]interface{}{
+		"foo":  "bar",
+		"flag": true,
+	}
 
 	r1 := &centralizedRule{
-		properties: &properties{
+		ruleProperties: &ruleProperties{
 			ruleName: "r1",
 			priority: 5,
 		},
 	}
 
 	r3 := &centralizedRule{
-		properties: &properties{
+		ruleProperties: &ruleProperties{
 			ruleName: "r3",
 			priority: 7,
 		},
@@ -228,8 +231,8 @@ func TestCreateUserRuleNoOp(t *testing.T) {
 	}
 
 	m := &centralizedManifest{
-		Rules: rules,
-		Index: index,
+		rules: rules,
+		index: index,
 	}
 
 	// Duplicate rule properties. 'r3' already exists. Input to updateRule().
@@ -241,7 +244,7 @@ func TestCreateUserRuleNoOp(t *testing.T) {
 	ruleName := "r3"
 	priority := int64(6)
 	host := "h"
-	ruleProperties := properties{
+	ruleProperties := ruleProperties{
 		serviceName:   serviceName,
 		httpMethod:    httpMethod,
 		urlPath:       urlPath,
@@ -259,22 +262,25 @@ func TestCreateUserRuleNoOp(t *testing.T) {
 	r, err := m.putRule(&ruleProperties)
 	assert.Nil(t, err)
 	assert.Equal(t, r3, r)
-	assert.Equal(t, 2, len(m.Rules))
-	assert.Equal(t, 2, len(m.Index))
-	assert.Equal(t, r1, m.Rules[0])
-	assert.Equal(t, r3, m.Rules[1])
+	assert.Equal(t, 2, len(m.rules))
+	assert.Equal(t, 2, len(m.index))
+	assert.Equal(t, r1, m.rules[0])
+	assert.Equal(t, r3, m.rules[1])
 }
 
 // Assert that putRule() updates the user-defined rule in the manifest
 func TestUpdateUserRule(t *testing.T) {
 	resARN := "*"
 	serviceType := ""
-	attributes := make([]interface{}, 2)
+	attributes := map[string]interface{}{
+		"foo":  "bar",
+		"flag": true,
+	}
 
 	// Original rule
 	r1 := &centralizedRule{
 
-		properties: &properties{
+		ruleProperties: &ruleProperties{
 			ruleName:      "r1",
 			priority:      5,
 			serviceName:   "*.foo.com",
@@ -299,8 +305,8 @@ func TestUpdateUserRule(t *testing.T) {
 	}
 
 	m := &centralizedManifest{
-		Rules: rules,
-		Index: index,
+		rules: rules,
+		index: index,
 	}
 
 	// Updated rule properties. Input to updateRule().
@@ -313,7 +319,7 @@ func TestUpdateUserRule(t *testing.T) {
 	priority := int64(6)
 	host := "h"
 
-	updated := properties{
+	updated := ruleProperties{
 		serviceName:   serviceName,
 		httpMethod:    httpMethod,
 		urlPath:       urlPath,
@@ -333,39 +339,39 @@ func TestUpdateUserRule(t *testing.T) {
 	}
 
 	exp := &centralizedRule{
-		reservoir:  cr,
-		properties: &updated,
+		reservoir:      cr,
+		ruleProperties: &updated,
 	}
 
 	// Assert that rule has been updated
 	r, err := m.putRule(&updated)
 	assert.Nil(t, err)
 	assert.Equal(t, exp, r)
-	assert.Equal(t, exp, m.Index["r1"])
-	assert.Equal(t, exp, m.Rules[0])
-	assert.Equal(t, 1, len(m.Rules))
-	assert.Equal(t, 1, len(m.Index))
+	assert.Equal(t, exp, m.index["r1"])
+	assert.Equal(t, exp, m.rules[0])
+	assert.Equal(t, 1, len(m.rules))
+	assert.Equal(t, 1, len(m.index))
 }
 
 // Assert that deleting a rule from the end of the array removes the rule
 // and preserves ordering of the sorted array
 func TestDeleteLastRule(t *testing.T) {
 	r1 := &centralizedRule{
-		properties: &properties{
+		ruleProperties: &ruleProperties{
 			ruleName: "r1",
 			priority: 5,
 		},
 	}
 
 	r2 := &centralizedRule{
-		properties: &properties{
+		ruleProperties: &ruleProperties{
 			ruleName: "r2",
 			priority: 6,
 		},
 	}
 
 	r3 := &centralizedRule{
-		properties: &properties{
+		ruleProperties: &ruleProperties{
 			ruleName: "r3",
 			priority: 7,
 		},
@@ -380,8 +386,8 @@ func TestDeleteLastRule(t *testing.T) {
 	}
 
 	m := &centralizedManifest{
-		Rules: rules,
-		Index: index,
+		rules: rules,
+		index: index,
 	}
 
 	// Active rules to exclude from deletion
@@ -394,39 +400,39 @@ func TestDeleteLastRule(t *testing.T) {
 	m.prune(a)
 
 	// Assert size of manifest
-	assert.Equal(t, 2, len(m.Rules))
-	assert.Equal(t, 2, len(m.Index))
+	assert.Equal(t, 2, len(m.rules))
+	assert.Equal(t, 2, len(m.index))
 
 	// Assert index consistency
-	_, ok := m.Index["r3"]
+	_, ok := m.index["r3"]
 	assert.False(t, ok)
-	assert.Equal(t, r1, m.Index["r1"])
-	assert.Equal(t, r2, m.Index["r2"])
+	assert.Equal(t, r1, m.index["r1"])
+	assert.Equal(t, r2, m.index["r2"])
 
 	// Assert ordering of array
-	assert.Equal(t, r1, m.Rules[0])
-	assert.Equal(t, r2, m.Rules[1])
+	assert.Equal(t, r1, m.rules[0])
+	assert.Equal(t, r2, m.rules[1])
 }
 
 // Assert that deleting a rule from the middle of the array removes the rule
 // and preserves ordering of the sorted array
 func TestDeleteMiddleRule(t *testing.T) {
 	r1 := &centralizedRule{
-		properties: &properties{
+		ruleProperties: &ruleProperties{
 			ruleName: "r1",
 			priority: 5,
 		},
 	}
 
 	r2 := &centralizedRule{
-		properties: &properties{
+		ruleProperties: &ruleProperties{
 			ruleName: "r2",
 			priority: 6,
 		},
 	}
 
 	r3 := &centralizedRule{
-		properties: &properties{
+		ruleProperties: &ruleProperties{
 			ruleName: "r3",
 			priority: 7,
 		},
@@ -441,8 +447,8 @@ func TestDeleteMiddleRule(t *testing.T) {
 	}
 
 	m := &centralizedManifest{
-		Rules: rules,
-		Index: index,
+		rules: rules,
+		index: index,
 	}
 
 	// Active rules to exclude from deletion
@@ -455,39 +461,39 @@ func TestDeleteMiddleRule(t *testing.T) {
 	m.prune(a)
 
 	// Assert size of manifest
-	assert.Equal(t, 2, len(m.Rules))
-	assert.Equal(t, 2, len(m.Index))
+	assert.Equal(t, 2, len(m.rules))
+	assert.Equal(t, 2, len(m.index))
 
 	// Assert index consistency
-	_, ok := m.Index["r2"]
+	_, ok := m.index["r2"]
 	assert.False(t, ok)
-	assert.Equal(t, r1, m.Index["r1"])
-	assert.Equal(t, r3, m.Index["r3"])
+	assert.Equal(t, r1, m.index["r1"])
+	assert.Equal(t, r3, m.index["r3"])
 
 	// Assert ordering of array
-	assert.Equal(t, r1, m.Rules[0])
-	assert.Equal(t, r3, m.Rules[1])
+	assert.Equal(t, r1, m.rules[0])
+	assert.Equal(t, r3, m.rules[1])
 }
 
 // Assert that deleting a rule from the beginning of the array removes the rule
 // and preserves ordering of the sorted array
 func TestDeleteFirstRule(t *testing.T) {
 	r1 := &centralizedRule{
-		properties: &properties{
+		ruleProperties: &ruleProperties{
 			ruleName: "r1",
 			priority: 5,
 		},
 	}
 
 	r2 := &centralizedRule{
-		properties: &properties{
+		ruleProperties: &ruleProperties{
 			ruleName: "r2",
 			priority: 6,
 		},
 	}
 
 	r3 := &centralizedRule{
-		properties: &properties{
+		ruleProperties: &ruleProperties{
 			ruleName: "r3",
 			priority: 7,
 		},
@@ -502,8 +508,8 @@ func TestDeleteFirstRule(t *testing.T) {
 	}
 
 	m := &centralizedManifest{
-		Rules: rules,
-		Index: index,
+		rules: rules,
+		index: index,
 	}
 
 	// Active rules to exclude from deletion
@@ -516,24 +522,24 @@ func TestDeleteFirstRule(t *testing.T) {
 	m.prune(a)
 
 	// Assert size of manifest
-	assert.Equal(t, 2, len(m.Rules))
-	assert.Equal(t, 2, len(m.Index))
+	assert.Equal(t, 2, len(m.rules))
+	assert.Equal(t, 2, len(m.index))
 
 	// Assert index consistency
-	_, ok := m.Index["r1"]
+	_, ok := m.index["r1"]
 	assert.False(t, ok)
-	assert.Equal(t, r2, m.Index["r2"])
-	assert.Equal(t, r3, m.Index["r3"])
+	assert.Equal(t, r2, m.index["r2"])
+	assert.Equal(t, r3, m.index["r3"])
 
 	// Assert ordering of array
-	assert.Equal(t, r2, m.Rules[0])
-	assert.Equal(t, r3, m.Rules[1])
+	assert.Equal(t, r2, m.rules[0])
+	assert.Equal(t, r3, m.rules[1])
 }
 
 // Assert that deleting the only rule from the array removes the rule
 func TestDeleteOnlyRule(t *testing.T) {
 	r1 := &centralizedRule{
-		properties: &properties{
+		ruleProperties: &ruleProperties{
 			ruleName: "r1",
 			priority: 5,
 		},
@@ -546,8 +552,8 @@ func TestDeleteOnlyRule(t *testing.T) {
 	}
 
 	m := &centralizedManifest{
-		Rules: rules,
-		Index: index,
+		rules: rules,
+		index: index,
 	}
 
 	// Active rules to exclude from deletion
@@ -557,11 +563,11 @@ func TestDeleteOnlyRule(t *testing.T) {
 	m.prune(a)
 
 	// Assert size of manifest
-	assert.Equal(t, 0, len(m.Rules))
-	assert.Equal(t, 0, len(m.Index))
+	assert.Equal(t, 0, len(m.rules))
+	assert.Equal(t, 0, len(m.index))
 
 	// Assert index consistency
-	_, ok := m.Index["r1"]
+	_, ok := m.index["r1"]
 	assert.False(t, ok)
 }
 
@@ -572,8 +578,8 @@ func TestDeleteEmptyRulesArray(t *testing.T) {
 	index := map[string]*centralizedRule{}
 
 	m := &centralizedManifest{
-		Rules: rules,
-		Index: index,
+		rules: rules,
+		index: index,
 	}
 
 	// Active rules to exclude from deletion
@@ -583,28 +589,28 @@ func TestDeleteEmptyRulesArray(t *testing.T) {
 	m.prune(a)
 
 	// Assert size of manifest
-	assert.Equal(t, 0, len(m.Rules))
-	assert.Equal(t, 0, len(m.Index))
+	assert.Equal(t, 0, len(m.rules))
+	assert.Equal(t, 0, len(m.index))
 }
 
 // Assert that deleting all rules results in an empty array and does not panic
 func TestDeleteAllRules(t *testing.T) {
 	r1 := &centralizedRule{
-		properties: &properties{
+		ruleProperties: &ruleProperties{
 			ruleName: "r1",
 			priority: 5,
 		},
 	}
 
 	r2 := &centralizedRule{
-		properties: &properties{
+		ruleProperties: &ruleProperties{
 			ruleName: "r2",
 			priority: 6,
 		},
 	}
 
 	r3 := &centralizedRule{
-		properties: &properties{
+		ruleProperties: &ruleProperties{
 			ruleName: "r3",
 			priority: 7,
 		},
@@ -619,8 +625,8 @@ func TestDeleteAllRules(t *testing.T) {
 	}
 
 	m := &centralizedManifest{
-		Rules: rules,
-		Index: index,
+		rules: rules,
+		index: index,
 	}
 
 	// Active rules to exclude from deletion
@@ -630,28 +636,28 @@ func TestDeleteAllRules(t *testing.T) {
 	m.prune(a)
 
 	// Assert size of manifest
-	assert.Equal(t, 0, len(m.Rules))
-	assert.Equal(t, 0, len(m.Index))
+	assert.Equal(t, 0, len(m.rules))
+	assert.Equal(t, 0, len(m.index))
 }
 
 // Assert that sorting an unsorted array results in a sorted array - check priority
 func TestSort(t *testing.T) {
 	r1 := &centralizedRule{
-		properties: &properties{
+		ruleProperties: &ruleProperties{
 			ruleName: "r1",
 			priority: 5,
 		},
 	}
 
 	r2 := &centralizedRule{
-		properties: &properties{
+		ruleProperties: &ruleProperties{
 			ruleName: "r2",
 			priority: 6,
 		},
 	}
 
 	r3 := &centralizedRule{
-		properties: &properties{
+		ruleProperties: &ruleProperties{
 			ruleName: "r3",
 			priority: 7,
 		},
@@ -661,14 +667,14 @@ func TestSort(t *testing.T) {
 	rules := []*centralizedRule{r2, r1, r3}
 
 	m := &centralizedManifest{
-		Rules: rules,
+		rules: rules,
 	}
 
 	// Sort array
 	m.sort()
 
 	// Assert on order
-	assert.Equal(t, r1, m.Rules[0])
-	assert.Equal(t, r2, m.Rules[1])
-	assert.Equal(t, r3, m.Rules[2])
+	assert.Equal(t, r1, m.rules[0])
+	assert.Equal(t, r2, m.rules[1])
+	assert.Equal(t, r3, m.rules[2])
 }

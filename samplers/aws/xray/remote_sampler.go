@@ -21,25 +21,9 @@ import (
 	"reflect"
 	"sync"
 	"time"
+
+	"go.opentelemetry.io/otel/sdk/trace"
 )
-
-// Sampler decides whether a trace should be sampled and exported.
-type Sampler interface {
-	// ToDo: add SamplingResult and SamplingParameters when adding business logic for centralized sampling
-	// ShouldSample returns a SamplingResult based on a decision made from the
-	// passed parameters.
-	ShouldSample()
-	// Description returns information describing the Sampler.
-	Description() string
-}
-
-// ToDo: take input from customer as an option when calling RemoteSampler API
-//type RemoteSamplerConfig struct {
-//	// collector ProxyEndpoint to call GetSamplingRules and GetSamplingTargets APIs
-//	ProxyEndpoint string
-//	// PollingInterval (seconds) to retrieve sampling rules from AWS X-Ray Console
-//	PollingInterval int64
-//}
 
 // RemoteSampler is an implementation of SamplingStrategy.
 type RemoteSampler struct {
@@ -47,7 +31,7 @@ type RemoteSampler struct {
 	manifest *centralizedManifest
 
 	// proxy is used for getting quotas and sampling rules
-	proxy *proxy
+	xrayClient *xrayClient
 
 	// pollerStart, if true represents rule and target pollers are started
 	pollerStart bool
@@ -59,19 +43,15 @@ type RemoteSampler struct {
 }
 
 // Compile time assertion that remoteSampler implements the Sampler interface.
-var _ Sampler = (*RemoteSampler)(nil)
+var _ trace.Sampler = (*RemoteSampler)(nil)
 
 // NewRemoteSampler returns a centralizedSampler which decides to sample a given request or not.
 func NewRemoteSampler() *RemoteSampler {
-	return newRemoteSampler()
-}
-
-func newRemoteSampler() *RemoteSampler {
 	clock := &DefaultClock{}
 
 	m := &centralizedManifest{
-		Rules: []*centralizedRule{},
-		Index: map[string]*centralizedRule{},
+		rules: []*centralizedRule{},
+		index: map[string]*centralizedRule{},
 		clock: clock,
 	}
 
@@ -79,16 +59,20 @@ func newRemoteSampler() *RemoteSampler {
 		pollerStart: false,
 		clock:       clock,
 		manifest:    m,
+		// ToDo: take proxyEndpoint and pollingInterval from users
+		xrayClient: newClient("127.0.0.1:2000"),
 	}
 }
 
-func (rs *RemoteSampler) ShouldSample() {
+func (rs *RemoteSampler) ShouldSample(parameters trace.SamplingParameters) trace.SamplingResult {
 	// ToDo: add business logic for remote sampling
 	rs.mu.Lock()
 	if !rs.pollerStart {
 		rs.start()
 	}
 	rs.mu.Unlock()
+
+	return trace.SamplingResult{}
 }
 
 func (rs *RemoteSampler) Description() string {
@@ -97,12 +81,6 @@ func (rs *RemoteSampler) Description() string {
 
 func (rs *RemoteSampler) start() {
 	if !rs.pollerStart {
-		var er error
-		// ToDo: add config to set proxy value
-		rs.proxy, er = newProxy("127.0.0.1:2000")
-		if er != nil {
-			panic(er)
-		}
 		rs.startRulePoller()
 	}
 
@@ -141,7 +119,7 @@ func (rs *RemoteSampler) refreshManifest() (err error) {
 	now := rs.clock.Now().Unix()
 
 	// Get sampling rules from proxy
-	records, err := rs.proxy.getSamplingRules()
+	rules, err := rs.xrayClient.getSamplingRules()
 	if err != nil {
 		return
 	}
@@ -152,77 +130,49 @@ func (rs *RemoteSampler) refreshManifest() (err error) {
 	// Create missing rules. Update existing ones.
 	failed := false
 
-	switch x := records.(type) {
-	case []interface{}:
-		for _, e := range x {
-			svcRule := e.(map[string]interface{})["SamplingRule"].(map[string]interface{})
-
-			ruleProperties := &properties{
-				ruleName:      svcRule["RuleName"].(string),
-				serviceType:   svcRule["ServiceType"].(string),
-				resourceARN:   svcRule["ResourceARN"].(string),
-				attributes:    svcRule["Attributes"],
-				serviceName:   svcRule["ServiceName"].(string),
-				host:          svcRule["Host"].(string),
-				httpMethod:    svcRule["HTTPMethod"].(string),
-				urlPath:       svcRule["URLPath"].(string),
-				reservoirSize: int64(svcRule["ReservoirSize"].(float64)),
-				fixedRate:     svcRule["FixedRate"].(float64),
-				priority:      int64(svcRule["Priority"].(float64)),
-				version:       int64(svcRule["Version"].(float64)),
-			}
-
-			if svcRule == nil {
-				log.Println("Sampling rule missing from sampling rule record.")
-				failed = true
-				continue
-			}
-
-			if ruleProperties.ruleName == "" {
-				log.Println("Sampling rule without rule name is not supported")
-				failed = true
-				continue
-			}
-
-			// Only sampling rule with version 1 is valid
-			if ruleProperties.version == 0 {
-				log.Println("Sampling rule without version number is not supported: ", ruleProperties.ruleName)
-				failed = true
-				continue
-			}
-
-			if ruleProperties.version != int64(1) {
-				log.Println("Sampling rule without version 1 is not supported: ", ruleProperties.ruleName)
-				failed = true
-				continue
-			}
-
-			if reflect.ValueOf(ruleProperties.attributes).Len() != 0 {
-				log.Println("Sampling rule with non nil Attributes is not applicable: ", ruleProperties.ruleName)
-				continue
-			}
-
-			if ruleProperties.resourceARN == "" {
-				log.Println("Sampling rule without ResourceARN is not applicable: ", ruleProperties.ruleName)
-				continue
-			}
-
-			if ruleProperties.resourceARN != "*" {
-				log.Println("Sampling rule with ResourceARN not equal to * is not applicable: ", ruleProperties.ruleName)
-				continue
-			}
-
-			// Create/update rule
-			r, putErr := rs.manifest.putRule(ruleProperties)
-			if putErr != nil {
-				failed = true
-				log.Printf("Error occurred creating/updating rule. %v\n", putErr)
-			} else if r != nil {
-				actives[r] = true
-			}
+	for _, svcRule := range rules {
+		if svcRule.ruleName == "" {
+			log.Println("Sampling rule without rule name is not supported")
+			failed = true
+			continue
 		}
-	default:
-		log.Printf("unhandled type: %T\n", records)
+
+		// Only sampling rule with version 1 is valid
+		if svcRule.version == 0 {
+			log.Println("Sampling rule without version number is not supported: ", svcRule.ruleName)
+			failed = true
+			continue
+		}
+
+		if svcRule.version != int64(1) {
+			log.Println("Sampling rule without version 1 is not supported: ", svcRule.ruleName)
+			failed = true
+			continue
+		}
+
+		if reflect.ValueOf(svcRule.attributes).Len() != 0 {
+			log.Println("Sampling rule with non nil Attributes is not applicable: ", svcRule.ruleName)
+			continue
+		}
+
+		if svcRule.resourceARN == "" {
+			log.Println("Sampling rule without ResourceARN is not applicable: ", svcRule.ruleName)
+			continue
+		}
+
+		if svcRule.resourceARN != "*" {
+			log.Println("Sampling rule with ResourceARN not equal to * is not applicable: ", svcRule.ruleName)
+			continue
+		}
+
+		// Create/update rule
+		r, putErr := rs.manifest.putRule(&svcRule)
+		if putErr != nil {
+			failed = true
+			log.Printf("Error occurred creating/updating rule. %v\n", putErr)
+		} else if r != nil {
+			actives[r] = true
+		}
 	}
 
 	// Set err if updates failed

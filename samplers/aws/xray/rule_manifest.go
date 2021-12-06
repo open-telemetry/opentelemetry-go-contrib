@@ -30,9 +30,9 @@ const defaultInterval = int64(10)
 //// custom rules and default values for incoming requests that do
 //// not match any of the provided rules.
 type centralizedManifest struct {
-	Default     *centralizedRule
-	Rules       []*centralizedRule
-	Index       map[string]*centralizedRule
+	defaultRule *centralizedRule
+	rules       []*centralizedRule
+	index       map[string]*centralizedRule
 	refreshedAt int64
 	clock       Clock
 	mu          sync.RWMutex
@@ -40,143 +40,143 @@ type centralizedManifest struct {
 
 // putRule updates the named rule if it already exists or creates it if it does not.
 // May break ordering of the sorted rules array if it creates a new rule.
-func (m *centralizedManifest) putRule(ruleProperties *properties) (r *centralizedRule, err error) {
+func (m *centralizedManifest) putRule(rule *ruleProperties) (r *centralizedRule, err error) {
 	defer func() {
 		if x := recover(); x != nil {
 			err = fmt.Errorf("%v", x)
 		}
 	}()
 
-	name := ruleProperties.ruleName
+	name := rule.ruleName
 
 	// Default rule
 	if name == defaultRule {
 		m.mu.RLock()
-		r = m.Default
+		r = m.defaultRule
 		m.mu.RUnlock()
 
 		// Update rule if already exists
 		if r != nil {
-			m.updateDefaultRule(ruleProperties)
+			m.updateDefaultRule(rule)
 
 			return
 		}
 
 		// Create Default rule
-		r = m.createDefaultRule(ruleProperties)
+		r = m.createDefaultRule(rule)
 
 		return
 	}
 
 	// User-defined rule
 	m.mu.RLock()
-	r, ok := m.Index[name]
+	r, ok := m.index[name]
 	m.mu.RUnlock()
 
 	// Create rule if it does not exist
 	if !ok {
-		r = m.createUserRule(ruleProperties)
+		r = m.createUserRule(rule)
 
 		return
 	}
 
 	// Update existing rule
-	m.updateUserRule(r, ruleProperties)
+	m.updateUserRule(r, rule)
 
 	return
 }
 
 // createUserRule creates a user-defined centralizedRule, appends it to the sorted array,
 // adds it to the index, and returns the newly created rule.
-func (m *centralizedManifest) createUserRule(ruleProperties *properties) *centralizedRule {
+func (m *centralizedManifest) createUserRule(rule *ruleProperties) *centralizedRule {
+	m.mu.Lock()
+	defer m.mu.Unlock()
+
+	// Return early if rule already exists
+	if r, ok := m.index[rule.ruleName]; ok {
+		return r
+	}
+
 	// Create CentralizedRule from xraySvc.SamplingRule
 	clock := &DefaultClock{}
 	rand := &DefaultRand{}
 
 	cr := &centralizedReservoir{
-		capacity: ruleProperties.reservoirSize,
+		capacity: rule.reservoirSize,
 		interval: defaultInterval,
 	}
 
 	csr := &centralizedRule{
-		reservoir:  cr,
-		properties: ruleProperties,
-		clock:      clock,
-		rand:       rand,
-	}
-
-	m.mu.Lock()
-	defer m.mu.Unlock()
-
-	// Return early if rule already exists
-	if r, ok := m.Index[ruleProperties.ruleName]; ok {
-		return r
+		reservoir:      cr,
+		ruleProperties: rule,
+		clock:          clock,
+		rand:           rand,
 	}
 
 	// Update sorted array
-	m.Rules = append(m.Rules, csr)
+	m.rules = append(m.rules, csr)
 
 	// Update index
-	m.Index[ruleProperties.ruleName] = csr
+	m.index[rule.ruleName] = csr
 
 	return csr
 }
 
 // updateUserRule updates the properties of the user-defined centralizedRule using the given
 // *properties.
-func (m *centralizedManifest) updateUserRule(r *centralizedRule, ruleProperties *properties) {
+func (m *centralizedManifest) updateUserRule(r *centralizedRule, rule *ruleProperties) {
 	r.mu.Lock()
 	defer r.mu.Unlock()
 
-	r.properties = ruleProperties
-	r.reservoir.capacity = ruleProperties.reservoirSize
+	r.ruleProperties = rule
+	r.reservoir.capacity = rule.reservoirSize
 }
 
 // createDefaultRule creates a default centralizedRule and adds it to the manifest.
-func (m *centralizedManifest) createDefaultRule(ruleProperties *properties) *centralizedRule {
+func (m *centralizedManifest) createDefaultRule(rule *ruleProperties) *centralizedRule {
+	m.mu.Lock()
+	defer m.mu.Unlock()
+
+	// Return early if rule already exists
+	if d := m.defaultRule; d != nil {
+		return d
+	}
+
 	// Create CentralizedRule from xraySvc.SamplingRule
 	clock := &DefaultClock{}
 	rand := &DefaultRand{}
 
 	cr := &centralizedReservoir{
-		capacity: ruleProperties.reservoirSize,
+		capacity: rule.reservoirSize,
 		interval: defaultInterval,
 	}
 
 	csr := &centralizedRule{
-		reservoir:  cr,
-		properties: ruleProperties,
-		clock:      clock,
-		rand:       rand,
-	}
-
-	m.mu.Lock()
-	defer m.mu.Unlock()
-
-	// Return early if rule already exists
-	if d := m.Default; d != nil {
-		return d
+		reservoir:      cr,
+		ruleProperties: rule,
+		clock:          clock,
+		rand:           rand,
 	}
 
 	// Update manifest if rule does not exist
-	m.Default = csr
+	m.defaultRule = csr
 
 	// Update index
-	m.Index[ruleProperties.ruleName] = csr
+	m.index[rule.ruleName] = csr
 
 	return csr
 }
 
 // updateDefaultRule updates the properties of the default CentralizedRule using the given
 // *properties.
-func (m *centralizedManifest) updateDefaultRule(ruleProperties *properties) {
-	r := m.Default
+func (m *centralizedManifest) updateDefaultRule(rule *ruleProperties) {
+	r := m.defaultRule
 
 	r.mu.Lock()
 	defer r.mu.Unlock()
 
-	r.properties = ruleProperties
-	r.reservoir.capacity = ruleProperties.reservoirSize
+	r.ruleProperties = rule
+	r.reservoir.capacity = rule.reservoirSize
 }
 
 // prune removes all rules in the manifest not present in the given list of active rules.
@@ -186,46 +186,39 @@ func (m *centralizedManifest) prune(actives map[*centralizedRule]bool) {
 	defer m.mu.Unlock()
 
 	// Iterate in reverse order to avoid adjusting index for each deleted rule
-	for i := len(m.Rules) - 1; i >= 0; i-- {
-		r := m.Rules[i]
+	for i := len(m.rules) - 1; i >= 0; i-- {
+		r := m.rules[i]
 
 		if _, ok := actives[r]; !ok {
-			m.deleteRule(i)
+			// Remove from index
+			delete(m.index, m.rules[i].ruleProperties.ruleName)
+
+			// Delete by reslicing without index
+			a := append(m.rules[:i], m.rules[i+1:]...)
+
+			// Set pointer to nil to free capacity from underlying array
+			m.rules[len(m.rules)-1] = nil
+
+			// Assign resliced rules
+			m.rules = a
 		}
 	}
-}
-
-// deleteRule deletes the rule from the array, and the index.
-// Assumes write lock is already held.
-// Preserves ordering of sorted array.
-func (m *centralizedManifest) deleteRule(idx int) {
-	// Remove from index
-	delete(m.Index, m.Rules[idx].ruleName)
-
-	// Delete by reslicing without index
-	a := append(m.Rules[:idx], m.Rules[idx+1:]...)
-
-	// Set pointer to nil to free capacity from underlying array
-	m.Rules[len(m.Rules)-1] = nil
-
-	// Assign resliced rules
-	m.Rules = a
 }
 
 // sort sorts the rule array first by priority and then by rule name.
 func (m *centralizedManifest) sort() {
 	// Comparison function
 	less := func(i, j int) bool {
-		if m.Rules[i].priority == m.Rules[j].priority {
-			return strings.Compare(m.Rules[i].ruleName, m.Rules[j].ruleName) < 0
+		if m.rules[i].ruleProperties.priority == m.rules[j].ruleProperties.priority {
+			return strings.Compare(m.rules[i].ruleProperties.ruleName, m.rules[j].ruleProperties.ruleName) < 0
 		}
-		return m.Rules[i].priority < m.Rules[j].priority
+		return m.rules[i].ruleProperties.priority < m.rules[j].ruleProperties.priority
 	}
 
 	m.mu.Lock()
 	defer m.mu.Unlock()
 
-	sort.Slice(m.Rules, less)
+	sort.Slice(m.rules, less)
 }
 
 // expired returns true if the manifest has not been successfully refreshed in

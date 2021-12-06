@@ -16,44 +16,41 @@ package xray
 
 import (
 	"encoding/json"
-	"io"
 	"log"
 	"net/http"
 	"net/url"
 )
 
-type proxy struct {
-	// http client for sending unsigned proxied requests to the daemon
+type xrayClient struct {
+	// http client for sending unsigned proxied requests to the collector
 	httpClient *http.Client
 
 	proxyEndpoint string
 }
 
-// newProxy returns a http client with proxy endpoint
-func newProxy(d string) (*proxy, error) {
-	log.Printf("X-Ray proxy using address : %v\n", d)
+// newClient returns a http client with proxy endpoint
+func newClient(d string) *xrayClient {
 	proxyEndpoint := "http://" + d
 
 	proxyURL, err := url.Parse(proxyEndpoint)
 	if err != nil {
 		log.Println("Bad proxy URL", err)
-		return nil, err
 	}
 
 	httpClient := &http.Client{
 		Transport: &http.Transport{Proxy: http.ProxyURL(proxyURL)},
 	}
 
-	p := &proxy{
+	p := &xrayClient{
 		httpClient:    httpClient,
 		proxyEndpoint: proxyEndpoint,
 	}
 
-	return p, nil
+	return p
 }
 
 // getSamplingRules calls the collector(aws proxy enabled) for sampling rules
-func (p *proxy) getSamplingRules() (interface{}, error) {
+func (p *xrayClient) getSamplingRules() ([]ruleProperties, error) {
 	req, err := http.NewRequest(http.MethodPost, p.proxyEndpoint+"/GetSamplingRules", nil)
 	if err != nil {
 		log.Printf("failed to create http request, %v\n", err)
@@ -67,15 +64,38 @@ func (p *proxy) getSamplingRules() (interface{}, error) {
 	var data map[string]interface{}
 	err = json.NewDecoder(output.Body).Decode(&data)
 	if err != nil {
-		log.Printf("failed to read http response body, %v\n", err)
+		return nil, err
 	}
 
-	defer func(Body io.ReadCloser) {
-		err := Body.Close()
-		if err != nil {
-			log.Printf("failed to close http response body, %v\n\n", err)
-		}
-	}(output.Body)
+	var rules []ruleProperties
+	switch x := data["SamplingRuleRecords"].(type) {
+	case []interface{}:
+		for _, e := range x {
+			svcRule := e.(map[string]interface{})["SamplingRule"].(map[string]interface{})
 
-	return data["SamplingRuleRecords"], nil
+			rules = append(rules, ruleProperties{
+				ruleName:      svcRule["RuleName"].(string),
+				serviceType:   svcRule["ServiceType"].(string),
+				resourceARN:   svcRule["ResourceARN"].(string),
+				attributes:    svcRule["Attributes"].(map[string]interface{}),
+				serviceName:   svcRule["ServiceName"].(string),
+				host:          svcRule["Host"].(string),
+				httpMethod:    svcRule["HTTPMethod"].(string),
+				urlPath:       svcRule["URLPath"].(string),
+				reservoirSize: int64(svcRule["ReservoirSize"].(float64)),
+				fixedRate:     svcRule["FixedRate"].(float64),
+				priority:      int64(svcRule["Priority"].(float64)),
+				version:       int64(svcRule["Version"].(float64)),
+			})
+		}
+	default:
+		log.Printf("unhandled type: %T\n", data["SamplingRuleRecords"])
+	}
+
+	err = output.Body.Close()
+	if err != nil {
+		log.Printf("failed to close http response body, %v\n\n", err)
+	}
+
+	return rules, nil
 }
