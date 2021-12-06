@@ -19,6 +19,7 @@ import (
 	"io/ioutil"
 	"net/http"
 	"net/http/httptest"
+	"runtime"
 	"strings"
 	"testing"
 
@@ -117,7 +118,15 @@ func TestTransportErrorStatus(t *testing.T) {
 		t.Errorf("expected error status code on span; got: %q", got)
 	}
 
-	if got := span.Status().Description; !strings.Contains(got, "connect: connection refused") {
+	errSubstr := "connect: connection refused"
+	if runtime.GOOS == "windows" {
+		// tls.Dial returns an error that does not contain the substring "connection refused"
+		// on Windows machines
+		//
+		// ref: "dial tcp 127.0.0.1:50115: connectex: No connection could be made because the target machine actively refused it."
+		errSubstr = "No connection could be made because the target machine actively refused it"
+	}
+	if got := span.Status().Description; !strings.Contains(got, errSubstr) {
 		t.Errorf("expected error status message on span; got: %q", got)
 	}
 }
