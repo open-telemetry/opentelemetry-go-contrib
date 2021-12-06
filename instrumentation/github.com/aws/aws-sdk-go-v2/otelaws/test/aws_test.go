@@ -107,12 +107,14 @@ func TestAppendMiddlewares(t *testing.T) {
 
 			svc := route53.NewFromConfig(aws.Config{
 				Region: c.expectedRegion,
-				EndpointResolver: aws.EndpointResolverFunc(func(service, region string) (aws.Endpoint, error) {
-					return aws.Endpoint{
-						URL:         server.URL,
-						SigningName: "route53",
-					}, nil
-				}),
+				EndpointResolverWithOptions: aws.EndpointResolverWithOptionsFunc(
+					func(service, region string, _ ...interface{}) (aws.Endpoint, error) {
+						return aws.Endpoint{
+							URL:         server.URL,
+							SigningName: "route53",
+						}, nil
+					},
+				),
 				Retryer: func() aws.Retryer {
 					return aws.NopRetryer{}
 				},
