@@ -30,9 +30,7 @@ import (
 	"go.opentelemetry.io/otel/trace"
 )
 
-func ok(w http.ResponseWriter, _ *http.Request) {
-	w.WriteHeader(http.StatusOK)
-}
+func ok(w http.ResponseWriter, _ *http.Request) {}
 
 func TestSDKIntegration(t *testing.T) {
 	sr := tracetest.NewSpanRecorder()

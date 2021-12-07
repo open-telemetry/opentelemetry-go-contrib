@@ -18,6 +18,7 @@ import (
 	"context"
 	"os"
 	"reflect"
+	"runtime"
 	"testing"
 	"time"
 
@@ -67,6 +68,12 @@ func setEnvVars() {
 	_ = os.Setenv("AWS_REGION", "us-texas-1")
 	_ = os.Setenv("AWS_LAMBDA_FUNCTION_VERSION", "$LATEST")
 	_ = os.Setenv("_X_AMZN_TRACE_ID", "Root=1-5759e988-bd862e3fe1be46a994272793;Parent=53995c3f42cd8ad8;Sampled=1")
+
+	// fix issue: "The requested service provider could not be loaded or initialized."
+	// Guess: The env for Windows in GitHub action is incomplete
+	if runtime.GOOS == "windows" && os.Getenv("SYSTEMROOT") == "" {
+		_ = os.Setenv("SYSTEMROOT", `C:\Windows`)
+	}
 }
 
 // Vars for end to end testing
@@ -154,16 +161,20 @@ func assertSpanEqualsIgnoreTimeAndSpanID(t *testing.T, expected *v1trace.Resourc
 func TestWrapEndToEnd(t *testing.T) {
 	setEnvVars()
 
+	ctx := context.Background()
+	tp, err := NewTracerProvider(ctx)
+	assert.NoError(t, err)
+
 	customerHandler := func() (string, error) {
 		return "hello world", nil
 	}
-	mockCollector := runMockCollectorAtEndpoint(t, "localhost:4317")
+	mockCollector := runMockCollectorAtEndpoint(t, ":4317")
 	defer func() {
 		_ = mockCollector.Stop()
 	}()
 	<-time.After(5 * time.Millisecond)
 
-	wrapped := otellambda.InstrumentHandler(customerHandler, AllRecommendedOptions()...)
+	wrapped := otellambda.InstrumentHandler(customerHandler, WithRecommendedOptions(tp)...)
 	wrappedCallable := reflect.ValueOf(wrapped)
 	resp := wrappedCallable.Call([]reflect.Value{reflect.ValueOf(mockContext)})
 	assert.Len(t, resp, 2)
