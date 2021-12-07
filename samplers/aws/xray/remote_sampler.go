@@ -90,7 +90,7 @@ func (rs *RemoteSampler) start() {
 func (rs *RemoteSampler) startRulePoller() {
 	// ToDo: Add logic to do periodic sampling rules call via background goroutines.
 	// Period = 300s, Jitter = 5s
-	t := NewTimer(10*time.Second, 5*time.Second)
+	t := NewTicker(30*time.Second, 5*time.Second)
 
 	for range t.C() {
 		t.Reset()
