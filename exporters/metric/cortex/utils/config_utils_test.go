@@ -32,6 +32,17 @@ func initYAML(yamlBytes []byte, path string) (afero.Fs, error) {
 	// Create an in-memory file system.
 	fs := afero.NewMemMapFs()
 
+	// https://github.com/spf13/viper/blob/v1.8.1/viper.go#L480
+	// absPathify uses filepath.Clean, so here you also need to use filepath.Clean
+	if filepath.IsAbs(path) {
+		path = filepath.Clean(path)
+	} else {
+		p, err := filepath.Abs(path)
+		if err == nil {
+			path = filepath.Clean(p)
+		}
+	}
+
 	// Retrieve the directory path.
 	dirPath := filepath.Dir(path)
 
