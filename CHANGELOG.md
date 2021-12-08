@@ -19,6 +19,7 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 - `go.opentelemetry.io/contrib/instrumentation/github.com/gorilla/mux/otelmux`
   does not require instrumented HTTP handlers to call `Write` nor
   `WriteHeader` anymore. (#1443)
+- Modified otel http-server-duration from microseconds to milliseconds to reflect specs. (#1414)
 
 ## [1.2.0/0.27.0] - 2021-11-15
 
