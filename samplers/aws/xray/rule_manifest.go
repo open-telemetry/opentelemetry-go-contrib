@@ -47,7 +47,7 @@ func (m *centralizedManifest) putRule(rule *ruleProperties) (r *centralizedRule,
 		}
 	}()
 
-	name := rule.ruleName
+	name := *rule.RuleName
 
 	// Default rule
 	if name == defaultRule {
@@ -93,7 +93,7 @@ func (m *centralizedManifest) createUserRule(rule *ruleProperties) *centralizedR
 	defer m.mu.Unlock()
 
 	// Return early if rule already exists
-	if r, ok := m.index[rule.ruleName]; ok {
+	if r, ok := m.index[*rule.RuleName]; ok {
 		return r
 	}
 
@@ -102,7 +102,7 @@ func (m *centralizedManifest) createUserRule(rule *ruleProperties) *centralizedR
 	rand := &DefaultRand{}
 
 	cr := &centralizedReservoir{
-		capacity: rule.reservoirSize,
+		capacity: *rule.ReservoirSize,
 		interval: defaultInterval,
 	}
 
@@ -117,7 +117,7 @@ func (m *centralizedManifest) createUserRule(rule *ruleProperties) *centralizedR
 	m.rules = append(m.rules, csr)
 
 	// Update index
-	m.index[rule.ruleName] = csr
+	m.index[*rule.RuleName] = csr
 
 	return csr
 }
@@ -129,7 +129,7 @@ func (m *centralizedManifest) updateUserRule(r *centralizedRule, rule *rulePrope
 	defer r.mu.Unlock()
 
 	r.ruleProperties = rule
-	r.reservoir.capacity = rule.reservoirSize
+	r.reservoir.capacity = *rule.ReservoirSize
 }
 
 // createDefaultRule creates a default centralizedRule and adds it to the manifest.
@@ -147,7 +147,7 @@ func (m *centralizedManifest) createDefaultRule(rule *ruleProperties) *centraliz
 	rand := &DefaultRand{}
 
 	cr := &centralizedReservoir{
-		capacity: rule.reservoirSize,
+		capacity: *rule.ReservoirSize,
 		interval: defaultInterval,
 	}
 
@@ -162,7 +162,7 @@ func (m *centralizedManifest) createDefaultRule(rule *ruleProperties) *centraliz
 	m.defaultRule = csr
 
 	// Update index
-	m.index[rule.ruleName] = csr
+	m.index[*rule.RuleName] = csr
 
 	return csr
 }
@@ -176,7 +176,7 @@ func (m *centralizedManifest) updateDefaultRule(rule *ruleProperties) {
 	defer r.mu.Unlock()
 
 	r.ruleProperties = rule
-	r.reservoir.capacity = rule.reservoirSize
+	r.reservoir.capacity = *rule.ReservoirSize
 }
 
 // prune removes all rules in the manifest not present in the given list of active rules.
@@ -191,7 +191,7 @@ func (m *centralizedManifest) prune(actives map[*centralizedRule]bool) {
 
 		if _, ok := actives[r]; !ok {
 			// Remove from index
-			delete(m.index, m.rules[i].ruleProperties.ruleName)
+			delete(m.index, *m.rules[i].ruleProperties.RuleName)
 
 			// Delete by reslicing without index
 			a := append(m.rules[:i], m.rules[i+1:]...)
@@ -209,10 +209,10 @@ func (m *centralizedManifest) prune(actives map[*centralizedRule]bool) {
 func (m *centralizedManifest) sort() {
 	// Comparison function
 	less := func(i, j int) bool {
-		if m.rules[i].ruleProperties.priority == m.rules[j].ruleProperties.priority {
-			return strings.Compare(m.rules[i].ruleProperties.ruleName, m.rules[j].ruleProperties.ruleName) < 0
+		if m.rules[i].ruleProperties.Priority == m.rules[j].ruleProperties.Priority {
+			return strings.Compare(*m.rules[i].ruleProperties.RuleName, *m.rules[j].ruleProperties.RuleName) < 0
 		}
-		return m.rules[i].ruleProperties.priority < m.rules[j].ruleProperties.priority
+		return *m.rules[i].ruleProperties.Priority < *m.rules[j].ruleProperties.Priority
 	}
 
 	m.mu.Lock()

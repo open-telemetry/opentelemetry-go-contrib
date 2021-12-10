@@ -20,20 +20,33 @@ import (
 	"github.com/stretchr/testify/assert"
 )
 
+// utility functions to get pointers value
+func getIntPointer(val int64) *int64 {
+	return &val
+}
+
+func getStringPointer(val string) *string {
+	return &val
+}
+
+func getFloatPointer(val float64) *float64 {
+	return &val
+}
+
 // Assert that putRule() creates a new user-defined rule and adds to manifest
 func TestCreateUserRule(t *testing.T) {
 	resARN := "*"
 	r1 := &centralizedRule{
 		ruleProperties: &ruleProperties{
-			ruleName: "r1",
-			priority: 5,
+			RuleName: getStringPointer("r1"),
+			Priority: getIntPointer(5),
 		},
 	}
 
 	r3 := &centralizedRule{
 		ruleProperties: &ruleProperties{
-			ruleName: "r3",
-			priority: 7,
+			RuleName: getStringPointer("r3"),
+			Priority: getIntPointer(7),
 		},
 	}
 
@@ -60,17 +73,17 @@ func TestCreateUserRule(t *testing.T) {
 	priority := int64(6)
 	serviceTye := "*"
 
-	ruleProperties := ruleProperties{
-		serviceName:   serviceName,
-		httpMethod:    httpMethod,
-		urlPath:       urlPath,
-		reservoirSize: reservoirSize,
-		fixedRate:     fixedRate,
-		ruleName:      ruleName,
-		priority:      priority,
-		host:          host,
-		serviceType:   serviceTye,
-		resourceARN:   resARN,
+	ruleProperties := &ruleProperties{
+		ServiceName:   &serviceName,
+		HTTPMethod:    &httpMethod,
+		URLPath:       &urlPath,
+		ReservoirSize: &reservoirSize,
+		FixedRate:     &fixedRate,
+		RuleName:      &ruleName,
+		Priority:      &priority,
+		Host:          &host,
+		ServiceType:   &serviceTye,
+		ResourceARN:   &resARN,
 	}
 
 	// Expected centralized sampling rule
@@ -84,13 +97,13 @@ func TestCreateUserRule(t *testing.T) {
 
 	exp := &centralizedRule{
 		reservoir:      cr,
-		ruleProperties: &ruleProperties,
+		ruleProperties: ruleProperties,
 		clock:          clock,
 		rand:           rand,
 	}
 
 	// Add to manifest, index
-	r2, err := m.putRule(&ruleProperties)
+	r2, err := m.putRule(ruleProperties)
 	assert.Nil(t, err)
 	assert.Equal(t, exp, r2)
 
@@ -120,9 +133,9 @@ func TestCreateDefaultRule(t *testing.T) {
 	rand := &DefaultRand{}
 
 	p := &ruleProperties{
-		ruleName:      ruleName,
-		reservoirSize: reservoirSize,
-		fixedRate:     fixedRate,
+		RuleName:      &ruleName,
+		ReservoirSize: &reservoirSize,
+		FixedRate:     &fixedRate,
 	}
 
 	cr := &centralizedReservoir{
@@ -152,9 +165,9 @@ func TestUpdateDefaultRule(t *testing.T) {
 	// Original default sampling rule
 	r := &centralizedRule{
 		ruleProperties: &ruleProperties{
-			ruleName:      "Default",
-			reservoirSize: 10,
-			fixedRate:     0.05,
+			RuleName:      getStringPointer("Default"),
+			ReservoirSize: getIntPointer(10),
+			FixedRate:     getFloatPointer(0.05),
 		},
 		reservoir: &centralizedReservoir{
 			capacity: 10,
@@ -174,9 +187,9 @@ func TestUpdateDefaultRule(t *testing.T) {
 
 	// Expected centralized sampling rule
 	p := &ruleProperties{
-		ruleName:      ruleName,
-		reservoirSize: reservoirSize,
-		fixedRate:     fixedRate,
+		RuleName:      &ruleName,
+		ReservoirSize: &reservoirSize,
+		FixedRate:     &fixedRate,
 	}
 
 	cr := &centralizedReservoir{
@@ -200,23 +213,22 @@ func TestUpdateDefaultRule(t *testing.T) {
 // Assert that creating a user-defined rule which already exists is a no-op
 func TestCreateUserRuleNoOp(t *testing.T) {
 	resARN := "*"
-	serviceTye := ""
-	attributes := map[string]interface{}{
-		"foo":  "bar",
-		"flag": true,
+	serviceType := ""
+	attributes := map[string]*string{
+		"foo": getStringPointer("bar"),
 	}
 
 	r1 := &centralizedRule{
 		ruleProperties: &ruleProperties{
-			ruleName: "r1",
-			priority: 5,
+			RuleName: getStringPointer("r1"),
+			Priority: getIntPointer(5),
 		},
 	}
 
 	r3 := &centralizedRule{
 		ruleProperties: &ruleProperties{
-			ruleName: "r3",
-			priority: 7,
+			RuleName: getStringPointer("r3"),
+			Priority: getIntPointer(7),
 		},
 		reservoir: &centralizedReservoir{
 			capacity: 5,
@@ -244,22 +256,23 @@ func TestCreateUserRuleNoOp(t *testing.T) {
 	ruleName := "r3"
 	priority := int64(6)
 	host := "h"
-	ruleProperties := ruleProperties{
-		serviceName:   serviceName,
-		httpMethod:    httpMethod,
-		urlPath:       urlPath,
-		reservoirSize: reservoirSize,
-		fixedRate:     fixedRate,
-		ruleName:      ruleName,
-		priority:      priority,
-		host:          host,
-		resourceARN:   resARN,
-		serviceType:   serviceTye,
-		attributes:    attributes,
+
+	ruleProperties := &ruleProperties{
+		ServiceName:   &serviceName,
+		HTTPMethod:    &httpMethod,
+		URLPath:       &urlPath,
+		ReservoirSize: &reservoirSize,
+		FixedRate:     &fixedRate,
+		RuleName:      &ruleName,
+		Priority:      &priority,
+		Host:          &host,
+		ServiceType:   &serviceType,
+		ResourceARN:   &resARN,
+		Attributes:    attributes,
 	}
 
 	// Assert manifest has not changed
-	r, err := m.putRule(&ruleProperties)
+	r, err := m.putRule(ruleProperties)
 	assert.Nil(t, err)
 	assert.Equal(t, r3, r)
 	assert.Equal(t, 2, len(m.rules))
@@ -272,25 +285,23 @@ func TestCreateUserRuleNoOp(t *testing.T) {
 func TestUpdateUserRule(t *testing.T) {
 	resARN := "*"
 	serviceType := ""
-	attributes := map[string]interface{}{
-		"foo":  "bar",
-		"flag": true,
+	attributes := map[string]*string{
+		"foo": getStringPointer("bar"),
 	}
 
 	// Original rule
 	r1 := &centralizedRule{
-
 		ruleProperties: &ruleProperties{
-			ruleName:      "r1",
-			priority:      5,
-			serviceName:   "*.foo.com",
-			httpMethod:    "GET",
-			urlPath:       "/resource/*",
-			reservoirSize: 15,
-			fixedRate:     0.04,
-			resourceARN:   resARN,
-			serviceType:   serviceType,
-			attributes:    attributes,
+			RuleName:      getStringPointer("r1"),
+			Priority:      getIntPointer(5),
+			ServiceName:   getStringPointer("*.foo.com"),
+			HTTPMethod:    getStringPointer("GET"),
+			URLPath:       getStringPointer("/resource/*"),
+			ReservoirSize: getIntPointer(15),
+			FixedRate:     getFloatPointer(0.04),
+			ResourceARN:   &resARN,
+			ServiceType:   &serviceType,
+			Attributes:    attributes,
 		},
 
 		reservoir: &centralizedReservoir{
@@ -319,18 +330,18 @@ func TestUpdateUserRule(t *testing.T) {
 	priority := int64(6)
 	host := "h"
 
-	updated := ruleProperties{
-		serviceName:   serviceName,
-		httpMethod:    httpMethod,
-		urlPath:       urlPath,
-		reservoirSize: reservoirSize,
-		fixedRate:     fixedRate,
-		ruleName:      ruleName,
-		priority:      priority,
-		host:          host,
-		resourceARN:   resARN,
-		serviceType:   serviceType,
-		attributes:    attributes,
+	updated := &ruleProperties{
+		ServiceName:   &serviceName,
+		HTTPMethod:    &httpMethod,
+		URLPath:       &urlPath,
+		ReservoirSize: &reservoirSize,
+		FixedRate:     &fixedRate,
+		RuleName:      &ruleName,
+		Priority:      &priority,
+		Host:          &host,
+		ServiceType:   &serviceType,
+		ResourceARN:   &resARN,
+		Attributes:    attributes,
 	}
 
 	// Expected updated centralized sampling rule
@@ -340,11 +351,11 @@ func TestUpdateUserRule(t *testing.T) {
 
 	exp := &centralizedRule{
 		reservoir:      cr,
-		ruleProperties: &updated,
+		ruleProperties: updated,
 	}
 
 	// Assert that rule has been updated
-	r, err := m.putRule(&updated)
+	r, err := m.putRule(updated)
 	assert.Nil(t, err)
 	assert.Equal(t, exp, r)
 	assert.Equal(t, exp, m.index["r1"])
@@ -358,22 +369,22 @@ func TestUpdateUserRule(t *testing.T) {
 func TestDeleteLastRule(t *testing.T) {
 	r1 := &centralizedRule{
 		ruleProperties: &ruleProperties{
-			ruleName: "r1",
-			priority: 5,
+			RuleName: getStringPointer("r1"),
+			Priority: getIntPointer(5),
 		},
 	}
 
 	r2 := &centralizedRule{
 		ruleProperties: &ruleProperties{
-			ruleName: "r2",
-			priority: 6,
+			RuleName: getStringPointer("r2"),
+			Priority: getIntPointer(6),
 		},
 	}
 
 	r3 := &centralizedRule{
 		ruleProperties: &ruleProperties{
-			ruleName: "r3",
-			priority: 7,
+			RuleName: getStringPointer("r3"),
+			Priority: getIntPointer(7),
 		},
 	}
 
@@ -419,22 +430,22 @@ func TestDeleteLastRule(t *testing.T) {
 func TestDeleteMiddleRule(t *testing.T) {
 	r1 := &centralizedRule{
 		ruleProperties: &ruleProperties{
-			ruleName: "r1",
-			priority: 5,
+			RuleName: getStringPointer("r1"),
+			Priority: getIntPointer(5),
 		},
 	}
 
 	r2 := &centralizedRule{
 		ruleProperties: &ruleProperties{
-			ruleName: "r2",
-			priority: 6,
+			RuleName: getStringPointer("r2"),
+			Priority: getIntPointer(6),
 		},
 	}
 
 	r3 := &centralizedRule{
 		ruleProperties: &ruleProperties{
-			ruleName: "r3",
-			priority: 7,
+			RuleName: getStringPointer("r3"),
+			Priority: getIntPointer(7),
 		},
 	}
 
@@ -480,22 +491,22 @@ func TestDeleteMiddleRule(t *testing.T) {
 func TestDeleteFirstRule(t *testing.T) {
 	r1 := &centralizedRule{
 		ruleProperties: &ruleProperties{
-			ruleName: "r1",
-			priority: 5,
+			RuleName: getStringPointer("r1"),
+			Priority: getIntPointer(5),
 		},
 	}
 
 	r2 := &centralizedRule{
 		ruleProperties: &ruleProperties{
-			ruleName: "r2",
-			priority: 6,
+			RuleName: getStringPointer("r2"),
+			Priority: getIntPointer(6),
 		},
 	}
 
 	r3 := &centralizedRule{
 		ruleProperties: &ruleProperties{
-			ruleName: "r3",
-			priority: 7,
+			RuleName: getStringPointer("r3"),
+			Priority: getIntPointer(7),
 		},
 	}
 
@@ -540,8 +551,8 @@ func TestDeleteFirstRule(t *testing.T) {
 func TestDeleteOnlyRule(t *testing.T) {
 	r1 := &centralizedRule{
 		ruleProperties: &ruleProperties{
-			ruleName: "r1",
-			priority: 5,
+			RuleName: getStringPointer("r1"),
+			Priority: getIntPointer(5),
 		},
 	}
 
@@ -597,22 +608,22 @@ func TestDeleteEmptyRulesArray(t *testing.T) {
 func TestDeleteAllRules(t *testing.T) {
 	r1 := &centralizedRule{
 		ruleProperties: &ruleProperties{
-			ruleName: "r1",
-			priority: 5,
+			RuleName: getStringPointer("r1"),
+			Priority: getIntPointer(5),
 		},
 	}
 
 	r2 := &centralizedRule{
 		ruleProperties: &ruleProperties{
-			ruleName: "r2",
-			priority: 6,
+			RuleName: getStringPointer("r2"),
+			Priority: getIntPointer(6),
 		},
 	}
 
 	r3 := &centralizedRule{
 		ruleProperties: &ruleProperties{
-			ruleName: "r3",
-			priority: 7,
+			RuleName: getStringPointer("r3"),
+			Priority: getIntPointer(7),
 		},
 	}
 
@@ -644,22 +655,22 @@ func TestDeleteAllRules(t *testing.T) {
 func TestSort(t *testing.T) {
 	r1 := &centralizedRule{
 		ruleProperties: &ruleProperties{
-			ruleName: "r1",
-			priority: 5,
+			RuleName: getStringPointer("r1"),
+			Priority: getIntPointer(5),
 		},
 	}
 
 	r2 := &centralizedRule{
 		ruleProperties: &ruleProperties{
-			ruleName: "r2",
-			priority: 6,
+			RuleName: getStringPointer("r2"),
+			Priority: getIntPointer(6),
 		},
 	}
 
 	r3 := &centralizedRule{
 		ruleProperties: &ruleProperties{
-			ruleName: "r3",
-			priority: 7,
+			RuleName: getStringPointer("r3"),
+			Priority: getIntPointer(7),
 		},
 	}
 

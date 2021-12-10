@@ -15,6 +15,8 @@
 package xray
 
 import (
+	"bytes"
+	"context"
 	"encoding/json"
 	"log"
 	"net/http"
@@ -50,8 +52,8 @@ func newClient(d string) *xrayClient {
 }
 
 // getSamplingRules calls the collector(aws proxy enabled) for sampling rules
-func (p *xrayClient) getSamplingRules() ([]ruleProperties, error) {
-	req, err := http.NewRequest(http.MethodPost, p.proxyEndpoint+"/GetSamplingRules", nil)
+func (p *xrayClient) getSamplingRules(ctx context.Context) (*getSamplingRulesOutput, error) {
+	req, err := http.NewRequestWithContext(ctx, http.MethodPost, p.proxyEndpoint+"/GetSamplingRules", nil)
 	if err != nil {
 		log.Printf("failed to create http request, %v\n", err)
 	}
@@ -61,41 +63,17 @@ func (p *xrayClient) getSamplingRules() ([]ruleProperties, error) {
 		return nil, err
 	}
 
-	var data map[string]interface{}
-	err = json.NewDecoder(output.Body).Decode(&data)
-	if err != nil {
-		return nil, err
-	}
+	buf := new(bytes.Buffer)
+	_, _ = buf.ReadFrom(output.Body)
 
-	var rules []ruleProperties
-	switch x := data["SamplingRuleRecords"].(type) {
-	case []interface{}:
-		for _, e := range x {
-			svcRule := e.(map[string]interface{})["SamplingRule"].(map[string]interface{})
-
-			rules = append(rules, ruleProperties{
-				ruleName:      svcRule["RuleName"].(string),
-				serviceType:   svcRule["ServiceType"].(string),
-				resourceARN:   svcRule["ResourceARN"].(string),
-				attributes:    svcRule["Attributes"].(map[string]interface{}),
-				serviceName:   svcRule["ServiceName"].(string),
-				host:          svcRule["Host"].(string),
-				httpMethod:    svcRule["HTTPMethod"].(string),
-				urlPath:       svcRule["URLPath"].(string),
-				reservoirSize: int64(svcRule["ReservoirSize"].(float64)),
-				fixedRate:     svcRule["FixedRate"].(float64),
-				priority:      int64(svcRule["Priority"].(float64)),
-				version:       int64(svcRule["Version"].(float64)),
-			})
-		}
-	default:
-		log.Printf("unhandled type: %T\n", data["SamplingRuleRecords"])
-	}
+	// Unmarshalling json data to populate getSamplingTargetsOutput struct
+	var samplingRulesOutput getSamplingRulesOutput
+	_ = json.Unmarshal(buf.Bytes(), &samplingRulesOutput)
 
 	err = output.Body.Close()
 	if err != nil {
 		log.Printf("failed to close http response body, %v\n\n", err)
 	}
 
-	return rules, nil
+	return &samplingRulesOutput, nil
 }

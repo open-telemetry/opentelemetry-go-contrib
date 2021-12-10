@@ -26,13 +26,13 @@ type centralizedRule struct {
 	ruleProperties *ruleProperties
 
 	// Number of requests matched against this rule
-	//requests float64
+	//requests int64
 	//
 	// Number of requests sampled using this rule
-	//sampled float64
+	//sampled int64
 	//
 	// Number of requests burrowed
-	//borrows float64
+	//borrows int64
 	//
 	// Timestamp for last match against this rule
 	//usedAt int64
@@ -48,16 +48,25 @@ type centralizedRule struct {
 
 // properties is the base set of properties that define a sampling rule.
 type ruleProperties struct {
-	ruleName      string
-	serviceType   string
-	resourceARN   string
-	attributes    map[string]interface{}
-	serviceName   string
-	host          string
-	httpMethod    string
-	urlPath       string
-	reservoirSize int64
-	fixedRate     float64
-	priority      int64
-	version       int64
+	RuleName      *string            `json:"RuleName"`
+	ServiceType   *string            `json:"ServiceType"`
+	ResourceARN   *string            `json:"ResourceARN"`
+	Attributes    map[string]*string `json:"Attributes"`
+	ServiceName   *string            `json:"ServiceName"`
+	Host          *string            `json:"Host"`
+	HTTPMethod    *string            `json:"HTTPMethod"`
+	URLPath       *string            `json:"URLPath"`
+	ReservoirSize *int64             `json:"ReservoirSize"`
+	FixedRate     *float64           `json:"FixedRate"`
+	Priority      *int64             `json:"Priority"`
+	Version       *int64             `json:"Version"`
+}
+
+type samplingRuleRecords struct {
+	SamplingRule *ruleProperties `json:"SamplingRule"`
+}
+
+// getSamplingRulesOutput is used to store parsed json sampling rules
+type getSamplingRulesOutput struct {
+	SamplingRuleRecords []*samplingRuleRecords `json:"SamplingRuleRecords"`
 }

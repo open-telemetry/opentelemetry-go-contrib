@@ -15,10 +15,11 @@
 package xray
 
 import (
+	"context"
+	crypto "crypto/rand"
 	"errors"
 	"fmt"
 	"log"
-	"reflect"
 	"sync"
 	"time"
 
@@ -36,6 +37,9 @@ type RemoteSampler struct {
 	// pollerStart, if true represents rule and target pollers are started
 	pollerStart bool
 
+	// Unique ID used by XRay service to identify this client
+	clientID string
+
 	// Provides system time
 	clock Clock
 
@@ -47,6 +51,15 @@ var _ trace.Sampler = (*RemoteSampler)(nil)
 
 // NewRemoteSampler returns a centralizedSampler which decides to sample a given request or not.
 func NewRemoteSampler() *RemoteSampler {
+	// Generate clientID
+	var r [12]byte
+
+	_, err := crypto.Read(r[:])
+	if err != nil {
+		return nil
+	}
+	id := fmt.Sprintf("%02x", r)
+
 	clock := &DefaultClock{}
 
 	m := &centralizedManifest{
@@ -59,6 +72,7 @@ func NewRemoteSampler() *RemoteSampler {
 		pollerStart: false,
 		clock:       clock,
 		manifest:    m,
+		clientID:    id,
 		// ToDo: take proxyEndpoint and pollingInterval from users
 		xrayClient: newClient("127.0.0.1:2000"),
 	}
@@ -119,7 +133,7 @@ func (rs *RemoteSampler) refreshManifest() (err error) {
 	now := rs.clock.Now().Unix()
 
 	// Get sampling rules from proxy
-	rules, err := rs.xrayClient.getSamplingRules()
+	rules, err := rs.xrayClient.getSamplingRules(context.Background())
 	if err != nil {
 		return
 	}
@@ -130,43 +144,43 @@ func (rs *RemoteSampler) refreshManifest() (err error) {
 	// Create missing rules. Update existing ones.
 	failed := false
 
-	for _, svcRule := range rules {
-		if svcRule.ruleName == "" {
+	for _, records := range rules.SamplingRuleRecords {
+		if records.SamplingRule.RuleName == nil {
 			log.Println("Sampling rule without rule name is not supported")
 			failed = true
 			continue
 		}
 
 		// Only sampling rule with version 1 is valid
-		if svcRule.version == 0 {
-			log.Println("Sampling rule without version number is not supported: ", svcRule.ruleName)
+		if records.SamplingRule.Version == nil {
+			log.Println("Sampling rule without version number is not supported: ", *records.SamplingRule.RuleName)
 			failed = true
 			continue
 		}
 
-		if svcRule.version != int64(1) {
-			log.Println("Sampling rule without version 1 is not supported: ", svcRule.ruleName)
+		if *records.SamplingRule.Version != int64(1) {
+			log.Println("Sampling rule without version 1 is not supported: ", *records.SamplingRule.RuleName)
 			failed = true
 			continue
 		}
 
-		if reflect.ValueOf(svcRule.attributes).Len() != 0 {
-			log.Println("Sampling rule with non nil Attributes is not applicable: ", svcRule.ruleName)
+		if len(records.SamplingRule.Attributes) != 0 {
+			log.Println("Sampling rule with non nil Attributes is not applicable: ", *records.SamplingRule.RuleName)
 			continue
 		}
 
-		if svcRule.resourceARN == "" {
-			log.Println("Sampling rule without ResourceARN is not applicable: ", svcRule.ruleName)
+		if records.SamplingRule.ResourceARN == nil {
+			log.Println("Sampling rule without ResourceARN is not applicable: ", *records.SamplingRule.RuleName)
 			continue
 		}
 
-		if svcRule.resourceARN != "*" {
-			log.Println("Sampling rule with ResourceARN not equal to * is not applicable: ", svcRule.ruleName)
+		if *records.SamplingRule.ResourceARN != "*" {
+			log.Println("Sampling rule with ResourceARN not equal to * is not applicable: ", *records.SamplingRule.RuleName)
 			continue
 		}
 
 		// Create/update rule
-		r, putErr := rs.manifest.putRule(&svcRule)
+		r, putErr := rs.manifest.putRule(records.SamplingRule)
 		if putErr != nil {
 			failed = true
 			log.Printf("Error occurred creating/updating rule. %v\n", putErr)
