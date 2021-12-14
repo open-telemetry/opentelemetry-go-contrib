@@ -12,7 +12,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package xray
+package main
 
 import (
 	"context"
@@ -20,10 +20,11 @@ import (
 	"errors"
 	"fmt"
 	"log"
+	"strings"
 	"sync"
 	"time"
 
-	"go.opentelemetry.io/otel/sdk/trace"
+	sdktrace "go.opentelemetry.io/otel/sdk/trace"
 )
 
 // RemoteSampler is an implementation of SamplingStrategy.
@@ -47,7 +48,7 @@ type RemoteSampler struct {
 }
 
 // Compile time assertion that remoteSampler implements the Sampler interface.
-var _ trace.Sampler = (*RemoteSampler)(nil)
+var _ sdktrace.Sampler = (*RemoteSampler)(nil)
 
 // NewRemoteSampler returns a centralizedSampler which decides to sample a given request or not.
 func NewRemoteSampler() *RemoteSampler {
@@ -78,15 +79,55 @@ func NewRemoteSampler() *RemoteSampler {
 	}
 }
 
-func (rs *RemoteSampler) ShouldSample(parameters trace.SamplingParameters) trace.SamplingResult {
-	// ToDo: add business logic for remote sampling
+func (rs *RemoteSampler) ShouldSample(parameters sdktrace.SamplingParameters) sdktrace.SamplingResult {
 	rs.mu.Lock()
 	if !rs.pollerStart {
 		rs.start()
 	}
 	rs.mu.Unlock()
 
-	return trace.SamplingResult{}
+	// Use fallback if manifest is expired
+	if rs.manifest.expired() {
+		log.Print("Centralized sampling data expired. Using fallback sampling strategy")
+
+		// ToDo: add business logic for fallback sampler
+	}
+
+	rs.manifest.mu.RLock()
+	defer rs.manifest.mu.RUnlock()
+
+	// Match against known rules
+	for _, r := range rs.manifest.rules {
+
+		r.mu.RLock()
+		applicable := r.AppliesTo()
+		r.mu.RUnlock()
+
+		if !applicable {
+			continue
+		}
+
+		log.Printf("Applicable rule: %s", *r.ruleProperties.RuleName)
+
+		samplingResult := r.Sample(parameters)
+
+		return samplingResult
+	}
+
+	// Match against default rule
+	if r := rs.manifest.defaultRule; r != nil {
+		log.Printf("Applicable rule: %s", *r.ruleProperties.RuleName)
+
+		samplingResult := r.Sample(parameters)
+
+		return samplingResult
+	}
+
+	// Use fallback if default rule is unavailable
+	log.Print("Centralized default sampling rule unavailable. Using fallback sampling strategy")
+	// ToDo: add business logic for fallback sampler
+
+	return sdktrace.SamplingResult{}
 }
 
 func (rs *RemoteSampler) Description() string {
@@ -96,22 +137,38 @@ func (rs *RemoteSampler) Description() string {
 func (rs *RemoteSampler) start() {
 	if !rs.pollerStart {
 		rs.startRulePoller()
+		rs.startTargetPoller()
 	}
 
 	rs.pollerStart = true
 }
 
+// startRulePoller starts rule poller.
 func (rs *RemoteSampler) startRulePoller() {
 	// ToDo: Add logic to do periodic sampling rules call via background goroutines.
 	// Period = 300s, Jitter = 5s
 	t := NewTicker(30*time.Second, 5*time.Second)
 
-	for range t.C() {
+	//for range t.C() {
 		t.Reset()
 		if err := rs.refreshManifest(); err != nil {
 			log.Printf("Error occurred while refreshing sampling rules. %v\n", err)
 		} else {
 			log.Println("Successfully fetched sampling rules")
+		}
+	//}
+}
+
+// startTargetPoller starts target poller.
+func (rs *RemoteSampler) startTargetPoller() {
+	// ToDo: Add logic to do periodic sampling rules call via background goroutines.
+	// Period = 10.1s, Jitter = 100ms
+	t := NewTicker(10*time.Second+100*time.Millisecond, 100*time.Millisecond)
+
+	for range t.C() {
+		t.Reset()
+		if err := rs.refreshTargets(); err != nil {
+			log.Printf("Error occurred while refreshing targets for sampling rules. %v", err)
 		}
 	}
 }
@@ -206,4 +263,179 @@ func (rs *RemoteSampler) refreshManifest() (err error) {
 	rs.manifest.mu.Unlock()
 
 	return
+}
+
+// refreshTargets refreshes targets for sampling rules. It calls the XRay service proxy with sampling
+// statistics for the previous interval and receives targets for the next interval.
+func (rs *RemoteSampler) refreshTargets() (err error) {
+	// Explicitly recover from panics since this is the entry point for a long-running goroutine
+	// and we can not allow a panic to propagate to customer code.
+	defer func() {
+		if r := recover(); r != nil {
+			err = fmt.Errorf("%v", r)
+		}
+	}()
+
+	// Flag indicating batch failure
+	failed := false
+
+	// Flag indicating whether or not manifest should be refreshed
+	refresh := false
+
+	// Generate sampling statistics
+	statistics := rs.snapshots()
+
+	// Do not refresh targets if no statistics to report
+	if len(statistics) == 0 {
+		log.Print("No statistics to report. Not refreshing sampling targets.")
+		return nil
+	}
+
+	// Get sampling targets
+	output, err := rs.xrayClient.getSamplingTargets(context.Background(), statistics)
+	if err != nil {
+		return
+	}
+
+	// Update sampling targets
+	for _, t := range output.SamplingTargetDocuments {
+		if err = rs.updateTarget(t); err != nil {
+			failed = true
+			log.Printf("Error occurred updating target for rule. %v", err)
+		}
+	}
+
+	// Consume unprocessed statistics messages
+	for _, s := range output.UnprocessedStatistics {
+		log.Printf(
+			"Error occurred updating sampling target for rule: %s, code: %s, message: %s",
+			s.RuleName,
+			s.ErrorCode,
+			s.Message,
+		)
+
+		// Do not set any flags if error is unknown
+		if s.ErrorCode == nil || s.RuleName == nil {
+			continue
+		}
+
+		// Set batch failure if any sampling statistics return 5xx
+		if strings.HasPrefix(*s.ErrorCode, "5") {
+			failed = true
+		}
+
+		// Set refresh flag if any sampling statistics return 4xx
+		if strings.HasPrefix(*s.ErrorCode, "4") {
+			refresh = true
+		}
+	}
+
+	// Set err if updates failed
+	if failed {
+		err = errors.New("error occurred updating sampling targets")
+	} else {
+		log.Print("Successfully refreshed sampling targets")
+	}
+
+	// Set refresh flag if modifiedAt timestamp from remote is greater than ours.
+	if remote := output.LastRuleModification; remote != nil {
+		rs.manifest.mu.RLock()
+		local := rs.manifest.refreshedAt
+		rs.manifest.mu.RUnlock()
+
+		if *remote >= local {
+			refresh = true
+		}
+	}
+	// Perform out-of-band async manifest refresh if flag is set
+	if refresh {
+		log.Print("Refreshing sampling rules out-of-band.")
+
+		go func() {
+			if err := rs.refreshManifest(); err != nil {
+				log.Printf("Error occurred refreshing sampling rules out-of-band. %v", err)
+			}
+		}()
+	}
+	return
+}
+
+// samplingStatistics takes a snapshot of sampling statistics from all rules, resetting
+// statistics counters in the process.
+func (rs *RemoteSampler) snapshots() []*samplingStatisticsDocument {
+	now := rs.clock.Now().Unix()
+
+	rs.manifest.mu.RLock()
+	defer rs.manifest.mu.RUnlock()
+
+	statistics := make([]*samplingStatisticsDocument, 0, len(rs.manifest.rules)+1)
+
+	// Generate sampling statistics for user-defined rules
+	for _, r := range rs.manifest.rules {
+		if !r.stale(now) {
+			continue
+		}
+
+		s := r.snapshot()
+		s.ClientID = &rs.clientID
+
+		statistics = append(statistics, s)
+	}
+
+	// Generate sampling statistics for default rule
+	if r := rs.manifest.defaultRule; r != nil && r.stale(now) {
+		s := r.snapshot()
+		s.ClientID = &rs.clientID
+
+		statistics = append(statistics, s)
+	}
+
+	return statistics
+}
+
+// updateTarget updates sampling targets for the rule specified in the target struct.
+func (rs *RemoteSampler) updateTarget(t *samplingTargetDocument) (err error) {
+	// Pre-emptively dereference xraySvc.SamplingTarget fields and return early on nil values
+	// A panic in the middle of an update may leave the rule in an inconsistent state.
+	if t.RuleName == nil {
+		return errors.New("invalid sampling target. Missing rule name")
+	}
+
+	if t.FixedRate == nil {
+		return fmt.Errorf("invalid sampling target for rule %s. Missing fixed rate", *t.RuleName)
+	}
+
+	// Rule for given target
+	rs.manifest.mu.RLock()
+	r, ok := rs.manifest.index[*t.RuleName]
+	rs.manifest.mu.RUnlock()
+
+	if !ok {
+		return fmt.Errorf("rule %s not found", *t.RuleName)
+	}
+
+	r.mu.Lock()
+	defer r.mu.Unlock()
+
+	r.reservoir.refreshedAt = rs.clock.Now().Unix()
+
+	// Update non-optional attributes from response
+	*r.ruleProperties.FixedRate = *t.FixedRate
+
+	// Update optional attributes from response
+	if t.ReservoirQuota != nil {
+		r.reservoir.quota = *t.ReservoirQuota
+	}
+	if t.ReservoirQuotaTTL != nil {
+		r.reservoir.expiresAt = *t.ReservoirQuotaTTL
+	}
+	if t.Interval != nil {
+		r.reservoir.interval = *t.Interval
+	}
+
+	return nil
+}
+
+func main() {
+	NewRemoteSampler().ShouldSample(sdktrace.SamplingParameters{})
 }

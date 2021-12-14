@@ -12,7 +12,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package xray
+package main
 
 import (
 	"bytes"
@@ -76,4 +76,38 @@ func (p *xrayClient) getSamplingRules(ctx context.Context) (*getSamplingRulesOut
 	}
 
 	return &samplingRulesOutput, nil
+}
+
+// getSamplingTargets calls the collector(aws proxy enabled) for sampling targets
+func (p *xrayClient) getSamplingTargets(ctx context.Context, s []*samplingStatisticsDocument) (*getSamplingTargetsOutput, error) {
+	statistics := getSamplingTargetsInput{
+		SamplingStatisticsDocuments: s,
+	}
+
+	statisticsByte, _ := json.Marshal(statistics)
+	body := bytes.NewReader(statisticsByte)
+
+	req, err := http.NewRequestWithContext(ctx, http.MethodPost, p.proxyEndpoint+"/SamplingTargets", body)
+	if err != nil {
+		log.Printf("failed to create http request, %v\n", err)
+	}
+
+	output, err := p.httpClient.Do(req)
+	if err != nil {
+		return nil, err
+	}
+
+	buf := new(bytes.Buffer)
+	_, _ = buf.ReadFrom(output.Body)
+
+	// Unmarshalling json data to populate getSamplingTargetsOutput struct
+	var samplingTargetsOutput getSamplingTargetsOutput
+	_ = json.Unmarshal(buf.Bytes(), &samplingTargetsOutput)
+
+	err = output.Body.Close()
+	if err != nil {
+		log.Printf("failed to close http response body, %v\n\n", err)
+	}
+
+	return &samplingTargetsOutput, nil
 }

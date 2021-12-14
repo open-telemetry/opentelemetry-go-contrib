@@ -12,7 +12,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package xray
+package main
 
 import (
 	"fmt"
@@ -24,7 +24,7 @@ import (
 const defaultRule = "Default"
 const defaultInterval = int64(10)
 
-//const manifestTTL = 3600 // Seconds
+const manifestTTL = 3600 // Seconds
 
 //// centralizedManifest represents a full sampling ruleset, with a list of
 //// custom rules and default values for incoming requests that do
@@ -221,11 +221,11 @@ func (m *centralizedManifest) sort() {
 	sort.Slice(m.rules, less)
 }
 
-// expired returns true if the manifest has not been successfully refreshed in
-// 'manifestTTL' seconds.
-//func (m *centralizedManifest) expired() bool {
-//	m.mu.RLock()
-//	defer m.mu.RUnlock()
-//
-//	return m.refreshedAt < m.clock.Now().Unix()-manifestTTL
-//}
+//expired returns true if the manifest has not been successfully refreshed in
+//'manifestTTL' seconds.
+func (m *centralizedManifest) expired() bool {
+	m.mu.RLock()
+	defer m.mu.RUnlock()
+
+	return m.refreshedAt < m.clock.Now().Unix()-manifestTTL
+}
