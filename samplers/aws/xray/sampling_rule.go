@@ -70,3 +70,13 @@ type samplingRuleRecords struct {
 type getSamplingRulesOutput struct {
 	SamplingRuleRecords []*samplingRuleRecords `json:"SamplingRuleRecords"`
 }
+
+// updateRule updates the properties of the user-defined and default centralizedRule using the given
+// *properties.
+func (r *centralizedRule) updateRule(rule *ruleProperties) {
+	r.mu.Lock()
+	defer r.mu.Unlock()
+
+	r.ruleProperties = rule
+	r.reservoir.capacity = *rule.ReservoirSize
+}

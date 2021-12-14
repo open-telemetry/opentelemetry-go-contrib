@@ -56,8 +56,10 @@ func NewRemoteSampler() *RemoteSampler {
 
 	_, err := crypto.Read(r[:])
 	if err != nil {
+		log.Println("error reading cryptographically secure random number generator")
 		return nil
 	}
+
 	id := fmt.Sprintf("%02x", r)
 
 	clock := &DefaultClock{}
@@ -102,18 +104,28 @@ func (rs *RemoteSampler) start() {
 }
 
 func (rs *RemoteSampler) startRulePoller() {
-	// ToDo: Add logic to do periodic sampling rules call via background goroutines.
-	// Period = 300s, Jitter = 5s
-	t := NewTicker(30*time.Second, 5*time.Second)
-
-	for range t.C() {
-		t.Reset()
+	// Initial refresh
+	go func() {
 		if err := rs.refreshManifest(); err != nil {
 			log.Printf("Error occurred while refreshing sampling rules. %v\n", err)
 		} else {
 			log.Println("Successfully fetched sampling rules")
 		}
-	}
+	}()
+
+	// Periodic manifest refresh
+	go func() {
+		// Period = 300s, Jitter = 5s
+		t := newTicker(300*time.Second, 5*time.Second)
+
+		for range t.C() {
+			if err := rs.refreshManifest(); err != nil {
+				log.Printf("Error occurred while refreshing sampling rules. %v\n", err)
+			} else {
+				log.Println("Successfully fetched sampling rules")
+			}
+		}
+	}()
 }
 
 func (rs *RemoteSampler) refreshManifest() (err error) {
@@ -139,7 +151,7 @@ func (rs *RemoteSampler) refreshManifest() (err error) {
 	}
 
 	// Set of rules to exclude from pruning
-	actives := map[*centralizedRule]bool{}
+	actives := map[centralizedRule]bool{}
 
 	// Create missing rules. Update existing ones.
 	failed := false
@@ -185,7 +197,7 @@ func (rs *RemoteSampler) refreshManifest() (err error) {
 			failed = true
 			log.Printf("Error occurred creating/updating rule. %v\n", putErr)
 		} else if r != nil {
-			actives[r] = true
+			actives[*r] = true
 		}
 	}
 

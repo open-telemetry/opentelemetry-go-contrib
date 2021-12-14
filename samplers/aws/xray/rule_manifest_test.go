@@ -402,9 +402,9 @@ func TestDeleteLastRule(t *testing.T) {
 	}
 
 	// Active rules to exclude from deletion
-	a := map[*centralizedRule]bool{
-		r1: true,
-		r2: true,
+	a := map[centralizedRule]bool{
+		*r1: true,
+		*r2: true,
 	}
 
 	// Delete r3
@@ -463,9 +463,9 @@ func TestDeleteMiddleRule(t *testing.T) {
 	}
 
 	// Active rules to exclude from deletion
-	a := map[*centralizedRule]bool{
-		r1: true,
-		r3: true,
+	a := map[centralizedRule]bool{
+		*r1: true,
+		*r3: true,
 	}
 
 	// Delete r2
@@ -524,9 +524,9 @@ func TestDeleteFirstRule(t *testing.T) {
 	}
 
 	// Active rules to exclude from deletion
-	a := map[*centralizedRule]bool{
-		r2: true,
-		r3: true,
+	a := map[centralizedRule]bool{
+		*r2: true,
+		*r3: true,
 	}
 
 	// Delete r1
@@ -568,7 +568,7 @@ func TestDeleteOnlyRule(t *testing.T) {
 	}
 
 	// Active rules to exclude from deletion
-	a := map[*centralizedRule]bool{}
+	a := map[centralizedRule]bool{}
 
 	// Delete r1
 	m.prune(a)
@@ -594,7 +594,7 @@ func TestDeleteEmptyRulesArray(t *testing.T) {
 	}
 
 	// Active rules to exclude from deletion
-	a := map[*centralizedRule]bool{}
+	a := map[centralizedRule]bool{}
 
 	// Delete from empty array
 	m.prune(a)
@@ -641,7 +641,7 @@ func TestDeleteAllRules(t *testing.T) {
 	}
 
 	// Active rules to exclude from deletion
-	a := map[*centralizedRule]bool{}
+	a := map[centralizedRule]bool{}
 
 	// Delete r3
 	m.prune(a)
