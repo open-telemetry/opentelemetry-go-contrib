@@ -47,17 +47,15 @@ func (m *centralizedManifest) putRule(rule *ruleProperties) (r *centralizedRule,
 		}
 	}()
 
-	name := *rule.RuleName
-
 	// Default rule
-	if name == defaultRule {
+	if *rule.RuleName == defaultRule {
 		m.mu.RLock()
 		r = m.defaultRule
 		m.mu.RUnlock()
 
 		// Update rule if already exists
 		if r != nil {
-			m.updateDefaultRule(rule)
+			r.updateRule(rule)
 
 			return
 		}
@@ -70,7 +68,8 @@ func (m *centralizedManifest) putRule(rule *ruleProperties) (r *centralizedRule,
 
 	// User-defined rule
 	m.mu.RLock()
-	r, ok := m.index[name]
+	var ok bool
+	r, ok = m.index[*rule.RuleName]
 	m.mu.RUnlock()
 
 	// Create rule if it does not exist
@@ -81,7 +80,7 @@ func (m *centralizedManifest) putRule(rule *ruleProperties) (r *centralizedRule,
 	}
 
 	// Update existing rule
-	m.updateUserRule(r, rule)
+	r.updateRule(rule)
 
 	return
 }
@@ -122,16 +121,6 @@ func (m *centralizedManifest) createUserRule(rule *ruleProperties) *centralizedR
 	return csr
 }
 
-// updateUserRule updates the properties of the user-defined centralizedRule using the given
-// *properties.
-func (m *centralizedManifest) updateUserRule(r *centralizedRule, rule *ruleProperties) {
-	r.mu.Lock()
-	defer r.mu.Unlock()
-
-	r.ruleProperties = rule
-	r.reservoir.capacity = *rule.ReservoirSize
-}
-
 // createDefaultRule creates a default centralizedRule and adds it to the manifest.
 func (m *centralizedManifest) createDefaultRule(rule *ruleProperties) *centralizedRule {
 	m.mu.Lock()
@@ -167,21 +156,9 @@ func (m *centralizedManifest) createDefaultRule(rule *ruleProperties) *centraliz
 	return csr
 }
 
-// updateDefaultRule updates the properties of the default CentralizedRule using the given
-// *properties.
-func (m *centralizedManifest) updateDefaultRule(rule *ruleProperties) {
-	r := m.defaultRule
-
-	r.mu.Lock()
-	defer r.mu.Unlock()
-
-	r.ruleProperties = rule
-	r.reservoir.capacity = *rule.ReservoirSize
-}
-
 // prune removes all rules in the manifest not present in the given list of active rules.
 // Preserves ordering of sorted array.
-func (m *centralizedManifest) prune(actives map[*centralizedRule]bool) {
+func (m *centralizedManifest) prune(actives map[centralizedRule]bool) {
 	m.mu.Lock()
 	defer m.mu.Unlock()
 
@@ -189,15 +166,12 @@ func (m *centralizedManifest) prune(actives map[*centralizedRule]bool) {
 	for i := len(m.rules) - 1; i >= 0; i-- {
 		r := m.rules[i]
 
-		if _, ok := actives[r]; !ok {
+		if _, ok := actives[*r]; !ok {
 			// Remove from index
 			delete(m.index, *m.rules[i].ruleProperties.RuleName)
 
 			// Delete by reslicing without index
 			a := append(m.rules[:i], m.rules[i+1:]...)
-
-			// Set pointer to nil to free capacity from underlying array
-			m.rules[len(m.rules)-1] = nil
 
 			// Assign resliced rules
 			m.rules = a
@@ -209,7 +183,7 @@ func (m *centralizedManifest) prune(actives map[*centralizedRule]bool) {
 func (m *centralizedManifest) sort() {
 	// Comparison function
 	less := func(i, j int) bool {
-		if m.rules[i].ruleProperties.Priority == m.rules[j].ruleProperties.Priority {
+		if *m.rules[i].ruleProperties.Priority == *m.rules[j].ruleProperties.Priority {
 			return strings.Compare(*m.rules[i].ruleProperties.RuleName, *m.rules[j].ruleProperties.RuleName) < 0
 		}
 		return *m.rules[i].ruleProperties.Priority < *m.rules[j].ruleProperties.Priority

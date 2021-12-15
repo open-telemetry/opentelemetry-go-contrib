@@ -49,7 +49,7 @@ type samplingTargetDocument struct {
 	ReservoirQuota *int64 `json:"ReservoirQuota,omitempty"`
 
 	// When the reservoir quota expires.
-	ReservoirQuotaTTL *int64 `json:"ReservoirQuotaTTL,omitempty"`
+	ReservoirQuotaTTL *float64 `json:"ReservoirQuotaTTL,omitempty"`
 
 	// The name of the sampling rule.
 	RuleName *string `json:"RuleName,omitempty"`
@@ -67,7 +67,7 @@ type getSamplingTargetsInput struct {
 
 // getSamplingTargetsOutput is used to store parsed json sampling targets
 type getSamplingTargetsOutput struct {
-	LastRuleModification *int64 `json:"LastRuleModification,omitempty"`
+	LastRuleModification *float64 `json:"LastRuleModification,omitempty"`
 	SamplingTargetDocuments []*samplingTargetDocument `json:"SamplingTargetDocuments,omitempty"`
 	UnprocessedStatistics []*unprocessedStatistic `json:"UnprocessedStatistics,omitempty"`
 }

@@ -22,7 +22,6 @@ import (
 	"sync"
 )
 
-// ToDo: other fields will be used in business logic for remote sampling
 // centralizedRule represents a centralized sampling rule
 type centralizedRule struct {
 	// Centralized reservoir for keeping track of reservoir usage
@@ -32,16 +31,13 @@ type centralizedRule struct {
 	ruleProperties *ruleProperties
 
 	// Number of requests matched against this rule
-	requests int64
-	//
+	matchedRequests int64
+
 	// Number of requests sampled using this rule
-	sampled int64
-	//
+	sampledRequests int64
+
 	// Number of requests borrowed
-	borrows int64
-	//
-	// Timestamp for last match against this rule
-	//usedAt int64
+	borrowedRequests int64
 
 	// Provides system time
 	clock Clock
@@ -77,27 +73,38 @@ type getSamplingRulesOutput struct {
 	SamplingRuleRecords []*samplingRuleRecords `json:"SamplingRuleRecords"`
 }
 
+// updateRule updates the properties of the user-defined and default centralizedRule using the given
+// *properties.
+func (r *centralizedRule) updateRule(rule *ruleProperties) {
+	r.mu.Lock()
+	defer r.mu.Unlock()
+
+	r.ruleProperties = rule
+	r.reservoir.capacity = *rule.ReservoirSize
+}
+
 // Sample returns sdktrace.SamplingResult on whether to sample or not
 func (r *centralizedRule) Sample(parameters sdktrace.SamplingParameters) sdktrace.SamplingResult {
 	attributes := []attribute.KeyValue{
 		attribute.String("Rule", *r.ruleProperties.RuleName),
 	}
 
-	now := r.clock.Now().Unix()
 	sd := sdktrace.SamplingResult{
 		Attributes: attributes,
 		Tracestate: trace.SpanContextFromContext(parameters.ParentContext).TraceState(),
 	}
 
+	now := r.clock.Now().Unix()
+
 	r.mu.Lock()
 	defer r.mu.Unlock()
 
-	r.requests++
+	r.matchedRequests++
 
-	// Use fallbackSampler if quota has expired
+	// fallback sampling logic if quota has expired
 	if r.reservoir.expired(now) {
-		//if reservoir quota is expired sampling using fallback sampler
-		// sampling config: 1 req/sec and then 5% of additional requests
+		// if reservoir quota is expired then sampling using
+		// sampling config: 1 req/sec and then x% of fixedRate
 
 		// Sampling 1 req/sec
 		if r.reservoir.borrow(now) {
@@ -105,57 +112,53 @@ func (r *centralizedRule) Sample(parameters sdktrace.SamplingParameters) sdktrac
 				"Sampling target has expired for rule %s. Using fallback sampling and borrowing 1 req/sec from reservoir",
 				*r.ruleProperties.RuleName,
 			)
-			r.borrows++
+			r.borrowedRequests++
 
 			sd.Decision = sdktrace.RecordAndSample
 			return sd
 		}
 
 		log.Printf(
-			"Sampling target has expired for rule %s. Using fallback sampling and sample 5 percent of requests during that second",
+			"Sampling target has expired for rule %s. Using traceIDRationBased sampler to sample 5 percent of requests during that second",
 			*r.ruleProperties.RuleName,
 		)
 
-		// Sampling using 5% fixed rate sampling if reservoir is consumed for that second
-		samplingDecision := bernoulliSample(r.rand, 0.05)
-		sd.Decision = samplingDecision
+		// using traceIDRatioBased sampler to sample using 5% fixed rate
+		samplingDecision := sdktrace.TraceIDRatioBased(*r.ruleProperties.FixedRate).ShouldSample(parameters)
 
-		if sd.Decision == sdktrace.RecordAndSample {
-			r.sampled++
+		samplingDecision.Attributes = attributes
+
+		if samplingDecision.Decision == sdktrace.RecordAndSample {
+			r.sampledRequests++
 		}
-		return sd
+
+		return samplingDecision
 	}
 
 	// Take from reservoir quota, if possible
 	if r.reservoir.Take(now) {
-		r.sampled++
+		r.sampledRequests++
 		sd.Decision = sdktrace.RecordAndSample
 
 		return sd
 	}
 
 	log.Printf(
-		"Sampling target has been exhausted for rule %s. Using fixed rate.",
+		"Sampling target has been exhausted for rule %s. Using traceIDRatioBased Sampler with fixed rate.",
 		*r.ruleProperties.RuleName,
 	)
 
-	// sampling using bernoulliSample with Fixed Rate given in the rule
-	sd.Decision = bernoulliSample(r.rand, *r.ruleProperties.FixedRate)
+	// using traceIDRatioBased sampler to sample using fixed rate
+	samplingDecision := sdktrace.TraceIDRatioBased(*r.ruleProperties.FixedRate).ShouldSample(parameters)
 
-	if sd.Decision == sdktrace.RecordAndSample {
-		r.sampled++
+	samplingDecision.Attributes = attributes
+	samplingDecision.Tracestate = trace.SpanContextFromContext(parameters.ParentContext).TraceState()
+
+	if samplingDecision.Decision == sdktrace.RecordAndSample {
+		r.sampledRequests++
 	}
 
-	return sd
-}
-
-// bernoulliSample uses bernoulli sampling rate to make a sampling decision
-func bernoulliSample(rand Rand, samplingRate float64) sdktrace.SamplingDecision {
-	if rand.Float64() < samplingRate {
-		return sdktrace.RecordAndSample
-	}
-
-	return sdktrace.Drop
+	return samplingDecision
 }
 
 // stale returns true if the quota is due for a refresh. False otherwise.
@@ -163,7 +166,7 @@ func (r *centralizedRule) stale(now int64) bool {
 	r.mu.RLock()
 	defer r.mu.RUnlock()
 
-	return r.requests != 0 && now >= r.reservoir.refreshedAt+r.reservoir.interval
+	return r.matchedRequests != 0 && now >= r.reservoir.refreshedAt+r.reservoir.interval
 }
 
 // snapshot takes a snapshot of the sampling statistics counters, returning
@@ -175,10 +178,10 @@ func (r *centralizedRule) snapshot() *samplingStatisticsDocument {
 
 	// Copy statistics counters since xraySvc.SamplingStatistics expects
 	// pointers to counters, and ours are mutable.
-	requests, sampled, borrows := r.requests, r.sampled, r.borrows
+	requests, sampled, borrows := r.matchedRequests, r.sampledRequests, r.borrowedRequests
 
 	// Reset counters
-	r.requests, r.sampled, r.borrows = 0, 0, 0
+	r.matchedRequests, r.sampledRequests, r.borrowedRequests = 0, 0, 0
 
 	r.mu.Unlock()
 

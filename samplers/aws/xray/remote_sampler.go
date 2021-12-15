@@ -41,8 +41,13 @@ type RemoteSampler struct {
 	// Unique ID used by XRay service to identify this client
 	clientID string
 
+	// samplingRules polling interval, default is 300 seconds
+	samplingRulesPollingInterval time.Duration
+
 	// Provides system time
 	clock Clock
+
+	fallbackSampler *FallbackSampler
 
 	mu sync.RWMutex
 }
@@ -51,14 +56,18 @@ type RemoteSampler struct {
 var _ sdktrace.Sampler = (*RemoteSampler)(nil)
 
 // NewRemoteSampler returns a centralizedSampler which decides to sample a given request or not.
-func NewRemoteSampler() *RemoteSampler {
+func NewRemoteSampler(opts ...SamplerOption) *RemoteSampler {
+	options := new(samplerOptions).applyOptionsAndDefaults(opts...)
+
 	// Generate clientID
 	var r [12]byte
 
 	_, err := crypto.Read(r[:])
 	if err != nil {
+		log.Println("error reading cryptographically secure random number generator")
 		return nil
 	}
+
 	id := fmt.Sprintf("%02x", r)
 
 	clock := &DefaultClock{}
@@ -74,8 +83,9 @@ func NewRemoteSampler() *RemoteSampler {
 		clock:       clock,
 		manifest:    m,
 		clientID:    id,
-		// ToDo: take proxyEndpoint and pollingInterval from users
-		xrayClient: newClient("127.0.0.1:2000"),
+		xrayClient: newClient(options.proxyEndpoint),
+		samplingRulesPollingInterval: options.samplingRulesPollingInterval,
+		fallbackSampler: NewFallbackSampler(),
 	}
 }
 
@@ -86,11 +96,12 @@ func (rs *RemoteSampler) ShouldSample(parameters sdktrace.SamplingParameters) sd
 	}
 	rs.mu.Unlock()
 
-	// Use fallback if manifest is expired
-	if rs.manifest.expired() {
-		log.Print("Centralized sampling data expired. Using fallback sampling strategy")
+	time.Sleep(5*time.Second)
 
-		// ToDo: add business logic for fallback sampler
+	// Use fallback sampler with sampling config 1 req/sec and 5% of additional requests if manifest is expired
+	if rs.manifest.expired() {
+		log.Print("Centralized manifest expired. Using fallback sampling strategy")
+		return rs.fallbackSampler.ShouldSample(parameters)
 	}
 
 	rs.manifest.mu.RLock()
@@ -123,11 +134,9 @@ func (rs *RemoteSampler) ShouldSample(parameters sdktrace.SamplingParameters) sd
 		return samplingResult
 	}
 
-	// Use fallback if default rule is unavailable
-	log.Print("Centralized default sampling rule unavailable. Using fallback sampling strategy")
-	// ToDo: add business logic for fallback sampler
-
-	return sdktrace.SamplingResult{}
+	// Use fallback sampler with sampling config 1 req/sec and 5% of additional requests
+	log.Print("Centralized sampling rules are unavailable. Using fallback sampling strategy")
+	return rs.fallbackSampler.ShouldSample(parameters)
 }
 
 func (rs *RemoteSampler) Description() string {
@@ -145,32 +154,43 @@ func (rs *RemoteSampler) start() {
 
 // startRulePoller starts rule poller.
 func (rs *RemoteSampler) startRulePoller() {
-	// ToDo: Add logic to do periodic sampling rules call via background goroutines.
-	// Period = 300s, Jitter = 5s
-	t := NewTicker(30*time.Second, 5*time.Second)
-
-	//for range t.C() {
-		t.Reset()
+	// Initial refresh
+	go func() {
 		if err := rs.refreshManifest(); err != nil {
 			log.Printf("Error occurred while refreshing sampling rules. %v\n", err)
 		} else {
 			log.Println("Successfully fetched sampling rules")
 		}
-	//}
+	}()
+
+	// Periodic manifest refresh
+	go func() {
+		// Period = 300s, Jitter = 5s
+		t := newTicker(rs.samplingRulesPollingInterval, 5*time.Second)
+
+		for range t.C() {
+			if err := rs.refreshManifest(); err != nil {
+				log.Printf("Error occurred while refreshing sampling rules. %v\n", err)
+			} else {
+				log.Println("Successfully fetched sampling rules")
+			}
+		}
+	}()
 }
 
 // startTargetPoller starts target poller.
 func (rs *RemoteSampler) startTargetPoller() {
-	// ToDo: Add logic to do periodic sampling rules call via background goroutines.
-	// Period = 10.1s, Jitter = 100ms
-	t := NewTicker(10*time.Second+100*time.Millisecond, 100*time.Millisecond)
+	// Periodic quota refresh
+	go func() {
+		// Period = 10.1s, Jitter = 100ms
+		t := newTicker(10*time.Second+100*time.Millisecond, 100*time.Millisecond)
 
-	for range t.C() {
-		t.Reset()
-		if err := rs.refreshTargets(); err != nil {
-			log.Printf("Error occurred while refreshing targets for sampling rules. %v", err)
+		for range t.C() {
+			if err := rs.refreshTargets(); err != nil {
+				log.Printf("Error occurred while refreshing targets for sampling rules. %v", err)
+			}
 		}
-	}
+	}()
 }
 
 func (rs *RemoteSampler) refreshManifest() (err error) {
@@ -196,7 +216,7 @@ func (rs *RemoteSampler) refreshManifest() (err error) {
 	}
 
 	// Set of rules to exclude from pruning
-	actives := map[*centralizedRule]bool{}
+	actives := map[centralizedRule]bool{}
 
 	// Create missing rules. Update existing ones.
 	failed := false
@@ -242,7 +262,7 @@ func (rs *RemoteSampler) refreshManifest() (err error) {
 			failed = true
 			log.Printf("Error occurred creating/updating rule. %v\n", putErr)
 		} else if r != nil {
-			actives[r] = true
+			actives[*r] = true
 		}
 	}
 
@@ -309,9 +329,9 @@ func (rs *RemoteSampler) refreshTargets() (err error) {
 	for _, s := range output.UnprocessedStatistics {
 		log.Printf(
 			"Error occurred updating sampling target for rule: %s, code: %s, message: %s",
-			s.RuleName,
-			s.ErrorCode,
-			s.Message,
+			*s.RuleName,
+			*s.ErrorCode,
+			*s.Message,
 		)
 
 		// Do not set any flags if error is unknown
@@ -343,10 +363,11 @@ func (rs *RemoteSampler) refreshTargets() (err error) {
 		local := rs.manifest.refreshedAt
 		rs.manifest.mu.RUnlock()
 
-		if *remote >= local {
+		if int64(*remote) >= local {
 			refresh = true
 		}
 	}
+
 	// Perform out-of-band async manifest refresh if flag is set
 	if refresh {
 		log.Print("Refreshing sampling rules out-of-band.")
@@ -357,6 +378,7 @@ func (rs *RemoteSampler) refreshTargets() (err error) {
 			}
 		}()
 	}
+
 	return
 }
 
@@ -427,7 +449,7 @@ func (rs *RemoteSampler) updateTarget(t *samplingTargetDocument) (err error) {
 		r.reservoir.quota = *t.ReservoirQuota
 	}
 	if t.ReservoirQuotaTTL != nil {
-		r.reservoir.expiresAt = *t.ReservoirQuotaTTL
+		r.reservoir.expiresAt = int64(*t.ReservoirQuotaTTL)
 	}
 	if t.Interval != nil {
 		r.reservoir.interval = *t.Interval
@@ -437,5 +459,10 @@ func (rs *RemoteSampler) updateTarget(t *samplingTargetDocument) (err error) {
 }
 
 func main() {
-	NewRemoteSampler().ShouldSample(sdktrace.SamplingParameters{})
+	rs := NewRemoteSampler()
+
+	for i:=0; i< 30;i++ {
+		rs.ShouldSample(sdktrace.SamplingParameters{})
+		time.Sleep(20*time.Second)
+	}
 }

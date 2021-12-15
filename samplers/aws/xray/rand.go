@@ -112,3 +112,26 @@ func (r *DefaultRand) Intn(n int) int {
 func (r *DefaultRand) Float64() float64 {
 	return globalRand.Float64()
 }
+
+// MockRand is an implementation of Rand interface.
+type MockRand struct {
+	F64   float64
+	Int   int
+	Int64 int64
+}
+
+// Float64 returns value of F64.
+func (r *MockRand) Float64() float64 {
+	return r.F64
+}
+
+// Intn returns value of Int.
+func (r *MockRand) Intn(n int) int {
+	return r.Int
+}
+
+// Int63n returns value of Int64.
+func (r *MockRand) Int63n(n int64) int64 {
+	return r.Int64
+}
+

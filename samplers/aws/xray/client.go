@@ -20,7 +20,6 @@ import (
 	"encoding/json"
 	"log"
 	"net/http"
-	"net/url"
 )
 
 type xrayClient struct {
@@ -34,17 +33,8 @@ type xrayClient struct {
 func newClient(d string) *xrayClient {
 	proxyEndpoint := "http://" + d
 
-	proxyURL, err := url.Parse(proxyEndpoint)
-	if err != nil {
-		log.Println("Bad proxy URL", err)
-	}
-
-	httpClient := &http.Client{
-		Transport: &http.Transport{Proxy: http.ProxyURL(proxyURL)},
-	}
-
 	p := &xrayClient{
-		httpClient:    httpClient,
+		httpClient:    &http.Client{},
 		proxyEndpoint: proxyEndpoint,
 	}
 
@@ -64,11 +54,17 @@ func (p *xrayClient) getSamplingRules(ctx context.Context) (*getSamplingRulesOut
 	}
 
 	buf := new(bytes.Buffer)
-	_, _ = buf.ReadFrom(output.Body)
+	_, err = buf.ReadFrom(output.Body)
+	if err != nil {
+		return nil, err
+	}
 
 	// Unmarshalling json data to populate getSamplingTargetsOutput struct
 	var samplingRulesOutput getSamplingRulesOutput
-	_ = json.Unmarshal(buf.Bytes(), &samplingRulesOutput)
+	err = json.Unmarshal(buf.Bytes(), &samplingRulesOutput)
+	if err != nil {
+		return nil, err
+	}
 
 	err = output.Body.Close()
 	if err != nil {
@@ -98,11 +94,17 @@ func (p *xrayClient) getSamplingTargets(ctx context.Context, s []*samplingStatis
 	}
 
 	buf := new(bytes.Buffer)
-	_, _ = buf.ReadFrom(output.Body)
+	_, err = buf.ReadFrom(output.Body)
+	if err != nil {
+		return nil, err
+	}
 
 	// Unmarshalling json data to populate getSamplingTargetsOutput struct
 	var samplingTargetsOutput getSamplingTargetsOutput
-	_ = json.Unmarshal(buf.Bytes(), &samplingTargetsOutput)
+	err = json.Unmarshal(buf.Bytes(), &samplingTargetsOutput)
+	if err != nil {
+		return nil, err
+	}
 
 	err = output.Body.Close()
 	if err != nil {
