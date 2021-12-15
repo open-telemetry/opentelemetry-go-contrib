@@ -9,7 +9,7 @@
 // Package pattern provides a basic pattern matching utility.
 // Patterns may contain fixed text, and/or special characters (`*`, `?`).
 // `*` represents 0 or more wildcard characters. `?` represents a single wildcard character.
-package main
+package xray
 
 import "strings"
 
