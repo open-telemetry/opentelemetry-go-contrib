@@ -134,4 +134,3 @@ func (r *MockRand) Intn(n int) int {
 func (r *MockRand) Int63n(n int64) int64 {
 	return r.Int64
 }
-

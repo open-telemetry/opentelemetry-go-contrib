@@ -57,8 +57,8 @@ type samplingTargetDocument struct {
 
 type unprocessedStatistic struct {
 	ErrorCode *string `json:"ErrorCode,omitempty"`
-	Message *string  `json:"Message,omitempty"`
-	RuleName *string `json:"RuleName,omitempty"`
+	Message   *string `json:"Message,omitempty"`
+	RuleName  *string `json:"RuleName,omitempty"`
 }
 
 type getSamplingTargetsInput struct {
@@ -67,7 +67,7 @@ type getSamplingTargetsInput struct {
 
 // getSamplingTargetsOutput is used to store parsed json sampling targets
 type getSamplingTargetsOutput struct {
-	LastRuleModification *float64 `json:"LastRuleModification,omitempty"`
+	LastRuleModification    *float64                  `json:"LastRuleModification,omitempty"`
 	SamplingTargetDocuments []*samplingTargetDocument `json:"SamplingTargetDocuments,omitempty"`
-	UnprocessedStatistics []*unprocessedStatistic `json:"UnprocessedStatistics,omitempty"`
+	UnprocessedStatistics   []*unprocessedStatistic   `json:"UnprocessedStatistics,omitempty"`
 }

@@ -15,9 +15,11 @@
 package xray
 
 import (
-	"github.com/stretchr/testify/assert"
-	"go.opentelemetry.io/otel/sdk/trace"
 	"testing"
+
+	"github.com/stretchr/testify/assert"
+
+	"go.opentelemetry.io/otel/sdk/trace"
 )
 
 func TestStaleRule(t *testing.T) {
@@ -71,24 +73,24 @@ func TestExpiredReservoirTraceIDRationBasedSample(t *testing.T) {
 	}
 
 	p := &ruleProperties{
-		RuleName: getStringPointer("r1"),
+		RuleName:  getStringPointer("r1"),
 		FixedRate: getFloatPointer(0.06),
 	}
 
 	// Expired reservoir
 	cr := &centralizedReservoir{
-		expiresAt: 1500000060,
-		borrowed:  true,
+		expiresAt:    1500000060,
+		borrowed:     true,
 		used:         0,
 		capacity:     10,
 		currentEpoch: 1500000061,
 	}
 
 	csr := &centralizedRule{
-		reservoir:  cr,
+		reservoir:      cr,
 		ruleProperties: p,
-		clock:      clock,
-		rand:       rand,
+		clock:          clock,
+		rand:           rand,
 	}
 
 	sd := csr.Sample(trace.SamplingParameters{})
@@ -104,8 +106,8 @@ func TestTakeFromQuotaSample(t *testing.T) {
 	}
 
 	cr := &centralizedReservoir{
-		quota:     10,
-		expiresAt: 1500000060,
+		quota:        10,
+		expiresAt:    1500000060,
 		currentEpoch: clock.Now().Unix(),
 		used:         0,
 	}
@@ -138,21 +140,21 @@ func TestTraceIDRatioBasedSamplerPositive(t *testing.T) {
 
 	p := &ruleProperties{
 		FixedRate: getFloatPointer(0.06),
-		RuleName: getStringPointer("r1"),
+		RuleName:  getStringPointer("r1"),
 	}
 
 	cr := &centralizedReservoir{
-		quota:     10,
-		expiresAt: 1500000060,
+		quota:        10,
+		expiresAt:    1500000060,
 		currentEpoch: clock.Now().Unix(),
 		used:         10,
 	}
 
 	csr := &centralizedRule{
-		reservoir:  cr,
+		reservoir:      cr,
 		ruleProperties: p,
-		rand:       rand,
-		clock:      clock,
+		rand:           rand,
+		clock:          clock,
 	}
 
 	sd := csr.Sample(trace.SamplingParameters{})
@@ -172,10 +174,10 @@ func TestSnapshot(t *testing.T) {
 		ruleProperties: &ruleProperties{
 			RuleName: getStringPointer("rule1"),
 		},
-		matchedRequests: 100,
+		matchedRequests:  100,
 		sampledRequests:  12,
-		borrowedRequests:  2,
-		clock:    clock,
+		borrowedRequests: 2,
+		clock:            clock,
 	}
 
 	ss := csr.snapshot()

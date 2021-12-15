@@ -15,8 +15,9 @@
 package xray
 
 import (
-	"github.com/stretchr/testify/assert"
 	"testing"
+
+	"github.com/stretchr/testify/assert"
 )
 
 func TestTakeQuotaAvailable(t *testing.T) {
@@ -29,7 +30,7 @@ func TestTakeQuotaAvailable(t *testing.T) {
 	}
 
 	r := &centralizedReservoir{
-		quota: quota,
+		quota:        quota,
 		capacity:     capacity,
 		used:         used,
 		currentEpoch: clock.Now().Unix(),
@@ -50,7 +51,7 @@ func TestTakeQuotaUnavailable(t *testing.T) {
 	}
 
 	r := &centralizedReservoir{
-		quota: quota,
+		quota:        quota,
 		capacity:     capacity,
 		used:         used,
 		currentEpoch: clock.Now().Unix(),
@@ -128,7 +129,7 @@ func TestResetQuotaUsageRotation(t *testing.T) {
 	}
 
 	r := &centralizedReservoir{
-		quota: quota,
+		quota:        quota,
 		capacity:     capacity,
 		used:         used,
 		currentEpoch: clock.Now().Unix(),

@@ -34,7 +34,7 @@ func (t *DefaultClock) Now() time.Time {
 
 // MockClock is a struct to record current time.
 type MockClock struct {
-	NowTime int64
+	NowTime  int64
 	NowNanos int64
 }
 

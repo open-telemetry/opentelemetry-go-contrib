@@ -19,7 +19,7 @@ import (
 )
 
 const (
-	defaultProxyEndpoint = "127.0.0.1:2000"
+	defaultProxyEndpoint   = "127.0.0.1:2000"
 	defaultPollingInterval = 300
 )
 
@@ -27,8 +27,8 @@ const (
 type SamplerOption func(options *samplerOptions)
 
 type samplerOptions struct {
-	proxyEndpoint       			string
-	samplingRulesPollingInterval 	time.Duration
+	proxyEndpoint                string
+	samplingRulesPollingInterval time.Duration
 }
 
 // sets custom proxy endpoint

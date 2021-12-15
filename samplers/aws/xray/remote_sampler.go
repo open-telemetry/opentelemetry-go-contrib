@@ -79,13 +79,13 @@ func NewRemoteSampler(opts ...SamplerOption) *RemoteSampler {
 	}
 
 	return &RemoteSampler{
-		pollerStart: false,
-		clock:       clock,
-		manifest:    m,
-		clientID:    id,
-		xrayClient: newClient(options.proxyEndpoint),
+		pollerStart:                  false,
+		clock:                        clock,
+		manifest:                     m,
+		clientID:                     id,
+		xrayClient:                   newClient(options.proxyEndpoint),
 		samplingRulesPollingInterval: options.samplingRulesPollingInterval,
-		fallbackSampler: NewFallbackSampler(),
+		fallbackSampler:              NewFallbackSampler(),
 	}
 }
 
@@ -96,7 +96,7 @@ func (rs *RemoteSampler) ShouldSample(parameters sdktrace.SamplingParameters) sd
 	}
 	rs.mu.Unlock()
 
-	time.Sleep(5*time.Second)
+	time.Sleep(5 * time.Second)
 
 	// Use fallback sampler with sampling config 1 req/sec and 5% of additional requests if manifest is expired
 	if rs.manifest.expired() {
@@ -456,13 +456,4 @@ func (rs *RemoteSampler) updateTarget(t *samplingTargetDocument) (err error) {
 	}
 
 	return nil
-}
-
-func main() {
-	rs := NewRemoteSampler()
-
-	for i:=0; i< 30;i++ {
-		rs.ShouldSample(sdktrace.SamplingParameters{})
-		time.Sleep(20*time.Second)
-	}
 }

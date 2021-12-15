@@ -21,8 +21,8 @@ import (
 
 type FallbackSampler struct {
 	currentEpoch int64
-	borrowed bool
-	clock Clock
+	borrowed     bool
+	clock        Clock
 }
 
 // Compile time assertion that remoteSampler implements the Sampler interface.
@@ -66,8 +66,3 @@ func (fs *FallbackSampler) borrow(now int64) bool {
 
 	return !s
 }
-
-
-
-
-

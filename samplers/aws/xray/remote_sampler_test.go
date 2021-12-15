@@ -15,8 +15,9 @@
 package xray
 
 import (
-	"github.com/stretchr/testify/assert"
 	"testing"
+
+	"github.com/stretchr/testify/assert"
 )
 
 // Assert that snapshots returns an array of valid sampling statistics
@@ -40,10 +41,10 @@ func TestSnapshots(t *testing.T) {
 			RuleName: getStringPointer(name1),
 		},
 		matchedRequests:  requests1,
-		sampledRequests:   sampled1,
-		borrowedRequests:   borrows1,
-		reservoir: r1,
-		clock:     clock,
+		sampledRequests:  sampled1,
+		borrowedRequests: borrows1,
+		reservoir:        r1,
+		clock:            clock,
 	}
 
 	name2 := "r2"
@@ -58,10 +59,10 @@ func TestSnapshots(t *testing.T) {
 			RuleName: getStringPointer(name2),
 		},
 		matchedRequests:  requests2,
-		sampledRequests:   sampled2,
-		borrowedRequests:   borrows2,
-		reservoir: r2,
-		clock:     clock,
+		sampledRequests:  sampled2,
+		borrowedRequests: borrows2,
+		reservoir:        r2,
+		clock:            clock,
 	}
 
 	rules := []*centralizedRule{csr1, csr2}
@@ -124,10 +125,10 @@ func TestMixedSnapshots(t *testing.T) {
 			RuleName: getStringPointer(name1),
 		},
 		matchedRequests:  requests1,
-		sampledRequests:   sampled1,
-		borrowedRequests:   borrows1,
-		reservoir: r1,
-		clock:     clock,
+		sampledRequests:  sampled1,
+		borrowedRequests: borrows1,
+		reservoir:        r1,
+		clock:            clock,
 	}
 
 	// Stale and inactive rule
@@ -144,10 +145,10 @@ func TestMixedSnapshots(t *testing.T) {
 			RuleName: getStringPointer(name2),
 		},
 		matchedRequests:  requests2,
-		sampledRequests:   sampled2,
-		borrowedRequests:   borrows2,
-		reservoir: r2,
-		clock:     clock,
+		sampledRequests:  sampled2,
+		borrowedRequests: borrows2,
+		reservoir:        r2,
+		clock:            clock,
 	}
 
 	// Fresh rule
@@ -164,10 +165,10 @@ func TestMixedSnapshots(t *testing.T) {
 			RuleName: getStringPointer(name3),
 		},
 		matchedRequests:  requests3,
-		sampledRequests:   sampled3,
-		borrowedRequests:   borrows3,
-		reservoir: r3,
-		clock:     clock,
+		sampledRequests:  sampled3,
+		borrowedRequests: borrows3,
+		reservoir:        r3,
+		clock:            clock,
 	}
 
 	rules := []*centralizedRule{csr1, csr2, csr3}
@@ -219,13 +220,13 @@ func TestUpdateTarget(t *testing.T) {
 	// Sampling rule about to be updated with new target
 	csr := &centralizedRule{
 		ruleProperties: &ruleProperties{
-			RuleName: getStringPointer("r1"),
+			RuleName:  getStringPointer("r1"),
 			FixedRate: getFloatPointer(0.10),
 		},
 		reservoir: &centralizedReservoir{
-			quota:       8,
-			refreshedAt: 1499999990,
-			expiresAt:   1500000010,
+			quota:        8,
+			refreshedAt:  1499999990,
+			expiresAt:    1500000010,
 			capacity:     50,
 			used:         7,
 			currentEpoch: 1500000000,
@@ -254,13 +255,13 @@ func TestUpdateTarget(t *testing.T) {
 	// Updated sampling rule
 	exp := &centralizedRule{
 		ruleProperties: &ruleProperties{
-			RuleName: getStringPointer("r1"),
+			RuleName:  getStringPointer("r1"),
 			FixedRate: getFloatPointer(0.05),
 		},
 		reservoir: &centralizedReservoir{
-			quota:       10,
-			refreshedAt: 1500000000,
-			expiresAt:   1500000060,
+			quota:        10,
+			refreshedAt:  1500000000,
+			expiresAt:    1500000060,
 			capacity:     50,
 			used:         7,
 			currentEpoch: 1500000000,
@@ -316,12 +317,12 @@ func TestUpdateTargetPanicRecovery(t *testing.T) {
 	// Sampling rule about to be updated with new target
 	csr := &centralizedRule{
 		ruleProperties: &ruleProperties{
-			RuleName: getStringPointer("r1"),
+			RuleName:  getStringPointer("r1"),
 			FixedRate: getFloatPointer(0.10),
 		},
 		reservoir: &centralizedReservoir{
-			quota:     8,
-			expiresAt: 1500000010,
+			quota:        8,
+			expiresAt:    1500000010,
 			capacity:     50,
 			used:         7,
 			currentEpoch: 1500000000,
@@ -349,12 +350,12 @@ func TestUpdateTargetPanicRecovery(t *testing.T) {
 	// Unchanged sampling rule
 	exp := &centralizedRule{
 		ruleProperties: &ruleProperties{
-			RuleName: getStringPointer("r1"),
+			RuleName:  getStringPointer("r1"),
 			FixedRate: getFloatPointer(0.10),
 		},
 		reservoir: &centralizedReservoir{
-			quota:     8,
-			expiresAt: 1500000010,
+			quota:        8,
+			expiresAt:    1500000010,
 			capacity:     50,
 			used:         7,
 			currentEpoch: 1500000000,

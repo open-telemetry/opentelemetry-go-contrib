@@ -15,11 +15,12 @@
 package xray
 
 import (
+	"log"
+	"sync"
+
 	"go.opentelemetry.io/otel/attribute"
 	sdktrace "go.opentelemetry.io/otel/sdk/trace"
 	"go.opentelemetry.io/otel/trace"
-	"log"
-	"sync"
 )
 
 // centralizedRule represents a centralized sampling rule
