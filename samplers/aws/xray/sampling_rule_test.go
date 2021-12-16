@@ -67,11 +67,6 @@ func TestExpiredReservoirTraceIDRationBasedSample(t *testing.T) {
 		NowTime: 1500000061,
 	}
 
-	// Set random to be within sampling rate
-	rand := &MockRand{
-		F64: 0.05,
-	}
-
 	p := &ruleProperties{
 		RuleName:  getStringPointer("r1"),
 		FixedRate: getFloatPointer(0.06),
@@ -90,13 +85,44 @@ func TestExpiredReservoirTraceIDRationBasedSample(t *testing.T) {
 		reservoir:      cr,
 		ruleProperties: p,
 		clock:          clock,
-		rand:           rand,
 	}
 
-	sd := csr.Sample(trace.SamplingParameters{})
+	csr.Sample(trace.SamplingParameters{})
 
-	assert.Equal(t, trace.RecordAndSample, sd.Decision)
+	assert.Equal(t, int64(0), csr.borrowedRequests)
 	assert.Equal(t, int64(1), csr.sampledRequests)
+	assert.Equal(t, int64(1), csr.matchedRequests)
+}
+
+func TestExpiredReservoirBorrowSample(t *testing.T) {
+	clock := &MockClock{
+		NowTime: 1500000061,
+	}
+
+	p := &ruleProperties{
+		RuleName:  getStringPointer("r1"),
+		FixedRate: getFloatPointer(0.06),
+	}
+
+	// Expired reservoir
+	cr := &centralizedReservoir{
+		expiresAt:    1500000060,
+		borrowed:     false,
+		used:         0,
+		capacity:     10,
+		currentEpoch: 1500000061,
+	}
+
+	csr := &centralizedRule{
+		reservoir:      cr,
+		ruleProperties: p,
+		clock:          clock,
+	}
+
+	csr.Sample(trace.SamplingParameters{})
+
+	assert.Equal(t, int64(1), csr.borrowedRequests)
+	assert.Equal(t, int64(0), csr.sampledRequests)
 	assert.Equal(t, int64(1), csr.matchedRequests)
 }
 
@@ -133,11 +159,6 @@ func TestTraceIDRatioBasedSamplerPositive(t *testing.T) {
 		NowTime: 1500000000,
 	}
 
-	// Set random to be within sampling rate
-	rand := &MockRand{
-		F64: 0.05,
-	}
-
 	p := &ruleProperties{
 		FixedRate: getFloatPointer(0.06),
 		RuleName:  getStringPointer("r1"),
@@ -153,13 +174,11 @@ func TestTraceIDRatioBasedSamplerPositive(t *testing.T) {
 	csr := &centralizedRule{
 		reservoir:      cr,
 		ruleProperties: p,
-		rand:           rand,
 		clock:          clock,
 	}
 
-	sd := csr.Sample(trace.SamplingParameters{})
+	csr.Sample(trace.SamplingParameters{})
 
-	assert.Equal(t, trace.RecordAndSample, sd.Decision)
 	assert.Equal(t, int64(1), csr.sampledRequests)
 	assert.Equal(t, int64(1), csr.matchedRequests)
 	assert.Equal(t, int64(10), csr.reservoir.used)
