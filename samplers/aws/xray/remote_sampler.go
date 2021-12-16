@@ -96,8 +96,6 @@ func (rs *RemoteSampler) ShouldSample(parameters sdktrace.SamplingParameters) sd
 	}
 	rs.mu.Unlock()
 
-	time.Sleep(5 * time.Second)
-
 	// Use fallback sampler with sampling config 1 req/sec and 5% of additional requests if manifest is expired
 	if rs.manifest.expired() {
 		log.Print("Centralized manifest expired. Using fallback sampling strategy")
@@ -199,7 +197,7 @@ func (rs *RemoteSampler) refreshManifest() (err error) {
 	defer func() {
 		if r := recover(); r != nil {
 			// Resort to bring rules array into consistent state.
-			//cs.manifest.sort()
+			rs.manifest.sort()
 
 			err = fmt.Errorf("%v", r)
 		}

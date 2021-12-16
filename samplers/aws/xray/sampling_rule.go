@@ -84,7 +84,7 @@ func (r *centralizedRule) updateRule(rule *ruleProperties) {
 	r.reservoir.capacity = *rule.ReservoirSize
 }
 
-// Sample returns sdktrace.SamplingResult on whether to sample or not
+// Sample returns sdktrace.SamplingResult on whether to sample the trace or drop the trace
 func (r *centralizedRule) Sample(parameters sdktrace.SamplingParameters) sdktrace.SamplingResult {
 	attributes := []attribute.KeyValue{
 		attribute.String("Rule", *r.ruleProperties.RuleName),
