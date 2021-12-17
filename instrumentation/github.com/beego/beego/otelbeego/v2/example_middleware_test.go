@@ -49,6 +49,3 @@ func ExampleRender() {
 	web.RunWithMiddleWares(":7777", mware)
 }
 
-func TestAAA(t *testing.T) {
-	ExampleRender()
-}
