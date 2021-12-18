@@ -21,16 +21,12 @@ import (
 	"sync"
 )
 
-const defaultRule = "Default"
 const defaultInterval = int64(10)
-
-//const manifestTTL = 3600 // Seconds
 
 //// centralizedManifest represents a full sampling ruleset, with a list of
 //// custom rules and default values for incoming requests that do
 //// not match any of the provided rules.
 type centralizedManifest struct {
-	defaultRule *centralizedRule
 	rules       []*centralizedRule
 	index       map[string]*centralizedRule
 	refreshedAt int64
@@ -47,26 +43,7 @@ func (m *centralizedManifest) putRule(rule *ruleProperties) (r *centralizedRule,
 		}
 	}()
 
-	// Default rule
-	if *rule.RuleName == defaultRule {
-		m.mu.RLock()
-		r = m.defaultRule
-		m.mu.RUnlock()
-
-		// Update rule if already exists
-		if r != nil {
-			r.updateRule(rule)
-
-			return
-		}
-
-		// Create Default rule
-		r = m.createDefaultRule(rule)
-
-		return
-	}
-
-	// User-defined rule
+	// User-defined rule + default rule
 	m.mu.RLock()
 	var ok bool
 	r, ok = m.index[*rule.RuleName]
@@ -74,7 +51,7 @@ func (m *centralizedManifest) putRule(rule *ruleProperties) (r *centralizedRule,
 
 	// Create rule if it does not exist
 	if !ok {
-		r = m.createUserRule(rule)
+		r = m.createRule(rule)
 
 		return
 	}
@@ -87,7 +64,7 @@ func (m *centralizedManifest) putRule(rule *ruleProperties) (r *centralizedRule,
 
 // createUserRule creates a user-defined centralizedRule, appends it to the sorted array,
 // adds it to the index, and returns the newly created rule.
-func (m *centralizedManifest) createUserRule(rule *ruleProperties) *centralizedRule {
+func (m *centralizedManifest) createRule(rule *ruleProperties) *centralizedRule {
 	m.mu.Lock()
 	defer m.mu.Unlock()
 
@@ -114,41 +91,6 @@ func (m *centralizedManifest) createUserRule(rule *ruleProperties) *centralizedR
 
 	// Update sorted array
 	m.rules = append(m.rules, csr)
-
-	// Update index
-	m.index[*rule.RuleName] = csr
-
-	return csr
-}
-
-// createDefaultRule creates a default centralizedRule and adds it to the manifest.
-func (m *centralizedManifest) createDefaultRule(rule *ruleProperties) *centralizedRule {
-	m.mu.Lock()
-	defer m.mu.Unlock()
-
-	// Return early if rule already exists
-	if d := m.defaultRule; d != nil {
-		return d
-	}
-
-	// Create CentralizedRule from xraySvc.SamplingRule
-	clock := &DefaultClock{}
-	rand := &DefaultRand{}
-
-	cr := &centralizedReservoir{
-		capacity: *rule.ReservoirSize,
-		interval: defaultInterval,
-	}
-
-	csr := &centralizedRule{
-		reservoir:      cr,
-		ruleProperties: rule,
-		clock:          clock,
-		rand:           rand,
-	}
-
-	// Update manifest if rule does not exist
-	m.defaultRule = csr
 
 	// Update index
 	m.index[*rule.RuleName] = csr
@@ -194,12 +136,3 @@ func (m *centralizedManifest) sort() {
 
 	sort.Slice(m.rules, less)
 }
-
-// expired returns true if the manifest has not been successfully refreshed in
-// 'manifestTTL' seconds.
-//func (m *centralizedManifest) expired() bool {
-//	m.mu.RLock()
-//	defer m.mu.RUnlock()
-//
-//	return m.refreshedAt < m.clock.Now().Unix()-manifestTTL
-//}

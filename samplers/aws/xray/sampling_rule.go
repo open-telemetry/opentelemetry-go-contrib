@@ -26,16 +26,13 @@ type centralizedRule struct {
 	ruleProperties *ruleProperties
 
 	// Number of requests matched against this rule
-	//requests int64
+	//matchedRequests int64
 	//
 	// Number of requests sampled using this rule
-	//sampled int64
+	//sampledRequests int64
 	//
 	// Number of requests burrowed
-	//borrows int64
-	//
-	// Timestamp for last match against this rule
-	//usedAt int64
+	//borrowedRequests int64
 
 	// Provides system time
 	clock Clock
