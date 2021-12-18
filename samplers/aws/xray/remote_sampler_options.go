@@ -29,6 +29,7 @@ type SamplerOption func(options *samplerOptions)
 type samplerOptions struct {
 	proxyEndpoint                string
 	samplingRulesPollingInterval time.Duration
+	logger                       Logger
 }
 
 // sets custom proxy endpoint
@@ -41,7 +42,14 @@ func WithProxyEndpoint(proxyEndpoint string) SamplerOption {
 // sets polling interval for sampling rules
 func WithSamplingRulesPollingInterval(polingInterval time.Duration) SamplerOption {
 	return func(o *samplerOptions) {
-		o.samplingRulesPollingInterval = defaultPollingInterval
+		o.samplingRulesPollingInterval = polingInterval
+	}
+}
+
+// sets custom logging for remote sampling implementation
+func WithLogger(l Logger) SamplerOption {
+	return func(o *samplerOptions) {
+		o.logger = l
 	}
 }
 
@@ -55,6 +63,9 @@ func (o *samplerOptions) applyOptionsAndDefaults(opts ...SamplerOption) *sampler
 	}
 	if o.samplingRulesPollingInterval <= 0 {
 		o.samplingRulesPollingInterval = defaultPollingInterval * time.Second
+	}
+	if o.logger == nil {
+		o.logger = noopLogger{}
 	}
 
 	return o

@@ -18,7 +18,7 @@ import (
 	"bytes"
 	"context"
 	"encoding/json"
-	"log"
+	"fmt"
 	"net/http"
 )
 
@@ -45,30 +45,30 @@ func newClient(d string) *xrayClient {
 func (p *xrayClient) getSamplingRules(ctx context.Context) (*getSamplingRulesOutput, error) {
 	req, err := http.NewRequestWithContext(ctx, http.MethodPost, p.proxyEndpoint+"/GetSamplingRules", nil)
 	if err != nil {
-		log.Printf("failed to create http request, %v\n", err)
+		globalLogger.Printf("failed to create http request, %v\n", err)
 	}
 
 	output, err := p.httpClient.Do(req)
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("xray client: unable to retrieve sampling settings: %w", err)
 	}
 
 	buf := new(bytes.Buffer)
 	_, err = buf.ReadFrom(output.Body)
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("xray client: unable to read response body: %w", err)
 	}
 
 	// Unmarshalling json data to populate getSamplingTargetsOutput struct
 	var samplingRulesOutput getSamplingRulesOutput
 	err = json.Unmarshal(buf.Bytes(), &samplingRulesOutput)
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("xray client: unable to unmarshal the response body: %w", err)
 	}
 
 	err = output.Body.Close()
 	if err != nil {
-		log.Printf("failed to close http response body, %v\n\n", err)
+		globalLogger.Printf("failed to close http response body, %v\n\n", err)
 	}
 
 	return &samplingRulesOutput, nil
@@ -85,30 +85,30 @@ func (p *xrayClient) getSamplingTargets(ctx context.Context, s []*samplingStatis
 
 	req, err := http.NewRequestWithContext(ctx, http.MethodPost, p.proxyEndpoint+"/SamplingTargets", body)
 	if err != nil {
-		log.Printf("failed to create http request, %v\n", err)
+		globalLogger.Printf("failed to create http request, %v\n", err)
 	}
 
 	output, err := p.httpClient.Do(req)
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("xray client: unable to retrieve sampling settings: %w", err)
 	}
 
 	buf := new(bytes.Buffer)
 	_, err = buf.ReadFrom(output.Body)
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("xray client: unable to read response body: %w", err)
 	}
 
 	// Unmarshalling json data to populate getSamplingTargetsOutput struct
 	var samplingTargetsOutput getSamplingTargetsOutput
 	err = json.Unmarshal(buf.Bytes(), &samplingTargetsOutput)
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("xray client: unable to unmarshal the response body: %w", err)
 	}
 
 	err = output.Body.Close()
 	if err != nil {
-		log.Printf("failed to close http response body, %v\n\n", err)
+		globalLogger.Printf("failed to close http response body, %v\n\n", err)
 	}
 
 	return &samplingTargetsOutput, nil

@@ -15,7 +15,6 @@
 package xray
 
 import (
-	"log"
 	"sync"
 
 	"go.opentelemetry.io/otel/attribute"
@@ -84,7 +83,7 @@ func (r *centralizedRule) updateRule(rule *ruleProperties) {
 	r.reservoir.capacity = *rule.ReservoirSize
 }
 
-// Sample returns sdktrace.SamplingResult on whether to sample the trace or drop the trace
+// Sample returns SamplingResult with SamplingDecision, TraceState and Attributes
 func (r *centralizedRule) Sample(parameters sdktrace.SamplingParameters) sdktrace.SamplingResult {
 	attributes := []attribute.KeyValue{
 		attribute.String("Rule", *r.ruleProperties.RuleName),
@@ -109,7 +108,7 @@ func (r *centralizedRule) Sample(parameters sdktrace.SamplingParameters) sdktrac
 
 		// Sampling 1 req/sec
 		if r.reservoir.borrow(now) {
-			log.Printf(
+			globalLogger.Printf(
 				"Sampling target has expired for rule %s. Using fallback sampling and borrowing 1 req/sec from reservoir",
 				*r.ruleProperties.RuleName,
 			)
@@ -119,12 +118,12 @@ func (r *centralizedRule) Sample(parameters sdktrace.SamplingParameters) sdktrac
 			return sd
 		}
 
-		log.Printf(
+		globalLogger.Printf(
 			"Sampling target has expired for rule %s. Using traceIDRationBased sampler to sample 5 percent of requests during that second",
 			*r.ruleProperties.RuleName,
 		)
 
-		// using traceIDRatioBased sampler to sample using 5% fixed rate
+		// using traceIDRatioBased sampler to sample
 		samplingDecision := sdktrace.TraceIDRatioBased(*r.ruleProperties.FixedRate).ShouldSample(parameters)
 
 		samplingDecision.Attributes = attributes
@@ -144,7 +143,7 @@ func (r *centralizedRule) Sample(parameters sdktrace.SamplingParameters) sdktrac
 		return sd
 	}
 
-	log.Printf(
+	globalLogger.Printf(
 		"Sampling target has been exhausted for rule %s. Using traceIDRatioBased Sampler with fixed rate.",
 		*r.ruleProperties.RuleName,
 	)

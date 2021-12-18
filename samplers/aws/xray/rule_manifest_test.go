@@ -34,7 +34,7 @@ func getFloatPointer(val float64) *float64 {
 }
 
 // Assert that putRule() creates a new user-defined rule and adds to manifest
-func TestCreateUserRule(t *testing.T) {
+func TestCreateRule(t *testing.T) {
 	resARN := "*"
 	r1 := &centralizedRule{
 		ruleProperties: &ruleProperties{
@@ -117,101 +117,8 @@ func TestCreateUserRule(t *testing.T) {
 	assert.Equal(t, exp, r2)
 }
 
-// Assert that putRule() creates a new default rule and adds to manifest
-func TestCreateDefaultRule(t *testing.T) {
-	m := &centralizedManifest{
-		index: map[string]*centralizedRule{},
-	}
-
-	// Output of GetSamplingRules API and Input to putRule().
-	reservoirSize := int64(10)
-	fixedRate := float64(0.05)
-	ruleName := "Default"
-
-	// Expected centralized sampling rule
-	clock := &DefaultClock{}
-	rand := &DefaultRand{}
-
-	p := &ruleProperties{
-		RuleName:      &ruleName,
-		ReservoirSize: &reservoirSize,
-		FixedRate:     &fixedRate,
-	}
-
-	cr := &centralizedReservoir{
-		capacity: reservoirSize,
-		interval: 10,
-	}
-
-	exp := &centralizedRule{
-		reservoir:      cr,
-		ruleProperties: p,
-		clock:          clock,
-		rand:           rand,
-	}
-
-	// Add to manifest
-	r, err := m.putRule(p)
-	assert.Nil(t, err)
-	assert.Equal(t, exp, r)
-	assert.Equal(t, exp, m.defaultRule)
-}
-
-// Assert that putRule() updates the default rule
-func TestUpdateDefaultRule(t *testing.T) {
-	clock := &DefaultClock{}
-	rand := &DefaultRand{}
-
-	// Original default sampling rule
-	r := &centralizedRule{
-		ruleProperties: &ruleProperties{
-			RuleName:      getStringPointer("Default"),
-			ReservoirSize: getIntPointer(10),
-			FixedRate:     getFloatPointer(0.05),
-		},
-		reservoir: &centralizedReservoir{
-			capacity: 10,
-		},
-		clock: clock,
-		rand:  rand,
-	}
-
-	m := &centralizedManifest{
-		defaultRule: r,
-	}
-
-	// Output of GetSamplingRules API and Input to putRule().
-	reservoirSize := int64(20)
-	fixedRate := 0.06
-	ruleName := "Default"
-
-	// Expected centralized sampling rule
-	p := &ruleProperties{
-		RuleName:      &ruleName,
-		ReservoirSize: &reservoirSize,
-		FixedRate:     &fixedRate,
-	}
-
-	cr := &centralizedReservoir{
-		capacity: reservoirSize,
-	}
-
-	exp := &centralizedRule{
-		reservoir:      cr,
-		ruleProperties: p,
-		clock:          clock,
-		rand:           rand,
-	}
-
-	// Update default rule in manifest
-	r, err := m.putRule(p)
-	assert.Nil(t, err)
-	assert.Equal(t, exp, r)
-	assert.Equal(t, exp, m.defaultRule)
-}
-
-// Assert that creating a user-defined rule which already exists is a no-op
-func TestCreateUserRuleNoOp(t *testing.T) {
+// Assert that creating a rule which already exists is a no-op
+func TestCreateRuleNoOp(t *testing.T) {
 	resARN := "*"
 	serviceType := ""
 	attributes := map[string]*string{
@@ -281,8 +188,8 @@ func TestCreateUserRuleNoOp(t *testing.T) {
 	assert.Equal(t, r3, m.rules[1])
 }
 
-// Assert that putRule() updates the user-defined rule in the manifest
-func TestUpdateUserRule(t *testing.T) {
+// Assert that putRule() updates the rule in the manifest
+func TestUpdateRule(t *testing.T) {
 	resARN := "*"
 	serviceType := ""
 	attributes := map[string]*string{
