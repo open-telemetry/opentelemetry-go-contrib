@@ -24,49 +24,48 @@ const (
 )
 
 // SamplerOption is a function that sets config on the sampler
-type SamplerOption func(options *samplerOptions)
+type Option func(options *config)
 
-type samplerOptions struct {
+type config struct {
 	proxyEndpoint                string
 	samplingRulesPollingInterval time.Duration
 	logger                       Logger
 }
 
 // sets custom proxy endpoint
-func WithProxyEndpoint(proxyEndpoint string) SamplerOption {
-	return func(o *samplerOptions) {
+func WithProxyEndpoint(proxyEndpoint string) Option {
+	return func(o *config) {
 		o.proxyEndpoint = proxyEndpoint
 	}
 }
 
 // sets polling interval for sampling rules
-func WithSamplingRulesPollingInterval(polingInterval time.Duration) SamplerOption {
-	return func(o *samplerOptions) {
+func WithSamplingRulesPollingInterval(polingInterval time.Duration) Option {
+	return func(o *config) {
 		o.samplingRulesPollingInterval = polingInterval
 	}
 }
 
 // sets custom logging for remote sampling implementation
-func WithLogger(l Logger) SamplerOption {
-	return func(o *samplerOptions) {
+func WithLogger(l Logger) Option {
+	return func(o *config) {
 		o.logger = l
 	}
 }
 
-func (o *samplerOptions) applyOptionsAndDefaults(opts ...SamplerOption) *samplerOptions {
+func newConfig(opts ...Option) *config {
+	cfg := &config{
+		proxyEndpoint:                defaultProxyEndpoint,
+		samplingRulesPollingInterval: defaultPollingInterval * time.Second,
+		logger:                       noopLogger{},
+	}
+
 	for _, option := range opts {
-		option(o)
+		option(cfg)
 	}
 
-	if o.proxyEndpoint == "" {
-		o.proxyEndpoint = defaultProxyEndpoint
-	}
-	if o.samplingRulesPollingInterval <= 0 {
-		o.samplingRulesPollingInterval = defaultPollingInterval * time.Second
-	}
-	if o.logger == nil {
-		o.logger = noopLogger{}
-	}
+	// setting global logger
+	globalLogger = cfg.logger
 
-	return o
+	return cfg
 }
