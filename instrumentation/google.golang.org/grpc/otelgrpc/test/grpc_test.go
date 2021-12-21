@@ -23,6 +23,7 @@ import (
 	"github.com/stretchr/testify/require"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/codes"
+	"google.golang.org/grpc/credentials/insecure"
 	"google.golang.org/grpc/interop"
 	pb "google.golang.org/grpc/interop/grpc_testing"
 	"google.golang.org/grpc/test/bufconn"
@@ -56,7 +57,7 @@ func doCalls(cOpt []grpc.DialOption, sOpt []grpc.ServerOption) error {
 		"bufnet",
 		append([]grpc.DialOption{
 			grpc.WithContextDialer(dial),
-			grpc.WithInsecure(),
+			grpc.WithTransportCredentials(insecure.NewCredentials()),
 		}, cOpt...)...,
 	)
 	if err != nil {
