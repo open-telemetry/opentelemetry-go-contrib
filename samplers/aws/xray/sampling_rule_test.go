@@ -15,7 +15,6 @@
 package xray
 
 import (
-	"context"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
@@ -63,7 +62,8 @@ func TestInactiveRule(t *testing.T) {
 }
 
 func TestExpiredReservoirTraceIDRationBasedSample(t *testing.T) {
-	_, _ = NewRemoteSampler(context.Background())
+	// setting the logger
+	newConfig()
 
 	// One second past expiration
 	clock := &MockClock{
@@ -98,7 +98,8 @@ func TestExpiredReservoirTraceIDRationBasedSample(t *testing.T) {
 }
 
 func TestExpiredReservoirBorrowSample(t *testing.T) {
-	_, _ = NewRemoteSampler(context.Background())
+	// setting the logger
+	newConfig()
 
 	clock := &MockClock{
 		NowTime: 1500000061,
@@ -132,7 +133,8 @@ func TestExpiredReservoirBorrowSample(t *testing.T) {
 }
 
 func TestTakeFromQuotaSample(t *testing.T) {
-	_, _ = NewRemoteSampler(context.Background())
+	// setting the logger
+	newConfig()
 
 	clock := &MockClock{
 		NowTime: 1500000000,
@@ -162,7 +164,8 @@ func TestTakeFromQuotaSample(t *testing.T) {
 }
 
 func TestTraceIDRatioBasedSamplerPositive(t *testing.T) {
-	_, _ = NewRemoteSampler(context.Background())
+	// setting the logger
+	newConfig()
 
 	clock := &MockClock{
 		NowTime: 1500000000,

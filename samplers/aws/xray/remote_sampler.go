@@ -20,7 +20,6 @@ import (
 	"errors"
 	"fmt"
 	"strings"
-	"sync"
 	"time"
 
 	sdktrace "go.opentelemetry.io/otel/sdk/trace"
@@ -50,19 +49,14 @@ type RemoteSampler struct {
 	clock Clock
 
 	fallbackSampler *FallbackSampler
-
-	mu sync.RWMutex
 }
 
 // Compile time assertion that remoteSampler implements the Sampler interface.
 var _ sdktrace.Sampler = (*RemoteSampler)(nil)
 
 // NewRemoteSampler returns a centralizedSampler which decides to sample a given request or not.
-func NewRemoteSampler(ctx context.Context, opts ...SamplerOption) (*RemoteSampler, error) {
-	options := new(samplerOptions).applyOptionsAndDefaults(opts...)
-
-	// set global logging
-	globalLogger = options.logger
+func NewRemoteSampler(ctx context.Context, opts ...Option) (*RemoteSampler, error) {
+	cfg := newConfig(opts...)
 
 	// Generate clientID
 	var r [12]byte
@@ -87,16 +81,13 @@ func NewRemoteSampler(ctx context.Context, opts ...SamplerOption) (*RemoteSample
 		clock:                        clock,
 		manifest:                     m,
 		clientID:                     id,
-		xrayClient:                   newClient(options.proxyEndpoint),
-		samplingRulesPollingInterval: options.samplingRulesPollingInterval,
+		xrayClient:                   newClient(cfg.proxyEndpoint),
+		samplingRulesPollingInterval: cfg.samplingRulesPollingInterval,
 		fallbackSampler:              NewFallbackSampler(),
 	}
 
-	remoteSampler.mu.Lock()
-	if !remoteSampler.pollerStart {
-		remoteSampler.start(ctx)
-	}
-	remoteSampler.mu.Unlock()
+	// starts the rule and target poller
+	remoteSampler.start(ctx)
 
 	return remoteSampler, nil
 }
@@ -140,11 +131,10 @@ func (rs *RemoteSampler) Description() string {
 
 func (rs *RemoteSampler) start(ctx context.Context) {
 	if !rs.pollerStart {
+		rs.pollerStart = true
 		rs.startRulePoller(ctx)
 		rs.startTargetPoller(ctx)
 	}
-
-	rs.pollerStart = true
 }
 
 // startRulePoller starts rule poller.
@@ -152,13 +142,6 @@ func (rs *RemoteSampler) startRulePoller(ctx context.Context) {
 	go func() {
 		// Period = 300s, Jitter = 5s
 		t := newTicker(rs.samplingRulesPollingInterval, 5*time.Second)
-
-		// Initial refresh
-		if err := rs.refreshManifest(ctx); err != nil {
-			globalLogger.Printf("Error occurred while refreshing sampling rules. %v\n", err)
-		} else {
-			globalLogger.Println("Successfully fetched sampling rules")
-		}
 
 		// Periodic manifest refresh
 		for {
@@ -170,11 +153,11 @@ func (rs *RemoteSampler) startRulePoller(ctx context.Context) {
 			select {
 			case _, more := <-t.C():
 				if !more {
-					break
+					return
 				}
 				continue
 			case <-ctx.Done():
-				break
+				return
 			}
 		}
 	}()
@@ -182,14 +165,23 @@ func (rs *RemoteSampler) startRulePoller(ctx context.Context) {
 
 // startTargetPoller starts target poller.
 func (rs *RemoteSampler) startTargetPoller(ctx context.Context) {
-	// Periodic quota refresh
 	go func() {
 		// Period = 10.1s, Jitter = 100ms
 		t := newTicker(10*time.Second+100*time.Millisecond, 100*time.Millisecond)
 
-		for range t.C() {
+		// Periodic quota refresh
+		for {
 			if err := rs.refreshTargets(ctx); err != nil {
 				globalLogger.Printf("Error occurred while refreshing targets for sampling rules. %v", err)
+			}
+			select {
+			case _, more := <-t.C():
+				if !more {
+					return
+				}
+				continue
+			case <-ctx.Done():
+				return
 			}
 		}
 	}()
@@ -316,7 +308,7 @@ func (rs *RemoteSampler) refreshTargets(ctx context.Context) (err error) {
 	// Get sampling targets
 	output, err := rs.xrayClient.getSamplingTargets(ctx, statistics)
 	if err != nil {
-		return
+		return fmt.Errorf("refreshTargets: Error occurred while getting sampling targets: %w", err)
 	}
 
 	// Update sampling targets

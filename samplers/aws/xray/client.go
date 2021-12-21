@@ -46,6 +46,7 @@ func (p *xrayClient) getSamplingRules(ctx context.Context) (*getSamplingRulesOut
 	req, err := http.NewRequestWithContext(ctx, http.MethodPost, p.proxyEndpoint+"/GetSamplingRules", nil)
 	if err != nil {
 		globalLogger.Printf("failed to create http request, %v\n", err)
+		return nil, fmt.Errorf("xray client: failed to create http request: %w", err)
 	}
 
 	output, err := p.httpClient.Do(req)
