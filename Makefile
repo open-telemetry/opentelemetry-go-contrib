@@ -11,7 +11,7 @@ REGISTRY_BASE_URL = https://raw.githubusercontent.com/open-telemetry/opentelemet
 CONTRIB_REPO_URL = https://github.com/open-telemetry/opentelemetry-go-contrib/tree/main
 
 GO = go
-GOTEST_MIN = go test -v -timeout 30s
+GOTEST_MIN = $(GO) test -v -timeout 30s
 GOTEST = $(GOTEST_MIN) -race
 GOTEST_WITH_COVERAGE = $(GOTEST) -coverprofile=coverage.out -covermode=atomic
 
@@ -23,24 +23,24 @@ TOOLS_DIR := $(abspath ./.tools)
 
 $(TOOLS_DIR)/golangci-lint: $(TOOLS_MOD_DIR)/go.mod $(TOOLS_MOD_DIR)/go.sum $(TOOLS_MOD_DIR)/tools.go
 	cd $(TOOLS_MOD_DIR) && \
-	go build -o $(TOOLS_DIR)/golangci-lint github.com/golangci/golangci-lint/cmd/golangci-lint
+	$(GO) build -o $(TOOLS_DIR)/golangci-lint github.com/golangci/golangci-lint/cmd/golangci-lint
 
 $(TOOLS_DIR)/misspell: $(TOOLS_MOD_DIR)/go.mod $(TOOLS_MOD_DIR)/go.sum $(TOOLS_MOD_DIR)/tools.go
 	cd $(TOOLS_MOD_DIR) && \
-	go build -o $(TOOLS_DIR)/misspell github.com/client9/misspell/cmd/misspell
+	$(GO) build -o $(TOOLS_DIR)/misspell github.com/client9/misspell/cmd/misspell
 
 $(TOOLS_DIR)/gocovmerge: $(TOOLS_MOD_DIR)/go.mod $(TOOLS_MOD_DIR)/go.sum $(TOOLS_MOD_DIR)/tools.go
 	cd $(TOOLS_MOD_DIR) && \
-	go build -o $(TOOLS_DIR)/gocovmerge github.com/wadey/gocovmerge
+	$(GO) build -o $(TOOLS_DIR)/gocovmerge github.com/wadey/gocovmerge
 
 $(TOOLS_DIR)/stringer: $(TOOLS_MOD_DIR)/go.mod $(TOOLS_MOD_DIR)/go.sum $(TOOLS_MOD_DIR)/tools.go
 	cd $(TOOLS_MOD_DIR) && \
-	go build -o $(TOOLS_DIR)/stringer golang.org/x/tools/cmd/stringer
+	$(GO) build -o $(TOOLS_DIR)/stringer golang.org/x/tools/cmd/stringer
 
 MULTIMOD=$(TOOLS_DIR)/multimod
 $(TOOLS_DIR)/multimod: $(TOOLS_MOD_DIR)/go.mod $(TOOLS_MOD_DIR)/go.sum $(TOOLS_MOD_DIR)/tools.go
 	cd $(TOOLS_MOD_DIR) && \
-	go build -o $(TOOLS_DIR)/multimod go.opentelemetry.io/build-tools/multimod
+	$(GO) build -o $(TOOLS_DIR)/multimod go.opentelemetry.io/build-tools/multimod
 
 precommit: dependabot-check license-check generate lint build test
 
@@ -56,7 +56,7 @@ test-with-coverage: $(TOOLS_DIR)/gocovmerge
 	  echo "$$CMD $$dir/..."; \
 	  (cd "$$dir" && \
 	    $$CMD ./... && \
-	    go tool cover -html=coverage.out -o coverage.html); \
+	    $(GO) tool cover -html=coverage.out -o coverage.html); \
 	done; \
 	$(TOOLS_DIR)/gocovmerge $$(find . -name coverage.out) > coverage.txt
 
@@ -71,7 +71,7 @@ test-gocql:
 	  CMD=cassandra IMG_NAME=cass-integ ./tools/wait.sh; \
 	  (cd instrumentation/github.com/gocql/gocql/otelgocql/test/ && \
 	    $(GOTEST_WITH_COVERAGE) -coverpkg=go.opentelemetry.io/contrib/instrumentation/github.com/gocql/gocql/otelgocql/...  ./... && \
-	    go tool cover -html=coverage.out -o coverage.html); \
+	    $(GO) tool cover -html=coverage.out -o coverage.html); \
 	  cp ./instrumentation/github.com/gocql/gocql/otelgocql/test/coverage.out ./; \
 	  docker stop cass-integ; \
 	fi
@@ -84,7 +84,7 @@ test-mongo-driver:
 	  CMD=mongo IMG_NAME=mongo-integ ./tools/wait.sh; \
 	  (cd instrumentation/go.mongodb.org/mongo-driver/mongo/otelmongo/test && \
 	    $(GOTEST_WITH_COVERAGE) -coverpkg=go.opentelemetry.io/contrib/instrumentation/go.mongodb.org/mongo-driver/mongo/otelmongo/...  ./... && \
-	    go tool cover -html=coverage.out -o coverage.html); \
+	    $(GO) tool cover -html=coverage.out -o coverage.html); \
 	  cp ./instrumentation/go.mongodb.org/mongo-driver/mongo/otelmongo/test/coverage.out ./; \
 	  docker stop mongo-integ; \
 	fi
@@ -97,7 +97,7 @@ test-gomemcache:
 	  CMD=gomemcache IMG_NAME=gomemcache-integ  ./tools/wait.sh; \
 	  (cd instrumentation/github.com/bradfitz/gomemcache/memcache/otelmemcache/test && \
 	    $(GOTEST_WITH_COVERAGE) -coverpkg=go.opentelemetry.io/contrib/instrumentation/github.com/bradfitz/gomemcache/memcache/otelmemcache/...  ./... && \
-	    go tool cover -html=coverage.out -o coverage.html); \
+	    $(GO) tool cover -html=coverage.out -o coverage.html); \
 	  docker stop gomemcache-integ ; \
 	  cp ./instrumentation/github.com/bradfitz/gomemcache/memcache/otelmemcache/test/coverage.out ./; \
 	fi
@@ -118,14 +118,14 @@ build:
 	set -e; for dir in $(ALL_GO_MOD_DIRS); do \
 	  echo "compiling all packages in $${dir}"; \
 	  (cd "$${dir}" && \
-	    go build ./... && \
-	    go test -run xxxxxMatchNothingxxxxx ./... >/dev/null); \
+	    $(GO) build ./... && \
+	    $(GO) test -run xxxxxMatchNothingxxxxx ./... >/dev/null); \
 	done
 
 .PHONY: test
 test:
 	set -e; for dir in $(ALL_GO_MOD_DIRS); do \
-	  echo "go test ./... + race in $${dir}"; \
+	  echo "$(GO) test ./... + race in $${dir}"; \
 	  (cd "$${dir}" && \
 	    $(GOTEST) ./...); \
 	done
@@ -133,7 +133,7 @@ test:
 .PHONY: test-short
 test-short:
 	set -e; for dir in $(ALL_GO_MOD_DIRS); do \
-	  echo "go test ./... + race in $${dir}"; \
+	  echo "$(GO) test ./... + race in $${dir}"; \
 	  (cd "$${dir}" && \
 	    $(GOTEST_MIN) -short ./...); \
 	done
@@ -158,7 +158,7 @@ lint-modules:
 
 .PHONY: generate
 generate: $(TOOLS_DIR)/stringer
-	PATH="$(TOOLS_DIR):$${PATH}" go generate ./...
+	PATH="$(TOOLS_DIR):$${PATH}" $(GO) generate ./...
 
 .PHONY: license-check
 license-check:
