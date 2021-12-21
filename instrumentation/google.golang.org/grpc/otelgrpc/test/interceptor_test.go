@@ -37,6 +37,7 @@ import (
 	"go.uber.org/goleak"
 	"google.golang.org/grpc"
 	grpc_codes "google.golang.org/grpc/codes"
+	"google.golang.org/grpc/credentials/insecure"
 	"google.golang.org/grpc/metadata"
 	"google.golang.org/grpc/status"
 )
@@ -132,7 +133,7 @@ func (mm *mockProtoMessage) ProtoMessage() {
 }
 
 func TestUnaryClientInterceptor(t *testing.T) {
-	clientConn, err := grpc.Dial("fake:connection", grpc.WithInsecure())
+	clientConn, err := grpc.Dial("fake:connection", grpc.WithTransportCredentials(insecure.NewCredentials()))
 	if err != nil {
 		t.Fatalf("failed to create client connection: %v", err)
 	}
@@ -362,7 +363,7 @@ func newMockClientStream(opts clientStreamOpts) *mockClientStream {
 
 func createInterceptedStreamClient(t *testing.T, method string, opts clientStreamOpts) (grpc.ClientStream, *tracetest.SpanRecorder) {
 	mockStream := newMockClientStream(opts)
-	clientConn, err := grpc.Dial("fake:connection", grpc.WithInsecure())
+	clientConn, err := grpc.Dial("fake:connection", grpc.WithTransportCredentials(insecure.NewCredentials()))
 	if err != nil {
 		t.Fatalf("failed to create client connection: %v", err)
 	}
@@ -527,7 +528,7 @@ func TestStreamClientInterceptorOnUnidirectionalClientServerStream(t *testing.T)
 // There should be no goleaks
 func TestStreamClientInterceptorCancelContext(t *testing.T) {
 	defer goleak.VerifyNone(t)
-	clientConn, err := grpc.Dial("fake:connection", grpc.WithInsecure())
+	clientConn, err := grpc.Dial("fake:connection", grpc.WithTransportCredentials(insecure.NewCredentials()))
 	if err != nil {
 		t.Fatalf("failed to create client connection: %v", err)
 	}
@@ -580,7 +581,7 @@ func TestStreamClientInterceptorCancelContext(t *testing.T) {
 func TestStreamClientInterceptorWithError(t *testing.T) {
 	defer goleak.VerifyNone(t)
 
-	clientConn, err := grpc.Dial("fake:connection", grpc.WithInsecure())
+	clientConn, err := grpc.Dial("fake:connection", grpc.WithTransportCredentials(insecure.NewCredentials()))
 	if err != nil {
 		t.Fatalf("failed to create client connection: %v", err)
 	}
