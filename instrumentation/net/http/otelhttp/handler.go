@@ -195,6 +195,7 @@ func (h *Handler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	h.counters[RequestContentLength].Add(ctx, bw.read, attributes...)
 	h.counters[ResponseContentLength].Add(ctx, rww.written, attributes...)
 
+	// Use floating point division here for higher precision (instead of Millisecond method).
 	elapsedTime := float64(time.Since(requestStartTime)) / float64(time.Millisecond)
 
 	h.valueRecorders[ServerLatency].Record(ctx, elapsedTime, attributes...)
