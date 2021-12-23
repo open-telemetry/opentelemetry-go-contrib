@@ -24,7 +24,7 @@ We have updated the project minimum supported Go version to 1.16
 - `go.opentelemetry.io/contrib/instrumentation/github.com/gorilla/mux/otelmux`
   does not require instrumented HTTP handlers to call `Write` nor
   `WriteHeader` anymore. (#1443)
-- Modified otel http-server-duration from microseconds to milliseconds to reflect specs. (#1414)
+- Change the `http-server-duration` instrument in `go.opentelemetry.io/contrib/instrumentation/net/http/otelhttp` to record milliseconds instead of microseconds match what is specified in the OpenTelemetry specification. (#1414, #1537)
 
 ## [1.2.0/0.27.0] - 2021-11-15
 
