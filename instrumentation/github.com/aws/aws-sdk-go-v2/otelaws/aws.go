@@ -23,6 +23,7 @@ import (
 	smithyhttp "github.com/aws/smithy-go/transport/http"
 
 	"go.opentelemetry.io/otel"
+	"go.opentelemetry.io/otel/attribute"
 	"go.opentelemetry.io/otel/codes"
 	semconv "go.opentelemetry.io/otel/semconv/v1.7.0"
 	"go.opentelemetry.io/otel/trace"
@@ -34,8 +35,11 @@ const (
 
 type spanTimestampKey struct{}
 
+type attributesetter func(ctx context.Context, in middleware.InitializeInput) []attribute.KeyValue
+
 type otelMiddlewares struct {
-	tracer trace.Tracer
+	tracer          trace.Tracer
+	attributesetter attributesetter
 }
 
 func (m otelMiddlewares) initializeMiddlewareBefore(stack *middleware.Stack) error {
@@ -55,12 +59,22 @@ func (m otelMiddlewares) initializeMiddlewareAfter(stack *middleware.Stack) erro
 		out middleware.InitializeOutput, metadata middleware.Metadata, err error) {
 
 		serviceID := v2Middleware.GetServiceID(ctx)
+
+		attributes := []attribute.KeyValue{ServiceAttr(serviceID),
+			RegionAttr(v2Middleware.GetRegion(ctx)),
+			OperationAttr(v2Middleware.GetOperationName(ctx)),
+		}
+		if m.attributesetter != nil {
+			attributes = append(
+				attributes,
+				m.attributesetter(ctx, in)...,
+			)
+		}
+
 		ctx, span := m.tracer.Start(ctx, serviceID,
 			trace.WithTimestamp(ctx.Value(spanTimestampKey{}).(time.Time)),
 			trace.WithSpanKind(trace.SpanKindClient),
-			trace.WithAttributes(ServiceAttr(serviceID),
-				RegionAttr(v2Middleware.GetRegion(ctx)),
-				OperationAttr(v2Middleware.GetOperationName(ctx))),
+			trace.WithAttributes(attributes...),
 		)
 		defer span.End()
 
@@ -104,13 +118,16 @@ func (m otelMiddlewares) deserializeMiddleware(stack *middleware.Stack) error {
 // Please see more details in https://aws.github.io/aws-sdk-go-v2/docs/middleware/
 func AppendMiddlewares(apiOptions *[]func(*middleware.Stack) error, opts ...Option) {
 	cfg := config{
-		TracerProvider: otel.GetTracerProvider(),
+		TracerProvider:  otel.GetTracerProvider(),
+		AttributeSetter: Defaultattributesetter,
 	}
 	for _, opt := range opts {
 		opt.apply(&cfg)
 	}
 
 	m := otelMiddlewares{tracer: cfg.TracerProvider.Tracer(tracerName,
-		trace.WithInstrumentationVersion(SemVersion()))}
+		trace.WithInstrumentationVersion(SemVersion())),
+		attributesetter: cfg.AttributeSetter}
 	*apiOptions = append(*apiOptions, m.initializeMiddlewareBefore, m.initializeMiddlewareAfter, m.deserializeMiddleware)
+
 }
