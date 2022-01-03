@@ -8,6 +8,10 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 
 ## [Unreleased]
 
+### Changed
+
+- `runtime.go.*` instrumentation metrics have been renamed to `process.runtime.go.*` according to metrics conventions (#1549)
+
 ## [1.3.0/0.28.0] - 2021-12-10
 
 ### ⚠️ Notice ⚠️
