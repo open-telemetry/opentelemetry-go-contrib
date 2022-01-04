@@ -37,12 +37,12 @@ func TestRuntime(t *testing.T) {
 func getGCCount(provider *metrictest.MeterProvider) int {
 	for _, b := range provider.MeasurementBatches {
 		for _, m := range b.Measurements {
-			if m.Instrument.Descriptor().Name() == "runtime.go.gc.count" {
+			if m.Instrument.Descriptor().Name() == "process.runtime.go.gc.count" {
 				return int(m.Number.CoerceToInt64(m.Instrument.Descriptor().NumberKind()))
 			}
 		}
 	}
-	panic("Could not locate a runtime.go.gc.count metric in test output")
+	panic("Could not locate a process.runtime.go.gc.count metric in test output")
 }
 
 func testMinimumInterval(t *testing.T, shouldHappen bool, opts ...runtime.Option) {
