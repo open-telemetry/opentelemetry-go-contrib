@@ -16,6 +16,10 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 
 - Change the `http-server-duration` instrument in `go.opentelemetry.io/contrib/instrumentation/net/http/otelhttp` to record milliseconds instead of microseconds match what is specified in the OpenTelemetry specification. (#1414, #1537)
 
+### Removed
+
+- Remove the MinMaxSumCount from cortex. (#1554)
+
 ## [1.3.0/0.28.0] - 2021-12-10
 
 ### ⚠️ Notice ⚠️
