@@ -19,7 +19,6 @@ import (
 	"fmt"
 	"net"
 	"os"
-	"strings"
 	"time"
 
 	"github.com/DataDog/datadog-go/statsd"
@@ -90,10 +89,7 @@ func ExampleExporter() {
 			// specifics of OpenTelemetry aggregator calculations
 			// "max" is something that will always exist and always be the same
 			statLine := string(d)
-			if strings.HasPrefix(statLine, "myrecorder.max") {
-				fmt.Println(statLine)
-				return
-			}
+			fmt.Println(statLine)
 		case <-timedOutChan:
 			_, _ = fmt.Fprintln(os.Stderr, "Server timed out waiting for packets")
 			return
@@ -104,7 +100,7 @@ func ExampleExporter() {
 	}
 
 	// Output:
-	// myrecorder.max:100|g|#env:dev,l:1,service.name:ExampleExporter,telemetry.sdk.language:go,telemetry.sdk.name:opentelemetry,telemetry.sdk.version:1.2.0
+	// myrecorder:151|c|#env:dev,l:1,service.name:ExampleExporter,telemetry.sdk.language:go,telemetry.sdk.name:opentelemetry,telemetry.sdk.version:1.2.0
 	//
 }
 
