@@ -280,9 +280,8 @@ Although only the `Sum` and `Histogram` aggregations are currently being used, t
 exporter supports 5 different aggregations:
 1. `Sum`
 2. `LastValue`
-3. `MinMaxSumCount`
-4. `Distribution`
-5. `Histogram`
+3. `Distribution`
+4. `Histogram`
 
 ## Error Handling
 In general, errors are returned to the calling function / method. Eventually, errors make

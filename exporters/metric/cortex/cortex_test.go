@@ -106,12 +106,6 @@ func TestConvertToTimeSeries(t *testing.T) {
 			wantLength: 1,
 		},
 		{
-			name:       "convertFromMinMaxSumCount",
-			input:      getMMSCReader(t, 123.456, 876.543),
-			want:       wantMMSCTimeSeries,
-			wantLength: 4,
-		},
-		{
 			name:       "convertFromHistogram",
 			input:      getHistogramReader(t),
 			want:       wantHistogramTimeSeries,

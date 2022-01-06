@@ -30,7 +30,6 @@ import (
 	"go.opentelemetry.io/otel/sdk/export/metric/aggregation"
 	"go.opentelemetry.io/otel/sdk/metric/aggregator/histogram"
 	"go.opentelemetry.io/otel/sdk/metric/aggregator/lastvalue"
-	"go.opentelemetry.io/otel/sdk/metric/aggregator/minmaxsumcount"
 	"go.opentelemetry.io/otel/sdk/metric/aggregator/sum"
 	controller "go.opentelemetry.io/otel/sdk/metric/controller/basic"
 	processor "go.opentelemetry.io/otel/sdk/metric/processor/basic"
@@ -52,11 +51,6 @@ func (testAggregatorSelector) AggregatorFor(desc *sdkapi.Descriptor, aggPtrs ...
 	switch {
 	case strings.HasSuffix(desc.Name(), "_sum"):
 		aggs := sum.New(len(aggPtrs))
-		for i := range aggPtrs {
-			*aggPtrs[i] = &aggs[i]
-		}
-	case strings.HasSuffix(desc.Name(), "_mmsc"):
-		aggs := minmaxsumcount.New(len(aggPtrs), desc)
 		for i := range aggPtrs {
 			*aggPtrs[i] = &aggs[i]
 		}
@@ -109,21 +103,6 @@ func getLastValueReader(t *testing.T, values ...int64) export.InstrumentationLib
 			res.Observe(value)
 		}
 	})
-
-	require.NoError(t, cont.Collect(ctx))
-
-	return cont
-}
-
-// getMMSCReader returns a checkpoint set with a minmaxsumcount aggregation record
-func getMMSCReader(t *testing.T, values ...float64) export.InstrumentationLibraryReader {
-	ctx, meter, cont := testMeter(t)
-
-	histo := metric.Must(meter).NewFloat64Histogram("metric_mmsc")
-
-	for _, value := range values {
-		histo.Record(ctx, value)
-	}
 
 	require.NoError(t, cont.Collect(ctx))
 
