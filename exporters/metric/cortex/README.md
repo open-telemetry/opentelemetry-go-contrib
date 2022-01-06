@@ -277,7 +277,7 @@ that instruments are mapped to aggregations as shown in the table below.
 | ValueObserver     | Histogram   |
 
 Although only the `Sum` and `Histogram` aggregations are currently being used, the
-exporter supports 5 different aggregations:
+exporter supports 4 different aggregations:
 1. `Sum`
 2. `LastValue`
 3. `Distribution`
