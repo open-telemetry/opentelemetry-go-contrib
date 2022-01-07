@@ -18,6 +18,7 @@ import (
 	"context"
 	"fmt"
 	"os"
+	"strings"
 
 	"cloud.google.com/go/compute/metadata"
 
@@ -56,6 +57,16 @@ func NewCloudRun() *CloudRun {
 	}
 }
 
+func (c *CloudRun) cloudRegion(ctx context.Context) (string, error) {
+	region, err := c.mc.Get("instance/region")
+	if err != nil {
+		return "", err
+	}
+	// Region from the metadata server is in the format /projects/123/regions/r.
+	// https://cloud.google.com/run/docs/reference/container-contract#metadata-server
+	return region[strings.LastIndex(region, "/")+1:], nil
+}
+
 // Detect detects associated resources when running on Cloud Run hosts.
 // NOTE: the service.namespace attribute is currently hardcoded to be
 // "cloud-run-managed". This may change in the future, please do not rely on
@@ -80,7 +91,7 @@ func (c *CloudRun) Detect(ctx context.Context) (*resource.Resource, error) {
 		attributes = append(attributes, semconv.CloudAccountIDKey.String(projectID))
 	}
 
-	if region, err := c.mc.Get("instance/region"); hasProblem(err) {
+	if region, err := c.cloudRegion(ctx); hasProblem(err) {
 		errInfo = append(errInfo, err.Error())
 	} else if region != "" {
 		attributes = append(attributes, semconv.CloudRegionKey.String(region))

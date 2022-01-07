@@ -85,7 +85,7 @@ func TestCloudRunDetectorExpectSuccess(t *testing.T) {
 	metadata := map[string]string{
 		"project/project-id": "foo",
 		"instance/id":        "bar",
-		"instance/region":    "utopia",
+		"instance/region":    "/projects/123/regions/utopia",
 	}
 	envvars := map[string]string{
 		"K_SERVICE": "x-service",
