@@ -93,7 +93,7 @@ func ExampleExporter() {
 		case <-timedOutChan:
 			_, _ = fmt.Fprintln(os.Stderr, "Server timed out waiting for packets")
 			return
-		case <-time.After(1 * time.Second):
+		case <-time.After(2 * time.Second):
 			fmt.Println("no data received after 1 second")
 			return
 		}
