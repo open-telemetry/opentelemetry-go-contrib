@@ -71,7 +71,7 @@ func ExampleExporter() {
 		defer func() { handleErr(cont.Stop(ctx)) }()
 		global.SetMeterProvider(cont)
 		meter := global.Meter("marwandist")
-		m := metric.Must(meter).NewInt64Histogram("myrecorder")
+		m := metric.Must(meter).NewInt64Counter("mycounter")
 		meter.RecordBatch(context.Background(), []attribute.KeyValue{attribute.Int("l", 1)},
 			m.Measurement(1), m.Measurement(50), m.Measurement(100))
 	}()
@@ -100,7 +100,7 @@ func ExampleExporter() {
 	}
 
 	// Output:
-	// myrecorder:151|c|#env:dev,l:1,service.name:ExampleExporter,telemetry.sdk.language:go,telemetry.sdk.name:opentelemetry,telemetry.sdk.version:1.2.0
+	// mycounter:151|c|#env:dev,l:1,service.name:ExampleExporter,telemetry.sdk.language:go,telemetry.sdk.name:opentelemetry,telemetry.sdk.version:1.2.0
 	//
 }
 
