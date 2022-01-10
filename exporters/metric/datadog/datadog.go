@@ -123,30 +123,6 @@ func (e *Exporter) Export(ctx context.Context, res *resource.Resource, ilr expor
 						return fmt.Errorf("error submitting %s point: %w", name, err)
 					}
 				}
-			case aggregation.MinMaxSumCount:
-				type record struct {
-					name string
-					f    func() (number.Number, error)
-				}
-				recs := []record{
-					{
-						name: name + ".min",
-						f:    agg.Min,
-					},
-					{
-						name: name + ".max",
-						f:    agg.Max,
-					},
-				}
-				for _, rec := range recs {
-					val, err := rec.f()
-					if err != nil {
-						return fmt.Errorf("error getting MinMaxSumCount value for %s: %w", name, err)
-					}
-					if err := e.client.Gauge(rec.name, metricValue(r.Descriptor().NumberKind(), val), tags, rate); err != nil {
-						return fmt.Errorf("error submitting %s point: %w", name, err)
-					}
-				}
 			case aggregation.Sum:
 				val, err := agg.Sum()
 				if err != nil {
