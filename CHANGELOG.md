@@ -8,6 +8,10 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 
 ## [Unreleased]
 
+### Added
+
+- Add `WithClientTrace` option to `otelhttp.Transport` (#875)
+
 ### Changed
 
 - All metric instruments from the `go.opentelemetry.io/contrib/instrumentation/runtime` package have been renamed from `runtime.go.*` to `process.runtime.go.*` so as to comply with OpenTelemetry semantic conventions. (#1549)
