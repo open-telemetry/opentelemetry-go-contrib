@@ -109,27 +109,17 @@ func (e *Exporter) Export(ctx context.Context, res *resource.Resource, ilr expor
 				tags = append(tags, tag)
 			}
 			switch agg := agg.(type) {
-			case aggregation.MinMaxSumCount:
-				type record struct {
-					name string
-					f    func() (number.Number, error)
+			case aggregation.Points:
+				numbers, err := agg.Points()
+				if err != nil {
+					return fmt.Errorf("error getting Points for %s: %w", name, err)
 				}
-				recs := []record{
-					{
-						name: name + ".min",
-						f:    agg.Min,
-					},
-					{
-						name: name + ".max",
-						f:    agg.Max,
-					},
+				f := e.client.Histogram
+				if e.opts.UseDistribution {
+					f = e.client.Distribution
 				}
-				for _, rec := range recs {
-					val, err := rec.f()
-					if err != nil {
-						return fmt.Errorf("error getting MinMaxSumCount value for %s: %w", name, err)
-					}
-					if err := e.client.Gauge(rec.name, metricValue(r.Descriptor().NumberKind(), val), tags, rate); err != nil {
+				for _, n := range numbers {
+					if err := f(name, metricValue(r.Descriptor().NumberKind(), n.Number), tags, rate); err != nil {
 						return fmt.Errorf("error submitting %s point: %w", name, err)
 					}
 				}
