@@ -14,7 +14,7 @@ jobs:
     runs-on: ubuntu-latest
     steps:
     - name: Install Go
-      uses: actions/setup-go@v2.1.4
+      uses: actions/setup-go@v2.1.5
       with:
         go-version: ${{ env.DEFAULT_GO_VERSION }}
     - name: Checkout Repo
@@ -48,7 +48,7 @@ jobs:
     runs-on: ubuntu-latest
     steps:
     - name: Install Go
-      uses: actions/setup-go@v2.1.4
+      uses: actions/setup-go@v2.1.5
       with:
         go-version: ${{ env.DEFAULT_GO_VERSION }}
     - name: Checkout Repo
@@ -71,7 +71,7 @@ jobs:
     runs-on: ubuntu-latest
     steps:
     - name: Install Go
-      uses: actions/setup-go@v2.1.4
+      uses: actions/setup-go@v2.1.5
       with:
         go-version: ${{ env.DEFAULT_GO_VERSION }}
     - name: Checkout Repo
@@ -108,9 +108,7 @@ jobs:
     strategy:
       matrix:
         go-version: [1.17, 1.16]
-        # TODO: support all of these.
-        #os: [ubuntu-latest, macos-latest, windows-latest]
-        os: [ubuntu-latest, macos-latest]
+        os: [ubuntu-latest, macos-latest, windows-latest]
         # GitHub Actions does not support arm* architectures on default
         # runners. It is possible to acomplish this with a self-hosted runner
         # if we want to add this in the future:
@@ -123,7 +121,7 @@ jobs:
     runs-on: ${{ matrix.os }}
     steps:
     - name: Install Go
-      uses: actions/setup-go@v2.1.4
+      uses: actions/setup-go@v2.1.5
       with:
         go-version: ${{ matrix.go-version }}
     - name: Checkout code
@@ -152,7 +150,7 @@ jobs:
     runs-on: ubuntu-latest
     steps:
     - name: Install Go
-      uses: actions/setup-go@v2.1.4
+      uses: actions/setup-go@v2.1.5
       with:
         go-version: ${{ env.DEFAULT_GO_VERSION }}
     - name: Checkout Repo

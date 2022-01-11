@@ -14,12 +14,29 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 
 ### Changed
 
-- `otelhttptrace.NewClientTrace` now uses `TracerProvider` from the parent context if one exists and none was set with `WithTracerProvider` (#874)
-- Changed the project minimum supported Go version from 1.15 to 1.16. (#1442)
+- All metric instruments from the `go.opentelemetry.io/contrib/instrumentation/runtime` package have been renamed from `runtime.go.*` to `process.runtime.go.*` so as to comply with OpenTelemetry semantic conventions. (#1549)
 
 ### Fixed
 
-- The `"go.opentelemetry.io/contrib/detector/aws/ecs".Detector` no longer errors if not running in ECS. (#1426, #1428)
+- Change the `http-server-duration` instrument in `go.opentelemetry.io/contrib/instrumentation/net/http/otelhttp` to record milliseconds instead of microseconds match what is specified in the OpenTelemetry specification. (#1414, #1537)
+
+### Removed
+
+- Remove the MinMaxSumCount from cortex and datadog exporter. (#1554)
+
+## [1.3.0/0.28.0] - 2021-12-10
+
+### ⚠️ Notice ⚠️
+
+We have updated the project minimum supported Go version to 1.16
+
+### Changed
+
+- `otelhttptrace.NewClientTrace` now uses `TracerProvider` from the parent context if one exists and none was set with `WithTracerProvider` (#874)
+
+### Fixed
+
+- The `"go.opentelemetry.io/contrib/detector/aws/ecs".Detector` no longer errors if not running in ECS. (#1428)
 - `go.opentelemetry.io/contrib/instrumentation/github.com/gorilla/mux/otelmux`
   does not require instrumented HTTP handlers to call `Write` nor
   `WriteHeader` anymore. (#1443)
@@ -411,7 +428,8 @@ First official tagged release of `contrib` repository.
 - Prefix support for dogstatsd (#34)
 - Update Go Runtime package to use batch observer (#44)
 
-[Unreleased]: https://github.com/open-telemetry/opentelemetry-go-contrib/compare/v1.2.0...HEAD
+[Unreleased]: https://github.com/open-telemetry/opentelemetry-go-contrib/compare/v1.3.0...HEAD
+[1.3.0/0.28.0]: https://github.com/open-telemetry/opentelemetry-go-contrib/releases/tag/v1.3.0
 [1.2.0/0.27.0]: https://github.com/open-telemetry/opentelemetry-go-contrib/releases/tag/v1.2.0
 [1.1.1/0.26.1]: https://github.com/open-telemetry/opentelemetry-go-contrib/releases/tag/v1.1.1
 [1.1.0/0.26.0]: https://github.com/open-telemetry/opentelemetry-go-contrib/releases/tag/v1.1.0

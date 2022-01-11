@@ -19,18 +19,20 @@ import (
 	"fmt"
 	"net"
 	"os"
-	"strings"
 	"time"
 
 	"github.com/DataDog/datadog-go/statsd"
 
-	"go.opentelemetry.io/contrib/exporters/metric/datadog"
 	"go.opentelemetry.io/otel/attribute"
 	"go.opentelemetry.io/otel/metric"
 	"go.opentelemetry.io/otel/metric/global"
 	controller "go.opentelemetry.io/otel/sdk/metric/controller/basic"
 	"go.opentelemetry.io/otel/sdk/metric/processor/basic"
 	"go.opentelemetry.io/otel/sdk/metric/selector/simple"
+	"go.opentelemetry.io/otel/sdk/resource"
+	semconv "go.opentelemetry.io/otel/semconv/v1.4.0"
+
+	"go.opentelemetry.io/contrib/exporters/metric/datadog"
 )
 
 type TestUDPServer struct {
@@ -57,16 +59,19 @@ func ExampleExporter() {
 	go func() {
 		defer exp.Close()
 		processor := basic.NewFactory(selector, exp)
-		cont := controller.New(processor, controller.WithExporter(exp), controller.WithCollectPeriod(time.Second*10))
+		cont := controller.New(processor, controller.WithExporter(exp), controller.WithCollectPeriod(time.Second*10),
+			controller.WithResource(resource.Default()),
+			controller.WithResource(resource.NewSchemaless(semconv.ServiceNameKey.String("ExampleExporter"))))
 		ctx := context.Background()
 		err := cont.Start(ctx)
 		if err != nil {
 			panic(err)
 		}
+
 		defer func() { handleErr(cont.Stop(ctx)) }()
 		global.SetMeterProvider(cont)
 		meter := global.Meter("marwandist")
-		m := metric.Must(meter).NewInt64Histogram("myrecorder")
+		m := metric.Must(meter).NewInt64Counter("mycounter")
 		meter.RecordBatch(context.Background(), []attribute.KeyValue{attribute.Int("l", 1)},
 			m.Measurement(1), m.Measurement(50), m.Measurement(100))
 	}()
@@ -84,21 +89,18 @@ func ExampleExporter() {
 			// specifics of OpenTelemetry aggregator calculations
 			// "max" is something that will always exist and always be the same
 			statLine := string(d)
-			if strings.HasPrefix(statLine, "myrecorder.max") {
-				fmt.Println(statLine)
-				return
-			}
+			fmt.Println(statLine)
 		case <-timedOutChan:
 			_, _ = fmt.Fprintln(os.Stderr, "Server timed out waiting for packets")
 			return
-		case <-time.After(1 * time.Second):
+		case <-time.After(2 * time.Second):
 			fmt.Println("no data received after 1 second")
 			return
 		}
 	}
 
 	// Output:
-	// myrecorder.max:100|g|#env:dev,l:1,service.name:unknown_service:datadog.test,telemetry.sdk.language:go,telemetry.sdk.name:opentelemetry,telemetry.sdk.version:1.2.0
+	// mycounter:151|c|#env:dev,l:1,service.name:ExampleExporter,telemetry.sdk.language:go,telemetry.sdk.name:opentelemetry,telemetry.sdk.version:1.2.0
 	//
 }
 

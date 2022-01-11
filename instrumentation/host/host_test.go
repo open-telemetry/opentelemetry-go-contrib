@@ -28,9 +28,10 @@ import (
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 
-	"go.opentelemetry.io/contrib/instrumentation/host"
 	"go.opentelemetry.io/otel/attribute"
 	"go.opentelemetry.io/otel/metric/metrictest"
+
+	"go.opentelemetry.io/contrib/instrumentation/host"
 )
 
 func getMetric(provider *metrictest.MeterProvider, name string, lbl attribute.KeyValue) float64 {
@@ -218,19 +219,17 @@ func TestHostNetwork(t *testing.T) {
 	require.NoError(t, err)
 
 	// As we are going to read the /proc file system for this info, sleep a while:
-	time.Sleep(time.Second)
+	require.Eventually(t, func() bool {
+		hostAfter, err := net.IOCountersWithContext(ctx, false)
+		require.NoError(t, err)
+
+		return uint64(howMuch) <= hostAfter[0].BytesSent-hostBefore[0].BytesSent &&
+			uint64(howMuch) <= hostAfter[0].BytesRecv-hostBefore[0].BytesRecv
+	}, 30*time.Second, time.Second/2)
 
 	provider.RunAsyncInstruments()
-
-	hostAfter, err := net.IOCountersWithContext(ctx, false)
-	require.NoError(t, err)
-
 	hostTransmit := getMetric(provider, "system.network.io", host.AttributeNetworkTransmit[0])
 	hostReceive := getMetric(provider, "system.network.io", host.AttributeNetworkReceive[0])
-
-	// Check that the network transmit/receive used is greater than before:
-	require.LessOrEqual(t, uint64(howMuch), hostAfter[0].BytesSent-hostBefore[0].BytesSent)
-	require.LessOrEqual(t, uint64(howMuch), hostAfter[0].BytesRecv-hostBefore[0].BytesRecv)
 
 	// Check that the recorded measurements reflect the same change:
 	require.LessOrEqual(t, uint64(howMuch), uint64(hostTransmit)-hostBefore[0].BytesSent)
