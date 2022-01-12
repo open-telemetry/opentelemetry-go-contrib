@@ -14,7 +14,13 @@
 
 package otelaws
 
-import "go.opentelemetry.io/otel/attribute"
+import (
+	"context"
+
+	v2Middleware "github.com/aws/aws-sdk-go-v2/aws/middleware"
+	"github.com/aws/smithy-go/middleware"
+	"go.opentelemetry.io/otel/attribute"
+)
 
 // AWS attributes.
 const (
@@ -38,4 +44,20 @@ func ServiceAttr(service string) attribute.KeyValue {
 
 func RequestIDAttr(requestID string) attribute.KeyValue {
 	return RequestIDKey.String(requestID)
+}
+
+func Defaultattributesetter(ctx context.Context, in middleware.InitializeInput) []attribute.KeyValue {
+	servicemap := map[string]attributesetter{
+		"dynamodb": DynamodbAttributeSetter,
+	}
+
+	serviceID := v2Middleware.GetServiceID(ctx)
+
+	if val, ok := servicemap[serviceID]; ok {
+		function := val
+		attributes := function(ctx, in)
+		return attributes
+	}
+
+	return []attribute.KeyValue{}
 }

@@ -9,6 +9,7 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 ## [Unreleased]
 
 ### Added
+- Dynamodb spans will now have the appropriate attributes added for the operation being performed, this is detected automatically but it is also now possible to provide a custom function to set attributes using `WithAttributeSetter` 
 
 - Add `WithClientTrace` option to `otelhttp.Transport` (#875)
 
@@ -35,11 +36,11 @@ We have updated the project minimum supported Go version to 1.16
 - `otelhttptrace.NewClientTrace` now uses `TracerProvider` from the parent context if one exists and none was set with `WithTracerProvider` (#874)
 
 ### Fixed
-
 - The `"go.opentelemetry.io/contrib/detector/aws/ecs".Detector` no longer errors if not running in ECS. (#1428)
 - `go.opentelemetry.io/contrib/instrumentation/github.com/gorilla/mux/otelmux`
   does not require instrumented HTTP handlers to call `Write` nor
   `WriteHeader` anymore. (#1443)
+
 
 ## [1.2.0/0.27.0] - 2021-11-15
 
@@ -72,6 +73,8 @@ Update dependency on the `go.opentelemetry.io/otel` project to `v1.1.0`.
 - Add resource detector for AWS Lambda. (#983)
 - Add `WithTracerProvider` option for `otelhttptrace.NewClientTrace`. (#1128)
 - Add optional AWS X-Ray configuration module for AWS Lambda Instrumentation. (#984)
+
+
 
 ### Fixed
 

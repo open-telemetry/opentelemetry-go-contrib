@@ -6,6 +6,7 @@ replace go.opentelemetry.io/contrib => ../../../../../
 
 require (
 	github.com/aws/aws-sdk-go-v2 v1.12.0
+	github.com/aws/aws-sdk-go-v2/service/dynamodb v1.11.0
 	github.com/aws/smithy-go v1.9.1
 	go.opentelemetry.io/otel v1.3.0
 	go.opentelemetry.io/otel/trace v1.3.0
