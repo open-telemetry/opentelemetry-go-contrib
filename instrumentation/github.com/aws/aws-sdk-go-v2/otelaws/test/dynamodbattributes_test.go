@@ -100,7 +100,7 @@ func TestDynamodbTags(t *testing.T) {
 			assert.Contains(t, attrs, attribute.Int("http.status_code", cases.expectedStatusCode))
 			assert.Contains(t, attrs, attribute.String("aws.service", "DynamoDB"))
 			assert.Contains(t, attrs, attribute.String("aws.region", cases.expectedRegion))
-			assert.Contains(t, attrs, attribute.String("aws.operation", "GetItem")) // chnage the operation to a dynamodb one
+			assert.Contains(t, attrs, attribute.String("aws.operation", "GetItem")) 
 			assert.Contains(t, attrs, attribute.String("aws.dynamodb.table_names", "table1"))
 			assert.Contains(t, attrs, attribute.String("aws.dynamodb.projection", "test"))
 			assert.Contains(t, attrs, attribute.Bool("aws.dynamodb.consistent_read", false))
@@ -295,10 +295,13 @@ func TestDynamodbTagsQueryInput(t *testing.T) {
 			ScanIndexForward:       aws.Bool(true),
 			ProjectionExpression:   aws.String("projectionexpression"),
 			Select:                 dtypes.SelectAllAttributes,
-			KeyConditionExpression: aws.String("gsi1pk = :gsi1pk and gsi1sk > :gsi1sk"),
+			KeyConditionExpression: aws.String("id = :hashKey and #date > :rangeKey"),
+			ExpressionAttributeNames: map[string]string{
+				"#date": "date",
+			},
 			ExpressionAttributeValues: map[string]dtypes.AttributeValue{
-				":gsi1pk": &dtypes.AttributeValueMemberS{Value: "123"},
-				":gsi1sk": &dtypes.AttributeValueMemberN{Value: "20150101"},
+				":hashKey":  &dtypes.AttributeValueMemberS{Value: "123"},
+				":rangeKey": &dtypes.AttributeValueMemberN{Value: "20150101"},
 			},
 		},
 	}

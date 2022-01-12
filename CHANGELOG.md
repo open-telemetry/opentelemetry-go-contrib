@@ -9,9 +9,7 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 ## [Unreleased]
 
 ### Added
-<<<<<<< HEAD
 - Dynamodb spans will now have the appropriate attributes added for the operation being performed, this is detected automatically but it is also now possible to provide a custom function to set attributes using `WithAttributeSetter` 
-=======
 
 - Add `WithClientTrace` option to `otelhttp.Transport` (#875)
 
@@ -26,7 +24,6 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 ### Removed
 
 - Remove the MinMaxSumCount from cortex and datadog exporter. (#1554)
->>>>>>> main
 
 ## [1.3.0/0.28.0] - 2021-12-10
 
