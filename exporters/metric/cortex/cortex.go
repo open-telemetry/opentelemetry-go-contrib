@@ -160,13 +160,6 @@ func (e *Exporter) ConvertToTimeSeries(res *resource.Resource, checkpointSet exp
 					return err
 				}
 				timeSeries = append(timeSeries, tSeries)
-				if minMaxSumCount, ok := agg.(aggregation.MinMaxSumCount); ok {
-					tSeries, err := convertFromMinMaxSumCount(edata, minMaxSumCount)
-					if err != nil {
-						return err
-					}
-					timeSeries = append(timeSeries, tSeries...)
-				}
 			} else if lastValue, ok := agg.(aggregation.LastValue); ok {
 				tSeries, err := convertFromLastValue(edata, lastValue)
 				if err != nil {
@@ -234,42 +227,6 @@ func convertFromLastValue(edata exportData, lastValue aggregation.LastValue) (pr
 	name := sanitize(edata.Descriptor().Name())
 	numberKind := edata.Descriptor().NumberKind()
 	tSeries := createTimeSeries(edata, value, numberKind, attribute.String("__name__", name))
-
-	return tSeries, nil
-}
-
-// convertFromMinMaxSumCount returns 4 TimeSeries for the min, max, sum, and count from the mmsc aggregation
-func convertFromMinMaxSumCount(edata exportData, minMaxSumCount aggregation.MinMaxSumCount) ([]prompb.TimeSeries, error) {
-	numberKind := edata.Descriptor().NumberKind()
-
-	// Convert Min
-	min, err := minMaxSumCount.Min()
-	if err != nil {
-		return nil, err
-	}
-	name := sanitize(edata.Descriptor().Name() + "_min")
-	minTimeSeries := createTimeSeries(edata, min, numberKind, attribute.String("__name__", name))
-
-	// Convert Max
-	max, err := minMaxSumCount.Max()
-	if err != nil {
-		return nil, err
-	}
-	name = sanitize(edata.Descriptor().Name() + "_max")
-	maxTimeSeries := createTimeSeries(edata, max, numberKind, attribute.String("__name__", name))
-
-	// Convert Count
-	count, err := minMaxSumCount.Count()
-	if err != nil {
-		return nil, err
-	}
-	name = sanitize(edata.Descriptor().Name() + "_count")
-	countTimeSeries := createTimeSeries(edata, number.NewInt64Number(int64(count)), number.Int64Kind, attribute.String("__name__", name))
-
-	// Return all timeSeries
-	tSeries := []prompb.TimeSeries{
-		minTimeSeries, maxTimeSeries, countTimeSeries,
-	}
 
 	return tSeries, nil
 }
