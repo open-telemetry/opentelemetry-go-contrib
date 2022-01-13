@@ -72,8 +72,10 @@ func ExampleExporter() {
 		global.SetMeterProvider(cont)
 		meter := global.Meter("marwandist")
 		m := metric.Must(meter).NewInt64Counter("mycounter")
+		histo := metric.Must(meter).NewInt64Histogram("myhistogram")
 		meter.RecordBatch(context.Background(), []attribute.KeyValue{attribute.Int("l", 1)},
-			m.Measurement(1), m.Measurement(50), m.Measurement(100))
+			m.Measurement(1), m.Measurement(50), m.Measurement(100),
+			histo.Measurement(1), histo.Measurement(50), histo.Measurement(100))
 	}()
 
 	statsChan := make(chan []byte, 1)
@@ -100,8 +102,9 @@ func ExampleExporter() {
 	}
 
 	// Output:
-	// mycounter:151|c|#env:dev,l:1,service.name:ExampleExporter,telemetry.sdk.language:go,telemetry.sdk.name:opentelemetry,telemetry.sdk.version:1.2.0
+	// mycounter:151|c|#env:dev,l:1,service.name:ExampleExporter,telemetry.sdk.language:go,telemetry.sdk.name:opentelemetry,telemetry.sdk.version:1.3.0
 	//
+	// myhistogram:151|c|#env:dev,l:1,service.name:ExampleExporter,telemetry.sdk.language:go,telemetry.sdk.name:opentelemetry,telemetry.sdk.version:1.3.0
 }
 
 func getTestServer(addr string) (*TestUDPServer, error) {

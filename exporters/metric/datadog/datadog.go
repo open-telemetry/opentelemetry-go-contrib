@@ -109,19 +109,13 @@ func (e *Exporter) Export(ctx context.Context, res *resource.Resource, ilr expor
 				tags = append(tags, tag)
 			}
 			switch agg := agg.(type) {
-			case aggregation.Points:
-				numbers, err := agg.Points()
+			case aggregation.Histogram:
+				val, err := agg.Histogram()
 				if err != nil {
-					return fmt.Errorf("error getting Points for %s: %w", name, err)
+					return fmt.Errorf("error getting Histogram value for %s: %w", name, err)
 				}
-				f := e.client.Histogram
-				if e.opts.UseDistribution {
-					f = e.client.Distribution
-				}
-				for _, n := range numbers {
-					if err := f(name, metricValue(r.Descriptor().NumberKind(), n.Number), tags, rate); err != nil {
-						return fmt.Errorf("error submitting %s point: %w", name, err)
-					}
+				if err := e.client.Histogram(name, val.Boundaries[0], tags, rate); err != nil {
+					return fmt.Errorf("error submitting %s point: %w", name, err)
 				}
 			case aggregation.Sum:
 				val, err := agg.Sum()
