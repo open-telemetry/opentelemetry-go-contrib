@@ -35,8 +35,8 @@ const (
 	gcpFunctionNameKey = "K_SERVICE"
 )
 
-//NewResourceDetector will return an implementation for gcp cloud function resource detector
-func NewResourceDetector() resource.Detector {
+//NewCloudFunction will return an implementation for gcp cloud function resource detector
+func NewCloudFunction() resource.Detector {
 	return &CloudFunction{
 		client: &gcpClientImpl{},
 	}
