@@ -11,6 +11,7 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 ### Added
 
 - Add `WithClientTrace` option to `otelhttp.Transport` (#875)
+- Handle Histograms in Datadog Exporter. (#1583)
 
 ### Changed
 
