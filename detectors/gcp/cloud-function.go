@@ -21,6 +21,7 @@ import (
 	"strings"
 
 	"cloud.google.com/go/compute/metadata"
+
 	"go.opentelemetry.io/otel/attribute"
 	"go.opentelemetry.io/otel/sdk/resource"
 	semconv "go.opentelemetry.io/otel/semconv/v1.4.0"
