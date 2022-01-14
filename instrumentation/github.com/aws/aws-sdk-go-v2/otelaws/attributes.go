@@ -19,6 +19,7 @@ import (
 
 	v2Middleware "github.com/aws/aws-sdk-go-v2/aws/middleware"
 	"github.com/aws/smithy-go/middleware"
+
 	"go.opentelemetry.io/otel/attribute"
 )
 
@@ -29,6 +30,10 @@ const (
 	ServiceKey   attribute.Key = "aws.service"
 	RequestIDKey attribute.Key = "aws.request_id"
 )
+
+var servicemap map[string]AttributeSetter = map[string]AttributeSetter{
+	"dynamodb": DynamodbAttributeSetter,
+}
 
 func OperationAttr(operation string) attribute.KeyValue {
 	return OperationKey.String(operation)
@@ -46,17 +51,12 @@ func RequestIDAttr(requestID string) attribute.KeyValue {
 	return RequestIDKey.String(requestID)
 }
 
-func Defaultattributesetter(ctx context.Context, in middleware.InitializeInput) []attribute.KeyValue {
-	servicemap := map[string]attributesetter{
-		"dynamodb": DynamodbAttributeSetter,
-	}
+func DefaultAttributeSetter(ctx context.Context, in middleware.InitializeInput) []attribute.KeyValue {
 
 	serviceID := v2Middleware.GetServiceID(ctx)
 
-	if val, ok := servicemap[serviceID]; ok {
-		function := val
-		attributes := function(ctx, in)
-		return attributes
+	if fn, ok := servicemap[serviceID]; ok {
+		return fn(ctx, in)
 	}
 
 	return []attribute.KeyValue{}

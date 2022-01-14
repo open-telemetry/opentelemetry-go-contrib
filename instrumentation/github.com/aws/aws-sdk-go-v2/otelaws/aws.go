@@ -35,11 +35,11 @@ const (
 
 type spanTimestampKey struct{}
 
-type attributesetter func(ctx context.Context, in middleware.InitializeInput) []attribute.KeyValue
+type AttributeSetter func(context.Context, middleware.InitializeInput) []attribute.KeyValue
 
 type otelMiddlewares struct {
 	tracer          trace.Tracer
-	attributesetter attributesetter
+	attributesetter AttributeSetter
 }
 
 func (m otelMiddlewares) initializeMiddlewareBefore(stack *middleware.Stack) error {
@@ -119,7 +119,7 @@ func (m otelMiddlewares) deserializeMiddleware(stack *middleware.Stack) error {
 func AppendMiddlewares(apiOptions *[]func(*middleware.Stack) error, opts ...Option) {
 	cfg := config{
 		TracerProvider:  otel.GetTracerProvider(),
-		AttributeSetter: Defaultattributesetter,
+		AttributeSetter: DefaultAttributeSetter,
 	}
 	for _, opt := range opts {
 		opt.apply(&cfg)

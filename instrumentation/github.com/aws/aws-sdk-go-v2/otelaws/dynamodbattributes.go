@@ -22,7 +22,7 @@ import (
 	"github.com/aws/smithy-go/middleware"
 
 	"go.opentelemetry.io/otel/attribute"
-	"go.opentelemetry.io/otel/semconv/v1.7.0"
+	semconv "go.opentelemetry.io/otel/semconv/v1.7.0"
 )
 
 func DynamodbAttributeSetter(ctx context.Context, in middleware.InitializeInput) []attribute.KeyValue {
@@ -48,18 +48,18 @@ func DynamodbAttributeSetter(ctx context.Context, in middleware.InitializeInput)
 		}
 
 	case *dynamodb.BatchGetItemInput:
-		var table_names []string
+		var tableNames []string
 		for k, _ := range v.RequestItems {
-			table_names = append(table_names, k)
+			tableNames = append(tableNames, k)
 		}
-		dynamodbAttributes = append(dynamodbAttributes, semconv.AWSDynamoDBTableNamesKey.StringSlice(table_names))
+		dynamodbAttributes = append(dynamodbAttributes, semconv.AWSDynamoDBTableNamesKey.StringSlice(tableNames))
 
 	case *dynamodb.BatchWriteItemInput:
-		var table_names []string
+		var tableNames []string
 		for k, _ := range v.RequestItems {
-			table_names = append(table_names, k)
+			tableNames = append(tableNames, k)
 		}
-		dynamodbAttributes = append(dynamodbAttributes, semconv.AWSDynamoDBTableNamesKey.StringSlice(table_names))
+		dynamodbAttributes = append(dynamodbAttributes, semconv.AWSDynamoDBTableNamesKey.StringSlice(tableNames))
 
 	case *dynamodb.CreateTableInput:
 		dynamodbAttributes = append(dynamodbAttributes, semconv.AWSDynamoDBTableNamesKey.String(*v.TableName))
