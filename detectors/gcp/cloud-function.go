@@ -16,19 +16,11 @@ package gcp
 
 import (
 	"context"
-	"errors"
 	"os"
-	"strings"
-
-	"cloud.google.com/go/compute/metadata"
 
 	"go.opentelemetry.io/otel/attribute"
 	"go.opentelemetry.io/otel/sdk/resource"
 	semconv "go.opentelemetry.io/otel/semconv/v1.4.0"
-)
-
-var (
-	errNotOnGoogleCloudFunction = errors.New("cannot detect environment variables from Google Cloud Function")
 )
 
 const (
@@ -38,48 +30,26 @@ const (
 //NewCloudFunction will return an implementation for gcp cloud function resource detector
 func NewCloudFunction() resource.Detector {
 	return &CloudFunction{
-		client: &gcpClientImpl{},
+		cloudRun: NewCloudRun(),
 	}
-}
-
-type gcpClient interface {
-	gcpProjectID() (string, error)
-	gcpRegion() (string, error)
-}
-type gcpClientImpl struct{}
-
-func (gi *gcpClientImpl) gcpProjectID() (string, error) {
-	return metadata.ProjectID()
-}
-
-func (gi *gcpClientImpl) gcpRegion() (string, error) {
-	var region string
-	zone, err := metadata.Zone()
-	if zone != "" {
-		splitArr := strings.SplitN(zone, "-", 3)
-		if len(splitArr) == 3 {
-			region = strings.Join(splitArr[0:2], "-")
-		}
-	}
-	return region, err
 }
 
 type CloudFunction struct {
-	client gcpClient
+	cloudRun *CloudRun
 }
 
 // Detect detects associated resources when running in  cloud function.
 func (f *CloudFunction) Detect(ctx context.Context) (*resource.Resource, error) {
 	functionName, ok := f.googleCloudFunctionName()
 	if !ok {
-		return nil, errNotOnGoogleCloudFunction
+		return nil, nil
 	}
 
-	projectID, err := f.client.gcpProjectID()
+	projectID, err := f.cloudRun.mc.ProjectID()
 	if err != nil {
 		return nil, err
 	}
-	region, err := f.client.gcpRegion()
+	region, err := f.cloudRun.cloudRegion(context.Background())
 	if err != nil {
 		return nil, err
 	}
