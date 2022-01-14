@@ -49,7 +49,7 @@ func (f *CloudFunction) Detect(ctx context.Context) (*resource.Resource, error) 
 	if err != nil {
 		return nil, err
 	}
-	region, err := f.cloudRun.cloudRegion(context.Background())
+	region, err := f.cloudRun.cloudRegion(ctx)
 	if err != nil {
 		return nil, err
 	}
