@@ -23,6 +23,7 @@ import (
 
 	"github.com/DataDog/datadog-go/statsd"
 
+	"go.opentelemetry.io/contrib/exporters/metric/datadog"
 	"go.opentelemetry.io/otel/attribute"
 	"go.opentelemetry.io/otel/metric"
 	"go.opentelemetry.io/otel/metric/global"
@@ -31,8 +32,6 @@ import (
 	"go.opentelemetry.io/otel/sdk/metric/selector/simple"
 	"go.opentelemetry.io/otel/sdk/resource"
 	semconv "go.opentelemetry.io/otel/semconv/v1.4.0"
-
-	"go.opentelemetry.io/contrib/exporters/metric/datadog"
 )
 
 type TestUDPServer struct {
@@ -71,11 +70,12 @@ func ExampleExporter() {
 		defer func() { handleErr(cont.Stop(ctx)) }()
 		global.SetMeterProvider(cont)
 		meter := global.Meter("marwandist")
-		m := metric.Must(meter).NewInt64Counter("mycounter")
-		histo := metric.Must(meter).NewInt64Histogram("myhistogram")
+		counter := metric.Must(meter).NewInt64Counter("mycounter")
 		meter.RecordBatch(context.Background(), []attribute.KeyValue{attribute.Int("l", 1)},
-			m.Measurement(1), m.Measurement(50), m.Measurement(100),
-			histo.Measurement(1), histo.Measurement(50), histo.Measurement(100))
+			counter.Measurement(1), counter.Measurement(50), counter.Measurement(100))
+
+		histo := metric.Must(meter).NewInt64Histogram("myhistogram")
+		histo.Record(ctx, 151, attribute.Int("l", 1))
 	}()
 
 	statsChan := make(chan []byte, 1)
