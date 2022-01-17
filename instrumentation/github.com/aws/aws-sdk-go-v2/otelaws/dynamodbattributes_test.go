@@ -20,11 +20,10 @@ import (
 
 	"github.com/aws/aws-sdk-go-v2/aws"
 	"github.com/aws/aws-sdk-go-v2/service/dynamodb"
-	"github.com/stretchr/testify/assert"
 	dtypes "github.com/aws/aws-sdk-go-v2/service/dynamodb/types"
 	"github.com/aws/smithy-go/middleware"
+	"github.com/stretchr/testify/assert"
 	"go.opentelemetry.io/otel/attribute"
-
 )
 
 func TestDynamodbTagsBatchGetItemInput(t *testing.T) {

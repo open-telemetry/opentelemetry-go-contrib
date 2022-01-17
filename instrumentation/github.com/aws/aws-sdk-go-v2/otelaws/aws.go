@@ -39,7 +39,7 @@ type AttributeSetter func(context.Context, middleware.InitializeInput) []attribu
 
 type otelMiddlewares struct {
 	tracer          trace.Tracer
-	attributesetter AttributeSetter
+	attributesetter []AttributeSetter
 }
 
 func (m otelMiddlewares) initializeMiddlewareBefore(stack *middleware.Stack) error {
@@ -64,11 +64,8 @@ func (m otelMiddlewares) initializeMiddlewareAfter(stack *middleware.Stack) erro
 			RegionAttr(v2Middleware.GetRegion(ctx)),
 			OperationAttr(v2Middleware.GetOperationName(ctx)),
 		}
-		if m.attributesetter != nil {
-			attributes = append(
-				attributes,
-				m.attributesetter(ctx, in)...,
-			)
+		for _, setter := range m.attributesetter {
+			attributes = append(attributes, setter(ctx, in)...)
 		}
 
 		ctx, span := m.tracer.Start(ctx, serviceID,
@@ -118,11 +115,14 @@ func (m otelMiddlewares) deserializeMiddleware(stack *middleware.Stack) error {
 // Please see more details in https://aws.github.io/aws-sdk-go-v2/docs/middleware/
 func AppendMiddlewares(apiOptions *[]func(*middleware.Stack) error, opts ...Option) {
 	cfg := config{
-		TracerProvider:  otel.GetTracerProvider(),
-		AttributeSetter: DefaultAttributeSetter,
+		TracerProvider: otel.GetTracerProvider(),
 	}
 	for _, opt := range opts {
 		opt.apply(&cfg)
+	}
+
+	if cfg.AttributeSetter == nil {
+		cfg.AttributeSetter = []AttributeSetter{DefaultAttributeSetter}
 	}
 
 	m := otelMiddlewares{tracer: cfg.TracerProvider.Tracer(tracerName,

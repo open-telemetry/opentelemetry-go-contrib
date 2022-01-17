@@ -32,7 +32,6 @@ import (
 	sdktrace "go.opentelemetry.io/otel/sdk/trace"
 	"go.opentelemetry.io/otel/sdk/trace/tracetest"
 	"go.opentelemetry.io/otel/trace"
-
 )
 
 func TestDynamodbTags(t *testing.T) {
@@ -47,62 +46,62 @@ func TestDynamodbTags(t *testing.T) {
 		expectedStatusCode: 200,
 	}
 
-		server := httptest.NewServer(http.HandlerFunc(
-			func(w http.ResponseWriter, r *http.Request) {
-				w.WriteHeader(cases.responseStatus)
-			}))
-		defer server.Close()
+	server := httptest.NewServer(http.HandlerFunc(
+		func(w http.ResponseWriter, r *http.Request) {
+			w.WriteHeader(cases.responseStatus)
+		}))
+	defer server.Close()
 
-		t.Run("dynamodb tags", func(t *testing.T) {
-			sr := tracetest.NewSpanRecorder()
-			provider := sdktrace.NewTracerProvider(sdktrace.WithSpanProcessor(sr))
+	t.Run("dynamodb tags", func(t *testing.T) {
+		sr := tracetest.NewSpanRecorder()
+		provider := sdktrace.NewTracerProvider(sdktrace.WithSpanProcessor(sr))
 
-			svc := dynamodb.NewFromConfig(aws.Config{
-				Region: cases.expectedRegion,
-				EndpointResolverWithOptions: aws.EndpointResolverWithOptionsFunc(
-					func(service, region string, _ ...interface{}) (aws.Endpoint, error) {
-						return aws.Endpoint{
-							URL:         server.URL,
-							SigningName: "dynamodb",
-						}, nil
-					},
-				),
-				Retryer: func() aws.Retryer {
-					return aws.NopRetryer{}
+		svc := dynamodb.NewFromConfig(aws.Config{
+			Region: cases.expectedRegion,
+			EndpointResolverWithOptions: aws.EndpointResolverWithOptionsFunc(
+				func(service, region string, _ ...interface{}) (aws.Endpoint, error) {
+					return aws.Endpoint{
+						URL:         server.URL,
+						SigningName: "dynamodb",
+					}, nil
 				},
-			})
-			_, err := svc.GetItem(context.Background(), &dynamodb.GetItemInput{
-				TableName:            aws.String("table1"),
-				ConsistentRead:       aws.Bool(false),
-				ProjectionExpression: aws.String("test"),
-				Key: map[string]dtypes.AttributeValue{
-					"id": &dtypes.AttributeValueMemberS{Value: "test"},
-				},
-			}, func(options *dynamodb.Options) {
-				otelaws.AppendMiddlewares(
-					&options.APIOptions, otelaws.WithAttributeSetter(otelaws.DynamodbAttributeSetter), otelaws.WithTracerProvider(provider))
-			})
-
-			if cases.expectedError == codes.Unset {
-				assert.NoError(t, err)
-			} else {
-				assert.NotNil(t, err)
-			}
-
-			spans := sr.Ended()
-			require.Len(t, spans, 1)
-			span := spans[0]
-
-			assert.Equal(t, "DynamoDB", span.Name())
-			assert.Equal(t, trace.SpanKindClient, span.SpanKind())
-			attrs := span.Attributes()
-			assert.Contains(t, attrs, attribute.Int("http.status_code", cases.expectedStatusCode))
-			assert.Contains(t, attrs, attribute.String("aws.service", "DynamoDB"))
-			assert.Contains(t, attrs, attribute.String("aws.region", cases.expectedRegion))
-			assert.Contains(t, attrs, attribute.String("aws.operation", "GetItem")) 
-			assert.Contains(t, attrs, attribute.String("aws.dynamodb.table_names", "table1"))
-			assert.Contains(t, attrs, attribute.String("aws.dynamodb.projection", "test"))
-			assert.Contains(t, attrs, attribute.Bool("aws.dynamodb.consistent_read", false))
-
+			),
+			Retryer: func() aws.Retryer {
+				return aws.NopRetryer{}
+			},
 		})
+		_, err := svc.GetItem(context.Background(), &dynamodb.GetItemInput{
+			TableName:            aws.String("table1"),
+			ConsistentRead:       aws.Bool(false),
+			ProjectionExpression: aws.String("test"),
+			Key: map[string]dtypes.AttributeValue{
+				"id": &dtypes.AttributeValueMemberS{Value: "test"},
+			},
+		}, func(options *dynamodb.Options) {
+			otelaws.AppendMiddlewares(
+				&options.APIOptions, otelaws.WithAttributeSetter([]otelaws.AttributeSetter{otelaws.DynamodbAttributeSetter}), otelaws.WithTracerProvider(provider))
+		})
+
+		if cases.expectedError == codes.Unset {
+			assert.NoError(t, err)
+		} else {
+			assert.NotNil(t, err)
+		}
+
+		spans := sr.Ended()
+		require.Len(t, spans, 1)
+		span := spans[0]
+
+		assert.Equal(t, "DynamoDB", span.Name())
+		assert.Equal(t, trace.SpanKindClient, span.SpanKind())
+		attrs := span.Attributes()
+		assert.Contains(t, attrs, attribute.Int("http.status_code", cases.expectedStatusCode))
+		assert.Contains(t, attrs, attribute.String("aws.service", "DynamoDB"))
+		assert.Contains(t, attrs, attribute.String("aws.region", cases.expectedRegion))
+		assert.Contains(t, attrs, attribute.String("aws.operation", "GetItem"))
+		assert.Contains(t, attrs, attribute.String("aws.dynamodb.table_names", "table1"))
+		assert.Contains(t, attrs, attribute.String("aws.dynamodb.projection", "test"))
+		assert.Contains(t, attrs, attribute.Bool("aws.dynamodb.consistent_read", false))
+
+	})
 }
