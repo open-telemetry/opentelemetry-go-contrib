@@ -57,7 +57,7 @@ func (f *CloudFunction) Detect(ctx context.Context) (*resource.Resource, error) 
 	attributes := []attribute.KeyValue{
 		semconv.CloudProviderGCP,
 		semconv.CloudPlatformGCPCloudFunctions,
-		attribute.String(string(semconv.FaaSNameKey), functionName),
+		semconv.FaaSNameKey.String(functionName),
 		semconv.CloudAccountIDKey.String(projectID),
 		semconv.CloudRegionKey.String(region),
 	}
