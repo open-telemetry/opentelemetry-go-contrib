@@ -48,11 +48,11 @@ func WithTracerProvider(provider trace.TracerProvider) Option {
 
 // WithAttributeSetter specifies an attribute setter function for setting service specific attributes.
 // If none is specified, the service will be determined by the DefaultAttributeSetter function and the corresponding attributes will be included.
-func WithAttributeSetter(attributesetter []AttributeSetter) Option {
+func WithAttributeSetter(attributesetters ...AttributeSetter) Option {
 
 	return optionFunc(func(cfg *config) {
-		if attributesetter != nil {
-			cfg.AttributeSetter = attributesetter
+		if len(attributesetters) > 0 {
+			cfg.AttributeSetter = append(cfg.AttributeSetter, attributesetters...)
 		}
 	})
 }
