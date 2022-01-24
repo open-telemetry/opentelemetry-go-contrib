@@ -4,7 +4,7 @@ go 1.16
 
 require (
 	github.com/golang/snappy v0.0.4
-	github.com/google/go-cmp v0.5.6
+	github.com/google/go-cmp v0.5.7
 	// Note: v1.8.2-0.20210928085443-fafb309d4027 is
 	// Prometheus v2.30.1 released 2021-09-28
 	// https://github.com/prometheus/prometheus/commit/fafb309d4027b050c917362d7d2680c5ad6f6e9e
