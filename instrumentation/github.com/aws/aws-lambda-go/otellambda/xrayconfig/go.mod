@@ -9,7 +9,7 @@ replace (
 )
 
 require (
-	github.com/aws/aws-lambda-go v1.27.1
+	github.com/aws/aws-lambda-go v1.28.0
 	github.com/stretchr/testify v1.7.0
 	go.opentelemetry.io/contrib/detectors/aws/lambda v0.27.0
 	go.opentelemetry.io/contrib/instrumentation/github.com/aws/aws-lambda-go/otellambda v0.27.0
@@ -18,6 +18,6 @@ require (
 	go.opentelemetry.io/otel/exporters/otlp/otlptrace/otlptracegrpc v1.3.0
 	go.opentelemetry.io/otel/sdk v1.3.0
 	go.opentelemetry.io/otel/trace v1.3.0
-	go.opentelemetry.io/proto/otlp v0.11.0
+	go.opentelemetry.io/proto/otlp v0.12.0
 	google.golang.org/grpc v1.43.0
 )
