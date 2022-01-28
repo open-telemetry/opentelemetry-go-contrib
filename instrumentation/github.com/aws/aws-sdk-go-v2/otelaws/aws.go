@@ -39,7 +39,7 @@ type AttributeSetter func(context.Context, middleware.InitializeInput) []attribu
 
 type otelMiddlewares struct {
 	tracer          trace.Tracer
-	attributesetter []AttributeSetter
+	attributeSetter []AttributeSetter
 }
 
 func (m otelMiddlewares) initializeMiddlewareBefore(stack *middleware.Stack) error {
@@ -60,7 +60,8 @@ func (m otelMiddlewares) initializeMiddlewareAfter(stack *middleware.Stack) erro
 
 		serviceID := v2Middleware.GetServiceID(ctx)
 
-		attributes := []attribute.KeyValue{ServiceAttr(serviceID),
+		attributes := []attribute.KeyValue{
+			ServiceAttr(serviceID),
 			RegionAttr(v2Middleware.GetRegion(ctx)),
 			OperationAttr(v2Middleware.GetOperationName(ctx)),
 		}

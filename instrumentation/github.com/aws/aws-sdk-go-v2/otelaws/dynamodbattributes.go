@@ -25,7 +25,7 @@ import (
 	semconv "go.opentelemetry.io/otel/semconv/v1.7.0"
 )
 
-func DynamodbAttributeSetter(ctx context.Context, in middleware.InitializeInput) []attribute.KeyValue {
+func DynamoDBAttributeSetter(ctx context.Context, in middleware.InitializeInput) []attribute.KeyValue {
 
 	dynamodbAttributes := []attribute.KeyValue{
 		{

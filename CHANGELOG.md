@@ -9,7 +9,9 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 ## [Unreleased]
 
 ### Added
-- Dynamodb spans will now have the appropriate attributes added for the operation being performed, this is detected automatically but it is also now possible to provide a custom function to set attributes using `WithAttributeSetter` 
+
+- Dynamodb spans created with the `go.opentelemetry.io/contrib/instrumentation/github.com/aws/aws-sdk-go-v2/otelaws/` package will now have the appropriate database attributes added for the operation being performed.
+  These attributes are detected automatically, but it is also now possible to provide a custom function to set attributes using `WithAttributeSetter`. (#1582)
 
 - Add `WithClientTrace` option to `otelhttp.Transport` (#875)
 
