@@ -129,7 +129,7 @@ func (r *runtime) register() error {
 	}
 
 	if _, err := r.meter.NewInt64UpDownCounterObserver(
-		"runtime.go.goroutines",
+		"process.runtime.go.goroutines",
 		func(_ context.Context, result metric.Int64ObserverResult) {
 			result.Observe(int64(goruntime.NumGoroutine()))
 		},
@@ -139,7 +139,7 @@ func (r *runtime) register() error {
 	}
 
 	if _, err := r.meter.NewInt64CounterObserver(
-		"runtime.go.cgo.calls",
+		"process.runtime.go.cgo.calls",
 		func(_ context.Context, result metric.Int64ObserverResult) {
 			result.Observe(goruntime.NumCgoCall())
 		},
@@ -212,7 +212,7 @@ func (r *runtime) registerMemStats() error {
 	})
 
 	if heapAlloc, err = batchObserver.NewInt64UpDownCounterObserver(
-		"runtime.go.mem.heap_alloc",
+		"process.runtime.go.mem.heap_alloc",
 		metric.WithUnit(unit.Bytes),
 		metric.WithDescription("Bytes of allocated heap objects"),
 	); err != nil {
@@ -220,7 +220,7 @@ func (r *runtime) registerMemStats() error {
 	}
 
 	if heapIdle, err = batchObserver.NewInt64UpDownCounterObserver(
-		"runtime.go.mem.heap_idle",
+		"process.runtime.go.mem.heap_idle",
 		metric.WithUnit(unit.Bytes),
 		metric.WithDescription("Bytes in idle (unused) spans"),
 	); err != nil {
@@ -228,7 +228,7 @@ func (r *runtime) registerMemStats() error {
 	}
 
 	if heapInuse, err = batchObserver.NewInt64UpDownCounterObserver(
-		"runtime.go.mem.heap_inuse",
+		"process.runtime.go.mem.heap_inuse",
 		metric.WithUnit(unit.Bytes),
 		metric.WithDescription("Bytes in in-use spans"),
 	); err != nil {
@@ -236,7 +236,7 @@ func (r *runtime) registerMemStats() error {
 	}
 
 	if heapObjects, err = batchObserver.NewInt64UpDownCounterObserver(
-		"runtime.go.mem.heap_objects",
+		"process.runtime.go.mem.heap_objects",
 		metric.WithDescription("Number of allocated heap objects"),
 	); err != nil {
 		return err
@@ -245,7 +245,7 @@ func (r *runtime) registerMemStats() error {
 	// FYI see https://github.com/golang/go/issues/32284 to help
 	// understand the meaning of this value.
 	if heapReleased, err = batchObserver.NewInt64UpDownCounterObserver(
-		"runtime.go.mem.heap_released",
+		"process.runtime.go.mem.heap_released",
 		metric.WithUnit(unit.Bytes),
 		metric.WithDescription("Bytes of idle spans whose physical memory has been returned to the OS"),
 	); err != nil {
@@ -253,7 +253,7 @@ func (r *runtime) registerMemStats() error {
 	}
 
 	if heapSys, err = batchObserver.NewInt64UpDownCounterObserver(
-		"runtime.go.mem.heap_sys",
+		"process.runtime.go.mem.heap_sys",
 		metric.WithUnit(unit.Bytes),
 		metric.WithDescription("Bytes of heap memory obtained from the OS"),
 	); err != nil {
@@ -261,21 +261,21 @@ func (r *runtime) registerMemStats() error {
 	}
 
 	if ptrLookups, err = batchObserver.NewInt64CounterObserver(
-		"runtime.go.mem.lookups",
+		"process.runtime.go.mem.lookups",
 		metric.WithDescription("Number of pointer lookups performed by the runtime"),
 	); err != nil {
 		return err
 	}
 
 	if liveObjects, err = batchObserver.NewInt64UpDownCounterObserver(
-		"runtime.go.mem.live_objects",
+		"process.runtime.go.mem.live_objects",
 		metric.WithDescription("Number of live objects is the number of cumulative Mallocs - Frees"),
 	); err != nil {
 		return err
 	}
 
 	if gcCount, err = batchObserver.NewInt64CounterObserver(
-		"runtime.go.gc.count",
+		"process.runtime.go.gc.count",
 		metric.WithDescription("Number of completed garbage collection cycles"),
 	); err != nil {
 		return err
@@ -285,7 +285,7 @@ func (r *runtime) registerMemStats() error {
 	// individual pauses, but we may lose individual pauses if the
 	// observation interval is too slow.
 	if pauseTotalNs, err = batchObserver.NewInt64CounterObserver(
-		"runtime.go.gc.pause_total_ns",
+		"process.runtime.go.gc.pause_total_ns",
 		// TODO: nanoseconds units
 		metric.WithDescription("Cumulative nanoseconds in GC stop-the-world pauses since the program started"),
 	); err != nil {
@@ -293,7 +293,7 @@ func (r *runtime) registerMemStats() error {
 	}
 
 	if gcPauseNs, err = r.meter.NewInt64Histogram(
-		"runtime.go.gc.pause_ns",
+		"process.runtime.go.gc.pause_ns",
 		// TODO: nanoseconds units
 		metric.WithDescription("Amount of nanoseconds in GC stop-the-world pauses"),
 	); err != nil {
