@@ -25,7 +25,7 @@ import (
 	semconv "go.opentelemetry.io/otel/semconv/v1.7.0"
 )
 
-func DynamoDBAttributeSetter(ctx context.Context, in middleware.InitializeInput) []attribute.KeyValue {
+func DynamodbAttributeSetter(ctx context.Context, in middleware.InitializeInput) []attribute.KeyValue {
 
 	dynamodbAttributes := []attribute.KeyValue{
 		{
@@ -47,7 +47,14 @@ func DynamoDBAttributeSetter(ctx context.Context, in middleware.InitializeInput)
 			dynamodbAttributes = append(dynamodbAttributes, semconv.AWSDynamoDBProjectionKey.String(*v.ProjectionExpression))
 		}
 
-	case *dynamodb.BatchGetItemInput, *dynamodb.BatchWriteItemInput:
+	case *dynamodb.BatchGetItemInput:
+		var tableNames []string
+		for k, _ := range v.RequestItems {
+			tableNames = append(tableNames, k)
+		}
+		dynamodbAttributes = append(dynamodbAttributes, semconv.AWSDynamoDBTableNamesKey.StringSlice(tableNames))
+
+	case *dynamodb.BatchWriteItemInput:
 		var tableNames []string
 		for k, _ := range v.RequestItems {
 			tableNames = append(tableNames, k)
@@ -72,7 +79,13 @@ func DynamoDBAttributeSetter(ctx context.Context, in middleware.InitializeInput)
 			dynamodbAttributes = append(dynamodbAttributes, semconv.AWSDynamoDBProvisionedWriteCapacityKey.Int64(*v.ProvisionedThroughput.WriteCapacityUnits))
 		}
 
-	case *dynamodb.DeleteItemInput, *dynamodb.DeleteTableInput, *dynamodb.DescribeTableInput, *dynamodb.PutItemInput:
+	case *dynamodb.DeleteItemInput:
+		dynamodbAttributes = append(dynamodbAttributes, semconv.AWSDynamoDBTableNamesKey.String(*v.TableName))
+
+	case *dynamodb.DeleteTableInput:
+		dynamodbAttributes = append(dynamodbAttributes, semconv.AWSDynamoDBTableNamesKey.String(*v.TableName))
+
+	case *dynamodb.DescribeTableInput:
 		dynamodbAttributes = append(dynamodbAttributes, semconv.AWSDynamoDBTableNamesKey.String(*v.TableName))
 
 	case *dynamodb.ListTablesInput:
@@ -84,6 +97,10 @@ func DynamoDBAttributeSetter(ctx context.Context, in middleware.InitializeInput)
 		if v.Limit != nil {
 			dynamodbAttributes = append(dynamodbAttributes, semconv.AWSDynamoDBLimitKey.Int(int(*v.Limit)))
 		}
+
+	case *dynamodb.PutItemInput:
+
+		dynamodbAttributes = append(dynamodbAttributes, semconv.AWSDynamoDBTableNamesKey.String(*v.TableName))
 
 	case *dynamodb.QueryInput:
 
