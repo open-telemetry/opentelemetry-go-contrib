@@ -26,7 +26,7 @@ import (
 	"go.opentelemetry.io/otel/attribute"
 )
 
-func TestDynamodbTagsBatchGetItemInput(t *testing.T) {
+func TestDynamoDBTagsBatchGetItemInput(t *testing.T) {
 	input := middleware.InitializeInput{
 		Parameters: &dynamodb.BatchGetItemInput{
 			RequestItems: map[string]dtypes.KeysAndAttributes{
