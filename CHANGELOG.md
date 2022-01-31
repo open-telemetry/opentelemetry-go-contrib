@@ -19,9 +19,9 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 ### Fixed
 
 - Change the `http-server-duration` instrument in `go.opentelemetry.io/contrib/instrumentation/net/http/otelhttp` to record milliseconds instead of microseconds match what is specified in the OpenTelemetry specification. (#1414, #1537)
-- The `"go.opentelemetry.io/contrib/instrumentation/net/http/otelhttp".Transport` type now correctly handles protocol switching.
-  The response body returned implements the `io.ReadWriteCloser` interface if the underlying response body does.
-  This ensures that protocol switching requests receive an response body that they can write to. (#1329, #1628)
+- The `"go.opentelemetry.io/contrib/instrumentation/net/http/otelhttp".Transport` type now correctly handles protocol switching responses.
+  The returned response body implements the `io.ReadWriteCloser` interface if the underlying one does.
+  This ensures that protocol switching requests receive a response body that they can write to. (#1329, #1628)
 
 ### Removed
 
