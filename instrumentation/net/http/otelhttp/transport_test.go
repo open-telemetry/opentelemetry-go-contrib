@@ -286,3 +286,56 @@ func TestWrappedBodyCloseError(t *testing.T) {
 	assert.Equal(t, expectedErr, wb.Close())
 	s.assert(t, true, nil, codes.Unset, "")
 }
+
+type readWriteCloser struct {
+	readCloser
+
+	writeErr error
+}
+
+const writeSize = 1
+
+func (rwc readWriteCloser) Write([]byte) (int, error) {
+	return writeSize, rwc.writeErr
+}
+
+func TestNewWrappedBodyReadWriteCloserImplementation(t *testing.T) {
+	wb := newWrappedBody(nil, readWriteCloser{})
+	assert.Implements(t, (*io.ReadWriteCloser)(nil), wb)
+}
+
+func TestNewWrappedBodyReadCloserImplementation(t *testing.T) {
+	wb := newWrappedBody(nil, readCloser{})
+	assert.Implements(t, (*io.ReadCloser)(nil), wb)
+
+	_, ok := wb.(io.ReadWriteCloser)
+	assert.False(t, ok, "wrappedBody should not implement io.ReadWriteCloser")
+}
+
+func TestWrappedBodyWrite(t *testing.T) {
+	s := new(span)
+	var rwc io.ReadWriteCloser
+	assert.NotPanics(t, func() {
+		rwc = newWrappedBody(s, readWriteCloser{}).(io.ReadWriteCloser)
+	})
+
+	n, err := rwc.Write([]byte{})
+	assert.Equal(t, writeSize, n, "wrappedBody returned wrong bytes")
+	assert.NoError(t, err)
+	s.assert(t, false, nil, codes.Unset, "")
+}
+
+func TestWrappedBodyWriteError(t *testing.T) {
+	s := new(span)
+	expectedErr := errors.New("test")
+	var rwc io.ReadWriteCloser
+	assert.NotPanics(t, func() {
+		rwc = newWrappedBody(s, readWriteCloser{
+			writeErr: expectedErr,
+		}).(io.ReadWriteCloser)
+	})
+	n, err := rwc.Write([]byte{})
+	assert.Equal(t, writeSize, n, "wrappedBody returned wrong bytes")
+	assert.ErrorIs(t, err, expectedErr)
+	s.assert(t, false, expectedErr, codes.Error, expectedErr.Error())
+}
