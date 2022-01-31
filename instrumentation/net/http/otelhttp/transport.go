@@ -123,7 +123,7 @@ func (t *Transport) RoundTrip(r *http.Request) (*http.Response, error) {
 
 	span.SetAttributes(semconv.HTTPAttributesFromHTTPStatusCode(res.StatusCode)...)
 	span.SetStatus(semconv.SpanStatusFromHTTPStatusCode(res.StatusCode))
-	res.Body = newWrappedBody(ctx, span, res.Body)
+	res.Body = newWrappedBody(span, res.Body)
 
 	return res, err
 }
@@ -131,17 +131,17 @@ func (t *Transport) RoundTrip(r *http.Request) (*http.Response, error) {
 // newWrappedBody returns a new and appropriately scoped *wrappedBody as an
 // io.ReadCloser. If the passed body implements io.Writer, the returned value
 // will implement io.ReadWriteCloser.
-func newWrappedBody(ctx context.Context, span trace.Span, body io.ReadCloser) io.ReadCloser {
+func newWrappedBody(span trace.Span, body io.ReadCloser) io.ReadCloser {
 	// The successful protocol switch responses will have a body that
 	// implement an io.ReadWriteCloser. Ensure this interface type continues
 	// to be satisfied if that is the case.
 	if _, ok := body.(io.ReadWriteCloser); ok {
-		return &wrappedBody{ctx: ctx, span: span, body: body}
+		return &wrappedBody{span: span, body: body}
 	}
 
 	// Remove the implementation of the io.ReadWriteCloser and only implement
 	// the io.ReadCloser.
-	return struct{ io.ReadCloser }{&wrappedBody{ctx: ctx, span: span, body: body}}
+	return struct{ io.ReadCloser }{&wrappedBody{span: span, body: body}}
 }
 
 // wrappedBody is the response body type returned by the transport
@@ -153,7 +153,6 @@ func newWrappedBody(ctx context.Context, span trace.Span, body io.ReadCloser) io
 // If the response body implements the io.Writer interface (i.e. for
 // successful protocol switches), the wrapped body also will.
 type wrappedBody struct {
-	ctx  context.Context
 	span trace.Span
 	body io.ReadCloser
 }
