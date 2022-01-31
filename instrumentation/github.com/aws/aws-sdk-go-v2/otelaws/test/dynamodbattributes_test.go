@@ -80,7 +80,7 @@ func TestDynamodbTags(t *testing.T) {
 			},
 		}, func(options *dynamodb.Options) {
 			otelaws.AppendMiddlewares(
-				&options.APIOptions, otelaws.WithAttributeSetter(otelaws.DynamodbAttributeSetter), otelaws.WithTracerProvider(provider))
+				&options.APIOptions, otelaws.WithAttributeSetter(otelaws.DynamoDBAttributeSetter), otelaws.WithTracerProvider(provider))
 		})
 
 		if cases.expectedError == codes.Unset {
@@ -168,7 +168,7 @@ func TestDynamodbTagsCustomSetter(t *testing.T) {
 			},
 		}, func(options *dynamodb.Options) {
 			otelaws.AppendMiddlewares(
-				&options.APIOptions, otelaws.WithAttributeSetter(otelaws.DynamodbAttributeSetter, mycustomsetter), otelaws.WithTracerProvider(provider))
+				&options.APIOptions, otelaws.WithAttributeSetter(otelaws.DynamoDBAttributeSetter, mycustomsetter), otelaws.WithTracerProvider(provider))
 		})
 
 		if cases.expectedError == codes.Unset {

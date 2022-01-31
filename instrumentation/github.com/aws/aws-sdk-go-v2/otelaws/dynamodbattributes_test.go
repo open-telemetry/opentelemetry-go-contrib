@@ -41,7 +41,7 @@ func TestDynamodbTagsBatchGetItemInput(t *testing.T) {
 		},
 	}
 
-	attributes := DynamodbAttributeSetter(context.TODO(), input)
+	attributes := DynamoDBAttributeSetter(context.TODO(), input)
 
 	assert.Contains(t, attributes, attribute.StringSlice("aws.dynamodb.table_names", []string{"table1"}))
 }
@@ -70,7 +70,7 @@ func TestDynamodbTagsBatchWriteItemInput(t *testing.T) {
 		},
 	}
 
-	attributes := DynamodbAttributeSetter(context.TODO(), input)
+	attributes := DynamoDBAttributeSetter(context.TODO(), input)
 
 	assert.Contains(t, attributes, attribute.StringSlice("aws.dynamodb.table_names", []string{"table1"}))
 }
@@ -124,7 +124,7 @@ func TestDynamodbTagsCreateTableInput(t *testing.T) {
 		},
 	}
 
-	attributes := DynamodbAttributeSetter(context.TODO(), input)
+	attributes := DynamoDBAttributeSetter(context.TODO(), input)
 
 	assert.Contains(t, attributes, attribute.String("aws.dynamodb.table_names", "table1"))
 	assert.Contains(t, attributes, attribute.String("aws.dynamodb.global_secondary_indexes", "[{\"IndexName\":\"index1\",\"KeySchema\":[{\"AttributeName\":\"attributename\",\"KeyType\":\"HASH\"}],\"Projection\":{\"NonKeyAttributes\":[\"non-key-attributes\"],\"ProjectionType\":\"\"},\"ProvisionedThroughput\":null}]"))
@@ -142,7 +142,7 @@ func TestDynamodbTagsDeleteItemInput(t *testing.T) {
 			TableName: aws.String("table1"),
 		},
 	}
-	attributes := DynamodbAttributeSetter(context.TODO(), input)
+	attributes := DynamoDBAttributeSetter(context.TODO(), input)
 
 	assert.Contains(t, attributes, attribute.String("aws.dynamodb.table_names", "table1"))
 }
@@ -153,7 +153,7 @@ func TestDynamodbTagsDeleteTableInput(t *testing.T) {
 			TableName: aws.String("table1"),
 		},
 	}
-	attributes := DynamodbAttributeSetter(context.TODO(), input)
+	attributes := DynamoDBAttributeSetter(context.TODO(), input)
 
 	assert.Contains(t, attributes, attribute.String("aws.dynamodb.table_names", "table1"))
 
@@ -165,7 +165,7 @@ func TestDynamodbTagsDescribeTableInput(t *testing.T) {
 			TableName: aws.String("table1"),
 		},
 	}
-	attributes := DynamodbAttributeSetter(context.TODO(), input)
+	attributes := DynamoDBAttributeSetter(context.TODO(), input)
 
 	assert.Contains(t, attributes, attribute.String("aws.dynamodb.table_names", "table1"))
 }
@@ -177,7 +177,7 @@ func TestDynamodbTagsListTablesInput(t *testing.T) {
 			Limit:                   aws.Int32(10),
 		},
 	}
-	attributes := DynamodbAttributeSetter(context.TODO(), input)
+	attributes := DynamoDBAttributeSetter(context.TODO(), input)
 
 	assert.Contains(t, attributes, attribute.String("aws.dynamodb.exclusive_start_table", "table1"))
 	assert.Contains(t, attributes, attribute.Int("aws.dynamodb.limit", 10))
@@ -196,7 +196,7 @@ func TestDynamodbTagsPutItemInput(t *testing.T) {
 		},
 	}
 
-	attributes := DynamodbAttributeSetter(context.TODO(), input)
+	attributes := DynamoDBAttributeSetter(context.TODO(), input)
 
 	assert.Contains(t, attributes, attribute.String("aws.dynamodb.table_names", "table1"))
 }
@@ -222,7 +222,7 @@ func TestDynamodbTagsQueryInput(t *testing.T) {
 		},
 	}
 
-	attributes := DynamodbAttributeSetter(context.TODO(), input)
+	attributes := DynamoDBAttributeSetter(context.TODO(), input)
 
 	assert.Contains(t, attributes, attribute.String("aws.dynamodb.table_names", "table1"))
 	assert.Contains(t, attributes, attribute.Bool("aws.dynamodb.consistent_read", true))
@@ -248,7 +248,7 @@ func TestDynamodbTagsScanInput(t *testing.T) {
 		},
 	}
 
-	attributes := DynamodbAttributeSetter(context.TODO(), input)
+	attributes := DynamoDBAttributeSetter(context.TODO(), input)
 
 	assert.Contains(t, attributes, attribute.String("aws.dynamodb.table_names", "my-table"))
 	assert.Contains(t, attributes, attribute.Bool("aws.dynamodb.consistent_read", true))
@@ -275,7 +275,7 @@ func TestDynamodbTagsUpdateItemInput(t *testing.T) {
 		},
 	}
 
-	attributes := DynamodbAttributeSetter(context.TODO(), input)
+	attributes := DynamoDBAttributeSetter(context.TODO(), input)
 
 	assert.Contains(t, attributes, attribute.String("aws.dynamodb.table_names", "my-table"))
 
@@ -315,7 +315,7 @@ func TestDynamodbTagsUpdateTableInput(t *testing.T) {
 		},
 	}
 
-	attributes := DynamodbAttributeSetter(context.TODO(), input)
+	attributes := DynamoDBAttributeSetter(context.TODO(), input)
 
 	assert.Contains(t, attributes, attribute.String("aws.dynamodb.table_names", "my-table"))
 	assert.Contains(t, attributes, attribute.String("aws.dynamodb.attribute_definitions", "[{\"AttributeName\":\"id\",\"AttributeType\":\"S\"}]"))

@@ -35,6 +35,7 @@ const (
 
 type spanTimestampKey struct{}
 
+// AttributeSetter returns an array of KeyValue pairs, it can be used to set custom attributes.
 type AttributeSetter func(context.Context, middleware.InitializeInput) []attribute.KeyValue
 
 type otelMiddlewares struct {
@@ -65,7 +66,7 @@ func (m otelMiddlewares) initializeMiddlewareAfter(stack *middleware.Stack) erro
 			RegionAttr(v2Middleware.GetRegion(ctx)),
 			OperationAttr(v2Middleware.GetOperationName(ctx)),
 		}
-		for _, setter := range m.attributesetter {
+		for _, setter := range m.attributeSetter {
 			attributes = append(attributes, setter(ctx, in)...)
 		}
 
@@ -128,7 +129,7 @@ func AppendMiddlewares(apiOptions *[]func(*middleware.Stack) error, opts ...Opti
 
 	m := otelMiddlewares{tracer: cfg.TracerProvider.Tracer(tracerName,
 		trace.WithInstrumentationVersion(SemVersion())),
-		attributesetter: cfg.AttributeSetter}
+		attributeSetter: cfg.AttributeSetter}
 	*apiOptions = append(*apiOptions, m.initializeMiddlewareBefore, m.initializeMiddlewareAfter, m.deserializeMiddleware)
 
 }
