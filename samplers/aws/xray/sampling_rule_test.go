@@ -19,6 +19,7 @@ import (
 
 	"github.com/stretchr/testify/assert"
 
+	"go.opentelemetry.io/otel/attribute"
 	"go.opentelemetry.io/otel/sdk/trace"
 )
 
@@ -224,4 +225,72 @@ func TestSnapshot(t *testing.T) {
 	assert.Equal(t, int64(2), *ss.BorrowCount)
 	assert.Equal(t, "rule1", *ss.RuleName)
 	assert.Equal(t, clock.NowTime, *ss.Timestamp)
+}
+
+func TestAppliesToMatchingWithAllAttrs(t *testing.T) {
+	csr := &centralizedRule{
+		ruleProperties: &ruleProperties{
+			RuleName:    getStringPointer("rule1"),
+			ServiceName: getStringPointer("test-service"),
+			ServiceType: getStringPointer("EC2"),
+			Host:        getStringPointer("localhost"),
+			HTTPMethod:  getStringPointer("GET"),
+			URLPath:     getStringPointer("http://127.0.0.1:2000"),
+		},
+	}
+
+	httpAttrs := []attribute.KeyValue{
+		attribute.String("http.host", "localhost"),
+		attribute.String("http.method", "GET"),
+		attribute.String("http.url", "http://127.0.0.1:2000"),
+	}
+
+	params := trace.SamplingParameters{Attributes: httpAttrs}
+
+	assert.True(t, csr.appliesTo(params, "test-service", "EC2"))
+}
+
+func TestAppliesToMatchingWithStarHTTPAttrs(t *testing.T) {
+	csr := &centralizedRule{
+		ruleProperties: &ruleProperties{
+			RuleName:    getStringPointer("rule1"),
+			ServiceName: getStringPointer("test-service"),
+			ServiceType: getStringPointer("EC2"),
+			Host:        getStringPointer("*"),
+			HTTPMethod:  getStringPointer("*"),
+			URLPath:     getStringPointer("*"),
+		},
+	}
+
+	assert.True(t, csr.appliesTo(trace.SamplingParameters{}, "test-service", "EC2"))
+}
+
+func TestAppliesToMatchingWithHTTPAttrs(t *testing.T) {
+	csr := &centralizedRule{
+		ruleProperties: &ruleProperties{
+			RuleName:    getStringPointer("rule1"),
+			ServiceName: getStringPointer("test-service"),
+			ServiceType: getStringPointer("EC2"),
+			Host:        getStringPointer("localhost"),
+			HTTPMethod:  getStringPointer("GET"),
+			URLPath:     getStringPointer("http://127.0.0.1:2000"),
+		},
+	}
+
+	assert.False(t, csr.appliesTo(trace.SamplingParameters{}, "test-service", "EC2"))
+}
+
+func TestAppliesToNoMatching(t *testing.T) {
+	csr := &centralizedRule{
+		ruleProperties: &ruleProperties{
+			RuleName:    getStringPointer("rule1"),
+			ServiceName: getStringPointer("test-service"),
+			ServiceType: getStringPointer("EC2"),
+			Host:        getStringPointer("*"),
+			HTTPMethod:  getStringPointer("*"),
+			URLPath:     getStringPointer("*"),
+		},
+	}
+
+	assert.False(t, csr.appliesTo(trace.SamplingParameters{}, "test-service", "ECS"))
 }

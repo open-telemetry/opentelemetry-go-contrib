@@ -152,7 +152,7 @@ func (r *centralizedRule) Sample(parameters sdktrace.SamplingParameters) sdktrac
 	samplingDecision := sdktrace.TraceIDRatioBased(*r.ruleProperties.FixedRate).ShouldSample(parameters)
 
 	samplingDecision.Attributes = attributes
-	samplingDecision.Tracestate = trace.SpanContextFromContext(parameters.ParentContext).TraceState()
+	samplingDecision.Tracestate = sd.Tracestate
 
 	if samplingDecision.Decision == sdktrace.RecordAndSample {
 		r.sampledRequests++
@@ -197,7 +197,32 @@ func (r *centralizedRule) snapshot() *samplingStatisticsDocument {
 	return s
 }
 
-func (r *centralizedRule) AppliesTo() bool {
-	// ToDo: Implement matching logic
-	return true
+func (r *centralizedRule) appliesTo(parameters sdktrace.SamplingParameters, serviceName string, cloudPlatform string) bool {
+	var httpTarget string
+	var httpURL string
+	var httpHost string
+	var httpMethod string
+
+	if parameters.Attributes != nil {
+		for _, attrs := range parameters.Attributes {
+			if attrs.Key == "http.target" {
+				httpTarget = attrs.Value.AsString()
+			}
+			if attrs.Key == "http.url" {
+				httpURL = attrs.Value.AsString()
+			}
+			if attrs.Key == "http.host" {
+				httpHost = attrs.Value.AsString()
+			}
+			if attrs.Key == "http.method" {
+				httpMethod = attrs.Value.AsString()
+			}
+		}
+	}
+
+	return (wildcardMatch(*r.ruleProperties.ServiceName, serviceName, true)) &&
+		(wildcardMatch(*r.ruleProperties.ServiceType, cloudPlatform, true)) &&
+		(wildcardMatch(*r.ruleProperties.Host, httpHost, true)) &&
+		(wildcardMatch(*r.ruleProperties.HTTPMethod, httpMethod, true)) &&
+		(wildcardMatch(*r.ruleProperties.URLPath, httpURL, true) || wildcardMatch(*r.ruleProperties.URLPath, httpTarget, true))
 }

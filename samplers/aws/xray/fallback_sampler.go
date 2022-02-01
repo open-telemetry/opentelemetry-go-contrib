@@ -15,14 +15,16 @@
 package xray
 
 import (
+	"sync/atomic"
+
 	sdktrace "go.opentelemetry.io/otel/sdk/trace"
 	"go.opentelemetry.io/otel/trace"
 )
 
 type FallbackSampler struct {
-	currentEpoch int64
-	borrowed     bool
-	clock        Clock
+	currentEpoch   int64
+	clock          Clock
+	defaultSampler sdktrace.Sampler
 }
 
 // Compile time assertion that remoteSampler implements the Sampler interface.
@@ -30,23 +32,24 @@ var _ sdktrace.Sampler = (*FallbackSampler)(nil)
 
 func NewFallbackSampler() *FallbackSampler {
 	return &FallbackSampler{
-		clock: &DefaultClock{},
+		clock:          &DefaultClock{},
+		defaultSampler: sdktrace.TraceIDRatioBased(0.05),
 	}
 }
 
 func (fs *FallbackSampler) ShouldSample(parameters sdktrace.SamplingParameters) sdktrace.SamplingResult {
-	sd := sdktrace.SamplingResult{
-		Tracestate: trace.SpanContextFromContext(parameters.ParentContext).TraceState(),
-	}
-
 	// borrowing 1 request/second
 	if fs.borrow(fs.clock.Now().Unix()) {
+		sd := sdktrace.SamplingResult{
+			Tracestate: trace.SpanContextFromContext(parameters.ParentContext).TraceState(),
+		}
+
 		sd.Decision = sdktrace.RecordAndSample
 		return sd
 	}
 
 	// using traceIDRatioBased sampler to sample using 5% fixed rate
-	samplingDecision := sdktrace.TraceIDRatioBased(0.05).ShouldSample(parameters)
+	samplingDecision := fs.defaultSampler.ShouldSample(parameters)
 
 	return samplingDecision
 }
@@ -56,13 +59,9 @@ func (fs *FallbackSampler) Description() string {
 }
 
 func (fs *FallbackSampler) borrow(now int64) bool {
-	if now != fs.currentEpoch {
-		fs.currentEpoch = now
-		fs.borrowed = false
+	cur := atomic.LoadInt64(&fs.currentEpoch)
+	if cur >= now {
+		return false
 	}
-
-	s := fs.borrowed
-	fs.borrowed = true
-
-	return !s
+	return atomic.CompareAndSwapInt64(&fs.currentEpoch, cur, now)
 }

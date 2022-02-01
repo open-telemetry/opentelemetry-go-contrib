@@ -42,6 +42,12 @@ type RemoteSampler struct {
 	// samplingRules polling interval, default is 300 seconds
 	samplingRulesPollingInterval time.Duration
 
+	// matching attribute
+	serviceName string
+
+	// matching attribute
+	cloudPlatform string
+
 	// Unique ID used by XRay service to identify this client
 	clientID string
 
@@ -55,7 +61,7 @@ type RemoteSampler struct {
 var _ sdktrace.Sampler = (*RemoteSampler)(nil)
 
 // NewRemoteSampler returns a centralizedSampler which decides to sample a given request or not.
-func NewRemoteSampler(ctx context.Context, opts ...Option) (*RemoteSampler, error) {
+func NewRemoteSampler(ctx context.Context, serviceName string, cloudPlatform string, opts ...Option) (*RemoteSampler, error) {
 	cfg := newConfig(opts...)
 
 	// Generate clientID
@@ -84,6 +90,8 @@ func NewRemoteSampler(ctx context.Context, opts ...Option) (*RemoteSampler, erro
 		xrayClient:                   newClient(cfg.proxyEndpoint),
 		samplingRulesPollingInterval: cfg.samplingRulesPollingInterval,
 		fallbackSampler:              NewFallbackSampler(),
+		serviceName:                  serviceName,
+		cloudPlatform:                cloudPlatform,
 	}
 
 	// starts the rule and target poller
@@ -106,18 +114,14 @@ func (rs *RemoteSampler) ShouldSample(parameters sdktrace.SamplingParameters) sd
 	for _, r := range rs.manifest.rules {
 
 		r.mu.RLock()
-		applicable := r.AppliesTo()
+		applicable := r.appliesTo(parameters, rs.serviceName, rs.cloudPlatform)
 		r.mu.RUnlock()
 
-		if !applicable {
-			continue
+		if applicable {
+			globalLogger.Printf("Applicable rule: %s", *r.ruleProperties.RuleName)
+
+			return r.Sample(parameters)
 		}
-
-		globalLogger.Printf("Applicable rule: %s", *r.ruleProperties.RuleName)
-
-		samplingResult := r.Sample(parameters)
-
-		return samplingResult
 	}
 
 	// Use fallback sampler with sampling config 1 req/sec and 5% of additional requests
