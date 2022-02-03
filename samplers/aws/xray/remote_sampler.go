@@ -78,7 +78,7 @@ func NewRemoteSampler(ctx context.Context, opts ...Option) (*RemoteSampler, erro
 		clock:                        clock,
 		manifest:                     m,
 		clientID:                     id,
-		xrayClient:                   newClient(cfg.proxyEndpoint),
+		xrayClient:                   newClient(cfg.endpoint),
 		samplingRulesPollingInterval: cfg.samplingRulesPollingInterval,
 	}
 

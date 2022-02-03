@@ -27,15 +27,15 @@ const (
 type Option func(options *config)
 
 type config struct {
-	proxyEndpoint                string
+	endpoint                     string
 	samplingRulesPollingInterval time.Duration
 	logger                       Logger
 }
 
 // sets custom proxy endpoint
-func WithProxyEndpoint(proxyEndpoint string) Option {
+func WithEndpoint(endpoint string) Option {
 	return func(o *config) {
-		o.proxyEndpoint = proxyEndpoint
+		o.endpoint = endpoint
 	}
 }
 
@@ -55,7 +55,7 @@ func WithLogger(l Logger) Option {
 
 func newConfig(opts ...Option) *config {
 	cfg := &config{
-		proxyEndpoint:                defaultProxyEndpoint,
+		endpoint:                     defaultProxyEndpoint,
 		samplingRulesPollingInterval: defaultPollingInterval * time.Second,
 		logger:                       noopLogger{},
 	}

@@ -59,6 +59,11 @@ type ruleProperties struct {
 	Version       *int64             `json:"Version"`
 }
 
+// getSamplingRulesInput is used to store
+type getSamplingRulesInput struct {
+	NextToken *string `json:"NextToken"`
+}
+
 type samplingRuleRecords struct {
 	SamplingRule *ruleProperties `json:"SamplingRule"`
 }

@@ -26,24 +26,27 @@ type xrayClient struct {
 	// http client for sending unsigned proxied requests to the collector
 	httpClient *http.Client
 
-	proxyEndpoint string
+	endpoint string
 }
 
 // newClient returns a http client with proxy endpoint
 func newClient(d string) *xrayClient {
-	proxyEndpoint := "http://" + d
+	endpoint := "http://" + d
 
-	p := &xrayClient{
-		httpClient:    &http.Client{},
-		proxyEndpoint: proxyEndpoint,
+	return &xrayClient{
+		httpClient: &http.Client{},
+		endpoint:   endpoint,
 	}
-
-	return p
 }
 
 // getSamplingRules calls the collector(aws proxy enabled) for sampling rules
 func (p *xrayClient) getSamplingRules(ctx context.Context) (*getSamplingRulesOutput, error) {
-	req, err := http.NewRequestWithContext(ctx, http.MethodPost, p.proxyEndpoint+"/GetSamplingRules", nil)
+	rulesInput := getSamplingRulesInput{}
+
+	statisticsByte, _ := json.Marshal(rulesInput)
+	body := bytes.NewReader(statisticsByte)
+
+	req, err := http.NewRequestWithContext(ctx, http.MethodPost, p.endpoint+"/GetSamplingRules", body)
 	if err != nil {
 		globalLogger.Printf("failed to create http request, %v\n", err)
 		return nil, fmt.Errorf("xray client: failed to create http request: %w", err)
