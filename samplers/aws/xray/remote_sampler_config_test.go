@@ -15,17 +15,18 @@
 package xray
 
 import (
+	"github.com/go-logr/logr"
 	"github.com/stretchr/testify/assert"
 	"testing"
 	"time"
 )
 
 func TestNewConfig(t *testing.T) {
-	cfg := newConfig(WithSamplingRulesPollingInterval(400*time.Second), WithEndpoint("127.0.0.1:5000"), WithLogger(testLogger{}))
+	cfg := newConfig(WithSamplingRulesPollingInterval(400*time.Second), WithEndpoint("127.0.0.1:5000"), WithLogger(logr.Logger{}))
 
 	assert.Equal(t, cfg.samplingRulesPollingInterval, 400*time.Second)
 	assert.Equal(t, cfg.endpoint, "127.0.0.1:5000")
-	assert.Equal(t, cfg.logger, testLogger{})
+	assert.Equal(t, cfg.logger, logr.Logger{})
 }
 
 func TestDefaultConfig(t *testing.T) {
@@ -33,7 +34,7 @@ func TestDefaultConfig(t *testing.T) {
 
 	assert.Equal(t, cfg.samplingRulesPollingInterval, 300*time.Second)
 	assert.Equal(t, cfg.endpoint, "127.0.0.1:2000")
-	assert.Equal(t, cfg.logger, noopLogger{})
+	assert.Equal(t, cfg.logger, logr.Logger{})
 }
 
 // noopLogger to bypass logging

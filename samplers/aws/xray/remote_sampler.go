@@ -19,13 +19,14 @@ import (
 	crypto "crypto/rand"
 	"errors"
 	"fmt"
+	"github.com/go-logr/logr"
 	"time"
 
 	sdktrace "go.opentelemetry.io/otel/sdk/trace"
 )
 
 // global variable for logging
-var globalLogger Logger
+var globalLogger logr.Logger
 
 // RemoteSampler is an implementation of SamplingStrategy.
 type RemoteSampler struct {
@@ -113,9 +114,9 @@ func (rs *RemoteSampler) startRulePoller(ctx context.Context) {
 		// Periodic manifest refresh
 		for {
 			if err := rs.refreshManifest(ctx); err != nil {
-				globalLogger.Printf("Error occurred while refreshing sampling rules. %v\n", err)
+				globalLogger.Error(err, "Error occurred while refreshing sampling rules")
 			} else {
-				globalLogger.Println("Successfully fetched sampling rules")
+				globalLogger.V(1).Info("Successfully fetched sampling rules")
 			}
 			select {
 			case _, more := <-t.C():
@@ -160,36 +161,36 @@ func (rs *RemoteSampler) refreshManifest(ctx context.Context) (err error) {
 
 	for _, records := range rules.SamplingRuleRecords {
 		if records.SamplingRule.RuleName == nil {
-			globalLogger.Println("Sampling rule without rule name is not supported")
+			globalLogger.V(1).Info("Sampling rule without rule name is not supported")
 			failed = true
 			continue
 		}
 
 		// Only sampling rule with version 1 is valid
 		if records.SamplingRule.Version == nil {
-			globalLogger.Println("Sampling rule without version number is not supported: ", *records.SamplingRule.RuleName)
+			globalLogger.V(1).Info("Sampling rule without version number is not supported: ", *records.SamplingRule.RuleName)
 			failed = true
 			continue
 		}
 
 		if *records.SamplingRule.Version != int64(1) {
-			globalLogger.Println("Sampling rule without version 1 is not supported: ", *records.SamplingRule.RuleName)
+			globalLogger.V(1).Info("Sampling rule without version 1 is not supported: ", *records.SamplingRule.RuleName)
 			failed = true
 			continue
 		}
 
 		if len(records.SamplingRule.Attributes) != 0 {
-			globalLogger.Println("Sampling rule with non nil Attributes is not applicable: ", *records.SamplingRule.RuleName)
+			globalLogger.V(1).Info("Sampling rule with non nil Attributes is not applicable: ", *records.SamplingRule.RuleName)
 			continue
 		}
 
 		if records.SamplingRule.ResourceARN == nil {
-			globalLogger.Println("Sampling rule without ResourceARN is not applicable: ", *records.SamplingRule.RuleName)
+			globalLogger.V(1).Info("Sampling rule without ResourceARN is not applicable: ", *records.SamplingRule.RuleName)
 			continue
 		}
 
 		if *records.SamplingRule.ResourceARN != "*" {
-			globalLogger.Println("Sampling rule with ResourceARN not equal to * is not applicable: ", *records.SamplingRule.RuleName)
+			globalLogger.V(1).Info("Sampling rule with ResourceARN not equal to * is not applicable: ", *records.SamplingRule.RuleName)
 			continue
 		}
 
@@ -197,7 +198,7 @@ func (rs *RemoteSampler) refreshManifest(ctx context.Context) (err error) {
 		r, putErr := rs.manifest.putRule(records.SamplingRule)
 		if putErr != nil {
 			failed = true
-			globalLogger.Printf("Error occurred creating/updating rule. %v\n", putErr)
+			globalLogger.Error(putErr, "Error occurred creating/updating rule")
 		} else if r != nil {
 			actives[*r] = true
 		}

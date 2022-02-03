@@ -48,7 +48,7 @@ func (p *xrayClient) getSamplingRules(ctx context.Context) (*getSamplingRulesOut
 
 	req, err := http.NewRequestWithContext(ctx, http.MethodPost, p.endpoint+"/GetSamplingRules", body)
 	if err != nil {
-		globalLogger.Printf("failed to create http request, %v\n", err)
+		globalLogger.Error(err, "failed to create http request")
 		return nil, fmt.Errorf("xray client: failed to create http request: %w", err)
 	}
 
@@ -72,7 +72,7 @@ func (p *xrayClient) getSamplingRules(ctx context.Context) (*getSamplingRulesOut
 
 	err = output.Body.Close()
 	if err != nil {
-		globalLogger.Printf("failed to close http response body, %v\n\n", err)
+		globalLogger.Error(err, "failed to close http response body")
 	}
 
 	return &samplingRulesOutput, nil

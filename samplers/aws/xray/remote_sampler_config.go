@@ -15,6 +15,7 @@
 package xray
 
 import (
+	"github.com/go-logr/logr"
 	"time"
 )
 
@@ -29,7 +30,7 @@ type Option func(options *config)
 type config struct {
 	endpoint                     string
 	samplingRulesPollingInterval time.Duration
-	logger                       Logger
+	logger                       logr.Logger
 }
 
 // sets custom proxy endpoint
@@ -47,7 +48,7 @@ func WithSamplingRulesPollingInterval(polingInterval time.Duration) Option {
 }
 
 // sets custom logging for remote sampling implementation
-func WithLogger(l Logger) Option {
+func WithLogger(l logr.Logger) Option {
 	return func(o *config) {
 		o.logger = l
 	}
@@ -57,7 +58,7 @@ func newConfig(opts ...Option) *config {
 	cfg := &config{
 		endpoint:                     defaultProxyEndpoint,
 		samplingRulesPollingInterval: defaultPollingInterval * time.Second,
-		logger:                       noopLogger{},
+		logger:                       logr.Logger{},
 	}
 
 	for _, option := range opts {
