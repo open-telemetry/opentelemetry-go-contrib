@@ -271,6 +271,43 @@ func TestUpdateRule(t *testing.T) {
 	assert.Equal(t, 1, len(m.index))
 }
 
+// Assert that putRule() recovers from panic.
+func TestPutRuleRecovery(t *testing.T) {
+	attributes := make(map[string]*string)
+	var rules []*centralizedRule
+
+	index := map[string]*centralizedRule{}
+
+	m := &centralizedManifest{
+		rules: rules,
+		index: index,
+	}
+
+	newRule := &centralizedRule{
+		ruleProperties: &ruleProperties{
+			ServiceName: getStringPointer("www.foo.com"),
+			HTTPMethod:  getStringPointer("POST"),
+			FixedRate:   getFloatPointer(0.05),
+			RuleName:    getStringPointer("r2"),
+			Priority:    getIntPointer(int64(6)),
+			ResourceARN: getStringPointer("*"),
+			ServiceType: getStringPointer(""),
+			Attributes:  attributes,
+		},
+	}
+
+	// Attempt to add to manifest
+	r, err := m.putRule(newRule.ruleProperties)
+	assert.NotNil(t, err)
+	assert.Nil(t, r)
+
+	// Assert index is unchanged
+	assert.Equal(t, 0, len(m.index))
+
+	// Assert sorted array is unchanged
+	assert.Equal(t, 0, len(m.rules))
+}
+
 // Assert that deleting a rule from the end of the array removes the rule
 // and preserves ordering of the sorted array
 func TestDeleteLastRule(t *testing.T) {
@@ -559,7 +596,7 @@ func TestDeleteAllRules(t *testing.T) {
 }
 
 // Assert that sorting an unsorted array results in a sorted array - check priority
-func TestSort(t *testing.T) {
+func TestSort1(t *testing.T) {
 	r1 := &centralizedRule{
 		ruleProperties: &ruleProperties{
 			RuleName: getStringPointer("r1"),
@@ -590,6 +627,45 @@ func TestSort(t *testing.T) {
 
 	// Sort array
 	m.sort()
+
+	// Assert on order
+	assert.Equal(t, r1, m.rules[0])
+	assert.Equal(t, r2, m.rules[1])
+	assert.Equal(t, r3, m.rules[2])
+}
+
+// Assert that sorting an unsorted array results in a sorted array - check priority and rule name
+func TestSort2(t *testing.T) {
+	r1 := &centralizedRule{
+		ruleProperties: &ruleProperties{
+			RuleName: getStringPointer("r1"),
+			Priority: getIntPointer(5),
+		},
+	}
+
+	r2 := &centralizedRule{
+		ruleProperties: &ruleProperties{
+			RuleName: getStringPointer("r2"),
+			Priority: getIntPointer(6),
+		},
+	}
+
+	r3 := &centralizedRule{
+		ruleProperties: &ruleProperties{
+			RuleName: getStringPointer("r3"),
+			Priority: getIntPointer(7),
+		},
+	}
+
+	// Unsorted rules array
+	rules := []*centralizedRule{r2, r1, r3}
+
+	m := &centralizedManifest{
+		rules: rules,
+	}
+
+	// Sort array
+	m.sort() // r1 should precede r2
 
 	// Assert on order
 	assert.Equal(t, r1, m.rules[0])

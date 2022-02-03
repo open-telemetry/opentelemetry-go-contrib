@@ -15,7 +15,9 @@
 package xray
 
 import (
+	"github.com/stretchr/testify/assert"
 	"sync/atomic"
+	"testing"
 	"time"
 )
 
@@ -36,4 +38,12 @@ func (c *MockClock) Increment(s int64, ns int64) time.Time {
 	nSec := atomic.AddInt64(&c.NowNanos, ns)
 
 	return time.Unix(sec, nSec)
+}
+
+func TestNewTicker(t *testing.T) {
+	ticker := newTicker(300*time.Second, 5*time.Second)
+
+	assert.Equal(t, ticker.d, 5*time.Minute)
+	assert.NotEmpty(t, ticker.t)
+	assert.NotEmpty(t, ticker.jitter)
 }
