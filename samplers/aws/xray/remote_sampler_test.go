@@ -36,7 +36,20 @@ func TestRefreshManifest(t *testing.T) {
 
 	u, _ := url.Parse(testServer.URL)
 
-	rs, _ := NewRemoteSampler(ctx, WithProxyEndpoint(u.Host))
+	clock := &DefaultClock{}
+
+	m := &centralizedManifest{
+		rules: []*centralizedRule{},
+		index: map[string]*centralizedRule{},
+		clock: clock,
+	}
+
+	rs := &RemoteSampler{
+		xrayClient: newClient(u.Host),
+		clock:      clock,
+		manifest:   m,
+	}
+
 	_ = rs.refreshManifest(ctx)
 
 	// Rule 'r1'
@@ -44,9 +57,9 @@ func TestRefreshManifest(t *testing.T) {
 		ruleProperties: &ruleProperties{
 			RuleName:      getStringPointer("Default"),
 			Priority:      getIntPointer(10000),
-			Host: 		   getStringPointer("*"),
+			Host:          getStringPointer("*"),
 			HTTPMethod:    getStringPointer("*"),
-			URLPath: 	   getStringPointer("*"),
+			URLPath:       getStringPointer("*"),
 			ReservoirSize: getIntPointer(40),
 			Version:       getIntPointer(1),
 			FixedRate:     getFloatPointer(0.5),
@@ -61,9 +74,9 @@ func TestRefreshManifest(t *testing.T) {
 		ruleProperties: &ruleProperties{
 			RuleName:      getStringPointer("test-rule"),
 			Priority:      getIntPointer(1),
-			Host: 		   getStringPointer("*"),
+			Host:          getStringPointer("*"),
 			HTTPMethod:    getStringPointer("GET"),
-			URLPath: 	   getStringPointer("/aws-sdk-call"),
+			URLPath:       getStringPointer("/aws-sdk-call"),
 			ReservoirSize: getIntPointer(3),
 			FixedRate:     getFloatPointer(0.09),
 			Version:       getIntPointer(1),
@@ -78,9 +91,9 @@ func TestRefreshManifest(t *testing.T) {
 		ruleProperties: &ruleProperties{
 			RuleName:      getStringPointer("test-rule-1"),
 			Priority:      getIntPointer(100),
-			Host: 		   getStringPointer("*"),
+			Host:          getStringPointer("*"),
 			HTTPMethod:    getStringPointer("*"),
-			URLPath: 	   getStringPointer("*"),
+			URLPath:       getStringPointer("*"),
 			ReservoirSize: getIntPointer(100),
 			FixedRate:     getFloatPointer(0.09),
 			Version:       getIntPointer(1),
@@ -101,18 +114,18 @@ func TestRefreshManifest(t *testing.T) {
 
 func TestRefreshManifestRuleAdditionInvalidRule1(t *testing.T) {
 	ctx := context.Background()
+	newConfig()
 
 	// Rule 'r1'
 	r1 := &centralizedRule{
 		ruleProperties: &ruleProperties{
-			RuleName: getStringPointer("r1"),
-			Priority: getIntPointer(4),
+			RuleName:    getStringPointer("r1"),
+			Priority:    getIntPointer(4),
 			ResourceARN: getStringPointer("XYZ"), // invalid
 		},
 		reservoir: &centralizedReservoir{
-			quota: 10,
+			quota:    10,
 			capacity: 50,
-
 		},
 	}
 
@@ -131,7 +144,6 @@ func TestRefreshManifestRuleAdditionInvalidRule1(t *testing.T) {
 
 	body := "{\"NextToken\":null,\"SamplingRuleRecords\":[{\"CreatedAt\":1.639446197E9,\"ModifiedAt\":1.639446197E9,\"SamplingRule\":{\"Attributes\":{},\"FixedRate\":0.05,\"HTTPMethod\":\"POST\",\"Host\":\"*\",\"Priority\":4,\"ReservoirSize\":50,\"ResourceARN\":\"XYZ\",\"RuleARN\":\"arn:aws:xray:us-west-2:836082170990:sampling-rule/r1\",\"RuleName\":\"r1\",\"ServiceName\":\"www.foo.com\",\"ServiceType\":\"\",\"URLPath\":\"/resource/bar\",\"Version\":1}}]}"
 
-
 	// generate a test server so we can capture and inspect the request
 	testServer := httptest.NewServer(http.HandlerFunc(func(res http.ResponseWriter, req *http.Request) {
 		_, _ = res.Write([]byte(body))
@@ -140,7 +152,14 @@ func TestRefreshManifestRuleAdditionInvalidRule1(t *testing.T) {
 
 	u, _ := url.Parse(testServer.URL)
 
-	rs, _ := NewRemoteSampler(ctx, WithProxyEndpoint(u.Host))
+	clock := &DefaultClock{}
+
+	rs := &RemoteSampler{
+		xrayClient: newClient(u.Host),
+		clock:      clock,
+		manifest:   manifest,
+	}
+
 	rs.manifest = manifest
 	err := rs.refreshManifest(ctx)
 
@@ -158,14 +177,13 @@ func TestRefreshManifestRuleAdditionInvalidRule2(t *testing.T) { // non nil Attr
 	// Rule 'r1'
 	r1 := &centralizedRule{
 		ruleProperties: &ruleProperties{
-			RuleName: getStringPointer("r1"),
-			Priority: getIntPointer(4),
+			RuleName:    getStringPointer("r1"),
+			Priority:    getIntPointer(4),
 			ResourceARN: getStringPointer("*"),
 		},
 		reservoir: &centralizedReservoir{
-			quota: 10,
+			quota:    10,
 			capacity: 50,
-
 		},
 	}
 
@@ -184,7 +202,6 @@ func TestRefreshManifestRuleAdditionInvalidRule2(t *testing.T) { // non nil Attr
 
 	body := "{\"NextToken\":null,\"SamplingRuleRecords\":[{\"CreatedAt\":1.639446197E9,\"ModifiedAt\":1.639446197E9,\"SamplingRule\":{\"Attributes\":{\"a\":\"b\"},\"FixedRate\":0.05,\"HTTPMethod\":\"POST\",\"Host\":\"*\",\"Priority\":4,\"ReservoirSize\":50,\"ResourceARN\":\"XYZ\",\"RuleARN\":\"arn:aws:xray:us-west-2:836082170990:sampling-rule/r1\",\"RuleName\":\"r1\",\"ServiceName\":\"www.foo.com\",\"ServiceType\":\"\",\"URLPath\":\"/resource/bar\",\"Version\":1}}]}"
 
-
 	// generate a test server so we can capture and inspect the request
 	testServer := httptest.NewServer(http.HandlerFunc(func(res http.ResponseWriter, req *http.Request) {
 		_, _ = res.Write([]byte(body))
@@ -193,8 +210,14 @@ func TestRefreshManifestRuleAdditionInvalidRule2(t *testing.T) { // non nil Attr
 
 	u, _ := url.Parse(testServer.URL)
 
-	rs, _ := NewRemoteSampler(ctx, WithProxyEndpoint(u.Host))
-	rs.manifest = manifest
+	clock := &DefaultClock{}
+
+	rs := &RemoteSampler{
+		xrayClient: newClient(u.Host),
+		clock:      clock,
+		manifest:   manifest,
+	}
+
 	err := rs.refreshManifest(ctx)
 
 	assert.Nil(t, err)
@@ -207,28 +230,26 @@ func TestRefreshManifestRuleAdditionInvalidRule3(t *testing.T) { // 1 valid and 
 	// Rule 'r1'
 	r1 := &centralizedRule{
 		ruleProperties: &ruleProperties{
-			RuleName: getStringPointer("r1"),
-			Priority: getIntPointer(4),
+			RuleName:    getStringPointer("r1"),
+			Priority:    getIntPointer(4),
 			ResourceARN: getStringPointer("*"),
 		},
 		reservoir: &centralizedReservoir{
-			quota: 10,
+			quota:    10,
 			capacity: 50,
-
 		},
 	}
 
 	// Rule 'r2'
 	r2 := &centralizedRule{
 		ruleProperties: &ruleProperties{
-			RuleName: getStringPointer("r2"),
-			Priority: getIntPointer(4),
+			RuleName:    getStringPointer("r2"),
+			Priority:    getIntPointer(4),
 			ResourceARN: getStringPointer("*"),
 		},
 		reservoir: &centralizedReservoir{
-			quota: 10,
+			quota:    10,
 			capacity: 50,
-
 		},
 	}
 
@@ -247,7 +268,6 @@ func TestRefreshManifestRuleAdditionInvalidRule3(t *testing.T) { // 1 valid and 
 
 	body := "{\"NextToken\":null,\"SamplingRuleRecords\":[{\"CreatedAt\":0.0,\"ModifiedAt\":1.639517389E9,\"SamplingRule\":{\"Attributes\":{\"a\":\"b\"},\"FixedRate\":0.5,\"HTTPMethod\":\"*\",\"Host\":\"*\",\"Priority\":10000,\"ReservoirSize\":60,\"ResourceARN\":\"*\",\"RuleARN\":\"arn:aws:xray:us-west-2:836082170990:sampling-rule/Default\",\"RuleName\":\"r1\",\"ServiceName\":\"*\",\"ServiceType\":\"*\",\"URLPath\":\"*\",\"Version\":1}},{\"CreatedAt\":1.637691613E9,\"ModifiedAt\":1.643748669E9,\"SamplingRule\":{\"Attributes\":{},\"FixedRate\":0.09,\"HTTPMethod\":\"GET\",\"Host\":\"*\",\"Priority\":1,\"ReservoirSize\":3,\"ResourceARN\":\"*\",\"RuleARN\":\"arn:aws:xray:us-west-2:836082170990:sampling-rule/test-rule\",\"RuleName\":\"r2\",\"ServiceName\":\"test-rule\",\"ServiceType\":\"local\",\"URLPath\":\"/aws-sdk-call\",\"Version\":1}}]}"
 
-
 	// generate a test server so we can capture and inspect the request
 	testServer := httptest.NewServer(http.HandlerFunc(func(res http.ResponseWriter, req *http.Request) {
 		_, _ = res.Write([]byte(body))
@@ -256,8 +276,14 @@ func TestRefreshManifestRuleAdditionInvalidRule3(t *testing.T) { // 1 valid and 
 
 	u, _ := url.Parse(testServer.URL)
 
-	rs, _ := NewRemoteSampler(ctx, WithProxyEndpoint(u.Host))
-	rs.manifest = manifest
+	clock := &DefaultClock{}
+
+	rs := &RemoteSampler{
+		xrayClient: newClient(u.Host),
+		clock:      clock,
+		manifest:   manifest,
+	}
+
 	err := rs.refreshManifest(ctx)
 
 	assert.Nil(t, err)
@@ -272,39 +298,37 @@ func TestRefreshManifestInvalidRuleUpdate(t *testing.T) {
 	// Rule 'r1'
 	r1 := &centralizedRule{
 		ruleProperties: &ruleProperties{
-			RuleName: getStringPointer("r1"),
-			Priority: getIntPointer(4),
-			ResourceARN: getStringPointer("*"),
-			ServiceName: getStringPointer("www.foo.com"),
-			HTTPMethod:  getStringPointer("POST"),
-			URLPath:     getStringPointer("/resource/bar"),
+			RuleName:      getStringPointer("r1"),
+			Priority:      getIntPointer(4),
+			ResourceARN:   getStringPointer("*"),
+			ServiceName:   getStringPointer("www.foo.com"),
+			HTTPMethod:    getStringPointer("POST"),
+			URLPath:       getStringPointer("/resource/bar"),
 			ReservoirSize: getIntPointer(50),
-			FixedRate:        getFloatPointer(0.05),
+			FixedRate:     getFloatPointer(0.05),
 		},
 		reservoir: &centralizedReservoir{
-			quota: 10,
+			quota:    10,
 			capacity: 50,
-
 		},
 	}
 
 	// Rule 'r3'
 	r3 := &centralizedRule{
 		ruleProperties: &ruleProperties{
-			RuleName: getStringPointer("r1"),
-			Priority: getIntPointer(8),
-			ResourceARN: getStringPointer("*"),
-			ServiceName: getStringPointer("www.bar.com"),
-			HTTPMethod:  getStringPointer("POST"),
-			URLPath:     getStringPointer("/resource/foo"),
+			RuleName:      getStringPointer("r1"),
+			Priority:      getIntPointer(8),
+			ResourceARN:   getStringPointer("*"),
+			ServiceName:   getStringPointer("www.bar.com"),
+			HTTPMethod:    getStringPointer("POST"),
+			URLPath:       getStringPointer("/resource/foo"),
 			ReservoirSize: getIntPointer(40),
-			FixedRate:        getFloatPointer(0.10),
-			Host: getStringPointer("h3"),
+			FixedRate:     getFloatPointer(0.10),
+			Host:          getStringPointer("h3"),
 		},
 		reservoir: &centralizedReservoir{
-			quota: 10,
+			quota:    10,
 			capacity: 50,
-
 		},
 	}
 
@@ -324,7 +348,6 @@ func TestRefreshManifestInvalidRuleUpdate(t *testing.T) {
 
 	body := "{\"NextToken\":null,\"SamplingRuleRecords\":[{\"CreatedAt\":0.0,\"ModifiedAt\":1.639517389E9,\"SamplingRule\":{\"Attributes\":{},\"FixedRate\":0.5,\"HTTPMethod\":\"*\",\"Host\":\"*\",\"Priority\":10000,\"ReservoirSize\":60,\"ResourceARN\":\"*\",\"RuleARN\":\"arn:aws:xray:us-west-2:836082170990:sampling-rule/Default\",\"FixedRate\":0.09,\"RuleName\":\"r1\",\"ServiceName\":\"*\",\"ServiceType\":\"*\",\"URLPath\":\"*\",\"Version\":1}},{\"CreatedAt\":1.637691613E9,\"ModifiedAt\":1.643748669E9,\"SamplingRule\":{\"Attributes\":{},\"FixedRate\":0.09,\"HTTPMethod\":\"GET\",\"Host\":\"*\",\"Priority\":1,\"ReservoirSize\":3,\"ResourceARN\":\"*\",\"RuleARN\":\"arn:aws:xray:us-west-2:836082170990:sampling-rule/test-rule\",\"RuleName\":\"r3\",\"ServiceName\":\"test-rule\",\"ServiceType\":\"local\",\"URLPath\":\"/aws-sdk-call\",\"Version\":2}}]}"
 
-
 	// generate a test server so we can capture and inspect the request
 	testServer := httptest.NewServer(http.HandlerFunc(func(res http.ResponseWriter, req *http.Request) {
 		_, _ = res.Write([]byte(body))
@@ -333,8 +356,14 @@ func TestRefreshManifestInvalidRuleUpdate(t *testing.T) {
 
 	u, _ := url.Parse(testServer.URL)
 
-	rs, _ := NewRemoteSampler(ctx, WithProxyEndpoint(u.Host))
-	rs.manifest = manifest
+	clock := &DefaultClock{}
+
+	rs := &RemoteSampler{
+		xrayClient: newClient(u.Host),
+		clock:      clock,
+		manifest:   manifest,
+	}
+
 	err := rs.refreshManifest(ctx)
 	assert.NotNil(t, err)
 
