@@ -12,6 +12,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
+//go:build !race
 // +build !race
 
 package consistent
@@ -23,7 +24,6 @@ import (
 	"math/rand"
 	"strconv"
 	"testing"
-	"time"
 
 	"github.com/stretchr/testify/require"
 
@@ -36,7 +36,7 @@ const (
 )
 
 var (
-	trials = 20
+	trials         = 20
 	populationSize = 1e5
 
 	// These may be computed using Gonum, e.g.,
@@ -121,11 +121,6 @@ func TestSamplerStatistics(t *testing.T) {
 		}
 	)
 
-	if testing.Short() {
-		one := rand.New(rand.NewSource(time.Now().UnixNano())).Intn(len(allTests))
-		allTests = allTests[one : one+1]
-	}
-
 	for _, test := range allTests {
 		t.Run(fmt.Sprint(test.prob), func(t *testing.T) {
 			var expected []float64
@@ -169,7 +164,7 @@ func TestSamplerStatistics(t *testing.T) {
 					return
 				} else {
 					// Note: this can be uncommented to verify that the preceding seed failed the test,
-					// for example:
+					// however this just doubles runtime and adds little evidence.  For example:
 					// if seedIndex != 0 && countFailures(rand.NewSource(seedBank[seedIndex-1])) == 1 {
 					// 	t.Logf("update the test for %g to use seed index < %d", test.prob, seedIndex)
 					// 	t.Fail()
@@ -184,6 +179,8 @@ func TestSamplerStatistics(t *testing.T) {
 		})
 	}
 
+	// Note: This produces a table that should match what is in
+	// the specification if it's the same test.
 	for idx, res := range testSummary {
 		var probability, pvalues, expectLower, expectUpper, expectUnsampled string
 		if res.test.degrees == twoDegrees {
@@ -268,8 +265,8 @@ func sampleTrials(t *testing.T, prob float64, degrees testDegrees, upperP pValue
 		// Note: because the test is probabilistic, we can't be
 		// sure that both the min and max P values happen.  We
 		// can only assert that one of these is true.
-		require.GreaterOrEqual(t, maxP, upperP - 1)
-		require.GreaterOrEqual(t, minP, upperP - 1)
+		require.GreaterOrEqual(t, maxP, upperP-1)
+		require.GreaterOrEqual(t, minP, upperP-1)
 		require.LessOrEqual(t, maxP, upperP)
 		require.LessOrEqual(t, minP, upperP)
 		require.LessOrEqual(t, maxP-minP, 1)
