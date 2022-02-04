@@ -113,13 +113,11 @@ func TestSamplerStatistics(t *testing.T) {
 			{0.00290, 9, twoDegrees, 4},
 			{0.00100, 10, twoDegrees, 6},
 			{0.00050, 11, twoDegrees, 0},
-			{0.00026, 12, twoDegrees, 3},
 
 			// Powers of two
 			{0x1p-1, 1, oneDegree, 0},
 			{0x1p-4, 4, oneDegree, 0},
 			{0x1p-7, 7, oneDegree, 1},
-			{0x1p-10, 10, oneDegree, 1},
 		}
 	)
 
@@ -172,11 +170,10 @@ func TestSamplerStatistics(t *testing.T) {
 				} else {
 					// Note: this can be uncommented to verify that the preceding seed failed the test,
 					// for example:
-					// @@@
-					if seedIndex != 0 && countFailures(rand.NewSource(seedBank[seedIndex-1])) == 1 {
-						t.Logf("update the test for %g to use seed index < %d", test.prob, seedIndex)
-						t.Fail()
-					}
+					// if seedIndex != 0 && countFailures(rand.NewSource(seedBank[seedIndex-1])) == 1 {
+					// 	t.Logf("update the test for %g to use seed index < %d", test.prob, seedIndex)
+					// 	t.Fail()
+					// }
 					break
 				}
 			}
@@ -277,8 +274,8 @@ func sampleTrials(t *testing.T, prob float64, degrees testDegrees, upperP pValue
 		require.LessOrEqual(t, minP, upperP)
 		require.LessOrEqual(t, maxP-minP, 1)
 
-		ceilingProb = 1 / float64(int64(1)<<minP)
-		floorProb = 1 / float64(int64(1)<<maxP)
+		ceilingProb = 1 / float64(int64(1)<<(upperP-1))
+		floorProb = 1 / float64(int64(1)<<upperP)
 		floorChoice = (ceilingProb - prob) / (ceilingProb - floorProb)
 	} else {
 		require.Equal(t, minP, maxP)
@@ -304,6 +301,7 @@ func sampleTrials(t *testing.T, prob float64, degrees testDegrees, upperP pValue
 		expectLowerCount,
 		expectUpperCount,
 	}
+
 	chi2 := 0.0
 	chi2 += math.Pow(float64(unsampled)-expectUnsampled, 2) / expectUnsampled
 	chi2 += math.Pow(float64(lowerCount)-expectLowerCount, 2) / expectLowerCount
