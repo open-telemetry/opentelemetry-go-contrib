@@ -16,6 +16,9 @@ package xray
 
 import (
 	"github.com/go-logr/logr"
+	"github.com/go-logr/stdr"
+	"log"
+	"os"
 	"time"
 )
 
@@ -58,7 +61,7 @@ func newConfig(opts ...Option) *config {
 	cfg := &config{
 		endpoint:                     defaultProxyEndpoint,
 		samplingRulesPollingInterval: defaultPollingInterval * time.Second,
-		logger:                       logr.Logger{},
+		logger:                       stdr.New(log.New(os.Stderr, "", log.LstdFlags|log.Lshortfile)),
 	}
 
 	for _, option := range opts {
@@ -67,6 +70,8 @@ func newConfig(opts ...Option) *config {
 
 	// setting global logger
 	globalLogger = cfg.logger
+	// set global verbosity to log info logs
+	stdr.SetVerbosity(1)
 
 	return cfg
 }

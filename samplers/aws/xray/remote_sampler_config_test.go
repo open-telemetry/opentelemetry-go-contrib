@@ -16,7 +16,10 @@ package xray
 
 import (
 	"github.com/go-logr/logr"
+	"github.com/go-logr/stdr"
 	"github.com/stretchr/testify/assert"
+	"log"
+	"os"
 	"testing"
 	"time"
 )
@@ -34,16 +37,5 @@ func TestDefaultConfig(t *testing.T) {
 
 	assert.Equal(t, cfg.samplingRulesPollingInterval, 300*time.Second)
 	assert.Equal(t, cfg.endpoint, "127.0.0.1:2000")
-	assert.Equal(t, cfg.logger, logr.Logger{})
-}
-
-// noopLogger to bypass logging
-type testLogger struct{}
-
-// noop logging method
-func (nl testLogger) Printf(format string, v ...interface{}) {
-}
-
-// noop logging method
-func (nl testLogger) Println(v ...interface{}) {
+	assert.Equal(t, cfg.logger, stdr.New(log.New(os.Stderr, "", log.LstdFlags|log.Lshortfile)))
 }
