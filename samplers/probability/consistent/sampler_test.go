@@ -17,9 +17,7 @@ package consistent
 import (
 	"context"
 	"fmt"
-	"math"
 	"math/rand"
-	"strconv"
 	"strings"
 	"sync"
 	"testing"
@@ -44,32 +42,6 @@ type (
 	testErrorHandler struct {
 		lock   sync.Mutex
 		errors []error
-	}
-)
-
-const (
-	oneDegree  testDegrees = 1
-	twoDegrees testDegrees = 2
-)
-
-var (
-	populationSize = 1e6
-	trials         = 20
-
-	// These may be computed using Gonum, e.g.,
-	// import "gonum.org/v1/gonum/stat/distuv"
-	// with significance = 1 / float64(trials) = 0.05
-	// chiSquaredDF1  = distuv.ChiSquared{K: 1}.Quantile(significance)
-	// chiSquaredDF2  = distuv.ChiSquared{K: 2}.Quantile(significance)
-	//
-	// These have been specified using significance = 0.05:
-	chiSquaredDF1 = 0.003932140000019522
-	chiSquaredDF2 = 0.1025865887751011
-
-	chiSquaredByDF = [3]float64{
-		0,
-		chiSquaredDF1,
-		chiSquaredDF2,
 	}
 )
 
@@ -276,105 +248,4 @@ func TestSamplerBehavior(t *testing.T) {
 			}
 		})
 	}
-}
-
-func sampleTrials(t *testing.T, prob float64, degrees testDegrees, upperP pValue, source rand.Source) (float64, []float64) {
-	ctx := context.Background()
-
-	sampler := ProbabilityBased(
-		prob,
-		WithRandomSource(source),
-	)
-
-	recorder := &testSpanRecorder{}
-	provider := sdktrace.NewTracerProvider(
-		sdktrace.WithSyncer(recorder),
-		sdktrace.WithSampler(sampler),
-	)
-
-	tracer := provider.Tracer("test")
-
-	for i := 0; i < int(populationSize); i++ {
-		_, span := tracer.Start(ctx, "span")
-		span.End()
-	}
-
-	var minP, maxP pValue
-
-	counts := map[pValue]int64{}
-
-	for idx, r := range recorder.spans {
-		ts := r.SpanContext().TraceState()
-		p, _ := parsePR(ts.Get("ot"))
-
-		pi, err := strconv.ParseUint(p, 10, 64)
-		require.NoError(t, err)
-
-		if idx == 0 {
-			maxP = pValue(pi)
-			minP = maxP
-		} else {
-			if pValue(pi) < minP {
-				minP = pValue(pi)
-			}
-			if pValue(pi) > maxP {
-				maxP = pValue(pi)
-			}
-		}
-		counts[pValue(pi)]++
-	}
-
-	require.Less(t, maxP, minP+pValue(degrees), "%v %v %v", minP, maxP, degrees)
-	require.Less(t, maxP, pValue(63))
-	require.LessOrEqual(t, len(counts), 2)
-
-	var ceilingProb, floorProb, floorChoice float64
-
-	// Note: we have to test len(counts) == 0 because this outcome
-	// is actually possible, just very unlikely.  If this happens
-	// during development, a new initial seed must be used for
-	// this test.
-	//
-	// The test specification ensures the test ensures there are
-	// at least 20 expected items per category in these tests.
-	require.NotEqual(t, 0, len(counts))
-
-	if degrees == 2 {
-		require.Equal(t, minP+1, maxP)
-		require.Equal(t, upperP, maxP)
-		ceilingProb = 1 / float64(int64(1)<<minP)
-		floorProb = 1 / float64(int64(1)<<maxP)
-		floorChoice = (ceilingProb - prob) / (ceilingProb - floorProb)
-	} else {
-		require.Equal(t, minP, maxP)
-		require.Equal(t, upperP, maxP)
-		ceilingProb = 0
-		floorProb = prob
-		floorChoice = 1
-	}
-
-	expectLowerCount := floorChoice * floorProb * populationSize
-	expectUpperCount := (1 - floorChoice) * ceilingProb * populationSize
-	expectUnsampled := (1 - prob) * populationSize
-
-	upperCount := int64(0)
-	lowerCount := counts[maxP]
-	if degrees == 2 {
-		upperCount = counts[minP]
-	}
-	unsampled := int64(populationSize) - upperCount - lowerCount
-
-	expected := []float64{
-		expectUnsampled,
-		expectLowerCount,
-		expectUpperCount,
-	}
-	chi2 := 0.0
-	chi2 += math.Pow(float64(unsampled)-expectUnsampled, 2) / expectUnsampled
-	chi2 += math.Pow(float64(lowerCount)-expectLowerCount, 2) / expectLowerCount
-	if degrees == 2 {
-		chi2 += math.Pow(float64(upperCount)-expectUpperCount, 2) / expectUpperCount
-	}
-
-	return chi2, expected
 }
