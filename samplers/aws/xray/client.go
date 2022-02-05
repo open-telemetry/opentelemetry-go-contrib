@@ -15,6 +15,7 @@
 package xray
 
 import (
+	"bytes"
 	"context"
 	"encoding/json"
 	"fmt"
@@ -46,7 +47,10 @@ func newClient(d string) *xrayClient {
 
 // getSamplingRules calls the collector(aws proxy enabled) for sampling rules
 func (p *xrayClient) getSamplingRules(ctx context.Context) (*getSamplingRulesOutput, error) {
-	req, err := http.NewRequestWithContext(ctx, http.MethodPost, p.endpoint.String()+"/GetSamplingRules", nil)
+	statisticsByte, _ := json.Marshal(getSamplingRulesInput{})
+	body := bytes.NewReader(statisticsByte)
+
+	req, err := http.NewRequestWithContext(ctx, http.MethodPost, p.endpoint.String()+"/GetSamplingRules", body)
 	if err != nil {
 		return nil, fmt.Errorf("xray client: failed to create http request: %w", err)
 	}

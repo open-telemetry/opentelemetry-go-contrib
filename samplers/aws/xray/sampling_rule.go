@@ -14,8 +14,6 @@
 
 package xray
 
-import "sync"
-
 // ToDo: other fields will be used in business logic for remote sampling
 // rule represents a centralized sampling rule
 type rule struct {
@@ -40,7 +38,7 @@ type rule struct {
 	// Provides random numbers
 	rand Rand
 
-	mu sync.RWMutex
+	//mu sync.RWMutex
 }
 
 // properties is the base set of properties that define a sampling rule.

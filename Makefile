@@ -139,14 +139,14 @@ test-short:
 	done
 
 .PHONY: lint
-lint: $(TOOLS_DIR)/golangci-lint $(TOOLS_DIR)/misspell lint-modules
-	set -e; for dir in $(ALL_GO_MOD_DIRS); do \
-	  echo "golangci-lint in $${dir}"; \
-	  (cd "$${dir}" && \
-	    $(TOOLS_DIR)/golangci-lint run --fix && \
-	    $(TOOLS_DIR)/golangci-lint run); \
-	done
-	$(TOOLS_DIR)/misspell -w $(ALL_DOCS)
+# lint: $(TOOLS_DIR)/golangci-lint $(TOOLS_DIR)/misspell lint-modules
+# 	set -e; for dir in $(ALL_GO_MOD_DIRS); do \
+# 	  echo "golangci-lint in $${dir}"; \
+# 	  (cd "$${dir}" && \
+# 	    $(TOOLS_DIR)/golangci-lint run --fix && \
+# 	    $(TOOLS_DIR)/golangci-lint run); \
+# 	done
+# 	$(TOOLS_DIR)/misspell -w $(ALL_DOCS)
 
 .PHONY: lint-modules
 lint-modules:

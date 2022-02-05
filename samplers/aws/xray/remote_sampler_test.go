@@ -574,7 +574,7 @@ func TestManifestRulesAndIndexUpdate(t *testing.T) {
 	assert.True(t, okRule2)
 
 	// second update
-	count += 1
+	count++
 	err = rs.refreshManifest(ctx)
 	require.NoError(t, err)
 
