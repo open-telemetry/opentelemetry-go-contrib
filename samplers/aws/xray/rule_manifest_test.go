@@ -33,31 +33,31 @@ func getFloatPointer(val float64) *float64 {
 	return &val
 }
 
-// Assert that putRule() creates a new user-defined rule and adds to manifest
+// Assert that createRule() creates a new rule and adds to manifest
 func TestCreateRule(t *testing.T) {
 	resARN := "*"
-	r1 := &centralizedRule{
+	r1 := &rule{
 		ruleProperties: &ruleProperties{
 			RuleName: getStringPointer("r1"),
 			Priority: getIntPointer(5),
 		},
 	}
 
-	r3 := &centralizedRule{
+	r3 := &rule{
 		ruleProperties: &ruleProperties{
 			RuleName: getStringPointer("r3"),
 			Priority: getIntPointer(7),
 		},
 	}
 
-	rules := []*centralizedRule{r1, r3}
+	rules := []*rule{r1, r3}
 
-	index := map[string]*centralizedRule{
+	index := map[string]*rule{
 		"r1": r1,
 		"r3": r3,
 	}
 
-	m := &centralizedManifest{
+	m := &manifest{
 		rules: rules,
 		index: index,
 	}
@@ -67,7 +67,7 @@ func TestCreateRule(t *testing.T) {
 	httpMethod := "POST"
 	urlPath := "/bar/*"
 	reservoirSize := int64(10)
-	fixedRate := float64(0.05)
+	fixedRate := 0.05
 	ruleName := "r2"
 	host := "local"
 	priority := int64(6)
@@ -87,15 +87,15 @@ func TestCreateRule(t *testing.T) {
 	}
 
 	// Expected centralized sampling rule
-	clock := &DefaultClock{}
-	rand := &DefaultRand{}
+	clock := &defaultClock{}
+	rand := &defaultRand{}
 
-	cr := &centralizedReservoir{
+	cr := &reservoir{
 		capacity: 10,
 		interval: 10,
 	}
 
-	exp := &centralizedRule{
+	exp := &rule{
 		reservoir:      cr,
 		ruleProperties: ruleProperties,
 		clock:          clock,
@@ -103,9 +103,8 @@ func TestCreateRule(t *testing.T) {
 	}
 
 	// Add to manifest, index
-	r2, err := m.putRule(ruleProperties)
+	err := m.createRule(ruleProperties)
 	assert.Nil(t, err)
-	assert.Equal(t, exp, r2)
 
 	// Assert new rule is present in index
 	r2, ok := m.index["r2"]
@@ -117,501 +116,23 @@ func TestCreateRule(t *testing.T) {
 	assert.Equal(t, exp, r2)
 }
 
-// Assert that creating a rule which already exists is a no-op
-func TestCreateRuleNoOp(t *testing.T) {
-	resARN := "*"
-	serviceType := ""
-	attributes := map[string]*string{
-		"foo": getStringPointer("bar"),
-	}
-
-	r1 := &centralizedRule{
-		ruleProperties: &ruleProperties{
-			RuleName: getStringPointer("r1"),
-			Priority: getIntPointer(5),
-		},
-	}
-
-	r3 := &centralizedRule{
-		ruleProperties: &ruleProperties{
-			RuleName: getStringPointer("r3"),
-			Priority: getIntPointer(7),
-		},
-		reservoir: &centralizedReservoir{
-			capacity: 5,
-		},
-	}
-
-	rules := []*centralizedRule{r1, r3}
-
-	index := map[string]*centralizedRule{
-		"r1": r1,
-		"r3": r3,
-	}
-
-	m := &centralizedManifest{
-		rules: rules,
-		index: index,
-	}
-
-	// Duplicate rule properties. 'r3' already exists. Input to updateRule().
-	serviceName := "www.foo.com"
-	httpMethod := "POST"
-	urlPath := "/bar/*"
-	reservoirSize := int64(10)
-	fixedRate := float64(0.05)
-	ruleName := "r3"
-	priority := int64(6)
-	host := "h"
-
-	ruleProperties := &ruleProperties{
-		ServiceName:   &serviceName,
-		HTTPMethod:    &httpMethod,
-		URLPath:       &urlPath,
-		ReservoirSize: &reservoirSize,
-		FixedRate:     &fixedRate,
-		RuleName:      &ruleName,
-		Priority:      &priority,
-		Host:          &host,
-		ServiceType:   &serviceType,
-		ResourceARN:   &resARN,
-		Attributes:    attributes,
-	}
-
-	// Assert manifest has not changed
-	r, err := m.putRule(ruleProperties)
-	assert.Nil(t, err)
-	assert.Equal(t, r3, r)
-	assert.Equal(t, 2, len(m.rules))
-	assert.Equal(t, 2, len(m.index))
-	assert.Equal(t, r1, m.rules[0])
-	assert.Equal(t, r3, m.rules[1])
-}
-
-// Assert that putRule() updates the rule in the manifest
-func TestUpdateRule(t *testing.T) {
-	resARN := "*"
-	serviceType := ""
-	attributes := map[string]*string{
-		"foo": getStringPointer("bar"),
-	}
-
-	// Original rule
-	r1 := &centralizedRule{
-		ruleProperties: &ruleProperties{
-			RuleName:      getStringPointer("r1"),
-			Priority:      getIntPointer(5),
-			ServiceName:   getStringPointer("*.foo.com"),
-			HTTPMethod:    getStringPointer("GET"),
-			URLPath:       getStringPointer("/resource/*"),
-			ReservoirSize: getIntPointer(15),
-			FixedRate:     getFloatPointer(0.04),
-			ResourceARN:   &resARN,
-			ServiceType:   &serviceType,
-			Attributes:    attributes,
-		},
-
-		reservoir: &centralizedReservoir{
-			capacity: 5,
-		},
-	}
-
-	rules := []*centralizedRule{r1}
-
-	index := map[string]*centralizedRule{
-		"r1": r1,
-	}
-
-	m := &centralizedManifest{
-		rules: rules,
-		index: index,
-	}
-
-	// Updated rule properties. Input to updateRule().
-	serviceName := "www.foo.com"
-	httpMethod := "POST"
-	urlPath := "/bar/*"
-	reservoirSize := int64(10)
-	fixedRate := float64(0.05)
-	ruleName := "r1"
-	priority := int64(6)
-	host := "h"
-
-	updated := &ruleProperties{
-		ServiceName:   &serviceName,
-		HTTPMethod:    &httpMethod,
-		URLPath:       &urlPath,
-		ReservoirSize: &reservoirSize,
-		FixedRate:     &fixedRate,
-		RuleName:      &ruleName,
-		Priority:      &priority,
-		Host:          &host,
-		ServiceType:   &serviceType,
-		ResourceARN:   &resARN,
-		Attributes:    attributes,
-	}
-
-	// Expected updated centralized sampling rule
-	cr := &centralizedReservoir{
-		capacity: 10,
-	}
-
-	exp := &centralizedRule{
-		reservoir:      cr,
-		ruleProperties: updated,
-	}
-
-	// Assert that rule has been updated
-	r, err := m.putRule(updated)
-	assert.Nil(t, err)
-	assert.Equal(t, exp, r)
-	assert.Equal(t, exp, m.index["r1"])
-	assert.Equal(t, exp, m.rules[0])
-	assert.Equal(t, 1, len(m.rules))
-	assert.Equal(t, 1, len(m.index))
-}
-
-// Assert that putRule() recovers from panic.
-func TestPutRuleRecovery(t *testing.T) {
-	attributes := make(map[string]*string)
-	var rules []*centralizedRule
-
-	index := map[string]*centralizedRule{}
-
-	m := &centralizedManifest{
-		rules: rules,
-		index: index,
-	}
-
-	newRule := &centralizedRule{
-		ruleProperties: &ruleProperties{
-			ServiceName: getStringPointer("www.foo.com"),
-			HTTPMethod:  getStringPointer("POST"),
-			FixedRate:   getFloatPointer(0.05),
-			RuleName:    getStringPointer("r2"),
-			Priority:    getIntPointer(int64(6)),
-			ResourceARN: getStringPointer("*"),
-			ServiceType: getStringPointer(""),
-			Attributes:  attributes,
-		},
-	}
-
-	// Attempt to add to manifest
-	r, err := m.putRule(newRule.ruleProperties)
-	assert.NotNil(t, err)
-	assert.Nil(t, r)
-
-	// Assert index is unchanged
-	assert.Equal(t, 0, len(m.index))
-
-	// Assert sorted array is unchanged
-	assert.Equal(t, 0, len(m.rules))
-}
-
-// Assert that deleting a rule from the end of the array removes the rule
-// and preserves ordering of the sorted array
-func TestDeleteLastRule(t *testing.T) {
-	r1 := &centralizedRule{
-		ruleProperties: &ruleProperties{
-			RuleName: getStringPointer("r1"),
-			Priority: getIntPointer(5),
-		},
-	}
-
-	r2 := &centralizedRule{
-		ruleProperties: &ruleProperties{
-			RuleName: getStringPointer("r2"),
-			Priority: getIntPointer(6),
-		},
-	}
-
-	r3 := &centralizedRule{
-		ruleProperties: &ruleProperties{
-			RuleName: getStringPointer("r3"),
-			Priority: getIntPointer(7),
-		},
-	}
-
-	rules := []*centralizedRule{r1, r2, r3}
-
-	index := map[string]*centralizedRule{
-		"r1": r1,
-		"r2": r2,
-		"r3": r3,
-	}
-
-	m := &centralizedManifest{
-		rules: rules,
-		index: index,
-	}
-
-	// Active rules to exclude from deletion
-	a := map[centralizedRule]bool{
-		*r1: true,
-		*r2: true,
-	}
-
-	// Delete r3
-	m.prune(a)
-
-	// Assert size of manifest
-	assert.Equal(t, 2, len(m.rules))
-	assert.Equal(t, 2, len(m.index))
-
-	// Assert index consistency
-	_, ok := m.index["r3"]
-	assert.False(t, ok)
-	assert.Equal(t, r1, m.index["r1"])
-	assert.Equal(t, r2, m.index["r2"])
-
-	// Assert ordering of array
-	assert.Equal(t, r1, m.rules[0])
-	assert.Equal(t, r2, m.rules[1])
-}
-
-// Assert that deleting a rule from the middle of the array removes the rule
-// and preserves ordering of the sorted array
-func TestDeleteMiddleRule(t *testing.T) {
-	r1 := &centralizedRule{
-		ruleProperties: &ruleProperties{
-			RuleName: getStringPointer("r1"),
-			Priority: getIntPointer(5),
-		},
-	}
-
-	r2 := &centralizedRule{
-		ruleProperties: &ruleProperties{
-			RuleName: getStringPointer("r2"),
-			Priority: getIntPointer(6),
-		},
-	}
-
-	r3 := &centralizedRule{
-		ruleProperties: &ruleProperties{
-			RuleName: getStringPointer("r3"),
-			Priority: getIntPointer(7),
-		},
-	}
-
-	rules := []*centralizedRule{r1, r2, r3}
-
-	index := map[string]*centralizedRule{
-		"r1": r1,
-		"r2": r2,
-		"r3": r3,
-	}
-
-	m := &centralizedManifest{
-		rules: rules,
-		index: index,
-	}
-
-	// Active rules to exclude from deletion
-	a := map[centralizedRule]bool{
-		*r1: true,
-		*r3: true,
-	}
-
-	// Delete r2
-	m.prune(a)
-
-	// Assert size of manifest
-	assert.Equal(t, 2, len(m.rules))
-	assert.Equal(t, 2, len(m.index))
-
-	// Assert index consistency
-	_, ok := m.index["r2"]
-	assert.False(t, ok)
-	assert.Equal(t, r1, m.index["r1"])
-	assert.Equal(t, r3, m.index["r3"])
-
-	// Assert ordering of array
-	assert.Equal(t, r1, m.rules[0])
-	assert.Equal(t, r3, m.rules[1])
-}
-
-// Assert that deleting a rule from the beginning of the array removes the rule
-// and preserves ordering of the sorted array
-func TestDeleteFirstRule(t *testing.T) {
-	r1 := &centralizedRule{
-		ruleProperties: &ruleProperties{
-			RuleName: getStringPointer("r1"),
-			Priority: getIntPointer(5),
-		},
-	}
-
-	r2 := &centralizedRule{
-		ruleProperties: &ruleProperties{
-			RuleName: getStringPointer("r2"),
-			Priority: getIntPointer(6),
-		},
-	}
-
-	r3 := &centralizedRule{
-		ruleProperties: &ruleProperties{
-			RuleName: getStringPointer("r3"),
-			Priority: getIntPointer(7),
-		},
-	}
-
-	rules := []*centralizedRule{r1, r2, r3}
-
-	index := map[string]*centralizedRule{
-		"r1": r1,
-		"r2": r2,
-		"r3": r3,
-	}
-
-	m := &centralizedManifest{
-		rules: rules,
-		index: index,
-	}
-
-	// Active rules to exclude from deletion
-	a := map[centralizedRule]bool{
-		*r2: true,
-		*r3: true,
-	}
-
-	// Delete r1
-	m.prune(a)
-
-	// Assert size of manifest
-	assert.Equal(t, 2, len(m.rules))
-	assert.Equal(t, 2, len(m.index))
-
-	// Assert index consistency
-	_, ok := m.index["r1"]
-	assert.False(t, ok)
-	assert.Equal(t, r2, m.index["r2"])
-	assert.Equal(t, r3, m.index["r3"])
-
-	// Assert ordering of array
-	assert.Equal(t, r2, m.rules[0])
-	assert.Equal(t, r3, m.rules[1])
-}
-
-// Assert that deleting the only rule from the array removes the rule
-func TestDeleteOnlyRule(t *testing.T) {
-	r1 := &centralizedRule{
-		ruleProperties: &ruleProperties{
-			RuleName: getStringPointer("r1"),
-			Priority: getIntPointer(5),
-		},
-	}
-
-	rules := []*centralizedRule{r1}
-
-	index := map[string]*centralizedRule{
-		"r1": r1,
-	}
-
-	m := &centralizedManifest{
-		rules: rules,
-		index: index,
-	}
-
-	// Active rules to exclude from deletion
-	a := map[centralizedRule]bool{}
-
-	// Delete r1
-	m.prune(a)
-
-	// Assert size of manifest
-	assert.Equal(t, 0, len(m.rules))
-	assert.Equal(t, 0, len(m.index))
-
-	// Assert index consistency
-	_, ok := m.index["r1"]
-	assert.False(t, ok)
-}
-
-// Assert that deleting rules from an empty array does not panic
-func TestDeleteEmptyRulesArray(t *testing.T) {
-	var rules []*centralizedRule
-
-	index := map[string]*centralizedRule{}
-
-	m := &centralizedManifest{
-		rules: rules,
-		index: index,
-	}
-
-	// Active rules to exclude from deletion
-	a := map[centralizedRule]bool{}
-
-	// Delete from empty array
-	m.prune(a)
-
-	// Assert size of manifest
-	assert.Equal(t, 0, len(m.rules))
-	assert.Equal(t, 0, len(m.index))
-}
-
-// Assert that deleting all rules results in an empty array and does not panic
-func TestDeleteAllRules(t *testing.T) {
-	r1 := &centralizedRule{
-		ruleProperties: &ruleProperties{
-			RuleName: getStringPointer("r1"),
-			Priority: getIntPointer(5),
-		},
-	}
-
-	r2 := &centralizedRule{
-		ruleProperties: &ruleProperties{
-			RuleName: getStringPointer("r2"),
-			Priority: getIntPointer(6),
-		},
-	}
-
-	r3 := &centralizedRule{
-		ruleProperties: &ruleProperties{
-			RuleName: getStringPointer("r3"),
-			Priority: getIntPointer(7),
-		},
-	}
-
-	rules := []*centralizedRule{r1, r2, r3}
-
-	index := map[string]*centralizedRule{
-		"r1": r1,
-		"r2": r2,
-		"r3": r3,
-	}
-
-	m := &centralizedManifest{
-		rules: rules,
-		index: index,
-	}
-
-	// Active rules to exclude from deletion
-	a := map[centralizedRule]bool{}
-
-	// Delete r3
-	m.prune(a)
-
-	// Assert size of manifest
-	assert.Equal(t, 0, len(m.rules))
-	assert.Equal(t, 0, len(m.index))
-}
-
 // Assert that sorting an unsorted array results in a sorted array - check priority
 func TestSort1(t *testing.T) {
-	r1 := &centralizedRule{
+	r1 := &rule{
 		ruleProperties: &ruleProperties{
 			RuleName: getStringPointer("r1"),
 			Priority: getIntPointer(5),
 		},
 	}
 
-	r2 := &centralizedRule{
+	r2 := &rule{
 		ruleProperties: &ruleProperties{
 			RuleName: getStringPointer("r2"),
 			Priority: getIntPointer(6),
 		},
 	}
 
-	r3 := &centralizedRule{
+	r3 := &rule{
 		ruleProperties: &ruleProperties{
 			RuleName: getStringPointer("r3"),
 			Priority: getIntPointer(7),
@@ -619,9 +140,9 @@ func TestSort1(t *testing.T) {
 	}
 
 	// Unsorted rules array
-	rules := []*centralizedRule{r2, r1, r3}
+	rules := []*rule{r2, r1, r3}
 
-	m := &centralizedManifest{
+	m := &manifest{
 		rules: rules,
 	}
 
@@ -636,21 +157,21 @@ func TestSort1(t *testing.T) {
 
 // Assert that sorting an unsorted array results in a sorted array - check priority and rule name
 func TestSort2(t *testing.T) {
-	r1 := &centralizedRule{
+	r1 := &rule{
 		ruleProperties: &ruleProperties{
 			RuleName: getStringPointer("r1"),
 			Priority: getIntPointer(5),
 		},
 	}
 
-	r2 := &centralizedRule{
+	r2 := &rule{
 		ruleProperties: &ruleProperties{
 			RuleName: getStringPointer("r2"),
 			Priority: getIntPointer(6),
 		},
 	}
 
-	r3 := &centralizedRule{
+	r3 := &rule{
 		ruleProperties: &ruleProperties{
 			RuleName: getStringPointer("r3"),
 			Priority: getIntPointer(7),
@@ -658,9 +179,9 @@ func TestSort2(t *testing.T) {
 	}
 
 	// Unsorted rules array
-	rules := []*centralizedRule{r2, r1, r3}
+	rules := []*rule{r2, r1, r3}
 
-	m := &centralizedManifest{
+	m := &manifest{
 		rules: rules,
 	}
 

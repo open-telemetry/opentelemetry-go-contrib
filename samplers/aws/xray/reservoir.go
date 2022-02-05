@@ -15,8 +15,8 @@
 package xray
 
 // ToDo: other fields will be used in business logic for remote sampling
-// centralizedReservoir is a reservoir distributed among all running instances of the SDK
-type centralizedReservoir struct {
+// reservoir is a reservoir distributed among all running instances of the SDK
+type reservoir struct {
 	// Quota assigned to client
 	quota int64
 	//

@@ -17,62 +17,128 @@ package xray
 import (
 	"context"
 	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 	"net/http"
 	"net/http/httptest"
 	"net/url"
+	"reflect"
 	"testing"
 )
 
 func TestRefreshManifest(t *testing.T) {
 	ctx := context.Background()
 
-	body := "{\"NextToken\":null,\"SamplingRuleRecords\":[{\"CreatedAt\":0.0,\"ModifiedAt\":1.639517389E9,\"SamplingRule\":{\"Attributes\":{},\"FixedRate\":0.5,\"HTTPMethod\":\"*\",\"Host\":\"*\",\"Priority\":10000,\"ReservoirSize\":60,\"ResourceARN\":\"*\",\"RuleARN\":\"arn:aws:xray:us-west-2:836082170990:sampling-rule/Default\",\"RuleName\":\"Default\",\"ServiceName\":\"*\",\"ServiceType\":\"*\",\"URLPath\":\"*\",\"Version\":1}},{\"CreatedAt\":1.637691613E9,\"ModifiedAt\":1.643748669E9,\"SamplingRule\":{\"Attributes\":{},\"FixedRate\":0.09,\"HTTPMethod\":\"GET\",\"Host\":\"*\",\"Priority\":1,\"ReservoirSize\":3,\"ResourceARN\":\"*\",\"RuleARN\":\"arn:aws:xray:us-west-2:836082170990:sampling-rule/test-rule\",\"RuleName\":\"test-rule\",\"ServiceName\":\"test-rule\",\"ServiceType\":\"local\",\"URLPath\":\"/aws-sdk-call\",\"Version\":1}},{\"CreatedAt\":1.639446197E9,\"ModifiedAt\":1.639446197E9,\"SamplingRule\":{\"Attributes\":{},\"FixedRate\":0.09,\"HTTPMethod\":\"*\",\"Host\":\"*\",\"Priority\":100,\"ReservoirSize\":100,\"ResourceARN\":\"*\",\"RuleARN\":\"arn:aws:xray:us-west-2:836082170990:sampling-rule/test-rule-1\",\"RuleName\":\"test-rule-1\",\"ServiceName\":\"*\",\"ServiceType\":\"*\",\"URLPath\":\"*\",\"Version\":1}}]}"
+	body := []byte(`{
+  "NextToken": null,
+  "SamplingRuleRecords": [
+    {
+      "CreatedAt": 0,
+      "ModifiedAt": 1639517389,
+      "SamplingRule": {
+        "Attributes": {},
+        "FixedRate": 0.5,
+        "HTTPMethod": "*",
+        "Host": "*",
+        "Priority": 10000,
+        "ReservoirSize": 60,
+        "ResourceARN": "*",
+        "RuleARN": "arn:aws:xray:us-west-2:xxxxxxx:sampling-rule/r1",
+        "RuleName": "r1",
+        "ServiceName": "*",
+        "ServiceType": "*",
+        "URLPath": "*",
+        "Version": 1
+      }
+    },
+    {
+      "CreatedAt": 1637691613,
+      "ModifiedAt": 1643748669,
+      "SamplingRule": {
+        "Attributes": {},
+        "FixedRate": 0.09,
+        "HTTPMethod": "GET",
+        "Host": "*",
+        "Priority": 1,
+        "ReservoirSize": 3,
+        "ResourceARN": "*",
+        "RuleARN": "arn:aws:xray:us-west-2:xxxxxxx:sampling-rule/r2",
+        "RuleName": "r2",
+        "ServiceName": "test-rule",
+        "ServiceType": "*",
+        "URLPath": "/aws-sdk-call",
+        "Version": 1
+      }
+    },
+    {
+      "CreatedAt": 1639446197,
+      "ModifiedAt": 1639446197,
+      "SamplingRule": {
+        "Attributes": {},
+        "FixedRate": 0.09,
+        "HTTPMethod": "*",
+        "Host": "*",
+        "Priority": 100,
+        "ReservoirSize": 100,
+        "ResourceARN": "*",
+        "RuleARN": "arn:aws:xray:us-west-2:xxxxxxx:sampling-rule/r3",
+        "RuleName": "r3",
+        "ServiceName": "*",
+        "ServiceType": "local",
+        "URLPath": "*",
+        "Version": 1
+      }
+    }
+  ]
+}`)
 
 	// generate a test server so we can capture and inspect the request
 	testServer := httptest.NewServer(http.HandlerFunc(func(res http.ResponseWriter, req *http.Request) {
-		_, _ = res.Write([]byte(body))
+		_, err := res.Write([]byte(body))
+		require.NoError(t, err)
 	}))
 	defer testServer.Close()
 
-	u, _ := url.Parse(testServer.URL)
+	u, err := url.Parse(testServer.URL)
+	require.NoError(t, err)
 
-	clock := &DefaultClock{}
+	clock := &defaultClock{}
 
-	m := &centralizedManifest{
-		rules: []*centralizedRule{},
-		index: map[string]*centralizedRule{},
+	m := &manifest{
+		rules: []*rule{},
+		index: map[string]*rule{},
 		clock: clock,
 	}
 
-	rs := &RemoteSampler{
+	rs := &remoteSampler{
 		xrayClient: newClient(u.Host),
 		clock:      clock,
 		manifest:   m,
 	}
 
-	_ = rs.refreshManifest(ctx)
+	err = rs.refreshManifest(ctx)
+	require.NoError(t, err)
 
 	// Rule 'r1'
-	r1 := &centralizedRule{
+	r1 := &rule{
 		ruleProperties: &ruleProperties{
-			RuleName:      getStringPointer("Default"),
+			RuleName:      getStringPointer("r1"),
 			Priority:      getIntPointer(10000),
 			Host:          getStringPointer("*"),
 			HTTPMethod:    getStringPointer("*"),
 			URLPath:       getStringPointer("*"),
-			ReservoirSize: getIntPointer(40),
+			ReservoirSize: getIntPointer(60),
 			Version:       getIntPointer(1),
 			FixedRate:     getFloatPointer(0.5),
 			ServiceName:   getStringPointer("*"),
 			ResourceARN:   getStringPointer("*"),
-			ServiceType:   getStringPointer(""),
+			ServiceType:   getStringPointer("*"),
 		},
 	}
 
 	// Rule 'r2'
-	r2 := &centralizedRule{
+	r2 := &rule{
 		ruleProperties: &ruleProperties{
-			RuleName:      getStringPointer("test-rule"),
+			RuleName:      getStringPointer("r2"),
 			Priority:      getIntPointer(1),
 			Host:          getStringPointer("*"),
 			HTTPMethod:    getStringPointer("GET"),
@@ -82,14 +148,14 @@ func TestRefreshManifest(t *testing.T) {
 			Version:       getIntPointer(1),
 			ServiceName:   getStringPointer("test-rule"),
 			ResourceARN:   getStringPointer("*"),
-			ServiceType:   getStringPointer("local"),
+			ServiceType:   getStringPointer("*"),
 		},
 	}
 
 	// Rule 'r3'
-	r3 := &centralizedRule{
+	r3 := &rule{
 		ruleProperties: &ruleProperties{
-			RuleName:      getStringPointer("test-rule-1"),
+			RuleName:      getStringPointer("r3"),
 			Priority:      getIntPointer(100),
 			Host:          getStringPointer("*"),
 			HTTPMethod:    getStringPointer("*"),
@@ -99,278 +165,438 @@ func TestRefreshManifest(t *testing.T) {
 			Version:       getIntPointer(1),
 			ServiceName:   getStringPointer("*"),
 			ResourceARN:   getStringPointer("*"),
-			ServiceType:   getStringPointer(""),
+			ServiceType:   getStringPointer("local"),
 		},
 	}
 	// Assert on sorting order
 	assert.Equal(t, r2.ruleProperties.RuleName, rs.manifest.rules[0].ruleProperties.RuleName)
+	assert.Equal(t, r2.ruleProperties.Priority, rs.manifest.rules[0].ruleProperties.Priority)
+	assert.Equal(t, r2.ruleProperties.Host, rs.manifest.rules[0].ruleProperties.Host)
+	assert.Equal(t, r2.ruleProperties.HTTPMethod, rs.manifest.rules[0].ruleProperties.HTTPMethod)
+	assert.Equal(t, r2.ruleProperties.URLPath, rs.manifest.rules[0].ruleProperties.URLPath)
+	assert.Equal(t, r2.ruleProperties.ReservoirSize, rs.manifest.rules[0].ruleProperties.ReservoirSize)
+	assert.Equal(t, r2.ruleProperties.FixedRate, rs.manifest.rules[0].ruleProperties.FixedRate)
+	assert.Equal(t, r2.ruleProperties.Version, rs.manifest.rules[0].ruleProperties.Version)
+	assert.Equal(t, r2.ruleProperties.ServiceName, rs.manifest.rules[0].ruleProperties.ServiceName)
+	assert.Equal(t, r2.ruleProperties.ResourceARN, rs.manifest.rules[0].ruleProperties.ResourceARN)
+	assert.Equal(t, r2.ruleProperties.ServiceType, rs.manifest.rules[0].ruleProperties.ServiceType)
+
 	assert.Equal(t, r3.ruleProperties.RuleName, rs.manifest.rules[1].ruleProperties.RuleName)
+	assert.Equal(t, r3.ruleProperties.Priority, rs.manifest.rules[1].ruleProperties.Priority)
+	assert.Equal(t, r3.ruleProperties.Host, rs.manifest.rules[1].ruleProperties.Host)
+	assert.Equal(t, r3.ruleProperties.HTTPMethod, rs.manifest.rules[1].ruleProperties.HTTPMethod)
+	assert.Equal(t, r3.ruleProperties.URLPath, rs.manifest.rules[1].ruleProperties.URLPath)
+	assert.Equal(t, r3.ruleProperties.ReservoirSize, rs.manifest.rules[1].ruleProperties.ReservoirSize)
+	assert.Equal(t, r3.ruleProperties.FixedRate, rs.manifest.rules[1].ruleProperties.FixedRate)
+	assert.Equal(t, r3.ruleProperties.Version, rs.manifest.rules[1].ruleProperties.Version)
+	assert.Equal(t, r3.ruleProperties.ServiceName, rs.manifest.rules[1].ruleProperties.ServiceName)
+	assert.Equal(t, r3.ruleProperties.ResourceARN, rs.manifest.rules[1].ruleProperties.ResourceARN)
+	assert.Equal(t, r3.ruleProperties.ServiceType, rs.manifest.rules[1].ruleProperties.ServiceType)
+
 	assert.Equal(t, r1.ruleProperties.RuleName, rs.manifest.rules[2].ruleProperties.RuleName)
+	assert.Equal(t, r1.ruleProperties.Priority, rs.manifest.rules[2].ruleProperties.Priority)
+	assert.Equal(t, r1.ruleProperties.Host, rs.manifest.rules[2].ruleProperties.Host)
+	assert.Equal(t, r1.ruleProperties.HTTPMethod, rs.manifest.rules[2].ruleProperties.HTTPMethod)
+	assert.Equal(t, r1.ruleProperties.URLPath, rs.manifest.rules[2].ruleProperties.URLPath)
+	assert.Equal(t, r1.ruleProperties.ReservoirSize, rs.manifest.rules[2].ruleProperties.ReservoirSize)
+	assert.Equal(t, r1.ruleProperties.FixedRate, rs.manifest.rules[2].ruleProperties.FixedRate)
+	assert.Equal(t, r1.ruleProperties.Version, rs.manifest.rules[2].ruleProperties.Version)
+	assert.Equal(t, r1.ruleProperties.ServiceName, rs.manifest.rules[2].ruleProperties.ServiceName)
+	assert.Equal(t, r1.ruleProperties.ResourceARN, rs.manifest.rules[2].ruleProperties.ResourceARN)
+	assert.Equal(t, r1.ruleProperties.ServiceType, rs.manifest.rules[2].ruleProperties.ServiceType)
 
 	// Assert on size of manifest
 	assert.Equal(t, 3, len(rs.manifest.rules))
 	assert.Equal(t, 3, len(rs.manifest.index))
 }
 
-func TestRefreshManifestRuleAdditionInvalidRule1(t *testing.T) {
+// assert that invalid rule with ResourceARN other than "*" does not update to the manifest
+func TestRefreshManifestAddInvalidRuleType1(t *testing.T) {
 	ctx := context.Background()
+
+	// to enable logging
 	newConfig()
 
-	// Rule 'r1'
-	r1 := &centralizedRule{
-		ruleProperties: &ruleProperties{
-			RuleName:    getStringPointer("r1"),
-			Priority:    getIntPointer(4),
-			ResourceARN: getStringPointer("XYZ"), // invalid
-		},
-		reservoir: &centralizedReservoir{
-			quota:    10,
-			capacity: 50,
-		},
-	}
-
-	// Sorted array
-	rules := []*centralizedRule{r1}
-
-	index := map[string]*centralizedRule{
-		"r1": r1,
-	}
-
-	manifest := &centralizedManifest{
-		rules:       rules,
-		index:       index,
-		refreshedAt: 1500000000,
-	}
-
-	body := "{\"NextToken\":null,\"SamplingRuleRecords\":[{\"CreatedAt\":1.639446197E9,\"ModifiedAt\":1.639446197E9,\"SamplingRule\":{\"Attributes\":{},\"FixedRate\":0.05,\"HTTPMethod\":\"POST\",\"Host\":\"*\",\"Priority\":4,\"ReservoirSize\":50,\"ResourceARN\":\"XYZ\",\"RuleARN\":\"arn:aws:xray:us-west-2:836082170990:sampling-rule/r1\",\"RuleName\":\"r1\",\"ServiceName\":\"www.foo.com\",\"ServiceType\":\"\",\"URLPath\":\"/resource/bar\",\"Version\":1}}]}"
+	// invalid rule due to ResourceARN
+	body := []byte(`{
+  "NextToken": null,
+  "SamplingRuleRecords": [
+    {
+      "CreatedAt": 0,
+      "ModifiedAt": 1639517389,
+      "SamplingRule": {
+        "Attributes": {},
+        "FixedRate": 0.5,
+        "HTTPMethod": "*",
+        "Host": "*",
+        "Priority": 10000,
+        "ReservoirSize": 60,
+        "ResourceARN": "XYZ",
+        "RuleARN": "arn:aws:xray:us-west-2:xxxxxxx:sampling-rule/r1",
+        "RuleName": "r1",
+        "ServiceName": "*",
+        "ServiceType": "*",
+        "URLPath": "*",
+        "Version": 1
+      }
+    }
+  ]
+}`)
 
 	// generate a test server so we can capture and inspect the request
 	testServer := httptest.NewServer(http.HandlerFunc(func(res http.ResponseWriter, req *http.Request) {
-		_, _ = res.Write([]byte(body))
+		_, err := res.Write([]byte(body))
+		require.NoError(t, err)
+
 	}))
 	defer testServer.Close()
 
-	u, _ := url.Parse(testServer.URL)
+	u, err := url.Parse(testServer.URL)
+	require.NoError(t, err)
 
-	clock := &DefaultClock{}
+	clock := &defaultClock{}
 
-	rs := &RemoteSampler{
-		xrayClient: newClient(u.Host),
-		clock:      clock,
-		manifest:   manifest,
+	m := &manifest{
+		rules: []*rule{},
+		index: map[string]*rule{},
+		clock: clock,
 	}
 
-	rs.manifest = manifest
-	err := rs.refreshManifest(ctx)
+	rs := &remoteSampler{
+		xrayClient: newClient(u.Host),
+		clock:      clock,
+		manifest:   m,
+	}
 
-	assert.Nil(t, err)
+	err = rs.refreshManifest(ctx)
+	require.NoError(t, err)
+
 	// Refresh manifest with updates from mock proxy
 	assert.Equal(t, 0, len(rs.manifest.rules)) // Rule not added
 }
 
-func TestRefreshManifestRuleAdditionInvalidRule2(t *testing.T) { // non nil Attributes
+// assert that invalid rule with attribute does not update to the manifest
+func TestRefreshManifestAddInvalidRuleType2(t *testing.T) {
 	ctx := context.Background()
 
-	attributes := make(map[string]*string)
-	attributes["a"] = getStringPointer("*")
+	// to enable logging
+	newConfig()
 
-	// Rule 'r1'
-	r1 := &centralizedRule{
-		ruleProperties: &ruleProperties{
-			RuleName:    getStringPointer("r1"),
-			Priority:    getIntPointer(4),
-			ResourceARN: getStringPointer("*"),
-		},
-		reservoir: &centralizedReservoir{
-			quota:    10,
-			capacity: 50,
-		},
-	}
-
-	// Sorted array
-	rules := []*centralizedRule{r1}
-
-	index := map[string]*centralizedRule{
-		"r1": r1,
-	}
-
-	manifest := &centralizedManifest{
-		rules:       rules,
-		index:       index,
-		refreshedAt: 1500000000,
-	}
-
-	body := "{\"NextToken\":null,\"SamplingRuleRecords\":[{\"CreatedAt\":1.639446197E9,\"ModifiedAt\":1.639446197E9,\"SamplingRule\":{\"Attributes\":{\"a\":\"b\"},\"FixedRate\":0.05,\"HTTPMethod\":\"POST\",\"Host\":\"*\",\"Priority\":4,\"ReservoirSize\":50,\"ResourceARN\":\"XYZ\",\"RuleARN\":\"arn:aws:xray:us-west-2:836082170990:sampling-rule/r1\",\"RuleName\":\"r1\",\"ServiceName\":\"www.foo.com\",\"ServiceType\":\"\",\"URLPath\":\"/resource/bar\",\"Version\":1}}]}"
+	// invalid rule due to attributes
+	body := []byte(`{
+  "NextToken": null,
+  "SamplingRuleRecords": [
+    {
+      "CreatedAt": 0,
+      "ModifiedAt": 1639517389,
+      "SamplingRule": {
+        "Attributes": {"a":"b"},
+        "FixedRate": 0.5,
+        "HTTPMethod": "*",
+        "Host": "*",
+        "Priority": 10000,
+        "ReservoirSize": 60,
+        "ResourceARN": "*",
+        "RuleARN": "arn:aws:xray:us-west-2:xxxxxxx:sampling-rule/r1",
+        "RuleName": "r1",
+        "ServiceName": "*",
+        "ServiceType": "*",
+        "URLPath": "*",
+        "Version": 1
+      }
+    }
+  ]
+}`)
 
 	// generate a test server so we can capture and inspect the request
 	testServer := httptest.NewServer(http.HandlerFunc(func(res http.ResponseWriter, req *http.Request) {
-		_, _ = res.Write([]byte(body))
+		_, err := res.Write([]byte(body))
+		require.NoError(t, err)
 	}))
 	defer testServer.Close()
 
-	u, _ := url.Parse(testServer.URL)
+	u, err := url.Parse(testServer.URL)
+	require.NoError(t, err)
 
-	clock := &DefaultClock{}
+	clock := &defaultClock{}
 
-	rs := &RemoteSampler{
-		xrayClient: newClient(u.Host),
-		clock:      clock,
-		manifest:   manifest,
+	m := &manifest{
+		rules: []*rule{},
+		index: map[string]*rule{},
+		clock: clock,
 	}
 
-	err := rs.refreshManifest(ctx)
+	rs := &remoteSampler{
+		xrayClient: newClient(u.Host),
+		clock:      clock,
+		manifest:   m,
+	}
 
-	assert.Nil(t, err)
+	err = rs.refreshManifest(ctx)
+	require.NoError(t, err)
+
 	assert.Equal(t, 0, len(rs.manifest.rules)) // rule not added
 }
 
-func TestRefreshManifestRuleAdditionInvalidRule3(t *testing.T) { // 1 valid and 1 invalid rule
+// assert that 1 valid and 1 invalid rule update only valid rule gets stored to the manifest
+func TestRefreshManifestAddInvalidRule3(t *testing.T) {
 	ctx := context.Background()
 
+	// to enable logging
+	newConfig()
+
+	body := []byte(`{
+  "NextToken": null,
+  "SamplingRuleRecords": [
+    {
+      "CreatedAt": 0,
+      "ModifiedAt": 1639517389,
+      "SamplingRule": {
+        "Attributes": {},
+        "FixedRate": 0.5,
+        "HTTPMethod": "*",
+        "Host": "*",
+        "Priority": 10000,
+        "ReservoirSize": 60,
+        "ResourceARN": "*",
+        "RuleARN": "arn:aws:xray:us-west-2:xxxxxxx:sampling-rule/r1",
+        "RuleName": "r1",
+        "ServiceName": "*",
+        "ServiceType": "*",
+        "URLPath": "*",
+        "Version": 1
+      }
+    },
+   {
+      "CreatedAt": 0,
+      "ModifiedAt": 1639517389,
+      "SamplingRule": {
+        "Attributes": {"a":"b"},
+        "FixedRate": 0.5,
+        "HTTPMethod": "*",
+        "Host": "*",
+        "Priority": 10000,
+        "ReservoirSize": 60,
+        "ResourceARN": "*",
+        "RuleARN": "arn:aws:xray:us-west-2:xxxxxxx:sampling-rule/r2",
+        "RuleName": "r2",
+        "ServiceName": "*",
+        "ServiceType": "*",
+        "URLPath": "*",
+        "Version": 1
+      }
+    }
+  ]
+}`)
 	// Rule 'r1'
-	r1 := &centralizedRule{
+	r1 := &rule{
 		ruleProperties: &ruleProperties{
-			RuleName:    getStringPointer("r1"),
-			Priority:    getIntPointer(4),
-			ResourceARN: getStringPointer("*"),
-		},
-		reservoir: &centralizedReservoir{
-			quota:    10,
-			capacity: 50,
-		},
-	}
-
-	// Rule 'r2'
-	r2 := &centralizedRule{
-		ruleProperties: &ruleProperties{
-			RuleName:    getStringPointer("r2"),
-			Priority:    getIntPointer(4),
-			ResourceARN: getStringPointer("*"),
-		},
-		reservoir: &centralizedReservoir{
-			quota:    10,
-			capacity: 50,
+			RuleName:      getStringPointer("r1"),
+			Priority:      getIntPointer(10000),
+			Host:          getStringPointer("*"),
+			HTTPMethod:    getStringPointer("*"),
+			URLPath:       getStringPointer("*"),
+			ReservoirSize: getIntPointer(60),
+			FixedRate:     getFloatPointer(0.5),
+			Version:       getIntPointer(1),
+			ServiceName:   getStringPointer("*"),
+			ResourceARN:   getStringPointer("*"),
+			ServiceType:   getStringPointer("*"),
 		},
 	}
-
-	// Sorted array
-	rules := []*centralizedRule{r1}
-
-	index := map[string]*centralizedRule{
-		"r1": r1,
-	}
-
-	manifest := &centralizedManifest{
-		rules:       rules,
-		index:       index,
-		refreshedAt: 1500000000,
-	}
-
-	body := "{\"NextToken\":null,\"SamplingRuleRecords\":[{\"CreatedAt\":0.0,\"ModifiedAt\":1.639517389E9,\"SamplingRule\":{\"Attributes\":{\"a\":\"b\"},\"FixedRate\":0.5,\"HTTPMethod\":\"*\",\"Host\":\"*\",\"Priority\":10000,\"ReservoirSize\":60,\"ResourceARN\":\"*\",\"RuleARN\":\"arn:aws:xray:us-west-2:836082170990:sampling-rule/Default\",\"RuleName\":\"r1\",\"ServiceName\":\"*\",\"ServiceType\":\"*\",\"URLPath\":\"*\",\"Version\":1}},{\"CreatedAt\":1.637691613E9,\"ModifiedAt\":1.643748669E9,\"SamplingRule\":{\"Attributes\":{},\"FixedRate\":0.09,\"HTTPMethod\":\"GET\",\"Host\":\"*\",\"Priority\":1,\"ReservoirSize\":3,\"ResourceARN\":\"*\",\"RuleARN\":\"arn:aws:xray:us-west-2:836082170990:sampling-rule/test-rule\",\"RuleName\":\"r2\",\"ServiceName\":\"test-rule\",\"ServiceType\":\"local\",\"URLPath\":\"/aws-sdk-call\",\"Version\":1}}]}"
 
 	// generate a test server so we can capture and inspect the request
 	testServer := httptest.NewServer(http.HandlerFunc(func(res http.ResponseWriter, req *http.Request) {
-		_, _ = res.Write([]byte(body))
+		_, err := res.Write([]byte(body))
+		require.NoError(t, err)
 	}))
 	defer testServer.Close()
 
-	u, _ := url.Parse(testServer.URL)
+	u, err := url.Parse(testServer.URL)
+	require.NoError(t, err)
 
-	clock := &DefaultClock{}
+	clock := &defaultClock{}
 
-	rs := &RemoteSampler{
-		xrayClient: newClient(u.Host),
-		clock:      clock,
-		manifest:   manifest,
+	m := &manifest{
+		rules: []*rule{},
+		index: map[string]*rule{},
+		clock: clock,
 	}
 
-	err := rs.refreshManifest(ctx)
+	rs := &remoteSampler{
+		xrayClient: newClient(u.Host),
+		clock:      clock,
+		manifest:   m,
+	}
 
-	assert.Nil(t, err)
-	assert.Equal(t, 1, len(rs.manifest.rules)) // u1 not added
-	assert.Equal(t, r2.ruleProperties.RuleName, rs.manifest.rules[0].ruleProperties.RuleName)
+	err = rs.refreshManifest(ctx)
+	require.NoError(t, err)
+
+	assert.Equal(t, 1, len(rs.manifest.rules))
+
+	assert.Equal(t, r1.ruleProperties.RuleName, rs.manifest.rules[0].ruleProperties.RuleName)
+	assert.Equal(t, r1.ruleProperties.Priority, rs.manifest.rules[0].ruleProperties.Priority)
+	assert.Equal(t, r1.ruleProperties.Host, rs.manifest.rules[0].ruleProperties.Host)
+	assert.Equal(t, r1.ruleProperties.HTTPMethod, rs.manifest.rules[0].ruleProperties.HTTPMethod)
+	assert.Equal(t, r1.ruleProperties.URLPath, rs.manifest.rules[0].ruleProperties.URLPath)
+	assert.Equal(t, r1.ruleProperties.ReservoirSize, rs.manifest.rules[0].ruleProperties.ReservoirSize)
+	assert.Equal(t, r1.ruleProperties.FixedRate, rs.manifest.rules[0].ruleProperties.FixedRate)
+	assert.Equal(t, r1.ruleProperties.Version, rs.manifest.rules[0].ruleProperties.Version)
+	assert.Equal(t, r1.ruleProperties.ServiceName, rs.manifest.rules[0].ruleProperties.ServiceName)
+	assert.Equal(t, r1.ruleProperties.ResourceARN, rs.manifest.rules[0].ruleProperties.ResourceARN)
+	assert.Equal(t, r1.ruleProperties.ServiceType, rs.manifest.rules[0].ruleProperties.ServiceType)
 }
 
-// Assert that an invalid rule update does not update the rule
-func TestRefreshManifestInvalidRuleUpdate(t *testing.T) {
+// assert that manifest rules and index correctly updates from temporary manifest with each update
+func TestManifestRulesAndIndexUpdate(t *testing.T) {
 	ctx := context.Background()
+	count := 0
 
-	// Rule 'r1'
-	r1 := &centralizedRule{
-		ruleProperties: &ruleProperties{
-			RuleName:      getStringPointer("r1"),
-			Priority:      getIntPointer(4),
-			ResourceARN:   getStringPointer("*"),
-			ServiceName:   getStringPointer("www.foo.com"),
-			HTTPMethod:    getStringPointer("POST"),
-			URLPath:       getStringPointer("/resource/bar"),
-			ReservoirSize: getIntPointer(50),
-			FixedRate:     getFloatPointer(0.05),
-		},
-		reservoir: &centralizedReservoir{
-			quota:    10,
-			capacity: 50,
-		},
-	}
+	// to enable logging
+	newConfig()
 
-	// Rule 'r3'
-	r3 := &centralizedRule{
-		ruleProperties: &ruleProperties{
-			RuleName:      getStringPointer("r1"),
-			Priority:      getIntPointer(8),
-			ResourceARN:   getStringPointer("*"),
-			ServiceName:   getStringPointer("www.bar.com"),
-			HTTPMethod:    getStringPointer("POST"),
-			URLPath:       getStringPointer("/resource/foo"),
-			ReservoirSize: getIntPointer(40),
-			FixedRate:     getFloatPointer(0.10),
-			Host:          getStringPointer("h3"),
-		},
-		reservoir: &centralizedReservoir{
-			quota:    10,
-			capacity: 50,
-		},
-	}
-
-	// Sorted array
-	rules := []*centralizedRule{r1, r3}
-
-	index := map[string]*centralizedRule{
-		"r1": r1,
-		"r3": r3,
-	}
-
-	manifest := &centralizedManifest{
-		rules:       rules,
-		index:       index,
-		refreshedAt: 1500000000,
-	}
-
-	body := "{\"NextToken\":null,\"SamplingRuleRecords\":[{\"CreatedAt\":0.0,\"ModifiedAt\":1.639517389E9,\"SamplingRule\":{\"Attributes\":{},\"FixedRate\":0.5,\"HTTPMethod\":\"*\",\"Host\":\"*\",\"Priority\":10000,\"ReservoirSize\":60,\"ResourceARN\":\"*\",\"RuleARN\":\"arn:aws:xray:us-west-2:836082170990:sampling-rule/Default\",\"FixedRate\":0.09,\"RuleName\":\"r1\",\"ServiceName\":\"*\",\"ServiceType\":\"*\",\"URLPath\":\"*\",\"Version\":1}},{\"CreatedAt\":1.637691613E9,\"ModifiedAt\":1.643748669E9,\"SamplingRule\":{\"Attributes\":{},\"FixedRate\":0.09,\"HTTPMethod\":\"GET\",\"Host\":\"*\",\"Priority\":1,\"ReservoirSize\":3,\"ResourceARN\":\"*\",\"RuleARN\":\"arn:aws:xray:us-west-2:836082170990:sampling-rule/test-rule\",\"RuleName\":\"r3\",\"ServiceName\":\"test-rule\",\"ServiceType\":\"local\",\"URLPath\":\"/aws-sdk-call\",\"Version\":2}}]}"
+	// first update
+	body1 := []byte(`{
+  "NextToken": null,
+  "SamplingRuleRecords": [
+    {
+      "CreatedAt": 0,
+      "ModifiedAt": 1639517389,
+      "SamplingRule": {
+        "Attributes": {},
+        "FixedRate": 0.5,
+        "HTTPMethod": "*",
+        "Host": "*",
+        "Priority": 100000,
+        "ReservoirSize": 60,
+        "ResourceARN": "*",
+        "RuleARN": "arn:aws:xray:us-west-2:xxxxxxx:sampling-rule/r1",
+        "RuleName": "r1",
+        "ServiceName": "*",
+        "ServiceType": "*",
+        "URLPath": "*",
+        "Version": 1
+      }
+    },
+   {
+      "CreatedAt": 0,
+      "ModifiedAt": 1639517389,
+      "SamplingRule": {
+        "Attributes": {},
+        "FixedRate": 0.5,
+        "HTTPMethod": "*",
+        "Host": "*",
+        "Priority": 10000,
+        "ReservoirSize": 60,
+        "ResourceARN": "*",
+        "RuleARN": "arn:aws:xray:us-west-2:xxxxxxx:sampling-rule/r2",
+        "RuleName": "r2",
+        "ServiceName": "*",
+        "ServiceType": "*",
+        "URLPath": "*",
+        "Version": 1
+      }
+    }
+  ]
+}`)
+	// second update
+	body2 := []byte(`{
+  "NextToken": null,
+  "SamplingRuleRecords": [
+    {
+      "CreatedAt": 0,
+      "ModifiedAt": 1639517389,
+      "SamplingRule": {
+        "Attributes": {},
+        "FixedRate": 0.5,
+        "HTTPMethod": "*",
+        "Host": "*",
+        "Priority": 100000,
+        "ReservoirSize": 60,
+        "ResourceARN": "*",
+        "RuleARN": "arn:aws:xray:us-west-2:xxxxxxx:sampling-rule/r1",
+        "RuleName": "r1",
+        "ServiceName": "*",
+        "ServiceType": "*",
+        "URLPath": "*",
+        "Version": 1
+      }
+    }
+  ]
+}`)
 
 	// generate a test server so we can capture and inspect the request
 	testServer := httptest.NewServer(http.HandlerFunc(func(res http.ResponseWriter, req *http.Request) {
-		_, _ = res.Write([]byte(body))
+		if count == 0 {
+			// first update
+			_, err := res.Write([]byte(body1))
+			require.NoError(t, err)
+		} else {
+			// second update
+			_, err := res.Write([]byte(body2))
+			require.NoError(t, err)
+		}
 	}))
 	defer testServer.Close()
 
-	u, _ := url.Parse(testServer.URL)
+	u, err := url.Parse(testServer.URL)
+	require.NoError(t, err)
 
-	clock := &DefaultClock{}
+	clock := &defaultClock{}
 
-	rs := &RemoteSampler{
-		xrayClient: newClient(u.Host),
-		clock:      clock,
-		manifest:   manifest,
+	m := &manifest{
+		rules: []*rule{},
+		index: map[string]*rule{},
+		clock: clock,
 	}
 
-	err := rs.refreshManifest(ctx)
-	assert.NotNil(t, err)
+	rs := &remoteSampler{
+		xrayClient: newClient(u.Host),
+		clock:      clock,
+		manifest:   m,
+	}
 
-	// Assert on size of manifest
+	err = rs.refreshManifest(ctx)
+	require.NoError(t, err)
+
+	// assert that manifest has 2 rules and indexes currently
+	assert.Equal(t, 2, len(rs.manifest.rules))
+	assert.Equal(t, 2, len(rs.manifest.index))
+
+	assert.Equal(t, rs.manifest.rules[0].ruleProperties.RuleName, getStringPointer("r2"))
+	assert.Equal(t, rs.manifest.rules[1].ruleProperties.RuleName, getStringPointer("r1"))
+
+	// assert that both the rules are available in manifest index
+	_, okRule1 := rs.manifest.index[*rs.manifest.rules[0].ruleProperties.RuleName]
+	_, okRule2 := rs.manifest.index[*rs.manifest.rules[1].ruleProperties.RuleName]
+
+	assert.True(t, okRule1)
+	assert.True(t, okRule2)
+
+	// second update
+	count += 1
+	err = rs.refreshManifest(ctx)
+	require.NoError(t, err)
+
+	// assert that manifest has 1 "r1" rule and index currently
 	assert.Equal(t, 1, len(rs.manifest.rules))
 	assert.Equal(t, 1, len(rs.manifest.index))
 
-	// Assert on sorting order
-	assert.Equal(t, r1.ruleProperties.RuleName, rs.manifest.rules[0].ruleProperties.RuleName)
+	assert.Equal(t, rs.manifest.rules[0].ruleProperties.RuleName, getStringPointer("r1"))
+
+	// assert that "r1" rule available in index
+	_, okRule := rs.manifest.index[*rs.manifest.rules[0].ruleProperties.RuleName]
+	assert.True(t, okRule)
+}
+
+// assert that NewRemoteSampler returns a sampler with *xray.remoteSampler type
+func TestNewRemoteSampler(t *testing.T) {
+	ctx, cancel := context.WithCancel(context.Background())
+	defer cancel()
+
+	rs, err := NewRemoteSampler(ctx)
+	require.NoError(t, err)
+
+	s := &remoteSampler{}
+	assert.Equal(t, reflect.TypeOf(rs), reflect.TypeOf(s))
 }

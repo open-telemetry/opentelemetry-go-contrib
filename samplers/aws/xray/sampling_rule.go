@@ -17,10 +17,10 @@ package xray
 import "sync"
 
 // ToDo: other fields will be used in business logic for remote sampling
-// centralizedRule represents a centralized sampling rule
-type centralizedRule struct {
+// rule represents a centralized sampling rule
+type rule struct {
 	// Centralized reservoir for keeping track of reservoir usage
-	reservoir *centralizedReservoir
+	reservoir *reservoir
 
 	// sampling rule properties
 	ruleProperties *ruleProperties
@@ -35,7 +35,7 @@ type centralizedRule struct {
 	//borrowedRequests int64
 
 	// Provides system time
-	clock Clock
+	clock clock
 
 	// Provides random numbers
 	rand Rand
@@ -71,14 +71,4 @@ type samplingRuleRecords struct {
 // getSamplingRulesOutput is used to store parsed json sampling rules
 type getSamplingRulesOutput struct {
 	SamplingRuleRecords []*samplingRuleRecords `json:"SamplingRuleRecords"`
-}
-
-// updateRule updates the properties of the user-defined and default centralizedRule using the given
-// *properties.
-func (r *centralizedRule) updateRule(rule *ruleProperties) {
-	r.mu.Lock()
-	defer r.mu.Unlock()
-
-	r.ruleProperties = rule
-	r.reservoir.capacity = *rule.ReservoirSize
 }
