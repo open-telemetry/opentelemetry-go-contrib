@@ -19,8 +19,9 @@ import (
 	crypto "crypto/rand"
 	"errors"
 	"fmt"
-	"github.com/go-logr/logr"
 	"time"
+
+	"github.com/go-logr/logr"
 
 	sdktrace "go.opentelemetry.io/otel/sdk/trace"
 )

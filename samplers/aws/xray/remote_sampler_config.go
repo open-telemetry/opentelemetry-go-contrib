@@ -15,11 +15,12 @@
 package xray
 
 import (
-	"github.com/go-logr/logr"
-	"github.com/go-logr/stdr"
 	"log"
 	"os"
 	"time"
+
+	"github.com/go-logr/logr"
+	"github.com/go-logr/stdr"
 )
 
 const (

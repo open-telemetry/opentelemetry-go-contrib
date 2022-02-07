@@ -15,13 +15,14 @@
 package xray
 
 import (
-	"github.com/go-logr/logr"
-	"github.com/go-logr/stdr"
-	"github.com/stretchr/testify/assert"
 	"log"
 	"os"
 	"testing"
 	"time"
+
+	"github.com/go-logr/logr"
+	"github.com/go-logr/stdr"
+	"github.com/stretchr/testify/assert"
 )
 
 // assert that user provided values are tied to config

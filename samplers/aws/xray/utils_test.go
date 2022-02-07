@@ -15,10 +15,11 @@
 package xray
 
 import (
-	"github.com/stretchr/testify/assert"
 	"sync/atomic"
 	"testing"
 	"time"
+
+	"github.com/stretchr/testify/assert"
 )
 
 // MockClock is a struct to record current time.
