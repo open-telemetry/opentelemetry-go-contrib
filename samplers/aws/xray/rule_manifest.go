@@ -17,7 +17,6 @@ package xray
 import (
 	"sort"
 	"strings"
-	"sync"
 )
 
 const defaultInterval = int64(10)
@@ -30,7 +29,6 @@ type manifest struct {
 	index       map[string]*rule
 	refreshedAt int64
 	clock       clock
-	mu          sync.RWMutex
 }
 
 // createRule creates a user-defined rule, appends it to the sorted array,

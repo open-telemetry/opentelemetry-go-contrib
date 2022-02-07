@@ -19,6 +19,7 @@ import (
 	crypto "crypto/rand"
 	"errors"
 	"fmt"
+	"sync"
 	"time"
 
 	"github.com/go-logr/logr"
@@ -49,6 +50,8 @@ type remoteSampler struct {
 
 	// Provides system time.
 	clock clock
+
+	mu sync.RWMutex
 }
 
 // Compile time assertion that remoteSampler implements the Sampler interface.
@@ -204,15 +207,13 @@ func (rs *remoteSampler) refreshManifest(ctx context.Context) (err error) {
 
 	// Re-sort to fix matching priorities.
 	tempManifest.sort()
+	// Update refreshedAt timestamp
+	tempManifest.refreshedAt = now
 
 	// assign temp manifest to original copy/one sync refresh.
-	rs.manifest.mu.Lock()
-	rs.manifest.rules = tempManifest.rules
-	rs.manifest.index = tempManifest.index
-
-	// Update refreshedAt timestamp
-	rs.manifest.refreshedAt = now
-	rs.manifest.mu.Unlock()
+	rs.mu.Lock()
+	rs.manifest = tempManifest
+	rs.mu.Unlock()
 
 	return
 }
