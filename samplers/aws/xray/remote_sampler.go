@@ -108,11 +108,12 @@ func (rs *remoteSampler) Description() string {
 func (rs *remoteSampler) start(ctx context.Context) {
 	if !rs.pollerStart {
 		rs.pollerStart = true
-		rs.startRulePoller(ctx)
+		rs.startPoller(ctx)
 	}
 }
 
-func (rs *remoteSampler) startRulePoller(ctx context.Context) {
+func (rs *remoteSampler) startPoller(ctx context.Context) {
+	// ToDo: add logic for getting sampling targets
 	go func() {
 		// Period = 300s, Jitter = 5s
 		t := newTicker(rs.samplingRulesPollingInterval, 5*time.Second)

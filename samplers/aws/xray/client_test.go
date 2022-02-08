@@ -178,3 +178,9 @@ func TestNewClient(t *testing.T) {
 
 	assert.Equal(t, xrayClient.endpoint.String(), "http://127.0.0.1:2020")
 }
+
+func TestEndpointIsNotReachable(t *testing.T) {
+	client := newClient("127.0.0.1:2020")
+	_, err := client.getSamplingRules(context.Background())
+	assert.Error(t, err)
+}
