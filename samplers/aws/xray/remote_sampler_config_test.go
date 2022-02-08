@@ -40,7 +40,7 @@ func TestDefaultConfig(t *testing.T) {
 
 	assert.Equal(t, cfg.samplingRulesPollingInterval, 300*time.Second)
 	assert.Equal(t, cfg.endpoint, "127.0.0.1:2000")
-	assert.Equal(t, cfg.logger, stdr.New(log.New(os.Stderr, "", log.LstdFlags|log.Lshortfile)))
+	assert.Equal(t, cfg.logger, stdr.NewWithOptions(log.New(os.Stderr, "", log.LstdFlags|log.Lshortfile), stdr.Options{LogCaller: stdr.Error}))
 }
 
 // asset when some config is provided by user then other config will be picked up from default config
@@ -49,7 +49,7 @@ func TestPartialUserProvidedConfig(t *testing.T) {
 
 	assert.Equal(t, cfg.samplingRulesPollingInterval, 500*time.Second)
 	assert.Equal(t, cfg.endpoint, "127.0.0.1:2000")
-	assert.Equal(t, cfg.logger, stdr.New(log.New(os.Stderr, "", log.LstdFlags|log.Lshortfile)))
+	assert.Equal(t, cfg.logger, stdr.NewWithOptions(log.New(os.Stderr, "", log.LstdFlags|log.Lshortfile), stdr.Options{LogCaller: stdr.Error}))
 }
 
 func TestValidateConfigIncorrectEndpoint(t *testing.T) {
