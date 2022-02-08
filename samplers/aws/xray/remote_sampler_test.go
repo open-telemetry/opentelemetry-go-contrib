@@ -819,14 +819,3 @@ func TestNewRemoteSampler(t *testing.T) {
 	s := &remoteSampler{}
 	assert.Equal(t, reflect.TypeOf(rs), reflect.TypeOf(s))
 }
-
-// assert that config validation error results in nil remote sampler
-func TestConfigError(t *testing.T) {
-	ctx, cancel := context.WithCancel(context.Background())
-	defer cancel()
-
-	rs, err := NewRemoteSampler(ctx, WithEndpoint("http://127.0.0.1:8080"))
-
-	assert.Error(t, err)
-	assert.Nil(t, rs)
-}
