@@ -41,12 +41,12 @@ type reservoir struct {
 }
 
 // expired returns true if current time is past expiration timestamp. False otherwise.
-func (r *centralizedReservoir) expired(now int64) bool {
+func (r *reservoir) expired(now int64) bool {
 	return now > r.expiresAt
 }
 
 // borrow returns true if the reservoir has not been borrowed from this epoch
-func (r *centralizedReservoir) borrow(now int64) bool {
+func (r *reservoir) borrow(now int64) bool {
 	if now != r.currentEpoch {
 		r.reset(now)
 	}
@@ -58,7 +58,7 @@ func (r *centralizedReservoir) borrow(now int64) bool {
 }
 
 // Take consumes quota from reservoir, if any remains, and returns true. False otherwise.
-func (r *centralizedReservoir) Take(now int64) bool {
+func (r *reservoir) Take(now int64) bool {
 	if now != r.currentEpoch {
 		r.reset(now)
 	}
@@ -73,6 +73,6 @@ func (r *centralizedReservoir) Take(now int64) bool {
 	return false
 }
 
-func (r *centralizedReservoir) reset(now int64) {
+func (r *reservoir) reset(now int64) {
 	r.currentEpoch, r.used, r.borrowed = now, 0, false
 }

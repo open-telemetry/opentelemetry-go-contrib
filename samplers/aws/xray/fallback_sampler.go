@@ -23,7 +23,7 @@ import (
 
 type FallbackSampler struct {
 	currentEpoch   int64
-	clock          Clock
+	clock          clock
 	defaultSampler sdktrace.Sampler
 }
 
@@ -32,26 +32,22 @@ var _ sdktrace.Sampler = (*FallbackSampler)(nil)
 
 func NewFallbackSampler() *FallbackSampler {
 	return &FallbackSampler{
-		clock:          &DefaultClock{},
+		clock:          &defaultClock{},
 		defaultSampler: sdktrace.TraceIDRatioBased(0.05),
 	}
 }
 
 func (fs *FallbackSampler) ShouldSample(parameters sdktrace.SamplingParameters) sdktrace.SamplingResult {
-	// borrowing 1 request/second
-	if fs.borrow(fs.clock.Now().Unix()) {
-		sd := sdktrace.SamplingResult{
+	// borrowing one request every second
+	if fs.borrow(fs.clock.now().Unix()) {
+		return sdktrace.SamplingResult{
 			Tracestate: trace.SpanContextFromContext(parameters.ParentContext).TraceState(),
+			Decision: sdktrace.RecordAndSample,
 		}
-
-		sd.Decision = sdktrace.RecordAndSample
-		return sd
 	}
 
-	// using traceIDRatioBased sampler to sample using 5% fixed rate
-	samplingDecision := fs.defaultSampler.ShouldSample(parameters)
-
-	return samplingDecision
+	// traceIDRatioBasedSampler to sample 5% of additional requests every second
+	return fs.defaultSampler.ShouldSample(parameters)
 }
 
 func (fs *FallbackSampler) Description() string {

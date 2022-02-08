@@ -24,9 +24,9 @@ import (
 )
 
 func TestStaleRule(t *testing.T) {
-	cr := &centralizedRule{
+	cr := &rule{
 		matchedRequests: 5,
-		reservoir: &centralizedReservoir{
+		reservoir: &reservoir{
 			refreshedAt: 1500000000,
 			interval:    10,
 		},
@@ -37,9 +37,9 @@ func TestStaleRule(t *testing.T) {
 }
 
 func TestFreshRule(t *testing.T) {
-	cr := &centralizedRule{
+	cr := &rule{
 		matchedRequests: 5,
-		reservoir: &centralizedReservoir{
+		reservoir: &reservoir{
 			refreshedAt: 1500000000,
 			interval:    10,
 		},
@@ -50,9 +50,9 @@ func TestFreshRule(t *testing.T) {
 }
 
 func TestInactiveRule(t *testing.T) {
-	cr := &centralizedRule{
+	cr := &rule{
 		matchedRequests: 0,
-		reservoir: &centralizedReservoir{
+		reservoir: &reservoir{
 			refreshedAt: 1500000000,
 			interval:    10,
 		},
@@ -67,8 +67,8 @@ func TestExpiredReservoirTraceIDRationBasedSample(t *testing.T) {
 	newConfig()
 
 	// One second past expiration
-	clock := &MockClock{
-		NowTime: 1500000061,
+	clock := &mockClock{
+		nowTime: 1500000061,
 	}
 
 	p := &ruleProperties{
@@ -77,7 +77,7 @@ func TestExpiredReservoirTraceIDRationBasedSample(t *testing.T) {
 	}
 
 	// Expired reservoir
-	cr := &centralizedReservoir{
+	cr := &reservoir{
 		expiresAt:    1500000060,
 		borrowed:     true,
 		used:         0,
@@ -85,7 +85,7 @@ func TestExpiredReservoirTraceIDRationBasedSample(t *testing.T) {
 		currentEpoch: 1500000061,
 	}
 
-	csr := &centralizedRule{
+	csr := &rule{
 		reservoir:      cr,
 		ruleProperties: p,
 		clock:          clock,
@@ -102,8 +102,8 @@ func TestExpiredReservoirBorrowSample(t *testing.T) {
 	// setting the logger
 	newConfig()
 
-	clock := &MockClock{
-		NowTime: 1500000061,
+	clock := &mockClock{
+		nowTime: 1500000061,
 	}
 
 	p := &ruleProperties{
@@ -112,7 +112,7 @@ func TestExpiredReservoirBorrowSample(t *testing.T) {
 	}
 
 	// Expired reservoir
-	cr := &centralizedReservoir{
+	cr := &reservoir{
 		expiresAt:    1500000060,
 		borrowed:     false,
 		used:         0,
@@ -120,7 +120,7 @@ func TestExpiredReservoirBorrowSample(t *testing.T) {
 		currentEpoch: 1500000061,
 	}
 
-	csr := &centralizedRule{
+	csr := &rule{
 		reservoir:      cr,
 		ruleProperties: p,
 		clock:          clock,
@@ -137,18 +137,18 @@ func TestTakeFromQuotaSample(t *testing.T) {
 	// setting the logger
 	newConfig()
 
-	clock := &MockClock{
-		NowTime: 1500000000,
+	clock := &mockClock{
+		nowTime: 1500000000,
 	}
 
-	cr := &centralizedReservoir{
+	cr := &reservoir{
 		quota:        10,
 		expiresAt:    1500000060,
-		currentEpoch: clock.Now().Unix(),
+		currentEpoch: clock.now().Unix(),
 		used:         0,
 	}
 
-	csr := &centralizedRule{
+	csr := &rule{
 		ruleProperties: &ruleProperties{
 			RuleName: getStringPointer("r1"),
 		},
@@ -168,8 +168,8 @@ func TestTraceIDRatioBasedSamplerPositive(t *testing.T) {
 	// setting the logger
 	newConfig()
 
-	clock := &MockClock{
-		NowTime: 1500000000,
+	clock := &mockClock{
+		nowTime: 1500000000,
 	}
 
 	p := &ruleProperties{
@@ -177,14 +177,14 @@ func TestTraceIDRatioBasedSamplerPositive(t *testing.T) {
 		RuleName:  getStringPointer("r1"),
 	}
 
-	cr := &centralizedReservoir{
+	cr := &reservoir{
 		quota:        10,
 		expiresAt:    1500000060,
-		currentEpoch: clock.Now().Unix(),
+		currentEpoch: clock.now().Unix(),
 		used:         10,
 	}
 
-	csr := &centralizedRule{
+	csr := &rule{
 		reservoir:      cr,
 		ruleProperties: p,
 		clock:          clock,
@@ -198,11 +198,11 @@ func TestTraceIDRatioBasedSamplerPositive(t *testing.T) {
 }
 
 func TestSnapshot(t *testing.T) {
-	clock := &MockClock{
-		NowTime: 1500000000,
+	clock := &mockClock{
+		nowTime: 1500000000,
 	}
 
-	csr := &centralizedRule{
+	csr := &rule{
 		ruleProperties: &ruleProperties{
 			RuleName: getStringPointer("rule1"),
 		},
@@ -224,11 +224,11 @@ func TestSnapshot(t *testing.T) {
 	assert.Equal(t, int64(12), *ss.SampledCount)
 	assert.Equal(t, int64(2), *ss.BorrowCount)
 	assert.Equal(t, "rule1", *ss.RuleName)
-	assert.Equal(t, clock.NowTime, *ss.Timestamp)
+	assert.Equal(t, clock.nowTime, *ss.Timestamp)
 }
 
 func TestAppliesToMatchingWithAllAttrs(t *testing.T) {
-	csr := &centralizedRule{
+	csr := &rule{
 		ruleProperties: &ruleProperties{
 			RuleName:    getStringPointer("rule1"),
 			ServiceName: getStringPointer("test-service"),
@@ -251,7 +251,7 @@ func TestAppliesToMatchingWithAllAttrs(t *testing.T) {
 }
 
 func TestAppliesToMatchingWithStarHTTPAttrs(t *testing.T) {
-	csr := &centralizedRule{
+	csr := &rule{
 		ruleProperties: &ruleProperties{
 			RuleName:    getStringPointer("rule1"),
 			ServiceName: getStringPointer("test-service"),
@@ -266,7 +266,7 @@ func TestAppliesToMatchingWithStarHTTPAttrs(t *testing.T) {
 }
 
 func TestAppliesToMatchingWithHTTPAttrs(t *testing.T) {
-	csr := &centralizedRule{
+	csr := &rule{
 		ruleProperties: &ruleProperties{
 			RuleName:    getStringPointer("rule1"),
 			ServiceName: getStringPointer("test-service"),
@@ -281,7 +281,7 @@ func TestAppliesToMatchingWithHTTPAttrs(t *testing.T) {
 }
 
 func TestAppliesToNoMatching(t *testing.T) {
-	csr := &centralizedRule{
+	csr := &rule{
 		ruleProperties: &ruleProperties{
 			RuleName:    getStringPointer("rule1"),
 			ServiceName: getStringPointer("test-service"),

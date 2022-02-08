@@ -25,18 +25,18 @@ func TestTakeQuotaAvailable(t *testing.T) {
 	used := int64(0)
 	quota := int64(9)
 
-	clock := MockClock{
-		NowTime: 1500000000,
+	clock := mockClock{
+		nowTime: 1500000000,
 	}
 
-	r := &centralizedReservoir{
+	r := &reservoir{
 		quota:        quota,
 		capacity:     capacity,
 		used:         used,
-		currentEpoch: clock.Now().Unix(),
+		currentEpoch: clock.now().Unix(),
 	}
 
-	s := r.Take(clock.Now().Unix())
+	s := r.Take(clock.now().Unix())
 	assert.Equal(t, true, s)
 	assert.Equal(t, int64(1), r.used)
 }
@@ -46,76 +46,76 @@ func TestTakeQuotaUnavailable(t *testing.T) {
 	used := int64(100)
 	quota := int64(9)
 
-	clock := MockClock{
-		NowTime: 1500000000,
+	clock := mockClock{
+		nowTime: 1500000000,
 	}
 
-	r := &centralizedReservoir{
+	r := &reservoir{
 		quota:        quota,
 		capacity:     capacity,
 		used:         used,
-		currentEpoch: clock.Now().Unix(),
+		currentEpoch: clock.now().Unix(),
 	}
 
-	s := r.Take(clock.Now().Unix())
+	s := r.Take(clock.now().Unix())
 	assert.Equal(t, false, s)
 	assert.Equal(t, int64(100), r.used)
 }
 
 func TestExpiredReservoir(t *testing.T) {
-	clock := MockClock{
-		NowTime: 1500000001,
+	clock := mockClock{
+		nowTime: 1500000001,
 	}
 
-	r := &centralizedReservoir{
+	r := &reservoir{
 		expiresAt: 1500000000,
 	}
 
-	expired := r.expired(clock.Now().Unix())
+	expired := r.expired(clock.now().Unix())
 
 	assert.Equal(t, true, expired)
 }
 
 // Assert that the borrow flag is reset every second
 func TestBorrowFlagReset(t *testing.T) {
-	clock := MockClock{
-		NowTime: 1500000000,
+	clock := mockClock{
+		nowTime: 1500000000,
 	}
 
-	r := &centralizedReservoir{
+	r := &reservoir{
 		capacity: 10,
 	}
 
-	s := r.borrow(clock.Now().Unix())
+	s := r.borrow(clock.now().Unix())
 	assert.True(t, s)
 
-	s = r.borrow(clock.Now().Unix())
+	s = r.borrow(clock.now().Unix())
 	assert.False(t, s)
 
 	// Increment clock by 1
-	clock = MockClock{
-		NowTime: 1500000001,
+	clock = mockClock{
+		nowTime: 1500000001,
 	}
 
 	// Reset borrow flag
-	r.Take(clock.Now().Unix())
+	r.Take(clock.now().Unix())
 
-	s = r.borrow(clock.Now().Unix())
+	s = r.borrow(clock.now().Unix())
 	assert.True(t, s)
 }
 
 // Assert that the reservoir does not allow borrowing if the reservoir capacity
 // is zero.
 func TestBorrowZeroCapacity(t *testing.T) {
-	clock := MockClock{
-		NowTime: 1500000000,
+	clock := mockClock{
+		nowTime: 1500000000,
 	}
 
-	r := &centralizedReservoir{
+	r := &reservoir{
 		capacity: 0,
 	}
 
-	s := r.borrow(clock.Now().Unix())
+	s := r.borrow(clock.now().Unix())
 	assert.False(t, s)
 }
 
@@ -124,36 +124,36 @@ func TestResetQuotaUsageRotation(t *testing.T) {
 	used := int64(0)
 	quota := int64(5)
 
-	clock := MockClock{
-		NowTime: 1500000000,
+	clock := mockClock{
+		nowTime: 1500000000,
 	}
 
-	r := &centralizedReservoir{
+	r := &reservoir{
 		quota:        quota,
 		capacity:     capacity,
 		used:         used,
-		currentEpoch: clock.Now().Unix(),
+		currentEpoch: clock.now().Unix(),
 	}
 
 	// Consume quota for second
 	for i := 0; i < 5; i++ {
-		taken := r.Take(clock.Now().Unix())
+		taken := r.Take(clock.now().Unix())
 		assert.Equal(t, true, taken)
 		assert.Equal(t, int64(i+1), r.used)
 	}
 
 	// Take() should be false since no unused quota left
-	taken := r.Take(clock.Now().Unix())
+	taken := r.Take(clock.now().Unix())
 	assert.Equal(t, false, taken)
 	assert.Equal(t, int64(5), r.used)
 
 	// Increment epoch to reset unused quota
-	clock = MockClock{
-		NowTime: 1500000001,
+	clock = mockClock{
+		nowTime: 1500000001,
 	}
 
 	// Take() should be true since ununsed quota is available
-	taken = r.Take(clock.Now().Unix())
+	taken = r.Take(clock.now().Unix())
 	assert.Equal(t, int64(1500000001), r.currentEpoch)
 	assert.Equal(t, true, taken)
 	assert.Equal(t, int64(1), r.used)

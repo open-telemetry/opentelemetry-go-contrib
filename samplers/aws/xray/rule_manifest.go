@@ -75,9 +75,6 @@ func (m *manifest) sort() {
 
 //expired returns true if the manifest has not been successfully refreshed in
 //'manifestTTL' seconds.
-func (m *centralizedManifest) expired() bool {
-	m.mu.RLock()
-	defer m.mu.RUnlock()
-
-	return m.refreshedAt < m.clock.Now().Unix()-manifestTTL
+func (m *manifest) expired() bool {
+	return m.refreshedAt < m.clock.now().Unix()-manifestTTL
 }

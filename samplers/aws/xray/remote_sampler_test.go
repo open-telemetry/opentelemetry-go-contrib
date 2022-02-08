@@ -28,21 +28,21 @@ import (
 
 // Assert that snapshots returns an array of valid sampling statistics
 func TestSnapshots(t *testing.T) {
-	clock := &MockClock{
-		NowTime: 1500000000,
+	clock := &mockClock{
+		nowTime: 1500000000,
 	}
 
 	id := "c1"
-	time := clock.Now().Unix()
+	time := clock.now().Unix()
 
 	name1 := "r1"
 	requests1 := int64(1000)
 	sampled1 := int64(100)
 	borrows1 := int64(5)
-	r1 := &centralizedReservoir{
+	r1 := &reservoir{
 		interval: 10,
 	}
-	csr1 := &centralizedRule{
+	csr1 := &rule{
 		ruleProperties: &ruleProperties{
 			RuleName: getStringPointer(name1),
 		},
@@ -57,10 +57,10 @@ func TestSnapshots(t *testing.T) {
 	requests2 := int64(500)
 	sampled2 := int64(10)
 	borrows2 := int64(0)
-	r2 := &centralizedReservoir{
+	r2 := &reservoir{
 		interval: 10,
 	}
-	csr2 := &centralizedRule{
+	csr2 := &rule{
 		ruleProperties: &ruleProperties{
 			RuleName: getStringPointer(name2),
 		},
@@ -71,13 +71,13 @@ func TestSnapshots(t *testing.T) {
 		clock:            clock,
 	}
 
-	rules := []*centralizedRule{csr1, csr2}
+	rules := []*rule{csr1, csr2}
 
-	m := &centralizedManifest{
+	m := &manifest{
 		rules: rules,
 	}
 
-	sampler := &RemoteSampler{
+	sampler := &remoteSampler{
 		manifest: m,
 		clientID: id,
 		clock:    clock,
@@ -110,23 +110,23 @@ func TestSnapshots(t *testing.T) {
 
 // Assert that fresh and inactive rules are not included in a snapshot
 func TestMixedSnapshots(t *testing.T) {
-	clock := &MockClock{
-		NowTime: 1500000000,
+	clock := &mockClock{
+		nowTime: 1500000000,
 	}
 
 	id := "c1"
-	time := clock.Now().Unix()
+	time := clock.now().Unix()
 
 	// Stale and active rule
 	name1 := "r1"
 	requests1 := int64(1000)
 	sampled1 := int64(100)
 	borrows1 := int64(5)
-	r1 := &centralizedReservoir{
+	r1 := &reservoir{
 		interval:    20,
 		refreshedAt: 1499999980,
 	}
-	csr1 := &centralizedRule{
+	csr1 := &rule{
 		ruleProperties: &ruleProperties{
 			RuleName: getStringPointer(name1),
 		},
@@ -142,11 +142,11 @@ func TestMixedSnapshots(t *testing.T) {
 	requests2 := int64(0)
 	sampled2 := int64(0)
 	borrows2 := int64(0)
-	r2 := &centralizedReservoir{
+	r2 := &reservoir{
 		interval:    20,
 		refreshedAt: 1499999970,
 	}
-	csr2 := &centralizedRule{
+	csr2 := &rule{
 		ruleProperties: &ruleProperties{
 			RuleName: getStringPointer(name2),
 		},
@@ -162,11 +162,11 @@ func TestMixedSnapshots(t *testing.T) {
 	requests3 := int64(1000)
 	sampled3 := int64(100)
 	borrows3 := int64(5)
-	r3 := &centralizedReservoir{
+	r3 := &reservoir{
 		interval:    20,
 		refreshedAt: 1499999990,
 	}
-	csr3 := &centralizedRule{
+	csr3 := &rule{
 		ruleProperties: &ruleProperties{
 			RuleName: getStringPointer(name3),
 		},
@@ -177,13 +177,13 @@ func TestMixedSnapshots(t *testing.T) {
 		clock:            clock,
 	}
 
-	rules := []*centralizedRule{csr1, csr2, csr3}
+	rules := []*rule{csr1, csr2, csr3}
 
-	m := &centralizedManifest{
+	m := &manifest{
 		rules: rules,
 	}
 
-	sampler := &RemoteSampler{
+	sampler := &remoteSampler{
 		manifest: m,
 		clientID: id,
 		clock:    clock,
@@ -207,8 +207,8 @@ func TestMixedSnapshots(t *testing.T) {
 
 // Assert that a valid sampling target updates its rule
 func TestUpdateTarget(t *testing.T) {
-	clock := &MockClock{
-		NowTime: 1500000000,
+	clock := &mockClock{
+		nowTime: 1500000000,
 	}
 
 	// Sampling target received from centralized sampling backend
@@ -224,12 +224,12 @@ func TestUpdateTarget(t *testing.T) {
 	}
 
 	// Sampling rule about to be updated with new target
-	csr := &centralizedRule{
+	csr := &rule{
 		ruleProperties: &ruleProperties{
 			RuleName:  getStringPointer("r1"),
 			FixedRate: getFloatPointer(0.10),
 		},
-		reservoir: &centralizedReservoir{
+		reservoir: &reservoir{
 			quota:        8,
 			refreshedAt:  1499999990,
 			expiresAt:    1500000010,
@@ -239,18 +239,18 @@ func TestUpdateTarget(t *testing.T) {
 		},
 	}
 
-	rules := []*centralizedRule{csr}
+	rules := []*rule{csr}
 
-	index := map[string]*centralizedRule{
+	index := map[string]*rule{
 		"r1": csr,
 	}
 
-	m := &centralizedManifest{
+	m := &manifest{
 		rules: rules,
 		index: index,
 	}
 
-	s := &RemoteSampler{
+	s := &remoteSampler{
 		manifest: m,
 		clock:    clock,
 	}
@@ -259,12 +259,12 @@ func TestUpdateTarget(t *testing.T) {
 	assert.Nil(t, err)
 
 	// Updated sampling rule
-	exp := &centralizedRule{
+	exp := &rule{
 		ruleProperties: &ruleProperties{
 			RuleName:  getStringPointer("r1"),
 			FixedRate: getFloatPointer(0.05),
 		},
-		reservoir: &centralizedReservoir{
+		reservoir: &reservoir{
 			quota:        10,
 			refreshedAt:  1500000000,
 			expiresAt:    1500000060,
@@ -291,16 +291,16 @@ func TestUpdateTargetMissingRule(t *testing.T) {
 		RuleName:          &name,
 	}
 
-	var rules []*centralizedRule
+	var rules []*rule
 
-	index := map[string]*centralizedRule{}
+	index := map[string]*rule{}
 
-	m := &centralizedManifest{
+	m := &manifest{
 		rules: rules,
 		index: index,
 	}
 
-	s := &RemoteSampler{
+	s := &remoteSampler{
 		manifest: m,
 	}
 
@@ -321,12 +321,12 @@ func TestUpdateTargetPanicRecovery(t *testing.T) {
 	}
 
 	// Sampling rule about to be updated with new target
-	csr := &centralizedRule{
+	csr := &rule{
 		ruleProperties: &ruleProperties{
 			RuleName:  getStringPointer("r1"),
 			FixedRate: getFloatPointer(0.10),
 		},
-		reservoir: &centralizedReservoir{
+		reservoir: &reservoir{
 			quota:        8,
 			expiresAt:    1500000010,
 			capacity:     50,
@@ -335,18 +335,18 @@ func TestUpdateTargetPanicRecovery(t *testing.T) {
 		},
 	}
 
-	rules := []*centralizedRule{csr}
+	rules := []*rule{csr}
 
-	index := map[string]*centralizedRule{
+	index := map[string]*rule{
 		"r1": csr,
 	}
 
-	m := &centralizedManifest{
+	m := &manifest{
 		rules: rules,
 		index: index,
 	}
 
-	s := &RemoteSampler{
+	s := &remoteSampler{
 		manifest: m,
 	}
 
@@ -354,12 +354,12 @@ func TestUpdateTargetPanicRecovery(t *testing.T) {
 	assert.NotNil(t, err)
 
 	// Unchanged sampling rule
-	exp := &centralizedRule{
+	exp := &rule{
 		ruleProperties: &ruleProperties{
 			RuleName:  getStringPointer("r1"),
 			FixedRate: getFloatPointer(0.10),
 		},
-		reservoir: &centralizedReservoir{
+		reservoir: &reservoir{
 			quota:        8,
 			expiresAt:    1500000010,
 			capacity:     50,
@@ -942,7 +942,7 @@ func TestNewRemoteSampler(t *testing.T) {
 	ctx, cancel := context.WithCancel(context.Background())
 	defer cancel()
 
-	rs, err := NewRemoteSampler(ctx)
+	rs, err := NewRemoteSampler(ctx, "test", "local")
 	require.NoError(t, err)
 
 	s := &remoteSampler{}

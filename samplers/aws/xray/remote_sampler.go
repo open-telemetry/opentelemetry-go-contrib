@@ -56,11 +56,12 @@ type remoteSampler struct {
 	clientID string
 
 	// Provides system time
-	clock Clock
+	clock clock
 
+	// fallback sampler
 	fallbackSampler *FallbackSampler
 
-  mu sync.RWMutex
+  	mu sync.RWMutex
 }
 
 // Compile time assertion that remoteSampler implements the Sampler interface.
@@ -69,7 +70,7 @@ var _ sdktrace.Sampler = (*remoteSampler)(nil)
 // NewRemoteSampler returns a sampler which decides to sample a given request or not
 // based on the sampling rules set by users on AWS X-Ray console. Sampler also periodically polls
 // sampling rules and sampling targets.
-func NewRemoteSampler(ctx context.Context, serviceName string, cloudPlatform string, opts ...Option) (*RemoteSampler, error) {
+func NewRemoteSampler(ctx context.Context, serviceName string, cloudPlatform string, opts ...Option) (sdktrace.Sampler, error) {
 	cfg := newConfig(opts...)
 
 	// Generate clientID
@@ -107,15 +108,15 @@ func NewRemoteSampler(ctx context.Context, serviceName string, cloudPlatform str
 	return remoteSampler, nil
 }
 
-func (rs *RemoteSampler) ShouldSample(parameters sdktrace.SamplingParameters) sdktrace.SamplingResult {
-	// Use fallback sampler with sampling config 1 req/sec and 5% of additional requests if manifest is expired
+func (rs *remoteSampler) ShouldSample(parameters sdktrace.SamplingParameters) sdktrace.SamplingResult {
+	rs.mu.RLock()
+	defer rs.mu.RUnlock()
+
+	// Use fallback sampling when manifest is expired (1 req/sec and 5% of additional requests)
 	if rs.manifest.expired() {
-		globalLogger.Printf("Centralized manifest expired. Using fallback sampling strategy")
+		globalLogger.V(1).Info("Centralized manifest expired. Using fallback sampling strategy")
 		return rs.fallbackSampler.ShouldSample(parameters)
 	}
-
-	rs.manifest.mu.RLock()
-	defer rs.manifest.mu.RUnlock()
 
 	// Match against known rules
 	for _, r := range rs.manifest.rules {
@@ -125,14 +126,14 @@ func (rs *RemoteSampler) ShouldSample(parameters sdktrace.SamplingParameters) sd
 		r.mu.RUnlock()
 
 		if applicable {
-			globalLogger.Printf("Applicable rule: %s", *r.ruleProperties.RuleName)
+			globalLogger.V(1).Info("Applicable rule", "RuleName", *r.ruleProperties.RuleName)
 
 			return r.Sample(parameters)
 		}
 	}
 
-	// Use fallback sampler with sampling config 1 req/sec and 5% of additional requests
-	globalLogger.Printf("Centralized sampling rules are unavailable. Using fallback sampling strategy")
+	// Use fallback sampling when request does not match against known rules (1 req/sec and 5% of additional requests)
+	globalLogger.V(1).Info("No match against centralized rules using fallback sampling strategy")
 	return rs.fallbackSampler.ShouldSample(parameters)
 }
 
@@ -143,50 +144,40 @@ func (rs *remoteSampler) Description() string {
 func (rs *remoteSampler) start(ctx context.Context) {
 	if !rs.pollerStart {
 		rs.pollerStart = true
-		rs.startRulePoller(ctx)
-		rs.startTargetPoller(ctx)
+		rs.startPoller(ctx)
 	}
 }
 
-// startRulePoller starts rule poller.
-func (rs *RemoteSampler) startRulePoller(ctx context.Context) {
+// startPoller starts rules and targets poller.
+func (rs *remoteSampler) startPoller(ctx context.Context) {
 	go func() {
 		// Period = 300s, Jitter = 5s
-		t := newTicker(rs.samplingRulesPollingInterval, 5*time.Second)
+		rulesTicker := newTicker(rs.samplingRulesPollingInterval, 5*time.Second)
 
-		// Periodic manifest refresh
+		// Period = 10.1s, Jitter = 100ms
+		targetTicker := newTicker(10*time.Second+100*time.Millisecond, 100*time.Millisecond)
+
+
 		for {
+			// fetch sampling rules
 			if err := rs.refreshManifest(ctx); err != nil {
 				globalLogger.Error(err, "Error occurred while refreshing sampling rules")
 			} else {
 				globalLogger.Info("Successfully fetched sampling rules")
 			}
+
+			// fetch sampling targets
+			if err := rs.refreshTargets(ctx); err != nil {
+				globalLogger.Error(err, "Error occurred while refreshing targets for sampling rules")
+			}
+
 			select {
-			case _, more := <-t.C():
+			case _, more := <-rulesTicker.C():
 				if !more {
 					return
 				}
 				continue
-			case <-ctx.Done():
-				return
-			}
-		}
-	}()
-}
-
-// startTargetPoller starts target poller.
-func (rs *RemoteSampler) startTargetPoller(ctx context.Context) {
-	go func() {
-		// Period = 10.1s, Jitter = 100ms
-		t := newTicker(10*time.Second+100*time.Millisecond, 100*time.Millisecond)
-
-		// Periodic quota refresh
-		for {
-			if err := rs.refreshTargets(ctx); err != nil {
-				globalLogger.Printf("Error occurred while refreshing targets for sampling rules. %v", err)
-			}
-			select {
-			case _, more := <-t.C():
+			case _, more := <-targetTicker.C():
 				if !more {
 					return
 				}
@@ -281,15 +272,7 @@ func (rs *remoteSampler) refreshManifest(ctx context.Context) (err error) {
 
 // refreshTargets refreshes targets for sampling rules. It calls the XRay service proxy with sampling
 // statistics for the previous interval and receives targets for the next interval.
-func (rs *RemoteSampler) refreshTargets(ctx context.Context) (err error) {
-	// Explicitly recover from panics since this is the entry point for a long-running goroutine
-	// and we can not allow a panic to propagate to customer code.
-	defer func() {
-		if r := recover(); r != nil {
-			err = fmt.Errorf("%v", r)
-		}
-	}()
-
+func (rs *remoteSampler) refreshTargets(ctx context.Context) (err error) {
 	// Flag indicating batch failure
 	failed := false
 
@@ -301,7 +284,7 @@ func (rs *RemoteSampler) refreshTargets(ctx context.Context) (err error) {
 
 	// Do not refresh targets if no statistics to report
 	if len(statistics) == 0 {
-		globalLogger.Printf("No statistics to report. Not refreshing sampling targets.")
+		globalLogger.V(1).Info("No statistics to report and not refreshing sampling targets")
 		return nil
 	}
 
@@ -315,17 +298,16 @@ func (rs *RemoteSampler) refreshTargets(ctx context.Context) (err error) {
 	for _, t := range output.SamplingTargetDocuments {
 		if err = rs.updateTarget(t); err != nil {
 			failed = true
-			globalLogger.Printf("Error occurred updating target for rule. %v", err)
+			globalLogger.Error(err, "Error occurred updating target for rule")
 		}
 	}
 
 	// Consume unprocessed statistics messages
 	for _, s := range output.UnprocessedStatistics {
-		globalLogger.Printf(
-			"Error occurred updating sampling target for rule: %s, code: %s, message: %s",
-			*s.RuleName,
+		globalLogger.V(1).Info(
+			"Error occurred updating sampling target for rule, code and message", "RuleName", *s.RuleName, "ErrorCode",
 			*s.ErrorCode,
-			*s.Message,
+			"Message", *s.Message,
 		)
 
 		// Do not set any flags if error is unknown
@@ -348,14 +330,14 @@ func (rs *RemoteSampler) refreshTargets(ctx context.Context) (err error) {
 	if failed {
 		err = errors.New("error occurred updating sampling targets")
 	} else {
-		globalLogger.Printf("Successfully refreshed sampling targets")
+		globalLogger.Info("Successfully refreshed sampling targets")
 	}
 
 	// Set refresh flag if modifiedAt timestamp from remote is greater than ours.
 	if remote := output.LastRuleModification; remote != nil {
-		rs.manifest.mu.RLock()
+		rs.mu.RLock()
 		local := rs.manifest.refreshedAt
-		rs.manifest.mu.RUnlock()
+		rs.mu.RUnlock()
 
 		if int64(*remote) >= local {
 			refresh = true
@@ -364,11 +346,11 @@ func (rs *RemoteSampler) refreshTargets(ctx context.Context) (err error) {
 
 	// Perform out-of-band async manifest refresh if flag is set
 	if refresh {
-		globalLogger.Printf("Refreshing sampling rules out-of-band.")
+		globalLogger.Info("Refreshing sampling rules out-of-band")
 
 		go func() {
 			if err := rs.refreshManifest(ctx); err != nil {
-				globalLogger.Printf("Error occurred refreshing sampling rules out-of-band. %v", err)
+				globalLogger.Error(err, "Error occurred refreshing sampling rules out-of-band")
 			}
 		}()
 	}
@@ -378,31 +360,29 @@ func (rs *RemoteSampler) refreshTargets(ctx context.Context) (err error) {
 
 // samplingStatistics takes a snapshot of sampling statistics from all rules, resetting
 // statistics counters in the process.
-func (rs *RemoteSampler) snapshots() []*samplingStatisticsDocument {
-	now := rs.clock.Now().Unix()
+func (rs *remoteSampler) snapshots() []*samplingStatisticsDocument {
+	now := rs.clock.now().Unix()
 
-	rs.manifest.mu.RLock()
-	defer rs.manifest.mu.RUnlock()
+	rs.mu.RLock()
+	defer rs.mu.RUnlock()
 
 	statistics := make([]*samplingStatisticsDocument, 0, len(rs.manifest.rules)+1)
 
 	// Generate sampling statistics for user-defined rules
 	for _, r := range rs.manifest.rules {
-		if !r.stale(now) {
-			continue
+		if r.stale(now) {
+			s := r.snapshot()
+			s.ClientID = &rs.clientID
+
+			statistics = append(statistics, s)
 		}
-
-		s := r.snapshot()
-		s.ClientID = &rs.clientID
-
-		statistics = append(statistics, s)
 	}
 
 	return statistics
 }
 
 // updateTarget updates sampling targets for the rule specified in the target struct.
-func (rs *RemoteSampler) updateTarget(t *samplingTargetDocument) (err error) {
+func (rs *remoteSampler) updateTarget(t *samplingTargetDocument) (err error) {
 	// Pre-emptively dereference xraySvc.SamplingTarget fields and return early on nil values
 	// A panic in the middle of an update may leave the rule in an inconsistent state.
 	if t.RuleName == nil {
@@ -414,9 +394,9 @@ func (rs *RemoteSampler) updateTarget(t *samplingTargetDocument) (err error) {
 	}
 
 	// Rule for given target
-	rs.manifest.mu.RLock()
+	rs.mu.RLock()
 	r, ok := rs.manifest.index[*t.RuleName]
-	rs.manifest.mu.RUnlock()
+	rs.mu.RUnlock()
 
 	if !ok {
 		return fmt.Errorf("rule %s not found", *t.RuleName)
@@ -425,7 +405,7 @@ func (rs *RemoteSampler) updateTarget(t *samplingTargetDocument) (err error) {
 	r.mu.Lock()
 	defer r.mu.Unlock()
 
-	r.reservoir.refreshedAt = rs.clock.Now().Unix()
+	r.reservoir.refreshedAt = rs.clock.now().Unix()
 
 	// Update non-optional attributes from response
 	*r.ruleProperties.FixedRate = *t.FixedRate

@@ -17,7 +17,6 @@ package xray
 import (
 	"sync"
 
-	"go.opentelemetry.io/otel/attribute"
 	sdktrace "go.opentelemetry.io/otel/sdk/trace"
 	"go.opentelemetry.io/otel/trace"
 )
@@ -45,7 +44,7 @@ type rule struct {
 	// Provides random numbers
 	rand Rand
 
-	//mu sync.RWMutex
+	mu sync.RWMutex
 }
 
 // properties is the base set of properties that define a sampling rule.
@@ -79,17 +78,12 @@ type getSamplingRulesOutput struct {
 }
 
 // Sample returns SamplingResult with SamplingDecision, TraceState and Attributes
-func (r *centralizedRule) Sample(parameters sdktrace.SamplingParameters) sdktrace.SamplingResult {
-	attributes := []attribute.KeyValue{
-		attribute.String("Rule", *r.ruleProperties.RuleName),
-	}
-
+func (r *rule) Sample(parameters sdktrace.SamplingParameters) sdktrace.SamplingResult {
 	sd := sdktrace.SamplingResult{
-		Attributes: attributes,
 		Tracestate: trace.SpanContextFromContext(parameters.ParentContext).TraceState(),
 	}
 
-	now := r.clock.Now().Unix()
+	now := r.clock.now().Unix()
 
 	r.mu.Lock()
 	defer r.mu.Unlock()
@@ -101,10 +95,10 @@ func (r *centralizedRule) Sample(parameters sdktrace.SamplingParameters) sdktrac
 		// if reservoir quota is expired then sampling using
 		// sampling config: 1 req/sec and then x% of fixedRate
 
-		// Sampling 1 req/sec
+		// borrowing one request every second
 		if r.reservoir.borrow(now) {
-			globalLogger.Printf(
-				"Sampling target has expired for rule %s. Using fallback sampling and borrowing 1 req/sec from reservoir",
+			globalLogger.V(1).Info(
+				"Sampling target has expired for rule %s. Using fallback sampling and borrowing 1 req/sec from reservoir", "RuleName",
 				*r.ruleProperties.RuleName,
 			)
 			r.borrowedRequests++
@@ -113,21 +107,19 @@ func (r *centralizedRule) Sample(parameters sdktrace.SamplingParameters) sdktrac
 			return sd
 		}
 
-		globalLogger.Printf(
+		globalLogger.V(1).Info(
 			"Sampling target has expired for rule %s. Using traceIDRationBased sampler to sample 5 percent of requests during that second",
-			*r.ruleProperties.RuleName,
+			"RuleName", *r.ruleProperties.RuleName,
 		)
 
 		// using traceIDRatioBased sampler to sample
-		samplingDecision := sdktrace.TraceIDRatioBased(*r.ruleProperties.FixedRate).ShouldSample(parameters)
+		sd = sdktrace.TraceIDRatioBased(*r.ruleProperties.FixedRate).ShouldSample(parameters)
 
-		samplingDecision.Attributes = attributes
-
-		if samplingDecision.Decision == sdktrace.RecordAndSample {
+		if sd.Decision == sdktrace.RecordAndSample {
 			r.sampledRequests++
 		}
 
-		return samplingDecision
+		return sd
 	}
 
 	// Take from reservoir quota, if possible
@@ -138,26 +130,23 @@ func (r *centralizedRule) Sample(parameters sdktrace.SamplingParameters) sdktrac
 		return sd
 	}
 
-	globalLogger.Printf(
+	globalLogger.Info(
 		"Sampling target has been exhausted for rule %s. Using traceIDRatioBased Sampler with fixed rate.",
-		*r.ruleProperties.RuleName,
+		"RuleName", *r.ruleProperties.RuleName,
 	)
 
 	// using traceIDRatioBased sampler to sample using fixed rate
-	samplingDecision := sdktrace.TraceIDRatioBased(*r.ruleProperties.FixedRate).ShouldSample(parameters)
+	sd = sdktrace.TraceIDRatioBased(*r.ruleProperties.FixedRate).ShouldSample(parameters)
 
-	samplingDecision.Attributes = attributes
-	samplingDecision.Tracestate = sd.Tracestate
-
-	if samplingDecision.Decision == sdktrace.RecordAndSample {
+	if sd.Decision == sdktrace.RecordAndSample {
 		r.sampledRequests++
 	}
 
-	return samplingDecision
+	return sd
 }
 
 // stale returns true if the quota is due for a refresh. False otherwise.
-func (r *centralizedRule) stale(now int64) bool {
+func (r *rule) stale(now int64) bool {
 	r.mu.RLock()
 	defer r.mu.RUnlock()
 
@@ -166,7 +155,7 @@ func (r *centralizedRule) stale(now int64) bool {
 
 // snapshot takes a snapshot of the sampling statistics counters, returning
 // samplingStatisticsDocument. It also resets statistics counters.
-func (r *centralizedRule) snapshot() *samplingStatisticsDocument {
+func (r *rule) snapshot() *samplingStatisticsDocument {
 	r.mu.Lock()
 
 	name := r.ruleProperties.RuleName
@@ -180,19 +169,17 @@ func (r *centralizedRule) snapshot() *samplingStatisticsDocument {
 
 	r.mu.Unlock()
 
-	now := r.clock.Now().Unix()
-	s := &samplingStatisticsDocument{
+	now := r.clock.now().Unix()
+	return &samplingStatisticsDocument{
 		RequestCount: &requests,
 		SampledCount: &sampled,
 		BorrowCount:  &borrows,
 		RuleName:     name,
 		Timestamp:    &now,
 	}
-
-	return s
 }
 
-func (r *centralizedRule) appliesTo(parameters sdktrace.SamplingParameters, serviceName string, cloudPlatform string) bool {
+func (r *rule) appliesTo(parameters sdktrace.SamplingParameters, serviceName string, cloudPlatform string) bool {
 	var httpTarget string
 	var httpURL string
 	var httpHost string

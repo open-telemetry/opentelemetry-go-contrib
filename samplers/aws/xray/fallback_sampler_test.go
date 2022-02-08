@@ -23,8 +23,8 @@ import (
 )
 
 func TestShouldSample(t *testing.T) {
-	clock := MockClock{
-		NowTime: 1500000000,
+	clock := mockClock{
+		nowTime: 1500000000,
 	}
 
 	fs := NewFallbackSampler()
@@ -36,19 +36,19 @@ func TestShouldSample(t *testing.T) {
 }
 
 func TestBorrowOnePerSecond(t *testing.T) {
-	clock := MockClock{
-		NowTime: 1500000000,
+	clock := mockClock{
+		nowTime: 1500000000,
 	}
 
 	fs := NewFallbackSampler()
 	fs.clock = &clock
 
-	borrowed := fs.borrow(clock.NowTime)
+	borrowed := fs.borrow(clock.nowTime)
 
 	// assert that borrowing one per second
 	assert.True(t, borrowed)
 
-	borrowed = fs.borrow(clock.NowTime)
+	borrowed = fs.borrow(clock.nowTime)
 
 	// assert that borrowing again is false during that second
 	assert.False(t, borrowed)
