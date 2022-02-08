@@ -20,32 +20,41 @@ import (
 	"encoding/json"
 	"fmt"
 	"net/http"
+	"net/url"
 )
 
 type xrayClient struct {
 	// http client for sending unsigned proxied requests to the collector
 	httpClient *http.Client
 
-	proxyEndpoint string
+	endpoint *url.URL
 }
 
-// newClient returns a http client with proxy endpoint
+// newClient returns an HTTP client with proxy endpoint
 func newClient(d string) *xrayClient {
-	proxyEndpoint := "http://" + d
+	endpoint := "http://" + d
 
-	p := &xrayClient{
-		httpClient:    &http.Client{},
-		proxyEndpoint: proxyEndpoint,
+	endpointURL, err := url.Parse(endpoint)
+	if err != nil {
+		globalLogger.Error(err, "unable to parse endpoint from string")
 	}
 
-	return p
+	return &xrayClient{
+		httpClient: &http.Client{},
+		endpoint:   endpointURL,
+	}
 }
 
 // getSamplingRules calls the collector(aws proxy enabled) for sampling rules
 func (p *xrayClient) getSamplingRules(ctx context.Context) (*getSamplingRulesOutput, error) {
-	req, err := http.NewRequestWithContext(ctx, http.MethodPost, p.proxyEndpoint+"/GetSamplingRules", nil)
+	statisticsByte, err := json.Marshal(getSamplingRulesInput{})
 	if err != nil {
-		globalLogger.Printf("failed to create http request, %v\n", err)
+		return nil, err
+	}
+	body := bytes.NewReader(statisticsByte)
+
+	req, err := http.NewRequestWithContext(ctx, http.MethodPost, p.endpoint.String()+"/GetSamplingRules", body)
+	if err != nil {
 		return nil, fmt.Errorf("xray client: failed to create http request: %w", err)
 	}
 
@@ -53,26 +62,14 @@ func (p *xrayClient) getSamplingRules(ctx context.Context) (*getSamplingRulesOut
 	if err != nil {
 		return nil, fmt.Errorf("xray client: unable to retrieve sampling settings: %w", err)
 	}
+	defer output.Body.Close()
 
-	buf := new(bytes.Buffer)
-	_, err = buf.ReadFrom(output.Body)
-	if err != nil {
-		return nil, fmt.Errorf("xray client: unable to read response body: %w", err)
-	}
-
-	// Unmarshalling json data to populate getSamplingTargetsOutput struct
-	var samplingRulesOutput getSamplingRulesOutput
-	err = json.Unmarshal(buf.Bytes(), &samplingRulesOutput)
-	if err != nil {
+	var samplingRulesOutput *getSamplingRulesOutput
+	if err := json.NewDecoder(output.Body).Decode(&samplingRulesOutput); err != nil {
 		return nil, fmt.Errorf("xray client: unable to unmarshal the response body: %w", err)
 	}
 
-	err = output.Body.Close()
-	if err != nil {
-		globalLogger.Printf("failed to close http response body, %v\n\n", err)
-	}
-
-	return &samplingRulesOutput, nil
+	return samplingRulesOutput, nil
 }
 
 // getSamplingTargets calls the collector(aws proxy enabled) for sampling targets

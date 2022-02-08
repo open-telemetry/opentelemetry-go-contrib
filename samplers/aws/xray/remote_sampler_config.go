@@ -15,7 +15,12 @@
 package xray
 
 import (
+	"log"
+	"os"
 	"time"
+
+	"github.com/go-logr/logr"
+	"github.com/go-logr/stdr"
 )
 
 const (
@@ -27,15 +32,15 @@ const (
 type Option func(options *config)
 
 type config struct {
-	proxyEndpoint                string
+	endpoint                     string
 	samplingRulesPollingInterval time.Duration
-	logger                       Logger
+	logger                       logr.Logger
 }
 
 // sets custom proxy endpoint
-func WithProxyEndpoint(proxyEndpoint string) Option {
+func WithEndpoint(endpoint string) Option {
 	return func(o *config) {
-		o.proxyEndpoint = proxyEndpoint
+		o.endpoint = endpoint
 	}
 }
 
@@ -47,7 +52,7 @@ func WithSamplingRulesPollingInterval(polingInterval time.Duration) Option {
 }
 
 // sets custom logging for remote sampling implementation
-func WithLogger(l Logger) Option {
+func WithLogger(l logr.Logger) Option {
 	return func(o *config) {
 		o.logger = l
 	}
@@ -55,9 +60,9 @@ func WithLogger(l Logger) Option {
 
 func newConfig(opts ...Option) *config {
 	cfg := &config{
-		proxyEndpoint:                defaultProxyEndpoint,
+		endpoint:                     defaultProxyEndpoint,
 		samplingRulesPollingInterval: defaultPollingInterval * time.Second,
-		logger:                       noopLogger{},
+		logger:                       stdr.New(log.New(os.Stderr, "", log.LstdFlags|log.Lshortfile)),
 	}
 
 	for _, option := range opts {
@@ -66,6 +71,8 @@ func newConfig(opts ...Option) *config {
 
 	// setting global logger
 	globalLogger = cfg.logger
+	// set global verbosity to log info logs
+	stdr.SetVerbosity(1)
 
 	return cfg
 }

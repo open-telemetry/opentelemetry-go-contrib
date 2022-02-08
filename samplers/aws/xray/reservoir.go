@@ -14,8 +14,7 @@
 
 package xray
 
-// centralizedReservoir is a reservoir distributed among all running instances of the SDK
-type centralizedReservoir struct {
+type reservoir struct {
 	// Quota assigned to client
 	quota int64
 

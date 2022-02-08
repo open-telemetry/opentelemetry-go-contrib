@@ -20,26 +20,30 @@ import (
 	"errors"
 	"fmt"
 	"strings"
+	"sync"
 	"time"
+
+	"github.com/go-logr/logr"
 
 	sdktrace "go.opentelemetry.io/otel/sdk/trace"
 )
 
 // global variable for logging
-var globalLogger Logger
+var globalLogger logr.Logger
 
-// RemoteSampler is an implementation of SamplingStrategy.
-type RemoteSampler struct {
-	// List of known centralized sampling rules
-	manifest *centralizedManifest
+// remoteSampler is a sampler for AWS X-Ray which polls sampling rules and sampling targets
+// to make a sampling decision based on rules set by users on AWS X-Ray console
+type remoteSampler struct {
+	// List of known centralized sampling rules.
+	manifest *manifest
 
-	// proxy is used for getting quotas and sampling rules
+	// xrayClient is used for getting quotas and sampling rules.
 	xrayClient *xrayClient
 
-	// pollerStart, if true represents rule and target pollers are started
+	// pollerStart, if true represents rule and target pollers are started.
 	pollerStart bool
 
-	// samplingRules polling interval, default is 300 seconds
+	// samplingRulesPollingInterval, default is 300 seconds.
 	samplingRulesPollingInterval time.Duration
 
 	// matching attribute
@@ -55,12 +59,16 @@ type RemoteSampler struct {
 	clock Clock
 
 	fallbackSampler *FallbackSampler
+
+  mu sync.RWMutex
 }
 
 // Compile time assertion that remoteSampler implements the Sampler interface.
-var _ sdktrace.Sampler = (*RemoteSampler)(nil)
+var _ sdktrace.Sampler = (*remoteSampler)(nil)
 
-// NewRemoteSampler returns a centralizedSampler which decides to sample a given request or not.
+// NewRemoteSampler returns a sampler which decides to sample a given request or not
+// based on the sampling rules set by users on AWS X-Ray console. Sampler also periodically polls
+// sampling rules and sampling targets.
 func NewRemoteSampler(ctx context.Context, serviceName string, cloudPlatform string, opts ...Option) (*RemoteSampler, error) {
 	cfg := newConfig(opts...)
 
@@ -74,20 +82,19 @@ func NewRemoteSampler(ctx context.Context, serviceName string, cloudPlatform str
 
 	id := fmt.Sprintf("%02x", r)
 
-	clock := &DefaultClock{}
+	clock := &defaultClock{}
 
-	m := &centralizedManifest{
-		rules: []*centralizedRule{},
-		index: map[string]*centralizedRule{},
+	m := &manifest{
+		rules: []*rule{},
+		index: map[string]*rule{},
 		clock: clock,
 	}
 
-	remoteSampler := &RemoteSampler{
-		pollerStart:                  false,
+	remoteSampler := &remoteSampler{
 		clock:                        clock,
 		manifest:                     m,
 		clientID:                     id,
-		xrayClient:                   newClient(cfg.proxyEndpoint),
+		xrayClient:                   newClient(cfg.endpoint),
 		samplingRulesPollingInterval: cfg.samplingRulesPollingInterval,
 		fallbackSampler:              NewFallbackSampler(),
 		serviceName:                  serviceName,
@@ -129,11 +136,11 @@ func (rs *RemoteSampler) ShouldSample(parameters sdktrace.SamplingParameters) sd
 	return rs.fallbackSampler.ShouldSample(parameters)
 }
 
-func (rs *RemoteSampler) Description() string {
+func (rs *remoteSampler) Description() string {
 	return "remote sampling with AWS X-Ray"
 }
 
-func (rs *RemoteSampler) start(ctx context.Context) {
+func (rs *remoteSampler) start(ctx context.Context) {
 	if !rs.pollerStart {
 		rs.pollerStart = true
 		rs.startRulePoller(ctx)
@@ -150,9 +157,9 @@ func (rs *RemoteSampler) startRulePoller(ctx context.Context) {
 		// Periodic manifest refresh
 		for {
 			if err := rs.refreshManifest(ctx); err != nil {
-				globalLogger.Printf("Error occurred while refreshing sampling rules. %v\n", err)
+				globalLogger.Error(err, "Error occurred while refreshing sampling rules")
 			} else {
-				globalLogger.Println("Successfully fetched sampling rules")
+				globalLogger.Info("Successfully fetched sampling rules")
 			}
 			select {
 			case _, more := <-t.C():
@@ -191,76 +198,66 @@ func (rs *RemoteSampler) startTargetPoller(ctx context.Context) {
 	}()
 }
 
-func (rs *RemoteSampler) refreshManifest(ctx context.Context) (err error) {
-	// Explicitly recover from panics since this is the entry point for a long-running goroutine
-	// and we can not allow a panic to propagate to the application code.
-	defer func() {
-		if r := recover(); r != nil {
-			// Resort to bring rules array into consistent state.
-			rs.manifest.sort()
-
-			err = fmt.Errorf("%v", r)
-		}
-	}()
-
+func (rs *remoteSampler) refreshManifest(ctx context.Context) (err error) {
 	// Compute 'now' before calling GetSamplingRules to avoid marking manifest as
 	// fresher than it actually is.
-	now := rs.clock.Now().Unix()
+	now := rs.clock.now().Unix()
 
-	// Get sampling rules from proxy
+	// Get sampling rules from proxy.
 	rules, err := rs.xrayClient.getSamplingRules(ctx)
 	if err != nil {
 		return
 	}
 
-	// Set of rules to exclude from pruning
-	actives := map[centralizedRule]bool{}
-
-	// Create missing rules. Update existing ones.
 	failed := false
+
+	// temporary manifest declaration.
+	tempManifest := &manifest{
+		rules: []*rule{},
+		index: map[string]*rule{},
+		clock: &defaultClock{},
+	}
 
 	for _, records := range rules.SamplingRuleRecords {
 		if records.SamplingRule.RuleName == nil {
-			globalLogger.Println("Sampling rule without rule name is not supported")
+			globalLogger.V(1).Info("Sampling rule without rule name is not supported")
 			failed = true
 			continue
 		}
 
 		// Only sampling rule with version 1 is valid
 		if records.SamplingRule.Version == nil {
-			globalLogger.Println("Sampling rule without version number is not supported: ", *records.SamplingRule.RuleName)
+			globalLogger.V(1).Info("Sampling rule without version number is not supported", "RuleName", *records.SamplingRule.RuleName)
 			failed = true
 			continue
 		}
 
 		if *records.SamplingRule.Version != int64(1) {
-			globalLogger.Println("Sampling rule without version 1 is not supported: ", *records.SamplingRule.RuleName)
+			globalLogger.V(1).Info("Sampling rule without version 1 is not supported", "RuleName", *records.SamplingRule.RuleName)
 			failed = true
 			continue
 		}
 
 		if len(records.SamplingRule.Attributes) != 0 {
-			globalLogger.Println("Sampling rule with non nil Attributes is not applicable: ", *records.SamplingRule.RuleName)
+			globalLogger.V(1).Info("Sampling rule with non nil Attributes is not applicable", "RuleName", *records.SamplingRule.RuleName)
 			continue
 		}
 
 		if records.SamplingRule.ResourceARN == nil {
-			globalLogger.Println("Sampling rule without ResourceARN is not applicable: ", *records.SamplingRule.RuleName)
+			globalLogger.V(1).Info("Sampling rule without ResourceARN is not applicable", "RuleName", *records.SamplingRule.RuleName)
 			continue
 		}
 
 		if *records.SamplingRule.ResourceARN != "*" {
-			globalLogger.Println("Sampling rule with ResourceARN not equal to * is not applicable: ", *records.SamplingRule.RuleName)
+			globalLogger.V(1).Info("Sampling rule with ResourceARN not equal to * is not applicable", "RuleName", *records.SamplingRule.RuleName)
 			continue
 		}
 
-		// Create/update rule
-		r, putErr := rs.manifest.putRule(records.SamplingRule)
-		if putErr != nil {
+		// create rule and store it in temporary manifest to avoid locking issues.
+		createErr := tempManifest.createRule(records.SamplingRule)
+		if createErr != nil {
 			failed = true
-			globalLogger.Printf("Error occurred creating/updating rule. %v\n", putErr)
-		} else if r != nil {
-			actives[*r] = true
+			globalLogger.Error(createErr, "Error occurred creating/updating rule")
 		}
 	}
 
@@ -269,16 +266,15 @@ func (rs *RemoteSampler) refreshManifest(ctx context.Context) (err error) {
 		err = errors.New("error occurred creating/updating rules")
 	}
 
-	// Prune inactive rules
-	rs.manifest.prune(actives)
-
-	// Re-sort to fix matching priorities
-	rs.manifest.sort()
-
+	// Re-sort to fix matching priorities.
+	tempManifest.sort()
 	// Update refreshedAt timestamp
-	rs.manifest.mu.Lock()
-	rs.manifest.refreshedAt = now
-	rs.manifest.mu.Unlock()
+	tempManifest.refreshedAt = now
+
+	// assign temp manifest to original copy/one sync refresh.
+	rs.mu.Lock()
+	rs.manifest = tempManifest
+	rs.mu.Unlock()
 
 	return
 }

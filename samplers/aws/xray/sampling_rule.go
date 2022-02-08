@@ -23,9 +23,9 @@ import (
 )
 
 // centralizedRule represents a centralized sampling rule
-type centralizedRule struct {
+type rule struct {
 	// Centralized reservoir for keeping track of reservoir usage
-	reservoir *centralizedReservoir
+	reservoir *reservoir
 
 	// sampling rule properties
 	ruleProperties *ruleProperties
@@ -40,12 +40,12 @@ type centralizedRule struct {
 	borrowedRequests int64
 
 	// Provides system time
-	clock Clock
+	clock clock
 
 	// Provides random numbers
 	rand Rand
 
-	mu sync.RWMutex
+	//mu sync.RWMutex
 }
 
 // properties is the base set of properties that define a sampling rule.
@@ -64,6 +64,11 @@ type ruleProperties struct {
 	Version       *int64             `json:"Version"`
 }
 
+// getSamplingRulesInput is used to store
+type getSamplingRulesInput struct {
+	NextToken *string `json:"NextToken"`
+}
+
 type samplingRuleRecords struct {
 	SamplingRule *ruleProperties `json:"SamplingRule"`
 }
@@ -71,16 +76,6 @@ type samplingRuleRecords struct {
 // getSamplingRulesOutput is used to store parsed json sampling rules
 type getSamplingRulesOutput struct {
 	SamplingRuleRecords []*samplingRuleRecords `json:"SamplingRuleRecords"`
-}
-
-// updateRule updates the properties of the user-defined and default centralizedRule using the given
-// *properties.
-func (r *centralizedRule) updateRule(rule *ruleProperties) {
-	r.mu.Lock()
-	defer r.mu.Unlock()
-
-	r.ruleProperties = rule
-	r.reservoir.capacity = *rule.ReservoirSize
 }
 
 // Sample returns SamplingResult with SamplingDecision, TraceState and Attributes
