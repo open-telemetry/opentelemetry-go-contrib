@@ -110,8 +110,11 @@ func TestRefreshManifest(t *testing.T) {
 		clock: clock,
 	}
 
+	client, err := newClient(u.Host)
+	require.NoError(t, err)
+
 	rs := &remoteSampler{
-		xrayClient: newClient(u.Host),
+		xrayClient: client,
 		clock:      clock,
 		manifest:   m,
 	}
@@ -211,8 +214,8 @@ func TestRefreshManifest(t *testing.T) {
 	assert.Equal(t, 3, len(rs.manifest.index))
 }
 
-// assert that invalid rule with ResourceARN other than "*" does not update to the manifest
-func TestRefreshManifestAddInvalidRuleType1(t *testing.T) {
+// assert that rule with nil ServiceName does not update to the manifest
+func TestRefreshManifestMissingServiceName(t *testing.T) {
 	ctx := context.Background()
 
 	// to enable logging
@@ -235,7 +238,6 @@ func TestRefreshManifestAddInvalidRuleType1(t *testing.T) {
         "ResourceARN": "XYZ",
         "RuleARN": "arn:aws:xray:us-west-2:xxxxxxx:sampling-rule/r1",
         "RuleName": "r1",
-        "ServiceName": "*",
         "ServiceType": "*",
         "URLPath": "*",
         "Version": 1
@@ -263,8 +265,11 @@ func TestRefreshManifestAddInvalidRuleType1(t *testing.T) {
 		clock: clock,
 	}
 
+	client, err := newClient(u.Host)
+	require.NoError(t, err)
+
 	rs := &remoteSampler{
-		xrayClient: newClient(u.Host),
+		xrayClient: client,
 		clock:      clock,
 		manifest:   m,
 	}
@@ -276,14 +281,14 @@ func TestRefreshManifestAddInvalidRuleType1(t *testing.T) {
 	assert.Equal(t, 0, len(rs.manifest.rules)) // Rule not added
 }
 
-// assert that invalid rule with attribute does not update to the manifest
-func TestRefreshManifestAddInvalidRuleType2(t *testing.T) {
+// assert that rule with nil ServiceType does not update to the manifest
+func TestRefreshManifestMissingServiceType(t *testing.T) {
 	ctx := context.Background()
 
 	// to enable logging
 	newConfig()
 
-	// invalid rule due to attributes
+	// invalid rule due to ResourceARN
 	body := []byte(`{
   "NextToken": null,
   "SamplingRuleRecords": [
@@ -291,17 +296,16 @@ func TestRefreshManifestAddInvalidRuleType2(t *testing.T) {
       "CreatedAt": 0,
       "ModifiedAt": 1639517389,
       "SamplingRule": {
-        "Attributes": {"a":"b"},
+        "Attributes": {},
         "FixedRate": 0.5,
         "HTTPMethod": "*",
         "Host": "*",
         "Priority": 10000,
         "ReservoirSize": 60,
-        "ResourceARN": "*",
+        "ResourceARN": "XYZ",
         "RuleARN": "arn:aws:xray:us-west-2:xxxxxxx:sampling-rule/r1",
         "RuleName": "r1",
-        "ServiceName": "*",
-        "ServiceType": "*",
+        "ServiceName": "test",
         "URLPath": "*",
         "Version": 1
       }
@@ -313,6 +317,7 @@ func TestRefreshManifestAddInvalidRuleType2(t *testing.T) {
 	testServer := httptest.NewServer(http.HandlerFunc(func(res http.ResponseWriter, req *http.Request) {
 		_, err := res.Write([]byte(body))
 		require.NoError(t, err)
+
 	}))
 	defer testServer.Close()
 
@@ -327,8 +332,11 @@ func TestRefreshManifestAddInvalidRuleType2(t *testing.T) {
 		clock: clock,
 	}
 
+	client, err := newClient(u.Host)
+	require.NoError(t, err)
+
 	rs := &remoteSampler{
-		xrayClient: newClient(u.Host),
+		xrayClient: client,
 		clock:      clock,
 		manifest:   m,
 	}
@@ -336,16 +344,221 @@ func TestRefreshManifestAddInvalidRuleType2(t *testing.T) {
 	err = rs.refreshManifest(ctx)
 	require.NoError(t, err)
 
-	assert.Equal(t, 0, len(rs.manifest.rules)) // rule not added
+	// Refresh manifest with updates from mock proxy
+	assert.Equal(t, 0, len(rs.manifest.rules)) // Rule not added
 }
 
-// assert that 1 valid and 1 invalid rule update only valid rule gets stored to the manifest
-func TestRefreshManifestAddInvalidRule3(t *testing.T) {
+// assert that rule with nil ReservoirSize does not update to the manifest
+func TestRefreshManifestMissingReservoirSize(t *testing.T) {
 	ctx := context.Background()
 
 	// to enable logging
 	newConfig()
 
+	// invalid rule due to ResourceARN
+	body := []byte(`{
+  "NextToken": null,
+  "SamplingRuleRecords": [
+    {
+      "CreatedAt": 0,
+      "ModifiedAt": 1639517389,
+      "SamplingRule": {
+        "Attributes": {},
+        "FixedRate": 0.5,
+        "HTTPMethod": "*",
+        "Host": "*",
+        "Priority": 10000,
+        "ResourceARN": "XYZ",
+        "RuleARN": "arn:aws:xray:us-west-2:xxxxxxx:sampling-rule/r1",
+        "RuleName": "r1",
+		"ServiceName": "test",
+        "ServiceType": "*",
+        "URLPath": "*",
+        "Version": 1
+      }
+    }
+  ]
+}`)
+
+	// generate a test server so we can capture and inspect the request
+	testServer := httptest.NewServer(http.HandlerFunc(func(res http.ResponseWriter, req *http.Request) {
+		_, err := res.Write([]byte(body))
+		require.NoError(t, err)
+
+	}))
+	defer testServer.Close()
+
+	u, err := url.Parse(testServer.URL)
+	require.NoError(t, err)
+
+	clock := &defaultClock{}
+
+	m := &manifest{
+		rules: []*rule{},
+		index: map[string]*rule{},
+		clock: clock,
+	}
+
+	client, err := newClient(u.Host)
+	require.NoError(t, err)
+
+	rs := &remoteSampler{
+		xrayClient: client,
+		clock:      clock,
+		manifest:   m,
+	}
+
+	err = rs.refreshManifest(ctx)
+	require.NoError(t, err)
+
+	// Refresh manifest with updates from mock proxy
+	assert.Equal(t, 0, len(rs.manifest.rules)) // Rule not added
+}
+
+// assert that rule with version greater than one does not update to the manifest
+func TestRefreshManifestIncorrectPriority(t *testing.T) {
+	ctx := context.Background()
+
+	// to enable logging
+	newConfig()
+
+	// invalid rule due to ResourceARN
+	body := []byte(`{
+  "NextToken": null,
+  "SamplingRuleRecords": [
+    {
+      "CreatedAt": 0,
+      "ModifiedAt": 1639517389,
+      "SamplingRule": {
+        "Attributes": {},
+        "FixedRate": 0.5,
+        "HTTPMethod": "*",
+        "Host": "*",
+        "Priority": 10000,
+		"ReservoirSize": 60,
+        "ResourceARN": "XYZ",
+        "RuleARN": "arn:aws:xray:us-west-2:xxxxxxx:sampling-rule/r1",
+        "RuleName": "r1",
+		"ServiceName": "test",
+        "ServiceType": "*",
+        "URLPath": "*",
+        "Version": 5
+      }
+    }
+  ]
+}`)
+
+	// generate a test server so we can capture and inspect the request
+	testServer := httptest.NewServer(http.HandlerFunc(func(res http.ResponseWriter, req *http.Request) {
+		_, err := res.Write([]byte(body))
+		require.NoError(t, err)
+
+	}))
+	defer testServer.Close()
+
+	u, err := url.Parse(testServer.URL)
+	require.NoError(t, err)
+
+	clock := &defaultClock{}
+
+	m := &manifest{
+		rules: []*rule{},
+		index: map[string]*rule{},
+		clock: clock,
+	}
+
+	client, err := newClient(u.Host)
+	require.NoError(t, err)
+
+	rs := &remoteSampler{
+		xrayClient: client,
+		clock:      clock,
+		manifest:   m,
+	}
+
+	err = rs.refreshManifest(ctx)
+	require.NoError(t, err)
+
+	// Refresh manifest with updates from mock proxy
+	assert.Equal(t, 0, len(rs.manifest.rules)) // Rule not added
+}
+
+// assert that rule nil attributes does update the manifest
+func TestRefreshManifestNilAttributes(t *testing.T) {
+	ctx := context.Background()
+
+	// to enable logging
+	newConfig()
+
+	// invalid rule due to ResourceARN
+	body := []byte(`{
+  "NextToken": null,
+  "SamplingRuleRecords": [
+    {
+      "CreatedAt": 0,
+      "ModifiedAt": 1639517389,
+      "SamplingRule": {
+        "Attributes": {},
+        "FixedRate": 0.5,
+        "HTTPMethod": "*",
+        "Host": "*",
+        "Priority": 10000,
+        "ResourceARN": "XYZ",
+        "RuleARN": "arn:aws:xray:us-west-2:xxxxxxx:sampling-rule/r1",
+        "RuleName": "r1",
+		"ReservoirSize": 60,
+		"ServiceName": "test",
+        "ServiceType": "*",
+        "URLPath": "*",
+        "Version": 1
+      }
+    }
+  ]
+}`)
+
+	// generate a test server so we can capture and inspect the request
+	testServer := httptest.NewServer(http.HandlerFunc(func(res http.ResponseWriter, req *http.Request) {
+		_, err := res.Write([]byte(body))
+		require.NoError(t, err)
+
+	}))
+	defer testServer.Close()
+
+	u, err := url.Parse(testServer.URL)
+	require.NoError(t, err)
+
+	clock := &defaultClock{}
+
+	m := &manifest{
+		rules: []*rule{},
+		index: map[string]*rule{},
+		clock: clock,
+	}
+
+	client, err := newClient(u.Host)
+	require.NoError(t, err)
+
+	rs := &remoteSampler{
+		xrayClient: client,
+		clock:      clock,
+		manifest:   m,
+	}
+
+	err = rs.refreshManifest(ctx)
+	require.NoError(t, err)
+
+	// Refresh manifest with updates from mock proxy
+	assert.Equal(t, 1, len(rs.manifest.rules)) // Rule added
+}
+
+// assert that 1 valid and 1 invalid rule update only valid rule gets stored to the manifest
+func TestRefreshManifestAddOneInvalidRule(t *testing.T) {
+	ctx := context.Background()
+
+	// to enable logging
+	newConfig()
+
+	// host is missing from r2
 	body := []byte(`{
   "NextToken": null,
   "SamplingRuleRecords": [
@@ -375,7 +588,6 @@ func TestRefreshManifestAddInvalidRule3(t *testing.T) {
         "Attributes": {"a":"b"},
         "FixedRate": 0.5,
         "HTTPMethod": "*",
-        "Host": "*",
         "Priority": 10000,
         "ReservoirSize": 60,
         "ResourceARN": "*",
@@ -424,8 +636,11 @@ func TestRefreshManifestAddInvalidRule3(t *testing.T) {
 		clock: clock,
 	}
 
+	client, err := newClient(u.Host)
+	require.NoError(t, err)
+
 	rs := &remoteSampler{
-		xrayClient: newClient(u.Host),
+		xrayClient: client,
 		clock:      clock,
 		manifest:   m,
 	}
@@ -551,8 +766,11 @@ func TestManifestRulesAndIndexUpdate(t *testing.T) {
 		clock: clock,
 	}
 
+	client, err := newClient(u.Host)
+	require.NoError(t, err)
+
 	rs := &remoteSampler{
-		xrayClient: newClient(u.Host),
+		xrayClient: client,
 		clock:      clock,
 		manifest:   m,
 	}
@@ -600,4 +818,15 @@ func TestNewRemoteSampler(t *testing.T) {
 
 	s := &remoteSampler{}
 	assert.Equal(t, reflect.TypeOf(rs), reflect.TypeOf(s))
+}
+
+// assert that config validation error results in nil remote sampler
+func TestConfigError(t *testing.T) {
+	ctx, cancel := context.WithCancel(context.Background())
+	defer cancel()
+
+	rs, err := NewRemoteSampler(ctx, WithEndpoint("http://127.0.0.1:8080"))
+
+	assert.Error(t, err)
+	assert.Nil(t, rs)
 }

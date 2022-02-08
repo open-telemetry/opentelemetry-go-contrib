@@ -17,7 +17,6 @@ package xray
 import (
 	"context"
 	crypto "crypto/rand"
-	"errors"
 	"fmt"
 	"sync"
 	"time"
@@ -33,14 +32,14 @@ var globalLogger logr.Logger
 // remoteSampler is a sampler for AWS X-Ray which polls sampling rules and sampling targets
 // to make a sampling decision based on rules set by users on AWS X-Ray console
 type remoteSampler struct {
-	// List of known centralized sampling rules.
+	// manifest is the list of known centralized sampling rules.
 	manifest *manifest
 
 	// xrayClient is used for getting quotas and sampling rules.
 	xrayClient *xrayClient
 
-	// pollerStart, if true represents rule and target pollers are started.
-	pollerStart bool
+	// pollerStarted, if true represents rule and target pollers are started.
+	pollerStarted bool
 
 	// samplingRulesPollingInterval, default is 300 seconds.
 	samplingRulesPollingInterval time.Duration
@@ -48,7 +47,7 @@ type remoteSampler struct {
 	// Unique ID used by XRay service to identify this client.
 	clientID string
 
-	// Provides system time.
+	// Provides time.
 	clock clock
 
 	mu sync.RWMutex
@@ -63,10 +62,16 @@ var _ sdktrace.Sampler = (*remoteSampler)(nil)
 func NewRemoteSampler(ctx context.Context, opts ...Option) (sdktrace.Sampler, error) {
 	cfg := newConfig(opts...)
 
+	// validate config
+	err := validateConfig(cfg)
+	if err != nil {
+		return nil, err
+	}
+
 	// Generate clientID
 	var r [12]byte
 
-	_, err := crypto.Read(r[:])
+	_, err = crypto.Read(r[:])
 	if err != nil {
 		return nil, fmt.Errorf("unable to generate client ID: %w", err)
 	}
@@ -81,11 +86,16 @@ func NewRemoteSampler(ctx context.Context, opts ...Option) (sdktrace.Sampler, er
 		clock: clock,
 	}
 
+	client, err := newClient(cfg.endpoint)
+	if err != nil {
+		return nil, err
+	}
+
 	remoteSampler := &remoteSampler{
 		clock:                        clock,
 		manifest:                     m,
 		clientID:                     id,
-		xrayClient:                   newClient(cfg.endpoint),
+		xrayClient:                   client,
 		samplingRulesPollingInterval: cfg.samplingRulesPollingInterval,
 	}
 
@@ -102,12 +112,16 @@ func (rs *remoteSampler) ShouldSample(parameters sdktrace.SamplingParameters) sd
 }
 
 func (rs *remoteSampler) Description() string {
+	return "AwsXrayRemoteSampler{" + rs.getDescription() + "}"
+}
+
+func (rs *remoteSampler) getDescription() string {
 	return "remote sampling with AWS X-Ray"
 }
 
 func (rs *remoteSampler) start(ctx context.Context) {
-	if !rs.pollerStart {
-		rs.pollerStart = true
+	if !rs.pollerStarted {
+		rs.pollerStarted = true
 		rs.startPoller(ctx)
 	}
 }
@@ -123,7 +137,7 @@ func (rs *remoteSampler) startPoller(ctx context.Context) {
 			if err := rs.refreshManifest(ctx); err != nil {
 				globalLogger.Error(err, "Error occurred while refreshing sampling rules")
 			} else {
-				globalLogger.Info("Successfully fetched sampling rules")
+				globalLogger.V(1).Info("Successfully fetched sampling rules")
 			}
 			select {
 			case _, more := <-t.C():
@@ -141,15 +155,13 @@ func (rs *remoteSampler) startPoller(ctx context.Context) {
 func (rs *remoteSampler) refreshManifest(ctx context.Context) (err error) {
 	// Compute 'now' before calling GetSamplingRules to avoid marking manifest as
 	// fresher than it actually is.
-	now := rs.clock.now().Unix()
+	now := rs.clock.now()
 
 	// Get sampling rules from proxy.
 	rules, err := rs.xrayClient.getSamplingRules(ctx)
 	if err != nil {
 		return
 	}
-
-	failed := false
 
 	// temporary manifest declaration.
 	tempManifest := &manifest{
@@ -161,25 +173,52 @@ func (rs *remoteSampler) refreshManifest(ctx context.Context) (err error) {
 	for _, records := range rules.SamplingRuleRecords {
 		if records.SamplingRule.RuleName == nil {
 			globalLogger.V(1).Info("Sampling rule without rule name is not supported")
-			failed = true
 			continue
 		}
 
 		// Only sampling rule with version 1 is valid
 		if records.SamplingRule.Version == nil {
-			globalLogger.V(1).Info("Sampling rule without version number is not supported", "RuleName", *records.SamplingRule.RuleName)
-			failed = true
+			globalLogger.V(1).Info("Sampling rule without Version is not supported", "RuleName", *records.SamplingRule.RuleName)
 			continue
 		}
 
 		if *records.SamplingRule.Version != int64(1) {
-			globalLogger.V(1).Info("Sampling rule without version 1 is not supported", "RuleName", *records.SamplingRule.RuleName)
-			failed = true
+			globalLogger.V(1).Info("Sampling rule without Version 1 is not supported", "RuleName", *records.SamplingRule.RuleName)
 			continue
 		}
 
-		if len(records.SamplingRule.Attributes) != 0 {
-			globalLogger.V(1).Info("Sampling rule with non nil Attributes is not applicable", "RuleName", *records.SamplingRule.RuleName)
+		if records.SamplingRule.ServiceName == nil {
+			globalLogger.V(1).Info("Sampling rule without ServiceName is not supported", "RuleName", *records.SamplingRule.RuleName)
+			continue
+		}
+
+		if records.SamplingRule.ServiceType == nil {
+			globalLogger.V(1).Info("Sampling rule without ServiceType is not supported", "RuleName", *records.SamplingRule.RuleName)
+			continue
+		}
+
+		if records.SamplingRule.Host == nil {
+			globalLogger.V(1).Info("Sampling rule without Host is not supported", "RuleName", *records.SamplingRule.RuleName)
+			continue
+		}
+
+		if records.SamplingRule.HTTPMethod == nil {
+			globalLogger.V(1).Info("Sampling rule without HTTPMethod is not supported", "RuleName", *records.SamplingRule.RuleName)
+			continue
+		}
+
+		if records.SamplingRule.URLPath == nil {
+			globalLogger.V(1).Info("Sampling rule without URLPath is not supported", "RuleName", *records.SamplingRule.RuleName)
+			continue
+		}
+
+		if records.SamplingRule.ReservoirSize == nil {
+			globalLogger.V(1).Info("Sampling rule without ReservoirSize  is not supported", "RuleName", *records.SamplingRule.RuleName)
+			continue
+		}
+
+		if records.SamplingRule.FixedRate == nil {
+			globalLogger.V(1).Info("Sampling rule without FixedRate is not supported", "RuleName", *records.SamplingRule.RuleName)
 			continue
 		}
 
@@ -188,22 +227,16 @@ func (rs *remoteSampler) refreshManifest(ctx context.Context) (err error) {
 			continue
 		}
 
-		if *records.SamplingRule.ResourceARN != "*" {
-			globalLogger.V(1).Info("Sampling rule with ResourceARN not equal to * is not applicable", "RuleName", *records.SamplingRule.RuleName)
+		if records.SamplingRule.Priority == nil {
+			globalLogger.V(1).Info("Sampling rule without version number is not supported", "RuleName", *records.SamplingRule.RuleName)
 			continue
 		}
 
 		// create rule and store it in temporary manifest to avoid locking issues.
 		createErr := tempManifest.createRule(records.SamplingRule)
 		if createErr != nil {
-			failed = true
 			globalLogger.Error(createErr, "Error occurred creating/updating rule")
 		}
-	}
-
-	// Set err if updates failed
-	if failed {
-		err = errors.New("error occurred creating/updating rules")
 	}
 
 	// Re-sort to fix matching priorities.

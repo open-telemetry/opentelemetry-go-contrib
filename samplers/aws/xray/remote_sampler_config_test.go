@@ -51,3 +51,45 @@ func TestPartialUserProvidedConfig(t *testing.T) {
 	assert.Equal(t, cfg.endpoint, "127.0.0.1:2000")
 	assert.Equal(t, cfg.logger, stdr.New(log.New(os.Stderr, "", log.LstdFlags|log.Lshortfile)))
 }
+
+func TestValidateConfigIncorrectEndpoint(t *testing.T) {
+	cfg := newConfig(WithEndpoint("http://127.0.0.1:2000"))
+
+	err := validateConfig(cfg)
+	assert.Error(t, err)
+}
+
+func TestValidateConfigSpecialCharacterEndpoint(t *testing.T) {
+	cfg := newConfig(WithEndpoint("@127.0.0.1:2000"))
+
+	err := validateConfig(cfg)
+	assert.Error(t, err)
+}
+
+func TestValidateConfigLocalHost(t *testing.T) {
+	cfg := newConfig(WithEndpoint("localhost:2000"))
+
+	err := validateConfig(cfg)
+	assert.NoError(t, err)
+}
+
+func TestValidateConfigInvalidPort(t *testing.T) {
+	cfg := newConfig(WithEndpoint("127.0.0.1:abcd"))
+
+	err := validateConfig(cfg)
+	assert.Error(t, err)
+}
+
+func TestValidateConfigNegativeDuration(t *testing.T) {
+	cfg := newConfig(WithSamplingRulesPollingInterval(-300 * time.Second))
+
+	err := validateConfig(cfg)
+	assert.Error(t, err)
+}
+
+func TestValidateConfigPositiveDuration(t *testing.T) {
+	cfg := newConfig(WithSamplingRulesPollingInterval(300 * time.Second))
+
+	err := validateConfig(cfg)
+	assert.NoError(t, err)
+}

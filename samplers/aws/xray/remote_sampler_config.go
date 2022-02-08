@@ -15,8 +15,13 @@
 package xray
 
 import (
+	"fmt"
 	"log"
+	"math"
 	"os"
+	"regexp"
+	"strconv"
+	"strings"
 	"time"
 
 	"github.com/go-logr/logr"
@@ -62,7 +67,7 @@ func newConfig(opts ...Option) *config {
 	cfg := &config{
 		endpoint:                     defaultProxyEndpoint,
 		samplingRulesPollingInterval: defaultPollingInterval * time.Second,
-		logger:                       stdr.New(log.New(os.Stderr, "", log.LstdFlags|log.Lshortfile)),
+		logger:                       stdr.NewWithOptions(log.New(os.Stderr, "", log.LstdFlags|log.Lshortfile), stdr.Options{LogCaller: stdr.Error}),
 	}
 
 	for _, option := range opts {
@@ -71,8 +76,37 @@ func newConfig(opts ...Option) *config {
 
 	// setting global logger
 	globalLogger = cfg.logger
-	// set global verbosity to log info logs
-	stdr.SetVerbosity(1)
 
 	return cfg
+}
+
+func validateConfig(cfg *config) (err error) {
+	// check endpoint follows certain format
+	split := strings.Split(cfg.endpoint, ":")
+
+	if len(split) > 2 {
+		return fmt.Errorf("endpoint validation error: expected format is 127.0.0.1:8080")
+	}
+
+	// validate host name
+	r, err := regexp.Compile("[^A-Za-z0-9.]")
+	if err != nil {
+		return err
+	}
+
+	if r.MatchString(split[0]) {
+		return fmt.Errorf("endpoint validation error: expected format is 127.0.0.1:8080")
+	}
+
+	// validate port
+	if _, err := strconv.Atoi(split[1]); err != nil {
+		return fmt.Errorf("endpoint validation error: expected format is 127.0.0.1:8080")
+	}
+
+	// validate polling interval is positive
+	if math.Signbit(float64(cfg.samplingRulesPollingInterval)) {
+		return fmt.Errorf("endpoint validation error: samplingRulesPollingInterval should be positive number")
+	}
+
+	return
 }

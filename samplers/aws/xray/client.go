@@ -24,41 +24,41 @@ import (
 )
 
 type xrayClient struct {
-	// http client for sending unsigned proxied requests to the collector
+	// http client for sending sampling requests to the collector
 	httpClient *http.Client
 
 	endpoint *url.URL
 }
 
 // newClient returns an HTTP client with proxy endpoint
-func newClient(d string) *xrayClient {
-	endpoint := "http://" + d
+func newClient(addr string) (client *xrayClient, err error) {
+	endpoint := "http://" + addr
 
 	endpointURL, err := url.Parse(endpoint)
 	if err != nil {
-		globalLogger.Error(err, "unable to parse endpoint from string")
+		return nil, err
 	}
 
 	return &xrayClient{
 		httpClient: &http.Client{},
 		endpoint:   endpointURL,
-	}
+	}, nil
 }
 
 // getSamplingRules calls the collector(aws proxy enabled) for sampling rules
-func (p *xrayClient) getSamplingRules(ctx context.Context) (*getSamplingRulesOutput, error) {
-	statisticsByte, err := json.Marshal(getSamplingRulesInput{})
+func (c *xrayClient) getSamplingRules(ctx context.Context) (*getSamplingRulesOutput, error) {
+	samplingRulesInput, err := json.Marshal(getSamplingRulesInput{})
 	if err != nil {
 		return nil, err
 	}
-	body := bytes.NewReader(statisticsByte)
+	body := bytes.NewReader(samplingRulesInput)
 
-	req, err := http.NewRequestWithContext(ctx, http.MethodPost, p.endpoint.String()+"/GetSamplingRules", body)
+	req, err := http.NewRequestWithContext(ctx, http.MethodPost, c.endpoint.String()+"/GetSamplingRules", body)
 	if err != nil {
 		return nil, fmt.Errorf("xray client: failed to create http request: %w", err)
 	}
 
-	output, err := p.httpClient.Do(req)
+	output, err := c.httpClient.Do(req)
 	if err != nil {
 		return nil, fmt.Errorf("xray client: unable to retrieve sampling settings: %w", err)
 	}

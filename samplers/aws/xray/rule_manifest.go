@@ -17,6 +17,7 @@ package xray
 import (
 	"sort"
 	"strings"
+	"time"
 )
 
 const defaultInterval = int64(10)
@@ -27,7 +28,7 @@ const defaultInterval = int64(10)
 type manifest struct {
 	rules       []*rule
 	index       map[string]*rule
-	refreshedAt int64
+	refreshedAt time.Time
 	clock       clock
 }
 
