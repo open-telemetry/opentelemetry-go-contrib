@@ -47,7 +47,10 @@ func newClient(d string) *xrayClient {
 
 // getSamplingRules calls the collector(aws proxy enabled) for sampling rules
 func (p *xrayClient) getSamplingRules(ctx context.Context) (*getSamplingRulesOutput, error) {
-	statisticsByte, _ := json.Marshal(getSamplingRulesInput{})
+	statisticsByte, err := json.Marshal(getSamplingRulesInput{})
+	if err != nil {
+		return nil, err
+	}
 	body := bytes.NewReader(statisticsByte)
 
 	req, err := http.NewRequestWithContext(ctx, http.MethodPost, p.endpoint.String()+"/GetSamplingRules", body)

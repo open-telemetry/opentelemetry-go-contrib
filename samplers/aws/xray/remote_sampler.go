@@ -98,7 +98,7 @@ func NewRemoteSampler(ctx context.Context, opts ...Option) (sdktrace.Sampler, er
 func (rs *remoteSampler) ShouldSample(parameters sdktrace.SamplingParameters) sdktrace.SamplingResult {
 	// ToDo: add business logic for remote sampling
 
-	return sdktrace.SamplingResult{}
+	return sdktrace.TraceIDRatioBased(0.05).ShouldSample(parameters)
 }
 
 func (rs *remoteSampler) Description() string {
