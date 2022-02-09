@@ -12,7 +12,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package xray
+package main
 
 import (
 	"bytes"
@@ -31,27 +31,27 @@ type xrayClient struct {
 }
 
 // newClient returns an HTTP client with proxy endpoint
-func newClient(d string) *xrayClient {
-	endpoint := "http://" + d
+func newClient(addr string) (client *xrayClient, err error) {
+	endpoint := "http://" + addr
 
 	endpointURL, err := url.Parse(endpoint)
 	if err != nil {
-		globalLogger.Error(err, "unable to parse endpoint from string")
+		return nil, err
 	}
 
 	return &xrayClient{
 		httpClient: &http.Client{},
 		endpoint:   endpointURL,
-	}
+	}, nil
 }
 
 // getSamplingRules calls the collector(aws proxy enabled) for sampling rules
 func (p *xrayClient) getSamplingRules(ctx context.Context) (*getSamplingRulesOutput, error) {
-	statisticsByte, err := json.Marshal(getSamplingRulesInput{})
+	samplingRulesInput, err := json.Marshal(getSamplingRulesInput{})
 	if err != nil {
 		return nil, err
 	}
-	body := bytes.NewReader(statisticsByte)
+	body := bytes.NewReader(samplingRulesInput)
 
 	req, err := http.NewRequestWithContext(ctx, http.MethodPost, p.endpoint.String()+"/GetSamplingRules", body)
 	if err != nil {

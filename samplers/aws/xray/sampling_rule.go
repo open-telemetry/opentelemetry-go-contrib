@@ -12,10 +12,11 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package xray
+package main
 
 import (
 	"sync"
+	"sync/atomic"
 
 	sdktrace "go.opentelemetry.io/otel/sdk/trace"
 	"go.opentelemetry.io/otel/trace"
@@ -85,38 +86,23 @@ func (r *rule) Sample(parameters sdktrace.SamplingParameters) sdktrace.SamplingR
 
 	now := r.clock.now().Unix()
 
-	r.mu.Lock()
-	defer r.mu.Unlock()
-
-	r.matchedRequests++
+	atomic.AddInt64(&r.matchedRequests, int64(1))
 
 	// fallback sampling logic if quota has expired
 	if r.reservoir.expired(now) {
-		// if reservoir quota is expired then sampling using
-		// sampling config: 1 req/sec and then x% of fixedRate
-
 		// borrowing one request every second
 		if r.reservoir.borrow(now) {
-			globalLogger.V(1).Info(
-				"Sampling target has expired for rule %s. Using fallback sampling and borrowing 1 req/sec from reservoir", "RuleName",
-				*r.ruleProperties.RuleName,
-			)
-			r.borrowedRequests++
+			atomic.AddInt64(&r.borrowedRequests, int64(1))
 
 			sd.Decision = sdktrace.RecordAndSample
 			return sd
 		}
 
-		globalLogger.V(1).Info(
-			"Sampling target has expired for rule %s. Using traceIDRationBased sampler to sample 5 percent of requests during that second",
-			"RuleName", *r.ruleProperties.RuleName,
-		)
-
-		// using traceIDRatioBased sampler to sample
+		// using traceIDRatioBased sampler to sample using fixed rate
 		sd = sdktrace.TraceIDRatioBased(*r.ruleProperties.FixedRate).ShouldSample(parameters)
 
 		if sd.Decision == sdktrace.RecordAndSample {
-			r.sampledRequests++
+			atomic.AddInt64(&r.sampledRequests, int64(1))
 		}
 
 		return sd
@@ -124,16 +110,11 @@ func (r *rule) Sample(parameters sdktrace.SamplingParameters) sdktrace.SamplingR
 
 	// Take from reservoir quota, if possible
 	if r.reservoir.Take(now) {
-		r.sampledRequests++
+		atomic.AddInt64(&r.sampledRequests, int64(1))
 		sd.Decision = sdktrace.RecordAndSample
 
 		return sd
 	}
-
-	globalLogger.Info(
-		"Sampling target has been exhausted for rule %s. Using traceIDRatioBased Sampler with fixed rate.",
-		"RuleName", *r.ruleProperties.RuleName,
-	)
 
 	// using traceIDRatioBased sampler to sample using fixed rate
 	sd = sdktrace.TraceIDRatioBased(*r.ruleProperties.FixedRate).ShouldSample(parameters)
@@ -156,17 +137,12 @@ func (r *rule) stale(now int64) bool {
 // snapshot takes a snapshot of the sampling statistics counters, returning
 // samplingStatisticsDocument. It also resets statistics counters.
 func (r *rule) snapshot() *samplingStatisticsDocument {
-	r.mu.Lock()
-
 	name := r.ruleProperties.RuleName
 
-	// Copy statistics counters since xraySvc.SamplingStatistics expects
-	// pointers to counters, and ours are mutable.
 	requests, sampled, borrows := r.matchedRequests, r.sampledRequests, r.borrowedRequests
 
-	// Reset counters
+	r.mu.Lock()
 	r.matchedRequests, r.sampledRequests, r.borrowedRequests = 0, 0, 0
-
 	r.mu.Unlock()
 
 	now := r.clock.now().Unix()

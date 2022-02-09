@@ -12,7 +12,11 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package xray
+package main
+
+import (
+	"sync/atomic"
+)
 
 type reservoir struct {
 	// Quota assigned to client
@@ -28,7 +32,7 @@ type reservoir struct {
 	interval int64
 
 	// True if reservoir has been borrowed from this epoch
-	borrowed bool
+	//borrowed bool
 
 	// Total size of reservoir
 	capacity int64
@@ -42,37 +46,35 @@ type reservoir struct {
 
 // expired returns true if current time is past expiration timestamp. False otherwise.
 func (r *reservoir) expired(now int64) bool {
-	return now > r.expiresAt
+	expire := atomic.LoadInt64(&r.expiresAt)
+
+	return now > expire
 }
 
 // borrow returns true if the reservoir has not been borrowed from this epoch
 func (r *reservoir) borrow(now int64) bool {
-	if now != r.currentEpoch {
-		r.reset(now)
+	cur := atomic.LoadInt64(&r.currentEpoch)
+	if cur >= now {
+		return false
 	}
-
-	s := r.borrowed
-	r.borrowed = true
-
-	return !s && r.capacity != 0
+	return atomic.CompareAndSwapInt64(&r.currentEpoch, cur, now)
 }
 
 // Take consumes quota from reservoir, if any remains, and returns true. False otherwise.
 func (r *reservoir) Take(now int64) bool {
-	if now != r.currentEpoch {
-		r.reset(now)
+	cur := atomic.LoadInt64(&r.currentEpoch)
+	used := atomic.LoadInt64(&r.used)
+	quota := atomic.LoadInt64(&r.quota)
+
+	if cur >= now {
+		if quota > used {
+			atomic.AddInt64(&r.used, 1)
+			return true
+		}
 	}
 
-	// Consume from quota, if available
-	if r.quota > r.used {
-		r.used++
-
-		return true
-	}
+	atomic.CompareAndSwapInt64(&r.currentEpoch, cur, now)
+	atomic.CompareAndSwapInt64(&r.used, used, int64(0))
 
 	return false
-}
-
-func (r *reservoir) reset(now int64) {
-	r.currentEpoch, r.used, r.borrowed = now, 0, false
 }

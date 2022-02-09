@@ -12,7 +12,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package xray
+package main
 
 import (
 	"context"
@@ -73,10 +73,16 @@ var _ sdktrace.Sampler = (*remoteSampler)(nil)
 func NewRemoteSampler(ctx context.Context, serviceName string, cloudPlatform string, opts ...Option) (sdktrace.Sampler, error) {
 	cfg := newConfig(opts...)
 
+	// validate config
+	err := validateConfig(cfg)
+	if err != nil {
+		return nil, err
+	}
+
 	// Generate clientID
 	var r [12]byte
 
-	_, err := crypto.Read(r[:])
+	_, err = crypto.Read(r[:])
 	if err != nil {
 		return nil, fmt.Errorf("unable to generate client ID: %w", err)
 	}
@@ -91,11 +97,16 @@ func NewRemoteSampler(ctx context.Context, serviceName string, cloudPlatform str
 		clock: clock,
 	}
 
+	client, err := newClient(cfg.endpoint)
+	if err != nil {
+		return nil, err
+	}
+
 	remoteSampler := &remoteSampler{
 		clock:                        clock,
 		manifest:                     m,
 		clientID:                     id,
-		xrayClient:                   newClient(cfg.endpoint),
+		xrayClient:                   client,
 		samplingRulesPollingInterval: cfg.samplingRulesPollingInterval,
 		fallbackSampler:              NewFallbackSampler(),
 		serviceName:                  serviceName,
@@ -110,34 +121,36 @@ func NewRemoteSampler(ctx context.Context, serviceName string, cloudPlatform str
 
 func (rs *remoteSampler) ShouldSample(parameters sdktrace.SamplingParameters) sdktrace.SamplingResult {
 	rs.mu.RLock()
-	defer rs.mu.RUnlock()
+	m := rs.manifest
+	rs.mu.RUnlock()
 
-	// Use fallback sampling when manifest is expired (1 req/sec and 5% of additional requests)
-	if rs.manifest.expired() {
-		globalLogger.V(1).Info("Centralized manifest expired. Using fallback sampling strategy")
+	// Use fallback sampler when manifest is expired
+	if m.expired() {
+		globalLogger.V(5).Info("Centralized manifest expired. Using fallback sampling strategy")
 		return rs.fallbackSampler.ShouldSample(parameters)
 	}
 
 	// Match against known rules
-	for _, r := range rs.manifest.rules {
-
-		r.mu.RLock()
+	for _, r := range m.rules {
 		applicable := r.appliesTo(parameters, rs.serviceName, rs.cloudPlatform)
-		r.mu.RUnlock()
 
 		if applicable {
-			globalLogger.V(1).Info("Applicable rule", "RuleName", *r.ruleProperties.RuleName)
+			globalLogger.V(5).Info("Applicable rule", "RuleName", *r.ruleProperties.RuleName)
 
 			return r.Sample(parameters)
 		}
 	}
 
-	// Use fallback sampling when request does not match against known rules (1 req/sec and 5% of additional requests)
-	globalLogger.V(1).Info("No match against centralized rules using fallback sampling strategy")
+	// Use fallback sampler when request does not match against known rules
+	globalLogger.V(5).Info("No match against centralized rules using fallback sampling strategy")
 	return rs.fallbackSampler.ShouldSample(parameters)
 }
 
 func (rs *remoteSampler) Description() string {
+	return "AwsXrayRemoteSampler{" + rs.getDescription() + "}"
+}
+
+func (rs *remoteSampler) getDescription() string {
 	return "remote sampling with AWS X-Ray"
 }
 
@@ -155,31 +168,37 @@ func (rs *remoteSampler) startPoller(ctx context.Context) {
 		rulesTicker := newTicker(rs.samplingRulesPollingInterval, 5*time.Second)
 
 		// Period = 10.1s, Jitter = 100ms
-		targetTicker := newTicker(10*time.Second+100*time.Millisecond, 100*time.Millisecond)
+		targetTicker := newTicker(5*time.Second+100*time.Millisecond, 100*time.Millisecond)
 
+		// fetch sampling rules to start up
+		if err := rs.refreshManifest(ctx); err != nil {
+			globalLogger.Error(err, "Error occurred while refreshing sampling rules")
+		} else {
+			globalLogger.Info("Successfully fetched sampling rules")
+		}
 
 		for {
-			// fetch sampling rules
-			if err := rs.refreshManifest(ctx); err != nil {
-				globalLogger.Error(err, "Error occurred while refreshing sampling rules")
-			} else {
-				globalLogger.Info("Successfully fetched sampling rules")
-			}
-
-			// fetch sampling targets
-			if err := rs.refreshTargets(ctx); err != nil {
-				globalLogger.Error(err, "Error occurred while refreshing targets for sampling rules")
-			}
-
 			select {
 			case _, more := <-rulesTicker.C():
 				if !more {
 					return
 				}
+
+				// fetch sampling rules
+				if err := rs.refreshManifest(ctx); err != nil {
+					globalLogger.Error(err, "Error occurred while refreshing sampling rules")
+				} else {
+					globalLogger.V(1).Info("Successfully fetched sampling rules")
+				}
 				continue
 			case _, more := <-targetTicker.C():
 				if !more {
 					return
+				}
+
+				// fetch sampling targets
+				if err := rs.refreshTargets(ctx); err != nil {
+					globalLogger.Error(err, "Error occurred while refreshing targets for sampling rules")
 				}
 				continue
 			case <-ctx.Done():
@@ -330,7 +349,7 @@ func (rs *remoteSampler) refreshTargets(ctx context.Context) (err error) {
 	if failed {
 		err = errors.New("error occurred updating sampling targets")
 	} else {
-		globalLogger.Info("Successfully refreshed sampling targets")
+		globalLogger.V(1).Info("Successfully refreshed sampling targets")
 	}
 
 	// Set refresh flag if modifiedAt timestamp from remote is greater than ours.
@@ -361,15 +380,16 @@ func (rs *remoteSampler) refreshTargets(ctx context.Context) (err error) {
 // samplingStatistics takes a snapshot of sampling statistics from all rules, resetting
 // statistics counters in the process.
 func (rs *remoteSampler) snapshots() []*samplingStatisticsDocument {
-	now := rs.clock.now().Unix()
-
 	rs.mu.RLock()
-	defer rs.mu.RUnlock()
+	m := rs.manifest
+	rs.mu.RUnlock()
+
+	now := rs.clock.now().Unix()
 
 	statistics := make([]*samplingStatisticsDocument, 0, len(rs.manifest.rules)+1)
 
 	// Generate sampling statistics for user-defined rules
-	for _, r := range rs.manifest.rules {
+	for _, r := range m.rules {
 		if r.stale(now) {
 			s := r.snapshot()
 			s.ClientID = &rs.clientID
@@ -422,4 +442,14 @@ func (rs *remoteSampler) updateTarget(t *samplingTargetDocument) (err error) {
 	}
 
 	return nil
+}
+
+func main() {
+	ctx := context.Background()
+	rs, _ := NewRemoteSampler(ctx, "test", "test-platform")
+
+	for i:=0; i<1000; i++ {
+		rs.ShouldSample(sdktrace.SamplingParameters{})
+		time.Sleep(250*time.Millisecond)
+	}
 }

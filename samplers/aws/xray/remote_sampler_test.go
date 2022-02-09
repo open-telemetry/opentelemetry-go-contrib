@@ -12,7 +12,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package xray
+package main
 
 import (
   "context"
@@ -457,8 +457,11 @@ func TestRefreshManifest(t *testing.T) {
 		clock: clock,
 	}
 
+	client, err := newClient(u.Host)
+	require.NoError(t, err)
+
 	rs := &remoteSampler{
-		xrayClient: newClient(u.Host),
+		xrayClient: client,
 		clock:      clock,
 		manifest:   m,
 	}
@@ -610,8 +613,11 @@ func TestRefreshManifestAddInvalidRuleType1(t *testing.T) {
 		clock: clock,
 	}
 
+	client, err := newClient(u.Host)
+	require.NoError(t, err)
+
 	rs := &remoteSampler{
-		xrayClient: newClient(u.Host),
+		xrayClient: client,
 		clock:      clock,
 		manifest:   m,
 	}
@@ -674,8 +680,11 @@ func TestRefreshManifestAddInvalidRuleType2(t *testing.T) {
 		clock: clock,
 	}
 
+	client, err := newClient(u.Host)
+	require.NoError(t, err)
+
 	rs := &remoteSampler{
-		xrayClient: newClient(u.Host),
+		xrayClient: client,
 		clock:      clock,
 		manifest:   m,
 	}
@@ -771,8 +780,11 @@ func TestRefreshManifestAddInvalidRule3(t *testing.T) {
 		clock: clock,
 	}
 
+	client, err := newClient(u.Host)
+	require.NoError(t, err)
+
 	rs := &remoteSampler{
-		xrayClient: newClient(u.Host),
+		xrayClient: client,
 		clock:      clock,
 		manifest:   m,
 	}
@@ -898,8 +910,11 @@ func TestManifestRulesAndIndexUpdate(t *testing.T) {
 		clock: clock,
 	}
 
+	client, err := newClient(u.Host)
+	require.NoError(t, err)
+
 	rs := &remoteSampler{
-		xrayClient: newClient(u.Host),
+		xrayClient: client,
 		clock:      clock,
 		manifest:   m,
 	}

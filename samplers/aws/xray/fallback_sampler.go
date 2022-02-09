@@ -12,7 +12,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package xray
+package main
 
 import (
 	"sync/atomic"
@@ -51,6 +51,10 @@ func (fs *FallbackSampler) ShouldSample(parameters sdktrace.SamplingParameters) 
 }
 
 func (fs *FallbackSampler) Description() string {
+	return "FallbackSampler{" + fs.getDescription() + "}"
+}
+
+func (fs *FallbackSampler) getDescription() string {
 	return "fallback sampling with sampling config of 1 req/sec and 5% of additional requests"
 }
 
