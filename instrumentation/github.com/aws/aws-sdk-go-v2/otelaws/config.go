@@ -50,8 +50,6 @@ func WithTracerProvider(provider trace.TracerProvider) Option {
 // If none is specified, the service will be determined by the DefaultAttributeSetter function and the corresponding attributes will be included.
 func WithAttributeSetter(attributesetters ...AttributeSetter) Option {
 	return optionFunc(func(cfg *config) {
-		if len(attributesetters) > 0 {
-			cfg.AttributeSetter = append(cfg.AttributeSetter, attributesetters...)
-		}
+		cfg.AttributeSetter = append(cfg.AttributeSetter, attributesetters...)
 	})
 }

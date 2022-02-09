@@ -45,14 +45,14 @@ func DynamoDBAttributeSetter(ctx context.Context, in middleware.InitializeInput)
 
 	case *dynamodb.BatchGetItemInput:
 		var tableNames []string
-		for k, _ := range v.RequestItems {
+		for k := range v.RequestItems {
 			tableNames = append(tableNames, k)
 		}
 		dynamodbAttributes = append(dynamodbAttributes, semconv.AWSDynamoDBTableNamesKey.StringSlice(tableNames))
 
 	case *dynamodb.BatchWriteItemInput:
 		var tableNames []string
-		for k, _ := range v.RequestItems {
+		for k := range v.RequestItems {
 			tableNames = append(tableNames, k)
 		}
 		dynamodbAttributes = append(dynamodbAttributes, semconv.AWSDynamoDBTableNamesKey.StringSlice(tableNames))
