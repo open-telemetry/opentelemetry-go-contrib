@@ -12,7 +12,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package main
+package xray
 
 import (
 	"testing"
@@ -22,7 +22,7 @@ import (
 	"go.opentelemetry.io/otel/sdk/trace"
 )
 
-func TestShouldSample(t *testing.T) {
+func TestSampleUsingFallbackSampler(t *testing.T) {
 	clock := mockClock{
 		nowTime: 1500000000,
 	}
@@ -52,4 +52,10 @@ func TestBorrowOnePerSecond(t *testing.T) {
 
 	// assert that borrowing again is false during that second
 	assert.False(t, borrowed)
+}
+
+func TestFallbackSamplerDescription(t *testing.T) {
+	fs := NewFallbackSampler()
+	s := fs.Description()
+	assert.Equal(t, s, "FallbackSampler{fallback sampling with sampling config of 1 req/sec and 5% of additional requests}")
 }

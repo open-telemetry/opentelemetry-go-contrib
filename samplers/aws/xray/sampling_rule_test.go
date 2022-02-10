@@ -12,7 +12,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package main
+package xray
 
 import (
 	"testing"
@@ -63,9 +63,6 @@ func TestInactiveRule(t *testing.T) {
 }
 
 func TestExpiredReservoirTraceIDRationBasedSample(t *testing.T) {
-	// setting the logger
-	newConfig()
-
 	// One second past expiration
 	clock := &mockClock{
 		nowTime: 1500000061,
@@ -79,7 +76,6 @@ func TestExpiredReservoirTraceIDRationBasedSample(t *testing.T) {
 	// Expired reservoir
 	cr := &reservoir{
 		expiresAt:    1500000060,
-		borrowed:     true,
 		used:         0,
 		capacity:     10,
 		currentEpoch: 1500000061,
@@ -96,14 +92,12 @@ func TestExpiredReservoirTraceIDRationBasedSample(t *testing.T) {
 	assert.Equal(t, int64(0), csr.borrowedRequests)
 	assert.Equal(t, int64(1), csr.sampledRequests)
 	assert.Equal(t, int64(1), csr.matchedRequests)
+	assert.Equal(t, int64(0), csr.reservoir.used)
 }
 
 func TestExpiredReservoirBorrowSample(t *testing.T) {
-	// setting the logger
-	newConfig()
-
 	clock := &mockClock{
-		nowTime: 1500000061,
+		nowTime: 1500000062,
 	}
 
 	p := &ruleProperties{
@@ -114,7 +108,6 @@ func TestExpiredReservoirBorrowSample(t *testing.T) {
 	// Expired reservoir
 	cr := &reservoir{
 		expiresAt:    1500000060,
-		borrowed:     false,
 		used:         0,
 		capacity:     10,
 		currentEpoch: 1500000061,
@@ -126,11 +119,13 @@ func TestExpiredReservoirBorrowSample(t *testing.T) {
 		clock:          clock,
 	}
 
-	csr.Sample(trace.SamplingParameters{})
+	sd := csr.Sample(trace.SamplingParameters{})
 
+	assert.Equal(t, trace.RecordAndSample, sd.Decision)
 	assert.Equal(t, int64(1), csr.borrowedRequests)
 	assert.Equal(t, int64(0), csr.sampledRequests)
 	assert.Equal(t, int64(1), csr.matchedRequests)
+	assert.Equal(t, int64(0), csr.reservoir.used)
 }
 
 func TestTakeFromQuotaSample(t *testing.T) {
@@ -160,14 +155,12 @@ func TestTakeFromQuotaSample(t *testing.T) {
 
 	assert.Equal(t, trace.RecordAndSample, sd.Decision)
 	assert.Equal(t, int64(1), csr.sampledRequests)
+	assert.Equal(t, int64(0), csr.borrowedRequests)
 	assert.Equal(t, int64(1), csr.matchedRequests)
 	assert.Equal(t, int64(1), csr.reservoir.used)
 }
 
-func TestTraceIDRatioBasedSamplerPositive(t *testing.T) {
-	// setting the logger
-	newConfig()
-
+func TestTraceIDRatioBasedSampler(t *testing.T) {
 	clock := &mockClock{
 		nowTime: 1500000000,
 	}
@@ -190,9 +183,11 @@ func TestTraceIDRatioBasedSamplerPositive(t *testing.T) {
 		clock:          clock,
 	}
 
-	csr.Sample(trace.SamplingParameters{})
+	sd := csr.Sample(trace.SamplingParameters{})
 
+	assert.NotEmpty(t, sd.Decision)
 	assert.Equal(t, int64(1), csr.sampledRequests)
+	assert.Equal(t, int64(0), csr.borrowedRequests)
 	assert.Equal(t, int64(1), csr.matchedRequests)
 	assert.Equal(t, int64(10), csr.reservoir.used)
 }

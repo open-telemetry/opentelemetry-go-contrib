@@ -12,7 +12,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package main
+package xray
 
 import (
 	"testing"
@@ -77,7 +77,7 @@ func TestExpiredReservoir(t *testing.T) {
 }
 
 // Assert that the borrow flag is reset every second
-func TestBorrowFlagReset(t *testing.T) {
+func TestBorrowEverySecond(t *testing.T) {
 	clock := mockClock{
 		nowTime: 1500000000,
 	}
@@ -97,26 +97,8 @@ func TestBorrowFlagReset(t *testing.T) {
 		nowTime: 1500000001,
 	}
 
-	// Reset borrow flag
-	r.Take(clock.now().Unix())
-
 	s = r.borrow(clock.now().Unix())
 	assert.True(t, s)
-}
-
-// Assert that the reservoir does not allow borrowing if the reservoir capacity
-// is zero.
-func TestBorrowZeroCapacity(t *testing.T) {
-	clock := mockClock{
-		nowTime: 1500000000,
-	}
-
-	r := &reservoir{
-		capacity: 0,
-	}
-
-	s := r.borrow(clock.now().Unix())
-	assert.False(t, s)
 }
 
 func TestResetQuotaUsageRotation(t *testing.T) {
@@ -157,4 +139,25 @@ func TestResetQuotaUsageRotation(t *testing.T) {
 	assert.Equal(t, int64(1500000001), r.currentEpoch)
 	assert.Equal(t, true, taken)
 	assert.Equal(t, int64(1), r.used)
+}
+
+func TestReservoir(t *testing.T) {
+	capacity := int64(100)
+	used := int64(2)
+	quota := int64(5)
+
+	clock := mockClock{
+		nowTime: 1500000000,
+	}
+
+	r := &reservoir{
+		quota:        quota,
+		capacity:     capacity,
+		used:         used,
+		currentEpoch: 1500000001,
+	}
+
+	taken := r.Take(clock.now().Unix())
+
+	assert.True(t, taken)
 }

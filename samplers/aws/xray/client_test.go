@@ -12,7 +12,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package main
+package xray
 
 import (
 	"context"
@@ -99,7 +99,8 @@ func TestGetSamplingRules(t *testing.T) {
 	u, err := url.Parse(testServer.URL)
 	require.NoError(t, err)
 
-	client := newClient(u.Host)
+	client, err := newClient(u.Host)
+	require.NoError(t, err)
 
 	samplingRules, err := client.getSamplingRules(ctx)
 	require.NoError(t, err)
@@ -156,11 +157,13 @@ func TestGetSamplingRulesWithMissingValues(t *testing.T) {
 		_, err := res.Write([]byte(body))
 		require.NoError(t, err)
 	}))
+	defer testServer.Close()
 
 	u, err := url.Parse(testServer.URL)
 	require.NoError(t, err)
 
-	client := newClient(u.Host)
+	client, err := newClient(u.Host)
+	require.NoError(t, err)
 
 	samplingRules, err := client.getSamplingRules(ctx)
 	require.NoError(t, err)
@@ -173,8 +176,107 @@ func TestGetSamplingRulesWithMissingValues(t *testing.T) {
 	assert.Equal(t, *samplingRules.SamplingRuleRecords[0].SamplingRule.RuleName, "Default")
 }
 
+func TestGetSamplingTargets(t *testing.T) {
+	body := []byte(`{
+   "LastRuleModification": 123456,
+   "SamplingTargetDocuments": [ 
+      { 
+         "FixedRate": 5,
+         "Interval": 5,
+         "ReservoirQuota": 3,
+         "ReservoirQuotaTTL": 456789,
+         "RuleName": "r1"
+      }
+   ],
+   "UnprocessedStatistics": [ 
+      { 
+         "ErrorCode": "200",
+         "Message": "ok",
+         "RuleName": "r1"
+      }
+   ]
+}`)
+
+	ctx := context.Background()
+
+	// generate a test server so we can capture and inspect the request
+	testServer := httptest.NewServer(http.HandlerFunc(func(res http.ResponseWriter, req *http.Request) {
+		_, err := res.Write([]byte(body))
+		require.NoError(t, err)
+	}))
+	defer testServer.Close()
+
+	u, err := url.Parse(testServer.URL)
+	require.NoError(t, err)
+
+	client, err := newClient(u.Host)
+	require.NoError(t, err)
+
+	samplingTragets, err := client.getSamplingTargets(ctx, nil)
+	require.NoError(t, err)
+
+	assert.Equal(t, *samplingTragets.LastRuleModification, float64(123456))
+	assert.Equal(t, *samplingTragets.SamplingTargetDocuments[0].FixedRate, float64(5))
+	assert.Equal(t, *samplingTragets.SamplingTargetDocuments[0].Interval, int64(5))
+	assert.Equal(t, *samplingTragets.SamplingTargetDocuments[0].ReservoirQuota, int64(3))
+	assert.Equal(t, *samplingTragets.SamplingTargetDocuments[0].ReservoirQuotaTTL, float64(456789))
+	assert.Equal(t, *samplingTragets.SamplingTargetDocuments[0].RuleName, "r1")
+	assert.Equal(t, *samplingTragets.UnprocessedStatistics[0].RuleName, "r1")
+	assert.Equal(t, *samplingTragets.UnprocessedStatistics[0].ErrorCode, "200")
+	assert.Equal(t, *samplingTragets.UnprocessedStatistics[0].Message, "ok")
+}
+
+func TestGetSamplingTargetsMissingValues(t *testing.T) {
+	body := []byte(`{
+   "LastRuleModification": 123456,
+   "SamplingTargetDocuments": [ 
+      { 
+         "FixedRate": 5,
+         "ReservoirQuotaTTL": 456789,
+         "RuleName": "r1"
+      }
+   ],
+   "UnprocessedStatistics": [ 
+      { 
+         "ErrorCode": "200",
+         "Message": "ok",
+         "RuleName": "r1"
+      }
+   ]
+}`)
+
+	ctx := context.Background()
+
+	// generate a test server so we can capture and inspect the request
+	testServer := httptest.NewServer(http.HandlerFunc(func(res http.ResponseWriter, req *http.Request) {
+		_, err := res.Write([]byte(body))
+		require.NoError(t, err)
+	}))
+	defer testServer.Close()
+
+	u, err := url.Parse(testServer.URL)
+	require.NoError(t, err)
+
+	client, err := newClient(u.Host)
+	require.NoError(t, err)
+
+	samplingTragets, err := client.getSamplingTargets(ctx, nil)
+	require.NoError(t, err)
+
+	assert.Nil(t, samplingTragets.SamplingTargetDocuments[0].Interval)
+	assert.Nil(t, samplingTragets.SamplingTargetDocuments[0].ReservoirQuota)
+}
+
 func TestNewClient(t *testing.T) {
-	xrayClient := newClient("127.0.0.1:2020")
+	xrayClient, err := newClient("127.0.0.1:2020")
+	require.NoError(t, err)
 
 	assert.Equal(t, xrayClient.endpoint.String(), "http://127.0.0.1:2020")
+}
+
+func TestEndpointIsNotReachable(t *testing.T) {
+	client, err := newClient("127.0.0.1:2020")
+	require.NoError(t, err)
+	_, err = client.getSamplingRules(context.Background())
+	assert.Error(t, err)
 }

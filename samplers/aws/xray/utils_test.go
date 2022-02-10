@@ -12,10 +12,9 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package main
+package xray
 
 import (
-	"sync/atomic"
 	"testing"
 	"time"
 
@@ -31,14 +30,6 @@ type mockClock struct {
 // Now function returns NowTime value.
 func (c *mockClock) now() time.Time {
 	return time.Unix(c.nowTime, c.nowNanos)
-}
-
-// Increment is a method to increase current time.
-func (c *mockClock) increment(s int64, ns int64) time.Time {
-	sec := atomic.AddInt64(&c.nowTime, s)
-	nSec := atomic.AddInt64(&c.nowNanos, ns)
-
-	return time.Unix(sec, nSec)
 }
 
 func TestNewTicker(t *testing.T) {

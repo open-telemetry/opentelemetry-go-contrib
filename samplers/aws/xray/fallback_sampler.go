@@ -12,7 +12,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package main
+package xray
 
 import (
 	"sync/atomic"
@@ -42,7 +42,7 @@ func (fs *FallbackSampler) ShouldSample(parameters sdktrace.SamplingParameters) 
 	if fs.borrow(fs.clock.now().Unix()) {
 		return sdktrace.SamplingResult{
 			Tracestate: trace.SpanContextFromContext(parameters.ParentContext).TraceState(),
-			Decision: sdktrace.RecordAndSample,
+			Decision:   sdktrace.RecordAndSample,
 		}
 	}
 

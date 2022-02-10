@@ -12,7 +12,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package main
+package xray
 
 import (
 	"bytes"
@@ -24,7 +24,7 @@ import (
 )
 
 type xrayClient struct {
-	// http client for sending unsigned proxied requests to the collector
+	// http client for sending sampling requests to the collector
 	httpClient *http.Client
 
 	endpoint *url.URL
@@ -46,19 +46,19 @@ func newClient(addr string) (client *xrayClient, err error) {
 }
 
 // getSamplingRules calls the collector(aws proxy enabled) for sampling rules
-func (p *xrayClient) getSamplingRules(ctx context.Context) (*getSamplingRulesOutput, error) {
+func (c *xrayClient) getSamplingRules(ctx context.Context) (*getSamplingRulesOutput, error) {
 	samplingRulesInput, err := json.Marshal(getSamplingRulesInput{})
 	if err != nil {
 		return nil, err
 	}
 	body := bytes.NewReader(samplingRulesInput)
 
-	req, err := http.NewRequestWithContext(ctx, http.MethodPost, p.endpoint.String()+"/GetSamplingRules", body)
+	req, err := http.NewRequestWithContext(ctx, http.MethodPost, c.endpoint.String()+"/GetSamplingRules", body)
 	if err != nil {
 		return nil, fmt.Errorf("xray client: failed to create http request: %w", err)
 	}
 
-	output, err := p.httpClient.Do(req)
+	output, err := c.httpClient.Do(req)
 	if err != nil {
 		return nil, fmt.Errorf("xray client: unable to retrieve sampling settings: %w", err)
 	}
@@ -73,7 +73,7 @@ func (p *xrayClient) getSamplingRules(ctx context.Context) (*getSamplingRulesOut
 }
 
 // getSamplingTargets calls the collector(aws proxy enabled) for sampling targets
-func (p *xrayClient) getSamplingTargets(ctx context.Context, s []*samplingStatisticsDocument) (*getSamplingTargetsOutput, error) {
+func (c *xrayClient) getSamplingTargets(ctx context.Context, s []*samplingStatisticsDocument) (*getSamplingTargetsOutput, error) {
 	statistics := getSamplingTargetsInput{
 		SamplingStatisticsDocuments: s,
 	}
@@ -84,12 +84,12 @@ func (p *xrayClient) getSamplingTargets(ctx context.Context, s []*samplingStatis
 	}
 	body := bytes.NewReader(statisticsByte)
 
-	req, err := http.NewRequestWithContext(ctx, http.MethodPost, p.endpoint.String()+"/SamplingTargets", body)
+	req, err := http.NewRequestWithContext(ctx, http.MethodPost, c.endpoint.String()+"/SamplingTargets", body)
 	if err != nil {
 		return nil, fmt.Errorf("xray client: failed to create http request: %w", err)
 	}
 
-	output, err := p.httpClient.Do(req)
+	output, err := c.httpClient.Do(req)
 	if err != nil {
 		return nil, fmt.Errorf("xray client: unable to retrieve sampling settings: %w", err)
 	}

@@ -12,7 +12,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package main
+package xray
 
 import (
 	"context"
@@ -28,20 +28,17 @@ import (
 	sdktrace "go.opentelemetry.io/otel/sdk/trace"
 )
 
-// global variable for logging
-var globalLogger logr.Logger
-
 // remoteSampler is a sampler for AWS X-Ray which polls sampling rules and sampling targets
 // to make a sampling decision based on rules set by users on AWS X-Ray console
 type remoteSampler struct {
-	// List of known centralized sampling rules.
+	// manifest is the list of known centralized sampling rules.
 	manifest *manifest
 
 	// xrayClient is used for getting quotas and sampling rules.
 	xrayClient *xrayClient
 
-	// pollerStart, if true represents rule and target pollers are started.
-	pollerStart bool
+	// pollerStarted, if true represents rule and target pollers are started.
+	pollerStarted bool
 
 	// samplingRulesPollingInterval, default is 300 seconds.
 	samplingRulesPollingInterval time.Duration
@@ -55,13 +52,16 @@ type remoteSampler struct {
 	// Unique ID used by XRay service to identify this client
 	clientID string
 
-	// Provides system time
+	// Provides time.
 	clock clock
 
 	// fallback sampler
 	fallbackSampler *FallbackSampler
 
-  	mu sync.RWMutex
+	// logger for logging
+	logger logr.Logger
+
+	mu sync.RWMutex
 }
 
 // Compile time assertion that remoteSampler implements the Sampler interface.
@@ -111,6 +111,7 @@ func NewRemoteSampler(ctx context.Context, serviceName string, cloudPlatform str
 		fallbackSampler:              NewFallbackSampler(),
 		serviceName:                  serviceName,
 		cloudPlatform:                cloudPlatform,
+		logger:                       cfg.logger,
 	}
 
 	// starts the rule and target poller
@@ -126,7 +127,7 @@ func (rs *remoteSampler) ShouldSample(parameters sdktrace.SamplingParameters) sd
 
 	// Use fallback sampler when manifest is expired
 	if m.expired() {
-		globalLogger.V(5).Info("Centralized manifest expired. Using fallback sampling strategy")
+		rs.logger.V(5).Info("Centralized manifest expired. Using fallback sampling strategy")
 		return rs.fallbackSampler.ShouldSample(parameters)
 	}
 
@@ -135,14 +136,14 @@ func (rs *remoteSampler) ShouldSample(parameters sdktrace.SamplingParameters) sd
 		applicable := r.appliesTo(parameters, rs.serviceName, rs.cloudPlatform)
 
 		if applicable {
-			globalLogger.V(5).Info("Applicable rule", "RuleName", *r.ruleProperties.RuleName)
+			rs.logger.V(5).Info("Applicable rule", "RuleName", *r.ruleProperties.RuleName)
 
 			return r.Sample(parameters)
 		}
 	}
 
 	// Use fallback sampler when request does not match against known rules
-	globalLogger.V(5).Info("No match against centralized rules using fallback sampling strategy")
+	rs.logger.V(5).Info("No match against centralized rules using fallback sampling strategy")
 	return rs.fallbackSampler.ShouldSample(parameters)
 }
 
@@ -155,13 +156,12 @@ func (rs *remoteSampler) getDescription() string {
 }
 
 func (rs *remoteSampler) start(ctx context.Context) {
-	if !rs.pollerStart {
-		rs.pollerStart = true
+	if !rs.pollerStarted {
+		rs.pollerStarted = true
 		rs.startPoller(ctx)
 	}
 }
 
-// startPoller starts rules and targets poller.
 func (rs *remoteSampler) startPoller(ctx context.Context) {
 	go func() {
 		// Period = 300s, Jitter = 5s
@@ -172,9 +172,9 @@ func (rs *remoteSampler) startPoller(ctx context.Context) {
 
 		// fetch sampling rules to start up
 		if err := rs.refreshManifest(ctx); err != nil {
-			globalLogger.Error(err, "Error occurred while refreshing sampling rules")
+			rs.logger.Error(err, "Error occurred while refreshing sampling rules")
 		} else {
-			globalLogger.Info("Successfully fetched sampling rules")
+			rs.logger.V(5).Info("Successfully fetched sampling rules")
 		}
 
 		for {
@@ -186,9 +186,9 @@ func (rs *remoteSampler) startPoller(ctx context.Context) {
 
 				// fetch sampling rules
 				if err := rs.refreshManifest(ctx); err != nil {
-					globalLogger.Error(err, "Error occurred while refreshing sampling rules")
+					rs.logger.Error(err, "Error occurred while refreshing sampling rules")
 				} else {
-					globalLogger.V(1).Info("Successfully fetched sampling rules")
+					rs.logger.V(5).Info("Successfully fetched sampling rules")
 				}
 				continue
 			case _, more := <-targetTicker.C():
@@ -198,7 +198,7 @@ func (rs *remoteSampler) startPoller(ctx context.Context) {
 
 				// fetch sampling targets
 				if err := rs.refreshTargets(ctx); err != nil {
-					globalLogger.Error(err, "Error occurred while refreshing targets for sampling rules")
+					rs.logger.Error(err, "Error occurred while refreshing targets for sampling rules")
 				}
 				continue
 			case <-ctx.Done():
@@ -219,8 +219,6 @@ func (rs *remoteSampler) refreshManifest(ctx context.Context) (err error) {
 		return
 	}
 
-	failed := false
-
 	// temporary manifest declaration.
 	tempManifest := &manifest{
 		rules: []*rule{},
@@ -230,50 +228,71 @@ func (rs *remoteSampler) refreshManifest(ctx context.Context) (err error) {
 
 	for _, records := range rules.SamplingRuleRecords {
 		if records.SamplingRule.RuleName == nil {
-			globalLogger.V(1).Info("Sampling rule without rule name is not supported")
-			failed = true
+			rs.logger.V(5).Info("Sampling rule without rule name is not supported")
 			continue
 		}
 
 		// Only sampling rule with version 1 is valid
 		if records.SamplingRule.Version == nil {
-			globalLogger.V(1).Info("Sampling rule without version number is not supported", "RuleName", *records.SamplingRule.RuleName)
-			failed = true
+			rs.logger.V(5).Info("Sampling rule without Version is not supported", "RuleName", *records.SamplingRule.RuleName)
 			continue
 		}
 
 		if *records.SamplingRule.Version != int64(1) {
-			globalLogger.V(1).Info("Sampling rule without version 1 is not supported", "RuleName", *records.SamplingRule.RuleName)
-			failed = true
+			rs.logger.V(5).Info("Sampling rule without Version 1 is not supported", "RuleName", *records.SamplingRule.RuleName)
 			continue
 		}
 
-		if len(records.SamplingRule.Attributes) != 0 {
-			globalLogger.V(1).Info("Sampling rule with non nil Attributes is not applicable", "RuleName", *records.SamplingRule.RuleName)
+		if records.SamplingRule.ServiceName == nil {
+			rs.logger.V(5).Info("Sampling rule without ServiceName is not supported", "RuleName", *records.SamplingRule.RuleName)
+			continue
+		}
+
+		if records.SamplingRule.ServiceType == nil {
+			rs.logger.V(5).Info("Sampling rule without ServiceType is not supported", "RuleName", *records.SamplingRule.RuleName)
+			continue
+		}
+
+		if records.SamplingRule.Host == nil {
+			rs.logger.V(5).Info("Sampling rule without Host is not supported", "RuleName", *records.SamplingRule.RuleName)
+			continue
+		}
+
+		if records.SamplingRule.HTTPMethod == nil {
+			rs.logger.V(5).Info("Sampling rule without HTTPMethod is not supported", "RuleName", *records.SamplingRule.RuleName)
+			continue
+		}
+
+		if records.SamplingRule.URLPath == nil {
+			rs.logger.V(5).Info("Sampling rule without URLPath is not supported", "RuleName", *records.SamplingRule.RuleName)
+			continue
+		}
+
+		if records.SamplingRule.ReservoirSize == nil {
+			rs.logger.V(5).Info("Sampling rule without ReservoirSize  is not supported", "RuleName", *records.SamplingRule.RuleName)
+			continue
+		}
+
+		if records.SamplingRule.FixedRate == nil {
+			rs.logger.V(5).Info("Sampling rule without FixedRate is not supported", "RuleName", *records.SamplingRule.RuleName)
 			continue
 		}
 
 		if records.SamplingRule.ResourceARN == nil {
-			globalLogger.V(1).Info("Sampling rule without ResourceARN is not applicable", "RuleName", *records.SamplingRule.RuleName)
+			rs.logger.V(5).Info("Sampling rule without ResourceARN is not applicable", "RuleName", *records.SamplingRule.RuleName)
 			continue
 		}
 
-		if *records.SamplingRule.ResourceARN != "*" {
-			globalLogger.V(1).Info("Sampling rule with ResourceARN not equal to * is not applicable", "RuleName", *records.SamplingRule.RuleName)
+		if records.SamplingRule.Priority == nil {
+			rs.logger.V(5).Info("Sampling rule without version number is not supported", "RuleName", *records.SamplingRule.RuleName)
 			continue
 		}
 
 		// create rule and store it in temporary manifest to avoid locking issues.
 		createErr := tempManifest.createRule(records.SamplingRule)
 		if createErr != nil {
-			failed = true
-			globalLogger.Error(createErr, "Error occurred creating/updating rule")
+			rs.logger.Error(createErr, "Error occurred creating/updating rule")
 		}
-	}
-
-	// Set err if updates failed
-	if failed {
-		err = errors.New("error occurred creating/updating rules")
 	}
 
 	// Re-sort to fix matching priorities.
@@ -303,7 +322,7 @@ func (rs *remoteSampler) refreshTargets(ctx context.Context) (err error) {
 
 	// Do not refresh targets if no statistics to report
 	if len(statistics) == 0 {
-		globalLogger.V(1).Info("No statistics to report and not refreshing sampling targets")
+		rs.logger.V(5).Info("No statistics to report and not refreshing sampling targets")
 		return nil
 	}
 
@@ -317,13 +336,13 @@ func (rs *remoteSampler) refreshTargets(ctx context.Context) (err error) {
 	for _, t := range output.SamplingTargetDocuments {
 		if err = rs.updateTarget(t); err != nil {
 			failed = true
-			globalLogger.Error(err, "Error occurred updating target for rule")
+			rs.logger.Error(err, "Error occurred updating target for rule")
 		}
 	}
 
 	// Consume unprocessed statistics messages
 	for _, s := range output.UnprocessedStatistics {
-		globalLogger.V(1).Info(
+		rs.logger.V(5).Info(
 			"Error occurred updating sampling target for rule, code and message", "RuleName", *s.RuleName, "ErrorCode",
 			*s.ErrorCode,
 			"Message", *s.Message,
@@ -349,7 +368,7 @@ func (rs *remoteSampler) refreshTargets(ctx context.Context) (err error) {
 	if failed {
 		err = errors.New("error occurred updating sampling targets")
 	} else {
-		globalLogger.V(1).Info("Successfully refreshed sampling targets")
+		rs.logger.V(5).Info("Successfully refreshed sampling targets")
 	}
 
 	// Set refresh flag if modifiedAt timestamp from remote is greater than ours.
@@ -365,11 +384,11 @@ func (rs *remoteSampler) refreshTargets(ctx context.Context) (err error) {
 
 	// Perform out-of-band async manifest refresh if flag is set
 	if refresh {
-		globalLogger.Info("Refreshing sampling rules out-of-band")
+		rs.logger.V(5).Info("Refreshing sampling rules out-of-band")
 
 		go func() {
 			if err := rs.refreshManifest(ctx); err != nil {
-				globalLogger.Error(err, "Error occurred refreshing sampling rules out-of-band")
+				rs.logger.Error(err, "Error occurred refreshing sampling rules out-of-band")
 			}
 		}()
 	}
@@ -448,8 +467,8 @@ func main() {
 	ctx := context.Background()
 	rs, _ := NewRemoteSampler(ctx, "test", "test-platform")
 
-	for i:=0; i<1000; i++ {
+	for i := 0; i < 1000; i++ {
 		rs.ShouldSample(sdktrace.SamplingParameters{})
-		time.Sleep(250*time.Millisecond)
+		time.Sleep(250 * time.Millisecond)
 	}
 }

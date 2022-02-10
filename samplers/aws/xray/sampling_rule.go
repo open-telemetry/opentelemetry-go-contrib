@@ -12,9 +12,10 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package main
+package xray
 
 import (
+	"fmt"
 	"sync"
 	"sync/atomic"
 
@@ -85,6 +86,7 @@ func (r *rule) Sample(parameters sdktrace.SamplingParameters) sdktrace.SamplingR
 	}
 
 	now := r.clock.now().Unix()
+	fmt.Println(r.clock.now())
 
 	atomic.AddInt64(&r.matchedRequests, int64(1))
 
@@ -92,12 +94,14 @@ func (r *rule) Sample(parameters sdktrace.SamplingParameters) sdktrace.SamplingR
 	if r.reservoir.expired(now) {
 		// borrowing one request every second
 		if r.reservoir.borrow(now) {
+			fmt.Println("inside expired reservoir")
 			atomic.AddInt64(&r.borrowedRequests, int64(1))
 
 			sd.Decision = sdktrace.RecordAndSample
 			return sd
 		}
 
+		fmt.Println("inside expired traceIDRatio")
 		// using traceIDRatioBased sampler to sample using fixed rate
 		sd = sdktrace.TraceIDRatioBased(*r.ruleProperties.FixedRate).ShouldSample(parameters)
 
@@ -110,12 +114,14 @@ func (r *rule) Sample(parameters sdktrace.SamplingParameters) sdktrace.SamplingR
 
 	// Take from reservoir quota, if possible
 	if r.reservoir.Take(now) {
+		fmt.Println("inside non expired reservoir")
 		atomic.AddInt64(&r.sampledRequests, int64(1))
 		sd.Decision = sdktrace.RecordAndSample
 
 		return sd
 	}
 
+	fmt.Println("inside non expired traceIDRatio")
 	// using traceIDRatioBased sampler to sample using fixed rate
 	sd = sdktrace.TraceIDRatioBased(*r.ruleProperties.FixedRate).ShouldSample(parameters)
 

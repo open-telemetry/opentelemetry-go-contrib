@@ -12,7 +12,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package main
+package xray
 
 import (
 	"sync/atomic"
@@ -30,9 +30,6 @@ type reservoir struct {
 
 	// Polling interval for quota
 	interval int64
-
-	// True if reservoir has been borrowed from this epoch
-	//borrowed bool
 
 	// Total size of reservoir
 	capacity int64
@@ -63,18 +60,19 @@ func (r *reservoir) borrow(now int64) bool {
 // Take consumes quota from reservoir, if any remains, and returns true. False otherwise.
 func (r *reservoir) Take(now int64) bool {
 	cur := atomic.LoadInt64(&r.currentEpoch)
-	used := atomic.LoadInt64(&r.used)
 	quota := atomic.LoadInt64(&r.quota)
+	used := atomic.LoadInt64(&r.used)
 
-	if cur >= now {
-		if quota > used {
-			atomic.AddInt64(&r.used, 1)
-			return true
-		}
+	if cur != now {
+		atomic.CompareAndSwapInt64(&r.currentEpoch, cur, now)
+		atomic.CompareAndSwapInt64(&r.used, used, int64(0))
+		used = 0
 	}
 
-	atomic.CompareAndSwapInt64(&r.currentEpoch, cur, now)
-	atomic.CompareAndSwapInt64(&r.used, used, int64(0))
+	if quota > used {
+		atomic.AddInt64(&r.used, 1)
+		return true
+	}
 
 	return false
 }
