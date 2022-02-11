@@ -30,12 +30,11 @@ import (
 	"go.opentelemetry.io/otel/metric/global"
 	"go.opentelemetry.io/otel/metric/number"
 	"go.opentelemetry.io/otel/metric/sdkapi"
-	"go.opentelemetry.io/otel/sdk/export/metric"
-	export "go.opentelemetry.io/otel/sdk/export/metric"
-	"go.opentelemetry.io/otel/sdk/export/metric/aggregation"
 	"go.opentelemetry.io/otel/sdk/instrumentation"
 	"go.opentelemetry.io/otel/sdk/metric/aggregator/histogram"
 	controller "go.opentelemetry.io/otel/sdk/metric/controller/basic"
+	"go.opentelemetry.io/otel/sdk/metric/export"
+	"go.opentelemetry.io/otel/sdk/metric/export/aggregation"
 	processor "go.opentelemetry.io/otel/sdk/metric/processor/basic"
 	"go.opentelemetry.io/otel/sdk/metric/selector/simple"
 	"go.opentelemetry.io/otel/sdk/resource"
@@ -58,7 +57,7 @@ func (e *Exporter) TemporalityFor(*sdkapi.Descriptor, aggregation.Kind) aggregat
 }
 
 // Export forwards metrics to Cortex from the SDK
-func (e *Exporter) Export(_ context.Context, res *resource.Resource, checkpointSet metric.InstrumentationLibraryReader) error {
+func (e *Exporter) Export(_ context.Context, res *resource.Resource, checkpointSet export.InstrumentationLibraryReader) error {
 	timeseries, err := e.ConvertToTimeSeries(res, checkpointSet)
 	if err != nil {
 		return err
@@ -134,7 +133,7 @@ func (e *Exporter) ConvertToTimeSeries(res *resource.Resource, checkpointSet exp
 
 	// Iterate over each record in the checkpoint set and convert to TimeSeries
 	aggError = checkpointSet.ForEach(func(library instrumentation.Library, reader export.Reader) error {
-		return reader.ForEach(e, func(record metric.Record) error {
+		return reader.ForEach(e, func(record export.Record) error {
 			// Convert based on aggregation type
 			edata := exportData{
 				Resource: res,
