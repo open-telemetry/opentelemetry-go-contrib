@@ -8,9 +8,11 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 
 ## [Unreleased]
 
+## [1.4.0/0.29.0] - 2022-02-11
+
 ### Added
 
-- Add `WithClientTrace` option to `otelhttp.Transport` (#875)
+- Add `WithClientTrace` option to `go.opentelemetry.io/contrib/instrumentation/net/http/otelhttp`. (#875)
 
 ### Changed
 
@@ -18,19 +20,20 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 
 ### Fixed
 
-- Change the `http-server-duration` instrument in `go.opentelemetry.io/contrib/instrumentation/net/http/otelhttp` to record milliseconds instead of microseconds match what is specified in the OpenTelemetry specification. (#1414, #1537)
+- Change the `http-server-duration` instrument in `go.opentelemetry.io/contrib/instrumentation/net/http/otelhttp` to record milliseconds instead of microseconds.
+  This changes fixes the code to comply with the OpenTelemetry specification. (#1414, #1537)
 - The `"go.opentelemetry.io/contrib/instrumentation/net/http/otelhttp".Transport` type now correctly handles protocol switching responses.
   The returned response body implements the `io.ReadWriteCloser` interface if the underlying one does.
   This ensures that protocol switching requests receive a response body that they can write to. (#1329, #1628)
 
 ### Deprecated
 
-- The `go.opentelemetry.io/contrib/exporters/metric/datadog` module is deprecated. (#TBD)
+- The `go.opentelemetry.io/contrib/exporters/metric/datadog` module is deprecated. (#1639)
 
 ### Removed
 
-- Remove the MinMaxSumCount from cortex and datadog exporter. (#1554)
-- The `go.opentelemetry.io/contrib/exporters/metric/dogstatsd` exporter no longer support exporting histogram or exact data points. (#TBD)
+- Remove the `MinMaxSumCount` from cortex and datadog exporter. (#1554)
+- The `go.opentelemetry.io/contrib/exporters/metric/dogstatsd` exporter no longer support exporting histogram or exact data points. (#1639)
 
 ## [1.3.0/0.28.0] - 2021-12-10
 
@@ -436,7 +439,8 @@ First official tagged release of `contrib` repository.
 - Prefix support for dogstatsd (#34)
 - Update Go Runtime package to use batch observer (#44)
 
-[Unreleased]: https://github.com/open-telemetry/opentelemetry-go-contrib/compare/v1.3.0...HEAD
+[Unreleased]: https://github.com/open-telemetry/opentelemetry-go-contrib/compare/v1.4.0...HEAD
+[1.4.0/0.29.0]: https://github.com/open-telemetry/opentelemetry-go-contrib/releases/tag/v1.4.0
 [1.3.0/0.28.0]: https://github.com/open-telemetry/opentelemetry-go-contrib/releases/tag/v1.3.0
 [1.2.0/0.27.0]: https://github.com/open-telemetry/opentelemetry-go-contrib/releases/tag/v1.2.0
 [1.1.1/0.26.1]: https://github.com/open-telemetry/opentelemetry-go-contrib/releases/tag/v1.1.1
