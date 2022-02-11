@@ -7,8 +7,7 @@ require (
 	github.com/DataDog/datadog-go v4.8.3+incompatible
 	github.com/Microsoft/go-winio v0.5.1 // indirect
 	go.opentelemetry.io/otel v1.4.0
-	go.opentelemetry.io/otel/metric v0.25.0
+	go.opentelemetry.io/otel/metric v0.27.0
 	go.opentelemetry.io/otel/sdk v1.4.0
-	go.opentelemetry.io/otel/sdk/export/metric v0.25.0
-	go.opentelemetry.io/otel/sdk/metric v0.25.0
+	go.opentelemetry.io/otel/sdk/metric v0.27.0
 )
