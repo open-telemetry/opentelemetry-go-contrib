@@ -23,6 +23,10 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
   The returned response body implements the `io.ReadWriteCloser` interface if the underlying one does.
   This ensures that protocol switching requests receive a response body that they can write to. (#1329, #1628)
 
+### Deprecated
+
+- The `go.opentelemetry.io/contrib/exporters/metric/datadog` module is deprecated. (#TBD)
+
 ### Removed
 
 - Remove the MinMaxSumCount from cortex and datadog exporter. (#1554)

@@ -12,6 +12,9 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
+// Package datadog provides a DataDog exporter.
+//
+// Deprecated: This package is no longer supported.
 package datadog
 
 import (
