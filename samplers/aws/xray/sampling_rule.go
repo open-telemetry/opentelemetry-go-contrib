@@ -16,6 +16,7 @@ package xray
 
 import (
 	"fmt"
+	"go.opentelemetry.io/contrib/samplers/aws/xray/internal_xray"
 	"sync"
 	"sync/atomic"
 
@@ -41,7 +42,7 @@ type rule struct {
 	borrowedRequests int64
 
 	// Provides system time
-	clock clock
+	clock internal_xray.clock
 
 	// Provides random numbers
 	rand Rand
@@ -142,24 +143,24 @@ func (r *rule) stale(now int64) bool {
 
 // snapshot takes a snapshot of the sampling statistics counters, returning
 // samplingStatisticsDocument. It also resets statistics counters.
-func (r *rule) snapshot() *samplingStatisticsDocument {
-	name := r.ruleProperties.RuleName
-
-	requests, sampled, borrows := r.matchedRequests, r.sampledRequests, r.borrowedRequests
-
-	r.mu.Lock()
-	r.matchedRequests, r.sampledRequests, r.borrowedRequests = 0, 0, 0
-	r.mu.Unlock()
-
-	now := r.clock.now().Unix()
-	return &samplingStatisticsDocument{
-		RequestCount: &requests,
-		SampledCount: &sampled,
-		BorrowCount:  &borrows,
-		RuleName:     name,
-		Timestamp:    &now,
-	}
-}
+//func (r *rule) snapshot() *internal_xray.samplingStatisticsDocument {
+//	name := r.ruleProperties.RuleName
+//
+//	requests, sampled, borrows := r.matchedRequests, r.sampledRequests, r.borrowedRequests
+//
+//	r.mu.Lock()
+//	r.matchedRequests, r.sampledRequests, r.borrowedRequests = 0, 0, 0
+//	r.mu.Unlock()
+//
+//	now := r.clock.now().Unix()
+//	return &internal_xray.samplingStatisticsDocument{
+//		RequestCount: &requests,
+//		SampledCount: &sampled,
+//		BorrowCount:  &borrows,
+//		RuleName:     name,
+//		Timestamp:    &now,
+//	}
+//}
 
 func (r *rule) appliesTo(parameters sdktrace.SamplingParameters, serviceName string, cloudPlatform string) bool {
 	var httpTarget string

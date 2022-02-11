@@ -19,6 +19,7 @@ import (
 	crypto "crypto/rand"
 	"errors"
 	"fmt"
+	"go.opentelemetry.io/contrib/samplers/aws/xray/internal_xray"
 	"strings"
 	"sync"
 	"time"
@@ -32,10 +33,10 @@ import (
 // to make a sampling decision based on rules set by users on AWS X-Ray console
 type remoteSampler struct {
 	// manifest is the list of known centralized sampling rules.
-	manifest *manifest
+	manifest internal_xray.Manifest
 
 	// xrayClient is used for getting quotas and sampling rules.
-	xrayClient *xrayClient
+	xrayClient *internal_xray.XrayClient
 
 	// pollerStarted, if true represents rule and target pollers are started.
 	pollerStarted bool
@@ -51,9 +52,6 @@ type remoteSampler struct {
 
 	// Unique ID used by XRay service to identify this client
 	clientID string
-
-	// Provides time.
-	clock clock
 
 	// fallback sampler
 	fallbackSampler *FallbackSampler
@@ -89,24 +87,15 @@ func NewRemoteSampler(ctx context.Context, serviceName string, cloudPlatform str
 
 	id := fmt.Sprintf("%02x", r)
 
-	clock := &defaultClock{}
-
-	m := &manifest{
-		rules: []*rule{},
-		index: map[string]*rule{},
-		clock: clock,
-	}
-
-	client, err := newClient(cfg.endpoint)
+	client, err := internal_xray.NewClient(cfg.endpoint)
 	if err != nil {
 		return nil, err
 	}
 
 	remoteSampler := &remoteSampler{
-		clock:                        clock,
-		manifest:                     m,
-		clientID:                     id,
+		manifest:                     internal_xray.Manifest{},
 		xrayClient:                   client,
+		clientID:                     id,
 		samplingRulesPollingInterval: cfg.samplingRulesPollingInterval,
 		fallbackSampler:              NewFallbackSampler(),
 		serviceName:                  serviceName,
@@ -162,6 +151,8 @@ func (rs *remoteSampler) start(ctx context.Context) {
 	}
 }
 
+// startPoller starts the rule and target poller in a separate go routine which runs periodically to refresh manifest and
+// targets
 func (rs *remoteSampler) startPoller(ctx context.Context) {
 	go func() {
 		// Period = 300s, Jitter = 5s
@@ -169,13 +160,6 @@ func (rs *remoteSampler) startPoller(ctx context.Context) {
 
 		// Period = 10.1s, Jitter = 100ms
 		targetTicker := newTicker(5*time.Second+100*time.Millisecond, 100*time.Millisecond)
-
-		// fetch sampling rules to start up
-		if err := rs.refreshManifest(ctx); err != nil {
-			rs.logger.Error(err, "Error occurred while refreshing sampling rules")
-		} else {
-			rs.logger.V(5).Info("Successfully fetched sampling rules")
-		}
 
 		for {
 			select {
@@ -185,7 +169,7 @@ func (rs *remoteSampler) startPoller(ctx context.Context) {
 				}
 
 				// fetch sampling rules
-				if err := rs.refreshManifest(ctx); err != nil {
+				if err := rs.manifest.RefreshManifest(ctx, rs.xrayClient, rs.logger); err != nil {
 					rs.logger.Error(err, "Error occurred while refreshing sampling rules")
 				} else {
 					rs.logger.V(5).Info("Successfully fetched sampling rules")
@@ -197,7 +181,7 @@ func (rs *remoteSampler) startPoller(ctx context.Context) {
 				}
 
 				// fetch sampling targets
-				if err := rs.refreshTargets(ctx); err != nil {
+				if err := rs.manifest.RefreshTargets(ctx, rs.xrayClient, rs.logger); err != nil {
 					rs.logger.Error(err, "Error occurred while refreshing targets for sampling rules")
 				}
 				continue
@@ -209,103 +193,7 @@ func (rs *remoteSampler) startPoller(ctx context.Context) {
 }
 
 func (rs *remoteSampler) refreshManifest(ctx context.Context) (err error) {
-	// Compute 'now' before calling GetSamplingRules to avoid marking manifest as
-	// fresher than it actually is.
-	now := rs.clock.now().Unix()
 
-	// Get sampling rules from proxy.
-	rules, err := rs.xrayClient.getSamplingRules(ctx)
-	if err != nil {
-		return
-	}
-
-	// temporary manifest declaration.
-	tempManifest := &manifest{
-		rules: []*rule{},
-		index: map[string]*rule{},
-		clock: &defaultClock{},
-	}
-
-	for _, records := range rules.SamplingRuleRecords {
-		if records.SamplingRule.RuleName == nil {
-			rs.logger.V(5).Info("Sampling rule without rule name is not supported")
-			continue
-		}
-
-		// Only sampling rule with version 1 is valid
-		if records.SamplingRule.Version == nil {
-			rs.logger.V(5).Info("Sampling rule without Version is not supported", "RuleName", *records.SamplingRule.RuleName)
-			continue
-		}
-
-		if *records.SamplingRule.Version != int64(1) {
-			rs.logger.V(5).Info("Sampling rule without Version 1 is not supported", "RuleName", *records.SamplingRule.RuleName)
-			continue
-		}
-
-		if records.SamplingRule.ServiceName == nil {
-			rs.logger.V(5).Info("Sampling rule without ServiceName is not supported", "RuleName", *records.SamplingRule.RuleName)
-			continue
-		}
-
-		if records.SamplingRule.ServiceType == nil {
-			rs.logger.V(5).Info("Sampling rule without ServiceType is not supported", "RuleName", *records.SamplingRule.RuleName)
-			continue
-		}
-
-		if records.SamplingRule.Host == nil {
-			rs.logger.V(5).Info("Sampling rule without Host is not supported", "RuleName", *records.SamplingRule.RuleName)
-			continue
-		}
-
-		if records.SamplingRule.HTTPMethod == nil {
-			rs.logger.V(5).Info("Sampling rule without HTTPMethod is not supported", "RuleName", *records.SamplingRule.RuleName)
-			continue
-		}
-
-		if records.SamplingRule.URLPath == nil {
-			rs.logger.V(5).Info("Sampling rule without URLPath is not supported", "RuleName", *records.SamplingRule.RuleName)
-			continue
-		}
-
-		if records.SamplingRule.ReservoirSize == nil {
-			rs.logger.V(5).Info("Sampling rule without ReservoirSize  is not supported", "RuleName", *records.SamplingRule.RuleName)
-			continue
-		}
-
-		if records.SamplingRule.FixedRate == nil {
-			rs.logger.V(5).Info("Sampling rule without FixedRate is not supported", "RuleName", *records.SamplingRule.RuleName)
-			continue
-		}
-
-		if records.SamplingRule.ResourceARN == nil {
-			rs.logger.V(5).Info("Sampling rule without ResourceARN is not applicable", "RuleName", *records.SamplingRule.RuleName)
-			continue
-		}
-
-		if records.SamplingRule.Priority == nil {
-			rs.logger.V(5).Info("Sampling rule without version number is not supported", "RuleName", *records.SamplingRule.RuleName)
-			continue
-		}
-
-		// create rule and store it in temporary manifest to avoid locking issues.
-		createErr := tempManifest.createRule(records.SamplingRule)
-		if createErr != nil {
-			rs.logger.Error(createErr, "Error occurred creating/updating rule")
-		}
-	}
-
-	// Re-sort to fix matching priorities.
-	tempManifest.sort()
-	// Update refreshedAt timestamp
-	tempManifest.refreshedAt = now
-
-	// assign temp manifest to original copy/one sync refresh.
-	rs.mu.Lock()
-	rs.manifest = tempManifest
-	rs.mu.Unlock()
-
-	return
 }
 
 // refreshTargets refreshes targets for sampling rules. It calls the XRay service proxy with sampling
@@ -398,70 +286,70 @@ func (rs *remoteSampler) refreshTargets(ctx context.Context) (err error) {
 
 // samplingStatistics takes a snapshot of sampling statistics from all rules, resetting
 // statistics counters in the process.
-func (rs *remoteSampler) snapshots() []*samplingStatisticsDocument {
-	rs.mu.RLock()
-	m := rs.manifest
-	rs.mu.RUnlock()
-
-	now := rs.clock.now().Unix()
-
-	statistics := make([]*samplingStatisticsDocument, 0, len(rs.manifest.rules)+1)
-
-	// Generate sampling statistics for user-defined rules
-	for _, r := range m.rules {
-		if r.stale(now) {
-			s := r.snapshot()
-			s.ClientID = &rs.clientID
-
-			statistics = append(statistics, s)
-		}
-	}
-
-	return statistics
-}
+//func (rs *remoteSampler) snapshots() []*internal_xray.samplingStatisticsDocument {
+//	rs.mu.RLock()
+//	m := rs.manifest
+//	rs.mu.RUnlock()
+//
+//	now := rs.clock.now().Unix()
+//
+//	statistics := make([]*internal_xray.samplingStatisticsDocument, 0, len(rs.manifest.rules)+1)
+//
+//	// Generate sampling statistics for user-defined rules
+//	for _, r := range m.rules {
+//		if r.stale(now) {
+//			s := r.snapshot()
+//			s.ClientID = &rs.clientID
+//
+//			statistics = append(statistics, s)
+//		}
+//	}
+//
+//	return statistics
+//}
 
 // updateTarget updates sampling targets for the rule specified in the target struct.
-func (rs *remoteSampler) updateTarget(t *samplingTargetDocument) (err error) {
-	// Pre-emptively dereference xraySvc.SamplingTarget fields and return early on nil values
-	// A panic in the middle of an update may leave the rule in an inconsistent state.
-	if t.RuleName == nil {
-		return errors.New("invalid sampling target. Missing rule name")
-	}
-
-	if t.FixedRate == nil {
-		return fmt.Errorf("invalid sampling target for rule %s. Missing fixed rate", *t.RuleName)
-	}
-
-	// Rule for given target
-	rs.mu.RLock()
-	r, ok := rs.manifest.index[*t.RuleName]
-	rs.mu.RUnlock()
-
-	if !ok {
-		return fmt.Errorf("rule %s not found", *t.RuleName)
-	}
-
-	r.mu.Lock()
-	defer r.mu.Unlock()
-
-	r.reservoir.refreshedAt = rs.clock.now().Unix()
-
-	// Update non-optional attributes from response
-	*r.ruleProperties.FixedRate = *t.FixedRate
-
-	// Update optional attributes from response
-	if t.ReservoirQuota != nil {
-		r.reservoir.quota = *t.ReservoirQuota
-	}
-	if t.ReservoirQuotaTTL != nil {
-		r.reservoir.expiresAt = int64(*t.ReservoirQuotaTTL)
-	}
-	if t.Interval != nil {
-		r.reservoir.interval = *t.Interval
-	}
-
-	return nil
-}
+//func (rs *remoteSampler) updateTarget(t *internal_xray.samplingTargetDocument) (err error) {
+//	// Pre-emptively dereference xraySvc.SamplingTarget fields and return early on nil values
+//	// A panic in the middle of an update may leave the rule in an inconsistent state.
+//	if t.RuleName == nil {
+//		return errors.New("invalid sampling target. Missing rule name")
+//	}
+//
+//	if t.FixedRate == nil {
+//		return fmt.Errorf("invalid sampling target for rule %s. Missing fixed rate", *t.RuleName)
+//	}
+//
+//	// Rule for given target
+//	rs.mu.RLock()
+//	r, ok := rs.manifest.index[*t.RuleName]
+//	rs.mu.RUnlock()
+//
+//	if !ok {
+//		return fmt.Errorf("rule %s not found", *t.RuleName)
+//	}
+//
+//	r.mu.Lock()
+//	defer r.mu.Unlock()
+//
+//	r.reservoir.refreshedAt = rs.clock.now().Unix()
+//
+//	// Update non-optional attributes from response
+//	*r.ruleProperties.FixedRate = *t.FixedRate
+//
+//	// Update optional attributes from response
+//	if t.ReservoirQuota != nil {
+//		r.reservoir.quota = *t.ReservoirQuota
+//	}
+//	if t.ReservoirQuotaTTL != nil {
+//		r.reservoir.expiresAt = int64(*t.ReservoirQuotaTTL)
+//	}
+//	if t.Interval != nil {
+//		r.reservoir.interval = *t.Interval
+//	}
+//
+//	return nil
+//}
 
 func main() {
 	ctx := context.Background()

@@ -15,6 +15,7 @@
 package xray
 
 import (
+	"go.opentelemetry.io/contrib/samplers/aws/xray/internal_xray"
 	"sort"
 	"strings"
 )
@@ -30,51 +31,8 @@ type manifest struct {
 	rules       []*rule
 	index       map[string]*rule
 	refreshedAt int64
-	clock       clock
+	clock       internal_xray.clock
 }
 
 // createRule creates a user-defined rule, appends it to the sorted array,
 // adds it to the index, and returns the newly created rule.
-func (m *manifest) createRule(ruleProp *ruleProperties) (err error) {
-	clock := &defaultClock{}
-	rand := &defaultRand{}
-
-	cr := &reservoir{
-		capacity: *ruleProp.ReservoirSize,
-		interval: defaultInterval,
-	}
-
-	csr := &rule{
-		reservoir:      cr,
-		ruleProperties: ruleProp,
-		clock:          clock,
-		rand:           rand,
-	}
-
-	// Update sorted array
-	m.rules = append(m.rules, csr)
-
-	// Update index
-	m.index[*ruleProp.RuleName] = csr
-
-	return
-}
-
-// sort sorts the rule array first by priority and then by rule name.
-func (m *manifest) sort() {
-	// Comparison function
-	less := func(i, j int) bool {
-		if *m.rules[i].ruleProperties.Priority == *m.rules[j].ruleProperties.Priority {
-			return strings.Compare(*m.rules[i].ruleProperties.RuleName, *m.rules[j].ruleProperties.RuleName) < 0
-		}
-		return *m.rules[i].ruleProperties.Priority < *m.rules[j].ruleProperties.Priority
-	}
-
-	sort.Slice(m.rules, less)
-}
-
-//expired returns true if the manifest has not been successfully refreshed in
-//'manifestTTL' seconds.
-func (m *manifest) expired() bool {
-	return m.refreshedAt < m.clock.now().Unix()-manifestTTL
-}

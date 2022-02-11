@@ -15,6 +15,7 @@
 package xray
 
 import (
+	"go.opentelemetry.io/contrib/samplers/aws/xray/internal_xray"
 	"sync/atomic"
 
 	sdktrace "go.opentelemetry.io/otel/sdk/trace"
@@ -23,7 +24,7 @@ import (
 
 type FallbackSampler struct {
 	currentEpoch   int64
-	clock          clock
+	clock          internal_xray.clock
 	defaultSampler sdktrace.Sampler
 }
 
@@ -32,7 +33,7 @@ var _ sdktrace.Sampler = (*FallbackSampler)(nil)
 
 func NewFallbackSampler() *FallbackSampler {
 	return &FallbackSampler{
-		clock:          &defaultClock{},
+		clock:          &internal_xray.defaultClock{},
 		defaultSampler: sdktrace.TraceIDRatioBased(0.05),
 	}
 }
