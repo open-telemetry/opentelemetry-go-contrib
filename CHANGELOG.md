@@ -34,6 +34,7 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 
 - Remove the `MinMaxSumCount` from cortex and datadog exporter. (#1554)
 - The `go.opentelemetry.io/contrib/exporters/metric/dogstatsd` exporter no longer support exporting histogram or exact data points. (#1639)
+- The `go.opentelemetry.io/contrib/exporters/metric/datadog` exporter no longer support exporting exact data points. (#1639)
 
 ## [1.3.0/0.28.0] - 2021-12-10
 
