@@ -87,11 +87,9 @@ func NewExportPipeline(config Config, opts ...controller.Option) (*controller.Co
 		return nil, err
 	}
 
-	// Use arrays for Values and sums for everything else
-	selector := simple.NewWithExactDistribution()
-
 	// The basic processor ensures that the exporter sees the full
 	// set of attributes as dogstatsd tags.
+	selector := simple.NewWithInexpensiveDistribution()
 	processor := basic.NewFactory(selector, exporter)
 
 	cont := controller.New(processor, append(opts, controller.WithExporter(exporter))...)
