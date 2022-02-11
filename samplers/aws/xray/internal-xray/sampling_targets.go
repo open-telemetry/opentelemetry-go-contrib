@@ -12,7 +12,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package xray
+package internal_xray
 
 // samplingStatisticsDocument is used to store current state of sampling data
 type samplingStatisticsDocument struct {
@@ -33,6 +33,20 @@ type samplingStatisticsDocument struct {
 
 	// The current time.
 	Timestamp *int64
+}
+
+// getSamplingRulesInput is used to store
+type getSamplingRulesInput struct {
+	NextToken *string `json:"NextToken"`
+}
+
+type samplingRuleRecords struct {
+	SamplingRule *RuleProperties `json:"SamplingRule"`
+}
+
+// getSamplingRulesOutput is used to store parsed json sampling rules
+type getSamplingRulesOutput struct {
+	SamplingRuleRecords []*samplingRuleRecords `json:"SamplingRuleRecords"`
 }
 
 // samplingTargetDocument contains updated targeted information retrieved from X-Ray service
