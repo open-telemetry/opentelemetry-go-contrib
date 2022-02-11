@@ -18,7 +18,11 @@ const manifestTTL = 3600
 type Manifest struct {
 	Rules       []Rule
 	refreshedAt int64
-	mu 			sync.RWMutex
+	XrayClient  *xrayClient
+	Logger 		logr.Logger
+	ClientID 	string
+	Clock       Clock
+	mu          sync.RWMutex
 }
 
 // centralizedRule represents a centralized sampling rule
@@ -81,47 +85,46 @@ type RuleProperties struct {
 }
 
 // updates/writes rules to the manifest
-func (m *Manifest) RefreshManifest(ctx context.Context, c *XrayClient, l logr.Logger) (err error) {
-	// Compute 'now' before calling GetSamplingRules to avoid marking manifest as
-	// fresher than it actually is.
-	clock := &DefaultClock{}
-	now := clock.now().Unix()
+func (m *Manifest) RefreshManifest(ctx context.Context) (err error) {
+	tempManifest := &Manifest{
+		Rules: []Rule{},
+		XrayClient: m.XrayClient,
+		Logger: m.Logger,
+		ClientID: m.ClientID,
+		Clock: m.Clock,
+	}
 
 	// Get sampling rules from proxy.
-	rules, err := c.getSamplingRules(ctx)
+	rules, err := m.XrayClient.getSamplingRules(ctx)
 	if err != nil {
 		return err
 	}
 
-	// temporary manifest declaration.
-	tempManifest := &Manifest{
-		Rules: []Rule{},
-	}
-
 	for _, records := range rules.SamplingRuleRecords {
 		if records.SamplingRule.RuleName == "" {
-			l.V(5).Info("Sampling rule without rule name is not supported")
+			tempManifest.Logger.V(5).Info("Sampling rule without rule name is not supported")
 			continue
 		}
 
 		if records.SamplingRule.Version != int64(1) {
-			l.V(5).Info("Sampling rule without Version 1 is not supported", "RuleName", records.SamplingRule.RuleName)
+			tempManifest.Logger.V(5).Info("Sampling rule without Version 1 is not supported", "RuleName", records.SamplingRule.RuleName)
 			continue
 		}
 
 		// create rule and store it in temporary manifest to avoid locking issues.
 		createErr := tempManifest.createRule(records.SamplingRule)
 		if createErr != nil {
-			l.Error(createErr, "Error occurred creating/updating rule")
+			tempManifest.Logger.Error(createErr, "Error occurred creating/updating rule")
 		}
 	}
 
 	// Re-sort to fix matching priorities.
 	tempManifest.sort()
 	// Update refreshedAt timestamp
-	tempManifest.refreshedAt = now
+	tempManifest.refreshedAt = tempManifest.Clock.now().Unix()
 
 	// assign temp manifest to original copy/one sync refresh.
+
 	m.mu.Lock()
 	m = tempManifest
 	m.mu.Unlock()
@@ -130,9 +133,30 @@ func (m *Manifest) RefreshManifest(ctx context.Context, c *XrayClient, l logr.Lo
 }
 
 // updates/writes reservoir to the rules which considered as manifest update
-func (m *Manifest) RefreshTarget(ctx context.Context, c *XrayClient, l logr.Logger) error {
+func (m *Manifest) RefreshTarget(ctx context.Context) error {
 
 
+}
+
+// samplingStatistics takes a snapshot of sampling statistics from all rules, resetting
+// statistics counters in the process.
+func (m *Manifest) snapshots() []*samplingStatisticsDocument {
+	clock := &DefaultClock{}
+	now := clock.now().Unix()
+
+	statistics := make([]*samplingStatisticsDocument, 0, len(m.Rules)+1)
+
+	// Generate sampling statistics for user-defined rules
+	for _, r := range m.Rules {
+		if r.stale(now) {
+			s := r.snapshot()
+			s.ClientID = &rs.clientID
+
+			statistics = append(statistics, s)
+		}
+	}
+
+	return statistics
 }
 
 func (m *Manifest) createRule(ruleProp *RuleProperties) (err error) {

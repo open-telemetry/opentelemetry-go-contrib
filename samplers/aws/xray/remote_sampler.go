@@ -35,9 +35,6 @@ type remoteSampler struct {
 	// manifest is the list of known centralized sampling rules.
 	manifest internal_xray.Manifest
 
-	// xrayClient is used for getting quotas and sampling rules.
-	xrayClient *internal_xray.XrayClient
-
 	// pollerStarted, if true represents rule and target pollers are started.
 	pollerStarted bool
 
@@ -49,9 +46,6 @@ type remoteSampler struct {
 
 	// matching attribute
 	cloudPlatform string
-
-	// Unique ID used by XRay service to identify this client
-	clientID string
 
 	// fallback sampler
 	fallbackSampler *FallbackSampler
@@ -92,10 +86,18 @@ func NewRemoteSampler(ctx context.Context, serviceName string, cloudPlatform str
 		return nil, err
 	}
 
+	clock := &internal_xray.DefaultClock{}
+
+	m := internal_xray.Manifest{
+		Rules: []internal_xray.Rule{},
+		Clock: clock,
+		XrayClient: client,
+		ClientID: id,
+		Logger: cfg.logger,
+	}
+
 	remoteSampler := &remoteSampler{
-		manifest:                     internal_xray.Manifest{},
-		xrayClient:                   client,
-		clientID:                     id,
+		manifest:                     m,
 		samplingRulesPollingInterval: cfg.samplingRulesPollingInterval,
 		fallbackSampler:              NewFallbackSampler(),
 		serviceName:                  serviceName,

@@ -23,7 +23,7 @@ import (
 	"net/url"
 )
 
-type XrayClient struct {
+type xrayClient struct {
 	// http client for sending sampling requests to the collector
 	httpClient *http.Client
 
@@ -31,7 +31,7 @@ type XrayClient struct {
 }
 
 // newClient returns an HTTP client with proxy endpoint
-func NewClient(addr string) (client *XrayClient, err error) {
+func NewClient(addr string) (client *xrayClient, err error) {
 	endpoint := "http://" + addr
 
 	endpointURL, err := url.Parse(endpoint)
@@ -39,14 +39,14 @@ func NewClient(addr string) (client *XrayClient, err error) {
 		return nil, err
 	}
 
-	return &XrayClient{
+	return &xrayClient{
 		httpClient: &http.Client{},
 		endpoint:   endpointURL,
 	}, nil
 }
 
 // getSamplingRules calls the collector(aws proxy enabled) for sampling rules
-func (c *XrayClient) getSamplingRules(ctx context.Context) (*getSamplingRulesOutput, error) {
+func (c *xrayClient) getSamplingRules(ctx context.Context) (*getSamplingRulesOutput, error) {
 	samplingRulesInput, err := json.Marshal(getSamplingRulesInput{})
 	if err != nil {
 		return nil, err
@@ -73,7 +73,7 @@ func (c *XrayClient) getSamplingRules(ctx context.Context) (*getSamplingRulesOut
 }
 
 // getSamplingTargets calls the collector(aws proxy enabled) for sampling targets
-func (c *XrayClient) getSamplingTargets(ctx context.Context, s []*samplingStatisticsDocument) (*getSamplingTargetsOutput, error) {
+func (c *xrayClient) getSamplingTargets(ctx context.Context, s []*samplingStatisticsDocument) (*getSamplingTargetsOutput, error) {
 	statistics := getSamplingTargetsInput{
 		SamplingStatisticsDocuments: s,
 	}
