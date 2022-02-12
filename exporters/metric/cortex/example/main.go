@@ -12,6 +12,9 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
+// Package main exemplifies how to use a Cortex exporter.
+//
+// Deprecated: This package is no longer supported.
 package main
 
 import (

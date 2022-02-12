@@ -29,6 +29,8 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 ### Deprecated
 
 - The `go.opentelemetry.io/contrib/exporters/metric/datadog` module is deprecated. (#1639)
+- The `go.opentelemetry.io/contrib/exporters/metric/cortex` module is deprecated.
+  Use the go.opentelemetry.io/otel/exporters/otlp/otlpmetric exporter as a replacement to send data to a collector which can then export with its PRW exporter. (#1639)
 
 ### Removed
 

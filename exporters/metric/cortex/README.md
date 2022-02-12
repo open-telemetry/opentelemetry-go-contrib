@@ -1,5 +1,9 @@
 # OpenTelemetry Go SDK Prometheus Remote Write Exporter for Cortex
 
+⚠️ This project is deprecated. Use the
+`go.opentelemetry.io/otel/exporters/otlp/otlpmetric` exporter as a replacement
+to send data to a collector which can then export with its PRW exporter.
+
 This module contains an exporter that sends cumulative metrics data from the OpenTelemetry
 Go SDK to [Cortex](https://cortexmetrics.io/) using the Prometheus Remote Write API. While
 it is aimed at Cortex, it should work with other backends that ingest data with the same
