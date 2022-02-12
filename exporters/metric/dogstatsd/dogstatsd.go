@@ -12,6 +12,9 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
+// Package dogstatsd provides a StatsD exporter.
+//
+// Deprecated: This package is no longer supported.
 package dogstatsd // import "go.opentelemetry.io/contrib/exporters/metric/dogstatsd"
 
 import (
