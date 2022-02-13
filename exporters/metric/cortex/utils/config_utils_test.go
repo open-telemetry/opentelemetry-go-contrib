@@ -23,8 +23,8 @@ import (
 	"github.com/spf13/afero"
 	"github.com/stretchr/testify/require"
 
-	"go.opentelemetry.io/contrib/exporters/metric/cortex"
-	"go.opentelemetry.io/contrib/exporters/metric/cortex/utils"
+	"go.opentelemetry.io/contrib/exporters/metric/cortex"       // nolint:staticcheck // allow import of deprecated pkg.
+	"go.opentelemetry.io/contrib/exporters/metric/cortex/utils" // nolint:staticcheck // allow import of deprecated pkg.
 )
 
 // initYAML creates a YAML file at a given filepath in a in-memory file system.

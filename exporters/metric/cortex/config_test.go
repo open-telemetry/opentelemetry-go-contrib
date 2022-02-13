@@ -19,7 +19,7 @@ import (
 
 	"github.com/stretchr/testify/require"
 
-	"go.opentelemetry.io/contrib/exporters/metric/cortex"
+	"go.opentelemetry.io/contrib/exporters/metric/cortex" // nolint:staticcheck // allow import of deprecated pkg.
 )
 
 // TestValidate checks whether Validate() returns the correct error and sets the correct

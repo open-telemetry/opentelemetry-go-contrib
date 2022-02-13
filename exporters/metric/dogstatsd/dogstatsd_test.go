@@ -30,7 +30,7 @@ import (
 	"go.opentelemetry.io/otel/sdk/resource"
 	semconv "go.opentelemetry.io/otel/semconv/v1.7.0"
 
-	"go.opentelemetry.io/contrib/exporters/metric/dogstatsd"
+	"go.opentelemetry.io/contrib/exporters/metric/dogstatsd" // nolint:staticcheck // allow import of deprecated pkg.
 )
 
 // TestDogstatsAttributes that attributes are formatted in the correct style,

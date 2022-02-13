@@ -24,7 +24,7 @@ import (
 	"sync"
 	"time"
 
-	"go.opentelemetry.io/contrib/exporters/metric/dogstatsd"
+	"go.opentelemetry.io/contrib/exporters/metric/dogstatsd" // nolint:staticcheck // allow import of deprecated pkg.
 	"go.opentelemetry.io/otel/attribute"
 	"go.opentelemetry.io/otel/metric"
 	controller "go.opentelemetry.io/otel/sdk/metric/controller/basic"
