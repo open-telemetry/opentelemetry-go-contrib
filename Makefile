@@ -14,10 +14,9 @@
 
 TOOLS_MOD_DIR := ./tools
 
-# All source code and documents. Used in spell check.
 ALL_DOCS := $(shell find . -name '*.md' -type f | sort)
-# All directories with go.mod files related to opentelemetry library. Used for building, testing and linting.
-ALL_GO_MOD_DIRS := $(filter-out $(TOOLS_MOD_DIR), $(shell find . -type f -name 'go.mod' -exec dirname {} \; | sort))
+ALL_GO_MOD_DIRS := $(shell find . -type f -name 'go.mod' -exec dirname {} \; | sort)
+OTEL_GO_MOD_DIRS := $(filter-out $(TOOLS_MOD_DIR), $(ALL_GO_MOD_DIRS))
 ALL_COVERAGE_MOD_DIRS := $(shell find . -type f -name 'go.mod' -exec dirname {} \; | egrep -v '^./example|^$(TOOLS_MOD_DIR)' | sort)
 
 # URLs to check if all contrib entries exist in the registry.
@@ -32,34 +31,68 @@ GOTEST_WITH_COVERAGE = $(GOTEST) -coverprofile=coverage.out -covermode=atomic
 .DEFAULT_GOAL := precommit
 
 .PHONY: precommit
-
-TOOLS_DIR := $(abspath ./.tools)
-
-$(TOOLS_DIR)/golangci-lint: $(TOOLS_MOD_DIR)/go.mod $(TOOLS_MOD_DIR)/go.sum $(TOOLS_MOD_DIR)/tools.go
-	cd $(TOOLS_MOD_DIR) && \
-	$(GO) build -o $(TOOLS_DIR)/golangci-lint github.com/golangci/golangci-lint/cmd/golangci-lint
-
-$(TOOLS_DIR)/misspell: $(TOOLS_MOD_DIR)/go.mod $(TOOLS_MOD_DIR)/go.sum $(TOOLS_MOD_DIR)/tools.go
-	cd $(TOOLS_MOD_DIR) && \
-	$(GO) build -o $(TOOLS_DIR)/misspell github.com/client9/misspell/cmd/misspell
-
-$(TOOLS_DIR)/gocovmerge: $(TOOLS_MOD_DIR)/go.mod $(TOOLS_MOD_DIR)/go.sum $(TOOLS_MOD_DIR)/tools.go
-	cd $(TOOLS_MOD_DIR) && \
-	$(GO) build -o $(TOOLS_DIR)/gocovmerge github.com/wadey/gocovmerge
-
-$(TOOLS_DIR)/stringer: $(TOOLS_MOD_DIR)/go.mod $(TOOLS_MOD_DIR)/go.sum $(TOOLS_MOD_DIR)/tools.go
-	cd $(TOOLS_MOD_DIR) && \
-	$(GO) build -o $(TOOLS_DIR)/stringer golang.org/x/tools/cmd/stringer
-
-MULTIMOD=$(TOOLS_DIR)/multimod
-$(TOOLS_DIR)/multimod: $(TOOLS_MOD_DIR)/go.mod $(TOOLS_MOD_DIR)/go.sum $(TOOLS_MOD_DIR)/tools.go
-	cd $(TOOLS_MOD_DIR) && \
-	$(GO) build -o $(TOOLS_DIR)/multimod go.opentelemetry.io/build-tools/multimod
-
 precommit: dependabot-check license-check generate lint build test
 
+# Tools
+
+.PHONY: tools
+
+TOOLS = $(CURDIR)/.tools
+
+$(TOOLS):
+	@mkdir -p $@
+$(TOOLS)/%: | $(TOOLS)
+	cd $(TOOLS_MOD_DIR) && \
+	$(GO) build -o $@ $(PACKAGE)
+
+GOLANGCI_LINT = $(TOOLS)/golangci-lint
+$(GOLANGCI_LINT): PACKAGE=github.com/golangci/golangci-lint/cmd/golangci-lint
+
+MISSPELL = $(TOOLS)/misspell
+$(MISSPELL): PACKAGE=github.com/client9/misspell/cmd/misspell
+
+GOCOVMERGE = $(TOOLS)/gocovmerge
+$(GOCOVMERGE): PACKAGE=github.com/wadey/gocovmerge
+
+ESC = $(TOOLS)/esc
+$(ESC): PACKAGE=github.com/mjibson/esc
+
+STRINGER = $(TOOLS)/stringer
+$(STRINGER): PACKAGE=golang.org/x/tools/cmd/stringer
+
+MULTIMOD = $(TOOLS)/multimod
+$(MULTIMOD): PACKAGE=go.opentelemetry.io/build-tools/multimod
+
+tools: $(GOLANGCI_LINT) $(MISSPELL) $(GOCOVMERGE) $(STRINGER) $(ESC) $(MULTIMOD)
+
+# Build
+
+.PHONY: generate build
+
+generate: $(OTEL_GO_MOD_DIRS:%=generate/%)
+generate/%: DIR=$*
+generate/%: | $(STRINGER) $(ESC)
+	@echo "$(GO) generate $(DIR)/..." \
+		&& cd $(DIR) \
+		&& PATH="$(TOOLS):$${PATH}" $(GO) generate ./...
+
+build: generate $(OTEL_GO_MOD_DIRS:%=build/%) $(OTEL_GO_MOD_DIRS:%=build-tests/%)
+build/%: DIR=$*
+build/%:
+	@echo "$(GO) build $(DIR)/..." \
+		&& cd $(DIR) \
+		&& $(GO) build ./...
+
+build-tests/%: DIR=$*
+build-tests/%:
+	@echo "$(GO) build tests $(DIR)/..." \
+		&& cd $(DIR) \
+		&& $(GO) list ./... \
+		| grep -v third_party \
+		| xargs $(GO) test -vet=off -run xxxxxMatchNothingxxxxx >/dev/null
+
 .PHONY: test-with-coverage
-test-with-coverage: $(TOOLS_DIR)/gocovmerge
+test-with-coverage: | $(GOCOVMERGE)
 	set -e; \
 	printf "" > coverage.txt; \
 	for dir in $(ALL_COVERAGE_MOD_DIRS); do \
@@ -126,19 +159,9 @@ check-clean-work-tree:
 	  exit 1; \
 	fi
 
-.PHONY: build
-build:
-	# TODO: Fix this on windows.
-	set -e; for dir in $(ALL_GO_MOD_DIRS); do \
-	  echo "compiling all packages in $${dir}"; \
-	  (cd "$${dir}" && \
-	    $(GO) build ./... && \
-	    $(GO) test -run xxxxxMatchNothingxxxxx ./... >/dev/null); \
-	done
-
 .PHONY: test
 test:
-	set -e; for dir in $(ALL_GO_MOD_DIRS); do \
+	set -e; for dir in $(OTEL_GO_MOD_DIRS); do \
 	  echo "$(GO) test ./... + race in $${dir}"; \
 	  (cd "$${dir}" && \
 	    $(GOTEST) ./...); \
@@ -146,15 +169,15 @@ test:
 
 .PHONY: test-short
 test-short:
-	set -e; for dir in $(ALL_GO_MOD_DIRS); do \
+	set -e; for dir in $(OTEL_GO_MOD_DIRS); do \
 	  echo "$(GO) test ./... + race in $${dir}"; \
 	  (cd "$${dir}" && \
 	    $(GOTEST_MIN) -short ./...); \
 	done
 
 .PHONY: lint
-lint: $(TOOLS_DIR)/golangci-lint $(TOOLS_DIR)/misspell lint-modules
-	set -e; for dir in $(ALL_GO_MOD_DIRS); do \
+lint: lint-modules | $(GOLANGCI_LINT) $(MISSPELL)
+	set -e; for dir in $(OTEL_GO_MOD_DIRS); do \
 	  echo "golangci-lint in $${dir}"; \
 	  (cd "$${dir}" && \
 	    $(TOOLS_DIR)/golangci-lint run --fix && \
@@ -164,15 +187,11 @@ lint: $(TOOLS_DIR)/golangci-lint $(TOOLS_DIR)/misspell lint-modules
 
 .PHONY: lint-modules
 lint-modules:
-	set -e; for dir in $(ALL_GO_MOD_DIRS) $(TOOLS_MOD_DIR); do \
+	set -e; for dir in $(ALL_GO_MOD_DIRS); do \
 	  echo "$(GO) mod tidy in $${dir}"; \
 	  (cd "$${dir}" && \
 	    $(GO) mod tidy); \
 	done
-
-.PHONY: generate
-generate: $(TOOLS_DIR)/stringer
-	PATH="$(TOOLS_DIR):$${PATH}" $(GO) generate ./...
 
 .PHONY: license-check
 license-check:
