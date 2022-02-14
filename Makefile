@@ -30,8 +30,9 @@ GOTEST_WITH_COVERAGE = $(GOTEST) -coverprofile=coverage.out -covermode=atomic
 
 .DEFAULT_GOAL := precommit
 
-.PHONY: precommit
+.PHONY: precommit ci
 precommit: dependabot-check license-check generate lint build test
+ci: precommit check-clean-work-tree test-with-coverage
 
 # Tools
 
@@ -91,6 +92,81 @@ build-tests/%:
 		| grep -v third_party \
 		| xargs $(GO) test -vet=off -run xxxxxMatchNothingxxxxx >/dev/null
 
+# Linting
+
+.PHONY: golangci-lint golangci-lint-fix
+golangci-lint-fix: ARGS=--fix
+golangci-lint-fix: golangci-lint
+golangci-lint: $(OTEL_GO_MOD_DIRS:%=golangci-lint/%)
+golangci-lint/%: DIR=$*
+golangci-lint/%: | $(GOLANGCI_LINT)
+	@echo 'golangci-lint $(if $(ARGS),$(ARGS) ,)$(DIR)' \
+		&& cd $(DIR) \
+		&& $(GOLANGCI_LINT) run --allow-serial-runners $(ARGS)
+
+.PHONY: go-mod-tidy
+go-mod-tidy: $(ALL_GO_MOD_DIRS:%=go-mod-tidy/%)
+go-mod-tidy/%: DIR=$*
+go-mod-tidy/%:
+	@echo "$(GO) mod tidy in $(DIR)" \
+		&& cd $(DIR) \
+		&& $(GO) mod tidy
+
+.PHONY: misspell
+misspell: | $(MISSPELL)
+	@$(MISSPELL) -w $(ALL_DOCS)
+
+.PHONY: lint
+lint: go-mod-tidy golangci-lint misspell
+
+.PHONY: license-check
+license-check:
+	@licRes=$$(for f in $$(find . -type f \( -iname '*.go' -o -iname '*.sh' \) ! -path './vendor/*' ! -path './exporters/otlp/internal/opentelemetry-proto/*') ; do \
+	           awk '/Copyright The OpenTelemetry Authors|generated|GENERATED/ && NR<=3 { found=1; next } END { if (!found) print FILENAME }' $$f; \
+	   done); \
+	   if [ -n "$${licRes}" ]; then \
+	           echo "license header checking failed:"; echo "$${licRes}"; \
+	           exit 1; \
+	   fi
+
+.PHONY: registry-links-check
+registry-links-check:
+	@checkRes=$$( \
+		for f in $$( find ./instrumentation ./exporters ./detectors ! -path './instrumentation/net/*' -type f -name 'go.mod' -exec dirname {} \; | egrep -v '/example|/utils' | sort ) \
+			./instrumentation/net/http; do \
+			TYPE="instrumentation"; \
+			if $$(echo "$$f" | grep -q "exporters"); then \
+				TYPE="exporter"; \
+			fi; \
+			if $$(echo "$$f" | grep -q "detectors"); then \
+				TYPE="detector"; \
+			fi; \
+			NAME=$$(echo "$$f" | sed -e 's/.*\///' -e 's/.*otel//'); \
+			LINK=$(CONTRIB_REPO_URL)/$$(echo "$$f" | sed -e 's/..//' -e 's/\/otel.*$$//'); \
+			if ! $$(curl -s $(REGISTRY_BASE_URL)/$${TYPE}-go-$${NAME}.md | grep -q "$${LINK}"); then \
+				echo "$$f"; \
+			fi \
+		done; \
+	); \
+	if [ -n "$$checkRes" ]; then \
+		echo "WARNING: registry link check failed for the following packages:"; echo "$${checkRes}"; \
+	fi
+
+.PHONY: dependabot-check
+dependabot-check:
+	@result=$$( \
+		for f in $$( find . -type f -name go.mod -exec dirname {} \; | sed 's/^.\/\?/\//' ); \
+			do grep -q "$$f" .github/dependabot.yml \
+			|| echo "$$f"; \
+		done; \
+	); \
+	if [ -n "$$result" ]; then \
+		echo "missing go.mod dependabot check:"; echo "$$result"; \
+		exit 1; \
+	fi
+
+# Tests
+
 .PHONY: test-with-coverage
 test-with-coverage: | $(GOCOVMERGE)
 	set -e; \
@@ -106,9 +182,6 @@ test-with-coverage: | $(GOCOVMERGE)
 	    $(GO) tool cover -html=coverage.out -o coverage.html); \
 	done; \
 	$(TOOLS_DIR)/gocovmerge $$(find . -name coverage.out) > coverage.txt
-
-.PHONY: ci
-ci: precommit check-clean-work-tree test-with-coverage
 
 .PHONY: test-gocql
 test-gocql:
@@ -175,69 +248,7 @@ test-short:
 	    $(GOTEST_MIN) -short ./...); \
 	done
 
-.PHONY: lint
-lint: lint-modules | $(GOLANGCI_LINT) $(MISSPELL)
-	set -e; for dir in $(OTEL_GO_MOD_DIRS); do \
-	  echo "golangci-lint in $${dir}"; \
-	  (cd "$${dir}" && \
-	    $(TOOLS_DIR)/golangci-lint run --fix && \
-	    $(TOOLS_DIR)/golangci-lint run); \
-	done
-	$(TOOLS_DIR)/misspell -w $(ALL_DOCS)
-
-.PHONY: lint-modules
-lint-modules:
-	set -e; for dir in $(ALL_GO_MOD_DIRS); do \
-	  echo "$(GO) mod tidy in $${dir}"; \
-	  (cd "$${dir}" && \
-	    $(GO) mod tidy); \
-	done
-
-.PHONY: license-check
-license-check:
-	@licRes=$$(for f in $$(find . -type f \( -iname '*.go' -o -iname '*.sh' \) ! -path './vendor/*' ! -path './exporters/otlp/internal/opentelemetry-proto/*') ; do \
-	           awk '/Copyright The OpenTelemetry Authors|generated|GENERATED/ && NR<=3 { found=1; next } END { if (!found) print FILENAME }' $$f; \
-	   done); \
-	   if [ -n "$${licRes}" ]; then \
-	           echo "license header checking failed:"; echo "$${licRes}"; \
-	           exit 1; \
-	   fi
-
-.PHONY: registry-links-check
-registry-links-check:
-	@checkRes=$$( \
-		for f in $$( find ./instrumentation ./exporters ./detectors ! -path './instrumentation/net/*' -type f -name 'go.mod' -exec dirname {} \; | egrep -v '/example|/utils' | sort ) \
-			./instrumentation/net/http; do \
-			TYPE="instrumentation"; \
-			if $$(echo "$$f" | grep -q "exporters"); then \
-				TYPE="exporter"; \
-			fi; \
-			if $$(echo "$$f" | grep -q "detectors"); then \
-				TYPE="detector"; \
-			fi; \
-			NAME=$$(echo "$$f" | sed -e 's/.*\///' -e 's/.*otel//'); \
-			LINK=$(CONTRIB_REPO_URL)/$$(echo "$$f" | sed -e 's/..//' -e 's/\/otel.*$$//'); \
-			if ! $$(curl -s $(REGISTRY_BASE_URL)/$${TYPE}-go-$${NAME}.md | grep -q "$${LINK}"); then \
-				echo "$$f"; \
-			fi \
-		done; \
-	); \
-	if [ -n "$$checkRes" ]; then \
-		echo "WARNING: registry link check failed for the following packages:"; echo "$${checkRes}"; \
-	fi
-
-.PHONY: dependabot-check
-dependabot-check:
-	@result=$$( \
-		for f in $$( find . -type f -name go.mod -exec dirname {} \; | sed 's/^.\/\?/\//' ); \
-			do grep -q "$$f" .github/dependabot.yml \
-			|| echo "$$f"; \
-		done; \
-	); \
-	if [ -n "$$result" ]; then \
-		echo "missing go.mod dependabot check:"; echo "$$result"; \
-		exit 1; \
-	fi
+# Releasing
 
 COREPATH ?= "../opentelemetry-go"
 .PHONY: sync-core
