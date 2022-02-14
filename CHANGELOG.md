@@ -22,6 +22,8 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 
 - Change the `http-server-duration` instrument in `go.opentelemetry.io/contrib/instrumentation/net/http/otelhttp` to record milliseconds instead of microseconds.
   This changes fixes the code to comply with the OpenTelemetry specification. (#1414, #1537)
+- Fixed the region reported by the `"go.opentelemetry.io/contrib/detectors/gcp".CloudRun` detector to comply with the OpenTelemetry specification.
+  It no longer includes the project scoped region path, instead just the region. (#1546)
 - The `"go.opentelemetry.io/contrib/instrumentation/net/http/otelhttp".Transport` type now correctly handles protocol switching responses.
   The returned response body implements the `io.ReadWriteCloser` interface if the underlying one does.
   This ensures that protocol switching requests receive a response body that they can write to. (#1329, #1628)
