@@ -31,8 +31,8 @@ GOTEST_WITH_COVERAGE = $(GOTEST) -coverprofile=coverage.out -covermode=atomic
 .DEFAULT_GOAL := precommit
 
 .PHONY: precommit ci
-precommit: dependabot-check license-check generate lint build test
-ci: precommit check-clean-work-tree test-with-coverage
+precommit: dependabot-check license-check misspell go-mod-tidy golangci-lint-fix test
+ci: dependabot-check license-check lint vanity-import-check build test check-clean-work-tree
 
 # Tools
 
