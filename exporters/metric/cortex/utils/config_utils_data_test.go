@@ -17,7 +17,7 @@ package utils_test
 import (
 	"time"
 
-	"go.opentelemetry.io/contrib/exporters/metric/cortex"
+	"go.opentelemetry.io/contrib/exporters/metric/cortex" // nolint:staticcheck // allow import of deprecated pkg.
 )
 
 // This is an example YAML file that produces a Config struct without errors.
