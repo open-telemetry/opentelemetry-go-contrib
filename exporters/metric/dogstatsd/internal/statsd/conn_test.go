@@ -30,13 +30,13 @@ import (
 	"go.opentelemetry.io/otel/metric"
 	"go.opentelemetry.io/otel/metric/number"
 	"go.opentelemetry.io/otel/metric/sdkapi"
-	export "go.opentelemetry.io/otel/sdk/export/metric"
-	"go.opentelemetry.io/otel/sdk/export/metric/aggregation"
 	"go.opentelemetry.io/otel/sdk/instrumentation"
-	"go.opentelemetry.io/otel/sdk/metric/aggregator/exact"
+	"go.opentelemetry.io/otel/sdk/metric/aggregator"
 	"go.opentelemetry.io/otel/sdk/metric/aggregator/lastvalue"
 	"go.opentelemetry.io/otel/sdk/metric/aggregator/sum"
 	controller "go.opentelemetry.io/otel/sdk/metric/controller/basic"
+	"go.opentelemetry.io/otel/sdk/metric/export"
+	"go.opentelemetry.io/otel/sdk/metric/export/aggregation"
 	processor "go.opentelemetry.io/otel/sdk/metric/processor/basic"
 	"go.opentelemetry.io/otel/sdk/resource"
 	semconv "go.opentelemetry.io/otel/semconv/v1.7.0"
@@ -57,7 +57,7 @@ func testMeter(t *testing.T, exp export.Exporter) (context.Context, metric.Meter
 type testAggregatorSelector struct {
 }
 
-func (testAggregatorSelector) AggregatorFor(desc *sdkapi.Descriptor, aggPtrs ...*export.Aggregator) {
+func (testAggregatorSelector) AggregatorFor(desc *sdkapi.Descriptor, aggPtrs ...*aggregator.Aggregator) {
 	switch {
 	case strings.HasSuffix(desc.Name(), "counter"):
 		aggs := sum.New(len(aggPtrs))
@@ -66,12 +66,6 @@ func (testAggregatorSelector) AggregatorFor(desc *sdkapi.Descriptor, aggPtrs ...
 		}
 	case strings.HasSuffix(desc.Name(), "gauge"):
 		aggs := lastvalue.New(len(aggPtrs))
-		for i := range aggPtrs {
-			*aggPtrs[i] = &aggs[i]
-		}
-	case strings.HasSuffix(desc.Name(), "histogram") ||
-		strings.HasSuffix(desc.Name(), "timer"):
-		aggs := exact.New(len(aggPtrs))
 		for i := range aggPtrs {
 			*aggPtrs[i] = &aggs[i]
 		}
@@ -147,8 +141,6 @@ func TestBasicFormat(t *testing.T) {
 			expected: []string{
 				"counter:%s|c|#A=B,C=D",
 				"gauge:%s|g|#A=B,C=D",
-				"histogram:%s|h|#A=B,C=D",
-				"timer:%s|ms|#A=B,C=D",
 			},
 		},
 		{
@@ -156,8 +148,6 @@ func TestBasicFormat(t *testing.T) {
 			expected: []string{
 				"counter.B.D:%s|c",
 				"gauge.B.D:%s|g",
-				"histogram.B.D:%s|h",
-				"timer.B.D:%s|ms",
 			},
 		},
 	} {
@@ -192,26 +182,18 @@ func TestBasicFormat(t *testing.T) {
 							func(_ context.Context, res metric.Int64ObserverResult) {
 								res.Observe(2, attributes...)
 							})
-						histo := metric.Must(meter).NewInt64Histogram("histogram")
-						timer := metric.Must(meter).NewInt64Histogram("timer", metric.WithUnit("ms"))
 						counter.Add(ctx, 2, attributes...)
-						histo.Record(ctx, 2, attributes...)
-						timer.Record(ctx, 2, attributes...)
 					} else {
 						counter := metric.Must(meter).NewFloat64Counter("counter")
 						_ = metric.Must(meter).NewFloat64GaugeObserver("gauge",
 							func(_ context.Context, res metric.Float64ObserverResult) {
 								res.Observe(2, attributes...)
 							})
-						histo := metric.Must(meter).NewFloat64Histogram("histogram")
-						timer := metric.Must(meter).NewFloat64Histogram("timer", metric.WithUnit("ms"))
 						counter.Add(ctx, 2, attributes...)
-						histo.Record(ctx, 2, attributes...)
-						timer.Record(ctx, 2, attributes...)
 					}
 
 					require.NoError(t, cont.Stop(ctx))
-					require.Equal(t, 1, len(writer.vec))
+					require.Equalf(t, 1, len(writer.vec), "%#v", writer.vec)
 
 					// Note we do not know the order metrics will be sent.
 					wantStrings := map[string]bool{}
@@ -444,11 +426,12 @@ func TestExactSplit(t *testing.T) {
 	}
 
 	ctx, meter, cont := testMeter(t, exp)
-	histo := metric.Must(meter).NewInt64Histogram("histogram")
 	require.NoError(t, cont.Start(ctx))
 
 	for i := 0; i < 1024; i++ {
-		histo.Record(ctx, 100)
+		name := fmt.Sprintf("%d.counter", i)
+		counter := metric.Must(meter).NewInt64Counter(name)
+		counter.Add(ctx, 100)
 	}
 
 	require.NoError(t, cont.Stop(ctx))
@@ -474,13 +457,13 @@ func TestPrefix(t *testing.T) {
 	}
 
 	ctx, meter, cont := testMeter(t, exp)
-	histo := metric.Must(meter).NewInt64Histogram("histogram")
+	counter := metric.Must(meter).NewInt64Counter("counter")
 	require.NoError(t, cont.Start(ctx))
 
-	histo.Record(ctx, 100)
+	counter.Add(ctx, 100)
 
 	require.NoError(t, cont.Stop(ctx))
 
-	require.Equal(t, `veryspecial.histogram:100|h|#
+	require.Equal(t, `veryspecial.counter:100|c|#
 `, strings.Join(writer.vec, ""))
 }

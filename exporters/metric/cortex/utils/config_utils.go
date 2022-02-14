@@ -12,6 +12,9 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
+// Package utils provides utilities for the Cortex exporter.
+//
+// Deprecated: This package is no longer supported.
 package utils
 
 import (
@@ -20,7 +23,7 @@ import (
 	"github.com/spf13/afero"
 	"github.com/spf13/viper"
 
-	"go.opentelemetry.io/contrib/exporters/metric/cortex"
+	"go.opentelemetry.io/contrib/exporters/metric/cortex" // nolint:staticcheck // allow import of deprecated pkg.
 )
 
 // Option sets an option for a Config struct.
