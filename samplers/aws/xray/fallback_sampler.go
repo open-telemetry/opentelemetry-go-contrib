@@ -12,11 +12,11 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package xray
+package main
 
 import (
-	"go.opentelemetry.io/contrib/samplers/aws/xray/internal_xray"
 	"sync/atomic"
+	"time"
 
 	sdktrace "go.opentelemetry.io/otel/sdk/trace"
 	"go.opentelemetry.io/otel/trace"
@@ -24,7 +24,6 @@ import (
 
 type FallbackSampler struct {
 	currentEpoch   int64
-	clock          internal_xray.clock
 	defaultSampler sdktrace.Sampler
 }
 
@@ -33,14 +32,13 @@ var _ sdktrace.Sampler = (*FallbackSampler)(nil)
 
 func NewFallbackSampler() *FallbackSampler {
 	return &FallbackSampler{
-		clock:          &internal_xray.defaultClock{},
 		defaultSampler: sdktrace.TraceIDRatioBased(0.05),
 	}
 }
 
 func (fs *FallbackSampler) ShouldSample(parameters sdktrace.SamplingParameters) sdktrace.SamplingResult {
 	// borrowing one request every second
-	if fs.borrow(fs.clock.now().Unix()) {
+	if fs.borrow(time.Now().Unix()) {
 		return sdktrace.SamplingResult{
 			Tracestate: trace.SpanContextFromContext(parameters.ParentContext).TraceState(),
 			Decision:   sdktrace.RecordAndSample,

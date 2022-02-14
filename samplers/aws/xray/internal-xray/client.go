@@ -31,7 +31,7 @@ type xrayClient struct {
 }
 
 // newClient returns an HTTP client with proxy endpoint
-func NewClient(addr string) (client *xrayClient, err error) {
+func newClient(addr string) (client *xrayClient, err error) {
 	endpoint := "http://" + addr
 
 	endpointURL, err := url.Parse(endpoint)

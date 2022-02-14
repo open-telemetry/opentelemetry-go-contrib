@@ -19,14 +19,14 @@ import (
 )
 
 // clock provides an interface to implement method for getting current time.
-type Clock interface {
+type clock interface {
 	now() time.Time
 }
 
 // defaultClock is an implementation of Clock interface.
-type DefaultClock struct{}
+type defaultClock struct{}
 
 // now returns current time.
-func (t *DefaultClock) now() time.Time {
+func (t *defaultClock) now() time.Time {
 	return time.Now()
 }

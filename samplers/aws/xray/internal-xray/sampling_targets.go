@@ -35,13 +35,29 @@ type samplingStatisticsDocument struct {
 	Timestamp *int64
 }
 
+// properties is the base set of properties that define a sampling rule.
+type ruleProperties struct {
+	RuleName      string            `json:"RuleName"`
+	ServiceType   string            `json:"ServiceType"`
+	ResourceARN   string            `json:"ResourceARN"`
+	Attributes    map[string]string `json:"Attributes"`
+	ServiceName   string            `json:"ServiceName"`
+	Host          string            `json:"Host"`
+	HTTPMethod    string            `json:"HTTPMethod"`
+	URLPath       string            `json:"URLPath"`
+	ReservoirSize int64             `json:"ReservoirSize"`
+	FixedRate     float64           `json:"FixedRate"`
+	Priority      int64             `json:"Priority"`
+	Version       int64             `json:"Version"`
+}
+
 // getSamplingRulesInput is used to store
 type getSamplingRulesInput struct {
 	NextToken *string `json:"NextToken"`
 }
 
 type samplingRuleRecords struct {
-	SamplingRule *RuleProperties `json:"SamplingRule"`
+	SamplingRule *ruleProperties `json:"SamplingRule"`
 }
 
 // getSamplingRulesOutput is used to store parsed json sampling rules

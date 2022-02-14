@@ -12,7 +12,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package xray
+package internal_xray
 
 import (
 	"sync/atomic"
@@ -58,7 +58,7 @@ func (r *reservoir) borrow(now int64) bool {
 }
 
 // Take consumes quota from reservoir, if any remains, and returns true. False otherwise.
-func (r *reservoir) Take(now int64) bool {
+func (r *reservoir) take(now int64) bool {
 	cur := atomic.LoadInt64(&r.currentEpoch)
 	quota := atomic.LoadInt64(&r.quota)
 	used := atomic.LoadInt64(&r.used)
