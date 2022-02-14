@@ -24,6 +24,7 @@ import (
 	"math/rand"
 	"strconv"
 	"testing"
+	"time"
 
 	"github.com/stretchr/testify/require"
 
@@ -59,7 +60,7 @@ var (
 func TestSamplerStatistics(t *testing.T) {
 
 	seedBankRng := rand.New(rand.NewSource(77777677777))
-	seedBank := make([]int64, 15) // N.B. Max=14 below.
+	seedBank := make([]int64, 7) // N.B. Max=6 below.
 	for i := range seedBank {
 		seedBank[i] = seedBankRng.Int63()
 	}
@@ -120,6 +121,13 @@ func TestSamplerStatistics(t *testing.T) {
 			{0x1p-7, 7, oneDegree, 1},
 		}
 	)
+
+	// Limit the test runtime by choosing 3 of the above
+	// non-deterministically
+	rand.New(rand.NewSource(time.Now().UnixNano())).Shuffle(len(allTests), func(i, j int) {
+		allTests[i], allTests[j] = allTests[j], allTests[i]
+	})
+	allTests = allTests[0:3]
 
 	for _, test := range allTests {
 		t.Run(fmt.Sprint(test.prob), func(t *testing.T) {
