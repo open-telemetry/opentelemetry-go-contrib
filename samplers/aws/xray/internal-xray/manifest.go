@@ -6,6 +6,7 @@ import (
 	"errors"
 	"fmt"
 	"github.com/go-logr/logr"
+	"reflect"
 	"sort"
 	"strings"
 	"sync"
@@ -129,23 +130,27 @@ func (m *Manifest) updateRules(rules *getSamplingRulesOutput) {
 
 // updates/writes reservoir to the rules which considered as manifest update
 func (m *Manifest) RefreshManifestTargets(ctx context.Context) (err error) {
-	//manifest := Manifest{
-	//	Rules: []rule{},
-	//}
-
 	m.mu.RLock()
-	manifest := *m
+	mani := *m // deep copy
 	m.mu.RUnlock()
 
-	s := &manifest
-	p := &m
+	a := reflect.TypeOf(*m)
+	b:= reflect.TypeOf(m)
+	c := reflect.TypeOf(mani)
+	d := reflect.TypeOf(&mani)
+	e := reflect.TypeOf(mani.Rules[0])
+	f := reflect.TypeOf(&m.Rules[0])
 
-	fmt.Println(s)
-	fmt.Println(p)
+	fmt.Println(a)
+	fmt.Println(b)
+	fmt.Println(c)
+	fmt.Println(d)
+	fmt.Println(e)
+	fmt.Println(f)
 
 
 	// Generate sampling statistics
-	statistics, err := manifest.snapshots(); if err != nil { return err }
+	statistics, err := m.snapshots(); if err != nil { return err }
 
 	// Do not refresh targets if no statistics to report
 	if len(statistics) == 0 {
@@ -159,7 +164,7 @@ func (m *Manifest) RefreshManifestTargets(ctx context.Context) (err error) {
 		return fmt.Errorf("refreshTargets: Error occurred while getting sampling targets: %w", err)
 	}
 
-	refresh, err := manifest.updateTargets(targets); if err != nil {
+	refresh, err := m.updateTargets(targets); if err != nil {
 		return err
 	}
 

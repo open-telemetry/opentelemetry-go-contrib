@@ -129,7 +129,7 @@ func (rs *remoteSampler) start(ctx context.Context) {
 // startPoller starts the rule and target poller in a separate go routine which runs periodically to refresh manifest and
 // targets
 func (rs *remoteSampler) startPoller(ctx context.Context) {
-//	go func() {
+	go func() {
 		// Period = 300s, Jitter = 5s
 		rulesTicker := newTicker(rs.samplingRulesPollingInterval, 5*time.Second)
 
@@ -171,7 +171,7 @@ func (rs *remoteSampler) startPoller(ctx context.Context) {
 				return
 			}
 		}
-//	}()
+	}()
 }
 
 func main() {
