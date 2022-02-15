@@ -29,7 +29,26 @@ type rule struct {
 	mu sync.RWMutex
 }
 
+// properties is the base set of properties that define a sampling rule.
+type ruleProperties struct {
+	RuleName      string            `json:"RuleName"`
+	ServiceType   string            `json:"ServiceType"`
+	ResourceARN   string            `json:"ResourceARN"`
+	Attributes    map[string]string `json:"Attributes"`
+	ServiceName   string            `json:"ServiceName"`
+	Host          string            `json:"Host"`
+	HTTPMethod    string            `json:"HTTPMethod"`
+	URLPath       string            `json:"URLPath"`
+	ReservoirSize int64             `json:"ReservoirSize"`
+	FixedRate     float64           `json:"FixedRate"`
+	Priority      int64             `json:"Priority"`
+	Version       int64             `json:"Version"`
+}
+
 func (r *rule) stale(now int64) bool {
+	r.mu.RLock()
+	r.mu.RUnlock()
+
 	return r.matchedRequests != 0 && now >= r.reservoir.refreshedAt+r.reservoir.interval
 }
 
@@ -39,21 +58,22 @@ func (r *rule) snapshot() *samplingStatisticsDocument {
 	clock := &defaultClock{}
 	now := clock.now().Unix()
 
+	r.mu.RLock()
 	name := r.ruleProperties.RuleName
+	requests, sampled, borrowed := r.matchedRequests, r.sampledRequests, r.borrowedRequests
+	r.mu.RUnlock()
 
-	r.mu.Lock()
-	r.matchedRequests, r.sampledRequests, r.borrowedRequests = 4, 4, 0
-	r.mu.Unlock()
-	requests, sampled, borrows := r.matchedRequests, r.sampledRequests, r.borrowedRequests
+	// reset counters
+	atomic.CompareAndSwapInt64(&r.matchedRequests, requests, int64(0))
+	atomic.CompareAndSwapInt64(&r.sampledRequests, sampled, int64(0))
+	atomic.CompareAndSwapInt64(&r.borrowedRequests, borrowed, int64(0))
 
-	r.mu.Lock()
-	r.matchedRequests, r.sampledRequests, r.borrowedRequests = 0, 0, 0
-	r.mu.Unlock()
+	requests, sampled, borrowed = 4, 4, 0
 
 	return &samplingStatisticsDocument{
 		RequestCount: &requests,
 		SampledCount: &sampled,
-		BorrowCount:  &borrows,
+		BorrowCount:  &borrowed,
 		RuleName:     &name,
 		Timestamp:    &now,
 	}

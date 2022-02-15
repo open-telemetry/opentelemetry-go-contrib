@@ -89,8 +89,7 @@ func NewRemoteSampler(ctx context.Context, serviceName string, cloudPlatform str
 
 func (rs *remoteSampler) ShouldSample(parameters sdktrace.SamplingParameters) sdktrace.SamplingResult {
 	rs.mu.RLock()
-	m := rs.manifest
-	rs.mu.RUnlock()
+	defer rs.mu.RUnlock()
 
 	// Use fallback sampler when manifest is expired
 	if rs.manifest.Expired() {
@@ -99,7 +98,7 @@ func (rs *remoteSampler) ShouldSample(parameters sdktrace.SamplingParameters) sd
 	}
 
 	// Match against known rules
-	for _, r := range m.Rules {
+	for _, r := range rs.manifest.Rules {
 		applicable := r.AppliesTo(parameters, rs.serviceName, rs.cloudPlatform)
 
 		if applicable {
@@ -138,7 +137,7 @@ func (rs *remoteSampler) startPoller(ctx context.Context) {
 		targetTicker := newTicker(5*time.Second+100*time.Millisecond, 100*time.Millisecond)
 
 		// fetch sampling rules
-		if err := rs.manifest.RefreshManifest(ctx); err != nil {
+		if err := rs.manifest.RefreshManifestRules(ctx); err != nil {
 			rs.logger.Error(err, "Error occurred while refreshing sampling rules")
 		} else {
 			rs.logger.V(5).Info("Successfully fetched sampling rules")
@@ -152,7 +151,7 @@ func (rs *remoteSampler) startPoller(ctx context.Context) {
 				}
 
 				// fetch sampling rules
-				if err := rs.manifest.RefreshManifest(ctx); err != nil {
+				if err := rs.manifest.RefreshManifestRules(ctx); err != nil {
 					rs.logger.Error(err, "Error occurred while refreshing sampling rules")
 				} else {
 					rs.logger.V(5).Info("Successfully fetched sampling rules")
@@ -164,7 +163,7 @@ func (rs *remoteSampler) startPoller(ctx context.Context) {
 				}
 
 				// fetch sampling targets
-				if err := rs.manifest.RefreshTargets(ctx); err != nil {
+				if err := rs.manifest.RefreshManifestTargets(ctx); err != nil {
 					rs.logger.Error(err, "Error occurred while refreshing targets for sampling rules")
 				}
 				continue

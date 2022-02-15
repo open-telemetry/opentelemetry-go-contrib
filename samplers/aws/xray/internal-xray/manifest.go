@@ -22,10 +22,50 @@ type Manifest struct {
 	Rules       []rule
 	refreshedAt int64
 	xrayClient  *xrayClient
-	clientID 	string
 	logger 		logr.Logger
 	clock       clock
 	mu          sync.RWMutex
+}
+
+// samplingStatisticsDocument is used to store current state of sampling data
+type samplingStatisticsDocument struct {
+	// The number of requests recorded with borrowed reservoir quota.
+	BorrowCount *int64
+
+	// A unique identifier for the service in hexadecimal.
+	ClientID *string
+
+	// The number of requests that matched the rule.
+	RequestCount *int64
+
+	// The name of the sampling rule.
+	RuleName *string
+
+	// The number of requests recorded.
+	SampledCount *int64
+
+	// The current time.
+	Timestamp *int64
+}
+
+// samplingTargetDocument contains updated targeted information retrieved from X-Ray service
+type samplingTargetDocument struct {
+	// The percentage of matching requests to instrument, after the reservoir is
+	// exhausted.
+	FixedRate *float64 `json:"FixedRate,omitempty"`
+
+	// The number of seconds for the service to wait before getting sampling targets
+	// again.
+	Interval *int64 `json:"Interval,omitempty"`
+
+	// The number of requests per second that X-Ray allocated this service.
+	ReservoirQuota *int64 `json:"ReservoirQuota,omitempty"`
+
+	// When the reservoir quota expires.
+	ReservoirQuotaTTL *float64 `json:"ReservoirQuotaTTL,omitempty"`
+
+	// The name of the sampling rule.
+	RuleName *string `json:"RuleName,omitempty"`
 }
 
 func NewManifest(addr string, logger logr.Logger) (*Manifest, error) {
@@ -40,15 +80,22 @@ func NewManifest(addr string, logger logr.Logger) (*Manifest, error) {
 }
 
 // updates/writes rules to the manifest
-func (m *Manifest) RefreshManifest(ctx context.Context) (err error) {
-	tempManifest := Manifest{
-		Rules: []rule{},
-	}
-
-	// Get sampling rules from proxy.
+func (m *Manifest) RefreshManifestRules(ctx context.Context) (err error) {
+	// Get sampling rules from X-Ray service backend
 	rules, err := m.xrayClient.getSamplingRules(ctx)
 	if err != nil {
 		return err
+	}
+
+	// create temporary manifest with retrieved rules and updates to the original manifest rules
+	m.updateRules(rules)
+
+	return
+}
+
+func (m *Manifest) updateRules(rules *getSamplingRulesOutput) {
+	tempManifest := Manifest{
+		Rules: []rule{},
 	}
 
 	for _, records := range rules.SamplingRuleRecords {
@@ -81,55 +128,65 @@ func (m *Manifest) RefreshManifest(ctx context.Context) (err error) {
 }
 
 // updates/writes reservoir to the rules which considered as manifest update
-func (m Manifest) RefreshTargets(ctx context.Context) (err error) {
-	failed := false
-
-	// Flag indicating whether or not manifest should be refreshed
-	refresh := false
-
-	tempManifest := Manifest{
-		Rules: []rule{},
-	}
+func (m *Manifest) RefreshManifestTargets(ctx context.Context) (err error) {
+	//manifest := Manifest{
+	//	Rules: []rule{},
+	//}
 
 	m.mu.RLock()
-	tempManifest.Rules = m.Rules
+	manifest := *m
 	m.mu.RUnlock()
 
-	m.Rules[0].ruleProperties.RuleName = "hero"
-	name2 := &tempManifest.Rules[0].ruleProperties.RuleName
+	s := &manifest
+	p := &m
 
-	fmt.Println(name2)
+	fmt.Println(s)
+	fmt.Println(p)
+
 
 	// Generate sampling statistics
-	statistics, err := tempManifest.snapshots(); if err != nil {
-		return err
-	}
+	statistics, err := manifest.snapshots(); if err != nil { return err }
 
 	// Do not refresh targets if no statistics to report
 	if len(statistics) == 0 {
-		return
+		m.logger.V(5).Info("No statistics to report and not refreshing sampling targets")
+		return nil
 	}
 
 	// Get sampling targets
-	output, err := m.xrayClient.getSamplingTargets(ctx, statistics)
+	targets, err := m.xrayClient.getSamplingTargets(ctx, statistics)
 	if err != nil {
 		return fmt.Errorf("refreshTargets: Error occurred while getting sampling targets: %w", err)
 	}
 
+	refresh, err := manifest.updateTargets(targets); if err != nil {
+		return err
+	}
+
+	// Perform out-of-band async manifest refresh if flag is set
+	if refresh {
+		m.logger.V(5).Info("Refreshing sampling rules out-of-band")
+
+		go func() {
+			if err := m.RefreshManifestRules(ctx); err != nil {
+				m.logger.Error(err, "Error occurred refreshing sampling rules out-of-band")
+			}
+		}()
+	}
+
+	return
+}
+
+func (m *Manifest) updateTargets(targets *getSamplingTargetsOutput) (refresh bool, err error) {
 	// Update sampling targets
-	for _, t := range output.SamplingTargetDocuments {
-		if err = tempManifest.updateTarget(t); err != nil {
-			failed = true
-			m.logger.Error(err, "Error occurred updating target for rule")
+	for _, t := range targets.SamplingTargetDocuments {
+		if err := m.updateReservoir(t); err != nil {
+			return false, err
 		}
 	}
 
-	m.mu.Lock()
-	m.Rules = tempManifest.Rules
-	m.mu.Unlock()
-
 	// Consume unprocessed statistics messages
-	for _, s := range output.UnprocessedStatistics {
+	for _, s := range targets.UnprocessedStatistics {
 		m.logger.V(5).Info(
 			"Error occurred updating sampling target for rule, code and message", "RuleName", *s.RuleName, "ErrorCode",
 			*s.ErrorCode,
@@ -143,7 +200,7 @@ func (m Manifest) RefreshTargets(ctx context.Context) (err error) {
 
 		// Set batch failure if any sampling statistics return 5xx
 		if strings.HasPrefix(*s.ErrorCode, "5") {
-			failed = true
+			return false, fmt.Errorf("statistics returned 5xx")
 		}
 
 		// Set refresh flag if any sampling statistics return 4xx
@@ -152,31 +209,11 @@ func (m Manifest) RefreshTargets(ctx context.Context) (err error) {
 		}
 	}
 
-	// Set err if updates failed
-	if failed {
-		err = errors.New("error occurred updating sampling targets")
-	} else {
-		m.logger.V(5).Info("Successfully refreshed sampling targets")
-	}
-
 	// Set refresh flag if modifiedAt timestamp from remote is greater than ours.
-	if remote := output.LastRuleModification; remote != nil {
-		local := m.refreshedAt
-
-		if int64(*remote) >= local {
+	if remote := targets.LastRuleModification; remote != nil {
+		if int64(*remote) >= m.refreshedAt {
 			refresh = true
 		}
-	}
-
-	// Perform out-of-band async manifest refresh if flag is set
-	if refresh {
-		m.logger.V(5).Info("Refreshing sampling rules out-of-band")
-
-		go func() {
-			if err := m.RefreshManifest(ctx); err != nil {
-				m.logger.Error(err, "Error occurred refreshing sampling rules out-of-band")
-			}
-		}()
 	}
 
 	return
@@ -189,7 +226,7 @@ func (m *Manifest) snapshots() ([]*samplingStatisticsDocument, error) {
 
 	// Generate sampling statistics for user-defined rules
 	for _, r := range m.Rules {
-		//if r.stale(m.clock.now().Unix()) {
+//		if r.stale(m.clock.now().Unix()) {
 			s := r.snapshot()
 			clientID, err := generateClientId(); if err != nil {
 				return nil, err
@@ -197,7 +234,7 @@ func (m *Manifest) snapshots() ([]*samplingStatisticsDocument, error) {
 			s.ClientID = clientID
 
 			statistics = append(statistics, s)
-		//}
+//		}
 	}
 
 	return statistics, nil
@@ -219,7 +256,7 @@ func (m *Manifest) createRule(ruleProp ruleProperties) (err error) {
 	return
 }
 
-func (m *Manifest) updateTarget(t *samplingTargetDocument) (err error) {
+func (m *Manifest) updateReservoir(t *samplingTargetDocument) (err error) {
 	// Pre-emptively dereference xraySvc.SamplingTarget fields and return early on nil values
 	// A panic in the middle of an update may leave the rule in an inconsistent state.
 	if t.RuleName == nil {
@@ -230,25 +267,28 @@ func (m *Manifest) updateTarget(t *samplingTargetDocument) (err error) {
 		return fmt.Errorf("invalid sampling target for rule %s. Missing fixed rate", *t.RuleName)
 	}
 
-	for _, r := range m.Rules {
-		if r.ruleProperties.RuleName == *t.RuleName {
-			r.reservoir.refreshedAt = m.clock.now().Unix()
-
-			// Update non-optional attributes from response
-			r.ruleProperties.FixedRate = *t.FixedRate
-
-			// Update optional attributes from response
-			if t.ReservoirQuota != nil {
-				r.reservoir.quota = *t.ReservoirQuota
-			}
-			if t.ReservoirQuotaTTL != nil {
-				r.reservoir.expiresAt = int64(*t.ReservoirQuotaTTL)
-			}
-			if t.Interval != nil {
-				r.reservoir.interval = *t.Interval
-			}
-		}
-	}
+	//for _, r := range m.Rules {
+	//	if r.ruleProperties.RuleName == *t.RuleName {
+	//		r.reservoir.refreshedAt = m.clock.now().Unix()
+	//
+	//		// Update non-optional attributes from response
+	//		r.ruleProperties.FixedRate = *t.FixedRate
+	//
+	//		// Update optional attributes from response
+	//		if t.ReservoirQuota != nil {
+	//			r.reservoir.quota = *t.ReservoirQuota
+	//		}
+	//		if t.ReservoirQuotaTTL != nil {
+	//			r.reservoir.expiresAt = int64(*t.ReservoirQuotaTTL)
+	//		}
+	//		if t.Interval != nil {
+	//			r.reservoir.interval = *t.Interval
+	//		}
+	//	}
+	//}
+	m.Rules[0].reservoir.refreshedAt = 67
+	m.Rules[1].reservoir.refreshedAt = 77
+	m.Rules[2].reservoir.refreshedAt = 87
 
 	return nil
 }

@@ -23,6 +23,37 @@ import (
 	"net/url"
 )
 
+// getSamplingRulesInput is used to store
+type getSamplingRulesInput struct {
+	NextToken *string `json:"NextToken"`
+}
+
+type samplingRuleRecords struct {
+	SamplingRule *ruleProperties `json:"SamplingRule"`
+}
+
+// getSamplingRulesOutput is used to store parsed json sampling rules
+type getSamplingRulesOutput struct {
+	SamplingRuleRecords []*samplingRuleRecords `json:"SamplingRuleRecords"`
+}
+
+type getSamplingTargetsInput struct {
+	SamplingStatisticsDocuments []*samplingStatisticsDocument
+}
+
+// getSamplingTargetsOutput is used to store parsed json sampling targets
+type getSamplingTargetsOutput struct {
+	LastRuleModification    *float64                  `json:"LastRuleModification,omitempty"`
+	SamplingTargetDocuments []*samplingTargetDocument `json:"SamplingTargetDocuments,omitempty"`
+	UnprocessedStatistics   []*unprocessedStatistic   `json:"UnprocessedStatistics,omitempty"`
+}
+
+type unprocessedStatistic struct {
+	ErrorCode *string `json:"ErrorCode,omitempty"`
+	Message   *string `json:"Message,omitempty"`
+	RuleName  *string `json:"RuleName,omitempty"`
+}
+
 type xrayClient struct {
 	// http client for sending sampling requests to the collector
 	httpClient *http.Client
