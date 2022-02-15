@@ -88,27 +88,7 @@ func NewRemoteSampler(ctx context.Context, serviceName string, cloudPlatform str
 }
 
 func (rs *remoteSampler) ShouldSample(parameters sdktrace.SamplingParameters) sdktrace.SamplingResult {
-	rs.mu.RLock()
-	defer rs.mu.RUnlock()
-
-	// Use fallback sampler when manifest is expired
-	if rs.manifest.Expired() {
-		rs.logger.V(5).Info("Centralized manifest expired. Using fallback sampling strategy")
-		return rs.fallbackSampler.ShouldSample(parameters)
-	}
-
-	// Match against known rules
-	for _, r := range rs.manifest.Rules {
-		applicable := r.AppliesTo(parameters, rs.serviceName, rs.cloudPlatform)
-
-		if applicable {
-			return r.Sample(parameters)
-		}
-	}
-
-	// Use fallback sampler when request does not match against known rules
-	rs.logger.V(5).Info("No match against centralized rules using fallback sampling strategy")
-	return rs.fallbackSampler.ShouldSample(parameters)
+	return sdktrace.SamplingResult{}
 }
 
 func (rs *remoteSampler) Description() string {
@@ -129,49 +109,7 @@ func (rs *remoteSampler) start(ctx context.Context) {
 // startPoller starts the rule and target poller in a separate go routine which runs periodically to refresh manifest and
 // targets
 func (rs *remoteSampler) startPoller(ctx context.Context) {
-	go func() {
-		// Period = 300s, Jitter = 5s
-		rulesTicker := newTicker(rs.samplingRulesPollingInterval, 5*time.Second)
-
-		// Period = 10.1s, Jitter = 100ms
-		targetTicker := newTicker(5*time.Second+100*time.Millisecond, 100*time.Millisecond)
-
-		// fetch sampling rules
-		if err := rs.manifest.RefreshManifestRules(ctx); err != nil {
-			rs.logger.Error(err, "Error occurred while refreshing sampling rules")
-		} else {
-			rs.logger.V(5).Info("Successfully fetched sampling rules")
-		}
-
-		for {
-			select {
-			case _, more := <-rulesTicker.C():
-				if !more {
-					return
-				}
-
-				// fetch sampling rules
-				if err := rs.manifest.RefreshManifestRules(ctx); err != nil {
-					rs.logger.Error(err, "Error occurred while refreshing sampling rules")
-				} else {
-					rs.logger.V(5).Info("Successfully fetched sampling rules")
-				}
-				continue
-			case _, more := <-targetTicker.C():
-				if !more {
-					return
-				}
-
-				// fetch sampling targets
-				if err := rs.manifest.RefreshManifestTargets(ctx); err != nil {
-					rs.logger.Error(err, "Error occurred while refreshing targets for sampling rules")
-				}
-				continue
-			case <-ctx.Done():
-				return
-			}
-		}
-	}()
+	// logic for spinning up rule and target poller
 }
 
 func main() {

@@ -39,37 +39,15 @@ type reservoir struct {
 
 // expired returns true if current time is past expiration timestamp. False otherwise.
 func (r *reservoir) expired(now int64) bool {
-	//expire := atomic.LoadInt64(&r.expiresAt)
-	//
-	//return now > expire
 	return false
 }
 
 // borrow returns true if the reservoir has not been borrowed from this epoch
 func (r *reservoir) borrow(now int64) bool {
-	//cur := atomic.LoadInt64(&r.currentEpoch)
-	//if cur >= now {
-	//	return false
-	//}
-	//return atomic.CompareAndSwapInt64(&r.currentEpoch, cur, now)
 	return false
 }
 
 // Take consumes quota from reservoir, if any remains, and returns true. False otherwise.
 func (r *reservoir) take(now int64) bool {
-	//cur := atomic.LoadInt64(&r.currentEpoch)
-	//quota := atomic.LoadInt64(&r.quota)
-	//used := atomic.LoadInt64(&r.used)
-	//
-	//if cur != now {
-	//	atomic.CompareAndSwapInt64(&r.currentEpoch, cur, now)
-	//	atomic.CompareAndSwapInt64(&r.used, used, int64(0))
-	//	used = 0
-	//}
-	//
-	//if quota > used {
-	//	atomic.AddInt64(&r.used, 1)
-	//	return true
-	//}
 	return false
 }
