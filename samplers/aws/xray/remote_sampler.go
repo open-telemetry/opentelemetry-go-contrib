@@ -87,6 +87,7 @@ func NewRemoteSampler(ctx context.Context, serviceName string, cloudPlatform str
 	return remoteSampler, nil
 }
 
+// business logic for remote sampling
 func (rs *remoteSampler) ShouldSample(parameters sdktrace.SamplingParameters) sdktrace.SamplingResult {
 	return sdktrace.SamplingResult{}
 }

@@ -92,19 +92,29 @@ func (m *Manifest) RefreshManifestRules(ctx context.Context) (err error) {
 	return
 }
 
-// updates/writes reservoir to the rules which considered as manifest update
-func (m *Manifest) RefreshManifestTargets(ctx context.Context) (err error) {
-	return
-}
-
+// create and populate the temp manifest and swap the original manifest values with temp manifest
 func (m *Manifest) updateRules(rules *getSamplingRulesOutput) {
 	return
 }
 
-func (m *Manifest) updateTargets(targets *getSamplingTargetsOutput) (refresh bool, err error) {
+// use sampling rule records to create rule
+func (m *Manifest) createRule(ruleProp ruleProperties) (err error) {
 	return
 }
 
+// retrieves sampling targets and updates/writes reservoir
+func (m *Manifest) RefreshManifestTargets(ctx context.Context) (err error) {
+	m.updateTargets(nil)
+	return
+}
+
+// traverse through the sampling targets and process any unprocessed targets
+func (m *Manifest) updateTargets(targets *getSamplingTargetsOutput) (refresh bool, err error) {
+	m.updateReservoir(nil)
+	return
+}
+
+// updates the value of target in reservoir
 func (m *Manifest) updateReservoir(t *samplingTargetDocument) (err error) {
 	return nil
 }
@@ -113,10 +123,6 @@ func (m *Manifest) updateReservoir(t *samplingTargetDocument) (err error) {
 // statistics counters in the process.
 func (m *Manifest) snapshots() ([]*samplingStatisticsDocument, error) {
 	return nil, nil
-}
-
-func (m *Manifest) createRule(ruleProp ruleProperties) (err error) {
-	return
 }
 
 // sort sorts the rule array first by priority and then by rule name.
