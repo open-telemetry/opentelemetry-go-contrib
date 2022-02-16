@@ -20,7 +20,6 @@ import (
 
 	"github.com/Shopify/sarama"
 
-	"go.opentelemetry.io/contrib/instrumentation/github.com/Shopify/sarama/otelsarama/internal"
 	"go.opentelemetry.io/otel/attribute"
 	semconv "go.opentelemetry.io/otel/semconv/v1.7.0"
 	"go.opentelemetry.io/otel/trace"
@@ -66,7 +65,7 @@ func (w *consumerMessagesDispatcherWrapper) Run() {
 			semconv.MessagingDestinationKey.String(msg.Topic),
 			semconv.MessagingOperationReceive,
 			semconv.MessagingMessageIDKey.String(strconv.FormatInt(msg.Offset, 10)),
-			internal.KafkaPartitionKey.Int64(int64(msg.Partition)),
+			semconv.MessagingKafkaPartitionKey.Int64(int64(msg.Partition)),
 		}
 		opts := []trace.SpanStartOption{
 			trace.WithAttributes(attrs...),
