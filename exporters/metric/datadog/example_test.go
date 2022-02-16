@@ -98,7 +98,7 @@ func ExampleExporter() {
 	}
 
 	// Output:
-	// mycounter:151|c|#env:dev,l:1,service.name:ExampleExporter,telemetry.sdk.language:go,telemetry.sdk.name:opentelemetry,telemetry.sdk.version:1.4.0
+	// mycounter:151|c|#env:dev,l:1,service.name:ExampleExporter,telemetry.sdk.language:go,telemetry.sdk.name:opentelemetry,telemetry.sdk.version:1.4.1
 	//
 }
 
