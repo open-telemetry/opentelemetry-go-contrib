@@ -24,15 +24,13 @@ REGISTRY_BASE_URL = https://raw.githubusercontent.com/open-telemetry/opentelemet
 CONTRIB_REPO_URL = https://github.com/open-telemetry/opentelemetry-go-contrib/tree/main
 
 GO = go
-GOTEST_MIN = $(GO) test -v -timeout 30s
-GOTEST = $(GOTEST_MIN) -race
-GOTEST_WITH_COVERAGE = $(GOTEST) -coverprofile=coverage.out -covermode=atomic
+TIMEOUT = 60
 
 .DEFAULT_GOAL := precommit
 
 .PHONY: precommit ci
-precommit: dependabot-check license-check misspell go-mod-tidy golangci-lint-fix test
-ci: dependabot-check license-check lint vanity-import-check build test check-clean-work-tree
+precommit: dependabot-generate license-check misspell go-mod-tidy golangci-lint-fix test-default
+ci: dependabot-check license-check lint vanity-import-check build test-default check-clean-work-tree test-coverage
 
 # Tools
 
@@ -205,23 +203,49 @@ dependabot-generate:
 			(printf "      interval: weekly\n" >> $(DEPENDABOT_PATH)); \
 		done
 
+.PHONY: check-clean-work-tree
+check-clean-work-tree:
+	@if ! git diff --quiet; then \
+	  echo; \
+	  echo 'Working tree is not clean, did you forget to run "make precommit"?'; \
+	  echo; \
+	  git status; \
+	  exit 1; \
+	fi
+
 # Tests
 
-.PHONY: test-with-coverage
-test-with-coverage: | $(GOCOVMERGE)
-	set -e; \
-	printf "" > coverage.txt; \
-	for dir in $(ALL_COVERAGE_MOD_DIRS); do \
-	  CMD="$(GOTEST_WITH_COVERAGE)"; \
-	  echo "$$dir" | \
-	    grep -q 'test$$' && \
-	    CMD="$$CMD -coverpkg=go.opentelemetry.io/contrib/$$( dirname "$$dir" | sed -e "s/^\.\///g" )/..."; \
-	  echo "$$CMD $$dir/..."; \
-	  (cd "$$dir" && \
-	    $$CMD ./... && \
-	    $(GO) tool cover -html=coverage.out -o coverage.html); \
-	done; \
-	$(TOOLS_DIR)/gocovmerge $$(find . -name coverage.out) > coverage.txt
+TEST_TARGETS := test-default test-bench test-short test-verbose test-race
+.PHONY: $(TEST_TARGETS) test
+test-default test-race: ARGS=-race
+test-bench:   ARGS=-run=xxxxxMatchNothingxxxxx -test.benchtime=1ms -bench=.
+test-short:   ARGS=-short
+test-verbose: ARGS=-v
+$(TEST_TARGETS): test
+test: $(OTEL_GO_MOD_DIRS:%=test/%)
+test/%: DIR=$*
+test/%:
+	@echo "$(GO) test -timeout $(TIMEOUT)s $(ARGS) $(DIR)/..." \
+		&& cd $(DIR) \
+		&& $(GO) test -timeout $(TIMEOUT)s $(ARGS)
+
+COVERAGE_MODE    = atomic
+COVERAGE_PROFILE = coverage.out
+.PHONY: test-coverage
+test-coverage: $(ALL_COVERAGE_MOD_DIRS:%=test-coverage/%) | $(GOCOVMERGE)
+	@printf "" > coverage.txt \
+		&& $(GOCOVMERGE) $$(find . -name $(COVERAGE_PROFILE)) > coverage.txt
+
+test-coverage/%: DIR=$*
+test-coverage/%:
+	@set -e; \
+		CMD="$(GO) test -race -covermode=$(COVERAGE_MODE) -coverprofile=$(COVERAGE_PROFILE)"; \
+		grep -q 'test$$' <<< "$(DIR)" \
+		&& CMD="$$CMD -coverpkg=go.opentelemetry.io/contrib/$$( dirname "$(DIR)" | sed -e "s/^\.\///g" )/..."; \
+		echo "$$CMD $(DIR)/..."; \
+		cd "$(DIR)" \
+		&& $$CMD ./... \
+		&& $(GO) tool cover -html=coverage.out -o coverage.html;
 
 .PHONY: test-gocql
 test-gocql:
@@ -261,32 +285,6 @@ test-gomemcache:
 	  docker stop gomemcache-integ ; \
 	  cp ./instrumentation/github.com/bradfitz/gomemcache/memcache/otelmemcache/test/coverage.out ./; \
 	fi
-
-.PHONY: check-clean-work-tree
-check-clean-work-tree:
-	@if ! git diff --quiet; then \
-	  echo; \
-	  echo 'Working tree is not clean, did you forget to run "make precommit"?'; \
-	  echo; \
-	  git status; \
-	  exit 1; \
-	fi
-
-.PHONY: test
-test:
-	set -e; for dir in $(OTEL_GO_MOD_DIRS); do \
-	  echo "$(GO) test ./... + race in $${dir}"; \
-	  (cd "$${dir}" && \
-	    $(GOTEST) ./...); \
-	done
-
-.PHONY: test-short
-test-short:
-	set -e; for dir in $(OTEL_GO_MOD_DIRS); do \
-	  echo "$(GO) test ./... + race in $${dir}"; \
-	  (cd "$${dir}" && \
-	    $(GOTEST_MIN) -short ./...); \
-	done
 
 # Releasing
 
