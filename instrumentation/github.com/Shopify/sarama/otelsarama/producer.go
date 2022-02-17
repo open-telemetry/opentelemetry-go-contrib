@@ -23,7 +23,6 @@ import (
 
 	"go.opentelemetry.io/otel/codes"
 
-	"go.opentelemetry.io/contrib/instrumentation/github.com/Shopify/sarama/otelsarama/internal"
 	"go.opentelemetry.io/otel/attribute"
 	semconv "go.opentelemetry.io/otel/semconv/v1.7.0"
 	"go.opentelemetry.io/otel/trace"
@@ -274,7 +273,7 @@ func startProducerSpan(cfg config, version sarama.KafkaVersion, msg *sarama.Prod
 func finishProducerSpan(span trace.Span, partition int32, offset int64, err error) {
 	span.SetAttributes(
 		semconv.MessagingMessageIDKey.String(strconv.FormatInt(offset, 10)),
-		internal.KafkaPartitionKey.Int64(int64(partition)),
+		semconv.MessagingKafkaPartitionKey.Int64(int64(partition)),
 	)
 	if err != nil {
 		span.SetStatus(codes.Error, err.Error())

@@ -22,9 +22,11 @@ import (
 	"io/ioutil"
 	"net/http"
 	"net/http/httptest"
+	"strings"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 
 	"go.opentelemetry.io/otel/codes"
 	"go.opentelemetry.io/otel/propagation"
@@ -285,4 +287,91 @@ func TestWrappedBodyCloseError(t *testing.T) {
 	wb := &wrappedBody{span: trace.Span(s), body: readCloser{closeErr: expectedErr}}
 	assert.Equal(t, expectedErr, wb.Close())
 	s.assert(t, true, nil, codes.Unset, "")
+}
+
+type readWriteCloser struct {
+	readCloser
+
+	writeErr error
+}
+
+const writeSize = 1
+
+func (rwc readWriteCloser) Write([]byte) (int, error) {
+	return writeSize, rwc.writeErr
+}
+
+func TestNewWrappedBodyReadWriteCloserImplementation(t *testing.T) {
+	wb := newWrappedBody(nil, readWriteCloser{})
+	assert.Implements(t, (*io.ReadWriteCloser)(nil), wb)
+}
+
+func TestNewWrappedBodyReadCloserImplementation(t *testing.T) {
+	wb := newWrappedBody(nil, readCloser{})
+	assert.Implements(t, (*io.ReadCloser)(nil), wb)
+
+	_, ok := wb.(io.ReadWriteCloser)
+	assert.False(t, ok, "wrappedBody should not implement io.ReadWriteCloser")
+}
+
+func TestWrappedBodyWrite(t *testing.T) {
+	s := new(span)
+	var rwc io.ReadWriteCloser
+	assert.NotPanics(t, func() {
+		rwc = newWrappedBody(s, readWriteCloser{}).(io.ReadWriteCloser)
+	})
+
+	n, err := rwc.Write([]byte{})
+	assert.Equal(t, writeSize, n, "wrappedBody returned wrong bytes")
+	assert.NoError(t, err)
+	s.assert(t, false, nil, codes.Unset, "")
+}
+
+func TestWrappedBodyWriteError(t *testing.T) {
+	s := new(span)
+	expectedErr := errors.New("test")
+	var rwc io.ReadWriteCloser
+	assert.NotPanics(t, func() {
+		rwc = newWrappedBody(s, readWriteCloser{
+			writeErr: expectedErr,
+		}).(io.ReadWriteCloser)
+	})
+	n, err := rwc.Write([]byte{})
+	assert.Equal(t, writeSize, n, "wrappedBody returned wrong bytes")
+	assert.ErrorIs(t, err, expectedErr)
+	s.assert(t, false, expectedErr, codes.Error, expectedErr.Error())
+}
+
+func TestTransportProtocolSwitch(t *testing.T) {
+	// This test validates the fix to #1329.
+
+	// Simulate a "101 Switching Protocols" response from the test server.
+	response := []byte(strings.Join([]string{
+		"HTTP/1.1 101 Switching Protocols",
+		"Upgrade: WebSocket",
+		"Connection: Upgrade",
+		"", "", // Needed for extra CRLF.
+	}, "\r\n"))
+
+	ts := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
+		conn, buf, err := w.(http.Hijacker).Hijack()
+		require.NoError(t, err)
+
+		_, err = buf.Write(response)
+		require.NoError(t, err)
+		require.NoError(t, buf.Flush())
+		require.NoError(t, conn.Close())
+	}))
+	defer ts.Close()
+
+	ctx := context.Background()
+	r, err := http.NewRequestWithContext(ctx, http.MethodGet, ts.URL, http.NoBody)
+	require.NoError(t, err)
+
+	c := http.Client{Transport: NewTransport(http.DefaultTransport)}
+	res, err := c.Do(r)
+	require.NoError(t, err)
+	t.Cleanup(func() { require.NoError(t, res.Body.Close()) })
+
+	assert.Implements(t, (*io.ReadWriteCloser)(nil), res.Body, "invalid body returned for protocol switch")
 }
