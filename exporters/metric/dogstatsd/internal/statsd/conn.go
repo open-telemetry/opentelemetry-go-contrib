@@ -29,10 +29,9 @@ import (
 
 	"go.opentelemetry.io/otel/metric/number"
 	"go.opentelemetry.io/otel/metric/sdkapi"
-	"go.opentelemetry.io/otel/metric/unit"
-	export "go.opentelemetry.io/otel/sdk/export/metric"
-	"go.opentelemetry.io/otel/sdk/export/metric/aggregation"
 	"go.opentelemetry.io/otel/sdk/instrumentation"
+	"go.opentelemetry.io/otel/sdk/metric/export"
+	"go.opentelemetry.io/otel/sdk/metric/export/aggregation"
 	"go.opentelemetry.io/otel/sdk/resource"
 )
 
@@ -78,10 +77,8 @@ type (
 )
 
 const (
-	formatCounter   = "c"
-	formatHistogram = "h"
-	formatGauge     = "g"
-	formatTiming    = "ms"
+	formatCounter = "c"
+	formatGauge   = "g"
 
 	// MaxPacketSize defaults to the smallest value known to work
 	// across all cloud providers.  If the packets are too large,
@@ -182,29 +179,13 @@ func (e *Exporter) Export(_ context.Context, res *resource.Resource, ilReader ex
 	// Is there a specification for this?
 	aggErr = ilReader.ForEach(func(_ instrumentation.Library, reader export.Reader) error {
 		return reader.ForEach(e, func(rec export.Record) error {
-			pts, err := e.countPoints(rec)
-			if err != nil {
+			before := buf.Len()
+
+			if err := e.formatMetric(rec, res, 0, buf); err != nil {
 				return err
 			}
-			for pt := 0; pt < pts; pt++ {
-				before := buf.Len()
 
-				if err := e.formatMetric(rec, res, pt, buf); err != nil {
-					return err
-				}
-
-				if buf.Len() < e.config.MaxPacketSize {
-					continue
-				}
-				if before == 0 {
-					// A single metric >= packet size
-					if err := e.send(buf.Bytes()); err != nil && sendErr == nil {
-						sendErr = err
-					}
-					buf.Reset()
-					continue
-				}
-
+			if buf.Len() >= e.config.MaxPacketSize {
 				// Send and copy the leftover
 				if err := e.send(buf.Bytes()[:before]); err != nil && sendErr == nil {
 					sendErr = err
@@ -240,47 +221,12 @@ func (e *Exporter) send(buf []byte) error {
 	return nil
 }
 
-// countPoints returns the number of separate statsd points contained
-// in this record.
-func (e *Exporter) countPoints(rec export.Record) (int, error) {
-	agg := rec.Aggregation()
-
-	if pts, ok := agg.(aggregation.Points); ok {
-		points, err := pts.Points()
-		if err != nil {
-			return 0, err
-		}
-		return len(points), nil
-	}
-	return 1, nil
-}
-
 // formatMetric formats an individual export record.  For some records
 // this will emit a single statistic, for some it will emit more than
 // one.
 func (e *Exporter) formatMetric(rec export.Record, res *resource.Resource, pos int, buf *bytes.Buffer) error {
-	desc := rec.Descriptor()
 	agg := rec.Aggregation()
-	// TODO handle non-Points Distribution/MaxSumCount by
-	// formatting individual quantiles, the sum, and the count as
-	// single statistics.  For the dogstatsd variation, assuming
-	// open-source systems like Veneur add support, figure out the
-	// proper encoding for "d"-type distribution data.
-
-	if pts, ok := agg.(aggregation.Points); ok {
-		var format string
-		if desc.Unit() == unit.Milliseconds {
-			format = formatTiming
-		} else {
-			format = formatHistogram
-		}
-		points, err := pts.Points()
-		if err != nil {
-			return err
-		}
-		e.formatSingleStat(rec, res, points[pos].Number, format, buf)
-
-	} else if sum, ok := agg.(aggregation.Sum); ok {
+	if sum, ok := agg.(aggregation.Sum); ok {
 		sum, err := sum.Sum()
 		if err != nil {
 			return err

@@ -12,6 +12,12 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
+// Package cortex provides a Cortex exporter. It provides functionality to
+// sends cumulative metric data Cortex using the Prometheus Remote Write API.
+//
+// Deprecated: This package is no longer supported. Use the
+// go.opentelemetry.io/otel/exporters/otlp/otlpmetric exporter as a replacement
+// to send data to a collector which can then export with its PRW exporter.
 package cortex
 
 import (
@@ -30,12 +36,11 @@ import (
 	"go.opentelemetry.io/otel/metric/global"
 	"go.opentelemetry.io/otel/metric/number"
 	"go.opentelemetry.io/otel/metric/sdkapi"
-	"go.opentelemetry.io/otel/sdk/export/metric"
-	export "go.opentelemetry.io/otel/sdk/export/metric"
-	"go.opentelemetry.io/otel/sdk/export/metric/aggregation"
 	"go.opentelemetry.io/otel/sdk/instrumentation"
 	"go.opentelemetry.io/otel/sdk/metric/aggregator/histogram"
 	controller "go.opentelemetry.io/otel/sdk/metric/controller/basic"
+	"go.opentelemetry.io/otel/sdk/metric/export"
+	"go.opentelemetry.io/otel/sdk/metric/export/aggregation"
 	processor "go.opentelemetry.io/otel/sdk/metric/processor/basic"
 	"go.opentelemetry.io/otel/sdk/metric/selector/simple"
 	"go.opentelemetry.io/otel/sdk/resource"
@@ -58,7 +63,7 @@ func (e *Exporter) TemporalityFor(*sdkapi.Descriptor, aggregation.Kind) aggregat
 }
 
 // Export forwards metrics to Cortex from the SDK
-func (e *Exporter) Export(_ context.Context, res *resource.Resource, checkpointSet metric.InstrumentationLibraryReader) error {
+func (e *Exporter) Export(_ context.Context, res *resource.Resource, checkpointSet export.InstrumentationLibraryReader) error {
 	timeseries, err := e.ConvertToTimeSeries(res, checkpointSet)
 	if err != nil {
 		return err
@@ -134,7 +139,7 @@ func (e *Exporter) ConvertToTimeSeries(res *resource.Resource, checkpointSet exp
 
 	// Iterate over each record in the checkpoint set and convert to TimeSeries
 	aggError = checkpointSet.ForEach(func(library instrumentation.Library, reader export.Reader) error {
-		return reader.ForEach(e, func(record metric.Record) error {
+		return reader.ForEach(e, func(record export.Record) error {
 			// Convert based on aggregation type
 			edata := exportData{
 				Resource: res,

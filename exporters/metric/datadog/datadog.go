@@ -12,6 +12,9 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
+// Package datadog provides a DataDog exporter.
+//
+// Deprecated: This package is no longer supported.
 package datadog
 
 import (
@@ -24,9 +27,9 @@ import (
 	"go.opentelemetry.io/otel/attribute"
 	"go.opentelemetry.io/otel/metric/number"
 	"go.opentelemetry.io/otel/metric/sdkapi"
-	export "go.opentelemetry.io/otel/sdk/export/metric"
-	"go.opentelemetry.io/otel/sdk/export/metric/aggregation"
 	"go.opentelemetry.io/otel/sdk/instrumentation"
+	"go.opentelemetry.io/otel/sdk/metric/export"
+	"go.opentelemetry.io/otel/sdk/metric/export/aggregation"
 	"go.opentelemetry.io/otel/sdk/resource"
 )
 
@@ -109,20 +112,6 @@ func (e *Exporter) Export(ctx context.Context, res *resource.Resource, ilr expor
 				tags = append(tags, tag)
 			}
 			switch agg := agg.(type) {
-			case aggregation.Points:
-				numbers, err := agg.Points()
-				if err != nil {
-					return fmt.Errorf("error getting Points for %s: %w", name, err)
-				}
-				f := e.client.Histogram
-				if e.opts.UseDistribution {
-					f = e.client.Distribution
-				}
-				for _, n := range numbers {
-					if err := f(name, metricValue(r.Descriptor().NumberKind(), n.Number), tags, rate); err != nil {
-						return fmt.Errorf("error submitting %s point: %w", name, err)
-					}
-				}
 			case aggregation.Sum:
 				val, err := agg.Sum()
 				if err != nil {

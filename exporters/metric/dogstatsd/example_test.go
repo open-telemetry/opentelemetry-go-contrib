@@ -24,7 +24,7 @@ import (
 	"sync"
 	"time"
 
-	"go.opentelemetry.io/contrib/exporters/metric/dogstatsd"
+	"go.opentelemetry.io/contrib/exporters/metric/dogstatsd" // nolint:staticcheck // allow import of deprecated pkg.
 	"go.opentelemetry.io/otel/attribute"
 	"go.opentelemetry.io/otel/metric"
 	controller "go.opentelemetry.io/otel/sdk/metric/controller/basic"
@@ -82,11 +82,11 @@ func ExampleNew() {
 
 	// Create and update a single counter:
 	counter := metric.Must(meter).NewInt64Counter("a.counter")
-	values := metric.Must(meter).NewInt64Histogram("a.values")
+	values := metric.Must(meter).NewInt64UpDownCounter("a.values")
 
-	values.Record(ctx, 50, key.String("value"))
+	values.Add(ctx, 50, key.String("value"))
 	counter.Add(ctx, 100, key.String("value"))
-	values.Record(ctx, 150, key.String("value"))
+	values.Add(ctx, 150, key.String("value"))
 
 	// Flush the exporter, close the pipe, and wait for the reader.
 	err = cont.Stop(context.Background())
@@ -98,8 +98,7 @@ func ExampleNew() {
 
 	// Output:
 	// a.counter:100|c|#host:name,key:value
-	// a.values:150|h|#host:name,key:value
-	// a.values:50|h|#host:name,key:value
+	// a.values:200|c|#host:name,key:value
 }
 
 func canonicalStats(lines []string) {
