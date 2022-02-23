@@ -44,7 +44,6 @@ func (r *Rule) snapshot() *samplingStatisticsDocument {
 
 	// reset counters
 	r.matchedRequests, r.sampledRequests, r.borrowedRequests = 0, 0, 0
-	requests, sampled, borrowed = 4, 4, 4
 
 	return &samplingStatisticsDocument{
 		RequestCount: &requests,

@@ -279,7 +279,7 @@ func (m *Manifest) snapshots() ([]*samplingStatisticsDocument, error) {
 
 	// Generate sampling statistics for user-defined rules
 	for _, r := range m.Rules {
-//		if r.stale(m.clock.Now().Unix()) {
+		if r.stale(m.clock.Now().Unix()) {
 			s := r.snapshot()
 			clientID, err := generateClientId(); if err != nil {
 				return nil, err
@@ -287,7 +287,7 @@ func (m *Manifest) snapshots() ([]*samplingStatisticsDocument, error) {
 			s.ClientID = clientID
 
 			statistics = append(statistics, s)
-//		}
+		}
 	}
 
 	return statistics, nil
