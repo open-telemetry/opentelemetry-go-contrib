@@ -25,6 +25,7 @@ type Manifest struct {
 	SamplingTargetsPollingInterval  time.Duration
 	refreshedAt 					int64
 	xrayClient  					*xrayClient
+	clientID						*string
 	logger      					logr.Logger
 	clock       					util.Clock
 	mu          					sync.RWMutex
@@ -32,7 +33,13 @@ type Manifest struct {
 
 // NewManifest return manifest object configured with logging, clock and xrayClient.
 func NewManifest(addr string, logger logr.Logger) (*Manifest, error) {
+	// generate client for getSamplingRules and getSamplingTargets API call
 	client, err := newClient(addr); if err != nil {
+		return nil, err
+	}
+
+	// generate clientID for sampling statistics
+	clientID, err := generateClientId(); if err != nil {
 		return nil, err
 	}
 
@@ -41,6 +48,7 @@ func NewManifest(addr string, logger logr.Logger) (*Manifest, error) {
 		clock: &util.DefaultClock{},
 		logger: logger,
 		SamplingTargetsPollingInterval: 10 * time.Second,
+		clientID: clientID,
 	}, nil
 }
 
@@ -281,10 +289,7 @@ func (m *Manifest) snapshots() ([]*samplingStatisticsDocument, error) {
 	for _, r := range m.Rules {
 		if r.stale(m.clock.Now().Unix()) {
 			s := r.snapshot()
-			clientID, err := generateClientId(); if err != nil {
-				return nil, err
-			}
-			s.ClientID = clientID
+			s.ClientID = m.clientID
 
 			statistics = append(statistics, s)
 		}
