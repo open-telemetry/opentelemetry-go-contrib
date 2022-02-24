@@ -10,7 +10,7 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 
 ### Added
 
-- Add missing `cloud.platform` value to AWS Lambda, GCP Compute Engine, GCP Cloud Run, GCP GKE resource detectors and add `cloud.provider` to GCP GKE resource detector.
+- Add missing `cloud.platform` value to AWS Lambda, GCP Compute Engine, GCP Cloud Run, GCP GKE resource detectors and add `cloud.provider` to GCP GKE resource detector. (#1857)
 
 ### Fixed
 
