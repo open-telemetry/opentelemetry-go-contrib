@@ -95,6 +95,7 @@ func TestCloudRunDetectorExpectSuccess(t *testing.T) {
 		resource.WithAttributes(
 			attribute.String("cloud.account.id", "foo"),
 			attribute.String("cloud.provider", "gcp"),
+			attribute.String("cloud.platform", "gcp_cloud_run"),
 			attribute.String("cloud.region", "utopia"),
 			attribute.String("service.instance.id", "bar"),
 			attribute.String("service.name", "x-service"),
