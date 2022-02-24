@@ -80,6 +80,7 @@ func (c *CloudRun) Detect(ctx context.Context) (*resource.Resource, error) {
 
 	attributes := []attribute.KeyValue{
 		semconv.CloudProviderGCP,
+		semconv.CloudPlatformGCPCloudRun,
 		semconv.ServiceNamespaceKey.String(serviceNamespace),
 	}
 

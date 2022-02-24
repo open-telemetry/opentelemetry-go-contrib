@@ -8,6 +8,10 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 
 ## [Unreleased]
 
+### Added
+
+- Add missing `cloud.platform` value to AWS Lambda, GCP Compute Engine, GCP Cloud Run, GCP GKE resource detectors and add `cloud.provider` to GCP GKE resource detector.
+
 ### Fixed
 
 - Fix the `echo` middleware by using `SpanKind.SERVER` when deciding the `SpanStatus`.

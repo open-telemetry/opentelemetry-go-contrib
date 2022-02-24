@@ -41,6 +41,7 @@ func (gce *GCE) Detect(ctx context.Context) (*resource.Resource, error) {
 
 	attributes := []attribute.KeyValue{
 		semconv.CloudProviderGCP,
+		semconv.CloudPlatformGCPComputeEngine,
 	}
 
 	var errInfo []string

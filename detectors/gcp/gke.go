@@ -47,6 +47,8 @@ func (gke *GKE) Detect(ctx context.Context) (*resource.Resource, error) {
 	}
 
 	attributes := []attribute.KeyValue{
+		semconv.CloudProviderGCP,
+		semconv.CloudPlatformGCPKubernetesEngine,
 		semconv.K8SNamespaceNameKey.String(os.Getenv("NAMESPACE")),
 		semconv.K8SPodNameKey.String(os.Getenv("HOSTNAME")),
 	}
