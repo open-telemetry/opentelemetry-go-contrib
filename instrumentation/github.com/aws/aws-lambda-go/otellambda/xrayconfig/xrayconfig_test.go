@@ -114,7 +114,8 @@ var (
 	}
 
 	expectedSpanResource = v1resource.Resource{
-		Attributes: []*v1common.KeyValue{{Key: "cloud.provider", Value: &v1common.AnyValue{Value: &v1common.AnyValue_StringValue{StringValue: "aws"}}},
+		Attributes: []*v1common.KeyValue{{Key: "cloud.platform", Value: &v1common.AnyValue{Value: &v1common.AnyValue_StringValue{StringValue: "aws_lambda"}}},
+			{Key: "cloud.provider", Value: &v1common.AnyValue{Value: &v1common.AnyValue_StringValue{StringValue: "aws"}}},
 			{Key: "cloud.region", Value: &v1common.AnyValue{Value: &v1common.AnyValue_StringValue{StringValue: "us-texas-1"}}},
 			{Key: "faas.name", Value: &v1common.AnyValue{Value: &v1common.AnyValue_StringValue{StringValue: "testFunction"}}},
 			{Key: "faas.version", Value: &v1common.AnyValue{Value: &v1common.AnyValue_StringValue{StringValue: "$LATEST"}}}},
@@ -129,11 +130,12 @@ var (
 )
 
 func assertResourceEquals(t *testing.T, expected *v1resource.Resource, actual *v1resource.Resource) {
-	assert.Len(t, actual.Attributes, 4)
+	assert.Len(t, actual.Attributes, 5)
 	assert.Equal(t, expected.Attributes[0].String(), actual.Attributes[0].String())
 	assert.Equal(t, expected.Attributes[1].String(), actual.Attributes[1].String())
 	assert.Equal(t, expected.Attributes[2].String(), actual.Attributes[2].String())
 	assert.Equal(t, expected.Attributes[3].String(), actual.Attributes[3].String())
+	assert.Equal(t, expected.Attributes[4].String(), actual.Attributes[4].String())
 	assert.Equal(t, expected.DroppedAttributesCount, actual.DroppedAttributesCount)
 }
 
