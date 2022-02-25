@@ -8,6 +8,11 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 
 ## [Unreleased]
 
+### Fixed
+
+- Fix the `echo` middleware by using `SpanKind.SERVER` when deciding the `SpanStatus`.
+  This makes `4xx` response codes to not be an error anymore. (#1848)
+
 ## [1.4.0/0.29.0] - 2022-02-14
 
 ### Added
