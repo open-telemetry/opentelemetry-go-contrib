@@ -27,7 +27,7 @@ type Manifest struct {
 	xrayClient  					*xrayClient
 	clientID						*string
 	logger      					logr.Logger
-	clock       					util.Clock
+	Clock       					util.Clock
 	mu          					sync.RWMutex
 }
 
@@ -45,7 +45,7 @@ func NewManifest(addr string, logger logr.Logger) (*Manifest, error) {
 
 	return &Manifest{
 		xrayClient: client,
-		clock: &util.DefaultClock{},
+		Clock: &util.DefaultClock{},
 		logger: logger,
 		SamplingTargetsPollingInterval: 10 * time.Second,
 		clientID: clientID,
@@ -58,7 +58,7 @@ func (m *Manifest) Expired() bool {
 	m.mu.RLock()
 	defer m.mu.RUnlock()
 
-	return m.refreshedAt < m.clock.Now().Unix()-manifestTTL
+	return m.refreshedAt < m.Clock.Now().Unix()-manifestTTL
 }
 
 // MatchAgainstManifestRules returns a Rule and boolean flag set as true if rule has been match against span attributes, otherwise nil and false
@@ -177,7 +177,7 @@ func (m *Manifest) updateRules(rules *getSamplingRulesOutput) {
 
 	m.mu.Lock()
 	m.Rules = tempManifest.Rules
-	m.refreshedAt = m.clock.Now().Unix()
+	m.refreshedAt = m.Clock.Now().Unix()
 	m.mu.Unlock()
 
 	return
@@ -202,13 +202,6 @@ func (m *Manifest) createRule(ruleProp ruleProperties) {
 func (m *Manifest) updateTargets(targets *getSamplingTargetsOutput) (refresh bool, err error) {
 	// update sampling targets for each rule
 	for _, t := range targets.SamplingTargetDocuments {
-		if t.RuleName != nil && t.ReservoirQuota != nil {
-			fmt.Println("rule name")
-			fmt.Println(*t.RuleName)
-			fmt.Println("assigned quota")
-			fmt.Println(*t.ReservoirQuota)
-		}
-
 		if err := m.updateReservoir(t); err != nil {
 			return false, err
 		}
@@ -217,9 +210,9 @@ func (m *Manifest) updateTargets(targets *getSamplingTargetsOutput) (refresh boo
 	// consume unprocessed statistics messages
 	for _, s := range targets.UnprocessedStatistics {
 		m.logger.V(5).Info(
-			"error occurred updating sampling target for rule, code and message", "RuleName", *s.RuleName, "ErrorCode",
-			*s.ErrorCode,
-			"Message", *s.Message,
+			"error occurred updating sampling target for rule, code and message", "RuleName", s.RuleName, "ErrorCode",
+			s.ErrorCode,
+			"Message", s.Message,
 		)
 
 		// do not set any flags if error is unknown
@@ -259,7 +252,7 @@ func (m *Manifest) updateReservoir(t *samplingTargetDocument) (err error) {
 
 	for index, rule := range m.Rules {
 		if rule.ruleProperties.RuleName == *t.RuleName {
-			m.Rules[index].reservoir.refreshedAt = m.clock.Now().Unix()
+			m.Rules[index].reservoir.refreshedAt = m.Clock.Now().Unix()
 
 			// Update non-optional attributes from response
 			m.Rules[index].ruleProperties.FixedRate = *t.FixedRate
@@ -287,8 +280,8 @@ func (m *Manifest) snapshots() ([]*samplingStatisticsDocument, error) {
 
 	// Generate sampling statistics for user-defined rules
 	for _, r := range m.Rules {
-		if r.stale(m.clock.Now().Unix()) {
-			s := r.snapshot()
+		if r.stale(m.Clock.Now().Unix()) {
+			s := r.snapshot(m.Clock.Now().Unix())
 			s.ClientID = m.clientID
 
 			statistics = append(statistics, s)

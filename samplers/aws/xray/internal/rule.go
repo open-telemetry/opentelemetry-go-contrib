@@ -26,6 +26,8 @@ type Rule struct {
 
 	// number of requests borrowed using specific rule
 	borrowedRequests int64
+
+	clock util.Clock
 }
 
 // stale checks if targets (sampling stats) for a given rule is expired or not
@@ -35,10 +37,7 @@ func (r *Rule) stale(now int64) bool {
 
 // snapshot takes a snapshot of the sampling statistics counters, returning
 // samplingStatisticsDocument. It also resets statistics counters.
-func (r *Rule) snapshot() *samplingStatisticsDocument {
-	clock := &util.DefaultClock{}
-	now := clock.Now().Unix()
-
+func (r *Rule) snapshot(now int64) *samplingStatisticsDocument {
 	name := r.ruleProperties.RuleName
 	requests, sampled, borrowed := r.matchedRequests, r.sampledRequests, r.borrowedRequests
 
@@ -55,13 +54,10 @@ func (r *Rule) snapshot() *samplingStatisticsDocument {
 }
 
 // Sample uses sampling targets of a given rule to decide which sampling should be done and returns a SamplingResult.
-func (r *Rule) Sample(parameters sdktrace.SamplingParameters) sdktrace.SamplingResult {
+func (r *Rule) Sample(parameters sdktrace.SamplingParameters, now int64) sdktrace.SamplingResult {
 	sd := sdktrace.SamplingResult{
 		Tracestate: trace.SpanContextFromContext(parameters.ParentContext).TraceState(),
 	}
-
-	clock := &util.DefaultClock{}
-	now := clock.Now().Unix()
 
 	atomic.AddInt64(&r.matchedRequests, int64(1))
 
@@ -142,9 +138,13 @@ func (r *Rule) appliesTo(parameters sdktrace.SamplingParameters, serviceName str
 func (r *Rule) attributeMatching(parameters sdktrace.SamplingParameters) bool {
 	match := false
 	if len(r.ruleProperties.Attributes) > 0 {
-		for _, attrs := range parameters.Attributes {
-			if r.ruleProperties.Attributes[string(attrs.Key)] != "" {
-				match = wildcardMatch(r.ruleProperties.Attributes[string(attrs.Key)], attrs.Value.AsString())
+		for key, value := range r.ruleProperties.Attributes {
+			for _, attrs := range parameters.Attributes {
+				if key == string(attrs.Key) {
+					match = wildcardMatch(value, attrs.Value.AsString())
+				} else {
+					match = false
+				}
 			}
 		}
 		return match

@@ -96,7 +96,7 @@ func (rs *remoteSampler) ShouldSample(parameters sdktrace.SamplingParameters) sd
 		// match against known rules
 		r, match := rs.manifest.MatchAgainstManifestRules(parameters, rs.serviceName, rs.cloudPlatform); if match {
 			// remote sampling based on rule match
-			return r.Sample(parameters)
+			return r.Sample(parameters, rs.manifest.Clock.Now().Unix())
 		}
 	}
 
@@ -172,6 +172,11 @@ func (rs *remoteSampler) startPoller(ctx context.Context) {
 func main() {
 	ctx := context.Background()
 	rs, _ := NewRemoteSampler(ctx, "test", "test-platform")
+	//
+	//commonLabels := []attribute.KeyValue{
+	//	attribute.String("labelA", "chocolate"),
+	//	attribute.String("labelB", "raspberry"),
+	//}
 
 	for i := 0; i < 1000; i++ {
 		rs.ShouldSample(sdktrace.SamplingParameters{})
