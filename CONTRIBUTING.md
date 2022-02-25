@@ -79,6 +79,7 @@ Approvers:
 - [David Ashpole](https://github.com/dashpole), Google
 - [Gustavo Silva Paiva](https://github.com/paivagustavo), LightStep
 - [Robert Pająk](https://github.com/pellared), Splunk
+- [Chester Cheung](https://github.com/hanyuancheung), Tencent
 
 Maintainers:
 
