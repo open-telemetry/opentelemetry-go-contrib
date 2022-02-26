@@ -15,9 +15,12 @@
 package internal
 
 import (
+	"testing"
+
+	"github.com/stretchr/testify/require"
+
 	"go.opentelemetry.io/otel/attribute"
 	"go.opentelemetry.io/otel/sdk/trace"
-	"testing"
 
 	"github.com/stretchr/testify/assert"
 )
@@ -92,7 +95,7 @@ func TestSnapshot(t *testing.T) {
 // assert that reservoir is expired, borrowing 1 req during that second.
 func TestExpiredReservoirBorrowSample(t *testing.T) {
 	r1 := Rule{
-		reservoir:     reservoir{
+		reservoir: reservoir{
 			expiresAt:    1500000060,
 			used:         0,
 			capacity:     10,
@@ -162,7 +165,7 @@ func TestConsumeFromQuotaSample(t *testing.T) {
 // assert that sampling using traceIDRationBasedSampler.
 func TestTraceIDRatioBasedSampler(t *testing.T) {
 	r1 := Rule{
-		reservoir:      reservoir{
+		reservoir: reservoir{
 			quota:        10,
 			expiresAt:    1500000060,
 			currentEpoch: 1500000000,
@@ -221,7 +224,9 @@ func TestAppliesToMatchingWithAllAttrs(t *testing.T) {
 		attribute.String("http.url", "http://127.0.0.1:2000"),
 	}
 
-	assert.True(t, r1.appliesTo(trace.SamplingParameters{Attributes: httpAttrs}, "test-service", "EC2"))
+	match, err := r1.appliesTo(trace.SamplingParameters{Attributes: httpAttrs}, "test-service", "EC2")
+	require.NoError(t, err)
+	assert.True(t, match)
 }
 
 // assert that matching will happen when rules has all the HTTP attrs set as '*' and
@@ -244,7 +249,9 @@ func TestAppliesToMatchingWithStarHTTPAttrs(t *testing.T) {
 		attribute.String("http.url", "http://127.0.0.1:2000"),
 	}
 
-	assert.True(t, r1.appliesTo(trace.SamplingParameters{Attributes: httpAttrs}, "test-service", "EC2"))
+	match, err := r1.appliesTo(trace.SamplingParameters{Attributes: httpAttrs}, "test-service", "EC2")
+	require.NoError(t, err)
+	assert.True(t, match)
 }
 
 // assert that matching will not happen when rules has all the HTTP attrs set as non '*' values and
@@ -261,7 +268,9 @@ func TestAppliesToMatchingWithHTTPAttrs_NoSpanAttrs(t *testing.T) {
 		},
 	}
 
-	assert.False(t, r1.appliesTo(trace.SamplingParameters{}, "test-service", "EC2"))
+	match, err := r1.appliesTo(trace.SamplingParameters{}, "test-service", "EC2")
+	require.NoError(t, err)
+	assert.False(t, match)
 }
 
 // assert that matching will happen when rules has all the HTTP attrs set as '*' values and
@@ -278,7 +287,9 @@ func TestAppliesToMatchingWithStarHTTPAttrs_NoSpanAttrs(t *testing.T) {
 		},
 	}
 
-	assert.True(t, r1.appliesTo(trace.SamplingParameters{}, "test-service", "EC2"))
+	match, err := r1.appliesTo(trace.SamplingParameters{}, "test-service", "EC2")
+	require.NoError(t, err)
+	assert.True(t, match)
 }
 
 // assert that matching will not happen when rules has some HTTP attrs set as non '*' values and
@@ -295,7 +306,9 @@ func TestAppliesToMatchingWithPartialHTTPAttrs_NoSpanAttrs(t *testing.T) {
 		},
 	}
 
-	assert.False(t, r1.appliesTo(trace.SamplingParameters{}, "test-service", "EC2"))
+	match, err := r1.appliesTo(trace.SamplingParameters{}, "test-service", "EC2")
+	require.NoError(t, err)
+	assert.False(t, match)
 }
 
 // assert that matching will not happen when rule and span ServiceType attr value is different.
@@ -311,7 +324,9 @@ func TestAppliesToNoMatching(t *testing.T) {
 		},
 	}
 
-	assert.False(t, r1.appliesTo(trace.SamplingParameters{}, "test-service", "ECS"))
+	match, err := r1.appliesTo(trace.SamplingParameters{}, "test-service", "ECS")
+	require.NoError(t, err)
+	assert.False(t, match)
 }
 
 // assert that if rules has attribute and span has those attribute with same value then matching will happen.
@@ -330,7 +345,9 @@ func TestAttributeMatching(t *testing.T) {
 		},
 	}
 
-	assert.True(t, r1.attributeMatching(trace.SamplingParameters{Attributes: commonLabels}))
+	match, err := r1.attributeMatching(trace.SamplingParameters{Attributes: commonLabels})
+	require.NoError(t, err)
+	assert.True(t, match)
 }
 
 // assert that if some of the rules attributes are not present in span attributes then matching
@@ -350,7 +367,9 @@ func TestNoAttributeMatching(t *testing.T) {
 		},
 	}
 
-	assert.False(t, r1.attributeMatching(trace.SamplingParameters{Attributes: commonLabels}))
+	match, err := r1.attributeMatching(trace.SamplingParameters{Attributes: commonLabels})
+	require.NoError(t, err)
+	assert.False(t, match)
 }
 
 // assert that wildcard attributes will match.
@@ -369,7 +388,9 @@ func TestAttributeWildCardMatching(t *testing.T) {
 		},
 	}
 
-	assert.True(t, r1.attributeMatching(trace.SamplingParameters{Attributes: commonLabels}))
+	match, err := r1.attributeMatching(trace.SamplingParameters{Attributes: commonLabels})
+	require.NoError(t, err)
+	assert.True(t, match)
 }
 
 // assert that if rules has no attributes then matching will happen.
@@ -385,11 +406,7 @@ func TestAttributeMatching_NoRuleAttrs(t *testing.T) {
 		},
 	}
 
-	assert.True(t, r1.attributeMatching(trace.SamplingParameters{Attributes: commonLabels}))
+	match, err := r1.attributeMatching(trace.SamplingParameters{Attributes: commonLabels})
+	require.NoError(t, err)
+	assert.True(t, match)
 }
-
-
-
-
-
-

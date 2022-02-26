@@ -14,57 +14,58 @@
 
 package internal
 
-import "strings"
+import (
+	"fmt"
+	"regexp"
+	"strings"
+)
 
 // wildcardMatch returns true if text matches pattern at the given case-sensitivity; returns false otherwise.
-func wildcardMatch(pattern, text string) bool {
+func wildcardMatch(pattern, text string) (bool, error) {
 	patternLen := len(pattern)
 	textLen := len(text)
 	if patternLen == 0 {
-		return textLen == 0
+		return textLen == 0, nil
 	}
 
 	if pattern == "*" {
-		return true
+		return true, nil
 	}
 
 	pattern = strings.ToLower(pattern)
 	text = strings.ToLower(text)
 
-	i := 0
-	p := 0
-	iStar := textLen
-	pStar := 0
+	match, err := regexp.MatchString(toRegexPattern(pattern), text)
+	if err != nil {
+		return false, fmt.Errorf("wildcardMatch: unable to perform regex matching: %w", err)
+	}
 
-	for i < textLen {
-		if p < patternLen {
-			switch pattern[p] {
-			case text[i]:
-				i++
-				p++
-				continue
-			case '?':
-				i++
-				p++
-				continue
-			case '*':
-				iStar = i
-				pStar = p
-				p++
-				continue
+	return match, nil
+}
+
+func toRegexPattern(pattern string) string {
+	tokenStart := -1
+	var result strings.Builder
+	for i, char := range pattern {
+		if string(char) == "*" || string(char) == "?" {
+			if tokenStart != -1 {
+				result.WriteString(regexp.QuoteMeta(pattern[tokenStart:i]))
+				tokenStart = -1
+			}
+
+			if string(char) == "*" {
+				result.WriteString(".*")
+			} else {
+				result.WriteString(".")
+			}
+		} else {
+			if tokenStart == -1 {
+				tokenStart = i
 			}
 		}
-		if iStar == textLen {
-			return false
-		}
-		iStar++
-		i = iStar
-		p = pStar + 1
 	}
-
-	for p < patternLen && pattern[p] == '*' {
-		p++
+	if tokenStart != -1 {
+		result.WriteString(regexp.QuoteMeta(pattern[tokenStart:]))
 	}
-
-	return p == patternLen && i == textLen
+	return result.String()
 }

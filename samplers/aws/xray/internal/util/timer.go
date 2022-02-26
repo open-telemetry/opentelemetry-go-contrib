@@ -20,17 +20,17 @@ import (
 
 // Ticker is the same as time.Ticker except that it has jitters.
 // A Ticker must be created with NewTicker.
-type ticker struct {
+type Ticker struct {
 	t      *time.Ticker
 	d      time.Duration
 	jitter time.Duration
 }
 
 // NewTicker creates a new Ticker that will send the current time on its channel.
-func NewTicker(d, jitter time.Duration) *ticker {
+func NewTicker(d, jitter time.Duration) *Ticker {
 	t := time.NewTicker(d - time.Duration(globalRand.Int63n(int64(jitter))))
 
-	jitteredTicker := ticker{
+	jitteredTicker := Ticker{
 		t:      t,
 		d:      d,
 		jitter: jitter,
@@ -40,6 +40,6 @@ func NewTicker(d, jitter time.Duration) *ticker {
 }
 
 // C is channel.
-func (j *ticker) C() <-chan time.Time {
+func (j *Ticker) C() <-chan time.Time {
 	return j.t.C
 }

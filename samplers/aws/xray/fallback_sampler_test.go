@@ -12,12 +12,14 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package main
+package xray
 
 import (
-	"github.com/stretchr/testify/assert"
-	"go.opentelemetry.io/otel/sdk/trace"
 	"testing"
+
+	"github.com/stretchr/testify/assert"
+
+	"go.opentelemetry.io/otel/sdk/trace"
 )
 
 // assert sampling using fallback sampler.

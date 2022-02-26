@@ -15,8 +15,9 @@
 package internal
 
 import (
-	"go.opentelemetry.io/contrib/samplers/aws/xray/internal/util"
 	"testing"
+
+	"go.opentelemetry.io/contrib/samplers/aws/xray/internal/util"
 
 	"github.com/stretchr/testify/assert"
 )

@@ -1,11 +1,24 @@
+// Copyright The OpenTelemetry Authors
+//
+// Licensed under the Apache License, Version 2.0 (the "License");
+// you may not use this file except in compliance with the License.
+// You may obtain a copy of the License at
+//
+//     http://www.apache.org/licenses/LICENSE-2.0
+//
+// Unless required by applicable law or agreed to in writing, software
+// distributed under the License is distributed on an "AS IS" BASIS,
+// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+// See the License for the specific language governing permissions and
+// limitations under the License.
+
 package internal
 
 import (
-	"fmt"
-	"go.opentelemetry.io/contrib/samplers/aws/xray/internal/util"
+	"sync/atomic"
+
 	sdktrace "go.opentelemetry.io/otel/sdk/trace"
 	"go.opentelemetry.io/otel/trace"
-	"sync/atomic"
 )
 
 // Rule represents a sampling rule which contains rule properties and reservoir which keeps tracks of sampling statistics of a rule
@@ -26,8 +39,6 @@ type Rule struct {
 
 	// number of requests borrowed using specific rule
 	borrowedRequests int64
-
-	clock util.Clock
 }
 
 // stale checks if targets (sampling stats) for a given rule is expired or not
@@ -65,14 +76,12 @@ func (r *Rule) Sample(parameters sdktrace.SamplingParameters, now int64) sdktrac
 	if r.reservoir.expired(now) {
 		// borrowing one request every second
 		if r.reservoir.borrow(now) {
-			fmt.Println("inside expired reservoir")
 			atomic.AddInt64(&r.borrowedRequests, int64(1))
 
 			sd.Decision = sdktrace.RecordAndSample
 			return sd
 		}
 
-		fmt.Println("inside expired traceIDRatio")
 		// using traceIDRatioBased sampler to sample using fixed rate
 		sd = sdktrace.TraceIDRatioBased(r.ruleProperties.FixedRate).ShouldSample(parameters)
 
@@ -85,14 +94,12 @@ func (r *Rule) Sample(parameters sdktrace.SamplingParameters, now int64) sdktrac
 
 	// Take from reservoir quota, if quota is available for that second
 	if r.reservoir.take(now) {
-		fmt.Println("inside non expired reservoir")
 		atomic.AddInt64(&r.sampledRequests, int64(1))
 		sd.Decision = sdktrace.RecordAndSample
 
 		return sd
 	}
 
-	fmt.Println("inside non expired traceIDRatio")
 	// using traceIDRatioBased sampler to sample using fixed rate
 	sd = sdktrace.TraceIDRatioBased(r.ruleProperties.FixedRate).ShouldSample(parameters)
 
@@ -104,11 +111,12 @@ func (r *Rule) Sample(parameters sdktrace.SamplingParameters, now int64) sdktrac
 }
 
 // appliesTo performs a matching against rule properties to see if a given rule does match with any of the rule set on AWS X-Ray console
-func (r *Rule) appliesTo(parameters sdktrace.SamplingParameters, serviceName string, cloudPlatform string) bool {
+func (r *Rule) appliesTo(parameters sdktrace.SamplingParameters, serviceName string, cloudPlatform string) (bool, error) {
 	var httpTarget string
 	var httpURL string
 	var httpHost string
 	var httpMethod string
+	var HTTPURLPathMatcher bool
 
 	if parameters.Attributes != nil {
 		for _, attrs := range parameters.Attributes {
@@ -127,28 +135,66 @@ func (r *Rule) appliesTo(parameters sdktrace.SamplingParameters, serviceName str
 		}
 	}
 
-	return (r.attributeMatching(parameters)) && (wildcardMatch(r.ruleProperties.ServiceName, serviceName)) &&
-		(wildcardMatch(r.ruleProperties.ServiceType, cloudPlatform)) &&
-		(wildcardMatch(r.ruleProperties.Host, httpHost)) &&
-		(wildcardMatch(r.ruleProperties.HTTPMethod, httpMethod)) &&
-		(wildcardMatch(r.ruleProperties.URLPath, httpURL) || wildcardMatch(r.ruleProperties.URLPath, httpTarget))
+	// attributes and other HTTP span attributes matching
+	attributeMatcher, err := r.attributeMatching(parameters)
+	if err != nil {
+		return attributeMatcher, err
+	}
+	serviceNameMatcher, err := wildcardMatch(r.ruleProperties.ServiceName, serviceName)
+	if err != nil {
+		return serviceNameMatcher, err
+	}
+	serviceTypeMatcher, err := wildcardMatch(r.ruleProperties.ServiceType, cloudPlatform)
+	if err != nil {
+		return serviceTypeMatcher, err
+	}
+	HTTPMethodMatcher, err := wildcardMatch(r.ruleProperties.HTTPMethod, httpMethod)
+	if err != nil {
+		return HTTPMethodMatcher, err
+	}
+	HTTPHostMatcher, err := wildcardMatch(r.ruleProperties.Host, httpHost)
+	if err != nil {
+		return HTTPHostMatcher, err
+	}
+
+	if httpURL != "" {
+		HTTPURLPathMatcher, err = wildcardMatch(r.ruleProperties.URLPath, httpURL)
+		if err != nil {
+			return HTTPURLPathMatcher, err
+		}
+	} else {
+		HTTPURLPathMatcher, err = wildcardMatch(r.ruleProperties.URLPath, httpTarget)
+		if err != nil {
+			return HTTPURLPathMatcher, err
+		}
+	}
+
+	return attributeMatcher &&
+		serviceNameMatcher &&
+		serviceTypeMatcher &&
+		HTTPMethodMatcher &&
+		HTTPHostMatcher &&
+		HTTPURLPathMatcher, nil
 }
 
 // attributeMatching performs a match on attributes set by users on AWS X-Ray console
-func (r *Rule) attributeMatching(parameters sdktrace.SamplingParameters) bool {
-	match := false
+func (r *Rule) attributeMatching(parameters sdktrace.SamplingParameters) (match bool, err error) {
+	match = false
 	if len(r.ruleProperties.Attributes) > 0 {
 		for key, value := range r.ruleProperties.Attributes {
 			for _, attrs := range parameters.Attributes {
 				if key == string(attrs.Key) {
-					match = wildcardMatch(value, attrs.Value.AsString())
+					match, err = wildcardMatch(value, attrs.Value.AsString())
+					if err != nil {
+						return false, err
+					}
 				} else {
 					match = false
 				}
 			}
 		}
-		return match
+		return match, nil
 	}
 
-	return true
+	return true, nil
 }

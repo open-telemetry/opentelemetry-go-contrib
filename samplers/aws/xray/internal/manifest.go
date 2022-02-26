@@ -1,17 +1,33 @@
+// Copyright The OpenTelemetry Authors
+//
+// Licensed under the Apache License, Version 2.0 (the "License");
+// you may not use this file except in compliance with the License.
+// You may obtain a copy of the License at
+//
+//     http://www.apache.org/licenses/LICENSE-2.0
+//
+// Unless required by applicable law or agreed to in writing, software
+// distributed under the License is distributed on an "AS IS" BASIS,
+// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+// See the License for the specific language governing permissions and
+// limitations under the License.
+
 package internal
 
 import (
 	"context"
 	crypto "crypto/rand"
 	"fmt"
-	"github.com/go-logr/logr"
-	"github.com/jinzhu/copier"
-	"go.opentelemetry.io/contrib/samplers/aws/xray/internal/util"
-	sdktrace "go.opentelemetry.io/otel/sdk/trace"
 	"sort"
 	"strings"
 	"sync"
 	"time"
+
+	"github.com/go-logr/logr"
+	"github.com/jinzhu/copier"
+
+	"go.opentelemetry.io/contrib/samplers/aws/xray/internal/util"
+	sdktrace "go.opentelemetry.io/otel/sdk/trace"
 )
 
 const defaultInterval = int64(10)
@@ -21,34 +37,36 @@ const manifestTTL = 3600
 // Manifest represents a full sampling ruleset and provides
 // option for configuring Logger, Clock and xrayClient.
 type Manifest struct {
-	Rules       					[]Rule
-	SamplingTargetsPollingInterval  time.Duration
-	refreshedAt 					int64
-	xrayClient  					*xrayClient
-	clientID						*string
-	logger      					logr.Logger
-	Clock       					util.Clock
-	mu          					sync.RWMutex
+	Rules                          []Rule
+	SamplingTargetsPollingInterval time.Duration
+	refreshedAt                    int64
+	xrayClient                     *xrayClient
+	clientID                       *string
+	logger                         logr.Logger
+	Clock                          util.Clock
+	mu                             sync.RWMutex
 }
 
 // NewManifest return manifest object configured with logging, clock and xrayClient.
 func NewManifest(addr string, logger logr.Logger) (*Manifest, error) {
 	// generate client for getSamplingRules and getSamplingTargets API call
-	client, err := newClient(addr); if err != nil {
+	client, err := newClient(addr)
+	if err != nil {
 		return nil, err
 	}
 
 	// generate clientID for sampling statistics
-	clientID, err := generateClientId(); if err != nil {
+	clientID, err := generateClientID()
+	if err != nil {
 		return nil, err
 	}
 
 	return &Manifest{
-		xrayClient: client,
-		Clock: &util.DefaultClock{},
-		logger: logger,
+		xrayClient:                     client,
+		Clock:                          &util.DefaultClock{},
+		logger:                         logger,
 		SamplingTargetsPollingInterval: 10 * time.Second,
-		clientID: clientID,
+		clientID:                       clientID,
 	}, nil
 }
 
@@ -62,22 +80,25 @@ func (m *Manifest) Expired() bool {
 }
 
 // MatchAgainstManifestRules returns a Rule and boolean flag set as true if rule has been match against span attributes, otherwise nil and false
-func (m *Manifest) MatchAgainstManifestRules(parameters sdktrace.SamplingParameters, serviceName string, cloudPlatform string) (*Rule, bool) {
+func (m *Manifest) MatchAgainstManifestRules(parameters sdktrace.SamplingParameters, serviceName string, cloudPlatform string) (*Rule, bool, error) {
 	m.mu.RLock()
 	defer m.mu.RUnlock()
 
 	matched := false
 
 	for index, r := range m.Rules {
-		isRuleMatch := r.appliesTo(parameters, serviceName, cloudPlatform)
+		isRuleMatch, err := r.appliesTo(parameters, serviceName, cloudPlatform)
+		if err != nil {
+			return nil, isRuleMatch, err
+		}
 
 		if isRuleMatch {
 			matched = true
-			return &m.Rules[index], matched
+			return &m.Rules[index], matched, nil
 		}
 	}
 
-	return nil, matched
+	return nil, matched, nil
 }
 
 // RefreshManifestRules writes sampling rule properties to the manifest object.
@@ -100,13 +121,17 @@ func (m *Manifest) RefreshManifestTargets(ctx context.Context) (err error) {
 
 	// deep copy centralized manifest object to temporary manifest to avoid thread safety issue
 	m.mu.RLock()
-	err = copier.CopyWithOption(&manifest, m, copier.Option{IgnoreEmpty: false, DeepCopy: true}); if err != nil {
+	err = copier.CopyWithOption(&manifest, m, copier.Option{IgnoreEmpty: false, DeepCopy: true})
+	if err != nil {
 		return err
 	}
 	m.mu.RUnlock()
 
 	// generate sampling statistics based on the data in temporary manifest
-	statistics, err := manifest.snapshots(); if err != nil { return err }
+	statistics, err := manifest.snapshots()
+	if err != nil {
+		return err
+	}
 
 	// return if no statistics to report
 	if len(statistics) == 0 {
@@ -118,12 +143,13 @@ func (m *Manifest) RefreshManifestTargets(ctx context.Context) (err error) {
 	targets, err := m.xrayClient.getSamplingTargets(ctx, statistics)
 	if err != nil {
 		return fmt.Errorf("refreshTargets: error occurred while getting sampling targets: %w", err)
-	} else {
-		m.logger.V(5).Info("successfully fetched sampling targets")
 	}
 
+	m.logger.V(5).Info("successfully fetched sampling targets")
+
 	// update temporary manifest with retrieved targets (statistics) for each rule
-	refresh, err := manifest.updateTargets(targets); if err != nil {
+	refresh, err := manifest.updateTargets(targets)
+	if err != nil {
 		return err
 	}
 
@@ -159,12 +185,12 @@ func (m *Manifest) updateRules(rules *getSamplingRulesOutput) {
 
 	for _, records := range rules.SamplingRuleRecords {
 		if records.SamplingRule.RuleName == "" {
-			m.logger.V(5).Info("Sampling rule without rule name is not supported")
+			m.logger.V(5).Info("sampling rule without rule name is not supported")
 			continue
 		}
 
 		if records.SamplingRule.Version != int64(1) {
-			m.logger.V(5).Info("Sampling rule without Version 1 is not supported", "RuleName", records.SamplingRule.RuleName)
+			m.logger.V(5).Info("sampling rule without Version 1 is not supported", "RuleName", records.SamplingRule.RuleName)
 			continue
 		}
 
@@ -179,24 +205,20 @@ func (m *Manifest) updateRules(rules *getSamplingRulesOutput) {
 	m.Rules = tempManifest.Rules
 	m.refreshedAt = m.Clock.Now().Unix()
 	m.mu.Unlock()
-
-	return
 }
 
 func (m *Manifest) createRule(ruleProp ruleProperties) {
-	cr := reservoir {
+	cr := reservoir{
 		capacity: ruleProp.ReservoirSize,
 		interval: defaultInterval,
 	}
 
-	csr := Rule {
+	csr := Rule{
 		reservoir:      cr,
 		ruleProperties: ruleProp,
 	}
 
 	m.Rules = append(m.Rules, csr)
-
-	return
 }
 
 func (m *Manifest) updateTargets(targets *getSamplingTargetsOutput) (refresh bool, err error) {
@@ -323,7 +345,7 @@ func (m *Manifest) minimumPollingInterval(targets *getSamplingTargetsOutput) (mi
 }
 
 // generateClientId generates random client ID
-func generateClientId() (*string, error) {
+func generateClientID() (*string, error) {
 	var r [12]byte
 
 	_, err := crypto.Read(r[:])
@@ -335,5 +357,3 @@ func generateClientId() (*string, error) {
 
 	return &id, err
 }
-
-

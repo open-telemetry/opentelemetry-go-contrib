@@ -89,26 +89,4 @@ type Rand interface {
 	Float64() float64
 }
 
-// defaultRand is an implementation of Rand interface.
-// It is safe for concurrent use by multiple goroutines.
-type defaultRand struct{}
-
 var globalRand = newGlobalRand()
-
-// Int63n returns, as an int64, a non-negative pseudo-random number in [0,n)
-// from the default Source.
-func (r *defaultRand) Int63n(n int64) int64 {
-	return globalRand.Int63n(n)
-}
-
-// Intn returns, as an int, a non-negative pseudo-random number in [0,n)
-// from the default Source.
-func (r *defaultRand) Intn(n int) int {
-	return globalRand.Intn(n)
-}
-
-// Float64 returns, as a float64, a pseudo-random number in [0.0,1.0)
-// from the default Source.
-func (r *defaultRand) Float64() float64 {
-	return globalRand.Float64()
-}

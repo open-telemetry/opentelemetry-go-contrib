@@ -15,7 +15,6 @@
 package internal
 
 import (
-	"fmt"
 	"sync/atomic"
 )
 
@@ -65,10 +64,6 @@ func (r *reservoir) take(now int64) bool {
 	cur := atomic.LoadInt64(&r.currentEpoch)
 	quota := atomic.LoadInt64(&r.quota)
 	used := atomic.LoadInt64(&r.used)
-
-	fmt.Println("cur", cur)
-	fmt.Println("quota", quota)
-	fmt.Println("used", used)
 
 	if cur != now {
 		atomic.CompareAndSwapInt64(&r.currentEpoch, cur, now)

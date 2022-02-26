@@ -19,101 +19,85 @@ import (
 	"math/rand"
 	"testing"
 
+	"github.com/stretchr/testify/require"
+
 	"github.com/stretchr/testify/assert"
 )
 
-func TestInvalidArgs(t *testing.T) {
-	assert.False(t, wildcardMatch("", "whatever"))
+// assert wildcard match is positive.
+func TestWildCardMatchPositive(t *testing.T) {
+	tests := []struct {
+		pattern string
+		text    string
+	}{
+		// wildcard positive test set
+		{"*", ""},
+		{"foo", "foo"},
+		{"foo*bar*?", "foodbaris"},
+		{"?o?", "foo"},
+		{"*oo", "foo"},
+		{"foo*", "foo"},
+		{"*o?", "foo"},
+		{"*", "boo"},
+		{"", ""},
+		{"a", "a"},
+		{"*a", "a"},
+		{"*a", "ba"},
+		{"a*", "a"},
+		{"a*", "ab"},
+		{"a*a", "aa"},
+		{"a*a", "aba"},
+		{"a*a*", "aaaaaaaaaaaaaaaaaaaaaaa"},
+		{"a*b*a*b*a*b*a*b*a*",
+			"akljd9gsdfbkjhaabajkhbbyiaahkjbjhbuykjakjhabkjhbabjhkaabbabbaaakljdfsjklababkjbsdabab"},
+		{"a*na*ha", "anananahahanahana"},
+		{"***a", "a"},
+		{"**a**", "a"},
+		{"a**b", "ab"},
+		{"*?", "a"},
+		{"*??", "aa"},
+		{"*?", "a"},
+		{"*?*a*", "ba"},
+		{"?at", "bat"},
+		{"?at", "cat"},
+		{"?o?se", "horse"},
+		{"?o?se", "mouse"},
+		{"*s", "horse"},
+		{"J*", "Jeep"},
+		{"*/foo", "/bar/foo"},
+	}
+
+	for _, test := range tests {
+		match, err := wildcardMatch(test.pattern, test.text)
+		require.NoError(t, err)
+		assert.True(t, match)
+	}
 }
 
-func TestInvalidArgs1(t *testing.T) {
-	assert.True(t, wildcardMatch("*", ""))
-}
+// assert wildcard match is negative.
+func TestWildCardMatchNegative(t *testing.T) {
+	tests := []struct {
+		pattern string
+		text    string
+	}{
+		// wildcard negative test set
+		{"", "whatever"},
+		{"foo", "bar"},
+		{"f?o", "boo"},
+		{"f??", "boo"},
+		{"fo*", "boo"},
+		{"f?*", "boo"},
+		{"abcd", "abc"},
+		{"??", "a"},
+		{"??", "a"},
+		{"*?*a", "a"},
+	}
 
-func TestMatchExactPositive(t *testing.T) {
-	assert.True(t, wildcardMatch("foo", "foo"))
-}
-
-func TestMatchExactNegative(t *testing.T) {
-	assert.False(t, wildcardMatch("foo", "bar"))
-}
-
-func TestSingleWildcardPositive(t *testing.T) {
-	assert.True(t, wildcardMatch("fo?", "foo"))
-}
-
-func TestSingleWildcardNegative(t *testing.T) {
-	assert.False(t, wildcardMatch("f?o", "boo"))
-}
-
-func TestMultipleWildcardPositive(t *testing.T) {
-	assert.True(t, wildcardMatch("?o?", "foo"))
-}
-
-func TestMultipleWildcardNegative(t *testing.T) {
-	assert.False(t, wildcardMatch("f??", "boo"))
-}
-
-func TestGlobPositive(t *testing.T) {
-	assert.True(t, wildcardMatch("*oo", "foo"))
-}
-
-func TestGlobPositiveZeroOrMore(t *testing.T) {
-	assert.True(t, wildcardMatch("foo*", "foo"))
-}
-
-func TestGlobNegativeZeroOrMore(t *testing.T) {
-	assert.False(t, wildcardMatch("foo*", "fo0"))
-}
-
-func TestGlobNegative(t *testing.T) {
-	assert.False(t, wildcardMatch("fo*", "boo"))
-}
-
-func TestGlobAndSinglePositive(t *testing.T) {
-	assert.True(t, wildcardMatch("*o?", "foo"))
-}
-
-func TestGlobAndSingleNegative(t *testing.T) {
-	assert.False(t, wildcardMatch("f?*", "boo"))
-}
-
-func TestPureWildcard(t *testing.T) {
-	assert.True(t, wildcardMatch("*", "boo"))
-}
-
-func TestMisc(t *testing.T) {
-	animal1 := "?at"
-	animal2 := "?o?se"
-	animal3 := "*s"
-
-	vehicle1 := "J*"
-	vehicle2 := "????"
-
-	assert.True(t, wildcardMatch(animal1, "bat"))
-	assert.True(t, wildcardMatch(animal1, "cat"))
-	assert.True(t, wildcardMatch(animal2, "horse"))
-	assert.True(t, wildcardMatch(animal2, "mouse"))
-	assert.True(t, wildcardMatch(animal3, "dogs"))
-	assert.True(t, wildcardMatch(animal3, "horses"))
-
-	assert.True(t, wildcardMatch(vehicle1, "Jeep"))
-	assert.True(t, wildcardMatch(vehicle2, "ford"))
-	assert.False(t, wildcardMatch(vehicle2, "chevy"))
-	assert.True(t, wildcardMatch("*", "cAr"))
-
-	assert.True(t, wildcardMatch("*/foo", "/bar/foo"))
-}
-
-func TestCaseInsensitivity(t *testing.T) {
-	assert.True(t, wildcardMatch("Foo", "Foo"))
-	assert.True(t, wildcardMatch("Foo", "FOO"))
-	assert.True(t, wildcardMatch("Fo*", "Foo0"))
-	assert.True(t, wildcardMatch("Fo*", "FOO0"))
-	assert.True(t, wildcardMatch("Fo?", "Foo"))
-	assert.True(t, wildcardMatch("Fo?", "FOo"))
-	assert.True(t, wildcardMatch("Fo?", "FoO"))
-	assert.True(t, wildcardMatch("Fo?", "FOO"))
+	for _, test := range tests {
+		match, err := wildcardMatch(test.pattern, test.text)
+		require.NoError(t, err)
+		assert.False(t, match)
+	}
 }
 
 func TestLongStrings(t *testing.T) {
@@ -124,57 +108,7 @@ func TestLongStrings(t *testing.T) {
 	}
 	text.WriteString("b")
 
-	assert.True(t, wildcardMatch("a*b", text.String()))
-}
-
-func TestNoGlobs(t *testing.T) {
-	assert.False(t, wildcardMatch("abcd", "abc"))
-}
-
-func TestEdgeCaseGlobs(t *testing.T) {
-	assert.True(t, wildcardMatch("", ""))
-	assert.True(t, wildcardMatch("a", "a"))
-	assert.True(t, wildcardMatch("*a", "a"))
-	assert.True(t, wildcardMatch("*a", "ba"))
-	assert.True(t, wildcardMatch("a*", "a"))
-	assert.True(t, wildcardMatch("a*", "ab"))
-	assert.True(t, wildcardMatch("a*a", "aa"))
-	assert.True(t, wildcardMatch("a*a", "aba"))
-	assert.True(t, wildcardMatch("a*a", "aaa"))
-	assert.True(t, wildcardMatch("a*a*", "aa"))
-	assert.True(t, wildcardMatch("a*a*", "aba"))
-	assert.True(t, wildcardMatch("a*a*", "aaa"))
-	assert.True(t, wildcardMatch("a*a*", "aaaaaaaaaaaaaaaaaaaaaaa"))
-	assert.True(t, wildcardMatch("a*b*a*b*a*b*a*b*a*",
-		"akljd9gsdfbkjhaabajkhbbyiaahkjbjhbuykjakjhabkjhbabjhkaabbabbaaakljdfsjklababkjbsdabab"))
-	assert.False(t, wildcardMatch("a*na*ha", "anananahahanahana"))
-}
-
-func TestMultiGlobs(t *testing.T) {
-	assert.True(t, wildcardMatch("*a", "a"))
-	assert.True(t, wildcardMatch("**a", "a"))
-	assert.True(t, wildcardMatch("***a", "a"))
-	assert.True(t, wildcardMatch("**a*", "a"))
-	assert.True(t, wildcardMatch("**a**", "a"))
-
-	assert.True(t, wildcardMatch("a**b", "ab"))
-	assert.True(t, wildcardMatch("a**b", "abb"))
-
-	assert.True(t, wildcardMatch("*?", "a"))
-	assert.True(t, wildcardMatch("*?", "aa"))
-	assert.True(t, wildcardMatch("*??", "aa"))
-	assert.False(t, wildcardMatch("*???", "aa"))
-	assert.True(t, wildcardMatch("*?", "aaa"))
-
-	assert.True(t, wildcardMatch("?", "a"))
-	assert.False(t, wildcardMatch("??", "a"))
-
-	assert.True(t, wildcardMatch("?*", "a"))
-	assert.True(t, wildcardMatch("*?", "a"))
-	assert.False(t, wildcardMatch("?*?", "a"))
-	assert.True(t, wildcardMatch("?*?", "aa"))
-	assert.True(t, wildcardMatch("*?*", "a"))
-
-	assert.False(t, wildcardMatch("*?*a", "a"))
-	assert.True(t, wildcardMatch("*?*a*", "ba"))
+	match, err := wildcardMatch("a*b", text.String())
+	require.NoError(t, err)
+	assert.True(t, match)
 }

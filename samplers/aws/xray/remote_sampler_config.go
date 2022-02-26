@@ -12,7 +12,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package main
+package xray
 
 import (
 	"fmt"
@@ -73,8 +73,6 @@ func newConfig(opts ...Option) *config {
 	for _, option := range opts {
 		option(cfg)
 	}
-
-	stdr.SetVerbosity(5)
 
 	return cfg
 }

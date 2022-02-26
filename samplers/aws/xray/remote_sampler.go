@@ -12,14 +12,14 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package main
+package xray
 
 import (
 	"context"
+	"time"
+
 	"go.opentelemetry.io/contrib/samplers/aws/xray/internal"
 	"go.opentelemetry.io/contrib/samplers/aws/xray/internal/util"
-	"sync"
-	"time"
 
 	"github.com/go-logr/logr"
 
@@ -49,8 +49,6 @@ type remoteSampler struct {
 
 	// logger for logging
 	logger logr.Logger
-
-	mu sync.RWMutex
 }
 
 // Compile time assertion that remoteSampler implements the Sampler interface.
@@ -70,11 +68,12 @@ func NewRemoteSampler(ctx context.Context, serviceName string, cloudPlatform str
 	}
 
 	// create manifest with config
-	m, err := internal.NewManifest(cfg.endpoint, cfg.logger); if err != nil {
+	m, err := internal.NewManifest(cfg.endpoint, cfg.logger)
+	if err != nil {
 		return nil, err
 	}
 
-	remoteSampler := &remoteSampler {
+	remoteSampler := &remoteSampler{
 		manifest:                     m,
 		samplingRulesPollingInterval: cfg.samplingRulesPollingInterval,
 		fallbackSampler:              NewFallbackSampler(),
@@ -94,7 +93,13 @@ func NewRemoteSampler(ctx context.Context, serviceName string, cloudPlatform str
 func (rs *remoteSampler) ShouldSample(parameters sdktrace.SamplingParameters) sdktrace.SamplingResult {
 	if !rs.manifest.Expired() {
 		// match against known rules
-		r, match := rs.manifest.MatchAgainstManifestRules(parameters, rs.serviceName, rs.cloudPlatform); if match {
+		r, match, err := rs.manifest.MatchAgainstManifestRules(parameters, rs.serviceName, rs.cloudPlatform)
+		if err != nil {
+			rs.logger.Error(err, "regexp matching error while matching span and resource attributes")
+			return sdktrace.SamplingResult{}
+		}
+
+		if match {
 			// remote sampling based on rule match
 			return r.Sample(parameters, rs.manifest.Clock.Now().Unix())
 		}
@@ -167,19 +172,4 @@ func (rs *remoteSampler) startPoller(ctx context.Context) {
 			}
 		}
 	}()
-}
-
-func main() {
-	ctx := context.Background()
-	rs, _ := NewRemoteSampler(ctx, "test", "test-platform")
-	//
-	//commonLabels := []attribute.KeyValue{
-	//	attribute.String("labelA", "chocolate"),
-	//	attribute.String("labelB", "raspberry"),
-	//}
-
-	for i := 0; i < 1000; i++ {
-		rs.ShouldSample(sdktrace.SamplingParameters{})
-		time.Sleep(250 * time.Millisecond)
-	}
 }

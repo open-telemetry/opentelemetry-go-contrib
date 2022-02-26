@@ -16,10 +16,6 @@ package internal
 
 import (
 	"context"
-	"github.com/go-logr/stdr"
-	"github.com/stretchr/testify/require"
-	"go.opentelemetry.io/contrib/samplers/aws/xray/internal/util"
-	sdktrace "go.opentelemetry.io/otel/sdk/trace"
 	"log"
 	"net/http"
 	"net/http/httptest"
@@ -27,10 +23,16 @@ import (
 	"os"
 	"testing"
 
+	"github.com/go-logr/stdr"
+	"github.com/stretchr/testify/require"
+
+	"go.opentelemetry.io/contrib/samplers/aws/xray/internal/util"
+	sdktrace "go.opentelemetry.io/otel/sdk/trace"
+
 	"github.com/stretchr/testify/assert"
 )
 
-// assert that new manifest has certain non-nil attributes
+// assert that new manifest has certain non-nil attributes.
 func TestNewManifest(t *testing.T) {
 	logger := stdr.NewWithOptions(log.New(os.Stderr, "", log.LstdFlags|log.Lshortfile), stdr.Options{LogCaller: stdr.Error})
 	m, err := NewManifest("127.0.0.1:2000", logger)
@@ -44,11 +46,39 @@ func TestNewManifest(t *testing.T) {
 	assert.NotNil(t, m.xrayClient)
 }
 
-// assert that manifest rule r2 is a match for sampling
+// assert that manifest is expired.
+func TestExpiredManifest(t *testing.T) {
+	clock := &util.MockClock{
+		NowTime: 10000,
+	}
+
+	m := &Manifest{
+		Clock:       clock,
+		refreshedAt: 3700,
+	}
+
+	assert.True(t, m.Expired())
+}
+
+// assert that if collector is not enabled at specified endpoint, returns an error
+func TestRefreshManifestError(t *testing.T) {
+	// collector is not running at port 2020 so expect error
+	client, err := newClient("127.0.0.1:2020")
+	require.NoError(t, err)
+
+	m := &Manifest{
+		xrayClient: client,
+	}
+
+	err = m.RefreshManifestRules(context.Background())
+	assert.Error(t, err)
+}
+
+// assert that manifest rule r2 is a match for sampling.
 func TestMatchAgainstManifestRules(t *testing.T) {
 	r1 := Rule{
 		ruleProperties: ruleProperties{
-			RuleName:     "r1",
+			RuleName:      "r1",
 			Priority:      10000,
 			Host:          "*",
 			HTTPMethod:    "*",
@@ -90,8 +120,8 @@ func TestMatchAgainstManifestRules(t *testing.T) {
 		Rules: rules,
 	}
 
-	exp, err := m.MatchAgainstManifestRules(sdktrace.SamplingParameters{}, "test", "local")
-	require.NotEmpty(t, err)
+	exp, _, err := m.MatchAgainstManifestRules(sdktrace.SamplingParameters{}, "test", "local")
+	require.NoError(t, err)
 
 	// assert that manifest rule r2 is a match
 	assert.Equal(t, *exp, r2)
@@ -177,7 +207,7 @@ func TestRefreshManifestRules(t *testing.T) {
 	require.NoError(t, err)
 
 	m := &Manifest{
-		Rules: []Rule{},
+		Rules:      []Rule{},
 		xrayClient: client,
 		Clock:      &util.DefaultClock{},
 	}
@@ -198,7 +228,7 @@ func TestRefreshManifestRules(t *testing.T) {
 			ServiceName:   "*",
 			ResourceARN:   "*",
 			ServiceType:   "*",
-			Attributes: map[string]string{},
+			Attributes:    map[string]string{},
 		},
 		reservoir: reservoir{
 			interval: defaultInterval,
@@ -219,7 +249,7 @@ func TestRefreshManifestRules(t *testing.T) {
 			ServiceName:   "test-rule",
 			ResourceARN:   "*",
 			ServiceType:   "*",
-			Attributes: map[string]string{},
+			Attributes:    map[string]string{},
 		},
 		reservoir: reservoir{
 			interval: defaultInterval,
@@ -240,7 +270,7 @@ func TestRefreshManifestRules(t *testing.T) {
 			ServiceName:   "*",
 			ResourceARN:   "*",
 			ServiceType:   "local",
-			Attributes: map[string]string{},
+			Attributes:    map[string]string{},
 		},
 		reservoir: reservoir{
 			interval: defaultInterval,
@@ -257,7 +287,7 @@ func TestRefreshManifestRules(t *testing.T) {
 	assert.Equal(t, 3, len(m.Rules))
 }
 
-// assert that rule with no ServiceName updates manifest successfully with empty values
+// assert that rule with no ServiceName updates manifest successfully with empty values.
 func TestRefreshManifestMissingServiceName(t *testing.T) {
 	ctx := context.Background()
 
@@ -301,9 +331,9 @@ func TestRefreshManifestMissingServiceName(t *testing.T) {
 	require.NoError(t, err)
 
 	m := &Manifest{
-		Rules: []Rule{},
+		Rules:      []Rule{},
 		xrayClient: client,
-		Clock: &util.DefaultClock{},
+		Clock:      &util.DefaultClock{},
 	}
 
 	err = m.RefreshManifestRules(ctx)
@@ -313,7 +343,7 @@ func TestRefreshManifestMissingServiceName(t *testing.T) {
 	assert.Equal(t, 1, len(m.Rules))
 }
 
-// assert that rule with no RuleName does not update to the manifest
+// assert that rule with no RuleName does not update to the manifest.
 func TestRefreshManifestMissingRuleName(t *testing.T) {
 	ctx := context.Background()
 
@@ -356,10 +386,10 @@ func TestRefreshManifestMissingRuleName(t *testing.T) {
 	require.NoError(t, err)
 
 	m := &Manifest{
-		Rules: []Rule{},
+		Rules:      []Rule{},
 		xrayClient: client,
-		Clock: &util.DefaultClock{},
-		logger: stdr.NewWithOptions(log.New(os.Stderr, "", log.LstdFlags|log.Lshortfile), stdr.Options{LogCaller: stdr.Error}),
+		Clock:      &util.DefaultClock{},
+		logger:     stdr.NewWithOptions(log.New(os.Stderr, "", log.LstdFlags|log.Lshortfile), stdr.Options{LogCaller: stdr.Error}),
 	}
 
 	err = m.RefreshManifestRules(ctx)
@@ -369,7 +399,7 @@ func TestRefreshManifestMissingRuleName(t *testing.T) {
 	assert.Equal(t, 0, len(m.Rules))
 }
 
-// assert that rule with version greater than one does not update to the manifest
+// assert that rule with version greater than one does not update to the manifest.
 func TestRefreshManifestIncorrectVersion(t *testing.T) {
 	ctx := context.Background()
 
@@ -414,10 +444,10 @@ func TestRefreshManifestIncorrectVersion(t *testing.T) {
 	require.NoError(t, err)
 
 	m := &Manifest{
-		Rules: []Rule{},
+		Rules:      []Rule{},
 		xrayClient: client,
-		Clock: &util.DefaultClock{},
-		logger: stdr.NewWithOptions(log.New(os.Stderr, "", log.LstdFlags|log.Lshortfile), stdr.Options{LogCaller: stdr.Error}),
+		Clock:      &util.DefaultClock{},
+		logger:     stdr.NewWithOptions(log.New(os.Stderr, "", log.LstdFlags|log.Lshortfile), stdr.Options{LogCaller: stdr.Error}),
 	}
 
 	err = m.RefreshManifestRules(ctx)
@@ -427,7 +457,7 @@ func TestRefreshManifestIncorrectVersion(t *testing.T) {
 	assert.Equal(t, 0, len(m.Rules))
 }
 
-// assert that 1 valid and 1 invalid rule update only valid rule gets stored to the manifest
+// assert that 1 valid and 1 invalid rule update only valid rule gets stored to the manifest.
 func TestRefreshManifestAddOneInvalidRule(t *testing.T) {
 	ctx := context.Background()
 
@@ -488,7 +518,7 @@ func TestRefreshManifestAddOneInvalidRule(t *testing.T) {
 			ServiceName:   "*",
 			ResourceARN:   "*",
 			ServiceType:   "*",
-			Attributes: map[string]string{},
+			Attributes:    map[string]string{},
 		},
 		reservoir: reservoir{
 			interval: defaultInterval,
@@ -510,10 +540,10 @@ func TestRefreshManifestAddOneInvalidRule(t *testing.T) {
 	require.NoError(t, err)
 
 	m := &Manifest{
-		Rules: []Rule{},
+		Rules:      []Rule{},
 		xrayClient: client,
-		Clock: &util.DefaultClock{},
-		logger: stdr.NewWithOptions(log.New(os.Stderr, "", log.LstdFlags|log.Lshortfile), stdr.Options{LogCaller: stdr.Error}),
+		Clock:      &util.DefaultClock{},
+		logger:     stdr.NewWithOptions(log.New(os.Stderr, "", log.LstdFlags|log.Lshortfile), stdr.Options{LogCaller: stdr.Error}),
 	}
 
 	err = m.RefreshManifestRules(ctx)
@@ -525,7 +555,129 @@ func TestRefreshManifestAddOneInvalidRule(t *testing.T) {
 	assert.Equal(t, r1, m.Rules[0])
 }
 
-// assert that a valid sampling target updates its rule
+// assert that inactive rule so return early without doing getSamplingTargets call
+func TestRefreshManifestTarget_NoSnapShot(t *testing.T) {
+	clock := &util.MockClock{
+		NowTime: 15000000,
+	}
+
+	r1 := Rule{
+		ruleProperties: ruleProperties{
+			RuleName:      "r3",
+			Priority:      100,
+			Host:          "*",
+			HTTPMethod:    "*",
+			URLPath:       "*",
+			ReservoirSize: 100,
+			FixedRate:     0.09,
+			Version:       1,
+			ServiceName:   "*",
+			ResourceARN:   "*",
+			ServiceType:   "local",
+			Attributes:    map[string]string{},
+		},
+		reservoir: reservoir{
+			interval: defaultInterval,
+			capacity: int64(100),
+		},
+		matchedRequests: int64(0),
+	}
+
+	rules := []Rule{r1}
+
+	m := &Manifest{
+		Rules:  rules,
+		Clock:  clock,
+		logger: stdr.NewWithOptions(log.New(os.Stderr, "", log.LstdFlags|log.Lshortfile), stdr.Options{LogCaller: stdr.Error}),
+	}
+
+	err := m.RefreshManifestTargets(context.Background())
+	assert.Nil(t, err)
+}
+
+// assert that refresh manifest targets successfully updates reservoir value for a rule.
+func TestRefreshManifestTargets(t *testing.T) {
+	// RuleName is missing from r2
+	body := []byte(`{
+   "LastRuleModification": 17000000,
+   "SamplingTargetDocuments": [ 
+      { 
+         "FixedRate": 0.06,
+         "Interval": 25,
+         "ReservoirQuota": 23,
+         "ReservoirQuotaTTL": 15000000,
+         "RuleName": "r1"
+      }
+   ],
+   "UnprocessedStatistics": [ 
+      { 
+         "ErrorCode": "200",
+         "Message": "Ok",
+         "RuleName": "r1"
+      }
+   ]
+}`)
+
+	clock := &util.MockClock{
+		NowTime: 150,
+	}
+
+	r1 := Rule{
+		ruleProperties: ruleProperties{
+			RuleName:      "r1",
+			Priority:      100,
+			Host:          "*",
+			HTTPMethod:    "*",
+			URLPath:       "*",
+			ReservoirSize: 100,
+			FixedRate:     0.09,
+			Version:       1,
+			ServiceName:   "*",
+			ResourceARN:   "*",
+			ServiceType:   "local",
+			Attributes:    map[string]string{},
+		},
+		reservoir: reservoir{
+			interval: defaultInterval,
+			capacity: int64(100),
+		},
+		matchedRequests: int64(5),
+	}
+
+	rules := []Rule{r1}
+
+	// generate a test server so we can capture and inspect the request
+	testServer := httptest.NewServer(http.HandlerFunc(func(res http.ResponseWriter, req *http.Request) {
+		_, err := res.Write([]byte(body))
+		require.NoError(t, err)
+	}))
+	defer testServer.Close()
+
+	u, err := url.Parse(testServer.URL)
+	require.NoError(t, err)
+
+	client, err := newClient(u.Host)
+	require.NoError(t, err)
+
+	m := &Manifest{
+		Rules:       rules,
+		Clock:       clock,
+		logger:      stdr.NewWithOptions(log.New(os.Stderr, "", log.LstdFlags|log.Lshortfile), stdr.Options{LogCaller: stdr.Error}),
+		xrayClient:  client,
+		refreshedAt: 18000000,
+	}
+
+	err = m.RefreshManifestTargets(context.Background())
+	require.NoError(t, err)
+
+	// assert target updates
+	assert.Equal(t, m.Rules[0].ruleProperties.FixedRate, 0.06)
+	assert.Equal(t, m.Rules[0].reservoir.quota, int64(23))
+	assert.Equal(t, m.Rules[0].reservoir.expiresAt, int64(15000000))
+	assert.Equal(t, m.Rules[0].reservoir.interval, int64(25))
+}
+
+// assert that a valid sampling target updates its rule.
 func TestUpdateTargets(t *testing.T) {
 	clock := &util.MockClock{
 		NowTime: 1500000000,
@@ -598,7 +750,7 @@ func TestUpdateTargets(t *testing.T) {
 }
 
 // assert that when last rule modification time is greater than manifest refresh time we need to update manifest
-// out of band (async)
+// out of band (async).
 func TestUpdateTargetsRefreshFlagTest(t *testing.T) {
 	clock := &util.MockClock{
 		NowTime: 1500000000,
@@ -620,7 +772,7 @@ func TestUpdateTargetsRefreshFlagTest(t *testing.T) {
 	targetLastRuleModifiedTime := float64(1500000020)
 	targets := &getSamplingTargetsOutput{
 		SamplingTargetDocuments: []*samplingTargetDocument{&st},
-		LastRuleModification: &targetLastRuleModifiedTime,
+		LastRuleModification:    &targetLastRuleModifiedTime,
 	}
 
 	// sampling rule about to be updated with new target
@@ -642,9 +794,9 @@ func TestUpdateTargetsRefreshFlagTest(t *testing.T) {
 	rules := []Rule{r1}
 
 	m := &Manifest{
-		Rules: rules,
+		Rules:       rules,
 		refreshedAt: clock.Now().Unix(),
-		Clock: clock,
+		Clock:       clock,
 	}
 
 	refresh, err := m.updateTargets(targets)
@@ -673,7 +825,7 @@ func TestUpdateTargetsRefreshFlagTest(t *testing.T) {
 	assert.Equal(t, exp, m.Rules[0])
 }
 
-// unprocessed statistics error code is 5xx then updateTargets returns an error, if 4xx refresh flag set to true
+// unprocessed statistics error code is 5xx then updateTargets returns an error, if 4xx refresh flag set to true.
 func TestUpdateTargetsUnprocessedStatistics(t *testing.T) {
 	clock := &util.MockClock{
 		NowTime: 1500000000,
@@ -692,39 +844,51 @@ func TestUpdateTargetsUnprocessedStatistics(t *testing.T) {
 		RuleName:          &name,
 	}
 
+	// case for 4xx
 	errorCode500 := "500"
 	unprocessedStats5xx := unprocessedStatistic{
 		ErrorCode: &errorCode500,
-		RuleName: &name,
+		RuleName:  &name,
 	}
 
-	errorCode400 := "400"
-	unprocessedStats4xx := unprocessedStatistic{
-		ErrorCode: &errorCode400,
-		RuleName: &name,
-	}
-
-	targets := &getSamplingTargetsOutput{
+	targets5xx := &getSamplingTargetsOutput{
 		SamplingTargetDocuments: []*samplingTargetDocument{&st},
-		UnprocessedStatistics: []*unprocessedStatistic{&unprocessedStats5xx, &unprocessedStats4xx},
+		UnprocessedStatistics:   []*unprocessedStatistic{&unprocessedStats5xx},
 	}
-
 
 	m := &Manifest{
-		Clock: clock,
+		Clock:  clock,
 		logger: stdr.NewWithOptions(log.New(os.Stderr, "", log.LstdFlags|log.Lshortfile), stdr.Options{LogCaller: stdr.Error}),
-
 	}
 
-	refresh, err := m.updateTargets(targets)
-	// assert error happened since unprocessed stats has 5xx error code
+	refresh, err := m.updateTargets(targets5xx)
+	// assert error happened since unprocessed stats has returned 5xx error code
 	require.Error(t, err)
 
 	// assert refresh is false
 	assert.False(t, refresh)
+
+	// case for 4xx
+	errorCode400 := "400"
+	unprocessedStats4xx := unprocessedStatistic{
+		ErrorCode: &errorCode400,
+		RuleName:  &name,
+	}
+
+	targets4xx := &getSamplingTargetsOutput{
+		SamplingTargetDocuments: []*samplingTargetDocument{&st},
+		UnprocessedStatistics:   []*unprocessedStatistic{&unprocessedStats4xx},
+	}
+
+	refresh, err = m.updateTargets(targets4xx)
+	// assert that no error happened since unprocessed stats has returned 4xx error code
+	require.NoError(t, err)
+
+	// assert refresh is true
+	assert.True(t, refresh)
 }
 
-// assert that a missing sampling rule in manifest does not update it's reservoir values
+// assert that a missing sampling rule in manifest does not update it's reservoir values.
 func TestUpdateReservoir(t *testing.T) {
 	// Sampling target received from centralized sampling backend
 	rate := 0.05
@@ -767,7 +931,7 @@ func TestUpdateReservoir(t *testing.T) {
 	assert.Equal(t, m.Rules[0], r1)
 }
 
-// assert that a sampling target with missing Fixed Rate returns an error
+// assert that a sampling target with missing Fixed Rate returns an error.
 func TestUpdateReservoirMissingFixedRate(t *testing.T) {
 	// Sampling target received from centralized sampling backend
 	quota := int64(10)
@@ -805,7 +969,7 @@ func TestUpdateReservoirMissingFixedRate(t *testing.T) {
 	require.Error(t, err)
 }
 
-// assert that a sampling target with missing Rule Name returns an error
+// assert that a sampling target with missing Rule Name returns an error.
 func TestUpdateReservoirMissingRuleName(t *testing.T) {
 	// Sampling target received from centralized sampling backend
 	rate := 0.05
@@ -843,7 +1007,7 @@ func TestUpdateReservoirMissingRuleName(t *testing.T) {
 	require.Error(t, err)
 }
 
-// assert that snapshots returns an array of valid sampling statistics
+// assert that snapshots returns an array of valid sampling statistics.
 func TestSnapshots(t *testing.T) {
 	clock := &util.MockClock{
 		NowTime: 1500000000,
@@ -857,7 +1021,7 @@ func TestSnapshots(t *testing.T) {
 	borrowed1 := int64(5)
 	r1 := Rule{
 		ruleProperties: ruleProperties{
-			RuleName:  name1,
+			RuleName: name1,
 		},
 		reservoir: reservoir{
 			interval: 10,
@@ -875,7 +1039,7 @@ func TestSnapshots(t *testing.T) {
 		ruleProperties: ruleProperties{
 			RuleName: name2,
 		},
-		reservoir:  reservoir{
+		reservoir: reservoir{
 			interval: 10,
 		},
 		matchedRequests:  requests2,
@@ -887,9 +1051,9 @@ func TestSnapshots(t *testing.T) {
 
 	id := "c1"
 	m := &Manifest{
-		Rules: rules,
+		Rules:    rules,
 		clientID: &id,
-		Clock: clock,
+		Clock:    clock,
 	}
 
 	// Expected SamplingStatistics structs
@@ -922,7 +1086,7 @@ func TestSnapshots(t *testing.T) {
 	assert.Equal(t, ss2, *statistics[1])
 }
 
-// assert that fresh and inactive rules are not included in a snapshot
+// assert that fresh and inactive rules are not included in a snapshot.
 func TestMixedSnapshots(t *testing.T) {
 	clock := &util.MockClock{
 		NowTime: 1500000000,
@@ -960,7 +1124,7 @@ func TestMixedSnapshots(t *testing.T) {
 		ruleProperties: ruleProperties{
 			RuleName: name2,
 		},
-		reservoir:        reservoir{
+		reservoir: reservoir{
 			interval:    20,
 			refreshedAt: 1499999990,
 		},
@@ -979,7 +1143,7 @@ func TestMixedSnapshots(t *testing.T) {
 		ruleProperties: ruleProperties{
 			RuleName: name3,
 		},
-		reservoir:        reservoir{
+		reservoir: reservoir{
 			interval:    20,
 			refreshedAt: 1499999990,
 		},
@@ -992,8 +1156,8 @@ func TestMixedSnapshots(t *testing.T) {
 
 	m := &Manifest{
 		clientID: &id,
-		Clock: clock,
-		Rules: rules,
+		Clock:    clock,
+		Rules:    rules,
 	}
 
 	ss1 := samplingStatisticsDocument{
@@ -1016,7 +1180,7 @@ func TestMixedSnapshots(t *testing.T) {
 	assert.Equal(t, ss1, *statistics[0])
 }
 
-// Assert that sorting an unsorted array results in a sorted array - check priority
+// Assert that sorting an unsorted array results in a sorted array - check priority.
 func TestSortBasedOnPriority(t *testing.T) {
 	r1 := Rule{
 		ruleProperties: ruleProperties{
@@ -1055,7 +1219,7 @@ func TestSortBasedOnPriority(t *testing.T) {
 	assert.Equal(t, r3, m.Rules[2])
 }
 
-// Assert that sorting an unsorted array results in a sorted array - check priority and rule name
+// Assert that sorting an unsorted array results in a sorted array - check priority and rule name.
 func TestSortBasedOnRuleName(t *testing.T) {
 	r1 := Rule{
 		ruleProperties: ruleProperties{
@@ -1094,49 +1258,21 @@ func TestSortBasedOnRuleName(t *testing.T) {
 	assert.Equal(t, r3, m.Rules[2])
 }
 
-// asserts the minimum value of all the targets
+// asserts the minimum value of all the targets.
 func TestMinPollInterval(t *testing.T) {
 	interval1 := int64(10)
 	t1 := &samplingTargetDocument{
-		Interval:     &interval1,
+		Interval: &interval1,
 	}
 
-	interval2 := int64(15)
+	interval2 := int64(5)
 	t2 := &samplingTargetDocument{
-		Interval:     &interval2,
+		Interval: &interval2,
 	}
 
 	interval3 := int64(25)
 	t3 := &samplingTargetDocument{
-		Interval:     &interval3,
-	}
-
-	targets := &getSamplingTargetsOutput{
-		SamplingTargetDocuments: []*samplingTargetDocument{t1, t2, t3},
-	}
-
-	m := &Manifest{}
-
-	minPoll := m.minimumPollingInterval(targets)
-
-	assert.Equal(t, int64(10), minPoll)
-}
-
-// asserts the minimum value of all the targets when some targets has 0 interval
-func TestMinPollIntervalZeroCase(t *testing.T) {
-	interval1 := int64(0)
-	t1 := &samplingTargetDocument{
-		Interval:     &interval1,
-	}
-
-	interval2 := int64(0)
-	t2 := &samplingTargetDocument{
-		Interval:     &interval2,
-	}
-
-	interval3 := int64(5)
-	t3 := &samplingTargetDocument{
-		Interval:     &interval3,
+		Interval: &interval3,
 	}
 
 	targets := &getSamplingTargetsOutput{
@@ -1150,21 +1286,49 @@ func TestMinPollIntervalZeroCase(t *testing.T) {
 	assert.Equal(t, int64(5), minPoll)
 }
 
-// asserts the minimum value of all the targets when some targets has negative interval
-func TestMinPollIntervalNegativeCase(t *testing.T) {
-	interval1 := int64(-5)
+// asserts the minimum value of all the targets when some targets has 0 interval.
+func TestMinPollIntervalZeroCase(t *testing.T) {
+	interval1 := int64(0)
 	t1 := &samplingTargetDocument{
-		Interval:     &interval1,
+		Interval: &interval1,
 	}
 
 	interval2 := int64(0)
 	t2 := &samplingTargetDocument{
-		Interval:     &interval2,
+		Interval: &interval2,
+	}
+
+	interval3 := int64(5)
+	t3 := &samplingTargetDocument{
+		Interval: &interval3,
+	}
+
+	targets := &getSamplingTargetsOutput{
+		SamplingTargetDocuments: []*samplingTargetDocument{t1, t2, t3},
+	}
+
+	m := &Manifest{}
+
+	minPoll := m.minimumPollingInterval(targets)
+
+	assert.Equal(t, int64(5), minPoll)
+}
+
+// asserts the minimum value of all the targets when some targets has negative interval.
+func TestMinPollIntervalNegativeCase(t *testing.T) {
+	interval1 := int64(-5)
+	t1 := &samplingTargetDocument{
+		Interval: &interval1,
+	}
+
+	interval2 := int64(0)
+	t2 := &samplingTargetDocument{
+		Interval: &interval2,
 	}
 
 	interval3 := int64(0)
 	t3 := &samplingTargetDocument{
-		Interval:     &interval3,
+		Interval: &interval3,
 	}
 
 	targets := &getSamplingTargetsOutput{
@@ -1178,9 +1342,9 @@ func TestMinPollIntervalNegativeCase(t *testing.T) {
 	assert.Equal(t, int64(-5), minPoll)
 }
 
-// assert that able to successfully generate the client ID
+// assert that able to successfully generate the client ID.
 func TestGenerateClientID(t *testing.T) {
-	clientID, err := generateClientId()
+	clientID, err := generateClientID()
 	require.NoError(t, err)
 	assert.NotEmpty(t, clientID)
 }

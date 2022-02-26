@@ -12,14 +12,16 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package main
+package xray
 
 import (
+	"testing"
+
 	"github.com/stretchr/testify/assert"
+
 	"go.opentelemetry.io/contrib/samplers/aws/xray/internal"
 	"go.opentelemetry.io/contrib/samplers/aws/xray/internal/util"
 	sdktrace "go.opentelemetry.io/otel/sdk/trace"
-	"testing"
 )
 
 // assert that when manifest is not expired sampling happens with 1 req/sec.
@@ -52,6 +54,3 @@ func TestRemoteSamplerDescription(t *testing.T) {
 	s := rs.Description()
 	assert.Equal(t, s, "AwsXrayRemoteSampler{remote sampling with AWS X-Ray}")
 }
-
-
-

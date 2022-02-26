@@ -79,9 +79,9 @@ type samplingStatisticsDocument struct {
 
 // getSamplingTargetsOutput is used to store parsed json sampling targets
 type getSamplingTargetsOutput struct {
-	LastRuleModification    *float64                                `json:"LastRuleModification,omitempty"`
-	SamplingTargetDocuments []*samplingTargetDocument 				`json:"SamplingTargetDocuments,omitempty"`
-	UnprocessedStatistics   []*unprocessedStatistic                 `json:"UnprocessedStatistics,omitempty"`
+	LastRuleModification    *float64                  `json:"LastRuleModification,omitempty"`
+	SamplingTargetDocuments []*samplingTargetDocument `json:"SamplingTargetDocuments,omitempty"`
+	UnprocessedStatistics   []*unprocessedStatistic   `json:"UnprocessedStatistics,omitempty"`
 }
 
 // samplingTargetDocument contains updated targeted information retrieved from X-Ray service
