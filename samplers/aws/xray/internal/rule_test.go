@@ -372,27 +372,6 @@ func TestNoAttributeMatching(t *testing.T) {
 	assert.False(t, match)
 }
 
-// assert that wildcard attributes will match.
-func TestAttributeWildCardMatching(t *testing.T) {
-	commonLabels := []attribute.KeyValue{
-		attribute.String("labelA", "chocolate"),
-		attribute.String("labelB", "raspberry"),
-	}
-
-	r1 := Rule{
-		ruleProperties: ruleProperties{
-			Attributes: map[string]string{
-				"labelA": "choco*",
-				"labelB": "rasp*",
-			},
-		},
-	}
-
-	match, err := r1.attributeMatching(trace.SamplingParameters{Attributes: commonLabels})
-	require.NoError(t, err)
-	assert.True(t, match)
-}
-
 // assert that if rules has no attributes then matching will happen.
 func TestAttributeMatching_NoRuleAttrs(t *testing.T) {
 	commonLabels := []attribute.KeyValue{
