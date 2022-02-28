@@ -15,7 +15,6 @@
 package internal
 
 import (
-	"fmt"
 	"testing"
 
 	"github.com/stretchr/testify/require"
@@ -330,8 +329,8 @@ func TestAppliesToNoMatching(t *testing.T) {
 	assert.False(t, match)
 }
 
-// assert that if rules has attribute and span has those attribute with same value then matching will happen.
-func TestAttributeMatching(t *testing.T) {
+// assert that if rules has no attributes then matching will happen.
+func TestAttributeMatching_NoRuleAttrs(t *testing.T) {
 	commonLabels := []attribute.KeyValue{
 		attribute.String("labelA", "chocolate"),
 		attribute.String("labelB", "raspberry"),
@@ -339,22 +338,18 @@ func TestAttributeMatching(t *testing.T) {
 
 	r1 := Rule{
 		ruleProperties: ruleProperties{
-			Attributes: map[string]string{
-				"labelA": "chocolate",
-				"labelB": "raspberry",
-			},
+			Attributes: map[string]string{},
 		},
 	}
 
 	match, err := r1.attributeMatching(trace.SamplingParameters{Attributes: commonLabels})
 	require.NoError(t, err)
-	fmt.Println(match)
 	assert.True(t, match)
 }
 
 // assert that if some of the rules attributes are not present in span attributes then matching
 // will not happen.
-func TestNoAttributeMatching(t *testing.T) {
+func TestMatchAgainstManifestRules_NoAttributeMatch(t *testing.T) {
 	commonLabels := []attribute.KeyValue{
 		attribute.String("labelA", "chocolate"),
 		attribute.String("labelB", "raspberry"),
@@ -372,44 +367,4 @@ func TestNoAttributeMatching(t *testing.T) {
 	match, err := r1.attributeMatching(trace.SamplingParameters{Attributes: commonLabels})
 	require.NoError(t, err)
 	assert.False(t, match)
-}
-
-// assert that wildcard attributes will match.
-func TestAttributeWildCardMatching(t *testing.T) {
-	commonLabels := []attribute.KeyValue{
-		attribute.String("labelA", "chocolate"),
-		attribute.String("labelB", "raspberry"),
-	}
-
-	r1 := Rule{
-		ruleProperties: ruleProperties{
-			Attributes: map[string]string{
-				"labelA": "choco*",
-				"labelB": "rasp*",
-			},
-		},
-	}
-
-	match, err := r1.attributeMatching(trace.SamplingParameters{Attributes: commonLabels})
-	require.NoError(t, err)
-	fmt.Println(match)
-	assert.True(t, match)
-}
-
-// assert that if rules has no attributes then matching will happen.
-func TestAttributeMatching_NoRuleAttrs(t *testing.T) {
-	commonLabels := []attribute.KeyValue{
-		attribute.String("labelA", "chocolate"),
-		attribute.String("labelB", "raspberry"),
-	}
-
-	r1 := Rule{
-		ruleProperties: ruleProperties{
-			Attributes: map[string]string{},
-		},
-	}
-
-	match, err := r1.attributeMatching(trace.SamplingParameters{Attributes: commonLabels})
-	require.NoError(t, err)
-	assert.True(t, match)
 }

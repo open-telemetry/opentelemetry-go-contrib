@@ -23,6 +23,8 @@ import (
 	"os"
 	"testing"
 
+	"go.opentelemetry.io/otel/attribute"
+
 	"github.com/go-logr/stdr"
 	"github.com/stretchr/testify/require"
 
@@ -125,6 +127,92 @@ func TestMatchAgainstManifestRules(t *testing.T) {
 
 	// assert that manifest rule r2 is a match
 	assert.Equal(t, *exp, r2)
+}
+
+// assert that if rules has attribute and span has those attribute with same value then matching will happen.
+func TestMatchAgainstManifestRules_AttributeMatch(t *testing.T) {
+	commonLabels := []attribute.KeyValue{
+		attribute.String("labelA", "chocolate"),
+		attribute.String("labelB", "raspberry"),
+	}
+
+	r1 := Rule{
+		ruleProperties: ruleProperties{
+			RuleName:      "r1",
+			Priority:      10000,
+			Host:          "*",
+			HTTPMethod:    "*",
+			URLPath:       "*",
+			ReservoirSize: 60,
+			FixedRate:     0.5,
+			Version:       1,
+			ServiceName:   "*",
+			ResourceARN:   "*",
+			ServiceType:   "*",
+			Attributes: map[string]string{
+				"labelA": "chocolate",
+				"labelB": "raspberry",
+			},
+		},
+		reservoir: reservoir{
+			expiresAt: 14050,
+		},
+	}
+
+	rules := []Rule{r1}
+
+	m := &Manifest{
+		Rules: rules,
+	}
+
+	exp, _, err := m.MatchAgainstManifestRules(sdktrace.SamplingParameters{Attributes: commonLabels}, "test", "local")
+	require.NoError(t, err)
+
+	// assert that manifest rule r1 is a match
+	assert.Equal(t, *exp, r1)
+}
+
+// assert that wildcard attributes will match.
+func TestMatchAgainstManifestRules_AttributeWildCardMatch(t *testing.T) {
+	commonLabels := []attribute.KeyValue{
+		attribute.String("labelA", "chocolate"),
+		attribute.String("labelB", "raspberry"),
+	}
+
+	r1 := Rule{
+		ruleProperties: ruleProperties{
+			RuleName:      "r1",
+			Priority:      10000,
+			Host:          "*",
+			HTTPMethod:    "*",
+			URLPath:       "*",
+			ReservoirSize: 60,
+			FixedRate:     0.5,
+			Version:       1,
+			ServiceName:   "*",
+			ResourceARN:   "*",
+			ServiceType:   "*",
+			Attributes: map[string]string{
+				"labelA": "choco*",
+				"labelB": "rasp*",
+			},
+		},
+		reservoir: reservoir{
+			expiresAt: 14050,
+		},
+	}
+
+	rules := []Rule{r1}
+
+	m := &Manifest{
+		Rules: rules,
+	}
+
+	exp, _, err := m.MatchAgainstManifestRules(sdktrace.SamplingParameters{Attributes: commonLabels}, "test", "local")
+	require.NoError(t, err)
+
+	// assert that manifest rule r1 is a match
+	assert.Equal(t, *exp, r1)
 }
 
 func TestRefreshManifestRules(t *testing.T) {
