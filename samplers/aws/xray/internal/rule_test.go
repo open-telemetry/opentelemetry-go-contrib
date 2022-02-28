@@ -15,6 +15,7 @@
 package internal
 
 import (
+	"fmt"
 	"testing"
 
 	"github.com/stretchr/testify/require"
@@ -347,6 +348,7 @@ func TestAttributeMatching(t *testing.T) {
 
 	match, err := r1.attributeMatching(trace.SamplingParameters{Attributes: commonLabels})
 	require.NoError(t, err)
+	fmt.Println(match)
 	assert.True(t, match)
 }
 
@@ -370,6 +372,28 @@ func TestNoAttributeMatching(t *testing.T) {
 	match, err := r1.attributeMatching(trace.SamplingParameters{Attributes: commonLabels})
 	require.NoError(t, err)
 	assert.False(t, match)
+}
+
+// assert that wildcard attributes will match.
+func TestAttributeWildCardMatching(t *testing.T) {
+	commonLabels := []attribute.KeyValue{
+		attribute.String("labelA", "chocolate"),
+		attribute.String("labelB", "raspberry"),
+	}
+
+	r1 := Rule{
+		ruleProperties: ruleProperties{
+			Attributes: map[string]string{
+				"labelA": "choco*",
+				"labelB": "rasp*",
+			},
+		},
+	}
+
+	match, err := r1.attributeMatching(trace.SamplingParameters{Attributes: commonLabels})
+	require.NoError(t, err)
+	fmt.Println(match)
+	assert.True(t, match)
 }
 
 // assert that if rules has no attributes then matching will happen.
