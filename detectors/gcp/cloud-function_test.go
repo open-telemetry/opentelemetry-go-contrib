@@ -133,7 +133,7 @@ func TestCloudFunctionDetect(t *testing.T) {
 				res: resource.NewSchemaless([]attribute.KeyValue{
 					semconv.CloudProviderGCP,
 					semconv.CloudPlatformGCPCloudFunctions,
-					attribute.String(string(semconv.FaaSNameKey), functionName),
+					semconv.FaaSNameKey.String(functionName),
 					semconv.CloudAccountIDKey.String(projectIDValue),
 					semconv.CloudRegionKey.String(regionValue),
 				}...),
