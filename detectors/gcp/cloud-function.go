@@ -29,18 +29,18 @@ const (
 
 // NewCloudFunction will return a GCP Cloud Function resource detector.
 func NewCloudFunction() resource.Detector {
-	return &CloudFunction{
+	return &cloudFunction{
 		cloudRun: NewCloudRun(),
 	}
 }
 
 // CloudFunction collects resource information of GCP Cloud Function
-type CloudFunction struct {
+type cloudFunction struct {
 	cloudRun *CloudRun
 }
 
 // Detect detects associated resources when running in GCP Cloud Function.
-func (f *CloudFunction) Detect(ctx context.Context) (*resource.Resource, error) {
+func (f *cloudFunction) Detect(ctx context.Context) (*resource.Resource, error) {
 	functionName, ok := f.googleCloudFunctionName()
 	if !ok {
 		return nil, nil
@@ -66,6 +66,6 @@ func (f *CloudFunction) Detect(ctx context.Context) (*resource.Resource, error) 
 
 }
 
-func (f *CloudFunction) googleCloudFunctionName() (string, bool) {
+func (f *cloudFunction) googleCloudFunctionName() (string, bool) {
 	return os.LookupEnv(gcpFunctionNameKey)
 }

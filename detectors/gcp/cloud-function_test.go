@@ -143,7 +143,7 @@ func TestCloudFunctionDetect(t *testing.T) {
 	}
 
 	for _, test := range tests {
-		detector := CloudFunction{
+		detector := cloudFunction{
 			cloudRun: test.cr,
 		}
 		res, err := detector.Detect(context.Background())
