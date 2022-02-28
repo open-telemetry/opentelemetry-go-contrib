@@ -12,7 +12,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package datadog_test
+package datadog
 
 import (
 	"context"
@@ -31,8 +31,6 @@ import (
 	"go.opentelemetry.io/otel/sdk/metric/selector/simple"
 	"go.opentelemetry.io/otel/sdk/resource"
 	semconv "go.opentelemetry.io/otel/semconv/v1.4.0"
-
-	"go.opentelemetry.io/contrib/exporters/metric/datadog"
 )
 
 type TestUDPServer struct {
@@ -42,7 +40,7 @@ type TestUDPServer struct {
 func ExampleExporter() {
 	const testHostPort = ":8159"
 	selector := simple.NewWithInexpensiveDistribution()
-	exp, err := datadog.NewExporter(datadog.Options{
+	exp, err := NewExporter(Options{
 		StatsAddr:     testHostPort,
 		Tags:          []string{"env:dev"},
 		StatsDOptions: []statsd.Option{statsd.WithoutTelemetry()},
@@ -100,7 +98,7 @@ func ExampleExporter() {
 	}
 
 	// Output:
-	// mycounter:151|c|#env:dev,l:1,service.name:ExampleExporter,telemetry.sdk.language:go,telemetry.sdk.name:opentelemetry,telemetry.sdk.version:1.2.0
+	// mycounter:151|c|#env:dev,l:1,service.name:ExampleExporter,telemetry.sdk.language:go,telemetry.sdk.name:opentelemetry,telemetry.sdk.version:1.4.1
 	//
 }
 

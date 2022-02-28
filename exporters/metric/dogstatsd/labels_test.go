@@ -19,7 +19,7 @@ import (
 
 	"github.com/stretchr/testify/require"
 
-	"go.opentelemetry.io/contrib/exporters/metric/dogstatsd"
+	"go.opentelemetry.io/contrib/exporters/metric/dogstatsd" // nolint:staticcheck // allow import of deprecated pkg.
 	"go.opentelemetry.io/otel/attribute"
 )
 

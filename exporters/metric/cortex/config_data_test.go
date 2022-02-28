@@ -17,7 +17,7 @@ package cortex_test
 import (
 	"time"
 
-	"go.opentelemetry.io/contrib/exporters/metric/cortex"
+	"go.opentelemetry.io/contrib/exporters/metric/cortex" // nolint:staticcheck // allow import of deprecated pkg.
 )
 
 // Config struct with default values. This is used to verify the output of Validate().

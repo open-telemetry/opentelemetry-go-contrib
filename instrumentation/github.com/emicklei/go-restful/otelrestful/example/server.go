@@ -26,6 +26,7 @@ import (
 	"go.opentelemetry.io/otel"
 	"go.opentelemetry.io/otel/attribute"
 	stdout "go.opentelemetry.io/otel/exporters/stdout/stdouttrace"
+	"go.opentelemetry.io/otel/propagation"
 	sdktrace "go.opentelemetry.io/otel/sdk/trace"
 	oteltrace "go.opentelemetry.io/otel/trace"
 )
@@ -76,6 +77,7 @@ func initTracer() *sdktrace.TracerProvider {
 		sdktrace.WithBatcher(exporter),
 	)
 	otel.SetTracerProvider(tp)
+	otel.SetTextMapPropagator(propagation.NewCompositeTextMapPropagator(propagation.Baggage{}, propagation.TraceContext{}))
 	tracer = otel.GetTracerProvider().Tracer("go-restful-server", oteltrace.WithInstrumentationVersion("0.1"))
 	return tp
 }

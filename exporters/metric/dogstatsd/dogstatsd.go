@@ -12,6 +12,9 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
+// Package dogstatsd provides a StatsD exporter.
+//
+// Deprecated: This package is no longer supported.
 package dogstatsd // import "go.opentelemetry.io/contrib/exporters/metric/dogstatsd"
 
 import (
@@ -21,8 +24,8 @@ import (
 
 	"go.opentelemetry.io/contrib/exporters/metric/dogstatsd/internal/statsd"
 	"go.opentelemetry.io/otel/metric/global"
-	export "go.opentelemetry.io/otel/sdk/export/metric"
 	controller "go.opentelemetry.io/otel/sdk/metric/controller/basic"
+	"go.opentelemetry.io/otel/sdk/metric/export"
 	"go.opentelemetry.io/otel/sdk/metric/processor/basic"
 	"go.opentelemetry.io/otel/sdk/metric/selector/simple"
 	"go.opentelemetry.io/otel/sdk/resource"
@@ -87,11 +90,9 @@ func NewExportPipeline(config Config, opts ...controller.Option) (*controller.Co
 		return nil, err
 	}
 
-	// Use arrays for Values and sums for everything else
-	selector := simple.NewWithExactDistribution()
-
 	// The basic processor ensures that the exporter sees the full
 	// set of attributes as dogstatsd tags.
+	selector := simple.NewWithInexpensiveDistribution()
 	processor := basic.NewFactory(selector, exporter)
 
 	cont := controller.New(processor, append(opts, controller.WithExporter(exporter))...)
