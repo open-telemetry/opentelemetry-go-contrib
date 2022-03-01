@@ -86,8 +86,8 @@ func (m *Manifest) MatchAgainstManifestRules(parameters sdktrace.SamplingParamet
 
 	matched := false
 
-	for index, r := range m.Rules {
-		isRuleMatch, err := r.appliesTo(parameters, serviceName, cloudPlatform)
+	for index := range m.Rules {
+		isRuleMatch, err := m.Rules[index].appliesTo(parameters, serviceName, cloudPlatform)
 		if err != nil {
 			return nil, isRuleMatch, err
 		}
