@@ -34,7 +34,7 @@ func NewCloudFunction() resource.Detector {
 	}
 }
 
-// CloudFunction collects resource information of GCP Cloud Function
+// cloudFunction collects resource information of GCP Cloud Function
 type cloudFunction struct {
 	cloudRun *CloudRun
 }
