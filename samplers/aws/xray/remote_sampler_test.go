@@ -15,7 +15,11 @@
 package xray
 
 import (
+	"log"
+	"os"
 	"testing"
+
+	"github.com/go-logr/stdr"
 
 	"github.com/stretchr/testify/assert"
 
@@ -24,8 +28,33 @@ import (
 	sdktrace "go.opentelemetry.io/otel/sdk/trace"
 )
 
-// TestShouldSample assert that when manifest is not expired sampling happens with 1 req/sec.
-func TestShouldSample(t *testing.T) {
+// TestShouldSample assert that when manifest is not expired sd is dropped since FixedRate is 0
+func TestShouldSample_NonExpiredManifest(t *testing.T) {
+	clock := &util.MockClock{
+		NowTime: -62135593200,
+	}
+
+	r1 := internal.Rule{}
+
+	rules := []internal.Rule{r1}
+
+	m := &internal.Manifest{
+		Rules: rules,
+		Clock: clock,
+	}
+
+	rs := &remoteSampler{
+		manifest:        m,
+		logger:          stdr.NewWithOptions(log.New(os.Stderr, "", log.LstdFlags|log.Lshortfile), stdr.Options{LogCaller: stdr.Error}),
+		fallbackSampler: NewFallbackSampler(),
+	}
+
+	sd := rs.ShouldSample(sdktrace.SamplingParameters{})
+	assert.Equal(t, sd.Decision, sdktrace.Drop)
+}
+
+// TestShouldSample assert that when manifest is expired sampling happens with 1 req/sec.
+func TestShouldSample_ExpiredManifest(t *testing.T) {
 	clock := &util.MockClock{
 		NowTime: 100,
 	}
@@ -40,7 +69,9 @@ func TestShouldSample(t *testing.T) {
 	}
 
 	rs := &remoteSampler{
-		manifest: m,
+		manifest:        m,
+		logger:          stdr.NewWithOptions(log.New(os.Stderr, "", log.LstdFlags|log.Lshortfile), stdr.Options{LogCaller: stdr.Error}),
+		fallbackSampler: NewFallbackSampler(),
 	}
 
 	sd := rs.ShouldSample(sdktrace.SamplingParameters{})
