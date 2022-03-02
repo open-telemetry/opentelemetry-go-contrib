@@ -38,6 +38,7 @@ type Transport struct {
 	filters           []Filter
 	spanNameFormatter func(string, *http.Request) string
 	clientTrace       func(context.Context) *httptrace.ClientTrace
+	roundTripOptions  func(r *http.Request)
 }
 
 var _ http.RoundTripper = &Transport{}
@@ -74,6 +75,7 @@ func (t *Transport) applyConfig(c *config) {
 	t.filters = c.Filters
 	t.spanNameFormatter = c.SpanNameFormatter
 	t.clientTrace = c.ClientTrace
+	t.roundTripOptions = c.RoundTripOptions
 }
 
 func defaultTransportFormatter(_ string, r *http.Request) string {
@@ -89,6 +91,9 @@ func (t *Transport) RoundTrip(r *http.Request) (*http.Response, error) {
 			// Simply pass through to the base RoundTripper if a filter rejects the request
 			return t.rt.RoundTrip(r)
 		}
+	}
+	if t.roundTripOptions != nil {
+		t.roundTripOptions(r)
 	}
 
 	tracer := t.tracer

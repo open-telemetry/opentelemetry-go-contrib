@@ -42,6 +42,7 @@ type config struct {
 	Filters           []Filter
 	SpanNameFormatter func(string, *http.Request) string
 	ClientTrace       func(context.Context) *httptrace.ClientTrace
+	RoundTripOptions  func(*http.Request)
 
 	TracerProvider trace.TracerProvider
 	MeterProvider  metric.MeterProvider
