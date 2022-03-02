@@ -94,7 +94,7 @@ func Middleware(service string, opts ...Option) echo.MiddlewareFunc {
 			}
 
 			attrs := semconv.HTTPAttributesFromHTTPStatusCode(c.Response().Status)
-			spanStatus, spanMessage := semconv.SpanStatusFromHTTPStatusCode(c.Response().Status)
+			spanStatus, spanMessage := semconv.SpanStatusFromHTTPStatusCodeAndSpanKind(c.Response().Status, oteltrace.SpanKindServer)
 			span.SetAttributes(attrs...)
 			span.SetStatus(spanStatus, spanMessage)
 

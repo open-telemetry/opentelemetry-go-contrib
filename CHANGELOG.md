@@ -8,6 +8,18 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 
 ## [Unreleased]
 
+
+### Added
+
+- DynamoDB spans created with the `go.opentelemetry.io/contrib/instrumentation/github.com/aws/aws-sdk-go-v2/otelaws` package will now have the appropriate database attributes added for the operation being performed.
+  These attributes are detected automatically, but it is also now possible to provide a custom function to set attributes using `WithAttributeSetter`. (#1582)
+
+### Fixed
+
+- Fix the `echo` middleware by using `SpanKind.SERVER` when deciding the `SpanStatus`.
+  This makes `4xx` response codes to not be an error anymore. (#1848)
+
+
 ## [1.4.0/0.29.0] - 2022-02-14
 
 ### Added

@@ -14,7 +14,14 @@
 
 package otelaws
 
-import "go.opentelemetry.io/otel/attribute"
+import (
+	"context"
+
+	v2Middleware "github.com/aws/aws-sdk-go-v2/aws/middleware"
+	"github.com/aws/smithy-go/middleware"
+
+	"go.opentelemetry.io/otel/attribute"
+)
 
 // AWS attributes.
 const (
@@ -23,6 +30,10 @@ const (
 	ServiceKey   attribute.Key = "aws.service"
 	RequestIDKey attribute.Key = "aws.request_id"
 )
+
+var servicemap map[string]AttributeSetter = map[string]AttributeSetter{
+	"dynamodb": DynamoDBAttributeSetter,
+}
 
 func OperationAttr(operation string) attribute.KeyValue {
 	return OperationKey.String(operation)
@@ -38,4 +49,17 @@ func ServiceAttr(service string) attribute.KeyValue {
 
 func RequestIDAttr(requestID string) attribute.KeyValue {
 	return RequestIDKey.String(requestID)
+}
+
+// DefaultAttributeSetter checks to see if there are service specific attributes available to set for the AWS service.
+// If there are service specific attributes available then they will be included.
+func DefaultAttributeSetter(ctx context.Context, in middleware.InitializeInput) []attribute.KeyValue {
+
+	serviceID := v2Middleware.GetServiceID(ctx)
+
+	if fn, ok := servicemap[serviceID]; ok {
+		return fn(ctx, in)
+	}
+
+	return []attribute.KeyValue{}
 }
