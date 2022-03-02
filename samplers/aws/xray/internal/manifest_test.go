@@ -22,6 +22,7 @@ import (
 	"net/url"
 	"os"
 	"testing"
+	"time"
 
 	"go.opentelemetry.io/otel/attribute"
 
@@ -54,9 +55,10 @@ func TestExpiredManifest(t *testing.T) {
 		NowTime: 10000,
 	}
 
+	refreshedAt := time.Unix(3700, 0)
 	m := &Manifest{
 		Clock:       clock,
-		refreshedAt: 3700,
+		refreshedAt: refreshedAt,
 	}
 
 	assert.True(t, m.Expired())
@@ -321,7 +323,6 @@ func TestRefreshManifestRules(t *testing.T) {
 			Attributes:    map[string]string{},
 		},
 		reservoir: reservoir{
-			interval: defaultInterval,
 			capacity: int64(60),
 		},
 	}
@@ -342,7 +343,6 @@ func TestRefreshManifestRules(t *testing.T) {
 			Attributes:    map[string]string{},
 		},
 		reservoir: reservoir{
-			interval: defaultInterval,
 			capacity: int64(3),
 		},
 	}
@@ -363,7 +363,6 @@ func TestRefreshManifestRules(t *testing.T) {
 			Attributes:    map[string]string{},
 		},
 		reservoir: reservoir{
-			interval: defaultInterval,
 			capacity: int64(100),
 		},
 	}
@@ -611,7 +610,6 @@ func TestRefreshManifestAddOneInvalidRule(t *testing.T) {
 			Attributes:    map[string]string{},
 		},
 		reservoir: reservoir{
-			interval: defaultInterval,
 			capacity: int64(60),
 		},
 	}
@@ -667,10 +665,11 @@ func TestRefreshManifestTarget_NoSnapShot(t *testing.T) {
 			Attributes:    map[string]string{},
 		},
 		reservoir: reservoir{
-			interval: defaultInterval,
 			capacity: int64(100),
 		},
-		matchedRequests: int64(0),
+		samplingStatistics: samplingStatistics{
+			matchedRequests: int64(0),
+		},
 	}
 
 	rules := []Rule{r1}
@@ -729,10 +728,11 @@ func TestRefreshManifestTargets(t *testing.T) {
 			Attributes:    map[string]string{},
 		},
 		reservoir: reservoir{
-			interval: defaultInterval,
 			capacity: int64(100),
 		},
-		matchedRequests: int64(5),
+		samplingStatistics: samplingStatistics{
+			matchedRequests: int64(5),
+		},
 	}
 
 	rules := []Rule{r1}
@@ -749,13 +749,13 @@ func TestRefreshManifestTargets(t *testing.T) {
 
 	client, err := newClient(u.Host)
 	require.NoError(t, err)
-
+	refreshedAt := time.Unix(18000000, 0)
 	m := &Manifest{
 		Rules:       rules,
 		Clock:       clock,
 		logger:      stdr.NewWithOptions(log.New(os.Stderr, "", log.LstdFlags|log.Lshortfile), stdr.Options{LogCaller: stdr.Error}),
 		xrayClient:  client,
-		refreshedAt: 18000000,
+		refreshedAt: refreshedAt,
 	}
 
 	refresh, err := m.RefreshManifestTargets(context.Background())
@@ -766,7 +766,7 @@ func TestRefreshManifestTargets(t *testing.T) {
 	assert.Equal(t, m.Rules[0].ruleProperties.FixedRate, 0.06)
 	assert.Equal(t, m.Rules[0].reservoir.quota, int64(23))
 	assert.Equal(t, m.Rules[0].reservoir.expiresAt, int64(15000000))
-	assert.Equal(t, m.Rules[0].reservoir.interval, int64(25))
+	assert.Equal(t, m.Rules[0].reservoir.interval, time.Duration(25))
 }
 
 // assert that a valid sampling target updates its rule.
@@ -792,6 +792,7 @@ func TestUpdateTargets(t *testing.T) {
 		SamplingTargetDocuments: []*samplingTargetDocument{&st},
 	}
 
+	refreshedAt1 := time.Unix(1499999990, 0)
 	// sampling rule about to be updated with new target
 	r1 := Rule{
 		ruleProperties: ruleProperties{
@@ -800,7 +801,7 @@ func TestUpdateTargets(t *testing.T) {
 		},
 		reservoir: reservoir{
 			quota:        8,
-			refreshedAt:  1499999990,
+			refreshedAt:  refreshedAt1,
 			expiresAt:    1500000010,
 			capacity:     50,
 			used:         7,
@@ -821,6 +822,7 @@ func TestUpdateTargets(t *testing.T) {
 	// assert refresh is false
 	assert.False(t, refresh)
 
+	refreshedAt2 := time.Unix(1500000000, 0)
 	// Updated sampling rule
 	exp := Rule{
 		ruleProperties: ruleProperties{
@@ -829,7 +831,7 @@ func TestUpdateTargets(t *testing.T) {
 		},
 		reservoir: reservoir{
 			quota:        10,
-			refreshedAt:  1500000000,
+			refreshedAt:  refreshedAt2,
 			expiresAt:    1500000060,
 			capacity:     50,
 			used:         7,
@@ -867,6 +869,7 @@ func TestUpdateTargetsRefreshFlagTest(t *testing.T) {
 		LastRuleModification:    &targetLastRuleModifiedTime,
 	}
 
+	refreshedAt1 := time.Unix(1499999990, 0)
 	// sampling rule about to be updated with new target
 	r1 := Rule{
 		ruleProperties: ruleProperties{
@@ -875,7 +878,7 @@ func TestUpdateTargetsRefreshFlagTest(t *testing.T) {
 		},
 		reservoir: reservoir{
 			quota:        8,
-			refreshedAt:  1499999990,
+			refreshedAt:  refreshedAt1,
 			expiresAt:    1500000010,
 			capacity:     50,
 			used:         7,
@@ -887,7 +890,7 @@ func TestUpdateTargetsRefreshFlagTest(t *testing.T) {
 
 	m := &Manifest{
 		Rules:       rules,
-		refreshedAt: clock.Now().Unix(),
+		refreshedAt: clock.Now(),
 		Clock:       clock,
 	}
 
@@ -897,6 +900,7 @@ func TestUpdateTargetsRefreshFlagTest(t *testing.T) {
 	// assert refresh is false
 	assert.True(t, refresh)
 
+	refreshedAt2 := time.Unix(1500000000, 0)
 	// Updated sampling rule
 	exp := Rule{
 		ruleProperties: ruleProperties{
@@ -905,7 +909,7 @@ func TestUpdateTargetsRefreshFlagTest(t *testing.T) {
 		},
 		reservoir: reservoir{
 			quota:        10,
-			refreshedAt:  1500000000,
+			refreshedAt:  refreshedAt2,
 			expiresAt:    1500000060,
 			capacity:     50,
 			used:         7,
@@ -994,6 +998,7 @@ func TestUpdateReservoir(t *testing.T) {
 		RuleName:          &name,
 	}
 
+	refreshedAt1 := time.Unix(1499999990, 0)
 	// manifest only has rule r2 but not rule with r1 which targets just received
 	r1 := Rule{
 		ruleProperties: ruleProperties{
@@ -1002,7 +1007,7 @@ func TestUpdateReservoir(t *testing.T) {
 		},
 		reservoir: reservoir{
 			quota:        8,
-			refreshedAt:  1499999990,
+			refreshedAt:  refreshedAt1,
 			expiresAt:    1500000010,
 			capacity:     50,
 			used:         7,
@@ -1035,6 +1040,7 @@ func TestUpdateReservoirMissingFixedRate(t *testing.T) {
 		RuleName:          &name,
 	}
 
+	refreshedAt1 := time.Unix(1499999990, 0)
 	// manifest rule which we're trying to update with above target st
 	r1 := Rule{
 		ruleProperties: ruleProperties{
@@ -1043,7 +1049,7 @@ func TestUpdateReservoirMissingFixedRate(t *testing.T) {
 		},
 		reservoir: reservoir{
 			quota:        8,
-			refreshedAt:  1499999990,
+			refreshedAt:  refreshedAt1,
 			expiresAt:    1500000010,
 			capacity:     50,
 			used:         7,
@@ -1073,6 +1079,7 @@ func TestUpdateReservoirMissingRuleName(t *testing.T) {
 		FixedRate:         &rate,
 	}
 
+	refreshedAt1 := time.Unix(1499999990, 0)
 	// manifest rule which we're trying to update with above target st
 	r1 := Rule{
 		ruleProperties: ruleProperties{
@@ -1081,7 +1088,7 @@ func TestUpdateReservoirMissingRuleName(t *testing.T) {
 		},
 		reservoir: reservoir{
 			quota:        8,
-			refreshedAt:  1499999990,
+			refreshedAt:  refreshedAt1,
 			expiresAt:    1500000010,
 			capacity:     50,
 			used:         7,
@@ -1105,7 +1112,7 @@ func TestSnapshots(t *testing.T) {
 		NowTime: 1500000000,
 	}
 
-	time := clock.Now().Unix()
+	time1 := clock.Now().Unix()
 
 	name1 := "r1"
 	requests1 := int64(1000)
@@ -1118,9 +1125,11 @@ func TestSnapshots(t *testing.T) {
 		reservoir: reservoir{
 			interval: 10,
 		},
-		matchedRequests:  requests1,
-		sampledRequests:  sampled1,
-		borrowedRequests: borrowed1,
+		samplingStatistics: samplingStatistics{
+			matchedRequests:  requests1,
+			sampledRequests:  sampled1,
+			borrowedRequests: borrowed1,
+		},
 	}
 
 	name2 := "r2"
@@ -1134,9 +1143,11 @@ func TestSnapshots(t *testing.T) {
 		reservoir: reservoir{
 			interval: 10,
 		},
-		matchedRequests:  requests2,
-		sampledRequests:  sampled2,
-		borrowedRequests: borrowed2,
+		samplingStatistics: samplingStatistics{
+			matchedRequests:  requests2,
+			sampledRequests:  sampled2,
+			borrowedRequests: borrowed2,
+		},
 	}
 
 	rules := []Rule{r1, r2}
@@ -1155,7 +1166,7 @@ func TestSnapshots(t *testing.T) {
 		RuleName:     &name1,
 		SampledCount: &sampled1,
 		BorrowCount:  &borrowed1,
-		Timestamp:    &time,
+		Timestamp:    &time1,
 	}
 
 	ss2 := samplingStatisticsDocument{
@@ -1164,7 +1175,7 @@ func TestSnapshots(t *testing.T) {
 		RuleName:     &name2,
 		SampledCount: &sampled2,
 		BorrowCount:  &borrowed2,
-		Timestamp:    &time,
+		Timestamp:    &time1,
 	}
 
 	statistics, err := m.snapshots()
@@ -1185,32 +1196,36 @@ func TestMixedSnapshots(t *testing.T) {
 	}
 
 	id := "c1"
-	time := clock.Now().Unix()
+	time1 := clock.Now().Unix()
 
 	// stale and active rule
 	name1 := "r1"
 	requests1 := int64(1000)
 	sampled1 := int64(100)
-	borrows1 := int64(5)
+	borrowed1 := int64(5)
 
+	refreshedAt1 := time.Unix(1499999970, 0)
 	r1 := Rule{
 		ruleProperties: ruleProperties{
 			RuleName: name1,
 		},
 		reservoir: reservoir{
 			interval:    20,
-			refreshedAt: 1499999980,
+			refreshedAt: refreshedAt1,
 		},
-		matchedRequests:  requests1,
-		sampledRequests:  sampled1,
-		borrowedRequests: borrows1,
+		samplingStatistics: samplingStatistics{
+			matchedRequests:  requests1,
+			sampledRequests:  sampled1,
+			borrowedRequests: borrowed1,
+		},
 	}
 
+	refreshedAt2 := time.Unix(1499999990, 0)
 	// fresh and inactive rule
 	name2 := "r2"
 	requests2 := int64(0)
 	sampled2 := int64(0)
-	borrows2 := int64(0)
+	borrowed2 := int64(0)
 
 	r2 := Rule{
 		ruleProperties: ruleProperties{
@@ -1218,18 +1233,21 @@ func TestMixedSnapshots(t *testing.T) {
 		},
 		reservoir: reservoir{
 			interval:    20,
-			refreshedAt: 1499999990,
+			refreshedAt: refreshedAt2,
 		},
-		matchedRequests:  requests2,
-		sampledRequests:  sampled2,
-		borrowedRequests: borrows2,
+		samplingStatistics: samplingStatistics{
+			matchedRequests:  requests2,
+			sampledRequests:  sampled2,
+			borrowedRequests: borrowed2,
+		},
 	}
 
+	refreshedAt3 := time.Unix(1499999990, 0)
 	// fresh rule
 	name3 := "r3"
 	requests3 := int64(1000)
 	sampled3 := int64(100)
-	borrows3 := int64(5)
+	borrowed3 := int64(5)
 
 	r3 := Rule{
 		ruleProperties: ruleProperties{
@@ -1237,11 +1255,13 @@ func TestMixedSnapshots(t *testing.T) {
 		},
 		reservoir: reservoir{
 			interval:    20,
-			refreshedAt: 1499999990,
+			refreshedAt: refreshedAt3,
 		},
-		matchedRequests:  requests3,
-		sampledRequests:  sampled3,
-		borrowedRequests: borrows3,
+		samplingStatistics: samplingStatistics{
+			matchedRequests:  requests3,
+			sampledRequests:  sampled3,
+			borrowedRequests: borrowed3,
+		},
 	}
 
 	rules := []Rule{r1, r2, r3}
@@ -1257,15 +1277,12 @@ func TestMixedSnapshots(t *testing.T) {
 		RequestCount: &requests1,
 		RuleName:     &name1,
 		SampledCount: &sampled1,
-		BorrowCount:  &borrows1,
-		Timestamp:    &time,
+		BorrowCount:  &borrowed1,
+		Timestamp:    &time1,
 	}
 
 	statistics, err := m.snapshots()
 	require.NoError(t, err)
-
-	// match time
-	*statistics[0].Timestamp = 1500000000
 
 	// assert that only inactive rules are added to the statistics
 	assert.Equal(t, 1, len(statistics))
@@ -1352,86 +1369,44 @@ func TestSortBasedOnRuleName(t *testing.T) {
 
 // asserts the minimum value of all the targets.
 func TestMinPollInterval(t *testing.T) {
-	interval1 := int64(10)
-	t1 := &samplingTargetDocument{
-		Interval: &interval1,
-	}
+	r1 := Rule{reservoir: reservoir{interval: 10}}
+	r2 := Rule{reservoir: reservoir{interval: 5}}
+	r3 := Rule{reservoir: reservoir{interval: 25}}
 
-	interval2 := int64(5)
-	t2 := &samplingTargetDocument{
-		Interval: &interval2,
-	}
+	rules := []Rule{r1, r2, r3}
+	m := &Manifest{Rules: rules}
 
-	interval3 := int64(25)
-	t3 := &samplingTargetDocument{
-		Interval: &interval3,
-	}
+	minPoll := m.minimumPollingInterval()
 
-	targets := &getSamplingTargetsOutput{
-		SamplingTargetDocuments: []*samplingTargetDocument{t1, t2, t3},
-	}
-
-	m := &Manifest{}
-
-	minPoll := m.minimumPollingInterval(targets)
-
-	assert.Equal(t, int64(5), minPoll)
+	assert.Equal(t, 5*time.Second, minPoll)
 }
 
 // asserts the minimum value of all the targets when some targets has 0 interval.
 func TestMinPollIntervalZeroCase(t *testing.T) {
-	interval1 := int64(0)
-	t1 := &samplingTargetDocument{
-		Interval: &interval1,
-	}
+	r1 := Rule{reservoir: reservoir{interval: 0}}
+	r2 := Rule{reservoir: reservoir{interval: 0}}
+	r3 := Rule{reservoir: reservoir{interval: 5}}
 
-	interval2 := int64(0)
-	t2 := &samplingTargetDocument{
-		Interval: &interval2,
-	}
+	rules := []Rule{r1, r2, r3}
+	m := &Manifest{Rules: rules}
 
-	interval3 := int64(5)
-	t3 := &samplingTargetDocument{
-		Interval: &interval3,
-	}
+	minPoll := m.minimumPollingInterval()
 
-	targets := &getSamplingTargetsOutput{
-		SamplingTargetDocuments: []*samplingTargetDocument{t1, t2, t3},
-	}
-
-	m := &Manifest{}
-
-	minPoll := m.minimumPollingInterval(targets)
-
-	assert.Equal(t, int64(5), minPoll)
+	assert.Equal(t, 5*time.Second, minPoll)
 }
 
 // asserts the minimum value of all the targets when some targets has negative interval.
 func TestMinPollIntervalNegativeCase(t *testing.T) {
-	interval1 := int64(-5)
-	t1 := &samplingTargetDocument{
-		Interval: &interval1,
-	}
+	r1 := Rule{reservoir: reservoir{interval: -5}}
+	r2 := Rule{reservoir: reservoir{interval: 0}}
+	r3 := Rule{reservoir: reservoir{interval: 0}}
 
-	interval2 := int64(0)
-	t2 := &samplingTargetDocument{
-		Interval: &interval2,
-	}
+	rules := []Rule{r1, r2, r3}
+	m := &Manifest{Rules: rules}
 
-	interval3 := int64(0)
-	t3 := &samplingTargetDocument{
-		Interval: &interval3,
-	}
+	minPoll := m.minimumPollingInterval()
 
-	targets := &getSamplingTargetsOutput{
-		SamplingTargetDocuments: []*samplingTargetDocument{t1, t2, t3},
-	}
-
-	m := &Manifest{}
-
-	minPoll := m.minimumPollingInterval(targets)
-
-	assert.Equal(t, int64(-5), minPoll)
+	assert.Equal(t, -5*time.Second, minPoll)
 }
 
 // assert that able to successfully generate the client ID.

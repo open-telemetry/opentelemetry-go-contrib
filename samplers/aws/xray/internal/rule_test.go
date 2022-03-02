@@ -16,6 +16,7 @@ package internal
 
 import (
 	"testing"
+	"time"
 
 	"github.com/stretchr/testify/require"
 
@@ -27,43 +28,55 @@ import (
 
 // assert that rule is active but stale due to quota is expired.
 func TestStaleRule(t *testing.T) {
+	refreshedAt := time.Unix(1500000000, 0)
 	r1 := Rule{
-		matchedRequests: 5,
+		samplingStatistics: samplingStatistics{
+			matchedRequests: 5,
+		},
 		reservoir: reservoir{
-			refreshedAt: 1500000000,
+			refreshedAt: refreshedAt,
 			interval:    10,
 		},
 	}
 
-	s := r1.stale(1500000010)
+	now := time.Unix(1500000020, 0)
+	s := r1.stale(now)
 	assert.True(t, s)
 }
 
 // assert that rule is active and not stale.
 func TestFreshRule(t *testing.T) {
+	refreshedAt := time.Unix(1500000000, 0)
 	r1 := Rule{
-		matchedRequests: 5,
+		samplingStatistics: samplingStatistics{
+			matchedRequests: 5,
+		},
 		reservoir: reservoir{
-			refreshedAt: 1500000000,
+			refreshedAt: refreshedAt,
 			interval:    10,
 		},
 	}
 
-	s := r1.stale(1500000009)
+	now := time.Unix(1500000009, 0)
+	s := r1.stale(now)
 	assert.False(t, s)
 }
 
 // assert that rule is inactive but not stale.
 func TestInactiveRule(t *testing.T) {
+	refreshedAt := time.Unix(1500000000, 0)
 	r1 := Rule{
-		matchedRequests: 0,
+		samplingStatistics: samplingStatistics{
+			matchedRequests: 0,
+		},
 		reservoir: reservoir{
-			refreshedAt: 1500000000,
+			refreshedAt: refreshedAt,
 			interval:    10,
 		},
 	}
 
-	s := r1.stale(1500000011)
+	now := time.Unix(1500000011, 0)
+	s := r1.stale(now)
 	assert.False(t, s)
 }
 
@@ -73,17 +86,20 @@ func TestSnapshot(t *testing.T) {
 		ruleProperties: ruleProperties{
 			RuleName: "r1",
 		},
-		matchedRequests:  100,
-		sampledRequests:  12,
-		borrowedRequests: 2,
+		samplingStatistics: samplingStatistics{
+			matchedRequests:  100,
+			sampledRequests:  12,
+			borrowedRequests: 2,
+		},
 	}
 
-	ss := r1.snapshot(1500000000)
+	now := time.Unix(1500000000, 0)
+	ss := r1.snapshot(now)
 
 	// assert counters were reset
-	assert.Equal(t, int64(0), r1.matchedRequests)
-	assert.Equal(t, int64(0), r1.sampledRequests)
-	assert.Equal(t, int64(0), r1.borrowedRequests)
+	assert.Equal(t, int64(0), r1.samplingStatistics.matchedRequests)
+	assert.Equal(t, int64(0), r1.samplingStatistics.sampledRequests)
+	assert.Equal(t, int64(0), r1.samplingStatistics.borrowedRequests)
 
 	// assert on SamplingStatistics counters
 	assert.Equal(t, int64(100), *ss.RequestCount)
@@ -107,12 +123,13 @@ func TestExpiredReservoirBorrowSample(t *testing.T) {
 		},
 	}
 
-	sd := r1.Sample(trace.SamplingParameters{}, 1500000062)
+	now := time.Unix(1500000062, 0)
+	sd := r1.Sample(trace.SamplingParameters{}, now)
 
 	assert.Equal(t, trace.RecordAndSample, sd.Decision)
-	assert.Equal(t, int64(1), r1.borrowedRequests)
-	assert.Equal(t, int64(0), r1.sampledRequests)
-	assert.Equal(t, int64(1), r1.matchedRequests)
+	assert.Equal(t, int64(1), r1.samplingStatistics.borrowedRequests)
+	assert.Equal(t, int64(0), r1.samplingStatistics.sampledRequests)
+	assert.Equal(t, int64(1), r1.samplingStatistics.matchedRequests)
 	assert.Equal(t, int64(0), r1.reservoir.used)
 }
 
@@ -131,11 +148,12 @@ func TestExpiredReservoirTraceIDRationBasedSample(t *testing.T) {
 		},
 	}
 
-	r1.Sample(trace.SamplingParameters{}, 1500000061)
+	now := time.Unix(1500000061, 0)
+	r1.Sample(trace.SamplingParameters{}, now)
 
-	assert.Equal(t, int64(0), r1.borrowedRequests)
-	assert.Equal(t, int64(1), r1.sampledRequests)
-	assert.Equal(t, int64(1), r1.matchedRequests)
+	assert.Equal(t, int64(0), r1.samplingStatistics.borrowedRequests)
+	assert.Equal(t, int64(1), r1.samplingStatistics.sampledRequests)
+	assert.Equal(t, int64(1), r1.samplingStatistics.matchedRequests)
 	assert.Equal(t, int64(0), r1.reservoir.used)
 }
 
@@ -153,12 +171,13 @@ func TestConsumeFromQuotaSample(t *testing.T) {
 		},
 	}
 
-	sd := r1.Sample(trace.SamplingParameters{}, 1500000000)
+	now := time.Unix(1500000000, 0)
+	sd := r1.Sample(trace.SamplingParameters{}, now)
 
 	assert.Equal(t, trace.RecordAndSample, sd.Decision)
-	assert.Equal(t, int64(1), r1.sampledRequests)
-	assert.Equal(t, int64(0), r1.borrowedRequests)
-	assert.Equal(t, int64(1), r1.matchedRequests)
+	assert.Equal(t, int64(1), r1.samplingStatistics.sampledRequests)
+	assert.Equal(t, int64(0), r1.samplingStatistics.borrowedRequests)
+	assert.Equal(t, int64(1), r1.samplingStatistics.matchedRequests)
 	assert.Equal(t, int64(1), r1.reservoir.used)
 }
 
@@ -177,12 +196,13 @@ func TestTraceIDRatioBasedSampler(t *testing.T) {
 		},
 	}
 
-	sd := r1.Sample(trace.SamplingParameters{}, 1500000000)
+	now := time.Unix(1500000000, 0)
+	sd := r1.Sample(trace.SamplingParameters{}, now)
 
 	assert.NotEmpty(t, sd.Decision)
-	assert.Equal(t, int64(1), r1.sampledRequests)
-	assert.Equal(t, int64(0), r1.borrowedRequests)
-	assert.Equal(t, int64(1), r1.matchedRequests)
+	assert.Equal(t, int64(1), r1.samplingStatistics.sampledRequests)
+	assert.Equal(t, int64(0), r1.samplingStatistics.borrowedRequests)
+	assert.Equal(t, int64(1), r1.samplingStatistics.matchedRequests)
 	assert.Equal(t, int64(10), r1.reservoir.used)
 }
 
@@ -201,7 +221,8 @@ func TestTraceIDRatioBasedSamplerFixedRateZero(t *testing.T) {
 		},
 	}
 
-	sd := r1.Sample(trace.SamplingParameters{}, 1500000000)
+	now := time.Unix(1500000000, 0)
+	sd := r1.Sample(trace.SamplingParameters{}, now)
 
 	assert.Equal(t, sd.Decision, trace.Drop)
 }

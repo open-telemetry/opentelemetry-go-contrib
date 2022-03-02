@@ -16,6 +16,7 @@ package internal // import "go.opentelemetry.io/contrib/samplers/aws/xray/intern
 
 import (
 	"sync/atomic"
+	"time"
 
 	sdktrace "go.opentelemetry.io/otel/sdk/trace"
 	"go.opentelemetry.io/otel/trace"
@@ -23,14 +24,7 @@ import (
 
 // Rule represents a sampling rule which contains rule properties and reservoir which keeps tracks of sampling statistics of a rule
 type Rule struct {
-	// number of requests matched against specific rule
-	matchedRequests int64
-
-	// number of requests sampled using specific rule
-	sampledRequests int64
-
-	// number of requests borrowed using specific rule
-	borrowedRequests int64
+	samplingStatistics samplingStatistics
 
 	// reservoir has equivalent fields to store what we receive from service API getSamplingTargets
 	// https://docs.aws.amazon.com/xray/latest/api/API_GetSamplingTargets.html
@@ -41,43 +35,55 @@ type Rule struct {
 	ruleProperties ruleProperties
 }
 
+type samplingStatistics struct {
+	// number of requests matched against specific rule
+	matchedRequests int64
+
+	// number of requests sampled using specific rule
+	sampledRequests int64
+
+	// number of requests borrowed using specific rule
+	borrowedRequests int64
+}
+
 // stale checks if targets (sampling stats) for a given rule is expired or not
-func (r *Rule) stale(now int64) bool {
-	return r.matchedRequests != 0 && now >= r.reservoir.refreshedAt+r.reservoir.interval
+func (r *Rule) stale(now time.Time) bool {
+	reservoirRefreshTime := r.reservoir.refreshedAt.Add(time.Duration(r.reservoir.interval) * time.Second)
+	return r.samplingStatistics.matchedRequests != 0 && now.After(reservoirRefreshTime)
 }
 
 // snapshot takes a snapshot of the sampling statistics counters, returning
 // samplingStatisticsDocument. It also resets statistics counters.
-func (r *Rule) snapshot(now int64) *samplingStatisticsDocument {
+func (r *Rule) snapshot(now time.Time) *samplingStatisticsDocument {
 	name := r.ruleProperties.RuleName
-	requests, sampled, borrowed := r.matchedRequests, r.sampledRequests, r.borrowedRequests
+	requests, sampled, borrowed := r.samplingStatistics.matchedRequests, r.samplingStatistics.sampledRequests, r.samplingStatistics.borrowedRequests
 
 	// reset counters
-	r.matchedRequests, r.sampledRequests, r.borrowedRequests = 0, 0, 0
-
+	r.samplingStatistics.matchedRequests, r.samplingStatistics.sampledRequests, r.samplingStatistics.borrowedRequests = 0, 0, 0
+	timeStamp := now.Unix()
 	return &samplingStatisticsDocument{
 		RequestCount: &requests,
 		SampledCount: &sampled,
 		BorrowCount:  &borrowed,
 		RuleName:     &name,
-		Timestamp:    &now,
+		Timestamp:    &timeStamp,
 	}
 }
 
 // Sample uses sampling targets of a given rule to decide
 // which sampling should be done and returns a SamplingResult.
-func (r *Rule) Sample(parameters sdktrace.SamplingParameters, now int64) sdktrace.SamplingResult {
+func (r *Rule) Sample(parameters sdktrace.SamplingParameters, now time.Time) sdktrace.SamplingResult {
 	sd := sdktrace.SamplingResult{
 		Tracestate: trace.SpanContextFromContext(parameters.ParentContext).TraceState(),
 	}
 
-	atomic.AddInt64(&r.matchedRequests, int64(1))
+	atomic.AddInt64(&r.samplingStatistics.matchedRequests, int64(1))
 
 	// fallback sampling logic if quota for a given rule is expired
-	if r.reservoir.expired(now) {
+	if r.reservoir.expired(now.Unix()) {
 		// borrowing one request every second
-		if r.reservoir.borrow(now) {
-			atomic.AddInt64(&r.borrowedRequests, int64(1))
+		if r.reservoir.borrow(now.Unix()) {
+			atomic.AddInt64(&r.samplingStatistics.borrowedRequests, int64(1))
 
 			sd.Decision = sdktrace.RecordAndSample
 			return sd
@@ -87,15 +93,15 @@ func (r *Rule) Sample(parameters sdktrace.SamplingParameters, now int64) sdktrac
 		sd = sdktrace.TraceIDRatioBased(r.ruleProperties.FixedRate).ShouldSample(parameters)
 
 		if sd.Decision == sdktrace.RecordAndSample {
-			atomic.AddInt64(&r.sampledRequests, int64(1))
+			atomic.AddInt64(&r.samplingStatistics.sampledRequests, int64(1))
 		}
 
 		return sd
 	}
 
 	// Take from reservoir quota, if quota is available for that second
-	if r.reservoir.take(now) {
-		atomic.AddInt64(&r.sampledRequests, int64(1))
+	if r.reservoir.take(now.Unix()) {
+		atomic.AddInt64(&r.samplingStatistics.sampledRequests, int64(1))
 		sd.Decision = sdktrace.RecordAndSample
 
 		return sd
@@ -105,7 +111,7 @@ func (r *Rule) Sample(parameters sdktrace.SamplingParameters, now int64) sdktrac
 	sd = sdktrace.TraceIDRatioBased(r.ruleProperties.FixedRate).ShouldSample(parameters)
 
 	if sd.Decision == sdktrace.RecordAndSample {
-		atomic.AddInt64(&r.sampledRequests, int64(1))
+		atomic.AddInt64(&r.samplingStatistics.sampledRequests, int64(1))
 	}
 
 	return sd

@@ -17,6 +17,7 @@ package internal // import "go.opentelemetry.io/contrib/samplers/aws/xray/intern
 import (
 	"sync"
 	"sync/atomic"
+	"time"
 )
 
 // reservoir represents a sampling statistics for a given rule and populate it's value from
@@ -32,13 +33,13 @@ type reservoir struct {
 	quota int64
 
 	// quota refresh timestamp
-	refreshedAt int64
+	refreshedAt time.Time
 
 	// quota expiration timestamp
 	expiresAt int64
 
 	// polling interval for quota
-	interval int64
+	interval time.Duration
 
 	// total size of reservoir
 	capacity int64

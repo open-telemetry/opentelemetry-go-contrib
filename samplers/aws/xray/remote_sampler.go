@@ -100,7 +100,7 @@ func (rs *remoteSampler) ShouldSample(parameters sdktrace.SamplingParameters) sd
 
 		if match {
 			// remote sampling based on rule match
-			return r.Sample(parameters, rs.manifest.Clock.Now().Unix())
+			return r.Sample(parameters, rs.manifest.Clock.Now())
 		}
 	}
 

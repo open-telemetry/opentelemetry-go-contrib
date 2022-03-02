@@ -30,8 +30,6 @@ import (
 	sdktrace "go.opentelemetry.io/otel/sdk/trace"
 )
 
-const defaultInterval = int64(10)
-
 const manifestTTL = 3600
 
 // Manifest represents a full sampling ruleset and provides
@@ -39,7 +37,7 @@ const manifestTTL = 3600
 type Manifest struct {
 	Rules                          []Rule
 	SamplingTargetsPollingInterval time.Duration
-	refreshedAt                    int64
+	refreshedAt                    time.Time
 	xrayClient                     *xrayClient
 	clientID                       *string
 	logger                         logr.Logger
@@ -76,26 +74,28 @@ func (m *Manifest) Expired() bool {
 	m.mu.RLock()
 	defer m.mu.RUnlock()
 
-	return m.refreshedAt < m.Clock.Now().Unix()-manifestTTL
+	now := time.Unix(m.Clock.Now().Unix()-manifestTTL, 0)
+	return now.After(m.refreshedAt)
 }
 
 // MatchAgainstManifestRules returns a Rule and boolean flag set as true
 // if rule has been match against span attributes, otherwise nil and false
 func (m *Manifest) MatchAgainstManifestRules(parameters sdktrace.SamplingParameters, serviceName string, cloudPlatform string) (*Rule, bool, error) {
 	m.mu.RLock()
-	defer m.mu.RUnlock()
+	rules := m.Rules
+	m.mu.RUnlock()
 
 	matched := false
 
-	for index := range m.Rules {
-		isRuleMatch, err := m.Rules[index].appliesTo(parameters, serviceName, cloudPlatform)
+	for index := range rules {
+		isRuleMatch, err := rules[index].appliesTo(parameters, serviceName, cloudPlatform)
 		if err != nil {
 			return nil, isRuleMatch, err
 		}
 
 		if isRuleMatch {
 			matched = true
-			return &m.Rules[index], matched, nil
+			return &rules[index], matched, nil
 		}
 	}
 
@@ -155,9 +155,9 @@ func (m *Manifest) RefreshManifestTargets(ctx context.Context) (refresh bool, er
 	}
 
 	// find next polling interval for targets
-	minPoll := manifest.minimumPollingInterval(targets)
+	minPoll := manifest.minimumPollingInterval()
 	if minPoll > 0 {
-		m.SamplingTargetsPollingInterval = time.Duration(minPoll) * time.Second
+		m.SamplingTargetsPollingInterval = minPoll
 	}
 
 	// update centralized manifest object
@@ -193,14 +193,13 @@ func (m *Manifest) updateRules(rules *getSamplingRulesOutput) {
 
 	m.mu.Lock()
 	m.Rules = tempManifest.Rules
-	m.refreshedAt = m.Clock.Now().Unix()
+	m.refreshedAt = m.Clock.Now()
 	m.mu.Unlock()
 }
 
 func (m *Manifest) createRule(ruleProp ruleProperties) {
 	cr := reservoir{
 		capacity: ruleProp.ReservoirSize,
-		interval: defaultInterval,
 	}
 
 	csr := Rule{
@@ -245,7 +244,10 @@ func (m *Manifest) updateTargets(targets *getSamplingTargetsOutput) (refresh boo
 
 	// set refresh flag if modifiedAt timestamp from remote is greater than ours
 	if remote := targets.LastRuleModification; remote != nil {
-		if int64(*remote) >= m.refreshedAt {
+		// convert unix timestamp to time.Time
+		lastRuleModification := time.Unix(int64(*targets.LastRuleModification), 0)
+
+		if lastRuleModification.After(m.refreshedAt) {
 			refresh = true
 		}
 	}
@@ -264,7 +266,7 @@ func (m *Manifest) updateReservoir(t *samplingTargetDocument) (err error) {
 
 	for index := range m.Rules {
 		if m.Rules[index].ruleProperties.RuleName == *t.RuleName {
-			m.Rules[index].reservoir.refreshedAt = m.Clock.Now().Unix()
+			m.Rules[index].reservoir.refreshedAt = m.Clock.Now()
 
 			// Update non-optional attributes from response
 			m.Rules[index].ruleProperties.FixedRate = *t.FixedRate
@@ -277,7 +279,7 @@ func (m *Manifest) updateReservoir(t *samplingTargetDocument) (err error) {
 				m.Rules[index].reservoir.expiresAt = int64(*t.ReservoirQuotaTTL)
 			}
 			if t.Interval != nil {
-				m.Rules[index].reservoir.interval = *t.Interval
+				m.Rules[index].reservoir.interval = time.Duration(*t.Interval)
 			}
 		}
 	}
@@ -292,8 +294,8 @@ func (m *Manifest) snapshots() ([]*samplingStatisticsDocument, error) {
 
 	// Generate sampling statistics for user-defined rules
 	for index := range m.Rules {
-		if m.Rules[index].stale(m.Clock.Now().Unix()) {
-			s := m.Rules[index].snapshot(m.Clock.Now().Unix())
+		if m.Rules[index].stale(m.Clock.Now()) {
+			s := m.Rules[index].snapshot(m.Clock.Now())
 			s.ClientID = m.clientID
 
 			statistics = append(statistics, s)
@@ -317,21 +319,19 @@ func (m *Manifest) sort() {
 }
 
 // minimumPollingInterval finds the minimum interval amongst all the targets
-func (m *Manifest) minimumPollingInterval(targets *getSamplingTargetsOutput) (minPoll int64) {
-	minPoll = 0
-	for _, t := range targets.SamplingTargetDocuments {
-		if t.Interval != nil {
-			if minPoll == 0 {
-				minPoll = *t.Interval
-			} else {
-				if minPoll > *t.Interval {
-					minPoll = *t.Interval
-				}
+func (m *Manifest) minimumPollingInterval() (minPoll time.Duration) {
+	minPoll = time.Duration(0)
+	for _, rules := range m.Rules {
+		if minPoll == 0 {
+			minPoll = rules.reservoir.interval
+		} else {
+			if minPoll >= rules.reservoir.interval {
+				minPoll = rules.reservoir.interval
 			}
 		}
 	}
 
-	return minPoll
+	return minPoll * time.Second
 }
 
 // generateClientID generates random client ID
