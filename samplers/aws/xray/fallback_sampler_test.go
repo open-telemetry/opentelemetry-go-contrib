@@ -43,6 +43,11 @@ func TestBorrowOnePerSecond(t *testing.T) {
 
 	// assert that borrowing again is false during that second
 	assert.False(t, borrowed)
+
+	borrowed = fs.borrow(1500000001)
+
+	// assert that borrowing again in next second
+	assert.True(t, borrowed)
 }
 
 // assert fallback sampling description.

@@ -285,7 +285,7 @@ func TestRefreshManifestRules(t *testing.T) {
 
 	// generate a test server so we can capture and inspect the request
 	testServer := httptest.NewServer(http.HandlerFunc(func(res http.ResponseWriter, req *http.Request) {
-		_, err := res.Write([]byte(body))
+		_, err := res.Write(body)
 		require.NoError(t, err)
 	}))
 	defer testServer.Close()
@@ -408,7 +408,7 @@ func TestRefreshManifestMissingServiceName(t *testing.T) {
 
 	// generate a test server so we can capture and inspect the request
 	testServer := httptest.NewServer(http.HandlerFunc(func(res http.ResponseWriter, req *http.Request) {
-		_, err := res.Write([]byte(body))
+		_, err := res.Write(body)
 		require.NoError(t, err)
 
 	}))
@@ -463,7 +463,7 @@ func TestRefreshManifestMissingRuleName(t *testing.T) {
 
 	// generate a test server so we can capture and inspect the request
 	testServer := httptest.NewServer(http.HandlerFunc(func(res http.ResponseWriter, req *http.Request) {
-		_, err := res.Write([]byte(body))
+		_, err := res.Write(body)
 		require.NoError(t, err)
 
 	}))
@@ -521,7 +521,7 @@ func TestRefreshManifestIncorrectVersion(t *testing.T) {
 
 	// generate a test server so we can capture and inspect the request
 	testServer := httptest.NewServer(http.HandlerFunc(func(res http.ResponseWriter, req *http.Request) {
-		_, err := res.Write([]byte(body))
+		_, err := res.Write(body)
 		require.NoError(t, err)
 
 	}))
@@ -618,7 +618,7 @@ func TestRefreshManifestAddOneInvalidRule(t *testing.T) {
 
 	// generate a test server so we can capture and inspect the request
 	testServer := httptest.NewServer(http.HandlerFunc(func(res http.ResponseWriter, req *http.Request) {
-		_, err := res.Write([]byte(body))
+		_, err := res.Write(body)
 		require.NoError(t, err)
 	}))
 	defer testServer.Close()
@@ -681,7 +681,8 @@ func TestRefreshManifestTarget_NoSnapShot(t *testing.T) {
 		logger: stdr.NewWithOptions(log.New(os.Stderr, "", log.LstdFlags|log.Lshortfile), stdr.Options{LogCaller: stdr.Error}),
 	}
 
-	err := m.RefreshManifestTargets(context.Background())
+	refresh, err := m.RefreshManifestTargets(context.Background())
+	assert.False(t, refresh)
 	assert.Nil(t, err)
 }
 
@@ -738,7 +739,7 @@ func TestRefreshManifestTargets(t *testing.T) {
 
 	// generate a test server so we can capture and inspect the request
 	testServer := httptest.NewServer(http.HandlerFunc(func(res http.ResponseWriter, req *http.Request) {
-		_, err := res.Write([]byte(body))
+		_, err := res.Write(body)
 		require.NoError(t, err)
 	}))
 	defer testServer.Close()
@@ -757,7 +758,8 @@ func TestRefreshManifestTargets(t *testing.T) {
 		refreshedAt: 18000000,
 	}
 
-	err = m.RefreshManifestTargets(context.Background())
+	refresh, err := m.RefreshManifestTargets(context.Background())
+	assert.False(t, refresh)
 	require.NoError(t, err)
 
 	// assert target updates

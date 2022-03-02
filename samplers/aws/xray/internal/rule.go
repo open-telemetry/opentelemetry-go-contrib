@@ -12,7 +12,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package internal
+package internal // import "go.opentelemetry.io/contrib/samplers/aws/xray/internal"
 
 import (
 	"sync/atomic"
@@ -64,7 +64,8 @@ func (r *Rule) snapshot(now int64) *samplingStatisticsDocument {
 	}
 }
 
-// Sample uses sampling targets of a given rule to decide which sampling should be done and returns a SamplingResult.
+// Sample uses sampling targets of a given rule to decide
+// which sampling should be done and returns a SamplingResult.
 func (r *Rule) Sample(parameters sdktrace.SamplingParameters, now int64) sdktrace.SamplingResult {
 	sd := sdktrace.SamplingResult{
 		Tracestate: trace.SpanContextFromContext(parameters.ParentContext).TraceState(),
@@ -110,7 +111,8 @@ func (r *Rule) Sample(parameters sdktrace.SamplingParameters, now int64) sdktrac
 	return sd
 }
 
-// appliesTo performs a matching against rule properties to see if a given rule does match with any of the rule set on AWS X-Ray console
+// appliesTo performs a matching against rule properties to see
+// if a given rule does match with any of the rule set on AWS X-Ray console
 func (r *Rule) appliesTo(parameters sdktrace.SamplingParameters, serviceName string, cloudPlatform string) (bool, error) {
 	var httpTarget string
 	var httpURL string

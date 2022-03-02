@@ -12,7 +12,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package xray
+package xray // import "go.opentelemetry.io/contrib/samplers/aws/xray"
 
 import (
 	"context"
@@ -20,10 +20,9 @@ import (
 
 	"go.opentelemetry.io/contrib/samplers/aws/xray/internal"
 	"go.opentelemetry.io/contrib/samplers/aws/xray/internal/util"
+	sdktrace "go.opentelemetry.io/otel/sdk/trace"
 
 	"github.com/go-logr/logr"
-
-	sdktrace "go.opentelemetry.io/otel/sdk/trace"
 )
 
 // remoteSampler is a sampler for AWS X-Ray which polls sampling rules and sampling targets
@@ -105,12 +104,13 @@ func (rs *remoteSampler) ShouldSample(parameters sdktrace.SamplingParameters) sd
 		}
 	}
 
-	// Use fallback sampler if manifest is expired or sampling rules does not match against manifest
+	// Use fallback sampler if manifest is expired
+	// or sampling rules does not match against manifest
 	rs.logger.V(5).Info("span attributes does not match to the sampling rules or manifest is expired so using fallback sampling strategy")
 	return rs.fallbackSampler.ShouldSample(parameters)
 }
 
-// Description returns description of the sampler being used
+// Description returns description of the sampler being used.
 func (rs *remoteSampler) Description() string {
 	return "AwsXrayRemoteSampler{" + rs.getDescription() + "}"
 }
@@ -127,7 +127,7 @@ func (rs *remoteSampler) start(ctx context.Context) {
 }
 
 // startPoller starts the rule and target poller in a single go routine which runs periodically
-// to refresh manifest and targets
+// to refresh manifest and targets.
 func (rs *remoteSampler) startPoller(ctx context.Context) {
 	go func() {
 		// jitter = 5s, default 300 seconds
@@ -137,11 +137,7 @@ func (rs *remoteSampler) startPoller(ctx context.Context) {
 		targetTicker := util.NewTicker(rs.manifest.SamplingTargetsPollingInterval, 100*time.Millisecond)
 
 		// fetch sampling rules to kick start the remote sampling
-		if err := rs.manifest.RefreshManifestRules(ctx); err != nil {
-			rs.logger.Error(err, "Error occurred while refreshing sampling rules")
-		} else {
-			rs.logger.V(5).Info("Successfully fetched sampling rules")
-		}
+		rs.refreshManifest(ctx)
 
 		for {
 			select {
@@ -151,11 +147,7 @@ func (rs *remoteSampler) startPoller(ctx context.Context) {
 				}
 
 				// fetch sampling rules and updates manifest
-				if err := rs.manifest.RefreshManifestRules(ctx); err != nil {
-					rs.logger.Error(err, "error occurred while refreshing sampling rules")
-				} else {
-					rs.logger.V(5).Info("successfully fetched sampling rules")
-				}
+				rs.refreshManifest(ctx)
 				continue
 			case _, more := <-targetTicker.C():
 				if !more {
@@ -163,8 +155,11 @@ func (rs *remoteSampler) startPoller(ctx context.Context) {
 				}
 
 				// fetch sampling targets and updates manifest
-				if err := rs.manifest.RefreshManifestTargets(ctx); err != nil {
-					rs.logger.Error(err, "error occurred while refreshing sampling rule targets")
+				refresh := rs.refreshTargets(ctx)
+
+				// out of band manifest refresh if it manifest is not updated
+				if refresh {
+					rs.refreshManifest(ctx)
 				}
 				continue
 			case <-ctx.Done():
@@ -172,4 +167,23 @@ func (rs *remoteSampler) startPoller(ctx context.Context) {
 			}
 		}
 	}()
+}
+
+// refreshManifest refreshes the manifest retrieved via getSamplingRules API.
+func (rs *remoteSampler) refreshManifest(ctx context.Context) {
+	if err := rs.manifest.RefreshManifestRules(ctx); err != nil {
+		rs.logger.Error(err, "Error occurred while refreshing sampling rules")
+	} else {
+		rs.logger.V(5).Info("Successfully fetched sampling rules")
+	}
+}
+
+// refreshTarget refreshes the sampling targets in manifest retrieved via getSamplingTargets API.
+func (rs *remoteSampler) refreshTargets(ctx context.Context) bool {
+	refresh := false
+	var err error
+	if refresh, err = rs.manifest.RefreshManifestTargets(ctx); err != nil {
+		rs.logger.Error(err, "error occurred while refreshing sampling rule targets")
+	}
+	return refresh
 }

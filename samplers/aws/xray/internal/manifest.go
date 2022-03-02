@@ -12,7 +12,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package internal
+package internal // import "go.opentelemetry.io/contrib/samplers/aws/xray/internal"
 
 import (
 	"context"
@@ -79,7 +79,8 @@ func (m *Manifest) Expired() bool {
 	return m.refreshedAt < m.Clock.Now().Unix()-manifestTTL
 }
 
-// MatchAgainstManifestRules returns a Rule and boolean flag set as true if rule has been match against span attributes, otherwise nil and false
+// MatchAgainstManifestRules returns a Rule and boolean flag set as true
+// if rule has been match against span attributes, otherwise nil and false
 func (m *Manifest) MatchAgainstManifestRules(parameters sdktrace.SamplingParameters, serviceName string, cloudPlatform string) (*Rule, bool, error) {
 	m.mu.RLock()
 	defer m.mu.RUnlock()
@@ -116,41 +117,41 @@ func (m *Manifest) RefreshManifestRules(ctx context.Context) (err error) {
 }
 
 // RefreshManifestTargets updates sampling targets (statistics) for each rule
-func (m *Manifest) RefreshManifestTargets(ctx context.Context) (err error) {
+func (m *Manifest) RefreshManifestTargets(ctx context.Context) (refresh bool, err error) {
 	var manifest Manifest
 
 	// deep copy centralized manifest object to temporary manifest to avoid thread safety issue
 	m.mu.RLock()
 	err = copier.CopyWithOption(&manifest, m, copier.Option{IgnoreEmpty: false, DeepCopy: true})
 	if err != nil {
-		return err
+		return false, err
 	}
 	m.mu.RUnlock()
 
 	// generate sampling statistics based on the data in temporary manifest
 	statistics, err := manifest.snapshots()
 	if err != nil {
-		return err
+		return false, err
 	}
 
 	// return if no statistics to report
 	if len(statistics) == 0 {
 		m.logger.V(5).Info("no statistics to report and not refreshing sampling targets")
-		return nil
+		return false, nil
 	}
 
 	// get sampling targets (statistics) for every expired rule from AWS X-Ray
 	targets, err := m.xrayClient.getSamplingTargets(ctx, statistics)
 	if err != nil {
-		return fmt.Errorf("refreshTargets: error occurred while getting sampling targets: %w", err)
+		return false, fmt.Errorf("refreshTargets: error occurred while getting sampling targets: %w", err)
 	}
 
 	m.logger.V(5).Info("successfully fetched sampling targets")
 
 	// update temporary manifest with retrieved targets (statistics) for each rule
-	refresh, err := manifest.updateTargets(targets)
+	refresh, err = manifest.updateTargets(targets)
 	if err != nil {
-		return err
+		return refresh, err
 	}
 
 	// find next polling interval for targets
@@ -163,17 +164,6 @@ func (m *Manifest) RefreshManifestTargets(ctx context.Context) (err error) {
 	m.mu.Lock()
 	m.Rules = manifest.Rules
 	m.mu.Unlock()
-
-	// perform out-of-band async manifest refresh if refresh is set to true
-	if refresh {
-		m.logger.V(5).Info("refreshing sampling rules out-of-band")
-
-		go func() {
-			if err := m.RefreshManifestRules(ctx); err != nil {
-				m.logger.Error(err, "error occurred refreshing sampling rules out-of-band")
-			}
-		}()
-	}
 
 	return
 }
@@ -272,8 +262,8 @@ func (m *Manifest) updateReservoir(t *samplingTargetDocument) (err error) {
 		return fmt.Errorf("invalid sampling target for rule %s. Missing fixed rate", *t.RuleName)
 	}
 
-	for index, rule := range m.Rules {
-		if rule.ruleProperties.RuleName == *t.RuleName {
+	for index := range m.Rules {
+		if m.Rules[index].ruleProperties.RuleName == *t.RuleName {
 			m.Rules[index].reservoir.refreshedAt = m.Clock.Now().Unix()
 
 			// Update non-optional attributes from response
@@ -301,9 +291,9 @@ func (m *Manifest) snapshots() ([]*samplingStatisticsDocument, error) {
 	statistics := make([]*samplingStatisticsDocument, 0, len(m.Rules)+1)
 
 	// Generate sampling statistics for user-defined rules
-	for _, r := range m.Rules {
-		if r.stale(m.Clock.Now().Unix()) {
-			s := r.snapshot(m.Clock.Now().Unix())
+	for index := range m.Rules {
+		if m.Rules[index].stale(m.Clock.Now().Unix()) {
+			s := m.Rules[index].snapshot(m.Clock.Now().Unix())
 			s.ClientID = m.clientID
 
 			statistics = append(statistics, s)
@@ -344,7 +334,7 @@ func (m *Manifest) minimumPollingInterval(targets *getSamplingTargetsOutput) (mi
 	return minPoll
 }
 
-// generateClientId generates random client ID
+// generateClientID generates random client ID
 func generateClientID() (*string, error) {
 	var r [12]byte
 

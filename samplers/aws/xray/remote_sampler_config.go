@@ -12,7 +12,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package xray
+package xray // import "go.opentelemetry.io/contrib/samplers/aws/xray"
 
 import (
 	"fmt"
@@ -33,7 +33,7 @@ const (
 	defaultPollingInterval = 300
 )
 
-// SamplerOption is a function that sets config on the sampler
+// Option is a function that sets config on the sampler.
 type Option func(options *config)
 
 type config struct {
@@ -42,21 +42,21 @@ type config struct {
 	logger                       logr.Logger
 }
 
-// sets custom proxy endpoint
+// WithEndpoint sets custom proxy endpoint.
 func WithEndpoint(endpoint string) Option {
 	return func(o *config) {
 		o.endpoint = endpoint
 	}
 }
 
-// sets polling interval for sampling rules
+// WithSamplingRulesPollingInterval sets polling interval for sampling rules.
 func WithSamplingRulesPollingInterval(polingInterval time.Duration) Option {
 	return func(o *config) {
 		o.samplingRulesPollingInterval = polingInterval
 	}
 }
 
-// sets custom logging for remote sampling implementation
+// WithLogger sets custom logging for remote sampling implementation.
 func WithLogger(l logr.Logger) Option {
 	return func(o *config) {
 		o.logger = l

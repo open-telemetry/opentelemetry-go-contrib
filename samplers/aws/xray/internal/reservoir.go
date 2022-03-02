@@ -12,9 +12,10 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package internal
+package internal // import "go.opentelemetry.io/contrib/samplers/aws/xray/internal"
 
 import (
+	"sync"
 	"sync/atomic"
 )
 
@@ -61,19 +62,19 @@ func (r *reservoir) borrow(now int64) bool {
 
 // Take consumes quota from reservoir, if any remains, then returns true. False otherwise.
 func (r *reservoir) take(now int64) bool {
-	cur := atomic.LoadInt64(&r.currentEpoch)
-	quota := atomic.LoadInt64(&r.quota)
-	used := atomic.LoadInt64(&r.used)
+	var mu sync.RWMutex
+	mu.Lock()
+	defer mu.Unlock()
 
-	if cur != now {
-		atomic.CompareAndSwapInt64(&r.currentEpoch, cur, now)
-		atomic.CompareAndSwapInt64(&r.used, used, int64(0))
-		used = 0
+	if r.currentEpoch != now {
+		r.used = 0
+		r.currentEpoch = now
 	}
 
-	if quota > used {
-		atomic.AddInt64(&r.used, 1)
+	if r.quota > r.used {
+		r.used++
 		return true
 	}
+
 	return false
 }

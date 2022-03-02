@@ -24,7 +24,7 @@ import (
 	sdktrace "go.opentelemetry.io/otel/sdk/trace"
 )
 
-// assert that when manifest is not expired sampling happens with 1 req/sec.
+// TestShouldSample assert that when manifest is not expired sampling happens with 1 req/sec.
 func TestShouldSample(t *testing.T) {
 	clock := &util.MockClock{
 		NowTime: 100,
@@ -47,7 +47,7 @@ func TestShouldSample(t *testing.T) {
 	assert.Equal(t, sd.Decision, sdktrace.RecordAndSample)
 }
 
-// assert remote sampling description.
+// TestRemoteSamplerDescription assert remote sampling description.
 func TestRemoteSamplerDescription(t *testing.T) {
 	rs := &remoteSampler{}
 

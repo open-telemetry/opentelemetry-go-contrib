@@ -114,10 +114,14 @@ type xrayClient struct {
 	// http client for sending sampling requests to the collector
 	httpClient *http.Client
 
-	endpoint *url.URL
+	// resolved URL to call getSamplingRules API
+	samplingRulesURL string
+
+	// resolved URL to call getSamplingTargets API
+	samplingTargetsURL string
 }
 
-// newClient returns an HTTP client with proxy endpoint
+// newClient returns an HTTP client with proxy endpoint.
 func newClient(addr string) (client *xrayClient, err error) {
 	endpoint := "http://" + addr
 
@@ -126,13 +130,18 @@ func newClient(addr string) (client *xrayClient, err error) {
 		return nil, err
 	}
 
+	// construct resolved URL for getSamplingRules and getSamplingTargets API calls
+	samplingRulesURL := endpointURL.String() + "/GetSamplingRules"
+	samplingTargetsURL := endpointURL.String() + "/SamplingTargets"
+
 	return &xrayClient{
-		httpClient: &http.Client{},
-		endpoint:   endpointURL,
+		httpClient:         &http.Client{},
+		samplingRulesURL:   samplingRulesURL,
+		samplingTargetsURL: samplingTargetsURL,
 	}, nil
 }
 
-// getSamplingRules calls the collector(aws proxy enabled) for sampling rules
+// getSamplingRules calls the collector(aws proxy enabled) for sampling rules.
 func (c *xrayClient) getSamplingRules(ctx context.Context) (*getSamplingRulesOutput, error) {
 	samplingRulesInput, err := json.Marshal(getSamplingRulesInput{})
 	if err != nil {
@@ -140,7 +149,7 @@ func (c *xrayClient) getSamplingRules(ctx context.Context) (*getSamplingRulesOut
 	}
 	body := bytes.NewReader(samplingRulesInput)
 
-	req, err := http.NewRequestWithContext(ctx, http.MethodPost, c.endpoint.String()+"/GetSamplingRules", body)
+	req, err := http.NewRequestWithContext(ctx, http.MethodPost, c.samplingRulesURL, body)
 	if err != nil {
 		return nil, fmt.Errorf("xray client: failed to create http request: %w", err)
 	}
@@ -159,7 +168,7 @@ func (c *xrayClient) getSamplingRules(ctx context.Context) (*getSamplingRulesOut
 	return samplingRulesOutput, nil
 }
 
-// getSamplingTargets calls the collector(aws proxy enabled) for sampling targets
+// getSamplingTargets calls the collector(aws proxy enabled) for sampling targets.
 func (c *xrayClient) getSamplingTargets(ctx context.Context, s []*samplingStatisticsDocument) (*getSamplingTargetsOutput, error) {
 	statistics := getSamplingTargetsInput{
 		SamplingStatisticsDocuments: s,
@@ -171,7 +180,7 @@ func (c *xrayClient) getSamplingTargets(ctx context.Context, s []*samplingStatis
 	}
 	body := bytes.NewReader(statisticsByte)
 
-	req, err := http.NewRequestWithContext(ctx, http.MethodPost, c.endpoint.String()+"/SamplingTargets", body)
+	req, err := http.NewRequestWithContext(ctx, http.MethodPost, c.samplingTargetsURL, body)
 	if err != nil {
 		return nil, fmt.Errorf("xray client: failed to create http request: %w", err)
 	}

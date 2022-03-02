@@ -12,7 +12,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package util
+package util // import "go.opentelemetry.io/contrib/samplers/aws/xray/internal/util"
 
 import (
 	"sync/atomic"

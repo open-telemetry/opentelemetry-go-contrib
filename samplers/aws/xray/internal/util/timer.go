@@ -12,7 +12,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package util
+package util // import "go.opentelemetry.io/contrib/samplers/aws/xray/internal/util"
 
 import (
 	"time"
@@ -28,7 +28,7 @@ type Ticker struct {
 
 // NewTicker creates a new Ticker that will send the current time on its channel.
 func NewTicker(d, jitter time.Duration) *Ticker {
-	t := time.NewTicker(d - time.Duration(globalRand.Int63n(int64(jitter))))
+	t := time.NewTicker(d - time.Duration(newGlobalRand().Int63n(int64(jitter))))
 
 	jitteredTicker := Ticker{
 		t:      t,
