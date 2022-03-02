@@ -186,3 +186,11 @@ func WithClientTrace(f func(context.Context) *httptrace.ClientTrace) Option {
 		c.ClientTrace = f
 	})
 }
+
+// WithRoundTrip takes a function that will be applied to the requests
+// sent through the otelhttp Transport.
+func WithRoundTrip(f func(r *http.Request)) Option {
+	return optionFunc(func(c *config) {
+		c.RoundTripOptions = f
+	})
+}
