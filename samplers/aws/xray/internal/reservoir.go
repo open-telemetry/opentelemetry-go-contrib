@@ -23,20 +23,20 @@ import (
 // reservoir represents a sampling statistics for a given rule and populate it's value from
 // the response getSamplingTargets API which sends information on sampling statistics real-time
 type reservoir struct {
-	// reservoir consumption for current epoch
-	used int64
+	// quota expiration timestamp
+	expiresAt int64
 
 	// reservoir usage is reset every second
 	currentEpoch int64
+
+	// reservoir consumption for current epoch
+	used int64
 
 	// quota assigned to client
 	quota int64
 
 	// quota refresh timestamp
 	refreshedAt time.Time
-
-	// quota expiration timestamp
-	expiresAt int64
 
 	// polling interval for quota
 	interval time.Duration
