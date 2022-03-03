@@ -5,7 +5,7 @@ This package implements [Jaeger remote sampler](https://www.jaegertracing.io/doc
 ## Example
 
 [example/](./example) shows how to host remote sampling strategies using the OpenTelemetry Collector.
-The Collector uses the Jaeger receiver to host the strategy file, note you do not need to send Jaeger to make use of the Jaeger remote sampling protocol. 
+The Collector uses the Jaeger receiver to host the strategy file. Note you do not need to run Jaeger to make use of the Jaeger remote sampling protocol. However, you do need Jaeger backend if you want to utilize its adaptive sampling engine that auto-calculates remote sampling strategies.
 
 Run the OpenTelemetry Collector using docker-compose:
 
