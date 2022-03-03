@@ -15,8 +15,9 @@
 package ot_test
 
 import (
-	"go.opentelemetry.io/otel/trace"
 	"strings"
+
+	"go.opentelemetry.io/otel/trace"
 )
 
 const (
