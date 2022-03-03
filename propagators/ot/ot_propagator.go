@@ -28,9 +28,10 @@ import (
 
 const (
 	// Default OT Header names.
-	traceIDHeader = "ot-tracer-traceid"
-	spanIDHeader  = "ot-tracer-spanid"
-	sampledHeader = "ot-tracer-sampled"
+	traceIDHeader       = "ot-tracer-traceid"
+	spanIDHeader        = "ot-tracer-spanid"
+	sampledHeader       = "ot-tracer-sampled"
+	baggageHeaderPrefix = "ot-baggage-"
 
 	otTraceIDPadding = "0000000000000000"
 
@@ -72,7 +73,7 @@ func (o OT) Inject(ctx context.Context, carrier propagation.TextMapCarrier) {
 	}
 
 	for _, m := range baggage.FromContext(ctx).Members() {
-		carrier.Set(fmt.Sprintf("ot-baggage-%s", m.Key()), m.Value())
+		carrier.Set(fmt.Sprintf("%s%s", baggageHeaderPrefix, m.Key()), m.Value())
 	}
 
 }
@@ -93,16 +94,40 @@ func (o OT) Extract(ctx context.Context, carrier propagation.TextMapCarrier) con
 	if err != nil || !sc.IsValid() {
 		return ctx
 	}
-	// TODO: implement extracting baggage
-	//
-	// this currently is not achievable without an implementation of `keys`
-	// on the carrier, see:
-	// https://github.com/open-telemetry/opentelemetry-go/issues/1493
+
+	bags, err := extractBags(carrier)
+	if err != nil {
+		return ctx
+	}
+	ctx = baggage.ContextWithBaggage(ctx, bags)
 	return trace.ContextWithRemoteSpanContext(ctx, sc)
 }
 
 func (o OT) Fields() []string {
 	return []string{traceIDHeader, spanIDHeader, sampledHeader}
+}
+
+// extractBags reconstructs the baggage information from opentracing
+func extractBags(carrier propagation.TextMapCarrier) (baggage.Baggage, error) {
+	emptyBags, _ := baggage.New()
+	var members []baggage.Member
+	for _, key := range carrier.Keys() {
+		lowerKey := strings.ToLower(key)
+		if !strings.HasPrefix(lowerKey, baggageHeaderPrefix) {
+			continue
+		}
+		strippedKey := strings.TrimPrefix(lowerKey, baggageHeaderPrefix)
+		member, err := baggage.NewMember(strippedKey, carrier.Get(key))
+		if err != nil {
+			return emptyBags, err
+		}
+		members = append(members, member)
+	}
+	bags, err := baggage.New(members...)
+	if err != nil {
+		return emptyBags, err
+	}
+	return bags, nil
 }
 
 // extract reconstructs a SpanContext from header values based on OT
