@@ -17,7 +17,6 @@ package xray
 import (
 	"context"
 	"net/http"
-	"strings"
 	"testing"
 
 	"go.opentelemetry.io/otel"
@@ -25,11 +24,13 @@ import (
 
 	"github.com/stretchr/testify/assert"
 
+	sdktrace "go.opentelemetry.io/otel/sdk/trace"
 	"go.opentelemetry.io/otel/trace"
 )
 
 var (
 	traceID                    = trace.TraceID{0x8a, 0x3c, 0x60, 0xf7, 0xd1, 0x88, 0xf8, 0xfa, 0x79, 0xd4, 0x8a, 0x39, 0x1a, 0x77, 0x8f, 0xa6}
+	rootSpanID                 = trace.SpanID{0x8a, 0x3c, 0x60, 0xf7, 0xd1, 0x88, 0xf8, 0xfa}
 	xrayTraceID                = "1-8a3c60f7-d188f8fa79d48a391a778fa6"
 	xrayTraceIDIncorrectLength = "1-82138-1203123"
 	parentID64Str              = "53995c3f42cd8ad8"
@@ -40,6 +41,7 @@ var (
 
 func TestAwsXrayExtract(t *testing.T) {
 	testData := []struct {
+		name         string
 		traceID      string
 		parentSpanID string
 		samplingFlag string
@@ -47,6 +49,27 @@ func TestAwsXrayExtract(t *testing.T) {
 		err          error
 	}{
 		{
+			"only root",
+			xrayTraceID, "", "",
+			trace.SpanContextConfig{
+				TraceID:    traceID,
+				SpanID:     rootSpanID,
+				TraceFlags: traceFlagNone,
+			},
+			nil,
+		},
+		{
+			"only root and sampled",
+			xrayTraceID, "", isSampled,
+			trace.SpanContextConfig{
+				TraceID:    traceID,
+				SpanID:     rootSpanID,
+				TraceFlags: trace.FlagsSampled,
+			},
+			nil,
+		},
+		{
+			"not sampled",
 			xrayTraceID, parentID64Str, notSampled,
 			trace.SpanContextConfig{
 				TraceID:    traceID,
@@ -56,6 +79,7 @@ func TestAwsXrayExtract(t *testing.T) {
 			nil,
 		},
 		{
+			"sampled",
 			xrayTraceID, parentID64Str, isSampled,
 			trace.SpanContextConfig{
 				TraceID:    traceID,
@@ -65,16 +89,19 @@ func TestAwsXrayExtract(t *testing.T) {
 			nil,
 		},
 		{
+			"zero parent id",
 			xrayTraceID, zeroSpanIDStr, isSampled,
 			trace.SpanContextConfig{},
 			errInvalidSpanIDLength,
 		},
 		{
+			"wrong trace id length",
 			xrayTraceIDIncorrectLength, parentID64Str, isSampled,
 			trace.SpanContextConfig{},
 			errLengthTraceIDHeader,
 		},
 		{
+			"wrong trace id version",
 			wrongVersionTraceHeaderID, parentID64Str, isSampled,
 			trace.SpanContextConfig{},
 			errInvalidTraceIDVersion,
@@ -82,23 +109,24 @@ func TestAwsXrayExtract(t *testing.T) {
 	}
 
 	for _, test := range testData {
-		headerVal := strings.Join([]string{traceIDKey, kvDelimiter, test.traceID, traceHeaderDelimiter, parentIDKey, kvDelimiter,
-			test.parentSpanID, traceHeaderDelimiter, sampleFlagKey, kvDelimiter, test.samplingFlag}, "")
+		t.Run(test.name, func(t *testing.T) {
+			headerVal := makeTraceHeaderVal(test.traceID, test.parentSpanID, test.samplingFlag)
 
-		sc, err := extract(headerVal)
+			sc, err := extract(headerVal)
 
-		info := []interface{}{
-			"trace ID: %q, parent span ID: %q, sampling flag: %q",
-			test.traceID,
-			test.parentSpanID,
-			test.samplingFlag,
-		}
+			info := []interface{}{
+				"trace ID: %q, parent span ID: %q, sampling flag: %q",
+				test.traceID,
+				test.parentSpanID,
+				test.samplingFlag,
+			}
 
-		if !assert.Equal(t, test.err, err, info...) {
-			continue
-		}
-
-		assert.Equal(t, trace.NewSpanContext(test.expected), sc, info...)
+			assert.Equal(t, test.err, err, info...)
+			assert.Equal(t, trace.NewSpanContext(test.expected), sc, info...)
+			if test.err == nil {
+				assert.True(t, sc.IsValid())
+			}
+		})
 	}
 }
 
@@ -106,27 +134,32 @@ func BenchmarkPropagatorExtract(b *testing.B) {
 	propagator := Propagator{}
 
 	ctx := context.Background()
-	req, _ := http.NewRequest("GET", "http://example.com", nil)
 
-	req.Header.Set("Root", "1-8a3c60f7-d188f8fa79d48a391a778fa6")
-	req.Header.Set("Parent", "53995c3f42cd8ad8")
-	req.Header.Set("Sampled", "1")
+	headers := make(http.Header)
+	headers.Set(traceHeaderKey,
+		makeTraceHeaderVal(xrayTraceID, parentID64Str, isSampled))
 
 	b.ResetTimer()
 	for i := 0; i < b.N; i++ {
-		_ = propagator.Extract(ctx, propagation.HeaderCarrier(req.Header))
+		_ = propagator.Extract(ctx, propagation.HeaderCarrier(headers))
 	}
 }
 
 func BenchmarkPropagatorInject(b *testing.B) {
 	propagator := Propagator{}
+
+	otel.SetTracerProvider(sdktrace.NewTracerProvider(
+		sdktrace.WithIDGenerator(NewIDGenerator()),
+	))
+
 	tracer := otel.Tracer("test")
 
-	req, _ := http.NewRequest("GET", "http://example.com", nil)
+	headers := make(http.Header)
+
 	ctx, _ := tracer.Start(context.Background(), "Parent operation...")
 
 	b.ResetTimer()
 	for i := 0; i < b.N; i++ {
-		propagator.Inject(ctx, propagation.HeaderCarrier(req.Header))
+		propagator.Inject(ctx, propagation.HeaderCarrier(headers))
 	}
 }

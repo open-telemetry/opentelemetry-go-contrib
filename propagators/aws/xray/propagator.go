@@ -54,10 +54,13 @@ var (
 )
 
 // Propagator serializes Span Context to/from AWS X-Ray headers.
+// @see
+//   https://docs.aws.amazon.com/xray/latest/devguide/xray-concepts.html#xray-concepts-tracingheader
 //
 // Example AWS X-Ray format:
-//
-// X-Amzn-Trace-Id: Root={traceId};Parent={parentId};Sampled={samplingFlag}.
+// 	X-Amzn-Trace-Id: Root={traceId}
+// 	X-Amzn-Trace-Id: Root={traceId};Sampled={samplingFlag}
+// 	X-Amzn-Trace-Id: Root={traceId};Parent={parentId};Sampled={samplingFlag}.
 type Propagator struct{}
 
 // Asserts that the propagator implements the otel.TextMapPropagator interface at compile time.
@@ -66,21 +69,19 @@ var _ propagation.TextMapPropagator = &Propagator{}
 // Inject injects a context to the carrier following AWS X-Ray format.
 func (xray Propagator) Inject(ctx context.Context, carrier propagation.TextMapCarrier) {
 	sc := trace.SpanFromContext(ctx).SpanContext()
-	if !sc.TraceID().IsValid() || !sc.SpanID().IsValid() {
+	if !sc.IsValid() {
 		return
 	}
 	otTraceID := sc.TraceID().String()
-	xrayTraceID := traceIDVersion + traceIDDelimiter + otTraceID[0:traceIDFirstPartLength] +
+	xrayTraceID := traceIDVersion +
+		traceIDDelimiter + otTraceID[0:traceIDFirstPartLength] +
 		traceIDDelimiter + otTraceID[traceIDFirstPartLength:]
 	parentID := sc.SpanID()
 	samplingFlag := notSampled
 	if sc.TraceFlags() == traceFlagSampled {
 		samplingFlag = isSampled
 	}
-	headers := []string{traceIDKey, kvDelimiter, xrayTraceID, traceHeaderDelimiter, parentIDKey,
-		kvDelimiter, parentID.String(), traceHeaderDelimiter, sampleFlagKey, kvDelimiter, samplingFlag}
-
-	carrier.Set(traceHeaderKey, strings.Join(headers, ""))
+	carrier.Set(traceHeaderKey, makeTraceHeaderVal(xrayTraceID, parentID.String(), samplingFlag))
 }
 
 // Extract gets a context from the carrier if it contains AWS X-Ray headers.
@@ -98,7 +99,7 @@ func (xray Propagator) Extract(ctx context.Context, carrier propagation.TextMapC
 // extract extracts Span Context from context.
 func extract(headerVal string) (trace.SpanContext, error) {
 	var (
-		scc            = trace.SpanContextConfig{}
+		scc            trace.SpanContextConfig
 		err            error
 		delimiterIndex int
 		part           string
@@ -134,6 +135,10 @@ func extract(headerVal string) (trace.SpanContext, error) {
 			//extract traceflag
 			scc.TraceFlags = parseTraceFlag(value)
 		}
+	}
+	// The span context must contain the span id even its absent from the header.
+	if !scc.SpanID.IsValid() {
+		copy(scc.SpanID[:], scc.TraceID[:len(scc.SpanID)])
 	}
 	return trace.NewSpanContext(scc), nil
 }
@@ -179,4 +184,18 @@ func parseTraceFlag(xraySampledFlag string) trace.TraceFlags {
 // Fields returns list of fields used by HTTPTextFormat.
 func (xray Propagator) Fields() []string {
 	return []string{traceHeaderKey}
+}
+
+// makeTraceHeaderVal returns the trace header value.
+// Both parentID and samplingFlag are optional.
+func makeTraceHeaderVal(traceID, parentID, samplingFlag string) string {
+	val := make([]string, 0, 11)
+	val = append(val, traceIDKey, kvDelimiter, traceID)
+	if parentID != "" {
+		val = append(val, traceHeaderDelimiter, parentIDKey, kvDelimiter, parentID)
+	}
+	if samplingFlag != "" {
+		val = append(val, traceHeaderDelimiter, sampleFlagKey, kvDelimiter, samplingFlag)
+	}
+	return strings.Join(val, "")
 }
