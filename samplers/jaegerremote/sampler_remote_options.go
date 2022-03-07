@@ -14,9 +14,6 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-// Copyright (c) 2021 The Jaeger Authors.
-// Copyright (c) 2017 Uber Technologies, Inc.
-
 package jaegerremote
 
 import (
