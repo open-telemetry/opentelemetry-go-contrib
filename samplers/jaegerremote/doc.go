@@ -1,4 +1,6 @@
 // Copyright The OpenTelemetry Authors
+// Copyright (c) 2021 The Jaeger Authors.
+// Copyright (c) 2017 Uber Technologies, Inc.
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -11,6 +13,7 @@
 // WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 // See the License for the specific language governing permissions and
 // limitations under the License.
-
 // Package jaegerremote implements the Jaeger Remote protocol.
-package jaegerremote // import "go.opentelemetry.io/contrib/samplers/jaegerremote"
+// import "go.opentelemetry.io/contrib/samplers/jaegerremote"
+
+package jaegerremote

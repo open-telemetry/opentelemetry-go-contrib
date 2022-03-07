@@ -1,4 +1,6 @@
 // Copyright The OpenTelemetry Authors
+// Copyright (c) 2021 The Jaeger Authors.
+// Copyright (c) 2017 Uber Technologies, Inc.
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -69,8 +71,8 @@ type Sampler struct {
 	// Cf. https://github.com/uber/jaeger-client-go/issues/155, https://goo.gl/zW7dgq
 	closed int64 // 0 - not closed, 1 - closed
 
-	sync.RWMutex // used to serialize access to samplerOptions.sampler
-	samplerOptions
+	sync.RWMutex // used to serialize access to samplerConfig.sampler
+	samplerConfig
 
 	serviceName string
 	doneChan    chan *sync.WaitGroup
@@ -82,11 +84,11 @@ func New(
 	serviceName string,
 	opts ...SamplerOption,
 ) *Sampler {
-	options := new(samplerOptions).applyOptionsAndDefaults(opts...)
+	options := new(samplerConfig).applyOptionsAndDefaults(opts...)
 	sampler := &Sampler{
-		samplerOptions: *options,
-		serviceName:    serviceName,
-		doneChan:       make(chan *sync.WaitGroup),
+		samplerConfig: *options,
+		serviceName:   serviceName,
+		doneChan:      make(chan *sync.WaitGroup),
 	}
 	go sampler.pollController()
 	return sampler
@@ -229,15 +231,15 @@ func (u *rateLimitingSamplerUpdater) Update(sampler trace.Sampler, strategy inte
 
 // -----------------------
 
-// adaptiveSamplerUpdater is used by Sampler to parse sampling configuration.
+// perOperationSamplerUpdater is used by Sampler to parse sampling configuration.
 // Fields have the same meaning as in perOperationSamplerParams.
-type adaptiveSamplerUpdater struct {
+type perOperationSamplerUpdater struct {
 	MaxOperations            int
 	OperationNameLateBinding bool
 }
 
 // Update implements Update of samplerUpdater.
-func (u *adaptiveSamplerUpdater) Update(sampler trace.Sampler, strategy interface{}) (trace.Sampler, error) {
+func (u *perOperationSamplerUpdater) Update(sampler trace.Sampler, strategy interface{}) (trace.Sampler, error) {
 	type response interface {
 		GetOperationSampling() *jaeger_api_v2.PerOperationSamplingStrategies
 	}

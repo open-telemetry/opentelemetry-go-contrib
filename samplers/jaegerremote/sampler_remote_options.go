@@ -1,4 +1,6 @@
 // Copyright The OpenTelemetry Authors
+// Copyright (c) 2021 The Jaeger Authors.
+// Copyright (c) 2017 Uber Technologies, Inc.
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -24,9 +26,9 @@ import (
 )
 
 // SamplerOption is a function that sets some option on the sampler
-type SamplerOption func(options *samplerOptions)
+type SamplerOption func(options *samplerConfig)
 
-type samplerOptions struct {
+type samplerConfig struct {
 	sampler                 trace.Sampler
 	samplingServerURL       string
 	samplingRefreshInterval time.Duration
@@ -39,7 +41,7 @@ type samplerOptions struct {
 // WithMaxOperations creates a SamplerOption that sets the maximum number of
 // operations the sampler will keep track of.
 func WithMaxOperations(maxOperations int) SamplerOption {
-	return func(o *samplerOptions) {
+	return func(o *samplerConfig) {
 		o.posParams.MaxOperations = maxOperations
 	}
 }
@@ -47,7 +49,7 @@ func WithMaxOperations(maxOperations int) SamplerOption {
 // WithOperationNameLateBinding creates a SamplerOption that sets the respective
 // field in the perOperationSamplerParams.
 func WithOperationNameLateBinding(enable bool) SamplerOption {
-	return func(o *samplerOptions) {
+	return func(o *samplerConfig) {
 		o.posParams.OperationNameLateBinding = enable
 	}
 }
@@ -55,7 +57,7 @@ func WithOperationNameLateBinding(enable bool) SamplerOption {
 // WithInitialSampler creates a SamplerOption that sets the initial sampler
 // to use before a remote sampler is created and used.
 func WithInitialSampler(sampler trace.Sampler) SamplerOption {
-	return func(o *samplerOptions) {
+	return func(o *samplerConfig) {
 		o.sampler = sampler
 	}
 }
@@ -63,7 +65,7 @@ func WithInitialSampler(sampler trace.Sampler) SamplerOption {
 // WithSamplingServerURL creates a SamplerOption that sets the sampling server url
 // of the local agent that contains the sampling strategies.
 func WithSamplingServerURL(samplingServerURL string) SamplerOption {
-	return func(o *samplerOptions) {
+	return func(o *samplerConfig) {
 		o.samplingServerURL = samplingServerURL
 	}
 }
@@ -71,33 +73,33 @@ func WithSamplingServerURL(samplingServerURL string) SamplerOption {
 // WithSamplingRefreshInterval creates a SamplerOption that sets how often the
 // sampler will poll local agent for the appropriate sampling strategy.
 func WithSamplingRefreshInterval(samplingRefreshInterval time.Duration) SamplerOption {
-	return func(o *samplerOptions) {
+	return func(o *samplerConfig) {
 		o.samplingRefreshInterval = samplingRefreshInterval
 	}
 }
 
 // samplingStrategyFetcher creates a SamplerOption that initializes sampling strategy fetcher.
 func withSamplingStrategyFetcher(fetcher samplingStrategyFetcher) SamplerOption {
-	return func(o *samplerOptions) {
+	return func(o *samplerConfig) {
 		o.samplingFetcher = fetcher
 	}
 }
 
 // samplingStrategyParser creates a SamplerOption that initializes sampling strategy parser.
 func withSamplingStrategyParser(parser samplingStrategyParser) SamplerOption {
-	return func(o *samplerOptions) {
+	return func(o *samplerConfig) {
 		o.samplingParser = parser
 	}
 }
 
 // withUpdaters creates a SamplerOption that initializes sampler updaters.
 func withUpdaters(updaters ...samplerUpdater) SamplerOption {
-	return func(o *samplerOptions) {
+	return func(o *samplerConfig) {
 		o.updaters = updaters
 	}
 }
 
-func (o *samplerOptions) applyOptionsAndDefaults(opts ...SamplerOption) *samplerOptions {
+func (o *samplerConfig) applyOptionsAndDefaults(opts ...SamplerOption) *samplerConfig {
 	for _, option := range opts {
 		option(o)
 	}
@@ -118,7 +120,7 @@ func (o *samplerOptions) applyOptionsAndDefaults(opts ...SamplerOption) *sampler
 	}
 	if o.updaters == nil {
 		o.updaters = []samplerUpdater{
-			&adaptiveSamplerUpdater{
+			&perOperationSamplerUpdater{
 				MaxOperations:            o.posParams.MaxOperations,
 				OperationNameLateBinding: o.posParams.OperationNameLateBinding,
 			},

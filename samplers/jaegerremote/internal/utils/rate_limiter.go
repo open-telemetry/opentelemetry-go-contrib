@@ -1,4 +1,6 @@
 // Copyright The OpenTelemetry Authors
+// Copyright (c) 2021 The Jaeger Authors.
+// Copyright (c) 2017 Uber Technologies, Inc.
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -12,8 +14,6 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-// Copyright (c) 2021 The Jaeger Authors.
-// Copyright (c) 2017 Uber Technologies, Inc.
 
 package utils
 
@@ -24,14 +24,8 @@ import (
 
 // RateLimiter is a filter used to check if a message that is worth itemCost units is within the rate limits.
 //
-// TODO (breaking change) remove this interface in favor of public struct below
-//
-// Deprecated, use ReconfigurableRateLimiter.
-type RateLimiter interface {
-	CheckCredit(itemCost float64) bool
-}
 
-// ReconfigurableRateLimiter is a rate limiter based on leaky bucket algorithm, formulated in terms of a
+// RateLimiter is a rate limiter based on leaky bucket algorithm, formulated in terms of a
 // credits balance that is replenished every time CheckCredit() method is called (tick) by the amount proportional
 // to the time elapsed since the last tick, up to max of creditsPerSecond. A call to CheckCredit() takes a cost
 // of an item we want to pay with the balance. If the balance exceeds the cost of the item, the item is "purchased"
@@ -44,8 +38,7 @@ type RateLimiter interface {
 // It can also be used to limit the rate of traffic in bytes, by setting creditsPerSecond to desired throughput
 // as bytes/second, and calling CheckCredit() with the actual message size.
 //
-// TODO (breaking change) rename to RateLimiter once the interface is removed
-type ReconfigurableRateLimiter struct {
+type RateLimiter struct {
 	lock sync.Mutex
 
 	creditsPerSecond float64
@@ -56,9 +49,9 @@ type ReconfigurableRateLimiter struct {
 	timeNow func() time.Time
 }
 
-// NewRateLimiter creates a new ReconfigurableRateLimiter.
-func NewRateLimiter(creditsPerSecond, maxBalance float64) *ReconfigurableRateLimiter {
-	return &ReconfigurableRateLimiter{
+// NewRateLimiter creates a new RateLimiter.
+func NewRateLimiter(creditsPerSecond, maxBalance float64) *RateLimiter {
+	return &RateLimiter{
 		creditsPerSecond: creditsPerSecond,
 		balance:          maxBalance,
 		maxBalance:       maxBalance,
@@ -69,7 +62,7 @@ func NewRateLimiter(creditsPerSecond, maxBalance float64) *ReconfigurableRateLim
 
 // CheckCredit tries to reduce the current balance by itemCost provided that the current balance
 // is not lest than itemCost.
-func (rl *ReconfigurableRateLimiter) CheckCredit(itemCost float64) bool {
+func (rl *RateLimiter) CheckCredit(itemCost float64) bool {
 	rl.lock.Lock()
 	defer rl.lock.Unlock()
 
@@ -88,7 +81,7 @@ func (rl *ReconfigurableRateLimiter) CheckCredit(itemCost float64) bool {
 }
 
 // updateBalance recalculates current balance based on time elapsed. Must be called while holding a lock.
-func (rl *ReconfigurableRateLimiter) updateBalance() {
+func (rl *RateLimiter) updateBalance() {
 	// calculate how much time passed since the last tick, and update current tick
 	currentTime := rl.timeNow()
 	elapsedTime := currentTime.Sub(rl.lastTick)
@@ -104,7 +97,7 @@ func (rl *ReconfigurableRateLimiter) updateBalance() {
 // the current accumulated balance (pro-rated to the new maxBalance value). Using this method
 // instead of creating a new rate limiter helps to avoid thundering herd when sampling
 // strategies are updated.
-func (rl *ReconfigurableRateLimiter) Update(creditsPerSecond, maxBalance float64) {
+func (rl *RateLimiter) Update(creditsPerSecond, maxBalance float64) {
 	rl.lock.Lock()
 	defer rl.lock.Unlock()
 
