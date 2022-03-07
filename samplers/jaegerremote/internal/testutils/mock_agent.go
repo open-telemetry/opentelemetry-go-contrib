@@ -45,7 +45,7 @@ func (s *MockAgent) Close() {
 }
 
 // MockAgent is a mock representation of Jaeger Agent.
-// It receives spans over UDP, and has an HTTP endpoint for sampling strategies.
+// It has an HTTP endpoint for sampling strategies.
 type MockAgent struct {
 	samplingMgr *samplingManager
 	samplingSrv *httptest.Server
