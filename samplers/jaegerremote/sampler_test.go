@@ -14,7 +14,6 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-
 package jaegerremote
 
 import (
@@ -78,7 +77,6 @@ func TestGuaranteedThroughputProbabilisticSamplerUpdate(t *testing.T) {
 	samplingRate := 0.5
 	lowerBound := 2.0
 	sampler := newGuaranteedThroughputProbabilisticSampler(lowerBound, samplingRate)
-
 	assert.Equal(t, lowerBound, sampler.lowerBound)
 	assert.Equal(t, samplingRate, sampler.samplingRate)
 

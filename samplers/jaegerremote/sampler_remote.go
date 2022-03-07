@@ -79,11 +79,11 @@ type Sampler struct {
 // the sampling strategy from an HTTP sampling server (e.g. jaeger-agent).
 func New(
 	serviceName string,
-	opts ...SamplerOption,
+	opts ...Option,
 ) *Sampler {
-	options := new(samplerConfig).applyOptionsAndDefaults(opts...)
+	options := newConfig(opts...)
 	sampler := &Sampler{
-		samplerConfig: *options,
+		samplerConfig: options,
 		serviceName:   serviceName,
 		doneChan:      make(chan *sync.WaitGroup),
 	}
@@ -144,12 +144,12 @@ func (s *Sampler) setSampler(sampler trace.Sampler) {
 func (s *Sampler) UpdateSampler() {
 	res, err := s.samplingFetcher.Fetch(s.serviceName)
 	if err != nil {
-		//s.logger.Infof("failed to fetch sampling strategy: %v", err)
+		//c.logger.Infof("failed to fetch sampling strategy: %v", err)
 		return
 	}
 	strategy, err := s.samplingParser.Parse(res)
 	if err != nil {
-		//s.logger.Infof("failed to parse sampling strategy response: %v", err)
+		//c.logger.Infof("failed to parse sampling strategy response: %v", err)
 		return
 	}
 
@@ -157,7 +157,7 @@ func (s *Sampler) UpdateSampler() {
 	defer s.Unlock()
 
 	if err := s.updateSamplerViaUpdaters(strategy); err != nil {
-		//s.logger.Infof("failed to handle sampling strategy response %+v. Got error: %v", res, err)
+		//c.logger.Infof("failed to handle sampling strategy response %+v. Got error: %v", res, err)
 		return
 	}
 }
@@ -293,7 +293,7 @@ func (f *httpSamplingStrategyFetcher) Fetch(serviceName string) ([]byte, error) 
 	}
 
 	if resp.StatusCode >= 400 {
-		return nil, fmt.Errorf("StatusCode: %d, Body: %s", resp.StatusCode, body)
+		return nil, fmt.Errorf("StatusCode: %d, Body: %c", resp.StatusCode, body)
 	}
 
 	return body, nil

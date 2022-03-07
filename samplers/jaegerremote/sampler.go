@@ -193,7 +193,7 @@ func (s *guaranteedThroughputProbabilisticSampler) setProbabilisticSampler(sampl
 		s.probabilisticSampler.init(samplingRate)
 	}
 	// since we don't validate samplingRate, sampler may have clamped it to [0, 1] interval
-	samplingRate = s.probabilisticSampler.SamplingRate()
+	s.samplingRate = s.probabilisticSampler.SamplingRate()
 }
 
 func (s *guaranteedThroughputProbabilisticSampler) ShouldSample(p trace.SamplingParameters) trace.SamplingResult {

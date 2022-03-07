@@ -14,7 +14,6 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-
 package jaegerremote
 
 import (
@@ -82,7 +81,7 @@ type testSamplingStrategyFetcher struct {
 }
 
 func (c *testSamplingStrategyFetcher) Fetch(serviceName string) ([]byte, error) {
-	return []byte(c.response), nil
+	return c.response, nil
 }
 
 type testSamplingStrategyParser struct {
@@ -130,7 +129,7 @@ func TestRemoteSamplerOptions(t *testing.T) {
 }
 
 func TestRemoteSamplerOptionsDefaults(t *testing.T) {
-	options := new(samplerConfig).applyOptionsAndDefaults()
+	options := newConfig()
 	sampler, ok := options.sampler.(*probabilisticSampler)
 	assert.True(t, ok)
 	assert.Equal(t, 0.001, sampler.samplingRate)

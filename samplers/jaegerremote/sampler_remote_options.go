@@ -35,95 +35,111 @@ type samplerConfig struct {
 	posParams               perOperationSamplerParams
 }
 
-// WithMaxOperations creates a SamplerOption that sets the maximum number of
-// operations the sampler will keep track of.
-func WithMaxOperations(maxOperations int) SamplerOption {
-	return func(o *samplerConfig) {
-		o.posParams.MaxOperations = maxOperations
-	}
+type config struct {
+	c samplerConfig
 }
 
-// WithOperationNameLateBinding creates a SamplerOption that sets the respective
-// field in the perOperationSamplerParams.
-func WithOperationNameLateBinding(enable bool) SamplerOption {
-	return func(o *samplerConfig) {
-		o.posParams.OperationNameLateBinding = enable
+// newConfig returns an appropriately configured config.
+func newConfig(options ...Option) samplerConfig {
+	c := new(config)
+	for _, option := range options {
+		option.apply(c)
 	}
-}
-
-// WithInitialSampler creates a SamplerOption that sets the initial sampler
-// to use before a remote sampler is created and used.
-func WithInitialSampler(sampler trace.Sampler) SamplerOption {
-	return func(o *samplerConfig) {
-		o.sampler = sampler
+	if c.c.sampler == nil {
+		c.c.sampler = newProbabilisticSampler(0.001)
 	}
-}
-
-// WithSamplingServerURL creates a SamplerOption that sets the sampling server url
-// of the local agent that contains the sampling strategies.
-func WithSamplingServerURL(samplingServerURL string) SamplerOption {
-	return func(o *samplerConfig) {
-		o.samplingServerURL = samplingServerURL
+	if c.c.samplingServerURL == "" {
+		c.c.samplingServerURL = defaultSamplingServerURL
 	}
-}
-
-// WithSamplingRefreshInterval creates a SamplerOption that sets how often the
-// sampler will poll local agent for the appropriate sampling strategy.
-func WithSamplingRefreshInterval(samplingRefreshInterval time.Duration) SamplerOption {
-	return func(o *samplerConfig) {
-		o.samplingRefreshInterval = samplingRefreshInterval
+	if c.c.samplingRefreshInterval <= 0 {
+		c.c.samplingRefreshInterval = defaultSamplingRefreshInterval
 	}
-}
-
-// samplingStrategyFetcher creates a SamplerOption that initializes sampling strategy fetcher.
-func withSamplingStrategyFetcher(fetcher samplingStrategyFetcher) SamplerOption {
-	return func(o *samplerConfig) {
-		o.samplingFetcher = fetcher
+	if c.c.samplingFetcher == nil {
+		c.c.samplingFetcher = newHTTPSamplingStrategyFetcher(c.c.samplingServerURL)
 	}
-}
-
-// samplingStrategyParser creates a SamplerOption that initializes sampling strategy parser.
-func withSamplingStrategyParser(parser samplingStrategyParser) SamplerOption {
-	return func(o *samplerConfig) {
-		o.samplingParser = parser
+	if c.c.samplingParser == nil {
+		c.c.samplingParser = new(samplingStrategyParserImpl)
 	}
-}
-
-// withUpdaters creates a SamplerOption that initializes sampler updaters.
-func withUpdaters(updaters ...samplerUpdater) SamplerOption {
-	return func(o *samplerConfig) {
-		o.updaters = updaters
-	}
-}
-
-func (o *samplerConfig) applyOptionsAndDefaults(opts ...SamplerOption) *samplerConfig {
-	for _, option := range opts {
-		option(o)
-	}
-	if o.sampler == nil {
-		o.sampler = newProbabilisticSampler(0.001)
-	}
-	if o.samplingServerURL == "" {
-		o.samplingServerURL = defaultSamplingServerURL
-	}
-	if o.samplingRefreshInterval <= 0 {
-		o.samplingRefreshInterval = defaultSamplingRefreshInterval
-	}
-	if o.samplingFetcher == nil {
-		o.samplingFetcher = newHTTPSamplingStrategyFetcher(o.samplingServerURL)
-	}
-	if o.samplingParser == nil {
-		o.samplingParser = new(samplingStrategyParserImpl)
-	}
-	if o.updaters == nil {
-		o.updaters = []samplerUpdater{
+	if c.c.updaters == nil {
+		c.c.updaters = []samplerUpdater{
 			&perOperationSamplerUpdater{
-				MaxOperations:            o.posParams.MaxOperations,
-				OperationNameLateBinding: o.posParams.OperationNameLateBinding,
+				MaxOperations:            c.c.posParams.MaxOperations,
+				OperationNameLateBinding: c.c.posParams.OperationNameLateBinding,
 			},
 			new(probabilisticSamplerUpdater),
 			new(rateLimitingSamplerUpdater),
 		}
 	}
-	return o
+	return c.c
+}
+
+type Option interface {
+	apply(*config)
+}
+
+type optionFunc func(*config)
+
+func (fn optionFunc) apply(c *config) {
+	fn(c)
+}
+
+// WithInitialSampler creates a SamplerOption that sets the initial sampler
+// to use before a remote sampler is created and used.
+func WithInitialSampler(sampler trace.Sampler) Option {
+	return optionFunc(func(c *config) {
+		c.c.sampler = sampler
+	})
+}
+
+// WithSamplingServerURL creates a SamplerOption that sets the sampling server url
+// of the local agent that contains the sampling strategies.
+func WithSamplingServerURL(samplingServerURL string) Option {
+	return optionFunc(func(c *config) {
+		c.c.samplingServerURL = samplingServerURL
+	})
+}
+
+// WithMaxOperations creates a SamplerOption that sets the maximum number of
+// operations the sampler will keep track of.
+func WithMaxOperations(maxOperations int) Option {
+	return optionFunc(func(c *config) {
+		c.c.posParams.MaxOperations = maxOperations
+	})
+}
+
+// WithOperationNameLateBinding creates a SamplerOption that sets the respective
+// field in the perOperationSamplerParams.
+func WithOperationNameLateBinding(enable bool) Option {
+	return optionFunc(func(c *config) {
+		c.c.posParams.OperationNameLateBinding = enable
+	})
+}
+
+// WithSamplingRefreshInterval creates a SamplerOption that sets how often the
+// sampler will poll local agent for the appropriate sampling strategy.
+func WithSamplingRefreshInterval(samplingRefreshInterval time.Duration) Option {
+	return optionFunc(func(c *config) {
+		c.c.samplingRefreshInterval = samplingRefreshInterval
+	})
+}
+
+// samplingStrategyFetcher creates a SamplerOption that initializes sampling strategy fetcher.
+func withSamplingStrategyFetcher(fetcher samplingStrategyFetcher) Option {
+	return optionFunc(func(c *config) {
+		c.c.samplingFetcher = fetcher
+	})
+}
+
+// samplingStrategyParser creates a SamplerOption that initializes sampling strategy parser.
+func withSamplingStrategyParser(parser samplingStrategyParser) Option {
+	return optionFunc(func(c *config) {
+		c.c.samplingParser = parser
+	})
+}
+
+// withUpdaters creates a SamplerOption that initializes sampler updaters.
+func withUpdaters(updaters ...samplerUpdater) Option {
+	return optionFunc(func(c *config) {
+		c.c.updaters = updaters
+	})
 }
