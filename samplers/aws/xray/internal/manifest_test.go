@@ -327,6 +327,7 @@ func TestRefreshManifestRules(t *testing.T) {
 			capacity: 60,
 			mu:       &sync.RWMutex{},
 		},
+		samplingStatistics: &samplingStatistics{},
 	}
 
 	r2 := Rule{
@@ -348,6 +349,7 @@ func TestRefreshManifestRules(t *testing.T) {
 			capacity: 3,
 			mu:       &sync.RWMutex{},
 		},
+		samplingStatistics: &samplingStatistics{},
 	}
 
 	r3 := Rule{
@@ -369,6 +371,7 @@ func TestRefreshManifestRules(t *testing.T) {
 			capacity: 100,
 			mu:       &sync.RWMutex{},
 		},
+		samplingStatistics: &samplingStatistics{},
 	}
 
 	// Assert on sorting order
@@ -617,6 +620,7 @@ func TestRefreshManifestAddOneInvalidRule(t *testing.T) {
 			capacity: 60,
 			mu:       &sync.RWMutex{},
 		},
+		samplingStatistics: &samplingStatistics{},
 	}
 
 	// generate a test server so we can capture and inspect the request
