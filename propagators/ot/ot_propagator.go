@@ -20,6 +20,8 @@ import (
 	"fmt"
 	"strings"
 
+	"go.uber.org/multierr"
+
 	"go.opentelemetry.io/otel/baggage"
 
 	"go.opentelemetry.io/otel/propagation"
@@ -107,9 +109,9 @@ func (o OT) Fields() []string {
 	return []string{traceIDHeader, spanIDHeader, sampledHeader}
 }
 
-// extractBags reconstructs the baggage information from opentracing
+// extractBags extracts OpenTracing baggage information from carrier.
 func extractBags(carrier propagation.TextMapCarrier) (baggage.Baggage, error) {
-	emptyBags, _ := baggage.New()
+	var err error
 	var members []baggage.Member
 	for _, key := range carrier.Keys() {
 		lowerKey := strings.ToLower(key)
@@ -117,17 +119,18 @@ func extractBags(carrier propagation.TextMapCarrier) (baggage.Baggage, error) {
 			continue
 		}
 		strippedKey := strings.TrimPrefix(lowerKey, baggageHeaderPrefix)
-		member, err := baggage.NewMember(strippedKey, carrier.Get(key))
-		if err != nil {
-			return emptyBags, err
+		member, e := baggage.NewMember(strippedKey, carrier.Get(key))
+		if e != nil {
+			err = multierr.Append(err, e)
+			continue
 		}
 		members = append(members, member)
 	}
-	bags, err := baggage.New(members...)
+	bags, e := baggage.New(members...)
 	if err != nil {
-		return emptyBags, err
+		return bags, multierr.Append(err, e)
 	}
-	return bags, nil
+	return bags, err
 }
 
 // extract reconstructs a SpanContext from header values based on OT
