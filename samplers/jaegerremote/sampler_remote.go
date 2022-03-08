@@ -32,8 +32,10 @@ import (
 )
 
 const (
-	defaultRemoteSamplingTimeout   = 10 * time.Second
-	defaultSamplingRefreshInterval = time.Minute
+	defaultRemoteSamplingTimeout            = 10 * time.Second
+	defaultSamplingRefreshInterval          = time.Minute
+	defaultSamplingMaxOperations            = 256
+	defaultSamplingOperationNameLateBinding = true
 )
 
 // samplingStrategyFetcher is used to fetch sampling strategy updates from remote server.
@@ -69,7 +71,7 @@ type Sampler struct {
 	closed int64 // 0 - not closed, 1 - closed
 
 	sync.RWMutex // used to serialize access to samplerConfig.sampler
-	samplerConfig
+	config
 
 	serviceName string
 	doneChan    chan *sync.WaitGroup
@@ -83,9 +85,9 @@ func New(
 ) *Sampler {
 	options := newConfig(opts...)
 	sampler := &Sampler{
-		samplerConfig: options,
-		serviceName:   serviceName,
-		doneChan:      make(chan *sync.WaitGroup),
+		config:      options,
+		serviceName: serviceName,
+		doneChan:    make(chan *sync.WaitGroup),
 	}
 	go sampler.pollController()
 	return sampler
@@ -94,7 +96,7 @@ func New(
 func (s *Sampler) ShouldSample(p trace.SamplingParameters) trace.SamplingResult {
 	s.RLock()
 	defer s.RUnlock()
-	return s.sampler.ShouldSample(p)
+	return s.ShouldSample(p)
 }
 
 // Close does a clean shutdown of the sampler, stopping any background
@@ -144,12 +146,12 @@ func (s *Sampler) setSampler(sampler trace.Sampler) {
 func (s *Sampler) UpdateSampler() {
 	res, err := s.samplingFetcher.Fetch(s.serviceName)
 	if err != nil {
-		//c.logger.Infof("failed to fetch sampling strategy: %v", err)
+		// log.Printf("failed to fetch sampling strategy: %v", err)
 		return
 	}
 	strategy, err := s.samplingParser.Parse(res)
 	if err != nil {
-		//c.logger.Infof("failed to parse sampling strategy response: %v", err)
+		// log.Printf("failed to parse sampling strategy response: %v", err)
 		return
 	}
 
