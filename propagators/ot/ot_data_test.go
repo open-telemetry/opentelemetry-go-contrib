@@ -193,6 +193,11 @@ var invalidExtractHeaders = []extractTest{
 			sampledHeader:     "1",
 			"ot-baggage-d–76": "test",
 		},
+		expected: trace.SpanContextConfig{
+			TraceID:    traceID32,
+			SpanID:     spanID,
+			TraceFlags: trace.FlagsSampled,
+		},
 	},
 	{
 		name: "invalid baggage value",
@@ -202,6 +207,11 @@ var invalidExtractHeaders = []extractTest{
 			sampledHeader: "1",
 			baggageHeader: "øtel",
 		},
+		expected: trace.SpanContextConfig{
+			TraceID:    traceID32,
+			SpanID:     spanID,
+			TraceFlags: trace.FlagsSampled,
+		},
 	},
 	{
 		name: "invalid baggage result (too large)",
@@ -210,6 +220,11 @@ var invalidExtractHeaders = []extractTest{
 			spanIDHeader:  spanIDStr,
 			sampledHeader: "1",
 			baggageHeader: strings.Repeat("s", 8188),
+		},
+		expected: trace.SpanContextConfig{
+			TraceID:    traceID32,
+			SpanID:     spanID,
+			TraceFlags: trace.FlagsSampled,
 		},
 	},
 	{

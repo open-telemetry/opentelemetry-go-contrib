@@ -97,7 +97,7 @@ func (o OT) Extract(ctx context.Context, carrier propagation.TextMapCarrier) con
 
 	bags, err := extractBags(carrier)
 	if err != nil {
-		return ctx
+		return trace.ContextWithRemoteSpanContext(ctx, sc)
 	}
 	ctx = baggage.ContextWithBaggage(ctx, bags)
 	return trace.ContextWithRemoteSpanContext(ctx, sc)
