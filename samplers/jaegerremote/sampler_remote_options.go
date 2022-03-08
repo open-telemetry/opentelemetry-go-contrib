@@ -41,36 +41,26 @@ type config struct {
 
 // newConfig returns an appropriately configured config.
 func newConfig(options ...Option) samplerConfig {
-	c := new(config)
-	for _, option := range options {
-		option.apply(c)
-	}
-	if c.c.sampler == nil {
-		c.c.sampler = newProbabilisticSampler(0.001)
-	}
-	if c.c.samplingServerURL == "" {
-		c.c.samplingServerURL = defaultSamplingServerURL
-	}
-	if c.c.samplingRefreshInterval <= 0 {
-		c.c.samplingRefreshInterval = defaultSamplingRefreshInterval
-	}
-	if c.c.samplingFetcher == nil {
-		c.c.samplingFetcher = newHTTPSamplingStrategyFetcher(c.c.samplingServerURL)
-	}
-	if c.c.samplingParser == nil {
-		c.c.samplingParser = new(samplingStrategyParserImpl)
-	}
-	if c.c.updaters == nil {
-		c.c.updaters = []samplerUpdater{
+	c := config{
+		sampler: newProbabilisticSampler(0.001),
+		samplingServerURL: defaultSamplingServerURL,
+		samplingRefreshInterval: defaultSamplingRefreshInterval,
+		samplingFetcher: newHTTPSamplingStrategyFetcher(defaultSamplingServerURL),
+		samplingParser: new(samplingStrategyParserImpl),
+		updaters: []samplerUpdater{
 			&perOperationSamplerUpdater{
-				MaxOperations:            c.c.posParams.MaxOperations,
-				OperationNameLateBinding: c.c.posParams.OperationNameLateBinding,
+				MaxOperations:            <a default value>,
+				OperationNameLateBinding: <a default value>,
 			},
 			new(probabilisticSamplerUpdater),
 			new(rateLimitingSamplerUpdater),
-		}
+		},
 	}
-	return c.c
+	for _, option := range options {
+		option.apply(c)
+	}
+
+	return c
 }
 
 type Option interface {
