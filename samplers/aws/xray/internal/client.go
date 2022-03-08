@@ -46,7 +46,7 @@ type ruleProperties struct {
 	Host          string            `json:"Host"`
 	HTTPMethod    string            `json:"HTTPMethod"`
 	URLPath       string            `json:"URLPath"`
-	ReservoirSize int64             `json:"ReservoirSize"`
+	ReservoirSize float64           `json:"ReservoirSize"`
 	FixedRate     float64           `json:"FixedRate"`
 	Priority      int64             `json:"Priority"`
 	Version       int64             `json:"Version"`
@@ -95,7 +95,7 @@ type samplingTargetDocument struct {
 	Interval *int64 `json:"Interval,omitempty"`
 
 	// the number of requests per second that X-Ray allocated this service
-	ReservoirQuota *int64 `json:"ReservoirQuota,omitempty"`
+	ReservoirQuota *float64 `json:"ReservoirQuota,omitempty"`
 
 	// when the reservoir quota expires
 	ReservoirQuotaTTL *float64 `json:"ReservoirQuotaTTL,omitempty"`

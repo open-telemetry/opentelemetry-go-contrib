@@ -15,7 +15,9 @@
 package internal
 
 import (
+	"sync"
 	"testing"
+	"time"
 
 	"go.opentelemetry.io/contrib/samplers/aws/xray/internal/util"
 
@@ -28,11 +30,13 @@ func TestExpiredReservoir(t *testing.T) {
 		NowTime: 1500000001,
 	}
 
+	expiresAt := time.Unix(1500000000, 0)
 	r := &reservoir{
-		expiresAt: 1500000000,
+		expiresAt: expiresAt,
+		mu:        &sync.RWMutex{},
 	}
 
-	expired := r.expired(clock.Now().Unix())
+	expired := r.expired(clock.Now())
 
 	assert.True(t, expired)
 }
@@ -43,13 +47,16 @@ func TestExpiredReservoirSameAsClockTime(t *testing.T) {
 		NowTime: 1500000000,
 	}
 
+	expiresAt := time.Unix(1500000000, 0)
+
 	r := &reservoir{
-		expiresAt: 1500000000,
+		expiresAt: expiresAt,
+		mu:        &sync.RWMutex{},
 	}
 
-	expired := r.expired(clock.Now().Unix())
+	expired := r.expired(clock.Now())
 
-	assert.True(t, expired)
+	assert.False(t, expired)
 }
 
 // Assert that borrow only 1 req/sec
@@ -60,12 +67,13 @@ func TestBorrowEverySecond(t *testing.T) {
 
 	r := &reservoir{
 		capacity: 10,
+		mu:       &sync.RWMutex{},
 	}
 
-	s := r.borrow(clock.Now().Unix())
+	s := r.borrow(clock.Now())
 	assert.True(t, s)
 
-	s = r.borrow(clock.Now().Unix())
+	s = r.borrow(clock.Now())
 	assert.False(t, s)
 
 	// Increment clock by 1
@@ -73,46 +81,52 @@ func TestBorrowEverySecond(t *testing.T) {
 		NowTime: 1500000001,
 	}
 
-	s = r.borrow(clock.Now().Unix())
+	s = r.borrow(clock.Now())
 	assert.True(t, s)
 }
 
 // assert that we can still borrowing from reservoir is possible since assigned quota is available to consume
 // and it will increase used count.
-func TestConsumeAvailableQuota(t *testing.T) {
+func TestConsumeFromReservoir(t *testing.T) {
 	clock := &util.MockClock{
 		NowTime: 1500000000,
 	}
 
 	r := &reservoir{
-		quota:        int64(9),
-		capacity:     int64(100),
-		used:         int64(0),
-		currentEpoch: clock.Now().Unix(),
+		quota:    2,
+		capacity: 100,
+		mu:       &sync.RWMutex{},
 	}
 
-	s := r.take(clock.Now().Unix())
-	assert.True(t, s)
-	assert.Equal(t, int64(1), r.used)
-}
+	// reservoir updates the quotaBalance for new second and allows to consume
+	// quota balance is 0 because we are consuming from reservoir for the first time
+	assert.Equal(t, r.quotaBalance, 0.0)
+	assert.True(t, r.take(clock.Now(), 1.0))
+	assert.Equal(t, r.quotaBalance, 1.0)
+	assert.True(t, r.take(clock.Now(), 1.0))
+	assert.Equal(t, r.quotaBalance, 0.0)
+	// once assigned quota is consumed reservoir does not allow to consume in that second
+	assert.False(t, r.take(clock.Now(), 1.0))
 
-// assert that we can not borrow from reservoir since assigned quota is not available to consume
-// and it will not increase used count.
-func TestConsumeUnavailableQuota(t *testing.T) {
-	clock := &util.MockClock{
-		NowTime: 1500000000,
-	}
+	// increase the clock by 1
+	clock.NowTime = 1500000001
 
-	r := &reservoir{
-		quota:        int64(9),
-		capacity:     int64(100),
-		used:         int64(9),
-		currentEpoch: clock.Now().Unix(),
-	}
+	// reservoir updates the quotaBalance for new second and allows to consume
+	assert.Equal(t, r.quotaBalance, 0.0)
+	assert.True(t, r.take(clock.Now(), 1.0))
+	assert.Equal(t, r.quotaBalance, 1.0)
+	assert.True(t, r.take(clock.Now(), 1.0))
+	assert.Equal(t, r.quotaBalance, 0.0)
+	// once assigned quota is consumed reservoir does not allow to consume in that second
+	assert.False(t, r.take(clock.Now(), 1.0))
 
-	s := r.take(clock.Now().Unix())
-	assert.False(t, s)
-	assert.Equal(t, int64(9), r.used)
+	// increase the clock by 5
+	clock.NowTime = 1500000005
+
+	// elapsedTime is 4 seconds so quota balance should be elapsedTime * quota = 8 and below take would consume 1 so
+	// ultimately 7
+	assert.True(t, r.take(clock.Now(), 1.0))
+	assert.Equal(t, r.quotaBalance, 7.0)
 }
 
 func TestResetQuotaUsageRotation(t *testing.T) {
@@ -121,23 +135,20 @@ func TestResetQuotaUsageRotation(t *testing.T) {
 	}
 
 	r := &reservoir{
-		quota:        int64(5),
-		capacity:     int64(100),
-		used:         int64(0),
-		currentEpoch: clock.Now().Unix(),
+		quota:    5,
+		capacity: 100,
+		mu:       &sync.RWMutex{},
 	}
 
 	// consume quota for second
 	for i := 0; i < 5; i++ {
-		taken := r.take(clock.Now().Unix())
+		taken := r.take(clock.Now(), 1.0)
 		assert.Equal(t, true, taken)
-		assert.Equal(t, int64(i+1), r.used)
 	}
 
 	// take() should be false since no unused quota left
-	taken := r.take(clock.Now().Unix())
+	taken := r.take(clock.Now(), 1.0)
 	assert.Equal(t, false, taken)
-	assert.Equal(t, int64(5), r.used)
 
 	// increment epoch to reset unused quota
 	clock = &util.MockClock{
@@ -145,8 +156,26 @@ func TestResetQuotaUsageRotation(t *testing.T) {
 	}
 
 	// take() should be true since ununsed quota is available
-	taken = r.take(clock.Now().Unix())
-	assert.Equal(t, int64(1500000001), r.currentEpoch)
+	taken = r.take(clock.Now(), 1.0)
 	assert.Equal(t, true, taken)
-	assert.Equal(t, int64(1), r.used)
+}
+
+// assert that when quotaBalance exceeds totalQuotaBalanceCapacity then totalQuotaBalanceCapacity
+// gets assigned to quotaBalance
+func TestQuotaBalanceExceedsCapacity(t *testing.T) {
+	clock := &util.MockClock{
+		NowTime: 1500000001,
+	}
+
+	r := &reservoir{
+		quota:    6,
+		capacity: 5,
+		mu:       &sync.RWMutex{},
+		lastTick: time.Unix(1500000000, 0),
+	}
+
+	r.refreshQuotaBalance(clock.Now())
+
+	// assert that if quotaBalance exceeds capacity then total capacity would be new quotaBalance
+	assert.Equal(t, r.quotaBalance, 1*r.capacity)
 }

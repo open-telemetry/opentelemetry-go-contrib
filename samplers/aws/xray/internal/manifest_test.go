@@ -21,6 +21,7 @@ import (
 	"net/http/httptest"
 	"net/url"
 	"os"
+	"sync"
 	"testing"
 	"time"
 
@@ -95,7 +96,7 @@ func TestMatchAgainstManifestRules(t *testing.T) {
 			ServiceType:   "*",
 		},
 		reservoir: reservoir{
-			expiresAt: 14050,
+			expiresAt: time.Unix(14050, 0),
 		},
 	}
 
@@ -114,7 +115,7 @@ func TestMatchAgainstManifestRules(t *testing.T) {
 			ServiceType:   "local",
 		},
 		reservoir: reservoir{
-			expiresAt: 14050,
+			expiresAt: time.Unix(14050, 0),
 		},
 	}
 
@@ -157,7 +158,7 @@ func TestMatchAgainstManifestRules_AttributeMatch(t *testing.T) {
 			},
 		},
 		reservoir: reservoir{
-			expiresAt: 14050,
+			expiresAt: time.Unix(14050, 0),
 		},
 	}
 
@@ -201,7 +202,7 @@ func TestMatchAgainstManifestRules_AttributeWildCardMatch(t *testing.T) {
 			},
 		},
 		reservoir: reservoir{
-			expiresAt: 14050,
+			expiresAt: time.Unix(14050, 0),
 		},
 	}
 
@@ -323,7 +324,8 @@ func TestRefreshManifestRules(t *testing.T) {
 			Attributes:    map[string]string{},
 		},
 		reservoir: reservoir{
-			capacity: int64(60),
+			capacity: 60,
+			mu:       &sync.RWMutex{},
 		},
 	}
 
@@ -343,7 +345,8 @@ func TestRefreshManifestRules(t *testing.T) {
 			Attributes:    map[string]string{},
 		},
 		reservoir: reservoir{
-			capacity: int64(3),
+			capacity: 3,
+			mu:       &sync.RWMutex{},
 		},
 	}
 
@@ -363,7 +366,8 @@ func TestRefreshManifestRules(t *testing.T) {
 			Attributes:    map[string]string{},
 		},
 		reservoir: reservoir{
-			capacity: int64(100),
+			capacity: 100,
+			mu:       &sync.RWMutex{},
 		},
 	}
 
@@ -610,7 +614,8 @@ func TestRefreshManifestAddOneInvalidRule(t *testing.T) {
 			Attributes:    map[string]string{},
 		},
 		reservoir: reservoir{
-			capacity: int64(60),
+			capacity: 60,
+			mu:       &sync.RWMutex{},
 		},
 	}
 
@@ -665,7 +670,7 @@ func TestRefreshManifestTarget_NoSnapShot(t *testing.T) {
 			Attributes:    map[string]string{},
 		},
 		reservoir: reservoir{
-			capacity: int64(100),
+			capacity: 100,
 		},
 		samplingStatistics: samplingStatistics{
 			matchedRequests: int64(0),
@@ -728,7 +733,8 @@ func TestRefreshManifestTargets(t *testing.T) {
 			Attributes:    map[string]string{},
 		},
 		reservoir: reservoir{
-			capacity: int64(100),
+			capacity: 100,
+			mu:       &sync.RWMutex{},
 		},
 		samplingStatistics: samplingStatistics{
 			matchedRequests: int64(5),
@@ -764,8 +770,8 @@ func TestRefreshManifestTargets(t *testing.T) {
 
 	// assert target updates
 	assert.Equal(t, m.Rules[0].ruleProperties.FixedRate, 0.06)
-	assert.Equal(t, m.Rules[0].reservoir.quota, int64(23))
-	assert.Equal(t, m.Rules[0].reservoir.expiresAt, int64(15000000))
+	assert.Equal(t, m.Rules[0].reservoir.quota, 23.0)
+	assert.Equal(t, m.Rules[0].reservoir.expiresAt, time.Unix(15000000, 0))
 	assert.Equal(t, m.Rules[0].reservoir.interval, time.Duration(25))
 }
 
@@ -777,7 +783,7 @@ func TestUpdateTargets(t *testing.T) {
 
 	// sampling target received from centralized sampling backend
 	rate := 0.05
-	quota := int64(10)
+	quota := float64(10)
 	ttl := float64(1500000060)
 	name := "r1"
 
@@ -800,12 +806,10 @@ func TestUpdateTargets(t *testing.T) {
 			FixedRate: 0.10,
 		},
 		reservoir: reservoir{
-			quota:        8,
-			refreshedAt:  refreshedAt1,
-			expiresAt:    1500000010,
-			capacity:     50,
-			used:         7,
-			currentEpoch: 1500000000,
+			quota:       8,
+			refreshedAt: refreshedAt1,
+			expiresAt:   time.Unix(1500000010, 0),
+			capacity:    50,
 		},
 	}
 
@@ -830,12 +834,10 @@ func TestUpdateTargets(t *testing.T) {
 			FixedRate: 0.05,
 		},
 		reservoir: reservoir{
-			quota:        10,
-			refreshedAt:  refreshedAt2,
-			expiresAt:    1500000060,
-			capacity:     50,
-			used:         7,
-			currentEpoch: 1500000000,
+			quota:       10,
+			refreshedAt: refreshedAt2,
+			expiresAt:   time.Unix(1500000060, 0),
+			capacity:    50,
 		},
 	}
 
@@ -852,7 +854,7 @@ func TestUpdateTargetsRefreshFlagTest(t *testing.T) {
 
 	// sampling target received from centralized sampling backend
 	rate := 0.05
-	quota := int64(10)
+	quota := float64(10)
 	ttl := float64(1500000060)
 	name := "r1"
 
@@ -877,12 +879,10 @@ func TestUpdateTargetsRefreshFlagTest(t *testing.T) {
 			FixedRate: 0.10,
 		},
 		reservoir: reservoir{
-			quota:        8,
-			refreshedAt:  refreshedAt1,
-			expiresAt:    1500000010,
-			capacity:     50,
-			used:         7,
-			currentEpoch: 1500000000,
+			quota:       8,
+			refreshedAt: refreshedAt1,
+			expiresAt:   time.Unix(1500000010, 0),
+			capacity:    50,
 		},
 	}
 
@@ -908,12 +908,10 @@ func TestUpdateTargetsRefreshFlagTest(t *testing.T) {
 			FixedRate: 0.05,
 		},
 		reservoir: reservoir{
-			quota:        10,
-			refreshedAt:  refreshedAt2,
-			expiresAt:    1500000060,
-			capacity:     50,
-			used:         7,
-			currentEpoch: 1500000000,
+			quota:       10,
+			refreshedAt: refreshedAt2,
+			expiresAt:   time.Unix(1500000060, 0),
+			capacity:    50,
 		},
 	}
 
@@ -929,7 +927,7 @@ func TestUpdateTargetsUnprocessedStatistics(t *testing.T) {
 
 	// sampling target received from centralized sampling backend
 	rate := 0.05
-	quota := int64(10)
+	quota := float64(10)
 	ttl := float64(1500000060)
 	name := "r1"
 
@@ -988,7 +986,7 @@ func TestUpdateTargetsUnprocessedStatistics(t *testing.T) {
 func TestUpdateReservoir(t *testing.T) {
 	// Sampling target received from centralized sampling backend
 	rate := 0.05
-	quota := int64(10)
+	quota := float64(10)
 	ttl := float64(1500000060)
 	name := "r1"
 	st := &samplingTargetDocument{
@@ -1006,12 +1004,10 @@ func TestUpdateReservoir(t *testing.T) {
 			FixedRate: 0.10,
 		},
 		reservoir: reservoir{
-			quota:        8,
-			refreshedAt:  refreshedAt1,
-			expiresAt:    1500000010,
-			capacity:     50,
-			used:         7,
-			currentEpoch: 1500000000,
+			quota:       8,
+			refreshedAt: refreshedAt1,
+			expiresAt:   time.Unix(1500000010, 0),
+			capacity:    50,
 		},
 	}
 
@@ -1031,7 +1027,7 @@ func TestUpdateReservoir(t *testing.T) {
 // assert that a sampling target with missing Fixed Rate returns an error.
 func TestUpdateReservoirMissingFixedRate(t *testing.T) {
 	// Sampling target received from centralized sampling backend
-	quota := int64(10)
+	quota := float64(10)
 	ttl := float64(1500000060)
 	name := "r1"
 	st := &samplingTargetDocument{
@@ -1048,12 +1044,10 @@ func TestUpdateReservoirMissingFixedRate(t *testing.T) {
 			FixedRate: 0.10,
 		},
 		reservoir: reservoir{
-			quota:        8,
-			refreshedAt:  refreshedAt1,
-			expiresAt:    1500000010,
-			capacity:     50,
-			used:         7,
-			currentEpoch: 1500000000,
+			quota:       8,
+			refreshedAt: refreshedAt1,
+			expiresAt:   time.Unix(1500000010, 0),
+			capacity:    50,
 		},
 	}
 
@@ -1071,7 +1065,7 @@ func TestUpdateReservoirMissingFixedRate(t *testing.T) {
 func TestUpdateReservoirMissingRuleName(t *testing.T) {
 	// Sampling target received from centralized sampling backend
 	rate := 0.05
-	quota := int64(10)
+	quota := float64(10)
 	ttl := float64(1500000060)
 	st := &samplingTargetDocument{
 		ReservoirQuota:    &quota,
@@ -1087,12 +1081,10 @@ func TestUpdateReservoirMissingRuleName(t *testing.T) {
 			FixedRate: 0.10,
 		},
 		reservoir: reservoir{
-			quota:        8,
-			refreshedAt:  refreshedAt1,
-			expiresAt:    1500000010,
-			capacity:     50,
-			used:         7,
-			currentEpoch: 1500000000,
+			quota:       8,
+			refreshedAt: refreshedAt1,
+			expiresAt:   time.Unix(1500000010, 0),
+			capacity:    50,
 		},
 	}
 

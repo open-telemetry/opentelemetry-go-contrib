@@ -16,7 +16,6 @@ package internal // import "go.opentelemetry.io/contrib/samplers/aws/xray/intern
 
 import (
 	"sync"
-	"sync/atomic"
 	"time"
 )
 
@@ -24,16 +23,16 @@ import (
 // the response getSamplingTargets API which sends information on sampling statistics real-time
 type reservoir struct {
 	// quota expiration timestamp
-	expiresAt int64
+	expiresAt time.Time
 
-	// reservoir usage is reset every second
-	currentEpoch int64
+	// quota assigned to client to consume per second
+	quota float64
 
-	// reservoir consumption for current epoch
-	used int64
+	// current balance of quota
+	quotaBalance float64
 
-	// quota assigned to client
-	quota int64
+	// total size of reservoir consumption per second
+	capacity float64
 
 	// quota refresh timestamp
 	refreshedAt time.Time
@@ -41,41 +40,77 @@ type reservoir struct {
 	// polling interval for quota
 	interval time.Duration
 
-	// total size of reservoir
-	capacity int64
+	// stores reservoir ticks
+	lastTick time.Time
+
+	// stores borrow ticks
+	borrowTick time.Time
+
+	mu *sync.RWMutex
 }
 
 // expired returns true if current time is past expiration timestamp. False otherwise.
-func (r *reservoir) expired(now int64) bool {
-	expire := atomic.LoadInt64(&r.expiresAt)
+func (r *reservoir) expired(now time.Time) bool {
+	r.mu.RLock()
+	defer r.mu.RUnlock()
 
-	return now >= expire
+	return now.After(r.expiresAt)
 }
 
 // borrow returns true if the reservoir has not been borrowed from this epoch.
-func (r *reservoir) borrow(now int64) bool {
-	cur := atomic.LoadInt64(&r.currentEpoch)
-	if cur >= now {
+func (r *reservoir) borrow(now time.Time) bool {
+	r.mu.Lock()
+	defer r.mu.Unlock()
+
+	currentTime := now
+
+	if currentTime.Equal(r.borrowTick) {
 		return false
 	}
-	return atomic.CompareAndSwapInt64(&r.currentEpoch, cur, now)
-}
 
-// Take consumes quota from reservoir, if any remains, then returns true. False otherwise.
-func (r *reservoir) take(now int64) bool {
-	var mu sync.RWMutex
-	mu.Lock()
-	defer mu.Unlock()
-
-	if r.currentEpoch != now {
-		r.used = 0
-		r.currentEpoch = now
-	}
-
-	if r.quota > r.used {
-		r.used++
+	if currentTime.After(r.borrowTick) {
+		r.borrowTick = currentTime
 		return true
 	}
 
 	return false
+}
+
+// take consumes quota from reservoir, if any remains, then returns true. False otherwise.
+func (r *reservoir) take(now time.Time, itemCost float64) bool {
+	r.mu.Lock()
+	defer r.mu.Unlock()
+
+	if r.lastTick.IsZero() {
+		r.lastTick = now
+		r.quotaBalance = r.quota
+	}
+
+	if r.quotaBalance >= itemCost {
+		r.quotaBalance -= itemCost
+		return true
+	}
+
+	// update quota balance based on elapsed time
+	r.refreshQuotaBalance(now)
+
+	if r.quotaBalance >= itemCost {
+		r.quotaBalance -= itemCost
+		return true
+	}
+
+	return false
+}
+
+func (r *reservoir) refreshQuotaBalance(now time.Time) {
+	currentTime := now
+	elapsedTime := currentTime.Sub(r.lastTick)
+	r.lastTick = currentTime
+
+	// calculate how much credit have we accumulated since the last tick
+	totalQuotaBalanceCapacity := elapsedTime.Seconds() * r.capacity
+	r.quotaBalance += elapsedTime.Seconds() * r.quota
+	if r.quotaBalance > totalQuotaBalanceCapacity {
+		r.quotaBalance = totalQuotaBalanceCapacity
+	}
 }

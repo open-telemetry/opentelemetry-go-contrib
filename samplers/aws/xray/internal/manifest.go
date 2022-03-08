@@ -200,6 +200,7 @@ func (m *Manifest) updateRules(rules *getSamplingRulesOutput) {
 func (m *Manifest) createRule(ruleProp ruleProperties) {
 	cr := reservoir{
 		capacity: ruleProp.ReservoirSize,
+		mu:       &sync.RWMutex{},
 	}
 
 	csr := Rule{
@@ -276,7 +277,7 @@ func (m *Manifest) updateReservoir(t *samplingTargetDocument) (err error) {
 				m.Rules[index].reservoir.quota = *t.ReservoirQuota
 			}
 			if t.ReservoirQuotaTTL != nil {
-				m.Rules[index].reservoir.expiresAt = int64(*t.ReservoirQuotaTTL)
+				m.Rules[index].reservoir.expiresAt = time.Unix(int64(*t.ReservoirQuotaTTL), 0)
 			}
 			if t.Interval != nil {
 				m.Rules[index].reservoir.interval = time.Duration(*t.Interval)

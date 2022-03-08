@@ -109,21 +109,21 @@ func TestGetSamplingRules(t *testing.T) {
 	assert.Equal(t, samplingRules.SamplingRuleRecords[0].SamplingRule.ServiceType, "*")
 	assert.Equal(t, samplingRules.SamplingRuleRecords[0].SamplingRule.Host, "*")
 	assert.Equal(t, samplingRules.SamplingRuleRecords[0].SamplingRule.URLPath, "*")
-	assert.Equal(t, samplingRules.SamplingRuleRecords[0].SamplingRule.ReservoirSize, int64(60))
+	assert.Equal(t, samplingRules.SamplingRuleRecords[0].SamplingRule.ReservoirSize, 60.0)
 	assert.Equal(t, samplingRules.SamplingRuleRecords[0].SamplingRule.FixedRate, 0.5)
 
 	assert.Equal(t, samplingRules.SamplingRuleRecords[1].SamplingRule.RuleName, "test-rule")
 	assert.Equal(t, samplingRules.SamplingRuleRecords[1].SamplingRule.ServiceType, "local")
 	assert.Equal(t, samplingRules.SamplingRuleRecords[1].SamplingRule.Host, "*")
 	assert.Equal(t, samplingRules.SamplingRuleRecords[1].SamplingRule.URLPath, "/aws-sdk-call")
-	assert.Equal(t, samplingRules.SamplingRuleRecords[1].SamplingRule.ReservoirSize, int64(3))
+	assert.Equal(t, samplingRules.SamplingRuleRecords[1].SamplingRule.ReservoirSize, 3.0)
 	assert.Equal(t, samplingRules.SamplingRuleRecords[1].SamplingRule.FixedRate, 0.09)
 
 	assert.Equal(t, samplingRules.SamplingRuleRecords[2].SamplingRule.RuleName, "test-rule-1")
 	assert.Equal(t, samplingRules.SamplingRuleRecords[2].SamplingRule.ServiceType, "*")
 	assert.Equal(t, samplingRules.SamplingRuleRecords[2].SamplingRule.Host, "*")
 	assert.Equal(t, samplingRules.SamplingRuleRecords[2].SamplingRule.URLPath, "*")
-	assert.Equal(t, samplingRules.SamplingRuleRecords[2].SamplingRule.ReservoirSize, int64(100))
+	assert.Equal(t, samplingRules.SamplingRuleRecords[2].SamplingRule.ReservoirSize, 100.0)
 	assert.Equal(t, samplingRules.SamplingRuleRecords[2].SamplingRule.FixedRate, 0.09)
 }
 
@@ -170,7 +170,7 @@ func TestGetSamplingRulesWithMissingValues(t *testing.T) {
 
 	// Priority and ReservoirSize are missing in API response so they are assigned as nil
 	assert.Equal(t, samplingRules.SamplingRuleRecords[0].SamplingRule.Priority, int64(0))
-	assert.Equal(t, samplingRules.SamplingRuleRecords[0].SamplingRule.ReservoirSize, int64(0))
+	assert.Equal(t, samplingRules.SamplingRuleRecords[0].SamplingRule.ReservoirSize, 0.0)
 
 	// other values are stored as expected
 	assert.Equal(t, samplingRules.SamplingRuleRecords[0].SamplingRule.RuleName, "Default")
@@ -218,7 +218,7 @@ func TestGetSamplingTargets(t *testing.T) {
 	assert.Equal(t, *samplingTragets.LastRuleModification, float64(123456))
 	assert.Equal(t, *samplingTragets.SamplingTargetDocuments[0].FixedRate, float64(5))
 	assert.Equal(t, *samplingTragets.SamplingTargetDocuments[0].Interval, int64(5))
-	assert.Equal(t, *samplingTragets.SamplingTargetDocuments[0].ReservoirQuota, int64(3))
+	assert.Equal(t, *samplingTragets.SamplingTargetDocuments[0].ReservoirQuota, 3.0)
 	assert.Equal(t, *samplingTragets.SamplingTargetDocuments[0].ReservoirQuotaTTL, float64(456789))
 	assert.Equal(t, *samplingTragets.SamplingTargetDocuments[0].RuleName, "r1")
 	assert.Equal(t, *samplingTragets.UnprocessedStatistics[0].RuleName, "r1")

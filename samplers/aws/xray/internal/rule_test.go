@@ -15,6 +15,7 @@
 package internal
 
 import (
+	"sync"
 	"testing"
 	"time"
 
@@ -112,10 +113,9 @@ func TestSnapshot(t *testing.T) {
 func TestExpiredReservoirBorrowSample(t *testing.T) {
 	r1 := Rule{
 		reservoir: reservoir{
-			expiresAt:    1500000060,
-			used:         0,
-			capacity:     10,
-			currentEpoch: 1500000061,
+			expiresAt: time.Unix(1500000060, 0),
+			capacity:  10,
+			mu:        &sync.RWMutex{},
 		},
 		ruleProperties: ruleProperties{
 			RuleName:  "r1",
@@ -130,17 +130,16 @@ func TestExpiredReservoirBorrowSample(t *testing.T) {
 	assert.Equal(t, int64(1), r1.samplingStatistics.borrowedRequests)
 	assert.Equal(t, int64(0), r1.samplingStatistics.sampledRequests)
 	assert.Equal(t, int64(1), r1.samplingStatistics.matchedRequests)
-	assert.Equal(t, int64(0), r1.reservoir.used)
 }
 
 // assert that reservoir is expired, borrowed 1 req during that second so now using traceIDRatioBased sampler.
 func TestExpiredReservoirTraceIDRationBasedSample(t *testing.T) {
 	r1 := Rule{
 		reservoir: reservoir{
-			expiresAt:    1500000060,
-			used:         0,
-			capacity:     10,
-			currentEpoch: 1500000061,
+			expiresAt:  time.Unix(1500000060, 0),
+			capacity:   10,
+			mu:         &sync.RWMutex{},
+			borrowTick: time.Unix(1500000061, 0),
 		},
 		ruleProperties: ruleProperties{
 			RuleName:  "r1",
@@ -149,25 +148,24 @@ func TestExpiredReservoirTraceIDRationBasedSample(t *testing.T) {
 	}
 
 	now := time.Unix(1500000061, 0)
-	r1.Sample(trace.SamplingParameters{}, now)
+	sd := r1.Sample(trace.SamplingParameters{}, now)
 
+	assert.NotEmpty(t, sd.Decision)
 	assert.Equal(t, int64(0), r1.samplingStatistics.borrowedRequests)
 	assert.Equal(t, int64(1), r1.samplingStatistics.sampledRequests)
 	assert.Equal(t, int64(1), r1.samplingStatistics.matchedRequests)
-	assert.Equal(t, int64(0), r1.reservoir.used)
 }
 
 // assert that reservoir is not expired, quota is available so consuming from quota.
-func TestConsumeFromQuotaSample(t *testing.T) {
+func TestConsumeFromReservoirSample(t *testing.T) {
 	r1 := Rule{
 		ruleProperties: ruleProperties{
 			RuleName: "r1",
 		},
 		reservoir: reservoir{
-			quota:        10,
-			expiresAt:    1500000060,
-			currentEpoch: 1500000000,
-			used:         0,
+			quota:     10,
+			expiresAt: time.Unix(1500000060, 0),
+			mu:        &sync.RWMutex{},
 		},
 	}
 
@@ -178,17 +176,16 @@ func TestConsumeFromQuotaSample(t *testing.T) {
 	assert.Equal(t, int64(1), r1.samplingStatistics.sampledRequests)
 	assert.Equal(t, int64(0), r1.samplingStatistics.borrowedRequests)
 	assert.Equal(t, int64(1), r1.samplingStatistics.matchedRequests)
-	assert.Equal(t, int64(1), r1.reservoir.used)
 }
 
-// assert that sampling using traceIDRationBasedSampler.
-func TestTraceIDRatioBasedSampler(t *testing.T) {
+// assert that sampling using traceIDRationBasedSampler when reservoir quota is consumed.
+func TestTraceIDRatioBasedSampler_ReservoirIsConsumedSample(t *testing.T) {
 	r1 := Rule{
 		reservoir: reservoir{
-			quota:        10,
-			expiresAt:    1500000060,
-			currentEpoch: 1500000000,
-			used:         10,
+			quota:     10,
+			expiresAt: time.Unix(1500000060, 0),
+			mu:        &sync.RWMutex{},
+			lastTick:  time.Unix(1500000000, 0),
 		},
 		ruleProperties: ruleProperties{
 			FixedRate: 0.05,
@@ -203,17 +200,16 @@ func TestTraceIDRatioBasedSampler(t *testing.T) {
 	assert.Equal(t, int64(1), r1.samplingStatistics.sampledRequests)
 	assert.Equal(t, int64(0), r1.samplingStatistics.borrowedRequests)
 	assert.Equal(t, int64(1), r1.samplingStatistics.matchedRequests)
-	assert.Equal(t, int64(10), r1.reservoir.used)
 }
 
 // assert that when fixed rate is 0 traceIDRatioBased sampler will not sample the trace.
 func TestTraceIDRatioBasedSamplerFixedRateZero(t *testing.T) {
 	r1 := Rule{
 		reservoir: reservoir{
-			quota:        10,
-			expiresAt:    1500000060,
-			currentEpoch: 1500000000,
-			used:         10,
+			quota:     10,
+			expiresAt: time.Unix(1500000060, 0),
+			mu:        &sync.RWMutex{},
+			lastTick:  time.Unix(1500000000, 0),
 		},
 		ruleProperties: ruleProperties{
 			FixedRate: 0,
