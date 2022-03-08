@@ -31,7 +31,7 @@ import (
 func TestStaleRule(t *testing.T) {
 	refreshedAt := time.Unix(1500000000, 0)
 	r1 := Rule{
-		samplingStatistics: samplingStatistics{
+		samplingStatistics: &samplingStatistics{
 			matchedRequests: 5,
 		},
 		reservoir: reservoir{
@@ -49,7 +49,7 @@ func TestStaleRule(t *testing.T) {
 func TestFreshRule(t *testing.T) {
 	refreshedAt := time.Unix(1500000000, 0)
 	r1 := Rule{
-		samplingStatistics: samplingStatistics{
+		samplingStatistics: &samplingStatistics{
 			matchedRequests: 5,
 		},
 		reservoir: reservoir{
@@ -67,7 +67,7 @@ func TestFreshRule(t *testing.T) {
 func TestInactiveRule(t *testing.T) {
 	refreshedAt := time.Unix(1500000000, 0)
 	r1 := Rule{
-		samplingStatistics: samplingStatistics{
+		samplingStatistics: &samplingStatistics{
 			matchedRequests: 0,
 		},
 		reservoir: reservoir{
@@ -87,7 +87,7 @@ func TestSnapshot(t *testing.T) {
 		ruleProperties: ruleProperties{
 			RuleName: "r1",
 		},
-		samplingStatistics: samplingStatistics{
+		samplingStatistics: &samplingStatistics{
 			matchedRequests:  100,
 			sampledRequests:  12,
 			borrowedRequests: 2,
@@ -121,6 +121,7 @@ func TestExpiredReservoirBorrowSample(t *testing.T) {
 			RuleName:  "r1",
 			FixedRate: 0.06,
 		},
+		samplingStatistics: &samplingStatistics{},
 	}
 
 	now := time.Unix(1500000062, 0)
@@ -145,6 +146,7 @@ func TestExpiredReservoirTraceIDRationBasedSample(t *testing.T) {
 			RuleName:  "r1",
 			FixedRate: 0.06,
 		},
+		samplingStatistics: &samplingStatistics{},
 	}
 
 	now := time.Unix(1500000061, 0)
@@ -167,6 +169,7 @@ func TestConsumeFromReservoirSample(t *testing.T) {
 			expiresAt: time.Unix(1500000060, 0),
 			mu:        &sync.RWMutex{},
 		},
+		samplingStatistics: &samplingStatistics{},
 	}
 
 	now := time.Unix(1500000000, 0)
@@ -191,6 +194,7 @@ func TestTraceIDRatioBasedSampler_ReservoirIsConsumedSample(t *testing.T) {
 			FixedRate: 0.05,
 			RuleName:  "r1",
 		},
+		samplingStatistics: &samplingStatistics{},
 	}
 
 	now := time.Unix(1500000000, 0)
@@ -215,6 +219,7 @@ func TestTraceIDRatioBasedSamplerFixedRateZero(t *testing.T) {
 			FixedRate: 0,
 			RuleName:  "r1",
 		},
+		samplingStatistics: &samplingStatistics{},
 	}
 
 	now := time.Unix(1500000000, 0)

@@ -204,8 +204,9 @@ func (m *Manifest) createRule(ruleProp ruleProperties) {
 	}
 
 	csr := Rule{
-		reservoir:      cr,
-		ruleProperties: ruleProp,
+		reservoir:          cr,
+		ruleProperties:     ruleProp,
+		samplingStatistics: &samplingStatistics{},
 	}
 
 	m.Rules = append(m.Rules, csr)

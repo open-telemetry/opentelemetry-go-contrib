@@ -24,7 +24,7 @@ import (
 
 // Rule represents a sampling rule which contains rule properties and reservoir which keeps tracks of sampling statistics of a rule
 type Rule struct {
-	samplingStatistics samplingStatistics
+	samplingStatistics *samplingStatistics
 
 	// reservoir has equivalent fields to store what we receive from service API getSamplingTargets
 	// https://docs.aws.amazon.com/xray/latest/api/API_GetSamplingTargets.html
@@ -56,15 +56,21 @@ func (r *Rule) stale(now time.Time) bool {
 // samplingStatisticsDocument. It also resets statistics counters.
 func (r *Rule) snapshot(now time.Time) *samplingStatisticsDocument {
 	name := r.ruleProperties.RuleName
-	requests, sampled, borrowed := r.samplingStatistics.matchedRequests, r.samplingStatistics.sampledRequests, r.samplingStatistics.borrowedRequests
+
+	matchedRequests := atomic.LoadInt64(&r.samplingStatistics.matchedRequests)
+	sampledRequests := atomic.LoadInt64(&r.samplingStatistics.sampledRequests)
+	borrowedRequest := atomic.LoadInt64(&r.samplingStatistics.borrowedRequests)
 
 	// reset counters
-	r.samplingStatistics.matchedRequests, r.samplingStatistics.sampledRequests, r.samplingStatistics.borrowedRequests = 0, 0, 0
+	atomic.CompareAndSwapInt64(&r.samplingStatistics.matchedRequests, matchedRequests, int64(0))
+	atomic.CompareAndSwapInt64(&r.samplingStatistics.sampledRequests, sampledRequests, int64(0))
+	atomic.CompareAndSwapInt64(&r.samplingStatistics.borrowedRequests, borrowedRequest, int64(0))
+
 	timeStamp := now.Unix()
 	return &samplingStatisticsDocument{
-		RequestCount: &requests,
-		SampledCount: &sampled,
-		BorrowCount:  &borrowed,
+		RequestCount: &matchedRequests,
+		SampledCount: &sampledRequests,
+		BorrowCount:  &borrowedRequest,
 		RuleName:     &name,
 		Timestamp:    &timeStamp,
 	}

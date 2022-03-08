@@ -672,7 +672,7 @@ func TestRefreshManifestTarget_NoSnapShot(t *testing.T) {
 		reservoir: reservoir{
 			capacity: 100,
 		},
-		samplingStatistics: samplingStatistics{
+		samplingStatistics: &samplingStatistics{
 			matchedRequests: int64(0),
 		},
 	}
@@ -736,7 +736,7 @@ func TestRefreshManifestTargets(t *testing.T) {
 			capacity: 100,
 			mu:       &sync.RWMutex{},
 		},
-		samplingStatistics: samplingStatistics{
+		samplingStatistics: &samplingStatistics{
 			matchedRequests: int64(5),
 		},
 	}
@@ -1117,7 +1117,7 @@ func TestSnapshots(t *testing.T) {
 		reservoir: reservoir{
 			interval: 10,
 		},
-		samplingStatistics: samplingStatistics{
+		samplingStatistics: &samplingStatistics{
 			matchedRequests:  requests1,
 			sampledRequests:  sampled1,
 			borrowedRequests: borrowed1,
@@ -1135,7 +1135,7 @@ func TestSnapshots(t *testing.T) {
 		reservoir: reservoir{
 			interval: 10,
 		},
-		samplingStatistics: samplingStatistics{
+		samplingStatistics: &samplingStatistics{
 			matchedRequests:  requests2,
 			sampledRequests:  sampled2,
 			borrowedRequests: borrowed2,
@@ -1205,7 +1205,7 @@ func TestMixedSnapshots(t *testing.T) {
 			interval:    20,
 			refreshedAt: refreshedAt1,
 		},
-		samplingStatistics: samplingStatistics{
+		samplingStatistics: &samplingStatistics{
 			matchedRequests:  requests1,
 			sampledRequests:  sampled1,
 			borrowedRequests: borrowed1,
@@ -1227,7 +1227,7 @@ func TestMixedSnapshots(t *testing.T) {
 			interval:    20,
 			refreshedAt: refreshedAt2,
 		},
-		samplingStatistics: samplingStatistics{
+		samplingStatistics: &samplingStatistics{
 			matchedRequests:  requests2,
 			sampledRequests:  sampled2,
 			borrowedRequests: borrowed2,
@@ -1249,7 +1249,7 @@ func TestMixedSnapshots(t *testing.T) {
 			interval:    20,
 			refreshedAt: refreshedAt3,
 		},
-		samplingStatistics: samplingStatistics{
+		samplingStatistics: &samplingStatistics{
 			matchedRequests:  requests3,
 			sampledRequests:  sampled3,
 			borrowedRequests: borrowed3,

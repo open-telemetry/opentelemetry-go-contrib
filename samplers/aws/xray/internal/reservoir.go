@@ -64,7 +64,7 @@ func (r *reservoir) borrow(now time.Time) bool {
 
 	currentTime := now
 
-	if currentTime.Equal(r.borrowTick) {
+	if currentTime.Unix() == r.borrowTick.Unix() {
 		return false
 	}
 
