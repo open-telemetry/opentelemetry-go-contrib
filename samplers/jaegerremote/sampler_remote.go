@@ -96,7 +96,7 @@ func New(
 func (s *Sampler) ShouldSample(p trace.SamplingParameters) trace.SamplingResult {
 	s.RLock()
 	defer s.RUnlock()
-	return s.ShouldSample(p)
+	return s.sampler.ShouldSample(p)
 }
 
 // Close does a clean shutdown of the sampler, stopping any background
