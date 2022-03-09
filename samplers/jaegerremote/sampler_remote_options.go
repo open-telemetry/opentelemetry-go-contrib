@@ -79,6 +79,8 @@ func WithInitialSampler(sampler trace.Sampler) Option {
 func WithSamplingServerURL(samplingServerURL string) Option {
 	return optionFunc(func(c *config) {
 		c.samplingServerURL = samplingServerURL
+		// The default port of jaeger agent is 5778, but there are other ports specified by the user, so the sampling address and fetch address are strongly bound
+		c.samplingFetcher = newHTTPSamplingStrategyFetcher(samplingServerURL)
 	})
 }
 
