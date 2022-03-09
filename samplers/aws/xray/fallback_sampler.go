@@ -15,7 +15,6 @@
 package xray // import "go.opentelemetry.io/contrib/samplers/aws/xray"
 
 import (
-	"fmt"
 	"time"
 
 	sdktrace "go.opentelemetry.io/otel/sdk/trace"
@@ -43,14 +42,12 @@ func NewFallbackSampler() *FallbackSampler {
 func (fs *FallbackSampler) ShouldSample(parameters sdktrace.SamplingParameters) sdktrace.SamplingResult {
 	// borrowing one request every second
 	if fs.take(time.Now(), 1.0) {
-		fmt.Println("inside borrow")
 		return sdktrace.SamplingResult{
 			Tracestate: trace.SpanContextFromContext(parameters.ParentContext).TraceState(),
 			Decision:   sdktrace.RecordAndSample,
 		}
 	}
 
-	fmt.Println("outside borrow")
 	// traceIDRatioBasedSampler to sample 5% of additional requests every second
 	return fs.defaultSampler.ShouldSample(parameters)
 }
