@@ -23,7 +23,6 @@ import (
 	"go.uber.org/multierr"
 
 	"go.opentelemetry.io/otel/baggage"
-
 	"go.opentelemetry.io/otel/propagation"
 	"go.opentelemetry.io/otel/trace"
 )
