@@ -9,3 +9,5 @@ require (
 	go.opentelemetry.io/otel/exporters/stdout/stdouttrace v1.1.0
 	go.opentelemetry.io/otel/sdk v1.1.0
 )
+
+replace go.opentelemetry.io/contrib/samplers/jaegerremote => ../
