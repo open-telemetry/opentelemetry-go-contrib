@@ -74,8 +74,8 @@ func (m *Manifest) Expired() bool {
 	m.mu.RLock()
 	defer m.mu.RUnlock()
 
-	now := time.Unix(m.Clock.Now().Unix()-manifestTTL, 0)
-	return now.After(m.refreshedAt)
+	manifestLiveTime := m.refreshedAt.Add(time.Second * manifestTTL)
+	return m.Clock.Now().After(manifestLiveTime)
 }
 
 // MatchAgainstManifestRules returns a Rule and boolean flag set as true

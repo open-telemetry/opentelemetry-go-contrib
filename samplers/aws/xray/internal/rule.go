@@ -57,14 +57,9 @@ func (r *Rule) stale(now time.Time) bool {
 func (r *Rule) snapshot(now time.Time) *samplingStatisticsDocument {
 	name := r.ruleProperties.RuleName
 
-	matchedRequests := atomic.LoadInt64(&r.samplingStatistics.matchedRequests)
-	sampledRequests := atomic.LoadInt64(&r.samplingStatistics.sampledRequests)
-	borrowedRequest := atomic.LoadInt64(&r.samplingStatistics.borrowedRequests)
-
-	// reset counters
-	atomic.CompareAndSwapInt64(&r.samplingStatistics.matchedRequests, matchedRequests, int64(0))
-	atomic.CompareAndSwapInt64(&r.samplingStatistics.sampledRequests, sampledRequests, int64(0))
-	atomic.CompareAndSwapInt64(&r.samplingStatistics.borrowedRequests, borrowedRequest, int64(0))
+	matchedRequests := atomic.SwapInt64(&r.samplingStatistics.matchedRequests, int64(0))
+	sampledRequests := atomic.SwapInt64(&r.samplingStatistics.sampledRequests, int64(0))
+	borrowedRequest := atomic.SwapInt64(&r.samplingStatistics.borrowedRequests, int64(0))
 
 	timeStamp := now.Unix()
 	return &samplingStatisticsDocument{
@@ -88,7 +83,7 @@ func (r *Rule) Sample(parameters sdktrace.SamplingParameters, now time.Time) sdk
 	// fallback sampling logic if quota for a given rule is expired
 	if r.reservoir.expired(now) {
 		// borrowing one request every second
-		if r.reservoir.borrow(now) {
+		if r.reservoir.take(now, true, 1.0) {
 			atomic.AddInt64(&r.samplingStatistics.borrowedRequests, int64(1))
 
 			sd.Decision = sdktrace.RecordAndSample
@@ -106,7 +101,7 @@ func (r *Rule) Sample(parameters sdktrace.SamplingParameters, now time.Time) sdk
 	}
 
 	// Take from reservoir quota, if quota is available for that second
-	if r.reservoir.take(now, 1.0) {
+	if r.reservoir.take(now, false, 1.0) {
 		atomic.AddInt64(&r.samplingStatistics.sampledRequests, int64(1))
 		sd.Decision = sdktrace.RecordAndSample
 

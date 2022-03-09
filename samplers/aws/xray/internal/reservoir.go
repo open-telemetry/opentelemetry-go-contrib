@@ -43,9 +43,6 @@ type reservoir struct {
 	// stores reservoir ticks
 	lastTick time.Time
 
-	// stores borrow ticks
-	borrowTick time.Time
-
 	mu *sync.RWMutex
 }
 
@@ -57,33 +54,19 @@ func (r *reservoir) expired(now time.Time) bool {
 	return now.After(r.expiresAt)
 }
 
-// borrow returns true if the reservoir has not been borrowed from this epoch.
-func (r *reservoir) borrow(now time.Time) bool {
-	r.mu.Lock()
-	defer r.mu.Unlock()
-
-	currentTime := now
-
-	if currentTime.Unix() == r.borrowTick.Unix() {
-		return false
-	}
-
-	if currentTime.After(r.borrowTick) {
-		r.borrowTick = currentTime
-		return true
-	}
-
-	return false
-}
-
 // take consumes quota from reservoir, if any remains, then returns true. False otherwise.
-func (r *reservoir) take(now time.Time, itemCost float64) bool {
+func (r *reservoir) take(now time.Time, borrowed bool, itemCost float64) bool {
 	r.mu.Lock()
 	defer r.mu.Unlock()
 
 	if r.lastTick.IsZero() {
 		r.lastTick = now
-		r.quotaBalance = r.quota
+
+		if borrowed {
+			r.quotaBalance = 1.0
+		} else {
+			r.quotaBalance = r.quota
+		}
 	}
 
 	if r.quotaBalance >= itemCost {
@@ -92,7 +75,7 @@ func (r *reservoir) take(now time.Time, itemCost float64) bool {
 	}
 
 	// update quota balance based on elapsed time
-	r.refreshQuotaBalance(now)
+	r.refreshQuotaBalance(now, borrowed)
 
 	if r.quotaBalance >= itemCost {
 		r.quotaBalance -= itemCost
@@ -102,15 +85,28 @@ func (r *reservoir) take(now time.Time, itemCost float64) bool {
 	return false
 }
 
-func (r *reservoir) refreshQuotaBalance(now time.Time) {
+// refreshQuotaBalance refreshes the quotaBalance. if borrowed true then add quota balance 1 by every second
+// otherwise add quota balance based on assigned quota by X-Ray service
+func (r *reservoir) refreshQuotaBalance(now time.Time, borrowed bool) {
 	currentTime := now
 	elapsedTime := currentTime.Sub(r.lastTick)
 	r.lastTick = currentTime
 
 	// calculate how much credit have we accumulated since the last tick
-	totalQuotaBalanceCapacity := elapsedTime.Seconds() * r.capacity
-	r.quotaBalance += elapsedTime.Seconds() * r.quota
-	if r.quotaBalance > totalQuotaBalanceCapacity {
-		r.quotaBalance = totalQuotaBalanceCapacity
+	if borrowed {
+		// when elapsedTime is higher than 1 even then we need to keep quotaBalance
+		// near to 1 so making elapsedTime to 1 for only borrowing 1 per second case
+		if elapsedTime.Seconds() > 1.0 {
+			r.quotaBalance += 1.0
+		} else {
+			r.quotaBalance += elapsedTime.Seconds() * 1
+		}
+	} else {
+		totalQuotaBalanceCapacity := elapsedTime.Seconds() * r.capacity
+		r.quotaBalance += elapsedTime.Seconds() * r.quota
+
+		if r.quotaBalance > totalQuotaBalanceCapacity {
+			r.quotaBalance = totalQuotaBalanceCapacity
+		}
 	}
 }

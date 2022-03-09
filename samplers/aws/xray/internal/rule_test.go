@@ -137,10 +137,10 @@ func TestExpiredReservoirBorrowSample(t *testing.T) {
 func TestExpiredReservoirTraceIDRationBasedSample(t *testing.T) {
 	r1 := Rule{
 		reservoir: reservoir{
-			expiresAt:  time.Unix(1500000060, 0),
-			capacity:   10,
-			mu:         &sync.RWMutex{},
-			borrowTick: time.Unix(1500000061, 0),
+			expiresAt: time.Unix(1500000060, 0),
+			capacity:  10,
+			mu:        &sync.RWMutex{},
+			lastTick:  time.Unix(1500000061, 0),
 		},
 		ruleProperties: ruleProperties{
 			RuleName:  "r1",

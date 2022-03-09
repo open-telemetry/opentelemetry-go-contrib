@@ -15,7 +15,7 @@
 package xray // import "go.opentelemetry.io/contrib/samplers/aws/xray"
 
 import (
-	"sync/atomic"
+	"fmt"
 	"time"
 
 	sdktrace "go.opentelemetry.io/otel/sdk/trace"
@@ -23,7 +23,8 @@ import (
 )
 
 type FallbackSampler struct {
-	currentEpoch   int64
+	lastTick       time.Time
+	quotaBalance   float64
 	defaultSampler sdktrace.Sampler
 }
 
@@ -34,19 +35,22 @@ var _ sdktrace.Sampler = (*FallbackSampler)(nil)
 func NewFallbackSampler() *FallbackSampler {
 	return &FallbackSampler{
 		defaultSampler: sdktrace.TraceIDRatioBased(0.05),
+		quotaBalance:   1.0,
 	}
 }
 
 // ShouldSample implements the logic of borrowing 1 req/sec and then use traceIDRatioBasedSampler to sample 5% of additional requests.
 func (fs *FallbackSampler) ShouldSample(parameters sdktrace.SamplingParameters) sdktrace.SamplingResult {
 	// borrowing one request every second
-	if fs.borrow(time.Now().Unix()) {
+	if fs.take(time.Now(), 1.0) {
+		fmt.Println("inside borrow")
 		return sdktrace.SamplingResult{
 			Tracestate: trace.SpanContextFromContext(parameters.ParentContext).TraceState(),
 			Decision:   sdktrace.RecordAndSample,
 		}
 	}
 
+	fmt.Println("outside borrow")
 	// traceIDRatioBasedSampler to sample 5% of additional requests every second
 	return fs.defaultSampler.ShouldSample(parameters)
 }
@@ -60,10 +64,40 @@ func (fs *FallbackSampler) getDescription() string {
 	return "fallback sampling with sampling config of 1 req/sec and 5% of additional requests"
 }
 
-func (fs *FallbackSampler) borrow(now int64) bool {
-	cur := atomic.LoadInt64(&fs.currentEpoch)
-	if cur >= now {
-		return false
+// take consumes quota from reservoir, if any remains, then returns true. False otherwise.
+func (fs *FallbackSampler) take(now time.Time, itemCost float64) bool {
+	if fs.lastTick.IsZero() {
+		fs.lastTick = now
 	}
-	return atomic.CompareAndSwapInt64(&fs.currentEpoch, cur, now)
+
+	if fs.quotaBalance >= itemCost {
+		fs.quotaBalance -= itemCost
+		return true
+	}
+
+	// update quota balance based on elapsed time
+	fs.refreshQuotaBalance(now)
+
+	if fs.quotaBalance >= itemCost {
+		fs.quotaBalance -= itemCost
+		return true
+	}
+
+	return false
+}
+
+// refreshQuotaBalance refreshes the quotaBalance considering elapsedTime.
+func (fs *FallbackSampler) refreshQuotaBalance(now time.Time) {
+	currentTime := now
+	elapsedTime := currentTime.Sub(fs.lastTick)
+	fs.lastTick = currentTime
+
+	// when elapsedTime is higher than 1 even then we need to keep quotaBalance
+	// near to 1 so making elapsedTime to 1 for only borrowing 1 per second case
+	if elapsedTime.Seconds() > 1.0 {
+		fs.quotaBalance += 1.0
+	} else {
+		// calculate how much credit have we accumulated since the last tick
+		fs.quotaBalance += elapsedTime.Seconds() * 1
+	}
 }
