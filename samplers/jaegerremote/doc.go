@@ -13,7 +13,6 @@
 // WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 // See the License for the specific language governing permissions and
 // limitations under the License.
-// Package jaegerremote implements the Jaeger Remote protocol.
-// import "go.opentelemetry.io/contrib/samplers/jaegerremote"
 
-package jaegerremote
+// Package jaegerremote implements the Jaeger Remote protocol.
+package jaegerremote // import "go.opentelemetry.io/contrib/samplers/jaegerremote"

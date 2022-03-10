@@ -12,6 +12,7 @@
 // WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 // See the License for the specific language governing permissions and
 // limitations under the License.
+
 // This package implements the Jaeger jaeger-idl specification as defined
 // at https://github.com/jaegertracing/jaeger-idl/blob/main/proto/api_v2/sampling.proto
 syntax="proto3";

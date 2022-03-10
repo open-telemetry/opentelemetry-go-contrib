@@ -43,7 +43,7 @@ type probabilisticSampler struct {
 
 const maxRandomNumber = ^(uint64(1) << 63) // i.e. 0x7fffffffffffffff
 
-// NewProbabilisticSampler creates a sampler that randomly samples a certain percentage of traces specified by the
+// newProbabilisticSampler creates a sampler that randomly samples a certain percentage of traces specified by the
 // samplingRate, in the range between 0.0 and 1.0.
 //
 // It relies on the fact that new trace IDs are 63bit random numbers themselves, thus making the sampling decision
