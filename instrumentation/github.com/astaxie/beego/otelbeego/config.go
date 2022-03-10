@@ -99,7 +99,7 @@ func WithSpanNameFormatter(f SpanNameFormatter) Option {
 func newConfig(options ...Option) *config {
 	config := &config{
 		tracerProvider: otel.GetTracerProvider(),
-		meterProvider:  global.GetMeterProvider(),
+		meterProvider:  global.MeterProvider(),
 		propagators:    otel.GetTextMapPropagator(),
 		filters:        []Filter{},
 		formatter:      defaultSpanNameFormatter,
