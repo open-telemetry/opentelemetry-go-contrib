@@ -55,8 +55,7 @@ func (s *server) SayHello(ctx context.Context, in *api.HelloRequest) (*api.Hello
 }
 
 func (s *server) workHard(ctx context.Context) {
-	var span trace.Span
-	ctx, span = tracer.Start(ctx, "workHard",
+	_, span := tracer.Start(ctx, "workHard",
 		trace.WithAttributes(attribute.String("extra.key", "extra.value")))
 	defer span.End()
 
