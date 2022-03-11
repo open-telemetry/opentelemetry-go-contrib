@@ -41,17 +41,22 @@ func newConfig(options ...Option) config {
 		samplingFetcher:         newHTTPSamplingStrategyFetcher(defaultSamplingServerURL),
 		samplingParser:          new(samplingStrategyParserImpl),
 		updaters: []samplerUpdater{
-			&perOperationSamplerUpdater{
-				MaxOperations:            defaultSamplingMaxOperations,
-				OperationNameLateBinding: defaultSamplingOperationNameLateBinding,
-			},
 			new(probabilisticSamplerUpdater),
 			new(rateLimitingSamplerUpdater),
+		},
+		posParams: perOperationSamplerParams{
+			MaxOperations:            defaultSamplingMaxOperations,
+			OperationNameLateBinding: defaultSamplingOperationNameLateBinding,
 		},
 	}
 	for _, option := range options {
 		option.apply(&c)
 	}
+	c.updaters = append(c.updaters,
+		&perOperationSamplerUpdater{
+			MaxOperations:            c.posParams.MaxOperations,
+			OperationNameLateBinding: c.posParams.OperationNameLateBinding,
+		})
 
 	return c
 }
