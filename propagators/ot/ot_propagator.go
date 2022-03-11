@@ -20,17 +20,19 @@ import (
 	"fmt"
 	"strings"
 
-	"go.opentelemetry.io/otel/baggage"
+	"go.uber.org/multierr"
 
+	"go.opentelemetry.io/otel/baggage"
 	"go.opentelemetry.io/otel/propagation"
 	"go.opentelemetry.io/otel/trace"
 )
 
 const (
 	// Default OT Header names.
-	traceIDHeader = "ot-tracer-traceid"
-	spanIDHeader  = "ot-tracer-spanid"
-	sampledHeader = "ot-tracer-sampled"
+	traceIDHeader       = "ot-tracer-traceid"
+	spanIDHeader        = "ot-tracer-spanid"
+	sampledHeader       = "ot-tracer-sampled"
+	baggageHeaderPrefix = "ot-baggage-"
 
 	otTraceIDPadding = "0000000000000000"
 
@@ -72,7 +74,7 @@ func (o OT) Inject(ctx context.Context, carrier propagation.TextMapCarrier) {
 	}
 
 	for _, m := range baggage.FromContext(ctx).Members() {
-		carrier.Set(fmt.Sprintf("ot-baggage-%s", m.Key()), m.Value())
+		carrier.Set(fmt.Sprintf("%s%s", baggageHeaderPrefix, m.Key()), m.Value())
 	}
 
 }
@@ -93,16 +95,41 @@ func (o OT) Extract(ctx context.Context, carrier propagation.TextMapCarrier) con
 	if err != nil || !sc.IsValid() {
 		return ctx
 	}
-	// TODO: implement extracting baggage
-	//
-	// this currently is not achievable without an implementation of `keys`
-	// on the carrier, see:
-	// https://github.com/open-telemetry/opentelemetry-go/issues/1493
+
+	bags, err := extractBags(carrier)
+	if err != nil {
+		return trace.ContextWithRemoteSpanContext(ctx, sc)
+	}
+	ctx = baggage.ContextWithBaggage(ctx, bags)
 	return trace.ContextWithRemoteSpanContext(ctx, sc)
 }
 
 func (o OT) Fields() []string {
 	return []string{traceIDHeader, spanIDHeader, sampledHeader}
+}
+
+// extractBags extracts OpenTracing baggage information from carrier.
+func extractBags(carrier propagation.TextMapCarrier) (baggage.Baggage, error) {
+	var err error
+	var members []baggage.Member
+	for _, key := range carrier.Keys() {
+		lowerKey := strings.ToLower(key)
+		if !strings.HasPrefix(lowerKey, baggageHeaderPrefix) {
+			continue
+		}
+		strippedKey := strings.TrimPrefix(lowerKey, baggageHeaderPrefix)
+		member, e := baggage.NewMember(strippedKey, carrier.Get(key))
+		if e != nil {
+			err = multierr.Append(err, e)
+			continue
+		}
+		members = append(members, member)
+	}
+	bags, e := baggage.New(members...)
+	if err != nil {
+		return bags, multierr.Append(err, e)
+	}
+	return bags, err
 }
 
 // extract reconstructs a SpanContext from header values based on OT
