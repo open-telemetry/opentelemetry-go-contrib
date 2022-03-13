@@ -15,43 +15,10 @@
 package xray
 
 import (
-	"log"
-	"os"
 	"testing"
 
-	"github.com/go-logr/stdr"
-
 	"github.com/stretchr/testify/assert"
-
-	"go.opentelemetry.io/contrib/samplers/aws/xray/internal"
-	"go.opentelemetry.io/contrib/samplers/aws/xray/internal/util"
-	sdktrace "go.opentelemetry.io/otel/sdk/trace"
 )
-
-// TestShouldSample assert that when manifest is expired sampling happens with 1 req/sec.
-func TestShouldSample_ExpiredManifest(t *testing.T) {
-	clock := &util.MockClock{
-		NowTime: 100,
-	}
-
-	r1 := internal.Rule{}
-
-	rules := []internal.Rule{r1}
-
-	m := &internal.Manifest{
-		Rules: rules,
-		Clock: clock,
-	}
-
-	rs := &remoteSampler{
-		manifest:        m,
-		logger:          stdr.NewWithOptions(log.New(os.Stderr, "", log.LstdFlags|log.Lshortfile), stdr.Options{LogCaller: stdr.Error}),
-		fallbackSampler: NewFallbackSampler(),
-	}
-
-	sd := rs.ShouldSample(sdktrace.SamplingParameters{})
-	assert.Equal(t, sd.Decision, sdktrace.RecordAndSample)
-}
 
 // TestRemoteSamplerDescription assert remote sampling description.
 func TestRemoteSamplerDescription(t *testing.T) {

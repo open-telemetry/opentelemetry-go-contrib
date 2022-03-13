@@ -18,8 +18,9 @@ import (
 	"context"
 	"time"
 
-	"go.opentelemetry.io/contrib/samplers/aws/xray/internal"
 	"go.opentelemetry.io/contrib/samplers/aws/xray/internal/util"
+
+	"go.opentelemetry.io/contrib/samplers/aws/xray/internal"
 	sdktrace "go.opentelemetry.io/otel/sdk/trace"
 
 	"github.com/go-logr/logr"
@@ -90,83 +91,82 @@ func NewRemoteSampler(ctx context.Context, serviceName string, cloudPlatform str
 // ShouldSample matches span attributes with retrieved sampling rules and perform sampling,
 // if rules does not match or manifest is expired then use fallback sampling.
 func (rs *remoteSampler) ShouldSample(parameters sdktrace.SamplingParameters) sdktrace.SamplingResult {
-	if !rs.manifest.Expired() {
-		// match against known rules
-		r, match, err := rs.manifest.MatchAgainstManifestRules(parameters, rs.serviceName, rs.cloudPlatform)
-		if err != nil {
-			rs.logger.Error(err, "regexp matching error while matching span and resource attributes")
-			return sdktrace.SamplingResult{}
-		}
+	if rs.manifest.Expired() {
+		// Use fallback sampler if manifest is expired
+		rs.logger.V(5).Info("manifest is expired so using fallback sampling strategy")
 
-		if match {
-			// remote sampling based on rule match
-			return r.Sample(parameters, rs.manifest.Clock.Now())
-		}
+		return rs.fallbackSampler.ShouldSample(parameters)
 	}
 
-	// Use fallback sampler if manifest is expired
-	// or sampling rules does not match against manifest
+	// match against known rules
+	r, match, err := rs.manifest.MatchAgainstManifestRules(parameters, rs.serviceName, rs.cloudPlatform)
+	if err != nil {
+		rs.logger.Error(err, "regexp matching error while matching span and resource attributes")
+		return sdktrace.SamplingResult{}
+	}
+
+	if match {
+		// remote sampling based on rule match
+		return r.Sample(parameters, time.Now())
+	}
+
+	// Use fallback sampler if
+	// sampling rules does not match against manifest
 	rs.logger.V(5).Info("span attributes does not match to the sampling rules or manifest is expired so using fallback sampling strategy")
 	return rs.fallbackSampler.ShouldSample(parameters)
 }
 
 // Description returns description of the sampler being used.
 func (rs *remoteSampler) Description() string {
-	return "AwsXrayRemoteSampler{" + rs.getDescription() + "}"
-}
-
-func (rs *remoteSampler) getDescription() string {
-	return "remote sampling with AWS X-Ray"
+	return "AwsXrayRemoteSampler{remote sampling with AWS X-Ray}"
 }
 
 func (rs *remoteSampler) start(ctx context.Context) {
 	if !rs.pollerStarted {
 		rs.pollerStarted = true
-		rs.startPoller(ctx)
+		go rs.startPoller(ctx)
 	}
 }
 
 // startPoller starts the rule and target poller in a single go routine which runs periodically
 // to refresh manifest and targets.
 func (rs *remoteSampler) startPoller(ctx context.Context) {
-	go func() {
-		// jitter = 5s, default 300 seconds
-		rulesTicker := util.NewTicker(rs.samplingRulesPollingInterval, 5*time.Second)
+	// jitter = 5s, default 300 seconds
+	rulesTicker := util.NewTicker(rs.samplingRulesPollingInterval, 5*time.Second)
 
-		// jitter = 100ms, default 10 seconds
-		targetTicker := util.NewTicker(rs.manifest.SamplingTargetsPollingInterval, 100*time.Millisecond)
+	// jitter = 100ms, default 10 seconds
+	targetTicker := util.NewTicker(rs.manifest.SamplingTargetsPollingInterval, 100*time.Millisecond)
 
-		// fetch sampling rules to kick start the remote sampling
-		rs.refreshManifest(ctx)
+	// fetch sampling rules to kick start the remote sampling
+	rs.refreshManifest(ctx)
 
-		for {
-			select {
-			case _, more := <-rulesTicker.C():
-				if !more {
-					return
-				}
-
-				// fetch sampling rules and updates manifest
-				rs.refreshManifest(ctx)
-				continue
-			case _, more := <-targetTicker.C():
-				if !more {
-					return
-				}
-
-				// fetch sampling targets and updates manifest
-				refresh := rs.refreshTargets(ctx)
-
-				// out of band manifest refresh if it manifest is not updated
-				if refresh {
-					rs.refreshManifest(ctx)
-				}
-				continue
-			case <-ctx.Done():
+	for {
+		select {
+		case _, more := <-rulesTicker.C():
+			if !more {
 				return
 			}
+
+			// fetch sampling rules and updates manifest
+			rs.refreshManifest(ctx)
+			continue
+		case _, more := <-targetTicker.C():
+			if !more {
+				return
+			}
+
+			// fetch sampling targets and updates manifest
+			refresh := rs.refreshTargets(ctx)
+
+			// out of band manifest refresh if it manifest is not updated
+			if refresh {
+				rs.refreshManifest(ctx)
+			}
+			continue
+		case <-ctx.Done():
+			return
 		}
-	}()
+	}
 }
 
 // refreshManifest refreshes the manifest retrieved via getSamplingRules API.

@@ -15,6 +15,7 @@
 package xray // import "go.opentelemetry.io/contrib/samplers/aws/xray"
 
 import (
+	"sync"
 	"time"
 
 	sdktrace "go.opentelemetry.io/otel/sdk/trace"
@@ -25,6 +26,7 @@ type FallbackSampler struct {
 	lastTick       time.Time
 	quotaBalance   float64
 	defaultSampler sdktrace.Sampler
+	mu             sync.RWMutex
 }
 
 // Compile time assertion that remoteSampler implements the Sampler interface.
@@ -54,15 +56,14 @@ func (fs *FallbackSampler) ShouldSample(parameters sdktrace.SamplingParameters) 
 
 // Description returns description of the sampler being used
 func (fs *FallbackSampler) Description() string {
-	return "FallbackSampler{" + fs.getDescription() + "}"
-}
-
-func (fs *FallbackSampler) getDescription() string {
-	return "fallback sampling with sampling config of 1 req/sec and 5% of additional requests"
+	return "FallbackSampler{fallback sampling with sampling config of 1 req/sec and 5% of additional requests}"
 }
 
 // take consumes quota from reservoir, if any remains, then returns true. False otherwise.
 func (fs *FallbackSampler) take(now time.Time, itemCost float64) bool {
+	fs.mu.Lock()
+	defer fs.mu.Unlock()
+
 	if fs.lastTick.IsZero() {
 		fs.lastTick = now
 	}
@@ -95,6 +96,6 @@ func (fs *FallbackSampler) refreshQuotaBalance(now time.Time) {
 		fs.quotaBalance += 1.0
 	} else {
 		// calculate how much credit have we accumulated since the last tick
-		fs.quotaBalance += elapsedTime.Seconds() * 1
+		fs.quotaBalance += elapsedTime.Seconds()
 	}
 }

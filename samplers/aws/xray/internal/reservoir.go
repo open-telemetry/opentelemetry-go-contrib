@@ -99,7 +99,7 @@ func (r *reservoir) refreshQuotaBalance(now time.Time, borrowed bool) {
 		if elapsedTime.Seconds() > 1.0 {
 			r.quotaBalance += 1.0
 		} else {
-			r.quotaBalance += elapsedTime.Seconds() * 1
+			r.quotaBalance += elapsedTime.Seconds()
 		}
 	} else {
 		totalQuotaBalanceCapacity := elapsedTime.Seconds() * r.capacity

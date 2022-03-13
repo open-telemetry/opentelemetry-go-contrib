@@ -187,11 +187,12 @@ func (r *Rule) appliesTo(parameters sdktrace.SamplingParameters, serviceName str
 }
 
 // attributeMatching performs a match on attributes set by users on AWS X-Ray console
-func (r *Rule) attributeMatching(parameters sdktrace.SamplingParameters) (match bool, err error) {
-	match = false
-	unmatchedCounter := 0
+func (r *Rule) attributeMatching(parameters sdktrace.SamplingParameters) (bool, error) {
+	match := false
+	var err error
 	if len(r.ruleProperties.Attributes) > 0 {
 		for key, value := range r.ruleProperties.Attributes {
+			unmatchedCounter := 0
 			for _, attrs := range parameters.Attributes {
 				if key == string(attrs.Key) {
 					match, err = wildcardMatch(value, attrs.Value.AsString())
@@ -201,11 +202,11 @@ func (r *Rule) attributeMatching(parameters sdktrace.SamplingParameters) (match 
 				} else {
 					unmatchedCounter++
 				}
+
+				if unmatchedCounter == len(parameters.Attributes) {
+					return false, nil
+				}
 			}
-			if unmatchedCounter == len(parameters.Attributes) {
-				return false, nil
-			}
-			unmatchedCounter = 0
 		}
 		return match, nil
 	}

@@ -18,6 +18,7 @@ import (
 	"context"
 	crypto "crypto/rand"
 	"fmt"
+	"math"
 	"sort"
 	"strings"
 	"sync"
@@ -41,7 +42,7 @@ type Manifest struct {
 	xrayClient                     *xrayClient
 	clientID                       *string
 	logger                         logr.Logger
-	Clock                          util.Clock
+	clock                          util.Clock
 	mu                             sync.RWMutex
 }
 
@@ -61,7 +62,7 @@ func NewManifest(addr string, logger logr.Logger) (*Manifest, error) {
 
 	return &Manifest{
 		xrayClient:                     client,
-		Clock:                          &util.DefaultClock{},
+		clock:                          &util.DefaultClock{},
 		logger:                         logger,
 		SamplingTargetsPollingInterval: 10 * time.Second,
 		clientID:                       clientID,
@@ -75,7 +76,7 @@ func (m *Manifest) Expired() bool {
 	defer m.mu.RUnlock()
 
 	manifestLiveTime := m.refreshedAt.Add(time.Second * manifestTTL)
-	return m.Clock.Now().After(manifestLiveTime)
+	return m.clock.Now().After(manifestLiveTime)
 }
 
 // MatchAgainstManifestRules returns a Rule and boolean flag set as true
@@ -193,7 +194,7 @@ func (m *Manifest) updateRules(rules *getSamplingRulesOutput) {
 
 	m.mu.Lock()
 	m.Rules = tempManifest.Rules
-	m.refreshedAt = m.Clock.Now()
+	m.refreshedAt = m.clock.Now()
 	m.mu.Unlock()
 }
 
@@ -268,7 +269,7 @@ func (m *Manifest) updateReservoir(t *samplingTargetDocument) (err error) {
 
 	for index := range m.Rules {
 		if m.Rules[index].ruleProperties.RuleName == *t.RuleName {
-			m.Rules[index].reservoir.refreshedAt = m.Clock.Now()
+			m.Rules[index].reservoir.refreshedAt = m.clock.Now()
 
 			// Update non-optional attributes from response
 			m.Rules[index].ruleProperties.FixedRate = *t.FixedRate
@@ -296,8 +297,8 @@ func (m *Manifest) snapshots() ([]*samplingStatisticsDocument, error) {
 
 	// Generate sampling statistics for user-defined rules
 	for index := range m.Rules {
-		if m.Rules[index].stale(m.Clock.Now()) {
-			s := m.Rules[index].snapshot(m.Clock.Now())
+		if m.Rules[index].stale(m.clock.Now()) {
+			s := m.Rules[index].snapshot(m.clock.Now())
 			s.ClientID = m.clientID
 
 			statistics = append(statistics, s)
@@ -321,15 +322,15 @@ func (m *Manifest) sort() {
 }
 
 // minimumPollingInterval finds the minimum interval amongst all the targets
-func (m *Manifest) minimumPollingInterval() (minPoll time.Duration) {
-	minPoll = time.Duration(0)
+func (m *Manifest) minimumPollingInterval() time.Duration {
+	if len(m.Rules) == 0 {
+		return time.Duration(0)
+	}
+
+	minPoll := time.Duration(math.MaxInt64)
 	for _, rules := range m.Rules {
-		if minPoll == 0 {
+		if minPoll >= rules.reservoir.interval {
 			minPoll = rules.reservoir.interval
-		} else {
-			if minPoll >= rules.reservoir.interval {
-				minPoll = rules.reservoir.interval
-			}
 		}
 	}
 

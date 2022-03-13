@@ -33,34 +33,45 @@ const (
 	defaultPollingInterval = 300
 )
 
-// Option is a function that sets config on the sampler.
-type Option func(options *config)
-
 type config struct {
 	endpoint                     string
 	samplingRulesPollingInterval time.Duration
 	logger                       logr.Logger
 }
 
+// Option sets configuration on the sampler.
+type Option interface {
+	apply(*config) *config
+}
+
+type optionFunc func(*config) *config
+
+func (f optionFunc) apply(cfg *config) *config {
+	return f(cfg)
+}
+
 // WithEndpoint sets custom proxy endpoint.
 func WithEndpoint(endpoint string) Option {
-	return func(o *config) {
-		o.endpoint = endpoint
-	}
+	return optionFunc(func(cfg *config) *config {
+		cfg.endpoint = endpoint
+		return cfg
+	})
 }
 
 // WithSamplingRulesPollingInterval sets polling interval for sampling rules.
 func WithSamplingRulesPollingInterval(polingInterval time.Duration) Option {
-	return func(o *config) {
-		o.samplingRulesPollingInterval = polingInterval
-	}
+	return optionFunc(func(cfg *config) *config {
+		cfg.samplingRulesPollingInterval = polingInterval
+		return cfg
+	})
 }
 
 // WithLogger sets custom logging for remote sampling implementation.
 func WithLogger(l logr.Logger) Option {
-	return func(o *config) {
-		o.logger = l
-	}
+	return optionFunc(func(cfg *config) *config {
+		cfg.logger = l
+		return cfg
+	})
 }
 
 func newConfig(opts ...Option) *config {
@@ -71,7 +82,7 @@ func newConfig(opts ...Option) *config {
 	}
 
 	for _, option := range opts {
-		option(cfg)
+		option.apply(cfg)
 	}
 
 	return cfg

@@ -23,10 +23,6 @@ import (
 	"net/url"
 )
 
-type getSamplingRulesInput struct {
-	NextToken *string `json:"NextToken"`
-}
-
 // getSamplingRulesOutput is used to store parsed json sampling rules.
 type getSamplingRulesOutput struct {
 	SamplingRuleRecords []*samplingRuleRecords `json:"SamplingRuleRecords"`
@@ -131,23 +127,24 @@ func newClient(addr string) (client *xrayClient, err error) {
 	}
 
 	// construct resolved URL for getSamplingRules and getSamplingTargets API calls
-	samplingRulesURL := endpointURL.String() + "/GetSamplingRules"
-	samplingTargetsURL := endpointURL.String() + "/SamplingTargets"
+	endpointURL.Path = "/GetSamplingRules"
+	samplingRulesURL := *endpointURL
+
+	endpointURL.Path = "/SamplingTargets"
+	samplingTargetsURL := *endpointURL
 
 	return &xrayClient{
 		httpClient:         &http.Client{},
-		samplingRulesURL:   samplingRulesURL,
-		samplingTargetsURL: samplingTargetsURL,
+		samplingRulesURL:   samplingRulesURL.String(),
+		samplingTargetsURL: samplingTargetsURL.String(),
 	}, nil
 }
 
 // getSamplingRules calls the collector(aws proxy enabled) for sampling rules.
 func (c *xrayClient) getSamplingRules(ctx context.Context) (*getSamplingRulesOutput, error) {
-	samplingRulesInput, err := json.Marshal(getSamplingRulesInput{})
-	if err != nil {
-		return nil, err
-	}
-	body := bytes.NewReader(samplingRulesInput)
+	emptySamplingRulesInputJSON := []byte(`{"NextToken": null}`)
+
+	body := bytes.NewReader(emptySamplingRulesInputJSON)
 
 	req, err := http.NewRequestWithContext(ctx, http.MethodPost, c.samplingRulesURL, body)
 	if err != nil {

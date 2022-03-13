@@ -271,8 +271,8 @@ func TestNewClient(t *testing.T) {
 	xrayClient, err := newClient("127.0.0.1:2020")
 	require.NoError(t, err)
 
-	assert.Equal(t, xrayClient.samplingRulesURL, "http://127.0.0.1:2020/GetSamplingRules")
-	assert.Equal(t, xrayClient.samplingTargetsURL, "http://127.0.0.1:2020/SamplingTargets")
+	assert.Equal(t, "http://127.0.0.1:2020/GetSamplingRules", xrayClient.samplingRulesURL)
+	assert.Equal(t, "http://127.0.0.1:2020/SamplingTargets", xrayClient.samplingTargetsURL)
 }
 
 func TestEndpointIsNotReachable(t *testing.T) {

@@ -46,7 +46,6 @@ func TestNewManifest(t *testing.T) {
 	assert.NotEmpty(t, m.clientID)
 	assert.NotEmpty(t, m.SamplingTargetsPollingInterval)
 
-	assert.NotNil(t, m.Clock)
 	assert.NotNil(t, m.xrayClient)
 }
 
@@ -58,7 +57,7 @@ func TestExpiredManifest(t *testing.T) {
 
 	refreshedAt := time.Unix(3700, 0)
 	m := &Manifest{
-		Clock:       clock,
+		clock:       clock,
 		refreshedAt: refreshedAt,
 	}
 
@@ -302,7 +301,7 @@ func TestRefreshManifestRules(t *testing.T) {
 	m := &Manifest{
 		Rules:      []Rule{},
 		xrayClient: client,
-		Clock:      &util.DefaultClock{},
+		clock:      &util.DefaultClock{},
 	}
 
 	err = m.RefreshManifestRules(ctx)
@@ -429,7 +428,7 @@ func TestRefreshManifestMissingServiceName(t *testing.T) {
 	m := &Manifest{
 		Rules:      []Rule{},
 		xrayClient: client,
-		Clock:      &util.DefaultClock{},
+		clock:      &util.DefaultClock{},
 	}
 
 	err = m.RefreshManifestRules(ctx)
@@ -484,7 +483,7 @@ func TestRefreshManifestMissingRuleName(t *testing.T) {
 	m := &Manifest{
 		Rules:      []Rule{},
 		xrayClient: client,
-		Clock:      &util.DefaultClock{},
+		clock:      &util.DefaultClock{},
 		logger:     stdr.NewWithOptions(log.New(os.Stderr, "", log.LstdFlags|log.Lshortfile), stdr.Options{LogCaller: stdr.Error}),
 	}
 
@@ -542,7 +541,7 @@ func TestRefreshManifestIncorrectVersion(t *testing.T) {
 	m := &Manifest{
 		Rules:      []Rule{},
 		xrayClient: client,
-		Clock:      &util.DefaultClock{},
+		clock:      &util.DefaultClock{},
 		logger:     stdr.NewWithOptions(log.New(os.Stderr, "", log.LstdFlags|log.Lshortfile), stdr.Options{LogCaller: stdr.Error}),
 	}
 
@@ -639,7 +638,7 @@ func TestRefreshManifestAddOneInvalidRule(t *testing.T) {
 	m := &Manifest{
 		Rules:      []Rule{},
 		xrayClient: client,
-		Clock:      &util.DefaultClock{},
+		clock:      &util.DefaultClock{},
 		logger:     stdr.NewWithOptions(log.New(os.Stderr, "", log.LstdFlags|log.Lshortfile), stdr.Options{LogCaller: stdr.Error}),
 	}
 
@@ -685,7 +684,7 @@ func TestRefreshManifestTarget_NoSnapShot(t *testing.T) {
 
 	m := &Manifest{
 		Rules:  rules,
-		Clock:  clock,
+		clock:  clock,
 		logger: stdr.NewWithOptions(log.New(os.Stderr, "", log.LstdFlags|log.Lshortfile), stdr.Options{LogCaller: stdr.Error}),
 	}
 
@@ -762,7 +761,7 @@ func TestRefreshManifestTargets(t *testing.T) {
 	refreshedAt := time.Unix(18000000, 0)
 	m := &Manifest{
 		Rules:       rules,
-		Clock:       clock,
+		clock:       clock,
 		logger:      stdr.NewWithOptions(log.New(os.Stderr, "", log.LstdFlags|log.Lshortfile), stdr.Options{LogCaller: stdr.Error}),
 		xrayClient:  client,
 		refreshedAt: refreshedAt,
@@ -777,6 +776,112 @@ func TestRefreshManifestTargets(t *testing.T) {
 	assert.Equal(t, m.Rules[0].reservoir.quota, 23.0)
 	assert.Equal(t, m.Rules[0].reservoir.expiresAt, time.Unix(15000000, 0))
 	assert.Equal(t, m.Rules[0].reservoir.interval, time.Duration(25))
+}
+
+// assert that refresh manifest targets successfully updates samplingTargetsPollingInterval.
+func TestRefreshManifestTargets_PollIntervalUpdateTest(t *testing.T) {
+	// RuleName is missing from r2
+	body := []byte(`{
+   "LastRuleModification": 17000000,
+   "SamplingTargetDocuments": [ 
+      { 
+         "FixedRate": 0.06,
+         "Interval": 15,
+         "ReservoirQuota": 23,
+         "ReservoirQuotaTTL": 15000000,
+         "RuleName": "r1"
+      },
+	  { 
+         "FixedRate": 0.06,
+         "Interval": 5,
+         "ReservoirQuota": 23,
+         "ReservoirQuotaTTL": 15000000,
+         "RuleName": "r2"
+      },
+      { 
+         "FixedRate": 0.06,
+         "Interval": 25,
+         "ReservoirQuota": 23,
+         "ReservoirQuotaTTL": 15000000,
+         "RuleName": "r3"
+      }
+   ],
+   "UnprocessedStatistics": [ 
+      { 
+         "ErrorCode": "200",
+         "Message": "Ok",
+         "RuleName": "r3"
+      }
+   ]
+}`)
+
+	clock := &util.MockClock{
+		NowTime: 150,
+	}
+
+	r1 := Rule{
+		ruleProperties: ruleProperties{
+			RuleName: "r1",
+		},
+		reservoir: reservoir{
+			mu: &sync.RWMutex{},
+		},
+		samplingStatistics: &samplingStatistics{
+			matchedRequests: int64(5),
+		},
+	}
+
+	r2 := Rule{
+		ruleProperties: ruleProperties{
+			RuleName: "r2",
+		},
+		reservoir: reservoir{
+			mu: &sync.RWMutex{},
+		},
+		samplingStatistics: &samplingStatistics{},
+	}
+
+	r3 := Rule{
+		ruleProperties: ruleProperties{
+			RuleName: "r3",
+		},
+		reservoir: reservoir{
+			mu: &sync.RWMutex{},
+		},
+		samplingStatistics: &samplingStatistics{},
+	}
+
+	rules := []Rule{r1, r2, r3}
+
+	// generate a test server so we can capture and inspect the request
+	testServer := httptest.NewServer(http.HandlerFunc(func(res http.ResponseWriter, req *http.Request) {
+		_, err := res.Write(body)
+		require.NoError(t, err)
+	}))
+	defer testServer.Close()
+
+	u, err := url.Parse(testServer.URL)
+	require.NoError(t, err)
+
+	client, err := newClient(u.Host)
+	require.NoError(t, err)
+
+	client.samplingTargetsURL = "http://" + u.Host + "/SamplingTargets"
+	refreshedAt := time.Unix(18000000, 0)
+
+	m := &Manifest{
+		Rules:       rules,
+		clock:       clock,
+		logger:      stdr.NewWithOptions(log.New(os.Stderr, "", log.LstdFlags|log.Lshortfile), stdr.Options{LogCaller: stdr.Error}),
+		xrayClient:  client,
+		refreshedAt: refreshedAt,
+	}
+
+	_, err = m.RefreshManifestTargets(context.Background())
+	require.NoError(t, err)
+
+	// assert that sampling rules polling interval is minimum of all target intervals min(15, 5, 25)
+	assert.Equal(t, m.SamplingTargetsPollingInterval, 5*time.Second)
 }
 
 // assert that a valid sampling target updates its rule.
@@ -821,7 +926,7 @@ func TestUpdateTargets(t *testing.T) {
 
 	m := &Manifest{
 		Rules: rules,
-		Clock: clock,
+		clock: clock,
 	}
 
 	refresh, err := m.updateTargets(targets)
@@ -895,7 +1000,7 @@ func TestUpdateTargetsRefreshFlagTest(t *testing.T) {
 	m := &Manifest{
 		Rules:       rules,
 		refreshedAt: clock.Now(),
-		Clock:       clock,
+		clock:       clock,
 	}
 
 	refresh, err := m.updateTargets(targets)
@@ -955,7 +1060,7 @@ func TestUpdateTargetsUnprocessedStatistics(t *testing.T) {
 	}
 
 	m := &Manifest{
-		Clock:  clock,
+		clock:  clock,
 		logger: stdr.NewWithOptions(log.New(os.Stderr, "", log.LstdFlags|log.Lshortfile), stdr.Options{LogCaller: stdr.Error}),
 	}
 
@@ -1152,7 +1257,7 @@ func TestSnapshots(t *testing.T) {
 	m := &Manifest{
 		Rules:    rules,
 		clientID: &id,
-		Clock:    clock,
+		clock:    clock,
 	}
 
 	// Expected SamplingStatistics structs
@@ -1264,7 +1369,7 @@ func TestMixedSnapshots(t *testing.T) {
 
 	m := &Manifest{
 		clientID: &id,
-		Clock:    clock,
+		clock:    clock,
 		Rules:    rules,
 	}
 
@@ -1365,9 +1470,9 @@ func TestSortBasedOnRuleName(t *testing.T) {
 
 // asserts the minimum value of all the targets.
 func TestMinPollInterval(t *testing.T) {
-	r1 := Rule{reservoir: reservoir{interval: 10}}
-	r2 := Rule{reservoir: reservoir{interval: 5}}
-	r3 := Rule{reservoir: reservoir{interval: 25}}
+	r1 := Rule{reservoir: reservoir{interval: time.Duration(10)}}
+	r2 := Rule{reservoir: reservoir{interval: time.Duration(5)}}
+	r3 := Rule{reservoir: reservoir{interval: time.Duration(25)}}
 
 	rules := []Rule{r1, r2, r3}
 	m := &Manifest{Rules: rules}
@@ -1379,23 +1484,23 @@ func TestMinPollInterval(t *testing.T) {
 
 // asserts the minimum value of all the targets when some targets has 0 interval.
 func TestMinPollIntervalZeroCase(t *testing.T) {
-	r1 := Rule{reservoir: reservoir{interval: 0}}
-	r2 := Rule{reservoir: reservoir{interval: 0}}
-	r3 := Rule{reservoir: reservoir{interval: 5}}
+	r1 := Rule{reservoir: reservoir{interval: time.Duration(0)}}
+	r2 := Rule{reservoir: reservoir{interval: time.Duration(0)}}
+	r3 := Rule{reservoir: reservoir{interval: time.Duration(5)}}
 
 	rules := []Rule{r1, r2, r3}
 	m := &Manifest{Rules: rules}
 
 	minPoll := m.minimumPollingInterval()
 
-	assert.Equal(t, 5*time.Second, minPoll)
+	assert.Equal(t, 0*time.Second, minPoll)
 }
 
 // asserts the minimum value of all the targets when some targets has negative interval.
 func TestMinPollIntervalNegativeCase(t *testing.T) {
-	r1 := Rule{reservoir: reservoir{interval: -5}}
-	r2 := Rule{reservoir: reservoir{interval: 0}}
-	r3 := Rule{reservoir: reservoir{interval: 0}}
+	r1 := Rule{reservoir: reservoir{interval: time.Duration(-5)}}
+	r2 := Rule{reservoir: reservoir{interval: time.Duration(0)}}
+	r3 := Rule{reservoir: reservoir{interval: time.Duration(0)}}
 
 	rules := []Rule{r1, r2, r3}
 	m := &Manifest{Rules: rules}
