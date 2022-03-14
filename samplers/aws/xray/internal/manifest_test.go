@@ -39,7 +39,11 @@ import (
 // assert that new manifest has certain non-nil attributes.
 func TestNewManifest(t *testing.T) {
 	logger := stdr.NewWithOptions(log.New(os.Stderr, "", log.LstdFlags|log.Lshortfile), stdr.Options{LogCaller: stdr.Error})
-	m, err := NewManifest("127.0.0.1:2000", logger)
+
+	endpoint, err := url.Parse("http://127.0.0.1:2020")
+	require.NoError(t, err)
+
+	m, err := NewManifest(*endpoint, logger)
 	require.NoError(t, err)
 
 	assert.NotEmpty(t, m.logger)
@@ -67,7 +71,10 @@ func TestExpiredManifest(t *testing.T) {
 // assert that if collector is not enabled at specified endpoint, returns an error
 func TestRefreshManifestError(t *testing.T) {
 	// collector is not running at port 2020 so expect error
-	client, err := newClient("127.0.0.1:2020")
+	endpoint, err := url.Parse("http://127.0.0.1:2020")
+	require.NoError(t, err)
+
+	client, err := newClient(*endpoint)
 	require.NoError(t, err)
 
 	m := &Manifest{
@@ -295,7 +302,7 @@ func TestRefreshManifestRules(t *testing.T) {
 	u, err := url.Parse(testServer.URL)
 	require.NoError(t, err)
 
-	client, err := newClient(u.Host)
+	client, err := newClient(*u)
 	require.NoError(t, err)
 
 	m := &Manifest{
@@ -422,7 +429,7 @@ func TestRefreshManifestMissingServiceName(t *testing.T) {
 	u, err := url.Parse(testServer.URL)
 	require.NoError(t, err)
 
-	client, err := newClient(u.Host)
+	client, err := newClient(*u)
 	require.NoError(t, err)
 
 	m := &Manifest{
@@ -477,7 +484,7 @@ func TestRefreshManifestMissingRuleName(t *testing.T) {
 	u, err := url.Parse(testServer.URL)
 	require.NoError(t, err)
 
-	client, err := newClient(u.Host)
+	client, err := newClient(*u)
 	require.NoError(t, err)
 
 	m := &Manifest{
@@ -535,7 +542,7 @@ func TestRefreshManifestIncorrectVersion(t *testing.T) {
 	u, err := url.Parse(testServer.URL)
 	require.NoError(t, err)
 
-	client, err := newClient(u.Host)
+	client, err := newClient(*u)
 	require.NoError(t, err)
 
 	m := &Manifest{
@@ -632,7 +639,7 @@ func TestRefreshManifestAddOneInvalidRule(t *testing.T) {
 	u, err := url.Parse(testServer.URL)
 	require.NoError(t, err)
 
-	client, err := newClient(u.Host)
+	client, err := newClient(*u)
 	require.NoError(t, err)
 
 	m := &Manifest{
@@ -756,7 +763,7 @@ func TestRefreshManifestTargets(t *testing.T) {
 	u, err := url.Parse(testServer.URL)
 	require.NoError(t, err)
 
-	client, err := newClient(u.Host)
+	client, err := newClient(*u)
 	require.NoError(t, err)
 	refreshedAt := time.Unix(18000000, 0)
 	m := &Manifest{
@@ -863,10 +870,9 @@ func TestRefreshManifestTargets_PollIntervalUpdateTest(t *testing.T) {
 	u, err := url.Parse(testServer.URL)
 	require.NoError(t, err)
 
-	client, err := newClient(u.Host)
+	client, err := newClient(*u)
 	require.NoError(t, err)
 
-	client.samplingTargetsURL = "http://" + u.Host + "/SamplingTargets"
 	refreshedAt := time.Unix(18000000, 0)
 
 	m := &Manifest{

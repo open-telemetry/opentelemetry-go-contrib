@@ -59,10 +59,13 @@ var _ sdktrace.Sampler = (*remoteSampler)(nil)
 // sampling rules and sampling targets.
 func NewRemoteSampler(ctx context.Context, serviceName string, cloudPlatform string, opts ...Option) (sdktrace.Sampler, error) {
 	// create new config based on options or set to default values
-	cfg := newConfig(opts...)
+	cfg, err := newConfig(opts...)
+	if err != nil {
+		return nil, err
+	}
 
 	// validate config
-	err := validateConfig(cfg)
+	err = validateConfig(cfg)
 	if err != nil {
 		return nil, err
 	}

@@ -99,7 +99,7 @@ func TestGetSamplingRules(t *testing.T) {
 	u, err := url.Parse(testServer.URL)
 	require.NoError(t, err)
 
-	client, err := newClient(u.Host)
+	client, err := newClient(*u)
 	require.NoError(t, err)
 
 	samplingRules, err := client.getSamplingRules(ctx)
@@ -162,7 +162,7 @@ func TestGetSamplingRulesWithMissingValues(t *testing.T) {
 	u, err := url.Parse(testServer.URL)
 	require.NoError(t, err)
 
-	client, err := newClient(u.Host)
+	client, err := newClient(*u)
 	require.NoError(t, err)
 
 	samplingRules, err := client.getSamplingRules(ctx)
@@ -209,7 +209,7 @@ func TestGetSamplingTargets(t *testing.T) {
 	u, err := url.Parse(testServer.URL)
 	require.NoError(t, err)
 
-	client, err := newClient(u.Host)
+	client, err := newClient(*u)
 	require.NoError(t, err)
 
 	samplingTragets, err := client.getSamplingTargets(ctx, nil)
@@ -254,10 +254,10 @@ func TestGetSamplingTargetsMissingValues(t *testing.T) {
 	}))
 	defer testServer.Close()
 
-	u, err := url.Parse(testServer.URL)
+	endpoint, err := url.Parse(testServer.URL)
 	require.NoError(t, err)
 
-	client, err := newClient(u.Host)
+	client, err := newClient(*endpoint)
 	require.NoError(t, err)
 
 	samplingTragets, err := client.getSamplingTargets(ctx, nil)
@@ -268,7 +268,10 @@ func TestGetSamplingTargetsMissingValues(t *testing.T) {
 }
 
 func TestNewClient(t *testing.T) {
-	xrayClient, err := newClient("127.0.0.1:2020")
+	endpoint, err := url.Parse("http://127.0.0.1:2020")
+	require.NoError(t, err)
+
+	xrayClient, err := newClient(*endpoint)
 	require.NoError(t, err)
 
 	assert.Equal(t, "http://127.0.0.1:2020/GetSamplingRules", xrayClient.samplingRulesURL)
@@ -276,7 +279,10 @@ func TestNewClient(t *testing.T) {
 }
 
 func TestEndpointIsNotReachable(t *testing.T) {
-	client, err := newClient("127.0.0.1:2020")
+	endpoint, err := url.Parse("http://127.0.0.1:2020")
+	require.NoError(t, err)
+
+	client, err := newClient(*endpoint)
 	require.NoError(t, err)
 
 	_, err = client.getSamplingRules(context.Background())

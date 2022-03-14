@@ -118,20 +118,13 @@ type xrayClient struct {
 }
 
 // newClient returns an HTTP client with proxy endpoint.
-func newClient(addr string) (client *xrayClient, err error) {
-	endpoint := "http://" + addr
-
-	endpointURL, err := url.Parse(endpoint)
-	if err != nil {
-		return nil, err
-	}
-
+func newClient(endpoint url.URL) (client *xrayClient, err error) {
 	// construct resolved URL for getSamplingRules and getSamplingTargets API calls
-	endpointURL.Path = "/GetSamplingRules"
-	samplingRulesURL := *endpointURL
+	endpoint.Path = "/GetSamplingRules"
+	samplingRulesURL := endpoint
 
-	endpointURL.Path = "/SamplingTargets"
-	samplingTargetsURL := *endpointURL
+	endpoint.Path = "/SamplingTargets"
+	samplingTargetsURL := endpoint
 
 	return &xrayClient{
 		httpClient:         &http.Client{},

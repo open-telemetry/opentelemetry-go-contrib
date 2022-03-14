@@ -18,9 +18,9 @@ import (
 	"fmt"
 	"log"
 	"math"
+	"net/url"
 	"os"
 	"regexp"
-	"strconv"
 	"strings"
 	"time"
 
@@ -29,12 +29,11 @@ import (
 )
 
 const (
-	defaultProxyEndpoint   = "127.0.0.1:2000"
 	defaultPollingInterval = 300
 )
 
 type config struct {
-	endpoint                     string
+	endpoint                     url.URL
 	samplingRulesPollingInterval time.Duration
 	logger                       logr.Logger
 }
@@ -51,7 +50,7 @@ func (f optionFunc) apply(cfg *config) *config {
 }
 
 // WithEndpoint sets custom proxy endpoint.
-func WithEndpoint(endpoint string) Option {
+func WithEndpoint(endpoint url.URL) Option {
 	return optionFunc(func(cfg *config) *config {
 		cfg.endpoint = endpoint
 		return cfg
@@ -74,9 +73,14 @@ func WithLogger(l logr.Logger) Option {
 	})
 }
 
-func newConfig(opts ...Option) *config {
+func newConfig(opts ...Option) (*config, error) {
+	defaultProxyEndpoint, err := url.Parse("http://127.0.0.1:2000")
+	if err != nil {
+		return nil, err
+	}
+
 	cfg := &config{
-		endpoint:                     defaultProxyEndpoint,
+		endpoint:                     *defaultProxyEndpoint,
 		samplingRulesPollingInterval: defaultPollingInterval * time.Second,
 		logger:                       stdr.NewWithOptions(log.New(os.Stderr, "", log.LstdFlags|log.Lshortfile), stdr.Options{LogCaller: stdr.Error}),
 	}
@@ -85,16 +89,18 @@ func newConfig(opts ...Option) *config {
 		option.apply(cfg)
 	}
 
-	return cfg
+	return cfg, nil
 }
 
 func validateConfig(cfg *config) (err error) {
 	// check endpoint follows certain format
-	split := strings.Split(cfg.endpoint, ":")
+	endpointHostSplit := strings.Split(cfg.endpoint.Host, ":")
 
-	if len(split) > 2 {
-		return fmt.Errorf("endpoint validation error: expected format is 127.0.0.1:8080")
+	if len(endpointHostSplit) > 2 {
+		return fmt.Errorf("config validation error: expected endpoint host format is hostname:port")
 	}
+
+	hostName := endpointHostSplit[0]
 
 	// validate host name
 	r, err := regexp.Compile("[^A-Za-z0-9.]")
@@ -102,18 +108,13 @@ func validateConfig(cfg *config) (err error) {
 		return err
 	}
 
-	if r.MatchString(split[0]) {
-		return fmt.Errorf("endpoint validation error: expected format is 127.0.0.1:8080")
-	}
-
-	// validate port
-	if _, err := strconv.Atoi(split[1]); err != nil {
-		return fmt.Errorf("endpoint validation error: expected format is 127.0.0.1:8080")
+	if r.MatchString(hostName) || hostName == "" {
+		return fmt.Errorf("config validation error: host name should not contain special characters or empty")
 	}
 
 	// validate polling interval is positive
 	if math.Signbit(float64(cfg.samplingRulesPollingInterval)) {
-		return fmt.Errorf("endpoint validation error: samplingRulesPollingInterval should be positive number")
+		return fmt.Errorf("config validation error: samplingRulesPollingInterval should be positive number")
 	}
 
 	return

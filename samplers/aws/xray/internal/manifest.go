@@ -19,6 +19,7 @@ import (
 	crypto "crypto/rand"
 	"fmt"
 	"math"
+	"net/url"
 	"sort"
 	"strings"
 	"sync"
@@ -47,7 +48,7 @@ type Manifest struct {
 }
 
 // NewManifest return manifest object configured with logging, clock and xrayClient.
-func NewManifest(addr string, logger logr.Logger) (*Manifest, error) {
+func NewManifest(addr url.URL, logger logr.Logger) (*Manifest, error) {
 	// generate client for getSamplingRules and getSamplingTargets API call
 	client, err := newClient(addr)
 	if err != nil {
