@@ -8,7 +8,7 @@ replace (
 )
 
 require (
-	github.com/aws/aws-sdk-go-v2 v1.14.0
+	github.com/aws/aws-sdk-go-v2 v1.15.0
 	github.com/aws/aws-sdk-go-v2/config v1.14.0
 	github.com/aws/aws-sdk-go-v2/service/dynamodb v1.14.0
 	github.com/aws/aws-sdk-go-v2/service/s3 v1.25.0
