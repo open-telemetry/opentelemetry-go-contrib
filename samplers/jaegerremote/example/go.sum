@@ -46,7 +46,6 @@ github.com/google/go-cmp v0.3.1/go.mod h1:8QqcDgzrUqlUb/G2PQTWiueGozuR1884gddMyw
 github.com/google/go-cmp v0.4.0/go.mod h1:v8dTdLbMG2kIc/vJvl+f65V22dbkXbowE6jgT/gNBxE=
 github.com/google/go-cmp v0.5.0/go.mod h1:v8dTdLbMG2kIc/vJvl+f65V22dbkXbowE6jgT/gNBxE=
 github.com/google/go-cmp v0.5.5/go.mod h1:v8dTdLbMG2kIc/vJvl+f65V22dbkXbowE6jgT/gNBxE=
-github.com/google/go-cmp v0.5.6/go.mod h1:v8dTdLbMG2kIc/vJvl+f65V22dbkXbowE6jgT/gNBxE=
 github.com/google/go-cmp v0.5.7 h1:81/ik6ipDQS2aGcBfIN5dHDB36BwrStyeAQquSYCV4o=
 github.com/google/go-cmp v0.5.7/go.mod h1:n+brtR0CgQNWTVd5ZUFpTBC8YFBDLK/h/bpaJ8/DtOE=
 github.com/google/uuid v1.1.2/go.mod h1:TIyPZe4MgqvfeYDBFedMoGGpEw/LqOeaOT+nhxU+yHo=
@@ -64,15 +63,12 @@ github.com/stretchr/testify v1.7.0 h1:nwc3DEeHmmLAfoZucVR881uASk0Mfjw8xYJ99tb5Cc
 github.com/stretchr/testify v1.7.0/go.mod h1:6Fq8oRcR53rry900zMqJjRRixrwX3KX962/h/Wwjteg=
 github.com/yuin/goldmark v1.1.27/go.mod h1:3hX8gzYuyVAZsxl0MRgGTJEmQBFcNTphYh9decYSb74=
 github.com/yuin/goldmark v1.2.1/go.mod h1:3hX8gzYuyVAZsxl0MRgGTJEmQBFcNTphYh9decYSb74=
-go.opentelemetry.io/otel v1.1.0/go.mod h1:7cww0OW51jQ8IaZChIEdqLwgh+44+7uiTdWsAL0wQpA=
 go.opentelemetry.io/otel v1.4.1 h1:QbINgGDDcoQUoMJa2mMaWno49lja9sHwp6aoa2n3a4g=
 go.opentelemetry.io/otel v1.4.1/go.mod h1:StM6F/0fSwpd8dKWDCdRr7uRvEPYdW0hBSlbdTiUde4=
-go.opentelemetry.io/otel/exporters/stdout/stdouttrace v1.1.0 h1:n9UCiD5XeG/a67Qvzsg9eRXB7DkysXtO7n8vSVnq2vI=
-go.opentelemetry.io/otel/exporters/stdout/stdouttrace v1.1.0/go.mod h1:lISWK4NRLxKH/IrroKBpMd7k/pBuUUaEU6bCykFb9hQ=
-go.opentelemetry.io/otel/sdk v1.1.0/go.mod h1:3aQvM6uLm6C4wJpHtT8Od3vNzeZ34Pqc6bps8MywWzo=
+go.opentelemetry.io/otel/exporters/stdout/stdouttrace v1.4.1 h1:yaXaoJjXaJqRnsfW9HrN7pGb7bzcEn31Rk6yo2LFaWo=
+go.opentelemetry.io/otel/exporters/stdout/stdouttrace v1.4.1/go.mod h1:BFiGsTMZdqtxufux8ANXuMeRz9dMPVFdJZadUWDFD7o=
 go.opentelemetry.io/otel/sdk v1.4.1 h1:J7EaW71E0v87qflB4cDolaqq3AcujGrtyIPGQoZOB0Y=
 go.opentelemetry.io/otel/sdk v1.4.1/go.mod h1:NBwHDgDIBYjwK2WNu1OPgsIc2IJzmBXNnvIJxJc8BpE=
-go.opentelemetry.io/otel/trace v1.1.0/go.mod h1:i47XtdcBQiktu5IsrPqOHe8w+sBmnLwwHt8wiUsWGTI=
 go.opentelemetry.io/otel/trace v1.4.1 h1:O+16qcdTrT7zxv2J6GejTPFinSwA++cYerC5iSiF8EQ=
 go.opentelemetry.io/otel/trace v1.4.1/go.mod h1:iYEVbroFCNut9QkwEczV9vMRPHNKSSwYZjulEtsmhFc=
 go.opentelemetry.io/proto/otlp v0.7.0/go.mod h1:PqfVotwruBrMGOCsRd/89rSnXhoiJIqeYNgFYFoEGnI=
