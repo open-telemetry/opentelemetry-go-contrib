@@ -22,10 +22,10 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 
 ### Removed
 
-- The deprecated `go.opentelemetry.io/contrib/exporters/metric/datadog` module is removed. (TBD)
-- The deprecated `go.opentelemetry.io/contrib/exporters/metric/dogstatsd` module is removed. (TBD)
+- The deprecated `go.opentelemetry.io/contrib/exporters/metric/datadog` module is removed. (#1920)
+- The deprecated `go.opentelemetry.io/contrib/exporters/metric/dogstatsd` module is removed. (#1920)
 - The deprecated `go.opentelemetry.io/contrib/exporters/metric/cortex` module is removed.
-  Use the `go.opentelemetry.io/otel/exporters/otlp/otlpmetric` exporter as a replacement to send data to a collector which can then export with its PRW exporter. (TBD)
+  Use the `go.opentelemetry.io/otel/exporters/otlp/otlpmetric` exporter as a replacement to send data to a collector which can then export with its PRW exporter. (#1920)
 
 ## [1.4.0/0.29.0] - 2022-02-14
 
