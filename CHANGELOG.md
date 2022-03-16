@@ -8,6 +8,7 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 
 ## [Unreleased]
 
+## [1.5.0/0.30.0/0.1.0] - 2022-03-16
 
 ### Added
 
@@ -464,7 +465,8 @@ First official tagged release of `contrib` repository.
 - Prefix support for dogstatsd (#34)
 - Update Go Runtime package to use batch observer (#44)
 
-[Unreleased]: https://github.com/open-telemetry/opentelemetry-go-contrib/compare/v1.4.0...HEAD
+[Unreleased]: https://github.com/open-telemetry/opentelemetry-go-contrib/compare/v1.5.0...HEAD
+[1.5.0/0.30.0/0.1.0]: https://github.com/open-telemetry/opentelemetry-go-contrib/releases/tag/v1.5.0
 [1.4.0/0.29.0]: https://github.com/open-telemetry/opentelemetry-go-contrib/releases/tag/v1.4.0
 [1.3.0/0.28.0]: https://github.com/open-telemetry/opentelemetry-go-contrib/releases/tag/v1.3.0
 [1.2.0/0.27.0]: https://github.com/open-telemetry/opentelemetry-go-contrib/releases/tag/v1.2.0
