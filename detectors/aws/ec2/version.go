@@ -16,7 +16,7 @@ package ec2
 
 // Version is the current release version of the EC2 resource detector.
 func Version() string {
-	return "1.4.0"
+	return "1.5.0"
 	// This string is updated by the pre_release.sh script during release
 }
 
