@@ -6,12 +6,11 @@
 [![Go Report Card](https://goreportcard.com/badge/go.opentelemetry.io/contrib)](https://goreportcard.com/report/go.opentelemetry.io/contrib)
 [![Slack](https://img.shields.io/badge/slack-@cncf/otel--go-brightgreen.svg?logo=slack)](https://cloud-native.slack.com/archives/C01NPAXACKT)
 
-Collection of 3rd-party instrumentation and exporters for [OpenTelemetry-Go](https://github.com/open-telemetry/opentelemetry-go).
+Collection of 3rd-party packages for [OpenTelemetry-Go](https://github.com/open-telemetry/opentelemetry-go).
 
 ## Contents
 
 - [Instrumentation](./instrumentation/): Packages providing OpenTelemetry instrumentation for 3rd-party libraries.
-- [Exporters](./exporters/): Packages providing OpenTelemetry exporters for 3rd-party telemetry systems.
 - [Propagators](./propagators/): Packages providing OpenTelemetry context propagators for 3rd-party propagation formats.
 - [Detectors](./detectors/): Packages providing OpenTelemetry resource detectors for 3rd-party cloud computing environments.
 
