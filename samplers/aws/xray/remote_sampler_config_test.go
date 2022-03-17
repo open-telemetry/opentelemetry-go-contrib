@@ -84,10 +84,7 @@ func TestValidateHostNameWithSpecialCharacterEndpoint(t *testing.T) {
 	endpoint, err := url.Parse("http://127.0.0.1@:2000")
 	require.NoError(t, err)
 
-	cfg, err := newConfig(WithEndpoint(*endpoint))
-	require.NoError(t, err)
-
-	err = validateConfig(cfg)
+	_, err = newConfig(WithEndpoint(*endpoint))
 	assert.Error(t, err)
 }
 
@@ -96,27 +93,18 @@ func TestValidateInvalidEndpoint(t *testing.T) {
 	endpoint, err := url.Parse("https://")
 	require.NoError(t, err)
 
-	cfg, err := newConfig(WithEndpoint(*endpoint))
-	require.NoError(t, err)
-
-	err = validateConfig(cfg)
+	_, err = newConfig(WithEndpoint(*endpoint))
 	assert.Error(t, err)
 }
 
 // assert negative sampling rules interval leads to an error.
 func TestValidateConfigNegativeDuration(t *testing.T) {
-	cfg, err := newConfig(WithSamplingRulesPollingInterval(-300 * time.Second))
-	require.NoError(t, err)
-
-	err = validateConfig(cfg)
+	_, err := newConfig(WithSamplingRulesPollingInterval(-300 * time.Second))
 	assert.Error(t, err)
 }
 
 // assert positive sampling rules interval.
 func TestValidateConfigPositiveDuration(t *testing.T) {
-	cfg, err := newConfig(WithSamplingRulesPollingInterval(300 * time.Second))
-	require.NoError(t, err)
-
-	err = validateConfig(cfg)
+	_, err := newConfig(WithSamplingRulesPollingInterval(300 * time.Second))
 	assert.NoError(t, err)
 }

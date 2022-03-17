@@ -64,12 +64,6 @@ func NewRemoteSampler(ctx context.Context, serviceName string, cloudPlatform str
 		return nil, err
 	}
 
-	// validate config
-	err = validateConfig(cfg)
-	if err != nil {
-		return nil, err
-	}
-
 	// create manifest with config
 	m, err := internal.NewManifest(cfg.endpoint, cfg.logger)
 	if err != nil {

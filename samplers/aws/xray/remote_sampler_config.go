@@ -89,6 +89,12 @@ func newConfig(opts ...Option) (*config, error) {
 		option.apply(cfg)
 	}
 
+	// validate config
+	err = validateConfig(cfg)
+	if err != nil {
+		return nil, err
+	}
+
 	return cfg, nil
 }
 

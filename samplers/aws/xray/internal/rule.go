@@ -202,10 +202,9 @@ func (r *Rule) attributeMatching(parameters sdktrace.SamplingParameters) (bool, 
 				} else {
 					unmatchedCounter++
 				}
-
-				if unmatchedCounter == len(parameters.Attributes) {
-					return false, nil
-				}
+			}
+			if unmatchedCounter == len(parameters.Attributes) {
+				return false, nil
 			}
 		}
 		return match, nil
