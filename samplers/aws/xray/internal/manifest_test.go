@@ -1515,6 +1515,16 @@ func TestMinPollIntervalNegativeCase(t *testing.T) {
 	assert.Equal(t, -5*time.Second, minPoll)
 }
 
+// asserts that manifest with empty rules return 0
+func TestMinPollIntervalNoRules(t *testing.T) {
+	var rules []Rule
+	m := &Manifest{Rules: rules}
+
+	minPoll := m.minimumPollingInterval()
+
+	assert.Equal(t, 0*time.Second, minPoll)
+}
+
 // assert that able to successfully generate the client ID.
 func TestGenerateClientID(t *testing.T) {
 	clientID, err := generateClientID()

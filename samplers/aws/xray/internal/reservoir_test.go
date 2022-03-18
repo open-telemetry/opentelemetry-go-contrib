@@ -238,3 +238,22 @@ func TestQuotaBalanceBorrow(t *testing.T) {
 	// assert that if quotaBalance exceeds capacity then total capacity would be new quotaBalance
 	assert.Equal(t, r.quotaBalance, 1.0)
 }
+
+// assert that when borrow is true and elapsedTime is greater than 1, then we only increase the quota balance by 1
+func TestQuotaBalanceIncreaseByOne_BorrowCase(t *testing.T) {
+	clock := &mockClock{
+		nowTime: 1500000002,
+	}
+
+	r := &reservoir{
+		quota:        6,
+		capacity:     5,
+		mu:           &sync.RWMutex{},
+		quotaBalance: 0.25,
+		lastTick:     time.Unix(1500000000, 0),
+	}
+
+	r.refreshQuotaBalance(clock.now(), true)
+
+	assert.Equal(t, r.quotaBalance, 1.25)
+}

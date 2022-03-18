@@ -351,6 +351,28 @@ func TestAppliesToNoMatching(t *testing.T) {
 	assert.False(t, match)
 }
 
+// assert that when attribute has http.url is empty, uses http.target wildcard matching.
+func TestAppliesToHTTPTargetMatching(t *testing.T) {
+	commonLabels := []attribute.KeyValue{
+		attribute.String("http.target", "target"),
+	}
+
+	r1 := Rule{
+		ruleProperties: ruleProperties{
+			RuleName:    "r1",
+			ServiceName: "test-service",
+			ServiceType: "ECS",
+			Host:        "*",
+			HTTPMethod:  "*",
+			URLPath:     "*",
+		},
+	}
+
+	match, err := r1.appliesTo(trace.SamplingParameters{Attributes: commonLabels}, "test-service", "ECS")
+	require.NoError(t, err)
+	assert.True(t, match)
+}
+
 // assert that if rules has attribute and span has those attribute with same value then matching will happen.
 func TestAttributeMatching(t *testing.T) {
 	commonLabels := []attribute.KeyValue{
