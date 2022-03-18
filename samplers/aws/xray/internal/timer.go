@@ -12,7 +12,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package util // import "go.opentelemetry.io/contrib/samplers/aws/xray/internal/util"
+package internal // import "go.opentelemetry.io/contrib/samplers/aws/xray/internal"
 
 import (
 	"time"
@@ -21,19 +21,19 @@ import (
 // Ticker is the same as time.Ticker except that it has jitters.
 // A Ticker must be created with NewTicker.
 type Ticker struct {
-	t      *time.Ticker
-	d      time.Duration
-	jitter time.Duration
+	Tick     *time.Ticker
+	duration time.Duration
+	jitter   time.Duration
 }
 
 // NewTicker creates a new Ticker that will send the current time on its channel.
-func NewTicker(d, jitter time.Duration) *Ticker {
-	t := time.NewTicker(d - time.Duration(newGlobalRand().Int63n(int64(jitter))))
+func NewTicker(duration, jitter time.Duration) *Ticker {
+	t := time.NewTicker(duration - time.Duration(newGlobalRand().Int63n(int64(jitter))))
 
 	jitteredTicker := Ticker{
-		t:      t,
-		d:      d,
-		jitter: jitter,
+		Tick:     t,
+		duration: duration,
+		jitter:   jitter,
 	}
 
 	return &jitteredTicker
@@ -41,5 +41,5 @@ func NewTicker(d, jitter time.Duration) *Ticker {
 
 // C is channel.
 func (j *Ticker) C() <-chan time.Time {
-	return j.t.C
+	return j.Tick.C
 }

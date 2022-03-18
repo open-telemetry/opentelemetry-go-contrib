@@ -19,14 +19,12 @@ import (
 	"testing"
 	"time"
 
-	"go.opentelemetry.io/contrib/samplers/aws/xray/internal/util"
-
 	"github.com/stretchr/testify/assert"
 )
 
 // assert that reservoir quota is expired.
 func TestExpiredReservoir(t *testing.T) {
-	clock := &util.MockClock{
+	clock := &MockClock{
 		NowTime: 1500000001,
 	}
 
@@ -43,7 +41,7 @@ func TestExpiredReservoir(t *testing.T) {
 
 // assert that reservoir quota is still expired since now time is equal to expiresAt time.
 func TestExpiredReservoirSameAsClockTime(t *testing.T) {
-	clock := &util.MockClock{
+	clock := &MockClock{
 		NowTime: 1500000000,
 	}
 
@@ -61,7 +59,7 @@ func TestExpiredReservoirSameAsClockTime(t *testing.T) {
 
 // assert that borrow only 1 req/sec
 func TestBorrowEverySecond(t *testing.T) {
-	clock := &util.MockClock{
+	clock := &MockClock{
 		NowTime: 1500000000,
 	}
 
@@ -77,7 +75,7 @@ func TestBorrowEverySecond(t *testing.T) {
 	assert.False(t, s)
 
 	// Increment clock by 1
-	clock = &util.MockClock{
+	clock = &MockClock{
 		NowTime: 1500000001,
 	}
 
@@ -88,7 +86,7 @@ func TestBorrowEverySecond(t *testing.T) {
 // assert that when reservoir is expired we consume from quota is 1 and then
 // when reservoir is not expired consume from assigned quota by X-Ray service
 func TestConsumeFromBorrow_ConsumeFromQuota(t *testing.T) {
-	clock := &util.MockClock{
+	clock := &MockClock{
 		NowTime: 1500000000,
 	}
 
@@ -105,7 +103,7 @@ func TestConsumeFromBorrow_ConsumeFromQuota(t *testing.T) {
 	assert.False(t, s)
 
 	// Increment clock by 1
-	clock = &util.MockClock{
+	clock = &MockClock{
 		NowTime: 1500000001,
 	}
 
@@ -113,7 +111,7 @@ func TestConsumeFromBorrow_ConsumeFromQuota(t *testing.T) {
 	assert.True(t, s)
 
 	// Increment clock by 1
-	clock = &util.MockClock{
+	clock = &MockClock{
 		NowTime: 1500000002,
 	}
 
@@ -130,7 +128,7 @@ func TestConsumeFromBorrow_ConsumeFromQuota(t *testing.T) {
 // assert that we can still borrowing from reservoir is possible since assigned quota is available to consume
 // and it will increase used count.
 func TestConsumeFromReservoir(t *testing.T) {
-	clock := &util.MockClock{
+	clock := &MockClock{
 		NowTime: 1500000000,
 	}
 
@@ -172,7 +170,7 @@ func TestConsumeFromReservoir(t *testing.T) {
 }
 
 func TestResetQuotaUsageRotation(t *testing.T) {
-	clock := &util.MockClock{
+	clock := &MockClock{
 		NowTime: 1500000000,
 	}
 
@@ -193,7 +191,7 @@ func TestResetQuotaUsageRotation(t *testing.T) {
 	assert.Equal(t, false, taken)
 
 	// increment epoch to reset unused quota
-	clock = &util.MockClock{
+	clock = &MockClock{
 		NowTime: 1500000001,
 	}
 
@@ -205,7 +203,7 @@ func TestResetQuotaUsageRotation(t *testing.T) {
 // assert that when quotaBalance exceeds totalQuotaBalanceCapacity then totalQuotaBalanceCapacity
 // gets assigned to quotaBalance
 func TestQuotaBalanceNonBorrow_ExceedsCapacity(t *testing.T) {
-	clock := &util.MockClock{
+	clock := &MockClock{
 		NowTime: 1500000001,
 	}
 
@@ -224,7 +222,7 @@ func TestQuotaBalanceNonBorrow_ExceedsCapacity(t *testing.T) {
 
 // assert quotaBalance and capacity of borrowing case
 func TestQuotaBalanceBorrow(t *testing.T) {
-	clock := &util.MockClock{
+	clock := &MockClock{
 		NowTime: 1500000001,
 	}
 

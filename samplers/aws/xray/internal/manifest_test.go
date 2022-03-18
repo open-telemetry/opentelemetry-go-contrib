@@ -30,7 +30,6 @@ import (
 	"github.com/go-logr/stdr"
 	"github.com/stretchr/testify/require"
 
-	"go.opentelemetry.io/contrib/samplers/aws/xray/internal/util"
 	sdktrace "go.opentelemetry.io/otel/sdk/trace"
 
 	"github.com/stretchr/testify/assert"
@@ -55,7 +54,7 @@ func TestNewManifest(t *testing.T) {
 
 // assert that manifest is expired.
 func TestExpiredManifest(t *testing.T) {
-	clock := &util.MockClock{
+	clock := &MockClock{
 		NowTime: 10000,
 	}
 
@@ -308,7 +307,7 @@ func TestRefreshManifestRules(t *testing.T) {
 	m := &Manifest{
 		Rules:      []Rule{},
 		xrayClient: client,
-		clock:      &util.DefaultClock{},
+		clock:      &DefaultClock{},
 	}
 
 	err = m.RefreshManifestRules(ctx)
@@ -435,7 +434,7 @@ func TestRefreshManifestMissingServiceName(t *testing.T) {
 	m := &Manifest{
 		Rules:      []Rule{},
 		xrayClient: client,
-		clock:      &util.DefaultClock{},
+		clock:      &DefaultClock{},
 	}
 
 	err = m.RefreshManifestRules(ctx)
@@ -490,7 +489,7 @@ func TestRefreshManifestMissingRuleName(t *testing.T) {
 	m := &Manifest{
 		Rules:      []Rule{},
 		xrayClient: client,
-		clock:      &util.DefaultClock{},
+		clock:      &DefaultClock{},
 		logger:     stdr.NewWithOptions(log.New(os.Stderr, "", log.LstdFlags|log.Lshortfile), stdr.Options{LogCaller: stdr.Error}),
 	}
 
@@ -548,7 +547,7 @@ func TestRefreshManifestIncorrectVersion(t *testing.T) {
 	m := &Manifest{
 		Rules:      []Rule{},
 		xrayClient: client,
-		clock:      &util.DefaultClock{},
+		clock:      &DefaultClock{},
 		logger:     stdr.NewWithOptions(log.New(os.Stderr, "", log.LstdFlags|log.Lshortfile), stdr.Options{LogCaller: stdr.Error}),
 	}
 
@@ -645,7 +644,7 @@ func TestRefreshManifestAddOneInvalidRule(t *testing.T) {
 	m := &Manifest{
 		Rules:      []Rule{},
 		xrayClient: client,
-		clock:      &util.DefaultClock{},
+		clock:      &DefaultClock{},
 		logger:     stdr.NewWithOptions(log.New(os.Stderr, "", log.LstdFlags|log.Lshortfile), stdr.Options{LogCaller: stdr.Error}),
 	}
 
@@ -660,7 +659,7 @@ func TestRefreshManifestAddOneInvalidRule(t *testing.T) {
 
 // assert that inactive rule so return early without doing getSamplingTargets call
 func TestRefreshManifestTarget_NoSnapShot(t *testing.T) {
-	clock := &util.MockClock{
+	clock := &MockClock{
 		NowTime: 15000000,
 	}
 
@@ -723,7 +722,7 @@ func TestRefreshManifestTargets(t *testing.T) {
    ]
 }`)
 
-	clock := &util.MockClock{
+	clock := &MockClock{
 		NowTime: 150,
 	}
 
@@ -822,7 +821,7 @@ func TestRefreshManifestTargets_PollIntervalUpdateTest(t *testing.T) {
    ]
 }`)
 
-	clock := &util.MockClock{
+	clock := &MockClock{
 		NowTime: 150,
 	}
 
@@ -892,7 +891,7 @@ func TestRefreshManifestTargets_PollIntervalUpdateTest(t *testing.T) {
 
 // assert that a valid sampling target updates its rule.
 func TestUpdateTargets(t *testing.T) {
-	clock := &util.MockClock{
+	clock := &MockClock{
 		NowTime: 1500000000,
 	}
 
@@ -963,7 +962,7 @@ func TestUpdateTargets(t *testing.T) {
 // assert that when last rule modification time is greater than manifest refresh time we need to update manifest
 // out of band (async).
 func TestUpdateTargetsRefreshFlagTest(t *testing.T) {
-	clock := &util.MockClock{
+	clock := &MockClock{
 		NowTime: 1500000000,
 	}
 
@@ -1036,7 +1035,7 @@ func TestUpdateTargetsRefreshFlagTest(t *testing.T) {
 
 // unprocessed statistics error code is 5xx then updateTargets returns an error, if 4xx refresh flag set to true.
 func TestUpdateTargetsUnprocessedStatistics(t *testing.T) {
-	clock := &util.MockClock{
+	clock := &MockClock{
 		NowTime: 1500000000,
 	}
 
@@ -1215,7 +1214,7 @@ func TestUpdateReservoirMissingRuleName(t *testing.T) {
 
 // assert that snapshots returns an array of valid sampling statistics.
 func TestSnapshots(t *testing.T) {
-	clock := &util.MockClock{
+	clock := &MockClock{
 		NowTime: 1500000000,
 	}
 
@@ -1298,7 +1297,7 @@ func TestSnapshots(t *testing.T) {
 
 // assert that fresh and inactive rules are not included in a snapshot.
 func TestMixedSnapshots(t *testing.T) {
-	clock := &util.MockClock{
+	clock := &MockClock{
 		NowTime: 1500000000,
 	}
 

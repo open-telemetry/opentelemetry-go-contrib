@@ -2,8 +2,6 @@ module go.opentelemetry.io/contrib/samplers/aws/xray
 
 go 1.16
 
-replace go.opentelemetry.io/contrib/samplers/aws/xray/internal => ../internal
-
 require (
 	github.com/go-logr/logr v1.2.2
 	github.com/go-logr/stdr v1.2.2

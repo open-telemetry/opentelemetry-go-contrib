@@ -28,7 +28,6 @@ import (
 	"github.com/go-logr/logr"
 	"github.com/jinzhu/copier"
 
-	"go.opentelemetry.io/contrib/samplers/aws/xray/internal/util"
 	sdktrace "go.opentelemetry.io/otel/sdk/trace"
 )
 
@@ -43,7 +42,7 @@ type Manifest struct {
 	xrayClient                     *xrayClient
 	clientID                       *string
 	logger                         logr.Logger
-	clock                          util.Clock
+	clock                          Clock
 	mu                             sync.RWMutex
 }
 
@@ -63,7 +62,7 @@ func NewManifest(addr url.URL, logger logr.Logger) (*Manifest, error) {
 
 	return &Manifest{
 		xrayClient:                     client,
-		clock:                          &util.DefaultClock{},
+		clock:                          &DefaultClock{},
 		logger:                         logger,
 		SamplingTargetsPollingInterval: 10 * time.Second,
 		clientID:                       clientID,

@@ -18,8 +18,6 @@ import (
 	"context"
 	"time"
 
-	"go.opentelemetry.io/contrib/samplers/aws/xray/internal/util"
-
 	"go.opentelemetry.io/contrib/samplers/aws/xray/internal"
 	sdktrace "go.opentelemetry.io/otel/sdk/trace"
 
@@ -129,10 +127,12 @@ func (rs *remoteSampler) start(ctx context.Context) {
 // to refresh manifest and targets.
 func (rs *remoteSampler) startPoller(ctx context.Context) {
 	// jitter = 5s, default 300 seconds
-	rulesTicker := util.NewTicker(rs.samplingRulesPollingInterval, 5*time.Second)
+	rulesTicker := internal.NewTicker(rs.samplingRulesPollingInterval, 5*time.Second)
+	defer rulesTicker.Tick.Stop()
 
 	// jitter = 100ms, default 10 seconds
-	targetTicker := util.NewTicker(rs.manifest.SamplingTargetsPollingInterval, 100*time.Millisecond)
+	targetTicker := internal.NewTicker(rs.manifest.SamplingTargetsPollingInterval, 100*time.Millisecond)
+	defer targetTicker.Tick.Stop()
 
 	// fetch sampling rules to kick start the remote sampling
 	rs.refreshManifest(ctx)
