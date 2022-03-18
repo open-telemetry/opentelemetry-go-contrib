@@ -8,12 +8,16 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 
 ## [Unreleased]
 
+## [1.5.0/0.30.0/0.1.0] - 2022-03-16
 
 ### Added
 
-- DynamoDB spans created with the `go.opentelemetry.io/contrib/instrumentation/github.com/aws/aws-sdk-go-v2/otelaws` package will now have the appropriate database attributes added for the operation being performed.
+- Added the `go.opentelemetry.io/contrib/samplers/jaegerremote` package.
+  This package implements the Jaeger remote sampler for OpenTelemetry Go. (#936)
+- DynamoDB spans created with the `go.opentelemetry.io/contrib/instrumentation/github.com/aws/aws-sdk-go-v2/otelaws` package now have the appropriate database attributes added for the operation being performed.
   These attributes are detected automatically, but it is also now possible to provide a custom function to set attributes using `WithAttributeSetter`. (#1582)
-- Add resource detector for GCP cloud function.
+- Add resource detector for GCP cloud function. (#1584)
+- Add OpenTracing baggage extraction to the OpenTracing propagator in `go.opentelemetry.io/contrib/propagators/ot`. (#1880)
 
 ### Fixed
 
@@ -464,7 +468,8 @@ First official tagged release of `contrib` repository.
 - Prefix support for dogstatsd (#34)
 - Update Go Runtime package to use batch observer (#44)
 
-[Unreleased]: https://github.com/open-telemetry/opentelemetry-go-contrib/compare/v1.4.0...HEAD
+[Unreleased]: https://github.com/open-telemetry/opentelemetry-go-contrib/compare/v1.5.0...HEAD
+[1.5.0/0.30.0/0.1.0]: https://github.com/open-telemetry/opentelemetry-go-contrib/releases/tag/v1.5.0
 [1.4.0/0.29.0]: https://github.com/open-telemetry/opentelemetry-go-contrib/releases/tag/v1.4.0
 [1.3.0/0.28.0]: https://github.com/open-telemetry/opentelemetry-go-contrib/releases/tag/v1.3.0
 [1.2.0/0.27.0]: https://github.com/open-telemetry/opentelemetry-go-contrib/releases/tag/v1.2.0

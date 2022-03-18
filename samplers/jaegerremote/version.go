@@ -12,9 +12,9 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package test
+package jaegerremote
 
-// Version is the current release version of the otelhttp instrumentation test module.
+// Version is the current release version of the Jaeger remote sampler.
 func Version() string {
 	return "0.30.0"
 	// This string is updated by the pre_release.sh script during release
