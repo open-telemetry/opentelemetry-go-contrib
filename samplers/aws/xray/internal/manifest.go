@@ -42,7 +42,7 @@ type Manifest struct {
 	xrayClient                     *xrayClient
 	clientID                       *string
 	logger                         logr.Logger
-	clock                          Clock
+	clock                          clock
 	mu                             sync.RWMutex
 }
 
@@ -62,7 +62,7 @@ func NewManifest(addr url.URL, logger logr.Logger) (*Manifest, error) {
 
 	return &Manifest{
 		xrayClient:                     client,
-		clock:                          &DefaultClock{},
+		clock:                          &defaultClock{},
 		logger:                         logger,
 		SamplingTargetsPollingInterval: 10 * time.Second,
 		clientID:                       clientID,
@@ -76,7 +76,7 @@ func (m *Manifest) Expired() bool {
 	defer m.mu.RUnlock()
 
 	manifestLiveTime := m.refreshedAt.Add(time.Second * manifestTTL)
-	return m.clock.Now().After(manifestLiveTime)
+	return m.clock.now().After(manifestLiveTime)
 }
 
 // MatchAgainstManifestRules returns a Rule and boolean flag set as true
@@ -194,7 +194,7 @@ func (m *Manifest) updateRules(rules *getSamplingRulesOutput) {
 
 	m.mu.Lock()
 	m.Rules = tempManifest.Rules
-	m.refreshedAt = m.clock.Now()
+	m.refreshedAt = m.clock.now()
 	m.mu.Unlock()
 }
 
@@ -269,7 +269,7 @@ func (m *Manifest) updateReservoir(t *samplingTargetDocument) (err error) {
 
 	for index := range m.Rules {
 		if m.Rules[index].ruleProperties.RuleName == *t.RuleName {
-			m.Rules[index].reservoir.refreshedAt = m.clock.Now()
+			m.Rules[index].reservoir.refreshedAt = m.clock.now()
 
 			// Update non-optional attributes from response
 			m.Rules[index].ruleProperties.FixedRate = *t.FixedRate
@@ -297,8 +297,8 @@ func (m *Manifest) snapshots() ([]*samplingStatisticsDocument, error) {
 
 	// Generate sampling statistics for user-defined rules
 	for index := range m.Rules {
-		if m.Rules[index].stale(m.clock.Now()) {
-			s := m.Rules[index].snapshot(m.clock.Now())
+		if m.Rules[index].stale(m.clock.now()) {
+			s := m.Rules[index].snapshot(m.clock.now())
 			s.ClientID = m.clientID
 
 			statistics = append(statistics, s)

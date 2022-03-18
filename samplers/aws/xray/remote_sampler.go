@@ -127,19 +127,19 @@ func (rs *remoteSampler) start(ctx context.Context) {
 // to refresh manifest and targets.
 func (rs *remoteSampler) startPoller(ctx context.Context) {
 	// jitter = 5s, default 300 seconds
-	rulesTicker := internal.NewTicker(rs.samplingRulesPollingInterval, 5*time.Second)
-	defer rulesTicker.Tick.Stop()
+	rulesTicker := newTicker(rs.samplingRulesPollingInterval, 5*time.Second)
+	defer rulesTicker.tick.Stop()
 
 	// jitter = 100ms, default 10 seconds
-	targetTicker := internal.NewTicker(rs.manifest.SamplingTargetsPollingInterval, 100*time.Millisecond)
-	defer targetTicker.Tick.Stop()
+	targetTicker := newTicker(rs.manifest.SamplingTargetsPollingInterval, 100*time.Millisecond)
+	defer targetTicker.tick.Stop()
 
 	// fetch sampling rules to kick start the remote sampling
 	rs.refreshManifest(ctx)
 
 	for {
 		select {
-		case _, more := <-rulesTicker.C():
+		case _, more := <-rulesTicker.c():
 			if !more {
 				return
 			}
@@ -147,7 +147,7 @@ func (rs *remoteSampler) startPoller(ctx context.Context) {
 			// fetch sampling rules and updates manifest
 			rs.refreshManifest(ctx)
 			continue
-		case _, more := <-targetTicker.C():
+		case _, more := <-targetTicker.c():
 			if !more {
 				return
 			}

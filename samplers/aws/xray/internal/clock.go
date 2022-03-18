@@ -15,38 +15,29 @@
 package internal // import "go.opentelemetry.io/contrib/samplers/aws/xray/internal"
 
 import (
-	"sync/atomic"
 	"time"
 )
 
 // Clock provides an interface to implement method for getting current time.
-type Clock interface {
-	Now() time.Time
+type clock interface {
+	now() time.Time
 }
 
 // DefaultClock is an implementation of Clock interface.
-type DefaultClock struct{}
+type defaultClock struct{}
 
 // Now returns current time.
-func (t *DefaultClock) Now() time.Time {
+func (t *defaultClock) now() time.Time {
 	return time.Now()
 }
 
 // MockClock is a struct to record current time.
-type MockClock struct {
-	NowTime  int64
-	NowNanos int64
+type mockClock struct {
+	nowTime  int64
+	nowNanos int64
 }
 
 // Now function returns NowTime value.
-func (c *MockClock) Now() time.Time {
-	return time.Unix(c.NowTime, c.NowNanos)
-}
-
-// Increment is a method to increase current time.
-func (c *MockClock) Increment(s int64, ns int64) time.Time {
-	sec := atomic.AddInt64(&c.NowTime, s)
-	nSec := atomic.AddInt64(&c.NowNanos, ns)
-
-	return time.Unix(sec, nSec)
+func (c *mockClock) now() time.Time {
+	return time.Unix(c.nowTime, c.nowNanos)
 }

@@ -54,8 +54,8 @@ func TestNewManifest(t *testing.T) {
 
 // assert that manifest is expired.
 func TestExpiredManifest(t *testing.T) {
-	clock := &MockClock{
-		NowTime: 10000,
+	clock := &mockClock{
+		nowTime: 10000,
 	}
 
 	refreshedAt := time.Unix(3700, 0)
@@ -307,7 +307,7 @@ func TestRefreshManifestRules(t *testing.T) {
 	m := &Manifest{
 		Rules:      []Rule{},
 		xrayClient: client,
-		clock:      &DefaultClock{},
+		clock:      &defaultClock{},
 	}
 
 	err = m.RefreshManifestRules(ctx)
@@ -434,7 +434,7 @@ func TestRefreshManifestMissingServiceName(t *testing.T) {
 	m := &Manifest{
 		Rules:      []Rule{},
 		xrayClient: client,
-		clock:      &DefaultClock{},
+		clock:      &defaultClock{},
 	}
 
 	err = m.RefreshManifestRules(ctx)
@@ -489,7 +489,7 @@ func TestRefreshManifestMissingRuleName(t *testing.T) {
 	m := &Manifest{
 		Rules:      []Rule{},
 		xrayClient: client,
-		clock:      &DefaultClock{},
+		clock:      &defaultClock{},
 		logger:     stdr.NewWithOptions(log.New(os.Stderr, "", log.LstdFlags|log.Lshortfile), stdr.Options{LogCaller: stdr.Error}),
 	}
 
@@ -547,7 +547,7 @@ func TestRefreshManifestIncorrectVersion(t *testing.T) {
 	m := &Manifest{
 		Rules:      []Rule{},
 		xrayClient: client,
-		clock:      &DefaultClock{},
+		clock:      &defaultClock{},
 		logger:     stdr.NewWithOptions(log.New(os.Stderr, "", log.LstdFlags|log.Lshortfile), stdr.Options{LogCaller: stdr.Error}),
 	}
 
@@ -644,7 +644,7 @@ func TestRefreshManifestAddOneInvalidRule(t *testing.T) {
 	m := &Manifest{
 		Rules:      []Rule{},
 		xrayClient: client,
-		clock:      &DefaultClock{},
+		clock:      &defaultClock{},
 		logger:     stdr.NewWithOptions(log.New(os.Stderr, "", log.LstdFlags|log.Lshortfile), stdr.Options{LogCaller: stdr.Error}),
 	}
 
@@ -659,8 +659,8 @@ func TestRefreshManifestAddOneInvalidRule(t *testing.T) {
 
 // assert that inactive rule so return early without doing getSamplingTargets call
 func TestRefreshManifestTarget_NoSnapShot(t *testing.T) {
-	clock := &MockClock{
-		NowTime: 15000000,
+	clock := &mockClock{
+		nowTime: 15000000,
 	}
 
 	r1 := Rule{
@@ -722,8 +722,8 @@ func TestRefreshManifestTargets(t *testing.T) {
    ]
 }`)
 
-	clock := &MockClock{
-		NowTime: 150,
+	clock := &mockClock{
+		nowTime: 150,
 	}
 
 	r1 := Rule{
@@ -821,8 +821,8 @@ func TestRefreshManifestTargets_PollIntervalUpdateTest(t *testing.T) {
    ]
 }`)
 
-	clock := &MockClock{
-		NowTime: 150,
+	clock := &mockClock{
+		nowTime: 150,
 	}
 
 	r1 := Rule{
@@ -891,8 +891,8 @@ func TestRefreshManifestTargets_PollIntervalUpdateTest(t *testing.T) {
 
 // assert that a valid sampling target updates its rule.
 func TestUpdateTargets(t *testing.T) {
-	clock := &MockClock{
-		NowTime: 1500000000,
+	clock := &mockClock{
+		nowTime: 1500000000,
 	}
 
 	// sampling target received from centralized sampling backend
@@ -962,8 +962,8 @@ func TestUpdateTargets(t *testing.T) {
 // assert that when last rule modification time is greater than manifest refresh time we need to update manifest
 // out of band (async).
 func TestUpdateTargetsRefreshFlagTest(t *testing.T) {
-	clock := &MockClock{
-		NowTime: 1500000000,
+	clock := &mockClock{
+		nowTime: 1500000000,
 	}
 
 	// sampling target received from centralized sampling backend
@@ -1004,7 +1004,7 @@ func TestUpdateTargetsRefreshFlagTest(t *testing.T) {
 
 	m := &Manifest{
 		Rules:       rules,
-		refreshedAt: clock.Now(),
+		refreshedAt: clock.now(),
 		clock:       clock,
 	}
 
@@ -1035,8 +1035,8 @@ func TestUpdateTargetsRefreshFlagTest(t *testing.T) {
 
 // unprocessed statistics error code is 5xx then updateTargets returns an error, if 4xx refresh flag set to true.
 func TestUpdateTargetsUnprocessedStatistics(t *testing.T) {
-	clock := &MockClock{
-		NowTime: 1500000000,
+	clock := &mockClock{
+		nowTime: 1500000000,
 	}
 
 	// sampling target received from centralized sampling backend
@@ -1214,11 +1214,11 @@ func TestUpdateReservoirMissingRuleName(t *testing.T) {
 
 // assert that snapshots returns an array of valid sampling statistics.
 func TestSnapshots(t *testing.T) {
-	clock := &MockClock{
-		NowTime: 1500000000,
+	clock := &mockClock{
+		nowTime: 1500000000,
 	}
 
-	time1 := clock.Now().Unix()
+	time1 := clock.now().Unix()
 
 	name1 := "r1"
 	requests1 := int64(1000)
@@ -1297,12 +1297,12 @@ func TestSnapshots(t *testing.T) {
 
 // assert that fresh and inactive rules are not included in a snapshot.
 func TestMixedSnapshots(t *testing.T) {
-	clock := &MockClock{
-		NowTime: 1500000000,
+	clock := &mockClock{
+		nowTime: 1500000000,
 	}
 
 	id := "c1"
-	time1 := clock.Now().Unix()
+	time1 := clock.now().Unix()
 
 	// stale and active rule
 	name1 := "r1"
