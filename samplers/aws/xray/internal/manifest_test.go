@@ -225,6 +225,42 @@ func TestMatchAgainstManifestRules_AttributeWildCardMatch(t *testing.T) {
 	assert.Equal(t, *exp, r1)
 }
 
+// assert that when no known rule is match then returned rule is nil,
+// matched flag is false
+func TestMatchAgainstManifestRules_NoMatch(t *testing.T) {
+	r1 := Rule{
+		ruleProperties: ruleProperties{
+			RuleName:      "r1",
+			Priority:      10000,
+			Host:          "*",
+			HTTPMethod:    "*",
+			URLPath:       "*",
+			ReservoirSize: 60,
+			FixedRate:     0.5,
+			Version:       1,
+			ServiceName:   "test-no-match",
+			ResourceARN:   "*",
+			ServiceType:   "local",
+		},
+		reservoir: reservoir{
+			expiresAt: time.Unix(14050, 0),
+		},
+	}
+
+	rules := []Rule{r1}
+
+	m := &Manifest{
+		Rules: rules,
+	}
+
+	rule, isMatch, err := m.MatchAgainstManifestRules(sdktrace.SamplingParameters{}, "test", "local")
+
+	// assert that when no known rule is match then returned rule is nil
+	require.NoError(t, err)
+	assert.False(t, isMatch)
+	assert.Nil(t, rule)
+}
+
 func TestRefreshManifestRules(t *testing.T) {
 	ctx := context.Background()
 
@@ -1052,7 +1088,7 @@ func TestUpdateTargetsUnprocessedStatistics(t *testing.T) {
 		RuleName:          &name,
 	}
 
-	// case for 4xx
+	// case for 5xx
 	errorCode500 := "500"
 	unprocessedStats5xx := unprocessedStatistic{
 		ErrorCode: &errorCode500,
@@ -1094,6 +1130,29 @@ func TestUpdateTargetsUnprocessedStatistics(t *testing.T) {
 
 	// assert refresh is true
 	assert.True(t, refresh)
+
+	// case when rule error code is unknown do not set any flag
+	unprocessedStats := unprocessedStatistic{
+		ErrorCode: nil,
+		RuleName:  nil,
+	}
+
+	targets := &getSamplingTargetsOutput{
+		SamplingTargetDocuments: []*samplingTargetDocument{&st},
+		UnprocessedStatistics:   []*unprocessedStatistic{&unprocessedStats},
+	}
+
+	m = &Manifest{
+		clock:  clock,
+		logger: stdr.NewWithOptions(log.New(os.Stderr, "", log.LstdFlags|log.Lshortfile), stdr.Options{LogCaller: stdr.Error}),
+	}
+
+	refresh, err = m.updateTargets(targets)
+	require.NoError(t, err)
+
+	// assert refresh is false
+	assert.False(t, refresh)
+
 }
 
 // assert that a missing sampling rule in manifest does not update it's reservoir values.
