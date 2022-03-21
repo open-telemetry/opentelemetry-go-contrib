@@ -31,7 +31,7 @@ const (
 	RequestIDKey attribute.Key = "aws.request_id"
 )
 
-var servicemap map[string]AttributeSetter = map[string]AttributeSetter{
+var servicemap = map[string]AttributeSetter{
 	"dynamodb": DynamoDBAttributeSetter,
 }
 
