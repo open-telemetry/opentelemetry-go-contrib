@@ -199,7 +199,7 @@ test-coverage/%: DIR=$*
 test-coverage/%:
 	@set -e; \
 		CMD="$(GO) test -race -covermode=$(COVERAGE_MODE) -coverprofile=$(COVERAGE_PROFILE)"; \
-		grep -q 'test$$' <<< "$(DIR)" \
+		echo "$(DIR)" | grep -q 'test$$' \
 		&& CMD="$$CMD -coverpkg=go.opentelemetry.io/contrib/$$( dirname "$(DIR)" | sed -e "s/^\.\///g" )/..."; \
 		echo "$$CMD $(DIR)/..."; \
 		cd "$(DIR)" \
