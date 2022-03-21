@@ -675,6 +675,24 @@ updates:
       interval: "weekly"
       day: "sunday"
   - package-ecosystem: "gomod"
+    directory: "/samplers/jaegerremote"
+    labels:
+      - dependencies
+      - go
+      - "Skip Changelog"
+    schedule:
+      interval: "weekly"
+      day: "sunday"
+  - package-ecosystem: "gomod"
+    directory: "/samplers/jaegerremote/example"
+    labels:
+      - dependencies
+      - go
+      - "Skip Changelog"
+    schedule:
+      interval: "weekly"
+      day: "sunday"
+  - package-ecosystem: "gomod"
     directory: "/tools"
     labels:
       - dependencies
