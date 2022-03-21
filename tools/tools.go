@@ -22,6 +22,7 @@ import (
 	_ "github.com/golangci/golangci-lint/cmd/golangci-lint"
 	_ "github.com/mjibson/esc"
 	_ "github.com/wadey/gocovmerge"
+	_ "go.opentelemetry.io/build-tools/dbotconf"
 	_ "go.opentelemetry.io/build-tools/multimod"
 	_ "golang.org/x/tools/cmd/stringer"
 )
