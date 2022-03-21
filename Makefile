@@ -59,13 +59,16 @@ $(ESC): PACKAGE=github.com/mjibson/esc
 STRINGER = $(TOOLS)/stringer
 $(STRINGER): PACKAGE=golang.org/x/tools/cmd/stringer
 
+PORTO = $(TOOLS)/porto
+$(TOOLS)/porto: PACKAGE=github.com/jcchavezs/porto/cmd/porto
+
 MULTIMOD = $(TOOLS)/multimod
 $(MULTIMOD): PACKAGE=go.opentelemetry.io/build-tools/multimod
 
 DBOTCONF = $(TOOLS)/dbotconf
 $(TOOLS)/dbotconf: PACKAGE=go.opentelemetry.io/build-tools/dbotconf
 
-tools: $(GOLANGCI_LINT) $(MISSPELL) $(GOCOVMERGE) $(STRINGER) $(ESC) $(MULTIMOD) $(DBOTCONF)
+tools: $(GOLANGCI_LINT) $(MISSPELL) $(GOCOVMERGE) $(STRINGER) $(ESC) $(PORTO) $(MULTIMOD) $(DBOTCONF)
 
 # Build
 
@@ -116,6 +119,10 @@ go-mod-tidy/%:
 .PHONY: misspell
 misspell: | $(MISSPELL)
 	@$(MISSPELL) -w $(ALL_DOCS)
+
+.PHONY: vanity-import-check
+vanity-import-check: | $(PORTO)
+	@$(PORTO) --include-internal -l .
 
 .PHONY: lint
 lint: go-mod-tidy golangci-lint misspell
