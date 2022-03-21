@@ -12,7 +12,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package ecs
+package ecs // import "go.opentelemetry.io/contrib/detectors/aws/ecs"
 
 import (
 	"context"

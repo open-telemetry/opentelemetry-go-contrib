@@ -15,7 +15,7 @@
 //go:build tools
 // +build tools
 
-package tools
+package tools // import "go.opentelemetry.io/contrib/tools"
 
 import (
 	_ "github.com/client9/misspell/cmd/misspell"

@@ -12,7 +12,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package jaegerremote
+package jaegerremote // import "go.opentelemetry.io/contrib/samplers/jaegerremote"
 
 // Version is the current release version of the Jaeger remote sampler.
 func Version() string {

@@ -12,7 +12,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package test
+package test // import "go.opentelemetry.io/contrib/instrumentation/github.com/gocql/gocql/otelgocql/test"
 
 // Version is the current release version of the gocql instrumentation test module.
 func Version() string {

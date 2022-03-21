@@ -12,7 +12,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package host
+package host // import "go.opentelemetry.io/contrib/instrumentation/host"
 
 // Version is the current release version of the host instrumentation.
 func Version() string {
