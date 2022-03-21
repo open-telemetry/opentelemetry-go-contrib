@@ -144,7 +144,7 @@ func (tw traceware) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	defer putRRW(rrw)
 	tw.handler.ServeHTTP(rrw.writer, r2)
 	attrs := semconv.HTTPAttributesFromHTTPStatusCode(rrw.status)
-	spanStatus, spanMessage := semconv.SpanStatusFromHTTPStatusCode(rrw.status)
+	spanStatus, spanMessage := semconv.SpanStatusFromHTTPStatusCodeAndSpanKind(rrw.status, oteltrace.SpanKindServer)
 	span.SetAttributes(attrs...)
 	span.SetStatus(spanStatus, spanMessage)
 }
