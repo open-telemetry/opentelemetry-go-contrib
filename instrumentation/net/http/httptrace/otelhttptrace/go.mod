@@ -6,6 +6,6 @@ replace go.opentelemetry.io/contrib => ../../../../..
 
 require (
 	github.com/google/go-cmp v0.5.7
-	go.opentelemetry.io/otel v1.4.1
-	go.opentelemetry.io/otel/trace v1.4.1
+	go.opentelemetry.io/otel v1.5.0
+	go.opentelemetry.io/otel/trace v1.5.0
 )

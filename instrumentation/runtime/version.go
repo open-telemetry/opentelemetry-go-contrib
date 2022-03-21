@@ -16,7 +16,7 @@ package runtime
 
 // Version is the current release version of the runtime instrumentation.
 func Version() string {
-	return "0.29.0"
+	return "0.30.0"
 	// This string is updated by the pre_release.sh script during release
 }
 
