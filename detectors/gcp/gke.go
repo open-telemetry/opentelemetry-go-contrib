@@ -27,18 +27,29 @@ import (
 )
 
 // GKE collects resource information of GKE computing instances
-type GKE struct{}
+type GKE struct {
+	mc     metadataClient
+	getenv func(string) string
+}
+
+// NewCloudRun creates a CloudRun detector.
+func NewGKE() *GKE {
+	return &GKE{
+		mc:     metadata.NewClient(nil),
+		getenv: os.Getenv,
+	}
+}
 
 // compile time assertion that GKE implements the resource.Detector interface.
 var _ resource.Detector = (*GKE)(nil)
 
 // Detect detects associated resources when running in GKE environment.
 func (gke *GKE) Detect(ctx context.Context) (*resource.Resource, error) {
-	gcpDetecor := GCE{}
-	gceLablRes, err := gcpDetecor.Detect(ctx)
+	gceDetecor := NewGCE()
+	gcpLablRes, err := gceDetecor.Detect(ctx)
 
-	if os.Getenv("KUBERNETES_SERVICE_HOST") == "" {
-		return gceLablRes, err
+	if gke.getenv("KUBERNETES_SERVICE_HOST") == "" {
+		return gcpLablRes, err
 	}
 
 	var errInfo []string
@@ -49,15 +60,15 @@ func (gke *GKE) Detect(ctx context.Context) (*resource.Resource, error) {
 	attributes := []attribute.KeyValue{
 		semconv.CloudProviderGCP,
 		semconv.CloudPlatformGCPKubernetesEngine,
-		semconv.K8SNamespaceNameKey.String(os.Getenv("NAMESPACE")),
-		semconv.K8SPodNameKey.String(os.Getenv("HOSTNAME")),
+		semconv.K8SNamespaceNameKey.String(gke.getenv("NAMESPACE")),
+		semconv.K8SPodNameKey.String(gke.getenv("HOSTNAME")),
 	}
 
-	if containerName := os.Getenv("CONTAINER_NAME"); containerName != "" {
+	if containerName := gke.getenv("CONTAINER_NAME"); containerName != "" {
 		attributes = append(attributes, semconv.ContainerNameKey.String(containerName))
 	}
 
-	if clusterName, err := metadata.InstanceAttributeValue("cluster-name"); hasProblem(err) {
+	if clusterName, err := gke.mc.InstanceAttributeValue("cluster-name"); hasProblem(err) {
 		errInfo = append(errInfo, err.Error())
 	} else if clusterName != "" {
 		attributes = append(attributes, semconv.K8SClusterNameKey.String(clusterName))
@@ -65,7 +76,7 @@ func (gke *GKE) Detect(ctx context.Context) (*resource.Resource, error) {
 
 	k8sattributeRes := resource.NewWithAttributes(semconv.SchemaURL, attributes...)
 
-	res, err := resource.Merge(gceLablRes, k8sattributeRes)
+	res, err := resource.Merge(gcpLablRes, k8sattributeRes)
 	if err != nil {
 		errInfo = append(errInfo, err.Error())
 	}

@@ -28,14 +28,24 @@ import (
 )
 
 // GCE collects resource information of GCE computing instances
-type GCE struct{}
+type GCE struct {
+	mc    metadataClient
+	onGCE func() bool
+}
+
+var NewGCE = func() *GCE {
+	return &GCE{
+		mc:    metadata.NewClient(nil),
+		onGCE: metadata.OnGCE,
+	}
+}
 
 // compile time assertion that GCE implements the resource.Detector interface.
 var _ resource.Detector = (*GCE)(nil)
 
 // Detect detects associated resources when running on GCE hosts.
 func (gce *GCE) Detect(ctx context.Context) (*resource.Resource, error) {
-	if !metadata.OnGCE() {
+	if !gce.onGCE() {
 		return nil, nil
 	}
 
@@ -46,13 +56,13 @@ func (gce *GCE) Detect(ctx context.Context) (*resource.Resource, error) {
 
 	var errInfo []string
 
-	if projectID, err := metadata.ProjectID(); hasProblem(err) {
+	if projectID, err := gce.mc.ProjectID(); hasProblem(err) {
 		errInfo = append(errInfo, err.Error())
 	} else if projectID != "" {
 		attributes = append(attributes, semconv.CloudAccountIDKey.String(projectID))
 	}
 
-	if zone, err := metadata.Zone(); hasProblem(err) {
+	if zone, err := gce.mc.Zone(); hasProblem(err) {
 		errInfo = append(errInfo, err.Error())
 	} else if zone != "" {
 		attributes = append(attributes, semconv.CloudAvailabilityZoneKey.String(zone))
@@ -63,13 +73,13 @@ func (gce *GCE) Detect(ctx context.Context) (*resource.Resource, error) {
 		}
 	}
 
-	if instanceID, err := metadata.InstanceID(); hasProblem(err) {
+	if instanceID, err := gce.mc.InstanceID(); hasProblem(err) {
 		errInfo = append(errInfo, err.Error())
 	} else if instanceID != "" {
 		attributes = append(attributes, semconv.HostIDKey.String(instanceID))
 	}
 
-	if name, err := metadata.InstanceName(); hasProblem(err) {
+	if name, err := gce.mc.InstanceName(); hasProblem(err) {
 		errInfo = append(errInfo, err.Error())
 	} else if name != "" {
 		attributes = append(attributes, semconv.HostNameKey.String(name))
@@ -81,7 +91,7 @@ func (gce *GCE) Detect(ctx context.Context) (*resource.Resource, error) {
 		attributes = append(attributes, semconv.HostNameKey.String(hostname))
 	}
 
-	if hostType, err := metadata.Get("instance/machine-type"); hasProblem(err) {
+	if hostType, err := gce.mc.Get("instance/machine-type"); hasProblem(err) {
 		errInfo = append(errInfo, err.Error())
 	} else if hostType != "" {
 		attributes = append(attributes, semconv.HostTypeKey.String(hostType))
@@ -93,15 +103,4 @@ func (gce *GCE) Detect(ctx context.Context) (*resource.Resource, error) {
 	}
 
 	return resource.NewWithAttributes(semconv.SchemaURL, attributes...), aggregatedErr
-}
-
-// hasProblem checks if the err is not nil or for missing resources
-func hasProblem(err error) bool {
-	if err == nil {
-		return false
-	}
-	if _, undefined := err.(metadata.NotDefinedError); undefined {
-		return false
-	}
-	return true
 }

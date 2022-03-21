@@ -16,6 +16,7 @@ package gcp
 
 import (
 	"context"
+	"os"
 	"testing"
 
 	"github.com/google/go-cmp/cmp"
@@ -24,52 +25,52 @@ import (
 	"go.opentelemetry.io/otel/sdk/resource"
 )
 
-func setupForCloudRunTest(c *CloudRun, mc metadataClient, ongce func() bool, getenv func(string) string) {
+func setupForGCETest(c *GCE, mc metadataClient, ongce func() bool) {
 	c.mc = mc
 	c.onGCE = ongce
-	c.getenv = getenv
 }
 
 var _ metadataClient = (*client)(nil)
 
-func TestCloudRunDetectorNotOnGCE(t *testing.T) {
+func TestGCEDetectorNotOnGCE(t *testing.T) {
 	ctx := context.Background()
-	c := NewCloudRun()
-	setupForCloudRunTest(c, nil, notOnGCE, getenv(nil))
+	c := NewGCE()
+	setupForGCETest(c, nil, notOnGCE)
 
 	if res, err := c.Detect(ctx); res != nil || err != nil {
 		t.Errorf("Expect c.Detect(ctx) to return (nil, nil), got (%v, %v)", res, err)
 	}
 }
 
-func TestCloudRunDetectorExpectSuccess(t *testing.T) {
+func TestGCEDetectorExpectSuccess(t *testing.T) {
 	ctx := context.Background()
 
 	metadata := map[string]string{
-		"project/project-id": "foo",
-		"instance/id":        "bar",
-		"instance/region":    "/projects/123/regions/utopia",
+		"project/project-id":    "foo",
+		"instance/id":           "bar",
+		"instance/region":       "/projects/123/regions/utopia",
+		"instance/machine-type": "n1-standard-1",
+		"instance/name":         "test-instance",
+		"instance/zone":         "us-central1-a",
 	}
-	envvars := map[string]string{
-		"K_SERVICE": "x-service",
-	}
+	hostname, _ := os.Hostname()
 	want, err := resource.New(
 		ctx,
 		resource.WithAttributes(
 			attribute.String("cloud.account.id", "foo"),
 			attribute.String("cloud.provider", "gcp"),
-			attribute.String("cloud.platform", "gcp_cloud_run"),
-			attribute.String("cloud.region", "utopia"),
-			attribute.String("service.instance.id", "bar"),
-			attribute.String("service.name", "x-service"),
-			attribute.String("service.namespace", "cloud-run-managed"),
+			attribute.String("cloud.platform", "gcp_compute_engine"),
+			attribute.String("cloud.availability_zone", "us-central1-a"),
+			attribute.String("host.id", "bar"),
+			attribute.String("host.name", hostname),
+			attribute.String("host.type", "n1-standard-1"),
 		),
 	)
 	if err != nil {
 		t.Fatalf("failed to create a resource: %v", err)
 	}
-	c := NewCloudRun()
-	setupForCloudRunTest(c, &client{m: metadata}, onGCE, getenv(envvars))
+	c := NewGCE()
+	setupForGCETest(c, &client{m: metadata}, onGCE)
 
 	if res, err := c.Detect(ctx); err != nil {
 		t.Fatalf("got unexpected failure: %v", err)
@@ -78,7 +79,7 @@ func TestCloudRunDetectorExpectSuccess(t *testing.T) {
 	}
 }
 
-func TestCloudRunDetectorExpectFail(t *testing.T) {
+func TestGCEDetectorExpectFail(t *testing.T) {
 	ctx := context.Background()
 
 	tests := []struct {
@@ -89,46 +90,38 @@ func TestCloudRunDetectorExpectFail(t *testing.T) {
 		{
 			name: "Missing ProjectID",
 			metadata: map[string]string{
-				"instance/id":     "bar",
-				"instance/region": "utopia",
-			},
-			envvars: map[string]string{
-				"K_SERVICE": "x-service",
+				"instance/id":           "bar",
+				"instance/region":       "/projects/123/regions/utopia",
+				"instance/machine-type": "n1-standard-1",
+				"instance/name":         "test-instance",
+				"instance/zone":         "us-central1-a",
 			},
 		},
 		{
 			name: "Missing InstanceID",
 			metadata: map[string]string{
-				"project/project-id": "foo",
-				"instance/region":    "utopia",
-			},
-			envvars: map[string]string{
-				"K_SERVICE": "x-service",
-			},
-		},
-		{
-			name: "Missing Region",
-			metadata: map[string]string{
-				"project/project-id": "foo",
-				"instance/id":        "bar",
-			},
-			envvars: map[string]string{
-				"K_SERVICE": "x-service",
+				"project/project-id":    "foo",
+				"instance/region":       "/projects/123/regions/utopia",
+				"instance/machine-type": "n1-standard-1",
+				"instance/name":         "test-instance",
+				"instance/zone":         "us-central1-a",
 			},
 		},
 		{
-			name: "Missing K_SERVICE envvar",
+			name: "Missing Zone",
 			metadata: map[string]string{
-				"project/project-id": "foo",
-				"instance/id":        "bar",
-				"instance/region":    "utopia",
+				"project/project-id":    "foo",
+				"instance/id":           "bar",
+				"instance/region":       "/projects/123/regions/utopia",
+				"instance/machine-type": "n1-standard-1",
+				"instance/name":         "test-instance",
 			},
 		},
 	}
 	for _, test := range tests {
 		t.Run(test.name, func(t *testing.T) {
-			c := NewCloudRun()
-			setupForCloudRunTest(c, &client{m: test.metadata}, onGCE, getenv(test.envvars))
+			c := NewGCE()
+			setupForGCETest(c, &client{m: test.metadata}, onGCE)
 
 			if res, err := c.Detect(ctx); err == nil {
 				t.Errorf("Expect c.Detect(ctx) to return error, got nil (resource: %v)", res)
