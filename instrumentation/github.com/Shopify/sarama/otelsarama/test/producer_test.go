@@ -26,7 +26,6 @@ import (
 	"github.com/stretchr/testify/require"
 
 	"go.opentelemetry.io/contrib/instrumentation/github.com/Shopify/sarama/otelsarama"
-	"go.opentelemetry.io/contrib/instrumentation/github.com/Shopify/sarama/otelsarama/internal"
 	"go.opentelemetry.io/otel/attribute"
 	"go.opentelemetry.io/otel/codes"
 	"go.opentelemetry.io/otel/propagation"
@@ -68,7 +67,7 @@ func TestWrapSyncProducer(t *testing.T) {
 				semconv.MessagingDestinationKindTopic,
 				semconv.MessagingDestinationKey.String(topic),
 				semconv.MessagingMessageIDKey.String("1"),
-				internal.KafkaPartitionKey.Int64(0),
+				semconv.MessagingKafkaPartitionKey.Int64(0),
 			},
 			parentSpanID: oteltrace.SpanContextFromContext(ctx).SpanID(),
 			kind:         oteltrace.SpanKindProducer,
@@ -79,7 +78,7 @@ func TestWrapSyncProducer(t *testing.T) {
 				semconv.MessagingDestinationKindTopic,
 				semconv.MessagingDestinationKey.String(topic),
 				semconv.MessagingMessageIDKey.String("2"),
-				internal.KafkaPartitionKey.Int64(0),
+				semconv.MessagingKafkaPartitionKey.Int64(0),
 			},
 			kind: oteltrace.SpanKindProducer,
 		},
@@ -91,7 +90,7 @@ func TestWrapSyncProducer(t *testing.T) {
 				// TODO: The mock sync producer of sarama does not handle the offset while sending messages
 				// https://github.com/Shopify/sarama/pull/1747
 				//semconv.MessagingMessageIDKey.String("3"),
-				internal.KafkaPartitionKey.Int64(12),
+				semconv.MessagingKafkaPartitionKey.Int64(12),
 			},
 			kind: oteltrace.SpanKindProducer,
 		},
@@ -101,7 +100,7 @@ func TestWrapSyncProducer(t *testing.T) {
 				semconv.MessagingDestinationKindTopic,
 				semconv.MessagingDestinationKey.String(topic),
 				//semconv.MessagingMessageIDKey.String("4"),
-				internal.KafkaPartitionKey.Int64(25),
+				semconv.MessagingKafkaPartitionKey.Int64(25),
 			},
 			kind: oteltrace.SpanKindProducer,
 		},
@@ -258,7 +257,7 @@ func TestWrapAsyncProducer(t *testing.T) {
 					semconv.MessagingDestinationKindTopic,
 					semconv.MessagingDestinationKey.String(topic),
 					semconv.MessagingMessageIDKey.String("1"),
-					internal.KafkaPartitionKey.Int64(9),
+					semconv.MessagingKafkaPartitionKey.Int64(9),
 				},
 				kind: oteltrace.SpanKindProducer,
 			},
@@ -268,7 +267,7 @@ func TestWrapAsyncProducer(t *testing.T) {
 					semconv.MessagingDestinationKindTopic,
 					semconv.MessagingDestinationKey.String(topic),
 					semconv.MessagingMessageIDKey.String("2"),
-					internal.KafkaPartitionKey.Int64(31),
+					semconv.MessagingKafkaPartitionKey.Int64(31),
 				},
 				kind: oteltrace.SpanKindProducer,
 			},

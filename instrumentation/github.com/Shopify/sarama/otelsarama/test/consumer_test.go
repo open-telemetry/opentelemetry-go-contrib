@@ -25,7 +25,6 @@ import (
 	"github.com/stretchr/testify/require"
 
 	"go.opentelemetry.io/contrib/instrumentation/github.com/Shopify/sarama/otelsarama"
-	"go.opentelemetry.io/contrib/instrumentation/github.com/Shopify/sarama/otelsarama/internal"
 	"go.opentelemetry.io/otel/attribute"
 	"go.opentelemetry.io/otel/propagation"
 	sdktrace "go.opentelemetry.io/otel/sdk/trace"
@@ -113,7 +112,7 @@ func consumeAndCheck(t *testing.T, mt trace.Tracer, complFn func() []sdktrace.Re
 				semconv.MessagingDestinationKey.String("test-topic"),
 				semconv.MessagingOperationReceive,
 				semconv.MessagingMessageIDKey.String("0"),
-				internal.KafkaPartitionKey.Int64(0),
+				semconv.MessagingKafkaPartitionKey.Int64(0),
 			},
 			parentSpanID: trace.SpanContextFromContext(ctx).SpanID(),
 			kind:         trace.SpanKindConsumer,
@@ -126,7 +125,7 @@ func consumeAndCheck(t *testing.T, mt trace.Tracer, complFn func() []sdktrace.Re
 				semconv.MessagingDestinationKey.String("test-topic"),
 				semconv.MessagingOperationReceive,
 				semconv.MessagingMessageIDKey.String("1"),
-				internal.KafkaPartitionKey.Int64(0),
+				semconv.MessagingKafkaPartitionKey.Int64(0),
 			},
 			kind:   trace.SpanKindConsumer,
 			msgKey: []byte("foo2"),
