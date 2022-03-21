@@ -38,9 +38,9 @@ jobs:
         path: ~/.tools
         key: ${{ runner.os }}-${{ env.cache-name }}-${{ hashFiles('./internal/tools/**') }}
     - name: Run linters
-      run: make dependabot-check license-check lint
+      run: make dependabot-check license-check lint vanity-import-check
     - name: Build
-      run: make generate build
+      run: make build
     - name: Check clean repository
       run: make check-clean-work-tree
 
@@ -65,7 +65,7 @@ jobs:
         path: ~/go/pkg/mod
         key: ${{ runner.os }}-${{ env.cache-name }}-${{ hashFiles('**/go.sum') }}
     - name: Run tests with race detector
-      run: make test
+      run: make test-race
 
   test-coverage:
     runs-on: ubuntu-latest
@@ -109,7 +109,7 @@ jobs:
   compatibility-test:
     strategy:
       matrix:
-        go-version: [1.17, 1.16]
+        go-version: [1.18, 1.17, 1.16]
         os: [ubuntu-latest, macos-latest, windows-latest]
         # GitHub Actions does not support arm* architectures on default
         # runners. It is possible to acomplish this with a self-hosted runner
