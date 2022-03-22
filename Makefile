@@ -122,7 +122,7 @@ misspell: | $(MISSPELL)
 
 .PHONY: vanity-import-check
 vanity-import-check: | $(PORTO)
-	@$(PORTO) --include-internal -l .
+	@$(PORTO) --include-internal -l . || echo "(run: make vanity-import-fix)"
 
 .PHONY: vanity-import-fix
 vanity-import-fix: | $(PORTO)
