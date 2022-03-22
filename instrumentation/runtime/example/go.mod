@@ -12,4 +12,5 @@ require (
 	go.opentelemetry.io/otel/exporters/stdout/stdoutmetric v0.27.0
 	go.opentelemetry.io/otel/metric v0.27.0
 	go.opentelemetry.io/otel/sdk/metric v0.27.0
+	golang.org/x/sys v0.0.0-20220319134239-a9b59b0215f8 // indirect
 )
