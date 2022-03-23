@@ -182,7 +182,7 @@ func TestConsumeFromReservoirSample(t *testing.T) {
 }
 
 // assert that sampling using traceIDRationBasedSampler when reservoir quota is consumed.
-func TestTraceIDRatioBasedSampler_ReservoirIsConsumedSample(t *testing.T) {
+func TestTraceIDRatioBasedSamplerReservoirIsConsumedSample(t *testing.T) {
 	r1 := Rule{
 		reservoir: reservoir{
 			quota:     10,
@@ -278,7 +278,7 @@ func TestAppliesToMatchingWithStarHTTPAttrs(t *testing.T) {
 
 // assert that matching will not happen when rules has all the HTTP attrs set as non '*' values and
 // span has no HTTP attributes.
-func TestAppliesToMatchingWithHTTPAttrs_NoSpanAttrs(t *testing.T) {
+func TestAppliesToMatchingWithHTTPAttrsNoSpanAttrs(t *testing.T) {
 	r1 := Rule{
 		ruleProperties: ruleProperties{
 			RuleName:    "r1",
@@ -297,7 +297,7 @@ func TestAppliesToMatchingWithHTTPAttrs_NoSpanAttrs(t *testing.T) {
 
 // assert that matching will happen when rules has all the HTTP attrs set as '*' values and
 // span has no HTTP attributes.
-func TestAppliesToMatchingWithStarHTTPAttrs_NoSpanAttrs(t *testing.T) {
+func TestAppliesToMatchingWithStarHTTPAttrsNoSpanAttrs(t *testing.T) {
 	r1 := Rule{
 		ruleProperties: ruleProperties{
 			RuleName:    "r1",
@@ -316,7 +316,7 @@ func TestAppliesToMatchingWithStarHTTPAttrs_NoSpanAttrs(t *testing.T) {
 
 // assert that matching will not happen when rules has some HTTP attrs set as non '*' values and
 // span has no HTTP attributes.
-func TestAppliesToMatchingWithPartialHTTPAttrs_NoSpanAttrs(t *testing.T) {
+func TestAppliesToMatchingWithPartialHTTPAttrsNoSpanAttrs(t *testing.T) {
 	r1 := Rule{
 		ruleProperties: ruleProperties{
 			RuleName:    "r1",
@@ -395,7 +395,7 @@ func TestAttributeMatching(t *testing.T) {
 }
 
 // assert that if rules has no attributes then matching will happen.
-func TestAttributeMatching_NoRuleAttrs(t *testing.T) {
+func TestAttributeMatchingNoRuleAttrs(t *testing.T) {
 	commonLabels := []attribute.KeyValue{
 		attribute.String("labelA", "chocolate"),
 		attribute.String("labelB", "raspberry"),
@@ -435,7 +435,7 @@ func TestAttributeWildCardMatching(t *testing.T) {
 
 // assert that if some of the rules attributes are not present in span attributes then matching
 // will not happen.
-func TestMatchAgainstManifestRules_NoAttributeMatch(t *testing.T) {
+func TestMatchAgainstManifestRulesNoAttributeMatch(t *testing.T) {
 	commonLabels := []attribute.KeyValue{
 		attribute.String("labelA", "chocolate"),
 		attribute.String("labelB", "raspberry"),

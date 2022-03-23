@@ -25,16 +25,18 @@ import (
 	"sync"
 	"time"
 
-	"github.com/go-logr/logr"
 	"github.com/jinzhu/copier"
+
+	"github.com/go-logr/logr"
 
 	sdktrace "go.opentelemetry.io/otel/sdk/trace"
 )
 
 const manifestTTL = 3600
+const version = 1
 
 // Manifest represents a full sampling ruleset and provides
-// option for configuring Logger, Clock and xrayClient.
+// options for configuring Logger, Clock and xrayClient.
 type Manifest struct {
 	Rules                          []Rule
 	SamplingTargetsPollingInterval time.Duration
@@ -46,15 +48,16 @@ type Manifest struct {
 	mu                             sync.RWMutex
 }
 
-// NewManifest return manifest object configured with logging, clock and xrayClient.
+// NewManifest return manifest object configured the passed with logging and an xrayClient
+// configured to address addr.
 func NewManifest(addr url.URL, logger logr.Logger) (*Manifest, error) {
-	// generate client for getSamplingRules and getSamplingTargets API call
+	// Generate client for getSamplingRules and getSamplingTargets API call.
 	client, err := newClient(addr)
 	if err != nil {
 		return nil, err
 	}
 
-	// generate clientID for sampling statistics
+	// Generate clientID for sampling statistics.
 	clientID, err := generateClientID()
 	if err != nil {
 		return nil, err
@@ -80,13 +83,11 @@ func (m *Manifest) Expired() bool {
 }
 
 // MatchAgainstManifestRules returns a Rule and boolean flag set as true
-// if rule has been match against span attributes, otherwise nil and false
+// if rule has been match against span attributes, otherwise nil and false.
 func (m *Manifest) MatchAgainstManifestRules(parameters sdktrace.SamplingParameters, serviceName string, cloudPlatform string) (*Rule, bool, error) {
 	m.mu.RLock()
 	rules := m.Rules
 	m.mu.RUnlock()
-
-	matched := false
 
 	for index := range rules {
 		isRuleMatch, err := rules[index].appliesTo(parameters, serviceName, cloudPlatform)
@@ -95,39 +96,46 @@ func (m *Manifest) MatchAgainstManifestRules(parameters sdktrace.SamplingParamet
 		}
 
 		if isRuleMatch {
-			matched = true
-			return &rules[index], matched, nil
+			return &rules[index], true, nil
 		}
 	}
 
-	return nil, matched, nil
+	return nil, false, nil
 }
 
 // RefreshManifestRules writes sampling rule properties to the manifest object.
 func (m *Manifest) RefreshManifestRules(ctx context.Context) (err error) {
-	// get sampling rules from AWS X-Ray console
+	// Get sampling rules from AWS X-Ray console.
 	rules, err := m.xrayClient.getSamplingRules(ctx)
 	if err != nil {
 		return err
 	}
 
-	// update the retrieved sampling rules to manifest object
+	// Update the retrieved sampling rules to manifest object.
 	m.updateRules(rules)
 
 	return
 }
 
-// RefreshManifestTargets updates sampling targets (statistics) for each rule
+// RefreshManifestTargets updates sampling targets (statistics) for each rule.
 func (m *Manifest) RefreshManifestTargets(ctx context.Context) (refresh bool, err error) {
 	var manifest Manifest
 
 	// deep copy centralized manifest object to temporary manifest to avoid thread safety issue
-	m.mu.RLock()
-	err = copier.CopyWithOption(&manifest, m, copier.Option{IgnoreEmpty: false, DeepCopy: true})
+	err = func() error {
+		m.mu.RLock()
+		defer m.mu.RUnlock()
+
+		err = copier.CopyWithOption(&manifest, m, copier.Option{IgnoreEmpty: false, DeepCopy: true})
+		if err != nil {
+			return err
+		}
+
+		return nil
+	}()
 	if err != nil {
 		return false, err
 	}
-	m.mu.RUnlock()
 
 	// generate sampling statistics based on the data in temporary manifest
 	statistics, err := manifest.snapshots()
@@ -135,13 +143,13 @@ func (m *Manifest) RefreshManifestTargets(ctx context.Context) (refresh bool, er
 		return false, err
 	}
 
-	// return if no statistics to report
+	// Return if no statistics to report.
 	if len(statistics) == 0 {
 		m.logger.V(5).Info("no statistics to report and not refreshing sampling targets")
 		return false, nil
 	}
 
-	// get sampling targets (statistics) for every expired rule from AWS X-Ray
+	// Get sampling targets (statistics) for every expired rule from AWS X-Ray.
 	targets, err := m.xrayClient.getSamplingTargets(ctx, statistics)
 	if err != nil {
 		return false, fmt.Errorf("refreshTargets: error occurred while getting sampling targets: %w", err)
@@ -149,19 +157,19 @@ func (m *Manifest) RefreshManifestTargets(ctx context.Context) (refresh bool, er
 
 	m.logger.V(5).Info("successfully fetched sampling targets")
 
-	// update temporary manifest with retrieved targets (statistics) for each rule
+	// Update temporary manifest with retrieved targets (statistics) for each rule.
 	refresh, err = manifest.updateTargets(targets)
 	if err != nil {
 		return refresh, err
 	}
 
-	// find next polling interval for targets
+	// Find next polling interval for targets.
 	minPoll := manifest.minimumPollingInterval()
 	if minPoll > 0 {
 		m.SamplingTargetsPollingInterval = minPoll
 	}
 
-	// update centralized manifest object
+	// Update centralized manifest object.
 	m.mu.Lock()
 	m.Rules = manifest.Rules
 	m.mu.Unlock()
@@ -180,12 +188,12 @@ func (m *Manifest) updateRules(rules *getSamplingRulesOutput) {
 			continue
 		}
 
-		if records.SamplingRule.Version != int64(1) {
+		if records.SamplingRule.Version != version {
 			m.logger.V(5).Info("sampling rule without Version 1 is not supported", "RuleName", records.SamplingRule.RuleName)
 			continue
 		}
 
-		// create rule and store it in temporary manifest to avoid thread safety issues
+		// Create the rule and store it in temporary manifest to avoid thread safety issues.
 		tempManifest.createRule(*records.SamplingRule)
 	}
 
@@ -214,14 +222,14 @@ func (m *Manifest) createRule(ruleProp ruleProperties) {
 }
 
 func (m *Manifest) updateTargets(targets *getSamplingTargetsOutput) (refresh bool, err error) {
-	// update sampling targets for each rule
+	// Update sampling targets for each rule.
 	for _, t := range targets.SamplingTargetDocuments {
 		if err := m.updateReservoir(t); err != nil {
 			return false, err
 		}
 	}
 
-	// consume unprocessed statistics messages
+	// Consume unprocessed statistics messages.
 	for _, s := range targets.UnprocessedStatistics {
 		m.logger.V(5).Info(
 			"error occurred updating sampling target for rule, code and message", "RuleName", s.RuleName, "ErrorCode",
@@ -229,25 +237,25 @@ func (m *Manifest) updateTargets(targets *getSamplingTargetsOutput) (refresh boo
 			"Message", s.Message,
 		)
 
-		// do not set any flags if error is unknown
+		// Do not set any flags if error is unknown.
 		if s.ErrorCode == nil || s.RuleName == nil {
 			continue
 		}
 
-		// set batch failure if any sampling statistics returned 5xx
+		// Set batch failure if any sampling statistics returned 5xx.
 		if strings.HasPrefix(*s.ErrorCode, "5") {
 			return false, fmt.Errorf("sampling statistics returned 5xx")
 		}
 
-		// set refresh flag if any sampling statistics returned 4xx
+		// Set refresh flag if any sampling statistics returned 4xx.
 		if strings.HasPrefix(*s.ErrorCode, "4") {
 			refresh = true
 		}
 	}
 
-	// set refresh flag if modifiedAt timestamp from remote is greater than ours
+	// Set refresh flag if modifiedAt timestamp from remote is greater than ours.
 	if remote := targets.LastRuleModification; remote != nil {
-		// convert unix timestamp to time.Time
+		// Convert unix timestamp to time.Time.
 		lastRuleModification := time.Unix(int64(*targets.LastRuleModification), 0)
 
 		if lastRuleModification.After(m.refreshedAt) {
@@ -260,11 +268,11 @@ func (m *Manifest) updateTargets(targets *getSamplingTargetsOutput) (refresh boo
 
 func (m *Manifest) updateReservoir(t *samplingTargetDocument) (err error) {
 	if t.RuleName == nil {
-		return fmt.Errorf("invalid sampling target. Missing rule name")
+		return fmt.Errorf("invalid sampling targe: missing rule name")
 	}
 
 	if t.FixedRate == nil {
-		return fmt.Errorf("invalid sampling target for rule %s. Missing fixed rate", *t.RuleName)
+		return fmt.Errorf("invalid sampling target for rule %s: missing fixed rate", *t.RuleName)
 	}
 
 	for index := range m.Rules {
@@ -293,9 +301,9 @@ func (m *Manifest) updateReservoir(t *samplingTargetDocument) (err error) {
 // snapshots takes a snapshot of sampling statistics from all rules, resetting
 // statistics counters in the process.
 func (m *Manifest) snapshots() ([]*samplingStatisticsDocument, error) {
-	statistics := make([]*samplingStatisticsDocument, 0, len(m.Rules)+1)
+	statistics := make([]*samplingStatisticsDocument, 0, len(m.Rules))
 
-	// Generate sampling statistics for user-defined rules
+	// Generate sampling statistics for user-defined rules.
 	for index := range m.Rules {
 		if m.Rules[index].stale(m.clock.now()) {
 			s := m.Rules[index].snapshot(m.clock.now())
@@ -308,9 +316,8 @@ func (m *Manifest) snapshots() ([]*samplingStatisticsDocument, error) {
 	return statistics, nil
 }
 
-// sort sorts the rule array first by priority and then by rule name.
+// sort sorts the Rules of m array first by priority and then by name.
 func (m *Manifest) sort() {
-	// comparison function
 	less := func(i, j int) bool {
 		if m.Rules[i].ruleProperties.Priority == m.Rules[j].ruleProperties.Priority {
 			return strings.Compare(m.Rules[i].ruleProperties.RuleName, m.Rules[j].ruleProperties.RuleName) < 0
@@ -321,7 +328,7 @@ func (m *Manifest) sort() {
 	sort.Slice(m.Rules, less)
 }
 
-// minimumPollingInterval finds the minimum interval amongst all the targets
+// minimumPollingInterval finds the minimum polling interval for all the targets of m's Rules.
 func (m *Manifest) minimumPollingInterval() time.Duration {
 	if len(m.Rules) == 0 {
 		return time.Duration(0)
@@ -337,7 +344,7 @@ func (m *Manifest) minimumPollingInterval() time.Duration {
 	return minPoll * time.Second
 }
 
-// generateClientID generates random client ID
+// generateClientID generates random client ID.
 func generateClientID() (*string, error) {
 	var r [12]byte
 

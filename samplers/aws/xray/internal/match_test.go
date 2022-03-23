@@ -63,13 +63,14 @@ func TestWildCardMatchPositive(t *testing.T) {
 		{"?o?se", "mouse"},
 		{"*s", "horse"},
 		{"J*", "Jeep"},
+		{"J*", "jeep"},
 		{"*/foo", "/bar/foo"},
 	}
 
 	for _, test := range tests {
 		match, err := wildcardMatch(test.pattern, test.text)
 		require.NoError(t, err)
-		assert.True(t, match)
+		assert.True(t, match, test.text)
 	}
 }
 

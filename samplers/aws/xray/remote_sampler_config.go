@@ -50,6 +50,7 @@ func (f optionFunc) apply(cfg *config) *config {
 }
 
 // WithEndpoint sets custom proxy endpoint.
+// default endpoint being used is http://127.0.0.1:2000.
 func WithEndpoint(endpoint url.URL) Option {
 	return optionFunc(func(cfg *config) *config {
 		cfg.endpoint = endpoint
@@ -58,6 +59,7 @@ func WithEndpoint(endpoint url.URL) Option {
 }
 
 // WithSamplingRulesPollingInterval sets polling interval for sampling rules.
+// default samplingRulesPollingInterval being used is 300 seconds.
 func WithSamplingRulesPollingInterval(polingInterval time.Duration) Option {
 	return optionFunc(func(cfg *config) *config {
 		cfg.samplingRulesPollingInterval = polingInterval
@@ -66,6 +68,7 @@ func WithSamplingRulesPollingInterval(polingInterval time.Duration) Option {
 }
 
 // WithLogger sets custom logging for remote sampling implementation.
+// default logger being used is go-logr/stdr (https://github.com/go-logr/stdr).
 func WithLogger(l logr.Logger) Option {
 	return optionFunc(func(cfg *config) *config {
 		cfg.logger = l
@@ -118,7 +121,6 @@ func validateConfig(cfg *config) (err error) {
 		return fmt.Errorf("config validation error: host name should not contain special characters or empty")
 	}
 
-	// validate polling interval is positive
 	if math.Signbit(float64(cfg.samplingRulesPollingInterval)) {
 		return fmt.Errorf("config validation error: samplingRulesPollingInterval should be positive number")
 	}

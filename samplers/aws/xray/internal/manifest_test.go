@@ -16,18 +16,16 @@ package internal
 
 import (
 	"context"
-	"log"
 	"net/http"
 	"net/http/httptest"
 	"net/url"
-	"os"
 	"sync"
 	"testing"
 	"time"
 
 	"go.opentelemetry.io/otel/attribute"
 
-	"github.com/go-logr/stdr"
+	"github.com/go-logr/logr/testr"
 	"github.com/stretchr/testify/require"
 
 	sdktrace "go.opentelemetry.io/otel/sdk/trace"
@@ -37,7 +35,7 @@ import (
 
 // assert that new manifest has certain non-nil attributes.
 func TestNewManifest(t *testing.T) {
-	logger := stdr.NewWithOptions(log.New(os.Stderr, "", log.LstdFlags|log.Lshortfile), stdr.Options{LogCaller: stdr.Error})
+	logger := testr.New(t)
 
 	endpoint, err := url.Parse("http://127.0.0.1:2020")
 	require.NoError(t, err)
@@ -130,7 +128,8 @@ func TestMatchAgainstManifestRules(t *testing.T) {
 		Rules: rules,
 	}
 
-	exp, _, err := m.MatchAgainstManifestRules(sdktrace.SamplingParameters{}, "test", "local")
+	exp, match, err := m.MatchAgainstManifestRules(sdktrace.SamplingParameters{}, "test", "local")
+	require.True(t, match)
 	require.NoError(t, err)
 
 	// assert that manifest rule r2 is a match
@@ -138,7 +137,7 @@ func TestMatchAgainstManifestRules(t *testing.T) {
 }
 
 // assert that if rules has attribute and span has those attribute with same value then matching will happen.
-func TestMatchAgainstManifestRules_AttributeMatch(t *testing.T) {
+func TestMatchAgainstManifestRulesAttributeMatch(t *testing.T) {
 	commonLabels := []attribute.KeyValue{
 		attribute.String("labelA", "chocolate"),
 		attribute.String("labelB", "raspberry"),
@@ -173,16 +172,16 @@ func TestMatchAgainstManifestRules_AttributeMatch(t *testing.T) {
 		Rules: rules,
 	}
 
-	exp, _, err := m.MatchAgainstManifestRules(sdktrace.SamplingParameters{Attributes: commonLabels}, "test", "local")
+	exp, match, err := m.MatchAgainstManifestRules(sdktrace.SamplingParameters{Attributes: commonLabels}, "test", "local")
+	require.True(t, match)
 	require.NoError(t, err)
 
 	// assert that manifest rule r1 is a match
-	assert.Nil(t, err)
 	assert.Equal(t, *exp, r1)
 }
 
 // assert that wildcard attributes will match.
-func TestMatchAgainstManifestRules_AttributeWildCardMatch(t *testing.T) {
+func TestMatchAgainstManifestRulesAttributeWildCardMatch(t *testing.T) {
 	commonLabels := []attribute.KeyValue{
 		attribute.String("labelA", "chocolate"),
 		attribute.String("labelB", "raspberry"),
@@ -217,7 +216,8 @@ func TestMatchAgainstManifestRules_AttributeWildCardMatch(t *testing.T) {
 		Rules: rules,
 	}
 
-	exp, _, err := m.MatchAgainstManifestRules(sdktrace.SamplingParameters{Attributes: commonLabels}, "test", "local")
+	exp, match, err := m.MatchAgainstManifestRules(sdktrace.SamplingParameters{Attributes: commonLabels}, "test", "local")
+	require.True(t, match)
 	require.NoError(t, err)
 
 	// assert that manifest rule r1 is a match
@@ -227,7 +227,7 @@ func TestMatchAgainstManifestRules_AttributeWildCardMatch(t *testing.T) {
 
 // assert that when no known rule is match then returned rule is nil,
 // matched flag is false
-func TestMatchAgainstManifestRules_NoMatch(t *testing.T) {
+func TestMatchAgainstManifestRulesNoMatch(t *testing.T) {
 	r1 := Rule{
 		ruleProperties: ruleProperties{
 			RuleName:      "r1",
@@ -332,12 +332,9 @@ func TestRefreshManifestRules(t *testing.T) {
 		_, err := res.Write(body)
 		require.NoError(t, err)
 	}))
-	defer testServer.Close()
+	t.Cleanup(testServer.Close)
 
-	u, err := url.Parse(testServer.URL)
-	require.NoError(t, err)
-
-	client, err := newClient(*u)
+	client, err := createTestClient(testServer.URL)
 	require.NoError(t, err)
 
 	m := &Manifest{
@@ -415,13 +412,12 @@ func TestRefreshManifestRules(t *testing.T) {
 		samplingStatistics: &samplingStatistics{},
 	}
 
+	require.Len(t, m.Rules, 3)
+
 	// Assert on sorting order
 	assert.Equal(t, r2, m.Rules[0])
 	assert.Equal(t, r3, m.Rules[1])
 	assert.Equal(t, r1, m.Rules[2])
-
-	// Assert on size of manifest
-	assert.Equal(t, 3, len(m.Rules))
 }
 
 // assert that rule with no ServiceName updates manifest successfully with empty values.
@@ -459,12 +455,9 @@ func TestRefreshManifestMissingServiceName(t *testing.T) {
 		require.NoError(t, err)
 
 	}))
-	defer testServer.Close()
+	t.Cleanup(testServer.Close)
 
-	u, err := url.Parse(testServer.URL)
-	require.NoError(t, err)
-
-	client, err := newClient(*u)
+	client, err := createTestClient(testServer.URL)
 	require.NoError(t, err)
 
 	m := &Manifest{
@@ -477,7 +470,7 @@ func TestRefreshManifestMissingServiceName(t *testing.T) {
 	require.NoError(t, err)
 
 	// assert on rule gets added
-	assert.Equal(t, 1, len(m.Rules))
+	assert.Len(t, m.Rules, 1)
 }
 
 // assert that rule with no RuleName does not update to the manifest.
@@ -514,26 +507,23 @@ func TestRefreshManifestMissingRuleName(t *testing.T) {
 		require.NoError(t, err)
 
 	}))
-	defer testServer.Close()
+	t.Cleanup(testServer.Close)
 
-	u, err := url.Parse(testServer.URL)
-	require.NoError(t, err)
-
-	client, err := newClient(*u)
+	client, err := createTestClient(testServer.URL)
 	require.NoError(t, err)
 
 	m := &Manifest{
 		Rules:      []Rule{},
 		xrayClient: client,
 		clock:      &defaultClock{},
-		logger:     stdr.NewWithOptions(log.New(os.Stderr, "", log.LstdFlags|log.Lshortfile), stdr.Options{LogCaller: stdr.Error}),
+		logger:     testr.New(t),
 	}
 
 	err = m.RefreshManifestRules(ctx)
 	require.NoError(t, err)
 
 	// assert on rule not added
-	assert.Equal(t, 0, len(m.Rules))
+	assert.Len(t, m.Rules, 0)
 }
 
 // assert that rule with version greater than one does not update to the manifest.
@@ -572,26 +562,23 @@ func TestRefreshManifestIncorrectVersion(t *testing.T) {
 		require.NoError(t, err)
 
 	}))
-	defer testServer.Close()
+	t.Cleanup(testServer.Close)
 
-	u, err := url.Parse(testServer.URL)
-	require.NoError(t, err)
-
-	client, err := newClient(*u)
+	client, err := createTestClient(testServer.URL)
 	require.NoError(t, err)
 
 	m := &Manifest{
 		Rules:      []Rule{},
 		xrayClient: client,
 		clock:      &defaultClock{},
-		logger:     stdr.NewWithOptions(log.New(os.Stderr, "", log.LstdFlags|log.Lshortfile), stdr.Options{LogCaller: stdr.Error}),
+		logger:     testr.New(t),
 	}
 
 	err = m.RefreshManifestRules(ctx)
 	require.NoError(t, err)
 
 	// assert on rule not added
-	assert.Equal(t, 0, len(m.Rules))
+	assert.Len(t, m.Rules, 0)
 }
 
 // assert that 1 valid and 1 invalid rule update only valid rule gets stored to the manifest.
@@ -681,20 +668,20 @@ func TestRefreshManifestAddOneInvalidRule(t *testing.T) {
 		Rules:      []Rule{},
 		xrayClient: client,
 		clock:      &defaultClock{},
-		logger:     stdr.NewWithOptions(log.New(os.Stderr, "", log.LstdFlags|log.Lshortfile), stdr.Options{LogCaller: stdr.Error}),
+		logger:     testr.New(t),
 	}
 
 	err = m.RefreshManifestRules(ctx)
 	require.NoError(t, err)
 
-	assert.Equal(t, 1, len(m.Rules))
+	assert.Len(t, m.Rules, 1)
 
 	// assert on r1
 	assert.Equal(t, r1, m.Rules[0])
 }
 
 // assert that inactive rule so return early without doing getSamplingTargets call
-func TestRefreshManifestTarget_NoSnapShot(t *testing.T) {
+func TestRefreshManifestTargetNoSnapShot(t *testing.T) {
 	clock := &mockClock{
 		nowTime: 15000000,
 	}
@@ -727,12 +714,12 @@ func TestRefreshManifestTarget_NoSnapShot(t *testing.T) {
 	m := &Manifest{
 		Rules:  rules,
 		clock:  clock,
-		logger: stdr.NewWithOptions(log.New(os.Stderr, "", log.LstdFlags|log.Lshortfile), stdr.Options{LogCaller: stdr.Error}),
+		logger: testr.New(t),
 	}
 
 	refresh, err := m.RefreshManifestTargets(context.Background())
 	assert.False(t, refresh)
-	assert.Nil(t, err)
+	assert.NoError(t, err)
 }
 
 // assert that refresh manifest targets successfully updates reservoir value for a rule.
@@ -793,18 +780,16 @@ func TestRefreshManifestTargets(t *testing.T) {
 		_, err := res.Write(body)
 		require.NoError(t, err)
 	}))
-	defer testServer.Close()
+	t.Cleanup(testServer.Close)
 
-	u, err := url.Parse(testServer.URL)
+	client, err := createTestClient(testServer.URL)
 	require.NoError(t, err)
 
-	client, err := newClient(*u)
-	require.NoError(t, err)
 	refreshedAt := time.Unix(18000000, 0)
 	m := &Manifest{
 		Rules:       rules,
 		clock:       clock,
-		logger:      stdr.NewWithOptions(log.New(os.Stderr, "", log.LstdFlags|log.Lshortfile), stdr.Options{LogCaller: stdr.Error}),
+		logger:      testr.New(t),
 		xrayClient:  client,
 		refreshedAt: refreshedAt,
 	}
@@ -814,6 +799,7 @@ func TestRefreshManifestTargets(t *testing.T) {
 	require.NoError(t, err)
 
 	// assert target updates
+	require.Len(t, m.Rules, 1)
 	assert.Equal(t, m.Rules[0].ruleProperties.FixedRate, 0.06)
 	assert.Equal(t, m.Rules[0].reservoir.quota, 23.0)
 	assert.Equal(t, m.Rules[0].reservoir.expiresAt, time.Unix(15000000, 0))
@@ -821,8 +807,7 @@ func TestRefreshManifestTargets(t *testing.T) {
 }
 
 // assert that refresh manifest targets successfully updates samplingTargetsPollingInterval.
-func TestRefreshManifestTargets_PollIntervalUpdateTest(t *testing.T) {
-	// RuleName is missing from r2
+func TestRefreshManifestTargetsPollIntervalUpdateTest(t *testing.T) {
 	body := []byte(`{
    "LastRuleModification": 17000000,
    "SamplingTargetDocuments": [ 
@@ -900,12 +885,9 @@ func TestRefreshManifestTargets_PollIntervalUpdateTest(t *testing.T) {
 		_, err := res.Write(body)
 		require.NoError(t, err)
 	}))
-	defer testServer.Close()
+	t.Cleanup(testServer.Close)
 
-	u, err := url.Parse(testServer.URL)
-	require.NoError(t, err)
-
-	client, err := newClient(*u)
+	client, err := createTestClient(testServer.URL)
 	require.NoError(t, err)
 
 	refreshedAt := time.Unix(18000000, 0)
@@ -913,7 +895,7 @@ func TestRefreshManifestTargets_PollIntervalUpdateTest(t *testing.T) {
 	m := &Manifest{
 		Rules:       rules,
 		clock:       clock,
-		logger:      stdr.NewWithOptions(log.New(os.Stderr, "", log.LstdFlags|log.Lshortfile), stdr.Options{LogCaller: stdr.Error}),
+		logger:      testr.New(t),
 		xrayClient:  client,
 		refreshedAt: refreshedAt,
 	}
@@ -922,7 +904,7 @@ func TestRefreshManifestTargets_PollIntervalUpdateTest(t *testing.T) {
 	require.NoError(t, err)
 
 	// assert that sampling rules polling interval is minimum of all target intervals min(15, 5, 25)
-	assert.Equal(t, m.SamplingTargetsPollingInterval, 5*time.Second)
+	assert.Equal(t, 5*time.Second, m.SamplingTargetsPollingInterval)
 }
 
 // assert that a valid sampling target updates its rule.
@@ -1102,7 +1084,7 @@ func TestUpdateTargetsUnprocessedStatistics(t *testing.T) {
 
 	m := &Manifest{
 		clock:  clock,
-		logger: stdr.NewWithOptions(log.New(os.Stderr, "", log.LstdFlags|log.Lshortfile), stdr.Options{LogCaller: stdr.Error}),
+		logger: testr.New(t),
 	}
 
 	refresh, err := m.updateTargets(targets5xx)
@@ -1144,7 +1126,7 @@ func TestUpdateTargetsUnprocessedStatistics(t *testing.T) {
 
 	m = &Manifest{
 		clock:  clock,
-		logger: stdr.NewWithOptions(log.New(os.Stderr, "", log.LstdFlags|log.Lshortfile), stdr.Options{LogCaller: stdr.Error}),
+		logger: testr.New(t),
 	}
 
 	refresh, err = m.updateTargets(targets)
@@ -1450,7 +1432,7 @@ func TestMixedSnapshots(t *testing.T) {
 	require.NoError(t, err)
 
 	// assert that only inactive rules are added to the statistics
-	assert.Equal(t, 1, len(statistics))
+	require.Len(t, statistics, 1)
 	assert.Equal(t, ss1, *statistics[0])
 }
 

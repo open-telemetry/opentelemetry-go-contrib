@@ -22,31 +22,31 @@ import (
 	"go.opentelemetry.io/otel/trace"
 )
 
-// Rule represents a sampling rule which contains rule properties and reservoir which keeps tracks of sampling statistics of a rule
+// Rule represents a sampling rule which contains rule properties and reservoir which keeps tracks of sampling statistics of a rule.
 type Rule struct {
 	samplingStatistics *samplingStatistics
 
-	// reservoir has equivalent fields to store what we receive from service API getSamplingTargets
+	// reservoir has equivalent fields to store what we receive from service API getSamplingTargets.
 	// https://docs.aws.amazon.com/xray/latest/api/API_GetSamplingTargets.html
 	reservoir reservoir
 
-	// equivalent to what we receive from service API getSamplingRules
+	// ruleProperty is equivalent to what we receive from service API getSamplingRules.
 	// https://docs.aws.amazon.com/cli/latest/reference/xray/get-sampling-rules.html
 	ruleProperties ruleProperties
 }
 
 type samplingStatistics struct {
-	// number of requests matched against specific rule
+	// matchedRequests is the number of requests matched against specific rule.
 	matchedRequests int64
 
-	// number of requests sampled using specific rule
+	// sampledRequests is the number of requests sampled using specific rule.
 	sampledRequests int64
 
-	// number of requests borrowed using specific rule
+	// borrowedRequests is the number of requests borrowed using specific rule.
 	borrowedRequests int64
 }
 
-// stale checks if targets (sampling stats) for a given rule is expired or not
+// stale checks if targets (sampling stats) for a given rule is expired or not.
 func (r *Rule) stale(now time.Time) bool {
 	reservoirRefreshTime := r.reservoir.refreshedAt.Add(time.Duration(r.reservoir.interval) * time.Second)
 	return r.samplingStatistics.matchedRequests != 0 && now.After(reservoirRefreshTime)
@@ -80,9 +80,9 @@ func (r *Rule) Sample(parameters sdktrace.SamplingParameters, now time.Time) sdk
 
 	atomic.AddInt64(&r.samplingStatistics.matchedRequests, int64(1))
 
-	// fallback sampling logic if quota for a given rule is expired
+	// Fallback sampling logic if quota for a given rule is expired.
 	if r.reservoir.expired(now) {
-		// borrowing one request every second
+		// Borrowing one request every second.
 		if r.reservoir.take(now, true, 1.0) {
 			atomic.AddInt64(&r.samplingStatistics.borrowedRequests, int64(1))
 
@@ -90,7 +90,7 @@ func (r *Rule) Sample(parameters sdktrace.SamplingParameters, now time.Time) sdk
 			return sd
 		}
 
-		// using traceIDRatioBased sampler to sample using fixed rate
+		// Using traceIDRatioBased sampler to sample using fixed rate.
 		sd = sdktrace.TraceIDRatioBased(r.ruleProperties.FixedRate).ShouldSample(parameters)
 
 		if sd.Decision == sdktrace.RecordAndSample {
@@ -100,7 +100,7 @@ func (r *Rule) Sample(parameters sdktrace.SamplingParameters, now time.Time) sdk
 		return sd
 	}
 
-	// Take from reservoir quota, if quota is available for that second
+	// Take from reservoir quota, if quota is available for that second.
 	if r.reservoir.take(now, false, 1.0) {
 		atomic.AddInt64(&r.samplingStatistics.sampledRequests, int64(1))
 		sd.Decision = sdktrace.RecordAndSample
@@ -119,7 +119,7 @@ func (r *Rule) Sample(parameters sdktrace.SamplingParameters, now time.Time) sdk
 }
 
 // appliesTo performs a matching against rule properties to see
-// if a given rule does match with any of the rule set on AWS X-Ray console
+// if a given rule does match with any of the rule set on AWS X-Ray console.
 func (r *Rule) appliesTo(parameters sdktrace.SamplingParameters, serviceName string, cloudPlatform string) (bool, error) {
 	var httpTarget string
 	var httpURL string
@@ -144,7 +144,7 @@ func (r *Rule) appliesTo(parameters sdktrace.SamplingParameters, serviceName str
 		}
 	}
 
-	// attributes and other HTTP span attributes matching
+	// Attributes and other HTTP span attributes matching.
 	attributeMatcher, err := r.attributeMatching(parameters)
 	if err != nil {
 		return attributeMatcher, err
@@ -186,29 +186,31 @@ func (r *Rule) appliesTo(parameters sdktrace.SamplingParameters, serviceName str
 		HTTPURLPathMatcher, nil
 }
 
-// attributeMatching performs a match on attributes set by users on AWS X-Ray console
+// attributeMatching performs a match on attributes set by users on AWS X-Ray console.
 func (r *Rule) attributeMatching(parameters sdktrace.SamplingParameters) (bool, error) {
 	match := false
 	var err error
-	if len(r.ruleProperties.Attributes) > 0 {
-		for key, value := range r.ruleProperties.Attributes {
-			unmatchedCounter := 0
-			for _, attrs := range parameters.Attributes {
-				if key == string(attrs.Key) {
-					match, err = wildcardMatch(value, attrs.Value.AsString())
-					if err != nil {
-						return false, err
-					}
-				} else {
-					unmatchedCounter++
-				}
-			}
-			if unmatchedCounter == len(parameters.Attributes) {
-				return false, nil
-			}
-		}
-		return match, nil
+
+	if len(r.ruleProperties.Attributes) == 0 {
+		return true, nil
 	}
 
-	return true, nil
+	for key, value := range r.ruleProperties.Attributes {
+		unmatchedCounter := 0
+		for _, attrs := range parameters.Attributes {
+			if key == string(attrs.Key) {
+				match, err = wildcardMatch(value, attrs.Value.AsString())
+				if err != nil {
+					return false, err
+				}
+			} else {
+				unmatchedCounter++
+			}
+		}
+		if unmatchedCounter == len(parameters.Attributes) {
+			return false, nil
+		}
+	}
+
+	return match, nil
 }

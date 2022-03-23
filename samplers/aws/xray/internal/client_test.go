@@ -25,6 +25,20 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
+func createTestClient(testServerURL string) (*xrayClient, error) {
+	u, err := url.Parse(testServerURL)
+	if err != nil {
+		return nil, err
+	}
+
+	client, err := newClient(*u)
+	if err != nil {
+		return nil, err
+	}
+
+	return client, nil
+}
+
 func TestGetSamplingRules(t *testing.T) {
 	body := []byte(`{
   "NextToken": null,
@@ -92,14 +106,12 @@ func TestGetSamplingRules(t *testing.T) {
 
 	// generate a test server so we can capture and inspect the request
 	testServer := httptest.NewServer(http.HandlerFunc(func(res http.ResponseWriter, req *http.Request) {
-		_, err := res.Write([]byte(body))
+		_, err := res.Write(body)
 		require.NoError(t, err)
 	}))
+	t.Cleanup(testServer.Close)
 
-	u, err := url.Parse(testServer.URL)
-	require.NoError(t, err)
-
-	client, err := newClient(*u)
+	client, err := createTestClient(testServer.URL)
 	require.NoError(t, err)
 
 	samplingRules, err := client.getSamplingRules(ctx)
@@ -157,12 +169,9 @@ func TestGetSamplingRulesWithMissingValues(t *testing.T) {
 		_, err := res.Write([]byte(body))
 		require.NoError(t, err)
 	}))
-	defer testServer.Close()
+	t.Cleanup(testServer.Close)
 
-	u, err := url.Parse(testServer.URL)
-	require.NoError(t, err)
-
-	client, err := newClient(*u)
+	client, err := createTestClient(testServer.URL)
 	require.NoError(t, err)
 
 	samplingRules, err := client.getSamplingRules(ctx)
@@ -204,12 +213,9 @@ func TestGetSamplingTargets(t *testing.T) {
 		_, err := res.Write([]byte(body))
 		require.NoError(t, err)
 	}))
-	defer testServer.Close()
+	t.Cleanup(testServer.Close)
 
-	u, err := url.Parse(testServer.URL)
-	require.NoError(t, err)
-
-	client, err := newClient(*u)
+	client, err := createTestClient(testServer.URL)
 	require.NoError(t, err)
 
 	samplingTragets, err := client.getSamplingTargets(ctx, nil)
@@ -252,12 +258,9 @@ func TestGetSamplingTargetsMissingValues(t *testing.T) {
 		_, err := res.Write([]byte(body))
 		require.NoError(t, err)
 	}))
-	defer testServer.Close()
+	t.Cleanup(testServer.Close)
 
-	endpoint, err := url.Parse(testServer.URL)
-	require.NoError(t, err)
-
-	client, err := newClient(*endpoint)
+	client, err := createTestClient(testServer.URL)
 	require.NoError(t, err)
 
 	samplingTragets, err := client.getSamplingTargets(ctx, nil)

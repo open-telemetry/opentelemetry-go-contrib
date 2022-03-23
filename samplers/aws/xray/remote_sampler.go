@@ -25,7 +25,7 @@ import (
 )
 
 // remoteSampler is a sampler for AWS X-Ray which polls sampling rules and sampling targets
-// to make a sampling decision based on rules set by users on AWS X-Ray console
+// to make a sampling decision based on rules set by users on AWS X-Ray console.
 type remoteSampler struct {
 	// manifest is the list of known centralized sampling rules.
 	manifest *internal.Manifest
@@ -36,16 +36,13 @@ type remoteSampler struct {
 	// samplingRulesPollingInterval, default is 300 seconds.
 	samplingRulesPollingInterval time.Duration
 
-	// matching attribute
 	serviceName string
 
-	// matching attribute
 	cloudPlatform string
 
-	// fallback sampler
 	fallbackSampler *FallbackSampler
 
-	// logger for logging
+	// logger for logging.
 	logger logr.Logger
 }
 
@@ -56,7 +53,7 @@ var _ sdktrace.Sampler = (*remoteSampler)(nil)
 // based on the sampling rules set by users on AWS X-Ray console. Sampler also periodically polls
 // sampling rules and sampling targets.
 func NewRemoteSampler(ctx context.Context, serviceName string, cloudPlatform string, opts ...Option) (sdktrace.Sampler, error) {
-	// create new config based on options or set to default values
+	// Create new config based on options or set to default values.
 	cfg, err := newConfig(opts...)
 	if err != nil {
 		return nil, err
@@ -77,37 +74,34 @@ func NewRemoteSampler(ctx context.Context, serviceName string, cloudPlatform str
 		logger:                       cfg.logger,
 	}
 
-	// starts the rule and target poller
 	remoteSampler.start(ctx)
 
 	return remoteSampler, nil
 }
 
-// ShouldSample matches span attributes with retrieved sampling rules and perform sampling,
-// if rules does not match or manifest is expired then use fallback sampling.
+// ShouldSample matches span attributes with retrieved sampling rules and returns a sampling result.
+// If the sampling parameter to not match or the manifest is expired then the fallback sampler is used.
 func (rs *remoteSampler) ShouldSample(parameters sdktrace.SamplingParameters) sdktrace.SamplingResult {
 	if rs.manifest.Expired() {
-		// Use fallback sampler if manifest is expired
+		// Use fallback sampler if manifest is expired.
 		rs.logger.V(5).Info("manifest is expired so using fallback sampling strategy")
 
 		return rs.fallbackSampler.ShouldSample(parameters)
 	}
 
-	// match against known rules
 	r, match, err := rs.manifest.MatchAgainstManifestRules(parameters, rs.serviceName, rs.cloudPlatform)
 	if err != nil {
-		rs.logger.Error(err, "regexp matching error while matching span and resource attributes")
+		rs.logger.Error(err, "rule matching error")
 		return sdktrace.SamplingResult{}
 	}
 
 	if match {
-		// remote sampling based on rule match
+		// Remote sampling based on rule match.
 		return r.Sample(parameters, time.Now())
 	}
 
-	// Use fallback sampler if
-	// sampling rules does not match against manifest
-	rs.logger.V(5).Info("span attributes does not match to the sampling rules or manifest is expired so using fallback sampling strategy")
+	// Use fallback sampler if sampling rules does not match against manifest.
+	rs.logger.V(5).Info("span does not match rules from manifest(or it is expired), using fallback sampler")
 	return rs.fallbackSampler.ShouldSample(parameters)
 }
 
@@ -124,17 +118,17 @@ func (rs *remoteSampler) start(ctx context.Context) {
 }
 
 // startPoller starts the rule and target poller in a single go routine which runs periodically
-// to refresh manifest and targets.
+// to the refresh manifest and targets.
 func (rs *remoteSampler) startPoller(ctx context.Context) {
-	// jitter = 5s, default 300 seconds
+	// jitter = 5s, default duration 300 seconds.
 	rulesTicker := newTicker(rs.samplingRulesPollingInterval, 5*time.Second)
 	defer rulesTicker.tick.Stop()
 
-	// jitter = 100ms, default 10 seconds
+	// jitter = 100ms, default duration 10 seconds.
 	targetTicker := newTicker(rs.manifest.SamplingTargetsPollingInterval, 100*time.Millisecond)
 	defer targetTicker.tick.Stop()
 
-	// fetch sampling rules to kick start the remote sampling
+	// Fetch sampling rules to kick start the remote sampling.
 	rs.refreshManifest(ctx)
 
 	for {
@@ -144,7 +138,6 @@ func (rs *remoteSampler) startPoller(ctx context.Context) {
 				return
 			}
 
-			// fetch sampling rules and updates manifest
 			rs.refreshManifest(ctx)
 			continue
 		case _, more := <-targetTicker.c():
@@ -152,10 +145,10 @@ func (rs *remoteSampler) startPoller(ctx context.Context) {
 				return
 			}
 
-			// fetch sampling targets and updates manifest
 			refresh := rs.refreshTargets(ctx)
 
-			// out of band manifest refresh if it manifest is not updated
+			// If LastRuleModification time is more recent than manifest refresh time,
+			// then we explicitly perform refreshing the manifest.
 			if refresh {
 				rs.refreshManifest(ctx)
 			}
@@ -169,9 +162,9 @@ func (rs *remoteSampler) startPoller(ctx context.Context) {
 // refreshManifest refreshes the manifest retrieved via getSamplingRules API.
 func (rs *remoteSampler) refreshManifest(ctx context.Context) {
 	if err := rs.manifest.RefreshManifestRules(ctx); err != nil {
-		rs.logger.Error(err, "Error occurred while refreshing sampling rules")
+		rs.logger.Error(err, "error occurred while refreshing sampling rules")
 	} else {
-		rs.logger.V(5).Info("Successfully fetched sampling rules")
+		rs.logger.V(5).Info("successfully fetched sampling rules")
 	}
 }
 

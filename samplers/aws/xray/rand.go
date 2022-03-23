@@ -30,8 +30,10 @@ func newSeed() int64 {
 	return seed
 }
 
+var seed = newSeed()
+
 func newGlobalRand() *rand.Rand {
-	src := rand.NewSource(newSeed())
+	src := rand.NewSource(seed)
 	if src64, ok := src.(rand.Source64); ok {
 		return rand.New(src64)
 	}

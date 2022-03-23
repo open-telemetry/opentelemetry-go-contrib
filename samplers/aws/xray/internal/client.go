@@ -54,49 +54,49 @@ type getSamplingTargetsInput struct {
 
 // samplingStatisticsDocument is used to store current state of sampling data.
 type samplingStatisticsDocument struct {
-	// a unique identifier for the service in hexadecimal
+	// A unique identifier for the service in hexadecimal.
 	ClientID *string
 
-	// the name of the sampling rule
+	// The name of the sampling rule.
 	RuleName *string
 
-	// the number of requests that matched the rule
+	// The number of requests that matched the rule.
 	RequestCount *int64
 
-	// the number of requests borrowed
+	// The number of requests borrowed.
 	BorrowCount *int64
 
-	// the number of requests sampled using the rule
+	// The number of requests sampled using the rule.
 	SampledCount *int64
 
-	// the current time
+	// The current time.
 	Timestamp *int64
 }
 
-// getSamplingTargetsOutput is used to store parsed json sampling targets
+// getSamplingTargetsOutput is used to store parsed json sampling targets.
 type getSamplingTargetsOutput struct {
 	LastRuleModification    *float64                  `json:"LastRuleModification,omitempty"`
 	SamplingTargetDocuments []*samplingTargetDocument `json:"SamplingTargetDocuments,omitempty"`
 	UnprocessedStatistics   []*unprocessedStatistic   `json:"UnprocessedStatistics,omitempty"`
 }
 
-// samplingTargetDocument contains updated targeted information retrieved from X-Ray service
+// samplingTargetDocument contains updated targeted information retrieved from X-Ray service.
 type samplingTargetDocument struct {
-	// the percentage of matching requests to instrument, after the reservoir is
-	// exhausted
+	// The percentage of matching requests to instrument, after the reservoir is
+	// exhausted.
 	FixedRate *float64 `json:"FixedRate,omitempty"`
 
-	// the number of seconds for the service to wait before getting sampling targets
-	// again
+	// The number of seconds for the service to wait before getting sampling targets
+	// again.
 	Interval *int64 `json:"Interval,omitempty"`
 
-	// the number of requests per second that X-Ray allocated this service
+	// The number of requests per second that X-Ray allocated this service.
 	ReservoirQuota *float64 `json:"ReservoirQuota,omitempty"`
 
-	// when the reservoir quota expires
+	// The reservoir quota expires.
 	ReservoirQuotaTTL *float64 `json:"ReservoirQuotaTTL,omitempty"`
 
-	// the name of the sampling rule
+	// The name of the sampling rule.
 	RuleName *string `json:"RuleName,omitempty"`
 }
 
@@ -107,19 +107,19 @@ type unprocessedStatistic struct {
 }
 
 type xrayClient struct {
-	// http client for sending sampling requests to the collector
+	// HTTP client for sending sampling requests to the collector.
 	httpClient *http.Client
 
-	// resolved URL to call getSamplingRules API
+	// Resolved URL to call getSamplingRules API.
 	samplingRulesURL string
 
-	// resolved URL to call getSamplingTargets API
+	// Resolved URL to call getSamplingTargets API.
 	samplingTargetsURL string
 }
 
 // newClient returns an HTTP client with proxy endpoint.
 func newClient(endpoint url.URL) (client *xrayClient, err error) {
-	// construct resolved URL for getSamplingRules and getSamplingTargets API calls
+	// Construct resolved URLs for getSamplingRules and getSamplingTargets API calls.
 	endpoint.Path = "/GetSamplingRules"
 	samplingRulesURL := endpoint
 

@@ -18,26 +18,26 @@ import (
 	"time"
 )
 
-// Clock provides an interface to implement method for getting current time.
+// clock represents a time keeper that returns its version of the current time.
 type clock interface {
 	now() time.Time
 }
 
-// DefaultClock is an implementation of Clock interface.
+// defaultClock wraps the standard time package.
 type defaultClock struct{}
 
-// Now returns current time.
+// now returns current time according to the standard time package.
 func (t *defaultClock) now() time.Time {
 	return time.Now()
 }
 
-// MockClock is a struct to record current time.
+// mockClock is a time keeper that returns a fixed time.
 type mockClock struct {
 	nowTime  int64
 	nowNanos int64
 }
 
-// Now function returns NowTime value.
+// now function returns the fixed time value stored in c.
 func (c *mockClock) now() time.Time {
 	return time.Unix(c.nowTime, c.nowNanos)
 }

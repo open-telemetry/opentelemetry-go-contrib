@@ -20,33 +20,33 @@ import (
 )
 
 // reservoir represents a sampling statistics for a given rule and populate it's value from
-// the response getSamplingTargets API which sends information on sampling statistics real-time
+// the response getSamplingTargets API which sends information on sampling statistics in real-time.
 type reservoir struct {
-	// quota expiration timestamp
+	// Quota expiration timestamp.
 	expiresAt time.Time
 
-	// quota assigned to client to consume per second
+	// Quota assigned to client to consume per second.
 	quota float64
 
-	// current balance of quota
+	// Current balance of quota.
 	quotaBalance float64
 
-	// total size of reservoir consumption per second
+	// Total size of reservoir consumption per second.
 	capacity float64
 
-	// quota refresh timestamp
+	// Quota refresh timestamp.
 	refreshedAt time.Time
 
-	// polling interval for quota
+	// Polling interval for quota.
 	interval time.Duration
 
-	// stores reservoir ticks
+	// Stores reservoir ticks.
 	lastTick time.Time
 
 	mu *sync.RWMutex
 }
 
-// expired returns true if current time is past expiration timestamp. False otherwise.
+// expired returns true if current time is past expiration timestamp. Otherwise, false is returned if no quota remains.
 func (r *reservoir) expired(now time.Time) bool {
 	r.mu.RLock()
 	defer r.mu.RUnlock()
@@ -75,7 +75,7 @@ func (r *reservoir) take(now time.Time, borrowed bool, itemCost float64) bool {
 	}
 
 	// update quota balance based on elapsed time
-	r.refreshQuotaBalance(now, borrowed)
+	r.refreshQuotaBalanceLocked(now, borrowed)
 
 	if r.quotaBalance >= itemCost {
 		r.quotaBalance -= itemCost
@@ -85,17 +85,17 @@ func (r *reservoir) take(now time.Time, borrowed bool, itemCost float64) bool {
 	return false
 }
 
-// refreshQuotaBalance refreshes the quotaBalance. if borrowed true then add quota balance 1 by every second
-// otherwise add quota balance based on assigned quota by X-Ray service
-func (r *reservoir) refreshQuotaBalance(now time.Time, borrowed bool) {
-	currentTime := now
-	elapsedTime := currentTime.Sub(r.lastTick)
-	r.lastTick = currentTime
+// refreshQuotaBalanceLocked refreshes the quotaBalance. If borrowed is true then add to the quota balance 1 by every second,
+// otherwise add to the quota balance based on assigned quota by X-Ray service.
+// It is assumed the lock is held when calling this.
+func (r *reservoir) refreshQuotaBalanceLocked(now time.Time, borrowed bool) {
+	elapsedTime := now.Sub(r.lastTick)
+	r.lastTick = now
 
-	// calculate how much credit have we accumulated since the last tick
+	// Calculate how much credit have we accumulated since the last tick.
 	if borrowed {
-		// when elapsedTime is higher than 1 even then we need to keep quotaBalance
-		// near to 1 so making elapsedTime to 1 for only borrowing 1 per second case
+		// In borrowing case since we want to enforce sample one req every second, no need to accumulate
+		// quotaBalance based on elapsedTime when elapsedTime is greater than 1.
 		if elapsedTime.Seconds() > 1.0 {
 			r.quotaBalance += 1.0
 		} else {

@@ -22,6 +22,7 @@ import (
 	"go.opentelemetry.io/otel/trace"
 )
 
+// FallbackSampler does the sampling at a rate of 1 req/sec and 5% of additional requests.
 type FallbackSampler struct {
 	lastTick       time.Time
 	quotaBalance   float64
@@ -54,7 +55,7 @@ func (fs *FallbackSampler) ShouldSample(parameters sdktrace.SamplingParameters) 
 	return fs.defaultSampler.ShouldSample(parameters)
 }
 
-// Description returns description of the sampler being used
+// Description returns description of the sampler being used.
 func (fs *FallbackSampler) Description() string {
 	return "FallbackSampler{fallback sampling with sampling config of 1 req/sec and 5% of additional requests}"
 }
@@ -74,7 +75,7 @@ func (fs *FallbackSampler) take(now time.Time, itemCost float64) bool {
 	}
 
 	// update quota balance based on elapsed time
-	fs.refreshQuotaBalance(now)
+	fs.refreshQuotaBalanceLocked(now)
 
 	if fs.quotaBalance >= itemCost {
 		fs.quotaBalance -= itemCost
@@ -84,11 +85,11 @@ func (fs *FallbackSampler) take(now time.Time, itemCost float64) bool {
 	return false
 }
 
-// refreshQuotaBalance refreshes the quotaBalance considering elapsedTime.
-func (fs *FallbackSampler) refreshQuotaBalance(now time.Time) {
-	currentTime := now
-	elapsedTime := currentTime.Sub(fs.lastTick)
-	fs.lastTick = currentTime
+// refreshQuotaBalanceLocked refreshes the quotaBalance considering elapsedTime.
+// It is assumed the lock is held when calling this.
+func (fs *FallbackSampler) refreshQuotaBalanceLocked(now time.Time) {
+	elapsedTime := now.Sub(fs.lastTick)
+	fs.lastTick = now
 
 	// when elapsedTime is higher than 1 even then we need to keep quotaBalance
 	// near to 1 so making elapsedTime to 1 for only borrowing 1 per second case
