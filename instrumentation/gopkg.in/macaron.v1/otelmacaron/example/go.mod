@@ -14,5 +14,6 @@ require (
 	go.opentelemetry.io/otel/exporters/stdout/stdouttrace v1.5.0
 	go.opentelemetry.io/otel/sdk v1.5.0
 	go.opentelemetry.io/otel/trace v1.5.0
+	golang.org/x/sys v0.0.0-20220319134239-a9b59b0215f8 // indirect
 	gopkg.in/macaron.v1 v1.4.0
 )
