@@ -347,7 +347,7 @@ func assertSpan(t *testing.T, span trace.ReadOnlySpan, tc *testCase) {
 	}
 }
 
-// TODO: recreate metrictest
+// TODO: Replace with in memory exporter https://github.com/open-telemetry/opentelemetry-go/issues/2722
 // func assertMetrics(t *testing.T, batches []metrictest.Batch, tc *testCase) {
 // 	for _, batch := range batches {
 // 		for _, att := range tc.expectedAttributes {
