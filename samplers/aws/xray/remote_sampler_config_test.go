@@ -75,26 +75,29 @@ func TestValidEndpoint(t *testing.T) {
 	cfg, err := newConfig(WithEndpoint(*endpoint))
 	require.NoError(t, err)
 
-	err = validateConfig(cfg)
-	assert.NoError(t, err)
+	assert.Equal(t, cfg.endpoint, *endpoint)
 }
 
-// assert that host name with special character would result in an error.
+// assert that host name with special character would not result in an error.
 func TestValidateHostNameWithSpecialCharacterEndpoint(t *testing.T) {
 	endpoint, err := url.Parse("http://127.0.0.1@:2000")
 	require.NoError(t, err)
 
-	_, err = newConfig(WithEndpoint(*endpoint))
-	assert.Error(t, err)
+	cfg, err := newConfig(WithEndpoint(*endpoint))
+	require.NoError(t, err)
+
+	assert.Equal(t, cfg.endpoint, *endpoint)
 }
 
-// assert that endpoint without host name would result in an error.
+// assert that endpoint without host name would not result in an error.
 func TestValidateInvalidEndpoint(t *testing.T) {
 	endpoint, err := url.Parse("https://")
 	require.NoError(t, err)
 
-	_, err = newConfig(WithEndpoint(*endpoint))
-	assert.Error(t, err)
+	cfg, err := newConfig(WithEndpoint(*endpoint))
+	require.NoError(t, err)
+
+	assert.Equal(t, cfg.endpoint, *endpoint)
 }
 
 // assert negative sampling rules interval leads to an error.

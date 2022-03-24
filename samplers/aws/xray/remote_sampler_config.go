@@ -20,8 +20,6 @@ import (
 	"math"
 	"net/url"
 	"os"
-	"regexp"
-	"strings"
 	"time"
 
 	"github.com/go-logr/logr"
@@ -92,38 +90,9 @@ func newConfig(opts ...Option) (*config, error) {
 		option.apply(cfg)
 	}
 
-	// validate config
-	err = validateConfig(cfg)
-	if err != nil {
-		return nil, err
+	if math.Signbit(float64(cfg.samplingRulesPollingInterval)) {
+		return nil, fmt.Errorf("config validation error: samplingRulesPollingInterval should be positive number")
 	}
 
 	return cfg, nil
-}
-
-func validateConfig(cfg *config) (err error) {
-	// check endpoint follows certain format
-	endpointHostSplit := strings.Split(cfg.endpoint.Host, ":")
-
-	if len(endpointHostSplit) > 2 {
-		return fmt.Errorf("config validation error: expected endpoint host format is hostname:port")
-	}
-
-	hostName := endpointHostSplit[0]
-
-	// validate host name
-	r, err := regexp.Compile("[^A-Za-z0-9.]")
-	if err != nil {
-		return err
-	}
-
-	if r.MatchString(hostName) || hostName == "" {
-		return fmt.Errorf("config validation error: host name should not contain special characters or empty")
-	}
-
-	if math.Signbit(float64(cfg.samplingRulesPollingInterval)) {
-		return fmt.Errorf("config validation error: samplingRulesPollingInterval should be positive number")
-	}
-
-	return
 }

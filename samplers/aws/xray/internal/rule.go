@@ -149,21 +149,45 @@ func (r *Rule) appliesTo(parameters sdktrace.SamplingParameters, serviceName str
 	if err != nil {
 		return attributeMatcher, err
 	}
+
+	if !attributeMatcher {
+		return attributeMatcher, nil
+	}
+
 	serviceNameMatcher, err := wildcardMatch(r.ruleProperties.ServiceName, serviceName)
 	if err != nil {
 		return serviceNameMatcher, err
 	}
+
+	if !serviceNameMatcher {
+		return serviceNameMatcher, nil
+	}
+
 	serviceTypeMatcher, err := wildcardMatch(r.ruleProperties.ServiceType, cloudPlatform)
 	if err != nil {
 		return serviceTypeMatcher, err
 	}
+
+	if !serviceTypeMatcher {
+		return serviceTypeMatcher, nil
+	}
+
 	HTTPMethodMatcher, err := wildcardMatch(r.ruleProperties.HTTPMethod, httpMethod)
 	if err != nil {
 		return HTTPMethodMatcher, err
 	}
+
+	if !HTTPMethodMatcher {
+		return HTTPMethodMatcher, nil
+	}
+
 	HTTPHostMatcher, err := wildcardMatch(r.ruleProperties.Host, httpHost)
 	if err != nil {
 		return HTTPHostMatcher, err
+	}
+
+	if !HTTPHostMatcher {
+		return HTTPHostMatcher, nil
 	}
 
 	if httpURL != "" {
@@ -171,19 +195,22 @@ func (r *Rule) appliesTo(parameters sdktrace.SamplingParameters, serviceName str
 		if err != nil {
 			return HTTPURLPathMatcher, err
 		}
+
+		if !HTTPURLPathMatcher {
+			return HTTPURLPathMatcher, nil
+		}
 	} else {
 		HTTPURLPathMatcher, err = wildcardMatch(r.ruleProperties.URLPath, httpTarget)
 		if err != nil {
 			return HTTPURLPathMatcher, err
 		}
+
+		if !HTTPURLPathMatcher {
+			return HTTPURLPathMatcher, nil
+		}
 	}
 
-	return attributeMatcher &&
-		serviceNameMatcher &&
-		serviceTypeMatcher &&
-		HTTPMethodMatcher &&
-		HTTPHostMatcher &&
-		HTTPURLPathMatcher, nil
+	return true, nil
 }
 
 // attributeMatching performs a match on attributes set by users on AWS X-Ray console.

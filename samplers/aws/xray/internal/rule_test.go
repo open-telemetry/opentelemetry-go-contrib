@@ -373,6 +373,76 @@ func TestAppliesToHTTPTargetMatching(t *testing.T) {
 	assert.True(t, match)
 }
 
+// assert early exit when attribute matcher is false
+func TestAppliesToExitEarlyNoAttributesMatch(t *testing.T) {
+	commonLabels := []attribute.KeyValue{
+		attribute.String("http.target", "target"),
+	}
+
+	r1 := Rule{
+		ruleProperties: ruleProperties{
+			RuleName:    "r1",
+			ServiceName: "test-service",
+			ServiceType: "ECS",
+			Host:        "*",
+			HTTPMethod:  "*",
+			URLPath:     "*",
+			Attributes: map[string]string{
+				"labelA": "chocolate",
+				"labelC": "fudge",
+			},
+		},
+	}
+
+	match, err := r1.appliesTo(trace.SamplingParameters{Attributes: commonLabels}, "test-service", "ECS")
+	require.NoError(t, err)
+	assert.False(t, match)
+}
+
+// assert early exit when service name matcher is false
+func TestAppliesToExitEarlyNoServiceNameMatch(t *testing.T) {
+	r1 := Rule{
+		ruleProperties: ruleProperties{
+			RuleName:    "r1",
+			ServiceName: "test-service",
+			ServiceType: "ECS",
+			Host:        "*",
+			HTTPMethod:  "*",
+			URLPath:     "*",
+			Attributes: map[string]string{
+				"labelA": "chocolate",
+				"labelC": "fudge",
+			},
+		},
+	}
+
+	match, err := r1.appliesTo(trace.SamplingParameters{}, "test-service11", "ECS")
+	require.NoError(t, err)
+	assert.False(t, match)
+}
+
+// assert early exit when service type matcher is false
+func TestAppliesToExitEarlyNoServiceTypeMatch(t *testing.T) {
+	r1 := Rule{
+		ruleProperties: ruleProperties{
+			RuleName:    "r1",
+			ServiceName: "test-service",
+			ServiceType: "EC2",
+			Host:        "*",
+			HTTPMethod:  "*",
+			URLPath:     "*",
+			Attributes: map[string]string{
+				"labelA": "chocolate",
+				"labelC": "fudge",
+			},
+		},
+	}
+
+	match, err := r1.appliesTo(trace.SamplingParameters{}, "test-service", "ECS")
+	require.NoError(t, err)
+	assert.False(t, match)
+}
+
 // assert that if rules has attribute and span has those attribute with same value then matching will happen.
 func TestAttributeMatching(t *testing.T) {
 	commonLabels := []attribute.KeyValue{
