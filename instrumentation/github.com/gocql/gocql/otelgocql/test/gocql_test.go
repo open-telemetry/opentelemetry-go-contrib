@@ -49,6 +49,7 @@ func (m *mockConnectObserver) ObserveConnect(observedConnect gocql.ObservedConne
 	m.callCount++
 }
 
+// TODO: Replace with in memory exporter https://github.com/open-telemetry/opentelemetry-go/issues/2722
 // type testRecord struct {
 // 	name       string
 // 	meterName  string
@@ -108,6 +109,7 @@ func TestQuery(t *testing.T) {
 		assertConnectionLevelAttributes(t, span)
 	}
 
+	// TODO: Replace with in memory exporter https://github.com/open-telemetry/opentelemetry-go/issues/2722
 	// // Check metrics
 	// actual := obtainTestRecords(meterProvider.MeasurementBatches)
 	// require.Len(t, actual, 3)

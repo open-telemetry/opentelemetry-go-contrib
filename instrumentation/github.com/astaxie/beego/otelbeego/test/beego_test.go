@@ -220,7 +220,7 @@ func TestStatic(t *testing.T) {
 	spans := sr.Ended()
 	require.Len(t, spans, 1)
 	assertSpan(t, spans[0], tc)
-	// TODO: recreate metrictest
+	// TODO: Replace with in memory exporter https://github.com/open-telemetry/opentelemetry-go/issues/2722
 	// assertMetrics(t, meterProvider.MeasurementBatches, tc)
 }
 
@@ -327,7 +327,7 @@ func runTest(t *testing.T, tc *testCase, url string) {
 	} else {
 		require.Len(t, spans, 0)
 	}
-	// TODO: recreate metrictest
+	// TODO: Replace with in memory exporter https://github.com/open-telemetry/opentelemetry-go/issues/2722
 	// assertMetrics(t, meterProvider.MeasurementBatches, tc)
 }
 

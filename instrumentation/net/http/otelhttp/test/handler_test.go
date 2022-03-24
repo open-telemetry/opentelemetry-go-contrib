@@ -34,6 +34,7 @@ import (
 	"go.opentelemetry.io/otel/sdk/trace/tracetest"
 )
 
+// TODO: Replace with in memory exporter https://github.com/open-telemetry/opentelemetry-go/issues/2722
 // func assertMetricAttributes(t *testing.T, expectedAttributes []attribute.KeyValue, measurementBatches []metrictest.Batch) {
 // 	for _, batch := range measurementBatches {
 // 		assert.ElementsMatch(t, expectedAttributes, batch.Labels)
@@ -46,7 +47,7 @@ func TestHandlerBasics(t *testing.T) {
 	spanRecorder := tracetest.NewSpanRecorder()
 	provider := sdktrace.NewTracerProvider(sdktrace.WithSpanProcessor(spanRecorder))
 
-	// TODO: Replace with in memory recorder
+	// TODO: Replace with in memory exporter https://github.com/open-telemetry/opentelemetry-go/issues/2722
 	meterProvider := nonrecording.NewNoopMeterProvider()
 
 	operation := "test_handler"
