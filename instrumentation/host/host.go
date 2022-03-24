@@ -285,5 +285,9 @@ func (h *host) register() error {
 			networkIOUsage.Observe(ctx, int64(ioStats[0].BytesRecv), AttributeNetworkReceive...)
 		})
 
+	if err != nil {
+		return err
+	}
+
 	return nil
 }

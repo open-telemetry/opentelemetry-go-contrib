@@ -141,6 +141,9 @@ func (r *runtime) register() error {
 		"process.runtime.go.cgo.calls",
 		instrument.WithDescription("Number of cgo calls made by the current process"),
 	)
+	if err != nil {
+		return err
+	}
 
 	err = r.meter.RegisterCallback(
 		[]instrument.Asynchronous{
@@ -154,6 +157,9 @@ func (r *runtime) register() error {
 			cgoCalls.Observe(ctx, goruntime.NumCgoCall())
 		},
 	)
+	if err != nil {
+		return err
+	}
 
 	return r.registerMemStats()
 }
@@ -317,7 +323,9 @@ func (r *runtime) registerMemStats() error {
 
 			lastNumGC = memStats.NumGC
 		})
-
+	if err != nil {
+		return err
+	}
 	return nil
 }
 

@@ -14,13 +14,6 @@
 
 package host_test
 
-import (
-	gonet "net"
-	"testing"
-
-	"github.com/stretchr/testify/require"
-)
-
 // TODO Replace with in memory exporter https://github.com/open-telemetry/opentelemetry-go/issues/2722
 // func getMetric(provider *metrictest.MeterProvider, name string, lbl attribute.KeyValue) float64 {
 // 	for _, b := range provider.MeasurementBatches {
@@ -155,41 +148,41 @@ import (
 // 	}
 // }
 
-func sendBytes(t *testing.T, count int) error {
-	conn1, err := gonet.ListenPacket("udp", "127.0.0.1:0")
-	if err != nil {
-		return err
-	}
-	defer conn1.Close()
+// func sendBytes(t *testing.T, count int) error {
+// 	conn1, err := gonet.ListenPacket("udp", "127.0.0.1:0")
+// 	if err != nil {
+// 		return err
+// 	}
+// 	defer conn1.Close()
 
-	conn2, err := gonet.ListenPacket("udp", "127.0.0.1:0")
-	if err != nil {
-		return err
-	}
-	defer conn2.Close()
+// 	conn2, err := gonet.ListenPacket("udp", "127.0.0.1:0")
+// 	if err != nil {
+// 		return err
+// 	}
+// 	defer conn2.Close()
 
-	data1 := make([]byte, 1000)
-	data2 := make([]byte, 1000)
-	for i := range data1 {
-		data1[i] = byte(i)
-	}
+// 	data1 := make([]byte, 1000)
+// 	data2 := make([]byte, 1000)
+// 	for i := range data1 {
+// 		data1[i] = byte(i)
+// 	}
 
-	for ; count > 0; count -= len(data1) {
-		_, err = conn1.WriteTo(data1, conn2.LocalAddr())
-		if err != nil {
-			return err
-		}
-		_, readAddr, err := conn2.ReadFrom(data2)
-		if err != nil {
-			return err
-		}
+// 	for ; count > 0; count -= len(data1) {
+// 		_, err = conn1.WriteTo(data1, conn2.LocalAddr())
+// 		if err != nil {
+// 			return err
+// 		}
+// 		_, readAddr, err := conn2.ReadFrom(data2)
+// 		if err != nil {
+// 			return err
+// 		}
 
-		require.Equal(t, "udp", readAddr.Network())
-		require.Equal(t, conn1.LocalAddr().String(), readAddr.String())
-	}
+// 		require.Equal(t, "udp", readAddr.Network())
+// 		require.Equal(t, conn1.LocalAddr().String(), readAddr.String())
+// 	}
 
-	return nil
-}
+// 	return nil
+// }
 
 // TODO Replace with in memory exporter https://github.com/open-telemetry/opentelemetry-go/issues/2722
 // func TestHostNetwork(t *testing.T) {

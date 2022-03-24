@@ -30,16 +30,15 @@ import (
 	"go.opentelemetry.io/otel/attribute"
 	"go.opentelemetry.io/otel/metric/nonrecording"
 	"go.opentelemetry.io/otel/propagation"
-	"go.opentelemetry.io/otel/sdk/metric/metrictest"
 	sdktrace "go.opentelemetry.io/otel/sdk/trace"
 	"go.opentelemetry.io/otel/sdk/trace/tracetest"
 )
 
-func assertMetricAttributes(t *testing.T, expectedAttributes []attribute.KeyValue, measurementBatches []metrictest.Batch) {
-	for _, batch := range measurementBatches {
-		assert.ElementsMatch(t, expectedAttributes, batch.Labels)
-	}
-}
+// func assertMetricAttributes(t *testing.T, expectedAttributes []attribute.KeyValue, measurementBatches []metrictest.Batch) {
+// 	for _, batch := range measurementBatches {
+// 		assert.ElementsMatch(t, expectedAttributes, batch.Labels)
+// 	}
+// }
 
 func TestHandlerBasics(t *testing.T) {
 	rr := httptest.NewRecorder()
