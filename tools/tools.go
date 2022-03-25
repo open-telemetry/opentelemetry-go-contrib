@@ -15,12 +15,15 @@
 //go:build tools
 // +build tools
 
-package tools
+package tools // import "go.opentelemetry.io/contrib/tools"
 
 import (
 	_ "github.com/client9/misspell/cmd/misspell"
 	_ "github.com/golangci/golangci-lint/cmd/golangci-lint"
+	_ "github.com/jcchavezs/porto/cmd/porto"
+	_ "github.com/mjibson/esc"
 	_ "github.com/wadey/gocovmerge"
+	_ "go.opentelemetry.io/build-tools/dbotconf"
 	_ "go.opentelemetry.io/build-tools/multimod"
 	_ "golang.org/x/tools/cmd/stringer"
 )

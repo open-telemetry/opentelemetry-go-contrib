@@ -12,7 +12,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package test
+package test // import "go.opentelemetry.io/contrib/instrumentation/github.com/emicklei/go-restful/otelrestful/test"
 
 // Version is the current release version of the go-restful instrumentation test module.
 func Version() string {

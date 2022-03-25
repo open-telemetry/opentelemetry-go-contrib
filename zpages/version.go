@@ -12,7 +12,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package zpages
+package zpages // import "go.opentelemetry.io/contrib/zpages"
 
 // Version is the current release version of the zpages span processor.
 func Version() string {

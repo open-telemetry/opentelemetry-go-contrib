@@ -12,7 +12,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package test
+package test // import "go.opentelemetry.io/contrib/instrumentation/github.com/gin-gonic/gin/otelgin/test"
 
 // Version is the current release version of the gin instrumentation test module.
 func Version() string {
