@@ -29,6 +29,9 @@ import (
 	"go.opentelemetry.io/otel/attribute"
 	"go.opentelemetry.io/otel/metric"
 	"go.opentelemetry.io/otel/metric/global"
+	"go.opentelemetry.io/otel/metric/instrument"
+	"go.opentelemetry.io/otel/metric/instrument/asyncfloat64"
+	"go.opentelemetry.io/otel/metric/instrument/asyncint64"
 	"go.opentelemetry.io/otel/metric/unit"
 )
 
@@ -88,7 +91,7 @@ var (
 // newConfig computes a config from a list of Options.
 func newConfig(opts ...Option) config {
 	c := config{
-		MeterProvider: global.GetMeterProvider(),
+		MeterProvider: global.MeterProvider(),
 	}
 	for _, opt := range opts {
 		opt.apply(&c)
@@ -100,7 +103,7 @@ func newConfig(opts ...Option) config {
 func Start(opts ...Option) error {
 	c := newConfig(opts...)
 	if c.MeterProvider == nil {
-		c.MeterProvider = global.GetMeterProvider()
+		c.MeterProvider = global.MeterProvider()
 	}
 	h := &host{
 		meter: c.MeterProvider.Meter(
@@ -116,13 +119,13 @@ func (h *host) register() error {
 	var (
 		err error
 
-		processCPUTime metric.Float64CounterObserver
-		hostCPUTime    metric.Float64CounterObserver
+		processCPUTime asyncfloat64.Counter
+		hostCPUTime    asyncfloat64.Counter
 
-		hostMemoryUsage       metric.Int64GaugeObserver
-		hostMemoryUtilization metric.Float64GaugeObserver
+		hostMemoryUsage       asyncint64.Gauge
+		hostMemoryUtilization asyncfloat64.Gauge
 
-		networkIOUsage metric.Int64CounterObserver
+		networkIOUsage asyncint64.Counter
 
 		// lock prevents a race between batch observer and instrument registration.
 		lock sync.Mutex
@@ -136,145 +139,153 @@ func (h *host) register() error {
 	lock.Lock()
 	defer lock.Unlock()
 
-	batchObserver := h.meter.NewBatchObserver(func(ctx context.Context, result metric.BatchObserverResult) {
-		lock.Lock()
-		defer lock.Unlock()
-
-		// This follows the OpenTelemetry Collector's "hostmetrics"
-		// receiver/hostmetricsreceiver/internal/scraper/processscraper
-		// measures User and System IOwait time.
-		// TODO: the Collector has per-OS compilation modules to support
-		// specific metrics that are not universal.
-		processTimes, err := proc.TimesWithContext(ctx)
-		if err != nil {
-			otel.Handle(err)
-			return
-		}
-
-		hostTimeSlice, err := cpu.TimesWithContext(ctx, false)
-		if err != nil {
-			otel.Handle(err)
-			return
-		}
-		if len(hostTimeSlice) != 1 {
-			otel.Handle(fmt.Errorf("host CPU usage: incorrect summary count"))
-			return
-		}
-
-		vmStats, err := mem.VirtualMemoryWithContext(ctx)
-		if err != nil {
-			otel.Handle(err)
-			return
-		}
-
-		ioStats, err := net.IOCountersWithContext(ctx, false)
-		if err != nil {
-			otel.Handle(err)
-			return
-		}
-		if len(ioStats) != 1 {
-			otel.Handle(fmt.Errorf("host network usage: incorrect summary count"))
-			return
-		}
-
-		// Process CPU time
-		result.Observe(AttributeCPUTimeUser, processCPUTime.Observation(processTimes.User))
-		result.Observe(AttributeCPUTimeSystem, processCPUTime.Observation(processTimes.System))
-
-		// Host CPU time
-		hostTime := hostTimeSlice[0]
-		result.Observe(AttributeCPUTimeUser, hostCPUTime.Observation(hostTime.User))
-		result.Observe(AttributeCPUTimeSystem, hostCPUTime.Observation(hostTime.System))
-
-		// TODO(#244): "other" is a placeholder for actually dealing
-		// with these states.  Do users actually want this
-		// (unconditionally)?  How should we handle "iowait"
-		// if not all systems expose it?  Should we break
-		// these down by CPU?  If so, are users going to want
-		// to aggregate in-process?  See:
-		// https://github.com/open-telemetry/opentelemetry-go-contrib/issues/244
-		other := hostTime.Nice +
-			hostTime.Iowait +
-			hostTime.Irq +
-			hostTime.Softirq +
-			hostTime.Steal +
-			hostTime.Guest +
-			hostTime.GuestNice
-
-		result.Observe(AttributeCPUTimeOther, hostCPUTime.Observation(other))
-		result.Observe(AttributeCPUTimeIdle, hostCPUTime.Observation(hostTime.Idle))
-
-		// Host memory usage
-		result.Observe(AttributeMemoryUsed, hostMemoryUsage.Observation(int64(vmStats.Used)))
-		result.Observe(AttributeMemoryAvailable, hostMemoryUsage.Observation(int64(vmStats.Available)))
-
-		// Host memory utilization
-		result.Observe(AttributeMemoryUsed,
-			hostMemoryUtilization.Observation(float64(vmStats.Used)/float64(vmStats.Total)),
-		)
-		result.Observe(AttributeMemoryAvailable,
-			hostMemoryUtilization.Observation(float64(vmStats.Available)/float64(vmStats.Total)),
-		)
-
-		// Host network usage
-		//
-		// TODO: These can be broken down by network
-		// interface, with similar questions to those posed
-		// about per-CPU measurements above.
-		result.Observe(AttributeNetworkTransmit, networkIOUsage.Observation(int64(ioStats[0].BytesSent)))
-		result.Observe(AttributeNetworkReceive, networkIOUsage.Observation(int64(ioStats[0].BytesRecv)))
-	})
-
 	// TODO: .time units are in seconds, but "unit" package does
 	// not include this string.
 	// https://github.com/open-telemetry/opentelemetry-specification/issues/705
-	if processCPUTime, err = batchObserver.NewFloat64CounterObserver(
+	if processCPUTime, err = h.meter.AsyncFloat64().Counter(
 		"process.cpu.time",
-		metric.WithUnit("s"),
-		metric.WithDescription(
+		instrument.WithUnit("s"),
+		instrument.WithDescription(
 			"Accumulated CPU time spent by this process attributeed by state (User, System, ...)",
 		),
 	); err != nil {
 		return err
 	}
 
-	if hostCPUTime, err = batchObserver.NewFloat64CounterObserver(
+	if hostCPUTime, err = h.meter.AsyncFloat64().Counter(
 		"system.cpu.time",
-		metric.WithUnit("s"),
-		metric.WithDescription(
+		instrument.WithUnit("s"),
+		instrument.WithDescription(
 			"Accumulated CPU time spent by this host attributeed by state (User, System, Other, Idle)",
 		),
 	); err != nil {
 		return err
 	}
 
-	if hostMemoryUsage, err = batchObserver.NewInt64GaugeObserver(
+	if hostMemoryUsage, err = h.meter.AsyncInt64().Gauge(
 		"system.memory.usage",
-		metric.WithUnit(unit.Bytes),
-		metric.WithDescription(
+		instrument.WithUnit(unit.Bytes),
+		instrument.WithDescription(
 			"Memory usage of this process attributed by memory state (Used, Available)",
 		),
 	); err != nil {
 		return err
 	}
 
-	if hostMemoryUtilization, err = batchObserver.NewFloat64GaugeObserver(
+	if hostMemoryUtilization, err = h.meter.AsyncFloat64().Gauge(
 		"system.memory.utilization",
-		metric.WithUnit(unit.Dimensionless),
-		metric.WithDescription(
+		instrument.WithUnit(unit.Dimensionless),
+		instrument.WithDescription(
 			"Memory utilization of this process attributeed by memory state (Used, Available)",
 		),
 	); err != nil {
 		return err
 	}
 
-	if networkIOUsage, err = batchObserver.NewInt64CounterObserver(
+	if networkIOUsage, err = h.meter.AsyncInt64().Counter(
 		"system.network.io",
-		metric.WithUnit(unit.Bytes),
-		metric.WithDescription(
+		instrument.WithUnit(unit.Bytes),
+		instrument.WithDescription(
 			"Bytes transferred attributeed by direction (Transmit, Receive)",
 		),
 	); err != nil {
+		return err
+	}
+
+	err = h.meter.RegisterCallback(
+		[]instrument.Asynchronous{
+			processCPUTime,
+			hostCPUTime,
+			hostMemoryUsage,
+			hostMemoryUtilization,
+			networkIOUsage,
+		},
+		func(ctx context.Context) {
+			lock.Lock()
+			defer lock.Unlock()
+
+			// This follows the OpenTelemetry Collector's "hostmetrics"
+			// receiver/hostmetricsreceiver/internal/scraper/processscraper
+			// measures User and System IOwait time.
+			// TODO: the Collector has per-OS compilation modules to support
+			// specific metrics that are not universal.
+			processTimes, err := proc.TimesWithContext(ctx)
+			if err != nil {
+				otel.Handle(err)
+				return
+			}
+
+			hostTimeSlice, err := cpu.TimesWithContext(ctx, false)
+			if err != nil {
+				otel.Handle(err)
+				return
+			}
+			if len(hostTimeSlice) != 1 {
+				otel.Handle(fmt.Errorf("host CPU usage: incorrect summary count"))
+				return
+			}
+
+			vmStats, err := mem.VirtualMemoryWithContext(ctx)
+			if err != nil {
+				otel.Handle(err)
+				return
+			}
+
+			ioStats, err := net.IOCountersWithContext(ctx, false)
+			if err != nil {
+				otel.Handle(err)
+				return
+			}
+			if len(ioStats) != 1 {
+				otel.Handle(fmt.Errorf("host network usage: incorrect summary count"))
+				return
+			}
+
+			// Process CPU time
+			processCPUTime.Observe(ctx, processTimes.User, AttributeCPUTimeUser...)
+			processCPUTime.Observe(ctx, processTimes.System, AttributeCPUTimeSystem...)
+
+			// Host CPU time
+			hostTime := hostTimeSlice[0]
+			hostCPUTime.Observe(ctx, hostTime.User, AttributeCPUTimeUser...)
+			hostCPUTime.Observe(ctx, hostTime.System, AttributeCPUTimeSystem...)
+
+			// TODO(#244): "other" is a placeholder for actually dealing
+			// with these states.  Do users actually want this
+			// (unconditionally)?  How should we handle "iowait"
+			// if not all systems expose it?  Should we break
+			// these down by CPU?  If so, are users going to want
+			// to aggregate in-process?  See:
+			// https://github.com/open-telemetry/opentelemetry-go-contrib/issues/244
+			other := hostTime.Nice +
+				hostTime.Iowait +
+				hostTime.Irq +
+				hostTime.Softirq +
+				hostTime.Steal +
+				hostTime.Guest +
+				hostTime.GuestNice
+
+			hostCPUTime.Observe(ctx, other, AttributeCPUTimeOther...)
+			hostCPUTime.Observe(ctx, hostTime.Idle, AttributeCPUTimeIdle...)
+
+			// Host memory usage
+			hostMemoryUsage.Observe(ctx, int64(vmStats.Used), AttributeMemoryUsed...)
+			hostMemoryUsage.Observe(ctx, int64(vmStats.Available), AttributeMemoryAvailable...)
+
+			// Host memory utilization
+			hostMemoryUtilization.Observe(ctx, float64(vmStats.Used)/float64(vmStats.Total), AttributeMemoryUsed...)
+			hostMemoryUtilization.Observe(ctx, float64(vmStats.Available)/float64(vmStats.Total), AttributeMemoryAvailable...)
+
+			// Host network usage
+			//
+			// TODO: These can be broken down by network
+			// interface, with similar questions to those posed
+			// about per-CPU measurements above.
+			networkIOUsage.Observe(ctx, int64(ioStats[0].BytesSent), AttributeNetworkTransmit...)
+			networkIOUsage.Observe(ctx, int64(ioStats[0].BytesRecv), AttributeNetworkReceive...)
+		})
+
+	if err != nil {
 		return err
 	}
 

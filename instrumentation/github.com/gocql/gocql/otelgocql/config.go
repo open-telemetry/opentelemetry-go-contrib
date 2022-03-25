@@ -120,7 +120,7 @@ func WithConnectInstrumentation(enabled bool) Option {
 func newConfig(options ...Option) *config {
 	cfg := &config{
 		tracerProvider:    otel.GetTracerProvider(),
-		meterProvider:     global.GetMeterProvider(),
+		meterProvider:     global.MeterProvider(),
 		instrumentQuery:   true,
 		instrumentBatch:   true,
 		instrumentConnect: true,
