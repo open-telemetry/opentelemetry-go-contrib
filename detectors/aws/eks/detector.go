@@ -12,7 +12,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package eks
+package eks // import "go.opentelemetry.io/contrib/detectors/aws/eks"
 
 import (
 	"context"
