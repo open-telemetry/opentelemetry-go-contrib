@@ -121,7 +121,6 @@ func (m *Manifest) RefreshManifestRules(ctx context.Context) (err error) {
 func (m *Manifest) RefreshManifestTargets(ctx context.Context) (refresh bool, err error) {
 	var manifest Manifest
 
-	// deep copy centralized manifest object to temporary manifest to avoid thread safety issue
 	err = func() error {
 		m.mu.RLock()
 		defer m.mu.RUnlock()
@@ -316,7 +315,7 @@ func (m *Manifest) snapshots() ([]*samplingStatisticsDocument, error) {
 	return statistics, nil
 }
 
-// sort sorts the Rules of m array first by priority and then by name.
+// sort sorts the Rules of m first by priority and then by name.
 func (m *Manifest) sort() {
 	less := func(i, j int) bool {
 		if m.Rules[i].ruleProperties.Priority == m.Rules[j].ruleProperties.Priority {

@@ -16,12 +16,12 @@ package internal
 
 import (
 	"context"
-	"net/http"
-	"net/http/httptest"
 	"net/url"
 	"sync"
 	"testing"
 	"time"
+
+	"github.com/jinzhu/copier"
 
 	"go.opentelemetry.io/otel/attribute"
 
@@ -32,6 +32,16 @@ import (
 
 	"github.com/stretchr/testify/assert"
 )
+
+func createSamplingTargetDocument(name string, interval int64, rate, quota, ttl float64) *samplingTargetDocument {
+	return &samplingTargetDocument{
+		FixedRate:         &rate,
+		Interval:          &interval,
+		ReservoirQuota:    &quota,
+		ReservoirQuotaTTL: &ttl,
+		RuleName:          &name,
+	}
+}
 
 // assert that new manifest has certain non-nil attributes.
 func TestNewManifest(t *testing.T) {
@@ -56,10 +66,9 @@ func TestExpiredManifest(t *testing.T) {
 		nowTime: 10000,
 	}
 
-	refreshedAt := time.Unix(3700, 0)
 	m := &Manifest{
 		clock:       clock,
-		refreshedAt: refreshedAt,
+		refreshedAt: time.Unix(3700, 0),
 	}
 
 	assert.True(t, m.Expired())
@@ -122,10 +131,8 @@ func TestMatchAgainstManifestRules(t *testing.T) {
 		},
 	}
 
-	rules := []Rule{r1, r2}
-
 	m := &Manifest{
-		Rules: rules,
+		Rules: []Rule{r1, r2},
 	}
 
 	exp, match, err := m.MatchAgainstManifestRules(sdktrace.SamplingParameters{}, "test", "local")
@@ -166,10 +173,8 @@ func TestMatchAgainstManifestRulesAttributeMatch(t *testing.T) {
 		},
 	}
 
-	rules := []Rule{r1}
-
 	m := &Manifest{
-		Rules: rules,
+		Rules: []Rule{r1},
 	}
 
 	exp, match, err := m.MatchAgainstManifestRules(sdktrace.SamplingParameters{Attributes: commonLabels}, "test", "local")
@@ -210,10 +215,8 @@ func TestMatchAgainstManifestRulesAttributeWildCardMatch(t *testing.T) {
 		},
 	}
 
-	rules := []Rule{r1}
-
 	m := &Manifest{
-		Rules: rules,
+		Rules: []Rule{r1},
 	}
 
 	exp, match, err := m.MatchAgainstManifestRules(sdktrace.SamplingParameters{Attributes: commonLabels}, "test", "local")
@@ -247,10 +250,8 @@ func TestMatchAgainstManifestRulesNoMatch(t *testing.T) {
 		},
 	}
 
-	rules := []Rule{r1}
-
 	m := &Manifest{
-		Rules: rules,
+		Rules: []Rule{r1},
 	}
 
 	rule, isMatch, err := m.MatchAgainstManifestRules(sdktrace.SamplingParameters{}, "test", "local")
@@ -327,23 +328,13 @@ func TestRefreshManifestRules(t *testing.T) {
   ]
 }`)
 
-	// generate a test server so we can capture and inspect the request
-	testServer := httptest.NewServer(http.HandlerFunc(func(res http.ResponseWriter, req *http.Request) {
-		_, err := res.Write(body)
-		require.NoError(t, err)
-	}))
-	t.Cleanup(testServer.Close)
-
-	client, err := createTestClient(testServer.URL)
-	require.NoError(t, err)
-
 	m := &Manifest{
 		Rules:      []Rule{},
-		xrayClient: client,
+		xrayClient: createTestClient(t, body),
 		clock:      &defaultClock{},
 	}
 
-	err = m.RefreshManifestRules(ctx)
+	err := m.RefreshManifestRules(ctx)
 	require.NoError(t, err)
 
 	r1 := Rule{
@@ -449,28 +440,17 @@ func TestRefreshManifestMissingServiceName(t *testing.T) {
   ]
 }`)
 
-	// generate a test server so we can capture and inspect the request
-	testServer := httptest.NewServer(http.HandlerFunc(func(res http.ResponseWriter, req *http.Request) {
-		_, err := res.Write(body)
-		require.NoError(t, err)
-
-	}))
-	t.Cleanup(testServer.Close)
-
-	client, err := createTestClient(testServer.URL)
-	require.NoError(t, err)
-
 	m := &Manifest{
 		Rules:      []Rule{},
-		xrayClient: client,
+		xrayClient: createTestClient(t, body),
 		clock:      &defaultClock{},
 	}
 
-	err = m.RefreshManifestRules(ctx)
+	err := m.RefreshManifestRules(ctx)
 	require.NoError(t, err)
 
 	// assert on rule gets added
-	assert.Len(t, m.Rules, 1)
+	require.Len(t, m.Rules, 1)
 }
 
 // assert that rule with no RuleName does not update to the manifest.
@@ -501,29 +481,18 @@ func TestRefreshManifestMissingRuleName(t *testing.T) {
   ]
 }`)
 
-	// generate a test server so we can capture and inspect the request
-	testServer := httptest.NewServer(http.HandlerFunc(func(res http.ResponseWriter, req *http.Request) {
-		_, err := res.Write(body)
-		require.NoError(t, err)
-
-	}))
-	t.Cleanup(testServer.Close)
-
-	client, err := createTestClient(testServer.URL)
-	require.NoError(t, err)
-
 	m := &Manifest{
 		Rules:      []Rule{},
-		xrayClient: client,
+		xrayClient: createTestClient(t, body),
 		clock:      &defaultClock{},
 		logger:     testr.New(t),
 	}
 
-	err = m.RefreshManifestRules(ctx)
+	err := m.RefreshManifestRules(ctx)
 	require.NoError(t, err)
 
 	// assert on rule not added
-	assert.Len(t, m.Rules, 0)
+	require.Len(t, m.Rules, 0)
 }
 
 // assert that rule with version greater than one does not update to the manifest.
@@ -556,29 +525,18 @@ func TestRefreshManifestIncorrectVersion(t *testing.T) {
   ]
 }`)
 
-	// generate a test server so we can capture and inspect the request
-	testServer := httptest.NewServer(http.HandlerFunc(func(res http.ResponseWriter, req *http.Request) {
-		_, err := res.Write(body)
-		require.NoError(t, err)
-
-	}))
-	t.Cleanup(testServer.Close)
-
-	client, err := createTestClient(testServer.URL)
-	require.NoError(t, err)
-
 	m := &Manifest{
 		Rules:      []Rule{},
-		xrayClient: client,
+		xrayClient: createTestClient(t, body),
 		clock:      &defaultClock{},
 		logger:     testr.New(t),
 	}
 
-	err = m.RefreshManifestRules(ctx)
+	err := m.RefreshManifestRules(ctx)
 	require.NoError(t, err)
 
 	// assert on rule not added
-	assert.Len(t, m.Rules, 0)
+	require.Len(t, m.Rules, 0)
 }
 
 // assert that 1 valid and 1 invalid rule update only valid rule gets stored to the manifest.
@@ -651,30 +609,17 @@ func TestRefreshManifestAddOneInvalidRule(t *testing.T) {
 		samplingStatistics: &samplingStatistics{},
 	}
 
-	// generate a test server so we can capture and inspect the request
-	testServer := httptest.NewServer(http.HandlerFunc(func(res http.ResponseWriter, req *http.Request) {
-		_, err := res.Write(body)
-		require.NoError(t, err)
-	}))
-	defer testServer.Close()
-
-	u, err := url.Parse(testServer.URL)
-	require.NoError(t, err)
-
-	client, err := newClient(*u)
-	require.NoError(t, err)
-
 	m := &Manifest{
 		Rules:      []Rule{},
-		xrayClient: client,
+		xrayClient: createTestClient(t, body),
 		clock:      &defaultClock{},
 		logger:     testr.New(t),
 	}
 
-	err = m.RefreshManifestRules(ctx)
+	err := m.RefreshManifestRules(ctx)
 	require.NoError(t, err)
 
-	assert.Len(t, m.Rules, 1)
+	require.Len(t, m.Rules, 1)
 
 	// assert on r1
 	assert.Equal(t, r1, m.Rules[0])
@@ -709,10 +654,8 @@ func TestRefreshManifestTargetNoSnapShot(t *testing.T) {
 		},
 	}
 
-	rules := []Rule{r1}
-
 	m := &Manifest{
-		Rules:  rules,
+		Rules:  []Rule{r1},
 		clock:  clock,
 		logger: testr.New(t),
 	}
@@ -773,25 +716,12 @@ func TestRefreshManifestTargets(t *testing.T) {
 		},
 	}
 
-	rules := []Rule{r1}
-
-	// generate a test server so we can capture and inspect the request
-	testServer := httptest.NewServer(http.HandlerFunc(func(res http.ResponseWriter, req *http.Request) {
-		_, err := res.Write(body)
-		require.NoError(t, err)
-	}))
-	t.Cleanup(testServer.Close)
-
-	client, err := createTestClient(testServer.URL)
-	require.NoError(t, err)
-
-	refreshedAt := time.Unix(18000000, 0)
 	m := &Manifest{
-		Rules:       rules,
+		Rules:       []Rule{r1},
 		clock:       clock,
 		logger:      testr.New(t),
-		xrayClient:  client,
-		refreshedAt: refreshedAt,
+		xrayClient:  createTestClient(t, body),
+		refreshedAt: time.Unix(18000000, 0),
 	}
 
 	refresh, err := m.RefreshManifestTargets(context.Background())
@@ -878,29 +808,15 @@ func TestRefreshManifestTargetsPollIntervalUpdateTest(t *testing.T) {
 		samplingStatistics: &samplingStatistics{},
 	}
 
-	rules := []Rule{r1, r2, r3}
-
-	// generate a test server so we can capture and inspect the request
-	testServer := httptest.NewServer(http.HandlerFunc(func(res http.ResponseWriter, req *http.Request) {
-		_, err := res.Write(body)
-		require.NoError(t, err)
-	}))
-	t.Cleanup(testServer.Close)
-
-	client, err := createTestClient(testServer.URL)
-	require.NoError(t, err)
-
-	refreshedAt := time.Unix(18000000, 0)
-
 	m := &Manifest{
-		Rules:       rules,
+		Rules:       []Rule{r1, r2, r3},
 		clock:       clock,
 		logger:      testr.New(t),
-		xrayClient:  client,
-		refreshedAt: refreshedAt,
+		xrayClient:  createTestClient(t, body),
+		refreshedAt: time.Unix(18000000, 0),
 	}
 
-	_, err = m.RefreshManifestTargets(context.Background())
+	_, err := m.RefreshManifestTargets(context.Background())
 	require.NoError(t, err)
 
 	// assert that sampling rules polling interval is minimum of all target intervals min(15, 5, 25)
@@ -909,28 +825,10 @@ func TestRefreshManifestTargetsPollIntervalUpdateTest(t *testing.T) {
 
 // assert that a valid sampling target updates its rule.
 func TestUpdateTargets(t *testing.T) {
-	clock := &mockClock{
-		nowTime: 1500000000,
-	}
-
-	// sampling target received from centralized sampling backend
-	rate := 0.05
-	quota := float64(10)
-	ttl := float64(1500000060)
-	name := "r1"
-
-	st := samplingTargetDocument{
-		FixedRate:         &rate,
-		ReservoirQuota:    &quota,
-		ReservoirQuotaTTL: &ttl,
-		RuleName:          &name,
-	}
-
 	targets := &getSamplingTargetsOutput{
-		SamplingTargetDocuments: []*samplingTargetDocument{&st},
+		SamplingTargetDocuments: []*samplingTargetDocument{createSamplingTargetDocument("r1", 0, 0.05, 10, 1500000060)},
 	}
 
-	refreshedAt1 := time.Unix(1499999990, 0)
 	// sampling rule about to be updated with new target
 	r1 := Rule{
 		ruleProperties: ruleProperties{
@@ -939,16 +837,18 @@ func TestUpdateTargets(t *testing.T) {
 		},
 		reservoir: reservoir{
 			quota:       8,
-			refreshedAt: refreshedAt1,
+			refreshedAt: time.Unix(1499999990, 0),
 			expiresAt:   time.Unix(1500000010, 0),
 			capacity:    50,
 		},
 	}
 
-	rules := []Rule{r1}
+	clock := &mockClock{
+		nowTime: 1500000000,
+	}
 
 	m := &Manifest{
-		Rules: rules,
+		Rules: []Rule{r1},
 		clock: clock,
 	}
 
@@ -958,7 +858,6 @@ func TestUpdateTargets(t *testing.T) {
 	// assert refresh is false
 	assert.False(t, refresh)
 
-	refreshedAt2 := time.Unix(1500000000, 0)
 	// Updated sampling rule
 	exp := Rule{
 		ruleProperties: ruleProperties{
@@ -967,7 +866,7 @@ func TestUpdateTargets(t *testing.T) {
 		},
 		reservoir: reservoir{
 			quota:       10,
-			refreshedAt: refreshedAt2,
+			refreshedAt: time.Unix(1500000000, 0),
 			expiresAt:   time.Unix(1500000060, 0),
 			capacity:    50,
 		},
@@ -980,30 +879,12 @@ func TestUpdateTargets(t *testing.T) {
 // assert that when last rule modification time is greater than manifest refresh time we need to update manifest
 // out of band (async).
 func TestUpdateTargetsRefreshFlagTest(t *testing.T) {
-	clock := &mockClock{
-		nowTime: 1500000000,
-	}
-
-	// sampling target received from centralized sampling backend
-	rate := 0.05
-	quota := float64(10)
-	ttl := float64(1500000060)
-	name := "r1"
-
-	st := samplingTargetDocument{
-		FixedRate:         &rate,
-		ReservoirQuota:    &quota,
-		ReservoirQuotaTTL: &ttl,
-		RuleName:          &name,
-	}
-
 	targetLastRuleModifiedTime := float64(1500000020)
 	targets := &getSamplingTargetsOutput{
-		SamplingTargetDocuments: []*samplingTargetDocument{&st},
+		SamplingTargetDocuments: []*samplingTargetDocument{createSamplingTargetDocument("r1", 0, 0.05, 10, 1500000060)},
 		LastRuleModification:    &targetLastRuleModifiedTime,
 	}
 
-	refreshedAt1 := time.Unix(1499999990, 0)
 	// sampling rule about to be updated with new target
 	r1 := Rule{
 		ruleProperties: ruleProperties{
@@ -1012,16 +893,18 @@ func TestUpdateTargetsRefreshFlagTest(t *testing.T) {
 		},
 		reservoir: reservoir{
 			quota:       8,
-			refreshedAt: refreshedAt1,
+			refreshedAt: time.Unix(1499999990, 0),
 			expiresAt:   time.Unix(1500000010, 0),
 			capacity:    50,
 		},
 	}
 
-	rules := []Rule{r1}
+	clock := &mockClock{
+		nowTime: 1500000000,
+	}
 
 	m := &Manifest{
-		Rules:       rules,
+		Rules:       []Rule{r1},
 		refreshedAt: clock.now(),
 		clock:       clock,
 	}
@@ -1032,7 +915,6 @@ func TestUpdateTargetsRefreshFlagTest(t *testing.T) {
 	// assert refresh is false
 	assert.True(t, refresh)
 
-	refreshedAt2 := time.Unix(1500000000, 0)
 	// Updated sampling rule
 	exp := Rule{
 		ruleProperties: ruleProperties{
@@ -1041,7 +923,7 @@ func TestUpdateTargetsRefreshFlagTest(t *testing.T) {
 		},
 		reservoir: reservoir{
 			quota:       10,
-			refreshedAt: refreshedAt2,
+			refreshedAt: time.Unix(1500000000, 0),
 			expiresAt:   time.Unix(1500000060, 0),
 			capacity:    50,
 		},
@@ -1053,33 +935,21 @@ func TestUpdateTargetsRefreshFlagTest(t *testing.T) {
 
 // unprocessed statistics error code is 5xx then updateTargets returns an error, if 4xx refresh flag set to true.
 func TestUpdateTargetsUnprocessedStatistics(t *testing.T) {
-	clock := &mockClock{
-		nowTime: 1500000000,
-	}
-
-	// sampling target received from centralized sampling backend
-	rate := 0.05
-	quota := float64(10)
-	ttl := float64(1500000060)
-	name := "r1"
-
-	st := samplingTargetDocument{
-		FixedRate:         &rate,
-		ReservoirQuota:    &quota,
-		ReservoirQuotaTTL: &ttl,
-		RuleName:          &name,
-	}
-
 	// case for 5xx
+	ruleName := "r1"
 	errorCode500 := "500"
 	unprocessedStats5xx := unprocessedStatistic{
 		ErrorCode: &errorCode500,
-		RuleName:  &name,
+		RuleName:  &ruleName,
 	}
 
 	targets5xx := &getSamplingTargetsOutput{
-		SamplingTargetDocuments: []*samplingTargetDocument{&st},
+		SamplingTargetDocuments: []*samplingTargetDocument{createSamplingTargetDocument(ruleName, 0, 0.05, 10, 1500000060)},
 		UnprocessedStatistics:   []*unprocessedStatistic{&unprocessedStats5xx},
+	}
+
+	clock := &mockClock{
+		nowTime: 1500000000,
 	}
 
 	m := &Manifest{
@@ -1098,11 +968,11 @@ func TestUpdateTargetsUnprocessedStatistics(t *testing.T) {
 	errorCode400 := "400"
 	unprocessedStats4xx := unprocessedStatistic{
 		ErrorCode: &errorCode400,
-		RuleName:  &name,
+		RuleName:  &ruleName,
 	}
 
 	targets4xx := &getSamplingTargetsOutput{
-		SamplingTargetDocuments: []*samplingTargetDocument{&st},
+		SamplingTargetDocuments: []*samplingTargetDocument{createSamplingTargetDocument(ruleName, 0, 0.05, 10, 1500000060)},
 		UnprocessedStatistics:   []*unprocessedStatistic{&unprocessedStats4xx},
 	}
 
@@ -1120,7 +990,7 @@ func TestUpdateTargetsUnprocessedStatistics(t *testing.T) {
 	}
 
 	targets := &getSamplingTargetsOutput{
-		SamplingTargetDocuments: []*samplingTargetDocument{&st},
+		SamplingTargetDocuments: []*samplingTargetDocument{createSamplingTargetDocument(ruleName, 0, 0.05, 10, 1500000060)},
 		UnprocessedStatistics:   []*unprocessedStatistic{&unprocessedStats},
 	}
 
@@ -1139,19 +1009,6 @@ func TestUpdateTargetsUnprocessedStatistics(t *testing.T) {
 
 // assert that a missing sampling rule in manifest does not update it's reservoir values.
 func TestUpdateReservoir(t *testing.T) {
-	// Sampling target received from centralized sampling backend
-	rate := 0.05
-	quota := float64(10)
-	ttl := float64(1500000060)
-	name := "r1"
-	st := &samplingTargetDocument{
-		FixedRate:         &rate,
-		ReservoirQuota:    &quota,
-		ReservoirQuotaTTL: &ttl,
-		RuleName:          &name,
-	}
-
-	refreshedAt1 := time.Unix(1499999990, 0)
 	// manifest only has rule r2 but not rule with r1 which targets just received
 	r1 := Rule{
 		ruleProperties: ruleProperties{
@@ -1160,19 +1017,17 @@ func TestUpdateReservoir(t *testing.T) {
 		},
 		reservoir: reservoir{
 			quota:       8,
-			refreshedAt: refreshedAt1,
+			refreshedAt: time.Unix(1499999990, 0),
 			expiresAt:   time.Unix(1500000010, 0),
 			capacity:    50,
 		},
 	}
 
-	rules := []Rule{r1}
-
 	m := &Manifest{
-		Rules: rules,
+		Rules: []Rule{r1},
 	}
 
-	err := m.updateReservoir(st)
+	err := m.updateReservoir(createSamplingTargetDocument("r1", 0, 0.05, 10, 1500000060))
 	require.NoError(t, err)
 
 	// assert that rule reservoir value does not get updated and still same as r1
@@ -1181,17 +1036,6 @@ func TestUpdateReservoir(t *testing.T) {
 
 // assert that a sampling target with missing Fixed Rate returns an error.
 func TestUpdateReservoirMissingFixedRate(t *testing.T) {
-	// Sampling target received from centralized sampling backend
-	quota := float64(10)
-	ttl := float64(1500000060)
-	name := "r1"
-	st := &samplingTargetDocument{
-		ReservoirQuota:    &quota,
-		ReservoirQuotaTTL: &ttl,
-		RuleName:          &name,
-	}
-
-	refreshedAt1 := time.Unix(1499999990, 0)
 	// manifest rule which we're trying to update with above target st
 	r1 := Rule{
 		ruleProperties: ruleProperties{
@@ -1200,35 +1044,24 @@ func TestUpdateReservoirMissingFixedRate(t *testing.T) {
 		},
 		reservoir: reservoir{
 			quota:       8,
-			refreshedAt: refreshedAt1,
+			refreshedAt: time.Unix(1499999990, 0),
 			expiresAt:   time.Unix(1500000010, 0),
 			capacity:    50,
 		},
 	}
 
-	rules := []Rule{r1}
-
 	m := &Manifest{
-		Rules: rules,
+		Rules: []Rule{r1},
 	}
 
+	st := createSamplingTargetDocument("r1", 0, 0, 10, 1500000060)
+	st.FixedRate = nil
 	err := m.updateReservoir(st)
 	require.Error(t, err)
 }
 
 // assert that a sampling target with missing Rule Name returns an error.
 func TestUpdateReservoirMissingRuleName(t *testing.T) {
-	// Sampling target received from centralized sampling backend
-	rate := 0.05
-	quota := float64(10)
-	ttl := float64(1500000060)
-	st := &samplingTargetDocument{
-		ReservoirQuota:    &quota,
-		ReservoirQuotaTTL: &ttl,
-		FixedRate:         &rate,
-	}
-
-	refreshedAt1 := time.Unix(1499999990, 0)
 	// manifest rule which we're trying to update with above target st
 	r1 := Rule{
 		ruleProperties: ruleProperties{
@@ -1237,18 +1070,18 @@ func TestUpdateReservoirMissingRuleName(t *testing.T) {
 		},
 		reservoir: reservoir{
 			quota:       8,
-			refreshedAt: refreshedAt1,
+			refreshedAt: time.Unix(1499999990, 0),
 			expiresAt:   time.Unix(1500000010, 0),
 			capacity:    50,
 		},
 	}
 
-	rules := []Rule{r1}
-
 	m := &Manifest{
-		Rules: rules,
+		Rules: []Rule{r1},
 	}
 
+	st := createSamplingTargetDocument("r1", 0, 0, 10, 1500000060)
+	st.RuleName = nil
 	err := m.updateReservoir(st)
 	require.Error(t, err)
 }
@@ -1297,11 +1130,9 @@ func TestSnapshots(t *testing.T) {
 		},
 	}
 
-	rules := []Rule{r1, r2}
-
 	id := "c1"
 	m := &Manifest{
-		Rules:    rules,
+		Rules:    []Rule{r1, r2},
 		clientID: &id,
 		clock:    clock,
 	}
@@ -1351,14 +1182,13 @@ func TestMixedSnapshots(t *testing.T) {
 	sampled1 := int64(100)
 	borrowed1 := int64(5)
 
-	refreshedAt1 := time.Unix(1499999970, 0)
 	r1 := Rule{
 		ruleProperties: ruleProperties{
 			RuleName: name1,
 		},
 		reservoir: reservoir{
 			interval:    20,
-			refreshedAt: refreshedAt1,
+			refreshedAt: time.Unix(1499999970, 0),
 		},
 		samplingStatistics: &samplingStatistics{
 			matchedRequests:  requests1,
@@ -1367,7 +1197,6 @@ func TestMixedSnapshots(t *testing.T) {
 		},
 	}
 
-	refreshedAt2 := time.Unix(1499999990, 0)
 	// fresh and inactive rule
 	name2 := "r2"
 	requests2 := int64(0)
@@ -1380,7 +1209,7 @@ func TestMixedSnapshots(t *testing.T) {
 		},
 		reservoir: reservoir{
 			interval:    20,
-			refreshedAt: refreshedAt2,
+			refreshedAt: time.Unix(1499999990, 0),
 		},
 		samplingStatistics: &samplingStatistics{
 			matchedRequests:  requests2,
@@ -1389,7 +1218,6 @@ func TestMixedSnapshots(t *testing.T) {
 		},
 	}
 
-	refreshedAt3 := time.Unix(1499999990, 0)
 	// fresh rule
 	name3 := "r3"
 	requests3 := int64(1000)
@@ -1402,7 +1230,7 @@ func TestMixedSnapshots(t *testing.T) {
 		},
 		reservoir: reservoir{
 			interval:    20,
-			refreshedAt: refreshedAt3,
+			refreshedAt: time.Unix(1499999990, 0),
 		},
 		samplingStatistics: &samplingStatistics{
 			matchedRequests:  requests3,
@@ -1571,4 +1399,243 @@ func TestGenerateClientID(t *testing.T) {
 	clientID, err := generateClientID()
 	require.NoError(t, err)
 	assert.NotEmpty(t, clientID)
+}
+
+// validate no data race is happening when updating rule properties in manifest while matching
+func TestRaceUpdatingRulesWhileMatching(t *testing.T) {
+	// getSamplingRules response
+	ruleRecords := samplingRuleRecords{
+		SamplingRule: &ruleProperties{
+			RuleName:      "r1",
+			Priority:      10000,
+			Host:          "localhost",
+			HTTPMethod:    "*",
+			URLPath:       "/test/path",
+			ReservoirSize: 40,
+			FixedRate:     0.9,
+			Version:       1,
+			ServiceName:   "helios",
+			ResourceARN:   "*",
+			ServiceType:   "*",
+		},
+	}
+
+	s := &getSamplingRulesOutput{
+		SamplingRuleRecords: []*samplingRuleRecords{&ruleRecords},
+	}
+
+	// existing rule in manifest
+	r1 := Rule{
+		ruleProperties: ruleProperties{
+			RuleName:      "r1",
+			Priority:      10000,
+			Host:          "*",
+			HTTPMethod:    "*",
+			URLPath:       "*",
+			ReservoirSize: 60,
+			FixedRate:     0.5,
+			Version:       1,
+			ServiceName:   "test",
+			ResourceARN:   "*",
+			ServiceType:   "*",
+		},
+		reservoir: reservoir{
+			expiresAt: time.Unix(14050, 0),
+		},
+	}
+
+	rules := []Rule{r1}
+
+	clock := &mockClock{
+		nowTime: 1500000000,
+	}
+
+	m := &Manifest{
+		Rules: rules,
+		clock: clock,
+	}
+
+	// async rule updates
+	go func() {
+		for i := 0; i < 100; i++ {
+			m.updateRules(s)
+			time.Sleep(time.Millisecond)
+		}
+	}()
+
+	// matching logic
+	for i := 0; i < 100; i++ {
+		_, match, err := m.MatchAgainstManifestRules(sdktrace.SamplingParameters{}, "helios", "macos")
+		require.NoError(t, err)
+		require.False(t, match)
+	}
+}
+
+// validate no data race is happening when updating rule properties and rule targets in manifest while matching
+func TestRaceUpdatingRulesAndTargetsWhileMatching(t *testing.T) {
+	// getSamplingRules response to update existing manifest rule
+	ruleRecords := samplingRuleRecords{
+		SamplingRule: &ruleProperties{
+			RuleName:      "r1",
+			Priority:      10000,
+			Host:          "localhost",
+			HTTPMethod:    "*",
+			URLPath:       "/test/path",
+			ReservoirSize: 40,
+			FixedRate:     0.9,
+			Version:       1,
+			ServiceName:   "helios",
+			ResourceARN:   "*",
+			ServiceType:   "*",
+		},
+	}
+
+	// existing rule already present in manifest
+	r1 := Rule{
+		ruleProperties: ruleProperties{
+			RuleName:      "r1",
+			Priority:      10000,
+			Host:          "*",
+			HTTPMethod:    "*",
+			URLPath:       "*",
+			ReservoirSize: 60,
+			FixedRate:     0.5,
+			Version:       1,
+			ServiceName:   "test",
+			ResourceARN:   "*",
+			ServiceType:   "*",
+		},
+		reservoir: reservoir{
+			refreshedAt: time.Unix(13000000, 0),
+		},
+	}
+	clock := &mockClock{
+		nowTime: 1500000000,
+	}
+
+	rules := []Rule{r1}
+
+	m := &Manifest{
+		Rules: rules,
+		clock: clock,
+	}
+
+	// async rule updates
+	go func() {
+		for i := 0; i < 100; i++ {
+			m.updateRules(&getSamplingRulesOutput{
+				SamplingRuleRecords: []*samplingRuleRecords{&ruleRecords},
+			})
+			time.Sleep(time.Millisecond)
+		}
+	}()
+
+	// async target updates
+	go func() {
+		for i := 0; i < 100; i++ {
+			var manifest Manifest
+
+			err := func() error {
+				m.mu.RLock()
+				defer m.mu.RUnlock()
+
+				err := copier.CopyWithOption(&manifest, m, copier.Option{IgnoreEmpty: false, DeepCopy: true})
+				if err != nil {
+					return err
+				}
+
+				return nil
+			}()
+			require.NoError(t, err)
+
+			err = manifest.updateReservoir(createSamplingTargetDocument("r1", 0, 0.05, 10, 13000000))
+			require.NoError(t, err)
+			time.Sleep(time.Millisecond)
+
+			m.mu.Lock()
+			m.Rules = manifest.Rules
+			m.mu.Unlock()
+		}
+	}()
+
+	// matching logic
+	for i := 0; i < 100; i++ {
+		_, match, err := m.MatchAgainstManifestRules(sdktrace.SamplingParameters{}, "helios", "macos")
+		require.NoError(t, err)
+		require.False(t, match)
+		time.Sleep(time.Millisecond)
+	}
+}
+
+// validate no data race is when capturing sampling statistics in manifest while sampling
+func TestRaceUpdatingSamplingStatisticsWhenSampling(t *testing.T) {
+	// existing rule already present in manifest
+	r1 := Rule{
+		ruleProperties: ruleProperties{
+			RuleName:      "r1",
+			Priority:      10000,
+			Host:          "*",
+			HTTPMethod:    "*",
+			URLPath:       "*",
+			ReservoirSize: 60,
+			FixedRate:     0.5,
+			Version:       1,
+			ServiceName:   "test",
+			ResourceARN:   "*",
+			ServiceType:   "*",
+		},
+		reservoir: reservoir{
+			refreshedAt: time.Unix(15000000, 0),
+			mu:          &sync.RWMutex{},
+		},
+		samplingStatistics: &samplingStatistics{
+			matchedRequests:  5,
+			borrowedRequests: 0,
+			sampledRequests:  0,
+		},
+	}
+	clock := &mockClock{
+		nowTime: 18000000,
+	}
+
+	rules := []Rule{r1}
+
+	m := &Manifest{
+		Rules: rules,
+		clock: clock,
+	}
+
+	// async snapshot updates
+	go func() {
+		for i := 0; i < 100; i++ {
+			var manifest Manifest
+
+			err := func() error {
+				m.mu.RLock()
+				defer m.mu.RUnlock()
+
+				err := copier.CopyWithOption(&manifest, m, copier.Option{IgnoreEmpty: false, DeepCopy: true})
+				if err != nil {
+					return err
+				}
+
+				return nil
+			}()
+			require.NoError(t, err)
+
+			_, err = manifest.snapshots()
+			require.NoError(t, err)
+
+			m.mu.Lock()
+			m.Rules = manifest.Rules
+			m.mu.Unlock()
+			time.Sleep(time.Millisecond)
+		}
+	}()
+
+	// sampling logic
+	for i := 0; i < 100; i++ {
+		_ = r1.Sample(sdktrace.SamplingParameters{}, time.Unix(clock.nowTime+int64(i), 0))
+		time.Sleep(time.Millisecond)
+	}
 }

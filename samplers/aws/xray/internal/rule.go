@@ -48,8 +48,10 @@ type samplingStatistics struct {
 
 // stale checks if targets (sampling stats) for a given rule is expired or not.
 func (r *Rule) stale(now time.Time) bool {
-	reservoirRefreshTime := r.reservoir.refreshedAt.Add(time.Duration(r.reservoir.interval) * time.Second)
-	return r.samplingStatistics.matchedRequests != 0 && now.After(reservoirRefreshTime)
+	matchedRequests := atomic.LoadInt64(&r.samplingStatistics.matchedRequests)
+
+	reservoirRefreshTime := r.reservoir.refreshedAt.Add(r.reservoir.interval * time.Second)
+	return matchedRequests != 0 && now.After(reservoirRefreshTime)
 }
 
 // snapshot takes a snapshot of the sampling statistics counters, returning
@@ -210,7 +212,7 @@ func (r *Rule) appliesTo(parameters sdktrace.SamplingParameters, serviceName str
 		}
 	}
 
-	return true, nil
+	return attributeMatcher && serviceNameMatcher && serviceTypeMatcher && HTTPMethodMatcher && HTTPHostMatcher && HTTPURLPathMatcher, nil
 }
 
 // attributeMatching performs a match on attributes set by users on AWS X-Ray console.
@@ -229,6 +231,10 @@ func (r *Rule) attributeMatching(parameters sdktrace.SamplingParameters) (bool, 
 				match, err = wildcardMatch(value, attrs.Value.AsString())
 				if err != nil {
 					return false, err
+				}
+
+				if !match {
+					return false, nil
 				}
 			} else {
 				unmatchedCounter++

@@ -25,18 +25,20 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
-func createTestClient(testServerURL string) (*xrayClient, error) {
-	u, err := url.Parse(testServerURL)
-	if err != nil {
-		return nil, err
-	}
+func createTestClient(t *testing.T, body []byte) *xrayClient {
+	testServer := httptest.NewServer(http.HandlerFunc(func(res http.ResponseWriter, _ *http.Request) {
+		_, err := res.Write(body)
+		require.NoError(t, err)
+	}))
+	t.Cleanup(testServer.Close)
+
+	u, err := url.Parse(testServer.URL)
+	require.NoError(t, err)
 
 	client, err := newClient(*u)
-	if err != nil {
-		return nil, err
-	}
+	require.NoError(t, err)
 
-	return client, nil
+	return client
 }
 
 func TestGetSamplingRules(t *testing.T) {
@@ -104,15 +106,7 @@ func TestGetSamplingRules(t *testing.T) {
 }`)
 	ctx := context.Background()
 
-	// generate a test server so we can capture and inspect the request
-	testServer := httptest.NewServer(http.HandlerFunc(func(res http.ResponseWriter, req *http.Request) {
-		_, err := res.Write(body)
-		require.NoError(t, err)
-	}))
-	t.Cleanup(testServer.Close)
-
-	client, err := createTestClient(testServer.URL)
-	require.NoError(t, err)
+	client := createTestClient(t, body)
 
 	samplingRules, err := client.getSamplingRules(ctx)
 	require.NoError(t, err)
@@ -164,15 +158,7 @@ func TestGetSamplingRulesWithMissingValues(t *testing.T) {
 }`)
 	ctx := context.Background()
 
-	// generate a test server so we can capture and inspect the request
-	testServer := httptest.NewServer(http.HandlerFunc(func(res http.ResponseWriter, req *http.Request) {
-		_, err := res.Write([]byte(body))
-		require.NoError(t, err)
-	}))
-	t.Cleanup(testServer.Close)
-
-	client, err := createTestClient(testServer.URL)
-	require.NoError(t, err)
+	client := createTestClient(t, body)
 
 	samplingRules, err := client.getSamplingRules(ctx)
 	require.NoError(t, err)
@@ -208,15 +194,7 @@ func TestGetSamplingTargets(t *testing.T) {
 
 	ctx := context.Background()
 
-	// generate a test server so we can capture and inspect the request
-	testServer := httptest.NewServer(http.HandlerFunc(func(res http.ResponseWriter, req *http.Request) {
-		_, err := res.Write([]byte(body))
-		require.NoError(t, err)
-	}))
-	t.Cleanup(testServer.Close)
-
-	client, err := createTestClient(testServer.URL)
-	require.NoError(t, err)
+	client := createTestClient(t, body)
 
 	samplingTragets, err := client.getSamplingTargets(ctx, nil)
 	require.NoError(t, err)
@@ -253,15 +231,7 @@ func TestGetSamplingTargetsMissingValues(t *testing.T) {
 
 	ctx := context.Background()
 
-	// generate a test server so we can capture and inspect the request
-	testServer := httptest.NewServer(http.HandlerFunc(func(res http.ResponseWriter, req *http.Request) {
-		_, err := res.Write([]byte(body))
-		require.NoError(t, err)
-	}))
-	t.Cleanup(testServer.Close)
-
-	client, err := createTestClient(testServer.URL)
-	require.NoError(t, err)
+	client := createTestClient(t, body)
 
 	samplingTragets, err := client.getSamplingTargets(ctx, nil)
 	require.NoError(t, err)

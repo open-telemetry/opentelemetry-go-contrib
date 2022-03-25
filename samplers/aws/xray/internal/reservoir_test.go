@@ -185,7 +185,7 @@ func TestResetQuotaUsageRotation(t *testing.T) {
 
 	// take() should be false since no unused quota left
 	taken := r.take(clock.now(), false, 1.0)
-	assert.Equal(t, false, taken)
+	assert.False(t, taken)
 
 	// increment epoch to reset unused quota
 	clock = &mockClock{
