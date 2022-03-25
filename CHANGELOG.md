@@ -8,6 +8,10 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 
 ## [Unreleased]
 
+### Changed
+
+- Upgraded packages using otel/metrics v0.27.0 to v0.28.0. (#1977)
+
 ## [1.5.0/0.30.0/0.1.0] - 2022-03-16
 
 ### Added
