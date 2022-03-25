@@ -12,7 +12,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package otelaws
+package otelaws // import "go.opentelemetry.io/contrib/instrumentation/github.com/aws/aws-sdk-go-v2/otelaws"
 
 import (
 	"context"
@@ -31,7 +31,7 @@ const (
 	RequestIDKey attribute.Key = "aws.request_id"
 )
 
-var servicemap map[string]AttributeSetter = map[string]AttributeSetter{
+var servicemap = map[string]AttributeSetter{
 	"dynamodb": DynamoDBAttributeSetter,
 }
 

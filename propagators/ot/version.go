@@ -12,7 +12,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package ot
+package ot // import "go.opentelemetry.io/contrib/propagators/ot"
 
 // Version is the current release version of the ot propagator.
 func Version() string {

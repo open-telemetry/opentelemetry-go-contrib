@@ -12,7 +12,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package test
+package test // import "go.opentelemetry.io/contrib/instrumentation/net/http/httptrace/otelhttptrace/test"
 
 // Version is the current release version of the httptrace instrumentation test module.
 func Version() string {
