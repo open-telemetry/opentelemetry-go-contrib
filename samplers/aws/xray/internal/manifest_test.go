@@ -17,11 +17,8 @@ package internal
 import (
 	"context"
 	"net/url"
-	"sync"
 	"testing"
 	"time"
-
-	"github.com/jinzhu/copier"
 
 	"go.opentelemetry.io/otel/attribute"
 
@@ -107,7 +104,7 @@ func TestMatchAgainstManifestRules(t *testing.T) {
 			ResourceARN:   "*",
 			ServiceType:   "*",
 		},
-		reservoir: reservoir{
+		reservoir: &reservoir{
 			expiresAt: time.Unix(14050, 0),
 		},
 	}
@@ -126,7 +123,7 @@ func TestMatchAgainstManifestRules(t *testing.T) {
 			ResourceARN:   "*",
 			ServiceType:   "local",
 		},
-		reservoir: reservoir{
+		reservoir: &reservoir{
 			expiresAt: time.Unix(14050, 0),
 		},
 	}
@@ -168,7 +165,7 @@ func TestMatchAgainstManifestRulesAttributeMatch(t *testing.T) {
 				"labelB": "raspberry",
 			},
 		},
-		reservoir: reservoir{
+		reservoir: &reservoir{
 			expiresAt: time.Unix(14050, 0),
 		},
 	}
@@ -210,7 +207,7 @@ func TestMatchAgainstManifestRulesAttributeWildCardMatch(t *testing.T) {
 				"labelB": "rasp*",
 			},
 		},
-		reservoir: reservoir{
+		reservoir: &reservoir{
 			expiresAt: time.Unix(14050, 0),
 		},
 	}
@@ -245,7 +242,7 @@ func TestMatchAgainstManifestRulesNoMatch(t *testing.T) {
 			ResourceARN:   "*",
 			ServiceType:   "local",
 		},
-		reservoir: reservoir{
+		reservoir: &reservoir{
 			expiresAt: time.Unix(14050, 0),
 		},
 	}
@@ -352,9 +349,8 @@ func TestRefreshManifestRules(t *testing.T) {
 			ServiceType:   "*",
 			Attributes:    map[string]string{},
 		},
-		reservoir: reservoir{
+		reservoir: &reservoir{
 			capacity: 60,
-			mu:       &sync.RWMutex{},
 		},
 		samplingStatistics: &samplingStatistics{},
 	}
@@ -374,9 +370,8 @@ func TestRefreshManifestRules(t *testing.T) {
 			ServiceType:   "*",
 			Attributes:    map[string]string{},
 		},
-		reservoir: reservoir{
+		reservoir: &reservoir{
 			capacity: 3,
-			mu:       &sync.RWMutex{},
 		},
 		samplingStatistics: &samplingStatistics{},
 	}
@@ -396,9 +391,8 @@ func TestRefreshManifestRules(t *testing.T) {
 			ServiceType:   "local",
 			Attributes:    map[string]string{},
 		},
-		reservoir: reservoir{
+		reservoir: &reservoir{
 			capacity: 100,
-			mu:       &sync.RWMutex{},
 		},
 		samplingStatistics: &samplingStatistics{},
 	}
@@ -602,9 +596,8 @@ func TestRefreshManifestAddOneInvalidRule(t *testing.T) {
 			ServiceType:   "*",
 			Attributes:    map[string]string{},
 		},
-		reservoir: reservoir{
+		reservoir: &reservoir{
 			capacity: 60,
-			mu:       &sync.RWMutex{},
 		},
 		samplingStatistics: &samplingStatistics{},
 	}
@@ -646,7 +639,7 @@ func TestRefreshManifestTargetNoSnapShot(t *testing.T) {
 			ServiceType:   "local",
 			Attributes:    map[string]string{},
 		},
-		reservoir: reservoir{
+		reservoir: &reservoir{
 			capacity: 100,
 		},
 		samplingStatistics: &samplingStatistics{
@@ -707,9 +700,8 @@ func TestRefreshManifestTargets(t *testing.T) {
 			ServiceType:   "local",
 			Attributes:    map[string]string{},
 		},
-		reservoir: reservoir{
+		reservoir: &reservoir{
 			capacity: 100,
-			mu:       &sync.RWMutex{},
 		},
 		samplingStatistics: &samplingStatistics{
 			matchedRequests: int64(5),
@@ -780,32 +772,26 @@ func TestRefreshManifestTargetsPollIntervalUpdateTest(t *testing.T) {
 		ruleProperties: ruleProperties{
 			RuleName: "r1",
 		},
-		reservoir: reservoir{
-			mu: &sync.RWMutex{},
-		},
 		samplingStatistics: &samplingStatistics{
 			matchedRequests: int64(5),
 		},
+		reservoir: &reservoir{},
 	}
 
 	r2 := Rule{
 		ruleProperties: ruleProperties{
 			RuleName: "r2",
 		},
-		reservoir: reservoir{
-			mu: &sync.RWMutex{},
-		},
 		samplingStatistics: &samplingStatistics{},
+		reservoir:          &reservoir{},
 	}
 
 	r3 := Rule{
 		ruleProperties: ruleProperties{
 			RuleName: "r3",
 		},
-		reservoir: reservoir{
-			mu: &sync.RWMutex{},
-		},
 		samplingStatistics: &samplingStatistics{},
+		reservoir:          &reservoir{},
 	}
 
 	m := &Manifest{
@@ -835,7 +821,7 @@ func TestUpdateTargets(t *testing.T) {
 			RuleName:  "r1",
 			FixedRate: 0.10,
 		},
-		reservoir: reservoir{
+		reservoir: &reservoir{
 			quota:       8,
 			refreshedAt: time.Unix(1499999990, 0),
 			expiresAt:   time.Unix(1500000010, 0),
@@ -864,7 +850,7 @@ func TestUpdateTargets(t *testing.T) {
 			RuleName:  "r1",
 			FixedRate: 0.05,
 		},
-		reservoir: reservoir{
+		reservoir: &reservoir{
 			quota:       10,
 			refreshedAt: time.Unix(1500000000, 0),
 			expiresAt:   time.Unix(1500000060, 0),
@@ -891,7 +877,7 @@ func TestUpdateTargetsRefreshFlagTest(t *testing.T) {
 			RuleName:  "r1",
 			FixedRate: 0.10,
 		},
-		reservoir: reservoir{
+		reservoir: &reservoir{
 			quota:       8,
 			refreshedAt: time.Unix(1499999990, 0),
 			expiresAt:   time.Unix(1500000010, 0),
@@ -921,7 +907,7 @@ func TestUpdateTargetsRefreshFlagTest(t *testing.T) {
 			RuleName:  "r1",
 			FixedRate: 0.05,
 		},
-		reservoir: reservoir{
+		reservoir: &reservoir{
 			quota:       10,
 			refreshedAt: time.Unix(1500000000, 0),
 			expiresAt:   time.Unix(1500000060, 0),
@@ -1015,7 +1001,7 @@ func TestUpdateReservoir(t *testing.T) {
 			RuleName:  "r2",
 			FixedRate: 0.10,
 		},
-		reservoir: reservoir{
+		reservoir: &reservoir{
 			quota:       8,
 			refreshedAt: time.Unix(1499999990, 0),
 			expiresAt:   time.Unix(1500000010, 0),
@@ -1042,7 +1028,7 @@ func TestUpdateReservoirMissingFixedRate(t *testing.T) {
 			RuleName:  "r2",
 			FixedRate: 0.10,
 		},
-		reservoir: reservoir{
+		reservoir: &reservoir{
 			quota:       8,
 			refreshedAt: time.Unix(1499999990, 0),
 			expiresAt:   time.Unix(1500000010, 0),
@@ -1068,7 +1054,7 @@ func TestUpdateReservoirMissingRuleName(t *testing.T) {
 			RuleName:  "r2",
 			FixedRate: 0.10,
 		},
-		reservoir: reservoir{
+		reservoir: &reservoir{
 			quota:       8,
 			refreshedAt: time.Unix(1499999990, 0),
 			expiresAt:   time.Unix(1500000010, 0),
@@ -1102,7 +1088,7 @@ func TestSnapshots(t *testing.T) {
 		ruleProperties: ruleProperties{
 			RuleName: name1,
 		},
-		reservoir: reservoir{
+		reservoir: &reservoir{
 			interval: 10,
 		},
 		samplingStatistics: &samplingStatistics{
@@ -1120,7 +1106,7 @@ func TestSnapshots(t *testing.T) {
 		ruleProperties: ruleProperties{
 			RuleName: name2,
 		},
-		reservoir: reservoir{
+		reservoir: &reservoir{
 			interval: 10,
 		},
 		samplingStatistics: &samplingStatistics{
@@ -1186,7 +1172,7 @@ func TestMixedSnapshots(t *testing.T) {
 		ruleProperties: ruleProperties{
 			RuleName: name1,
 		},
-		reservoir: reservoir{
+		reservoir: &reservoir{
 			interval:    20,
 			refreshedAt: time.Unix(1499999970, 0),
 		},
@@ -1207,7 +1193,7 @@ func TestMixedSnapshots(t *testing.T) {
 		ruleProperties: ruleProperties{
 			RuleName: name2,
 		},
-		reservoir: reservoir{
+		reservoir: &reservoir{
 			interval:    20,
 			refreshedAt: time.Unix(1499999990, 0),
 		},
@@ -1228,7 +1214,7 @@ func TestMixedSnapshots(t *testing.T) {
 		ruleProperties: ruleProperties{
 			RuleName: name3,
 		},
-		reservoir: reservoir{
+		reservoir: &reservoir{
 			interval:    20,
 			refreshedAt: time.Unix(1499999990, 0),
 		},
@@ -1264,7 +1250,112 @@ func TestMixedSnapshots(t *testing.T) {
 	assert.Equal(t, ss1, *statistics[0])
 }
 
-// Assert that sorting an unsorted array results in a sorted array - check priority.
+// assert that deep copy creates a new manifest object with new address space.
+func TestDeepCopy(t *testing.T) {
+	r1 := Rule{
+		ruleProperties: ruleProperties{
+			RuleName:      "r1",
+			Priority:      100,
+			Host:          "http://127.0.0.0.1:2020",
+			HTTPMethod:    "POST",
+			URLPath:       "/test",
+			ReservoirSize: 100,
+			FixedRate:     0.09,
+			Version:       1,
+			ServiceName:   "openTelemetry",
+			ResourceARN:   "*",
+			ServiceType:   "local",
+			Attributes:    map[string]string{},
+		},
+		reservoir: &reservoir{
+			capacity: 100,
+		},
+		samplingStatistics: &samplingStatistics{
+			matchedRequests:  int64(5),
+			borrowedRequests: int64(1),
+			sampledRequests:  int64(3),
+		},
+	}
+
+	r2 := Rule{
+		ruleProperties: ruleProperties{
+			RuleName:      "r2",
+			Priority:      10,
+			Host:          "http://127.0.0.0.1:2020",
+			HTTPMethod:    "GET",
+			URLPath:       "/test/path",
+			ReservoirSize: 100,
+			FixedRate:     0.09,
+			Version:       1,
+			ServiceName:   "x-ray",
+			ResourceARN:   "*",
+			ServiceType:   "local",
+			Attributes:    map[string]string{},
+		},
+		reservoir: &reservoir{
+			capacity: 100,
+		},
+		samplingStatistics: &samplingStatistics{
+			matchedRequests:  int64(5),
+			borrowedRequests: int64(1),
+			sampledRequests:  int64(3),
+		},
+	}
+
+	clock := &mockClock{
+		nowTime: 1500000000,
+	}
+
+	m := &Manifest{
+		Rules:                          []Rule{r1, r2},
+		SamplingTargetsPollingInterval: 10 * time.Second,
+		refreshedAt:                    time.Unix(1500000, 0),
+		xrayClient:                     createTestClient(t, []byte(`hello world!`)),
+		logger:                         testr.New(t),
+		clock:                          clock,
+	}
+
+	manifest := m.deepCopy()
+
+	require.Len(t, m.Rules, 2)
+	require.Len(t, manifest.Rules, 2)
+
+	assert.Equal(t, &m.xrayClient, &manifest.xrayClient)
+
+	assert.NotSame(t, &m.clock, &manifest.clock)
+	assert.NotSame(t, &m.refreshedAt, &manifest.refreshedAt)
+	assert.NotSame(t, &m.SamplingTargetsPollingInterval, &manifest.SamplingTargetsPollingInterval)
+	assert.NotSame(t, &m.logger, &manifest.logger)
+	assert.NotSame(t, &m.mu, &manifest.mu)
+
+	// rule properties has different address space in m and manifest
+	assert.NotSame(t, &m.Rules[0].ruleProperties.RuleName, &manifest.Rules[0].ruleProperties.RuleName)
+	assert.NotSame(t, &m.Rules[0].ruleProperties.ServiceName, &manifest.Rules[0].ruleProperties.RuleName)
+	assert.NotSame(t, &m.Rules[0].ruleProperties.ServiceType, &manifest.Rules[0].ruleProperties.RuleName)
+	assert.NotSame(t, &m.Rules[0].ruleProperties.Host, &manifest.Rules[0].ruleProperties.RuleName)
+	assert.NotSame(t, &m.Rules[0].ruleProperties.HTTPMethod, &manifest.Rules[0].ruleProperties.RuleName)
+	assert.NotSame(t, &m.Rules[0].ruleProperties.URLPath, &manifest.Rules[0].ruleProperties.RuleName)
+	assert.NotSame(t, &m.Rules[0].ruleProperties.FixedRate, &manifest.Rules[0].ruleProperties.RuleName)
+	assert.NotSame(t, &m.Rules[0].ruleProperties.ReservoirSize, &manifest.Rules[0].ruleProperties.RuleName)
+	assert.NotSame(t, &m.Rules[0].ruleProperties.ResourceARN, &manifest.Rules[0].ruleProperties.RuleName)
+	assert.NotSame(t, &m.Rules[0].ruleProperties.Priority, &manifest.Rules[0].ruleProperties.Priority)
+	assert.NotSame(t, &m.Rules[0].ruleProperties.Version, &manifest.Rules[0].ruleProperties.Version)
+	assert.NotSame(t, &m.Rules[0].ruleProperties.Attributes, &manifest.Rules[0].ruleProperties.Attributes)
+
+	// reservoir has different address space in m and manifest
+	assert.NotSame(t, &m.Rules[0].reservoir.refreshedAt, &manifest.Rules[0].reservoir.refreshedAt)
+	assert.NotSame(t, &m.Rules[0].reservoir.expiresAt, &manifest.Rules[0].reservoir.expiresAt)
+	assert.NotSame(t, &m.Rules[0].reservoir.lastTick, &manifest.Rules[0].reservoir.lastTick)
+	assert.NotSame(t, &m.Rules[0].reservoir.interval, &manifest.Rules[0].reservoir.interval)
+	assert.NotSame(t, &m.Rules[0].reservoir.capacity, &manifest.Rules[0].reservoir.capacity)
+	assert.NotSame(t, &m.Rules[0].reservoir.quota, &manifest.Rules[0].reservoir.quota)
+	assert.NotSame(t, &m.Rules[0].reservoir.quotaBalance, &manifest.Rules[0].reservoir.quotaBalance)
+
+	// samplings statistics has same address space since it is a pointer
+	assert.Equal(t, &m.Rules[0].samplingStatistics, &manifest.Rules[0].samplingStatistics)
+}
+
+// assert that sorting an unsorted array results in a sorted array - check priority.
 func TestSortBasedOnPriority(t *testing.T) {
 	r1 := Rule{
 		ruleProperties: ruleProperties{
@@ -1303,7 +1394,7 @@ func TestSortBasedOnPriority(t *testing.T) {
 	assert.Equal(t, r3, m.Rules[2])
 }
 
-// Assert that sorting an unsorted array results in a sorted array - check priority and rule name.
+// assert that sorting an unsorted array results in a sorted array - check priority and rule name.
 func TestSortBasedOnRuleName(t *testing.T) {
 	r1 := Rule{
 		ruleProperties: ruleProperties{
@@ -1344,9 +1435,9 @@ func TestSortBasedOnRuleName(t *testing.T) {
 
 // asserts the minimum value of all the targets.
 func TestMinPollInterval(t *testing.T) {
-	r1 := Rule{reservoir: reservoir{interval: time.Duration(10)}}
-	r2 := Rule{reservoir: reservoir{interval: time.Duration(5)}}
-	r3 := Rule{reservoir: reservoir{interval: time.Duration(25)}}
+	r1 := Rule{reservoir: &reservoir{interval: time.Duration(10)}}
+	r2 := Rule{reservoir: &reservoir{interval: time.Duration(5)}}
+	r3 := Rule{reservoir: &reservoir{interval: time.Duration(25)}}
 
 	rules := []Rule{r1, r2, r3}
 	m := &Manifest{Rules: rules}
@@ -1358,9 +1449,9 @@ func TestMinPollInterval(t *testing.T) {
 
 // asserts the minimum value of all the targets when some targets has 0 interval.
 func TestMinPollIntervalZeroCase(t *testing.T) {
-	r1 := Rule{reservoir: reservoir{interval: time.Duration(0)}}
-	r2 := Rule{reservoir: reservoir{interval: time.Duration(0)}}
-	r3 := Rule{reservoir: reservoir{interval: time.Duration(5)}}
+	r1 := Rule{reservoir: &reservoir{interval: time.Duration(0)}}
+	r2 := Rule{reservoir: &reservoir{interval: time.Duration(0)}}
+	r3 := Rule{reservoir: &reservoir{interval: time.Duration(5)}}
 
 	rules := []Rule{r1, r2, r3}
 	m := &Manifest{Rules: rules}
@@ -1372,9 +1463,9 @@ func TestMinPollIntervalZeroCase(t *testing.T) {
 
 // asserts the minimum value of all the targets when some targets has negative interval.
 func TestMinPollIntervalNegativeCase(t *testing.T) {
-	r1 := Rule{reservoir: reservoir{interval: time.Duration(-5)}}
-	r2 := Rule{reservoir: reservoir{interval: time.Duration(0)}}
-	r3 := Rule{reservoir: reservoir{interval: time.Duration(0)}}
+	r1 := Rule{reservoir: &reservoir{interval: time.Duration(-5)}}
+	r2 := Rule{reservoir: &reservoir{interval: time.Duration(0)}}
+	r3 := Rule{reservoir: &reservoir{interval: time.Duration(0)}}
 
 	rules := []Rule{r1, r2, r3}
 	m := &Manifest{Rules: rules}
@@ -1439,7 +1530,7 @@ func TestRaceUpdatingRulesWhileMatching(t *testing.T) {
 			ResourceARN:   "*",
 			ServiceType:   "*",
 		},
-		reservoir: reservoir{
+		reservoir: &reservoir{
 			expiresAt: time.Unix(14050, 0),
 		},
 	}
@@ -1505,7 +1596,7 @@ func TestRaceUpdatingRulesAndTargetsWhileMatching(t *testing.T) {
 			ResourceARN:   "*",
 			ServiceType:   "*",
 		},
-		reservoir: reservoir{
+		reservoir: &reservoir{
 			refreshedAt: time.Unix(13000000, 0),
 		},
 	}
@@ -1533,22 +1624,9 @@ func TestRaceUpdatingRulesAndTargetsWhileMatching(t *testing.T) {
 	// async target updates
 	go func() {
 		for i := 0; i < 100; i++ {
-			var manifest Manifest
+			manifest := m.deepCopy()
 
-			err := func() error {
-				m.mu.RLock()
-				defer m.mu.RUnlock()
-
-				err := copier.CopyWithOption(&manifest, m, copier.Option{IgnoreEmpty: false, DeepCopy: true})
-				if err != nil {
-					return err
-				}
-
-				return nil
-			}()
-			require.NoError(t, err)
-
-			err = manifest.updateReservoir(createSamplingTargetDocument("r1", 0, 0.05, 10, 13000000))
+			err := manifest.updateReservoir(createSamplingTargetDocument("r1", 0, 0.05, 10, 13000000))
 			require.NoError(t, err)
 			time.Sleep(time.Millisecond)
 
@@ -1584,9 +1662,8 @@ func TestRaceUpdatingSamplingStatisticsWhenSampling(t *testing.T) {
 			ResourceARN:   "*",
 			ServiceType:   "*",
 		},
-		reservoir: reservoir{
+		reservoir: &reservoir{
 			refreshedAt: time.Unix(15000000, 0),
-			mu:          &sync.RWMutex{},
 		},
 		samplingStatistics: &samplingStatistics{
 			matchedRequests:  5,
@@ -1608,22 +1685,9 @@ func TestRaceUpdatingSamplingStatisticsWhenSampling(t *testing.T) {
 	// async snapshot updates
 	go func() {
 		for i := 0; i < 100; i++ {
-			var manifest Manifest
+			manifest := m.deepCopy()
 
-			err := func() error {
-				m.mu.RLock()
-				defer m.mu.RUnlock()
-
-				err := copier.CopyWithOption(&manifest, m, copier.Option{IgnoreEmpty: false, DeepCopy: true})
-				if err != nil {
-					return err
-				}
-
-				return nil
-			}()
-			require.NoError(t, err)
-
-			_, err = manifest.snapshots()
+			_, err := manifest.snapshots()
 			require.NoError(t, err)
 
 			m.mu.Lock()

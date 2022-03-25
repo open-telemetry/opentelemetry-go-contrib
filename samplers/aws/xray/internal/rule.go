@@ -28,7 +28,7 @@ type Rule struct {
 
 	// reservoir has equivalent fields to store what we receive from service API getSamplingTargets.
 	// https://docs.aws.amazon.com/xray/latest/api/API_GetSamplingTargets.html
-	reservoir reservoir
+	reservoir *reservoir
 
 	// ruleProperty is equivalent to what we receive from service API getSamplingRules.
 	// https://docs.aws.amazon.com/cli/latest/reference/xray/get-sampling-rules.html

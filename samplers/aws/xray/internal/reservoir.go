@@ -43,7 +43,7 @@ type reservoir struct {
 	// Stores reservoir ticks.
 	lastTick time.Time
 
-	mu *sync.RWMutex
+	mu sync.RWMutex
 }
 
 // expired returns true if current time is past expiration timestamp. Otherwise, false is returned if no quota remains.

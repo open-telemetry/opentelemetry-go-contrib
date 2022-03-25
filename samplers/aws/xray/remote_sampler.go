@@ -82,7 +82,7 @@ func NewRemoteSampler(ctx context.Context, serviceName string, cloudPlatform str
 }
 
 // ShouldSample matches span attributes with retrieved sampling rules and returns a sampling result.
-// If the sampling parameter to not match or the manifest is expired then the fallback sampler is used.
+// If the sampling parameters do not match or the manifest is expired then the fallback sampler is used.
 func (rs *remoteSampler) ShouldSample(parameters sdktrace.SamplingParameters) sdktrace.SamplingResult {
 	if rs.manifest.Expired() {
 		// Use fallback sampler if manifest is expired.
@@ -120,7 +120,7 @@ func (rs *remoteSampler) start(ctx context.Context) {
 }
 
 // startPoller starts the rule and target poller in a single go routine which runs periodically
-// to the refresh manifest and targets.
+// to refresh the manifest and targets.
 func (rs *remoteSampler) startPoller(ctx context.Context) {
 	// jitter = 5s, default duration 300 seconds.
 	rulesTicker := newTicker(rs.samplingRulesPollingInterval, 5*time.Second)

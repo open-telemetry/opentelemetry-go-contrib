@@ -48,7 +48,7 @@ func (f optionFunc) apply(cfg *config) *config {
 }
 
 // WithEndpoint sets custom proxy endpoint.
-// default endpoint being used is http://127.0.0.1:2000.
+// If this option is not provided the default endpoint used will be http://127.0.0.1:2000.
 func WithEndpoint(endpoint url.URL) Option {
 	return optionFunc(func(cfg *config) *config {
 		cfg.endpoint = endpoint
@@ -57,7 +57,7 @@ func WithEndpoint(endpoint url.URL) Option {
 }
 
 // WithSamplingRulesPollingInterval sets polling interval for sampling rules.
-// default samplingRulesPollingInterval being used is 300 seconds.
+// If this option is not provided the default samplingRulesPollingInterval used will be 300 seconds.
 func WithSamplingRulesPollingInterval(polingInterval time.Duration) Option {
 	return optionFunc(func(cfg *config) *config {
 		cfg.samplingRulesPollingInterval = polingInterval
@@ -66,7 +66,7 @@ func WithSamplingRulesPollingInterval(polingInterval time.Duration) Option {
 }
 
 // WithLogger sets custom logging for remote sampling implementation.
-// default logger being used is go-logr/stdr (https://github.com/go-logr/stdr).
+// If this option is not provided the default logger used will be go-logr/stdr (https://github.com/go-logr/stdr).
 func WithLogger(l logr.Logger) Option {
 	return optionFunc(func(cfg *config) *config {
 		cfg.logger = l

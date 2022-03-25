@@ -240,6 +240,17 @@ func TestGetSamplingTargetsMissingValues(t *testing.T) {
 	assert.Nil(t, samplingTragets.SamplingTargetDocuments[0].ReservoirQuota)
 }
 
+func TestNilContext(t *testing.T) {
+	client := createTestClient(t, []byte(``))
+	samplingRulesOutput, err := client.getSamplingRules(context.TODO())
+	require.Error(t, err)
+	require.Nil(t, samplingRulesOutput)
+
+	samplingTargetsOutput, err := client.getSamplingTargets(context.TODO(), nil)
+	require.Error(t, err)
+	require.Nil(t, samplingTargetsOutput)
+}
+
 func TestNewClient(t *testing.T) {
 	endpoint, err := url.Parse("http://127.0.0.1:2020")
 	require.NoError(t, err)

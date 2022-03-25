@@ -25,8 +25,6 @@ import (
 	"sync"
 	"time"
 
-	"github.com/jinzhu/copier"
-
 	"github.com/go-logr/logr"
 
 	sdktrace "go.opentelemetry.io/otel/sdk/trace"
@@ -119,24 +117,10 @@ func (m *Manifest) RefreshManifestRules(ctx context.Context) (err error) {
 
 // RefreshManifestTargets updates sampling targets (statistics) for each rule.
 func (m *Manifest) RefreshManifestTargets(ctx context.Context) (refresh bool, err error) {
-	var manifest Manifest
+	// Deep copy manifest object.
+	manifest := m.deepCopy()
 
-	err = func() error {
-		m.mu.RLock()
-		defer m.mu.RUnlock()
-
-		err = copier.CopyWithOption(&manifest, m, copier.Option{IgnoreEmpty: false, DeepCopy: true})
-		if err != nil {
-			return err
-		}
-
-		return nil
-	}()
-	if err != nil {
-		return false, err
-	}
-
-	// generate sampling statistics based on the data in temporary manifest
+	// Generate sampling statistics based on the data in temporary manifest
 	statistics, err := manifest.snapshots()
 	if err != nil {
 		return false, err
@@ -208,11 +192,10 @@ func (m *Manifest) updateRules(rules *getSamplingRulesOutput) {
 func (m *Manifest) createRule(ruleProp ruleProperties) {
 	cr := reservoir{
 		capacity: ruleProp.ReservoirSize,
-		mu:       &sync.RWMutex{},
 	}
 
 	csr := Rule{
-		reservoir:          cr,
+		reservoir:          &cr,
 		ruleProperties:     ruleProp,
 		samplingStatistics: &samplingStatistics{},
 	}
@@ -313,6 +296,52 @@ func (m *Manifest) snapshots() ([]*samplingStatisticsDocument, error) {
 	}
 
 	return statistics, nil
+}
+
+// deepCopy copies the m to another manifest object.
+func (m *Manifest) deepCopy() *Manifest {
+	m.mu.RLock()
+	defer m.mu.RUnlock()
+
+	manifest := Manifest{
+		Rules: []Rule{},
+	}
+
+	for _, rule := range m.Rules {
+		// Deep copying rules.
+		var tempRule Rule
+		tempRule.ruleProperties = rule.ruleProperties
+
+		// Deep copying reservoir (copying each fields of reservoir because we want to initialize new mutex values for each rule).
+		var tempRes reservoir
+
+		rule.reservoir.mu.RLock()
+		tempRes.expiresAt = rule.reservoir.expiresAt
+		tempRes.quota = rule.reservoir.quota
+		tempRes.quotaBalance = rule.reservoir.quotaBalance
+		tempRes.capacity = rule.reservoir.capacity
+		tempRes.refreshedAt = rule.reservoir.refreshedAt
+		tempRes.interval = rule.reservoir.interval
+		tempRes.lastTick = rule.reservoir.lastTick
+		rule.reservoir.mu.RUnlock()
+
+		tempRule.reservoir = &tempRes
+
+		// Shallow copying sampling statistics.
+		tempRule.samplingStatistics = rule.samplingStatistics
+
+		manifest.Rules = append(manifest.Rules, tempRule)
+	}
+
+	// Copying other manifest fields.
+	manifest.SamplingTargetsPollingInterval = m.SamplingTargetsPollingInterval
+	manifest.refreshedAt = m.refreshedAt
+	manifest.xrayClient = m.xrayClient
+	manifest.clientID = m.clientID
+	manifest.logger = m.logger
+	manifest.clock = m.clock
+
+	return &manifest
 }
 
 // sort sorts the Rules of m first by priority and then by name.

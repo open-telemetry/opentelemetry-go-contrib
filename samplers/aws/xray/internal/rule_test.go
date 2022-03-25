@@ -15,11 +15,8 @@
 package internal
 
 import (
-	"sync"
 	"testing"
 	"time"
-
-	"github.com/jinzhu/copier"
 
 	"github.com/stretchr/testify/require"
 
@@ -36,7 +33,7 @@ func TestStaleRule(t *testing.T) {
 		samplingStatistics: &samplingStatistics{
 			matchedRequests: 5,
 		},
-		reservoir: reservoir{
+		reservoir: &reservoir{
 			refreshedAt: refreshedAt,
 			interval:    10,
 		},
@@ -54,7 +51,7 @@ func TestFreshRule(t *testing.T) {
 		samplingStatistics: &samplingStatistics{
 			matchedRequests: 5,
 		},
-		reservoir: reservoir{
+		reservoir: &reservoir{
 			refreshedAt: refreshedAt,
 			interval:    10,
 		},
@@ -72,7 +69,7 @@ func TestInactiveRule(t *testing.T) {
 		samplingStatistics: &samplingStatistics{
 			matchedRequests: 0,
 		},
-		reservoir: reservoir{
+		reservoir: &reservoir{
 			refreshedAt: refreshedAt,
 			interval:    10,
 		},
@@ -114,10 +111,9 @@ func TestSnapshot(t *testing.T) {
 // assert that reservoir is expired, borrowing 1 req during that second.
 func TestExpiredReservoirBorrowSample(t *testing.T) {
 	r1 := Rule{
-		reservoir: reservoir{
+		reservoir: &reservoir{
 			expiresAt: time.Unix(1500000060, 0),
 			capacity:  10,
-			mu:        &sync.RWMutex{},
 		},
 		ruleProperties: ruleProperties{
 			RuleName:  "r1",
@@ -138,10 +134,9 @@ func TestExpiredReservoirBorrowSample(t *testing.T) {
 // assert that reservoir is expired, borrowed 1 req during that second so now using traceIDRatioBased sampler.
 func TestExpiredReservoirTraceIDRationBasedSample(t *testing.T) {
 	r1 := Rule{
-		reservoir: reservoir{
+		reservoir: &reservoir{
 			expiresAt: time.Unix(1500000060, 0),
 			capacity:  10,
-			mu:        &sync.RWMutex{},
 			lastTick:  time.Unix(1500000061, 0),
 		},
 		ruleProperties: ruleProperties{
@@ -166,10 +161,9 @@ func TestConsumeFromReservoirSample(t *testing.T) {
 		ruleProperties: ruleProperties{
 			RuleName: "r1",
 		},
-		reservoir: reservoir{
+		reservoir: &reservoir{
 			quota:     10,
 			expiresAt: time.Unix(1500000060, 0),
-			mu:        &sync.RWMutex{},
 		},
 		samplingStatistics: &samplingStatistics{},
 	}
@@ -186,10 +180,9 @@ func TestConsumeFromReservoirSample(t *testing.T) {
 // assert that sampling using traceIDRationBasedSampler when reservoir quota is consumed.
 func TestTraceIDRatioBasedSamplerReservoirIsConsumedSample(t *testing.T) {
 	r1 := Rule{
-		reservoir: reservoir{
+		reservoir: &reservoir{
 			quota:     10,
 			expiresAt: time.Unix(1500000060, 0),
-			mu:        &sync.RWMutex{},
 			lastTick:  time.Unix(1500000000, 0),
 		},
 		ruleProperties: ruleProperties{
@@ -211,10 +204,9 @@ func TestTraceIDRatioBasedSamplerReservoirIsConsumedSample(t *testing.T) {
 // assert that when fixed rate is 0 traceIDRatioBased sampler will not sample the trace.
 func TestTraceIDRatioBasedSamplerFixedRateZero(t *testing.T) {
 	r1 := Rule{
-		reservoir: reservoir{
+		reservoir: &reservoir{
 			quota:     10,
 			expiresAt: time.Unix(1500000060, 0),
-			mu:        &sync.RWMutex{},
 			lastTick:  time.Unix(1500000000, 0),
 		},
 		ruleProperties: ruleProperties{
@@ -616,9 +608,8 @@ func TestRaceUpdatingRulesAndTargetsWhileSampling(t *testing.T) {
 			ResourceARN:   "*",
 			ServiceType:   "*",
 		},
-		reservoir: reservoir{
+		reservoir: &reservoir{
 			refreshedAt: time.Unix(18000000, 0),
-			mu:          &sync.RWMutex{},
 		},
 		samplingStatistics: &samplingStatistics{
 			matchedRequests:  0,
@@ -650,22 +641,9 @@ func TestRaceUpdatingRulesAndTargetsWhileSampling(t *testing.T) {
 	// async target updates
 	go func() {
 		for i := 0; i < 100; i++ {
-			var manifest Manifest
+			manifest := m.deepCopy()
 
-			err := func() error {
-				m.mu.RLock()
-				defer m.mu.RUnlock()
-
-				err := copier.CopyWithOption(&manifest, m, copier.Option{IgnoreEmpty: false, DeepCopy: true})
-				if err != nil {
-					return err
-				}
-
-				return nil
-			}()
-			require.NoError(t, err)
-
-			err = manifest.updateReservoir(&st)
+			err := manifest.updateReservoir(&st)
 			require.NoError(t, err)
 			time.Sleep(time.Millisecond)
 

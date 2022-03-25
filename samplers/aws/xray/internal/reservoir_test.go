@@ -15,7 +15,6 @@
 package internal
 
 import (
-	"sync"
 	"testing"
 	"time"
 
@@ -31,7 +30,6 @@ func TestExpiredReservoir(t *testing.T) {
 	expiresAt := time.Unix(1500000000, 0)
 	r := &reservoir{
 		expiresAt: expiresAt,
-		mu:        &sync.RWMutex{},
 	}
 
 	expired := r.expired(clock.now())
@@ -49,7 +47,6 @@ func TestExpiredReservoirSameAsClockTime(t *testing.T) {
 
 	r := &reservoir{
 		expiresAt: expiresAt,
-		mu:        &sync.RWMutex{},
 	}
 
 	assert.False(t, r.expired(clock.now()))
@@ -63,7 +60,6 @@ func TestBorrowEverySecond(t *testing.T) {
 
 	r := &reservoir{
 		capacity: 10,
-		mu:       &sync.RWMutex{},
 	}
 
 	s := r.take(clock.now(), true, 1.0)
@@ -91,7 +87,6 @@ func TestConsumeFromBorrowConsumeFromQuota(t *testing.T) {
 	r := &reservoir{
 		quota:    2,
 		capacity: 10,
-		mu:       &sync.RWMutex{},
 	}
 
 	s := r.take(clock.now(), true, 1.0)
@@ -133,7 +128,6 @@ func TestConsumeFromReservoir(t *testing.T) {
 	r := &reservoir{
 		quota:    2,
 		capacity: 100,
-		mu:       &sync.RWMutex{},
 	}
 
 	// reservoir updates the quotaBalance for new second and allows to consume
@@ -175,7 +169,6 @@ func TestResetQuotaUsageRotation(t *testing.T) {
 	r := &reservoir{
 		quota:    5,
 		capacity: 100,
-		mu:       &sync.RWMutex{},
 	}
 
 	// consume quota for second
@@ -206,7 +199,6 @@ func TestQuotaBalanceNonBorrowExceedsCapacity(t *testing.T) {
 	r := &reservoir{
 		quota:    6,
 		capacity: 5,
-		mu:       &sync.RWMutex{},
 		lastTick: time.Unix(1500000000, 0),
 	}
 
@@ -225,7 +217,6 @@ func TestQuotaBalanceBorrow(t *testing.T) {
 	r := &reservoir{
 		quota:    6,
 		capacity: 5,
-		mu:       &sync.RWMutex{},
 		lastTick: time.Unix(1500000000, 0),
 	}
 
@@ -244,7 +235,6 @@ func TestQuotaBalanceIncreaseByOneBorrowCase(t *testing.T) {
 	r := &reservoir{
 		quota:        6,
 		capacity:     5,
-		mu:           &sync.RWMutex{},
 		quotaBalance: 0.25,
 		lastTick:     time.Unix(1500000000, 0),
 	}
