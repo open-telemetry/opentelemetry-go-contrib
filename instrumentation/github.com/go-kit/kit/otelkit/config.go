@@ -14,7 +14,7 @@
 
 // Based on https://github.com/go-kit/kit/blob/3796a6b25f5c6c545454d3ed7187c4ced258083d/tracing/opencensus/endpoint_options.go
 
-package otelkit
+package otelkit // import "go.opentelemetry.io/contrib/instrumentation/github.com/go-kit/kit/otelkit"
 
 import (
 	"context"

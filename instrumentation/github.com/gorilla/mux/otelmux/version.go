@@ -12,11 +12,11 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package otelmux
+package otelmux // import "go.opentelemetry.io/contrib/instrumentation/github.com/gorilla/mux/otelmux"
 
 // Version is the current release version of the gorilla/mux instrumentation.
 func Version() string {
-	return "0.29.0"
+	return "0.30.0"
 	// This string is updated by the pre_release.sh script during release
 }
 

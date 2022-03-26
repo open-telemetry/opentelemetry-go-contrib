@@ -12,11 +12,11 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package runtime
+package runtime // import "go.opentelemetry.io/contrib/instrumentation/runtime"
 
 // Version is the current release version of the runtime instrumentation.
 func Version() string {
-	return "0.29.0"
+	return "0.30.0"
 	// This string is updated by the pre_release.sh script during release
 }
 

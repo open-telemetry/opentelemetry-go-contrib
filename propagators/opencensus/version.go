@@ -12,11 +12,11 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package opencensus
+package opencensus // import "go.opentelemetry.io/contrib/propagators/opencensus"
 
 // Version is the current release version of the OpenCensus propagator.
 func Version() string {
-	return "0.29.0"
+	return "0.30.0"
 	// This string is updated by the pre_release.sh script during release
 }
 
