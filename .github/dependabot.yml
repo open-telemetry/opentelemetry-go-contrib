@@ -622,55 +622,6 @@ updates:
     schedule:
       interval: "weekly"
       day: "sunday"
-  - package-ecosystem: "gomod"
-    directory: "/tools"
-    labels:
-      - dependencies
-      - go
-      - "Skip Changelog"
-    schedule:
-      interval: "weekly"
-      day: "sunday"
-  -
-    package-ecosystem: "gomod"
-    directory: "/instrumentation/github.com/go-kit/kit/otelkit"
-    labels:
-      - dependencies
-      - go
-      - "Skip Changelog"
-    schedule:
-      interval: "weekly"
-      day: "sunday"
-  -
-    package-ecosystem: "gomod"
-    directory: "/instrumentation/github.com/go-kit/kit/otelkit/example"
-    labels:
-      - dependencies
-      - go
-      - "Skip Changelog"
-    schedule:
-      interval: "weekly"
-      day: "sunday"
-  -
-    package-ecosystem: "gomod"
-    directory: "/instrumentation/github.com/go-kit/kit/otelkit/test"
-    labels:
-      - dependencies
-      - go
-      - "Skip Changelog"
-    schedule:
-      interval: "weekly"
-      day: "sunday"
-  -
-    package-ecosystem: "gomod"
-    directory: "/zpages"
-    labels:
-      - dependencies
-      - go
-      - "Skip Changelog"
-    schedule:
-      interval: "weekly"
-      day: "sunday"
   -
     package-ecosystem: "gomod"
     directory: "/samplers/aws/xray"
