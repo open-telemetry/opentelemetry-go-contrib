@@ -12,7 +12,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package lambda
+package lambda // import "go.opentelemetry.io/contrib/detectors/aws/lambda"
 
 import (
 	"context"

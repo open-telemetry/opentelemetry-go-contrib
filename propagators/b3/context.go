@@ -12,7 +12,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package b3
+package b3 // import "go.opentelemetry.io/contrib/propagators/b3"
 
 import "context"
 
