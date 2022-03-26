@@ -11,7 +11,7 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 ### Changed
 
 - Upgraded packages using otel/metrics v0.27.0 to v0.28.0. (#1977)
-- Enhancement in the ECS detector to include the ECS task metadata and the container metadata to the   resource attributes. (#1922)
+- Enhancement in the ECS detector to include the ECS task metadata and the container metadata to the resource attributes. (#1922)
 
 ### Fixed
 
