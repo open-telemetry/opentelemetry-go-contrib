@@ -120,7 +120,7 @@ func (m *Manifest) RefreshManifestTargets(ctx context.Context) (refresh bool, er
 	// Deep copy manifest object.
 	manifest := m.deepCopy()
 
-	// Generate sampling statistics based on the data in temporary manifest
+	// Generate sampling statistics based on the data in temporary manifest.
 	statistics, err := manifest.snapshots()
 	if err != nil {
 		return false, err
