@@ -93,8 +93,8 @@ func (rs *remoteSampler) ShouldSample(parameters sdktrace.SamplingParameters) sd
 
 	r, match, err := rs.manifest.MatchAgainstManifestRules(parameters, rs.serviceName, rs.cloudPlatform)
 	if err != nil {
-		rs.logger.Error(err, "rule matching error")
-		return sdktrace.SamplingResult{}
+		rs.logger.Error(err, "rule matching error, using fallback sampler")
+		return rs.fallbackSampler.ShouldSample(parameters)
 	}
 
 	if match {
@@ -109,7 +109,7 @@ func (rs *remoteSampler) ShouldSample(parameters sdktrace.SamplingParameters) sd
 
 // Description returns description of the sampler being used.
 func (rs *remoteSampler) Description() string {
-	return "AwsXrayRemoteSampler{remote sampling with AWS X-Ray}"
+	return "AWSXRayRemoteSampler{remote sampling with AWS X-Ray}"
 }
 
 func (rs *remoteSampler) start(ctx context.Context) {
