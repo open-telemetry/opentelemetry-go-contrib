@@ -16,7 +16,7 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 
 ### Changed
 
-- Upgraded all dependencies on stable moduels from `go.opentelemetry.io/otel` from v1.5.0 to v1.6.1. (#TBD)
+- Upgraded all dependencies on stable moduels from `go.opentelemetry.io/otel` from v1.5.0 to v1.6.1. (#2134)
 - Upgraded all dependencies on metric moduels from `go.opentelemetry.io/otel` from v0.27.0 to v0.28.0. (#1977)
 
 ## [1.5.0/0.30.0/0.1.0] - 2022-03-16
