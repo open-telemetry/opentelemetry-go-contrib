@@ -212,7 +212,7 @@ func (r *Rule) appliesTo(parameters sdktrace.SamplingParameters, serviceName str
 		}
 	}
 
-	return attributeMatcher && serviceNameMatcher && serviceTypeMatcher && HTTPMethodMatcher && HTTPHostMatcher && HTTPURLPathMatcher, nil
+	return true, nil
 }
 
 // attributeMatching performs a match on attributes set by users on AWS X-Ray console.
