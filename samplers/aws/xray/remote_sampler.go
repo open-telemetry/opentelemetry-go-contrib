@@ -53,6 +53,8 @@ var _ sdktrace.Sampler = (*remoteSampler)(nil)
 // based on the sampling rules set by users on AWS X-Ray console. Sampler also periodically polls
 // sampling rules and sampling targets.
 // NOTE: ctx passed in NewRemoteSampler API is being used in background go routine. Cancellation to this context can kill the background go routine.
+// serviceName refers to the name of the service equivalent to set by customers on AWS X-Ray console when adding sampling rules and
+// cloudPlatform refers to the environment service is running on (EC2, EKS etc).
 // Guide on AWS X-Ray remote sampling implementation (https://aws-otel.github.io/docs/getting-started/remote-sampling#otel-remote-sampling-implementation-caveats).
 func NewRemoteSampler(ctx context.Context, serviceName string, cloudPlatform string, opts ...Option) (sdktrace.Sampler, error) {
 	// Create new config based on options or set to default values.
