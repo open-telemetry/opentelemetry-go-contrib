@@ -52,12 +52,10 @@ func newConfig(options ...Option) config {
 	for _, option := range options {
 		option.apply(&c)
 	}
-	c.updaters = append(c.updaters,
-		&perOperationSamplerUpdater{
-			MaxOperations:            c.posParams.MaxOperations,
-			OperationNameLateBinding: c.posParams.OperationNameLateBinding,
-		})
-
+	c.updaters = append([]samplerUpdater{&perOperationSamplerUpdater{
+		MaxOperations:            c.posParams.MaxOperations,
+		OperationNameLateBinding: c.posParams.OperationNameLateBinding,
+	}}, c.updaters...)
 	return c
 }
 
