@@ -17,6 +17,7 @@
 package utils // import "go.opentelemetry.io/contrib/samplers/jaegerremote/internal/utils"
 
 import (
+	"math"
 	"sync"
 	"time"
 )
@@ -52,7 +53,7 @@ type RateLimiter struct {
 func NewRateLimiter(creditsPerSecond, maxBalance float64) *RateLimiter {
 	return &RateLimiter{
 		creditsPerSecond: creditsPerSecond,
-		balance:          maxBalance,
+		balance:          math.Min(creditsPerSecond, maxBalance),
 		maxBalance:       maxBalance,
 		lastTick:         time.Now(),
 		timeNow:          time.Now,
