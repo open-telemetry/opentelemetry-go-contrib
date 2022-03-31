@@ -68,8 +68,6 @@ func TestRateLimitingSampler(t *testing.T) {
 
 	sampler = newRateLimitingSampler(0.1)
 	result = sampler.ShouldSample(trace.SamplingParameters{Name: testOperationName})
-	assert.Equal(t, trace.RecordAndSample, result.Decision)
-	result = sampler.ShouldSample(trace.SamplingParameters{Name: testOperationName})
 	assert.Equal(t, trace.Drop, result.Decision)
 }
 

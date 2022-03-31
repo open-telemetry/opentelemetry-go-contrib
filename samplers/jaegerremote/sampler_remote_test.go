@@ -271,14 +271,46 @@ func TestRemotelyControlledSampler_updateSampler(t *testing.T) {
 			assert.NotEqual(t, initSampler, sampler.sampler, "Sampler should have been updated")
 			assert.Equal(t, test.expectedDefaultProbability, s.defaultSampler.SamplingRate())
 
-			// First call is always sampled
-			result := sampler.ShouldSample(makeSamplingParameters(testMaxID+10, testOperationName))
-			assert.Equal(t, trace.RecordAndSample, result.Decision)
-
-			result = sampler.ShouldSample(makeSamplingParameters(testMaxID-10, testOperationName))
+			result := sampler.ShouldSample(makeSamplingParameters(testMaxID-10, testOperationName))
 			assert.Equal(t, trace.RecordAndSample, result.Decision)
 		})
 	}
+}
+
+func TestRemotelyControlledSampler_multiStrategyResponse(t *testing.T) {
+	agent, sampler := initAgent(t)
+	defer agent.Close()
+	initSampler, ok := sampler.sampler.(*probabilisticSampler)
+	assert.True(t, ok)
+
+	defaultSampingRate := 1.0
+	testUnusedOpName := "unused_op"
+
+	res := &jaeger_api_v2.SamplingStrategyResponse{
+		StrategyType:          jaeger_api_v2.SamplingStrategyType_PROBABILISTIC,
+		ProbabilisticSampling: &jaeger_api_v2.ProbabilisticSamplingStrategy{SamplingRate: defaultSampingRate},
+		OperationSampling: &jaeger_api_v2.PerOperationSamplingStrategies{
+			DefaultSamplingProbability:       defaultSampingRate,
+			DefaultLowerBoundTracesPerSecond: 0.001,
+			PerOperationStrategies: []*jaeger_api_v2.OperationSamplingStrategy{
+				{
+					Operation: testUnusedOpName,
+					ProbabilisticSampling: &jaeger_api_v2.ProbabilisticSamplingStrategy{
+						SamplingRate: 0.0,
+					}},
+			},
+		},
+	}
+
+	agent.AddSamplingStrategy("client app", res)
+	sampler.UpdateSampler()
+	s, ok := sampler.sampler.(*perOperationSampler)
+	assert.True(t, ok)
+	assert.NotEqual(t, initSampler, sampler.sampler, "Sampler should have been updated")
+	assert.Equal(t, defaultSampingRate, s.defaultSampler.SamplingRate())
+
+	result := sampler.ShouldSample(makeSamplingParameters(testMaxID-10, testUnusedOpName))
+	assert.Equal(t, trace.Drop, result.Decision)
 }
 
 func TestSamplerQueryError(t *testing.T) {
