@@ -32,6 +32,7 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 ### Added
 
 - The project is now tested against Go 1.18 (in addition to the existing 1.16 and 1.17) (#1976)
+- Add the HTTP status code label to `go.opentelemetry.io/contrib/instrumentation/net/http/otelhttp` instrumentation that allows to count requests by their response code. (#771, #2138)
 
 ### Changed
 

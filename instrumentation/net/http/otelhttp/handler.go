@@ -200,7 +200,9 @@ func (h *Handler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	// Use floating point division here for higher precision (instead of Millisecond method).
 	elapsedTime := float64(time.Since(requestStartTime)) / float64(time.Millisecond)
 
-	h.valueRecorders[ServerLatency].Record(ctx, elapsedTime, attributes...)
+	// Status code label is required to count the errors ratio
+	durationAttributes := append(attributes, semconv.HTTPStatusCodeKey.Int(rww.statusCode))
+	h.valueRecorders[ServerLatency].Record(ctx, elapsedTime, durationAttributes...)
 }
 
 func setAfterServeAttributes(span trace.Span, read, wrote int64, statusCode int, rerr, werr error) {
