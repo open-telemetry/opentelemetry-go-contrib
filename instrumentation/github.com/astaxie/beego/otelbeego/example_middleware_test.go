@@ -24,7 +24,7 @@ type ExampleController struct {
 
 func (c *ExampleController) Get() {
 	// name of the template in the views directory
-	c.Controller.TplName = "index.tpl"
+	c.TplName = "index.tpl"
 
 	// explicit call to Render
 	if err := Render(&c.Controller); err != nil {
