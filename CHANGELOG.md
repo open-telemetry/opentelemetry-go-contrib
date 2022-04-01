@@ -9,7 +9,7 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 ## [Unreleased]
 
 ### Fixed
-- Fixed jaegerremote sampler not behaving properly with per operation startegy set. (#2137)
+- Fixed jaegerremote sampler not behaving properly with per operation strategy set. (#2137)
 
 ## [1.6.0/0.31.0] - 2022-03-28
 

@@ -271,7 +271,11 @@ func TestRemotelyControlledSampler_updateSampler(t *testing.T) {
 			assert.NotEqual(t, initSampler, sampler.sampler, "Sampler should have been updated")
 			assert.Equal(t, test.expectedDefaultProbability, s.defaultSampler.SamplingRate())
 
-			result := sampler.ShouldSample(makeSamplingParameters(testMaxID-10, testOperationName))
+			// First call is always sampled
+			result := sampler.ShouldSample(makeSamplingParameters(testMaxID+10, testOperationName))
+			assert.Equal(t, trace.RecordAndSample, result.Decision)
+
+			result = sampler.ShouldSample(makeSamplingParameters(testMaxID-10, testOperationName))
 			assert.Equal(t, trace.RecordAndSample, result.Decision)
 		})
 	}
@@ -285,6 +289,7 @@ func TestRemotelyControlledSampler_multiStrategyResponse(t *testing.T) {
 
 	defaultSampingRate := 1.0
 	testUnusedOpName := "unused_op"
+	testUnusedOpSamplingRate := 0.0
 
 	res := &jaeger_api_v2.SamplingStrategyResponse{
 		StrategyType:          jaeger_api_v2.SamplingStrategyType_PROBABILISTIC,
@@ -296,7 +301,7 @@ func TestRemotelyControlledSampler_multiStrategyResponse(t *testing.T) {
 				{
 					Operation: testUnusedOpName,
 					ProbabilisticSampling: &jaeger_api_v2.ProbabilisticSamplingStrategy{
-						SamplingRate: 0.0,
+						SamplingRate: testUnusedOpSamplingRate,
 					}},
 			},
 		},
@@ -310,7 +315,10 @@ func TestRemotelyControlledSampler_multiStrategyResponse(t *testing.T) {
 	assert.Equal(t, defaultSampingRate, s.defaultSampler.SamplingRate())
 
 	result := sampler.ShouldSample(makeSamplingParameters(testMaxID-10, testUnusedOpName))
+	assert.Equal(t, trace.RecordAndSample, result.Decision) // first call always pass
+	result = sampler.ShouldSample(makeSamplingParameters(testMaxID, testUnusedOpName))
 	assert.Equal(t, trace.Drop, result.Decision)
+
 }
 
 func TestSamplerQueryError(t *testing.T) {
