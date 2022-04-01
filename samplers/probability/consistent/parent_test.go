@@ -143,9 +143,10 @@ func TestParentSamplerInvalidContext(t *testing.T) {
 
 				sccfg.TraceID = traceID
 				sccfg.SpanID = spanID
-			} else {
-				// Note: this is testing a fabricated situation where
-				// the context has a tracestate and no TraceID.
+
+				// Note: the other branch is testing a fabricated
+				// situation where the context has a tracestate and
+				// no TraceID.
 			}
 			if invalid.sampled {
 				sccfg.TraceFlags = trace.FlagsSampled

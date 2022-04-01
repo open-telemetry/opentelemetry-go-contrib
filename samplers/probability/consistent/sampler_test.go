@@ -34,11 +34,6 @@ type (
 	testDegrees int
 	pValue      int
 
-	testSpanRecorder struct {
-		lock  sync.Mutex
-		spans []sdktrace.ReadOnlySpan
-	}
-
 	testErrorHandler struct {
 		lock   sync.Mutex
 		errors []error
@@ -56,17 +51,6 @@ func parsePR(s string) (p, r string) {
 		}
 	}
 	return
-}
-
-func (tsr *testSpanRecorder) ExportSpans(ctx context.Context, spans []sdktrace.ReadOnlySpan) error {
-	tsr.lock.Lock()
-	defer tsr.lock.Unlock()
-	tsr.spans = append(tsr.spans, spans...)
-	return nil
-}
-
-func (tsr *testSpanRecorder) Shutdown(ctx context.Context) error {
-	return nil
 }
 
 func (eh *testErrorHandler) Handle(err error) {

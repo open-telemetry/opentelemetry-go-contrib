@@ -29,6 +29,7 @@ import (
 	"github.com/stretchr/testify/require"
 
 	sdktrace "go.opentelemetry.io/otel/sdk/trace"
+	"go.opentelemetry.io/otel/sdk/trace/tracetest"
 )
 
 const (
@@ -216,7 +217,7 @@ func sampleTrials(t *testing.T, prob float64, degrees testDegrees, upperP pValue
 		WithRandomSource(source),
 	)
 
-	recorder := &testSpanRecorder{}
+	recorder := &tracetest.InMemoryExporter{}
 	provider := sdktrace.NewTracerProvider(
 		sdktrace.WithSyncer(recorder),
 		sdktrace.WithSampler(sampler),
@@ -233,8 +234,8 @@ func sampleTrials(t *testing.T, prob float64, degrees testDegrees, upperP pValue
 
 	counts := map[pValue]int64{}
 
-	for idx, r := range recorder.spans {
-		ts := r.SpanContext().TraceState()
+	for idx, r := range recorder.GetSpans() {
+		ts := r.SpanContext.TraceState()
 		p, _ := parsePR(ts.Get("ot"))
 
 		pi, err := strconv.ParseUint(p, 10, 64)
