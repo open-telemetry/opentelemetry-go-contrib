@@ -8,6 +8,10 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 
 ## [Unreleased]
 
+## Samplers 0.2.0 - 2022-04-01
+
+- Added AWS X-Ray remote sampling support. (#1859)
+
 ## [1.6.0/0.31.0] - 2022-03-28
 
 ### Added
