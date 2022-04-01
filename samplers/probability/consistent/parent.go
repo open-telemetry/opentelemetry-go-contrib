@@ -28,12 +28,16 @@ type (
 	}
 )
 
+// ParentProbabilityBased is an implementation of the OpenTelemetry
+// Trace Sampler interface that provides additional checks for tracestate
+// Probability Sampling fields.
 func ParentProbabilityBased(root sdktrace.Sampler, samplers ...sdktrace.ParentBasedSamplerOption) sdktrace.Sampler {
 	return &parentProbabilitySampler{
 		delegate: sdktrace.ParentBased(root, samplers...),
 	}
 }
 
+// ShouldSample implements "go.opentelemetry.io/otel/sdk/trace".Sampler.
 func (p *parentProbabilitySampler) ShouldSample(params sdktrace.SamplingParameters) sdktrace.SamplingResult {
 	psc := trace.SpanContextFromContext(params.ParentContext)
 
@@ -62,6 +66,9 @@ func (p *parentProbabilitySampler) ShouldSample(params sdktrace.SamplingParamete
 	return p.delegate.ShouldSample(params)
 }
 
+// Description returns the same description as the built-in
+// ParentBased sampler, with "ParentBased" replaced by
+// "ParentProbabilityBased".
 func (p *parentProbabilitySampler) Description() string {
 	return "ParentProbabilityBased" + strings.TrimPrefix(p.delegate.Description(), "ParentBased")
 }

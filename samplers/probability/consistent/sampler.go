@@ -27,6 +27,8 @@ import (
 )
 
 type (
+	// ProbabilityBasedOption is an option to the
+	// ConssitentProbabilityBased sampler.
 	ProbabilityBasedOption interface {
 		apply(*consistentProbabilityBasedConfig)
 	}
@@ -62,9 +64,7 @@ type (
 	}
 )
 
-// WithRandomSource sets the source of the random number used in this
-// prototype of OTEP 170, which assumes the randomness is not derived
-// from the TraceID.
+// WithRandomSource sets the source of the randomness used by the Sampler.
 func WithRandomSource(source rand.Source) ProbabilityBasedOption {
 	return consistentProbabilityBasedRandomSource{source}
 }
@@ -120,7 +120,7 @@ func (cs *consistentProbabilityBased) lowChoice() bool {
 	return cs.rnd.Float64() < cs.lowProb
 }
 
-// ShouldSample implements Sampler.
+// ShouldSample implements "go.opentelemetry.io/otel/sdk/trace".Sampler.
 func (cs *consistentProbabilityBased) ShouldSample(p sdktrace.SamplingParameters) sdktrace.SamplingResult {
 	psc := trace.SpanContextFromContext(p.ParentContext)
 
@@ -168,7 +168,7 @@ func (cs *consistentProbabilityBased) ShouldSample(p sdktrace.SamplingParameters
 	}
 }
 
-// Description implements Sampler.
+// Description returns "ProbabilityBased{%g}" with the configured probability.
 func (cs *consistentProbabilityBased) Description() string {
 	var prob float64
 	if cs.lowLAC != pZeroValue {
