@@ -12,11 +12,11 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package otelgocql
+package otelgocql // import "go.opentelemetry.io/contrib/instrumentation/github.com/gocql/gocql/otelgocql"
 
 // Version is the current release version of the gocql instrumentation.
 func Version() string {
-	return "0.29.0"
+	return "0.31.0"
 	// This string is updated by the pre_release.sh script during release
 }
 

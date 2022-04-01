@@ -12,7 +12,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package otelaws
+package otelaws // import "go.opentelemetry.io/contrib/instrumentation/github.com/aws/aws-sdk-go-v2/otelaws"
 
 import (
 	"context"
@@ -23,6 +23,7 @@ import (
 	smithyhttp "github.com/aws/smithy-go/transport/http"
 
 	"go.opentelemetry.io/otel"
+	"go.opentelemetry.io/otel/attribute"
 	"go.opentelemetry.io/otel/codes"
 	semconv "go.opentelemetry.io/otel/semconv/v1.7.0"
 	"go.opentelemetry.io/otel/trace"
@@ -34,8 +35,12 @@ const (
 
 type spanTimestampKey struct{}
 
+// AttributeSetter returns an array of KeyValue pairs, it can be used to set custom attributes.
+type AttributeSetter func(context.Context, middleware.InitializeInput) []attribute.KeyValue
+
 type otelMiddlewares struct {
-	tracer trace.Tracer
+	tracer          trace.Tracer
+	attributeSetter []AttributeSetter
 }
 
 func (m otelMiddlewares) initializeMiddlewareBefore(stack *middleware.Stack) error {
@@ -55,12 +60,20 @@ func (m otelMiddlewares) initializeMiddlewareAfter(stack *middleware.Stack) erro
 		out middleware.InitializeOutput, metadata middleware.Metadata, err error) {
 
 		serviceID := v2Middleware.GetServiceID(ctx)
+
+		attributes := []attribute.KeyValue{
+			ServiceAttr(serviceID),
+			RegionAttr(v2Middleware.GetRegion(ctx)),
+			OperationAttr(v2Middleware.GetOperationName(ctx)),
+		}
+		for _, setter := range m.attributeSetter {
+			attributes = append(attributes, setter(ctx, in)...)
+		}
+
 		ctx, span := m.tracer.Start(ctx, serviceID,
 			trace.WithTimestamp(ctx.Value(spanTimestampKey{}).(time.Time)),
 			trace.WithSpanKind(trace.SpanKindClient),
-			trace.WithAttributes(ServiceAttr(serviceID),
-				RegionAttr(v2Middleware.GetRegion(ctx)),
-				OperationAttr(v2Middleware.GetOperationName(ctx))),
+			trace.WithAttributes(attributes...),
 		)
 		defer span.End()
 
@@ -110,7 +123,13 @@ func AppendMiddlewares(apiOptions *[]func(*middleware.Stack) error, opts ...Opti
 		opt.apply(&cfg)
 	}
 
+	if cfg.AttributeSetter == nil {
+		cfg.AttributeSetter = []AttributeSetter{DefaultAttributeSetter}
+	}
+
 	m := otelMiddlewares{tracer: cfg.TracerProvider.Tracer(tracerName,
-		trace.WithInstrumentationVersion(SemVersion()))}
+		trace.WithInstrumentationVersion(SemVersion())),
+		attributeSetter: cfg.AttributeSetter}
 	*apiOptions = append(*apiOptions, m.initializeMiddlewareBefore, m.initializeMiddlewareAfter, m.deserializeMiddleware)
+
 }

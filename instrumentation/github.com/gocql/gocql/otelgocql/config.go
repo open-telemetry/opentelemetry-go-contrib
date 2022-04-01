@@ -12,7 +12,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package otelgocql
+package otelgocql // import "go.opentelemetry.io/contrib/instrumentation/github.com/gocql/gocql/otelgocql"
 
 import (
 	"github.com/gocql/gocql"
@@ -120,7 +120,7 @@ func WithConnectInstrumentation(enabled bool) Option {
 func newConfig(options ...Option) *config {
 	cfg := &config{
 		tracerProvider:    otel.GetTracerProvider(),
-		meterProvider:     global.GetMeterProvider(),
+		meterProvider:     global.MeterProvider(),
 		instrumentQuery:   true,
 		instrumentBatch:   true,
 		instrumentConnect: true,

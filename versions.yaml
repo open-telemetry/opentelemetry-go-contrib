@@ -14,7 +14,7 @@
 
 module-sets:
   stable-v1:
-    version: v1.4.0
+    version: v1.6.0
     modules:
       - go.opentelemetry.io/contrib
       - go.opentelemetry.io/contrib/tools
@@ -27,7 +27,7 @@ module-sets:
       - go.opentelemetry.io/contrib/detectors/aws/ecs
       - go.opentelemetry.io/contrib/detectors/aws/eks
   experimental-instrumentation:
-    version: v0.29.0
+    version: v0.31.0
     modules:
       - go.opentelemetry.io/contrib/detectors/aws/lambda
       - go.opentelemetry.io/contrib/propagators/opencensus
@@ -82,17 +82,14 @@ module-sets:
       - go.opentelemetry.io/contrib/instrumentation/github.com/emicklei/go-restful/otelrestful/test
       - go.opentelemetry.io/contrib/zpages
   experimental-metrics:
-    version: v0.29.0
+    version: v0.31.0
     modules:
       - go.opentelemetry.io/contrib/instrumentation/host
       - go.opentelemetry.io/contrib/instrumentation/host/example
       - go.opentelemetry.io/contrib/instrumentation/runtime
       - go.opentelemetry.io/contrib/instrumentation/runtime/example
-  experimental-metric-exporters:
-    version: v0.29.0
+  experimental-samplers:
+    version: v0.1.0
     modules:
-      - go.opentelemetry.io/contrib/exporters/metric/dogstatsd
-      - go.opentelemetry.io/contrib/exporters/metric/cortex
-      - go.opentelemetry.io/contrib/exporters/metric/cortex/example
-      - go.opentelemetry.io/contrib/exporters/metric/cortex/utils
-      - go.opentelemetry.io/contrib/exporters/metric/datadog
+      - go.opentelemetry.io/contrib/samplers/jaegerremote
+      - go.opentelemetry.io/contrib/samplers/jaegerremote/example
