@@ -44,10 +44,6 @@ func TestParentSamplerDescription(t *testing.T) {
 	)
 }
 
-func TestParentSamplerRootContext(t *testing.T) {
-
-}
-
 func TestParentSamplerValidContext(t *testing.T) {
 	parent := ParentProbabilityBased(sdktrace.NeverSample())
 	type testCase struct {
@@ -120,7 +116,7 @@ func TestParentSamplerInvalidContext(t *testing.T) {
 		sampled bool
 		expect  string
 	}
-	for _, valid := range []testCase{
+	for _, invalid := range []testCase{
 		// sampled
 		{"r:100", true, ""},
 		{"r:100;p:1", true, ""},
@@ -133,19 +129,25 @@ func TestParentSamplerInvalidContext(t *testing.T) {
 		{"r:10;p:1", false, "r:10"},
 		{"r:10;p:1;a:b", false, "r:10;a:b"},
 	} {
-		t.Run(testName(valid.in), func(t *testing.T) {
+		testInvalid := func(t *testing.T, isChildContext bool) {
+
 			traceID, _ := trace.TraceIDFromHex("4bf92f3577b34da6a3ce929d0e0e4736")
-			spanID, _ := trace.SpanIDFromHex("00f067aa0ba902b7")
-			traceState, err := trace.TraceState{}.Insert(traceStateKey, valid.in)
+			traceState, err := trace.TraceState{}.Insert(traceStateKey, invalid.in)
 			require.NoError(t, err)
 
 			sccfg := trace.SpanContextConfig{
-				TraceID:    traceID,
-				SpanID:     spanID,
 				TraceState: traceState,
 			}
+			if isChildContext {
+				spanID, _ := trace.SpanIDFromHex("00f067aa0ba902b7")
 
-			if valid.sampled {
+				sccfg.TraceID = traceID
+				sccfg.SpanID = spanID
+			} else {
+				// Note: this is testing a fabricated situation where
+				// the context has a tracestate and no TraceID.
+			}
+			if invalid.sampled {
 				sccfg.TraceFlags = trace.FlagsSampled
 			}
 
@@ -157,19 +159,28 @@ func TestParentSamplerInvalidContext(t *testing.T) {
 			result := parent.ShouldSample(
 				sdktrace.SamplingParameters{
 					ParentContext: parentCtx,
-					TraceID:       traceID,
+					TraceID:       sccfg.TraceID,
 					Name:          "test",
 					Kind:          trace.SpanKindServer,
 				},
 			)
 
-			if valid.sampled {
+			if isChildContext && invalid.sampled {
 				require.Equal(t, sdktrace.RecordAndSample, result.Decision)
 			} else {
+				// if we're not a child context, ShouldSample
+				// falls through to the delegate, which is NeverSample.
 				require.Equal(t, sdktrace.Drop, result.Decision)
 			}
 			require.Equal(t, []attribute.KeyValue(nil), result.Attributes)
-			require.Equal(t, valid.expect, result.Tracestate.Get(traceStateKey))
+			require.Equal(t, invalid.expect, result.Tracestate.Get(traceStateKey))
+		}
+
+		t.Run(testName(invalid.in)+"_with_parent", func(t *testing.T) {
+			testInvalid(t, true)
+		})
+		t.Run(testName(invalid.in)+"_no_parent", func(t *testing.T) {
+			testInvalid(t, false)
 		})
 	}
 }

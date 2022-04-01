@@ -56,8 +56,7 @@ func (p *parentProbabilitySampler) ShouldSample(params sdktrace.SamplingParamete
 		}
 
 		// Fix the broken tracestate before calling the delegate.
-		params.ParentContext =
-			trace.ContextWithSpanContext(params.ParentContext, psc.WithTraceState(state))
+		params.ParentContext = trace.ContextWithSpanContext(params.ParentContext, psc.WithTraceState(state))
 	}
 
 	return p.delegate.ShouldSample(params)

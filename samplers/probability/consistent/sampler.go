@@ -12,6 +12,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
+// Package consistent provides a consistent probability based sampler.
 package consistent // import "go.opentelemetry.io/contrib/samplers/probability/consistent"
 
 import (
