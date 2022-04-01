@@ -79,7 +79,7 @@ func (s consistentProbabilityBasedRandomSource) apply(cfg *consistentProbability
 // - Fractions >= 1 will always sample.
 // - Fractions < 2^-62 are treated as zero.
 //
-// This Sampler sets the `sampler.adjusted_count` attribute.
+// This Sampler sets the OpenTelemetry tracestate p-value and/or r-value.
 //
 // To respect the parent trace's `SampledFlag`, this sampler should be
 // used as the root delegate of a `Parent` sampler.
