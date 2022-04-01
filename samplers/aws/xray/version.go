@@ -12,9 +12,9 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package jaegerremote // import "go.opentelemetry.io/contrib/samplers/jaegerremote"
+package xray // import "go.opentelemetry.io/contrib/samplers/aws/xray"
 
-// Version is the current release version of the Jaeger remote sampler.
+// Version is the current release version of the AWS X-Ray remote sampler.
 func Version() string {
 	return "0.2.0"
 	// This string is updated by the pre_release.sh script during release
