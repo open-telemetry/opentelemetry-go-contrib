@@ -49,13 +49,13 @@ func newConfig(options ...Option) config {
 			OperationNameLateBinding: defaultSamplingOperationNameLateBinding,
 		},
 	}
+	for _, option := range options {
+		option.apply(&c)
+	}
 	c.updaters = append([]samplerUpdater{&perOperationSamplerUpdater{
 		MaxOperations:            c.posParams.MaxOperations,
 		OperationNameLateBinding: c.posParams.OperationNameLateBinding,
 	}}, c.updaters...)
-	for _, option := range options {
-		option.apply(&c)
-	}
 	return c
 }
 

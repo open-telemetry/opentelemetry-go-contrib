@@ -125,7 +125,7 @@ func TestRemoteSamplerOptions(t *testing.T) {
 	assert.Equal(t, 42*time.Second, sampler.samplingRefreshInterval)
 	assert.Same(t, fetcher, sampler.samplingFetcher)
 	assert.Same(t, parser, sampler.samplingParser)
-	assert.Same(t, updaters[0], sampler.updaters[0])
+	assert.EqualValues(t, sampler.updaters[0], &perOperationSamplerUpdater{MaxOperations: 42, OperationNameLateBinding: true})
 }
 
 func TestRemoteSamplerOptionsDefaults(t *testing.T) {
@@ -318,7 +318,6 @@ func TestRemotelyControlledSampler_multiStrategyResponse(t *testing.T) {
 	assert.Equal(t, trace.RecordAndSample, result.Decision) // first call always pass
 	result = sampler.ShouldSample(makeSamplingParameters(testMaxID, testUnusedOpName))
 	assert.Equal(t, trace.Drop, result.Decision)
-
 }
 
 func TestSamplerQueryError(t *testing.T) {
