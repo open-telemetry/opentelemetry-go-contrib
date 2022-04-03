@@ -96,7 +96,7 @@ func TestNotFoundIsNotError(t *testing.T) {
 		attribute.String("http.target", "/does/not/exist"),
 		attribute.String("http.route", "/does/not/exist"),
 	)
-	assert.NotEqual(t, sr.Ended()[0].Status().Code, codes.Error)
+	assert.Equal(t, sr.Ended()[0].Status().Code, codes.Unset)
 
 }
 
