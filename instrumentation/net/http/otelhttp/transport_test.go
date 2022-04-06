@@ -281,6 +281,13 @@ func TestWrappedBodyClose(t *testing.T) {
 	s.assert(t, true, nil, codes.Unset, "")
 }
 
+func TestWrappedBodyClosePanic(t *testing.T) {
+	s := new(span)
+	var body io.ReadCloser
+	wb := newWrappedBody(s, body)
+	assert.NoError(t, wb.Close())
+}
+
 func TestWrappedBodyCloseError(t *testing.T) {
 	s := new(span)
 	expectedErr := errors.New("test")

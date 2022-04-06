@@ -22,6 +22,10 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 - Upgraded all dependencies on stable modules from `go.opentelemetry.io/otel` from v1.5.0 to v1.6.1. (#2134)
 - Upgraded all dependencies on metric modules from `go.opentelemetry.io/otel` from v0.27.0 to v0.28.0. (#1977)
 
+### Fixed
+
+- otelhttp: Avoid panic by adding nil check to `wrappedBody.Close` (#2164)
+
 ## [1.5.0/0.30.0/0.1.0] - 2022-03-16
 
 ### Added
