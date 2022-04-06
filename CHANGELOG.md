@@ -8,6 +8,14 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 
 ## [Unreleased]
 
+### Changed
+
+- Enhancement in the ECS detector to include the ECS task metadata and the container metadata to the resource attributes. (#1922)
+
+### Fixed
+
+- Fixed the ECS detector to detect the correct container ID for both EC2 and Farget launch type. Previously it was not working properly for the Farget launch type. (#1922)
+
 ## [1.6.0/0.31.0] - 2022-03-28
 
 ### Added
@@ -15,6 +23,10 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 - The project is now tested against Go 1.18 (in addition to the existing 1.16 and 1.17) (#1976)
 
 ### Changed
+
+- Upgraded packages using otel/metrics v0.27.0 to v0.28.0. (#1977)
+
+### Fixed
 
 - Upgraded all dependencies on stable modules from `go.opentelemetry.io/otel` from v1.5.0 to v1.6.1. (#2134)
 - Upgraded all dependencies on metric modules from `go.opentelemetry.io/otel` from v0.27.0 to v0.28.0. (#1977)
