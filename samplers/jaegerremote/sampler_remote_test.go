@@ -125,7 +125,7 @@ func TestRemoteSamplerOptions(t *testing.T) {
 	assert.Equal(t, 42*time.Second, sampler.samplingRefreshInterval)
 	assert.Same(t, fetcher, sampler.samplingFetcher)
 	assert.Same(t, parser, sampler.samplingParser)
-	assert.Same(t, updaters[0], sampler.updaters[0])
+	assert.EqualValues(t, sampler.updaters[0], &perOperationSamplerUpdater{MaxOperations: 42, OperationNameLateBinding: true})
 }
 
 func TestRemoteSamplerOptionsDefaults(t *testing.T) {
@@ -279,6 +279,45 @@ func TestRemotelyControlledSampler_updateSampler(t *testing.T) {
 			assert.Equal(t, trace.RecordAndSample, result.Decision)
 		})
 	}
+}
+
+func TestRemotelyControlledSampler_multiStrategyResponse(t *testing.T) {
+	agent, sampler := initAgent(t)
+	defer agent.Close()
+	initSampler, ok := sampler.sampler.(*probabilisticSampler)
+	assert.True(t, ok)
+
+	defaultSampingRate := 1.0
+	testUnusedOpName := "unused_op"
+	testUnusedOpSamplingRate := 0.0
+
+	res := &jaeger_api_v2.SamplingStrategyResponse{
+		StrategyType:          jaeger_api_v2.SamplingStrategyType_PROBABILISTIC,
+		ProbabilisticSampling: &jaeger_api_v2.ProbabilisticSamplingStrategy{SamplingRate: defaultSampingRate},
+		OperationSampling: &jaeger_api_v2.PerOperationSamplingStrategies{
+			DefaultSamplingProbability:       defaultSampingRate,
+			DefaultLowerBoundTracesPerSecond: 0.001,
+			PerOperationStrategies: []*jaeger_api_v2.OperationSamplingStrategy{
+				{
+					Operation: testUnusedOpName,
+					ProbabilisticSampling: &jaeger_api_v2.ProbabilisticSamplingStrategy{
+						SamplingRate: testUnusedOpSamplingRate,
+					}},
+			},
+		},
+	}
+
+	agent.AddSamplingStrategy("client app", res)
+	sampler.UpdateSampler()
+	s, ok := sampler.sampler.(*perOperationSampler)
+	assert.True(t, ok)
+	assert.NotEqual(t, initSampler, sampler.sampler, "Sampler should have been updated")
+	assert.Equal(t, defaultSampingRate, s.defaultSampler.SamplingRate())
+
+	result := sampler.ShouldSample(makeSamplingParameters(testMaxID-10, testUnusedOpName))
+	assert.Equal(t, trace.RecordAndSample, result.Decision) // first call always pass
+	result = sampler.ShouldSample(makeSamplingParameters(testMaxID, testUnusedOpName))
+	assert.Equal(t, trace.Drop, result.Decision)
 }
 
 func TestSamplerQueryError(t *testing.T) {
