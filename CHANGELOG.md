@@ -9,6 +9,9 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 ## [Unreleased]
 
 ### Fixed
+
+- Fix the `otelmux` middleware by using `SpanKindServer` when deciding the `SpanStatus`.
+  This makes `4xx` response codes to not be an error anymore. (#1973)
 - Fixed jaegerremote sampler not behaving properly with per operation strategy set. (#2137)
 
 ## [1.6.0/0.31.0] - 2022-03-28
