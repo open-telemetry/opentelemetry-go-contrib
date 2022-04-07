@@ -285,7 +285,7 @@ func TestWrappedBodyClosePanic(t *testing.T) {
 	s := new(span)
 	var body io.ReadCloser
 	wb := newWrappedBody(s, body)
-	assert.NoError(t, wb.Close())
+	assert.NotPanics(t, func() { wb.Close() }, "nil body should not panic on close")
 }
 
 func TestWrappedBodyCloseError(t *testing.T) {
