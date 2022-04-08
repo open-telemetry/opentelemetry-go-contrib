@@ -19,6 +19,7 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 ### Added
 
 - The project is now tested against Go 1.18 (in addition to the existing 1.16 and 1.17) (#1976)
+- Added Go-Kit middlewares to propagate trace context for incoming HTTP and gRPC clients, `HttpPropagateMiddleware` and `GrpcPropagateMiddleware`. (#2166) 
 
 ### Changed
 
