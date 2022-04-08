@@ -89,8 +89,8 @@ var (
 			"X-Amzn-Trace-Id": []string{"Root=1-5759e988-bd862e3fe1be46a994272793;Parent=53995c3f42cd8ad8;Sampled=1"},
 		})
 
-	expectedSpans = v1trace.InstrumentationLibrarySpans{
-		InstrumentationLibrary: &v1common.InstrumentationLibrary{Name: "go.opentelemetry.io/contrib/instrumentation/github.com/aws/aws-lambda-go/otellambda", Version: otellambda.SemVersion()},
+	expectedSpans = v1trace.ScopeSpans{
+		Scope: &v1common.InstrumentationScope{Name: "go.opentelemetry.io/contrib/instrumentation/github.com/aws/aws-lambda-go/otellambda", Version: otellambda.SemVersion()},
 		Spans: []*v1trace.Span{{
 			TraceId:           []byte{0x57, 0x59, 0xe9, 0x88, 0xbd, 0x86, 0x2e, 0x3f, 0xe1, 0xbe, 0x46, 0xa9, 0x94, 0x27, 0x27, 0x93},
 			SpanId:            nil,
@@ -122,9 +122,9 @@ var (
 	}
 
 	expectedResourceSpans = v1trace.ResourceSpans{
-		Resource:                    &expectedSpanResource,
-		InstrumentationLibrarySpans: []*v1trace.InstrumentationLibrarySpans{&expectedSpans},
-		SchemaUrl:                   "",
+		Resource:   &expectedSpanResource,
+		ScopeSpans: []*v1trace.ScopeSpans{&expectedSpans},
+		SchemaUrl:  "",
 	}
 )
 
@@ -140,10 +140,10 @@ func assertResourceEquals(t *testing.T, expected *v1resource.Resource, actual *v
 // ignore timestamps and SpanID since time is obviously variable,
 // and SpanID is randomized when using xray IDGenerator
 func assertSpanEqualsIgnoreTimeAndSpanID(t *testing.T, expected *v1trace.ResourceSpans, actual *v1trace.ResourceSpans) {
-	assert.Equal(t, expected.InstrumentationLibrarySpans[0].InstrumentationLibrary, actual.InstrumentationLibrarySpans[0].InstrumentationLibrary)
+	assert.Equal(t, expected.ScopeSpans[0].Scope, actual.ScopeSpans[0].Scope)
 
-	actualSpan := actual.InstrumentationLibrarySpans[0].Spans[0]
-	expectedSpan := expected.InstrumentationLibrarySpans[0].Spans[0]
+	actualSpan := actual.ScopeSpans[0].Spans[0]
+	expectedSpan := expected.ScopeSpans[0].Spans[0]
 	assert.Equal(t, expectedSpan.Name, actualSpan.Name)
 	assert.Equal(t, expectedSpan.ParentSpanId, actualSpan.ParentSpanId)
 	assert.Equal(t, expectedSpan.Kind, actualSpan.Kind)
