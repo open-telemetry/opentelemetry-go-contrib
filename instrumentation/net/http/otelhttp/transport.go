@@ -186,5 +186,8 @@ func (wb *wrappedBody) Read(b []byte) (int, error) {
 
 func (wb *wrappedBody) Close() error {
 	wb.span.End()
-	return wb.body.Close()
+	if wb.body != nil {
+		return wb.body.Close()
+	}
+	return nil
 }
