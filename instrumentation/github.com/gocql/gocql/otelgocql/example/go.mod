@@ -13,8 +13,8 @@ require (
 	go.opentelemetry.io/otel v1.6.3
 	go.opentelemetry.io/otel/exporters/prometheus v0.28.0
 	go.opentelemetry.io/otel/exporters/zipkin v1.6.3
-	go.opentelemetry.io/otel/metric v0.28.0
+	go.opentelemetry.io/otel/metric v0.29.0
 	go.opentelemetry.io/otel/sdk v1.6.3
-	go.opentelemetry.io/otel/sdk/metric v0.28.0
+	go.opentelemetry.io/otel/sdk/metric v0.29.0
 	golang.org/x/sys v0.0.0-20220319134239-a9b59b0215f8 // indirect
 )
