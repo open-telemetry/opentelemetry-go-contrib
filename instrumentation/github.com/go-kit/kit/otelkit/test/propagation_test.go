@@ -105,7 +105,7 @@ func TestGrpcPropagationMiddleware(t *testing.T) {
 
 }
 
-func TestHttpPropagationMiddleware(t *testing.T) {
+func TestHTTPPropagationMiddleware(t *testing.T) {
 	t.Run("WithParentTrace", func(t *testing.T) {
 
 		sr := tracetest.NewSpanRecorder()
@@ -121,7 +121,7 @@ func TestHttpPropagationMiddleware(t *testing.T) {
 		r, _ := http.NewRequest("", "", nil)
 		r.Header.Set("traceparent", traceParent)
 
-		prop := otelkit.HttpPropagationMiddleware()
+		prop := otelkit.HTTPPropagationMiddleware()
 		mw := otelkit.EndpointMiddleware()
 
 		e := func(ctx context.Context, _ interface{}) (interface{}, error) {
@@ -151,7 +151,7 @@ func TestHttpPropagationMiddleware(t *testing.T) {
 		r, _ := http.NewRequest("", "", nil)
 		r.Header.Set("traceparent", "")
 
-		prop := otelkit.HttpPropagationMiddleware()
+		prop := otelkit.HTTPPropagationMiddleware()
 		mw := otelkit.EndpointMiddleware()
 
 		e := func(ctx context.Context, _ interface{}) (interface{}, error) {

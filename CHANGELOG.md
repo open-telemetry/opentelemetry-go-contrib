@@ -13,13 +13,14 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 - Fix the `otelmux` middleware by using `SpanKindServer` when deciding the `SpanStatus`.
   This makes `4xx` response codes to not be an error anymore. (#1973)
 - Fixed jaegerremote sampler not behaving properly with per operation strategy set. (#2137)
+- Stopped injecting propagation context into response headers in otelhttp. (#2180)
 
 ## [1.6.0/0.31.0] - 2022-03-28
 
 ### Added
 
 - The project is now tested against Go 1.18 (in addition to the existing 1.16 and 1.17) (#1976)
-- Added Go-Kit middlewares to propagate trace context for incoming HTTP and gRPC clients, `HttpPropagateMiddleware` and `GrpcPropagateMiddleware`. (#2166) 
+- Added Go-Kit middlewares to propagate trace context for incoming HTTP and gRPC clients, `HTTPPropagateMiddleware` and `GrpcPropagateMiddleware`. (#2166) 
 
 ### Changed
 

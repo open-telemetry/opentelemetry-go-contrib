@@ -12,7 +12,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package otelkit
+package otelkit // import "go.opentelemetry.io/contrib/instrumentation/github.com/go-kit/kit/otelkit"
 
 import (
 	"context"
@@ -67,10 +67,10 @@ func GrpcPropagationMiddleware() endpoint.Middleware {
 	}
 }
 
-// HttpPropagationMiddleware uses HTTP header from the incoming request,
+// HTTPPropagationMiddleware uses HTTP header from the incoming request,
 // if it exists, and extracts the traceparent to propagate context information
 // that enables distributed tracing.
-func HttpPropagationMiddleware() endpoint.Middleware {
+func HTTPPropagationMiddleware() endpoint.Middleware {
 	return func(next endpoint.Endpoint) endpoint.Endpoint {
 		return func(ctx context.Context, request interface{}) (response interface{}, err error) {
 			if r, ok := request.(*http.Request); ok {
