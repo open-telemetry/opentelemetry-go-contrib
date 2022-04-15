@@ -4,11 +4,26 @@ run:
   tests: true #Default
 
 linters:
+  # Disable everything by default so upgrades to not include new "default
+  # enabled" linters.
+  disable-all: true
+  # Specifically enable linters we want to use.
   enable:
-    - misspell
-    - goimports
-    - revive
+    - deadcode
+    - errcheck
     - gofmt
+    - goimports
+    - gosimple
+    - govet
+    - ineffassign
+    - misspell
+    - revive
+    - staticcheck
+    - structcheck
+    - typecheck
+    - unused
+    - varcheck
+
 
 issues:
   exclude-rules:
@@ -26,7 +41,7 @@ issues:
 linters-settings:
   misspell:
     locale: US
-    #ignore-words:
-    #  - someword
+    ignore-words:
+      - cancelled
   goimports:
     local-prefixes: go.opentelemetry.io
