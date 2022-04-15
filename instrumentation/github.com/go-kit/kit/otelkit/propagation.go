@@ -27,6 +27,9 @@ import (
 
 type MultimapCarrier map[string][]string
 
+// Compile time check that MultimapCarrier implements the TextMapCarrier.
+var _ propagation.TextMapCarrier = MultimapCarrier{}
+
 func (c MultimapCarrier) Get(key string) string {
 	if v := c[key]; len(v) > 0 {
 		return v[0]
@@ -46,7 +49,7 @@ func (c MultimapCarrier) Keys() []string {
 	return keys
 }
 
-// GrpcPropagationMiddleware uses gRPC metadata from the incoming context,
+// GRPCPropagationMiddleware uses gRPC metadata from the incoming context,
 // if it exists, and extracts the traceparent to propagate context information
 // that enables distributed tracing.
 func GRPCPropagationMiddleware() endpoint.Middleware {
