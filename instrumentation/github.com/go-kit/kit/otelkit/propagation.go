@@ -25,6 +25,27 @@ import (
 	"go.opentelemetry.io/otel/propagation"
 )
 
+type MultimapCarrier map[string][]string
+
+func (c MultimapCarrier) Get(key string) string {
+	if v := c[key]; len(v) > 0 {
+		return v[0]
+	}
+	return ""
+}
+
+func (c MultimapCarrier) Set(key, value string) {
+	c[key] = []string{value}
+}
+
+func (c MultimapCarrier) Keys() []string {
+	keys := make([]string, 0, len(c))
+	for k := range c {
+		keys = append(keys, k)
+	}
+	return keys
+}
+
 // GrpcPropagationMiddleware uses gRPC metadata from the incoming context,
 // if it exists, and extracts the traceparent to propagate context information
 // that enables distributed tracing.
@@ -32,7 +53,7 @@ func GRPCPropagationMiddleware() endpoint.Middleware {
 	return func(next endpoint.Endpoint) endpoint.Endpoint {
 		return func(ctx context.Context, request interface{}) (response interface{}, err error) {
 			if md, ok := metadata.FromIncomingContext(ctx); ok {
-				ctx = otel.GetTextMapPropagator().Extract(ctx, propagation.HeaderCarrier(md))
+				ctx = otel.GetTextMapPropagator().Extract(ctx, MultimapCarrier(md))
 			}
 			return next(ctx, request)
 		}

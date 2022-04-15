@@ -56,7 +56,7 @@ func TestGrpcPropagationMiddleware(t *testing.T) {
 		)
 		ctx = metadata.NewIncomingContext(ctx, md)
 
-		prop := otelkit.GrpcPropagationMiddleware()
+		prop := otelkit.GRPCPropagationMiddleware()
 		mw := otelkit.EndpointMiddleware()
 
 		e := func(ctx context.Context, _ interface{}) (interface{}, error) {
@@ -88,7 +88,7 @@ func TestGrpcPropagationMiddleware(t *testing.T) {
 		)
 		ctx = metadata.NewIncomingContext(ctx, md)
 
-		prop := otelkit.GrpcPropagationMiddleware()
+		prop := otelkit.GRPCPropagationMiddleware()
 		mw := otelkit.EndpointMiddleware()
 
 		e := func(ctx context.Context, _ interface{}) (interface{}, error) {
