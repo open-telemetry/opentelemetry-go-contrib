@@ -56,7 +56,7 @@ func (c *MultimapCarrier) Keys() []string {
 // GrpcPropagationMiddleware uses gRPC metadata from the incoming context,
 // if it exists, and extracts the traceparent to propagate context information
 // that enables distributed tracing.
-func GrpcPropagationMiddleware() endpoint.Middleware {
+func GRPCPropagationMiddleware() endpoint.Middleware {
 	return func(next endpoint.Endpoint) endpoint.Endpoint {
 		return func(ctx context.Context, request interface{}) (response interface{}, err error) {
 			if md, ok := metadata.FromIncomingContext(ctx); ok {
