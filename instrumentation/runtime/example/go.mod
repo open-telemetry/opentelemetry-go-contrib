@@ -10,7 +10,7 @@ replace (
 require (
 	go.opentelemetry.io/contrib/instrumentation/runtime v0.31.0
 	go.opentelemetry.io/otel/exporters/stdout/stdoutmetric v0.28.0
-	go.opentelemetry.io/otel/metric v0.28.0
+	go.opentelemetry.io/otel/metric v0.29.0
 	go.opentelemetry.io/otel/sdk/metric v0.28.0
 	golang.org/x/sys v0.0.0-20220319134239-a9b59b0215f8 // indirect
 )
