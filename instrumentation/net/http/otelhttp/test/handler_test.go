@@ -91,9 +91,6 @@ func TestHandlerBasics(t *testing.T) {
 	if got, expected := rr.Result().StatusCode, http.StatusOK; got != expected {
 		t.Fatalf("got %d, expected %d", got, expected)
 	}
-	if got := rr.Header().Get("Traceparent"); got == "" {
-		t.Fatal("expected non empty trace header")
-	}
 
 	spans := spanRecorder.Ended()
 	if got, expected := len(spans), 1; got != expected {
