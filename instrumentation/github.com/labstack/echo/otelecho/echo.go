@@ -89,8 +89,6 @@ func Middleware(service string, opts ...Option) echo.MiddlewareFunc {
 			err := next(c)
 			if err != nil {
 				span.SetAttributes(attribute.String("echo.error", err.Error()))
-				// invokes the registered HTTP error handler
-				c.Error(err)
 			}
 
 			attrs := semconv.HTTPAttributesFromHTTPStatusCode(c.Response().Status)
@@ -98,7 +96,7 @@ func Middleware(service string, opts ...Option) echo.MiddlewareFunc {
 			span.SetAttributes(attrs...)
 			span.SetStatus(spanStatus, spanMessage)
 
-			return nil
+			return err
 		}
 	}
 }
