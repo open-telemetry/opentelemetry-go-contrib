@@ -93,3 +93,4 @@ module-sets:
     modules:
       - go.opentelemetry.io/contrib/samplers/jaegerremote
       - go.opentelemetry.io/contrib/samplers/jaegerremote/example
+      - go.opentelemetry.io/contrib/samplers/aws/xray

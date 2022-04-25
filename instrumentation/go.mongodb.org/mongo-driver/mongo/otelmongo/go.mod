@@ -5,7 +5,7 @@ go 1.13
 replace go.opentelemetry.io/contrib => ../../../../..
 
 require (
-	go.mongodb.org/mongo-driver v1.8.4
-	go.opentelemetry.io/otel v1.6.1
-	go.opentelemetry.io/otel/trace v1.6.1
+	go.mongodb.org/mongo-driver v1.9.0
+	go.opentelemetry.io/otel v1.6.3
+	go.opentelemetry.io/otel/trace v1.6.3
 )
