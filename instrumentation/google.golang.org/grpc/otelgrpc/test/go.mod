@@ -9,7 +9,7 @@ require (
 	go.opentelemetry.io/otel v1.6.3
 	go.opentelemetry.io/otel/sdk v1.6.3
 	go.uber.org/goleak v1.1.12
-	google.golang.org/grpc v1.45.0
+	google.golang.org/grpc v1.46.0
 )
 
 replace (
