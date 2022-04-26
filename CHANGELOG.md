@@ -8,6 +8,12 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 
 ## [Unreleased]
 
+### Changed
+
+- Upgraded all `semconv` package use to `v1.10.0`.
+  This includes a backwards incompatible change for the `otelgocql` package to conform with the specification [change](https://github.com/open-telemetry/opentelemetry-specification/pull/1973).
+  The `db.cassandra.keyspace` attribute is now transmitted as the `db.name` attribute. (#2222)
+
 ### Fixed
 
 - Fix the `otelmux` middleware by using `SpanKindServer` when deciding the `SpanStatus`.
