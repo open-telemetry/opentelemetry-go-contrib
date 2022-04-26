@@ -8,8 +8,8 @@ require (
 	go.opentelemetry.io/contrib/instrumentation/github.com/astaxie/beego/otelbeego v0.31.0
 	go.opentelemetry.io/contrib/propagators/b3 v1.6.0
 	go.opentelemetry.io/otel v1.6.3
-	go.opentelemetry.io/otel/metric v0.29.0
 	go.opentelemetry.io/otel/sdk v1.6.3
+	go.opentelemetry.io/otel/sdk/metric v0.29.1-0.20220425151224-b8e4241a32f2
 )
 
 replace (
