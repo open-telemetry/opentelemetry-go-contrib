@@ -41,12 +41,12 @@ func getGCCount(exp *metrictest.Exporter) int {
 	for _, r := range exp.GetRecords() {
 		if r.InstrumentName == "process.runtime.go.gc.count" {
 			switch r.AggregationKind {
-			case aggregation.SumKind:
+			case aggregation.SumKind, aggregation.HistogramKind:
 				return int(r.Sum.CoerceToInt64(r.NumberKind))
 			case aggregation.LastValueKind:
 				return int(r.LastValue.CoerceToInt64(r.NumberKind))
 			default:
-				panic(fmt.Sprintf("invalid aggregation type: %T", r.AggregationKind))
+				panic(fmt.Sprintf("invalid aggregation type: %v", r.AggregationKind))
 			}
 		}
 	}

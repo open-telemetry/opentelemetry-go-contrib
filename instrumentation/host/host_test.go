@@ -53,12 +53,12 @@ func getMetric(exp *metrictest.Exporter, name string, lbl attribute.KeyValue) fl
 			continue
 		}
 		switch r.AggregationKind {
-		case aggregation.SumKind:
+		case aggregation.SumKind, aggregation.HistogramKind:
 			return r.Sum.CoerceToFloat64(r.NumberKind)
 		case aggregation.LastValueKind:
 			return r.LastValue.CoerceToFloat64(r.NumberKind)
 		default:
-			panic(fmt.Sprintf("invalid aggregation type: %T", r.AggregationKind))
+			panic(fmt.Sprintf("invalid aggregation type: %v", r.AggregationKind))
 		}
 	}
 	panic("Could not locate a metric in test output")

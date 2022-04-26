@@ -112,6 +112,7 @@ func TestQuery(t *testing.T) {
 	}
 
 	// Check metrics
+	require.NoError(t, metricExporter.Collect(context.Background()))
 	actual := obtainTestRecords(metricExporter.GetRecords())
 	require.Len(t, actual, 3)
 	expected := []testRecord{
@@ -223,6 +224,7 @@ func TestBatch(t *testing.T) {
 	}
 
 	// Check metrics
+	require.NoError(t, metricExporter.Collect(context.Background()))
 	actual := obtainTestRecords(metricExporter.GetRecords())
 	require.Len(t, actual, 2)
 	expected := []testRecord{
@@ -377,12 +379,12 @@ func obtainTestRecords(mers []metrictest.ExportRecord) []testRecord {
 	for _, mer := range mers {
 		var n number.Number
 		switch mer.AggregationKind {
-		case aggregation.SumKind:
+		case aggregation.SumKind, aggregation.HistogramKind:
 			n = mer.Sum
 		case aggregation.LastValueKind:
 			n = mer.LastValue
 		default:
-			panic(fmt.Sprintf("unsupported aggregation type: %T", mer.AggregationKind))
+			panic(fmt.Sprintf("unsupported aggregation type: %v", mer.AggregationKind))
 		}
 		records = append(
 			records,
