@@ -16,62 +16,26 @@ package gcp // import "go.opentelemetry.io/contrib/detectors/gcp"
 
 import (
 	"context"
-	"fmt"
 	"os"
 
 	"cloud.google.com/go/compute/metadata"
 
 	"go.opentelemetry.io/otel/attribute"
-	"go.opentelemetry.io/otel/sdk/resource"
 	semconv "go.opentelemetry.io/otel/semconv/v1.7.0"
 )
 
-// GKE collects resource information of GKE computing instances
-type GKE struct{}
+func onGKE() bool {
+	return os.Getenv("KUBERNETES_SERVICE_HOST") != ""
+}
 
-// compile time assertion that GKE implements the resource.Detector interface.
-var _ resource.Detector = (*GKE)(nil)
-
-// Detect detects associated resources when running in GKE environment.
-func (gke *GKE) Detect(ctx context.Context) (*resource.Resource, error) {
-	gcpDetecor := GCE{}
-	gceLablRes, err := gcpDetecor.Detect(ctx)
-
-	if os.Getenv("KUBERNETES_SERVICE_HOST") == "" {
-		return gceLablRes, err
-	}
-
-	var errInfo []string
-	if err != nil {
-		errInfo = append(errInfo, err.Error())
-	}
-
-	attributes := []attribute.KeyValue{
-		semconv.K8SNamespaceNameKey.String(os.Getenv("NAMESPACE")),
-		semconv.K8SPodNameKey.String(os.Getenv("HOSTNAME")),
-	}
-
-	if containerName := os.Getenv("CONTAINER_NAME"); containerName != "" {
-		attributes = append(attributes, semconv.ContainerNameKey.String(containerName))
-	}
-
+// gkeAttributes detects resource attributes available via the GKE Metadata server:
+// https://cloud.google.com/kubernetes-engine/docs/concepts/workload-identity#instance_attributes
+func gkeAttributes(ctx context.Context) (attributes []attribute.KeyValue, errs []string) {
 	if clusterName, err := metadata.InstanceAttributeValue("cluster-name"); hasProblem(err) {
-		errInfo = append(errInfo, err.Error())
+		errs = append(errs, err.Error())
 	} else if clusterName != "" {
 		attributes = append(attributes, semconv.K8SClusterNameKey.String(clusterName))
 	}
-
-	k8sattributeRes := resource.NewWithAttributes(semconv.SchemaURL, attributes...)
-
-	res, err := resource.Merge(gceLablRes, k8sattributeRes)
-	if err != nil {
-		errInfo = append(errInfo, err.Error())
-	}
-
-	var aggregatedErr error
-	if len(errInfo) > 0 {
-		aggregatedErr = fmt.Errorf("detecting GKE resources: %s", errInfo)
-	}
-
-	return res, aggregatedErr
+	// TODO: with workload identity enabled, do we need to use cluster-location instead of the GCE availability zone?
+	return
 }

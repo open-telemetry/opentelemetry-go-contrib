@@ -16,91 +16,40 @@ package gcp // import "go.opentelemetry.io/contrib/detectors/gcp"
 
 import (
 	"context"
-	"fmt"
-	"os"
 	"strings"
 
 	"cloud.google.com/go/compute/metadata"
 
 	"go.opentelemetry.io/otel/attribute"
-	"go.opentelemetry.io/otel/sdk/resource"
 	semconv "go.opentelemetry.io/otel/semconv/v1.7.0"
 )
 
-// GCE collects resource information of GCE computing instances
-type GCE struct{}
-
-// compile time assertion that GCE implements the resource.Detector interface.
-var _ resource.Detector = (*GCE)(nil)
-
-// Detect detects associated resources when running on GCE hosts.
-func (gce *GCE) Detect(ctx context.Context) (*resource.Resource, error) {
-	if !metadata.OnGCE() {
-		return nil, nil
+// gceAttributes are attributes that are available from the
+// GCE metadata server: https://cloud.google.com/compute/docs/metadata/default-metadata-values#vm_instance_metadata
+func gceAttributes(ctx context.Context) (attributes []attribute.KeyValue, errs []string) {
+	if instanceID, err := metadata.InstanceID(); hasProblem(err) {
+		errs = append(errs, err.Error())
+	} else if instanceID != "" {
+		attributes = append(attributes, semconv.HostIDKey.String(instanceID))
 	}
-
-	attributes := []attribute.KeyValue{
-		semconv.CloudProviderGCP,
+	if name, err := metadata.InstanceName(); hasProblem(err) {
+		errs = append(errs, err.Error())
+	} else if name != "" {
+		attributes = append(attributes, semconv.HostNameKey.String(name))
 	}
-
-	var errInfo []string
-
-	if projectID, err := metadata.ProjectID(); hasProblem(err) {
-		errInfo = append(errInfo, err.Error())
-	} else if projectID != "" {
-		attributes = append(attributes, semconv.CloudAccountIDKey.String(projectID))
+	if hostType, err := metadata.Get("instance/machine-type"); hasProblem(err) {
+		errs = append(errs, err.Error())
+	} else if hostType != "" {
+		attributes = append(attributes, semconv.HostTypeKey.String(hostType))
 	}
-
 	if zone, err := metadata.Zone(); hasProblem(err) {
-		errInfo = append(errInfo, err.Error())
+		errs = append(errs, err.Error())
 	} else if zone != "" {
 		attributes = append(attributes, semconv.CloudAvailabilityZoneKey.String(zone))
-
 		splitArr := strings.SplitN(zone, "-", 3)
 		if len(splitArr) == 3 {
 			semconv.CloudRegionKey.String(strings.Join(splitArr[0:2], "-"))
 		}
 	}
-
-	if instanceID, err := metadata.InstanceID(); hasProblem(err) {
-		errInfo = append(errInfo, err.Error())
-	} else if instanceID != "" {
-		attributes = append(attributes, semconv.HostIDKey.String(instanceID))
-	}
-
-	if name, err := metadata.InstanceName(); hasProblem(err) {
-		errInfo = append(errInfo, err.Error())
-	} else if name != "" {
-		attributes = append(attributes, semconv.HostNameKey.String(name))
-	}
-
-	if hostname, err := os.Hostname(); hasProblem(err) {
-		errInfo = append(errInfo, err.Error())
-	} else if hostname != "" {
-		attributes = append(attributes, semconv.HostNameKey.String(hostname))
-	}
-
-	if hostType, err := metadata.Get("instance/machine-type"); hasProblem(err) {
-		errInfo = append(errInfo, err.Error())
-	} else if hostType != "" {
-		attributes = append(attributes, semconv.HostTypeKey.String(hostType))
-	}
-
-	var aggregatedErr error
-	if len(errInfo) > 0 {
-		aggregatedErr = fmt.Errorf("detecting GCE resources: %s", errInfo)
-	}
-
-	return resource.NewWithAttributes(semconv.SchemaURL, attributes...), aggregatedErr
-}
-
-// hasProblem checks if the err is not nil or for missing resources
-func hasProblem(err error) bool {
-	if err == nil {
-		return false
-	}
-	if _, undefined := err.(metadata.NotDefinedError); undefined {
-		return false
-	}
-	return true
+	return
 }
