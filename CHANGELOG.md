@@ -8,6 +8,10 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 
 ## [Unreleased]
 
+### Added
+
+- Consistent probability sampler implementation. (#1379)
+
 ### Changed
 
 - Upgraded all `semconv` package use to `v1.10.0`.
