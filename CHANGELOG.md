@@ -8,6 +8,10 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 
 ## [Unreleased]
 
+### Added
+
+- Consistent probability sampler implementation. (#1379)
+
 ### Fixed
 
 - Fix the `otelmux` middleware by using `SpanKindServer` when deciding the `SpanStatus`.

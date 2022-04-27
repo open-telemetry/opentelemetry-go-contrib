@@ -10,7 +10,7 @@ replace (
 )
 
 require (
-	github.com/aws/aws-lambda-go v1.29.0
+	github.com/aws/aws-lambda-go v1.30.0
 	github.com/stretchr/testify v1.7.1
 	go.opentelemetry.io/contrib/detectors/aws/lambda v0.31.0
 	go.opentelemetry.io/contrib/instrumentation/github.com/aws/aws-lambda-go/otellambda v0.31.0
