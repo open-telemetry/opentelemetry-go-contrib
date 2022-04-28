@@ -12,11 +12,12 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package eks // import "go.opentelemetry.io/contrib/detectors/aws/eks"
+package consistent // import "go.opentelemetry.io/contrib/samplers/probability/consistent"
 
-// Version is the current release version of the EKS resource detector.
+// Version is the current release version of the consistent probability
+// sampler.
 func Version() string {
-	return "1.7.0"
+	return "0.2.0"
 	// This string is updated by the pre_release.sh script during release
 }
 

@@ -11,7 +11,7 @@ require (
 	github.com/emicklei/go-restful/v3 v3.7.4
 	github.com/json-iterator/go v1.1.10 // indirect
 	github.com/stretchr/testify v1.7.1
-	go.opentelemetry.io/contrib/propagators/b3 v1.6.0
-	go.opentelemetry.io/otel v1.6.4-0.20220425151224-b8e4241a32f2
-	go.opentelemetry.io/otel/trace v1.6.3
+	go.opentelemetry.io/contrib/propagators/b3 v1.7.0
+	go.opentelemetry.io/otel v1.7.0
+	go.opentelemetry.io/otel/trace v1.7.0
 )
