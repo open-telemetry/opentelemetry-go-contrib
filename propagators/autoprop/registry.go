@@ -24,7 +24,7 @@ import (
 	"go.opentelemetry.io/otel/propagation"
 )
 
-// none is the specical "propagator" name that means no propagator shall be
+// none is the special "propagator" name that means no propagator shall be
 // configured.
 const none = "none"
 
