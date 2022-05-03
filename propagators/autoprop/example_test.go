@@ -56,7 +56,7 @@ func ExampleNewTextMapPropagator_environment() {
 	// Propagators set for the OTEL_PROPAGATORS environment variable take
 	// precedence and will override any arguments passed to
 	// NewTextMapPropagator.
-	os.Setenv("OTEL_PROPAGATORS", "b3,baggage")
+	_ = os.Setenv("OTEL_PROPAGATORS", "b3,baggage")
 
 	// Returns only a B3 and Baggage TextMapPropagator (i.e. does not include
 	// TraceContext).
@@ -78,7 +78,7 @@ func ExampleRegisterTextMapPropagator() {
 	// NewTextMapPropagator.
 	autoprop.RegisterTextMapPropagator("custom-prop", myTextMapPropagator{})
 
-	os.Setenv("OTEL_PROPAGATORS", "custom-prop")
+	_ = os.Setenv("OTEL_PROPAGATORS", "custom-prop")
 	fmt.Println(autoprop.NewTextMapPropagator().Fields())
 	// Output: [my-header-val]
 }

@@ -71,7 +71,6 @@ func NewTextMapPropagator(props ...propagation.TextMapPropagator) propagation.Te
 	default:
 		return propagation.NewCompositeTextMapPropagator(props...)
 	}
-
 }
 
 // errUnknownPropagator is returned when an unknown propagator name is used in
