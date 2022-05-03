@@ -58,11 +58,20 @@ func NewTextMapPropagator(props ...propagation.TextMapPropagator) propagation.Te
 		return envProp
 	}
 
-	if len(props) != 0 {
+	switch len(props) {
+	case 0:
+		// Default to TraceContext and Baggage.
+		return propagation.NewCompositeTextMapPropagator(
+			propagation.TraceContext{}, propagation.Baggage{},
+		)
+	case 1:
+		// Do not add overhead with a composite propagator wrapping a single
+		// propagator, return it directly.
+		return props[0]
+	default:
 		return propagation.NewCompositeTextMapPropagator(props...)
 	}
 
-	return propagation.NewCompositeTextMapPropagator(propagation.TraceContext{}, propagation.Baggage{})
 }
 
 // errUnknownPropagator is returned when an unknown propagator name is used in
