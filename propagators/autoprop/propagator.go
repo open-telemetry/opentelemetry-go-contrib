@@ -41,8 +41,8 @@ const otelPropagatorsEnvKey = "OTEL_PROPAGATORS"
 // for more information.
 //
 // The supported environment variable propagators can be extended to include
-// custom 3rd-party TextMapPropagator. See the Register function for more
-// information.
+// custom 3rd-party TextMapPropagator. See the RegisterTextMapPropagator
+// function for more information.
 //
 // If OTEL_PROPAGATORS is not defined and props is no provided, the returned
 // TextMapPropagator will be a composite of the TraceContext and Baggage
