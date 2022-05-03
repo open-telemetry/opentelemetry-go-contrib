@@ -19,7 +19,7 @@ import (
 	"net"
 
 	"go.opentelemetry.io/otel/attribute"
-	semconv "go.opentelemetry.io/otel/semconv/v1.7.0"
+	semconv "go.opentelemetry.io/otel/semconv/v1.10.0"
 )
 
 const (
@@ -127,9 +127,9 @@ func CassConnectOperation() attribute.KeyValue {
 }
 
 // CassKeyspace returns the keyspace of the session as
-// a semconv KeyValue pair (db.cassandra.keyspace).
+// a semconv KeyValue pair (db.name).
 func CassKeyspace(keyspace string) attribute.KeyValue {
-	return semconv.DBCassandraKeyspaceKey.String(keyspace)
+	return semconv.DBNameKey.String(keyspace)
 }
 
 // CassBatchQueries returns the number of queries in a batch query

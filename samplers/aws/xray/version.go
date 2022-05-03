@@ -12,11 +12,11 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package eks // import "go.opentelemetry.io/contrib/detectors/aws/eks"
+package xray // import "go.opentelemetry.io/contrib/samplers/aws/xray"
 
-// Version is the current release version of the EKS resource detector.
+// Version is the current release version of the AWS XRay remote sampler.
 func Version() string {
-	return "1.7.0"
+	return "0.2.0"
 	// This string is updated by the pre_release.sh script during release
 }
 
