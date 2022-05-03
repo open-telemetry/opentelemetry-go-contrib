@@ -12,7 +12,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package autoprop
+package autoprop // import "go.opentelemetry.io/contrib/propagators/autoprop"
 
 import (
 	"sync"
