@@ -73,8 +73,12 @@ func (r *registry) load(key string) (p propagation.TextMapPropagator, ok bool) {
 // store sets the value for a key.
 func (r *registry) store(key string, value propagation.TextMapPropagator) {
 	r.mu.Lock()
+	defer r.mu.Unlock()
+	if r.index == nil {
+		r.index = map[string]propagation.TextMapPropagator{key: value}
+		return
+	}
 	r.index[key] = value
-	r.mu.Unlock()
 }
 
 // RegisterTextMapPropagator sets the TextMapPropagator p to be used when the
