@@ -66,8 +66,6 @@ func TestNewTextMapPropagatorDefault(t *testing.T) {
 
 type ptrNoop struct{}
 
-var _ propagation.TextMapPropagator = (*ptrNoop)(nil)
-
 func (*ptrNoop) Inject(context.Context, propagation.TextMapCarrier) {}
 
 func (*ptrNoop) Extract(context.Context, propagation.TextMapCarrier) context.Context {
