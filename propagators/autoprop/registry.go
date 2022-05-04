@@ -31,7 +31,7 @@ const none = "none"
 // envRegistry is the index of all supported environment variable
 // values and their mapping to a TextMapPropagator.
 var envRegistry = &registry{
-	index: map[string]propagation.TextMapPropagator{
+	names: map[string]propagation.TextMapPropagator{
 		// W3C Trace Context.
 		"tracecontext": propagation.TraceContext{},
 		// W3C Baggage.
@@ -52,12 +52,12 @@ var envRegistry = &registry{
 	},
 }
 
-// registry maintains an index of propagator names to TextMapPropagator
+// registry maintains a map of propagator names to TextMapPropagator
 // implementations that is safe for concurrent use by multiple goroutines
 // without additional locking or coordination.
 type registry struct {
 	mu    sync.Mutex
-	index map[string]propagation.TextMapPropagator
+	names map[string]propagation.TextMapPropagator
 }
 
 // load returns the value stored in the registry index for a key, or nil if no
@@ -65,7 +65,7 @@ type registry struct {
 // index.
 func (r *registry) load(key string) (p propagation.TextMapPropagator, ok bool) {
 	r.mu.Lock()
-	p, ok = r.index[key]
+	p, ok = r.names[key]
 	r.mu.Unlock()
 	return p, ok
 }
@@ -74,11 +74,11 @@ func (r *registry) load(key string) (p propagation.TextMapPropagator, ok bool) {
 func (r *registry) store(key string, value propagation.TextMapPropagator) {
 	r.mu.Lock()
 	defer r.mu.Unlock()
-	if r.index == nil {
-		r.index = map[string]propagation.TextMapPropagator{key: value}
+	if r.names == nil {
+		r.names = map[string]propagation.TextMapPropagator{key: value}
 		return
 	}
-	r.index[key] = value
+	r.names[key] = value
 }
 
 // RegisterTextMapPropagator sets the TextMapPropagator p to be used when the
