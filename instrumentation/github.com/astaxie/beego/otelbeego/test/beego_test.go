@@ -29,11 +29,11 @@ import (
 	"go.opentelemetry.io/contrib/instrumentation/github.com/astaxie/beego/otelbeego/internal"
 	"go.opentelemetry.io/contrib/propagators/b3"
 	"go.opentelemetry.io/otel/attribute"
-	"go.opentelemetry.io/otel/metric/nonrecording"
 	"go.opentelemetry.io/otel/propagation"
+	"go.opentelemetry.io/otel/sdk/metric/metrictest"
 	"go.opentelemetry.io/otel/sdk/trace"
 	"go.opentelemetry.io/otel/sdk/trace/tracetest"
-	semconv "go.opentelemetry.io/otel/semconv/v1.7.0"
+	semconv "go.opentelemetry.io/otel/semconv/v1.10.0"
 
 	"github.com/astaxie/beego"
 	beegoCtx "github.com/astaxie/beego/context"
@@ -189,7 +189,7 @@ func TestStatic(t *testing.T) {
 	defer replaceBeego()
 	sr := tracetest.NewSpanRecorder()
 	tracerProvider := trace.NewTracerProvider(trace.WithSpanProcessor(sr))
-	meterProvider := nonrecording.NewNoopMeterProvider()
+	meterProvider, metricExporter := metrictest.NewTestMeterProvider()
 	file, err := ioutil.TempFile("", "static-*.html")
 	require.NoError(t, err)
 	defer os.Remove(file.Name())
@@ -220,8 +220,7 @@ func TestStatic(t *testing.T) {
 	spans := sr.Ended()
 	require.Len(t, spans, 1)
 	assertSpan(t, spans[0], tc)
-	// TODO: Replace with in memory exporter https://github.com/open-telemetry/opentelemetry-go/issues/2722
-	// assertMetrics(t, meterProvider.MeasurementBatches, tc)
+	assertMetrics(t, metricExporter.GetRecords(), tc)
 }
 
 func TestRender(t *testing.T) {
@@ -288,7 +287,7 @@ func TestRender(t *testing.T) {
 func runTest(t *testing.T, tc *testCase, url string) {
 	sr := tracetest.NewSpanRecorder()
 	tracerProvider := trace.NewTracerProvider(trace.WithSpanProcessor(sr))
-	meterProvider := nonrecording.NewNoopMeterProvider()
+	meterProvider, metricExporter := metrictest.NewTestMeterProvider()
 	addTestRoutes(t)
 	defer replaceBeego()
 
@@ -327,8 +326,7 @@ func runTest(t *testing.T, tc *testCase, url string) {
 	} else {
 		require.Len(t, spans, 0)
 	}
-	// TODO: Replace with in memory exporter https://github.com/open-telemetry/opentelemetry-go/issues/2722
-	// assertMetrics(t, meterProvider.MeasurementBatches, tc)
+	assertMetrics(t, metricExporter.GetRecords(), tc)
 }
 
 func defaultAttributes() []attribute.KeyValue {
@@ -347,14 +345,13 @@ func assertSpan(t *testing.T, span trace.ReadOnlySpan, tc *testCase) {
 	}
 }
 
-// TODO: Replace with in memory exporter https://github.com/open-telemetry/opentelemetry-go/issues/2722
-// func assertMetrics(t *testing.T, batches []metrictest.Batch, tc *testCase) {
-// 	for _, batch := range batches {
-// 		for _, att := range tc.expectedAttributes {
-// 			require.Contains(t, batch.Labels, att)
-// 		}
-// 	}
-// }
+func assertMetrics(t *testing.T, records []metrictest.ExportRecord, tc *testCase) {
+	for _, record := range records {
+		for _, att := range tc.expectedAttributes {
+			require.Contains(t, record.Attributes, att)
+		}
+	}
+}
 
 // ------------------------------------------ Test Cases
 

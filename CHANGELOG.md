@@ -8,6 +8,18 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 
 ## [Unreleased]
 
+## [1.7.0/0.32.0] - 2022-04-28
+
+### Added
+
+- Consistent probability sampler implementation. (#1379)
+
+### Changed
+
+- Upgraded all `semconv` package use to `v1.10.0`.
+  This includes a backwards incompatible change for the `otelgocql` package to conform with the specification [change](https://github.com/open-telemetry/opentelemetry-specification/pull/1973).
+  The `db.cassandra.keyspace` attribute is now transmitted as the `db.name` attribute. (#2222)
+
 ### Fixed
 
 - Set attributes based on whether hostname provided is an IP Address or hostname (#2182)
@@ -491,7 +503,8 @@ First official tagged release of `contrib` repository.
 - Prefix support for dogstatsd (#34)
 - Update Go Runtime package to use batch observer (#44)
 
-[Unreleased]: https://github.com/open-telemetry/opentelemetry-go-contrib/compare/v1.6.0...HEAD
+[Unreleased]: https://github.com/open-telemetry/opentelemetry-go-contrib/compare/v1.7.0...HEAD
+[1.7.0/0.32.0]: https://github.com/open-telemetry/opentelemetry-go-contrib/releases/tag/v1.7.0
 [1.6.0/0.31.0]: https://github.com/open-telemetry/opentelemetry-go-contrib/releases/tag/v1.6.0
 [1.5.0/0.30.0/0.1.0]: https://github.com/open-telemetry/opentelemetry-go-contrib/releases/tag/v1.5.0
 [1.4.0/0.29.0]: https://github.com/open-telemetry/opentelemetry-go-contrib/releases/tag/v1.4.0
