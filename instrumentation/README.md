@@ -50,7 +50,7 @@ The following instrumentation packages are provided for popular Go packages and 
 | [github.com/go-kit/kit](./github.com/go-kit/kit/otelkit) |  | ✓ |
 | [github.com/gocql/gocql](./github.com/gocql/gocql/otelgocql) | ✓ | ✓ |
 | [github.com/gorilla/mux](./github.com/gorilla/mux/otelmux) |  | ✓ |
-| [github.com/labstack/echo](./github.com/labstack/echo/otelecho) |  | ✓ |
+| [github.com/labstack/echo](./github.com/labstack/echo/otelecho) | ✓ | ✓ |
 | [github.com/Shopify/sarama](./github.com/Shopify/sarama/otelsarama) |  | ✓ |
 | [go.mongodb.org/mongo-driver](./go.mongodb.org/mongo-driver/mongo/otelmongo) |  | ✓ |
 | [google.golang.org/grpc](./google.golang.org/grpc/otelgrpc) |  | ✓ |

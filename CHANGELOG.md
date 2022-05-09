@@ -8,6 +8,12 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 
 ## [Unreleased]
 
+### Changed
+
+- `otelecho` middleware to wrap `otelhttp` tracer implementation rather than implement its own. This is a backwards incompatible change
+  in most cases as `Middleware` now only accepts `otelhttp` options rather than options specific to it's package. This means that the `otelecho`
+  package now supports http server metrics provided by `otelhttp`.
+
 ## [1.7.0/0.32.0] - 2022-04-28
 
 ### Added
