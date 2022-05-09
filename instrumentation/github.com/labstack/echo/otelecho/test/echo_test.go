@@ -18,6 +18,7 @@ package test
 
 import (
 	"errors"
+	"go.opentelemetry.io/contrib/instrumentation/net/http/otelhttp"
 	"net/http"
 	"net/http/httptest"
 	"testing"
@@ -61,7 +62,7 @@ func TestChildSpanFromCustomTracer(t *testing.T) {
 	provider := trace.NewTracerProvider(trace.WithSpanProcessor(sr))
 
 	router := echo.New()
-	router.Use(otelecho.Middleware("foobar", otelecho.WithTracerProvider(provider)))
+	router.Use(otelecho.Middleware("foobar", otelhttp.WithTracerProvider(provider)))
 	router.GET("/user/:id", func(c echo.Context) error {
 		return c.NoContent(200)
 	})
@@ -79,11 +80,11 @@ func TestTrace200(t *testing.T) {
 	provider := trace.NewTracerProvider(trace.WithSpanProcessor(sr))
 
 	router := echo.New()
-	router.Use(otelecho.Middleware("foobar", otelecho.WithTracerProvider(provider)))
+	router.Use(otelecho.Middleware("foobar", otelhttp.WithTracerProvider(provider), otelhttp.WithSpanNameFormatter(otelecho.PathSpanNameFormatter)))
 	router.GET("/user/:id", func(c echo.Context) error {
 		id := c.Param("id")
 		return c.String(200, id)
-	})
+	}, otelecho.WithRouteTag("/user/:id"))
 
 	r := httptest.NewRequest("GET", "/user/123", nil)
 	w := httptest.NewRecorder()
@@ -113,7 +114,7 @@ func TestError(t *testing.T) {
 
 	// setup
 	router := echo.New()
-	router.Use(otelecho.Middleware("foobar", otelecho.WithTracerProvider(provider)))
+	router.Use(otelecho.Middleware("foobar", otelhttp.WithTracerProvider(provider), otelhttp.WithSpanNameFormatter(otelecho.PathSpanNameFormatter)))
 	wantErr := errors.New("oh no")
 	// configure a handler that returns an error and 5xx status
 	// code

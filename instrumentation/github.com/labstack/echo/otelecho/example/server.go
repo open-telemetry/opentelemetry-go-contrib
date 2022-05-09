@@ -16,6 +16,7 @@ package main
 
 import (
 	"context"
+	"go.opentelemetry.io/contrib/instrumentation/net/http/otelhttp"
 	"log"
 	"net/http"
 
@@ -40,7 +41,7 @@ func main() {
 		}
 	}()
 	r := echo.New()
-	r.Use(otelecho.Middleware("my-server"))
+	r.Use(otelecho.Middleware("my-server", otelhttp.WithSpanNameFormatter(otelecho.PathSpanNameFormatter)))
 
 	r.GET("/users/:id", func(c echo.Context) error {
 		id := c.Param("id")

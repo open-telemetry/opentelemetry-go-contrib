@@ -15,89 +15,56 @@
 package otelecho // import "go.opentelemetry.io/contrib/instrumentation/github.com/labstack/echo/otelecho"
 
 import (
-	"fmt"
-
+	"context"
 	"github.com/labstack/echo/v4"
-	"github.com/labstack/echo/v4/middleware"
-
-	"go.opentelemetry.io/otel"
-
+	"go.opentelemetry.io/contrib/instrumentation/net/http/otelhttp"
 	"go.opentelemetry.io/otel/attribute"
-	"go.opentelemetry.io/otel/propagation"
-	semconv "go.opentelemetry.io/otel/semconv/v1.10.0"
-	oteltrace "go.opentelemetry.io/otel/trace"
+	"go.opentelemetry.io/otel/trace"
+	"net/http"
 )
 
 const (
-	tracerKey  = "otel-go-contrib-tracer-labstack-echo"
-	tracerName = "go.opentelemetry.io/contrib/instrumentation/github.com/labstack/echo/otelecho"
+	ctxEchoPath = "ctxEchoPath"
 )
 
 // Middleware returns echo middleware which will trace incoming requests.
-func Middleware(service string, opts ...Option) echo.MiddlewareFunc {
-	cfg := config{}
-	for _, opt := range opts {
-		opt.apply(&cfg)
-	}
-	if cfg.TracerProvider == nil {
-		cfg.TracerProvider = otel.GetTracerProvider()
-	}
-	tracer := cfg.TracerProvider.Tracer(
-		tracerName,
-		oteltrace.WithInstrumentationVersion(SemVersion()),
-	)
-	if cfg.Propagators == nil {
-		cfg.Propagators = otel.GetTextMapPropagator()
-	}
+func Middleware(service string, opts ...otelhttp.Option) echo.MiddlewareFunc {
+	return wrapMiddleware(func(handlerFunc http.Handler) http.Handler {
+		return otelhttp.NewHandler(handlerFunc, service, opts...)
+	})
+}
 
-	if cfg.Skipper == nil {
-		cfg.Skipper = middleware.DefaultSkipper
-	}
+// WithRouteTag wraps otelhttp.WithRouteTag into an echo middleware
+func WithRouteTag(route string) echo.MiddlewareFunc {
+	return wrapMiddleware(func(handler http.Handler) http.Handler {
+		return otelhttp.WithRouteTag(route, handler)
+	})
+}
 
+// PathSpanNameFormatter formats span names with the name of the path for the routed handler
+// The PathSpanNameFormatter requires that the server has the instrumentation middleware inserted before it
+func PathSpanNameFormatter(operation string, r *http.Request) string {
+	path := r.Context().Value(ctxEchoPath)
+	return path.(string)
+}
+
+func wrapMiddleware(middleware func(http.Handler) http.Handler) echo.MiddlewareFunc {
 	return func(next echo.HandlerFunc) echo.HandlerFunc {
 		return func(c echo.Context) error {
-			if cfg.Skipper(c) {
-				return next(c)
-			}
-
-			c.Set(tracerKey, tracer)
-			request := c.Request()
-			savedCtx := request.Context()
-			defer func() {
-				request = request.WithContext(savedCtx)
-				c.SetRequest(request)
-			}()
-			ctx := cfg.Propagators.Extract(savedCtx, propagation.HeaderCarrier(request.Header))
-			opts := []oteltrace.SpanStartOption{
-				oteltrace.WithAttributes(semconv.NetAttributesFromHTTPRequest("tcp", request)...),
-				oteltrace.WithAttributes(semconv.EndUserAttributesFromHTTPRequest(request)...),
-				oteltrace.WithAttributes(semconv.HTTPServerAttributesFromHTTPRequest(service, c.Path(), request)...),
-				oteltrace.WithSpanKind(oteltrace.SpanKindServer),
-			}
-			spanName := c.Path()
-			if spanName == "" {
-				spanName = fmt.Sprintf("HTTP %s route not found", request.Method)
-			}
-
-			ctx, span := tracer.Start(ctx, spanName, opts...)
-			defer span.End()
-
-			// pass the span through the request context
-			c.SetRequest(request.WithContext(ctx))
-
-			// serve the request to the next middleware
-			err := next(c)
-			if err != nil {
-				span.SetAttributes(attribute.String("echo.error", err.Error()))
-				// invokes the registered HTTP error handler
-				c.Error(err)
-			}
-
-			attrs := semconv.HTTPAttributesFromHTTPStatusCode(c.Response().Status)
-			spanStatus, spanMessage := semconv.SpanStatusFromHTTPStatusCodeAndSpanKind(c.Response().Status, oteltrace.SpanKindServer)
-			span.SetAttributes(attrs...)
-			span.SetStatus(spanStatus, spanMessage)
-
+			ctx := context.WithValue(c.Request().Context(), ctxEchoPath, c.Path())
+			middleware(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+				c.SetRequest(r)
+				c.SetResponse(echo.NewResponse(w, c.Echo()))
+				err := next(c)
+				if err != nil {
+					span := trace.SpanFromContext(r.Context())
+					if span != nil {
+						span.SetAttributes(attribute.String("echo.error", err.Error()))
+					}
+					// invokes the registered HTTP error handler
+					c.Error(err)
+				}
+			})).ServeHTTP(c.Response(), c.Request().WithContext(ctx))
 			return nil
 		}
 	}
