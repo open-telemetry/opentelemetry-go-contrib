@@ -19,10 +19,11 @@ package otelecho
 import (
 	"context"
 	"errors"
-	"go.opentelemetry.io/contrib/instrumentation/net/http/otelhttp"
 	"net/http"
 	"net/http/httptest"
 	"testing"
+
+	"go.opentelemetry.io/contrib/instrumentation/net/http/otelhttp"
 
 	"github.com/labstack/echo/v4"
 

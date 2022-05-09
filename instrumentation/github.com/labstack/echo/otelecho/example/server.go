@@ -16,9 +16,10 @@ package main
 
 import (
 	"context"
-	"go.opentelemetry.io/contrib/instrumentation/net/http/otelhttp"
 	"log"
 	"net/http"
+
+	"go.opentelemetry.io/contrib/instrumentation/net/http/otelhttp"
 
 	"github.com/labstack/echo/v4"
 

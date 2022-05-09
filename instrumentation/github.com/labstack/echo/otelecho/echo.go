@@ -16,15 +16,19 @@ package otelecho // import "go.opentelemetry.io/contrib/instrumentation/github.c
 
 import (
 	"context"
+	"net/http"
+
 	"github.com/labstack/echo/v4"
+
 	"go.opentelemetry.io/contrib/instrumentation/net/http/otelhttp"
 	"go.opentelemetry.io/otel/attribute"
 	"go.opentelemetry.io/otel/trace"
-	"net/http"
 )
 
+type echoCtxKey string
+
 const (
-	ctxEchoPath = "ctxEchoPath"
+	echoPathCtxKey echoCtxKey = "echoPathCtxKey"
 )
 
 // Middleware returns echo middleware which will trace incoming requests.
@@ -44,14 +48,14 @@ func WithRouteTag(route string) echo.MiddlewareFunc {
 // PathSpanNameFormatter formats span names with the name of the path for the routed handler
 // The PathSpanNameFormatter requires that the server has the instrumentation middleware inserted before it
 func PathSpanNameFormatter(operation string, r *http.Request) string {
-	path := r.Context().Value(ctxEchoPath)
+	path := r.Context().Value(echoPathCtxKey)
 	return path.(string)
 }
 
 func wrapMiddleware(middleware func(http.Handler) http.Handler) echo.MiddlewareFunc {
 	return func(next echo.HandlerFunc) echo.HandlerFunc {
 		return func(c echo.Context) error {
-			ctx := context.WithValue(c.Request().Context(), ctxEchoPath, c.Path())
+			ctx := context.WithValue(c.Request().Context(), echoPathCtxKey, c.Path())
 			middleware(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 				c.SetRequest(r)
 				c.SetResponse(echo.NewResponse(w, c.Echo()))
