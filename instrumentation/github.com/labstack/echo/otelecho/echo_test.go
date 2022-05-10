@@ -23,17 +23,14 @@ import (
 	"net/http/httptest"
 	"testing"
 
-	"go.opentelemetry.io/contrib/instrumentation/net/http/otelhttp"
-
 	"github.com/labstack/echo/v4"
-
 	"github.com/stretchr/testify/assert"
 
+	"go.opentelemetry.io/contrib/instrumentation/net/http/otelhttp"
+	b3prop "go.opentelemetry.io/contrib/propagators/b3"
 	"go.opentelemetry.io/otel"
 	"go.opentelemetry.io/otel/propagation"
 	"go.opentelemetry.io/otel/trace"
-
-	b3prop "go.opentelemetry.io/contrib/propagators/b3"
 )
 
 func TestErrorOnlyHandledOnce(t *testing.T) {
@@ -86,7 +83,7 @@ func TestPropagationWithGlobalPropagators(t *testing.T) {
 	otel.GetTextMapPropagator().Inject(ctx, propagation.HeaderCarrier(r.Header))
 
 	router := echo.New()
-	router.Use(Middleware("foobar", otelhttp.WithTracerProvider(provider)))
+	router.Use(Middleware("foobar", WithOTelHTTPOptions(otelhttp.WithTracerProvider(provider))))
 	router.GET("/user/:id", func(c echo.Context) error {
 		span := trace.SpanFromContext(c.Request().Context())
 		assert.Equal(t, sc.TraceID(), span.SpanContext().TraceID())
@@ -117,7 +114,7 @@ func TestPropagationWithCustomPropagators(t *testing.T) {
 	b3.Inject(ctx, propagation.HeaderCarrier(r.Header))
 
 	router := echo.New()
-	router.Use(Middleware("foobar", otelhttp.WithTracerProvider(provider), otelhttp.WithPropagators(b3)))
+	router.Use(Middleware("foobar", WithOTelHTTPOptions(otelhttp.WithTracerProvider(provider), otelhttp.WithPropagators(b3))))
 	router.GET("/user/:id", func(c echo.Context) error {
 		span := trace.SpanFromContext(c.Request().Context())
 		assert.Equal(t, sc.TraceID(), span.SpanContext().TraceID())
@@ -129,16 +126,16 @@ func TestPropagationWithCustomPropagators(t *testing.T) {
 	assert.Equal(t, http.StatusOK, w.Result().StatusCode, "should call the 'user' handler")
 }
 
-func TestFilter(t *testing.T) {
+func TestSkipper(t *testing.T) {
 	r := httptest.NewRequest("GET", "/ping", nil)
 	w := httptest.NewRecorder()
 
-	skipper := func(req *http.Request) bool {
-		return req.RequestURI == "/ping"
+	skipper := func(c echo.Context) bool {
+		return c.Request().RequestURI == "/ping"
 	}
 
 	router := echo.New()
-	router.Use(Middleware("foobar", otelhttp.WithFilter(skipper)))
+	router.Use(Middleware("foobar", WithSkipper(skipper)))
 	router.GET("/ping", func(c echo.Context) error {
 		span := trace.SpanFromContext(c.Request().Context())
 		assert.False(t, span.SpanContext().HasSpanID())

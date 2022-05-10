@@ -19,11 +19,10 @@ import (
 	"log"
 	"net/http"
 
-	"go.opentelemetry.io/contrib/instrumentation/net/http/otelhttp"
-
 	"github.com/labstack/echo/v4"
 
 	"go.opentelemetry.io/contrib/instrumentation/github.com/labstack/echo/otelecho"
+	"go.opentelemetry.io/contrib/instrumentation/net/http/otelhttp"
 	"go.opentelemetry.io/otel"
 	"go.opentelemetry.io/otel/attribute"
 	stdout "go.opentelemetry.io/otel/exporters/stdout/stdouttrace"
@@ -42,7 +41,7 @@ func main() {
 		}
 	}()
 	r := echo.New()
-	r.Use(otelecho.Middleware("my-server", otelhttp.WithSpanNameFormatter(otelecho.PathSpanNameFormatter)))
+	r.Use(otelecho.Middleware("my-server", otelecho.WithOTelHTTPOptions(otelhttp.WithSpanNameFormatter(otelecho.PathSpanNameFormatter))))
 
 	r.GET("/users/:id", func(c echo.Context) error {
 		id := c.Param("id")
