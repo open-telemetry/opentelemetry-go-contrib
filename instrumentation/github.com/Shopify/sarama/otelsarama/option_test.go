@@ -20,10 +20,15 @@ import (
 	"github.com/stretchr/testify/assert"
 
 	"go.opentelemetry.io/otel"
+	"go.opentelemetry.io/otel/propagation"
+	sdktrace "go.opentelemetry.io/otel/sdk/trace"
 	"go.opentelemetry.io/otel/trace"
 )
 
 func TestNewConfig(t *testing.T) {
+	tp := sdktrace.NewTracerProvider()
+	prop := propagation.NewCompositeTextMapPropagator()
+
 	testCases := []struct {
 		name     string
 		opts     []Option
@@ -32,7 +37,18 @@ func TestNewConfig(t *testing.T) {
 		{
 			name: "with provider",
 			opts: []Option{
-				WithTracerProvider(otel.GetTracerProvider()),
+				WithTracerProvider(tp),
+			},
+			expected: config{
+				TracerProvider: tp,
+				Tracer:         tp.Tracer(defaultTracerName, trace.WithInstrumentationVersion(SemVersion())),
+				Propagators:    otel.GetTextMapPropagator(),
+			},
+		},
+		{
+			name: "with empty provider",
+			opts: []Option{
+				WithTracerProvider(nil),
 			},
 			expected: config{
 				TracerProvider: otel.GetTracerProvider(),
@@ -42,6 +58,17 @@ func TestNewConfig(t *testing.T) {
 		},
 		{
 			name: "with propagators",
+			opts: []Option{
+				WithPropagators(prop),
+			},
+			expected: config{
+				TracerProvider: otel.GetTracerProvider(),
+				Tracer:         otel.GetTracerProvider().Tracer(defaultTracerName, trace.WithInstrumentationVersion(SemVersion())),
+				Propagators:    prop,
+			},
+		},
+		{
+			name: "with empty propagators",
 			opts: []Option{
 				WithPropagators(nil),
 			},
