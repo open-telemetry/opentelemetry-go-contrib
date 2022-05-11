@@ -15,18 +15,36 @@
 package otelsarama
 
 import (
+	"context"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
 
 	"go.opentelemetry.io/otel"
 	"go.opentelemetry.io/otel/propagation"
-	sdktrace "go.opentelemetry.io/otel/sdk/trace"
 	"go.opentelemetry.io/otel/trace"
 )
 
+// We need a fake tracer provider to ensure the one passed in options is the one used afterwards.
+// In order to avoid adding the SDK as a dependency, we use this mock.
+type fakeTracerProvider struct{}
+
+func (fakeTracerProvider) Tracer(name string, opts ...trace.TracerOption) trace.Tracer {
+	return fakeTracer{
+		name: name,
+	}
+}
+
+type fakeTracer struct {
+	name string
+}
+
+func (fakeTracer) Start(ctx context.Context, spanName string, opts ...trace.SpanStartOption) (context.Context, trace.Span) {
+	return ctx, nil
+}
+
 func TestNewConfig(t *testing.T) {
-	tp := sdktrace.NewTracerProvider()
+	tp := fakeTracerProvider{}
 	prop := propagation.NewCompositeTextMapPropagator()
 
 	testCases := []struct {
