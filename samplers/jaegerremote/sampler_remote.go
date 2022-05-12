@@ -124,6 +124,8 @@ func (s *Sampler) pollController() {
 }
 
 func (s *Sampler) pollControllerWithTicker(ticker *time.Ticker) {
+	s.UpdateSampler()
+
 	for {
 		select {
 		case <-ticker.C:
