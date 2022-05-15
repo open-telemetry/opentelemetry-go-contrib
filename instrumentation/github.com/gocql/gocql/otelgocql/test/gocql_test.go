@@ -30,9 +30,12 @@ import (
 	"go.opentelemetry.io/contrib/instrumentation/github.com/gocql/gocql/otelgocql/internal"
 	"go.opentelemetry.io/contrib/internal/util"
 	"go.opentelemetry.io/otel/attribute"
+	"go.opentelemetry.io/otel/sdk/metric/export/aggregation"
+	"go.opentelemetry.io/otel/sdk/metric/metrictest"
+	"go.opentelemetry.io/otel/sdk/metric/number"
 	sdktrace "go.opentelemetry.io/otel/sdk/trace"
 	"go.opentelemetry.io/otel/sdk/trace/tracetest"
-	semconv "go.opentelemetry.io/otel/semconv/v1.7.0"
+	semconv "go.opentelemetry.io/otel/semconv/v1.10.0"
 	"go.opentelemetry.io/otel/trace"
 )
 
@@ -49,21 +52,20 @@ func (m *mockConnectObserver) ObserveConnect(observedConnect gocql.ObservedConne
 	m.callCount++
 }
 
-// TODO: Replace with in memory exporter https://github.com/open-telemetry/opentelemetry-go/issues/2722
-// type testRecord struct {
-// 	name       string
-// 	meterName  string
-// 	attributes []attribute.KeyValue
-// 	number     number.Number
-// 	numberKind number.Kind
-// }
+type testRecord struct {
+	name       string
+	meterName  string
+	attributes []attribute.KeyValue
+	number     number.Number
+	numberKind number.Kind
+}
 
 func TestQuery(t *testing.T) {
 	defer afterEach()
 	cluster := getCluster()
 	sr := tracetest.NewSpanRecorder()
 	tracerProvider := sdktrace.NewTracerProvider(sdktrace.WithSpanProcessor(sr))
-	// meterProvider := metrictest.NewMeterProvider()
+	meterProvider, metricExporter := metrictest.NewTestMeterProvider()
 
 	ctx, parentSpan := tracerProvider.Tracer(internal.InstrumentationName).Start(context.Background(), "gocql-test")
 
@@ -71,7 +73,7 @@ func TestQuery(t *testing.T) {
 		ctx,
 		cluster,
 		otelgocql.WithTracerProvider(tracerProvider),
-		// otelgocql.WithMeterProvider(meterProvider),
+		otelgocql.WithMeterProvider(meterProvider),
 		otelgocql.WithConnectInstrumentation(false),
 	)
 	require.NoError(t, err)
@@ -109,71 +111,71 @@ func TestQuery(t *testing.T) {
 		assertConnectionLevelAttributes(t, span)
 	}
 
-	// TODO: Replace with in memory exporter https://github.com/open-telemetry/opentelemetry-go/issues/2722
-	// // Check metrics
-	// actual := obtainTestRecords(meterProvider.MeasurementBatches)
-	// require.Len(t, actual, 3)
-	// expected := []testRecord{
-	// 	{
-	// 		name:      "db.cassandra.queries",
-	// 		meterName: internal.InstrumentationName,
-	// 		attributes: []attribute.KeyValue{
-	// 			internal.CassDBSystem(),
-	// 			internal.CassPeerIP("127.0.0.1"),
-	// 			internal.CassPeerPort(9042),
-	// 			internal.CassVersion("3"),
-	// 			internal.CassHostID("test-id"),
-	// 			internal.CassHostState("UP"),
-	// 			internal.CassKeyspace(keyspace),
-	// 			internal.CassStatement(insertStmt),
-	// 		},
-	// 		number: 1,
-	// 	},
-	// 	{
-	// 		name:      "db.cassandra.rows",
-	// 		meterName: internal.InstrumentationName,
-	// 		attributes: []attribute.KeyValue{
-	// 			internal.CassDBSystem(),
-	// 			internal.CassPeerIP("127.0.0.1"),
-	// 			internal.CassPeerPort(9042),
-	// 			internal.CassVersion("3"),
-	// 			internal.CassHostID("test-id"),
-	// 			internal.CassHostState("UP"),
-	// 			internal.CassKeyspace(keyspace),
-	// 		},
-	// 		number: 0,
-	// 	},
-	// 	{
-	// 		name:      "db.cassandra.latency",
-	// 		meterName: internal.InstrumentationName,
-	// 		attributes: []attribute.KeyValue{
-	// 			internal.CassDBSystem(),
-	// 			internal.CassPeerIP("127.0.0.1"),
-	// 			internal.CassPeerPort(9042),
-	// 			internal.CassVersion("3"),
-	// 			internal.CassHostID("test-id"),
-	// 			internal.CassHostState("UP"),
-	// 			internal.CassKeyspace(keyspace),
-	// 		},
-	// 	},
-	// }
+	// Check metrics
+	require.NoError(t, metricExporter.Collect(context.Background()))
+	actual := obtainTestRecords(metricExporter.GetRecords())
+	require.Len(t, actual, 3)
+	expected := []testRecord{
+		{
+			name:      "db.cassandra.queries",
+			meterName: internal.InstrumentationName,
+			attributes: []attribute.KeyValue{
+				internal.CassDBSystem(),
+				internal.CassPeerIP("127.0.0.1"),
+				internal.CassPeerPort(9042),
+				internal.CassVersion("3"),
+				internal.CassHostID("test-id"),
+				internal.CassHostState("UP"),
+				internal.CassKeyspace(keyspace),
+				internal.CassStatement(insertStmt),
+			},
+			number: 1,
+		},
+		{
+			name:      "db.cassandra.rows",
+			meterName: internal.InstrumentationName,
+			attributes: []attribute.KeyValue{
+				internal.CassDBSystem(),
+				internal.CassPeerIP("127.0.0.1"),
+				internal.CassPeerPort(9042),
+				internal.CassVersion("3"),
+				internal.CassHostID("test-id"),
+				internal.CassHostState("UP"),
+				internal.CassKeyspace(keyspace),
+			},
+			number: 0,
+		},
+		{
+			name:      "db.cassandra.latency",
+			meterName: internal.InstrumentationName,
+			attributes: []attribute.KeyValue{
+				internal.CassDBSystem(),
+				internal.CassPeerIP("127.0.0.1"),
+				internal.CassPeerPort(9042),
+				internal.CassVersion("3"),
+				internal.CassHostID("test-id"),
+				internal.CassHostState("UP"),
+				internal.CassKeyspace(keyspace),
+			},
+		},
+	}
 
-	// for _, record := range actual {
-	// 	switch record.name {
-	// 	case "db.cassandra.queries":
-	// 		recordEqual(t, expected[0], record)
-	// 		assert.Equal(t, expected[0].number, record.number)
-	// 	case "db.cassandra.rows":
-	// 		recordEqual(t, expected[1], record)
-	// 		assert.Equal(t, expected[1].number, record.number)
-	// 	case "db.cassandra.latency":
-	// 		recordEqual(t, expected[2], record)
-	// 		// The latency will vary, so just check that it exists
-	// 		assert.True(t, !record.number.IsZero(record.numberKind))
-	// 	default:
-	// 		t.Fatalf("wrong metric %s", record.name)
-	// 	}
-	// }
+	for _, record := range actual {
+		switch record.name {
+		case "db.cassandra.queries":
+			recordEqual(t, expected[0], record)
+			assert.Equal(t, expected[0].number, record.number)
+		case "db.cassandra.rows":
+			recordEqual(t, expected[1], record)
+			assert.Equal(t, expected[1].number, record.number)
+		case "db.cassandra.latency":
+			recordEqual(t, expected[2], record)
+			// The latency will vary, so just check that it exists
+			assert.True(t, !record.number.IsZero(record.numberKind))
+		default:
+			t.Fatalf("wrong metric %s", record.name)
+		}
+	}
 
 }
 
@@ -182,7 +184,7 @@ func TestBatch(t *testing.T) {
 	cluster := getCluster()
 	sr := tracetest.NewSpanRecorder()
 	tracerProvider := sdktrace.NewTracerProvider(sdktrace.WithSpanProcessor(sr))
-	// meterProvider := metrictest.NewMeterProvider()
+	meterProvider, metricExporter := metrictest.NewTestMeterProvider()
 
 	ctx, parentSpan := tracerProvider.Tracer(internal.InstrumentationName).Start(context.Background(), "gocql-test")
 
@@ -190,7 +192,7 @@ func TestBatch(t *testing.T) {
 		ctx,
 		cluster,
 		otelgocql.WithTracerProvider(tracerProvider),
-		// otelgocql.WithMeterProvider(meterProvider),
+		otelgocql.WithMeterProvider(meterProvider),
 		otelgocql.WithConnectInstrumentation(false),
 	)
 	require.NoError(t, err)
@@ -221,51 +223,52 @@ func TestBatch(t *testing.T) {
 		assertConnectionLevelAttributes(t, span)
 	}
 
-	// // Check metrics
-	// actual := obtainTestRecords(meterProvider.MeasurementBatches)
-	// require.Len(t, actual, 2)
-	// expected := []testRecord{
-	// 	{
-	// 		name:      "db.cassandra.batch.queries",
-	// 		meterName: internal.InstrumentationName,
-	// 		attributes: []attribute.KeyValue{
-	// 			internal.CassDBSystem(),
-	// 			internal.CassPeerIP("127.0.0.1"),
-	// 			internal.CassPeerPort(9042),
-	// 			internal.CassVersion("3"),
-	// 			internal.CassHostID("test-id"),
-	// 			internal.CassHostState("UP"),
-	// 			internal.CassKeyspace(keyspace),
-	// 		},
-	// 		number: 1,
-	// 	},
-	// 	{
-	// 		name:      "db.cassandra.latency",
-	// 		meterName: internal.InstrumentationName,
-	// 		attributes: []attribute.KeyValue{
-	// 			internal.CassDBSystem(),
-	// 			internal.CassPeerIP("127.0.0.1"),
-	// 			internal.CassPeerPort(9042),
-	// 			internal.CassVersion("3"),
-	// 			internal.CassHostID("test-id"),
-	// 			internal.CassHostState("UP"),
-	// 			internal.CassKeyspace(keyspace),
-	// 		},
-	// 	},
-	// }
+	// Check metrics
+	require.NoError(t, metricExporter.Collect(context.Background()))
+	actual := obtainTestRecords(metricExporter.GetRecords())
+	require.Len(t, actual, 2)
+	expected := []testRecord{
+		{
+			name:      "db.cassandra.batch.queries",
+			meterName: internal.InstrumentationName,
+			attributes: []attribute.KeyValue{
+				internal.CassDBSystem(),
+				internal.CassPeerIP("127.0.0.1"),
+				internal.CassPeerPort(9042),
+				internal.CassVersion("3"),
+				internal.CassHostID("test-id"),
+				internal.CassHostState("UP"),
+				internal.CassKeyspace(keyspace),
+			},
+			number: 1,
+		},
+		{
+			name:      "db.cassandra.latency",
+			meterName: internal.InstrumentationName,
+			attributes: []attribute.KeyValue{
+				internal.CassDBSystem(),
+				internal.CassPeerIP("127.0.0.1"),
+				internal.CassPeerPort(9042),
+				internal.CassVersion("3"),
+				internal.CassHostID("test-id"),
+				internal.CassHostState("UP"),
+				internal.CassKeyspace(keyspace),
+			},
+		},
+	}
 
-	// for _, record := range actual {
-	// 	switch record.name {
-	// 	case "db.cassandra.batch.queries":
-	// 		recordEqual(t, expected[0], record)
-	// 		assert.Equal(t, expected[0].number, record.number)
-	// 	case "db.cassandra.latency":
-	// 		recordEqual(t, expected[1], record)
-	// 		assert.True(t, !record.number.IsZero(record.numberKind))
-	// 	default:
-	// 		t.Fatalf("wrong metric %s", record.name)
-	// 	}
-	// }
+	for _, record := range actual {
+		switch record.name {
+		case "db.cassandra.batch.queries":
+			recordEqual(t, expected[0], record)
+			assert.Equal(t, expected[0].number, record.number)
+		case "db.cassandra.latency":
+			recordEqual(t, expected[1], record)
+			assert.True(t, !record.number.IsZero(record.numberKind))
+		default:
+			t.Fatalf("wrong metric %s", record.name)
+		}
+	}
 
 }
 
@@ -274,7 +277,7 @@ func TestConnection(t *testing.T) {
 	cluster := getCluster()
 	sr := tracetest.NewSpanRecorder()
 	tracerProvider := sdktrace.NewTracerProvider(sdktrace.WithSpanProcessor(sr))
-	// meterProvider := metrictest.NewMeterProvider()
+	meterProvider, metricExporter := metrictest.NewTestMeterProvider()
 	connectObserver := &mockConnectObserver{0}
 	ctx := context.Background()
 
@@ -282,7 +285,7 @@ func TestConnection(t *testing.T) {
 		ctx,
 		cluster,
 		otelgocql.WithTracerProvider(tracerProvider),
-		// otelgocql.WithMeterProvider(meterProvider),
+		otelgocql.WithMeterProvider(meterProvider),
 		otelgocql.WithConnectObserver(connectObserver),
 	)
 	require.NoError(t, err)
@@ -300,31 +303,31 @@ func TestConnection(t *testing.T) {
 		assertConnectionLevelAttributes(t, span)
 	}
 
-	// // Verify the metrics
-	// actual := obtainTestRecords(meterProvider.MeasurementBatches)
-	// expected := []testRecord{
-	// 	{
-	// 		name:      "db.cassandra.connections",
-	// 		meterName: internal.InstrumentationName,
-	// 		attributes: []attribute.KeyValue{
-	// 			internal.CassDBSystem(),
-	// 			internal.CassPeerIP("127.0.0.1"),
-	// 			internal.CassPeerPort(9042),
-	// 			internal.CassVersion("3"),
-	// 			internal.CassHostID("test-id"),
-	// 			internal.CassHostState("UP"),
-	// 		},
-	// 	},
-	// }
+	// Verify the metrics
+	actual := obtainTestRecords(metricExporter.GetRecords())
+	expected := []testRecord{
+		{
+			name:      "db.cassandra.connections",
+			meterName: internal.InstrumentationName,
+			attributes: []attribute.KeyValue{
+				internal.CassDBSystem(),
+				internal.CassPeerIP("127.0.0.1"),
+				internal.CassPeerPort(9042),
+				internal.CassVersion("3"),
+				internal.CassHostID("test-id"),
+				internal.CassHostState("UP"),
+			},
+		},
+	}
 
-	// for _, record := range actual {
-	// 	switch record.name {
-	// 	case "db.cassandra.connections":
-	// 		recordEqual(t, expected[0], record)
-	// 	default:
-	// 		t.Fatalf("wrong metric %s", record.name)
-	// 	}
-	// }
+	for _, record := range actual {
+		switch record.name {
+		case "db.cassandra.connections":
+			recordEqual(t, expected[0], record)
+		default:
+			t.Fatalf("wrong metric %s", record.name)
+		}
+	}
 }
 
 func TestHostOrIP(t *testing.T) {
@@ -369,46 +372,53 @@ func getCluster() *gocql.ClusterConfig {
 	return cluster
 }
 
-// // obtainTestRecords creates a slice of testRecord with values
-// // obtained from measurements
-// func obtainTestRecords(mbs []metrictest.Batch) []testRecord {
-// 	var records []testRecord
-// 	for _, mb := range mbs {
-// 		for _, m := range mb.Measurements {
-// 			records = append(
-// 				records,
-// 				testRecord{
-// 					name:       m.Instrument.Descriptor().Name(),
-// 					meterName:  mb.Library.InstrumentationName,
-// 					attributes: mb.Labels,
-// 					number:     m.Number,
-// 					numberKind: m.Instrument.Descriptor().NumberKind(),
-// 				},
-// 			)
-// 		}
-// 	}
+// obtainTestRecords creates a slice of testRecord with values
+// obtained from measurements
+func obtainTestRecords(mers []metrictest.ExportRecord) []testRecord {
+	var records []testRecord
+	for _, mer := range mers {
+		var n number.Number
+		switch mer.AggregationKind {
+		case aggregation.SumKind, aggregation.HistogramKind:
+			n = mer.Sum
+		case aggregation.LastValueKind:
+			n = mer.LastValue
+		default:
+			panic(fmt.Sprintf("unsupported aggregation type: %v", mer.AggregationKind))
+		}
+		records = append(
+			records,
+			testRecord{
+				name:       mer.InstrumentName,
+				meterName:  mer.InstrumentationLibrary.InstrumentationName,
+				attributes: mer.Attributes,
+				number:     n,
+				numberKind: mer.NumberKind,
+			},
+		)
+	}
 
-// 	return records
-// }
+	return records
+}
 
-// // recordEqual checks that the given metric name and instrumentation names are equal.
-// func recordEqual(t *testing.T, expected testRecord, actual testRecord) {
-// 	assert.Equal(t, expected.name, actual.name)
-// 	assert.Equal(t, expected.meterName, actual.meterName)
-// 	require.Len(t, actual.attributes, len(expected.attributes))
-// 	actualSet := attribute.NewSet(actual.attributes...)
-// 	for _, attribute := range expected.attributes {
-// 		actualValue, ok := actualSet.Value(attribute.Key)
-// 		assert.True(t, ok)
-// 		assert.NotNil(t, actualValue)
-// 		// Can't test equality of host id
-// 		if attribute.Key != internal.CassHostIDKey && attribute.Key != internal.CassVersionKey {
-// 			assert.Equal(t, attribute.Value, actualValue)
-// 		} else {
-// 			assert.NotEmpty(t, actualValue)
-// 		}
-// 	}
-// }
+// recordEqual checks that the given metric name and instrumentation names are equal.
+func recordEqual(t *testing.T, expected testRecord, actual testRecord) {
+	assert.Equal(t, expected.name, actual.name)
+	assert.Equal(t, expected.meterName, actual.meterName)
+	require.Len(t, actual.attributes, len(expected.attributes))
+	actualSet := attribute.NewSet(actual.attributes...)
+	for _, attribute := range expected.attributes {
+		actualValue, ok := actualSet.Value(attribute.Key)
+		assert.True(t, ok)
+		assert.NotNil(t, actualValue)
+		// Can't test equality of host id
+		if attribute.Key != internal.CassHostIDKey && attribute.Key != internal.CassVersionKey {
+			assert.Equal(t, attribute.Value, actualValue)
+		} else {
+			assert.NotEmpty(t, actualValue)
+		}
+	}
+}
 
 // beforeAll creates the testing keyspace and table if they do not already exist.
 func beforeAll() {
