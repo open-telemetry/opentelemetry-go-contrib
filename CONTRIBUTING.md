@@ -87,6 +87,10 @@ Maintainers:
 - [Anthony Mirabella](https://github.com/Aneurysm9), Amazon
 - [Tyler Yahn](https://github.com/MrAlias), Splunk
 
+Emeritus:
+
+- [Gustavo Silva Paiva](https://github.com/paivagustavo), LightStep
+
 ### Become an Approver or a Maintainer
 
 See the [community membership document in OpenTelemetry community
