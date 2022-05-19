@@ -26,7 +26,6 @@ import (
 	"github.com/labstack/echo/v4"
 	"github.com/stretchr/testify/assert"
 
-	"go.opentelemetry.io/contrib/instrumentation/net/http/otelhttp"
 	b3prop "go.opentelemetry.io/contrib/propagators/b3"
 	"go.opentelemetry.io/otel"
 	"go.opentelemetry.io/otel/propagation"
@@ -83,7 +82,7 @@ func TestPropagationWithGlobalPropagators(t *testing.T) {
 	otel.GetTextMapPropagator().Inject(ctx, propagation.HeaderCarrier(r.Header))
 
 	router := echo.New()
-	router.Use(Middleware("foobar", WithOTelHTTPOptions(otelhttp.WithTracerProvider(provider))))
+	router.Use(Middleware("foobar", WithTracerProvider(provider)))
 	router.GET("/user/:id", func(c echo.Context) error {
 		span := trace.SpanFromContext(c.Request().Context())
 		assert.Equal(t, sc.TraceID(), span.SpanContext().TraceID())
@@ -114,7 +113,7 @@ func TestPropagationWithCustomPropagators(t *testing.T) {
 	b3.Inject(ctx, propagation.HeaderCarrier(r.Header))
 
 	router := echo.New()
-	router.Use(Middleware("foobar", WithOTelHTTPOptions(otelhttp.WithTracerProvider(provider), otelhttp.WithPropagators(b3))))
+	router.Use(Middleware("foobar", WithTracerProvider(provider), WithPropagators(b3)))
 	router.GET("/user/:id", func(c echo.Context) error {
 		span := trace.SpanFromContext(c.Request().Context())
 		assert.Equal(t, sc.TraceID(), span.SpanContext().TraceID())

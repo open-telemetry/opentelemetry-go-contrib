@@ -27,7 +27,6 @@ import (
 	"github.com/stretchr/testify/require"
 
 	"go.opentelemetry.io/contrib/instrumentation/github.com/labstack/echo/otelecho"
-	"go.opentelemetry.io/contrib/instrumentation/net/http/otelhttp"
 	"go.opentelemetry.io/otel"
 	"go.opentelemetry.io/otel/attribute"
 	"go.opentelemetry.io/otel/codes"
@@ -60,7 +59,7 @@ func TestChildSpanFromCustomTracer(t *testing.T) {
 	provider := trace.NewTracerProvider(trace.WithSpanProcessor(sr))
 
 	router := echo.New()
-	router.Use(otelecho.Middleware("foobar", otelecho.WithOTelHTTPOptions(otelhttp.WithTracerProvider(provider))))
+	router.Use(otelecho.Middleware("foobar", otelecho.WithTracerProvider(provider)))
 	router.GET("/user/:id", func(c echo.Context) error {
 		return c.NoContent(200)
 	})
@@ -78,7 +77,7 @@ func TestTrace200(t *testing.T) {
 	provider := trace.NewTracerProvider(trace.WithSpanProcessor(sr))
 
 	router := echo.New()
-	router.Use(otelecho.Middleware("foobar", otelecho.WithOTelHTTPOptions(otelhttp.WithTracerProvider(provider), otelhttp.WithSpanNameFormatter(otelecho.PathSpanNameFormatter))))
+	router.Use(otelecho.Middleware("foobar", otelecho.WithTracerProvider(provider), otelecho.WithSpanNameFormatter(otelecho.PathSpanNameFormatter)))
 	router.GET("/user/:id", func(c echo.Context) error {
 		id := c.Param("id")
 		return c.String(200, id)
@@ -112,7 +111,7 @@ func TestError(t *testing.T) {
 
 	// setup
 	router := echo.New()
-	router.Use(otelecho.Middleware("foobar", otelecho.WithOTelHTTPOptions(otelhttp.WithTracerProvider(provider), otelhttp.WithSpanNameFormatter(otelecho.PathSpanNameFormatter))))
+	router.Use(otelecho.Middleware("foobar", otelecho.WithTracerProvider(provider), otelecho.WithSpanNameFormatter(otelecho.PathSpanNameFormatter)))
 	wantErr := errors.New("oh no")
 	// configure a handler that returns an error and 5xx status
 	// code

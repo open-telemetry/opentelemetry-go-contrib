@@ -47,12 +47,6 @@ func newConfig(opts ...Option) *config {
 	return c
 }
 
-func WithOTelHTTPOptions(options ...otelhttp.Option) Option {
-	return optionFunc(func(conf *config) {
-		conf.otelhttpOptions = append(conf.otelhttpOptions, options...)
-	})
-}
-
 func WithSkipper(skipper func(c echo.Context) bool) Option {
 	return optionFunc(func(conf *config) {
 		conf.otelhttpOptions = append(conf.otelhttpOptions, otelhttp.WithFilter(func(request *http.Request) bool {
