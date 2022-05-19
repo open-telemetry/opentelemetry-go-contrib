@@ -8,11 +8,19 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 
 ## [Unreleased]
 
+## Added
+
+- `otelecho` mirrored options from `otelhttp`. Added new option `WithRouteTagFromPath()` which adds a middleware into the
+  chain to tag all routes with `echo.Context.Path()`. (#2269)
+
 ### Changed
 
-- `otelecho` middleware to wrap `otelhttp` tracer implementation rather than implement its own. This is a backwards incompatible change
-  in most cases as `Middleware` now only accepts `otelhttp` options rather than options specific to it's package. This means that the `otelecho`
-  package now supports http server metrics provided by `otelhttp`.
+- `otelecho` middleware to wrap `otelhttp` tracer implementation rather than implement its own. This means that the `otelecho`
+  package now supports http server metrics provided by `otelhttp`. The following changes are considered breaking: (#2269)
+  - Span names differ from the previous version by default. However, passing `otelecho.WithSpanNameFormatter(otelecho.PathSpanNameFormatter)` as an option
+    will produce the previous behaviour.
+  - Route tags differ from the previous version by default. However, passing `otelecho.WithRouteTagFromPath()` will produce the
+    previous behaviour. Or add the `WithRouteTag()` middleware to your handler to tag a specific route differently.
 
 ## [1.7.0/0.32.0] - 2022-04-28
 

@@ -34,30 +34,9 @@ const (
 // Middleware returns echo middleware which will trace incoming requests.
 func Middleware(service string, opts ...Option) echo.MiddlewareFunc {
 	conf := newConfig(opts...)
-	return wrapMiddleware(func(handlerFunc http.Handler) http.Handler {
-		return otelhttp.NewHandler(handlerFunc, service, conf.otelhttpOptions...)
-	})
-}
-
-// WithRouteTag wraps otelhttp.WithRouteTag into an echo middleware
-func WithRouteTag(route string) echo.MiddlewareFunc {
-	return wrapMiddleware(func(handler http.Handler) http.Handler {
-		return otelhttp.WithRouteTag(route, handler)
-	})
-}
-
-// PathSpanNameFormatter formats span names with the name of the path for the routed handler
-// The PathSpanNameFormatter requires that the server has the instrumentation middleware inserted before it
-func PathSpanNameFormatter(operation string, r *http.Request) string {
-	ctx := r.Context().Value(echoContextCtxKey).(echo.Context)
-	return ctx.Path()
-}
-
-func wrapMiddleware(middleware func(http.Handler) http.Handler) echo.MiddlewareFunc {
 	return func(next echo.HandlerFunc) echo.HandlerFunc {
 		return func(c echo.Context) error {
-			ctx := context.WithValue(c.Request().Context(), echoContextCtxKey, c)
-			middleware(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+			var handlerFunc http.Handler = http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 				c.SetRequest(r)
 				c.SetResponse(echo.NewResponse(w, c.Echo()))
 				err := next(c)
@@ -69,8 +48,30 @@ func wrapMiddleware(middleware func(http.Handler) http.Handler) echo.MiddlewareF
 					// invokes the registered HTTP error handler
 					c.Error(err)
 				}
-			})).ServeHTTP(c.Response(), c.Request().WithContext(ctx))
+			})
+
+			if conf.routeTagFromPath {
+				handlerFunc = otelhttp.WithRouteTag(c.Path(), handlerFunc)
+			}
+
+			ctx := context.WithValue(c.Request().Context(), echoContextCtxKey, c)
+			otelhttp.NewHandler(handlerFunc, service, conf.otelhttpOptions...).
+				ServeHTTP(c.Response(), c.Request().WithContext(ctx))
 			return nil
 		}
 	}
+}
+
+// WithRouteTag wraps otelhttp.WithRouteTag into an echo middleware
+func WithRouteTag(route string) echo.MiddlewareFunc {
+	return echo.WrapMiddleware(func(handler http.Handler) http.Handler {
+		return otelhttp.WithRouteTag(route, handler)
+	})
+}
+
+// PathSpanNameFormatter formats span names with the name of the path for the routed handler
+// The PathSpanNameFormatter requires that the server has the instrumentation middleware inserted before it
+func PathSpanNameFormatter(operation string, r *http.Request) string {
+	ctx := r.Context().Value(echoContextCtxKey).(echo.Context)
+	return ctx.Path()
 }

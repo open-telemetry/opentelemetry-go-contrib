@@ -23,7 +23,8 @@ import (
 
 // config is used to configure the mux middleware.
 type config struct {
-	otelhttpOptions []otelhttp.Option
+	otelhttpOptions  []otelhttp.Option
+	routeTagFromPath bool
 }
 
 // Option specifies instrumentation configuration options.
@@ -47,11 +48,19 @@ func newConfig(opts ...Option) *config {
 	return c
 }
 
+// WithSkipper specifies a skipper for allowing requests to skip generating spans.
 func WithSkipper(skipper func(c echo.Context) bool) Option {
 	return optionFunc(func(conf *config) {
 		conf.otelhttpOptions = append(conf.otelhttpOptions, otelhttp.WithFilter(func(request *http.Request) bool {
 			c := request.Context().Value(echoContextCtxKey).(echo.Context)
 			return skipper(c)
 		}))
+	})
+}
+
+// WithRouteTagFromPath adds a middleware into the chain to tag all routes with echo.Context.Path()
+func WithRouteTagFromPath() Option {
+	return optionFunc(func(c *config) {
+		c.routeTagFromPath = true
 	})
 }

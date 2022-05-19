@@ -77,11 +77,11 @@ func TestTrace200(t *testing.T) {
 	provider := trace.NewTracerProvider(trace.WithSpanProcessor(sr))
 
 	router := echo.New()
-	router.Use(otelecho.Middleware("foobar", otelecho.WithTracerProvider(provider), otelecho.WithSpanNameFormatter(otelecho.PathSpanNameFormatter)))
+	router.Use(otelecho.Middleware("foobar", otelecho.WithTracerProvider(provider), otelecho.WithSpanNameFormatter(otelecho.PathSpanNameFormatter), otelecho.WithRouteTagFromPath()))
 	router.GET("/user/:id", func(c echo.Context) error {
 		id := c.Param("id")
 		return c.String(200, id)
-	}, otelecho.WithRouteTag("/user/:id"))
+	})
 
 	r := httptest.NewRequest("GET", "/user/123", nil)
 	w := httptest.NewRecorder()
