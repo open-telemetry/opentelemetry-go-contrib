@@ -117,7 +117,6 @@ func EndpointMiddleware(options ...Option) endpoint.Middleware {
 
 					return
 				}
-
 				// no errors identified
 			}()
 
