@@ -62,7 +62,7 @@ func None(fs ...otelhttp.Filter) otelhttp.Filter {
 	}
 }
 
-// Not provides a convenience mechanism for inverting a Filter
+// Not provides a convenience mechanism for inverting a Filter.
 func Not(f otelhttp.Filter) otelhttp.Filter {
 	return func(r *http.Request) bool {
 		return !f(r)

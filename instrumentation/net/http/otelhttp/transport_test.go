@@ -99,7 +99,6 @@ func TestTransportFormatter(t *testing.T) {
 			}
 		})
 	}
-
 }
 
 func TestTransportBasics(t *testing.T) {
@@ -229,7 +228,7 @@ func (s *span) SetStatus(c codes.Code, d string) {
 	s.statusCode, s.statusDesc = c, d
 }
 
-func (s *span) assert(t *testing.T, ended bool, err error, c codes.Code, d string) {
+func (s *span) assert(t *testing.T, ended bool, err error, c codes.Code, d string) { // nolint: revive  // ended is not a control flag.
 	if ended {
 		assert.True(t, s.ended, "not ended")
 	} else {
