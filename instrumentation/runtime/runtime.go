@@ -28,7 +28,7 @@ import (
 	"go.opentelemetry.io/otel/metric/unit"
 )
 
-// Runtime reports the work-in-progress conventional runtime metrics specified by OpenTelemetry
+// Runtime reports the work-in-progress conventional runtime metrics specified by OpenTelemetry.
 type runtime struct {
 	config config
 	meter  metric.Meter
