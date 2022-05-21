@@ -97,6 +97,12 @@ func (p *testSamplingStrategyParser) Parse(response []byte) (interface{}, error)
 			SamplingRate: 0.85,
 		}
 		return strategy, nil
+	case "rateLimiting":
+		strategy.StrategyType = jaeger_api_v2.SamplingStrategyType_RATE_LIMITING
+		strategy.RateLimitingSampling = &jaeger_api_v2.RateLimitingSamplingStrategy{
+			MaxTracesPerSecond: 100,
+		}
+		return strategy, nil
 	}
 
 	return nil, errors.New("unknown strategy test request")
@@ -501,4 +507,26 @@ func getSamplingStrategyResponse(strategyType jaeger_api_v2.SamplingStrategyType
 		}
 	}
 	return nil
+}
+
+func TestRemotelyControlledSampler_ImmediatelyUpdateOnStartup(t *testing.T) {
+	initSampler := newProbabilisticSampler(0.123)
+	fetcher := &testSamplingStrategyFetcher{response: []byte("rateLimiting")}
+	parser := new(testSamplingStrategyParser)
+	updaters := []samplerUpdater{new(probabilisticSamplerUpdater), new(rateLimitingSamplerUpdater)}
+	sampler := New(
+		"test",
+		WithMaxOperations(42),
+		WithOperationNameLateBinding(true),
+		WithInitialSampler(initSampler),
+		WithSamplingServerURL("my url"),
+		WithSamplingRefreshInterval(10*time.Minute),
+		withSamplingStrategyFetcher(fetcher),
+		withSamplingStrategyParser(parser),
+		withUpdaters(updaters...),
+	)
+	time.Sleep(100 * time.Millisecond) // waiting for s.pollController
+	s, ok := sampler.sampler.(*rateLimitingSampler)
+	assert.True(t, ok)
+	assert.Equal(t, s.maxTracesPerSecond, float64(100))
 }
