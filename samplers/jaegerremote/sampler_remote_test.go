@@ -526,6 +526,7 @@ func TestRemotelyControlledSampler_ImmediatelyUpdateOnStartup(t *testing.T) {
 		withUpdaters(updaters...),
 	)
 	time.Sleep(100 * time.Millisecond) // waiting for s.pollController
+	sampler.Close()                    // stop pollController, avoid date race
 	s, ok := sampler.sampler.(*rateLimitingSampler)
 	assert.True(t, ok)
 	assert.Equal(t, s.maxTracesPerSecond, float64(100))
