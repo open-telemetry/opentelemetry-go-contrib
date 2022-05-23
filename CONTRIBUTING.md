@@ -77,9 +77,9 @@ Approvers:
 - [Josh MacDonald](https://github.com/jmacd), LightStep
 - [Sam Xie](https://github.com/XSAM), Cisco/AppDynamics
 - [David Ashpole](https://github.com/dashpole), Google
-- [Gustavo Silva Paiva](https://github.com/paivagustavo), LightStep
 - [Robert Pająk](https://github.com/pellared), Splunk
 - [Chester Cheung](https://github.com/hanyuancheung), Tencent
+- [Damien Mathieu](https://github.com/dmathieu), Auth0/Okta
 
 Maintainers:
 
