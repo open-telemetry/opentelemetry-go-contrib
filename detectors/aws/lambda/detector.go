@@ -61,6 +61,7 @@ func (detector *resourceDetector) Detect(context.Context) (*resource.Resource, e
 
 	attrs := []attribute.KeyValue{
 		semconv.CloudProviderAWS,
+		semconv.CloudPlatformAWSLambda,
 		semconv.CloudRegionKey.String(awsRegion),
 		semconv.FaaSNameKey.String(lambdaName),
 		semconv.FaaSVersionKey.String(functionVersion),

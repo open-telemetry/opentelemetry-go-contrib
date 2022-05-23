@@ -64,6 +64,18 @@ func (mock *metaDataClientImpl) InstanceID() (string, error) {
 	return "", nil
 }
 
+func (mock *metaDataClientImpl) InstanceAttributeValue(attr string) (string, error) {
+	return "", nil
+}
+
+func (mock *metaDataClientImpl) InstanceName() (string, error) {
+	return "", nil
+}
+
+func (mock *metaDataClientImpl) Zone() (string, error) {
+	return "", nil
+}
+
 type want struct {
 	res *resource.Resource
 	err error

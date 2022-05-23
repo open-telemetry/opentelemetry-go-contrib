@@ -35,6 +35,7 @@ func TestDetectSuccess(t *testing.T) {
 
 	attributes := []attribute.KeyValue{
 		semconv.CloudProviderAWS,
+		semconv.CloudPlatformAWSLambda,
 		semconv.CloudRegionKey.String("us-texas-1"),
 		semconv.FaaSNameKey.String("testFunction"),
 		semconv.FaaSVersionKey.String("$LATEST"),

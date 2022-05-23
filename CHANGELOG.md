@@ -52,6 +52,7 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
   These attributes are detected automatically, but it is also now possible to provide a custom function to set attributes using `WithAttributeSetter`. (#1582)
 - Add resource detector for GCP cloud function. (#1584)
 - Add OpenTracing baggage extraction to the OpenTracing propagator in `go.opentelemetry.io/contrib/propagators/ot`. (#1880)
+- Add missing `cloud.platform` value to AWS Lambda, GCP Compute Engine, GCP Cloud Run, GCP GKE resource detectors and add `cloud.provider` to GCP GKE resource detector. (#1857)
 
 ### Fixed
 

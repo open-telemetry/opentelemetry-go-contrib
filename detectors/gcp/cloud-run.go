@@ -29,14 +29,6 @@ import (
 
 const serviceNamespace = "cloud-run-managed"
 
-// The minimal list of metadata.Client methods we use. Use an interface so we
-// can replace it with a fake implementation in the unit test.
-type metadataClient interface {
-	ProjectID() (string, error)
-	Get(string) (string, error)
-	InstanceID() (string, error)
-}
-
 // CloudRun collects resource information of Cloud Run instance.
 type CloudRun struct {
 	mc     metadataClient
@@ -80,6 +72,7 @@ func (c *CloudRun) Detect(ctx context.Context) (*resource.Resource, error) {
 
 	attributes := []attribute.KeyValue{
 		semconv.CloudProviderGCP,
+		semconv.CloudPlatformGCPCloudRun,
 		semconv.ServiceNamespaceKey.String(serviceNamespace),
 	}
 
