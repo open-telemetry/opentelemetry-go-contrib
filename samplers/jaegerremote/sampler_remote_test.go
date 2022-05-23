@@ -287,6 +287,29 @@ func TestRemotelyControlledSampler_updateSampler(t *testing.T) {
 	}
 }
 
+func TestRemotelyControlledSampler_ImmediatelyUpdateOnStartup(t *testing.T) {
+	initSampler := newProbabilisticSampler(0.123)
+	fetcher := &testSamplingStrategyFetcher{response: []byte("rateLimiting")}
+	parser := new(testSamplingStrategyParser)
+	updaters := []samplerUpdater{new(probabilisticSamplerUpdater), new(rateLimitingSamplerUpdater)}
+	sampler := New(
+		"test",
+		WithMaxOperations(42),
+		WithOperationNameLateBinding(true),
+		WithInitialSampler(initSampler),
+		WithSamplingServerURL("my url"),
+		WithSamplingRefreshInterval(10*time.Minute),
+		withSamplingStrategyFetcher(fetcher),
+		withSamplingStrategyParser(parser),
+		withUpdaters(updaters...),
+	)
+	time.Sleep(100 * time.Millisecond) // waiting for s.pollController
+	sampler.Close()                    // stop pollController, avoid date race
+	s, ok := sampler.sampler.(*rateLimitingSampler)
+	assert.True(t, ok)
+	assert.Equal(t, s.maxTracesPerSecond, float64(100))
+}
+
 func TestRemotelyControlledSampler_multiStrategyResponse(t *testing.T) {
 	agent, sampler := initAgent(t)
 	defer agent.Close()
@@ -507,27 +530,4 @@ func getSamplingStrategyResponse(strategyType jaeger_api_v2.SamplingStrategyType
 		}
 	}
 	return nil
-}
-
-func TestRemotelyControlledSampler_ImmediatelyUpdateOnStartup(t *testing.T) {
-	initSampler := newProbabilisticSampler(0.123)
-	fetcher := &testSamplingStrategyFetcher{response: []byte("rateLimiting")}
-	parser := new(testSamplingStrategyParser)
-	updaters := []samplerUpdater{new(probabilisticSamplerUpdater), new(rateLimitingSamplerUpdater)}
-	sampler := New(
-		"test",
-		WithMaxOperations(42),
-		WithOperationNameLateBinding(true),
-		WithInitialSampler(initSampler),
-		WithSamplingServerURL("my url"),
-		WithSamplingRefreshInterval(10*time.Minute),
-		withSamplingStrategyFetcher(fetcher),
-		withSamplingStrategyParser(parser),
-		withUpdaters(updaters...),
-	)
-	time.Sleep(100 * time.Millisecond) // waiting for s.pollController
-	sampler.Close()                    // stop pollController, avoid date race
-	s, ok := sampler.sampler.(*rateLimitingSampler)
-	assert.True(t, ok)
-	assert.Equal(t, s.maxTracesPerSecond, float64(100))
 }
