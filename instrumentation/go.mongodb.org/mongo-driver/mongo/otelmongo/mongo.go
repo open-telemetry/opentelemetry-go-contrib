@@ -116,7 +116,7 @@ func (m *monitor) Finished(evt *event.CommandFinishedEvent, err error) {
 }
 
 // TODO sanitize values where possible
-// TODO limit maximum size
+// TODO limit maximum size.
 func sanitizeCommand(command bson.Raw) string {
 	b, _ := bson.MarshalExtJSON(command, false, false)
 	return string(b)
