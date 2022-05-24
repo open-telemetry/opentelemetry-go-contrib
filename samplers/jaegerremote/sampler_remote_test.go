@@ -307,7 +307,7 @@ func TestRemotelyControlledSampler_ImmediatelyUpdateOnStartup(t *testing.T) {
 	sampler.Close()                    // stop pollController, avoid date race
 	s, ok := sampler.sampler.(*rateLimitingSampler)
 	assert.True(t, ok)
-	assert.Equal(t, s.maxTracesPerSecond, float64(100))
+	assert.Equal(t, float64(100), s.maxTracesPerSecond)
 }
 
 func TestRemotelyControlledSampler_multiStrategyResponse(t *testing.T) {
