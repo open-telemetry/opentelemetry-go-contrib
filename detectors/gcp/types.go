@@ -16,7 +16,7 @@ package gcp // import "go.opentelemetry.io/contrib/detectors/gcp"
 
 import "github.com/GoogleCloudPlatform/opentelemetry-operations-go/detectors/gcp"
 
-// gcpDetector can detect attributes of GCP environments
+// gcpDetector can detect attributes of GCP environments.
 type gcpDetector interface {
 	ProjectID() (string, error)
 	CloudPlatform() gcp.Platform

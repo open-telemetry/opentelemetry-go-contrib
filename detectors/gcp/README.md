@@ -37,9 +37,9 @@ tp := trace.NewTracerProvider(
 ## Setting Kubernetes attributes
 
 Previous iterations of GCP resource detection attempted to detect
-container.name, k8s.pod.name and k8s.namespace.name.  When using this detector,
+`container.name`, `k8s.pod.name` and `k8s.namespace.name`.  When using this detector,
 you should use this in your Pod Spec to set these using
-OTEL_RESOURCE_ATTRIBUTES:
+`OTEL_RESOURCE_ATTRIBUTES`:
 
 ```yaml
 env:
