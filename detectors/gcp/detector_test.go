@@ -176,20 +176,21 @@ func TestDetect(t *testing.T) {
 		{
 			desc: "error",
 			detector: &detector{detector: &fakeGCPDetector{
-				err: fmt.Errorf("Failed to get metadata"),
+				err: fmt.Errorf("failed to get metadata"),
 			}},
 			expectErr: true,
+			expectedResource: resource.NewWithAttributes(semconv.SchemaURL,
+				semconv.CloudProviderGCP,
+			),
 		},
 	} {
 		t.Run(tc.desc, func(t *testing.T) {
-
 			res, err := tc.detector.Detect(context.TODO())
 			if tc.expectErr {
 				assert.Error(t, err)
 			} else {
 				assert.NoError(t, err)
 			}
-
 			assert.Equal(t, tc.expectedResource, res, "Resource object returned is incorrect")
 		})
 	}
