@@ -15,15 +15,38 @@
 package otelsarama
 
 import (
+	"context"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
 
 	"go.opentelemetry.io/otel"
+	"go.opentelemetry.io/otel/propagation"
 	"go.opentelemetry.io/otel/trace"
 )
 
+// We need a fake tracer provider to ensure the one passed in options is the one used afterwards.
+// In order to avoid adding the SDK as a dependency, we use this mock.
+type fakeTracerProvider struct{}
+
+func (fakeTracerProvider) Tracer(name string, opts ...trace.TracerOption) trace.Tracer {
+	return fakeTracer{
+		name: name,
+	}
+}
+
+type fakeTracer struct {
+	name string
+}
+
+func (fakeTracer) Start(ctx context.Context, spanName string, opts ...trace.SpanStartOption) (context.Context, trace.Span) {
+	return ctx, nil
+}
+
 func TestNewConfig(t *testing.T) {
+	tp := fakeTracerProvider{}
+	prop := propagation.NewCompositeTextMapPropagator()
+
 	testCases := []struct {
 		name     string
 		opts     []Option
@@ -32,7 +55,18 @@ func TestNewConfig(t *testing.T) {
 		{
 			name: "with provider",
 			opts: []Option{
-				WithTracerProvider(otel.GetTracerProvider()),
+				WithTracerProvider(tp),
+			},
+			expected: config{
+				TracerProvider: tp,
+				Tracer:         tp.Tracer(defaultTracerName, trace.WithInstrumentationVersion(SemVersion())),
+				Propagators:    otel.GetTextMapPropagator(),
+			},
+		},
+		{
+			name: "with empty provider",
+			opts: []Option{
+				WithTracerProvider(nil),
 			},
 			expected: config{
 				TracerProvider: otel.GetTracerProvider(),
@@ -42,6 +76,17 @@ func TestNewConfig(t *testing.T) {
 		},
 		{
 			name: "with propagators",
+			opts: []Option{
+				WithPropagators(prop),
+			},
+			expected: config{
+				TracerProvider: otel.GetTracerProvider(),
+				Tracer:         otel.GetTracerProvider().Tracer(defaultTracerName, trace.WithInstrumentationVersion(SemVersion())),
+				Propagators:    prop,
+			},
+		},
+		{
+			name: "with empty propagators",
 			opts: []Option{
 				WithPropagators(nil),
 			},
