@@ -44,7 +44,6 @@ func TestTraceIDIsUnique(t *testing.T) {
 }
 
 func TestTraceIDTimestampInBounds(t *testing.T) {
-
 	idg := NewIDGenerator()
 
 	previousTime := time.Now().Unix()

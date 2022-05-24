@@ -49,12 +49,12 @@ type detectorUtils interface {
 	getContainerID() (string, error)
 }
 
-// This struct will implement the detectorUtils interface
+// This struct will implement the detectorUtils interface.
 type eksDetectorUtils struct {
 	clientset *kubernetes.Clientset
 }
 
-// resourceDetector for detecting resources running on Amazon EKS
+// resourceDetector for detecting resources running on Amazon EKS.
 type resourceDetector struct {
 	utils detectorUtils
 	err   error
@@ -131,7 +131,7 @@ func isEKS(ctx context.Context, utils detectorUtils) (bool, error) {
 	return awsAuth != nil, nil
 }
 
-// newK8sDetectorUtils creates the Kubernetes clientset
+// newK8sDetectorUtils creates the Kubernetes clientset.
 func newK8sDetectorUtils() (*eksDetectorUtils, error) {
 	// Get cluster configuration
 	confs, err := rest.InClusterConfig()
@@ -148,7 +148,7 @@ func newK8sDetectorUtils() (*eksDetectorUtils, error) {
 	return &eksDetectorUtils{clientset: clientset}, nil
 }
 
-// isK8s checks if the current environment is running in a Kubernetes environment
+// isK8s checks if the current environment is running in a Kubernetes environment.
 func isK8s(utils detectorUtils) bool {
 	return utils.fileExists(k8sTokenPath) && utils.fileExists(k8sCertPath)
 }
@@ -159,7 +159,7 @@ func (eksUtils eksDetectorUtils) fileExists(filename string) bool {
 	return err == nil && !info.IsDir()
 }
 
-// getConfigMap retrieves the configuration map from the k8s API
+// getConfigMap retrieves the configuration map from the k8s API.
 func (eksUtils eksDetectorUtils) getConfigMap(ctx context.Context, namespace string, name string) (map[string]string, error) {
 	cm, err := eksUtils.clientset.CoreV1().ConfigMaps(namespace).Get(ctx, name, metav1.GetOptions{})
 	if err != nil {
@@ -169,7 +169,7 @@ func (eksUtils eksDetectorUtils) getConfigMap(ctx context.Context, namespace str
 	return cm.Data, nil
 }
 
-// getClusterName retrieves the clusterName resource attribute
+// getClusterName retrieves the clusterName resource attribute.
 func getClusterName(ctx context.Context, utils detectorUtils) (string, error) {
 	resp, err := utils.getConfigMap(ctx, cwConfigmapNS, cwConfigmapName)
 	if err != nil {

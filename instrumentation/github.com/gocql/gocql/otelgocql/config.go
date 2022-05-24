@@ -73,7 +73,7 @@ func WithConnectObserver(observer gocql.ConnectObserver) Option {
 }
 
 // WithTracerProvider will set the trace provider used to get a tracer
-// for creating spans. Defaults to TracerProvider()
+// for creating spans. Defaults to TracerProvider().
 func WithTracerProvider(provider trace.TracerProvider) Option {
 	return optionFunc(func(c *config) {
 		if provider != nil {
