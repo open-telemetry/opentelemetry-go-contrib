@@ -49,14 +49,14 @@ func toRegexPattern(pattern string) string {
 	for i, char := range pattern {
 		if string(char) == "*" || string(char) == "?" {
 			if tokenStart != -1 {
-				result.WriteString(regexp.QuoteMeta(pattern[tokenStart:i]))
+				_, _ = result.WriteString(regexp.QuoteMeta(pattern[tokenStart:i]))
 				tokenStart = -1
 			}
 
 			if string(char) == "*" {
-				result.WriteString(".*")
+				_, _ = result.WriteString(".*")
 			} else {
-				result.WriteString(".")
+				_, _ = result.WriteString(".")
 			}
 		} else {
 			if tokenStart == -1 {
@@ -65,7 +65,7 @@ func toRegexPattern(pattern string) string {
 		}
 	}
 	if tokenStart != -1 {
-		result.WriteString(regexp.QuoteMeta(pattern[tokenStart:]))
+		_, _ = result.WriteString(regexp.QuoteMeta(pattern[tokenStart:]))
 	}
 	return result.String()
 }

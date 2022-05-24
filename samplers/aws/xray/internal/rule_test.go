@@ -367,7 +367,7 @@ func TestAppliesToHTTPTargetMatching(t *testing.T) {
 	assert.True(t, match)
 }
 
-// assert early exit when rule properties retrieved from AWS X-Ray console does not match with span attributes
+// assert early exit when rule properties retrieved from AWS X-Ray console does not match with span attributes.
 func TestAppliesToExitEarlyNoMatch(t *testing.T) {
 	commonLabels := []attribute.KeyValue{
 		attribute.String("labelA", "chocolate"),
@@ -561,7 +561,7 @@ func TestMatchAgainstManifestRulesNoAttributeMatch(t *testing.T) {
 	assert.False(t, match)
 }
 
-// validate no data race is happening when updating rule properties and rule targets in manifest while sampling
+// validate no data race is happening when updating rule properties and rule targets in manifest while sampling.
 func TestRaceUpdatingRulesAndTargetsWhileSampling(t *testing.T) {
 	// getSamplingRules response to update existing manifest rule
 	ruleRecords := samplingRuleRecords{

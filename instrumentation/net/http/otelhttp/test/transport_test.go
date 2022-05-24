@@ -69,7 +69,7 @@ func TestTransportUsesFormatter(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	res.Body.Close()
+	require.NoError(t, res.Body.Close())
 
 	spans := spanRecorder.Ended()
 	spanName := spans[0].Name()
@@ -77,7 +77,6 @@ func TestTransportUsesFormatter(t *testing.T) {
 	if spanName != expectedName {
 		t.Fatalf("unexpected name: got %s, expected %s", spanName, expectedName)
 	}
-
 }
 
 func TestTransportErrorStatus(t *testing.T) {

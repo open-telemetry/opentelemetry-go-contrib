@@ -297,7 +297,7 @@ func TestWithoutSubSpans(t *testing.T) {
 	require.NoError(t, err)
 	resp, err := fixture.Client.Do(req)
 	require.NoError(t, err)
-	resp.Body.Close()
+	require.NoError(t, resp.Body.Close())
 	// no spans created because we were just using background context without span
 	require.Len(t, fixture.SpanRecorder.Ended(), 0)
 
@@ -315,7 +315,7 @@ func TestWithoutSubSpans(t *testing.T) {
 	require.NoError(t, err)
 	resp, err = fixture.Client.Do(req)
 	require.NoError(t, err)
-	resp.Body.Close()
+	require.NoError(t, resp.Body.Close())
 	span.End()
 	// we just have the one span we created
 	require.Len(t, fixture.SpanRecorder.Ended(), 1)
@@ -400,7 +400,7 @@ func TestWithRedactedHeaders(t *testing.T) {
 	require.NoError(t, err)
 	resp, err := fixture.Client.Do(req)
 	require.NoError(t, err)
-	resp.Body.Close()
+	require.NoError(t, resp.Body.Close())
 	span.End()
 	require.Len(t, fixture.SpanRecorder.Ended(), 1)
 	recSpan := fixture.SpanRecorder.Ended()[0]
@@ -430,7 +430,7 @@ func TestWithoutHeaders(t *testing.T) {
 	require.NoError(t, err)
 	resp, err := fixture.Client.Do(req)
 	require.NoError(t, err)
-	resp.Body.Close()
+	require.NoError(t, resp.Body.Close())
 	span.End()
 	require.Len(t, fixture.SpanRecorder.Ended(), 1)
 	recSpan := fixture.SpanRecorder.Ended()[0]
@@ -455,7 +455,7 @@ func TestWithInsecureHeaders(t *testing.T) {
 	require.NoError(t, err)
 	resp, err := fixture.Client.Do(req)
 	require.NoError(t, err)
-	resp.Body.Close()
+	require.NoError(t, resp.Body.Close())
 	span.End()
 	require.Len(t, fixture.SpanRecorder.Ended(), 1)
 	recSpan := fixture.SpanRecorder.Ended()[0]

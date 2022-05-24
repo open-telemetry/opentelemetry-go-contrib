@@ -16,6 +16,7 @@ package main
 
 import (
 	"context"
+	"fmt"
 	"io"
 	"log"
 	"time"
@@ -31,7 +32,10 @@ import (
 )
 
 func main() {
-	tp := config.Init()
+	tp, err := config.Init()
+	if err != nil {
+		log.Fatal(err)
+	}
 	defer func() {
 		if err := tp.Shutdown(context.Background()); err != nil {
 			log.Printf("Error shutting down tracer provider: %v", err)
@@ -39,7 +43,7 @@ func main() {
 	}()
 
 	var conn *grpc.ClientConn
-	conn, err := grpc.Dial(":7777", grpc.WithTransportCredentials(insecure.NewCredentials()),
+	conn, err = grpc.Dial(":7777", grpc.WithTransportCredentials(insecure.NewCredentials()),
 		grpc.WithUnaryInterceptor(otelgrpc.UnaryClientInterceptor()),
 		grpc.WithStreamInterceptor(otelgrpc.StreamClientInterceptor()),
 	)
@@ -51,15 +55,23 @@ func main() {
 
 	c := api.NewHelloServiceClient(conn)
 
-	callSayHello(c)
-	callSayHelloClientStream(c)
-	callSayHelloServerStream(c)
-	callSayHelloBidiStream(c)
+	if err := callSayHello(c); err != nil {
+		log.Fatal(err)
+	}
+	if err := callSayHelloClientStream(c); err != nil {
+		log.Fatal(err)
+	}
+	if err := callSayHelloServerStream(c); err != nil {
+		log.Fatal(err)
+	}
+	if err := callSayHelloBidiStream(c); err != nil {
+		log.Fatal(err)
+	}
 
 	time.Sleep(10 * time.Millisecond)
 }
 
-func callSayHello(c api.HelloServiceClient) {
+func callSayHello(c api.HelloServiceClient) error {
 	md := metadata.Pairs(
 		"timestamp", time.Now().Format(time.StampNano),
 		"client-id", "web-api-client-us-east-1",
@@ -69,12 +81,13 @@ func callSayHello(c api.HelloServiceClient) {
 	ctx := metadata.NewOutgoingContext(context.Background(), md)
 	response, err := c.SayHello(ctx, &api.HelloRequest{Greeting: "World"})
 	if err != nil {
-		log.Fatalf("Error when calling SayHello: %s", err)
+		return fmt.Errorf("calling SayHello: %w", err)
 	}
 	log.Printf("Response from server: %s", response.Reply)
+	return nil
 }
 
-func callSayHelloClientStream(c api.HelloServiceClient) {
+func callSayHelloClientStream(c api.HelloServiceClient) error {
 	md := metadata.Pairs(
 		"timestamp", time.Now().Format(time.StampNano),
 		"client-id", "web-api-client-us-east-1",
@@ -84,7 +97,7 @@ func callSayHelloClientStream(c api.HelloServiceClient) {
 	ctx := metadata.NewOutgoingContext(context.Background(), md)
 	stream, err := c.SayHelloClientStream(ctx)
 	if err != nil {
-		log.Fatalf("Error when opening SayHelloClientStream: %s", err)
+		return fmt.Errorf("opening SayHelloClientStream: %w", err)
 	}
 
 	for i := 0; i < 5; i++ {
@@ -93,19 +106,20 @@ func callSayHelloClientStream(c api.HelloServiceClient) {
 		time.Sleep(time.Duration(i*50) * time.Millisecond)
 
 		if err != nil {
-			log.Fatalf("Error when sending to SayHelloClientStream: %s", err)
+			return fmt.Errorf("sending to SayHelloClientStream: %w", err)
 		}
 	}
 
 	response, err := stream.CloseAndRecv()
 	if err != nil {
-		log.Fatalf("Error when closing SayHelloClientStream: %s", err)
+		return fmt.Errorf("closing SayHelloClientStream: %w", err)
 	}
 
 	log.Printf("Response from server: %s", response.Reply)
+	return nil
 }
 
-func callSayHelloServerStream(c api.HelloServiceClient) {
+func callSayHelloServerStream(c api.HelloServiceClient) error {
 	md := metadata.Pairs(
 		"timestamp", time.Now().Format(time.StampNano),
 		"client-id", "web-api-client-us-east-1",
@@ -115,7 +129,7 @@ func callSayHelloServerStream(c api.HelloServiceClient) {
 	ctx := metadata.NewOutgoingContext(context.Background(), md)
 	stream, err := c.SayHelloServerStream(ctx, &api.HelloRequest{Greeting: "World"})
 	if err != nil {
-		log.Fatalf("Error when opening SayHelloServerStream: %s", err)
+		return fmt.Errorf("opening SayHelloServerStream: %w", err)
 	}
 
 	for {
@@ -123,15 +137,16 @@ func callSayHelloServerStream(c api.HelloServiceClient) {
 		if err == io.EOF {
 			break
 		} else if err != nil {
-			log.Fatalf("Error when receiving from SayHelloServerStream: %s", err)
+			return fmt.Errorf("receiving from SayHelloServerStream: %w", err)
 		}
 
 		log.Printf("Response from server: %s", response.Reply)
 		time.Sleep(50 * time.Millisecond)
 	}
+	return nil
 }
 
-func callSayHelloBidiStream(c api.HelloServiceClient) {
+func callSayHelloBidiStream(c api.HelloServiceClient) error {
 	md := metadata.Pairs(
 		"timestamp", time.Now().Format(time.StampNano),
 		"client-id", "web-api-client-us-east-1",
@@ -141,7 +156,7 @@ func callSayHelloBidiStream(c api.HelloServiceClient) {
 	ctx := metadata.NewOutgoingContext(context.Background(), md)
 	stream, err := c.SayHelloBidiStream(ctx)
 	if err != nil {
-		log.Fatalf("Error when opening SayHelloBidiStream: %s", err)
+		return fmt.Errorf("opening SayHelloBidiStream: %w", err)
 	}
 
 	serverClosed := make(chan struct{})
@@ -152,6 +167,7 @@ func callSayHelloBidiStream(c api.HelloServiceClient) {
 			err := stream.Send(&api.HelloRequest{Greeting: "World"})
 
 			if err != nil {
+				// nolint: revive  // This acts as its own main func.
 				log.Fatalf("Error when sending to SayHelloBidiStream: %s", err)
 			}
 
@@ -160,6 +176,7 @@ func callSayHelloBidiStream(c api.HelloServiceClient) {
 
 		err := stream.CloseSend()
 		if err != nil {
+			// nolint: revive  // This acts as its own main func.
 			log.Fatalf("Error when closing SayHelloBidiStream: %s", err)
 		}
 
@@ -172,6 +189,7 @@ func callSayHelloBidiStream(c api.HelloServiceClient) {
 			if err == io.EOF {
 				break
 			} else if err != nil {
+				// nolint: revive  // This acts as its own main func.
 				log.Fatalf("Error when receiving from SayHelloBidiStream: %s", err)
 			}
 
@@ -185,4 +203,5 @@ func callSayHelloBidiStream(c api.HelloServiceClient) {
 	// Wait until client and server both closed the connection.
 	<-clientClosed
 	<-serverClosed
+	return nil
 }

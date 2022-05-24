@@ -35,7 +35,7 @@ import (
 	"go.opentelemetry.io/otel/metric/unit"
 )
 
-// Host reports the work-in-progress conventional host metrics specified by OpenTelemetry
+// Host reports the work-in-progress conventional host metrics specified by OpenTelemetry.
 type host struct {
 	config config
 	meter  metric.Meter
