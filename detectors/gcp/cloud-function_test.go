@@ -79,9 +79,9 @@ func TestCloudFunctionDetect(t *testing.T) {
 	}
 	defer func() {
 		if !ok {
-			os.Unsetenv(gcpFunctionNameKey)
+			_ = os.Unsetenv(gcpFunctionNameKey)
 		} else {
-			os.Setenv(gcpFunctionNameKey, oldValue)
+			_ = os.Setenv(gcpFunctionNameKey, oldValue)
 		}
 	}()
 	tests := []struct {
@@ -158,11 +158,11 @@ func TestCloudFunctionDetect(t *testing.T) {
 func TestNotOnCloudFunction(t *testing.T) {
 	oldValue, ok := os.LookupEnv(gcpFunctionNameKey)
 	if ok {
-		os.Unsetenv(gcpFunctionNameKey)
+		_ = os.Unsetenv(gcpFunctionNameKey)
 	}
 	defer func() {
 		if ok {
-			os.Setenv(gcpFunctionNameKey, oldValue)
+			_ = os.Setenv(gcpFunctionNameKey, oldValue)
 		}
 	}()
 	detector := NewCloudFunction()

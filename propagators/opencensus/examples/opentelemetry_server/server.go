@@ -37,7 +37,7 @@ const port = ":50051"
 // server is used to implement helloworld.GreeterServer.
 type server struct{}
 
-// SayHello implements helloworld.GreeterServer
+// SayHello implements helloworld.GreeterServer.
 func (s *server) SayHello(ctx context.Context, in *pb.HelloRequest) (*pb.HelloReply, error) {
 	_, span := trace.StartSpan(ctx, "sleep")
 	time.Sleep(time.Duration(rand.Float64() * float64(time.Second)))

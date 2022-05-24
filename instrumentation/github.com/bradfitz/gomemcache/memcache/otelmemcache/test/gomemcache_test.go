@@ -80,7 +80,7 @@ func TestOperationWithCacheMissError(t *testing.T) {
 	assert.Equal(t, err.Error(), spans[0].Status().Description)
 }
 
-// tests require running memcached instance
+// tests require running memcached instance.
 func initClientWithSpanRecorder(t *testing.T) (*otelmemcache.Client, *tracetest.SpanRecorder) {
 	host, port := "localhost", "11211"
 

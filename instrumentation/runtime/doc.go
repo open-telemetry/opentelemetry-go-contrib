@@ -12,7 +12,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-// package runtime implements the conventional runtime metrics specified by OpenTelemetry.
+// Package runtime implements the conventional runtime metrics specified by OpenTelemetry.
 //
 // The metric events produced are:
 //   runtime.go.cgo.calls         -          Number of cgo calls made by the current process

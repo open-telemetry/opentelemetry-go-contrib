@@ -56,7 +56,7 @@ func newInstrumentor(opts ...Option) instrumentor {
 		resAttrs: []attribute.KeyValue{}}
 }
 
-// Logic to start OTel Tracing
+// Logic to start OTel Tracing.
 func (i *instrumentor) tracingBegin(ctx context.Context, eventJSON []byte) (context.Context, trace.Span) {
 	// Add trace id to context
 	mc := i.configuration.EventToCarrier(eventJSON)
@@ -94,7 +94,7 @@ func (i *instrumentor) tracingBegin(ctx context.Context, eventJSON []byte) (cont
 	return ctx, span
 }
 
-// Logic to wrap up OTel Tracing
+// Logic to wrap up OTel Tracing.
 func (i *instrumentor) tracingEnd(ctx context.Context, span trace.Span) {
 	span.End()
 

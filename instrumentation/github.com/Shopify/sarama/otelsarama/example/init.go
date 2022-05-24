@@ -15,8 +15,6 @@
 package example // import "go.opentelemetry.io/contrib/instrumentation/github.com/Shopify/sarama/otelsarama/example"
 
 import (
-	"log"
-
 	"go.opentelemetry.io/otel"
 	stdout "go.opentelemetry.io/otel/exporters/stdout/stdouttrace"
 	"go.opentelemetry.io/otel/propagation"
@@ -28,10 +26,11 @@ const (
 	KafkaTopic = "sarama-instrumentation-example"
 )
 
-func InitTracer() *sdktrace.TracerProvider {
+// InitTracer creates and registers globally a new TracerProvider.
+func InitTracer() (*sdktrace.TracerProvider, error) {
 	exporter, err := stdout.New(stdout.WithPrettyPrint())
 	if err != nil {
-		log.Fatal(err)
+		return nil, err
 	}
 	tp := sdktrace.NewTracerProvider(
 		sdktrace.WithSampler(sdktrace.AlwaysSample()),
@@ -39,5 +38,5 @@ func InitTracer() *sdktrace.TracerProvider {
 	)
 	otel.SetTracerProvider(tp)
 	otel.SetTextMapPropagator(propagation.NewCompositeTextMapPropagator(propagation.TraceContext{}))
-	return tp
+	return tp, nil
 }

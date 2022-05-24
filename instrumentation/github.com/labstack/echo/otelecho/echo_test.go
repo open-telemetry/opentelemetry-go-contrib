@@ -42,7 +42,7 @@ func TestErrorOnlyHandledOnce(t *testing.T) {
 	}
 	router.Use(Middleware("test-service"))
 	router.GET("/", func(c echo.Context) error {
-		return errors.New("Mock Error")
+		return errors.New("mock error")
 	})
 	r := httptest.NewRequest(http.MethodGet, "/", nil)
 	w := httptest.NewRecorder()
