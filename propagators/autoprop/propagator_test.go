@@ -35,9 +35,9 @@ func setenv(t *testing.T, key, value string) {
 	}
 
 	if ok {
-		t.Cleanup(func() { os.Setenv(key, prevValue) })
+		t.Cleanup(func() { _ = os.Setenv(key, prevValue) })
 	} else {
-		t.Cleanup(func() { os.Unsetenv(key) })
+		t.Cleanup(func() { _ = os.Unsetenv(key) })
 	}
 }
 
