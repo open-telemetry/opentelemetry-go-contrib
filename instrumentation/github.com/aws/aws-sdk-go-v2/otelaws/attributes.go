@@ -35,18 +35,22 @@ var servicemap = map[string]AttributeSetter{
 	"dynamodb": DynamoDBAttributeSetter,
 }
 
+// OperationAttr returns the AWS operation attribute.
 func OperationAttr(operation string) attribute.KeyValue {
 	return OperationKey.String(operation)
 }
 
+// OperationAttr returns the AWS region attribute.
 func RegionAttr(region string) attribute.KeyValue {
 	return RegionKey.String(region)
 }
 
+// OperationAttr returns the AWS service attribute.
 func ServiceAttr(service string) attribute.KeyValue {
 	return ServiceKey.String(service)
 }
 
+// OperationAttr returns the AWS request ID attribute.
 func RequestIDAttr(requestID string) attribute.KeyValue {
 	return RequestIDKey.String(requestID)
 }
@@ -54,7 +58,6 @@ func RequestIDAttr(requestID string) attribute.KeyValue {
 // DefaultAttributeSetter checks to see if there are service specific attributes available to set for the AWS service.
 // If there are service specific attributes available then they will be included.
 func DefaultAttributeSetter(ctx context.Context, in middleware.InitializeInput) []attribute.KeyValue {
-
 	serviceID := v2Middleware.GetServiceID(ctx)
 
 	if fn, ok := servicemap[serviceID]; ok {

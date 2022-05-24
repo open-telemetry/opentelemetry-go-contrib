@@ -31,25 +31,25 @@ type MockDetectorUtils struct {
 	mock.Mock
 }
 
-// Mock function for fileExists()
+// Mock function for fileExists().
 func (detectorUtils *MockDetectorUtils) fileExists(filename string) bool {
 	args := detectorUtils.Called(filename)
 	return args.Bool(0)
 }
 
-// Mock function for getConfigMap()
+// Mock function for getConfigMap().
 func (detectorUtils *MockDetectorUtils) getConfigMap(_ context.Context, namespace string, name string) (map[string]string, error) {
 	args := detectorUtils.Called(namespace, name)
 	return args.Get(0).(map[string]string), args.Error(1)
 }
 
-// Mock function for getContainerID()
+// Mock function for getContainerID().
 func (detectorUtils *MockDetectorUtils) getContainerID() (string, error) {
 	args := detectorUtils.Called()
 	return args.String(0), args.Error(1)
 }
 
-// Tests EKS resource detector running in EKS environment
+// Tests EKS resource detector running in EKS environment.
 func TestEks(t *testing.T) {
 	detectorUtils := new(MockDetectorUtils)
 
@@ -78,7 +78,7 @@ func TestEks(t *testing.T) {
 	detectorUtils.AssertExpectations(t)
 }
 
-// Tests EKS resource detector not running in EKS environment
+// Tests EKS resource detector not running in EKS environment.
 func TestNotEKS(t *testing.T) {
 	detectorUtils := new(MockDetectorUtils)
 

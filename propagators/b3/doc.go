@@ -12,6 +12,6 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-// This package implements the B3 propagator specification as defined
-// at https://github.com/openzipkin/b3-propagation
+// Package b3 implements the B3 propagator specification as defined at
+// https://github.com/openzipkin/b3-propagation
 package b3 // import "go.opentelemetry.io/contrib/propagators/b3"

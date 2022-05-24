@@ -151,8 +151,8 @@ func TestDBCrudOperation(t *testing.T) {
 			}
 		})
 	}
-
 }
+
 func TestDBCollectionAttribute(t *testing.T) {
 	tt := []struct {
 		title      string
@@ -246,7 +246,6 @@ func TestDBCollectionAttribute(t *testing.T) {
 			for _, v := range tc.validators {
 				assert.True(t, v(s))
 			}
-
 		})
 	}
 }

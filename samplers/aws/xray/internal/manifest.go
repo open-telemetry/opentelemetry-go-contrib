@@ -345,7 +345,7 @@ func (m *Manifest) deepCopy() *Manifest {
 }
 
 // sort sorts the Rules of m first by priority and then by name.
-func (m *Manifest) sort() {
+func (m *Manifest) sort() { // nolint: revive  // method names are scoped by receiver.
 	less := func(i, j int) bool {
 		if m.Rules[i].ruleProperties.Priority == m.Rules[j].ruleProperties.Priority {
 			return strings.Compare(m.Rules[i].ruleProperties.RuleName, m.Rules[j].ruleProperties.RuleName) < 0

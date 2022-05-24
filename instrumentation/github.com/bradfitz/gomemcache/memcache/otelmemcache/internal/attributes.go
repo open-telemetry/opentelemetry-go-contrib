@@ -21,6 +21,7 @@ import (
 
 type Operation string
 
+// Instrumentation specific tracing information.
 const (
 	OperationAdd            Operation = "add"
 	OperationCompareAndSwap Operation = "cas"

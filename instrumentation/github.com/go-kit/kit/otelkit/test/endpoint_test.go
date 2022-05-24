@@ -37,7 +37,7 @@ const (
 	operationKey = contextKey("operation")
 )
 
-// compile time assertion
+// compile time assertion.
 var _ endpoint.Failer = failedResponse{}
 
 type customError struct {

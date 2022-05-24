@@ -12,6 +12,6 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-// This package implements the Jaeger propagator specification as defined
-// at https://www.jaegertracing.io/docs/1.18/client-libraries/#propagation-format
+// Package jaeger implements the Jaeger propagator specification as defined at
+// https://www.jaegertracing.io/docs/1.18/client-libraries/#propagation-format
 package jaeger // import "go.opentelemetry.io/contrib/propagators/jaeger"
