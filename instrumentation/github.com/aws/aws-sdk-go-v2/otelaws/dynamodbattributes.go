@@ -27,12 +27,10 @@ import (
 
 // DynamoDBAttributeSetter sets DynamoDB specific attributes depending on the the DynamoDB operation being performed.
 func DynamoDBAttributeSetter(ctx context.Context, in middleware.InitializeInput) []attribute.KeyValue {
-
 	dynamodbAttributes := []attribute.KeyValue{semconv.DBSystemKey.String("dynamodb")}
 
 	switch v := in.Parameters.(type) {
 	case *dynamodb.GetItemInput:
-
 		dynamodbAttributes = append(dynamodbAttributes, semconv.AWSDynamoDBTableNamesKey.String(*v.TableName))
 
 		if v.ConsistentRead != nil {
@@ -85,7 +83,6 @@ func DynamoDBAttributeSetter(ctx context.Context, in middleware.InitializeInput)
 		dynamodbAttributes = append(dynamodbAttributes, semconv.AWSDynamoDBTableNamesKey.String(*v.TableName))
 
 	case *dynamodb.ListTablesInput:
-
 		if v.ExclusiveStartTableName != nil {
 			dynamodbAttributes = append(dynamodbAttributes, semconv.AWSDynamoDBExclusiveStartTableKey.String(*v.ExclusiveStartTableName))
 		}
@@ -95,11 +92,9 @@ func DynamoDBAttributeSetter(ctx context.Context, in middleware.InitializeInput)
 		}
 
 	case *dynamodb.PutItemInput:
-
 		dynamodbAttributes = append(dynamodbAttributes, semconv.AWSDynamoDBTableNamesKey.String(*v.TableName))
 
 	case *dynamodb.QueryInput:
-
 		dynamodbAttributes = append(dynamodbAttributes, semconv.AWSDynamoDBTableNamesKey.String(*v.TableName))
 
 		if v.ConsistentRead != nil {
@@ -125,7 +120,6 @@ func DynamoDBAttributeSetter(ctx context.Context, in middleware.InitializeInput)
 		dynamodbAttributes = append(dynamodbAttributes, semconv.AWSDynamoDBSelectKey.String(string(v.Select)))
 
 	case *dynamodb.ScanInput:
-
 		dynamodbAttributes = append(dynamodbAttributes, semconv.AWSDynamoDBTableNamesKey.String(*v.TableName))
 
 		if v.ConsistentRead != nil {
@@ -155,11 +149,9 @@ func DynamoDBAttributeSetter(ctx context.Context, in middleware.InitializeInput)
 		}
 
 	case *dynamodb.UpdateItemInput:
-
 		dynamodbAttributes = append(dynamodbAttributes, semconv.AWSDynamoDBTableNamesKey.String(*v.TableName))
 
 	case *dynamodb.UpdateTableInput:
-
 		dynamodbAttributes = append(dynamodbAttributes, semconv.AWSDynamoDBTableNamesKey.String(*v.TableName))
 
 		if v.AttributeDefinitions != nil {
@@ -176,9 +168,7 @@ func DynamoDBAttributeSetter(ctx context.Context, in middleware.InitializeInput)
 			dynamodbAttributes = append(dynamodbAttributes, semconv.AWSDynamoDBProvisionedReadCapacityKey.Int64(*v.ProvisionedThroughput.ReadCapacityUnits))
 			dynamodbAttributes = append(dynamodbAttributes, semconv.AWSDynamoDBProvisionedWriteCapacityKey.Int64(*v.ProvisionedThroughput.WriteCapacityUnits))
 		}
-
 	}
 
 	return dynamodbAttributes
-
 }

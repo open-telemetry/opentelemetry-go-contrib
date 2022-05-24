@@ -59,7 +59,6 @@ var (
 )
 
 func TestSamplerStatistics(t *testing.T) {
-
 	seedBankRng := rand.New(rand.NewSource(77777677777))
 	seedBank := make([]int64, 7) // N.B. Max=6 below.
 	for i := range seedBank {

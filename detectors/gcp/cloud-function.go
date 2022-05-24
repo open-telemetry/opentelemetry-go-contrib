@@ -34,7 +34,7 @@ func NewCloudFunction() resource.Detector {
 	}
 }
 
-// cloudFunction collects resource information of GCP Cloud Function
+// cloudFunction collects resource information of GCP Cloud Function.
 type cloudFunction struct {
 	cloudRun *CloudRun
 }
@@ -63,7 +63,6 @@ func (f *cloudFunction) Detect(ctx context.Context) (*resource.Resource, error) 
 		semconv.CloudRegionKey.String(region),
 	}
 	return resource.NewWithAttributes(semconv.SchemaURL, attributes...), nil
-
 }
 
 func (f *cloudFunction) googleCloudFunctionName() (string, bool) {
