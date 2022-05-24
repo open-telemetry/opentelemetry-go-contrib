@@ -26,7 +26,7 @@ import (
 	semconv "go.opentelemetry.io/otel/semconv/v1.10.0"
 )
 
-// GKE collects resource information of GKE computing instances
+// GKE collects resource information of GKE computing instances.
 type GKE struct{}
 
 // compile time assertion that GKE implements the resource.Detector interface.

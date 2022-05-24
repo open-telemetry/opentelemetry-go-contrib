@@ -35,7 +35,7 @@ type noopFlusher struct{}
 
 func (*noopFlusher) ForceFlush(context.Context) error { return nil }
 
-// Compile time check our noopFlusher implements Flusher
+// Compile time check our noopFlusher implements Flusher.
 var _ Flusher = &noopFlusher{}
 
 // An EventToCarrier function defines how the instrumentation should
@@ -50,9 +50,10 @@ func emptyEventToCarrier([]byte) propagation.TextMapCarrier {
 	return propagation.HeaderCarrier{}
 }
 
-// Compile time check our emptyEventToCarrier implements EventToCarrier
+// Compile time check our emptyEventToCarrier implements EventToCarrier.
 var _ EventToCarrier = emptyEventToCarrier
 
+// Option applies a configuration option.
 type Option interface {
 	apply(*config)
 }
@@ -92,24 +93,33 @@ type config struct {
 	Propagator propagation.TextMapPropagator
 }
 
+// WithTracerProvider configures the TracerProvider used by the
+// instrumentation.
+//
+// By default, the global TracerProvider is used.
 func WithTracerProvider(tracerProvider trace.TracerProvider) Option {
 	return optionFunc(func(c *config) {
 		c.TracerProvider = tracerProvider
 	})
 }
 
+// WithFlusher sets the used flusher.
 func WithFlusher(flusher Flusher) Option {
 	return optionFunc(func(c *config) {
 		c.Flusher = flusher
 	})
 }
 
+// WithEventToCarrier sets the used EventToCarrier.
 func WithEventToCarrier(eventToCarrier EventToCarrier) Option {
 	return optionFunc(func(c *config) {
 		c.EventToCarrier = eventToCarrier
 	})
 }
 
+// WithPropagator configures the propagator used by the instrumentation.
+//
+// By default, the global TextMapPropagator will be used.
 func WithPropagator(propagator propagation.TextMapPropagator) Option {
 	return optionFunc(func(c *config) {
 		c.Propagator = propagator

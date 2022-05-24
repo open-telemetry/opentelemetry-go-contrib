@@ -128,7 +128,6 @@ func TestHostCPU(t *testing.T) {
 	// Ranges are not empty
 	require.NotEqual(t, hostAfter[0].System, hostBefore[0].System)
 	require.NotEqual(t, hostAfter[0].User, hostBefore[0].User)
-
 	// TODO: We are not testing host "Other" nor "Idle" and
 	// generally the specification hasn't been finalized, so
 	// there's more to do.  Moreover, "Other" is not portable and

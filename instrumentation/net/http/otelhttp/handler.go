@@ -112,7 +112,7 @@ func (h *Handler) createMeasures() {
 	h.valueRecorders[ServerLatency] = serverLatencyMeasure
 }
 
-// ServeHTTP serves HTTP requests (http.Handler)
+// ServeHTTP serves HTTP requests (http.Handler).
 func (h *Handler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	requestStartTime := time.Now()
 	for _, f := range h.filters {

@@ -30,7 +30,10 @@ import (
 func main() {
 	var host, port = os.Getenv("HOST"), "11211"
 
-	tp := initTracer()
+	tp, err := initTracer()
+	if err != nil {
+		log.Fatal(err)
+	}
 	defer func() {
 		if err := tp.Shutdown(context.Background()); err != nil {
 			log.Printf("Error shutting down tracer provider: %v", err)
@@ -77,15 +80,15 @@ func doMemcacheOperations(ctx context.Context, c *otelmemcache.Client) {
 	}
 }
 
-func initTracer() *sdktrace.TracerProvider {
+func initTracer() (*sdktrace.TracerProvider, error) {
 	exporter, err := oteltracestdout.New(oteltracestdout.WithPrettyPrint())
 	if err != nil {
-		log.Fatal(err)
+		return nil, err
 	}
 	tp := sdktrace.NewTracerProvider(
 		sdktrace.WithSampler(sdktrace.AlwaysSample()),
 		sdktrace.WithBatcher(exporter),
 	)
 
-	return tp
+	return tp, nil
 }

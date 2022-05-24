@@ -130,7 +130,6 @@ func TestParentSamplerInvalidContext(t *testing.T) {
 		{"r:10;p:1;a:b", false, "r:10;a:b"},
 	} {
 		testInvalid := func(t *testing.T, isChildContext bool) {
-
 			traceID, _ := trace.TraceIDFromHex("4bf92f3577b34da6a3ce929d0e0e4736")
 			traceState, err := trace.TraceState{}.Insert(traceStateKey, invalid.in)
 			require.NoError(t, err)
@@ -143,7 +142,6 @@ func TestParentSamplerInvalidContext(t *testing.T) {
 
 				sccfg.TraceID = traceID
 				sccfg.SpanID = spanID
-
 				// Note: the other branch is testing a fabricated
 				// situation where the context has a tracestate and
 				// no TraceID.

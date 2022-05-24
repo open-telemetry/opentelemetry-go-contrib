@@ -21,11 +21,11 @@ import (
 )
 
 const (
-	// defaultSamplingServerPort is the default port to fetch sampling config from, via http
+	// defaultSamplingServerPort is the default port to fetch sampling config from, via http.
 	defaultSamplingServerPort = 5778
 )
 
 var (
-	// defaultSamplingServerURL is the default url to fetch sampling config from, via http
+	// defaultSamplingServerURL is the default url to fetch sampling config from, via http.
 	defaultSamplingServerURL = fmt.Sprintf("http://127.0.0.1:%d/sampling", defaultSamplingServerPort)
 )
