@@ -41,20 +41,21 @@ func main() {
 			log.Printf("Error shutting down tracer provider: %v", err)
 		}
 	}()
-	ep := otelkit.EndpointMiddleware(
-		otelkit.WithOperation("getUser"),
-	)(func(ctx context.Context, request interface{}) (response interface{}, err error) {
-		id := request.(string)
-		name := getUser(ctx, id)
-		reply := fmt.Sprintf("user %s (id %s)\n", name, id)
+	ep := otelkit.HTTPPropagationMiddleware()(
+		otelkit.EndpointMiddleware(
+			otelkit.WithOperation("getUser"),
+		)(func(ctx context.Context, request interface{}) (response interface{}, err error) {
+			vars := mux.Vars(request.(*http.Request))
+			id := vars["id"]
+			name := getUser(ctx, id)
+			reply := fmt.Sprintf("user %s (id %s)\n", name, id)
 
-		return reply, nil
-	})
+			return reply, nil
+		}),
+	)
 	r := mux.NewRouter()
 	r.HandleFunc("/users/{id:[0-9]+}", func(w http.ResponseWriter, r *http.Request) {
-		vars := mux.Vars(r)
-		id := vars["id"]
-		reply, _ := ep(r.Context(), id)
+		reply, _ := ep(r.Context(), r)
 		_, _ = w.Write(([]byte)(reply.(string)))
 	})
 	http.Handle("/", r)

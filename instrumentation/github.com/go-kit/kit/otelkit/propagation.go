@@ -25,11 +25,16 @@ import (
 	"go.opentelemetry.io/otel/propagation"
 )
 
+// MultimapCarrier is a TextMapCarrier that uses a map held in memory as a storage
+// medium for propagated key-value pairs.
+// It is useful for coercing types with a map[string][]string backing type, for
+// example metadata.MD.
 type MultimapCarrier map[string][]string
 
 // Compile time check that MultimapCarrier implements the TextMapCarrier.
 var _ propagation.TextMapCarrier = MultimapCarrier{}
 
+// Get returns the value associated with the passed key.
 func (c MultimapCarrier) Get(key string) string {
 	if v := c[key]; len(v) > 0 {
 		return v[0]
@@ -37,10 +42,12 @@ func (c MultimapCarrier) Get(key string) string {
 	return ""
 }
 
+// Set stores the key-value pair.
 func (c MultimapCarrier) Set(key, value string) {
 	c[key] = []string{value}
 }
 
+// Keys lists the keys stored in this carrier.
 func (c MultimapCarrier) Keys() []string {
 	keys := make([]string, 0, len(c))
 	for k := range c {

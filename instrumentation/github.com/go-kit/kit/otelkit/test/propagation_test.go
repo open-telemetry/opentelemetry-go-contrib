@@ -17,6 +17,7 @@ package test
 import (
 	"context"
 	"net/http"
+	"sort"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
@@ -38,7 +39,39 @@ const (
 	traceParent   = "00-" + parentID + "-b9c7c989f97918e1-01"
 )
 
-func TestGrpcPropagationMiddleware(t *testing.T) {
+func TestMultimapCarrier(t *testing.T) {
+	t.Run("Get", func(t *testing.T) {
+		carrier := otelkit.MultimapCarrier{
+			"key1": []string{"value1"},
+			"key2": []string{"value2"},
+		}
+
+		assert.Equal(t, carrier.Get("key1"), "value1")
+		assert.Equal(t, carrier.Get("key2"), "value2")
+	})
+
+	t.Run("Set", func(t *testing.T) {
+		carrier := otelkit.MultimapCarrier{}
+		carrier.Set("key1", "value1")
+		carrier.Set("key2", "value2")
+
+		assert.Equal(t, carrier["key1"][0], "value1")
+		assert.Equal(t, carrier["key2"][0], "value2")
+	})
+
+	t.Run("Keys", func(t *testing.T) {
+		carrier := otelkit.MultimapCarrier{
+			"key1": []string{"value1"},
+			"key2": []string{"value2"},
+		}
+
+		keys := carrier.Keys()
+		sort.Strings(keys)
+		assert.Equal(t, []string{"key1", "key2"}, keys)
+	})
+}
+
+func TestGRPCPropagationMiddleware(t *testing.T) {
 	t.Run("WithParentTrace", func(t *testing.T) {
 
 		sr := tracetest.NewSpanRecorder()
@@ -50,7 +83,7 @@ func TestGrpcPropagationMiddleware(t *testing.T) {
 
 		ctx := context.Background()
 
-		// Add metadata WITH traceparent as a instrumentrament gRPC client would
+		// Add metadata WITH traceparent as a instrumented gRPC client would
 		md := metadata.Pairs(
 			"traceparent", traceParent,
 		)
@@ -147,7 +180,7 @@ func TestHTTPPropagationMiddleware(t *testing.T) {
 
 		ctx := context.Background()
 
-		// Add request WITHOUT traceparent as a instrumentramented HTTP client would
+		// Add request WITHOUT traceparent as a instrumented HTTP client would
 		r, _ := http.NewRequest("", "", nil)
 		r.Header.Set("traceparent", "")
 
