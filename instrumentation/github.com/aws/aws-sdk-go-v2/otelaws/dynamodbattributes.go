@@ -25,7 +25,7 @@ import (
 	semconv "go.opentelemetry.io/otel/semconv/v1.10.0"
 )
 
-// DynamoDBAttributeSetter sets DynamoDB specific attributes depending on the the DynamoDB operation being performed.
+// DynamoDBAttributeSetter sets DynamoDB specific attributes depending on the DynamoDB operation being performed.
 func DynamoDBAttributeSetter(ctx context.Context, in middleware.InitializeInput) []attribute.KeyValue {
 	dynamodbAttributes := []attribute.KeyValue{semconv.DBSystemKey.String("dynamodb")}
 

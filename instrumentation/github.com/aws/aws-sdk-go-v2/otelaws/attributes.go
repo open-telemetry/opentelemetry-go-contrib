@@ -17,6 +17,8 @@ package otelaws // import "go.opentelemetry.io/contrib/instrumentation/github.co
 import (
 	"context"
 
+	"github.com/aws/aws-sdk-go-v2/service/dynamodb"
+
 	v2Middleware "github.com/aws/aws-sdk-go-v2/aws/middleware"
 	"github.com/aws/smithy-go/middleware"
 
@@ -32,7 +34,7 @@ const (
 )
 
 var servicemap = map[string]AttributeSetter{
-	"dynamodb": DynamoDBAttributeSetter,
+	dynamodb.ServiceID: DynamoDBAttributeSetter,
 }
 
 // OperationAttr returns the AWS operation attribute.
