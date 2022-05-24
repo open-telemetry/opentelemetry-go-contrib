@@ -23,11 +23,19 @@ import (
 type ContextKey string
 
 const (
+	// CtxRouteTemplateKey is the context key used for a route template.
 	CtxRouteTemplateKey = ContextKey("x-opentelemetry-route-template")
 
+	// RenderTemplateSpanName is the span name for the beego.Controller.Render
+	// operation.
 	RenderTemplateSpanName = "beego.render.template"
-	RenderStringSpanName   = "beego.render.string"
-	RenderBytesSpanName    = "beego.render.bytes"
+	// RenderStringSpanName is the span name for the
+	// beego.Controller.RenderString operation.
+	RenderStringSpanName = "beego.render.string"
+	// RenderStringSpanName is the span name for the
+	// beego.Controller.RenderBytes operation.
+	RenderBytesSpanName = "beego.render.bytes"
 
+	// TemplateKey is used to describe the beego template used.
 	TemplateKey = attribute.Key("go.template")
 )

@@ -97,7 +97,6 @@ func TestNotFoundIsNotError(t *testing.T) {
 		attribute.String("http.route", "/does/not/exist"),
 	)
 	assert.Equal(t, sr.Ended()[0].Status().Code, codes.Unset)
-
 }
 
 func assertSpan(t *testing.T, span sdktrace.ReadOnlySpan, name string, kind trace.SpanKind, attrs ...attribute.KeyValue) {

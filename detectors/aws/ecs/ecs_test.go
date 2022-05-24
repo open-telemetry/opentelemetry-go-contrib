@@ -27,7 +27,7 @@ import (
 	semconv "go.opentelemetry.io/otel/semconv/v1.10.0"
 )
 
-// Create interface for functions that need to be mocked
+// Create interface for functions that need to be mocked.
 type MockDetectorUtils struct {
 	mock.Mock
 }
@@ -42,7 +42,7 @@ func (detectorUtils *MockDetectorUtils) getContainerName() (string, error) {
 	return args.String(0), args.Error(1)
 }
 
-//succesfully return resource when process is running on Amazon ECS environment
+//succesfully return resource when process is running on Amazon ECS environment.
 func TestDetect(t *testing.T) {
 	os.Clearenv()
 	_ = os.Setenv(metadataV3EnvVar, "3")
@@ -66,7 +66,7 @@ func TestDetect(t *testing.T) {
 	assert.Equal(t, res, expectedResource, "Resource returned is incorrect")
 }
 
-//returns empty resource when detector cannot read container ID
+//returns empty resource when detector cannot read container ID.
 func TestDetectCannotReadContainerID(t *testing.T) {
 	os.Clearenv()
 	_ = os.Setenv(metadataV3EnvVar, "3")
@@ -83,7 +83,7 @@ func TestDetectCannotReadContainerID(t *testing.T) {
 	assert.Equal(t, 0, len(res.Attributes()))
 }
 
-//returns empty resource when detector cannot read container Name
+//returns empty resource when detector cannot read container Name.
 func TestDetectCannotReadContainerName(t *testing.T) {
 	os.Clearenv()
 	_ = os.Setenv(metadataV3EnvVar, "3")
@@ -100,7 +100,7 @@ func TestDetectCannotReadContainerName(t *testing.T) {
 	assert.Equal(t, 0, len(res.Attributes()))
 }
 
-//returns empty resource when process is not running ECS
+//returns empty resource when process is not running ECS.
 func TestReturnsIfNoEnvVars(t *testing.T) {
 	os.Clearenv()
 	detector := &resourceDetector{utils: nil}

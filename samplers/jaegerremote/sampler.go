@@ -90,7 +90,7 @@ func (s *probabilisticSampler) Equal(other trace.Sampler) bool {
 // Update modifies in-place the sampling rate. Locking must be done externally.
 func (s *probabilisticSampler) Update(samplingRate float64) error {
 	if samplingRate < 0.0 || samplingRate > 1.0 {
-		return fmt.Errorf("Sampling Rate must be between 0.0 and 1.0, received %f", samplingRate)
+		return fmt.Errorf("sampling rate must be between 0.0 and 1.0, received %f", samplingRate)
 	}
 	s.init(samplingRate)
 	return nil
@@ -205,7 +205,7 @@ func (s *guaranteedThroughputProbabilisticSampler) ShouldSample(p trace.Sampling
 	return result
 }
 
-// this function should only be called while holding a Write lock
+// this function should only be called while holding a Write lock.
 func (s *guaranteedThroughputProbabilisticSampler) update(lowerBound, samplingRate float64) {
 	s.setProbabilisticSampler(samplingRate)
 	if s.lowerBound != lowerBound {

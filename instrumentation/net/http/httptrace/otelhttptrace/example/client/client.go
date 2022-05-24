@@ -36,12 +36,12 @@ import (
 	"go.opentelemetry.io/otel/trace"
 )
 
-func initTracer() *sdktrace.TracerProvider {
+func initTracer() (*sdktrace.TracerProvider, error) {
 	// Create stdout exporter to be able to retrieve
 	// the collected spans.
 	exporter, err := stdout.New(stdout.WithPrettyPrint())
 	if err != nil {
-		log.Fatal(err)
+		return nil, err
 	}
 
 	// For the demonstration, use sdktrace.AlwaysSample sampler to sample all traces.
@@ -52,11 +52,14 @@ func initTracer() *sdktrace.TracerProvider {
 	)
 	otel.SetTracerProvider(tp)
 	otel.SetTextMapPropagator(propagation.NewCompositeTextMapPropagator(propagation.TraceContext{}, propagation.Baggage{}))
-	return tp
+	return tp, nil
 }
 
 func main() {
-	tp := initTracer()
+	tp, err := initTracer()
+	if err != nil {
+		log.Fatal(err)
+	}
 	defer func() {
 		if err := tp.Shutdown(context.Background()); err != nil {
 			log.Printf("Error shutting down tracer provider: %v", err)
@@ -73,7 +76,7 @@ func main() {
 	var body []byte
 
 	tr := otel.Tracer("example/client")
-	err := func(ctx context.Context) error {
+	err = func(ctx context.Context) error {
 		ctx, span := tr.Start(ctx, "say hello", trace.WithAttributes(semconv.PeerServiceKey.String("ExampleService")))
 		defer span.End()
 
@@ -92,7 +95,7 @@ func main() {
 	}(ctx)
 
 	if err != nil {
-		panic(err)
+		log.Fatal(err)
 	}
 
 	fmt.Printf("Response Received: %s\n\n\n", body)

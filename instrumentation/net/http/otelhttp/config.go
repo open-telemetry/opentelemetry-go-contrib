@@ -142,7 +142,7 @@ func WithFilter(f Filter) Option {
 
 type event int
 
-// Different types of events that can be recorded, see WithMessageEvents
+// Different types of events that can be recorded, see WithMessageEvents.
 const (
 	ReadEvents event = iota
 	WriteEvents
@@ -171,7 +171,7 @@ func WithMessageEvents(events ...event) Option {
 }
 
 // WithSpanNameFormatter takes a function that will be called on every
-// request and the returned string will become the Span Name
+// request and the returned string will become the Span Name.
 func WithSpanNameFormatter(f func(operation string, r *http.Request) string) Option {
 	return optionFunc(func(c *config) {
 		c.SpanNameFormatter = f
