@@ -33,7 +33,7 @@ type samplingManager struct {
 	mutex    sync.Mutex
 }
 
-// GetSamplingStrategy implements handler method of sampling.SamplingManager
+// GetSamplingStrategy implements handler method of sampling.SamplingManager.
 func (s *samplingManager) GetSamplingStrategy(serviceName string) (interface{}, error) {
 	s.mutex.Lock()
 	defer s.mutex.Unlock()
@@ -47,7 +47,7 @@ func (s *samplingManager) GetSamplingStrategy(serviceName string) (interface{}, 
 		}}, nil
 }
 
-// AddSamplingStrategy registers a sampling strategy for a service
+// AddSamplingStrategy registers a sampling strategy for a service.
 func (s *samplingManager) AddSamplingStrategy(service string, strategy interface{}) {
 	s.mutex.Lock()
 	defer s.mutex.Unlock()

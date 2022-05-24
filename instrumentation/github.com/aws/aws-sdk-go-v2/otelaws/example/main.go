@@ -44,7 +44,6 @@ func initTracer() {
 		sdktrace.WithSpanProcessor(bsp),
 	)
 	otel.SetTracerProvider(tp)
-
 }
 
 func main() {
@@ -96,5 +95,4 @@ func main() {
 	for _, tableName := range resp.TableNames {
 		fmt.Println(tableName)
 	}
-
 }

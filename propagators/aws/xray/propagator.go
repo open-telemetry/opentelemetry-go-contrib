@@ -57,7 +57,7 @@ var (
 //
 // Example AWS X-Ray format:
 //
-// X-Amzn-Trace-Id: Root={traceId};Parent={parentId};Sampled={samplingFlag}
+// X-Amzn-Trace-Id: Root={traceId};Parent={parentId};Sampled={samplingFlag}.
 type Propagator struct{}
 
 // Asserts that the propagator implements the otel.TextMapPropagator interface at compile time.

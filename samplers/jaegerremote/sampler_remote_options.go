@@ -59,6 +59,7 @@ func newConfig(options ...Option) config {
 	return c
 }
 
+// Option applies configuration settings to a Sampler.
 type Option interface {
 	apply(*config)
 }

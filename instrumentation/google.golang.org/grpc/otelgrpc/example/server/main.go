@@ -40,12 +40,12 @@ const (
 
 var tracer = otel.Tracer("grpc-example")
 
-// server is used to implement api.HelloServiceServer
+// server is used to implement api.HelloServiceServer.
 type server struct {
 	api.HelloServiceServer
 }
 
-// SayHello implements api.HelloServiceServer
+// SayHello implements api.HelloServiceServer.
 func (s *server) SayHello(ctx context.Context, in *api.HelloRequest) (*api.HelloResponse, error) {
 	log.Printf("Received: %v\n", in.GetGreeting())
 	s.workHard(ctx)
@@ -124,7 +124,10 @@ func (s *server) SayHelloBidiStream(stream api.HelloService_SayHelloBidiStreamSe
 }
 
 func main() {
-	tp := config.Init()
+	tp, err := config.Init()
+	if err != nil {
+		log.Fatal(err)
+	}
 	defer func() {
 		if err := tp.Shutdown(context.Background()); err != nil {
 			log.Printf("Error shutting down tracer provider: %v", err)

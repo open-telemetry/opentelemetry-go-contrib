@@ -157,7 +157,6 @@ func TestDynamodbTagsDeleteTableInput(t *testing.T) {
 	attributes := DynamoDBAttributeSetter(context.TODO(), input)
 
 	assert.Contains(t, attributes, attribute.String("aws.dynamodb.table_names", "table1"))
-
 }
 
 func TestDynamodbTagsDescribeTableInput(t *testing.T) {
@@ -182,7 +181,6 @@ func TestDynamodbTagsListTablesInput(t *testing.T) {
 
 	assert.Contains(t, attributes, attribute.String("aws.dynamodb.exclusive_start_table", "table1"))
 	assert.Contains(t, attributes, attribute.Int("aws.dynamodb.limit", 10))
-
 }
 
 func TestDynamodbTagsPutItemInput(t *testing.T) {
@@ -232,7 +230,6 @@ func TestDynamodbTagsQueryInput(t *testing.T) {
 	assert.Contains(t, attributes, attribute.Bool("aws.dynamodb.scan_forward", true))
 	assert.Contains(t, attributes, attribute.String("aws.dynamodb.projection", "projectionexpression"))
 	assert.Contains(t, attributes, attribute.String("aws.dynamodb.select", "ALL_ATTRIBUTES"))
-
 }
 
 func TestDynamodbTagsScanInput(t *testing.T) {
@@ -259,7 +256,6 @@ func TestDynamodbTagsScanInput(t *testing.T) {
 	assert.Contains(t, attributes, attribute.Int("aws.dynamodb.total_segments", 100))
 	assert.Contains(t, attributes, attribute.Int("aws.dynamodb.segment", 10))
 	assert.Contains(t, attributes, attribute.String("aws.dynamodb.projection", "Artist, Genre"))
-
 }
 
 func TestDynamodbTagsUpdateItemInput(t *testing.T) {
@@ -279,7 +275,6 @@ func TestDynamodbTagsUpdateItemInput(t *testing.T) {
 	attributes := DynamoDBAttributeSetter(context.TODO(), input)
 
 	assert.Contains(t, attributes, attribute.String("aws.dynamodb.table_names", "my-table"))
-
 }
 
 func TestDynamodbTagsUpdateTableInput(t *testing.T) {

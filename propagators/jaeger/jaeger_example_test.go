@@ -20,7 +20,7 @@ import (
 )
 
 func ExampleJaeger() {
-	jaeger := jaeger.Jaeger{}
+	p := jaeger.Jaeger{}
 	// register jaeger propagator
-	otel.SetTextMapPropagator(jaeger)
+	otel.SetTextMapPropagator(p)
 }

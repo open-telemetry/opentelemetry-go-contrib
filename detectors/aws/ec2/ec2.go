@@ -42,6 +42,7 @@ func newConfig(options ...Option) *config {
 	return c
 }
 
+// Option applies an EC2 detector configuration option.
 type Option interface {
 	apply(*config)
 }
@@ -52,7 +53,7 @@ func (fn optionFunc) apply(c *config) {
 	fn(c)
 }
 
-// WithClient sets the ec2metadata client in config
+// WithClient sets the ec2metadata client in config.
 func WithClient(t Client) Option {
 	return optionFunc(func(c *config) {
 		c.c = t
@@ -63,12 +64,12 @@ func (cfg *config) getClient() Client {
 	return cfg.c
 }
 
-// resource detector collects resource information from EC2 environment
+// resource detector collects resource information from EC2 environment.
 type resourceDetector struct {
 	c Client
 }
 
-// Client implements methods to capture EC2 environment metadata information
+// Client implements methods to capture EC2 environment metadata information.
 type Client interface {
 	Available() bool
 	GetInstanceIdentityDocument() (ec2metadata.EC2InstanceIdentityDocument, error)

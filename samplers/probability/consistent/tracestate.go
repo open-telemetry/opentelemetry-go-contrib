@@ -102,7 +102,7 @@ func isUCAlpha(r byte) bool {
 	return r >= 'A' && r <= 'Z'
 }
 
-func parseOTelTraceState(ts string, isSampled bool) (otelTraceState, error) {
+func parseOTelTraceState(ts string, isSampled bool) (otelTraceState, error) { // nolint: revive
 	var pval, rval string
 	var unknown []string
 
