@@ -33,7 +33,7 @@ func GetJSON(url string, out interface{}) error {
 	return ReadJSON(resp, out)
 }
 
-// ReadJSON reads JSON from http.Response and parses it into `out`
+// ReadJSON reads JSON from http.Response and parses it into `out`.
 func ReadJSON(resp *http.Response, out interface{}) error {
 	defer resp.Body.Close()
 
@@ -43,7 +43,7 @@ func ReadJSON(resp *http.Response, out interface{}) error {
 			return err
 		}
 
-		return fmt.Errorf("StatusCode: %d, Body: %s", resp.StatusCode, body)
+		return fmt.Errorf("status code: %d, body: %s", resp.StatusCode, body)
 	}
 
 	if out == nil {

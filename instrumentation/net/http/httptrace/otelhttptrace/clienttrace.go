@@ -83,7 +83,7 @@ func WithoutSubSpans() ClientTraceOption {
 // WithRedactedHeaders will be replaced by fixed '****' values for the header
 // names provided.  These are in addition to the sensitive headers already
 // redacted by default: Authorization, WWW-Authenticate, Proxy-Authenticate
-// Proxy-Authorization, Cookie, Set-Cookie
+// Proxy-Authorization, Cookie, Set-Cookie.
 func WithRedactedHeaders(headers ...string) ClientTraceOption {
 	return clientTraceOptionFunc(func(ct *clientTracer) {
 		for _, header := range headers {
@@ -398,11 +398,11 @@ func sm2s(value map[string][]string) string {
 	var buf strings.Builder
 	for k, v := range value {
 		if buf.Len() != 0 {
-			buf.WriteString(",")
+			_, _ = buf.WriteString(",")
 		}
-		buf.WriteString(k)
-		buf.WriteString("=")
-		buf.WriteString(sliceToString(v))
+		_, _ = buf.WriteString(k)
+		_, _ = buf.WriteString("=")
+		_, _ = buf.WriteString(sliceToString(v))
 	}
 	return buf.String()
 }

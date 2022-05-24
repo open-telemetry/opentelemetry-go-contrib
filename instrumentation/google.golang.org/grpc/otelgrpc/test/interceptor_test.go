@@ -525,7 +525,7 @@ func TestStreamClientInterceptorOnUnidirectionalClientServerStream(t *testing.T)
 }
 
 // TestStreamClientInterceptorCancelContext tests a cancel context situation.
-// There should be no goleaks
+// There should be no goleaks.
 func TestStreamClientInterceptorCancelContext(t *testing.T) {
 	defer goleak.VerifyNone(t)
 	clientConn, err := grpc.Dial("fake:connection", grpc.WithTransportCredentials(insecure.NewCredentials()))
@@ -646,13 +646,14 @@ func TestServerInterceptorError(t *testing.T) {
 	}
 	assert.Equal(t, codes.Error, span.Status().Code)
 	assert.Contains(t, deniedErr.Error(), span.Status().Description)
-	var codeAttr *attribute.KeyValue
+	var codeAttr attribute.KeyValue
 	for _, a := range span.Attributes() {
 		if a.Key == otelgrpc.GRPCStatusCodeKey {
-			codeAttr = &a
+			codeAttr = a
+			break
 		}
 	}
-	if assert.NotNil(t, codeAttr, "attributes contain gRPC status code") {
+	if assert.True(t, codeAttr.Valid(), "attributes contain gRPC status code") {
 		assert.Equal(t, attribute.Int64Value(int64(grpc_codes.PermissionDenied)), codeAttr.Value)
 	}
 	assert.Len(t, span.Events(), 2)

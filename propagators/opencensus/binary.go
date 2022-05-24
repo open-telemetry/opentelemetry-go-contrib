@@ -39,7 +39,7 @@ type Binary struct{}
 
 var _ propagation.TextMapPropagator = Binary{}
 
-// Inject injects context into the TextMapCarrier
+// Inject injects context into the TextMapCarrier.
 func (b Binary) Inject(ctx context.Context, carrier propagation.TextMapCarrier) {
 	binaryContext := ctx.Value(binaryKey)
 	if state, ok := binaryContext.(string); binaryContext != nil && ok {
@@ -54,7 +54,7 @@ func (b Binary) Inject(ctx context.Context, carrier propagation.TextMapCarrier) 
 	carrier.Set(binaryHeader, string(h))
 }
 
-// Extract extracts the SpanContext from the TextMapCarrier
+// Extract extracts the SpanContext from the TextMapCarrier.
 func (b Binary) Extract(ctx context.Context, carrier propagation.TextMapCarrier) context.Context {
 	state := carrier.Get(binaryHeader)
 	if state != "" {

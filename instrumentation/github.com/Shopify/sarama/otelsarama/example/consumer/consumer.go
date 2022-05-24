@@ -17,8 +17,10 @@ package main
 import (
 	"context"
 	"flag"
+	"fmt"
 	"log"
 	"os"
+	"os/signal"
 	"strings"
 	"time"
 
@@ -37,7 +39,10 @@ var (
 )
 
 func main() {
-	tp := example.InitTracer()
+	tp, err := example.InitTracer()
+	if err != nil {
+		log.Fatal(err)
+	}
 	defer func() {
 		if err := tp.Shutdown(context.Background()); err != nil {
 			log.Printf("Error shutting down tracer provider: %v", err)
@@ -53,12 +58,16 @@ func main() {
 	brokerList := strings.Split(*brokers, ",")
 	log.Printf("Kafka brokers: %s", strings.Join(brokerList, ", "))
 
-	startConsumerGroup(brokerList)
+	ctx, cancel := signal.NotifyContext(context.Background(), os.Interrupt)
+	defer cancel()
+	if err := startConsumerGroup(ctx, brokerList); err != nil {
+		log.Fatal(err)
+	}
 
-	select {}
+	<-ctx.Done()
 }
 
-func startConsumerGroup(brokerList []string) {
+func startConsumerGroup(ctx context.Context, brokerList []string) error {
 	consumerGroupHandler := Consumer{}
 	// Wrap instrumentation
 	handler := otelsarama.WrapConsumerGroupHandler(&consumerGroupHandler)
@@ -70,13 +79,14 @@ func startConsumerGroup(brokerList []string) {
 	// Create consumer group
 	consumerGroup, err := sarama.NewConsumerGroup(brokerList, "example", config)
 	if err != nil {
-		log.Fatalln("Failed to start sarama consumer group:", err)
+		return fmt.Errorf("starting consumer group: %w", err)
 	}
 
-	err = consumerGroup.Consume(context.Background(), []string{example.KafkaTopic}, handler)
+	err = consumerGroup.Consume(ctx, []string{example.KafkaTopic}, handler)
 	if err != nil {
-		log.Fatalln("Failed to consume via handler:", err)
+		return fmt.Errorf("consuming via handler: %w", err)
 	}
+	return nil
 }
 
 func printMessage(msg *sarama.ConsumerMessage) {
@@ -95,16 +105,16 @@ func printMessage(msg *sarama.ConsumerMessage) {
 	log.Println("Successful to read message: ", string(msg.Value))
 }
 
-// Consumer represents a Sarama consumer group consumer
+// Consumer represents a Sarama consumer group consumer.
 type Consumer struct {
 }
 
-// Setup is run at the beginning of a new session, before ConsumeClaim
+// Setup is run at the beginning of a new session, before ConsumeClaim.
 func (consumer *Consumer) Setup(sarama.ConsumerGroupSession) error {
 	return nil
 }
 
-// Cleanup is run at the end of a session, once all ConsumeClaim goroutines have exited
+// Cleanup is run at the end of a session, once all ConsumeClaim goroutines have exited.
 func (consumer *Consumer) Cleanup(sarama.ConsumerGroupSession) error {
 	return nil
 }

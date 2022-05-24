@@ -104,9 +104,9 @@ func TestLongStrings(t *testing.T) {
 	chars := []byte{'a', 'b', 'c', 'd'}
 	text := bytes.NewBufferString("a")
 	for i := 0; i < 8192; i++ {
-		text.WriteString(string(chars[rand.Intn(len(chars))]))
+		_, _ = text.WriteString(string(chars[rand.Intn(len(chars))]))
 	}
-	text.WriteString("b")
+	_, _ = text.WriteString("b")
 
 	match, err := wildcardMatch("a*b", text.String())
 	require.NoError(t, err)
