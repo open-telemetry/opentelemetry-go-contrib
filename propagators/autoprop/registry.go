@@ -83,8 +83,8 @@ func (r *registry) store(key string, value propagation.TextMapPropagator) {
 
 // RegisterTextMapPropagator sets the TextMapPropagator p to be used when the
 // OTEL_PROPAGATORS environment variable contains the propagator name. This
-// allows the default supported environment TextMapPropagators to be extended
-// with 3rd-part implementations.
+// allows adding additional environment TextMapPropagators, or replacing the
+// default TextMapPropagators with 3rd-party implementations.
 func RegisterTextMapPropagator(name string, p propagation.TextMapPropagator) {
 	envRegistry.store(name, p)
 }
