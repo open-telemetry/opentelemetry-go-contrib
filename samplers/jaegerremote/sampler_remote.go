@@ -93,6 +93,8 @@ func New(
 	return sampler
 }
 
+// ShouldSample returns a sampling choice based on the passed sampling
+// parameters.
 func (s *Sampler) ShouldSample(p trace.SamplingParameters) trace.SamplingResult {
 	s.RLock()
 	defer s.RUnlock()
@@ -113,6 +115,7 @@ func (s *Sampler) Close() {
 	wg.Wait()
 }
 
+// Description returns a human-readable name for the Sampler.
 func (s *Sampler) Description() string {
 	return "JaegerRemoteSampler{}"
 }
@@ -166,7 +169,7 @@ func (s *Sampler) UpdateSampler() {
 	}
 }
 
-// NB: this function should only be called while holding a Write lock
+// NB: this function should only be called while holding a Write lock.
 func (s *Sampler) updateSamplerViaUpdaters(strategy interface{}) error {
 	for _, updater := range s.updaters {
 		sampler, err := updater.Update(s.sampler, strategy)
@@ -297,7 +300,7 @@ func (f *httpSamplingStrategyFetcher) Fetch(serviceName string) ([]byte, error) 
 	}
 
 	if resp.StatusCode >= 400 {
-		return nil, fmt.Errorf("StatusCode: %d, Body: %c", resp.StatusCode, body)
+		return nil, fmt.Errorf("status code: %d, body: %c", resp.StatusCode, body)
 	}
 
 	return body, nil

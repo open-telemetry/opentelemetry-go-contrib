@@ -76,7 +76,7 @@ func setEnvVars() {
 	}
 }
 
-// Vars for end to end testing
+// Vars for end to end testing.
 var (
 	mockLambdaContext = lambdacontext.LambdaContext{
 		AwsRequestID:       "123",
@@ -138,7 +138,7 @@ func assertResourceEquals(t *testing.T, expected *v1resource.Resource, actual *v
 }
 
 // ignore timestamps and SpanID since time is obviously variable,
-// and SpanID is randomized when using xray IDGenerator
+// and SpanID is randomized when using xray IDGenerator.
 func assertSpanEqualsIgnoreTimeAndSpanID(t *testing.T, expected *v1trace.ResourceSpans, actual *v1trace.ResourceSpans) {
 	assert.Equal(t, expected.ScopeSpans[0].Scope, actual.ScopeSpans[0].Scope)
 

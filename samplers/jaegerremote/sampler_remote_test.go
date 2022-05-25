@@ -90,8 +90,7 @@ type testSamplingStrategyParser struct {
 func (p *testSamplingStrategyParser) Parse(response []byte) (interface{}, error) {
 	strategy := new(jaeger_api_v2.SamplingStrategyResponse)
 
-	switch string(response) {
-	case "probabilistic":
+	if string(response) == "probabilistic" {
 		strategy.StrategyType = jaeger_api_v2.SamplingStrategyType_PROBABILISTIC
 		strategy.ProbabilisticSampling = &jaeger_api_v2.ProbabilisticSamplingStrategy{
 			SamplingRate: 0.85,

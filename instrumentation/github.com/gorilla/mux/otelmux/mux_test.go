@@ -124,21 +124,21 @@ func (rw *testResponseWriter) WriteHeader(statusCode int) {
 	rw.writer.WriteHeader(statusCode)
 }
 
-// implement Hijacker
+// implement Hijacker.
 func (rw *testResponseWriter) Hijack() (net.Conn, *bufio.ReadWriter, error) {
 	return nil, nil, nil
 }
 
-// implement Pusher
+// implement Pusher.
 func (rw *testResponseWriter) Push(target string, opts *http.PushOptions) error {
 	return nil
 }
 
-// implement Flusher
+// implement Flusher.
 func (rw *testResponseWriter) Flush() {
 }
 
-// implement io.ReaderFrom
+// implement io.ReaderFrom.
 func (rw *testResponseWriter) ReadFrom(r io.Reader) (n int64, err error) {
 	return 0, nil
 }

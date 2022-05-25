@@ -52,8 +52,8 @@ var (
 	errInvalidSpanIDHeader       = errors.New("invalid B3 spanID header found")
 	errInvalidParentSpanIDHeader = errors.New("invalid B3 ParentSpanID header found")
 	errInvalidScope              = errors.New("require either both traceID and spanID or none")
-	errInvalidScopeParent        = errors.New("ParentSpanID requires both traceID and spanID to be available")
-	errInvalidScopeParentSingle  = errors.New("ParentSpanID requires traceID, spanID and Sampled to be available")
+	errInvalidScopeParent        = errors.New("traceID and spanID required for ParentSpanID")
+	errInvalidScopeParentSingle  = errors.New("traceID, spanID and Sampled required for ParentSpanID")
 	errEmptyContext              = errors.New("empty request context")
 	errInvalidTraceIDValue       = errors.New("invalid B3 traceID value found")
 	errInvalidSpanIDValue        = errors.New("invalid B3 spanID value found")
@@ -259,23 +259,25 @@ func extractSingle(ctx context.Context, contextHeader string) (context.Context, 
 
 	headerLen := len(contextHeader)
 
-	if headerLen == samplingWidth {
+	switch {
+	case headerLen == samplingWidth:
 		sampling = contextHeader
-	} else if headerLen == traceID64BitsWidth || headerLen == traceID128BitsWidth {
+	case headerLen == traceID64BitsWidth || headerLen == traceID128BitsWidth:
 		// Trace ID by itself is invalid.
 		return ctx, empty, errInvalidScope
-	} else if headerLen >= traceID64BitsWidth+spanIDWidth+separatorWidth {
+	case headerLen >= traceID64BitsWidth+spanIDWidth+separatorWidth:
 		pos := 0
 		var traceID string
-		if string(contextHeader[traceID64BitsWidth]) == "-" {
+		switch {
+		case string(contextHeader[traceID64BitsWidth]) == "-":
 			// traceID must be 64 bits
 			pos += traceID64BitsWidth // {traceID}
 			traceID = b3TraceIDPadding + string(contextHeader[0:pos])
-		} else if string(contextHeader[32]) == "-" {
+		case string(contextHeader[32]) == "-":
 			// traceID must be 128 bits
 			pos += traceID128BitsWidth // {traceID}
 			traceID = string(contextHeader[0:pos])
-		} else {
+		default:
 			return ctx, empty, errInvalidTraceIDValue
 		}
 		var err error
@@ -298,12 +300,13 @@ func extractSingle(ctx context.Context, contextHeader string) (context.Context, 
 			}
 			pos += separatorWidth // {traceID}-{spanID}-
 
-			if headerLen == pos+samplingWidth {
+			switch {
+			case headerLen == pos+samplingWidth:
 				sampling = string(contextHeader[pos])
-			} else if headerLen == pos+parentSpanIDWidth {
+			case headerLen == pos+parentSpanIDWidth:
 				// {traceID}-{spanID}-{parentSpanID} is invalid.
 				return ctx, empty, errInvalidScopeParentSingle
-			} else if headerLen == pos+samplingWidth+separatorWidth+parentSpanIDWidth {
+			case headerLen == pos+samplingWidth+separatorWidth+parentSpanIDWidth:
 				sampling = string(contextHeader[pos])
 				pos += samplingWidth + separatorWidth // {traceID}-{spanID}-{sampling}-
 
@@ -313,11 +316,11 @@ func extractSingle(ctx context.Context, contextHeader string) (context.Context, 
 				if err != nil {
 					return ctx, empty, errInvalidParentSpanIDValue
 				}
-			} else {
+			default:
 				return ctx, empty, errInvalidParentSpanIDValue
 			}
 		}
-	} else {
+	default:
 		return ctx, empty, errInvalidTraceIDValue
 	}
 	switch sampling {
