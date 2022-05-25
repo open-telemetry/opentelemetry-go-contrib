@@ -14,7 +14,7 @@
 version: "3.7"
 services:
   go-restful-client:
-    image: golang:1.16-alpine
+    image: golang:1.17-alpine
     networks:
       - example
     command:
