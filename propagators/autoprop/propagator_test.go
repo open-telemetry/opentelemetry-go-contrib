@@ -45,8 +45,6 @@ type handler struct {
 	err error
 }
 
-var _ otel.ErrorHandler = (*handler)(nil)
-
 func (h *handler) Handle(err error) { h.err = err }
 
 func TestNewTextMapPropagatorInvalidEnvVal(t *testing.T) {
