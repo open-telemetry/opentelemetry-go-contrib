@@ -16,7 +16,6 @@ package autoprop
 
 import (
 	"context"
-	"os"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
@@ -24,22 +23,6 @@ import (
 	"go.opentelemetry.io/otel"
 	"go.opentelemetry.io/otel/propagation"
 )
-
-// setenv sets and unsets an environment variable in the context of a test
-// run. It is used instead of t.Setenv so as to support Go <1.17. It can be
-// replaced with t.Setenv(key, value) when this support is dropped.
-func setenv(t *testing.T, key, value string) {
-	prevValue, ok := os.LookupEnv(key)
-	if err := os.Setenv(key, value); err != nil {
-		t.Fatalf("cannot set environment variable: %v", err)
-	}
-
-	if ok {
-		t.Cleanup(func() { _ = os.Setenv(key, prevValue) })
-	} else {
-		t.Cleanup(func() { _ = os.Unsetenv(key) })
-	}
-}
 
 type handler struct {
 	err error
@@ -52,7 +35,7 @@ func TestNewTextMapPropagatorInvalidEnvVal(t *testing.T) {
 	otel.SetErrorHandler(h)
 
 	const name = "invalid-name"
-	setenv(t, otelPropagatorsEnvKey, name)
+	t.Setenv(otelPropagatorsEnvKey, name)
 	_ = NewTextMapPropagator()
 	assert.ErrorIs(t, h.err, errUnknownPropagator)
 }
@@ -79,6 +62,6 @@ func TestNewTextMapPropagatorSingleNoOverhead(t *testing.T) {
 }
 
 func TestNewTextMapPropagatorMultiEnvNone(t *testing.T) {
-	setenv(t, otelPropagatorsEnvKey, "b3,none,tracecontext")
+	t.Setenv(otelPropagatorsEnvKey, "b3,none,tracecontext")
 	assert.Equal(t, noop, NewTextMapPropagator())
 }
