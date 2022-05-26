@@ -15,6 +15,7 @@
 package autoprop
 
 import (
+	"fmt"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
@@ -60,8 +61,20 @@ func TestRegistryConcurrentSafe(t *testing.T) {
 func TestRegisterTextMapPropagator(t *testing.T) {
 	const propName = "custom"
 	RegisterTextMapPropagator(propName, noop)
+	t.Cleanup(func() { envRegistry.drop(propName) })
 
 	v, ok := envRegistry.load(propName)
 	assert.True(t, ok, "missing propagator in envRegistry")
 	assert.Equal(t, noop, v, "wrong propagator stored")
+}
+
+func TestDuplicateRegisterTextMapPropagatorPanics(t *testing.T) {
+	const propName = "custom"
+	RegisterTextMapPropagator(propName, noop)
+	t.Cleanup(func() { envRegistry.drop(propName) })
+
+	errString := fmt.Sprintf("%s: %q", errDupReg, propName)
+	assert.PanicsWithError(t, errString, func() {
+		RegisterTextMapPropagator(propName, noop)
+	})
 }
