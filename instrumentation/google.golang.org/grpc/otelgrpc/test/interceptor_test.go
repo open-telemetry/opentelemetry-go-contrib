@@ -19,7 +19,6 @@ import (
 	"errors"
 	"io"
 	"strings"
-	"sync"
 	"testing"
 	"time"
 
@@ -41,60 +40,6 @@ import (
 	"google.golang.org/grpc/metadata"
 	"google.golang.org/grpc/status"
 )
-
-type SpanRecorder struct {
-	startedMu sync.RWMutex
-	started   []trace.ReadWriteSpan
-
-	endedMu sync.RWMutex
-	ended   []trace.ReadOnlySpan
-}
-
-func NewSpanRecorder() *SpanRecorder {
-	return new(SpanRecorder)
-}
-
-// OnStart records started spans.
-func (sr *SpanRecorder) OnStart(_ context.Context, s trace.ReadWriteSpan) {
-	sr.startedMu.Lock()
-	defer sr.startedMu.Unlock()
-	sr.started = append(sr.started, s)
-}
-
-// OnEnd records completed spans.
-func (sr *SpanRecorder) OnEnd(s trace.ReadOnlySpan) {
-	sr.endedMu.Lock()
-	defer sr.endedMu.Unlock()
-	sr.ended = append(sr.ended, s)
-}
-
-// Shutdown does nothing.
-func (sr *SpanRecorder) Shutdown(context.Context) error {
-	return nil
-}
-
-// ForceFlush does nothing.
-func (sr *SpanRecorder) ForceFlush(context.Context) error {
-	return nil
-}
-
-// Started returns a copy of all started spans that have been recorded.
-func (sr *SpanRecorder) Started() []trace.ReadWriteSpan {
-	sr.startedMu.RLock()
-	defer sr.startedMu.RUnlock()
-	dst := make([]trace.ReadWriteSpan, len(sr.started))
-	copy(dst, sr.started)
-	return dst
-}
-
-// Ended returns a copy of all ended spans that have been recorded.
-func (sr *SpanRecorder) Ended() []trace.ReadOnlySpan {
-	sr.endedMu.RLock()
-	defer sr.endedMu.RUnlock()
-	dst := make([]trace.ReadOnlySpan, len(sr.ended))
-	copy(dst, sr.ended)
-	return dst
-}
 
 func getSpanFromRecorder(sr *tracetest.SpanRecorder, name string) (trace.ReadOnlySpan, bool) {
 	for _, s := range sr.Ended() {
