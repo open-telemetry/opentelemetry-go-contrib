@@ -29,6 +29,11 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 - Stopped injecting propagation context into response headers in otelhttp. (#2180)
 - Fix issue where attributes for DynamoDB were not added because of a string miss match. (#2272)
 
+### Removed
+
+- Drop support for Go 1.16.
+  The project currently only supports Go 1.17 and above. (#2314)
+
 ## [1.6.0/0.31.0] - 2022-03-28
 
 ### Added
