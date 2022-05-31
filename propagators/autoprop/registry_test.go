@@ -19,6 +19,7 @@ import (
 	"testing"
 
 	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 
 	"go.opentelemetry.io/otel/propagation"
 )
@@ -27,7 +28,9 @@ var noop = propagation.NewCompositeTextMapPropagator()
 
 func TestRegistryEmptyStore(t *testing.T) {
 	r := registry{}
-	assert.NotPanics(t, func() { r.store("first", noop) })
+	assert.NotPanics(t, func() {
+		require.NoError(t, r.store("first", noop))
+	})
 }
 
 func TestRegistryEmptyLoad(t *testing.T) {
@@ -43,10 +46,14 @@ func TestRegistryConcurrentSafe(t *testing.T) {
 	const propName = "prop"
 
 	r := registry{}
-	assert.NotPanics(t, func() { r.store(propName, noop) })
+	assert.NotPanics(t, func() {
+		require.NoError(t, r.store(propName, noop))
+	})
 
 	go func() {
-		assert.NotPanics(t, func() { r.store(propName, noop) })
+		assert.NotPanics(t, func() {
+			require.ErrorIs(t, r.store(propName, noop), errDupReg)
+		})
 	}()
 
 	go func() {
