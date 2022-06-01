@@ -3,7 +3,7 @@
 This package contains an AWS x-ray compatible propagator along
 with an x-ray compatible IDGenerator.
 
-## `traceIdSampler` and `x-ray ID Generator Compatability`
+## `traceIdRatioSampler` and `x-ray IDGenerator` compatability
 
 It is a general suggestion to `NOT` use the `traceIDRatioSampler` while also
 using the `x-ray IDGenerator`. The non random nature of building an x-ray traceId
