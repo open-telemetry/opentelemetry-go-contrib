@@ -44,7 +44,6 @@ func TestDetect(t *testing.T) {
 				projectID:           "my-project",
 				cloudPlatform:       gcp.GKE,
 				gkeHostID:           "1472385723456792345",
-				gkeHostName:         "my-gke-node-1234",
 				gkeClusterName:      "my-cluster",
 				gkeAvailabilityZone: "us-central1-c",
 			}},
@@ -55,7 +54,6 @@ func TestDetect(t *testing.T) {
 				semconv.K8SClusterNameKey.String("my-cluster"),
 				semconv.CloudAvailabilityZoneKey.String("us-central1-c"),
 				semconv.HostIDKey.String("1472385723456792345"),
-				semconv.HostNameKey.String("my-gke-node-1234"),
 			),
 		},
 		{
@@ -64,7 +62,6 @@ func TestDetect(t *testing.T) {
 				projectID:      "my-project",
 				cloudPlatform:  gcp.GKE,
 				gkeHostID:      "1472385723456792345",
-				gkeHostName:    "my-gke-node-1234",
 				gkeClusterName: "my-cluster",
 				gkeRegion:      "us-central1",
 			}},
@@ -75,7 +72,6 @@ func TestDetect(t *testing.T) {
 				semconv.K8SClusterNameKey.String("my-cluster"),
 				semconv.CloudRegionKey.String("us-central1"),
 				semconv.HostIDKey.String("1472385723456792345"),
-				semconv.HostNameKey.String("my-gke-node-1234"),
 			),
 		},
 		{

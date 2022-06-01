@@ -56,7 +56,6 @@ func (d *detector) Detect(ctx context.Context) (*resource.Resource, error) {
 		b.addZoneOrRegion(d.detector.GKEAvailabilityZoneOrRegion)
 		b.add(semconv.K8SClusterNameKey, d.detector.GKEClusterName)
 		b.add(semconv.HostIDKey, d.detector.GKEHostID)
-		b.add(semconv.HostNameKey, d.detector.GKEHostName)
 	case gcp.CloudRun:
 		b.attrs = append(b.attrs, semconv.CloudPlatformGCPCloudRun)
 		b.add(semconv.FaaSNameKey, d.detector.FaaSName)
