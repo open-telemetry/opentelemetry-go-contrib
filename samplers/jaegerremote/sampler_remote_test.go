@@ -90,10 +90,17 @@ type testSamplingStrategyParser struct {
 func (p *testSamplingStrategyParser) Parse(response []byte) (interface{}, error) {
 	strategy := new(jaeger_api_v2.SamplingStrategyResponse)
 
-	if string(response) == "probabilistic" {
+	switch string(response) {
+	case "probabilistic":
 		strategy.StrategyType = jaeger_api_v2.SamplingStrategyType_PROBABILISTIC
 		strategy.ProbabilisticSampling = &jaeger_api_v2.ProbabilisticSamplingStrategy{
 			SamplingRate: 0.85,
+		}
+		return strategy, nil
+	case "rateLimiting":
+		strategy.StrategyType = jaeger_api_v2.SamplingStrategyType_RATE_LIMITING
+		strategy.RateLimitingSampling = &jaeger_api_v2.RateLimitingSamplingStrategy{
+			MaxTracesPerSecond: 100,
 		}
 		return strategy, nil
 	}
@@ -278,6 +285,29 @@ func TestRemotelyControlledSampler_updateSampler(t *testing.T) {
 			assert.Equal(t, trace.RecordAndSample, result.Decision)
 		})
 	}
+}
+
+func TestRemotelyControlledSampler_ImmediatelyUpdateOnStartup(t *testing.T) {
+	initSampler := newProbabilisticSampler(0.123)
+	fetcher := &testSamplingStrategyFetcher{response: []byte("rateLimiting")}
+	parser := new(testSamplingStrategyParser)
+	updaters := []samplerUpdater{new(probabilisticSamplerUpdater), new(rateLimitingSamplerUpdater)}
+	sampler := New(
+		"test",
+		WithMaxOperations(42),
+		WithOperationNameLateBinding(true),
+		WithInitialSampler(initSampler),
+		WithSamplingServerURL("my url"),
+		WithSamplingRefreshInterval(10*time.Minute),
+		withSamplingStrategyFetcher(fetcher),
+		withSamplingStrategyParser(parser),
+		withUpdaters(updaters...),
+	)
+	time.Sleep(100 * time.Millisecond) // waiting for s.pollController
+	sampler.Close()                    // stop pollController, avoid date race
+	s, ok := sampler.sampler.(*rateLimitingSampler)
+	assert.True(t, ok)
+	assert.Equal(t, float64(100), s.maxTracesPerSecond)
 }
 
 func TestRemotelyControlledSampler_multiStrategyResponse(t *testing.T) {
