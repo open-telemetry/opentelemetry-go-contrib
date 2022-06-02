@@ -13,7 +13,6 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 ### Added
 
 - Consistent probability sampler implementation. (#1379)
-- Add README to `go.opentelemetry.io/contrib/propagators/aws/xray`. (#2321)
 
 ### Changed
 
