@@ -34,6 +34,7 @@ import (
 	sdktrace "go.opentelemetry.io/otel/sdk/trace"
 	"go.opentelemetry.io/otel/sdk/trace/tracetest"
 	semconv "go.opentelemetry.io/otel/semconv/v1.10.0"
+	"go.opentelemetry.io/otel/trace"
 )
 
 func assertMetricAttributes(t *testing.T, expectedAttributes []attribute.KeyValue, expRec []metrictest.ExportRecord) {
@@ -140,4 +141,48 @@ func TestHandlerRequestWithTraceContext(t *testing.T) {
 	assert.Equal(t, "test_request", spans[1].Name())
 	assert.NotEmpty(t, spans[0].Parent().SpanID())
 	assert.Equal(t, spans[1].SpanContext().SpanID(), spans[0].Parent().SpanID())
+}
+
+func TestWithPublicEndpoint(t *testing.T) {
+	spanRecorder := tracetest.NewSpanRecorder()
+	provider := sdktrace.NewTracerProvider(
+		sdktrace.WithSpanProcessor(spanRecorder),
+	)
+	remoteSpan := trace.SpanContextConfig{
+		TraceID: trace.TraceID{0x01},
+		SpanID:  trace.SpanID{0x01},
+	}
+	prop := propagation.TraceContext{}
+	h := otelhttp.NewHandler(
+		http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+			s := trace.SpanFromContext(r.Context())
+			sc := s.SpanContext()
+
+			// Should be with new root trace.
+			assert.True(t, sc.IsValid())
+			assert.False(t, sc.IsRemote())
+			assert.NotEqual(t, remoteSpan.TraceID, sc.TraceID())
+		}), "test_handler",
+		otelhttp.WithPublicEndpoint(),
+		otelhttp.WithPropagators(prop),
+		otelhttp.WithTracerProvider(provider),
+	)
+
+	r, err := http.NewRequest(http.MethodGet, "http://localhost/", nil)
+	require.NoError(t, err)
+
+	sc := trace.NewSpanContext(remoteSpan).WithRemote(true)
+	ctx := trace.ContextWithSpanContext(context.Background(), sc)
+	prop.Inject(ctx, propagation.HeaderCarrier(r.Header))
+
+	rr := httptest.NewRecorder()
+	h.ServeHTTP(rr, r)
+	assert.Equal(t, 200, rr.Result().StatusCode)
+
+	// Recorded span should be linked with an incoming span context.
+	assert.NoError(t, spanRecorder.ForceFlush(ctx))
+	done := spanRecorder.Ended()
+	require.Len(t, done, 1)
+	require.Len(t, done[0].Links(), 1, "should contain link")
+	require.True(t, sc.Equal(done[0].Links()[0].SpanContext), "should link incoming span context")
 }
