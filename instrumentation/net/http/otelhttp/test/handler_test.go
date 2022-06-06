@@ -151,6 +151,7 @@ func TestWithPublicEndpoint(t *testing.T) {
 	remoteSpan := trace.SpanContextConfig{
 		TraceID: trace.TraceID{0x01},
 		SpanID:  trace.SpanID{0x01},
+		Remote:  true,
 	}
 	prop := propagation.TraceContext{}
 	h := otelhttp.NewHandler(
@@ -171,7 +172,7 @@ func TestWithPublicEndpoint(t *testing.T) {
 	r, err := http.NewRequest(http.MethodGet, "http://localhost/", nil)
 	require.NoError(t, err)
 
-	sc := trace.NewSpanContext(remoteSpan).WithRemote(true)
+	sc := trace.NewSpanContext(remoteSpan)
 	ctx := trace.ContextWithSpanContext(context.Background(), sc)
 	prop.Inject(ctx, propagation.HeaderCarrier(r.Header))
 
