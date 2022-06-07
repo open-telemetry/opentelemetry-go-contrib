@@ -37,6 +37,7 @@ type config struct {
 	Meter             metric.Meter
 	Propagators       propagation.TextMapPropagator
 	SpanStartOptions  []trace.SpanStartOption
+	PublicEndpoint    bool
 	ReadEvent         bool
 	WriteEvent        bool
 	Filters           []Filter
@@ -106,6 +107,7 @@ func WithMeterProvider(provider metric.MeterProvider) Option {
 // association instead of a link.
 func WithPublicEndpoint() Option {
 	return optionFunc(func(c *config) {
+		c.PublicEndpoint = true
 		c.SpanStartOptions = append(c.SpanStartOptions, trace.WithNewRoot())
 	})
 }
