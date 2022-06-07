@@ -10,8 +10,8 @@ github.com/aws/aws-sdk-go-v2/service/internal/accept-encoding v1.9.1 h1:T4pFel53
 github.com/aws/aws-sdk-go-v2/service/internal/accept-encoding v1.9.1/go.mod h1:GeUru+8VzrTXV/83XyMJ80KpH8xO89VPoUileyNQ+tc=
 github.com/aws/aws-sdk-go-v2/service/internal/endpoint-discovery v1.7.5 h1:5luSEBzszJUfcjtGExZ6+T8h/fc0Vq7foE3D2b4LrP8=
 github.com/aws/aws-sdk-go-v2/service/internal/endpoint-discovery v1.7.5/go.mod h1:yu4bJTJjxrsTWxt/Hn90WT5lhGV6auJNyey1+dVW2yA=
-github.com/aws/aws-sdk-go-v2/service/route53 v1.20.5 h1:Vex6D07/CmahT0LIaiRk+j9xyVAsvQxBa8iv38p3Ajc=
-github.com/aws/aws-sdk-go-v2/service/route53 v1.20.5/go.mod h1:QZWV7sxHUg/qsPJcAtAI9JyLPKZ78weHmdILmYMCqEE=
+github.com/aws/aws-sdk-go-v2/service/route53 v1.21.0 h1:h6WhUKz24e1LZfhMGBpvKL1CuMwP446VdSWvVHfDo9U=
+github.com/aws/aws-sdk-go-v2/service/route53 v1.21.0/go.mod h1:QZWV7sxHUg/qsPJcAtAI9JyLPKZ78weHmdILmYMCqEE=
 github.com/aws/smithy-go v1.11.2 h1:eG/N+CcUMAvsdffgMvjMKwfyDzIkjM6pfxMJ8Mzc6mE=
 github.com/aws/smithy-go v1.11.2/go.mod h1:3xHYmszWVx2c0kIwQeEVf9uSm4fYZt67FBJnwub1bgM=
 github.com/davecgh/go-spew v1.1.0 h1:ZDRjVQ15GmhC3fiQ8ni8+OwkZQO4DARzQgrnXU1Liz8=
