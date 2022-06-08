@@ -51,6 +51,7 @@ type Handler struct {
 	spanNameFormatter func(string, *http.Request) string
 	counters          map[string]syncint64.Counter
 	valueRecorders    map[string]syncfloat64.Histogram
+	publicEndpoint    bool
 }
 
 func defaultHandlerFormatter(operation string, _ *http.Request) string {
@@ -86,6 +87,7 @@ func (h *Handler) configure(c *config) {
 	h.writeEvent = c.WriteEvent
 	h.filters = c.Filters
 	h.spanNameFormatter = c.SpanNameFormatter
+	h.publicEndpoint = c.PublicEndpoint
 }
 
 func handleErr(err error) {
@@ -140,6 +142,12 @@ func (h *Handler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	}
 
 	ctx := h.propagators.Extract(r.Context(), propagation.HeaderCarrier(r.Header))
+	if h.publicEndpoint {
+		// Linking incoming span context if any for public endpoint.
+		if s := trace.SpanContextFromContext(ctx); s.IsValid() && s.IsRemote() {
+			opts = append(opts, trace.WithLinks(trace.Link{SpanContext: s}))
+		}
+	}
 	ctx, span := tracer.Start(ctx, h.spanNameFormatter(h.operation, r), opts...)
 	defer span.End()
 
