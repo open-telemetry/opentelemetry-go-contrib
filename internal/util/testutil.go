@@ -26,6 +26,6 @@ func IntegrationShouldRun(name string) {
 			"to",
 			fmt.Sprintf("\"%s\"", name),
 		)
-		os.Exit(0)
+		os.Exit(0) //nolint revive  // Signal test was successfully skipped.
 	}
 }

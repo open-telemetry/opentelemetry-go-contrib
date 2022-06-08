@@ -30,7 +30,6 @@ import (
 	"go.opentelemetry.io/otel/trace"
 
 	b3prop "go.opentelemetry.io/contrib/propagators/b3"
-	oteltrace "go.opentelemetry.io/otel/trace"
 )
 
 func init() {
@@ -41,7 +40,7 @@ func TestGetSpanNotInstrumented(t *testing.T) {
 	router := gin.New()
 	router.GET("/ping", func(c *gin.Context) {
 		// Assert we don't have a span on the context.
-		span := oteltrace.SpanFromContext(c.Request.Context())
+		span := trace.SpanFromContext(c.Request.Context())
 		ok := !span.SpanContext().IsValid()
 		assert.True(t, ok)
 		_, _ = c.Writer.Write([]byte("ok"))
@@ -72,7 +71,7 @@ func TestPropagationWithGlobalPropagators(t *testing.T) {
 	router := gin.New()
 	router.Use(Middleware("foobar", WithTracerProvider(provider)))
 	router.GET("/user/:id", func(c *gin.Context) {
-		span := oteltrace.SpanFromContext(c.Request.Context())
+		span := trace.SpanFromContext(c.Request.Context())
 		assert.Equal(t, sc.TraceID(), span.SpanContext().TraceID())
 		assert.Equal(t, sc.SpanID(), span.SpanContext().SpanID())
 	})
@@ -99,7 +98,7 @@ func TestPropagationWithCustomPropagators(t *testing.T) {
 	router := gin.New()
 	router.Use(Middleware("foobar", WithTracerProvider(provider), WithPropagators(b3)))
 	router.GET("/user/:id", func(c *gin.Context) {
-		span := oteltrace.SpanFromContext(c.Request.Context())
+		span := trace.SpanFromContext(c.Request.Context())
 		assert.Equal(t, sc.TraceID(), span.SpanContext().TraceID())
 		assert.Equal(t, sc.SpanID(), span.SpanContext().SpanID())
 	})

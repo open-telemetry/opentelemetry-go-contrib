@@ -71,7 +71,7 @@ func TestExpiredManifest(t *testing.T) {
 	assert.True(t, m.Expired())
 }
 
-// assert that if collector is not enabled at specified endpoint, returns an error
+// assert that if collector is not enabled at specified endpoint, returns an error.
 func TestRefreshManifestError(t *testing.T) {
 	// collector is not running at port 2020 so expect error
 	endpoint, err := url.Parse("http://127.0.0.1:2020")
@@ -226,7 +226,7 @@ func TestMatchAgainstManifestRulesAttributeWildCardMatch(t *testing.T) {
 }
 
 // assert that when no known rule is match then returned rule is nil,
-// matched flag is false
+// matched flag is false.
 func TestMatchAgainstManifestRulesNoMatch(t *testing.T) {
 	r1 := Rule{
 		ruleProperties: ruleProperties{
@@ -618,7 +618,7 @@ func TestRefreshManifestAddOneInvalidRule(t *testing.T) {
 	assert.Equal(t, r1, m.Rules[0])
 }
 
-// assert that inactive rule so return early without doing getSamplingTargets call
+// assert that inactive rule so return early without doing getSamplingTargets call.
 func TestRefreshManifestTargetNoSnapShot(t *testing.T) {
 	clock := &mockClock{
 		nowTime: 15000000,
@@ -990,7 +990,6 @@ func TestUpdateTargetsUnprocessedStatistics(t *testing.T) {
 
 	// assert refresh is false
 	assert.False(t, refresh)
-
 }
 
 // assert that a missing sampling rule in manifest does not update it's reservoir values.
@@ -1475,7 +1474,7 @@ func TestMinPollIntervalNegativeCase(t *testing.T) {
 	assert.Equal(t, -5*time.Second, minPoll)
 }
 
-// asserts that manifest with empty rules return 0
+// asserts that manifest with empty rules return 0.
 func TestMinPollIntervalNoRules(t *testing.T) {
 	var rules []Rule
 	m := &Manifest{Rules: rules}
@@ -1492,7 +1491,7 @@ func TestGenerateClientID(t *testing.T) {
 	assert.NotEmpty(t, clientID)
 }
 
-// validate no data race is happening when updating rule properties in manifest while matching
+// validate no data race is happening when updating rule properties in manifest while matching.
 func TestRaceUpdatingRulesWhileMatching(t *testing.T) {
 	// getSamplingRules response
 	ruleRecords := samplingRuleRecords{
@@ -1562,7 +1561,7 @@ func TestRaceUpdatingRulesWhileMatching(t *testing.T) {
 	}
 }
 
-// validate no data race is happening when updating rule properties and rule targets in manifest while matching
+// validate no data race is happening when updating rule properties and rule targets in manifest while matching.
 func TestRaceUpdatingRulesAndTargetsWhileMatching(t *testing.T) {
 	// getSamplingRules response to update existing manifest rule
 	ruleRecords := samplingRuleRecords{
@@ -1645,7 +1644,7 @@ func TestRaceUpdatingRulesAndTargetsWhileMatching(t *testing.T) {
 	}
 }
 
-// validate no data race is when capturing sampling statistics in manifest while sampling
+// validate no data race is when capturing sampling statistics in manifest while sampling.
 func TestRaceUpdatingSamplingStatisticsWhenSampling(t *testing.T) {
 	// existing rule already present in manifest
 	r1 := Rule{

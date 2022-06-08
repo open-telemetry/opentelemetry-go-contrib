@@ -37,7 +37,7 @@ var (
 	errNotOnLambda = errors.New("process is not on Lambda, cannot detect environment variables from Lambda")
 )
 
-// resource detector collects resource information from Lambda environment
+// resource detector collects resource information from Lambda environment.
 type resourceDetector struct{}
 
 // compile time assertion that resource detector implements the resource.Detector interface.
@@ -48,9 +48,8 @@ func NewResourceDetector() resource.Detector {
 	return &resourceDetector{}
 }
 
-// Detect collects resource attributes available when running on lambda
+// Detect collects resource attributes available when running on lambda.
 func (detector *resourceDetector) Detect(context.Context) (*resource.Resource, error) {
-
 	// Lambda resources come from ENV
 	lambdaName := os.Getenv(lambdaFunctionNameEnvVar)
 	if len(lambdaName) == 0 {

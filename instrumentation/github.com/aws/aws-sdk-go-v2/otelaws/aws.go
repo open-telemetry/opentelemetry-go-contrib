@@ -47,7 +47,6 @@ func (m otelMiddlewares) initializeMiddlewareBefore(stack *middleware.Stack) err
 	return stack.Initialize.Add(middleware.InitializeMiddlewareFunc("OTelInitializeMiddlewareBefore", func(
 		ctx context.Context, in middleware.InitializeInput, next middleware.InitializeHandler) (
 		out middleware.InitializeOutput, metadata middleware.Metadata, err error) {
-
 		ctx = context.WithValue(ctx, spanTimestampKey{}, time.Now())
 		return next.HandleInitialize(ctx, in)
 	}),
@@ -58,7 +57,6 @@ func (m otelMiddlewares) initializeMiddlewareAfter(stack *middleware.Stack) erro
 	return stack.Initialize.Add(middleware.InitializeMiddlewareFunc("OTelInitializeMiddlewareAfter", func(
 		ctx context.Context, in middleware.InitializeInput, next middleware.InitializeHandler) (
 		out middleware.InitializeOutput, metadata middleware.Metadata, err error) {
-
 		serviceID := v2Middleware.GetServiceID(ctx)
 
 		attributes := []attribute.KeyValue{
@@ -131,5 +129,4 @@ func AppendMiddlewares(apiOptions *[]func(*middleware.Stack) error, opts ...Opti
 		trace.WithInstrumentationVersion(SemVersion())),
 		attributeSetter: cfg.AttributeSetter}
 	*apiOptions = append(*apiOptions, m.initializeMiddlewareBefore, m.initializeMiddlewareAfter, m.deserializeMiddleware)
-
 }

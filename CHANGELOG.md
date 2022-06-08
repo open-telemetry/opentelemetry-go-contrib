@@ -10,6 +10,7 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 
 ## Added
 
+- The `go.opentelemetry.io/contrib/propagators/autoprop` package to provide configuration of propagators with useful defaults and envar support. (#2258)
 - `otelecho` mirrored options from `otelhttp`. Added new option `WithRouteTagFromPath()` which adds a middleware into the
   chain to tag all routes with `echo.Context.Path()`. (#2269)
 
@@ -40,6 +41,12 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
   This makes `4xx` response codes to not be an error anymore. (#1973)
 - Fixed jaegerremote sampler not behaving properly with per operation strategy set. (#2137)
 - Stopped injecting propagation context into response headers in otelhttp. (#2180)
+- Fix issue where attributes for DynamoDB were not added because of a string miss match. (#2272)
+
+### Removed
+
+- Drop support for Go 1.16.
+  The project currently only supports Go 1.17 and above. (#2314)
 
 ## [1.6.0/0.31.0] - 2022-03-28
 

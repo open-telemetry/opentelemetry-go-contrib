@@ -150,5 +150,4 @@ func span(c *beego.Controller, spanName string) (context.Context, trace.Span) {
 			Template(c.TplName),
 		),
 	)
-
 }

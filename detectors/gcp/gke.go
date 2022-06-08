@@ -26,7 +26,9 @@ import (
 	semconv "go.opentelemetry.io/otel/semconv/v1.10.0"
 )
 
-// GKE collects resource information of GKE computing instances
+// GKE collects resource information of GKE computing instances.
+// Deprecated: Use gcp.NewDetector() instead, which does NOT detect container, pod, and namespace attributes.
+// Set those using name using the OTEL_RESOURCE_ATTRIBUTES env var instead.
 type GKE struct{}
 
 // compile time assertion that GKE implements the resource.Detector interface.

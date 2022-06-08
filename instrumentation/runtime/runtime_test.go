@@ -53,7 +53,7 @@ func getGCCount(exp *metrictest.Exporter) int {
 	panic("Could not locate a process.runtime.go.gc.count metric in test output")
 }
 
-func testMinimumInterval(t *testing.T, shouldHappen bool, opts ...runtime.Option) {
+func testMinimumInterval(t *testing.T, expect int, opts ...runtime.Option) {
 	goruntime.GC()
 
 	var mstats0 goruntime.MemStats
@@ -76,28 +76,24 @@ func testMinimumInterval(t *testing.T, shouldHappen bool, opts ...runtime.Option
 
 	require.Equal(t, 1, getGCCount(exp)-baseline)
 
-	extra := 0
-	if shouldHappen {
-		extra = 3
-	}
-
+	// Only counted for small min read mem state itervals.
 	goruntime.GC()
 	goruntime.GC()
 	goruntime.GC()
 
 	require.NoError(t, exp.Collect(context.Background()))
 
-	require.Equal(t, 1+extra, getGCCount(exp)-baseline)
+	require.Equal(t, expect, getGCCount(exp)-baseline)
 }
 
 func TestDefaultMinimumInterval(t *testing.T) {
-	testMinimumInterval(t, false)
+	testMinimumInterval(t, 1)
 }
 
 func TestNoMinimumInterval(t *testing.T) {
-	testMinimumInterval(t, true, runtime.WithMinimumReadMemStatsInterval(0))
+	testMinimumInterval(t, 4, runtime.WithMinimumReadMemStatsInterval(0))
 }
 
 func TestExplicitMinimumInterval(t *testing.T) {
-	testMinimumInterval(t, false, runtime.WithMinimumReadMemStatsInterval(time.Hour))
+	testMinimumInterval(t, 1, runtime.WithMinimumReadMemStatsInterval(time.Hour))
 }
