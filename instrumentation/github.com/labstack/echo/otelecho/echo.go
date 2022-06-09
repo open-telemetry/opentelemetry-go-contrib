@@ -62,7 +62,7 @@ func Middleware(service string, opts ...Option) echo.MiddlewareFunc {
 	}
 }
 
-// WithRouteTag wraps otelhttp.WithRouteTag into an echo middleware
+// WithRouteTag wraps otelhttp.WithRouteTag into an echo middleware.
 func WithRouteTag(route string) echo.MiddlewareFunc {
 	return echo.WrapMiddleware(func(handler http.Handler) http.Handler {
 		return otelhttp.WithRouteTag(route, handler)
@@ -70,7 +70,7 @@ func WithRouteTag(route string) echo.MiddlewareFunc {
 }
 
 // PathSpanNameFormatter formats span names with the name of the path for the routed handler
-// The PathSpanNameFormatter requires that the server has the instrumentation middleware inserted before it
+// The PathSpanNameFormatter requires that the server has the instrumentation middleware inserted before it.
 func PathSpanNameFormatter(operation string, r *http.Request) string {
 	ctx := r.Context().Value(echoContextCtxKey).(echo.Context)
 	return ctx.Path()

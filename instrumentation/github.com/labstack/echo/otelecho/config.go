@@ -58,7 +58,7 @@ func WithSkipper(skipper func(c echo.Context) bool) Option {
 	})
 }
 
-// WithRouteTagFromPath adds a middleware into the chain to tag all routes with echo.Context.Path()
+// WithRouteTagFromPath adds a middleware into the chain to tag all routes with echo.Context.Path().
 func WithRouteTagFromPath() Option {
 	return optionFunc(func(c *config) {
 		c.routeTagFromPath = true
