@@ -38,6 +38,7 @@ type config struct {
 	Propagators       propagation.TextMapPropagator
 	SpanStartOptions  []trace.SpanStartOption
 	PublicEndpoint    bool
+	PublicEndpointFn  func(*http.Request) bool
 	ReadEvent         bool
 	WriteEvent        bool
 	Filters           []Filter
@@ -108,7 +109,16 @@ func WithMeterProvider(provider metric.MeterProvider) Option {
 func WithPublicEndpoint() Option {
 	return optionFunc(func(c *config) {
 		c.PublicEndpoint = true
-		c.SpanStartOptions = append(c.SpanStartOptions, trace.WithNewRoot())
+	})
+}
+
+// WithPublicEndpointFn runs with every request, and allows conditionnally
+// configuring the Handler to link the span with an incoming span context. If
+// this option is not provided or returns false, then the association is a
+// child association instead of a link.
+func WithPublicEndpointFn(fn func(*http.Request) bool) Option {
+	return optionFunc(func(c *config) {
+		c.PublicEndpointFn = fn
 	})
 }
 
