@@ -22,7 +22,7 @@ import (
 )
 
 // wrappedHandlerFunction is a struct which only holds an instrumentor and is
-// able to instrument invocations of the user's lambda handler function
+// able to instrument invocations of the user's lambda handler function.
 type wrappedHandlerFunction struct {
 	instrumentor instrumentor
 }
@@ -34,7 +34,7 @@ func errorHandler(e error) func(context.Context, interface{}) (interface{}, erro
 }
 
 // Ensure handler takes 0-2 values, with context
-// as its first value if two arguments exist
+// as its first value if two arguments exist.
 func validateArguments(handler reflect.Type) (bool, error) {
 	handlerTakesContext := false
 	if handler.NumIn() > 2 {
@@ -52,7 +52,7 @@ func validateArguments(handler reflect.Type) (bool, error) {
 }
 
 // Ensure handler returns 0-2 values, with an error
-// as its first value if any exist
+// as its first value if any exist.
 func validateReturns(handler reflect.Type) error {
 	errorType := reflect.TypeOf((*error)(nil)).Elem()
 
@@ -72,7 +72,7 @@ func validateReturns(handler reflect.Type) error {
 	return nil
 }
 
-// Wraps and calls customer lambda handler then unpacks response as necessary
+// Wraps and calls customer lambda handler then unpacks response as necessary.
 func (whf *wrappedHandlerFunction) wrapperInternals(ctx context.Context, handlerFunc interface{}, eventJSON []byte, event reflect.Value, takesContext bool) (interface{}, error) {
 	wrappedLambdaHandler := reflect.ValueOf(whf.wrapper(handlerFunc))
 
@@ -94,7 +94,7 @@ func (whf *wrappedHandlerFunction) wrapperInternals(ctx context.Context, handler
 	return val, err
 }
 
-// InstrumentHandler Provides a lambda handler which wraps customer lambda handler with OTel Tracing
+// InstrumentHandler Provides a lambda handler which wraps customer lambda handler with OTel Tracing.
 func InstrumentHandler(handlerFunc interface{}, options ...Option) interface{} {
 	whf := wrappedHandlerFunction{instrumentor: newInstrumentor(options...)}
 
@@ -148,10 +148,9 @@ func InstrumentHandler(handlerFunc interface{}, options ...Option) interface{} {
 	}
 }
 
-// Adds OTel span surrounding customer handler call
+// Adds OTel span surrounding customer handler call.
 func (whf *wrappedHandlerFunction) wrapper(handlerFunc interface{}) func(ctx context.Context, eventJSON []byte, event interface{}, takesContext bool) []reflect.Value {
 	return func(ctx context.Context, eventJSON []byte, event interface{}, takesContext bool) []reflect.Value {
-
 		ctx, span := whf.instrumentor.tracingBegin(ctx, eventJSON)
 		defer whf.instrumentor.tracingEnd(ctx, span)
 
@@ -171,7 +170,7 @@ func (whf *wrappedHandlerFunction) wrapper(handlerFunc interface{}) func(ctx con
 }
 
 // Determine if an interface{} is nil or the
-// if the reflect.Value of the event is nil
+// if the reflect.Value of the event is nil.
 func eventExists(event interface{}) bool {
 	if event == nil {
 		return false

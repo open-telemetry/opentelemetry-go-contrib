@@ -12,9 +12,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-// This package provides all of its functionality through its
-// submodules. The submodules in the exporters directory provide
-// implementations for trace and metric exporters for third-party
-// collectors, and submodules in the instrumentation directory provide the
-// instrumentation for the popular go libraries.
+// Package contrib is a collection of extensions for the opentelemetry-go
+// project. It provides 3rd parth resource detectors, propagators, samplers,
+// and instrumentation as submodules.
 package contrib // import "go.opentelemetry.io/contrib"

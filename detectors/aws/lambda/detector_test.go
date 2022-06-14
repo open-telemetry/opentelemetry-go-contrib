@@ -26,7 +26,7 @@ import (
 	semconv "go.opentelemetry.io/otel/semconv/v1.10.0"
 )
 
-// successfully return resource when process is running on Amazon Lambda environment
+// successfully return resource when process is running on Amazon Lambda environment.
 func TestDetectSuccess(t *testing.T) {
 	os.Clearenv()
 	_ = os.Setenv(lambdaFunctionNameEnvVar, "testFunction")
@@ -47,7 +47,7 @@ func TestDetectSuccess(t *testing.T) {
 	assert.Equal(t, expectedResource, res, "Resource returned is incorrect")
 }
 
-// return empty resource when not running on lambda
+// return empty resource when not running on lambda.
 func TestReturnsIfNoEnvVars(t *testing.T) {
 	os.Clearenv()
 	detector := resourceDetector{}

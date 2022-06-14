@@ -38,7 +38,7 @@ func StartMockAgent() (*MockAgent, error) {
 	return agent, nil
 }
 
-// Close stops the serving of traffic
+// Close stops the serving of traffic.
 func (s *MockAgent) Close() {
 	s.samplingSrv.Close()
 }
@@ -50,12 +50,12 @@ type MockAgent struct {
 	samplingSrv *httptest.Server
 }
 
-// SamplingServerAddr returns the host:port of HTTP server exposing sampling strategy endpoint
+// SamplingServerAddr returns the host:port of HTTP server exposing sampling strategy endpoint.
 func (s *MockAgent) SamplingServerAddr() string {
 	return s.samplingSrv.Listener.Addr().String()
 }
 
-// AddSamplingStrategy registers a sampling strategy for a service
+// AddSamplingStrategy registers a sampling strategy for a service.
 func (s *MockAgent) AddSamplingStrategy(service string, strategy interface{}) {
 	s.samplingMgr.AddSamplingStrategy(service, strategy)
 }
@@ -79,13 +79,13 @@ func (h *samplingHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, fmt.Sprintf("Error retrieving strategy: %+v", err), http.StatusInternalServerError)
 		return
 	}
-	json, err := json.Marshal(resp)
+	data, err := json.Marshal(resp)
 	if err != nil {
 		http.Error(w, "Cannot marshall Thrift to JSON", http.StatusInternalServerError)
 		return
 	}
 	w.Header().Add("Content-Type", "application/json")
-	if _, err := w.Write(json); err != nil {
+	if _, err := w.Write(data); err != nil {
 		return
 	}
 }

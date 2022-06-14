@@ -30,6 +30,7 @@ module-sets:
     version: v0.32.0
     modules:
       - go.opentelemetry.io/contrib/detectors/aws/lambda
+      - go.opentelemetry.io/contrib/propagators/autoprop
       - go.opentelemetry.io/contrib/propagators/opencensus
       - go.opentelemetry.io/contrib/propagators/opencensus/examples
       - go.opentelemetry.io/contrib/instrumentation/gopkg.in/macaron.v1/otelmacaron

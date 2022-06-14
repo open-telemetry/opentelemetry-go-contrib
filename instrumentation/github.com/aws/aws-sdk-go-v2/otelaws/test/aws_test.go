@@ -99,7 +99,6 @@ func TestAppendMiddlewares(t *testing.T) {
 					t.Fatal(err)
 				}
 			}))
-		defer server.Close()
 
 		t.Run(name, func(t *testing.T) {
 			sr := tracetest.NewSpanRecorder()
@@ -152,5 +151,6 @@ func TestAppendMiddlewares(t *testing.T) {
 			assert.Contains(t, attrs, attribute.String("aws.operation", "ChangeResourceRecordSets"))
 		})
 
+		server.Close()
 	}
 }

@@ -55,7 +55,7 @@ func (r *reservoir) expired(now time.Time) bool {
 }
 
 // take consumes quota from reservoir, if any remains, then returns true. False otherwise.
-func (r *reservoir) take(now time.Time, borrowed bool, itemCost float64) bool {
+func (r *reservoir) take(now time.Time, borrowed bool, itemCost float64) bool { // nolint: revive  // borrowed is not a control flag.
 	r.mu.Lock()
 	defer r.mu.Unlock()
 
@@ -88,7 +88,7 @@ func (r *reservoir) take(now time.Time, borrowed bool, itemCost float64) bool {
 // refreshQuotaBalanceLocked refreshes the quotaBalance. If borrowed is true then add to the quota balance 1 by every second,
 // otherwise add to the quota balance based on assigned quota by X-Ray service.
 // It is assumed the lock is held when calling this.
-func (r *reservoir) refreshQuotaBalanceLocked(now time.Time, borrowed bool) {
+func (r *reservoir) refreshQuotaBalanceLocked(now time.Time, borrowed bool) { // nolint: revive  // borrowed is not a control flag.
 	elapsedTime := now.Sub(r.lastTick)
 	r.lastTick = now
 

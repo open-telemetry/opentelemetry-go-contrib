@@ -42,21 +42,21 @@ var (
 	errCannotReadCGroupFile    = errors.New("ECS resource detector failed to read cGroupFile")
 )
 
-// Create interface for methods needing to be mocked
+// Create interface for methods needing to be mocked.
 type detectorUtils interface {
 	getContainerName() (string, error)
 	getContainerID() (string, error)
 }
 
-// struct implements detectorUtils interface
+// struct implements detectorUtils interface.
 type ecsDetectorUtils struct{}
 
-// resource detector collects resource information from Elastic Container Service environment
+// resource detector collects resource information from Elastic Container Service environment.
 type resourceDetector struct {
 	utils detectorUtils
 }
 
-// compile time assertion that ecsDetectorUtils implements detectorUtils interface
+// compile time assertion that ecsDetectorUtils implements detectorUtils interface.
 var _ detectorUtils = (*ecsDetectorUtils)(nil)
 
 // compile time assertion that resource detector implements the resource.Detector interface.
@@ -93,7 +93,7 @@ func (detector *resourceDetector) Detect(ctx context.Context) (*resource.Resourc
 	return resource.NewWithAttributes(semconv.SchemaURL, attributes...), nil
 }
 
-// returns docker container ID from default c group path
+// returns docker container ID from default c group path.
 func (ecsUtils ecsDetectorUtils) getContainerID() (string, error) {
 	fileData, err := ioutil.ReadFile(defaultCgroupPath)
 	if err != nil {
@@ -108,7 +108,7 @@ func (ecsUtils ecsDetectorUtils) getContainerID() (string, error) {
 	return "", errCannotReadContainerID
 }
 
-// returns host name reported by the kernel
+// returns host name reported by the kernel.
 func (ecsUtils ecsDetectorUtils) getContainerName() (string, error) {
 	hostName, err := os.Hostname()
 	if err != nil {
