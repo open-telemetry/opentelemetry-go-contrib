@@ -10,7 +10,7 @@ replace (
 
 require (
 	github.com/aws/aws-lambda-go v1.32.0
-	github.com/stretchr/testify v1.7.1
+	github.com/stretchr/testify v1.7.2
 	go.opentelemetry.io/contrib/detectors/aws/lambda v0.32.0
 	go.opentelemetry.io/contrib/instrumentation/github.com/aws/aws-lambda-go/otellambda v0.32.0
 	go.opentelemetry.io/contrib/propagators/aws v1.7.0
@@ -37,5 +37,5 @@ require (
 	golang.org/x/text v0.3.5 // indirect
 	google.golang.org/genproto v0.0.0-20211118181313-81c1377c94b1 // indirect
 	google.golang.org/protobuf v1.28.0 // indirect
-	gopkg.in/yaml.v3 v3.0.0-20200615113413-eeeca48fe776 // indirect
+	gopkg.in/yaml.v3 v3.0.1 // indirect
 )
