@@ -68,9 +68,16 @@ func (d *detector) Detect(ctx context.Context) (*resource.Resource, error) {
 		b.add(semconv.FaaSVersionKey, d.detector.FaaSVersion)
 		b.add(semconv.FaaSIDKey, d.detector.FaaSID)
 		b.add(semconv.CloudRegionKey, d.detector.FaaSCloudRegion)
-	case gcp.AppEngine:
+	case gcp.AppEngineFlex:
 		b.attrs = append(b.attrs, semconv.CloudPlatformGCPAppEngine)
-		b.addZoneAndRegion(d.detector.AppEngineAvailabilityZoneAndRegion)
+		b.addZoneAndRegion(d.detector.AppEngineFlexAvailabilityZoneAndRegion)
+		b.add(semconv.FaaSNameKey, d.detector.AppEngineServiceName)
+		b.add(semconv.FaaSVersionKey, d.detector.AppEngineServiceVersion)
+		b.add(semconv.FaaSIDKey, d.detector.AppEngineServiceInstance)
+	case gcp.AppEngineStandard:
+		b.attrs = append(b.attrs, semconv.CloudPlatformGCPAppEngine)
+		b.add(semconv.CloudAvailabilityZoneKey, d.detector.AppEngineStandardAvailabilityZone)
+		b.add(semconv.CloudRegionKey, d.detector.AppEngineStandardCloudRegion)
 		b.add(semconv.FaaSNameKey, d.detector.AppEngineServiceName)
 		b.add(semconv.FaaSVersionKey, d.detector.AppEngineServiceVersion)
 		b.add(semconv.FaaSIDKey, d.detector.AppEngineServiceInstance)
