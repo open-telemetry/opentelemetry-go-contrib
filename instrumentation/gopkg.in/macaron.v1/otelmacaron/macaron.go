@@ -64,7 +64,7 @@ func Middleware(service string, opts ...Option) macaron.Handler {
 
 		status := c.Resp.Status()
 		attrs := semconv.HTTPAttributesFromHTTPStatusCode(status)
-		spanStatus, spanMessage := semconv.SpanStatusFromHTTPStatusCode(status)
+		spanStatus, spanMessage := semconv.SpanStatusFromHTTPStatusCodeAndSpanKind(status, oteltrace.SpanKindServer)
 		span.SetAttributes(attrs...)
 		span.SetStatus(spanStatus, spanMessage)
 	}

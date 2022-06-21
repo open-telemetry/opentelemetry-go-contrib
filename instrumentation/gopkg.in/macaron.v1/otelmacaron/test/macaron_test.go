@@ -17,6 +17,7 @@ package test
 import (
 	"net/http"
 	"net/http/httptest"
+	"strconv"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
@@ -26,6 +27,7 @@ import (
 	"go.opentelemetry.io/contrib/instrumentation/gopkg.in/macaron.v1/otelmacaron"
 	"go.opentelemetry.io/otel"
 	"go.opentelemetry.io/otel/attribute"
+	"go.opentelemetry.io/otel/codes"
 	"go.opentelemetry.io/otel/sdk/trace"
 	"go.opentelemetry.io/otel/sdk/trace/tracetest"
 	oteltrace "go.opentelemetry.io/otel/trace"
@@ -93,4 +95,32 @@ func TestChildSpanNames(t *testing.T) {
 	assert.Contains(t, attrs, attribute.Int("http.status_code", http.StatusOK))
 	assert.Contains(t, attrs, attribute.String("http.method", "GET"))
 	assert.Contains(t, attrs, attribute.String("http.target", "/book/foo"))
+}
+
+func TestSpanStatus(t *testing.T) {
+	testCases := []struct {
+		httpStatusCode int
+		wantSpanStatus codes.Code
+	}{
+		{200, codes.Unset},
+		{400, codes.Unset},
+		{500, codes.Error},
+	}
+	for _, tc := range testCases {
+		t.Run(strconv.Itoa(tc.httpStatusCode), func(t *testing.T) {
+			sr := tracetest.NewSpanRecorder()
+			provider := trace.NewTracerProvider()
+			provider.RegisterSpanProcessor(sr)
+			m := macaron.Classic()
+			m.Use(otelmacaron.Middleware("foobar", otelmacaron.WithTracerProvider(provider)))
+			m.Get("/", func(ctx *macaron.Context) {
+				ctx.Resp.WriteHeader(tc.httpStatusCode)
+			})
+
+			m.ServeHTTP(httptest.NewRecorder(), httptest.NewRequest("GET", "/", nil))
+
+			require.Len(t, sr.Ended(), 1, "should emit a span")
+			assert.Equal(t, sr.Ended()[0].Status().Code, tc.wantSpanStatus, "should only set Error status for HTTP statuses >= 500")
+		})
+	}
 }
