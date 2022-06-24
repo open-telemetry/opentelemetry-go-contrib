@@ -21,6 +21,7 @@ import (
 	"html/template"
 	"net/http"
 	"net/http/httptest"
+	"strconv"
 	"testing"
 
 	"github.com/gin-gonic/gin"
@@ -134,6 +135,34 @@ func TestError(t *testing.T) {
 	assert.Contains(t, attr, attribute.String("gin.errors", "Error #01: oh no\n"))
 	// server errors set the status
 	assert.Equal(t, codes.Error, span.Status().Code)
+}
+
+func TestSpanStatus(t *testing.T) {
+	testCases := []struct {
+		httpStatusCode int
+		wantSpanStatus codes.Code
+	}{
+		{200, codes.Unset},
+		{400, codes.Unset},
+		{500, codes.Error},
+	}
+	for _, tc := range testCases {
+		t.Run(strconv.Itoa(tc.httpStatusCode), func(t *testing.T) {
+			sr := tracetest.NewSpanRecorder()
+			provider := sdktrace.NewTracerProvider()
+			provider.RegisterSpanProcessor(sr)
+			router := gin.New()
+			router.Use(otelgin.Middleware("foobar", otelgin.WithTracerProvider(provider)))
+			router.GET("/", func(c *gin.Context) {
+				c.Status(tc.httpStatusCode)
+			})
+
+			router.ServeHTTP(httptest.NewRecorder(), httptest.NewRequest("GET", "/", nil))
+
+			require.Len(t, sr.Ended(), 1, "should emit a span")
+			assert.Equal(t, sr.Ended()[0].Status().Code, tc.wantSpanStatus, "should only set Error status for HTTP statuses >= 500")
+		})
+	}
 }
 
 func TestHTML(t *testing.T) {
