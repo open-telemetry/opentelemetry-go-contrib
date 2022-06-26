@@ -4,7 +4,7 @@ go 1.17
 
 require (
 	github.com/gocql/gocql v0.0.0-20210707082121-9a3953d1826d
-	github.com/stretchr/testify v1.7.2
+	github.com/stretchr/testify v1.7.5
 	go.opentelemetry.io/contrib v1.7.0
 	go.opentelemetry.io/contrib/instrumentation/github.com/gocql/gocql/otelgocql v0.32.0
 	go.opentelemetry.io/otel v1.7.0
@@ -14,7 +14,7 @@ require (
 )
 
 require (
-	github.com/davecgh/go-spew v1.1.0 // indirect
+	github.com/davecgh/go-spew v1.1.1 // indirect
 	github.com/go-logr/logr v1.2.3 // indirect
 	github.com/go-logr/stdr v1.2.2 // indirect
 	github.com/golang/snappy v0.0.3 // indirect
