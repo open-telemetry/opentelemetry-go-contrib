@@ -4,7 +4,7 @@ go 1.17
 
 require (
 	github.com/astaxie/beego v1.12.3
-	github.com/stretchr/testify v1.7.2
+	github.com/stretchr/testify v1.7.5
 	go.opentelemetry.io/contrib/instrumentation/github.com/astaxie/beego/otelbeego v0.32.0
 	go.opentelemetry.io/contrib/propagators/b3 v1.7.0
 	go.opentelemetry.io/otel v1.7.0
