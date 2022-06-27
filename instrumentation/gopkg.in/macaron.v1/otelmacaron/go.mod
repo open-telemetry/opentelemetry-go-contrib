@@ -8,7 +8,7 @@ replace (
 )
 
 require (
-	github.com/stretchr/testify v1.7.2
+	github.com/stretchr/testify v1.7.5
 	go.opentelemetry.io/contrib/propagators/b3 v1.7.0
 	go.opentelemetry.io/otel v1.7.0
 	go.opentelemetry.io/otel/trace v1.7.0
@@ -16,7 +16,7 @@ require (
 )
 
 require (
-	github.com/davecgh/go-spew v1.1.0 // indirect
+	github.com/davecgh/go-spew v1.1.1 // indirect
 	github.com/go-logr/logr v1.2.3 // indirect
 	github.com/go-logr/stdr v1.2.2 // indirect
 	github.com/go-macaron/inject v0.0.0-20160627170012-d8a0b8677191 // indirect
