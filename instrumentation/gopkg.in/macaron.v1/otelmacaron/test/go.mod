@@ -3,7 +3,7 @@ module go.opentelemetry.io/contrib/instrumentation/gopkg.in/macaron.v1/otelmacar
 go 1.17
 
 require (
-	github.com/stretchr/testify v1.7.5
+	github.com/stretchr/testify v1.8.0
 	go.opentelemetry.io/contrib/instrumentation/gopkg.in/macaron.v1/otelmacaron v0.32.0
 	go.opentelemetry.io/otel v1.7.0
 	go.opentelemetry.io/otel/sdk v1.7.0
