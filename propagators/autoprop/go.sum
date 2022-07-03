@@ -15,8 +15,8 @@ github.com/stretchr/objx v0.4.0/go.mod h1:YvHI0jy2hoMjB+UWwv71VJQ9isScKT/TqJzVSS
 github.com/stretchr/testify v1.3.0/go.mod h1:M5WIy9Dh21IEIfnGCwXGc5bZfKNJtfHm1UVUgZn+9EI=
 github.com/stretchr/testify v1.7.0/go.mod h1:6Fq8oRcR53rry900zMqJjRRixrwX3KX962/h/Wwjteg=
 github.com/stretchr/testify v1.7.1/go.mod h1:6Fq8oRcR53rry900zMqJjRRixrwX3KX962/h/Wwjteg=
-github.com/stretchr/testify v1.7.5 h1:s5PTfem8p8EbKQOctVV53k6jCJt3UX4IEJzwh+C324Q=
-github.com/stretchr/testify v1.7.5/go.mod h1:yNjHg4UonilssWZ8iaSj1OCr/vHnekPRkoO+kdMU+MU=
+github.com/stretchr/testify v1.8.0 h1:pSgiaMZlXftHpm5L7V1+rVB+AZJydKsMxsQBIJw4PKk=
+github.com/stretchr/testify v1.8.0/go.mod h1:yNjHg4UonilssWZ8iaSj1OCr/vHnekPRkoO+kdMU+MU=
 go.opentelemetry.io/contrib/propagators/aws v1.7.0 h1:hzLtX+K4YhsrBabA35uBYxCENb5rS/9Z9X8MToTlA3k=
 go.opentelemetry.io/contrib/propagators/aws v1.7.0/go.mod h1:h/ql5T6e1XLRFplWNNdzLHp8eb0dkBu+xYOCYxerh0Q=
 go.opentelemetry.io/contrib/propagators/b3 v1.7.0 h1:oRAenUhj+GFttfIp3gj7HYVzBhPOHgq/dWPDSmLCXSY=
