@@ -23,6 +23,12 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
   - Route tags differ from the previous version by default. However, passing `otelecho.WithRouteTagFromPath()` will produce the
     previous behaviour. Or add the `WithRouteTag()` middleware to your handler to tag a specific route differently.
 
+### Fixed
+
+- Fix the `otelhttp`, `otelgin`, `otelmacaron`, `otelrestful` middlewares
+  by using `SpanKindServer` when deciding the `SpanStatus`.
+  This makes `4xx` response codes to not be an error anymore. (#2427)
+
 ## [1.7.0/0.32.0] - 2022-04-28
 
 ### Added

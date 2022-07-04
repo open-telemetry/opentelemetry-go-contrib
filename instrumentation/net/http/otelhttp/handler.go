@@ -160,8 +160,8 @@ func (h *Handler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 
 	var bw bodyWrapper
 	// if request body is nil we don't want to mutate the body as it will affect
-	// the identity of it in a unforeseeable way because we assert ReadCloser
-	// fullfills a certain interface and it is indeed nil.
+	// the identity of it in an unforeseeable way because we assert ReadCloser
+	// fulfills a certain interface and it is indeed nil.
 	if r.Body != nil {
 		bw.ReadCloser = r.Body
 		bw.record = readRecordFunc
@@ -227,7 +227,7 @@ func setAfterServeAttributes(span trace.Span, read, wrote int64, statusCode int,
 	}
 	if statusCode > 0 {
 		attributes = append(attributes, semconv.HTTPAttributesFromHTTPStatusCode(statusCode)...)
-		span.SetStatus(semconv.SpanStatusFromHTTPStatusCode(statusCode))
+		span.SetStatus(semconv.SpanStatusFromHTTPStatusCodeAndSpanKind(statusCode, trace.SpanKindServer))
 	}
 	if werr != nil && werr != io.EOF {
 		attributes = append(attributes, WriteErrorKey.String(werr.Error()))

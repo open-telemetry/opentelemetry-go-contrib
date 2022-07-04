@@ -17,6 +17,7 @@ package test
 import (
 	"net/http"
 	"net/http/httptest"
+	"strconv"
 	"testing"
 
 	"github.com/emicklei/go-restful/v3"
@@ -26,6 +27,7 @@ import (
 	"go.opentelemetry.io/contrib/instrumentation/github.com/emicklei/go-restful/otelrestful"
 	"go.opentelemetry.io/otel"
 	"go.opentelemetry.io/otel/attribute"
+	"go.opentelemetry.io/otel/codes"
 	sdktrace "go.opentelemetry.io/otel/sdk/trace"
 	"go.opentelemetry.io/otel/sdk/trace/tracetest"
 	oteltrace "go.opentelemetry.io/otel/trace"
@@ -169,6 +171,37 @@ func TestMultiFilters(t *testing.T) {
 	spans = sr.Ended()
 	require.Len(t, spans, 3)
 	assertSpan(t, spans[2], "/library/{name}")
+}
+
+func TestSpanStatus(t *testing.T) {
+	testCases := []struct {
+		httpStatusCode int
+		wantSpanStatus codes.Code
+	}{
+		{200, codes.Unset},
+		{400, codes.Unset},
+		{500, codes.Error},
+	}
+	for _, tc := range testCases {
+		t.Run(strconv.Itoa(tc.httpStatusCode), func(t *testing.T) {
+			sr := tracetest.NewSpanRecorder()
+			provider := sdktrace.NewTracerProvider()
+			provider.RegisterSpanProcessor(sr)
+			handlerFunc := func(req *restful.Request, resp *restful.Response) {
+				resp.WriteHeader(tc.httpStatusCode)
+			}
+			ws := &restful.WebService{}
+			ws.Route(ws.GET("/").To(handlerFunc))
+			container := restful.NewContainer()
+			container.Filter(otelrestful.OTelFilter("my-service", otelrestful.WithTracerProvider(provider)))
+			container.Add(ws)
+
+			container.ServeHTTP(httptest.NewRecorder(), httptest.NewRequest("GET", "/", nil))
+
+			require.Len(t, sr.Ended(), 1, "should emit a span")
+			assert.Equal(t, sr.Ended()[0].Status().Code, tc.wantSpanStatus, "should only set Error status for HTTP statuses >= 500")
+		})
+	}
 }
 
 func assertSpan(t *testing.T, span sdktrace.ReadOnlySpan, name string, attrs ...attribute.KeyValue) {

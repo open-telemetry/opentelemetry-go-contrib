@@ -21,6 +21,7 @@ import (
 	"io/ioutil"
 	"net/http"
 	"net/http/httptest"
+	"strconv"
 	"strings"
 	"testing"
 
@@ -29,6 +30,7 @@ import (
 
 	"go.opentelemetry.io/contrib/instrumentation/net/http/otelhttp"
 	"go.opentelemetry.io/otel/attribute"
+	"go.opentelemetry.io/otel/codes"
 	"go.opentelemetry.io/otel/propagation"
 	"go.opentelemetry.io/otel/sdk/metric/metrictest"
 	sdktrace "go.opentelemetry.io/otel/sdk/trace"
@@ -186,4 +188,33 @@ func TestWithPublicEndpoint(t *testing.T) {
 	require.Len(t, done, 1)
 	require.Len(t, done[0].Links(), 1, "should contain link")
 	require.True(t, sc.Equal(done[0].Links()[0].SpanContext), "should link incoming span context")
+}
+
+func TestSpanStatus(t *testing.T) {
+	testCases := []struct {
+		httpStatusCode int
+		wantSpanStatus codes.Code
+	}{
+		{200, codes.Unset},
+		{400, codes.Unset},
+		{500, codes.Error},
+	}
+	for _, tc := range testCases {
+		t.Run(strconv.Itoa(tc.httpStatusCode), func(t *testing.T) {
+			sr := tracetest.NewSpanRecorder()
+			provider := sdktrace.NewTracerProvider()
+			provider.RegisterSpanProcessor(sr)
+			h := otelhttp.NewHandler(
+				http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+					w.WriteHeader(tc.httpStatusCode)
+				}), "test_handler",
+				otelhttp.WithTracerProvider(provider),
+			)
+
+			h.ServeHTTP(httptest.NewRecorder(), httptest.NewRequest("GET", "/", nil))
+
+			require.Len(t, sr.Ended(), 1, "should emit a span")
+			assert.Equal(t, sr.Ended()[0].Status().Code, tc.wantSpanStatus, "should only set Error status for HTTP statuses >= 500")
+		})
+	}
 }
