@@ -10,7 +10,7 @@ replace (
 
 require (
 	github.com/astaxie/beego v1.12.3
-	github.com/stretchr/testify v1.7.1
+	github.com/stretchr/testify v1.8.0
 	go.opentelemetry.io/contrib/instrumentation/net/http/otelhttp v0.32.0
 	go.opentelemetry.io/otel v1.7.0
 	go.opentelemetry.io/otel/metric v0.30.0
@@ -39,5 +39,5 @@ require (
 	golang.org/x/text v0.3.3 // indirect
 	google.golang.org/protobuf v1.25.0 // indirect
 	gopkg.in/yaml.v2 v2.2.8 // indirect
-	gopkg.in/yaml.v3 v3.0.0-20200313102051-9f266ea9e77c // indirect
+	gopkg.in/yaml.v3 v3.0.1 // indirect
 )

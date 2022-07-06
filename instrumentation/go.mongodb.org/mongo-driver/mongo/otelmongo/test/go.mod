@@ -3,7 +3,7 @@ module go.opentelemetry.io/contrib/instrumentation/go.mongodb.org/mongo-driver/m
 go 1.17
 
 require (
-	github.com/stretchr/testify v1.7.1
+	github.com/stretchr/testify v1.8.0
 	go.mongodb.org/mongo-driver v1.9.1
 	go.opentelemetry.io/contrib v1.7.0
 	go.opentelemetry.io/contrib/instrumentation/go.mongodb.org/mongo-driver/mongo/otelmongo v0.32.0
@@ -29,7 +29,7 @@ require (
 	golang.org/x/sync v0.0.0-20190911185100-cd5d95a43a6e // indirect
 	golang.org/x/sys v0.0.0-20210423185535-09eb48e85fd7 // indirect
 	golang.org/x/text v0.3.5 // indirect
-	gopkg.in/yaml.v3 v3.0.0-20200313102051-9f266ea9e77c // indirect
+	gopkg.in/yaml.v3 v3.0.1 // indirect
 )
 
 replace (
