@@ -52,6 +52,7 @@ type Handler struct {
 	counters          map[string]syncint64.Counter
 	valueRecorders    map[string]syncfloat64.Histogram
 	publicEndpoint    bool
+	publicEndpointFn  func(*http.Request) bool
 }
 
 func defaultHandlerFormatter(operation string, _ *http.Request) string {
@@ -88,6 +89,7 @@ func (h *Handler) configure(c *config) {
 	h.filters = c.Filters
 	h.spanNameFormatter = c.SpanNameFormatter
 	h.publicEndpoint = c.PublicEndpoint
+	h.publicEndpointFn = c.PublicEndpointFn
 }
 
 func handleErr(err error) {
@@ -125,11 +127,21 @@ func (h *Handler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		}
 	}
 
-	opts := append([]trace.SpanStartOption{
+	ctx := h.propagators.Extract(r.Context(), propagation.HeaderCarrier(r.Header))
+	opts := h.spanStartOptions
+	if h.publicEndpoint || (h.publicEndpointFn != nil && h.publicEndpointFn(r.WithContext(ctx))) {
+		opts = append(opts, trace.WithNewRoot())
+		// Linking incoming span context if any for public endpoint.
+		if s := trace.SpanContextFromContext(ctx); s.IsValid() && s.IsRemote() {
+			opts = append(opts, trace.WithLinks(trace.Link{SpanContext: s}))
+		}
+	}
+
+	opts = append([]trace.SpanStartOption{
 		trace.WithAttributes(semconv.NetAttributesFromHTTPRequest("tcp", r)...),
 		trace.WithAttributes(semconv.EndUserAttributesFromHTTPRequest(r)...),
 		trace.WithAttributes(semconv.HTTPServerAttributesFromHTTPRequest(h.operation, "", r)...),
-	}, h.spanStartOptions...) // start with the configured options
+	}, opts...) // start with the configured options
 
 	tracer := h.tracer
 
@@ -141,13 +153,6 @@ func (h *Handler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		}
 	}
 
-	ctx := h.propagators.Extract(r.Context(), propagation.HeaderCarrier(r.Header))
-	if h.publicEndpoint {
-		// Linking incoming span context if any for public endpoint.
-		if s := trace.SpanContextFromContext(ctx); s.IsValid() && s.IsRemote() {
-			opts = append(opts, trace.WithLinks(trace.Link{SpanContext: s}))
-		}
-	}
 	ctx, span := tracer.Start(ctx, h.spanNameFormatter(h.operation, r), opts...)
 	defer span.End()
 
