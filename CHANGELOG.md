@@ -11,6 +11,7 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 ### Added
 
 - The `go.opentelemetry.io/contrib/propagators/autoprop` package to provide configuration of propagators with useful defaults and envar support. (#2258)
+- `WithPublicEndpointFn` hook to dynamically detect public HTTP requests and set their trace parent as a link. (#2342)
 
 ### Fixed
 
