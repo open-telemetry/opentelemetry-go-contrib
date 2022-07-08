@@ -3,7 +3,6 @@ module go.opentelemetry.io/contrib/instrumentation/github.com/aws/aws-sdk-go-v2/
 go 1.17
 
 replace (
-	go.opentelemetry.io/contrib => ../../../../../..
 	go.opentelemetry.io/contrib/instrumentation/github.com/aws/aws-sdk-go-v2/otelaws => ../
 )
 

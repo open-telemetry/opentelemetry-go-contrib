@@ -40,5 +40,3 @@ require (
 replace go.opentelemetry.io/contrib/instrumentation/github.com/gin-gonic/gin/otelgin => ../
 
 replace go.opentelemetry.io/contrib/propagators/b3 => ../../../../../../propagators/b3
-
-replace go.opentelemetry.io/contrib => ../../../../../../

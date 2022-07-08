@@ -2,8 +2,6 @@ module go.opentelemetry.io/contrib/instrumentation/google.golang.org/grpc/otelgr
 
 go 1.17
 
-replace go.opentelemetry.io/contrib => ../../../../
-
 require (
 	github.com/golang/protobuf v1.5.2
 	go.opentelemetry.io/otel v1.8.0

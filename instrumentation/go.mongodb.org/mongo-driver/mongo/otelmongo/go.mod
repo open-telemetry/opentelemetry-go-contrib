@@ -2,8 +2,6 @@ module go.opentelemetry.io/contrib/instrumentation/go.mongodb.org/mongo-driver/m
 
 go 1.17
 
-replace go.opentelemetry.io/contrib => ../../../../..
-
 require (
 	go.mongodb.org/mongo-driver v1.9.1
 	go.opentelemetry.io/otel v1.8.0

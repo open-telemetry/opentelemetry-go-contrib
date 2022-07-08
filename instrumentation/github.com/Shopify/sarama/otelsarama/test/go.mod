@@ -38,5 +38,3 @@ require (
 )
 
 replace go.opentelemetry.io/contrib/instrumentation/github.com/Shopify/sarama/otelsarama => ../
-
-replace go.opentelemetry.io/contrib => ../../../../../../

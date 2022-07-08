@@ -2,8 +2,6 @@ module go.opentelemetry.io/contrib/instrumentation/github.com/gorilla/mux/otelmu
 
 go 1.17
 
-replace go.opentelemetry.io/contrib => ../../../../..
-
 require (
 	github.com/felixge/httpsnoop v1.0.3
 	github.com/gorilla/mux v1.8.0

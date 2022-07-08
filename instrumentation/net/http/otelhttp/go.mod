@@ -2,8 +2,6 @@ module go.opentelemetry.io/contrib/instrumentation/net/http/otelhttp
 
 go 1.17
 
-replace go.opentelemetry.io/contrib => ../../../..
-
 require (
 	github.com/felixge/httpsnoop v1.0.3
 	github.com/stretchr/testify v1.8.0

@@ -41,7 +41,6 @@ require (
 )
 
 replace (
-	go.opentelemetry.io/contrib => ../../../../../../
 	go.opentelemetry.io/contrib/instrumentation/github.com/astaxie/beego/otelbeego => ../
 	go.opentelemetry.io/contrib/instrumentation/net/http/otelhttp => ../../../../../net/http/otelhttp
 	go.opentelemetry.io/contrib/propagators/b3 => ../../../../../../propagators/b3

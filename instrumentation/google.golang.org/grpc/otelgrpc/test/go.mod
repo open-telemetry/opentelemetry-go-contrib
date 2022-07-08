@@ -30,6 +30,5 @@ require (
 )
 
 replace (
-	go.opentelemetry.io/contrib => ../../../../../
 	go.opentelemetry.io/contrib/instrumentation/google.golang.org/grpc/otelgrpc => ../
 )

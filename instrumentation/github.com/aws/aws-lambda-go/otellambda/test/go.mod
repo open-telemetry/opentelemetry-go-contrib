@@ -3,7 +3,6 @@ module go.opentelemetry.io/contrib/instrumentation/github.com/aws/aws-lambda-go/
 go 1.17
 
 replace (
-	go.opentelemetry.io/contrib => ../../../../../..
 	go.opentelemetry.io/contrib/detectors/aws/lambda => ../../../../../../detectors/aws/lambda
 	go.opentelemetry.io/contrib/instrumentation/github.com/aws/aws-lambda-go/otellambda => ../
 	go.opentelemetry.io/contrib/propagators/aws => ../../../../../../propagators/aws

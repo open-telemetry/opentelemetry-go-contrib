@@ -3,7 +3,6 @@ module go.opentelemetry.io/contrib/instrumentation/github.com/emicklei/go-restfu
 go 1.17
 
 replace (
-	go.opentelemetry.io/contrib => ../../../../../../
 	go.opentelemetry.io/contrib/instrumentation/github.com/emicklei/go-restful/otelrestful => ../
 	go.opentelemetry.io/contrib/propagators/b3 => ../../../../../../propagators/b3
 )

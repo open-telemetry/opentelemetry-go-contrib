@@ -2,8 +2,6 @@ module go.opentelemetry.io/contrib/instrumentation/github.com/bradfitz/gomemcach
 
 go 1.17
 
-replace go.opentelemetry.io/contrib => ../../../../../../
-
 require (
 	github.com/bradfitz/gomemcache v0.0.0-20190913173617-a41fca850d0b
 	github.com/stretchr/testify v1.8.0

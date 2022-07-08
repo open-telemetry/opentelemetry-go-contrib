@@ -3,7 +3,6 @@ module go.opentelemetry.io/contrib/instrumentation/runtime/example
 go 1.17
 
 replace (
-	go.opentelemetry.io/contrib => ../../../
 	go.opentelemetry.io/contrib/instrumentation/runtime => ../
 )
 

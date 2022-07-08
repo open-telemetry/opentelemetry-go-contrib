@@ -3,7 +3,6 @@ module go.opentelemetry.io/contrib/instrumentation/github.com/gin-gonic/gin/otel
 go 1.17
 
 replace (
-	go.opentelemetry.io/contrib => ../../../../../../
 	go.opentelemetry.io/contrib/instrumentation/github.com/gin-gonic/gin/otelgin => ../
 	go.opentelemetry.io/contrib/propagators/b3 => ../../../../../../propagators/b3
 )

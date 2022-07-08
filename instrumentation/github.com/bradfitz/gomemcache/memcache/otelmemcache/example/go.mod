@@ -3,7 +3,6 @@ module go.opentelemetry.io/contrib/instrumentation/github.com/bradfitz/gomemcach
 go 1.17
 
 replace (
-	go.opentelemetry.io/contrib => ../../../../../../../
 	go.opentelemetry.io/contrib/instrumentation/github.com/bradfitz/gomemcache/memcache/otelmemcache => ../
 )
 
