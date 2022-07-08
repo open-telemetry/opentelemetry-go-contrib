@@ -29,6 +29,4 @@ require (
 	gopkg.in/yaml.v3 v3.0.1 // indirect
 )
 
-replace (
-	go.opentelemetry.io/contrib/instrumentation/google.golang.org/grpc/otelgrpc => ../
-)
+replace go.opentelemetry.io/contrib/instrumentation/google.golang.org/grpc/otelgrpc => ../

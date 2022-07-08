@@ -2,10 +2,7 @@ module go.opentelemetry.io/contrib/instrumentation/github.com/astaxie/beego/otel
 
 go 1.17
 
-replace (
-	go.opentelemetry.io/contrib/instrumentation/net/http/otelhttp => ../../../../net/http/otelhttp
-
-)
+replace go.opentelemetry.io/contrib/instrumentation/net/http/otelhttp => ../../../../net/http/otelhttp
 
 require (
 	github.com/astaxie/beego v1.12.3

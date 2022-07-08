@@ -19,6 +19,4 @@ require (
 	gopkg.in/yaml.v3 v3.0.1 // indirect
 )
 
-replace (
-	go.opentelemetry.io/contrib/instrumentation/net/http/httptrace/otelhttptrace => ../
-)
+replace go.opentelemetry.io/contrib/instrumentation/net/http/httptrace/otelhttptrace => ../
