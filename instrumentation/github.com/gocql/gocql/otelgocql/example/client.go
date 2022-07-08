@@ -64,7 +64,7 @@ func main() {
 	if err != nil {
 		log.Fatalf("failed to create zipkin exporter: %s", err)
 	}
-	defer func() { tp.Shutdown(context.Background()) }() //nolint:errcheck
+	defer func() { tp.Shutdown(context.Background()) }() //nolint:revive,errcheck
 	if err := initDb(); err != nil {
 		log.Fatal(err)
 	}
