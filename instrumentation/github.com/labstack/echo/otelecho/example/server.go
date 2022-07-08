@@ -43,7 +43,7 @@ func main() {
 		}
 	}()
 	r := echo.New()
-	r.Use(otelecho.Middleware("my-server", otelecho.WithSpanNameFormatter(otelecho.PathSpanNameFormatter), otelecho.WithRouteTagFromPath()))
+	r.Use(otelecho.Middleware("my-server"))
 
 	r.GET("/users/:id", func(c echo.Context) error {
 		id := c.Param("id")
