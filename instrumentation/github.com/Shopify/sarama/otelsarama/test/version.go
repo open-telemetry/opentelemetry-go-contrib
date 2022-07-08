@@ -16,7 +16,7 @@ package test // import "go.opentelemetry.io/contrib/instrumentation/github.com/S
 
 // Version is the current release version of the sarama instrumentation test module.
 func Version() string {
-	return "0.32.0"
+	return "0.33.0"
 	// This string is updated by the pre_release.sh script during release
 }
 

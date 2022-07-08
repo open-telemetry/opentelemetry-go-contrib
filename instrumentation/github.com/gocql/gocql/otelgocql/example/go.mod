@@ -2,13 +2,11 @@ module go.opentelemetry.io/contrib/instrumentation/github.com/gocql/gocql/otelgo
 
 go 1.17
 
-replace (
-	go.opentelemetry.io/contrib/instrumentation/github.com/gocql/gocql/otelgocql => ../
-)
+replace go.opentelemetry.io/contrib/instrumentation/github.com/gocql/gocql/otelgocql => ../
 
 require (
 	github.com/gocql/gocql v0.0.0-20200624222514-34081eda590e
-	go.opentelemetry.io/contrib/instrumentation/github.com/gocql/gocql/otelgocql v0.32.0
+	go.opentelemetry.io/contrib/instrumentation/github.com/gocql/gocql/otelgocql v0.33.0
 	go.opentelemetry.io/otel v1.8.0
 	go.opentelemetry.io/otel/exporters/prometheus v0.31.0
 	go.opentelemetry.io/otel/exporters/zipkin v1.8.0

@@ -2,12 +2,10 @@ module go.opentelemetry.io/contrib/instrumentation/host/example
 
 go 1.17
 
-replace (
-	go.opentelemetry.io/contrib/instrumentation/host => ../
-)
+replace go.opentelemetry.io/contrib/instrumentation/host => ../
 
 require (
-	go.opentelemetry.io/contrib/instrumentation/host v0.32.0
+	go.opentelemetry.io/contrib/instrumentation/host v0.33.0
 	go.opentelemetry.io/otel/exporters/stdout/stdoutmetric v0.31.0
 	go.opentelemetry.io/otel/metric v0.31.0
 	go.opentelemetry.io/otel/sdk/metric v0.31.0
