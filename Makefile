@@ -68,7 +68,10 @@ $(MULTIMOD): PACKAGE=go.opentelemetry.io/build-tools/multimod
 DBOTCONF = $(TOOLS)/dbotconf
 $(TOOLS)/dbotconf: PACKAGE=go.opentelemetry.io/build-tools/dbotconf
 
-tools: $(GOLANGCI_LINT) $(MISSPELL) $(GOCOVMERGE) $(STRINGER) $(ESC) $(PORTO) $(MULTIMOD) $(DBOTCONF)
+CROSSLINK = $(TOOLS)/crosslink
+$(CROSSLINK): PACKAGE=go.opentelemetry.io/build-tools/crosslink
+
+tools: $(GOLANGCI_LINT) $(MISSPELL) $(GOCOVMERGE) $(STRINGER) $(ESC) $(PORTO) $(MULTIMOD) $(DBOTCONF) $(CROSSLINK)
 
 # Build
 
@@ -107,6 +110,11 @@ golangci-lint/%: | $(GOLANGCI_LINT)
 	@echo 'golangci-lint $(if $(ARGS),$(ARGS) ,)$(DIR)' \
 		&& cd $(DIR) \
 		&& $(GOLANGCI_LINT) run --allow-serial-runners $(ARGS)
+
+.PHONY: crosslink
+crosslink: | $(CROSSLINK)
+	@echo "Updating intra-repository dependencies in all go modules" \
+		&& $(CROSSLINK) --root=$(shell pwd) --prune
 
 .PHONY: go-mod-tidy
 go-mod-tidy: $(ALL_GO_MOD_DIRS:%=go-mod-tidy/%)
