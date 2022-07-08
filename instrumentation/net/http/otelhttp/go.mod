@@ -7,9 +7,9 @@ replace go.opentelemetry.io/contrib => ../../../..
 require (
 	github.com/felixge/httpsnoop v1.0.3
 	github.com/stretchr/testify v1.8.0
-	go.opentelemetry.io/otel v1.7.0
-	go.opentelemetry.io/otel/metric v0.30.0
-	go.opentelemetry.io/otel/trace v1.7.0
+	go.opentelemetry.io/otel v1.8.0
+	go.opentelemetry.io/otel/metric v0.31.0
+	go.opentelemetry.io/otel/trace v1.8.0
 )
 
 require (

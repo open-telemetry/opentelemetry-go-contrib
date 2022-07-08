@@ -21,8 +21,8 @@ import (
 	"testing"
 
 	"go.opentelemetry.io/otel"
+	"go.opentelemetry.io/otel/metric"
 	"go.opentelemetry.io/otel/metric/global"
-	"go.opentelemetry.io/otel/metric/nonrecording"
 	"go.opentelemetry.io/otel/trace"
 
 	"github.com/astaxie/beego"
@@ -58,7 +58,7 @@ func ctxTest() (context.Context, func(*testing.T, context.Context)) {
 
 func TestSpanFromContextDefaultProvider(t *testing.T) {
 	defer replaceBeego()
-	provider := nonrecording.NewNoopMeterProvider()
+	provider := metric.NewNoopMeterProvider()
 	global.SetMeterProvider(provider)
 	otel.SetTracerProvider(trace.NewNoopTracerProvider())
 
@@ -82,7 +82,7 @@ func TestSpanFromContextDefaultProvider(t *testing.T) {
 
 func TestSpanFromContextCustomProvider(t *testing.T) {
 	defer replaceBeego()
-	provider := nonrecording.NewNoopMeterProvider()
+	provider := metric.NewNoopMeterProvider()
 	ctx, eval := ctxTest()
 	router := beego.NewControllerRegister()
 	router.Get("/hello-with-span", func(ctx *beegoCtx.Context) {
