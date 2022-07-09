@@ -112,6 +112,7 @@ func TestRemoteSamplerOptions(t *testing.T) {
 	initSampler := newProbabilisticSampler(0.123)
 	fetcher := new(fakeSamplingFetcher)
 	parser := new(samplingStrategyParserImpl)
+	logger := new(stdLogger)
 	updaters := []samplerUpdater{new(probabilisticSamplerUpdater)}
 	sampler := New(
 		"test",
@@ -123,6 +124,7 @@ func TestRemoteSamplerOptions(t *testing.T) {
 		withSamplingStrategyFetcher(fetcher),
 		withSamplingStrategyParser(parser),
 		withUpdaters(updaters...),
+		WithSamplingLogger(logger),
 	)
 	assert.Equal(t, 42, sampler.posParams.MaxOperations)
 	assert.True(t, sampler.posParams.OperationNameLateBinding)
@@ -132,6 +134,7 @@ func TestRemoteSamplerOptions(t *testing.T) {
 	assert.Same(t, fetcher, sampler.samplingFetcher)
 	assert.Same(t, parser, sampler.samplingParser)
 	assert.EqualValues(t, sampler.updaters[0], &perOperationSamplerUpdater{MaxOperations: 42, OperationNameLateBinding: true})
+	assert.Same(t, logger, sampler.logger)
 }
 
 func TestRemoteSamplerOptionsDefaults(t *testing.T) {

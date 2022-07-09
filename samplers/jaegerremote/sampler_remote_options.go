@@ -30,6 +30,7 @@ type config struct {
 	samplingParser          samplingStrategyParser
 	updaters                []samplerUpdater
 	posParams               perOperationSamplerParams
+	logger                  Logger
 }
 
 // newConfig returns an appropriately configured config.
@@ -48,6 +49,7 @@ func newConfig(options ...Option) config {
 			MaxOperations:            defaultSamplingMaxOperations,
 			OperationNameLateBinding: defaultSamplingOperationNameLateBinding,
 		},
+		logger: NullLogger,
 	}
 	for _, option := range options {
 		option.apply(&c)
@@ -109,6 +111,13 @@ func WithOperationNameLateBinding(enable bool) Option {
 func WithSamplingRefreshInterval(samplingRefreshInterval time.Duration) Option {
 	return optionFunc(func(c *config) {
 		c.samplingRefreshInterval = samplingRefreshInterval
+	})
+}
+
+// WithSamplingLogger creates a Option that initializes sampling logger.
+func WithSamplingLogger(logger Logger) Option {
+	return optionFunc(func(c *config) {
+		c.logger = logger
 	})
 }
 

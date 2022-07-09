@@ -151,12 +151,12 @@ func (s *Sampler) setSampler(sampler trace.Sampler) {
 func (s *Sampler) UpdateSampler() {
 	res, err := s.samplingFetcher.Fetch(s.serviceName)
 	if err != nil {
-		// log.Printf("failed to fetch sampling strategy: %v", err)
+		s.logger.Error(fmt.Sprintf("failed to fetch sampling strategy: %v", err))
 		return
 	}
 	strategy, err := s.samplingParser.Parse(res)
 	if err != nil {
-		// log.Printf("failed to parse sampling strategy response: %v", err)
+		s.logger.Error(fmt.Sprintf("failed to parse sampling strategy response: %v", err))
 		return
 	}
 
@@ -164,7 +164,7 @@ func (s *Sampler) UpdateSampler() {
 	defer s.Unlock()
 
 	if err := s.updateSamplerViaUpdaters(strategy); err != nil {
-		//c.logger.Infof("failed to handle sampling strategy response %+v. Got error: %v", res, err)
+		s.logger.Error(fmt.Sprintf("failed to handle sampling strategy response %+v. Got error: %v", res, err))
 		return
 	}
 }
