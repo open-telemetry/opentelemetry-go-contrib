@@ -8,6 +8,10 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 
 ## [Unreleased]
 
+### Added
+
+- The `go.opentelmetry.io/contrib/sampers/spanname` package to provide a sampler to filter spans based on span names. (#2571)
+
 ## [1.8.0/0.33.0] - 2022-07-08
 
 ### Added
