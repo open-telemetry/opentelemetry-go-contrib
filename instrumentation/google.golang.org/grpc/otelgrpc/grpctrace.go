@@ -17,6 +17,8 @@ package otelgrpc // import "go.opentelemetry.io/contrib/instrumentation/google.g
 import (
 	"context"
 
+	"go.opentelemetry.io/contrib/instrumentation/google.golang.org/grpc/otelgrpc/filters"
+
 	"google.golang.org/grpc/metadata"
 
 	"go.opentelemetry.io/otel"
@@ -35,6 +37,7 @@ const (
 
 // config is a group of options for this instrumentation.
 type config struct {
+	Filter         filters.Filter
 	Propagators    propagation.TextMapPropagator
 	TracerProvider trace.TracerProvider
 }
@@ -75,6 +78,21 @@ type tracerProviderOption struct{ tp trace.TracerProvider }
 func (o tracerProviderOption) apply(c *config) {
 	if o.tp != nil {
 		c.TracerProvider = o.tp
+	}
+}
+
+// WithInterceptorFilter returns an Option to use the request filter.
+func WithInterceptorFilter(f filters.Filter) Option {
+	return interceptorFilterOption{f: f}
+}
+
+type interceptorFilterOption struct {
+	f filters.Filter
+}
+
+func (o interceptorFilterOption) apply(c *config) {
+	if o.f != nil {
+		c.Filter = o.f
 	}
 }
 
