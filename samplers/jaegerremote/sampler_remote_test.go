@@ -20,9 +20,12 @@ import (
 	"encoding/binary"
 	"errors"
 	"fmt"
+	"log"
+	"os"
 	"testing"
 	"time"
 
+	"github.com/go-logr/stdr"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 
@@ -112,7 +115,7 @@ func TestRemoteSamplerOptions(t *testing.T) {
 	initSampler := newProbabilisticSampler(0.123)
 	fetcher := new(fakeSamplingFetcher)
 	parser := new(samplingStrategyParserImpl)
-	logger := new(stdLogger)
+	logger := stdr.NewWithOptions(log.New(os.Stderr, "", log.LstdFlags|log.Lshortfile), stdr.Options{LogCaller: stdr.Error})
 	updaters := []samplerUpdater{new(probabilisticSamplerUpdater)}
 	sampler := New(
 		"test",
@@ -134,7 +137,7 @@ func TestRemoteSamplerOptions(t *testing.T) {
 	assert.Same(t, fetcher, sampler.samplingFetcher)
 	assert.Same(t, parser, sampler.samplingParser)
 	assert.EqualValues(t, sampler.updaters[0], &perOperationSamplerUpdater{MaxOperations: 42, OperationNameLateBinding: true})
-	assert.Same(t, logger, sampler.logger)
+	assert.Equal(t, logger, sampler.logger)
 }
 
 func TestRemoteSamplerOptionsDefaults(t *testing.T) {
