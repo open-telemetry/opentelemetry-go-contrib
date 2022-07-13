@@ -21,7 +21,7 @@ import (
 )
 
 // interceptorType is the flag to define which gRPC interceptor
-// the interceptorInfo object is.
+// the InterceptorInfo object is.
 type interceptorType uint8
 
 const (
@@ -31,7 +31,7 @@ const (
 	streamServer
 )
 
-// interceptorInfo is the union of all arguments to four types of
+// InterceptorInfo is the union of all arguments to four types of
 // gRPC interceptors, except for function types and function arguments
 // of invoker and streamer:
 // * invoker  grpc.UnaryInvoker (UnaryClient)
@@ -40,7 +40,7 @@ const (
 // * handler  grpc.UnaryHandler | grpc.StreamHandler (UnaryServer, StreamServer)
 // * req, reply, srv interface{} (UnaryClient, UnaryServer, StreamClient)
 // * cc       *grpc.ClientConn.
-type interceptorInfo struct {
+type InterceptorInfo struct {
 	ctx    context.Context
 	method string
 	desc   *grpc.StreamDesc
@@ -49,23 +49,27 @@ type interceptorInfo struct {
 	typ    interceptorType
 }
 
+// NewUnaryClientInterceptorInfo return a pointer of InterceptorInfo
+// based on the argument passed to UnaryClientInterceptor.
 func NewUnaryClientInterceptorInfo(
 	ctx context.Context,
 	method string,
-) *interceptorInfo {
-	return &interceptorInfo{
+) *InterceptorInfo {
+	return &InterceptorInfo{
 		ctx:    ctx,
 		method: method,
 		typ:    unaryClient,
 	}
 }
 
+// NewStreamClientInterceptorInfo return a pointer of InterceptorInfo
+// based on the argument passed to StreamServerInterceptor.
 func NewStreamClientInterceptorInfo(
 	ctx context.Context,
 	desc *grpc.StreamDesc,
 	method string,
-) *interceptorInfo {
-	return &interceptorInfo{
+) *InterceptorInfo {
+	return &InterceptorInfo{
 		ctx:    ctx,
 		desc:   desc,
 		method: method,
@@ -73,21 +77,25 @@ func NewStreamClientInterceptorInfo(
 	}
 }
 
+// NewUnaryServerInterceptorInfo return a pointer of InterceptorInfo
+// based on the argument passed to UnaryServerInterceptor.
 func NewUnaryServerInterceptorInfo(
 	ctx context.Context,
 	info *grpc.UnaryServerInfo,
-) *interceptorInfo {
-	return &interceptorInfo{
+) *InterceptorInfo {
+	return &InterceptorInfo{
 		ctx:    ctx,
 		usinfo: info,
 		typ:    unaryServer,
 	}
 }
 
+// NewStreamServerInterceptorInfo return a pointer of InterceptorInfo
+// based on the argument passed to StreamServerInterceptor.
 func NewStreamServerInterceptorInfo(
 	info *grpc.StreamServerInfo,
-) *interceptorInfo {
-	return &interceptorInfo{
+) *InterceptorInfo {
+	return &InterceptorInfo{
 		ssinfo: info,
 		typ:    streamServer,
 	}

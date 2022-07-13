@@ -23,7 +23,7 @@ import (
 
 type testCase struct {
 	name string
-	i    *interceptorInfo
+	i    *InterceptorInfo
 	f    Filter
 	want bool
 }

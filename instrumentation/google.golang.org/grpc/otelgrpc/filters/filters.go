@@ -22,7 +22,7 @@ import (
 // Filter is a predicate used to determine whether a given request in
 // interceptor info should be traced. A Filter must return true if
 // the request should be traced.
-type Filter func(*interceptorInfo) bool
+type Filter func(*InterceptorInfo) bool
 
 type gRPCPath struct {
 	service string
@@ -48,7 +48,7 @@ func splitFullMethod(name string) gRPCPath {
 // Any takes a list of Filters and returns a Filter that
 // returns true if any Filter in the list returns true.
 func Any(fs ...Filter) Filter {
-	return func(i *interceptorInfo) bool {
+	return func(i *InterceptorInfo) bool {
 		for _, f := range fs {
 			if f(i) {
 				return true
@@ -61,7 +61,7 @@ func Any(fs ...Filter) Filter {
 // All takes a list of Filters and returns a Filter that
 // returns true only if all Filters in the list return true.
 func All(fs ...Filter) Filter {
-	return func(i *interceptorInfo) bool {
+	return func(i *InterceptorInfo) bool {
 		for _, f := range fs {
 			if !f(i) {
 				return false
@@ -74,7 +74,7 @@ func All(fs ...Filter) Filter {
 // None takes a list of Filters and returns a Filter that returns
 // true only if none of the Filters in the list return true.
 func None(fs ...Filter) Filter {
-	return func(i *interceptorInfo) bool {
+	return func(i *InterceptorInfo) bool {
 		for _, f := range fs {
 			if f(i) {
 				return false
@@ -86,7 +86,7 @@ func None(fs ...Filter) Filter {
 
 // Not provides a convenience mechanism for inverting a Filter.
 func Not(f Filter) Filter {
-	return func(i *interceptorInfo) bool {
+	return func(i *InterceptorInfo) bool {
 		return !f(i)
 	}
 }
@@ -95,7 +95,7 @@ func Not(f Filter) Filter {
 // method name matches the provided string n. This filter is only for
 // client interceptors.
 func MethodName(n string) Filter {
-	return func(i *interceptorInfo) bool {
+	return func(i *InterceptorInfo) bool {
 		var p gRPCPath
 		switch i.typ {
 		case unaryServer:
@@ -117,7 +117,7 @@ func MethodName(n string) Filter {
 // method starts with the provided string pre. This filter is only for
 // client interceptors.
 func MethodPrefix(pre string) Filter {
-	return func(i *interceptorInfo) bool {
+	return func(i *InterceptorInfo) bool {
 		var p gRPCPath
 		switch i.typ {
 		case unaryServer:
@@ -139,7 +139,7 @@ func MethodPrefix(pre string) Filter {
 // full RPC method string, i.e. /package.service/method, starts with
 // the provided string n. This filter is only for server interceptors.
 func FullMethodName(n string) Filter {
-	return func(i *interceptorInfo) bool {
+	return func(i *InterceptorInfo) bool {
 		var fm string
 		switch i.typ {
 		case unaryClient, streamClient:
@@ -158,7 +158,7 @@ func FullMethodName(n string) Filter {
 // ServiceName returns a Filter that returns true if the request's
 // service name, i.e. package.service, matches s.
 func ServiceName(s string) Filter {
-	return func(i *interceptorInfo) bool {
+	return func(i *InterceptorInfo) bool {
 		var p gRPCPath
 		switch i.typ {
 		case unaryServer:
@@ -179,7 +179,7 @@ func ServiceName(s string) Filter {
 // ServicePrefix returns a Filter that returns true if the request's
 // service name, i.e. package.service, starts with the provided string pre.
 func ServicePrefix(pre string) Filter {
-	return func(i *interceptorInfo) bool {
+	return func(i *InterceptorInfo) bool {
 		var p gRPCPath
 		switch i.typ {
 		case unaryServer:
