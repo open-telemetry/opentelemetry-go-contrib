@@ -49,7 +49,6 @@ func dummyStreamServerInfo(n string) *grpc.StreamServerInfo {
 
 func TestMethodName(t *testing.T) {
 	const dummyFullMethodName = "/example.HelloService/Hello"
-
 	tcs := []testCase{
 		{
 			name: "unary client interceptor",
@@ -125,6 +124,49 @@ func TestMethodPrefix(t *testing.T) {
 			want: false,
 		},
 	}
+	for _, tc := range tcs {
+		out := tc.f(tc.i)
+		if tc.want != out {
+			t.Errorf("test case '%v' failed, wanted %v but obtained %v", tc.name, tc.want, out)
+		}
+	}
+}
+
+func TestFullMethodName(t *testing.T) {
+	const dummyFullMethodName = "/example.HelloService/Hello"
+	tcs := []testCase{
+		{
+			name: "unary client interceptor",
+			i:    NewUnaryClientInterceptorInfo(context.Background(), dummyFullMethodName),
+			f:    FullMethodName(dummyFullMethodName),
+			want: true,
+		},
+		{
+			name: "stream client interceptor",
+			i:    NewStreamClientInterceptorInfo(context.Background(), dummyStreamDesc(dummyFullMethodName), dummyFullMethodName),
+			f:    FullMethodName(dummyFullMethodName),
+			want: true,
+		},
+		{
+			name: "unary server interceptor",
+			i:    NewUnaryServerInterceptorInfo(context.Background(), dummyUnaryServerInfo(dummyFullMethodName)),
+			f:    FullMethodName(dummyFullMethodName),
+			want: true,
+		},
+		{
+			name: "stream server interceptor",
+			i:    NewStreamServerInterceptorInfo(dummyStreamServerInfo(dummyFullMethodName)),
+			f:    FullMethodName(dummyFullMethodName),
+			want: true,
+		},
+		{
+			name: "unary client interceptor fail",
+			i:    NewUnaryClientInterceptorInfo(context.Background(), dummyFullMethodName),
+			f:    FullMethodName("/example.HelloService/Goodbye"),
+			want: false,
+		},
+	}
+
 	for _, tc := range tcs {
 		out := tc.f(tc.i)
 		if tc.want != out {
