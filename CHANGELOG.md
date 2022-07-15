@@ -8,6 +8,9 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 
 ## [Unreleased]
 
+- The `samplers/jaegerremote` added Logger option.
+  Outputs the log of the sampler.UpdateSampler() function. (#2566)
+
 ## [1.8.0/0.33.0] - 2022-07-08
 
 ### Added
