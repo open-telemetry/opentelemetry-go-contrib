@@ -145,8 +145,8 @@ github.com/syndtr/goleveldb v0.0.0-20181127023241-353a9fca669c/go.mod h1:Z4AUp2K
 github.com/ugorji/go v0.0.0-20171122102828-84cb69a8af83/go.mod h1:hnLbHMwcvSihnDhEfx2/BzKp2xb0Y+ErdfYcrs9tkJQ=
 github.com/wendal/errors v0.0.0-20130201093226-f66c77a7882b/go.mod h1:Q12BUT7DqIlHRmgv3RskH+UCM/4eqVMgI0EMmlSpAXc=
 github.com/yuin/gopher-lua v0.0.0-20171031051903-609c9cd26973/go.mod h1:aEV29XrmTYFr3CiRxZeGHpkvbwq+prZduBqMaascyCU=
-go.opentelemetry.io/otel v1.8.0 h1:zcvBFizPbpa1q7FehvFiHbQwGzmPILebO0tyqIR5Djg=
-go.opentelemetry.io/otel v1.8.0/go.mod h1:2pkj+iMj0o03Y+cW6/m8Y4WkRdYN3AvCXCnzRMp9yvM=
+go.opentelemetry.io/otel v1.8.1-0.20220713135543-5568a3072367 h1:tsOj/3mHoQNbbK3rSmKxI9H2BdzpC36sw61MRvJ/fcg=
+go.opentelemetry.io/otel v1.8.1-0.20220713135543-5568a3072367/go.mod h1:2pkj+iMj0o03Y+cW6/m8Y4WkRdYN3AvCXCnzRMp9yvM=
 go.opentelemetry.io/otel/exporters/stdout/stdouttrace v1.8.0 h1:FVy7BZCjoA2Nk+fHqIdoTmm554J9wTX+YcrDp+mc368=
 go.opentelemetry.io/otel/exporters/stdout/stdouttrace v1.8.0/go.mod h1:ztncjvKpotSUQq7rlgPibGt8kZfSI3/jI8EO7JjuY2c=
 go.opentelemetry.io/otel/metric v0.31.0 h1:6SiklT+gfWAwWUR0meEMxQBtihpiEs4c+vL9spDTqUs=
