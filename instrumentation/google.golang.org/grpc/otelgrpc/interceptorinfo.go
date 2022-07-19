@@ -21,7 +21,7 @@ import (
 )
 
 // interceptorType is the flag to define which gRPC interceptor
-// the InterceptorInfo object is.
+// the interceptorInfo object is.
 type interceptorType uint8
 
 const (
@@ -31,7 +31,7 @@ const (
 	streamServer
 )
 
-// InterceptorInfo is the union of all arguments to four types of
+// interceptorInfo is the union of all arguments to four types of
 // gRPC interceptors, except for function types and function arguments
 // of invoker and streamer:
 // * invoker  grpc.UnaryInvoker (UnaryClient)
@@ -49,7 +49,7 @@ type interceptorInfo struct {
 	typ    interceptorType
 }
 
-// newUnaryClientInterceptorInfo return a pointer of InterceptorInfo
+// newUnaryClientInterceptorInfo return a pointer of interceptorInfo
 // based on the argument passed to UnaryClientInterceptor.
 func newUnaryClientInterceptorInfo(
 	ctx context.Context,
@@ -62,7 +62,7 @@ func newUnaryClientInterceptorInfo(
 	}
 }
 
-// newStreamClientInterceptorInfo return a pointer of InterceptorInfo
+// newStreamClientInterceptorInfo return a pointer of interceptorInfo
 // based on the argument passed to StreamServerInterceptor.
 func newStreamClientInterceptorInfo(
 	ctx context.Context,
@@ -77,7 +77,7 @@ func newStreamClientInterceptorInfo(
 	}
 }
 
-// newUnaryServerInterceptorInfo return a pointer of InterceptorInfo
+// newUnaryServerInterceptorInfo return a pointer of interceptorInfo
 // based on the argument passed to UnaryServerInterceptor.
 func newUnaryServerInterceptorInfo(
 	ctx context.Context,
@@ -90,7 +90,7 @@ func newUnaryServerInterceptorInfo(
 	}
 }
 
-// newStreamServerInterceptorInfo return a pointer of InterceptorInfo
+// newStreamServerInterceptorInfo return a pointer of interceptorInfo
 // based on the argument passed to StreamServerInterceptor.
 func newStreamServerInterceptorInfo(
 	info *grpc.StreamServerInfo,
