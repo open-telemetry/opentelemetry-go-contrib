@@ -12,7 +12,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package filters // import "go.opentelemetry.io/contrib/instrumentation/google.golang.org/grpc/otelgrpc/filters"
+package otelgrpc // import "go.opentelemetry.io/contrib/instrumentation/google.golang.org/grpc/otelgrpc"
 
 import (
 	"context"
@@ -40,7 +40,7 @@ const (
 // * handler  grpc.UnaryHandler | grpc.StreamHandler (UnaryServer, StreamServer)
 // * req, reply, srv interface{} (UnaryClient, UnaryServer, StreamClient)
 // * cc       *grpc.ClientConn.
-type InterceptorInfo struct {
+type interceptorInfo struct {
 	ctx    context.Context
 	method string
 	desc   *grpc.StreamDesc
@@ -49,27 +49,27 @@ type InterceptorInfo struct {
 	typ    interceptorType
 }
 
-// NewUnaryClientInterceptorInfo return a pointer of InterceptorInfo
+// newUnaryClientInterceptorInfo return a pointer of InterceptorInfo
 // based on the argument passed to UnaryClientInterceptor.
-func NewUnaryClientInterceptorInfo(
+func newUnaryClientInterceptorInfo(
 	ctx context.Context,
 	method string,
-) *InterceptorInfo {
-	return &InterceptorInfo{
+) *interceptorInfo {
+	return &interceptorInfo{
 		ctx:    ctx,
 		method: method,
 		typ:    unaryClient,
 	}
 }
 
-// NewStreamClientInterceptorInfo return a pointer of InterceptorInfo
+// newStreamClientInterceptorInfo return a pointer of InterceptorInfo
 // based on the argument passed to StreamServerInterceptor.
-func NewStreamClientInterceptorInfo(
+func newStreamClientInterceptorInfo(
 	ctx context.Context,
 	desc *grpc.StreamDesc,
 	method string,
-) *InterceptorInfo {
-	return &InterceptorInfo{
+) *interceptorInfo {
+	return &interceptorInfo{
 		ctx:    ctx,
 		desc:   desc,
 		method: method,
@@ -77,25 +77,25 @@ func NewStreamClientInterceptorInfo(
 	}
 }
 
-// NewUnaryServerInterceptorInfo return a pointer of InterceptorInfo
+// newUnaryServerInterceptorInfo return a pointer of InterceptorInfo
 // based on the argument passed to UnaryServerInterceptor.
-func NewUnaryServerInterceptorInfo(
+func newUnaryServerInterceptorInfo(
 	ctx context.Context,
 	info *grpc.UnaryServerInfo,
-) *InterceptorInfo {
-	return &InterceptorInfo{
+) *interceptorInfo {
+	return &interceptorInfo{
 		ctx:    ctx,
 		usinfo: info,
 		typ:    unaryServer,
 	}
 }
 
-// NewStreamServerInterceptorInfo return a pointer of InterceptorInfo
+// newStreamServerInterceptorInfo return a pointer of InterceptorInfo
 // based on the argument passed to StreamServerInterceptor.
-func NewStreamServerInterceptorInfo(
+func newStreamServerInterceptorInfo(
 	info *grpc.StreamServerInfo,
-) *InterceptorInfo {
-	return &InterceptorInfo{
+) *interceptorInfo {
+	return &interceptorInfo{
 		ssinfo: info,
 		typ:    streamServer,
 	}

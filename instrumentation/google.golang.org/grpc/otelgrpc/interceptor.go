@@ -29,7 +29,6 @@ import (
 	"google.golang.org/grpc/peer"
 	"google.golang.org/grpc/status"
 
-	"go.opentelemetry.io/contrib/instrumentation/google.golang.org/grpc/otelgrpc/filters"
 	"go.opentelemetry.io/contrib/instrumentation/google.golang.org/grpc/otelgrpc/internal"
 	"go.opentelemetry.io/otel/attribute"
 	"go.opentelemetry.io/otel/baggage"
@@ -75,7 +74,7 @@ func UnaryClientInterceptor(opts ...Option) grpc.UnaryClientInterceptor {
 		callOpts ...grpc.CallOption,
 	) error {
 		cfg := newConfig(opts)
-		i := filters.NewUnaryClientInterceptorInfo(ctx, method)
+		i := newUnaryClientInterceptorInfo(ctx, method)
 		if cfg.Filter != nil && !cfg.Filter(i) {
 			return invoker(ctx, method, req, reply, cc, callOpts...)
 		}
@@ -251,7 +250,7 @@ func StreamClientInterceptor(opts ...Option) grpc.StreamClientInterceptor {
 		callOpts ...grpc.CallOption,
 	) (grpc.ClientStream, error) {
 		cfg := newConfig(opts)
-		i := filters.NewStreamClientInterceptorInfo(ctx, desc, method)
+		i := newStreamClientInterceptorInfo(ctx, desc, method)
 		if cfg.Filter != nil && !cfg.Filter(i) {
 			return streamer(ctx, desc, cc, method, callOpts...)
 		}
@@ -314,7 +313,7 @@ func UnaryServerInterceptor(opts ...Option) grpc.UnaryServerInterceptor {
 		handler grpc.UnaryHandler,
 	) (interface{}, error) {
 		cfg := newConfig(opts)
-		i := filters.NewUnaryServerInterceptorInfo(ctx, info)
+		i := newUnaryServerInterceptorInfo(ctx, info)
 		if cfg.Filter != nil && !cfg.Filter(i) {
 			return handler(ctx, req)
 		}
@@ -408,7 +407,7 @@ func StreamServerInterceptor(opts ...Option) grpc.StreamServerInterceptor {
 	) error {
 		ctx := ss.Context()
 		cfg := newConfig(opts)
-		i := filters.NewStreamServerInterceptorInfo(info)
+		i := newStreamServerInterceptorInfo(info)
 		if cfg.Filter != nil && !cfg.Filter(i) {
 			return handler(srv, wrapServerStream(ctx, ss))
 		}
