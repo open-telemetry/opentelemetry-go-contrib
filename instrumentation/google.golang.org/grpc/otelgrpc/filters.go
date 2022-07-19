@@ -92,8 +92,7 @@ func Not(f Filter) Filter {
 }
 
 // MethodName returns a Filter that returns true if the request's
-// method name matches the provided string n. This filter is only for
-// client interceptors.
+// method name matches the provided string n.
 func MethodName(n string) Filter {
 	return func(i *interceptorInfo) bool {
 		var p gRPCPath
@@ -114,8 +113,7 @@ func MethodName(n string) Filter {
 }
 
 // MethodPrefix returns a Filter that returns true if the request's
-// method starts with the provided string pre. This filter is only for
-// client interceptors.
+// method starts with the provided string pre.
 func MethodPrefix(pre string) Filter {
 	return func(i *interceptorInfo) bool {
 		var p gRPCPath
@@ -137,7 +135,7 @@ func MethodPrefix(pre string) Filter {
 
 // FullMethodName returns a Filter that returns true if the request's
 // full RPC method string, i.e. /package.service/method, starts with
-// the provided string n. This filter is only for server interceptors.
+// the provided string n.
 func FullMethodName(n string) Filter {
 	return func(i *interceptorInfo) bool {
 		var fm string
