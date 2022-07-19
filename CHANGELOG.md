@@ -8,6 +8,10 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 
 ## [Unreleased]
 
+### Changed
+
+- Upgraded all `semconv` package use to `v1.12.0`. (#2589)
+
 ## [1.8.0/0.33.0] - 2022-07-08
 
 ### Added
