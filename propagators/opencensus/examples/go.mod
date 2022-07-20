@@ -6,7 +6,7 @@ require (
 	go.opencensus.io v0.22.6-0.20201102222123-380f4078db9f
 	go.opentelemetry.io/contrib/instrumentation/google.golang.org/grpc/otelgrpc v0.33.0
 	go.opentelemetry.io/contrib/propagators/opencensus v0.33.0
-	go.opentelemetry.io/otel v1.8.0
+	go.opentelemetry.io/otel v1.8.1-0.20220713135543-5568a3072367
 	go.opentelemetry.io/otel/exporters/stdout/stdouttrace v1.8.0
 	go.opentelemetry.io/otel/sdk v1.8.0
 	google.golang.org/grpc v1.48.0
