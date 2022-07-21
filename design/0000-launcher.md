@@ -96,7 +96,7 @@ func main() {
 }
 ```
 
-Or, with headers set directly in code:
+Alternatively, to set the Honeycomb API key directly in code:
 
 ```go
 import (
@@ -106,7 +106,6 @@ import (
 
 func main() {
     lnchr, err := launcher.ConfigureOpentelemetry(
-        launcher.WithServiceName("service-name"),
         honeycomb.WithApiKey("api-key"),
     )
     defer lnchr.Shutdown()
