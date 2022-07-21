@@ -8,6 +8,7 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 
 ## [Unreleased]
 
+- Upgraded all `semconv` package use to `v1.12.0`. (#2589)
 - The `samplers/jaegerremote` added Logger option.
   Outputs the log of the sampler.UpdateSampler() function. (#2566)
 

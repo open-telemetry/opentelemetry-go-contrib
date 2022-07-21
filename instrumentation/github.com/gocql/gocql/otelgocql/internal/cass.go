@@ -19,7 +19,7 @@ import (
 	"net"
 
 	"go.opentelemetry.io/otel/attribute"
-	semconv "go.opentelemetry.io/otel/semconv/v1.10.0"
+	semconv "go.opentelemetry.io/otel/semconv/v1.12.0"
 )
 
 const (

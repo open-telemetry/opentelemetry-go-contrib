@@ -14,12 +14,12 @@ require (
 	go.opentelemetry.io/contrib/detectors/aws/lambda v0.33.0
 	go.opentelemetry.io/contrib/instrumentation/github.com/aws/aws-lambda-go/otellambda v0.33.0
 	go.opentelemetry.io/contrib/propagators/aws v1.8.0
-	go.opentelemetry.io/otel v1.8.0
+	go.opentelemetry.io/otel v1.8.1-0.20220713135543-5568a3072367
 	go.opentelemetry.io/otel/exporters/otlp/otlptrace/otlptracegrpc v1.8.0
 	go.opentelemetry.io/otel/sdk v1.8.0
 	go.opentelemetry.io/otel/trace v1.8.0
 	go.opentelemetry.io/proto/otlp v0.18.0
-	google.golang.org/grpc v1.47.0
+	google.golang.org/grpc v1.48.0
 )
 
 require (

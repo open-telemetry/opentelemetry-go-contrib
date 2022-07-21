@@ -3,9 +3,9 @@ module go.opentelemetry.io/contrib/detectors/aws/ec2
 go 1.17
 
 require (
-	github.com/aws/aws-sdk-go v1.44.49
+	github.com/aws/aws-sdk-go v1.44.56
 	github.com/stretchr/testify v1.8.0
-	go.opentelemetry.io/otel v1.8.0
+	go.opentelemetry.io/otel v1.8.1-0.20220713135543-5568a3072367
 	go.opentelemetry.io/otel/sdk v1.8.0
 )
 
