@@ -67,8 +67,8 @@ github.com/stretchr/testify v1.7.0/go.mod h1:6Fq8oRcR53rry900zMqJjRRixrwX3KX962/
 github.com/stretchr/testify v1.7.1 h1:5TQK59W5E3v0r2duFAb7P95B6hEeOyEnHRa8MjYSMTY=
 go.opencensus.io v0.22.6-0.20201102222123-380f4078db9f h1:IUmbcoP9XyEXW+R9AbrZgDvaYVfTbISN92Y5RIV+Mx4=
 go.opencensus.io v0.22.6-0.20201102222123-380f4078db9f/go.mod h1:5pWMHQbX5EPX2/62yrJeAkowc+lfs/XD7Uxpq3pI6kk=
-go.opentelemetry.io/otel v1.8.0 h1:zcvBFizPbpa1q7FehvFiHbQwGzmPILebO0tyqIR5Djg=
-go.opentelemetry.io/otel v1.8.0/go.mod h1:2pkj+iMj0o03Y+cW6/m8Y4WkRdYN3AvCXCnzRMp9yvM=
+go.opentelemetry.io/otel v1.8.1-0.20220713135543-5568a3072367 h1:tsOj/3mHoQNbbK3rSmKxI9H2BdzpC36sw61MRvJ/fcg=
+go.opentelemetry.io/otel v1.8.1-0.20220713135543-5568a3072367/go.mod h1:2pkj+iMj0o03Y+cW6/m8Y4WkRdYN3AvCXCnzRMp9yvM=
 go.opentelemetry.io/otel/bridge/opencensus v0.31.0 h1:8Wk5/hHtEdTpYwUz0Ny8I+ccqfIMbp8Ce8/ZXlN4WPc=
 go.opentelemetry.io/otel/bridge/opencensus v0.31.0/go.mod h1:hgI/HZyVIo3QL0RBmlOy2/VIQCc27OC1c/4ifwqTv4A=
 go.opentelemetry.io/otel/exporters/stdout/stdouttrace v1.8.0 h1:FVy7BZCjoA2Nk+fHqIdoTmm554J9wTX+YcrDp+mc368=

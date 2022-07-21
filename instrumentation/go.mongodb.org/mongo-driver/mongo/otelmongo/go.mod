@@ -4,7 +4,7 @@ go 1.17
 
 require (
 	go.mongodb.org/mongo-driver v1.10.0
-	go.opentelemetry.io/otel v1.8.0
+	go.opentelemetry.io/otel v1.8.1-0.20220713135543-5568a3072367
 	go.opentelemetry.io/otel/trace v1.8.0
 )
 

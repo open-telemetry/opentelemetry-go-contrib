@@ -12,6 +12,10 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 
 - Add gRPC trace `Filter` to the `go.opentelemetry.io/contrib/instrumentation/google.golang.org/grpc/otelgrpc` package to provide the way to filter the traces automatically generated in interceptors. (#2572)
 
+### Changed
+
+- Upgraded all `semconv` package use to `v1.12.0`. (#2589)
+
 ## [1.8.0/0.33.0] - 2022-07-08
 
 ### Added
