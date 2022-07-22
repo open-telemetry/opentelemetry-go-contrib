@@ -115,3 +115,20 @@ func RegisterTextMapPropagator(name string, p propagation.TextMapPropagator) {
 		panic(err)
 	}
 }
+
+// GetTextMapPropagator returns a TextMapPropagator composed from the
+// passed names of registered TextMapPropagators. Each name must match an
+// already registered TextMapPropagator (see the RegisterTextMapPropagator
+// function for more information), or a default (tracecontext, baggage, b3,
+// b3multi, jaeger, xray, or ottrace).
+//
+// If "none" is passed, or no names are provided, the returned
+// TextMapPropagator will be a no-operation implementation.
+//
+// An error is returned for any un-registered names. The remaining, known,
+// names will be used to compose a TextMapPropagator that is returned with the
+// error.
+func GetTextMapPropagator(names ...string) (propagation.TextMapPropagator, error) {
+	// FIXME
+	return nil, nil
+}
