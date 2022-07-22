@@ -17,6 +17,7 @@ package autoprop // import "go.opentelemetry.io/contrib/propagators/autoprop"
 import (
 	"errors"
 	"fmt"
+	"strings"
 	"sync"
 
 	"go.opentelemetry.io/contrib/propagators/aws/xray"
@@ -119,16 +120,50 @@ func RegisterTextMapPropagator(name string, p propagation.TextMapPropagator) {
 // GetTextMapPropagator returns a TextMapPropagator composed from the
 // passed names of registered TextMapPropagators. Each name must match an
 // already registered TextMapPropagator (see the RegisterTextMapPropagator
-// function for more information), or a default (tracecontext, baggage, b3,
+// function for more information) or a default (tracecontext, baggage, b3,
 // b3multi, jaeger, xray, or ottrace).
 //
-// If "none" is passed, or no names are provided, the returned
-// TextMapPropagator will be a no-operation implementation.
+// If "none" is included in the arguments, or no names are provided, the
+// returned TextMapPropagator will be a no-operation implementation.
 //
 // An error is returned for any un-registered names. The remaining, known,
 // names will be used to compose a TextMapPropagator that is returned with the
 // error.
 func GetTextMapPropagator(names ...string) (propagation.TextMapPropagator, error) {
-	// FIXME
-	return nil, nil
+	var (
+		props   []propagation.TextMapPropagator
+		unknown []string
+	)
+
+	for _, name := range names {
+		if name == none {
+			// If "none" is passed in combination with any other propagator,
+			// the result still needs to be a no-op propagator. Therefore,
+			// short-circuit here.
+			return propagation.NewCompositeTextMapPropagator(), nil
+		}
+
+		p, ok := propagators.load(name)
+		if !ok {
+			unknown = append(unknown, name)
+			continue
+		}
+		props = append(props, p)
+	}
+
+	var err error
+	if len(unknown) > 0 {
+		joined := strings.Join(unknown, ",")
+		err = fmt.Errorf("%w: %s", errUnknownPropagator, joined)
+	}
+
+	switch len(props) {
+	case 0:
+		return nil, err
+	case 1:
+		// Do not return a composite of a single propagator.
+		return props[0], err
+	default:
+		return propagation.NewCompositeTextMapPropagator(props...), err
+	}
 }
