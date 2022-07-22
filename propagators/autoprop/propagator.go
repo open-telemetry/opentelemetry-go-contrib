@@ -103,7 +103,7 @@ func parseEnv() (propagation.TextMapPropagator, error) {
 			return propagation.NewCompositeTextMapPropagator(), nil
 		}
 
-		p, ok := envRegistry.load(pStr)
+		p, ok := propagators.load(pStr)
 		if !ok {
 			unknown = append(unknown, pStr)
 			continue

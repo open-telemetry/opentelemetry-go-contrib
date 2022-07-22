@@ -30,9 +30,9 @@ import (
 // configured.
 const none = "none"
 
-// envRegistry is the index of all supported environment variable
-// values and their mapping to a TextMapPropagator.
-var envRegistry = &registry{
+// propagators is the registry of TextMapPropagators registered with this
+// package. It includes all the OpenTelemetry defaults at startup.
+var propagators = &registry{
 	names: map[string]propagation.TextMapPropagator{
 		// W3C Trace Context.
 		"tracecontext": propagation.TraceContext{},
@@ -102,7 +102,7 @@ func (r *registry) drop(key string) {
 // will panic if name has already been registered or is a default
 // (tracecontext, baggage, b3, b3multi, jaeger, xray, or ottrace).
 func RegisterTextMapPropagator(name string, p propagation.TextMapPropagator) {
-	if err := envRegistry.store(name, p); err != nil {
+	if err := propagators.store(name, p); err != nil {
 		// envRegistry.store will return errDupReg if name is already
 		// registered. Panic here so the user is made aware of the duplicate
 		// registration, which could be done by malicious code trying to
