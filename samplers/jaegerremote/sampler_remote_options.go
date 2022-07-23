@@ -21,6 +21,7 @@ import (
 	"os"
 	"time"
 
+	"github.com/go-logr/logr"
 	"github.com/go-logr/stdr"
 
 	"go.opentelemetry.io/otel/sdk/trace"
@@ -34,7 +35,7 @@ type config struct {
 	samplingParser          samplingStrategyParser
 	updaters                []samplerUpdater
 	posParams               perOperationSamplerParams
-	logger                  Logger
+	logger                  logr.Logger
 }
 
 // newConfig returns an appropriately configured config.
@@ -119,7 +120,7 @@ func WithSamplingRefreshInterval(samplingRefreshInterval time.Duration) Option {
 }
 
 // WithSamplingLogger creates a Option that initializes sampling logger.
-func WithSamplingLogger(logger Logger) Option {
+func WithSamplingLogger(logger logr.Logger) Option {
 	return optionFunc(func(c *config) {
 		c.logger = logger
 	})
