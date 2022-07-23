@@ -119,8 +119,8 @@ func WithSamplingRefreshInterval(samplingRefreshInterval time.Duration) Option {
 	})
 }
 
-// WithSamplingLogger creates a Option that initializes sampling logger.
-func WithSamplingLogger(logger logr.Logger) Option {
+// WithLogger creates a Option that initializes the logger.
+func WithLogger(logger logr.Logger) Option {
 	return optionFunc(func(c *config) {
 		c.logger = logger
 	})

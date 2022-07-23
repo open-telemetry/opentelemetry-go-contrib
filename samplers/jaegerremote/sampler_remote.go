@@ -104,7 +104,7 @@ func (s *Sampler) ShouldSample(p trace.SamplingParameters) trace.SamplingResult 
 // go-routines it may have started.
 func (s *Sampler) Close() {
 	if swapped := atomic.CompareAndSwapInt64(&s.closed, 0, 1); !swapped {
-		s.logger.Error(nil, "repeated attempt to close the sampler is ignored")
+		s.logger.Info("repeated attempt to close the sampler is ignored")
 		return
 	}
 

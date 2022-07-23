@@ -127,7 +127,7 @@ func TestRemoteSamplerOptions(t *testing.T) {
 		withSamplingStrategyFetcher(fetcher),
 		withSamplingStrategyParser(parser),
 		withUpdaters(updaters...),
-		WithSamplingLogger(logger),
+		WithLogger(logger),
 	)
 	assert.Equal(t, 42, sampler.posParams.MaxOperations)
 	assert.True(t, sampler.posParams.OperationNameLateBinding)
