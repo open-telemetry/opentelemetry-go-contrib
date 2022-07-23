@@ -142,7 +142,7 @@ func consumeAndCheck(t *testing.T, mt trace.Tracer, complFn func() []sdktrace.Re
 			// propagators.Extract always returns a remote SpanContext.
 			assert.Equal(t, sc, span.SpanContext().WithRemote(true))
 
-			assert.Equal(t, "kafka.consume", span.Name())
+			assert.Equal(t, fmt.Sprintf("%s receive", topic), span.Name())
 			assert.Equal(t, expected.kind, span.SpanKind())
 			assert.Equal(t, expected.msgKey, msgList[i].Key)
 			for _, k := range expected.attributeList {
