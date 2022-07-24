@@ -111,8 +111,12 @@ func (h *Handler) createMeasures() {
 	serverLatencyMeasure, err := h.meter.SyncFloat64().Histogram(ServerLatency)
 	handleErr(err)
 
+	activeRequest, err := h.meter.SyncInt64().UpDownCounter(ActiveRequest)
+	handleErr(err)
+
 	h.counters[RequestContentLength] = requestBytesCounter
 	h.counters[ResponseContentLength] = responseBytesCounter
+	h.counters[ActiveRequest] = activeRequest
 	h.valueRecorders[ServerLatency] = serverLatencyMeasure
 }
 
@@ -201,12 +205,15 @@ func (h *Handler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	labeler := &Labeler{}
 	ctx = injectLabeler(ctx, labeler)
 
+	// Add metrics
+	attributes := append(labeler.Get(), semconv.HTTPServerMetricAttributesFromHTTPRequest(h.operation, r)...)
+	h.counters[ActiveRequest].Add(ctx, 1, attributes...)
+	defer h.counters[ActiveRequest].Add(ctx, -1, attributes...)
+
 	h.handler.ServeHTTP(w, r.WithContext(ctx))
 
 	setAfterServeAttributes(span, bw.read, rww.written, rww.statusCode, bw.err, rww.err)
 
-	// Add metrics
-	attributes := append(labeler.Get(), semconv.HTTPServerMetricAttributesFromHTTPRequest(h.operation, r)...)
 	h.counters[RequestContentLength].Add(ctx, bw.read, attributes...)
 	h.counters[ResponseContentLength].Add(ctx, rww.written, attributes...)
 
