@@ -82,3 +82,31 @@ func ExampleRegisterTextMapPropagator() {
 	fmt.Println(autoprop.NewTextMapPropagator().Fields())
 	// Output: [my-header-val]
 }
+
+func ExampleGetTextMapPropagator() {
+	prop, err := autoprop.TextMapPropagator("b3", "baggage")
+	if err != nil {
+		// Handle error appropriately.
+		panic(err)
+	}
+
+	fields := prop.Fields()
+	sort.Strings(fields)
+	fmt.Println(fields)
+	// Output: [baggage x-b3-flags x-b3-sampled x-b3-spanid x-b3-traceid]
+}
+
+func ExampleGetTextMapPropagator_custom() {
+	// To use your own or a 3rd-party exporter it needs to be registered prior
+	// to calling GetTextMapPropagator.
+	autoprop.RegisterTextMapPropagator("custom-get-prop", myTextMapPropagator{})
+
+	prop, err := autoprop.TextMapPropagator("custom-get-prop")
+	if err != nil {
+		// Handle error appropriately.
+		panic(err)
+	}
+
+	fmt.Println(prop.Fields())
+	// Output: [my-header-val]
+}
