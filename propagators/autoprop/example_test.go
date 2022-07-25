@@ -84,7 +84,7 @@ func ExampleRegisterTextMapPropagator() {
 }
 
 func ExampleGetTextMapPropagator() {
-	prop, err := autoprop.GetTextMapPropagator("b3", "baggage")
+	prop, err := autoprop.TextMapPropagator("b3", "baggage")
 	if err != nil {
 		// Handle error appropriately.
 		panic(err)
@@ -101,7 +101,7 @@ func ExampleGetTextMapPropagator_custom() {
 	// to calling GetTextMapPropagator.
 	autoprop.RegisterTextMapPropagator("custom-get-prop", myTextMapPropagator{})
 
-	prop, err := autoprop.GetTextMapPropagator("custom-get-prop")
+	prop, err := autoprop.TextMapPropagator("custom-get-prop")
 	if err != nil {
 		// Handle error appropriately.
 		panic(err)

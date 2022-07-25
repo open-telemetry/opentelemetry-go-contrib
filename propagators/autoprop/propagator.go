@@ -86,5 +86,5 @@ func parseEnv() (propagation.TextMapPropagator, error) {
 	if !defined {
 		return nil, nil
 	}
-	return GetTextMapPropagator(strings.Split(propStrs, ",")...)
+	return TextMapPropagator(strings.Split(propStrs, ",")...)
 }

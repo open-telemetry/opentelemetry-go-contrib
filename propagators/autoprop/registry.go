@@ -117,7 +117,7 @@ func RegisterTextMapPropagator(name string, p propagation.TextMapPropagator) {
 	}
 }
 
-// GetTextMapPropagator returns a TextMapPropagator composed from the
+// TextMapPropagator returns a TextMapPropagator composed from the
 // passed names of registered TextMapPropagators. Each name must match an
 // already registered TextMapPropagator (see the RegisterTextMapPropagator
 // function for more information) or a default (tracecontext, baggage, b3,
@@ -129,7 +129,7 @@ func RegisterTextMapPropagator(name string, p propagation.TextMapPropagator) {
 // An error is returned for any un-registered names. The remaining, known,
 // names will be used to compose a TextMapPropagator that is returned with the
 // error.
-func GetTextMapPropagator(names ...string) (propagation.TextMapPropagator, error) {
+func TextMapPropagator(names ...string) (propagation.TextMapPropagator, error) {
 	var (
 		props   []propagation.TextMapPropagator
 		unknown []string
