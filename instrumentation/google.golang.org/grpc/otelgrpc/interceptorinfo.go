@@ -16,6 +16,8 @@ package otelgrpc // import "go.opentelemetry.io/contrib/instrumentation/google.g
 
 import (
 	"context"
+	"path"
+	"strings"
 
 	"google.golang.org/grpc"
 )
@@ -47,6 +49,39 @@ type interceptorInfo struct {
 	usinfo *grpc.UnaryServerInfo
 	ssinfo *grpc.StreamServerInfo
 	typ    interceptorType
+}
+
+// splitFullMethod splits path defined in gRPC protocol
+// and returns as gRPCPath object that has divided service and method names
+// https://github.com/grpc/grpc/blob/master/doc/PROTOCOL-HTTP2.md
+// If name is not FullMethod, returned gRPCPath has empty service field.
+func splitFullMethod(name string) gRPCPath {
+	s, m := path.Split(name)
+	if s != "" {
+		s = path.Clean(s)
+		s = strings.TrimLeft(s, "/")
+	}
+	return gRPCPath{
+		service: s,
+		method:  m,
+	}
+}
+
+func (i *interceptorInfo) splitFullMethod() gRPCPath {
+	var p gRPCPath
+	switch i.typ {
+	case unaryServer:
+		p = splitFullMethod(i.usinfo.FullMethod)
+	case streamServer:
+		p = splitFullMethod(i.ssinfo.FullMethod)
+	case unaryClient, streamClient:
+		p = splitFullMethod(i.method)
+	default:
+		p = gRPCPath{
+			method: i.method,
+		}
+	}
+	return p
 }
 
 // newUnaryClientInterceptorInfo return a pointer of interceptorInfo

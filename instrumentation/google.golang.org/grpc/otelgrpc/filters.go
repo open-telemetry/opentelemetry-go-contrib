@@ -15,7 +15,6 @@
 package otelgrpc // import "go.opentelemetry.io/contrib/instrumentation/google.golang.org/grpc/otelgrpc"
 
 import (
-	"path"
 	"strings"
 )
 
@@ -27,22 +26,6 @@ type Filter func(*interceptorInfo) bool
 type gRPCPath struct {
 	service string
 	method  string
-}
-
-// splitFullMethod splits path defined in gRPC protocol
-// and returns as gRPCPath object that has divided service and method names
-// https://github.com/grpc/grpc/blob/master/doc/PROTOCOL-HTTP2.md
-// If name is not FullMethod, returned gRPCPath has empty service field.
-func splitFullMethod(name string) gRPCPath {
-	s, m := path.Split(name)
-	if s != "" {
-		s = path.Clean(s)
-		s = strings.TrimLeft(s, "/")
-	}
-	return gRPCPath{
-		service: s,
-		method:  m,
-	}
 }
 
 // Any takes a list of Filters and returns a Filter that
@@ -88,19 +71,7 @@ func Not(f Filter) Filter {
 // method name matches the provided string n.
 func MethodName(n string) Filter {
 	return func(i *interceptorInfo) bool {
-		var p gRPCPath
-		switch i.typ {
-		case unaryServer:
-			p = splitFullMethod(i.usinfo.FullMethod)
-		case streamServer:
-			p = splitFullMethod(i.ssinfo.FullMethod)
-		case unaryClient, streamClient:
-			p = splitFullMethod(i.method)
-		default:
-			p = gRPCPath{
-				method: i.method,
-			}
-		}
+		p := i.splitFullMethod()
 		return p.method == n
 	}
 }
@@ -109,19 +80,7 @@ func MethodName(n string) Filter {
 // method starts with the provided string pre.
 func MethodPrefix(pre string) Filter {
 	return func(i *interceptorInfo) bool {
-		var p gRPCPath
-		switch i.typ {
-		case unaryServer:
-			p = splitFullMethod(i.usinfo.FullMethod)
-		case streamServer:
-			p = splitFullMethod(i.ssinfo.FullMethod)
-		case unaryClient, streamClient:
-			p = splitFullMethod(i.method)
-		default:
-			p = gRPCPath{
-				method: i.method,
-			}
-		}
+		p := i.splitFullMethod()
 		return strings.HasPrefix(p.method, pre)
 	}
 }
@@ -150,19 +109,7 @@ func FullMethodName(n string) Filter {
 // service name, i.e. package.service, matches s.
 func ServiceName(s string) Filter {
 	return func(i *interceptorInfo) bool {
-		var p gRPCPath
-		switch i.typ {
-		case unaryServer:
-			p = splitFullMethod(i.usinfo.FullMethod)
-		case streamServer:
-			p = splitFullMethod(i.ssinfo.FullMethod)
-		case unaryClient, streamClient:
-			p = splitFullMethod(i.method)
-		default:
-			p = gRPCPath{
-				method: i.method,
-			}
-		}
+		p := i.splitFullMethod()
 		return p.service == s
 	}
 }
@@ -171,19 +118,7 @@ func ServiceName(s string) Filter {
 // service name, i.e. package.service, starts with the provided string pre.
 func ServicePrefix(pre string) Filter {
 	return func(i *interceptorInfo) bool {
-		var p gRPCPath
-		switch i.typ {
-		case unaryServer:
-			p = splitFullMethod(i.usinfo.FullMethod)
-		case streamServer:
-			p = splitFullMethod(i.ssinfo.FullMethod)
-		case unaryClient, streamClient:
-			p = splitFullMethod(i.method)
-		default:
-			p = gRPCPath{
-				method: i.method,
-			}
-		}
+		p := i.splitFullMethod()
 		return strings.HasPrefix(p.service, pre)
 	}
 }
