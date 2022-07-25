@@ -74,14 +74,7 @@ func All(fs ...Filter) Filter {
 // None takes a list of Filters and returns a Filter that returns
 // true only if none of the Filters in the list return true.
 func None(fs ...Filter) Filter {
-	return func(i *interceptorInfo) bool {
-		for _, f := range fs {
-			if f(i) {
-				return false
-			}
-		}
-		return true
-	}
+	return Not(Any(fs...))
 }
 
 // Not provides a convenience mechanism for inverting a Filter.
@@ -198,7 +191,6 @@ func ServicePrefix(pre string) Filter {
 // NotHealthCheck returns a Filter that returns true if the request's
 // is not health check defined by gRPC Health Checking Protocol.
 // https://github.com/grpc/grpc/blob/master/doc/health-checking.md
-// This is the short of Not(MethodName("grpc.health.v1.Health/Check")).
 func NotHealthCheck() Filter {
 	return Not(ServicePrefix("grpc.health.v1.Health"))
 }
