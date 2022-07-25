@@ -163,7 +163,7 @@ func (s *Sampler) UpdateSampler() {
 	defer s.Unlock()
 
 	if err := s.updateSamplerViaUpdaters(strategy); err != nil {
-		s.logger.Error(err, fmt.Sprintf("failed to handle sampling strategy response %+v.", res))
+		s.logger.Error(err, "failed to handle sampling strategy response", "response", res)
 		return
 	}
 }

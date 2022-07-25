@@ -8,9 +8,13 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 
 ## [Unreleased]
 
+### Added
+
+- The `WithLogger` option to `go.opentelemetry.io/contrib/samplers/jaegerremote` to allow users to pass a `logr.Logger` and have operations logged. (#2566)
+
+### Changed 
+
 - Upgraded all `semconv` package use to `v1.12.0`. (#2589)
-- The `samplers/jaegerremote` added Logger option.
-  Outputs the log of the sampler.UpdateSampler() function. (#2566)
 
 ## [1.8.0/0.33.0] - 2022-07-08
 
