@@ -51,7 +51,7 @@ func newConfig(options ...Option) config {
 			MaxOperations:            defaultSamplingMaxOperations,
 			OperationNameLateBinding: defaultSamplingOperationNameLateBinding,
 		},
-		logger: logr.New(NullLoggger),
+		logger: logr.Discard(),
 	}
 	for _, option := range options {
 		option.apply(&c)
