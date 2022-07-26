@@ -19,7 +19,7 @@ The vendor-neutral launcher will live in the opentelemetry-go-contrib repo, and 
 ### Getting started
 
 ```shell
-go get github.com/opentelemetry-go-contrib/otel-launcher-go/launcher
+go get go.opentelemetry.io/contrib/launcher
 ```
 
 ### Configure
@@ -27,7 +27,7 @@ go get github.com/opentelemetry-go-contrib/otel-launcher-go/launcher
 Minimal setup - by default will send all telemetry to localhost:4317, with the ability to set environment variables for endpoint, headers, resource attributes, and more as listed in the configuration options noted below:
 
 ```go
-import "github.com/opentelemetry-go-contrib/otel-launcher-go/launcher"
+import "go.opentelemetry.io/contrib/launcher"
 
 func main() {
     lnchr, err := launcher.ConfigureOpentelemetry()
@@ -38,7 +38,7 @@ func main() {
 Or set headers directly in code instead:
 
 ```go
-import "github.com/opentelemetry-go-contrib/otel-launcher-go/launcher"
+import "go.opentelemetry.io/contrib/launcher"
 
 func main() {
     lnchr, err := launcher.ConfigureOpentelemetry(
@@ -86,7 +86,7 @@ Minimal setup, which sends to the Honeycomb endpoint and requires `HONEYCOMB_API
 
 ```go
 import (
-    "github.com/opentelemetry-go-contrib/otel-launcher-go/launcher"
+    "go.opentelemetry.io/contrib/launcher"
     _ "github.com/honeycombio/otel-launcher-go/launcher/honeycomb"
 )
 
@@ -100,7 +100,7 @@ Alternatively, to set the Honeycomb API key directly in code:
 
 ```go
 import (
-    "github.com/opentelemetry-go-contrib/otel-launcher-go/launcher"
+    "go.opentelemetry.io/contrib/launcher"
     "github.com/honeycombio/otel-launcher-go/launcher/honeycomb"
 )
 
