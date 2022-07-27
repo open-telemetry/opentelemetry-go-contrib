@@ -16,7 +16,6 @@ package autoprop // import "go.opentelemetry.io/contrib/propagators/autoprop"
 
 import (
 	"errors"
-	"fmt"
 	"os"
 	"strings"
 
@@ -87,43 +86,5 @@ func parseEnv() (propagation.TextMapPropagator, error) {
 	if !defined {
 		return nil, nil
 	}
-
-	const sep = ","
-
-	var (
-		props   []propagation.TextMapPropagator
-		unknown []string
-	)
-
-	for _, pStr := range strings.Split(propStrs, sep) {
-		if pStr == none {
-			// If "none" is passed in combination with any other propagator,
-			// the result still needs to be a no-op propagator. Therefore,
-			// short-circuit here.
-			return propagation.NewCompositeTextMapPropagator(), nil
-		}
-
-		p, ok := envRegistry.load(pStr)
-		if !ok {
-			unknown = append(unknown, pStr)
-			continue
-		}
-		props = append(props, p)
-	}
-
-	var err error
-	if len(unknown) > 0 {
-		joined := strings.Join(unknown, sep)
-		err = fmt.Errorf("%w: %s", errUnknownPropagator, joined)
-	}
-
-	switch len(props) {
-	case 0:
-		return nil, err
-	case 1:
-		// Do not return a composite of a single propagator.
-		return props[0], err
-	default:
-		return propagation.NewCompositeTextMapPropagator(props...), err
-	}
+	return TextMapPropagator(strings.Split(propStrs, ",")...)
 }

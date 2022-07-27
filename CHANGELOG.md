@@ -8,6 +8,11 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 
 ## [Unreleased]
 
+### Added
+
+- The `TextMapPropagator` function to `go.opentelemetry.io/contrib/propagators/autoprop`.
+  This function is used to return a composite `TextMapPropagator` from registered names (instead of having to specify with an environment variable). (#2593)
+
 ### Changed
 
 - Upgraded all `semconv` package use to `v1.12.0`. (#2589)
