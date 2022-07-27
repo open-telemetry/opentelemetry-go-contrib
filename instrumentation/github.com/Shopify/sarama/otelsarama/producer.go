@@ -254,14 +254,12 @@ func msgPayloadSize(msg *sarama.ProducerMessage, kafkaVersion sarama.KafkaVersio
 	if kafkaVersion.IsAtLeast(sarama.V0_11_0_0) {
 		version = 2
 	}
-	var size int
+	size := producerMessageOverhead
 	if version >= 2 {
 		size = maximumRecordOverhead
 		for _, h := range msg.Headers {
 			size += len(h.Key) + len(h.Value) + 2*binary.MaxVarintLen32
 		}
-	} else {
-		size = producerMessageOverhead
 	}
 	if msg.Key != nil {
 		size += msg.Key.Length()
