@@ -247,6 +247,14 @@ func WrapAsyncProducer(saramaConfig *sarama.Config, p sarama.AsyncProducer, opts
 	return wrapped
 }
 
+// msgPayloadSize returns the approximate estimate of message size in bytes.
+//
+// For kafka version <= 0.10, the message size is
+// ~ 4(crc32) + 8(timestamp) + 4(key len) + 4(value len) + 4(message len) + 1(attrs) + 1(magic).
+//
+// For kafka version >= 0.11, the message size with varint encoding is
+// ~ 5 * (crc32, key len, value len, message len, attrs) + timestamp + 1 byte (magic).
+// + header key + header value + header key len + header value len.
 func msgPayloadSize(msg *sarama.ProducerMessage, kafkaVersion sarama.KafkaVersion) int {
 	maximumRecordOverhead := 5*binary.MaxVarintLen32 + binary.MaxVarintLen64 + 1
 	producerMessageOverhead := 26
