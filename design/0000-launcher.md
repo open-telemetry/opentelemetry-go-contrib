@@ -56,7 +56,7 @@ func main() {
 
 | Config Option               | Env Variable                        | Required | Default              |
 | --------------------------  | ----------------------------------- | -------- | -------------------- |
-| WithServiceName             | OTEL_SERVICE_NAME                   | y        | -                    |
+| WithServiceName             | OTEL_SERVICE_NAME                   | n*       | unknown_service:go   |
 | WithServiceVersion          | OTEL_SERVICE_VERSION                | n        | -                    |
 | WithHeaders                 | OTEL_EXPORTER_OTLP_HEADERS          | n        | {}                   |
 | WithTracesExporterEndpoint  | OTEL_EXPORTER_OTLP_TRACES_ENDPOINT  | n        | localhost:4317       |
@@ -70,6 +70,8 @@ func main() {
 | WithMetricsEnabled          | OTEL_METRICS_ENABLED                | n        | true                 |
 | WithTracesEnabled           | OTEL_TRACES_ENABLED                 | n        | true                 |
 | WithProtocol                | OTEL_EXPORTER_OTLP_PROTOCOL         | n        | grpc                 |
+
+*Service name should be set using the `WithServiceName` configuration option, the `OTEL_SERVICE_NAME` environment variable, or by setting the `service.name` in `OTEL_RESOURCE_ATTRIBUTES`. The default service name is based on the SDK's behavior as it conforms to the specification: `unknown_service`, suffixed with either the process name (where possible) or `go`.
 
 ### Additional Configuration Options
 
