@@ -8,7 +8,7 @@ replace (
 )
 
 require (
-	go.opentelemetry.io/contrib/instrumentation/gopkg.in/macaron.v1/otelmacaron v0.33.0
+	go.opentelemetry.io/contrib/instrumentation/gopkg.in/macaron.v1/otelmacaron v0.34.0
 	go.opentelemetry.io/otel v1.9.0
 	go.opentelemetry.io/otel/exporters/stdout/stdouttrace v1.9.0
 	go.opentelemetry.io/otel/sdk v1.9.0

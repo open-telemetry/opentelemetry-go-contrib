@@ -6,7 +6,7 @@ replace go.opentelemetry.io/contrib/instrumentation/github.com/Shopify/sarama/ot
 
 require (
 	github.com/Shopify/sarama v1.35.0
-	go.opentelemetry.io/contrib/instrumentation/github.com/Shopify/sarama/otelsarama v0.33.0
+	go.opentelemetry.io/contrib/instrumentation/github.com/Shopify/sarama/otelsarama v0.34.0
 	go.opentelemetry.io/otel v1.9.0
 	go.opentelemetry.io/otel/exporters/stdout/stdouttrace v1.9.0
 	go.opentelemetry.io/otel/sdk v1.9.0
