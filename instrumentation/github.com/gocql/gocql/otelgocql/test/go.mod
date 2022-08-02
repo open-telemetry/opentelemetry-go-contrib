@@ -7,10 +7,10 @@ require (
 	github.com/stretchr/testify v1.8.0
 	go.opentelemetry.io/contrib v1.8.0
 	go.opentelemetry.io/contrib/instrumentation/github.com/gocql/gocql/otelgocql v0.33.0
-	go.opentelemetry.io/otel v1.8.1-0.20220713135543-5568a3072367
-	go.opentelemetry.io/otel/sdk v1.8.0
+	go.opentelemetry.io/otel v1.9.0
+	go.opentelemetry.io/otel/sdk v1.9.0
 	go.opentelemetry.io/otel/sdk/metric v0.31.0
-	go.opentelemetry.io/otel/trace v1.8.0
+	go.opentelemetry.io/otel/trace v1.9.0
 )
 
 require (
