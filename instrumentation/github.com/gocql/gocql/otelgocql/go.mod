@@ -5,9 +5,9 @@ go 1.17
 require (
 	github.com/gocql/gocql v0.0.0-20200624222514-34081eda590e
 	github.com/stretchr/testify v1.8.0
-	go.opentelemetry.io/otel v1.8.1-0.20220713135543-5568a3072367
+	go.opentelemetry.io/otel v1.9.0
 	go.opentelemetry.io/otel/metric v0.31.0
-	go.opentelemetry.io/otel/trace v1.8.0
+	go.opentelemetry.io/otel/trace v1.9.0
 )
 
 require (

@@ -85,6 +85,7 @@ func TestHandlerBasics(t *testing.T) {
 		semconv.HTTPSchemeHTTP,
 		semconv.HTTPHostKey.String(r.Host),
 		semconv.HTTPFlavorKey.String(fmt.Sprintf("1.%d", r.ProtoMinor)),
+		semconv.HTTPMethodKey.String("GET"),
 		attribute.String("test", "attribute"),
 	}
 
