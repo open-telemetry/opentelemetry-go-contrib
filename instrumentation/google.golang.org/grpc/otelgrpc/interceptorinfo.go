@@ -15,7 +15,6 @@
 package otelgrpc // import "go.opentelemetry.io/contrib/instrumentation/google.golang.org/grpc/otelgrpc"
 
 import (
-	"context"
 	"path"
 	"strings"
 
@@ -33,19 +32,10 @@ const (
 	streamServer
 )
 
-// interceptorInfo is the union of all arguments to four types of
-// gRPC interceptors, except for function types and function arguments
-// of invoker and streamer:
-// * invoker  grpc.UnaryInvoker (UnaryClient)
-// * streamer grpc.Streamer (StreamClient)
-// * stream   grpc.ServerStream (StreamServer)
-// * handler  grpc.UnaryHandler | grpc.StreamHandler (UnaryServer, StreamServer)
-// * req, reply, srv interface{} (UnaryClient, UnaryServer, StreamClient)
-// * cc       *grpc.ClientConn.
+// interceptorInfo is the union of some arguments to four types of
+// gRPC interceptors.
 type interceptorInfo struct {
-	ctx    context.Context
 	method string
-	desc   *grpc.StreamDesc
 	usinfo *grpc.UnaryServerInfo
 	ssinfo *grpc.StreamServerInfo
 	typ    interceptorType
@@ -87,11 +77,9 @@ func (i *interceptorInfo) splitFullMethod() gRPCPath {
 // newUnaryClientInterceptorInfo return a pointer of interceptorInfo
 // based on the argument passed to UnaryClientInterceptor.
 func newUnaryClientInterceptorInfo(
-	ctx context.Context,
 	method string,
 ) *interceptorInfo {
 	return &interceptorInfo{
-		ctx:    ctx,
 		method: method,
 		typ:    unaryClient,
 	}
@@ -100,13 +88,9 @@ func newUnaryClientInterceptorInfo(
 // newStreamClientInterceptorInfo return a pointer of interceptorInfo
 // based on the argument passed to StreamServerInterceptor.
 func newStreamClientInterceptorInfo(
-	ctx context.Context,
-	desc *grpc.StreamDesc,
 	method string,
 ) *interceptorInfo {
 	return &interceptorInfo{
-		ctx:    ctx,
-		desc:   desc,
 		method: method,
 		typ:    streamClient,
 	}
@@ -115,11 +99,9 @@ func newStreamClientInterceptorInfo(
 // newUnaryServerInterceptorInfo return a pointer of interceptorInfo
 // based on the argument passed to UnaryServerInterceptor.
 func newUnaryServerInterceptorInfo(
-	ctx context.Context,
 	info *grpc.UnaryServerInfo,
 ) *interceptorInfo {
 	return &interceptorInfo{
-		ctx:    ctx,
 		usinfo: info,
 		typ:    unaryServer,
 	}

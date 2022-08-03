@@ -15,7 +15,6 @@
 package otelgrpc // import "go.opentelemetry.io/contrib/instrumentation/google.golang.org/grpc/otelgrpc"
 
 import (
-	"context"
 	"testing"
 
 	"google.golang.org/grpc"
@@ -26,13 +25,6 @@ type testCase struct {
 	i    *interceptorInfo
 	f    Filter
 	want bool
-}
-
-func dummyStreamDesc(n string) *grpc.StreamDesc {
-	p := splitFullMethod(n)
-	return &grpc.StreamDesc{
-		StreamName: p.service,
-	}
 }
 
 func dummyUnaryServerInfo(n string) *grpc.UnaryServerInfo {
@@ -52,19 +44,19 @@ func TestMethodName(t *testing.T) {
 	tcs := []testCase{
 		{
 			name: "unary client interceptor",
-			i:    newUnaryClientInterceptorInfo(context.Background(), dummyFullMethodName),
+			i:    newUnaryClientInterceptorInfo(dummyFullMethodName),
 			f:    MethodName("Hello"),
 			want: true,
 		},
 		{
 			name: "stream client interceptor",
-			i:    newStreamClientInterceptorInfo(context.Background(), dummyStreamDesc(dummyFullMethodName), dummyFullMethodName),
+			i:    newStreamClientInterceptorInfo(dummyFullMethodName),
 			f:    MethodName("Hello"),
 			want: true,
 		},
 		{
 			name: "unary server interceptor",
-			i:    newUnaryServerInterceptorInfo(context.Background(), dummyUnaryServerInfo(dummyFullMethodName)),
+			i:    newUnaryServerInterceptorInfo(dummyUnaryServerInfo(dummyFullMethodName)),
 			f:    MethodName("Hello"),
 			want: true,
 		},
@@ -76,7 +68,7 @@ func TestMethodName(t *testing.T) {
 		},
 		{
 			name: "unary client interceptor fail",
-			i:    newUnaryClientInterceptorInfo(context.Background(), dummyFullMethodName),
+			i:    newUnaryClientInterceptorInfo(dummyFullMethodName),
 			f:    MethodName("Goodbye"),
 			want: false,
 		},
@@ -95,19 +87,19 @@ func TestMethodPrefix(t *testing.T) {
 	tcs := []testCase{
 		{
 			name: "unary client interceptor",
-			i:    newUnaryClientInterceptorInfo(context.Background(), dummyFullMethodName),
+			i:    newUnaryClientInterceptorInfo(dummyFullMethodName),
 			f:    MethodPrefix("Foobar"),
 			want: true,
 		},
 		{
 			name: "stream client interceptor",
-			i:    newStreamClientInterceptorInfo(context.Background(), dummyStreamDesc(dummyFullMethodName), dummyFullMethodName),
+			i:    newStreamClientInterceptorInfo(dummyFullMethodName),
 			f:    MethodPrefix("Foobar"),
 			want: true,
 		},
 		{
 			name: "unary server interceptor",
-			i:    newUnaryServerInterceptorInfo(context.Background(), dummyUnaryServerInfo(dummyFullMethodName)),
+			i:    newUnaryServerInterceptorInfo(dummyUnaryServerInfo(dummyFullMethodName)),
 			f:    MethodPrefix("Foobar"),
 			want: true,
 		},
@@ -119,7 +111,7 @@ func TestMethodPrefix(t *testing.T) {
 		},
 		{
 			name: "unary client interceptor fail",
-			i:    newUnaryClientInterceptorInfo(context.Background(), dummyFullMethodName),
+			i:    newUnaryClientInterceptorInfo(dummyFullMethodName),
 			f:    MethodPrefix("Barfoo"),
 			want: false,
 		},
@@ -137,19 +129,19 @@ func TestFullMethodName(t *testing.T) {
 	tcs := []testCase{
 		{
 			name: "unary client interceptor",
-			i:    newUnaryClientInterceptorInfo(context.Background(), dummyFullMethodName),
+			i:    newUnaryClientInterceptorInfo(dummyFullMethodName),
 			f:    FullMethodName(dummyFullMethodName),
 			want: true,
 		},
 		{
 			name: "stream client interceptor",
-			i:    newStreamClientInterceptorInfo(context.Background(), dummyStreamDesc(dummyFullMethodName), dummyFullMethodName),
+			i:    newStreamClientInterceptorInfo(dummyFullMethodName),
 			f:    FullMethodName(dummyFullMethodName),
 			want: true,
 		},
 		{
 			name: "unary server interceptor",
-			i:    newUnaryServerInterceptorInfo(context.Background(), dummyUnaryServerInfo(dummyFullMethodName)),
+			i:    newUnaryServerInterceptorInfo(dummyUnaryServerInfo(dummyFullMethodName)),
 			f:    FullMethodName(dummyFullMethodName),
 			want: true,
 		},
@@ -161,7 +153,7 @@ func TestFullMethodName(t *testing.T) {
 		},
 		{
 			name: "unary client interceptor fail",
-			i:    newUnaryClientInterceptorInfo(context.Background(), dummyFullMethodName),
+			i:    newUnaryClientInterceptorInfo(dummyFullMethodName),
 			f:    FullMethodName("/example.HelloService/Goodbye"),
 			want: false,
 		},
@@ -181,19 +173,19 @@ func TestServiceName(t *testing.T) {
 	tcs := []testCase{
 		{
 			name: "unary client interceptor",
-			i:    newUnaryClientInterceptorInfo(context.Background(), dummyFullMethodName),
+			i:    newUnaryClientInterceptorInfo(dummyFullMethodName),
 			f:    ServiceName("example.HelloService"),
 			want: true,
 		},
 		{
 			name: "stream client interceptor",
-			i:    newStreamClientInterceptorInfo(context.Background(), dummyStreamDesc(dummyFullMethodName), dummyFullMethodName),
+			i:    newStreamClientInterceptorInfo(dummyFullMethodName),
 			f:    ServiceName("example.HelloService"),
 			want: true,
 		},
 		{
 			name: "unary server interceptor",
-			i:    newUnaryServerInterceptorInfo(context.Background(), dummyUnaryServerInfo(dummyFullMethodName)),
+			i:    newUnaryServerInterceptorInfo(dummyUnaryServerInfo(dummyFullMethodName)),
 			f:    ServiceName("example.HelloService"),
 			want: true,
 		},
@@ -205,7 +197,7 @@ func TestServiceName(t *testing.T) {
 		},
 		{
 			name: "unary client interceptor fail",
-			i:    newUnaryClientInterceptorInfo(context.Background(), dummyFullMethodName),
+			i:    newUnaryClientInterceptorInfo(dummyFullMethodName),
 			f:    ServiceName("opentelemetry.HelloService"),
 			want: false,
 		},
@@ -224,19 +216,19 @@ func TestServicePrefix(t *testing.T) {
 	tcs := []testCase{
 		{
 			name: "unary client interceptor",
-			i:    newUnaryClientInterceptorInfo(context.Background(), dummyFullMethodName),
+			i:    newUnaryClientInterceptorInfo(dummyFullMethodName),
 			f:    ServicePrefix("example"),
 			want: true,
 		},
 		{
 			name: "stream client interceptor",
-			i:    newStreamClientInterceptorInfo(context.Background(), dummyStreamDesc(dummyFullMethodName), dummyFullMethodName),
+			i:    newStreamClientInterceptorInfo(dummyFullMethodName),
 			f:    ServicePrefix("example"),
 			want: true,
 		},
 		{
 			name: "unary server interceptor",
-			i:    newUnaryServerInterceptorInfo(context.Background(), dummyUnaryServerInfo(dummyFullMethodName)),
+			i:    newUnaryServerInterceptorInfo(dummyUnaryServerInfo(dummyFullMethodName)),
 			f:    ServicePrefix("example"),
 			want: true,
 		},
@@ -248,7 +240,7 @@ func TestServicePrefix(t *testing.T) {
 		},
 		{
 			name: "unary client interceptor fail",
-			i:    newUnaryClientInterceptorInfo(context.Background(), dummyFullMethodName),
+			i:    newUnaryClientInterceptorInfo(dummyFullMethodName),
 			f:    ServicePrefix("opentelemetry"),
 			want: false,
 		},
@@ -266,19 +258,19 @@ func TestAny(t *testing.T) {
 	tcs := []testCase{
 		{
 			name: "unary client interceptor true && true",
-			i:    newUnaryClientInterceptorInfo(context.Background(), dummyFullMethodName),
+			i:    newUnaryClientInterceptorInfo(dummyFullMethodName),
 			f:    Any(MethodName("FoobarHello"), MethodPrefix("Foobar")),
 			want: true,
 		},
 		{
 			name: "unary client interceptor false && true",
-			i:    newUnaryClientInterceptorInfo(context.Background(), dummyFullMethodName),
+			i:    newUnaryClientInterceptorInfo(dummyFullMethodName),
 			f:    Any(MethodName("Hello"), MethodPrefix("Foobar")),
 			want: true,
 		},
 		{
 			name: "unary client interceptor false && false",
-			i:    newUnaryClientInterceptorInfo(context.Background(), dummyFullMethodName),
+			i:    newUnaryClientInterceptorInfo(dummyFullMethodName),
 			f:    Any(MethodName("Goodbye"), MethodPrefix("Barfoo")),
 			want: false,
 		},
@@ -296,19 +288,19 @@ func TestAll(t *testing.T) {
 	tcs := []testCase{
 		{
 			name: "unary client interceptor true && true",
-			i:    newUnaryClientInterceptorInfo(context.Background(), dummyFullMethodName),
+			i:    newUnaryClientInterceptorInfo(dummyFullMethodName),
 			f:    All(MethodName("FoobarHello"), MethodPrefix("Foobar")),
 			want: true,
 		},
 		{
 			name: "unary client interceptor true && false",
-			i:    newUnaryClientInterceptorInfo(context.Background(), dummyFullMethodName),
+			i:    newUnaryClientInterceptorInfo(dummyFullMethodName),
 			f:    All(MethodName("FoobarHello"), MethodPrefix("Barfoo")),
 			want: false,
 		},
 		{
 			name: "unary client interceptor false && false",
-			i:    newUnaryClientInterceptorInfo(context.Background(), dummyFullMethodName),
+			i:    newUnaryClientInterceptorInfo(dummyFullMethodName),
 			f:    All(MethodName("FoobarGoodbye"), MethodPrefix("Barfoo")),
 			want: false,
 		},
@@ -326,19 +318,19 @@ func TestNone(t *testing.T) {
 	tcs := []testCase{
 		{
 			name: "unary client interceptor true && true",
-			i:    newUnaryClientInterceptorInfo(context.Background(), dummyFullMethodName),
+			i:    newUnaryClientInterceptorInfo(dummyFullMethodName),
 			f:    None(MethodName("FoobarHello"), MethodPrefix("Foobar")),
 			want: false,
 		},
 		{
 			name: "unary client interceptor true && false",
-			i:    newUnaryClientInterceptorInfo(context.Background(), dummyFullMethodName),
+			i:    newUnaryClientInterceptorInfo(dummyFullMethodName),
 			f:    None(MethodName("FoobarHello"), MethodPrefix("Barfoo")),
 			want: false,
 		},
 		{
 			name: "unary client interceptor false && false",
-			i:    newUnaryClientInterceptorInfo(context.Background(), dummyFullMethodName),
+			i:    newUnaryClientInterceptorInfo(dummyFullMethodName),
 			f:    None(MethodName("FoobarGoodbye"), MethodPrefix("Barfoo")),
 			want: true,
 		},
@@ -356,19 +348,19 @@ func TestNot(t *testing.T) {
 	tcs := []testCase{
 		{
 			name: "methodname not",
-			i:    newUnaryClientInterceptorInfo(context.Background(), dummyFullMethodName),
+			i:    newUnaryClientInterceptorInfo(dummyFullMethodName),
 			f:    Not(MethodName("FoobarHello")),
 			want: false,
 		},
 		{
 			name: "method prefix not",
-			i:    newUnaryServerInterceptorInfo(context.Background(), dummyUnaryServerInfo(dummyFullMethodName)),
+			i:    newUnaryServerInterceptorInfo(dummyUnaryServerInfo(dummyFullMethodName)),
 			f:    Not(MethodPrefix("FoobarHello")),
 			want: false,
 		},
 		{
 			name: "unary client interceptor not all(true && true)",
-			i:    newUnaryClientInterceptorInfo(context.Background(), dummyFullMethodName),
+			i:    newUnaryClientInterceptorInfo(dummyFullMethodName),
 			f:    Not(All(MethodName("FoobarHello"), MethodPrefix("Foobar"))),
 			want: false,
 		},
@@ -390,19 +382,19 @@ func TestNotHealthCheck(t *testing.T) {
 	tcs := []testCase{
 		{
 			name: "unary client interceptor healthcheck",
-			i:    newUnaryClientInterceptorInfo(context.Background(), healthCheck),
+			i:    newUnaryClientInterceptorInfo(healthCheck),
 			f:    NotHealthCheck(),
 			want: false,
 		},
 		{
 			name: "stream client interceptor healthcheck",
-			i:    newStreamClientInterceptorInfo(context.Background(), dummyStreamDesc(healthCheck), healthCheck),
+			i:    newStreamClientInterceptorInfo(healthCheck),
 			f:    NotHealthCheck(),
 			want: false,
 		},
 		{
 			name: "unary server interceptor healthcheck",
-			i:    newUnaryServerInterceptorInfo(context.Background(), dummyUnaryServerInfo(healthCheck)),
+			i:    newUnaryServerInterceptorInfo(dummyUnaryServerInfo(healthCheck)),
 			f:    NotHealthCheck(),
 			want: false,
 		},
@@ -414,19 +406,19 @@ func TestNotHealthCheck(t *testing.T) {
 		},
 		{
 			name: "unary client interceptor",
-			i:    newUnaryClientInterceptorInfo(context.Background(), dummyFullMethod),
+			i:    newUnaryClientInterceptorInfo(dummyFullMethod),
 			f:    NotHealthCheck(),
 			want: true,
 		},
 		{
 			name: "stream client interceptor",
-			i:    newStreamClientInterceptorInfo(context.Background(), dummyStreamDesc(dummyFullMethod), dummyFullMethod),
+			i:    newStreamClientInterceptorInfo(dummyFullMethod),
 			f:    NotHealthCheck(),
 			want: true,
 		},
 		{
 			name: "unary server interceptor",
-			i:    newUnaryServerInterceptorInfo(context.Background(), dummyUnaryServerInfo(dummyFullMethod)),
+			i:    newUnaryServerInterceptorInfo(dummyUnaryServerInfo(dummyFullMethod)),
 			f:    NotHealthCheck(),
 			want: true,
 		},
