@@ -22,7 +22,7 @@ import (
 
 	"go.opentelemetry.io/contrib/instrumentation/net/http/otelhttp"
 	"go.opentelemetry.io/otel/attribute"
-	"go.opentelemetry.io/otel/trace"
+	oteltrace "go.opentelemetry.io/otel/trace"
 )
 
 type echoCtxKey int
@@ -66,7 +66,7 @@ func (o *otelhttpAdapter) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		err = next(c)
 	}
 	if err != nil {
-		span := trace.SpanFromContext(r.Context())
+		span := oteltrace.SpanFromContext(r.Context())
 		span.SetAttributes(attribute.String("echo.error", err.Error()))
 		// invokes the registered HTTP error handler
 		c.Error(err)

@@ -8,21 +8,10 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 
 ## [Unreleased]
 
-### Added
-
-- The `go.opentelemetry.io/contrib/propagators/autoprop` package to provide configuration of propagators with useful defaults and envar support. (#2258)
-- `otelecho` mirrored options from `otelhttp`. Added new option `WithRouteTagFromPath()` which adds a middleware into the
-  chain to tag all routes with `echo.Context.Path()`. (#2269)
-
 ### Changed
 
 - `otelecho` middleware to wrap `otelhttp` tracer implementation rather than implement its own. This means that the `otelecho`
-  package now supports http server metrics provided by `otelhttp`. The following changes are considered breaking: (#2269)
-  - Span names differ from the previous version by default. However, passing `otelecho.WithSpanNameFormatter(otelecho.PathSpanNameFormatter)` as an option
-    will produce the previous behaviour.
-  - Route tags differ from the previous version by default. However, passing `otelecho.WithRouteTagFromPath()` will produce the
-    previous behaviour. Or add the `WithRouteTag()` middleware to your handler to tag a specific route differently.
-
+  package now supports http server metrics provided by `otelhttp`. It also now supports a mirroring of all options accepted by otelhttp.
 
 ## [1.9.0/0.34.0/0.4.0] - 2022-08-02
 

@@ -16,6 +16,8 @@ package otelecho // import "go.opentelemetry.io/contrib/instrumentation/github.c
 import (
 	"net/http"
 
+	"github.com/labstack/echo/v4/middleware"
+
 	"github.com/labstack/echo/v4"
 
 	"go.opentelemetry.io/contrib/instrumentation/net/http/otelhttp"
@@ -27,6 +29,7 @@ type config struct {
 	noRouteTagFromPath      bool
 	noPathSpanNameFormatter bool
 	hasSpanNameFormatter    bool
+	hasFilter               bool
 }
 
 // Option specifies instrumentation configuration options.
@@ -52,16 +55,20 @@ func newConfig(opts ...Option) *config {
 		c.otelhttpOptions = append(c.otelhttpOptions, otelhttp.WithSpanNameFormatter(PathSpanNameFormatter))
 	}
 
+	// If user hasn't passed a filter, configure the default echo skipper
+	if !c.hasFilter {
+		WithSkipper(middleware.DefaultSkipper).apply(c)
+	}
+
 	return c
 }
 
 // WithSkipper specifies a skipper for allowing requests to skip generating spans.
 func WithSkipper(skipper func(c echo.Context) bool) Option {
-	return optionFunc(func(conf *config) {
-		conf.otelhttpOptions = append(conf.otelhttpOptions, otelhttp.WithFilter(func(request *http.Request) bool {
-			c := request.Context().Value(echoContextCtxKey).(echo.Context)
-			return skipper(c)
-		}))
+	return WithFilter(func(request *http.Request) bool {
+		c := request.Context().Value(echoContextCtxKey).(echo.Context)
+		// negate skipper response because true implies skip, which is the opposite of an otelhttp.Filter
+		return !skipper(c)
 	})
 }
 

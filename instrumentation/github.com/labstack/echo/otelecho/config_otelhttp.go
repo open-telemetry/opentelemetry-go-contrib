@@ -74,6 +74,7 @@ func WithSpanOptions(opts ...trace.SpanStartOption) Option {
 // simple and fast.
 func WithFilter(f func(*http.Request) bool) Option {
 	return optionFunc(func(c *config) {
+		c.hasFilter = true
 		c.otelhttpOptions = append(c.otelhttpOptions, otelhttp.WithFilter(f))
 	})
 }
