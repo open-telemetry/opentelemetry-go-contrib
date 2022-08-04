@@ -65,13 +65,14 @@ func WithSkipper(skipper func(c echo.Context) bool) Option {
 	})
 }
 
-// WithoutRouteTagFromPath removes a middleware from the chain to tag all routes with echo.Context.Path().
+// WithoutRouteTagFromPath prevents adding a middleware to tag all routes with echo.Context.Path().
 func WithoutRouteTagFromPath() Option {
 	return optionFunc(func(c *config) {
 		c.noRouteTagFromPath = true
 	})
 }
 
+// WithoutPathSpanNameFormatter prevents the otelecho default span name formatter from being used.
 func WithoutPathSpanNameFormatter() Option {
 	return optionFunc(func(c *config) {
 		c.noPathSpanNameFormatter = true
