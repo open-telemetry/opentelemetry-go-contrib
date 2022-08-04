@@ -2,21 +2,18 @@ module go.opentelemetry.io/contrib/instrumentation/gopkg.in/macaron.v1/otelmacar
 
 go 1.17
 
-replace (
-	go.opentelemetry.io/contrib => ../../../..
-	go.opentelemetry.io/contrib/propagators/b3 => ../../../../propagators/b3
-)
+replace go.opentelemetry.io/contrib/propagators/b3 => ../../../../propagators/b3
 
 require (
-	github.com/stretchr/testify v1.7.2
-	go.opentelemetry.io/contrib/propagators/b3 v1.7.0
-	go.opentelemetry.io/otel v1.7.0
-	go.opentelemetry.io/otel/trace v1.7.0
+	github.com/stretchr/testify v1.8.0
+	go.opentelemetry.io/contrib/propagators/b3 v1.9.0
+	go.opentelemetry.io/otel v1.9.0
+	go.opentelemetry.io/otel/trace v1.9.0
 	gopkg.in/macaron.v1 v1.4.0
 )
 
 require (
-	github.com/davecgh/go-spew v1.1.0 // indirect
+	github.com/davecgh/go-spew v1.1.1 // indirect
 	github.com/go-logr/logr v1.2.3 // indirect
 	github.com/go-logr/stdr v1.2.2 // indirect
 	github.com/go-macaron/inject v0.0.0-20160627170012-d8a0b8677191 // indirect

@@ -8,7 +8,7 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 
 ## [Unreleased]
 
-## Added
+### Added
 
 - The `go.opentelemetry.io/contrib/propagators/autoprop` package to provide configuration of propagators with useful defaults and envar support. (#2258)
 - `otelecho` mirrored options from `otelhttp`. Added new option `WithRouteTagFromPath()` which adds a middleware into the
@@ -22,6 +22,31 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
     will produce the previous behaviour.
   - Route tags differ from the previous version by default. However, passing `otelecho.WithRouteTagFromPath()` will produce the
     previous behaviour. Or add the `WithRouteTag()` middleware to your handler to tag a specific route differently.
+
+
+## [1.9.0/0.34.0/0.4.0] - 2022-08-02
+
+### Added
+
+- The `TextMapPropagator` function to `go.opentelemetry.io/contrib/propagators/autoprop`.
+  This function is used to return a composite `TextMapPropagator` from registered names (instead of having to specify with an environment variable). (#2593)
+
+### Changed
+
+- Upgraded all `semconv` package use to `v1.12.0`. (#2589)
+
+## [1.8.0/0.33.0] - 2022-07-08
+
+### Added
+
+- The `go.opentelemetry.io/contrib/propagators/autoprop` package to provide configuration of propagators with useful defaults and envar support. (#2258)
+- `WithPublicEndpointFn` hook to dynamically detect public HTTP requests and set their trace parent as a link. (#2342)
+
+### Fixed
+
+- Fix the `otelhttp`, `otelgin`, `otelmacaron`, `otelrestful` middlewares
+  by using `SpanKindServer` when deciding the `SpanStatus`.
+  This makes `4xx` response codes to not be an error anymore. (#2427)
 
 ## [1.7.0/0.32.0] - 2022-04-28
 
@@ -523,7 +548,9 @@ First official tagged release of `contrib` repository.
 - Prefix support for dogstatsd (#34)
 - Update Go Runtime package to use batch observer (#44)
 
-[Unreleased]: https://github.com/open-telemetry/opentelemetry-go-contrib/compare/v1.7.0...HEAD
+[Unreleased]: https://github.com/open-telemetry/opentelemetry-go-contrib/compare/v1.9.0...HEAD
+[1.9.0/0.34.0/0.4.0]: https://github.com/open-telemetry/opentelemetry-go-contrib/releases/tag/v1.9.0
+[1.8.0/0.33.0]: https://github.com/open-telemetry/opentelemetry-go-contrib/releases/tag/v1.8.0
 [1.7.0/0.32.0]: https://github.com/open-telemetry/opentelemetry-go-contrib/releases/tag/v1.7.0
 [1.6.0/0.31.0]: https://github.com/open-telemetry/opentelemetry-go-contrib/releases/tag/v1.6.0
 [1.5.0/0.30.0/0.1.0]: https://github.com/open-telemetry/opentelemetry-go-contrib/releases/tag/v1.5.0

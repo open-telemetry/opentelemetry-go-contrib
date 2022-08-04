@@ -3,19 +3,18 @@ module go.opentelemetry.io/contrib/instrumentation/github.com/astaxie/beego/otel
 go 1.17
 
 replace (
-	go.opentelemetry.io/contrib => ../../../../../../
 	go.opentelemetry.io/contrib/instrumentation/github.com/astaxie/beego/otelbeego => ../
 	go.opentelemetry.io/contrib/instrumentation/net/http/otelhttp => ../../../../../net/http/otelhttp
-	go.opentelemetry.io/contrib/propagators/b3 => ../../../../../../propagators/b3
+
 )
 
 require (
 	github.com/astaxie/beego v1.12.3
-	go.opentelemetry.io/contrib/instrumentation/github.com/astaxie/beego/otelbeego v0.32.0
-	go.opentelemetry.io/otel v1.7.0
-	go.opentelemetry.io/otel/exporters/stdout/stdouttrace v1.7.0
-	go.opentelemetry.io/otel/sdk v1.7.0
-	go.opentelemetry.io/otel/trace v1.7.0
+	go.opentelemetry.io/contrib/instrumentation/github.com/astaxie/beego/otelbeego v0.34.0
+	go.opentelemetry.io/otel v1.9.0
+	go.opentelemetry.io/otel/exporters/stdout/stdouttrace v1.9.0
+	go.opentelemetry.io/otel/sdk v1.9.0
+	go.opentelemetry.io/otel/trace v1.9.0
 )
 
 require (
@@ -32,8 +31,8 @@ require (
 	github.com/prometheus/common v0.10.0 // indirect
 	github.com/prometheus/procfs v0.1.3 // indirect
 	github.com/shiena/ansicolor v0.0.0-20151119151921-a422bbe96644 // indirect
-	go.opentelemetry.io/contrib/instrumentation/net/http/otelhttp v0.32.0 // indirect
-	go.opentelemetry.io/otel/metric v0.30.0 // indirect
+	go.opentelemetry.io/contrib/instrumentation/net/http/otelhttp v0.34.0 // indirect
+	go.opentelemetry.io/otel/metric v0.31.0 // indirect
 	golang.org/x/crypto v0.0.0-20200622213623-75b288015ac9 // indirect
 	golang.org/x/net v0.0.0-20200707034311-ab3426394381 // indirect
 	golang.org/x/sys v0.0.0-20220319134239-a9b59b0215f8 // indirect

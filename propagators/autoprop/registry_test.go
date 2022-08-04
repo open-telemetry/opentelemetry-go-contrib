@@ -68,9 +68,9 @@ func TestRegistryConcurrentSafe(t *testing.T) {
 func TestRegisterTextMapPropagator(t *testing.T) {
 	const propName = "custom"
 	RegisterTextMapPropagator(propName, noop)
-	t.Cleanup(func() { envRegistry.drop(propName) })
+	t.Cleanup(func() { propagators.drop(propName) })
 
-	v, ok := envRegistry.load(propName)
+	v, ok := propagators.load(propName)
 	assert.True(t, ok, "missing propagator in envRegistry")
 	assert.Equal(t, noop, v, "wrong propagator stored")
 }
@@ -78,7 +78,7 @@ func TestRegisterTextMapPropagator(t *testing.T) {
 func TestDuplicateRegisterTextMapPropagatorPanics(t *testing.T) {
 	const propName = "custom"
 	RegisterTextMapPropagator(propName, noop)
-	t.Cleanup(func() { envRegistry.drop(propName) })
+	t.Cleanup(func() { propagators.drop(propName) })
 
 	errString := fmt.Sprintf("%s: %q", errDupReg, propName)
 	assert.PanicsWithError(t, errString, func() {

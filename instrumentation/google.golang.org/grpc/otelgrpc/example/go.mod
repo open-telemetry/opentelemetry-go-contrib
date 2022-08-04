@@ -2,20 +2,17 @@ module go.opentelemetry.io/contrib/instrumentation/google.golang.org/grpc/otelgr
 
 go 1.17
 
-replace (
-	go.opentelemetry.io/contrib => ../../../../../
-	go.opentelemetry.io/contrib/instrumentation/google.golang.org/grpc/otelgrpc => ../
-)
+replace go.opentelemetry.io/contrib/instrumentation/google.golang.org/grpc/otelgrpc => ../
 
 require (
 	github.com/golang/protobuf v1.5.2
-	go.opentelemetry.io/contrib/instrumentation/google.golang.org/grpc/otelgrpc v0.32.0
-	go.opentelemetry.io/otel v1.7.0
-	go.opentelemetry.io/otel/exporters/stdout/stdouttrace v1.7.0
-	go.opentelemetry.io/otel/sdk v1.7.0
-	go.opentelemetry.io/otel/trace v1.7.0
+	go.opentelemetry.io/contrib/instrumentation/google.golang.org/grpc/otelgrpc v0.34.0
+	go.opentelemetry.io/otel v1.9.0
+	go.opentelemetry.io/otel/exporters/stdout/stdouttrace v1.9.0
+	go.opentelemetry.io/otel/sdk v1.9.0
+	go.opentelemetry.io/otel/trace v1.9.0
 	golang.org/x/net v0.0.0-20201021035429-f5854403a974
-	google.golang.org/grpc v1.47.0
+	google.golang.org/grpc v1.48.0
 )
 
 require (

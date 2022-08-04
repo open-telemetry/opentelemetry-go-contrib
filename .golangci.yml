@@ -2,6 +2,7 @@
 run:
   issues-exit-code: 1 #Default
   tests: true #Default
+  timeout: 2m
 
 linters:
   # Disable everything by default so upgrades to not include new "default
