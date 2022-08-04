@@ -36,18 +36,7 @@ const (
 func Middleware(service string, opts ...Option) echo.MiddlewareFunc {
 	conf := newConfig(opts...)
 
-	var handler http.Handler
-	if conf.noRouteTagFromPath {
-		handler = http.HandlerFunc(otelAdapter)
-	} else {
-		handler = http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-			c := r.Context().Value(echoContextCtxKey).(echo.Context)
-			newHandler := otelhttp.WithRouteTag(c.Path(), http.HandlerFunc(otelAdapter))
-			newHandler.ServeHTTP(w, r)
-		})
-	}
-
-	otelhttpHandler := otelhttp.NewHandler(handler, service, conf.otelhttpOptions...)
+	otelhttpHandler := otelhttp.NewHandler(&otelhttpAdapter{conf: conf}, service, conf.otelhttpOptions...)
 
 	return func(next echo.HandlerFunc) echo.HandlerFunc {
 		return func(c echo.Context) error {
@@ -59,18 +48,26 @@ func Middleware(service string, opts ...Option) echo.MiddlewareFunc {
 	}
 }
 
-func otelAdapter(w http.ResponseWriter, r *http.Request) {
+type otelhttpAdapter struct {
+	conf *config
+}
+
+func (o *otelhttpAdapter) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	c := r.Context().Value(echoContextCtxKey).(echo.Context)
 	next := r.Context().Value(echoNextHandler).(echo.HandlerFunc)
 
 	c.SetRequest(r)
 	c.SetResponse(echo.NewResponse(w, c.Echo()))
-	err := next(c)
+	var err error
+
+	if !o.conf.noRouteTagFromPath {
+		err = WithRouteTag(c.Path())(next)(c)
+	} else {
+		err = next(c)
+	}
 	if err != nil {
 		span := trace.SpanFromContext(r.Context())
-		if span != nil {
-			span.SetAttributes(attribute.String("echo.error", err.Error()))
-		}
+		span.SetAttributes(attribute.String("echo.error", err.Error()))
 		// invokes the registered HTTP error handler
 		c.Error(err)
 	}

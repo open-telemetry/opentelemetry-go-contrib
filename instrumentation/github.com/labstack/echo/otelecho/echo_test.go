@@ -24,12 +24,14 @@ import (
 	"testing"
 
 	"github.com/labstack/echo/v4"
+
 	"github.com/stretchr/testify/assert"
 
-	b3prop "go.opentelemetry.io/contrib/propagators/b3"
 	"go.opentelemetry.io/otel"
 	"go.opentelemetry.io/otel/propagation"
 	"go.opentelemetry.io/otel/trace"
+
+	b3prop "go.opentelemetry.io/contrib/propagators/b3"
 )
 
 func TestErrorOnlyHandledOnce(t *testing.T) {

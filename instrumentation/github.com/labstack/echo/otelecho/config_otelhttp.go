@@ -112,6 +112,7 @@ func WithMessageEvents(events ...event) Option {
 // request and the returned string will become the Span Name.
 func WithSpanNameFormatter(f func(operation string, r *http.Request) string) Option {
 	return optionFunc(func(c *config) {
+		c.hasSpanNameFormatter = true
 		c.otelhttpOptions = append(c.otelhttpOptions, otelhttp.WithSpanNameFormatter(f))
 	})
 }

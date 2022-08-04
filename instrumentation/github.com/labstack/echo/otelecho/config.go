@@ -26,6 +26,7 @@ type config struct {
 	otelhttpOptions         []otelhttp.Option
 	noRouteTagFromPath      bool
 	noPathSpanNameFormatter bool
+	hasSpanNameFormatter    bool
 }
 
 // Option specifies instrumentation configuration options.
@@ -46,7 +47,8 @@ func newConfig(opts ...Option) *config {
 		opt.apply(c)
 	}
 
-	if !c.noPathSpanNameFormatter {
+	// If user hasn't passed a span name formatter and the default hasn't been disabled, set the default as PathSpanNameFormatter
+	if !c.hasSpanNameFormatter && !c.noPathSpanNameFormatter {
 		c.otelhttpOptions = append(c.otelhttpOptions, otelhttp.WithSpanNameFormatter(PathSpanNameFormatter))
 	}
 
