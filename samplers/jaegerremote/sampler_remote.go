@@ -26,6 +26,7 @@ import (
 	"sync/atomic"
 	"time"
 
+	"github.com/gogo/protobuf/jsonpb"
 	jaeger_api_v2 "go.opentelemetry.io/contrib/samplers/jaegerremote/internal/proto-gen/jaeger-idl/proto/api_v2"
 	"go.opentelemetry.io/otel"
 	"go.opentelemetry.io/otel/sdk/trace"
@@ -313,7 +314,9 @@ type samplingStrategyParserImpl struct{}
 func (p *samplingStrategyParserImpl) Parse(response []byte) (interface{}, error) {
 	strategy := new(jaeger_api_v2.SamplingStrategyResponse)
 	if err := json.Unmarshal(response, strategy); err != nil {
-		return nil, err
+		if err = jsonpb.UnmarshalString(string(response), strategy); err != nil {
+			return nil, err
+		}
 	}
 	return strategy, nil
 }
