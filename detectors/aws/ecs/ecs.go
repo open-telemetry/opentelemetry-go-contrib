@@ -17,8 +17,12 @@ package ecs // import "go.opentelemetry.io/contrib/detectors/aws/ecs"
 import (
 	"context"
 	"errors"
+	"fmt"
+	"net/http"
 	"os"
 	"strings"
+
+	ecsmetadata "github.com/brunoscheufler/aws-ecs-metadata-go"
 
 	"go.opentelemetry.io/otel/attribute"
 	"go.opentelemetry.io/otel/sdk/resource"
@@ -35,10 +39,12 @@ const (
 )
 
 var (
-	empty                      = resource.Empty()
-	errCannotReadContainerID   = errors.New("failed to read container ID from cGroupFile")
-	errCannotReadContainerName = errors.New("failed to read hostname")
-	errCannotReadCGroupFile    = errors.New("ECS resource detector failed to read cGroupFile")
+	empty                           = resource.Empty()
+	errCannotReadContainerID        = errors.New("failed to read container ID from cGroupFile")
+	errCannotReadContainerName      = errors.New("failed to read hostname")
+	errCannotReadCGroupFile         = errors.New("ECS resource detector failed to read cGroupFile")
+	errCannotRetrieveMetadataV4     = errors.New("ECS resource detector failed to retrieve metadata from the ECS Metada v4 container endpoint")
+	errCannotRetrieveMetadataV4Task = errors.New("ECS resource detector failed to retrieve metadata from the ECS Metada v4 task endpoint")
 )
 
 // Create interface for methods needing to be mocked.
@@ -63,7 +69,9 @@ var _ resource.Detector = (*resourceDetector)(nil)
 
 // NewResourceDetector returns a resource detector that will detect AWS ECS resources.
 func NewResourceDetector() resource.Detector {
-	return &resourceDetector{utils: ecsDetectorUtils{}}
+	return &resourceDetector{
+		utils: ecsDetectorUtils{},
+	}
 }
 
 // Detect finds associated resources when running on ECS environment.
@@ -87,6 +95,37 @@ func (detector *resourceDetector) Detect(ctx context.Context) (*resource.Resourc
 		semconv.CloudPlatformAWSECS,
 		semconv.ContainerNameKey.String(hostName),
 		semconv.ContainerIDKey.String(containerID),
+	}
+
+	if len(metadataURIV4) > 0 {
+		containerMetadata, err := ecsmetadata.GetContainerV4(ctx, &http.Client{})
+		if err != nil {
+			return empty, err
+		}
+		attributes = append(
+			attributes,
+			semconv.AWSECSContainerARNKey.String(containerMetadata.ContainerARN),
+		)
+
+		taskMetadata, err := ecsmetadata.GetTaskV4(ctx, &http.Client{})
+		if err != nil {
+			return empty, err
+		}
+
+		clusterArn := taskMetadata.Cluster
+		if !strings.HasPrefix(clusterArn, "arn:") {
+			baseArn := containerMetadata.ContainerARN[:strings.LastIndex(containerMetadata.ContainerARN, ":")]
+			clusterArn = fmt.Sprintf("%s:cluster/%s", baseArn, clusterArn)
+		}
+
+		attributes = append(
+			attributes,
+			semconv.AWSECSClusterARNKey.String(clusterArn),
+			semconv.AWSECSLaunchtypeKey.String(taskMetadata.LaunchType),
+			semconv.AWSECSTaskARNKey.String(taskMetadata.TaskARN),
+			semconv.AWSECSTaskFamilyKey.String(taskMetadata.Family),
+			semconv.AWSECSTaskRevisionKey.String(taskMetadata.Revision),
+		)
 	}
 
 	return resource.NewWithAttributes(semconv.SchemaURL, attributes...), nil

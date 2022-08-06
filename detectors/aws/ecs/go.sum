@@ -1,3 +1,5 @@
+github.com/brunoscheufler/aws-ecs-metadata-go v0.0.0-20220806202253-1e93a1d357d6 h1:Izqf3e8tWDmFCnSRdmtej33tKPWlPYIvPPXqcI9qimM=
+github.com/brunoscheufler/aws-ecs-metadata-go v0.0.0-20220806202253-1e93a1d357d6/go.mod h1:5BBxNAuQFkDjY3l9UHlJ8NnnM6NEi0bocZR2xc3xGxU=
 github.com/davecgh/go-spew v1.1.0/go.mod h1:J7Y8YcW2NihsgmVo/mv3lAwl/skON4iLHjSsI+c5H38=
 github.com/davecgh/go-spew v1.1.1 h1:vj9j/u1bqnvCEfJOwUhtlOARqs3+rkHYY13jYWTU97c=
 github.com/davecgh/go-spew v1.1.1/go.mod h1:J7Y8YcW2NihsgmVo/mv3lAwl/skON4iLHjSsI+c5H38=
