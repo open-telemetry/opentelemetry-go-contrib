@@ -69,7 +69,8 @@ func TestDetectV3(t *testing.T) {
 	assert.Equal(t, expectedResource, res, "Resource returned is incorrect")
 }
 
-//succesfully return resource when process is running on Amazon ECS environment with Metadata v4.
+// succesfully returns resource when process is running on Amazon ECS environment 
+// with Metadata v4.
 func TestDetectV4(t *testing.T) {
 	testServer := httptest.NewServer(http.HandlerFunc(func(res http.ResponseWriter, req *http.Request) {
 		if strings.HasSuffix(req.URL.String(), "/task") {
