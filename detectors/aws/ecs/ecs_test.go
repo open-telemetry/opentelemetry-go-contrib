@@ -45,7 +45,8 @@ func (detectorUtils *MockDetectorUtils) getContainerName() (string, error) {
 	return args.String(0), args.Error(1)
 }
 
-// succesfully return resource when process is running on Amazon ECS environment with no Metadata v4.
+// succesfully returns resource when process is running on Amazon ECS environment
+// with no Metadata v4.
 func TestDetectV3(t *testing.T) {
 	os.Clearenv()
 	_ = os.Setenv(metadataV3EnvVar, "3")
