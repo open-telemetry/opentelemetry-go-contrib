@@ -12,7 +12,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package runtime_test
+package runtime
 
 import (
 	"context"
@@ -24,14 +24,13 @@ import (
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 
-	"go.opentelemetry.io/contrib/instrumentation/runtime"
 	"go.opentelemetry.io/otel/sdk/metric/export/aggregation"
 	"go.opentelemetry.io/otel/sdk/metric/metrictest"
 )
 
 func TestRuntime(t *testing.T) {
-	err := runtime.Start(
-		runtime.WithMinimumReadMemStatsInterval(time.Second),
+	err := Start(
+		WithMinimumReadMemStatsInterval(time.Second),
 	)
 	assert.NoError(t, err)
 	time.Sleep(time.Second)
@@ -53,7 +52,7 @@ func getGCCount(exp *metrictest.Exporter) int {
 	panic("Could not locate a process.runtime.go.gc.count metric in test output")
 }
 
-func testMinimumInterval(t *testing.T, shouldHappen bool, opts ...runtime.Option) {
+func testMinimumInterval(t *testing.T, shouldHappen bool, opts ...Option) {
 	goruntime.GC()
 
 	var mstats0 goruntime.MemStats
@@ -62,10 +61,10 @@ func testMinimumInterval(t *testing.T, shouldHappen bool, opts ...runtime.Option
 
 	provider, exp := metrictest.NewTestMeterProvider()
 
-	err := runtime.Start(
+	err := Start(
 		append(
 			opts,
-			runtime.WithMeterProvider(provider),
+			WithMeterProvider(provider),
 		)...,
 	)
 	assert.NoError(t, err)
@@ -95,9 +94,9 @@ func TestDefaultMinimumInterval(t *testing.T) {
 }
 
 func TestNoMinimumInterval(t *testing.T) {
-	testMinimumInterval(t, true, runtime.WithMinimumReadMemStatsInterval(0))
+	testMinimumInterval(t, true, WithMinimumReadMemStatsInterval(0))
 }
 
 func TestExplicitMinimumInterval(t *testing.T) {
-	testMinimumInterval(t, false, runtime.WithMinimumReadMemStatsInterval(time.Hour))
+	testMinimumInterval(t, false, WithMinimumReadMemStatsInterval(time.Hour))
 }
