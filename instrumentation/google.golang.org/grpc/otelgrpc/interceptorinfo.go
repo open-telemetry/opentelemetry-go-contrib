@@ -18,8 +18,8 @@ import (
 	"google.golang.org/grpc"
 )
 
-// interceptorType is the flag to define which gRPC interceptor
-// the interceptorInfo object is.
+// InterceptorType is the flag to define which gRPC interceptor
+// the InterceptorInfo object is.
 type InterceptorType uint8
 
 const (
