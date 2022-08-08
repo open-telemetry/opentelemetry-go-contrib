@@ -27,7 +27,7 @@ const (
 	UnaryClient InterceptorType = iota
 	// StreamClient is the type for grpc.StreamClient interceptor.
 	StreamClient
-	// UnaryServer is the type for *grpc.UnaryServer interceptor.
+	// UnaryServer is the type for grpc.UnaryServer interceptor.
 	UnaryServer
 	// StreamServer is the type for grpc.StreamServer interceptor.
 	StreamServer
