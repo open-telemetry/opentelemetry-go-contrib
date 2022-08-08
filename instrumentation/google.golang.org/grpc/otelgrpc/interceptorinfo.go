@@ -23,8 +23,11 @@ import (
 type InterceptorType uint8
 
 const (
+	// UndefinedInterceptor is the type for the interceptor information that is not
+	// well initialized or categorized to other types.
+	UndefinedInterceptor InterceptorType = iota
 	// UnaryClient is the type for grpc.UnaryClient interceptor.
-	UnaryClient InterceptorType = iota
+	UnaryClient
 	// StreamClient is the type for grpc.StreamClient interceptor.
 	StreamClient
 	// UnaryServer is the type for grpc.UnaryServer interceptor.
