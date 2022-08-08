@@ -27,6 +27,7 @@ import (
 	"time"
 
 	"github.com/gogo/protobuf/jsonpb"
+
 	jaeger_api_v2 "go.opentelemetry.io/contrib/samplers/jaegerremote/internal/proto-gen/jaeger-idl/proto/api_v2"
 	"go.opentelemetry.io/otel"
 	"go.opentelemetry.io/otel/sdk/trace"
