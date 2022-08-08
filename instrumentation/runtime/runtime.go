@@ -17,6 +17,7 @@ package runtime // import "go.opentelemetry.io/contrib/instrumentation/runtime"
 import (
 	"context"
 	goruntime "runtime"
+	"runtime/metrics"
 	"sync"
 	"time"
 
@@ -28,17 +29,29 @@ import (
 	"go.opentelemetry.io/otel/metric/unit"
 )
 
-// Runtime reports the work-in-progress conventional runtime metrics specified by OpenTelemetry
-type runtime struct {
+// LibraryName is the value of instrumentation.Library.Name.
+const LibraryName = "go.opentelemetry.io/contrib/instrumentation/runtime"
+
+// legacyRuntime reports Golang runtime metrics (legacy implementation).
+type legacyRuntime struct {
 	config config
 	meter  metric.Meter
 }
 
 // config contains optional settings for reporting runtime metrics.
 type config struct {
+	// UseGoRuntimeMetrics indicates to use the metric names
+	// directly reported from the Go-1.16+ runtime/metrics API.
+	//
+	// UseGoRuntimeMetrics will become the default behavior
+	// no sooner than January 2023.
+	UseGoRuntimeMetrics bool
+
 	// MinimumReadMemStatsInterval sets the mininum interval
 	// between calls to runtime.ReadMemStats().  Negative values
 	// are ignored.
+	//
+	// Deprecated: This setting only has effect when UseGoRuntimeMetrics==false.
 	MinimumReadMemStatsInterval time.Duration
 
 	// MeterProvider sets the metric.MeterProvider.  If nil, the global
@@ -87,9 +100,23 @@ func (o metricProviderOption) apply(c *config) {
 	}
 }
 
+// WithUseGoRuntimeMetrics enables direct use of the Go-1.16+
+// runtime/metrics instead of the original implementation found
+// in this package.
+func WithUseGoRuntimeMetrics(use bool) Option {
+	return useGoRuntimeMetrics{use}
+}
+
+type useGoRuntimeMetrics struct{ use bool }
+
+func (o useGoRuntimeMetrics) apply(c *config) {
+	c.UseGoRuntimeMetrics = o.use
+}
+
 // newConfig computes a config from the supplied Options.
 func newConfig(opts ...Option) config {
 	c := config{
+		UseGoRuntimeMetrics:         false,
 		MeterProvider:               global.MeterProvider(),
 		MinimumReadMemStatsInterval: DefaultMinimumReadMemStatsInterval,
 	}
@@ -100,6 +127,7 @@ func newConfig(opts ...Option) config {
 }
 
 // Start initializes reporting of runtime metrics using the supplied config.
+// Note: this form cannot be stopped.  To
 func Start(opts ...Option) error {
 	c := newConfig(opts...)
 	if c.MinimumReadMemStatsInterval < 0 {
@@ -108,17 +136,23 @@ func Start(opts ...Option) error {
 	if c.MeterProvider == nil {
 		c.MeterProvider = global.MeterProvider()
 	}
-	r := &runtime{
-		meter: c.MeterProvider.Meter(
-			"go.opentelemetry.io/contrib/instrumentation/runtime",
-			metric.WithInstrumentationVersion(SemVersion()),
-		),
-		config: c,
+	meter := c.MeterProvider.Meter(
+		LibraryName,
+		metric.WithInstrumentationVersion(SemVersion()),
+	)
+
+	if !c.UseGoRuntimeMetrics {
+		r := &legacyRuntime{
+			config: c,
+			meter:  meter,
+		}
+		return r.register()
 	}
+	r := newBuiltinRuntime(meter, metrics.All, metrics.Read)
 	return r.register()
 }
 
-func (r *runtime) register() error {
+func (r *legacyRuntime) register() error {
 	startTime := time.Now()
 	uptime, err := r.meter.AsyncInt64().UpDownCounter(
 		"runtime.uptime",
@@ -164,7 +198,7 @@ func (r *runtime) register() error {
 	return r.registerMemStats()
 }
 
-func (r *runtime) registerMemStats() error {
+func (r *legacyRuntime) registerMemStats() error {
 	var (
 		err error
 
