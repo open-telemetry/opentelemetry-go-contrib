@@ -33,6 +33,11 @@ const (
 	GRPCStatusCodeKey = attribute.Key("rpc.grpc.status_code")
 )
 
+// Filter is a predicate used to determine whether a given request in
+// interceptor info should be traced. A Filter must return true if
+// the request should be traced.
+type Filter func(*InterceptorInfo) bool
+
 // config is a group of options for this instrumentation.
 type config struct {
 	Filter         Filter

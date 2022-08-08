@@ -74,7 +74,10 @@ func UnaryClientInterceptor(opts ...Option) grpc.UnaryClientInterceptor {
 		callOpts ...grpc.CallOption,
 	) error {
 		cfg := newConfig(opts)
-		i := newUnaryClientInterceptorInfo(method)
+		i := &InterceptorInfo{
+			Method: method,
+			Typ:    UnaryClient,
+		}
 		if cfg.Filter != nil && !cfg.Filter(i) {
 			return invoker(ctx, method, req, reply, cc, callOpts...)
 		}
@@ -250,7 +253,10 @@ func StreamClientInterceptor(opts ...Option) grpc.StreamClientInterceptor {
 		callOpts ...grpc.CallOption,
 	) (grpc.ClientStream, error) {
 		cfg := newConfig(opts)
-		i := newStreamClientInterceptorInfo(method)
+		i := &InterceptorInfo{
+			Method: method,
+			Typ:    StreamClient,
+		}
 		if cfg.Filter != nil && !cfg.Filter(i) {
 			return streamer(ctx, desc, cc, method, callOpts...)
 		}
@@ -313,7 +319,10 @@ func UnaryServerInterceptor(opts ...Option) grpc.UnaryServerInterceptor {
 		handler grpc.UnaryHandler,
 	) (interface{}, error) {
 		cfg := newConfig(opts)
-		i := newUnaryServerInterceptorInfo(info)
+		i := &InterceptorInfo{
+			UnaryServerInfo: info,
+			Typ:             UnaryServer,
+		}
 		if cfg.Filter != nil && !cfg.Filter(i) {
 			return handler(ctx, req)
 		}
@@ -407,7 +416,10 @@ func StreamServerInterceptor(opts ...Option) grpc.StreamServerInterceptor {
 	) error {
 		ctx := ss.Context()
 		cfg := newConfig(opts)
-		i := newStreamServerInterceptorInfo(info)
+		i := &InterceptorInfo{
+			StreamServerInfo: info,
+			Typ:              StreamServer,
+		}
 		if cfg.Filter != nil && !cfg.Filter(i) {
 			return handler(srv, wrapServerStream(ctx, ss))
 		}
