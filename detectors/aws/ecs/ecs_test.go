@@ -69,7 +69,7 @@ func TestDetectV3(t *testing.T) {
 	assert.Equal(t, expectedResource, res, "Resource returned is incorrect")
 }
 
-// succesfully returns resource when process is running on Amazon ECS environment 
+// succesfully returns resource when process is running on Amazon ECS environment
 // with Metadata v4.
 func TestDetectV4(t *testing.T) {
 	testServer := httptest.NewServer(http.HandlerFunc(func(res http.ResponseWriter, req *http.Request) {
@@ -103,7 +103,7 @@ func TestDetectV4(t *testing.T) {
 		semconv.ContainerIDKey.String("0123456789A"),
 		semconv.AWSECSContainerARNKey.String("arn:aws:ecs:us-west-2:111122223333:container/0206b271-b33f-47ab-86c6-a0ba208a70a9"),
 		semconv.AWSECSClusterARNKey.String("arn:aws:ecs:us-west-2:111122223333:cluster/default"),
-		semconv.AWSECSLaunchtypeKey.String("EC2"),
+		semconv.AWSECSLaunchtypeKey.String("ec2"),
 		semconv.AWSECSTaskARNKey.String("arn:aws:ecs:us-west-2:111122223333:task/default/158d1c8083dd49d6b527399fd6414f5c"),
 		semconv.AWSECSTaskFamilyKey.String("curltest"),
 		semconv.AWSECSTaskRevisionKey.String("26"),

@@ -121,7 +121,7 @@ func (detector *resourceDetector) Detect(ctx context.Context) (*resource.Resourc
 		attributes = append(
 			attributes,
 			semconv.AWSECSClusterARNKey.String(clusterArn),
-			semconv.AWSECSLaunchtypeKey.String(taskMetadata.LaunchType),
+			semconv.AWSECSLaunchtypeKey.String(strings.ToLower(taskMetadata.LaunchType)),
 			semconv.AWSECSTaskARNKey.String(taskMetadata.TaskARN),
 			semconv.AWSECSTaskFamilyKey.String(taskMetadata.Family),
 			semconv.AWSECSTaskRevisionKey.String(taskMetadata.Revision),
