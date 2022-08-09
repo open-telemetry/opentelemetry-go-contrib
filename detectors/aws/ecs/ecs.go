@@ -20,6 +20,7 @@ import (
 	"fmt"
 	"net/http"
 	"os"
+	"regexp"
 	"strings"
 
 	ecsmetadata "github.com/brunoscheufler/aws-ecs-metadata-go"
@@ -39,12 +40,16 @@ const (
 )
 
 var (
-	empty                           = resource.Empty()
-	errCannotReadContainerID        = errors.New("failed to read container ID from cGroupFile")
-	errCannotReadContainerName      = errors.New("failed to read hostname")
-	errCannotReadCGroupFile         = errors.New("ECS resource detector failed to read cGroupFile")
-	errCannotRetrieveMetadataV4     = errors.New("ECS resource detector failed to retrieve metadata from the ECS Metada v4 container endpoint")
-	errCannotRetrieveMetadataV4Task = errors.New("ECS resource detector failed to retrieve metadata from the ECS Metada v4 task endpoint")
+	empty                                 = resource.Empty()
+	errCannotReadContainerID              = errors.New("failed to read container ID from cGroupFile")
+	errCannotReadContainerName            = errors.New("failed to read hostname")
+	errCannotReadCGroupFile               = errors.New("ECS resource detector failed to read cGroupFile")
+	errCannotRetrieveMetadataV4           = errors.New("ECS resource detector failed to retrieve metadata from the ECS Metadata v4 container endpoint")
+	errCannotRetrieveMetadataV4Task       = errors.New("ECS resource detector failed to retrieve metadata from the ECS Metadata v4 task endpoint")
+	errCannotRetrieveLogsGroupMetadataV4  = errors.New("The ECS Metadata v4 did not return a AwsLogGroup name")
+	errCannotRetrieveLogsStreamMetadataV4 = errors.New("The ECS Metadata v4 did not return a AwsLogStream name")
+	errCannotParseAwsRegionMetadataV4     = errors.New("Cannot parse the AWS region our of the Container ARN returned by the ECS Metadata v4 container endpoint")
+	errCannotParseAwsAccountMetadataV4    = errors.New("Cannot parse the AWS account our of the Container ARN returned by the ECS Metadata v4 container endpoint")
 )
 
 // Create interface for methods needing to be mocked.
@@ -118,6 +123,15 @@ func (detector *resourceDetector) Detect(ctx context.Context) (*resource.Resourc
 			clusterArn = fmt.Sprintf("%s:cluster/%s", baseArn, clusterArn)
 		}
 
+		logAttributes, err := detector.getLogsAttributes(containerMetadata)
+		if err != nil {
+			return empty, err
+		}
+
+		if len(logAttributes) > 0 {
+			attributes = append(attributes, logAttributes...)
+		}
+
 		attributes = append(
 			attributes,
 			semconv.AWSECSClusterARNKey.String(clusterArn),
@@ -129,6 +143,39 @@ func (detector *resourceDetector) Detect(ctx context.Context) (*resource.Resourc
 	}
 
 	return resource.NewWithAttributes(semconv.SchemaURL, attributes...), nil
+}
+
+func (detector *resourceDetector) getLogsAttributes(metadata *ecsmetadata.ContainerMetadataV4) ([]attribute.KeyValue, error) {
+	if metadata.LogDriver != "awslogs" {
+		return []attribute.KeyValue{}, nil
+	}
+
+	logsOptions := metadata.LogOptions
+
+	if len(logsOptions.AwsLogsGroup) < 1 {
+		return nil, errCannotRetrieveLogsGroupMetadataV4
+	}
+
+	if len(logsOptions.AwsLogsStream) < 1 {
+		return nil, errCannotRetrieveLogsStreamMetadataV4
+	}
+
+	containerArn := metadata.ContainerARN
+	logsRegion := logsOptions.AwsRegion
+	if len(logsRegion) < 1 {
+		r := regexp.MustCompile(`arn:aws:ecs:([^:]+):.*`)
+		logsRegion = r.FindStringSubmatch(containerArn)[1]
+	}
+
+	r := regexp.MustCompile(`arn:aws:ecs:[^:]+:([^:]+):.*`)
+	awsAccount := r.FindStringSubmatch(containerArn)[1]
+
+	return []attribute.KeyValue{
+		semconv.AWSLogGroupNamesKey.String(logsOptions.AwsLogsGroup),
+		semconv.AWSLogGroupARNsKey.String(fmt.Sprintf("arn:aws:logs:%s:%s:log-group:%s:*", logsRegion, awsAccount, logsOptions.AwsLogsGroup)),
+		semconv.AWSLogStreamNamesKey.String(logsOptions.AwsLogsStream),
+		semconv.AWSLogStreamARNsKey.String(fmt.Sprintf("arn:aws:logs:%s:%s:log-group:%s:log-stream:%s", logsRegion, awsAccount, logsOptions.AwsLogsGroup, logsOptions.AwsLogsStream)),
+	}, nil
 }
 
 // returns docker container ID from default c group path.

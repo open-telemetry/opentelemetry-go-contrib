@@ -16,6 +16,7 @@ package ecs
 
 import (
 	"context"
+	"encoding/json"
 	http "net/http"
 	"net/http/httptest"
 	"os"
@@ -25,6 +26,7 @@ import (
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/mock"
 
+	ecsmetadata "github.com/brunoscheufler/aws-ecs-metadata-go"
 	"go.opentelemetry.io/otel/attribute"
 	"go.opentelemetry.io/otel/sdk/resource"
 	semconv "go.opentelemetry.io/otel/semconv/v1.12.0"
@@ -107,11 +109,16 @@ func TestDetectV4(t *testing.T) {
 		semconv.AWSECSTaskARNKey.String("arn:aws:ecs:us-west-2:111122223333:task/default/158d1c8083dd49d6b527399fd6414f5c"),
 		semconv.AWSECSTaskFamilyKey.String("curltest"),
 		semconv.AWSECSTaskRevisionKey.String("26"),
+		semconv.AWSLogGroupNamesKey.String("/ecs/metadata"),
+		semconv.AWSLogGroupARNsKey.String("arn:aws:logs:us-west-2:111122223333:log-group:/ecs/metadata:*"),
+		semconv.AWSLogStreamNamesKey.String("ecs/curl/8f03e41243824aea923aca126495f665"),
+		semconv.AWSLogStreamARNsKey.String("arn:aws:logs:us-west-2:111122223333:log-group:/ecs/metadata:log-stream:ecs/curl/8f03e41243824aea923aca126495f665"),
 	}
 	expectedResource := resource.NewWithAttributes(semconv.SchemaURL, attributes...)
 	detector := &resourceDetector{utils: detectorUtils}
-	res, _ := detector.Detect(context.Background())
+	res, err := detector.Detect(context.Background())
 
+	assert.Equal(t, err, nil, "Detector should not file")
 	assert.Equal(t, expectedResource, res, "Resource returned is incorrect")
 }
 
@@ -147,6 +154,13 @@ func TestDetectCannotReadContainerName(t *testing.T) {
 
 	assert.Equal(t, errCannotReadContainerName, err)
 	assert.Equal(t, 0, len(res.Attributes()))
+}
+
+func TestDetectV4Parse(t *testing.T) {
+	content, _ := os.ReadFile("testdata/metadatav4-response-task.json")
+
+	taskMetadata := &ecsmetadata.TaskMetadataV4{}
+	json.Unmarshal(content, taskMetadata)
 }
 
 // returns empty resource when process is not running ECS.

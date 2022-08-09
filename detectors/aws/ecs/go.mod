@@ -3,13 +3,13 @@ module go.opentelemetry.io/contrib/detectors/aws/ecs
 go 1.18
 
 require (
-	github.com/brunoscheufler/aws-ecs-metadata-go v0.0.0-20220806202253-1e93a1d357d6
 	github.com/stretchr/testify v1.8.0
 	go.opentelemetry.io/otel v1.11.1
 	go.opentelemetry.io/otel/sdk v1.11.1
 )
 
 require (
+	github.com/brunoscheufler/aws-ecs-metadata-go v0.0.0-20220812150832-b6b31c6eeeaf // indirect
 	github.com/davecgh/go-spew v1.1.1 // indirect
 	github.com/go-logr/logr v1.2.3 // indirect
 	github.com/go-logr/stdr v1.2.2 // indirect
