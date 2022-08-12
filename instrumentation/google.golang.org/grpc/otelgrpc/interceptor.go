@@ -100,7 +100,7 @@ func UnaryClientInterceptor(opts ...Option) grpc.UnaryClientInterceptor {
 		)
 		defer span.End()
 
-		Inject(ctx, &metadataCopy, opts...)
+		inject(ctx, &metadataCopy, cfg.Propagators)
 		ctx = metadata.NewOutgoingContext(ctx, metadataCopy)
 
 		messageSent.Event(ctx, 1, req)
@@ -278,7 +278,7 @@ func StreamClientInterceptor(opts ...Option) grpc.StreamClientInterceptor {
 			trace.WithAttributes(attr...),
 		)
 
-		Inject(ctx, &metadataCopy, opts...)
+		inject(ctx, &metadataCopy, cfg.Propagators)
 		ctx = metadata.NewOutgoingContext(ctx, metadataCopy)
 
 		s, err := streamer(ctx, desc, cc, method, callOpts...)
