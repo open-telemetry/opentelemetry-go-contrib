@@ -3,7 +3,7 @@ module go.opentelemetry.io/contrib/instrumentation/github.com/labstack/echo/otel
 go 1.17
 
 require (
-	github.com/labstack/echo/v4 v4.7.2
+	github.com/labstack/echo/v4 v4.8.0
 	github.com/stretchr/testify v1.8.0
 	go.opentelemetry.io/contrib/instrumentation/github.com/labstack/echo/otelecho v0.34.0
 	go.opentelemetry.io/otel v1.9.0
