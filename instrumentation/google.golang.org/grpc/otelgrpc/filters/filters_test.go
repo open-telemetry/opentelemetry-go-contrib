@@ -376,7 +376,7 @@ func TestNot(t *testing.T) {
 	}
 }
 
-func TestNotHealthCheck(t *testing.T) {
+func TestHealthCheck(t *testing.T) {
 	const (
 		healthCheck     = "/grpc.health.v1.Health/Check"
 		dummyFullMethod = "/example.HelloService/FoobarHello"
@@ -385,50 +385,50 @@ func TestNotHealthCheck(t *testing.T) {
 		{
 			name: "unary client interceptor healthcheck",
 			i:    &otelgrpc.InterceptorInfo{Method: healthCheck, Typ: otelgrpc.UnaryClient},
-			f:    NotHealthCheck(),
-			want: false,
+			f:    HealthCheck(),
+			want: true,
 		},
 		{
 			name: "stream client interceptor healthcheck",
 			i:    &otelgrpc.InterceptorInfo{Method: healthCheck, Typ: otelgrpc.StreamClient},
-			f:    NotHealthCheck(),
-			want: false,
+			f:    HealthCheck(),
+			want: true,
 		},
 		{
 			name: "unary server interceptor healthcheck",
 			i:    &otelgrpc.InterceptorInfo{UnaryServerInfo: dummyUnaryServerInfo(healthCheck), Typ: otelgrpc.UnaryServer},
-			f:    NotHealthCheck(),
-			want: false,
+			f:    HealthCheck(),
+			want: true,
 		},
 		{
 			name: "stream server interceptor healthcheck",
 			i:    &otelgrpc.InterceptorInfo{StreamServerInfo: dummyStreamServerInfo(healthCheck), Typ: otelgrpc.StreamServer},
-			f:    NotHealthCheck(),
-			want: false,
+			f:    HealthCheck(),
+			want: true,
 		},
 		{
 			name: "unary client interceptor",
 			i:    &otelgrpc.InterceptorInfo{Method: dummyFullMethod, Typ: otelgrpc.UnaryClient},
-			f:    NotHealthCheck(),
-			want: true,
+			f:    HealthCheck(),
+			want: false,
 		},
 		{
 			name: "stream client interceptor",
 			i:    &otelgrpc.InterceptorInfo{Method: dummyFullMethod, Typ: otelgrpc.StreamClient},
-			f:    NotHealthCheck(),
-			want: true,
+			f:    HealthCheck(),
+			want: false,
 		},
 		{
 			name: "unary server interceptor",
 			i:    &otelgrpc.InterceptorInfo{UnaryServerInfo: dummyUnaryServerInfo(dummyFullMethod), Typ: otelgrpc.UnaryServer},
-			f:    NotHealthCheck(),
-			want: true,
+			f:    HealthCheck(),
+			want: false,
 		},
 		{
 			name: "stream server interceptor",
 			i:    &otelgrpc.InterceptorInfo{StreamServerInfo: dummyStreamServerInfo(dummyFullMethod), Typ: otelgrpc.StreamServer},
-			f:    NotHealthCheck(),
-			want: true,
+			f:    HealthCheck(),
+			want: false,
 		},
 	}
 
