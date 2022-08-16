@@ -23,6 +23,7 @@ import (
 	"time"
 
 	"go.opentelemetry.io/contrib/instrumentation/google.golang.org/grpc/otelgrpc"
+	"go.opentelemetry.io/contrib/instrumentation/google.golang.org/grpc/otelgrpc/filters"
 	"go.opentelemetry.io/contrib/instrumentation/google.golang.org/grpc/otelgrpc/internal"
 	"go.opentelemetry.io/otel/attribute"
 	"go.opentelemetry.io/otel/codes"
@@ -607,6 +608,45 @@ func TestServerInterceptorError(t *testing.T) {
 		attribute.Key("message.id").Int(1),
 		attribute.Key("message.uncompressed_size").Int(26),
 	}, span.Events()[1].Attributes)
+}
+
+func TestServerInterceptorFilter(t *testing.T) {
+	sr := tracetest.NewSpanRecorder()
+	tp := trace.NewTracerProvider(trace.WithSpanProcessor(sr))
+	usi := otelgrpc.UnaryServerInterceptor(otelgrpc.WithTracerProvider(tp), otelgrpc.WithInterceptorFilter(filters.ServicePrefix("github.com.foo.serviceName_123")))
+	handler := func(_ context.Context, _ interface{}) (interface{}, error) {
+		return &mockProtoMessage{}, nil
+	}
+
+	checks := []struct {
+		method     string
+		name       string
+		expectErr  bool
+		expectSpan bool
+	}{
+		{
+			method: "/github.com.foo.serviceName_123/method",
+			name:   "github.com.foo.serviceName_123/method",
+		},
+		{
+			method:     "/github.com.foo.serviceName_321/method",
+			name:       "github.com.foo.serviceName_321/method",
+			expectSpan: true,
+		},
+	}
+
+	for _, check := range checks {
+		_, err := usi(context.Background(), &mockProtoMessage{}, &grpc.UnaryServerInfo{FullMethod: check.method}, handler)
+		if check.expectErr {
+			assert.Error(t, err)
+		} else {
+			assert.NoError(t, err)
+		}
+		_, ok := getSpanFromRecorder(sr, check.name)
+		if assert.Equal(t, ok, check.expectSpan, "span found %q", check.name) {
+			continue
+		}
+	}
 }
 
 func TestParseFullMethod(t *testing.T) {
