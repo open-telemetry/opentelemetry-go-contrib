@@ -151,7 +151,7 @@ func ServicePrefix(pre string) otelgrpc.Filter {
 }
 
 // HealthCheck returns a Filter that returns true if the request's
-// is not health check defined by gRPC Health Checking Protocol.
+// service name is health check defined by gRPC Health Checking Protocol.
 // https://github.com/grpc/grpc/blob/master/doc/health-checking.md
 func HealthCheck() otelgrpc.Filter {
 	return ServicePrefix("grpc.health.v1.Health")
