@@ -8,7 +8,6 @@ import (
 	"encoding/base64"
 	"fmt"
 	"io"
-	"io/ioutil"
 	"net/http"
 	"os"
 	"path"
@@ -66,7 +65,7 @@ func (_escStaticFS) prepare(name string) (*_escFile, error) {
 		if err != nil {
 			return
 		}
-		f.data, err = ioutil.ReadAll(gr)
+		f.data, err = io.ReadAll(gr)
 	})
 	if err != nil {
 		return nil, err
@@ -176,7 +175,7 @@ func FSByte(useLocal bool, name string) ([]byte, error) {
 		if err != nil {
 			return nil, err
 		}
-		b, err := ioutil.ReadAll(f)
+		b, err := io.ReadAll(f)
 		_ = f.Close()
 		return b, err
 	}

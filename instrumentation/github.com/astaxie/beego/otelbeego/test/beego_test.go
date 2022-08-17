@@ -17,7 +17,7 @@ package test
 import (
 	"encoding/json"
 	"fmt"
-	"io/ioutil"
+	"io"
 	"net/http"
 	"net/http/httptest"
 	"os"
@@ -190,7 +190,7 @@ func TestStatic(t *testing.T) {
 	sr := tracetest.NewSpanRecorder()
 	tracerProvider := trace.NewTracerProvider(trace.WithSpanProcessor(sr))
 	meterProvider, metricExporter := metrictest.NewTestMeterProvider()
-	file, err := ioutil.TempFile("", "static-*.html")
+	file, err := os.CreateTemp("", "static-*.html")
 	require.NoError(t, err)
 	defer os.Remove(file.Name())
 	_, err = file.WriteString(beego.Htmlunquote("<h1>Hello, world!</h1>"))
@@ -214,7 +214,7 @@ func TestStatic(t *testing.T) {
 	}
 
 	require.Equal(t, http.StatusOK, rr.Result().StatusCode)
-	body, err := ioutil.ReadAll(rr.Result().Body)
+	body, err := io.ReadAll(rr.Result().Body)
 	require.NoError(t, err)
 	require.Equal(t, "<h1>Hello, world!</h1>", string(body))
 	spans := sr.Ended()
@@ -233,12 +233,10 @@ func TestRender(t *testing.T) {
 		"<body>This is a template test. Hello {{.name}}</body></html>"
 
 	// Create a temp directory to hold a view
-	dir, err := ioutil.TempDir("", "views")
-	defer os.RemoveAll(dir)
-	require.NoError(t, err)
+	dir := t.TempDir()
 
 	// Create the view
-	file, err := ioutil.TempFile(dir, "*index.tpl")
+	file, err := os.CreateTemp(dir, "*index.tpl")
 	require.NoError(t, err)
 	_, err = file.WriteString(htmlStr)
 	require.NoError(t, err)
@@ -259,7 +257,7 @@ func TestRender(t *testing.T) {
 		req, err := http.NewRequest(http.MethodGet, fmt.Sprintf("http://localhost/template%s", str), nil)
 		require.NoError(t, err)
 		mw(beego.BeeApp.Handlers).ServeHTTP(rr, req)
-		body, err := ioutil.ReadAll(rr.Result().Body)
+		body, err := io.ReadAll(rr.Result().Body)
 		require.Equal(t, strings.Replace(htmlStr, "{{.name}}", "test", 1), string(body))
 		require.NoError(t, err)
 	}
@@ -313,7 +311,7 @@ func runTest(t *testing.T, tc *testCase, url string) {
 	mw(beego.BeeApp.Handlers).ServeHTTP(rr, req)
 
 	require.Equal(t, tc.expectedHTTPStatus, rr.Result().StatusCode)
-	body, err := ioutil.ReadAll(rr.Result().Body)
+	body, err := io.ReadAll(rr.Result().Body)
 	require.NoError(t, err)
 	message := testReply{}
 	require.NoError(t, json.Unmarshal(body, &message))

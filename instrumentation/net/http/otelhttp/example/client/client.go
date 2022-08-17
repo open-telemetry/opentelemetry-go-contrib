@@ -18,7 +18,7 @@ import (
 	"context"
 	"flag"
 	"fmt"
-	"io/ioutil"
+	"io"
 	"log"
 	"net/http"
 	"time"
@@ -84,7 +84,7 @@ func main() {
 		if err != nil {
 			panic(err)
 		}
-		body, err = ioutil.ReadAll(res.Body)
+		body, err = io.ReadAll(res.Body)
 		_ = res.Body.Close()
 
 		return err

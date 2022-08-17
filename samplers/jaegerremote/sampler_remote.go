@@ -19,7 +19,7 @@ package jaegerremote // import "go.opentelemetry.io/contrib/samplers/jaegerremot
 import (
 	"encoding/json"
 	"fmt"
-	"io/ioutil"
+	"io"
 	"net/http"
 	"net/url"
 	"sync"
@@ -164,7 +164,7 @@ func (s *Sampler) UpdateSampler() {
 	defer s.Unlock()
 
 	if err := s.updateSamplerViaUpdaters(strategy); err != nil {
-		//c.logger.Infof("failed to handle sampling strategy response %+v. Got error: %v", res, err)
+		// c.logger.Infof("failed to handle sampling strategy response %+v. Got error: %v", res, err)
 		return
 	}
 }
@@ -294,7 +294,7 @@ func (f *httpSamplingStrategyFetcher) Fetch(serviceName string) ([]byte, error) 
 	}
 	defer resp.Body.Close()
 
-	body, err := ioutil.ReadAll(resp.Body)
+	body, err := io.ReadAll(resp.Body)
 	if err != nil {
 		return nil, err
 	}
