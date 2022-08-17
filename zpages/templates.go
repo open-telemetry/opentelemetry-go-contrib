@@ -42,7 +42,7 @@ type headerData struct {
 }
 
 func parseTemplate(name string) *template.Template {
-	f, err := internal.FS(false).Open("/templates/" + name + ".html")
+	f, err := internal.Templates.Open("templates/" + name + ".html")
 	if err != nil {
 		log.Panicf("%v: %v", name, err) // nolint: revive  // Called during initialization.
 	}
