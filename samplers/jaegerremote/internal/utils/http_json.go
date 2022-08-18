@@ -20,7 +20,6 @@ import (
 	"encoding/json"
 	"fmt"
 	"io"
-	"io/ioutil"
 	"net/http"
 )
 
@@ -38,7 +37,7 @@ func ReadJSON(resp *http.Response, out interface{}) error {
 	defer resp.Body.Close()
 
 	if resp.StatusCode >= 400 {
-		body, err := ioutil.ReadAll(resp.Body)
+		body, err := io.ReadAll(resp.Body)
 		if err != nil {
 			return err
 		}
@@ -47,7 +46,7 @@ func ReadJSON(resp *http.Response, out interface{}) error {
 	}
 
 	if out == nil {
-		_, err := io.Copy(ioutil.Discard, resp.Body)
+		_, err := io.Copy(io.Discard, resp.Body)
 		if err != nil {
 			return err
 		}

@@ -21,13 +21,15 @@
 //
 // The metric events produced are listed here with attribute dimensions.
 //
-//   Name			Attribute
+//	Name			Attribute
+//
 // ----------------------------------------------------------------------
-//   process.cpu.time           state=user|system
-//   system.cpu.time            state=user|system|other|idle
-//   system.memory.usage        state=used|available
-//   system.memory.utilization  state=used|available
-//   system.network.io          direction=transmit|receive
+//
+//	process.cpu.time           state=user|system
+//	system.cpu.time            state=user|system|other|idle
+//	system.memory.usage        state=used|available
+//	system.memory.utilization  state=used|available
+//	system.network.io          direction=transmit|receive
 //
 // See https://github.com/open-telemetry/oteps/blob/main/text/0119-standard-system-metrics.md
 // for the definition of these metric instruments.

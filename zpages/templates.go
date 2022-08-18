@@ -19,7 +19,7 @@ package zpages // import "go.opentelemetry.io/contrib/zpages"
 import (
 	"fmt"
 	"html/template"
-	"io/ioutil"
+	"io"
 	"log"
 
 	"go.opentelemetry.io/contrib/zpages/internal"
@@ -42,7 +42,7 @@ type headerData struct {
 }
 
 func parseTemplate(name string) *template.Template {
-	f, err := internal.FS(false).Open("/templates/" + name + ".html")
+	f, err := internal.Templates.Open("templates/" + name + ".html")
 	if err != nil {
 		log.Panicf("%v: %v", name, err) // nolint: revive  // Called during initialization.
 	}
@@ -51,7 +51,7 @@ func parseTemplate(name string) *template.Template {
 			log.Panicf("%v: %v", name, err) // nolint: revive  // Called during initialization.
 		}
 	}()
-	text, err := ioutil.ReadAll(f)
+	text, err := io.ReadAll(f)
 	if err != nil {
 		log.Panicf("%v: %v", name, err) // nolint: revive  // Called during initialization.
 	}
