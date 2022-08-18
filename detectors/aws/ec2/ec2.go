@@ -79,7 +79,7 @@ type Client interface {
 // compile time assertion that resourceDetector implements the resource.Detector interface.
 var _ resource.Detector = (*resourceDetector)(nil)
 
-//NewResourceDetector returns a resource detector that will detect AWS EC2 resources.
+// NewResourceDetector returns a resource detector that will detect AWS EC2 resources.
 func NewResourceDetector(opts ...Option) resource.Detector {
 	c := newConfig(opts...)
 	return &resourceDetector{c.getClient()}
