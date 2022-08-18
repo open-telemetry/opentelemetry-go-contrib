@@ -1,8 +1,16 @@
 # Launcher
 
-## What is it?
+## What it is
 
-The Go Launcher (name TBD) is a configuration layer that chooses default values for configuration options that many OpenTelemetry users would ultimately configure manually, allowing for minimal code to quickly instrument with OpenTelemetry.
+The Go Launcher (name TBD) is a configuration layer that chooses default values for configuration options that many OpenTelemetry users would ultimately configure manually, allowing for minimal code to quickly instrument with OpenTelemetry. It is intended as the main “getting started” path for newcomers and people without advanced configuration needs.
+
+## What it isn’t
+
+The Go Launcher is not a new Go SDK but rather a complementary wrapper around the existing SDK. Certain functionality like resource detectors, autoprop packages, and autoexporter packages, can and should be used from the core SDK to make the configuration layer more resilient to - and compatible with - potential upstream changes. Other functionality that differs from the Go SDK should not be introduced to the Launcher, either by new environment variables or code configuration, including but not limited to changing out processors, adding specific sampling methods, and enabling or disabling specific instrumentation. New functionality may be provided using a separate package, such as vendor-specific requirements.
+
+The Go Launcher is also not intended to be a lightweight configuration option for advanced users who specifically require minimal dependencies and smaller package size. To achieve the minimal configuration for developers, some unused dependencies will be included as a necessity; see Tradeoffs below.
+
+The Go Launcher is ideally used with environment variables; as such, not all configuration options may be available to set directly within code. If there is more desire to use configuration options directly within code, either the regular SDK can be used, or a vendor package can be used that allows for extra configuration options.
 
 ## Motivation
 
@@ -59,9 +67,9 @@ func main() {
 | WithServiceName             | OTEL_SERVICE_NAME                   | n*       | unknown_service:go   |
 | WithServiceVersion          | OTEL_SERVICE_VERSION                | n        | -                    |
 | WithHeaders                 | OTEL_EXPORTER_OTLP_HEADERS          | n        | {}                   |
-| WithTracesExporterEndpoint  | OTEL_EXPORTER_OTLP_TRACES_ENDPOINT  | n        | localhost:4317       |
+| WithTracesExporterEndpoint  | OTEL_EXPORTER_OTLP_TRACES_ENDPOINT  | n        | localhost:4317**     |
 | WithTracesExporterInsecure  | OTEL_EXPORTER_OTLP_TRACES_INSECURE  | n        | false                |
-| WithMetricsExporterEndpoint | OTEL_EXPORTER_OTLP_METRICS_ENDPOINT | n        | localhost:4317       |
+| WithMetricsExporterEndpoint | OTEL_EXPORTER_OTLP_METRICS_ENDPOINT | n        | localhost:4317**     |
 | WithMetricsExporterInsecure | OTEL_EXPORTER_OTLP_METRICS_INSECURE | n        | false                |
 | WithLogLevel                | OTEL_LOG_LEVEL                      | n        | info                 |
 | WithPropagators             | OTEL_PROPAGATORS                    | n        | tracecontext,baggage |
@@ -73,12 +81,17 @@ func main() {
 
 *Service name should be set using the `WithServiceName` configuration option, the `OTEL_SERVICE_NAME` environment variable, or by setting the `service.name` in `OTEL_RESOURCE_ATTRIBUTES`. The default service name is based on the SDK's behavior as it conforms to the specification: `unknown_service`, suffixed with either the process name (where possible) or `go`.
 
+**If `OTEL_EXPORTER_OTLP_PROTOCOL` is set to `http/protobuf`, the default endpoint will be `localhost:4318`.
+
 ### Additional Configuration Options
 
 Not yet implemented but still desired configuration options would include:
 
-- `OTEL_EXPORTER_OTLP_PROTOCOL`: `http/protobuf`
-    - ideally, selecting this would change the default endpoint to localhost:4318
+- `autoexporter` registry
+- `WithTracesExporter` = `OTLP` default, with options to select from the autoexporter registry once available
+- `WithMetricsExporter` = `OTLP` default, with options to select from the autoexporter registry once available
+- `WithOTLPTracesExporterEndpoint` = `localhost:4317` default, or `localhost:4318` if http protocol is set
+- `WithOTLPMetricsExporterEndpoint` = `localhost:4317` default, or `localhost:4318` if http protocol is set
 
 ### Using a Vendor-Specific Package
 
