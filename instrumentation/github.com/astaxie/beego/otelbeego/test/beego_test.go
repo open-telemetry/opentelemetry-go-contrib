@@ -192,6 +192,7 @@ func TestStatic(t *testing.T) {
 	meterProvider, metricExporter := metrictest.NewTestMeterProvider()
 	file, err := os.CreateTemp("", "static-*.html")
 	require.NoError(t, err)
+	defer file.Close()
 	defer os.Remove(file.Name())
 	_, err = file.WriteString(beego.Htmlunquote("<h1>Hello, world!</h1>"))
 	require.NoError(t, err)
@@ -238,6 +239,7 @@ func TestRender(t *testing.T) {
 	// Create the view
 	file, err := os.CreateTemp(dir, "*index.tpl")
 	require.NoError(t, err)
+	defer file.Close()
 	_, err = file.WriteString(htmlStr)
 	require.NoError(t, err)
 	// Add path to view path
