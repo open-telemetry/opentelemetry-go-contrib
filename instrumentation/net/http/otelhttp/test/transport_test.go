@@ -16,7 +16,7 @@ package test
 
 import (
 	"context"
-	"io/ioutil"
+	"io"
 	"net/http"
 	"net/http/httptest"
 	"net/http/httptrace"
@@ -162,7 +162,7 @@ func TestTransportRequestWithTraceContext(t *testing.T) {
 
 	span.End()
 
-	body, err := ioutil.ReadAll(res.Body)
+	body, err := io.ReadAll(res.Body)
 	require.NoError(t, err)
 
 	require.Equal(t, content, body)
@@ -222,7 +222,7 @@ func TestWithHTTPTrace(t *testing.T) {
 
 	span.End()
 
-	body, err := ioutil.ReadAll(res.Body)
+	body, err := io.ReadAll(res.Body)
 	require.NoError(t, err)
 
 	require.Equal(t, content, body)
