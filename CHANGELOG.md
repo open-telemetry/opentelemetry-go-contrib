@@ -12,6 +12,10 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 
 - Use Go 1.19 as the default version for CI testing/linting. (#2675)
 
+### Added
+
+- Support runtime/metrics option in instrumentation/runtime package. (#2643)
+
 ## [1.9.0/0.34.0/0.4.0] - 2022-08-02
 
 ### Added
