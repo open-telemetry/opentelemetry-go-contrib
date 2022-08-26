@@ -55,23 +55,53 @@ func newBuiltinRuntime(meter metric.Meter, af allFunc, rf readFunc) *builtinRunt
 func (r *builtinRuntime) register() error {
 	all := metrics.All()
 	counts := map[string]int{}
+	toName := func(in string) (string, string) {
+		n, statedUnits, _ := strings.Cut(in, ":")
+		n = "process.runtime.go" + strings.ReplaceAll(n, "/", ".")
+		return n, statedUnits
+	}
 
 	for _, m := range all {
-		counts[m.Name]++
+		name, _ := toName(m.Name)
+		counts[name]++
 	}
 
 	var rerr error
 	for _, m := range all {
-		n, u, _ := strings.Cut(m.Name, ":")
-
-		n = "process.runtime.go" + strings.ReplaceAll(n, "/", ".")
-		u = "{" + u + "}"
+		n, statedUnits := toName(m.Name)
+		var u string
+		switch statedUnits {
+		case "bytes", "seconds":
+			// Real units
+			u = statedUnits
+		default:
+			// Pseudo-units
+			u = "{" + statedUnits + "}"
+		}
 
 		if counts[n] > 1 {
-			// When the names conflict, leave the unit in the name.
-			// Let it be unitless, so that OTLP->PRW->OTLP will roundtrip.
-			n = n + "." + u[1:len(u)-1]
-			u = ""
+			// This is treated as a special case, we know this happens
+			// with "objects" and "bytes" in the standard Go 1.19 runtime.
+			switch statedUnits {
+			case "objects":
+				// In this case, use `.objects` suffix.
+				n = n + ".objects"
+				u = "{objects}"
+			case "bytes":
+				// In this case, use no suffix.  In Prometheus this will
+				// be appended as a suffix.
+			default:
+				panic(fmt.Sprint(
+					"unrecognized duplicate metrics names, ",
+					"attention required: ",
+					n,
+				))
+			}
+		}
+
+		// Remove any ".total" suffix, this is redundant for Prometheus.
+		if strings.HasSuffix(n, ".total") {
+			n = n[:len(n)-len(".total")]
 		}
 
 		opts := []instrument.Option{
