@@ -53,9 +53,6 @@ $(MISSPELL): PACKAGE=github.com/client9/misspell/cmd/misspell
 GOCOVMERGE = $(TOOLS)/gocovmerge
 $(GOCOVMERGE): PACKAGE=github.com/wadey/gocovmerge
 
-ESC = $(TOOLS)/esc
-$(ESC): PACKAGE=github.com/mjibson/esc
-
 STRINGER = $(TOOLS)/stringer
 $(STRINGER): PACKAGE=golang.org/x/tools/cmd/stringer
 
@@ -71,7 +68,7 @@ $(TOOLS)/dbotconf: PACKAGE=go.opentelemetry.io/build-tools/dbotconf
 CROSSLINK = $(TOOLS)/crosslink
 $(CROSSLINK): PACKAGE=go.opentelemetry.io/build-tools/crosslink
 
-tools: $(GOLANGCI_LINT) $(MISSPELL) $(GOCOVMERGE) $(STRINGER) $(ESC) $(PORTO) $(MULTIMOD) $(DBOTCONF) $(CROSSLINK)
+tools: $(GOLANGCI_LINT) $(MISSPELL) $(GOCOVMERGE) $(STRINGER) $(PORTO) $(MULTIMOD) $(DBOTCONF) $(CROSSLINK)
 
 # Build
 
@@ -79,7 +76,7 @@ tools: $(GOLANGCI_LINT) $(MISSPELL) $(GOCOVMERGE) $(STRINGER) $(ESC) $(PORTO) $(
 
 generate: $(OTEL_GO_MOD_DIRS:%=generate/%)
 generate/%: DIR=$*
-generate/%: | $(STRINGER) $(ESC)
+generate/%: | $(STRINGER)
 	@echo "$(GO) generate $(DIR)/..." \
 		&& cd $(DIR) \
 		&& PATH="$(TOOLS):$${PATH}" $(GO) generate ./...
