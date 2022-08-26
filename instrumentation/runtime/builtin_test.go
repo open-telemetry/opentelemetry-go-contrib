@@ -26,15 +26,6 @@ import (
 	"go.opentelemetry.io/otel/sdk/metric/metrictest"
 )
 
-// TODO: It's not clear whether the Go runtime changes the result of
-// All() at runtime.  This code is organized assuming that it does
-// not, however note that a couple of documented metrics do not
-// appear, which could be platform differences or could be this
-// incorrect assumption.  For example, these have not been seen
-//
-//   /gc/limiter/last-enabled:gc-cycle
-//   /sched/gomaxprocs:threads
-
 var expectLib = metrictest.Library{
 	InstrumentationName:    LibraryName,
 	InstrumentationVersion: SemVersion(),
@@ -58,7 +49,9 @@ func TestBuiltinRuntimeMetrics(t *testing.T) {
 
 	const prefix = "process.runtime.go."
 
-	allNames := map[string]bool{}
+	// Counts are >1 for metrics that are totalized.
+	expect := expectRuntimeMetrics
+	allNames := map[string]int{}
 
 	// Note: metrictest library lacks a way to distinguish
 	// monotonic vs not or to test the unit. This will be fixed in
@@ -66,43 +59,16 @@ func TestBuiltinRuntimeMetrics(t *testing.T) {
 	for _, rec := range exp.Records {
 		require.True(t, strings.HasPrefix(rec.InstrumentName, prefix), "%s", rec.InstrumentName)
 		require.Equal(t, expectLib, rec.InstrumentationLibrary)
-		require.Equal(t, []attribute.KeyValue(nil), rec.Attributes)
-		allNames[rec.InstrumentName[len(prefix):]] = true
+		name := rec.InstrumentName[len(prefix):]
+		if expect[name] > 1 {
+			require.Equal(t, 1, len(rec.Attributes))
+		} else {
+			require.Equal(t, []attribute.KeyValue(nil), rec.Attributes)
+		}
+		allNames[name]++
 	}
 
-	require.Equal(t, map[string]bool{
-		"gc.cycles.automatic":                  true,
-		"gc.cycles.forced":                     true,
-		"gc.cycles":                            true,
-		"gc.heap.allocs.objects":               true,
-		"gc.heap.allocs":                       true,
-		"gc.heap.frees.objects":                true,
-		"gc.heap.frees":                        true,
-		"gc.heap.goal":                         true,
-		"gc.heap.objects":                      true,
-		"gc.heap.tiny.allocs":                  true,
-		"memory.classes.heap.free":             true,
-		"memory.classes.heap.objects":          true,
-		"memory.classes.heap.released":         true,
-		"memory.classes.heap.stacks":           true,
-		"memory.classes.heap.unused":           true,
-		"memory.classes.metadata.mcache.free":  true,
-		"memory.classes.metadata.mcache.inuse": true,
-		"memory.classes.metadata.mspan.free":   true,
-		"memory.classes.metadata.mspan.inuse":  true,
-		"memory.classes.metadata.other":        true,
-		"memory.classes.os-stacks":             true,
-		"memory.classes.other":                 true,
-		"memory.classes.profiling.buckets":     true,
-		"memory.classes":                       true,
-		"sched.goroutines":                     true,
-
-		// New in 1.19.  TODO: How to make this test stable?
-		"cgo.go-to-c-calls":       true,
-		"gc.limiter.last-enabled": true,
-		"gc.stack.starting-size":  true,
-		"sched.gomaxprocs":        true,
-	}, allNames)
+	require.Equal(t, expect, allNames)
 }
 
 func makeTestCase() (allFunc, readFunc, map[string]metrics.Value) {
@@ -149,14 +115,14 @@ func makeTestCase() (allFunc, readFunc, map[string]metrics.Value) {
 				Cumulative:  false,
 			},
 			{
-				Name:        "/process/count:things",
-				Description: "a process counter of things",
+				Name:        "/process/count:objects",
+				Description: "a process counter of objects",
 				Kind:        metrics.KindUint64,
 				Cumulative:  true,
 			},
 			{
-				Name:        "/process/count:parts",
-				Description: "a process counter of parts",
+				Name:        "/process/count:bytes",
+				Description: "a process counter of bytes",
 				Kind:        metrics.KindUint64,
 				Cumulative:  true,
 			},
@@ -165,22 +131,24 @@ func makeTestCase() (allFunc, readFunc, map[string]metrics.Value) {
 	mapping := map[string]metrics.Value{
 		"/cntr/things:things":       allInts[0],
 		"/updowncntr/things:things": allInts[1],
-		"/process/cntr:things":      allInts[2],
-		"/process/cntr:parts":       allInts[3],
+		"/process/count:objects":    allInts[2],
+		"/process/count:bytes":      allInts[3],
 	}
 	rf := func(samples []metrics.Sample) {
 		for i := range samples {
 			v, ok := mapping[samples[i].Name]
 			if ok {
 				samples[i].Value = v
+			} else {
+				panic("WRTF")
 			}
 		}
 	}
 	return af, rf, map[string]metrics.Value{
-		"cntr.things":         allInts[0],
-		"updowncntr.things":   allInts[1],
-		"process.cntr.things": allInts[2],
-		"process.cntr.parts":  allInts[3],
+		"cntr.things":           allInts[0],
+		"updowncntr.things":     allInts[1],
+		"process.count.objects": allInts[2],
+		"process.count":         allInts[3],
 	}
 }
 
@@ -195,9 +163,13 @@ func TestMetricTranslation(t *testing.T) {
 
 	const prefix = "process.runtime.go."
 
+	require.NoError(t, exp.Collect(context.Background()))
+
+	require.NotEqual(t, 0, len(exp.Records))
 	for _, rec := range exp.Records {
 		require.Regexp(t, `^process\.runtime\.go\..+`, rec.InstrumentName)
-		require.Equal(t, expectLib, rec.InstrumentationLibrary)
+
+		// This does not test the totalize logic.
 		require.Equal(t, []attribute.KeyValue(nil), rec.Attributes)
 
 		name := rec.InstrumentName[len("process.runtime.go."):]
@@ -205,8 +177,6 @@ func TestMetricTranslation(t *testing.T) {
 		// Note: only int64 is tested, we have no way to
 		// generate Float64 values and Float64Hist values are
 		// not implemented for testing.
-
-		require.Equal(t, mapping[name].Uint64, uint64(rec.Sum.AsInt64()))
+		require.Equal(t, mapping[name].Uint64(), uint64(rec.Sum.AsInt64()))
 	}
-
 }
