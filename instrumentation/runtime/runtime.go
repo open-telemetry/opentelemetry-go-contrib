@@ -127,7 +127,6 @@ func newConfig(opts ...Option) config {
 }
 
 // Start initializes reporting of runtime metrics using the supplied config.
-// Note: this form cannot be stopped.  To
 func Start(opts ...Option) error {
 	c := newConfig(opts...)
 	if c.MinimumReadMemStatsInterval < 0 {

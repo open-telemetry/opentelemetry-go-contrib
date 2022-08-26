@@ -1,6 +1,6 @@
 module go.opentelemetry.io/contrib/instrumentation/runtime
 
-go 1.16
+go 1.18
 
 replace go.opentelemetry.io/contrib => ../..
 
