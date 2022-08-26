@@ -33,7 +33,7 @@ import (
 	"go.opentelemetry.io/otel/attribute"
 	"go.opentelemetry.io/otel/baggage"
 	"go.opentelemetry.io/otel/codes"
-	semconv "go.opentelemetry.io/otel/semconv/v1.10.0"
+	semconv "go.opentelemetry.io/otel/semconv/v1.12.0"
 	"go.opentelemetry.io/otel/trace"
 )
 
@@ -73,10 +73,19 @@ func UnaryClientInterceptor(opts ...Option) grpc.UnaryClientInterceptor {
 		invoker grpc.UnaryInvoker,
 		callOpts ...grpc.CallOption,
 	) error {
+		cfg := newConfig(opts)
+		i := &InterceptorInfo{
+			Method: method,
+			Typ:    UnaryClient,
+		}
+		if cfg.Filter != nil && !cfg.Filter(i) {
+			return invoker(ctx, method, req, reply, cc, callOpts...)
+		}
+
 		requestMetadata, _ := metadata.FromOutgoingContext(ctx)
 		metadataCopy := requestMetadata.Copy()
 
-		tracer := newConfig(opts).TracerProvider.Tracer(
+		tracer := cfg.TracerProvider.Tracer(
 			instrumentationName,
 			trace.WithInstrumentationVersion(SemVersion()),
 		)
@@ -243,10 +252,19 @@ func StreamClientInterceptor(opts ...Option) grpc.StreamClientInterceptor {
 		streamer grpc.Streamer,
 		callOpts ...grpc.CallOption,
 	) (grpc.ClientStream, error) {
+		cfg := newConfig(opts)
+		i := &InterceptorInfo{
+			Method: method,
+			Typ:    StreamClient,
+		}
+		if cfg.Filter != nil && !cfg.Filter(i) {
+			return streamer(ctx, desc, cc, method, callOpts...)
+		}
+
 		requestMetadata, _ := metadata.FromOutgoingContext(ctx)
 		metadataCopy := requestMetadata.Copy()
 
-		tracer := newConfig(opts).TracerProvider.Tracer(
+		tracer := cfg.TracerProvider.Tracer(
 			instrumentationName,
 			trace.WithInstrumentationVersion(SemVersion()),
 		)
@@ -300,13 +318,22 @@ func UnaryServerInterceptor(opts ...Option) grpc.UnaryServerInterceptor {
 		info *grpc.UnaryServerInfo,
 		handler grpc.UnaryHandler,
 	) (interface{}, error) {
+		cfg := newConfig(opts)
+		i := &InterceptorInfo{
+			UnaryServerInfo: info,
+			Typ:             UnaryServer,
+		}
+		if cfg.Filter != nil && !cfg.Filter(i) {
+			return handler(ctx, req)
+		}
+
 		requestMetadata, _ := metadata.FromIncomingContext(ctx)
 		metadataCopy := requestMetadata.Copy()
 
 		bags, spanCtx := Extract(ctx, &metadataCopy, opts...)
 		ctx = baggage.ContextWithBaggage(ctx, bags)
 
-		tracer := newConfig(opts).TracerProvider.Tracer(
+		tracer := cfg.TracerProvider.Tracer(
 			instrumentationName,
 			trace.WithInstrumentationVersion(SemVersion()),
 		)
@@ -388,6 +415,14 @@ func StreamServerInterceptor(opts ...Option) grpc.StreamServerInterceptor {
 		handler grpc.StreamHandler,
 	) error {
 		ctx := ss.Context()
+		cfg := newConfig(opts)
+		i := &InterceptorInfo{
+			StreamServerInfo: info,
+			Typ:              StreamServer,
+		}
+		if cfg.Filter != nil && !cfg.Filter(i) {
+			return handler(srv, wrapServerStream(ctx, ss))
+		}
 
 		requestMetadata, _ := metadata.FromIncomingContext(ctx)
 		metadataCopy := requestMetadata.Copy()
@@ -395,7 +430,7 @@ func StreamServerInterceptor(opts ...Option) grpc.StreamServerInterceptor {
 		bags, spanCtx := Extract(ctx, &metadataCopy, opts...)
 		ctx = baggage.ContextWithBaggage(ctx, bags)
 
-		tracer := newConfig(opts).TracerProvider.Tracer(
+		tracer := cfg.TracerProvider.Tracer(
 			instrumentationName,
 			trace.WithInstrumentationVersion(SemVersion()),
 		)
@@ -459,7 +494,7 @@ func peerFromCtx(ctx context.Context) string {
 	return p.Addr.String()
 }
 
-// statusCodeAttr returns status code attribute based on given gRPC code
+// statusCodeAttr returns status code attribute based on given gRPC code.
 func statusCodeAttr(c grpc_codes.Code) attribute.KeyValue {
 	return GRPCStatusCodeKey.Int64(int64(c))
 }

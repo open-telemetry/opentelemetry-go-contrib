@@ -27,22 +27,22 @@ import (
 	"go.opentelemetry.io/otel/propagation"
 	"go.opentelemetry.io/otel/sdk/resource"
 	sdktrace "go.opentelemetry.io/otel/sdk/trace"
-	semconv "go.opentelemetry.io/otel/semconv/v1.10.0"
+	semconv "go.opentelemetry.io/otel/semconv/v1.12.0"
 	"go.opentelemetry.io/otel/trace"
 )
 
-type ExampleController struct {
+type exampleController struct {
 	beego.Controller
 }
 
-func (c *ExampleController) Get() {
+func (c *exampleController) Get() {
 	ctx := c.Ctx.Request.Context()
 	span := trace.SpanFromContext(ctx)
 	span.AddEvent("handling this...")
 	c.Ctx.WriteString("Hello, world!")
 }
 
-func (c *ExampleController) Template() {
+func (c *exampleController) Template() {
 	c.TplName = "hello.tpl"
 	// Render the template file with tracing enabled
 	if err := otelbeego.Render(&c.Controller); err != nil {
@@ -50,12 +50,12 @@ func (c *ExampleController) Template() {
 	}
 }
 
-func initTracer() *sdktrace.TracerProvider {
+func initTracer() (*sdktrace.TracerProvider, error) {
 	// Create stdout exporter to be able to retrieve
 	// the collected spans.
 	exporter, err := stdout.New(stdout.WithPrettyPrint())
 	if err != nil {
-		log.Fatal(err)
+		return nil, err
 	}
 
 	// For the demonstration, use sdktrace.AlwaysSample sampler to sample all traces.
@@ -66,11 +66,14 @@ func initTracer() *sdktrace.TracerProvider {
 		sdktrace.WithResource(resource.NewWithAttributes(semconv.SchemaURL, semconv.ServiceNameKey.String("ExampleService"))))
 	otel.SetTracerProvider(tp)
 	otel.SetTextMapPropagator(propagation.NewCompositeTextMapPropagator(propagation.TraceContext{}, propagation.Baggage{}))
-	return tp
+	return tp, nil
 }
 
 func main() {
-	tp := initTracer()
+	tp, err := initTracer()
+	if err != nil {
+		log.Fatal(err)
+	}
 	defer func() {
 		if err := tp.Shutdown(context.Background()); err != nil {
 			log.Printf("Error shutting down tracer provider: %v", err)
@@ -80,11 +83,10 @@ func main() {
 	// To enable tracing on template rendering, disable autorender
 	beego.BConfig.WebConfig.AutoRender = false
 
-	beego.Router("/hello", &ExampleController{})
-	beego.Router("/", &ExampleController{}, "get:Template")
+	beego.Router("/hello", &exampleController{})
+	beego.Router("/", &exampleController{}, "get:Template")
 
 	mware := otelbeego.NewOTelBeegoMiddleWare("beego-example")
 
 	beego.RunWithMiddleWares(":7777", mware)
-
 }

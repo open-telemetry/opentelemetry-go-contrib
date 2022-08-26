@@ -19,7 +19,7 @@ import (
 	"net"
 
 	"go.opentelemetry.io/otel/attribute"
-	semconv "go.opentelemetry.io/otel/semconv/v1.10.0"
+	semconv "go.opentelemetry.io/otel/semconv/v1.12.0"
 )
 
 const (
@@ -52,9 +52,10 @@ const (
 	// made for the query in question.
 	CassQueryAttemptsKey = attribute.Key("db.cassandra.attempts")
 
-	// Static span names
+	// CassBatchQueryName is the batch operation span name.
 	CassBatchQueryName = "Batch Query"
-	CassConnectName    = "New Connection"
+	// CassConnectName is the connect operation span name.
+	CassConnectName = "New Connection"
 
 	// InstrumentationName is the name of the instrumentation package.
 	InstrumentationName = "go.opentelemetry.io/contrib/instrumentation/github.com/gocql/gocql/otelgocql"

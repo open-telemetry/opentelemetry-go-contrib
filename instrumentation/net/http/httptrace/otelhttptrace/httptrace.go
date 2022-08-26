@@ -22,7 +22,7 @@ import (
 	"go.opentelemetry.io/otel/attribute"
 	"go.opentelemetry.io/otel/baggage"
 	"go.opentelemetry.io/otel/propagation"
-	semconv "go.opentelemetry.io/otel/semconv/v1.10.0"
+	semconv "go.opentelemetry.io/otel/semconv/v1.12.0"
 	"go.opentelemetry.io/otel/trace"
 )
 
@@ -50,7 +50,7 @@ func newConfig(opts []Option) *config {
 	return c
 }
 
-// WithPropagators sets the propagators to use for Extraction and Injection
+// WithPropagators sets the propagators to use for Extraction and Injection.
 func WithPropagators(props propagation.TextMapPropagator) Option {
 	return optionFunc(func(c *config) {
 		if props != nil {
@@ -72,6 +72,8 @@ func Extract(ctx context.Context, req *http.Request, opts ...Option) ([]attribut
 	return attrs, baggage.FromContext(ctx), trace.SpanContextFromContext(ctx)
 }
 
+// Inject sets attributes, context entries, and span context from ctx into
+// the request.
 func Inject(ctx context.Context, req *http.Request, opts ...Option) {
 	c := newConfig(opts)
 	c.propagators.Inject(ctx, propagation.HeaderCarrier(req.Header))

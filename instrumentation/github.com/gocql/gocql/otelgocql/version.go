@@ -16,7 +16,7 @@ package otelgocql // import "go.opentelemetry.io/contrib/instrumentation/github.
 
 // Version is the current release version of the gocql instrumentation.
 func Version() string {
-	return "0.32.0"
+	return "0.34.0"
 	// This string is updated by the pre_release.sh script during release
 }
 

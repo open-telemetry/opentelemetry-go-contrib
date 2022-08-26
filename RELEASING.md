@@ -7,7 +7,7 @@ release using this tool for this repository.
 
 ## Start a release
 
-First, decide which module sets will have their versions chagned and what those
+First, decide which module sets will have their versions changed and what those
 versions will be. If you are making a release to upgrade the upstream
 go.opentelemetry.io/otel packages, all module sets will likely need to be
 released.
@@ -74,7 +74,7 @@ Finally, commit this change to your release branch.
 ### Make a Pull Request
 
 Push your release branch and create a pull request for the changes. Be sure to
-include the curated chagnes your included in the changelog in the description.
+include the curated changes your included in the changelog in the description.
 Especially include the change PR references, as this will help show viewers of
 the repository looking at these PRs that they are included in the release.
 

@@ -19,7 +19,6 @@ import (
 	"context"
 	"errors"
 	"io"
-	"io/ioutil"
 	"net/http"
 	"net/http/httptest"
 	"strings"
@@ -99,7 +98,6 @@ func TestTransportFormatter(t *testing.T) {
 			}
 		})
 	}
-
 }
 
 func TestTransportBasics(t *testing.T) {
@@ -138,7 +136,7 @@ func TestTransportBasics(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	body, err := ioutil.ReadAll(res.Body)
+	body, err := io.ReadAll(res.Body)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -184,7 +182,7 @@ func TestNilTransport(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	body, err := ioutil.ReadAll(res.Body)
+	body, err := io.ReadAll(res.Body)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -229,7 +227,7 @@ func (s *span) SetStatus(c codes.Code, d string) {
 	s.statusCode, s.statusDesc = c, d
 }
 
-func (s *span) assert(t *testing.T, ended bool, err error, c codes.Code, d string) {
+func (s *span) assert(t *testing.T, ended bool, err error, c codes.Code, d string) { // nolint: revive  // ended is not a control flag.
 	if ended {
 		assert.True(t, s.ended, "not ended")
 	} else {

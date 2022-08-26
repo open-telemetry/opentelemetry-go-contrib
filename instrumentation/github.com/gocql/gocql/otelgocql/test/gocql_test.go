@@ -35,7 +35,7 @@ import (
 	"go.opentelemetry.io/otel/sdk/metric/number"
 	sdktrace "go.opentelemetry.io/otel/sdk/trace"
 	"go.opentelemetry.io/otel/sdk/trace/tracetest"
-	semconv "go.opentelemetry.io/otel/semconv/v1.10.0"
+	semconv "go.opentelemetry.io/otel/semconv/v1.12.0"
 	"go.opentelemetry.io/otel/trace"
 )
 
@@ -61,7 +61,7 @@ type testRecord struct {
 }
 
 func TestQuery(t *testing.T) {
-	defer afterEach()
+	defer afterEach(t)
 	cluster := getCluster()
 	sr := tracetest.NewSpanRecorder()
 	tracerProvider := sdktrace.NewTracerProvider(sdktrace.WithSpanProcessor(sr))
@@ -100,7 +100,6 @@ func TestQuery(t *testing.T) {
 
 	// Verify attributes are correctly added to the spans. Omit the one local span
 	for _, span := range spans[0 : len(spans)-1] {
-
 		switch span.Name() {
 		case insertStmt:
 			assert.Contains(t, span.Attributes(), semconv.DBStatementKey.String(insertStmt))
@@ -176,11 +175,10 @@ func TestQuery(t *testing.T) {
 			t.Fatalf("wrong metric %s", record.name)
 		}
 	}
-
 }
 
 func TestBatch(t *testing.T) {
-	defer afterEach()
+	defer afterEach(t)
 	cluster := getCluster()
 	sr := tracetest.NewSpanRecorder()
 	tracerProvider := sdktrace.NewTracerProvider(sdktrace.WithSpanProcessor(sr))
@@ -269,11 +267,10 @@ func TestBatch(t *testing.T) {
 			t.Fatalf("wrong metric %s", record.name)
 		}
 	}
-
 }
 
 func TestConnection(t *testing.T) {
-	defer afterEach()
+	defer afterEach(t)
 	cluster := getCluster()
 	sr := tracetest.NewSpanRecorder()
 	tracerProvider := sdktrace.NewTracerProvider(sdktrace.WithSpanProcessor(sr))
@@ -332,18 +329,18 @@ func TestConnection(t *testing.T) {
 
 func TestHostOrIP(t *testing.T) {
 	hostAndPort := "127.0.0.1:9042"
-	attribute := internal.HostOrIP(hostAndPort)
-	assert.Equal(t, semconv.NetPeerIPKey, attribute.Key)
-	assert.Equal(t, "127.0.0.1", attribute.Value.AsString())
+	attr := internal.HostOrIP(hostAndPort)
+	assert.Equal(t, semconv.NetPeerIPKey, attr.Key)
+	assert.Equal(t, "127.0.0.1", attr.Value.AsString())
 
 	hostAndPort = "exampleHost:9042"
-	attribute = internal.HostOrIP(hostAndPort)
-	assert.Equal(t, semconv.NetPeerNameKey, attribute.Key)
-	assert.Equal(t, "exampleHost", attribute.Value.AsString())
+	attr = internal.HostOrIP(hostAndPort)
+	assert.Equal(t, semconv.NetPeerNameKey, attr.Key)
+	assert.Equal(t, "exampleHost", attr.Value.AsString())
 
 	hostAndPort = "invalid-host-and-port-string"
-	attribute = internal.HostOrIP(hostAndPort)
-	require.Empty(t, attribute.Value.AsString())
+	attr = internal.HostOrIP(hostAndPort)
+	require.Empty(t, attr.Value.AsString())
 }
 
 func assertConnectionLevelAttributes(t *testing.T, span sdktrace.ReadOnlySpan) {
@@ -373,7 +370,7 @@ func getCluster() *gocql.ClusterConfig {
 }
 
 // obtainTestRecords creates a slice of testRecord with values
-// obtained from measurements
+// obtained from measurements.
 func obtainTestRecords(mers []metrictest.ExportRecord) []testRecord {
 	var records []testRecord
 	for _, mer := range mers {
@@ -407,13 +404,13 @@ func recordEqual(t *testing.T, expected testRecord, actual testRecord) {
 	assert.Equal(t, expected.meterName, actual.meterName)
 	require.Len(t, actual.attributes, len(expected.attributes))
 	actualSet := attribute.NewSet(actual.attributes...)
-	for _, attribute := range expected.attributes {
-		actualValue, ok := actualSet.Value(attribute.Key)
+	for _, attr := range expected.attributes {
+		actualValue, ok := actualSet.Value(attr.Key)
 		assert.True(t, ok)
 		assert.NotNil(t, actualValue)
 		// Can't test equality of host id
-		if attribute.Key != internal.CassHostIDKey && attribute.Key != internal.CassVersionKey {
-			assert.Equal(t, attribute.Value, actualValue)
+		if attr.Key != internal.CassHostIDKey && attr.Key != internal.CassVersionKey {
+			assert.Equal(t, attr.Value, actualValue)
 		} else {
 			assert.NotEmpty(t, actualValue)
 		}
@@ -421,14 +418,14 @@ func recordEqual(t *testing.T, expected testRecord, actual testRecord) {
 }
 
 // beforeAll creates the testing keyspace and table if they do not already exist.
-func beforeAll() {
+func beforeAll() error {
 	cluster := gocql.NewCluster("localhost")
 	cluster.Consistency = gocql.LocalQuorum
 	cluster.Keyspace = "system"
 
 	session, err := cluster.CreateSession()
 	if err != nil {
-		log.Fatalf("failed to connect to database during beforeAll, %v", err)
+		return fmt.Errorf("failed to connect to database during beforeAll, %v", err)
 	}
 
 	err = session.Query(
@@ -438,41 +435,44 @@ func beforeAll() {
 		),
 	).Exec()
 	if err != nil {
-		log.Fatal(err)
+		return err
 	}
 
 	cluster.Keyspace = keyspace
 	cluster.Timeout = time.Second * 2
 	session, err = cluster.CreateSession()
 	if err != nil {
-		log.Fatal(err)
+		return err
 	}
 
 	err = session.Query(
 		fmt.Sprintf("create table if not exists %s(id UUID, title text, PRIMARY KEY(id))", tableName),
 	).Exec()
 	if err != nil {
-		log.Fatal(err)
+		return err
 	}
+	return nil
 }
 
 // afterEach truncates the table used for testing.
-func afterEach() {
+func afterEach(t *testing.T) {
 	cluster := gocql.NewCluster("localhost")
 	cluster.Consistency = gocql.LocalQuorum
 	cluster.Keyspace = keyspace
 	cluster.Timeout = time.Second * 2
 	session, err := cluster.CreateSession()
 	if err != nil {
-		log.Fatalf("failed to connect to database during afterEach, %v", err)
+		t.Fatalf("failed to connect to database during afterEach, %v", err)
 	}
 	if err = session.Query(fmt.Sprintf("truncate table %s", tableName)).Exec(); err != nil {
-		log.Fatalf("failed to truncate table, %v", err)
+		t.Fatalf("failed to truncate table, %v", err)
 	}
 }
 
 func TestMain(m *testing.M) {
 	util.IntegrationShouldRun("test-gocql")
-	beforeAll()
+	if err := beforeAll(); err != nil {
+		log.Fatal(err)
+	}
 	os.Exit(m.Run())
 }

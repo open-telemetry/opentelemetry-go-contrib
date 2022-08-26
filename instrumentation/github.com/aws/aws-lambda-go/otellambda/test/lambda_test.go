@@ -40,7 +40,7 @@ import (
 	"go.opentelemetry.io/otel/sdk/resource"
 	sdktrace "go.opentelemetry.io/otel/sdk/trace"
 	"go.opentelemetry.io/otel/sdk/trace/tracetest"
-	semconv "go.opentelemetry.io/otel/semconv/v1.10.0"
+	semconv "go.opentelemetry.io/otel/semconv/v1.12.0"
 	"go.opentelemetry.io/otel/trace"
 )
 
@@ -105,7 +105,7 @@ func setEnvVars() {
 	_ = os.Setenv("_X_AMZN_TRACE_ID", "Root=1-5759e988-bd862e3fe1be46a994272793;Parent=53995c3f42cd8ad8;Sampled=1")
 }
 
-// Vars for Tracing and TracingWithFlusher Tests
+// Vars for Tracing and TracingWithFlusher Tests.
 var (
 	mockLambdaContext = lambdacontext.LambdaContext{
 		AwsRequestID:       "123",
@@ -297,7 +297,7 @@ type mockRequest struct {
 	Headers map[string]string
 }
 
-// Vars for mockPropagator Tests
+// Vars for mockPropagator Tests.
 var (
 	mockPropagatorTestsTraceIDHex = "12345678901234567890123456789012"
 	mockPropagatorTestsSpanIDHex  = "1234567890123456"
@@ -352,7 +352,6 @@ func mockRequestCarrier(eventJSON []byte) propagation.TextMapCarrier {
 }
 
 func TestInstrumentHandlerTracingWithMockPropagator(t *testing.T) {
-
 	setEnvVars()
 	tp, memExporter := initMockTracerProvider()
 

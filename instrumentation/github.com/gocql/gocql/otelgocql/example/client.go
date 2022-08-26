@@ -57,10 +57,17 @@ const keyspace = "gocql_integration_example"
 var wg sync.WaitGroup
 
 func main() {
-	initMetrics()
-	tp := initTracer()
-	defer func() { tp.Shutdown(context.Background()) }() //nolint:errcheck
-	initDb()
+	if err := initMetrics(); err != nil {
+		log.Fatalf("failed to install metric exporter, %v", err)
+	}
+	tp, err := initTracer()
+	if err != nil {
+		log.Fatalf("failed to create zipkin exporter: %s", err)
+	}
+	defer func() { tp.Shutdown(context.Background()) }() //nolint:revive,errcheck
+	if err := initDb(); err != nil {
+		log.Fatal(err)
+	}
 
 	ctx, span := otel.Tracer(
 		"go.opentelemetry.io/contrib/instrumentation/github.com/gocql/gocql/otelgocql/example",
@@ -117,7 +124,7 @@ func main() {
 	wg.Wait()
 }
 
-func initMetrics() {
+func initMetrics() error {
 	// Start prometheus
 	cont := controller.New(
 		processor.NewFactory(
@@ -130,7 +137,7 @@ func initMetrics() {
 	)
 	metricExporter, err := prometheus.New(prometheus.Config{}, cont)
 	if err != nil {
-		log.Fatalf("failed to install metric exporter, %v", err)
+		return err
 	}
 	global.SetMeterProvider(metricExporter.MeterProvider())
 
@@ -157,51 +164,50 @@ func initMetrics() {
 			log.Printf("error stopping metric controller: %s", err)
 		}
 	}()
+	return nil
 }
 
-func initTracer() *trace.TracerProvider {
+func initTracer() (*trace.TracerProvider, error) {
 	exporter, err := zipkintrace.New("http://localhost:9411/api/v2/spans")
 	if err != nil {
-		log.Fatalf("failed to create zipkin exporter: %s", err)
+		return nil, err
 	}
 
 	tp := trace.NewTracerProvider(trace.WithBatcher(exporter))
 	otel.SetTracerProvider(tp)
 
-	return tp
+	return tp, nil
 }
 
-func initDb() {
+func initDb() error {
 	cluster := gocql.NewCluster("127.0.0.1")
 	cluster.Keyspace = "system"
 	cluster.Consistency = gocql.LocalQuorum
 	cluster.Timeout = time.Second * 2
 	session, err := cluster.CreateSession()
 	if err != nil {
-		log.Fatal(err)
+		return err
 	}
 	stmt := fmt.Sprintf(
 		"create keyspace if not exists %s with replication = { 'class' : 'SimpleStrategy', 'replication_factor' : 1 }",
 		keyspace,
 	)
 	if err := session.Query(stmt).Exec(); err != nil {
-		log.Fatal(err)
+		return err
 	}
 
 	cluster.Keyspace = keyspace
 	session, err = cluster.CreateSession()
 	if err != nil {
-		log.Fatal(err)
+		return err
 	}
 
 	stmt = "create table if not exists book(id UUID, title text, author_first_name text, author_last_name text, PRIMARY KEY(id))"
 	if err = session.Query(stmt).Exec(); err != nil {
-		log.Fatal(err)
+		return err
 	}
 
-	if err := session.Query("create index if not exists on book(author_last_name)").Exec(); err != nil {
-		log.Fatal(err)
-	}
+	return session.Query("create index if not exists on book(author_last_name)").Exec()
 }
 
 func getCluster() *gocql.ClusterConfig {

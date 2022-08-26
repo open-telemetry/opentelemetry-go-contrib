@@ -19,7 +19,6 @@ import (
 	"errors"
 	"io"
 	"strings"
-	"sync"
 	"testing"
 	"time"
 
@@ -29,7 +28,7 @@ import (
 	"go.opentelemetry.io/otel/codes"
 	"go.opentelemetry.io/otel/sdk/trace"
 	"go.opentelemetry.io/otel/sdk/trace/tracetest"
-	semconv "go.opentelemetry.io/otel/semconv/v1.10.0"
+	semconv "go.opentelemetry.io/otel/semconv/v1.12.0"
 
 	"github.com/golang/protobuf/proto" //nolint:staticcheck
 	"github.com/stretchr/testify/assert"
@@ -41,60 +40,6 @@ import (
 	"google.golang.org/grpc/metadata"
 	"google.golang.org/grpc/status"
 )
-
-type SpanRecorder struct {
-	startedMu sync.RWMutex
-	started   []trace.ReadWriteSpan
-
-	endedMu sync.RWMutex
-	ended   []trace.ReadOnlySpan
-}
-
-func NewSpanRecorder() *SpanRecorder {
-	return new(SpanRecorder)
-}
-
-// OnStart records started spans.
-func (sr *SpanRecorder) OnStart(_ context.Context, s trace.ReadWriteSpan) {
-	sr.startedMu.Lock()
-	defer sr.startedMu.Unlock()
-	sr.started = append(sr.started, s)
-}
-
-// OnEnd records completed spans.
-func (sr *SpanRecorder) OnEnd(s trace.ReadOnlySpan) {
-	sr.endedMu.Lock()
-	defer sr.endedMu.Unlock()
-	sr.ended = append(sr.ended, s)
-}
-
-// Shutdown does nothing.
-func (sr *SpanRecorder) Shutdown(context.Context) error {
-	return nil
-}
-
-// ForceFlush does nothing.
-func (sr *SpanRecorder) ForceFlush(context.Context) error {
-	return nil
-}
-
-// Started returns a copy of all started spans that have been recorded.
-func (sr *SpanRecorder) Started() []trace.ReadWriteSpan {
-	sr.startedMu.RLock()
-	defer sr.startedMu.RUnlock()
-	dst := make([]trace.ReadWriteSpan, len(sr.started))
-	copy(dst, sr.started)
-	return dst
-}
-
-// Ended returns a copy of all ended spans that have been recorded.
-func (sr *SpanRecorder) Ended() []trace.ReadOnlySpan {
-	sr.endedMu.RLock()
-	defer sr.endedMu.RUnlock()
-	dst := make([]trace.ReadOnlySpan, len(sr.ended))
-	copy(dst, sr.ended)
-	return dst
-}
 
 func getSpanFromRecorder(sr *tracetest.SpanRecorder, name string) (trace.ReadOnlySpan, bool) {
 	for _, s := range sr.Ended() {
@@ -525,7 +470,7 @@ func TestStreamClientInterceptorOnUnidirectionalClientServerStream(t *testing.T)
 }
 
 // TestStreamClientInterceptorCancelContext tests a cancel context situation.
-// There should be no goleaks
+// There should be no goleaks.
 func TestStreamClientInterceptorCancelContext(t *testing.T) {
 	defer goleak.VerifyNone(t)
 	clientConn, err := grpc.Dial("fake:connection", grpc.WithTransportCredentials(insecure.NewCredentials()))
@@ -646,13 +591,14 @@ func TestServerInterceptorError(t *testing.T) {
 	}
 	assert.Equal(t, codes.Error, span.Status().Code)
 	assert.Contains(t, deniedErr.Error(), span.Status().Description)
-	var codeAttr *attribute.KeyValue
+	var codeAttr attribute.KeyValue
 	for _, a := range span.Attributes() {
 		if a.Key == otelgrpc.GRPCStatusCodeKey {
-			codeAttr = &a
+			codeAttr = a
+			break
 		}
 	}
-	if assert.NotNil(t, codeAttr, "attributes contain gRPC status code") {
+	if assert.True(t, codeAttr.Valid(), "attributes contain gRPC status code") {
 		assert.Equal(t, attribute.Int64Value(int64(grpc_codes.PermissionDenied)), codeAttr.Value)
 	}
 	assert.Len(t, span.Events(), 2)

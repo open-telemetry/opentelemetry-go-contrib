@@ -24,7 +24,7 @@ import (
 
 	"go.opentelemetry.io/otel/attribute"
 	"go.opentelemetry.io/otel/sdk/resource"
-	semconv "go.opentelemetry.io/otel/semconv/v1.10.0"
+	semconv "go.opentelemetry.io/otel/semconv/v1.12.0"
 )
 
 const serviceNamespace = "cloud-run-managed"
@@ -38,6 +38,7 @@ type metadataClient interface {
 }
 
 // CloudRun collects resource information of Cloud Run instance.
+// Deprecated: Use gcp.NewDetector() instead. Note that it sets faas.* resource attributes instead of service.* attributes.
 type CloudRun struct {
 	mc     metadataClient
 	onGCE  func() bool
@@ -49,6 +50,7 @@ type CloudRun struct {
 var _ resource.Detector = (*CloudRun)(nil)
 
 // NewCloudRun creates a CloudRun detector.
+// Deprecated: Use gcp.NewDetector() instead. Note that it sets faas.* resource attributes instead of service.* attributes.
 func NewCloudRun() *CloudRun {
 	return &CloudRun{
 		mc:     metadata.NewClient(nil),
