@@ -47,9 +47,7 @@
 // Name                                                    Unit          Instrument
 // ------------------------------------------------------------------------------------
 // process.runtime.go.cgo.go-to-c-calls                    {calls}       Counter[int64]
-// process.runtime.go.gc.cycles.automatic                  {gc-cycles}   Counter[int64]
-// process.runtime.go.gc.cycles.forced                     {gc-cycles}   Counter[int64]
-// process.runtime.go.gc.cycles                            {gc-cycles}   Counter[int64]
+// process.runtime.go.gc.cycles{cycle=forced,automatic}    {gc-cycles}   Counter[int64]
 // process.runtime.go.gc.heap.allocs                       bytes (*)     Counter[int64]
 // process.runtime.go.gc.heap.allocs.objects               {objects} (*) Counter[int64]
 // process.runtime.go.gc.heap.allocs-by-size               bytes         Histogram[float64] (**)
@@ -62,20 +60,7 @@
 // process.runtime.go.gc.limiter.last-enabled              {gc-cycle}    UpDownCounter[int64]
 // process.runtime.go.gc.pauses                            seconds       Histogram[float64] (**)
 // process.runtime.go.gc.stack.starting-size               bytes         UpDownCounter[int64]
-// process.runtime.go.memory.classes.heap.free             bytes         UpDownCounter[int64]
-// process.runtime.go.memory.classes.heap.objects          bytes         UpDownCounter[int64]
-// process.runtime.go.memory.classes.heap.released         bytes         UpDownCounter[int64]
-// process.runtime.go.memory.classes.heap.stacks           bytes         UpDownCounter[int64]
-// process.runtime.go.memory.classes.heap.unused           bytes         UpDownCounter[int64]
-// process.runtime.go.memory.classes.metadata.mcache.free  bytes         UpDownCounter[int64]
-// process.runtime.go.memory.classes.metadata.mcache.inuse bytes         UpDownCounter[int64]
-// process.runtime.go.memory.classes.metadata.mspan.free   bytes         UpDownCounter[int64]
-// process.runtime.go.memory.classes.metadata.mspan.inuse  bytes         UpDownCounter[int64]
-// process.runtime.go.memory.classes.metadata.other        bytes         UpDownCounter[int64]
-// process.runtime.go.memory.classes.os-stacks             bytes         UpDownCounter[int64]
-// process.runtime.go.memory.classes.other                 bytes         UpDownCounter[int64]
-// process.runtime.go.memory.classes.profiling.buckets     bytes         UpDownCounter[int64]
-// process.runtime.go.memory.classes                       bytes         UpDownCounter[int64]
+// process.runtime.go.memory.classes{class=...}            bytes         UpDownCounter[int64]
 // process.runtime.go.sched.gomaxprocs                     {threads}     UpDownCounter[int64]
 // process.runtime.go.sched.goroutines                     {goroutines}  UpDownCounter[int64]
 // process.runtime.go.sched.latencies                      seconds       GaugeHistogram[float64] (**)
