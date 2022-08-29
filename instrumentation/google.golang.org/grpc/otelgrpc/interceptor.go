@@ -65,6 +65,7 @@ var (
 // UnaryClientInterceptor returns a grpc.UnaryClientInterceptor suitable
 // for use in a grpc.Dial call.
 func UnaryClientInterceptor(opts ...Option) grpc.UnaryClientInterceptor {
+	cfg := newConfig(opts)
 	return func(
 		ctx context.Context,
 		method string,
@@ -73,7 +74,6 @@ func UnaryClientInterceptor(opts ...Option) grpc.UnaryClientInterceptor {
 		invoker grpc.UnaryInvoker,
 		callOpts ...grpc.CallOption,
 	) error {
-		cfg := newConfig(opts)
 		i := &InterceptorInfo{
 			Method: method,
 			Typ:    UnaryClient,
@@ -100,7 +100,7 @@ func UnaryClientInterceptor(opts ...Option) grpc.UnaryClientInterceptor {
 		)
 		defer span.End()
 
-		Inject(ctx, &metadataCopy, opts...)
+		inject(ctx, &metadataCopy, cfg.Propagators)
 		ctx = metadata.NewOutgoingContext(ctx, metadataCopy)
 
 		messageSent.Event(ctx, 1, req)
@@ -244,6 +244,7 @@ func (w *clientStream) sendStreamEvent(eventType streamEventType, err error) {
 // StreamClientInterceptor returns a grpc.StreamClientInterceptor suitable
 // for use in a grpc.Dial call.
 func StreamClientInterceptor(opts ...Option) grpc.StreamClientInterceptor {
+	cfg := newConfig(opts)
 	return func(
 		ctx context.Context,
 		desc *grpc.StreamDesc,
@@ -252,7 +253,6 @@ func StreamClientInterceptor(opts ...Option) grpc.StreamClientInterceptor {
 		streamer grpc.Streamer,
 		callOpts ...grpc.CallOption,
 	) (grpc.ClientStream, error) {
-		cfg := newConfig(opts)
 		i := &InterceptorInfo{
 			Method: method,
 			Typ:    StreamClient,
@@ -278,7 +278,7 @@ func StreamClientInterceptor(opts ...Option) grpc.StreamClientInterceptor {
 			trace.WithAttributes(attr...),
 		)
 
-		Inject(ctx, &metadataCopy, opts...)
+		inject(ctx, &metadataCopy, cfg.Propagators)
 		ctx = metadata.NewOutgoingContext(ctx, metadataCopy)
 
 		s, err := streamer(ctx, desc, cc, method, callOpts...)
@@ -312,13 +312,13 @@ func StreamClientInterceptor(opts ...Option) grpc.StreamClientInterceptor {
 // UnaryServerInterceptor returns a grpc.UnaryServerInterceptor suitable
 // for use in a grpc.NewServer call.
 func UnaryServerInterceptor(opts ...Option) grpc.UnaryServerInterceptor {
+	cfg := newConfig(opts)
 	return func(
 		ctx context.Context,
 		req interface{},
 		info *grpc.UnaryServerInfo,
 		handler grpc.UnaryHandler,
 	) (interface{}, error) {
-		cfg := newConfig(opts)
 		i := &InterceptorInfo{
 			UnaryServerInfo: info,
 			Typ:             UnaryServer,
@@ -408,6 +408,7 @@ func wrapServerStream(ctx context.Context, ss grpc.ServerStream) *serverStream {
 // StreamServerInterceptor returns a grpc.StreamServerInterceptor suitable
 // for use in a grpc.NewServer call.
 func StreamServerInterceptor(opts ...Option) grpc.StreamServerInterceptor {
+	cfg := newConfig(opts)
 	return func(
 		srv interface{},
 		ss grpc.ServerStream,
@@ -415,7 +416,6 @@ func StreamServerInterceptor(opts ...Option) grpc.StreamServerInterceptor {
 		handler grpc.StreamHandler,
 	) error {
 		ctx := ss.Context()
-		cfg := newConfig(opts)
 		i := &InterceptorInfo{
 			StreamServerInfo: info,
 			Typ:              StreamServer,
