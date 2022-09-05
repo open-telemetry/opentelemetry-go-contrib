@@ -17,6 +17,7 @@
 package otelgin // import "go.opentelemetry.io/contrib/instrumentation/github.com/gin-gonic/gin/otelgin"
 
 import (
+	"go.opentelemetry.io/otel/attribute"
 	"go.opentelemetry.io/otel/propagation"
 	oteltrace "go.opentelemetry.io/otel/trace"
 )
@@ -24,6 +25,7 @@ import (
 type config struct {
 	TracerProvider oteltrace.TracerProvider
 	Propagators    propagation.TextMapPropagator
+	Attributes     []attribute.KeyValue
 }
 
 // Option specifies instrumentation configuration options.
@@ -55,5 +57,12 @@ func WithTracerProvider(provider oteltrace.TracerProvider) Option {
 		if provider != nil {
 			cfg.TracerProvider = provider
 		}
+	})
+}
+
+// WithAttributes specifies a list of attributes which will be appended to each span.
+func WithAttributes(attrs ...attribute.KeyValue) Option {
+	return optionFunc(func(cfg *config) {
+		cfg.Attributes = attrs
 	})
 }
