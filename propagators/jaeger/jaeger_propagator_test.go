@@ -26,10 +26,11 @@ import (
 )
 
 var (
-	traceID        = trace.TraceID{0, 0, 0, 0, 0, 0, 0, 0, 0x7b, 0, 0, 0, 0, 0, 0x1, 0xc8}
-	traceID128Str  = "00000000000000007b000000000001c8"
+	traceID        = trace.TraceID{0, 0, 0, 0, 0, 0, 0, 0, 0xb, 0, 0, 0, 0, 0, 0x1, 0xc8}
+	traceID128Str  = "00000000000000000b000000000001c8"
 	zeroTraceIDStr = "00000000000000000000000000000000"
-	traceID64Str   = "7b000000000001c8"
+	traceID64Str   = "0b000000000001c8"
+	traceID60Str   = "b000000000001c8"
 	spanID         = trace.SpanID{0, 0, 0, 0, 0, 0, 0, 0x7b}
 	zeroSpanIDStr  = "0000000000000000"
 	spanIDStr      = "000000000000007b"
@@ -57,6 +58,16 @@ func TestJaeger_Extract(t *testing.T) {
 		},
 		{
 			traceID64Str, spanIDStr, deprecatedParentSpanID, "1",
+			trace.SpanContextConfig{
+				TraceID:    traceID,
+				SpanID:     spanID,
+				TraceFlags: trace.FlagsSampled,
+			},
+			nil,
+			false,
+		},
+		{
+			traceID60Str, spanIDStr, deprecatedParentSpanID, "1",
 			trace.SpanContextConfig{
 				TraceID:    traceID,
 				SpanID:     spanID,
@@ -124,7 +135,7 @@ func TestJaeger_Extract(t *testing.T) {
 			false,
 		},
 		{
-			"000000000007b00000000000001c8", spanIDStr, deprecatedParentSpanID, "1",
+			"0000000000000007b00000000000001c8", spanIDStr, deprecatedParentSpanID, "1",
 			trace.SpanContextConfig{},
 			errInvalidTraceIDLength,
 			false,
