@@ -137,7 +137,11 @@ func (s *metadataSupplier) Keys() []string {
 // requests.
 func Inject(ctx context.Context, md *metadata.MD, opts ...Option) {
 	c := newConfig(opts)
-	c.Propagators.Inject(ctx, &metadataSupplier{
+	inject(ctx, md, c.Propagators)
+}
+
+func inject(ctx context.Context, md *metadata.MD, propagators propagation.TextMapPropagator) {
+	propagators.Inject(ctx, &metadataSupplier{
 		metadata: md,
 	})
 }
@@ -147,7 +151,11 @@ func Inject(ctx context.Context, md *metadata.MD, opts ...Option) {
 // This function is meant to be used on incoming requests.
 func Extract(ctx context.Context, md *metadata.MD, opts ...Option) (baggage.Baggage, trace.SpanContext) {
 	c := newConfig(opts)
-	ctx = c.Propagators.Extract(ctx, &metadataSupplier{
+	return extract(ctx, md, c.Propagators)
+}
+
+func extract(ctx context.Context, md *metadata.MD, propagators propagation.TextMapPropagator) (baggage.Baggage, trace.SpanContext) {
+	ctx = propagators.Extract(ctx, &metadataSupplier{
 		metadata: md,
 	})
 
