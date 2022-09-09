@@ -26,7 +26,10 @@ import (
 	"github.com/stretchr/testify/assert"
 
 	"go.opentelemetry.io/otel"
+	"go.opentelemetry.io/otel/attribute"
 	"go.opentelemetry.io/otel/propagation"
+	sdktrace "go.opentelemetry.io/otel/sdk/trace"
+	"go.opentelemetry.io/otel/sdk/trace/tracetest"
 	"go.opentelemetry.io/otel/trace"
 
 	b3prop "go.opentelemetry.io/contrib/propagators/b3"
@@ -104,4 +107,40 @@ func TestPropagationWithCustomPropagators(t *testing.T) {
 	})
 
 	router.ServeHTTP(w, r)
+}
+
+func TestWithCustomSpanOptions(t *testing.T) {
+	spanRecorder := tracetest.NewSpanRecorder()
+	provider := sdktrace.NewTracerProvider(sdktrace.WithSpanProcessor(spanRecorder))
+	b3 := b3prop.New()
+
+	r := httptest.NewRequest("GET", "/user/123", nil)
+	w := httptest.NewRecorder()
+
+	attrs := trace.WithAttributes(
+		[]attribute.KeyValue{
+			attribute.String("foo", "bar"),
+		}...,
+	)
+
+	router := gin.New()
+	router.Use(Middleware("foobar", WithTracerProvider(provider), WithPropagators(b3), WithSpanOptions(attrs)))
+
+	router.GET("/user/:id", func(c *gin.Context) {
+		// it does not need anything
+	})
+
+	router.ServeHTTP(w, r)
+
+	spans := spanRecorder.Ended()
+
+	// check if "foo":"bar" pairs is in span's attributes
+	attr := attribute.KeyValue{}
+	for _, attr = range spans[0].Attributes() {
+		if attr.Key == "foo" {
+			break
+		}
+	}
+
+	assert.Equal(t, attr.Value.AsString(), "bar", "It should have foo bar attribute in the first span")
 }

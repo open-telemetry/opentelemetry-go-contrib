@@ -60,13 +60,15 @@ func Middleware(service string, opts ...Option) gin.HandlerFunc {
 			c.Request = c.Request.WithContext(savedCtx)
 		}()
 		ctx := cfg.Propagators.Extract(savedCtx, propagation.HeaderCarrier(c.Request.Header))
-		opts := []oteltrace.SpanStartOption{
-			oteltrace.WithAttributes(cfg.Attributes...),
-			oteltrace.WithAttributes(semconv.NetAttributesFromHTTPRequest("tcp", c.Request)...),
-			oteltrace.WithAttributes(semconv.EndUserAttributesFromHTTPRequest(c.Request)...),
-			oteltrace.WithAttributes(semconv.HTTPServerAttributesFromHTTPRequest(service, c.FullPath(), c.Request)...),
-			oteltrace.WithSpanKind(oteltrace.SpanKindServer),
-		}
+		opts := cfg.SpanStartOptions
+		opts = append(opts,
+			[]oteltrace.SpanStartOption{
+				oteltrace.WithAttributes(semconv.NetAttributesFromHTTPRequest("tcp", c.Request)...),
+				oteltrace.WithAttributes(semconv.EndUserAttributesFromHTTPRequest(c.Request)...),
+				oteltrace.WithAttributes(semconv.HTTPServerAttributesFromHTTPRequest(service, c.FullPath(), c.Request)...),
+				oteltrace.WithSpanKind(oteltrace.SpanKindServer),
+			}...,
+		)
 		spanName := c.FullPath()
 		if spanName == "" {
 			spanName = fmt.Sprintf("HTTP %s route not found", c.Request.Method)
