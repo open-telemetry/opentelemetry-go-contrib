@@ -16,7 +16,8 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 ### Fixed
 
 - Fix the Jaeger propagator rejecting trace IDs that are both shorter than 128 bits and not exactly 64 bits long (while not being 0).
-  This fixes compatibility with Jaeger clients encoding trace IDs as variable-length hex strings, [as required by the Jaeger propagation format](https://www.jaegertracing.io/docs/1.37/client-libraries/#value). (#2731)
+  Also fix the propagator rejecting span IDs shorter than 64 bits.
+  This fixes compatibility with Jaeger clients encoding trace and span IDs as variable-length hex strings, [as required by the Jaeger propagation format](https://www.jaegertracing.io/docs/1.37/client-libraries/#value). (#2731)
 
 ## [1.9.0/0.34.0/0.4.0] - 2022-08-02
 

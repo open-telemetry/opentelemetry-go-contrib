@@ -31,7 +31,7 @@ const (
 	traceID128bitsWidth = 128 / 4
 	spanIDWidth         = 64 / 4
 
-	traceIDPaddingChar = "0"
+	idPaddingChar = "0"
 
 	flagsDebug      = 0x02
 	flagsSampled    = 0x01
@@ -113,7 +113,7 @@ func extract(ctx context.Context, headerVal string) (context.Context, trace.Span
 		// padding when length is less than 32
 		if len(id) < traceID128bitsWidth {
 			padCharCount := traceID128bitsWidth - len(id)
-			id = strings.Repeat(traceIDPaddingChar, padCharCount) + id
+			id = strings.Repeat(idPaddingChar, padCharCount) + id
 		}
 		scc.TraceID, err = trace.TraceIDFromHex(id)
 		if err != nil {
@@ -124,8 +124,13 @@ func extract(ctx context.Context, headerVal string) (context.Context, trace.Span
 	// extract span ID
 	if parts[1] != "" {
 		id := parts[1]
-		if len(id) != spanIDWidth {
+		if len(id) > spanIDWidth {
 			return ctx, empty, errInvalidSpanIDLength
+		}
+		// padding when length is less than 16
+		if len(id) < spanIDWidth {
+			padCharCount := spanIDWidth - len(id)
+			id = strings.Repeat(idPaddingChar, padCharCount) + id
 		}
 		scc.SpanID, err = trace.SpanIDFromHex(id)
 		if err != nil {
