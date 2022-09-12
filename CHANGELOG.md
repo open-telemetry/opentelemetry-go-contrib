@@ -8,6 +8,8 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 
 ## [Unreleased]
 
+## [1.10.0/0.35.0/0.5.0]
+
 ### Changed
 
 - Rename the `Typ` field of `"go.opentelemetry.io/contrib/instrumentation/google.golang.org/grpc/otelgrpc".InterceptorInfo` to `Type`. (#2688)
@@ -538,7 +540,8 @@ First official tagged release of `contrib` repository.
 - Prefix support for dogstatsd (#34)
 - Update Go Runtime package to use batch observer (#44)
 
-[Unreleased]: https://github.com/open-telemetry/opentelemetry-go-contrib/compare/v1.9.0...HEAD
+[Unreleased]: https://github.com/open-telemetry/opentelemetry-go-contrib/compare/v1.10.0...HEAD
+[1.10.0/0.35.0/0.5.0]: https://github.com/open-telemetry/opentelemetry-go-contrib/releases/tag/v1.10.0
 [1.9.0/0.34.0/0.4.0]: https://github.com/open-telemetry/opentelemetry-go-contrib/releases/tag/v1.9.0
 [1.8.0/0.33.0]: https://github.com/open-telemetry/opentelemetry-go-contrib/releases/tag/v1.8.0
 [1.7.0/0.32.0]: https://github.com/open-telemetry/opentelemetry-go-contrib/releases/tag/v1.7.0
