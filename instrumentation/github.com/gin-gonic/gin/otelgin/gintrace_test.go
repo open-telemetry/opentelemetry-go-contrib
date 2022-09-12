@@ -21,6 +21,7 @@ import (
 	"net/http"
 	"net/http/httptest"
 	"testing"
+	"time"
 
 	"github.com/gin-gonic/gin"
 	"github.com/stretchr/testify/assert"
@@ -116,14 +117,26 @@ func TestWithCustomSpanOptions(t *testing.T) {
 	r := httptest.NewRequest("GET", "/user/123", nil)
 	w := httptest.NewRecorder()
 
-	opts := trace.WithAttributes(
-		[]attribute.KeyValue{
-			attribute.String("foo", "bar"),
-		}...,
-	)
+	// test for overwriting span start/end time, it may be useless
+	spanStartTime := time.Now().Add(time.Second)
+	spanEndTime := spanStartTime.Add(time.Minute)
+
+	startOpts := []trace.SpanStartOption{
+		trace.WithTimestamp(spanStartTime),
+		trace.WithAttributes(
+			[]attribute.KeyValue{
+				attribute.String("foo", "bar"),
+			}...,
+		),
+	}
+
+	endOpts := []trace.SpanEndOption{
+		trace.WithTimestamp(spanEndTime),
+		trace.WithStackTrace(true), // capture the error with stack trace
+	}
 
 	router := gin.New()
-	router.Use(Middleware("foobar", WithTracerProvider(provider), WithSpanOptions(opts)))
+	router.Use(Middleware("foobar", WithTracerProvider(provider), WithSpanStartOptions(startOpts...), WithSpanEndOptions(endOpts...)))
 
 	router.GET("/user/:id", func(c *gin.Context) {
 		// it does not need anything
@@ -132,6 +145,10 @@ func TestWithCustomSpanOptions(t *testing.T) {
 	router.ServeHTTP(w, r)
 
 	spans := spanRecorder.Ended()
+
+	// check for span start/end time
+	assert.Equal(t, spans[0].StartTime(), spanStartTime)
+	assert.Equal(t, spans[0].EndTime(), spanEndTime)
 
 	// check if "foo":"bar" pairs is in span's attributes
 	attr := attribute.KeyValue{}
