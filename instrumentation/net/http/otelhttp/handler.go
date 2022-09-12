@@ -41,19 +41,19 @@ type Handler struct {
 	operation string
 	handler   http.Handler
 
-	tracer            trace.Tracer
-	meter             metric.Meter
-	propagators       propagation.TextMapPropagator
-	spanStartOptions  []trace.SpanStartOption
-	metricAttributes  []func(string, *http.Request, int) []attribute.KeyValue
-	readEvent         bool
-	writeEvent        bool
-	filters           []Filter
-	spanNameFormatter func(string, *http.Request) string
-	counters          map[string]syncint64.Counter
-	valueRecorders    map[string]syncfloat64.Histogram
-	publicEndpoint    bool
-	publicEndpointFn  func(*http.Request) bool
+	tracer             trace.Tracer
+	meter              metric.Meter
+	propagators        propagation.TextMapPropagator
+	spanStartOptions   []trace.SpanStartOption
+	metricAttributeFns []func(*MetricAttributesParams) []attribute.KeyValue
+	readEvent          bool
+	writeEvent         bool
+	filters            []Filter
+	spanNameFormatter  func(string, *http.Request) string
+	counters           map[string]syncint64.Counter
+	valueRecorders     map[string]syncfloat64.Histogram
+	publicEndpoint     bool
+	publicEndpointFn   func(*http.Request) bool
 }
 
 func defaultHandlerFormatter(operation string, _ *http.Request) string {
@@ -85,7 +85,7 @@ func (h *Handler) configure(c *config) {
 	h.meter = c.Meter
 	h.propagators = c.Propagators
 	h.spanStartOptions = c.SpanStartOptions
-	h.metricAttributes = c.MetricAttributes
+	h.metricAttributeFns = c.MetricAttributeFns
 	h.readEvent = c.ReadEvent
 	h.writeEvent = c.WriteEvent
 	h.filters = c.Filters
@@ -209,8 +209,12 @@ func (h *Handler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 
 	// Add metrics
 	attributes := append(labeler.Get(), semconv.HTTPServerMetricAttributesFromHTTPRequest(h.operation, r)...)
-	for _, metricAttributes := range h.metricAttributes {
-		attributes = append(attributes, metricAttributes(h.operation, r, rww.statusCode)...)
+	for _, metricAttributes := range h.metricAttributeFns {
+		attributes = append(attributes, metricAttributes(&MetricAttributesParams{
+			Operation:  h.operation,
+			Request:    r,
+			StatusCode: rww.statusCode,
+		})...)
 	}
 	h.counters[RequestContentLength].Add(ctx, bw.read, attributes...)
 	h.counters[ResponseContentLength].Add(ctx, rww.written, attributes...)

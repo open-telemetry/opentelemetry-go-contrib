@@ -165,8 +165,8 @@ func TestMetricsAttributes(t *testing.T) {
 		otelhttp.WithTracerProvider(provider),
 		otelhttp.WithMeterProvider(meterProvider),
 		otelhttp.WithPropagators(propagation.TraceContext{}),
-		otelhttp.WithMetricAttributes(func(operation string, r *http.Request, statusCode int) []attribute.KeyValue {
-			return []attribute.KeyValue{semconv.HTTPTargetKey.String(r.URL.Path)}
+		otelhttp.WithMetricAttributes(func(params *otelhttp.MetricAttributesParams) []attribute.KeyValue {
+			return []attribute.KeyValue{semconv.HTTPTargetKey.String(params.Request.URL.Path)}
 		}),
 	)
 

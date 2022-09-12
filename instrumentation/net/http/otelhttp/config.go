@@ -34,18 +34,18 @@ const (
 // config represents the configuration options available for the http.Handler
 // and http.Transport types.
 type config struct {
-	Tracer            trace.Tracer
-	Meter             metric.Meter
-	Propagators       propagation.TextMapPropagator
-	SpanStartOptions  []trace.SpanStartOption
-	MetricAttributes  []func(string, *http.Request, int) []attribute.KeyValue
-	PublicEndpoint    bool
-	PublicEndpointFn  func(*http.Request) bool
-	ReadEvent         bool
-	WriteEvent        bool
-	Filters           []Filter
-	SpanNameFormatter func(string, *http.Request) string
-	ClientTrace       func(context.Context) *httptrace.ClientTrace
+	Tracer             trace.Tracer
+	Meter              metric.Meter
+	Propagators        propagation.TextMapPropagator
+	SpanStartOptions   []trace.SpanStartOption
+	MetricAttributeFns []func(*MetricAttributesParams) []attribute.KeyValue
+	PublicEndpoint     bool
+	PublicEndpointFn   func(*http.Request) bool
+	ReadEvent          bool
+	WriteEvent         bool
+	Filters            []Filter
+	SpanNameFormatter  func(string, *http.Request) string
+	ClientTrace        func(context.Context) *httptrace.ClientTrace
 
 	TracerProvider trace.TracerProvider
 	MeterProvider  metric.MeterProvider
@@ -143,11 +143,20 @@ func WithSpanOptions(opts ...trace.SpanStartOption) Option {
 	})
 }
 
+// MetricAttributesParams are the parameters to the function set by WithMetricAttributes
+type MetricAttributesParams struct {
+	Operation  string
+	Request    *http.Request
+	StatusCode int
+}
+
 // WithMetricAttributes adds a function that will be called to add attributes
 // to the request metrics.
-func WithMetricAttributes(metricAttributes func(operation string, r *http.Request, statusCode int) []attribute.KeyValue) Option {
+// Try to avoid high cardinality metrics as each new attribute add significant
+// processing to the destination system, so make sure the service can handle them.
+func WithMetricAttributes(metricAttributesFn func(params *MetricAttributesParams) []attribute.KeyValue) Option {
 	return optionFunc(func(c *config) {
-		c.MetricAttributes = append(c.MetricAttributes, metricAttributes)
+		c.MetricAttributeFns = append(c.MetricAttributeFns, metricAttributesFn)
 	})
 }
 
