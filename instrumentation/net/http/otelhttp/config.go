@@ -143,9 +143,9 @@ func WithSpanOptions(opts ...trace.SpanStartOption) Option {
 	})
 }
 
-// WithMetricsAttributes adds a function that will be called to add attributes
+// WithMetricAttributes adds a function that will be called to add attributes
 // to the request metrics.
-func WithMetricsAttributes(metricAttributes func(operation string, r *http.Request, statusCode int) []attribute.KeyValue) Option {
+func WithMetricAttributes(metricAttributes func(operation string, r *http.Request, statusCode int) []attribute.KeyValue) Option {
 	return optionFunc(func(c *config) {
 		c.MetricAttributes = append(c.MetricAttributes, metricAttributes)
 	})
