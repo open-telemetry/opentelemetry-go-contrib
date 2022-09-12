@@ -20,7 +20,7 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 - Add gRPC trace `Filter` to the `go.opentelemetry.io/contrib/instrumentation/google.golang.org/grpc/otelgrpc` package to provide the way to filter the traces automatically generated in interceptors. (#2572)
 - The `TextMapPropagator` function to `go.opentelemetry.io/contrib/propagators/autoprop`.
   This function is used to return a composite `TextMapPropagator` from registered names (instead of having to specify with an environment variable). (#2593)
-- Add `WithSpanOptions` to `go.opentelemetry.io/contrib/github.com/gin-gonic/gin/otelgin` package to configure span options. (#2730)
+- Add `WithSpanStartOptions`, `WithSpanEndOptions` to `go.opentelemetry.io/contrib/github.com/gin-gonic/gin/otelgin` package to configure span options. (#2730)
 
 ### Changed
 
