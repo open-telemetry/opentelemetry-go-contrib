@@ -112,19 +112,18 @@ func TestPropagationWithCustomPropagators(t *testing.T) {
 func TestWithCustomSpanOptions(t *testing.T) {
 	spanRecorder := tracetest.NewSpanRecorder()
 	provider := sdktrace.NewTracerProvider(sdktrace.WithSpanProcessor(spanRecorder))
-	b3 := b3prop.New()
 
 	r := httptest.NewRequest("GET", "/user/123", nil)
 	w := httptest.NewRecorder()
 
-	attrs := trace.WithAttributes(
+	opts := trace.WithAttributes(
 		[]attribute.KeyValue{
 			attribute.String("foo", "bar"),
 		}...,
 	)
 
 	router := gin.New()
-	router.Use(Middleware("foobar", WithTracerProvider(provider), WithPropagators(b3), WithSpanOptions(attrs)))
+	router.Use(Middleware("foobar", WithTracerProvider(provider), WithSpanOptions(opts)))
 
 	router.GET("/user/:id", func(c *gin.Context) {
 		// it does not need anything
