@@ -20,6 +20,7 @@ import (
 	"net/http/httptrace"
 
 	"go.opentelemetry.io/otel"
+	"go.opentelemetry.io/otel/attribute"
 	"go.opentelemetry.io/otel/metric"
 	"go.opentelemetry.io/otel/metric/global"
 	"go.opentelemetry.io/otel/propagation"
@@ -37,6 +38,7 @@ type config struct {
 	Meter             metric.Meter
 	Propagators       propagation.TextMapPropagator
 	SpanStartOptions  []trace.SpanStartOption
+	MetricAttributes  []func(string, *http.Request, int) []attribute.KeyValue
 	PublicEndpoint    bool
 	PublicEndpointFn  func(*http.Request) bool
 	ReadEvent         bool
@@ -138,6 +140,14 @@ func WithPropagators(ps propagation.TextMapPropagator) Option {
 func WithSpanOptions(opts ...trace.SpanStartOption) Option {
 	return optionFunc(func(c *config) {
 		c.SpanStartOptions = append(c.SpanStartOptions, opts...)
+	})
+}
+
+// WithMetricsAttributes adds a function that will be called to add attributes
+// to the request metrics.
+func WithMetricsAttributes(metricAttributes func(operation string, r *http.Request, statusCode int) []attribute.KeyValue) Option {
+	return optionFunc(func(c *config) {
+		c.MetricAttributes = append(c.MetricAttributes, metricAttributes)
 	})
 }
 

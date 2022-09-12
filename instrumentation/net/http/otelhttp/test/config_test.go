@@ -15,16 +15,25 @@
 package test
 
 import (
+	"context"
+	"fmt"
 	"io"
 	"net/http"
 	"net/http/httptest"
+	"strings"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
+	"go.opentelemetry.io/otel/attribute"
+	"go.opentelemetry.io/otel/propagation"
+	"go.opentelemetry.io/otel/sdk/metric/metrictest"
+	sdktrace "go.opentelemetry.io/otel/sdk/trace"
 
 	"go.opentelemetry.io/contrib/instrumentation/net/http/otelhttp"
 	"go.opentelemetry.io/otel/sdk/trace"
 	"go.opentelemetry.io/otel/sdk/trace/tracetest"
+	semconv "go.opentelemetry.io/otel/semconv/v1.12.0"
 )
 
 func TestBasicFilter(t *testing.T) {
@@ -131,5 +140,76 @@ func TestSpanNameFormatter(t *testing.T) {
 				assert.Equal(t, tc.expected, spans[0].Name())
 			}
 		})
+	}
+}
+
+func TestMetricsAttributes(t *testing.T) {
+	rr := httptest.NewRecorder()
+
+	spanRecorder := tracetest.NewSpanRecorder()
+	provider := sdktrace.NewTracerProvider(sdktrace.WithSpanProcessor(spanRecorder))
+
+	meterProvider, metricExporter := metrictest.NewTestMeterProvider()
+
+	operation := "test_handler"
+
+	h := otelhttp.NewHandler(
+		http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+			l, _ := otelhttp.LabelerFromContext(r.Context())
+			l.Add(attribute.String("test", "attribute"))
+
+			if _, err := io.WriteString(w, "hello world"); err != nil {
+				t.Fatal(err)
+			}
+		}), operation,
+		otelhttp.WithTracerProvider(provider),
+		otelhttp.WithMeterProvider(meterProvider),
+		otelhttp.WithPropagators(propagation.TraceContext{}),
+		otelhttp.WithMetricsAttributes(func(operation string, r *http.Request, statusCode int) []attribute.KeyValue {
+			return []attribute.KeyValue{semconv.HTTPTargetKey.String(r.URL.Path)}
+		}),
+	)
+
+	r, err := http.NewRequest(http.MethodGet, "http://localhost/x", strings.NewReader("foo"))
+	if err != nil {
+		t.Fatal(err)
+	}
+	h.ServeHTTP(rr, r)
+
+	require.NoError(t, metricExporter.Collect(context.Background()))
+	if len(metricExporter.GetRecords()) == 0 {
+		t.Fatalf("got 0 recorded measurements, expected 1 or more")
+	}
+
+	attributesToVerify := []attribute.KeyValue{
+		semconv.HTTPServerNameKey.String(operation),
+		semconv.HTTPSchemeHTTP,
+		semconv.HTTPHostKey.String(r.Host),
+		semconv.HTTPFlavorKey.String(fmt.Sprintf("1.%d", r.ProtoMinor)),
+		semconv.HTTPMethodKey.String("GET"),
+		attribute.String("test", "attribute"),
+		semconv.HTTPTargetKey.String("/x"),
+	}
+
+	assertMetricAttributes(t, attributesToVerify, metricExporter.GetRecords())
+
+	if got, expected := rr.Result().StatusCode, http.StatusOK; got != expected {
+		t.Fatalf("got %d, expected %d", got, expected)
+	}
+
+	spans := spanRecorder.Ended()
+	if got, expected := len(spans), 1; got != expected {
+		t.Fatalf("got %d spans, expected %d", got, expected)
+	}
+	if !spans[0].SpanContext().IsValid() {
+		t.Fatalf("invalid span created: %#v", spans[0].SpanContext())
+	}
+
+	d, err := io.ReadAll(rr.Result().Body)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if got, expected := string(d), "hello world"; got != expected {
+		t.Fatalf("got %q, expected %q", got, expected)
 	}
 }

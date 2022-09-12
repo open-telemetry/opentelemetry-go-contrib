@@ -45,6 +45,7 @@ type Handler struct {
 	meter             metric.Meter
 	propagators       propagation.TextMapPropagator
 	spanStartOptions  []trace.SpanStartOption
+	metricAttributes  []func(string, *http.Request, int) []attribute.KeyValue
 	readEvent         bool
 	writeEvent        bool
 	filters           []Filter
@@ -84,6 +85,7 @@ func (h *Handler) configure(c *config) {
 	h.meter = c.Meter
 	h.propagators = c.Propagators
 	h.spanStartOptions = c.SpanStartOptions
+	h.metricAttributes = c.MetricAttributes
 	h.readEvent = c.ReadEvent
 	h.writeEvent = c.WriteEvent
 	h.filters = c.Filters
@@ -207,6 +209,9 @@ func (h *Handler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 
 	// Add metrics
 	attributes := append(labeler.Get(), semconv.HTTPServerMetricAttributesFromHTTPRequest(h.operation, r)...)
+	for _, metricAttributes := range h.metricAttributes {
+		attributes = append(attributes, metricAttributes(h.operation, r, rww.statusCode)...)
+	}
 	h.counters[RequestContentLength].Add(ctx, bw.read, attributes...)
 	h.counters[ResponseContentLength].Add(ctx, rww.written, attributes...)
 
