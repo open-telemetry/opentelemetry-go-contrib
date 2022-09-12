@@ -18,14 +18,13 @@ package otelgin // import "go.opentelemetry.io/contrib/instrumentation/github.co
 
 import (
 	"go.opentelemetry.io/otel/propagation"
-	"go.opentelemetry.io/otel/trace"
 	oteltrace "go.opentelemetry.io/otel/trace"
 )
 
 type config struct {
 	TracerProvider   oteltrace.TracerProvider
 	Propagators      propagation.TextMapPropagator
-	SpanStartOptions []trace.SpanStartOption
+	SpanStartOptions []oteltrace.SpanStartOption
 }
 
 // Option specifies instrumentation configuration options.
@@ -62,7 +61,7 @@ func WithTracerProvider(provider oteltrace.TracerProvider) Option {
 
 // WithSpanOptions configures an additional set of
 // trace.SpanOptions, which are applied to each new span.
-func WithSpanOptions(opts ...trace.SpanStartOption) Option {
+func WithSpanOptions(opts ...oteltrace.SpanStartOption) Option {
 	return optionFunc(func(cfg *config) {
 		cfg.SpanStartOptions = append(cfg.SpanStartOptions, opts...)
 	})
