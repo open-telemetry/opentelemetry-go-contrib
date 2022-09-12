@@ -4,10 +4,10 @@ go 1.17
 
 require (
 	github.com/stretchr/testify v1.8.0
-	go.opentelemetry.io/contrib/propagators/aws v1.9.0
-	go.opentelemetry.io/contrib/propagators/b3 v1.9.0
-	go.opentelemetry.io/contrib/propagators/jaeger v1.9.0
-	go.opentelemetry.io/contrib/propagators/ot v1.9.0
+	go.opentelemetry.io/contrib/propagators/aws v1.10.0
+	go.opentelemetry.io/contrib/propagators/b3 v1.10.0
+	go.opentelemetry.io/contrib/propagators/jaeger v1.10.0
+	go.opentelemetry.io/contrib/propagators/ot v1.10.0
 	go.opentelemetry.io/otel v1.10.0
 )
 
