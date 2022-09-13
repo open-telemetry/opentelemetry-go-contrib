@@ -143,7 +143,7 @@ func WithSpanOptions(opts ...trace.SpanStartOption) Option {
 	})
 }
 
-// MetricAttributesParams are the parameters to the function set by WithMetricAttributes
+// MetricAttributesParams are the parameters to the function set by WithMetricAttributes.
 type MetricAttributesParams struct {
 	Operation  string
 	Request    *http.Request
