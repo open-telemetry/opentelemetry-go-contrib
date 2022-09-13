@@ -13,6 +13,10 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 - Rename the `Typ` field of `"go.opentelemetry.io/contrib/instrumentation/google.golang.org/grpc/otelgrpc".InterceptorInfo` to `Type`. (#2688)
 - Use Go 1.19 as the default version for CI testing/linting. (#2675)
 
+### Added
+
+- Add `WithMetricAttributes` option to `go.opentelemetry.io/contrib/instrumentation/net/http/otelhttp` to allow adding custom attributes to `net/http` metrics.
+
 ## [1.9.0/0.34.0/0.4.0] - 2022-08-02
 
 ### Added
