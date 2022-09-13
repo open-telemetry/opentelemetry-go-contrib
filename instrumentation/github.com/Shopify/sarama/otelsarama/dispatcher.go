@@ -16,6 +16,7 @@ package otelsarama // import "go.opentelemetry.io/contrib/instrumentation/github
 
 import (
 	"context"
+	"fmt"
 	"strconv"
 
 	"github.com/Shopify/sarama"
@@ -71,7 +72,7 @@ func (w *consumerMessagesDispatcherWrapper) Run() {
 			trace.WithAttributes(attrs...),
 			trace.WithSpanKind(trace.SpanKindConsumer),
 		}
-		newCtx, span := w.cfg.Tracer.Start(parentSpanContext, "kafka.consume", opts...)
+		newCtx, span := w.cfg.Tracer.Start(parentSpanContext, fmt.Sprintf("%s receive", msg.Topic), opts...)
 
 		// Inject current span context, so consumers can use it to propagate span.
 		w.cfg.Propagators.Inject(newCtx, carrier)

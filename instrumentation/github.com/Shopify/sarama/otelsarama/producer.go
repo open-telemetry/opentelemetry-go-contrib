@@ -16,6 +16,8 @@ package otelsarama // import "go.opentelemetry.io/contrib/instrumentation/github
 
 import (
 	"context"
+	"encoding/binary"
+	"fmt"
 	"strconv"
 	"sync"
 
@@ -120,7 +122,7 @@ type producerMessageContext struct {
 }
 
 // WrapAsyncProducer wraps a sarama.AsyncProducer so that all produced messages
-// are traced. It requires the underlying sarama Config so we can know whether
+// are traced. It requires the underlying sarama Config, so we can know whether
 // or not successes will be returned.
 //
 // If `Return.Successes` is false, there is no way to know partition and offset of
@@ -187,7 +189,7 @@ func WrapAsyncProducer(saramaConfig *sarama.Config, p sarama.AsyncProducer, opts
 	}()
 
 	// Sarama will consume all the successes and errors by itself while closing,
-	// so we need to end these these spans ourseleves.
+	// so we need to end these spans ourselves.
 	var cleanupWg sync.WaitGroup
 
 	// Spawn Successes consumer goroutine.
@@ -245,6 +247,37 @@ func WrapAsyncProducer(saramaConfig *sarama.Config, p sarama.AsyncProducer, opts
 	return wrapped
 }
 
+// msgPayloadSize returns the approximate estimate of message size in bytes.
+//
+// For kafka version <= 0.10, the message size is
+// ~ 4(crc32) + 8(timestamp) + 4(key len) + 4(value len) + 4(message len) + 1(attrs) + 1(magic).
+//
+// For kafka version >= 0.11, the message size with varint encoding is
+// ~ 5 * (crc32, key len, value len, message len, attrs) + timestamp + 1 byte (magic).
+// + header key + header value + header key len + header value len.
+func msgPayloadSize(msg *sarama.ProducerMessage, kafkaVersion sarama.KafkaVersion) int {
+	maximumRecordOverhead := 5*binary.MaxVarintLen32 + binary.MaxVarintLen64 + 1
+	producerMessageOverhead := 26
+	version := 1
+	if kafkaVersion.IsAtLeast(sarama.V0_11_0_0) {
+		version = 2
+	}
+	size := producerMessageOverhead
+	if version >= 2 {
+		size = maximumRecordOverhead
+		for _, h := range msg.Headers {
+			size += len(h.Key) + len(h.Value) + 2*binary.MaxVarintLen32
+		}
+	}
+	if msg.Key != nil {
+		size += msg.Key.Length()
+	}
+	if msg.Value != nil {
+		size += msg.Value.Length()
+	}
+	return size
+}
+
 func startProducerSpan(cfg config, version sarama.KafkaVersion, msg *sarama.ProducerMessage) trace.Span {
 	// If there's a span context in the message, use that as the parent context.
 	carrier := NewProducerMessageCarrier(msg)
@@ -255,12 +288,14 @@ func startProducerSpan(cfg config, version sarama.KafkaVersion, msg *sarama.Prod
 		semconv.MessagingSystemKey.String("kafka"),
 		semconv.MessagingDestinationKindTopic,
 		semconv.MessagingDestinationKey.String(msg.Topic),
+		semconv.MessagingMessagePayloadSizeBytesKey.Int(msgPayloadSize(msg, version)),
+		semconv.MessagingOperationKey.String("send"),
 	}
 	opts := []trace.SpanStartOption{
 		trace.WithAttributes(attrs...),
 		trace.WithSpanKind(trace.SpanKindProducer),
 	}
-	ctx, span := cfg.Tracer.Start(ctx, "kafka.produce", opts...)
+	ctx, span := cfg.Tracer.Start(ctx, fmt.Sprintf("%s send", msg.Topic), opts...)
 
 	if version.IsAtLeast(sarama.V0_11_0_0) {
 		// Inject current span context, so consumers can use it to propagate span.
