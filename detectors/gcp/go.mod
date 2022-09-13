@@ -5,7 +5,7 @@ go 1.17
 require (
 	cloud.google.com/go/compute v1.9.0
 	github.com/GoogleCloudPlatform/opentelemetry-operations-go/detectors/gcp v0.32.7
-	github.com/google/go-cmp v0.5.8
+	github.com/google/go-cmp v0.5.9
 	github.com/stretchr/testify v1.8.0
 	go.opentelemetry.io/otel v1.10.0
 	go.opentelemetry.io/otel/sdk v1.10.0
