@@ -8,6 +8,10 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 
 ## [Unreleased]
 
+### Added
+
+- The `go.opentelemetry.io/contrib/propagators/autoexport` package to provide configuration of trace exporterswith useful defaults and envar support. (#2753)
+
 ## [1.8.0/0.33.0] - 2022-07-08
 
 ### Added
