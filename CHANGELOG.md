@@ -12,6 +12,25 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 
 - The `go.opentelemetry.io/contrib/propagators/autoexport` package to provide configuration of trace exporterswith useful defaults and envar support. (#2753)
 
+## [1.10.0/0.35.0/0.5.0]
+
+### Changed
+
+- Rename the `Typ` field of `"go.opentelemetry.io/contrib/instrumentation/google.golang.org/grpc/otelgrpc".InterceptorInfo` to `Type`. (#2688)
+- Use Go 1.19 as the default version for CI testing/linting. (#2675)
+
+## [1.9.0/0.34.0/0.4.0] - 2022-08-02
+
+### Added
+
+- Add gRPC trace `Filter` to the `go.opentelemetry.io/contrib/instrumentation/google.golang.org/grpc/otelgrpc` package to provide the way to filter the traces automatically generated in interceptors. (#2572)
+- The `TextMapPropagator` function to `go.opentelemetry.io/contrib/propagators/autoprop`.
+  This function is used to return a composite `TextMapPropagator` from registered names (instead of having to specify with an environment variable). (#2593)
+
+### Changed
+
+- Upgraded all `semconv` package use to `v1.12.0`. (#2589)
+
 ## [1.8.0/0.33.0] - 2022-07-08
 
 ### Added
