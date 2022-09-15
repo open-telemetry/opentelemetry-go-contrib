@@ -12,23 +12,22 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package autoexport_test
+package autoexport
 
 import (
 	"testing"
 
 	"github.com/stretchr/testify/assert"
-	"go.opentelemetry.io/contrib/exporters/autoexport"
 	"go.opentelemetry.io/otel/exporters/otlp/otlptrace/otlptracegrpc"
 )
 
 func TestNoExportersAreConfiguredIfEnvNotSetAndNoExportersProvided(t *testing.T) {
-	exporters := autoexport.NewTraceExporters()
+	exporters := NewTraceExporters()
 	assert.Equal(t, 0, len(exporters))
 }
 
 func TestProvidedExportersAreUsedWhenEnvVarIsNotSet(t *testing.T) {
-	exporters := autoexport.NewTraceExporters(
+	exporters := NewTraceExporters(
 		otlptracegrpc.NewUnstarted(),
 	)
 	assert.Equal(t, 1, len(exporters))
@@ -36,6 +35,6 @@ func TestProvidedExportersAreUsedWhenEnvVarIsNotSet(t *testing.T) {
 
 func TestExportersConfiguredInEnvVarAreReturned(t *testing.T) {
 	t.Setenv("OTEL_TRACES_EXPORTERS", "otlp")
-	exporters := autoexport.NewTraceExporters()
+	exporters := NewTraceExporters()
 	assert.Equal(t, 1, len(exporters))
 }
