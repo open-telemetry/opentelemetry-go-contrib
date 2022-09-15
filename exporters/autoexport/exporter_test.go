@@ -22,19 +22,20 @@ import (
 )
 
 func TestNoExportersAreConfiguredIfEnvNotSetAndNoExportersProvided(t *testing.T) {
-	exporters := NewTraceExporters()
-	assert.Equal(t, 0, len(exporters))
+	exporter := NewTraceExporter(nil)
+	assert.Nil(t, exporter)
 }
 
 func TestProvidedExportersAreUsedWhenEnvVarIsNotSet(t *testing.T) {
-	exporters := NewTraceExporters(
-		otlptracegrpc.NewUnstarted(),
+	exp := otlptracegrpc.NewUnstarted()
+	exporter := NewTraceExporter(
+		exp,
 	)
-	assert.Equal(t, 1, len(exporters))
+	assert.Equal(t, exp, exporter)
 }
 
 func TestExportersConfiguredInEnvVarAreReturned(t *testing.T) {
 	t.Setenv("OTEL_TRACES_EXPORTERS", "otlp")
-	exporters := NewTraceExporters()
-	assert.Equal(t, 1, len(exporters))
+	exporter := NewTraceExporter(nil)
+	assert.NotNil(t, 1, exporter)
 }

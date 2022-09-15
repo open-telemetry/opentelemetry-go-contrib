@@ -15,82 +15,41 @@
 package autoexport // import "go.opentelemetry.io/contrib/exporters/autoexport"
 
 import (
-	"context"
-	"errors"
-	"fmt"
 	"os"
-	"strings"
 
 	"go.opentelemetry.io/otel"
-	"go.opentelemetry.io/otel/exporters/otlp/otlptrace/otlptracegrpc"
 	"go.opentelemetry.io/otel/sdk/trace"
 )
 
-const otelTracesExportersEnvKey = "OTEL_TRACES_EXPORTERS"
+const (
+	otelTracesExportersEnvKey = "OTEL_TRACES_EXPORTER"
+)
 
-// errUnknownExpoter is returned when an unknown exporter name is used in
-// the OTEL_*_EXPORTERS environment variables.
-var errUnknownExpoter = errors.New("unknown exporter")
-
-// NewTraceExporters returns a slice of SpanExporters defined using the environment
-// variable OTEL_TRACES_EXPORTERS or the provided exporters parameter. The exports defined
-// in OTEL_TRACES_EXPORTERS is preferred over the list passed in.
-func NewTraceExporters(exporters ...trace.SpanExporter) []trace.SpanExporter {
-	// prefer exporters configured via environment variables over exporters
-	// passed in via exporters parameter
-	envExporters, err := parseEnv()
+// NewTraceExporter returns a conbfigured SpanExporter defined using the environment
+// variable OTEL_TRACES_EXPORTER or the passed in exporter. The exporter defined
+// in OTEL_TRACES_EXPORTER is preferred over the exporter passed in.
+func NewTraceExporter(exporter trace.SpanExporter) trace.SpanExporter {
+	// prefer exporter configured via environment variables over exporter
+	// passed in via exporter parameter
+	envExporter, err := parseEnv()
 	if err != nil {
 		otel.Handle(err)
 	}
-	if len(envExporters) > 0 {
-		return envExporters
+	if envExporter != nil {
+		return envExporter
 	}
 
-	return exporters
+	return exporter
 }
 
-// parseEnv returns an array of SpanExporter's defined by the OTEL_EXPORTERS
+// parseEnv returns a configured SpanExporter defined by the OTEL_TRACES_EXPORTER
 // environment variable.
-// A nil slice is returned if no exporters are defined for the environment variable.
-func parseEnv() ([]trace.SpanExporter, error) {
-	expTypes, defined := os.LookupEnv(otelTracesExportersEnvKey)
+// nil is returned if no exporter is defined for the environment variable.
+func parseEnv() (trace.SpanExporter, error) {
+	expType, defined := os.LookupEnv(otelTracesExportersEnvKey)
 	if !defined {
 		return nil, nil
 	}
 
-	const sep = ","
-
-	var (
-		exporters []trace.SpanExporter
-		unknown   []string
-	)
-
-	for _, expType := range strings.Split(expTypes, sep) {
-		switch expType {
-		case "otlp":
-			// TODO: switch between otlp exporter protocol (grpc, http)
-			exp, err := otlptracegrpc.New(context.Background())
-			if err != nil {
-				// TODO: capture and return start up errors
-			} else {
-				exporters = append(exporters, exp)
-			}
-		default:
-			exp, ok := envRegistry.load(expType)
-			if !ok {
-				unknown = append(unknown, expType)
-				continue
-			}
-			exporters = append(exporters, exp)
-		}
-	}
-
-	var err error
-	if len(unknown) > 0 {
-		joined := strings.Join(unknown, sep)
-		err = fmt.Errorf("%w: %s", errUnknownExpoter, joined)
-	}
-
-	// TODO: combine start errs with unknown exporter error
-	return exporters, err
+	return SpanExporter(expType)
 }
