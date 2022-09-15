@@ -32,9 +32,12 @@ const otelTracesExportersEnvKey = "OTEL_EXPORTERS"
 // the OTEL_EXPORTERS environment variable.
 var errUnknownExpoter = errors.New("unknown exporter")
 
+// NewTraceExporters returns a slice of SpanExporters defined using the environment
+// variable OTEL_EXPORTERS or the provided exporters parameter. The exports defined
+// in OTEL_EXPORTERS is preferred over the list passed in.
 func NewTraceExporters(exporters ...trace.SpanExporter) []trace.SpanExporter {
 	// prefer exporters configured via environment variables over exporters
-	// passed in via exporters paramter
+	// passed in via exporters parameter
 	envExporters, err := parseEnv()
 	if err != nil {
 		otel.Handle(err)
@@ -60,7 +63,6 @@ func parseEnv() ([]trace.SpanExporter, error) {
 	var (
 		exporters []trace.SpanExporter
 		unknown   []string
-		errors    []error
 	)
 
 	for _, expType := range strings.Split(expTypes, sep) {
@@ -69,11 +71,10 @@ func parseEnv() ([]trace.SpanExporter, error) {
 			// TODO: switch between otlp exporter protocol (grpc, http)
 			exp, err := otlptracegrpc.New(context.Background())
 			if err != nil {
-				errors = append(errors, err)
+				// TODO: capture and return start up errors
 			} else {
 				exporters = append(exporters, exp)
 			}
-			break
 		default:
 			exp, ok := envRegistry.load(expType)
 			if !ok {
@@ -90,6 +91,6 @@ func parseEnv() ([]trace.SpanExporter, error) {
 		err = fmt.Errorf("%w: %s", errUnknownExpoter, joined)
 	}
 
-	// TODO: combine start errors with unknown exporter error
+	// TODO: combine start errs with unknown exporter error
 	return exporters, err
 }
