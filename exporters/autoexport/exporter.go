@@ -26,15 +26,15 @@ import (
 	"go.opentelemetry.io/otel/sdk/trace"
 )
 
-const otelTracesExportersEnvKey = "OTEL_EXPORTERS"
+const otelTracesExportersEnvKey = "OTEL_TRACES_EXPORTERS"
 
 // errUnknownExpoter is returned when an unknown exporter name is used in
-// the OTEL_EXPORTERS environment variable.
+// the OTEL_*_EXPORTERS environment variables.
 var errUnknownExpoter = errors.New("unknown exporter")
 
 // NewTraceExporters returns a slice of SpanExporters defined using the environment
-// variable OTEL_EXPORTERS or the provided exporters parameter. The exports defined
-// in OTEL_EXPORTERS is preferred over the list passed in.
+// variable OTEL_TRACES_EXPORTERS or the provided exporters parameter. The exports defined
+// in OTEL_TRACES_EXPORTERS is preferred over the list passed in.
 func NewTraceExporters(exporters ...trace.SpanExporter) []trace.SpanExporter {
 	// prefer exporters configured via environment variables over exporters
 	// passed in via exporters parameter
