@@ -30,7 +30,6 @@ import (
 	"go.opentelemetry.io/contrib/propagators/b3"
 	"go.opentelemetry.io/otel/attribute"
 	"go.opentelemetry.io/otel/propagation"
-	"go.opentelemetry.io/otel/sdk/metric/metrictest"
 	"go.opentelemetry.io/otel/sdk/trace"
 	"go.opentelemetry.io/otel/sdk/trace/tracetest"
 	semconv "go.opentelemetry.io/otel/semconv/v1.12.0"
@@ -40,6 +39,11 @@ import (
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
+
+// TODO(#TBD): Add metric integration tests for the instrumentation. These
+// tests depend on
+// https://github.com/open-telemetry/opentelemetry-go/issues/3031 being
+// resolved.
 
 // ------------------------------------------ Test Controller
 
@@ -189,7 +193,6 @@ func TestStatic(t *testing.T) {
 	defer replaceBeego()
 	sr := tracetest.NewSpanRecorder()
 	tracerProvider := trace.NewTracerProvider(trace.WithSpanProcessor(sr))
-	meterProvider, metricExporter := metrictest.NewTestMeterProvider()
 	file, err := os.CreateTemp("", "static-*.html")
 	require.NoError(t, err)
 	defer file.Close()
@@ -202,7 +205,6 @@ func TestStatic(t *testing.T) {
 
 	mw := otelbeego.NewOTelBeegoMiddleWare(middleWareName,
 		otelbeego.WithTracerProvider(tracerProvider),
-		otelbeego.WithMeterProvider(meterProvider),
 	)
 
 	rr := httptest.NewRecorder()
@@ -221,7 +223,6 @@ func TestStatic(t *testing.T) {
 	spans := sr.Ended()
 	require.Len(t, spans, 1)
 	assertSpan(t, spans[0], tc)
-	assertMetrics(t, metricExporter.GetRecords(), tc)
 }
 
 func TestRender(t *testing.T) {
@@ -287,7 +288,6 @@ func TestRender(t *testing.T) {
 func runTest(t *testing.T, tc *testCase, url string) {
 	sr := tracetest.NewSpanRecorder()
 	tracerProvider := trace.NewTracerProvider(trace.WithSpanProcessor(sr))
-	meterProvider, metricExporter := metrictest.NewTestMeterProvider()
 	addTestRoutes(t)
 	defer replaceBeego()
 
@@ -306,7 +306,6 @@ func runTest(t *testing.T, tc *testCase, url string) {
 		append(
 			tc.options,
 			otelbeego.WithTracerProvider(tracerProvider),
-			otelbeego.WithMeterProvider(meterProvider),
 		)...,
 	)
 
@@ -326,7 +325,6 @@ func runTest(t *testing.T, tc *testCase, url string) {
 	} else {
 		require.Len(t, spans, 0)
 	}
-	assertMetrics(t, metricExporter.GetRecords(), tc)
 }
 
 func defaultAttributes() []attribute.KeyValue {
@@ -342,14 +340,6 @@ func assertSpan(t *testing.T, span trace.ReadOnlySpan, tc *testCase) {
 	attr := span.Attributes()
 	for _, att := range tc.expectedAttributes {
 		assert.Contains(t, attr, att)
-	}
-}
-
-func assertMetrics(t *testing.T, records []metrictest.ExportRecord, tc *testCase) {
-	for _, record := range records {
-		for _, att := range tc.expectedAttributes {
-			require.Contains(t, record.Attributes, att)
-		}
 	}
 }
 
