@@ -18,7 +18,6 @@ import (
 	"context"
 	"fmt"
 	"io"
-	"io/ioutil"
 	"net/http"
 	"net/http/httptest"
 	"strconv"
@@ -103,7 +102,7 @@ func TestHandlerBasics(t *testing.T) {
 		t.Fatalf("invalid span created: %#v", spans[0].SpanContext())
 	}
 
-	d, err := ioutil.ReadAll(rr.Result().Body)
+	d, err := io.ReadAll(rr.Result().Body)
 	if err != nil {
 		t.Fatal(err)
 	}

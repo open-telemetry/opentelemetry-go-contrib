@@ -17,7 +17,6 @@ package ecs // import "go.opentelemetry.io/contrib/detectors/aws/ecs"
 import (
 	"context"
 	"errors"
-	"io/ioutil"
 	"os"
 	"strings"
 
@@ -95,7 +94,7 @@ func (detector *resourceDetector) Detect(ctx context.Context) (*resource.Resourc
 
 // returns docker container ID from default c group path.
 func (ecsUtils ecsDetectorUtils) getContainerID() (string, error) {
-	fileData, err := ioutil.ReadFile(defaultCgroupPath)
+	fileData, err := os.ReadFile(defaultCgroupPath)
 	if err != nil {
 		return "", errCannotReadCGroupFile
 	}

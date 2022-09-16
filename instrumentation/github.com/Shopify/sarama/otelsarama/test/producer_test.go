@@ -17,6 +17,7 @@ package test
 import (
 	"context"
 	"errors"
+	"fmt"
 	"sync"
 	"testing"
 
@@ -131,7 +132,7 @@ func TestWrapSyncProducer(t *testing.T) {
 		// Check span
 		assert.True(t, span.SpanContext().IsValid())
 		assert.Equal(t, expected.parentSpanID, span.Parent().SpanID())
-		assert.Equal(t, "kafka.produce", span.Name())
+		assert.Equal(t, fmt.Sprintf("%s send", topic), span.Name())
 		assert.Equal(t, expected.kind, span.SpanKind())
 		for _, k := range expected.attributeList {
 			assert.Contains(t, span.Attributes(), k)
@@ -206,7 +207,7 @@ func TestWrapAsyncProducer(t *testing.T) {
 
 			// Check span
 			assert.True(t, span.SpanContext().IsValid())
-			assert.Equal(t, "kafka.produce", span.Name())
+			assert.Equal(t, fmt.Sprintf("%s send", topic), span.Name())
 			assert.Equal(t, expected.kind, span.SpanKind())
 			for _, k := range expected.attributeList {
 				assert.Contains(t, span.Attributes(), k)
@@ -278,7 +279,7 @@ func TestWrapAsyncProducer(t *testing.T) {
 
 			// Check span
 			assert.True(t, span.SpanContext().IsValid())
-			assert.Equal(t, "kafka.produce", span.Name())
+			assert.Equal(t, fmt.Sprintf("%s send", topic), span.Name())
 			assert.Equal(t, expected.kind, span.SpanKind())
 			for _, k := range expected.attributeList {
 				assert.Contains(t, span.Attributes(), k)

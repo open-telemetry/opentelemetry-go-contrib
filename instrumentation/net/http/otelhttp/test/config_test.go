@@ -16,7 +16,6 @@ package test
 
 import (
 	"io"
-	"io/ioutil"
 	"net/http"
 	"net/http/httptest"
 	"testing"
@@ -60,7 +59,7 @@ func TestBasicFilter(t *testing.T) {
 	if got, expected := len(spanRecorder.Ended()), 0; got != expected {
 		t.Fatalf("got %d recorded spans, expected %d", got, expected)
 	}
-	d, err := ioutil.ReadAll(rr.Result().Body)
+	d, err := io.ReadAll(rr.Result().Body)
 	if err != nil {
 		t.Fatal(err)
 	}

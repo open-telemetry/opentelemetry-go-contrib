@@ -4,8 +4,8 @@ go 1.17
 
 require (
 	github.com/stretchr/testify v1.8.0
-	go.opentelemetry.io/otel v1.9.0
-	go.opentelemetry.io/otel/sdk v1.9.0
+	go.opentelemetry.io/otel v1.10.0
+	go.opentelemetry.io/otel/sdk v1.10.0
 	k8s.io/apimachinery v0.24.3
 	k8s.io/client-go v0.24.3
 )
@@ -32,7 +32,7 @@ require (
 	github.com/munnerz/goautoneg v0.0.0-20191010083416-a7dc8b61c822 // indirect
 	github.com/pmezard/go-difflib v1.0.0 // indirect
 	github.com/stretchr/objx v0.4.0 // indirect
-	go.opentelemetry.io/otel/trace v1.9.0 // indirect
+	go.opentelemetry.io/otel/trace v1.10.0 // indirect
 	golang.org/x/net v0.0.0-20220127200216-cd36cc0744dd // indirect
 	golang.org/x/oauth2 v0.0.0-20211104180415-d3ed0bb246c8 // indirect
 	golang.org/x/sys v0.0.0-20220209214540-3681064d5158 // indirect
