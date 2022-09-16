@@ -202,7 +202,12 @@ func initMetrics() error {
 	}
 	http.Handle("/", promhttp.Handler())
 	log.Print("Serving metrics at :2222/")
-	go http.ListenAndServe(":2222", nil)
+	go func() {
+		err := http.ListenAndServe(":2222", nil)
+		if err != nil {
+			log.Print(err)
+		}
+	}()
 
 	ctx, _ := signal.NotifyContext(context.Background(), os.Interrupt)
 	wg.Add(1)
