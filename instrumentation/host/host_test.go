@@ -14,7 +14,7 @@
 
 package host_test
 
-// TODO(#TBD): Add integration tests for the host instrumentation. These tests
+// TODO(#2755): Add integration tests for the host instrumentation. These tests
 // depend on https://github.com/open-telemetry/opentelemetry-go/issues/3031
 // being resolved.
 //
