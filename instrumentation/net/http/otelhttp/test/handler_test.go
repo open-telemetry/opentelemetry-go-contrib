@@ -16,7 +16,6 @@ package test
 
 import (
 	"context"
-	"fmt"
 	"io"
 	"net/http"
 	"net/http/httptest"
@@ -31,26 +30,21 @@ import (
 	"go.opentelemetry.io/otel/attribute"
 	"go.opentelemetry.io/otel/codes"
 	"go.opentelemetry.io/otel/propagation"
-	"go.opentelemetry.io/otel/sdk/metric/metrictest"
 	sdktrace "go.opentelemetry.io/otel/sdk/trace"
 	"go.opentelemetry.io/otel/sdk/trace/tracetest"
-	semconv "go.opentelemetry.io/otel/semconv/v1.12.0"
 	"go.opentelemetry.io/otel/trace"
 )
 
-func assertMetricAttributes(t *testing.T, expectedAttributes []attribute.KeyValue, expRec []metrictest.ExportRecord) {
-	for _, r := range expRec {
-		assert.ElementsMatch(t, expectedAttributes, r.Attributes)
-	}
-}
+// TODO(#TBD): Add metric integration tests for the instrumentation. These
+// tests depend on
+// https://github.com/open-telemetry/opentelemetry-go/issues/3031 being
+// resolved.
 
 func TestHandlerBasics(t *testing.T) {
 	rr := httptest.NewRecorder()
 
 	spanRecorder := tracetest.NewSpanRecorder()
 	provider := sdktrace.NewTracerProvider(sdktrace.WithSpanProcessor(spanRecorder))
-
-	meterProvider, metricExporter := metrictest.NewTestMeterProvider()
 
 	operation := "test_handler"
 
@@ -64,7 +58,6 @@ func TestHandlerBasics(t *testing.T) {
 			}
 		}), operation,
 		otelhttp.WithTracerProvider(provider),
-		otelhttp.WithMeterProvider(meterProvider),
 		otelhttp.WithPropagators(propagation.TraceContext{}),
 	)
 
@@ -73,22 +66,6 @@ func TestHandlerBasics(t *testing.T) {
 		t.Fatal(err)
 	}
 	h.ServeHTTP(rr, r)
-
-	require.NoError(t, metricExporter.Collect(context.Background()))
-	if len(metricExporter.GetRecords()) == 0 {
-		t.Fatalf("got 0 recorded measurements, expected 1 or more")
-	}
-
-	attributesToVerify := []attribute.KeyValue{
-		semconv.HTTPServerNameKey.String(operation),
-		semconv.HTTPSchemeHTTP,
-		semconv.HTTPHostKey.String(r.Host),
-		semconv.HTTPFlavorKey.String(fmt.Sprintf("1.%d", r.ProtoMinor)),
-		semconv.HTTPMethodKey.String("GET"),
-		attribute.String("test", "attribute"),
-	}
-
-	assertMetricAttributes(t, attributesToVerify, metricExporter.GetRecords())
 
 	if got, expected := rr.Result().StatusCode, http.StatusOK; got != expected {
 		t.Fatalf("got %d, expected %d", got, expected)
