@@ -40,7 +40,7 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
-// TODO(#TBD): Add metric integration tests for the instrumentation. These
+// TODO(#2762): Add metric integration tests for the instrumentation. These
 // tests depend on
 // https://github.com/open-telemetry/opentelemetry-go/issues/3031 being
 // resolved.
