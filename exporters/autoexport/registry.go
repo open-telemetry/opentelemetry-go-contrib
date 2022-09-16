@@ -113,8 +113,7 @@ func RegisterSpanExporter(name string, e trace.SpanExporter) {
 //
 // An error is returned for any unknown exporters.
 func SpanExporter(name string) (trace.SpanExporter, error) {
-	switch name {
-	case "otlp":
+	if name == "otlp" {
 		proto := "grpc"
 		if protoStr, ok := os.LookupEnv(otelExporterOtlpProtoEnvKey); ok {
 			proto = protoStr
