@@ -35,7 +35,7 @@ import (
 	"go.opentelemetry.io/otel/trace"
 )
 
-// TODO(#TBD): Add metric integration tests for the instrumentation. These
+// TODO(#2759): Add metric integration tests for the instrumentation. These
 // tests depend on
 // https://github.com/open-telemetry/opentelemetry-go/issues/3031 being
 // resolved.
