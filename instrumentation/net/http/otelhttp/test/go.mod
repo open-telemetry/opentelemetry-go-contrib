@@ -16,7 +16,7 @@ require (
 	github.com/go-logr/logr v1.2.3 // indirect
 	github.com/go-logr/stdr v1.2.2 // indirect
 	github.com/pmezard/go-difflib v1.0.0 // indirect
-	go.opentelemetry.io/otel/metric v0.31.1-0.20220916150821-e1a1f07e44e9 // indirect
+	go.opentelemetry.io/otel/metric v0.32.0 // indirect
 	golang.org/x/sys v0.0.0-20210423185535-09eb48e85fd7 // indirect
 	gopkg.in/yaml.v3 v3.0.1 // indirect
 )
