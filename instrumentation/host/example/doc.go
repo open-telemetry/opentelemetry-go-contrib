@@ -12,11 +12,5 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package host_test
-
-// TODO(#2755): Add integration tests for the host instrumentation. These tests
-// depend on https://github.com/open-telemetry/opentelemetry-go/issues/3031
-// being resolved.
-//
-// The added tests will depend on the metric SDK. Therefore, they should be
-// added to a sub-directory called "test" instead of this file.
+// Package main provides and example use of the host instrumentation.
+package main
