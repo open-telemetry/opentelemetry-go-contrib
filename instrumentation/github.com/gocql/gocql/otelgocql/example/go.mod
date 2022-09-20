@@ -7,13 +7,13 @@ replace go.opentelemetry.io/contrib/instrumentation/github.com/gocql/gocql/otelg
 require (
 	github.com/gocql/gocql v0.0.0-20200624222514-34081eda590e
 	github.com/prometheus/client_golang v1.13.0
-	go.opentelemetry.io/contrib/instrumentation/github.com/gocql/gocql/otelgocql v0.35.0
+	go.opentelemetry.io/contrib/instrumentation/github.com/gocql/gocql/otelgocql v0.36.0
 	go.opentelemetry.io/otel v1.10.0
-	go.opentelemetry.io/otel/exporters/prometheus v0.31.1-0.20220916150821-e1a1f07e44e9
+	go.opentelemetry.io/otel/exporters/prometheus v0.32.0
 	go.opentelemetry.io/otel/exporters/zipkin v1.10.0
-	go.opentelemetry.io/otel/metric v0.31.1-0.20220916150821-e1a1f07e44e9
+	go.opentelemetry.io/otel/metric v0.32.0
 	go.opentelemetry.io/otel/sdk v1.10.0
-	go.opentelemetry.io/otel/sdk/metric v0.31.1-0.20220916150821-e1a1f07e44e9
+	go.opentelemetry.io/otel/sdk/metric v0.32.0
 )
 
 require (
