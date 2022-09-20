@@ -8,6 +8,11 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 
 ## [Unreleased]
 
+### Removed
+
+- Drop support for Go 1.17.
+  The project currently only supports Go 1.18 and above. (#2785)
+
 ## [0.36.0]
 
 ### Changed
