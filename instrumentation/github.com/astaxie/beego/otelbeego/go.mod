@@ -1,6 +1,6 @@
 module go.opentelemetry.io/contrib/instrumentation/github.com/astaxie/beego/otelbeego
 
-go 1.17
+go 1.18
 
 replace go.opentelemetry.io/contrib/instrumentation/net/http/otelhttp => ../../../../net/http/otelhttp
 

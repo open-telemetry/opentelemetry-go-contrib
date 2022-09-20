@@ -1,6 +1,6 @@
 module go.opentelemetry.io/contrib/instrumentation/runtime
 
-go 1.17
+go 1.18
 
 require go.opentelemetry.io/otel/metric v0.32.0
 

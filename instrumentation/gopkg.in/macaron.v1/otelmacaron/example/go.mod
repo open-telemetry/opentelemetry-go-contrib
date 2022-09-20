@@ -1,6 +1,6 @@
 module go.opentelemetry.io/contrib/instrumentation/gopkg.in/macaron.v1/otelmacaron/example
 
-go 1.17
+go 1.18
 
 replace (
 	go.opentelemetry.io/contrib/instrumentation/gopkg.in/macaron.v1/otelmacaron => ../
