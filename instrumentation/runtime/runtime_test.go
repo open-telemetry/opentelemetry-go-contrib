@@ -14,86 +14,10 @@
 
 package runtime_test
 
-import (
-	"context"
-	"fmt"
-	goruntime "runtime"
-	"testing"
-	"time"
-
-	"github.com/stretchr/testify/assert"
-	"github.com/stretchr/testify/require"
-
-	"go.opentelemetry.io/contrib/instrumentation/runtime"
-	"go.opentelemetry.io/otel/sdk/metric/export/aggregation"
-	"go.opentelemetry.io/otel/sdk/metric/metrictest"
-)
-
-func TestRuntime(t *testing.T) {
-	err := runtime.Start(
-		runtime.WithMinimumReadMemStatsInterval(time.Second),
-	)
-	assert.NoError(t, err)
-	time.Sleep(time.Second)
-}
-
-func getGCCount(exp *metrictest.Exporter) int {
-	for _, r := range exp.GetRecords() {
-		if r.InstrumentName == "process.runtime.go.gc.count" {
-			switch r.AggregationKind {
-			case aggregation.SumKind, aggregation.HistogramKind:
-				return int(r.Sum.CoerceToInt64(r.NumberKind))
-			case aggregation.LastValueKind:
-				return int(r.LastValue.CoerceToInt64(r.NumberKind))
-			default:
-				panic(fmt.Sprintf("invalid aggregation type: %v", r.AggregationKind))
-			}
-		}
-	}
-	panic("Could not locate a process.runtime.go.gc.count metric in test output")
-}
-
-func testMinimumInterval(t *testing.T, expect int, opts ...runtime.Option) {
-	goruntime.GC()
-
-	var mstats0 goruntime.MemStats
-	goruntime.ReadMemStats(&mstats0)
-	baseline := int(mstats0.NumGC)
-
-	provider, exp := metrictest.NewTestMeterProvider()
-
-	err := runtime.Start(
-		append(
-			opts,
-			runtime.WithMeterProvider(provider),
-		)...,
-	)
-	assert.NoError(t, err)
-
-	goruntime.GC()
-
-	require.NoError(t, exp.Collect(context.Background()))
-
-	require.Equal(t, 1, getGCCount(exp)-baseline)
-
-	// Only counted for small min read mem state itervals.
-	goruntime.GC()
-	goruntime.GC()
-	goruntime.GC()
-
-	require.NoError(t, exp.Collect(context.Background()))
-
-	require.Equal(t, expect, getGCCount(exp)-baseline)
-}
-
-func TestDefaultMinimumInterval(t *testing.T) {
-	testMinimumInterval(t, 1)
-}
-
-func TestNoMinimumInterval(t *testing.T) {
-	testMinimumInterval(t, 4, runtime.WithMinimumReadMemStatsInterval(0))
-}
-
-func TestExplicitMinimumInterval(t *testing.T) {
-	testMinimumInterval(t, 1, runtime.WithMinimumReadMemStatsInterval(time.Hour))
-}
+// TODO(#2757): Add integration tests for the runtime instrumentation. These
+// tests depend on
+// https://github.com/open-telemetry/opentelemetry-go/issues/3031 being
+// resolved.
+//
+// The added tests will depend on the metric SDK. Therefore, they should be
+// added to a sub-directory called "test" instead of this file.
