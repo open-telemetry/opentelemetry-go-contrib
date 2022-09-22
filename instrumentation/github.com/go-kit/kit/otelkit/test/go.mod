@@ -1,6 +1,6 @@
 module go.opentelemetry.io/contrib/instrumentation/github.com/go-kit/kit/otelkit/test
 
-go 1.17
+go 1.18
 
 require (
 	github.com/go-kit/kit v0.12.0

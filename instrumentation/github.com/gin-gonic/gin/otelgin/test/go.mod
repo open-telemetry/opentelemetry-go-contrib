@@ -1,6 +1,6 @@
 module go.opentelemetry.io/contrib/instrumentation/github.com/gin-gonic/gin/otelgin/test
 
-go 1.17
+go 1.18
 
 require (
 	github.com/gin-gonic/gin v1.8.1
