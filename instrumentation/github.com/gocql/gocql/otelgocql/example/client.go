@@ -173,7 +173,6 @@ func views() ([]view.View, error) {
 
 	v, err = view.New(
 		view.MatchInstrumentName("db.cassandra.latency"),
-		view.WithRename("db_cassandra_latency"),
 		view.WithSetAggregation(aggregation.ExplicitBucketHistogram{
 			Boundaries: []float64{0.001, 0.01, 0.1, 0.5, 1, 2, 5, 10},
 		}),
@@ -203,7 +202,7 @@ func initMetrics() error {
 	http.Handle("/", promhttp.Handler())
 	log.Print("Serving metrics at :2222/")
 	go func() {
-		err := http.ListenAndServe(":2222", nil)
+		err := http.ListenAndServe(":2223", nil)
 		if err != nil {
 			log.Print(err)
 		}
