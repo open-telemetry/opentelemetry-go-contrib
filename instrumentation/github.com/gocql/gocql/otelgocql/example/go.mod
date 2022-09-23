@@ -34,5 +34,3 @@ require (
 	google.golang.org/protobuf v1.28.1 // indirect
 	gopkg.in/inf.v0 v0.9.1 // indirect
 )
-
-replace go.opentelemetry.io/otel/sdk => go.opentelemetry.io/otel/sdk v1.10.0
