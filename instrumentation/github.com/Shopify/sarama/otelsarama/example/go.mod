@@ -1,12 +1,12 @@
 module go.opentelemetry.io/contrib/instrumentation/github.com/Shopify/sarama/otelsarama/example
 
-go 1.17
+go 1.18
 
 replace go.opentelemetry.io/contrib/instrumentation/github.com/Shopify/sarama/otelsarama => ../
 
 require (
 	github.com/Shopify/sarama v1.36.0
-	go.opentelemetry.io/contrib/instrumentation/github.com/Shopify/sarama/otelsarama v0.35.0
+	go.opentelemetry.io/contrib/instrumentation/github.com/Shopify/sarama/otelsarama v0.36.0
 	go.opentelemetry.io/otel v1.10.0
 	go.opentelemetry.io/otel/exporters/stdout/stdouttrace v1.10.0
 	go.opentelemetry.io/otel/sdk v1.10.0

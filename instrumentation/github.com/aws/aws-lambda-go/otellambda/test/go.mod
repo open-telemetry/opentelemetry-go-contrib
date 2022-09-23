@@ -1,6 +1,6 @@
 module go.opentelemetry.io/contrib/instrumentation/github.com/aws/aws-lambda-go/otellambda/test
 
-go 1.17
+go 1.18
 
 replace (
 	go.opentelemetry.io/contrib/detectors/aws/lambda => ../../../../../../detectors/aws/lambda
@@ -11,8 +11,8 @@ replace (
 require (
 	github.com/aws/aws-lambda-go v1.34.1
 	github.com/stretchr/testify v1.8.0
-	go.opentelemetry.io/contrib/detectors/aws/lambda v0.35.0
-	go.opentelemetry.io/contrib/instrumentation/github.com/aws/aws-lambda-go/otellambda v0.35.0
+	go.opentelemetry.io/contrib/detectors/aws/lambda v0.36.0
+	go.opentelemetry.io/contrib/instrumentation/github.com/aws/aws-lambda-go/otellambda v0.36.0
 	go.opentelemetry.io/contrib/propagators/aws v1.10.0
 	go.opentelemetry.io/otel v1.10.0
 	go.opentelemetry.io/otel/sdk v1.10.0
