@@ -8,6 +8,17 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 
 ## [Unreleased]
 
+## [0.36.1]
+
+### Changed
+
+- Upgrade dependencies of the OpenTelemetry Go Metric SDK to use the new [`v0.32.1` release](https://github.com/open-telemetry/opentelemetry-go/releases
+
+### Removed
+
+- Drop support for Go 1.17.
+  The project currently only supports Go 1.18 and above. (#2785)
+
 ## [0.36.0]
 
 ### Changed
@@ -550,8 +561,8 @@ First official tagged release of `contrib` repository.
 - Prefix support for dogstatsd (#34)
 - Update Go Runtime package to use batch observer (#44)
 
-[Unreleased]: https://github.com/open-telemetry/opentelemetry-go-contrib/compare/v0.36.0...HEAD
-[0.36.0]: https://github.com/open-telemetry/opentelemetry-go-contrib/releases/tag/v0.36.0
+[Unreleased]: https://github.com/open-telemetry/opentelemetry-go-contrib/compare/zpages/v0.36.0...HEAD
+[0.36.0]: https://github.com/open-telemetry/opentelemetry-go-contrib/releases/tag/zpages/v0.36.0
 [1.10.0/0.35.0/0.5.0]: https://github.com/open-telemetry/opentelemetry-go-contrib/releases/tag/v1.10.0
 [1.9.0/0.34.0/0.4.0]: https://github.com/open-telemetry/opentelemetry-go-contrib/releases/tag/v1.9.0
 [1.8.0/0.33.0]: https://github.com/open-telemetry/opentelemetry-go-contrib/releases/tag/v1.8.0
