@@ -1,10 +1,10 @@
 module go.opentelemetry.io/contrib/instrumentation/github.com/go-kit/kit/otelkit/example
 
-go 1.17
+go 1.18
 
 require (
 	github.com/gorilla/mux v1.8.0
-	go.opentelemetry.io/contrib/instrumentation/github.com/go-kit/kit/otelkit v0.35.0
+	go.opentelemetry.io/contrib/instrumentation/github.com/go-kit/kit/otelkit v0.36.1
 	go.opentelemetry.io/otel v1.10.0
 	go.opentelemetry.io/otel/exporters/stdout/stdouttrace v1.10.0
 	go.opentelemetry.io/otel/sdk v1.10.0

@@ -1,12 +1,12 @@
 module go.opentelemetry.io/contrib/instrumentation/google.golang.org/grpc/otelgrpc/example
 
-go 1.17
+go 1.18
 
 replace go.opentelemetry.io/contrib/instrumentation/google.golang.org/grpc/otelgrpc => ../
 
 require (
 	github.com/golang/protobuf v1.5.2
-	go.opentelemetry.io/contrib/instrumentation/google.golang.org/grpc/otelgrpc v0.35.0
+	go.opentelemetry.io/contrib/instrumentation/google.golang.org/grpc/otelgrpc v0.36.1
 	go.opentelemetry.io/otel v1.10.0
 	go.opentelemetry.io/otel/exporters/stdout/stdouttrace v1.10.0
 	go.opentelemetry.io/otel/sdk v1.10.0
