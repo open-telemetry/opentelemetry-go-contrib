@@ -49,6 +49,10 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 
 - Upgrade dependencies of the OpenTelemetry Go Metric SDK to use the new [`v0.32.1` release](https://github.com/open-telemetry/opentelemetry-go/releases/tag/sdk%2Fmetric%2Fv0.32.1)
 
+### Fixed
+
+- Set the status_code span attribute even if the HTTP handler hasn't written anything. (#2822)
+
 ### Removed
 
 - Drop support for Go 1.17.
