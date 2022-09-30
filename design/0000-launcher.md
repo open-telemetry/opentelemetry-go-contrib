@@ -32,7 +32,7 @@ go get go.opentelemetry.io/contrib/otelinit
 
 ### Configure
 
-Minimal setup - by default will send all telemetry to localhost:4317, with the ability to set environment variables for endpoint, headers, resource attributes, and more as listed in the configuration options noted below:
+Minimal setup - by default will send all telemetry to `localhost:4317`, with the ability to set environment variables for endpoint, headers, resource attributes, and more as listed in the configuration options noted below:
 
 ```go
 import "go.opentelemetry.io/contrib/otelinit"
@@ -43,18 +43,16 @@ func main() {
 }
 ```
 
-Or set headers directly in code instead:
+Alternatively, set environment variables or set variables directly in code to override defaults:
 
 ```go
 import "go.opentelemetry.io/contrib/otelinit"
 
 func main() {
     init, err := otelinit.ConfigureOpentelemetry(
+        otelinit.WithTracesExporter(new trace.SpanExporter("jaeger")) // if using non-default exporter
+        otelinit.WithPropagators(b3.New()) // if using non-default propagator
         otelinit.WithServiceName("service-name"),
-        otelinit.WithHeaders(map[string]string{
-            "service-auth-key": "value",
-            "service-useful-field": "testing",
-        }),
     )
     defer init.Shutdown()
 }
@@ -66,36 +64,22 @@ func main() {
 | --------------------------  | ----------------------------------- | -------- | -------------------- |
 | WithServiceName             | OTEL_SERVICE_NAME                   | n*       | unknown_service:go   |
 | WithServiceVersion          | OTEL_SERVICE_VERSION                | n        | -                    |
-| WithHeaders                 | OTEL_EXPORTER_OTLP_HEADERS          | n        | {}                   |
-| WithTracesExporterEndpoint  | OTEL_EXPORTER_OTLP_TRACES_ENDPOINT  | n        | localhost:4317**     |
-| WithTracesExporterInsecure  | OTEL_EXPORTER_OTLP_TRACES_INSECURE  | n        | false                |
-| WithMetricsExporterEndpoint | OTEL_EXPORTER_OTLP_METRICS_ENDPOINT | n        | localhost:4317**     |
-| WithMetricsExporterInsecure | OTEL_EXPORTER_OTLP_METRICS_INSECURE | n        | false                |
+| WithTracesExporter          | OTEL_TRACES_EXPORTER                | n        | otlp                 |
 | WithLogLevel                | OTEL_LOG_LEVEL                      | n        | info                 |
 | WithPropagators             | OTEL_PROPAGATORS                    | n        | tracecontext,baggage |
 | WithResourceAttributes      | OTEL_RESOURCE_ATTRIBUTES            | n        | -                    |
-| WithMetricsReportingPeriod  | OTEL_EXPORTER_OTLP_METRICS_PERIOD   | n        | 30s                  |
 | WithMetricsEnabled          | OTEL_METRICS_ENABLED                | n        | true                 |
 | WithTracesEnabled           | OTEL_TRACES_ENABLED                 | n        | true                 |
-| WithProtocol                | OTEL_EXPORTER_OTLP_PROTOCOL         | n        | grpc                 |
 
 *Service name should be set using the `WithServiceName` configuration option, the `OTEL_SERVICE_NAME` environment variable, or by setting the `service.name` in `OTEL_RESOURCE_ATTRIBUTES`. The default service name is based on the SDK's behavior as it conforms to the specification: `unknown_service`, suffixed with either the process name (where possible) or `go`.
 
-**If `OTEL_EXPORTER_OTLP_PROTOCOL` is set to `http/protobuf`, the default endpoint will be `localhost:4318`.
+The propagator(s) will be set using the `autoprop` package. `WithPropagators` is an option that sets the default `tracecontext,baggage` propagators if none are set using environment variables.
 
-### Additional Configuration Options
-
-Not yet implemented but still desired configuration options would include:
-
-- `autoexporter` registry
-- `WithTracesExporter` = `OTLP` default, with options to select from the autoexporter registry once available
-- `WithMetricsExporter` = `OTLP` default, with options to select from the autoexporter registry once available
-- `WithOTLPTracesExporterEndpoint` = `localhost:4317` default, or `localhost:4318` if http protocol is set
-- `WithOTLPMetricsExporterEndpoint` = `localhost:4317` default, or `localhost:4318` if http protocol is set
+The exporter(s) will be set using the `autoexport` package. `WithTracesExporter` is an option that sets the default span exporter if none are set using environment variables.
 
 ### Using a Vendor-Specific Package
 
-Vendors may create and maintain convenience configuration packages to more easily setup for export to a specific backend. For example, using a Honeycomb package would look like this:
+Vendors may create and maintain convenience configuration packages to more easily setup for export to a specific backend. This is commonly done to set a specific endpoint, and set specific metadata or headers needed for telemetry - thus overriding defaults. For example, using a Honeycomb package would look like this:
 
 Minimal setup, which sends to the Honeycomb endpoint and requires `HONEYCOMB_API_KEY` environment variable:
 
