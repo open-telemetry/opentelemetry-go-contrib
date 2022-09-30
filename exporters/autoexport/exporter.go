@@ -25,7 +25,7 @@ const (
 	otelTracesExportersEnvKey = "OTEL_TRACES_EXPORTER"
 )
 
-// NewTraceExporter returns a conbfigured SpanExporter defined using the environment
+// NewTraceExporter returns a configured SpanExporter defined using the environment
 // variable OTEL_TRACES_EXPORTER or the passed in exporter. The exporter defined
 // in OTEL_TRACES_EXPORTER is preferred over the exporter passed in.
 func NewTraceExporter(exporter trace.SpanExporter) trace.SpanExporter {
