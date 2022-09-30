@@ -93,9 +93,3 @@ func (w *respWriterWrapper) WriteHeader(statusCode int) {
 	w.statusCode = statusCode
 	w.ResponseWriter.WriteHeader(statusCode)
 }
-
-func (w *respWriterWrapper) Flush() {
-	if !w.wroteHeader {
-		w.WriteHeader(http.StatusOK)
-	}
-}

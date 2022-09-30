@@ -180,7 +180,13 @@ func (h *Handler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		}
 	}
 
-	rww := &respWriterWrapper{ResponseWriter: w, record: writeRecordFunc, ctx: ctx, props: h.propagators}
+	rww := &respWriterWrapper{
+		ResponseWriter: w,
+		record:         writeRecordFunc,
+		ctx:            ctx,
+		props:          h.propagators,
+		statusCode:     200, // default status code in case the Handler doesn't write anything
+	}
 
 	// Wrap w to use our ResponseWriter methods while also exposing
 	// other interfaces that w may implement (http.CloseNotifier,
@@ -202,7 +208,6 @@ func (h *Handler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	ctx = injectLabeler(ctx, labeler)
 
 	h.handler.ServeHTTP(w, r.WithContext(ctx))
-	rww.Flush()
 
 	setAfterServeAttributes(span, bw.read, rww.written, rww.statusCode, bw.err, rww.err)
 
@@ -231,10 +236,9 @@ func setAfterServeAttributes(span trace.Span, read, wrote int64, statusCode int,
 	if wrote > 0 {
 		attributes = append(attributes, WroteBytesKey.Int64(wrote))
 	}
-	if statusCode > 0 {
-		attributes = append(attributes, semconv.HTTPAttributesFromHTTPStatusCode(statusCode)...)
-		span.SetStatus(semconv.SpanStatusFromHTTPStatusCodeAndSpanKind(statusCode, trace.SpanKindServer))
-	}
+	attributes = append(attributes, semconv.HTTPAttributesFromHTTPStatusCode(statusCode)...)
+	span.SetStatus(semconv.SpanStatusFromHTTPStatusCodeAndSpanKind(statusCode, trace.SpanKindServer))
+
 	if werr != nil && werr != io.EOF {
 		attributes = append(attributes, WriteErrorKey.String(werr.Error()))
 	}
