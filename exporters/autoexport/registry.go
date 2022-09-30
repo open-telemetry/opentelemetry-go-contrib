@@ -52,6 +52,9 @@ var (
 	// errInvalidOtlpProtocol is returned when an invalid protocol is used in
 	// the OTEL_EXPORTER_OTLP_PROTOCOL environment variable.
 	errInvalidOtlpProtocol = errors.New("invalid OTLP protocol - should be one of ['grpc', 'http/protobuf']")
+
+	// errDuplicateRegistration is returned when an duplicate registration is detected.
+	errDuplicateRegistration = errors.New("duplicate registration")
 )
 
 // load returns the value stored in the registry index for a key, or nil if no
@@ -64,8 +67,6 @@ func (r *registry) load(key string) (p trace.SpanExporter, ok bool) {
 	return p, ok
 }
 
-var errDupReg = errors.New("duplicate registration")
-
 // store sets the value for a key if is not already in the registry. errDupReg
 // is returned if the registry already contains key.
 func (r *registry) store(key string, value trace.SpanExporter) error {
@@ -76,7 +77,7 @@ func (r *registry) store(key string, value trace.SpanExporter) error {
 		return nil
 	}
 	if _, ok := r.names[key]; ok {
-		return fmt.Errorf("%w: %q", errDupReg, key)
+		return fmt.Errorf("%w: %q", errDuplicateRegistration, key)
 	}
 	r.names[key] = value
 	return nil

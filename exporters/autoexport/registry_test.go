@@ -52,7 +52,7 @@ func TestRegistryConcurrentSafe(t *testing.T) {
 
 	go func() {
 		assert.NotPanics(t, func() {
-			require.ErrorIs(t, r.store(exporterName, stdout), errDupReg)
+			require.ErrorIs(t, r.store(exporterName, stdout), errDuplicateRegistration)
 		})
 	}()
 
@@ -80,7 +80,7 @@ func TestDuplicateRegisterSpanExporterPanics(t *testing.T) {
 	RegisterSpanExporter(exporterName, stdout)
 	t.Cleanup(func() { envRegistry.drop(exporterName) })
 
-	errString := fmt.Sprintf("%s: %q", errDupReg, exporterName)
+	errString := fmt.Sprintf("%s: %q", errDuplicateRegistration, exporterName)
 	assert.PanicsWithError(t, errString, func() {
 		RegisterSpanExporter(exporterName, stdout)
 	})
