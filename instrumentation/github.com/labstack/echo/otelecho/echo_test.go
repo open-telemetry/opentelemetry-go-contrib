@@ -51,6 +51,24 @@ func TestErrorOnlyHandledOnce(t *testing.T) {
 	assert.Equal(t, 1, timesHandlingError)
 }
 
+func TestHttpErrorTypeHandled(t *testing.T) {
+	router := echo.New()
+	var handlingError error
+	err := errors.New("mock error")
+	router.HTTPErrorHandler = func(e error, c echo.Context) {
+		handlingError = e
+	}
+	router.Use(Middleware("test-service"))
+	router.GET("/", func(c echo.Context) error {
+		return echo.NewHTTPError(http.StatusBadRequest, err)
+	})
+	r := httptest.NewRequest(http.MethodGet, "/", nil)
+	w := httptest.NewRecorder()
+	router.ServeHTTP(w, r)
+
+	assert.Equal(t, err.Error(), handlingError.Error())
+}
+
 func TestGetSpanNotInstrumented(t *testing.T) {
 	router := echo.New()
 	router.GET("/ping", func(c echo.Context) error {

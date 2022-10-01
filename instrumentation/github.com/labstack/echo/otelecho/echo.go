@@ -15,6 +15,7 @@
 package otelecho // import "go.opentelemetry.io/contrib/instrumentation/github.com/labstack/echo/otelecho"
 
 import (
+	"errors"
 	"fmt"
 
 	"github.com/labstack/echo/v4"
@@ -87,6 +88,14 @@ func Middleware(service string, opts ...Option) echo.MiddlewareFunc {
 
 			// serve the request to the next middleware
 			err := next(c)
+
+			var echoError *echo.HTTPError
+
+			// handle *HTTPError error type in Echo
+			if errors.As(err, &echoError) {
+				err = err.(*echo.HTTPError).Message.(error)
+			}
+
 			if err != nil {
 				span.SetAttributes(attribute.String("echo.error", err.Error()))
 				// invokes the registered HTTP error handler
