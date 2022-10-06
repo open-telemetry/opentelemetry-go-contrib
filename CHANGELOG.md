@@ -32,6 +32,12 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 - Rename the `Typ` field of `"go.opentelemetry.io/contrib/instrumentation/google.golang.org/grpc/otelgrpc".InterceptorInfo` to `Type`. (#2688)
 - Use Go 1.19 as the default version for CI testing/linting. (#2675)
 
+### Fixed
+
+- Fix the Jaeger propagator rejecting trace IDs that are both shorter than 128 bits and not exactly 64 bits long (while not being 0).
+  Also fix the propagator rejecting span IDs shorter than 64 bits.
+  This fixes compatibility with Jaeger clients encoding trace and span IDs as variable-length hex strings, [as required by the Jaeger propagation format](https://www.jaegertracing.io/docs/1.37/client-libraries/#value). (#2731)
+
 ## [1.9.0/0.34.0/0.4.0] - 2022-08-02
 
 ### Added
