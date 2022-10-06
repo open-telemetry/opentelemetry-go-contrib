@@ -8,6 +8,11 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 
 ## [Unreleased]
 
+
+### Changed
+
+- google.golang.org/grpc/otelgrpc: Avoid getting a new Tracer for every RPC.
+
 ## [0.36.1]
 
 ### Changed
