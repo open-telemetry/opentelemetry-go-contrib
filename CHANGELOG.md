@@ -8,10 +8,10 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 
 ## [Unreleased]
 
-
 ### Changed
 
 - google.golang.org/grpc/otelgrpc: Avoid getting a new Tracer for every RPC.
+- google.golang.org/grpc/otelgrpc: Deprecate Inject and Extract public funcs.
 
 ## [0.36.1]
 
