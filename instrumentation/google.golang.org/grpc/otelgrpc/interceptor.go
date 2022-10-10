@@ -21,13 +21,12 @@ import (
 	"io"
 	"net"
 
-	"github.com/golang/protobuf/proto" // nolint:staticcheck
-
 	"google.golang.org/grpc"
 	grpc_codes "google.golang.org/grpc/codes"
 	"google.golang.org/grpc/metadata"
 	"google.golang.org/grpc/peer"
 	"google.golang.org/grpc/status"
+	"google.golang.org/protobuf/proto"
 
 	"go.opentelemetry.io/contrib/instrumentation/google.golang.org/grpc/otelgrpc/internal"
 	"go.opentelemetry.io/otel/attribute"
@@ -42,6 +41,9 @@ type messageType attribute.KeyValue
 // passed context with id and size (if message is a proto message).
 func (m messageType) Event(ctx context.Context, id int, message interface{}) {
 	span := trace.SpanFromContext(ctx)
+	if !span.IsRecording() {
+		return
+	}
 	if p, ok := message.(proto.Message); ok {
 		span.AddEvent("message", trace.WithAttributes(
 			attribute.KeyValue(m),
