@@ -31,7 +31,6 @@ import (
 
 	"go.opentelemetry.io/contrib/instrumentation/google.golang.org/grpc/otelgrpc/internal"
 	"go.opentelemetry.io/otel/attribute"
-	"go.opentelemetry.io/otel/baggage"
 	"go.opentelemetry.io/otel/codes"
 	semconv "go.opentelemetry.io/otel/semconv/v1.12.0"
 	"go.opentelemetry.io/otel/trace"
@@ -66,6 +65,11 @@ var (
 // for use in a grpc.Dial call.
 func UnaryClientInterceptor(opts ...Option) grpc.UnaryClientInterceptor {
 	cfg := newConfig(opts)
+	tracer := cfg.TracerProvider.Tracer(
+		instrumentationName,
+		trace.WithInstrumentationVersion(SemVersion()),
+	)
+
 	return func(
 		ctx context.Context,
 		method string,
@@ -82,14 +86,6 @@ func UnaryClientInterceptor(opts ...Option) grpc.UnaryClientInterceptor {
 			return invoker(ctx, method, req, reply, cc, callOpts...)
 		}
 
-		requestMetadata, _ := metadata.FromOutgoingContext(ctx)
-		metadataCopy := requestMetadata.Copy()
-
-		tracer := cfg.TracerProvider.Tracer(
-			instrumentationName,
-			trace.WithInstrumentationVersion(SemVersion()),
-		)
-
 		name, attr := spanInfo(method, cc.Target())
 		var span trace.Span
 		ctx, span = tracer.Start(
@@ -100,8 +96,7 @@ func UnaryClientInterceptor(opts ...Option) grpc.UnaryClientInterceptor {
 		)
 		defer span.End()
 
-		inject(ctx, &metadataCopy, cfg.Propagators)
-		ctx = metadata.NewOutgoingContext(ctx, metadataCopy)
+		ctx = inject(ctx, cfg.Propagators)
 
 		messageSent.Event(ctx, 1, req)
 
@@ -245,6 +240,11 @@ func (w *clientStream) sendStreamEvent(eventType streamEventType, err error) {
 // for use in a grpc.Dial call.
 func StreamClientInterceptor(opts ...Option) grpc.StreamClientInterceptor {
 	cfg := newConfig(opts)
+	tracer := cfg.TracerProvider.Tracer(
+		instrumentationName,
+		trace.WithInstrumentationVersion(SemVersion()),
+	)
+
 	return func(
 		ctx context.Context,
 		desc *grpc.StreamDesc,
@@ -261,14 +261,6 @@ func StreamClientInterceptor(opts ...Option) grpc.StreamClientInterceptor {
 			return streamer(ctx, desc, cc, method, callOpts...)
 		}
 
-		requestMetadata, _ := metadata.FromOutgoingContext(ctx)
-		metadataCopy := requestMetadata.Copy()
-
-		tracer := cfg.TracerProvider.Tracer(
-			instrumentationName,
-			trace.WithInstrumentationVersion(SemVersion()),
-		)
-
 		name, attr := spanInfo(method, cc.Target())
 		var span trace.Span
 		ctx, span = tracer.Start(
@@ -278,8 +270,7 @@ func StreamClientInterceptor(opts ...Option) grpc.StreamClientInterceptor {
 			trace.WithAttributes(attr...),
 		)
 
-		inject(ctx, &metadataCopy, cfg.Propagators)
-		ctx = metadata.NewOutgoingContext(ctx, metadataCopy)
+		ctx = inject(ctx, cfg.Propagators)
 
 		s, err := streamer(ctx, desc, cc, method, callOpts...)
 		if err != nil {
@@ -313,6 +304,11 @@ func StreamClientInterceptor(opts ...Option) grpc.StreamClientInterceptor {
 // for use in a grpc.NewServer call.
 func UnaryServerInterceptor(opts ...Option) grpc.UnaryServerInterceptor {
 	cfg := newConfig(opts)
+	tracer := cfg.TracerProvider.Tracer(
+		instrumentationName,
+		trace.WithInstrumentationVersion(SemVersion()),
+	)
+
 	return func(
 		ctx context.Context,
 		req interface{},
@@ -327,20 +323,11 @@ func UnaryServerInterceptor(opts ...Option) grpc.UnaryServerInterceptor {
 			return handler(ctx, req)
 		}
 
-		requestMetadata, _ := metadata.FromIncomingContext(ctx)
-		metadataCopy := requestMetadata.Copy()
-
-		bags, spanCtx := Extract(ctx, &metadataCopy, opts...)
-		ctx = baggage.ContextWithBaggage(ctx, bags)
-
-		tracer := cfg.TracerProvider.Tracer(
-			instrumentationName,
-			trace.WithInstrumentationVersion(SemVersion()),
-		)
+		ctx = extract(ctx, cfg.Propagators)
 
 		name, attr := spanInfo(info.FullMethod, peerFromCtx(ctx))
 		ctx, span := tracer.Start(
-			trace.ContextWithRemoteSpanContext(ctx, spanCtx),
+			trace.ContextWithRemoteSpanContext(ctx, trace.SpanContextFromContext(ctx)),
 			name,
 			trace.WithSpanKind(trace.SpanKindServer),
 			trace.WithAttributes(attr...),
@@ -409,6 +396,11 @@ func wrapServerStream(ctx context.Context, ss grpc.ServerStream) *serverStream {
 // for use in a grpc.NewServer call.
 func StreamServerInterceptor(opts ...Option) grpc.StreamServerInterceptor {
 	cfg := newConfig(opts)
+	tracer := cfg.TracerProvider.Tracer(
+		instrumentationName,
+		trace.WithInstrumentationVersion(SemVersion()),
+	)
+
 	return func(
 		srv interface{},
 		ss grpc.ServerStream,
@@ -424,20 +416,11 @@ func StreamServerInterceptor(opts ...Option) grpc.StreamServerInterceptor {
 			return handler(srv, wrapServerStream(ctx, ss))
 		}
 
-		requestMetadata, _ := metadata.FromIncomingContext(ctx)
-		metadataCopy := requestMetadata.Copy()
-
-		bags, spanCtx := Extract(ctx, &metadataCopy, opts...)
-		ctx = baggage.ContextWithBaggage(ctx, bags)
-
-		tracer := cfg.TracerProvider.Tracer(
-			instrumentationName,
-			trace.WithInstrumentationVersion(SemVersion()),
-		)
+		ctx = extract(ctx, cfg.Propagators)
 
 		name, attr := spanInfo(info.FullMethod, peerFromCtx(ctx))
 		ctx, span := tracer.Start(
-			trace.ContextWithRemoteSpanContext(ctx, spanCtx),
+			trace.ContextWithRemoteSpanContext(ctx, trace.SpanContextFromContext(ctx)),
 			name,
 			trace.WithSpanKind(trace.SpanKindServer),
 			trace.WithAttributes(attr...),
