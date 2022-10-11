@@ -16,6 +16,7 @@ package otelaws // import "go.opentelemetry.io/contrib/instrumentation/github.co
 
 import (
 	"context"
+	"fmt"
 	"time"
 
 	v2Middleware "github.com/aws/aws-sdk-go-v2/aws/middleware"
@@ -25,6 +26,7 @@ import (
 	"go.opentelemetry.io/otel"
 	"go.opentelemetry.io/otel/attribute"
 	"go.opentelemetry.io/otel/codes"
+	"go.opentelemetry.io/otel/propagation"
 	semconv "go.opentelemetry.io/otel/semconv/v1.12.0"
 	"go.opentelemetry.io/otel/trace"
 )
@@ -110,6 +112,25 @@ func (m otelMiddlewares) deserializeMiddleware(stack *middleware.Stack) error {
 		middleware.Before)
 }
 
+func (m otelMiddlewares) finalizeMiddleware(stack *middleware.Stack) error {
+	return stack.Finalize.Add(middleware.FinalizeMiddlewareFunc("OTelFinalizeMiddleware", func(
+		ctx context.Context, in middleware.FinalizeInput, next middleware.FinalizeHandler) (
+		out middleware.FinalizeOutput, metadata middleware.Metadata, err error) {
+
+		// Propagate the Trace information by injecting it into the HTTP request.
+		switch req := in.Request.(type) {
+		case *smithyhttp.Request:
+			otel.GetTextMapPropagator().Inject(ctx, propagation.HeaderCarrier(req.Header))
+		default:
+			return out, metadata, fmt.Errorf("unknown transport type %T", req)
+		}
+
+		return next.HandleFinalize(ctx, in)
+
+	}),
+		middleware.Before)
+}
+
 // AppendMiddlewares attaches OTel middlewares to the AWS Go SDK V2 for instrumentation.
 // OTel middlewares can be appended to either all aws clients or a specific operation.
 // Please see more details in https://aws.github.io/aws-sdk-go-v2/docs/middleware/
@@ -128,5 +149,5 @@ func AppendMiddlewares(apiOptions *[]func(*middleware.Stack) error, opts ...Opti
 	m := otelMiddlewares{tracer: cfg.TracerProvider.Tracer(tracerName,
 		trace.WithInstrumentationVersion(SemVersion())),
 		attributeSetter: cfg.AttributeSetter}
-	*apiOptions = append(*apiOptions, m.initializeMiddlewareBefore, m.initializeMiddlewareAfter, m.deserializeMiddleware)
+	*apiOptions = append(*apiOptions, m.initializeMiddlewareBefore, m.initializeMiddlewareAfter, m.finalizeMiddleware, m.deserializeMiddleware)
 }
