@@ -8,17 +8,24 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 
 ## [Unreleased]
 
+## [0.36.2]
+
 ### Changed
 
-- google.golang.org/grpc/otelgrpc: Avoid getting a new Tracer for every RPC.
-- google.golang.org/grpc/otelgrpc: Deprecate Inject and Extract public funcs.
-- google.golang.org/grpc/otelgrpc: Conditionally compute message size for tracing events using proto v2 API rather than legacy v1 API.
+- Upgrade dependencies of the OpenTelemetry Go Metric SDK to use the new [`v0.32.2` release](https://github.com/open-telemetry/opentelemetry-go/releases/tag/sdk%2Fmetric%2Fv0.32.2)
+- Avoid getting a new Tracer for every RPC in `go.opentelemetry.io/contrib/instrumentation/google.golang.org/grpc/otelgrpc`. (#2835)
+- Conditionally compute message size for tracing events using proto v2 API rather than legacy v1 API in `go.opentelemetry.io/contrib/instrumentation/google.golang.org/grpc/otelgrpc`. (#2647)
+
+### Deprecated
+
+- The `Inject` function in `go.opentelemetry.io/contrib/instrumentation/google.golang.org/grpc/otelgrpc` is deprecated. (#2838)
+- The `Extract` function in `go.opentelemetry.io/contrib/instrumentation/google.golang.org/grpc/otelgrpc` is deprecated. (#2838)
 
 ## [0.36.1]
 
 ### Changed
 
-- Upgrade dependencies of the OpenTelemetry Go Metric SDK to use the new [`v0.32.1` release](https://github.com/open-telemetry/opentelemetry-go/releases
+- Upgrade dependencies of the OpenTelemetry Go Metric SDK to use the new [`v0.32.1` release](https://github.com/open-telemetry/opentelemetry-go/releases/tag/sdk%2Fmetric%2Fv0.32.1)
 
 ### Removed
 
@@ -569,7 +576,9 @@ First official tagged release of `contrib` repository.
 - Prefix support for dogstatsd (#34)
 - Update Go Runtime package to use batch observer (#44)
 
-[Unreleased]: https://github.com/open-telemetry/opentelemetry-go-contrib/compare/zpages/v0.36.0...HEAD
+[Unreleased]: https://github.com/open-telemetry/opentelemetry-go-contrib/compare/zpages/v0.36.2...HEAD
+[0.36.2]: https://github.com/open-telemetry/opentelemetry-go-contrib/releases/tag/zpages/v0.36.2
+[0.36.1]: https://github.com/open-telemetry/opentelemetry-go-contrib/releases/tag/zpages/v0.36.1
 [0.36.0]: https://github.com/open-telemetry/opentelemetry-go-contrib/releases/tag/zpages/v0.36.0
 [1.10.0/0.35.0/0.5.0]: https://github.com/open-telemetry/opentelemetry-go-contrib/releases/tag/v1.10.0
 [1.9.0/0.34.0/0.4.0]: https://github.com/open-telemetry/opentelemetry-go-contrib/releases/tag/v1.9.0
