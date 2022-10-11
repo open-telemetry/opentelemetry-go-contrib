@@ -30,7 +30,7 @@ import (
 	oteltrace "go.opentelemetry.io/otel/trace"
 )
 
-var tracer = otel.Tracer("gin-server")
+var tracer = otel.Tracer("echo-server")
 
 func main() {
 	tp, err := initTracer()
