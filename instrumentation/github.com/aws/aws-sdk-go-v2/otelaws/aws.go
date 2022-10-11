@@ -16,7 +16,6 @@ package otelaws // import "go.opentelemetry.io/contrib/instrumentation/github.co
 
 import (
 	"context"
-	"fmt"
 	"time"
 
 	v2Middleware "github.com/aws/aws-sdk-go-v2/aws/middleware"
@@ -42,6 +41,7 @@ type AttributeSetter func(context.Context, middleware.InitializeInput) []attribu
 
 type otelMiddlewares struct {
 	tracer          trace.Tracer
+	propagator      propagation.TextMapPropagator
 	attributeSetter []AttributeSetter
 }
 
@@ -120,13 +120,10 @@ func (m otelMiddlewares) finalizeMiddleware(stack *middleware.Stack) error {
 		// Propagate the Trace information by injecting it into the HTTP request.
 		switch req := in.Request.(type) {
 		case *smithyhttp.Request:
-			otel.GetTextMapPropagator().Inject(ctx, propagation.HeaderCarrier(req.Header))
-		default:
-			return out, metadata, fmt.Errorf("unknown transport type %T", req)
+			m.propagator.Inject(ctx, propagation.HeaderCarrier(req.Header))
 		}
 
 		return next.HandleFinalize(ctx, in)
-
 	}),
 		middleware.Before)
 }
@@ -136,7 +133,8 @@ func (m otelMiddlewares) finalizeMiddleware(stack *middleware.Stack) error {
 // Please see more details in https://aws.github.io/aws-sdk-go-v2/docs/middleware/
 func AppendMiddlewares(apiOptions *[]func(*middleware.Stack) error, opts ...Option) {
 	cfg := config{
-		TracerProvider: otel.GetTracerProvider(),
+		TracerProvider:    otel.GetTracerProvider(),
+		TextMapPropagator: otel.GetTextMapPropagator(),
 	}
 	for _, opt := range opts {
 		opt.apply(&cfg)
@@ -148,6 +146,7 @@ func AppendMiddlewares(apiOptions *[]func(*middleware.Stack) error, opts ...Opti
 
 	m := otelMiddlewares{tracer: cfg.TracerProvider.Tracer(tracerName,
 		trace.WithInstrumentationVersion(SemVersion())),
+		propagator:      cfg.TextMapPropagator,
 		attributeSetter: cfg.AttributeSetter}
 	*apiOptions = append(*apiOptions, m.initializeMiddlewareBefore, m.initializeMiddlewareAfter, m.finalizeMiddleware, m.deserializeMiddleware)
 }
