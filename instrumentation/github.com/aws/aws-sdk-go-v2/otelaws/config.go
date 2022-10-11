@@ -48,7 +48,7 @@ func WithTracerProvider(provider trace.TracerProvider) Option {
 	})
 }
 
-// WithTextMapPropagator specifies a Text Map Propagator to use propagating context.
+// WithTextMapPropagator specifies a Text Map Propagator to use when propagating context.
 // If none is specified, the global TextMapPropagator is used.
 func WithTextMapPropagator(propagator propagation.TextMapPropagator) Option {
 	return optionFunc(func(cfg *config) {
