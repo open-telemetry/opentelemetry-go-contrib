@@ -7,7 +7,7 @@ replace go.opentelemetry.io/contrib/instrumentation/github.com/gocql/gocql/otelg
 require (
 	github.com/gocql/gocql v0.0.0-20200624222514-34081eda590e
 	github.com/prometheus/client_golang v1.13.0
-	go.opentelemetry.io/contrib/instrumentation/github.com/gocql/gocql/otelgocql v0.36.2
+	go.opentelemetry.io/contrib/instrumentation/github.com/gocql/gocql/otelgocql v0.36.3
 	go.opentelemetry.io/otel v1.11.0
 	go.opentelemetry.io/otel/exporters/prometheus v0.32.3
 	go.opentelemetry.io/otel/exporters/zipkin v1.11.0
