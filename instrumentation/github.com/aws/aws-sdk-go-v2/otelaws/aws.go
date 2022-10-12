@@ -116,11 +116,11 @@ func (m otelMiddlewares) finalizeMiddleware(stack *middleware.Stack) error {
 	return stack.Finalize.Add(middleware.FinalizeMiddlewareFunc("OTelFinalizeMiddleware", func(
 		ctx context.Context, in middleware.FinalizeInput, next middleware.FinalizeHandler) (
 		out middleware.FinalizeOutput, metadata middleware.Metadata, err error) {
-
 		// Propagate the Trace information by injecting it into the HTTP request.
 		switch req := in.Request.(type) {
 		case *smithyhttp.Request:
 			m.propagator.Inject(ctx, propagation.HeaderCarrier(req.Header))
+		default:
 		}
 
 		return next.HandleFinalize(ctx, in)

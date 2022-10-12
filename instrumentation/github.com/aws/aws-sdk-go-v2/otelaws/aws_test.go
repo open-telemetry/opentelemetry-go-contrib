@@ -23,6 +23,7 @@ import (
 	smithyhttp "github.com/aws/smithy-go/transport/http"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
+
 	"go.opentelemetry.io/otel/propagation"
 )
 
@@ -68,7 +69,7 @@ func Test_otelMiddlewares_finalizeMiddleware(t *testing.T) {
 		return nil, middleware.Metadata{}, nil
 	})
 
-	stack.Finalize.HandleMiddleware(context.Background(), input, next)
+	_, _, _ = stack.Finalize.HandleMiddleware(context.Background(), input, next)
 
 	// Assert header has been updated with injected values
 	key := http.CanonicalHeaderKey(propagator.injectKey)
