@@ -24,9 +24,6 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 
 - The `Inject` function in `go.opentelemetry.io/contrib/instrumentation/google.golang.org/grpc/otelgrpc` is deprecated. (#2838)
 - The `Extract` function in `go.opentelemetry.io/contrib/instrumentation/google.golang.org/grpc/otelgrpc` is deprecated. (#2838)
-- google.golang.org/grpc/otelgrpc: Avoid getting a new Tracer for every RPC.
-- google.golang.org/grpc/otelgrpc: Deprecate Inject and Extract public funcs.
-- google.golang.org/grpc/otelgrpc: Conditionally compute message size for tracing events using proto v2 API rather than legacy v1 API.
 
 ## [0.36.1]
 
