@@ -16,7 +16,7 @@ package otelecho // import "go.opentelemetry.io/contrib/instrumentation/github.c
 
 // Version is the current release version of the echo instrumentation.
 func Version() string {
-	return "0.36.1"
+	return "0.36.3"
 	// This string is updated by the pre_release.sh script during release
 }
 
