@@ -7,10 +7,10 @@ replace go.opentelemetry.io/contrib/instrumentation/net/http/otelhttp => ../../.
 require (
 	github.com/astaxie/beego v1.12.3
 	github.com/stretchr/testify v1.8.0
-	go.opentelemetry.io/contrib/instrumentation/net/http/otelhttp v0.36.1
-	go.opentelemetry.io/otel v1.10.0
-	go.opentelemetry.io/otel/metric v0.32.1
-	go.opentelemetry.io/otel/trace v1.10.0
+	go.opentelemetry.io/contrib/instrumentation/net/http/otelhttp v0.36.3
+	go.opentelemetry.io/otel v1.11.0
+	go.opentelemetry.io/otel/metric v0.32.3
+	go.opentelemetry.io/otel/trace v1.11.0
 )
 
 require (

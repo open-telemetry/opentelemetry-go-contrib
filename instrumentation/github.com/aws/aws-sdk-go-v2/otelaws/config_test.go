@@ -12,15 +12,22 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package test // import "go.opentelemetry.io/contrib/instrumentation/net/http/otelhttp/test"
+package otelaws
 
-// Version is the current release version of the otelhttp instrumentation test module.
-func Version() string {
-	return "0.36.3"
-	// This string is updated by the pre_release.sh script during release
-}
+import (
+	"testing"
 
-// SemVersion is the semantic version to be supplied to tracer/meter creation.
-func SemVersion() string {
-	return "semver:" + Version()
+	"github.com/stretchr/testify/assert"
+
+	"go.opentelemetry.io/otel"
+)
+
+func TestWithTextMapPropagator(t *testing.T) {
+	cfg := config{}
+	propagator := otel.GetTextMapPropagator()
+
+	option := WithTextMapPropagator(propagator)
+	option.apply(&cfg)
+
+	assert.Equal(t, cfg.TextMapPropagator, propagator)
 }
