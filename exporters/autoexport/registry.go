@@ -49,7 +49,7 @@ var (
 	// the OTEL_*_EXPORTER environment variables.
 	errUnknownExpoter = errors.New("unknown exporter")
 
-	// errInvalidOtlpProtocol is returned when an invalid protocol is used in
+	// errInvalidOTLPProtocol is returned when an invalid protocol is used in
 	// the OTEL_EXPORTER_OTLP_PROTOCOL environment variable.
 	errInvalidOTLPProtocol = errors.New("invalid OTLP protocol - should be one of ['grpc', 'http/protobuf']")
 
@@ -116,7 +116,7 @@ func RegisterSpanExporter(name string, e trace.SpanExporter) {
 func SpanExporter(name string) (trace.SpanExporter, error) {
 	if name == "otlp" {
 		proto := "grpc"
-		if protoStr, ok := os.LookupEnv(otelExporterOtlpProtoEnvKey); ok {
+		if protoStr, ok := os.LookupEnv(otelExporterOTLPProtoEnvKey); ok {
 			proto = protoStr
 		}
 
@@ -126,7 +126,7 @@ func SpanExporter(name string) (trace.SpanExporter, error) {
 		case "http/protobuf":
 			return otlptracehttp.New(context.Background())
 		default:
-			return nil, errInvalidOtlpProtocol
+			return nil, errInvalidOTLPProtocol
 		}
 	}
 
