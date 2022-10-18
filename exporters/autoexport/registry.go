@@ -27,7 +27,7 @@ import (
 )
 
 const (
-	otelExporterOtlpProtoEnvKey = "OTEL_EXPORTER_OTLP_PROTOCOL"
+	otelExporterOTLPProtoEnvKey = "OTEL_EXPORTER_OTLP_PROTOCOL"
 )
 
 // registry maintains a map of exporter names to SpanExporter
@@ -51,7 +51,7 @@ var (
 
 	// errInvalidOtlpProtocol is returned when an invalid protocol is used in
 	// the OTEL_EXPORTER_OTLP_PROTOCOL environment variable.
-	errInvalidOtlpProtocol = errors.New("invalid OTLP protocol - should be one of ['grpc', 'http/protobuf']")
+	errInvalidOTLPProtocol = errors.New("invalid OTLP protocol - should be one of ['grpc', 'http/protobuf']")
 
 	// errDuplicateRegistration is returned when an duplicate registration is detected.
 	errDuplicateRegistration = errors.New("duplicate registration")
@@ -67,7 +67,7 @@ func (r *registry) load(key string) (p trace.SpanExporter, ok bool) {
 	return p, ok
 }
 
-// store sets the value for a key if is not already in the registry. errDupReg
+// store sets the value for a key if is not already in the registry. errDuplicateRegistration
 // is returned if the registry already contains key.
 func (r *registry) store(key string, value trace.SpanExporter) error {
 	r.mu.Lock()
@@ -95,7 +95,7 @@ func (r *registry) drop(key string) {
 // will panic if name has already been registered.
 func RegisterSpanExporter(name string, e trace.SpanExporter) {
 	if err := envRegistry.store(name, e); err != nil {
-		// envRegistry.store will return errDupReg if name is already
+		// envRegistry.store will return errDuplicateRegistration if name is already
 		// registered. Panic here so the user is made aware of the duplicate
 		// registration, which could be done by malicious code trying to
 		// intercept cross-cutting concerns.
@@ -125,7 +125,6 @@ func SpanExporter(name string) (trace.SpanExporter, error) {
 			return otlptracegrpc.New(context.Background())
 		case "http/protobuf":
 			return otlptracehttp.New(context.Background())
-		// TODO: add 'http/json' when available
 		default:
 			return nil, errInvalidOtlpProtocol
 		}
