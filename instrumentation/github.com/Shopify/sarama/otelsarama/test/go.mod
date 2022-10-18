@@ -3,7 +3,7 @@ module go.opentelemetry.io/contrib/instrumentation/github.com/Shopify/sarama/ote
 go 1.18
 
 require (
-	github.com/Shopify/sarama v1.37.0
+	github.com/Shopify/sarama v1.37.2
 	github.com/stretchr/testify v1.8.0
 	go.opentelemetry.io/contrib/instrumentation/github.com/Shopify/sarama/otelsarama v0.36.3
 	go.opentelemetry.io/otel v1.11.0
