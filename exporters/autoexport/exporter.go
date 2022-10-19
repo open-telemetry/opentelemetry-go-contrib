@@ -29,18 +29,21 @@ type autoExportConfig struct {
 	fallbackExporter trace.SpanExporter
 }
 
-type AutoExportOption func(*autoExportConfig)
+// Option applies an autoexport configuration option.
+type Option func(*autoExportConfig)
 
-func WithFallabckSpanExporter(exporter trace.SpanExporter) AutoExportOption {
+// WithFallabckSpanExporter sets the fallback exporter to use when no exporter
+// is configured through the OTEL_TRACES_EXPORTER environment vaiable.
+func WithFallabckSpanExporter(exporter trace.SpanExporter) Option {
 	return func(config *autoExportConfig) {
 		config.fallbackExporter = exporter
 	}
 }
 
 // NewTraceExporter returns a configured SpanExporter defined using the environment
-// variable OTEL_TRACES_EXPORTER or the passed in exporter. The exporter defined
-// in OTEL_TRACES_EXPORTER is preferred over the exporter passed in.
-func NewTraceExporter(opts ...AutoExportOption) trace.SpanExporter {
+// variable OTEL_TRACES_EXPORTER, the configured fallback exporter via options or
+// a default OTLP expoter (in this order).
+func NewTraceExporter(opts ...Option) trace.SpanExporter {
 	// prefer exporter configured via environment variables over exporter
 	// passed in via exporter parameter
 	envExporter, err := parseEnv()

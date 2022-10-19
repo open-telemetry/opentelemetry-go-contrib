@@ -121,10 +121,10 @@ func RegisterSpanExporter(name string, e trace.SpanExporter) {
 	}
 }
 
-// SpanExporter returns a SpanExporter using passed in name
-// using the list of registered SpanExporters. Each name must match an
-// already registered SpanExporter or a default (otlp).
-//
+// SpanExporter returns a span exporter using the passed in name
+// from the list of registered SpanExporters. Each name must match an
+// already registered SpanExporter. A default OTLP exporter is registed
+// under both an empty string "" and "otlp".
 // An error is returned for any unknown exporters.
 func SpanExporter(name string) (trace.SpanExporter, error) {
 	exp, ok := envRegistry.load(name)
