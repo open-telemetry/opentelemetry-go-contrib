@@ -21,6 +21,7 @@ import (
 	"os"
 	"sync"
 
+	"go.opentelemetry.io/otel"
 	"go.opentelemetry.io/otel/exporters/otlp/otlptrace"
 	"go.opentelemetry.io/otel/exporters/otlp/otlptrace/otlptracegrpc"
 	"go.opentelemetry.io/otel/exporters/otlp/otlptrace/otlptracehttp"
@@ -57,6 +58,17 @@ var (
 	// errDuplicateRegistration is returned when an duplicate registration is detected.
 	errDuplicateRegistration = errors.New("duplicate registration")
 )
+
+func init() {
+	exp, err := buildOTLPExporter()
+	if err != nil {
+		otel.Handle(err)
+	}
+	if exp != nil {
+		RegisterSpanExporter("", exp)
+		RegisterSpanExporter("otlp", exp)
+	}
+}
 
 // load returns the value stored in the registry index for a key, or nil if no
 // value is present. The ok result indicates whether value was found in the
@@ -116,26 +128,14 @@ func RegisterSpanExporter(name string, e trace.SpanExporter) {
 // An error is returned for any unknown exporters.
 func SpanExporter(name string) (trace.SpanExporter, error) {
 	exp, ok := envRegistry.load(name)
-	if ok {
-		return exp, nil
+	if !ok {
+		return nil, errUnknownExpoter
 	}
-	switch name {
-	case "", "otlp":
-		otlpExporter, err := buildOTLPExporter()
-		if err != nil {
-			return nil, err
-		}
-		if err := envRegistry.store("", otlpExporter); err != nil {
-			return nil, err
-		}
-		if err := envRegistry.store("otlp", otlpExporter); err != nil {
-			return nil, err
-		}
-		return otlpExporter, nil
-	}
-	return nil, errUnknownExpoter
+	return exp, nil
 }
 
+// buildOTLPExporter creates an OTLP exporter using the environment variable
+// OTEL_EXPORTER_OTLP_PROTOCOL to determine the exporter protocol.
 func buildOTLPExporter() (*otlptrace.Exporter, error) {
 	proto := "grpc"
 	if protoStr, ok := os.LookupEnv(otelExporterOTLPProtoEnvKey); ok {

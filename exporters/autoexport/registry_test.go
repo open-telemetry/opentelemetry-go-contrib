@@ -95,3 +95,13 @@ func TestRetrievingSameKeyReturnsSameExporterInstance(t *testing.T) {
 	assert.Nil(t, err)
 	assert.Equal(t, exp1, exp2)
 }
+
+func TestOTLPExporterIsAutomaticallyRegistered(t *testing.T) {
+	exp1, err := SpanExporter("")
+	assert.Nil(t, err)
+
+	exp2, err := SpanExporter("otlp")
+	assert.Nil(t, err)
+
+	assert.Equal(t, exp1, exp2)
+}
