@@ -21,6 +21,7 @@ import (
 	"os"
 	"sync"
 
+	"go.opentelemetry.io/otel/exporters/otlp/otlptrace"
 	"go.opentelemetry.io/otel/exporters/otlp/otlptrace/otlptracegrpc"
 	"go.opentelemetry.io/otel/exporters/otlp/otlptrace/otlptracehttp"
 	"go.opentelemetry.io/otel/sdk/trace"
@@ -114,25 +115,39 @@ func RegisterSpanExporter(name string, e trace.SpanExporter) {
 //
 // An error is returned for any unknown exporters.
 func SpanExporter(name string) (trace.SpanExporter, error) {
-	if name == "otlp" {
-		proto := "grpc"
-		if protoStr, ok := os.LookupEnv(otelExporterOTLPProtoEnvKey); ok {
-			proto = protoStr
-		}
-
-		switch proto {
-		case "grpc":
-			return otlptracegrpc.New(context.Background())
-		case "http/protobuf":
-			return otlptracehttp.New(context.Background())
-		default:
-			return nil, errInvalidOTLPProtocol
-		}
-	}
-
 	exp, ok := envRegistry.load(name)
-	if !ok {
-		return nil, errUnknownExpoter
+	if ok {
+		return exp, nil
 	}
-	return exp, nil
+	switch name {
+	case "", "otlp":
+		otlpExporter, err := buildOTLPExporter()
+		if err != nil {
+			return nil, err
+		}
+		if err := envRegistry.store("", otlpExporter); err != nil {
+			return nil, err
+		}
+		if err := envRegistry.store("otlp", otlpExporter); err != nil {
+			return nil, err
+		}
+		return otlpExporter, nil
+	}
+	return nil, errUnknownExpoter
+}
+
+func buildOTLPExporter() (*otlptrace.Exporter, error) {
+	proto := "grpc"
+	if protoStr, ok := os.LookupEnv(otelExporterOTLPProtoEnvKey); ok {
+		proto = protoStr
+	}
+
+	switch proto {
+	case "grpc":
+		return otlptracegrpc.New(context.Background())
+	case "http/protobuf":
+		return otlptracehttp.New(context.Background())
+	default:
+		return nil, errInvalidOTLPProtocol
+	}
 }

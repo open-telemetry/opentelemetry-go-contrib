@@ -85,3 +85,13 @@ func TestDuplicateRegisterSpanExporterPanics(t *testing.T) {
 		RegisterSpanExporter(exporterName, stdout)
 	})
 }
+
+func TestRetrievingSameKeyReturnsSameExporterInstance(t *testing.T) {
+	const exporterType = "otlp"
+	exp1, err := SpanExporter(exporterType)
+	assert.Nil(t, err)
+
+	exp2, err := SpanExporter(exporterType)
+	assert.Nil(t, err)
+	assert.Equal(t, exp1, exp2)
+}
