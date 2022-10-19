@@ -15,28 +15,49 @@
 package autoexport
 
 import (
+	"context"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
 
-	"go.opentelemetry.io/otel/exporters/otlp/otlptrace/otlptracegrpc"
+	tracesdk "go.opentelemetry.io/otel/sdk/trace"
 )
 
-func TestNoExportersAreConfiguredIfEnvNotSetAndNoExportersProvided(t *testing.T) {
-	exporter := NewTraceExporter(nil)
-	assert.Nil(t, exporter)
+func TestOTLPExporterIsReturnedWhenNoEnvOrFallbackExporterIsConfigured(t *testing.T) {
+	exporter := NewTraceExporter()
+	assert.NotNil(t, exporter)
+
+	otlpExp, err := SpanExporter("otlp")
+	assert.Nil(t, err)
+	assert.Equal(t, otlpExp, exporter)
 }
 
-func TestProvidedExportersAreUsedWhenEnvVarIsNotSet(t *testing.T) {
-	exp := otlptracegrpc.NewUnstarted()
+func TestConfiguredExporterIsReturned(t *testing.T) {
+	exp := &testExporter{}
 	exporter := NewTraceExporter(
-		exp,
+		WithFallabckSpanExporter(exp),
 	)
 	assert.Equal(t, exp, exporter)
 }
 
-func TestExportersConfiguredInEnvVarAreReturned(t *testing.T) {
-	t.Setenv("OTEL_TRACES_EXPORTERS", "otlp")
-	exporter := NewTraceExporter(nil)
-	assert.NotNil(t, 1, exporter)
+func TestEnvExporterIsPreferredOverFallbackExporter(t *testing.T) {
+	t.Setenv("OTEL_TRACES_EXPORTER", "otlp")
+
+	exp := &testExporter{}
+	exporter := NewTraceExporter(
+		WithFallabckSpanExporter(exp),
+	)
+	otlpExp, err := SpanExporter("otlp")
+	assert.Nil(t, err)
+	assert.Equal(t, otlpExp, exporter)
+}
+
+type testExporter struct{}
+
+func (e *testExporter) ExportSpans(ctx context.Context, ss []tracesdk.ReadOnlySpan) error {
+	return nil
+}
+
+func (e *testExporter) Shutdown(ctx context.Context) error {
+	return nil
 }

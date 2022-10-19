@@ -25,10 +25,22 @@ const (
 	otelTracesExportersEnvKey = "OTEL_TRACES_EXPORTER"
 )
 
+type autoExportConfig struct {
+	fallbackExporter trace.SpanExporter
+}
+
+type AutoExportOption func(*autoExportConfig)
+
+func WithFallabckSpanExporter(exporter trace.SpanExporter) AutoExportOption {
+	return func(config *autoExportConfig) {
+		config.fallbackExporter = exporter
+	}
+}
+
 // NewTraceExporter returns a configured SpanExporter defined using the environment
 // variable OTEL_TRACES_EXPORTER or the passed in exporter. The exporter defined
 // in OTEL_TRACES_EXPORTER is preferred over the exporter passed in.
-func NewTraceExporter(exporter trace.SpanExporter) trace.SpanExporter {
+func NewTraceExporter(opts ...AutoExportOption) trace.SpanExporter {
 	// prefer exporter configured via environment variables over exporter
 	// passed in via exporter parameter
 	envExporter, err := parseEnv()
@@ -39,7 +51,21 @@ func NewTraceExporter(exporter trace.SpanExporter) trace.SpanExporter {
 		return envExporter
 	}
 
-	return exporter
+	// attempt to get fallback exporter
+	config := &autoExportConfig{}
+	for _, opt := range opts {
+		opt(config)
+	}
+	if config.fallbackExporter != nil {
+		return config.fallbackExporter
+	}
+
+	// if no env or fallback exporter, use OTLP exporter
+	exp, err := SpanExporter("otlp")
+	if err != nil {
+		otel.Handle(err)
+	}
+	return exp
 }
 
 // parseEnv returns a configured SpanExporter defined by the OTEL_TRACES_EXPORTER
