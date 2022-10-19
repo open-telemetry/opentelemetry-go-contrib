@@ -5,10 +5,10 @@ go 1.18
 require (
 	github.com/astaxie/beego v1.12.3
 	github.com/stretchr/testify v1.8.0
-	go.opentelemetry.io/contrib/instrumentation/github.com/astaxie/beego/otelbeego v0.36.0
-	go.opentelemetry.io/contrib/propagators/b3 v1.10.0
-	go.opentelemetry.io/otel v1.10.0
-	go.opentelemetry.io/otel/sdk v1.10.0
+	go.opentelemetry.io/contrib/instrumentation/github.com/astaxie/beego/otelbeego v0.36.3
+	go.opentelemetry.io/contrib/propagators/b3 v1.11.0
+	go.opentelemetry.io/otel v1.11.0
+	go.opentelemetry.io/otel/sdk v1.11.0
 )
 
 require (
@@ -27,12 +27,12 @@ require (
 	github.com/prometheus/common v0.10.0 // indirect
 	github.com/prometheus/procfs v0.1.3 // indirect
 	github.com/shiena/ansicolor v0.0.0-20151119151921-a422bbe96644 // indirect
-	go.opentelemetry.io/contrib/instrumentation/net/http/otelhttp v0.36.0 // indirect
-	go.opentelemetry.io/otel/metric v0.32.0 // indirect
-	go.opentelemetry.io/otel/trace v1.10.0 // indirect
+	go.opentelemetry.io/contrib/instrumentation/net/http/otelhttp v0.36.3 // indirect
+	go.opentelemetry.io/otel/metric v0.32.3 // indirect
+	go.opentelemetry.io/otel/trace v1.11.0 // indirect
 	golang.org/x/crypto v0.0.0-20200622213623-75b288015ac9 // indirect
 	golang.org/x/net v0.0.0-20200707034311-ab3426394381 // indirect
-	golang.org/x/sys v0.0.0-20220319134239-a9b59b0215f8 // indirect
+	golang.org/x/sys v0.0.0-20220919091848-fb04ddd9f9c8 // indirect
 	golang.org/x/text v0.3.3 // indirect
 	google.golang.org/protobuf v1.25.0 // indirect
 	gopkg.in/yaml.v2 v2.2.8 // indirect
