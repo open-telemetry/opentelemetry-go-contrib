@@ -37,7 +37,6 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 ### Changed
 
 - Upgrade dependencies of the OpenTelemetry Go Metric SDK to use the new [`v0.32.1` release](https://github.com/open-telemetry/opentelemetry-go/releases/tag/sdk%2Fmetric%2Fv0.32.1)
->>>>>>> f86225b04c3b254a32c3f89235c2d2a3d7411c7f
 
 ### Removed
 
