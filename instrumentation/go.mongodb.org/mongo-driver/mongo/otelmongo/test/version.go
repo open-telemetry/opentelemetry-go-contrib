@@ -16,7 +16,7 @@ package test // import "go.opentelemetry.io/contrib/instrumentation/go.mongodb.o
 
 // Version is the current release version of the mongo-driver instrumentation test module.
 func Version() string {
-	return "0.36.3"
+	return "0.36.4"
 	// This string is updated by the pre_release.sh script during release
 }
 
