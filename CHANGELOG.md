@@ -8,9 +8,15 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 
 ## [Unreleased]
 
+## [1.11.1/0.36.4/0.5.2]
+
 ### Added
 
 - Add trace context propagation support to `instrumentation/github.com/aws/aws-sdk-go-v2/otelaws` (#2856).
+
+### Changed
+
+- Upgrade dependencies of OpenTelemetry Go to use the new [`v1.11.1`/`v0.33.0` release](https://github.com/open-telemetry/opentelemetry-go/releases/tag/v1.11.1)
 
 ## [1.11.0/0.36.3/0.5.1]
 
@@ -586,7 +592,8 @@ First official tagged release of `contrib` repository.
 - Prefix support for dogstatsd (#34)
 - Update Go Runtime package to use batch observer (#44)
 
-[Unreleased]: https://github.com/open-telemetry/opentelemetry-go-contrib/compare/v1.11.0...HEAD
+[Unreleased]: https://github.com/open-telemetry/opentelemetry-go-contrib/compare/v1.11.1...HEAD
+[1.11.1/0.36.4/0.5.2]: https://github.com/open-telemetry/opentelemetry-go-contrib/releases/tag/v1.11.1
 [1.11.0/0.36.3/0.5.1]: https://github.com/open-telemetry/opentelemetry-go-contrib/releases/tag/v1.11.0
 [0.36.2]: https://github.com/open-telemetry/opentelemetry-go-contrib/releases/tag/zpages/v0.36.2
 [0.36.1]: https://github.com/open-telemetry/opentelemetry-go-contrib/releases/tag/zpages/v0.36.1
