@@ -17,10 +17,9 @@ package otelaws // import "go.opentelemetry.io/contrib/instrumentation/github.co
 import (
 	"context"
 
+	v2Middleware "github.com/aws/aws-sdk-go-v2/aws/middleware"
 	"github.com/aws/aws-sdk-go-v2/service/dynamodb"
 	"github.com/aws/aws-sdk-go-v2/service/sqs"
-
-	v2Middleware "github.com/aws/aws-sdk-go-v2/aws/middleware"
 	"github.com/aws/smithy-go/middleware"
 
 	"go.opentelemetry.io/otel/attribute"
