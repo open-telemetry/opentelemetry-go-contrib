@@ -18,6 +18,7 @@ import (
 	"context"
 
 	"github.com/aws/aws-sdk-go-v2/service/dynamodb"
+	"github.com/aws/aws-sdk-go-v2/service/sqs"
 
 	v2Middleware "github.com/aws/aws-sdk-go-v2/aws/middleware"
 	"github.com/aws/smithy-go/middleware"
@@ -31,10 +32,13 @@ const (
 	RegionKey    attribute.Key = "aws.region"
 	ServiceKey   attribute.Key = "aws.service"
 	RequestIDKey attribute.Key = "aws.request_id"
+	TableNameKey attribute.Key = "aws.table_name"
+	QueueURLKey  attribute.Key = "aws.queue_url"
 )
 
 var servicemap = map[string]AttributeSetter{
 	dynamodb.ServiceID: DynamoDBAttributeSetter,
+	sqs.ServiceID:      SQSAttributeSetter,
 }
 
 // OperationAttr returns the AWS operation attribute.
@@ -42,19 +46,29 @@ func OperationAttr(operation string) attribute.KeyValue {
 	return OperationKey.String(operation)
 }
 
-// OperationAttr returns the AWS region attribute.
+// RegionAttr returns the AWS region attribute.
 func RegionAttr(region string) attribute.KeyValue {
 	return RegionKey.String(region)
 }
 
-// OperationAttr returns the AWS service attribute.
+// ServiceAttr returns the AWS service attribute.
 func ServiceAttr(service string) attribute.KeyValue {
 	return ServiceKey.String(service)
 }
 
-// OperationAttr returns the AWS request ID attribute.
+// RequestIDAttr returns the AWS request ID attribute.
 func RequestIDAttr(requestID string) attribute.KeyValue {
 	return RequestIDKey.String(requestID)
+}
+
+// TableNameAttr returns the AWS table name attribute for a single table name.
+func TableNameAttr(tableName string) attribute.KeyValue {
+	return TableNameKey.String(tableName)
+}
+
+// QueueURLAttr returns the AWS queue URL attribute.
+func QueueURLAttr(queueURL string) attribute.KeyValue {
+	return QueueURLKey.String(queueURL)
 }
 
 // DefaultAttributeSetter checks to see if there are service specific attributes available to set for the AWS service.

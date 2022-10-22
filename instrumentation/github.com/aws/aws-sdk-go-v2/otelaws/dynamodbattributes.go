@@ -32,6 +32,7 @@ func DynamoDBAttributeSetter(ctx context.Context, in middleware.InitializeInput)
 	switch v := in.Parameters.(type) {
 	case *dynamodb.GetItemInput:
 		dynamodbAttributes = append(dynamodbAttributes, semconv.AWSDynamoDBTableNamesKey.String(*v.TableName))
+		dynamodbAttributes = append(dynamodbAttributes, TableNameAttr(*v.TableName))
 
 		if v.ConsistentRead != nil {
 			dynamodbAttributes = append(dynamodbAttributes, semconv.AWSDynamoDBConsistentReadKey.Bool(*v.ConsistentRead))
@@ -57,6 +58,7 @@ func DynamoDBAttributeSetter(ctx context.Context, in middleware.InitializeInput)
 
 	case *dynamodb.CreateTableInput:
 		dynamodbAttributes = append(dynamodbAttributes, semconv.AWSDynamoDBTableNamesKey.String(*v.TableName))
+		dynamodbAttributes = append(dynamodbAttributes, TableNameAttr(*v.TableName))
 
 		if v.GlobalSecondaryIndexes != nil {
 			globalindexes, _ := json.Marshal(v.GlobalSecondaryIndexes)
@@ -75,12 +77,15 @@ func DynamoDBAttributeSetter(ctx context.Context, in middleware.InitializeInput)
 
 	case *dynamodb.DeleteItemInput:
 		dynamodbAttributes = append(dynamodbAttributes, semconv.AWSDynamoDBTableNamesKey.String(*v.TableName))
+		dynamodbAttributes = append(dynamodbAttributes, TableNameAttr(*v.TableName))
 
 	case *dynamodb.DeleteTableInput:
 		dynamodbAttributes = append(dynamodbAttributes, semconv.AWSDynamoDBTableNamesKey.String(*v.TableName))
+		dynamodbAttributes = append(dynamodbAttributes, TableNameAttr(*v.TableName))
 
 	case *dynamodb.DescribeTableInput:
 		dynamodbAttributes = append(dynamodbAttributes, semconv.AWSDynamoDBTableNamesKey.String(*v.TableName))
+		dynamodbAttributes = append(dynamodbAttributes, TableNameAttr(*v.TableName))
 
 	case *dynamodb.ListTablesInput:
 		if v.ExclusiveStartTableName != nil {
@@ -93,9 +98,11 @@ func DynamoDBAttributeSetter(ctx context.Context, in middleware.InitializeInput)
 
 	case *dynamodb.PutItemInput:
 		dynamodbAttributes = append(dynamodbAttributes, semconv.AWSDynamoDBTableNamesKey.String(*v.TableName))
+		dynamodbAttributes = append(dynamodbAttributes, TableNameAttr(*v.TableName))
 
 	case *dynamodb.QueryInput:
 		dynamodbAttributes = append(dynamodbAttributes, semconv.AWSDynamoDBTableNamesKey.String(*v.TableName))
+		dynamodbAttributes = append(dynamodbAttributes, TableNameAttr(*v.TableName))
 
 		if v.ConsistentRead != nil {
 			dynamodbAttributes = append(dynamodbAttributes, semconv.AWSDynamoDBConsistentReadKey.Bool(*v.ConsistentRead))
@@ -121,6 +128,7 @@ func DynamoDBAttributeSetter(ctx context.Context, in middleware.InitializeInput)
 
 	case *dynamodb.ScanInput:
 		dynamodbAttributes = append(dynamodbAttributes, semconv.AWSDynamoDBTableNamesKey.String(*v.TableName))
+		dynamodbAttributes = append(dynamodbAttributes, TableNameAttr(*v.TableName))
 
 		if v.ConsistentRead != nil {
 			dynamodbAttributes = append(dynamodbAttributes, semconv.AWSDynamoDBConsistentReadKey.Bool(*v.ConsistentRead))
@@ -150,9 +158,11 @@ func DynamoDBAttributeSetter(ctx context.Context, in middleware.InitializeInput)
 
 	case *dynamodb.UpdateItemInput:
 		dynamodbAttributes = append(dynamodbAttributes, semconv.AWSDynamoDBTableNamesKey.String(*v.TableName))
+		dynamodbAttributes = append(dynamodbAttributes, TableNameAttr(*v.TableName))
 
 	case *dynamodb.UpdateTableInput:
 		dynamodbAttributes = append(dynamodbAttributes, semconv.AWSDynamoDBTableNamesKey.String(*v.TableName))
+		dynamodbAttributes = append(dynamodbAttributes, TableNameAttr(*v.TableName))
 
 		if v.AttributeDefinitions != nil {
 			attributedefinitions, _ := json.Marshal(v.AttributeDefinitions)
