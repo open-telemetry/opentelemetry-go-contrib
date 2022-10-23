@@ -87,7 +87,7 @@ func TestDetectV4LaunchTypeEc2(t *testing.T) {
 			}
 		}
 	}))
-	defer func() { testServer.Close() }()
+	defer testServer.Close()
 
 	os.Clearenv()
 	_ = os.Setenv(metadataV3EnvVar, "3")
@@ -138,7 +138,7 @@ func TestDetectV4LaunchTypeFargate(t *testing.T) {
 			}
 		}
 	}))
-	defer func() { testServer.Close() }()
+	defer testServer.Close()
 
 	os.Clearenv()
 	_ = os.Setenv(metadataV3EnvVar, "3")
