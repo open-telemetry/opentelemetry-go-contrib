@@ -21,6 +21,7 @@ import (
 	"net/http"
 	"os"
 	"regexp"
+	"runtime"
 	"strings"
 
 	ecsmetadata "github.com/brunoscheufler/aws-ecs-metadata-go"
@@ -41,15 +42,9 @@ const (
 
 var (
 	empty                                 = resource.Empty()
-	errCannotReadContainerID              = errors.New("failed to read container ID from cGroupFile")
 	errCannotReadContainerName            = errors.New("failed to read hostname")
-	errCannotReadCGroupFile               = errors.New("ECS resource detector failed to read cGroupFile")
-	errCannotRetrieveMetadataV4           = errors.New("ECS resource detector failed to retrieve metadata from the ECS Metadata v4 container endpoint")
-	errCannotRetrieveMetadataV4Task       = errors.New("ECS resource detector failed to retrieve metadata from the ECS Metadata v4 task endpoint")
-	errCannotRetrieveLogsGroupMetadataV4  = errors.New("The ECS Metadata v4 did not return a AwsLogGroup name")
-	errCannotRetrieveLogsStreamMetadataV4 = errors.New("The ECS Metadata v4 did not return a AwsLogStream name")
-	errCannotParseAwsRegionMetadataV4     = errors.New("Cannot parse the AWS region our of the Container ARN returned by the ECS Metadata v4 container endpoint")
-	errCannotParseAwsAccountMetadataV4    = errors.New("Cannot parse the AWS account our of the Container ARN returned by the ECS Metadata v4 container endpoint")
+	errCannotRetrieveLogsGroupMetadataV4  = errors.New("the ECS Metadata v4 did not return a AwsLogGroup name")
+	errCannotRetrieveLogsStreamMetadataV4 = errors.New("the ECS Metadata v4 did not return a AwsLogStream name")
 )
 
 // Create interface for methods needing to be mocked.
@@ -180,9 +175,16 @@ func (detector *resourceDetector) getLogsAttributes(metadata *ecsmetadata.Contai
 
 // returns docker container ID from default c group path.
 func (ecsUtils ecsDetectorUtils) getContainerID() (string, error) {
+	if runtime.GOOS != "linux" {
+		// Cgroups are used only under Linux.
+		return "", nil
+	}
+
 	fileData, err := os.ReadFile(defaultCgroupPath)
 	if err != nil {
-		return "", errCannotReadCGroupFile
+		// Cgroups file not found.
+		// For example, windows; or when running integration tests outside of a container.
+		return "", nil
 	}
 	splitData := strings.Split(strings.TrimSpace(string(fileData)), "\n")
 	for _, str := range splitData {
@@ -190,7 +192,7 @@ func (ecsUtils ecsDetectorUtils) getContainerID() (string, error) {
 			return str[len(str)-containerIDLength:], nil
 		}
 	}
-	return "", errCannotReadContainerID
+	return "", nil
 }
 
 // returns host name reported by the kernel.
