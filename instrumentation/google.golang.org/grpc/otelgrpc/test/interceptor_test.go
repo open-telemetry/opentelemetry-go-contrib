@@ -30,15 +30,16 @@ import (
 	"go.opentelemetry.io/otel/sdk/trace/tracetest"
 	semconv "go.opentelemetry.io/otel/semconv/v1.12.0"
 
-	"github.com/golang/protobuf/proto" //nolint:staticcheck
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	"go.uber.org/goleak"
 	"google.golang.org/grpc"
 	grpc_codes "google.golang.org/grpc/codes"
 	"google.golang.org/grpc/credentials/insecure"
+	"google.golang.org/grpc/interop/grpc_testing"
 	"google.golang.org/grpc/metadata"
 	"google.golang.org/grpc/status"
+	"google.golang.org/protobuf/proto"
 )
 
 func getSpanFromRecorder(sr *tracetest.SpanRecorder, name string) (trace.ReadOnlySpan, bool) {
@@ -65,18 +66,6 @@ func (mcuici *mockUICInvoker) invoker(ctx context.Context, method string, req, r
 	return nil
 }
 
-type mockProtoMessage struct{}
-
-func (mm *mockProtoMessage) Reset() {
-}
-
-func (mm *mockProtoMessage) String() string {
-	return "mock"
-}
-
-func (mm *mockProtoMessage) ProtoMessage() {
-}
-
 func TestUnaryClientInterceptor(t *testing.T) {
 	clientConn, err := grpc.Dial("fake:connection", grpc.WithTransportCredentials(insecure.NewCredentials()))
 	if err != nil {
@@ -88,8 +77,8 @@ func TestUnaryClientInterceptor(t *testing.T) {
 	tp := trace.NewTracerProvider(trace.WithSpanProcessor(sr))
 	unaryInterceptor := otelgrpc.UnaryClientInterceptor(otelgrpc.WithTracerProvider(tp))
 
-	req := &mockProtoMessage{}
-	reply := &mockProtoMessage{}
+	req := &grpc_testing.SimpleRequest{}
+	reply := &grpc_testing.SimpleResponse{}
 	uniInterceptorInvoker := &mockUICInvoker{}
 
 	checks := []struct {
@@ -115,12 +104,12 @@ func TestUnaryClientInterceptor(t *testing.T) {
 				{
 					otelgrpc.RPCMessageTypeKey:             attribute.StringValue("SENT"),
 					otelgrpc.RPCMessageIDKey:               attribute.IntValue(1),
-					otelgrpc.RPCMessageUncompressedSizeKey: attribute.IntValue(proto.Size(proto.Message(req))),
+					otelgrpc.RPCMessageUncompressedSizeKey: attribute.IntValue(proto.Size(req)),
 				},
 				{
 					otelgrpc.RPCMessageTypeKey:             attribute.StringValue("RECEIVED"),
 					otelgrpc.RPCMessageIDKey:               attribute.IntValue(1),
-					otelgrpc.RPCMessageUncompressedSizeKey: attribute.IntValue(proto.Size(proto.Message(reply))),
+					otelgrpc.RPCMessageUncompressedSizeKey: attribute.IntValue(proto.Size(reply)),
 				},
 			},
 		},
@@ -139,12 +128,12 @@ func TestUnaryClientInterceptor(t *testing.T) {
 				{
 					otelgrpc.RPCMessageTypeKey:             attribute.StringValue("SENT"),
 					otelgrpc.RPCMessageIDKey:               attribute.IntValue(1),
-					otelgrpc.RPCMessageUncompressedSizeKey: attribute.IntValue(proto.Size(proto.Message(req))),
+					otelgrpc.RPCMessageUncompressedSizeKey: attribute.IntValue(proto.Size(req)),
 				},
 				{
 					otelgrpc.RPCMessageTypeKey:             attribute.StringValue("RECEIVED"),
 					otelgrpc.RPCMessageIDKey:               attribute.IntValue(1),
-					otelgrpc.RPCMessageUncompressedSizeKey: attribute.IntValue(proto.Size(proto.Message(reply))),
+					otelgrpc.RPCMessageUncompressedSizeKey: attribute.IntValue(proto.Size(reply)),
 				},
 			},
 		},
@@ -163,12 +152,12 @@ func TestUnaryClientInterceptor(t *testing.T) {
 				{
 					otelgrpc.RPCMessageTypeKey:             attribute.StringValue("SENT"),
 					otelgrpc.RPCMessageIDKey:               attribute.IntValue(1),
-					otelgrpc.RPCMessageUncompressedSizeKey: attribute.IntValue(proto.Size(proto.Message(req))),
+					otelgrpc.RPCMessageUncompressedSizeKey: attribute.IntValue(proto.Size(req)),
 				},
 				{
 					otelgrpc.RPCMessageTypeKey:             attribute.StringValue("RECEIVED"),
 					otelgrpc.RPCMessageIDKey:               attribute.IntValue(1),
-					otelgrpc.RPCMessageUncompressedSizeKey: attribute.IntValue(proto.Size(proto.Message(reply))),
+					otelgrpc.RPCMessageUncompressedSizeKey: attribute.IntValue(proto.Size(reply)),
 				},
 			},
 		},
@@ -188,12 +177,12 @@ func TestUnaryClientInterceptor(t *testing.T) {
 				{
 					otelgrpc.RPCMessageTypeKey:             attribute.StringValue("SENT"),
 					otelgrpc.RPCMessageIDKey:               attribute.IntValue(1),
-					otelgrpc.RPCMessageUncompressedSizeKey: attribute.IntValue(proto.Size(proto.Message(req))),
+					otelgrpc.RPCMessageUncompressedSizeKey: attribute.IntValue(proto.Size(req)),
 				},
 				{
 					otelgrpc.RPCMessageTypeKey:             attribute.StringValue("RECEIVED"),
 					otelgrpc.RPCMessageIDKey:               attribute.IntValue(1),
-					otelgrpc.RPCMessageUncompressedSizeKey: attribute.IntValue(proto.Size(proto.Message(reply))),
+					otelgrpc.RPCMessageUncompressedSizeKey: attribute.IntValue(proto.Size(reply)),
 				},
 			},
 			expectErr: true,
@@ -211,12 +200,12 @@ func TestUnaryClientInterceptor(t *testing.T) {
 				{
 					otelgrpc.RPCMessageTypeKey:             attribute.StringValue("SENT"),
 					otelgrpc.RPCMessageIDKey:               attribute.IntValue(1),
-					otelgrpc.RPCMessageUncompressedSizeKey: attribute.IntValue(proto.Size(proto.Message(req))),
+					otelgrpc.RPCMessageUncompressedSizeKey: attribute.IntValue(proto.Size(req)),
 				},
 				{
 					otelgrpc.RPCMessageTypeKey:             attribute.StringValue("RECEIVED"),
 					otelgrpc.RPCMessageIDKey:               attribute.IntValue(1),
-					otelgrpc.RPCMessageUncompressedSizeKey: attribute.IntValue(proto.Size(proto.Message(reply))),
+					otelgrpc.RPCMessageUncompressedSizeKey: attribute.IntValue(proto.Size(reply)),
 				},
 			},
 		},
@@ -235,12 +224,12 @@ func TestUnaryClientInterceptor(t *testing.T) {
 				{
 					otelgrpc.RPCMessageTypeKey:             attribute.StringValue("SENT"),
 					otelgrpc.RPCMessageIDKey:               attribute.IntValue(1),
-					otelgrpc.RPCMessageUncompressedSizeKey: attribute.IntValue(proto.Size(proto.Message(req))),
+					otelgrpc.RPCMessageUncompressedSizeKey: attribute.IntValue(proto.Size(req)),
 				},
 				{
 					otelgrpc.RPCMessageTypeKey:             attribute.StringValue("RECEIVED"),
 					otelgrpc.RPCMessageIDKey:               attribute.IntValue(1),
-					otelgrpc.RPCMessageUncompressedSizeKey: attribute.IntValue(proto.Size(proto.Message(reply))),
+					otelgrpc.RPCMessageUncompressedSizeKey: attribute.IntValue(proto.Size(reply)),
 				},
 			},
 		},
@@ -277,7 +266,7 @@ func eventAttrMap(events []trace.Event) []map[attribute.Key]attribute.Value {
 type mockClientStream struct {
 	Desc *grpc.StreamDesc
 	Ctx  context.Context
-	msgs []mockProtoMessage
+	msgs []grpc_testing.SimpleResponse
 }
 
 func (mockClientStream) SendMsg(m interface{}) error { return nil }
@@ -299,9 +288,9 @@ type clientStreamOpts struct {
 }
 
 func newMockClientStream(opts clientStreamOpts) *mockClientStream {
-	var msgs []mockProtoMessage
+	var msgs []grpc_testing.SimpleResponse
 	for i := 0; i < opts.NumRecvMsgs; i++ {
-		msgs = append(msgs, mockProtoMessage{})
+		msgs = append(msgs, grpc_testing.SimpleResponse{})
 	}
 	return &mockClientStream{msgs: msgs}
 }
@@ -347,8 +336,8 @@ func TestStreamClientInterceptorOnBIDIStream(t *testing.T) {
 	_, ok := getSpanFromRecorder(sr, name)
 	require.False(t, ok, "span should not end while stream is open")
 
-	req := &mockProtoMessage{}
-	reply := &mockProtoMessage{}
+	req := &grpc_testing.SimpleRequest{}
+	reply := &grpc_testing.SimpleResponse{}
 
 	// send and receive fake data
 	for i := 0; i < 10; i++ {
@@ -414,8 +403,8 @@ func TestStreamClientInterceptorOnUnidirectionalClientServerStream(t *testing.T)
 	_, ok := getSpanFromRecorder(sr, name)
 	require.False(t, ok, "span should not end while stream is open")
 
-	req := &mockProtoMessage{}
-	reply := &mockProtoMessage{}
+	req := &grpc_testing.SimpleRequest{}
+	reply := &grpc_testing.SimpleResponse{}
 
 	// send fake data
 	for i := 0; i < 10; i++ {
@@ -509,8 +498,8 @@ func TestStreamClientInterceptorCancelContext(t *testing.T) {
 	_, ok := getSpanFromRecorder(sr, name)
 	require.False(t, ok, "span should not ended while stream is open")
 
-	req := &mockProtoMessage{}
-	reply := &mockProtoMessage{}
+	req := &grpc_testing.SimpleRequest{}
+	reply := &grpc_testing.SimpleResponse{}
 
 	// send and receive fake data
 	for i := 0; i < 10; i++ {
@@ -581,7 +570,7 @@ func TestServerInterceptorError(t *testing.T) {
 	handler := func(_ context.Context, _ interface{}) (interface{}, error) {
 		return nil, deniedErr
 	}
-	_, err := usi(context.Background(), &mockProtoMessage{}, &grpc.UnaryServerInfo{}, handler)
+	_, err := usi(context.Background(), &grpc_testing.SimpleRequest{}, &grpc.UnaryServerInfo{}, handler)
 	require.Error(t, err)
 	assert.Equal(t, err, deniedErr)
 

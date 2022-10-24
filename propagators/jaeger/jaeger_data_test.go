@@ -21,6 +21,7 @@ import (
 )
 
 const (
+	traceID15Str = "3ce929d0e0e4736"
 	traceID16Str = "a3ce929d0e0e4736"
 	traceID32Str = "a1ce929d0e0e4736a3ce929d0e0e4736"
 	spanIDStr    = "00f067aa0ba902b7"
@@ -28,6 +29,7 @@ const (
 )
 
 var (
+	traceID15 = trace.TraceID{0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x03, 0xce, 0x92, 0x9d, 0x0e, 0x0e, 0x47, 0x36}
 	traceID16 = trace.TraceID{0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0xa3, 0xce, 0x92, 0x9d, 0x0e, 0x0e, 0x47, 0x36}
 	traceID32 = trace.TraceID{0xa1, 0xce, 0x92, 0x9d, 0x0e, 0x0e, 0x47, 0x36, 0xa3, 0xce, 0x92, 0x9d, 0x0e, 0x0e, 0x47, 0x36}
 	spanID    = trace.SpanID{0x00, 0xf0, 0x67, 0xaa, 0x0b, 0xa9, 0x02, 0xb7}
@@ -118,6 +120,18 @@ var extractHeaders = []extractTest{
 		true,
 	},
 	{
+		"left padding 60 bit trace ID",
+		map[string]string{
+			jaegerHeader: fmt.Sprintf("%s:%s:0:1", traceID15Str, spanIDStr),
+		},
+		trace.SpanContextConfig{
+			TraceID:    traceID15,
+			SpanID:     spanID,
+			TraceFlags: trace.FlagsSampled,
+		},
+		false,
+	},
+	{
 		"left padding 64 bit trace ID",
 		map[string]string{
 			jaegerHeader: fmt.Sprintf("%s:%s:0:1", traceID16Str, spanIDStr),
@@ -160,12 +174,6 @@ var invalidExtractHeaders = []extractTest{
 		name: "trace ID length > 32",
 		headers: map[string]string{
 			jaegerHeader: fmt.Sprintf("%s:%s:0:1", traceID32Str+"0000", spanIDStr),
-		},
-	},
-	{
-		name: "trace ID length is not 32 or 16",
-		headers: map[string]string{
-			jaegerHeader: fmt.Sprintf("%s:%s:0:1", "1234567890abcd01234", spanIDStr),
 		},
 	},
 	{

@@ -135,29 +135,45 @@ func (s *metadataSupplier) Keys() []string {
 // Inject injects correlation context and span context into the gRPC
 // metadata object. This function is meant to be used on outgoing
 // requests.
+// Deprecated: Unnecessary public func.
 func Inject(ctx context.Context, md *metadata.MD, opts ...Option) {
 	c := newConfig(opts)
-	inject(ctx, md, c.Propagators)
-}
-
-func inject(ctx context.Context, md *metadata.MD, propagators propagation.TextMapPropagator) {
-	propagators.Inject(ctx, &metadataSupplier{
+	c.Propagators.Inject(ctx, &metadataSupplier{
 		metadata: md,
 	})
+}
+
+func inject(ctx context.Context, propagators propagation.TextMapPropagator) context.Context {
+	md, ok := metadata.FromOutgoingContext(ctx)
+	if !ok {
+		md = metadata.MD{}
+	}
+	propagators.Inject(ctx, &metadataSupplier{
+		metadata: &md,
+	})
+	return metadata.NewOutgoingContext(ctx, md)
 }
 
 // Extract returns the correlation context and span context that
 // another service encoded in the gRPC metadata object with Inject.
 // This function is meant to be used on incoming requests.
+// Deprecated: Unnecessary public func.
 func Extract(ctx context.Context, md *metadata.MD, opts ...Option) (baggage.Baggage, trace.SpanContext) {
 	c := newConfig(opts)
-	return extract(ctx, md, c.Propagators)
-}
-
-func extract(ctx context.Context, md *metadata.MD, propagators propagation.TextMapPropagator) (baggage.Baggage, trace.SpanContext) {
-	ctx = propagators.Extract(ctx, &metadataSupplier{
+	ctx = c.Propagators.Extract(ctx, &metadataSupplier{
 		metadata: md,
 	})
 
 	return baggage.FromContext(ctx), trace.SpanContextFromContext(ctx)
+}
+
+func extract(ctx context.Context, propagators propagation.TextMapPropagator) context.Context {
+	md, ok := metadata.FromIncomingContext(ctx)
+	if !ok {
+		md = metadata.MD{}
+	}
+
+	return propagators.Extract(ctx, &metadataSupplier{
+		metadata: &md,
+	})
 }
