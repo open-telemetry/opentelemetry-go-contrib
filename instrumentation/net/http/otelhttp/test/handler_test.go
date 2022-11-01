@@ -16,6 +16,7 @@ package test
 
 import (
 	"context"
+	"fmt"
 	"io"
 	"net/http"
 	"net/http/httptest"
@@ -30,21 +31,65 @@ import (
 	"go.opentelemetry.io/otel/attribute"
 	"go.opentelemetry.io/otel/codes"
 	"go.opentelemetry.io/otel/propagation"
+	"go.opentelemetry.io/otel/sdk/instrumentation"
+	"go.opentelemetry.io/otel/sdk/metric"
+	"go.opentelemetry.io/otel/sdk/metric/metricdata"
+	"go.opentelemetry.io/otel/sdk/metric/metricdata/metricdatatest"
 	sdktrace "go.opentelemetry.io/otel/sdk/trace"
 	"go.opentelemetry.io/otel/sdk/trace/tracetest"
+	semconv "go.opentelemetry.io/otel/semconv/v1.12.0"
 	"go.opentelemetry.io/otel/trace"
 )
 
-// TODO(#2759): Add metric integration tests for the instrumentation. These
-// tests depend on
-// https://github.com/open-telemetry/opentelemetry-go/issues/3031 being
-// resolved.
+func assertScopeMetrics(t *testing.T, sm metricdata.ScopeMetrics, attrs attribute.Set) {
+	assert.Equal(t, instrumentation.Scope{
+		Name:    "go.opentelemetry.io/contrib/instrumentation/net/http/otelhttp",
+		Version: otelhttp.SemVersion(),
+	}, sm.Scope)
+
+	require.Len(t, sm.Metrics, 3)
+
+	want := metricdata.Metrics{
+		Name: "http.server.request_content_length",
+		Data: metricdata.Sum[int64]{
+			DataPoints:  []metricdata.DataPoint[int64]{{Attributes: attrs, Value: 0}},
+			Temporality: metricdata.CumulativeTemporality,
+			IsMonotonic: true,
+		},
+	}
+	metricdatatest.AssertEqual(t, want, sm.Metrics[0], metricdatatest.IgnoreTimestamp())
+
+	want = metricdata.Metrics{
+		Name: "http.server.response_content_length",
+		Data: metricdata.Sum[int64]{
+			DataPoints:  []metricdata.DataPoint[int64]{{Attributes: attrs, Value: 11}},
+			Temporality: metricdata.CumulativeTemporality,
+			IsMonotonic: true,
+		},
+	}
+	metricdatatest.AssertEqual(t, want, sm.Metrics[1], metricdatatest.IgnoreTimestamp())
+
+	// Duration value is not predictable.
+	dur := sm.Metrics[2]
+	assert.Equal(t, "http.server.duration", dur.Name)
+	require.IsType(t, dur.Data, metricdata.Histogram{})
+	hist := dur.Data.(metricdata.Histogram)
+	assert.Equal(t, metricdata.CumulativeTemporality, hist.Temporality)
+	require.Len(t, hist.DataPoints, 1)
+	dPt := hist.DataPoints[0]
+	assert.Equal(t, attrs, dPt.Attributes, "attributes")
+	assert.Equal(t, uint64(1), dPt.Count, "count")
+	assert.Equal(t, []float64{0, 5, 10, 25, 50, 75, 100, 250, 500, 750, 1000, 2500, 5000, 7500, 10000}, dPt.Bounds, "bounds")
+}
 
 func TestHandlerBasics(t *testing.T) {
 	rr := httptest.NewRecorder()
 
 	spanRecorder := tracetest.NewSpanRecorder()
 	provider := sdktrace.NewTracerProvider(sdktrace.WithSpanProcessor(spanRecorder))
+
+	reader := metric.NewManualReader()
+	meterProvider := metric.NewMeterProvider(metric.WithReader(reader))
 
 	operation := "test_handler"
 
@@ -58,6 +103,7 @@ func TestHandlerBasics(t *testing.T) {
 			}
 		}), operation,
 		otelhttp.WithTracerProvider(provider),
+		otelhttp.WithMeterProvider(meterProvider),
 		otelhttp.WithPropagators(propagation.TraceContext{}),
 	)
 
@@ -66,6 +112,19 @@ func TestHandlerBasics(t *testing.T) {
 		t.Fatal(err)
 	}
 	h.ServeHTTP(rr, r)
+
+	rm, err := reader.Collect(context.Background())
+	require.NoError(t, err)
+	require.Len(t, rm.ScopeMetrics, 1)
+	attrs := attribute.NewSet(
+		semconv.HTTPServerNameKey.String(operation),
+		semconv.HTTPSchemeHTTP,
+		semconv.HTTPHostKey.String(r.Host),
+		semconv.HTTPFlavorKey.String(fmt.Sprintf("1.%d", r.ProtoMinor)),
+		semconv.HTTPMethodKey.String("GET"),
+		attribute.String("test", "attribute"),
+	)
+	assertScopeMetrics(t, rm.ScopeMetrics[0], attrs)
 
 	if got, expected := rr.Result().StatusCode, http.StatusOK; got != expected {
 		t.Fatalf("got %d, expected %d", got, expected)
