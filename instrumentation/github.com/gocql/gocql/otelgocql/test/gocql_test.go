@@ -119,6 +119,8 @@ func TestBatch(t *testing.T) {
 	cluster := getCluster()
 	sr := tracetest.NewSpanRecorder()
 	tracerProvider := sdktrace.NewTracerProvider(sdktrace.WithSpanProcessor(sr))
+	reader := metric.NewManualReader()
+	meterProvider := metric.NewMeterProvider(metric.WithReader(reader))
 
 	ctx, parentSpan := tracerProvider.Tracer(internal.InstrumentationName).Start(context.Background(), "gocql-test")
 
@@ -126,6 +128,7 @@ func TestBatch(t *testing.T) {
 		ctx,
 		cluster,
 		otelgocql.WithTracerProvider(tracerProvider),
+		otelgocql.WithMeterProvider(meterProvider),
 		otelgocql.WithConnectInstrumentation(false),
 	)
 	require.NoError(t, err)
@@ -155,6 +158,14 @@ func TestBatch(t *testing.T) {
 		assert.Contains(t, span.Attributes(), semconv.DBOperationKey.String("db.cassandra.batch.query"))
 		assertConnectionLevelAttributes(t, span)
 	}
+
+	rm, err := reader.Collect(context.Background())
+	require.NoError(t, err)
+	require.Len(t, rm.ScopeMetrics, 1)
+	sm := rm.ScopeMetrics[0]
+	assertScope(t, sm)
+	assertBatchQueriesMetric(t, 1, requireMetric(t, "db.cassandra.batch.queries", sm.Metrics))
+	assertLatencyMetric(t, 1, requireMetric(t, "db.cassandra.latency", sm.Metrics))
 }
 
 func TestConnection(t *testing.T) {
@@ -270,6 +281,27 @@ func assertQueriesMetric(t *testing.T, value int64, stmt string, m metricdata.Me
 		internal.CassHostState("UP"),
 		internal.CassKeyspace(keyspace),
 		internal.CassStatement(stmt),
+	}, dPt.Attributes)
+}
+
+func assertBatchQueriesMetric(t *testing.T, value int64, m metricdata.Metrics) {
+	assert.Equal(t, "db.cassandra.batch.queries", m.Name)
+	assert.Equal(t, "Number of batch queries executed", m.Description)
+	require.IsType(t, m.Data, metricdata.Sum[int64]{})
+	data := m.Data.(metricdata.Sum[int64])
+	assert.Equal(t, metricdata.CumulativeTemporality, data.Temporality, "Temporality")
+	assert.True(t, data.IsMonotonic, "IsMonotonic")
+	require.Len(t, data.DataPoints, 1, "DataPoints")
+	dPt := data.DataPoints[0]
+	assert.Equal(t, dPt.Value, value, "Value")
+	assertAttrSet(t, []attribute.KeyValue{
+		internal.CassDBSystem(),
+		internal.CassPeerIP("127.0.0.1"),
+		internal.CassPeerPort(9042),
+		internal.CassVersion("3"),
+		internal.CassHostID("test-id"),
+		internal.CassHostState("UP"),
+		internal.CassKeyspace(keyspace),
 	}, dPt.Attributes)
 }
 
