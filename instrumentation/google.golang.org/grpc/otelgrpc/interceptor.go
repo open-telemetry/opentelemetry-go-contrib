@@ -346,6 +346,7 @@ func UnaryServerInterceptor(opts ...Option) grpc.UnaryServerInterceptor {
 			cfg.rpcServerDuration.Record(ctx, int64(elapsedTime), attr...)
 		}(time.Now())
 
+		ctx = inject(ctx, cfg.Propagators)
 		resp, err := handler(ctx, req)
 		if err != nil {
 			s, _ := status.FromError(err)

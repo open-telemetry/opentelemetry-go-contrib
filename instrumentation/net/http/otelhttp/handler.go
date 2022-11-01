@@ -200,6 +200,7 @@ func (h *Handler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 
 	labeler := &Labeler{}
 	ctx = injectLabeler(ctx, labeler)
+	h.propagators.Inject(ctx, propagation.HeaderCarrier(r.Header))
 
 	h.handler.ServeHTTP(w, r.WithContext(ctx))
 
