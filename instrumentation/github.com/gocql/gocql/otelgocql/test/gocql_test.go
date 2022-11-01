@@ -173,6 +173,8 @@ func TestConnection(t *testing.T) {
 	cluster := getCluster()
 	sr := tracetest.NewSpanRecorder()
 	tracerProvider := sdktrace.NewTracerProvider(sdktrace.WithSpanProcessor(sr))
+	reader := metric.NewManualReader()
+	meterProvider := metric.NewMeterProvider(metric.WithReader(reader))
 	connectObserver := &mockConnectObserver{0}
 	ctx := context.Background()
 
@@ -180,6 +182,7 @@ func TestConnection(t *testing.T) {
 		ctx,
 		cluster,
 		otelgocql.WithTracerProvider(tracerProvider),
+		otelgocql.WithMeterProvider(meterProvider),
 		otelgocql.WithConnectObserver(connectObserver),
 	)
 	require.NoError(t, err)
@@ -196,6 +199,13 @@ func TestConnection(t *testing.T) {
 		assert.Contains(t, span.Attributes(), semconv.DBOperationKey.String("db.cassandra.connect"))
 		assertConnectionLevelAttributes(t, span)
 	}
+
+	rm, err := reader.Collect(context.Background())
+	require.NoError(t, err)
+	require.Len(t, rm.ScopeMetrics, 1)
+	sm := rm.ScopeMetrics[0]
+	assertScope(t, sm)
+	assertConnectionsMetric(t, requireMetric(t, "db.cassandra.connections", sm.Metrics))
 }
 
 func TestHostOrIP(t *testing.T) {
@@ -271,7 +281,7 @@ func assertQueriesMetric(t *testing.T, value int64, stmt string, m metricdata.Me
 	assert.True(t, data.IsMonotonic, "IsMonotonic")
 	require.Len(t, data.DataPoints, 1, "DataPoints")
 	dPt := data.DataPoints[0]
-	assert.Equal(t, dPt.Value, value, "Value")
+	assert.Equal(t, value, dPt.Value, "Value")
 	assertAttrSet(t, []attribute.KeyValue{
 		internal.CassDBSystem(),
 		internal.CassPeerIP("127.0.0.1"),
@@ -293,7 +303,7 @@ func assertBatchQueriesMetric(t *testing.T, value int64, m metricdata.Metrics) {
 	assert.True(t, data.IsMonotonic, "IsMonotonic")
 	require.Len(t, data.DataPoints, 1, "DataPoints")
 	dPt := data.DataPoints[0]
-	assert.Equal(t, dPt.Value, value, "Value")
+	assert.Equal(t, value, dPt.Value, "Value")
 	assertAttrSet(t, []attribute.KeyValue{
 		internal.CassDBSystem(),
 		internal.CassPeerIP("127.0.0.1"),
@@ -303,6 +313,25 @@ func assertBatchQueriesMetric(t *testing.T, value int64, m metricdata.Metrics) {
 		internal.CassHostState("UP"),
 		internal.CassKeyspace(keyspace),
 	}, dPt.Attributes)
+}
+
+func assertConnectionsMetric(t *testing.T, m metricdata.Metrics) {
+	assert.Equal(t, "db.cassandra.connections", m.Name)
+	assert.Equal(t, "Number of connections created", m.Description)
+	require.IsType(t, m.Data, metricdata.Sum[int64]{})
+	data := m.Data.(metricdata.Sum[int64])
+	assert.Equal(t, metricdata.CumulativeTemporality, data.Temporality, "Temporality")
+	assert.True(t, data.IsMonotonic, "IsMonotonic")
+	for _, dPt := range data.DataPoints {
+		assertAttrSet(t, []attribute.KeyValue{
+			internal.CassDBSystem(),
+			internal.CassPeerIP("127.0.0.1"),
+			internal.CassPeerPort(9042),
+			internal.CassVersion("3"),
+			internal.CassHostID("test-id"),
+			internal.CassHostState("UP"),
+		}, dPt.Attributes)
+	}
 }
 
 func assertRowsMetric(t *testing.T, count uint64, m metricdata.Metrics) {
