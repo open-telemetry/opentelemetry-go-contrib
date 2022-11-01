@@ -30,16 +30,15 @@ import (
 	"go.opentelemetry.io/contrib/instrumentation/github.com/gocql/gocql/otelgocql/internal"
 	"go.opentelemetry.io/contrib/internal/util"
 	"go.opentelemetry.io/otel/attribute"
+	"go.opentelemetry.io/otel/metric/unit"
+	"go.opentelemetry.io/otel/sdk/instrumentation"
+	"go.opentelemetry.io/otel/sdk/metric"
+	"go.opentelemetry.io/otel/sdk/metric/metricdata"
 	sdktrace "go.opentelemetry.io/otel/sdk/trace"
 	"go.opentelemetry.io/otel/sdk/trace/tracetest"
 	semconv "go.opentelemetry.io/otel/semconv/v1.12.0"
 	"go.opentelemetry.io/otel/trace"
 )
-
-// TODO(#2761): Add metric integration tests for the instrumentation. These
-// tests depend on
-// https://github.com/open-telemetry/opentelemetry-go/issues/3031 being
-// resolved.
 
 const (
 	keyspace  string = "gotest"
@@ -59,6 +58,8 @@ func TestQuery(t *testing.T) {
 	cluster := getCluster()
 	sr := tracetest.NewSpanRecorder()
 	tracerProvider := sdktrace.NewTracerProvider(sdktrace.WithSpanProcessor(sr))
+	reader := metric.NewManualReader()
+	meterProvider := metric.NewMeterProvider(metric.WithReader(reader))
 
 	ctx, parentSpan := tracerProvider.Tracer(internal.InstrumentationName).Start(context.Background(), "gocql-test")
 
@@ -66,6 +67,7 @@ func TestQuery(t *testing.T) {
 		ctx,
 		cluster,
 		otelgocql.WithTracerProvider(tracerProvider),
+		otelgocql.WithMeterProvider(meterProvider),
 		otelgocql.WithConnectInstrumentation(false),
 	)
 	require.NoError(t, err)
@@ -101,6 +103,15 @@ func TestQuery(t *testing.T) {
 		}
 		assertConnectionLevelAttributes(t, span)
 	}
+
+	rm, err := reader.Collect(context.Background())
+	require.NoError(t, err)
+	require.Len(t, rm.ScopeMetrics, 1)
+	sm := rm.ScopeMetrics[0]
+	assertScope(t, sm)
+	assertQueriesMetric(t, 1, insertStmt, requireMetric(t, "db.cassandra.queries", sm.Metrics))
+	assertRowsMetric(t, 1, requireMetric(t, "db.cassandra.rows", sm.Metrics))
+	assertLatencyMetric(t, 1, requireMetric(t, "db.cassandra.latency", sm.Metrics))
 }
 
 func TestBatch(t *testing.T) {
@@ -216,6 +227,107 @@ func getCluster() *gocql.ClusterConfig {
 	cluster.Consistency = gocql.LocalQuorum
 	cluster.NumConns = 1
 	return cluster
+}
+
+func assertScope(t *testing.T, sm metricdata.ScopeMetrics) {
+	assert.Equal(t, instrumentation.Scope{
+		Name:    "go.opentelemetry.io/contrib/instrumentation/github.com/gocql/gocql/otelgocql",
+		Version: otelgocql.SemVersion(),
+	}, sm.Scope)
+}
+
+func requireMetric(t *testing.T, name string, metrics []metricdata.Metrics) metricdata.Metrics {
+	m, ok := getMetric(name, metrics)
+	require.Truef(t, ok, "missing metric %q", name)
+	return m
+}
+
+func getMetric(name string, metrics []metricdata.Metrics) (metricdata.Metrics, bool) {
+	for _, m := range metrics {
+		if m.Name == name {
+			return m, true
+		}
+	}
+	return metricdata.Metrics{}, false
+}
+
+func assertQueriesMetric(t *testing.T, value int64, stmt string, m metricdata.Metrics) {
+	assert.Equal(t, "db.cassandra.queries", m.Name)
+	assert.Equal(t, "Number queries executed", m.Description)
+	require.IsType(t, m.Data, metricdata.Sum[int64]{})
+	data := m.Data.(metricdata.Sum[int64])
+	assert.Equal(t, metricdata.CumulativeTemporality, data.Temporality, "Temporality")
+	assert.True(t, data.IsMonotonic, "IsMonotonic")
+	require.Len(t, data.DataPoints, 1, "DataPoints")
+	dPt := data.DataPoints[0]
+	assert.Equal(t, dPt.Value, value, "Value")
+	assertAttrSet(t, []attribute.KeyValue{
+		internal.CassDBSystem(),
+		internal.CassPeerIP("127.0.0.1"),
+		internal.CassPeerPort(9042),
+		internal.CassVersion("3"),
+		internal.CassHostID("test-id"),
+		internal.CassHostState("UP"),
+		internal.CassKeyspace(keyspace),
+		internal.CassStatement(stmt),
+	}, dPt.Attributes)
+}
+
+func assertRowsMetric(t *testing.T, count uint64, m metricdata.Metrics) {
+	assert.Equal(t, "db.cassandra.rows", m.Name)
+	assert.Equal(t, "Number of rows returned from query", m.Description)
+	require.IsType(t, m.Data, metricdata.Histogram{})
+	data := m.Data.(metricdata.Histogram)
+	assert.Equal(t, metricdata.CumulativeTemporality, data.Temporality, "Temporality")
+	require.Len(t, data.DataPoints, 1, "DataPoints")
+	dPt := data.DataPoints[0]
+	assert.Equal(t, count, dPt.Count, "Count")
+	assertAttrSet(t, []attribute.KeyValue{
+		internal.CassDBSystem(),
+		internal.CassPeerIP("127.0.0.1"),
+		internal.CassPeerPort(9042),
+		internal.CassVersion("3"),
+		internal.CassHostID("test-id"),
+		internal.CassHostState("UP"),
+		internal.CassKeyspace(keyspace),
+	}, dPt.Attributes)
+}
+
+func assertLatencyMetric(t *testing.T, count uint64, m metricdata.Metrics) {
+	assert.Equal(t, "db.cassandra.latency", m.Name)
+	assert.Equal(t, "Sum of latency to host in milliseconds", m.Description)
+	assert.Equal(t, unit.Milliseconds, m.Unit)
+	require.IsType(t, m.Data, metricdata.Histogram{})
+	data := m.Data.(metricdata.Histogram)
+	assert.Equal(t, metricdata.CumulativeTemporality, data.Temporality, "Temporality")
+	require.Len(t, data.DataPoints, 1, "DataPoints")
+	dPt := data.DataPoints[0]
+	assert.Equal(t, count, dPt.Count, "Count")
+	assertAttrSet(t, []attribute.KeyValue{
+		internal.CassDBSystem(),
+		internal.CassPeerIP("127.0.0.1"),
+		internal.CassPeerPort(9042),
+		internal.CassVersion("3"),
+		internal.CassHostID("test-id"),
+		internal.CassHostState("UP"),
+		internal.CassKeyspace(keyspace),
+	}, dPt.Attributes)
+}
+
+func assertAttrSet(t *testing.T, want []attribute.KeyValue, got attribute.Set) {
+	for _, attr := range want {
+		actual, ok := got.Value(attr.Key)
+		if !assert.Truef(t, ok, "missing attribute %s", attr.Key) {
+			continue
+		}
+		switch attr.Key {
+		case internal.CassHostIDKey, internal.CassVersionKey:
+			// Host ID and Version will change between test runs.
+			assert.NotEmpty(t, actual)
+		default:
+			assert.Equal(t, attr.Value, actual)
+		}
+	}
 }
 
 // beforeAll creates the testing keyspace and table if they do not already exist.
