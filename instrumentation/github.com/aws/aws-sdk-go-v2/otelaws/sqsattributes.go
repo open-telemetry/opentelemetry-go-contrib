@@ -30,46 +30,32 @@ func SQSAttributeSetter(ctx context.Context, in middleware.InitializeInput) []at
 
 	switch v := in.Parameters.(type) {
 	case *sqs.DeleteMessageBatchInput:
-		sqsAttributes = append(sqsAttributes, QueueURLKey.String(*v.QueueUrl))
 		sqsAttributes = append(sqsAttributes, semconv.MessagingURLKey.String(*v.QueueUrl))
 	case *sqs.DeleteMessageInput:
-		sqsAttributes = append(sqsAttributes, QueueURLKey.String(*v.QueueUrl))
 		sqsAttributes = append(sqsAttributes, semconv.MessagingURLKey.String(*v.QueueUrl))
 	case *sqs.DeleteQueueInput:
-		sqsAttributes = append(sqsAttributes, QueueURLKey.String(*v.QueueUrl))
 		sqsAttributes = append(sqsAttributes, semconv.MessagingURLKey.String(*v.QueueUrl))
 	case *sqs.GetQueueAttributesInput:
-		sqsAttributes = append(sqsAttributes, QueueURLKey.String(*v.QueueUrl))
 		sqsAttributes = append(sqsAttributes, semconv.MessagingURLKey.String(*v.QueueUrl))
 	case *sqs.ListDeadLetterSourceQueuesInput:
-		sqsAttributes = append(sqsAttributes, QueueURLKey.String(*v.QueueUrl))
 		sqsAttributes = append(sqsAttributes, semconv.MessagingURLKey.String(*v.QueueUrl))
 	case *sqs.ListQueueTagsInput:
-		sqsAttributes = append(sqsAttributes, QueueURLKey.String(*v.QueueUrl))
 		sqsAttributes = append(sqsAttributes, semconv.MessagingURLKey.String(*v.QueueUrl))
 	case *sqs.PurgeQueueInput:
-		sqsAttributes = append(sqsAttributes, QueueURLKey.String(*v.QueueUrl))
 		sqsAttributes = append(sqsAttributes, semconv.MessagingURLKey.String(*v.QueueUrl))
 	case *sqs.ReceiveMessageInput:
-		sqsAttributes = append(sqsAttributes, QueueURLKey.String(*v.QueueUrl))
 		sqsAttributes = append(sqsAttributes, semconv.MessagingURLKey.String(*v.QueueUrl))
 	case *sqs.RemovePermissionInput:
-		sqsAttributes = append(sqsAttributes, QueueURLKey.String(*v.QueueUrl))
 		sqsAttributes = append(sqsAttributes, semconv.MessagingURLKey.String(*v.QueueUrl))
 	case *sqs.SendMessageBatchInput:
-		sqsAttributes = append(sqsAttributes, QueueURLKey.String(*v.QueueUrl))
 		sqsAttributes = append(sqsAttributes, semconv.MessagingURLKey.String(*v.QueueUrl))
 	case *sqs.SendMessageInput:
-		sqsAttributes = append(sqsAttributes, QueueURLKey.String(*v.QueueUrl))
 		sqsAttributes = append(sqsAttributes, semconv.MessagingURLKey.String(*v.QueueUrl))
 	case *sqs.SetQueueAttributesInput:
-		sqsAttributes = append(sqsAttributes, QueueURLKey.String(*v.QueueUrl))
 		sqsAttributes = append(sqsAttributes, semconv.MessagingURLKey.String(*v.QueueUrl))
 	case *sqs.TagQueueInput:
-		sqsAttributes = append(sqsAttributes, QueueURLKey.String(*v.QueueUrl))
 		sqsAttributes = append(sqsAttributes, semconv.MessagingURLKey.String(*v.QueueUrl))
 	case *sqs.UntagQueueInput:
-		sqsAttributes = append(sqsAttributes, QueueURLKey.String(*v.QueueUrl))
 		sqsAttributes = append(sqsAttributes, semconv.MessagingURLKey.String(*v.QueueUrl))
 	}
 

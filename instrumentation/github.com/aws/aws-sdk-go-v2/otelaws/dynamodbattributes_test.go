@@ -128,7 +128,6 @@ func TestDynamodbTagsCreateTableInput(t *testing.T) {
 	attributes := DynamoDBAttributeSetter(context.TODO(), input)
 
 	assert.Contains(t, attributes, attribute.String("aws.dynamodb.table_names", "table1"))
-	assert.Contains(t, attributes, attribute.String("aws.table_name", "table1"))
 	assert.Contains(t, attributes, attribute.String("aws.dynamodb.global_secondary_indexes", "[{\"IndexName\":\"index1\",\"KeySchema\":[{\"AttributeName\":\"attributename\",\"KeyType\":\"HASH\"}],\"Projection\":{\"NonKeyAttributes\":[\"non-key-attributes\"],\"ProjectionType\":\"\"},\"ProvisionedThroughput\":null}]"))
 	assert.Contains(t, attributes, attribute.String("aws.dynamodb.local_secondary_indexes", "[{\"IndexName\":\"index2\",\"KeySchema\":[{\"AttributeName\":\"attributename\",\"KeyType\":\"HASH\"}],\"Projection\":null}]"))
 	assert.Contains(t, attributes, attribute.Int("aws.dynamodb.provisioned_read_capacity", 123))
@@ -147,7 +146,6 @@ func TestDynamodbTagsDeleteItemInput(t *testing.T) {
 	attributes := DynamoDBAttributeSetter(context.TODO(), input)
 
 	assert.Contains(t, attributes, attribute.String("aws.dynamodb.table_names", "table1"))
-	assert.Contains(t, attributes, attribute.String("aws.table_name", "table1"))
 }
 
 func TestDynamodbTagsDeleteTableInput(t *testing.T) {
@@ -159,7 +157,6 @@ func TestDynamodbTagsDeleteTableInput(t *testing.T) {
 	attributes := DynamoDBAttributeSetter(context.TODO(), input)
 
 	assert.Contains(t, attributes, attribute.String("aws.dynamodb.table_names", "table1"))
-	assert.Contains(t, attributes, attribute.String("aws.table_name", "table1"))
 }
 
 func TestDynamodbTagsDescribeTableInput(t *testing.T) {
@@ -171,7 +168,6 @@ func TestDynamodbTagsDescribeTableInput(t *testing.T) {
 	attributes := DynamoDBAttributeSetter(context.TODO(), input)
 
 	assert.Contains(t, attributes, attribute.String("aws.dynamodb.table_names", "table1"))
-	assert.Contains(t, attributes, attribute.String("aws.table_name", "table1"))
 }
 
 func TestDynamodbTagsListTablesInput(t *testing.T) {
@@ -202,7 +198,6 @@ func TestDynamodbTagsPutItemInput(t *testing.T) {
 	attributes := DynamoDBAttributeSetter(context.TODO(), input)
 
 	assert.Contains(t, attributes, attribute.String("aws.dynamodb.table_names", "table1"))
-	assert.Contains(t, attributes, attribute.String("aws.table_name", "table1"))
 }
 
 func TestDynamodbTagsQueryInput(t *testing.T) {
@@ -229,7 +224,6 @@ func TestDynamodbTagsQueryInput(t *testing.T) {
 	attributes := DynamoDBAttributeSetter(context.TODO(), input)
 
 	assert.Contains(t, attributes, attribute.String("aws.dynamodb.table_names", "table1"))
-	assert.Contains(t, attributes, attribute.String("aws.table_name", "table1"))
 	assert.Contains(t, attributes, attribute.Bool("aws.dynamodb.consistent_read", true))
 	assert.Contains(t, attributes, attribute.String("aws.dynamodb.index_name", "index1"))
 	assert.Contains(t, attributes, attribute.Int("aws.dynamodb.limit", 10))
@@ -255,7 +249,6 @@ func TestDynamodbTagsScanInput(t *testing.T) {
 	attributes := DynamoDBAttributeSetter(context.TODO(), input)
 
 	assert.Contains(t, attributes, attribute.String("aws.dynamodb.table_names", "my-table"))
-	assert.Contains(t, attributes, attribute.String("aws.table_name", "my-table"))
 	assert.Contains(t, attributes, attribute.Bool("aws.dynamodb.consistent_read", true))
 	assert.Contains(t, attributes, attribute.String("aws.dynamodb.index_name", "index1"))
 	assert.Contains(t, attributes, attribute.Int("aws.dynamodb.limit", 10))
@@ -282,7 +275,6 @@ func TestDynamodbTagsUpdateItemInput(t *testing.T) {
 	attributes := DynamoDBAttributeSetter(context.TODO(), input)
 
 	assert.Contains(t, attributes, attribute.String("aws.dynamodb.table_names", "my-table"))
-	assert.Contains(t, attributes, attribute.String("aws.table_name", "my-table"))
 }
 
 func TestDynamodbTagsUpdateTableInput(t *testing.T) {
@@ -322,7 +314,6 @@ func TestDynamodbTagsUpdateTableInput(t *testing.T) {
 	attributes := DynamoDBAttributeSetter(context.TODO(), input)
 
 	assert.Contains(t, attributes, attribute.String("aws.dynamodb.table_names", "my-table"))
-	assert.Contains(t, attributes, attribute.String("aws.table_name", "my-table"))
 	assert.Contains(t, attributes, attribute.String("aws.dynamodb.attribute_definitions", "[{\"AttributeName\":\"id\",\"AttributeType\":\"S\"}]"))
 	assert.Contains(t, attributes, attribute.String("aws.dynamodb.global_secondary_index_updates", "[{\"Create\":{\"IndexName\":\"index1\",\"KeySchema\":[{\"AttributeName\":\"attribute\",\"KeyType\":\"HASH\"}],\"Projection\":{\"NonKeyAttributes\":[\"attribute1\",\"attribute2\"],\"ProjectionType\":\"ALL\"},\"ProvisionedThroughput\":null},\"Delete\":null,\"Update\":null}]"))
 	assert.Contains(t, attributes, attribute.Int("aws.dynamodb.provisioned_read_capacity", 123))

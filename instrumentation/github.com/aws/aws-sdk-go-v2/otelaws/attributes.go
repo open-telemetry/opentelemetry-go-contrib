@@ -31,8 +31,6 @@ const (
 	RegionKey    attribute.Key = "aws.region"
 	ServiceKey   attribute.Key = "aws.service"
 	RequestIDKey attribute.Key = "aws.request_id"
-	TableNameKey attribute.Key = "aws.table_name"
-	QueueURLKey  attribute.Key = "aws.queue_url"
 )
 
 var servicemap = map[string]AttributeSetter{
@@ -58,16 +56,6 @@ func ServiceAttr(service string) attribute.KeyValue {
 // RequestIDAttr returns the AWS request ID attribute.
 func RequestIDAttr(requestID string) attribute.KeyValue {
 	return RequestIDKey.String(requestID)
-}
-
-// TableNameAttr returns the AWS table name attribute for a single table name.
-func TableNameAttr(tableName string) attribute.KeyValue {
-	return TableNameKey.String(tableName)
-}
-
-// QueueURLAttr returns the AWS queue URL attribute.
-func QueueURLAttr(queueURL string) attribute.KeyValue {
-	return QueueURLKey.String(queueURL)
 }
 
 // DefaultAttributeSetter checks to see if there are service specific attributes available to set for the AWS service.

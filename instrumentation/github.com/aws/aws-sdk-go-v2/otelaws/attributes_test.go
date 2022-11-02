@@ -45,15 +45,3 @@ func TestRequestIDAttr(t *testing.T) {
 	attr := RequestIDAttr(requestID)
 	assert.Equal(t, attribute.String("aws.request_id", requestID), attr)
 }
-
-func TestTableNameAttr(t *testing.T) {
-	tableName := "test-table-name"
-	attr := TableNameAttr(tableName)
-	assert.Equal(t, attribute.String("aws.table_name", tableName), attr)
-}
-
-func TestQueueURLAttr(t *testing.T) {
-	queueURL := "test-queue-url"
-	attr := QueueURLAttr(queueURL)
-	assert.Equal(t, attribute.String("aws.queue_url", queueURL), attr)
-}

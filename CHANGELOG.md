@@ -10,8 +10,7 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 
 ### Added
 
-- `instrumentation/github.com/aws/aws-sdk-go-v2/otelaws`: Add `aws.table_name` attribute to all supporting DynamoDB operations (#2879).
-- `instrumentation/github.com/aws/aws-sdk-go-v2/otelaws`: Add `aws.queue_url` & `messaging.url` attributes to all supporting SQS operations (#2879).
+- `instrumentation/github.com/aws/aws-sdk-go-v2/otelaws`: Add semconv `messaging.url` & `messaging.system`  attributes to all supporting SQS operations (#2879).
 
 ## [1.11.1/0.36.4/0.5.2]
 
