@@ -23,6 +23,7 @@ import (
 
 	"github.com/Shopify/sarama"
 
+	"go.opentelemetry.io/otel"
 	"go.opentelemetry.io/otel/codes"
 
 	"go.opentelemetry.io/otel/attribute"
@@ -65,6 +66,11 @@ func WrapSyncProducer(saramaConfig *sarama.Config, producer sarama.SyncProducer,
 	cfg := newConfig(opts...)
 	if saramaConfig == nil {
 		saramaConfig = sarama.NewConfig()
+	}
+
+	err := startProducerMetric(cfg.Meter, saramaConfig.MetricRegistry)
+	if err != nil {
+		otel.Handle(err)
 	}
 
 	return &syncProducer{
@@ -131,6 +137,11 @@ func WrapAsyncProducer(saramaConfig *sarama.Config, p sarama.AsyncProducer, opts
 	cfg := newConfig(opts...)
 	if saramaConfig == nil {
 		saramaConfig = sarama.NewConfig()
+	}
+
+	err := startProducerMetric(cfg.Meter, saramaConfig.MetricRegistry)
+	if err != nil {
+		otel.Handle(err)
 	}
 
 	wrapped := &asyncProducer{

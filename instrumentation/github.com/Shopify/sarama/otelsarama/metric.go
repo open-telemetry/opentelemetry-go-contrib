@@ -59,6 +59,7 @@ const (
 )
 
 type observable[T int64 | float64] interface {
+	instrument.Asynchronous
 	Observe(ctx context.Context, x T, attrs ...attribute.KeyValue)
 }
 
@@ -66,7 +67,7 @@ func producerMetrics( /*topics []string*/ ) []metricsProps {
 	return []metricsProps{
 		{
 			Name:       "batch-size",
-			MetricType: HISTOGRAM,
+			MetricType: GAUGE,
 			MetricUnit: unit.Bytes,
 			// derived from sarama doc
 			Description:  "Distribution of the number of bytes sent per partition per request for all topics",
@@ -98,7 +99,7 @@ func producerMetrics( /*topics []string*/ ) []metricsProps {
 		}, // -for-topic-<topic>
 		{
 			Name:       "records-per-request",
-			MetricType: HISTOGRAM,
+			MetricType: GAUGE,
 			MetricUnit: unit.Dimensionless,
 			// derived from sarama doc
 			Description:  "Distribution of the number of records sent per request for all topics",
@@ -114,7 +115,7 @@ func producerMetrics( /*topics []string*/ ) []metricsProps {
 		}, // -for-topic-<topic>
 		{
 			Name:       "compression-ratio",
-			MetricType: HISTOGRAM,
+			MetricType: GAUGE,
 			MetricUnit: unit.Dimensionless,
 			// derived from sarama doc
 			Description:  "Distribution of the compression ratio times 100 of record batches for all topics",
@@ -131,10 +132,14 @@ func producerMetrics( /*topics []string*/ ) []metricsProps {
 	}
 }
 
-func startProducerMetric(meter metric.Meter, registry saramaMetrics.Registry) (saramaMetrics.Registry, error) {
+func startProducerMetric(meter metric.Meter, registry saramaMetrics.Registry) error {
 	var lock sync.Mutex
 	lock.Lock()
 	defer lock.Unlock()
+
+	if registry == nil {
+		return nil
+	}
 
 	producerMetrics := producerMetrics()
 
@@ -150,7 +155,7 @@ func startProducerMetric(meter metric.Meter, registry saramaMetrics.Registry) (s
 			prov := meter.AsyncInt64()
 			obs, callback, err := convertToInt64MetricType(prov, registry, producerMetric)
 			if err != nil {
-				return registry, err
+				return err
 			}
 			asyncInsts = append(asyncInsts, obs)
 			callbacks = append(callbacks, callback)
@@ -159,7 +164,7 @@ func startProducerMetric(meter metric.Meter, registry saramaMetrics.Registry) (s
 			prov := meter.AsyncFloat64()
 			obs, callback, err := convertToFloat64MetricType(prov, registry, producerMetric)
 			if err != nil {
-				return registry, err
+				return err
 			}
 			asyncInsts = append(asyncInsts, obs)
 			callbacks = append(callbacks, callback)
@@ -168,14 +173,19 @@ func startProducerMetric(meter metric.Meter, registry saramaMetrics.Registry) (s
 
 	err := meter.RegisterCallback(asyncInsts, func(ctx context.Context) {
 		for _, callback := range callbacks {
-			err := callback(ctx)
-			if err != nil {
-				otel.Handle(err)
+			if callback != nil { // in initial startup, nil is being returned
+				err := callback(ctx)
+				if err != nil {
+					otel.Handle(err)
+				}
 			}
 		}
 	})
+	if err != nil {
+		return err
+	}
 
-	return registry, err
+	return nil
 }
 
 func convertToInt64MetricType(prov asyncint64.InstrumentProvider, r saramaMetrics.Registry, prop metricsProps) (instrument.Asynchronous, func(ctx context.Context) error, error) {
@@ -186,7 +196,7 @@ func convertToInt64MetricType(prov asyncint64.InstrumentProvider, r saramaMetric
 
 	switch prop.MetricType {
 	case HISTOGRAM:
-		return nil, nil, errors.New("") // TODO: aggregate error functions for sake of errors.as / is
+		return nil, nil, errors.New("Histogram on Async instrument provier is not supported") // TODO: aggregate error functions for sake of errors.as / is
 	case GAUGE:
 		metType, err = prov.Gauge(
 			prop.Name,
@@ -215,6 +225,7 @@ func convertToInt64MetricType(prov asyncint64.InstrumentProvider, r saramaMetric
 
 	callback := func(ctx context.Context) error {
 		val, ok := prop.RetrievalFunction(r).(int64)
+
 		if !ok {
 			return fmt.Errorf("RetrievalFunction of %s does not return correct variable type", prop.Name)
 		}
@@ -233,7 +244,7 @@ func convertToFloat64MetricType(prov asyncfloat64.InstrumentProvider, r saramaMe
 
 	switch prop.MetricType {
 	case HISTOGRAM:
-		return nil, nil, errors.New("") // TODO: aggregate error functions for sake of errors.as / is
+		return nil, nil, errors.New("Histogram on Async instrument provier is not supported") // TODO: aggregate error functions for sake of errors.as / is
 	case GAUGE:
 		metType, err = prov.Gauge(
 			prop.Name,
@@ -262,6 +273,7 @@ func convertToFloat64MetricType(prov asyncfloat64.InstrumentProvider, r saramaMe
 
 	callback := func(ctx context.Context) error {
 		val, ok := prop.RetrievalFunction(r).(float64)
+
 		if !ok {
 			return fmt.Errorf("RetrievalFunction of %s does not return correct variable type", prop.Name)
 		}
