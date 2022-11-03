@@ -71,8 +71,8 @@ func WithTracerProvider(provider oteltrace.TracerProvider) Option {
 // If no filters are provided then all requests are traced.
 // Filters will be invoked for each processed request, it is advised to make them
 // simple and fast.
-func WithFilter(f Filter) Option {
+func WithFilter(f ...Filter) Option {
 	return optionFunc(func(c *config) {
-		c.Filters = append(c.Filters, f)
+		c.Filters = append(c.Filters, f...)
 	})
 }
