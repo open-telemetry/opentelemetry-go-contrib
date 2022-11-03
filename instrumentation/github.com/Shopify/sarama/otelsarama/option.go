@@ -16,17 +16,21 @@ package otelsarama // import "go.opentelemetry.io/contrib/instrumentation/github
 
 import (
 	"go.opentelemetry.io/otel"
+	"go.opentelemetry.io/otel/metric"
+	"go.opentelemetry.io/otel/metric/global"
 	"go.opentelemetry.io/otel/propagation"
 	"go.opentelemetry.io/otel/trace"
 )
 
-const defaultTracerName = "go.opentelemetry.io/contrib/instrumentation/github.com/Shopify/sarama/otelsarama"
+const defaultObservabilityName = "go.opentelemetry.io/contrib/instrumentation/github.com/Shopify/sarama/otelsarama"
 
 type config struct {
 	TracerProvider trace.TracerProvider
+	MeterProvider  metric.MeterProvider
 	Propagators    propagation.TextMapPropagator
 
 	Tracer trace.Tracer
+	Meter  metric.Meter
 }
 
 // newConfig returns a config with all Options set.
@@ -34,14 +38,20 @@ func newConfig(opts ...Option) config {
 	cfg := config{
 		Propagators:    otel.GetTextMapPropagator(),
 		TracerProvider: otel.GetTracerProvider(),
+		MeterProvider:  global.MeterProvider(),
 	}
 	for _, opt := range opts {
 		opt.apply(&cfg)
 	}
 
 	cfg.Tracer = cfg.TracerProvider.Tracer(
-		defaultTracerName,
+		defaultObservabilityName,
 		trace.WithInstrumentationVersion(SemVersion()),
+	)
+
+	cfg.Meter = cfg.MeterProvider.Meter(
+		defaultObservabilityName,
+		metric.WithInstrumentationVersion(SemVersion()),
 	)
 
 	return cfg
@@ -64,6 +74,14 @@ func WithTracerProvider(provider trace.TracerProvider) Option {
 	return optionFunc(func(cfg *config) {
 		if provider != nil {
 			cfg.TracerProvider = provider
+		}
+	})
+}
+
+func WithMeterProvider(provider metric.MeterProvider) Option {
+	return optionFunc(func(cfg *config) {
+		if provider != nil {
+			cfg.MeterProvider = provider
 		}
 	})
 }
