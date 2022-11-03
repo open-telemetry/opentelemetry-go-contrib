@@ -40,7 +40,6 @@ import (
 	"time"
 
 	"github.com/gocql/gocql"
-	"github.com/prometheus/client_golang/prometheus"
 	"github.com/prometheus/client_golang/prometheus/promhttp"
 
 	"go.opentelemetry.io/otel"
@@ -192,14 +191,13 @@ func initMetrics() error {
 		return err
 	}
 
-	exporter := otelprom.New()
-	provider := metric.NewMeterProvider(metric.WithReader(exporter, vs...))
-	global.SetMeterProvider(provider)
-
-	err = prometheus.Register(exporter.Collector)
+	exporter, err := otelprom.New()
 	if err != nil {
 		return err
 	}
+	provider := metric.NewMeterProvider(metric.WithReader(exporter, vs...))
+	global.SetMeterProvider(provider)
+
 	http.Handle("/", promhttp.Handler())
 	log.Print("Serving metrics at :2222/")
 	go func() {

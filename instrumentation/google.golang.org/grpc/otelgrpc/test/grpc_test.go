@@ -30,6 +30,8 @@ import (
 
 	"go.opentelemetry.io/contrib/instrumentation/google.golang.org/grpc/otelgrpc"
 	"go.opentelemetry.io/otel/attribute"
+	"go.opentelemetry.io/otel/sdk/metric"
+	"go.opentelemetry.io/otel/sdk/metric/metricdata"
 	"go.opentelemetry.io/otel/sdk/trace"
 	"go.opentelemetry.io/otel/sdk/trace/tracetest"
 	semconv "go.opentelemetry.io/otel/semconv/v1.12.0"
@@ -84,6 +86,8 @@ func TestInterceptors(t *testing.T) {
 
 	serverUnarySR := tracetest.NewSpanRecorder()
 	serverUnaryTP := trace.NewTracerProvider(trace.WithSpanProcessor(serverUnarySR))
+	serverUnaryMetricReader := metric.NewManualReader()
+	serverUnaryMP := metric.NewMeterProvider(metric.WithReader(serverUnaryMetricReader))
 
 	serverStreamSR := tracetest.NewSpanRecorder()
 	serverStreamTP := trace.NewTracerProvider(trace.WithSpanProcessor(serverStreamSR))
@@ -94,7 +98,7 @@ func TestInterceptors(t *testing.T) {
 			grpc.WithStreamInterceptor(otelgrpc.StreamClientInterceptor(otelgrpc.WithTracerProvider(clientStreamTP))),
 		},
 		[]grpc.ServerOption{
-			grpc.UnaryInterceptor(otelgrpc.UnaryServerInterceptor(otelgrpc.WithTracerProvider(serverUnaryTP))),
+			grpc.UnaryInterceptor(otelgrpc.UnaryServerInterceptor(otelgrpc.WithTracerProvider(serverUnaryTP), otelgrpc.WithMeterProvider(serverUnaryMP))),
 			grpc.StreamInterceptor(otelgrpc.StreamServerInterceptor(otelgrpc.WithTracerProvider(serverStreamTP))),
 		},
 	))
@@ -109,6 +113,7 @@ func TestInterceptors(t *testing.T) {
 
 	t.Run("UnaryServerSpans", func(t *testing.T) {
 		checkUnaryServerSpans(t, serverUnarySR.Ended())
+		checkUnaryServerRecords(t, serverUnaryMetricReader)
 	})
 
 	t.Run("StreamServerSpans", func(t *testing.T) {
@@ -621,4 +626,34 @@ func assertEvents(t *testing.T, expected, actual []trace.Event) bool {
 	}
 
 	return !failed
+}
+
+func checkUnaryServerRecords(t *testing.T, reader metric.Reader) {
+	rm, err := reader.Collect(context.Background())
+	assert.NoError(t, err)
+	require.Len(t, rm.ScopeMetrics, 1)
+	require.Len(t, rm.ScopeMetrics[0].Metrics, 1)
+	require.IsType(t, rm.ScopeMetrics[0].Metrics[0].Data, metricdata.Histogram{})
+	data := rm.ScopeMetrics[0].Metrics[0].Data.(metricdata.Histogram)
+
+	for _, dpt := range data.DataPoints {
+		attr := dpt.Attributes.ToSlice()
+		method := getRPCMethod(attr)
+		assert.NotEmpty(t, method)
+		assert.ElementsMatch(t, []attribute.KeyValue{
+			semconv.RPCMethodKey.String(method),
+			semconv.RPCServiceKey.String("grpc.testing.TestService"),
+			otelgrpc.RPCSystemGRPC,
+			otelgrpc.GRPCStatusCodeKey.Int64(int64(codes.OK)),
+		}, attr)
+	}
+}
+
+func getRPCMethod(attrs []attribute.KeyValue) string {
+	for _, kvs := range attrs {
+		if kvs.Key == semconv.RPCMethodKey {
+			return kvs.Value.AsString()
+		}
+	}
+	return ""
 }

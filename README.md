@@ -13,6 +13,7 @@ Collection of 3rd-party packages for [OpenTelemetry-Go](https://github.com/open-
 - [Instrumentation](./instrumentation/): Packages providing OpenTelemetry instrumentation for 3rd-party libraries.
 - [Propagators](./propagators/): Packages providing OpenTelemetry context propagators for 3rd-party propagation formats.
 - [Detectors](./detectors/): Packages providing OpenTelemetry resource detectors for 3rd-party cloud computing environments.
+- [Samplers](./samplers/): Packages providing additional implementations of OpenTelemetry samplers.
 
 ## Project Status
 
@@ -23,7 +24,7 @@ board](https://github.com/orgs/open-telemetry/projects/5).
 ### Compatibility
 
 
-OpenTelemetry-Go Contrib ensures compatibility with the current supported 
+OpenTelemetry-Go Contrib ensures compatibility with the current supported
 versions of
 the [Go language](https://golang.org/doc/devel/release#policy):
 
