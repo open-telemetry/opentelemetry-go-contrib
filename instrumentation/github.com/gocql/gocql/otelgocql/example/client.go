@@ -128,21 +128,8 @@ func main() {
 
 func views() ([]view.View, error) {
 	var vs []view.View
-	// TODO: Remove renames when the Prometheus exporter natively supports
-	// metric instrument name sanitation
-	// (https://github.com/open-telemetry/opentelemetry-go/issues/3183).
 	v, err := view.New(
-		view.MatchInstrumentName("db.cassandra.queries"),
-		view.WithRename("db_cassandra_queries"),
-	)
-	if err != nil {
-		return nil, err
-	}
-	vs = append(vs, v)
-
-	v, err = view.New(
 		view.MatchInstrumentName("db.cassandra.rows"),
-		view.WithRename("db_cassandra_rows"),
 		view.WithSetAggregation(aggregation.ExplicitBucketHistogram{
 			Boundaries: []float64{0.001, 0.01, 0.1, 0.5, 1, 2, 5, 10},
 		}),
@@ -153,26 +140,7 @@ func views() ([]view.View, error) {
 	vs = append(vs, v)
 
 	v, err = view.New(
-		view.MatchInstrumentName("db.cassandra.batch.queries"),
-		view.WithRename("db_cassandra_batch_queries"),
-	)
-	if err != nil {
-		return nil, err
-	}
-	vs = append(vs, v)
-
-	v, err = view.New(
-		view.MatchInstrumentName("db.cassandra.connections"),
-		view.WithRename("db_cassandra_connections"),
-	)
-	if err != nil {
-		return nil, err
-	}
-	vs = append(vs, v)
-
-	v, err = view.New(
 		view.MatchInstrumentName("db.cassandra.latency"),
-		view.WithRename("db_cassandra_latency"),
 		view.WithSetAggregation(aggregation.ExplicitBucketHistogram{
 			Boundaries: []float64{0.001, 0.01, 0.1, 0.5, 1, 2, 5, 10},
 		}),
