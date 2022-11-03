@@ -13,13 +13,14 @@
 // limitations under the License.
 
 package otelsarama // import "go.opentelemetry.io/contrib/instrumentation/github.com/Shopify/sarama/otelsarama"
+
 import (
 	"context"
 	"errors"
 	"fmt"
 	"sync"
 
-	saramaMetrics "github.com/rcrowley/go-metrics"
+	"github.com/rcrowley/go-metrics"
 	"go.opentelemetry.io/otel"
 	"go.opentelemetry.io/otel/attribute"
 	"go.opentelemetry.io/otel/metric"
@@ -50,7 +51,7 @@ type metricsProps struct {
 	MetricUnit        unit.Unit
 	Description       string
 	VariableType      variableType
-	RetrievalFunction func(r saramaMetrics.Registry) interface{} //TODO: refinement
+	RetrievalFunction func(r metrics.Registry) interface{}
 }
 
 const (
@@ -72,9 +73,9 @@ func producerMetrics( /*topics []string*/ ) []metricsProps {
 			// derived from sarama doc
 			Description:  "Distribution of the number of bytes sent per partition per request for all topics",
 			VariableType: FLOAT64,
-			RetrievalFunction: func(r saramaMetrics.Registry) interface{} {
+			RetrievalFunction: func(r metrics.Registry) interface{} {
 				var val int64
-				hist, ok := r.Get("batch-size").(saramaMetrics.Histogram)
+				hist, ok := r.Get("batch-size").(metrics.Histogram)
 				if !ok {
 					return val
 				}
@@ -88,9 +89,9 @@ func producerMetrics( /*topics []string*/ ) []metricsProps {
 			// derived from sarama doc
 			Description:  "Records/second sent to all topics",
 			VariableType: INT64,
-			RetrievalFunction: func(r saramaMetrics.Registry) interface{} {
+			RetrievalFunction: func(r metrics.Registry) interface{} {
 				var val int64
-				gaug, ok := r.Get("record-send-rate").(saramaMetrics.Gauge)
+				gaug, ok := r.Get("record-send-rate").(metrics.Gauge)
 				if !ok {
 					return val
 				}
@@ -104,9 +105,9 @@ func producerMetrics( /*topics []string*/ ) []metricsProps {
 			// derived from sarama doc
 			Description:  "Distribution of the number of records sent per request for all topics",
 			VariableType: FLOAT64,
-			RetrievalFunction: func(r saramaMetrics.Registry) interface{} {
+			RetrievalFunction: func(r metrics.Registry) interface{} {
 				var val float64
-				hist, ok := r.Get("records-per-request").(saramaMetrics.Histogram)
+				hist, ok := r.Get("records-per-request").(metrics.Histogram)
 				if !ok {
 					return val
 				}
@@ -120,9 +121,9 @@ func producerMetrics( /*topics []string*/ ) []metricsProps {
 			// derived from sarama doc
 			Description:  "Distribution of the compression ratio times 100 of record batches for all topics",
 			VariableType: FLOAT64,
-			RetrievalFunction: func(r saramaMetrics.Registry) interface{} {
+			RetrievalFunction: func(r metrics.Registry) interface{} {
 				var val float64
-				hist, ok := r.Get("compression-ratio").(saramaMetrics.Histogram)
+				hist, ok := r.Get("compression-ratio").(metrics.Histogram)
 				if !ok {
 					return val
 				}
@@ -146,9 +147,9 @@ func consumerMetrics( /*topics []string*/ ) []metricsProps {
 			// derived from sarama doc
 			Description:  "Distribution of the number of messages in a batch",
 			VariableType: FLOAT64,
-			RetrievalFunction: func(r saramaMetrics.Registry) interface{} {
+			RetrievalFunction: func(r metrics.Registry) interface{} {
 				var val int64
-				hist, ok := r.Get("consumer-batch-size").(saramaMetrics.Histogram)
+				hist, ok := r.Get("consumer-batch-size").(metrics.Histogram)
 				if !ok {
 					return val
 				}
@@ -162,9 +163,9 @@ func consumerMetrics( /*topics []string*/ ) []metricsProps {
 			// derived from sarama doc
 			Description:  "Fetch requests/second sent to all brokers",
 			VariableType: INT64,
-			RetrievalFunction: func(r saramaMetrics.Registry) interface{} {
+			RetrievalFunction: func(r metrics.Registry) interface{} {
 				var val int64
-				gaug, ok := r.Get("consumer-fetch-rate").(saramaMetrics.Gauge)
+				gaug, ok := r.Get("consumer-fetch-rate").(metrics.Gauge)
 				if !ok {
 					return val
 				}
@@ -178,9 +179,9 @@ func consumerMetrics( /*topics []string*/ ) []metricsProps {
 			// derived from sarama doc
 			Description:  "Distribution of the fetch response size in bytes",
 			VariableType: FLOAT64,
-			RetrievalFunction: func(r saramaMetrics.Registry) interface{} {
+			RetrievalFunction: func(r metrics.Registry) interface{} {
 				var val float64
-				hist, ok := r.Get("consumer-fetch-response-size").(saramaMetrics.Histogram)
+				hist, ok := r.Get("consumer-fetch-response-size").(metrics.Histogram)
 				if !ok {
 					return val
 				}
@@ -190,7 +191,7 @@ func consumerMetrics( /*topics []string*/ ) []metricsProps {
 	}
 }
 
-func startProducerMetric(meter metric.Meter, registry saramaMetrics.Registry) error {
+func startProducerMetric(meter metric.Meter, registry metrics.Registry) error {
 	var lock sync.Mutex
 	lock.Lock()
 	defer lock.Unlock()
@@ -204,7 +205,7 @@ func startProducerMetric(meter metric.Meter, registry saramaMetrics.Registry) er
 	return startMetrics(meter, registry, producerMetrics)
 }
 
-func startConsumerMetric(meter metric.Meter, registry saramaMetrics.Registry) error {
+func startConsumerMetric(meter metric.Meter, registry metrics.Registry) error {
 	var lock sync.Mutex
 	lock.Lock()
 	defer lock.Unlock()
@@ -218,7 +219,7 @@ func startConsumerMetric(meter metric.Meter, registry saramaMetrics.Registry) er
 	return startMetrics(meter, registry, consumerMetrics)
 }
 
-func startMetrics(meter metric.Meter, registry saramaMetrics.Registry, mets []metricsProps) error {
+func startMetrics(meter metric.Meter, registry metrics.Registry, mets []metricsProps) error {
 	var (
 		asyncInsts []instrument.Asynchronous         = make([]instrument.Asynchronous, len(mets))
 		callbacks  []func(ctx context.Context) error = make([]func(ctx context.Context) error, len(mets))
@@ -261,7 +262,7 @@ func startMetrics(meter metric.Meter, registry saramaMetrics.Registry, mets []me
 	return err
 }
 
-func convertToInt64MetricType(prov asyncint64.InstrumentProvider, r saramaMetrics.Registry, prop metricsProps) (instrument.Asynchronous, func(ctx context.Context) error, error) {
+func convertToInt64MetricType(prov asyncint64.InstrumentProvider, r metrics.Registry, prop metricsProps) (instrument.Asynchronous, func(ctx context.Context) error, error) {
 	var (
 		err     error
 		metType observable[int64]
@@ -309,7 +310,7 @@ func convertToInt64MetricType(prov asyncint64.InstrumentProvider, r saramaMetric
 	return metType, callback, err
 }
 
-func convertToFloat64MetricType(prov asyncfloat64.InstrumentProvider, r saramaMetrics.Registry, prop metricsProps) (instrument.Asynchronous, func(ctx context.Context) error, error) {
+func convertToFloat64MetricType(prov asyncfloat64.InstrumentProvider, r metrics.Registry, prop metricsProps) (instrument.Asynchronous, func(ctx context.Context) error, error) {
 	var (
 		err     error
 		metType observable[float64]

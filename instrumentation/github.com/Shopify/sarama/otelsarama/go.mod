@@ -29,7 +29,7 @@ require (
 	github.com/kr/text v0.2.0 // indirect
 	github.com/pierrec/lz4/v4 v4.1.17 // indirect
 	github.com/pmezard/go-difflib v1.0.0 // indirect
-	github.com/rcrowley/go-metrics v0.0.0-20201227073835-cf1acfcdf475 // indirect
+	github.com/rcrowley/go-metrics v0.0.0-20201227073835-cf1acfcdf475
 	github.com/rogpeppe/go-internal v1.9.0 // indirect
 	go.opentelemetry.io/otel/metric v0.33.0
 	golang.org/x/crypto v0.0.0-20220722155217-630584e8d5aa // indirect
