@@ -14,6 +14,7 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 
 - Add trace context propagation support to `instrumentation/github.com/aws/aws-sdk-go-v2/otelaws` (#2856).
 - [otelgrpc] Add `WithMeterProvider` function to enable metric and add metric `rpc.server.duration` to otelgrpc instrumentation library. (#2700) 
+- [otelgin] Add support for filters to the `go.opentelemetry.io/contrib/instrumentation/github.com/gin-gonic/gin/otelgin` package to provide the way to control which inbound requests are traced. (#2963)
 
 ### Changed
 
