@@ -77,17 +77,22 @@ func main() {
 		Key:   sarama.StringEncoder("random_number"),
 		Value: sarama.StringEncoder(fmt.Sprintf("%d", rand.Intn(1000))),
 	}
+
 	otel.GetTextMapPropagator().Inject(ctx, otelsarama.NewProducerMessageCarrier(&msg))
 
-	producer.Input() <- &msg
+	for i := 0; i < 10; i++ {
+		producer.Input() <- &msg
+	}
+
 	successMsg := <-producer.Successes()
 	log.Println("Successful to write message, offset:", successMsg.Offset)
-	time.Sleep(time.Second * 3)
+
 	err = producer.Close()
 	if err != nil {
 		span.SetStatus(codes.Error, err.Error())
 		log.Fatalln("Failed to close producer:", err)
 	}
+	time.Sleep(time.Second * 3)
 }
 
 func newAccessLogProducer(brokerList []string) (sarama.AsyncProducer, error) {

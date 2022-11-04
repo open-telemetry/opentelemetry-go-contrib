@@ -27,8 +27,6 @@ import (
 	"github.com/Shopify/sarama"
 
 	"go.opentelemetry.io/otel"
-	"go.opentelemetry.io/otel/exporters/stdout/stdoutmetric"
-	"go.opentelemetry.io/otel/sdk/metric"
 	semconv "go.opentelemetry.io/otel/semconv/v1.12.0"
 	"go.opentelemetry.io/otel/trace"
 
@@ -84,29 +82,12 @@ func startConsumerGroup(ctx context.Context, brokerList []string) error {
 		return fmt.Errorf("starting consumer group: %w", err)
 	}
 
-	meterProvider := newMetrerProvider()
-	err = otelsarama.StartConsumerMetrics(config, otelsarama.WithMeterProvider(meterProvider))
-	if err != nil {
-		return fmt.Errorf("starting consumer metrics: %w", err)
-	}
-
 	err = consumerGroup.Consume(ctx, []string{example.KafkaTopic}, handler)
 	if err != nil {
 		return fmt.Errorf("consuming via handler: %w", err)
 	}
 
 	return nil
-}
-
-func newMetrerProvider() *metric.MeterProvider {
-	exp, err := stdoutmetric.New()
-	if err != nil {
-		log.Fatal(err)
-	}
-
-	// Register the exporter with an SDK via a periodic reader.
-	read := metric.NewPeriodicReader(exp, metric.WithInterval(1*time.Second))
-	return metric.NewMeterProvider(metric.WithReader(read))
 }
 
 func printMessage(msg *sarama.ConsumerMessage) {

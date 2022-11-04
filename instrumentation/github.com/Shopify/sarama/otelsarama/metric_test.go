@@ -14,9 +14,34 @@
 
 package otelsarama
 
+import (
+	"sync"
+	"testing"
+
+	"github.com/stretchr/testify/assert"
+)
+
 // TODO(#2755): Add integration tests for the host instrumentation. These tests
 // depend on https://github.com/open-telemetry/opentelemetry-go/issues/3031
 // being resolved.
 //
 // The added tests will depend on the metric SDK. Therefore, they should be
 // added to a sub-directory called "test" instead of this file.
+
+func checkRateMetric(t *testing.T) {
+	rmetric := NewRateMetric()
+	assert.NotNil(t, rmetric)
+
+	wg := sync.WaitGroup{}
+	for i := 0; i < 100; i++ {
+		wg.Add(1)
+		rmetric.Add(100)
+	}
+	wg.Wait()
+
+	avg := rmetric.Average()
+	assert.Greater(t, avg, 0)
+
+	loadedAfterFlush := rmetric.recordAccumulation.Load()
+	assert.Less(t, loadedAfterFlush, 1)
+}

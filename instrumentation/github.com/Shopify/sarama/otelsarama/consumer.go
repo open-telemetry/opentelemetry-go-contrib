@@ -67,9 +67,3 @@ func WrapConsumer(c sarama.Consumer, opts ...Option) sarama.Consumer {
 		opts:     opts,
 	}
 }
-
-func StartConsumerMetrics(saramaConfig *sarama.Config, opts ...Option) error {
-	cfg := newConfig(opts...)
-
-	return startConsumerMetric(cfg.Meter, saramaConfig.MetricRegistry)
-}
