@@ -55,7 +55,6 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
   The project currently only supports Go 1.18 and above. (#2785)
 
 ## [0.36.0]
->>>>>>> 5fd652ad79a04a901bd6111c6b9d00d512487a43
 
 ### Changed
 
