@@ -12,6 +12,11 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
+//go:build go1.18
+// +build go1.18
+
+package main
+
 // This example will create the keyspace
 // "gocql_integration_example" and a single table
 // with the following schema:
@@ -24,8 +29,6 @@
 // The example will insert fictional books into the database and
 // then truncate the table.
 
-package main
-
 import (
 	"context"
 	"fmt"
@@ -37,16 +40,15 @@ import (
 	"time"
 
 	"github.com/gocql/gocql"
+	"github.com/prometheus/client_golang/prometheus/promhttp"
 
 	"go.opentelemetry.io/otel"
-	"go.opentelemetry.io/otel/exporters/prometheus"
-	zipkintrace "go.opentelemetry.io/otel/exporters/zipkin"
+	otelprom "go.opentelemetry.io/otel/exporters/prometheus"
+	"go.opentelemetry.io/otel/exporters/zipkin"
 	"go.opentelemetry.io/otel/metric/global"
-	"go.opentelemetry.io/otel/sdk/metric/aggregator/histogram"
-	controller "go.opentelemetry.io/otel/sdk/metric/controller/basic"
-	"go.opentelemetry.io/otel/sdk/metric/export/aggregation"
-	processor "go.opentelemetry.io/otel/sdk/metric/processor/basic"
-	"go.opentelemetry.io/otel/sdk/metric/selector/simple"
+	"go.opentelemetry.io/otel/sdk/metric"
+	"go.opentelemetry.io/otel/sdk/metric/aggregation"
+	"go.opentelemetry.io/otel/sdk/metric/view"
 	"go.opentelemetry.io/otel/sdk/trace"
 
 	"go.opentelemetry.io/contrib/instrumentation/github.com/gocql/gocql/otelgocql"
@@ -124,51 +126,70 @@ func main() {
 	wg.Wait()
 }
 
-func initMetrics() error {
-	// Start prometheus
-	cont := controller.New(
-		processor.NewFactory(
-			simple.NewWithHistogramDistribution(
-				histogram.WithExplicitBoundaries([]float64{0.001, 0.01, 0.1, 0.5, 1, 2, 5, 10}),
-			),
-			aggregation.CumulativeTemporalitySelector(),
-			processor.WithMemory(true),
-		),
+func views() ([]view.View, error) {
+	var vs []view.View
+	v, err := view.New(
+		view.MatchInstrumentName("db.cassandra.rows"),
+		view.WithSetAggregation(aggregation.ExplicitBucketHistogram{
+			Boundaries: []float64{0.001, 0.01, 0.1, 0.5, 1, 2, 5, 10},
+		}),
 	)
-	metricExporter, err := prometheus.New(prometheus.Config{}, cont)
+	if err != nil {
+		return nil, err
+	}
+	vs = append(vs, v)
+
+	v, err = view.New(
+		view.MatchInstrumentName("db.cassandra.latency"),
+		view.WithSetAggregation(aggregation.ExplicitBucketHistogram{
+			Boundaries: []float64{0.001, 0.01, 0.1, 0.5, 1, 2, 5, 10},
+		}),
+	)
+	if err != nil {
+		return nil, err
+	}
+	vs = append(vs, v)
+
+	return vs, nil
+}
+
+func initMetrics() error {
+	vs, err := views()
 	if err != nil {
 		return err
 	}
-	global.SetMeterProvider(metricExporter.MeterProvider())
 
-	server := http.Server{Addr: ":2222"}
-	http.HandleFunc("/", metricExporter.ServeHTTP)
+	exporter, err := otelprom.New()
+	if err != nil {
+		return err
+	}
+	provider := metric.NewMeterProvider(metric.WithReader(exporter, vs...))
+	global.SetMeterProvider(provider)
+
+	http.Handle("/", promhttp.Handler())
+	log.Print("Serving metrics at :2222/")
 	go func() {
-		defer wg.Done()
-		wg.Add(1)
-		log.Print(server.ListenAndServe())
+		err := http.ListenAndServe(":2222", nil)
+		if err != nil {
+			log.Print(err)
+		}
 	}()
 
-	// ctrl+c will stop the server gracefully
-	shutdown := make(chan os.Signal, 1)
-	signal.Notify(shutdown, os.Interrupt)
+	ctx, _ := signal.NotifyContext(context.Background(), os.Interrupt)
+	wg.Add(1)
 	go func() {
-		<-shutdown
-		if err := server.Shutdown(context.Background()); err != nil {
-			log.Printf("problem shutting down server, %v", err)
-		} else {
-			log.Print("gracefully shutting down server")
-		}
-		err := cont.Stop(context.Background())
+		defer wg.Done()
+		<-ctx.Done()
+		err := provider.Shutdown(context.Background())
 		if err != nil {
-			log.Printf("error stopping metric controller: %s", err)
+			log.Printf("error stopping MeterProvider: %s", err)
 		}
 	}()
 	return nil
 }
 
 func initTracer() (*trace.TracerProvider, error) {
-	exporter, err := zipkintrace.New("http://localhost:9411/api/v2/spans")
+	exporter, err := zipkin.New("http://localhost:9411/api/v2/spans")
 	if err != nil {
 		return nil, err
 	}

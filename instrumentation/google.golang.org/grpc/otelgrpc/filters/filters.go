@@ -32,7 +32,7 @@ type gRPCPath struct {
 // If name is not FullMethod, returned gRPCPath has empty service field.
 func splitFullMethod(i *otelgrpc.InterceptorInfo) gRPCPath {
 	var name string
-	switch i.Typ {
+	switch i.Type {
 	case otelgrpc.UnaryServer:
 		name = i.UnaryServerInfo.FullMethod
 	case otelgrpc.StreamServer:
@@ -118,7 +118,7 @@ func MethodPrefix(pre string) otelgrpc.Filter {
 func FullMethodName(n string) otelgrpc.Filter {
 	return func(i *otelgrpc.InterceptorInfo) bool {
 		var fm string
-		switch i.Typ {
+		switch i.Type {
 		case otelgrpc.UnaryClient, otelgrpc.StreamClient:
 			fm = i.Method
 		case otelgrpc.UnaryServer:

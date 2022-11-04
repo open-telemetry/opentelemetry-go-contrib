@@ -2,6 +2,33 @@
 
 This package implements [Jaeger remote sampler](https://www.jaegertracing.io/docs/latest/sampling/#collector-sampling-configuration).
 
+## Usage
+
+Configuration in the code:
+
+```go
+	jaegerRemoteSampler := jaegerremote.New(
+		"your-service-name",
+		jaegerremote.WithSamplingServerURL("http://{sampling_service_host_name}:5778"),
+		jaegerremote.WithSamplingRefreshInterval(10*time.Second),
+		jaegerremote.WithInitialSampler(trace.TraceIDRatioBased(0.5)),
+	)
+
+	tp := trace.NewTracerProvider(
+		trace.WithSampler(jaegerRemoteSampler),
+		...
+	)
+	otel.SetTracerProvider(tp)
+```
+
+Notes:
+
+* At this time, the Jaeger Remote Sampler can only be configured in the code,
+  configuration via `OTEL_TRACES_SAMPLER=jaeger_sampler` environment variable is not supported.
+* Service name must be passed to the constructor. It will be used by the sampler to poll
+  the backend for the sampling strategy for this service.
+* Both Jaeger Agent and OpenTelemetry Collector implement the Jaeger sampling service endpoint.
+
 ## Example
 
 [example/](./example) shows how to host remote sampling strategies using the OpenTelemetry Collector.

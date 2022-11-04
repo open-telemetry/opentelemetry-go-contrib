@@ -28,7 +28,7 @@ wait_for_cassandra () {
 
 wait_for_mongo () {
   for ((i = 0; i < 5; ++i)); do
-    if docker exec "$1" mongo; then
+    if docker exec "$1" mongosh; then
       exit 0
     fi
     echo "Mongo not yet available..."

@@ -15,12 +15,14 @@
 package otelaws // import "go.opentelemetry.io/contrib/instrumentation/github.com/aws/aws-sdk-go-v2/otelaws"
 
 import (
+	"go.opentelemetry.io/otel/propagation"
 	"go.opentelemetry.io/otel/trace"
 )
 
 type config struct {
-	TracerProvider  trace.TracerProvider
-	AttributeSetter []AttributeSetter
+	TracerProvider    trace.TracerProvider
+	TextMapPropagator propagation.TextMapPropagator
+	AttributeSetter   []AttributeSetter
 }
 
 // Option applies an option value.
@@ -42,6 +44,16 @@ func WithTracerProvider(provider trace.TracerProvider) Option {
 	return optionFunc(func(cfg *config) {
 		if provider != nil {
 			cfg.TracerProvider = provider
+		}
+	})
+}
+
+// WithTextMapPropagator specifies a Text Map Propagator to use when propagating context.
+// If none is specified, the global TextMapPropagator is used.
+func WithTextMapPropagator(propagator propagation.TextMapPropagator) Option {
+	return optionFunc(func(cfg *config) {
+		if propagator != nil {
+			cfg.TextMapPropagator = propagator
 		}
 	})
 }

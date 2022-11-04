@@ -20,18 +20,17 @@ import (
 	"context"
 	"io"
 	"net"
-
-	"github.com/golang/protobuf/proto" // nolint:staticcheck
+	"time"
 
 	"google.golang.org/grpc"
 	grpc_codes "google.golang.org/grpc/codes"
 	"google.golang.org/grpc/metadata"
 	"google.golang.org/grpc/peer"
 	"google.golang.org/grpc/status"
+	"google.golang.org/protobuf/proto"
 
 	"go.opentelemetry.io/contrib/instrumentation/google.golang.org/grpc/otelgrpc/internal"
 	"go.opentelemetry.io/otel/attribute"
-	"go.opentelemetry.io/otel/baggage"
 	"go.opentelemetry.io/otel/codes"
 	semconv "go.opentelemetry.io/otel/semconv/v1.12.0"
 	"go.opentelemetry.io/otel/trace"
@@ -43,6 +42,9 @@ type messageType attribute.KeyValue
 // passed context with id and size (if message is a proto message).
 func (m messageType) Event(ctx context.Context, id int, message interface{}) {
 	span := trace.SpanFromContext(ctx)
+	if !span.IsRecording() {
+		return
+	}
 	if p, ok := message.(proto.Message); ok {
 		span.AddEvent("message", trace.WithAttributes(
 			attribute.KeyValue(m),
@@ -65,6 +67,12 @@ var (
 // UnaryClientInterceptor returns a grpc.UnaryClientInterceptor suitable
 // for use in a grpc.Dial call.
 func UnaryClientInterceptor(opts ...Option) grpc.UnaryClientInterceptor {
+	cfg := newConfig(opts)
+	tracer := cfg.TracerProvider.Tracer(
+		instrumentationName,
+		trace.WithInstrumentationVersion(SemVersion()),
+	)
+
 	return func(
 		ctx context.Context,
 		method string,
@@ -73,22 +81,13 @@ func UnaryClientInterceptor(opts ...Option) grpc.UnaryClientInterceptor {
 		invoker grpc.UnaryInvoker,
 		callOpts ...grpc.CallOption,
 	) error {
-		cfg := newConfig(opts)
 		i := &InterceptorInfo{
 			Method: method,
-			Typ:    UnaryClient,
+			Type:   UnaryClient,
 		}
 		if cfg.Filter != nil && !cfg.Filter(i) {
 			return invoker(ctx, method, req, reply, cc, callOpts...)
 		}
-
-		requestMetadata, _ := metadata.FromOutgoingContext(ctx)
-		metadataCopy := requestMetadata.Copy()
-
-		tracer := cfg.TracerProvider.Tracer(
-			instrumentationName,
-			trace.WithInstrumentationVersion(SemVersion()),
-		)
 
 		name, attr := spanInfo(method, cc.Target())
 		var span trace.Span
@@ -100,8 +99,7 @@ func UnaryClientInterceptor(opts ...Option) grpc.UnaryClientInterceptor {
 		)
 		defer span.End()
 
-		Inject(ctx, &metadataCopy, opts...)
-		ctx = metadata.NewOutgoingContext(ctx, metadataCopy)
+		ctx = inject(ctx, cfg.Propagators)
 
 		messageSent.Event(ctx, 1, req)
 
@@ -244,6 +242,12 @@ func (w *clientStream) sendStreamEvent(eventType streamEventType, err error) {
 // StreamClientInterceptor returns a grpc.StreamClientInterceptor suitable
 // for use in a grpc.Dial call.
 func StreamClientInterceptor(opts ...Option) grpc.StreamClientInterceptor {
+	cfg := newConfig(opts)
+	tracer := cfg.TracerProvider.Tracer(
+		instrumentationName,
+		trace.WithInstrumentationVersion(SemVersion()),
+	)
+
 	return func(
 		ctx context.Context,
 		desc *grpc.StreamDesc,
@@ -252,22 +256,13 @@ func StreamClientInterceptor(opts ...Option) grpc.StreamClientInterceptor {
 		streamer grpc.Streamer,
 		callOpts ...grpc.CallOption,
 	) (grpc.ClientStream, error) {
-		cfg := newConfig(opts)
 		i := &InterceptorInfo{
 			Method: method,
-			Typ:    StreamClient,
+			Type:   StreamClient,
 		}
 		if cfg.Filter != nil && !cfg.Filter(i) {
 			return streamer(ctx, desc, cc, method, callOpts...)
 		}
-
-		requestMetadata, _ := metadata.FromOutgoingContext(ctx)
-		metadataCopy := requestMetadata.Copy()
-
-		tracer := cfg.TracerProvider.Tracer(
-			instrumentationName,
-			trace.WithInstrumentationVersion(SemVersion()),
-		)
 
 		name, attr := spanInfo(method, cc.Target())
 		var span trace.Span
@@ -278,8 +273,7 @@ func StreamClientInterceptor(opts ...Option) grpc.StreamClientInterceptor {
 			trace.WithAttributes(attr...),
 		)
 
-		Inject(ctx, &metadataCopy, opts...)
-		ctx = metadata.NewOutgoingContext(ctx, metadataCopy)
+		ctx = inject(ctx, cfg.Propagators)
 
 		s, err := streamer(ctx, desc, cc, method, callOpts...)
 		if err != nil {
@@ -312,35 +306,31 @@ func StreamClientInterceptor(opts ...Option) grpc.StreamClientInterceptor {
 // UnaryServerInterceptor returns a grpc.UnaryServerInterceptor suitable
 // for use in a grpc.NewServer call.
 func UnaryServerInterceptor(opts ...Option) grpc.UnaryServerInterceptor {
+	cfg := newConfig(opts)
+	tracer := cfg.TracerProvider.Tracer(
+		instrumentationName,
+		trace.WithInstrumentationVersion(SemVersion()),
+	)
+
 	return func(
 		ctx context.Context,
 		req interface{},
 		info *grpc.UnaryServerInfo,
 		handler grpc.UnaryHandler,
 	) (interface{}, error) {
-		cfg := newConfig(opts)
 		i := &InterceptorInfo{
 			UnaryServerInfo: info,
-			Typ:             UnaryServer,
+			Type:            UnaryServer,
 		}
 		if cfg.Filter != nil && !cfg.Filter(i) {
 			return handler(ctx, req)
 		}
 
-		requestMetadata, _ := metadata.FromIncomingContext(ctx)
-		metadataCopy := requestMetadata.Copy()
-
-		bags, spanCtx := Extract(ctx, &metadataCopy, opts...)
-		ctx = baggage.ContextWithBaggage(ctx, bags)
-
-		tracer := cfg.TracerProvider.Tracer(
-			instrumentationName,
-			trace.WithInstrumentationVersion(SemVersion()),
-		)
+		ctx = extract(ctx, cfg.Propagators)
 
 		name, attr := spanInfo(info.FullMethod, peerFromCtx(ctx))
 		ctx, span := tracer.Start(
-			trace.ContextWithRemoteSpanContext(ctx, spanCtx),
+			trace.ContextWithRemoteSpanContext(ctx, trace.SpanContextFromContext(ctx)),
 			name,
 			trace.WithSpanKind(trace.SpanKindServer),
 			trace.WithAttributes(attr...),
@@ -349,13 +339,22 @@ func UnaryServerInterceptor(opts ...Option) grpc.UnaryServerInterceptor {
 
 		messageReceived.Event(ctx, 1, req)
 
+		var statusCode grpc_codes.Code
+		defer func(t time.Time) {
+			elapsedTime := time.Since(t) / time.Millisecond
+			attr = append(attr, semconv.RPCGRPCStatusCodeKey.Int64(int64(statusCode)))
+			cfg.rpcServerDuration.Record(ctx, int64(elapsedTime), attr...)
+		}(time.Now())
+
 		resp, err := handler(ctx, req)
 		if err != nil {
 			s, _ := status.FromError(err)
+			statusCode = s.Code()
 			span.SetStatus(codes.Error, s.Message())
 			span.SetAttributes(statusCodeAttr(s.Code()))
 			messageSent.Event(ctx, 1, s.Proto())
 		} else {
+			statusCode = grpc_codes.OK
 			span.SetAttributes(statusCodeAttr(grpc_codes.OK))
 			messageSent.Event(ctx, 1, resp)
 		}
@@ -408,6 +407,12 @@ func wrapServerStream(ctx context.Context, ss grpc.ServerStream) *serverStream {
 // StreamServerInterceptor returns a grpc.StreamServerInterceptor suitable
 // for use in a grpc.NewServer call.
 func StreamServerInterceptor(opts ...Option) grpc.StreamServerInterceptor {
+	cfg := newConfig(opts)
+	tracer := cfg.TracerProvider.Tracer(
+		instrumentationName,
+		trace.WithInstrumentationVersion(SemVersion()),
+	)
+
 	return func(
 		srv interface{},
 		ss grpc.ServerStream,
@@ -415,29 +420,19 @@ func StreamServerInterceptor(opts ...Option) grpc.StreamServerInterceptor {
 		handler grpc.StreamHandler,
 	) error {
 		ctx := ss.Context()
-		cfg := newConfig(opts)
 		i := &InterceptorInfo{
 			StreamServerInfo: info,
-			Typ:              StreamServer,
+			Type:             StreamServer,
 		}
 		if cfg.Filter != nil && !cfg.Filter(i) {
 			return handler(srv, wrapServerStream(ctx, ss))
 		}
 
-		requestMetadata, _ := metadata.FromIncomingContext(ctx)
-		metadataCopy := requestMetadata.Copy()
-
-		bags, spanCtx := Extract(ctx, &metadataCopy, opts...)
-		ctx = baggage.ContextWithBaggage(ctx, bags)
-
-		tracer := cfg.TracerProvider.Tracer(
-			instrumentationName,
-			trace.WithInstrumentationVersion(SemVersion()),
-		)
+		ctx = extract(ctx, cfg.Propagators)
 
 		name, attr := spanInfo(info.FullMethod, peerFromCtx(ctx))
 		ctx, span := tracer.Start(
-			trace.ContextWithRemoteSpanContext(ctx, spanCtx),
+			trace.ContextWithRemoteSpanContext(ctx, trace.SpanContextFromContext(ctx)),
 			name,
 			trace.WithSpanKind(trace.SpanKindServer),
 			trace.WithAttributes(attr...),
@@ -445,7 +440,6 @@ func StreamServerInterceptor(opts ...Option) grpc.StreamServerInterceptor {
 		defer span.End()
 
 		err := handler(srv, wrapServerStream(ctx, ss))
-
 		if err != nil {
 			s, _ := status.FromError(err)
 			span.SetStatus(codes.Error, s.Message())

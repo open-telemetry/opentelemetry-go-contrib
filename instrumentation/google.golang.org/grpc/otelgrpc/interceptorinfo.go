@@ -45,6 +45,6 @@ type InterceptorInfo struct {
 	UnaryServerInfo *grpc.UnaryServerInfo
 	// StreamServerInfo if the metadata for StreamServer
 	StreamServerInfo *grpc.StreamServerInfo
-	// Typ is the type for interceptor
-	Typ InterceptorType
+	// Type is the type for interceptor
+	Type InterceptorType
 }
