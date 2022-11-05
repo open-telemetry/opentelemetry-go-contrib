@@ -28,7 +28,7 @@ import (
 )
 
 const (
-	sarama_kafka_version = 2
+	saramaKafkaVersion = 2
 )
 
 type rateMetric struct {
@@ -36,6 +36,7 @@ type rateMetric struct {
 	recordAccumulation atomic.Float64
 }
 
+// rate metric to be used for calculation of per second average
 func NewRateMetric() rateMetric {
 	return rateMetric{
 		startedAt:          time.Now(),
@@ -63,7 +64,8 @@ func (m *rateMetric) flush() {
 	m.recordAccumulation.Swap(0)
 }
 
-// PRODUCER METRICS
+// PRODUCER METRICS:
+// Implementation of producer metrics defined in otel specification
 type producerOutgoingBytesRate struct {
 	rateRecorder rateMetric
 	metric       asyncfloat64.Gauge

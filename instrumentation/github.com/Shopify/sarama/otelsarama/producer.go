@@ -23,6 +23,7 @@ import (
 
 	"github.com/Shopify/sarama"
 
+	"go.opentelemetry.io/otel"
 	"go.opentelemetry.io/otel/codes"
 	"go.opentelemetry.io/otel/metric/instrument"
 
@@ -44,7 +45,7 @@ func (p *syncProducer) SendMessage(msg *sarama.ProducerMessage) (partition int32
 	partition, offset, err = p.SyncProducer.SendMessage(msg)
 	finishProducerSpan(span, partition, offset, err)
 
-	byteSize := float64(msg.ByteSize(sarama_kafka_version))
+	byteSize := float64(msg.ByteSize(saramaKafkaVersion))
 	p.pmeters.producerOutgoingBytesRate.rateRecorder.Add(byteSize)
 
 	return partition, offset, err
@@ -75,7 +76,7 @@ func WrapSyncProducer(saramaConfig *sarama.Config, producer sarama.SyncProducer,
 
 	pmeters := newProducerMeters(cfg.Meter)
 
-	cfg.Meter.RegisterCallback([]instrument.Asynchronous{
+	err := cfg.Meter.RegisterCallback([]instrument.Asynchronous{
 		pmeters.producerOutgoingBytesRate.metric,
 	}, func(ctx context.Context) {
 
@@ -86,6 +87,9 @@ func WrapSyncProducer(saramaConfig *sarama.Config, producer sarama.SyncProducer,
 			},
 		)
 	})
+	if err != nil {
+		otel.Handle(err)
+	}
 
 	return &syncProducer{
 		SyncProducer: producer,
@@ -156,7 +160,7 @@ func WrapAsyncProducer(saramaConfig *sarama.Config, p sarama.AsyncProducer, opts
 
 	pmeters := newProducerMeters(cfg.Meter)
 
-	cfg.Meter.RegisterCallback([]instrument.Asynchronous{
+	err := cfg.Meter.RegisterCallback([]instrument.Asynchronous{
 		pmeters.producerOutgoingBytesRate.metric,
 	}, func(ctx context.Context) {
 
@@ -167,6 +171,9 @@ func WrapAsyncProducer(saramaConfig *sarama.Config, p sarama.AsyncProducer, opts
 			},
 		)
 	})
+	if err != nil {
+		otel.Handle(err)
+	}
 
 	//pmeters.producerOutgoingBytesRate
 	wrapped := &asyncProducer{
@@ -219,7 +226,7 @@ func WrapAsyncProducer(saramaConfig *sarama.Config, p sarama.AsyncProducer, opts
 					mc.span.End()
 				}
 
-				byteSize := float64(msg.ByteSize(sarama_kafka_version))
+				byteSize := float64(msg.ByteSize(saramaKafkaVersion))
 				pmeters.producerOutgoingBytesRate.rateRecorder.Add(byteSize)
 
 				p.Input() <- msg

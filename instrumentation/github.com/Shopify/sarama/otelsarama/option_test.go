@@ -15,7 +15,6 @@
 package otelsarama
 
 import (
-	"context"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
@@ -23,60 +22,9 @@ import (
 	"go.opentelemetry.io/otel"
 	"go.opentelemetry.io/otel/metric"
 	"go.opentelemetry.io/otel/metric/global"
-	"go.opentelemetry.io/otel/metric/instrument"
-	"go.opentelemetry.io/otel/metric/instrument/asyncfloat64"
-	"go.opentelemetry.io/otel/metric/instrument/asyncint64"
-	"go.opentelemetry.io/otel/metric/instrument/syncfloat64"
-	"go.opentelemetry.io/otel/metric/instrument/syncint64"
 	"go.opentelemetry.io/otel/propagation"
 	"go.opentelemetry.io/otel/trace"
 )
-
-// We need a fake tracer provider to ensure the one passed in options is the one used afterwards.
-// In order to avoid adding the SDK as a dependency, we use this mock.
-type fakeTracerProvider struct{}
-
-func (fakeTracerProvider) Tracer(name string, opts ...trace.TracerOption) trace.Tracer {
-	return fakeTracer{
-		name: name,
-	}
-}
-
-type fakeTracer struct {
-	name string
-}
-
-func (fakeTracer) Start(ctx context.Context, spanName string, opts ...trace.SpanStartOption) (context.Context, trace.Span) {
-	return ctx, nil
-}
-
-type fakeMeterProvider struct{}
-
-func (f fakeMeterProvider) Meter(instrumentationName string, opts ...metric.MeterOption) metric.Meter {
-	return fakeMeter{
-		instrumentationName: instrumentationName,
-	}
-}
-
-type fakeMeter struct {
-	instrumentationName string
-}
-
-func (f fakeMeter) AsyncInt64() asyncint64.InstrumentProvider {
-	return nil
-}
-func (fakeMeter) AsyncFloat64() asyncfloat64.InstrumentProvider {
-	return nil
-}
-func (fakeMeter) RegisterCallback(insts []instrument.Asynchronous, function func(context.Context)) error {
-	return nil
-}
-func (fakeMeter) SyncInt64() syncint64.InstrumentProvider {
-	return nil
-}
-func (fakeMeter) SyncFloat64() syncfloat64.InstrumentProvider {
-	return nil
-}
 
 func TestNewConfig(t *testing.T) {
 	tp := trace.NewNoopTracerProvider()

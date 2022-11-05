@@ -78,6 +78,8 @@ func WithTracerProvider(provider trace.TracerProvider) Option {
 	})
 }
 
+// WithMeterProvider specifies a meter provider to use for creating a meter.
+// If none is specified, the global provider is used.
 func WithMeterProvider(provider metric.MeterProvider) Option {
 	return optionFunc(func(cfg *config) {
 		if provider != nil {

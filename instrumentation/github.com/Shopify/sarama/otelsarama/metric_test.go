@@ -15,7 +15,6 @@
 package otelsarama
 
 import (
-	"sync"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
@@ -28,20 +27,15 @@ import (
 // The added tests will depend on the metric SDK. Therefore, they should be
 // added to a sub-directory called "test" instead of this file.
 
-func checkRateMetric(t *testing.T) {
+func TestRateMetric(t *testing.T) {
 	rmetric := NewRateMetric()
 	assert.NotNil(t, rmetric)
 
-	wg := sync.WaitGroup{}
-	for i := 0; i < 100; i++ {
-		wg.Add(1)
-		rmetric.Add(100)
-	}
-	wg.Wait()
+	rmetric.Add(100)
 
 	avg := rmetric.Average()
-	assert.Greater(t, avg, 0)
+	assert.Greater(t, avg, float64(0))
 
 	loadedAfterFlush := rmetric.recordAccumulation.Load()
-	assert.Less(t, loadedAfterFlush, 1)
+	assert.Less(t, loadedAfterFlush, float64(1))
 }
