@@ -37,5 +37,6 @@ func TestRateMetric(t *testing.T) {
 	assert.Greater(t, avg, float64(0))
 
 	loadedAfterFlush := rmetric.recordAccumulation.Load()
-	assert.Less(t, loadedAfterFlush, float64(1))
+	t.Log(loadedAfterFlush)
+	assert.Less(t, loadedAfterFlush, float32(1))
 }

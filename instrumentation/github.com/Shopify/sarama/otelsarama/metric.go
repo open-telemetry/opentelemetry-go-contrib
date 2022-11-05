@@ -33,25 +33,25 @@ const (
 
 type rateMetric struct {
 	startedAt          time.Time
-	recordAccumulation atomic.Float64
+	recordAccumulation atomic.Float32
 }
 
 // rate metric to be used for calculation of per second average
 func NewRateMetric() rateMetric {
 	return rateMetric{
 		startedAt:          time.Now(),
-		recordAccumulation: *atomic.NewFloat64(0),
+		recordAccumulation: *atomic.NewFloat32(0),
 	}
 }
 
 func (m *rateMetric) Add(record float64) {
-	m.recordAccumulation.Add(record)
+	m.recordAccumulation.Add(float32(record))
 }
 
 func (m *rateMetric) Average() float64 {
 	secondElapsed := time.Since(m.startedAt).Seconds()
 
-	var res float64 = m.recordAccumulation.Load()
+	var res float64 = float64(m.recordAccumulation.Load())
 	if secondElapsed > 1 {
 		res = res / secondElapsed
 	}
