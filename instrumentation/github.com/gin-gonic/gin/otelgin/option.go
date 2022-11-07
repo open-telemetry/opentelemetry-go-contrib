@@ -22,8 +22,10 @@ import (
 )
 
 type config struct {
-	TracerProvider oteltrace.TracerProvider
-	Propagators    propagation.TextMapPropagator
+	TracerProvider   oteltrace.TracerProvider
+	Propagators      propagation.TextMapPropagator
+	SpanStartOptions []oteltrace.SpanStartOption
+	SpanEndOptions   []oteltrace.SpanEndOption
 }
 
 // Option specifies instrumentation configuration options.
@@ -55,5 +57,21 @@ func WithTracerProvider(provider oteltrace.TracerProvider) Option {
 		if provider != nil {
 			cfg.TracerProvider = provider
 		}
+	})
+}
+
+// WithSpanStartOptions configures an additional set of
+// trace.SpanOptions, which are applied to each new span.
+func WithSpanStartOptions(opts ...oteltrace.SpanStartOption) Option {
+	return optionFunc(func(cfg *config) {
+		cfg.SpanStartOptions = append(cfg.SpanStartOptions, opts...)
+	})
+}
+
+// WithSpanEndOptions configures an additional set of
+// trace.SpanEndOptions, which are applied to each new span.
+func WithSpanEndOptions(opts ...oteltrace.SpanEndOption) Option {
+	return optionFunc(func(cfg *config) {
+		cfg.SpanEndOptions = append(cfg.SpanEndOptions, opts...)
 	})
 }

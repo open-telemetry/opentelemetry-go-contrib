@@ -21,12 +21,16 @@ import (
 	"net/http"
 	"net/http/httptest"
 	"testing"
+	"time"
 
 	"github.com/gin-gonic/gin"
 	"github.com/stretchr/testify/assert"
 
 	"go.opentelemetry.io/otel"
+	"go.opentelemetry.io/otel/attribute"
 	"go.opentelemetry.io/otel/propagation"
+	sdktrace "go.opentelemetry.io/otel/sdk/trace"
+	"go.opentelemetry.io/otel/sdk/trace/tracetest"
 	"go.opentelemetry.io/otel/trace"
 
 	b3prop "go.opentelemetry.io/contrib/propagators/b3"
@@ -104,4 +108,78 @@ func TestPropagationWithCustomPropagators(t *testing.T) {
 	})
 
 	router.ServeHTTP(w, r)
+}
+
+func TestWithCustomSpanStartOptions(t *testing.T) {
+	spanRecorder := tracetest.NewSpanRecorder()
+	provider := sdktrace.NewTracerProvider(sdktrace.WithSpanProcessor(spanRecorder))
+
+	r := httptest.NewRequest("GET", "/user/123", nil)
+	w := httptest.NewRecorder()
+
+	// test for override span start time, it may be useless
+	spanStartTime := time.Now().Add(time.Second)
+
+	startOpts := []trace.SpanStartOption{
+		trace.WithTimestamp(spanStartTime),
+		trace.WithAttributes(
+			[]attribute.KeyValue{
+				attribute.String("foo", "bar"),
+			}...,
+		),
+	}
+
+	router := gin.New()
+	router.Use(Middleware("foobar", WithTracerProvider(provider), WithSpanStartOptions(startOpts...)))
+
+	router.GET("/user/:id", func(c *gin.Context) {
+		// it does not need anything
+	})
+
+	router.ServeHTTP(w, r)
+
+	spans := spanRecorder.Ended()
+
+	// check for span start time
+	assert.Equal(t, spans[0].StartTime(), spanStartTime, "Span start time should be equal to overrided one")
+
+	// check if "foo":"bar" pairs is in span's attributes
+	attr := attribute.KeyValue{}
+	for _, attr = range spans[0].Attributes() {
+		if attr.Key == "foo" {
+			break
+		}
+	}
+
+	assert.Equal(t, attr.Value.AsString(), "bar", "It should have foo bar attribute in the first span")
+}
+
+func TestWithCustomSpanEndOptions(t *testing.T) {
+	spanRecorder := tracetest.NewSpanRecorder()
+	provider := sdktrace.NewTracerProvider(sdktrace.WithSpanProcessor(spanRecorder))
+
+	r := httptest.NewRequest("GET", "/user/123", nil)
+	w := httptest.NewRecorder()
+
+	// test for override span end time, it may be useless
+	spanEndTime := time.Now().Add(time.Minute)
+
+	endOpts := []trace.SpanEndOption{
+		trace.WithTimestamp(spanEndTime),
+		trace.WithStackTrace(true), // capture the error with stack trace
+	}
+
+	router := gin.New()
+	router.Use(Middleware("foobar", WithTracerProvider(provider), WithSpanEndOptions(endOpts...)))
+
+	router.GET("/user/:id", func(c *gin.Context) {
+		// it does not need anything
+	})
+
+	router.ServeHTTP(w, r)
+
+	spans := spanRecorder.Ended()
+
+	// check for span end time
+	assert.Equal(t, spans[0].EndTime(), spanEndTime, "Span end time should be equal to overrided one")
 }
