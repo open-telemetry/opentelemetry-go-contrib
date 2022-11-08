@@ -82,7 +82,7 @@ func newProducerMeters(meter metric.Meter) producerMeters {
 	); err != nil {
 		otel.Handle(err)
 	}
-	pm.producerOutgoingBytesRate.rateRecorder = NewRateMetric()
+	pm.producerOutgoingBytesRate.rateRecorder = newRateMetric()
 
 	return pm
 }
