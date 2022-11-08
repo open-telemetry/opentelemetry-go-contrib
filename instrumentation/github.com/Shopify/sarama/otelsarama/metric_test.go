@@ -28,7 +28,7 @@ import (
 // added to a sub-directory called "test" instead of this file.
 
 func TestRateMetric(t *testing.T) {
-	rmetric := NewRateMetric()
+	rmetric := newRateMetric()
 	assert.NotNil(t, rmetric)
 
 	rmetric.Add(100)
