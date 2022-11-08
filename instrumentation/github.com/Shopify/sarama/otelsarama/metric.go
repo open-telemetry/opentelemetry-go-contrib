@@ -50,17 +50,13 @@ func (m *rateMetric) Add(record float64) {
 
 func (m *rateMetric) Average() float64 {
 	secondElapsed := time.Since(m.startedAt).Seconds()
-
-	var res float64 = float64(m.recordAccumulation.Load())
-	if secondElapsed > 1 {
-		res = res / secondElapsed
-	}
+	loaded := float64(m.recordAccumulation.Load())
 
 	// flush all measure units
 	m.startedAt = time.Now()
 	m.recordAccumulation.Swap(0)
 
-	return res
+	return loaded / secondElapsed
 }
 
 // PRODUCER METRICS:
