@@ -55,13 +55,12 @@ func (m *rateMetric) Average() float64 {
 	if secondElapsed > 1 {
 		res = res / secondElapsed
 	}
-	m.flush()
-	return res
-}
 
-func (m *rateMetric) flush() {
+	// flush all measure units
 	m.startedAt = time.Now()
 	m.recordAccumulation.Swap(0)
+
+	return res
 }
 
 // PRODUCER METRICS:
