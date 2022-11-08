@@ -28,6 +28,8 @@ import (
 
 	"go.opentelemetry.io/otel"
 	"go.opentelemetry.io/otel/codes"
+	"go.opentelemetry.io/otel/exporters/stdout/stdoutmetric"
+	"go.opentelemetry.io/otel/sdk/metric"
 
 	"go.opentelemetry.io/contrib/instrumentation/github.com/Shopify/sarama/otelsarama"
 	"go.opentelemetry.io/contrib/instrumentation/github.com/Shopify/sarama/otelsarama/example"
@@ -77,7 +79,10 @@ func main() {
 	}
 	otel.GetTextMapPropagator().Inject(ctx, otelsarama.NewProducerMessageCarrier(&msg))
 
-	producer.Input() <- &msg
+	for i := 0; i < 10; i++ {
+		producer.Input() <- &msg
+	}
+
 	successMsg := <-producer.Successes()
 	log.Println("Successful to write message, offset:", successMsg.Offset)
 
@@ -86,6 +91,7 @@ func main() {
 		span.SetStatus(codes.Error, err.Error())
 		log.Fatalln("Failed to close producer:", err)
 	}
+	time.Sleep(time.Second * 3)
 }
 
 func newAccessLogProducer(brokerList []string) (sarama.AsyncProducer, error) {
@@ -99,8 +105,9 @@ func newAccessLogProducer(brokerList []string) (sarama.AsyncProducer, error) {
 		return nil, fmt.Errorf("starting Sarama producer: %w", err)
 	}
 
+	meterProvider := newMetrerProvider()
 	// Wrap instrumentation
-	producer = otelsarama.WrapAsyncProducer(config, producer)
+	producer = otelsarama.WrapAsyncProducer(config, producer, otelsarama.WithMeterProvider(meterProvider))
 
 	// We will log to STDOUT if we're not able to produce messages.
 	go func() {
@@ -110,4 +117,15 @@ func newAccessLogProducer(brokerList []string) (sarama.AsyncProducer, error) {
 	}()
 
 	return producer, nil
+}
+
+func newMetrerProvider() *metric.MeterProvider {
+	exp, err := stdoutmetric.New()
+	if err != nil {
+		log.Fatal(err)
+	}
+
+	// Register the exporter with an SDK via a periodic reader.
+	read := metric.NewPeriodicReader(exp, metric.WithInterval(1*time.Second))
+	return metric.NewMeterProvider(metric.WithReader(read))
 }

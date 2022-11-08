@@ -15,36 +15,21 @@
 package otelsarama
 
 import (
-	"context"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
 
 	"go.opentelemetry.io/otel"
+	"go.opentelemetry.io/otel/metric"
+	"go.opentelemetry.io/otel/metric/global"
 	"go.opentelemetry.io/otel/propagation"
 	"go.opentelemetry.io/otel/trace"
 )
 
-// We need a fake tracer provider to ensure the one passed in options is the one used afterwards.
-// In order to avoid adding the SDK as a dependency, we use this mock.
-type fakeTracerProvider struct{}
-
-func (fakeTracerProvider) Tracer(name string, opts ...trace.TracerOption) trace.Tracer {
-	return fakeTracer{
-		name: name,
-	}
-}
-
-type fakeTracer struct {
-	name string
-}
-
-func (fakeTracer) Start(ctx context.Context, spanName string, opts ...trace.SpanStartOption) (context.Context, trace.Span) {
-	return ctx, nil
-}
-
 func TestNewConfig(t *testing.T) {
-	tp := fakeTracerProvider{}
+	tp := trace.NewNoopTracerProvider()
+	mp := metric.NewNoopMeterProvider()
+
 	prop := propagation.NewCompositeTextMapPropagator()
 
 	testCases := []struct {
@@ -53,27 +38,34 @@ func TestNewConfig(t *testing.T) {
 		expected config
 	}{
 		{
-			name: "with provider",
+			name: "with both providers",
 			opts: []Option{
 				WithTracerProvider(tp),
+				WithMeterProvider(mp),
 			},
 			expected: config{
 				TracerProvider: tp,
-				Tracer:         tp.Tracer(defaultTracerName, trace.WithInstrumentationVersion(SemVersion())),
+				MeterProvider:  mp,
+				Tracer:         tp.Tracer(defaultObservabilityName, trace.WithInstrumentationVersion(SemVersion())),
+				Meter:          mp.Meter(defaultObservabilityName, metric.WithInstrumentationVersion(SemVersion())),
 				Propagators:    otel.GetTextMapPropagator(),
 			},
 		},
 		{
-			name: "with empty provider",
+			name: "with both empty providers",
 			opts: []Option{
 				WithTracerProvider(nil),
+				WithMeterProvider(nil),
 			},
 			expected: config{
 				TracerProvider: otel.GetTracerProvider(),
-				Tracer:         otel.GetTracerProvider().Tracer(defaultTracerName, trace.WithInstrumentationVersion(SemVersion())),
+				MeterProvider:  global.MeterProvider(),
+				Tracer:         otel.GetTracerProvider().Tracer(defaultObservabilityName, trace.WithInstrumentationVersion(SemVersion())),
+				Meter:          global.MeterProvider().Meter(defaultObservabilityName, metric.WithInstrumentationVersion(SemVersion())),
 				Propagators:    otel.GetTextMapPropagator(),
 			},
 		},
+
 		{
 			name: "with propagators",
 			opts: []Option{
@@ -81,7 +73,9 @@ func TestNewConfig(t *testing.T) {
 			},
 			expected: config{
 				TracerProvider: otel.GetTracerProvider(),
-				Tracer:         otel.GetTracerProvider().Tracer(defaultTracerName, trace.WithInstrumentationVersion(SemVersion())),
+				MeterProvider:  global.MeterProvider(),
+				Tracer:         otel.GetTracerProvider().Tracer(defaultObservabilityName, trace.WithInstrumentationVersion(SemVersion())),
+				Meter:          global.MeterProvider().Meter(defaultObservabilityName, metric.WithInstrumentationVersion(SemVersion())),
 				Propagators:    prop,
 			},
 		},
@@ -92,7 +86,9 @@ func TestNewConfig(t *testing.T) {
 			},
 			expected: config{
 				TracerProvider: otel.GetTracerProvider(),
-				Tracer:         otel.GetTracerProvider().Tracer(defaultTracerName, trace.WithInstrumentationVersion(SemVersion())),
+				MeterProvider:  global.MeterProvider(),
+				Tracer:         otel.GetTracerProvider().Tracer(defaultObservabilityName, trace.WithInstrumentationVersion(SemVersion())),
+				Meter:          global.MeterProvider().Meter(defaultObservabilityName, metric.WithInstrumentationVersion(SemVersion())),
 				Propagators:    otel.GetTextMapPropagator(),
 			},
 		},

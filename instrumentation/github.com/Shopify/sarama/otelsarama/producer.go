@@ -23,7 +23,9 @@ import (
 
 	"github.com/Shopify/sarama"
 
+	"go.opentelemetry.io/otel"
 	"go.opentelemetry.io/otel/codes"
+	"go.opentelemetry.io/otel/metric/instrument"
 
 	"go.opentelemetry.io/otel/attribute"
 	semconv "go.opentelemetry.io/otel/semconv/v1.12.0"
@@ -32,6 +34,7 @@ import (
 
 type syncProducer struct {
 	sarama.SyncProducer
+	pmeters      producerMeters
 	cfg          config
 	saramaConfig *sarama.Config
 }
@@ -41,6 +44,10 @@ func (p *syncProducer) SendMessage(msg *sarama.ProducerMessage) (partition int32
 	span := startProducerSpan(p.cfg, p.saramaConfig.Version, msg)
 	partition, offset, err = p.SyncProducer.SendMessage(msg)
 	finishProducerSpan(span, partition, offset, err)
+
+	byteSize := float64(msg.ByteSize(saramaKafkaVersion))
+	p.pmeters.producerOutgoingBytesRate.rateRecorder.Add(byteSize)
+
 	return partition, offset, err
 }
 
@@ -67,8 +74,26 @@ func WrapSyncProducer(saramaConfig *sarama.Config, producer sarama.SyncProducer,
 		saramaConfig = sarama.NewConfig()
 	}
 
+	pmeters := newProducerMeters(cfg.Meter)
+
+	err := cfg.Meter.RegisterCallback([]instrument.Asynchronous{
+		pmeters.producerOutgoingBytesRate.metric,
+	}, func(ctx context.Context) {
+
+		pmeters.ObserveProducerOutgoingBytesRate(ctx,
+			attribute.KeyValue{
+				Key:   "client-id",
+				Value: attribute.StringValue(saramaConfig.ClientID),
+			},
+		)
+	})
+	if err != nil {
+		otel.Handle(err)
+	}
+
 	return &syncProducer{
 		SyncProducer: producer,
+		pmeters:      pmeters,
 		cfg:          cfg,
 		saramaConfig: saramaConfig,
 	}
@@ -133,6 +158,24 @@ func WrapAsyncProducer(saramaConfig *sarama.Config, p sarama.AsyncProducer, opts
 		saramaConfig = sarama.NewConfig()
 	}
 
+	pmeters := newProducerMeters(cfg.Meter)
+
+	err := cfg.Meter.RegisterCallback([]instrument.Asynchronous{
+		pmeters.producerOutgoingBytesRate.metric,
+	}, func(ctx context.Context) {
+
+		pmeters.ObserveProducerOutgoingBytesRate(ctx,
+			attribute.KeyValue{
+				Key:   "client-id",
+				Value: attribute.StringValue(saramaConfig.ClientID),
+			},
+		)
+	})
+	if err != nil {
+		otel.Handle(err)
+	}
+
+	//pmeters.producerOutgoingBytesRate
 	wrapped := &asyncProducer{
 		AsyncProducer: p,
 		input:         make(chan *sarama.ProducerMessage),
@@ -182,6 +225,9 @@ func WrapAsyncProducer(saramaConfig *sarama.Config, p sarama.AsyncProducer, opts
 					// be done.
 					mc.span.End()
 				}
+
+				byteSize := float64(msg.ByteSize(saramaKafkaVersion))
+				pmeters.producerOutgoingBytesRate.rateRecorder.Add(byteSize)
 
 				p.Input() <- msg
 			}

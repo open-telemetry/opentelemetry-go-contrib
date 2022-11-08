@@ -127,6 +127,7 @@ func (consumer *Consumer) ConsumeClaim(session sarama.ConsumerGroupSession, clai
 	// https://github.com/Shopify/sarama/blob/master/consumer_group.go#L27-L29
 	for message := range claim.Messages() {
 		printMessage(message)
+		time.Sleep(time.Second)
 		session.MarkMessage(message, "")
 	}
 
