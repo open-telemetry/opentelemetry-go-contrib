@@ -13,6 +13,10 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 - The `WithLogger` option to `go.opentelemetry.io/contrib/samplers/jaegerremote` to allow users to pass a `logr.Logger` and have operations logged. (#2566)
 - Add the `messaging.url` & `messaging.system` attributes to all appropriate SQS operations in the `go.opentelemetry.io/contrib/instrumentation/github.com/aws/aws-sdk-go-v2/otelaws` package. (#2879)
 
+### Fixed
+
+- Set the status_code span attribute even if the HTTP handler hasn't written anything. (#2822)
+
 ## [1.11.1/0.36.4/0.5.2]
 
 ### Added
@@ -48,10 +52,6 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 ### Changed
 
 - Upgrade dependencies of the OpenTelemetry Go Metric SDK to use the new [`v0.32.1` release](https://github.com/open-telemetry/opentelemetry-go/releases/tag/sdk%2Fmetric%2Fv0.32.1)
-
-### Fixed
-
-- Set the status_code span attribute even if the HTTP handler hasn't written anything. (#2822)
 
 ### Removed
 
