@@ -107,8 +107,6 @@ func newAccessLogProducer(brokerList []string) (sarama.AsyncProducer, error) {
 
 	meterProvider := newMetrerProvider()
 	// Wrap instrumentation
-	//producer = otelsarama.WrapAsyncProducer(config, producer)
-
 	producer = otelsarama.WrapAsyncProducer(config, producer, otelsarama.WithMeterProvider(meterProvider))
 
 	// We will log to STDOUT if we're not able to produce messages.
