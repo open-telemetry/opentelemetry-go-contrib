@@ -24,6 +24,7 @@ import (
 	"go.opentelemetry.io/otel/metric/instrument"
 	"go.opentelemetry.io/otel/metric/instrument/asyncfloat64"
 	"go.opentelemetry.io/otel/metric/unit"
+
 	"go.uber.org/atomic"
 )
 
@@ -60,7 +61,7 @@ func (m *rateMetric) Average() float64 {
 }
 
 // PRODUCER METRICS:
-// Implementation of producer metrics defined in otel specification
+// Implementation of producer metrics defined in otel specification.
 type producerOutgoingBytesRate struct {
 	rateRecorder rateMetric
 	metric       asyncfloat64.Gauge
@@ -72,7 +73,7 @@ type producerMeters struct {
 
 func newProducerMeters(meter metric.Meter) producerMeters {
 	var (
-		pm  producerMeters = producerMeters{producerOutgoingBytesRate: producerOutgoingBytesRate{}}
+		pm  = producerMeters{producerOutgoingBytesRate: producerOutgoingBytesRate{}}
 		err error
 	)
 

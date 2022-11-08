@@ -79,7 +79,6 @@ func WrapSyncProducer(saramaConfig *sarama.Config, producer sarama.SyncProducer,
 	err := cfg.Meter.RegisterCallback([]instrument.Asynchronous{
 		pmeters.producerOutgoingBytesRate.metric,
 	}, func(ctx context.Context) {
-
 		pmeters.ObserveProducerOutgoingBytesRate(ctx,
 			attribute.KeyValue{
 				Key:   "client-id",
@@ -163,7 +162,6 @@ func WrapAsyncProducer(saramaConfig *sarama.Config, p sarama.AsyncProducer, opts
 	err := cfg.Meter.RegisterCallback([]instrument.Asynchronous{
 		pmeters.producerOutgoingBytesRate.metric,
 	}, func(ctx context.Context) {
-
 		pmeters.ObserveProducerOutgoingBytesRate(ctx,
 			attribute.KeyValue{
 				Key:   "client-id",

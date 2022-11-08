@@ -105,7 +105,10 @@ func newAccessLogProducer(brokerList []string) (sarama.AsyncProducer, error) {
 		return nil, fmt.Errorf("starting Sarama producer: %w", err)
 	}
 
-	meterProvider := newMetrerProvider()
+	meterProvider, err := newMetrerProvider()
+	if err != nil {
+		return nil, fmt.Errorf("initializing stdout meterProvider: %w", err)
+	}
 	// Wrap instrumentation
 	producer = otelsarama.WrapAsyncProducer(config, producer, otelsarama.WithMeterProvider(meterProvider))
 
@@ -119,13 +122,13 @@ func newAccessLogProducer(brokerList []string) (sarama.AsyncProducer, error) {
 	return producer, nil
 }
 
-func newMetrerProvider() *metric.MeterProvider {
+func newMetrerProvider() (*metric.MeterProvider, error) {
 	exp, err := stdoutmetric.New()
 	if err != nil {
-		log.Fatal(err)
+		return nil, err
 	}
 
 	// Register the exporter with an SDK via a periodic reader.
 	read := metric.NewPeriodicReader(exp, metric.WithInterval(1*time.Second))
-	return metric.NewMeterProvider(metric.WithReader(read))
+	return metric.NewMeterProvider(metric.WithReader(read)), err
 }
