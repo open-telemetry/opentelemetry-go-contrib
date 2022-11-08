@@ -86,7 +86,6 @@ func startConsumerGroup(ctx context.Context, brokerList []string) error {
 	if err != nil {
 		return fmt.Errorf("consuming via handler: %w", err)
 	}
-
 	return nil
 }
 
