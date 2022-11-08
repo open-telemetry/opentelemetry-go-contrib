@@ -77,7 +77,6 @@ func main() {
 		Key:   sarama.StringEncoder("random_number"),
 		Value: sarama.StringEncoder(fmt.Sprintf("%d", rand.Intn(1000))),
 	}
-
 	otel.GetTextMapPropagator().Inject(ctx, otelsarama.NewProducerMessageCarrier(&msg))
 
 	for i := 0; i < 10; i++ {
