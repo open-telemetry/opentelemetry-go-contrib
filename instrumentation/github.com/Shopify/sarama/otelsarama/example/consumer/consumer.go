@@ -99,9 +99,6 @@ func printMessage(msg *sarama.ConsumerMessage) {
 	))
 	defer span.End()
 
-	// Emulate Work loads
-	time.Sleep(1 * time.Second)
-
 	log.Println("Successful to read message: ", string(msg.Value))
 }
 
