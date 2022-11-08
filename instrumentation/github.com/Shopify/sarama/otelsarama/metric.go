@@ -36,7 +36,7 @@ type rateMetric struct {
 	recordAccumulation atomic.Float32
 }
 
-// rate metric to be used for calculation of per second average
+// NewRateMetric returns a rate metric to be used for calculation of per second average.
 func NewRateMetric() rateMetric {
 	return rateMetric{
 		startedAt:          time.Now(),
