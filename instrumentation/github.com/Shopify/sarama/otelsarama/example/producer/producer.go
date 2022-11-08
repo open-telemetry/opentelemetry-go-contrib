@@ -96,7 +96,6 @@ func main() {
 
 func newAccessLogProducer(brokerList []string) (sarama.AsyncProducer, error) {
 	config := sarama.NewConfig()
-	//config.MetricRegistry
 	config.Version = sarama.V2_5_0_0
 	// So we can know the partition and offset of messages.
 	config.Producer.Return.Successes = true
