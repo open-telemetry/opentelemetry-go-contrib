@@ -16,6 +16,9 @@ package otelsarama // import "go.opentelemetry.io/contrib/instrumentation/github
 
 import (
 	"context"
+	"fmt"
+	"math"
+	"sync/atomic"
 	"time"
 
 	"go.opentelemetry.io/otel"
@@ -24,46 +27,59 @@ import (
 	"go.opentelemetry.io/otel/metric/instrument"
 	"go.opentelemetry.io/otel/metric/instrument/asyncfloat64"
 	"go.opentelemetry.io/otel/metric/unit"
-
-	"go.uber.org/atomic"
 )
 
 const (
+	// from second version onwards, key record counts as a part of entire out-going bytes.
 	saramaKafkaVersion = 2
 )
 
 type rateMetric struct {
 	startedAt          time.Time
-	recordAccumulation atomic.Float32
+	recordAccumulation uint64
 }
 
 // NewRateMetric returns a rate metric to be used for calculation of per second average.
-func newRateMetric() rateMetric {
-	return rateMetric{
+func newRateMetric() *rateMetric {
+	return &rateMetric{
 		startedAt:          time.Now(),
-		recordAccumulation: *atomic.NewFloat32(0),
+		recordAccumulation: 0, // TODO: remove uber atomic library
 	}
 }
 
 func (m *rateMetric) Add(record float64) {
-	m.recordAccumulation.Add(float32(record))
+	// float64 to uint64 => add it to accumulation
+	loaded := m.load()
+	fmt.Println("add", record, loaded)
+
+	result := loaded + record
+	m.store(result)
 }
 
 func (m *rateMetric) Average() float64 {
 	secondElapsed := time.Since(m.startedAt).Seconds()
-	loaded := float64(m.recordAccumulation.Load())
+	loaded := m.load()
 
 	// flush all measure units
 	m.startedAt = time.Now()
-	m.recordAccumulation.Swap(0)
+	m.store(0)
 
 	return loaded / secondElapsed
+}
+
+func (m *rateMetric) load() float64 {
+	return math.Float64frombits(atomic.LoadUint64(&m.recordAccumulation))
+}
+
+func (m *rateMetric) store(val float64) {
+	converted := math.Float64bits(val)
+	atomic.StoreUint64(&m.recordAccumulation, converted)
 }
 
 // PRODUCER METRICS:
 // Implementation of producer metrics defined in otel specification.
 type producerOutgoingBytesRate struct {
-	rateRecorder rateMetric
+	rateRecorder *rateMetric
 	metric       asyncfloat64.Gauge
 }
 

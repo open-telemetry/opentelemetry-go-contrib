@@ -31,12 +31,12 @@ func TestRateMetric(t *testing.T) {
 	rmetric := newRateMetric()
 	assert.NotNil(t, rmetric)
 
-	rmetric.Add(100)
+	rmetric.Add(100.501)
 
 	avg := rmetric.Average()
 	assert.Greater(t, avg, float64(0))
 
-	loadedAfterFlush := rmetric.recordAccumulation.Load()
+	loadedAfterFlush := rmetric.recordAccumulation
 	t.Log(loadedAfterFlush)
-	assert.Less(t, loadedAfterFlush, float32(1))
+	assert.Less(t, loadedAfterFlush, uint64(1))
 }
