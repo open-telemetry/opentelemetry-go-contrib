@@ -18,6 +18,7 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 ### Fixed
 
 - Set the status_code span attribute even if the HTTP handler hasn't written anything. (#2822)
+- Do not wrap http.NoBody in `go.opentelemetry.io/contrib/instrumentation/net/http/otelhttp`, which fixes handling of that special request body. (#2983)
 
 ## [1.11.1/0.36.4/0.5.2]
 

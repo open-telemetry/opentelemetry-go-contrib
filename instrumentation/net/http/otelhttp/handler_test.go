@@ -59,3 +59,23 @@ func TestHandlerReadingNilBodySuccess(t *testing.T) {
 	h.ServeHTTP(rr, r)
 	assert.Equal(t, 200, rr.Result().StatusCode)
 }
+
+// This use case is important as we make sure the body isn't mutated
+// when it is NoBody.
+func TestHandlerReadingNoBodySuccess(t *testing.T) {
+	h := otelhttp.NewHandler(
+		http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+			if r.Body != http.NoBody {
+				_, err := io.ReadAll(r.Body)
+				assert.NoError(t, err)
+			}
+		}), "test_handler",
+	)
+
+	r, err := http.NewRequest(http.MethodGet, "http://localhost/", http.NoBody)
+	require.NoError(t, err)
+
+	rr := httptest.NewRecorder()
+	h.ServeHTTP(rr, r)
+	assert.Equal(t, 200, rr.Result().StatusCode)
+}
