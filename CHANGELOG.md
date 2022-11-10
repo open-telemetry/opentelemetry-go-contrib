@@ -6,7 +6,11 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 
 This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
-## [Unreleased]
+## [0.35.1]
+
+### Fixed
+
+- Do not wrap http.NoBody in `go.opentelemetry.io/contrib/instrumentation/net/http/otelhttp`, which fixes handling of that special request body. (#3514)
 
 ## [1.10.0/0.35.0/0.5.0]
 
