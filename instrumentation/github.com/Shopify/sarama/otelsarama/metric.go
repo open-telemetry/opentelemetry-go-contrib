@@ -16,9 +16,7 @@ package otelsarama // import "go.opentelemetry.io/contrib/instrumentation/github
 
 import (
 	"context"
-	"fmt"
-	"math"
-	"sync/atomic"
+	"sync"
 	"time"
 
 	"go.opentelemetry.io/otel"
@@ -36,10 +34,10 @@ const (
 
 type rateMetric struct {
 	startedAt          time.Time
-	recordAccumulation uint64
+	recordAccumulation float64
+	mtx                sync.Mutex
 }
 
-// NewRateMetric returns a rate metric to be used for calculation of per second average.
 func newRateMetric() *rateMetric {
 	return &rateMetric{
 		startedAt:          time.Now(),
@@ -49,31 +47,24 @@ func newRateMetric() *rateMetric {
 
 func (m *rateMetric) Add(record float64) {
 	// float64 to uint64 => add it to accumulation
-	loaded := m.load()
-	fmt.Println("add", record, loaded)
+	m.mtx.Lock()
+	defer m.mtx.Unlock()
 
-	result := loaded + record
-	m.store(result)
+	m.recordAccumulation = m.recordAccumulation + record
 }
 
 func (m *rateMetric) Average() float64 {
+	m.mtx.Lock()
+	defer m.mtx.Unlock()
+
 	secondElapsed := time.Since(m.startedAt).Seconds()
-	loaded := m.load()
+	loaded := m.recordAccumulation
 
 	// flush all measure units
 	m.startedAt = time.Now()
-	m.store(0)
+	m.recordAccumulation = 0
 
 	return loaded / secondElapsed
-}
-
-func (m *rateMetric) load() float64 {
-	return math.Float64frombits(atomic.LoadUint64(&m.recordAccumulation))
-}
-
-func (m *rateMetric) store(val float64) {
-	converted := math.Float64bits(val)
-	atomic.StoreUint64(&m.recordAccumulation, converted)
 }
 
 // PRODUCER METRICS:
@@ -104,7 +95,7 @@ func newProducerMeters(meter metric.Meter) producerMeters {
 	return pm
 }
 
-func (pmeter *producerMeters) ObserveProducerOutgoingBytesRate(ctx context.Context, attrs ...attribute.KeyValue) {
-	avg := pmeter.producerOutgoingBytesRate.rateRecorder.Average()
-	pmeter.producerOutgoingBytesRate.metric.Observe(ctx, avg, attrs...)
+func (pmeters *producerMeters) ObserveProducerOutgoingBytesRate(ctx context.Context, attrs ...attribute.KeyValue) {
+	avg := pmeters.producerOutgoingBytesRate.rateRecorder.Average()
+	pmeters.producerOutgoingBytesRate.metric.Observe(ctx, avg, attrs...)
 }

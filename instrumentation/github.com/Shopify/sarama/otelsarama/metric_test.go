@@ -15,6 +15,7 @@
 package otelsarama
 
 import (
+	"sync"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
@@ -31,12 +32,28 @@ func TestRateMetric(t *testing.T) {
 	rmetric := newRateMetric()
 	assert.NotNil(t, rmetric)
 
-	rmetric.Add(100.501)
+	var wg sync.WaitGroup
+	//var mtx sync.Mutex
 
+	var record float64 = 100
+	numAdditions := 10000
+
+	wg.Add(numAdditions)
+	for i := 0; i < numAdditions; i++ {
+		go func(record float64) {
+			rmetric.Add(record)
+			wg.Done()
+		}(record)
+	}
+	wg.Wait()
+
+	assert.Equal(t, rmetric.recordAccumulation, record*float64(numAdditions))
+
+	// needs to be positive value.
 	avg := rmetric.Average()
 	assert.Greater(t, avg, float64(0))
 
 	loadedAfterFlush := rmetric.recordAccumulation
 	t.Log(loadedAfterFlush)
-	assert.Less(t, loadedAfterFlush, uint64(1))
+	assert.Equal(t, loadedAfterFlush, float64(0))
 }
