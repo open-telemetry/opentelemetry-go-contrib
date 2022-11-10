@@ -33,7 +33,6 @@ func TestRateMetric(t *testing.T) {
 	assert.NotNil(t, rmetric)
 
 	var wg sync.WaitGroup
-	//var mtx sync.Mutex
 
 	var record float64 = 100
 	numAdditions := 10000
