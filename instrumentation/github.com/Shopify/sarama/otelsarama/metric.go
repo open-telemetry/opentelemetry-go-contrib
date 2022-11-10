@@ -43,7 +43,7 @@ type rateMetric struct {
 func newRateMetric() *rateMetric {
 	return &rateMetric{
 		startedAt:          time.Now(),
-		recordAccumulation: 0, // TODO: remove uber atomic library
+		recordAccumulation: 0,
 	}
 }
 
