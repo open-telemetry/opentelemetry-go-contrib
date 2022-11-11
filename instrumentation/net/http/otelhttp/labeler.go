@@ -23,10 +23,11 @@ import (
 
 type labelerContextKeyType int
 
+// LabelerContextKey is the key in the context.Context on which the Labeler instance would be placed.
 const LabelerContextKey labelerContextKeyType = 0
 
 // Labeler provides a way to hook custom attribute.KeyValue entries to a request context during the execution of the
-// request. The instance of the custom Labeler can be accessed from the request's context with the LabelerContextKey
+// request. The instance of the custom Labeler can be accessed from the request's context with the LabelerContextKey.
 type Labeler interface {
 	Get() []attribute.KeyValue
 }
@@ -38,6 +39,7 @@ type StandardLabeler struct {
 	attributes []attribute.KeyValue
 }
 
+// NewStandardLabeler returns a StandardLabeler.
 func NewStandardLabeler() Labeler {
 	return &StandardLabeler{}
 }

@@ -205,7 +205,7 @@ func WithClientTrace(f func(context.Context) *httptrace.ClientTrace) Option {
 }
 
 // WithLabeler takes a function that returns a new labeler instance that will be
-// injected to the context of each request before passing it down to the actual handler
+// injected to the context of each request before passing it down to the actual handler.
 func WithLabeler(f func() Labeler) Option {
 	return optionFunc(func(c *config) {
 		c.NewLabeler = f
