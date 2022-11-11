@@ -21,22 +21,36 @@ import (
 	"go.opentelemetry.io/otel/attribute"
 )
 
-// Labeler is used to allow instrumented HTTP handlers to add custom attributes to
+type labelerContextKeyType int
+
+const LabelerContextKey labelerContextKeyType = 0
+
+// Labeler provides a way to hook custom attribute.KeyValue entries to a request context during the execution of the
+// request. The instance of the custom Labeler can be accessed from the request's context with the LabelerContextKey
+type Labeler interface {
+	Get() []attribute.KeyValue
+}
+
+// StandardLabeler is used to allow instrumented HTTP handlers to add custom attributes to
 // the metrics recorded by the net/http instrumentation.
-type Labeler struct {
+type StandardLabeler struct {
 	mu         sync.Mutex
 	attributes []attribute.KeyValue
 }
 
-// Add attributes to a Labeler.
-func (l *Labeler) Add(ls ...attribute.KeyValue) {
+func NewStandardLabeler() Labeler {
+	return &StandardLabeler{}
+}
+
+// Add attributes to a StandardLabeler.
+func (l *StandardLabeler) Add(ls ...attribute.KeyValue) {
 	l.mu.Lock()
 	defer l.mu.Unlock()
 	l.attributes = append(l.attributes, ls...)
 }
 
-// Get returns a copy of the attributes added to the Labeler.
-func (l *Labeler) Get() []attribute.KeyValue {
+// Get returns a copy of the attributes added to the StandardLabeler.
+func (l *StandardLabeler) Get() []attribute.KeyValue {
 	l.mu.Lock()
 	defer l.mu.Unlock()
 	ret := make([]attribute.KeyValue, len(l.attributes))
@@ -44,22 +58,18 @@ func (l *Labeler) Get() []attribute.KeyValue {
 	return ret
 }
 
-type labelerContextKeyType int
-
-const lablelerContextKey labelerContextKeyType = 0
-
-func injectLabeler(ctx context.Context, l *Labeler) context.Context {
-	return context.WithValue(ctx, lablelerContextKey, l)
+func injectLabeler(ctx context.Context, l Labeler) context.Context {
+	return context.WithValue(ctx, LabelerContextKey, l)
 }
 
-// LabelerFromContext retrieves a Labeler instance from the provided context if
-// one is available.  If no Labeler was found in the provided context a new, empty
-// Labeler is returned and the second return value is false.  In this case it is
-// safe to use the Labeler but any attributes added to it will not be used.
-func LabelerFromContext(ctx context.Context) (*Labeler, bool) {
-	l, ok := ctx.Value(lablelerContextKey).(*Labeler)
+// LabelerFromContext retrieves a StandardLabeler instance from the provided context if
+// one is available.  If no StandardLabeler was found in the provided context a new, empty
+// StandardLabeler is returned and the second return value is false.  In this case it is
+// safe to use the StandardLabeler but any attributes added to it will not be used.
+func LabelerFromContext(ctx context.Context) (*StandardLabeler, bool) {
+	l, ok := ctx.Value(LabelerContextKey).(*StandardLabeler)
 	if !ok {
-		l = &Labeler{}
+		l = &StandardLabeler{}
 	}
 	return l, ok
 }

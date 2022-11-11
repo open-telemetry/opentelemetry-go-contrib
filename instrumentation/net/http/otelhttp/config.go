@@ -44,6 +44,7 @@ type config struct {
 	Filters           []Filter
 	SpanNameFormatter func(string, *http.Request) string
 	ClientTrace       func(context.Context) *httptrace.ClientTrace
+	NewLabeler        func() Labeler
 
 	TracerProvider trace.TracerProvider
 	MeterProvider  metric.MeterProvider
@@ -73,6 +74,10 @@ func newConfig(opts ...Option) *config {
 	// Tracer is only initialized if manually specified. Otherwise, can be passed with the tracing context.
 	if c.TracerProvider != nil {
 		c.Tracer = newTracer(c.TracerProvider)
+	}
+
+	if c.NewLabeler == nil {
+		c.NewLabeler = NewStandardLabeler
 	}
 
 	c.Meter = c.MeterProvider.Meter(
@@ -196,5 +201,13 @@ func WithSpanNameFormatter(f func(operation string, r *http.Request) string) Opt
 func WithClientTrace(f func(context.Context) *httptrace.ClientTrace) Option {
 	return optionFunc(func(c *config) {
 		c.ClientTrace = f
+	})
+}
+
+// WithLabeler takes a function that returns a new labeler instance that will be
+// injected to the context of each request before passing it down to the actual handler
+func WithLabeler(f func() Labeler) Option {
+	return optionFunc(func(c *config) {
+		c.NewLabeler = f
 	})
 }
