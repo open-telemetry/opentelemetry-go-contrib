@@ -147,6 +147,61 @@ func TestHandlerBasics(t *testing.T) {
 	}
 }
 
+func TestHandlerEmittedAttributes(t *testing.T) {
+	testCases := []struct {
+		name       string
+		handler    func(http.ResponseWriter, *http.Request)
+		attributes []attribute.KeyValue
+	}{
+		{
+			name: "With a success handler",
+			handler: func(w http.ResponseWriter, r *http.Request) {
+				w.WriteHeader(http.StatusOK)
+			},
+			attributes: []attribute.KeyValue{
+				attribute.Int("http.status_code", 200),
+			},
+		},
+		{
+			name: "With a failing handler",
+			handler: func(w http.ResponseWriter, r *http.Request) {
+				w.WriteHeader(http.StatusBadRequest)
+			},
+			attributes: []attribute.KeyValue{
+				attribute.Int("http.status_code", 400),
+			},
+		},
+		{
+			name: "With an empty handler",
+			handler: func(w http.ResponseWriter, r *http.Request) {
+			},
+			attributes: []attribute.KeyValue{
+				attribute.Int("http.status_code", 200),
+			},
+		},
+	}
+	for _, tc := range testCases {
+		t.Run(tc.name, func(t *testing.T) {
+			sr := tracetest.NewSpanRecorder()
+			provider := sdktrace.NewTracerProvider()
+			provider.RegisterSpanProcessor(sr)
+			h := otelhttp.NewHandler(
+				http.HandlerFunc(tc.handler), "test_handler",
+				otelhttp.WithTracerProvider(provider),
+			)
+
+			h.ServeHTTP(httptest.NewRecorder(), httptest.NewRequest("GET", "/", nil))
+
+			require.Len(t, sr.Ended(), 1, "should emit a span")
+			attrs := sr.Ended()[0].Attributes()
+
+			for _, a := range tc.attributes {
+				assert.Contains(t, attrs, a)
+			}
+		})
+	}
+}
+
 func TestHandlerRequestWithTraceContext(t *testing.T) {
 	rr := httptest.NewRecorder()
 
