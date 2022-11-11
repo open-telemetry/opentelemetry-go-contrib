@@ -54,6 +54,14 @@ func Middleware(service string, opts ...Option) gin.HandlerFunc {
 		cfg.Propagators = otel.GetTextMapPropagator()
 	}
 	return func(c *gin.Context) {
+		for _, f := range cfg.Filters {
+			if !f(c.Request) {
+				// Serve the request to the next middleware
+				// if a filter rejects the request.
+				c.Next()
+				return
+			}
+		}
 		c.Set(tracerKey, tracer)
 		savedCtx := c.Request.Context()
 		defer func() {
