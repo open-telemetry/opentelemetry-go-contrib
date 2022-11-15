@@ -4,6 +4,7 @@ import (
 	"context"
 	"testing"
 
+	"github.com/nats-io/nats.go"
 	"github.com/stretchr/testify/assert"
 	sdktrace "go.opentelemetry.io/otel/sdk/trace"
 	"go.opentelemetry.io/otel/trace"
@@ -59,6 +60,22 @@ func Test_NewMsg(t *testing.T) {
 		defer span.End()
 
 		msg := NewMsg(spanCtx)
+
+		spanFromMsg := NewSpanFrom(msg)
+		defer spanFromMsg.End()
+
+		assert.Equal(t, spanFromMsg.SpanContext().TraceID(), span.SpanContext().TraceID())
+		assert.Equal(t, spanFromMsg.SpanContext().SpanID(), span.SpanContext().SpanID())
+	})
+
+	t.Run("Should inject trace and span ids.", func(t *testing.T) {
+		parent := context.TODO()
+
+		spanCtx, span := tracer.Start(parent, "newSpan")
+		defer span.End()
+
+		msg := &nats.Msg{}
+		Inject(spanCtx, msg)
 
 		spanFromMsg := NewSpanFrom(msg)
 		defer spanFromMsg.End()

@@ -14,25 +14,33 @@ const (
 	HeaderSpanIdKey = "otel.trace.parent.SpanID"
 )
 
+func inject(ctx context.Context, msg *nats.Msg) {
+	spanCtx := trace.SpanFromContext(ctx).SpanContext()
+
+	if spanCtx.HasTraceID() {
+		msg.Header.Set(HeaderTraceIdKey, spanCtx.TraceID().String())
+	}
+	if spanCtx.HasSpanID() {
+		msg.Header.Set(HeaderSpanIdKey, spanCtx.SpanID().String())
+	}
+}
+
 // NewMsg will create new *nats.Msg with nats.Header initialized with TraceID and SpanID from the context.
 // If either TraceID or SpanID are not present in the context new *nats.Msg will be created with empty header.
 func NewMsg(ctx context.Context) (msg *nats.Msg) {
-	span := trace.SpanFromContext(ctx)
-	spanCtx := span.SpanContext()
-
-	header := nats.Header{}
-
-	if spanCtx.HasTraceID() {
-		header.Set(HeaderTraceIdKey, spanCtx.TraceID().String())
-	}
-	if spanCtx.HasSpanID() {
-		header.Set(HeaderSpanIdKey, spanCtx.SpanID().String())
-	}
-
 	msg = &nats.Msg{
-		Header: header,
+		Header: nats.Header{},
 	}
+	Inject(ctx, msg)
 	return
+}
+
+// Inject will incject TraceID and SpanID from the context to *nats.Msg.
+func Inject(ctx context.Context, msg *nats.Msg) {
+	if msg.Header == nil {
+		msg.Header = nats.Header{}
+	}
+	inject(ctx, msg)
 }
 
 // NewCtxFrom will return new context.Context with initialized traceID and spanID from nats.Msg and context.Background().
