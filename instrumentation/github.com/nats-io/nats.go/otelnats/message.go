@@ -60,3 +60,15 @@ func CtxFrom(parent context.Context, msg *nats.Msg) (ctx context.Context) {
 	ctx = trace.ContextWithSpanContext(parent, spanCtx)
 	return
 }
+
+// SpanFrom will return new span from exisiting context initialized with traceID and spanID from *nats.Msg.
+func SpanFrom(parent context.Context, msg *nats.Msg) (span trace.Span) {
+	span = trace.SpanFromContext(CtxFrom(parent, msg))
+	return
+}
+
+// SpanFrom will return new span from context.Background() initialized with traceID and spanID from *nats.Msg.
+func NewSpanFrom(msg *nats.Msg) (span trace.Span) {
+	span = trace.SpanFromContext(NewCtxFrom(msg))
+	return
+}

@@ -51,4 +51,19 @@ func Test_NewMsg(t *testing.T) {
 		assert.Equal(t, spanFromMsg.SpanContext().TraceID(), span.SpanContext().TraceID())
 		assert.Equal(t, spanFromMsg.SpanContext().SpanID(), span.SpanContext().SpanID())
 	})
+
+	t.Run("Should create span from message.", func(t *testing.T) {
+		parent := context.TODO()
+
+		spanCtx, span := tracer.Start(parent, "newSpan")
+		defer span.End()
+
+		msg := NewMsg(spanCtx)
+
+		spanFromMsg := NewSpanFrom(msg)
+		defer spanFromMsg.End()
+
+		assert.Equal(t, spanFromMsg.SpanContext().TraceID(), span.SpanContext().TraceID())
+		assert.Equal(t, spanFromMsg.SpanContext().SpanID(), span.SpanContext().SpanID())
+	})
 }
