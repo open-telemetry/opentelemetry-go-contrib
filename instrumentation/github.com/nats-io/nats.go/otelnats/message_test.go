@@ -6,6 +6,7 @@ import (
 
 	"github.com/stretchr/testify/assert"
 	sdktrace "go.opentelemetry.io/otel/sdk/trace"
+	"go.opentelemetry.io/otel/trace"
 )
 
 func Test_NewMsg(t *testing.T) {
@@ -18,17 +19,36 @@ func Test_NewMsg(t *testing.T) {
 		assert.Equal(t, "", msg.Header.Get(HeaderSpanIdKey))
 	})
 
+	tracer := sdktrace.NewTracerProvider().Tracer("tracer")
+
 	t.Run("Should return new *nats.Msg with spanId and traceId headers.", func(t *testing.T) {
 		parent := context.TODO()
 
-		tracer := sdktrace.NewTracerProvider().Tracer("tracer")
-
-		ctx, span := tracer.Start(parent, "newTrace")
+		ctx, span := tracer.Start(parent, "newSpan")
 		defer span.End()
 
 		msg := NewMsg(ctx)
 
 		assert.NotEmpty(t, msg.Header.Get(HeaderTraceIdKey))
 		assert.NotEmpty(t, msg.Header.Get(HeaderSpanIdKey))
+	})
+
+	t.Run("Should reconstruct spanID and traceID from message headers.", func(t *testing.T) {
+		parent := context.TODO()
+
+		spanCtx, span := tracer.Start(parent, "newSpan")
+		defer span.End()
+
+		msg := NewMsg(spanCtx)
+
+		ctx := NewCtxFrom(msg)
+
+		assert.Equal(t, msg.Header, NewMsg(ctx).Header)
+
+		spanFromMsg := trace.SpanFromContext(ctx)
+		defer spanFromMsg.End()
+
+		assert.Equal(t, spanFromMsg.SpanContext().TraceID(), span.SpanContext().TraceID())
+		assert.Equal(t, spanFromMsg.SpanContext().SpanID(), span.SpanContext().SpanID())
 	})
 }
