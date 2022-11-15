@@ -9,9 +9,9 @@ import (
 
 const (
 	// HeaderTraceIdKey represents otel parent trace header key that will be used to propagate TraceID in nats.Msg.
-	HeaderTraceIdKey = "otel.parent.TraceID"
+	HeaderTraceIdKey = "otel.trace.parent.TraceID"
 	// HeaderTraceIdKey represents otel parent trace header key that will be used to propagate SpanID in nats.Msg.
-	HeaderSpanIdKey = "otel.parent.SpanID"
+	HeaderSpanIdKey = "otel.trace.parent.SpanID"
 )
 
 // NewMsg will create new *nats.Msg with nats.Header initialized with TraceID and SpanID from the context.
