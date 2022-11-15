@@ -1,0 +1,20 @@
+version: "3.7"
+services:
+  producer:
+    restart: unless-stopped
+    container_name: otelnats-producer
+    build:
+      dockerfile: $PWD/producer/Dockerfile
+      context: ../../../../../..
+  consumer:
+    restart: unless-stopped
+    container_name: otelnats-consumer
+    build:
+      dockerfile: $PWD/consumer/Dockerfile
+      context: ../../../../../..
+  nats:
+    container_name: otelnats-nats
+    restart: unless-stopped
+    image: nats
+    ports:
+      - "4222:4222"
