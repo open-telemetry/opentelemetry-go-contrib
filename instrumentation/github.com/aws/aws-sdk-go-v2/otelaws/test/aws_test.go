@@ -91,7 +91,7 @@ func TestAppendMiddlewares(t *testing.T) {
 	}
 
 	for name, c := range cases {
-		server := httptest.NewServer(http.HandlerFunc(
+		srv := httptest.NewServer(http.HandlerFunc(
 			func(w http.ResponseWriter, r *http.Request) {
 				w.WriteHeader(c.responseStatus)
 				_, err := w.Write(c.responseBody)
@@ -109,7 +109,7 @@ func TestAppendMiddlewares(t *testing.T) {
 				EndpointResolverWithOptions: aws.EndpointResolverWithOptionsFunc(
 					func(service, region string, _ ...interface{}) (aws.Endpoint, error) {
 						return aws.Endpoint{
-							URL:         server.URL,
+							URL:         srv.URL,
 							SigningName: "route53",
 						}, nil
 					},
@@ -151,6 +151,6 @@ func TestAppendMiddlewares(t *testing.T) {
 			assert.Contains(t, attrs, attribute.String("aws.operation", "ChangeResourceRecordSets"))
 		})
 
-		server.Close()
+		srv.Close()
 	}
 }

@@ -19,12 +19,12 @@ import (
 	"os"
 	"testing"
 
-	"github.com/stretchr/testify/assert"
-	"github.com/stretchr/testify/mock"
-
 	"go.opentelemetry.io/otel/attribute"
 	"go.opentelemetry.io/otel/sdk/resource"
 	semconv "go.opentelemetry.io/otel/semconv/v1.12.0"
+
+	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/mock"
 )
 
 // Create interface for functions that need to be mocked.
@@ -42,11 +42,11 @@ func (detectorUtils *MockDetectorUtils) getContainerName() (string, error) {
 	return args.String(0), args.Error(1)
 }
 
-// successfully return resource when process is running on Amazon ECS environment.
-func TestDetect(t *testing.T) {
+// successfully returns resource when process is running on Amazon ECS environment
+// with no Metadata v4.
+func TestDetectV3(t *testing.T) {
 	os.Clearenv()
 	_ = os.Setenv(metadataV3EnvVar, "3")
-	_ = os.Setenv(metadataV4EnvVar, "4")
 
 	detectorUtils := new(MockDetectorUtils)
 
@@ -63,24 +63,30 @@ func TestDetect(t *testing.T) {
 	detector := &resourceDetector{utils: detectorUtils}
 	res, _ := detector.Detect(context.Background())
 
-	assert.Equal(t, res, expectedResource, "Resource returned is incorrect")
+	assert.Equal(t, expectedResource, res, "Resource returned is incorrect")
 }
 
 // returns empty resource when detector cannot read container ID.
 func TestDetectCannotReadContainerID(t *testing.T) {
 	os.Clearenv()
 	_ = os.Setenv(metadataV3EnvVar, "3")
-	_ = os.Setenv(metadataV4EnvVar, "4")
 	detectorUtils := new(MockDetectorUtils)
 
 	detectorUtils.On("getContainerName").Return("container-Name", nil)
-	detectorUtils.On("getContainerID").Return("", errCannotReadContainerID)
+	detectorUtils.On("getContainerID").Return("", nil)
 
+	attributes := []attribute.KeyValue{
+		semconv.CloudProviderAWS,
+		semconv.CloudPlatformAWSECS,
+		semconv.ContainerNameKey.String("container-Name"),
+		semconv.ContainerIDKey.String(""),
+	}
+	expectedResource := resource.NewWithAttributes(semconv.SchemaURL, attributes...)
 	detector := &resourceDetector{utils: detectorUtils}
 	res, err := detector.Detect(context.Background())
 
-	assert.Equal(t, errCannotReadContainerID, err)
-	assert.Equal(t, 0, len(res.Attributes()))
+	assert.Equal(t, nil, err)
+	assert.Equal(t, expectedResource, res, "Resource returned is incorrect")
 }
 
 // returns empty resource when detector cannot read container Name.

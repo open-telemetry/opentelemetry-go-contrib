@@ -10,6 +10,7 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 
 ### Added
 
+- Implemented retrieving the [`aws.ecs.*` resource attributes](https://opentelemetry.io/docs/reference/specification/resource/semantic_conventions/cloud_provider/aws/ecs/) in `go.opentelemetry.io/detectors/aws/ecs` based on the ECS Metadata v4 endpoint.
 - The `WithLogger` option to `go.opentelemetry.io/contrib/samplers/jaegerremote` to allow users to pass a `logr.Logger` and have operations logged. (#2566)
 - Add the `messaging.url` & `messaging.system` attributes to all appropriate SQS operations in the `go.opentelemetry.io/contrib/instrumentation/github.com/aws/aws-sdk-go-v2/otelaws` package. (#2879)
 - Add example use of the metrics signal to `go.opentelemetry.io/contrib/instrumentation/net/http/otelhttp/example`. (#2610)
