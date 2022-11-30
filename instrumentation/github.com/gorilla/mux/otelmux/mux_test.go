@@ -169,7 +169,6 @@ func TestResponseWriterInterfaces(t *testing.T) {
 
 func TestCustomSpanNameFormatter(t *testing.T) {
 	exporter := tracetest.NewInMemoryExporter()
-	t.Cleanup(exporter.Reset)
 
 	tp := sdktrace.NewTracerProvider(sdktrace.WithSyncer(exporter))
 
@@ -180,26 +179,34 @@ func TestCustomSpanNameFormatter(t *testing.T) {
 		expected          string
 	}{
 		{nil, routeTpl},
-		{func(string, *http.Request) string { return "custom" }, "custom"},
-		{func(name string, r *http.Request) string {
-			return fmt.Sprintf("%s %s", r.Method, name)
-		}, "GET " + routeTpl},
+		{
+			func(string, *http.Request) string { return "custom" },
+			"custom",
+		},
+		{
+			func(name string, r *http.Request) string {
+				return fmt.Sprintf("%s %s", r.Method, name)
+			},
+			"GET " + routeTpl,
+		},
 	}
 
-	for _, d := range testdata {
-		router := mux.NewRouter()
-		router.Use(Middleware("foobar", WithTracerProvider(tp), WithSpanNameFormatter(d.spanNameFormatter)))
-		router.HandleFunc(routeTpl, func(w http.ResponseWriter, r *http.Request) {})
+	for i, d := range testdata {
+		t.Run(fmt.Sprintf("%d_%s", i, d.expected), func(t *testing.T) {
+			router := mux.NewRouter()
+			router.Use(Middleware("foobar", WithTracerProvider(tp), WithSpanNameFormatter(d.spanNameFormatter)))
+			router.HandleFunc(routeTpl, func(w http.ResponseWriter, r *http.Request) {})
 
-		r := httptest.NewRequest("GET", "/user/123", nil)
-		w := httptest.NewRecorder()
+			r := httptest.NewRequest("GET", "/user/123", nil)
+			w := httptest.NewRecorder()
 
-		router.ServeHTTP(w, r)
+			router.ServeHTTP(w, r)
 
-		spans := exporter.GetSpans()
-		require.Len(t, spans, 1)
-		assert.Equal(t, d.expected, spans[0].Name)
+			spans := exporter.GetSpans()
+			require.Len(t, spans, 1)
+			assert.Equal(t, d.expected, spans[0].Name)
 
-		exporter.Reset()
+			exporter.Reset()
+		})
 	}
 }
