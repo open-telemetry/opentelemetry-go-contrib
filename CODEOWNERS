@@ -41,8 +41,8 @@ instrumentation/google.golang.org/grpc/otelgrpc/                        @open-te
 instrumentation/gopkg.in/macaron.v1/otelmacaron/                        @open-telemetry/go-approvers
 
 instrumentation/host/                                                   @open-telemetry/go-approvers
-instrumentation/net/http/httptrace/otelhttptrace/                       @open-telemetry/go-approvers @Aneurysm9
-instrumentation/net/http/otelhttp/                                      @open-telemetry/go-approvers @Aneurysm9
+instrumentation/net/http/httptrace/otelhttptrace/                       @open-telemetry/go-approvers @Aneurysm9 @dmathieu
+instrumentation/net/http/otelhttp/                                      @open-telemetry/go-approvers @Aneurysm9 @dmathieu
 instrumentation/runtime/                                                @open-telemetry/go-approvers
 
 propagators/autoprop/                                                   @open-telemetry/go-approvers @MrAlias
