@@ -28,29 +28,32 @@ import (
 // OTelQueryObserver implements the gocql.QueryObserver interface
 // to provide instrumentation to gocql queries.
 type OTelQueryObserver struct {
-	enabled  bool
-	observer gocql.QueryObserver
-	tracer   trace.Tracer
-	inst     *instruments
+	enabled           bool
+	observer          gocql.QueryObserver
+	tracer            trace.Tracer
+	inst              *instruments
+	spanNameFormatter func(gocql.ObservedQuery) string
 }
 
 // OTelBatchObserver implements the gocql.BatchObserver interface
 // to provide instrumentation to gocql batch queries.
 type OTelBatchObserver struct {
-	enabled  bool
-	observer gocql.BatchObserver
-	tracer   trace.Tracer
-	inst     *instruments
+	enabled           bool
+	observer          gocql.BatchObserver
+	tracer            trace.Tracer
+	inst              *instruments
+	spanNameFormatter func(gocql.ObservedBatch) string
 }
 
 // OTelConnectObserver implements the gocql.ConnectObserver interface
 // to provide instrumentation to connection attempts made by the session.
 type OTelConnectObserver struct {
-	ctx      context.Context
-	enabled  bool
-	observer gocql.ConnectObserver
-	tracer   trace.Tracer
-	inst     *instruments
+	ctx               context.Context
+	enabled           bool
+	observer          gocql.ConnectObserver
+	tracer            trace.Tracer
+	inst              *instruments
+	spanNameFormatter func(gocql.ObservedConnect) string
 }
 
 // ------------------------------------------ Observer Functions
@@ -71,7 +74,7 @@ func (o *OTelQueryObserver) ObserveQuery(ctx context.Context, observedQuery gocq
 
 		ctx, span := o.tracer.Start(
 			ctx,
-			observedQuery.Statement,
+			o.spanNameFormatter(observedQuery),
 			trace.WithTimestamp(observedQuery.Start),
 			trace.WithAttributes(attributes...),
 			trace.WithSpanKind(trace.SpanKindClient),
@@ -133,7 +136,7 @@ func (o *OTelBatchObserver) ObserveBatch(ctx context.Context, observedBatch gocq
 
 		ctx, span := o.tracer.Start(
 			ctx,
-			internal.CassBatchQueryName,
+			o.spanNameFormatter(observedBatch),
 			trace.WithTimestamp(observedBatch.Start),
 			trace.WithAttributes(attributes...),
 			trace.WithSpanKind(trace.SpanKindClient),
@@ -181,7 +184,7 @@ func (o *OTelConnectObserver) ObserveConnect(observedConnect gocql.ObservedConne
 
 		_, span := o.tracer.Start(
 			o.ctx,
-			internal.CassConnectName,
+			o.spanNameFormatter(observedConnect),
 			trace.WithTimestamp(observedConnect.Start),
 			trace.WithAttributes(attributes...),
 			trace.WithSpanKind(trace.SpanKindClient),

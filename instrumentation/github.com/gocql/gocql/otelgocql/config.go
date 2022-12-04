@@ -17,6 +17,7 @@ package otelgocql // import "go.opentelemetry.io/contrib/instrumentation/github.
 import (
 	"github.com/gocql/gocql"
 
+	"go.opentelemetry.io/contrib/instrumentation/github.com/gocql/gocql/otelgocql/internal"
 	"go.opentelemetry.io/otel"
 	"go.opentelemetry.io/otel/metric"
 	"go.opentelemetry.io/otel/metric/global"
@@ -32,6 +33,10 @@ type config struct {
 	queryObserver     gocql.QueryObserver
 	batchObserver     gocql.BatchObserver
 	connectObserver   gocql.ConnectObserver
+
+	querySpanNameFormatter   func(gocql.ObservedQuery) string
+	batchSpanNameFormatter   func(gocql.ObservedBatch) string
+	connectSpanNameFormatter func(gocql.ObservedConnect) string
 }
 
 // Option applies a configuration option.
@@ -117,6 +122,30 @@ func WithConnectInstrumentation(enabled bool) Option {
 	})
 }
 
+// WithQuerySpanNameFormatter will allow customizing the span name when
+// observing queries. Defaults to the query being executed.
+func WithQuerySpanNameFormatter(querySpanNameFormatter func(gocql.ObservedQuery) string) Option {
+	return optionFunc(func(c *config) {
+		c.querySpanNameFormatter = querySpanNameFormatter
+	})
+}
+
+// WithBatchSpanNameFormatter will allow customizing the span name when
+// observing batches. Defaults to "Batch Query".
+func WithBatchSpanNameFormatter(batchSpanNameFormatter func(gocql.ObservedBatch) string) Option {
+	return optionFunc(func(c *config) {
+		c.batchSpanNameFormatter = batchSpanNameFormatter
+	})
+}
+
+// WithConnectSpanNameFormatter will allow customizing the span name when
+// observing connects. Defaults to "New Connection".
+func WithConnectSpanNameFormatter(connectSpanNameFormatter func(gocql.ObservedConnect) string) Option {
+	return optionFunc(func(c *config) {
+		c.connectSpanNameFormatter = connectSpanNameFormatter
+	})
+}
+
 func newConfig(options ...Option) *config {
 	cfg := &config{
 		tracerProvider:    otel.GetTracerProvider(),
@@ -124,6 +153,18 @@ func newConfig(options ...Option) *config {
 		instrumentQuery:   true,
 		instrumentBatch:   true,
 		instrumentConnect: true,
+		queryObserver:     nil,
+		batchObserver:     nil,
+		connectObserver:   nil,
+		querySpanNameFormatter: func(query gocql.ObservedQuery) string {
+			return query.Statement
+		},
+		batchSpanNameFormatter: func(batch gocql.ObservedBatch) string {
+			return internal.CassBatchQueryName
+		},
+		connectSpanNameFormatter: func(connect gocql.ObservedConnect) string {
+			return internal.CassConnectName
+		},
 	}
 
 	for _, apply := range options {

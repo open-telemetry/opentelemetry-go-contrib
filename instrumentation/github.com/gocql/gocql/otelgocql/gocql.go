@@ -34,23 +34,26 @@ func NewSessionWithTracing(ctx context.Context, cluster *gocql.ClusterConfig, op
 		trace.WithInstrumentationVersion(SemVersion()),
 	)
 	cluster.QueryObserver = &OTelQueryObserver{
-		enabled:  cfg.instrumentQuery,
-		observer: cfg.queryObserver,
-		tracer:   tracer,
-		inst:     instruments,
+		enabled:           cfg.instrumentQuery,
+		observer:          cfg.queryObserver,
+		tracer:            tracer,
+		inst:              instruments,
+		spanNameFormatter: cfg.querySpanNameFormatter,
 	}
 	cluster.BatchObserver = &OTelBatchObserver{
-		enabled:  cfg.instrumentBatch,
-		observer: cfg.batchObserver,
-		tracer:   tracer,
-		inst:     instruments,
+		enabled:           cfg.instrumentBatch,
+		observer:          cfg.batchObserver,
+		tracer:            tracer,
+		inst:              instruments,
+		spanNameFormatter: cfg.batchSpanNameFormatter,
 	}
 	cluster.ConnectObserver = &OTelConnectObserver{
-		ctx:      ctx,
-		enabled:  cfg.instrumentConnect,
-		observer: cfg.connectObserver,
-		tracer:   tracer,
-		inst:     instruments,
+		ctx:               ctx,
+		enabled:           cfg.instrumentConnect,
+		observer:          cfg.connectObserver,
+		tracer:            tracer,
+		inst:              instruments,
+		spanNameFormatter: cfg.connectSpanNameFormatter,
 	}
 	return cluster.CreateSession()
 }
