@@ -10,7 +10,7 @@ replace (
 
 require (
 	github.com/astaxie/beego v1.12.3
-	go.opentelemetry.io/contrib/instrumentation/github.com/astaxie/beego/otelbeego v0.36.4
+	go.opentelemetry.io/contrib/instrumentation/github.com/astaxie/beego/otelbeego v0.37.0
 	go.opentelemetry.io/otel v1.11.2
 	go.opentelemetry.io/otel/exporters/stdout/stdouttrace v1.11.2
 	go.opentelemetry.io/otel/sdk v1.11.2
