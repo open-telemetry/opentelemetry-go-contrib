@@ -53,6 +53,7 @@ type Handler struct {
 	valueRecorders    map[string]syncfloat64.Histogram
 	publicEndpoint    bool
 	publicEndpointFn  func(*http.Request) bool
+	newLabeler        func() Labeler
 }
 
 func defaultHandlerFormatter(operation string, _ *http.Request) string {
@@ -90,6 +91,7 @@ func (h *Handler) configure(c *config) {
 	h.spanNameFormatter = c.SpanNameFormatter
 	h.publicEndpoint = c.PublicEndpoint
 	h.publicEndpointFn = c.PublicEndpointFn
+	h.newLabeler = c.NewLabeler
 }
 
 func handleErr(err error) {
@@ -204,7 +206,7 @@ func (h *Handler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		},
 	})
 
-	labeler := &Labeler{}
+	labeler := h.newLabeler()
 	ctx = injectLabeler(ctx, labeler)
 
 	h.handler.ServeHTTP(w, r.WithContext(ctx))
