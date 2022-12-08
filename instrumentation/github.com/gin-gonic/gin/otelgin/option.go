@@ -17,8 +17,7 @@
 package otelgin // import "go.opentelemetry.io/contrib/instrumentation/github.com/gin-gonic/gin/otelgin"
 
 import (
-	"net/http"
-
+	"github.com/gin-gonic/gin"
 	"go.opentelemetry.io/otel/propagation"
 	oteltrace "go.opentelemetry.io/otel/trace"
 )
@@ -29,9 +28,9 @@ type config struct {
 	Filters        []Filter
 }
 
-// Filter is a predicate used to determine whether a given http.request should
+// Filter is a predicate used to determine whether a given gin.Context should
 // be traced. A Filter must return true if the request should be traced.
-type Filter func(*http.Request) bool
+type Filter func(*gin.Context) bool
 
 // Option specifies instrumentation configuration options.
 type Option interface {
