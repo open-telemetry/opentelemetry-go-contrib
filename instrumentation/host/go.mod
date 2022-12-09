@@ -3,7 +3,7 @@ module go.opentelemetry.io/contrib/instrumentation/host
 go 1.18
 
 require (
-	github.com/shirou/gopsutil/v3 v3.22.11
+	github.com/shirou/gopsutil/v3 v3.22.10
 	go.opentelemetry.io/otel v1.11.2
 	go.opentelemetry.io/otel/metric v0.34.0
 )
