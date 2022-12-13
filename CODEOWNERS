@@ -57,3 +57,4 @@ samplers/jaegerremote/                                                  @open-te
 samplers/probability/consistent/                                        @open-telemetry/go-approvers
 
 zpages/                                                                 @open-telemetry/go-approvers
+instrgen/                                                               @open-telemetry/go-approvers @MrAlias @pdelewski
