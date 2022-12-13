@@ -15,3 +15,5 @@
 * @jmacd @MrAlias @Aneurysm9 @evantorrie @XSAM @dashpole @MadVikingGod @pellared @hanyuancheung @dmathieu
 
 CODEOWNERS @MrAlias @Aneurysm9 @MadVikingGod
+
+instrgen/                                  @open-telemetry/go-approvers @MrAlias @pdelewski
