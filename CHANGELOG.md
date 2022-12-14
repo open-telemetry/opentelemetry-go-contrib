@@ -37,12 +37,14 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 
 - Update `go.opentelemetry.io/contrib/instrumentation/google.golang.org/grpc/otelgrpc` to align gRPC server span status with the changes in the OpenTelemetry specification. (#3685)
 - Adding the `db.statement` tag to spans in `go.opentelemetry.io/contrib/instrumentation/go.mongodb.org/mongo-driver/mongo/otelmongo` is now disabled by default. (#3519)
+- Update `go.opentelemetry.io/contrib/detectors/aws/ecs` to fix the task ARN when it's not valid. (#3583)
 
 ### Fixed
 
 - The error received by `otelecho` middleware is then passed back to upstream middleware instead of being swallowed. (#3656)
 - Prevent taking from reservoir in AWS XRay Remote Sampler when there is zero capacity in `go.opentelemetry.io/contrib/samplers/aws/xray`. (#3684)
 - Fix `otelhttp.Handler` in `go.opentelemetry.io/contrib/instrumentation/net/http/otelhttp` to propagate multiple `WriteHeader` calls while persisting the initial `statusCode`. (#3580)
+- Do not panic in `go.opentelemetry.io/contrib/detectors/aws/ecs` when the container ARN is not valid. (#3583)
 
 ## [1.16.0-rc.2/0.41.0-rc.2/0.10.0-rc.2] - 2023-03-23
 
@@ -52,7 +54,7 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 
 ### Fixed
 
-- AWS SDK rename attributes `aws.operation`, `aws.service` to `rpc.method`,`rpc.service` in `go.opentelemetry.io/contrib/instrumentation/github.com/aws/aws-sdk-go-v2/otelaws`. (#3582, #3617) 
+- AWS SDK rename attributes `aws.operation`, `aws.service` to `rpc.method`,`rpc.service` in `go.opentelemetry.io/contrib/instrumentation/github.com/aws/aws-sdk-go-v2/otelaws`. (#3582, #3617)
 - AWS SDK span name to be of the format `Service.Operation` in `go.opentelemetry.io/contrib/instrumentation/github.com/aws/aws-sdk-go-v2/otelaws`. (#3582, #3521)
 - Prevent sampler configuration reset from erroneously sampling first span in `go.opentelemetry.io/contrib/samplers/jaegerremote`. (#3603, #3604)
 
