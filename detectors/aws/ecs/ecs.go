@@ -113,8 +113,10 @@ func (detector *resourceDetector) Detect(ctx context.Context) (*resource.Resourc
 
 		clusterArn := taskMetadata.Cluster
 		if !strings.HasPrefix(clusterArn, "arn:") {
-			baseArn := containerMetadata.ContainerARN[:strings.LastIndex(containerMetadata.ContainerARN, ":")]
-			clusterArn = fmt.Sprintf("%s:cluster/%s", baseArn, clusterArn)
+			if i := strings.LastIndex(taskMetadata.TaskARN, ":"); i >= 0 {
+				baseArn := taskMetadata.TaskARN[:i]
+				clusterArn = fmt.Sprintf("%s:cluster/%s", baseArn, clusterArn)
+			}
 		}
 
 		logAttributes, err := detector.getLogsAttributes(containerMetadata)
