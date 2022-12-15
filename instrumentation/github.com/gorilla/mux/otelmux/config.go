@@ -15,14 +15,17 @@
 package otelmux // import "go.opentelemetry.io/contrib/instrumentation/github.com/gorilla/mux/otelmux"
 
 import (
+	"net/http"
+
 	"go.opentelemetry.io/otel/propagation"
 	oteltrace "go.opentelemetry.io/otel/trace"
 )
 
 // config is used to configure the mux middleware.
 type config struct {
-	TracerProvider oteltrace.TracerProvider
-	Propagators    propagation.TextMapPropagator
+	TracerProvider    oteltrace.TracerProvider
+	Propagators       propagation.TextMapPropagator
+	spanNameFormatter func(string, *http.Request) string
 }
 
 // Option specifies instrumentation configuration options.
@@ -54,5 +57,15 @@ func WithTracerProvider(provider oteltrace.TracerProvider) Option {
 		if provider != nil {
 			cfg.TracerProvider = provider
 		}
+	})
+}
+
+// WithSpanNameFormatter specifies a function to use for generating a custom span
+// name. By default, the route name (path template or regexp) is used. The route
+// name is provided so you can use it in the span name without needing to
+// duplicate the logic for extracting it from the request.
+func WithSpanNameFormatter(fn func(routeName string, r *http.Request) string) Option {
+	return optionFunc(func(cfg *config) {
+		cfg.spanNameFormatter = fn
 	})
 }
