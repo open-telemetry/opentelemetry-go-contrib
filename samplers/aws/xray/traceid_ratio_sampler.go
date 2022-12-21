@@ -32,7 +32,7 @@ type traceIDRatioBasedSampler struct {
 // NewTraceIDRatioBased creates a sampler based on (presumably) random parts of the TraceID.
 // fraction parameter should be between 0 and 1 where:
 // fraction >= 1 it will always sample
-// fraction <= 0 it will never sample
+// fraction <= 0 it will never sample.
 func NewTraceIDRatioBased(fraction float64) sdktrace.Sampler {
 	if fraction >= 1 {
 		return sdktrace.AlwaysSample()
