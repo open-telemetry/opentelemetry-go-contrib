@@ -18,6 +18,7 @@ import (
 	"context"
 	"errors"
 	"os"
+	"strconv"
 
 	"go.opentelemetry.io/otel/attribute"
 	"go.opentelemetry.io/otel/sdk/resource"
@@ -30,6 +31,8 @@ const (
 	lambdaFunctionNameEnvVar    = "AWS_LAMBDA_FUNCTION_NAME"
 	awsRegionEnvVar             = "AWS_REGION"
 	lambdaFunctionVersionEnvVar = "AWS_LAMBDA_FUNCTION_VERSION"
+	lambdaLogStreamNameEnvVar   = "AWS_LAMBDA_LOG_STREAM_NAME"
+	lambdaMemoryLimitEnvVar     = "AWS_LAMBDA_FUNCTION_MEMORY_SIZE"
 )
 
 var (
@@ -57,12 +60,22 @@ func (detector *resourceDetector) Detect(context.Context) (*resource.Resource, e
 	}
 	awsRegion := os.Getenv(awsRegionEnvVar)
 	functionVersion := os.Getenv(lambdaFunctionVersionEnvVar)
+	// The instance attributes corresponds to the log stream name for AWS lambda,
+	// see the FaaS convention for more details.
+	instance := os.Getenv(lambdaLogStreamNameEnvVar)
 
 	attrs := []attribute.KeyValue{
 		semconv.CloudProviderAWS,
 		semconv.CloudRegionKey.String(awsRegion),
+		semconv.FaaSInstanceKey.String(instance),
 		semconv.FaaSNameKey.String(lambdaName),
 		semconv.FaaSVersionKey.String(functionVersion),
+	}
+
+	maxMemoryStr := os.Getenv(lambdaMemoryLimitEnvVar)
+	maxMemory, err := strconv.Atoi(maxMemoryStr)
+	if err == nil {
+		attrs = append(attrs, semconv.FaaSMaxMemoryKey.Int(maxMemory))
 	}
 
 	return resource.NewWithAttributes(semconv.SchemaURL, attrs...), nil
