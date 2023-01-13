@@ -61,7 +61,7 @@ func (detector *resourceDetector) Detect(context.Context) (*resource.Resource, e
 	awsRegion := os.Getenv(awsRegionEnvVar)
 	functionVersion := os.Getenv(lambdaFunctionVersionEnvVar)
 	// The instance attributes corresponds to the log stream name for AWS lambda,
-	// see the FaaS convention for more details.
+	// see the FaaS resource specification for more details.
 	instance := os.Getenv(lambdaLogStreamNameEnvVar)
 
 	attrs := []attribute.KeyValue{
