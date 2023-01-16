@@ -12,7 +12,8 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 
 - Add the new `go.opentelemetry.io/contrib/instrgen` package to provide auto-generated source code instrumentation. (#3068)
 - `otelmux`: Add new `WithSpanNameFormatter` option to `go.opentelemetry.io/contrib/instrumentation/github.com/gorilla/mux/otelmux` to allow customizing span names. (#3041)
-- Add missing recommended AWS Lambda resource attributes `faas.instance` and `faas.max_memory` in `go.opentelemetry.io/contrib/detectors/aws/lambda`. (#2333)
+- Add missing recommended AWS Lambda resource attributes `faas.instance` and `faas.max_memory` in `go.opentelemetry.io/contrib/detectors/aws/lambda`. (#3148)
+- Improve documentation for `samplers/jaegerremote` by providing examples of sampling endpoints. (#3147)
 
 ## [1.12.0/0.37.0/0.6.0]
 
@@ -34,7 +35,7 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 ### Added
 
 - Add trace context propagation support to `instrumentation/github.com/aws/aws-sdk-go-v2/otelaws` (#2856).
-- [otelgrpc] Add `WithMeterProvider` function to enable metric and add metric `rpc.server.duration` to otelgrpc instrumentation library. (#2700) 
+- [otelgrpc] Add `WithMeterProvider` function to enable metric and add metric `rpc.server.duration` to otelgrpc instrumentation library. (#2700)
 
 ### Changed
 
