@@ -42,6 +42,8 @@ import (
 )
 
 func assertScopeMetrics(t *testing.T, sm metricdata.ScopeMetrics, attrs attribute.Set) {
+	t.Helper()
+
 	assert.Equal(t, instrumentation.Scope{
 		Name:    "go.opentelemetry.io/contrib/instrumentation/net/http/otelhttp",
 		Version: otelhttp.SemVersion(),
@@ -123,6 +125,7 @@ func TestHandlerBasics(t *testing.T) {
 		semconv.HTTPFlavorKey.String(fmt.Sprintf("1.%d", r.ProtoMinor)),
 		semconv.HTTPMethodKey.String("GET"),
 		attribute.String("test", "attribute"),
+		semconv.HTTPStatusCodeKey.Int(200),
 	)
 	assertScopeMetrics(t, rm.ScopeMetrics[0], attrs)
 
