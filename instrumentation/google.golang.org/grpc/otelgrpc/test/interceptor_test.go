@@ -39,7 +39,6 @@ import (
 	"google.golang.org/grpc/interop/grpc_testing"
 	"google.golang.org/grpc/metadata"
 	"google.golang.org/grpc/status"
-	"google.golang.org/protobuf/proto"
 )
 
 func getSpanFromRecorder(sr *tracetest.SpanRecorder, name string) (trace.ReadOnlySpan, bool) {
@@ -102,14 +101,12 @@ func TestUnaryClientInterceptor(t *testing.T) {
 			},
 			eventsAttr: []map[attribute.Key]attribute.Value{
 				{
-					otelgrpc.RPCMessageTypeKey:             attribute.StringValue("SENT"),
-					otelgrpc.RPCMessageIDKey:               attribute.IntValue(1),
-					otelgrpc.RPCMessageUncompressedSizeKey: attribute.IntValue(proto.Size(req)),
+					otelgrpc.RPCMessageTypeKey: attribute.StringValue("SENT"),
+					otelgrpc.RPCMessageIDKey:   attribute.IntValue(1),
 				},
 				{
-					otelgrpc.RPCMessageTypeKey:             attribute.StringValue("RECEIVED"),
-					otelgrpc.RPCMessageIDKey:               attribute.IntValue(1),
-					otelgrpc.RPCMessageUncompressedSizeKey: attribute.IntValue(proto.Size(reply)),
+					otelgrpc.RPCMessageTypeKey: attribute.StringValue("RECEIVED"),
+					otelgrpc.RPCMessageIDKey:   attribute.IntValue(1),
 				},
 			},
 		},
@@ -126,14 +123,12 @@ func TestUnaryClientInterceptor(t *testing.T) {
 			},
 			eventsAttr: []map[attribute.Key]attribute.Value{
 				{
-					otelgrpc.RPCMessageTypeKey:             attribute.StringValue("SENT"),
-					otelgrpc.RPCMessageIDKey:               attribute.IntValue(1),
-					otelgrpc.RPCMessageUncompressedSizeKey: attribute.IntValue(proto.Size(req)),
+					otelgrpc.RPCMessageTypeKey: attribute.StringValue("SENT"),
+					otelgrpc.RPCMessageIDKey:   attribute.IntValue(1),
 				},
 				{
-					otelgrpc.RPCMessageTypeKey:             attribute.StringValue("RECEIVED"),
-					otelgrpc.RPCMessageIDKey:               attribute.IntValue(1),
-					otelgrpc.RPCMessageUncompressedSizeKey: attribute.IntValue(proto.Size(reply)),
+					otelgrpc.RPCMessageTypeKey: attribute.StringValue("RECEIVED"),
+					otelgrpc.RPCMessageIDKey:   attribute.IntValue(1),
 				},
 			},
 		},
@@ -150,14 +145,12 @@ func TestUnaryClientInterceptor(t *testing.T) {
 			},
 			eventsAttr: []map[attribute.Key]attribute.Value{
 				{
-					otelgrpc.RPCMessageTypeKey:             attribute.StringValue("SENT"),
-					otelgrpc.RPCMessageIDKey:               attribute.IntValue(1),
-					otelgrpc.RPCMessageUncompressedSizeKey: attribute.IntValue(proto.Size(req)),
+					otelgrpc.RPCMessageTypeKey: attribute.StringValue("SENT"),
+					otelgrpc.RPCMessageIDKey:   attribute.IntValue(1),
 				},
 				{
-					otelgrpc.RPCMessageTypeKey:             attribute.StringValue("RECEIVED"),
-					otelgrpc.RPCMessageIDKey:               attribute.IntValue(1),
-					otelgrpc.RPCMessageUncompressedSizeKey: attribute.IntValue(proto.Size(reply)),
+					otelgrpc.RPCMessageTypeKey: attribute.StringValue("RECEIVED"),
+					otelgrpc.RPCMessageIDKey:   attribute.IntValue(1),
 				},
 			},
 		},
@@ -175,14 +168,12 @@ func TestUnaryClientInterceptor(t *testing.T) {
 			},
 			eventsAttr: []map[attribute.Key]attribute.Value{
 				{
-					otelgrpc.RPCMessageTypeKey:             attribute.StringValue("SENT"),
-					otelgrpc.RPCMessageIDKey:               attribute.IntValue(1),
-					otelgrpc.RPCMessageUncompressedSizeKey: attribute.IntValue(proto.Size(req)),
+					otelgrpc.RPCMessageTypeKey: attribute.StringValue("SENT"),
+					otelgrpc.RPCMessageIDKey:   attribute.IntValue(1),
 				},
 				{
-					otelgrpc.RPCMessageTypeKey:             attribute.StringValue("RECEIVED"),
-					otelgrpc.RPCMessageIDKey:               attribute.IntValue(1),
-					otelgrpc.RPCMessageUncompressedSizeKey: attribute.IntValue(proto.Size(reply)),
+					otelgrpc.RPCMessageTypeKey: attribute.StringValue("RECEIVED"),
+					otelgrpc.RPCMessageIDKey:   attribute.IntValue(1),
 				},
 			},
 			expectErr: true,
@@ -198,14 +189,12 @@ func TestUnaryClientInterceptor(t *testing.T) {
 			},
 			eventsAttr: []map[attribute.Key]attribute.Value{
 				{
-					otelgrpc.RPCMessageTypeKey:             attribute.StringValue("SENT"),
-					otelgrpc.RPCMessageIDKey:               attribute.IntValue(1),
-					otelgrpc.RPCMessageUncompressedSizeKey: attribute.IntValue(proto.Size(req)),
+					otelgrpc.RPCMessageTypeKey: attribute.StringValue("SENT"),
+					otelgrpc.RPCMessageIDKey:   attribute.IntValue(1),
 				},
 				{
-					otelgrpc.RPCMessageTypeKey:             attribute.StringValue("RECEIVED"),
-					otelgrpc.RPCMessageIDKey:               attribute.IntValue(1),
-					otelgrpc.RPCMessageUncompressedSizeKey: attribute.IntValue(proto.Size(reply)),
+					otelgrpc.RPCMessageTypeKey: attribute.StringValue("RECEIVED"),
+					otelgrpc.RPCMessageIDKey:   attribute.IntValue(1),
 				},
 			},
 		},
@@ -222,14 +211,12 @@ func TestUnaryClientInterceptor(t *testing.T) {
 			},
 			eventsAttr: []map[attribute.Key]attribute.Value{
 				{
-					otelgrpc.RPCMessageTypeKey:             attribute.StringValue("SENT"),
-					otelgrpc.RPCMessageIDKey:               attribute.IntValue(1),
-					otelgrpc.RPCMessageUncompressedSizeKey: attribute.IntValue(proto.Size(req)),
+					otelgrpc.RPCMessageTypeKey: attribute.StringValue("SENT"),
+					otelgrpc.RPCMessageIDKey:   attribute.IntValue(1),
 				},
 				{
-					otelgrpc.RPCMessageTypeKey:             attribute.StringValue("RECEIVED"),
-					otelgrpc.RPCMessageIDKey:               attribute.IntValue(1),
-					otelgrpc.RPCMessageUncompressedSizeKey: attribute.IntValue(proto.Size(reply)),
+					otelgrpc.RPCMessageTypeKey: attribute.StringValue("RECEIVED"),
+					otelgrpc.RPCMessageIDKey:   attribute.IntValue(1),
 				},
 			},
 		},
@@ -594,7 +581,6 @@ func TestServerInterceptorError(t *testing.T) {
 	assert.ElementsMatch(t, []attribute.KeyValue{
 		attribute.Key("message.type").String("SENT"),
 		attribute.Key("message.id").Int(1),
-		attribute.Key("message.uncompressed_size").Int(26),
 	}, span.Events()[1].Attributes)
 }
 

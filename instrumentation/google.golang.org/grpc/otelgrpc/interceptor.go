@@ -39,24 +39,16 @@ import (
 type messageType attribute.KeyValue
 
 // Event adds an event of the messageType to the span associated with the
-// passed context with id and size (if message is a proto message).
-func (m messageType) Event(ctx context.Context, id int, message interface{}) {
+// passed context with a message id.
+func (m messageType) Event(ctx context.Context, id int, _ interface{}) {
 	span := trace.SpanFromContext(ctx)
 	if !span.IsRecording() {
 		return
 	}
-	if p, ok := message.(proto.Message); ok {
-		span.AddEvent("message", trace.WithAttributes(
-			attribute.KeyValue(m),
-			RPCMessageIDKey.Int(id),
-			RPCMessageUncompressedSizeKey.Int(proto.Size(p)),
-		))
-	} else {
-		span.AddEvent("message", trace.WithAttributes(
-			attribute.KeyValue(m),
-			RPCMessageIDKey.Int(id),
-		))
-	}
+	span.AddEvent("message", trace.WithAttributes(
+		attribute.KeyValue(m),
+		RPCMessageIDKey.Int(id),
+	))
 }
 
 var (
