@@ -14,6 +14,10 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 - `otelmux`: Add new `WithSpanNameFormatter` option to `go.opentelemetry.io/contrib/instrumentation/github.com/gorilla/mux/otelmux` to allow customizing span names. (#3041)
 - Improve documentation for `samplers/jaegerremote` by providing examples of sampling endpoints. (#3147)
 
+### Changed
+
+- Updated to the new metric API. (#3170)
+
 ## [1.12.0/0.37.0/0.6.0]
 
 ### Added
