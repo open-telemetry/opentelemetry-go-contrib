@@ -46,6 +46,8 @@ Now your `TracerProvider` will have the following resource attributes and attach
 |`cloud.region` | us-east-1 
 |`faas.name` | MyLambdaFunction 
 |`faas.version` | $LATEST
+|`faas.instance` | 2021/06/28/[$LATEST]2f399eb14537447da05ab2a2e39309de
+|`faas.max_memory`| 128
 
 Of note, `faas.id` and `cloud.account.id` are not set by the Lambda resource detector because they are not available outside a Lambda invocation. For this reason, when using the AWS Lambda Instrumentation these attributes are set as additional span attributes.
 
