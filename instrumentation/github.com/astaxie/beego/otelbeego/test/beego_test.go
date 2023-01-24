@@ -168,7 +168,8 @@ func TestHandlerWithNamespace(t *testing.T) {
 		t.Run(tc.name, func(t *testing.T) {
 			// if using default span name, change name to NS path
 			if tc.expectedSpanName != customSpanName {
-				tc.expectedSpanName = fmt.Sprintf("/api/v1%s", tc.expectedSpanName)
+				routePattern := strings.Trim(strings.ReplaceAll(tc.expectedSpanName, tc.method, ""), " ")
+				tc.expectedSpanName = fmt.Sprintf("%s /api/v1%s", tc.method, routePattern)
 			}
 			runTest(t, &tc, "http://localhost/api/v1")
 		})
@@ -269,9 +270,9 @@ func TestRender(t *testing.T) {
 	require.Len(t, spans, 6) // 3 HTTP requests, each creating 2 spans
 	for _, span := range spans {
 		switch span.Name() {
-		case "/template/render":
-		case "/template/renderstring":
-		case "/template/renderbytes":
+		case "GET /template/render":
+		case "GET /template/renderstring":
+		case "GET /template/renderbytes":
 			continue
 		case internal.RenderTemplateSpanName,
 			internal.RenderStringSpanName,
@@ -368,7 +369,7 @@ var testCases = []*testCase{
 		path:               "/",
 		options:            []otelbeego.Option{},
 		hasSpan:            true,
-		expectedSpanName:   "/",
+		expectedSpanName:   "GET /",
 		expectedHTTPStatus: http.StatusOK,
 		expectedResponse:   testReply{Message: defaultReply},
 		expectedAttributes: []attribute.KeyValue{},
@@ -379,7 +380,7 @@ var testCases = []*testCase{
 		path:               "/1",
 		options:            []otelbeego.Option{},
 		hasSpan:            true,
-		expectedSpanName:   "/:id",
+		expectedSpanName:   "GET /:id",
 		expectedHTTPStatus: http.StatusOK,
 		expectedResponse:   testReply{Message: defaultReply},
 		expectedAttributes: []attribute.KeyValue{},
@@ -390,7 +391,7 @@ var testCases = []*testCase{
 		path:               "/greet?name=test",
 		options:            []otelbeego.Option{},
 		hasSpan:            true,
-		expectedSpanName:   "/greet",
+		expectedSpanName:   "POST /greet",
 		expectedHTTPStatus: http.StatusOK,
 		expectedResponse:   testReply{Message: "test said hello."},
 		expectedAttributes: []attribute.KeyValue{},
@@ -401,7 +402,7 @@ var testCases = []*testCase{
 		path:               "/",
 		options:            []otelbeego.Option{},
 		hasSpan:            true,
-		expectedSpanName:   "/",
+		expectedSpanName:   "DELETE /",
 		expectedHTTPStatus: http.StatusAccepted,
 		expectedResponse:   testReply{Message: "success"},
 		expectedAttributes: []attribute.KeyValue{},
@@ -412,7 +413,7 @@ var testCases = []*testCase{
 		path:               "/",
 		options:            []otelbeego.Option{},
 		hasSpan:            true,
-		expectedSpanName:   "/",
+		expectedSpanName:   "PUT /",
 		expectedHTTPStatus: http.StatusAccepted,
 		expectedResponse:   testReply{Message: "successfully put"},
 		expectedAttributes: []attribute.KeyValue{},
@@ -425,7 +426,7 @@ var testCases = []*testCase{
 			otelbeego.WithPropagators(propagation.NewCompositeTextMapPropagator(b3.New())),
 		},
 		hasSpan:            true,
-		expectedSpanName:   "/",
+		expectedSpanName:   "GET /",
 		expectedHTTPStatus: http.StatusOK,
 		expectedResponse:   testReply{Message: defaultReply},
 		expectedAttributes: []attribute.KeyValue{},
@@ -456,7 +457,7 @@ var testCases = []*testCase{
 			})),
 		},
 		hasSpan:            true,
-		expectedSpanName:   "/",
+		expectedSpanName:   "GET /",
 		expectedHTTPStatus: http.StatusOK,
 		expectedResponse:   testReply{Message: defaultReply},
 		expectedAttributes: []attribute.KeyValue{},
@@ -467,7 +468,7 @@ var testCases = []*testCase{
 		path:               "/greet",
 		options:            []otelbeego.Option{},
 		hasSpan:            true,
-		expectedSpanName:   "/greet",
+		expectedSpanName:   "POST /greet",
 		expectedHTTPStatus: http.StatusBadRequest,
 		expectedResponse:   testReply{Err: "missing query param \"name\""},
 		expectedAttributes: []attribute.KeyValue{},

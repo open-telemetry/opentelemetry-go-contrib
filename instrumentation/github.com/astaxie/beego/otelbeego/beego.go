@@ -16,6 +16,7 @@ package otelbeego // import "go.opentelemetry.io/contrib/instrumentation/github.
 
 import (
 	"context"
+	"fmt"
 	"net/http"
 
 	"go.opentelemetry.io/otel/codes"
@@ -54,7 +55,7 @@ func defaultSpanNameFormatter(operation string, req *http.Request) string {
 	if val := req.Context().Value(internal.CtxRouteTemplateKey); val != nil {
 		str, ok := val.(string)
 		if ok {
-			return str
+			return fmt.Sprintf("%s %s", req.Method, str)
 		}
 	}
 	return req.Method
