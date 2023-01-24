@@ -133,7 +133,6 @@ func checkUnaryClientSpans(t *testing.T, spans []trace.ReadOnlySpan) {
 			Attributes: []attribute.KeyValue{
 				otelgrpc.RPCMessageIDKey.Int(1),
 				otelgrpc.RPCMessageTypeKey.String("SENT"),
-				otelgrpc.RPCMessageUncompressedSizeKey.Int(0),
 			},
 		},
 		{
@@ -141,7 +140,6 @@ func checkUnaryClientSpans(t *testing.T, spans []trace.ReadOnlySpan) {
 			Attributes: []attribute.KeyValue{
 				otelgrpc.RPCMessageIDKey.Int(1),
 				otelgrpc.RPCMessageTypeKey.String("RECEIVED"),
-				otelgrpc.RPCMessageUncompressedSizeKey.Int(0),
 			},
 		},
 	}, emptySpan.Events())
@@ -162,7 +160,6 @@ func checkUnaryClientSpans(t *testing.T, spans []trace.ReadOnlySpan) {
 				otelgrpc.RPCMessageIDKey.Int(1),
 				otelgrpc.RPCMessageTypeKey.String("SENT"),
 				// largeReqSize from "google.golang.org/grpc/interop" + 12 (overhead).
-				otelgrpc.RPCMessageUncompressedSizeKey.Int(271840),
 			},
 		},
 		{
@@ -171,7 +168,6 @@ func checkUnaryClientSpans(t *testing.T, spans []trace.ReadOnlySpan) {
 				otelgrpc.RPCMessageIDKey.Int(1),
 				otelgrpc.RPCMessageTypeKey.String("RECEIVED"),
 				// largeRespSize from "google.golang.org/grpc/interop" + 8 (overhead).
-				otelgrpc.RPCMessageUncompressedSizeKey.Int(314167),
 			},
 		},
 	}, largeSpan.Events())
@@ -196,7 +192,6 @@ func checkStreamClientSpans(t *testing.T, spans []trace.ReadOnlySpan) {
 			Attributes: []attribute.KeyValue{
 				otelgrpc.RPCMessageIDKey.Int(1),
 				otelgrpc.RPCMessageTypeKey.String("SENT"),
-				otelgrpc.RPCMessageUncompressedSizeKey.Int(27190),
 			},
 		},
 		{
@@ -204,7 +199,6 @@ func checkStreamClientSpans(t *testing.T, spans []trace.ReadOnlySpan) {
 			Attributes: []attribute.KeyValue{
 				otelgrpc.RPCMessageIDKey.Int(2),
 				otelgrpc.RPCMessageTypeKey.String("SENT"),
-				otelgrpc.RPCMessageUncompressedSizeKey.Int(12),
 			},
 		},
 		{
@@ -212,7 +206,6 @@ func checkStreamClientSpans(t *testing.T, spans []trace.ReadOnlySpan) {
 			Attributes: []attribute.KeyValue{
 				otelgrpc.RPCMessageIDKey.Int(3),
 				otelgrpc.RPCMessageTypeKey.String("SENT"),
-				otelgrpc.RPCMessageUncompressedSizeKey.Int(1834),
 			},
 		},
 		{
@@ -220,7 +213,6 @@ func checkStreamClientSpans(t *testing.T, spans []trace.ReadOnlySpan) {
 			Attributes: []attribute.KeyValue{
 				otelgrpc.RPCMessageIDKey.Int(4),
 				otelgrpc.RPCMessageTypeKey.String("SENT"),
-				otelgrpc.RPCMessageUncompressedSizeKey.Int(45912),
 			},
 		},
 		// client does not record an event for the server response.
@@ -242,7 +234,6 @@ func checkStreamClientSpans(t *testing.T, spans []trace.ReadOnlySpan) {
 			Attributes: []attribute.KeyValue{
 				otelgrpc.RPCMessageIDKey.Int(1),
 				otelgrpc.RPCMessageTypeKey.String("SENT"),
-				otelgrpc.RPCMessageUncompressedSizeKey.Int(21),
 			},
 		},
 		{
@@ -250,7 +241,6 @@ func checkStreamClientSpans(t *testing.T, spans []trace.ReadOnlySpan) {
 			Attributes: []attribute.KeyValue{
 				otelgrpc.RPCMessageIDKey.Int(1),
 				otelgrpc.RPCMessageTypeKey.String("RECEIVED"),
-				otelgrpc.RPCMessageUncompressedSizeKey.Int(31423),
 			},
 		},
 		{
@@ -258,7 +248,6 @@ func checkStreamClientSpans(t *testing.T, spans []trace.ReadOnlySpan) {
 			Attributes: []attribute.KeyValue{
 				otelgrpc.RPCMessageIDKey.Int(2),
 				otelgrpc.RPCMessageTypeKey.String("RECEIVED"),
-				otelgrpc.RPCMessageUncompressedSizeKey.Int(13),
 			},
 		},
 		{
@@ -266,7 +255,6 @@ func checkStreamClientSpans(t *testing.T, spans []trace.ReadOnlySpan) {
 			Attributes: []attribute.KeyValue{
 				otelgrpc.RPCMessageIDKey.Int(3),
 				otelgrpc.RPCMessageTypeKey.String("RECEIVED"),
-				otelgrpc.RPCMessageUncompressedSizeKey.Int(2659),
 			},
 		},
 		{
@@ -274,7 +262,6 @@ func checkStreamClientSpans(t *testing.T, spans []trace.ReadOnlySpan) {
 			Attributes: []attribute.KeyValue{
 				otelgrpc.RPCMessageIDKey.Int(4),
 				otelgrpc.RPCMessageTypeKey.String("RECEIVED"),
-				otelgrpc.RPCMessageUncompressedSizeKey.Int(58987),
 			},
 		},
 	}, streamOutput.Events())
@@ -294,7 +281,6 @@ func checkStreamClientSpans(t *testing.T, spans []trace.ReadOnlySpan) {
 			Attributes: []attribute.KeyValue{
 				otelgrpc.RPCMessageIDKey.Int(1),
 				otelgrpc.RPCMessageTypeKey.String("SENT"),
-				otelgrpc.RPCMessageUncompressedSizeKey.Int(27196),
 			},
 		},
 		{
@@ -302,7 +288,6 @@ func checkStreamClientSpans(t *testing.T, spans []trace.ReadOnlySpan) {
 			Attributes: []attribute.KeyValue{
 				otelgrpc.RPCMessageIDKey.Int(1),
 				otelgrpc.RPCMessageTypeKey.String("RECEIVED"),
-				otelgrpc.RPCMessageUncompressedSizeKey.Int(31423),
 			},
 		},
 		{
@@ -310,7 +295,6 @@ func checkStreamClientSpans(t *testing.T, spans []trace.ReadOnlySpan) {
 			Attributes: []attribute.KeyValue{
 				otelgrpc.RPCMessageIDKey.Int(2),
 				otelgrpc.RPCMessageTypeKey.String("SENT"),
-				otelgrpc.RPCMessageUncompressedSizeKey.Int(16),
 			},
 		},
 		{
@@ -318,7 +302,6 @@ func checkStreamClientSpans(t *testing.T, spans []trace.ReadOnlySpan) {
 			Attributes: []attribute.KeyValue{
 				otelgrpc.RPCMessageIDKey.Int(2),
 				otelgrpc.RPCMessageTypeKey.String("RECEIVED"),
-				otelgrpc.RPCMessageUncompressedSizeKey.Int(13),
 			},
 		},
 		{
@@ -326,7 +309,6 @@ func checkStreamClientSpans(t *testing.T, spans []trace.ReadOnlySpan) {
 			Attributes: []attribute.KeyValue{
 				otelgrpc.RPCMessageIDKey.Int(3),
 				otelgrpc.RPCMessageTypeKey.String("SENT"),
-				otelgrpc.RPCMessageUncompressedSizeKey.Int(1839),
 			},
 		},
 		{
@@ -334,7 +316,6 @@ func checkStreamClientSpans(t *testing.T, spans []trace.ReadOnlySpan) {
 			Attributes: []attribute.KeyValue{
 				otelgrpc.RPCMessageIDKey.Int(3),
 				otelgrpc.RPCMessageTypeKey.String("RECEIVED"),
-				otelgrpc.RPCMessageUncompressedSizeKey.Int(2659),
 			},
 		},
 		{
@@ -342,7 +323,6 @@ func checkStreamClientSpans(t *testing.T, spans []trace.ReadOnlySpan) {
 			Attributes: []attribute.KeyValue{
 				otelgrpc.RPCMessageIDKey.Int(4),
 				otelgrpc.RPCMessageTypeKey.String("SENT"),
-				otelgrpc.RPCMessageUncompressedSizeKey.Int(45918),
 			},
 		},
 		{
@@ -350,7 +330,6 @@ func checkStreamClientSpans(t *testing.T, spans []trace.ReadOnlySpan) {
 			Attributes: []attribute.KeyValue{
 				otelgrpc.RPCMessageIDKey.Int(4),
 				otelgrpc.RPCMessageTypeKey.String("RECEIVED"),
-				otelgrpc.RPCMessageUncompressedSizeKey.Int(58987),
 			},
 		},
 	}, pingPong.Events())
@@ -375,7 +354,6 @@ func checkStreamServerSpans(t *testing.T, spans []trace.ReadOnlySpan) {
 			Attributes: []attribute.KeyValue{
 				otelgrpc.RPCMessageIDKey.Int(1),
 				otelgrpc.RPCMessageTypeKey.String("RECEIVED"),
-				otelgrpc.RPCMessageUncompressedSizeKey.Int(27190),
 			},
 		},
 		{
@@ -383,7 +361,6 @@ func checkStreamServerSpans(t *testing.T, spans []trace.ReadOnlySpan) {
 			Attributes: []attribute.KeyValue{
 				otelgrpc.RPCMessageIDKey.Int(2),
 				otelgrpc.RPCMessageTypeKey.String("RECEIVED"),
-				otelgrpc.RPCMessageUncompressedSizeKey.Int(12),
 			},
 		},
 		{
@@ -391,7 +368,6 @@ func checkStreamServerSpans(t *testing.T, spans []trace.ReadOnlySpan) {
 			Attributes: []attribute.KeyValue{
 				otelgrpc.RPCMessageIDKey.Int(3),
 				otelgrpc.RPCMessageTypeKey.String("RECEIVED"),
-				otelgrpc.RPCMessageUncompressedSizeKey.Int(1834),
 			},
 		},
 		{
@@ -399,7 +375,6 @@ func checkStreamServerSpans(t *testing.T, spans []trace.ReadOnlySpan) {
 			Attributes: []attribute.KeyValue{
 				otelgrpc.RPCMessageIDKey.Int(4),
 				otelgrpc.RPCMessageTypeKey.String("RECEIVED"),
-				otelgrpc.RPCMessageUncompressedSizeKey.Int(45912),
 			},
 		},
 		{
@@ -407,7 +382,6 @@ func checkStreamServerSpans(t *testing.T, spans []trace.ReadOnlySpan) {
 			Attributes: []attribute.KeyValue{
 				otelgrpc.RPCMessageIDKey.Int(1),
 				otelgrpc.RPCMessageTypeKey.String("SENT"),
-				otelgrpc.RPCMessageUncompressedSizeKey.Int(4),
 			},
 		},
 	}, streamInput.Events())
@@ -428,7 +402,6 @@ func checkStreamServerSpans(t *testing.T, spans []trace.ReadOnlySpan) {
 			Attributes: []attribute.KeyValue{
 				otelgrpc.RPCMessageIDKey.Int(1),
 				otelgrpc.RPCMessageTypeKey.String("RECEIVED"),
-				otelgrpc.RPCMessageUncompressedSizeKey.Int(21),
 			},
 		},
 		{
@@ -436,7 +409,6 @@ func checkStreamServerSpans(t *testing.T, spans []trace.ReadOnlySpan) {
 			Attributes: []attribute.KeyValue{
 				otelgrpc.RPCMessageIDKey.Int(1),
 				otelgrpc.RPCMessageTypeKey.String("SENT"),
-				otelgrpc.RPCMessageUncompressedSizeKey.Int(31423),
 			},
 		},
 		{
@@ -444,7 +416,6 @@ func checkStreamServerSpans(t *testing.T, spans []trace.ReadOnlySpan) {
 			Attributes: []attribute.KeyValue{
 				otelgrpc.RPCMessageIDKey.Int(2),
 				otelgrpc.RPCMessageTypeKey.String("SENT"),
-				otelgrpc.RPCMessageUncompressedSizeKey.Int(13),
 			},
 		},
 		{
@@ -452,7 +423,6 @@ func checkStreamServerSpans(t *testing.T, spans []trace.ReadOnlySpan) {
 			Attributes: []attribute.KeyValue{
 				otelgrpc.RPCMessageIDKey.Int(3),
 				otelgrpc.RPCMessageTypeKey.String("SENT"),
-				otelgrpc.RPCMessageUncompressedSizeKey.Int(2659),
 			},
 		},
 		{
@@ -460,7 +430,6 @@ func checkStreamServerSpans(t *testing.T, spans []trace.ReadOnlySpan) {
 			Attributes: []attribute.KeyValue{
 				otelgrpc.RPCMessageIDKey.Int(4),
 				otelgrpc.RPCMessageTypeKey.String("SENT"),
-				otelgrpc.RPCMessageUncompressedSizeKey.Int(58987),
 			},
 		},
 	}, streamOutput.Events())
@@ -480,7 +449,6 @@ func checkStreamServerSpans(t *testing.T, spans []trace.ReadOnlySpan) {
 			Attributes: []attribute.KeyValue{
 				otelgrpc.RPCMessageIDKey.Int(1),
 				otelgrpc.RPCMessageTypeKey.String("RECEIVED"),
-				otelgrpc.RPCMessageUncompressedSizeKey.Int(27196),
 			},
 		},
 		{
@@ -488,7 +456,6 @@ func checkStreamServerSpans(t *testing.T, spans []trace.ReadOnlySpan) {
 			Attributes: []attribute.KeyValue{
 				otelgrpc.RPCMessageIDKey.Int(1),
 				otelgrpc.RPCMessageTypeKey.String("SENT"),
-				otelgrpc.RPCMessageUncompressedSizeKey.Int(31423),
 			},
 		},
 		{
@@ -496,7 +463,6 @@ func checkStreamServerSpans(t *testing.T, spans []trace.ReadOnlySpan) {
 			Attributes: []attribute.KeyValue{
 				otelgrpc.RPCMessageIDKey.Int(2),
 				otelgrpc.RPCMessageTypeKey.String("RECEIVED"),
-				otelgrpc.RPCMessageUncompressedSizeKey.Int(16),
 			},
 		},
 		{
@@ -504,7 +470,6 @@ func checkStreamServerSpans(t *testing.T, spans []trace.ReadOnlySpan) {
 			Attributes: []attribute.KeyValue{
 				otelgrpc.RPCMessageIDKey.Int(2),
 				otelgrpc.RPCMessageTypeKey.String("SENT"),
-				otelgrpc.RPCMessageUncompressedSizeKey.Int(13),
 			},
 		},
 		{
@@ -512,7 +477,6 @@ func checkStreamServerSpans(t *testing.T, spans []trace.ReadOnlySpan) {
 			Attributes: []attribute.KeyValue{
 				otelgrpc.RPCMessageIDKey.Int(3),
 				otelgrpc.RPCMessageTypeKey.String("RECEIVED"),
-				otelgrpc.RPCMessageUncompressedSizeKey.Int(1839),
 			},
 		},
 		{
@@ -520,7 +484,6 @@ func checkStreamServerSpans(t *testing.T, spans []trace.ReadOnlySpan) {
 			Attributes: []attribute.KeyValue{
 				otelgrpc.RPCMessageIDKey.Int(3),
 				otelgrpc.RPCMessageTypeKey.String("SENT"),
-				otelgrpc.RPCMessageUncompressedSizeKey.Int(2659),
 			},
 		},
 		{
@@ -528,7 +491,6 @@ func checkStreamServerSpans(t *testing.T, spans []trace.ReadOnlySpan) {
 			Attributes: []attribute.KeyValue{
 				otelgrpc.RPCMessageIDKey.Int(4),
 				otelgrpc.RPCMessageTypeKey.String("RECEIVED"),
-				otelgrpc.RPCMessageUncompressedSizeKey.Int(45918),
 			},
 		},
 		{
@@ -536,7 +498,6 @@ func checkStreamServerSpans(t *testing.T, spans []trace.ReadOnlySpan) {
 			Attributes: []attribute.KeyValue{
 				otelgrpc.RPCMessageIDKey.Int(4),
 				otelgrpc.RPCMessageTypeKey.String("SENT"),
-				otelgrpc.RPCMessageUncompressedSizeKey.Int(58987),
 			},
 		},
 	}, pingPong.Events())
@@ -560,7 +521,6 @@ func checkUnaryServerSpans(t *testing.T, spans []trace.ReadOnlySpan) {
 			Attributes: []attribute.KeyValue{
 				otelgrpc.RPCMessageIDKey.Int(1),
 				otelgrpc.RPCMessageTypeKey.String("RECEIVED"),
-				otelgrpc.RPCMessageUncompressedSizeKey.Int(0),
 			},
 		},
 		{
@@ -568,7 +528,6 @@ func checkUnaryServerSpans(t *testing.T, spans []trace.ReadOnlySpan) {
 			Attributes: []attribute.KeyValue{
 				otelgrpc.RPCMessageIDKey.Int(1),
 				otelgrpc.RPCMessageTypeKey.String("SENT"),
-				otelgrpc.RPCMessageUncompressedSizeKey.Int(0),
 			},
 		},
 	}, emptySpan.Events())
@@ -589,7 +548,6 @@ func checkUnaryServerSpans(t *testing.T, spans []trace.ReadOnlySpan) {
 				otelgrpc.RPCMessageIDKey.Int(1),
 				otelgrpc.RPCMessageTypeKey.String("RECEIVED"),
 				// largeReqSize from "google.golang.org/grpc/interop" + 12 (overhead).
-				otelgrpc.RPCMessageUncompressedSizeKey.Int(271840),
 			},
 		},
 		{
@@ -598,7 +556,6 @@ func checkUnaryServerSpans(t *testing.T, spans []trace.ReadOnlySpan) {
 				otelgrpc.RPCMessageIDKey.Int(1),
 				otelgrpc.RPCMessageTypeKey.String("SENT"),
 				// largeRespSize from "google.golang.org/grpc/interop" + 8 (overhead).
-				otelgrpc.RPCMessageUncompressedSizeKey.Int(314167),
 			},
 		},
 	}, largeSpan.Events())

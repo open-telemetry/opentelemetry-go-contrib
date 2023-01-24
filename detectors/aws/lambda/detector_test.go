@@ -32,12 +32,16 @@ func TestDetectSuccess(t *testing.T) {
 	_ = os.Setenv(lambdaFunctionNameEnvVar, "testFunction")
 	_ = os.Setenv(awsRegionEnvVar, "us-texas-1")
 	_ = os.Setenv(lambdaFunctionVersionEnvVar, "$LATEST")
+	_ = os.Setenv(lambdaLogStreamNameEnvVar, "2023/01/01/[$LATEST]5d1edb9e525d486696cf01a3503487bc")
+	_ = os.Setenv(lambdaMemoryLimitEnvVar, "128")
 
 	attributes := []attribute.KeyValue{
 		semconv.CloudProviderAWS,
 		semconv.CloudRegionKey.String("us-texas-1"),
 		semconv.FaaSNameKey.String("testFunction"),
 		semconv.FaaSVersionKey.String("$LATEST"),
+		semconv.FaaSInstanceKey.String("2023/01/01/[$LATEST]5d1edb9e525d486696cf01a3503487bc"),
+		semconv.FaaSMaxMemoryKey.Int(128),
 	}
 	expectedResource := resource.NewWithAttributes(semconv.SchemaURL, attributes...)
 	detector := resourceDetector{}
