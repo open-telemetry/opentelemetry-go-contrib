@@ -62,8 +62,7 @@ func defaultHandlerFormatter(operation string, _ *http.Request) string {
 }
 
 // NewHandler wraps the passed handler, functioning like middleware, in a span
-// named after the operation and with any provided Options. The server defines
-// the name of the (virtual) server handling the request.
+// named after the operation and with any provided Options.
 func NewHandler(handler http.Handler, operation string, opts ...Option) http.Handler {
 	h := Handler{
 		handler:   handler,
