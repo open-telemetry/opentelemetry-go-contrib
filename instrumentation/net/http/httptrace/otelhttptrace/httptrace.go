@@ -22,9 +22,9 @@ import (
 	"go.opentelemetry.io/otel/attribute"
 	"go.opentelemetry.io/otel/baggage"
 	"go.opentelemetry.io/otel/propagation"
-	semconv "go.opentelemetry.io/otel/semconv/v1.13.0"
-	"go.opentelemetry.io/otel/semconv/v1.13.0/httpconv"
-	"go.opentelemetry.io/otel/semconv/v1.13.0/netconv"
+	semconv "go.opentelemetry.io/otel/semconv/v1.17.0"
+	"go.opentelemetry.io/otel/semconv/v1.17.0/httpconv"
+	"go.opentelemetry.io/otel/semconv/v1.17.0/netconv"
 	"go.opentelemetry.io/otel/trace"
 )
 
