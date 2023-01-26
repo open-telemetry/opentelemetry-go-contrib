@@ -82,7 +82,7 @@ func TestChildSpanNames(t *testing.T) {
 	assert.Equal(t, "/user/123", span.Name()) // TODO: span name should show router template, eg /user/:id
 	assert.Equal(t, oteltrace.SpanKindServer, span.SpanKind())
 	attrs := span.Attributes()
-	assert.Contains(t, attrs, attribute.String("http.server_name", "foobar"))
+	assert.Contains(t, attrs, attribute.String("net.host.name", "foobar"))
 	assert.Contains(t, attrs, attribute.Int("http.status_code", http.StatusOK))
 	assert.Contains(t, attrs, attribute.String("http.method", "GET"))
 	assert.Contains(t, attrs, attribute.String("http.target", "/user/123"))
@@ -91,7 +91,7 @@ func TestChildSpanNames(t *testing.T) {
 	assert.Equal(t, "/book/foo", span.Name()) // TODO: span name should show router template, eg /book/:title
 	assert.Equal(t, oteltrace.SpanKindServer, span.SpanKind())
 	attrs = span.Attributes()
-	assert.Contains(t, attrs, attribute.String("http.server_name", "foobar"))
+	assert.Contains(t, attrs, attribute.String("net.host.name", "foobar"))
 	assert.Contains(t, attrs, attribute.Int("http.status_code", http.StatusOK))
 	assert.Contains(t, attrs, attribute.String("http.method", "GET"))
 	assert.Contains(t, attrs, attribute.String("http.target", "/book/foo"))

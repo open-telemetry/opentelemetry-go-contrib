@@ -19,7 +19,7 @@ import (
 	"net"
 
 	"go.opentelemetry.io/otel/attribute"
-	semconv "go.opentelemetry.io/otel/semconv/v1.12.0"
+	semconv "go.opentelemetry.io/otel/semconv/v1.17.0"
 )
 
 const (
@@ -84,7 +84,7 @@ func CassPeerPort(port int) attribute.KeyValue {
 // CassPeerIP returns the IP address of the cassandra
 // server as a semconv KeyValue pair (net.peer.ip).
 func CassPeerIP(ip string) attribute.KeyValue {
-	return semconv.NetPeerIPKey.String(ip)
+	return semconv.NetSockPeerAddrKey.String(ip)
 }
 
 // CassVersion returns the cql version as a KeyValue pair.

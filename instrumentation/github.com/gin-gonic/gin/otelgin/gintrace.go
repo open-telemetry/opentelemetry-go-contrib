@@ -26,7 +26,8 @@ import (
 
 	"go.opentelemetry.io/otel/attribute"
 	"go.opentelemetry.io/otel/propagation"
-	semconv "go.opentelemetry.io/otel/semconv/v1.12.0"
+	"go.opentelemetry.io/otel/semconv/v1.16.0/httpconv"
+	semconv "go.opentelemetry.io/otel/semconv/v1.17.0"
 	oteltrace "go.opentelemetry.io/otel/trace"
 )
 
@@ -69,14 +70,19 @@ func Middleware(service string, opts ...Option) gin.HandlerFunc {
 		}()
 		ctx := cfg.Propagators.Extract(savedCtx, propagation.HeaderCarrier(c.Request.Header))
 		opts := []oteltrace.SpanStartOption{
-			oteltrace.WithAttributes(semconv.NetAttributesFromHTTPRequest("tcp", c.Request)...),
-			oteltrace.WithAttributes(semconv.EndUserAttributesFromHTTPRequest(c.Request)...),
-			oteltrace.WithAttributes(semconv.HTTPServerAttributesFromHTTPRequest(service, c.FullPath(), c.Request)...),
+			oteltrace.WithAttributes(httpconv.ServerRequest(c.Request)...),
+			// TODO: pass service to ServerRequest when
+			// https://github.com/open-telemetry/opentelemetry-go/pull/3619 is
+			// merged, and remove this.
+			oteltrace.WithAttributes(semconv.NetHostNameKey.String(service)),
 			oteltrace.WithSpanKind(oteltrace.SpanKindServer),
 		}
 		spanName := c.FullPath()
 		if spanName == "" {
 			spanName = fmt.Sprintf("HTTP %s route not found", c.Request.Method)
+		} else {
+			rAttr := semconv.HTTPRouteKey.String(spanName)
+			opts = append(opts, oteltrace.WithAttributes(rAttr))
 		}
 		ctx, span := tracer.Start(ctx, spanName, opts...)
 		defer span.End()
@@ -88,10 +94,10 @@ func Middleware(service string, opts ...Option) gin.HandlerFunc {
 		c.Next()
 
 		status := c.Writer.Status()
-		attrs := semconv.HTTPAttributesFromHTTPStatusCode(status)
-		spanStatus, spanMessage := semconv.SpanStatusFromHTTPStatusCodeAndSpanKind(status, oteltrace.SpanKindServer)
-		span.SetAttributes(attrs...)
-		span.SetStatus(spanStatus, spanMessage)
+		span.SetStatus(httpconv.ServerStatus(status))
+		if status > 0 {
+			span.SetAttributes(semconv.HTTPStatusCodeKey.Int(status))
+		}
 		if len(c.Errors) > 0 {
 			span.SetAttributes(attribute.String("gin.errors", c.Errors.String()))
 		}

@@ -98,7 +98,7 @@ func TestTrace200(t *testing.T) {
 	assert.Equal(t, "/user/:id", span.Name())
 	assert.Equal(t, oteltrace.SpanKindServer, span.SpanKind())
 	attr := span.Attributes()
-	assert.Contains(t, attr, attribute.String("http.server_name", "foobar"))
+	assert.Contains(t, attr, attribute.String("net.host.name", "foobar"))
 	assert.Contains(t, attr, attribute.Int("http.status_code", http.StatusOK))
 	assert.Contains(t, attr, attribute.String("http.method", "GET"))
 	assert.Contains(t, attr, attribute.String("http.target", "/user/123"))
@@ -130,7 +130,7 @@ func TestError(t *testing.T) {
 	span := spans[0]
 	assert.Equal(t, "/server_err", span.Name())
 	attr := span.Attributes()
-	assert.Contains(t, attr, attribute.String("http.server_name", "foobar"))
+	assert.Contains(t, attr, attribute.String("net.host.name", "foobar"))
 	assert.Contains(t, attr, attribute.Int("http.status_code", http.StatusInternalServerError))
 	assert.Contains(t, attr, attribute.String("gin.errors", "Error #01: oh no\n"))
 	// server errors set the status

@@ -37,7 +37,7 @@ import (
 	"go.opentelemetry.io/otel/sdk/metric/metricdata/metricdatatest"
 	sdktrace "go.opentelemetry.io/otel/sdk/trace"
 	"go.opentelemetry.io/otel/sdk/trace/tracetest"
-	semconv "go.opentelemetry.io/otel/semconv/v1.12.0"
+	semconv "go.opentelemetry.io/otel/semconv/v1.17.0"
 	"go.opentelemetry.io/otel/trace"
 )
 
@@ -91,8 +91,6 @@ func TestHandlerBasics(t *testing.T) {
 	reader := metric.NewManualReader()
 	meterProvider := metric.NewMeterProvider(metric.WithReader(reader))
 
-	operation := "test_handler"
-
 	h := otelhttp.NewHandler(
 		http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 			l, _ := otelhttp.LabelerFromContext(r.Context())
@@ -101,7 +99,7 @@ func TestHandlerBasics(t *testing.T) {
 			if _, err := io.WriteString(w, "hello world"); err != nil {
 				t.Fatal(err)
 			}
-		}), operation,
+		}), "test_handler",
 		otelhttp.WithTracerProvider(provider),
 		otelhttp.WithMeterProvider(meterProvider),
 		otelhttp.WithPropagators(propagation.TraceContext{}),
@@ -117,9 +115,9 @@ func TestHandlerBasics(t *testing.T) {
 	require.NoError(t, err)
 	require.Len(t, rm.ScopeMetrics, 1)
 	attrs := attribute.NewSet(
-		semconv.HTTPServerNameKey.String(operation),
+		semconv.NetHostNameKey.String(r.Host),
 		semconv.HTTPSchemeHTTP,
-		semconv.HTTPHostKey.String(r.Host),
+		semconv.HTTPTargetKey.String(r.URL.Path),
 		semconv.HTTPFlavorKey.String(fmt.Sprintf("1.%d", r.ProtoMinor)),
 		semconv.HTTPMethodKey.String("GET"),
 		attribute.String("test", "attribute"),

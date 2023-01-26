@@ -28,7 +28,7 @@ import (
 	"go.opentelemetry.io/otel/codes"
 	"go.opentelemetry.io/otel/sdk/trace"
 	"go.opentelemetry.io/otel/sdk/trace/tracetest"
-	semconv "go.opentelemetry.io/otel/semconv/v1.12.0"
+	semconv "go.opentelemetry.io/otel/semconv/v1.17.0"
 
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
@@ -66,7 +66,7 @@ func (mcuici *mockUICInvoker) invoker(ctx context.Context, method string, req, r
 }
 
 func TestUnaryClientInterceptor(t *testing.T) {
-	clientConn, err := grpc.Dial("fake:connection", grpc.WithTransportCredentials(insecure.NewCredentials()))
+	clientConn, err := grpc.Dial("fake:8906", grpc.WithTransportCredentials(insecure.NewCredentials()))
 	if err != nil {
 		t.Fatalf("failed to create client connection: %v", err)
 	}
@@ -96,8 +96,8 @@ func TestUnaryClientInterceptor(t *testing.T) {
 				semconv.RPCServiceKey.String("github.com.serviceName"),
 				semconv.RPCMethodKey.String("bar"),
 				otelgrpc.GRPCStatusCodeKey.Int64(0),
-				semconv.NetPeerIPKey.String("fake"),
-				semconv.NetPeerPortKey.String("connection"),
+				semconv.NetPeerNameKey.String("fake"),
+				semconv.NetPeerPortKey.Int(8906),
 			},
 			eventsAttr: []map[attribute.Key]attribute.Value{
 				{
@@ -118,8 +118,8 @@ func TestUnaryClientInterceptor(t *testing.T) {
 				semconv.RPCServiceKey.String("serviceName"),
 				semconv.RPCMethodKey.String("bar"),
 				otelgrpc.GRPCStatusCodeKey.Int64(0),
-				semconv.NetPeerIPKey.String("fake"),
-				semconv.NetPeerPortKey.String("connection"),
+				semconv.NetPeerNameKey.String("fake"),
+				semconv.NetPeerPortKey.Int(8906),
 			},
 			eventsAttr: []map[attribute.Key]attribute.Value{
 				{
@@ -140,8 +140,8 @@ func TestUnaryClientInterceptor(t *testing.T) {
 				semconv.RPCServiceKey.String("serviceName"),
 				semconv.RPCMethodKey.String("bar"),
 				otelgrpc.GRPCStatusCodeKey.Int64(int64(grpc_codes.OK)),
-				semconv.NetPeerIPKey.String("fake"),
-				semconv.NetPeerPortKey.String("connection"),
+				semconv.NetPeerNameKey.String("fake"),
+				semconv.NetPeerPortKey.Int(8906),
 			},
 			eventsAttr: []map[attribute.Key]attribute.Value{
 				{
@@ -163,8 +163,8 @@ func TestUnaryClientInterceptor(t *testing.T) {
 				semconv.RPCServiceKey.String("serviceName"),
 				semconv.RPCMethodKey.String("bar_error"),
 				otelgrpc.GRPCStatusCodeKey.Int64(int64(grpc_codes.Internal)),
-				semconv.NetPeerIPKey.String("fake"),
-				semconv.NetPeerPortKey.String("connection"),
+				semconv.NetPeerNameKey.String("fake"),
+				semconv.NetPeerPortKey.Int(8906),
 			},
 			eventsAttr: []map[attribute.Key]attribute.Value{
 				{
@@ -184,8 +184,8 @@ func TestUnaryClientInterceptor(t *testing.T) {
 			expectedAttr: []attribute.KeyValue{
 				semconv.RPCSystemKey.String("grpc"),
 				otelgrpc.GRPCStatusCodeKey.Int64(0),
-				semconv.NetPeerIPKey.String("fake"),
-				semconv.NetPeerPortKey.String("connection"),
+				semconv.NetPeerNameKey.String("fake"),
+				semconv.NetPeerPortKey.Int(8906),
 			},
 			eventsAttr: []map[attribute.Key]attribute.Value{
 				{
@@ -206,8 +206,8 @@ func TestUnaryClientInterceptor(t *testing.T) {
 				otelgrpc.GRPCStatusCodeKey.Int64(0),
 				semconv.RPCServiceKey.String("github.com.foo.serviceName_123"),
 				semconv.RPCMethodKey.String("method"),
-				semconv.NetPeerIPKey.String("fake"),
-				semconv.NetPeerPortKey.String("connection"),
+				semconv.NetPeerNameKey.String("fake"),
+				semconv.NetPeerPortKey.Int(8906),
 			},
 			eventsAttr: []map[attribute.Key]attribute.Value{
 				{
@@ -284,7 +284,7 @@ func newMockClientStream(opts clientStreamOpts) *mockClientStream {
 
 func createInterceptedStreamClient(t *testing.T, method string, opts clientStreamOpts) (grpc.ClientStream, *tracetest.SpanRecorder) {
 	mockStream := newMockClientStream(opts)
-	clientConn, err := grpc.Dial("fake:connection", grpc.WithTransportCredentials(insecure.NewCredentials()))
+	clientConn, err := grpc.Dial("fake:8906", grpc.WithTransportCredentials(insecure.NewCredentials()))
 	if err != nil {
 		t.Fatalf("failed to create client connection: %v", err)
 	}
@@ -352,8 +352,8 @@ func TestStreamClientInterceptorOnBIDIStream(t *testing.T) {
 		otelgrpc.GRPCStatusCodeKey.Int64(int64(grpc_codes.OK)),
 		semconv.RPCServiceKey.String("github.com.serviceName"),
 		semconv.RPCMethodKey.String("bar"),
-		semconv.NetPeerIPKey.String("fake"),
-		semconv.NetPeerPortKey.String("connection"),
+		semconv.NetPeerNameKey.String("fake"),
+		semconv.NetPeerPortKey.Int(8906),
 	}
 	assert.ElementsMatch(t, expectedAttr, span.Attributes())
 
@@ -420,8 +420,8 @@ func TestStreamClientInterceptorOnUnidirectionalClientServerStream(t *testing.T)
 		otelgrpc.GRPCStatusCodeKey.Int64(int64(grpc_codes.OK)),
 		semconv.RPCServiceKey.String("github.com.serviceName"),
 		semconv.RPCMethodKey.String("bar"),
-		semconv.NetPeerIPKey.String("fake"),
-		semconv.NetPeerPortKey.String("connection"),
+		semconv.NetPeerNameKey.String("fake"),
+		semconv.NetPeerPortKey.Int(8906),
 	}
 	assert.ElementsMatch(t, expectedAttr, span.Attributes())
 
@@ -449,7 +449,7 @@ func TestStreamClientInterceptorOnUnidirectionalClientServerStream(t *testing.T)
 // There should be no goleaks.
 func TestStreamClientInterceptorCancelContext(t *testing.T) {
 	defer goleak.VerifyNone(t)
-	clientConn, err := grpc.Dial("fake:connection", grpc.WithTransportCredentials(insecure.NewCredentials()))
+	clientConn, err := grpc.Dial("fake:8906", grpc.WithTransportCredentials(insecure.NewCredentials()))
 	if err != nil {
 		t.Fatalf("failed to create client connection: %v", err)
 	}
@@ -502,7 +502,7 @@ func TestStreamClientInterceptorCancelContext(t *testing.T) {
 func TestStreamClientInterceptorWithError(t *testing.T) {
 	defer goleak.VerifyNone(t)
 
-	clientConn, err := grpc.Dial("fake:connection", grpc.WithTransportCredentials(insecure.NewCredentials()))
+	clientConn, err := grpc.Dial("fake:8906", grpc.WithTransportCredentials(insecure.NewCredentials()))
 	if err != nil {
 		t.Fatalf("failed to create client connection: %v", err)
 	}
@@ -542,8 +542,8 @@ func TestStreamClientInterceptorWithError(t *testing.T) {
 		otelgrpc.GRPCStatusCodeKey.Int64(int64(grpc_codes.Unknown)),
 		semconv.RPCServiceKey.String("github.com.serviceName"),
 		semconv.RPCMethodKey.String("bar"),
-		semconv.NetPeerIPKey.String("fake"),
-		semconv.NetPeerPortKey.String("connection"),
+		semconv.NetPeerNameKey.String("fake"),
+		semconv.NetPeerPortKey.Int(8906),
 	}
 	assert.ElementsMatch(t, expectedAttr, span.Attributes())
 	assert.Equal(t, codes.Error, span.Status().Code)

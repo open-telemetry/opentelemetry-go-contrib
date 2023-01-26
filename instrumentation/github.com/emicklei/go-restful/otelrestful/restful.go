@@ -19,7 +19,8 @@ import (
 
 	"go.opentelemetry.io/otel"
 	"go.opentelemetry.io/otel/propagation"
-	semconv "go.opentelemetry.io/otel/semconv/v1.12.0"
+	"go.opentelemetry.io/otel/semconv/v1.15.0/httpconv"
+	semconv "go.opentelemetry.io/otel/semconv/v1.17.0"
 	oteltrace "go.opentelemetry.io/otel/trace"
 )
 
@@ -51,12 +52,20 @@ func OTelFilter(service string, opts ...Option) restful.FilterFunction {
 		route := req.SelectedRoutePath()
 		spanName := route
 
-		ctx, span := tracer.Start(ctx, spanName,
-			oteltrace.WithAttributes(semconv.NetAttributesFromHTTPRequest("tcp", r)...),
-			oteltrace.WithAttributes(semconv.EndUserAttributesFromHTTPRequest(r)...),
-			oteltrace.WithAttributes(semconv.HTTPServerAttributesFromHTTPRequest(service, route, r)...),
+		opts := []oteltrace.SpanStartOption{
+			oteltrace.WithAttributes(httpconv.ServerRequest(r)...),
+			// TODO: pass service to ServerRequest when
+			// https://github.com/open-telemetry/opentelemetry-go/pull/3619 is
+			// merged, and remove this.
+			oteltrace.WithAttributes(semconv.NetHostNameKey.String(service)),
 			oteltrace.WithSpanKind(oteltrace.SpanKindServer),
-		)
+		}
+		if route != "" {
+			rAttr := semconv.HTTPRouteKey.String(route)
+			opts = append(opts, oteltrace.WithAttributes(rAttr))
+		}
+
+		ctx, span := tracer.Start(ctx, spanName, opts...)
 		defer span.End()
 
 		// pass the span through the request context
@@ -64,9 +73,10 @@ func OTelFilter(service string, opts ...Option) restful.FilterFunction {
 
 		chain.ProcessFilter(req, resp)
 
-		attrs := semconv.HTTPAttributesFromHTTPStatusCode(resp.StatusCode())
-		spanStatus, spanMessage := semconv.SpanStatusFromHTTPStatusCodeAndSpanKind(resp.StatusCode(), oteltrace.SpanKindServer)
-		span.SetAttributes(attrs...)
-		span.SetStatus(spanStatus, spanMessage)
+		status := resp.StatusCode()
+		span.SetStatus(httpconv.ServerStatus(status))
+		if status > 0 {
+			span.SetAttributes(semconv.HTTPStatusCodeKey.Int(status))
+		}
 	}
 }

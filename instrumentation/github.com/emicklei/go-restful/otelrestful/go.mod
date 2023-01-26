@@ -8,7 +8,7 @@ require (
 	github.com/emicklei/go-restful/v3 v3.10.1
 	github.com/stretchr/testify v1.8.1
 	go.opentelemetry.io/contrib/propagators/b3 v1.12.0
-	go.opentelemetry.io/otel v1.11.2
+	go.opentelemetry.io/otel v1.11.3-0.20230124161041-c7e26795299f
 	go.opentelemetry.io/otel/trace v1.11.2
 )
 

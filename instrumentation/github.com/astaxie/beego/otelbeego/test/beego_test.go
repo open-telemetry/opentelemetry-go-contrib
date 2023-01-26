@@ -32,7 +32,7 @@ import (
 	"go.opentelemetry.io/otel/propagation"
 	"go.opentelemetry.io/otel/sdk/trace"
 	"go.opentelemetry.io/otel/sdk/trace/tracetest"
-	semconv "go.opentelemetry.io/otel/semconv/v1.12.0"
+	semconv "go.opentelemetry.io/otel/semconv/v1.17.0"
 
 	"github.com/astaxie/beego"
 	beegoCtx "github.com/astaxie/beego/context"
@@ -329,9 +329,8 @@ func runTest(t *testing.T, tc *testCase, url string) {
 
 func defaultAttributes() []attribute.KeyValue {
 	return []attribute.KeyValue{
-		semconv.HTTPServerNameKey.String(middleWareName),
+		semconv.NetHostNameKey.String(middleWareName),
 		semconv.HTTPSchemeHTTP,
-		semconv.HTTPHostKey.String("localhost"),
 	}
 }
 

@@ -25,7 +25,8 @@ import (
 	"go.opentelemetry.io/otel"
 
 	"go.opentelemetry.io/otel/propagation"
-	semconv "go.opentelemetry.io/otel/semconv/v1.12.0"
+	"go.opentelemetry.io/otel/semconv/v1.13.0/httpconv"
+	semconv "go.opentelemetry.io/otel/semconv/v1.17.0"
 	oteltrace "go.opentelemetry.io/otel/trace"
 )
 
@@ -135,14 +136,19 @@ func (tw traceware) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 			}
 		}
 	}
+	opts := []oteltrace.SpanStartOption{
+		oteltrace.WithAttributes(httpconv.ServerRequest(r)...),
+		// TODO: pass service to ServerRequest when
+		// https://github.com/open-telemetry/opentelemetry-go/pull/3619 is
+		// merged, and remove this.
+		oteltrace.WithAttributes(semconv.NetHostNameKey.String(tw.service)),
+		oteltrace.WithSpanKind(oteltrace.SpanKindServer),
+	}
 	if routeStr == "" {
 		routeStr = fmt.Sprintf("HTTP %s route not found", r.Method)
-	}
-	opts := []oteltrace.SpanStartOption{
-		oteltrace.WithAttributes(semconv.NetAttributesFromHTTPRequest("tcp", r)...),
-		oteltrace.WithAttributes(semconv.EndUserAttributesFromHTTPRequest(r)...),
-		oteltrace.WithAttributes(semconv.HTTPServerAttributesFromHTTPRequest(tw.service, routeStr, r)...),
-		oteltrace.WithSpanKind(oteltrace.SpanKindServer),
+	} else {
+		rAttr := semconv.HTTPRouteKey.String(routeStr)
+		opts = append(opts, oteltrace.WithAttributes(rAttr))
 	}
 	spanName := tw.spanNameFormatter(routeStr, r)
 	ctx, span := tw.tracer.Start(ctx, spanName, opts...)
@@ -151,8 +157,11 @@ func (tw traceware) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	rrw := getRRW(w)
 	defer putRRW(rrw)
 	tw.handler.ServeHTTP(rrw.writer, r2)
-	attrs := semconv.HTTPAttributesFromHTTPStatusCode(rrw.status)
-	spanStatus, spanMessage := semconv.SpanStatusFromHTTPStatusCodeAndSpanKind(rrw.status, oteltrace.SpanKindServer)
-	span.SetAttributes(attrs...)
-	span.SetStatus(spanStatus, spanMessage)
+	if rrw.status > 0 {
+		span.SetAttributes(semconv.HTTPStatusCodeKey.Int(rrw.status))
+	}
+	span.SetStatus(httpconv.ServerStatus(rrw.status))
+	if rrw.status > 0 {
+		span.SetAttributes(semconv.HTTPStatusCodeKey.Int(rrw.status))
+	}
 }
