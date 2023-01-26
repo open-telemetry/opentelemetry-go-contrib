@@ -66,7 +66,7 @@ func Extract(ctx context.Context, req *http.Request, opts ...Option) ([]attribut
 	c := newConfig(opts)
 	ctx = c.propagators.Extract(ctx, propagation.HeaderCarrier(req.Header))
 
-	attrs := append(httpconv.ServerRequest(req), netconv.Transport("tcp"))
+	attrs := append(httpconv.ServerRequest("", req), netconv.Transport("tcp"))
 	if req.ContentLength > 0 {
 		a := semconv.HTTPRequestContentLengthKey.Int(int(req.ContentLength))
 		attrs = append(attrs, a)

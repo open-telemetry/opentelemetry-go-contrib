@@ -121,7 +121,7 @@ func (t *Transport) RoundTrip(r *http.Request) (*http.Response, error) {
 		return res, err
 	}
 
-	span.SetAttributes(httpconv.ClientResponse(*res)...)
+	span.SetAttributes(httpconv.ClientResponse(res)...)
 	span.SetStatus(httpconv.ClientStatus(res.StatusCode))
 	res.Body = newWrappedBody(span, res.Body)
 

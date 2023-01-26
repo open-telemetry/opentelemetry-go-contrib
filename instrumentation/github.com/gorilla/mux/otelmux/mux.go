@@ -137,11 +137,7 @@ func (tw traceware) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		}
 	}
 	opts := []oteltrace.SpanStartOption{
-		oteltrace.WithAttributes(httpconv.ServerRequest(r)...),
-		// TODO: pass service to ServerRequest when
-		// https://github.com/open-telemetry/opentelemetry-go/pull/3619 is
-		// merged, and remove this.
-		oteltrace.WithAttributes(semconv.NetHostNameKey.String(tw.service)),
+		oteltrace.WithAttributes(httpconv.ServerRequest(tw.service, r)...),
 		oteltrace.WithSpanKind(oteltrace.SpanKindServer),
 	}
 	if routeStr == "" {

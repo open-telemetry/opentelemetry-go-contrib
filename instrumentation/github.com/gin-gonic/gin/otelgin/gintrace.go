@@ -70,11 +70,7 @@ func Middleware(service string, opts ...Option) gin.HandlerFunc {
 		}()
 		ctx := cfg.Propagators.Extract(savedCtx, propagation.HeaderCarrier(c.Request.Header))
 		opts := []oteltrace.SpanStartOption{
-			oteltrace.WithAttributes(httpconv.ServerRequest(c.Request)...),
-			// TODO: pass service to ServerRequest when
-			// https://github.com/open-telemetry/opentelemetry-go/pull/3619 is
-			// merged, and remove this.
-			oteltrace.WithAttributes(semconv.NetHostNameKey.String(service)),
+			oteltrace.WithAttributes(httpconv.ServerRequest(service, c.Request)...),
 			oteltrace.WithSpanKind(oteltrace.SpanKindServer),
 		}
 		spanName := c.FullPath()

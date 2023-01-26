@@ -132,10 +132,7 @@ func (h *Handler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 
 	ctx := h.propagators.Extract(r.Context(), propagation.HeaderCarrier(r.Header))
 	opts := []trace.SpanStartOption{
-		// TODO: pass h.server when
-		// https://github.com/open-telemetry/opentelemetry-go/pull/3619 is
-		// resolved, and remove the following if statement.
-		trace.WithAttributes(httpconv.ServerRequest(r)...),
+		trace.WithAttributes(httpconv.ServerRequest(h.server, r)...),
 	}
 	if h.server != "" {
 		hostAttr := semconv.NetHostNameKey.String(h.server)
@@ -219,7 +216,7 @@ func (h *Handler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	setAfterServeAttributes(span, bw.read, rww.written, rww.statusCode, bw.err, rww.err)
 
 	// Add metrics
-	attributes := append(labeler.Get(), httpconv.ServerRequest(r)...)
+	attributes := append(labeler.Get(), httpconv.ServerRequest(h.server, r)...)
 	h.counters[RequestContentLength].Add(ctx, bw.read, attributes...)
 	h.counters[ResponseContentLength].Add(ctx, rww.written, attributes...)
 

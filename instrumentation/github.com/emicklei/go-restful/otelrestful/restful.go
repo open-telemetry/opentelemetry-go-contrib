@@ -53,11 +53,7 @@ func OTelFilter(service string, opts ...Option) restful.FilterFunction {
 		spanName := route
 
 		opts := []oteltrace.SpanStartOption{
-			oteltrace.WithAttributes(httpconv.ServerRequest(r)...),
-			// TODO: pass service to ServerRequest when
-			// https://github.com/open-telemetry/opentelemetry-go/pull/3619 is
-			// merged, and remove this.
-			oteltrace.WithAttributes(semconv.NetHostNameKey.String(service)),
+			oteltrace.WithAttributes(httpconv.ServerRequest(service, r)...),
 			oteltrace.WithSpanKind(oteltrace.SpanKindServer),
 		}
 		if route != "" {

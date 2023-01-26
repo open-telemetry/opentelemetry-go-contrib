@@ -44,11 +44,7 @@ func Middleware(service string, opts ...Option) macaron.Handler {
 
 		ctx := cfg.Propagators.Extract(savedCtx, propagation.HeaderCarrier(c.Req.Header))
 		opts := []oteltrace.SpanStartOption{
-			oteltrace.WithAttributes(httpconv.ServerRequest(c.Req.Request)...),
-			// TODO: pass service to ServerRequest when
-			// https://github.com/open-telemetry/opentelemetry-go/pull/3619 is
-			// merged, and remove this.
-			oteltrace.WithAttributes(semconv.NetHostNameKey.String(service)),
+			oteltrace.WithAttributes(httpconv.ServerRequest(service, c.Req.Request)...),
 			oteltrace.WithSpanKind(oteltrace.SpanKindServer),
 		}
 		// TODO: span name should be router template not the actual request path, eg /user/:id vs /user/123
