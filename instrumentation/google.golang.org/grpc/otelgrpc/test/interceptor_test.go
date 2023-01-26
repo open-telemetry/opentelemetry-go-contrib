@@ -66,7 +66,10 @@ func (mcuici *mockUICInvoker) invoker(ctx context.Context, method string, req, r
 }
 
 func TestUnaryClientInterceptor(t *testing.T) {
-	clientConn, err := grpc.Dial("fake:8906", grpc.WithTransportCredentials(insecure.NewCredentials()))
+	ctx, cancel := context.WithCancel(context.Background())
+	t.Cleanup(cancel)
+
+	clientConn, err := grpc.DialContext(ctx, "fake:8906", grpc.WithTransportCredentials(insecure.NewCredentials()))
 	if err != nil {
 		t.Fatalf("failed to create client connection: %v", err)
 	}
@@ -283,8 +286,11 @@ func newMockClientStream(opts clientStreamOpts) *mockClientStream {
 }
 
 func createInterceptedStreamClient(t *testing.T, method string, opts clientStreamOpts) (grpc.ClientStream, *tracetest.SpanRecorder) {
+	ctx, cancel := context.WithCancel(context.Background())
+	t.Cleanup(cancel)
+
 	mockStream := newMockClientStream(opts)
-	clientConn, err := grpc.Dial("fake:8906", grpc.WithTransportCredentials(insecure.NewCredentials()))
+	clientConn, err := grpc.DialContext(ctx, "fake:8906", grpc.WithTransportCredentials(insecure.NewCredentials()))
 	if err != nil {
 		t.Fatalf("failed to create client connection: %v", err)
 	}
@@ -449,7 +455,11 @@ func TestStreamClientInterceptorOnUnidirectionalClientServerStream(t *testing.T)
 // There should be no goleaks.
 func TestStreamClientInterceptorCancelContext(t *testing.T) {
 	defer goleak.VerifyNone(t)
-	clientConn, err := grpc.Dial("fake:8906", grpc.WithTransportCredentials(insecure.NewCredentials()))
+
+	ctx, cancel := context.WithCancel(context.Background())
+	t.Cleanup(cancel)
+
+	clientConn, err := grpc.DialContext(ctx, "fake:8906", grpc.WithTransportCredentials(insecure.NewCredentials()))
 	if err != nil {
 		t.Fatalf("failed to create client connection: %v", err)
 	}
@@ -502,7 +512,10 @@ func TestStreamClientInterceptorCancelContext(t *testing.T) {
 func TestStreamClientInterceptorWithError(t *testing.T) {
 	defer goleak.VerifyNone(t)
 
-	clientConn, err := grpc.Dial("fake:8906", grpc.WithTransportCredentials(insecure.NewCredentials()))
+	ctx, cancel := context.WithCancel(context.Background())
+	t.Cleanup(cancel)
+
+	clientConn, err := grpc.DialContext(ctx, "fake:8906", grpc.WithTransportCredentials(insecure.NewCredentials()))
 	if err != nil {
 		t.Fatalf("failed to create client connection: %v", err)
 	}
