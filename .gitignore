@@ -4,6 +4,8 @@ Thumbs.db
 .tools/
 .idea/
 .vscode/
+go.work
+go.work.sum
 *.iml
 *.so
 coverage.*

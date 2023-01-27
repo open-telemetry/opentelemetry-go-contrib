@@ -18,6 +18,7 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 ### Changed
 
 - `otelgrpc`: Remove expensive calculation of uncompressed message size attribute. (#3168)
+- `samplers/jaegerremote`: change to use protobuf parser instead of encoding/json to accept enums as strings. (#3183)
 
 ## [1.12.0/0.37.0/0.6.0]
 
