@@ -18,6 +18,7 @@ import (
 	"context"
 	"errors"
 	"io"
+	"net"
 	"strings"
 	"testing"
 	"time"
@@ -39,6 +40,7 @@ import (
 	"google.golang.org/grpc/interop/grpc_testing"
 	"google.golang.org/grpc/metadata"
 	"google.golang.org/grpc/status"
+	"google.golang.org/grpc/test/bufconn"
 )
 
 func getSpanFromRecorder(sr *tracetest.SpanRecorder, name string) (trace.ReadOnlySpan, bool) {
@@ -65,11 +67,21 @@ func (mcuici *mockUICInvoker) invoker(ctx context.Context, method string, req, r
 	return nil
 }
 
+func ctxDialer() func(context.Context, string) (net.Conn, error) {
+	l := bufconn.Listen(0)
+	return func(ctx context.Context, _ string) (net.Conn, error) {
+		return l.DialContext(ctx)
+	}
+}
+
 func TestUnaryClientInterceptor(t *testing.T) {
 	ctx, cancel := context.WithCancel(context.Background())
 	t.Cleanup(cancel)
 
-	clientConn, err := grpc.DialContext(ctx, "fake:8906", grpc.WithTransportCredentials(insecure.NewCredentials()))
+	clientConn, err := grpc.DialContext(ctx, "fake:8906",
+		grpc.WithContextDialer(ctxDialer()),
+		grpc.WithTransportCredentials(insecure.NewCredentials()),
+	)
 	if err != nil {
 		t.Fatalf("failed to create client connection: %v", err)
 	}
@@ -290,7 +302,10 @@ func createInterceptedStreamClient(t *testing.T, method string, opts clientStrea
 	t.Cleanup(cancel)
 
 	mockStream := newMockClientStream(opts)
-	clientConn, err := grpc.DialContext(ctx, "fake:8906", grpc.WithTransportCredentials(insecure.NewCredentials()))
+	clientConn, err := grpc.DialContext(ctx, "fake:8906",
+		grpc.WithContextDialer(ctxDialer()),
+		grpc.WithTransportCredentials(insecure.NewCredentials()),
+	)
 	if err != nil {
 		t.Fatalf("failed to create client connection: %v", err)
 	}
@@ -321,7 +336,7 @@ func createInterceptedStreamClient(t *testing.T, method string, opts clientStrea
 }
 
 func TestStreamClientInterceptorOnBIDIStream(t *testing.T) {
-	t.Cleanup(func() { goleak.VerifyNone(t) })
+	defer goleak.VerifyNone(t)
 
 	method := "/github.com.serviceName/bar"
 	name := "github.com.serviceName/bar"
@@ -387,7 +402,7 @@ func TestStreamClientInterceptorOnBIDIStream(t *testing.T) {
 }
 
 func TestStreamClientInterceptorOnUnidirectionalClientServerStream(t *testing.T) {
-	t.Cleanup(func() { goleak.VerifyNone(t) })
+	defer goleak.VerifyNone(t)
 
 	method := "/github.com.serviceName/bar"
 	name := "github.com.serviceName/bar"
@@ -454,12 +469,15 @@ func TestStreamClientInterceptorOnUnidirectionalClientServerStream(t *testing.T)
 // TestStreamClientInterceptorCancelContext tests a cancel context situation.
 // There should be no goleaks.
 func TestStreamClientInterceptorCancelContext(t *testing.T) {
-	t.Cleanup(func() { goleak.VerifyNone(t) })
+	defer goleak.VerifyNone(t)
 
 	ctx, cancel := context.WithCancel(context.Background())
 	t.Cleanup(cancel)
 
-	clientConn, err := grpc.DialContext(ctx, "fake:8906", grpc.WithTransportCredentials(insecure.NewCredentials()))
+	clientConn, err := grpc.DialContext(ctx, "fake:8906",
+		grpc.WithContextDialer(ctxDialer()),
+		grpc.WithTransportCredentials(insecure.NewCredentials()),
+	)
 	if err != nil {
 		t.Fatalf("failed to create client connection: %v", err)
 	}
@@ -510,12 +528,15 @@ func TestStreamClientInterceptorCancelContext(t *testing.T) {
 
 // TestStreamClientInterceptorWithError tests a situation that streamer returns an error.
 func TestStreamClientInterceptorWithError(t *testing.T) {
-	t.Cleanup(func() { goleak.VerifyNone(t) })
+	defer goleak.VerifyNone(t)
 
 	ctx, cancel := context.WithCancel(context.Background())
 	t.Cleanup(cancel)
 
-	clientConn, err := grpc.DialContext(ctx, "fake:8906", grpc.WithTransportCredentials(insecure.NewCredentials()))
+	clientConn, err := grpc.DialContext(ctx, "fake:8906",
+		grpc.WithContextDialer(ctxDialer()),
+		grpc.WithTransportCredentials(insecure.NewCredentials()),
+	)
 	if err != nil {
 		t.Fatalf("failed to create client connection: %v", err)
 	}
