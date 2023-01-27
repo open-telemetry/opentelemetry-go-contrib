@@ -583,7 +583,7 @@ func TestSamplingStrategyParserImpl(t *testing.T) {
 
 func TestSamplingStrategyParserImpl_Error(t *testing.T) {
 	json := `{"strategyType":"foo_bar","probabilisticSampling":{"samplingRate":0.42}}`
-	any, err := new(samplingStrategyParserImpl).Parse([]byte(json))
-	require.Error(t, err, "output: %+v", any)
+	val, err := new(samplingStrategyParserImpl).Parse([]byte(json))
+	require.Error(t, err, "output: %+v", val)
 	require.Contains(t, err.Error(), `unknown value "foo_bar"`)
 }
