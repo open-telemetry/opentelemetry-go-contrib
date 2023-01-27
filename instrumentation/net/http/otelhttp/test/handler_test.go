@@ -121,6 +121,7 @@ func TestHandlerBasics(t *testing.T) {
 		semconv.HTTPFlavorKey.String(fmt.Sprintf("1.%d", r.ProtoMinor)),
 		semconv.HTTPMethodKey.String("GET"),
 		attribute.String("test", "attribute"),
+		semconv.HTTPStatusCodeKey.Int(200),
 	)
 	assertScopeMetrics(t, rm.ScopeMetrics[0], attrs)
 
