@@ -321,7 +321,7 @@ func createInterceptedStreamClient(t *testing.T, method string, opts clientStrea
 }
 
 func TestStreamClientInterceptorOnBIDIStream(t *testing.T) {
-	defer goleak.VerifyNone(t)
+	t.Cleanup(func() { goleak.VerifyNone(t) })
 
 	method := "/github.com.serviceName/bar"
 	name := "github.com.serviceName/bar"
@@ -387,7 +387,7 @@ func TestStreamClientInterceptorOnBIDIStream(t *testing.T) {
 }
 
 func TestStreamClientInterceptorOnUnidirectionalClientServerStream(t *testing.T) {
-	defer goleak.VerifyNone(t)
+	t.Cleanup(func() { goleak.VerifyNone(t) })
 
 	method := "/github.com.serviceName/bar"
 	name := "github.com.serviceName/bar"
@@ -454,7 +454,7 @@ func TestStreamClientInterceptorOnUnidirectionalClientServerStream(t *testing.T)
 // TestStreamClientInterceptorCancelContext tests a cancel context situation.
 // There should be no goleaks.
 func TestStreamClientInterceptorCancelContext(t *testing.T) {
-	defer goleak.VerifyNone(t)
+	t.Cleanup(func() { goleak.VerifyNone(t) })
 
 	ctx, cancel := context.WithCancel(context.Background())
 	t.Cleanup(cancel)
@@ -510,7 +510,7 @@ func TestStreamClientInterceptorCancelContext(t *testing.T) {
 
 // TestStreamClientInterceptorWithError tests a situation that streamer returns an error.
 func TestStreamClientInterceptorWithError(t *testing.T) {
-	defer goleak.VerifyNone(t)
+	t.Cleanup(func() { goleak.VerifyNone(t) })
 
 	ctx, cancel := context.WithCancel(context.Background())
 	t.Cleanup(cancel)
