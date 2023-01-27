@@ -157,7 +157,4 @@ func (tw traceware) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		span.SetAttributes(semconv.HTTPStatusCodeKey.Int(rrw.status))
 	}
 	span.SetStatus(httpconv.ServerStatus(rrw.status))
-	if rrw.status > 0 {
-		span.SetAttributes(semconv.HTTPStatusCodeKey.Int(rrw.status))
-	}
 }
