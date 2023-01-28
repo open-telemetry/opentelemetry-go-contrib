@@ -24,8 +24,7 @@ import (
 	"go.opentelemetry.io/otel"
 	"go.opentelemetry.io/otel/attribute"
 	"go.opentelemetry.io/otel/metric"
-	"go.opentelemetry.io/otel/metric/instrument/syncfloat64"
-	"go.opentelemetry.io/otel/metric/instrument/syncint64"
+	"go.opentelemetry.io/otel/metric/instrument"
 	"go.opentelemetry.io/otel/propagation"
 	semconv "go.opentelemetry.io/otel/semconv/v1.17.0"
 	"go.opentelemetry.io/otel/semconv/v1.17.0/httpconv"
@@ -51,8 +50,8 @@ type Handler struct {
 	writeEvent        bool
 	filters           []Filter
 	spanNameFormatter func(string, *http.Request) string
-	counters          map[string]syncint64.Counter
-	valueRecorders    map[string]syncfloat64.Histogram
+	counters          map[string]instrument.Int64Counter
+	valueRecorders    map[string]instrument.Float64Histogram
 	publicEndpoint    bool
 	publicEndpointFn  func(*http.Request) bool
 }
@@ -102,16 +101,16 @@ func handleErr(err error) {
 }
 
 func (h *Handler) createMeasures() {
-	h.counters = make(map[string]syncint64.Counter)
-	h.valueRecorders = make(map[string]syncfloat64.Histogram)
+	h.counters = make(map[string]instrument.Int64Counter)
+	h.valueRecorders = make(map[string]instrument.Float64Histogram)
 
-	requestBytesCounter, err := h.meter.SyncInt64().Counter(RequestContentLength)
+	requestBytesCounter, err := h.meter.Int64Counter(RequestContentLength)
 	handleErr(err)
 
-	responseBytesCounter, err := h.meter.SyncInt64().Counter(ResponseContentLength)
+	responseBytesCounter, err := h.meter.Int64Counter(ResponseContentLength)
 	handleErr(err)
 
-	serverLatencyMeasure, err := h.meter.SyncFloat64().Histogram(ServerLatency)
+	serverLatencyMeasure, err := h.meter.Float64Histogram(ServerLatency)
 	handleErr(err)
 
 	h.counters[RequestContentLength] = requestBytesCounter

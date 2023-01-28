@@ -18,6 +18,7 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 
 ### Changed
 
+- Updated to the new metric API. (#3170)
 - `otelgrpc`: Remove expensive calculation of uncompressed message size attribute. (#3168)
 - Upgrade all `semconv` packages to use `v1.17.0`. (#3182)
 
