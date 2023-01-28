@@ -44,7 +44,7 @@ func TestAppendMiddlewares(t *testing.T) {
 		expectedStatusCode int
 	}{
 		"invalidChangeBatchError": {
-			responseStatus: 500,
+			responseStatus: http.StatusInternalServerError,
 			responseBody: []byte(`<?xml version="1.0" encoding="UTF-8"?>
 		<InvalidChangeBatch xmlns="https://route53.amazonaws.com/doc/2013-04-01/">
 		  <Messages>
@@ -55,11 +55,11 @@ func TestAppendMiddlewares(t *testing.T) {
 			expectedRegion:     "us-east-1",
 			expectedError:      codes.Error,
 			expectedRequestID:  "b25f48e8-84fd-11e6-80d9-574e0c4664cb",
-			expectedStatusCode: 500,
+			expectedStatusCode: http.StatusInternalServerError,
 		},
 
 		"standardRestXMLError": {
-			responseStatus: 404,
+			responseStatus: http.StatusNotFound,
 			responseBody: []byte(`<?xml version="1.0"?>
 		<ErrorResponse xmlns="http://route53.amazonaws.com/doc/2016-09-07/">
 		  <Error>
@@ -73,11 +73,11 @@ func TestAppendMiddlewares(t *testing.T) {
 			expectedRegion:     "us-west-1",
 			expectedError:      codes.Error,
 			expectedRequestID:  "1234567890A",
-			expectedStatusCode: 404,
+			expectedStatusCode: http.StatusNotFound,
 		},
 
 		"Success response": {
-			responseStatus: 200,
+			responseStatus: http.StatusOK,
 			responseBody: []byte(`<?xml version="1.0" encoding="UTF-8"?>
 		<ChangeResourceRecordSetsResponse>
    			<ChangeInfo>
@@ -86,7 +86,7 @@ func TestAppendMiddlewares(t *testing.T) {
    		</ChangeInfo>
 		</ChangeResourceRecordSetsResponse>`),
 			expectedRegion:     "us-west-2",
-			expectedStatusCode: 200,
+			expectedStatusCode: http.StatusOK,
 		},
 	}
 

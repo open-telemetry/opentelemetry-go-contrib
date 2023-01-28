@@ -45,7 +45,7 @@ func TestChildSpanFromGlobalTracer(t *testing.T) {
 	router := echo.New()
 	router.Use(otelecho.Middleware("foobar"))
 	router.GET("/user/:id", func(c echo.Context) error {
-		return c.NoContent(200)
+		return c.NoContent(http.StatusOK)
 	})
 
 	r := httptest.NewRequest("GET", "/user/123", nil)
@@ -63,7 +63,7 @@ func TestChildSpanFromCustomTracer(t *testing.T) {
 	router := echo.New()
 	router.Use(otelecho.Middleware("foobar", otelecho.WithTracerProvider(provider)))
 	router.GET("/user/:id", func(c echo.Context) error {
-		return c.NoContent(200)
+		return c.NoContent(http.StatusOK)
 	})
 
 	r := httptest.NewRequest("GET", "/user/123", nil)
@@ -82,7 +82,7 @@ func TestTrace200(t *testing.T) {
 	router.Use(otelecho.Middleware("foobar", otelecho.WithTracerProvider(provider)))
 	router.GET("/user/:id", func(c echo.Context) error {
 		id := c.Param("id")
-		return c.String(200, id)
+		return c.String(http.StatusOK, id)
 	})
 
 	r := httptest.NewRequest("GET", "/user/123", nil)
