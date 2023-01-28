@@ -26,7 +26,8 @@ import (
 	"go.opentelemetry.io/otel/metric"
 	"go.opentelemetry.io/otel/metric/instrument"
 	"go.opentelemetry.io/otel/propagation"
-	semconv "go.opentelemetry.io/otel/semconv/v1.12.0"
+	semconv "go.opentelemetry.io/otel/semconv/v1.17.0"
+	"go.opentelemetry.io/otel/semconv/v1.17.0/httpconv"
 	"go.opentelemetry.io/otel/trace"
 )
 
@@ -38,6 +39,7 @@ var _ http.Handler = &Handler{}
 // to the span using the attribute.Keys defined in this package.
 type Handler struct {
 	operation string
+	server    string
 	handler   http.Handler
 
 	tracer            trace.Tracer
@@ -89,6 +91,7 @@ func (h *Handler) configure(c *config) {
 	h.spanNameFormatter = c.SpanNameFormatter
 	h.publicEndpoint = c.PublicEndpoint
 	h.publicEndpointFn = c.PublicEndpointFn
+	h.server = c.ServerName
 }
 
 func handleErr(err error) {
@@ -127,7 +130,14 @@ func (h *Handler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	}
 
 	ctx := h.propagators.Extract(r.Context(), propagation.HeaderCarrier(r.Header))
-	opts := h.spanStartOptions
+	opts := []trace.SpanStartOption{
+		trace.WithAttributes(httpconv.ServerRequest(h.server, r)...),
+	}
+	if h.server != "" {
+		hostAttr := semconv.NetHostNameKey.String(h.server)
+		opts = append(opts, trace.WithAttributes(hostAttr))
+	}
+	opts = append(opts, h.spanStartOptions...)
 	if h.publicEndpoint || (h.publicEndpointFn != nil && h.publicEndpointFn(r.WithContext(ctx))) {
 		opts = append(opts, trace.WithNewRoot())
 		// Linking incoming span context if any for public endpoint.
@@ -135,12 +145,6 @@ func (h *Handler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 			opts = append(opts, trace.WithLinks(trace.Link{SpanContext: s}))
 		}
 	}
-
-	opts = append([]trace.SpanStartOption{
-		trace.WithAttributes(semconv.NetAttributesFromHTTPRequest("tcp", r)...),
-		trace.WithAttributes(semconv.EndUserAttributesFromHTTPRequest(r)...),
-		trace.WithAttributes(semconv.HTTPServerAttributesFromHTTPRequest(h.operation, "", r)...),
-	}, opts...) // start with the configured options
 
 	tracer := h.tracer
 
@@ -211,7 +215,10 @@ func (h *Handler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	setAfterServeAttributes(span, bw.read, rww.written, rww.statusCode, bw.err, rww.err)
 
 	// Add metrics
-	attributes := append(labeler.Get(), semconv.HTTPServerMetricAttributesFromHTTPRequest(h.operation, r)...)
+	attributes := append(labeler.Get(), httpconv.ServerRequest(h.server, r)...)
+	if rww.statusCode > 0 {
+		attributes = append(attributes, semconv.HTTPStatusCodeKey.Int(rww.statusCode))
+	}
 	h.counters[RequestContentLength].Add(ctx, bw.read, attributes...)
 	h.counters[ResponseContentLength].Add(ctx, rww.written, attributes...)
 
@@ -235,8 +242,10 @@ func setAfterServeAttributes(span trace.Span, read, wrote int64, statusCode int,
 	if wrote > 0 {
 		attributes = append(attributes, WroteBytesKey.Int64(wrote))
 	}
-	attributes = append(attributes, semconv.HTTPAttributesFromHTTPStatusCode(statusCode)...)
-	span.SetStatus(semconv.SpanStatusFromHTTPStatusCodeAndSpanKind(statusCode, trace.SpanKindServer))
+	if statusCode > 0 {
+		attributes = append(attributes, semconv.HTTPStatusCodeKey.Int(statusCode))
+	}
+	span.SetStatus(httpconv.ServerStatus(statusCode))
 
 	if werr != nil && werr != io.EOF {
 		attributes = append(attributes, WriteErrorKey.String(werr.Error()))
