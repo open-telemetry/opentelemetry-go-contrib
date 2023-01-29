@@ -14,11 +14,13 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 - `otelmux`: Add new `WithSpanNameFormatter` option to `go.opentelemetry.io/contrib/instrumentation/github.com/gorilla/mux/otelmux` to allow customizing span names. (#3041)
 - Add missing recommended AWS Lambda resource attributes `faas.instance` and `faas.max_memory` in `go.opentelemetry.io/contrib/detectors/aws/lambda`. (#3148)
 - Improve documentation for `samplers/jaegerremote` by providing examples of sampling endpoints. (#3147)
+- Add `WithServerName` to `go.opentelemetry.io/contrib/instrumentation/net/http/otelhttp` to set the primary server name of a `Handler`. (#3182)
 
 ### Changed
 
 - Updated to the new metric API. (#3170)
 - `otelgrpc`: Remove expensive calculation of uncompressed message size attribute. (#3168)
+- Upgrade all `semconv` packages to use `v1.17.0`. (#3182)
 
 ## [1.12.0/0.37.0/0.6.0]
 
