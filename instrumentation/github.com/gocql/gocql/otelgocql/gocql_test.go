@@ -21,13 +21,13 @@ import (
 	"github.com/stretchr/testify/require"
 
 	"go.opentelemetry.io/contrib/instrumentation/github.com/gocql/gocql/otelgocql/internal"
-	semconv "go.opentelemetry.io/otel/semconv/v1.12.0"
+	semconv "go.opentelemetry.io/otel/semconv/v1.17.0"
 )
 
 func TestHostOrIP(t *testing.T) {
 	hostAndPort := "127.0.0.1:9042"
 	attribute := internal.HostOrIP(hostAndPort)
-	assert.Equal(t, semconv.NetPeerIPKey, attribute.Key)
+	assert.Equal(t, semconv.NetSockPeerAddrKey, attribute.Key)
 	assert.Equal(t, "127.0.0.1", attribute.Value.AsString())
 
 	hostAndPort = "exampleHost:9042"
