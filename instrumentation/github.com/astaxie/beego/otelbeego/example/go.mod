@@ -11,10 +11,10 @@ replace (
 require (
 	github.com/astaxie/beego v1.12.3
 	go.opentelemetry.io/contrib/instrumentation/github.com/astaxie/beego/otelbeego v0.37.0
-	go.opentelemetry.io/otel v1.11.3-0.20230126195513-af3db6e8bed6
-	go.opentelemetry.io/otel/exporters/stdout/stdouttrace v1.11.2
-	go.opentelemetry.io/otel/sdk v1.11.2
-	go.opentelemetry.io/otel/trace v1.11.2
+	go.opentelemetry.io/otel v1.12.0
+	go.opentelemetry.io/otel/exporters/stdout/stdouttrace v1.12.0
+	go.opentelemetry.io/otel/sdk v1.12.0
+	go.opentelemetry.io/otel/trace v1.12.0
 )
 
 require (
@@ -32,7 +32,7 @@ require (
 	github.com/prometheus/procfs v0.8.0 // indirect
 	github.com/shiena/ansicolor v0.0.0-20151119151921-a422bbe96644 // indirect
 	go.opentelemetry.io/contrib/instrumentation/net/http/otelhttp v0.37.0 // indirect
-	go.opentelemetry.io/otel/metric v0.34.1-0.20230119184437-b1a8002c4cf5 // indirect
+	go.opentelemetry.io/otel/metric v0.35.0 // indirect
 	golang.org/x/crypto v0.0.0-20200622213623-75b288015ac9 // indirect
 	golang.org/x/net v0.5.0 // indirect
 	golang.org/x/sys v0.4.0 // indirect
