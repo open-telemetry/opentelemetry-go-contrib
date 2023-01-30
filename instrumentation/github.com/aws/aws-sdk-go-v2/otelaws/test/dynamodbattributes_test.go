@@ -42,9 +42,9 @@ func TestDynamodbTags(t *testing.T) {
 		expectedStatusCode int
 		expectedError      codes.Code
 	}{
-		responseStatus:     200,
+		responseStatus:     http.StatusOK,
 		expectedRegion:     "us-west-2",
-		expectedStatusCode: 200,
+		expectedStatusCode: http.StatusOK,
 	}
 
 	server := httptest.NewServer(http.HandlerFunc(
@@ -113,9 +113,9 @@ func TestDynamodbTagsCustomSetter(t *testing.T) {
 		expectedStatusCode int
 		expectedError      codes.Code
 	}{
-		responseStatus:     200,
+		responseStatus:     http.StatusOK,
 		expectedRegion:     "us-west-2",
-		expectedStatusCode: 200,
+		expectedStatusCode: http.StatusOK,
 	}
 
 	server := httptest.NewServer(http.HandlerFunc(

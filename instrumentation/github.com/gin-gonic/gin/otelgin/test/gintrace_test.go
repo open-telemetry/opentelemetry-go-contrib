@@ -142,9 +142,9 @@ func TestSpanStatus(t *testing.T) {
 		httpStatusCode int
 		wantSpanStatus codes.Code
 	}{
-		{200, codes.Unset},
-		{400, codes.Unset},
-		{500, codes.Error},
+		{http.StatusOK, codes.Unset},
+		{http.StatusBadRequest, codes.Unset},
+		{http.StatusInternalServerError, codes.Error},
 	}
 	for _, tc := range testCases {
 		t.Run(strconv.Itoa(tc.httpStatusCode), func(t *testing.T) {
@@ -179,7 +179,7 @@ func TestHTML(t *testing.T) {
 
 	// a handler with an error and make the requests
 	router.GET("/hello", func(c *gin.Context) {
-		otelgin.HTML(c, 200, "hello", "world")
+		otelgin.HTML(c, http.StatusOK, "hello", "world")
 	})
 	r := httptest.NewRequest("GET", "/hello", nil)
 	w := httptest.NewRecorder()

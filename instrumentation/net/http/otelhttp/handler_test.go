@@ -43,7 +43,7 @@ func TestHandler(t *testing.T) {
 					}), "test_handler",
 				)
 			},
-			expectedStatusCode: 200,
+			expectedStatusCode: http.StatusOK,
 		},
 		{
 			name: "succeeds",
@@ -59,7 +59,7 @@ func TestHandler(t *testing.T) {
 				)
 			},
 			requestBody:        strings.NewReader("hello world"),
-			expectedStatusCode: 200,
+			expectedStatusCode: http.StatusOK,
 		},
 		{
 			name: "succeeds with a nil body",
@@ -70,7 +70,7 @@ func TestHandler(t *testing.T) {
 					}), "test_handler",
 				)
 			},
-			expectedStatusCode: 200,
+			expectedStatusCode: http.StatusOK,
 		},
 		{
 			name: "succeeds with an http.NoBody",
@@ -82,7 +82,7 @@ func TestHandler(t *testing.T) {
 				)
 			},
 			requestBody:        http.NoBody,
-			expectedStatusCode: 200,
+			expectedStatusCode: http.StatusOK,
 		},
 	}
 	for _, tc := range testCases {
