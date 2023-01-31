@@ -17,6 +17,7 @@ package otelmongo // import "go.opentelemetry.io/contrib/instrumentation/go.mong
 import (
 	"context"
 	"fmt"
+	"net"
 	"strconv"
 	"strings"
 	"sync"
@@ -51,10 +52,17 @@ func (m *monitor) Started(ctx context.Context, evt *event.CommandStartedEvent) {
 		semconv.DBSystemMongoDB,
 		semconv.DBOperationKey.String(evt.CommandName),
 		semconv.DBNameKey.String(evt.DatabaseName),
-		semconv.NetPeerNameKey.String(hostname),
 		semconv.NetPeerPortKey.Int(port),
 		semconv.NetTransportTCP,
 	}
+
+	addr := net.ParseIP(hostname)
+	if addr != nil {
+		attrs = append(attrs, semconv.NetPeerIPKey.String(hostname))
+	} else {
+		attrs = append(attrs, semconv.NetPeerNameKey.String(hostname))
+	}
+
 	if !m.cfg.CommandAttributeDisabled {
 		attrs = append(attrs, semconv.DBStatementKey.String(sanitizeCommand(evt.Command)))
 	}
