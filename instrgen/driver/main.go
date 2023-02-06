@@ -96,11 +96,28 @@ func dumpRootFunctions(rootFunctions []alib.FuncDescriptor) {
 	}
 }
 
+func isDirectory(path string) (bool, error) {
+	fileInfo, err := os.Stat(path)
+	if err != nil {
+		return false, err
+	}
+
+	return fileInfo.IsDir(), err
+}
+
 // Parsing algorithm works as follows. It goes through all function
 // decls and infer function bodies to find call to AutotelEntryPoint
 // A parent function of this call will become root of instrumentation
 // Each function call from this place will be instrumented automatically.
 func executeCommand(command string, projectPath string, packagePattern string) error {
+	isDir, err := isDirectory(projectPath)
+	if !isDir {
+		_ = usage()
+		return errors.New("[path to go project] argument must be directory")
+	}
+	if err != nil {
+		return err
+	}
 	if command == "--inject" {
 		_, err := Prune(projectPath, packagePattern, false)
 		if err != nil {
