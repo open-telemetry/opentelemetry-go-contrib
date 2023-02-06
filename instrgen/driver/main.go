@@ -118,7 +118,8 @@ func executeCommand(command string, projectPath string, packagePattern string) e
 	if err != nil {
 		return err
 	}
-	if command == "--inject" {
+	switch command {
+	case "--inject":
 		_, err := Prune(projectPath, packagePattern, false)
 		if err != nil {
 			return err
@@ -130,8 +131,7 @@ func executeCommand(command string, projectPath string, packagePattern string) e
 		}
 		fmt.Println("\tinstrumentation done")
 		return nil
-	}
-	if command == "--inject-dump-ir" {
+	case "--inject-dump-ir":
 		_, err := Prune(projectPath, packagePattern, true)
 		if err != nil {
 			return err
@@ -143,25 +143,23 @@ func executeCommand(command string, projectPath string, packagePattern string) e
 		}
 		fmt.Println("\tinstrumentation done")
 		return nil
-	}
-	if command == "--dumpcfg" {
+	case "--dumpcfg":
 		backwardCallGraph := makeCallGraph(projectPath, packagePattern)
 		dumpCallGraph(backwardCallGraph)
 		return nil
-	}
-	if command == "--rootfunctions" {
+	case "--rootfunctions":
 		rootFunctions := makeRootFunctions(projectPath, packagePattern)
 		dumpRootFunctions(rootFunctions)
 		return nil
-	}
-	if command == "--prune" {
+	case "--prune":
 		_, err := Prune(projectPath, packagePattern, false)
 		if err != nil {
 			return err
 		}
 		return nil
+	default:
+		return errors.New("unknown command")
 	}
-	return errors.New("unknown command")
 }
 
 func checkArgs(args []string) error {
