@@ -13,8 +13,13 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 - Add the new `go.opentelemetry.io/contrib/instrgen` package to provide auto-generated source code instrumentation. (#3068)
 
 ### Changed
+
 - Change `runtime.uptime` instrument in `go.opentelemetry.io/contrib/instrumentation/runtime` from `Int64ObservableUpDownCounter` to `Int64ObservableCounter`,
  since the value is monotonic. (#3347)
+
+### Fixed
+
+- The GCE detector in `go.opentelemetry.io/contrib/detectors/gcp` includes the "cloud.region" attribute when appropriate. (#3367)
 
 ## [1.13.0/0.37.0/0.7.0] - 2023-01-30
 
