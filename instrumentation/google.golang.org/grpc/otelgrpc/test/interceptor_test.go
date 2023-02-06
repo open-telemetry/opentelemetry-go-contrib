@@ -18,6 +18,7 @@ import (
 	"context"
 	"errors"
 	"io"
+	"net"
 	"strings"
 	"testing"
 	"time"
@@ -28,7 +29,7 @@ import (
 	"go.opentelemetry.io/otel/codes"
 	"go.opentelemetry.io/otel/sdk/trace"
 	"go.opentelemetry.io/otel/sdk/trace/tracetest"
-	semconv "go.opentelemetry.io/otel/semconv/v1.12.0"
+	semconv "go.opentelemetry.io/otel/semconv/v1.17.0"
 
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
@@ -39,7 +40,7 @@ import (
 	"google.golang.org/grpc/interop/grpc_testing"
 	"google.golang.org/grpc/metadata"
 	"google.golang.org/grpc/status"
-	"google.golang.org/protobuf/proto"
+	"google.golang.org/grpc/test/bufconn"
 )
 
 func getSpanFromRecorder(sr *tracetest.SpanRecorder, name string) (trace.ReadOnlySpan, bool) {
@@ -66,8 +67,21 @@ func (mcuici *mockUICInvoker) invoker(ctx context.Context, method string, req, r
 	return nil
 }
 
+func ctxDialer() func(context.Context, string) (net.Conn, error) {
+	l := bufconn.Listen(0)
+	return func(ctx context.Context, _ string) (net.Conn, error) {
+		return l.DialContext(ctx)
+	}
+}
+
 func TestUnaryClientInterceptor(t *testing.T) {
-	clientConn, err := grpc.Dial("fake:connection", grpc.WithTransportCredentials(insecure.NewCredentials()))
+	ctx, cancel := context.WithCancel(context.Background())
+	t.Cleanup(cancel)
+
+	clientConn, err := grpc.DialContext(ctx, "fake:8906",
+		grpc.WithContextDialer(ctxDialer()),
+		grpc.WithTransportCredentials(insecure.NewCredentials()),
+	)
 	if err != nil {
 		t.Fatalf("failed to create client connection: %v", err)
 	}
@@ -97,19 +111,17 @@ func TestUnaryClientInterceptor(t *testing.T) {
 				semconv.RPCServiceKey.String("github.com.serviceName"),
 				semconv.RPCMethodKey.String("bar"),
 				otelgrpc.GRPCStatusCodeKey.Int64(0),
-				semconv.NetPeerIPKey.String("fake"),
-				semconv.NetPeerPortKey.String("connection"),
+				semconv.NetPeerNameKey.String("fake"),
+				semconv.NetPeerPortKey.Int(8906),
 			},
 			eventsAttr: []map[attribute.Key]attribute.Value{
 				{
-					otelgrpc.RPCMessageTypeKey:             attribute.StringValue("SENT"),
-					otelgrpc.RPCMessageIDKey:               attribute.IntValue(1),
-					otelgrpc.RPCMessageUncompressedSizeKey: attribute.IntValue(proto.Size(req)),
+					otelgrpc.RPCMessageTypeKey: attribute.StringValue("SENT"),
+					otelgrpc.RPCMessageIDKey:   attribute.IntValue(1),
 				},
 				{
-					otelgrpc.RPCMessageTypeKey:             attribute.StringValue("RECEIVED"),
-					otelgrpc.RPCMessageIDKey:               attribute.IntValue(1),
-					otelgrpc.RPCMessageUncompressedSizeKey: attribute.IntValue(proto.Size(reply)),
+					otelgrpc.RPCMessageTypeKey: attribute.StringValue("RECEIVED"),
+					otelgrpc.RPCMessageIDKey:   attribute.IntValue(1),
 				},
 			},
 		},
@@ -121,19 +133,17 @@ func TestUnaryClientInterceptor(t *testing.T) {
 				semconv.RPCServiceKey.String("serviceName"),
 				semconv.RPCMethodKey.String("bar"),
 				otelgrpc.GRPCStatusCodeKey.Int64(0),
-				semconv.NetPeerIPKey.String("fake"),
-				semconv.NetPeerPortKey.String("connection"),
+				semconv.NetPeerNameKey.String("fake"),
+				semconv.NetPeerPortKey.Int(8906),
 			},
 			eventsAttr: []map[attribute.Key]attribute.Value{
 				{
-					otelgrpc.RPCMessageTypeKey:             attribute.StringValue("SENT"),
-					otelgrpc.RPCMessageIDKey:               attribute.IntValue(1),
-					otelgrpc.RPCMessageUncompressedSizeKey: attribute.IntValue(proto.Size(req)),
+					otelgrpc.RPCMessageTypeKey: attribute.StringValue("SENT"),
+					otelgrpc.RPCMessageIDKey:   attribute.IntValue(1),
 				},
 				{
-					otelgrpc.RPCMessageTypeKey:             attribute.StringValue("RECEIVED"),
-					otelgrpc.RPCMessageIDKey:               attribute.IntValue(1),
-					otelgrpc.RPCMessageUncompressedSizeKey: attribute.IntValue(proto.Size(reply)),
+					otelgrpc.RPCMessageTypeKey: attribute.StringValue("RECEIVED"),
+					otelgrpc.RPCMessageIDKey:   attribute.IntValue(1),
 				},
 			},
 		},
@@ -145,19 +155,17 @@ func TestUnaryClientInterceptor(t *testing.T) {
 				semconv.RPCServiceKey.String("serviceName"),
 				semconv.RPCMethodKey.String("bar"),
 				otelgrpc.GRPCStatusCodeKey.Int64(int64(grpc_codes.OK)),
-				semconv.NetPeerIPKey.String("fake"),
-				semconv.NetPeerPortKey.String("connection"),
+				semconv.NetPeerNameKey.String("fake"),
+				semconv.NetPeerPortKey.Int(8906),
 			},
 			eventsAttr: []map[attribute.Key]attribute.Value{
 				{
-					otelgrpc.RPCMessageTypeKey:             attribute.StringValue("SENT"),
-					otelgrpc.RPCMessageIDKey:               attribute.IntValue(1),
-					otelgrpc.RPCMessageUncompressedSizeKey: attribute.IntValue(proto.Size(req)),
+					otelgrpc.RPCMessageTypeKey: attribute.StringValue("SENT"),
+					otelgrpc.RPCMessageIDKey:   attribute.IntValue(1),
 				},
 				{
-					otelgrpc.RPCMessageTypeKey:             attribute.StringValue("RECEIVED"),
-					otelgrpc.RPCMessageIDKey:               attribute.IntValue(1),
-					otelgrpc.RPCMessageUncompressedSizeKey: attribute.IntValue(proto.Size(reply)),
+					otelgrpc.RPCMessageTypeKey: attribute.StringValue("RECEIVED"),
+					otelgrpc.RPCMessageIDKey:   attribute.IntValue(1),
 				},
 			},
 		},
@@ -170,19 +178,17 @@ func TestUnaryClientInterceptor(t *testing.T) {
 				semconv.RPCServiceKey.String("serviceName"),
 				semconv.RPCMethodKey.String("bar_error"),
 				otelgrpc.GRPCStatusCodeKey.Int64(int64(grpc_codes.Internal)),
-				semconv.NetPeerIPKey.String("fake"),
-				semconv.NetPeerPortKey.String("connection"),
+				semconv.NetPeerNameKey.String("fake"),
+				semconv.NetPeerPortKey.Int(8906),
 			},
 			eventsAttr: []map[attribute.Key]attribute.Value{
 				{
-					otelgrpc.RPCMessageTypeKey:             attribute.StringValue("SENT"),
-					otelgrpc.RPCMessageIDKey:               attribute.IntValue(1),
-					otelgrpc.RPCMessageUncompressedSizeKey: attribute.IntValue(proto.Size(req)),
+					otelgrpc.RPCMessageTypeKey: attribute.StringValue("SENT"),
+					otelgrpc.RPCMessageIDKey:   attribute.IntValue(1),
 				},
 				{
-					otelgrpc.RPCMessageTypeKey:             attribute.StringValue("RECEIVED"),
-					otelgrpc.RPCMessageIDKey:               attribute.IntValue(1),
-					otelgrpc.RPCMessageUncompressedSizeKey: attribute.IntValue(proto.Size(reply)),
+					otelgrpc.RPCMessageTypeKey: attribute.StringValue("RECEIVED"),
+					otelgrpc.RPCMessageIDKey:   attribute.IntValue(1),
 				},
 			},
 			expectErr: true,
@@ -193,19 +199,17 @@ func TestUnaryClientInterceptor(t *testing.T) {
 			expectedAttr: []attribute.KeyValue{
 				semconv.RPCSystemKey.String("grpc"),
 				otelgrpc.GRPCStatusCodeKey.Int64(0),
-				semconv.NetPeerIPKey.String("fake"),
-				semconv.NetPeerPortKey.String("connection"),
+				semconv.NetPeerNameKey.String("fake"),
+				semconv.NetPeerPortKey.Int(8906),
 			},
 			eventsAttr: []map[attribute.Key]attribute.Value{
 				{
-					otelgrpc.RPCMessageTypeKey:             attribute.StringValue("SENT"),
-					otelgrpc.RPCMessageIDKey:               attribute.IntValue(1),
-					otelgrpc.RPCMessageUncompressedSizeKey: attribute.IntValue(proto.Size(req)),
+					otelgrpc.RPCMessageTypeKey: attribute.StringValue("SENT"),
+					otelgrpc.RPCMessageIDKey:   attribute.IntValue(1),
 				},
 				{
-					otelgrpc.RPCMessageTypeKey:             attribute.StringValue("RECEIVED"),
-					otelgrpc.RPCMessageIDKey:               attribute.IntValue(1),
-					otelgrpc.RPCMessageUncompressedSizeKey: attribute.IntValue(proto.Size(reply)),
+					otelgrpc.RPCMessageTypeKey: attribute.StringValue("RECEIVED"),
+					otelgrpc.RPCMessageIDKey:   attribute.IntValue(1),
 				},
 			},
 		},
@@ -217,19 +221,17 @@ func TestUnaryClientInterceptor(t *testing.T) {
 				otelgrpc.GRPCStatusCodeKey.Int64(0),
 				semconv.RPCServiceKey.String("github.com.foo.serviceName_123"),
 				semconv.RPCMethodKey.String("method"),
-				semconv.NetPeerIPKey.String("fake"),
-				semconv.NetPeerPortKey.String("connection"),
+				semconv.NetPeerNameKey.String("fake"),
+				semconv.NetPeerPortKey.Int(8906),
 			},
 			eventsAttr: []map[attribute.Key]attribute.Value{
 				{
-					otelgrpc.RPCMessageTypeKey:             attribute.StringValue("SENT"),
-					otelgrpc.RPCMessageIDKey:               attribute.IntValue(1),
-					otelgrpc.RPCMessageUncompressedSizeKey: attribute.IntValue(proto.Size(req)),
+					otelgrpc.RPCMessageTypeKey: attribute.StringValue("SENT"),
+					otelgrpc.RPCMessageIDKey:   attribute.IntValue(1),
 				},
 				{
-					otelgrpc.RPCMessageTypeKey:             attribute.StringValue("RECEIVED"),
-					otelgrpc.RPCMessageIDKey:               attribute.IntValue(1),
-					otelgrpc.RPCMessageUncompressedSizeKey: attribute.IntValue(proto.Size(reply)),
+					otelgrpc.RPCMessageTypeKey: attribute.StringValue("RECEIVED"),
+					otelgrpc.RPCMessageIDKey:   attribute.IntValue(1),
 				},
 			},
 		},
@@ -296,8 +298,14 @@ func newMockClientStream(opts clientStreamOpts) *mockClientStream {
 }
 
 func createInterceptedStreamClient(t *testing.T, method string, opts clientStreamOpts) (grpc.ClientStream, *tracetest.SpanRecorder) {
+	ctx, cancel := context.WithCancel(context.Background())
+	t.Cleanup(cancel)
+
 	mockStream := newMockClientStream(opts)
-	clientConn, err := grpc.Dial("fake:connection", grpc.WithTransportCredentials(insecure.NewCredentials()))
+	clientConn, err := grpc.DialContext(ctx, "fake:8906",
+		grpc.WithContextDialer(ctxDialer()),
+		grpc.WithTransportCredentials(insecure.NewCredentials()),
+	)
 	if err != nil {
 		t.Fatalf("failed to create client connection: %v", err)
 	}
@@ -365,8 +373,8 @@ func TestStreamClientInterceptorOnBIDIStream(t *testing.T) {
 		otelgrpc.GRPCStatusCodeKey.Int64(int64(grpc_codes.OK)),
 		semconv.RPCServiceKey.String("github.com.serviceName"),
 		semconv.RPCMethodKey.String("bar"),
-		semconv.NetPeerIPKey.String("fake"),
-		semconv.NetPeerPortKey.String("connection"),
+		semconv.NetPeerNameKey.String("fake"),
+		semconv.NetPeerPortKey.Int(8906),
 	}
 	assert.ElementsMatch(t, expectedAttr, span.Attributes())
 
@@ -433,8 +441,8 @@ func TestStreamClientInterceptorOnUnidirectionalClientServerStream(t *testing.T)
 		otelgrpc.GRPCStatusCodeKey.Int64(int64(grpc_codes.OK)),
 		semconv.RPCServiceKey.String("github.com.serviceName"),
 		semconv.RPCMethodKey.String("bar"),
-		semconv.NetPeerIPKey.String("fake"),
-		semconv.NetPeerPortKey.String("connection"),
+		semconv.NetPeerNameKey.String("fake"),
+		semconv.NetPeerPortKey.Int(8906),
 	}
 	assert.ElementsMatch(t, expectedAttr, span.Attributes())
 
@@ -462,7 +470,14 @@ func TestStreamClientInterceptorOnUnidirectionalClientServerStream(t *testing.T)
 // There should be no goleaks.
 func TestStreamClientInterceptorCancelContext(t *testing.T) {
 	defer goleak.VerifyNone(t)
-	clientConn, err := grpc.Dial("fake:connection", grpc.WithTransportCredentials(insecure.NewCredentials()))
+
+	ctx, cancel := context.WithCancel(context.Background())
+	t.Cleanup(cancel)
+
+	clientConn, err := grpc.DialContext(ctx, "fake:8906",
+		grpc.WithContextDialer(ctxDialer()),
+		grpc.WithTransportCredentials(insecure.NewCredentials()),
+	)
 	if err != nil {
 		t.Fatalf("failed to create client connection: %v", err)
 	}
@@ -515,7 +530,13 @@ func TestStreamClientInterceptorCancelContext(t *testing.T) {
 func TestStreamClientInterceptorWithError(t *testing.T) {
 	defer goleak.VerifyNone(t)
 
-	clientConn, err := grpc.Dial("fake:connection", grpc.WithTransportCredentials(insecure.NewCredentials()))
+	ctx, cancel := context.WithCancel(context.Background())
+	t.Cleanup(cancel)
+
+	clientConn, err := grpc.DialContext(ctx, "fake:8906",
+		grpc.WithContextDialer(ctxDialer()),
+		grpc.WithTransportCredentials(insecure.NewCredentials()),
+	)
 	if err != nil {
 		t.Fatalf("failed to create client connection: %v", err)
 	}
@@ -555,8 +576,8 @@ func TestStreamClientInterceptorWithError(t *testing.T) {
 		otelgrpc.GRPCStatusCodeKey.Int64(int64(grpc_codes.Unknown)),
 		semconv.RPCServiceKey.String("github.com.serviceName"),
 		semconv.RPCMethodKey.String("bar"),
-		semconv.NetPeerIPKey.String("fake"),
-		semconv.NetPeerPortKey.String("connection"),
+		semconv.NetPeerNameKey.String("fake"),
+		semconv.NetPeerPortKey.Int(8906),
 	}
 	assert.ElementsMatch(t, expectedAttr, span.Attributes())
 	assert.Equal(t, codes.Error, span.Status().Code)
@@ -594,7 +615,6 @@ func TestServerInterceptorError(t *testing.T) {
 	assert.ElementsMatch(t, []attribute.KeyValue{
 		attribute.Key("message.type").String("SENT"),
 		attribute.Key("message.id").Int(1),
-		attribute.Key("message.uncompressed_size").Int(26),
 	}, span.Events()[1].Attributes)
 }
 
