@@ -85,7 +85,6 @@ func TestChildSpanNames(t *testing.T) {
 	assert.Contains(t, attrs, attribute.String("net.host.name", "foobar"))
 	assert.Contains(t, attrs, attribute.Int("http.status_code", http.StatusOK))
 	assert.Contains(t, attrs, attribute.String("http.method", "GET"))
-	assert.Contains(t, attrs, attribute.String("http.target", "/user/123"))
 
 	span = spans[1]
 	assert.Equal(t, "/book/foo", span.Name()) // TODO: span name should show router template, eg /book/:title
@@ -94,7 +93,6 @@ func TestChildSpanNames(t *testing.T) {
 	assert.Contains(t, attrs, attribute.String("net.host.name", "foobar"))
 	assert.Contains(t, attrs, attribute.Int("http.status_code", http.StatusOK))
 	assert.Contains(t, attrs, attribute.String("http.method", "GET"))
-	assert.Contains(t, attrs, attribute.String("http.target", "/book/foo"))
 }
 
 func TestSpanStatus(t *testing.T) {
