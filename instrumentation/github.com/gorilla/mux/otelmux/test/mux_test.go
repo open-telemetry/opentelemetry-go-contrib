@@ -15,6 +15,7 @@
 package test
 
 import (
+	"fmt"
 	"net/http"
 	"net/http/httptest"
 	"testing"
@@ -30,6 +31,54 @@ import (
 	"go.opentelemetry.io/otel/sdk/trace/tracetest"
 	"go.opentelemetry.io/otel/trace"
 )
+
+func TestCustomSpanNameFormatter(t *testing.T) {
+	exporter := tracetest.NewInMemoryExporter()
+
+	tp := sdktrace.NewTracerProvider(sdktrace.WithSyncer(exporter))
+
+	routeTpl := "/user/{id}"
+
+	testdata := []struct {
+		spanNameFormatter func(string, *http.Request) string
+		expected          string
+	}{
+		{nil, routeTpl},
+		{
+			func(string, *http.Request) string { return "custom" },
+			"custom",
+		},
+		{
+			func(name string, r *http.Request) string {
+				return fmt.Sprintf("%s %s", r.Method, name)
+			},
+			"GET " + routeTpl,
+		},
+	}
+
+	for i, d := range testdata {
+		t.Run(fmt.Sprintf("%d_%s", i, d.expected), func(t *testing.T) {
+			router := mux.NewRouter()
+			router.Use(otelmux.Middleware(
+				"foobar",
+				otelmux.WithTracerProvider(tp),
+				otelmux.WithSpanNameFormatter(d.spanNameFormatter),
+			))
+			router.HandleFunc(routeTpl, func(w http.ResponseWriter, r *http.Request) {})
+
+			r := httptest.NewRequest("GET", "/user/123", nil)
+			w := httptest.NewRecorder()
+
+			router.ServeHTTP(w, r)
+
+			spans := exporter.GetSpans()
+			require.Len(t, spans, 1)
+			assert.Equal(t, d.expected, spans[0].Name)
+
+			exporter.Reset()
+		})
+	}
+}
 
 func ok(w http.ResponseWriter, _ *http.Request) {}
 func notfound(w http.ResponseWriter, _ *http.Request) {
