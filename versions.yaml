@@ -90,7 +90,7 @@ module-sets:
       - go.opentelemetry.io/contrib/instrumentation/runtime
       - go.opentelemetry.io/contrib/instrumentation/runtime/example
   experimental-samplers:
-    version: v0.7.0
+    version: v0.8.0
     modules:
       - go.opentelemetry.io/contrib/samplers/aws/xray
       - go.opentelemetry.io/contrib/samplers/jaegerremote
