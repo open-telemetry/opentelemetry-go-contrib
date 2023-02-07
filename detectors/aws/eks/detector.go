@@ -99,7 +99,7 @@ func (detector *resourceDetector) Detect(ctx context.Context) (*resource.Resourc
 		return nil, err
 	}
 	if clusterName != "" {
-		attributes = append(attributes, semconv.K8SClusterNameKey.String(clusterName))
+		attributes = append(attributes, semconv.K8SClusterName(clusterName))
 	}
 
 	// Get containerID and append to attributes
@@ -108,7 +108,7 @@ func (detector *resourceDetector) Detect(ctx context.Context) (*resource.Resourc
 		return nil, err
 	}
 	if containerID != "" {
-		attributes = append(attributes, semconv.ContainerIDKey.String(containerID))
+		attributes = append(attributes, semconv.ContainerID(containerID))
 	}
 
 	// Return new resource object with clusterName and containerID as attributes

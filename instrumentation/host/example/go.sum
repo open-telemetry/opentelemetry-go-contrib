@@ -32,8 +32,8 @@ github.com/tklauser/numcpus v0.6.0 h1:kebhY2Qt+3U6RNK7UqpYNA+tJ23IBEGKkB7JQBfDYm
 github.com/tklauser/numcpus v0.6.0/go.mod h1:FEZLMke0lhOUG6w2JadTzp0a+Nl8PF/GFkQ5UVIcaL4=
 github.com/yusufpapurcu/wmi v1.2.2 h1:KBNDSne4vP5mbSWnJbO+51IMOXJB67QiYCSBrubbPRg=
 github.com/yusufpapurcu/wmi v1.2.2/go.mod h1:SBZ9tNy3G9/m5Oi98Zks0QjeHVDvuK0qfxQmPyzfmi0=
-go.opentelemetry.io/otel v1.12.0 h1:IgfC7kqQrRccIKuB7Cl+SRUmsKbEwSGPr0Eu+/ht1SQ=
-go.opentelemetry.io/otel v1.12.0/go.mod h1:geaoz0L0r1BEOR81k7/n9W4TCXYCJ7bPO7K374jQHG0=
+go.opentelemetry.io/otel v1.12.1-0.20230206174141-0446207a380c h1:akX9DDpsZ8HuPj+qzdyTNbmyCKYG2BHdPn7nJ6Kc6oU=
+go.opentelemetry.io/otel v1.12.1-0.20230206174141-0446207a380c/go.mod h1:geaoz0L0r1BEOR81k7/n9W4TCXYCJ7bPO7K374jQHG0=
 go.opentelemetry.io/otel/exporters/stdout/stdoutmetric v0.35.0 h1:4ItSNqXDmuPiYGIENWD2jeJECQRXwWxb3/HoSfKsa6U=
 go.opentelemetry.io/otel/exporters/stdout/stdoutmetric v0.35.0/go.mod h1:k/PEzF9FAu3Do2qFOaqF6F5rVy7Z0idyYtWKSbS8vRo=
 go.opentelemetry.io/otel/metric v0.35.0 h1:aPT5jk/w7F9zW51L7WgRqNKDElBdyRLGuBtI5MX34e8=

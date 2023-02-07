@@ -107,12 +107,12 @@ func consumeAndCheck(t *testing.T, mt trace.Tracer, complFn func() []sdktrace.Re
 	}{
 		{
 			attributeList: []attribute.KeyValue{
-				semconv.MessagingSystemKey.String("kafka"),
+				semconv.MessagingSystem("kafka"),
 				semconv.MessagingDestinationKindTopic,
-				semconv.MessagingDestinationNameKey.String("test-topic"),
+				semconv.MessagingDestinationName("test-topic"),
 				semconv.MessagingOperationReceive,
-				semconv.MessagingMessageIDKey.String("0"),
-				semconv.MessagingKafkaSourcePartitionKey.Int64(0),
+				semconv.MessagingMessageID("0"),
+				semconv.MessagingKafkaSourcePartition(0),
 			},
 			parentSpanID: trace.SpanContextFromContext(ctx).SpanID(),
 			kind:         trace.SpanKindConsumer,
@@ -120,12 +120,12 @@ func consumeAndCheck(t *testing.T, mt trace.Tracer, complFn func() []sdktrace.Re
 		},
 		{
 			attributeList: []attribute.KeyValue{
-				semconv.MessagingSystemKey.String("kafka"),
+				semconv.MessagingSystem("kafka"),
 				semconv.MessagingDestinationKindTopic,
-				semconv.MessagingDestinationNameKey.String("test-topic"),
+				semconv.MessagingDestinationName("test-topic"),
 				semconv.MessagingOperationReceive,
-				semconv.MessagingMessageIDKey.String("1"),
-				semconv.MessagingKafkaSourcePartitionKey.Int64(0),
+				semconv.MessagingMessageID("1"),
+				semconv.MessagingKafkaSourcePartition(0),
 			},
 			kind:   trace.SpanKindConsumer,
 			msgKey: []byte("foo2"),

@@ -77,7 +77,7 @@ func main() {
 
 	tr := otel.Tracer("example/client")
 	err = func(ctx context.Context) error {
-		ctx, span := tr.Start(ctx, "say hello", trace.WithAttributes(semconv.PeerServiceKey.String("ExampleService")))
+		ctx, span := tr.Start(ctx, "say hello", trace.WithAttributes(semconv.PeerService("ExampleService")))
 		defer span.End()
 
 		ctx = httptrace.WithClientTrace(ctx, otelhttptrace.NewClientTrace(ctx))

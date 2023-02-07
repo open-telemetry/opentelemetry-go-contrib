@@ -100,7 +100,9 @@ func TestDynamodbTags(t *testing.T) {
 		assert.Contains(t, attrs, attribute.String("aws.service", "DynamoDB"))
 		assert.Contains(t, attrs, attribute.String("aws.region", cases.expectedRegion))
 		assert.Contains(t, attrs, attribute.String("aws.operation", "GetItem"))
-		assert.Contains(t, attrs, attribute.String("aws.dynamodb.table_names", "table1"))
+		assert.Contains(t, attrs, attribute.StringSlice(
+			"aws.dynamodb.table_names", []string{"table1"},
+		))
 		assert.Contains(t, attrs, attribute.String("aws.dynamodb.projection", "test"))
 		assert.Contains(t, attrs, attribute.Bool("aws.dynamodb.consistent_read", false))
 	})
@@ -187,7 +189,9 @@ func TestDynamodbTagsCustomSetter(t *testing.T) {
 		assert.Contains(t, attrs, attribute.String("aws.service", "DynamoDB"))
 		assert.Contains(t, attrs, attribute.String("aws.region", cases.expectedRegion))
 		assert.Contains(t, attrs, attribute.String("aws.operation", "GetItem"))
-		assert.Contains(t, attrs, attribute.String("aws.dynamodb.table_names", "table1"))
+		assert.Contains(t, attrs, attribute.StringSlice(
+			"aws.dynamodb.table_names", []string{"table1"},
+		))
 		assert.Contains(t, attrs, attribute.String("aws.dynamodb.projection", "test"))
 		assert.Contains(t, attrs, attribute.Bool("aws.dynamodb.consistent_read", false))
 		assert.Contains(t, attrs, attribute.String("customattribute2key", "customattribute2value"))

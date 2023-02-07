@@ -72,19 +72,19 @@ func CassDBSystem() attribute.KeyValue {
 // CassPeerName returns the hostname of the cassandra
 // server as a semconv KeyValue pair (net.peer.name).
 func CassPeerName(name string) attribute.KeyValue {
-	return semconv.NetPeerNameKey.String(name)
+	return semconv.NetPeerName(name)
 }
 
 // CassPeerPort returns the port number of the cassandra
 // server as a semconv KeyValue pair (net.peer.port).
 func CassPeerPort(port int) attribute.KeyValue {
-	return semconv.NetPeerPortKey.Int(port)
+	return semconv.NetPeerPort(port)
 }
 
 // CassPeerIP returns the IP address of the cassandra
 // server as a semconv KeyValue pair (net.peer.ip).
 func CassPeerIP(ip string) attribute.KeyValue {
-	return semconv.NetSockPeerAddrKey.String(ip)
+	return semconv.NetSockPeerAddr(ip)
 }
 
 // CassVersion returns the cql version as a KeyValue pair.
@@ -107,7 +107,7 @@ func CassHostState(state string) attribute.KeyValue {
 // CassStatement returns the statement made to the cassandra database as a
 // semconv KeyValue pair (db.statement).
 func CassStatement(stmt string) attribute.KeyValue {
-	return semconv.DBStatementKey.String(stmt)
+	return semconv.DBStatement(stmt)
 }
 
 // CassBatchQueryOperation returns the batch query operation
@@ -116,7 +116,7 @@ func CassStatement(stmt string) attribute.KeyValue {
 // because there can be n different query statements in a batch query.
 func CassBatchQueryOperation() attribute.KeyValue {
 	cassBatchQueryOperation := "db.cassandra.batch.query"
-	return semconv.DBOperationKey.String(cassBatchQueryOperation)
+	return semconv.DBOperation(cassBatchQueryOperation)
 }
 
 // CassConnectOperation returns the connect operation
@@ -124,13 +124,13 @@ func CassBatchQueryOperation() attribute.KeyValue {
 // db.statement since connection creation does not have a CQL statement.
 func CassConnectOperation() attribute.KeyValue {
 	cassConnectOperation := "db.cassandra.connect"
-	return semconv.DBOperationKey.String(cassConnectOperation)
+	return semconv.DBOperation(cassConnectOperation)
 }
 
 // CassKeyspace returns the keyspace of the session as
 // a semconv KeyValue pair (db.name).
 func CassKeyspace(keyspace string) attribute.KeyValue {
-	return semconv.DBNameKey.String(keyspace)
+	return semconv.DBName(keyspace)
 }
 
 // CassBatchQueries returns the number of queries in a batch query

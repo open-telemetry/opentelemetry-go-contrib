@@ -7,8 +7,8 @@ github.com/go-logr/stdr v1.2.2/go.mod h1:mMo/vtBO5dYbehREoey6XUKy/eSumjCCveDpRre
 github.com/google/go-cmp v0.5.9 h1:O2Tfq5qg4qc4AmwVlvv0oLiVAGB7enBSJ2x2DqQFi38=
 github.com/pmezard/go-difflib v1.0.0 h1:4DBwDE0NGyQoBHbLQYPwSUPoCMWR5BEzIk/f1lZbAQM=
 github.com/stretchr/testify v1.8.1 h1:w7B6lhMri9wdJUVmEZPGGhZzrYTPvgJArz7wNPgYKsk=
-go.opentelemetry.io/otel v1.12.0 h1:IgfC7kqQrRccIKuB7Cl+SRUmsKbEwSGPr0Eu+/ht1SQ=
-go.opentelemetry.io/otel v1.12.0/go.mod h1:geaoz0L0r1BEOR81k7/n9W4TCXYCJ7bPO7K374jQHG0=
+go.opentelemetry.io/otel v1.12.1-0.20230206174141-0446207a380c h1:akX9DDpsZ8HuPj+qzdyTNbmyCKYG2BHdPn7nJ6Kc6oU=
+go.opentelemetry.io/otel v1.12.1-0.20230206174141-0446207a380c/go.mod h1:geaoz0L0r1BEOR81k7/n9W4TCXYCJ7bPO7K374jQHG0=
 go.opentelemetry.io/otel/exporters/stdout/stdoutmetric v0.35.0 h1:4ItSNqXDmuPiYGIENWD2jeJECQRXwWxb3/HoSfKsa6U=
 go.opentelemetry.io/otel/exporters/stdout/stdoutmetric v0.35.0/go.mod h1:k/PEzF9FAu3Do2qFOaqF6F5rVy7Z0idyYtWKSbS8vRo=
 go.opentelemetry.io/otel/metric v0.35.0 h1:aPT5jk/w7F9zW51L7WgRqNKDElBdyRLGuBtI5MX34e8=
