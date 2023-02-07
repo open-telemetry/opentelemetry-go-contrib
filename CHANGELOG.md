@@ -20,6 +20,15 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 ### Fixed
 
 - The GCE detector in `go.opentelemetry.io/contrib/detectors/gcp` includes the "cloud.region" attribute when appropriate. (#3367)
+- The span name of producer spans from `go.opentelemetry.io/contrib/instrumentation/github.com/Shopify/sarama/otelsarama` is corrected to use `publish` instead of `send`. (#3396)
+- Attribute types are corrected in `go.opentelemetry.io/contrib/instrumentation/github.com/aws/aws-sdk-go-v2/otelaws`. (#3396)
+  - `aws.dynamodb.table_names` is now a string slice value.
+  - `aws.dynamodb.global_secondary_indexes` is now a string slice value.
+  - `aws.dynamodb.local_secondary_indexes` is now a string slice value.
+  - `aws.dynamodb.attribute_definitions` is now a string slice value.
+  - `aws.dynamodb.global_secondary_index_updates` is now a string slice value.
+  - `aws.dynamodb.provisioned_read_capacity` is now a `float64` value.
+  - `aws.dynamodb.provisioned_write_capacity` is now a `float64` value.
 
 ## [1.13.0/0.37.0/0.7.0] - 2023-01-30
 
