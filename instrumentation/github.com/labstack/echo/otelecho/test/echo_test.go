@@ -45,7 +45,7 @@ func TestChildSpanFromGlobalTracer(t *testing.T) {
 	router := echo.New()
 	router.Use(otelecho.Middleware("foobar"))
 	router.GET("/user/:id", func(c echo.Context) error {
-		return c.NoContent(200)
+		return c.NoContent(http.StatusOK)
 	})
 
 	r := httptest.NewRequest("GET", "/user/123", nil)
@@ -63,7 +63,7 @@ func TestChildSpanFromCustomTracer(t *testing.T) {
 	router := echo.New()
 	router.Use(otelecho.Middleware("foobar", otelecho.WithTracerProvider(provider)))
 	router.GET("/user/:id", func(c echo.Context) error {
-		return c.NoContent(200)
+		return c.NoContent(http.StatusOK)
 	})
 
 	r := httptest.NewRequest("GET", "/user/123", nil)
@@ -82,7 +82,7 @@ func TestTrace200(t *testing.T) {
 	router.Use(otelecho.Middleware("foobar", otelecho.WithTracerProvider(provider)))
 	router.GET("/user/:id", func(c echo.Context) error {
 		id := c.Param("id")
-		return c.String(200, id)
+		return c.String(http.StatusOK, id)
 	})
 
 	r := httptest.NewRequest("GET", "/user/123", nil)
@@ -100,7 +100,7 @@ func TestTrace200(t *testing.T) {
 	assert.Equal(t, "/user/:id", span.Name())
 	assert.Equal(t, oteltrace.SpanKindServer, span.SpanKind())
 	attrs := span.Attributes()
-	assert.Contains(t, attrs, attribute.String("http.server_name", "foobar"))
+	assert.Contains(t, attrs, attribute.String("net.host.name", "foobar"))
 	assert.Contains(t, attrs, attribute.Int("http.status_code", http.StatusOK))
 	assert.Contains(t, attrs, attribute.String("http.method", "GET"))
 	assert.Contains(t, attrs, attribute.String("http.target", "/user/123"))
@@ -132,7 +132,7 @@ func TestError(t *testing.T) {
 	span := spans[0]
 	assert.Equal(t, "/server_err", span.Name())
 	attrs := span.Attributes()
-	assert.Contains(t, attrs, attribute.String("http.server_name", "foobar"))
+	assert.Contains(t, attrs, attribute.String("net.host.name", "foobar"))
 	assert.Contains(t, attrs, attribute.Int("http.status_code", http.StatusInternalServerError))
 	assert.Contains(t, attrs, attribute.String("echo.error", "oh no"))
 	// server errors set the status

@@ -36,7 +36,7 @@ import (
 	"go.opentelemetry.io/otel/sdk/metric/metricdata"
 	sdktrace "go.opentelemetry.io/otel/sdk/trace"
 	"go.opentelemetry.io/otel/sdk/trace/tracetest"
-	semconv "go.opentelemetry.io/otel/semconv/v1.12.0"
+	semconv "go.opentelemetry.io/otel/semconv/v1.17.0"
 	"go.opentelemetry.io/otel/trace"
 )
 
@@ -211,7 +211,7 @@ func TestConnection(t *testing.T) {
 func TestHostOrIP(t *testing.T) {
 	hostAndPort := "127.0.0.1:9042"
 	attr := internal.HostOrIP(hostAndPort)
-	assert.Equal(t, semconv.NetPeerIPKey, attr.Key)
+	assert.Equal(t, semconv.NetSockPeerAddrKey, attr.Key)
 	assert.Equal(t, "127.0.0.1", attr.Value.AsString())
 
 	hostAndPort = "exampleHost:9042"
@@ -227,7 +227,7 @@ func TestHostOrIP(t *testing.T) {
 func assertConnectionLevelAttributes(t *testing.T, span sdktrace.ReadOnlySpan) {
 	attrs := span.Attributes()
 	assert.Contains(t, attrs, semconv.DBSystemCassandra)
-	assert.Contains(t, attrs, semconv.NetPeerIPKey.String("127.0.0.1"))
+	assert.Contains(t, attrs, semconv.NetSockPeerAddrKey.String("127.0.0.1"))
 	assert.Contains(t, attrs, semconv.NetPeerPortKey.Int64(9042))
 	assert.Contains(t, attrs, internal.CassHostStateKey.String("UP"))
 	assert.Equal(t, trace.SpanKindClient, span.SpanKind())

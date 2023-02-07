@@ -24,7 +24,7 @@ import (
 
 	"go.opentelemetry.io/otel/attribute"
 	"go.opentelemetry.io/otel/sdk/resource"
-	semconv "go.opentelemetry.io/otel/semconv/v1.12.0"
+	semconv "go.opentelemetry.io/otel/semconv/v1.17.0"
 )
 
 // GCE collects resource information of GCE computing instances.
@@ -59,7 +59,7 @@ func (gce *GCE) Detect(ctx context.Context) (*resource.Resource, error) {
 
 		splitArr := strings.SplitN(zone, "-", 3)
 		if len(splitArr) == 3 {
-			semconv.CloudRegionKey.String(strings.Join(splitArr[0:2], "-"))
+			attributes = append(attributes, semconv.CloudRegionKey.String(strings.Join(splitArr[0:2], "-")))
 		}
 	}
 
