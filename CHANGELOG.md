@@ -11,6 +11,7 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 ### Added
 
 - Add the new `go.opentelemetry.io/contrib/instrgen` package to provide auto-generated source code instrumentation. (#3068)
+- Support [Go 1.20]. (#TBD)
 
 ## [1.14.0/0.39.0/0.8.0] - 2023-02-07
 
@@ -680,3 +681,5 @@ First official tagged release of `contrib` repository.
 [0.8.0]: https://github.com/open-telemetry/opentelemetry-go-contrib/releases/tag/v0.8.0
 [0.7.0]: https://github.com/open-telemetry/opentelemetry-go-contrib/releases/tag/v0.7.0
 [0.6.1]: https://github.com/open-telemetry/opentelemetry-go-contrib/releases/tag/v0.6.1
+
+[Go 1.20]: https://go.dev/doc/go1.20
