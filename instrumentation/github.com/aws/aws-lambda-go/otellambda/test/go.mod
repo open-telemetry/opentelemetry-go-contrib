@@ -14,9 +14,9 @@ require (
 	go.opentelemetry.io/contrib/detectors/aws/lambda v0.38.0
 	go.opentelemetry.io/contrib/instrumentation/github.com/aws/aws-lambda-go/otellambda v0.38.0
 	go.opentelemetry.io/contrib/propagators/aws v1.13.0
-	go.opentelemetry.io/otel v1.12.0
-	go.opentelemetry.io/otel/sdk v1.12.0
-	go.opentelemetry.io/otel/trace v1.12.0
+	go.opentelemetry.io/otel v1.13.0
+	go.opentelemetry.io/otel/sdk v1.13.0
+	go.opentelemetry.io/otel/trace v1.13.0
 )
 
 require (

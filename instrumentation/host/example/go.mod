@@ -6,10 +6,10 @@ replace go.opentelemetry.io/contrib/instrumentation/host => ../
 
 require (
 	go.opentelemetry.io/contrib/instrumentation/host v0.38.0
-	go.opentelemetry.io/otel v1.12.0
-	go.opentelemetry.io/otel/exporters/stdout/stdoutmetric v0.35.0
-	go.opentelemetry.io/otel/sdk v1.12.0
-	go.opentelemetry.io/otel/sdk/metric v0.35.0
+	go.opentelemetry.io/otel v1.13.0
+	go.opentelemetry.io/otel/exporters/stdout/stdoutmetric v0.36.0
+	go.opentelemetry.io/otel/sdk v1.13.0
+	go.opentelemetry.io/otel/sdk/metric v0.36.0
 )
 
 require (
@@ -22,7 +22,7 @@ require (
 	github.com/tklauser/go-sysconf v0.3.11 // indirect
 	github.com/tklauser/numcpus v0.6.0 // indirect
 	github.com/yusufpapurcu/wmi v1.2.2 // indirect
-	go.opentelemetry.io/otel/metric v0.35.0 // indirect
-	go.opentelemetry.io/otel/trace v1.12.0 // indirect
+	go.opentelemetry.io/otel/metric v0.36.0 // indirect
+	go.opentelemetry.io/otel/trace v1.13.0 // indirect
 	golang.org/x/sys v0.4.0 // indirect
 )
