@@ -240,7 +240,7 @@ func TestRender(t *testing.T) {
 	// Create the view
 	file, err := os.CreateTemp(dir, "*index.tpl")
 	require.NoError(t, err)
-	defer file.Close()
+	t.Cleanup(func() { require.NoError(t, file.Close()) })
 	_, err = file.WriteString(htmlStr)
 	require.NoError(t, err)
 	// Add path to view path
