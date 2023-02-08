@@ -249,6 +249,7 @@ func TestRender(t *testing.T) {
 	// Add path to view path
 	require.NoError(t, beego.AddViewPath(dir))
 	beego.SetViewsPath(dir)
+	t.Cleanup(func() { beego.SetViewsPath("") })
 
 	// Disable autorender to enable traced render
 	beego.BConfig.WebConfig.AutoRender = false
