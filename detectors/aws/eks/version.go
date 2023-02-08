@@ -16,7 +16,7 @@ package eks // import "go.opentelemetry.io/contrib/detectors/aws/eks"
 
 // Version is the current release version of the EKS resource detector.
 func Version() string {
-	return "1.13.0"
+	return "1.14.0"
 	// This string is updated by the pre_release.sh script during release
 }
 
