@@ -103,7 +103,6 @@ func TestTrace200(t *testing.T) {
 	assert.Contains(t, attrs, attribute.String("net.host.name", "foobar"))
 	assert.Contains(t, attrs, attribute.Int("http.status_code", http.StatusOK))
 	assert.Contains(t, attrs, attribute.String("http.method", "GET"))
-	assert.Contains(t, attrs, attribute.String("http.target", "/user/123"))
 	assert.Contains(t, attrs, attribute.String("http.route", "/user/:id"))
 }
 

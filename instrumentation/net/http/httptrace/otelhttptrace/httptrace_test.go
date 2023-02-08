@@ -86,7 +86,6 @@ func TestRoundtrip(t *testing.T) {
 		semconv.NetHostPortKey:              hp[1],
 		semconv.HTTPMethodKey:               "GET",
 		semconv.HTTPSchemeKey:               "http",
-		semconv.HTTPTargetKey:               "/",
 		semconv.HTTPUserAgentKey:            "Go-http-client/1.1",
 		semconv.HTTPRequestContentLengthKey: "3",
 		semconv.NetSockPeerAddrKey:          hp[0],

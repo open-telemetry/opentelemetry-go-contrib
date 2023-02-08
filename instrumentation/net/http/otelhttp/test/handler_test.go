@@ -117,7 +117,6 @@ func TestHandlerBasics(t *testing.T) {
 	attrs := attribute.NewSet(
 		semconv.NetHostNameKey.String(r.Host),
 		semconv.HTTPSchemeHTTP,
-		semconv.HTTPTargetKey.String(r.URL.Path),
 		semconv.HTTPFlavorKey.String(fmt.Sprintf("1.%d", r.ProtoMinor)),
 		semconv.HTTPMethodKey.String("GET"),
 		attribute.String("test", "attribute"),
