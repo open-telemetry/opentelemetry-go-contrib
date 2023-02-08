@@ -225,25 +225,23 @@ func TestStatic(t *testing.T) {
 	assertSpan(t, spans[0], tc)
 }
 
-func TestRender(t *testing.T) {
-	// Disable autorender to enable traced render
-	beego.BConfig.WebConfig.AutoRender = false
-	addTestRoutes(t)
-	defer replaceBeego()
-	htmlStr := "<!DOCTYPE html><html lang=\"en\">" +
-		"<head><meta charset=\"UTF-8\"><title>Hello World</title></head>" +
-		"<body>This is a template test. Hello {{.name}}</body></html>"
+var htmlStr = `<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8">
+    <title>Hello World</title>
+  </head>
+  <body>This is a template test. Hello {{.name}}</body>
+</html>
+`
 
-	// Create a temp directory to hold a view. Do not use t.TempDir because we
-	// cannot close the references to the directory once the templates are
-	// added to beego and Windows errors when the testing system tries to
-	// remove the directory (2023-02-08 windows-2022 (20230129.1) Go 1.20.0).
-	dir := filepath.Join(os.TempDir(), "TestRender")
-	require.NoError(t, os.MkdirAll(dir, 0777))
-	t.Cleanup(func() { require.NoError(t, os.RemoveAll(dir)) })
+func TestRender(t *testing.T) {
+	// Create a temp directory to hold a view.
+	dir := t.TempDir()
 
 	// Create the view
-	f, err := os.CreateTemp(dir, "*index.tpl")
+	tplName = "index.tpl"
+	f, err := os.Create(filepath.Join(dir, tplName))
 	require.NoError(t, err)
 	t.Cleanup(func() { require.NoError(t, f.Close()) })
 	_, err = f.WriteString(htmlStr)
@@ -251,7 +249,11 @@ func TestRender(t *testing.T) {
 	// Add path to view path
 	require.NoError(t, beego.AddViewPath(dir))
 	beego.SetViewsPath(dir)
-	_, tplName = filepath.Split(f.Name())
+
+	// Disable autorender to enable traced render
+	beego.BConfig.WebConfig.AutoRender = false
+	addTestRoutes(t)
+	t.Cleanup(replaceBeego)
 
 	sr := tracetest.NewSpanRecorder()
 	tracerProvider := trace.NewTracerProvider(trace.WithSpanProcessor(sr))
