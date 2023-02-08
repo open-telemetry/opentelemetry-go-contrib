@@ -61,12 +61,12 @@ func (w *consumerMessagesDispatcherWrapper) Run() {
 
 		// Create a span.
 		attrs := []attribute.KeyValue{
-			semconv.MessagingSystemKey.String("kafka"),
+			semconv.MessagingSystem("kafka"),
 			semconv.MessagingDestinationKindTopic,
-			semconv.MessagingDestinationNameKey.String(msg.Topic),
+			semconv.MessagingDestinationName(msg.Topic),
 			semconv.MessagingOperationReceive,
-			semconv.MessagingMessageIDKey.String(strconv.FormatInt(msg.Offset, 10)),
-			semconv.MessagingKafkaSourcePartitionKey.Int64(int64(msg.Partition)),
+			semconv.MessagingMessageID(strconv.FormatInt(msg.Offset, 10)),
+			semconv.MessagingKafkaSourcePartition(int(msg.Partition)),
 		}
 		opts := []trace.SpanStartOption{
 			trace.WithAttributes(attrs...),

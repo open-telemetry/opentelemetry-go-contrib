@@ -100,7 +100,7 @@ func (m otelMiddlewares) deserializeMiddleware(stack *middleware.Stack) error {
 		}
 
 		span := trace.SpanFromContext(ctx)
-		span.SetAttributes(semconv.HTTPStatusCodeKey.Int(resp.StatusCode))
+		span.SetAttributes(semconv.HTTPStatusCode(resp.StatusCode))
 
 		requestID, ok := v2Middleware.GetRequestIDMetadata(metadata)
 		if ok {

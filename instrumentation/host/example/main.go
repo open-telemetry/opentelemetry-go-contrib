@@ -33,7 +33,7 @@ import (
 
 var res = resource.NewWithAttributes(
 	semconv.SchemaURL,
-	semconv.ServiceNameKey.String("host-instrumentation-example"),
+	semconv.ServiceName("host-instrumentation-example"),
 )
 
 func main() {

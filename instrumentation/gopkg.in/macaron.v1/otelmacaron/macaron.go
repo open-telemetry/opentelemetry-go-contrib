@@ -64,7 +64,7 @@ func Middleware(service string, opts ...Option) macaron.Handler {
 		status := c.Resp.Status()
 		span.SetStatus(httpconv.ServerStatus(status))
 		if status > 0 {
-			span.SetAttributes(semconv.HTTPStatusCodeKey.Int(status))
+			span.SetAttributes(semconv.HTTPStatusCode(status))
 		}
 	}
 }

@@ -74,7 +74,7 @@ func Middleware(service string, opts ...Option) echo.MiddlewareFunc {
 				oteltrace.WithSpanKind(oteltrace.SpanKindServer),
 			}
 			if path := c.Path(); path != "" {
-				rAttr := semconv.HTTPRouteKey.String(path)
+				rAttr := semconv.HTTPRoute(path)
 				opts = append(opts, oteltrace.WithAttributes(rAttr))
 			}
 			spanName := c.Path()
@@ -99,7 +99,7 @@ func Middleware(service string, opts ...Option) echo.MiddlewareFunc {
 			status := c.Response().Status
 			span.SetStatus(httpconv.ServerStatus(status))
 			if status > 0 {
-				span.SetAttributes(semconv.HTTPStatusCodeKey.Int(status))
+				span.SetAttributes(semconv.HTTPStatusCode(status))
 			}
 
 			return nil

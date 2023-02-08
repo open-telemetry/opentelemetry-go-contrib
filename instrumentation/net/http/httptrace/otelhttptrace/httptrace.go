@@ -68,7 +68,7 @@ func Extract(ctx context.Context, req *http.Request, opts ...Option) ([]attribut
 
 	attrs := append(httpconv.ServerRequest("", req), netconv.Transport("tcp"))
 	if req.ContentLength > 0 {
-		a := semconv.HTTPRequestContentLengthKey.Int(int(req.ContentLength))
+		a := semconv.HTTPRequestContentLength(int(req.ContentLength))
 		attrs = append(attrs, a)
 	}
 	return attrs, baggage.FromContext(ctx), trace.SpanContextFromContext(ctx)

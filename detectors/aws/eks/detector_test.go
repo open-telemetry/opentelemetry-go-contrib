@@ -64,8 +64,8 @@ func TestEks(t *testing.T) {
 	eksResourceLabels := []attribute.KeyValue{
 		semconv.CloudProviderAWS,
 		semconv.CloudPlatformAWSEKS,
-		semconv.K8SClusterNameKey.String("my-cluster"),
-		semconv.ContainerIDKey.String("0123456789A"),
+		semconv.K8SClusterName("my-cluster"),
+		semconv.ContainerID("0123456789A"),
 	}
 	expectedResource := resource.NewWithAttributes(semconv.SchemaURL, eksResourceLabels...)
 

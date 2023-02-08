@@ -329,7 +329,7 @@ func runTest(t *testing.T, tc *testCase, url string) {
 
 func defaultAttributes() []attribute.KeyValue {
 	return []attribute.KeyValue{
-		semconv.NetHostNameKey.String(middleWareName),
+		semconv.NetHostName(middleWareName),
 		semconv.HTTPSchemeHTTP,
 	}
 }
