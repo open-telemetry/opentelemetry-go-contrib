@@ -143,7 +143,7 @@ func (tw traceware) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	if routeStr == "" {
 		routeStr = fmt.Sprintf("HTTP %s route not found", r.Method)
 	} else {
-		rAttr := semconv.HTTPRouteKey.String(routeStr)
+		rAttr := semconv.HTTPRoute(routeStr)
 		opts = append(opts, oteltrace.WithAttributes(rAttr))
 	}
 	spanName := tw.spanNameFormatter(routeStr, r)
@@ -154,7 +154,7 @@ func (tw traceware) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	defer putRRW(rrw)
 	tw.handler.ServeHTTP(rrw.writer, r2)
 	if rrw.status > 0 {
-		span.SetAttributes(semconv.HTTPStatusCodeKey.Int(rrw.status))
+		span.SetAttributes(semconv.HTTPStatusCode(rrw.status))
 	}
 	span.SetStatus(httpconv.ServerStatus(rrw.status))
 }

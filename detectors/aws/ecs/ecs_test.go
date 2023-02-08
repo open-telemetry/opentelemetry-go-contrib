@@ -56,8 +56,8 @@ func TestDetectV3(t *testing.T) {
 	attributes := []attribute.KeyValue{
 		semconv.CloudProviderAWS,
 		semconv.CloudPlatformAWSECS,
-		semconv.ContainerNameKey.String("container-Name"),
-		semconv.ContainerIDKey.String("0123456789A"),
+		semconv.ContainerName("container-Name"),
+		semconv.ContainerID("0123456789A"),
 	}
 	expectedResource := resource.NewWithAttributes(semconv.SchemaURL, attributes...)
 	detector := &resourceDetector{utils: detectorUtils}
@@ -78,8 +78,8 @@ func TestDetectCannotReadContainerID(t *testing.T) {
 	attributes := []attribute.KeyValue{
 		semconv.CloudProviderAWS,
 		semconv.CloudPlatformAWSECS,
-		semconv.ContainerNameKey.String("container-Name"),
-		semconv.ContainerIDKey.String(""),
+		semconv.ContainerName("container-Name"),
+		semconv.ContainerID(""),
 	}
 	expectedResource := resource.NewWithAttributes(semconv.SchemaURL, attributes...)
 	detector := &resourceDetector{utils: detectorUtils}

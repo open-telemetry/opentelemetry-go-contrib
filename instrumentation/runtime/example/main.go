@@ -34,7 +34,7 @@ import (
 
 var res = resource.NewWithAttributes(
 	semconv.SchemaURL,
-	semconv.ServiceNameKey.String("runtime-instrumentation-example"),
+	semconv.ServiceName("runtime-instrumentation-example"),
 )
 
 func main() {

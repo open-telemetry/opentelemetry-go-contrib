@@ -96,7 +96,7 @@ func TestQuery(t *testing.T) {
 	for _, span := range spans[0 : len(spans)-1] {
 		switch span.Name() {
 		case insertStmt:
-			assert.Contains(t, span.Attributes(), semconv.DBStatementKey.String(insertStmt))
+			assert.Contains(t, span.Attributes(), semconv.DBStatement(insertStmt))
 			assert.Equal(t, parentSpan.SpanContext().SpanID().String(), span.Parent().SpanID().String())
 		default:
 			t.Fatalf("unexpected span name %s", span.Name())
@@ -155,7 +155,7 @@ func TestBatch(t *testing.T) {
 		span := spans[0]
 		assert.Equal(t, internal.CassBatchQueryName, span.Name())
 		assert.Equal(t, parentSpan.SpanContext().SpanID(), span.Parent().SpanID())
-		assert.Contains(t, span.Attributes(), semconv.DBOperationKey.String("db.cassandra.batch.query"))
+		assert.Contains(t, span.Attributes(), semconv.DBOperation("db.cassandra.batch.query"))
 		assertConnectionLevelAttributes(t, span)
 	}
 
@@ -196,7 +196,7 @@ func TestConnection(t *testing.T) {
 	// Verify the span attributes
 	for _, span := range spans {
 		assert.Equal(t, internal.CassConnectName, span.Name())
-		assert.Contains(t, span.Attributes(), semconv.DBOperationKey.String("db.cassandra.connect"))
+		assert.Contains(t, span.Attributes(), semconv.DBOperation("db.cassandra.connect"))
 		assertConnectionLevelAttributes(t, span)
 	}
 
@@ -227,8 +227,8 @@ func TestHostOrIP(t *testing.T) {
 func assertConnectionLevelAttributes(t *testing.T, span sdktrace.ReadOnlySpan) {
 	attrs := span.Attributes()
 	assert.Contains(t, attrs, semconv.DBSystemCassandra)
-	assert.Contains(t, attrs, semconv.NetSockPeerAddrKey.String("127.0.0.1"))
-	assert.Contains(t, attrs, semconv.NetPeerPortKey.Int64(9042))
+	assert.Contains(t, attrs, semconv.NetSockPeerAddr("127.0.0.1"))
+	assert.Contains(t, attrs, semconv.NetPeerPort(9042))
 	assert.Contains(t, attrs, internal.CassHostStateKey.String("UP"))
 	assert.Equal(t, trace.SpanKindClient, span.SpanKind())
 

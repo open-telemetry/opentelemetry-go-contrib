@@ -36,17 +36,15 @@ const (
 	OperationSet            Operation = "set"
 	OperationTouch          Operation = "touch"
 
-	MamcacheDBSystemValue = "memcached"
-
 	MemcacheDBItemKeyName attribute.Key = "db.memcached.item"
 )
 
 func MemcacheDBSystem() attribute.KeyValue {
-	return semconv.DBSystemKey.String(MamcacheDBSystemValue)
+	return semconv.DBSystemMemcached
 }
 
 func MemcacheDBOperation(opName Operation) attribute.KeyValue {
-	return semconv.DBOperationKey.String(string(opName))
+	return semconv.DBOperation(string(opName))
 }
 
 func MemcacheDBItemKeys(itemKeys ...string) attribute.KeyValue {
