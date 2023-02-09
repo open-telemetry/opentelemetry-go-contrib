@@ -21,6 +21,7 @@ import (
 	"net/http"
 	"net/http/httptest"
 	"os"
+	"path/filepath"
 	"strings"
 	"testing"
 	"time"
@@ -241,19 +242,20 @@ func TestRender(t *testing.T) {
 	beego.SetTemplateFSFunc(func() http.FileSystem {
 		return &assetfs.AssetFS{
 			Asset: func(path string) ([]byte, error) {
-				if path == tplName {
+				if _, f := filepath.Split(path); f == tplName {
 					return []byte(htmlStr), nil
 				}
 				return nil, os.ErrNotExist
 			},
 			AssetDir: func(path string) ([]string, error) {
-				if path == "" {
+				switch path {
+				case "", `\`:
 					return []string{tplName}, nil
 				}
 				return nil, os.ErrNotExist
 			},
 			AssetInfo: func(path string) (os.FileInfo, error) {
-				if path == tplName {
+				if _, f := filepath.Split(path); f == tplName {
 					return &assetfs.FakeFile{
 						Path:      path,
 						Len:       int64(len(htmlStr)),
