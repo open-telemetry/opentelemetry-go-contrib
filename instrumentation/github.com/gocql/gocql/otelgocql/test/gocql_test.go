@@ -104,7 +104,8 @@ func TestQuery(t *testing.T) {
 		assertConnectionLevelAttributes(t, span)
 	}
 
-	rm, err := reader.Collect(context.Background())
+	rm := metricdata.ResourceMetrics{}
+	err = reader.Collect(context.Background(), &rm)
 	require.NoError(t, err)
 	require.Len(t, rm.ScopeMetrics, 1)
 	sm := rm.ScopeMetrics[0]
@@ -159,7 +160,8 @@ func TestBatch(t *testing.T) {
 		assertConnectionLevelAttributes(t, span)
 	}
 
-	rm, err := reader.Collect(context.Background())
+	rm := metricdata.ResourceMetrics{}
+	err = reader.Collect(context.Background(), &rm)
 	require.NoError(t, err)
 	require.Len(t, rm.ScopeMetrics, 1)
 	sm := rm.ScopeMetrics[0]
@@ -200,7 +202,8 @@ func TestConnection(t *testing.T) {
 		assertConnectionLevelAttributes(t, span)
 	}
 
-	rm, err := reader.Collect(context.Background())
+	rm := metricdata.ResourceMetrics{}
+	err = reader.Collect(context.Background(), &rm)
 	require.NoError(t, err)
 	require.Len(t, rm.ScopeMetrics, 1)
 	sm := rm.ScopeMetrics[0]

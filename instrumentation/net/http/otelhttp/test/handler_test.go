@@ -111,7 +111,8 @@ func TestHandlerBasics(t *testing.T) {
 	}
 	h.ServeHTTP(rr, r)
 
-	rm, err := reader.Collect(context.Background())
+	rm := metricdata.ResourceMetrics{}
+	err = reader.Collect(context.Background(), &rm)
 	require.NoError(t, err)
 	require.Len(t, rm.ScopeMetrics, 1)
 	attrs := attribute.NewSet(
