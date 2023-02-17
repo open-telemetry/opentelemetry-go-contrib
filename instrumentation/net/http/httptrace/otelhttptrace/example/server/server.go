@@ -44,6 +44,7 @@ func initTracer() (*sdktrace.TracerProvider, error) {
 	// For the demonstration, use sdktrace.AlwaysSample sampler to sample all traces.
 	// In a production application, you should configure the sampler to a trace.ParentBased(trace.TraceIDRatioBased)
 	// set at the desired ratio.
+	// See more info at https://opentelemetry.io/docs/instrumentation/go/exporting_data/#sampling.
 	tp := sdktrace.NewTracerProvider(
 		sdktrace.WithSampler(sdktrace.AlwaysSample()),
 		sdktrace.WithBatcher(exporter),
