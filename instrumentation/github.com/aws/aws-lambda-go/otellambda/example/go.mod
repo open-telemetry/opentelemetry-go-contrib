@@ -12,7 +12,7 @@ replace (
 require (
 	github.com/aws/aws-lambda-go v1.37.0
 	github.com/aws/aws-sdk-go-v2/config v1.18.12
-	github.com/aws/aws-sdk-go-v2/service/s3 v1.30.2
+	github.com/aws/aws-sdk-go-v2/service/s3 v1.30.3
 	go.opentelemetry.io/contrib/detectors/aws/lambda v0.39.0
 	go.opentelemetry.io/contrib/instrumentation/github.com/aws/aws-lambda-go/otellambda v0.39.0
 	go.opentelemetry.io/contrib/instrumentation/github.com/aws/aws-sdk-go-v2/otelaws v0.39.0
@@ -30,7 +30,7 @@ require (
 	github.com/aws/aws-sdk-go-v2/internal/configsources v1.1.28 // indirect
 	github.com/aws/aws-sdk-go-v2/internal/endpoints/v2 v2.4.22 // indirect
 	github.com/aws/aws-sdk-go-v2/internal/ini v1.3.29 // indirect
-	github.com/aws/aws-sdk-go-v2/internal/v4a v1.0.19 // indirect
+	github.com/aws/aws-sdk-go-v2/internal/v4a v1.0.20 // indirect
 	github.com/aws/aws-sdk-go-v2/service/dynamodb v1.18.2 // indirect
 	github.com/aws/aws-sdk-go-v2/service/internal/accept-encoding v1.9.11 // indirect
 	github.com/aws/aws-sdk-go-v2/service/internal/checksum v1.1.23 // indirect
