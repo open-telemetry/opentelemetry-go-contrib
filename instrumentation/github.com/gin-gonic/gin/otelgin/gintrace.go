@@ -77,7 +77,7 @@ func Middleware(service string, opts ...Option) gin.HandlerFunc {
 		if spanName == "" {
 			spanName = fmt.Sprintf("HTTP %s route not found", c.Request.Method)
 		} else {
-			rAttr := semconv.HTTPRouteKey.String(spanName)
+			rAttr := semconv.HTTPRoute(spanName)
 			opts = append(opts, oteltrace.WithAttributes(rAttr))
 		}
 		ctx, span := tracer.Start(ctx, spanName, opts...)
@@ -92,7 +92,7 @@ func Middleware(service string, opts ...Option) gin.HandlerFunc {
 		status := c.Writer.Status()
 		span.SetStatus(httpconv.ServerStatus(status))
 		if status > 0 {
-			span.SetAttributes(semconv.HTTPStatusCodeKey.Int(status))
+			span.SetAttributes(semconv.HTTPStatusCode(status))
 		}
 		if len(c.Errors) > 0 {
 			span.SetAttributes(attribute.String("gin.errors", c.Errors.String()))

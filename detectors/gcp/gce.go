@@ -49,42 +49,42 @@ func (gce *GCE) Detect(ctx context.Context) (*resource.Resource, error) {
 	if projectID, err := metadata.ProjectID(); hasProblem(err) {
 		errInfo = append(errInfo, err.Error())
 	} else if projectID != "" {
-		attributes = append(attributes, semconv.CloudAccountIDKey.String(projectID))
+		attributes = append(attributes, semconv.CloudAccountID(projectID))
 	}
 
 	if zone, err := metadata.Zone(); hasProblem(err) {
 		errInfo = append(errInfo, err.Error())
 	} else if zone != "" {
-		attributes = append(attributes, semconv.CloudAvailabilityZoneKey.String(zone))
+		attributes = append(attributes, semconv.CloudAvailabilityZone(zone))
 
 		splitArr := strings.SplitN(zone, "-", 3)
 		if len(splitArr) == 3 {
-			attributes = append(attributes, semconv.CloudRegionKey.String(strings.Join(splitArr[0:2], "-")))
+			attributes = append(attributes, semconv.CloudRegion(strings.Join(splitArr[0:2], "-")))
 		}
 	}
 
 	if instanceID, err := metadata.InstanceID(); hasProblem(err) {
 		errInfo = append(errInfo, err.Error())
 	} else if instanceID != "" {
-		attributes = append(attributes, semconv.HostIDKey.String(instanceID))
+		attributes = append(attributes, semconv.HostID(instanceID))
 	}
 
 	if name, err := metadata.InstanceName(); hasProblem(err) {
 		errInfo = append(errInfo, err.Error())
 	} else if name != "" {
-		attributes = append(attributes, semconv.HostNameKey.String(name))
+		attributes = append(attributes, semconv.HostName(name))
 	}
 
 	if hostname, err := os.Hostname(); hasProblem(err) {
 		errInfo = append(errInfo, err.Error())
 	} else if hostname != "" {
-		attributes = append(attributes, semconv.HostNameKey.String(hostname))
+		attributes = append(attributes, semconv.HostName(hostname))
 	}
 
 	if hostType, err := metadata.Get("instance/machine-type"); hasProblem(err) {
 		errInfo = append(errInfo, err.Error())
 	} else if hostType != "" {
-		attributes = append(attributes, semconv.HostTypeKey.String(hostType))
+		attributes = append(attributes, semconv.HostType(hostType))
 	}
 
 	var aggregatedErr error

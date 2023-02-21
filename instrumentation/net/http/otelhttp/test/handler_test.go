@@ -115,12 +115,12 @@ func TestHandlerBasics(t *testing.T) {
 	require.NoError(t, err)
 	require.Len(t, rm.ScopeMetrics, 1)
 	attrs := attribute.NewSet(
-		semconv.NetHostNameKey.String(r.Host),
+		semconv.NetHostName(r.Host),
 		semconv.HTTPSchemeHTTP,
 		semconv.HTTPFlavorKey.String(fmt.Sprintf("1.%d", r.ProtoMinor)),
-		semconv.HTTPMethodKey.String("GET"),
+		semconv.HTTPMethod("GET"),
 		attribute.String("test", "attribute"),
-		semconv.HTTPStatusCodeKey.Int(200),
+		semconv.HTTPStatusCode(200),
 	)
 	assertScopeMetrics(t, rm.ScopeMetrics[0], attrs)
 

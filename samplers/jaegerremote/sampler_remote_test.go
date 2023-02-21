@@ -535,3 +535,55 @@ func getSamplingStrategyResponse(strategyType jaeger_api_v2.SamplingStrategyType
 	}
 	return nil
 }
+
+func TestSamplingStrategyParserImpl(t *testing.T) {
+	assertProbabilistic := func(t *testing.T, s *jaeger_api_v2.SamplingStrategyResponse) {
+		require.NotNil(t, s.GetProbabilisticSampling(), "output: %+v", s)
+		require.EqualValues(t, 0.42, s.GetProbabilisticSampling().GetSamplingRate(), "output: %+v", s)
+	}
+	assertRateLimiting := func(t *testing.T, s *jaeger_api_v2.SamplingStrategyResponse) {
+		require.NotNil(t, s.GetRateLimitingSampling(), "output: %+v", s)
+		require.EqualValues(t, 42, s.GetRateLimitingSampling().GetMaxTracesPerSecond(), "output: %+v", s)
+	}
+	tests := []struct {
+		name   string
+		json   string
+		assert func(t *testing.T, s *jaeger_api_v2.SamplingStrategyResponse)
+	}{
+		{
+			name:   "official JSON probabilistic",
+			json:   `{"strategyType":"PROBABILISTIC","probabilisticSampling":{"samplingRate":0.42}}`,
+			assert: assertProbabilistic,
+		},
+		{
+			name:   "official JSON rate limiting",
+			json:   `{"strategyType":"RATE_LIMITING","rateLimitingSampling":{"maxTracesPerSecond":42}}`,
+			assert: assertRateLimiting,
+		},
+		{
+			name:   "legacy JSON probabilistic",
+			json:   `{"strategyType":0,"probabilisticSampling":{"samplingRate":0.42}}`,
+			assert: assertProbabilistic,
+		},
+		{
+			name:   "legacy JSON rate limiting",
+			json:   `{"strategyType":1,"rateLimitingSampling":{"maxTracesPerSecond":42}}`,
+			assert: assertRateLimiting,
+		},
+	}
+	for _, test := range tests {
+		t.Run(test.name, func(t *testing.T) {
+			val, err := new(samplingStrategyParserImpl).Parse([]byte(test.json))
+			require.NoError(t, err)
+			s := val.(*jaeger_api_v2.SamplingStrategyResponse)
+			test.assert(t, s)
+		})
+	}
+}
+
+func TestSamplingStrategyParserImpl_Error(t *testing.T) {
+	json := `{"strategyType":"foo_bar","probabilisticSampling":{"samplingRate":0.42}}`
+	val, err := new(samplingStrategyParserImpl).Parse([]byte(json))
+	require.Error(t, err, "output: %+v", val)
+	require.Contains(t, err.Error(), `unknown value "foo_bar"`)
+}

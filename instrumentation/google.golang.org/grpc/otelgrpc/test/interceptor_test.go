@@ -107,12 +107,12 @@ func TestUnaryClientInterceptor(t *testing.T) {
 			method: "/github.com.serviceName/bar",
 			name:   "github.com.serviceName/bar",
 			expectedAttr: []attribute.KeyValue{
-				semconv.RPCSystemKey.String("grpc"),
-				semconv.RPCServiceKey.String("github.com.serviceName"),
-				semconv.RPCMethodKey.String("bar"),
+				semconv.RPCSystemGRPC,
+				semconv.RPCService("github.com.serviceName"),
+				semconv.RPCMethod("bar"),
 				otelgrpc.GRPCStatusCodeKey.Int64(0),
-				semconv.NetPeerNameKey.String("fake"),
-				semconv.NetPeerPortKey.Int(8906),
+				semconv.NetPeerName("fake"),
+				semconv.NetPeerPort(8906),
 			},
 			eventsAttr: []map[attribute.Key]attribute.Value{
 				{
@@ -129,12 +129,12 @@ func TestUnaryClientInterceptor(t *testing.T) {
 			method: "/serviceName/bar",
 			name:   "serviceName/bar",
 			expectedAttr: []attribute.KeyValue{
-				semconv.RPCSystemKey.String("grpc"),
-				semconv.RPCServiceKey.String("serviceName"),
-				semconv.RPCMethodKey.String("bar"),
+				semconv.RPCSystemGRPC,
+				semconv.RPCService("serviceName"),
+				semconv.RPCMethod("bar"),
 				otelgrpc.GRPCStatusCodeKey.Int64(0),
-				semconv.NetPeerNameKey.String("fake"),
-				semconv.NetPeerPortKey.Int(8906),
+				semconv.NetPeerName("fake"),
+				semconv.NetPeerPort(8906),
 			},
 			eventsAttr: []map[attribute.Key]attribute.Value{
 				{
@@ -151,12 +151,12 @@ func TestUnaryClientInterceptor(t *testing.T) {
 			method: "serviceName/bar",
 			name:   "serviceName/bar",
 			expectedAttr: []attribute.KeyValue{
-				semconv.RPCSystemKey.String("grpc"),
-				semconv.RPCServiceKey.String("serviceName"),
-				semconv.RPCMethodKey.String("bar"),
+				semconv.RPCSystemGRPC,
+				semconv.RPCService("serviceName"),
+				semconv.RPCMethod("bar"),
 				otelgrpc.GRPCStatusCodeKey.Int64(int64(grpc_codes.OK)),
-				semconv.NetPeerNameKey.String("fake"),
-				semconv.NetPeerPortKey.Int(8906),
+				semconv.NetPeerName("fake"),
+				semconv.NetPeerPort(8906),
 			},
 			eventsAttr: []map[attribute.Key]attribute.Value{
 				{
@@ -174,12 +174,12 @@ func TestUnaryClientInterceptor(t *testing.T) {
 			name:             "serviceName/bar_error",
 			expectedSpanCode: codes.Error,
 			expectedAttr: []attribute.KeyValue{
-				semconv.RPCSystemKey.String("grpc"),
-				semconv.RPCServiceKey.String("serviceName"),
-				semconv.RPCMethodKey.String("bar_error"),
+				semconv.RPCSystemGRPC,
+				semconv.RPCService("serviceName"),
+				semconv.RPCMethod("bar_error"),
 				otelgrpc.GRPCStatusCodeKey.Int64(int64(grpc_codes.Internal)),
-				semconv.NetPeerNameKey.String("fake"),
-				semconv.NetPeerPortKey.Int(8906),
+				semconv.NetPeerName("fake"),
+				semconv.NetPeerPort(8906),
 			},
 			eventsAttr: []map[attribute.Key]attribute.Value{
 				{
@@ -197,10 +197,10 @@ func TestUnaryClientInterceptor(t *testing.T) {
 			method: "invalidName",
 			name:   "invalidName",
 			expectedAttr: []attribute.KeyValue{
-				semconv.RPCSystemKey.String("grpc"),
+				semconv.RPCSystemGRPC,
 				otelgrpc.GRPCStatusCodeKey.Int64(0),
-				semconv.NetPeerNameKey.String("fake"),
-				semconv.NetPeerPortKey.Int(8906),
+				semconv.NetPeerName("fake"),
+				semconv.NetPeerPort(8906),
 			},
 			eventsAttr: []map[attribute.Key]attribute.Value{
 				{
@@ -217,12 +217,12 @@ func TestUnaryClientInterceptor(t *testing.T) {
 			method: "/github.com.foo.serviceName_123/method",
 			name:   "github.com.foo.serviceName_123/method",
 			expectedAttr: []attribute.KeyValue{
-				semconv.RPCSystemKey.String("grpc"),
+				semconv.RPCSystemGRPC,
 				otelgrpc.GRPCStatusCodeKey.Int64(0),
-				semconv.RPCServiceKey.String("github.com.foo.serviceName_123"),
-				semconv.RPCMethodKey.String("method"),
-				semconv.NetPeerNameKey.String("fake"),
-				semconv.NetPeerPortKey.Int(8906),
+				semconv.RPCService("github.com.foo.serviceName_123"),
+				semconv.RPCMethod("method"),
+				semconv.NetPeerName("fake"),
+				semconv.NetPeerPort(8906),
 			},
 			eventsAttr: []map[attribute.Key]attribute.Value{
 				{
@@ -369,12 +369,12 @@ func TestStreamClientInterceptorOnBIDIStream(t *testing.T) {
 	require.True(t, ok, "missing span %s", name)
 
 	expectedAttr := []attribute.KeyValue{
-		semconv.RPCSystemKey.String("grpc"),
+		semconv.RPCSystemGRPC,
 		otelgrpc.GRPCStatusCodeKey.Int64(int64(grpc_codes.OK)),
-		semconv.RPCServiceKey.String("github.com.serviceName"),
-		semconv.RPCMethodKey.String("bar"),
-		semconv.NetPeerNameKey.String("fake"),
-		semconv.NetPeerPortKey.Int(8906),
+		semconv.RPCService("github.com.serviceName"),
+		semconv.RPCMethod("bar"),
+		semconv.NetPeerName("fake"),
+		semconv.NetPeerPort(8906),
 	}
 	assert.ElementsMatch(t, expectedAttr, span.Attributes())
 
@@ -437,12 +437,12 @@ func TestStreamClientInterceptorOnUnidirectionalClientServerStream(t *testing.T)
 	require.True(t, ok, "missing span %s", name)
 
 	expectedAttr := []attribute.KeyValue{
-		semconv.RPCSystemKey.String("grpc"),
+		semconv.RPCSystemGRPC,
 		otelgrpc.GRPCStatusCodeKey.Int64(int64(grpc_codes.OK)),
-		semconv.RPCServiceKey.String("github.com.serviceName"),
-		semconv.RPCMethodKey.String("bar"),
-		semconv.NetPeerNameKey.String("fake"),
-		semconv.NetPeerPortKey.Int(8906),
+		semconv.RPCService("github.com.serviceName"),
+		semconv.RPCMethod("bar"),
+		semconv.NetPeerName("fake"),
+		semconv.NetPeerPort(8906),
 	}
 	assert.ElementsMatch(t, expectedAttr, span.Attributes())
 
@@ -572,12 +572,12 @@ func TestStreamClientInterceptorWithError(t *testing.T) {
 	require.True(t, ok, "missing span %s", name)
 
 	expectedAttr := []attribute.KeyValue{
-		semconv.RPCSystemKey.String("grpc"),
+		semconv.RPCSystemGRPC,
 		otelgrpc.GRPCStatusCodeKey.Int64(int64(grpc_codes.Unknown)),
-		semconv.RPCServiceKey.String("github.com.serviceName"),
-		semconv.RPCMethodKey.String("bar"),
-		semconv.NetPeerNameKey.String("fake"),
-		semconv.NetPeerPortKey.Int(8906),
+		semconv.RPCService("github.com.serviceName"),
+		semconv.RPCMethod("bar"),
+		semconv.NetPeerName("fake"),
+		semconv.NetPeerPort(8906),
 	}
 	assert.ElementsMatch(t, expectedAttr, span.Attributes())
 	assert.Equal(t, codes.Error, span.Status().Code)
@@ -628,36 +628,36 @@ func TestParseFullMethod(t *testing.T) {
 			fullMethod: "/grpc.test.EchoService/Echo",
 			name:       "grpc.test.EchoService/Echo",
 			attr: []attribute.KeyValue{
-				semconv.RPCServiceKey.String("grpc.test.EchoService"),
-				semconv.RPCMethodKey.String("Echo"),
+				semconv.RPCService("grpc.test.EchoService"),
+				semconv.RPCMethod("Echo"),
 			},
 		}, {
 			fullMethod: "/com.example.ExampleRmiService/exampleMethod",
 			name:       "com.example.ExampleRmiService/exampleMethod",
 			attr: []attribute.KeyValue{
-				semconv.RPCServiceKey.String("com.example.ExampleRmiService"),
-				semconv.RPCMethodKey.String("exampleMethod"),
+				semconv.RPCService("com.example.ExampleRmiService"),
+				semconv.RPCMethod("exampleMethod"),
 			},
 		}, {
 			fullMethod: "/MyCalcService.Calculator/Add",
 			name:       "MyCalcService.Calculator/Add",
 			attr: []attribute.KeyValue{
-				semconv.RPCServiceKey.String("MyCalcService.Calculator"),
-				semconv.RPCMethodKey.String("Add"),
+				semconv.RPCService("MyCalcService.Calculator"),
+				semconv.RPCMethod("Add"),
 			},
 		}, {
 			fullMethod: "/MyServiceReference.ICalculator/Add",
 			name:       "MyServiceReference.ICalculator/Add",
 			attr: []attribute.KeyValue{
-				semconv.RPCServiceKey.String("MyServiceReference.ICalculator"),
-				semconv.RPCMethodKey.String("Add"),
+				semconv.RPCService("MyServiceReference.ICalculator"),
+				semconv.RPCMethod("Add"),
 			},
 		}, {
 			fullMethod: "/MyServiceWithNoPackage/theMethod",
 			name:       "MyServiceWithNoPackage/theMethod",
 			attr: []attribute.KeyValue{
-				semconv.RPCServiceKey.String("MyServiceWithNoPackage"),
-				semconv.RPCMethodKey.String("theMethod"),
+				semconv.RPCService("MyServiceWithNoPackage"),
+				semconv.RPCMethod("theMethod"),
 			},
 		}, {
 			fullMethod: "/pkg.srv",
@@ -667,7 +667,7 @@ func TestParseFullMethod(t *testing.T) {
 			fullMethod: "/pkg.srv/",
 			name:       "pkg.srv/",
 			attr: []attribute.KeyValue{
-				semconv.RPCServiceKey.String("pkg.srv"),
+				semconv.RPCService("pkg.srv"),
 			},
 		},
 	}

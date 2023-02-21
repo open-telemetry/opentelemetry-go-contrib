@@ -133,9 +133,9 @@ func TestCloudFunctionDetect(t *testing.T) {
 				res: resource.NewSchemaless([]attribute.KeyValue{
 					semconv.CloudProviderGCP,
 					semconv.CloudPlatformGCPCloudFunctions,
-					semconv.FaaSNameKey.String(functionName),
-					semconv.CloudAccountIDKey.String(projectIDValue),
-					semconv.CloudRegionKey.String(regionValue),
+					semconv.FaaSName(functionName),
+					semconv.CloudAccountID(projectIDValue),
+					semconv.CloudRegion(regionValue),
 				}...),
 				err: nil,
 			},

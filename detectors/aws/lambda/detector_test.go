@@ -37,11 +37,11 @@ func TestDetectSuccess(t *testing.T) {
 
 	attributes := []attribute.KeyValue{
 		semconv.CloudProviderAWS,
-		semconv.CloudRegionKey.String("us-texas-1"),
-		semconv.FaaSNameKey.String("testFunction"),
-		semconv.FaaSVersionKey.String("$LATEST"),
-		semconv.FaaSInstanceKey.String("2023/01/01/[$LATEST]5d1edb9e525d486696cf01a3503487bc"),
-		semconv.FaaSMaxMemoryKey.Int(128),
+		semconv.CloudRegion("us-texas-1"),
+		semconv.FaaSName("testFunction"),
+		semconv.FaaSVersion("$LATEST"),
+		semconv.FaaSInstance("2023/01/01/[$LATEST]5d1edb9e525d486696cf01a3503487bc"),
+		semconv.FaaSMaxMemory(128),
 	}
 	expectedResource := resource.NewWithAttributes(semconv.SchemaURL, attributes...)
 	detector := resourceDetector{}

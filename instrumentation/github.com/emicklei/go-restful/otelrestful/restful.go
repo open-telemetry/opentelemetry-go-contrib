@@ -57,7 +57,7 @@ func OTelFilter(service string, opts ...Option) restful.FilterFunction {
 			oteltrace.WithSpanKind(oteltrace.SpanKindServer),
 		}
 		if route != "" {
-			rAttr := semconv.HTTPRouteKey.String(route)
+			rAttr := semconv.HTTPRoute(route)
 			opts = append(opts, oteltrace.WithAttributes(rAttr))
 		}
 
@@ -72,7 +72,7 @@ func OTelFilter(service string, opts ...Option) restful.FilterFunction {
 		status := resp.StatusCode()
 		span.SetStatus(httpconv.ServerStatus(status))
 		if status > 0 {
-			span.SetAttributes(semconv.HTTPStatusCodeKey.Int(status))
+			span.SetAttributes(semconv.HTTPStatusCode(status))
 		}
 	}
 }
