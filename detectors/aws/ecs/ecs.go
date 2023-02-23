@@ -20,7 +20,6 @@ import (
 	"fmt"
 	"net/http"
 	"os"
-	"regexp"
 	"runtime"
 	"strings"
 
@@ -156,20 +155,35 @@ func (detector *resourceDetector) getLogsAttributes(metadata *ecsmetadata.Contai
 	}
 
 	containerArn := metadata.ContainerARN
+	// https://docs.aws.amazon.com/general/latest/gr/aws-arns-and-namespaces.html
+	const arnPartition = 1
+	const arnRegion = 3
+	const arnAccountId = 4
+	containerArnParts := strings.Split(containerArn, ":")
+	// a valid arn should have at least 6 parts
+	if len(containerArnParts) < 6 {
+		return nil, errCannotRetrieveLogsStreamMetadataV4
+	}
 	logsRegion := logsOptions.AwsRegion
 	if len(logsRegion) < 1 {
-		r := regexp.MustCompile(`arn:aws:ecs:([^:]+):.*`)
-		logsRegion = r.FindStringSubmatch(containerArn)[1]
+		logsRegion = containerArnParts[arnRegion]
 	}
 
-	r := regexp.MustCompile(`arn:aws:ecs:[^:]+:([^:]+):.*`)
-	awsAccount := r.FindStringSubmatch(containerArn)[1]
+	awsPartition := containerArnParts[arnPartition]
+	awsAccount := containerArnParts[arnAccountId]
+
+	awsLogGroupArn := strings.Join([]string{"arn", awsPartition, "logs",
+		logsRegion, awsAccount, "log-group", logsOptions.AwsLogsGroup,
+		"*"}, ":")
+	awsLogStreamArn := strings.Join([]string{"arn", awsPartition, "logs",
+		logsRegion, awsAccount, "log-group", logsOptions.AwsLogsGroup,
+		"log-stream", logsOptions.AwsLogsStream}, ":")
 
 	return []attribute.KeyValue{
 		semconv.AWSLogGroupNames(logsOptions.AwsLogsGroup),
-		semconv.AWSLogGroupARNs(fmt.Sprintf("arn:aws:logs:%s:%s:log-group:%s:*", logsRegion, awsAccount, logsOptions.AwsLogsGroup)),
+		semconv.AWSLogGroupARNs(awsLogGroupArn),
 		semconv.AWSLogStreamNames(logsOptions.AwsLogsStream),
-		semconv.AWSLogStreamARNs(fmt.Sprintf("arn:aws:logs:%s:%s:log-group:%s:log-stream:%s", logsRegion, awsAccount, logsOptions.AwsLogsGroup, logsOptions.AwsLogsStream)),
+		semconv.AWSLogStreamARNs(awsLogStreamArn),
 	}, nil
 }
 
