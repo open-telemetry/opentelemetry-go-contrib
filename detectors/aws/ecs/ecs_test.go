@@ -21,7 +21,7 @@ import (
 
 	"go.opentelemetry.io/otel/attribute"
 	"go.opentelemetry.io/otel/sdk/resource"
-	semconv "go.opentelemetry.io/otel/semconv/v1.12.0"
+	semconv "go.opentelemetry.io/otel/semconv/v1.17.0"
 
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/mock"
@@ -56,8 +56,8 @@ func TestDetectV3(t *testing.T) {
 	attributes := []attribute.KeyValue{
 		semconv.CloudProviderAWS,
 		semconv.CloudPlatformAWSECS,
-		semconv.ContainerNameKey.String("container-Name"),
-		semconv.ContainerIDKey.String("0123456789A"),
+		semconv.ContainerName("container-Name"),
+		semconv.ContainerID("0123456789A"),
 	}
 	expectedResource := resource.NewWithAttributes(semconv.SchemaURL, attributes...)
 	detector := &resourceDetector{utils: detectorUtils}
@@ -78,8 +78,8 @@ func TestDetectCannotReadContainerID(t *testing.T) {
 	attributes := []attribute.KeyValue{
 		semconv.CloudProviderAWS,
 		semconv.CloudPlatformAWSECS,
-		semconv.ContainerNameKey.String("container-Name"),
-		semconv.ContainerIDKey.String(""),
+		semconv.ContainerName("container-Name"),
+		semconv.ContainerID(""),
 	}
 	expectedResource := resource.NewWithAttributes(semconv.SchemaURL, attributes...)
 	detector := &resourceDetector{utils: detectorUtils}

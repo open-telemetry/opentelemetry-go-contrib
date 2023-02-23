@@ -23,7 +23,7 @@ import (
 
 	"go.opentelemetry.io/otel/attribute"
 	"go.opentelemetry.io/otel/sdk/resource"
-	semconv "go.opentelemetry.io/otel/semconv/v1.12.0"
+	semconv "go.opentelemetry.io/otel/semconv/v1.17.0"
 )
 
 // successfully return resource when process is running on Amazon Lambda environment.
@@ -37,11 +37,11 @@ func TestDetectSuccess(t *testing.T) {
 
 	attributes := []attribute.KeyValue{
 		semconv.CloudProviderAWS,
-		semconv.CloudRegionKey.String("us-texas-1"),
-		semconv.FaaSNameKey.String("testFunction"),
-		semconv.FaaSVersionKey.String("$LATEST"),
-		semconv.FaaSInstanceKey.String("2023/01/01/[$LATEST]5d1edb9e525d486696cf01a3503487bc"),
-		semconv.FaaSMaxMemoryKey.Int(128),
+		semconv.CloudRegion("us-texas-1"),
+		semconv.FaaSName("testFunction"),
+		semconv.FaaSVersion("$LATEST"),
+		semconv.FaaSInstance("2023/01/01/[$LATEST]5d1edb9e525d486696cf01a3503487bc"),
+		semconv.FaaSMaxMemory(128),
 	}
 	expectedResource := resource.NewWithAttributes(semconv.SchemaURL, attributes...)
 	detector := resourceDetector{}

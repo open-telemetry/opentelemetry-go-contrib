@@ -62,18 +62,17 @@ func main() {
 		log.Fatal(err)
 	}
 
-	rand.Seed(time.Now().Unix())
-
 	// Create root span
 	tr := otel.Tracer("producer")
 	ctx, span := tr.Start(context.Background(), "produce message")
 	defer span.End()
 
 	// Inject tracing info into message
+	rng := rand.New(rand.NewSource(time.Now().Unix()))
 	msg := sarama.ProducerMessage{
 		Topic: example.KafkaTopic,
 		Key:   sarama.StringEncoder("random_number"),
-		Value: sarama.StringEncoder(fmt.Sprintf("%d", rand.Intn(1000))),
+		Value: sarama.StringEncoder(fmt.Sprintf("%d", rng.Intn(1000))),
 	}
 	otel.GetTextMapPropagator().Inject(ctx, otelsarama.NewProducerMessageCarrier(&msg))
 

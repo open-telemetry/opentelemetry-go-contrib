@@ -23,7 +23,7 @@ import (
 	"github.com/aws/smithy-go/middleware"
 	"github.com/stretchr/testify/assert"
 
-	semconv "go.opentelemetry.io/otel/semconv/v1.12.0"
+	semconv "go.opentelemetry.io/otel/semconv/v1.17.0"
 )
 
 func TestSQSDeleteMessageBatchInput(t *testing.T) {
@@ -35,7 +35,7 @@ func TestSQSDeleteMessageBatchInput(t *testing.T) {
 
 	attributes := SQSAttributeSetter(context.TODO(), input)
 
-	assert.Contains(t, attributes, semconv.MessagingURLKey.String("test-queue-url"))
+	assert.Contains(t, attributes, semconv.NetPeerName("test-queue-url"))
 }
 
 func TestSQSDeleteMessageInput(t *testing.T) {
@@ -47,7 +47,7 @@ func TestSQSDeleteMessageInput(t *testing.T) {
 
 	attributes := SQSAttributeSetter(context.TODO(), input)
 
-	assert.Contains(t, attributes, semconv.MessagingURLKey.String("test-queue-url"))
+	assert.Contains(t, attributes, semconv.NetPeerName("test-queue-url"))
 }
 
 func TestSQSDeleteQueueInput(t *testing.T) {
@@ -59,7 +59,7 @@ func TestSQSDeleteQueueInput(t *testing.T) {
 
 	attributes := SQSAttributeSetter(context.TODO(), input)
 
-	assert.Contains(t, attributes, semconv.MessagingURLKey.String("test-queue-url"))
+	assert.Contains(t, attributes, semconv.NetPeerName("test-queue-url"))
 }
 
 func TestSQSGetQueueAttributesInput(t *testing.T) {
@@ -71,7 +71,7 @@ func TestSQSGetQueueAttributesInput(t *testing.T) {
 
 	attributes := SQSAttributeSetter(context.TODO(), input)
 
-	assert.Contains(t, attributes, semconv.MessagingURLKey.String("test-queue-url"))
+	assert.Contains(t, attributes, semconv.NetPeerName("test-queue-url"))
 }
 
 func TestSQSListDeadLetterSourceQueuesInput(t *testing.T) {
@@ -83,7 +83,7 @@ func TestSQSListDeadLetterSourceQueuesInput(t *testing.T) {
 
 	attributes := SQSAttributeSetter(context.TODO(), input)
 
-	assert.Contains(t, attributes, semconv.MessagingURLKey.String("test-queue-url"))
+	assert.Contains(t, attributes, semconv.NetPeerName("test-queue-url"))
 }
 
 func TestSQSListQueueTagsInput(t *testing.T) {
@@ -95,7 +95,7 @@ func TestSQSListQueueTagsInput(t *testing.T) {
 
 	attributes := SQSAttributeSetter(context.TODO(), input)
 
-	assert.Contains(t, attributes, semconv.MessagingURLKey.String("test-queue-url"))
+	assert.Contains(t, attributes, semconv.NetPeerName("test-queue-url"))
 }
 
 func TestSQSPurgeQueueInput(t *testing.T) {
@@ -107,7 +107,7 @@ func TestSQSPurgeQueueInput(t *testing.T) {
 
 	attributes := SQSAttributeSetter(context.TODO(), input)
 
-	assert.Contains(t, attributes, semconv.MessagingURLKey.String("test-queue-url"))
+	assert.Contains(t, attributes, semconv.NetPeerName("test-queue-url"))
 }
 
 func TestSQSReceiveMessageInput(t *testing.T) {
@@ -119,7 +119,7 @@ func TestSQSReceiveMessageInput(t *testing.T) {
 
 	attributes := SQSAttributeSetter(context.TODO(), input)
 
-	assert.Contains(t, attributes, semconv.MessagingURLKey.String("test-queue-url"))
+	assert.Contains(t, attributes, semconv.NetPeerName("test-queue-url"))
 }
 
 func TestSQSRemovePermissionInput(t *testing.T) {
@@ -131,7 +131,7 @@ func TestSQSRemovePermissionInput(t *testing.T) {
 
 	attributes := SQSAttributeSetter(context.TODO(), input)
 
-	assert.Contains(t, attributes, semconv.MessagingURLKey.String("test-queue-url"))
+	assert.Contains(t, attributes, semconv.NetPeerName("test-queue-url"))
 }
 
 func TestSQSSendMessageBatchInput(t *testing.T) {
@@ -143,7 +143,7 @@ func TestSQSSendMessageBatchInput(t *testing.T) {
 
 	attributes := SQSAttributeSetter(context.TODO(), input)
 
-	assert.Contains(t, attributes, semconv.MessagingURLKey.String("test-queue-url"))
+	assert.Contains(t, attributes, semconv.NetPeerName("test-queue-url"))
 }
 
 func TestSQSSendMessageInput(t *testing.T) {
@@ -155,7 +155,7 @@ func TestSQSSendMessageInput(t *testing.T) {
 
 	attributes := SQSAttributeSetter(context.TODO(), input)
 
-	assert.Contains(t, attributes, semconv.MessagingURLKey.String("test-queue-url"))
+	assert.Contains(t, attributes, semconv.NetPeerName("test-queue-url"))
 }
 
 func TestSQSSetQueueAttributesInput(t *testing.T) {
@@ -167,7 +167,7 @@ func TestSQSSetQueueAttributesInput(t *testing.T) {
 
 	attributes := SQSAttributeSetter(context.TODO(), input)
 
-	assert.Contains(t, attributes, semconv.MessagingURLKey.String("test-queue-url"))
+	assert.Contains(t, attributes, semconv.NetPeerName("test-queue-url"))
 }
 
 func TestSQSTagQueueInput(t *testing.T) {
@@ -179,7 +179,7 @@ func TestSQSTagQueueInput(t *testing.T) {
 
 	attributes := SQSAttributeSetter(context.TODO(), input)
 
-	assert.Contains(t, attributes, semconv.MessagingURLKey.String("test-queue-url"))
+	assert.Contains(t, attributes, semconv.NetPeerName("test-queue-url"))
 }
 
 func TestSQSUntagQueueInput(t *testing.T) {
@@ -191,5 +191,5 @@ func TestSQSUntagQueueInput(t *testing.T) {
 
 	attributes := SQSAttributeSetter(context.TODO(), input)
 
-	assert.Contains(t, attributes, semconv.MessagingURLKey.String("test-queue-url"))
+	assert.Contains(t, attributes, semconv.NetPeerName("test-queue-url"))
 }

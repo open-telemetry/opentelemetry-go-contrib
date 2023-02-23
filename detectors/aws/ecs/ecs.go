@@ -28,7 +28,7 @@ import (
 
 	"go.opentelemetry.io/otel/attribute"
 	"go.opentelemetry.io/otel/sdk/resource"
-	semconv "go.opentelemetry.io/otel/semconv/v1.12.0"
+	semconv "go.opentelemetry.io/otel/semconv/v1.17.0"
 )
 
 const (
@@ -93,8 +93,8 @@ func (detector *resourceDetector) Detect(ctx context.Context) (*resource.Resourc
 	attributes := []attribute.KeyValue{
 		semconv.CloudProviderAWS,
 		semconv.CloudPlatformAWSECS,
-		semconv.ContainerNameKey.String(hostName),
-		semconv.ContainerIDKey.String(containerID),
+		semconv.ContainerName(hostName),
+		semconv.ContainerID(containerID),
 	}
 
 	if len(metadataURIV4) > 0 {
@@ -104,7 +104,7 @@ func (detector *resourceDetector) Detect(ctx context.Context) (*resource.Resourc
 		}
 		attributes = append(
 			attributes,
-			semconv.AWSECSContainerARNKey.String(containerMetadata.ContainerARN),
+			semconv.AWSECSContainerARN(containerMetadata.ContainerARN),
 		)
 
 		taskMetadata, err := ecsmetadata.GetTaskV4(ctx, &http.Client{})
@@ -129,11 +129,11 @@ func (detector *resourceDetector) Detect(ctx context.Context) (*resource.Resourc
 
 		attributes = append(
 			attributes,
-			semconv.AWSECSClusterARNKey.String(clusterArn),
+			semconv.AWSECSClusterARN(clusterArn),
 			semconv.AWSECSLaunchtypeKey.String(strings.ToLower(taskMetadata.LaunchType)),
-			semconv.AWSECSTaskARNKey.String(taskMetadata.TaskARN),
-			semconv.AWSECSTaskFamilyKey.String(taskMetadata.Family),
-			semconv.AWSECSTaskRevisionKey.String(taskMetadata.Revision),
+			semconv.AWSECSTaskARN(taskMetadata.TaskARN),
+			semconv.AWSECSTaskFamily(taskMetadata.Family),
+			semconv.AWSECSTaskRevision(taskMetadata.Revision),
 		)
 	}
 
@@ -166,10 +166,10 @@ func (detector *resourceDetector) getLogsAttributes(metadata *ecsmetadata.Contai
 	awsAccount := r.FindStringSubmatch(containerArn)[1]
 
 	return []attribute.KeyValue{
-		semconv.AWSLogGroupNamesKey.String(logsOptions.AwsLogsGroup),
-		semconv.AWSLogGroupARNsKey.String(fmt.Sprintf("arn:aws:logs:%s:%s:log-group:%s:*", logsRegion, awsAccount, logsOptions.AwsLogsGroup)),
-		semconv.AWSLogStreamNamesKey.String(logsOptions.AwsLogsStream),
-		semconv.AWSLogStreamARNsKey.String(fmt.Sprintf("arn:aws:logs:%s:%s:log-group:%s:log-stream:%s", logsRegion, awsAccount, logsOptions.AwsLogsGroup, logsOptions.AwsLogsStream)),
+		semconv.AWSLogGroupNames(logsOptions.AwsLogsGroup),
+		semconv.AWSLogGroupARNs(fmt.Sprintf("arn:aws:logs:%s:%s:log-group:%s:*", logsRegion, awsAccount, logsOptions.AwsLogsGroup)),
+		semconv.AWSLogStreamNames(logsOptions.AwsLogsStream),
+		semconv.AWSLogStreamARNs(fmt.Sprintf("arn:aws:logs:%s:%s:log-group:%s:log-stream:%s", logsRegion, awsAccount, logsOptions.AwsLogsGroup, logsOptions.AwsLogsStream)),
 	}, nil
 }
 

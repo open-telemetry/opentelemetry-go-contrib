@@ -26,7 +26,7 @@ import (
 	"go.opentelemetry.io/otel/attribute"
 	"go.opentelemetry.io/otel/codes"
 	"go.opentelemetry.io/otel/propagation"
-	semconv "go.opentelemetry.io/otel/semconv/v1.12.0"
+	semconv "go.opentelemetry.io/otel/semconv/v1.17.0"
 	"go.opentelemetry.io/otel/trace"
 )
 
@@ -100,7 +100,7 @@ func (m otelMiddlewares) deserializeMiddleware(stack *middleware.Stack) error {
 		}
 
 		span := trace.SpanFromContext(ctx)
-		span.SetAttributes(semconv.HTTPStatusCodeKey.Int(resp.StatusCode))
+		span.SetAttributes(semconv.HTTPStatusCode(resp.StatusCode))
 
 		requestID, ok := v2Middleware.GetRequestIDMetadata(metadata)
 		if ok {

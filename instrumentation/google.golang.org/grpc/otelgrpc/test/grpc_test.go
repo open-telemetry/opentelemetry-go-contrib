@@ -34,7 +34,7 @@ import (
 	"go.opentelemetry.io/otel/sdk/metric/metricdata"
 	"go.opentelemetry.io/otel/sdk/trace"
 	"go.opentelemetry.io/otel/sdk/trace/tracetest"
-	semconv "go.opentelemetry.io/otel/semconv/v1.12.0"
+	semconv "go.opentelemetry.io/otel/semconv/v1.17.0"
 )
 
 const bufSize = 2048
@@ -144,8 +144,8 @@ func checkUnaryClientSpans(t *testing.T, spans []trace.ReadOnlySpan) {
 		},
 	}, emptySpan.Events())
 	assert.ElementsMatch(t, []attribute.KeyValue{
-		semconv.RPCMethodKey.String("EmptyCall"),
-		semconv.RPCServiceKey.String("grpc.testing.TestService"),
+		semconv.RPCMethod("EmptyCall"),
+		semconv.RPCService("grpc.testing.TestService"),
 		otelgrpc.RPCSystemGRPC,
 		otelgrpc.GRPCStatusCodeKey.Int64(int64(codes.OK)),
 	}, emptySpan.Attributes())
@@ -172,8 +172,8 @@ func checkUnaryClientSpans(t *testing.T, spans []trace.ReadOnlySpan) {
 		},
 	}, largeSpan.Events())
 	assert.ElementsMatch(t, []attribute.KeyValue{
-		semconv.RPCMethodKey.String("UnaryCall"),
-		semconv.RPCServiceKey.String("grpc.testing.TestService"),
+		semconv.RPCMethod("UnaryCall"),
+		semconv.RPCService("grpc.testing.TestService"),
 		otelgrpc.RPCSystemGRPC,
 		otelgrpc.GRPCStatusCodeKey.Int64(int64(codes.OK)),
 	}, largeSpan.Attributes())
@@ -218,8 +218,8 @@ func checkStreamClientSpans(t *testing.T, spans []trace.ReadOnlySpan) {
 		// client does not record an event for the server response.
 	}, streamInput.Events())
 	assert.ElementsMatch(t, []attribute.KeyValue{
-		semconv.RPCMethodKey.String("StreamingInputCall"),
-		semconv.RPCServiceKey.String("grpc.testing.TestService"),
+		semconv.RPCMethod("StreamingInputCall"),
+		semconv.RPCService("grpc.testing.TestService"),
 		otelgrpc.RPCSystemGRPC,
 		otelgrpc.GRPCStatusCodeKey.Int64(int64(codes.OK)),
 	}, streamInput.Attributes())
@@ -266,8 +266,8 @@ func checkStreamClientSpans(t *testing.T, spans []trace.ReadOnlySpan) {
 		},
 	}, streamOutput.Events())
 	assert.ElementsMatch(t, []attribute.KeyValue{
-		semconv.RPCMethodKey.String("StreamingOutputCall"),
-		semconv.RPCServiceKey.String("grpc.testing.TestService"),
+		semconv.RPCMethod("StreamingOutputCall"),
+		semconv.RPCService("grpc.testing.TestService"),
 		otelgrpc.RPCSystemGRPC,
 		otelgrpc.GRPCStatusCodeKey.Int64(int64(codes.OK)),
 	}, streamOutput.Attributes())
@@ -334,8 +334,8 @@ func checkStreamClientSpans(t *testing.T, spans []trace.ReadOnlySpan) {
 		},
 	}, pingPong.Events())
 	assert.ElementsMatch(t, []attribute.KeyValue{
-		semconv.RPCMethodKey.String("FullDuplexCall"),
-		semconv.RPCServiceKey.String("grpc.testing.TestService"),
+		semconv.RPCMethod("FullDuplexCall"),
+		semconv.RPCService("grpc.testing.TestService"),
 		otelgrpc.RPCSystemGRPC,
 		otelgrpc.GRPCStatusCodeKey.Int64(int64(codes.OK)),
 	}, pingPong.Attributes())
@@ -386,8 +386,8 @@ func checkStreamServerSpans(t *testing.T, spans []trace.ReadOnlySpan) {
 		},
 	}, streamInput.Events())
 	assert.ElementsMatch(t, []attribute.KeyValue{
-		semconv.RPCMethodKey.String("StreamingInputCall"),
-		semconv.RPCServiceKey.String("grpc.testing.TestService"),
+		semconv.RPCMethod("StreamingInputCall"),
+		semconv.RPCService("grpc.testing.TestService"),
 		otelgrpc.RPCSystemGRPC,
 		otelgrpc.GRPCStatusCodeKey.Int64(int64(codes.OK)),
 	}, streamInput.Attributes())
@@ -434,8 +434,8 @@ func checkStreamServerSpans(t *testing.T, spans []trace.ReadOnlySpan) {
 		},
 	}, streamOutput.Events())
 	assert.ElementsMatch(t, []attribute.KeyValue{
-		semconv.RPCMethodKey.String("StreamingOutputCall"),
-		semconv.RPCServiceKey.String("grpc.testing.TestService"),
+		semconv.RPCMethod("StreamingOutputCall"),
+		semconv.RPCService("grpc.testing.TestService"),
 		otelgrpc.RPCSystemGRPC,
 		otelgrpc.GRPCStatusCodeKey.Int64(int64(codes.OK)),
 	}, streamOutput.Attributes())
@@ -502,8 +502,8 @@ func checkStreamServerSpans(t *testing.T, spans []trace.ReadOnlySpan) {
 		},
 	}, pingPong.Events())
 	assert.ElementsMatch(t, []attribute.KeyValue{
-		semconv.RPCMethodKey.String("FullDuplexCall"),
-		semconv.RPCServiceKey.String("grpc.testing.TestService"),
+		semconv.RPCMethod("FullDuplexCall"),
+		semconv.RPCService("grpc.testing.TestService"),
 		otelgrpc.RPCSystemGRPC,
 		otelgrpc.GRPCStatusCodeKey.Int64(int64(codes.OK)),
 	}, pingPong.Attributes())
@@ -532,8 +532,8 @@ func checkUnaryServerSpans(t *testing.T, spans []trace.ReadOnlySpan) {
 		},
 	}, emptySpan.Events())
 	assert.ElementsMatch(t, []attribute.KeyValue{
-		semconv.RPCMethodKey.String("EmptyCall"),
-		semconv.RPCServiceKey.String("grpc.testing.TestService"),
+		semconv.RPCMethod("EmptyCall"),
+		semconv.RPCService("grpc.testing.TestService"),
 		otelgrpc.RPCSystemGRPC,
 		otelgrpc.GRPCStatusCodeKey.Int64(int64(codes.OK)),
 	}, emptySpan.Attributes())
@@ -560,8 +560,8 @@ func checkUnaryServerSpans(t *testing.T, spans []trace.ReadOnlySpan) {
 		},
 	}, largeSpan.Events())
 	assert.ElementsMatch(t, []attribute.KeyValue{
-		semconv.RPCMethodKey.String("UnaryCall"),
-		semconv.RPCServiceKey.String("grpc.testing.TestService"),
+		semconv.RPCMethod("UnaryCall"),
+		semconv.RPCService("grpc.testing.TestService"),
 		otelgrpc.RPCSystemGRPC,
 		otelgrpc.GRPCStatusCodeKey.Int64(int64(codes.OK)),
 	}, largeSpan.Attributes())
@@ -598,8 +598,8 @@ func checkUnaryServerRecords(t *testing.T, reader metric.Reader) {
 		method := getRPCMethod(attr)
 		assert.NotEmpty(t, method)
 		assert.ElementsMatch(t, []attribute.KeyValue{
-			semconv.RPCMethodKey.String(method),
-			semconv.RPCServiceKey.String("grpc.testing.TestService"),
+			semconv.RPCMethod(method),
+			semconv.RPCService("grpc.testing.TestService"),
 			otelgrpc.RPCSystemGRPC,
 			otelgrpc.GRPCStatusCodeKey.Int64(int64(codes.OK)),
 		}, attr)

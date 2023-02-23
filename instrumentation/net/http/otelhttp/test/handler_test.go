@@ -37,7 +37,7 @@ import (
 	"go.opentelemetry.io/otel/sdk/metric/metricdata/metricdatatest"
 	sdktrace "go.opentelemetry.io/otel/sdk/trace"
 	"go.opentelemetry.io/otel/sdk/trace/tracetest"
-	semconv "go.opentelemetry.io/otel/semconv/v1.12.0"
+	semconv "go.opentelemetry.io/otel/semconv/v1.17.0"
 	"go.opentelemetry.io/otel/trace"
 )
 
@@ -91,8 +91,6 @@ func TestHandlerBasics(t *testing.T) {
 	reader := metric.NewManualReader()
 	meterProvider := metric.NewMeterProvider(metric.WithReader(reader))
 
-	operation := "test_handler"
-
 	h := otelhttp.NewHandler(
 		http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 			l, _ := otelhttp.LabelerFromContext(r.Context())
@@ -101,7 +99,7 @@ func TestHandlerBasics(t *testing.T) {
 			if _, err := io.WriteString(w, "hello world"); err != nil {
 				t.Fatal(err)
 			}
-		}), operation,
+		}), "test_handler",
 		otelhttp.WithTracerProvider(provider),
 		otelhttp.WithMeterProvider(meterProvider),
 		otelhttp.WithPropagators(propagation.TraceContext{}),
@@ -117,12 +115,12 @@ func TestHandlerBasics(t *testing.T) {
 	require.NoError(t, err)
 	require.Len(t, rm.ScopeMetrics, 1)
 	attrs := attribute.NewSet(
-		semconv.HTTPServerNameKey.String(operation),
+		semconv.NetHostName(r.Host),
 		semconv.HTTPSchemeHTTP,
-		semconv.HTTPHostKey.String(r.Host),
 		semconv.HTTPFlavorKey.String(fmt.Sprintf("1.%d", r.ProtoMinor)),
-		semconv.HTTPMethodKey.String("GET"),
+		semconv.HTTPMethod("GET"),
 		attribute.String("test", "attribute"),
+		semconv.HTTPStatusCode(200),
 	)
 	assertScopeMetrics(t, rm.ScopeMetrics[0], attrs)
 
@@ -159,7 +157,7 @@ func TestHandlerEmittedAttributes(t *testing.T) {
 				w.WriteHeader(http.StatusOK)
 			},
 			attributes: []attribute.KeyValue{
-				attribute.Int("http.status_code", 200),
+				attribute.Int("http.status_code", http.StatusOK),
 			},
 		},
 		{
@@ -168,7 +166,7 @@ func TestHandlerEmittedAttributes(t *testing.T) {
 				w.WriteHeader(http.StatusBadRequest)
 			},
 			attributes: []attribute.KeyValue{
-				attribute.Int("http.status_code", 400),
+				attribute.Int("http.status_code", http.StatusBadRequest),
 			},
 		},
 		{
@@ -176,7 +174,7 @@ func TestHandlerEmittedAttributes(t *testing.T) {
 			handler: func(w http.ResponseWriter, r *http.Request) {
 			},
 			attributes: []attribute.KeyValue{
-				attribute.Int("http.status_code", 200),
+				attribute.Int("http.status_code", http.StatusOK),
 			},
 		},
 	}
@@ -223,7 +221,7 @@ func TestHandlerRequestWithTraceContext(t *testing.T) {
 	r = r.WithContext(ctx)
 
 	h.ServeHTTP(rr, r)
-	assert.Equal(t, 200, rr.Result().StatusCode)
+	assert.Equal(t, http.StatusOK, rr.Result().StatusCode)
 
 	span.End()
 
@@ -271,7 +269,7 @@ func TestWithPublicEndpoint(t *testing.T) {
 
 	rr := httptest.NewRecorder()
 	h.ServeHTTP(rr, r)
-	assert.Equal(t, 200, rr.Result().StatusCode)
+	assert.Equal(t, http.StatusOK, rr.Result().StatusCode)
 
 	// Recorded span should be linked with an incoming span context.
 	assert.NoError(t, spanRecorder.ForceFlush(ctx))
@@ -355,7 +353,7 @@ func TestWithPublicEndpointFn(t *testing.T) {
 
 			rr := httptest.NewRecorder()
 			h.ServeHTTP(rr, r)
-			assert.Equal(t, 200, rr.Result().StatusCode)
+			assert.Equal(t, http.StatusOK, rr.Result().StatusCode)
 
 			// Recorded span should be linked with an incoming span context.
 			assert.NoError(t, spanRecorder.ForceFlush(ctx))
@@ -370,9 +368,9 @@ func TestSpanStatus(t *testing.T) {
 		httpStatusCode int
 		wantSpanStatus codes.Code
 	}{
-		{200, codes.Unset},
-		{400, codes.Unset},
-		{500, codes.Error},
+		{http.StatusOK, codes.Unset},
+		{http.StatusBadRequest, codes.Unset},
+		{http.StatusInternalServerError, codes.Error},
 	}
 	for _, tc := range testCases {
 		t.Run(strconv.Itoa(tc.httpStatusCode), func(t *testing.T) {

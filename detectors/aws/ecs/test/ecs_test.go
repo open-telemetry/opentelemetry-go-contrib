@@ -25,7 +25,7 @@ import (
 	ecs "go.opentelemetry.io/contrib/detectors/aws/ecs"
 	"go.opentelemetry.io/otel/attribute"
 	"go.opentelemetry.io/otel/sdk/resource"
-	semconv "go.opentelemetry.io/otel/semconv/v1.12.0"
+	semconv "go.opentelemetry.io/otel/semconv/v1.17.0"
 
 	"github.com/stretchr/testify/assert"
 )
@@ -67,21 +67,21 @@ func TestDetectV4LaunchTypeEc2(t *testing.T) {
 	attributes := []attribute.KeyValue{
 		semconv.CloudProviderAWS,
 		semconv.CloudPlatformAWSECS,
-		semconv.ContainerNameKey.String(hostname),
+		semconv.ContainerName(hostname),
 		// We are not running the test in an actual container,
 		// the container id is tested with mocks of the cgroup
 		// file in the unit tests
-		semconv.ContainerIDKey.String(""),
-		semconv.AWSECSContainerARNKey.String("arn:aws:ecs:us-west-2:111122223333:container/0206b271-b33f-47ab-86c6-a0ba208a70a9"),
-		semconv.AWSECSClusterARNKey.String("arn:aws:ecs:us-west-2:111122223333:cluster/default"),
+		semconv.ContainerID(""),
+		semconv.AWSECSContainerARN("arn:aws:ecs:us-west-2:111122223333:container/0206b271-b33f-47ab-86c6-a0ba208a70a9"),
+		semconv.AWSECSClusterARN("arn:aws:ecs:us-west-2:111122223333:cluster/default"),
 		semconv.AWSECSLaunchtypeKey.String("ec2"),
-		semconv.AWSECSTaskARNKey.String("arn:aws:ecs:us-west-2:111122223333:task/default/158d1c8083dd49d6b527399fd6414f5c"),
-		semconv.AWSECSTaskFamilyKey.String("curltest"),
-		semconv.AWSECSTaskRevisionKey.String("26"),
-		semconv.AWSLogGroupNamesKey.String("/ecs/metadata"),
-		semconv.AWSLogGroupARNsKey.String("arn:aws:logs:us-west-2:111122223333:log-group:/ecs/metadata:*"),
-		semconv.AWSLogStreamNamesKey.String("ecs/curl/8f03e41243824aea923aca126495f665"),
-		semconv.AWSLogStreamARNsKey.String("arn:aws:logs:us-west-2:111122223333:log-group:/ecs/metadata:log-stream:ecs/curl/8f03e41243824aea923aca126495f665"),
+		semconv.AWSECSTaskARN("arn:aws:ecs:us-west-2:111122223333:task/default/158d1c8083dd49d6b527399fd6414f5c"),
+		semconv.AWSECSTaskFamily("curltest"),
+		semconv.AWSECSTaskRevision("26"),
+		semconv.AWSLogGroupNames("/ecs/metadata"),
+		semconv.AWSLogGroupARNs("arn:aws:logs:us-west-2:111122223333:log-group:/ecs/metadata:*"),
+		semconv.AWSLogStreamNames("ecs/curl/8f03e41243824aea923aca126495f665"),
+		semconv.AWSLogStreamARNs("arn:aws:logs:us-west-2:111122223333:log-group:/ecs/metadata:log-stream:ecs/curl/8f03e41243824aea923aca126495f665"),
 	}
 	expectedResource := resource.NewWithAttributes(semconv.SchemaURL, attributes...)
 	detector := ecs.NewResourceDetector()
@@ -124,21 +124,21 @@ func TestDetectV4LaunchTypeFargate(t *testing.T) {
 	attributes := []attribute.KeyValue{
 		semconv.CloudProviderAWS,
 		semconv.CloudPlatformAWSECS,
-		semconv.ContainerNameKey.String(hostname),
+		semconv.ContainerName(hostname),
 		// We are not running the test in an actual container,
 		// the container id is tested with mocks of the cgroup
 		// file in the unit tests
-		semconv.ContainerIDKey.String(""),
-		semconv.AWSECSContainerARNKey.String("arn:aws:ecs:us-west-2:111122223333:container/05966557-f16c-49cb-9352-24b3a0dcd0e1"),
-		semconv.AWSECSClusterARNKey.String("arn:aws:ecs:us-west-2:111122223333:cluster/default"),
+		semconv.ContainerID(""),
+		semconv.AWSECSContainerARN("arn:aws:ecs:us-west-2:111122223333:container/05966557-f16c-49cb-9352-24b3a0dcd0e1"),
+		semconv.AWSECSClusterARN("arn:aws:ecs:us-west-2:111122223333:cluster/default"),
 		semconv.AWSECSLaunchtypeKey.String("fargate"),
-		semconv.AWSECSTaskARNKey.String("arn:aws:ecs:us-west-2:111122223333:task/default/e9028f8d5d8e4f258373e7b93ce9a3c3"),
-		semconv.AWSECSTaskFamilyKey.String("curltest"),
-		semconv.AWSECSTaskRevisionKey.String("3"),
-		semconv.AWSLogGroupNamesKey.String("/ecs/containerlogs"),
-		semconv.AWSLogGroupARNsKey.String("arn:aws:logs:us-west-2:111122223333:log-group:/ecs/containerlogs:*"),
-		semconv.AWSLogStreamNamesKey.String("ecs/curl/cd189a933e5849daa93386466019ab50"),
-		semconv.AWSLogStreamARNsKey.String("arn:aws:logs:us-west-2:111122223333:log-group:/ecs/containerlogs:log-stream:ecs/curl/cd189a933e5849daa93386466019ab50"),
+		semconv.AWSECSTaskARN("arn:aws:ecs:us-west-2:111122223333:task/default/e9028f8d5d8e4f258373e7b93ce9a3c3"),
+		semconv.AWSECSTaskFamily("curltest"),
+		semconv.AWSECSTaskRevision("3"),
+		semconv.AWSLogGroupNames("/ecs/containerlogs"),
+		semconv.AWSLogGroupARNs("arn:aws:logs:us-west-2:111122223333:log-group:/ecs/containerlogs:*"),
+		semconv.AWSLogStreamNames("ecs/curl/cd189a933e5849daa93386466019ab50"),
+		semconv.AWSLogStreamARNs("arn:aws:logs:us-west-2:111122223333:log-group:/ecs/containerlogs:log-stream:ecs/curl/cd189a933e5849daa93386466019ab50"),
 	}
 	expectedResource := resource.NewWithAttributes(semconv.SchemaURL, attributes...)
 	detector := ecs.NewResourceDetector()

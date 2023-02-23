@@ -22,7 +22,7 @@ import (
 
 	"go.opentelemetry.io/otel/attribute"
 	"go.opentelemetry.io/otel/sdk/resource"
-	semconv "go.opentelemetry.io/otel/semconv/v1.12.0"
+	semconv "go.opentelemetry.io/otel/semconv/v1.17.0"
 )
 
 // For a complete list of reserved environment variables in Lambda, see:
@@ -66,16 +66,16 @@ func (detector *resourceDetector) Detect(context.Context) (*resource.Resource, e
 
 	attrs := []attribute.KeyValue{
 		semconv.CloudProviderAWS,
-		semconv.CloudRegionKey.String(awsRegion),
-		semconv.FaaSInstanceKey.String(instance),
-		semconv.FaaSNameKey.String(lambdaName),
-		semconv.FaaSVersionKey.String(functionVersion),
+		semconv.CloudRegion(awsRegion),
+		semconv.FaaSInstance(instance),
+		semconv.FaaSName(lambdaName),
+		semconv.FaaSVersion(functionVersion),
 	}
 
 	maxMemoryStr := os.Getenv(lambdaMemoryLimitEnvVar)
 	maxMemory, err := strconv.Atoi(maxMemoryStr)
 	if err == nil {
-		attrs = append(attrs, semconv.FaaSMaxMemoryKey.Int(maxMemory))
+		attrs = append(attrs, semconv.FaaSMaxMemory(maxMemory))
 	}
 
 	return resource.NewWithAttributes(semconv.SchemaURL, attrs...), nil

@@ -50,7 +50,7 @@ func (o *Handler) ServeHTTP(rr http.ResponseWriter, req *http.Request) {
 // defaultSpanNameFormatter is the default formatter for spans created with the beego
 // integration. Returns the route path template, or the URL path if the current path
 // is not associated with a router.
-func defaultSpanNameFormatter(operation string, req *http.Request) string {
+func defaultSpanNameFormatter(_ string, req *http.Request) string {
 	if val := req.Context().Value(internal.CtxRouteTemplateKey); val != nil {
 		str, ok := val.(string)
 		if ok {
@@ -71,6 +71,7 @@ func NewOTelBeegoMiddleWare(service string, options ...Option) beego.MiddleWare 
 		otelhttp.WithTracerProvider(cfg.tracerProvider),
 		otelhttp.WithMeterProvider(cfg.meterProvider),
 		otelhttp.WithPropagators(cfg.propagators),
+		otelhttp.WithServerName(service),
 	}
 
 	for _, f := range cfg.filters {
@@ -88,7 +89,7 @@ func NewOTelBeegoMiddleWare(service string, options ...Option) beego.MiddleWare 
 		return &Handler{
 			otelhttp.NewHandler(
 				handler,
-				service,
+				"",
 				httpOptions...,
 			),
 		}

@@ -20,6 +20,7 @@ import (
 	"context"
 	"io"
 	"net"
+	"strconv"
 	"time"
 
 	"google.golang.org/grpc"
@@ -32,7 +33,7 @@ import (
 	"go.opentelemetry.io/contrib/instrumentation/google.golang.org/grpc/otelgrpc/internal"
 	"go.opentelemetry.io/otel/attribute"
 	"go.opentelemetry.io/otel/codes"
-	semconv "go.opentelemetry.io/otel/semconv/v1.12.0"
+	semconv "go.opentelemetry.io/otel/semconv/v1.17.0"
 	"go.opentelemetry.io/otel/trace"
 )
 
@@ -456,7 +457,7 @@ func spanInfo(fullMethod, peerAddress string) (string, []attribute.KeyValue) {
 
 // peerAttr returns attributes about the peer address.
 func peerAttr(addr string) []attribute.KeyValue {
-	host, port, err := net.SplitHostPort(addr)
+	host, p, err := net.SplitHostPort(addr)
 	if err != nil {
 		return []attribute.KeyValue(nil)
 	}
@@ -464,11 +465,25 @@ func peerAttr(addr string) []attribute.KeyValue {
 	if host == "" {
 		host = "127.0.0.1"
 	}
-
-	return []attribute.KeyValue{
-		semconv.NetPeerIPKey.String(host),
-		semconv.NetPeerPortKey.String(port),
+	port, err := strconv.Atoi(p)
+	if err != nil {
+		return []attribute.KeyValue(nil)
 	}
+
+	var attr []attribute.KeyValue
+	if ip := net.ParseIP(host); ip != nil {
+		attr = []attribute.KeyValue{
+			semconv.NetSockPeerAddr(host),
+			semconv.NetSockPeerPort(port),
+		}
+	} else {
+		attr = []attribute.KeyValue{
+			semconv.NetPeerName(host),
+			semconv.NetPeerPort(port),
+		}
+	}
+
+	return attr
 }
 
 // peerFromCtx returns a peer address from a context, if one exists.
