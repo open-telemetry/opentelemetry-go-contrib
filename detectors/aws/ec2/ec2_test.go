@@ -28,7 +28,7 @@ import (
 
 	"go.opentelemetry.io/otel/attribute"
 	"go.opentelemetry.io/otel/sdk/resource"
-	semconv "go.opentelemetry.io/otel/semconv/v1.12.0"
+	semconv "go.opentelemetry.io/otel/semconv/v1.17.0"
 )
 
 func TestAWS_Detect(t *testing.T) {
@@ -64,12 +64,12 @@ func TestAWS_Detect(t *testing.T) {
 	usWestIDLabels := []attribute.KeyValue{
 		semconv.CloudProviderAWS,
 		semconv.CloudPlatformAWSEC2,
-		semconv.CloudRegionKey.String("us-west-2"),
-		semconv.CloudAvailabilityZoneKey.String("us-west-2b"),
-		semconv.CloudAccountIDKey.String("123456789012"),
-		semconv.HostIDKey.String("i-1234567890abcdef0"),
-		semconv.HostImageIDKey.String("ami-5fb8c835"),
-		semconv.HostTypeKey.String("t2.micro"),
+		semconv.CloudRegion("us-west-2"),
+		semconv.CloudAvailabilityZone("us-west-2b"),
+		semconv.CloudAccountID("123456789012"),
+		semconv.HostID("i-1234567890abcdef0"),
+		semconv.HostImageID("ami-5fb8c835"),
+		semconv.HostType("t2.micro"),
 	}
 
 	testTable := map[string]struct {
@@ -139,13 +139,13 @@ func TestAWS_Detect(t *testing.T) {
 				semconv.SchemaURL,
 				semconv.CloudProviderAWS,
 				semconv.CloudPlatformAWSEC2,
-				semconv.CloudRegionKey.String("us-west-2"),
-				semconv.CloudAvailabilityZoneKey.String("us-west-2b"),
-				semconv.CloudAccountIDKey.String("123456789012"),
-				semconv.HostIDKey.String("i-1234567890abcdef0"),
-				semconv.HostImageIDKey.String("ami-5fb8c835"),
-				semconv.HostNameKey.String("ip-12-34-56-78.us-west-2.compute.internal"),
-				semconv.HostTypeKey.String("t2.micro"),
+				semconv.CloudRegion("us-west-2"),
+				semconv.CloudAvailabilityZone("us-west-2b"),
+				semconv.CloudAccountID("123456789012"),
+				semconv.HostID("i-1234567890abcdef0"),
+				semconv.HostImageID("ami-5fb8c835"),
+				semconv.HostName("ip-12-34-56-78.us-west-2.compute.internal"),
+				semconv.HostType("t2.micro"),
 			)},
 		},
 	}

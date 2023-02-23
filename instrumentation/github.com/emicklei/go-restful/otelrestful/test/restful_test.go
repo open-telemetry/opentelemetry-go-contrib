@@ -42,8 +42,8 @@ func TestChildSpanFromGlobalTracer(t *testing.T) {
 	}
 	ws := &restful.WebService{}
 	ws.Route(ws.GET("/user/{id}").To(handlerFunc).
-		Returns(200, "OK", nil).
-		Returns(404, "Not Found", nil))
+		Returns(http.StatusOK, "OK", nil).
+		Returns(http.StatusNotFound, "Not Found", nil))
 	container := restful.NewContainer()
 	container.Filter(otelrestful.OTelFilter("my-service"))
 	container.Add(ws)
@@ -104,10 +104,9 @@ func TestChildSpanNames(t *testing.T) {
 		t,
 		spans[0],
 		"/user/{id:[0-9]+}",
-		attribute.String("http.server_name", "foobar"),
+		attribute.String("net.host.name", "foobar"),
 		attribute.Int("http.status_code", http.StatusOK),
 		attribute.String("http.method", "GET"),
-		attribute.String("http.target", "/user/123"),
 		attribute.String("http.route", "/user/{id:[0-9]+}"),
 	)
 
@@ -120,10 +119,9 @@ func TestChildSpanNames(t *testing.T) {
 		t,
 		spans[1],
 		"/book/{title}",
-		attribute.String("http.server_name", "foobar"),
+		attribute.String("net.host.name", "foobar"),
 		attribute.Int("http.status_code", http.StatusOK),
 		attribute.String("http.method", "GET"),
-		attribute.String("http.target", "/book/foo"),
 		attribute.String("http.route", "/book/{title}"),
 	)
 }
@@ -178,9 +176,9 @@ func TestSpanStatus(t *testing.T) {
 		httpStatusCode int
 		wantSpanStatus codes.Code
 	}{
-		{200, codes.Unset},
-		{400, codes.Unset},
-		{500, codes.Error},
+		{http.StatusOK, codes.Unset},
+		{http.StatusBadRequest, codes.Unset},
+		{http.StatusInternalServerError, codes.Error},
 	}
 	for _, tc := range testCases {
 		t.Run(strconv.Itoa(tc.httpStatusCode), func(t *testing.T) {

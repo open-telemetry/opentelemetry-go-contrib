@@ -1,6 +1,6 @@
 # Jaeger Remote Sampler
 
-This package implements [Jaeger remote sampler](https://www.jaegertracing.io/docs/latest/sampling/#collector-sampling-configuration).
+This package implements [Jaeger remote sampler](https://www.jaegertracing.io/docs/latest/sampling/#remote-sampling).
 Remote sampler allows defining sampling configuration for services at the backend, at the granularity of service + endpoint.
 When using the Jaeger backend, the sampling configuration can come from two sources:
 
