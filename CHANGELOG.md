@@ -16,7 +16,11 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 
 ### Changed
 
-- `samplers/jaegerremote`: change to use protobuf parser instead of encoding/json to accept enums as strings. (#3183)
+- `samplers/jaegerremote`: change to use protobuf parser instead of
+  encoding/json to accept enums as strings. (#3183)
+- `go.opentelemetry.io/contrib/instrumentation/github.com/aws/aws-lambda-go/otellambda`
+  updated to add a Link to the new Span if Trace Context is found in the
+  environment variable `_X_AMZN_TRACE_ID`, instead of using it as the parent (#3428)
 
 ### Fixed
 

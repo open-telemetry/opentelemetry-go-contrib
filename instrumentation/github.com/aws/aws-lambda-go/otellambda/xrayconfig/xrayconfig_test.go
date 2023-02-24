@@ -28,40 +28,10 @@ import (
 	"go.opentelemetry.io/contrib/instrumentation/github.com/aws/aws-lambda-go/otellambda"
 	"go.opentelemetry.io/contrib/propagators/aws/xray"
 	"go.opentelemetry.io/otel/propagation"
-	"go.opentelemetry.io/otel/trace"
 	v1common "go.opentelemetry.io/proto/otlp/common/v1"
 	v1resource "go.opentelemetry.io/proto/otlp/resource/v1"
 	v1trace "go.opentelemetry.io/proto/otlp/trace/v1"
 )
-
-func TestEventToCarrier(t *testing.T) {
-	os.Clearenv()
-
-	_ = os.Setenv("_X_AMZN_TRACE_ID", "traceID")
-	carrier := xrayEventToCarrier([]byte{})
-
-	assert.Equal(t, "traceID", carrier.Get("X-Amzn-Trace-Id"))
-}
-
-func TestEventToCarrierWithPropagator(t *testing.T) {
-	os.Clearenv()
-
-	_ = os.Setenv("_X_AMZN_TRACE_ID", "Root=1-5759e988-bd862e3fe1be46a994272793;Parent=53995c3f42cd8ad8;Sampled=1")
-	carrier := xrayEventToCarrier([]byte{})
-	ctx := xray.Propagator{}.Extract(context.Background(), carrier)
-
-	expectedTraceID, _ := trace.TraceIDFromHex("5759e988bd862e3fe1be46a994272793")
-	expectedSpanID, _ := trace.SpanIDFromHex("53995c3f42cd8ad8")
-	expectedCtx := trace.ContextWithRemoteSpanContext(context.Background(), trace.NewSpanContext(trace.SpanContextConfig{
-		TraceID:    expectedTraceID,
-		SpanID:     expectedSpanID,
-		TraceFlags: trace.FlagsSampled,
-		TraceState: trace.TraceState{},
-		Remote:     true,
-	}))
-
-	assert.Equal(t, expectedCtx, ctx)
-}
 
 func setEnvVars() {
 	_ = os.Setenv("AWS_LAMBDA_FUNCTION_NAME", "testFunction")
@@ -88,16 +58,16 @@ var (
 	}
 	mockContext = xray.Propagator{}.Extract(lambdacontext.NewContext(context.Background(), &mockLambdaContext),
 		propagation.HeaderCarrier{
-			"X-Amzn-Trace-Id": []string{"Root=1-5759e988-bd862e3fe1be46a994272793;Parent=53995c3f42cd8ad8;Sampled=1"},
+			"X-Amzn-Trace-Id": []string{"Root=1-6769e988-bd862e3fe1be46a994272793;Parent=63996c3f42cd8ad8;Sampled=1"},
 		})
 
 	expectedSpans = v1trace.ScopeSpans{
 		Scope: &v1common.InstrumentationScope{Name: "go.opentelemetry.io/contrib/instrumentation/github.com/aws/aws-lambda-go/otellambda", Version: otellambda.SemVersion()},
 		Spans: []*v1trace.Span{{
-			TraceId:           []byte{0x57, 0x59, 0xe9, 0x88, 0xbd, 0x86, 0x2e, 0x3f, 0xe1, 0xbe, 0x46, 0xa9, 0x94, 0x27, 0x27, 0x93},
+			TraceId:           []byte{0x67, 0x69, 0xe9, 0x88, 0xbd, 0x86, 0x2e, 0x3f, 0xe1, 0xbe, 0x46, 0xa9, 0x94, 0x27, 0x27, 0x93},
 			SpanId:            nil,
 			TraceState:        "",
-			ParentSpanId:      []byte{0x53, 0x99, 0x5c, 0x3f, 0x42, 0xcd, 0x8a, 0xd8},
+			ParentSpanId:      []byte{0x63, 0x99, 0x6c, 0x3f, 0x42, 0xcd, 0x8a, 0xd8},
 			Name:              "testFunction",
 			Kind:              v1trace.Span_SPAN_KIND_SERVER,
 			StartTimeUnixNano: 0,
@@ -108,7 +78,7 @@ var (
 			DroppedAttributesCount: 0,
 			Events:                 nil,
 			DroppedEventsCount:     0,
-			Links:                  nil,
+			Links:                  []*v1trace.Span_Link{{TraceId: []byte{0x57, 0x59, 0xe9, 0x88, 0xbd, 0x86, 0x2e, 0x3f,  0xe1, 0xbe, 0x46, 0xa9, 0x94, 0x27, 0x27, 0x93}, SpanId: []byte{0x53, 0x99, 0x5c, 0x3f, 0x42, 0xcd, 0x8a, 0xd8}, Attributes: []*v1common.KeyValue{{Key: "source", Value: &v1common.AnyValue{Value: &v1common.AnyValue_StringValue{StringValue: "x-ray-env"}}}}}},
 			DroppedLinksCount:      0,
 			Status:                 &v1trace.Status{Code: v1trace.Status_STATUS_CODE_UNSET},
 		}},
@@ -145,7 +115,7 @@ func assertResourceEquals(t *testing.T, expected *v1resource.Resource, actual *v
 
 // ignore timestamps and SpanID since time is obviously variable,
 // and SpanID is randomized when using xray IDGenerator.
-func assertSpanEqualsIgnoreTimeAndSpanID(t *testing.T, expected *v1trace.ResourceSpans, actual *v1trace.ResourceSpans) {
+func assertSpanEqualsIgnoreTimeAndTraceIDAndSpanID(t *testing.T, expected *v1trace.ResourceSpans, actual *v1trace.ResourceSpans) {
 	assert.Equal(t, expected.ScopeSpans[0].Scope, actual.ScopeSpans[0].Scope)
 
 	actualSpan := actual.ScopeSpans[0].Spans[0]
@@ -189,5 +159,5 @@ func TestWrapEndToEnd(t *testing.T) {
 
 	resSpans := mockCollector.getResourceSpans()
 	assert.Len(t, resSpans, 1)
-	assertSpanEqualsIgnoreTimeAndSpanID(t, &expectedResourceSpans, resSpans[0])
+	assertSpanEqualsIgnoreTimeAndTraceIDAndSpanID(t, &expectedResourceSpans, resSpans[0])
 }

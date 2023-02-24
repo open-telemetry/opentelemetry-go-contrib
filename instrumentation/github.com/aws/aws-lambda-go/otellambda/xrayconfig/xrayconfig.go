@@ -16,7 +16,6 @@ package xrayconfig // import "go.opentelemetry.io/contrib/instrumentation/github
 
 import (
 	"context"
-	"os"
 
 	lambdadetector "go.opentelemetry.io/contrib/detectors/aws/lambda"
 	"go.opentelemetry.io/contrib/instrumentation/github.com/aws/aws-lambda-go/otellambda"
@@ -26,9 +25,10 @@ import (
 	sdktrace "go.opentelemetry.io/otel/sdk/trace"
 )
 
+// TODO: Currently does nothing but should support pulling the propagated
+// trace context from attributes depending on the type of Lambda event
 func xrayEventToCarrier([]byte) propagation.TextMapCarrier {
-	xrayTraceID := os.Getenv("_X_AMZN_TRACE_ID")
-	return propagation.HeaderCarrier{"X-Amzn-Trace-Id": []string{xrayTraceID}}
+	return propagation.HeaderCarrier{}
 }
 
 // NewTracerProvider returns a TracerProvider configured with an exporter,

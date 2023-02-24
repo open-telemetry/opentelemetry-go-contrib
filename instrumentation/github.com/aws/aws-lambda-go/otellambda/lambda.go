@@ -21,9 +21,10 @@ import (
 	"strings"
 
 	"github.com/aws/aws-lambda-go/lambdacontext"
-
+	"go.opentelemetry.io/contrib/propagators/aws/xray"
 	"go.opentelemetry.io/otel"
 	"go.opentelemetry.io/otel/attribute"
+	"go.opentelemetry.io/otel/propagation"
 	semconv "go.opentelemetry.io/otel/semconv/v1.17.0"
 	"go.opentelemetry.io/otel/trace"
 )
@@ -54,6 +55,23 @@ func newInstrumentor(opts ...Option) instrumentor {
 	return instrumentor{configuration: cfg,
 		tracer:   cfg.TracerProvider.Tracer(tracerName, trace.WithInstrumentationVersion(SemVersion())),
 		resAttrs: []attribute.KeyValue{}}
+}
+
+func xrayEnvToLinks() []trace.Link {
+	xrayTraceID := os.Getenv("_X_AMZN_TRACE_ID")
+
+	if xrayTraceID != "" {
+		carrier := propagation.HeaderCarrier{"X-Amzn-Trace-Id": []string{xrayTraceID}}
+
+		xrayPropagator := xray.Propagator{}
+		ctx := xrayPropagator.Extract(context.Background(), carrier)
+
+		link := trace.LinkFromContext(ctx, attribute.String("source", "x-ray-env"))
+
+		return []trace.Link{link}
+	}
+
+	return []trace.Link{}
 }
 
 // Logic to start OTel Tracing.
@@ -89,7 +107,9 @@ func (i *instrumentor) tracingBegin(ctx context.Context, eventJSON []byte) (cont
 		attributes = append(attributes, i.resAttrs...)
 	}
 
-	ctx, span = i.tracer.Start(ctx, spanName, trace.WithSpanKind(trace.SpanKindServer), trace.WithAttributes(attributes...))
+	links := xrayEnvToLinks()
+
+	ctx, span = i.tracer.Start(ctx, spanName, trace.WithSpanKind(trace.SpanKindServer), trace.WithAttributes(attributes...), trace.WithLinks(links...))
 
 	return ctx, span
 }
