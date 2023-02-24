@@ -24,7 +24,6 @@ import (
 	"testing"
 
 	"github.com/labstack/echo/v4"
-
 	"github.com/stretchr/testify/assert"
 
 	"go.opentelemetry.io/otel"
@@ -58,7 +57,7 @@ func TestGetSpanNotInstrumented(t *testing.T) {
 		span := trace.SpanFromContext(c.Request().Context())
 		ok := !span.SpanContext().IsValid()
 		assert.True(t, ok)
-		return c.String(200, "ok")
+		return c.String(http.StatusOK, "ok")
 	})
 	r := httptest.NewRequest("GET", "/ping", nil)
 	w := httptest.NewRecorder()
@@ -89,7 +88,7 @@ func TestPropagationWithGlobalPropagators(t *testing.T) {
 		span := trace.SpanFromContext(c.Request().Context())
 		assert.Equal(t, sc.TraceID(), span.SpanContext().TraceID())
 		assert.Equal(t, sc.SpanID(), span.SpanContext().SpanID())
-		return c.NoContent(200)
+		return c.NoContent(http.StatusOK)
 	})
 
 	router.ServeHTTP(w, r)
@@ -120,7 +119,7 @@ func TestPropagationWithCustomPropagators(t *testing.T) {
 		span := trace.SpanFromContext(c.Request().Context())
 		assert.Equal(t, sc.TraceID(), span.SpanContext().TraceID())
 		assert.Equal(t, sc.SpanID(), span.SpanContext().SpanID())
-		return c.NoContent(200)
+		return c.NoContent(http.StatusOK)
 	})
 
 	router.ServeHTTP(w, r)
@@ -141,7 +140,7 @@ func TestSkipper(t *testing.T) {
 		span := trace.SpanFromContext(c.Request().Context())
 		assert.False(t, span.SpanContext().HasSpanID())
 		assert.False(t, span.SpanContext().HasTraceID())
-		return c.NoContent(200)
+		return c.NoContent(http.StatusOK)
 	})
 
 	router.ServeHTTP(w, r)

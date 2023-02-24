@@ -25,7 +25,7 @@ import (
 
 	"go.opentelemetry.io/otel/attribute"
 	"go.opentelemetry.io/otel/sdk/resource"
-	semconv "go.opentelemetry.io/otel/semconv/v1.10.0"
+	semconv "go.opentelemetry.io/otel/semconv/v1.17.0"
 )
 
 type config struct {
@@ -79,7 +79,7 @@ type Client interface {
 // compile time assertion that resourceDetector implements the resource.Detector interface.
 var _ resource.Detector = (*resourceDetector)(nil)
 
-//NewResourceDetector returns a resource detector that will detect AWS EC2 resources.
+// NewResourceDetector returns a resource detector that will detect AWS EC2 resources.
 func NewResourceDetector(opts ...Option) resource.Detector {
 	c := newConfig(opts...)
 	return &resourceDetector{c.getClient()}
@@ -104,12 +104,12 @@ func (detector *resourceDetector) Detect(ctx context.Context) (*resource.Resourc
 	attributes := []attribute.KeyValue{
 		semconv.CloudProviderAWS,
 		semconv.CloudPlatformAWSEC2,
-		semconv.CloudRegionKey.String(doc.Region),
-		semconv.CloudAvailabilityZoneKey.String(doc.AvailabilityZone),
-		semconv.CloudAccountIDKey.String(doc.AccountID),
-		semconv.HostIDKey.String(doc.InstanceID),
-		semconv.HostImageIDKey.String(doc.ImageID),
-		semconv.HostTypeKey.String(doc.InstanceType),
+		semconv.CloudRegion(doc.Region),
+		semconv.CloudAvailabilityZone(doc.AvailabilityZone),
+		semconv.CloudAccountID(doc.AccountID),
+		semconv.HostID(doc.InstanceID),
+		semconv.HostImageID(doc.ImageID),
+		semconv.HostType(doc.InstanceType),
 	}
 
 	m := &metadata{client: client}

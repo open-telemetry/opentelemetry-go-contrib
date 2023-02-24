@@ -37,7 +37,7 @@ func expToFloat64(x int) float64 {
 // splitProb returns the two values of log-adjusted-count nearest to p
 // Example:
 //
-//   splitProb(0.375) => (2, 1, 0.5)
+//	splitProb(0.375) => (2, 1, 0.5)
 //
 // indicates to sample with probability (2^-2) 50% of the time
 // and (2^-1) 50% of the time.

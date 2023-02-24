@@ -24,7 +24,7 @@ import (
 
 	"go.opentelemetry.io/otel"
 	"go.opentelemetry.io/otel/attribute"
-	semconv "go.opentelemetry.io/otel/semconv/v1.10.0"
+	semconv "go.opentelemetry.io/otel/semconv/v1.17.0"
 	"go.opentelemetry.io/otel/trace"
 )
 
@@ -72,7 +72,7 @@ func (i *instrumentor) tracingBegin(ctx context.Context, eventJSON []byte) (cont
 	}
 	if lc != nil {
 		ctxRequestID := lc.AwsRequestID
-		attributes = append(attributes, semconv.FaaSExecutionKey.String(ctxRequestID))
+		attributes = append(attributes, semconv.FaaSExecution(ctxRequestID))
 
 		// Some resource attrs added as span attrs because lambda
 		// resource detectors are created before a lambda
@@ -80,10 +80,10 @@ func (i *instrumentor) tracingBegin(ctx context.Context, eventJSON []byte) (cont
 		// Create these attrs upon first invocation
 		if len(i.resAttrs) == 0 {
 			ctxFunctionArn := lc.InvokedFunctionArn
-			attributes = append(attributes, semconv.FaaSIDKey.String(ctxFunctionArn))
+			attributes = append(attributes, semconv.FaaSID(ctxFunctionArn))
 			arnParts := strings.Split(ctxFunctionArn, ":")
 			if len(arnParts) >= 5 {
-				attributes = append(attributes, semconv.CloudAccountIDKey.String(arnParts[4]))
+				attributes = append(attributes, semconv.CloudAccountID(arnParts[4]))
 			}
 		}
 		attributes = append(attributes, i.resAttrs...)

@@ -30,12 +30,13 @@ import (
 	"go.opentelemetry.io/contrib/instrumentation/github.com/gocql/gocql/otelgocql/internal"
 	"go.opentelemetry.io/contrib/internal/util"
 	"go.opentelemetry.io/otel/attribute"
-	"go.opentelemetry.io/otel/sdk/metric/export/aggregation"
-	"go.opentelemetry.io/otel/sdk/metric/metrictest"
-	"go.opentelemetry.io/otel/sdk/metric/number"
+	"go.opentelemetry.io/otel/metric/unit"
+	"go.opentelemetry.io/otel/sdk/instrumentation"
+	"go.opentelemetry.io/otel/sdk/metric"
+	"go.opentelemetry.io/otel/sdk/metric/metricdata"
 	sdktrace "go.opentelemetry.io/otel/sdk/trace"
 	"go.opentelemetry.io/otel/sdk/trace/tracetest"
-	semconv "go.opentelemetry.io/otel/semconv/v1.10.0"
+	semconv "go.opentelemetry.io/otel/semconv/v1.17.0"
 	"go.opentelemetry.io/otel/trace"
 )
 
@@ -52,20 +53,13 @@ func (m *mockConnectObserver) ObserveConnect(observedConnect gocql.ObservedConne
 	m.callCount++
 }
 
-type testRecord struct {
-	name       string
-	meterName  string
-	attributes []attribute.KeyValue
-	number     number.Number
-	numberKind number.Kind
-}
-
 func TestQuery(t *testing.T) {
 	defer afterEach(t)
 	cluster := getCluster()
 	sr := tracetest.NewSpanRecorder()
 	tracerProvider := sdktrace.NewTracerProvider(sdktrace.WithSpanProcessor(sr))
-	meterProvider, metricExporter := metrictest.NewTestMeterProvider()
+	reader := metric.NewManualReader()
+	meterProvider := metric.NewMeterProvider(metric.WithReader(reader))
 
 	ctx, parentSpan := tracerProvider.Tracer(internal.InstrumentationName).Start(context.Background(), "gocql-test")
 
@@ -102,7 +96,7 @@ func TestQuery(t *testing.T) {
 	for _, span := range spans[0 : len(spans)-1] {
 		switch span.Name() {
 		case insertStmt:
-			assert.Contains(t, span.Attributes(), semconv.DBStatementKey.String(insertStmt))
+			assert.Contains(t, span.Attributes(), semconv.DBStatement(insertStmt))
 			assert.Equal(t, parentSpan.SpanContext().SpanID().String(), span.Parent().SpanID().String())
 		default:
 			t.Fatalf("unexpected span name %s", span.Name())
@@ -110,71 +104,14 @@ func TestQuery(t *testing.T) {
 		assertConnectionLevelAttributes(t, span)
 	}
 
-	// Check metrics
-	require.NoError(t, metricExporter.Collect(context.Background()))
-	actual := obtainTestRecords(metricExporter.GetRecords())
-	require.Len(t, actual, 3)
-	expected := []testRecord{
-		{
-			name:      "db.cassandra.queries",
-			meterName: internal.InstrumentationName,
-			attributes: []attribute.KeyValue{
-				internal.CassDBSystem(),
-				internal.CassPeerIP("127.0.0.1"),
-				internal.CassPeerPort(9042),
-				internal.CassVersion("3"),
-				internal.CassHostID("test-id"),
-				internal.CassHostState("UP"),
-				internal.CassKeyspace(keyspace),
-				internal.CassStatement(insertStmt),
-			},
-			number: 1,
-		},
-		{
-			name:      "db.cassandra.rows",
-			meterName: internal.InstrumentationName,
-			attributes: []attribute.KeyValue{
-				internal.CassDBSystem(),
-				internal.CassPeerIP("127.0.0.1"),
-				internal.CassPeerPort(9042),
-				internal.CassVersion("3"),
-				internal.CassHostID("test-id"),
-				internal.CassHostState("UP"),
-				internal.CassKeyspace(keyspace),
-			},
-			number: 0,
-		},
-		{
-			name:      "db.cassandra.latency",
-			meterName: internal.InstrumentationName,
-			attributes: []attribute.KeyValue{
-				internal.CassDBSystem(),
-				internal.CassPeerIP("127.0.0.1"),
-				internal.CassPeerPort(9042),
-				internal.CassVersion("3"),
-				internal.CassHostID("test-id"),
-				internal.CassHostState("UP"),
-				internal.CassKeyspace(keyspace),
-			},
-		},
-	}
-
-	for _, record := range actual {
-		switch record.name {
-		case "db.cassandra.queries":
-			recordEqual(t, expected[0], record)
-			assert.Equal(t, expected[0].number, record.number)
-		case "db.cassandra.rows":
-			recordEqual(t, expected[1], record)
-			assert.Equal(t, expected[1].number, record.number)
-		case "db.cassandra.latency":
-			recordEqual(t, expected[2], record)
-			// The latency will vary, so just check that it exists
-			assert.True(t, !record.number.IsZero(record.numberKind))
-		default:
-			t.Fatalf("wrong metric %s", record.name)
-		}
-	}
+	rm, err := reader.Collect(context.Background())
+	require.NoError(t, err)
+	require.Len(t, rm.ScopeMetrics, 1)
+	sm := rm.ScopeMetrics[0]
+	assertScope(t, sm)
+	assertQueriesMetric(t, 1, insertStmt, requireMetric(t, "db.cassandra.queries", sm.Metrics))
+	assertRowsMetric(t, 1, requireMetric(t, "db.cassandra.rows", sm.Metrics))
+	assertLatencyMetric(t, 1, requireMetric(t, "db.cassandra.latency", sm.Metrics))
 }
 
 func TestBatch(t *testing.T) {
@@ -182,7 +119,8 @@ func TestBatch(t *testing.T) {
 	cluster := getCluster()
 	sr := tracetest.NewSpanRecorder()
 	tracerProvider := sdktrace.NewTracerProvider(sdktrace.WithSpanProcessor(sr))
-	meterProvider, metricExporter := metrictest.NewTestMeterProvider()
+	reader := metric.NewManualReader()
+	meterProvider := metric.NewMeterProvider(metric.WithReader(reader))
 
 	ctx, parentSpan := tracerProvider.Tracer(internal.InstrumentationName).Start(context.Background(), "gocql-test")
 
@@ -217,56 +155,17 @@ func TestBatch(t *testing.T) {
 		span := spans[0]
 		assert.Equal(t, internal.CassBatchQueryName, span.Name())
 		assert.Equal(t, parentSpan.SpanContext().SpanID(), span.Parent().SpanID())
-		assert.Contains(t, span.Attributes(), semconv.DBOperationKey.String("db.cassandra.batch.query"))
+		assert.Contains(t, span.Attributes(), semconv.DBOperation("db.cassandra.batch.query"))
 		assertConnectionLevelAttributes(t, span)
 	}
 
-	// Check metrics
-	require.NoError(t, metricExporter.Collect(context.Background()))
-	actual := obtainTestRecords(metricExporter.GetRecords())
-	require.Len(t, actual, 2)
-	expected := []testRecord{
-		{
-			name:      "db.cassandra.batch.queries",
-			meterName: internal.InstrumentationName,
-			attributes: []attribute.KeyValue{
-				internal.CassDBSystem(),
-				internal.CassPeerIP("127.0.0.1"),
-				internal.CassPeerPort(9042),
-				internal.CassVersion("3"),
-				internal.CassHostID("test-id"),
-				internal.CassHostState("UP"),
-				internal.CassKeyspace(keyspace),
-			},
-			number: 1,
-		},
-		{
-			name:      "db.cassandra.latency",
-			meterName: internal.InstrumentationName,
-			attributes: []attribute.KeyValue{
-				internal.CassDBSystem(),
-				internal.CassPeerIP("127.0.0.1"),
-				internal.CassPeerPort(9042),
-				internal.CassVersion("3"),
-				internal.CassHostID("test-id"),
-				internal.CassHostState("UP"),
-				internal.CassKeyspace(keyspace),
-			},
-		},
-	}
-
-	for _, record := range actual {
-		switch record.name {
-		case "db.cassandra.batch.queries":
-			recordEqual(t, expected[0], record)
-			assert.Equal(t, expected[0].number, record.number)
-		case "db.cassandra.latency":
-			recordEqual(t, expected[1], record)
-			assert.True(t, !record.number.IsZero(record.numberKind))
-		default:
-			t.Fatalf("wrong metric %s", record.name)
-		}
-	}
+	rm, err := reader.Collect(context.Background())
+	require.NoError(t, err)
+	require.Len(t, rm.ScopeMetrics, 1)
+	sm := rm.ScopeMetrics[0]
+	assertScope(t, sm)
+	assertBatchQueriesMetric(t, 1, requireMetric(t, "db.cassandra.batch.queries", sm.Metrics))
+	assertLatencyMetric(t, 1, requireMetric(t, "db.cassandra.latency", sm.Metrics))
 }
 
 func TestConnection(t *testing.T) {
@@ -274,7 +173,8 @@ func TestConnection(t *testing.T) {
 	cluster := getCluster()
 	sr := tracetest.NewSpanRecorder()
 	tracerProvider := sdktrace.NewTracerProvider(sdktrace.WithSpanProcessor(sr))
-	meterProvider, metricExporter := metrictest.NewTestMeterProvider()
+	reader := metric.NewManualReader()
+	meterProvider := metric.NewMeterProvider(metric.WithReader(reader))
 	connectObserver := &mockConnectObserver{0}
 	ctx := context.Background()
 
@@ -296,41 +196,22 @@ func TestConnection(t *testing.T) {
 	// Verify the span attributes
 	for _, span := range spans {
 		assert.Equal(t, internal.CassConnectName, span.Name())
-		assert.Contains(t, span.Attributes(), semconv.DBOperationKey.String("db.cassandra.connect"))
+		assert.Contains(t, span.Attributes(), semconv.DBOperation("db.cassandra.connect"))
 		assertConnectionLevelAttributes(t, span)
 	}
 
-	// Verify the metrics
-	actual := obtainTestRecords(metricExporter.GetRecords())
-	expected := []testRecord{
-		{
-			name:      "db.cassandra.connections",
-			meterName: internal.InstrumentationName,
-			attributes: []attribute.KeyValue{
-				internal.CassDBSystem(),
-				internal.CassPeerIP("127.0.0.1"),
-				internal.CassPeerPort(9042),
-				internal.CassVersion("3"),
-				internal.CassHostID("test-id"),
-				internal.CassHostState("UP"),
-			},
-		},
-	}
-
-	for _, record := range actual {
-		switch record.name {
-		case "db.cassandra.connections":
-			recordEqual(t, expected[0], record)
-		default:
-			t.Fatalf("wrong metric %s", record.name)
-		}
-	}
+	rm, err := reader.Collect(context.Background())
+	require.NoError(t, err)
+	require.Len(t, rm.ScopeMetrics, 1)
+	sm := rm.ScopeMetrics[0]
+	assertScope(t, sm)
+	assertConnectionsMetric(t, requireMetric(t, "db.cassandra.connections", sm.Metrics))
 }
 
 func TestHostOrIP(t *testing.T) {
 	hostAndPort := "127.0.0.1:9042"
 	attr := internal.HostOrIP(hostAndPort)
-	assert.Equal(t, semconv.NetPeerIPKey, attr.Key)
+	assert.Equal(t, semconv.NetSockPeerAddrKey, attr.Key)
 	assert.Equal(t, "127.0.0.1", attr.Value.AsString())
 
 	hostAndPort = "exampleHost:9042"
@@ -346,8 +227,8 @@ func TestHostOrIP(t *testing.T) {
 func assertConnectionLevelAttributes(t *testing.T, span sdktrace.ReadOnlySpan) {
 	attrs := span.Attributes()
 	assert.Contains(t, attrs, semconv.DBSystemCassandra)
-	assert.Contains(t, attrs, semconv.NetPeerIPKey.String("127.0.0.1"))
-	assert.Contains(t, attrs, semconv.NetPeerPortKey.Int64(9042))
+	assert.Contains(t, attrs, semconv.NetSockPeerAddr("127.0.0.1"))
+	assert.Contains(t, attrs, semconv.NetPeerPort(9042))
 	assert.Contains(t, attrs, internal.CassHostStateKey.String("UP"))
 	assert.Equal(t, trace.SpanKindClient, span.SpanKind())
 
@@ -369,50 +250,143 @@ func getCluster() *gocql.ClusterConfig {
 	return cluster
 }
 
-// obtainTestRecords creates a slice of testRecord with values
-// obtained from measurements.
-func obtainTestRecords(mers []metrictest.ExportRecord) []testRecord {
-	var records []testRecord
-	for _, mer := range mers {
-		var n number.Number
-		switch mer.AggregationKind {
-		case aggregation.SumKind, aggregation.HistogramKind:
-			n = mer.Sum
-		case aggregation.LastValueKind:
-			n = mer.LastValue
-		default:
-			panic(fmt.Sprintf("unsupported aggregation type: %v", mer.AggregationKind))
-		}
-		records = append(
-			records,
-			testRecord{
-				name:       mer.InstrumentName,
-				meterName:  mer.InstrumentationLibrary.InstrumentationName,
-				attributes: mer.Attributes,
-				number:     n,
-				numberKind: mer.NumberKind,
-			},
-		)
-	}
-
-	return records
+func assertScope(t *testing.T, sm metricdata.ScopeMetrics) {
+	assert.Equal(t, instrumentation.Scope{
+		Name:    "go.opentelemetry.io/contrib/instrumentation/github.com/gocql/gocql/otelgocql",
+		Version: otelgocql.SemVersion(),
+	}, sm.Scope)
 }
 
-// recordEqual checks that the given metric name and instrumentation names are equal.
-func recordEqual(t *testing.T, expected testRecord, actual testRecord) {
-	assert.Equal(t, expected.name, actual.name)
-	assert.Equal(t, expected.meterName, actual.meterName)
-	require.Len(t, actual.attributes, len(expected.attributes))
-	actualSet := attribute.NewSet(actual.attributes...)
-	for _, attr := range expected.attributes {
-		actualValue, ok := actualSet.Value(attr.Key)
-		assert.True(t, ok)
-		assert.NotNil(t, actualValue)
-		// Can't test equality of host id
-		if attr.Key != internal.CassHostIDKey && attr.Key != internal.CassVersionKey {
-			assert.Equal(t, attr.Value, actualValue)
-		} else {
-			assert.NotEmpty(t, actualValue)
+func requireMetric(t *testing.T, name string, metrics []metricdata.Metrics) metricdata.Metrics {
+	m, ok := getMetric(name, metrics)
+	require.Truef(t, ok, "missing metric %q", name)
+	return m
+}
+
+func getMetric(name string, metrics []metricdata.Metrics) (metricdata.Metrics, bool) {
+	for _, m := range metrics {
+		if m.Name == name {
+			return m, true
+		}
+	}
+	return metricdata.Metrics{}, false
+}
+
+func assertQueriesMetric(t *testing.T, value int64, stmt string, m metricdata.Metrics) {
+	assert.Equal(t, "db.cassandra.queries", m.Name)
+	assert.Equal(t, "Number queries executed", m.Description)
+	require.IsType(t, m.Data, metricdata.Sum[int64]{})
+	data := m.Data.(metricdata.Sum[int64])
+	assert.Equal(t, metricdata.CumulativeTemporality, data.Temporality, "Temporality")
+	assert.True(t, data.IsMonotonic, "IsMonotonic")
+	require.Len(t, data.DataPoints, 1, "DataPoints")
+	dPt := data.DataPoints[0]
+	assert.Equal(t, value, dPt.Value, "Value")
+	assertAttrSet(t, []attribute.KeyValue{
+		internal.CassDBSystem(),
+		internal.CassPeerIP("127.0.0.1"),
+		internal.CassPeerPort(9042),
+		internal.CassVersion("3"),
+		internal.CassHostID("test-id"),
+		internal.CassHostState("UP"),
+		internal.CassKeyspace(keyspace),
+		internal.CassStatement(stmt),
+	}, dPt.Attributes)
+}
+
+func assertBatchQueriesMetric(t *testing.T, value int64, m metricdata.Metrics) {
+	assert.Equal(t, "db.cassandra.batch.queries", m.Name)
+	assert.Equal(t, "Number of batch queries executed", m.Description)
+	require.IsType(t, m.Data, metricdata.Sum[int64]{})
+	data := m.Data.(metricdata.Sum[int64])
+	assert.Equal(t, metricdata.CumulativeTemporality, data.Temporality, "Temporality")
+	assert.True(t, data.IsMonotonic, "IsMonotonic")
+	require.Len(t, data.DataPoints, 1, "DataPoints")
+	dPt := data.DataPoints[0]
+	assert.Equal(t, value, dPt.Value, "Value")
+	assertAttrSet(t, []attribute.KeyValue{
+		internal.CassDBSystem(),
+		internal.CassPeerIP("127.0.0.1"),
+		internal.CassPeerPort(9042),
+		internal.CassVersion("3"),
+		internal.CassHostID("test-id"),
+		internal.CassHostState("UP"),
+		internal.CassKeyspace(keyspace),
+	}, dPt.Attributes)
+}
+
+func assertConnectionsMetric(t *testing.T, m metricdata.Metrics) {
+	assert.Equal(t, "db.cassandra.connections", m.Name)
+	assert.Equal(t, "Number of connections created", m.Description)
+	require.IsType(t, m.Data, metricdata.Sum[int64]{})
+	data := m.Data.(metricdata.Sum[int64])
+	assert.Equal(t, metricdata.CumulativeTemporality, data.Temporality, "Temporality")
+	assert.True(t, data.IsMonotonic, "IsMonotonic")
+	for _, dPt := range data.DataPoints {
+		assertAttrSet(t, []attribute.KeyValue{
+			internal.CassDBSystem(),
+			internal.CassPeerIP("127.0.0.1"),
+			internal.CassPeerPort(9042),
+			internal.CassVersion("3"),
+			internal.CassHostID("test-id"),
+			internal.CassHostState("UP"),
+		}, dPt.Attributes)
+	}
+}
+
+func assertRowsMetric(t *testing.T, count uint64, m metricdata.Metrics) {
+	assert.Equal(t, "db.cassandra.rows", m.Name)
+	assert.Equal(t, "Number of rows returned from query", m.Description)
+	require.IsType(t, m.Data, metricdata.Histogram{})
+	data := m.Data.(metricdata.Histogram)
+	assert.Equal(t, metricdata.CumulativeTemporality, data.Temporality, "Temporality")
+	require.Len(t, data.DataPoints, 1, "DataPoints")
+	dPt := data.DataPoints[0]
+	assert.Equal(t, count, dPt.Count, "Count")
+	assertAttrSet(t, []attribute.KeyValue{
+		internal.CassDBSystem(),
+		internal.CassPeerIP("127.0.0.1"),
+		internal.CassPeerPort(9042),
+		internal.CassVersion("3"),
+		internal.CassHostID("test-id"),
+		internal.CassHostState("UP"),
+		internal.CassKeyspace(keyspace),
+	}, dPt.Attributes)
+}
+
+func assertLatencyMetric(t *testing.T, count uint64, m metricdata.Metrics) {
+	assert.Equal(t, "db.cassandra.latency", m.Name)
+	assert.Equal(t, "Sum of latency to host in milliseconds", m.Description)
+	assert.Equal(t, unit.Milliseconds, m.Unit)
+	require.IsType(t, m.Data, metricdata.Histogram{})
+	data := m.Data.(metricdata.Histogram)
+	assert.Equal(t, metricdata.CumulativeTemporality, data.Temporality, "Temporality")
+	require.Len(t, data.DataPoints, 1, "DataPoints")
+	dPt := data.DataPoints[0]
+	assert.Equal(t, count, dPt.Count, "Count")
+	assertAttrSet(t, []attribute.KeyValue{
+		internal.CassDBSystem(),
+		internal.CassPeerIP("127.0.0.1"),
+		internal.CassPeerPort(9042),
+		internal.CassVersion("3"),
+		internal.CassHostID("test-id"),
+		internal.CassHostState("UP"),
+		internal.CassKeyspace(keyspace),
+	}, dPt.Attributes)
+}
+
+func assertAttrSet(t *testing.T, want []attribute.KeyValue, got attribute.Set) {
+	for _, attr := range want {
+		actual, ok := got.Value(attr.Key)
+		if !assert.Truef(t, ok, "missing attribute %s", attr.Key) {
+			continue
+		}
+		switch attr.Key {
+		case internal.CassHostIDKey, internal.CassVersionKey:
+			// Host ID and Version will change between test runs.
+			assert.NotEmpty(t, actual)
+		default:
+			assert.Equal(t, attr.Value, actual)
 		}
 	}
 }

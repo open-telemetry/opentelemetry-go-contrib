@@ -17,29 +17,35 @@ package test
 import (
 	"encoding/json"
 	"fmt"
-	"io/ioutil"
+	"io"
 	"net/http"
 	"net/http/httptest"
 	"os"
 	"path/filepath"
 	"strings"
 	"testing"
+	"time"
 
 	"go.opentelemetry.io/contrib/instrumentation/github.com/astaxie/beego/otelbeego"
 	"go.opentelemetry.io/contrib/instrumentation/github.com/astaxie/beego/otelbeego/internal"
 	"go.opentelemetry.io/contrib/propagators/b3"
 	"go.opentelemetry.io/otel/attribute"
 	"go.opentelemetry.io/otel/propagation"
-	"go.opentelemetry.io/otel/sdk/metric/metrictest"
 	"go.opentelemetry.io/otel/sdk/trace"
 	"go.opentelemetry.io/otel/sdk/trace/tracetest"
-	semconv "go.opentelemetry.io/otel/semconv/v1.10.0"
+	semconv "go.opentelemetry.io/otel/semconv/v1.17.0"
 
 	"github.com/astaxie/beego"
 	beegoCtx "github.com/astaxie/beego/context"
+	assetfs "github.com/elazarl/go-bindata-assetfs"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
+
+// TODO(#2762): Add metric integration tests for the instrumentation. These
+// tests depend on
+// https://github.com/open-telemetry/opentelemetry-go/issues/3031 being
+// resolved.
 
 // ------------------------------------------ Test Controller
 
@@ -189,9 +195,9 @@ func TestStatic(t *testing.T) {
 	defer replaceBeego()
 	sr := tracetest.NewSpanRecorder()
 	tracerProvider := trace.NewTracerProvider(trace.WithSpanProcessor(sr))
-	meterProvider, metricExporter := metrictest.NewTestMeterProvider()
-	file, err := ioutil.TempFile("", "static-*.html")
+	file, err := os.CreateTemp("", "static-*.html")
 	require.NoError(t, err)
+	defer file.Close()
 	defer os.Remove(file.Name())
 	_, err = file.WriteString(beego.Htmlunquote("<h1>Hello, world!</h1>"))
 	require.NoError(t, err)
@@ -201,7 +207,6 @@ func TestStatic(t *testing.T) {
 
 	mw := otelbeego.NewOTelBeegoMiddleWare(middleWareName,
 		otelbeego.WithTracerProvider(tracerProvider),
-		otelbeego.WithMeterProvider(meterProvider),
 	)
 
 	rr := httptest.NewRecorder()
@@ -214,38 +219,67 @@ func TestStatic(t *testing.T) {
 	}
 
 	require.Equal(t, http.StatusOK, rr.Result().StatusCode)
-	body, err := ioutil.ReadAll(rr.Result().Body)
+	body, err := io.ReadAll(rr.Result().Body)
 	require.NoError(t, err)
 	require.Equal(t, "<h1>Hello, world!</h1>", string(body))
 	spans := sr.Ended()
 	require.Len(t, spans, 1)
 	assertSpan(t, spans[0], tc)
-	assertMetrics(t, metricExporter.GetRecords(), tc)
 }
 
+var htmlStr = `<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8">
+    <title>Hello World</title>
+  </head>
+  <body>This is a template test. Hello {{.name}}</body>
+</html>
+`
+
 func TestRender(t *testing.T) {
-	// Disable autorender to enable traced render
-	beego.BConfig.WebConfig.AutoRender = false
-	addTestRoutes(t)
-	defer replaceBeego()
-	htmlStr := "<!DOCTYPE html><html lang=\"en\">" +
-		"<head><meta charset=\"UTF-8\"><title>Hello World</title></head>" +
-		"<body>This is a template test. Hello {{.name}}</body></html>"
+	tplName = "index.tpl"
+	beego.SetTemplateFSFunc(func() http.FileSystem {
+		return &assetfs.AssetFS{
+			Asset: func(path string) ([]byte, error) {
+				if _, f := filepath.Split(path); f == tplName {
+					return []byte(htmlStr), nil
+				}
+				return nil, os.ErrNotExist
+			},
+			AssetDir: func(path string) ([]string, error) {
+				switch path {
+				case "", `\`:
+					return []string{tplName}, nil
+				}
+				return nil, os.ErrNotExist
+			},
+			AssetInfo: func(path string) (os.FileInfo, error) {
+				if _, f := filepath.Split(path); f == tplName {
+					return &assetfs.FakeFile{
+						Path:      path,
+						Len:       int64(len(htmlStr)),
+						Timestamp: time.Now(),
+					}, nil
+				}
+				return nil, os.ErrNotExist
+			},
+		}
+	})
+	viewPath := "/"
+	require.NoError(t, beego.AddViewPath(viewPath))
 
-	// Create a temp directory to hold a view
-	dir, err := ioutil.TempDir("", "views")
-	defer os.RemoveAll(dir)
-	require.NoError(t, err)
-
-	// Create the view
-	file, err := ioutil.TempFile(dir, "*index.tpl")
-	require.NoError(t, err)
-	_, err = file.WriteString(htmlStr)
-	require.NoError(t, err)
-	// Add path to view path
-	require.NoError(t, beego.AddViewPath(dir))
-	beego.SetViewsPath(dir)
-	_, tplName = filepath.Split(file.Name())
+	ctrl := &testController{
+		Controller: beego.Controller{
+			ViewPath:     viewPath,
+			EnableRender: true,
+		},
+		T: t,
+	}
+	app := beego.NewApp()
+	app.Handlers.Add("/template/render", ctrl, "get:TemplateRender")
+	app.Handlers.Add("/template/renderstring", ctrl, "get:TemplateRenderString")
+	app.Handlers.Add("/template/renderbytes", ctrl, "get:TemplateRenderBytes")
 
 	sr := tracetest.NewSpanRecorder()
 	tracerProvider := trace.NewTracerProvider(trace.WithSpanProcessor(sr))
@@ -258,8 +292,8 @@ func TestRender(t *testing.T) {
 		rr := httptest.NewRecorder()
 		req, err := http.NewRequest(http.MethodGet, fmt.Sprintf("http://localhost/template%s", str), nil)
 		require.NoError(t, err)
-		mw(beego.BeeApp.Handlers).ServeHTTP(rr, req)
-		body, err := ioutil.ReadAll(rr.Result().Body)
+		mw(app.Handlers).ServeHTTP(rr, req)
+		body, err := io.ReadAll(rr.Result().Body)
 		require.Equal(t, strings.Replace(htmlStr, "{{.name}}", "test", 1), string(body))
 		require.NoError(t, err)
 	}
@@ -268,16 +302,14 @@ func TestRender(t *testing.T) {
 	require.Len(t, spans, 6) // 3 HTTP requests, each creating 2 spans
 	for _, span := range spans {
 		switch span.Name() {
-		case "/template/render":
-		case "/template/renderstring":
-		case "/template/renderbytes":
+		case "GET":
 			continue
 		case internal.RenderTemplateSpanName,
 			internal.RenderStringSpanName,
 			internal.RenderBytesSpanName:
 			assert.Contains(t, span.Attributes(), internal.TemplateKey.String(tplName))
 		default:
-			t.Fatal("unexpected span name")
+			t.Fatal("unexpected span name", span.Name())
 		}
 	}
 }
@@ -287,7 +319,6 @@ func TestRender(t *testing.T) {
 func runTest(t *testing.T, tc *testCase, url string) {
 	sr := tracetest.NewSpanRecorder()
 	tracerProvider := trace.NewTracerProvider(trace.WithSpanProcessor(sr))
-	meterProvider, metricExporter := metrictest.NewTestMeterProvider()
 	addTestRoutes(t)
 	defer replaceBeego()
 
@@ -306,14 +337,13 @@ func runTest(t *testing.T, tc *testCase, url string) {
 		append(
 			tc.options,
 			otelbeego.WithTracerProvider(tracerProvider),
-			otelbeego.WithMeterProvider(meterProvider),
 		)...,
 	)
 
 	mw(beego.BeeApp.Handlers).ServeHTTP(rr, req)
 
 	require.Equal(t, tc.expectedHTTPStatus, rr.Result().StatusCode)
-	body, err := ioutil.ReadAll(rr.Result().Body)
+	body, err := io.ReadAll(rr.Result().Body)
 	require.NoError(t, err)
 	message := testReply{}
 	require.NoError(t, json.Unmarshal(body, &message))
@@ -326,14 +356,12 @@ func runTest(t *testing.T, tc *testCase, url string) {
 	} else {
 		require.Len(t, spans, 0)
 	}
-	assertMetrics(t, metricExporter.GetRecords(), tc)
 }
 
 func defaultAttributes() []attribute.KeyValue {
 	return []attribute.KeyValue{
-		semconv.HTTPServerNameKey.String(middleWareName),
+		semconv.NetHostName(middleWareName),
 		semconv.HTTPSchemeHTTP,
-		semconv.HTTPHostKey.String("localhost"),
 	}
 }
 
@@ -342,14 +370,6 @@ func assertSpan(t *testing.T, span trace.ReadOnlySpan, tc *testCase) {
 	attr := span.Attributes()
 	for _, att := range tc.expectedAttributes {
 		assert.Contains(t, attr, att)
-	}
-}
-
-func assertMetrics(t *testing.T, records []metrictest.ExportRecord, tc *testCase) {
-	for _, record := range records {
-		for _, att := range tc.expectedAttributes {
-			require.Contains(t, record.Attributes, att)
-		}
 	}
 }
 

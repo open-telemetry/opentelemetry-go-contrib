@@ -17,7 +17,7 @@ TOOLS_MOD_DIR := ./tools
 ALL_DOCS := $(shell find . -name '*.md' -type f | sort)
 ALL_GO_MOD_DIRS := $(shell find . -type f -name 'go.mod' -exec dirname {} \; | sort)
 OTEL_GO_MOD_DIRS := $(filter-out $(TOOLS_MOD_DIR), $(ALL_GO_MOD_DIRS))
-ALL_COVERAGE_MOD_DIRS := $(shell find . -type f -name 'go.mod' -exec dirname {} \; | egrep -v '^./example|^$(TOOLS_MOD_DIR)' | sort)
+ALL_COVERAGE_MOD_DIRS := $(shell find . -type f -name 'go.mod' -exec dirname {} \; | grep -E -v '^./example|^$(TOOLS_MOD_DIR)' | sort)
 
 # URLs to check if all contrib entries exist in the registry.
 REGISTRY_BASE_URL = https://raw.githubusercontent.com/open-telemetry/opentelemetry.io/main/content/en/registry
@@ -53,9 +53,6 @@ $(MISSPELL): PACKAGE=github.com/client9/misspell/cmd/misspell
 GOCOVMERGE = $(TOOLS)/gocovmerge
 $(GOCOVMERGE): PACKAGE=github.com/wadey/gocovmerge
 
-ESC = $(TOOLS)/esc
-$(ESC): PACKAGE=github.com/mjibson/esc
-
 STRINGER = $(TOOLS)/stringer
 $(STRINGER): PACKAGE=golang.org/x/tools/cmd/stringer
 
@@ -68,7 +65,10 @@ $(MULTIMOD): PACKAGE=go.opentelemetry.io/build-tools/multimod
 DBOTCONF = $(TOOLS)/dbotconf
 $(TOOLS)/dbotconf: PACKAGE=go.opentelemetry.io/build-tools/dbotconf
 
-tools: $(GOLANGCI_LINT) $(MISSPELL) $(GOCOVMERGE) $(STRINGER) $(ESC) $(PORTO) $(MULTIMOD) $(DBOTCONF)
+CROSSLINK = $(TOOLS)/crosslink
+$(CROSSLINK): PACKAGE=go.opentelemetry.io/build-tools/crosslink
+
+tools: $(GOLANGCI_LINT) $(MISSPELL) $(GOCOVMERGE) $(STRINGER) $(PORTO) $(MULTIMOD) $(DBOTCONF) $(CROSSLINK)
 
 # Build
 
@@ -76,7 +76,7 @@ tools: $(GOLANGCI_LINT) $(MISSPELL) $(GOCOVMERGE) $(STRINGER) $(ESC) $(PORTO) $(
 
 generate: $(OTEL_GO_MOD_DIRS:%=generate/%)
 generate/%: DIR=$*
-generate/%: | $(STRINGER) $(ESC)
+generate/%: | $(STRINGER)
 	@echo "$(GO) generate $(DIR)/..." \
 		&& cd $(DIR) \
 		&& PATH="$(TOOLS):$${PATH}" $(GO) generate ./...
@@ -108,13 +108,18 @@ golangci-lint/%: | $(GOLANGCI_LINT)
 		&& cd $(DIR) \
 		&& $(GOLANGCI_LINT) run --allow-serial-runners $(ARGS)
 
+.PHONY: crosslink
+crosslink: | $(CROSSLINK)
+	@echo "Updating intra-repository dependencies in all go modules" \
+		&& $(CROSSLINK) --root=$(shell pwd) --prune
+
 .PHONY: go-mod-tidy
 go-mod-tidy: $(ALL_GO_MOD_DIRS:%=go-mod-tidy/%)
 go-mod-tidy/%: DIR=$*
 go-mod-tidy/%:
 	@echo "$(GO) mod tidy in $(DIR)" \
 		&& cd $(DIR) \
-		&& $(GO) mod tidy
+		&& $(GO) mod tidy -compat=1.18
 
 .PHONY: misspell
 misspell: | $(MISSPELL)

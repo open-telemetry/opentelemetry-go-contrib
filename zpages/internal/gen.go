@@ -14,5 +14,7 @@
 
 package internal // import "go.opentelemetry.io/contrib/zpages/internal"
 
-// go get https://github.com/mjibson/esc.git
-//go:generate esc -pkg internal -modtime=1647459395 -o resources.go templates/
+import "embed"
+
+//go:embed templates/*
+var Templates embed.FS

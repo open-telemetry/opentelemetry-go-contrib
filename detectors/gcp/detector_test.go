@@ -24,7 +24,7 @@ import (
 	"github.com/stretchr/testify/assert"
 
 	"go.opentelemetry.io/otel/sdk/resource"
-	semconv "go.opentelemetry.io/otel/semconv/v1.10.0"
+	semconv "go.opentelemetry.io/otel/semconv/v1.17.0"
 )
 
 func TestDetect(t *testing.T) {
@@ -49,11 +49,11 @@ func TestDetect(t *testing.T) {
 			}},
 			expectedResource: resource.NewWithAttributes(semconv.SchemaURL,
 				semconv.CloudProviderGCP,
-				semconv.CloudAccountIDKey.String("my-project"),
+				semconv.CloudAccountID("my-project"),
 				semconv.CloudPlatformGCPKubernetesEngine,
-				semconv.K8SClusterNameKey.String("my-cluster"),
-				semconv.CloudAvailabilityZoneKey.String("us-central1-c"),
-				semconv.HostIDKey.String("1472385723456792345"),
+				semconv.K8SClusterName("my-cluster"),
+				semconv.CloudAvailabilityZone("us-central1-c"),
+				semconv.HostID("1472385723456792345"),
 			),
 		},
 		{
@@ -67,11 +67,11 @@ func TestDetect(t *testing.T) {
 			}},
 			expectedResource: resource.NewWithAttributes(semconv.SchemaURL,
 				semconv.CloudProviderGCP,
-				semconv.CloudAccountIDKey.String("my-project"),
+				semconv.CloudAccountID("my-project"),
 				semconv.CloudPlatformGCPKubernetesEngine,
-				semconv.K8SClusterNameKey.String("my-cluster"),
-				semconv.CloudRegionKey.String("us-central1"),
-				semconv.HostIDKey.String("1472385723456792345"),
+				semconv.K8SClusterName("my-cluster"),
+				semconv.CloudRegion("us-central1"),
+				semconv.HostID("1472385723456792345"),
 			),
 		},
 		{
@@ -87,13 +87,13 @@ func TestDetect(t *testing.T) {
 			}},
 			expectedResource: resource.NewWithAttributes(semconv.SchemaURL,
 				semconv.CloudProviderGCP,
-				semconv.CloudAccountIDKey.String("my-project"),
+				semconv.CloudAccountID("my-project"),
 				semconv.CloudPlatformGCPComputeEngine,
-				semconv.HostIDKey.String("1472385723456792345"),
-				semconv.HostNameKey.String("my-gke-node-1234"),
-				semconv.HostTypeKey.String("n1-standard1"),
-				semconv.CloudRegionKey.String("us-central1"),
-				semconv.CloudAvailabilityZoneKey.String("us-central1-c"),
+				semconv.HostID("1472385723456792345"),
+				semconv.HostName("my-gke-node-1234"),
+				semconv.HostType("n1-standard1"),
+				semconv.CloudRegion("us-central1"),
+				semconv.CloudAvailabilityZone("us-central1-c"),
 			),
 		},
 		{
@@ -108,12 +108,12 @@ func TestDetect(t *testing.T) {
 			}},
 			expectedResource: resource.NewWithAttributes(semconv.SchemaURL,
 				semconv.CloudProviderGCP,
-				semconv.CloudAccountIDKey.String("my-project"),
+				semconv.CloudAccountID("my-project"),
 				semconv.CloudPlatformGCPCloudRun,
-				semconv.CloudRegionKey.String("us-central1"),
-				semconv.FaaSNameKey.String("my-service"),
-				semconv.FaaSVersionKey.String("123456"),
-				semconv.FaaSIDKey.String("1472385723456792345"),
+				semconv.CloudRegion("us-central1"),
+				semconv.FaaSName("my-service"),
+				semconv.FaaSVersion("123456"),
+				semconv.FaaSID("1472385723456792345"),
 			),
 		},
 		{
@@ -128,19 +128,19 @@ func TestDetect(t *testing.T) {
 			}},
 			expectedResource: resource.NewWithAttributes(semconv.SchemaURL,
 				semconv.CloudProviderGCP,
-				semconv.CloudAccountIDKey.String("my-project"),
+				semconv.CloudAccountID("my-project"),
 				semconv.CloudPlatformGCPCloudFunctions,
-				semconv.CloudRegionKey.String("us-central1"),
-				semconv.FaaSNameKey.String("my-service"),
-				semconv.FaaSVersionKey.String("123456"),
-				semconv.FaaSIDKey.String("1472385723456792345"),
+				semconv.CloudRegion("us-central1"),
+				semconv.FaaSName("my-service"),
+				semconv.FaaSVersion("123456"),
+				semconv.FaaSID("1472385723456792345"),
 			),
 		},
 		{
-			desc: "App Engine",
+			desc: "App Engine Flex",
 			detector: &detector{detector: &fakeGCPDetector{
 				projectID:                 "my-project",
-				cloudPlatform:             gcp.AppEngine,
+				cloudPlatform:             gcp.AppEngineFlex,
 				appEngineServiceInstance:  "1472385723456792345",
 				appEngineAvailabilityZone: "us-central1-c",
 				appEngineRegion:           "us-central1",
@@ -149,13 +149,35 @@ func TestDetect(t *testing.T) {
 			}},
 			expectedResource: resource.NewWithAttributes(semconv.SchemaURL,
 				semconv.CloudProviderGCP,
-				semconv.CloudAccountIDKey.String("my-project"),
+				semconv.CloudAccountID("my-project"),
 				semconv.CloudPlatformGCPAppEngine,
-				semconv.CloudRegionKey.String("us-central1"),
-				semconv.CloudAvailabilityZoneKey.String("us-central1-c"),
-				semconv.FaaSNameKey.String("my-service"),
-				semconv.FaaSVersionKey.String("123456"),
-				semconv.FaaSIDKey.String("1472385723456792345"),
+				semconv.CloudRegion("us-central1"),
+				semconv.CloudAvailabilityZone("us-central1-c"),
+				semconv.FaaSName("my-service"),
+				semconv.FaaSVersion("123456"),
+				semconv.FaaSID("1472385723456792345"),
+			),
+		},
+		{
+			desc: "App Engine Standard",
+			detector: &detector{detector: &fakeGCPDetector{
+				projectID:                 "my-project",
+				cloudPlatform:             gcp.AppEngineStandard,
+				appEngineServiceInstance:  "1472385723456792345",
+				appEngineAvailabilityZone: "us-central1-c",
+				appEngineRegion:           "us-central1",
+				appEngineServiceName:      "my-service",
+				appEngineServiceVersion:   "123456",
+			}},
+			expectedResource: resource.NewWithAttributes(semconv.SchemaURL,
+				semconv.CloudProviderGCP,
+				semconv.CloudAccountID("my-project"),
+				semconv.CloudPlatformGCPAppEngine,
+				semconv.CloudRegion("us-central1"),
+				semconv.CloudAvailabilityZone("us-central1-c"),
+				semconv.FaaSName("my-service"),
+				semconv.FaaSVersion("123456"),
+				semconv.FaaSID("1472385723456792345"),
 			),
 		},
 		{
@@ -166,7 +188,7 @@ func TestDetect(t *testing.T) {
 			}},
 			expectedResource: resource.NewWithAttributes(semconv.SchemaURL,
 				semconv.CloudProviderGCP,
-				semconv.CloudAccountIDKey.String("my-project"),
+				semconv.CloudAccountID("my-project"),
 			),
 		},
 		{
@@ -288,11 +310,25 @@ func (f *fakeGCPDetector) FaaSCloudRegion() (string, error) {
 	return f.faaSCloudRegion, nil
 }
 
-func (f *fakeGCPDetector) AppEngineAvailabilityZoneAndRegion() (string, string, error) {
+func (f *fakeGCPDetector) AppEngineFlexAvailabilityZoneAndRegion() (string, string, error) {
 	if f.err != nil {
 		return "", "", f.err
 	}
 	return f.appEngineAvailabilityZone, f.appEngineRegion, nil
+}
+
+func (f *fakeGCPDetector) AppEngineStandardAvailabilityZone() (string, error) {
+	if f.err != nil {
+		return "", f.err
+	}
+	return f.appEngineAvailabilityZone, nil
+}
+
+func (f *fakeGCPDetector) AppEngineStandardCloudRegion() (string, error) {
+	if f.err != nil {
+		return "", f.err
+	}
+	return f.appEngineRegion, nil
 }
 
 func (f *fakeGCPDetector) AppEngineServiceName() (string, error) {

@@ -12,6 +12,9 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
+//go:build go1.18
+// +build go1.18
+
 package main
 
 import (
@@ -21,62 +24,42 @@ import (
 	"os/signal"
 	"time"
 
-	stdout "go.opentelemetry.io/otel/exporters/stdout/stdoutmetric"
-	"go.opentelemetry.io/otel/metric/global"
-	controller "go.opentelemetry.io/otel/sdk/metric/controller/basic"
-	processor "go.opentelemetry.io/otel/sdk/metric/processor/basic"
-	"go.opentelemetry.io/otel/sdk/metric/selector/simple"
-
 	"go.opentelemetry.io/contrib/instrumentation/host"
+	"go.opentelemetry.io/otel/exporters/stdout/stdoutmetric"
+	"go.opentelemetry.io/otel/sdk/metric"
+	"go.opentelemetry.io/otel/sdk/resource"
+	semconv "go.opentelemetry.io/otel/semconv/v1.17.0"
+)
+
+var res = resource.NewWithAttributes(
+	semconv.SchemaURL,
+	semconv.ServiceName("host-instrumentation-example"),
 )
 
 func main() {
-	exporter, err := stdout.New(stdout.WithPrettyPrint())
+	exp, err := stdoutmetric.New()
 	if err != nil {
-		log.Fatalln("failed to initialize metric stdout exporter:", err)
-	}
-	cont := controller.New(
-		processor.NewFactory(
-			simple.NewWithInexpensiveDistribution(),
-			exporter,
-		),
-		controller.WithExporter(exporter),
-		controller.WithCollectPeriod(3*time.Second),
-	)
-	if err := cont.Start(context.Background()); err != nil {
-		log.Fatalln("failed to start the metric controller:", err)
-	}
-	global.SetMeterProvider(cont)
-
-	if err := host.Start(); err != nil {
-		log.Fatalln("failed to start host instrumentation:", err)
+		log.Fatal(err)
 	}
 
-	ctx, cancel := newOSSignalContext()
-	defer cancel()
-
-	<-ctx.Done()
-
-	if err := cont.Stop(context.Background()); err != nil {
-		log.Fatalln("failed to stop the metric controller:", err)
-	}
-}
-
-func newOSSignalContext() (context.Context, func()) {
-	// trap Ctrl+C and call cancel on the context
-	ctx, cancel := context.WithCancel(context.Background())
-	c := make(chan os.Signal, 1)
-	signal.Notify(c, os.Interrupt)
-	go func() {
-		select {
-		case <-c:
-			cancel()
-		case <-ctx.Done():
+	// Register the exporter with an SDK via a periodic reader.
+	read := metric.NewPeriodicReader(exp, metric.WithInterval(1*time.Second))
+	provider := metric.NewMeterProvider(metric.WithResource(res), metric.WithReader(read))
+	defer func() {
+		err := provider.Shutdown(context.Background())
+		if err != nil {
+			log.Fatal(err)
 		}
 	}()
 
-	return ctx, func() {
-		signal.Stop(c)
-		cancel()
+	ctx, cancel := signal.NotifyContext(context.Background(), os.Interrupt)
+	defer cancel()
+
+	log.Print("Starting host instrumentation:")
+	err = host.Start(host.WithMeterProvider(provider))
+	if err != nil {
+		log.Fatal(err)
 	}
+
+	<-ctx.Done()
 }

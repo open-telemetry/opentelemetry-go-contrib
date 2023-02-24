@@ -2,6 +2,7 @@
 run:
   issues-exit-code: 1 #Default
   tests: true #Default
+  timeout: 2m
 
 linters:
   # Disable everything by default so upgrades to not include new "default
@@ -9,7 +10,6 @@ linters:
   disable-all: true
   # Specifically enable linters we want to use.
   enable:
-    - deadcode
     - depguard
     - errcheck
     - godot
@@ -21,10 +21,8 @@ linters:
     - misspell
     - revive
     - staticcheck
-    - structcheck
     - typecheck
     - unused
-    - varcheck
 
 issues:
   # Maximum issues count per one linter.

@@ -102,7 +102,7 @@ func TestHTTPRequestWithClientTrace(t *testing.T) {
 			name: "http.getconn",
 			attributes: []attribute.KeyValue{
 				attribute.Key("http.remote").String(address.String()),
-				attribute.Key("http.host").String(address.String()),
+				attribute.Key("net.host.name").String(address.String()),
 				attribute.Key("http.conn.reused").Bool(false),
 				attribute.Key("http.conn.wasidle").Bool(false),
 			},
@@ -325,10 +325,10 @@ func TestWithoutSubSpans(t *testing.T) {
 	require.Len(t, gotAttributes, 4)
 	assert.Equal(t,
 		[]attribute.KeyValue{
-			attribute.Key("http.host").String(fixture.Address),
-			attribute.Key("http.user-agent").String("oteltest/1.1"),
-			attribute.Key("http.authorization").String("****"),
-			attribute.Key("http.accept-encoding").String("gzip"),
+			attribute.Key("http.request.header.host").String(fixture.Address),
+			attribute.Key("http.request.header.user-agent").String("oteltest/1.1"),
+			attribute.Key("http.request.header.authorization").String("****"),
+			attribute.Key("http.request.header.accept-encoding").String("gzip"),
 		},
 		gotAttributes,
 	)
@@ -341,7 +341,7 @@ func TestWithoutSubSpans(t *testing.T) {
 		{"http.getconn.start", func(t *testing.T, got attrMap) {
 			assert.Equal(t,
 				attribute.StringValue(fixture.Address),
-				got[attribute.Key("http.host")],
+				got[attribute.Key("net.host.name")],
 			)
 		}},
 		{"http.getconn.done", func(t *testing.T, got attrMap) {
@@ -408,9 +408,9 @@ func TestWithRedactedHeaders(t *testing.T) {
 	gotAttributes := recSpan.Attributes()
 	assert.Equal(t,
 		[]attribute.KeyValue{
-			attribute.Key("http.host").String(fixture.Address),
-			attribute.Key("http.user-agent").String("****"),
-			attribute.Key("http.accept-encoding").String("gzip"),
+			attribute.Key("http.request.header.host").String(fixture.Address),
+			attribute.Key("http.request.header.user-agent").String("****"),
+			attribute.Key("http.request.header.accept-encoding").String("gzip"),
 		},
 		gotAttributes,
 	)
@@ -463,10 +463,10 @@ func TestWithInsecureHeaders(t *testing.T) {
 	gotAttributes := recSpan.Attributes()
 	assert.Equal(t,
 		[]attribute.KeyValue{
-			attribute.Key("http.host").String(fixture.Address),
-			attribute.Key("http.user-agent").String("oteltest/1.1"),
-			attribute.Key("http.authorization").String("Bearer token123"),
-			attribute.Key("http.accept-encoding").String("gzip"),
+			attribute.Key("http.request.header.host").String(fixture.Address),
+			attribute.Key("http.request.header.user-agent").String("oteltest/1.1"),
+			attribute.Key("http.request.header.authorization").String("Bearer token123"),
+			attribute.Key("http.request.header.accept-encoding").String("gzip"),
 		},
 		gotAttributes,
 	)

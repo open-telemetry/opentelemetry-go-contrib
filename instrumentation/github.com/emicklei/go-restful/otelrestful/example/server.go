@@ -45,8 +45,8 @@ func (u userResource) WebService() *restful.WebService {
 	ws.Route(ws.GET("/{user-id}").To(u.getUser).
 		Param(ws.PathParameter("user-id", "identifier of the user").DataType("integer").DefaultValue("1")).
 		Writes(user{}). // on the response
-		Returns(200, "OK", user{}).
-		Returns(404, "Not Found", nil))
+		Returns(http.StatusOK, "OK", user{}).
+		Returns(http.StatusNotFound, "Not Found", nil))
 	return ws
 }
 
