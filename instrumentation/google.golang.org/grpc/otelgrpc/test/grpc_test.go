@@ -586,7 +586,8 @@ func assertEvents(t *testing.T, expected, actual []trace.Event) bool {
 }
 
 func checkUnaryServerRecords(t *testing.T, reader metric.Reader) {
-	rm, err := reader.Collect(context.Background())
+	rm := metricdata.ResourceMetrics{}
+	err := reader.Collect(context.Background(), &rm)
 	assert.NoError(t, err)
 	require.Len(t, rm.ScopeMetrics, 1)
 	require.Len(t, rm.ScopeMetrics[0].Metrics, 1)
