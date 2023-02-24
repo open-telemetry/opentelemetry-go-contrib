@@ -164,6 +164,32 @@ func TestSpanStatus(t *testing.T) {
 	}
 }
 
+func TestSpanName(t *testing.T) {
+	testCases := []struct {
+		requestPath       string
+		spanNameFormatter otelgin.SpanNameFormatter
+		wantSpanName      string
+	}{
+		{"/user/1", nil, "/user/:id"},
+		{"/user/1", func(r *http.Request) string { return r.URL.Path }, "/user/1"},
+	}
+	for _, tc := range testCases {
+		t.Run(tc.requestPath, func(t *testing.T) {
+			sr := tracetest.NewSpanRecorder()
+			provider := sdktrace.NewTracerProvider()
+			provider.RegisterSpanProcessor(sr)
+			router := gin.New()
+			router.Use(otelgin.Middleware("foobar", otelgin.WithTracerProvider(provider), otelgin.WithSpanNameFormatter(tc.spanNameFormatter)))
+			router.GET("/user/:id", func(c *gin.Context) {})
+
+			router.ServeHTTP(httptest.NewRecorder(), httptest.NewRequest("GET", tc.requestPath, nil))
+
+			require.Len(t, sr.Ended(), 1, "should emit a span")
+			assert.Equal(t, sr.Ended()[0].Name(), tc.wantSpanName, "span name not correct")
+		})
+	}
+}
+
 func TestHTML(t *testing.T) {
 	sr := tracetest.NewSpanRecorder()
 	provider := sdktrace.NewTracerProvider(sdktrace.WithSpanProcessor(sr))
