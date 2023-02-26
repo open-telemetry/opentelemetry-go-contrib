@@ -5,7 +5,7 @@ go 1.18
 replace go.opentelemetry.io/contrib/instrumentation/github.com/gocql/gocql/otelgocql => ../
 
 require (
-	github.com/gocql/gocql v0.0.0-20200624222514-34081eda590e
+	github.com/gocql/gocql v1.3.1
 	github.com/prometheus/client_golang v1.14.0
 	go.opentelemetry.io/contrib/instrumentation/github.com/gocql/gocql/otelgocql v0.39.0
 	go.opentelemetry.io/otel v1.13.0
