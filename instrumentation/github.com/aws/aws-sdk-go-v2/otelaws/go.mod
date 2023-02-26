@@ -7,7 +7,7 @@ require (
 	github.com/aws/aws-sdk-go-v2/service/dynamodb v1.18.3
 	github.com/aws/aws-sdk-go-v2/service/sqs v1.20.2
 	github.com/aws/smithy-go v1.13.5
-	github.com/stretchr/testify v1.8.1
+	github.com/stretchr/testify v1.8.2
 	go.opentelemetry.io/otel v1.13.0
 	go.opentelemetry.io/otel/trace v1.13.0
 )
