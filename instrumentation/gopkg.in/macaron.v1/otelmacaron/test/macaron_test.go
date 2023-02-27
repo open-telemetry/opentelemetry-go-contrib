@@ -82,19 +82,17 @@ func TestChildSpanNames(t *testing.T) {
 	assert.Equal(t, "/user/123", span.Name()) // TODO: span name should show router template, eg /user/:id
 	assert.Equal(t, oteltrace.SpanKindServer, span.SpanKind())
 	attrs := span.Attributes()
-	assert.Contains(t, attrs, attribute.String("http.server_name", "foobar"))
+	assert.Contains(t, attrs, attribute.String("net.host.name", "foobar"))
 	assert.Contains(t, attrs, attribute.Int("http.status_code", http.StatusOK))
 	assert.Contains(t, attrs, attribute.String("http.method", "GET"))
-	assert.Contains(t, attrs, attribute.String("http.target", "/user/123"))
 
 	span = spans[1]
 	assert.Equal(t, "/book/foo", span.Name()) // TODO: span name should show router template, eg /book/:title
 	assert.Equal(t, oteltrace.SpanKindServer, span.SpanKind())
 	attrs = span.Attributes()
-	assert.Contains(t, attrs, attribute.String("http.server_name", "foobar"))
+	assert.Contains(t, attrs, attribute.String("net.host.name", "foobar"))
 	assert.Contains(t, attrs, attribute.Int("http.status_code", http.StatusOK))
 	assert.Contains(t, attrs, attribute.String("http.method", "GET"))
-	assert.Contains(t, attrs, attribute.String("http.target", "/book/foo"))
 }
 
 func TestSpanStatus(t *testing.T) {
@@ -102,9 +100,9 @@ func TestSpanStatus(t *testing.T) {
 		httpStatusCode int
 		wantSpanStatus codes.Code
 	}{
-		{200, codes.Unset},
-		{400, codes.Unset},
-		{500, codes.Error},
+		{http.StatusOK, codes.Unset},
+		{http.StatusBadRequest, codes.Unset},
+		{http.StatusInternalServerError, codes.Error},
 	}
 	for _, tc := range testCases {
 		t.Run(strconv.Itoa(tc.httpStatusCode), func(t *testing.T) {

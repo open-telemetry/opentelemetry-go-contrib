@@ -24,6 +24,7 @@ import (
 	"path/filepath"
 	"strings"
 	"testing"
+	"time"
 
 	"go.opentelemetry.io/contrib/instrumentation/github.com/astaxie/beego/otelbeego"
 	"go.opentelemetry.io/contrib/instrumentation/github.com/astaxie/beego/otelbeego/internal"
@@ -32,10 +33,11 @@ import (
 	"go.opentelemetry.io/otel/propagation"
 	"go.opentelemetry.io/otel/sdk/trace"
 	"go.opentelemetry.io/otel/sdk/trace/tracetest"
-	semconv "go.opentelemetry.io/otel/semconv/v1.12.0"
+	semconv "go.opentelemetry.io/otel/semconv/v1.17.0"
 
 	"github.com/astaxie/beego"
 	beegoCtx "github.com/astaxie/beego/context"
+	assetfs "github.com/elazarl/go-bindata-assetfs"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
@@ -225,28 +227,59 @@ func TestStatic(t *testing.T) {
 	assertSpan(t, spans[0], tc)
 }
 
+var htmlStr = `<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8">
+    <title>Hello World</title>
+  </head>
+  <body>This is a template test. Hello {{.name}}</body>
+</html>
+`
+
 func TestRender(t *testing.T) {
-	// Disable autorender to enable traced render
-	beego.BConfig.WebConfig.AutoRender = false
-	addTestRoutes(t)
-	defer replaceBeego()
-	htmlStr := "<!DOCTYPE html><html lang=\"en\">" +
-		"<head><meta charset=\"UTF-8\"><title>Hello World</title></head>" +
-		"<body>This is a template test. Hello {{.name}}</body></html>"
+	tplName = "index.tpl"
+	beego.SetTemplateFSFunc(func() http.FileSystem {
+		return &assetfs.AssetFS{
+			Asset: func(path string) ([]byte, error) {
+				if _, f := filepath.Split(path); f == tplName {
+					return []byte(htmlStr), nil
+				}
+				return nil, os.ErrNotExist
+			},
+			AssetDir: func(path string) ([]string, error) {
+				switch path {
+				case "", `\`:
+					return []string{tplName}, nil
+				}
+				return nil, os.ErrNotExist
+			},
+			AssetInfo: func(path string) (os.FileInfo, error) {
+				if _, f := filepath.Split(path); f == tplName {
+					return &assetfs.FakeFile{
+						Path:      path,
+						Len:       int64(len(htmlStr)),
+						Timestamp: time.Now(),
+					}, nil
+				}
+				return nil, os.ErrNotExist
+			},
+		}
+	})
+	viewPath := "/"
+	require.NoError(t, beego.AddViewPath(viewPath))
 
-	// Create a temp directory to hold a view
-	dir := t.TempDir()
-
-	// Create the view
-	file, err := os.CreateTemp(dir, "*index.tpl")
-	require.NoError(t, err)
-	defer file.Close()
-	_, err = file.WriteString(htmlStr)
-	require.NoError(t, err)
-	// Add path to view path
-	require.NoError(t, beego.AddViewPath(dir))
-	beego.SetViewsPath(dir)
-	_, tplName = filepath.Split(file.Name())
+	ctrl := &testController{
+		Controller: beego.Controller{
+			ViewPath:     viewPath,
+			EnableRender: true,
+		},
+		T: t,
+	}
+	app := beego.NewApp()
+	app.Handlers.Add("/template/render", ctrl, "get:TemplateRender")
+	app.Handlers.Add("/template/renderstring", ctrl, "get:TemplateRenderString")
+	app.Handlers.Add("/template/renderbytes", ctrl, "get:TemplateRenderBytes")
 
 	sr := tracetest.NewSpanRecorder()
 	tracerProvider := trace.NewTracerProvider(trace.WithSpanProcessor(sr))
@@ -259,7 +292,7 @@ func TestRender(t *testing.T) {
 		rr := httptest.NewRecorder()
 		req, err := http.NewRequest(http.MethodGet, fmt.Sprintf("http://localhost/template%s", str), nil)
 		require.NoError(t, err)
-		mw(beego.BeeApp.Handlers).ServeHTTP(rr, req)
+		mw(app.Handlers).ServeHTTP(rr, req)
 		body, err := io.ReadAll(rr.Result().Body)
 		require.Equal(t, strings.Replace(htmlStr, "{{.name}}", "test", 1), string(body))
 		require.NoError(t, err)
@@ -269,16 +302,14 @@ func TestRender(t *testing.T) {
 	require.Len(t, spans, 6) // 3 HTTP requests, each creating 2 spans
 	for _, span := range spans {
 		switch span.Name() {
-		case "/template/render":
-		case "/template/renderstring":
-		case "/template/renderbytes":
+		case "GET":
 			continue
 		case internal.RenderTemplateSpanName,
 			internal.RenderStringSpanName,
 			internal.RenderBytesSpanName:
 			assert.Contains(t, span.Attributes(), internal.TemplateKey.String(tplName))
 		default:
-			t.Fatal("unexpected span name")
+			t.Fatal("unexpected span name", span.Name())
 		}
 	}
 }
@@ -329,9 +360,8 @@ func runTest(t *testing.T, tc *testCase, url string) {
 
 func defaultAttributes() []attribute.KeyValue {
 	return []attribute.KeyValue{
-		semconv.HTTPServerNameKey.String(middleWareName),
+		semconv.NetHostName(middleWareName),
 		semconv.HTTPSchemeHTTP,
-		semconv.HTTPHostKey.String("localhost"),
 	}
 }
 

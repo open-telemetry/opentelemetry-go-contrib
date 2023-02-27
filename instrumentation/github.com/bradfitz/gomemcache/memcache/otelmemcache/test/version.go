@@ -16,7 +16,7 @@ package test // import "go.opentelemetry.io/contrib/instrumentation/github.com/b
 
 // Version is the current release version of the memcached instrumentation test module.
 func Version() string {
-	return "0.36.4"
+	return "0.39.0"
 	// This string is updated by the pre_release.sh script during release
 }
 

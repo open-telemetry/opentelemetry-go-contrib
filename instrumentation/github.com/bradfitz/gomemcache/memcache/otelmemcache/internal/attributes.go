@@ -16,7 +16,7 @@ package internal // import "go.opentelemetry.io/contrib/instrumentation/github.c
 
 import (
 	"go.opentelemetry.io/otel/attribute"
-	semconv "go.opentelemetry.io/otel/semconv/v1.12.0"
+	semconv "go.opentelemetry.io/otel/semconv/v1.17.0"
 )
 
 type Operation string
@@ -36,17 +36,15 @@ const (
 	OperationSet            Operation = "set"
 	OperationTouch          Operation = "touch"
 
-	MamcacheDBSystemValue = "memcached"
-
 	MemcacheDBItemKeyName attribute.Key = "db.memcached.item"
 )
 
 func MemcacheDBSystem() attribute.KeyValue {
-	return semconv.DBSystemKey.String(MamcacheDBSystemValue)
+	return semconv.DBSystemMemcached
 }
 
 func MemcacheDBOperation(opName Operation) attribute.KeyValue {
-	return semconv.DBOperationKey.String(string(opName))
+	return semconv.DBOperation(string(opName))
 }
 
 func MemcacheDBItemKeys(itemKeys ...string) attribute.KeyValue {

@@ -28,12 +28,12 @@ import (
 	"go.opentelemetry.io/otel/exporters/stdout/stdoutmetric"
 	"go.opentelemetry.io/otel/sdk/metric"
 	"go.opentelemetry.io/otel/sdk/resource"
-	semconv "go.opentelemetry.io/otel/semconv/v1.11.0"
+	semconv "go.opentelemetry.io/otel/semconv/v1.17.0"
 )
 
 var res = resource.NewWithAttributes(
 	semconv.SchemaURL,
-	semconv.ServiceNameKey.String("host-instrumentation-example"),
+	semconv.ServiceName("host-instrumentation-example"),
 )
 
 func main() {

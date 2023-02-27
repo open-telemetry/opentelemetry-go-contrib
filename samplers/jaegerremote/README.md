@@ -1,6 +1,12 @@
 # Jaeger Remote Sampler
 
-This package implements [Jaeger remote sampler](https://www.jaegertracing.io/docs/latest/sampling/#collector-sampling-configuration).
+This package implements [Jaeger remote sampler](https://www.jaegertracing.io/docs/latest/sampling/#remote-sampling).
+Remote sampler allows defining sampling configuration for services at the backend, at the granularity of service + endpoint.
+When using the Jaeger backend, the sampling configuration can come from two sources:
+
+1. A static configuration file, with the ability to hot-reload it on changes.
+2. [Adaptive sampling](https://www.jaegertracing.io/docs/latest/sampling/#adaptive-sampling) where Jaeger backend
+   automatically calculates desired sampling probabilities based on the target volume of trace data per service.
 
 ## Usage
 
@@ -9,7 +15,7 @@ Configuration in the code:
 ```go
 	jaegerRemoteSampler := jaegerremote.New(
 		"your-service-name",
-		jaegerremote.WithSamplingServerURL("http://{sampling_service_host_name}:5778"),
+		jaegerremote.WithSamplingServerURL("http://{sampling_service_host_name}:5778/sampling"),
 		jaegerremote.WithSamplingRefreshInterval(10*time.Second),
 		jaegerremote.WithInitialSampler(trace.TraceIDRatioBased(0.5)),
 	)
@@ -20,6 +26,14 @@ Configuration in the code:
 	)
 	otel.SetTracerProvider(tp)
 ```
+
+Sampling server:
+
+* Historically, the Jaeger Agent provided the sampling server at `http://{agent_host}:5778/sampling`.
+* When not running the Jaeger Agent, the sampling server is also provided by the Jaeger Collector,
+  but at a slightly different endpoint: `http://collector_host:14268/api/sampling`.
+* The OpenTelemetry Collector can provide the sampling endpoint `http://{otel_collector_host}:5778/sampling`
+  by [configuring an extension](https://github.com/open-telemetry/opentelemetry-collector-contrib/blob/main/extension/jaegerremotesampling/README.md).
 
 Notes:
 

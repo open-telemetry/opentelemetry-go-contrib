@@ -17,7 +17,7 @@
 package jaegerremote // import "go.opentelemetry.io/contrib/samplers/jaegerremote"
 
 import (
-	"encoding/json"
+	"bytes"
 	"fmt"
 	"io"
 	"net/http"
@@ -26,8 +26,9 @@ import (
 	"sync/atomic"
 	"time"
 
+	"github.com/gogo/protobuf/jsonpb"
+
 	jaeger_api_v2 "go.opentelemetry.io/contrib/samplers/jaegerremote/internal/proto-gen/jaeger-idl/proto/api_v2"
-	"go.opentelemetry.io/otel"
 	"go.opentelemetry.io/otel/sdk/trace"
 )
 
@@ -105,7 +106,7 @@ func (s *Sampler) ShouldSample(p trace.SamplingParameters) trace.SamplingResult 
 // go-routines it may have started.
 func (s *Sampler) Close() {
 	if swapped := atomic.CompareAndSwapInt64(&s.closed, 0, 1); !swapped {
-		otel.Handle(fmt.Errorf("repeated attempt to close the sampler is ignored"))
+		s.logger.Info("repeated attempt to close the sampler is ignored")
 		return
 	}
 
@@ -151,12 +152,12 @@ func (s *Sampler) setSampler(sampler trace.Sampler) {
 func (s *Sampler) UpdateSampler() {
 	res, err := s.samplingFetcher.Fetch(s.serviceName)
 	if err != nil {
-		// log.Printf("failed to fetch sampling strategy: %v", err)
+		s.logger.Error(err, "failed to fetch sampling strategy")
 		return
 	}
 	strategy, err := s.samplingParser.Parse(res)
 	if err != nil {
-		// log.Printf("failed to parse sampling strategy response: %v", err)
+		s.logger.Error(err, "failed to parse sampling strategy response")
 		return
 	}
 
@@ -164,7 +165,7 @@ func (s *Sampler) UpdateSampler() {
 	defer s.Unlock()
 
 	if err := s.updateSamplerViaUpdaters(strategy); err != nil {
-		// c.logger.Infof("failed to handle sampling strategy response %+v. Got error: %v", res, err)
+		s.logger.Error(err, "failed to handle sampling strategy response", "response", res)
 		return
 	}
 }
@@ -312,7 +313,11 @@ type samplingStrategyParserImpl struct{}
 
 func (p *samplingStrategyParserImpl) Parse(response []byte) (interface{}, error) {
 	strategy := new(jaeger_api_v2.SamplingStrategyResponse)
-	if err := json.Unmarshal(response, strategy); err != nil {
+	// Official Jaeger Remote Sampling protocol contains enums encoded as strings.
+	// Legacy protocol contains enums as numbers.
+	// Gogo's jsonpb module can parse either format.
+	// Cf. https://github.com/open-telemetry/opentelemetry-go-contrib/issues/3184
+	if err := jsonpb.Unmarshal(bytes.NewReader(response), strategy); err != nil {
 		return nil, err
 	}
 	return strategy, nil

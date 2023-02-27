@@ -16,6 +16,7 @@ package test
 
 import (
 	"context"
+	"fmt"
 	"io"
 	"net/http"
 	"net/http/httptest"
@@ -30,15 +31,56 @@ import (
 	"go.opentelemetry.io/otel/attribute"
 	"go.opentelemetry.io/otel/codes"
 	"go.opentelemetry.io/otel/propagation"
+	"go.opentelemetry.io/otel/sdk/instrumentation"
+	"go.opentelemetry.io/otel/sdk/metric"
+	"go.opentelemetry.io/otel/sdk/metric/metricdata"
+	"go.opentelemetry.io/otel/sdk/metric/metricdata/metricdatatest"
 	sdktrace "go.opentelemetry.io/otel/sdk/trace"
 	"go.opentelemetry.io/otel/sdk/trace/tracetest"
+	semconv "go.opentelemetry.io/otel/semconv/v1.17.0"
 	"go.opentelemetry.io/otel/trace"
 )
 
-// TODO(#2759): Add metric integration tests for the instrumentation. These
-// tests depend on
-// https://github.com/open-telemetry/opentelemetry-go/issues/3031 being
-// resolved.
+func assertScopeMetrics(t *testing.T, sm metricdata.ScopeMetrics, attrs attribute.Set) {
+	assert.Equal(t, instrumentation.Scope{
+		Name:    "go.opentelemetry.io/contrib/instrumentation/net/http/otelhttp",
+		Version: otelhttp.SemVersion(),
+	}, sm.Scope)
+
+	require.Len(t, sm.Metrics, 3)
+
+	want := metricdata.Metrics{
+		Name: "http.server.request_content_length",
+		Data: metricdata.Sum[int64]{
+			DataPoints:  []metricdata.DataPoint[int64]{{Attributes: attrs, Value: 0}},
+			Temporality: metricdata.CumulativeTemporality,
+			IsMonotonic: true,
+		},
+	}
+	metricdatatest.AssertEqual(t, want, sm.Metrics[0], metricdatatest.IgnoreTimestamp())
+
+	want = metricdata.Metrics{
+		Name: "http.server.response_content_length",
+		Data: metricdata.Sum[int64]{
+			DataPoints:  []metricdata.DataPoint[int64]{{Attributes: attrs, Value: 11}},
+			Temporality: metricdata.CumulativeTemporality,
+			IsMonotonic: true,
+		},
+	}
+	metricdatatest.AssertEqual(t, want, sm.Metrics[1], metricdatatest.IgnoreTimestamp())
+
+	// Duration value is not predictable.
+	dur := sm.Metrics[2]
+	assert.Equal(t, "http.server.duration", dur.Name)
+	require.IsType(t, dur.Data, metricdata.Histogram{})
+	hist := dur.Data.(metricdata.Histogram)
+	assert.Equal(t, metricdata.CumulativeTemporality, hist.Temporality)
+	require.Len(t, hist.DataPoints, 1)
+	dPt := hist.DataPoints[0]
+	assert.Equal(t, attrs, dPt.Attributes, "attributes")
+	assert.Equal(t, uint64(1), dPt.Count, "count")
+	assert.Equal(t, []float64{0, 5, 10, 25, 50, 75, 100, 250, 500, 750, 1000, 2500, 5000, 7500, 10000}, dPt.Bounds, "bounds")
+}
 
 func TestHandlerBasics(t *testing.T) {
 	rr := httptest.NewRecorder()
@@ -46,7 +88,8 @@ func TestHandlerBasics(t *testing.T) {
 	spanRecorder := tracetest.NewSpanRecorder()
 	provider := sdktrace.NewTracerProvider(sdktrace.WithSpanProcessor(spanRecorder))
 
-	operation := "test_handler"
+	reader := metric.NewManualReader()
+	meterProvider := metric.NewMeterProvider(metric.WithReader(reader))
 
 	h := otelhttp.NewHandler(
 		http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
@@ -56,8 +99,9 @@ func TestHandlerBasics(t *testing.T) {
 			if _, err := io.WriteString(w, "hello world"); err != nil {
 				t.Fatal(err)
 			}
-		}), operation,
+		}), "test_handler",
 		otelhttp.WithTracerProvider(provider),
+		otelhttp.WithMeterProvider(meterProvider),
 		otelhttp.WithPropagators(propagation.TraceContext{}),
 	)
 
@@ -66,6 +110,20 @@ func TestHandlerBasics(t *testing.T) {
 		t.Fatal(err)
 	}
 	h.ServeHTTP(rr, r)
+
+	rm := metricdata.ResourceMetrics{}
+	err = reader.Collect(context.Background(), &rm)
+	require.NoError(t, err)
+	require.Len(t, rm.ScopeMetrics, 1)
+	attrs := attribute.NewSet(
+		semconv.NetHostName(r.Host),
+		semconv.HTTPSchemeHTTP,
+		semconv.HTTPFlavorKey.String(fmt.Sprintf("1.%d", r.ProtoMinor)),
+		semconv.HTTPMethod("GET"),
+		attribute.String("test", "attribute"),
+		semconv.HTTPStatusCode(200),
+	)
+	assertScopeMetrics(t, rm.ScopeMetrics[0], attrs)
 
 	if got, expected := rr.Result().StatusCode, http.StatusOK; got != expected {
 		t.Fatalf("got %d, expected %d", got, expected)
@@ -85,6 +143,61 @@ func TestHandlerBasics(t *testing.T) {
 	}
 	if got, expected := string(d), "hello world"; got != expected {
 		t.Fatalf("got %q, expected %q", got, expected)
+	}
+}
+
+func TestHandlerEmittedAttributes(t *testing.T) {
+	testCases := []struct {
+		name       string
+		handler    func(http.ResponseWriter, *http.Request)
+		attributes []attribute.KeyValue
+	}{
+		{
+			name: "With a success handler",
+			handler: func(w http.ResponseWriter, r *http.Request) {
+				w.WriteHeader(http.StatusOK)
+			},
+			attributes: []attribute.KeyValue{
+				attribute.Int("http.status_code", http.StatusOK),
+			},
+		},
+		{
+			name: "With a failing handler",
+			handler: func(w http.ResponseWriter, r *http.Request) {
+				w.WriteHeader(http.StatusBadRequest)
+			},
+			attributes: []attribute.KeyValue{
+				attribute.Int("http.status_code", http.StatusBadRequest),
+			},
+		},
+		{
+			name: "With an empty handler",
+			handler: func(w http.ResponseWriter, r *http.Request) {
+			},
+			attributes: []attribute.KeyValue{
+				attribute.Int("http.status_code", http.StatusOK),
+			},
+		},
+	}
+	for _, tc := range testCases {
+		t.Run(tc.name, func(t *testing.T) {
+			sr := tracetest.NewSpanRecorder()
+			provider := sdktrace.NewTracerProvider()
+			provider.RegisterSpanProcessor(sr)
+			h := otelhttp.NewHandler(
+				http.HandlerFunc(tc.handler), "test_handler",
+				otelhttp.WithTracerProvider(provider),
+			)
+
+			h.ServeHTTP(httptest.NewRecorder(), httptest.NewRequest("GET", "/", nil))
+
+			require.Len(t, sr.Ended(), 1, "should emit a span")
+			attrs := sr.Ended()[0].Attributes()
+
+			for _, a := range tc.attributes {
+				assert.Contains(t, attrs, a)
+			}
+		})
 	}
 }
 
@@ -109,7 +222,7 @@ func TestHandlerRequestWithTraceContext(t *testing.T) {
 	r = r.WithContext(ctx)
 
 	h.ServeHTTP(rr, r)
-	assert.Equal(t, 200, rr.Result().StatusCode)
+	assert.Equal(t, http.StatusOK, rr.Result().StatusCode)
 
 	span.End()
 
@@ -157,7 +270,7 @@ func TestWithPublicEndpoint(t *testing.T) {
 
 	rr := httptest.NewRecorder()
 	h.ServeHTTP(rr, r)
-	assert.Equal(t, 200, rr.Result().StatusCode)
+	assert.Equal(t, http.StatusOK, rr.Result().StatusCode)
 
 	// Recorded span should be linked with an incoming span context.
 	assert.NoError(t, spanRecorder.ForceFlush(ctx))
@@ -241,7 +354,7 @@ func TestWithPublicEndpointFn(t *testing.T) {
 
 			rr := httptest.NewRecorder()
 			h.ServeHTTP(rr, r)
-			assert.Equal(t, 200, rr.Result().StatusCode)
+			assert.Equal(t, http.StatusOK, rr.Result().StatusCode)
 
 			// Recorded span should be linked with an incoming span context.
 			assert.NoError(t, spanRecorder.ForceFlush(ctx))
@@ -256,9 +369,9 @@ func TestSpanStatus(t *testing.T) {
 		httpStatusCode int
 		wantSpanStatus codes.Code
 	}{
-		{200, codes.Unset},
-		{400, codes.Unset},
-		{500, codes.Error},
+		{http.StatusOK, codes.Unset},
+		{http.StatusBadRequest, codes.Unset},
+		{http.StatusInternalServerError, codes.Error},
 	}
 	for _, tc := range testCases {
 		t.Run(strconv.Itoa(tc.httpStatusCode), func(t *testing.T) {

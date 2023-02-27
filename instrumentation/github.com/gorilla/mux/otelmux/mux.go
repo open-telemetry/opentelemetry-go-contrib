@@ -25,7 +25,8 @@ import (
 	"go.opentelemetry.io/otel"
 
 	"go.opentelemetry.io/otel/propagation"
-	semconv "go.opentelemetry.io/otel/semconv/v1.12.0"
+	semconv "go.opentelemetry.io/otel/semconv/v1.17.0"
+	"go.opentelemetry.io/otel/semconv/v1.17.0/httpconv"
 	oteltrace "go.opentelemetry.io/otel/trace"
 )
 
@@ -51,21 +52,26 @@ func Middleware(service string, opts ...Option) mux.MiddlewareFunc {
 	if cfg.Propagators == nil {
 		cfg.Propagators = otel.GetTextMapPropagator()
 	}
+	if cfg.spanNameFormatter == nil {
+		cfg.spanNameFormatter = defaultSpanNameFunc
+	}
 	return func(handler http.Handler) http.Handler {
 		return traceware{
-			service:     service,
-			tracer:      tracer,
-			propagators: cfg.Propagators,
-			handler:     handler,
+			service:           service,
+			tracer:            tracer,
+			propagators:       cfg.Propagators,
+			handler:           handler,
+			spanNameFormatter: cfg.spanNameFormatter,
 		}
 	}
 }
 
 type traceware struct {
-	service     string
-	tracer      oteltrace.Tracer
-	propagators propagation.TextMapPropagator
-	handler     http.Handler
+	service           string
+	tracer            oteltrace.Tracer
+	propagators       propagation.TextMapPropagator
+	handler           http.Handler
+	spanNameFormatter func(string, *http.Request) string
 }
 
 type recordingResponseWriter struct {
@@ -111,40 +117,44 @@ func putRRW(rrw *recordingResponseWriter) {
 	rrwPool.Put(rrw)
 }
 
+// defaultSpanNameFunc just reuses the route name as the span name.
+func defaultSpanNameFunc(routeName string, _ *http.Request) string { return routeName }
+
 // ServeHTTP implements the http.Handler interface. It does the actual
 // tracing of the request.
 func (tw traceware) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	ctx := tw.propagators.Extract(r.Context(), propagation.HeaderCarrier(r.Header))
-	spanName := ""
+	routeStr := ""
 	route := mux.CurrentRoute(r)
 	if route != nil {
 		var err error
-		spanName, err = route.GetPathTemplate()
+		routeStr, err = route.GetPathTemplate()
 		if err != nil {
-			spanName, err = route.GetPathRegexp()
+			routeStr, err = route.GetPathRegexp()
 			if err != nil {
-				spanName = ""
+				routeStr = ""
 			}
 		}
 	}
-	routeStr := spanName
-	if spanName == "" {
-		spanName = fmt.Sprintf("HTTP %s route not found", r.Method)
-	}
 	opts := []oteltrace.SpanStartOption{
-		oteltrace.WithAttributes(semconv.NetAttributesFromHTTPRequest("tcp", r)...),
-		oteltrace.WithAttributes(semconv.EndUserAttributesFromHTTPRequest(r)...),
-		oteltrace.WithAttributes(semconv.HTTPServerAttributesFromHTTPRequest(tw.service, routeStr, r)...),
+		oteltrace.WithAttributes(httpconv.ServerRequest(tw.service, r)...),
 		oteltrace.WithSpanKind(oteltrace.SpanKindServer),
 	}
+	if routeStr == "" {
+		routeStr = fmt.Sprintf("HTTP %s route not found", r.Method)
+	} else {
+		rAttr := semconv.HTTPRoute(routeStr)
+		opts = append(opts, oteltrace.WithAttributes(rAttr))
+	}
+	spanName := tw.spanNameFormatter(routeStr, r)
 	ctx, span := tw.tracer.Start(ctx, spanName, opts...)
 	defer span.End()
 	r2 := r.WithContext(ctx)
 	rrw := getRRW(w)
 	defer putRRW(rrw)
 	tw.handler.ServeHTTP(rrw.writer, r2)
-	attrs := semconv.HTTPAttributesFromHTTPStatusCode(rrw.status)
-	spanStatus, spanMessage := semconv.SpanStatusFromHTTPStatusCodeAndSpanKind(rrw.status, oteltrace.SpanKindServer)
-	span.SetAttributes(attrs...)
-	span.SetStatus(spanStatus, spanMessage)
+	if rrw.status > 0 {
+		span.SetAttributes(semconv.HTTPStatusCode(rrw.status))
+	}
+	span.SetStatus(httpconv.ServerStatus(rrw.status))
 }

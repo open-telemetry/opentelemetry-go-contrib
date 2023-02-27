@@ -8,7 +8,7 @@ Bring up the `http-server` and `http-client` services to run the example:
 docker-compose up --detach http-server http-client
 ```
 
-The `http-client` service sends just one HTTP request to `http-server` and then exits. View the span generated to `stdout` in the logs:
+The `http-client` service sends just one HTTP request to `http-server` and then exits. View the span and metric generated to `stdout` in the logs:
 ```sh
 docker-compose logs http-client
 ```

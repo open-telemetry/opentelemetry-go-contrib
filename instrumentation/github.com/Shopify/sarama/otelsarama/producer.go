@@ -26,7 +26,7 @@ import (
 	"go.opentelemetry.io/otel/codes"
 
 	"go.opentelemetry.io/otel/attribute"
-	semconv "go.opentelemetry.io/otel/semconv/v1.12.0"
+	semconv "go.opentelemetry.io/otel/semconv/v1.17.0"
 	"go.opentelemetry.io/otel/trace"
 )
 
@@ -285,17 +285,17 @@ func startProducerSpan(cfg config, version sarama.KafkaVersion, msg *sarama.Prod
 
 	// Create a span.
 	attrs := []attribute.KeyValue{
-		semconv.MessagingSystemKey.String("kafka"),
+		semconv.MessagingSystem("kafka"),
 		semconv.MessagingDestinationKindTopic,
-		semconv.MessagingDestinationKey.String(msg.Topic),
-		semconv.MessagingMessagePayloadSizeBytesKey.Int(msgPayloadSize(msg, version)),
-		semconv.MessagingOperationKey.String("send"),
+		semconv.MessagingDestinationName(msg.Topic),
+		semconv.MessagingMessagePayloadSizeBytes(msgPayloadSize(msg, version)),
+		semconv.MessagingOperationPublish,
 	}
 	opts := []trace.SpanStartOption{
 		trace.WithAttributes(attrs...),
 		trace.WithSpanKind(trace.SpanKindProducer),
 	}
-	ctx, span := cfg.Tracer.Start(ctx, fmt.Sprintf("%s send", msg.Topic), opts...)
+	ctx, span := cfg.Tracer.Start(ctx, fmt.Sprintf("%s publish", msg.Topic), opts...)
 
 	if version.IsAtLeast(sarama.V0_11_0_0) {
 		// Inject current span context, so consumers can use it to propagate span.
@@ -307,8 +307,8 @@ func startProducerSpan(cfg config, version sarama.KafkaVersion, msg *sarama.Prod
 
 func finishProducerSpan(span trace.Span, partition int32, offset int64, err error) {
 	span.SetAttributes(
-		semconv.MessagingMessageIDKey.String(strconv.FormatInt(offset, 10)),
-		semconv.MessagingKafkaPartitionKey.Int64(int64(partition)),
+		semconv.MessagingMessageID(strconv.FormatInt(offset, 10)),
+		semconv.MessagingKafkaDestinationPartition(int(partition)),
 	)
 	if err != nil {
 		span.SetStatus(codes.Error, err.Error())
