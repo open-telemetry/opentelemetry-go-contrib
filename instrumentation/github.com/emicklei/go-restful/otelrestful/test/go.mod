@@ -5,7 +5,7 @@ go 1.18
 require (
 	github.com/emicklei/go-restful/v3 v3.10.1
 	github.com/stretchr/testify v1.8.2
-	go.opentelemetry.io/contrib/instrumentation/github.com/emicklei/go-restful/otelrestful v0.39.0
+	go.opentelemetry.io/contrib/instrumentation/github.com/emicklei/go-restful/otelrestful v0.40.0
 	go.opentelemetry.io/otel v1.14.0
 	go.opentelemetry.io/otel/sdk v1.14.0
 	go.opentelemetry.io/otel/trace v1.14.0
