@@ -11,6 +11,14 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 ### Added
 
 - Add the new `go.opentelemetry.io/contrib/instrgen` package to provide auto-generated source code instrumentation. (#3068)
+
+## [1.15.0/0.40.0/0.9.0] - 2023-02-27
+
+This release is the last to support [Go 1.18].
+The next release will require at least [Go 1.19].
+
+### Added
+
 - Support [Go 1.20]. (#3372)
 - Add `SpanNameFormatter` option to package `go.opentelemetry.io/contrib/instrumentation/github.com/gin-gonic/gin/otelgin`. (#3343)
 
@@ -659,7 +667,8 @@ First official tagged release of `contrib` repository.
 - Prefix support for dogstatsd (#34)
 - Update Go Runtime package to use batch observer (#44)
 
-[Unreleased]: https://github.com/open-telemetry/opentelemetry-go-contrib/compare/v1.14.0...HEAD
+[Unreleased]: https://github.com/open-telemetry/opentelemetry-go-contrib/compare/v1.15.0...HEAD
+[1.15.0/0.40.0/0.9.0]: https://github.com/open-telemetry/opentelemetry-go-contrib/releases/tag/v1.15.0
 [1.14.0/0.39.0/0.8.0]: https://github.com/open-telemetry/opentelemetry-go-contrib/releases/tag/v1.14.0
 [1.13.0/0.38.0/0.7.0]: https://github.com/open-telemetry/opentelemetry-go-contrib/releases/tag/v1.13.0
 [1.12.0/0.37.0/0.6.0]: https://github.com/open-telemetry/opentelemetry-go-contrib/releases/tag/v1.12.0
@@ -703,3 +712,5 @@ First official tagged release of `contrib` repository.
 [0.6.1]: https://github.com/open-telemetry/opentelemetry-go-contrib/releases/tag/v0.6.1
 
 [Go 1.20]: https://go.dev/doc/go1.20
+[Go 1.19]: https://go.dev/doc/go1.19
+[Go 1.18]: https://go.dev/doc/go1.18
