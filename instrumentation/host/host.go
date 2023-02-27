@@ -29,7 +29,6 @@ import (
 	"go.opentelemetry.io/otel/metric"
 	"go.opentelemetry.io/otel/metric/global"
 	"go.opentelemetry.io/otel/metric/instrument"
-	"go.opentelemetry.io/otel/metric/unit"
 )
 
 // Host reports the work-in-progress conventional host metrics specified by OpenTelemetry.
@@ -161,7 +160,7 @@ func (h *host) register() error {
 
 	if hostMemoryUsage, err = h.meter.Int64ObservableGauge(
 		"system.memory.usage",
-		instrument.WithUnit(unit.Bytes),
+		instrument.WithUnit("By"),
 		instrument.WithDescription(
 			"Memory usage of this process attributed by memory state (Used, Available)",
 		),
@@ -171,7 +170,7 @@ func (h *host) register() error {
 
 	if hostMemoryUtilization, err = h.meter.Float64ObservableGauge(
 		"system.memory.utilization",
-		instrument.WithUnit(unit.Dimensionless),
+		instrument.WithUnit("1"),
 		instrument.WithDescription(
 			"Memory utilization of this process attributeed by memory state (Used, Available)",
 		),
@@ -181,7 +180,7 @@ func (h *host) register() error {
 
 	if networkIOUsage, err = h.meter.Int64ObservableCounter(
 		"system.network.io",
-		instrument.WithUnit(unit.Bytes),
+		instrument.WithUnit("By"),
 		instrument.WithDescription(
 			"Bytes transferred attributeed by direction (Transmit, Receive)",
 		),

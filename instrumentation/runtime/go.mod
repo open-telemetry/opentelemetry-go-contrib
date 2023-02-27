@@ -2,7 +2,7 @@ module go.opentelemetry.io/contrib/instrumentation/runtime
 
 go 1.18
 
-require go.opentelemetry.io/otel/metric v0.36.0
+require go.opentelemetry.io/otel/metric v0.36.1-0.20230227180222-b177f58e09ca
 
 require (
 	github.com/go-logr/logr v1.2.3 // indirect
