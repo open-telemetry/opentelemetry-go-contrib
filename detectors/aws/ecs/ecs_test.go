@@ -23,6 +23,7 @@ import (
 	"go.opentelemetry.io/otel/sdk/resource"
 	semconv "go.opentelemetry.io/otel/semconv/v1.17.0"
 
+	metadata "github.com/brunoscheufler/aws-ecs-metadata-go"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/mock"
 )
@@ -115,4 +116,36 @@ func TestReturnsIfNoEnvVars(t *testing.T) {
 	// When not on ECS, the detector should return nil and not error.
 	assert.NoError(t, err, "failure to detect when not on platform must not be an error")
 	assert.Nil(t, res, "failure to detect should return a nil Resource to optimize merge")
+}
+
+// handles alternative aws partitions (e.g. AWS GovCloud).
+func TestLogsAttributesAlternatePartition(t *testing.T) {
+	os.Clearenv()
+	detector := &resourceDetector{utils: nil}
+
+	containerMetadata := &metadata.ContainerMetadataV4{
+		LogDriver: "awslogs",
+		LogOptions: struct {
+			AwsLogsCreateGroup string `json:"awslogs-create-group"`
+			AwsLogsGroup       string `json:"awslogs-group"`
+			AwsLogsStream      string `json:"awslogs-stream"`
+			AwsRegion          string `json:"awslogs-region"`
+		}{
+			"fake-create",
+			"fake-group",
+			"fake-stream",
+			"",
+		},
+		ContainerARN: "arn:arn-partition:arn-svc:arn-region:arn-account:arn-resource",
+	}
+	actualAttributes, err := detector.getLogsAttributes(containerMetadata)
+	assert.NoError(t, err, "failure with nonstandard partitition")
+
+	expectedAttributes := []attribute.KeyValue{
+		semconv.AWSLogGroupNames(containerMetadata.LogOptions.AwsLogsGroup),
+		semconv.AWSLogGroupARNs("arn:arn-partition:logs:arn-region:arn-account:log-group:fake-group:*"),
+		semconv.AWSLogStreamNames(containerMetadata.LogOptions.AwsLogsStream),
+		semconv.AWSLogStreamARNs("arn:arn-partition:logs:arn-region:arn-account:log-group:fake-group:log-stream:fake-stream"),
+	}
+	assert.Equal(t, expectedAttributes, actualAttributes, "logs attributes are incorrect")
 }

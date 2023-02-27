@@ -8,9 +8,9 @@ require (
 	go.opentelemetry.io/contrib v1.14.0
 	go.opentelemetry.io/contrib/instrumentation/github.com/gocql/gocql/otelgocql v0.39.0
 	go.opentelemetry.io/otel v1.13.0
-	go.opentelemetry.io/otel/metric v0.36.0
+	go.opentelemetry.io/otel/metric v0.36.1-0.20230221193137-99ec432679fb
 	go.opentelemetry.io/otel/sdk v1.13.0
-	go.opentelemetry.io/otel/sdk/metric v0.36.0
+	go.opentelemetry.io/otel/sdk/metric v0.36.1-0.20230221193137-99ec432679fb
 	go.opentelemetry.io/otel/trace v1.13.0
 )
 

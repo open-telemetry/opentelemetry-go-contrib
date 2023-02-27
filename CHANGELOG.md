@@ -12,6 +12,7 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 
 - Add the new `go.opentelemetry.io/contrib/instrgen` package to provide auto-generated source code instrumentation. (#3068)
 - Support [Go 1.20]. (#3372)
+- Add `SpanNameFormatter` option to package `go.opentelemetry.io/contrib/instrumentation/github.com/gin-gonic/gin/otelgin`. (#3343)
 
 ### Changed
 
@@ -20,6 +21,7 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 ### Fixed
 
 - Remove use of deprecated `"math/rand".Seed` in `go.opentelemetry.io/contrib/instrumentation/github.com/Shopify/sarama/otelsarama/example/producer`. (#3396)
+- `detectors/aws/ecs`: Do not assume "aws" partition in ecs detector to prevent panic in AWS GovCloud. (#3167)
 
 ## [1.14.0/0.39.0/0.8.0] - 2023-02-07
 

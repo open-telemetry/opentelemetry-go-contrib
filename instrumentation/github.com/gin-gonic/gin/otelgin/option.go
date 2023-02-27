@@ -24,14 +24,18 @@ import (
 )
 
 type config struct {
-	TracerProvider oteltrace.TracerProvider
-	Propagators    propagation.TextMapPropagator
-	Filters        []Filter
+	TracerProvider    oteltrace.TracerProvider
+	Propagators       propagation.TextMapPropagator
+	Filters           []Filter
+	SpanNameFormatter SpanNameFormatter
 }
 
 // Filter is a predicate used to determine whether a given http.request should
 // be traced. A Filter must return true if the request should be traced.
 type Filter func(*http.Request) bool
+
+// SpanNameFormatter is used to set span name by http.request.
+type SpanNameFormatter func(r *http.Request) string
 
 // Option specifies instrumentation configuration options.
 type Option interface {
@@ -74,5 +78,13 @@ func WithTracerProvider(provider oteltrace.TracerProvider) Option {
 func WithFilter(f ...Filter) Option {
 	return optionFunc(func(c *config) {
 		c.Filters = append(c.Filters, f...)
+	})
+}
+
+// WithSpanNameFormatter takes a function that will be called on every
+// request and the returned string will become the Span Name.
+func WithSpanNameFormatter(f func(r *http.Request) string) Option {
+	return optionFunc(func(c *config) {
+		c.SpanNameFormatter = f
 	})
 }
