@@ -16,7 +16,7 @@ package otelkit // import "go.opentelemetry.io/contrib/instrumentation/github.co
 
 // Version is the current release version of the go-kit instrumentation.
 func Version() string {
-	return "0.39.0"
+	return "0.40.0"
 	// This string is updated by the pre_release.sh script during release
 }
 
