@@ -151,6 +151,15 @@ jobs:
         GOARCH: ${{ matrix.arch }}
       run: make test-short
 
+  test-compatibility:
+    runs-on: ubuntu-latest
+    needs: [compatibility-test]
+    steps:
+      - name: Test if compatibility-test workflow passed
+        run: |
+          echo ${{ needs.compatibility-test.result }}
+          test ${{ needs.compatibility-test.result }} == "success"
+
   integration:
     strategy:
       matrix:
@@ -197,3 +206,13 @@ jobs:
       with:
           name: opentelemetry-go-contrib-test-output
           path: ${{ env.TEST_RESULTS }}
+
+  test-integration:
+    runs-on: ubuntu-latest
+    needs: [integration]
+    steps:
+      - name: Test if integration workflow passed
+        run: |
+          echo ${{ needs.integration.result }}
+          test ${{ needs.integration.result }} == "success"
+
