@@ -4,8 +4,8 @@ go 1.18
 
 require (
 	github.com/shirou/gopsutil/v3 v3.23.1
-	go.opentelemetry.io/otel v1.14.0
-	go.opentelemetry.io/otel/metric v0.37.0
+	go.opentelemetry.io/otel v1.14.1-0.20230301191603-813936187e46
+	go.opentelemetry.io/otel/metric v0.37.1-0.20230301191603-813936187e46
 )
 
 require (
