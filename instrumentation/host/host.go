@@ -142,7 +142,7 @@ func (h *host) register() error {
 		"process.cpu.time",
 		instrument.WithUnit("s"),
 		instrument.WithDescription(
-			"Accumulated CPU time spent by this process attributeed by state (User, System, ...)",
+			"Accumulated CPU time spent by this process attributed by state (User, System, ...)",
 		),
 	); err != nil {
 		return err
@@ -152,7 +152,7 @@ func (h *host) register() error {
 		"system.cpu.time",
 		instrument.WithUnit("s"),
 		instrument.WithDescription(
-			"Accumulated CPU time spent by this host attributeed by state (User, System, Other, Idle)",
+			"Accumulated CPU time spent by this host attributed by state (User, System, Other, Idle)",
 		),
 	); err != nil {
 		return err
@@ -172,7 +172,7 @@ func (h *host) register() error {
 		"system.memory.utilization",
 		instrument.WithUnit("1"),
 		instrument.WithDescription(
-			"Memory utilization of this process attributeed by memory state (Used, Available)",
+			"Memory utilization of this process attributed by memory state (Used, Available)",
 		),
 	); err != nil {
 		return err
@@ -182,7 +182,7 @@ func (h *host) register() error {
 		"system.network.io",
 		instrument.WithUnit("By"),
 		instrument.WithDescription(
-			"Bytes transferred attributeed by direction (Transmit, Receive)",
+			"Bytes transferred attributed by direction (Transmit, Receive)",
 		),
 	); err != nil {
 		return err
