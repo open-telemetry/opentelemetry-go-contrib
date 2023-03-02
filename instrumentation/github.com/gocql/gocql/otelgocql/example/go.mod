@@ -7,12 +7,12 @@ replace go.opentelemetry.io/contrib/instrumentation/github.com/gocql/gocql/otelg
 require (
 	github.com/gocql/gocql v1.3.1
 	github.com/prometheus/client_golang v1.14.0
-	go.opentelemetry.io/contrib/instrumentation/github.com/gocql/gocql/otelgocql v0.40.0
-	go.opentelemetry.io/otel v1.14.1-0.20230301191603-813936187e46
-	go.opentelemetry.io/otel/exporters/prometheus v0.37.0
-	go.opentelemetry.io/otel/exporters/zipkin v1.14.0
-	go.opentelemetry.io/otel/sdk v1.14.0
-	go.opentelemetry.io/otel/sdk/metric v0.37.0
+	go.opentelemetry.io/contrib/instrumentation/github.com/gocql/gocql/otelgocql v0.41.0-rc.1
+	go.opentelemetry.io/otel v1.15.0-rc.1
+	go.opentelemetry.io/otel/exporters/prometheus v0.38.0-rc.1
+	go.opentelemetry.io/otel/exporters/zipkin v1.15.0-rc.1
+	go.opentelemetry.io/otel/sdk v1.15.0-rc.1
+	go.opentelemetry.io/otel/sdk/metric v0.38.0-rc.1
 )
 
 require (
@@ -28,8 +28,8 @@ require (
 	github.com/prometheus/client_model v0.3.0 // indirect
 	github.com/prometheus/common v0.37.0 // indirect
 	github.com/prometheus/procfs v0.8.0 // indirect
-	go.opentelemetry.io/otel/metric v0.37.1-0.20230301191603-813936187e46 // indirect
-	go.opentelemetry.io/otel/trace v1.14.0 // indirect
+	go.opentelemetry.io/otel/metric v1.15.0-rc.1 // indirect
+	go.opentelemetry.io/otel/trace v1.15.0-rc.1 // indirect
 	golang.org/x/sys v0.5.0 // indirect
 	google.golang.org/protobuf v1.28.1 // indirect
 	gopkg.in/inf.v0 v0.9.1 // indirect
