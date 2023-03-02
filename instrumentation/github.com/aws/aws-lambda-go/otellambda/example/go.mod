@@ -13,10 +13,10 @@ require (
 	github.com/aws/aws-lambda-go v1.37.0
 	github.com/aws/aws-sdk-go-v2/config v1.18.15
 	github.com/aws/aws-sdk-go-v2/service/s3 v1.30.5
-	go.opentelemetry.io/contrib/detectors/aws/lambda v0.40.0
-	go.opentelemetry.io/contrib/instrumentation/github.com/aws/aws-lambda-go/otellambda v0.40.0
-	go.opentelemetry.io/contrib/instrumentation/github.com/aws/aws-sdk-go-v2/otelaws v0.40.0
-	go.opentelemetry.io/contrib/instrumentation/net/http/otelhttp v0.40.0
+	go.opentelemetry.io/contrib/detectors/aws/lambda v0.41.0-rc.1
+	go.opentelemetry.io/contrib/instrumentation/github.com/aws/aws-lambda-go/otellambda v0.41.0-rc.1
+	go.opentelemetry.io/contrib/instrumentation/github.com/aws/aws-sdk-go-v2/otelaws v0.41.0-rc.1
+	go.opentelemetry.io/contrib/instrumentation/net/http/otelhttp v0.41.0-rc.1
 	go.opentelemetry.io/otel v1.15.0-rc.1
 	go.opentelemetry.io/otel/exporters/stdout/stdouttrace v1.15.0-rc.1
 	go.opentelemetry.io/otel/sdk v1.15.0-rc.1
