@@ -29,7 +29,6 @@ import (
 	"go.opentelemetry.io/otel/exporters/stdout/stdouttrace"
 	"go.opentelemetry.io/otel/propagation"
 
-	"go.opentelemetry.io/otel/metric/global"
 	sdkmetric "go.opentelemetry.io/otel/sdk/metric"
 	"go.opentelemetry.io/otel/sdk/resource"
 	sdktrace "go.opentelemetry.io/otel/sdk/trace"
@@ -64,7 +63,7 @@ func initMeter() (*sdkmetric.MeterProvider, error) {
 	}
 
 	mp := sdkmetric.NewMeterProvider(sdkmetric.WithReader(sdkmetric.NewPeriodicReader(exp)))
-	global.SetMeterProvider(mp)
+	otel.SetMeterProvider(mp)
 	return mp, nil
 }
 
