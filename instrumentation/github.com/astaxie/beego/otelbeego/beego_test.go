@@ -22,7 +22,6 @@ import (
 
 	"go.opentelemetry.io/otel"
 	"go.opentelemetry.io/otel/metric"
-	"go.opentelemetry.io/otel/metric/global"
 	"go.opentelemetry.io/otel/trace"
 
 	"github.com/astaxie/beego"
@@ -59,7 +58,7 @@ func ctxTest() (context.Context, func(*testing.T, context.Context)) {
 func TestSpanFromContextDefaultProvider(t *testing.T) {
 	defer replaceBeego()
 	provider := metric.NewNoopMeterProvider()
-	global.SetMeterProvider(provider)
+	otel.SetMeterProvider(provider)
 	otel.SetTracerProvider(trace.NewNoopTracerProvider())
 
 	ctx, eval := ctxTest()

@@ -5,10 +5,10 @@ go 1.18
 require (
 	github.com/Shopify/sarama v1.38.1
 	github.com/stretchr/testify v1.8.2
-	go.opentelemetry.io/contrib/instrumentation/github.com/Shopify/sarama/otelsarama v0.40.0
-	go.opentelemetry.io/otel v1.14.0
-	go.opentelemetry.io/otel/sdk v1.14.0
-	go.opentelemetry.io/otel/trace v1.14.0
+	go.opentelemetry.io/contrib/instrumentation/github.com/Shopify/sarama/otelsarama v0.41.0-rc.1
+	go.opentelemetry.io/otel v1.15.0-rc.1
+	go.opentelemetry.io/otel/sdk v1.15.0-rc.1
+	go.opentelemetry.io/otel/trace v1.15.0-rc.1
 )
 
 require (
@@ -31,6 +31,7 @@ require (
 	github.com/pierrec/lz4/v4 v4.1.17 // indirect
 	github.com/pmezard/go-difflib v1.0.0 // indirect
 	github.com/rcrowley/go-metrics v0.0.0-20201227073835-cf1acfcdf475 // indirect
+	go.opentelemetry.io/otel/metric v1.15.0-rc.1 // indirect
 	golang.org/x/crypto v0.1.0 // indirect
 	golang.org/x/net v0.7.0 // indirect
 	golang.org/x/sys v0.5.0 // indirect

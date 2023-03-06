@@ -9,11 +9,11 @@ replace (
 
 require (
 	github.com/labstack/echo/v4 v4.10.2
-	go.opentelemetry.io/contrib/instrumentation/github.com/labstack/echo/otelecho v0.40.0
-	go.opentelemetry.io/otel v1.14.0
-	go.opentelemetry.io/otel/exporters/stdout/stdouttrace v1.14.0
-	go.opentelemetry.io/otel/sdk v1.14.0
-	go.opentelemetry.io/otel/trace v1.14.0
+	go.opentelemetry.io/contrib/instrumentation/github.com/labstack/echo/otelecho v0.41.0-rc.1
+	go.opentelemetry.io/otel v1.15.0-rc.1
+	go.opentelemetry.io/otel/exporters/stdout/stdouttrace v1.15.0-rc.1
+	go.opentelemetry.io/otel/sdk v1.15.0-rc.1
+	go.opentelemetry.io/otel/trace v1.15.0-rc.1
 )
 
 require (
@@ -25,6 +25,7 @@ require (
 	github.com/mattn/go-isatty v0.0.17 // indirect
 	github.com/valyala/bytebufferpool v1.0.0 // indirect
 	github.com/valyala/fasttemplate v1.2.2 // indirect
+	go.opentelemetry.io/otel/metric v1.15.0-rc.1 // indirect
 	golang.org/x/crypto v0.6.0 // indirect
 	golang.org/x/net v0.7.0 // indirect
 	golang.org/x/sys v0.5.0 // indirect
