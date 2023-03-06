@@ -17,7 +17,7 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 ### Changed
 
 - Dropped compatibility testing for [Go 1.18].
-  The project no longer guarantees support for this version of Go. (#3813)
+  The project no longer guarantees support for this version of Go. (#3516)
 - Adding the `db.statement` tag to spans in `go.opentelemetry.io/contrib/instrumentation/go.mongodb.org/mongo-driver/mongo/otelmongo` is now disabled by default. (#3519)
 
 ## [1.15.0/0.40.0/0.9.0] - 2023-02-27
