@@ -1,6 +1,6 @@
 module go.opentelemetry.io/contrib/tools
 
-go 1.18
+go 1.19
 
 exclude github.com/blizzy78/varnamelen v0.6.1
 

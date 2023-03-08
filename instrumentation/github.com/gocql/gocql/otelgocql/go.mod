@@ -1,6 +1,6 @@
 module go.opentelemetry.io/contrib/instrumentation/github.com/gocql/gocql/otelgocql
 
-go 1.18
+go 1.19
 
 require (
 	github.com/gocql/gocql v1.3.1

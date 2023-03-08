@@ -119,7 +119,7 @@ go-mod-tidy/%: DIR=$*
 go-mod-tidy/%:
 	@echo "$(GO) mod tidy in $(DIR)" \
 		&& cd $(DIR) \
-		&& $(GO) mod tidy -compat=1.18
+		&& $(GO) mod tidy -compat=1.19
 
 .PHONY: misspell
 misspell: | $(MISSPELL)

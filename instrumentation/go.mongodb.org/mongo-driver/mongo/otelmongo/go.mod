@@ -1,6 +1,6 @@
 module go.opentelemetry.io/contrib/instrumentation/go.mongodb.org/mongo-driver/mongo/otelmongo
 
-go 1.18
+go 1.19
 
 require (
 	go.mongodb.org/mongo-driver v1.11.2
