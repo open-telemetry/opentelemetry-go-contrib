@@ -5,7 +5,7 @@ go 1.18
 replace go.opentelemetry.io/contrib/instrumentation/google.golang.org/grpc/otelgrpc => ../
 
 require (
-	github.com/golang/protobuf v1.5.2
+	github.com/golang/protobuf v1.5.3
 	go.opentelemetry.io/contrib/instrumentation/google.golang.org/grpc/otelgrpc v0.41.0-rc.1
 	go.opentelemetry.io/otel v1.15.0-rc.1
 	go.opentelemetry.io/otel/exporters/stdout/stdouttrace v1.15.0-rc.1
