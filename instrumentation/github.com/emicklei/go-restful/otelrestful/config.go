@@ -23,6 +23,7 @@ import (
 type config struct {
 	TracerProvider oteltrace.TracerProvider
 	Propagators    propagation.TextMapPropagator
+	PublicEndpoint bool
 }
 
 // Option applies a configuration value.
@@ -34,6 +35,15 @@ type optionFunc func(*config)
 
 func (o optionFunc) apply(c *config) {
 	o(c)
+}
+
+// WithPublicEndpoint configures the Handler to link the span with an incoming
+// span context. If this option is not provided, then the association is a child
+// association instead of a link.
+func WithPublicEndpoint() Option {
+	return optionFunc(func(c *config) {
+		c.PublicEndpoint = true
+	})
 }
 
 // WithPropagators specifies propagators to use for extracting

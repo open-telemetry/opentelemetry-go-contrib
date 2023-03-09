@@ -22,11 +22,14 @@ import (
 
 	"github.com/emicklei/go-restful/v3"
 	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 
 	"go.opentelemetry.io/contrib/instrumentation/github.com/emicklei/go-restful/otelrestful"
 	b3prop "go.opentelemetry.io/contrib/propagators/b3"
 	"go.opentelemetry.io/otel"
 	"go.opentelemetry.io/otel/propagation"
+	sdktrace "go.opentelemetry.io/otel/sdk/trace"
+	"go.opentelemetry.io/otel/sdk/trace/tracetest"
 	oteltrace "go.opentelemetry.io/otel/trace"
 )
 
@@ -117,4 +120,56 @@ func TestPropagationWithCustomPropagators(t *testing.T) {
 	container.Add(ws)
 
 	container.ServeHTTP(w, r)
+}
+
+func TestWithPublicEndpoint(t *testing.T) {
+	spanRecorder := tracetest.NewSpanRecorder()
+	provider := sdktrace.NewTracerProvider(
+		sdktrace.WithSpanProcessor(spanRecorder),
+	)
+	remoteSpan := oteltrace.SpanContextConfig{
+		TraceID: oteltrace.TraceID{0x01},
+		SpanID:  oteltrace.SpanID{0x01},
+		Remote:  true,
+	}
+	prop := propagation.TraceContext{}
+
+	handlerFunc := func(req *restful.Request, resp *restful.Response) {
+		s := oteltrace.SpanFromContext(req.Request.Context())
+		sc := s.SpanContext()
+
+		// Should be with new root trace.
+		assert.True(t, sc.IsValid())
+		assert.False(t, sc.IsRemote())
+		assert.NotEqual(t, remoteSpan.TraceID, sc.TraceID())
+	}
+
+	ws := &restful.WebService{}
+	ws.Route(ws.GET("/user/{id}").To(handlerFunc))
+
+	container := restful.NewContainer()
+	container.Filter(otelrestful.OTelFilter("test_handler",
+		otelrestful.WithPublicEndpoint(),
+		otelrestful.WithPropagators(prop),
+		otelrestful.WithTracerProvider(provider)),
+	)
+	container.Add(ws)
+
+	r, err := http.NewRequest(http.MethodGet, "http://localhost/user/123", nil)
+	require.NoError(t, err)
+
+	sc := oteltrace.NewSpanContext(remoteSpan)
+	ctx := oteltrace.ContextWithSpanContext(context.Background(), sc)
+	prop.Inject(ctx, propagation.HeaderCarrier(r.Header))
+
+	rr := httptest.NewRecorder()
+	container.ServeHTTP(rr, r)
+	assert.Equal(t, 200, rr.Result().StatusCode)
+
+	// Recorded span should be linked with an incoming span context.
+	assert.NoError(t, spanRecorder.ForceFlush(ctx))
+	done := spanRecorder.Ended()
+	require.Len(t, done, 1)
+	require.Len(t, done[0].Links(), 1, "should contain link")
+	require.True(t, sc.Equal(done[0].Links()[0].SpanContext), "should link incoming span context")
 }
