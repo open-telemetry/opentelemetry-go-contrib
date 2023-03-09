@@ -8,7 +8,7 @@ require (
 	go.opentelemetry.io/otel/metric v1.15.0-rc.1
 	go.opentelemetry.io/otel/trace v1.15.0-rc.1
 	google.golang.org/grpc v1.53.0
-	google.golang.org/protobuf v1.28.1
+	google.golang.org/protobuf v1.29.0
 )
 
 require (
