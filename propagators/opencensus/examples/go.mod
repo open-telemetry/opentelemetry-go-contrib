@@ -16,7 +16,7 @@ require (
 	github.com/go-logr/logr v1.2.3 // indirect
 	github.com/go-logr/stdr v1.2.2 // indirect
 	github.com/golang/groupcache v0.0.0-20200121045136-8c9f03a8e57e // indirect
-	github.com/golang/protobuf v1.5.2 // indirect
+	github.com/golang/protobuf v1.5.3 // indirect
 	go.opentelemetry.io/otel/bridge/opencensus v0.38.0-rc.1 // indirect
 	go.opentelemetry.io/otel/metric v1.15.0-rc.1 // indirect
 	go.opentelemetry.io/otel/sdk/metric v0.38.0-rc.1 // indirect
@@ -25,7 +25,7 @@ require (
 	golang.org/x/sys v0.6.0 // indirect
 	golang.org/x/text v0.8.0 // indirect
 	google.golang.org/genproto v0.0.0-20230110181048-76db0878b65f // indirect
-	google.golang.org/protobuf v1.28.1 // indirect
+	google.golang.org/protobuf v1.29.0 // indirect
 )
 
 replace (
