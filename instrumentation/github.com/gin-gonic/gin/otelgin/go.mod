@@ -1,6 +1,6 @@
 module go.opentelemetry.io/contrib/instrumentation/github.com/gin-gonic/gin/otelgin
 
-go 1.18
+go 1.19
 
 replace go.opentelemetry.io/contrib/propagators/b3 => ../../../../../propagators/b3
 

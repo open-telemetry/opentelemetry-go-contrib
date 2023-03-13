@@ -1,6 +1,6 @@
 module go.opentelemetry.io/contrib/instrumentation/host
 
-go 1.18
+go 1.19
 
 require (
 	github.com/shirou/gopsutil/v3 v3.23.2
