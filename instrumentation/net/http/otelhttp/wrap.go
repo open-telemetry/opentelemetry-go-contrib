@@ -86,10 +86,9 @@ func (w *respWriterWrapper) Write(p []byte) (int, error) {
 }
 
 func (w *respWriterWrapper) WriteHeader(statusCode int) {
-	if w.wroteHeader {
-		return
+	if !w.wroteHeader {
+		w.wroteHeader = true
+		w.statusCode = statusCode
 	}
-	w.wroteHeader = true
-	w.statusCode = statusCode
 	w.ResponseWriter.WriteHeader(statusCode)
 }
