@@ -178,6 +178,16 @@ func TestHandlerEmittedAttributes(t *testing.T) {
 				attribute.Int("http.status_code", http.StatusOK),
 			},
 		},
+		{
+			name: "With persisting initial failing status in handler with multiple WriteHeader calls",
+			handler: func(w http.ResponseWriter, r *http.Request) {
+				w.WriteHeader(http.StatusInternalServerError)
+				w.WriteHeader(http.StatusOK)
+			},
+			attributes: []attribute.KeyValue{
+				attribute.Int("http.status_code", http.StatusInternalServerError),
+			},
+		},
 	}
 	for _, tc := range testCases {
 		t.Run(tc.name, func(t *testing.T) {
