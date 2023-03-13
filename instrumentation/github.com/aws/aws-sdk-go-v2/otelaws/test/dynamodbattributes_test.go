@@ -93,7 +93,7 @@ func TestDynamodbTags(t *testing.T) {
 		require.Len(t, spans, 1)
 		span := spans[0]
 
-		assert.Equal(t, "DynamoDB", span.Name())
+		assert.Equal(t, "DynamoDB.GetItem", span.Name())
 		assert.Equal(t, trace.SpanKindClient, span.SpanKind())
 		attrs := span.Attributes()
 		assert.Contains(t, attrs, attribute.Int("http.status_code", cases.expectedStatusCode))
@@ -182,7 +182,7 @@ func TestDynamodbTagsCustomSetter(t *testing.T) {
 		require.Len(t, spans, 1)
 		span := spans[0]
 
-		assert.Equal(t, "DynamoDB", span.Name())
+		assert.Equal(t, "DynamoDB.GetItem", span.Name())
 		assert.Equal(t, trace.SpanKindClient, span.SpanKind())
 		attrs := span.Attributes()
 		assert.Contains(t, attrs, attribute.Int("http.status_code", cases.expectedStatusCode))

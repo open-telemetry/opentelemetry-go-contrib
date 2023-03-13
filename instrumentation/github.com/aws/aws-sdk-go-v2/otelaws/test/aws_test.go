@@ -138,7 +138,7 @@ func TestAppendMiddlewares(t *testing.T) {
 			require.Len(t, spans, 1)
 			span := spans[0]
 
-			assert.Equal(t, "Route 53", span.Name())
+			assert.Equal(t, "Route 53.ChangeResourceRecordSets", span.Name())
 			assert.Equal(t, trace.SpanKindClient, span.SpanKind())
 			assert.Equal(t, c.expectedError, span.Status().Code)
 			attrs := span.Attributes()

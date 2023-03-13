@@ -60,6 +60,7 @@ func (m otelMiddlewares) initializeMiddlewareAfter(stack *middleware.Stack) erro
 		ctx context.Context, in middleware.InitializeInput, next middleware.InitializeHandler) (
 		out middleware.InitializeOutput, metadata middleware.Metadata, err error) {
 		serviceID := v2Middleware.GetServiceID(ctx)
+		operation := v2Middleware.GetOperationName(ctx)
 
 		attributes := []attribute.KeyValue{
 			ServiceAttr(serviceID),
@@ -70,7 +71,7 @@ func (m otelMiddlewares) initializeMiddlewareAfter(stack *middleware.Stack) erro
 			attributes = append(attributes, setter(ctx, in)...)
 		}
 
-		ctx, span := m.tracer.Start(ctx, serviceID,
+		ctx, span := m.tracer.Start(ctx, serviceID+"."+operation,
 			trace.WithTimestamp(ctx.Value(spanTimestampKey{}).(time.Time)),
 			trace.WithSpanKind(trace.SpanKindClient),
 			trace.WithAttributes(attributes...),
