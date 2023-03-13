@@ -47,6 +47,7 @@ The following instrumentation packages are provided for popular Go packages and 
 | [github.com/bradfitz/gomemcache](./github.com/bradfitz/gomemcache/memcache/otelmemcache) |  | ✓ |
 | [github.com/emicklei/go-restful](./github.com/emicklei/go-restful/otelrestful) |  | ✓ |
 | [github.com/gin-gonic/gin](./github.com/gin-gonic/gin/otelgin) |  | ✓ |
+| [github.com/kataras/iris](./github.com/kataras/iris/oteliris) |  | ✓ |
 | [github.com/go-kit/kit](./github.com/go-kit/kit/otelkit) |  | ✓ |
 | [github.com/gocql/gocql](./github.com/gocql/gocql/otelgocql) | ✓ | ✓ |
 | [github.com/gorilla/mux](./github.com/gorilla/mux/otelmux) |  | ✓ |
