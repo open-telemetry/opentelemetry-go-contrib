@@ -1,6 +1,6 @@
 module go.opentelemetry.io/contrib/instrumentation/gopkg.in/macaron.v1/otelmacaron/test
 
-go 1.18
+go 1.19
 
 require (
 	github.com/stretchr/testify v1.8.2
