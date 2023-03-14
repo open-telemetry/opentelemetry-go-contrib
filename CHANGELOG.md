@@ -14,7 +14,7 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 
 ### Fixed
 
-- Fix aws sdk span name
+- Fix AWS SDK span name to be of the format `Service.Operation`.
   ([#3582](https://github.com/open-telemetry/opentelemetry-go-contrib/issues/3521))
 
 ## [1.16.0-rc.1/0.41.0-rc.1/0.9.0-rc.1] - 2023-03-02
