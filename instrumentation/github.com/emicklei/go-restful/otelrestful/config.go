@@ -74,7 +74,7 @@ func WithTracerProvider(provider oteltrace.TracerProvider) Option {
 // configuring the Handler to link the span with an incoming span context. If
 // this option is not provided or returns false, then the association is a
 // child association instead of a link.
-// Note: WithPublicEndpoint takes precedence over WithPublicEndpointFn.
+// Note: [WithPublicEndpoint] takes precedence over WithPublicEndpointFn.
 func WithPublicEndpointFn(fn func(*http.Request) bool) Option {
 	return optionFunc(func(c *config) {
 		c.PublicEndpointFn = fn
