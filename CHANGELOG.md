@@ -12,9 +12,9 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 
 - Add the new `go.opentelemetry.io/contrib/instrgen` package to provide auto-generated source code instrumentation. (#3068)
 
-### Changed
+### Fixed
 
-- Remove early return in `respWriterWrapper` in `go.opentelemetry.io/contrib/instrumentation/net/http/otelhttp` to avoid blocking multiple calls to underlying ResponseWriter.WriteHeader. (#3580)
+- Enable `otelhttp.Handler` to propagate multiple WriteHeader calls while persisting initial statusCode in `go.opentelemetry.io/contrib/instrumentation/net/http/otelhttp`. (#3580)
 
 ## [1.16.0-rc.1/0.41.0-rc.1/0.9.0-rc.1] - 2023-03-02
 
