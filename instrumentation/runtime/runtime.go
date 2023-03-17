@@ -17,6 +17,7 @@ package runtime // import "go.opentelemetry.io/contrib/instrumentation/runtime"
 import (
 	"context"
 	goruntime "runtime"
+	"runtime/metrics"
 	"sync"
 	"time"
 
@@ -157,7 +158,15 @@ func (r *runtime) register() error {
 		return err
 	}
 
-	return r.registerMemStats()
+	if err = r.registerMemStats(); err != nil {
+		return err
+	}
+
+	if err = r.registerRuntimeMetrics(); err != nil {
+		return err
+	}
+
+	return nil
 }
 
 func (r *runtime) registerMemStats() error {
@@ -320,6 +329,410 @@ func (r *runtime) registerMemStats() error {
 
 		gcCount,
 		pauseTotalNs,
+	)
+	if err != nil {
+		return err
+	}
+	return nil
+}
+
+func (r *runtime) registerRuntimeMetrics() error {
+	var (
+		err error
+
+		goToCCalls                       instrument.Int64ObservableCounter
+		gcCyclesAutomatic                instrument.Int64ObservableCounter
+		gcCyclesForced                   instrument.Int64ObservableCounter
+		gcCyclesTotal                    instrument.Int64ObservableCounter
+		gcHeapAllocsBytes                instrument.Int64ObservableCounter
+		gcHeapAllocsObjects              instrument.Int64ObservableCounter
+		gcHeapFreesBytes                 instrument.Int64ObservableCounter
+		gcHeapFreesObjects               instrument.Int64ObservableCounter
+		gcHeapGoal                       instrument.Int64ObservableUpDownCounter
+		gcHeapObjects                    instrument.Int64ObservableUpDownCounter
+		gcHeapTinyAllocs                 instrument.Int64ObservableCounter
+		gcLimiterLastEnabled             instrument.Int64ObservableUpDownCounter
+		gcStackStartingSize              instrument.Int64ObservableUpDownCounter
+		memoryClassesHeapFree            instrument.Int64ObservableUpDownCounter
+		memoryClassesHeapObjects         instrument.Int64ObservableUpDownCounter
+		memoryClassesHeapReleased        instrument.Int64ObservableUpDownCounter
+		memoryClassesHeapStacks          instrument.Int64ObservableUpDownCounter
+		memoryClassesHeapUnused          instrument.Int64ObservableUpDownCounter
+		memoryClassesMetadataMCacheFree  instrument.Int64ObservableUpDownCounter
+		memoryClassesMetadataMCacheInUse instrument.Int64ObservableUpDownCounter
+		memoryClassesMetadataMSpanFree   instrument.Int64ObservableUpDownCounter
+		memoryClassesMetadataMSpanInUse  instrument.Int64ObservableUpDownCounter
+		memoryClassesMetadataOther       instrument.Int64ObservableUpDownCounter
+		memoryClassesOSStacks            instrument.Int64ObservableUpDownCounter
+		memoryClassesOther               instrument.Int64ObservableUpDownCounter
+		memoryClassesProfilingBuckets    instrument.Int64ObservableUpDownCounter
+		memoryClassesTotal               instrument.Int64ObservableUpDownCounter
+		schedGoMaxProcs                  instrument.Int64ObservableUpDownCounter
+		schedGoroutines                  instrument.Int64ObservableUpDownCounter
+
+		// lock prevents a race between batch observer and instrument registration.
+		lock sync.Mutex
+	)
+
+	lock.Lock()
+	defer lock.Unlock()
+
+	if goToCCalls, err = r.meter.Int64ObservableCounter(
+		"process.runtime.go.cgo.go-to-c-calls",
+		instrument.WithUnit("calls"),
+		instrument.WithDescription("Count of calls made from Go to C by the current process."),
+	); err != nil {
+		return err
+	}
+
+	if gcCyclesAutomatic, err = r.meter.Int64ObservableCounter(
+		"process.runtime.go.gc.cycles.automatic",
+		instrument.WithUnit("gc-cycles"),
+		instrument.WithDescription(""),
+	); err != nil {
+		return err
+	}
+
+	if gcCyclesForced, err = r.meter.Int64ObservableCounter(
+		"process.runtime.go.gc.cycles.forced",
+		instrument.WithUnit("gc-cycles"),
+		instrument.WithDescription(""),
+	); err != nil {
+		return err
+	}
+
+	if gcCyclesTotal, err = r.meter.Int64ObservableCounter(
+		"process.runtime.go.gc.cycles.total",
+		instrument.WithUnit("gc-cycles"),
+		instrument.WithDescription(""),
+	); err != nil {
+		return err
+	}
+
+	if gcHeapAllocsBytes, err = r.meter.Int64ObservableCounter(
+		"process.runtime.go.gc.heap.allocs.bytes",
+		instrument.WithUnit("bytes"),
+		instrument.WithDescription(""),
+	); err != nil {
+		return err
+	}
+
+	if gcHeapAllocsObjects, err = r.meter.Int64ObservableCounter(
+		"process.runtime.go.gc.heap.allocs.objects",
+		instrument.WithUnit("objects"),
+		instrument.WithDescription(""),
+	); err != nil {
+		return err
+	}
+
+	if gcHeapFreesBytes, err = r.meter.Int64ObservableCounter(
+		"process.runtime.go.gc.heap.frees.bytes",
+		instrument.WithUnit("bytes"),
+		instrument.WithDescription(""),
+	); err != nil {
+		return err
+	}
+
+	if gcHeapFreesObjects, err = r.meter.Int64ObservableCounter(
+		"process.runtime.go.gc.heap.frees.objects",
+		instrument.WithUnit("objects"),
+		instrument.WithDescription(""),
+	); err != nil {
+		return err
+	}
+
+	if gcHeapGoal, err = r.meter.Int64ObservableUpDownCounter(
+		"process.runtime.go.gc.heap.goal",
+		instrument.WithUnit("bytes"),
+		instrument.WithDescription(""),
+	); err != nil {
+		return err
+	}
+
+	if gcHeapObjects, err = r.meter.Int64ObservableUpDownCounter(
+		"process.runtime.go.gc.heap.objects",
+		instrument.WithUnit("objects"),
+		instrument.WithDescription(""),
+	); err != nil {
+		return err
+	}
+
+	if gcHeapTinyAllocs, err = r.meter.Int64ObservableCounter(
+		"process.runtime.go.gc.heap.tiny.allocs",
+		instrument.WithUnit("objects"),
+		instrument.WithDescription(""),
+	); err != nil {
+		return err
+	}
+
+	if gcLimiterLastEnabled, err = r.meter.Int64ObservableUpDownCounter(
+		"process.runtime.go.gc.limiter.last-enabled",
+		instrument.WithUnit("gc-cycle"),
+		instrument.WithDescription(""),
+	); err != nil {
+		return err
+	}
+
+	if gcStackStartingSize, err = r.meter.Int64ObservableUpDownCounter(
+		"process.runtime.go.gc.stack.starting-size",
+		instrument.WithUnit("bytes"),
+		instrument.WithDescription(""),
+	); err != nil {
+		return err
+	}
+
+	if memoryClassesHeapFree, err = r.meter.Int64ObservableUpDownCounter(
+		"process.runtime.go.memory.classes.heap.free",
+		instrument.WithUnit("bytes"),
+		instrument.WithDescription(""),
+	); err != nil {
+		return err
+	}
+
+	if memoryClassesHeapObjects, err = r.meter.Int64ObservableUpDownCounter(
+		"process.runtime.go.memory.classes.heap.objects",
+		instrument.WithUnit("bytes"),
+		instrument.WithDescription(""),
+	); err != nil {
+		return err
+	}
+
+	if memoryClassesHeapReleased, err = r.meter.Int64ObservableUpDownCounter(
+		"process.runtime.go.memory.classes.heap.released",
+		instrument.WithUnit("bytes"),
+		instrument.WithDescription(""),
+	); err != nil {
+		return err
+	}
+
+	if memoryClassesHeapStacks, err = r.meter.Int64ObservableUpDownCounter(
+		"process.runtime.go.memory.classes.heap.stacks",
+		instrument.WithUnit("bytes"),
+		instrument.WithDescription(""),
+	); err != nil {
+		return err
+	}
+
+	if memoryClassesHeapUnused, err = r.meter.Int64ObservableUpDownCounter(
+		"process.runtime.go.memory.classes.heap.unused",
+		instrument.WithUnit("bytes"),
+		instrument.WithDescription(""),
+	); err != nil {
+		return err
+	}
+
+	if memoryClassesMetadataMCacheFree, err = r.meter.Int64ObservableUpDownCounter(
+		"process.runtime.go.memory.classes.metadata.mcache.free",
+		instrument.WithUnit("bytes"),
+		instrument.WithDescription(""),
+	); err != nil {
+		return err
+	}
+
+	if memoryClassesMetadataMCacheInUse, err = r.meter.Int64ObservableUpDownCounter(
+		"process.runtime.go.memory.classes.metadata.mcache.inuse",
+		instrument.WithUnit("bytes"),
+		instrument.WithDescription(""),
+	); err != nil {
+		return err
+	}
+
+	if memoryClassesMetadataMSpanFree, err = r.meter.Int64ObservableUpDownCounter(
+		"process.runtime.go.memory.classes.metadata.mspan.free",
+		instrument.WithUnit("bytes"),
+		instrument.WithDescription(""),
+	); err != nil {
+		return err
+	}
+
+	if memoryClassesMetadataMSpanInUse, err = r.meter.Int64ObservableUpDownCounter(
+		"process.runtime.go.memory.classes.metadata.mspan.inuse",
+		instrument.WithUnit("bytes"),
+		instrument.WithDescription(""),
+	); err != nil {
+		return err
+	}
+
+	if memoryClassesMetadataOther, err = r.meter.Int64ObservableUpDownCounter(
+		"process.runtime.go.memory.classes.metadata.other",
+		instrument.WithUnit("bytes"),
+		instrument.WithDescription(""),
+	); err != nil {
+		return err
+	}
+
+	if memoryClassesOSStacks, err = r.meter.Int64ObservableUpDownCounter(
+		"process.runtime.go.memory.classes.os-stacks",
+		instrument.WithUnit("bytes"),
+		instrument.WithDescription(""),
+	); err != nil {
+		return err
+	}
+
+	if memoryClassesOther, err = r.meter.Int64ObservableUpDownCounter(
+		"process.runtime.go.memory.classes.other",
+		instrument.WithUnit("bytes"),
+		instrument.WithDescription(""),
+	); err != nil {
+		return err
+	}
+
+	if memoryClassesProfilingBuckets, err = r.meter.Int64ObservableUpDownCounter(
+		"process.runtime.go.memory.classes.profiling.buckets",
+		instrument.WithUnit("bytes"),
+		instrument.WithDescription(""),
+	); err != nil {
+		return err
+	}
+
+	if memoryClassesTotal, err = r.meter.Int64ObservableUpDownCounter(
+		"process.runtime.go.memory.classes.total",
+		instrument.WithUnit("bytes"),
+		instrument.WithDescription(""),
+	); err != nil {
+		return err
+	}
+
+	if schedGoMaxProcs, err = r.meter.Int64ObservableUpDownCounter(
+		"process.runtime.go.sched.gomaxprocs",
+		instrument.WithUnit("threads"),
+		instrument.WithDescription(""),
+	); err != nil {
+		return err
+	}
+
+	if schedGoroutines, err = r.meter.Int64ObservableUpDownCounter(
+		"process.runtime.go.sched.goroutines",
+		instrument.WithUnit("goroutines"),
+		instrument.WithDescription(""),
+	); err != nil {
+		return err
+	}
+
+	// Get descriptions for all supported metrics.
+	descs := metrics.All()
+
+	// Create a sample for each metric.
+	samples := make([]metrics.Sample, len(descs))
+	for i := range samples {
+		samples[i].Name = descs[i].Name
+	}
+
+	_, err = r.meter.RegisterCallback(
+		func(ctx context.Context, o metric.Observer) error {
+			lock.Lock()
+			defer lock.Unlock()
+
+			// Sample the metrics. Re-use the samples slice if you can!
+			metrics.Read(samples)
+
+			// Iterate over all results.
+			for _, sample := range samples {
+				// Pull out the name and value.
+				name, value := sample.Name, sample.Value
+
+				// Handle each sample.
+				switch name {
+				case "/gc/heap/allocs:objects":
+					o.ObserveInt64(gcHeapAllocsObjects, int64(value.Uint64()))
+				case "/gc/heap/frees:objects":
+					o.ObserveInt64(gcHeapFreesObjects, int64(value.Uint64()))
+				case "/gc/heap/tiny/allocs:objects":
+					o.ObserveInt64(gcHeapTinyAllocs, int64(value.Uint64()))
+				case "/gc/limiter/last-enabled:gc-cycle":
+					o.ObserveInt64(gcLimiterLastEnabled, int64(value.Uint64()))
+				case "/memory/classes/heap/free:bytes":
+					o.ObserveInt64(memoryClassesHeapFree, int64(value.Uint64()))
+				case "/memory/classes/heap/released:bytes":
+					o.ObserveInt64(memoryClassesHeapReleased, int64(value.Uint64()))
+				case "/cgo/go-to-c-calls:calls":
+					o.ObserveInt64(goToCCalls, int64(value.Uint64()))
+				case "/gc/cycles/automatic:gc-cycles":
+					o.ObserveInt64(gcCyclesAutomatic, int64(value.Uint64()))
+				case "/gc/cycles/forced:gc-cycles":
+					o.ObserveInt64(gcCyclesForced, int64(value.Uint64()))
+				case "/gc/cycles/total:gc-cycles":
+					o.ObserveInt64(gcCyclesTotal, int64(value.Uint64()))
+				case "/gc/heap/allocs:bytes":
+					o.ObserveInt64(gcHeapAllocsBytes, int64(value.Uint64()))
+				case "/gc/heap/frees:bytes":
+					o.ObserveInt64(gcHeapFreesBytes, int64(value.Uint64()))
+				case "/gc/heap/goal:bytes":
+					o.ObserveInt64(gcHeapGoal, int64(value.Uint64()))
+				case "/gc/heap/objects:objects":
+					o.ObserveInt64(gcHeapObjects, int64(value.Uint64()))
+				case "/gc/stack/starting-size:bytes":
+					o.ObserveInt64(gcStackStartingSize, int64(value.Uint64()))
+				case "/memory/classes/heap/objects:bytes":
+					o.ObserveInt64(memoryClassesHeapObjects, int64(value.Uint64()))
+				case "/memory/classes/heap/stacks:bytes":
+					o.ObserveInt64(memoryClassesHeapStacks, int64(value.Uint64()))
+				case "/memory/classes/heap/unused:bytes":
+					o.ObserveInt64(memoryClassesHeapUnused, int64(value.Uint64()))
+				case "/memory/classes/metadata/mcache/free:bytes":
+					o.ObserveInt64(memoryClassesMetadataMCacheFree, int64(value.Uint64()))
+				case "/memory/classes/metadata/mcache/inuse:bytes":
+					o.ObserveInt64(memoryClassesMetadataMCacheInUse, int64(value.Uint64()))
+				case "/memory/classes/metadata/mspan/free:bytes":
+					o.ObserveInt64(memoryClassesMetadataMSpanFree, int64(value.Uint64()))
+				case "/memory/classes/metadata/mspan/inuse:bytes":
+					o.ObserveInt64(memoryClassesMetadataMSpanInUse, int64(value.Uint64()))
+				case "/memory/classes/metadata/other:bytes":
+					o.ObserveInt64(memoryClassesMetadataOther, int64(value.Uint64()))
+				case "/memory/classes/os-stacks:bytes":
+					o.ObserveInt64(memoryClassesOSStacks, int64(value.Uint64()))
+				case "/memory/classes/other:bytes":
+					o.ObserveInt64(memoryClassesOther, int64(value.Uint64()))
+				case "/memory/classes/profiling/buckets:bytes":
+					o.ObserveInt64(memoryClassesProfilingBuckets, int64(value.Uint64()))
+				case "/memory/classes/total:bytes":
+					o.ObserveInt64(memoryClassesTotal, int64(value.Uint64()))
+				case "/sched/gomaxprocs:threads":
+					o.ObserveInt64(schedGoMaxProcs, int64(value.Uint64()))
+				case "/sched/goroutines:goroutines":
+					o.ObserveInt64(schedGoroutines, int64(value.Uint64()))
+				case "/gc/heap/allocs-by-size:bytes",
+					"/gc/heap/frees-by-size:bytes",
+					"/gc/pauses:seconds",
+					"/sched/latencies:seconds":
+					// histograms are not currently implemented.
+					continue
+				default:
+					continue
+				}
+			}
+
+			return nil
+		},
+		goToCCalls,
+		gcCyclesAutomatic,
+		gcCyclesForced,
+		gcCyclesTotal,
+		gcHeapAllocsBytes,
+		gcHeapAllocsObjects,
+		gcHeapFreesBytes,
+		gcHeapFreesObjects,
+		gcHeapGoal,
+		gcHeapObjects,
+		gcHeapTinyAllocs,
+		gcLimiterLastEnabled,
+		gcStackStartingSize,
+		memoryClassesHeapFree,
+		memoryClassesHeapObjects,
+		memoryClassesHeapReleased,
+		memoryClassesHeapStacks,
+		memoryClassesHeapUnused,
+		memoryClassesMetadataMCacheFree,
+		memoryClassesMetadataMCacheInUse,
+		memoryClassesMetadataMSpanFree,
+		memoryClassesMetadataMSpanInUse,
+		memoryClassesMetadataOther,
+		memoryClassesOSStacks,
+		memoryClassesOther,
+		memoryClassesProfilingBuckets,
+		memoryClassesTotal,
+		schedGoMaxProcs,
+		schedGoroutines,
 	)
 	if err != nil {
 		return err
