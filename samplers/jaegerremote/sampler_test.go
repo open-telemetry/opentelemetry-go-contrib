@@ -71,6 +71,10 @@ func TestRateLimitingSampler(t *testing.T) {
 	assert.Equal(t, trace.RecordAndSample, result.Decision)
 	result = sampler.ShouldSample(trace.SamplingParameters{Name: testOperationName})
 	assert.Equal(t, trace.Drop, result.Decision)
+
+	sampler = newRateLimitingSampler(0)
+	result = sampler.ShouldSample(trace.SamplingParameters{Name: testOperationName})
+	assert.Equal(t, trace.Drop, result.Decision)
 }
 
 func TestGuaranteedThroughputProbabilisticSamplerUpdate(t *testing.T) {
