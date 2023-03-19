@@ -18,7 +18,7 @@ require (
 	go.opentelemetry.io/otel/trace v1.15.0-rc.1 // indirect
 	golang.org/x/sys v0.5.0 // indirect
 	google.golang.org/genproto v0.0.0-20211208223120-3a66f561d7aa // indirect
-	google.golang.org/protobuf v1.29.1 // indirect
+	google.golang.org/protobuf v1.30.0 // indirect
 )
 
 replace go.opentelemetry.io/contrib/samplers/jaegerremote => ../
