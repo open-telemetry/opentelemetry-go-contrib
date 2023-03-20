@@ -14,7 +14,7 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 
 ### Fixed
 
-- Enable `otelhttp.Handler` to propagate multiple WriteHeader calls while persisting initial statusCode in `go.opentelemetry.io/contrib/instrumentation/net/http/otelhttp`. (#3580)
+- Fixes `otelhttp.Handler`  in `go.opentelemetry.io/contrib/instrumentation/net/http/otelhttp` to propagate multiple `WriteHeader` calls while persisting the initial `statusCode`. (#3580)
 
 ## [1.16.0-rc.1/0.41.0-rc.1/0.9.0-rc.1] - 2023-03-02
 

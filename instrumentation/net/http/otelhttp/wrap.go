@@ -87,7 +87,7 @@ func (w *respWriterWrapper) Write(p []byte) (int, error) {
 
 // WriteHeader persists initial statusCode for span attribution.
 // All calls to WriteHeader will be propagated to the underlying ResponseWriter
-// but will not overwrite persisted statusCode.
+// and will persist the statusCode from the first call.
 // Blocking consecutive calls to WriteHeader alters expected behavior and will
 // remove warning logs from net/http where developers will notice incorrect handler implementations.
 func (w *respWriterWrapper) WriteHeader(statusCode int) {
