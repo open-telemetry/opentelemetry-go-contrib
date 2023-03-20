@@ -3,7 +3,7 @@ module go.opentelemetry.io/contrib/instrumentation/go.mongodb.org/mongo-driver/m
 go 1.19
 
 require (
-	go.mongodb.org/mongo-driver v1.11.2
+	go.mongodb.org/mongo-driver v1.11.3
 	go.opentelemetry.io/otel v1.15.0-rc.1
 	go.opentelemetry.io/otel/trace v1.15.0-rc.1
 )
