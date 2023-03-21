@@ -25,7 +25,7 @@ import (
 func TestOperationAttr(t *testing.T) {
 	operation := "test-operation"
 	attr := OperationAttr(operation)
-	assert.Equal(t, attribute.String("aws.operation", operation), attr)
+	assert.Equal(t, attribute.String("rpc.method", operation), attr)
 }
 
 func TestRegionAttr(t *testing.T) {
@@ -37,11 +37,18 @@ func TestRegionAttr(t *testing.T) {
 func TestServiceAttr(t *testing.T) {
 	service := "test-service"
 	attr := ServiceAttr(service)
-	assert.Equal(t, attribute.String("aws.service", service), attr)
+	assert.Equal(t, attribute.String("rpc.service", service), attr)
 }
 
 func TestRequestIDAttr(t *testing.T) {
 	requestID := "test-request-id"
 	attr := RequestIDAttr(requestID)
 	assert.Equal(t, attribute.String("aws.request_id", requestID), attr)
+}
+
+func TestSystemAttribute(t *testing.T) {
+	system := "test-system"
+	attr := SystemAttr(system)
+	assert.Equal(t, attribute.String("rpc.system", system), attr)
+
 }

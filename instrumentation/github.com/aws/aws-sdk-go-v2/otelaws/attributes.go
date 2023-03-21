@@ -27,10 +27,11 @@ import (
 
 // AWS attributes.
 const (
-	OperationKey attribute.Key = "aws.operation"
+	OperationKey attribute.Key = "rpc.method"
 	RegionKey    attribute.Key = "aws.region"
-	ServiceKey   attribute.Key = "aws.service"
+	ServiceKey   attribute.Key = "rpc.service"
 	RequestIDKey attribute.Key = "aws.request_id"
+	RpcSystem    attribute.Key = "rpc.system"
 )
 
 var servicemap = map[string]AttributeSetter{
@@ -38,7 +39,12 @@ var servicemap = map[string]AttributeSetter{
 	sqs.ServiceID:      SQSAttributeSetter,
 }
 
-// OperationAttr returns the AWS operation attribute.
+// SystemAttr return the RPC system attribute
+func SystemAttr(operation string) attribute.KeyValue {
+	return RpcSystem.String(operation)
+}
+
+// OperationAttr returns the RPC operation attribute.
 func OperationAttr(operation string) attribute.KeyValue {
 	return OperationKey.String(operation)
 }
@@ -48,7 +54,7 @@ func RegionAttr(region string) attribute.KeyValue {
 	return RegionKey.String(region)
 }
 
-// ServiceAttr returns the AWS service attribute.
+// ServiceAttr returns the RPC service attribute.
 func ServiceAttr(service string) attribute.KeyValue {
 	return ServiceKey.String(service)
 }
