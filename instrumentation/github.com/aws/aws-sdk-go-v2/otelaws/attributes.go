@@ -31,7 +31,7 @@ const (
 	RegionKey    attribute.Key = "aws.region"
 	ServiceKey   attribute.Key = "rpc.service"
 	RequestIDKey attribute.Key = "aws.request_id"
-	RpcSystem    attribute.Key = "rpc.system"
+	RPCSystem    attribute.Key = "rpc.system"
 )
 
 var servicemap = map[string]AttributeSetter{
@@ -39,9 +39,9 @@ var servicemap = map[string]AttributeSetter{
 	sqs.ServiceID:      SQSAttributeSetter,
 }
 
-// SystemAttr return the RPC system attribute
+// SystemAttr return the RPC system attribute.
 func SystemAttr(operation string) attribute.KeyValue {
-	return RpcSystem.String(operation)
+	return RPCSystem.String(operation)
 }
 
 // OperationAttr returns the RPC operation attribute.

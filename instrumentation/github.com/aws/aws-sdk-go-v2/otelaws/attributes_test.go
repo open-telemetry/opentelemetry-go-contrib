@@ -50,5 +50,4 @@ func TestSystemAttribute(t *testing.T) {
 	system := "test-system"
 	attr := SystemAttr(system)
 	assert.Equal(t, attribute.String("rpc.system", system), attr)
-
 }
