@@ -11,17 +11,46 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 ### Added
 
 - Add the new `go.opentelemetry.io/contrib/instrgen` package to provide auto-generated source code instrumentation. (#3068)
+- The `WithPublicEndpoint` and `WithPublicEndpointFn` options in `go.opentelemetry.io/contrib/instrumentation/github.com/emicklei/go-restful/otelrestful`. (#3563)
+
+### Fixed
+
+- - AWS SDK span name to be of the format `Service.Operation` in `go.opentelemetry.io/contrib/instrumentation/github.com/aws/aws-sdk-go-v2/otelaws`. (#3582, #3521)
+
+## [1.16.0-rc.1/0.41.0-rc.1/0.9.0-rc.1] - 2023-03-02
+
+### Changed
+
+- Dropped compatibility testing for [Go 1.18].
+  The project no longer guarantees support for this version of Go. (#3516)
+
+## [1.15.0/0.40.0/0.9.0] - 2023-02-27
+
+This release is the last to support [Go 1.18].
+The next release will require at least [Go 1.19].
+
+### Added
+
 - Support [Go 1.20]. (#3372)
 - Add `SpanNameFormatter` option to package `go.opentelemetry.io/contrib/instrumentation/github.com/gin-gonic/gin/otelgin`. (#3343)
 
 ### Changed
 
-- `samplers/jaegerremote`: change to use protobuf parser instead of encoding/json to accept enums as strings. (#3183)
+- Change to use protobuf parser instead of encoding/json to accept enums as strings in `go.opentelemetry.io/contrib/samplers/jaegerremote`. (#3183)
 
 ### Fixed
 
 - Remove use of deprecated `"math/rand".Seed` in `go.opentelemetry.io/contrib/instrumentation/github.com/Shopify/sarama/otelsarama/example/producer`. (#3396)
-- `detectors/aws/ecs`: Do not assume "aws" partition in ecs detector to prevent panic in AWS GovCloud. (#3167)
+- Do not assume "aws" partition in ecs detector to prevent panic in `go.opentelemetry.io/contrib/detectors/aws/ecs`. (#3167)
+- The span name of producer spans from `go.opentelemetry.io/contrib/instrumentation/github.com/Shopify/sarama/otelsarama` is corrected to use `publish` instead of `send`. (#3369)
+- Attribute types are corrected in `go.opentelemetry.io/contrib/instrumentation/github.com/aws/aws-sdk-go-v2/otelaws`. (#3369)
+  - `aws.dynamodb.table_names` is now a string slice value.
+  - `aws.dynamodb.global_secondary_indexes` is now a string slice value.
+  - `aws.dynamodb.local_secondary_indexes` is now a string slice value.
+  - `aws.dynamodb.attribute_definitions` is now a string slice value.
+  - `aws.dynamodb.global_secondary_index_updates` is now a string slice value.
+  - `aws.dynamodb.provisioned_read_capacity` is now a `float64` value.
+  - `aws.dynamodb.provisioned_write_capacity` is now a `float64` value.
 
 ## [1.14.0/0.39.0/0.8.0] - 2023-02-07
 
@@ -34,15 +63,6 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 ### Fixed
 
 - The GCE detector in `go.opentelemetry.io/contrib/detectors/gcp` includes the "cloud.region" attribute when appropriate. (#3367)
-- The span name of producer spans from `go.opentelemetry.io/contrib/instrumentation/github.com/Shopify/sarama/otelsarama` is corrected to use `publish` instead of `send`. (#3396)
-- Attribute types are corrected in `go.opentelemetry.io/contrib/instrumentation/github.com/aws/aws-sdk-go-v2/otelaws`. (#3396)
-  - `aws.dynamodb.table_names` is now a string slice value.
-  - `aws.dynamodb.global_secondary_indexes` is now a string slice value.
-  - `aws.dynamodb.local_secondary_indexes` is now a string slice value.
-  - `aws.dynamodb.attribute_definitions` is now a string slice value.
-  - `aws.dynamodb.global_secondary_index_updates` is now a string slice value.
-  - `aws.dynamodb.provisioned_read_capacity` is now a `float64` value.
-  - `aws.dynamodb.provisioned_write_capacity` is now a `float64` value.
 
 ## [1.13.0/0.38.0/0.7.0] - 2023-01-30
 
@@ -660,7 +680,9 @@ First official tagged release of `contrib` repository.
 - Prefix support for dogstatsd (#34)
 - Update Go Runtime package to use batch observer (#44)
 
-[Unreleased]: https://github.com/open-telemetry/opentelemetry-go-contrib/compare/v1.14.0...HEAD
+[Unreleased]: https://github.com/open-telemetry/opentelemetry-go-contrib/compare/v1.16.0-rc.1...HEAD
+[1.16.0-rc.1/0.41.0-rc.1/0.9.0-rc.1]: https://github.com/open-telemetry/opentelemetry-go-contrib/releases/tag/v1.16.0-rc.1
+[1.15.0/0.40.0/0.9.0]: https://github.com/open-telemetry/opentelemetry-go-contrib/releases/tag/v1.15.0
 [1.14.0/0.39.0/0.8.0]: https://github.com/open-telemetry/opentelemetry-go-contrib/releases/tag/v1.14.0
 [1.13.0/0.38.0/0.7.0]: https://github.com/open-telemetry/opentelemetry-go-contrib/releases/tag/v1.13.0
 [1.12.0/0.37.0/0.6.0]: https://github.com/open-telemetry/opentelemetry-go-contrib/releases/tag/v1.12.0
@@ -704,3 +726,5 @@ First official tagged release of `contrib` repository.
 [0.6.1]: https://github.com/open-telemetry/opentelemetry-go-contrib/releases/tag/v0.6.1
 
 [Go 1.20]: https://go.dev/doc/go1.20
+[Go 1.19]: https://go.dev/doc/go1.19
+[Go 1.18]: https://go.dev/doc/go1.18

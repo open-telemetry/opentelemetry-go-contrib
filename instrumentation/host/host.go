@@ -25,11 +25,10 @@ import (
 	"github.com/shirou/gopsutil/v3/net"
 	"github.com/shirou/gopsutil/v3/process"
 
+	"go.opentelemetry.io/otel"
 	"go.opentelemetry.io/otel/attribute"
 	"go.opentelemetry.io/otel/metric"
-	"go.opentelemetry.io/otel/metric/global"
 	"go.opentelemetry.io/otel/metric/instrument"
-	"go.opentelemetry.io/otel/metric/unit"
 )
 
 // Host reports the work-in-progress conventional host metrics specified by OpenTelemetry.
@@ -88,7 +87,7 @@ var (
 // newConfig computes a config from a list of Options.
 func newConfig(opts ...Option) config {
 	c := config{
-		MeterProvider: global.MeterProvider(),
+		MeterProvider: otel.GetMeterProvider(),
 	}
 	for _, opt := range opts {
 		opt.apply(&c)
@@ -100,7 +99,7 @@ func newConfig(opts ...Option) config {
 func Start(opts ...Option) error {
 	c := newConfig(opts...)
 	if c.MeterProvider == nil {
-		c.MeterProvider = global.MeterProvider()
+		c.MeterProvider = otel.GetMeterProvider()
 	}
 	h := &host{
 		meter: c.MeterProvider.Meter(
@@ -161,7 +160,7 @@ func (h *host) register() error {
 
 	if hostMemoryUsage, err = h.meter.Int64ObservableGauge(
 		"system.memory.usage",
-		instrument.WithUnit(unit.Bytes),
+		instrument.WithUnit("By"),
 		instrument.WithDescription(
 			"Memory usage of this process attributed by memory state (Used, Available)",
 		),
@@ -171,7 +170,7 @@ func (h *host) register() error {
 
 	if hostMemoryUtilization, err = h.meter.Float64ObservableGauge(
 		"system.memory.utilization",
-		instrument.WithUnit(unit.Dimensionless),
+		instrument.WithUnit("1"),
 		instrument.WithDescription(
 			"Memory utilization of this process attributeed by memory state (Used, Available)",
 		),
@@ -181,7 +180,7 @@ func (h *host) register() error {
 
 	if networkIOUsage, err = h.meter.Int64ObservableCounter(
 		"system.network.io",
-		instrument.WithUnit(unit.Bytes),
+		instrument.WithUnit("By"),
 		instrument.WithDescription(
 			"Bytes transferred attributeed by direction (Transmit, Receive)",
 		),

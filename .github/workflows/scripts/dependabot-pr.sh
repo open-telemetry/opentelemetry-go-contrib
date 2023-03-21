@@ -21,7 +21,7 @@ PR_NAME=dependabot-prs/`date +'%Y-%m-%dT%H%M%S'`
 git checkout -b $PR_NAME
 
 IFS=$'\n'
-requests=($( gh pr list --search "author:app/dependabot" --json title --jq '.[].title' ))
+requests=($( gh pr list --search "author:app/dependabot" -l "go" --json title --jq '.[].title' ))
 message=""
 dirs=(`find . -type f -name "go.mod" -exec dirname {} \; | sort | egrep  '^./'`)
 
@@ -62,4 +62,4 @@ git commit -m "dependabot updates `date`
 $message"
 git push origin $PR_NAME
 
-gh pr create --title "dependabot updates `date`" --body "$message" -l "Skip Changelog"
+gh pr create --title "[chore] dependabot updates `date`" --body "$message"

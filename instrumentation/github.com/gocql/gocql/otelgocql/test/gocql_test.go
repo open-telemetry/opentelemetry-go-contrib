@@ -30,7 +30,6 @@ import (
 	"go.opentelemetry.io/contrib/instrumentation/github.com/gocql/gocql/otelgocql/internal"
 	"go.opentelemetry.io/contrib/internal/util"
 	"go.opentelemetry.io/otel/attribute"
-	"go.opentelemetry.io/otel/metric/unit"
 	"go.opentelemetry.io/otel/sdk/instrumentation"
 	"go.opentelemetry.io/otel/sdk/metric"
 	"go.opentelemetry.io/otel/sdk/metric/metricdata"
@@ -360,7 +359,7 @@ func assertRowsMetric(t *testing.T, count uint64, m metricdata.Metrics) {
 func assertLatencyMetric(t *testing.T, count uint64, m metricdata.Metrics) {
 	assert.Equal(t, "db.cassandra.latency", m.Name)
 	assert.Equal(t, "Sum of latency to host in milliseconds", m.Description)
-	assert.Equal(t, unit.Milliseconds, m.Unit)
+	assert.Equal(t, "ms", m.Unit)
 	require.IsType(t, m.Data, metricdata.Histogram{})
 	data := m.Data.(metricdata.Histogram)
 	assert.Equal(t, metricdata.CumulativeTemporality, data.Temporality, "Temporality")

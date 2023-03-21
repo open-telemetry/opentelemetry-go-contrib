@@ -20,10 +20,9 @@ import (
 	"sync"
 	"time"
 
+	"go.opentelemetry.io/otel"
 	"go.opentelemetry.io/otel/metric"
-	"go.opentelemetry.io/otel/metric/global"
 	"go.opentelemetry.io/otel/metric/instrument"
-	"go.opentelemetry.io/otel/metric/unit"
 )
 
 // Runtime reports the work-in-progress conventional runtime metrics specified by OpenTelemetry.
@@ -88,7 +87,7 @@ func (o metricProviderOption) apply(c *config) {
 // newConfig computes a config from the supplied Options.
 func newConfig(opts ...Option) config {
 	c := config{
-		MeterProvider:               global.MeterProvider(),
+		MeterProvider:               otel.GetMeterProvider(),
 		MinimumReadMemStatsInterval: DefaultMinimumReadMemStatsInterval,
 	}
 	for _, opt := range opts {
@@ -104,7 +103,7 @@ func Start(opts ...Option) error {
 		c.MinimumReadMemStatsInterval = DefaultMinimumReadMemStatsInterval
 	}
 	if c.MeterProvider == nil {
-		c.MeterProvider = global.MeterProvider()
+		c.MeterProvider = otel.GetMeterProvider()
 	}
 	r := &runtime{
 		meter: c.MeterProvider.Meter(
@@ -120,7 +119,7 @@ func (r *runtime) register() error {
 	startTime := time.Now()
 	uptime, err := r.meter.Int64ObservableCounter(
 		"runtime.uptime",
-		instrument.WithUnit(unit.Milliseconds),
+		instrument.WithUnit("ms"),
 		instrument.WithDescription("Milliseconds since application was initialized"),
 	)
 	if err != nil {
@@ -194,7 +193,7 @@ func (r *runtime) registerMemStats() error {
 
 	if heapAlloc, err = r.meter.Int64ObservableUpDownCounter(
 		"process.runtime.go.mem.heap_alloc",
-		instrument.WithUnit(unit.Bytes),
+		instrument.WithUnit("By"),
 		instrument.WithDescription("Bytes of allocated heap objects"),
 	); err != nil {
 		return err
@@ -202,7 +201,7 @@ func (r *runtime) registerMemStats() error {
 
 	if heapIdle, err = r.meter.Int64ObservableUpDownCounter(
 		"process.runtime.go.mem.heap_idle",
-		instrument.WithUnit(unit.Bytes),
+		instrument.WithUnit("By"),
 		instrument.WithDescription("Bytes in idle (unused) spans"),
 	); err != nil {
 		return err
@@ -210,7 +209,7 @@ func (r *runtime) registerMemStats() error {
 
 	if heapInuse, err = r.meter.Int64ObservableUpDownCounter(
 		"process.runtime.go.mem.heap_inuse",
-		instrument.WithUnit(unit.Bytes),
+		instrument.WithUnit("By"),
 		instrument.WithDescription("Bytes in in-use spans"),
 	); err != nil {
 		return err
@@ -227,7 +226,7 @@ func (r *runtime) registerMemStats() error {
 	// understand the meaning of this value.
 	if heapReleased, err = r.meter.Int64ObservableUpDownCounter(
 		"process.runtime.go.mem.heap_released",
-		instrument.WithUnit(unit.Bytes),
+		instrument.WithUnit("By"),
 		instrument.WithDescription("Bytes of idle spans whose physical memory has been returned to the OS"),
 	); err != nil {
 		return err
@@ -235,7 +234,7 @@ func (r *runtime) registerMemStats() error {
 
 	if heapSys, err = r.meter.Int64ObservableUpDownCounter(
 		"process.runtime.go.mem.heap_sys",
-		instrument.WithUnit(unit.Bytes),
+		instrument.WithUnit("By"),
 		instrument.WithDescription("Bytes of heap memory obtained from the OS"),
 	); err != nil {
 		return err

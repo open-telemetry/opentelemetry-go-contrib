@@ -1,11 +1,11 @@
 module go.opentelemetry.io/contrib/instrumentation/host
 
-go 1.18
+go 1.19
 
 require (
-	github.com/shirou/gopsutil/v3 v3.23.1
-	go.opentelemetry.io/otel v1.13.0
-	go.opentelemetry.io/otel/metric v0.36.0
+	github.com/shirou/gopsutil/v3 v3.23.2
+	go.opentelemetry.io/otel v1.15.0-rc.1
+	go.opentelemetry.io/otel/metric v1.15.0-rc.1
 )
 
 require (
@@ -17,6 +17,6 @@ require (
 	github.com/tklauser/go-sysconf v0.3.11 // indirect
 	github.com/tklauser/numcpus v0.6.0 // indirect
 	github.com/yusufpapurcu/wmi v1.2.2 // indirect
-	go.opentelemetry.io/otel/trace v1.13.0 // indirect
-	golang.org/x/sys v0.4.0 // indirect
+	go.opentelemetry.io/otel/trace v1.15.0-rc.1 // indirect
+	golang.org/x/sys v0.5.0 // indirect
 )

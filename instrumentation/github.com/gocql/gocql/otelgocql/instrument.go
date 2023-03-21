@@ -20,7 +20,6 @@ import (
 	"go.opentelemetry.io/contrib/instrumentation/github.com/gocql/gocql/otelgocql/internal"
 	"go.opentelemetry.io/otel/metric"
 	"go.opentelemetry.io/otel/metric/instrument"
-	"go.opentelemetry.io/otel/metric/unit"
 )
 
 type instruments struct {
@@ -82,7 +81,7 @@ func newInstruments(p metric.MeterProvider) *instruments {
 	if instruments.latency, err = meter.Int64Histogram(
 		"db.cassandra.latency",
 		instrument.WithDescription("Sum of latency to host in milliseconds"),
-		instrument.WithUnit(unit.Milliseconds),
+		instrument.WithUnit("ms"),
 	); err != nil {
 		log.Printf("failed to create iLatency instrument, %v", err)
 	}

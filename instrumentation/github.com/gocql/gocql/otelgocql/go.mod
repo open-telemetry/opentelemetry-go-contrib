@@ -1,13 +1,13 @@
 module go.opentelemetry.io/contrib/instrumentation/github.com/gocql/gocql/otelgocql
 
-go 1.18
+go 1.19
 
 require (
 	github.com/gocql/gocql v1.3.1
 	github.com/stretchr/testify v1.8.2
-	go.opentelemetry.io/otel v1.13.0
-	go.opentelemetry.io/otel/metric v0.36.0
-	go.opentelemetry.io/otel/trace v1.13.0
+	go.opentelemetry.io/otel v1.15.0-rc.1
+	go.opentelemetry.io/otel/metric v1.15.0-rc.1
+	go.opentelemetry.io/otel/trace v1.15.0-rc.1
 )
 
 require (
