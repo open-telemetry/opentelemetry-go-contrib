@@ -15,7 +15,7 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 
 ### Fixed
 
-- Fixed jaegerremote probabilistic strategy not working as expected. (#3603)
+- Prevent sampler configuration reset from erroneously sampling first span in `go.opentelemetry.io/contrib/samplers/jaegerremote`. (#3603, #3604)
 
 ## [1.16.0-rc.1/0.41.0-rc.1/0.9.0-rc.1] - 2023-03-02
 
