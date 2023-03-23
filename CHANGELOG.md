@@ -10,7 +10,7 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 
 ### Added
 
-- Add the new `go.opentelemetry.io/contrib/instrgen` package to provide auto-generated source code instrumentation. (#3068)
+- Add the new `go.opentelemetry.io/contrib/instrgen` package to provide auto-generated source code instrumentation. (#3068, #3108)
 - The `WithPublicEndpoint` and `WithPublicEndpointFn` options in `go.opentelemetry.io/contrib/instrumentation/github.com/emicklei/go-restful/otelrestful`. (#3563)
 
 ### Fixed
@@ -72,7 +72,6 @@ The next release will require at least [Go 1.19].
 - Add missing recommended AWS Lambda resource attributes `faas.instance` and `faas.max_memory` in `go.opentelemetry.io/contrib/detectors/aws/lambda`. (#3148)
 - Improve documentation for `go.opentelemetry.io/contrib/samplers/jaegerremote` by providing examples of sampling endpoints. (#3147)
 - Add `WithServerName` to `go.opentelemetry.io/contrib/instrumentation/net/http/otelhttp` to set the primary server name of a `Handler`. (#3182)
-- Add `instrgen` implementation. (#3108)
 
 ### Changed
 
