@@ -1644,6 +1644,143 @@ func TestRaceUpdatingRulesAndTargetsWhileMatching(t *testing.T) {
 	}
 }
 
+// Validate Rules are preserved when a rule is updated with the same ruleProperties.
+func TestPreserveRulesWithSameRuleProperties(t *testing.T) {
+	// getSamplingRules response to update existing manifest rule, with matching ruleProperties
+	ruleRecords := samplingRuleRecords{
+		SamplingRule: &ruleProperties{
+			RuleName:      "r1",
+			Priority:      10000,
+			Host:          "localhost",
+			HTTPMethod:    "*",
+			URLPath:       "/test/path",
+			ReservoirSize: 40,
+			FixedRate:     0.9,
+			Version:       1,
+			ServiceName:   "helios",
+			ResourceARN:   "*",
+			ServiceType:   "*",
+		},
+	}
+
+	// existing rule already present in manifest
+	r1 := Rule{
+		ruleProperties: ruleProperties{
+			RuleName:      "r1",
+			Priority:      10000,
+			Host:          "localhost",
+			HTTPMethod:    "*",
+			URLPath:       "/test/path",
+			ReservoirSize: 40,
+			FixedRate:     0.9,
+			Version:       1,
+			ServiceName:   "helios",
+			ResourceARN:   "*",
+			ServiceType:   "*",
+		},
+		reservoir: &reservoir{
+			capacity:     100,
+			quota:        100,
+			quotaBalance: 80,
+			refreshedAt:  time.Unix(13000000, 0),
+		},
+		samplingStatistics: &samplingStatistics{
+			matchedRequests:  500,
+			sampledRequests:  10,
+			borrowedRequests: 0,
+		},
+	}
+	clock := &mockClock{
+		nowTime: 1500000000,
+	}
+
+	rules := []Rule{r1}
+
+	m := &Manifest{
+		Rules: rules,
+		clock: clock,
+	}
+
+	// Update rules
+	m.updateRules(&getSamplingRulesOutput{
+		SamplingRuleRecords: []*samplingRuleRecords{&ruleRecords},
+	})
+
+	require.Equal(t, r1.reservoir, m.Rules[0].reservoir)
+	require.Equal(t, r1.samplingStatistics, m.Rules[0].samplingStatistics)
+}
+
+// Validate Rules are NOT preserved when a rule is updated with a different ruleProperties with the same RuleName.
+func TestDoNotPreserveRulesWithDifferentRuleProperties(t *testing.T) {
+	// getSamplingRules response to update existing manifest rule, with different ruleProperties
+	ruleRecords := samplingRuleRecords{
+		SamplingRule: &ruleProperties{
+			RuleName:      "r1",
+			Priority:      10000,
+			Host:          "localhost",
+			HTTPMethod:    "*",
+			URLPath:       "/test/path",
+			ReservoirSize: 40,
+			FixedRate:     0.9,
+			Version:       1,
+			ServiceName:   "helios",
+			ResourceARN:   "*",
+			ServiceType:   "*",
+		},
+	}
+
+	// existing rule already present in manifest
+	r1 := Rule{
+		ruleProperties: ruleProperties{
+			RuleName:      "r1",
+			Priority:      10001,
+			Host:          "localhost",
+			HTTPMethod:    "*",
+			URLPath:       "/test/path",
+			ReservoirSize: 40,
+			FixedRate:     0.9,
+			Version:       1,
+			ServiceName:   "helios",
+			ResourceARN:   "*",
+			ServiceType:   "*",
+		},
+		reservoir: &reservoir{
+			capacity:     100,
+			quota:        100,
+			quotaBalance: 80,
+			refreshedAt:  time.Unix(13000000, 0),
+		},
+		samplingStatistics: &samplingStatistics{
+			matchedRequests:  500,
+			sampledRequests:  10,
+			borrowedRequests: 0,
+		},
+	}
+	clock := &mockClock{
+		nowTime: 1500000000,
+	}
+
+	rules := []Rule{r1}
+
+	m := &Manifest{
+		Rules: rules,
+		clock: clock,
+	}
+
+	// Update rules
+	m.updateRules(&getSamplingRulesOutput{
+		SamplingRuleRecords: []*samplingRuleRecords{&ruleRecords},
+	})
+
+	require.Equal(t, m.Rules[0].reservoir.quota, 0.0)
+	require.Equal(t, m.Rules[0].reservoir.quotaBalance, 0.0)
+	require.Equal(t, *m.Rules[0].samplingStatistics, samplingStatistics{
+		matchedRequests:  0,
+		sampledRequests:  0,
+		borrowedRequests: 0,
+	})
+}
+
 // validate no data race is when capturing sampling statistics in manifest while sampling.
 func TestRaceUpdatingSamplingStatisticsWhenSampling(t *testing.T) {
 	// existing rule already present in manifest

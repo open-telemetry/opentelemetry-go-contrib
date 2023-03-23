@@ -191,6 +191,7 @@ func (m *Manifest) updateRules(rules *getSamplingRulesOutput) {
 		currentRuleMap[rule.ruleProperties.RuleName] = rule
 	}
 
+	// Preserve entire Rule if newRule.ruleProperties == curRule.ruleProperties
 	for i, newRule := range tempManifest.Rules {
 		if curRule, ok := currentRuleMap[newRule.ruleProperties.RuleName]; ok {
 			if reflect.DeepEqual(newRule.ruleProperties, curRule.ruleProperties) {
