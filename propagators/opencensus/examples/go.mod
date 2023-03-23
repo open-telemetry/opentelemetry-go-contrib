@@ -4,8 +4,8 @@ go 1.19
 
 require (
 	go.opencensus.io v0.24.0
-	go.opentelemetry.io/contrib/instrumentation/google.golang.org/grpc/otelgrpc v0.41.0-rc.1
-	go.opentelemetry.io/contrib/propagators/opencensus v0.41.0-rc.1
+	go.opentelemetry.io/contrib/instrumentation/google.golang.org/grpc/otelgrpc v0.41.0-rc.2
+	go.opentelemetry.io/contrib/propagators/opencensus v0.41.0-rc.2
 	go.opentelemetry.io/otel v1.15.0-rc.2
 	go.opentelemetry.io/otel/exporters/stdout/stdouttrace v1.15.0-rc.2
 	go.opentelemetry.io/otel/sdk v1.15.0-rc.2
