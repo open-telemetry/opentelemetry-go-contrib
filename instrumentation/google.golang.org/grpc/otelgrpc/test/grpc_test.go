@@ -591,8 +591,8 @@ func checkUnaryServerRecords(t *testing.T, reader metric.Reader) {
 	assert.NoError(t, err)
 	require.Len(t, rm.ScopeMetrics, 1)
 	require.Len(t, rm.ScopeMetrics[0].Metrics, 1)
-	require.IsType(t, rm.ScopeMetrics[0].Metrics[0].Data, metricdata.Histogram{})
-	data := rm.ScopeMetrics[0].Metrics[0].Data.(metricdata.Histogram)
+	require.IsType(t, rm.ScopeMetrics[0].Metrics[0].Data, metricdata.Histogram[int64]{})
+	data := rm.ScopeMetrics[0].Metrics[0].Data.(metricdata.Histogram[int64])
 
 	for _, dpt := range data.DataPoints {
 		attr := dpt.Attributes.ToSlice()
