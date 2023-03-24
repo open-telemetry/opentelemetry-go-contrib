@@ -21,17 +21,15 @@ import (
 	"github.com/aws/aws-sdk-go-v2/service/dynamodb"
 	"github.com/aws/aws-sdk-go-v2/service/sqs"
 	"github.com/aws/smithy-go/middleware"
+	semconv "go.opentelemetry.io/otel/semconv/v1.17.0"
 
 	"go.opentelemetry.io/otel/attribute"
 )
 
 // AWS attributes.
 const (
-	OperationKey attribute.Key = "rpc.method"
 	RegionKey    attribute.Key = "aws.region"
-	ServiceKey   attribute.Key = "rpc.service"
 	RequestIDKey attribute.Key = "aws.request_id"
-	RPCSystem    attribute.Key = "rpc.system"
 )
 
 var servicemap = map[string]AttributeSetter{
@@ -41,12 +39,12 @@ var servicemap = map[string]AttributeSetter{
 
 // SystemAttr return the RPC system attribute.
 func SystemAttr(operation string) attribute.KeyValue {
-	return RPCSystem.String(operation)
+	return semconv.RPCSystemKey.String(operation)
 }
 
-// OperationAttr returns the RPC operation attribute.
+// OperationAttr returns the AWS operation attribute.
 func OperationAttr(operation string) attribute.KeyValue {
-	return OperationKey.String(operation)
+	return semconv.RPCMethod(operation)
 }
 
 // RegionAttr returns the AWS region attribute.
@@ -54,9 +52,9 @@ func RegionAttr(region string) attribute.KeyValue {
 	return RegionKey.String(region)
 }
 
-// ServiceAttr returns the RPC service attribute.
+// ServiceAttr returns the AWS service attribute.
 func ServiceAttr(service string) attribute.KeyValue {
-	return ServiceKey.String(service)
+	return semconv.RPCService(service)
 }
 
 // RequestIDAttr returns the AWS request ID attribute.

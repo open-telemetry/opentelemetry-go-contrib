@@ -20,6 +20,7 @@ import (
 	"github.com/stretchr/testify/assert"
 
 	"go.opentelemetry.io/otel/attribute"
+	semconv "go.opentelemetry.io/otel/semconv/v1.17.0"
 )
 
 func TestOperationAttr(t *testing.T) {
@@ -37,7 +38,7 @@ func TestRegionAttr(t *testing.T) {
 func TestServiceAttr(t *testing.T) {
 	service := "test-service"
 	attr := ServiceAttr(service)
-	assert.Equal(t, attribute.String("rpc.service", service), attr)
+	assert.Equal(t, semconv.RPCService(service), attr)
 }
 
 func TestRequestIDAttr(t *testing.T) {
@@ -49,5 +50,5 @@ func TestRequestIDAttr(t *testing.T) {
 func TestSystemAttribute(t *testing.T) {
 	system := "test-system"
 	attr := SystemAttr(system)
-	assert.Equal(t, attribute.String("rpc.system", system), attr)
+	assert.Equal(t, semconv.RPCSystemKey.String(system), attr)
 }
