@@ -3,7 +3,7 @@ module go.opentelemetry.io/contrib/instrumentation/github.com/aws/aws-sdk-go-v2/
 go 1.19
 
 require (
-	github.com/aws/aws-sdk-go-v2 v1.17.6
+	github.com/aws/aws-sdk-go-v2 v1.17.7
 	github.com/aws/aws-sdk-go-v2/service/dynamodb v1.19.1
 	github.com/aws/aws-sdk-go-v2/service/route53 v1.27.4
 	github.com/aws/smithy-go v1.13.5
