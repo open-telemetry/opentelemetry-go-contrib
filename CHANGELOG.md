@@ -12,6 +12,11 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 
 - Add `rpc.system` attribute. (#3617)
 - Add the new `go.opentelemetry.io/contrib/instrgen` package to provide auto-generated source code instrumentation. (#3068)
+
+## [1.16.0-rc.2/0.41.0-rc.2/0.10.0-rc.2] - 2023-03-23
+
+### Added
+
 - The `WithPublicEndpoint` and `WithPublicEndpointFn` options in `go.opentelemetry.io/contrib/instrumentation/github.com/emicklei/go-restful/otelrestful`. (#3563)
 
 ### Fixed
@@ -20,7 +25,7 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 - AWS SDK span name to be of the format `Service.Operation` in `go.opentelemetry.io/contrib/instrumentation/github.com/aws/aws-sdk-go-v2/otelaws`. (#3582, #3521)
 - Prevent sampler configuration reset from erroneously sampling first span in `go.opentelemetry.io/contrib/samplers/jaegerremote`. (#3603, #3604)
 
-## [1.16.0-rc.1/0.41.0-rc.1/0.9.0-rc.1] - 2023-03-02
+## [1.16.0-rc.1/0.41.0-rc.1/0.10.0-rc.1] - 2023-03-02
 
 ### Changed
 
@@ -682,8 +687,9 @@ First official tagged release of `contrib` repository.
 - Prefix support for dogstatsd (#34)
 - Update Go Runtime package to use batch observer (#44)
 
-[Unreleased]: https://github.com/open-telemetry/opentelemetry-go-contrib/compare/v1.16.0-rc.1...HEAD
-[1.16.0-rc.1/0.41.0-rc.1/0.9.0-rc.1]: https://github.com/open-telemetry/opentelemetry-go-contrib/releases/tag/v1.16.0-rc.1
+[Unreleased]: https://github.com/open-telemetry/opentelemetry-go-contrib/compare/v1.16.0-rc.2...HEAD
+[1.16.0-rc.2/0.41.0-rc.2/0.10.0-rc.2]: https://github.com/open-telemetry/opentelemetry-go-contrib/releases/tag/v1.16.0-rc.2
+[1.16.0-rc.1/0.41.0-rc.1/0.10.0-rc.1]: https://github.com/open-telemetry/opentelemetry-go-contrib/releases/tag/v1.16.0-rc.1
 [1.15.0/0.40.0/0.9.0]: https://github.com/open-telemetry/opentelemetry-go-contrib/releases/tag/v1.15.0
 [1.14.0/0.39.0/0.8.0]: https://github.com/open-telemetry/opentelemetry-go-contrib/releases/tag/v1.14.0
 [1.13.0/0.38.0/0.7.0]: https://github.com/open-telemetry/opentelemetry-go-contrib/releases/tag/v1.13.0

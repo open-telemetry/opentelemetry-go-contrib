@@ -72,8 +72,8 @@ func assertScopeMetrics(t *testing.T, sm metricdata.ScopeMetrics, attrs attribut
 	// Duration value is not predictable.
 	dur := sm.Metrics[2]
 	assert.Equal(t, "http.server.duration", dur.Name)
-	require.IsType(t, dur.Data, metricdata.Histogram{})
-	hist := dur.Data.(metricdata.Histogram)
+	require.IsType(t, dur.Data, metricdata.Histogram[float64]{})
+	hist := dur.Data.(metricdata.Histogram[float64])
 	assert.Equal(t, metricdata.CumulativeTemporality, hist.Temporality)
 	require.Len(t, hist.DataPoints, 1)
 	dPt := hist.DataPoints[0]
