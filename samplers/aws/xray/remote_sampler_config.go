@@ -24,6 +24,8 @@ import (
 
 	"github.com/go-logr/logr"
 	"github.com/go-logr/stdr"
+
+	"go.opentelemetry.io/otel/sdk/resource"
 )
 
 const (
@@ -34,6 +36,7 @@ type config struct {
 	endpoint                     url.URL
 	samplingRulesPollingInterval time.Duration
 	logger                       logr.Logger
+	resource                     *resource.Resource
 }
 
 // Option sets configuration on the sampler.
@@ -74,6 +77,15 @@ func WithLogger(l logr.Logger) Option {
 	})
 }
 
+// WithResource sets resource for remote sampling.
+// If this option is provided the remote sampler will use the service name or cloud platform found in the resource.
+func WithResource(r *resource.Resource) Option {
+	return optionFunc(func(cfg *config) *config {
+		cfg.resource = r
+		return cfg
+	})
+}
+
 func newConfig(opts ...Option) (*config, error) {
 	defaultProxyEndpoint, err := url.Parse("http://127.0.0.1:2000")
 	if err != nil {
@@ -84,6 +96,7 @@ func newConfig(opts ...Option) (*config, error) {
 		endpoint:                     *defaultProxyEndpoint,
 		samplingRulesPollingInterval: defaultPollingInterval * time.Second,
 		logger:                       stdr.NewWithOptions(log.New(os.Stderr, "", log.LstdFlags|log.Lshortfile), stdr.Options{LogCaller: stdr.Error}),
+		resource:                     nil,
 	}
 
 	for _, option := range opts {

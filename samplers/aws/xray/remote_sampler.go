@@ -20,6 +20,7 @@ import (
 
 	"go.opentelemetry.io/contrib/samplers/aws/xray/internal"
 	sdktrace "go.opentelemetry.io/otel/sdk/trace"
+	semconv "go.opentelemetry.io/otel/semconv/v1.17.0"
 
 	"github.com/go-logr/logr"
 )
@@ -69,12 +70,27 @@ func NewRemoteSampler(ctx context.Context, serviceName string, cloudPlatform str
 		return nil, err
 	}
 
+	samplerServiceName := serviceName
+	samplerCloudPlatform := cloudPlatform
+
+	// Override parameter values
+	if cfg.resource != nil {
+		for _, attr := range cfg.resource.Attributes() {
+			switch attr.Key {
+			case semconv.ServiceNameKey:
+				samplerServiceName = attr.Value.AsString()
+			case semconv.CloudPlatformKey:
+				samplerCloudPlatform = attr.Value.AsString()
+			}
+		}
+	}
+
 	remoteSampler := &remoteSampler{
 		manifest:                     m,
 		samplingRulesPollingInterval: cfg.samplingRulesPollingInterval,
 		fallbackSampler:              NewFallbackSampler(),
-		serviceName:                  serviceName,
-		cloudPlatform:                cloudPlatform,
+		serviceName:                  samplerServiceName,
+		cloudPlatform:                samplerCloudPlatform,
 		logger:                       cfg.logger,
 	}
 
