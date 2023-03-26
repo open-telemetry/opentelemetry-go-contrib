@@ -200,6 +200,24 @@ updates:
       interval: weekly
       day: sunday
   - package-ecosystem: gomod
+    directory: /instrgen/driver
+    labels:
+      - dependencies
+      - go
+      - Skip Changelog
+    schedule:
+      interval: weekly
+      day: sunday
+  - package-ecosystem: gomod
+    directory: /instrgen/driver/testdata/interface
+    labels:
+      - dependencies
+      - go
+      - Skip Changelog
+    schedule:
+      interval: weekly
+      day: sunday
+  - package-ecosystem: gomod
     directory: /instrumentation/github.com/Shopify/sarama/otelsarama
     labels:
       - dependencies
