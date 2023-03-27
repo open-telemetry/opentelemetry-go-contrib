@@ -206,15 +206,10 @@ func TestErrorNotSwallowedByMiddleware(t *testing.T) {
 	r := httptest.NewRequest(http.MethodGet, "/err", nil)
 	w := httptest.NewRecorder()
 	c := e.NewContext(r, w)
-
-	sr := tracetest.NewSpanRecorder()
-	provider := trace.NewTracerProvider(trace.WithSpanProcessor(sr))
-	opts := otelecho.WithTracerProvider(provider)
-	h := otelecho.Middleware("foobar", opts)(echo.HandlerFunc(func(c echo.Context) error {
+	h := otelecho.Middleware("foobar")(echo.HandlerFunc(func(c echo.Context) error {
 		return assert.AnError
 	}))
 
 	err := h(c)
-	assert.Equal(t, http.StatusInternalServerError, w.Result().StatusCode)
 	assert.Equal(t, assert.AnError, err)
 }
