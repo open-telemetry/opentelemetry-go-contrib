@@ -175,7 +175,6 @@ func TestStatusError(t *testing.T) {
 		},
 	} {
 		t.Run(tc.name, func(t *testing.T) {
-			assert := assert.New(t)
 			sr := tracetest.NewSpanRecorder()
 			provider := trace.NewTracerProvider(trace.WithSpanProcessor(sr))
 
@@ -189,21 +188,20 @@ func TestStatusError(t *testing.T) {
 			spans := sr.Ended()
 			require.Len(t, spans, 1)
 			span := spans[0]
-			assert.Equal("/err", span.Name())
-			assert.Equal(tc.spanCode, span.Status().Code)
+			assert.Equal(t, "/err", span.Name())
+			assert.Equal(t, tc.spanCode, span.Status().Code)
 
 			attrs := span.Attributes()
-			assert.Contains(attrs, attribute.String("net.host.name", "foobar"))
-			assert.Contains(attrs, attribute.String("http.route", "/err"))
-			assert.Contains(attrs, attribute.String("http.method", "GET"))
-			assert.Contains(attrs, attribute.Int("http.status_code", tc.statusCode))
-			assert.Contains(attrs, attribute.String("echo.error", tc.echoError))
+			assert.Contains(t, attrs, attribute.String("net.host.name", "foobar"))
+			assert.Contains(t, attrs, attribute.String("http.route", "/err"))
+			assert.Contains(t, attrs, attribute.String("http.method", "GET"))
+			assert.Contains(t, attrs, attribute.Int("http.status_code", tc.statusCode))
+			assert.Contains(t, attrs, attribute.String("echo.error", tc.echoError))
 		})
 	}
 }
 
 func TestErrorNotSwallowedByMiddleware(t *testing.T) {
-	assert := assert.New(t)
 	e := echo.New()
 	r := httptest.NewRequest(http.MethodGet, "/err", nil)
 	w := httptest.NewRecorder()
@@ -217,16 +215,16 @@ func TestErrorNotSwallowedByMiddleware(t *testing.T) {
 	}))
 
 	err := h(c)
-	assert.Equal(http.StatusInternalServerError, w.Result().StatusCode)
-	assert.EqualError(err, "oh no")
+	assert.Equal(t, http.StatusInternalServerError, w.Result().StatusCode)
+	assert.EqualError(t, err, "oh no")
 
 	spans := sr.Ended()
 	require.Len(t, spans, 1)
 	span := spans[0]
-	assert.Equal(codes.Error, span.Status().Code)
+	assert.Equal(t, codes.Error, span.Status().Code)
 
 	attrs := span.Attributes()
-	assert.Contains(attrs, attribute.String("net.host.name", "foobar"))
-	assert.Contains(attrs, attribute.Int("http.status_code", http.StatusInternalServerError))
-	assert.Contains(attrs, attribute.String("echo.error", "oh no"))
+	assert.Contains(t, attrs, attribute.String("net.host.name", "foobar"))
+	assert.Contains(t, attrs, attribute.Int("http.status_code", http.StatusInternalServerError))
+	assert.Contains(t, attrs, attribute.String("echo.error", "oh no"))
 }
