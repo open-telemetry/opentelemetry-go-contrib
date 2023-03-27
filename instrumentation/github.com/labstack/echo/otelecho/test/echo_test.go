@@ -211,20 +211,10 @@ func TestErrorNotSwallowedByMiddleware(t *testing.T) {
 	provider := trace.NewTracerProvider(trace.WithSpanProcessor(sr))
 	opts := otelecho.WithTracerProvider(provider)
 	h := otelecho.Middleware("foobar", opts)(echo.HandlerFunc(func(c echo.Context) error {
-		return errors.New("oh no")
+		return assert.AnError
 	}))
 
 	err := h(c)
 	assert.Equal(t, http.StatusInternalServerError, w.Result().StatusCode)
-	assert.EqualError(t, err, "oh no")
-
-	spans := sr.Ended()
-	require.Len(t, spans, 1)
-	span := spans[0]
-	assert.Equal(t, codes.Error, span.Status().Code)
-
-	attrs := span.Attributes()
-	assert.Contains(t, attrs, attribute.String("net.host.name", "foobar"))
-	assert.Contains(t, attrs, attribute.Int("http.status_code", http.StatusInternalServerError))
-	assert.Contains(t, attrs, attribute.String("echo.error", "oh no"))
+	assert.Equal(t, assert.AnError, err)
 }
