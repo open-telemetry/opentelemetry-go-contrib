@@ -48,7 +48,6 @@ func TestRequestIDAttr(t *testing.T) {
 }
 
 func TestSystemAttribute(t *testing.T) {
-	system := "test-system"
-	attr := SystemAttr(system)
-	assert.Equal(t, semconv.RPCSystemKey.String(system), attr)
+	attr := SystemAttr()
+	assert.Equal(t, semconv.RPCSystemKey.String("aws-api"), attr)
 }

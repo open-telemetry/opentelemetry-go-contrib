@@ -30,6 +30,7 @@ import (
 const (
 	RegionKey    attribute.Key = "aws.region"
 	RequestIDKey attribute.Key = "aws.request_id"
+	AWSSystemVal string        = "aws-api"
 )
 
 var servicemap = map[string]AttributeSetter{
@@ -37,9 +38,9 @@ var servicemap = map[string]AttributeSetter{
 	sqs.ServiceID:      SQSAttributeSetter,
 }
 
-// SystemAttr return the RPC system attribute.
-func SystemAttr(operation string) attribute.KeyValue {
-	return semconv.RPCSystemKey.String(operation)
+// SystemAttr return the AWS RPC system attribute.
+func SystemAttr() attribute.KeyValue {
+	return semconv.RPCSystemKey.String(AWSSystemVal)
 }
 
 // OperationAttr returns the AWS operation attribute.

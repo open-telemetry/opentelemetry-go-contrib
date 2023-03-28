@@ -64,7 +64,7 @@ func (m otelMiddlewares) initializeMiddlewareAfter(stack *middleware.Stack) erro
 		region := v2Middleware.GetRegion(ctx)
 
 		attributes := []attribute.KeyValue{
-			SystemAttr("aws-api"),
+			SystemAttr(),
 			ServiceAttr(serviceID),
 			RegionAttr(region),
 			OperationAttr(operation),
