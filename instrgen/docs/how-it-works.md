@@ -9,6 +9,4 @@ There are few passes during execution.
    is before context propagation due to fact of changing type signatures by context propagation)
 4. Context propagation. Adding additional context parameter to all function declarations and function call expressions that are visible
    (it will not add context argument to call expression without having visible function declaration).
-
-
 ![image info](./flow.png)
