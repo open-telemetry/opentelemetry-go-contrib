@@ -3,7 +3,7 @@
 `instrgen` driver modifies AST (Abstract Syntax Tree) in order to inject necessary opentelemetry calls.
 
 There are few passes during execution.
-1. Searching for entry point, a function definition with ```AutotelEntryPoint__()``` call.
+1. Searching for entry point, a function definition with ```AutotelEntryPoint()``` call.
 2. Building call graph. Traversing all calls from entry point through all function definitions.
 3. Injecting open telemetry calls into functions bodies.
 4. Context propagation. Adding additional context parameter to all function declarations and function call expressions that are visible
