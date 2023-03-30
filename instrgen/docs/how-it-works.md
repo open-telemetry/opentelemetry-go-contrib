@@ -3,7 +3,7 @@
 `instrgen` adds OpenTelemetry instrumentation to source code by directly modifying it.
 It uses the AST (Abstract Syntax Tree) representation of the code to determine its operational flow and injects necessary OpenTelemetry functionality into the AST.
 
-There are few passes during execution.
+The AST modification algorithm is the following:
 1. Searching for entry point, a function definition with ```AutotelEntryPoint()``` call.
 2. Building call graph. Traversing all calls from entry point through all function definitions.
 3. Injecting open telemetry calls into functions bodies.
