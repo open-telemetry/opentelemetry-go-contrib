@@ -1,6 +1,7 @@
 ## OpenTelemetry Go Source Automatic Instrumentation - How it works
 
-`instrgen` driver modifies AST (Abstract Syntax Tree) in order to inject necessary opentelemetry calls.
+`instrgen` adds OpenTelemetry instrumentation to source code by directly modifying it.
+It uses the AST (Abstract Syntax Tree) representation of the code to determine its operational flow and injects necessary OpenTelemetry functionality into the AST.
 
 There are few passes during execution.
 1. Searching for entry point, a function definition with ```AutotelEntryPoint()``` call.
