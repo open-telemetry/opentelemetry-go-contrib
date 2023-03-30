@@ -8,5 +8,5 @@ The AST modification algorithm is the following:
 2. Build the call graph. Traverse all calls from the entry point through all function definitions.
 3. Inject OpenTelemetry instrumentation into functions bodies.
 4. Context propagation. Adding an additional context parameter to all function declarations and function call expressions that are visible
-   (it will not add a context argument to call expressions without having visible function declaration).
+   (it will not add a context argument to call expressions if they are not reachable from the entry point).
 ![image info](./flow.png)
