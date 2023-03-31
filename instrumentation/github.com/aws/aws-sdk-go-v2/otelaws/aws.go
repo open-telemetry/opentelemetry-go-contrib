@@ -60,17 +60,20 @@ func (m otelMiddlewares) initializeMiddlewareAfter(stack *middleware.Stack) erro
 		ctx context.Context, in middleware.InitializeInput, next middleware.InitializeHandler) (
 		out middleware.InitializeOutput, metadata middleware.Metadata, err error) {
 		serviceID := v2Middleware.GetServiceID(ctx)
+		operation := v2Middleware.GetOperationName(ctx)
+		region := v2Middleware.GetRegion(ctx)
 
 		attributes := []attribute.KeyValue{
+			SystemAttr(),
 			ServiceAttr(serviceID),
-			RegionAttr(v2Middleware.GetRegion(ctx)),
-			OperationAttr(v2Middleware.GetOperationName(ctx)),
+			RegionAttr(region),
+			OperationAttr(operation),
 		}
 		for _, setter := range m.attributeSetter {
 			attributes = append(attributes, setter(ctx, in)...)
 		}
 
-		ctx, span := m.tracer.Start(ctx, serviceID,
+		ctx, span := m.tracer.Start(ctx, spanName(serviceID, operation),
 			trace.WithTimestamp(ctx.Value(spanTimestampKey{}).(time.Time)),
 			trace.WithSpanKind(trace.SpanKindClient),
 			trace.WithAttributes(attributes...),
@@ -126,6 +129,14 @@ func (m otelMiddlewares) finalizeMiddleware(stack *middleware.Stack) error {
 		return next.HandleFinalize(ctx, in)
 	}),
 		middleware.Before)
+}
+
+func spanName(serviceID, operation string) string {
+	spanName := serviceID
+	if operation != "" {
+		spanName += "." + operation
+	}
+	return spanName
 }
 
 // AppendMiddlewares attaches OTel middlewares to the AWS Go SDK V2 for instrumentation.

@@ -138,7 +138,7 @@ func TestAppendMiddlewares(t *testing.T) {
 			require.Len(t, spans, 1)
 			span := spans[0]
 
-			assert.Equal(t, "Route 53", span.Name())
+			assert.Equal(t, "Route 53.ChangeResourceRecordSets", span.Name())
 			assert.Equal(t, trace.SpanKindClient, span.SpanKind())
 			assert.Equal(t, c.expectedError, span.Status().Code)
 			attrs := span.Attributes()
@@ -146,9 +146,10 @@ func TestAppendMiddlewares(t *testing.T) {
 			if c.expectedRequestID != "" {
 				assert.Contains(t, attrs, attribute.String("aws.request_id", c.expectedRequestID))
 			}
-			assert.Contains(t, attrs, attribute.String("aws.service", "Route 53"))
+			assert.Contains(t, attrs, attribute.String("rpc.system", "aws-api"))
+			assert.Contains(t, attrs, attribute.String("rpc.service", "Route 53"))
 			assert.Contains(t, attrs, attribute.String("aws.region", c.expectedRegion))
-			assert.Contains(t, attrs, attribute.String("aws.operation", "ChangeResourceRecordSets"))
+			assert.Contains(t, attrs, attribute.String("rpc.method", "ChangeResourceRecordSets"))
 		})
 
 		srv.Close()
