@@ -15,6 +15,8 @@
 package otelmongo // import "go.opentelemetry.io/contrib/instrumentation/go.mongodb.org/mongo-driver/mongo/otelmongo"
 
 import (
+	"go.mongodb.org/mongo-driver/bson"
+
 	"go.opentelemetry.io/otel"
 	"go.opentelemetry.io/otel/trace"
 )
@@ -28,12 +30,15 @@ type config struct {
 	Tracer trace.Tracer
 
 	CommandAttributeDisabled bool
+
+	CommandSanitizerFunc CommandSanitizer
 }
 
 // newConfig returns a config with all Options set.
 func newConfig(opts ...Option) config {
 	cfg := config{
-		TracerProvider: otel.GetTracerProvider(),
+		TracerProvider:       otel.GetTracerProvider(),
+		CommandSanitizerFunc: sanitizeCommand,
 	}
 	for _, opt := range opts {
 		opt.apply(&cfg)
@@ -72,5 +77,15 @@ func WithTracerProvider(provider trace.TracerProvider) Option {
 func WithCommandAttributeDisabled(disabled bool) Option {
 	return optionFunc(func(cfg *config) {
 		cfg.CommandAttributeDisabled = disabled
+	})
+}
+
+// CommandSanitizer defines a function that sanitizes a MongoDB command.
+type CommandSanitizer func(command bson.Raw) string
+
+// WithCommandAttributeSanitizer specifies a function to sanitize the MongoDB command.
+func WithCommandAttributeSanitizer(sanitizer CommandSanitizer) Option {
+	return optionFunc(func(cfg *config) {
+		cfg.CommandSanitizerFunc = sanitizer
 	})
 }

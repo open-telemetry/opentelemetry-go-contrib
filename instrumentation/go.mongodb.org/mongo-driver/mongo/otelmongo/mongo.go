@@ -56,7 +56,7 @@ func (m *monitor) Started(ctx context.Context, evt *event.CommandStartedEvent) {
 		semconv.NetTransportTCP,
 	}
 	if !m.cfg.CommandAttributeDisabled {
-		attrs = append(attrs, semconv.DBStatement(sanitizeCommand(evt.Command)))
+		attrs = append(attrs, semconv.DBStatement(m.cfg.CommandSanitizerFunc(evt.Command)))
 	}
 	if collection, err := extractCollection(evt); err == nil && collection != "" {
 		spanName = collection + "."
