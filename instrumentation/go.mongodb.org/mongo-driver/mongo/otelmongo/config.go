@@ -81,6 +81,7 @@ func WithCommandAttributeDisabled(disabled bool) Option {
 }
 
 // CommandTransformer defines a function that transforms a MongoDB command attribute.
+// If the function returns an empty string, the attribute will not be added to the Span.
 type CommandTransformer func(command bson.Raw) string
 
 // WithCommandAttributeTransformer specifies a function to transform the MongoDB command attribute.
