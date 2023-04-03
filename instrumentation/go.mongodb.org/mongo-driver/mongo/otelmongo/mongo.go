@@ -56,7 +56,9 @@ func (m *monitor) Started(ctx context.Context, evt *event.CommandStartedEvent) {
 		semconv.NetTransportTCP,
 	}
 	if !m.cfg.CommandAttributeDisabled {
-		attrs = append(attrs, semconv.DBStatement(m.cfg.CommandSanitizerFunc(evt.Command)))
+		if stmt := m.cfg.CommandTransformerFunc(evt.Command); stmt != "" {
+			attrs = append(attrs, semconv.DBStatement(stmt))
+		}
 	}
 	if collection, err := extractCollection(evt); err == nil && collection != "" {
 		spanName = collection + "."
@@ -109,7 +111,7 @@ func (m *monitor) Finished(evt *event.CommandFinishedEvent, err error) {
 
 // TODO sanitize values where possible
 // TODO limit maximum size.
-func sanitizeCommand(command bson.Raw) string {
+func transformCommand(command bson.Raw) string {
 	b, _ := bson.MarshalExtJSON(command, false, false)
 	return string(b)
 }

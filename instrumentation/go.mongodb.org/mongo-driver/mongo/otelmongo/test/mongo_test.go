@@ -62,11 +62,11 @@ func TestDBCrudOperation(t *testing.T) {
 		title          string
 		operation      func(context.Context, *mongo.Database) (interface{}, error)
 		excludeCommand bool
-		sanitiser      otelmongo.CommandSanitizer
+		transformer    otelmongo.CommandTransformer
 		validators     []validator
 	}{
 		{
-			title: "insert",
+			title: "insert/includeCommand/nilTransformer",
 			operation: func(ctx context.Context, db *mongo.Database) (interface{}, error) {
 				return db.Collection("test-collection").InsertOne(ctx, bson.D{{Key: "test-item", Value: "test-value"}})
 			},
@@ -81,11 +81,11 @@ func TestDBCrudOperation(t *testing.T) {
 			}),
 		},
 		{
-			title: "insert",
+			title: "insert/includeCommand/customTransformer",
 			operation: func(ctx context.Context, db *mongo.Database) (interface{}, error) {
 				return db.Collection("test-collection").InsertOne(ctx, bson.D{{Key: "test-item", Value: "test-value"}})
 			},
-			sanitiser: func(command bson.Raw) string {
+			transformer: func(command bson.Raw) string {
 				b, _ := bson.MarshalExtJSON(command, false, false)
 				return strings.Replace(string(b), "test-value", "test-sanitized-value", 1)
 			},
@@ -100,7 +100,25 @@ func TestDBCrudOperation(t *testing.T) {
 			}),
 		},
 		{
-			title: "insert",
+			title: "insert/includeCommand/retractionTrandformer",
+			operation: func(ctx context.Context, db *mongo.Database) (interface{}, error) {
+				return db.Collection("test-collection").InsertOne(ctx, bson.D{{Key: "test-item", Value: "test-value"}})
+			},
+			transformer: func(command bson.Raw) string {
+				return ""
+			},
+			excludeCommand: false,
+			validators: append(commonValidators, func(s sdktrace.ReadOnlySpan) bool {
+				for _, attr := range s.Attributes() {
+					if attr.Key == "db.statement" {
+						return false
+					}
+				}
+				return true
+			}),
+		},
+		{
+			title: "insert/excludeCommand/nilTransformer",
 			operation: func(ctx context.Context, db *mongo.Database) (interface{}, error) {
 				return db.Collection("test-collection").InsertOne(ctx, bson.D{{Key: "test-item", Value: "test-value"}})
 			},
@@ -116,18 +134,7 @@ func TestDBCrudOperation(t *testing.T) {
 		},
 	}
 	for _, tc := range tt {
-		title := tc.title
-		if tc.excludeCommand {
-			title = title + "/excludeCommand"
-		} else {
-			title = title + "/includeCommand"
-		}
-		if tc.sanitiser != nil {
-			title = title + "/customSanitiser"
-		} else {
-			title = title + "/defaultSanitiser"
-		}
-		t.Run(title, func(t *testing.T) {
+		t.Run(tc.title, func(t *testing.T) {
 			sr := tracetest.NewSpanRecorder()
 			provider := sdktrace.NewTracerProvider(sdktrace.WithSpanProcessor(sr))
 
@@ -141,7 +148,7 @@ func TestDBCrudOperation(t *testing.T) {
 			opts.Monitor = otelmongo.NewMonitor(
 				otelmongo.WithTracerProvider(provider),
 				otelmongo.WithCommandAttributeDisabled(tc.excludeCommand),
-				otelmongo.WithCommandAttributeSanitizer(tc.sanitiser),
+				otelmongo.WithCommandAttributeTransformer(tc.transformer),
 			)
 			opts.ApplyURI(addr)
 			client, err := mongo.Connect(ctx, opts)

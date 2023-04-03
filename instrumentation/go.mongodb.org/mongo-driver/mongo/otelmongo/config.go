@@ -31,14 +31,14 @@ type config struct {
 
 	CommandAttributeDisabled bool
 
-	CommandSanitizerFunc CommandSanitizer
+	CommandTransformerFunc CommandTransformer
 }
 
 // newConfig returns a config with all Options set.
 func newConfig(opts ...Option) config {
 	cfg := config{
-		TracerProvider:       otel.GetTracerProvider(),
-		CommandSanitizerFunc: sanitizeCommand,
+		TracerProvider:         otel.GetTracerProvider(),
+		CommandTransformerFunc: transformCommand,
 	}
 	for _, opt := range opts {
 		opt.apply(&cfg)
@@ -80,16 +80,16 @@ func WithCommandAttributeDisabled(disabled bool) Option {
 	})
 }
 
-// CommandSanitizer defines a function that sanitizes a MongoDB command.
-type CommandSanitizer func(command bson.Raw) string
+// CommandTransformer defines a function that transforms a MongoDB command attribute.
+type CommandTransformer func(command bson.Raw) string
 
-// WithCommandAttributeSanitizer specifies a function to sanitize the MongoDB command.
-func WithCommandAttributeSanitizer(sanitizer CommandSanitizer) Option {
+// WithCommandAttributeTransformer specifies a function to transform the MongoDB command attribute.
+func WithCommandAttributeTransformer(transformer CommandTransformer) Option {
 	return optionFunc(func(cfg *config) {
-		if sanitizer != nil {
-			cfg.CommandSanitizerFunc = sanitizer
+		if transformer != nil {
+			cfg.CommandTransformerFunc = transformer
 		} else {
-			cfg.CommandSanitizerFunc = sanitizeCommand
+			cfg.CommandTransformerFunc = transformCommand
 		}
 	})
 }
