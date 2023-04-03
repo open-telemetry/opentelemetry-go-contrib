@@ -17,6 +17,7 @@ package test
 import (
 	"context"
 	"os"
+	"strings"
 	"testing"
 	"time"
 
@@ -61,6 +62,7 @@ func TestDBCrudOperation(t *testing.T) {
 		title          string
 		operation      func(context.Context, *mongo.Database) (interface{}, error)
 		excludeCommand bool
+		sanitiser      otelmongo.CommandSanitizer
 		validators     []validator
 	}{
 		{
@@ -73,6 +75,25 @@ func TestDBCrudOperation(t *testing.T) {
 				for _, attr := range s.Attributes() {
 					if attr.Key == "db.statement" {
 						return assert.Contains(t, attr.Value.AsString(), `"test-item":"test-value"`)
+					}
+				}
+				return false
+			}),
+		},
+		{
+			title: "insert",
+			operation: func(ctx context.Context, db *mongo.Database) (interface{}, error) {
+				return db.Collection("test-collection").InsertOne(ctx, bson.D{{Key: "test-item", Value: "test-value"}})
+			},
+			sanitiser: func(command bson.Raw) string {
+				b, _ := bson.MarshalExtJSON(command, false, false)
+				return strings.Replace(string(b), "test-value", "test-sanitized-value", 1)
+			},
+			excludeCommand: false,
+			validators: append(commonValidators, func(s sdktrace.ReadOnlySpan) bool {
+				for _, attr := range s.Attributes() {
+					if attr.Key == "db.statement" {
+						return assert.Contains(t, attr.Value.AsString(), `"test-item":"test-sanitized-value"`)
 					}
 				}
 				return false
@@ -101,6 +122,11 @@ func TestDBCrudOperation(t *testing.T) {
 		} else {
 			title = title + "/includeCommand"
 		}
+		if tc.sanitiser != nil {
+			title = title + "/customSanitiser"
+		} else {
+			title = title + "/defaultSanitiser"
+		}
 		t.Run(title, func(t *testing.T) {
 			sr := tracetest.NewSpanRecorder()
 			provider := sdktrace.NewTracerProvider(sdktrace.WithSpanProcessor(sr))
@@ -115,6 +141,7 @@ func TestDBCrudOperation(t *testing.T) {
 			opts.Monitor = otelmongo.NewMonitor(
 				otelmongo.WithTracerProvider(provider),
 				otelmongo.WithCommandAttributeDisabled(tc.excludeCommand),
+				otelmongo.WithCommandAttributeSanitizer(tc.sanitiser),
 			)
 			opts.ApplyURI(addr)
 			client, err := mongo.Connect(ctx, opts)

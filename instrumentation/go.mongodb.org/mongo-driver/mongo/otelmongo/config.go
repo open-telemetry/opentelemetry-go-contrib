@@ -86,6 +86,10 @@ type CommandSanitizer func(command bson.Raw) string
 // WithCommandAttributeSanitizer specifies a function to sanitize the MongoDB command.
 func WithCommandAttributeSanitizer(sanitizer CommandSanitizer) Option {
 	return optionFunc(func(cfg *config) {
-		cfg.CommandSanitizerFunc = sanitizer
+		if sanitizer != nil {
+			cfg.CommandSanitizerFunc = sanitizer
+		} else {
+			cfg.CommandSanitizerFunc = sanitizeCommand
+		}
 	})
 }

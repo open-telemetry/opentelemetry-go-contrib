@@ -12,6 +12,7 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 
 - AWS SDK add `rpc.system` attribute in `go.opentelemetry.io/contrib/instrumentation/github.com/aws/aws-sdk-go-v2/otelaws`. (#3582, #3617)
 - Add the new `go.opentelemetry.io/contrib/instrgen` package to provide auto-generated source code instrumentation. (#3068, #3108)
+- The `WithCommandAttributeSanitiser` option in `go.opentelemetry.io/contrib/instrumentation/go.mongodb.org/mongo-driver/mongo/otelmongo`. (#3662)
 
 ## [1.16.0-rc.2/0.41.0-rc.2/0.10.0-rc.2] - 2023-03-23
 
@@ -21,7 +22,7 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 
 ### Fixed
 
-- AWS SDK rename attributes `aws.operation`, `aws.service` to `rpc.method`,`rpc.service` in `go.opentelemetry.io/contrib/instrumentation/github.com/aws/aws-sdk-go-v2/otelaws`. (#3582, #3617) 
+- AWS SDK rename attributes `aws.operation`, `aws.service` to `rpc.method`,`rpc.service` in `go.opentelemetry.io/contrib/instrumentation/github.com/aws/aws-sdk-go-v2/otelaws`. (#3582, #3617)
 - AWS SDK span name to be of the format `Service.Operation` in `go.opentelemetry.io/contrib/instrumentation/github.com/aws/aws-sdk-go-v2/otelaws`. (#3582, #3521)
 - Prevent sampler configuration reset from erroneously sampling first span in `go.opentelemetry.io/contrib/samplers/jaegerremote`. (#3603, #3604)
 
