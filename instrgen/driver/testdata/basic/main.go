@@ -36,4 +36,5 @@ func main() {
 	goroutines()
 	pack()
 	methods()
+	wrong_lit()
 }

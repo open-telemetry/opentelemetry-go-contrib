@@ -46,4 +46,5 @@ func main() {
 	goroutines(__atel_child_tracing_ctx)
 	pack(__atel_child_tracing_ctx)
 	methods(__atel_child_tracing_ctx)
+	wrong_lit(__atel_child_tracing_ctx)
 }

@@ -16,6 +16,7 @@
 package main
 
 func wrong_lit() {
+
 	func() {
 	}
 }

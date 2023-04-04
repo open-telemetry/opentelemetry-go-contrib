@@ -15,7 +15,15 @@
 //nolint:all
 package main
 
-func wrong_lit() {
+import (
+	__atel_context "context"
+	__atel_otel "go.opentelemetry.io/otel"
+)
+
+func wrong_lit(__atel_tracing_ctx __atel_context.Context,) {
+	__atel_child_tracing_ctx, __atel_span := __atel_otel.Tracer("wrong_lit").Start(__atel_tracing_ctx, "wrong_lit")
+	_ = __atel_child_tracing_ctx
+	defer __atel_span.End()
 	func() {
 	}
 }
