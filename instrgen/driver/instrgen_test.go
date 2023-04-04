@@ -42,46 +42,6 @@ func inject(t *testing.T, root string, packagePattern string) {
 	require.NoError(t, err)
 }
 
-func Test(t *testing.T) {
-	for k, v := range testcases {
-		inject(t, k, "./...")
-		files := alib.SearchFiles(k, ".go_pass_tracing")
-		expectedFiles := alib.SearchFiles(v, ".go")
-		numOfFiles := len(expectedFiles)
-		fmt.Println("Go Files:", len(files))
-		fmt.Println("Expected Go Files:", len(expectedFiles))
-		numOfComparisons := 0
-		for _, file := range files {
-			fmt.Println(filepath.Base(file))
-			for _, expectedFile := range expectedFiles {
-				fmt.Println(filepath.Base(expectedFile))
-				if filepath.Base(file) == filepath.Base(expectedFile+"_pass_tracing") {
-					f1, err1 := os.ReadFile(file)
-					require.NoError(t, err1)
-					f2, err2 := os.ReadFile(expectedFile)
-					require.NoError(t, err2)
-					if !assert.True(t, bytes.Equal(f1, f2)) {
-						fmt.Println(k)
-						failures = append(failures, k)
-					}
-					numOfComparisons = numOfComparisons + 1
-				}
-			}
-		}
-		if numOfFiles != numOfComparisons {
-			fmt.Println("numberOfComparisons:", numOfComparisons)
-			panic("not all files were compared")
-		}
-		_, err := Prune(k, "./...", false)
-		if err != nil {
-			fmt.Println("Prune failed")
-		}
-	}
-	for _, f := range failures {
-		fmt.Println("FAILURE : ", f)
-	}
-}
-
 func TestCommands(t *testing.T) {
 	err := executeCommand("--dumpcfg", "./testdata/dummy", "./...")
 	require.NoError(t, err)
@@ -112,7 +72,47 @@ func TestArgs(t *testing.T) {
 	require.NoError(t, err)
 }
 
-func TestUnknown(t *testing.T) {
+func TestUnknownCommand(t *testing.T) {
 	err := executeCommand("unknown", "a", "b")
 	require.Error(t, err)
+}
+
+func TestInstrumentation(t *testing.T) {
+	for k, v := range testcases {
+		inject(t, k, "./...")
+		files := alib.SearchFiles(k, ".go_pass_tracing")
+		expectedFiles := alib.SearchFiles(v, ".go")
+		numOfFiles := len(expectedFiles)
+		fmt.Println("Go Files:", len(files))
+		fmt.Println("Expected Go Files:", len(expectedFiles))
+		numOfComparisons := 0
+		for _, file := range files {
+			fmt.Println(filepath.Base(file))
+			for _, expectedFile := range expectedFiles {
+				fmt.Println(filepath.Base(expectedFile))
+				if filepath.Base(file) == filepath.Base(expectedFile+"_pass_tracing") {
+					f1, err1 := os.ReadFile(file)
+					require.NoError(t, err1)
+					f2, err2 := os.ReadFile(expectedFile)
+					require.NoError(t, err2)
+					if !assert.True(t, bytes.Equal(f1, f2)) {
+						fmt.Println(file)
+						failures = append(failures, file)
+					}
+					numOfComparisons = numOfComparisons + 1
+				}
+			}
+		}
+		if numOfFiles != numOfComparisons {
+			fmt.Println("numberOfComparisons:", numOfComparisons)
+			panic("not all files were compared")
+		}
+		_, err := Prune(k, "./...", false)
+		if err != nil {
+			fmt.Println("Prune failed")
+		}
+	}
+	for _, f := range failures {
+		fmt.Println("FAILURE : ", f)
+	}
 }
