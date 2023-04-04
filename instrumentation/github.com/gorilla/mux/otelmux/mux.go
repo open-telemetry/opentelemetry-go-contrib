@@ -28,7 +28,6 @@ import (
 	semconv "go.opentelemetry.io/otel/semconv/v1.17.0"
 	"go.opentelemetry.io/otel/semconv/v1.17.0/httpconv"
 	"go.opentelemetry.io/otel/trace"
-	oteltrace "go.opentelemetry.io/otel/trace"
 )
 
 const (
@@ -48,7 +47,7 @@ func Middleware(service string, opts ...Option) mux.MiddlewareFunc {
 	}
 	tracer := cfg.TracerProvider.Tracer(
 		tracerName,
-		oteltrace.WithInstrumentationVersion(SemVersion()),
+		trace.WithInstrumentationVersion(SemVersion()),
 	)
 	if cfg.Propagators == nil {
 		cfg.Propagators = otel.GetTextMapPropagator()
@@ -75,7 +74,7 @@ func Middleware(service string, opts ...Option) mux.MiddlewareFunc {
 
 type traceware struct {
 	service           string
-	tracer            oteltrace.Tracer
+	tracer            trace.Tracer
 	propagators       propagation.TextMapPropagator
 	handler           http.Handler
 	spanNameFormatter func(string, *http.Request) string
@@ -146,9 +145,9 @@ func (tw traceware) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		}
 	}
 
-	opts := []oteltrace.SpanStartOption{
-		oteltrace.WithAttributes(httpconv.ServerRequest(tw.service, r)...),
-		oteltrace.WithSpanKind(oteltrace.SpanKindServer),
+	opts := []trace.SpanStartOption{
+		trace.WithAttributes(httpconv.ServerRequest(tw.service, r)...),
+		trace.WithSpanKind(trace.SpanKindServer),
 	}
 
 	if tw.publicEndpoint || (tw.publicEndpointFn != nil && tw.publicEndpointFn(r.WithContext(ctx))) {
@@ -163,7 +162,7 @@ func (tw traceware) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		routeStr = fmt.Sprintf("HTTP %s route not found", r.Method)
 	} else {
 		rAttr := semconv.HTTPRoute(routeStr)
-		opts = append(opts, oteltrace.WithAttributes(rAttr))
+		opts = append(opts, trace.WithAttributes(rAttr))
 	}
 	spanName := tw.spanNameFormatter(routeStr, r)
 	ctx, span := tw.tracer.Start(ctx, spanName, opts...)
