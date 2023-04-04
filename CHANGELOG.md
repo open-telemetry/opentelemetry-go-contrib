@@ -11,7 +11,7 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 ### Added
 
 - Add the new `go.opentelemetry.io/contrib/instrgen` package to provide auto-generated source code instrumentation. (#3068, #3108)
-- Add a new AWS XRay Remote Sampling method to take in a resource to configure service name and cloud platform in `go.opentelemetry.io/contrib/samplers/aws/xray`. (#TODO)
+- Add a new AWS XRay Remote Sampling method to take in a resource to configure service name and cloud platform in `go.opentelemetry.io/contrib/samplers/aws/xray`. (#3680)
 
 ## [1.16.0-rc.2/0.41.0-rc.2/0.10.0-rc.2] - 2023-03-23
 
