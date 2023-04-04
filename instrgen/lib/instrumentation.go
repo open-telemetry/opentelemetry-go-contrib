@@ -357,17 +357,31 @@ func (pass *InstrumentationPass) Execute(
 					addContext = true
 				}
 			}
-		case *ast.FuncLit:
-			for _, pos := range functionLiteralPositions {
-				if pos == x.Pos() {
-					return false
+		case *ast.ExprStmt:
+			if callExpr, ok := x.X.(*ast.CallExpr); ok {
+				if funcLit, ok := callExpr.Fun.(*ast.FuncLit); ok {
+					for _, pos := range functionLiteralPositions {
+						if pos == x.Pos() {
+							return false
+						}
+					}
+					funcLit.Body.List = append(makeSpanStmts("anonymous", "__atel_child_tracing_ctx"), funcLit.Body.List...)
+					addImports = true
+					addContext = true
 				}
 			}
-			x.Body.List = append(makeSpanStmts("anonymous", "__atel_child_tracing_ctx"), x.Body.List...)
-			addImports = true
-			addContext = true
+		case *ast.GoStmt:
+			if funcLit, ok := x.Call.Fun.(*ast.FuncLit); ok {
+				for _, pos := range functionLiteralPositions {
+					if pos == x.Pos() {
+						return false
+					}
+				}
+				funcLit.Body.List = append(makeSpanStmts("anonymous", "__atel_child_tracing_ctx"), funcLit.Body.List...)
+				addImports = true
+				addContext = true
+			}
 		}
-
 		return true
 	})
 	if addContext {
