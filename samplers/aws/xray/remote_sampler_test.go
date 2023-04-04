@@ -15,9 +15,16 @@
 package xray
 
 import (
+	"context"
+	"net/url"
 	"testing"
+	"time"
 
 	"github.com/stretchr/testify/assert"
+
+	"go.opentelemetry.io/otel/attribute"
+	"go.opentelemetry.io/otel/sdk/resource"
+	semconv "go.opentelemetry.io/otel/semconv/v1.17.0"
 )
 
 // TestRemoteSamplerDescription assert remote sampling description.
@@ -26,4 +33,30 @@ func TestRemoteSamplerDescription(t *testing.T) {
 
 	s := rs.Description()
 	assert.Equal(t, s, "AWSXRayRemoteSampler{remote sampling with AWS X-Ray}")
+}
+
+// assert that service name and cloud platform are obtained correctly from the resource.
+func TestRemoteSamplerCreationWithPopulatedResource(t *testing.T) {
+	endpoint, _ := url.Parse("http://127.0.0.1:2000")
+	testResource := resource.NewWithAttributes(
+		"test_resource",
+		attribute.KeyValue{Key: semconv.ServiceNameKey, Value: attribute.StringValue("GOLANG_SAMPLING_TEST_SERVICE")},
+		attribute.KeyValue{Key: semconv.CloudPlatformKey, Value: attribute.StringValue("GOLANG_SAMPLING_CLOUD_PLATFORM")},
+	)
+
+	rs, err := NewRemoteSamplerWithResource(context.TODO(), testResource, WithEndpoint(*endpoint), WithSamplingRulesPollingInterval(1000*time.Second))
+
+	assert.Equal(t, rs.Description(), "AWSXRayRemoteSampler{remote sampling with AWS X-Ray}")
+	assert.NoError(t, err, "Failed to create a remote sampler with a resource populated with service name and cloud platform")
+}
+
+// assert that service name and cloud platform are set to empty string when not populated in the resource.
+func TestRemoteSamplerCreationWithUnpopulatedResource(t *testing.T) {
+	endpoint, _ := url.Parse("http://127.0.0.1:2000")
+	testResource := resource.NewWithAttributes("test_resource")
+
+	rs, err := NewRemoteSamplerWithResource(context.TODO(), testResource, WithEndpoint(*endpoint), WithSamplingRulesPollingInterval(1000*time.Second))
+
+	assert.Equal(t, rs.Description(), "AWSXRayRemoteSampler{remote sampling with AWS X-Ray}")
+	assert.NoError(t, err, "Failed to create a remote sampler with an unpopulated resource")
 }
