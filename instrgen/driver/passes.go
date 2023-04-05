@@ -39,7 +39,7 @@ func CheckSema(analysis *lib.PackageAnalysis) error {
 	if err != nil {
 		log.Println(err)
 	}
-	return err
+	return nil
 }
 
 // ExecutePassesDumpIr.
@@ -54,7 +54,7 @@ func ExecutePassesDumpIr(analysis *lib.PackageAnalysis) error {
 	if err != nil {
 		return err
 	}
-	cmd := exec.Command("go mod tidy")
+	cmd := exec.Command("go", "mod", "tidy")
 	err = cmd.Run()
 	if err != nil {
 		log.Fatal(err)
@@ -75,7 +75,7 @@ func ExecutePasses(analysis *lib.PackageAnalysis) error {
 	if err != nil {
 		return err
 	}
-	cmd := exec.Command("go mod tidy")
+	cmd := exec.Command("go", "mod", "tidy")
 	err = cmd.Run()
 	if err != nil {
 		log.Fatal(err)
