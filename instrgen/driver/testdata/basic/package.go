@@ -17,8 +17,6 @@ package main
 
 import (
 	"os"
-
-	"go.opentelemetry.io/contrib/instrgen/rtlib"
 )
 
 func Close() error {

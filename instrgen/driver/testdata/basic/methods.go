@@ -15,10 +15,6 @@
 //nolint:all
 package main
 
-import (
-	"go.opentelemetry.io/contrib/instrgen/rtlib"
-)
-
 type element struct {
 }
 

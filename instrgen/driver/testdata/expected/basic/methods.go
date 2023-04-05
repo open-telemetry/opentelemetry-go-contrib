@@ -16,9 +16,8 @@
 package main
 
 import (
-	"go.opentelemetry.io/contrib/instrgen/rtlib"
-	__atel_otel "go.opentelemetry.io/otel"
 	__atel_context "context"
+	__atel_otel "go.opentelemetry.io/otel"
 )
 
 type element struct {

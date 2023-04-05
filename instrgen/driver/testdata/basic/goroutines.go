@@ -17,8 +17,6 @@ package main
 
 import (
 	"fmt"
-
-	"go.opentelemetry.io/contrib/instrgen/rtlib"
 )
 
 func goroutines() {
