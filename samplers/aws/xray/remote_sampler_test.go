@@ -39,9 +39,9 @@ func TestRemoteSamplerDescription(t *testing.T) {
 func TestRemoteSamplerCreationWithPopulatedResource(t *testing.T) {
 	endpoint, _ := url.Parse("http://127.0.0.1:2000")
 	testResource := resource.NewWithAttributes(
-		"test_resource",
+		semconv.SchemaURL,
 		attribute.KeyValue{Key: semconv.ServiceNameKey, Value: attribute.StringValue("GOLANG_SAMPLING_TEST_SERVICE")},
-		attribute.KeyValue{Key: semconv.CloudPlatformKey, Value: attribute.StringValue("GOLANG_SAMPLING_CLOUD_PLATFORM")},
+		semconv.CloudPlatformAWSEC2,
 	)
 
 	rs, err := NewRemoteSamplerWithResource(context.TODO(), testResource, WithEndpoint(*endpoint), WithSamplingRulesPollingInterval(1000*time.Second))
@@ -53,7 +53,7 @@ func TestRemoteSamplerCreationWithPopulatedResource(t *testing.T) {
 // assert that service name and cloud platform are set to empty string when not populated in the resource.
 func TestRemoteSamplerCreationWithUnpopulatedResource(t *testing.T) {
 	endpoint, _ := url.Parse("http://127.0.0.1:2000")
-	testResource := resource.NewWithAttributes("test_resource")
+	testResource := resource.NewWithAttributes(semconv.SchemaURL)
 
 	rs, err := NewRemoteSamplerWithResource(context.TODO(), testResource, WithEndpoint(*endpoint), WithSamplingRulesPollingInterval(1000*time.Second))
 

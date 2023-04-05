@@ -48,6 +48,14 @@ type remoteSampler struct {
 	logger logr.Logger
 }
 
+var cloudPlatformValues = map[string]string{
+	semconv.CloudPlatformAWSEC2.Value.AsString():              "AWS::EC2::Instance",
+	semconv.CloudPlatformAWSECS.Value.AsString():              "AWS::ECS::Container",
+	semconv.CloudPlatformAWSEKS.Value.AsString():              "AWS::EKS::Container",
+	semconv.CloudPlatformAWSElasticBeanstalk.Value.AsString(): "AWS::ElasticBeanstalk::Environment",
+	semconv.CloudPlatformAWSLambda.Value.AsString():           "AWS::Lambda::Function",
+}
+
 // Compile time assertion that remoteSampler implements the Sampler interface.
 var _ sdktrace.Sampler = (*remoteSampler)(nil)
 
@@ -114,7 +122,8 @@ func NewRemoteSamplerWithResource(ctx context.Context, otelResource *resource.Re
 		case semconv.ServiceNameKey:
 			samplerServiceName = attr.Value.AsString()
 		case semconv.CloudPlatformKey:
-			samplerCloudPlatform = attr.Value.AsString()
+			// Set as empty string if platform is not found in cloudPlatformValues
+			samplerCloudPlatform = cloudPlatformValues[attr.Value.AsString()]
 		}
 	}
 
