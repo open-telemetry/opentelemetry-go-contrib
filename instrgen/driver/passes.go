@@ -18,9 +18,11 @@ import (
 	"fmt"
 	"go/parser"
 	"log"
+	"os/exec"
+
+	"golang.org/x/tools/go/loader"
 
 	"go.opentelemetry.io/contrib/instrgen/lib"
-	"golang.org/x/tools/go/loader"
 )
 
 const (
@@ -37,7 +39,7 @@ func CheckSema(analysis *lib.PackageAnalysis) error {
 	if err != nil {
 		log.Println(err)
 	}
-	return nil
+	return err
 }
 
 // ExecutePassesDumpIr.
@@ -52,6 +54,12 @@ func ExecutePassesDumpIr(analysis *lib.PackageAnalysis) error {
 	if err != nil {
 		return err
 	}
+	cmd := exec.Command("go mod tidy")
+	err = cmd.Run()
+	if err != nil {
+		log.Fatal(err)
+	}
+
 	return CheckSema(analysis)
 }
 
@@ -66,6 +74,11 @@ func ExecutePasses(analysis *lib.PackageAnalysis) error {
 	_, err = analysis.Execute(&lib.ContextPropagationPass{}, contextPassFileSuffix)
 	if err != nil {
 		return err
+	}
+	cmd := exec.Command("go mod tidy")
+	err = cmd.Run()
+	if err != nil {
+		log.Fatal(err)
 	}
 	return CheckSema(analysis)
 }
