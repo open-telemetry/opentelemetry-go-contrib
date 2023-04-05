@@ -16,8 +16,11 @@ package main
 
 import (
 	"fmt"
+	"go/parser"
+	"log"
 
 	"go.opentelemetry.io/contrib/instrgen/lib"
+	"golang.org/x/tools/go/loader"
 )
 
 const (
@@ -26,6 +29,17 @@ const (
 	instrumentationPassFileSuffix = "_pass_tracing"
 )
 
+func CheckSema(analysis *lib.PackageAnalysis) error {
+	conf := loader.Config{ParserMode: parser.ParseComments}
+	conf.Import(analysis.ProjectPath)
+	_, err := conf.Load()
+	// TODO only log error for now
+	if err != nil {
+		log.Println(err)
+	}
+	return nil
+}
+
 // ExecutePassesDumpIr.
 func ExecutePassesDumpIr(analysis *lib.PackageAnalysis) error {
 	fmt.Println("Instrumentation")
@@ -33,10 +47,12 @@ func ExecutePassesDumpIr(analysis *lib.PackageAnalysis) error {
 	if err != nil {
 		return err
 	}
-
 	fmt.Println("ContextPropagation")
 	_, err = analysis.Execute(&lib.ContextPropagationPass{}, instrumentationPassFileSuffix)
-	return err
+	if err != nil {
+		return err
+	}
+	return CheckSema(analysis)
 }
 
 // ExecutePasses.
@@ -48,5 +64,8 @@ func ExecutePasses(analysis *lib.PackageAnalysis) error {
 	}
 	fmt.Println("ContextPropagation")
 	_, err = analysis.Execute(&lib.ContextPropagationPass{}, contextPassFileSuffix)
-	return err
+	if err != nil {
+		return err
+	}
+	return CheckSema(analysis)
 }
