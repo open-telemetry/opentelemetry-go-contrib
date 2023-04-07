@@ -1,6 +1,7 @@
 # OpenTelemetry Go Source Automatic Instrumentation
 
 This package provides a code generation utility that instruments existing source code with [OpenTelemetry].
+If you are looking for more details about internal working, see [How it works](./docs/how-it-works.md).
 
 ## Project Status
 

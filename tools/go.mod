@@ -6,7 +6,7 @@ exclude github.com/blizzy78/varnamelen v0.6.1
 
 require (
 	github.com/client9/misspell v0.3.4
-	github.com/golangci/golangci-lint v1.52.1
+	github.com/golangci/golangci-lint v1.52.2
 	github.com/jcchavezs/porto v0.4.0
 	github.com/wadey/gocovmerge v0.0.0-20160331181800-b5bfa59ec0ad
 	go.opentelemetry.io/build-tools/crosslink v0.6.0
@@ -122,7 +122,7 @@ require (
 	github.com/mgechev/revive v1.3.1 // indirect
 	github.com/mitchellh/go-homedir v1.1.0 // indirect
 	github.com/mitchellh/mapstructure v1.5.0 // indirect
-	github.com/moricho/tparallel v0.3.0 // indirect
+	github.com/moricho/tparallel v0.3.1 // indirect
 	github.com/nakabonne/nestif v0.3.1 // indirect
 	github.com/nbutton23/zxcvbn-go v0.0.0-20210217022336-fa2cb2858354 // indirect
 	github.com/nishanths/exhaustive v0.9.5 // indirect
@@ -183,7 +183,7 @@ require (
 	gitlab.com/bosi/decorder v0.2.3 // indirect
 	go.opentelemetry.io/build-tools v0.6.0 // indirect
 	go.uber.org/atomic v1.9.0 // indirect
-	go.uber.org/multierr v1.10.0 // indirect
+	go.uber.org/multierr v1.11.0 // indirect
 	go.uber.org/zap v1.24.0 // indirect
 	golang.org/x/crypto v0.5.0 // indirect
 	golang.org/x/exp v0.0.0-20220722155223-a9213eeb770e // indirect

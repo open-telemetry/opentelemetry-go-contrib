@@ -28,8 +28,8 @@ github.com/aws/aws-sdk-go-v2/service/internal/presigned-url v1.9.25 h1:5LHn8JQ0q
 github.com/aws/aws-sdk-go-v2/service/internal/presigned-url v1.9.25/go.mod h1:/95IA+0lMnzW6XzqYJRpjjsAbKEORVeO0anQqjd2CNU=
 github.com/aws/aws-sdk-go-v2/service/internal/s3shared v1.14.0 h1:e2ooMhpYGhDnBfSvIyusvAwX7KexuZaHbQY2Dyei7VU=
 github.com/aws/aws-sdk-go-v2/service/internal/s3shared v1.14.0/go.mod h1:bh2E0CXKZsQN+faiKVqC40vfNMAWheoULBCnEgO9K+8=
-github.com/aws/aws-sdk-go-v2/service/s3 v1.31.0 h1:B1G2pSPvbAtQjilPq+Y7jLIzCOwKzuVEl+aBBaNG0AQ=
-github.com/aws/aws-sdk-go-v2/service/s3 v1.31.0/go.mod h1:ncltU6n4Nof5uJttDtcNQ537uNuwYqsZZQcpkd2/GUQ=
+github.com/aws/aws-sdk-go-v2/service/s3 v1.31.1 h1:PJH4I+qYjPXclKRbVCW47iYUvtXEh1u6YmDhn5J8VQE=
+github.com/aws/aws-sdk-go-v2/service/s3 v1.31.1/go.mod h1:ncltU6n4Nof5uJttDtcNQ537uNuwYqsZZQcpkd2/GUQ=
 github.com/aws/aws-sdk-go-v2/service/sqs v1.20.6 h1:4P/vyx7zCI5yBhlDZ2kwhoLjMJi0X7iR3cxqjNfbego=
 github.com/aws/aws-sdk-go-v2/service/sqs v1.20.6/go.mod h1:HQHh1eChX10zDnGmD53WLYk8nPhUKO/JkAUUzDZ530Y=
 github.com/aws/aws-sdk-go-v2/service/sso v1.12.6 h1:5V7DWLBd7wTELVz5bPpwzYy/sikk0gsgZfj40X+l5OI=
@@ -43,8 +43,8 @@ github.com/aws/smithy-go v1.13.5/go.mod h1:Tg+OJXh4MB2R/uN61Ko2f6hTZwB/ZYGOtib8J
 github.com/davecgh/go-spew v1.1.0/go.mod h1:J7Y8YcW2NihsgmVo/mv3lAwl/skON4iLHjSsI+c5H38=
 github.com/davecgh/go-spew v1.1.1 h1:vj9j/u1bqnvCEfJOwUhtlOARqs3+rkHYY13jYWTU97c=
 github.com/go-logr/logr v1.2.2/go.mod h1:jdQByPbusPIv2/zmleS9BjJVeZ6kBagPoEUsqbVz/1A=
-github.com/go-logr/logr v1.2.3 h1:2DntVwHkVopvECVRSlL5PSo9eG+cAkDCuckLubN+rq0=
-github.com/go-logr/logr v1.2.3/go.mod h1:jdQByPbusPIv2/zmleS9BjJVeZ6kBagPoEUsqbVz/1A=
+github.com/go-logr/logr v1.2.4 h1:g01GSCwiDw2xSZfjJ2/T9M+S6pFdcNtFYsp+Y43HYDQ=
+github.com/go-logr/logr v1.2.4/go.mod h1:jdQByPbusPIv2/zmleS9BjJVeZ6kBagPoEUsqbVz/1A=
 github.com/go-logr/stdr v1.2.2 h1:hSWxHoqTgW2S2qGc0LTAI563KZ5YKYRhT3MFKZMbjag=
 github.com/go-logr/stdr v1.2.2/go.mod h1:mMo/vtBO5dYbehREoey6XUKy/eSumjCCveDpRre4VKE=
 github.com/google/go-cmp v0.5.8/go.mod h1:17dUlkBOakJ0+DkrSSNjCkIjxS6bF9zb3elmeNGIjoY=

@@ -146,9 +146,10 @@ func TestAppendMiddlewares(t *testing.T) {
 			if c.expectedRequestID != "" {
 				assert.Contains(t, attrs, attribute.String("aws.request_id", c.expectedRequestID))
 			}
-			assert.Contains(t, attrs, attribute.String("aws.service", "Route 53"))
+			assert.Contains(t, attrs, attribute.String("rpc.system", "aws-api"))
+			assert.Contains(t, attrs, attribute.String("rpc.service", "Route 53"))
 			assert.Contains(t, attrs, attribute.String("aws.region", c.expectedRegion))
-			assert.Contains(t, attrs, attribute.String("aws.operation", "ChangeResourceRecordSets"))
+			assert.Contains(t, attrs, attribute.String("rpc.method", "ChangeResourceRecordSets"))
 		})
 
 		srv.Close()
