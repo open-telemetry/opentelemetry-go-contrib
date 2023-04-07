@@ -57,6 +57,29 @@ var (
 	messageReceived = messageType(RPCMessageTypeReceived)
 )
 
+// serverStatus returns a span status code and message for a given gRPC
+// status code. It maps specific gRPC status codes to a corresponding span
+// status code and message. This function is intended for use on the server
+// side of a gRPC connection.
+//
+// If the gRPC status code is Unknown, DeadlineExceeded, Unimplemented,
+// Internal, Unavailable, or DataLoss, it returns a span status code of Error
+// and the message from the gRPC status. Otherwise, it returns a span status
+// code of Unset and an empty message.
+func serverStatus(grpcStatus *status.Status) (grpc_codes.Code, string) {
+	switch grpcStatus.Code() {
+	case grpc_codes.Unknown,
+		grpc_codes.DeadlineExceeded,
+		grpc_codes.Unimplemented,
+		grpc_codes.Internal,
+		grpc_codes.Unavailable,
+		grpc_codes.DataLoss:
+		return codes.Error, grpcStatus.Message()
+	default:
+		return codes.Unset, ""
+	}
+}
+
 // UnaryClientInterceptor returns a grpc.UnaryClientInterceptor suitable
 // for use in a grpc.Dial call.
 func UnaryClientInterceptor(opts ...Option) grpc.UnaryClientInterceptor {
@@ -342,8 +365,8 @@ func UnaryServerInterceptor(opts ...Option) grpc.UnaryServerInterceptor {
 		resp, err := handler(ctx, req)
 		if err != nil {
 			s, _ := status.FromError(err)
-			statusCode = s.Code()
-			span.SetStatus(codes.Error, s.Message())
+			statusCode, msg := serverStatus(s)
+			span.SetStatus(statusCode, msg)
 			span.SetAttributes(statusCodeAttr(s.Code()))
 			messageSent.Event(ctx, 1, s.Proto())
 		} else {
@@ -435,7 +458,8 @@ func StreamServerInterceptor(opts ...Option) grpc.StreamServerInterceptor {
 		err := handler(srv, wrapServerStream(ctx, ss))
 		if err != nil {
 			s, _ := status.FromError(err)
-			span.SetStatus(codes.Error, s.Message())
+			statusCode, msg := serverStatus(s)
+			span.SetStatus(statusCode, msg)
 			span.SetAttributes(statusCodeAttr(s.Code()))
 		} else {
 			span.SetAttributes(statusCodeAttr(grpc_codes.OK))
