@@ -66,7 +66,7 @@ var (
 // Internal, Unavailable, or DataLoss, it returns a span status code of Error
 // and the message from the gRPC status. Otherwise, it returns a span status
 // code of Unset and an empty message.
-func serverStatus(grpcStatus *status.Status) (grpc_codes.Code, string) {
+func serverStatus(grpcStatus *status.Status) (codes.Code, string) {
 	switch grpcStatus.Code() {
 	case grpc_codes.Unknown,
 		grpc_codes.DeadlineExceeded,
