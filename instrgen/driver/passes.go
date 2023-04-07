@@ -17,8 +17,8 @@ package main
 import (
 	"fmt"
 	"go/parser"
-	"log"
-	"os/exec"
+	"os"
+	"path/filepath"
 
 	"golang.org/x/tools/go/loader"
 
@@ -32,14 +32,25 @@ const (
 )
 
 func CheckSema(analysis *lib.PackageAnalysis) error {
-	conf := loader.Config{ParserMode: parser.ParseComments}
-	conf.Import(analysis.ProjectPath)
-	_, err := conf.Load()
-	// TODO only log error for now
+	cwd, _ := os.Getwd()
+	prevCwd := cwd
+	// Chdir is a workaround as it seems
+	// that loader.Config.Cwd does not behave
+	// as expect
+	err := os.Chdir(filepath.Join(cwd, analysis.ProjectPath))
 	if err != nil {
-		log.Println(err)
+		return err
 	}
-	return nil
+	conf := loader.Config{ParserMode: parser.ParseComments}
+
+	conf.Import(".")
+	_, err = conf.Load()
+
+	if err != nil {
+		return err
+	}
+	err = os.Chdir(prevCwd)
+	return err
 }
 
 // ExecutePassesDumpIr.
@@ -54,12 +65,8 @@ func ExecutePassesDumpIr(analysis *lib.PackageAnalysis) error {
 	if err != nil {
 		return err
 	}
-	cmd := exec.Command("go", "mod", "tidy")
-	err = cmd.Run()
-	if err != nil {
-		log.Fatal(err)
-	}
 
+	fmt.Println("CheckSema")
 	return CheckSema(analysis)
 }
 
@@ -75,10 +82,7 @@ func ExecutePasses(analysis *lib.PackageAnalysis) error {
 	if err != nil {
 		return err
 	}
-	cmd := exec.Command("go", "mod", "tidy")
-	err = cmd.Run()
-	if err != nil {
-		log.Fatal(err)
-	}
+
+	fmt.Println("CheckSema")
 	return CheckSema(analysis)
 }

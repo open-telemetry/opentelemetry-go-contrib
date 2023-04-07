@@ -38,14 +38,14 @@ var testcases = map[string]string{
 var failures []string
 
 func inject(t *testing.T, root string, packagePattern string) {
-	err := executeCommand("--inject-dump-ir", root, packagePattern)
+	err := executeCommand("--inject", root, packagePattern)
 	require.NoError(t, err)
 }
 
 func Test(t *testing.T) {
 	for k, v := range testcases {
 		inject(t, k, "./...")
-		files := alib.SearchFiles(k, ".go_pass_tracing")
+		files := alib.SearchFiles(k, ".go")
 		expectedFiles := alib.SearchFiles(v, ".go")
 		numOfFiles := len(expectedFiles)
 		fmt.Println("Go Files:", len(files))
@@ -55,7 +55,7 @@ func Test(t *testing.T) {
 			fmt.Println(filepath.Base(file))
 			for _, expectedFile := range expectedFiles {
 				fmt.Println(filepath.Base(expectedFile))
-				if filepath.Base(file) == filepath.Base(expectedFile+"_pass_tracing") {
+				if filepath.Base(file) == filepath.Base(expectedFile) {
 					f1, err1 := os.ReadFile(file)
 					require.NoError(t, err1)
 					f2, err2 := os.ReadFile(expectedFile)
