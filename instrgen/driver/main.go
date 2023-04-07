@@ -120,10 +120,16 @@ func executeCommand(command string, projectPath string, packagePattern string) e
 	}
 	switch command {
 	case "--inject":
-		_, err := Prune(projectPath, packagePattern, false)
+		err := CheckSema(projectPath)
 		if err != nil {
 			return err
 		}
+
+		_, err = Prune(projectPath, packagePattern, false)
+		if err != nil {
+			return err
+		}
+
 		analysis := makeAnalysis(projectPath, packagePattern, false)
 		err = ExecutePasses(analysis)
 		if err != nil {
@@ -132,7 +138,11 @@ func executeCommand(command string, projectPath string, packagePattern string) e
 		fmt.Println("\tinstrumentation done")
 		return nil
 	case "--inject-dump-ir":
-		_, err := Prune(projectPath, packagePattern, true)
+		err := CheckSema(projectPath)
+		if err != nil {
+			return err
+		}
+		_, err = Prune(projectPath, packagePattern, true)
 		if err != nil {
 			return err
 		}

@@ -31,13 +31,13 @@ const (
 	instrumentationPassFileSuffix = "_pass_tracing"
 )
 
-func CheckSema(analysis *lib.PackageAnalysis) error {
+func CheckSema(projectPath string) error {
 	cwd, _ := os.Getwd()
 	prevCwd := cwd
 	// Chdir is a workaround as it seems
 	// that loader.Config.Cwd does not behave
 	// as expect
-	err := os.Chdir(filepath.Join(cwd, analysis.ProjectPath))
+	err := os.Chdir(filepath.Join(cwd, projectPath))
 	if err != nil {
 		return err
 	}
@@ -67,7 +67,7 @@ func ExecutePassesDumpIr(analysis *lib.PackageAnalysis) error {
 	}
 
 	fmt.Println("CheckSema")
-	return CheckSema(analysis)
+	return CheckSema(analysis.ProjectPath)
 }
 
 // ExecutePasses.
@@ -84,5 +84,5 @@ func ExecutePasses(analysis *lib.PackageAnalysis) error {
 	}
 
 	fmt.Println("CheckSema")
-	return CheckSema(analysis)
+	return CheckSema(analysis.ProjectPath)
 }
