@@ -57,29 +57,6 @@ var (
 	messageReceived = messageType(RPCMessageTypeReceived)
 )
 
-// serverStatus returns a span status code and message for a given gRPC
-// status code. It maps specific gRPC status codes to a corresponding span
-// status code and message. This function is intended for use on the server
-// side of a gRPC connection.
-//
-// If the gRPC status code is Unknown, DeadlineExceeded, Unimplemented,
-// Internal, Unavailable, or DataLoss, it returns a span status code of Error
-// and the message from the gRPC status. Otherwise, it returns a span status
-// code of Unset and an empty message.
-func serverStatus(grpcStatus *status.Status) (codes.Code, string) {
-	switch grpcStatus.Code() {
-	case grpc_codes.Unknown,
-		grpc_codes.DeadlineExceeded,
-		grpc_codes.Unimplemented,
-		grpc_codes.Internal,
-		grpc_codes.Unavailable,
-		grpc_codes.DataLoss:
-		return codes.Error, grpcStatus.Message()
-	default:
-		return codes.Unset, ""
-	}
-}
-
 // UnaryClientInterceptor returns a grpc.UnaryClientInterceptor suitable
 // for use in a grpc.Dial call.
 func UnaryClientInterceptor(opts ...Option) grpc.UnaryClientInterceptor {
@@ -522,4 +499,27 @@ func peerFromCtx(ctx context.Context) string {
 // statusCodeAttr returns status code attribute based on given gRPC code.
 func statusCodeAttr(c grpc_codes.Code) attribute.KeyValue {
 	return GRPCStatusCodeKey.Int64(int64(c))
+}
+
+// serverStatus returns a span status code and message for a given gRPC
+// status code. It maps specific gRPC status codes to a corresponding span
+// status code and message. This function is intended for use on the server
+// side of a gRPC connection.
+//
+// If the gRPC status code is Unknown, DeadlineExceeded, Unimplemented,
+// Internal, Unavailable, or DataLoss, it returns a span status code of Error
+// and the message from the gRPC status. Otherwise, it returns a span status
+// code of Unset and an empty message.
+func serverStatus(grpcStatus *status.Status) (codes.Code, string) {
+	switch grpcStatus.Code() {
+	case grpc_codes.Unknown,
+		grpc_codes.DeadlineExceeded,
+		grpc_codes.Unimplemented,
+		grpc_codes.Internal,
+		grpc_codes.Unavailable,
+		grpc_codes.DataLoss:
+		return codes.Error, grpcStatus.Message()
+	default:
+		return codes.Unset, ""
+	}
 }
