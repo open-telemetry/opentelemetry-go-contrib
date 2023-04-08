@@ -583,107 +583,98 @@ func TestStreamClientInterceptorWithError(t *testing.T) {
 	assert.Equal(t, codes.Error, span.Status().Code)
 }
 
-func TestServerInterceptorOK(t *testing.T) {
-	sr := tracetest.NewSpanRecorder()
-	tp := trace.NewTracerProvider(trace.WithSpanProcessor(sr))
-	usi := otelgrpc.UnaryServerInterceptor(otelgrpc.WithTracerProvider(tp))
-	handler := func(_ context.Context, _ interface{}) (interface{}, error) {
-		return nil, nil
-	}
-	_, err := usi(context.Background(), &grpc_testing.SimpleRequest{}, &grpc.UnaryServerInfo{}, handler)
-	require.NoError(t, err)
-
-	span, ok := getSpanFromRecorder(sr, "")
-	if !ok {
-		t.Fatalf("failed to export error span")
-	}
-	assert.Equal(t, codes.Unset, span.Status().Code)
-	assert.Empty(t, span.Status().Description)
-	var codeAttr attribute.KeyValue
-	for _, a := range span.Attributes() {
-		if a.Key == otelgrpc.GRPCStatusCodeKey {
-			codeAttr = a
-			break
-		}
-	}
-	if assert.True(t, codeAttr.Valid(), "attributes contain gRPC status code") {
-		assert.Equal(t, attribute.Int64Value(int64(grpc_codes.OK)), codeAttr.Value)
-	}
-	assert.Len(t, span.Events(), 2)
-	assert.ElementsMatch(t, []attribute.KeyValue{
-		attribute.Key("message.type").String("SENT"),
-		attribute.Key("message.id").Int(1),
-	}, span.Events()[1].Attributes)
+var serverChecks = []struct {
+	grpcCode grpc_codes.Code
+	spanCode codes.Code
+	name     string
+}{
+	{
+		grpcCode: grpc_codes.OK,
+		spanCode: codes.Unset,
+		name:     "ok",
+	},
+	{
+		grpcCode: grpc_codes.Canceled,
+		spanCode: codes.Unset,
+		name:     "cancelled",
+	},
+	{
+		grpcCode: grpc_codes.NotFound,
+		spanCode: codes.Unset,
+		name:     "not.found",
+	},
+	{
+		grpcCode: grpc_codes.PermissionDenied,
+		spanCode: codes.Unset,
+		name:     "permission.denied",
+	},
+	{
+		grpcCode: grpc_codes.Unimplemented,
+		spanCode: codes.Error,
+		name:     "unimplemented",
+	},
+	{
+		grpcCode: grpc_codes.Internal,
+		spanCode: codes.Error,
+		name:     "internal",
+	},
+	{
+		grpcCode: grpc_codes.Unauthenticated,
+		spanCode: codes.Unset,
+		name:     "unauthenticated",
+	},
 }
 
-func TestServerInterceptorPermissionDeniedError(t *testing.T) {
+func UnaryServerInterceptor(t *testing.T) {
 	sr := tracetest.NewSpanRecorder()
 	tp := trace.NewTracerProvider(trace.WithSpanProcessor(sr))
 	usi := otelgrpc.UnaryServerInterceptor(otelgrpc.WithTracerProvider(tp))
-	deniedErr := status.Error(grpc_codes.PermissionDenied, "PERMISSION_DENIED_TEXT")
-	handler := func(_ context.Context, _ interface{}) (interface{}, error) {
-		return nil, deniedErr
-	}
-	_, err := usi(context.Background(), &grpc_testing.SimpleRequest{}, &grpc.UnaryServerInfo{}, handler)
-	require.Error(t, err)
-	assert.Equal(t, err, deniedErr)
-
-	span, ok := getSpanFromRecorder(sr, "")
-	if !ok {
-		t.Fatalf("failed to export error span")
-	}
-	assert.Equal(t, codes.Unset, span.Status().Code)
-	assert.Empty(t, span.Status().Description)
-	var codeAttr attribute.KeyValue
-	for _, a := range span.Attributes() {
-		if a.Key == otelgrpc.GRPCStatusCodeKey {
-			codeAttr = a
-			break
+	for _, check := range serverChecks {
+		grpcErr := status.Error(check.grpcCode, check.grpcCode.String())
+		handler := func(_ context.Context, _ interface{}) (interface{}, error) {
+			return nil, grpcErr
 		}
-	}
-	if assert.True(t, codeAttr.Valid(), "attributes contain gRPC status code") {
-		assert.Equal(t, attribute.Int64Value(int64(grpc_codes.PermissionDenied)), codeAttr.Value)
-	}
-	assert.Len(t, span.Events(), 2)
-	assert.ElementsMatch(t, []attribute.KeyValue{
-		attribute.Key("message.type").String("SENT"),
-		attribute.Key("message.id").Int(1),
-	}, span.Events()[1].Attributes)
-}
-
-func TestServerInterceptorInternalError(t *testing.T) {
-	sr := tracetest.NewSpanRecorder()
-	tp := trace.NewTracerProvider(trace.WithSpanProcessor(sr))
-	usi := otelgrpc.UnaryServerInterceptor(otelgrpc.WithTracerProvider(tp))
-	internalErr := status.Error(grpc_codes.Internal, "INTERNAL_TEXT")
-	handler := func(_ context.Context, _ interface{}) (interface{}, error) {
-		return nil, internalErr
-	}
-	_, err := usi(context.Background(), &grpc_testing.SimpleRequest{}, &grpc.UnaryServerInfo{}, handler)
-	require.Error(t, err)
-	assert.Equal(t, err, internalErr)
-
-	span, ok := getSpanFromRecorder(sr, "")
-	if !ok {
-		t.Fatalf("failed to export error span")
-	}
-	assert.Equal(t, codes.Error, span.Status().Code)
-	assert.Contains(t, internalErr.Error(), span.Status().Description)
-	var codeAttr attribute.KeyValue
-	for _, a := range span.Attributes() {
-		if a.Key == otelgrpc.GRPCStatusCodeKey {
-			codeAttr = a
-			break
+		_, err := usi(context.Background(), &grpc_testing.SimpleRequest{}, &grpc.UnaryServerInfo{FullMethod: check.name}, handler)
+		// the error should be nil only if the gRPC code is OK, otherwise it should be the same as the gRPC error
+		if check.grpcCode != grpc_codes.OK {
+			require.Error(t, err)
+			assert.Equal(t, err, grpcErr)
+		} else {
+			require.NoError(t, err)
 		}
+
+		span, ok := getSpanFromRecorder(sr, check.name)
+		if !assert.True(t, ok, "missing span %q", check.name) {
+			continue
+		}
+
+		// validate span status
+		assert.Equal(t, check.spanCode, span.Status().Code)
+		if span.Status().Code == codes.Error {
+			assert.Contains(t, grpcErr.Error(), span.Status().Description)
+		} else {
+			assert.Empty(t, span.Status().Description)
+		}
+
+		// validate span attributes
+		var codeAttr attribute.KeyValue
+		for _, a := range span.Attributes() {
+			if a.Key == otelgrpc.GRPCStatusCodeKey {
+				codeAttr = a
+				break
+			}
+		}
+		if assert.True(t, codeAttr.Valid(), "attributes contain gRPC status code") {
+			assert.Equal(t, attribute.Int64Value(int64(check.grpcCode)), codeAttr.Value)
+		}
+
+		// validate events and their attributes
+		assert.Len(t, span.Events(), 2)
+		assert.ElementsMatch(t, []attribute.KeyValue{
+			attribute.Key("message.type").String("SENT"),
+			attribute.Key("message.id").Int(1),
+		}, span.Events()[1].Attributes)
 	}
-	if assert.True(t, codeAttr.Valid(), "attributes contain gRPC status code") {
-		assert.Equal(t, attribute.Int64Value(int64(grpc_codes.Internal)), codeAttr.Value)
-	}
-	assert.Len(t, span.Events(), 2)
-	assert.ElementsMatch(t, []attribute.KeyValue{
-		attribute.Key("message.type").String("SENT"),
-		attribute.Key("message.id").Int(1),
-	}, span.Events()[1].Attributes)
 }
 
 type mockServerStream struct {
@@ -692,34 +683,49 @@ type mockServerStream struct {
 
 func (m *mockServerStream) Context() context.Context { return context.Background() }
 
-func TestStreamServerInterceptorInternalError(t *testing.T) {
+func TestStreamServerInterceptor(t *testing.T) {
 	sr := tracetest.NewSpanRecorder()
 	tp := trace.NewTracerProvider(trace.WithSpanProcessor(sr))
 	usi := otelgrpc.StreamServerInterceptor(otelgrpc.WithTracerProvider(tp))
-	internalErr := status.Error(grpc_codes.Internal, "INTERNAL_TEXT")
-	handler := func(_ interface{}, _ grpc.ServerStream) error {
-		return internalErr
-	}
-
-	err := usi(&grpc_testing.SimpleRequest{}, &mockServerStream{}, &grpc.StreamServerInfo{}, handler)
-	require.Error(t, err)
-	assert.Equal(t, err, internalErr)
-
-	span, ok := getSpanFromRecorder(sr, "")
-	if !ok {
-		t.Fatalf("failed to export error span")
-	}
-	assert.Equal(t, codes.Error, span.Status().Code)
-	assert.Contains(t, internalErr.Error(), span.Status().Description)
-	var codeAttr attribute.KeyValue
-	for _, a := range span.Attributes() {
-		if a.Key == otelgrpc.GRPCStatusCodeKey {
-			codeAttr = a
-			break
+	for _, check := range serverChecks {
+		grpcErr := status.Error(check.grpcCode, check.grpcCode.String())
+		handler := func(_ interface{}, _ grpc.ServerStream) error {
+			return grpcErr
 		}
-	}
-	if assert.True(t, codeAttr.Valid(), "attributes contain gRPC status code") {
-		assert.Equal(t, attribute.Int64Value(int64(grpc_codes.Internal)), codeAttr.Value)
+
+		err := usi(&grpc_testing.SimpleRequest{}, &mockServerStream{}, &grpc.StreamServerInfo{FullMethod: check.name}, handler)
+		// the error should be nil only if the gRPC code is OK, otherwise it should be the same as the gRPC error
+		if check.grpcCode != grpc_codes.OK {
+			require.Error(t, err)
+			assert.Equal(t, err, grpcErr)
+		} else {
+			require.NoError(t, err)
+		}
+
+		span, ok := getSpanFromRecorder(sr, check.name)
+		if !assert.True(t, ok, "missing span %q", check.name) {
+			continue
+		}
+
+		// validate span status
+		assert.Equal(t, check.spanCode, span.Status().Code)
+		if span.Status().Code == codes.Error {
+			assert.Contains(t, grpcErr.Error(), span.Status().Description)
+		} else {
+			assert.Empty(t, span.Status().Description)
+		}
+
+		// validate span attributes
+		var codeAttr attribute.KeyValue
+		for _, a := range span.Attributes() {
+			if a.Key == otelgrpc.GRPCStatusCodeKey {
+				codeAttr = a
+				break
+			}
+		}
+		if assert.True(t, codeAttr.Valid(), "attributes contain gRPC status code") {
+			assert.Equal(t, attribute.Int64Value(int64(check.grpcCode)), codeAttr.Value)
+		}
 	}
 }
 
