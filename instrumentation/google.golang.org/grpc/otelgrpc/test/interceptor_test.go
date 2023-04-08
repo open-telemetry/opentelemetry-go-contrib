@@ -599,8 +599,8 @@ func TestServerInterceptorError(t *testing.T) {
 	if !ok {
 		t.Fatalf("failed to export error span")
 	}
-	assert.Equal(t, codes.Error, span.Status().Code)
-	assert.Contains(t, deniedErr.Error(), span.Status().Description)
+	assert.Equal(t, codes.Unset, span.Status().Code)
+	assert.Empty(t, span.Status().Description)
 	var codeAttr attribute.KeyValue
 	for _, a := range span.Attributes() {
 		if a.Key == otelgrpc.GRPCStatusCodeKey {
