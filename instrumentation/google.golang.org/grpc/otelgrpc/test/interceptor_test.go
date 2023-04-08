@@ -583,7 +583,7 @@ func TestStreamClientInterceptorWithError(t *testing.T) {
 	assert.Equal(t, codes.Error, span.Status().Code)
 }
 
-func TestServerInterceptorError(t *testing.T) {
+func TestServerInterceptorPermissionDeniedError(t *testing.T) {
 	sr := tracetest.NewSpanRecorder()
 	tp := trace.NewTracerProvider(trace.WithSpanProcessor(sr))
 	usi := otelgrpc.UnaryServerInterceptor(otelgrpc.WithTracerProvider(tp))
@@ -610,6 +610,41 @@ func TestServerInterceptorError(t *testing.T) {
 	}
 	if assert.True(t, codeAttr.Valid(), "attributes contain gRPC status code") {
 		assert.Equal(t, attribute.Int64Value(int64(grpc_codes.PermissionDenied)), codeAttr.Value)
+	}
+	assert.Len(t, span.Events(), 2)
+	assert.ElementsMatch(t, []attribute.KeyValue{
+		attribute.Key("message.type").String("SENT"),
+		attribute.Key("message.id").Int(1),
+	}, span.Events()[1].Attributes)
+}
+
+func TestServerInterceptorInternalError(t *testing.T) {
+	sr := tracetest.NewSpanRecorder()
+	tp := trace.NewTracerProvider(trace.WithSpanProcessor(sr))
+	usi := otelgrpc.UnaryServerInterceptor(otelgrpc.WithTracerProvider(tp))
+	internalErr := status.Error(grpc_codes.Internal, "INTERNAL_TEXT")
+	handler := func(_ context.Context, _ interface{}) (interface{}, error) {
+		return nil, internalErr
+	}
+	_, err := usi(context.Background(), &grpc_testing.SimpleRequest{}, &grpc.UnaryServerInfo{}, handler)
+	require.Error(t, err)
+	assert.Equal(t, err, internalErr)
+
+	span, ok := getSpanFromRecorder(sr, "")
+	if !ok {
+		t.Fatalf("failed to export error span")
+	}
+	assert.Equal(t, codes.Error, span.Status().Code)
+	assert.Contains(t, internalErr.Error(), span.Status().Description)
+	var codeAttr attribute.KeyValue
+	for _, a := range span.Attributes() {
+		if a.Key == otelgrpc.GRPCStatusCodeKey {
+			codeAttr = a
+			break
+		}
+	}
+	if assert.True(t, codeAttr.Valid(), "attributes contain gRPC status code") {
+		assert.Equal(t, attribute.Int64Value(int64(grpc_codes.Internal)), codeAttr.Value)
 	}
 	assert.Len(t, span.Events(), 2)
 	assert.ElementsMatch(t, []attribute.KeyValue{
