@@ -59,6 +59,10 @@ func (r *reservoir) take(now time.Time, borrowed bool, itemCost float64) bool { 
 	r.mu.Lock()
 	defer r.mu.Unlock()
 
+	if r.capacity == 0 {
+		return false
+	}
+
 	if r.lastTick.IsZero() {
 		r.lastTick = now
 
