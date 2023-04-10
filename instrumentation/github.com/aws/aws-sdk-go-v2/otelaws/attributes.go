@@ -23,14 +23,14 @@ import (
 	"github.com/aws/smithy-go/middleware"
 
 	"go.opentelemetry.io/otel/attribute"
+	semconv "go.opentelemetry.io/otel/semconv/v1.17.0"
 )
 
 // AWS attributes.
 const (
-	OperationKey attribute.Key = "aws.operation"
 	RegionKey    attribute.Key = "aws.region"
-	ServiceKey   attribute.Key = "aws.service"
 	RequestIDKey attribute.Key = "aws.request_id"
+	AWSSystemVal string        = "aws-api"
 )
 
 var servicemap = map[string]AttributeSetter{
@@ -38,9 +38,14 @@ var servicemap = map[string]AttributeSetter{
 	sqs.ServiceID:      SQSAttributeSetter,
 }
 
+// SystemAttr return the AWS RPC system attribute.
+func SystemAttr() attribute.KeyValue {
+	return semconv.RPCSystemKey.String(AWSSystemVal)
+}
+
 // OperationAttr returns the AWS operation attribute.
 func OperationAttr(operation string) attribute.KeyValue {
-	return OperationKey.String(operation)
+	return semconv.RPCMethod(operation)
 }
 
 // RegionAttr returns the AWS region attribute.
@@ -50,7 +55,7 @@ func RegionAttr(region string) attribute.KeyValue {
 
 // ServiceAttr returns the AWS service attribute.
 func ServiceAttr(service string) attribute.KeyValue {
-	return ServiceKey.String(service)
+	return semconv.RPCService(service)
 }
 
 // RequestIDAttr returns the AWS request ID attribute.

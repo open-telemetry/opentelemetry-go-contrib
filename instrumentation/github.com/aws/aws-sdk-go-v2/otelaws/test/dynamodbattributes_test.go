@@ -97,9 +97,10 @@ func TestDynamodbTags(t *testing.T) {
 		assert.Equal(t, trace.SpanKindClient, span.SpanKind())
 		attrs := span.Attributes()
 		assert.Contains(t, attrs, attribute.Int("http.status_code", cases.expectedStatusCode))
-		assert.Contains(t, attrs, attribute.String("aws.service", "DynamoDB"))
+		assert.Contains(t, attrs, attribute.String("rpc.service", "DynamoDB"))
 		assert.Contains(t, attrs, attribute.String("aws.region", cases.expectedRegion))
-		assert.Contains(t, attrs, attribute.String("aws.operation", "GetItem"))
+		assert.Contains(t, attrs, attribute.String("rpc.method", "GetItem"))
+		assert.Contains(t, attrs, attribute.String("rpc.system", "aws-api"))
 		assert.Contains(t, attrs, attribute.StringSlice(
 			"aws.dynamodb.table_names", []string{"table1"},
 		))
@@ -186,9 +187,9 @@ func TestDynamodbTagsCustomSetter(t *testing.T) {
 		assert.Equal(t, trace.SpanKindClient, span.SpanKind())
 		attrs := span.Attributes()
 		assert.Contains(t, attrs, attribute.Int("http.status_code", cases.expectedStatusCode))
-		assert.Contains(t, attrs, attribute.String("aws.service", "DynamoDB"))
+		assert.Contains(t, attrs, attribute.String("rpc.service", "DynamoDB"))
 		assert.Contains(t, attrs, attribute.String("aws.region", cases.expectedRegion))
-		assert.Contains(t, attrs, attribute.String("aws.operation", "GetItem"))
+		assert.Contains(t, attrs, attribute.String("rpc.method", "GetItem"))
 		assert.Contains(t, attrs, attribute.StringSlice(
 			"aws.dynamodb.table_names", []string{"table1"},
 		))
