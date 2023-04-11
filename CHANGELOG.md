@@ -15,7 +15,7 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 
 ### Changed
 
-- Update `go.opentelemetry.io/contrib/instrumentation/google.golang.org/grpc/otelgrpc` to align gRPC server span status with the recent changes in the OpenTelemetry specification (see `https://github.com/open-telemetry/opentelemetry-specification/pull/3333`).
+- Update `go.opentelemetry.io/contrib/instrumentation/google.golang.org/grpc/otelgrpc` to align gRPC server span status with the changes in the OpenTelemetry specification. (#3685)
 
 ### Fixed
 
