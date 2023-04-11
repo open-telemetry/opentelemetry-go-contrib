@@ -16,7 +16,7 @@ package jaeger // import "go.opentelemetry.io/contrib/propagators/jaeger"
 
 // Version is the current release version of the Jaeger propagator.
 func Version() string {
-	return "1.16.0-rc.1"
+	return "1.16.0-rc.2"
 	// This string is updated by the pre_release.sh script during release
 }
 

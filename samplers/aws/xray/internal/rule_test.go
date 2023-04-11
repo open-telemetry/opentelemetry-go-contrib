@@ -162,6 +162,7 @@ func TestConsumeFromReservoirSample(t *testing.T) {
 			RuleName: "r1",
 		},
 		reservoir: &reservoir{
+			capacity:  10,
 			quota:     10,
 			expiresAt: time.Unix(1500000060, 0),
 		},
