@@ -1,6 +1,6 @@
 ---
 name: '[instrgen] Bug report'
-about: Create a report of invalid behavior about the instrgen pacakge to help us improve
+about: Create a report of invalid behavior about the instrgen package to help us improve
 title: ''
 labels: 'bug, area: instrgen'
 assignees: '@open-telemetry/go-instrumentation-approvers'
