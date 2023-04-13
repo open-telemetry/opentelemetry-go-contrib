@@ -55,9 +55,6 @@ func Middleware(service string, opts ...Option) mux.MiddlewareFunc {
 	if cfg.spanNameFormatter == nil {
 		cfg.spanNameFormatter = defaultSpanNameFunc
 	}
-	if cfg.PublicEndpointFn == nil {
-		cfg.PublicEndpointFn = func(*http.Request) bool { return false }
-	}
 
 	return func(handler http.Handler) http.Handler {
 		return traceware{
