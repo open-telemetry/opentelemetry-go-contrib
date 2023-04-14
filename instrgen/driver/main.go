@@ -120,7 +120,6 @@ func executeCommand(command string, projectPath string, packagePattern string) e
 	}
 	switch command {
 	case "--inject":
-		err := CheckSema(projectPath)
 		if err != nil {
 			return err
 		}
@@ -138,7 +137,6 @@ func executeCommand(command string, projectPath string, packagePattern string) e
 		fmt.Println("\tinstrumentation done")
 		return nil
 	case "--inject-dump-ir":
-		err := CheckSema(projectPath)
 		if err != nil {
 			return err
 		}

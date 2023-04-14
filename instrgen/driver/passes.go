@@ -20,7 +20,8 @@ import (
 	"os"
 	"path/filepath"
 
-	"golang.org/x/tools/go/loader"
+	//SA1019 not sure why it's complain about this package.
+	"golang.org/x/tools/go/loader" //nolint:staticcheck
 
 	"go.opentelemetry.io/contrib/instrgen/lib"
 )
@@ -31,6 +32,8 @@ const (
 	instrumentationPassFileSuffix = "_pass_tracing"
 )
 
+// CheckSema - check if AST is valid for
+// provided projectPath.
 func CheckSema(projectPath string) error {
 	cwd, _ := os.Getwd()
 	prevCwd := cwd
