@@ -4,6 +4,7 @@ Thumbs.db
 .tools/
 .idea/
 .vscode/
+vendor/
 *.iml
 *.so
 coverage.*

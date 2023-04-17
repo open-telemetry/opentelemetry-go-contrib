@@ -43,8 +43,9 @@ type config struct {
 	TracerProvider trace.TracerProvider
 	MeterProvider  metric.MeterProvider
 
-	meter             metric.Meter
-	rpcServerDuration instrument.Int64Histogram
+	meter                           metric.Meter
+	rpcServerDuration               instrument.Int64Histogram
+	includeRPCServerDurationPeerCtx bool
 }
 
 // Option applies an option value for a config.
@@ -125,6 +126,20 @@ func (o meterProviderOption) apply(c *config) {
 	if o.mp != nil {
 		c.MeterProvider = o.mp
 	}
+}
+
+type includePeerAddrAsAttribute struct {
+	use bool
+}
+
+// WithPeerAddrAsAttribute returns an Option to use peer details when
+// recording with the meter rpc.server.duration.
+func WithPeerAddrAsAttribute(peerAddrAsAttribute bool) Option {
+	return includePeerAddrAsAttribute{use: peerAddrAsAttribute}
+}
+
+func (o includePeerAddrAsAttribute) apply(c *config) {
+	c.includeRPCServerDurationPeerCtx = o.use
 }
 
 // WithMeterProvider returns an Option to use the MeterProvider when

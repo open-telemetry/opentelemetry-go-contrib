@@ -321,12 +321,16 @@ func UnaryServerInterceptor(opts ...Option) grpc.UnaryServerInterceptor {
 
 		ctx = extract(ctx, cfg.Propagators)
 
-		name, attr := spanInfo(info.FullMethod, peerFromCtx(ctx))
+		name, nameAttr := internal.ParseFullMethod(info.FullMethod)
+		peerAttrs := peerAttr(peerFromCtx(ctx))
+		spanAttrs := append(nameAttr, peerAttrs...)
+		spanAttrs = append(spanAttrs, RPCSystemGRPC)
+
 		ctx, span := tracer.Start(
 			trace.ContextWithRemoteSpanContext(ctx, trace.SpanContextFromContext(ctx)),
 			name,
 			trace.WithSpanKind(trace.SpanKindServer),
-			trace.WithAttributes(attr...),
+			trace.WithAttributes(spanAttrs...),
 		)
 		defer span.End()
 
@@ -335,6 +339,10 @@ func UnaryServerInterceptor(opts ...Option) grpc.UnaryServerInterceptor {
 		var statusCode grpc_codes.Code
 		defer func(t time.Time) {
 			elapsedTime := time.Since(t) / time.Millisecond
+			attr := append(nameAttr, RPCSystemGRPC)
+			if cfg.includeRPCServerDurationPeerCtx {
+				attr = append(attr, peerAttrs...)
+			}
 			attr = append(attr, semconv.RPCGRPCStatusCodeKey.Int64(int64(statusCode)))
 			cfg.rpcServerDuration.Record(ctx, int64(elapsedTime), attr...)
 		}(time.Now())
