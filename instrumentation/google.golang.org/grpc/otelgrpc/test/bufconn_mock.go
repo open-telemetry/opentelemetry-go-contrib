@@ -1,29 +1,44 @@
-package test
+// Copyright The OpenTelemetry Authors
+//
+// Licensed under the Apache License, Version 2.0 (the "License");
+// you may not use this file except in compliance with the License.
+// You may obtain a copy of the License at
+//
+//     http://www.apache.org/licenses/LICENSE-2.0
+//
+// Unless required by applicable law or agreed to in writing, software
+// distributed under the License is distributed on an "AS IS" BASIS,
+// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+// See the License for the specific language governing permissions and
+// limitations under the License.
+
+package test // import "go.opentelemetry.io/contrib/instrumentation/google.golang.org/grpc/otelgrpc/test"
 
 import (
 	"context"
 	"fmt"
-	"google.golang.org/grpc/test/bufconn"
 	"net"
 	"time"
+
+	"google.golang.org/grpc/test/bufconn"
 )
 
 const (
-	mockIp   = "1.1.1.1"
+	mockIP   = "1.1.1.1"
 	mockPort = 1234
 )
 
 var (
-	mockAddr, _ = net.ResolveTCPAddr("tcp", fmt.Sprintf("%s:%d", mockIp, mockPort))
+	mockAddr, _ = net.ResolveTCPAddr("tcp", fmt.Sprintf("%s:%d", mockIP, mockPort))
 )
 
 // bufConnMock wraps a bufconn.Lister for the sake of returning a valid address. This is so we can properly test
-// returning net.sock.peer.addr and net.sock.peer.port attributes
+// returning net.sock.peer.addr and net.sock.peer.port attributes.
 type bufConnMock struct {
 	listener *bufconn.Listener
 }
 
-func NewMockBufConn(size int) *bufConnMock {
+func newMockBufConn(size int) *bufConnMock {
 	return &bufConnMock{
 		listener: bufconn.Listen(size),
 	}

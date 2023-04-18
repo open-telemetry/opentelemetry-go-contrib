@@ -39,7 +39,7 @@ import (
 const bufSize = 2048
 
 func doCalls(cOpt []grpc.DialOption, sOpt []grpc.ServerOption) error {
-	l := NewMockBufConn(bufSize)
+	l := newMockBufConn(bufSize)
 	defer l.Close()
 
 	s := grpc.NewServer(sOpt...)
@@ -112,7 +112,7 @@ func TestInterceptors(t *testing.T) {
 
 	t.Run("UnaryServerSpans", func(t *testing.T) {
 		checkUnaryServerSpans(t, serverUnarySR.Ended())
-		checkUnaryServerRecords(t, serverUnaryMetricReader, false)
+		checkUnaryServerRecordsWithoutPeerInfo(t, serverUnaryMetricReader)
 	})
 
 	t.Run("StreamServerSpans", func(t *testing.T) {
@@ -134,9 +134,8 @@ func TestInterceptorWithPeerAddrAsAttribute(t *testing.T) {
 
 	t.Run("UnaryServerSpansWithPeerAddr", func(t *testing.T) {
 		checkUnaryServerSpans(t, serverUnaryPeerAddrSR.Ended())
-		checkUnaryServerRecords(t, serverUnaryMetricReaderPeerAddr, true)
+		checkUnaryServerRecordsWithPeerInfo(t, serverUnaryMetricReaderPeerAddr)
 	})
-
 }
 
 func checkUnaryClientSpans(t *testing.T, spans []trace.ReadOnlySpan) {
@@ -166,7 +165,7 @@ func checkUnaryClientSpans(t *testing.T, spans []trace.ReadOnlySpan) {
 		semconv.RPCService("grpc.testing.TestService"),
 		otelgrpc.RPCSystemGRPC,
 		otelgrpc.GRPCStatusCodeKey.Int64(int64(codes.OK)),
-		semconv.NetSockPeerAddr(mockIp),
+		semconv.NetSockPeerAddr(mockIP),
 		semconv.NetSockPeerPort(mockPort),
 	}, emptySpan.Attributes())
 
@@ -196,7 +195,7 @@ func checkUnaryClientSpans(t *testing.T, spans []trace.ReadOnlySpan) {
 		semconv.RPCService("grpc.testing.TestService"),
 		otelgrpc.RPCSystemGRPC,
 		otelgrpc.GRPCStatusCodeKey.Int64(int64(codes.OK)),
-		semconv.NetSockPeerAddr(mockIp),
+		semconv.NetSockPeerAddr(mockIP),
 		semconv.NetSockPeerPort(mockPort),
 	}, largeSpan.Attributes())
 }
@@ -244,7 +243,7 @@ func checkStreamClientSpans(t *testing.T, spans []trace.ReadOnlySpan) {
 		semconv.RPCService("grpc.testing.TestService"),
 		otelgrpc.RPCSystemGRPC,
 		otelgrpc.GRPCStatusCodeKey.Int64(int64(codes.OK)),
-		semconv.NetSockPeerAddr(mockIp),
+		semconv.NetSockPeerAddr(mockIP),
 		semconv.NetSockPeerPort(mockPort),
 	}, streamInput.Attributes())
 
@@ -294,7 +293,7 @@ func checkStreamClientSpans(t *testing.T, spans []trace.ReadOnlySpan) {
 		semconv.RPCService("grpc.testing.TestService"),
 		otelgrpc.RPCSystemGRPC,
 		otelgrpc.GRPCStatusCodeKey.Int64(int64(codes.OK)),
-		semconv.NetSockPeerAddr(mockIp),
+		semconv.NetSockPeerAddr(mockIP),
 		semconv.NetSockPeerPort(mockPort),
 	}, streamOutput.Attributes())
 
@@ -364,7 +363,7 @@ func checkStreamClientSpans(t *testing.T, spans []trace.ReadOnlySpan) {
 		semconv.RPCService("grpc.testing.TestService"),
 		otelgrpc.RPCSystemGRPC,
 		otelgrpc.GRPCStatusCodeKey.Int64(int64(codes.OK)),
-		semconv.NetSockPeerAddr(mockIp),
+		semconv.NetSockPeerAddr(mockIP),
 		semconv.NetSockPeerPort(mockPort),
 	}, pingPong.Attributes())
 }
@@ -418,7 +417,7 @@ func checkStreamServerSpans(t *testing.T, spans []trace.ReadOnlySpan) {
 		semconv.RPCService("grpc.testing.TestService"),
 		otelgrpc.RPCSystemGRPC,
 		otelgrpc.GRPCStatusCodeKey.Int64(int64(codes.OK)),
-		semconv.NetSockPeerAddr(mockIp),
+		semconv.NetSockPeerAddr(mockIP),
 		semconv.NetSockPeerPort(mockPort),
 	}, streamInput.Attributes())
 
@@ -468,7 +467,7 @@ func checkStreamServerSpans(t *testing.T, spans []trace.ReadOnlySpan) {
 		semconv.RPCService("grpc.testing.TestService"),
 		otelgrpc.RPCSystemGRPC,
 		otelgrpc.GRPCStatusCodeKey.Int64(int64(codes.OK)),
-		semconv.NetSockPeerAddr(mockIp),
+		semconv.NetSockPeerAddr(mockIP),
 		semconv.NetSockPeerPort(mockPort),
 	}, streamOutput.Attributes())
 
@@ -538,7 +537,7 @@ func checkStreamServerSpans(t *testing.T, spans []trace.ReadOnlySpan) {
 		semconv.RPCService("grpc.testing.TestService"),
 		otelgrpc.RPCSystemGRPC,
 		otelgrpc.GRPCStatusCodeKey.Int64(int64(codes.OK)),
-		semconv.NetSockPeerAddr(mockIp),
+		semconv.NetSockPeerAddr(mockIP),
 		semconv.NetSockPeerPort(mockPort),
 	}, pingPong.Attributes())
 }
@@ -570,7 +569,7 @@ func checkUnaryServerSpans(t *testing.T, spans []trace.ReadOnlySpan) {
 		semconv.RPCService("grpc.testing.TestService"),
 		otelgrpc.RPCSystemGRPC,
 		otelgrpc.GRPCStatusCodeKey.Int64(int64(codes.OK)),
-		semconv.NetSockPeerAddr(mockIp),
+		semconv.NetSockPeerAddr(mockIP),
 		semconv.NetSockPeerPort(mockPort),
 	}, emptySpan.Attributes())
 
@@ -600,7 +599,7 @@ func checkUnaryServerSpans(t *testing.T, spans []trace.ReadOnlySpan) {
 		semconv.RPCService("grpc.testing.TestService"),
 		otelgrpc.RPCSystemGRPC,
 		otelgrpc.GRPCStatusCodeKey.Int64(int64(codes.OK)),
-		semconv.NetSockPeerAddr(mockIp),
+		semconv.NetSockPeerAddr(mockIP),
 		semconv.NetSockPeerPort(mockPort),
 	}, largeSpan.Attributes())
 }
@@ -623,7 +622,7 @@ func assertEvents(t *testing.T, expected, actual []trace.Event) bool {
 	return !failed
 }
 
-func checkUnaryServerRecords(t *testing.T, reader metric.Reader, peerInfoIncluded bool) {
+func checkUnaryServerRecordsWithoutPeerInfo(t *testing.T, reader metric.Reader) {
 	rm := metricdata.ResourceMetrics{}
 	err := reader.Collect(context.Background(), &rm)
 	assert.NoError(t, err)
@@ -644,12 +643,33 @@ func checkUnaryServerRecords(t *testing.T, reader metric.Reader, peerInfoInclude
 			otelgrpc.RPCSystemGRPC,
 		}
 
-		if peerInfoIncluded {
-			attrs = append(attrs, []attribute.KeyValue{
-				semconv.NetSockPeerPort(mockPort),
-				semconv.NetSockPeerAddr(mockIp),
-			}...)
+		assert.ElementsMatch(t, attrs, attr)
+	}
+}
+
+func checkUnaryServerRecordsWithPeerInfo(t *testing.T, reader metric.Reader) {
+	rm := metricdata.ResourceMetrics{}
+	err := reader.Collect(context.Background(), &rm)
+	assert.NoError(t, err)
+	require.Len(t, rm.ScopeMetrics, 1)
+	require.Len(t, rm.ScopeMetrics[0].Metrics, 1)
+	require.IsType(t, rm.ScopeMetrics[0].Metrics[0].Data, metricdata.Histogram[int64]{})
+	data := rm.ScopeMetrics[0].Metrics[0].Data.(metricdata.Histogram[int64])
+
+	for _, dpt := range data.DataPoints {
+		attr := dpt.Attributes.ToSlice()
+		method := getRPCMethod(attr)
+		assert.NotEmpty(t, method)
+
+		attrs := []attribute.KeyValue{
+			otelgrpc.GRPCStatusCodeKey.Int64(int64(codes.OK)),
+			semconv.RPCMethod(method),
+			semconv.RPCService("grpc.testing.TestService"),
+			otelgrpc.RPCSystemGRPC,
+			semconv.NetSockPeerPort(mockPort),
+			semconv.NetSockPeerAddr(mockIP),
 		}
+
 		assert.ElementsMatch(t, attrs, attr)
 	}
 }
