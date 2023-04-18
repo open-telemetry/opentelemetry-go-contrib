@@ -66,6 +66,7 @@ var _ sdktrace.Sampler = (*remoteSampler)(nil)
 // serviceName refers to the name of the service equivalent to the one set in the AWS X-Ray console when adding sampling rules and
 // cloudPlatform refers to the cloud platform the service is running on ("ec2", "ecs", "eks", "lambda", etc).
 // Guide on AWS X-Ray remote sampling implementation (https://aws-otel.github.io/docs/getting-started/remote-sampling#otel-remote-sampling-implementation-caveats).
+// Deprecated: Use NewRemoteSamplerWithResource() instead, which creates the Remote Sampler with an OTel Resource to automatically configure service name and cloud platform.
 func NewRemoteSampler(ctx context.Context, serviceName string, cloudPlatform string, opts ...Option) (sdktrace.Sampler, error) {
 	// Create new config based on options or set to default values.
 	cfg, err := newConfig(opts...)
