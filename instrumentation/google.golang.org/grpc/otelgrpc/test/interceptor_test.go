@@ -694,10 +694,22 @@ func assertServerSpan(t *testing.T, wantSpanCode codes.Code, wantSpanStatusDescr
 }
 
 // TestUnaryServerInterceptor tests the server interceptor for unary RPCs.
-func TestUnaryServerInterceptor(t *testing.T) {
+func TestUnaryServerInterceptorWithPeerAddrAsAttribute(t *testing.T) {
 	sr := tracetest.NewSpanRecorder()
 	tp := trace.NewTracerProvider(trace.WithSpanProcessor(sr))
-	usi := otelgrpc.UnaryServerInterceptor(otelgrpc.WithTracerProvider(tp))
+	usi := otelgrpc.UnaryServerInterceptor(otelgrpc.WithTracerProvider(tp), otelgrpc.WithPeerAddrAsAttribute(true))
+	runServerChecks(t, usi, sr)
+}
+
+// TestUnaryServerInterceptor tests the server interceptor for unary RPCs.
+func TestUnaryServerInterceptorWithoutPeerAddrAsAttribute(t *testing.T) {
+	sr := tracetest.NewSpanRecorder()
+	tp := trace.NewTracerProvider(trace.WithSpanProcessor(sr))
+	usi := otelgrpc.UnaryServerInterceptor(otelgrpc.WithTracerProvider(tp), otelgrpc.WithPeerAddrAsAttribute(false))
+	runServerChecks(t, usi, sr)
+}
+
+func runServerChecks(t *testing.T, usi grpc.UnaryServerInterceptor, sr *tracetest.SpanRecorder) {
 	for _, check := range serverChecks {
 		name := check.grpcCode.String()
 		t.Run(name, func(t *testing.T) {
