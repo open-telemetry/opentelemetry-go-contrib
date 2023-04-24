@@ -16,6 +16,7 @@ package main
 
 import (
 	"fmt"
+	"go/build"
 	"go/parser"
 	"os"
 	"path/filepath"
@@ -35,17 +36,18 @@ const (
 // CheckSema - check if AST is valid for
 // provided projectPath.
 func CheckSema(projectPath string) error {
-	cwd, _ := os.Getwd()
-	prevCwd := cwd
+	prevCwd, _ := os.Getwd()
+	cwd := filepath.Join(prevCwd, projectPath)
 	// Chdir is a workaround as it seems
 	// that loader.Config.Cwd does not behave
 	// as expect
-	err := os.Chdir(filepath.Join(cwd, projectPath))
+	err := os.Chdir(cwd)
 	if err != nil {
 		return err
 	}
-	conf := loader.Config{ParserMode: parser.ParseComments}
-
+	conf := loader.Config{ParserMode: parser.ParseComments, Cwd: cwd}
+	conf.Build = &build.Default
+	conf.Build.CgoEnabled = false
 	conf.Import(".")
 	_, err = conf.Load()
 
