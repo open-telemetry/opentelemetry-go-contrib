@@ -392,3 +392,121 @@ func TestSpanStatus(t *testing.T) {
 		})
 	}
 }
+
+func TestHandlerTracesDisabled(t *testing.T) {
+	rr := httptest.NewRecorder()
+
+	spanRecorder := tracetest.NewSpanRecorder()
+	provider := sdktrace.NewTracerProvider(sdktrace.WithSpanProcessor(spanRecorder))
+
+	reader := metric.NewManualReader()
+	meterProvider := metric.NewMeterProvider(metric.WithReader(reader))
+
+	h := otelhttp.NewHandler(
+		http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+			l, _ := otelhttp.LabelerFromContext(r.Context())
+			l.Add(attribute.String("test", "attribute"))
+
+			if _, err := io.WriteString(w, "hello world"); err != nil {
+				t.Fatal(err)
+			}
+		}), "test_handler",
+		otelhttp.WithTracerProvider(provider),
+		otelhttp.WithMeterProvider(meterProvider),
+		otelhttp.WithPropagators(propagation.TraceContext{}),
+		otelhttp.WithDisableTraces(true),
+	)
+
+	r, err := http.NewRequest(http.MethodGet, "http://localhost/", strings.NewReader("foo"))
+	if err != nil {
+		t.Fatal(err)
+	}
+	h.ServeHTTP(rr, r)
+
+	rm := metricdata.ResourceMetrics{}
+	err = reader.Collect(context.Background(), &rm)
+	require.NoError(t, err)
+	require.Len(t, rm.ScopeMetrics, 1)
+	attrs := attribute.NewSet(
+		semconv.NetHostName(r.Host),
+		semconv.HTTPSchemeHTTP,
+		semconv.HTTPFlavorKey.String(fmt.Sprintf("1.%d", r.ProtoMinor)),
+		semconv.HTTPMethod("GET"),
+		attribute.String("test", "attribute"),
+		semconv.HTTPStatusCode(200),
+	)
+	assertScopeMetrics(t, rm.ScopeMetrics[0], attrs)
+
+	if got, expected := rr.Result().StatusCode, http.StatusOK; got != expected {
+		t.Fatalf("got %d, expected %d", got, expected)
+	}
+
+	spans := spanRecorder.Ended()
+	if got, expected := len(spans), 0; got != expected {
+		t.Fatalf("got %d spans, expected %d", got, expected)
+	}
+
+	d, err := io.ReadAll(rr.Result().Body)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if got, expected := string(d), "hello world"; got != expected {
+		t.Fatalf("got %q, expected %q", got, expected)
+	}
+}
+
+func TestHandlerMetricsDisabled(t *testing.T) {
+	rr := httptest.NewRecorder()
+
+	spanRecorder := tracetest.NewSpanRecorder()
+	provider := sdktrace.NewTracerProvider(sdktrace.WithSpanProcessor(spanRecorder))
+
+	reader := metric.NewManualReader()
+	meterProvider := metric.NewMeterProvider(metric.WithReader(reader))
+
+	h := otelhttp.NewHandler(
+		http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+			l, _ := otelhttp.LabelerFromContext(r.Context())
+			l.Add(attribute.String("test", "attribute"))
+
+			if _, err := io.WriteString(w, "hello world"); err != nil {
+				t.Fatal(err)
+			}
+		}), "test_handler",
+		otelhttp.WithTracerProvider(provider),
+		otelhttp.WithMeterProvider(meterProvider),
+		otelhttp.WithPropagators(propagation.TraceContext{}),
+		otelhttp.WithDisableMetrics(true),
+	)
+
+	r, err := http.NewRequest(http.MethodGet, "http://localhost/", strings.NewReader("foo"))
+	if err != nil {
+		t.Fatal(err)
+	}
+	h.ServeHTTP(rr, r)
+
+	rm := metricdata.ResourceMetrics{}
+	err = reader.Collect(context.Background(), &rm)
+	require.NoError(t, err)
+	require.Len(t, rm.ScopeMetrics, 0)
+
+	if got, expected := rr.Result().StatusCode, http.StatusOK; got != expected {
+		t.Fatalf("got %d, expected %d", got, expected)
+	}
+
+	spans := spanRecorder.Ended()
+	if got, expected := len(spans), 1; got != expected {
+		t.Fatalf("got %d spans, expected %d", got, expected)
+	}
+	if !spans[0].SpanContext().IsValid() {
+		t.Fatalf("invalid span created: %#v", spans[0].SpanContext())
+	}
+
+	d, err := io.ReadAll(rr.Result().Body)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if got, expected := string(d), "hello world"; got != expected {
+		t.Fatalf("got %q, expected %q", got, expected)
+	}
+}

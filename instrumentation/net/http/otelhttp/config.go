@@ -44,6 +44,8 @@ type config struct {
 	Filters           []Filter
 	SpanNameFormatter func(string, *http.Request) string
 	ClientTrace       func(context.Context) *httptrace.ClientTrace
+	DisableTraces     bool
+	DisableMetrics    bool
 
 	TracerProvider trace.TracerProvider
 	MeterProvider  metric.MeterProvider
@@ -204,5 +206,19 @@ func WithClientTrace(f func(context.Context) *httptrace.ClientTrace) Option {
 func WithServerName(server string) Option {
 	return optionFunc(func(c *config) {
 		c.ServerName = server
+	})
+}
+
+// WithDisableTraces disables traces processing.
+func WithDisableTraces(disableTraces bool) Option {
+	return optionFunc(func(cfg *config) {
+		cfg.DisableTraces = disableTraces
+	})
+}
+
+// WithDisableMetrics disables metrics processing.
+func WithDisableMetrics(disableMetrics bool) Option {
+	return optionFunc(func(cfg *config) {
+		cfg.DisableMetrics = disableMetrics
 	})
 }

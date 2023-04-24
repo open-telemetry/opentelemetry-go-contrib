@@ -54,6 +54,8 @@ type Handler struct {
 	valueRecorders    map[string]instrument.Float64Histogram
 	publicEndpoint    bool
 	publicEndpointFn  func(*http.Request) bool
+	disableTraces     bool
+	disableMetrics    bool
 }
 
 func defaultHandlerFormatter(operation string, _ *http.Request) string {
@@ -92,6 +94,8 @@ func (h *Handler) configure(c *config) {
 	h.publicEndpoint = c.PublicEndpoint
 	h.publicEndpointFn = c.PublicEndpointFn
 	h.server = c.ServerName
+	h.disableTraces = c.DisableTraces
+	h.disableMetrics = c.DisableMetrics
 }
 
 func handleErr(err error) {
@@ -130,37 +134,41 @@ func (h *Handler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	}
 
 	ctx := h.propagators.Extract(r.Context(), propagation.HeaderCarrier(r.Header))
-	opts := []trace.SpanStartOption{
-		trace.WithAttributes(httpconv.ServerRequest(h.server, r)...),
-	}
-	if h.server != "" {
-		hostAttr := semconv.NetHostName(h.server)
-		opts = append(opts, trace.WithAttributes(hostAttr))
-	}
-	opts = append(opts, h.spanStartOptions...)
-	if h.publicEndpoint || (h.publicEndpointFn != nil && h.publicEndpointFn(r.WithContext(ctx))) {
-		opts = append(opts, trace.WithNewRoot())
-		// Linking incoming span context if any for public endpoint.
-		if s := trace.SpanContextFromContext(ctx); s.IsValid() && s.IsRemote() {
-			opts = append(opts, trace.WithLinks(trace.Link{SpanContext: s}))
+	var span trace.Span
+
+	if !h.disableTraces {
+		opts := []trace.SpanStartOption{
+			trace.WithAttributes(httpconv.ServerRequest(h.server, r)...),
 		}
-	}
-
-	tracer := h.tracer
-
-	if tracer == nil {
-		if span := trace.SpanFromContext(r.Context()); span.SpanContext().IsValid() {
-			tracer = newTracer(span.TracerProvider())
-		} else {
-			tracer = newTracer(otel.GetTracerProvider())
+		if h.server != "" {
+			hostAttr := semconv.NetHostName(h.server)
+			opts = append(opts, trace.WithAttributes(hostAttr))
 		}
-	}
+		opts = append(opts, h.spanStartOptions...)
+		if h.publicEndpoint || (h.publicEndpointFn != nil && h.publicEndpointFn(r.WithContext(ctx))) {
+			opts = append(opts, trace.WithNewRoot())
+			// Linking incoming span context if any for public endpoint.
+			if s := trace.SpanContextFromContext(ctx); s.IsValid() && s.IsRemote() {
+				opts = append(opts, trace.WithLinks(trace.Link{SpanContext: s}))
+			}
+		}
 
-	ctx, span := tracer.Start(ctx, h.spanNameFormatter(h.operation, r), opts...)
-	defer span.End()
+		tracer := h.tracer
+
+		if tracer == nil {
+			if span := trace.SpanFromContext(r.Context()); span.SpanContext().IsValid() {
+				tracer = newTracer(span.TracerProvider())
+			} else {
+				tracer = newTracer(otel.GetTracerProvider())
+			}
+		}
+
+		ctx, span = tracer.Start(ctx, h.spanNameFormatter(h.operation, r), opts...)
+		defer span.End()
+	}
 
 	readRecordFunc := func(int64) {}
-	if h.readEvent {
+	if span != nil && h.readEvent {
 		readRecordFunc = func(n int64) {
 			span.AddEvent("read", trace.WithAttributes(ReadBytesKey.Int64(n)))
 		}
@@ -177,7 +185,7 @@ func (h *Handler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	}
 
 	writeRecordFunc := func(int64) {}
-	if h.writeEvent {
+	if span != nil && h.writeEvent {
 		writeRecordFunc = func(n int64) {
 			span.AddEvent("write", trace.WithAttributes(WroteBytesKey.Int64(n)))
 		}
@@ -212,20 +220,24 @@ func (h *Handler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 
 	h.handler.ServeHTTP(w, r.WithContext(ctx))
 
-	setAfterServeAttributes(span, bw.read, rww.written, rww.statusCode, bw.err, rww.err)
-
-	// Add metrics
-	attributes := append(labeler.Get(), httpconv.ServerRequest(h.server, r)...)
-	if rww.statusCode > 0 {
-		attributes = append(attributes, semconv.HTTPStatusCode(rww.statusCode))
+	if span != nil {
+		setAfterServeAttributes(span, bw.read, rww.written, rww.statusCode, bw.err, rww.err)
 	}
-	h.counters[RequestContentLength].Add(ctx, bw.read, attributes...)
-	h.counters[ResponseContentLength].Add(ctx, rww.written, attributes...)
 
-	// Use floating point division here for higher precision (instead of Millisecond method).
-	elapsedTime := float64(time.Since(requestStartTime)) / float64(time.Millisecond)
+	if !h.disableMetrics {
+		// Add metrics
+		attributes := append(labeler.Get(), httpconv.ServerRequest(h.server, r)...)
+		if rww.statusCode > 0 {
+			attributes = append(attributes, semconv.HTTPStatusCode(rww.statusCode))
+		}
+		h.counters[RequestContentLength].Add(ctx, bw.read, attributes...)
+		h.counters[ResponseContentLength].Add(ctx, rww.written, attributes...)
 
-	h.valueRecorders[ServerLatency].Record(ctx, elapsedTime, attributes...)
+		// Use floating point division here for higher precision (instead of Millisecond method).
+		elapsedTime := float64(time.Since(requestStartTime)) / float64(time.Millisecond)
+
+		h.valueRecorders[ServerLatency].Record(ctx, elapsedTime, attributes...)
+	}
 }
 
 func setAfterServeAttributes(span trace.Span, read, wrote int64, statusCode int, rerr, werr error) {
