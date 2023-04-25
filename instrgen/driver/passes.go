@@ -36,25 +36,16 @@ const (
 // CheckSema - check if AST is valid for
 // provided projectPath.
 func CheckSema(projectPath string) error {
-	prevCwd, _ := os.Getwd()
-	cwd := filepath.Join(prevCwd, projectPath)
-	// Chdir is a workaround as it seems
-	// that loader.Config.Cwd does not behave
-	// as expect
-	err := os.Chdir(cwd)
+	cwd, err := os.Getwd()
 	if err != nil {
 		return err
 	}
-	conf := loader.Config{ParserMode: parser.ParseComments, Cwd: cwd}
+	conf := loader.Config{ParserMode: parser.ParseComments}
 	conf.Build = &build.Default
 	conf.Build.CgoEnabled = false
-	conf.Import(".")
+	conf.Build.Dir = filepath.Join(cwd, projectPath)
+	conf.Import(projectPath)
 	_, err = conf.Load()
-
-	if err != nil {
-		return err
-	}
-	err = os.Chdir(prevCwd)
 	return err
 }
 
@@ -70,8 +61,7 @@ func ExecutePassesDumpIr(analysis *lib.PackageAnalysis) error {
 	if err != nil {
 		return err
 	}
-
-	fmt.Println("CheckSema")
+	fmt.Println("CheckSema...")
 	return CheckSema(analysis.ProjectPath)
 }
 
@@ -87,7 +77,6 @@ func ExecutePasses(analysis *lib.PackageAnalysis) error {
 	if err != nil {
 		return err
 	}
-
-	fmt.Println("CheckSema")
+	fmt.Println("CheckSema...")
 	return CheckSema(analysis.ProjectPath)
 }
