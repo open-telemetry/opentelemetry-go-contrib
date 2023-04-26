@@ -59,8 +59,9 @@ func NewHandler(handler http.Handler, operation string, opts ...Option) http.Han
 	return NewMiddleware(operation, opts...)(handler)
 }
 
-// NewMiddleware returns a tracing and metrics middleware from the given
-// operation name and options.
+// NewMiddleware returns a tracing and metrics instrumentation middleware.
+// The handler returned by the middleware wraps a handler
+// in a span named after the operation and enriches it with metrics.
 func NewMiddleware(operation string, opts ...Option) func(http.Handler) http.Handler {
 	h := middleware{
 		operation: operation,
