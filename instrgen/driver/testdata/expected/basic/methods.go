@@ -12,13 +12,12 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-//nolint:all
+//nolint:all // Linter is executed at the same time as tests which leads to race conditions and failures.
 package main
 
 import (
-	"go.opentelemetry.io/contrib/instrgen/rtlib"
-	__atel_otel "go.opentelemetry.io/otel"
 	__atel_context "context"
+	__atel_otel "go.opentelemetry.io/otel"
 )
 
 type element struct {
