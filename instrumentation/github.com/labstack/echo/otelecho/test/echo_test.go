@@ -137,3 +137,79 @@ func TestError(t *testing.T) {
 	// server errors set the status
 	assert.Equal(t, codes.Error, span.Status().Code)
 }
+
+func TestStatusError(t *testing.T) {
+	for _, tc := range []struct {
+		name       string
+		echoError  string
+		statusCode int
+		spanCode   codes.Code
+		handler    func(c echo.Context) error
+	}{
+		{
+			name:       "StandardError",
+			echoError:  "oh no",
+			statusCode: http.StatusInternalServerError,
+			spanCode:   codes.Error,
+			handler: func(c echo.Context) error {
+				return errors.New("oh no")
+			},
+		},
+		{
+			name:       "EchoHTTPServerError",
+			echoError:  "code=500, message=my error message",
+			statusCode: http.StatusInternalServerError,
+			spanCode:   codes.Error,
+			handler: func(c echo.Context) error {
+				return echo.NewHTTPError(http.StatusInternalServerError, "my error message")
+			},
+		},
+		{
+			name:       "EchoHTTPClientError",
+			echoError:  "code=400, message=my error message",
+			statusCode: http.StatusBadRequest,
+			spanCode:   codes.Unset,
+			handler: func(c echo.Context) error {
+				return echo.NewHTTPError(http.StatusBadRequest, "my error message")
+			},
+		},
+	} {
+		t.Run(tc.name, func(t *testing.T) {
+			sr := tracetest.NewSpanRecorder()
+			provider := trace.NewTracerProvider(trace.WithSpanProcessor(sr))
+
+			router := echo.New()
+			router.Use(otelecho.Middleware("foobar", otelecho.WithTracerProvider(provider)))
+			router.GET("/err", tc.handler)
+			r := httptest.NewRequest("GET", "/err", nil)
+			w := httptest.NewRecorder()
+			router.ServeHTTP(w, r)
+
+			spans := sr.Ended()
+			require.Len(t, spans, 1)
+			span := spans[0]
+			assert.Equal(t, "/err", span.Name())
+			assert.Equal(t, tc.spanCode, span.Status().Code)
+
+			attrs := span.Attributes()
+			assert.Contains(t, attrs, attribute.String("net.host.name", "foobar"))
+			assert.Contains(t, attrs, attribute.String("http.route", "/err"))
+			assert.Contains(t, attrs, attribute.String("http.method", "GET"))
+			assert.Contains(t, attrs, attribute.Int("http.status_code", tc.statusCode))
+			assert.Contains(t, attrs, attribute.String("echo.error", tc.echoError))
+		})
+	}
+}
+
+func TestErrorNotSwallowedByMiddleware(t *testing.T) {
+	e := echo.New()
+	r := httptest.NewRequest(http.MethodGet, "/err", nil)
+	w := httptest.NewRecorder()
+	c := e.NewContext(r, w)
+	h := otelecho.Middleware("foobar")(echo.HandlerFunc(func(c echo.Context) error {
+		return assert.AnError
+	}))
+
+	err := h(c)
+	assert.Equal(t, assert.AnError, err)
+}
