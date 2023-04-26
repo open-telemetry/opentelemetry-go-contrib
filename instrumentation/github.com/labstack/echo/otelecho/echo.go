@@ -102,7 +102,7 @@ func Middleware(service string, opts ...Option) echo.MiddlewareFunc {
 				span.SetAttributes(semconv.HTTPStatusCode(status))
 			}
 
-			return nil
+			return err
 		}
 	}
 }

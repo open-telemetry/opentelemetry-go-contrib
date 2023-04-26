@@ -18,7 +18,6 @@ package otelecho
 
 import (
 	"context"
-	"errors"
 	"net/http"
 	"net/http/httptest"
 	"testing"
@@ -32,23 +31,6 @@ import (
 
 	b3prop "go.opentelemetry.io/contrib/propagators/b3"
 )
-
-func TestErrorOnlyHandledOnce(t *testing.T) {
-	router := echo.New()
-	timesHandlingError := 0
-	router.HTTPErrorHandler = func(e error, c echo.Context) {
-		timesHandlingError++
-	}
-	router.Use(Middleware("test-service"))
-	router.GET("/", func(c echo.Context) error {
-		return errors.New("mock error")
-	})
-	r := httptest.NewRequest(http.MethodGet, "/", nil)
-	w := httptest.NewRecorder()
-	router.ServeHTTP(w, r)
-
-	assert.Equal(t, 1, timesHandlingError)
-}
 
 func TestGetSpanNotInstrumented(t *testing.T) {
 	router := echo.New()
