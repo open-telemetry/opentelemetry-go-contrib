@@ -13,9 +13,14 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 - AWS SDK add `rpc.system` attribute in `go.opentelemetry.io/contrib/instrumentation/github.com/aws/aws-sdk-go-v2/otelaws`. (#3582, #3617)
 - Add the new `go.opentelemetry.io/contrib/instrgen` package to provide auto-generated source code instrumentation. (#3068, #3108)
 
+### Changed
+
+- Update `go.opentelemetry.io/contrib/instrumentation/google.golang.org/grpc/otelgrpc` to align gRPC server span status with the changes in the OpenTelemetry specification. (#3685)
+
 ### Fixed
 
 - The error received by `otelecho` middleware is then passed back to upstream middleware instead of being swallowed. (#3656)
+- Prevent taking from reservoir in AWS XRay Remote Sampler when there is zero capacity in `go.opentelemetry.io/contrib/samplers/aws/xray`. (#3684)
 
 ## [1.16.0-rc.2/0.41.0-rc.2/0.10.0-rc.2] - 2023-03-23
 
