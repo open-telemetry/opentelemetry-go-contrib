@@ -178,6 +178,16 @@ func TestHandlerEmittedAttributes(t *testing.T) {
 				attribute.Int("http.status_code", http.StatusOK),
 			},
 		},
+		{
+			name: "With persisting initial failing status in handler with multiple WriteHeader calls",
+			handler: func(w http.ResponseWriter, r *http.Request) {
+				w.WriteHeader(http.StatusInternalServerError)
+				w.WriteHeader(http.StatusOK)
+			},
+			attributes: []attribute.KeyValue{
+				attribute.Int("http.status_code", http.StatusInternalServerError),
+			},
+		},
 	}
 	for _, tc := range testCases {
 		t.Run(tc.name, func(t *testing.T) {
@@ -197,6 +207,72 @@ func TestHandlerEmittedAttributes(t *testing.T) {
 			for _, a := range tc.attributes {
 				assert.Contains(t, attrs, a)
 			}
+		})
+	}
+}
+
+type respWriteHeaderCounter struct {
+	http.ResponseWriter
+
+	headersWritten []int
+}
+
+func (rw *respWriteHeaderCounter) WriteHeader(statusCode int) {
+	rw.headersWritten = append(rw.headersWritten, statusCode)
+	rw.ResponseWriter.WriteHeader(statusCode)
+}
+
+func TestHandlerPropagateWriteHeaderCalls(t *testing.T) {
+	testCases := []struct {
+		name                 string
+		handler              func(http.ResponseWriter, *http.Request)
+		expectHeadersWritten []int
+	}{
+		{
+			name: "With a success handler",
+			handler: func(w http.ResponseWriter, r *http.Request) {
+				w.WriteHeader(http.StatusOK)
+			},
+			expectHeadersWritten: []int{http.StatusOK},
+		},
+		{
+			name: "With a failing handler",
+			handler: func(w http.ResponseWriter, r *http.Request) {
+				w.WriteHeader(http.StatusBadRequest)
+			},
+			expectHeadersWritten: []int{http.StatusBadRequest},
+		},
+		{
+			name: "With an empty handler",
+			handler: func(w http.ResponseWriter, r *http.Request) {
+			},
+
+			expectHeadersWritten: nil,
+		},
+		{
+			name: "With calling WriteHeader twice",
+			handler: func(w http.ResponseWriter, r *http.Request) {
+				w.WriteHeader(http.StatusInternalServerError)
+				w.WriteHeader(http.StatusOK)
+			},
+			expectHeadersWritten: []int{http.StatusInternalServerError, http.StatusOK},
+		},
+	}
+
+	for _, tc := range testCases {
+		t.Run(tc.name, func(t *testing.T) {
+			sr := tracetest.NewSpanRecorder()
+			provider := sdktrace.NewTracerProvider()
+			provider.RegisterSpanProcessor(sr)
+			h := otelhttp.NewHandler(
+				http.HandlerFunc(tc.handler), "test_handler",
+				otelhttp.WithTracerProvider(provider),
+			)
+
+			recorder := httptest.NewRecorder()
+			rw := &respWriteHeaderCounter{ResponseWriter: recorder}
+			h.ServeHTTP(rw, httptest.NewRequest("GET", "/", nil))
+			require.EqualValues(t, tc.expectHeadersWritten, rw.headersWritten, "should propagate all WriteHeader calls to underlying ResponseWriter")
 		})
 	}
 }
