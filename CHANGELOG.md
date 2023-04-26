@@ -20,16 +20,13 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 ### Fixed
 
 - Prevent taking from reservoir in AWS XRay Remote Sampler when there is zero capacity in `go.opentelemetry.io/contrib/samplers/aws/xray`. (#3684)
+- Fix `otelhttp.Handler` in `go.opentelemetry.io/contrib/instrumentation/net/http/otelhttp` to propagate multiple `WriteHeader` calls while persisting the initial `statusCode`. (#3580)
 
 ## [1.16.0-rc.2/0.41.0-rc.2/0.10.0-rc.2] - 2023-03-23
 
 ### Added
 
 - The `WithPublicEndpoint` and `WithPublicEndpointFn` options in `go.opentelemetry.io/contrib/instrumentation/github.com/emicklei/go-restful/otelrestful`. (#3563)
-
-### Fixed
-
-- Fix `otelhttp.Handler` in `go.opentelemetry.io/contrib/instrumentation/net/http/otelhttp` to propagate multiple `WriteHeader` calls while persisting the initial `statusCode`. (#3580)
 
 ## [1.16.0-rc.1/0.41.0-rc.1/0.9.0-rc.1] - 2023-03-02
 
