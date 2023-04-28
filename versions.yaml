@@ -98,3 +98,5 @@ module-sets:
       - go.opentelemetry.io/contrib/samplers/probability/consistent
 excluded-modules:
   - go.opentelemetry.io/contrib/instrgen
+  - go.opentelemetry.io/contrib/instrgen/driver
+  - go.opentelemetry.io/contrib/instrgen/testdata/interface
