@@ -37,8 +37,9 @@ type config struct {
 // newConfig returns a config with all Options set.
 func newConfig(opts ...Option) config {
 	cfg := config{
-		TracerProvider:         otel.GetTracerProvider(),
-		CommandTransformerFunc: transformCommand,
+		TracerProvider:           otel.GetTracerProvider(),
+		CommandTransformerFunc:   transformCommand,
+		CommandAttributeDisabled: true,
 	}
 	for _, opt := range opts {
 		opt.apply(&cfg)
@@ -73,7 +74,8 @@ func WithTracerProvider(provider trace.TracerProvider) Option {
 }
 
 // WithCommandAttributeDisabled specifies if the MongoDB command is added as an attribute to Spans or not.
-// The MongoDB command will be added as an attribute to Spans by default if this option is not provided.
+// This is disabled by default and the MongoDB command will not be added as an attribute
+// to Spans if this option is not provided.
 func WithCommandAttributeDisabled(disabled bool) Option {
 	return optionFunc(func(cfg *config) {
 		cfg.CommandAttributeDisabled = disabled

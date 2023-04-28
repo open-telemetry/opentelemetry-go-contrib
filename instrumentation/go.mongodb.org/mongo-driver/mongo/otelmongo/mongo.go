@@ -109,7 +109,7 @@ func (m *monitor) Finished(evt *event.CommandFinishedEvent, err error) {
 	span.End()
 }
 
-// TODO sanitize values where possible
+// TODO sanitize values where possible, then reenable `db.statement` span attributes default.
 // TODO limit maximum size.
 func transformCommand(command bson.Raw) string {
 	b, _ := bson.MarshalExtJSON(command, false, false)

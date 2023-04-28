@@ -17,6 +17,6 @@ go.opentelemetry.io/otel/sdk v1.15.0-rc.2 h1:4t4aauPUWLswNEUXAi5s3X94/kg7+NQY+6C
 go.opentelemetry.io/otel/sdk v1.15.0-rc.2/go.mod h1:/dv7lLx8SqyUgUxQeFeUUGvHbl45K4dssbaYjj/ObTQ=
 go.opentelemetry.io/otel/trace v1.15.0-rc.2 h1:LizBnU5zjqWkHUlZu0tC2k7qICXqPCJqoDlWdc07uw8=
 go.opentelemetry.io/otel/trace v1.15.0-rc.2/go.mod h1:JBu+wEp/Ra+YOzZlvPjE6raGRlrUJE/R8aW7Wucsn/o=
-golang.org/x/sys v0.6.0 h1:MVltZSvRTcU2ljQOhs94SXPftV6DCNnZViHeQps87pQ=
-golang.org/x/sys v0.6.0/go.mod h1:oPkhp1MJrh7nUepCBck5+mAzfO9JrbApNNgaTdGDITg=
+golang.org/x/sys v0.7.0 h1:3jlCCIQZPdOYu1h8BkNvLz8Kgwtae2cagcG/VamtZRU=
+golang.org/x/sys v0.7.0/go.mod h1:oPkhp1MJrh7nUepCBck5+mAzfO9JrbApNNgaTdGDITg=
 gopkg.in/yaml.v3 v3.0.1 h1:fxVm/GzAzEWqLHuvctI91KS9hhNmmWOoWu0XTYJS7CA=
