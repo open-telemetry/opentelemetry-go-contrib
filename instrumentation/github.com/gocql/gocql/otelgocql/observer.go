@@ -92,7 +92,6 @@ func (o *OTelQueryObserver) ObserveQuery(ctx context.Context, observedQuery gocq
 				host,
 				internal.CassKeyspace(keyspace),
 				internal.CassStatement(observedQuery.Statement),
-				internal.CassErrMsg(observedQuery.Err.Error()),
 			)
 			inst.queryCount.Add(ctx, 1, metric.WithAttributes(attributes...))
 		}
