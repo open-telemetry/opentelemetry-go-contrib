@@ -19,6 +19,7 @@ import (
 
 	"go.opentelemetry.io/otel"
 	"go.opentelemetry.io/otel/metric"
+	"go.opentelemetry.io/otel/metric/global"
 	"go.opentelemetry.io/otel/trace"
 )
 
@@ -119,7 +120,7 @@ func WithConnectInstrumentation(enabled bool) Option {
 func newConfig(options ...Option) *config {
 	cfg := &config{
 		tracerProvider:    otel.GetTracerProvider(),
-		meterProvider:     otel.GetMeterProvider(),
+		meterProvider:     global.MeterProvider(),
 		instrumentQuery:   true,
 		instrumentBatch:   true,
 		instrumentConnect: true,
