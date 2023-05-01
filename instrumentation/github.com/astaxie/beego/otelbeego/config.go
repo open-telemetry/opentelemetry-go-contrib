@@ -17,6 +17,7 @@ package otelbeego // import "go.opentelemetry.io/contrib/instrumentation/github.
 import (
 	"go.opentelemetry.io/otel"
 	"go.opentelemetry.io/otel/metric"
+	"go.opentelemetry.io/otel/metric/global"
 	"go.opentelemetry.io/otel/propagation"
 	"go.opentelemetry.io/otel/trace"
 )
@@ -98,7 +99,7 @@ func WithSpanNameFormatter(f SpanNameFormatter) Option {
 func newConfig(options ...Option) *config {
 	config := &config{
 		tracerProvider: otel.GetTracerProvider(),
-		meterProvider:  otel.GetMeterProvider(),
+		meterProvider:  global.MeterProvider(),
 		propagators:    otel.GetTextMapPropagator(),
 		filters:        []Filter{},
 		formatter:      defaultSpanNameFormatter,
