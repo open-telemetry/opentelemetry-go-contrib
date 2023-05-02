@@ -276,8 +276,7 @@ func StreamClientInterceptor(opts ...Option) grpc.StreamClientInterceptor {
 
 		name, attr := spanInfo(method, cc.Target())
 		startOpts := append(defaultStartOpts, trace.WithAttributes(attr...))
-		var span trace.Span
-		ctx, span = tracer.Start(
+		ctx, span := tracer.Start(
 			ctx,
 			name,
 			startOpts...,
