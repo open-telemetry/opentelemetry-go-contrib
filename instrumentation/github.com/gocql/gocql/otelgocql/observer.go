@@ -22,6 +22,7 @@ import (
 
 	"go.opentelemetry.io/contrib/instrumentation/github.com/gocql/gocql/otelgocql/internal"
 	"go.opentelemetry.io/otel/attribute"
+	"go.opentelemetry.io/otel/metric"
 	"go.opentelemetry.io/otel/trace"
 )
 
@@ -78,39 +79,28 @@ func (o *OTelQueryObserver) ObserveQuery(ctx context.Context, observedQuery gocq
 		)
 
 		if observedQuery.Err != nil {
+			attributes = includeKeyValues(
+				host,
+				internal.CassKeyspace(keyspace),
+				internal.CassStatement(observedQuery.Statement),
+				internal.CassErrMsg(observedQuery.Err.Error()),
+			)
 			span.SetAttributes(internal.CassErrMsg(observedQuery.Err.Error()))
-			inst.queryCount.Add(
-				ctx,
-				1,
-				includeKeyValues(host,
-					internal.CassKeyspace(keyspace),
-					internal.CassStatement(observedQuery.Statement),
-					internal.CassErrMsg(observedQuery.Err.Error()),
-				)...,
-			)
+			inst.queryCount.Add(ctx, 1, metric.WithAttributes(attributes...))
 		} else {
-			inst.queryCount.Add(
-				ctx,
-				1,
-				includeKeyValues(host,
-					internal.CassKeyspace(keyspace),
-					internal.CassStatement(observedQuery.Statement),
-				)...,
+			attributes = includeKeyValues(
+				host,
+				internal.CassKeyspace(keyspace),
+				internal.CassStatement(observedQuery.Statement),
 			)
+			inst.queryCount.Add(ctx, 1, metric.WithAttributes(attributes...))
 		}
 
 		span.End(trace.WithTimestamp(observedQuery.End))
 
-		inst.queryRows.Record(
-			ctx,
-			int64(observedQuery.Rows),
-			includeKeyValues(host, internal.CassKeyspace(keyspace))...,
-		)
-		inst.latency.Record(
-			ctx,
-			nanoToMilliseconds(observedQuery.Metrics.TotalLatency),
-			includeKeyValues(host, internal.CassKeyspace(keyspace))...,
-		)
+		o := metric.WithAttributes(includeKeyValues(host, internal.CassKeyspace(keyspace))...)
+		inst.queryRows.Record(ctx, int64(observedQuery.Rows), o)
+		inst.latency.Record(ctx, nanoToMilliseconds(observedQuery.Metrics.TotalLatency), o)
 	}
 
 	if o.observer != nil {
@@ -140,30 +130,22 @@ func (o *OTelBatchObserver) ObserveBatch(ctx context.Context, observedBatch gocq
 		)
 
 		if observedBatch.Err != nil {
+			attributes = includeKeyValues(
+				host,
+				internal.CassKeyspace(keyspace),
+				internal.CassErrMsg(observedBatch.Err.Error()),
+			)
 			span.SetAttributes(internal.CassErrMsg(observedBatch.Err.Error()))
-			inst.batchCount.Add(
-				ctx,
-				1,
-				includeKeyValues(host,
-					internal.CassKeyspace(keyspace),
-					internal.CassErrMsg(observedBatch.Err.Error()),
-				)...,
-			)
+			inst.batchCount.Add(ctx, 1, metric.WithAttributes(attributes...))
 		} else {
-			inst.batchCount.Add(
-				ctx,
-				1,
-				includeKeyValues(host, internal.CassKeyspace(keyspace))...,
-			)
+			attributes = includeKeyValues(host, internal.CassKeyspace(keyspace))
+			inst.batchCount.Add(ctx, 1, metric.WithAttributes(attributes...))
 		}
 
 		span.End(trace.WithTimestamp(observedBatch.End))
 
-		inst.latency.Record(
-			ctx,
-			nanoToMilliseconds(observedBatch.Metrics.TotalLatency),
-			includeKeyValues(host, internal.CassKeyspace(keyspace))...,
-		)
+		o := metric.WithAttributes(includeKeyValues(host, internal.CassKeyspace(keyspace))...)
+		inst.latency.Record(ctx, nanoToMilliseconds(observedBatch.Metrics.TotalLatency), o)
 	}
 
 	if o.observer != nil {
@@ -188,18 +170,12 @@ func (o *OTelConnectObserver) ObserveConnect(observedConnect gocql.ObservedConne
 		)
 
 		if observedConnect.Err != nil {
+			attributes = includeKeyValues(host, internal.CassErrMsg(observedConnect.Err.Error()))
 			span.SetAttributes(internal.CassErrMsg(observedConnect.Err.Error()))
-			inst.connectionCount.Add(
-				o.ctx,
-				1,
-				includeKeyValues(host, internal.CassErrMsg(observedConnect.Err.Error()))...,
-			)
+			inst.connectionCount.Add(o.ctx, 1, metric.WithAttributes(attributes...))
 		} else {
-			inst.connectionCount.Add(
-				o.ctx,
-				1,
-				includeKeyValues(host)...,
-			)
+			attributes = includeKeyValues(host)
+			inst.connectionCount.Add(o.ctx, 1, metric.WithAttributes(attributes...))
 		}
 
 		span.End(trace.WithTimestamp(observedConnect.End))
