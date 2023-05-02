@@ -29,6 +29,7 @@ import (
 	"go.opentelemetry.io/otel/sdk/trace"
 	"go.opentelemetry.io/otel/sdk/trace/tracetest"
 	semconv "go.opentelemetry.io/otel/semconv/v1.17.0"
+	oteltrace "go.opentelemetry.io/otel/trace"
 
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
@@ -91,6 +92,7 @@ func TestUnaryClientInterceptor(t *testing.T) {
 	unaryInterceptor := otelgrpc.UnaryClientInterceptor(
 		otelgrpc.WithTracerProvider(tp),
 		otelgrpc.WithMessageEvents(otelgrpc.ReceivedEvents, otelgrpc.SentEvents),
+		otelgrpc.WithSpanOptions(oteltrace.WithAttributes(attribute.Bool("custom", true)))
 	)
 	unaryInterceptorOnlySentEvents := otelgrpc.UnaryClientInterceptor(
 		otelgrpc.WithTracerProvider(tp),
@@ -128,6 +130,7 @@ func TestUnaryClientInterceptor(t *testing.T) {
 				otelgrpc.GRPCStatusCodeKey.Int64(0),
 				semconv.NetPeerName("fake"),
 				semconv.NetPeerPort(8906),
+				attribute.Bool("custom", true),
 			},
 			eventsAttr: []map[attribute.Key]attribute.Value{
 				{
@@ -151,6 +154,7 @@ func TestUnaryClientInterceptor(t *testing.T) {
 				otelgrpc.GRPCStatusCodeKey.Int64(0),
 				semconv.NetPeerName("fake"),
 				semconv.NetPeerPort(8906),
+				attribute.Bool("custom", true),
 			},
 			eventsAttr: []map[attribute.Key]attribute.Value{
 				{
@@ -226,6 +230,7 @@ func TestUnaryClientInterceptor(t *testing.T) {
 				otelgrpc.GRPCStatusCodeKey.Int64(int64(grpc_codes.OK)),
 				semconv.NetPeerName("fake"),
 				semconv.NetPeerPort(8906),
+				attribute.Bool("custom", true),
 			},
 			eventsAttr: []map[attribute.Key]attribute.Value{
 				{
@@ -250,6 +255,7 @@ func TestUnaryClientInterceptor(t *testing.T) {
 				otelgrpc.GRPCStatusCodeKey.Int64(int64(grpc_codes.Internal)),
 				semconv.NetPeerName("fake"),
 				semconv.NetPeerPort(8906),
+				attribute.Bool("custom", true),
 			},
 			eventsAttr: []map[attribute.Key]attribute.Value{
 				{
@@ -272,6 +278,7 @@ func TestUnaryClientInterceptor(t *testing.T) {
 				otelgrpc.GRPCStatusCodeKey.Int64(0),
 				semconv.NetPeerName("fake"),
 				semconv.NetPeerPort(8906),
+				attribute.Bool("custom", true),
 			},
 			eventsAttr: []map[attribute.Key]attribute.Value{
 				{
@@ -295,6 +302,7 @@ func TestUnaryClientInterceptor(t *testing.T) {
 				semconv.RPCMethod("method"),
 				semconv.NetPeerName("fake"),
 				semconv.NetPeerPort(8906),
+				attribute.Bool("custom", true),
 			},
 			eventsAttr: []map[attribute.Key]attribute.Value{
 				{
@@ -389,6 +397,7 @@ func createInterceptedStreamClient(t *testing.T, method string, opts clientStrea
 	tp := trace.NewTracerProvider(trace.WithSpanProcessor(sr))
 	interceptorOpts := []otelgrpc.Option{
 		otelgrpc.WithTracerProvider(tp),
+		otelgrpc.WithSpanOptions(oteltrace.WithAttributes(attribute.Bool("custom", true)))
 	}
 	if len(opts.Events) > 0 {
 		interceptorOpts = append(interceptorOpts, otelgrpc.WithMessageEvents(opts.Events...))
@@ -454,6 +463,7 @@ func TestStreamClientInterceptorOnBIDIStream(t *testing.T) {
 		semconv.RPCMethod("bar"),
 		semconv.NetPeerName("fake"),
 		semconv.NetPeerPort(8906),
+		attribute.Bool("custom", true),
 	}
 	assert.ElementsMatch(t, expectedAttr, span.Attributes())
 
@@ -593,6 +603,7 @@ func TestStreamClientInterceptorOnUnidirectionalClientServerStream(t *testing.T)
 		semconv.RPCMethod("bar"),
 		semconv.NetPeerName("fake"),
 		semconv.NetPeerPort(8906),
+		attribute.Bool("custom", true),
 	}
 	assert.ElementsMatch(t, expectedAttr, span.Attributes())
 
