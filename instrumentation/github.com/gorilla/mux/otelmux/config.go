@@ -26,6 +26,8 @@ type config struct {
 	TracerProvider    oteltrace.TracerProvider
 	Propagators       propagation.TextMapPropagator
 	spanNameFormatter func(string, *http.Request) string
+	PublicEndpoint    bool
+	PublicEndpointFn  func(*http.Request) bool
 }
 
 // Option specifies instrumentation configuration options.
@@ -37,6 +39,26 @@ type optionFunc func(*config)
 
 func (o optionFunc) apply(c *config) {
 	o(c)
+}
+
+// WithPublicEndpoint configures the Handler to link the span with an incoming
+// span context. If this option is not provided, then the association is a child
+// association instead of a link.
+func WithPublicEndpoint() Option {
+	return optionFunc(func(c *config) {
+		c.PublicEndpoint = true
+	})
+}
+
+// WithPublicEndpointFn runs with every request, and allows conditionnally
+// configuring the Handler to link the span with an incoming span context. If
+// this option is not provided or returns false, then the association is a
+// child association instead of a link.
+// Note: WithPublicEndpoint takes precedence over WithPublicEndpointFn.
+func WithPublicEndpointFn(fn func(*http.Request) bool) Option {
+	return optionFunc(func(c *config) {
+		c.PublicEndpointFn = fn
+	})
 }
 
 // WithPropagators specifies propagators to use for extracting

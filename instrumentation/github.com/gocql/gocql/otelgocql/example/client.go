@@ -45,6 +45,7 @@ import (
 	"go.opentelemetry.io/otel"
 	otelprom "go.opentelemetry.io/otel/exporters/prometheus"
 	"go.opentelemetry.io/otel/exporters/zipkin"
+	"go.opentelemetry.io/otel/metric/global"
 	"go.opentelemetry.io/otel/sdk/metric"
 	"go.opentelemetry.io/otel/sdk/metric/aggregation"
 	"go.opentelemetry.io/otel/sdk/trace"
@@ -158,7 +159,7 @@ func initMetrics() error {
 		metric.WithReader(exporter),
 		metric.WithView(vs...),
 	)
-	otel.SetMeterProvider(provider)
+	global.SetMeterProvider(provider)
 
 	http.Handle("/", promhttp.Handler())
 	log.Print("Serving metrics at :2222/")
