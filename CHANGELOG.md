@@ -23,6 +23,10 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 - Upgrade dependencies of OpenTelemetry Go to use the new [`v1.15.1`/`v0.38.1` release](https://github.com/open-telemetry/opentelemetry-go/releases/tag/v1.15.1)
 
 
+### Fixed
+
+- AWS XRay Remote Sampling to preserve previous rule if updated rule property has not changed in `go.opentelemetry.io/contrib/samplers/aws/xray`. (#3619, #3620)
+
 ## [1.16.0/0.41.0/0.10.0] - 2023-04-28
 
 ### Added
