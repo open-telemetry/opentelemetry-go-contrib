@@ -37,6 +37,14 @@ const (
 	ServerLatency         = "http.server.duration"                // Incoming end to end duration, microseconds
 )
 
+// Client HTTP metrics.
+const (
+	ClientRequestCount          = "http.client.request_count"           // Outgoing request count total
+	ClientRequestContentLength  = "http.client.request_content_length"  // Outgoing request bytes total
+	ClientResponseContentLength = "http.client.response_content_length" // Outgoing response bytes total
+	ClientLatency               = "http.client.duration"                // Outgoing end to end duration, microseconds
+)
+
 // Filter is a predicate used to determine whether a given http.request should
 // be traced. A Filter must return true if the request should be traced.
 type Filter func(*http.Request) bool
