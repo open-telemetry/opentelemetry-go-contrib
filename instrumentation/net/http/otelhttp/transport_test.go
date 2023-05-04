@@ -18,6 +18,7 @@ import (
 	"bytes"
 	"context"
 	"errors"
+	"fmt"
 	"io"
 	"net/http"
 	"net/http/httptest"
@@ -31,6 +32,14 @@ import (
 	"go.opentelemetry.io/otel/propagation"
 	"go.opentelemetry.io/otel/trace"
 )
+
+func testDefaultTransportFormatter(_ string, r *http.Request) string {
+	path := r.URL.Path
+	if path == "" {
+		return fmt.Sprintf("HTTP %s", r.Method)
+	}
+	return fmt.Sprintf("HTTP %s %s", r.Method, path)
+}
 
 func TestTransportFormatter(t *testing.T) {
 	var httpMethods = []struct {
@@ -87,11 +96,11 @@ func TestTransportFormatter(t *testing.T) {
 
 	for _, tc := range httpMethods {
 		t.Run(tc.name, func(t *testing.T) {
-			r, err := http.NewRequest(tc.method, "http://localhost/", nil)
+			r, err := http.NewRequest(tc.method, "http://localhost", nil)
 			if err != nil {
 				t.Fatal(err)
 			}
-			formattedName := "HTTP " + r.Method
+			formattedName := testDefaultTransportFormatter("", r)
 
 			if formattedName != tc.expected {
 				t.Fatalf("unexpected name: got %s, expected %s", formattedName, tc.expected)

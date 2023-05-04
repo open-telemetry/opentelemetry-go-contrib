@@ -15,6 +15,7 @@
 package test
 
 import (
+	"fmt"
 	"io"
 	"net/http"
 	"net/http/httptest"
@@ -26,6 +27,14 @@ import (
 	"go.opentelemetry.io/otel/sdk/trace"
 	"go.opentelemetry.io/otel/sdk/trace/tracetest"
 )
+
+func testDefaultTransportFormatter(_ string, r *http.Request) string {
+	path := r.URL.Path
+	if path == "" {
+		return fmt.Sprintf("HTTP %s", r.Method)
+	}
+	return fmt.Sprintf("HTTP %s %s", r.Method, path)
+}
 
 func TestBasicFilter(t *testing.T) {
 	rr := httptest.NewRecorder()
@@ -85,9 +94,7 @@ func TestSpanNameFormatter(t *testing.T) {
 		},
 		{
 			name: "default transport formatter",
-			formatter: func(s string, r *http.Request) string {
-				return "HTTP " + r.Method + " " + r.URL.Path
-			},
+			formatter: testDefaultTransportFormatter,
 			expected: "HTTP GET /hello",
 		},
 		{
