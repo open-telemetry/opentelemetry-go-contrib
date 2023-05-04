@@ -15,7 +15,6 @@
 package test
 
 import (
-	"fmt"
 	"io"
 	"net/http"
 	"net/http/httptest"
@@ -31,9 +30,9 @@ import (
 func testDefaultTransportFormatter(_ string, r *http.Request) string {
 	path := r.URL.Path
 	if path == "" {
-		return fmt.Sprintf("HTTP %s", r.Method)
+		return r.Method
 	}
-	return fmt.Sprintf("HTTP %s %s", r.Method, path)
+	return r.Method + " " + path
 }
 
 func TestBasicFilter(t *testing.T) {
@@ -95,7 +94,7 @@ func TestSpanNameFormatter(t *testing.T) {
 		{
 			name: "default transport formatter",
 			formatter: testDefaultTransportFormatter,
-			expected: "HTTP GET /hello",
+			expected: "GET /hello",
 		},
 		{
 			name: "custom formatter",

@@ -73,7 +73,7 @@ func TestTransportUsesFormatter(t *testing.T) {
 
 	spans := spanRecorder.Ended()
 	spanName := spans[0].Name()
-	expectedName := "HTTP GET"
+	expectedName := "GET"
 	if spanName != expectedName {
 		t.Fatalf("unexpected name: got %s, expected %s", spanName, expectedName)
 	}
@@ -171,7 +171,7 @@ func TestTransportRequestWithTraceContext(t *testing.T) {
 	require.Len(t, spans, 2)
 
 	assert.Equal(t, "test_span", spans[0].Name())
-	assert.Equal(t, "HTTP GET", spans[1].Name())
+	assert.Equal(t, "GET", spans[1].Name())
 	assert.NotEmpty(t, spans[1].Parent().SpanID())
 	assert.Equal(t, spans[0].SpanContext().SpanID(), spans[1].Parent().SpanID())
 }
@@ -232,7 +232,7 @@ func TestWithHTTPTrace(t *testing.T) {
 
 	assert.Equal(t, "httptrace.GetConn", spans[0].Name())
 	assert.Equal(t, "test_span", spans[1].Name())
-	assert.Equal(t, "HTTP GET", spans[2].Name())
+	assert.Equal(t, "GET", spans[2].Name())
 	assert.NotEmpty(t, spans[0].Parent().SpanID())
 	assert.NotEmpty(t, spans[2].Parent().SpanID())
 	assert.Equal(t, spans[2].SpanContext().SpanID(), spans[0].Parent().SpanID())

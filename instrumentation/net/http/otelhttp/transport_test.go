@@ -18,7 +18,6 @@ import (
 	"bytes"
 	"context"
 	"errors"
-	"fmt"
 	"io"
 	"net/http"
 	"net/http/httptest"
@@ -36,9 +35,9 @@ import (
 func testDefaultTransportFormatter(_ string, r *http.Request) string {
 	path := r.URL.Path
 	if path == "" {
-		return fmt.Sprintf("HTTP %s", r.Method)
+		return r.Method
 	}
-	return fmt.Sprintf("HTTP %s %s", r.Method, path)
+	return r.Method + " " + path
 }
 
 func TestTransportFormatter(t *testing.T) {
@@ -50,47 +49,47 @@ func TestTransportFormatter(t *testing.T) {
 		{
 			"GET method",
 			http.MethodGet,
-			"HTTP GET",
+			"GET",
 		},
 		{
 			"HEAD method",
 			http.MethodHead,
-			"HTTP HEAD",
+			"HEAD",
 		},
 		{
 			"POST method",
 			http.MethodPost,
-			"HTTP POST",
+			"POST",
 		},
 		{
 			"PUT method",
 			http.MethodPut,
-			"HTTP PUT",
+			"PUT",
 		},
 		{
 			"PATCH method",
 			http.MethodPatch,
-			"HTTP PATCH",
+			"PATCH",
 		},
 		{
 			"DELETE method",
 			http.MethodDelete,
-			"HTTP DELETE",
+			"DELETE",
 		},
 		{
 			"CONNECT method",
 			http.MethodConnect,
-			"HTTP CONNECT",
+			"CONNECT",
 		},
 		{
 			"OPTIONS method",
 			http.MethodOptions,
-			"HTTP OPTIONS",
+			"OPTIONS",
 		},
 		{
 			"TRACE method",
 			http.MethodTrace,
-			"HTTP TRACE",
+			"TRACE",
 		},
 	}
 

@@ -80,10 +80,10 @@ func TestConvenienceWrappers(t *testing.T) {
 
 	spans := sr.Ended()
 	require.Equal(t, 4, len(spans))
-	assert.Equal(t, "HTTP GET", spans[0].Name())
-	assert.Equal(t, "HTTP HEAD", spans[1].Name())
-	assert.Equal(t, "HTTP POST", spans[2].Name())
-	assert.Equal(t, "HTTP POST", spans[3].Name())
+	assert.Equal(t, "GET", spans[0].Name())
+	assert.Equal(t, "HEAD", spans[1].Name())
+	assert.Equal(t, "POST", spans[2].Name())
+	assert.Equal(t, "POST", spans[3].Name())
 }
 
 func TestClientWithTraceContext(t *testing.T) {
@@ -112,7 +112,7 @@ func TestClientWithTraceContext(t *testing.T) {
 
 	spans := sr.Ended()
 	require.Equal(t, 2, len(spans))
-	assert.Equal(t, "HTTP GET", spans[0].Name())
+	assert.Equal(t, "GET", spans[0].Name())
 	assert.Equal(t, "http requests", spans[1].Name())
 	assert.NotEmpty(t, spans[0].Parent().SpanID())
 	assert.Equal(t, spans[1].SpanContext().SpanID(), spans[0].Parent().SpanID())

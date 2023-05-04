@@ -16,7 +16,6 @@ package otelhttp // import "go.opentelemetry.io/contrib/instrumentation/net/http
 
 import (
 	"context"
-	"fmt"
 	"io"
 	"net/http"
 	"net/http/httptrace"
@@ -80,9 +79,9 @@ func (t *Transport) applyConfig(c *config) {
 func defaultTransportFormatter(_ string, r *http.Request) string {
 	path := r.URL.Path
 	if path == "" {
-		return fmt.Sprintf("HTTP %s", r.Method)
+		return r.Method
 	}
-	return fmt.Sprintf("HTTP %s %s", r.Method, path)
+	return r.Method + " " + path
 }
 
 // RoundTrip creates a Span and propagates its context via the provided request's headers
