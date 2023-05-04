@@ -1,4 +1,4 @@
-module go.opentelemetry.io/contrib/instrgen/instrgen
+module go.opentelemetry.io/contrib/instrgen/driver
 
 go 1.19
 

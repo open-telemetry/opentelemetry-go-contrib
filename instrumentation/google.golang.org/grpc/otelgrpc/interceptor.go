@@ -33,6 +33,7 @@ import (
 	"go.opentelemetry.io/contrib/instrumentation/google.golang.org/grpc/otelgrpc/internal"
 	"go.opentelemetry.io/otel/attribute"
 	"go.opentelemetry.io/otel/codes"
+	"go.opentelemetry.io/otel/metric"
 	semconv "go.opentelemetry.io/otel/semconv/v1.17.0"
 	"go.opentelemetry.io/otel/trace"
 )
@@ -336,7 +337,8 @@ func UnaryServerInterceptor(opts ...Option) grpc.UnaryServerInterceptor {
 		defer func(t time.Time) {
 			elapsedTime := time.Since(t) / time.Millisecond
 			attr = append(attr, semconv.RPCGRPCStatusCodeKey.Int64(int64(statusCode)))
-			cfg.rpcServerDuration.Record(ctx, int64(elapsedTime), attr...)
+			o := metric.WithAttributes(attr...)
+			cfg.rpcServerDuration.Record(ctx, int64(elapsedTime), o)
 		}(time.Now())
 
 		resp, err := handler(ctx, req)
