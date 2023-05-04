@@ -20,6 +20,7 @@ import (
 	"fmt"
 	"math"
 	"net/url"
+	"reflect"
 	"sort"
 	"strings"
 	"sync"
@@ -183,7 +184,22 @@ func (m *Manifest) updateRules(rules *getSamplingRulesOutput) {
 	// Re-sort to fix matching priorities.
 	tempManifest.sort()
 
+	var currentRuleMap = make(map[string]Rule)
+
 	m.mu.Lock()
+	for _, rule := range m.Rules {
+		currentRuleMap[rule.ruleProperties.RuleName] = rule
+	}
+
+	// Preserve entire Rule if newRule.ruleProperties == curRule.ruleProperties
+	for i, newRule := range tempManifest.Rules {
+		if curRule, ok := currentRuleMap[newRule.ruleProperties.RuleName]; ok {
+			if reflect.DeepEqual(newRule.ruleProperties, curRule.ruleProperties) {
+				tempManifest.Rules[i] = curRule
+			}
+		}
+	}
+
 	m.Rules = tempManifest.Rules
 	m.refreshedAt = m.clock.now()
 	m.mu.Unlock()
