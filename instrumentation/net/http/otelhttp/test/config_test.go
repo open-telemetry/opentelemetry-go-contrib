@@ -85,10 +85,10 @@ func TestSpanNameFormatter(t *testing.T) {
 		},
 		{
 			name: "default transport formatter",
-			formatter: func(_ string, r *http.Request) string {
-				return "HTTP " + r.Method
+			formatter: func(s string, r *http.Request) string {
+				return "HTTP " + r.Method + " " + r.URL.Path
 			},
-			expected: "HTTP GET",
+			expected: "HTTP GET /hello",
 		},
 		{
 			name: "custom formatter",
