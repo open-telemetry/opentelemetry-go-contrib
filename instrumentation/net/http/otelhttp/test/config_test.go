@@ -92,9 +92,9 @@ func TestSpanNameFormatter(t *testing.T) {
 			expected:  "test_operation",
 		},
 		{
-			name: "default transport formatter",
+			name:      "default transport formatter",
 			formatter: testDefaultTransportFormatter,
-			expected: "GET /hello",
+			expected:  "GET /hello",
 		},
 		{
 			name: "custom formatter",
