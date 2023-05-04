@@ -4,7 +4,7 @@ go 1.18
 
 require (
 	github.com/gorilla/mux v1.8.0
-	go.opentelemetry.io/contrib/instrumentation/github.com/go-kit/kit/otelkit v0.41.1
+	go.opentelemetry.io/contrib/instrumentation/github.com/go-kit/kit/otelkit v0.42.0-rc.1
 	go.opentelemetry.io/otel v1.16.0-rc.1
 	go.opentelemetry.io/otel/exporters/stdout/stdouttrace v1.16.0-rc.1
 	go.opentelemetry.io/otel/sdk v1.16.0-rc.1
