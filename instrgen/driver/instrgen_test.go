@@ -95,8 +95,7 @@ func TestInstrumentation(t *testing.T) {
 					require.NoError(t, err1)
 					f2, err2 := os.ReadFile(expectedFile)
 					require.NoError(t, err2)
-					if !assert.True(t, bytes.Equal(f1, f2)) {
-						fmt.Println(file)
+					if !assert.True(t, bytes.Equal(f1, f2), file) {
 						failures = append(failures, file)
 					}
 					numOfComparisons = numOfComparisons + 1
