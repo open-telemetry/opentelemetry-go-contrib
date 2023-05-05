@@ -32,14 +32,6 @@ import (
 	"go.opentelemetry.io/otel/trace"
 )
 
-func testDefaultTransportFormatter(_ string, r *http.Request) string {
-	path := r.URL.Path
-	if path == "" {
-		return r.Method
-	}
-	return r.Method + " " + path
-}
-
 func TestTransportFormatter(t *testing.T) {
 	var httpMethods = []struct {
 		name     string
@@ -99,7 +91,7 @@ func TestTransportFormatter(t *testing.T) {
 			if err != nil {
 				t.Fatal(err)
 			}
-			formattedName := testDefaultTransportFormatter("", r)
+			formattedName := defaultTransportFormatter("", r)
 
 			if formattedName != tc.expected {
 				t.Fatalf("unexpected name: got %s, expected %s", formattedName, tc.expected)
