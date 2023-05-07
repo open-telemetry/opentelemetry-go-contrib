@@ -10,8 +10,8 @@ github.com/aws/aws-sdk-go-v2/service/internal/accept-encoding v1.9.11 h1:y2+VQzC
 github.com/aws/aws-sdk-go-v2/service/internal/accept-encoding v1.9.11/go.mod h1:iV4q2hsqtNECrfmlXyord9u4zyuFEJX9eLgLpSPzWA8=
 github.com/aws/aws-sdk-go-v2/service/internal/endpoint-discovery v1.7.27 h1:QmyPCRZNMR1pFbiOi9kBZWZuKrKB9LD4cxltxQk4tNE=
 github.com/aws/aws-sdk-go-v2/service/internal/endpoint-discovery v1.7.27/go.mod h1:DfuVY36ixXnsG+uTqnoLWunXAKJ4qjccoFrXUPpj+hs=
-github.com/aws/aws-sdk-go-v2/service/route53 v1.28.0 h1:oB+f+T9SZtP1XSDiMlKJEarjo4bgi1/rWRFyNPXo95s=
-github.com/aws/aws-sdk-go-v2/service/route53 v1.28.0/go.mod h1:9SEpwqaALzp34eCT6w5PTh4SDDT84wxfMRx9VJSJPsk=
+github.com/aws/aws-sdk-go-v2/service/route53 v1.28.1 h1:8e1fgdyer5IqBPtiWNsVLY/XFucmNTtYMqADyCFXTgQ=
+github.com/aws/aws-sdk-go-v2/service/route53 v1.28.1/go.mod h1:9SEpwqaALzp34eCT6w5PTh4SDDT84wxfMRx9VJSJPsk=
 github.com/aws/aws-sdk-go-v2/service/sqs v1.20.9 h1:fc/wDZYzYqTtWqOWybwyelGLayiNk6F1b+KEnxUICaY=
 github.com/aws/aws-sdk-go-v2/service/sqs v1.20.9/go.mod h1:ujUjm+PrcKUeIiKu2PT7MWjcyY0D6YZRZF3fSswiO+0=
 github.com/aws/smithy-go v1.13.5 h1:hgz0X/DX0dGqTYpGALqXJoRKRj5oQ7150i5FdTePzO8=
