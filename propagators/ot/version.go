@@ -22,5 +22,5 @@ func Version() string {
 
 // SemVersion is the semantic version to be supplied to tracer/meter creation.
 func SemVersion() string {
-	return "semver:" + Version()
+	return Version()
 }
