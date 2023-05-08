@@ -11,6 +11,7 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 ### Added
 
 - Add the new `go.opentelemetry.io/contrib/instrgen` package to provide auto-generated source code instrumentation. (#3068, #3108)
+- Remove `semver:` prefix from instrumentation version (#3681)
 
 ## [1.16.1/0.41.1/0.10.1] - 2023-05-02
 
