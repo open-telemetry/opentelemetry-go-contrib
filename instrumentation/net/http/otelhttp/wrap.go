@@ -18,7 +18,7 @@ import (
 	"context"
 	"io"
 	"net/http"
-	"sync"
+	"sync/atomic"
 
 	"go.opentelemetry.io/otel/propagation"
 )
@@ -31,18 +31,14 @@ type bodyWrapper struct {
 	io.ReadCloser
 	record func(n int64) // must not be nil
 
-	mu   sync.Mutex
-	read int64
+	read atomic.Int64
 	err  error
 }
 
 func (w *bodyWrapper) Read(b []byte) (int, error) {
-	w.mu.Lock()
-	defer w.mu.Unlock()
-
 	n, err := w.ReadCloser.Read(b)
 	n1 := int64(n)
-	w.read += n1
+	w.read.Add(1)
 	w.err = err
 	w.record(n1)
 	return n, err
@@ -50,13 +46,6 @@ func (w *bodyWrapper) Read(b []byte) (int, error) {
 
 func (w *bodyWrapper) Close() error {
 	return w.ReadCloser.Close()
-}
-
-func (w *bodyWrapper) readValue() int64 {
-	w.mu.Lock()
-	defer w.mu.Unlock()
-
-	return w.read
 }
 
 var _ http.ResponseWriter = &respWriterWrapper{}
