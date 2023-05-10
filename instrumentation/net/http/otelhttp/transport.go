@@ -187,9 +187,7 @@ func (t *Transport) RoundTrip(r *http.Request) (*http.Response, error) {
 		attributes = append(attributes, t.getRequestAttributes(r)...)
 	}
 	if err == nil {
-		if res.StatusCode > 0 {
-			attributes = append(attributes, semconv.HTTPStatusCode(res.StatusCode))
-		}
+		attributes = append(attributes, httpconv.ClientResponse(res)...)
 		if t.getResponseAttributes != nil {
 			attributes = append(attributes, t.getResponseAttributes(res)...)
 		}

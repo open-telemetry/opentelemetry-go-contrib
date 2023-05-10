@@ -359,6 +359,7 @@ func TestTransportMetrics(t *testing.T) {
 		semconv.HTTPURL(ts.URL),
 		semconv.HTTPFlavorKey.String(fmt.Sprintf("1.%d", r.ProtoMinor)),
 		semconv.HTTPMethod("GET"),
+		semconv.HTTPResponseContentLength(13),
 		attribute.String("test_req", "attribute_req"),
 		attribute.String("test_resp", "attribute_resp"),
 		semconv.HTTPStatusCode(200),
