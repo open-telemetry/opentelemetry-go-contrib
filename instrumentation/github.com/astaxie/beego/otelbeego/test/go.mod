@@ -45,3 +45,5 @@ replace (
 	go.opentelemetry.io/contrib/instrumentation/net/http/otelhttp => ../../../../../net/http/otelhttp
 	go.opentelemetry.io/contrib/propagators/b3 => ../../../../../../propagators/b3
 )
+
+exclude github.com/ugorji/go v0.0.0-20171122102828-84cb69a8af83

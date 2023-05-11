@@ -38,3 +38,5 @@ require (
 	gopkg.in/yaml.v2 v2.4.0 // indirect
 	gopkg.in/yaml.v3 v3.0.1 // indirect
 )
+
+exclude github.com/ugorji/go v0.0.0-20171122102828-84cb69a8af83
