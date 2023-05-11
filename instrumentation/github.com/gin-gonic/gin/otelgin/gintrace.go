@@ -49,7 +49,7 @@ func Middleware(service string, opts ...Option) gin.HandlerFunc {
 	}
 	tracer := cfg.TracerProvider.Tracer(
 		tracerName,
-		oteltrace.WithInstrumentationVersion(SemVersion()),
+		oteltrace.WithInstrumentationVersion(Version()),
 	)
 	if cfg.Propagators == nil {
 		cfg.Propagators = otel.GetTextMapPropagator()
@@ -118,7 +118,7 @@ func HTML(c *gin.Context, code int, name string, obj interface{}) {
 	if !ok {
 		tracer = otel.GetTracerProvider().Tracer(
 			tracerName,
-			oteltrace.WithInstrumentationVersion(SemVersion()),
+			oteltrace.WithInstrumentationVersion(Version()),
 		)
 	}
 	savedContext := c.Request.Context()

@@ -65,7 +65,7 @@ func newConfig(opts []Option) *config {
 
 	c.meter = c.MeterProvider.Meter(
 		instrumentationName,
-		metric.WithInstrumentationVersion(SemVersion()),
+		metric.WithInstrumentationVersion(Version()),
 		metric.WithSchemaURL(semconv.SchemaURL),
 	)
 	var err error
