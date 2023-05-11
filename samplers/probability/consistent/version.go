@@ -23,7 +23,7 @@ func Version() string {
 
 // SemVersion is the semantic version to be supplied to tracer/meter creation.
 //
-// Deprecated: SemVersion() does not return the version with the `sem:` prefix.
+// Deprecated: SemVersion() returns the version without the `sem:` prefix.
 // Please use Version() instead.
 func SemVersion() string {
 	return Version()

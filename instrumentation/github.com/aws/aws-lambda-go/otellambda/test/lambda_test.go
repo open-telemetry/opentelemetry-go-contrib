@@ -153,7 +153,7 @@ var (
 			attribute.String("faas.version", "$LATEST"),
 			attribute.String("faas.instance", "2023/01/01/[$LATEST]5d1edb9e525d486696cf01a3503487bc"),
 			attribute.Int("faas.max_memory", 128)),
-		InstrumentationLibrary: instrumentation.Library{Name: "go.opentelemetry.io/contrib/instrumentation/github.com/aws/aws-lambda-go/otellambda", Version: otellambda.SemVersion()},
+		InstrumentationLibrary: instrumentation.Library{Name: "go.opentelemetry.io/contrib/instrumentation/github.com/aws/aws-lambda-go/otellambda", Version: otellambda.Version()},
 	}
 )
 
@@ -343,7 +343,7 @@ var (
 			attribute.String("faas.version", "$LATEST"),
 			attribute.String("faas.instance", "2023/01/01/[$LATEST]5d1edb9e525d486696cf01a3503487bc"),
 			attribute.Int("faas.max_memory", 128)),
-		InstrumentationLibrary: instrumentation.Library{Name: "go.opentelemetry.io/contrib/instrumentation/github.com/aws/aws-lambda-go/otellambda", Version: otellambda.SemVersion()},
+		InstrumentationLibrary: instrumentation.Library{Name: "go.opentelemetry.io/contrib/instrumentation/github.com/aws/aws-lambda-go/otellambda", Version: otellambda.Version()},
 	}
 )
 
