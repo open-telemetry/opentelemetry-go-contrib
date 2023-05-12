@@ -84,12 +84,16 @@ func NewTracingState() TracingState {
 		_ = err
 		secureOption := otlptracegrpc.WithTLSCredentials(credentials.NewClientTLSFromCert(nil, ""))
 		secureOption = otlptracegrpc.WithInsecure()
-
+		exporterEndpoint := os.Getenv("OTEL_EXPORTER_OTLP_ENDPOINT")
+		// fallback to localhost
+		if exporterEndpoint == "" {
+			exporterEndpoint = "localhost:4317"
+		}
 		traceExporter, err := otlptrace.New(
 			context.Background(),
 			otlptracegrpc.NewClient(
 				secureOption,
-				otlptracegrpc.WithEndpoint("localhost:4317"),
+				otlptracegrpc.WithEndpoint(exporterEndpoint),
 			),
 		)
 		bsp := trace.NewBatchSpanProcessor(traceExporter)
