@@ -172,7 +172,7 @@ func NewClientTrace(ctx context.Context, opts ...ClientTraceOption) *httptrace.C
 
 	ct.tr = ct.tracerProvider.Tracer(
 		"go.opentelemetry.io/otel/instrumentation/httptrace",
-		trace.WithInstrumentationVersion(SemVersion()),
+		trace.WithInstrumentationVersion(Version()),
 	)
 
 	return &httptrace.ClientTrace{

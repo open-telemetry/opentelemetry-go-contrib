@@ -78,7 +78,7 @@ func newConfig(opts ...Option) *config {
 
 	c.Meter = c.MeterProvider.Meter(
 		instrumentationName,
-		metric.WithInstrumentationVersion(SemVersion()),
+		metric.WithInstrumentationVersion(Version()),
 	)
 
 	return c
