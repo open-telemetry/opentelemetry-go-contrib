@@ -34,7 +34,7 @@ func Middleware(service string, opts ...Option) macaron.Handler {
 	cfg := newConfig(opts)
 	tracer := cfg.TracerProvider.Tracer(
 		instrumentationName,
-		oteltrace.WithInstrumentationVersion(SemVersion()),
+		oteltrace.WithInstrumentationVersion(Version()),
 	)
 	return func(res http.ResponseWriter, req *http.Request, c *macaron.Context) {
 		savedCtx := c.Req.Request.Context()

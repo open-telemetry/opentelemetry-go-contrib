@@ -45,7 +45,7 @@ func Middleware(service string, opts ...Option) echo.MiddlewareFunc {
 	}
 	tracer := cfg.TracerProvider.Tracer(
 		tracerName,
-		oteltrace.WithInstrumentationVersion(SemVersion()),
+		oteltrace.WithInstrumentationVersion(Version()),
 	)
 	if cfg.Propagators == nil {
 		cfg.Propagators = otel.GetTextMapPropagator()

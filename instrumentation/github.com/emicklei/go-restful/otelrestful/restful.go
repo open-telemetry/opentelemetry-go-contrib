@@ -41,7 +41,7 @@ func OTelFilter(service string, opts ...Option) restful.FilterFunction {
 	}
 	tracer := cfg.TracerProvider.Tracer(
 		tracerName,
-		oteltrace.WithInstrumentationVersion(SemVersion()),
+		oteltrace.WithInstrumentationVersion(Version()),
 	)
 	if cfg.Propagators == nil {
 		cfg.Propagators = otel.GetTextMapPropagator()
