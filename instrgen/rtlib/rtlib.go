@@ -18,11 +18,14 @@ package rtlib // import "go.opentelemetry.io/contrib/instrgen/rtlib"
 
 import (
 	"context"
+	"go.opentelemetry.io/otel/exporters/otlp/otlptrace"
+	"go.opentelemetry.io/otel/exporters/otlp/otlptrace/otlptracegrpc"
 	"go.opentelemetry.io/otel/exporters/stdout/stdouttrace"
 	"go.opentelemetry.io/otel/exporters/zipkin"
 	"go.opentelemetry.io/otel/sdk/resource"
 	trace "go.opentelemetry.io/otel/sdk/trace"
 	semconv "go.opentelemetry.io/otel/semconv/v1.17.0"
+	"google.golang.org/grpc/credentials"
 	"io"
 	"log"
 	"os"
@@ -71,6 +74,31 @@ func NewTracingState() TracingState {
 		)
 		break
 	case "otlp":
+		ctx := context.Background()
+		res, err := resource.New(ctx,
+			resource.WithAttributes(
+				semconv.ServiceNameKey.String(serviceName),
+				semconv.TelemetrySDKLanguageGo,
+			),
+		)
+		_ = err
+		secureOption := otlptracegrpc.WithTLSCredentials(credentials.NewClientTLSFromCert(nil, ""))
+		secureOption = otlptracegrpc.WithInsecure()
+
+		traceExporter, err := otlptrace.New(
+			context.Background(),
+			otlptracegrpc.NewClient(
+				secureOption,
+				otlptracegrpc.WithEndpoint("localhost:4317"),
+			),
+		)
+		bsp := trace.NewBatchSpanProcessor(traceExporter)
+		tracingState.Tp = trace.NewTracerProvider(
+			trace.WithSampler(trace.AlwaysSample()),
+			trace.WithResource(res),
+			trace.WithSpanProcessor(bsp),
+		)
+
 		break
 	default:
 		// fallback to file exporting
