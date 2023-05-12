@@ -15,6 +15,7 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 ### Changed
 
 - Remove `semver:` prefix from instrumentation version. (#3681, #3798)
+- Add descriptions, RequestCount to otelhttp instrumentation
 
 ### Deprecated
 
