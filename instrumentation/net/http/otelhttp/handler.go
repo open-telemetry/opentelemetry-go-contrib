@@ -112,6 +112,12 @@ func (h *Handler) createMeasures() {
 	serverLatencyMeasure, err := h.meter.Float64Histogram(ServerLatency)
 	handleErr(err)
 
+	requestCounter, err := h.meter.Int64Counter(RequestCount,
+		metric.WithDescription("Count of http requests"),
+	)
+	handleErr(err)
+
+	h.counters[RequestCount] = requestCounter
 	h.counters[RequestContentLength] = requestBytesCounter
 	h.counters[ResponseContentLength] = responseBytesCounter
 	h.valueRecorders[ServerLatency] = serverLatencyMeasure
@@ -219,6 +225,7 @@ func (h *Handler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		attributes = append(attributes, semconv.HTTPStatusCode(rww.statusCode))
 	}
 	o := metric.WithAttributes(attributes...)
+	h.counters[RequestCount].Add(ctx, 1, o)
 	h.counters[RequestContentLength].Add(ctx, bw.read, o)
 	h.counters[ResponseContentLength].Add(ctx, rww.written, o)
 

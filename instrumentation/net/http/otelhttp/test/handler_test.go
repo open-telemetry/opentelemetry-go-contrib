@@ -47,7 +47,7 @@ func assertScopeMetrics(t *testing.T, sm metricdata.ScopeMetrics, attrs attribut
 		Version: otelhttp.Version(),
 	}, sm.Scope)
 
-	require.Len(t, sm.Metrics, 3)
+	require.Len(t, sm.Metrics, 4)
 
 	want := metricdata.Metrics{
 		Name: "http.server.request_content_length",
@@ -80,6 +80,17 @@ func assertScopeMetrics(t *testing.T, sm metricdata.ScopeMetrics, attrs attribut
 	assert.Equal(t, attrs, dPt.Attributes, "attributes")
 	assert.Equal(t, uint64(1), dPt.Count, "count")
 	assert.Equal(t, []float64{0, 5, 10, 25, 50, 75, 100, 250, 500, 750, 1000, 2500, 5000, 7500, 10000}, dPt.Bounds, "bounds")
+
+	want = metricdata.Metrics{
+		Name:        "http.server.request_count",
+		Description: "Count of http requests",
+		Data: metricdata.Sum[int64]{
+			DataPoints:  []metricdata.DataPoint[int64]{{Attributes: attrs, Value: 1}},
+			Temporality: metricdata.CumulativeTemporality,
+			IsMonotonic: true,
+		},
+	}
+	metricdatatest.AssertEqual(t, want, sm.Metrics[3], metricdatatest.IgnoreTimestamp())
 }
 
 func TestHandlerBasics(t *testing.T) {
