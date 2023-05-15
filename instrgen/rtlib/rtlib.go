@@ -20,12 +20,12 @@ import (
 	"context"
 	"go.opentelemetry.io/otel/exporters/otlp/otlptrace"
 	"go.opentelemetry.io/otel/exporters/otlp/otlptrace/otlptracegrpc"
+	"go.opentelemetry.io/otel/exporters/otlp/otlptrace/otlptracehttp"
 	"go.opentelemetry.io/otel/exporters/stdout/stdouttrace"
 	"go.opentelemetry.io/otel/exporters/zipkin"
 	"go.opentelemetry.io/otel/sdk/resource"
 	trace "go.opentelemetry.io/otel/sdk/trace"
 	semconv "go.opentelemetry.io/otel/semconv/v1.17.0"
-	"google.golang.org/grpc/credentials"
 	"io"
 	"log"
 	"os"
@@ -82,19 +82,29 @@ func NewTracingState() TracingState {
 			),
 		)
 		_ = err
-		secureOption := otlptracegrpc.WithTLSCredentials(credentials.NewClientTLSFromCert(nil, ""))
-		secureOption = otlptracegrpc.WithInsecure()
 		exporterEndpoint := os.Getenv("OTEL_EXPORTER_OTLP_ENDPOINT")
 		// fallback to localhost
 		if exporterEndpoint == "" {
 			exporterEndpoint = "localhost:4317"
 		}
+
+		var client otlptrace.Client
+		protocol := os.Getenv("OTEL_EXPORTER_OTLP_PROTOCOL")
+
+		if protocol == "http/protobuf" {
+			client = otlptracehttp.NewClient(
+				otlptracehttp.WithInsecure(),
+				otlptracehttp.WithEndpoint(exporterEndpoint),
+			)
+		} else {
+			client = otlptracegrpc.NewClient(
+				otlptracegrpc.WithInsecure(),
+				otlptracegrpc.WithEndpoint(exporterEndpoint),
+			)
+		}
 		traceExporter, err := otlptrace.New(
 			context.Background(),
-			otlptracegrpc.NewClient(
-				secureOption,
-				otlptracegrpc.WithEndpoint(exporterEndpoint),
-			),
+			client,
 		)
 		bsp := trace.NewBatchSpanProcessor(traceExporter)
 		tracingState.Tp = trace.NewTracerProvider(
