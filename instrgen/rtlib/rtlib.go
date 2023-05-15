@@ -31,6 +31,22 @@ import (
 	"os"
 )
 
+const (
+	ServiceName           = "OTEL_SERVICE_NAME"
+	DefaultServiceName    = "instrgen"
+	TracesExporter        = "OTEL_TRACES_EXPORTER"
+	ZipkinExporter        = "zipkin"
+	OtlpExporter          = "otlp"
+	ZipkinEndpoint        = "OTEL_EXPORTER_ZIPKIN_ENDPOINT"
+	OtlpExporterEndpoint  = "OTEL_EXPORTER_OTLP_ENDPOINT"
+	DefaultZipkinEndpoint = "http://localhost:9411/api/v2/spans"
+	DefaultGrpcEndpoint   = "localhost:4317"
+	DefaultHttpEndpoint   = "http://localhost:4318"
+	ExporterProtocol      = "OTEL_EXPORTER_OTLP_PROTOCOL"
+	ExporterHttpProtocol  = "http/protobuf"
+	TraceFile             = "traces.txt"
+)
+
 // TracingState type.
 type TracingState struct {
 	Logger *log.Logger
@@ -45,18 +61,18 @@ func NewTracingState() TracingState {
 
 	// Write telemetry data to a file.
 	var err error
-	serviceName := os.Getenv("OTEL_SERVICE_NAME")
+	serviceName := os.Getenv(ServiceName)
 	// fallback to instrgen
 	if serviceName == "" {
-		serviceName = "instrgen"
+		serviceName = DefaultServiceName
 	}
-	exporterVar := os.Getenv("OTEL_TRACES_EXPORTER")
+	exporterVar := os.Getenv(TracesExporter)
 	switch exporterVar {
-	case "zipkin":
-		exporterEndpoint := os.Getenv("OTEL_EXPORTER_ZIPKIN_ENDPOINT")
+	case ZipkinExporter:
+		exporterEndpoint := os.Getenv(ZipkinEndpoint)
 		// fallback to localhost
 		if exporterEndpoint == "" {
-			exporterEndpoint = "http://localhost:9411/api/v2/spans"
+			exporterEndpoint = DefaultZipkinEndpoint
 		}
 		exporter, _ := zipkin.New(
 			exporterEndpoint,
@@ -73,7 +89,7 @@ func NewTracingState() TracingState {
 			)),
 		)
 		break
-	case "otlp":
+	case OtlpExporter:
 		ctx := context.Background()
 		res, err := resource.New(ctx,
 			resource.WithAttributes(
@@ -81,22 +97,28 @@ func NewTracingState() TracingState {
 				semconv.TelemetrySDKLanguageGo,
 			),
 		)
-		_ = err
-		exporterEndpoint := os.Getenv("OTEL_EXPORTER_OTLP_ENDPOINT")
-		// fallback to localhost
-		if exporterEndpoint == "" {
-			exporterEndpoint = "localhost:4317"
+		if err != nil {
+			tracingState.Logger.Fatal(err)
 		}
 
 		var client otlptrace.Client
-		protocol := os.Getenv("OTEL_EXPORTER_OTLP_PROTOCOL")
+		protocol := os.Getenv(ExporterProtocol)
+		exporterEndpoint := os.Getenv(OtlpExporterEndpoint)
 
-		if protocol == "http/protobuf" {
+		if protocol == ExporterHttpProtocol {
+			if exporterEndpoint == "" {
+				exporterEndpoint = DefaultHttpEndpoint
+			}
+
 			client = otlptracehttp.NewClient(
 				otlptracehttp.WithInsecure(),
 				otlptracehttp.WithEndpoint(exporterEndpoint),
 			)
 		} else {
+			if exporterEndpoint == "" {
+				exporterEndpoint = DefaultGrpcEndpoint
+			}
+
 			client = otlptracegrpc.NewClient(
 				otlptracegrpc.WithInsecure(),
 				otlptracegrpc.WithEndpoint(exporterEndpoint),
@@ -106,17 +128,21 @@ func NewTracingState() TracingState {
 			context.Background(),
 			client,
 		)
+
+		if err != nil {
+			tracingState.Logger.Fatal(err)
+		}
+
 		bsp := trace.NewBatchSpanProcessor(traceExporter)
 		tracingState.Tp = trace.NewTracerProvider(
 			trace.WithSampler(trace.AlwaysSample()),
 			trace.WithResource(res),
 			trace.WithSpanProcessor(bsp),
 		)
-
 		break
 	default:
 		// fallback to file exporting
-		tracingState.File, err = os.Create("traces.txt")
+		tracingState.File, err = os.Create(TraceFile)
 
 		if err != nil {
 			tracingState.Logger.Fatal(err)
