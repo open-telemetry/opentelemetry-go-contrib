@@ -107,7 +107,7 @@ func Start(opts ...Option) error {
 	r := &runtime{
 		meter: c.MeterProvider.Meter(
 			"go.opentelemetry.io/contrib/instrumentation/runtime",
-			metric.WithInstrumentationVersion(SemVersion()),
+			metric.WithInstrumentationVersion(Version()),
 		),
 		config: c,
 	}

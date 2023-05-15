@@ -44,7 +44,7 @@ type instruments struct {
 func newInstruments(p metric.MeterProvider) *instruments {
 	meter := p.Meter(
 		internal.InstrumentationName,
-		metric.WithInstrumentationVersion(SemVersion()),
+		metric.WithInstrumentationVersion(Version()),
 	)
 	instruments := &instruments{}
 	var err error
