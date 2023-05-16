@@ -22,13 +22,13 @@ import (
 	"github.com/gin-gonic/gin"
 
 	"go.opentelemetry.io/otel"
-	"go.opentelemetry.io/otel/codes"
-
 	"go.opentelemetry.io/otel/attribute"
+	"go.opentelemetry.io/otel/codes"
 	"go.opentelemetry.io/otel/propagation"
 	semconv "go.opentelemetry.io/otel/semconv/v1.17.0"
-	"go.opentelemetry.io/otel/semconv/v1.17.0/httpconv"
 	oteltrace "go.opentelemetry.io/otel/trace"
+
+	"go.opentelemetry.io/contrib/instrumentation/github.com/gin-gonic/gin/otelgin/internal/semconvutil"
 )
 
 const (
@@ -70,7 +70,7 @@ func Middleware(service string, opts ...Option) gin.HandlerFunc {
 		}()
 		ctx := cfg.Propagators.Extract(savedCtx, propagation.HeaderCarrier(c.Request.Header))
 		opts := []oteltrace.SpanStartOption{
-			oteltrace.WithAttributes(httpconv.ServerRequest(service, c.Request)...),
+			oteltrace.WithAttributes(semconvutil.HTTPServerRequest(service, c.Request)...),
 			oteltrace.WithSpanKind(oteltrace.SpanKindServer),
 		}
 		var spanName string
@@ -95,7 +95,7 @@ func Middleware(service string, opts ...Option) gin.HandlerFunc {
 		c.Next()
 
 		status := c.Writer.Status()
-		span.SetStatus(httpconv.ServerStatus(status))
+		span.SetStatus(semconvutil.HTTPServerStatus(status))
 		if status > 0 {
 			span.SetAttributes(semconv.HTTPStatusCode(status))
 		}
