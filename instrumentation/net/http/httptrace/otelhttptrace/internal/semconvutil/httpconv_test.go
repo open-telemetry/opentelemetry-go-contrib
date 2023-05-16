@@ -11,6 +11,9 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
+// This code is be copied across Go modules.
+// source: internal/shared/semconvutil/httpconv_test.go
+
 package semconvutil
 
 import (
