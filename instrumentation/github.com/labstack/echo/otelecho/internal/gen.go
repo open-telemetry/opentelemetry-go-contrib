@@ -12,7 +12,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package internal
+package internal // import "go.opentelemetry.io/contrib/instrumentation/github.com/labstack/echo/otelecho/internal"
 
 // Generate semconvutil package:
 //go:generate cp -rf ../../../../../../internal/shared/semconvutil .
