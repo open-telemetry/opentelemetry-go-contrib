@@ -12,7 +12,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package otelrestful // import "go.opentelemetry.io/contrib/instrumentation/github.com/emicklei/go-restful/otelrestful"
+package internal
 
 // Generate semconvutil package:
 //go:generate cp -rf ../../../../../../internal/shared/semconvutil .
