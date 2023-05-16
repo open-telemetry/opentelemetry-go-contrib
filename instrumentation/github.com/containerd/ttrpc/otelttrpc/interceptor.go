@@ -53,6 +53,59 @@ var (
 	messageReceived = messageType(RPCMessageTypeReceived)
 )
 
+// UnaryClientInterceptor returns a ttrpc.UnaryClientInterceptor suitable
+// for use in a ttrpc.NewClient call.
+func UnaryClientInterceptor(opts ...Option) ttrpc.UnaryClientInterceptor {
+	cfg := newConfig(opts)
+	tracer := cfg.TracerProvider.Tracer(
+		instrumentationName,
+		trace.WithInstrumentationVersion(Version()),
+	)
+
+	return func(
+		ctx context.Context,
+		req *ttrpc.Request, reply *ttrpc.Response,
+		info *ttrpc.UnaryClientInfo,
+		invoker ttrpc.Invoker,
+	) error {
+		i := &InterceptorInfo{
+			Method: info.FullMethod,
+			Type:   UnaryClient,
+		}
+		if cfg.Filter != nil && !cfg.Filter(i) {
+			return invoker(ctx, req, reply)
+		}
+
+		name, attr := spanInfo(info.FullMethod, "") // TODO(klihub): we can't get the 'target'
+		var span trace.Span
+		ctx, span = tracer.Start(
+			ctx,
+			name,
+			trace.WithSpanKind(trace.SpanKindClient),
+			trace.WithAttributes(attr...),
+		)
+		defer span.End()
+
+		ctx = inject(ctx, cfg.Propagators)
+
+		messageSent.Event(ctx, 1, req)
+
+		err := invoker(ctx, req, reply)
+
+		messageReceived.Event(ctx, 1, reply)
+
+		if err != nil {
+			s, _ := status.FromError(err)
+			span.SetStatus(codes.Error, s.Message())
+			span.SetAttributes(statusCodeAttr(s.Code()))
+		} else {
+			span.SetAttributes(statusCodeAttr(grpc_codes.OK))
+		}
+
+		return err
+	}
+}
+
 // UnaryServerInterceptor returns ttrpc.UnaryServerInterceptor suitable
 // for use in a ttrpc.NewServer call.
 func UnaryServerInterceptor(opts ...Option) ttrpc.UnaryServerInterceptor {

@@ -15,8 +15,15 @@
 package otelttrpc
 
 import (
+	"net"
+
 	"github.com/containerd/ttrpc"
 )
+
+func ExampleUnaryClientInterceptor() {
+	var c net.Conn
+	_ = ttrpc.NewClient(c, ttrpc.WithUnaryClientInterceptor(UnaryClientInterceptor()))
+}
 
 func ExampleUnaryServerInterceptor() {
 	_, _ = ttrpc.NewServer(ttrpc.WithUnaryServerInterceptor(UnaryServerInterceptor()))
