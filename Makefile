@@ -68,7 +68,10 @@ $(TOOLS)/dbotconf: PACKAGE=go.opentelemetry.io/build-tools/dbotconf
 CROSSLINK = $(TOOLS)/crosslink
 $(CROSSLINK): PACKAGE=go.opentelemetry.io/build-tools/crosslink
 
-tools: $(GOLANGCI_LINT) $(MISSPELL) $(GOCOVMERGE) $(STRINGER) $(PORTO) $(MULTIMOD) $(DBOTCONF) $(CROSSLINK)
+GOTMPL = $(TOOLS)/gotmpl
+$(GOTMPL): PACKAGE=go.opentelemetry.io/build-tools/gotmpl
+
+tools: $(GOLANGCI_LINT) $(MISSPELL) $(GOCOVMERGE) $(STRINGER) $(PORTO) $(MULTIMOD) $(DBOTCONF) $(CROSSLINK) $(GOTMPL)
 
 # Build
 
@@ -76,10 +79,10 @@ tools: $(GOLANGCI_LINT) $(MISSPELL) $(GOCOVMERGE) $(STRINGER) $(PORTO) $(MULTIMO
 
 generate: $(OTEL_GO_MOD_DIRS:%=generate/%)
 generate/%: DIR=$*
-generate/%: | $(STRINGER)
+generate/%: | $(STRINGER) $(PORTO)
 	@echo "$(GO) generate $(DIR)/..." \
 		&& cd $(DIR) \
-		&& PATH="$(TOOLS):$${PATH}" $(GO) generate ./...
+		&& PATH="$(TOOLS):$${PATH}" $(GO) generate ./... && $(PORTO) -w .
 
 build: generate $(OTEL_GO_MOD_DIRS:%=build/%) $(OTEL_GO_MOD_DIRS:%=build-tests/%)
 build/%: DIR=$*
