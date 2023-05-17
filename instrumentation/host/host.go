@@ -103,7 +103,7 @@ func Start(opts ...Option) error {
 	h := &host{
 		meter: c.MeterProvider.Meter(
 			"go.opentelemetry.io/contrib/instrumentation/host",
-			metric.WithInstrumentationVersion(SemVersion()),
+			metric.WithInstrumentationVersion(Version()),
 		),
 		config: c,
 	}

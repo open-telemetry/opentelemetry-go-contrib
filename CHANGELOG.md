@@ -16,7 +16,12 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 
 ### Changed
 
-- Upgrade dependencies of OpenTelemetry Go to use the new [`v1.16.0-rc.1`/`v0.39.0-rc.1` release](https://github.com/open-telemetry/opentelemetry-go/releases/tag/v1.16.0-rc.1)
+- Upgrade dependencies of OpenTelemetry Go to use the new [`v1.16.0-rc.1`/`v0.39.0-rc.1` release](https://github.com/open-telemetry/opentelemetry-go/releases/tag/v1.16.0-rc.1).
+- Remove `semver:` prefix from instrumentation version. (#3681, #3798)
+
+### Deprecated
+
+- `SemVersion` functions in instrumentation packages are deprecated, use `Version` instead. (#3681, #3798)
 
 ## [1.16.1/0.41.1/0.10.1] - 2023-05-02
 

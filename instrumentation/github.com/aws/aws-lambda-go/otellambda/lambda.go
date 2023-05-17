@@ -52,7 +52,7 @@ func newInstrumentor(opts ...Option) instrumentor {
 	}
 
 	return instrumentor{configuration: cfg,
-		tracer:   cfg.TracerProvider.Tracer(tracerName, trace.WithInstrumentationVersion(SemVersion())),
+		tracer:   cfg.TracerProvider.Tracer(tracerName, trace.WithInstrumentationVersion(Version())),
 		resAttrs: []attribute.KeyValue{}}
 }
 
