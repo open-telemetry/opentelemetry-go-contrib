@@ -191,8 +191,6 @@ func (t *Transport) RoundTrip(r *http.Request) (*http.Response, error) {
 		if t.getResponseAttributes != nil {
 			attributes = append(attributes, t.getResponseAttributes(res)...)
 		}
-	} else {
-		attributes = append(attributes, semconv.HTTPStatusCode(http.StatusBadRequest))
 	}
 	o := metric.WithAttributes(attributes...)
 	t.counters[ClientRequestContentLength].Add(ctx, bw.read.Load(), o)
