@@ -13,7 +13,7 @@
 // limitations under the License.
 
 //nolint:all // Linter is executed at the same time as tests which leads to race conditions and failures.
-package app	// import "go.opentelemetry.io/contrib/instrgen/testdata/interface/app"
+package app // import "go.opentelemetry.io/contrib/instrgen/testdata/interface/app"
 
 import (
 	"fmt"
