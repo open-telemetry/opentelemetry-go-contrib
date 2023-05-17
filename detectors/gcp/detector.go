@@ -23,7 +23,7 @@ import (
 
 	"go.opentelemetry.io/otel/attribute"
 	"go.opentelemetry.io/otel/sdk/resource"
-	semconv "go.opentelemetry.io/otel/semconv/v1.12.0"
+	semconv "go.opentelemetry.io/otel/semconv/v1.17.0"
 )
 
 // NewDetector returns a resource detector which detects resource attributes on:
@@ -111,8 +111,8 @@ func (r *resourceBuilder) add(key attribute.Key, detect func() (string, error)) 
 // zoneAndRegion functions are expected to return zone, region, err.
 func (r *resourceBuilder) addZoneAndRegion(detect func() (string, string, error)) {
 	if zone, region, err := detect(); err == nil {
-		r.attrs = append(r.attrs, semconv.CloudAvailabilityZoneKey.String(zone))
-		r.attrs = append(r.attrs, semconv.CloudRegionKey.String(region))
+		r.attrs = append(r.attrs, semconv.CloudAvailabilityZone(zone))
+		r.attrs = append(r.attrs, semconv.CloudRegion(region))
 	} else {
 		r.errs = append(r.errs, err)
 	}
@@ -122,9 +122,9 @@ func (r *resourceBuilder) addZoneOrRegion(detect func() (string, gcp.LocationTyp
 	if v, locType, err := detect(); err == nil {
 		switch locType {
 		case gcp.Zone:
-			r.attrs = append(r.attrs, semconv.CloudAvailabilityZoneKey.String(v))
+			r.attrs = append(r.attrs, semconv.CloudAvailabilityZone(v))
 		case gcp.Region:
-			r.attrs = append(r.attrs, semconv.CloudRegionKey.String(v))
+			r.attrs = append(r.attrs, semconv.CloudRegion(v))
 		default:
 			r.errs = append(r.errs, fmt.Errorf("location must be zone or region. Got %v", locType))
 		}

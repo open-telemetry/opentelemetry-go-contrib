@@ -10,6 +10,132 @@ updates:
     schedule:
       interval: weekly
       day: sunday
+  - package-ecosystem: docker
+    directory: /instrumentation/github.com/Shopify/sarama/otelsarama/example/consumer
+    labels:
+      - dependencies
+      - docker
+      - Skip Changelog
+    schedule:
+      interval: weekly
+      day: sunday
+  - package-ecosystem: docker
+    directory: /instrumentation/github.com/Shopify/sarama/otelsarama/example/producer
+    labels:
+      - dependencies
+      - docker
+      - Skip Changelog
+    schedule:
+      interval: weekly
+      day: sunday
+  - package-ecosystem: docker
+    directory: /instrumentation/github.com/astaxie/beego/otelbeego/example
+    labels:
+      - dependencies
+      - docker
+      - Skip Changelog
+    schedule:
+      interval: weekly
+      day: sunday
+  - package-ecosystem: docker
+    directory: /instrumentation/github.com/aws/aws-lambda-go/otellambda/example
+    labels:
+      - dependencies
+      - docker
+      - Skip Changelog
+    schedule:
+      interval: weekly
+      day: sunday
+  - package-ecosystem: docker
+    directory: /instrumentation/github.com/aws/aws-sdk-go-v2/otelaws/example
+    labels:
+      - dependencies
+      - docker
+      - Skip Changelog
+    schedule:
+      interval: weekly
+      day: sunday
+  - package-ecosystem: docker
+    directory: /instrumentation/github.com/bradfitz/gomemcache/memcache/otelmemcache/example
+    labels:
+      - dependencies
+      - docker
+      - Skip Changelog
+    schedule:
+      interval: weekly
+      day: sunday
+  - package-ecosystem: docker
+    directory: /instrumentation/github.com/emicklei/go-restful/otelrestful/example
+    labels:
+      - dependencies
+      - docker
+      - Skip Changelog
+    schedule:
+      interval: weekly
+      day: sunday
+  - package-ecosystem: docker
+    directory: /instrumentation/github.com/gin-gonic/gin/otelgin/example
+    labels:
+      - dependencies
+      - docker
+      - Skip Changelog
+    schedule:
+      interval: weekly
+      day: sunday
+  - package-ecosystem: docker
+    directory: /instrumentation/github.com/go-kit/kit/otelkit/example
+    labels:
+      - dependencies
+      - docker
+      - Skip Changelog
+    schedule:
+      interval: weekly
+      day: sunday
+  - package-ecosystem: docker
+    directory: /instrumentation/github.com/gorilla/mux/otelmux/example
+    labels:
+      - dependencies
+      - docker
+      - Skip Changelog
+    schedule:
+      interval: weekly
+      day: sunday
+  - package-ecosystem: docker
+    directory: /instrumentation/github.com/labstack/echo/otelecho/example
+    labels:
+      - dependencies
+      - docker
+      - Skip Changelog
+    schedule:
+      interval: weekly
+      day: sunday
+  - package-ecosystem: docker
+    directory: /instrumentation/gopkg.in/macaron.v1/otelmacaron/example
+    labels:
+      - dependencies
+      - docker
+      - Skip Changelog
+    schedule:
+      interval: weekly
+      day: sunday
+  - package-ecosystem: docker
+    directory: /instrumentation/net/http/httptrace/otelhttptrace/example
+    labels:
+      - dependencies
+      - docker
+      - Skip Changelog
+    schedule:
+      interval: weekly
+      day: sunday
+  - package-ecosystem: docker
+    directory: /instrumentation/net/http/otelhttp/example
+    labels:
+      - dependencies
+      - docker
+      - Skip Changelog
+    schedule:
+      interval: weekly
+      day: sunday
   - package-ecosystem: gomod
     directory: /
     labels:
@@ -66,6 +192,33 @@ updates:
       day: sunday
   - package-ecosystem: gomod
     directory: /exporters/autoexport
+    labels:
+      - dependencies
+      - go
+      - Skip Changelog
+    schedule:
+      interval: weekly
+      day: sunday
+  - package-ecosystem: gomod
+    directory: /instrgen
+    labels:
+      - dependencies
+      - go
+      - Skip Changelog
+    schedule:
+      interval: weekly
+      day: sunday
+  - package-ecosystem: gomod
+    directory: /instrgen/driver
+    labels:
+      - dependencies
+      - go
+      - Skip Changelog
+    schedule:
+      interval: weekly
+      day: sunday
+  - package-ecosystem: gomod
+    directory: /instrgen/driver/testdata/interface
     labels:
       - dependencies
       - go

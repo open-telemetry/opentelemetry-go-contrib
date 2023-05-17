@@ -23,7 +23,7 @@ import (
 
 	"go.opentelemetry.io/otel/attribute"
 	"go.opentelemetry.io/otel/codes"
-	semconv "go.opentelemetry.io/otel/semconv/v1.12.0"
+	semconv "go.opentelemetry.io/otel/semconv/v1.17.0"
 	"go.opentelemetry.io/otel/trace"
 
 	"go.mongodb.org/mongo-driver/bson"
@@ -49,18 +49,18 @@ func (m *monitor) Started(ctx context.Context, evt *event.CommandStartedEvent) {
 
 	attrs := []attribute.KeyValue{
 		semconv.DBSystemMongoDB,
-		semconv.DBOperationKey.String(evt.CommandName),
-		semconv.DBNameKey.String(evt.DatabaseName),
-		semconv.NetPeerNameKey.String(hostname),
-		semconv.NetPeerPortKey.Int(port),
+		semconv.DBOperation(evt.CommandName),
+		semconv.DBName(evt.DatabaseName),
+		semconv.NetPeerName(hostname),
+		semconv.NetPeerPort(port),
 		semconv.NetTransportTCP,
 	}
 	if !m.cfg.CommandAttributeDisabled {
-		attrs = append(attrs, semconv.DBStatementKey.String(sanitizeCommand(evt.Command)))
+		attrs = append(attrs, semconv.DBStatement(sanitizeCommand(evt.Command)))
 	}
 	if collection, err := extractCollection(evt); err == nil && collection != "" {
 		spanName = collection + "."
-		attrs = append(attrs, semconv.DBMongoDBCollectionKey.String(collection))
+		attrs = append(attrs, semconv.DBMongoDBCollection(collection))
 	}
 	spanName += evt.CommandName
 	opts := []trace.SpanStartOption{
@@ -107,7 +107,7 @@ func (m *monitor) Finished(evt *event.CommandFinishedEvent, err error) {
 	span.End()
 }
 
-// TODO sanitize values where possible
+// TODO sanitize values where possible, then reenable `db.statement` span attributes default.
 // TODO limit maximum size.
 func sanitizeCommand(command bson.Raw) string {
 	b, _ := bson.MarshalExtJSON(command, false, false)
