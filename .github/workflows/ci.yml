@@ -43,7 +43,7 @@ jobs:
       with:
         path: ~/.tools
         key: ${{ runner.os }}-${{ env.cache-name }}-${{ hashFiles('./internal/tools/**') }}
-    - name: Run go generate
+    - name: Run go generate and vanity-import-fix
       run: make generate vanity-import-fix
     - name: Run linters
       run: make dependabot-check license-check lint
