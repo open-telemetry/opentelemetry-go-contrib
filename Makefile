@@ -29,7 +29,7 @@ TIMEOUT = 60
 .DEFAULT_GOAL := precommit
 
 .PHONY: precommit ci
-precommit: dependabot-generate license-check misspell go-mod-tidy vanity-import-fix generate golangci-lint-fix test-default
+precommit: dependabot-generate license-check misspell go-mod-tidy vanity-import-fix golangci-lint-fix test-default
 ci: dependabot-check license-check lint vanity-import-check build test-default check-clean-work-tree test-coverage
 
 # Tools
