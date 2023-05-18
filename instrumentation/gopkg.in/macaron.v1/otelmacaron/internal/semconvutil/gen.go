@@ -1,6 +1,3 @@
-// Code created by gotmpl. DO NOT MODIFY.
-// source: internal/shared/semconvutil/doc.go.tmpl
-
 // Copyright The OpenTelemetry Authors
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
@@ -15,5 +12,11 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-// Package semconvutil provides OpenTelemetry semantic conventions helpers.
 package semconvutil // import "go.opentelemetry.io/contrib/instrumentation/gopkg.in/macaron.v1/otelmacaron/internal/semconvutil"
+
+// Generate semconvutil package:
+//go:generate gotmpl --body=../../../../../../internal/shared/semconvutil/doc.go.tmpl "--data={}" --out=doc.go
+//go:generate gotmpl --body=../../../../../../internal/shared/semconvutil/httpconv_test.go.tmpl "--data={}" --out=httpconv_test.go
+//go:generate gotmpl --body=../../../../../../internal/shared/semconvutil/httpconv.go.tmpl "--data={}" --out=httpconv.go
+//go:generate gotmpl --body=../../../../../../internal/shared/semconvutil/netconv_test.go.tmpl "--data={}" --out=netconv_test.go
+//go:generate gotmpl --body=../../../../../../internal/shared/semconvutil/netconv.go.tmpl "--data={}" --out=netconv.go
