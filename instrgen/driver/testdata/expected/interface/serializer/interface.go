@@ -13,7 +13,7 @@
 // limitations under the License.
 
 //nolint:all // Linter is executed at the same time as tests which leads to race conditions and failures.
-package serializer	// import "go.opentelemetry.io/contrib/instrgen/testdata/interface/serializer"
+package serializer
 
 import __atel_context "context"
 
