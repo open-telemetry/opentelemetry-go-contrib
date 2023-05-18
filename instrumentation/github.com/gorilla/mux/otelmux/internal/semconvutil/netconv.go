@@ -15,7 +15,7 @@
 // This code is copied across Go modules.
 // source: internal/shared/semconvutil/netconv.go
 
-package semconvutil // import "go.opentelemetry.io/contrib/internal/shared/semconvutil"
+package semconvutil // import "go.opentelemetry.io/contrib/instrumentation/github.com/gorilla/mux/otelmux/internal/semconvutil"
 
 import (
 	"net"

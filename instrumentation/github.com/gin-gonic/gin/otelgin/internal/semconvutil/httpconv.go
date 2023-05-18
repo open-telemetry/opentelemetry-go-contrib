@@ -15,7 +15,7 @@
 // This code is copied across Go modules.
 // source: internal/shared/semconvutil/httpconv.go
 
-package semconvutil // import "go.opentelemetry.io/contrib/internal/shared/semconvutil"
+package semconvutil // import "go.opentelemetry.io/contrib/instrumentation/github.com/gin-gonic/gin/otelgin/internal/semconvutil"
 
 import (
 	"fmt"

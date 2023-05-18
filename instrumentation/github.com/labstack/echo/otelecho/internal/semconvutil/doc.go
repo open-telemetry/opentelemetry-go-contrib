@@ -16,4 +16,4 @@
 // source: internal/shared/semconvutil/doc.go
 
 // Package semconvutil provides OpenTelemetry semantic conventions helpers.
-package semconvutil // import "go.opentelemetry.io/contrib/internal/shared/semconvutil"
+package semconvutil // import "go.opentelemetry.io/contrib/instrumentation/github.com/labstack/echo/otelecho/internal/semconvutil"
