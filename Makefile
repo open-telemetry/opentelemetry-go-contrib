@@ -29,7 +29,7 @@ TIMEOUT = 60
 .DEFAULT_GOAL := precommit
 
 .PHONY: precommit ci
-precommit: generate dependabot-generate license-check misspell go-mod-tidy vanity-import-fix golangci-lint-fix test-default
+precommit: generate dependabot-generate license-check misspell go-mod-tidy golangci-lint-fix test-default
 ci: generate dependabot-check license-check lint vanity-import-check build test-default check-clean-work-tree test-coverage
 
 # Tools
@@ -68,18 +68,27 @@ $(TOOLS)/dbotconf: PACKAGE=go.opentelemetry.io/build-tools/dbotconf
 CROSSLINK = $(TOOLS)/crosslink
 $(CROSSLINK): PACKAGE=go.opentelemetry.io/build-tools/crosslink
 
-tools: $(GOLANGCI_LINT) $(MISSPELL) $(GOCOVMERGE) $(STRINGER) $(PORTO) $(MULTIMOD) $(DBOTCONF) $(CROSSLINK)
+GOTMPL = $(TOOLS)/gotmpl
+$(GOTMPL): PACKAGE=go.opentelemetry.io/build-tools/gotmpl
+
+tools: $(GOLANGCI_LINT) $(MISSPELL) $(GOCOVMERGE) $(STRINGER) $(PORTO) $(MULTIMOD) $(DBOTCONF) $(CROSSLINK) $(GOTMPL)
 
 # Generate
 
 .PHONY: generate
+generate: go-generate vanity-import-fix
 
-generate: $(OTEL_GO_MOD_DIRS:%=generate/%)
-generate/%: DIR=$*
-generate/%: | $(STRINGER)
+.PHONY: go-generate
+go-generate: $(OTEL_GO_MOD_DIRS:%=go-generate/%)
+go-generate/%: DIR=$*
+go-generate/%: | $(STRINGER) $(PORTO)
 	@echo "$(GO) generate $(DIR)/..." \
 		&& cd $(DIR) \
 		&& PATH="$(TOOLS):$${PATH}" $(GO) generate ./...
+
+.PHONY: vanity-import-fix
+vanity-import-fix: | $(PORTO)
+	@$(PORTO) --include-internal -w .
 
 # Build
 
@@ -132,10 +141,6 @@ misspell: | $(MISSPELL)
 .PHONY: vanity-import-check
 vanity-import-check: | $(PORTO)
 	@$(PORTO) --include-internal -l . || echo "(run: make vanity-import-fix)"
-
-.PHONY: vanity-import-fix
-vanity-import-fix: | $(PORTO)
-	@$(PORTO) --include-internal -w .
 
 .PHONY: lint
 lint: go-mod-tidy golangci-lint misspell
