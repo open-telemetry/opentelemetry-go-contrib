@@ -21,8 +21,6 @@ import (
 	"os"
 	"sync"
 
-	"go.opentelemetry.io/otel"
-	"go.opentelemetry.io/otel/exporters/otlp/otlptrace"
 	"go.opentelemetry.io/otel/exporters/otlp/otlptrace/otlptracegrpc"
 	"go.opentelemetry.io/otel/exporters/otlp/otlptrace/otlptracehttp"
 	"go.opentelemetry.io/otel/sdk/trace"
@@ -32,20 +30,27 @@ const (
 	otelExporterOTLPProtoEnvKey = "OTEL_EXPORTER_OTLP_PROTOCOL"
 )
 
-// registry maintains a map of exporter names to SpanExporter
-// implementations that is safe for concurrent use by multiple goroutines
-// without additional locking or coordination.
+// registry maintains a map of exporter names to SpanExporter factories
+// func() (trace.SpanExporter) that is safe for concurrent use by multiple
+// goroutines without additional locking or coordination.
 type registry struct {
 	mu    sync.Mutex
-	names map[string]trace.SpanExporter
+	names map[string]func() (trace.SpanExporter, error)
+}
+
+func newRegistry() (registry) {
+	return registry{
+		names: map[string]func() (trace.SpanExporter, error){
+			"": buildOTLPExporter,
+			"otlp": buildOTLPExporter,
+		},
+	}
 }
 
 var (
-	// envRegistry is the index of all supported exporter types
-	// and their mapping to a SpanExporter.
-	envRegistry = &registry{
-		names: map[string]trace.SpanExporter{},
-	}
+	// envRegistry is the package level registry of exporter registrations
+	// and their mapping to a SpanExporter factory func() (trace.SpanExporter, error).
+	envRegistry = newRegistry()
 
 	// errUnknownExpoter is returned when an unknown exporter name is used in
 	// the OTEL_*_EXPORTER environment variables.
@@ -59,55 +64,48 @@ var (
 	errDuplicateRegistration = errors.New("duplicate registration")
 )
 
-func init() {
-	exp, err := buildOTLPExporter()
-	if err != nil {
-		otel.Handle(err)
-	}
-	if exp != nil {
-		RegisterSpanExporter("", exp)
-		RegisterSpanExporter("otlp", exp)
-	}
-}
-
-// load returns the value stored in the registry index for a key, or nil if no
-// value is present. The ok result indicates whether value was found in the
-// index.
-func (r *registry) load(key string) (p trace.SpanExporter, ok bool) {
-	r.mu.Lock()
-	p, ok = r.names[key]
-	r.mu.Unlock()
-	return p, ok
-}
-
-// store sets the value for a key if is not already in the registry. errDuplicateRegistration
-// is returned if the registry already contains key.
-func (r *registry) store(key string, value trace.SpanExporter) error {
+// load returns tries to find the SpanExporter factory wioth the key and
+// then execute the factory, returning the created SpanExporter.
+// errUnknownExpoter is returned if the registration is missing and the error from
+// executing the factory if not nil.
+func (r *registry) load(key string) (trace.SpanExporter, error) {
 	r.mu.Lock()
 	defer r.mu.Unlock()
-	if r.names == nil {
-		r.names = map[string]trace.SpanExporter{key: value}
-		return nil
+	factory, ok := r.names[key]
+	if !ok {
+		return nil, errUnknownExpoter
 	}
+	exporter, err := factory()
+	if err != nil {
+		return nil, err
+	}
+	return exporter, nil
+}
+
+// store sets the factory for a key if is not already in the registry. errDuplicateRegistration
+// is returned if the registry already contains key.
+func (r *registry) store(key string, factory func() (trace.SpanExporter, error)) error {
+	r.mu.Lock()
+	defer r.mu.Unlock()
 	if _, ok := r.names[key]; ok {
 		return fmt.Errorf("%w: %q", errDuplicateRegistration, key)
 	}
-	r.names[key] = value
+	r.names[key] = factory
 	return nil
 }
 
 // drop removes key from the registry if it exists, otherwise nothing.
 func (r *registry) drop(key string) {
 	r.mu.Lock()
+	defer r.mu.Unlock()
 	delete(r.names, key)
-	r.mu.Unlock()
 }
 
-// RegisterSpanExporter sets the SpanExporter e to be used when the
+// RegisterSpanExporter sets the SpanExporter factory to be used when the
 // OTEL_TRACES_EXPORTERS environment variable contains the exporter name. This
 // will panic if name has already been registered.
-func RegisterSpanExporter(name string, e trace.SpanExporter) {
-	if err := envRegistry.store(name, e); err != nil {
+func RegisterSpanExporter(name string, factory func() (trace.SpanExporter, error)) {
+	if err := envRegistry.store(name, factory); err != nil {
 		// envRegistry.store will return errDuplicateRegistration if name is already
 		// registered. Panic here so the user is made aware of the duplicate
 		// registration, which could be done by malicious code trying to
@@ -127,16 +125,16 @@ func RegisterSpanExporter(name string, e trace.SpanExporter) {
 // under both an empty string "" and "otlp".
 // An error is returned for any unknown exporters.
 func SpanExporter(name string) (trace.SpanExporter, error) {
-	exp, ok := envRegistry.load(name)
-	if !ok {
-		return nil, errUnknownExpoter
+	exp, err := envRegistry.load(name)
+	if err != nil {
+		return nil, err
 	}
 	return exp, nil
 }
 
 // buildOTLPExporter creates an OTLP exporter using the environment variable
 // OTEL_EXPORTER_OTLP_PROTOCOL to determine the exporter protocol.
-func buildOTLPExporter() (*otlptrace.Exporter, error) {
+func buildOTLPExporter() (trace.SpanExporter, error) {
 	proto := "grpc"
 	if protoStr, ok := os.LookupEnv(otelExporterOTLPProtoEnvKey); ok {
 		proto = protoStr
