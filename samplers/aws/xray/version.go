@@ -16,7 +16,7 @@ package xray // import "go.opentelemetry.io/contrib/samplers/aws/xray"
 
 // Version is the current release version of the AWS XRay remote sampler.
 func Version() string {
-	return "0.10.1"
+	return "0.11.0-rc.1"
 	// This string is updated by the pre_release.sh script during release
 }
 
