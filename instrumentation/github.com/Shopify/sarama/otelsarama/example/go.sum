@@ -53,7 +53,7 @@ github.com/stretchr/objx v0.4.0/go.mod h1:YvHI0jy2hoMjB+UWwv71VJQ9isScKT/TqJzVSS
 github.com/stretchr/testify v1.4.0/go.mod h1:j7eGeouHqKxXV5pUuKE4zz7dFj8WfuZ+81PSLYec5m4=
 github.com/stretchr/testify v1.7.1/go.mod h1:6Fq8oRcR53rry900zMqJjRRixrwX3KX962/h/Wwjteg=
 github.com/stretchr/testify v1.8.0/go.mod h1:yNjHg4UonilssWZ8iaSj1OCr/vHnekPRkoO+kdMU+MU=
-github.com/stretchr/testify v1.8.2 h1:+h33VjcLVPDHtOdpUCuF+7gSuG3yGIftsP1YvFihtJ8=
+github.com/stretchr/testify v1.8.3 h1:RP3t2pwF7cMEbC1dqtB6poj3niw/9gnV4Cjg5oW5gtY=
 go.opentelemetry.io/otel v1.16.0-rc.1 h1:MDhS6G6x7UXVf7QgX9uNwllM/oLsVHr0NZnjX4MwgdY=
 go.opentelemetry.io/otel v1.16.0-rc.1/go.mod h1:dGSTwGyzvw5Dzn8nE8HrfOXnWIDrL0GIzQdOpTnJ2CM=
 go.opentelemetry.io/otel/exporters/stdout/stdouttrace v1.16.0-rc.1 h1:YVx9oJhfDLLm2nKz0rbnIzkZZIF6fuipxgHKx5Kuqog=
