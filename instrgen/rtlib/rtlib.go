@@ -22,10 +22,30 @@ import (
 	"log"
 	"os"
 
+	"go.opentelemetry.io/otel/exporters/otlp/otlptrace"
+	"go.opentelemetry.io/otel/exporters/otlp/otlptrace/otlptracegrpc"
+	"go.opentelemetry.io/otel/exporters/otlp/otlptrace/otlptracehttp"
 	"go.opentelemetry.io/otel/exporters/stdout/stdouttrace"
+	"go.opentelemetry.io/otel/exporters/zipkin"
 	"go.opentelemetry.io/otel/sdk/resource"
 	trace "go.opentelemetry.io/otel/sdk/trace"
-	semconv "go.opentelemetry.io/otel/semconv/v1.4.0"
+	semconv "go.opentelemetry.io/otel/semconv/v1.17.0"
+)
+
+const (
+	serviceName           = "OTEL_SERVICE_NAME"
+	defaultServiceName    = "instrgen"
+	tracesExporter        = "OTEL_TRACES_EXPORTER"
+	zipkinExporter        = "zipkin"
+	otlpExporter          = "otlp"
+	zipkinEndpoint        = "OTEL_EXPORTER_ZIPKIN_ENDPOINT"
+	otlpExporterEndpoint  = "OTEL_EXPORTER_OTLP_ENDPOINT"
+	defaultZipkinEndpoint = "http://localhost:9411/api/v2/spans"
+	defaultGrpcEndpoint   = "localhost:4317"
+	defaultHTTPEndpoint   = "http://localhost:4318"
+	exporterProtocol      = "OTEL_EXPORTER_OTLP_PROTOCOL"
+	exporterHTTPProtocol  = "http/protobuf"
+	traceFile             = "traces.txt"
 )
 
 // TracingState type.
@@ -42,30 +62,109 @@ func NewTracingState() TracingState {
 
 	// Write telemetry data to a file.
 	var err error
-	tracingState.File, err = os.Create("traces.txt")
+	serviceName := os.Getenv(serviceName)
+	// fallback to instrgen
+	if serviceName == "" {
+		serviceName = defaultServiceName
+	}
+	exporterVar := os.Getenv(tracesExporter)
+	switch exporterVar {
+	case zipkinExporter:
+		exporterEndpoint := os.Getenv(zipkinEndpoint)
+		// fallback to localhost
+		if exporterEndpoint == "" {
+			exporterEndpoint = defaultZipkinEndpoint
+		}
+		exporter, _ := zipkin.New(
+			exporterEndpoint,
+			zipkin.WithLogger(tracingState.Logger),
+		)
 
-	if err != nil {
-		tracingState.Logger.Fatal(err)
+		batcher := trace.NewBatchSpanProcessor(exporter)
+
+		tracingState.Tp = trace.NewTracerProvider(
+			trace.WithSpanProcessor(batcher),
+			trace.WithResource(resource.NewWithAttributes(
+				semconv.SchemaURL,
+				semconv.ServiceName(serviceName),
+			)),
+		)
+	case otlpExporter:
+		ctx := context.Background()
+		res, err := resource.New(ctx,
+			resource.WithAttributes(
+				semconv.ServiceNameKey.String(serviceName),
+				semconv.TelemetrySDKLanguageGo,
+			),
+		)
+		if err != nil {
+			tracingState.Logger.Fatal(err)
+		}
+
+		var client otlptrace.Client
+		protocol := os.Getenv(exporterProtocol)
+		exporterEndpoint := os.Getenv(otlpExporterEndpoint)
+
+		if protocol == exporterHTTPProtocol {
+			if exporterEndpoint == "" {
+				exporterEndpoint = defaultHTTPEndpoint
+			}
+
+			client = otlptracehttp.NewClient(
+				otlptracehttp.WithInsecure(),
+				otlptracehttp.WithEndpoint(exporterEndpoint),
+			)
+		} else {
+			if exporterEndpoint == "" {
+				exporterEndpoint = defaultGrpcEndpoint
+			}
+
+			client = otlptracegrpc.NewClient(
+				otlptracegrpc.WithInsecure(),
+				otlptracegrpc.WithEndpoint(exporterEndpoint),
+			)
+		}
+		traceExporter, err := otlptrace.New(
+			context.Background(),
+			client,
+		)
+
+		if err != nil {
+			tracingState.Logger.Fatal(err)
+		}
+
+		bsp := trace.NewBatchSpanProcessor(traceExporter)
+		tracingState.Tp = trace.NewTracerProvider(
+			trace.WithSampler(trace.AlwaysSample()),
+			trace.WithResource(res),
+			trace.WithSpanProcessor(bsp),
+		)
+	default:
+		// fallback to file exporting
+		tracingState.File, err = os.Create(traceFile)
+
+		if err != nil {
+			tracingState.Logger.Fatal(err)
+		}
+		var exp trace.SpanExporter
+		exp, err = NewConsoleExporter(tracingState.File)
+		if err != nil {
+			tracingState.Logger.Fatal(err)
+		}
+		tracingState.Tp = trace.NewTracerProvider(
+			trace.WithBatcher(exp),
+			trace.WithResource(NewResource()),
+		)
 	}
-	var exp trace.SpanExporter
-	exp, err = NewExporter(tracingState.File)
-	if err != nil {
-		tracingState.Logger.Fatal(err)
-	}
-	tracingState.Tp = trace.NewTracerProvider(
-		trace.WithBatcher(exp),
-		trace.WithResource(NewResource()),
-	)
 	return tracingState
 }
 
-// NewExporter returns a console exporter.
-func NewExporter(w io.Writer) (trace.SpanExporter, error) {
+// NewConsoleExporter returns a console exporter.
+func NewConsoleExporter(w io.Writer) (trace.SpanExporter, error) {
 	return stdouttrace.New(
 		stdouttrace.WithWriter(w),
 		// Use human readable output.
 		stdouttrace.WithPrettyPrint(),
-		// Do not print timestamps for the demo.
 		stdouttrace.WithoutTimestamps(),
 	)
 }
