@@ -5,9 +5,9 @@ go 1.19
 require (
 	github.com/stretchr/testify v1.8.3
 	go.opentelemetry.io/contrib/instrumentation/google.golang.org/grpc/otelgrpc v0.42.0-rc.1
-	go.opentelemetry.io/otel v1.16.0-rc.1
-	go.opentelemetry.io/otel/sdk v1.16.0-rc.1
-	go.opentelemetry.io/otel/sdk/metric v0.39.0-rc.1
+	go.opentelemetry.io/otel v1.16.0
+	go.opentelemetry.io/otel/sdk v1.16.0
+	go.opentelemetry.io/otel/sdk/metric v0.39.0
 	go.uber.org/goleak v1.2.1
 	google.golang.org/grpc v1.55.0
 )
@@ -21,8 +21,8 @@ require (
 	github.com/golang/protobuf v1.5.3 // indirect
 	github.com/kr/text v0.2.0 // indirect
 	github.com/pmezard/go-difflib v1.0.0 // indirect
-	go.opentelemetry.io/otel/metric v1.16.0-rc.1 // indirect
-	go.opentelemetry.io/otel/trace v1.16.0-rc.1 // indirect
+	go.opentelemetry.io/otel/metric v1.16.0 // indirect
+	go.opentelemetry.io/otel/trace v1.16.0 // indirect
 	golang.org/x/net v0.10.0 // indirect
 	golang.org/x/oauth2 v0.6.0 // indirect
 	golang.org/x/sys v0.8.0 // indirect
