@@ -12,6 +12,8 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 
 - Add the new `go.opentelemetry.io/contrib/instrgen` package to provide auto-generated source code instrumentation. (#3068, #3108)
 
+## [1.17.0/0.42.0/0.11.0] - 2023-05-22
+
 ### Changed
 
 - Use `strings.Cut()` instead of `string.SplitN()` for better readability and memory use. (#3822)
@@ -732,7 +734,8 @@ First official tagged release of `contrib` repository.
 - Prefix support for dogstatsd (#34)
 - Update Go Runtime package to use batch observer (#44)
 
-[Unreleased]: https://github.com/open-telemetry/opentelemetry-go-contrib/compare/v1.17.0-rc.1...HEAD
+[Unreleased]: https://github.com/open-telemetry/opentelemetry-go-contrib/compare/v1.17.0...HEAD
+[1.17.0/0.42.0/0.11.0]: https://github.com/open-telemetry/opentelemetry-go-contrib/releases/tag/v1.17.0
 [1.17.0-rc.1/0.42.0-rc.1/0.11.0-rc.1]: https://github.com/open-telemetry/opentelemetry-go-contrib/releases/tag/v1.17.0-rc.1
 [1.16.1/0.41.1/0.10.1]: https://github.com/open-telemetry/opentelemetry-go-contrib/releases/tag/v1.16.1
 [1.16.0/0.41.0/0.10.0]: https://github.com/open-telemetry/opentelemetry-go-contrib/releases/tag/v1.16.0
