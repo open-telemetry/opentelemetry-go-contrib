@@ -85,7 +85,7 @@ func Test_subsequent_calls_to_get_exporter_returns_new_instances(t *testing.T) {
 	assert.NotSame(t, exp1, exp2)
 }
 
-func Test_default_otlp_exporter_factorys_automatically_registered(t *testing.T) {
+func Test_default_otlp_exporter_factories_automatically_registered(t *testing.T) {
 	exp1, err := SpanExporter("")
 	assert.Nil(t, err)
 	assert.IsType(t, &otlptrace.Exporter{}, exp1)
