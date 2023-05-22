@@ -5,7 +5,7 @@ go 1.19
 require (
 	github.com/go-logr/logr v1.2.4
 	github.com/gogo/protobuf v1.3.2
-	github.com/stretchr/testify v1.8.2
+	github.com/stretchr/testify v1.8.3
 	go.opentelemetry.io/otel/sdk v1.16.0-rc.1
 	go.opentelemetry.io/otel/trace v1.16.0-rc.1
 	google.golang.org/genproto v0.0.0-20211208223120-3a66f561d7aa

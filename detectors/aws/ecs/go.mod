@@ -4,7 +4,7 @@ go 1.19
 
 require (
 	github.com/brunoscheufler/aws-ecs-metadata-go v0.0.0-20220812150832-b6b31c6eeeaf
-	github.com/stretchr/testify v1.8.2
+	github.com/stretchr/testify v1.8.3
 	go.opentelemetry.io/otel v1.16.0-rc.1
 	go.opentelemetry.io/otel/sdk v1.16.0-rc.1
 )
