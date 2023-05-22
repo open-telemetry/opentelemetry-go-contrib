@@ -14,6 +14,13 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 
 ### Changed
 
+- Use `strings.Cut()` instead of `string.SplitN()` for better readability and memory use. (#3822)
+
+## [1.17.0-rc.1/0.42.0-rc.1/0.11.0-rc.1] - 2023-05-17
+
+### Changed
+
+- Upgrade dependencies of OpenTelemetry Go to use the new [`v1.16.0-rc.1`/`v0.39.0-rc.1` release](https://github.com/open-telemetry/opentelemetry-go/releases/tag/v1.16.0-rc.1).
 - Remove `semver:` prefix from instrumentation version. (#3681, #3798)
 - Add RequestCount to otelhttp instrumentation. (#3808)
 
@@ -30,7 +37,6 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 ### Changed
 
 - Upgrade dependencies of OpenTelemetry Go to use the new [`v1.15.1`/`v0.38.1` release](https://github.com/open-telemetry/opentelemetry-go/releases/tag/v1.15.1)
-
 
 ### Fixed
 
@@ -727,7 +733,8 @@ First official tagged release of `contrib` repository.
 - Prefix support for dogstatsd (#34)
 - Update Go Runtime package to use batch observer (#44)
 
-[Unreleased]: https://github.com/open-telemetry/opentelemetry-go-contrib/compare/v1.16.1...HEAD
+[Unreleased]: https://github.com/open-telemetry/opentelemetry-go-contrib/compare/v1.17.0-rc.1...HEAD
+[1.17.0-rc.1/0.42.0-rc.1/0.11.0-rc.1]: https://github.com/open-telemetry/opentelemetry-go-contrib/releases/tag/v1.17.0-rc.1
 [1.16.1/0.41.1/0.10.1]: https://github.com/open-telemetry/opentelemetry-go-contrib/releases/tag/v1.16.1
 [1.16.0/0.41.0/0.10.0]: https://github.com/open-telemetry/opentelemetry-go-contrib/releases/tag/v1.16.0
 [1.16.0-rc.2/0.41.0-rc.2/0.10.0-rc.2]: https://github.com/open-telemetry/opentelemetry-go-contrib/releases/tag/v1.16.0-rc.2

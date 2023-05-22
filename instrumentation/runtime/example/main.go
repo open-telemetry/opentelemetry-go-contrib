@@ -25,8 +25,8 @@ import (
 	"time"
 
 	"go.opentelemetry.io/contrib/instrumentation/runtime"
+	"go.opentelemetry.io/otel"
 	"go.opentelemetry.io/otel/exporters/stdout/stdoutmetric"
-	"go.opentelemetry.io/otel/metric/global"
 	"go.opentelemetry.io/otel/sdk/metric"
 	"go.opentelemetry.io/otel/sdk/resource"
 	semconv "go.opentelemetry.io/otel/semconv/v1.17.0"
@@ -52,7 +52,7 @@ func main() {
 			log.Fatal(err)
 		}
 	}()
-	global.SetMeterProvider(provider)
+	otel.SetMeterProvider(provider)
 
 	ctx, cancel := signal.NotifyContext(context.Background(), os.Interrupt)
 	defer cancel()
