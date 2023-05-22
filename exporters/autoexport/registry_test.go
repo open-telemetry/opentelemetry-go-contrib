@@ -21,6 +21,7 @@ import (
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 
+	"go.opentelemetry.io/otel/exporters/otlp/otlptrace"
 	"go.opentelemetry.io/otel/exporters/stdout/stdouttrace"
 	"go.opentelemetry.io/otel/sdk/trace"
 )
@@ -33,14 +34,14 @@ var stdoutFactory = func() (trace.SpanExporter, error) {
 	return exp, nil
 }
 
-func TestRegistryEmptyStore(t *testing.T) {
+func Test_can_store_exporter_factory(t *testing.T) {
 	r := newRegistry()
 	assert.NotPanics(t, func() {
 		require.NoError(t, r.store("first", stdoutFactory))
 	})
 }
 
-func TestRegistryEmptyLoad(t *testing.T) {
+func Test_load_of_unknown_exporter_returns_error(t *testing.T) {
 	r := newRegistry()
 	assert.NotPanics(t, func() {
 		exp, err := r.load("non-existent")
@@ -49,7 +50,7 @@ func TestRegistryEmptyLoad(t *testing.T) {
 	})
 }
 
-func TestRegistryConcurrentSafe(t *testing.T) {
+func Test_registry_is_concurrent_safe(t *testing.T) {
 	const exporterName = "stdout"
 
 	r := newRegistry()
@@ -67,28 +68,44 @@ func TestRegistryConcurrentSafe(t *testing.T) {
 		assert.NotPanics(t, func() {
 			exp, err := r.load(exporterName)
 			assert.Nil(t, err, "missing exporter in registry")
-			_, ok := exp.(*stdouttrace.Exporter)
-			if !ok {
-				assert.Fail(t, "wrong exporter retuned")
-			}
+			assert.IsType(t, &stdouttrace.Exporter{}, exp)
 		})
 	}()
 }
 
-func TestRegisterSpanExporter(t *testing.T) {
+func Test_subsequent_calls_to_get_exporter_returns_new_instances(t *testing.T) {
+	const exporterType = "otlp"
+	exp1, err := SpanExporter(exporterType)
+	assert.Nil(t, err)
+	assert.IsType(t, &otlptrace.Exporter{}, exp1)
+
+	exp2, err := SpanExporter(exporterType)
+	assert.Nil(t, err)
+	assert.IsType(t, &otlptrace.Exporter{}, exp2)
+	assert.NotSame(t, exp1, exp2)
+}
+
+func Test_default_otlp_exporter_factorys_automatically_registered(t *testing.T) {
+	exp1, err := SpanExporter("")
+	assert.Nil(t, err)
+	assert.IsType(t, &otlptrace.Exporter{}, exp1)
+
+	exp2, err := SpanExporter("otlp")
+	assert.Nil(t, err)
+	assert.IsType(t, &otlptrace.Exporter{}, exp2)
+}
+
+func Test_env_registry_can_register_exporter_factory(t *testing.T) {
 	const exporterName = "custom"
 	RegisterSpanExporter(exporterName, stdoutFactory)
 	t.Cleanup(func() { envRegistry.drop(exporterName) })
 
 	exp, err := envRegistry.load(exporterName)
 	assert.Nil(t, err, "missing exporter in envRegistry")
-	_, ok := exp.(*stdouttrace.Exporter)
-	if !ok {
-		assert.Fail(t, "wrong exporter stored")
-	}
+	assert.IsType(t, &stdouttrace.Exporter{}, exp)
 }
 
-func TestDuplicateRegisterSpanExporterPanics(t *testing.T) {
+func Test_env_registry_panics_on_duplicate_register_calls(t *testing.T) {
 	const exporterName = "custom"
 	RegisterSpanExporter(exporterName, stdoutFactory)
 	t.Cleanup(func() { envRegistry.drop(exporterName) })
@@ -97,24 +114,4 @@ func TestDuplicateRegisterSpanExporterPanics(t *testing.T) {
 	assert.PanicsWithError(t, errString, func() {
 		RegisterSpanExporter(exporterName, stdoutFactory)
 	})
-}
-
-func TestRetrievingSameKeyReturnsDifferentExporterInstance(t *testing.T) {
-	const exporterType = "otlp"
-	exp1, err := SpanExporter(exporterType)
-	assert.Nil(t, err)
-
-	exp2, err := SpanExporter(exporterType)
-	assert.Nil(t, err)
-	assert.NotEqual(t, exp1, exp2)
-}
-
-func TestOTLPExporterIsAutomaticallyRegistered(t *testing.T) {
-	exp1, err := SpanExporter("")
-	assert.Nil(t, err)
-	assert.NotNil(t, exp1)
-
-	exp2, err := SpanExporter("otlp")
-	assert.Nil(t, err)
-	assert.NotNil(t, exp2)
 }
