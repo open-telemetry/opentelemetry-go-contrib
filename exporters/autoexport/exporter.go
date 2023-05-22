@@ -46,7 +46,7 @@ func WithFallabckSpanExporter(exporter trace.SpanExporter) Option {
 func NewTraceExporter(opts ...Option) trace.SpanExporter {
 	// prefer exporter configured via environment variables over exporter
 	// passed in via exporter parameter
-	envExporter, err := parseEnv()
+	envExporter, err := makeExporterFromEnv()
 	if err != nil {
 		otel.Handle(err)
 	}
@@ -71,10 +71,10 @@ func NewTraceExporter(opts ...Option) trace.SpanExporter {
 	return exp
 }
 
-// parseEnv returns a configured SpanExporter defined by the OTEL_TRACES_EXPORTER
+// makeExporterFromEnv returns a configured SpanExporter defined by the OTEL_TRACES_EXPORTER
 // environment variable.
 // nil is returned if no exporter is defined for the environment variable.
-func parseEnv() (trace.SpanExporter, error) {
+func makeExporterFromEnv() (trace.SpanExporter, error) {
 	expType, defined := os.LookupEnv(otelTracesExportersEnvKey)
 	if !defined {
 		return nil, nil
