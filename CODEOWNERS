@@ -16,7 +16,7 @@
 # instrumentation/net/http/otelhttp/         @open-telemetry/collector-go-approvers @madvikinggod @mralias
 # Path separator and minimum of 1 space between component path and owners is
 # important for validation steps
-# 
+#
 
 * @open-telemetry/go-approvers
 
@@ -25,19 +25,21 @@ CODEOWNERS @MrAlias @Aneurysm9 @MadVikingGod
 detectors/aws/                                                          @open-telemetry/go-approvers @Aneurysm9
 detectors/gcp/                                                          @open-telemetry/go-approvers @dashpole
 
+exporters/autoexport                                                    @open-telemetry/go-approvers @MikeGoldsmith
+
 instrumentation/github.com/astaxie/beego/otelbeego/                     @open-telemetry/go-approvers
 instrumentation/github.com/aws/aws-lambda-go/otellambda/                @open-telemetry/go-approvers @Aneurysm9
 instrumentation/github.com/aws/aws-sdk-go-v2/otelaws/                   @open-telemetry/go-approvers @Aneurysm9
 instrumentation/github.com/bradfitz/gomemcache/memcache/otelmemcache/   @open-telemetry/go-approvers
 instrumentation/github.com/emicklei/go-restful/otelrestful/             @open-telemetry/go-approvers
-instrumentation/github.com/gin-gonic/gin/otelgin/                       @open-telemetry/go-approvers @hanyuancheung 
+instrumentation/github.com/gin-gonic/gin/otelgin/                       @open-telemetry/go-approvers @hanyuancheung
 instrumentation/github.com/go-kit/kit/otelkit/                          @open-telemetry/go-approvers
 instrumentation/github.com/gocql/gocql/otelgocql/                       @open-telemetry/go-approvers
 instrumentation/github.com/gorilla/mux/otelmux/                         @open-telemetry/go-approvers
 instrumentation/github.com/labstack/echo/otelecho/                      @open-telemetry/go-approvers
-instrumentation/github.com/Shopify/sarama/otelsarama/                   @open-telemetry/go-approvers @pellared @hanyuancheung 
+instrumentation/github.com/Shopify/sarama/otelsarama/                   @open-telemetry/go-approvers @pellared @hanyuancheung
 instrumentation/go.mongodb.org/mongo-driver/mongo/otelmongo/            @open-telemetry/go-approvers
-instrumentation/google.golang.org/grpc/otelgrpc/                        @open-telemetry/go-approvers @dashpole @hanyuancheung 
+instrumentation/google.golang.org/grpc/otelgrpc/                        @open-telemetry/go-approvers @dashpole @hanyuancheung
 instrumentation/gopkg.in/macaron.v1/otelmacaron/                        @open-telemetry/go-approvers
 
 instrumentation/host/                                                   @open-telemetry/go-approvers @MadVikingGod
