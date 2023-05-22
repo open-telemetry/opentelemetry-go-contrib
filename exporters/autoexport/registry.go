@@ -38,10 +38,10 @@ type registry struct {
 	names map[string]func() (trace.SpanExporter, error)
 }
 
-func newRegistry() (registry) {
+func newRegistry() registry {
 	return registry{
 		names: map[string]func() (trace.SpanExporter, error){
-			"": buildOTLPExporter,
+			"":     buildOTLPExporter,
 			"otlp": buildOTLPExporter,
 		},
 	}
