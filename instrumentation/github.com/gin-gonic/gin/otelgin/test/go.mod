@@ -5,10 +5,10 @@ go 1.19
 require (
 	github.com/gin-gonic/gin v1.8.2
 	github.com/stretchr/testify v1.8.3
-	go.opentelemetry.io/contrib/instrumentation/github.com/gin-gonic/gin/otelgin v0.42.0-rc.1
-	go.opentelemetry.io/otel v1.16.0-rc.1
-	go.opentelemetry.io/otel/sdk v1.16.0-rc.1
-	go.opentelemetry.io/otel/trace v1.16.0-rc.1
+	go.opentelemetry.io/contrib/instrumentation/github.com/gin-gonic/gin/otelgin v0.42.0
+	go.opentelemetry.io/otel v1.16.0
+	go.opentelemetry.io/otel/sdk v1.16.0
+	go.opentelemetry.io/otel/trace v1.16.0
 )
 
 require (
@@ -28,7 +28,7 @@ require (
 	github.com/pelletier/go-toml/v2 v2.0.6 // indirect
 	github.com/pmezard/go-difflib v1.0.0 // indirect
 	github.com/ugorji/go/codec v1.2.9 // indirect
-	go.opentelemetry.io/otel/metric v1.16.0-rc.1 // indirect
+	go.opentelemetry.io/otel/metric v1.16.0 // indirect
 	golang.org/x/crypto v0.1.0 // indirect
 	golang.org/x/net v0.10.0 // indirect
 	golang.org/x/sys v0.8.0 // indirect
