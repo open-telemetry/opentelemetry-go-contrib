@@ -34,14 +34,14 @@ var stdoutFactory = func() (trace.SpanExporter, error) {
 	return exp, nil
 }
 
-func Test_can_store_exporter_factory(t *testing.T) {
+func TestCanStoreExporterFactory(t *testing.T) {
 	r := newRegistry()
 	assert.NotPanics(t, func() {
 		require.NoError(t, r.store("first", stdoutFactory))
 	})
 }
 
-func Test_load_of_unknown_exporter_returns_error(t *testing.T) {
+func TestLoadOfUnknownExporterReturnsError(t *testing.T) {
 	r := newRegistry()
 	assert.NotPanics(t, func() {
 		exp, err := r.load("non-existent")
@@ -50,7 +50,7 @@ func Test_load_of_unknown_exporter_returns_error(t *testing.T) {
 	})
 }
 
-func Test_registry_is_concurrent_safe(t *testing.T) {
+func TestRegistryIsConcurrentSafe(t *testing.T) {
 	const exporterName = "stdout"
 
 	r := newRegistry()
@@ -73,7 +73,7 @@ func Test_registry_is_concurrent_safe(t *testing.T) {
 	}()
 }
 
-func Test_subsequent_calls_to_get_exporter_returns_new_instances(t *testing.T) {
+func TestSubsequentCallsToGetExporterReturnsNewInstances(t *testing.T) {
 	const exporterType = "otlp"
 	exp1, err := SpanExporter(exporterType)
 	assert.Nil(t, err)
@@ -85,7 +85,7 @@ func Test_subsequent_calls_to_get_exporter_returns_new_instances(t *testing.T) {
 	assert.NotSame(t, exp1, exp2)
 }
 
-func Test_default_otlp_exporter_factories_automatically_registered(t *testing.T) {
+func TestDefaultOTLPExporterFactoriesAreAutomaticallyRegistered(t *testing.T) {
 	exp1, err := SpanExporter("")
 	assert.Nil(t, err)
 	assert.IsType(t, &otlptrace.Exporter{}, exp1)
@@ -95,7 +95,7 @@ func Test_default_otlp_exporter_factories_automatically_registered(t *testing.T)
 	assert.IsType(t, &otlptrace.Exporter{}, exp2)
 }
 
-func Test_env_registry_can_register_exporter_factory(t *testing.T) {
+func TestEnvRegistryCanRegisterExporterFactory(t *testing.T) {
 	const exporterName = "custom"
 	RegisterSpanExporter(exporterName, stdoutFactory)
 	t.Cleanup(func() { envRegistry.drop(exporterName) })
@@ -105,7 +105,7 @@ func Test_env_registry_can_register_exporter_factory(t *testing.T) {
 	assert.IsType(t, &stdouttrace.Exporter{}, exp)
 }
 
-func Test_env_registry_panics_on_duplicate_register_calls(t *testing.T) {
+func TestEnvRegistryPanicsOnDuplicateRegisterCalls(t *testing.T) {
 	const exporterName = "custom"
 	RegisterSpanExporter(exporterName, stdoutFactory)
 	t.Cleanup(func() { envRegistry.drop(exporterName) })
