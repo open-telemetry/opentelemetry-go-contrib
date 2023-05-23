@@ -7,6 +7,8 @@ Thumbs.db
 *.iml
 *.so
 coverage.*
+go.work
+go.work.sum
 example
 
 instrumentation/google.golang.org/grpc/otelgrpc/example/server/server
