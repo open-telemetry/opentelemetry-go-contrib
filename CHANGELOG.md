@@ -11,6 +11,7 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 ### Added
 
 - Add the new `go.opentelemetry.io/contrib/instrgen` package to provide auto-generated source code instrumentation. (#3068, #3108)
+- [otelgrpc] Avoid panic on target lookup when using a client implementation that doesn't use ClientConn struct (#3876)
 
 ### Changed
 
