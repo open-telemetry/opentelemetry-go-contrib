@@ -45,7 +45,7 @@ func TestLoadOfUnknownExporterReturnsError(t *testing.T) {
 	r := newRegistry()
 	assert.NotPanics(t, func() {
 		exp, err := r.load("non-existent")
-		assert.Equal(t, err, errUnknownExpoter, "empty registry should hold nothing")
+		assert.Equal(t, err, errUnknownExporter, "empty registry should hold nothing")
 		assert.Nil(t, exp, "non-nil exporter returned")
 	})
 }

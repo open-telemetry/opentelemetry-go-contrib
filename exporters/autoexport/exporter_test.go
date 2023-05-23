@@ -24,7 +24,7 @@ import (
 	"go.opentelemetry.io/otel/sdk/trace"
 )
 
-func TestOTLPExporterReturnedWhenNoEnvOrFallbackExportedConfigured(t *testing.T) {
+func TestOTLPExporterReturnedWhenNoEnvOrFallbackExporterConfigured(t *testing.T) {
 	exporter := NewTraceExporter()
 	assert.NotNil(t, exporter)
 	assert.IsType(t, &otlptrace.Exporter{}, exporter)
@@ -33,17 +33,17 @@ func TestOTLPExporterReturnedWhenNoEnvOrFallbackExportedConfigured(t *testing.T)
 func TestFallbackExporterReturnedWhenNoEnvExporterConfigured(t *testing.T) {
 	testExporter := &testExporter{}
 	exporter := NewTraceExporter(
-		WithFallabckSpanExporter(testExporter),
+		WithFallbackSpanExporter(testExporter),
 	)
 	assert.Equal(t, testExporter, exporter)
 }
 
-func TestEnvExporterIsPrefereredOverFallbackExporter(t *testing.T) {
+func TestEnvExporterIsPreferredOverFallbackExporter(t *testing.T) {
 	t.Setenv("OTEL_TRACES_EXPORTER", "otlp")
 
 	testExporter := &testExporter{}
 	exporter := NewTraceExporter(
-		WithFallabckSpanExporter(testExporter),
+		WithFallbackSpanExporter(testExporter),
 	)
 	assert.IsType(t, &otlptrace.Exporter{}, exporter)
 }

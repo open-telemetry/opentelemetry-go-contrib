@@ -52,9 +52,9 @@ var (
 	// and their mapping to a SpanExporter factory func() (trace.SpanExporter, error).
 	envRegistry = newRegistry()
 
-	// errUnknownExpoter is returned when an unknown exporter name is used in
+	// errUnknownExporter is returned when an unknown exporter name is used in
 	// the OTEL_*_EXPORTER environment variables.
-	errUnknownExpoter = errors.New("unknown exporter")
+	errUnknownExporter = errors.New("unknown exporter")
 
 	// errInvalidOTLPProtocol is returned when an invalid protocol is used in
 	// the OTEL_EXPORTER_OTLP_PROTOCOL environment variable.
@@ -64,16 +64,16 @@ var (
 	errDuplicateRegistration = errors.New("duplicate registration")
 )
 
-// load returns tries to find the SpanExporter factory wioth the key and
+// load returns tries to find the SpanExporter factory with the key and
 // then execute the factory, returning the created SpanExporter.
-// errUnknownExpoter is returned if the registration is missing and the error from
+// errUnknownExporter is returned if the registration is missing and the error from
 // executing the factory if not nil.
 func (r *registry) load(key string) (trace.SpanExporter, error) {
 	r.mu.Lock()
 	defer r.mu.Unlock()
 	factory, ok := r.names[key]
 	if !ok {
-		return nil, errUnknownExpoter
+		return nil, errUnknownExporter
 	}
 	exporter, err := factory()
 	if err != nil {
