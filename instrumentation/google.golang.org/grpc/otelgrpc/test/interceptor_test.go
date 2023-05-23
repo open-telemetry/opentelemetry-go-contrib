@@ -526,6 +526,54 @@ func TestStreamClientInterceptorCancelContext(t *testing.T) {
 	_ = streamClient.CloseSend()
 }
 
+// TestStreamClientInterceptorWithNoClientConn tests a situation where clientConn is nil.
+// There should be no NPEs.
+func TestStreamClientInterceptorWithNoClientConn(t *testing.T) {
+	defer goleak.VerifyNone(t)
+
+	// tracer
+	sr := tracetest.NewSpanRecorder()
+	tp := trace.NewTracerProvider(trace.WithSpanProcessor(sr))
+	streamCI := otelgrpc.StreamClientInterceptor(otelgrpc.WithTracerProvider(tp))
+
+	var mockClStr *mockClientStream
+	method := "/github.com.serviceName/bar"
+	name := "github.com.serviceName/bar"
+
+	// create a context with cancel
+	cancelCtx, cancel := context.WithCancel(context.Background())
+	defer cancel()
+	streamClient, err := streamCI(
+		cancelCtx,
+		&grpc.StreamDesc{ServerStreams: true},
+		nil, // no clientConn
+		method,
+		func(ctx context.Context,
+			desc *grpc.StreamDesc,
+			cc *grpc.ClientConn,
+			method string,
+			opts ...grpc.CallOption) (grpc.ClientStream, error) {
+			mockClStr = &mockClientStream{Desc: desc, Ctx: ctx}
+			return mockClStr, nil
+		},
+	)
+	require.NoError(t, err, "initialize grpc stream client")
+	_, ok := getSpanFromRecorder(sr, name)
+	require.False(t, ok, "span should not ended while stream is open")
+
+	req := &grpc_testing.SimpleRequest{}
+	reply := &grpc_testing.SimpleResponse{}
+
+	// send and receive fake data
+	for i := 0; i < 10; i++ {
+		_ = streamClient.SendMsg(req)
+		_ = streamClient.RecvMsg(reply)
+	}
+
+	// close client stream
+	_ = streamClient.CloseSend()
+}
+
 // TestStreamClientInterceptorWithError tests a situation that streamer returns an error.
 func TestStreamClientInterceptorWithError(t *testing.T) {
 	defer goleak.VerifyNone(t)
