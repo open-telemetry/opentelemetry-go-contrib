@@ -18,6 +18,10 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 
 - Use `strings.Cut()` instead of `string.SplitN()` for better readability and memory use. (#3822)
 
+### Fixed
+
+- AWS XRay Remote Sampling to cap quotaBalance to 1x quota in `go.opentelemetry.io/contrib/samplers/aws/xray`. (#3651, #3652)
+
 ## [1.17.0-rc.1/0.42.0-rc.1/0.11.0-rc.1] - 2023-05-17
 
 ### Changed
@@ -42,7 +46,6 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 ### Fixed
 
 - AWS XRay Remote Sampling to preserve previous rule if updated rule property has not changed in `go.opentelemetry.io/contrib/samplers/aws/xray`. (#3619, #3620)
-- AWS XRay Remote Sampling to cap quotaBalance to 1x quota in `go.opentelemetry.io/contrib/samplers/aws/xray`. (#3651, #3652)
 
 ## [1.16.0/0.41.0/0.10.0] - 2023-04-28
 
