@@ -75,11 +75,7 @@ func (r *registry) load(ctx context.Context, key string) (trace.SpanExporter, er
 	if !ok {
 		return nil, errUnknownExporter
 	}
-	exporter, err := factory()
-	if err != nil {
-		return nil, err
-	}
-	return exporter, nil
+	return factory(ctx)
 }
 
 // store sets the factory for a key if is not already in the registry. errDuplicateRegistration
