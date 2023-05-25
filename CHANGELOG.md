@@ -11,6 +11,7 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 ### Added
 
 - Add the new `go.opentelemetry.io/contrib/instrgen` package to provide auto-generated source code instrumentation. (#3068, #3108)
+- The `go.opentelemetry.io/contrib/exporters/autoexport` package to provide configuration of trace exporters with useful defaults and envar support. (#2753)
 
 ## [1.17.0/0.42.0/0.11.0] - 2023-05-23
 
@@ -72,7 +73,7 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 
 ### Fixed
 
-- AWS SDK rename attributes `aws.operation`, `aws.service` to `rpc.method`,`rpc.service` in `go.opentelemetry.io/contrib/instrumentation/github.com/aws/aws-sdk-go-v2/otelaws`. (#3582, #3617) 
+- AWS SDK rename attributes `aws.operation`, `aws.service` to `rpc.method`,`rpc.service` in `go.opentelemetry.io/contrib/instrumentation/github.com/aws/aws-sdk-go-v2/otelaws`. (#3582, #3617)
 - AWS SDK span name to be of the format `Service.Operation` in `go.opentelemetry.io/contrib/instrumentation/github.com/aws/aws-sdk-go-v2/otelaws`. (#3582, #3521)
 - Prevent sampler configuration reset from erroneously sampling first span in `go.opentelemetry.io/contrib/samplers/jaegerremote`. (#3603, #3604)
 
