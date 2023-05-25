@@ -27,7 +27,7 @@
 // If the environment variable is not set, the fallback exporter is returned.
 // The fallback exporter defaults to an
 // [OTLP exporter](https://pkg.go.dev/go.opentelemetry.io/otel/exporters/otlp/otlptrace)
-// and can be overriden using the [RegisterSpanExporter](https://pkg.go.dev/go.opentelemetry.io/contrib/exporters/autoexport#WithFallbackSpanExporter)
+// and can be overridden using the [RegisterSpanExporter](https://pkg.go.dev/go.opentelemetry.io/contrib/exporters/autoexport#WithFallbackSpanExporter)
 // option.
 
 package autoexport // import "go.opentelemetry.io/contrib/exporters/autoexport"
