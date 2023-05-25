@@ -25,7 +25,7 @@ import (
 )
 
 func TestOTLPExporterReturnedWhenNoEnvOrFallbackExporterConfigured(t *testing.T) {
-	exporter, err := NewTraceExporter()
+	exporter, err := NewTraceExporter(context.Background())
 	assert.Nil(t, err)
 	assert.NotNil(t, exporter)
 	assert.IsType(t, &otlptrace.Exporter{}, exporter)
@@ -34,6 +34,7 @@ func TestOTLPExporterReturnedWhenNoEnvOrFallbackExporterConfigured(t *testing.T)
 func TestFallbackExporterReturnedWhenNoEnvExporterConfigured(t *testing.T) {
 	testExporter := &testExporter{}
 	exporter, err := NewTraceExporter(
+		context.Background(),
 		WithFallbackSpanExporter(testExporter),
 	)
 	assert.Nil(t, err)
@@ -45,6 +46,7 @@ func TestEnvExporterIsPreferredOverFallbackExporter(t *testing.T) {
 
 	testExporter := &testExporter{}
 	exporter, err := NewTraceExporter(
+		context.Background(),
 		WithFallbackSpanExporter(testExporter),
 	)
 	assert.Nil(t, err)

@@ -15,6 +15,7 @@
 package autoexport // import "go.opentelemetry.io/contrib/exporters/autoexport"
 
 import (
+	"context"
 	"os"
 
 	"go.opentelemetry.io/otel/sdk/trace"
@@ -28,7 +29,7 @@ type config struct {
 	fallbackExporter trace.SpanExporter
 }
 
-func newConfig(opts ...Option) (config, error) {
+func newConfig(ctx context.Context, opts ...Option) (config, error) {
 	cfg := config{}
 	for _, opt := range opts {
 		cfg = opt.apply(cfg)
@@ -36,7 +37,7 @@ func newConfig(opts ...Option) (config, error) {
 
 	// if no fallback exporter is configured, use otlp exporter
 	if cfg.fallbackExporter == nil {
-		exp, err := SpanExporter("otlp")
+		exp, err := SpanExporter(context.Background(), "otlp")
 		if err != nil {
 			return cfg, err
 		}
@@ -68,7 +69,7 @@ func WithFallbackSpanExporter(exporter trace.SpanExporter) Option {
 // NewTraceExporter returns a configured SpanExporter defined using the environment
 // variable OTEL_TRACES_EXPORTER, the configured fallback exporter via options or
 // a default OTLP exporter (in this order).
-func NewTraceExporter(opts ...Option) (trace.SpanExporter, error) {
+func NewTraceExporter(ctx context.Context, opts ...Option) (trace.SpanExporter, error) {
 	// prefer exporter configured via environment variables over exporter
 	// passed in via exporter parameter
 	envExporter, err := makeExporterFromEnv()
@@ -78,7 +79,7 @@ func NewTraceExporter(opts ...Option) (trace.SpanExporter, error) {
 	if envExporter != nil {
 		return envExporter, nil
 	}
-	config, err := newConfig(opts...)
+	config, err := newConfig(ctx, opts...)
 	if err != nil {
 		return nil, err
 	}
@@ -93,5 +94,5 @@ func makeExporterFromEnv() (trace.SpanExporter, error) {
 	if !defined {
 		return nil, nil
 	}
-	return SpanExporter(expType)
+	return SpanExporter(context.Background(), expType)
 }

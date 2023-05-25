@@ -35,12 +35,12 @@ const (
 // goroutines without additional locking or coordination.
 type registry struct {
 	mu    sync.Mutex
-	names map[string]func() (trace.SpanExporter, error)
+	names map[string]func(context.Context) (trace.SpanExporter, error)
 }
 
 func newRegistry() registry {
 	return registry{
-		names: map[string]func() (trace.SpanExporter, error){
+		names: map[string]func(context.Context) (trace.SpanExporter, error){
 			"":     buildOTLPExporter,
 			"otlp": buildOTLPExporter,
 		},
@@ -68,7 +68,7 @@ var (
 // then execute the factory, returning the created SpanExporter.
 // errUnknownExporter is returned if the registration is missing and the error from
 // executing the factory if not nil.
-func (r *registry) load(key string) (trace.SpanExporter, error) {
+func (r *registry) load(ctx context.Context, key string) (trace.SpanExporter, error) {
 	r.mu.Lock()
 	defer r.mu.Unlock()
 	factory, ok := r.names[key]
@@ -84,7 +84,7 @@ func (r *registry) load(key string) (trace.SpanExporter, error) {
 
 // store sets the factory for a key if is not already in the registry. errDuplicateRegistration
 // is returned if the registry already contains key.
-func (r *registry) store(key string, factory func() (trace.SpanExporter, error)) error {
+func (r *registry) store(key string, factory func(ctx context.Context) (trace.SpanExporter, error)) error {
 	r.mu.Lock()
 	defer r.mu.Unlock()
 	if _, ok := r.names[key]; ok {
@@ -104,7 +104,7 @@ func (r *registry) drop(key string) {
 // RegisterSpanExporter sets the SpanExporter factory to be used when the
 // OTEL_TRACES_EXPORTERS environment variable contains the exporter name. This
 // will panic if name has already been registered.
-func RegisterSpanExporter(name string, factory func() (trace.SpanExporter, error)) {
+func RegisterSpanExporter(name string, factory func(ctx context.Context) (trace.SpanExporter, error)) {
 	if err := envRegistry.store(name, factory); err != nil {
 		// envRegistry.store will return errDuplicateRegistration if name is already
 		// registered. Panic here so the user is made aware of the duplicate
@@ -124,8 +124,8 @@ func RegisterSpanExporter(name string, factory func() (trace.SpanExporter, error
 // already registered SpanExporter. A default OTLP exporter is registered
 // under both an empty string "" and "otlp".
 // An error is returned for any unknown exporters.
-func SpanExporter(name string) (trace.SpanExporter, error) {
-	exp, err := envRegistry.load(name)
+func SpanExporter(ctx context.Context, name string) (trace.SpanExporter, error) {
+	exp, err := envRegistry.load(ctx, name)
 	if err != nil {
 		return nil, err
 	}
@@ -134,7 +134,7 @@ func SpanExporter(name string) (trace.SpanExporter, error) {
 
 // buildOTLPExporter creates an OTLP exporter using the environment variable
 // OTEL_EXPORTER_OTLP_PROTOCOL to determine the exporter protocol.
-func buildOTLPExporter() (trace.SpanExporter, error) {
+func buildOTLPExporter(ctx context.Context) (trace.SpanExporter, error) {
 	proto := "grpc"
 	if protoStr, ok := os.LookupEnv(otelExporterOTLPProtoEnvKey); ok {
 		proto = protoStr
@@ -142,9 +142,9 @@ func buildOTLPExporter() (trace.SpanExporter, error) {
 
 	switch proto {
 	case "grpc":
-		return otlptracegrpc.New(context.Background())
+		return otlptracegrpc.New(ctx)
 	case "http/protobuf":
-		return otlptracehttp.New(context.Background())
+		return otlptracehttp.New(ctx)
 	default:
 		return nil, errInvalidOTLPProtocol
 	}

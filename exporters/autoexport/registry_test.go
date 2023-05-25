@@ -15,6 +15,7 @@
 package autoexport
 
 import (
+	"context"
 	"fmt"
 	"testing"
 
@@ -26,7 +27,7 @@ import (
 	"go.opentelemetry.io/otel/sdk/trace"
 )
 
-var stdoutFactory = func() (trace.SpanExporter, error) {
+var stdoutFactory = func(ctx context.Context) (trace.SpanExporter, error) {
 	exp, err := stdouttrace.New()
 	if err != nil {
 		return nil, err
@@ -44,7 +45,7 @@ func TestCanStoreExporterFactory(t *testing.T) {
 func TestLoadOfUnknownExporterReturnsError(t *testing.T) {
 	r := newRegistry()
 	assert.NotPanics(t, func() {
-		exp, err := r.load("non-existent")
+		exp, err := r.load(context.Background(), "non-existent")
 		assert.Equal(t, err, errUnknownExporter, "empty registry should hold nothing")
 		assert.Nil(t, exp, "non-nil exporter returned")
 	})
@@ -66,7 +67,7 @@ func TestRegistryIsConcurrentSafe(t *testing.T) {
 
 	go func() {
 		assert.NotPanics(t, func() {
-			exp, err := r.load(exporterName)
+			exp, err := r.load(context.Background(), exporterName)
 			assert.Nil(t, err, "missing exporter in registry")
 			assert.IsType(t, &stdouttrace.Exporter{}, exp)
 		})
@@ -75,22 +76,22 @@ func TestRegistryIsConcurrentSafe(t *testing.T) {
 
 func TestSubsequentCallsToGetExporterReturnsNewInstances(t *testing.T) {
 	const exporterType = "otlp"
-	exp1, err := SpanExporter(exporterType)
+	exp1, err := SpanExporter(context.Background(), exporterType)
 	assert.Nil(t, err)
 	assert.IsType(t, &otlptrace.Exporter{}, exp1)
 
-	exp2, err := SpanExporter(exporterType)
+	exp2, err := SpanExporter(context.Background(), exporterType)
 	assert.Nil(t, err)
 	assert.IsType(t, &otlptrace.Exporter{}, exp2)
 	assert.NotSame(t, exp1, exp2)
 }
 
 func TestDefaultOTLPExporterFactoriesAreAutomaticallyRegistered(t *testing.T) {
-	exp1, err := SpanExporter("")
+	exp1, err := SpanExporter(context.Background(), "")
 	assert.Nil(t, err)
 	assert.IsType(t, &otlptrace.Exporter{}, exp1)
 
-	exp2, err := SpanExporter("otlp")
+	exp2, err := SpanExporter(context.Background(), "otlp")
 	assert.Nil(t, err)
 	assert.IsType(t, &otlptrace.Exporter{}, exp2)
 }
@@ -100,7 +101,7 @@ func TestEnvRegistryCanRegisterExporterFactory(t *testing.T) {
 	RegisterSpanExporter(exporterName, stdoutFactory)
 	t.Cleanup(func() { envRegistry.drop(exporterName) })
 
-	exp, err := envRegistry.load(exporterName)
+	exp, err := envRegistry.load(context.Background(), exporterName)
 	assert.Nil(t, err, "missing exporter in envRegistry")
 	assert.IsType(t, &stdouttrace.Exporter{}, exp)
 }
