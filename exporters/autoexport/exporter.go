@@ -72,7 +72,7 @@ func WithFallbackSpanExporter(exporter trace.SpanExporter) Option {
 func NewTraceExporter(ctx context.Context, opts ...Option) (trace.SpanExporter, error) {
 	// prefer exporter configured via environment variables over exporter
 	// passed in via exporter parameter
-	envExporter, err := makeExporterFromEnv()
+	envExporter, err := makeExporterFromEnv(ctx)
 	if err != nil {
 		return nil, err
 	}
@@ -89,10 +89,10 @@ func NewTraceExporter(ctx context.Context, opts ...Option) (trace.SpanExporter, 
 // makeExporterFromEnv returns a configured SpanExporter defined by the OTEL_TRACES_EXPORTER
 // environment variable.
 // nil is returned if no exporter is defined for the environment variable.
-func makeExporterFromEnv() (trace.SpanExporter, error) {
+func makeExporterFromEnv(ctx context.Context) (trace.SpanExporter, error) {
 	expType, defined := os.LookupEnv(otelTracesExportersEnvKey)
 	if !defined {
 		return nil, nil
 	}
-	return SpanExporter(context.Background(), expType)
+	return SpanExporter(ctx, expType)
 }
