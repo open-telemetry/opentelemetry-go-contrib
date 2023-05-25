@@ -30,19 +30,17 @@ const (
 	otelExporterOTLPProtoEnvKey = "OTEL_EXPORTER_OTLP_PROTOCOL"
 )
 
-type traceSpanExporterFactoryFunc func(context.Context) (trace.SpanExporter, error)
-
 // registry maintains a map of exporter names to SpanExporter factories
 // func(context.Context) (trace.SpanExporter, error) that is safe for concurrent use by multiple
 // goroutines without additional locking or coordination.
 type registry struct {
 	mu    sync.Mutex
-	names map[string]traceSpanExporterFactoryFunc
+	names map[string]func(context.Context) (trace.SpanExporter, error)
 }
 
 func newRegistry() registry {
 	return registry{
-		names: map[string]traceSpanExporterFactoryFunc{
+		names: map[string]func(context.Context) (trace.SpanExporter, error){
 			"":     buildOTLPExporter,
 			"otlp": buildOTLPExporter,
 		},
@@ -82,7 +80,7 @@ func (r *registry) load(ctx context.Context, key string) (trace.SpanExporter, er
 
 // store sets the factory for a key if is not already in the registry. errDuplicateRegistration
 // is returned if the registry already contains key.
-func (r *registry) store(key string, factory traceSpanExporterFactoryFunc) error {
+func (r *registry) store(key string, factory func(context.Context) (trace.SpanExporter, error)) error {
 	r.mu.Lock()
 	defer r.mu.Unlock()
 	if _, ok := r.names[key]; ok {
@@ -102,7 +100,7 @@ func (r *registry) drop(key string) {
 // RegisterSpanExporter sets the SpanExporter factory to be used when the
 // OTEL_TRACES_EXPORTERS environment variable contains the exporter name. This
 // will panic if name has already been registered.
-func RegisterSpanExporter(name string, factory traceSpanExporterFactoryFunc) {
+func RegisterSpanExporter(name string, factory func(context.Context) (trace.SpanExporter, error)) {
 	if err := envRegistry.store(name, factory); err != nil {
 		// envRegistry.store will return errDuplicateRegistration if name is already
 		// registered. Panic here so the user is made aware of the duplicate
