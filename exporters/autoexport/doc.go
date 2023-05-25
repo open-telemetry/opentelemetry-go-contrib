@@ -14,5 +14,4 @@
 
 // Package autoexport helps build trace exporters for configuring the
 // OpenTelemetry SDK trace export pipeline.
-
 package autoexport // import "go.opentelemetry.io/contrib/exporters/autoexport"
