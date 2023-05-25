@@ -11,7 +11,7 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 ### Added
 
 - Add the new `go.opentelemetry.io/contrib/instrgen` package to provide auto-generated source code instrumentation. (#3068, #3108)
-- The `go.opentelemetry.io/contrib/propagators/autoexport` package to provide configuration of trace exporters with useful defaults and envar support. (#2753)
+- The `go.opentelemetry.io/contrib/exporters/autoexport` package to provide configuration of trace exporters with useful defaults and envar support. (#2753)
 
 ## [1.17.0/0.42.0/0.11.0] - 2023-05-23
 
