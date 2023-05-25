@@ -25,19 +25,36 @@ const (
 	otelTracesExportersEnvKey = "OTEL_TRACES_EXPORTER"
 )
 
-type autoExportConfig struct {
+type config struct {
 	fallbackExporter trace.SpanExporter
 }
 
+func newConfig(opts ...Option) config {
+	cfg := config{}
+	for _, opt := range opts {
+		cfg = opt.apply(cfg)
+	}
+	return cfg
+}
+
 // Option applies an autoexport configuration option.
-type Option func(*autoExportConfig)
+type Option interface {
+	apply(config) config
+}
+
+type optionFunc func(config) config
+
+func (fn optionFunc) apply (cfg config) config {
+	return fn(cfg)
+}
 
 // WithFallbackSpanExporter sets the fallback exporter to use when no exporter
 // is configured through the OTEL_TRACES_EXPORTER environment variable.
 func WithFallbackSpanExporter(exporter trace.SpanExporter) Option {
-	return func(config *autoExportConfig) {
-		config.fallbackExporter = exporter
-	}
+	return optionFunc(func(cfg config) config {
+		cfg.fallbackExporter = exporter
+		return cfg
+	})
 }
 
 // NewTraceExporter returns a configured SpanExporter defined using the environment
@@ -55,10 +72,7 @@ func NewTraceExporter(opts ...Option) trace.SpanExporter {
 	}
 
 	// attempt to get fallback exporter
-	config := &autoExportConfig{}
-	for _, opt := range opts {
-		opt(config)
-	}
+	config := newConfig(opts...)
 	if config.fallbackExporter != nil {
 		return config.fallbackExporter
 	}
