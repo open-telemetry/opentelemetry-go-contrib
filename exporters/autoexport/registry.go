@@ -30,17 +30,19 @@ const (
 	otelExporterOTLPProtoEnvKey = "OTEL_EXPORTER_OTLP_PROTOCOL"
 )
 
+type traceSpanExporterFactoryFunc func(context.Context) (trace.SpanExporter, error)
+
 // registry maintains a map of exporter names to SpanExporter factories
-// func() (trace.SpanExporter) that is safe for concurrent use by multiple
+// func(context.Context) (trace.SpanExporter, error) that is safe for concurrent use by multiple
 // goroutines without additional locking or coordination.
 type registry struct {
 	mu    sync.Mutex
-	names map[string]func(context.Context) (trace.SpanExporter, error)
+	names map[string]traceSpanExporterFactoryFunc
 }
 
 func newRegistry() registry {
 	return registry{
-		names: map[string]func(context.Context) (trace.SpanExporter, error){
+		names: map[string]traceSpanExporterFactoryFunc{
 			"":     buildOTLPExporter,
 			"otlp": buildOTLPExporter,
 		},
@@ -49,7 +51,7 @@ func newRegistry() registry {
 
 var (
 	// envRegistry is the package level registry of exporter registrations
-	// and their mapping to a SpanExporter factory func() (trace.SpanExporter, error).
+	// and their mapping to a SpanExporter factory func(context.Context) (trace.SpanExporter, error).
 	envRegistry = newRegistry()
 
 	// errUnknownExporter is returned when an unknown exporter name is used in
@@ -80,7 +82,7 @@ func (r *registry) load(ctx context.Context, key string) (trace.SpanExporter, er
 
 // store sets the factory for a key if is not already in the registry. errDuplicateRegistration
 // is returned if the registry already contains key.
-func (r *registry) store(key string, factory func(ctx context.Context) (trace.SpanExporter, error)) error {
+func (r *registry) store(key string, factory traceSpanExporterFactoryFunc) error {
 	r.mu.Lock()
 	defer r.mu.Unlock()
 	if _, ok := r.names[key]; ok {
@@ -100,7 +102,7 @@ func (r *registry) drop(key string) {
 // RegisterSpanExporter sets the SpanExporter factory to be used when the
 // OTEL_TRACES_EXPORTERS environment variable contains the exporter name. This
 // will panic if name has already been registered.
-func RegisterSpanExporter(name string, factory func(ctx context.Context) (trace.SpanExporter, error)) {
+func RegisterSpanExporter(name string, factory traceSpanExporterFactoryFunc) {
 	if err := envRegistry.store(name, factory); err != nil {
 		// envRegistry.store will return errDuplicateRegistration if name is already
 		// registered. Panic here so the user is made aware of the duplicate
