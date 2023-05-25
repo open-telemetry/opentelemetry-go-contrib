@@ -16,7 +16,7 @@
 // that can be used when configuring an OpenTelemetry Go SDK trace export
 // pipeline.
 //
-// [NewTraceExporter] looks for the `OTEL_TRACES_EXPORTER` environment
+// [NewSpanExporter] looks for the `OTEL_TRACES_EXPORTER` environment
 // variable and if set, attempts to load the exporter from it's registry of
 // exporters. The registry is always loaded with an OTLP exporter with the key
 // `otlp` and additional exporters can be registered using

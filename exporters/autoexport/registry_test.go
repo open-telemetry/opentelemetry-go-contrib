@@ -76,22 +76,22 @@ func TestRegistryIsConcurrentSafe(t *testing.T) {
 
 func TestSubsequentCallsToGetExporterReturnsNewInstances(t *testing.T) {
 	const exporterType = "otlp"
-	exp1, err := SpanExporter(context.Background(), exporterType)
+	exp1, err := spanExporter(context.Background(), exporterType)
 	assert.Nil(t, err)
 	assert.IsType(t, &otlptrace.Exporter{}, exp1)
 
-	exp2, err := SpanExporter(context.Background(), exporterType)
+	exp2, err := spanExporter(context.Background(), exporterType)
 	assert.Nil(t, err)
 	assert.IsType(t, &otlptrace.Exporter{}, exp2)
 	assert.NotSame(t, exp1, exp2)
 }
 
 func TestDefaultOTLPExporterFactoriesAreAutomaticallyRegistered(t *testing.T) {
-	exp1, err := SpanExporter(context.Background(), "")
+	exp1, err := spanExporter(context.Background(), "")
 	assert.Nil(t, err)
 	assert.IsType(t, &otlptrace.Exporter{}, exp1)
 
-	exp2, err := SpanExporter(context.Background(), "otlp")
+	exp2, err := spanExporter(context.Background(), "otlp")
 	assert.Nil(t, err)
 	assert.IsType(t, &otlptrace.Exporter{}, exp2)
 }

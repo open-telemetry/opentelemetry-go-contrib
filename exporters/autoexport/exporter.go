@@ -37,7 +37,7 @@ func newConfig(ctx context.Context, opts ...Option) (config, error) {
 
 	// if no fallback exporter is configured, use otlp exporter
 	if cfg.fallbackExporter == nil {
-		exp, err := SpanExporter(context.Background(), "otlp")
+		exp, err := spanExporter(context.Background(), "otlp")
 		if err != nil {
 			return cfg, err
 		}
@@ -66,10 +66,10 @@ func WithFallbackSpanExporter(exporter trace.SpanExporter) Option {
 	})
 }
 
-// NewTraceExporter returns a configured SpanExporter defined using the environment
+// NewSpanExporter returns a configured SpanExporter defined using the environment
 // variable OTEL_TRACES_EXPORTER, the configured fallback exporter via options or
 // a default OTLP exporter (in this order).
-func NewTraceExporter(ctx context.Context, opts ...Option) (trace.SpanExporter, error) {
+func NewSpanExporter(ctx context.Context, opts ...Option) (trace.SpanExporter, error) {
 	// prefer exporter configured via environment variables over exporter
 	// passed in via exporter parameter
 	envExporter, err := makeExporterFromEnv(ctx)
@@ -94,5 +94,5 @@ func makeExporterFromEnv(ctx context.Context) (trace.SpanExporter, error) {
 	if !defined {
 		return nil, nil
 	}
-	return SpanExporter(ctx, expType)
+	return spanExporter(ctx, expType)
 }

@@ -115,12 +115,12 @@ func RegisterSpanExporter(name string, factory func(context.Context) (trace.Span
 	}
 }
 
-// SpanExporter returns a span exporter using the passed in name
+// spanExporter returns a span exporter using the passed in name
 // from the list of registered SpanExporters. Each name must match an
 // already registered SpanExporter. A default OTLP exporter is registered
 // under both an empty string "" and "otlp".
 // An error is returned for any unknown exporters.
-func SpanExporter(ctx context.Context, name string) (trace.SpanExporter, error) {
+func spanExporter(ctx context.Context, name string) (trace.SpanExporter, error) {
 	exp, err := envRegistry.load(ctx, name)
 	if err != nil {
 		return nil, err
