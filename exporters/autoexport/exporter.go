@@ -53,7 +53,7 @@ type Option interface {
 
 type optionFunc func(config) config
 
-func (fn optionFunc) apply (cfg config) config {
+func (fn optionFunc) apply(cfg config) config {
 	return fn(cfg)
 }
 
