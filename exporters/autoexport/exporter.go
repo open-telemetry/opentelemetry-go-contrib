@@ -17,7 +17,6 @@ package autoexport // import "go.opentelemetry.io/contrib/exporters/autoexport"
 import (
 	"os"
 
-	"go.opentelemetry.io/otel"
 	"go.opentelemetry.io/otel/sdk/trace"
 )
 
@@ -29,12 +28,21 @@ type config struct {
 	fallbackExporter trace.SpanExporter
 }
 
-func newConfig(opts ...Option) config {
+func newConfig(opts ...Option) (config, error) {
 	cfg := config{}
 	for _, opt := range opts {
 		cfg = opt.apply(cfg)
 	}
-	return cfg
+
+	// if no fallback exporter is configured, use otlp exporter
+	if cfg.fallbackExporter == nil {
+		exp, err := SpanExporter("otlp")
+		if err != nil {
+			return cfg, err
+		}
+		cfg.fallbackExporter = exp
+	}
+	return cfg, nil
 }
 
 // Option applies an autoexport configuration option.
@@ -60,29 +68,21 @@ func WithFallbackSpanExporter(exporter trace.SpanExporter) Option {
 // NewTraceExporter returns a configured SpanExporter defined using the environment
 // variable OTEL_TRACES_EXPORTER, the configured fallback exporter via options or
 // a default OTLP exporter (in this order).
-func NewTraceExporter(opts ...Option) trace.SpanExporter {
+func NewTraceExporter(opts ...Option) (trace.SpanExporter, error) {
 	// prefer exporter configured via environment variables over exporter
 	// passed in via exporter parameter
 	envExporter, err := makeExporterFromEnv()
 	if err != nil {
-		otel.Handle(err)
+		return nil, err
 	}
 	if envExporter != nil {
-		return envExporter
+		return envExporter, nil
 	}
-
-	// attempt to get fallback exporter
-	config := newConfig(opts...)
-	if config.fallbackExporter != nil {
-		return config.fallbackExporter
-	}
-
-	// if no env or fallback exporter, use OTLP exporter
-	exp, err := SpanExporter("otlp")
+	config, err := newConfig(opts...)
 	if err != nil {
-		otel.Handle(err)
+		return nil, err
 	}
-	return exp
+	return config.fallbackExporter, nil
 }
 
 // makeExporterFromEnv returns a configured SpanExporter defined by the OTEL_TRACES_EXPORTER
@@ -93,6 +93,5 @@ func makeExporterFromEnv() (trace.SpanExporter, error) {
 	if !defined {
 		return nil, nil
 	}
-
 	return SpanExporter(expType)
 }
