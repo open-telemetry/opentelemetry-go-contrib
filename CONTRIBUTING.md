@@ -79,11 +79,11 @@ Approvers:
 - [David Ashpole](https://github.com/dashpole), Google
 - [Chester Cheung](https://github.com/hanyuancheung), Tencent
 - [Damien Mathieu](https://github.com/dmathieu), Elastic
+- [Anthony Mirabella](https://github.com/Aneurysm9), Amazon
 
 Maintainers:
 
 - [Aaron Clawson](https://github.com/MadVikingGod), LightStep
-- [Anthony Mirabella](https://github.com/Aneurysm9), Amazon
 - [Robert Pająk](https://github.com/pellared), Splunk
 - [Tyler Yahn](https://github.com/MrAlias), Splunk
 

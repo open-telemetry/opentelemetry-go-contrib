@@ -20,7 +20,7 @@
 
 * @open-telemetry/go-approvers
 
-CODEOWNERS @MrAlias @Aneurysm9 @MadVikingGod @pellared
+CODEOWNERS @MrAlias @MadVikingGod @pellared
 
 detectors/aws/                                                          @open-telemetry/go-approvers @Aneurysm9
 detectors/gcp/                                                          @open-telemetry/go-approvers @dashpole
