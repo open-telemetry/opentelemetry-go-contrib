@@ -492,27 +492,27 @@ func TestWithRouteTag(t *testing.T) {
 	)
 
 	h.ServeHTTP(httptest.NewRecorder(), httptest.NewRequest(http.MethodGet, "/", nil))
-	expectedAttribute := semconv.HTTPRouteKey.String(route)
+	want := semconv.HTTPRouteKey.String(route)
 
 	require.Len(t, spanRecorder.Ended(), 1, "should emit a span")
-	span := spanRecorder.Ended()[0]
-	require.Contains(t, span.Attributes(), expectedAttribute, "should add route to span attributes")
+	gotSpan := spanRecorder.Ended()[0]
+	require.Contains(t, gotSpan.Attributes(), want, "should add route to span attributes")
 
 	rm := metricdata.ResourceMetrics{}
 	err := metricReader.Collect(context.Background(), &rm)
 	require.NoError(t, err)
 	require.Len(t, rm.ScopeMetrics, 1, "should emit metrics for one scope")
-	scopeMetrics := rm.ScopeMetrics[0]
+	gotMetrics := rm.ScopeMetrics[0].Metrics
 
-	for _, m := range scopeMetrics.Metrics {
+	for _, m := range gotMetrics {
 		switch d := m.Data.(type) {
 		case metricdata.Sum[int64]:
 			require.Len(t, d.DataPoints, 1, "metric '%v' should have exactly one data point", m.Name)
-			require.Contains(t, d.DataPoints[0].Attributes.ToSlice(), expectedAttribute, "should add route to attributes for metric '%v'", m.Name)
+			require.Contains(t, d.DataPoints[0].Attributes.ToSlice(), want, "should add route to attributes for metric '%v'", m.Name)
 
 		case metricdata.Histogram[float64]:
 			require.Len(t, d.DataPoints, 1, "metric '%v' should have exactly one data point", m.Name)
-			require.Contains(t, d.DataPoints[0].Attributes.ToSlice(), expectedAttribute, "should add route to attributes for metric '%v'", m.Name)
+			require.Contains(t, d.DataPoints[0].Attributes.ToSlice(), want, "should add route to attributes for metric '%v'", m.Name)
 
 		default:
 			require.Fail(t, "metric has unexpected data type", "metric '%v' has unexpected data type %T", m.Name, m.Data)
