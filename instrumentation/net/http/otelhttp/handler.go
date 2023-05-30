@@ -21,12 +21,12 @@ import (
 
 	"github.com/felixge/httpsnoop"
 
+	"go.opentelemetry.io/contrib/instrumentation/net/http/otelhttp/internal/semconvutil"
 	"go.opentelemetry.io/otel"
 	"go.opentelemetry.io/otel/attribute"
 	"go.opentelemetry.io/otel/metric"
 	"go.opentelemetry.io/otel/propagation"
 	semconv "go.opentelemetry.io/otel/semconv/v1.17.0"
-	"go.opentelemetry.io/otel/semconv/v1.17.0/httpconv"
 	"go.opentelemetry.io/otel/trace"
 )
 
@@ -136,7 +136,7 @@ func (h *Handler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 
 	ctx := h.propagators.Extract(r.Context(), propagation.HeaderCarrier(r.Header))
 	opts := []trace.SpanStartOption{
-		trace.WithAttributes(httpconv.ServerRequest(h.server, r)...),
+		trace.WithAttributes(semconvutil.HTTPServerRequest(h.server, r)...),
 	}
 	if h.server != "" {
 		hostAttr := semconv.NetHostName(h.server)
@@ -220,7 +220,7 @@ func (h *Handler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	setAfterServeAttributes(span, bw.read, rww.written, rww.statusCode, bw.err, rww.err)
 
 	// Add metrics
-	attributes := append(labeler.Get(), httpconv.ServerRequest(h.server, r)...)
+	attributes := append(labeler.Get(), semconvutil.HTTPServerRequest(h.server, r)...)
 	if rww.statusCode > 0 {
 		attributes = append(attributes, semconv.HTTPStatusCode(rww.statusCode))
 	}
@@ -252,7 +252,7 @@ func setAfterServeAttributes(span trace.Span, read, wrote int64, statusCode int,
 	if statusCode > 0 {
 		attributes = append(attributes, semconv.HTTPStatusCode(statusCode))
 	}
-	span.SetStatus(httpconv.ServerStatus(statusCode))
+	span.SetStatus(semconvutil.HTTPServerStatus(statusCode))
 
 	if werr != nil && werr != io.EOF {
 		attributes = append(attributes, WriteErrorKey.String(werr.Error()))
