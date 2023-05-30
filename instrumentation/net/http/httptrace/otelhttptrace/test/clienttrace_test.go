@@ -533,7 +533,7 @@ func TestHTTPRequestWithExpect100Continue(t *testing.T) {
 		return ok
 	}, 5*time.Second, 10*time.Millisecond)
 
-	// Fount http.send span must contains "GOT 100 - Wait" event
+	// Found http.send span must contain "GOT 100 - Wait" event
 	found := false
 	for _, v := range httpSendSpan.Events() {
 		if v.Name == "GOT 100 - Wait" {
