@@ -20,6 +20,8 @@ import (
 	"net/http"
 	"net/http/httptrace"
 
+	"go.opentelemetry.io/otel/attribute"
+
 	"go.opentelemetry.io/contrib/instrumentation/net/http/otelhttp/internal/semconvutil"
 	"go.opentelemetry.io/otel"
 	"go.opentelemetry.io/otel/codes"
@@ -32,12 +34,13 @@ import (
 type Transport struct {
 	rt http.RoundTripper
 
-	tracer            trace.Tracer
-	propagators       propagation.TextMapPropagator
-	spanStartOptions  []trace.SpanStartOption
-	filters           []Filter
-	spanNameFormatter func(string, *http.Request) string
-	clientTrace       func(context.Context) *httptrace.ClientTrace
+	tracer             trace.Tracer
+	propagators        propagation.TextMapPropagator
+	spanStartOptions   []trace.SpanStartOption
+	filters            []Filter
+	redactedAttributes map[attribute.Key]struct{}
+	spanNameFormatter  func(string, *http.Request) string
+	clientTrace        func(context.Context) *httptrace.ClientTrace
 }
 
 var _ http.RoundTripper = &Transport{}
@@ -74,6 +77,7 @@ func (t *Transport) applyConfig(c *config) {
 	t.filters = c.Filters
 	t.spanNameFormatter = c.SpanNameFormatter
 	t.clientTrace = c.ClientTrace
+	t.redactedAttributes = c.RedactedAttributes
 }
 
 func defaultTransportFormatter(_ string, r *http.Request) string {
@@ -110,7 +114,7 @@ func (t *Transport) RoundTrip(r *http.Request) (*http.Response, error) {
 	}
 
 	r = r.WithContext(ctx)
-	span.SetAttributes(semconvutil.HTTPClientRequest(r)...)
+	span.SetAttributes(t.redactAttributes(semconvutil.HTTPClientRequest(r))...)
 	t.propagators.Inject(ctx, propagation.HeaderCarrier(r.Header))
 
 	res, err := t.rt.RoundTrip(r)
@@ -121,7 +125,7 @@ func (t *Transport) RoundTrip(r *http.Request) (*http.Response, error) {
 		return res, err
 	}
 
-	span.SetAttributes(semconvutil.HTTPClientResponse(res)...)
+	span.SetAttributes(t.redactAttributes(semconvutil.HTTPClientResponse(res))...)
 	span.SetStatus(semconvutil.HTTPClientStatus(res.StatusCode))
 	res.Body = newWrappedBody(span, res.Body)
 
@@ -190,4 +194,21 @@ func (wb *wrappedBody) Close() error {
 		return wb.body.Close()
 	}
 	return nil
+}
+
+// redactAttributes - return []keyValue with applied redaction to attributes if match key in redactedAttributes.
+func (t *Transport) redactAttributes(attributes []attribute.KeyValue) []attribute.KeyValue {
+	var result []attribute.KeyValue
+	for _, att := range attributes {
+		result = append(result, t.redactAttribute(att))
+	}
+	return result
+}
+
+// redactAttribute - return keyValue with applied redaction to attributes if match key in redactedAttributes.
+func (t *Transport) redactAttribute(keyValue attribute.KeyValue) attribute.KeyValue {
+	if _, ok := t.redactedAttributes[keyValue.Key]; ok {
+		return attribute.KeyValue{Key: keyValue.Key, Value: attribute.StringValue("****")}
+	}
+	return keyValue
 }

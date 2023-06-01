@@ -35,18 +35,19 @@ type middleware struct {
 	operation string
 	server    string
 
-	tracer            trace.Tracer
-	meter             metric.Meter
-	propagators       propagation.TextMapPropagator
-	spanStartOptions  []trace.SpanStartOption
-	readEvent         bool
-	writeEvent        bool
-	filters           []Filter
-	spanNameFormatter func(string, *http.Request) string
-	counters          map[string]metric.Int64Counter
-	valueRecorders    map[string]metric.Float64Histogram
-	publicEndpoint    bool
-	publicEndpointFn  func(*http.Request) bool
+	tracer             trace.Tracer
+	meter              metric.Meter
+	propagators        propagation.TextMapPropagator
+	spanStartOptions   []trace.SpanStartOption
+	readEvent          bool
+	writeEvent         bool
+	filters            []Filter
+	redactedAttributes map[attribute.Key]struct{}
+	spanNameFormatter  func(string, *http.Request) string
+	counters           map[string]metric.Int64Counter
+	valueRecorders     map[string]metric.Float64Histogram
+	publicEndpoint     bool
+	publicEndpointFn   func(*http.Request) bool
 }
 
 func defaultHandlerFormatter(operation string, _ *http.Request) string {
@@ -91,6 +92,7 @@ func (h *middleware) configure(c *config) {
 	h.readEvent = c.ReadEvent
 	h.writeEvent = c.WriteEvent
 	h.filters = c.Filters
+	h.redactedAttributes = c.RedactedAttributes
 	h.spanNameFormatter = c.SpanNameFormatter
 	h.publicEndpoint = c.PublicEndpoint
 	h.publicEndpointFn = c.PublicEndpointFn
@@ -135,7 +137,7 @@ func (h *middleware) serveHTTP(w http.ResponseWriter, r *http.Request, next http
 
 	ctx := h.propagators.Extract(r.Context(), propagation.HeaderCarrier(r.Header))
 	opts := []trace.SpanStartOption{
-		trace.WithAttributes(semconvutil.HTTPServerRequest(h.server, r)...),
+		trace.WithAttributes(h.redactAttributes(semconvutil.HTTPServerRequest(h.server, r))...),
 	}
 	if h.server != "" {
 		hostAttr := semconv.NetHostName(h.server)
@@ -223,7 +225,7 @@ func (h *middleware) serveHTTP(w http.ResponseWriter, r *http.Request, next http
 	if rww.statusCode > 0 {
 		attributes = append(attributes, semconv.HTTPStatusCode(rww.statusCode))
 	}
-	o := metric.WithAttributes(attributes...)
+	o := metric.WithAttributes(h.redactAttributes(attributes)...)
 	h.counters[RequestContentLength].Add(ctx, bw.read, o)
 	h.counters[ResponseContentLength].Add(ctx, rww.written, o)
 
@@ -266,4 +268,21 @@ func WithRouteTag(route string, h http.Handler) http.Handler {
 		span.SetAttributes(semconv.HTTPRoute(route))
 		h.ServeHTTP(w, r)
 	})
+}
+
+// redactAttributes - return []keyValue with applied redaction to attributes if match key in redactedAttributes.
+func (h *middleware) redactAttributes(attributes []attribute.KeyValue) []attribute.KeyValue {
+	var result []attribute.KeyValue
+	for _, att := range attributes {
+		result = append(result, h.redactAttribute(att))
+	}
+	return result
+}
+
+// redactAttribute - return keyValue with applied redaction to attributes if match key in redactedAttributes.
+func (h *middleware) redactAttribute(keyValue attribute.KeyValue) attribute.KeyValue {
+	if _, ok := h.redactedAttributes[keyValue.Key]; ok {
+		return attribute.KeyValue{Key: keyValue.Key, Value: attribute.StringValue("****")}
+	}
+	return keyValue
 }
