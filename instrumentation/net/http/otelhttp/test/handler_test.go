@@ -510,7 +510,23 @@ func TestWithRouteTag(t *testing.T) {
 			require.Len(t, d.DataPoints, 1, "metric '%v' should have exactly one data point", m.Name)
 			require.Contains(t, d.DataPoints[0].Attributes.ToSlice(), want, "should add route to attributes for metric '%v'", m.Name)
 
+		case metricdata.Sum[float64]:
+			require.Len(t, d.DataPoints, 1, "metric '%v' should have exactly one data point", m.Name)
+			require.Contains(t, d.DataPoints[0].Attributes.ToSlice(), want, "should add route to attributes for metric '%v'", m.Name)
+
+		case metricdata.Histogram[int64]:
+			require.Len(t, d.DataPoints, 1, "metric '%v' should have exactly one data point", m.Name)
+			require.Contains(t, d.DataPoints[0].Attributes.ToSlice(), want, "should add route to attributes for metric '%v'", m.Name)
+
 		case metricdata.Histogram[float64]:
+			require.Len(t, d.DataPoints, 1, "metric '%v' should have exactly one data point", m.Name)
+			require.Contains(t, d.DataPoints[0].Attributes.ToSlice(), want, "should add route to attributes for metric '%v'", m.Name)
+
+		case metricdata.Gauge[int64]:
+			require.Len(t, d.DataPoints, 1, "metric '%v' should have exactly one data point", m.Name)
+			require.Contains(t, d.DataPoints[0].Attributes.ToSlice(), want, "should add route to attributes for metric '%v'", m.Name)
+
+		case metricdata.Gauge[float64]:
 			require.Len(t, d.DataPoints, 1, "metric '%v' should have exactly one data point", m.Name)
 			require.Contains(t, d.DataPoints[0].Attributes.ToSlice(), want, "should add route to attributes for metric '%v'", m.Name)
 
