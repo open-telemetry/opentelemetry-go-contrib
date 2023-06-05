@@ -42,6 +42,7 @@ type config struct {
 	TracerProvider trace.TracerProvider
 	MeterProvider  metric.MeterProvider
 
+	noLogIO           bool
 	meter             metric.Meter
 	rpcServerDuration metric.Int64Histogram
 }
@@ -130,4 +131,15 @@ func (o meterProviderOption) apply(c *config) {
 // creating a Meter. If this option is not provide the global MeterProvider will be used.
 func WithMeterProvider(mp metric.MeterProvider) Option {
 	return meterProviderOption{mp: mp}
+}
+
+type noLogIOProviderOption struct{}
+
+func (o noLogIOProviderOption) apply(c *config) {
+	c.noLogIO = true
+}
+
+// WithNoLogIO disables logging of SENT/RECEIVED events in the span.
+func WithNoLogIO() Option {
+	return noLogIOProviderOption{}
 }
