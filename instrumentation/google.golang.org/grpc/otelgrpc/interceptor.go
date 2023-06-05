@@ -95,13 +95,13 @@ func UnaryClientInterceptor(opts ...Option) grpc.UnaryClientInterceptor {
 
 		ctx = inject(ctx, cfg.Propagators)
 
-		if !cfg.noLogIO {
+		if cfg.SentEvent {
 			messageSent.Event(ctx, 1, req)
 		}
 
 		err := invoker(ctx, method, req, reply, cc, callOpts...)
 
-		if !cfg.noLogIO {
+		if cfg.ReceivedEvent {
 			messageReceived.Event(ctx, 1, reply)
 		}
 
@@ -134,11 +134,12 @@ const (
 type clientStream struct {
 	grpc.ClientStream
 
-	desc       *grpc.StreamDesc
-	events     chan streamEvent
-	eventsDone chan struct{}
-	finished   chan error
-	noLogIO    bool
+	desc          *grpc.StreamDesc
+	events        chan streamEvent
+	eventsDone    chan struct{}
+	finished      chan error
+	ReceivedEvent bool
+	SentEvent     bool
 
 	receivedMessageID int
 	sentMessageID     int
@@ -158,7 +159,7 @@ func (w *clientStream) RecvMsg(m interface{}) error {
 	} else {
 		w.receivedMessageID++
 
-		if !w.noLogIO {
+		if w.ReceivedEvent {
 			messageReceived.Event(w.Context(), w.receivedMessageID, m)
 		}
 	}
@@ -171,7 +172,7 @@ func (w *clientStream) SendMsg(m interface{}) error {
 
 	w.sentMessageID++
 
-	if !w.noLogIO {
+	if w.SentEvent {
 		messageSent.Event(w.Context(), w.sentMessageID, m)
 	}
 
@@ -229,12 +230,13 @@ func wrapClientStream(ctx context.Context, s grpc.ClientStream, desc *grpc.Strea
 	}()
 
 	return &clientStream{
-		ClientStream: s,
-		desc:         desc,
-		events:       events,
-		eventsDone:   eventsDone,
-		finished:     finished,
-		noLogIO:      cfg.noLogIO,
+		ClientStream:  s,
+		desc:          desc,
+		events:        events,
+		eventsDone:    eventsDone,
+		finished:      finished,
+		ReceivedEvent: cfg.ReceivedEvent,
+		SentEvent:     cfg.SentEvent,
 	}
 }
 
@@ -343,7 +345,7 @@ func UnaryServerInterceptor(opts ...Option) grpc.UnaryServerInterceptor {
 		)
 		defer span.End()
 
-		if !cfg.noLogIO {
+		if cfg.ReceivedEvent {
 			messageReceived.Event(ctx, 1, req)
 		}
 
@@ -362,14 +364,14 @@ func UnaryServerInterceptor(opts ...Option) grpc.UnaryServerInterceptor {
 			span.SetStatus(statusCode, msg)
 			span.SetAttributes(statusCodeAttr(s.Code()))
 
-			if !cfg.noLogIO {
+			if cfg.SentEvent {
 				messageSent.Event(ctx, 1, s.Proto())
 			}
 		} else {
 			statusCode = grpc_codes.OK
 			span.SetAttributes(statusCodeAttr(grpc_codes.OK))
 
-			if !cfg.noLogIO {
+			if cfg.SentEvent {
 				messageSent.Event(ctx, 1, resp)
 			}
 		}
@@ -386,7 +388,8 @@ type serverStream struct {
 
 	receivedMessageID int
 	sentMessageID     int
-	noLogIO           bool
+	ReceivedEvent     bool
+	SentEvent         bool
 }
 
 func (w *serverStream) Context() context.Context {
@@ -399,7 +402,7 @@ func (w *serverStream) RecvMsg(m interface{}) error {
 	if err == nil {
 		w.receivedMessageID++
 
-		if !w.noLogIO {
+		if w.ReceivedEvent {
 			messageReceived.Event(w.Context(), w.receivedMessageID, m)
 		}
 	}
@@ -412,7 +415,7 @@ func (w *serverStream) SendMsg(m interface{}) error {
 
 	w.sentMessageID++
 
-	if !w.noLogIO {
+	if w.SentEvent {
 		messageSent.Event(w.Context(), w.sentMessageID, m)
 	}
 
@@ -421,9 +424,10 @@ func (w *serverStream) SendMsg(m interface{}) error {
 
 func wrapServerStream(ctx context.Context, ss grpc.ServerStream, cfg *config) *serverStream {
 	return &serverStream{
-		ServerStream: ss,
-		ctx:          ctx,
-		noLogIO:      cfg.noLogIO,
+		ServerStream:  ss,
+		ctx:           ctx,
+		ReceivedEvent: cfg.ReceivedEvent,
+		SentEvent:     cfg.SentEvent,
 	}
 }
 

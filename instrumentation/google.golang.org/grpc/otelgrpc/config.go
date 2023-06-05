@@ -41,8 +41,9 @@ type config struct {
 	Propagators    propagation.TextMapPropagator
 	TracerProvider trace.TracerProvider
 	MeterProvider  metric.MeterProvider
+	ReceivedEvent     bool
+	SentEvent         bool
 
-	noLogIO           bool
 	meter             metric.Meter
 	rpcServerDuration metric.Int64Histogram
 }
@@ -133,13 +134,36 @@ func WithMeterProvider(mp metric.MeterProvider) Option {
 	return meterProviderOption{mp: mp}
 }
 
-type noLogIOProviderOption struct{}
+type event int
 
-func (o noLogIOProviderOption) apply(c *config) {
-	c.noLogIO = true
+// Different types of events that can be recorded, see WithMessageEvents.
+const (
+	ReceivedEvents event = iota
+	SentEvents
+)
+
+type messageEventsProviderOption struct{
+	events []event
 }
 
-// WithNoLogIO disables logging of SENT/RECEIVED events in the span.
-func WithNoLogIO() Option {
-	return noLogIOProviderOption{}
+func (o messageEventsProviderOption) apply(c *config) {
+	for _, e := range o.events {
+		switch e {
+		case ReceivedEvents:
+			c.ReceivedEvent = true
+		case SentEvents:
+			c.SentEvent = true
+		}
+	}
+}
+
+// WithMessageEvents configures the Handler to record the specified events
+// (span.AddEvent) on spans. By default only summary attributes are added at the
+// end of the request.
+//
+// Valid events are:
+//   - ReceivedEvents: Record the number of bytes read after every gRPC read operation.
+//   - SentEvents: Record the number of bytes written after every gRPC write operation.
+func WithMessageEvents(events ...event) Option {
+	return messageEventsProviderOption{events: events}
 }
