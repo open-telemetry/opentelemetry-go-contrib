@@ -89,7 +89,10 @@ func TestUnaryClientInterceptor(t *testing.T) {
 
 	sr := tracetest.NewSpanRecorder()
 	tp := trace.NewTracerProvider(trace.WithSpanProcessor(sr))
-	unaryInterceptor := otelgrpc.UnaryClientInterceptor(otelgrpc.WithTracerProvider(tp))
+	unaryInterceptor := otelgrpc.UnaryClientInterceptor(
+		otelgrpc.WithTracerProvider(tp),
+		otelgrpc.WithMessageEvents(otelgrpc.ReceivedEvents, otelgrpc.SentEvents),
+	)
 
 	req := &grpc_testing.SimpleRequest{}
 	reply := &grpc_testing.SimpleResponse{}
@@ -314,7 +317,10 @@ func createInterceptedStreamClient(t *testing.T, method string, opts clientStrea
 	// tracer
 	sr := tracetest.NewSpanRecorder()
 	tp := trace.NewTracerProvider(trace.WithSpanProcessor(sr))
-	streamCI := otelgrpc.StreamClientInterceptor(otelgrpc.WithTracerProvider(tp))
+	streamCI := otelgrpc.StreamClientInterceptor(
+		otelgrpc.WithTracerProvider(tp),
+		otelgrpc.WithMessageEvents(otelgrpc.ReceivedEvents, otelgrpc.SentEvents),
+	)
 
 	streamClient, err := streamCI(
 		context.Background(),
@@ -486,7 +492,10 @@ func TestStreamClientInterceptorCancelContext(t *testing.T) {
 	// tracer
 	sr := tracetest.NewSpanRecorder()
 	tp := trace.NewTracerProvider(trace.WithSpanProcessor(sr))
-	streamCI := otelgrpc.StreamClientInterceptor(otelgrpc.WithTracerProvider(tp))
+	streamCI := otelgrpc.StreamClientInterceptor(
+		otelgrpc.WithTracerProvider(tp),
+		otelgrpc.WithMessageEvents(otelgrpc.ReceivedEvents, otelgrpc.SentEvents),
+	)
 
 	var mockClStr *mockClientStream
 	method := "/github.com.serviceName/bar"
@@ -545,7 +554,10 @@ func TestStreamClientInterceptorWithError(t *testing.T) {
 	// tracer
 	sr := tracetest.NewSpanRecorder()
 	tp := trace.NewTracerProvider(trace.WithSpanProcessor(sr))
-	streamCI := otelgrpc.StreamClientInterceptor(otelgrpc.WithTracerProvider(tp))
+	streamCI := otelgrpc.StreamClientInterceptor(
+		otelgrpc.WithTracerProvider(tp),
+		otelgrpc.WithMessageEvents(otelgrpc.ReceivedEvents, otelgrpc.SentEvents),
+	)
 
 	var mockClStr *mockClientStream
 	method := "/github.com.serviceName/bar"
@@ -697,7 +709,10 @@ func assertServerSpan(t *testing.T, wantSpanCode codes.Code, wantSpanStatusDescr
 func TestUnaryServerInterceptor(t *testing.T) {
 	sr := tracetest.NewSpanRecorder()
 	tp := trace.NewTracerProvider(trace.WithSpanProcessor(sr))
-	usi := otelgrpc.UnaryServerInterceptor(otelgrpc.WithTracerProvider(tp))
+	usi := otelgrpc.UnaryServerInterceptor(
+		otelgrpc.WithTracerProvider(tp),
+		otelgrpc.WithMessageEvents(otelgrpc.ReceivedEvents, otelgrpc.SentEvents),
+	)
 	for _, check := range serverChecks {
 		name := check.grpcCode.String()
 		t.Run(name, func(t *testing.T) {
@@ -734,7 +749,10 @@ func (m *mockServerStream) Context() context.Context { return context.Background
 func TestStreamServerInterceptor(t *testing.T) {
 	sr := tracetest.NewSpanRecorder()
 	tp := trace.NewTracerProvider(trace.WithSpanProcessor(sr))
-	usi := otelgrpc.StreamServerInterceptor(otelgrpc.WithTracerProvider(tp))
+	usi := otelgrpc.StreamServerInterceptor(
+		otelgrpc.WithTracerProvider(tp),
+		otelgrpc.WithMessageEvents(otelgrpc.ReceivedEvents, otelgrpc.SentEvents),
+	)
 	for _, check := range serverChecks {
 		name := check.grpcCode.String()
 		t.Run(name, func(t *testing.T) {

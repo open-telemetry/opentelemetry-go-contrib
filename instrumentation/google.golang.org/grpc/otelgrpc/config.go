@@ -41,8 +41,8 @@ type config struct {
 	Propagators    propagation.TextMapPropagator
 	TracerProvider trace.TracerProvider
 	MeterProvider  metric.MeterProvider
-	ReceivedEvent     bool
-	SentEvent         bool
+	ReceivedEvent  bool
+	SentEvent      bool
 
 	meter             metric.Meter
 	rpcServerDuration metric.Int64Histogram
@@ -142,7 +142,7 @@ const (
 	SentEvents
 )
 
-type messageEventsProviderOption struct{
+type messageEventsProviderOption struct {
 	events []event
 }
 

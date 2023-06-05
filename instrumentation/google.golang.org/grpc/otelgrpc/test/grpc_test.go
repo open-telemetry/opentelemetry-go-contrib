@@ -94,12 +94,25 @@ func TestInterceptors(t *testing.T) {
 
 	assert.NoError(t, doCalls(
 		[]grpc.DialOption{
-			grpc.WithUnaryInterceptor(otelgrpc.UnaryClientInterceptor(otelgrpc.WithTracerProvider(clientUnaryTP))),
-			grpc.WithStreamInterceptor(otelgrpc.StreamClientInterceptor(otelgrpc.WithTracerProvider(clientStreamTP))),
+			grpc.WithUnaryInterceptor(otelgrpc.UnaryClientInterceptor(
+				otelgrpc.WithTracerProvider(clientUnaryTP),
+				otelgrpc.WithMessageEvents(otelgrpc.ReceivedEvents, otelgrpc.SentEvents),
+			)),
+			grpc.WithStreamInterceptor(otelgrpc.StreamClientInterceptor(
+				otelgrpc.WithTracerProvider(clientStreamTP),
+				otelgrpc.WithMessageEvents(otelgrpc.ReceivedEvents, otelgrpc.SentEvents),
+			)),
 		},
 		[]grpc.ServerOption{
-			grpc.UnaryInterceptor(otelgrpc.UnaryServerInterceptor(otelgrpc.WithTracerProvider(serverUnaryTP), otelgrpc.WithMeterProvider(serverUnaryMP))),
-			grpc.StreamInterceptor(otelgrpc.StreamServerInterceptor(otelgrpc.WithTracerProvider(serverStreamTP))),
+			grpc.UnaryInterceptor(otelgrpc.UnaryServerInterceptor(
+				otelgrpc.WithTracerProvider(serverUnaryTP),
+				otelgrpc.WithMeterProvider(serverUnaryMP),
+				otelgrpc.WithMessageEvents(otelgrpc.ReceivedEvents, otelgrpc.SentEvents),
+			)),
+			grpc.StreamInterceptor(otelgrpc.StreamServerInterceptor(
+				otelgrpc.WithTracerProvider(serverStreamTP),
+				otelgrpc.WithMessageEvents(otelgrpc.ReceivedEvents, otelgrpc.SentEvents),
+			)),
 		},
 	))
 
