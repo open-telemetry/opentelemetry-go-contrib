@@ -437,83 +437,24 @@ func (c *httpConv) header(prefix string, h http.Header) []attribute.KeyValue {
 // ClientStatus returns a span status code and message for an HTTP status code
 // value received by a client.
 func (c *httpConv) ClientStatus(code int) (codes.Code, string) {
-	stat, valid := validateHTTPStatusCode(code)
-	if !valid {
-		return stat, fmt.Sprintf("Invalid HTTP status code %d", code)
+	if code < 100 || code >= 600 {
+		return codes.Error, fmt.Sprintf("Invalid HTTP status code %d", code)
 	}
-	return stat, ""
+	if code >= 400 {
+		return codes.Error, ""
+	}
+	return codes.Unset, ""
 }
 
 // ServerStatus returns a span status code and message for an HTTP status code
 // value returned by a server. Status codes in the 400-499 range are not
 // returned as errors.
 func (c *httpConv) ServerStatus(code int) (codes.Code, string) {
-	stat, valid := validateHTTPStatusCode(code)
-	if !valid {
-		return stat, fmt.Sprintf("Invalid HTTP status code %d", code)
+	if code < 100 || code >= 600 {
+		return codes.Error, fmt.Sprintf("Invalid HTTP status code %d", code)
 	}
-
-	if code/100 == 4 {
-		return codes.Unset, ""
+	if code >= 500 {
+		return codes.Error, ""
 	}
-	return stat, ""
-}
-
-type codeRange struct {
-	fromInclusive int
-	toInclusive   int
-}
-
-func (r codeRange) contains(code int) bool {
-	return r.fromInclusive <= code && code <= r.toInclusive
-}
-
-var validRangesPerCategory = map[int][]codeRange{
-	1: {
-		{http.StatusContinue, http.StatusEarlyHints},
-	},
-	2: {
-		{http.StatusOK, http.StatusAlreadyReported},
-		{http.StatusIMUsed, http.StatusIMUsed},
-	},
-	3: {
-		{http.StatusMultipleChoices, http.StatusUseProxy},
-		{http.StatusTemporaryRedirect, http.StatusPermanentRedirect},
-	},
-	4: {
-		{http.StatusBadRequest, http.StatusTeapot}, // yes, teapot is so useful…
-		{http.StatusMisdirectedRequest, http.StatusUpgradeRequired},
-		{http.StatusPreconditionRequired, http.StatusTooManyRequests},
-		{http.StatusRequestHeaderFieldsTooLarge, http.StatusRequestHeaderFieldsTooLarge},
-		{http.StatusUnavailableForLegalReasons, http.StatusUnavailableForLegalReasons},
-	},
-	5: {
-		{http.StatusInternalServerError, http.StatusLoopDetected},
-		{http.StatusNotExtended, http.StatusNetworkAuthenticationRequired},
-	},
-}
-
-// validateHTTPStatusCode validates the HTTP status code and returns
-// corresponding span status code. If the `code` is not a valid HTTP status
-// code, returns span status Error and false.
-func validateHTTPStatusCode(code int) (codes.Code, bool) {
-	category := code / 100
-	ranges, ok := validRangesPerCategory[category]
-	if !ok {
-		return codes.Error, false
-	}
-	ok = false
-	for _, crange := range ranges {
-		ok = crange.contains(code)
-		if ok {
-			break
-		}
-	}
-	if !ok {
-		return codes.Error, false
-	}
-	if category > 0 && category < 4 {
-		return codes.Unset, true
-	}
-	return codes.Error, true
+	return codes.Unset, ""
 }
