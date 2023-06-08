@@ -41,8 +41,9 @@ type config struct {
 	Propagators    propagation.TextMapPropagator
 	TracerProvider trace.TracerProvider
 	MeterProvider  metric.MeterProvider
-	ReceivedEvent  bool
-	SentEvent      bool
+
+	ReceivedEvent bool
+	SentEvent     bool
 
 	meter             metric.Meter
 	rpcServerDuration metric.Int64Histogram
@@ -146,8 +147,8 @@ type messageEventsProviderOption struct {
 	events []event
 }
 
-func (o messageEventsProviderOption) apply(c *config) {
-	for _, e := range o.events {
+func (m messageEventsProviderOption) apply(c *config) {
+	for _, e := range m.events {
 		switch e {
 		case ReceivedEvents:
 			c.ReceivedEvent = true

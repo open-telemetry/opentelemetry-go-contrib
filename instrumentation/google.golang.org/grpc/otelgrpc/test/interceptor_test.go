@@ -435,42 +435,76 @@ func TestStreamClientInterceptorOnBIDIStream(t *testing.T) {
 	_ = streamClient.CloseSend()
 }
 
-func TestStreamClientInterceptorWithNoEvents(t *testing.T) {
-	defer goleak.VerifyNone(t)
-
-	method := "/github.com.serviceName/bar"
-	name := "github.com.serviceName/bar"
-	streamClient, sr := createInterceptedStreamClient(t, method, clientStreamOpts{NumRecvMsgs: 10, NoEvents: true})
-	_, ok := getSpanFromRecorder(sr, name)
-	require.False(t, ok, "span should not end while stream is open")
-
-	req := &grpc_testing.SimpleRequest{}
-	reply := &grpc_testing.SimpleResponse{}
-
-	// send and receive fake data
-	for i := 0; i < 10; i++ {
-		_ = streamClient.SendMsg(req)
-		_ = streamClient.RecvMsg(reply)
+func TestStreamClientInterceptorEvents(t *testing.T) {
+	testCases := []struct {
+		Name     string
+		NumMsgs  int
+		NoEvents bool
+	}{
+		{Name: "With events", NumMsgs: 1, NoEvents: false},
+		{Name: "No events", NumMsgs: 1, NoEvents: true},
+		{Name: "10 messages with events", NumMsgs: 10, NoEvents: false},
+		{Name: "10 messages no events", NumMsgs: 10, NoEvents: true},
 	}
 
-	// The stream has been exhausted so next read should get a EOF and the stream should be considered closed.
-	err := streamClient.RecvMsg(reply)
-	require.Equal(t, io.EOF, err)
+	for _, testCase := range testCases {
+		t.Run(testCase.Name, func(t *testing.T) {
+			defer goleak.VerifyNone(t)
 
-	// added retry because span end is called in separate go routine
-	var span trace.ReadOnlySpan
-	for retry := 0; retry < 5; retry++ {
-		span, ok = getSpanFromRecorder(sr, name)
-		if ok {
-			break
-		}
-		time.Sleep(time.Second * 1)
+			method := "/github.com.serviceName/bar"
+			name := "github.com.serviceName/bar"
+			streamClient, sr := createInterceptedStreamClient(t, method, clientStreamOpts{NumRecvMsgs: testCase.NumMsgs, NoEvents: testCase.NoEvents})
+			_, ok := getSpanFromRecorder(sr, name)
+			require.False(t, ok, "span should not end while stream is open")
+
+			req := &grpc_testing.SimpleRequest{}
+			reply := &grpc_testing.SimpleResponse{}
+			var eventsAttr []map[attribute.Key]attribute.Value
+
+			// send and receive fake data
+			for i := 0; i < testCase.NumMsgs; i++ {
+				_ = streamClient.SendMsg(req)
+				_ = streamClient.RecvMsg(reply)
+				if !testCase.NoEvents {
+					eventsAttr = append(eventsAttr,
+						map[attribute.Key]attribute.Value{
+							otelgrpc.RPCMessageTypeKey: attribute.StringValue("SENT"),
+							otelgrpc.RPCMessageIDKey:   attribute.IntValue(i + 1),
+						},
+						map[attribute.Key]attribute.Value{
+							otelgrpc.RPCMessageTypeKey: attribute.StringValue("RECEIVED"),
+							otelgrpc.RPCMessageIDKey:   attribute.IntValue(i + 1),
+						},
+					)
+				}
+			}
+
+			// The stream has been exhausted so next read should get a EOF and the stream should be considered closed.
+			err := streamClient.RecvMsg(reply)
+			require.Equal(t, io.EOF, err)
+
+			// added retry because span end is called in separate go routine
+			var span trace.ReadOnlySpan
+			for retry := 0; retry < 5; retry++ {
+				span, ok = getSpanFromRecorder(sr, name)
+				if ok {
+					break
+				}
+				time.Sleep(time.Second * 1)
+			}
+			require.True(t, ok, "missing span %s", name)
+
+			if testCase.NoEvents {
+				assert.Empty(t, span.Events())
+			} else {
+				assert.Len(t, span.Events(), len(eventsAttr))
+				assert.Equal(t, eventsAttr, eventAttrMap(span.Events()))
+			}
+
+			// ensure CloseSend can be subsequently called
+			_ = streamClient.CloseSend()
+		})
 	}
-	require.True(t, ok, "missing span %s", name)
-	require.Empty(t, span.Events())
-
-	// ensure CloseSend can be subsequently called
-	_ = streamClient.CloseSend()
 }
 
 func TestStreamClientInterceptorOnUnidirectionalClientServerStream(t *testing.T) {
@@ -835,6 +869,14 @@ type mockServerStream struct {
 
 func (m *mockServerStream) Context() context.Context { return context.Background() }
 
+func (m *mockServerStream) SendMsg(_ interface{}) error {
+	return nil
+}
+
+func (m *mockServerStream) RecvMsg(_ interface{}) error {
+	return nil
+}
+
 // TestStreamServerInterceptor tests the server interceptor for streaming RPCs.
 func TestStreamServerInterceptor(t *testing.T) {
 	sr := tracetest.NewSpanRecorder()
@@ -862,27 +904,66 @@ func TestStreamServerInterceptor(t *testing.T) {
 	}
 }
 
-func TestStreamServerInterceptorWithNoEvents(t *testing.T) {
-	sr := tracetest.NewSpanRecorder()
-	tp := trace.NewTracerProvider(trace.WithSpanProcessor(sr))
-	usi := otelgrpc.StreamServerInterceptor(
-		otelgrpc.WithTracerProvider(tp),
-	)
-
-	grpcCode := grpc_codes.OK
-	name := grpcCode.String()
-	// call the stream interceptor
-	grpcErr := status.Error(grpcCode, name)
-	handler := func(_ interface{}, _ grpc.ServerStream) error {
-		return grpcErr
+func TestStreamServerInterceptorEvents(t *testing.T) {
+	testCases := []struct {
+		Name     string
+		NoEvents bool
+	}{
+		{Name: "With events", NoEvents: false},
+		{Name: "No events", NoEvents: true},
 	}
-	err := usi(&grpc_testing.SimpleRequest{}, &mockServerStream{}, &grpc.StreamServerInfo{FullMethod: name}, handler)
-	assert.Equal(t, grpcErr, err)
 
-	// validate span
-	span, ok := getSpanFromRecorder(sr, name)
-	require.True(t, ok, "missing span %s", name)
-	require.Empty(t, span.Events())
+	for _, testCase := range testCases {
+		t.Run(testCase.Name, func(t *testing.T) {
+			sr := tracetest.NewSpanRecorder()
+			tp := trace.NewTracerProvider(trace.WithSpanProcessor(sr))
+			opts := []otelgrpc.Option{
+				otelgrpc.WithTracerProvider(tp),
+			}
+			if !testCase.NoEvents {
+				opts = append(opts, otelgrpc.WithMessageEvents(otelgrpc.ReceivedEvents, otelgrpc.SentEvents))
+			}
+			usi := otelgrpc.StreamServerInterceptor(opts...)
+			stream := &mockServerStream{}
+
+			grpcCode := grpc_codes.OK
+			name := grpcCode.String()
+			// call the stream interceptor
+			grpcErr := status.Error(grpcCode, name)
+			handler := func(_ interface{}, handlerStream grpc.ServerStream) error {
+				var msg grpc_testing.SimpleRequest
+				err := handlerStream.RecvMsg(&msg)
+				require.NoError(t, err)
+				err = handlerStream.SendMsg(&msg)
+				require.NoError(t, err)
+				return grpcErr
+			}
+
+			err := usi(&grpc_testing.SimpleRequest{}, stream, &grpc.StreamServerInfo{FullMethod: name}, handler)
+			require.Equal(t, grpcErr, err)
+
+			// validate span
+			span, ok := getSpanFromRecorder(sr, name)
+			require.True(t, ok, "missing span %s", name)
+
+			if testCase.NoEvents {
+				assert.Empty(t, span.Events())
+			} else {
+				eventsAttr := []map[attribute.Key]attribute.Value{
+					map[attribute.Key]attribute.Value{
+						otelgrpc.RPCMessageTypeKey: attribute.StringValue("RECEIVED"),
+						otelgrpc.RPCMessageIDKey:   attribute.IntValue(1),
+					},
+					map[attribute.Key]attribute.Value{
+						otelgrpc.RPCMessageTypeKey: attribute.StringValue("SENT"),
+						otelgrpc.RPCMessageIDKey:   attribute.IntValue(1),
+					},
+				}
+				assert.Len(t, span.Events(), len(eventsAttr))
+				assert.Equal(t, eventsAttr, eventAttrMap(span.Events()))
+			}
+		})
+	}
 }
 
 func TestParseFullMethod(t *testing.T) {
