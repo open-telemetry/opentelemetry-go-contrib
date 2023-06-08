@@ -332,7 +332,7 @@ func TestHTTPClientStatus(t *testing.T) {
 		{http.StatusSeeOther, codes.Unset, false},
 		{http.StatusNotModified, codes.Unset, false},
 		{http.StatusUseProxy, codes.Unset, false},
-		{306, codes.Error, true},
+		{306, codes.Unset, false},
 		{http.StatusTemporaryRedirect, codes.Unset, false},
 		{http.StatusPermanentRedirect, codes.Unset, false},
 		{http.StatusBadRequest, codes.Error, false},
@@ -364,6 +364,7 @@ func TestHTTPClientStatus(t *testing.T) {
 		{http.StatusTooManyRequests, codes.Error, false},
 		{http.StatusRequestHeaderFieldsTooLarge, codes.Error, false},
 		{http.StatusUnavailableForLegalReasons, codes.Error, false},
+		{499, codes.Error, false},
 		{http.StatusInternalServerError, codes.Error, false},
 		{http.StatusNotImplemented, codes.Error, false},
 		{http.StatusBadGateway, codes.Error, false},
@@ -379,13 +380,15 @@ func TestHTTPClientStatus(t *testing.T) {
 	}
 
 	for _, test := range tests {
-		c, msg := HTTPClientStatus(test.code)
-		assert.Equal(t, test.stat, c)
-		if test.msg && msg == "" {
-			t.Errorf("expected non-empty message for %d", test.code)
-		} else if !test.msg && msg != "" {
-			t.Errorf("expected empty message for %d, got: %s", test.code, msg)
-		}
+		t.Run(strconv.Itoa(test.code), func(t *testing.T) {
+			c, msg := HTTPClientStatus(test.code)
+			assert.Equal(t, test.stat, c)
+			if test.msg && msg == "" {
+				t.Errorf("expected non-empty message for %d", test.code)
+			} else if !test.msg && msg != "" {
+				t.Errorf("expected empty message for %d, got: %s", test.code, msg)
+			}
+		})
 	}
 }
 
@@ -416,7 +419,7 @@ func TestHTTPServerStatus(t *testing.T) {
 		{http.StatusSeeOther, codes.Unset, false},
 		{http.StatusNotModified, codes.Unset, false},
 		{http.StatusUseProxy, codes.Unset, false},
-		{306, codes.Error, true},
+		{306, codes.Unset, false},
 		{http.StatusTemporaryRedirect, codes.Unset, false},
 		{http.StatusPermanentRedirect, codes.Unset, false},
 		{http.StatusBadRequest, codes.Unset, false},
@@ -448,6 +451,7 @@ func TestHTTPServerStatus(t *testing.T) {
 		{http.StatusTooManyRequests, codes.Unset, false},
 		{http.StatusRequestHeaderFieldsTooLarge, codes.Unset, false},
 		{http.StatusUnavailableForLegalReasons, codes.Unset, false},
+		{499, codes.Unset, false},
 		{http.StatusInternalServerError, codes.Error, false},
 		{http.StatusNotImplemented, codes.Error, false},
 		{http.StatusBadGateway, codes.Error, false},
