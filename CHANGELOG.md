@@ -18,6 +18,14 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 
 - AWS XRay Remote Sampling to cap quotaBalance to 1x quota in `go.opentelemetry.io/contrib/samplers/aws/xray`. (#3651, #3652)
 - Do not panic when the HTTP request has the "Expect: 100-continue" header in `go.opentelemetry.io/contrib/instrumentation/net/http/httptrace/otelhttptrace`. (#3892)
+- Fix span status value set for non-standard HTTP status codes in modules listed below. (#3966)
+  - `go.opentelemetry.io/contrib/instrumentation/github.com/emicklei/go-restful/otelrestful`
+  - `go.opentelemetry.io/contrib/instrumentation/github.com/gin-gonic/gin/otelgin`
+  - `go.opentelemetry.io/contrib/instrumentation/github.com/gorilla/mux/otelmux`
+  - `go.opentelemetry.io/contrib/instrumentation/github.com/labstack/echo/otelecho`
+  - `go.opentelemetry.io/contrib/instrumentation/gopkg.in/macaron.v1/otelmacaron`
+  - `go.opentelemetry.io/contrib/instrumentation/net/http/httptrace/otelhttptrace`
+  - `go.opentelemetry.io/contrib/instrumentation/net/http/otelhttp`
 
 ### Removed
 
