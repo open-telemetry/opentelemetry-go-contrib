@@ -134,12 +134,13 @@ const (
 type clientStream struct {
 	grpc.ClientStream
 
-	desc          *grpc.StreamDesc
-	events        chan streamEvent
-	eventsDone    chan struct{}
-	finished      chan error
-	ReceivedEvent bool
-	SentEvent     bool
+	desc       *grpc.StreamDesc
+	events     chan streamEvent
+	eventsDone chan struct{}
+	finished   chan error
+
+	receivedEvent bool
+	sentEvent     bool
 
 	receivedMessageID int
 	sentMessageID     int
@@ -159,7 +160,7 @@ func (w *clientStream) RecvMsg(m interface{}) error {
 	} else {
 		w.receivedMessageID++
 
-		if w.ReceivedEvent {
+		if w.receivedEvent {
 			messageReceived.Event(w.Context(), w.receivedMessageID, m)
 		}
 	}
@@ -172,7 +173,7 @@ func (w *clientStream) SendMsg(m interface{}) error {
 
 	w.sentMessageID++
 
-	if w.SentEvent {
+	if w.sentEvent {
 		messageSent.Event(w.Context(), w.sentMessageID, m)
 	}
 
@@ -235,8 +236,8 @@ func wrapClientStream(ctx context.Context, s grpc.ClientStream, desc *grpc.Strea
 		events:        events,
 		eventsDone:    eventsDone,
 		finished:      finished,
-		ReceivedEvent: cfg.ReceivedEvent,
-		SentEvent:     cfg.SentEvent,
+		receivedEvent: cfg.ReceivedEvent,
+		sentEvent:     cfg.SentEvent,
 	}
 }
 
@@ -386,8 +387,9 @@ type serverStream struct {
 
 	receivedMessageID int
 	sentMessageID     int
-	ReceivedEvent     bool
-	SentEvent         bool
+
+	receivedEvent bool
+	sentEvent     bool
 }
 
 func (w *serverStream) Context() context.Context {
@@ -399,7 +401,7 @@ func (w *serverStream) RecvMsg(m interface{}) error {
 
 	if err == nil {
 		w.receivedMessageID++
-		if w.ReceivedEvent {
+		if w.receivedEvent {
 			messageReceived.Event(w.Context(), w.receivedMessageID, m)
 		}
 	}
@@ -411,7 +413,7 @@ func (w *serverStream) SendMsg(m interface{}) error {
 	err := w.ServerStream.SendMsg(m)
 
 	w.sentMessageID++
-	if w.SentEvent {
+	if w.sentEvent {
 		messageSent.Event(w.Context(), w.sentMessageID, m)
 	}
 
@@ -422,8 +424,8 @@ func wrapServerStream(ctx context.Context, ss grpc.ServerStream, cfg *config) *s
 	return &serverStream{
 		ServerStream:  ss,
 		ctx:           ctx,
-		ReceivedEvent: cfg.ReceivedEvent,
-		SentEvent:     cfg.SentEvent,
+		receivedEvent: cfg.ReceivedEvent,
+		sentEvent:     cfg.SentEvent,
 	}
 }
 
