@@ -950,11 +950,11 @@ func TestStreamServerInterceptorEvents(t *testing.T) {
 				assert.Empty(t, span.Events())
 			} else {
 				eventsAttr := []map[attribute.Key]attribute.Value{
-					map[attribute.Key]attribute.Value{
+					{
 						otelgrpc.RPCMessageTypeKey: attribute.StringValue("RECEIVED"),
 						otelgrpc.RPCMessageIDKey:   attribute.IntValue(1),
 					},
-					map[attribute.Key]attribute.Value{
+					{
 						otelgrpc.RPCMessageTypeKey: attribute.StringValue("SENT"),
 						otelgrpc.RPCMessageIDKey:   attribute.IntValue(1),
 					},
