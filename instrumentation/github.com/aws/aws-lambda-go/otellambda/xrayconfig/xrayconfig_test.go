@@ -174,7 +174,7 @@ func TestWrapEndToEnd(t *testing.T) {
 	customerHandler := func() (string, error) {
 		return "hello world", nil
 	}
-	mockCollector := runMockCollectorAtEndpoint(t, ":4317")
+	mockCollector := runMockCollectorAtEndpoint(t, "localhost:4317")
 	defer func() {
 		_ = mockCollector.Stop()
 	}()
