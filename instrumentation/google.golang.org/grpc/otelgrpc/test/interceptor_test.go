@@ -391,16 +391,12 @@ func TestStreamClientInterceptorOnBIDIStream(t *testing.T) {
 	err := streamClient.RecvMsg(reply)
 	require.Equal(t, io.EOF, err)
 
-	// added retry because span end is called in separate go routine
+	// wait for span end that is called in separate go routine
 	var span trace.ReadOnlySpan
-	for retry := 0; retry < 5; retry++ {
+	require.Eventually(t, func() bool {
 		span, ok = getSpanFromRecorder(sr, name)
-		if ok {
-			break
-		}
-		time.Sleep(time.Second * 1)
-	}
-	require.True(t, ok, "missing span %s", name)
+		return ok
+	}, 5 * time.Second, time.Second, "missing span %s", name)
 
 	expectedAttr := []attribute.KeyValue{
 		semconv.RPCSystemGRPC,
@@ -483,16 +479,12 @@ func TestStreamClientInterceptorEvents(t *testing.T) {
 			err := streamClient.RecvMsg(reply)
 			require.Equal(t, io.EOF, err)
 
-			// added retry because span end is called in separate go routine
+			// wait for span end that is called in separate go routine
 			var span trace.ReadOnlySpan
-			for retry := 0; retry < 5; retry++ {
+			require.Eventually(t, func() bool {
 				span, ok = getSpanFromRecorder(sr, name)
-				if ok {
-					break
-				}
-				time.Sleep(time.Second * 1)
-			}
-			require.True(t, ok, "missing span %s", name)
+				return ok
+			}, 5 * time.Second, time.Second, "missing span %s", name)
 
 			if testCase.NoEvents {
 				assert.Empty(t, span.Events())
@@ -531,16 +523,12 @@ func TestStreamClientInterceptorOnUnidirectionalClientServerStream(t *testing.T)
 	err := streamClient.RecvMsg(reply)
 	require.Nil(t, err)
 
-	// added retry because span end is called in separate go routine
+	// wait for span end that is called in separate go routine
 	var span trace.ReadOnlySpan
-	for retry := 0; retry < 5; retry++ {
+	require.Eventually(t, func() bool {
 		span, ok = getSpanFromRecorder(sr, name)
-		if ok {
-			break
-		}
-		time.Sleep(time.Second * 1)
-	}
-	require.True(t, ok, "missing span %s", name)
+		return ok
+	}, 5 * time.Second, time.Second, "missing span %s", name)
 
 	expectedAttr := []attribute.KeyValue{
 		semconv.RPCSystemGRPC,
