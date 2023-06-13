@@ -90,6 +90,11 @@ go-generate/%: | $(STRINGER) $(GOTMPL)
 vanity-import-fix: | $(PORTO)
 	@$(PORTO) --include-internal -w .
 
+# Generate go.work file for local development.
+.PHONY: go-work
+go-work: | $(CROSSLINK)
+	$(CROSSLINK) work --root=$(shell pwd)
+
 # Build
 
 .PHONY: build
