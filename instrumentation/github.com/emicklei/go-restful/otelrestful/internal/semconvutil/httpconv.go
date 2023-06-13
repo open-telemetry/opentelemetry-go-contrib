@@ -80,7 +80,20 @@ func HTTPClientStatus(code int) (codes.Code, string) {
 // "net.sock.peer.addr", "net.sock.peer.port", "http.user_agent", "enduser.id",
 // "http.client_ip".
 func HTTPServerRequest(server string, req *http.Request) []attribute.KeyValue {
-	return hc.ServerRequest(server, req)
+	attrs, _ := hc.ServerRequest(server, req)
+	return attrs
+}
+
+// HTTPServerRequestMetric returns metric attributes for an HTTP request received by a
+// server.
+//
+// See HTTPServerRequest for requirements.
+//
+// The following attributes are always returned: "http.method", "http.scheme",
+// "http.flavor", "net.host.name".
+func HTTPServerRequestMetric(server string, req *http.Request) []attribute.KeyValue {
+	_, attrs := hc.ServerRequest(server, req)
+	return attrs
 }
 
 // HTTPServerStatus returns a span status code and message for an HTTP status code
@@ -251,6 +264,8 @@ func (c *httpConv) ClientRequest(req *http.Request) []attribute.KeyValue {
 }
 
 // ServerRequest returns attributes for an HTTP request received by a server.
+// The first slice of attributes contains full information, while the second
+// one only preserve those won't causing high cardinality.
 //
 // The server must be the primary server name if it is known. For example this
 // would be the ServerName directive
@@ -271,7 +286,9 @@ func (c *httpConv) ClientRequest(req *http.Request) []attribute.KeyValue {
 // returned if they related values are defined in req: "net.host.port",
 // "net.sock.peer.addr", "net.sock.peer.port", "http.user_agent", "enduser.id",
 // "http.client_ip".
-func (c *httpConv) ServerRequest(server string, req *http.Request) []attribute.KeyValue {
+func (c *httpConv) ServerRequest(server string, req *http.Request) (
+	[]attribute.KeyValue, []attribute.KeyValue,
+) {
 	// TODO: This currently does not add the specification required
 	// `http.target` attribute. It has too high of a cardinality to safely be
 	// added. An alternate should be added, or this comment removed, when it is
@@ -280,6 +297,7 @@ func (c *httpConv) ServerRequest(server string, req *http.Request) []attribute.K
 	// should be removed as well.
 
 	n := 4 // Method, scheme, proto, and host name.
+	attrsLowCardinality := make([]attribute.KeyValue, 0, n)
 	var host string
 	var p int
 	if server == "" {
@@ -316,10 +334,11 @@ func (c *httpConv) ServerRequest(server string, req *http.Request) []attribute.K
 	}
 	attrs := make([]attribute.KeyValue, 0, n)
 
-	attrs = append(attrs, c.method(req.Method))
-	attrs = append(attrs, c.scheme(req.TLS != nil))
-	attrs = append(attrs, c.proto(req.Proto))
-	attrs = append(attrs, c.NetConv.HostName(host))
+	attrsLowCardinality = append(attrsLowCardinality, c.method(req.Method))
+	attrsLowCardinality = append(attrsLowCardinality, c.scheme(req.TLS != nil))
+	attrsLowCardinality = append(attrsLowCardinality, c.proto(req.Proto))
+	attrsLowCardinality = append(attrsLowCardinality, c.NetConv.HostName(host))
+	attrs = append(attrs, attrsLowCardinality...)
 
 	if hostPort > 0 {
 		attrs = append(attrs, c.NetConv.HostPort(hostPort))
@@ -346,7 +365,7 @@ func (c *httpConv) ServerRequest(server string, req *http.Request) []attribute.K
 		attrs = append(attrs, c.HTTPClientIPKey.String(clientIP))
 	}
 
-	return attrs
+	return attrs, attrsLowCardinality
 }
 
 func (c *httpConv) method(method string) attribute.KeyValue {
