@@ -17,8 +17,7 @@ package otelhttptrace
 import (
 	"context"
 	"fmt"
-	"io/ioutil"
-	"log"
+	"io"
 	"net/http"
 	"net/http/httptrace"
 
@@ -37,11 +36,12 @@ func ExampleNewClientTrace() {
 
 	resp, err := client.Get("https://example.com")
 	if err != nil {
-		log.Fatal(err)
+		fmt.Println(err)
+		return
 	}
 
 	defer resp.Body.Close()
-	body, _ := ioutil.ReadAll(resp.Body)
+	body, _ := io.ReadAll(resp.Body)
 
 	fmt.Println(body)
 }
