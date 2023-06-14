@@ -135,16 +135,16 @@ func WithMeterProvider(mp metric.MeterProvider) Option {
 	return meterProviderOption{mp: mp}
 }
 
-type event int
+type Event int
 
 // Different types of events that can be recorded, see WithMessageEvents.
 const (
-	ReceivedEvents event = iota
+	ReceivedEvents Event = iota
 	SentEvents
 )
 
 type messageEventsProviderOption struct {
-	events []event
+	events []Event
 }
 
 func (m messageEventsProviderOption) apply(c *config) {
@@ -165,6 +165,6 @@ func (m messageEventsProviderOption) apply(c *config) {
 // Valid events are:
 //   - ReceivedEvents: Record the number of bytes read after every gRPC read operation.
 //   - SentEvents: Record the number of bytes written after every gRPC write operation.
-func WithMessageEvents(events ...event) Option {
+func WithMessageEvents(events ...Event) Option {
 	return messageEventsProviderOption{events: events}
 }

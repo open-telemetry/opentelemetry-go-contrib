@@ -93,6 +93,14 @@ func TestUnaryClientInterceptor(t *testing.T) {
 		otelgrpc.WithTracerProvider(tp),
 		otelgrpc.WithMessageEvents(otelgrpc.ReceivedEvents, otelgrpc.SentEvents),
 	)
+	unaryInterceptorOnlySentEvents := otelgrpc.UnaryClientInterceptor(
+		otelgrpc.WithTracerProvider(tp),
+		otelgrpc.WithMessageEvents(otelgrpc.SentEvents),
+	)
+	unaryInterceptorOnlyReceivedEvents := otelgrpc.UnaryClientInterceptor(
+		otelgrpc.WithTracerProvider(tp),
+		otelgrpc.WithMessageEvents(otelgrpc.ReceivedEvents),
+	)
 	unaryInterceptorNoEvents := otelgrpc.UnaryClientInterceptor(
 		otelgrpc.WithTracerProvider(tp),
 	)
@@ -150,6 +158,44 @@ func TestUnaryClientInterceptor(t *testing.T) {
 					otelgrpc.RPCMessageTypeKey: attribute.StringValue("SENT"),
 					otelgrpc.RPCMessageIDKey:   attribute.IntValue(1),
 				},
+				{
+					otelgrpc.RPCMessageTypeKey: attribute.StringValue("RECEIVED"),
+					otelgrpc.RPCMessageIDKey:   attribute.IntValue(1),
+				},
+			},
+		},
+		{
+			method:      "/serviceName/bar_onlysentevents",
+			name:        "serviceName/bar_onlysentevents",
+			interceptor: unaryInterceptorOnlySentEvents,
+			expectedAttr: []attribute.KeyValue{
+				semconv.RPCSystemGRPC,
+				semconv.RPCService("serviceName"),
+				semconv.RPCMethod("bar_onlysentevents"),
+				otelgrpc.GRPCStatusCodeKey.Int64(0),
+				semconv.NetPeerName("fake"),
+				semconv.NetPeerPort(8906),
+			},
+			eventsAttr: []map[attribute.Key]attribute.Value{
+				{
+					otelgrpc.RPCMessageTypeKey: attribute.StringValue("SENT"),
+					otelgrpc.RPCMessageIDKey:   attribute.IntValue(1),
+				},
+			},
+		},
+		{
+			method:      "/serviceName/bar_onlyreceivedevents",
+			name:        "serviceName/bar_onlyreceivedevents",
+			interceptor: unaryInterceptorOnlyReceivedEvents,
+			expectedAttr: []attribute.KeyValue{
+				semconv.RPCSystemGRPC,
+				semconv.RPCService("serviceName"),
+				semconv.RPCMethod("bar_onlyreceivedevents"),
+				otelgrpc.GRPCStatusCodeKey.Int64(0),
+				semconv.NetPeerName("fake"),
+				semconv.NetPeerPort(8906),
+			},
+			eventsAttr: []map[attribute.Key]attribute.Value{
 				{
 					otelgrpc.RPCMessageTypeKey: attribute.StringValue("RECEIVED"),
 					otelgrpc.RPCMessageIDKey:   attribute.IntValue(1),
@@ -314,7 +360,7 @@ func (mockClientStream) Trailer() metadata.MD         { return nil }
 type clientStreamOpts struct {
 	NumRecvMsgs          int
 	DisableServerStreams bool
-	NoEvents             bool
+	Events               []otelgrpc.Event
 }
 
 func newMockClientStream(opts clientStreamOpts) *mockClientStream {
@@ -345,8 +391,8 @@ func createInterceptedStreamClient(t *testing.T, method string, opts clientStrea
 	interceptorOpts := []otelgrpc.Option{
 		otelgrpc.WithTracerProvider(tp),
 	}
-	if !opts.NoEvents {
-		interceptorOpts = append(interceptorOpts, otelgrpc.WithMessageEvents(otelgrpc.ReceivedEvents, otelgrpc.SentEvents))
+	if len(opts.Events) > 0 {
+		interceptorOpts = append(interceptorOpts, otelgrpc.WithMessageEvents(opts.Events...))
 	}
 	streamCI := otelgrpc.StreamClientInterceptor(interceptorOpts...)
 
@@ -374,7 +420,11 @@ func TestStreamClientInterceptorOnBIDIStream(t *testing.T) {
 
 	method := "/github.com.serviceName/bar"
 	name := "github.com.serviceName/bar"
-	streamClient, sr := createInterceptedStreamClient(t, method, clientStreamOpts{NumRecvMsgs: 10})
+	opts := clientStreamOpts{
+		NumRecvMsgs: 10,
+		Events: []otelgrpc.Event{otelgrpc.SentEvents, otelgrpc.ReceivedEvents},
+	}
+	streamClient, sr := createInterceptedStreamClient(t, method, opts)
 	_, ok := getSpanFromRecorder(sr, name)
 	require.False(t, ok, "span should not end while stream is open")
 
@@ -396,7 +446,7 @@ func TestStreamClientInterceptorOnBIDIStream(t *testing.T) {
 	require.Eventually(t, func() bool {
 		span, ok = getSpanFromRecorder(sr, name)
 		return ok
-	}, 5 * time.Second, time.Second, "missing span %s", name)
+	}, 5*time.Second, time.Second, "missing span %s", name)
 
 	expectedAttr := []attribute.KeyValue{
 		semconv.RPCSystemGRPC,
@@ -433,14 +483,13 @@ func TestStreamClientInterceptorOnBIDIStream(t *testing.T) {
 
 func TestStreamClientInterceptorEvents(t *testing.T) {
 	testCases := []struct {
-		Name     string
-		NumMsgs  int
-		NoEvents bool
+		Name   string
+		Events []otelgrpc.Event
 	}{
-		{Name: "With events", NumMsgs: 1, NoEvents: false},
-		{Name: "No events", NumMsgs: 1, NoEvents: true},
-		{Name: "10 messages with events", NumMsgs: 10, NoEvents: false},
-		{Name: "10 messages no events", NumMsgs: 10, NoEvents: true},
+		{Name: "With both events", Events: []otelgrpc.Event{otelgrpc.SentEvents, otelgrpc.ReceivedEvents}},
+		{Name: "With only sent events", Events: []otelgrpc.Event{otelgrpc.SentEvents}},
+		{Name: "With only received events", Events: []otelgrpc.Event{otelgrpc.ReceivedEvents}},
+		{Name: "No events", Events: []otelgrpc.Event{}},
 	}
 
 	for _, testCase := range testCases {
@@ -449,7 +498,7 @@ func TestStreamClientInterceptorEvents(t *testing.T) {
 
 			method := "/github.com.serviceName/bar"
 			name := "github.com.serviceName/bar"
-			streamClient, sr := createInterceptedStreamClient(t, method, clientStreamOpts{NumRecvMsgs: testCase.NumMsgs, NoEvents: testCase.NoEvents})
+			streamClient, sr := createInterceptedStreamClient(t, method, clientStreamOpts{NumRecvMsgs: 1, Events: testCase.Events})
 			_, ok := getSpanFromRecorder(sr, name)
 			require.False(t, ok, "span should not end while stream is open")
 
@@ -458,18 +507,22 @@ func TestStreamClientInterceptorEvents(t *testing.T) {
 			var eventsAttr []map[attribute.Key]attribute.Value
 
 			// send and receive fake data
-			for i := 0; i < testCase.NumMsgs; i++ {
-				_ = streamClient.SendMsg(req)
-				_ = streamClient.RecvMsg(reply)
-				if !testCase.NoEvents {
+			_ = streamClient.SendMsg(req)
+			_ = streamClient.RecvMsg(reply)
+			for _, event := range testCase.Events {
+				switch event {
+				case otelgrpc.SentEvents:
 					eventsAttr = append(eventsAttr,
 						map[attribute.Key]attribute.Value{
 							otelgrpc.RPCMessageTypeKey: attribute.StringValue("SENT"),
-							otelgrpc.RPCMessageIDKey:   attribute.IntValue(i + 1),
+							otelgrpc.RPCMessageIDKey:   attribute.IntValue(1),
 						},
+					)
+				case otelgrpc.ReceivedEvents:
+					eventsAttr = append(eventsAttr,
 						map[attribute.Key]attribute.Value{
 							otelgrpc.RPCMessageTypeKey: attribute.StringValue("RECEIVED"),
-							otelgrpc.RPCMessageIDKey:   attribute.IntValue(i + 1),
+							otelgrpc.RPCMessageIDKey:   attribute.IntValue(1),
 						},
 					)
 				}
@@ -484,9 +537,9 @@ func TestStreamClientInterceptorEvents(t *testing.T) {
 			require.Eventually(t, func() bool {
 				span, ok = getSpanFromRecorder(sr, name)
 				return ok
-			}, 5 * time.Second, time.Second, "missing span %s", name)
+			}, 5*time.Second, time.Second, "missing span %s", name)
 
-			if testCase.NoEvents {
+			if len(testCase.Events) == 0 {
 				assert.Empty(t, span.Events())
 			} else {
 				assert.Len(t, span.Events(), len(eventsAttr))
@@ -504,7 +557,11 @@ func TestStreamClientInterceptorOnUnidirectionalClientServerStream(t *testing.T)
 
 	method := "/github.com.serviceName/bar"
 	name := "github.com.serviceName/bar"
-	opts := clientStreamOpts{NumRecvMsgs: 1, DisableServerStreams: true}
+	opts := clientStreamOpts{
+		NumRecvMsgs:          1,
+		DisableServerStreams: true,
+		Events:               []otelgrpc.Event{otelgrpc.ReceivedEvents, otelgrpc.SentEvents},
+	}
 	streamClient, sr := createInterceptedStreamClient(t, method, opts)
 	_, ok := getSpanFromRecorder(sr, name)
 	require.False(t, ok, "span should not end while stream is open")
@@ -528,7 +585,7 @@ func TestStreamClientInterceptorOnUnidirectionalClientServerStream(t *testing.T)
 	require.Eventually(t, func() bool {
 		span, ok = getSpanFromRecorder(sr, name)
 		return ok
-	}, 5 * time.Second, time.Second, "missing span %s", name)
+	}, 5*time.Second, time.Second, "missing span %s", name)
 
 	expectedAttr := []attribute.KeyValue{
 		semconv.RPCSystemGRPC,
@@ -799,7 +856,6 @@ func TestUnaryServerInterceptor(t *testing.T) {
 	tp := trace.NewTracerProvider(trace.WithSpanProcessor(sr))
 	usi := otelgrpc.UnaryServerInterceptor(
 		otelgrpc.WithTracerProvider(tp),
-		otelgrpc.WithMessageEvents(otelgrpc.ReceivedEvents, otelgrpc.SentEvents),
 	)
 	for _, check := range serverChecks {
 		name := check.grpcCode.String()
@@ -816,39 +872,80 @@ func TestUnaryServerInterceptor(t *testing.T) {
 			span, ok := getSpanFromRecorder(sr, name)
 			require.True(t, ok, "missing span %s", name)
 			assertServerSpan(t, check.wantSpanCode, check.wantSpanStatusDescription, check.grpcCode, span)
-
-			// validate events and their attributes
-			assert.Len(t, span.Events(), 2)
-			assert.ElementsMatch(t, []attribute.KeyValue{
-				attribute.Key("message.type").String("SENT"),
-				attribute.Key("message.id").Int(1),
-			}, span.Events()[1].Attributes)
 		})
 	}
 }
 
-func TestUnaryServerInterceptorWithNoEvents(t *testing.T) {
-	sr := tracetest.NewSpanRecorder()
-	tp := trace.NewTracerProvider(trace.WithSpanProcessor(sr))
-	usi := otelgrpc.UnaryServerInterceptor(
-		otelgrpc.WithTracerProvider(tp),
-	)
-	grpcCode := grpc_codes.OK
-	name := grpcCode.String()
-	// call the unary interceptor
-	grpcErr := status.Error(grpcCode, name)
-	handler := func(_ context.Context, _ interface{}) (interface{}, error) {
-		return nil, grpcErr
+func TestUnaryServerInterceptorEvents(t *testing.T) {
+	testCases := []struct {
+		Name   string
+		Events []otelgrpc.Event
+	}{
+		{
+			Name:   "No events",
+			Events: []otelgrpc.Event{},
+		},
+		{
+			Name:   "With only received events",
+			Events: []otelgrpc.Event{otelgrpc.ReceivedEvents},
+		},
+		{
+			Name:   "With only sent events",
+			Events: []otelgrpc.Event{otelgrpc.SentEvents},
+		},
+		{
+			Name:   "With both events",
+			Events: []otelgrpc.Event{otelgrpc.ReceivedEvents, otelgrpc.SentEvents},
+		},
 	}
-	_, err := usi(context.Background(), &grpc_testing.SimpleRequest{}, &grpc.UnaryServerInfo{FullMethod: name}, handler)
-	assert.Equal(t, grpcErr, err)
 
-	// validate span
-	span, ok := getSpanFromRecorder(sr, name)
-	require.True(t, ok, "missing span %s", name)
+	for _, testCase := range testCases {
+		t.Run(testCase.Name, func(t *testing.T) {
+			sr := tracetest.NewSpanRecorder()
+			tp := trace.NewTracerProvider(trace.WithSpanProcessor(sr))
+			opts := []otelgrpc.Option{
+				otelgrpc.WithTracerProvider(tp),
+			}
+			if len(testCase.Events) > 0 {
+				opts = append(opts, otelgrpc.WithMessageEvents(testCase.Events...))
+			}
+			usi := otelgrpc.UnaryServerInterceptor(opts...)
+			grpcCode := grpc_codes.OK
+			name := grpcCode.String()
+			// call the unary interceptor
+			grpcErr := status.Error(grpcCode, name)
+			handler := func(_ context.Context, _ interface{}) (interface{}, error) {
+				return nil, grpcErr
+			}
+			_, err := usi(context.Background(), &grpc_testing.SimpleRequest{}, &grpc.UnaryServerInfo{FullMethod: name}, handler)
+			assert.Equal(t, grpcErr, err)
 
-	// validate events and their attributes
-	assert.Empty(t, span.Events())
+			// validate span
+			span, ok := getSpanFromRecorder(sr, name)
+			require.True(t, ok, "missing span %s", name)
+
+			// validate events and their attributes
+			if len(testCase.Events) == 0 {
+				assert.Empty(t, span.Events())
+			} else {
+				assert.Len(t, span.Events(), len(testCase.Events))
+				for i, event := range testCase.Events {
+					switch event {
+					case otelgrpc.ReceivedEvents:
+						assert.ElementsMatch(t, []attribute.KeyValue{
+							attribute.Key("message.type").String("RECEIVED"),
+							attribute.Key("message.id").Int(1),
+						}, span.Events()[i].Attributes)
+					case otelgrpc.SentEvents:
+						assert.ElementsMatch(t, []attribute.KeyValue{
+							attribute.Key("message.type").String("SENT"),
+							attribute.Key("message.id").Int(1),
+						}, span.Events()[i].Attributes)
+					}
+				}
+			}
+		})
+	}
 }
 
 type mockServerStream struct {
@@ -871,7 +968,6 @@ func TestStreamServerInterceptor(t *testing.T) {
 	tp := trace.NewTracerProvider(trace.WithSpanProcessor(sr))
 	usi := otelgrpc.StreamServerInterceptor(
 		otelgrpc.WithTracerProvider(tp),
-		otelgrpc.WithMessageEvents(otelgrpc.ReceivedEvents, otelgrpc.SentEvents),
 	)
 	for _, check := range serverChecks {
 		name := check.grpcCode.String()
@@ -894,11 +990,13 @@ func TestStreamServerInterceptor(t *testing.T) {
 
 func TestStreamServerInterceptorEvents(t *testing.T) {
 	testCases := []struct {
-		Name     string
-		NoEvents bool
+		Name   string
+		Events []otelgrpc.Event
 	}{
-		{Name: "With events", NoEvents: false},
-		{Name: "No events", NoEvents: true},
+		{Name: "With events", Events: []otelgrpc.Event{otelgrpc.ReceivedEvents, otelgrpc.SentEvents}},
+		{Name: "With only sent events", Events: []otelgrpc.Event{otelgrpc.SentEvents}},
+		{Name: "With only received events", Events: []otelgrpc.Event{otelgrpc.ReceivedEvents}},
+		{Name: "No events", Events: []otelgrpc.Event{}},
 	}
 
 	for _, testCase := range testCases {
@@ -908,8 +1006,8 @@ func TestStreamServerInterceptorEvents(t *testing.T) {
 			opts := []otelgrpc.Option{
 				otelgrpc.WithTracerProvider(tp),
 			}
-			if !testCase.NoEvents {
-				opts = append(opts, otelgrpc.WithMessageEvents(otelgrpc.ReceivedEvents, otelgrpc.SentEvents))
+			if len(testCase.Events) > 0 {
+				opts = append(opts, otelgrpc.WithMessageEvents(testCase.Events...))
 			}
 			usi := otelgrpc.StreamServerInterceptor(opts...)
 			stream := &mockServerStream{}
@@ -934,18 +1032,23 @@ func TestStreamServerInterceptorEvents(t *testing.T) {
 			span, ok := getSpanFromRecorder(sr, name)
 			require.True(t, ok, "missing span %s", name)
 
-			if testCase.NoEvents {
+			if len(testCase.Events) == 0 {
 				assert.Empty(t, span.Events())
 			} else {
-				eventsAttr := []map[attribute.Key]attribute.Value{
-					{
-						otelgrpc.RPCMessageTypeKey: attribute.StringValue("RECEIVED"),
-						otelgrpc.RPCMessageIDKey:   attribute.IntValue(1),
-					},
-					{
-						otelgrpc.RPCMessageTypeKey: attribute.StringValue("SENT"),
-						otelgrpc.RPCMessageIDKey:   attribute.IntValue(1),
-					},
+				var eventsAttr []map[attribute.Key]attribute.Value
+				for _, event := range testCase.Events {
+					switch event {
+					case otelgrpc.SentEvents:
+						eventsAttr = append(eventsAttr, map[attribute.Key]attribute.Value{
+							otelgrpc.RPCMessageTypeKey: attribute.StringValue("SENT"),
+							otelgrpc.RPCMessageIDKey:   attribute.IntValue(1),
+						})
+					case otelgrpc.ReceivedEvents:
+						eventsAttr = append(eventsAttr, map[attribute.Key]attribute.Value{
+							otelgrpc.RPCMessageTypeKey: attribute.StringValue("RECEIVED"),
+							otelgrpc.RPCMessageIDKey:   attribute.IntValue(1),
+						})
+					}
 				}
 				assert.Len(t, span.Events(), len(eventsAttr))
 				assert.Equal(t, eventsAttr, eventAttrMap(span.Events()))
