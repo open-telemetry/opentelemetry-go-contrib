@@ -135,6 +135,7 @@ func WithMeterProvider(mp metric.MeterProvider) Option {
 	return meterProviderOption{mp: mp}
 }
 
+// Event type that can be recorded, see WithMessageEvents.
 type Event int
 
 // Different types of events that can be recorded, see WithMessageEvents.

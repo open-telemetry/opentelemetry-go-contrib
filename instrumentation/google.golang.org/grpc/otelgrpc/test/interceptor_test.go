@@ -422,7 +422,7 @@ func TestStreamClientInterceptorOnBIDIStream(t *testing.T) {
 	name := "github.com.serviceName/bar"
 	opts := clientStreamOpts{
 		NumRecvMsgs: 10,
-		Events: []otelgrpc.Event{otelgrpc.SentEvents, otelgrpc.ReceivedEvents},
+		Events:      []otelgrpc.Event{otelgrpc.SentEvents, otelgrpc.ReceivedEvents},
 	}
 	streamClient, sr := createInterceptedStreamClient(t, method, opts)
 	_, ok := getSpanFromRecorder(sr, name)
