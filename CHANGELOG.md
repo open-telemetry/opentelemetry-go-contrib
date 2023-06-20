@@ -36,6 +36,7 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 ### Changed
 
 - Use `strings.Cut()` instead of `string.SplitN()` for better readability and memory use. (#3822)
+- Change `otelgrpc` interceptors to disable `SENT`/`RECEIVED` events.  Use `WithMessageEvents()` to turn back on. (#3964)
 
 ## [1.17.0-rc.1/0.42.0-rc.1/0.11.0-rc.1] - 2023-05-17
 
