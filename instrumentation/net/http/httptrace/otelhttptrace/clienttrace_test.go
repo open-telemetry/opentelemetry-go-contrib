@@ -41,7 +41,6 @@ func ExampleNewClientTrace() {
 	}
 
 	defer resp.Body.Close()
-	body, _ := io.ReadAll(resp.Body)
 
-	fmt.Println(body)
+	fmt.Println(resp.Status)
 }
