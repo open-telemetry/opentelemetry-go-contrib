@@ -17,7 +17,6 @@ package otelhttptrace
 import (
 	"context"
 	"fmt"
-	"io"
 	"net/http"
 	"net/http/httptrace"
 
