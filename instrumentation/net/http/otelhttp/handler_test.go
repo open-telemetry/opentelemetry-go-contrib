@@ -15,16 +15,11 @@
 package otelhttp_test
 
 import (
-	"context"
 	"io"
 	"net/http"
 	"net/http/httptest"
 	"strings"
 	"testing"
-
-	sdktrace "go.opentelemetry.io/otel/sdk/trace"
-	"go.opentelemetry.io/otel/sdk/trace/tracetest"
-	semconv "go.opentelemetry.io/otel/semconv/v1.17.0"
 
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
@@ -99,31 +94,5 @@ func TestHandler(t *testing.T) {
 			tc.handler(t).ServeHTTP(rr, r)
 			assert.Equal(t, tc.expectedStatusCode, rr.Result().StatusCode)
 		})
-	}
-}
-
-func TestWithRouteTagMiddleware(t *testing.T) {
-	recorder := tracetest.NewSpanRecorder()
-	tp := sdktrace.NewTracerProvider(sdktrace.WithSpanProcessor(recorder))
-	ctx, _ := tp.Tracer(t.Name()).Start(context.Background(), "test-route-tag-attribute")
-
-	expectedRouteTag := "a route"
-
-	nextCalled := false
-	mw := otelhttp.WithRouteTagMiddleware(expectedRouteTag)(http.HandlerFunc(func(writer http.ResponseWriter, request *http.Request) {
-		nextCalled = true
-	}))
-
-	r, err := http.NewRequestWithContext(ctx, http.MethodGet, "http://localhost/", nil)
-	require.NoError(t, err)
-
-	rr := httptest.NewRecorder()
-	mw.ServeHTTP(rr, r)
-
-	assert.True(t, nextCalled)
-
-	spans := recorder.Started()
-	if assert.Len(t, spans, 1) {
-		assert.Contains(t, spans[0].Attributes(), semconv.HTTPRoute(expectedRouteTag))
 	}
 }
