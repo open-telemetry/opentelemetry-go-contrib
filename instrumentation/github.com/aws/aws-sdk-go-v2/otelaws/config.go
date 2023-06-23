@@ -20,9 +20,10 @@ import (
 )
 
 type config struct {
-	TracerProvider    trace.TracerProvider
-	TextMapPropagator propagation.TextMapPropagator
-	AttributeSetter   []AttributeSetter
+	TracerProvider         trace.TracerProvider
+	TextMapPropagator      propagation.TextMapPropagator
+	AttributeSetter        []AttributeSetter
+	AttributeSettersConfig *AttributeSettersConfig
 }
 
 // Option applies an option value.
@@ -63,5 +64,12 @@ func WithTextMapPropagator(propagator propagation.TextMapPropagator) Option {
 func WithAttributeSetter(attributesetters ...AttributeSetter) Option {
 	return optionFunc(func(cfg *config) {
 		cfg.AttributeSetter = append(cfg.AttributeSetter, attributesetters...)
+	})
+}
+
+// WithAttributeSettersConfig specifies a config used by the attribute setter functions.
+func WithAttributeSettersConfig(settersConfig *AttributeSettersConfig) Option {
+	return optionFunc(func(cfg *config) {
+		cfg.AttributeSettersConfig = settersConfig
 	})
 }

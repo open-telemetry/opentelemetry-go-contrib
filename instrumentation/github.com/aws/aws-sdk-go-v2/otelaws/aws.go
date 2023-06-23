@@ -36,13 +36,19 @@ const (
 
 type spanTimestampKey struct{}
 
+// AttributeSettersConfig defines a config object used by the attribute setters.
+type AttributeSettersConfig struct {
+	RecordSensitiveData bool
+}
+
 // AttributeSetter returns an array of KeyValue pairs, it can be used to set custom attributes.
-type AttributeSetter func(context.Context, middleware.InitializeInput) []attribute.KeyValue
+type AttributeSetter func(context.Context, middleware.InitializeInput, *AttributeSettersConfig) []attribute.KeyValue
 
 type otelMiddlewares struct {
-	tracer          trace.Tracer
-	propagator      propagation.TextMapPropagator
-	attributeSetter []AttributeSetter
+	tracer                 trace.Tracer
+	propagator             propagation.TextMapPropagator
+	attributeSetter        []AttributeSetter
+	attributeSettersConfig *AttributeSettersConfig
 }
 
 func (m otelMiddlewares) initializeMiddlewareBefore(stack *middleware.Stack) error {
@@ -70,7 +76,7 @@ func (m otelMiddlewares) initializeMiddlewareAfter(stack *middleware.Stack) erro
 			OperationAttr(operation),
 		}
 		for _, setter := range m.attributeSetter {
-			attributes = append(attributes, setter(ctx, in)...)
+			attributes = append(attributes, setter(ctx, in, m.attributeSettersConfig)...)
 		}
 
 		ctx, span := m.tracer.Start(ctx, spanName(serviceID, operation),
@@ -157,7 +163,8 @@ func AppendMiddlewares(apiOptions *[]func(*middleware.Stack) error, opts ...Opti
 
 	m := otelMiddlewares{tracer: cfg.TracerProvider.Tracer(tracerName,
 		trace.WithInstrumentationVersion(Version())),
-		propagator:      cfg.TextMapPropagator,
-		attributeSetter: cfg.AttributeSetter}
+		propagator:             cfg.TextMapPropagator,
+		attributeSetter:        cfg.AttributeSetter,
+		attributeSettersConfig: cfg.AttributeSettersConfig}
 	*apiOptions = append(*apiOptions, m.initializeMiddlewareBefore, m.initializeMiddlewareAfter, m.finalizeMiddleware, m.deserializeMiddleware)
 }

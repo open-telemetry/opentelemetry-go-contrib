@@ -26,23 +26,19 @@ import (
 )
 
 // SNSAttributeSetter sets SNS specific attributes depending on the SNS operation being performed.
-func SNSAttributeSetter(ctx context.Context, in middleware.InitializeInput) []attribute.KeyValue {
+func SNSAttributeSetter(ctx context.Context, in middleware.InitializeInput, config *AttributeSettersConfig) []attribute.KeyValue {
 	snsAttributes := []attribute.KeyValue{semconv.MessagingSystem("AmazonSNS")}
 
 	switch v := in.Parameters.(type) {
 	case *sns.PublishInput:
 		var value string
-		valuePointer := v.TargetArn
-		if valuePointer == nil {
-			valuePointer = v.TopicArn
-		}
-		if valuePointer == nil {
-			if v.PhoneNumber != nil {
-				value = *v.PhoneNumber
-			}
-		} else {
-			arnParts := strings.Split(*valuePointer, ":")
-			value = arnParts[len(arnParts)-1]
+		switch true {
+		case v.TargetArn != nil:
+			value = parseArn(v.TargetArn)
+		case v.TopicArn != nil:
+			value = parseArn(v.TopicArn)
+		case v.PhoneNumber != nil && config.RecordSensitiveData:
+			value = *v.PhoneNumber
 		}
 		if value != "" {
 			snsAttributes = append(snsAttributes, semconv.MessagingDestinationName(value))
@@ -50,12 +46,17 @@ func SNSAttributeSetter(ctx context.Context, in middleware.InitializeInput) []at
 		snsAttributes = append(snsAttributes, semconv.MessagingDestinationKindTopic)
 	case *sns.PublishBatchInput:
 		if v.TopicArn != nil {
-			arnParts := strings.Split(*v.TopicArn, ":")
-			value := arnParts[len(arnParts)-1]
+			value := parseArn(v.TopicArn)
 			snsAttributes = append(snsAttributes, semconv.MessagingDestinationName(value))
 		}
 		snsAttributes = append(snsAttributes, semconv.MessagingDestinationKindTopic)
 	}
 
 	return snsAttributes
+}
+
+// parseArn extracts resource-id from an ARN.
+func parseArn(fullArn *string) string {
+	arnParts := strings.Split(*fullArn, ":")
+	return arnParts[len(arnParts)-1]
 }

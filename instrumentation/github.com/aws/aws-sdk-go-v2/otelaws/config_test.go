@@ -31,3 +31,13 @@ func TestWithTextMapPropagator(t *testing.T) {
 
 	assert.Equal(t, cfg.TextMapPropagator, propagator)
 }
+
+func TestWithAttributeSettersConfig(t *testing.T) {
+	settersConfig := new(AttributeSettersConfig)
+	cfg := config{}
+	option := WithAttributeSettersConfig(settersConfig)
+
+	option.apply(&cfg)
+
+	assert.Equal(t, cfg.AttributeSettersConfig, settersConfig)
+}

@@ -26,7 +26,7 @@ import (
 )
 
 // DynamoDBAttributeSetter sets DynamoDB specific attributes depending on the DynamoDB operation being performed.
-func DynamoDBAttributeSetter(ctx context.Context, in middleware.InitializeInput) []attribute.KeyValue {
+func DynamoDBAttributeSetter(ctx context.Context, in middleware.InitializeInput, _ *AttributeSettersConfig) []attribute.KeyValue {
 	dynamodbAttributes := []attribute.KeyValue{semconv.DBSystemDynamoDB}
 
 	switch v := in.Parameters.(type) {
