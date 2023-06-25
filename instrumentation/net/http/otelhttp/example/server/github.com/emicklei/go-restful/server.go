@@ -16,10 +16,11 @@ package main
 
 import (
 	"context"
-	"github.com/emicklei/go-restful/v3"
 	"log"
 	"net/http"
 	"strconv"
+
+	"github.com/emicklei/go-restful/v3"
 
 	"go.opentelemetry.io/contrib/instrumentation/net/http/otelhttp"
 	"go.opentelemetry.io/otel"
