@@ -78,7 +78,7 @@ func getUser(ctx context.Context, id string) string {
 	_, span := tracer.Start(ctx, "getUser", oteltrace.WithAttributes(attribute.String("id", id)))
 	defer span.End()
 	if id == "123" {
-		return "otelecho tester"
+		return "echo tester"
 	}
 	return "unknown"
 }

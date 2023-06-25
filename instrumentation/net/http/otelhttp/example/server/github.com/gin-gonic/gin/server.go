@@ -16,12 +16,13 @@ package main
 
 import (
 	"context"
-	"fmt"
+	"html/template"
 	"log"
 	"net/http"
 
-	"github.com/gorilla/mux"
+	"github.com/gin-gonic/gin"
 
+	ginadapter "github.com/gwatts/gin-adapter"
 	"go.opentelemetry.io/contrib/instrumentation/net/http/otelhttp"
 	"go.opentelemetry.io/otel"
 	"go.opentelemetry.io/otel/attribute"
@@ -31,7 +32,7 @@ import (
 	oteltrace "go.opentelemetry.io/otel/trace"
 )
 
-var tracer = otel.Tracer("mux-server")
+var tracer = otel.Tracer("gin-server")
 
 func main() {
 	tp, err := initTracer()
@@ -43,20 +44,24 @@ func main() {
 			log.Printf("Error shutting down tracer provider: %v", err)
 		}
 	}()
-	r := mux.NewRouter()
-	r.Use(otelhttp.NewMiddleware("my-server"))
+	r := gin.New()
 
-	p := r.Path("/users/{id:[0-9]+}").Subrouter()
-	p.Use(otelhttp.WithRouteTagMiddleware("/users/:id"))
-	p.HandleFunc("", func(w http.ResponseWriter, r *http.Request) {
-		vars := mux.Vars(r)
-		id := vars["id"]
-		name := getUser(r.Context(), id)
-		reply := fmt.Sprintf("user %s (id %s)\n", name, id)
-		_, _ = w.Write(([]byte)(reply))
-	})
-
-	_ = http.ListenAndServe(":8080", r)
+	r.Use(ginadapter.Wrap(otelhttp.NewMiddleware("my-server")))
+	tmplName := "user"
+	tmplStr := "user {{ .name }} (id {{ .id }})\n"
+	tmpl := template.Must(template.New(tmplName).Parse(tmplStr))
+	r.SetHTMLTemplate(tmpl)
+	r.GET("/users/:id",
+		ginadapter.Wrap(otelhttp.WithRouteTagMiddleware("/users/:id")),
+		func(c *gin.Context) {
+			id := c.Param("id")
+			name := getUser(c, id)
+			c.HTML(http.StatusOK, tmplName, gin.H{
+				"name": name,
+				"id":   id,
+			})
+		})
+	_ = r.Run(":8080")
 }
 
 func initTracer() (*sdktrace.TracerProvider, error) {
@@ -73,11 +78,13 @@ func initTracer() (*sdktrace.TracerProvider, error) {
 	return tp, nil
 }
 
-func getUser(ctx context.Context, id string) string {
-	_, span := tracer.Start(ctx, "getUser", oteltrace.WithAttributes(attribute.String("id", id)))
+func getUser(c *gin.Context, id string) string {
+	// Pass the built-in `context.Context` object from http.Request to OpenTelemetry APIs
+	// where required. It is available from gin.Context.Request.Context()
+	_, span := tracer.Start(c.Request.Context(), "getUser", oteltrace.WithAttributes(attribute.String("id", id)))
 	defer span.End()
 	if id == "123" {
-		return "mux tester"
+		return "gin tester"
 	}
 	return "unknown"
 }
