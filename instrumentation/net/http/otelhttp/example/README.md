@@ -26,7 +26,8 @@ docker-compose down
 ## Third Party Router Examples
 The OTel HTTP middleware can easily be utilized by third party router implementations. Examples
 of many can be found under server/github.com. So far this directory contains examples for:
-- gorilla/mux
-- labstack/echo
-- gin-gonic/gin
-- emicklei/go-restful
+- [github.com/gorilla/mux](./server/github.com/gorilla/mux)
+- [github.com/labstack/echo](./server/github.com/labstack/echo)
+- [github.com/gin-gonic/gin](./server/github.com/gin-gonic/gin)
+- [github.com/emicklei/go-restful](./server/github.com/emicklei/go-restful)
+- [github.com/go-chi/chi](./server/github.com/go-chi/chi)
