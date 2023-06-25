@@ -15,6 +15,6 @@ FROM golang:alpine AS base
 COPY . /src/
 WORKDIR /src/instrumentation/net/http/otelhttp/example/server/github.com/go-chi/chi
 
-FROM base AS echo-server
+FROM base AS chi-server
 RUN go install ./server.go
 CMD ["/go/bin/server"]
