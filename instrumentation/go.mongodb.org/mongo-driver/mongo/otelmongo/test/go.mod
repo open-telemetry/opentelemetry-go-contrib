@@ -3,8 +3,8 @@ module go.opentelemetry.io/contrib/instrumentation/go.mongodb.org/mongo-driver/m
 go 1.19
 
 require (
-	github.com/stretchr/testify v1.8.3
-	go.mongodb.org/mongo-driver v1.11.6
+	github.com/stretchr/testify v1.8.4
+	go.mongodb.org/mongo-driver v1.11.7
 	go.opentelemetry.io/contrib v1.17.0
 	go.opentelemetry.io/contrib/instrumentation/go.mongodb.org/mongo-driver/mongo/otelmongo v0.42.0
 	go.opentelemetry.io/otel v1.16.0

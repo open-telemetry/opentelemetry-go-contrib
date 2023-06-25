@@ -10,18 +10,33 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 
 ### Added
 
+- Add `NewMiddleware` function in `go.opentelemetry.io/contrib/instrumentation/net/http/otelhttp`. (#2964)
 - Add the new `go.opentelemetry.io/contrib/instrgen` package to provide auto-generated source code instrumentation. (#3068, #3108)
 - The `go.opentelemetry.io/contrib/exporters/autoexport` package to provide configuration of trace exporters with useful defaults and envar support. (#2753)
 
 ### Fixed
 
 - AWS XRay Remote Sampling to cap quotaBalance to 1x quota in `go.opentelemetry.io/contrib/samplers/aws/xray`. (#3651, #3652)
+- Do not panic when the HTTP request has the "Expect: 100-continue" header in `go.opentelemetry.io/contrib/instrumentation/net/http/httptrace/otelhttptrace`. (#3892)
+- Fix span status value set for non-standard HTTP status codes in modules listed below. (#3966)
+  - `go.opentelemetry.io/contrib/instrumentation/github.com/emicklei/go-restful/otelrestful`
+  - `go.opentelemetry.io/contrib/instrumentation/github.com/gin-gonic/gin/otelgin`
+  - `go.opentelemetry.io/contrib/instrumentation/github.com/gorilla/mux/otelmux`
+  - `go.opentelemetry.io/contrib/instrumentation/github.com/labstack/echo/otelecho`
+  - `go.opentelemetry.io/contrib/instrumentation/gopkg.in/macaron.v1/otelmacaron`
+  - `go.opentelemetry.io/contrib/instrumentation/net/http/httptrace/otelhttptrace`
+  - `go.opentelemetry.io/contrib/instrumentation/net/http/otelhttp`
+
+### Removed
+
+- Remove `Handler` type in `go.opentelemetry.io/contrib/instrumentation/net/http/otelhttp`. (#2964)
 
 ## [1.17.0/0.42.0/0.11.0] - 2023-05-23
 
 ### Changed
 
 - Use `strings.Cut()` instead of `string.SplitN()` for better readability and memory use. (#3822)
+- Change `otelgrpc` interceptors to disable `SENT`/`RECEIVED` events.  Use `WithMessageEvents()` to turn back on. (#3964)
 
 ## [1.17.0-rc.1/0.42.0-rc.1/0.11.0-rc.1] - 2023-05-17
 

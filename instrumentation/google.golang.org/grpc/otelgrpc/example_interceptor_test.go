@@ -12,24 +12,26 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package otelgrpc
+package otelgrpc_test
 
 import (
 	"google.golang.org/grpc"
+
+	"go.opentelemetry.io/contrib/instrumentation/google.golang.org/grpc/otelgrpc"
 )
 
 func ExampleStreamClientInterceptor() {
-	_, _ = grpc.Dial("localhost", grpc.WithStreamInterceptor(StreamClientInterceptor()))
+	_, _ = grpc.Dial("localhost", grpc.WithStreamInterceptor(otelgrpc.StreamClientInterceptor()))
 }
 
 func ExampleUnaryClientInterceptor() {
-	_, _ = grpc.Dial("localhost", grpc.WithUnaryInterceptor(UnaryClientInterceptor()))
+	_, _ = grpc.Dial("localhost", grpc.WithUnaryInterceptor(otelgrpc.UnaryClientInterceptor()))
 }
 
 func ExampleStreamServerInterceptor() {
-	_ = grpc.NewServer(grpc.StreamInterceptor(StreamServerInterceptor()))
+	_ = grpc.NewServer(grpc.StreamInterceptor(otelgrpc.StreamServerInterceptor()))
 }
 
 func ExampleUnaryServerInterceptor() {
-	_ = grpc.NewServer(grpc.UnaryInterceptor(UnaryServerInterceptor()))
+	_ = grpc.NewServer(grpc.UnaryInterceptor(otelgrpc.UnaryServerInterceptor()))
 }
