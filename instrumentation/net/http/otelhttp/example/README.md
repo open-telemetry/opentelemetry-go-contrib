@@ -22,3 +22,11 @@ Shut down the services when you are finished with the example:
 ```sh
 docker-compose down
 ```
+
+## Third Party Router Examples
+The OTel HTTP middleware can easily be utilized by third party router implementations. Examples
+of many can be found under server/github.com. So far this directory contains examples for:
+- gorilla/mux
+- labstack/echo
+- gin-gonic/gin
+- emicklei/go-restful

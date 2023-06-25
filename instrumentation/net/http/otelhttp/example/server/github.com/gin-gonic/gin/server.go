@@ -23,6 +23,7 @@ import (
 	"github.com/gin-gonic/gin"
 
 	ginadapter "github.com/gwatts/gin-adapter"
+
 	"go.opentelemetry.io/contrib/instrumentation/net/http/otelhttp"
 	"go.opentelemetry.io/otel"
 	"go.opentelemetry.io/otel/attribute"
