@@ -32,12 +32,11 @@ func TestWithTextMapPropagator(t *testing.T) {
 	assert.Equal(t, cfg.TextMapPropagator, propagator)
 }
 
-func TestWithAttributeSettersConfig(t *testing.T) {
-	settersConfig := new(AttributeSettersConfig)
+func TestWithSNSPhoneNumber(t *testing.T) {
 	cfg := config{}
-	option := WithAttributeSettersConfig(settersConfig)
+	option := WithSNSPhoneNumber(true)
 
 	option.apply(&cfg)
 
-	assert.Equal(t, cfg.AttributeSettersConfig, settersConfig)
+	assert.Equal(t, cfg.AttributeSettersConfig.RecordSNSPhoneNumber, true)
 }

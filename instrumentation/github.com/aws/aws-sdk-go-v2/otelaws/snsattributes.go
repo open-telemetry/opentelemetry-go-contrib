@@ -37,7 +37,7 @@ func SNSAttributeSetter(ctx context.Context, in middleware.InitializeInput, conf
 			value = parseArn(v.TargetArn)
 		case v.TopicArn != nil:
 			value = parseArn(v.TopicArn)
-		case v.PhoneNumber != nil && config.RecordSensitiveData:
+		case v.PhoneNumber != nil && config.RecordSNSPhoneNumber:
 			value = *v.PhoneNumber
 		}
 		if value != "" {

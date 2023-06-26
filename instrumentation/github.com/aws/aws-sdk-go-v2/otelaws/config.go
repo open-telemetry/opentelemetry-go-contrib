@@ -23,7 +23,7 @@ type config struct {
 	TracerProvider         trace.TracerProvider
 	TextMapPropagator      propagation.TextMapPropagator
 	AttributeSetter        []AttributeSetter
-	AttributeSettersConfig *AttributeSettersConfig
+	AttributeSettersConfig AttributeSettersConfig
 }
 
 // Option applies an option value.
@@ -67,9 +67,9 @@ func WithAttributeSetter(attributesetters ...AttributeSetter) Option {
 	})
 }
 
-// WithAttributeSettersConfig specifies a config used by the attribute setter functions.
-func WithAttributeSettersConfig(settersConfig *AttributeSettersConfig) Option {
+// WithSNSPhoneNumber specifies if phone number for SNS Inputs should be recorded.
+func WithSNSPhoneNumber(recordPhoneNumber bool) Option {
 	return optionFunc(func(cfg *config) {
-		cfg.AttributeSettersConfig = settersConfig
+		cfg.AttributeSettersConfig.RecordSNSPhoneNumber = recordPhoneNumber
 	})
 }

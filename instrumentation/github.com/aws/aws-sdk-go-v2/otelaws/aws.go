@@ -38,7 +38,7 @@ type spanTimestampKey struct{}
 
 // AttributeSettersConfig defines a config object used by the attribute setters.
 type AttributeSettersConfig struct {
-	RecordSensitiveData bool
+	RecordSNSPhoneNumber bool
 }
 
 // AttributeSetter returns an array of KeyValue pairs, it can be used to set custom attributes.
@@ -48,7 +48,7 @@ type otelMiddlewares struct {
 	tracer                 trace.Tracer
 	propagator             propagation.TextMapPropagator
 	attributeSetter        []AttributeSetter
-	attributeSettersConfig *AttributeSettersConfig
+	attributeSettersConfig AttributeSettersConfig
 }
 
 func (m otelMiddlewares) initializeMiddlewareBefore(stack *middleware.Stack) error {
@@ -76,7 +76,7 @@ func (m otelMiddlewares) initializeMiddlewareAfter(stack *middleware.Stack) erro
 			OperationAttr(operation),
 		}
 		for _, setter := range m.attributeSetter {
-			attributes = append(attributes, setter(ctx, in, m.attributeSettersConfig)...)
+			attributes = append(attributes, setter(ctx, in, &m.attributeSettersConfig)...)
 		}
 
 		ctx, span := m.tracer.Start(ctx, spanName(serviceID, operation),
