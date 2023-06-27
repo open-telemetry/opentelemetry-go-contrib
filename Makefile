@@ -29,8 +29,8 @@ TIMEOUT = 60
 .DEFAULT_GOAL := precommit
 
 .PHONY: precommit ci
-precommit: dependabot-generate license-check misspell go-mod-tidy vanity-import-fix golangci-lint-fix test-default
-ci: dependabot-check license-check lint vanity-import-check build test-default check-clean-work-tree test-coverage
+precommit: generate dependabot-generate license-check misspell go-mod-tidy golangci-lint-fix test-default
+ci: generate dependabot-check license-check lint vanity-import-check build test-default check-clean-work-tree test-coverage
 
 # Tools
 
@@ -68,20 +68,38 @@ $(TOOLS)/dbotconf: PACKAGE=go.opentelemetry.io/build-tools/dbotconf
 CROSSLINK = $(TOOLS)/crosslink
 $(CROSSLINK): PACKAGE=go.opentelemetry.io/build-tools/crosslink
 
-tools: $(GOLANGCI_LINT) $(MISSPELL) $(GOCOVMERGE) $(STRINGER) $(PORTO) $(MULTIMOD) $(DBOTCONF) $(CROSSLINK)
+GOTMPL = $(TOOLS)/gotmpl
+$(GOTMPL): PACKAGE=go.opentelemetry.io/build-tools/gotmpl
 
-# Build
+tools: $(GOLANGCI_LINT) $(MISSPELL) $(GOCOVMERGE) $(STRINGER) $(PORTO) $(MULTIMOD) $(DBOTCONF) $(CROSSLINK) $(GOTMPL)
 
-.PHONY: generate build
+# Generate
 
-generate: $(OTEL_GO_MOD_DIRS:%=generate/%)
-generate/%: DIR=$*
-generate/%: | $(STRINGER)
+.PHONY: generate
+generate: go-generate vanity-import-fix
+
+.PHONY: go-generate
+go-generate: $(OTEL_GO_MOD_DIRS:%=go-generate/%)
+go-generate/%: DIR=$*
+go-generate/%: | $(STRINGER) $(GOTMPL)
 	@echo "$(GO) generate $(DIR)/..." \
 		&& cd $(DIR) \
 		&& PATH="$(TOOLS):$${PATH}" $(GO) generate ./...
 
-build: generate $(OTEL_GO_MOD_DIRS:%=build/%) $(OTEL_GO_MOD_DIRS:%=build-tests/%)
+.PHONY: vanity-import-fix
+vanity-import-fix: | $(PORTO)
+	@$(PORTO) --include-internal -w .
+
+# Generate go.work file for local development.
+.PHONY: go-work
+go-work: | $(CROSSLINK)
+	$(CROSSLINK) work --root=$(shell pwd)
+
+# Build
+
+.PHONY: build
+
+build: $(OTEL_GO_MOD_DIRS:%=build/%) $(OTEL_GO_MOD_DIRS:%=build-tests/%)
 build/%: DIR=$*
 build/%:
 	@echo "$(GO) build $(DIR)/..." \
@@ -129,17 +147,13 @@ misspell: | $(MISSPELL)
 vanity-import-check: | $(PORTO)
 	@$(PORTO) --include-internal -l . || echo "(run: make vanity-import-fix)"
 
-.PHONY: vanity-import-fix
-vanity-import-fix: | $(PORTO)
-	@$(PORTO) --include-internal -w .
-
 .PHONY: lint
 lint: go-mod-tidy golangci-lint misspell
 
 .PHONY: license-check
 license-check:
 	@licRes=$$(for f in $$(find . -type f \( -iname '*.go' -o -iname '*.sh' \) ! -path './vendor/*' ! -path './exporters/otlp/internal/opentelemetry-proto/*') ; do \
-	           awk '/Copyright The OpenTelemetry Authors|generated|GENERATED/ && NR<=3 { found=1; next } END { if (!found) print FILENAME }' $$f; \
+	           awk '/Copyright The OpenTelemetry Authors|generated|GENERATED/ && NR<=4 { found=1; next } END { if (!found) print FILENAME }' $$f; \
 	   done); \
 	   if [ -n "$${licRes}" ]; then \
 	           echo "license header checking failed:"; echo "$${licRes}"; \

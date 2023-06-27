@@ -17,7 +17,7 @@ package consistent // import "go.opentelemetry.io/contrib/samplers/probability/c
 // Version is the current release version of the consistent probability
 // sampler.
 func Version() string {
-	return "0.10.1"
+	return "0.11.0"
 	// This string is updated by the pre_release.sh script during release
 }
 

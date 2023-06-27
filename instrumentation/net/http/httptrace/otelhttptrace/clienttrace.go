@@ -370,7 +370,7 @@ func (ct *clientTracer) got100Continue() {
 func (ct *clientTracer) wait100Continue() {
 	span := ct.root
 	if ct.useSpans {
-		span = ct.span("http.receive")
+		span = ct.span("http.send")
 	}
 	span.AddEvent("GOT 100 - Wait")
 }

@@ -95,11 +95,15 @@ func UnaryClientInterceptor(opts ...Option) grpc.UnaryClientInterceptor {
 
 		ctx = inject(ctx, cfg.Propagators)
 
-		messageSent.Event(ctx, 1, req)
+		if cfg.SentEvent {
+			messageSent.Event(ctx, 1, req)
+		}
 
 		err := invoker(ctx, method, req, reply, cc, callOpts...)
 
-		messageReceived.Event(ctx, 1, reply)
+		if cfg.ReceivedEvent {
+			messageReceived.Event(ctx, 1, reply)
+		}
 
 		if err != nil {
 			s, _ := status.FromError(err)
@@ -135,6 +139,9 @@ type clientStream struct {
 	eventsDone chan struct{}
 	finished   chan error
 
+	receivedEvent bool
+	sentEvent     bool
+
 	receivedMessageID int
 	sentMessageID     int
 }
@@ -152,7 +159,10 @@ func (w *clientStream) RecvMsg(m interface{}) error {
 		w.sendStreamEvent(errorEvent, err)
 	} else {
 		w.receivedMessageID++
-		messageReceived.Event(w.Context(), w.receivedMessageID, m)
+
+		if w.receivedEvent {
+			messageReceived.Event(w.Context(), w.receivedMessageID, m)
+		}
 	}
 
 	return err
@@ -162,7 +172,10 @@ func (w *clientStream) SendMsg(m interface{}) error {
 	err := w.ClientStream.SendMsg(m)
 
 	w.sentMessageID++
-	messageSent.Event(w.Context(), w.sentMessageID, m)
+
+	if w.sentEvent {
+		messageSent.Event(w.Context(), w.sentMessageID, m)
+	}
 
 	if err != nil {
 		w.sendStreamEvent(errorEvent, err)
@@ -191,7 +204,7 @@ func (w *clientStream) CloseSend() error {
 	return err
 }
 
-func wrapClientStream(ctx context.Context, s grpc.ClientStream, desc *grpc.StreamDesc) *clientStream {
+func wrapClientStream(ctx context.Context, s grpc.ClientStream, desc *grpc.StreamDesc, cfg *config) *clientStream {
 	events := make(chan streamEvent)
 	eventsDone := make(chan struct{})
 	finished := make(chan error)
@@ -218,11 +231,13 @@ func wrapClientStream(ctx context.Context, s grpc.ClientStream, desc *grpc.Strea
 	}()
 
 	return &clientStream{
-		ClientStream: s,
-		desc:         desc,
-		events:       events,
-		eventsDone:   eventsDone,
-		finished:     finished,
+		ClientStream:  s,
+		desc:          desc,
+		events:        events,
+		eventsDone:    eventsDone,
+		finished:      finished,
+		receivedEvent: cfg.ReceivedEvent,
+		sentEvent:     cfg.SentEvent,
 	}
 }
 
@@ -277,7 +292,7 @@ func StreamClientInterceptor(opts ...Option) grpc.StreamClientInterceptor {
 			span.End()
 			return s, err
 		}
-		stream := wrapClientStream(ctx, s, desc)
+		stream := wrapClientStream(ctx, s, desc, cfg)
 
 		go func() {
 			err := <-stream.finished
@@ -331,7 +346,9 @@ func UnaryServerInterceptor(opts ...Option) grpc.UnaryServerInterceptor {
 		)
 		defer span.End()
 
-		messageReceived.Event(ctx, 1, req)
+		if cfg.ReceivedEvent {
+			messageReceived.Event(ctx, 1, req)
+		}
 
 		var statusCode grpc_codes.Code
 		defer func(t time.Time) {
@@ -347,11 +364,15 @@ func UnaryServerInterceptor(opts ...Option) grpc.UnaryServerInterceptor {
 			statusCode, msg := serverStatus(s)
 			span.SetStatus(statusCode, msg)
 			span.SetAttributes(statusCodeAttr(s.Code()))
-			messageSent.Event(ctx, 1, s.Proto())
+			if cfg.SentEvent {
+				messageSent.Event(ctx, 1, s.Proto())
+			}
 		} else {
 			statusCode = grpc_codes.OK
 			span.SetAttributes(statusCodeAttr(grpc_codes.OK))
-			messageSent.Event(ctx, 1, resp)
+			if cfg.SentEvent {
+				messageSent.Event(ctx, 1, resp)
+			}
 		}
 
 		return resp, err
@@ -366,6 +387,9 @@ type serverStream struct {
 
 	receivedMessageID int
 	sentMessageID     int
+
+	receivedEvent bool
+	sentEvent     bool
 }
 
 func (w *serverStream) Context() context.Context {
@@ -377,7 +401,9 @@ func (w *serverStream) RecvMsg(m interface{}) error {
 
 	if err == nil {
 		w.receivedMessageID++
-		messageReceived.Event(w.Context(), w.receivedMessageID, m)
+		if w.receivedEvent {
+			messageReceived.Event(w.Context(), w.receivedMessageID, m)
+		}
 	}
 
 	return err
@@ -387,15 +413,19 @@ func (w *serverStream) SendMsg(m interface{}) error {
 	err := w.ServerStream.SendMsg(m)
 
 	w.sentMessageID++
-	messageSent.Event(w.Context(), w.sentMessageID, m)
+	if w.sentEvent {
+		messageSent.Event(w.Context(), w.sentMessageID, m)
+	}
 
 	return err
 }
 
-func wrapServerStream(ctx context.Context, ss grpc.ServerStream) *serverStream {
+func wrapServerStream(ctx context.Context, ss grpc.ServerStream, cfg *config) *serverStream {
 	return &serverStream{
-		ServerStream: ss,
-		ctx:          ctx,
+		ServerStream:  ss,
+		ctx:           ctx,
+		receivedEvent: cfg.ReceivedEvent,
+		sentEvent:     cfg.SentEvent,
 	}
 }
 
@@ -420,7 +450,7 @@ func StreamServerInterceptor(opts ...Option) grpc.StreamServerInterceptor {
 			Type:             StreamServer,
 		}
 		if cfg.Filter != nil && !cfg.Filter(i) {
-			return handler(srv, wrapServerStream(ctx, ss))
+			return handler(srv, wrapServerStream(ctx, ss, cfg))
 		}
 
 		ctx = extract(ctx, cfg.Propagators)
@@ -434,7 +464,7 @@ func StreamServerInterceptor(opts ...Option) grpc.StreamServerInterceptor {
 		)
 		defer span.End()
 
-		err := handler(srv, wrapServerStream(ctx, ss))
+		err := handler(srv, wrapServerStream(ctx, ss, cfg))
 		if err != nil {
 			s, _ := status.FromError(err)
 			statusCode, msg := serverStatus(s)
