@@ -103,7 +103,7 @@ func TestSQSAttributeSetter(t *testing.T) {
 	}
 	for name, input := range inputs {
 		t.Run(name, func(t *testing.T) {
-			attributes := SQSAttributeSetter(context.TODO(), input, &AttributeSettersConfig{})
+			attributes := SQSAttributeSetter(context.TODO(), input, nil)
 
 			assert.Contains(t, attributes, semconv.NetPeerName(queueURL))
 		})

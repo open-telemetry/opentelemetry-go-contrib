@@ -36,19 +36,12 @@ const (
 
 type spanTimestampKey struct{}
 
-// AttributeSettersConfig defines a config object used by the attribute setters.
-type AttributeSettersConfig struct {
-	RecordSNSPhoneNumber bool
-}
-
 // AttributeSetter returns an array of KeyValue pairs, it can be used to set custom attributes.
-type AttributeSetter func(context.Context, middleware.InitializeInput, *AttributeSettersConfig) []attribute.KeyValue
+type AttributeSetter func(context.Context, middleware.InitializeInput, *Config) []attribute.KeyValue
 
 type otelMiddlewares struct {
-	tracer                 trace.Tracer
-	propagator             propagation.TextMapPropagator
-	attributeSetter        []AttributeSetter
-	attributeSettersConfig AttributeSettersConfig
+	tracer trace.Tracer
+	config Config
 }
 
 func (m otelMiddlewares) initializeMiddlewareBefore(stack *middleware.Stack) error {
@@ -75,8 +68,8 @@ func (m otelMiddlewares) initializeMiddlewareAfter(stack *middleware.Stack) erro
 			RegionAttr(region),
 			OperationAttr(operation),
 		}
-		for _, setter := range m.attributeSetter {
-			attributes = append(attributes, setter(ctx, in, &m.attributeSettersConfig)...)
+		for _, setter := range m.config.AttributeSetter {
+			attributes = append(attributes, setter(ctx, in, &m.config)...)
 		}
 
 		ctx, span := m.tracer.Start(ctx, spanName(serviceID, operation),
@@ -128,7 +121,7 @@ func (m otelMiddlewares) finalizeMiddleware(stack *middleware.Stack) error {
 		// Propagate the Trace information by injecting it into the HTTP request.
 		switch req := in.Request.(type) {
 		case *smithyhttp.Request:
-			m.propagator.Inject(ctx, propagation.HeaderCarrier(req.Header))
+			m.config.TextMapPropagator.Inject(ctx, propagation.HeaderCarrier(req.Header))
 		default:
 		}
 
@@ -149,7 +142,7 @@ func spanName(serviceID, operation string) string {
 // OTel middlewares can be appended to either all aws clients or a specific operation.
 // Please see more details in https://aws.github.io/aws-sdk-go-v2/docs/middleware/
 func AppendMiddlewares(apiOptions *[]func(*middleware.Stack) error, opts ...Option) {
-	cfg := config{
+	cfg := Config{
 		TracerProvider:    otel.GetTracerProvider(),
 		TextMapPropagator: otel.GetTextMapPropagator(),
 	}
@@ -163,8 +156,7 @@ func AppendMiddlewares(apiOptions *[]func(*middleware.Stack) error, opts ...Opti
 
 	m := otelMiddlewares{tracer: cfg.TracerProvider.Tracer(tracerName,
 		trace.WithInstrumentationVersion(Version())),
-		propagator:             cfg.TextMapPropagator,
-		attributeSetter:        cfg.AttributeSetter,
-		attributeSettersConfig: cfg.AttributeSettersConfig}
+		config: cfg,
+	}
 	*apiOptions = append(*apiOptions, m.initializeMiddlewareBefore, m.initializeMiddlewareAfter, m.finalizeMiddleware, m.deserializeMiddleware)
 }

@@ -19,30 +19,31 @@ import (
 	"go.opentelemetry.io/otel/trace"
 )
 
-type config struct {
-	TracerProvider         trace.TracerProvider
-	TextMapPropagator      propagation.TextMapPropagator
-	AttributeSetter        []AttributeSetter
-	AttributeSettersConfig AttributeSettersConfig
+// Config holds configuration details for the SDK.
+type Config struct {
+	TracerProvider       trace.TracerProvider
+	TextMapPropagator    propagation.TextMapPropagator
+	RecordSNSPhoneNumber bool
+	AttributeSetter      []AttributeSetter
 }
 
 // Option applies an option value.
 type Option interface {
-	apply(*config)
+	apply(*Config)
 }
 
 // optionFunc provides a convenience wrapper for simple Options
 // that can be represented as functions.
-type optionFunc func(*config)
+type optionFunc func(*Config)
 
-func (o optionFunc) apply(c *config) {
+func (o optionFunc) apply(c *Config) {
 	o(c)
 }
 
 // WithTracerProvider specifies a tracer provider to use for creating a tracer.
 // If none is specified, the global TracerProvider is used.
 func WithTracerProvider(provider trace.TracerProvider) Option {
-	return optionFunc(func(cfg *config) {
+	return optionFunc(func(cfg *Config) {
 		if provider != nil {
 			cfg.TracerProvider = provider
 		}
@@ -52,7 +53,7 @@ func WithTracerProvider(provider trace.TracerProvider) Option {
 // WithTextMapPropagator specifies a Text Map Propagator to use when propagating context.
 // If none is specified, the global TextMapPropagator is used.
 func WithTextMapPropagator(propagator propagation.TextMapPropagator) Option {
-	return optionFunc(func(cfg *config) {
+	return optionFunc(func(cfg *Config) {
 		if propagator != nil {
 			cfg.TextMapPropagator = propagator
 		}
@@ -62,14 +63,14 @@ func WithTextMapPropagator(propagator propagation.TextMapPropagator) Option {
 // WithAttributeSetter specifies an attribute setter function for setting service specific attributes.
 // If none is specified, the service will be determined by the DefaultAttributeSetter function and the corresponding attributes will be included.
 func WithAttributeSetter(attributesetters ...AttributeSetter) Option {
-	return optionFunc(func(cfg *config) {
+	return optionFunc(func(cfg *Config) {
 		cfg.AttributeSetter = append(cfg.AttributeSetter, attributesetters...)
 	})
 }
 
 // WithSNSPhoneNumber specifies if phone number for SNS Inputs should be recorded.
 func WithSNSPhoneNumber(recordPhoneNumber bool) Option {
-	return optionFunc(func(cfg *config) {
-		cfg.AttributeSettersConfig.RecordSNSPhoneNumber = recordPhoneNumber
+	return optionFunc(func(cfg *Config) {
+		cfg.RecordSNSPhoneNumber = recordPhoneNumber
 	})
 }

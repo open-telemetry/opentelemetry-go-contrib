@@ -53,7 +53,7 @@ func Test_otelMiddlewares_finalizeMiddleware(t *testing.T) {
 	}
 
 	m := otelMiddlewares{
-		propagator: propagator,
+		config: Config{TextMapPropagator: propagator},
 	}
 
 	err := m.finalizeMiddleware(&stack)

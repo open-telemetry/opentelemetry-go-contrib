@@ -25,7 +25,7 @@ import (
 )
 
 // SQSAttributeSetter sets SQS specific attributes depending on the SQS operation being performed.
-func SQSAttributeSetter(ctx context.Context, in middleware.InitializeInput, _ *AttributeSettersConfig) []attribute.KeyValue {
+func SQSAttributeSetter(ctx context.Context, in middleware.InitializeInput, _ *Config) []attribute.KeyValue {
 	sqsAttributes := []attribute.KeyValue{semconv.MessagingSystem("AmazonSQS")}
 
 	key := semconv.NetPeerNameKey

@@ -32,7 +32,7 @@ func TestSNSAttributeSetter(t *testing.T) {
 		input     middleware.InitializeInput
 		expect    []attribute.KeyValue
 		notExpect []attribute.KeyValue
-		config    AttributeSettersConfig
+		config    Config
 	}{
 		"when publish input with target arn is passed": {
 			middleware.InitializeInput{
@@ -45,7 +45,7 @@ func TestSNSAttributeSetter(t *testing.T) {
 				semconv.MessagingDestinationKindTopic,
 			},
 			nil,
-			AttributeSettersConfig{},
+			Config{},
 		},
 		"when publish input with topic arn is passed": {
 			middleware.InitializeInput{
@@ -58,7 +58,7 @@ func TestSNSAttributeSetter(t *testing.T) {
 				semconv.MessagingDestinationKindTopic,
 			},
 			nil,
-			AttributeSettersConfig{},
+			Config{},
 		},
 		"when publish input with a phone number is passed and sensitive attributes are not recorded": {
 			middleware.InitializeInput{
@@ -72,7 +72,7 @@ func TestSNSAttributeSetter(t *testing.T) {
 			[]attribute.KeyValue{
 				semconv.MessagingDestinationName("+4900000000000"),
 			},
-			AttributeSettersConfig{},
+			Config{},
 		},
 		"when publish input with a phone number is passed and sensitive attributes are recorded": {
 			middleware.InitializeInput{
@@ -85,7 +85,7 @@ func TestSNSAttributeSetter(t *testing.T) {
 				semconv.MessagingDestinationKindTopic,
 			},
 			nil,
-			AttributeSettersConfig{true},
+			Config{RecordSNSPhoneNumber: true},
 		},
 		"when publish batch input is passed": {
 			middleware.InitializeInput{
@@ -98,7 +98,7 @@ func TestSNSAttributeSetter(t *testing.T) {
 				semconv.MessagingDestinationKindTopic,
 			},
 			nil,
-			AttributeSettersConfig{},
+			Config{},
 		},
 	}
 	for name, test := range cases {

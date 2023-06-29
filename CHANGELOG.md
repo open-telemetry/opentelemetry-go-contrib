@@ -10,7 +10,7 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 
 ### Added
 
-- Add the `messaging.system`, `messaging.destination.name`, and `messaging.destination.kind` attributes for the Publish and PublishBatch SNS operations in the `go.opentelemetry.io/contrib/instrumentation/github.com/aws/aws-sdk-go-v2/otelaws` package. Add an option for the AWS instrumentation config to specify if phone numbers should be recorded for SNS inputs in the `messaging.destination.name` attribute.  (#4014)
+- Add the `messaging.system`, `messaging.destination.name`, and `messaging.destination.kind` attributes for the Publish and PublishBatch SNS operations in the `go.opentelemetry.io/contrib/instrumentation/github.com/aws/aws-sdk-go-v2/otelaws` package, with an option for the AWS instrumentation config to specify if phone numbers should be recorded for SNS inputs in the `messaging.destination.name` attribute.  (#4014)
 - Add `NewMiddleware` function in `go.opentelemetry.io/contrib/instrumentation/net/http/otelhttp`. (#2964)
 - Add the new `go.opentelemetry.io/contrib/instrgen` package to provide auto-generated source code instrumentation. (#3068, #3108)
 - The `go.opentelemetry.io/contrib/exporters/autoexport` package to provide configuration of trace exporters with useful defaults and envar support. (#2753)

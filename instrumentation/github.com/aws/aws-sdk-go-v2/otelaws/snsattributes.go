@@ -26,7 +26,7 @@ import (
 )
 
 // SNSAttributeSetter sets SNS specific attributes depending on the SNS operation being performed.
-func SNSAttributeSetter(ctx context.Context, in middleware.InitializeInput, config *AttributeSettersConfig) []attribute.KeyValue {
+func SNSAttributeSetter(ctx context.Context, in middleware.InitializeInput, config *Config) []attribute.KeyValue {
 	snsAttributes := []attribute.KeyValue{semconv.MessagingSystem("AmazonSNS")}
 
 	switch v := in.Parameters.(type) {
