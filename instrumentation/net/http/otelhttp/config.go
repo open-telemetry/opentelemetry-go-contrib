@@ -20,6 +20,7 @@ import (
 	"net/http/httptrace"
 
 	"go.opentelemetry.io/otel"
+	"go.opentelemetry.io/otel/attribute"
 	"go.opentelemetry.io/otel/metric"
 	"go.opentelemetry.io/otel/propagation"
 	"go.opentelemetry.io/otel/trace"
@@ -32,18 +33,19 @@ const (
 // config represents the configuration options available for the http.Handler
 // and http.Transport types.
 type config struct {
-	ServerName        string
-	Tracer            trace.Tracer
-	Meter             metric.Meter
-	Propagators       propagation.TextMapPropagator
-	SpanStartOptions  []trace.SpanStartOption
-	PublicEndpoint    bool
-	PublicEndpointFn  func(*http.Request) bool
-	ReadEvent         bool
-	WriteEvent        bool
-	Filters           []Filter
-	SpanNameFormatter func(string, *http.Request) string
-	ClientTrace       func(context.Context) *httptrace.ClientTrace
+	ServerName         string
+	Tracer             trace.Tracer
+	Meter              metric.Meter
+	Propagators        propagation.TextMapPropagator
+	SpanStartOptions   []trace.SpanStartOption
+	PublicEndpoint     bool
+	PublicEndpointFn   func(*http.Request) bool
+	ReadEvent          bool
+	WriteEvent         bool
+	Filters            []Filter
+	SpanNameFormatter  func(string, *http.Request) string
+	ClientTrace        func(context.Context) *httptrace.ClientTrace
+	RedactedAttributes map[attribute.Key]struct{}
 
 	TracerProvider trace.TracerProvider
 	MeterProvider  metric.MeterProvider
@@ -63,8 +65,9 @@ func (o optionFunc) apply(c *config) {
 // newConfig creates a new config struct and applies opts to it.
 func newConfig(opts ...Option) *config {
 	c := &config{
-		Propagators:   otel.GetTextMapPropagator(),
-		MeterProvider: otel.GetMeterProvider(),
+		Propagators:        otel.GetTextMapPropagator(),
+		MeterProvider:      otel.GetMeterProvider(),
+		RedactedAttributes: map[attribute.Key]struct{}{},
 	}
 	for _, opt := range opts {
 		opt.apply(c)
@@ -150,6 +153,16 @@ func WithSpanOptions(opts ...trace.SpanStartOption) Option {
 func WithFilter(f Filter) Option {
 	return optionFunc(func(c *config) {
 		c.Filters = append(c.Filters, f)
+	})
+}
+
+// WithRedactedAttributes will be replaced by fixed '****' values for the request / response
+// names provided. By default, no request / response are redacted.
+func WithRedactedAttributes(attributes ...attribute.Key) Option {
+	return optionFunc(func(ct *config) {
+		for _, att := range attributes {
+			ct.RedactedAttributes[att] = struct{}{}
+		}
 	})
 }
 
