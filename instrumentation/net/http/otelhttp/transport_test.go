@@ -380,3 +380,31 @@ func TestTransportProtocolSwitch(t *testing.T) {
 
 	assert.Implements(t, (*io.ReadWriteCloser)(nil), res.Body, "invalid body returned for protocol switch")
 }
+
+func TestTransportOriginRequestNotModify(t *testing.T) {
+	prop := propagation.TraceContext{}
+
+	ctx := context.Background()
+	sc := trace.NewSpanContext(trace.SpanContextConfig{
+		TraceID: trace.TraceID{0x01},
+		SpanID:  trace.SpanID{0x01},
+	})
+	ctx = trace.ContextWithRemoteSpanContext(ctx, sc)
+
+	ts := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
+		w.WriteHeader(http.StatusOK)
+	}))
+	defer ts.Close()
+
+	r, err := http.NewRequestWithContext(ctx, http.MethodGet, ts.URL, http.NoBody)
+	require.NoError(t, err)
+
+	expectedRequest := r.Clone(r.Context())
+
+	c := http.Client{Transport: NewTransport(http.DefaultTransport, WithPropagators(prop))}
+	res, err := c.Do(r)
+
+	t.Cleanup(func() { require.NoError(t, res.Body.Close()) })
+
+	assert.Equal(t, expectedRequest, r)
+}
