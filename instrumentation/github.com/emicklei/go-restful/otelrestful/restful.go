@@ -16,6 +16,7 @@ package otelrestful // import "go.opentelemetry.io/contrib/instrumentation/githu
 
 import (
 	"github.com/emicklei/go-restful/v3"
+	"go.opentelemetry.io/contrib/instrumentation/net/http/otelhttp"
 
 	"go.opentelemetry.io/contrib/instrumentation/github.com/emicklei/go-restful/otelrestful/internal/semconvutil"
 	"go.opentelemetry.io/otel"
@@ -82,5 +83,13 @@ func OTelFilter(service string, opts ...Option) restful.FilterFunction {
 		if status > 0 {
 			span.SetAttributes(semconv.HTTPStatusCode(status))
 		}
+	}
+}
+
+// RouteTaggerMiddleware annotates the current span with the handler's route path.
+func RouteTaggerMiddleware() restful.FilterFunction {
+	return func(request *restful.Request, response *restful.Response, chain *restful.FilterChain) {
+		otelhttp.AnnotateSpanWithHTTPRoute(request.Request.Context(), request.SelectedRoutePath())
+		chain.ProcessFilter(request, response)
 	}
 }

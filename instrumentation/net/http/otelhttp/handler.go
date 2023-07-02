@@ -15,6 +15,7 @@
 package otelhttp // import "go.opentelemetry.io/contrib/instrumentation/net/http/otelhttp"
 
 import (
+	"context"
 	"io"
 	"net/http"
 	"time"
@@ -258,20 +259,26 @@ func setAfterServeAttributes(span trace.Span, read, wrote int64, statusCode int,
 	span.SetAttributes(attributes...)
 }
 
-// WithRouteTag annotates a span with the provided route name using the
-// RouteKey Tag.
+// WithRouteTag returns a http handler that annotates the current span
+// with the provided route name in the semconv.RouteKey attribute.
 func WithRouteTag(route string, h http.Handler) http.Handler {
 	return WithRouteTagMiddleware(route)(h)
 }
 
-// WithRouteTagMiddleware annotates a span with the provided route name using the
-// RouteKey Tag.
+// WithRouteTagMiddleware returns a http middleware that annotates the current span
+// with the provided route name in the semconv.RouteKey attribute.
 func WithRouteTagMiddleware(route string) func(http.Handler) http.Handler {
 	return func(next http.Handler) http.Handler {
 		return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-			span := trace.SpanFromContext(r.Context())
-			span.SetAttributes(semconv.HTTPRoute(route))
+			AnnotateSpanWithHTTPRoute(r.Context(), route)
 			next.ServeHTTP(w, r)
 		})
 	}
+}
+
+// AnnotateSpanWithHTTPRoute annotates the current span with the
+// provided route name in the semconv.RouteKey attribute.
+func AnnotateSpanWithHTTPRoute(ctx context.Context, route string) {
+	span := trace.SpanFromContext(ctx)
+	span.SetAttributes(semconv.HTTPRoute(route))
 }

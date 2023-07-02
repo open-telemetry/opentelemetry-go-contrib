@@ -16,9 +16,9 @@ package otelecho // import "go.opentelemetry.io/contrib/instrumentation/github.c
 
 import (
 	"fmt"
-
 	"github.com/labstack/echo/v4"
 	"github.com/labstack/echo/v4/middleware"
+	"go.opentelemetry.io/contrib/instrumentation/net/http/otelhttp"
 
 	"go.opentelemetry.io/otel"
 
@@ -103,6 +103,17 @@ func Middleware(service string, opts ...Option) echo.MiddlewareFunc {
 			}
 
 			return err
+		}
+	}
+}
+
+// RouteTaggerMiddleware annotates the current span with the handler's route path.
+func RouteTaggerMiddleware() echo.MiddlewareFunc {
+	return func(next echo.HandlerFunc) echo.HandlerFunc {
+		return func(c echo.Context) error {
+			otelhttp.AnnotateSpanWithHTTPRoute(c.Request().Context(), c.Path())
+
+			return next(c)
 		}
 	}
 }
