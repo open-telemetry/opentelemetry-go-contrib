@@ -16,6 +16,7 @@ package otelrestful // import "go.opentelemetry.io/contrib/instrumentation/githu
 
 import (
 	"github.com/emicklei/go-restful/v3"
+
 	"go.opentelemetry.io/contrib/instrumentation/net/http/otelhttp"
 
 	"go.opentelemetry.io/contrib/instrumentation/github.com/emicklei/go-restful/otelrestful/internal/semconvutil"
