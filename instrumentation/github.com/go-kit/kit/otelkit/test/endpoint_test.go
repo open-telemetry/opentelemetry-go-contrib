@@ -261,4 +261,23 @@ func TestEndpointMiddleware(t *testing.T) {
 		assert.Contains(t, events[0].Attributes, attribute.String("exception.type", "go.opentelemetry.io/contrib/instrumentation/github.com/go-kit/kit/otelkit/test.customError"))
 		assert.Contains(t, events[0].Attributes, attribute.String("exception.message", "some business error"))
 	})
+
+	t.Run("CustomSpanKind", func(t *testing.T) {
+		sr := tracetest.NewSpanRecorder()
+		provider := sdktrace.NewTracerProvider(sdktrace.WithSpanProcessor(sr))
+
+		mw := otelkit.EndpointMiddleware(
+			otelkit.WithTracerProvider(provider),
+			otelkit.WithSpanKind(trace.SpanKindConsumer),
+		)
+
+		_, _ = mw(passEndpoint)(context.Background(), nil)
+
+		spans := sr.Ended()
+		require.Len(t, spans, 1)
+
+		span := spans[0]
+
+		assert.Equal(t, trace.SpanKindConsumer, span.SpanKind())
+	})
 }

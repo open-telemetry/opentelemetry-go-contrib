@@ -40,7 +40,9 @@ const (
 // tracing middleware, generic OpenTelemetry transport middleware or custom before
 // and after transport functions.
 func EndpointMiddleware(options ...Option) endpoint.Middleware {
-	cfg := &config{}
+	cfg := &config{
+		SpanKind: trace.SpanKindServer,
+	}
 
 	for _, o := range options {
 		o.apply(cfg)
@@ -71,7 +73,7 @@ func EndpointMiddleware(options ...Option) endpoint.Middleware {
 
 			opts := []trace.SpanStartOption{
 				trace.WithAttributes(cfg.Attributes...),
-				trace.WithSpanKind(trace.SpanKindServer),
+				trace.WithSpanKind(cfg.SpanKind),
 			}
 
 			if cfg.GetAttributes != nil {

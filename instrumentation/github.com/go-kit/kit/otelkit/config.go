@@ -47,6 +47,9 @@ type config struct {
 	// GetAttributes is an optional function that can extract trace attributes
 	// from the context and add them to the span.
 	GetAttributes func(ctx context.Context) []attribute.KeyValue
+
+	// SpanKind is the kind of span to be created by this middleware.
+	SpanKind trace.SpanKind
 }
 
 // Option configures an EndpointMiddleware.
@@ -104,5 +107,13 @@ func WithAttributes(attrs ...attribute.KeyValue) Option {
 func WithAttributeGetter(fn func(ctx context.Context) []attribute.KeyValue) Option {
 	return optionFunc(func(o *config) {
 		o.GetAttributes = fn
+	})
+}
+
+// WithSpanKind sets the span kind for spans created by this middleware.
+// If this option is not provided, then trace.SpanKindServer is used.
+func WithSpanKind(kind trace.SpanKind) Option {
+	return optionFunc(func(o *config) {
+		o.SpanKind = kind
 	})
 }
