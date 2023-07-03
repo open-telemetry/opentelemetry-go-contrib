@@ -16,9 +16,10 @@ package otelmux // import "go.opentelemetry.io/contrib/instrumentation/github.co
 
 import (
 	"fmt"
-	"go.opentelemetry.io/contrib/instrumentation/net/http/otelhttp"
 	"net/http"
 	"sync"
+
+	"go.opentelemetry.io/contrib/instrumentation/net/http/otelhttp"
 
 	"github.com/felixge/httpsnoop"
 	"github.com/gorilla/mux"

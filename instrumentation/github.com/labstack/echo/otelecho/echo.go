@@ -16,8 +16,10 @@ package otelecho // import "go.opentelemetry.io/contrib/instrumentation/github.c
 
 import (
 	"fmt"
+
 	"github.com/labstack/echo/v4"
 	"github.com/labstack/echo/v4/middleware"
+
 	"go.opentelemetry.io/contrib/instrumentation/net/http/otelhttp"
 
 	"go.opentelemetry.io/otel"

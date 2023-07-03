@@ -35,5 +35,6 @@ require (
 
 replace (
 	go.opentelemetry.io/contrib/instrumentation/github.com/labstack/echo/otelecho => ../
+	go.opentelemetry.io/contrib/instrumentation/net/http/otelhttp => ../../../../../net/http/otelhttp
 	go.opentelemetry.io/contrib/propagators/b3 => ../../../../../../propagators/b3
 )

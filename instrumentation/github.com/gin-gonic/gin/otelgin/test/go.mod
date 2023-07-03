@@ -45,6 +45,8 @@ require (
 	gopkg.in/yaml.v3 v3.0.1 // indirect
 )
 
-replace go.opentelemetry.io/contrib/instrumentation/github.com/gin-gonic/gin/otelgin => ../
-
-replace go.opentelemetry.io/contrib/propagators/b3 => ../../../../../../propagators/b3
+replace (
+	go.opentelemetry.io/contrib/instrumentation/github.com/gin-gonic/gin/otelgin => ../
+	go.opentelemetry.io/contrib/instrumentation/net/http/otelhttp => ../../../../../net/http/otelhttp
+	go.opentelemetry.io/contrib/propagators/b3 => ../../../../../../propagators/b3
+)

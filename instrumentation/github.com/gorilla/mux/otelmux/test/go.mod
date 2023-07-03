@@ -23,4 +23,7 @@ require (
 	gopkg.in/yaml.v3 v3.0.1 // indirect
 )
 
-replace go.opentelemetry.io/contrib/instrumentation/github.com/gorilla/mux/otelmux => ../
+replace (
+	go.opentelemetry.io/contrib/instrumentation/github.com/gorilla/mux/otelmux => ../
+	go.opentelemetry.io/contrib/instrumentation/net/http/otelhttp => ../../../../../net/http/otelhttp
+)

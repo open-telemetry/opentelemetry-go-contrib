@@ -28,5 +28,6 @@ require (
 
 replace (
 	go.opentelemetry.io/contrib/instrumentation/github.com/emicklei/go-restful/otelrestful => ../
+	go.opentelemetry.io/contrib/instrumentation/net/http/otelhttp => ../../../../../net/http/otelhttp
 	go.opentelemetry.io/contrib/propagators/b3 => ../../../../../../propagators/b3
 )
