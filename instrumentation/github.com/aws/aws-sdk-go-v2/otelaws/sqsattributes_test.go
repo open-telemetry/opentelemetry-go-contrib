@@ -26,86 +26,170 @@ import (
 	semconv "go.opentelemetry.io/otel/semconv/v1.17.0"
 )
 
-func TestSQSAttributeSetter(t *testing.T) {
-	queueURL := "test-queue-url"
-	awsQueueURL := aws.String(queueURL)
-	inputs := map[string]middleware.InitializeInput{
-		"with DeleteMessageBatchInput": {
-			Parameters: &sqs.DeleteMessageBatchInput{
-				QueueUrl: awsQueueURL,
-			},
-		},
-		"with DeleteMessageInput": {
-			Parameters: &sqs.DeleteMessageInput{
-				QueueUrl: awsQueueURL,
-			},
-		},
-		"with DeleteQueueInput": {
-			Parameters: &sqs.DeleteQueueInput{
-				QueueUrl: awsQueueURL,
-			},
-		},
-		"with GetQueueAttributesInput": {
-			Parameters: &sqs.GetQueueAttributesInput{
-				QueueUrl: awsQueueURL,
-			},
-		},
-		"with ListDeadLetterSourceQueuesInput": {
-			Parameters: &sqs.ListDeadLetterSourceQueuesInput{
-				QueueUrl: awsQueueURL,
-			},
-		},
-		"with ListQueueTagsInput": {
-			Parameters: &sqs.ListQueueTagsInput{
-				QueueUrl: awsQueueURL,
-			},
-		},
-		"with PurgeQueueInput": {
-			Parameters: &sqs.PurgeQueueInput{
-				QueueUrl: awsQueueURL,
-			},
-		},
-		"with ReceiveMessageInput": {
-			Parameters: &sqs.ReceiveMessageInput{
-				QueueUrl: awsQueueURL,
-			},
-		},
-		"with RemovePermissionInput": {
-			Parameters: &sqs.RemovePermissionInput{
-				QueueUrl: awsQueueURL,
-			},
-		},
-		"with SendMessageBatchInput": {
-			Parameters: &sqs.SendMessageBatchInput{
-				QueueUrl: awsQueueURL,
-			},
-		},
-		"with SendMessageInput": {
-			Parameters: &sqs.SendMessageInput{
-				QueueUrl: awsQueueURL,
-			},
-		},
-		"with SetQueueAttributesInput": {
-			Parameters: &sqs.SetQueueAttributesInput{
-				QueueUrl: awsQueueURL,
-			},
-		},
-		"with TagQueueInput": {
-			Parameters: &sqs.TagQueueInput{
-				QueueUrl: awsQueueURL,
-			},
-		},
-		"with UntagQueueInput": {
-			Parameters: &sqs.UntagQueueInput{
-				QueueUrl: awsQueueURL,
-			},
+func TestSQSDeleteMessageBatchInput(t *testing.T) {
+	input := middleware.InitializeInput{
+		Parameters: &sqs.DeleteMessageBatchInput{
+			QueueUrl: aws.String("test-queue-url"),
 		},
 	}
-	for name, input := range inputs {
-		t.Run(name, func(t *testing.T) {
-			attributes := SQSAttributeSetter(context.TODO(), input, nil)
 
-			assert.Contains(t, attributes, semconv.NetPeerName(queueURL))
-		})
+	attributes := SQSAttributeSetter(context.TODO(), input, nil)
+
+	assert.Contains(t, attributes, semconv.NetPeerName("test-queue-url"))
+}
+
+func TestSQSDeleteMessageInput(t *testing.T) {
+	input := middleware.InitializeInput{
+		Parameters: &sqs.DeleteMessageInput{
+			QueueUrl: aws.String("test-queue-url"),
+		},
 	}
+
+	attributes := SQSAttributeSetter(context.TODO(), input, nil)
+
+	assert.Contains(t, attributes, semconv.NetPeerName("test-queue-url"))
+}
+
+func TestSQSDeleteQueueInput(t *testing.T) {
+	input := middleware.InitializeInput{
+		Parameters: &sqs.DeleteQueueInput{
+			QueueUrl: aws.String("test-queue-url"),
+		},
+	}
+
+	attributes := SQSAttributeSetter(context.TODO(), input, nil)
+
+	assert.Contains(t, attributes, semconv.NetPeerName("test-queue-url"))
+}
+
+func TestSQSGetQueueAttributesInput(t *testing.T) {
+	input := middleware.InitializeInput{
+		Parameters: &sqs.GetQueueAttributesInput{
+			QueueUrl: aws.String("test-queue-url"),
+		},
+	}
+
+	attributes := SQSAttributeSetter(context.TODO(), input, nil)
+
+	assert.Contains(t, attributes, semconv.NetPeerName("test-queue-url"))
+}
+
+func TestSQSListDeadLetterSourceQueuesInput(t *testing.T) {
+	input := middleware.InitializeInput{
+		Parameters: &sqs.ListDeadLetterSourceQueuesInput{
+			QueueUrl: aws.String("test-queue-url"),
+		},
+	}
+
+	attributes := SQSAttributeSetter(context.TODO(), input, nil)
+
+	assert.Contains(t, attributes, semconv.NetPeerName("test-queue-url"))
+}
+
+func TestSQSListQueueTagsInput(t *testing.T) {
+	input := middleware.InitializeInput{
+		Parameters: &sqs.ListQueueTagsInput{
+			QueueUrl: aws.String("test-queue-url"),
+		},
+	}
+
+	attributes := SQSAttributeSetter(context.TODO(), input, nil)
+
+	assert.Contains(t, attributes, semconv.NetPeerName("test-queue-url"))
+}
+
+func TestSQSPurgeQueueInput(t *testing.T) {
+	input := middleware.InitializeInput{
+		Parameters: &sqs.PurgeQueueInput{
+			QueueUrl: aws.String("test-queue-url"),
+		},
+	}
+
+	attributes := SQSAttributeSetter(context.TODO(), input, nil)
+
+	assert.Contains(t, attributes, semconv.NetPeerName("test-queue-url"))
+}
+
+func TestSQSReceiveMessageInput(t *testing.T) {
+	input := middleware.InitializeInput{
+		Parameters: &sqs.ReceiveMessageInput{
+			QueueUrl: aws.String("test-queue-url"),
+		},
+	}
+
+	attributes := SQSAttributeSetter(context.TODO(), input, nil)
+
+	assert.Contains(t, attributes, semconv.NetPeerName("test-queue-url"))
+}
+
+func TestSQSRemovePermissionInput(t *testing.T) {
+	input := middleware.InitializeInput{
+		Parameters: &sqs.RemovePermissionInput{
+			QueueUrl: aws.String("test-queue-url"),
+		},
+	}
+
+	attributes := SQSAttributeSetter(context.TODO(), input, nil)
+
+	assert.Contains(t, attributes, semconv.NetPeerName("test-queue-url"))
+}
+
+func TestSQSSendMessageBatchInput(t *testing.T) {
+	input := middleware.InitializeInput{
+		Parameters: &sqs.SendMessageBatchInput{
+			QueueUrl: aws.String("test-queue-url"),
+		},
+	}
+
+	attributes := SQSAttributeSetter(context.TODO(), input, nil)
+
+	assert.Contains(t, attributes, semconv.NetPeerName("test-queue-url"))
+}
+
+func TestSQSSendMessageInput(t *testing.T) {
+	input := middleware.InitializeInput{
+		Parameters: &sqs.SendMessageInput{
+			QueueUrl: aws.String("test-queue-url"),
+		},
+	}
+
+	attributes := SQSAttributeSetter(context.TODO(), input, nil)
+
+	assert.Contains(t, attributes, semconv.NetPeerName("test-queue-url"))
+}
+
+func TestSQSSetQueueAttributesInput(t *testing.T) {
+	input := middleware.InitializeInput{
+		Parameters: &sqs.SetQueueAttributesInput{
+			QueueUrl: aws.String("test-queue-url"),
+		},
+	}
+
+	attributes := SQSAttributeSetter(context.TODO(), input, nil)
+
+	assert.Contains(t, attributes, semconv.NetPeerName("test-queue-url"))
+}
+
+func TestSQSTagQueueInput(t *testing.T) {
+	input := middleware.InitializeInput{
+		Parameters: &sqs.TagQueueInput{
+			QueueUrl: aws.String("test-queue-url"),
+		},
+	}
+
+	attributes := SQSAttributeSetter(context.TODO(), input, nil)
+
+	assert.Contains(t, attributes, semconv.NetPeerName("test-queue-url"))
+}
+
+func TestSQSUntagQueueInput(t *testing.T) {
+	input := middleware.InitializeInput{
+		Parameters: &sqs.UntagQueueInput{
+			QueueUrl: aws.String("test-queue-url"),
+		},
+	}
+
+	attributes := SQSAttributeSetter(context.TODO(), input, nil)
+
+	assert.Contains(t, attributes, semconv.NetPeerName("test-queue-url"))
 }
