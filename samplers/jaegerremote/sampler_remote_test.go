@@ -45,7 +45,7 @@ func TestRemotelyControlledSampler_updateRace(t *testing.T) {
 		WithInitialSampler(initSampler),
 		WithSamplingServerURL("my url"),
 		WithSamplingRefreshInterval(time.Millisecond),
-		withSamplingStrategyFetcher(fetcher),
+		WithSamplingStrategyFetcher(fetcher),
 		withSamplingStrategyParser(parser),
 		withUpdaters(updaters...),
 	)
@@ -122,7 +122,7 @@ func TestRemoteSamplerOptions(t *testing.T) {
 		WithInitialSampler(initSampler),
 		WithSamplingServerURL("my url"),
 		WithSamplingRefreshInterval(42*time.Second),
-		withSamplingStrategyFetcher(fetcher),
+		WithSamplingStrategyFetcher(fetcher),
 		withSamplingStrategyParser(parser),
 		withUpdaters(updaters...),
 		WithLogger(logger),
@@ -303,7 +303,7 @@ func TestRemotelyControlledSampler_ImmediatelyUpdateOnStartup(t *testing.T) {
 		WithInitialSampler(initSampler),
 		WithSamplingServerURL("my url"),
 		WithSamplingRefreshInterval(10*time.Minute),
-		withSamplingStrategyFetcher(fetcher),
+		WithSamplingStrategyFetcher(fetcher),
 		withSamplingStrategyParser(parser),
 		withUpdaters(updaters...),
 	)

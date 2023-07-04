@@ -28,7 +28,7 @@ type config struct {
 	sampler                 trace.Sampler
 	samplingServerURL       string
 	samplingRefreshInterval time.Duration
-	samplingFetcher         samplingStrategyFetcher
+	samplingFetcher         SamplingStrategyFetcher
 	samplingParser          samplingStrategyParser
 	updaters                []samplerUpdater
 	posParams               perOperationSamplerParams
@@ -124,7 +124,7 @@ func WithLogger(logger logr.Logger) Option {
 }
 
 // samplingStrategyFetcher creates a Option that initializes sampling strategy fetcher.
-func withSamplingStrategyFetcher(fetcher samplingStrategyFetcher) Option {
+func WithSamplingStrategyFetcher(fetcher SamplingStrategyFetcher) Option {
 	return optionFunc(func(c *config) {
 		c.samplingFetcher = fetcher
 	})

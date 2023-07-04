@@ -39,8 +39,8 @@ const (
 	defaultSamplingOperationNameLateBinding = true
 )
 
-// samplingStrategyFetcher is used to fetch sampling strategy updates from remote server.
-type samplingStrategyFetcher interface {
+// SamplingStrategyFetcher is used to fetch sampling strategy updates from remote server.
+type SamplingStrategyFetcher interface {
 	Fetch(service string) ([]byte, error)
 }
 
