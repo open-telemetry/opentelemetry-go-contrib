@@ -18,6 +18,7 @@ package main
 
 import (
 	"bytes"
+	"encoding/json"
 	"fmt"
 	"os"
 	"path/filepath"
@@ -27,70 +28,56 @@ import (
 	"github.com/stretchr/testify/require"
 
 	alib "go.opentelemetry.io/contrib/instrgen/lib"
+	"go.opentelemetry.io/contrib/instrgen/rewriters"
 )
 
 var testcases = map[string]string{
-	"./testdata/basic":     "./testdata/expected/basic",
-	"./testdata/selector":  "./testdata/expected/selector",
-	"./testdata/interface": "./testdata/expected/interface",
+	"testdata/basic":     "testdata/expected/basic",
+	"testdata/interface": "testdata/expected/interface",
 }
 
 var failures []string
 
-func inject(t *testing.T, root string, packagePattern string) {
-	err := executeCommand("--inject-dump-ir", root, packagePattern)
-	require.NoError(t, err)
-}
-
-func TestCommands(t *testing.T) {
-	err := executeCommand("--dumpcfg", "./testdata/dummy", "./...")
-	require.NoError(t, err)
-	err = executeCommand("--rootfunctions", "./testdata/dummy", "./...")
-	require.NoError(t, err)
-	err = executeCommand("--prune", "./testdata/dummy", "./...")
-	require.NoError(t, err)
-	err = executeCommand("--inject", "./testdata/dummy", "./...")
-	require.NoError(t, err)
-	err = usage()
-	require.NoError(t, err)
-}
-
-func TestCallGraph(t *testing.T) {
-	cg := makeCallGraph("./testdata/dummy", "./...")
-	dumpCallGraph(cg)
-	assert.Equal(t, len(cg), 0, "callgraph should contain 0 elems")
-	rf := makeRootFunctions("./testdata/dummy", "./...")
-	dumpRootFunctions(rf)
-	assert.Equal(t, len(rf), 0, "rootfunctions set should be empty")
-}
-
-func TestArgs(t *testing.T) {
-	err := checkArgs(nil)
-	require.Error(t, err)
-	args := []string{"driver", "--inject", "", "./..."}
-	err = checkArgs(args)
-	require.NoError(t, err)
-}
-
-func TestUnknownCommand(t *testing.T) {
-	err := executeCommand("unknown", "a", "b")
-	require.Error(t, err)
+func TestCommand(t *testing.T) {
+	executor := &NullExecutor{}
+	err := executeCommand("--unknown", "./testdata/basic", "testdata/basic", "yes", "main.main", executor)
+	assert.Error(t, err)
 }
 
 func TestInstrumentation(t *testing.T) {
+	cwd, _ := os.Getwd()
+	var args []string
+	for k := range testcases {
+		filePaths := make(map[string]int)
+
+		files := alib.SearchFiles(k, ".go")
+		for index, file := range files {
+			filePaths[file] = index
+		}
+		pruner := rewriters.OtelPruner{
+			FilePattern: k, Replace: true}
+		analyzePackage(pruner, "main", filePaths, nil, "", args)
+
+		rewriter := rewriters.BasicRewriter{
+			FilePattern: k, Replace: "yes", Pkg: "main", Fun: "main"}
+		analyzePackage(rewriter, "main", filePaths, nil, "", args)
+	}
+	fmt.Println(cwd)
+
 	for k, v := range testcases {
-		inject(t, k, "./...")
-		files := alib.SearchFiles(k, ".go_pass_tracing")
-		expectedFiles := alib.SearchFiles(v, ".go")
+		files := alib.SearchFiles(cwd+"/"+k, ".go")
+		expectedFiles := alib.SearchFiles(cwd+"/"+v, ".go")
 		numOfFiles := len(expectedFiles)
 		fmt.Println("Go Files:", len(files))
 		fmt.Println("Expected Go Files:", len(expectedFiles))
+		assert.True(t, len(files) > 0)
 		numOfComparisons := 0
 		for _, file := range files {
 			fmt.Println(filepath.Base(file))
 			for _, expectedFile := range expectedFiles {
 				fmt.Println(filepath.Base(expectedFile))
-				if filepath.Base(file) == filepath.Base(expectedFile+"_pass_tracing") {
+				if filepath.Base(file) == filepath.Base(expectedFile) {
+					fmt.Println(file, " : ", expectedFile)
 					f1, err1 := os.ReadFile(file)
 					require.NoError(t, err1)
 					f2, err2 := os.ReadFile(expectedFile)
@@ -106,12 +93,120 @@ func TestInstrumentation(t *testing.T) {
 			fmt.Println("numberOfComparisons:", numOfComparisons)
 			panic("not all files were compared")
 		}
-		_, err := Prune(k, "./...", false)
-		if err != nil {
-			fmt.Println("Prune failed")
-		}
 	}
-	for _, f := range failures {
-		fmt.Println("FAILURE : ", f)
+}
+
+type NullExecutor struct {
+}
+
+func (executor *NullExecutor) Execute(_ string, _ []string) {
+}
+
+func (executor *NullExecutor) Run() error {
+	return nil
+}
+
+func TestToolExecMain(t *testing.T) {
+	for k := range testcases {
+		var args []string
+		files := alib.SearchFiles(k, ".go")
+		args = append(args, []string{"-o", "/tmp/go-build", "-p", "main", "-pack", "-asmhdr", "go_asm.h"}...)
+		args = append(args, files...)
+		instrgenCfg := InstrgenCmd{FilePattern: k, Cmd: "prune", Replace: "yes",
+			EntryPoint: EntryPoint{Pkg: "main", FunName: "main"}}
+		rewriterS := makeRewriters(instrgenCfg)
+		analyze(args, rewriterS)
+		instrgenCfg.Cmd = "inject"
+		rewriterS = makeRewriters(instrgenCfg)
+		analyze(args, rewriterS)
+	}
+	for k := range testcases {
+		var args []string
+		files := alib.SearchFiles(k, ".go")
+		args = append(args, []string{"-pack", "-asmhdr", "go_asm.h"}...)
+		args = append(args, files...)
+		instrgenCfg := InstrgenCmd{FilePattern: k, Cmd: "prune", Replace: "no",
+			EntryPoint: EntryPoint{Pkg: "main", FunName: "main"}}
+		rewriterS := makeRewriters(instrgenCfg)
+		analyze(args, rewriterS)
+		instrgenCfg.Cmd = "inject"
+		rewriterS = makeRewriters(instrgenCfg)
+		analyze(args, rewriterS)
+	}
+	for k := range testcases {
+		instrgenCfg := InstrgenCmd{FilePattern: k, Cmd: "prune", Replace: "yes",
+			EntryPoint: EntryPoint{Pkg: "main", FunName: "main"}}
+		rewriterS := makeRewriters(instrgenCfg)
+		var args []string
+		executor := &NullExecutor{}
+		err := toolExecMain(args, rewriterS, executor)
+		assert.Error(t, err)
+	}
+}
+
+func TestGetCommandName(t *testing.T) {
+	cmd := GetCommandName([]string{"/usr/local/go/compile"})
+	assert.True(t, cmd == "compile")
+	cmd = GetCommandName([]string{"/usr/local/go/compile.exe"})
+	assert.True(t, cmd == "compile")
+	cmd = GetCommandName([]string{})
+	assert.True(t, cmd == "")
+}
+
+func TestExecutePass(t *testing.T) {
+	executor := &ToolExecutor{}
+	require.NoError(t, executePass([]string{"go", "version"}, executor))
+}
+
+func TestDriverMain(t *testing.T) {
+	executor := &NullExecutor{}
+	{
+		err := os.Remove("instrgen_cmd.json")
+		_ = err
+		var args []string
+		args = append(args, "compile")
+		err = driverMain(args, executor)
+		require.Error(t, err)
+	}
+	for k := range testcases {
+		var args []string
+		files := alib.SearchFiles(k, ".go")
+		args = append(args, []string{"-o", "/tmp/go-build", "-p", "main", "-pack", "-asmhdr", "go_asm.h"}...)
+		args = append(args, files...)
+		instrgenCfg := InstrgenCmd{FilePattern: k, Cmd: "prune", Replace: "yes",
+			EntryPoint: EntryPoint{Pkg: "main", FunName: "main"}}
+		err := driverMain(args, executor)
+		assert.NoError(t, err)
+		instrgenCfg.Cmd = "inject"
+		err = driverMain(args, executor)
+		assert.NoError(t, err)
+	}
+	{
+		var args []string
+		args = append(args, "compile")
+		instrgenCfg := InstrgenCmd{FilePattern: "/testdata/basic", Cmd: "inject", Replace: "yes",
+			EntryPoint: EntryPoint{Pkg: "main", FunName: "main"}}
+		file, _ := json.MarshalIndent(instrgenCfg, "", " ")
+		err := os.WriteFile("instrgen_cmd.json", file, 0644)
+		require.NoError(t, err)
+		err = driverMain(args, executor)
+		require.NoError(t, err)
+	}
+	for k := range testcases {
+		var args []string
+		args = append(args, []string{"--inject", k, "yes", "main.main"}...)
+		err := driverMain(args, executor)
+		assert.NoError(t, err)
+	}
+	{
+		var args []string
+		args = append(args, "--inject")
+		err := driverMain(args, executor)
+		assert.Error(t, err)
+	}
+	{
+		var args []string
+		err := driverMain(args, executor)
+		assert.NoError(t, err)
 	}
 }

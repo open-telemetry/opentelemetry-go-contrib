@@ -34,38 +34,22 @@ func SearchFiles(root string, ext string) []string {
 	return files
 }
 
-func isPath(
-	callGraph map[FuncDescriptor][]FuncDescriptor,
-	current FuncDescriptor,
-	goal FuncDescriptor,
-	visited map[FuncDescriptor]bool,
-) bool {
-	if current == goal {
-		return true
-	}
+// CreateFile.
+func CreateFile(name string) (*os.File, error) {
+	var out *os.File
+	out, err := os.Create(name)
 
-	value, ok := callGraph[current]
-	if ok {
-		for _, child := range value {
-			exists := visited[child]
-			if exists {
-				continue
-			}
-			visited[child] = true
-			if isPath(callGraph, child, goal, visited) {
-				return true
-			}
-		}
+	if err != nil {
+		return nil, err
 	}
-	return false
+	return out, err
 }
 
-// Contains.
-func Contains(a []FuncDescriptor, x FuncDescriptor) bool {
-	for _, n := range a {
-		if x.TypeHash() == n.TypeHash() {
-			return true
-		}
+// FileExists.
+func FileExists(filename string) bool {
+	info, err := os.Stat(filename)
+	if os.IsNotExist(err) {
+		return false
 	}
-	return false
+	return !info.IsDir()
 }

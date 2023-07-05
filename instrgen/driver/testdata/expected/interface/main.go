@@ -17,6 +17,7 @@ package main
 
 import (
 	. "go.opentelemetry.io/contrib/instrgen/testdata/interface/app"
+	__atel_runtime "runtime"
 	__atel_otel "go.opentelemetry.io/otel"
 	__atel_context "context"
 	. "go.opentelemetry.io/contrib/instrgen/testdata/interface/serializer"
@@ -31,10 +32,11 @@ func main() {
 	__atel_child_tracing_ctx, __atel_span := __atel_otel.Tracer("main").Start(__atel_ctx, "main")
 	_ = __atel_child_tracing_ctx
 	defer __atel_span.End()
+	__atel_runtime.InstrgenSetTls(__atel_child_tracing_ctx)
 
 	rtlib.AutotelEntryPoint()
 	bs := BasicSerializer{}
 	var s Serializer
 	s = bs
-	s.Serialize(__atel_child_tracing_ctx)
+	s.Serialize()
 }

@@ -17,8 +17,9 @@ package main
 
 import (
 	"fmt"
-
 	"go.opentelemetry.io/contrib/instrgen/rtlib"
+	_ "go.opentelemetry.io/otel"
+	_ "context"
 )
 
 func recur(n int) {

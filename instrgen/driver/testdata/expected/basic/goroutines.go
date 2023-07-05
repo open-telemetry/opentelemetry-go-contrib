@@ -17,20 +17,24 @@ package main
 
 import (
 	"fmt"
+	__atel_runtime "runtime"
 	__atel_context "context"
+	_ "go.opentelemetry.io/otel"
 	__atel_otel "go.opentelemetry.io/otel"
+	_ "context"
 )
 
-func goroutines(__atel_tracing_ctx __atel_context.Context,) {
+func goroutines() {
+	__atel_tracing_ctx := __atel_runtime.InstrgenGetTls().(__atel_context.Context)
+	defer __atel_runtime.InstrgenSetTls(__atel_tracing_ctx)
 	__atel_child_tracing_ctx, __atel_span := __atel_otel.Tracer("goroutines").Start(__atel_tracing_ctx, "goroutines")
-	_ = __atel_child_tracing_ctx
+	__atel_runtime.InstrgenSetTls(__atel_child_tracing_ctx)
 	defer __atel_span.End()
+
 	messages := make(chan string)
 
 	go func() {
-		__atel_child_tracing_ctx, __atel_span := __atel_otel.Tracer("anonymous").Start(__atel_child_tracing_ctx, "anonymous")
-		_ = __atel_child_tracing_ctx
-		defer __atel_span.End()
+
 		messages <- "ping"
 	}()
 
