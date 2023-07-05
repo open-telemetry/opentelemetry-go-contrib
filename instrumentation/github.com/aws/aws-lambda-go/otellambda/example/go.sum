@@ -18,8 +18,8 @@ github.com/aws/aws-sdk-go-v2/internal/ini v1.3.35 h1:LWA+3kDM8ly001vJ1X1waCuLJdt
 github.com/aws/aws-sdk-go-v2/internal/ini v1.3.35/go.mod h1:0Eg1YjxE0Bhn56lx+SHJwCzhW+2JGtizsrx+lCqrfm0=
 github.com/aws/aws-sdk-go-v2/internal/v4a v1.0.26 h1:wscW+pnn3J1OYnanMnza5ZVYXLX4cKk5rAvUAl4Qu+c=
 github.com/aws/aws-sdk-go-v2/internal/v4a v1.0.26/go.mod h1:MtYiox5gvyB+OyP0Mr0Sm/yzbEAIPL9eijj/ouHAPw0=
-github.com/aws/aws-sdk-go-v2/service/dynamodb v1.19.11 h1:tLTGNAsazbfjfjW1k/i43kyCcyTTTTFaD93H7JbSbbs=
-github.com/aws/aws-sdk-go-v2/service/dynamodb v1.19.11/go.mod h1:W1oiFegjVosgjIwb2Vv45jiCQT1ee8x85u8EyZRYLes=
+github.com/aws/aws-sdk-go-v2/service/dynamodb v1.20.0 h1:ov790XKhwAziEXcl6WrjsbyWkGpboK7Cmikpe5gAzMw=
+github.com/aws/aws-sdk-go-v2/service/dynamodb v1.20.0/go.mod h1:W1oiFegjVosgjIwb2Vv45jiCQT1ee8x85u8EyZRYLes=
 github.com/aws/aws-sdk-go-v2/service/internal/accept-encoding v1.9.11 h1:y2+VQzC6Zh2ojtV2LoC0MNwHWc6qXv/j2vrQtlftkdA=
 github.com/aws/aws-sdk-go-v2/service/internal/accept-encoding v1.9.11/go.mod h1:iV4q2hsqtNECrfmlXyord9u4zyuFEJX9eLgLpSPzWA8=
 github.com/aws/aws-sdk-go-v2/service/internal/checksum v1.1.29 h1:zZSLP3v3riMOP14H7b4XP0uyfREDQOYv2cqIrvTXDNQ=
@@ -30,8 +30,8 @@ github.com/aws/aws-sdk-go-v2/service/internal/presigned-url v1.9.28 h1:bkRyG4a92
 github.com/aws/aws-sdk-go-v2/service/internal/presigned-url v1.9.28/go.mod h1:jj7znCIg05jXlaGBlFMGP8+7UN3VtCkRBG2spnmRQkU=
 github.com/aws/aws-sdk-go-v2/service/internal/s3shared v1.14.3 h1:dBL3StFxHtpBzJJ/mNEsjXVgfO+7jR0dAIEwLqMapEA=
 github.com/aws/aws-sdk-go-v2/service/internal/s3shared v1.14.3/go.mod h1:f1QyiAsvIv4B49DmCqrhlXqyaR+0IxMmyX+1P+AnzOM=
-github.com/aws/aws-sdk-go-v2/service/s3 v1.35.0 h1:ya7fmrN2fE7s1P2gaPbNg5MTkERVWfsH8ToP1YC4Z9o=
-github.com/aws/aws-sdk-go-v2/service/s3 v1.35.0/go.mod h1:aVbf0sko/TsLWHx30c/uVu7c62+0EAJ3vbxaJga0xCw=
+github.com/aws/aws-sdk-go-v2/service/s3 v1.36.0 h1:lEmQ1XSD9qLk+NZXbgvLJI/IiTz7OIR2TYUTFH25EI4=
+github.com/aws/aws-sdk-go-v2/service/s3 v1.36.0/go.mod h1:aVbf0sko/TsLWHx30c/uVu7c62+0EAJ3vbxaJga0xCw=
 github.com/aws/aws-sdk-go-v2/service/sqs v1.23.2 h1:Y2vfLiY3HmaMisuwx6fS2kMRYbajRXXB+9vesGVPseY=
 github.com/aws/aws-sdk-go-v2/service/sqs v1.23.2/go.mod h1:TaV67b6JMD1988x/uMDop/JnMFK6v5d4Ru+sDmFg+ww=
 github.com/aws/aws-sdk-go-v2/service/sso v1.12.12 h1:nneMBM2p79PGWBQovYO/6Xnc2ryRMw3InnDJq1FHkSY=
