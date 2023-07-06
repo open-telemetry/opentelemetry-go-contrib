@@ -37,11 +37,11 @@ const (
 type spanTimestampKey struct{}
 
 // AttributeSetter returns an array of KeyValue pairs, it can be used to set custom attributes.
-type AttributeSetter func(context.Context, middleware.InitializeInput, *Config) []attribute.KeyValue
+type AttributeSetter func(context.Context, middleware.InitializeInput) []attribute.KeyValue
 
 type otelMiddlewares struct {
 	tracer trace.Tracer
-	config Config
+	config config
 }
 
 func (m otelMiddlewares) initializeMiddlewareBefore(stack *middleware.Stack) error {
@@ -68,8 +68,9 @@ func (m otelMiddlewares) initializeMiddlewareAfter(stack *middleware.Stack) erro
 			RegionAttr(region),
 			OperationAttr(operation),
 		}
+		setterContext := injectConfig(ctx, &m.config)
 		for _, setter := range m.config.AttributeSetter {
-			attributes = append(attributes, setter(ctx, in, &m.config)...)
+			attributes = append(attributes, setter(setterContext, in)...)
 		}
 
 		ctx, span := m.tracer.Start(ctx, spanName(serviceID, operation),
@@ -142,7 +143,7 @@ func spanName(serviceID, operation string) string {
 // OTel middlewares can be appended to either all aws clients or a specific operation.
 // Please see more details in https://aws.github.io/aws-sdk-go-v2/docs/middleware/
 func AppendMiddlewares(apiOptions *[]func(*middleware.Stack) error, opts ...Option) {
-	cfg := Config{
+	cfg := config{
 		TracerProvider:    otel.GetTracerProvider(),
 		TextMapPropagator: otel.GetTextMapPropagator(),
 	}

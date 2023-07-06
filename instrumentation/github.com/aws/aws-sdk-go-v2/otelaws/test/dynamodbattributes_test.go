@@ -146,7 +146,7 @@ func TestDynamodbTagsCustomSetter(t *testing.T) {
 			},
 		})
 
-		mycustomsetter := otelaws.AttributeSetter(func(context.Context, middleware.InitializeInput, *otelaws.Config) []attribute.KeyValue {
+		mycustomsetter := otelaws.AttributeSetter(func(context.Context, middleware.InitializeInput) []attribute.KeyValue {
 			customAttributes := []attribute.KeyValue{
 				{
 					Key:   "customattribute2key",

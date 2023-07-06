@@ -23,7 +23,7 @@ import (
 )
 
 func TestWithTextMapPropagator(t *testing.T) {
-	cfg := Config{}
+	cfg := config{}
 	propagator := otel.GetTextMapPropagator()
 
 	option := WithTextMapPropagator(propagator)
@@ -33,7 +33,7 @@ func TestWithTextMapPropagator(t *testing.T) {
 }
 
 func TestWithSNSPhoneNumber(t *testing.T) {
-	cfg := Config{}
+	cfg := config{}
 	option := WithSNSPhoneNumber(true)
 
 	option.apply(&cfg)
