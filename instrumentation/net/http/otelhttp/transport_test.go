@@ -403,6 +403,7 @@ func TestTransportOriginRequestNotModify(t *testing.T) {
 
 	c := http.Client{Transport: NewTransport(http.DefaultTransport, WithPropagators(prop))}
 	res, err := c.Do(r)
+	require.NoError(t, err)
 
 	t.Cleanup(func() { require.NoError(t, res.Body.Close()) })
 
