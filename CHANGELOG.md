@@ -26,7 +26,7 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
   - `go.opentelemetry.io/contrib/instrumentation/gopkg.in/macaron.v1/otelmacaron`
   - `go.opentelemetry.io/contrib/instrumentation/net/http/httptrace/otelhttptrace`
   - `go.opentelemetry.io/contrib/instrumentation/net/http/otelhttp`
-- Shouldn't modify the origin request in RoundTripper (#4033)
+- Do not modify the origin request in RoundTripper in `go.opentelemetry.io/contrib/instrumentation/net/http/otelhttp`. (#4033)
 
 ### Removed
 
