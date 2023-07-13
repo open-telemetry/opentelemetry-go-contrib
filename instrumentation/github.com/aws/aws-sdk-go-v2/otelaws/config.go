@@ -15,14 +15,18 @@
 package otelaws // import "go.opentelemetry.io/contrib/instrumentation/github.com/aws/aws-sdk-go-v2/otelaws"
 
 import (
+	"context"
+
 	"go.opentelemetry.io/otel/propagation"
 	"go.opentelemetry.io/otel/trace"
 )
 
+// config holds configuration details for the SDK.
 type config struct {
-	TracerProvider    trace.TracerProvider
-	TextMapPropagator propagation.TextMapPropagator
-	AttributeSetter   []AttributeSetter
+	TracerProvider       trace.TracerProvider
+	TextMapPropagator    propagation.TextMapPropagator
+	RecordSNSPhoneNumber bool
+	AttributeSetter      []AttributeSetter
 }
 
 // Option applies an option value.
@@ -33,6 +37,22 @@ type Option interface {
 // optionFunc provides a convenience wrapper for simple Options
 // that can be represented as functions.
 type optionFunc func(*config)
+
+type contextKey string
+
+const configContextKey contextKey = "config"
+
+func injectConfig(ctx context.Context, cfg *config) context.Context {
+	return context.WithValue(ctx, configContextKey, cfg)
+}
+
+func configFromContext(ctx context.Context) (*config, bool) {
+	cfg, ok := ctx.Value(configContextKey).(*config)
+	if !ok {
+		cfg = &config{}
+	}
+	return cfg, ok
+}
 
 func (o optionFunc) apply(c *config) {
 	o(c)
@@ -63,5 +83,12 @@ func WithTextMapPropagator(propagator propagation.TextMapPropagator) Option {
 func WithAttributeSetter(attributesetters ...AttributeSetter) Option {
 	return optionFunc(func(cfg *config) {
 		cfg.AttributeSetter = append(cfg.AttributeSetter, attributesetters...)
+	})
+}
+
+// WithSNSPhoneNumber specifies if phone number for SNS Inputs should be recorded.
+func WithSNSPhoneNumber(recordPhoneNumber bool) Option {
+	return optionFunc(func(cfg *config) {
+		cfg.RecordSNSPhoneNumber = recordPhoneNumber
 	})
 }

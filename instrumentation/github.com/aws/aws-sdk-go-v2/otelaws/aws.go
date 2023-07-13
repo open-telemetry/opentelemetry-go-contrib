@@ -40,9 +40,8 @@ type spanTimestampKey struct{}
 type AttributeSetter func(context.Context, middleware.InitializeInput) []attribute.KeyValue
 
 type otelMiddlewares struct {
-	tracer          trace.Tracer
-	propagator      propagation.TextMapPropagator
-	attributeSetter []AttributeSetter
+	tracer trace.Tracer
+	config config
 }
 
 func (m otelMiddlewares) initializeMiddlewareBefore(stack *middleware.Stack) error {
@@ -69,8 +68,9 @@ func (m otelMiddlewares) initializeMiddlewareAfter(stack *middleware.Stack) erro
 			RegionAttr(region),
 			OperationAttr(operation),
 		}
-		for _, setter := range m.attributeSetter {
-			attributes = append(attributes, setter(ctx, in)...)
+		setterContext := injectConfig(ctx, &m.config)
+		for _, setter := range m.config.AttributeSetter {
+			attributes = append(attributes, setter(setterContext, in)...)
 		}
 
 		ctx, span := m.tracer.Start(ctx, spanName(serviceID, operation),
@@ -122,7 +122,7 @@ func (m otelMiddlewares) finalizeMiddleware(stack *middleware.Stack) error {
 		// Propagate the Trace information by injecting it into the HTTP request.
 		switch req := in.Request.(type) {
 		case *smithyhttp.Request:
-			m.propagator.Inject(ctx, propagation.HeaderCarrier(req.Header))
+			m.config.TextMapPropagator.Inject(ctx, propagation.HeaderCarrier(req.Header))
 		default:
 		}
 
@@ -157,7 +157,7 @@ func AppendMiddlewares(apiOptions *[]func(*middleware.Stack) error, opts ...Opti
 
 	m := otelMiddlewares{tracer: cfg.TracerProvider.Tracer(tracerName,
 		trace.WithInstrumentationVersion(Version())),
-		propagator:      cfg.TextMapPropagator,
-		attributeSetter: cfg.AttributeSetter}
+		config: cfg,
+	}
 	*apiOptions = append(*apiOptions, m.initializeMiddlewareBefore, m.initializeMiddlewareAfter, m.finalizeMiddleware, m.deserializeMiddleware)
 }

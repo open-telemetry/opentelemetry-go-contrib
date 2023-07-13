@@ -31,3 +31,12 @@ func TestWithTextMapPropagator(t *testing.T) {
 
 	assert.Equal(t, cfg.TextMapPropagator, propagator)
 }
+
+func TestWithSNSPhoneNumber(t *testing.T) {
+	cfg := config{}
+	option := WithSNSPhoneNumber(true)
+
+	option.apply(&cfg)
+
+	assert.Equal(t, cfg.RecordSNSPhoneNumber, true)
+}

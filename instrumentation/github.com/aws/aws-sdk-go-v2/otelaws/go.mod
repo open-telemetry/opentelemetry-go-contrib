@@ -5,6 +5,7 @@ go 1.19
 require (
 	github.com/aws/aws-sdk-go-v2 v1.18.1
 	github.com/aws/aws-sdk-go-v2/service/dynamodb v1.20.0
+	github.com/aws/aws-sdk-go-v2/service/sns v1.20.12
 	github.com/aws/aws-sdk-go-v2/service/sqs v1.23.2
 	github.com/aws/smithy-go v1.13.5
 	github.com/stretchr/testify v1.8.4
