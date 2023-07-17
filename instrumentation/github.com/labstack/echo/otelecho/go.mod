@@ -5,7 +5,7 @@ go 1.19
 replace go.opentelemetry.io/contrib/propagators/b3 => ../../../../../propagators/b3
 
 require (
-	github.com/labstack/echo/v4 v4.11.0
+	github.com/labstack/echo/v4 v4.11.1
 	github.com/stretchr/testify v1.8.4
 	go.opentelemetry.io/contrib/propagators/b3 v1.17.0
 	go.opentelemetry.io/otel v1.16.0
