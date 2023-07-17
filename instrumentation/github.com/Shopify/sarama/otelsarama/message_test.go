@@ -17,7 +17,7 @@ package otelsarama
 import (
 	"testing"
 
-	"github.com/Shopify/sarama"
+	"github.com/IBM/sarama"
 	"github.com/stretchr/testify/assert"
 )
 

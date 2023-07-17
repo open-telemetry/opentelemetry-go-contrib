@@ -12,7 +12,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-// Package otelsarama instruments the github.com/Shopify/sarama package.
+// Package otelsarama instruments the github.com/IBM/sarama package.
 //
 // The consumer's span will be created as a child of the producer's span.
 //

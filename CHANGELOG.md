@@ -27,6 +27,7 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
   - `go.opentelemetry.io/contrib/instrumentation/net/http/httptrace/otelhttptrace`
   - `go.opentelemetry.io/contrib/instrumentation/net/http/otelhttp`
 - Do not modify the origin request in RoundTripper in `go.opentelemetry.io/contrib/instrumentation/net/http/otelhttp`. (#4033)
+- Migration from `github.com/Shopify/sarama` to `github.com/IBM/sarama`
 
 ### Removed
 

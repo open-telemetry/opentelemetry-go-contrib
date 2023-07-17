@@ -21,8 +21,8 @@ import (
 	"sync"
 	"testing"
 
-	"github.com/Shopify/sarama"
-	"github.com/Shopify/sarama/mocks"
+	"github.com/IBM/sarama"
+	"github.com/IBM/sarama/mocks"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 
@@ -89,7 +89,7 @@ func TestWrapSyncProducer(t *testing.T) {
 				semconv.MessagingDestinationKindTopic,
 				semconv.MessagingDestinationName(topic),
 				// TODO: The mock sync producer of sarama does not handle the offset while sending messages
-				// https://github.com/Shopify/sarama/pull/1747
+				// https://github.com/IBM/sarama/pull/1747
 				//semconv.MessagingMessageID("3"),
 				semconv.MessagingKafkaDestinationPartition(12),
 			},

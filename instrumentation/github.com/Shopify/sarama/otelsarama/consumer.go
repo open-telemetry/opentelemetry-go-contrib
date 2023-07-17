@@ -15,7 +15,7 @@
 package otelsarama // import "go.opentelemetry.io/contrib/instrumentation/github.com/Shopify/sarama/otelsarama"
 
 import (
-	"github.com/Shopify/sarama"
+	"github.com/IBM/sarama"
 )
 
 type partitionConsumer struct {

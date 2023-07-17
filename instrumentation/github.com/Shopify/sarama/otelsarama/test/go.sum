@@ -1,5 +1,5 @@
-github.com/Shopify/sarama v1.38.1 h1:lqqPUPQZ7zPqYlWpTh+LQ9bhYNu2xJL6k1SJN4WVe2A=
-github.com/Shopify/sarama v1.38.1/go.mod h1:iwv9a67Ha8VNa+TifujYoWGxWnu2kNVAQdSdZ4X2o5g=
+github.com/IBM/sarama v1.40.0 h1:QTVmX+gMKye52mT5x+Ve/Bod2D0Gy7ylE2Wslv+RHtc=
+github.com/IBM/sarama v1.40.0/go.mod h1:6pBloAs1WanL/vsq5qFTyTGulJUntZHhMLOUYEIs9mg=
 github.com/Shopify/toxiproxy/v2 v2.5.0 h1:i4LPT+qrSlKNtQf5QliVjdP08GyAH8+BUIc9gT0eahc=
 github.com/davecgh/go-spew v1.1.0/go.mod h1:J7Y8YcW2NihsgmVo/mv3lAwl/skON4iLHjSsI+c5H38=
 github.com/davecgh/go-spew v1.1.1 h1:vj9j/u1bqnvCEfJOwUhtlOARqs3+rkHYY13jYWTU97c=

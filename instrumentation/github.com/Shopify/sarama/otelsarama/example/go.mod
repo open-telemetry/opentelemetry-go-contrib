@@ -5,7 +5,7 @@ go 1.18
 replace go.opentelemetry.io/contrib/instrumentation/github.com/Shopify/sarama/otelsarama => ../
 
 require (
-	github.com/Shopify/sarama v1.38.1
+	github.com/IBM/sarama v1.40.0
 	go.opentelemetry.io/contrib/instrumentation/github.com/Shopify/sarama/otelsarama v0.42.0
 	go.opentelemetry.io/otel v1.16.0
 	go.opentelemetry.io/otel/exporters/stdout/stdouttrace v1.16.0
