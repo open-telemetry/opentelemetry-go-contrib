@@ -20,7 +20,7 @@ import (
 
 	"github.com/astaxie/beego"
 
-	"go.opentelemetry.io/contrib/instrumentation/github.com/astaxie/beego/otelbeego"
+	"go.opentelemetry.io/contrib/instrumentation/github.com/astaxie/beego/otelbeego" //nolint:staticcheck // This is deprecated and will be removed in the next release.
 
 	"go.opentelemetry.io/otel"
 	stdout "go.opentelemetry.io/otel/exporters/stdout/stdouttrace"
