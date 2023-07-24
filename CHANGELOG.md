@@ -31,6 +31,7 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 ### Deprecated
 
 - The `go.opentelemetry.io/contrib/instrumentation/github.com/astaxie/beego/otelbeego` module is deprecated. (#4092)
+- The `go.opentelemetry.io/contrib/instrumentation/github.com/Shopify/sarama/otelsarama` module is deprecated. (#4099)
 
 ### Removed
 
