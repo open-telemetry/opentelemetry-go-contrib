@@ -17,6 +17,7 @@ package internal
 import (
 	"context"
 	"net/url"
+	"sync"
 	"testing"
 	"time"
 
@@ -1492,7 +1493,7 @@ func TestGenerateClientID(t *testing.T) {
 }
 
 // validate no data race is happening when updating rule properties in manifest while matching.
-func TestRaceUpdatingRulesWhileMatching(t *testing.T) {
+func TestUpdatingRulesWhileMatchingConcurrentSafe(t *testing.T) {
 	// getSamplingRules response
 	ruleRecords := samplingRuleRecords{
 		SamplingRule: &ruleProperties{
@@ -1546,7 +1547,9 @@ func TestRaceUpdatingRulesWhileMatching(t *testing.T) {
 	}
 
 	// async rule updates
+	done := make(chan struct{})
 	go func() {
+		defer close(done)
 		for i := 0; i < 100; i++ {
 			m.updateRules(s)
 			time.Sleep(time.Millisecond)
@@ -1559,10 +1562,11 @@ func TestRaceUpdatingRulesWhileMatching(t *testing.T) {
 		require.NoError(t, err)
 		require.False(t, match)
 	}
+	<-done
 }
 
 // validate no data race is happening when updating rule properties and rule targets in manifest while matching.
-func TestRaceUpdatingRulesAndTargetsWhileMatching(t *testing.T) {
+func TestUpdatingRulesAndTargetsWhileMatchingConcurrentSafe(t *testing.T) {
 	// getSamplingRules response to update existing manifest rule
 	ruleRecords := samplingRuleRecords{
 		SamplingRule: &ruleProperties{
@@ -1610,8 +1614,12 @@ func TestRaceUpdatingRulesAndTargetsWhileMatching(t *testing.T) {
 		clock: clock,
 	}
 
+	var wg sync.WaitGroup
+
 	// async rule updates
+	wg.Add(1)
 	go func() {
+		defer wg.Done()
 		for i := 0; i < 100; i++ {
 			m.updateRules(&getSamplingRulesOutput{
 				SamplingRuleRecords: []*samplingRuleRecords{&ruleRecords},
@@ -1621,7 +1629,9 @@ func TestRaceUpdatingRulesAndTargetsWhileMatching(t *testing.T) {
 	}()
 
 	// async target updates
+	wg.Add(1)
 	go func() {
+		defer wg.Done()
 		for i := 0; i < 100; i++ {
 			manifest := m.deepCopy()
 
@@ -1642,6 +1652,8 @@ func TestRaceUpdatingRulesAndTargetsWhileMatching(t *testing.T) {
 		require.False(t, match)
 		time.Sleep(time.Millisecond)
 	}
+
+	wg.Wait()
 }
 
 // Validate Rules are preserved when a rule is updated with the same ruleProperties.
@@ -1782,7 +1794,7 @@ func TestDoNotPreserveRulesWithDifferentRuleProperties(t *testing.T) {
 }
 
 // validate no data race is when capturing sampling statistics in manifest while sampling.
-func TestRaceUpdatingSamplingStatisticsWhenSampling(t *testing.T) {
+func TestUpdatingSamplingStatisticsWhenSamplingConcurrentSafe(t *testing.T) {
 	// existing rule already present in manifest
 	r1 := Rule{
 		ruleProperties: ruleProperties{
@@ -1819,7 +1831,9 @@ func TestRaceUpdatingSamplingStatisticsWhenSampling(t *testing.T) {
 	}
 
 	// async snapshot updates
+	done := make(chan struct{})
 	go func() {
+		defer close(done)
 		for i := 0; i < 100; i++ {
 			manifest := m.deepCopy()
 
@@ -1838,4 +1852,5 @@ func TestRaceUpdatingSamplingStatisticsWhenSampling(t *testing.T) {
 		_ = r1.Sample(sdktrace.SamplingParameters{}, time.Unix(clock.nowTime+int64(i), 0))
 		time.Sleep(time.Millisecond)
 	}
+	<-done
 }
