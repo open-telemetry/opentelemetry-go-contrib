@@ -66,7 +66,6 @@ func UnaryClientInterceptor(opts ...Option) grpc.UnaryClientInterceptor {
 		instrumentationName,
 		trace.WithInstrumentationVersion(Version()),
 	)
-	defaultStartOpts := append([]trace.SpanStartOption{trace.WithSpanKind(trace.SpanKindClient)}, cfg.SpanStartOptions...)
 
 	return func(
 		ctx context.Context,
@@ -85,7 +84,13 @@ func UnaryClientInterceptor(opts ...Option) grpc.UnaryClientInterceptor {
 		}
 
 		name, attr := spanInfo(method, cc.Target())
-		startOpts := append(defaultStartOpts, trace.WithAttributes(attr...))
+
+		startOpts := append([]trace.SpanStartOption{
+			trace.WithSpanKind(trace.SpanKindClient),
+			trace.WithAttributes(attr...)},
+			cfg.SpanStartOptions...,
+		)
+
 		ctx, span := tracer.Start(
 			ctx,
 			name,
@@ -256,7 +261,6 @@ func StreamClientInterceptor(opts ...Option) grpc.StreamClientInterceptor {
 		instrumentationName,
 		trace.WithInstrumentationVersion(Version()),
 	)
-	defaultStartOpts := append([]trace.SpanStartOption{trace.WithSpanKind(trace.SpanKindClient)}, cfg.SpanStartOptions...)
 
 	return func(
 		ctx context.Context,
@@ -275,7 +279,13 @@ func StreamClientInterceptor(opts ...Option) grpc.StreamClientInterceptor {
 		}
 
 		name, attr := spanInfo(method, cc.Target())
-		startOpts := append(defaultStartOpts, trace.WithAttributes(attr...))
+
+		startOpts := append([]trace.SpanStartOption{
+			trace.WithSpanKind(trace.SpanKindClient),
+			trace.WithAttributes(attr...)},
+			cfg.SpanStartOptions...,
+		)
+
 		ctx, span := tracer.Start(
 			ctx,
 			name,
@@ -320,7 +330,6 @@ func UnaryServerInterceptor(opts ...Option) grpc.UnaryServerInterceptor {
 		instrumentationName,
 		trace.WithInstrumentationVersion(Version()),
 	)
-	defaultStartOpts := append([]trace.SpanStartOption{trace.WithSpanKind(trace.SpanKindServer)}, cfg.SpanStartOptions...)
 
 	return func(
 		ctx context.Context,
@@ -337,9 +346,14 @@ func UnaryServerInterceptor(opts ...Option) grpc.UnaryServerInterceptor {
 		}
 
 		ctx = extract(ctx, cfg.Propagators)
-
 		name, attr := spanInfo(info.FullMethod, peerFromCtx(ctx))
-		startOpts := append(defaultStartOpts, trace.WithAttributes(attr...))
+
+		startOpts := append([]trace.SpanStartOption{
+			trace.WithSpanKind(trace.SpanKindServer),
+			trace.WithAttributes(attr...)},
+			cfg.SpanStartOptions...,
+		)
+
 		ctx, span := tracer.Start(
 			trace.ContextWithRemoteSpanContext(ctx, trace.SpanContextFromContext(ctx)),
 			name,
@@ -438,7 +452,6 @@ func StreamServerInterceptor(opts ...Option) grpc.StreamServerInterceptor {
 		instrumentationName,
 		trace.WithInstrumentationVersion(Version()),
 	)
-	defaultStartOpts := append([]trace.SpanStartOption{trace.WithSpanKind(trace.SpanKindServer)}, cfg.SpanStartOptions...)
 
 	return func(
 		srv interface{},
@@ -456,9 +469,14 @@ func StreamServerInterceptor(opts ...Option) grpc.StreamServerInterceptor {
 		}
 
 		ctx = extract(ctx, cfg.Propagators)
-
 		name, attr := spanInfo(info.FullMethod, peerFromCtx(ctx))
-		startOpts := append(defaultStartOpts, trace.WithAttributes(attr...))
+
+		startOpts := append([]trace.SpanStartOption{
+			trace.WithSpanKind(trace.SpanKindServer),
+			trace.WithAttributes(attr...)},
+			cfg.SpanStartOptions...,
+		)
+
 		ctx, span := tracer.Start(
 			trace.ContextWithRemoteSpanContext(ctx, trace.SpanContextFromContext(ctx)),
 			name,
