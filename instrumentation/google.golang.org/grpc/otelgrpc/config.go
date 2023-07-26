@@ -174,9 +174,7 @@ func WithMessageEvents(events ...Event) Option {
 type spanStartOption struct{ opts []trace.SpanStartOption }
 
 func (o spanStartOption) apply(c *config) {
-	if o.opts != nil {
-		c.SpanStartOptions = append(c.SpanStartOptions, o.opts...)
-	}
+	c.SpanStartOptions = append(c.SpanStartOptions, o.opts...)
 }
 
 // WithSpanOptions configures an additional set of
