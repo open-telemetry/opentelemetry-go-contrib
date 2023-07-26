@@ -130,10 +130,11 @@ func spanExporter(ctx context.Context, name string) (trace.SpanExporter, error) 
 
 // buildOTLPExporter creates an OTLP exporter using the environment variable
 // OTEL_EXPORTER_OTLP_PROTOCOL to determine the exporter protocol.
+// Defaults to http/protobuf protocol.
 func buildOTLPExporter(ctx context.Context) (trace.SpanExporter, error) {
-	proto := "grpc"
-	if protoStr, ok := os.LookupEnv(otelExporterOTLPProtoEnvKey); ok {
-		proto = protoStr
+	proto := os.Getenv(otelExporterOTLPProtoEnvKey)
+	if proto == "" {
+		proto = "http/protobuf"
 	}
 
 	switch proto {
