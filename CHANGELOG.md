@@ -12,11 +12,7 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 
 - Add `NewMiddleware` function in `go.opentelemetry.io/contrib/instrumentation/net/http/otelhttp`. (#2964)
 - Add the new `go.opentelemetry.io/contrib/instrgen` package to provide auto-generated source code instrumentation. (#3068, #3108)
-- The `go.opentelemetry.io/contrib/exporters/autoexport` package to provide configuration of trace exporters with useful defaults and envar support. (#2753)
-
-### Changed
-
-- OTLP exporter defaults to `http/protobuf` protocol instead of `grpc` in `go.opentelemetry.io/contrib/exporters/autoexport`. (#4100)
+- The `go.opentelemetry.io/contrib/exporters/autoexport` package to provide configuration of trace exporters with useful defaults and envar support. (#2753, #4100)
 
 ### Fixed
 
@@ -31,7 +27,6 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
   - `go.opentelemetry.io/contrib/instrumentation/net/http/httptrace/otelhttptrace`
   - `go.opentelemetry.io/contrib/instrumentation/net/http/otelhttp`
 - Do not modify the origin request in RoundTripper in `go.opentelemetry.io/contrib/instrumentation/net/http/otelhttp`. (#4033)
-- Handle empty value of `OTEL_TRACES_EXPORTER` and `OTEL_EXPORTER_OTLP_PROTOCOL` environment variables the same way as when the variable is unset in `go.opentelemetry.io/contrib/exporters/autoexport`. (#4100)
 
 ### Deprecated
 
