@@ -13,4 +13,9 @@
 // limitations under the License.
 
 // Package otelbeego instruments the github.com/astaxie/beego package.
+//
+// Deprecated: This module is no longer supported.
+// github.com/astaxie/beego is no longer maintained.
+// Use github.com/beego/beego/v2 together with its instrumentation
+// packages instead.
 package otelbeego // import "go.opentelemetry.io/contrib/instrumentation/github.com/astaxie/beego/otelbeego"

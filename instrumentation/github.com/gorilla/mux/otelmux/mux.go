@@ -22,11 +22,10 @@ import (
 	"github.com/felixge/httpsnoop"
 	"github.com/gorilla/mux"
 
+	"go.opentelemetry.io/contrib/instrumentation/github.com/gorilla/mux/otelmux/internal/semconvutil"
 	"go.opentelemetry.io/otel"
-
 	"go.opentelemetry.io/otel/propagation"
 	semconv "go.opentelemetry.io/otel/semconv/v1.17.0"
-	"go.opentelemetry.io/otel/semconv/v1.17.0/httpconv"
 	"go.opentelemetry.io/otel/trace"
 )
 
@@ -47,7 +46,7 @@ func Middleware(service string, opts ...Option) mux.MiddlewareFunc {
 	}
 	tracer := cfg.TracerProvider.Tracer(
 		tracerName,
-		trace.WithInstrumentationVersion(SemVersion()),
+		trace.WithInstrumentationVersion(Version()),
 	)
 	if cfg.Propagators == nil {
 		cfg.Propagators = otel.GetTextMapPropagator()
@@ -143,7 +142,7 @@ func (tw traceware) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	}
 
 	opts := []trace.SpanStartOption{
-		trace.WithAttributes(httpconv.ServerRequest(tw.service, r)...),
+		trace.WithAttributes(semconvutil.HTTPServerRequest(tw.service, r)...),
 		trace.WithSpanKind(trace.SpanKindServer),
 	}
 
@@ -171,5 +170,5 @@ func (tw traceware) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	if rrw.status > 0 {
 		span.SetAttributes(semconv.HTTPStatusCode(rrw.status))
 	}
-	span.SetStatus(httpconv.ServerStatus(rrw.status))
+	span.SetStatus(semconvutil.HTTPServerStatus(rrw.status))
 }

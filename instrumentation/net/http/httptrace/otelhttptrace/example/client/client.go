@@ -68,7 +68,14 @@ func main() {
 	url := flag.String("server", "http://localhost:7777/hello", "server url")
 	flag.Parse()
 
-	client := http.Client{Transport: otelhttp.NewTransport(http.DefaultTransport)}
+	client := http.Client{
+		Transport: otelhttp.NewTransport(
+			http.DefaultTransport,
+			otelhttp.WithClientTrace(func(ctx context.Context) *httptrace.ClientTrace {
+				return otelhttptrace.NewClientTrace(ctx)
+			}),
+		),
+	}
 
 	bag, _ := baggage.Parse("username=donuts")
 	ctx := baggage.ContextWithBaggage(context.Background(), bag)
