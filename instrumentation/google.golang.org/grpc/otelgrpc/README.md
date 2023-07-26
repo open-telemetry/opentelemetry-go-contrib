@@ -1,4 +1,4 @@
-# How to usage
+# gRPC instrumentation
 
 This library is the instrumentation library for `google.golang.org/grpc`
 
