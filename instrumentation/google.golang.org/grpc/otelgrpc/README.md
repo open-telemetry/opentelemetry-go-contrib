@@ -9,6 +9,8 @@ For now you can instrument your program which use `google.golang.org/grpc` in tw
 
 You can see the example of both ways in directory `./example`
 
+**notice**: **Do not use both interceptors and stats handlers at the same time!** If so, you will get duplicated spans and the parent/child relationships between spans will also be broken.
+
 Although the implementation `stats.Handler` in experimental stage, we strongly still recommand you to use `stats.Handler`, mainly for two reasons:
 - **Functional advantages**: `stats.Handler`` has more information for user to build more flexible and granular metric, for example
   - multiple different types of represent "data length": In [InPayLoad](https://pkg.go.dev/google.golang.org/grpc/stats#InPayload), there exists `Length`, `CompressedLength`, `WireLength` to denote the size of uncompressed, compressed payload data, with or without framing data. But in Interceptors, we can only got uncompressed data, and this feature is also removed due to performance problem. [#3168](https://github.com/open-telemetry/opentelemetry-go-contrib/pull/3168)
