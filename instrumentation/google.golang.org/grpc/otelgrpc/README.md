@@ -18,4 +18,3 @@ Although the implementation `stats.Handler` in experimental stage, we strongly s
   - some other use cases: for example [catch failure of decoding message](https://github.com/open-telemetry/opentelemetry-go-contrib/issues/197#issuecomment-668377700)
 - **Performance advantages**: If too many interceptors are registered in a service, the interceptor chain can become too long, which increases the latency and processing time of the entire RPC call.
 
-You should also **notice** that: **Do not use both two ways in the meantime!** If so, you will get duplicated spans and the parent/child relationships between spans will also be broken.
