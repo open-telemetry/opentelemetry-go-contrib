@@ -82,8 +82,8 @@ var errUnknownPropagator = errors.New("unknown propagator")
 // TextMapPropagator will be returned if "none" is defined anywhere in the
 // environment variable.
 func parseEnv() (propagation.TextMapPropagator, error) {
-	propStrs, defined := os.LookupEnv(otelPropagatorsEnvKey)
-	if !defined {
+	propStrs := os.Getenv(otelPropagatorsEnvKey)
+	if propStrs == "" {
 		return nil, nil
 	}
 	return TextMapPropagator(strings.Split(propStrs, ",")...)
