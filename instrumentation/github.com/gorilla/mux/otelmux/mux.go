@@ -19,6 +19,8 @@ import (
 	"net/http"
 	"sync"
 
+	"go.opentelemetry.io/contrib/instrumentation/net/http/otelhttp"
+
 	"github.com/felixge/httpsnoop"
 	"github.com/gorilla/mux"
 
@@ -171,4 +173,18 @@ func (tw traceware) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		span.SetAttributes(semconv.HTTPStatusCode(rrw.status))
 	}
 	span.SetStatus(semconvutil.HTTPServerStatus(rrw.status))
+}
+
+// RouteTaggerMiddleware annotates the current span with the handler's route path.
+func RouteTaggerMiddleware() mux.MiddlewareFunc {
+	return func(next http.Handler) http.Handler {
+		return http.HandlerFunc(func(writer http.ResponseWriter, request *http.Request) {
+			route := mux.CurrentRoute(request)
+			path, err := route.GetPathTemplate()
+			if err == nil {
+				otelhttp.AnnotateSpanWithHTTPRoute(request.Context(), path)
+			}
+			next.ServeHTTP(writer, request)
+		})
+	}
 }

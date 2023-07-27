@@ -21,6 +21,8 @@ import (
 
 	"github.com/gin-gonic/gin"
 
+	"go.opentelemetry.io/contrib/instrumentation/net/http/otelhttp"
+
 	"go.opentelemetry.io/contrib/instrumentation/github.com/gin-gonic/gin/otelgin/internal/semconvutil"
 	"go.opentelemetry.io/otel"
 	"go.opentelemetry.io/otel/attribute"
@@ -138,4 +140,12 @@ func HTML(c *gin.Context, code int, name string, obj interface{}) {
 		}
 	}()
 	c.HTML(code, name, obj)
+}
+
+// RouteTaggerMiddleware annotates the current span with the handler's route path.
+func RouteTaggerMiddleware() gin.HandlerFunc {
+	return func(c *gin.Context) {
+		otelhttp.AnnotateSpanWithHTTPRoute(c.Request.Context(), c.FullPath())
+		c.Next()
+	}
 }
