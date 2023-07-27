@@ -44,7 +44,7 @@ import (
 func assertScopeMetrics(t *testing.T, sm metricdata.ScopeMetrics, attrs attribute.Set) {
 	assert.Equal(t, instrumentation.Scope{
 		Name:    "go.opentelemetry.io/contrib/instrumentation/net/http/otelhttp",
-		Version: otelhttp.SemVersion(),
+		Version: otelhttp.Version(),
 	}, sm.Scope)
 
 	require.Len(t, sm.Metrics, 3)

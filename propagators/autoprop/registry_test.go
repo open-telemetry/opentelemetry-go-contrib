@@ -16,6 +16,7 @@ package autoprop
 
 import (
 	"fmt"
+	"sync"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
@@ -50,19 +51,27 @@ func TestRegistryConcurrentSafe(t *testing.T) {
 		require.NoError(t, r.store(propName, noop))
 	})
 
+	var wg sync.WaitGroup
+
+	wg.Add(1)
 	go func() {
+		defer wg.Done()
 		assert.NotPanics(t, func() {
 			require.ErrorIs(t, r.store(propName, noop), errDupReg)
 		})
 	}()
 
+	wg.Add(1)
 	go func() {
+		defer wg.Done()
 		assert.NotPanics(t, func() {
 			v, ok := r.load(propName)
 			assert.True(t, ok, "missing propagator in registry")
 			assert.Equal(t, noop, v, "wrong propagator retuned")
 		})
 	}()
+
+	wg.Wait()
 }
 
 func TestRegisterTextMapPropagator(t *testing.T) {

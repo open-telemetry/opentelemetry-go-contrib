@@ -255,7 +255,7 @@ func getCluster() *gocql.ClusterConfig {
 func assertScope(t *testing.T, sm metricdata.ScopeMetrics) {
 	assert.Equal(t, instrumentation.Scope{
 		Name:    "go.opentelemetry.io/contrib/instrumentation/github.com/gocql/gocql/otelgocql",
-		Version: otelgocql.SemVersion(),
+		Version: otelgocql.Version(),
 	}, sm.Scope)
 }
 
