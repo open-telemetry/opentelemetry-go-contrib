@@ -75,7 +75,7 @@ func TestRegistryIsConcurrentSafe(t *testing.T) {
 		defer wg.Done()
 		assert.NotPanics(t, func() {
 			exp, err := r.load(context.Background(), exporterName)
-			assert.Nil(t, err, "missing exporter in registry")
+			assert.NoError(t, err, "missing exporter in registry")
 			assert.IsType(t, &stdouttrace.Exporter{}, exp)
 		})
 	}()
@@ -86,12 +86,13 @@ func TestRegistryIsConcurrentSafe(t *testing.T) {
 func TestSubsequentCallsToGetExporterReturnsNewInstances(t *testing.T) {
 	const exporterType = "otlp"
 	exp1, err := spanExporter(context.Background(), exporterType)
-	assert.Nil(t, err)
-	assert.IsType(t, &otlptrace.Exporter{}, exp1)
+	assert.NoError(t, err)
+	assertOTLPHTTPExporter(t, exp1)
 
 	exp2, err := spanExporter(context.Background(), exporterType)
-	assert.Nil(t, err)
-	assert.IsType(t, &otlptrace.Exporter{}, exp2)
+	assert.NoError(t, err)
+	assertOTLPHTTPExporter(t, exp2)
+
 	assert.NotSame(t, exp1, exp2)
 }
 
