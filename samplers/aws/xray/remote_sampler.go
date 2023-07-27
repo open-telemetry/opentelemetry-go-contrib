@@ -19,7 +19,9 @@ import (
 	"time"
 
 	"go.opentelemetry.io/contrib/samplers/aws/xray/internal"
+	"go.opentelemetry.io/otel/sdk/resource"
 	sdktrace "go.opentelemetry.io/otel/sdk/trace"
+	semconv "go.opentelemetry.io/otel/semconv/v1.17.0"
 
 	"github.com/go-logr/logr"
 )
@@ -46,6 +48,14 @@ type remoteSampler struct {
 	logger logr.Logger
 }
 
+var cloudPlatformValues = map[string]string{
+	semconv.CloudPlatformAWSEC2.Value.AsString():              "AWS::EC2::Instance",
+	semconv.CloudPlatformAWSECS.Value.AsString():              "AWS::ECS::Container",
+	semconv.CloudPlatformAWSEKS.Value.AsString():              "AWS::EKS::Container",
+	semconv.CloudPlatformAWSElasticBeanstalk.Value.AsString(): "AWS::ElasticBeanstalk::Environment",
+	semconv.CloudPlatformAWSLambda.Value.AsString():           "AWS::Lambda::Function",
+}
+
 // Compile time assertion that remoteSampler implements the Sampler interface.
 var _ sdktrace.Sampler = (*remoteSampler)(nil)
 
@@ -56,6 +66,7 @@ var _ sdktrace.Sampler = (*remoteSampler)(nil)
 // serviceName refers to the name of the service equivalent to the one set in the AWS X-Ray console when adding sampling rules and
 // cloudPlatform refers to the cloud platform the service is running on ("ec2", "ecs", "eks", "lambda", etc).
 // Guide on AWS X-Ray remote sampling implementation (https://aws-otel.github.io/docs/getting-started/remote-sampling#otel-remote-sampling-implementation-caveats).
+// Deprecated: Use NewRemoteSamplerWithResource() instead, which creates the Remote Sampler with an OTel Resource to automatically configure service name and cloud platform.
 func NewRemoteSampler(ctx context.Context, serviceName string, cloudPlatform string, opts ...Option) (sdktrace.Sampler, error) {
 	// Create new config based on options or set to default values.
 	cfg, err := newConfig(opts...)
@@ -75,6 +86,54 @@ func NewRemoteSampler(ctx context.Context, serviceName string, cloudPlatform str
 		fallbackSampler:              NewFallbackSampler(),
 		serviceName:                  serviceName,
 		cloudPlatform:                cloudPlatform,
+		logger:                       cfg.logger,
+	}
+
+	remoteSampler.start(ctx)
+
+	return remoteSampler, nil
+}
+
+// NewRemoteSamplerWithResource returns a sampler which decides to sample a given request or not
+// based on the sampling rules set by users on AWS X-Ray console. Sampler also periodically polls
+// sampling rules and sampling targets.
+// NOTE: ctx passed in NewRemoteSamplerWithResource API is being used in background go routine. Cancellation to this context can kill the background go routine.
+// This takes in an OTel resource in order to configure service name and cloud platform for service rule matching. Their default values are empty strings if they are not in the resource.
+// Guide on AWS X-Ray remote sampling implementation (https://aws-otel.github.io/docs/getting-started/remote-sampling#otel-remote-sampling-implementation-caveats).
+func NewRemoteSamplerWithResource(ctx context.Context, otelResource *resource.Resource, opts ...Option) (sdktrace.Sampler, error) {
+	// Create new config based on options or set to default values.
+	cfg, err := newConfig(opts...)
+	if err != nil {
+		return nil, err
+	}
+
+	// create manifest with config
+	m, err := internal.NewManifest(cfg.endpoint, cfg.logger)
+	if err != nil {
+		return nil, err
+	}
+
+	// Default values if not present in resource
+	samplerServiceName := ""
+	samplerCloudPlatform := ""
+
+	// Find resource values
+	for _, attr := range otelResource.Attributes() {
+		switch attr.Key {
+		case semconv.ServiceNameKey:
+			samplerServiceName = attr.Value.AsString()
+		case semconv.CloudPlatformKey:
+			// Set as empty string if platform is not found in cloudPlatformValues
+			samplerCloudPlatform = cloudPlatformValues[attr.Value.AsString()]
+		}
+	}
+
+	remoteSampler := &remoteSampler{
+		manifest:                     m,
+		samplingRulesPollingInterval: cfg.samplingRulesPollingInterval,
+		fallbackSampler:              NewFallbackSampler(),
+		serviceName:                  samplerServiceName,
+		cloudPlatform:                samplerCloudPlatform,
 		logger:                       cfg.logger,
 	}
 
