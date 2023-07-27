@@ -17,6 +17,7 @@ package autoexport
 import (
 	"context"
 	"fmt"
+	"sync"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
@@ -59,19 +60,27 @@ func TestRegistryIsConcurrentSafe(t *testing.T) {
 		require.NoError(t, r.store(exporterName, stdoutFactory))
 	})
 
+	var wg sync.WaitGroup
+
+	wg.Add(1)
 	go func() {
+		defer wg.Done()
 		assert.NotPanics(t, func() {
 			require.ErrorIs(t, r.store(exporterName, stdoutFactory), errDuplicateRegistration)
 		})
 	}()
 
+	wg.Add(1)
 	go func() {
+		defer wg.Done()
 		assert.NotPanics(t, func() {
 			exp, err := r.load(context.Background(), exporterName)
 			assert.Nil(t, err, "missing exporter in registry")
 			assert.IsType(t, &stdouttrace.Exporter{}, exp)
 		})
 	}()
+
+	wg.Wait()
 }
 
 func TestSubsequentCallsToGetExporterReturnsNewInstances(t *testing.T) {
