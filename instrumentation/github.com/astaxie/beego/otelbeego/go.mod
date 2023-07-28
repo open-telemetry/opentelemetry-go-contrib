@@ -1,3 +1,7 @@
+// Deprecated: This module is no longer supported.
+// github.com/astaxie/beego is no longer maintained.
+// Use github.com/beego/beego/v2 together with its instrumentation
+// packages instead.
 module go.opentelemetry.io/contrib/instrumentation/github.com/astaxie/beego/otelbeego
 
 go 1.19
