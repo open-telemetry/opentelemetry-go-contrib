@@ -38,7 +38,7 @@ type bodyWrapper struct {
 func (w *bodyWrapper) Read(b []byte) (int, error) {
 	n, err := w.ReadCloser.Read(b)
 	n1 := int64(n)
-	w.read.Add(1)
+	w.read.Add(n1)
 	w.err = err
 	w.record(n1)
 	return n, err

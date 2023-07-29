@@ -172,21 +172,21 @@ func (t *Transport) RoundTrip(r *http.Request) (*http.Response, error) {
 		span.SetStatus(codes.Error, err.Error())
 		span.End()
 	} else {
-		span.SetAttributes(httpconv.ClientResponse(res)...)
+		span.SetAttributes(semconvutil.HTTPClientResponse(res)...)
 		if t.getResponseAttributes != nil {
 			span.SetAttributes(t.getResponseAttributes(res)...)
 		}
-		span.SetStatus(httpconv.ClientStatus(res.StatusCode))
+		span.SetStatus(semconvutil.HTTPClientStatus(res.StatusCode))
 		res.Body = newWrappedBody(span, res.Body)
 	}
 
 	// Add metrics
-	attributes := httpconv.ClientRequest(r)
+	attributes := semconvutil.HTTPClientRequest(r)
 	if t.getRequestAttributes != nil {
 		attributes = append(attributes, t.getRequestAttributes(r)...)
 	}
 	if err == nil {
-		attributes = append(attributes, httpconv.ClientResponse(res)...)
+		attributes = append(attributes, semconvutil.HTTPClientResponse(res)...)
 		if t.getResponseAttributes != nil {
 			attributes = append(attributes, t.getResponseAttributes(res)...)
 		}
@@ -200,10 +200,6 @@ func (t *Transport) RoundTrip(r *http.Request) (*http.Response, error) {
 	// Use floating point division here for higher precision (instead of Millisecond method).
 	elapsedTime := float64(time.Since(requestStartTime)) / float64(time.Millisecond)
 	t.valueRecorders[ClientLatency].Record(ctx, elapsedTime, o)
-
-  span.SetAttributes(semconvutil.HTTPClientResponse(res)...)
-	span.SetStatus(semconvutil.HTTPClientStatus(res.StatusCode))
-	res.Body = newWrappedBody(span, res.Body)
 
 	return res, err
 }
