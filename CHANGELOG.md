@@ -15,10 +15,6 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 - The `go.opentelemetry.io/contrib/exporters/autoexport` package to provide configuration of trace exporters with useful defaults and envar support. (#2753)
 - `WithRouteTag` in `go.opentelemetry.io/contrib/instrumentation/net/http/otelhttp` adds HTTP route attribute to metrics. (#615)
 
-### Changed
-
-
-
 ### Fixed
 
 - AWS XRay Remote Sampling to cap quotaBalance to 1x quota in `go.opentelemetry.io/contrib/samplers/aws/xray`. (#3651, #3652)
