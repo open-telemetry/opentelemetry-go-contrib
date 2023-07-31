@@ -25,15 +25,16 @@ import (
 
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
+	"go.opentelemetry.io/otel/sdk/metric"
+	"go.opentelemetry.io/otel/sdk/metric/metricdata"
 
 	"go.opentelemetry.io/contrib/instrumentation/net/http/otelhttp"
 	"go.opentelemetry.io/otel/attribute"
 	"go.opentelemetry.io/otel/propagation"
-	"go.opentelemetry.io/otel/sdk/metric/metrictest"
 	"go.opentelemetry.io/otel/sdk/trace"
 	sdktrace "go.opentelemetry.io/otel/sdk/trace"
 	"go.opentelemetry.io/otel/sdk/trace/tracetest"
-	semconv "go.opentelemetry.io/otel/semconv/v1.12.0"
+	semconv "go.opentelemetry.io/otel/semconv/v1.17.0"
 )
 
 func TestBasicFilter(t *testing.T) {
@@ -149,7 +150,8 @@ func TestMetricsAttributes(t *testing.T) {
 	spanRecorder := tracetest.NewSpanRecorder()
 	provider := sdktrace.NewTracerProvider(sdktrace.WithSpanProcessor(spanRecorder))
 
-	meterProvider, metricExporter := metrictest.NewTestMeterProvider()
+	reader := metric.NewManualReader()
+	meterProvider := metric.NewMeterProvider(metric.WithReader(reader))
 
 	operation := "test_handler"
 
@@ -176,22 +178,21 @@ func TestMetricsAttributes(t *testing.T) {
 	}
 	h.ServeHTTP(rr, r)
 
-	require.NoError(t, metricExporter.Collect(context.Background()))
-	if len(metricExporter.GetRecords()) == 0 {
-		t.Fatalf("got 0 recorded measurements, expected 1 or more")
-	}
+	rm := metricdata.ResourceMetrics{}
+	require.NoError(t, reader.Collect(context.Background(), &rm))
+	require.Len(t, rm.ScopeMetrics, 1)
 
-	attributesToVerify := []attribute.KeyValue{
-		semconv.HTTPServerNameKey.String(operation),
+	attrs := attribute.NewSet(
+		semconv.NetHostName(r.Host),
 		semconv.HTTPSchemeHTTP,
-		semconv.HTTPHostKey.String(r.Host),
 		semconv.HTTPFlavorKey.String(fmt.Sprintf("1.%d", r.ProtoMinor)),
-		semconv.HTTPMethodKey.String("GET"),
+		semconv.HTTPMethod("GET"),
 		attribute.String("test", "attribute"),
 		semconv.HTTPTargetKey.String("/x"),
-	}
+		semconv.HTTPStatusCode(200),
+	)
 
-	assertMetricAttributes(t, attributesToVerify, metricExporter.GetRecords())
+	assertScopeMetrics(t, rm.ScopeMetrics[0], attrs)
 
 	if got, expected := rr.Result().StatusCode, http.StatusOK; got != expected {
 		t.Fatalf("got %d, expected %d", got, expected)
