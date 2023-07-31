@@ -258,8 +258,8 @@ func setAfterServeAttributes(span trace.Span, read, wrote int64, statusCode int,
 	span.SetAttributes(attributes...)
 }
 
-// WithRouteTag annotates a span with the provided route name using the
-// RouteKey Tag.
+// WithRouteTag annotates spans and metrics with the provided route name
+// with HTTP route attribute.
 func WithRouteTag(route string, h http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		attr := semconv.HTTPRouteKey.String(route)
