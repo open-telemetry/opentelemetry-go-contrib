@@ -23,7 +23,6 @@ import (
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 
-	"go.opentelemetry.io/otel/exporters/otlp/otlptrace"
 	"go.opentelemetry.io/otel/exporters/stdout/stdouttrace"
 	"go.opentelemetry.io/otel/sdk/trace"
 )
@@ -99,11 +98,11 @@ func TestSubsequentCallsToGetExporterReturnsNewInstances(t *testing.T) {
 func TestDefaultOTLPExporterFactoriesAreAutomaticallyRegistered(t *testing.T) {
 	exp1, err := spanExporter(context.Background(), "")
 	assert.Nil(t, err)
-	assert.IsType(t, &otlptrace.Exporter{}, exp1)
+	assertOTLPHTTPExporter(t, exp1)
 
 	exp2, err := spanExporter(context.Background(), "otlp")
 	assert.Nil(t, err)
-	assert.IsType(t, &otlptrace.Exporter{}, exp2)
+	assertOTLPHTTPExporter(t, exp2)
 }
 
 func TestEnvRegistryCanRegisterExporterFactory(t *testing.T) {
