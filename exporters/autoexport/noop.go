@@ -12,7 +12,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package autoexport
+package autoexport // import "go.opentelemetry.io/contrib/exporters/autoexport"
 
 import (
 	"context"
