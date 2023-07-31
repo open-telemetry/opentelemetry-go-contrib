@@ -14,7 +14,7 @@
 
 module-sets:
   stable-v1:
-    version: v1.11.1
+    version: v1.17.0
     modules:
       - go.opentelemetry.io/contrib
       - go.opentelemetry.io/contrib/tools
@@ -27,9 +27,10 @@ module-sets:
       - go.opentelemetry.io/contrib/detectors/aws/ecs
       - go.opentelemetry.io/contrib/detectors/aws/eks
   experimental-instrumentation:
-    version: v0.36.4
+    version: v0.42.0
     modules:
       - go.opentelemetry.io/contrib/detectors/aws/lambda
+      - go.opentelemetry.io/contrib/exporters/autoexport
       - go.opentelemetry.io/contrib/propagators/autoprop
       - go.opentelemetry.io/contrib/propagators/opencensus
       - go.opentelemetry.io/contrib/propagators/opencensus/examples
@@ -83,16 +84,20 @@ module-sets:
       - go.opentelemetry.io/contrib/instrumentation/github.com/emicklei/go-restful/otelrestful/test
       - go.opentelemetry.io/contrib/zpages
   experimental-metrics:
-    version: v0.36.4
+    version: v0.42.0
     modules:
       - go.opentelemetry.io/contrib/instrumentation/host
       - go.opentelemetry.io/contrib/instrumentation/host/example
       - go.opentelemetry.io/contrib/instrumentation/runtime
       - go.opentelemetry.io/contrib/instrumentation/runtime/example
   experimental-samplers:
-    version: v0.5.2
+    version: v0.11.0
     modules:
       - go.opentelemetry.io/contrib/samplers/aws/xray
       - go.opentelemetry.io/contrib/samplers/jaegerremote
       - go.opentelemetry.io/contrib/samplers/jaegerremote/example
       - go.opentelemetry.io/contrib/samplers/probability/consistent
+excluded-modules:
+  - go.opentelemetry.io/contrib/instrgen
+  - go.opentelemetry.io/contrib/instrgen/driver
+  - go.opentelemetry.io/contrib/instrgen/testdata/interface

@@ -22,9 +22,10 @@ import (
 
 	"go.opentelemetry.io/otel"
 
+	"go.opentelemetry.io/contrib/instrumentation/github.com/labstack/echo/otelecho/internal/semconvutil"
 	"go.opentelemetry.io/otel/attribute"
 	"go.opentelemetry.io/otel/propagation"
-	semconv "go.opentelemetry.io/otel/semconv/v1.12.0"
+	semconv "go.opentelemetry.io/otel/semconv/v1.17.0"
 	oteltrace "go.opentelemetry.io/otel/trace"
 )
 
@@ -44,7 +45,7 @@ func Middleware(service string, opts ...Option) echo.MiddlewareFunc {
 	}
 	tracer := cfg.TracerProvider.Tracer(
 		tracerName,
-		oteltrace.WithInstrumentationVersion(SemVersion()),
+		oteltrace.WithInstrumentationVersion(Version()),
 	)
 	if cfg.Propagators == nil {
 		cfg.Propagators = otel.GetTextMapPropagator()
@@ -69,10 +70,12 @@ func Middleware(service string, opts ...Option) echo.MiddlewareFunc {
 			}()
 			ctx := cfg.Propagators.Extract(savedCtx, propagation.HeaderCarrier(request.Header))
 			opts := []oteltrace.SpanStartOption{
-				oteltrace.WithAttributes(semconv.NetAttributesFromHTTPRequest("tcp", request)...),
-				oteltrace.WithAttributes(semconv.EndUserAttributesFromHTTPRequest(request)...),
-				oteltrace.WithAttributes(semconv.HTTPServerAttributesFromHTTPRequest(service, c.Path(), request)...),
+				oteltrace.WithAttributes(semconvutil.HTTPServerRequest(service, request)...),
 				oteltrace.WithSpanKind(oteltrace.SpanKindServer),
+			}
+			if path := c.Path(); path != "" {
+				rAttr := semconv.HTTPRoute(path)
+				opts = append(opts, oteltrace.WithAttributes(rAttr))
 			}
 			spanName := c.Path()
 			if spanName == "" {
@@ -93,12 +96,13 @@ func Middleware(service string, opts ...Option) echo.MiddlewareFunc {
 				c.Error(err)
 			}
 
-			attrs := semconv.HTTPAttributesFromHTTPStatusCode(c.Response().Status)
-			spanStatus, spanMessage := semconv.SpanStatusFromHTTPStatusCodeAndSpanKind(c.Response().Status, oteltrace.SpanKindServer)
-			span.SetAttributes(attrs...)
-			span.SetStatus(spanStatus, spanMessage)
+			status := c.Response().Status
+			span.SetStatus(semconvutil.HTTPServerStatus(status))
+			if status > 0 {
+				span.SetAttributes(semconv.HTTPStatusCode(status))
+			}
 
-			return nil
+			return err
 		}
 	}
 }

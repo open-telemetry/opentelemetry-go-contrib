@@ -98,10 +98,9 @@ func TestTrace200(t *testing.T) {
 	assert.Equal(t, "/user/:id", span.Name())
 	assert.Equal(t, oteltrace.SpanKindServer, span.SpanKind())
 	attr := span.Attributes()
-	assert.Contains(t, attr, attribute.String("http.server_name", "foobar"))
+	assert.Contains(t, attr, attribute.String("net.host.name", "foobar"))
 	assert.Contains(t, attr, attribute.Int("http.status_code", http.StatusOK))
 	assert.Contains(t, attr, attribute.String("http.method", "GET"))
-	assert.Contains(t, attr, attribute.String("http.target", "/user/123"))
 	assert.Contains(t, attr, attribute.String("http.route", "/user/:id"))
 }
 
@@ -130,7 +129,7 @@ func TestError(t *testing.T) {
 	span := spans[0]
 	assert.Equal(t, "/server_err", span.Name())
 	attr := span.Attributes()
-	assert.Contains(t, attr, attribute.String("http.server_name", "foobar"))
+	assert.Contains(t, attr, attribute.String("net.host.name", "foobar"))
 	assert.Contains(t, attr, attribute.Int("http.status_code", http.StatusInternalServerError))
 	assert.Contains(t, attr, attribute.String("gin.errors", "Error #01: oh no\n"))
 	// server errors set the status
@@ -142,9 +141,9 @@ func TestSpanStatus(t *testing.T) {
 		httpStatusCode int
 		wantSpanStatus codes.Code
 	}{
-		{200, codes.Unset},
-		{400, codes.Unset},
-		{500, codes.Error},
+		{http.StatusOK, codes.Unset},
+		{http.StatusBadRequest, codes.Unset},
+		{http.StatusInternalServerError, codes.Error},
 	}
 	for _, tc := range testCases {
 		t.Run(strconv.Itoa(tc.httpStatusCode), func(t *testing.T) {
@@ -165,6 +164,32 @@ func TestSpanStatus(t *testing.T) {
 	}
 }
 
+func TestSpanName(t *testing.T) {
+	testCases := []struct {
+		requestPath       string
+		spanNameFormatter otelgin.SpanNameFormatter
+		wantSpanName      string
+	}{
+		{"/user/1", nil, "/user/:id"},
+		{"/user/1", func(r *http.Request) string { return r.URL.Path }, "/user/1"},
+	}
+	for _, tc := range testCases {
+		t.Run(tc.requestPath, func(t *testing.T) {
+			sr := tracetest.NewSpanRecorder()
+			provider := sdktrace.NewTracerProvider()
+			provider.RegisterSpanProcessor(sr)
+			router := gin.New()
+			router.Use(otelgin.Middleware("foobar", otelgin.WithTracerProvider(provider), otelgin.WithSpanNameFormatter(tc.spanNameFormatter)))
+			router.GET("/user/:id", func(c *gin.Context) {})
+
+			router.ServeHTTP(httptest.NewRecorder(), httptest.NewRequest("GET", tc.requestPath, nil))
+
+			require.Len(t, sr.Ended(), 1, "should emit a span")
+			assert.Equal(t, sr.Ended()[0].Name(), tc.wantSpanName, "span name not correct")
+		})
+	}
+}
+
 func TestHTML(t *testing.T) {
 	sr := tracetest.NewSpanRecorder()
 	provider := sdktrace.NewTracerProvider(sdktrace.WithSpanProcessor(sr))
@@ -179,7 +204,7 @@ func TestHTML(t *testing.T) {
 
 	// a handler with an error and make the requests
 	router.GET("/hello", func(c *gin.Context) {
-		otelgin.HTML(c, 200, "hello", "world")
+		otelgin.HTML(c, http.StatusOK, "hello", "world")
 	})
 	r := httptest.NewRequest("GET", "/hello", nil)
 	w := httptest.NewRecorder()
@@ -202,4 +227,38 @@ func TestHTML(t *testing.T) {
 	}
 	require.NotNil(t, tspan)
 	assert.Contains(t, tspan.Attributes(), attribute.String("go.template", "hello"))
+}
+
+func TestWithFilter(t *testing.T) {
+	t.Run("custom filter filtering route", func(t *testing.T) {
+		sr := tracetest.NewSpanRecorder()
+		otel.SetTracerProvider(sdktrace.NewTracerProvider(sdktrace.WithSpanProcessor(sr)))
+
+		router := gin.New()
+		f := func(req *http.Request) bool { return req.URL.Path != "/healthcheck" }
+		router.Use(otelgin.Middleware("foobar", otelgin.WithFilter(f)))
+		router.GET("/healthcheck", func(c *gin.Context) {})
+
+		r := httptest.NewRequest("GET", "/healthcheck", nil)
+		w := httptest.NewRecorder()
+
+		router.ServeHTTP(w, r)
+		assert.Len(t, sr.Ended(), 0)
+	})
+
+	t.Run("custom filter not filtering route", func(t *testing.T) {
+		sr := tracetest.NewSpanRecorder()
+		otel.SetTracerProvider(sdktrace.NewTracerProvider(sdktrace.WithSpanProcessor(sr)))
+
+		router := gin.New()
+		f := func(req *http.Request) bool { return req.URL.Path != "/healthcheck" }
+		router.Use(otelgin.Middleware("foobar", otelgin.WithFilter(f)))
+		router.GET("/user/:id", func(c *gin.Context) {})
+
+		r := httptest.NewRequest("GET", "/user/123", nil)
+		w := httptest.NewRecorder()
+
+		router.ServeHTTP(w, r)
+		assert.Len(t, sr.Ended(), 1)
+	})
 }

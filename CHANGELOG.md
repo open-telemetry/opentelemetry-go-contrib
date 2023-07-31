@@ -7,18 +7,182 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ## [Unreleased]
+- Add `WithMetricAttributes` option to `go.opentelemetry.io/contrib/instrumentation/net/http/otelhttp` to allow adding custom attributes to `net/http` metrics.
 
 ### Added
 
+- Add `NewMiddleware` function in `go.opentelemetry.io/contrib/instrumentation/net/http/otelhttp`. (#2964)
+- Add the new `go.opentelemetry.io/contrib/instrgen` package to provide auto-generated source code instrumentation. (#3068, #3108)
+- The `go.opentelemetry.io/contrib/exporters/autoexport` package to provide configuration of trace exporters with useful defaults and envar support. (#2753, #4100)
+
+### Fixed
+
+- AWS XRay Remote Sampling to cap quotaBalance to 1x quota in `go.opentelemetry.io/contrib/samplers/aws/xray`. (#3651, #3652)
+- Do not panic when the HTTP request has the "Expect: 100-continue" header in `go.opentelemetry.io/contrib/instrumentation/net/http/httptrace/otelhttptrace`. (#3892)
+- Fix span status value set for non-standard HTTP status codes in modules listed below. (#3966)
+  - `go.opentelemetry.io/contrib/instrumentation/github.com/emicklei/go-restful/otelrestful`
+  - `go.opentelemetry.io/contrib/instrumentation/github.com/gin-gonic/gin/otelgin`
+  - `go.opentelemetry.io/contrib/instrumentation/github.com/gorilla/mux/otelmux`
+  - `go.opentelemetry.io/contrib/instrumentation/github.com/labstack/echo/otelecho`
+  - `go.opentelemetry.io/contrib/instrumentation/gopkg.in/macaron.v1/otelmacaron`
+  - `go.opentelemetry.io/contrib/instrumentation/net/http/httptrace/otelhttptrace`
+  - `go.opentelemetry.io/contrib/instrumentation/net/http/otelhttp`
+- Do not modify the origin request in RoundTripper in `go.opentelemetry.io/contrib/instrumentation/net/http/otelhttp`. (#4033)
+- Handle empty value of `OTEL_PROPAGATORS` environment variable the same way as when the variable is unset in `go.opentelemetry.io/contrib/propagators/autoprop`. (#4101)
+
+### Deprecated
+
+- The `go.opentelemetry.io/contrib/instrumentation/github.com/astaxie/beego/otelbeego` module is deprecated. (#4092, #4104)
+- The `go.opentelemetry.io/contrib/instrumentation/github.com/go-kit/kit/otelkit` module is deprecated. (#4093, #4104)
+
+### Removed
+
+- Remove `Handler` type in `go.opentelemetry.io/contrib/instrumentation/net/http/otelhttp`. (#2964)
+
+## [1.17.0/0.42.0/0.11.0] - 2023-05-23
+
+### Changed
+
+- Use `strings.Cut()` instead of `string.SplitN()` for better readability and memory use. (#3822)
+- Change `otelgrpc` interceptors to disable `SENT`/`RECEIVED` events.  Use `WithMessageEvents()` to turn back on. (#3964)
+
+## [1.17.0-rc.1/0.42.0-rc.1/0.11.0-rc.1] - 2023-05-17
+
+### Changed
+
+- Upgrade dependencies of OpenTelemetry Go to use the new [`v1.16.0-rc.1`/`v0.39.0-rc.1` release](https://github.com/open-telemetry/opentelemetry-go/releases/tag/v1.16.0-rc.1).
+- Remove `semver:` prefix from instrumentation version. (#3681, #3798)
+
+### Deprecated
+
+- `SemVersion` functions in instrumentation packages are deprecated, use `Version` instead. (#3681, #3798)
+
+## [1.16.1/0.41.1/0.10.1] - 2023-05-02
+
+### Added
+
+- The `WithPublicEndpoint` and `WithPublicEndpointFn` options in `go.opentelemetry.io/contrib/instrumentation/github.com/gorilla/mux/otelmux`. (#3661)
+
+### Changed
+
+- Upgrade dependencies of OpenTelemetry Go to use the new [`v1.15.1`/`v0.38.1` release](https://github.com/open-telemetry/opentelemetry-go/releases/tag/v1.15.1)
+
+### Fixed
+
+- AWS XRay Remote Sampling to preserve previous rule if updated rule property has not changed in `go.opentelemetry.io/contrib/samplers/aws/xray`. (#3619, #3620)
+
+## [1.16.0/0.41.0/0.10.0] - 2023-04-28
+
+### Added
+
+- AWS SDK add `rpc.system` attribute in `go.opentelemetry.io/contrib/instrumentation/github.com/aws/aws-sdk-go-v2/otelaws`. (#3582, #3617)
+
+### Changed
+
+- Update `go.opentelemetry.io/contrib/instrumentation/google.golang.org/grpc/otelgrpc` to align gRPC server span status with the changes in the OpenTelemetry specification. (#3685)
+- Adding the `db.statement` tag to spans in `go.opentelemetry.io/contrib/instrumentation/go.mongodb.org/mongo-driver/mongo/otelmongo` is now disabled by default. (#3519)
+
+### Fixed
+
+- The error received by `otelecho` middleware is then passed back to upstream middleware instead of being swallowed. (#3656)
+- Prevent taking from reservoir in AWS XRay Remote Sampler when there is zero capacity in `go.opentelemetry.io/contrib/samplers/aws/xray`. (#3684)
+- Fix `otelhttp.Handler` in `go.opentelemetry.io/contrib/instrumentation/net/http/otelhttp` to propagate multiple `WriteHeader` calls while persisting the initial `statusCode`. (#3580)
+
+## [1.16.0-rc.2/0.41.0-rc.2/0.10.0-rc.2] - 2023-03-23
+
+### Added
+
+- The `WithPublicEndpoint` and `WithPublicEndpointFn` options in `go.opentelemetry.io/contrib/instrumentation/github.com/emicklei/go-restful/otelrestful`. (#3563)
+
+### Fixed
+
+- AWS SDK rename attributes `aws.operation`, `aws.service` to `rpc.method`,`rpc.service` in `go.opentelemetry.io/contrib/instrumentation/github.com/aws/aws-sdk-go-v2/otelaws`. (#3582, #3617)
+- AWS SDK span name to be of the format `Service.Operation` in `go.opentelemetry.io/contrib/instrumentation/github.com/aws/aws-sdk-go-v2/otelaws`. (#3582, #3521)
+- Prevent sampler configuration reset from erroneously sampling first span in `go.opentelemetry.io/contrib/samplers/jaegerremote`. (#3603, #3604)
+
+## [1.16.0-rc.1/0.41.0-rc.1/0.10.0-rc.1] - 2023-03-02
+
+### Changed
+
+- Dropped compatibility testing for [Go 1.18].
+  The project no longer guarantees support for this version of Go. (#3516)
+
+## [1.15.0/0.40.0/0.9.0] - 2023-02-27
+
+This release is the last to support [Go 1.18].
+The next release will require at least [Go 1.19].
+
+### Added
+
+- Support [Go 1.20]. (#3372)
+- Add `SpanNameFormatter` option to package `go.opentelemetry.io/contrib/instrumentation/github.com/gin-gonic/gin/otelgin`. (#3343)
+
+### Changed
+
+- Change to use protobuf parser instead of encoding/json to accept enums as strings in `go.opentelemetry.io/contrib/samplers/jaegerremote`. (#3183)
+
+### Fixed
+
+- Remove use of deprecated `"math/rand".Seed` in `go.opentelemetry.io/contrib/instrumentation/github.com/Shopify/sarama/otelsarama/example/producer`. (#3396)
+- Do not assume "aws" partition in ecs detector to prevent panic in `go.opentelemetry.io/contrib/detectors/aws/ecs`. (#3167)
+- The span name of producer spans from `go.opentelemetry.io/contrib/instrumentation/github.com/Shopify/sarama/otelsarama` is corrected to use `publish` instead of `send`. (#3369)
+- Attribute types are corrected in `go.opentelemetry.io/contrib/instrumentation/github.com/aws/aws-sdk-go-v2/otelaws`. (#3369)
+  - `aws.dynamodb.table_names` is now a string slice value.
+  - `aws.dynamodb.global_secondary_indexes` is now a string slice value.
+  - `aws.dynamodb.local_secondary_indexes` is now a string slice value.
+  - `aws.dynamodb.attribute_definitions` is now a string slice value.
+  - `aws.dynamodb.global_secondary_index_updates` is now a string slice value.
+  - `aws.dynamodb.provisioned_read_capacity` is now a `float64` value.
+  - `aws.dynamodb.provisioned_write_capacity` is now a `float64` value.
+
+## [1.14.0/0.39.0/0.8.0] - 2023-02-07
+
+### Changed
+
+- Change `runtime.uptime` instrument in `go.opentelemetry.io/contrib/instrumentation/runtime` from `Int64ObservableUpDownCounter` to `Int64ObservableCounter`,
+ since the value is monotonic. (#3347)
+- `samplers/jaegerremote`: change to use protobuf parser instead of encoding/json to accept enums as strings. (#3183)
+
+### Fixed
+
+- The GCE detector in `go.opentelemetry.io/contrib/detectors/gcp` includes the "cloud.region" attribute when appropriate. (#3367)
+
+## [1.13.0/0.38.0/0.7.0] - 2023-01-30
+
+### Added
+
+- Add `WithSpanNameFormatter` to `go.opentelemetry.io/contrib/instrumentation/github.com/gorilla/mux/otelmux` to allow customizing span names. (#3041)
+- Add missing recommended AWS Lambda resource attributes `faas.instance` and `faas.max_memory` in `go.opentelemetry.io/contrib/detectors/aws/lambda`. (#3148)
+- Improve documentation for `go.opentelemetry.io/contrib/samplers/jaegerremote` by providing examples of sampling endpoints. (#3147)
+- Add `WithServerName` to `go.opentelemetry.io/contrib/instrumentation/net/http/otelhttp` to set the primary server name of a `Handler`. (#3182)
+
+### Changed
+
+- Remove expensive calculation of uncompressed message size attribute in `go.opentelemetry.io/contrib/instrumentation/google.golang.org/grpc/otelgrpc`. (#3168)
+- Upgrade all `semconv` packages to use `v1.17.0`. (#3182)
+- Upgrade dependencies of OpenTelemetry Go to use the new [`v1.12.0`/`v0.35.0` release](https://github.com/open-telemetry/opentelemetry-go/releases/tag/v1.12.0). (#3190, #3170)
+
+## [1.12.0/0.37.0/0.6.0]
+
+### Added
+
+- Implemented retrieving the [`aws.ecs.*` resource attributes](https://opentelemetry.io/docs/reference/specification/resource/semantic_conventions/cloud_provider/aws/ecs/) in `go.opentelemetry.io/detectors/aws/ecs` based on the ECS Metadata v4 endpoint. (#2626)
+- The `WithLogger` option to `go.opentelemetry.io/contrib/samplers/jaegerremote` to allow users to pass a `logr.Logger` and have operations logged. (#2566)
 - Add the `messaging.url` & `messaging.system` attributes to all appropriate SQS operations in the `go.opentelemetry.io/contrib/instrumentation/github.com/aws/aws-sdk-go-v2/otelaws` package. (#2879)
-- Add `WithMetricAttributes` option to `go.opentelemetry.io/contrib/instrumentation/net/http/otelhttp` to allow adding custom attributes to `net/http` metrics.
+- Add example use of the metrics signal to `go.opentelemetry.io/contrib/instrumentation/net/http/otelhttp/example`. (#2610)
+- [otelgin] Add support for filters to the `go.opentelemetry.io/contrib/instrumentation/github.com/gin-gonic/gin/otelgin` package to provide the way to control which inbound requests are traced. (#2965, #2963)
+
+### Fixed
+
+- Set the status_code span attribute even if the HTTP handler hasn't written anything. (#2822)
+- Do not wrap http.NoBody in `go.opentelemetry.io/contrib/instrumentation/net/http/otelhttp`, which fixes handling of that special request body. (#2983)
 
 ## [1.11.1/0.36.4/0.5.2]
 
 ### Added
 
 - Add trace context propagation support to `instrumentation/github.com/aws/aws-sdk-go-v2/otelaws` (#2856).
-- [otelgrpc] Add `WithMeterProvider` function to enable metric and add metric `rpc.server.duration` to otelgrpc instrumentation library. (#2700) 
+- [otelgrpc] Add `WithMeterProvider` function to enable metric and add metric `rpc.server.duration` to otelgrpc instrumentation library. (#2700)
 
 ### Changed
 
@@ -598,7 +762,17 @@ First official tagged release of `contrib` repository.
 - Prefix support for dogstatsd (#34)
 - Update Go Runtime package to use batch observer (#44)
 
-[Unreleased]: https://github.com/open-telemetry/opentelemetry-go-contrib/compare/v1.11.1...HEAD
+[Unreleased]: https://github.com/open-telemetry/opentelemetry-go-contrib/compare/v1.17.0...HEAD
+[1.17.0/0.42.0/0.11.0]: https://github.com/open-telemetry/opentelemetry-go-contrib/releases/tag/v1.17.0
+[1.17.0-rc.1/0.42.0-rc.1/0.11.0-rc.1]: https://github.com/open-telemetry/opentelemetry-go-contrib/releases/tag/v1.17.0-rc.1
+[1.16.1/0.41.1/0.10.1]: https://github.com/open-telemetry/opentelemetry-go-contrib/releases/tag/v1.16.1
+[1.16.0/0.41.0/0.10.0]: https://github.com/open-telemetry/opentelemetry-go-contrib/releases/tag/v1.16.0
+[1.16.0-rc.2/0.41.0-rc.2/0.10.0-rc.2]: https://github.com/open-telemetry/opentelemetry-go-contrib/releases/tag/v1.16.0-rc.2
+[1.16.0-rc.1/0.41.0-rc.1/0.10.0-rc.1]: https://github.com/open-telemetry/opentelemetry-go-contrib/releases/tag/v1.16.0-rc.1
+[1.15.0/0.40.0/0.9.0]: https://github.com/open-telemetry/opentelemetry-go-contrib/releases/tag/v1.15.0
+[1.14.0/0.39.0/0.8.0]: https://github.com/open-telemetry/opentelemetry-go-contrib/releases/tag/v1.14.0
+[1.13.0/0.38.0/0.7.0]: https://github.com/open-telemetry/opentelemetry-go-contrib/releases/tag/v1.13.0
+[1.12.0/0.37.0/0.6.0]: https://github.com/open-telemetry/opentelemetry-go-contrib/releases/tag/v1.12.0
 [1.11.1/0.36.4/0.5.2]: https://github.com/open-telemetry/opentelemetry-go-contrib/releases/tag/v1.11.1
 [1.11.0/0.36.3/0.5.1]: https://github.com/open-telemetry/opentelemetry-go-contrib/releases/tag/v1.11.0
 [0.36.2]: https://github.com/open-telemetry/opentelemetry-go-contrib/releases/tag/zpages/v0.36.2
@@ -637,3 +811,7 @@ First official tagged release of `contrib` repository.
 [0.8.0]: https://github.com/open-telemetry/opentelemetry-go-contrib/releases/tag/v0.8.0
 [0.7.0]: https://github.com/open-telemetry/opentelemetry-go-contrib/releases/tag/v0.7.0
 [0.6.1]: https://github.com/open-telemetry/opentelemetry-go-contrib/releases/tag/v0.6.1
+
+[Go 1.20]: https://go.dev/doc/go1.20
+[Go 1.19]: https://go.dev/doc/go1.19
+[Go 1.18]: https://go.dev/doc/go1.18

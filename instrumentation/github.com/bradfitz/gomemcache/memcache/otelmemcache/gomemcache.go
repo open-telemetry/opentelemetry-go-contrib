@@ -60,7 +60,7 @@ func NewClientWithTracing(client *memcache.Client, opts ...Option) *Client {
 		client,
 		cfg.tracerProvider.Tracer(
 			tracerName,
-			oteltrace.WithInstrumentationVersion(SemVersion()),
+			oteltrace.WithInstrumentationVersion(Version()),
 		),
 		context.Background(),
 	}

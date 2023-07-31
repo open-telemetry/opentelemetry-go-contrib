@@ -21,12 +21,12 @@ import (
 
 	"github.com/gin-gonic/gin"
 
+	"go.opentelemetry.io/contrib/instrumentation/github.com/gin-gonic/gin/otelgin/internal/semconvutil"
 	"go.opentelemetry.io/otel"
-	"go.opentelemetry.io/otel/codes"
-
 	"go.opentelemetry.io/otel/attribute"
+	"go.opentelemetry.io/otel/codes"
 	"go.opentelemetry.io/otel/propagation"
-	semconv "go.opentelemetry.io/otel/semconv/v1.12.0"
+	semconv "go.opentelemetry.io/otel/semconv/v1.17.0"
 	oteltrace "go.opentelemetry.io/otel/trace"
 )
 
@@ -48,12 +48,20 @@ func Middleware(service string, opts ...Option) gin.HandlerFunc {
 	}
 	tracer := cfg.TracerProvider.Tracer(
 		tracerName,
-		oteltrace.WithInstrumentationVersion(SemVersion()),
+		oteltrace.WithInstrumentationVersion(Version()),
 	)
 	if cfg.Propagators == nil {
 		cfg.Propagators = otel.GetTextMapPropagator()
 	}
 	return func(c *gin.Context) {
+		for _, f := range cfg.Filters {
+			if !f(c.Request) {
+				// Serve the request to the next middleware
+				// if a filter rejects the request.
+				c.Next()
+				return
+			}
+		}
 		c.Set(tracerKey, tracer)
 		savedCtx := c.Request.Context()
 		defer func() {
@@ -61,14 +69,20 @@ func Middleware(service string, opts ...Option) gin.HandlerFunc {
 		}()
 		ctx := cfg.Propagators.Extract(savedCtx, propagation.HeaderCarrier(c.Request.Header))
 		opts := []oteltrace.SpanStartOption{
-			oteltrace.WithAttributes(semconv.NetAttributesFromHTTPRequest("tcp", c.Request)...),
-			oteltrace.WithAttributes(semconv.EndUserAttributesFromHTTPRequest(c.Request)...),
-			oteltrace.WithAttributes(semconv.HTTPServerAttributesFromHTTPRequest(service, c.FullPath(), c.Request)...),
+			oteltrace.WithAttributes(semconvutil.HTTPServerRequest(service, c.Request)...),
 			oteltrace.WithSpanKind(oteltrace.SpanKindServer),
 		}
-		spanName := c.FullPath()
+		var spanName string
+		if cfg.SpanNameFormatter == nil {
+			spanName = c.FullPath()
+		} else {
+			spanName = cfg.SpanNameFormatter(c.Request)
+		}
 		if spanName == "" {
 			spanName = fmt.Sprintf("HTTP %s route not found", c.Request.Method)
+		} else {
+			rAttr := semconv.HTTPRoute(spanName)
+			opts = append(opts, oteltrace.WithAttributes(rAttr))
 		}
 		ctx, span := tracer.Start(ctx, spanName, opts...)
 		defer span.End()
@@ -80,10 +94,10 @@ func Middleware(service string, opts ...Option) gin.HandlerFunc {
 		c.Next()
 
 		status := c.Writer.Status()
-		attrs := semconv.HTTPAttributesFromHTTPStatusCode(status)
-		spanStatus, spanMessage := semconv.SpanStatusFromHTTPStatusCodeAndSpanKind(status, oteltrace.SpanKindServer)
-		span.SetAttributes(attrs...)
-		span.SetStatus(spanStatus, spanMessage)
+		span.SetStatus(semconvutil.HTTPServerStatus(status))
+		if status > 0 {
+			span.SetAttributes(semconv.HTTPStatusCode(status))
+		}
 		if len(c.Errors) > 0 {
 			span.SetAttributes(attribute.String("gin.errors", c.Errors.String()))
 		}
@@ -103,7 +117,7 @@ func HTML(c *gin.Context, code int, name string, obj interface{}) {
 	if !ok {
 		tracer = otel.GetTracerProvider().Tracer(
 			tracerName,
-			oteltrace.WithInstrumentationVersion(SemVersion()),
+			oteltrace.WithInstrumentationVersion(Version()),
 		)
 	}
 	savedContext := c.Request.Context()

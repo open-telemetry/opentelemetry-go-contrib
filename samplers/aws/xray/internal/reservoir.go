@@ -59,6 +59,10 @@ func (r *reservoir) take(now time.Time, borrowed bool, itemCost float64) bool { 
 	r.mu.Lock()
 	defer r.mu.Unlock()
 
+	if r.capacity == 0 {
+		return false
+	}
+
 	if r.lastTick.IsZero() {
 		r.lastTick = now
 
@@ -102,11 +106,11 @@ func (r *reservoir) refreshQuotaBalanceLocked(now time.Time, borrowed bool) { //
 			r.quotaBalance += elapsedTime.Seconds()
 		}
 	} else {
-		totalQuotaBalanceCapacity := elapsedTime.Seconds() * r.capacity
-		r.quotaBalance += elapsedTime.Seconds() * r.quota
+		elapsedSeconds := elapsedTime.Seconds()
+		r.quotaBalance += elapsedSeconds * r.quota
 
-		if r.quotaBalance > totalQuotaBalanceCapacity {
-			r.quotaBalance = totalQuotaBalanceCapacity
+		if r.quotaBalance > r.quota {
+			r.quotaBalance = r.quota
 		}
 	}
 }

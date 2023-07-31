@@ -15,14 +15,19 @@
 package otelmux // import "go.opentelemetry.io/contrib/instrumentation/github.com/gorilla/mux/otelmux"
 
 import (
+	"net/http"
+
 	"go.opentelemetry.io/otel/propagation"
 	oteltrace "go.opentelemetry.io/otel/trace"
 )
 
 // config is used to configure the mux middleware.
 type config struct {
-	TracerProvider oteltrace.TracerProvider
-	Propagators    propagation.TextMapPropagator
+	TracerProvider    oteltrace.TracerProvider
+	Propagators       propagation.TextMapPropagator
+	spanNameFormatter func(string, *http.Request) string
+	PublicEndpoint    bool
+	PublicEndpointFn  func(*http.Request) bool
 }
 
 // Option specifies instrumentation configuration options.
@@ -34,6 +39,26 @@ type optionFunc func(*config)
 
 func (o optionFunc) apply(c *config) {
 	o(c)
+}
+
+// WithPublicEndpoint configures the Handler to link the span with an incoming
+// span context. If this option is not provided, then the association is a child
+// association instead of a link.
+func WithPublicEndpoint() Option {
+	return optionFunc(func(c *config) {
+		c.PublicEndpoint = true
+	})
+}
+
+// WithPublicEndpointFn runs with every request, and allows conditionnally
+// configuring the Handler to link the span with an incoming span context. If
+// this option is not provided or returns false, then the association is a
+// child association instead of a link.
+// Note: WithPublicEndpoint takes precedence over WithPublicEndpointFn.
+func WithPublicEndpointFn(fn func(*http.Request) bool) Option {
+	return optionFunc(func(c *config) {
+		c.PublicEndpointFn = fn
+	})
 }
 
 // WithPropagators specifies propagators to use for extracting
@@ -54,5 +79,15 @@ func WithTracerProvider(provider oteltrace.TracerProvider) Option {
 		if provider != nil {
 			cfg.TracerProvider = provider
 		}
+	})
+}
+
+// WithSpanNameFormatter specifies a function to use for generating a custom span
+// name. By default, the route name (path template or regexp) is used. The route
+// name is provided so you can use it in the span name without needing to
+// duplicate the logic for extracting it from the request.
+func WithSpanNameFormatter(fn func(routeName string, r *http.Request) string) Option {
+	return optionFunc(func(cfg *config) {
+		cfg.spanNameFormatter = fn
 	})
 }

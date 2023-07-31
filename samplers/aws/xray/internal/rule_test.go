@@ -162,6 +162,7 @@ func TestConsumeFromReservoirSample(t *testing.T) {
 			RuleName: "r1",
 		},
 		reservoir: &reservoir{
+			capacity:  10,
 			quota:     10,
 			expiresAt: time.Unix(1500000060, 0),
 		},
@@ -562,7 +563,7 @@ func TestMatchAgainstManifestRulesNoAttributeMatch(t *testing.T) {
 }
 
 // validate no data race is happening when updating rule properties and rule targets in manifest while sampling.
-func TestRaceUpdatingRulesAndTargetsWhileSampling(t *testing.T) {
+func TestUpdatingRulesAndTargetsWhileSamplingConcurrentSafe(t *testing.T) {
 	// getSamplingRules response to update existing manifest rule
 	ruleRecords := samplingRuleRecords{
 		SamplingRule: &ruleProperties{

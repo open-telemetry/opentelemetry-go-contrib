@@ -77,14 +77,14 @@ Approvers:
 - [Josh MacDonald](https://github.com/jmacd), LightStep
 - [Sam Xie](https://github.com/XSAM), Cisco/AppDynamics
 - [David Ashpole](https://github.com/dashpole), Google
-- [Robert Pająk](https://github.com/pellared), Splunk
 - [Chester Cheung](https://github.com/hanyuancheung), Tencent
-- [Damien Mathieu](https://github.com/dmathieu), Auth0/Okta
+- [Damien Mathieu](https://github.com/dmathieu), Elastic
+- [Anthony Mirabella](https://github.com/Aneurysm9), Amazon
 
 Maintainers:
 
 - [Aaron Clawson](https://github.com/MadVikingGod), LightStep
-- [Anthony Mirabella](https://github.com/Aneurysm9), Amazon
+- [Robert Pająk](https://github.com/pellared), Splunk
 - [Tyler Yahn](https://github.com/MrAlias), Splunk
 
 Emeritus:

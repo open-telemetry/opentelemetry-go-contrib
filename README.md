@@ -13,16 +13,19 @@ Collection of 3rd-party packages for [OpenTelemetry-Go](https://github.com/open-
 - [Instrumentation](./instrumentation/): Packages providing OpenTelemetry instrumentation for 3rd-party libraries.
 - [Propagators](./propagators/): Packages providing OpenTelemetry context propagators for 3rd-party propagation formats.
 - [Detectors](./detectors/): Packages providing OpenTelemetry resource detectors for 3rd-party cloud computing environments.
+- [Exporters](./exporters/): Packages providing OpenTelemetry exporters for 3rd-party export formats.
 - [Samplers](./samplers/): Packages providing additional implementations of OpenTelemetry samplers.
 
 ## Project Status
 
-This project is currently in a pre-GA phase. Our progress towards a GA release
-candidate is tracked in [this project
-board](https://github.com/orgs/open-telemetry/projects/5).
+This project contains both stable and unstable modules.
+Refer to the module for its version or our [versioning manifest](./versions.yaml).
+
+Project versioning information and stability guarantees can be found in the [versioning documentation](https://github.com/open-telemetry/opentelemetry-go/blob/a724cf884287e04785eaa91513d26a6ef9699288/VERSIONING.md).
+
+Progress and status specific to this repository is tracked in our local [project boards](https://github.com/open-telemetry/opentelemetry-go-contrib/projects?query=is%3Aopen) and [milestones](https://github.com/open-telemetry/opentelemetry-go-contrib/milestones).
 
 ### Compatibility
-
 
 OpenTelemetry-Go Contrib ensures compatibility with the current supported
 versions of
@@ -45,16 +48,16 @@ This project is tested on the following systems.
 
 | OS      | Go Version | Architecture |
 | ------- | ---------- | ------------ |
+| Ubuntu  | 1.20       | amd64        |
 | Ubuntu  | 1.19       | amd64        |
-| Ubuntu  | 1.18       | amd64        |
+| Ubuntu  | 1.20       | 386          |
 | Ubuntu  | 1.19       | 386          |
-| Ubuntu  | 1.18       | 386          |
+| MacOS   | 1.20       | amd64        |
 | MacOS   | 1.19       | amd64        |
-| MacOS   | 1.18       | amd64        |
+| Windows | 1.20       | amd64        |
 | Windows | 1.19       | amd64        |
-| Windows | 1.18       | amd64        |
+| Windows | 1.20       | 386          |
 | Windows | 1.19       | 386          |
-| Windows | 1.18       | 386          |
 
 While this project should work for other systems, no compatibility guarantees
 are made for those systems currently.

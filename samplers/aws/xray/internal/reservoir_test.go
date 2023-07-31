@@ -152,13 +152,39 @@ func TestConsumeFromReservoir(t *testing.T) {
 	// once assigned quota is consumed reservoir does not allow to consume in that second
 	assert.False(t, r.take(clock.now(), false, 1.0))
 
+	// increase the clock by 4
+	clock.nowTime = 1500000005
+
+	// reservoir updates the quotaBalance with one second worth of quota (even though 4 seconds have passed) and allows to consume
+	assert.Equal(t, r.quotaBalance, 0.0)
+	assert.True(t, r.take(clock.now(), false, 1.0))
+	assert.Equal(t, r.quotaBalance, 1.0)
+	assert.True(t, r.take(clock.now(), false, 1.0))
+	assert.Equal(t, r.quotaBalance, 0.0)
+}
+
+func TestZeroCapacityFailBorrow(t *testing.T) {
+	clock := &mockClock{
+		nowTime: 1500000000,
+	}
+
+	r := &reservoir{
+		quota:    0,
+		capacity: 0,
+	}
+
+	// start with no quota balance
+	assert.Equal(t, r.quotaBalance, 0.0)
+	// attempt to borrow from reservoir, and should fail since there is no capacity
+	assert.False(t, r.take(clock.now(), true, 1.0))
+
 	// increase the clock by 5
 	clock.nowTime = 1500000005
 
-	// elapsedTime is 4 seconds so quota balance should be elapsedTime * quota = 8 and below take would consume 1 so
-	// ultimately 7
-	assert.True(t, r.take(clock.now(), false, 1.0))
-	assert.Equal(t, r.quotaBalance, 7.0)
+	// validate there is still no quota balance
+	assert.Equal(t, r.quotaBalance, 0.0)
+	// again, attempt to borrow from reservoir, and should fail since there is no capacity
+	assert.False(t, r.take(clock.now(), true, 1.0))
 }
 
 func TestResetQuotaUsageRotation(t *testing.T) {
@@ -189,23 +215,22 @@ func TestResetQuotaUsageRotation(t *testing.T) {
 	assert.True(t, r.take(clock.now(), false, 1.0))
 }
 
-// assert that when quotaBalance exceeds totalQuotaBalanceCapacity then totalQuotaBalanceCapacity
-// gets assigned to quotaBalance.
-func TestQuotaBalanceNonBorrowExceedsCapacity(t *testing.T) {
+// assert that when quotaBalance is assigned the correct value after a portion of a second.
+func TestQuotaBalanceAfterPortionOfSecond(t *testing.T) {
 	clock := &mockClock{
-		nowTime: 1500000001,
+		nowTime: 1500000002,
 	}
 
 	r := &reservoir{
 		quota:    6,
-		capacity: 5,
-		lastTick: time.Unix(1500000000, 0),
+		capacity: 6,
+		lastTick: time.Unix(1500000001, 500000000),
 	}
 
 	r.refreshQuotaBalanceLocked(clock.now(), false)
 
-	// assert that if quotaBalance exceeds capacity then total capacity would be new quotaBalance
-	assert.Equal(t, r.quotaBalance, r.capacity)
+	// assert that after half a second, quotaBalance is now quota*0.5 = 3
+	assert.Equal(t, r.quotaBalance, 3.0)
 }
 
 // assert quotaBalance and capacity of borrowing case.

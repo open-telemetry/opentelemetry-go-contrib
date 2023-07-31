@@ -7,14 +7,20 @@ on:
 env:
   # path to where test results will be saved
   TEST_RESULTS: /tmp/test-results
-  # Default minimum version of Go to support.
-  DEFAULT_GO_VERSION: 1.19
+  # Default version of Go to use by CI workflows. This should be the latest
+  # release of Go; developers likely use the latest release in development and
+  # we want to catch any bugs (e.g. lint errors, race detection) with this
+  # release before they are merged. The Go compatibility guarantees ensure
+  # backwards compatibility with the previous two minor releases and we
+  # explicitly test our code for these versions so keeping this at prior
+  # versions does not add value.
+  DEFAULT_GO_VERSION: "1.20"
 jobs:
   lint:
     runs-on: ubuntu-latest
     steps:
     - name: Install Go
-      uses: actions/setup-go@v3
+      uses: actions/setup-go@v4
       with:
         go-version: ${{ env.DEFAULT_GO_VERSION }}
     - name: Checkout Repo
@@ -37,6 +43,8 @@ jobs:
       with:
         path: ~/.tools
         key: ${{ runner.os }}-${{ env.cache-name }}-${{ hashFiles('./internal/tools/**') }}
+    - name: Generate
+      run: make generate
     - name: Run linters
       run: make dependabot-check license-check lint vanity-import-check
     - name: Build
@@ -48,7 +56,7 @@ jobs:
     runs-on: ubuntu-latest
     steps:
     - name: Install Go
-      uses: actions/setup-go@v3
+      uses: actions/setup-go@v4
       with:
         go-version: ${{ env.DEFAULT_GO_VERSION }}
     - name: Checkout Repo
@@ -71,7 +79,7 @@ jobs:
     runs-on: ubuntu-latest
     steps:
     - name: Install Go
-      uses: actions/setup-go@v3
+      uses: actions/setup-go@v4
       with:
         go-version: ${{ env.DEFAULT_GO_VERSION }}
     - name: Checkout Repo
@@ -95,7 +103,7 @@ jobs:
         cp coverage.txt $TEST_RESULTS
         cp coverage.html $TEST_RESULTS
     - name: Upload coverage report
-      uses: codecov/codecov-action@v3.1.1
+      uses: codecov/codecov-action@v3.1.4
       with:
         file: ./coverage.txt
         fail_ci_if_error: true
@@ -109,7 +117,7 @@ jobs:
   compatibility-test:
     strategy:
       matrix:
-        go-version: [1.19, 1.18]
+        go-version: ["1.20", 1.19]
         os: [ubuntu-latest, macos-latest, windows-latest]
         # GitHub Actions does not support arm* architectures on default
         # runners. It is possible to acomplish this with a self-hosted runner
@@ -123,7 +131,7 @@ jobs:
     runs-on: ${{ matrix.os }}
     steps:
     - name: Install Go
-      uses: actions/setup-go@v3
+      uses: actions/setup-go@v4
       with:
         go-version: ${{ matrix.go-version }}
     - name: Checkout code
@@ -145,6 +153,15 @@ jobs:
         GOARCH: ${{ matrix.arch }}
       run: make test-short
 
+  test-compatibility:
+    runs-on: ubuntu-latest
+    needs: [compatibility-test]
+    steps:
+      - name: Test if compatibility-test workflow passed
+        run: |
+          echo ${{ needs.compatibility-test.result }}
+          test ${{ needs.compatibility-test.result }} == "success"
+
   integration:
     strategy:
       matrix:
@@ -152,7 +169,7 @@ jobs:
     runs-on: ubuntu-latest
     steps:
     - name: Install Go
-      uses: actions/setup-go@v3
+      uses: actions/setup-go@v4
       with:
         go-version: ${{ env.DEFAULT_GO_VERSION }}
     - name: Checkout Repo
@@ -180,7 +197,7 @@ jobs:
         find . -name 'coverage.html' > "${TEST_RESULTS}/coverage.lst"
         tar -n -cf - -T "${TEST_RESULTS}/coverage.lst" | tar -C "${TEST_RESULTS}" -xvf -
     - name: Upload coverage report
-      uses: codecov/codecov-action@v3.1.1
+      uses: codecov/codecov-action@v3.1.4
       if: hashFiles('coverage.out') != ''
       with:
         file: ./coverage.out
@@ -191,3 +208,13 @@ jobs:
       with:
           name: opentelemetry-go-contrib-test-output
           path: ${{ env.TEST_RESULTS }}
+
+  test-integration:
+    runs-on: ubuntu-latest
+    needs: [integration]
+    steps:
+      - name: Test if integration workflow passed
+        run: |
+          echo ${{ needs.integration.result }}
+          test ${{ needs.integration.result }} == "success"
+

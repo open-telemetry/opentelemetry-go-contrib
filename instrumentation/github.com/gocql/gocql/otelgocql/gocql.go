@@ -31,7 +31,7 @@ func NewSessionWithTracing(ctx context.Context, cluster *gocql.ClusterConfig, op
 	instruments := newInstruments(cfg.meterProvider)
 	tracer := cfg.tracerProvider.Tracer(
 		internal.InstrumentationName,
-		trace.WithInstrumentationVersion(SemVersion()),
+		trace.WithInstrumentationVersion(Version()),
 	)
 	cluster.QueryObserver = &OTelQueryObserver{
 		enabled:  cfg.instrumentQuery,

@@ -28,11 +28,6 @@ import (
 	"go.opentelemetry.io/otel"
 	"go.opentelemetry.io/otel/attribute"
 	"go.opentelemetry.io/otel/metric"
-	"go.opentelemetry.io/otel/metric/global"
-	"go.opentelemetry.io/otel/metric/instrument"
-	"go.opentelemetry.io/otel/metric/instrument/asyncfloat64"
-	"go.opentelemetry.io/otel/metric/instrument/asyncint64"
-	"go.opentelemetry.io/otel/metric/unit"
 )
 
 // Host reports the work-in-progress conventional host metrics specified by OpenTelemetry.
@@ -72,26 +67,26 @@ func (o metricProviderOption) apply(c *config) {
 var (
 	// Attribute sets for CPU time measurements.
 
-	AttributeCPUTimeUser   = []attribute.KeyValue{attribute.String("state", "user")}
-	AttributeCPUTimeSystem = []attribute.KeyValue{attribute.String("state", "system")}
-	AttributeCPUTimeOther  = []attribute.KeyValue{attribute.String("state", "other")}
-	AttributeCPUTimeIdle   = []attribute.KeyValue{attribute.String("state", "idle")}
+	AttributeCPUTimeUser   = attribute.NewSet(attribute.String("state", "user"))
+	AttributeCPUTimeSystem = attribute.NewSet(attribute.String("state", "system"))
+	AttributeCPUTimeOther  = attribute.NewSet(attribute.String("state", "other"))
+	AttributeCPUTimeIdle   = attribute.NewSet(attribute.String("state", "idle"))
 
 	// Attribute sets used for Memory measurements.
 
-	AttributeMemoryAvailable = []attribute.KeyValue{attribute.String("state", "available")}
-	AttributeMemoryUsed      = []attribute.KeyValue{attribute.String("state", "used")}
+	AttributeMemoryAvailable = attribute.NewSet(attribute.String("state", "available"))
+	AttributeMemoryUsed      = attribute.NewSet(attribute.String("state", "used"))
 
 	// Attribute sets used for Network measurements.
 
-	AttributeNetworkTransmit = []attribute.KeyValue{attribute.String("direction", "transmit")}
-	AttributeNetworkReceive  = []attribute.KeyValue{attribute.String("direction", "receive")}
+	AttributeNetworkTransmit = attribute.NewSet(attribute.String("direction", "transmit"))
+	AttributeNetworkReceive  = attribute.NewSet(attribute.String("direction", "receive"))
 )
 
 // newConfig computes a config from a list of Options.
 func newConfig(opts ...Option) config {
 	c := config{
-		MeterProvider: global.MeterProvider(),
+		MeterProvider: otel.GetMeterProvider(),
 	}
 	for _, opt := range opts {
 		opt.apply(&c)
@@ -103,12 +98,12 @@ func newConfig(opts ...Option) config {
 func Start(opts ...Option) error {
 	c := newConfig(opts...)
 	if c.MeterProvider == nil {
-		c.MeterProvider = global.MeterProvider()
+		c.MeterProvider = otel.GetMeterProvider()
 	}
 	h := &host{
 		meter: c.MeterProvider.Meter(
 			"go.opentelemetry.io/contrib/instrumentation/host",
-			metric.WithInstrumentationVersion(SemVersion()),
+			metric.WithInstrumentationVersion(Version()),
 		),
 		config: c,
 	}
@@ -119,13 +114,13 @@ func (h *host) register() error {
 	var (
 		err error
 
-		processCPUTime asyncfloat64.Counter
-		hostCPUTime    asyncfloat64.Counter
+		processCPUTime metric.Float64ObservableCounter
+		hostCPUTime    metric.Float64ObservableCounter
 
-		hostMemoryUsage       asyncint64.Gauge
-		hostMemoryUtilization asyncfloat64.Gauge
+		hostMemoryUsage       metric.Int64ObservableGauge
+		hostMemoryUtilization metric.Float64ObservableGauge
 
-		networkIOUsage asyncint64.Counter
+		networkIOUsage metric.Int64ObservableCounter
 
 		// lock prevents a race between batch observer and instrument registration.
 		lock sync.Mutex
@@ -142,65 +137,58 @@ func (h *host) register() error {
 	// TODO: .time units are in seconds, but "unit" package does
 	// not include this string.
 	// https://github.com/open-telemetry/opentelemetry-specification/issues/705
-	if processCPUTime, err = h.meter.AsyncFloat64().Counter(
+	if processCPUTime, err = h.meter.Float64ObservableCounter(
 		"process.cpu.time",
-		instrument.WithUnit("s"),
-		instrument.WithDescription(
+		metric.WithUnit("s"),
+		metric.WithDescription(
 			"Accumulated CPU time spent by this process attributeed by state (User, System, ...)",
 		),
 	); err != nil {
 		return err
 	}
 
-	if hostCPUTime, err = h.meter.AsyncFloat64().Counter(
+	if hostCPUTime, err = h.meter.Float64ObservableCounter(
 		"system.cpu.time",
-		instrument.WithUnit("s"),
-		instrument.WithDescription(
+		metric.WithUnit("s"),
+		metric.WithDescription(
 			"Accumulated CPU time spent by this host attributeed by state (User, System, Other, Idle)",
 		),
 	); err != nil {
 		return err
 	}
 
-	if hostMemoryUsage, err = h.meter.AsyncInt64().Gauge(
+	if hostMemoryUsage, err = h.meter.Int64ObservableGauge(
 		"system.memory.usage",
-		instrument.WithUnit(unit.Bytes),
-		instrument.WithDescription(
+		metric.WithUnit("By"),
+		metric.WithDescription(
 			"Memory usage of this process attributed by memory state (Used, Available)",
 		),
 	); err != nil {
 		return err
 	}
 
-	if hostMemoryUtilization, err = h.meter.AsyncFloat64().Gauge(
+	if hostMemoryUtilization, err = h.meter.Float64ObservableGauge(
 		"system.memory.utilization",
-		instrument.WithUnit(unit.Dimensionless),
-		instrument.WithDescription(
+		metric.WithUnit("1"),
+		metric.WithDescription(
 			"Memory utilization of this process attributeed by memory state (Used, Available)",
 		),
 	); err != nil {
 		return err
 	}
 
-	if networkIOUsage, err = h.meter.AsyncInt64().Counter(
+	if networkIOUsage, err = h.meter.Int64ObservableCounter(
 		"system.network.io",
-		instrument.WithUnit(unit.Bytes),
-		instrument.WithDescription(
+		metric.WithUnit("By"),
+		metric.WithDescription(
 			"Bytes transferred attributeed by direction (Transmit, Receive)",
 		),
 	); err != nil {
 		return err
 	}
 
-	err = h.meter.RegisterCallback(
-		[]instrument.Asynchronous{
-			processCPUTime,
-			hostCPUTime,
-			hostMemoryUsage,
-			hostMemoryUtilization,
-			networkIOUsage,
-		},
-		func(ctx context.Context) {
+	_, err = h.meter.RegisterCallback(
+		func(ctx context.Context, o metric.Observer) error {
 			lock.Lock()
 			defer lock.Unlock()
 
@@ -211,44 +199,38 @@ func (h *host) register() error {
 			// specific metrics that are not universal.
 			processTimes, err := proc.TimesWithContext(ctx)
 			if err != nil {
-				otel.Handle(err)
-				return
+				return err
 			}
 
 			hostTimeSlice, err := cpu.TimesWithContext(ctx, false)
 			if err != nil {
-				otel.Handle(err)
-				return
+				return err
 			}
 			if len(hostTimeSlice) != 1 {
-				otel.Handle(fmt.Errorf("host CPU usage: incorrect summary count"))
-				return
+				return fmt.Errorf("host CPU usage: incorrect summary count")
 			}
 
 			vmStats, err := mem.VirtualMemoryWithContext(ctx)
 			if err != nil {
-				otel.Handle(err)
-				return
+				return err
 			}
 
 			ioStats, err := net.IOCountersWithContext(ctx, false)
 			if err != nil {
-				otel.Handle(err)
-				return
+				return err
 			}
 			if len(ioStats) != 1 {
-				otel.Handle(fmt.Errorf("host network usage: incorrect summary count"))
-				return
+				return fmt.Errorf("host network usage: incorrect summary count")
 			}
 
-			// Process CPU time
-			processCPUTime.Observe(ctx, processTimes.User, AttributeCPUTimeUser...)
-			processCPUTime.Observe(ctx, processTimes.System, AttributeCPUTimeSystem...)
-
-			// Host CPU time
 			hostTime := hostTimeSlice[0]
-			hostCPUTime.Observe(ctx, hostTime.User, AttributeCPUTimeUser...)
-			hostCPUTime.Observe(ctx, hostTime.System, AttributeCPUTimeSystem...)
+			opt := metric.WithAttributeSet(AttributeCPUTimeUser)
+			o.ObserveFloat64(processCPUTime, processTimes.User, opt)
+			o.ObserveFloat64(hostCPUTime, hostTime.User, opt)
+
+			opt = metric.WithAttributeSet(AttributeCPUTimeSystem)
+			o.ObserveFloat64(processCPUTime, processTimes.System, opt)
+			o.ObserveFloat64(hostCPUTime, hostTime.System, opt)
 
 			// TODO(#244): "other" is a placeholder for actually dealing
 			// with these states.  Do users actually want this
@@ -265,25 +247,41 @@ func (h *host) register() error {
 				hostTime.Guest +
 				hostTime.GuestNice
 
-			hostCPUTime.Observe(ctx, other, AttributeCPUTimeOther...)
-			hostCPUTime.Observe(ctx, hostTime.Idle, AttributeCPUTimeIdle...)
+			opt = metric.WithAttributeSet(AttributeCPUTimeOther)
+			o.ObserveFloat64(hostCPUTime, other, opt)
+			opt = metric.WithAttributeSet(AttributeCPUTimeIdle)
+			o.ObserveFloat64(hostCPUTime, hostTime.Idle, opt)
 
 			// Host memory usage
-			hostMemoryUsage.Observe(ctx, int64(vmStats.Used), AttributeMemoryUsed...)
-			hostMemoryUsage.Observe(ctx, int64(vmStats.Available), AttributeMemoryAvailable...)
+			opt = metric.WithAttributeSet(AttributeMemoryUsed)
+			o.ObserveInt64(hostMemoryUsage, int64(vmStats.Used), opt)
+			opt = metric.WithAttributeSet(AttributeMemoryAvailable)
+			o.ObserveInt64(hostMemoryUsage, int64(vmStats.Available), opt)
 
 			// Host memory utilization
-			hostMemoryUtilization.Observe(ctx, float64(vmStats.Used)/float64(vmStats.Total), AttributeMemoryUsed...)
-			hostMemoryUtilization.Observe(ctx, float64(vmStats.Available)/float64(vmStats.Total), AttributeMemoryAvailable...)
+			opt = metric.WithAttributeSet(AttributeMemoryUsed)
+			o.ObserveFloat64(hostMemoryUtilization, float64(vmStats.Used)/float64(vmStats.Total), opt)
+			opt = metric.WithAttributeSet(AttributeMemoryAvailable)
+			o.ObserveFloat64(hostMemoryUtilization, float64(vmStats.Available)/float64(vmStats.Total), opt)
 
 			// Host network usage
 			//
 			// TODO: These can be broken down by network
 			// interface, with similar questions to those posed
 			// about per-CPU measurements above.
-			networkIOUsage.Observe(ctx, int64(ioStats[0].BytesSent), AttributeNetworkTransmit...)
-			networkIOUsage.Observe(ctx, int64(ioStats[0].BytesRecv), AttributeNetworkReceive...)
-		})
+			opt = metric.WithAttributeSet(AttributeNetworkTransmit)
+			o.ObserveInt64(networkIOUsage, int64(ioStats[0].BytesSent), opt)
+			opt = metric.WithAttributeSet(AttributeNetworkReceive)
+			o.ObserveInt64(networkIOUsage, int64(ioStats[0].BytesRecv), opt)
+
+			return nil
+		},
+		processCPUTime,
+		hostCPUTime,
+		hostMemoryUsage,
+		hostMemoryUtilization,
+		networkIOUsage,
+	)
 
 	if err != nil {
 		return err

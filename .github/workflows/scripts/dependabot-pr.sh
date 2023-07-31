@@ -14,14 +14,14 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-git config user.name $GITHUB_ACTOR
-git config user.email $GITHUB_ACTOR@users.noreply.github.com
+git config user.name opentelemetrybot
+git config user.email 107717825+opentelemetrybot@users.noreply.github.com
 
-PR_NAME=dependabot-prs/`date +'%Y-%m-%dT%H%M%S'`
-git checkout -b $PR_NAME
+BRANCH=dependabot/dependabot-prs/`date +'%Y-%m-%dT%H%M%S'`
+git checkout -b $BRANCH
 
 IFS=$'\n'
-requests=($( gh pr list --search "author:app/dependabot" --json title --jq '.[].title' ))
+requests=($( gh pr list --search "author:app/dependabot" -l "go" --json title --jq '.[].title' ))
 message=""
 dirs=(`find . -type f -name "go.mod" -exec dirname {} \; | sort | egrep  '^./'`)
 
@@ -60,6 +60,6 @@ git add go.sum go.mod
 git add "**/go.sum" "**/go.mod"
 git commit -m "dependabot updates `date`
 $message"
-git push origin $PR_NAME
+git push origin $BRANCH
 
-gh pr create --title "dependabot updates `date`" --body "$message" -l "Skip Changelog"
+gh pr create --title "[chore] dependabot updates `date`" --body "$message"

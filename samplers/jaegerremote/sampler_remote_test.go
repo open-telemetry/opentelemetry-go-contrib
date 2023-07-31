@@ -20,9 +20,11 @@ import (
 	"encoding/binary"
 	"errors"
 	"fmt"
+	"sync"
 	"testing"
 	"time"
 
+	"github.com/go-logr/logr/testr"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 
@@ -32,7 +34,7 @@ import (
 	oteltrace "go.opentelemetry.io/otel/trace"
 )
 
-func TestRemotelyControlledSampler_updateRace(t *testing.T) {
+func TestRemotelyControlledSampler_updateConcurrentSafe(t *testing.T) {
 	initSampler := newProbabilisticSampler(0.123)
 	fetcher := &testSamplingStrategyFetcher{response: []byte("probabilistic")}
 	parser := new(testSamplingStrategyParser)
@@ -49,31 +51,25 @@ func TestRemotelyControlledSampler_updateRace(t *testing.T) {
 		withUpdaters(updaters...),
 	)
 
+	defer sampler.Close()
+
 	s := makeSamplingParameters(1, "test")
-	end := make(chan struct{})
 
-	accessor := func(f func()) {
-		for {
-			select {
-			case <-end:
-				return
-			default:
-				f()
-			}
-		}
-	}
+	var wg sync.WaitGroup
 
-	go accessor(func() {
+	wg.Add(1)
+	go func() {
+		defer wg.Done()
 		sampler.UpdateSampler()
-	})
+	}()
 
-	go accessor(func() {
+	wg.Add(1)
+	go func() {
+		defer wg.Done()
 		sampler.ShouldSample(s)
-	})
+	}()
 
-	time.Sleep(100 * time.Millisecond)
-	close(end)
-	sampler.Close()
+	wg.Wait()
 }
 
 type testSamplingStrategyFetcher struct {
@@ -112,6 +108,7 @@ func TestRemoteSamplerOptions(t *testing.T) {
 	initSampler := newProbabilisticSampler(0.123)
 	fetcher := new(fakeSamplingFetcher)
 	parser := new(samplingStrategyParserImpl)
+	logger := testr.New(t)
 	updaters := []samplerUpdater{new(probabilisticSamplerUpdater)}
 	sampler := New(
 		"test",
@@ -123,6 +120,7 @@ func TestRemoteSamplerOptions(t *testing.T) {
 		withSamplingStrategyFetcher(fetcher),
 		withSamplingStrategyParser(parser),
 		withUpdaters(updaters...),
+		WithLogger(logger),
 	)
 	assert.Equal(t, 42, sampler.posParams.MaxOperations)
 	assert.True(t, sampler.posParams.OperationNameLateBinding)
@@ -132,6 +130,7 @@ func TestRemoteSamplerOptions(t *testing.T) {
 	assert.Same(t, fetcher, sampler.samplingFetcher)
 	assert.Same(t, parser, sampler.samplingParser)
 	assert.EqualValues(t, sampler.updaters[0], &perOperationSamplerUpdater{MaxOperations: 42, OperationNameLateBinding: true})
+	assert.Equal(t, logger, sampler.logger)
 }
 
 func TestRemoteSamplerOptionsDefaults(t *testing.T) {
@@ -196,11 +195,15 @@ func TestRemotelyControlledSampler(t *testing.T) {
 	ticker := &time.Ticker{C: c}
 	// reset closed so the next call to Close() correctly stops the polling goroutine
 	remoteSampler.closed = 0
-	go remoteSampler.pollControllerWithTicker(ticker)
+	done := make(chan struct{})
+	go func() {
+		defer close(done)
+		remoteSampler.pollControllerWithTicker(ticker)
+	}()
 
 	c <- time.Now() // force update based on timer
-	time.Sleep(10 * time.Millisecond)
 	remoteSampler.Close()
+	<-done
 
 	s2, ok := remoteSampler.sampler.(*probabilisticSampler)
 	assert.True(t, ok)
@@ -530,4 +533,56 @@ func getSamplingStrategyResponse(strategyType jaeger_api_v2.SamplingStrategyType
 		}
 	}
 	return nil
+}
+
+func TestSamplingStrategyParserImpl(t *testing.T) {
+	assertProbabilistic := func(t *testing.T, s *jaeger_api_v2.SamplingStrategyResponse) {
+		require.NotNil(t, s.GetProbabilisticSampling(), "output: %+v", s)
+		require.EqualValues(t, 0.42, s.GetProbabilisticSampling().GetSamplingRate(), "output: %+v", s)
+	}
+	assertRateLimiting := func(t *testing.T, s *jaeger_api_v2.SamplingStrategyResponse) {
+		require.NotNil(t, s.GetRateLimitingSampling(), "output: %+v", s)
+		require.EqualValues(t, 42, s.GetRateLimitingSampling().GetMaxTracesPerSecond(), "output: %+v", s)
+	}
+	tests := []struct {
+		name   string
+		json   string
+		assert func(t *testing.T, s *jaeger_api_v2.SamplingStrategyResponse)
+	}{
+		{
+			name:   "official JSON probabilistic",
+			json:   `{"strategyType":"PROBABILISTIC","probabilisticSampling":{"samplingRate":0.42}}`,
+			assert: assertProbabilistic,
+		},
+		{
+			name:   "official JSON rate limiting",
+			json:   `{"strategyType":"RATE_LIMITING","rateLimitingSampling":{"maxTracesPerSecond":42}}`,
+			assert: assertRateLimiting,
+		},
+		{
+			name:   "legacy JSON probabilistic",
+			json:   `{"strategyType":0,"probabilisticSampling":{"samplingRate":0.42}}`,
+			assert: assertProbabilistic,
+		},
+		{
+			name:   "legacy JSON rate limiting",
+			json:   `{"strategyType":1,"rateLimitingSampling":{"maxTracesPerSecond":42}}`,
+			assert: assertRateLimiting,
+		},
+	}
+	for _, test := range tests {
+		t.Run(test.name, func(t *testing.T) {
+			val, err := new(samplingStrategyParserImpl).Parse([]byte(test.json))
+			require.NoError(t, err)
+			s := val.(*jaeger_api_v2.SamplingStrategyResponse)
+			test.assert(t, s)
+		})
+	}
+}
+
+func TestSamplingStrategyParserImpl_Error(t *testing.T) {
+	json := `{"strategyType":"foo_bar","probabilisticSampling":{"samplingRate":0.42}}`
+	val, err := new(samplingStrategyParserImpl).Parse([]byte(json))
+	require.Error(t, err, "output: %+v", val)
+	require.Contains(t, err.Error(), `unknown value "foo_bar"`)
 }

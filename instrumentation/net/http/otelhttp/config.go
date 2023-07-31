@@ -22,7 +22,6 @@ import (
 	"go.opentelemetry.io/otel"
 	"go.opentelemetry.io/otel/attribute"
 	"go.opentelemetry.io/otel/metric"
-	"go.opentelemetry.io/otel/metric/global"
 	"go.opentelemetry.io/otel/propagation"
 	"go.opentelemetry.io/otel/trace"
 )
@@ -34,6 +33,7 @@ const (
 // config represents the configuration options available for the http.Handler
 // and http.Transport types.
 type config struct {
+	ServerName         string
 	Tracer             trace.Tracer
 	Meter              metric.Meter
 	Propagators        propagation.TextMapPropagator
@@ -66,7 +66,7 @@ func (o optionFunc) apply(c *config) {
 func newConfig(opts ...Option) *config {
 	c := &config{
 		Propagators:   otel.GetTextMapPropagator(),
-		MeterProvider: global.MeterProvider(),
+		MeterProvider: otel.GetMeterProvider(),
 	}
 	for _, opt := range opts {
 		opt.apply(c)
@@ -79,7 +79,7 @@ func newConfig(opts ...Option) *config {
 
 	c.Meter = c.MeterProvider.Meter(
 		instrumentationName,
-		metric.WithInstrumentationVersion(SemVersion()),
+		metric.WithInstrumentationVersion(Version()),
 	)
 
 	return c
@@ -215,5 +215,13 @@ func WithSpanNameFormatter(f func(operation string, r *http.Request) string) Opt
 func WithClientTrace(f func(context.Context) *httptrace.ClientTrace) Option {
 	return optionFunc(func(c *config) {
 		c.ClientTrace = f
+	})
+}
+
+// WithServerName returns an Option that sets the name of the (virtual) server
+// handling requests.
+func WithServerName(server string) Option {
+	return optionFunc(func(c *config) {
+		c.ServerName = server
 	})
 }

@@ -26,7 +26,7 @@ import (
 	"go.opentelemetry.io/otel/attribute"
 	"go.opentelemetry.io/otel/codes"
 	"go.opentelemetry.io/otel/propagation"
-	semconv "go.opentelemetry.io/otel/semconv/v1.12.0"
+	semconv "go.opentelemetry.io/otel/semconv/v1.17.0"
 	"go.opentelemetry.io/otel/trace"
 )
 
@@ -60,17 +60,20 @@ func (m otelMiddlewares) initializeMiddlewareAfter(stack *middleware.Stack) erro
 		ctx context.Context, in middleware.InitializeInput, next middleware.InitializeHandler) (
 		out middleware.InitializeOutput, metadata middleware.Metadata, err error) {
 		serviceID := v2Middleware.GetServiceID(ctx)
+		operation := v2Middleware.GetOperationName(ctx)
+		region := v2Middleware.GetRegion(ctx)
 
 		attributes := []attribute.KeyValue{
+			SystemAttr(),
 			ServiceAttr(serviceID),
-			RegionAttr(v2Middleware.GetRegion(ctx)),
-			OperationAttr(v2Middleware.GetOperationName(ctx)),
+			RegionAttr(region),
+			OperationAttr(operation),
 		}
 		for _, setter := range m.attributeSetter {
 			attributes = append(attributes, setter(ctx, in)...)
 		}
 
-		ctx, span := m.tracer.Start(ctx, serviceID,
+		ctx, span := m.tracer.Start(ctx, spanName(serviceID, operation),
 			trace.WithTimestamp(ctx.Value(spanTimestampKey{}).(time.Time)),
 			trace.WithSpanKind(trace.SpanKindClient),
 			trace.WithAttributes(attributes...),
@@ -100,7 +103,7 @@ func (m otelMiddlewares) deserializeMiddleware(stack *middleware.Stack) error {
 		}
 
 		span := trace.SpanFromContext(ctx)
-		span.SetAttributes(semconv.HTTPStatusCodeKey.Int(resp.StatusCode))
+		span.SetAttributes(semconv.HTTPStatusCode(resp.StatusCode))
 
 		requestID, ok := v2Middleware.GetRequestIDMetadata(metadata)
 		if ok {
@@ -128,6 +131,14 @@ func (m otelMiddlewares) finalizeMiddleware(stack *middleware.Stack) error {
 		middleware.Before)
 }
 
+func spanName(serviceID, operation string) string {
+	spanName := serviceID
+	if operation != "" {
+		spanName += "." + operation
+	}
+	return spanName
+}
+
 // AppendMiddlewares attaches OTel middlewares to the AWS Go SDK V2 for instrumentation.
 // OTel middlewares can be appended to either all aws clients or a specific operation.
 // Please see more details in https://aws.github.io/aws-sdk-go-v2/docs/middleware/
@@ -145,7 +156,7 @@ func AppendMiddlewares(apiOptions *[]func(*middleware.Stack) error, opts ...Opti
 	}
 
 	m := otelMiddlewares{tracer: cfg.TracerProvider.Tracer(tracerName,
-		trace.WithInstrumentationVersion(SemVersion())),
+		trace.WithInstrumentationVersion(Version())),
 		propagator:      cfg.TextMapPropagator,
 		attributeSetter: cfg.AttributeSetter}
 	*apiOptions = append(*apiOptions, m.initializeMiddlewareBefore, m.initializeMiddlewareAfter, m.finalizeMiddleware, m.deserializeMiddleware)

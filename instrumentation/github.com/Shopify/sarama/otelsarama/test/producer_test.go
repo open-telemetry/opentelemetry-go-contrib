@@ -32,7 +32,7 @@ import (
 	"go.opentelemetry.io/otel/propagation"
 	"go.opentelemetry.io/otel/sdk/trace"
 	"go.opentelemetry.io/otel/sdk/trace/tracetest"
-	semconv "go.opentelemetry.io/otel/semconv/v1.12.0"
+	semconv "go.opentelemetry.io/otel/semconv/v1.17.0"
 	oteltrace "go.opentelemetry.io/otel/trace"
 )
 
@@ -64,44 +64,44 @@ func TestWrapSyncProducer(t *testing.T) {
 	}{
 		{
 			attributeList: []attribute.KeyValue{
-				semconv.MessagingSystemKey.String("kafka"),
+				semconv.MessagingSystem("kafka"),
 				semconv.MessagingDestinationKindTopic,
-				semconv.MessagingDestinationKey.String(topic),
-				semconv.MessagingMessageIDKey.String("1"),
-				semconv.MessagingKafkaPartitionKey.Int64(0),
+				semconv.MessagingDestinationName(topic),
+				semconv.MessagingMessageID("1"),
+				semconv.MessagingKafkaDestinationPartition(0),
 			},
 			parentSpanID: oteltrace.SpanContextFromContext(ctx).SpanID(),
 			kind:         oteltrace.SpanKindProducer,
 		},
 		{
 			attributeList: []attribute.KeyValue{
-				semconv.MessagingSystemKey.String("kafka"),
+				semconv.MessagingSystem("kafka"),
 				semconv.MessagingDestinationKindTopic,
-				semconv.MessagingDestinationKey.String(topic),
-				semconv.MessagingMessageIDKey.String("2"),
-				semconv.MessagingKafkaPartitionKey.Int64(0),
+				semconv.MessagingDestinationName(topic),
+				semconv.MessagingMessageID("2"),
+				semconv.MessagingKafkaDestinationPartition(0),
 			},
 			kind: oteltrace.SpanKindProducer,
 		},
 		{
 			attributeList: []attribute.KeyValue{
-				semconv.MessagingSystemKey.String("kafka"),
+				semconv.MessagingSystem("kafka"),
 				semconv.MessagingDestinationKindTopic,
-				semconv.MessagingDestinationKey.String(topic),
+				semconv.MessagingDestinationName(topic),
 				// TODO: The mock sync producer of sarama does not handle the offset while sending messages
 				// https://github.com/Shopify/sarama/pull/1747
-				//semconv.MessagingMessageIDKey.String("3"),
-				semconv.MessagingKafkaPartitionKey.Int64(12),
+				//semconv.MessagingMessageID("3"),
+				semconv.MessagingKafkaDestinationPartition(12),
 			},
 			kind: oteltrace.SpanKindProducer,
 		},
 		{
 			attributeList: []attribute.KeyValue{
-				semconv.MessagingSystemKey.String("kafka"),
+				semconv.MessagingSystem("kafka"),
 				semconv.MessagingDestinationKindTopic,
-				semconv.MessagingDestinationKey.String(topic),
-				//semconv.MessagingMessageIDKey.String("4"),
-				semconv.MessagingKafkaPartitionKey.Int64(25),
+				semconv.MessagingDestinationName(topic),
+				//semconv.MessagingMessageID("4"),
+				semconv.MessagingKafkaDestinationPartition(25),
 			},
 			kind: oteltrace.SpanKindProducer,
 		},
@@ -132,7 +132,7 @@ func TestWrapSyncProducer(t *testing.T) {
 		// Check span
 		assert.True(t, span.SpanContext().IsValid())
 		assert.Equal(t, expected.parentSpanID, span.Parent().SpanID())
-		assert.Equal(t, fmt.Sprintf("%s send", topic), span.Name())
+		assert.Equal(t, fmt.Sprintf("%s publish", topic), span.Name())
 		assert.Equal(t, expected.kind, span.SpanKind())
 		for _, k := range expected.attributeList {
 			assert.Contains(t, span.Attributes(), k)
@@ -186,17 +186,17 @@ func TestWrapAsyncProducer(t *testing.T) {
 		}{
 			{
 				attributeList: []attribute.KeyValue{
-					semconv.MessagingSystemKey.String("kafka"),
+					semconv.MessagingSystem("kafka"),
 					semconv.MessagingDestinationKindTopic,
-					semconv.MessagingDestinationKey.String(topic),
+					semconv.MessagingDestinationName(topic),
 				},
 				kind: oteltrace.SpanKindProducer,
 			},
 			{
 				attributeList: []attribute.KeyValue{
-					semconv.MessagingSystemKey.String("kafka"),
+					semconv.MessagingSystem("kafka"),
 					semconv.MessagingDestinationKindTopic,
-					semconv.MessagingDestinationKey.String(topic),
+					semconv.MessagingDestinationName(topic),
 				},
 				kind: oteltrace.SpanKindProducer,
 			},
@@ -207,7 +207,7 @@ func TestWrapAsyncProducer(t *testing.T) {
 
 			// Check span
 			assert.True(t, span.SpanContext().IsValid())
-			assert.Equal(t, fmt.Sprintf("%s send", topic), span.Name())
+			assert.Equal(t, fmt.Sprintf("%s publish", topic), span.Name())
 			assert.Equal(t, expected.kind, span.SpanKind())
 			for _, k := range expected.attributeList {
 				assert.Contains(t, span.Attributes(), k)
@@ -254,21 +254,21 @@ func TestWrapAsyncProducer(t *testing.T) {
 		}{
 			{
 				attributeList: []attribute.KeyValue{
-					semconv.MessagingSystemKey.String("kafka"),
+					semconv.MessagingSystem("kafka"),
 					semconv.MessagingDestinationKindTopic,
-					semconv.MessagingDestinationKey.String(topic),
-					semconv.MessagingMessageIDKey.String("1"),
-					semconv.MessagingKafkaPartitionKey.Int64(9),
+					semconv.MessagingDestinationName(topic),
+					semconv.MessagingMessageID("1"),
+					semconv.MessagingKafkaDestinationPartition(9),
 				},
 				kind: oteltrace.SpanKindProducer,
 			},
 			{
 				attributeList: []attribute.KeyValue{
-					semconv.MessagingSystemKey.String("kafka"),
+					semconv.MessagingSystem("kafka"),
 					semconv.MessagingDestinationKindTopic,
-					semconv.MessagingDestinationKey.String(topic),
-					semconv.MessagingMessageIDKey.String("2"),
-					semconv.MessagingKafkaPartitionKey.Int64(31),
+					semconv.MessagingDestinationName(topic),
+					semconv.MessagingMessageID("2"),
+					semconv.MessagingKafkaDestinationPartition(31),
 				},
 				kind: oteltrace.SpanKindProducer,
 			},
@@ -279,7 +279,7 @@ func TestWrapAsyncProducer(t *testing.T) {
 
 			// Check span
 			assert.True(t, span.SpanContext().IsValid())
-			assert.Equal(t, fmt.Sprintf("%s send", topic), span.Name())
+			assert.Equal(t, fmt.Sprintf("%s publish", topic), span.Name())
 			assert.Equal(t, expected.kind, span.SpanKind())
 			for _, k := range expected.attributeList {
 				assert.Contains(t, span.Attributes(), k)
