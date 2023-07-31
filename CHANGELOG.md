@@ -13,7 +13,7 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 - Add `NewMiddleware` function in `go.opentelemetry.io/contrib/instrumentation/net/http/otelhttp`. (#2964)
 - Add the new `go.opentelemetry.io/contrib/instrgen` package to provide auto-generated source code instrumentation. (#3068, #3108)
 - The `go.opentelemetry.io/contrib/exporters/autoexport` package to provide configuration of trace exporters with useful defaults and envar support. (#2753, #4100)
-- Add metrics to HTTP transport in `go.opentelemetry.io/contrib/instrumentation/net/http/otelhttp`. (#3769)
+- Add metrics to `NewTransport` in `go.opentelemetry.io/contrib/instrumentation/net/http/otelhttp`. (#3769)
 
 ### Fixed
 
