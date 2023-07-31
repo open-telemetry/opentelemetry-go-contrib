@@ -3,8 +3,8 @@ module go.opentelemetry.io/contrib/instrumentation/github.com/gocql/gocql/otelgo
 go 1.19
 
 require (
-	github.com/gocql/gocql v1.4.0
-	github.com/stretchr/testify v1.8.3
+	github.com/gocql/gocql v1.5.2
+	github.com/stretchr/testify v1.8.4
 	go.opentelemetry.io/otel v1.16.0
 	go.opentelemetry.io/otel/metric v1.16.0
 	go.opentelemetry.io/otel/trace v1.16.0

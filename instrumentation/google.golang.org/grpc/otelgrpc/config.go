@@ -42,6 +42,9 @@ type config struct {
 	TracerProvider trace.TracerProvider
 	MeterProvider  metric.MeterProvider
 
+	ReceivedEvent bool
+	SentEvent     bool
+
 	meter             metric.Meter
 	rpcServerDuration metric.Int64Histogram
 }
@@ -130,4 +133,39 @@ func (o meterProviderOption) apply(c *config) {
 // creating a Meter. If this option is not provide the global MeterProvider will be used.
 func WithMeterProvider(mp metric.MeterProvider) Option {
 	return meterProviderOption{mp: mp}
+}
+
+// Event type that can be recorded, see WithMessageEvents.
+type Event int
+
+// Different types of events that can be recorded, see WithMessageEvents.
+const (
+	ReceivedEvents Event = iota
+	SentEvents
+)
+
+type messageEventsProviderOption struct {
+	events []Event
+}
+
+func (m messageEventsProviderOption) apply(c *config) {
+	for _, e := range m.events {
+		switch e {
+		case ReceivedEvents:
+			c.ReceivedEvent = true
+		case SentEvents:
+			c.SentEvent = true
+		}
+	}
+}
+
+// WithMessageEvents configures the Handler to record the specified events
+// (span.AddEvent) on spans. By default only summary attributes are added at the
+// end of the request.
+//
+// Valid events are:
+//   - ReceivedEvents: Record the number of bytes read after every gRPC read operation.
+//   - SentEvents: Record the number of bytes written after every gRPC write operation.
+func WithMessageEvents(events ...Event) Option {
+	return messageEventsProviderOption{events: events}
 }

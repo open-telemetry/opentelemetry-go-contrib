@@ -42,12 +42,10 @@ The following instrumentation packages are provided for popular Go packages and 
 
 | Instrumentation Package | Metrics | Traces |
 | :---------------------: | :-----: | :----: |
-| [github.com/astaxie/beego](./github.com/astaxie/beego/otelbeego) | ✓ | ✓ |
 | [github.com/aws/aws-sdk-go-v2](./github.com/aws/aws-sdk-go-v2/otelaws)|  | ✓ |
 | [github.com/bradfitz/gomemcache](./github.com/bradfitz/gomemcache/memcache/otelmemcache) |  | ✓ |
 | [github.com/emicklei/go-restful](./github.com/emicklei/go-restful/otelrestful) |  | ✓ |
 | [github.com/gin-gonic/gin](./github.com/gin-gonic/gin/otelgin) |  | ✓ |
-| [github.com/go-kit/kit](./github.com/go-kit/kit/otelkit) |  | ✓ |
 | [github.com/gocql/gocql](./github.com/gocql/gocql/otelgocql) | ✓ | ✓ |
 | [github.com/gorilla/mux](./github.com/gorilla/mux/otelmux) |  | ✓ |
 | [github.com/labstack/echo](./github.com/labstack/echo/otelecho) |  | ✓ |

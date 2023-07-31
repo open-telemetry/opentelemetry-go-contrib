@@ -90,6 +90,11 @@ go-generate/%: | $(STRINGER) $(GOTMPL)
 vanity-import-fix: | $(PORTO)
 	@$(PORTO) --include-internal -w .
 
+# Generate go.work file for local development.
+.PHONY: go-work
+go-work: | $(CROSSLINK)
+	$(CROSSLINK) work --root=$(shell pwd)
+
 # Build
 
 .PHONY: build
@@ -140,7 +145,7 @@ misspell: | $(MISSPELL)
 
 .PHONY: vanity-import-check
 vanity-import-check: | $(PORTO)
-	@$(PORTO) --include-internal -l . || echo "(run: make vanity-import-fix)"
+	@$(PORTO) --include-internal -l . || ( echo "(run: make vanity-import-fix)"; exit 1 )
 
 .PHONY: lint
 lint: go-mod-tidy golangci-lint misspell
@@ -181,7 +186,7 @@ registry-links-check:
 DEPENDABOT_CONFIG = .github/dependabot.yml
 .PHONY: dependabot-check
 dependabot-check: | $(DBOTCONF)
-	@$(DBOTCONF) verify $(DEPENDABOT_CONFIG) || echo "(run: make dependabot-generate)"
+	@$(DBOTCONF) verify $(DEPENDABOT_CONFIG) || ( echo "(run: make dependabot-generate)"; exit 1 )
 
 .PHONY: dependabot-generate
 dependabot-generate: | $(DBOTCONF)

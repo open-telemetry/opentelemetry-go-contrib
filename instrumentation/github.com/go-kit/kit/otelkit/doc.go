@@ -19,4 +19,6 @@
 // For instrumenting the transport layer,
 // look at the instrumentation libraries provided by go.opentelemetry.io/contrib.
 // Learn more about go-kit's layers at https://gokit.io/faq/#architecture-and-design.
+//
+// Deprecated: This module is no longer supported.
 package otelkit // import "go.opentelemetry.io/contrib/instrumentation/github.com/go-kit/kit/otelkit"
