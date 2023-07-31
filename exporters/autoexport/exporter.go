@@ -90,8 +90,8 @@ func NewSpanExporter(ctx context.Context, opts ...Option) (trace.SpanExporter, e
 // environment variable.
 // nil is returned if no exporter is defined for the environment variable.
 func makeExporterFromEnv(ctx context.Context) (trace.SpanExporter, error) {
-	expType, defined := os.LookupEnv(otelTracesExportersEnvKey)
-	if !defined {
+	expType := os.Getenv(otelTracesExportersEnvKey)
+	if expType == "" {
 		return nil, nil
 	}
 	return spanExporter(ctx, expType)
