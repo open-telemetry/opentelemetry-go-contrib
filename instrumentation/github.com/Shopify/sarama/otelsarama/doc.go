@@ -20,4 +20,7 @@
 // (https://archive.apache.org/dist/kafka/0.11.0.0/RELEASE_NOTES.html)
 //
 // Based on: https://github.com/DataDog/dd-trace-go/tree/v1/contrib/Shopify/sarama
+//
+// Deprecated: This module is no longer supported.
+// github.com/Shopify/sarama moved to github.com/IBM/sarama.
 package otelsarama // import "go.opentelemetry.io/contrib/instrumentation/github.com/Shopify/sarama/otelsarama"
