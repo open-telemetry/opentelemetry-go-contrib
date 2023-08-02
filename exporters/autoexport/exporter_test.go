@@ -72,6 +72,14 @@ func TestEnvExporterOTLPOverGRPC(t *testing.T) {
 	assertOTLPGRPCExporter(t, exporter)
 }
 
+func TestEnvExporterOTLPOverGRPCOnlyProtocol(t *testing.T) {
+	t.Setenv("OTEL_EXPORTER_OTLP_PROTOCOL", "grpc")
+
+	exporter, err := NewSpanExporter(context.Background())
+	assert.NoError(t, err)
+	assertOTLPGRPCExporter(t, exporter)
+}
+
 func TestEnvExporterOTLPInvalidProtocol(t *testing.T) {
 	t.Setenv("OTEL_TRACES_EXPORTER", "otlp")
 	t.Setenv("OTEL_EXPORTER_OTLP_PROTOCOL", "invalid")

@@ -66,9 +66,56 @@ func WithFallbackSpanExporter(exporter trace.SpanExporter) Option {
 	})
 }
 
-// NewSpanExporter returns a configured SpanExporter defined using the environment
-// variable OTEL_TRACES_EXPORTER, the configured fallback exporter via options or
-// a default OTLP exporter (in this order).
+// NewSpanExporter returns a configured [go.opentelemetry.io/otel/sdk/trace.SpanExporter]
+// defined using the environment variables described below.
+//
+// OTEL_TRACES_EXPORTER defines the traces exporter; supported values:
+//   - "none" - "no operation" exporter
+//   - "otlp" (default) - OTLP exporter
+//
+// OTEL_EXPORTER_OTLP_PROTOCOL defines OTLP exporter's transport protocol;
+// supported values:
+//   - "grpc" - protobuf-encoded data using gRPC wire format over HTTP/2 connection
+//   - "http/protobuf" (default) -  protobuf-encoded data over HTTP connection
+//
+// OTEL_EXPORTER_OTLP_ENDPOINT, OTEL_EXPORTER_OTLP_TRACES_ENDPOINT define
+// the target URL to which the OTLP exporter is going to send telemetry.
+// For OTEL_EXPORTER_OTLP_ENDPOINT and http/protobuf protocol,
+// "v1/traces" is appended to the provided value.
+// Default value for grpc protocol: "http://localhost:4317" .
+// Default value for http/protobuf protocol: "http://localhost:4318[/v1/traces]".
+//
+// OTEL_EXPORTER_OTLP_CERTIFICATE, OTEL_EXPORTER_OTLP_TRACES_CERTIFICATE define
+// a filepath to a TLS certificate pool to use by OTLP exporter when verifying
+// a server's TLS credentials. If it exists, it is parsed as a [crypto/x509.CertPool].
+// Default value: "".
+//
+// OTEL_EXPORTER_OTLP_HEADERS, OTEL_EXPORTER_OTLP_TRACES_HEADERS define
+// a comma-separated list of additional HTTP headers sent by OTLP exporter,
+// for example: Authorization=secret,X-Key=Value.
+// Default value: "".
+//
+// OTEL_EXPORTER_OTLP_COMPRESSION, OTEL_EXPORTER_OTLP_TRACES_COMPRESSION define
+// the compression used by OTLP exporter; supported values:
+//   - "gzip"
+//   - "" (default).
+//
+// OTEL_EXPORTER_OTLP_TIMEOUT, OTEL_EXPORTER_OTLP_TRACES_TIMEOUT define
+// the maximum time the OTLP exporter will wait for each batch export.
+// The value is interpreted as number of milliseconds.
+// Default value: "10000" (10 seconds).
+//
+// OTEL_EXPORTER_OTLP_TRACES_* environment variables have precedence
+// over OTEL_EXPORTER_OTLP_* environment variables.
+//
+// An error is returned if an environment value is set to an unhandled value.
+//
+// Use [RegisterSpanExporter] to handle more values of OTEL_TRACES_EXPORTER.
+//
+// Use [WithFallbackSpanExporter] option to change the returned exporter
+// when OTEL_TRACES_EXPORTER is unset or empty.
+//
+// Use [IsNone] to check if the retured exporter is a "no operation" exporter.
 func NewSpanExporter(ctx context.Context, opts ...Option) (trace.SpanExporter, error) {
 	// prefer exporter configured via environment variables over exporter
 	// passed in via exporter parameter
