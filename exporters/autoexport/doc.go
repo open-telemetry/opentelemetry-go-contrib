@@ -13,6 +13,6 @@
 // limitations under the License.
 
 // Package autoexport provides OpenTelemetry exporter factory functions
-// with defaults and environment variables support as defined by the
+// with defaults and environment variable support as defined by the
 // OpenTelemetry specification.
 package autoexport // import "go.opentelemetry.io/contrib/exporters/autoexport"
