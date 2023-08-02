@@ -28,8 +28,7 @@ import (
 func TestOTLPExporterReturnedWhenNoEnvOrFallbackExporterConfigured(t *testing.T) {
 	exporter, err := NewSpanExporter(context.Background())
 	assert.NoError(t, err)
-	assert.NotNil(t, exporter)
-	assert.IsType(t, &otlptrace.Exporter{}, exporter)
+	assertOTLPHTTPExporter(t, exporter)
 }
 
 func TestFallbackExporterReturnedWhenNoEnvExporterConfigured(t *testing.T) {
@@ -40,6 +39,7 @@ func TestFallbackExporterReturnedWhenNoEnvExporterConfigured(t *testing.T) {
 	)
 	assert.NoError(t, err)
 	assert.Equal(t, testExporter, exporter)
+	assert.False(t, IsNone(exporter))
 }
 
 func TestEnvExporterIsPreferredOverFallbackExporter(t *testing.T) {
@@ -81,6 +81,14 @@ func TestEnvExporterOTLPInvalidProtocol(t *testing.T) {
 	assert.Nil(t, exporter)
 }
 
+func TestEnvExporterNone(t *testing.T) {
+	t.Setenv("OTEL_TRACES_EXPORTER", "none")
+
+	exporter, err := NewSpanExporter(context.Background())
+	assert.NoError(t, err)
+	assert.True(t, IsNone(exporter))
+}
+
 func assertOTLPHTTPExporter(t *testing.T, got trace.SpanExporter) {
 	t.Helper()
 
@@ -91,6 +99,8 @@ func assertOTLPHTTPExporter(t *testing.T, got trace.SpanExporter) {
 	// Implementation detail hack. This may break when bumping OTLP exporter modules as it uses unexported API.
 	clientType := reflect.Indirect(reflect.ValueOf(got)).FieldByName("client").Elem().Type().String()
 	assert.Equal(t, "*otlptracehttp.client", clientType)
+
+	assert.False(t, IsNone(got))
 }
 
 func assertOTLPGRPCExporter(t *testing.T, got trace.SpanExporter) {
@@ -103,6 +113,8 @@ func assertOTLPGRPCExporter(t *testing.T, got trace.SpanExporter) {
 	// Implementation detail hack. This may break when bumping OTLP exporter modules as it uses unexported API.
 	clientType := reflect.Indirect(reflect.ValueOf(got)).FieldByName("client").Elem().Type().String()
 	assert.Equal(t, "*otlptracegrpc.client", clientType)
+
+	assert.False(t, IsNone(got))
 }
 
 type testExporter struct{}
