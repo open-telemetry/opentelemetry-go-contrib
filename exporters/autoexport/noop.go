@@ -35,9 +35,9 @@ func (e noop) Shutdown(ctx context.Context) error {
 	return nil
 }
 
-// IsNone returns true for the exporter returned by [NewSpanExporter]
+// IsNoneSpanExporter returns true for the exporter returned by [NewSpanExporter]
 // when OTEL_TRACES_EXPORTER environment variable is set to "none".
-func IsNone(e trace.SpanExporter) bool {
+func IsNoneSpanExporter(e trace.SpanExporter) bool {
 	_, ok := e.(noop)
 	return ok
 }

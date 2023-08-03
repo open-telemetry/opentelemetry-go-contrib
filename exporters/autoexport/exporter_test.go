@@ -39,7 +39,7 @@ func TestFallbackExporterReturnedWhenNoEnvExporterConfigured(t *testing.T) {
 	)
 	assert.NoError(t, err)
 	assert.Equal(t, testExporter, exporter)
-	assert.False(t, IsNone(exporter))
+	assert.False(t, IsNoneSpanExporter(exporter))
 }
 
 func TestEnvExporterIsPreferredOverFallbackExporter(t *testing.T) {
@@ -94,7 +94,7 @@ func TestEnvExporterNone(t *testing.T) {
 
 	exporter, err := NewSpanExporter(context.Background())
 	assert.NoError(t, err)
-	assert.True(t, IsNone(exporter))
+	assert.True(t, IsNoneSpanExporter(exporter))
 }
 
 func assertOTLPHTTPExporter(t *testing.T, got trace.SpanExporter) {
@@ -108,7 +108,7 @@ func assertOTLPHTTPExporter(t *testing.T, got trace.SpanExporter) {
 	clientType := reflect.Indirect(reflect.ValueOf(got)).FieldByName("client").Elem().Type().String()
 	assert.Equal(t, "*otlptracehttp.client", clientType)
 
-	assert.False(t, IsNone(got))
+	assert.False(t, IsNoneSpanExporter(got))
 }
 
 func assertOTLPGRPCExporter(t *testing.T, got trace.SpanExporter) {
@@ -122,7 +122,7 @@ func assertOTLPGRPCExporter(t *testing.T, got trace.SpanExporter) {
 	clientType := reflect.Indirect(reflect.ValueOf(got)).FieldByName("client").Elem().Type().String()
 	assert.Equal(t, "*otlptracegrpc.client", clientType)
 
-	assert.False(t, IsNone(got))
+	assert.False(t, IsNoneSpanExporter(got))
 }
 
 type testExporter struct{}
