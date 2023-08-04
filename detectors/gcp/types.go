@@ -37,4 +37,6 @@ type gcpDetector interface {
 	GCEHostType() (string, error)
 	GCEHostID() (string, error)
 	GCEHostName() (string, error)
+	GCEInstanceHostname() (string, error)
+	GCEInstanceName() (string, error)
 }
