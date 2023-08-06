@@ -12,8 +12,9 @@ github.com/aws/aws-sdk-go-v2/service/internal/endpoint-discovery v1.7.30 h1:PCFI
 github.com/aws/aws-sdk-go-v2/service/internal/endpoint-discovery v1.7.30/go.mod h1:FkGNuhZzhDjehwqKF7/fZjvPvcvEWpWT4yxUlgv9sso=
 github.com/aws/aws-sdk-go-v2/service/sqs v1.23.4 h1:TPMp4uoVml+k0rNwo8SoZdGT7+F6x0AfIKvz7OVK9kA=
 github.com/aws/aws-sdk-go-v2/service/sqs v1.23.4/go.mod h1:ADgofuTwePPCcluD9j2PTs4DPseqBTILSG8//8Fttno=
-github.com/aws/smithy-go v1.13.5 h1:hgz0X/DX0dGqTYpGALqXJoRKRj5oQ7150i5FdTePzO8=
 github.com/aws/smithy-go v1.13.5/go.mod h1:Tg+OJXh4MB2R/uN61Ko2f6hTZwB/ZYGOtib8J3gBHzA=
+github.com/aws/smithy-go v1.14.0 h1:+X90sB94fizKjDmwb4vyl2cTTPXTE5E2G/1mjByb0io=
+github.com/aws/smithy-go v1.14.0/go.mod h1:Tg+OJXh4MB2R/uN61Ko2f6hTZwB/ZYGOtib8J3gBHzA=
 github.com/davecgh/go-spew v1.1.0/go.mod h1:J7Y8YcW2NihsgmVo/mv3lAwl/skON4iLHjSsI+c5H38=
 github.com/davecgh/go-spew v1.1.1 h1:vj9j/u1bqnvCEfJOwUhtlOARqs3+rkHYY13jYWTU97c=
 github.com/davecgh/go-spew v1.1.1/go.mod h1:J7Y8YcW2NihsgmVo/mv3lAwl/skON4iLHjSsI+c5H38=
