@@ -13,7 +13,7 @@ require (
 	go.opentelemetry.io/build-tools/dbotconf v0.10.0
 	go.opentelemetry.io/build-tools/gotmpl v0.10.0
 	go.opentelemetry.io/build-tools/multimod v0.10.0
-	golang.org/x/tools v0.11.0
+	golang.org/x/tools v0.11.1
 )
 
 require (
