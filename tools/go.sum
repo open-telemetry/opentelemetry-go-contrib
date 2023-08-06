@@ -616,8 +616,8 @@ go.opentelemetry.io/build-tools/crosslink v0.10.0 h1:lyXOJP2z3G/o+e0w00q3vkzFZw4
 go.opentelemetry.io/build-tools/crosslink v0.10.0/go.mod h1:B//a0+OAU8kjgLLJnxjDNnlGv8CJt9pF/BaGc0nChvU=
 go.opentelemetry.io/build-tools/dbotconf v0.10.0 h1:BKk+Q2BoHqcA9lbrbVqYeQVHPJJb+jHePoO4TIyCy3Y=
 go.opentelemetry.io/build-tools/dbotconf v0.10.0/go.mod h1:SOyfUbctj4X9QakCfGy/eTlYlFo/HTNtyjJs7hHP9gE=
-go.opentelemetry.io/build-tools/gotmpl v0.10.0 h1:pytcJ20iHs87Y/gMEb3pDgQuZ9g+wBgYYlexzUSJLV4=
-go.opentelemetry.io/build-tools/gotmpl v0.10.0/go.mod h1:FzweYUfAJC1i5ATrtFI4KJggnO9QQGPdSVKWA8RHjdE=
+go.opentelemetry.io/build-tools/gotmpl v0.11.0 h1:T2KJ7Eli7wLrp+8TXpUQ+Q+wAdZZDiyHYSvrpeER7Pc=
+go.opentelemetry.io/build-tools/gotmpl v0.11.0/go.mod h1:FzweYUfAJC1i5ATrtFI4KJggnO9QQGPdSVKWA8RHjdE=
 go.opentelemetry.io/build-tools/multimod v0.10.0 h1:jYlpTXAJCZqjzYZdEdwdDIX90qnqQvZkgaPkMt9r6BA=
 go.opentelemetry.io/build-tools/multimod v0.10.0/go.mod h1:jn2a5TTq9wSR9ragaruZ2ilqOV+VerkNtNPTqwtIMyM=
 go.tmz.dev/musttag v0.7.0 h1:QfytzjTWGXZmChoX0L++7uQN+yRCPfyFm+whsM+lfGc=
