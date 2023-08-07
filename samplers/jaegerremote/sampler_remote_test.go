@@ -21,6 +21,7 @@ import (
 	"errors"
 	"fmt"
 	"net/http"
+	"sync"
 	"testing"
 	"time"
 
@@ -34,7 +35,7 @@ import (
 	oteltrace "go.opentelemetry.io/otel/trace"
 )
 
-func TestRemotelyControlledSampler_updateRace(t *testing.T) {
+func TestRemotelyControlledSampler_updateConcurrentSafe(t *testing.T) {
 	initSampler := newProbabilisticSampler(0.123)
 	fetcher := &testSamplingStrategyFetcher{response: []byte("probabilistic")}
 	parser := new(testSamplingStrategyParser)
@@ -51,31 +52,25 @@ func TestRemotelyControlledSampler_updateRace(t *testing.T) {
 		withUpdaters(updaters...),
 	)
 
+	defer sampler.Close()
+
 	s := makeSamplingParameters(1, "test")
-	end := make(chan struct{})
 
-	accessor := func(f func()) {
-		for {
-			select {
-			case <-end:
-				return
-			default:
-				f()
-			}
-		}
-	}
+	var wg sync.WaitGroup
 
-	go accessor(func() {
+	wg.Add(1)
+	go func() {
+		defer wg.Done()
 		sampler.UpdateSampler()
-	})
+	}()
 
-	go accessor(func() {
+	wg.Add(1)
+	go func() {
+		defer wg.Done()
 		sampler.ShouldSample(s)
-	})
+	}()
 
-	time.Sleep(100 * time.Millisecond)
-	close(end)
-	sampler.Close()
+	wg.Wait()
 }
 
 type testSamplingStrategyFetcher struct {
@@ -201,11 +196,15 @@ func TestRemotelyControlledSampler(t *testing.T) {
 	ticker := &time.Ticker{C: c}
 	// reset closed so the next call to Close() correctly stops the polling goroutine
 	remoteSampler.closed = 0
-	go remoteSampler.pollControllerWithTicker(ticker)
+	done := make(chan struct{})
+	go func() {
+		defer close(done)
+		remoteSampler.pollControllerWithTicker(ticker)
+	}()
 
 	c <- time.Now() // force update based on timer
-	time.Sleep(10 * time.Millisecond)
 	remoteSampler.Close()
+	<-done
 
 	s2, ok := remoteSampler.sampler.(*probabilisticSampler)
 	assert.True(t, ok)

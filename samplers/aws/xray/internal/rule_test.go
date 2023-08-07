@@ -563,7 +563,7 @@ func TestMatchAgainstManifestRulesNoAttributeMatch(t *testing.T) {
 }
 
 // validate no data race is happening when updating rule properties and rule targets in manifest while sampling.
-func TestRaceUpdatingRulesAndTargetsWhileSampling(t *testing.T) {
+func TestUpdatingRulesAndTargetsWhileSamplingConcurrentSafe(t *testing.T) {
 	// getSamplingRules response to update existing manifest rule
 	ruleRecords := samplingRuleRecords{
 		SamplingRule: &ruleProperties{

@@ -29,7 +29,7 @@ import (
 	sdktrace "go.opentelemetry.io/otel/sdk/trace"
 	oteltrace "go.opentelemetry.io/otel/trace"
 
-	"go.opentelemetry.io/contrib/instrumentation/github.com/go-kit/kit/otelkit"
+	"go.opentelemetry.io/contrib/instrumentation/github.com/go-kit/kit/otelkit" //nolint:staticcheck // This is deprecated and will be removed in the next release.
 )
 
 var tracer = otel.Tracer("kit-server")

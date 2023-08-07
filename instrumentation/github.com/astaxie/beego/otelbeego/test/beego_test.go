@@ -26,7 +26,7 @@ import (
 	"testing"
 	"time"
 
-	"go.opentelemetry.io/contrib/instrumentation/github.com/astaxie/beego/otelbeego"
+	"go.opentelemetry.io/contrib/instrumentation/github.com/astaxie/beego/otelbeego" //nolint:staticcheck // This is deprecated and will be removed in the next release.
 	"go.opentelemetry.io/contrib/instrumentation/github.com/astaxie/beego/otelbeego/internal"
 	"go.opentelemetry.io/contrib/propagators/b3"
 	"go.opentelemetry.io/otel/attribute"

@@ -16,6 +16,7 @@ package autoexport
 
 import (
 	"context"
+	"reflect"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
@@ -26,9 +27,8 @@ import (
 
 func TestOTLPExporterReturnedWhenNoEnvOrFallbackExporterConfigured(t *testing.T) {
 	exporter, err := NewSpanExporter(context.Background())
-	assert.Nil(t, err)
-	assert.NotNil(t, exporter)
-	assert.IsType(t, &otlptrace.Exporter{}, exporter)
+	assert.NoError(t, err)
+	assertOTLPHTTPExporter(t, exporter)
 }
 
 func TestFallbackExporterReturnedWhenNoEnvExporterConfigured(t *testing.T) {
@@ -37,8 +37,9 @@ func TestFallbackExporterReturnedWhenNoEnvExporterConfigured(t *testing.T) {
 		context.Background(),
 		WithFallbackSpanExporter(testExporter),
 	)
-	assert.Nil(t, err)
+	assert.NoError(t, err)
 	assert.Equal(t, testExporter, exporter)
+	assert.False(t, IsNoneSpanExporter(exporter))
 }
 
 func TestEnvExporterIsPreferredOverFallbackExporter(t *testing.T) {
@@ -49,8 +50,79 @@ func TestEnvExporterIsPreferredOverFallbackExporter(t *testing.T) {
 		context.Background(),
 		WithFallbackSpanExporter(testExporter),
 	)
-	assert.Nil(t, err)
-	assert.IsType(t, &otlptrace.Exporter{}, exporter)
+	assert.NoError(t, err)
+	assertOTLPHTTPExporter(t, exporter)
+}
+
+func TestEnvExporterOTLPOverHTTP(t *testing.T) {
+	t.Setenv("OTEL_TRACES_EXPORTER", "otlp")
+	t.Setenv("OTEL_EXPORTER_OTLP_PROTOCOL", "http/protobuf")
+
+	exporter, err := NewSpanExporter(context.Background())
+	assert.NoError(t, err)
+	assertOTLPHTTPExporter(t, exporter)
+}
+
+func TestEnvExporterOTLPOverGRPC(t *testing.T) {
+	t.Setenv("OTEL_TRACES_EXPORTER", "otlp")
+	t.Setenv("OTEL_EXPORTER_OTLP_PROTOCOL", "grpc")
+
+	exporter, err := NewSpanExporter(context.Background())
+	assert.NoError(t, err)
+	assertOTLPGRPCExporter(t, exporter)
+}
+
+func TestEnvExporterOTLPOverGRPCOnlyProtocol(t *testing.T) {
+	t.Setenv("OTEL_EXPORTER_OTLP_PROTOCOL", "grpc")
+
+	exporter, err := NewSpanExporter(context.Background())
+	assert.NoError(t, err)
+	assertOTLPGRPCExporter(t, exporter)
+}
+
+func TestEnvExporterOTLPInvalidProtocol(t *testing.T) {
+	t.Setenv("OTEL_TRACES_EXPORTER", "otlp")
+	t.Setenv("OTEL_EXPORTER_OTLP_PROTOCOL", "invalid")
+
+	exporter, err := NewSpanExporter(context.Background())
+	assert.Error(t, err)
+	assert.Nil(t, exporter)
+}
+
+func TestEnvExporterNone(t *testing.T) {
+	t.Setenv("OTEL_TRACES_EXPORTER", "none")
+
+	exporter, err := NewSpanExporter(context.Background())
+	assert.NoError(t, err)
+	assert.True(t, IsNoneSpanExporter(exporter))
+}
+
+func assertOTLPHTTPExporter(t *testing.T, got trace.SpanExporter) {
+	t.Helper()
+
+	if !assert.IsType(t, &otlptrace.Exporter{}, got) {
+		return
+	}
+
+	// Implementation detail hack. This may break when bumping OTLP exporter modules as it uses unexported API.
+	clientType := reflect.Indirect(reflect.ValueOf(got)).FieldByName("client").Elem().Type().String()
+	assert.Equal(t, "*otlptracehttp.client", clientType)
+
+	assert.False(t, IsNoneSpanExporter(got))
+}
+
+func assertOTLPGRPCExporter(t *testing.T, got trace.SpanExporter) {
+	t.Helper()
+
+	if !assert.IsType(t, &otlptrace.Exporter{}, got) {
+		return
+	}
+
+	// Implementation detail hack. This may break when bumping OTLP exporter modules as it uses unexported API.
+	clientType := reflect.Indirect(reflect.ValueOf(got)).FieldByName("client").Elem().Type().String()
+	assert.Equal(t, "*otlptracegrpc.client", clientType)
+
+	assert.False(t, IsNoneSpanExporter(got))
 }
 
 type testExporter struct{}

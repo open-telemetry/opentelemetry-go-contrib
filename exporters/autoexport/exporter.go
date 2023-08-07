@@ -66,9 +66,28 @@ func WithFallbackSpanExporter(exporter trace.SpanExporter) Option {
 	})
 }
 
-// NewSpanExporter returns a configured SpanExporter defined using the environment
-// variable OTEL_TRACES_EXPORTER, the configured fallback exporter via options or
-// a default OTLP exporter (in this order).
+// NewSpanExporter returns a configured [go.opentelemetry.io/otel/sdk/trace.SpanExporter]
+// defined using the environment variables described below.
+//
+// OTEL_TRACES_EXPORTER defines the traces exporter; supported values:
+//   - "none" - "no operation" exporter
+//   - "otlp" (default) - OTLP exporter; see [go.opentelemetry.io/otel/exporters/otlp/otlptrace]
+//
+// OTEL_EXPORTER_OTLP_PROTOCOL defines OTLP exporter's transport protocol;
+// supported values:
+//   - "grpc" - protobuf-encoded data using gRPC wire format over HTTP/2 connection;
+//     see: [go.opentelemetry.io/otel/exporters/otlp/otlptrace/otlptracegrpc]
+//   - "http/protobuf" (default) -  protobuf-encoded data over HTTP connection;
+//     see: [go.opentelemetry.io/otel/exporters/otlp/otlptrace/otlptracehttp]
+//
+// An error is returned if an environment value is set to an unhandled value.
+//
+// Use [RegisterSpanExporter] to handle more values of OTEL_TRACES_EXPORTER.
+//
+// Use [WithFallbackSpanExporter] option to change the returned exporter
+// when OTEL_TRACES_EXPORTER is unset or empty.
+//
+// Use [IsNoneSpanExporter] to check if the retured exporter is a "no operation" exporter.
 func NewSpanExporter(ctx context.Context, opts ...Option) (trace.SpanExporter, error) {
 	// prefer exporter configured via environment variables over exporter
 	// passed in via exporter parameter
@@ -90,8 +109,8 @@ func NewSpanExporter(ctx context.Context, opts ...Option) (trace.SpanExporter, e
 // environment variable.
 // nil is returned if no exporter is defined for the environment variable.
 func makeExporterFromEnv(ctx context.Context) (trace.SpanExporter, error) {
-	expType, defined := os.LookupEnv(otelTracesExportersEnvKey)
-	if !defined {
+	expType := os.Getenv(otelTracesExportersEnvKey)
+	if expType == "" {
 		return nil, nil
 	}
 	return spanExporter(ctx, expType)
