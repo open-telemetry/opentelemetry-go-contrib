@@ -20,6 +20,7 @@ import (
 	"encoding/binary"
 	"errors"
 	"fmt"
+	"net/http"
 	"testing"
 	"time"
 
@@ -586,4 +587,17 @@ func TestSamplingStrategyParserImpl_Error(t *testing.T) {
 	val, err := new(samplingStrategyParserImpl).Parse([]byte(json))
 	require.Error(t, err, "output: %+v", val)
 	require.Contains(t, err.Error(), `unknown value "foo_bar"`)
+}
+
+func TestDefaultSamplingStrategyFetcher_Panic(t *testing.T) {
+	defaultTransport := http.DefaultTransport
+	http.DefaultTransport = http.NewFileTransport(http.Dir("/"))
+
+	t.Cleanup(func() {
+		http.DefaultTransport = defaultTransport
+	})
+
+	require.Panics(t, func() {
+		newHTTPSamplingStrategyFetcher("")
+	})
 }
