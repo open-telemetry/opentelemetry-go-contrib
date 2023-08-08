@@ -183,16 +183,6 @@ func TestTransportErrorStatus(t *testing.T) {
 	if got := span.Status().Description; !strings.Contains(got, errSubstr) {
 		t.Errorf("expected error status message on span; got: %q", got)
 	}
-
-	// check metrics
-	rm := metricdata.ResourceMetrics{}
-	err = reader.Collect(context.Background(), &rm)
-	require.NoError(t, err)
-	require.Len(t, rm.ScopeMetrics, 1)
-	require.Len(t, rm.ScopeMetrics[0].Metrics, 2) // response length isn't added on error
-
-	metricdatatest.AssertHasAttributes(t, rm.ScopeMetrics[0].Metrics[0].Data.(metricdata.Sum[int64]),
-		semconv.HTTPStatusCode(http.StatusBadRequest))
 }
 
 func TestTransportRequestWithTraceContext(t *testing.T) {

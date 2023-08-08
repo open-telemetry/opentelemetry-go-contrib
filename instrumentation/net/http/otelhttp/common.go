@@ -39,7 +39,6 @@ const (
 
 // Client HTTP metrics.
 const (
-	ClientRequestCount          = "http.client.request_count"           // Outgoing request count total
 	ClientRequestContentLength  = "http.client.request_content_length"  // Outgoing request bytes total
 	ClientResponseContentLength = "http.client.response_content_length" // Outgoing response bytes total
 	ClientLatency               = "http.client.duration"                // Outgoing end to end duration, microseconds
