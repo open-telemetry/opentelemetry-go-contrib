@@ -43,6 +43,7 @@ func newRegistry() registry {
 		names: map[string]func(context.Context) (trace.SpanExporter, error){
 			"":     buildOTLPExporter,
 			"otlp": buildOTLPExporter,
+			"none": func(ctx context.Context) (trace.SpanExporter, error) { return noop{}, nil },
 		},
 	}
 }
