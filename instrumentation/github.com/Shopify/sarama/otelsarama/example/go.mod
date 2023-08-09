@@ -1,3 +1,5 @@
+// Deprecated: This module is no longer supported.
+// github.com/Shopify/sarama moved to github.com/IBM/sarama.
 module go.opentelemetry.io/contrib/instrumentation/github.com/Shopify/sarama/otelsarama/example
 
 go 1.18

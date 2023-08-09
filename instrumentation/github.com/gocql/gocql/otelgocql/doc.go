@@ -13,4 +13,6 @@
 // limitations under the License.
 
 // Package otelgocql instruments the github.com/gocql/gocql package.
+//
+// Deprecated: This module is no longer supported.
 package otelgocql // import "go.opentelemetry.io/contrib/instrumentation/github.com/gocql/gocql/otelgocql"

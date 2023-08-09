@@ -21,7 +21,7 @@ import (
 
 	"github.com/bradfitz/gomemcache/memcache"
 
-	"go.opentelemetry.io/contrib/instrumentation/github.com/bradfitz/gomemcache/memcache/otelmemcache"
+	"go.opentelemetry.io/contrib/instrumentation/github.com/bradfitz/gomemcache/memcache/otelmemcache" //nolint:staticcheck // This is deprecated and will be removed in the next release.
 
 	oteltracestdout "go.opentelemetry.io/otel/exporters/stdout/stdouttrace"
 	sdktrace "go.opentelemetry.io/otel/sdk/trace"

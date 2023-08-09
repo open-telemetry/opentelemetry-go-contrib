@@ -49,7 +49,7 @@ import (
 	"go.opentelemetry.io/otel/sdk/metric/aggregation"
 	"go.opentelemetry.io/otel/sdk/trace"
 
-	"go.opentelemetry.io/contrib/instrumentation/github.com/gocql/gocql/otelgocql"
+	"go.opentelemetry.io/contrib/instrumentation/github.com/gocql/gocql/otelgocql" //nolint:staticcheck // This is deprecated and will be removed in the next release.
 )
 
 const keyspace = "gocql_integration_example"
