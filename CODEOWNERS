@@ -25,7 +25,7 @@ CODEOWNERS @MrAlias @MadVikingGod @pellared
 detectors/aws/                                                          @open-telemetry/go-approvers @Aneurysm9
 detectors/gcp/                                                          @open-telemetry/go-approvers @dashpole
 
-exporters/autoexport                                                    @open-telemetry/go-approvers @MikeGoldsmith
+exporters/autoexport                                                    @open-telemetry/go-approvers @MikeGoldsmith @pellared
 
 instrumentation/github.com/astaxie/beego/otelbeego/                     @open-telemetry/go-approvers
 instrumentation/github.com/aws/aws-lambda-go/otellambda/                @open-telemetry/go-approvers @Aneurysm9
