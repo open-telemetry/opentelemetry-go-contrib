@@ -92,7 +92,7 @@ func TestUnaryClientInterceptor(t *testing.T) {
 	unaryInterceptor := otelgrpc.UnaryClientInterceptor(
 		otelgrpc.WithTracerProvider(tp),
 		otelgrpc.WithMessageEvents(otelgrpc.ReceivedEvents, otelgrpc.SentEvents),
-		otelgrpc.WithSpanOptions(oteltrace.WithAttributes(attribute.Bool("custom", true)))
+		otelgrpc.WithSpanOptions(oteltrace.WithAttributes(attribute.Bool("custom", true))),
 	)
 	unaryInterceptorOnlySentEvents := otelgrpc.UnaryClientInterceptor(
 		otelgrpc.WithTracerProvider(tp),
@@ -397,7 +397,7 @@ func createInterceptedStreamClient(t *testing.T, method string, opts clientStrea
 	tp := trace.NewTracerProvider(trace.WithSpanProcessor(sr))
 	interceptorOpts := []otelgrpc.Option{
 		otelgrpc.WithTracerProvider(tp),
-		otelgrpc.WithSpanOptions(oteltrace.WithAttributes(attribute.Bool("custom", true)))
+		otelgrpc.WithSpanOptions(oteltrace.WithAttributes(attribute.Bool("custom", true))),
 	}
 	if len(opts.Events) > 0 {
 		interceptorOpts = append(interceptorOpts, otelgrpc.WithMessageEvents(opts.Events...))
