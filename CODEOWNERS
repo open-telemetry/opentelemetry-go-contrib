@@ -52,7 +52,7 @@ propagators/aws/                                                        @open-te
 propagators/b3/                                                         @open-telemetry/go-approvers @pellared
 propagators/jaeger/                                                     @open-telemetry/go-approvers
 propagators/opencensus/                                                 @open-telemetry/go-approvers @dashpole
-propagators/ot/                                                         @open-telemetry/go-approvers
+propagators/ot/                                                         @open-telemetry/go-approvers @pellared
 
 samplers/aws/xray/                                                      @open-telemetry/go-approvers @Aneurysm9
 samplers/jaegerremote/                                                  @open-telemetry/go-approvers
