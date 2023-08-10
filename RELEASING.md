@@ -14,11 +14,10 @@ released.
 
 ### Breaking changes validation
 
-You can run `make gorelease` that runs
-[gorelease](https://pkg.go.dev/golang.org/x/exp/cmd/gorelease)
+You can run `make gorelease` that runs [gorelease](https://pkg.go.dev/golang.org/x/exp/cmd/gorelease)
 to ensure that there are no unwanted changes done in the public API.
 
-> You can check/report problems under <golang.org/issues/26420>.
+You can check/report problems with `gorelease` [here](golang.org/issues/26420).
 
 ### Create a release branch
 
