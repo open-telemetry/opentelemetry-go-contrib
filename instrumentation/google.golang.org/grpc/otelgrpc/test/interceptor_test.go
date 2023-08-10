@@ -24,7 +24,6 @@ import (
 	"time"
 
 	"go.opentelemetry.io/contrib/instrumentation/google.golang.org/grpc/otelgrpc"
-	"go.opentelemetry.io/contrib/instrumentation/google.golang.org/grpc/otelgrpc/internal"
 	"go.opentelemetry.io/otel/attribute"
 	"go.opentelemetry.io/otel/codes"
 	"go.opentelemetry.io/otel/sdk/trace"
@@ -217,7 +216,7 @@ func TestUnaryClientInterceptor(t *testing.T) {
 			eventsAttr: []map[attribute.Key]attribute.Value{},
 		},
 		{
-			method:      "serviceName/bar",
+			method:      "/serviceName/bar",
 			name:        "serviceName/bar",
 			interceptor: unaryInterceptor,
 			expectedAttr: []attribute.KeyValue{
@@ -240,7 +239,7 @@ func TestUnaryClientInterceptor(t *testing.T) {
 			},
 		},
 		{
-			method:           "serviceName/bar_error",
+			method:           "/serviceName/bar_error",
 			name:             "serviceName/bar_error",
 			interceptor:      unaryInterceptor,
 			expectedSpanCode: codes.Error,
@@ -1054,66 +1053,5 @@ func TestStreamServerInterceptorEvents(t *testing.T) {
 				assert.Equal(t, eventsAttr, eventAttrMap(span.Events()))
 			}
 		})
-	}
-}
-
-func TestParseFullMethod(t *testing.T) {
-	tests := []struct {
-		fullMethod string
-		name       string
-		attr       []attribute.KeyValue
-	}{
-		{
-			fullMethod: "/grpc.test.EchoService/Echo",
-			name:       "grpc.test.EchoService/Echo",
-			attr: []attribute.KeyValue{
-				semconv.RPCService("grpc.test.EchoService"),
-				semconv.RPCMethod("Echo"),
-			},
-		}, {
-			fullMethod: "/com.example.ExampleRmiService/exampleMethod",
-			name:       "com.example.ExampleRmiService/exampleMethod",
-			attr: []attribute.KeyValue{
-				semconv.RPCService("com.example.ExampleRmiService"),
-				semconv.RPCMethod("exampleMethod"),
-			},
-		}, {
-			fullMethod: "/MyCalcService.Calculator/Add",
-			name:       "MyCalcService.Calculator/Add",
-			attr: []attribute.KeyValue{
-				semconv.RPCService("MyCalcService.Calculator"),
-				semconv.RPCMethod("Add"),
-			},
-		}, {
-			fullMethod: "/MyServiceReference.ICalculator/Add",
-			name:       "MyServiceReference.ICalculator/Add",
-			attr: []attribute.KeyValue{
-				semconv.RPCService("MyServiceReference.ICalculator"),
-				semconv.RPCMethod("Add"),
-			},
-		}, {
-			fullMethod: "/MyServiceWithNoPackage/theMethod",
-			name:       "MyServiceWithNoPackage/theMethod",
-			attr: []attribute.KeyValue{
-				semconv.RPCService("MyServiceWithNoPackage"),
-				semconv.RPCMethod("theMethod"),
-			},
-		}, {
-			fullMethod: "/pkg.srv",
-			name:       "pkg.srv",
-			attr:       []attribute.KeyValue(nil),
-		}, {
-			fullMethod: "/pkg.srv/",
-			name:       "pkg.srv/",
-			attr: []attribute.KeyValue{
-				semconv.RPCService("pkg.srv"),
-			},
-		},
-	}
-
-	for _, test := range tests {
-		n, a := internal.ParseFullMethod(test.fullMethod)
-		assert.Equal(t, test.name, n)
-		assert.Equal(t, test.attr, a)
 	}
 }

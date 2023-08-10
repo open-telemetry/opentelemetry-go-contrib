@@ -12,22 +12,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-// This module provides easy access to configuring a trace exporter
-// that can be used when configuring an OpenTelemetry Go SDK trace export
-// pipeline.
-//
-// [NewSpanExporter] looks for the `OTEL_TRACES_EXPORTER` environment
-// variable and if set, attempts to load the exporter from it's registry of
-// exporters. The registry is always loaded with an OTLP exporter with the key
-// `otlp` and additional exporters can be registered using
-// [RegisterSpanExporter].
-// Exporter registration uses a factory method pattern to not unneccarily build
-// exporters and use resources until they are requested.
-//
-// If the environment variable is not set, the fallback exporter is returned.
-// The fallback exporter defaults to an
-// [OTLP exporter](https://pkg.go.dev/go.opentelemetry.io/otel/exporters/otlp/otlptrace)
-// and can be overridden using the [RegisterSpanExporter](https://pkg.go.dev/go.opentelemetry.io/contrib/exporters/autoexport#WithFallbackSpanExporter)
-// option.
-
+// Package autoexport provides OpenTelemetry exporter factory functions
+// with defaults and environment variable support as defined by the
+// OpenTelemetry specification.
 package autoexport // import "go.opentelemetry.io/contrib/exporters/autoexport"
