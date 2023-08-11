@@ -52,4 +52,6 @@ samplers/aws/xray/                                                      @open-te
 samplers/jaegerremote/                                                  @open-telemetry/go-approvers
 samplers/probability/consistent/                                        @open-telemetry/go-approvers @MadVikingGod
 
+zpages/                                                                 @open-telemetry/go-approvers
+
 instrgen/                                                               @open-telemetry/go-approvers @open-telemetry/go-instrumentation-approvers @MrAlias @pdelewski

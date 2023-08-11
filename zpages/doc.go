@@ -14,6 +14,4 @@
 
 // Package zpages implements a collection of HTML pages that display
 // telemetry stats.
-//
-// Deprecated: This module is no longer supported.
 package zpages // import "go.opentelemetry.io/contrib/zpages"
