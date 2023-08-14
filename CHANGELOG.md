@@ -16,6 +16,10 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 - `WithRouteTag` in `go.opentelemetry.io/contrib/instrumentation/net/http/otelhttp` adds HTTP route attribute to metrics. (#615)
 - Add `WithSpanOptions` option in `go.opentelemetry.io/contrib/instrumentation/google.golang.org/grpc/otelgrpc`. (#3768)
 
+### Changed
+
+- `go.opentelemetry.io/contrib/detectors/gcp`: Detect faas.instance instead of faas.id, since faas.id is being removed. (#4198)
+
 ### Fixed
 
 - AWS XRay Remote Sampling to cap quotaBalance to 1x quota in `go.opentelemetry.io/contrib/samplers/aws/xray`. (#3651, #3652)
