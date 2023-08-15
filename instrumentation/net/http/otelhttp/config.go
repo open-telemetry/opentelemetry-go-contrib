@@ -20,7 +20,6 @@ import (
 	"net/http/httptrace"
 
 	"go.opentelemetry.io/otel"
-	"go.opentelemetry.io/otel/attribute"
 	"go.opentelemetry.io/otel/metric"
 	"go.opentelemetry.io/otel/propagation"
 	"go.opentelemetry.io/otel/trace"
@@ -33,20 +32,18 @@ const (
 // config represents the configuration options available for the http.Handler
 // and http.Transport types.
 type config struct {
-	ServerName            string
-	Tracer                trace.Tracer
-	Meter                 metric.Meter
-	Propagators           propagation.TextMapPropagator
-	SpanStartOptions      []trace.SpanStartOption
-	PublicEndpoint        bool
-	PublicEndpointFn      func(*http.Request) bool
-	ReadEvent             bool
-	WriteEvent            bool
-	Filters               []Filter
-	SpanNameFormatter     func(string, *http.Request) string
-	ClientTrace           func(context.Context) *httptrace.ClientTrace
-	GetRequestAttributes  func(*http.Request) []attribute.KeyValue
-	GetResponseAttributes func(*http.Response) []attribute.KeyValue
+	ServerName        string
+	Tracer            trace.Tracer
+	Meter             metric.Meter
+	Propagators       propagation.TextMapPropagator
+	SpanStartOptions  []trace.SpanStartOption
+	PublicEndpoint    bool
+	PublicEndpointFn  func(*http.Request) bool
+	ReadEvent         bool
+	WriteEvent        bool
+	Filters           []Filter
+	SpanNameFormatter func(string, *http.Request) string
+	ClientTrace       func(context.Context) *httptrace.ClientTrace
 
 	TracerProvider trace.TracerProvider
 	MeterProvider  metric.MeterProvider
@@ -207,19 +204,5 @@ func WithClientTrace(f func(context.Context) *httptrace.ClientTrace) Option {
 func WithServerName(server string) Option {
 	return optionFunc(func(c *config) {
 		c.ServerName = server
-	})
-}
-
-// WithRequestAttributeGetter extracts additional attributes from the request.
-func WithRequestAttributeGetter(fn func(req *http.Request) []attribute.KeyValue) Option {
-	return optionFunc(func(o *config) {
-		o.GetRequestAttributes = fn
-	})
-}
-
-// WithResponseAttributeGetter extracts additional attributes from the response.
-func WithResponseAttributeGetter(fn func(req *http.Response) []attribute.KeyValue) Option {
-	return optionFunc(func(o *config) {
-		o.GetResponseAttributes = fn
 	})
 }

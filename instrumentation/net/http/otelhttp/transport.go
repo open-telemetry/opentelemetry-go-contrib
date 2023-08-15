@@ -86,8 +86,6 @@ func (t *Transport) applyConfig(c *config) {
 	t.filters = c.Filters
 	t.spanNameFormatter = c.SpanNameFormatter
 	t.clientTrace = c.ClientTrace
-	t.getRequestAttributes = c.GetRequestAttributes
-	t.getResponseAttributes = c.GetResponseAttributes
 }
 
 func defaultTransportFormatter(_ string, r *http.Request) string {

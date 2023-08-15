@@ -44,47 +44,6 @@ import (
 	"go.opentelemetry.io/otel/trace"
 )
 
-func assertClientScopeMetrics(t *testing.T, sm metricdata.ScopeMetrics, attrs attribute.Set) {
-	assert.Equal(t, instrumentation.Scope{
-		Name:    "go.opentelemetry.io/contrib/instrumentation/net/http/otelhttp",
-		Version: otelhttp.Version(),
-	}, sm.Scope)
-
-	require.Len(t, sm.Metrics, 3)
-
-	want := metricdata.Metrics{
-		Name: "http.client.request_content_length",
-		Data: metricdata.Sum[int64]{
-			DataPoints:  []metricdata.DataPoint[int64]{{Attributes: attrs, Value: 0}},
-			Temporality: metricdata.CumulativeTemporality,
-			IsMonotonic: true,
-		},
-	}
-	metricdatatest.AssertEqual(t, want, sm.Metrics[0], metricdatatest.IgnoreTimestamp())
-
-	want = metricdata.Metrics{
-		Name: "http.client.response_content_length",
-		Data: metricdata.Sum[int64]{
-			DataPoints:  []metricdata.DataPoint[int64]{{Attributes: attrs, Value: 13}},
-			Temporality: metricdata.CumulativeTemporality,
-			IsMonotonic: true,
-		},
-	}
-	metricdatatest.AssertEqual(t, want, sm.Metrics[1], metricdatatest.IgnoreTimestamp())
-
-	// Duration value is not predictable.
-	dur := sm.Metrics[2]
-	assert.Equal(t, "http.client.duration", dur.Name)
-	require.IsType(t, dur.Data, metricdata.Histogram[float64]{})
-	hist := dur.Data.(metricdata.Histogram[float64])
-	assert.Equal(t, metricdata.CumulativeTemporality, hist.Temporality)
-	require.Len(t, hist.DataPoints, 1)
-	dPt := hist.DataPoints[0]
-	assert.Equal(t, attrs, dPt.Attributes, "attributes")
-	assert.Equal(t, uint64(1), dPt.Count, "count")
-	assert.Equal(t, []float64{0, 5, 10, 25, 50, 75, 100, 250, 500, 750, 1000, 2500, 5000, 7500, 10000}, dPt.Bounds, "bounds")
-}
-
 func TestTransportUsesFormatter(t *testing.T) {
 	prop := propagation.TraceContext{}
 	spanRecorder := tracetest.NewSpanRecorder()
@@ -134,9 +93,6 @@ func TestTransportErrorStatus(t *testing.T) {
 	spanRecorder := tracetest.NewSpanRecorder()
 	provider := sdktrace.NewTracerProvider(sdktrace.WithSpanProcessor(spanRecorder))
 
-	reader := metric.NewManualReader()
-	meterProvider := metric.NewMeterProvider(metric.WithReader(reader))
-
 	// Run a server and stop to make sure nothing is listening and force the error.
 	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {}))
 	server.Close()
@@ -145,7 +101,6 @@ func TestTransportErrorStatus(t *testing.T) {
 	tr := otelhttp.NewTransport(
 		http.DefaultTransport,
 		otelhttp.WithTracerProvider(provider),
-		otelhttp.WithMeterProvider(meterProvider),
 	)
 	c := http.Client{Transport: tr}
 	r, err := http.NewRequest(http.MethodGet, server.URL, nil)
@@ -315,12 +270,6 @@ func TestTransportMetrics(t *testing.T) {
 	tr := otelhttp.NewTransport(
 		http.DefaultTransport,
 		otelhttp.WithMeterProvider(meterProvider),
-		otelhttp.WithRequestAttributeGetter(func(req *http.Request) []attribute.KeyValue {
-			return []attribute.KeyValue{attribute.String("test_req", "attribute_req")}
-		}),
-		otelhttp.WithResponseAttributeGetter(func(req *http.Response) []attribute.KeyValue {
-			return []attribute.KeyValue{attribute.String("test_resp", "attribute_resp")}
-		}),
 	)
 
 	c := http.Client{Transport: tr}
@@ -350,9 +299,48 @@ func TestTransportMetrics(t *testing.T) {
 		semconv.HTTPFlavorKey.String(fmt.Sprintf("1.%d", r.ProtoMinor)),
 		semconv.HTTPMethod("GET"),
 		semconv.HTTPResponseContentLength(13),
-		attribute.String("test_req", "attribute_req"),
-		attribute.String("test_resp", "attribute_resp"),
 		semconv.HTTPStatusCode(200),
 	)
 	assertClientScopeMetrics(t, rm.ScopeMetrics[0], attrs)
+}
+
+func assertClientScopeMetrics(t *testing.T, sm metricdata.ScopeMetrics, attrs attribute.Set) {
+	assert.Equal(t, instrumentation.Scope{
+		Name:    "go.opentelemetry.io/contrib/instrumentation/net/http/otelhttp",
+		Version: otelhttp.Version(),
+	}, sm.Scope)
+
+	require.Len(t, sm.Metrics, 3)
+
+	want := metricdata.Metrics{
+		Name: "http.client.request_content_length",
+		Data: metricdata.Sum[int64]{
+			DataPoints:  []metricdata.DataPoint[int64]{{Attributes: attrs, Value: 0}},
+			Temporality: metricdata.CumulativeTemporality,
+			IsMonotonic: true,
+		},
+	}
+	metricdatatest.AssertEqual(t, want, sm.Metrics[0], metricdatatest.IgnoreTimestamp())
+
+	want = metricdata.Metrics{
+		Name: "http.client.response_content_length",
+		Data: metricdata.Sum[int64]{
+			DataPoints:  []metricdata.DataPoint[int64]{{Attributes: attrs, Value: 13}},
+			Temporality: metricdata.CumulativeTemporality,
+			IsMonotonic: true,
+		},
+	}
+	metricdatatest.AssertEqual(t, want, sm.Metrics[1], metricdatatest.IgnoreTimestamp())
+
+	// Duration value is not predictable.
+	dur := sm.Metrics[2]
+	assert.Equal(t, "http.client.duration", dur.Name)
+	require.IsType(t, dur.Data, metricdata.Histogram[float64]{})
+	hist := dur.Data.(metricdata.Histogram[float64])
+	assert.Equal(t, metricdata.CumulativeTemporality, hist.Temporality)
+	require.Len(t, hist.DataPoints, 1)
+	dPt := hist.DataPoints[0]
+	assert.Equal(t, attrs, dPt.Attributes, "attributes")
+	assert.Equal(t, uint64(1), dPt.Count, "count")
+	assert.Equal(t, []float64{0, 5, 10, 25, 50, 75, 100, 250, 500, 750, 1000, 2500, 5000, 7500, 10000}, dPt.Bounds, "bounds")
 }
