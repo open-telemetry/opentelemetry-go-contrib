@@ -17,6 +17,7 @@
 package test
 
 import (
+	"context"
 	"errors"
 	"html/template"
 	"net/http"
@@ -31,8 +32,11 @@ import (
 	"go.opentelemetry.io/contrib/instrumentation/github.com/gin-gonic/gin/otelgin"
 	"go.opentelemetry.io/otel"
 	"go.opentelemetry.io/otel/codes"
+	sdkmetric "go.opentelemetry.io/otel/sdk/metric"
+	"go.opentelemetry.io/otel/sdk/metric/metricdata"
 	sdktrace "go.opentelemetry.io/otel/sdk/trace"
 	"go.opentelemetry.io/otel/sdk/trace/tracetest"
+	semconv "go.opentelemetry.io/otel/semconv/v1.17.0"
 
 	"go.opentelemetry.io/otel/attribute"
 	oteltrace "go.opentelemetry.io/otel/trace"
@@ -261,4 +265,107 @@ func TestWithFilter(t *testing.T) {
 		router.ServeHTTP(w, r)
 		assert.Len(t, sr.Ended(), 1)
 	})
+}
+
+func TestMetrics(t *testing.T) {
+	tests := []struct {
+		name       string
+		request    *http.Request
+		httpStatus int
+		attrs      []attribute.KeyValue
+	}{
+		{
+			name:       "GET 200",
+			request:    httptest.NewRequest("GET", "/user/123", nil),
+			httpStatus: 200,
+			attrs: []attribute.KeyValue{
+				semconv.HTTPMethod("GET"),
+				semconv.HTTPScheme("http"),
+				semconv.HTTPFlavorHTTP11,
+				semconv.HTTPRoute("/user/:id"),
+				semconv.HTTPStatusCode(200),
+				semconv.NetHostName("foobar"),
+			},
+		},
+		{
+			name:       "POST 200",
+			request:    httptest.NewRequest("POST", "/user/234", nil),
+			httpStatus: 200,
+			attrs: []attribute.KeyValue{
+				semconv.HTTPMethod("POST"),
+				semconv.HTTPScheme("http"),
+				semconv.HTTPFlavorHTTP11,
+				semconv.HTTPRoute("/user/:id"),
+				semconv.HTTPStatusCode(200),
+				semconv.NetHostName("foobar"),
+			},
+		},
+		{
+			name:       "GET 302",
+			request:    httptest.NewRequest("GET", "/user/123", nil),
+			httpStatus: 302,
+			attrs: []attribute.KeyValue{
+				semconv.HTTPMethod("GET"),
+				semconv.HTTPScheme("http"),
+				semconv.HTTPFlavorHTTP11,
+				semconv.HTTPRoute("/user/:id"),
+				semconv.HTTPStatusCode(302),
+				semconv.NetHostName("foobar"),
+			},
+		},
+		{
+			name:       "404",
+			request:    httptest.NewRequest("GET", "/whereami", nil),
+			httpStatus: 404,
+			attrs: []attribute.KeyValue{
+				semconv.HTTPMethod("GET"),
+				semconv.HTTPScheme("http"),
+				semconv.HTTPFlavorHTTP11,
+				semconv.HTTPStatusCode(404),
+				semconv.NetHostName("foobar"),
+			},
+		},
+	}
+
+	for _, tc := range tests {
+		tc := tc
+		t.Run(tc.name, func(t *testing.T) {
+			reader := sdkmetric.NewManualReader()
+			provider := sdkmetric.NewMeterProvider(sdkmetric.WithReader(reader))
+
+			router := gin.New()
+			router.Use(otelgin.Middleware("foobar", otelgin.WithMeterProvider(provider)))
+			router.Any("/user/:id", func(c *gin.Context) {
+				id := c.Param("id")
+				c.Status(tc.httpStatus)
+				_, _ = c.Writer.Write([]byte(id))
+			})
+
+			w := httptest.NewRecorder()
+
+			// do and verify the request
+			router.ServeHTTP(w, tc.request)
+			response := w.Result()
+			require.Equal(t, tc.httpStatus, response.StatusCode)
+
+			checkMetrics(t, reader, tc.attrs)
+		})
+	}
+}
+
+func checkMetrics(t *testing.T, reader sdkmetric.Reader, expAttrs []attribute.KeyValue) {
+	t.Helper()
+
+	rm := metricdata.ResourceMetrics{}
+	err := reader.Collect(context.Background(), &rm)
+	assert.NoError(t, err)
+	require.Len(t, rm.ScopeMetrics, 1)
+	require.Len(t, rm.ScopeMetrics[0].Metrics, 1)
+	require.IsType(t, rm.ScopeMetrics[0].Metrics[0].Data, metricdata.Histogram[int64]{})
+	data := rm.ScopeMetrics[0].Metrics[0].Data.(metricdata.Histogram[int64])
+
+	for _, dpt := range data.DataPoints {
+		attr := dpt.Attributes.ToSlice()
+		assert.ElementsMatch(t, expAttrs, attr)
+	}
 }

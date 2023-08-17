@@ -18,6 +18,7 @@ package otelgin // import "go.opentelemetry.io/contrib/instrumentation/github.co
 
 import (
 	"fmt"
+	"time"
 
 	"github.com/gin-gonic/gin"
 
@@ -25,14 +26,15 @@ import (
 	"go.opentelemetry.io/otel"
 	"go.opentelemetry.io/otel/attribute"
 	"go.opentelemetry.io/otel/codes"
+	otelmetric "go.opentelemetry.io/otel/metric"
 	"go.opentelemetry.io/otel/propagation"
 	semconv "go.opentelemetry.io/otel/semconv/v1.17.0"
 	oteltrace "go.opentelemetry.io/otel/trace"
 )
 
 const (
-	tracerKey  = "otel-go-contrib-tracer"
-	tracerName = "go.opentelemetry.io/contrib/instrumentation/github.com/gin-gonic/gin/otelgin"
+	tracerKey           = "otel-go-contrib-tracer"
+	instrumentationName = "go.opentelemetry.io/contrib/instrumentation/github.com/gin-gonic/gin/otelgin"
 )
 
 // Middleware returns middleware that will trace incoming requests.
@@ -46,10 +48,22 @@ func Middleware(service string, opts ...Option) gin.HandlerFunc {
 	if cfg.TracerProvider == nil {
 		cfg.TracerProvider = otel.GetTracerProvider()
 	}
+	if cfg.MeterProvider == nil {
+		cfg.MeterProvider = otel.GetMeterProvider()
+	}
 	tracer := cfg.TracerProvider.Tracer(
-		tracerName,
+		instrumentationName,
 		oteltrace.WithInstrumentationVersion(Version()),
 	)
+	meter := cfg.MeterProvider.Meter(
+		instrumentationName,
+		otelmetric.WithInstrumentationVersion(Version()),
+	)
+	httpServerDuration, err := meter.Int64Histogram("http.server.duration", otelmetric.WithUnit("ms"))
+	if err != nil {
+		otel.Handle(err)
+	}
+
 	if cfg.Propagators == nil {
 		cfg.Propagators = otel.GetTextMapPropagator()
 	}
@@ -68,10 +82,7 @@ func Middleware(service string, opts ...Option) gin.HandlerFunc {
 			c.Request = c.Request.WithContext(savedCtx)
 		}()
 		ctx := cfg.Propagators.Extract(savedCtx, propagation.HeaderCarrier(c.Request.Header))
-		opts := []oteltrace.SpanStartOption{
-			oteltrace.WithAttributes(semconvutil.HTTPServerRequest(service, c.Request)...),
-			oteltrace.WithSpanKind(oteltrace.SpanKindServer),
-		}
+		spanAttrs := semconvutil.HTTPServerRequest(service, c.Request)
 		var spanName string
 		if cfg.SpanNameFormatter == nil {
 			spanName = c.FullPath()
@@ -82,7 +93,11 @@ func Middleware(service string, opts ...Option) gin.HandlerFunc {
 			spanName = fmt.Sprintf("HTTP %s route not found", c.Request.Method)
 		} else {
 			rAttr := semconv.HTTPRoute(spanName)
-			opts = append(opts, oteltrace.WithAttributes(rAttr))
+			spanAttrs = append(spanAttrs, rAttr)
+		}
+		opts := []oteltrace.SpanStartOption{
+			oteltrace.WithAttributes(spanAttrs...),
+			oteltrace.WithSpanKind(oteltrace.SpanKindServer),
 		}
 		ctx, span := tracer.Start(ctx, spanName, opts...)
 		defer span.End()
@@ -90,13 +105,32 @@ func Middleware(service string, opts ...Option) gin.HandlerFunc {
 		// pass the span through the request context
 		c.Request = c.Request.WithContext(ctx)
 
+		var httpStatus int
+		defer func(t time.Time) {
+			elapsedTime := time.Since(t) / time.Millisecond
+			var metricAttrs []attribute.KeyValue
+			// Filter span attributes to the ones allowed for server metrics.
+			for _, attr := range spanAttrs {
+				switch attr.Key {
+				case semconv.HTTPMethodKey, semconv.HTTPSchemeKey, semconv.HTTPRouteKey,
+					semconv.HTTPFlavorKey, semconv.NetHostNameKey, semconv.NetHostPortKey:
+					metricAttrs = append(metricAttrs, attr)
+				}
+			}
+			if httpStatus > 0 {
+				metricAttrs = append(metricAttrs, semconv.HTTPStatusCodeKey.Int(httpStatus))
+			}
+			o := otelmetric.WithAttributes(metricAttrs...)
+			httpServerDuration.Record(ctx, int64(elapsedTime), o)
+		}(time.Now())
+
 		// serve the request to the next middleware
 		c.Next()
 
-		status := c.Writer.Status()
-		span.SetStatus(semconvutil.HTTPServerStatus(status))
-		if status > 0 {
-			span.SetAttributes(semconv.HTTPStatusCode(status))
+		httpStatus = c.Writer.Status()
+		span.SetStatus(semconvutil.HTTPServerStatus(httpStatus))
+		if httpStatus > 0 {
+			span.SetAttributes(semconv.HTTPStatusCode(httpStatus))
 		}
 		if len(c.Errors) > 0 {
 			span.SetAttributes(attribute.String("gin.errors", c.Errors.String()))
@@ -116,7 +150,7 @@ func HTML(c *gin.Context, code int, name string, obj interface{}) {
 	}
 	if !ok {
 		tracer = otel.GetTracerProvider().Tracer(
-			tracerName,
+			instrumentationName,
 			oteltrace.WithInstrumentationVersion(Version()),
 		)
 	}
