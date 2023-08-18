@@ -46,7 +46,6 @@ import (
 	otelprom "go.opentelemetry.io/otel/exporters/prometheus"
 	"go.opentelemetry.io/otel/exporters/zipkin"
 	"go.opentelemetry.io/otel/sdk/metric"
-	"go.opentelemetry.io/otel/sdk/metric/aggregation"
 	"go.opentelemetry.io/otel/sdk/trace"
 
 	"go.opentelemetry.io/contrib/instrumentation/github.com/gocql/gocql/otelgocql"
@@ -131,7 +130,7 @@ func views() []metric.View {
 				Name: "db.cassandra.rows",
 			},
 			metric.Stream{
-				Aggregation: aggregation.ExplicitBucketHistogram{
+				Aggregation: metric.AggregationExplicitBucketHistogram{
 					Boundaries: []float64{0.001, 0.01, 0.1, 0.5, 1, 2, 5, 10},
 				},
 			},
@@ -139,7 +138,7 @@ func views() []metric.View {
 		metric.NewView(
 			metric.Instrument{Name: "db.cassandra.latency"},
 			metric.Stream{
-				Aggregation: aggregation.ExplicitBucketHistogram{
+				Aggregation: metric.AggregationExplicitBucketHistogram{
 					Boundaries: []float64{0.001, 0.01, 0.1, 0.5, 1, 2, 5, 10},
 				},
 			},
