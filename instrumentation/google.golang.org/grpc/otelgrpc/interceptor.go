@@ -58,6 +58,110 @@ var (
 	messageReceived = messageType(RPCMessageTypeReceived)
 )
 
+const (
+	// ServerAddressKey is the attribute Key conforming to the "server.address"
+	// semantic conventions. It represents the logical server hostname, matches
+	// server FQDN if available, and IP or socket address if FQDN is not known.
+	//
+	// Type: string
+	// RequirementLevel: Optional
+	// Stability: stable
+	// Examples: 'example.com'.
+	ServerAddressKey = attribute.Key("server.address")
+
+	// ServerPortKey is the attribute Key conforming to the "server.port"
+	// semantic conventions. It represents the logical server port number
+	//
+	// Type: int
+	// RequirementLevel: Optional
+	// Stability: stable
+	// Examples: 80, 8080, 443.
+	ServerPortKey = attribute.Key("server.port")
+
+	// ServerSocketDomainKey is the attribute Key conforming to the
+	// "server.socket.domain" semantic conventions. It represents the domain
+	// name of an immediate peer.
+	//
+	// Type: string
+	// RequirementLevel: Recommended (If different than `server.address`.)
+	// Stability: stable
+	// Examples: 'proxy.example.com'
+	// Note: Typically observed from the client side, and represents a proxy or
+	// other intermediary domain name.
+	ServerSocketDomainKey = attribute.Key("server.socket.domain")
+
+	// ServerSocketAddressKey is the attribute Key conforming to the
+	// "server.socket.address" semantic conventions. It represents the physical
+	// server IP address or Unix socket address. If set from the client, should
+	// simply use the socket's peer address, and not attempt to find any actual
+	// server IP (i.e., if set from client, this may represent some proxy
+	// server instead of the logical server).
+	//
+	// Type: string
+	// RequirementLevel: Recommended (If different than `server.address`.)
+	// Stability: stable
+	// Examples: '10.5.3.2'.
+	ServerSocketAddressKey = attribute.Key("server.socket.address")
+
+	// ServerSocketPortKey is the attribute Key conforming to the
+	// "server.socket.port" semantic conventions. It represents the physical
+	// server port.
+	//
+	// Type: int
+	// RequirementLevel: Recommended (If different than `server.port`.)
+	// Stability: stable
+	// Examples: 16456.
+	ServerSocketPortKey = attribute.Key("server.socket.port")
+)
+
+const (
+	// ClientAddressKey is the attribute Key conforming to the "client.address"
+	// semantic conventions. It represents the client address - unix domain
+	// socket name, IPv4 or IPv6 address.
+	//
+	// Type: string
+	// RequirementLevel: Optional
+	// Stability: stable
+	// Examples: '/tmp/my.sock', '10.1.2.80'
+	// Note: When observed from the server side, and when communicating through
+	// an intermediary, `client.address` SHOULD represent client address behind
+	// any intermediaries (e.g. proxies) if it's available.
+	ClientAddressKey = attribute.Key("client.address")
+
+	// ClientPortKey is the attribute Key conforming to the "client.port"
+	// semantic conventions. It represents the client port number
+	//
+	// Type: int
+	// RequirementLevel: Optional
+	// Stability: stable
+	// Examples: 65123
+	// Note: When observed from the server side, and when communicating through
+	// an intermediary, `client.port` SHOULD represent client port behind any
+	// intermediaries (e.g. proxies) if it's available.
+	ClientPortKey = attribute.Key("client.port")
+
+	// ClientSocketAddressKey is the attribute Key conforming to the
+	// "client.socket.address" semantic conventions. It represents the
+	// immediate client peer address - unix domain socket name, IPv4 or IPv6
+	// address.
+	//
+	// Type: string
+	// RequirementLevel: Recommended (If different than `client.address`.)
+	// Stability: stable
+	// Examples: '/tmp/my.sock', '127.0.0.1'.
+	ClientSocketAddressKey = attribute.Key("client.socket.address")
+
+	// ClientSocketPortKey is the attribute Key conforming to the
+	// "client.socket.port" semantic conventions. It represents the immediate
+	// client peer port number
+	//
+	// Type: int
+	// RequirementLevel: Recommended (If different than `client.port`.)
+	// Stability: stable
+	// Examples: 35555.
+	ClientSocketPortKey = attribute.Key("client.socket.port")
+)
+
 // UnaryClientInterceptor returns a grpc.UnaryClientInterceptor suitable
 // for use in a grpc.Dial call.
 func UnaryClientInterceptor(opts ...Option) grpc.UnaryClientInterceptor {
@@ -83,7 +187,7 @@ func UnaryClientInterceptor(opts ...Option) grpc.UnaryClientInterceptor {
 			return invoker(ctx, method, req, reply, cc, callOpts...)
 		}
 
-		name, attr := spanInfo(method, cc.Target())
+		name, attr := clientSpanInfo(method, cc.Target())
 
 		startOpts := append([]trace.SpanStartOption{
 			trace.WithSpanKind(trace.SpanKindClient),
@@ -278,7 +382,7 @@ func StreamClientInterceptor(opts ...Option) grpc.StreamClientInterceptor {
 			return streamer(ctx, desc, cc, method, callOpts...)
 		}
 
-		name, attr := spanInfo(method, cc.Target())
+		name, attr := clientSpanInfo(method, cc.Target())
 
 		startOpts := append([]trace.SpanStartOption{
 			trace.WithSpanKind(trace.SpanKindClient),
@@ -508,6 +612,16 @@ func spanInfo(fullMethod, peerAddress string) (string, []attribute.KeyValue) {
 	return name, attrs
 }
 
+// spanInfo returns a span name and all appropriate attributes from the gRPC
+// method and peer address.
+func clientSpanInfo(fullMethod, peerAddress string) (string, []attribute.KeyValue) {
+	attrs := []attribute.KeyValue{RPCSystemGRPC}
+	name, mAttrs := internal.ParseFullMethod(fullMethod)
+	attrs = append(attrs, mAttrs...)
+	attrs = append(attrs, clientPeerAttr(peerAddress)...)
+	return name, attrs
+}
+
 // peerAttr returns attributes about the peer address.
 func peerAttr(addr string) []attribute.KeyValue {
 	host, p, err := net.SplitHostPort(addr)
@@ -526,13 +640,43 @@ func peerAttr(addr string) []attribute.KeyValue {
 	var attr []attribute.KeyValue
 	if ip := net.ParseIP(host); ip != nil {
 		attr = []attribute.KeyValue{
-			semconv.NetSockPeerAddr(host),
-			semconv.NetSockPeerPort(port),
+			ClientSocketAddressKey.String(host),
+			ClientSocketPortKey.Int(port),
 		}
 	} else {
 		attr = []attribute.KeyValue{
-			semconv.NetPeerName(host),
-			semconv.NetPeerPort(port),
+			ClientAddressKey.String(host),
+			ClientPortKey.Int(port),
+		}
+	}
+
+	return attr
+}
+
+func clientPeerAttr(addr string) []attribute.KeyValue {
+	host, p, err := net.SplitHostPort(addr)
+	if err != nil {
+		return []attribute.KeyValue(nil)
+	}
+
+	if host == "" {
+		host = "127.0.0.1"
+	}
+	port, err := strconv.Atoi(p)
+	if err != nil {
+		return []attribute.KeyValue(nil)
+	}
+
+	var attr []attribute.KeyValue
+	if ip := net.ParseIP(host); ip != nil {
+		attr = []attribute.KeyValue{
+			ServerSocketAddressKey.String(host),
+			ServerSocketPortKey.Int(port),
+		}
+	} else {
+		attr = []attribute.KeyValue{
+			ServerAddressKey.String(host),
+			ServerPortKey.Int(port),
 		}
 	}
 

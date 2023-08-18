@@ -120,6 +120,30 @@ func HTTPResponseHeader(h http.Header) []attribute.KeyValue {
 	return hc.ResponseHeader(h)
 }
 
+const (
+	// URLFullKey is the attribute Key conforming to the "url.full" semantic
+	// conventions. It represents the absolute URL describing a network
+	// resource according to [RFC3986](https://www.rfc-editor.org/rfc/rfc3986)
+	//
+	// Type: string
+	// RequirementLevel: Optional
+	// Stability: stable
+	// Examples: 'https://www.foo.bar/search?q=OpenTelemetry#SemConv',
+	// '//localhost'
+	// Note: For network calls, URL usually has
+	// `scheme://host[:port][path][?query][#fragment]` format, where the
+	// fragment is not transmitted over HTTP, but if it is known, it should be
+	// included nevertheless.
+	// `url.full` MUST NOT contain credentials passed via URL in form of
+	// `https://username:password@www.example.com/`. In such case username and
+	// password should be redacted and attribute's value should be
+	// `https://REDACTED:REDACTED@www.example.com/`.
+	// `url.full` SHOULD capture the absolute URL when it is available (or can
+	// be reconstructed) and SHOULD NOT be validated or modified except for
+	// sanitizing purposes.
+	URLFullKey = attribute.Key("url.full")
+)
+
 // httpConv are the HTTP semantic convention attributes defined for a version
 // of the OpenTelemetry specification.
 type httpConv struct {
@@ -154,7 +178,7 @@ var hc = &httpConv{
 	HTTPSchemeHTTPS:              semconv.HTTPSchemeHTTPS,
 	HTTPStatusCodeKey:            semconv.HTTPStatusCodeKey,
 	HTTPTargetKey:                semconv.HTTPTargetKey,
-	HTTPURLKey:                   semconv.HTTPURLKey,
+	HTTPURLKey:                   URLFullKey,
 	HTTPUserAgentKey:             semconv.HTTPUserAgentKey,
 }
 
@@ -230,9 +254,9 @@ func (c *httpConv) ClientRequest(req *http.Request) []attribute.KeyValue {
 	}
 	attrs = append(attrs, c.HTTPURLKey.String(u))
 
-	attrs = append(attrs, c.NetConv.PeerName(peer))
+	attrs = append(attrs, c.NetConv.ServerAddress(peer))
 	if port > 0 {
-		attrs = append(attrs, c.NetConv.PeerPort(port))
+		attrs = append(attrs, c.NetConv.ServerPort(port))
 	}
 
 	if useragent != "" {
@@ -328,9 +352,9 @@ func (c *httpConv) ServerRequest(server string, req *http.Request) []attribute.K
 	if peer != "" {
 		// The Go HTTP server sets RemoteAddr to "IP:port", this will not be a
 		// file-path that would be interpreted with a sock family.
-		attrs = append(attrs, c.NetConv.SockPeerAddr(peer))
+		attrs = append(attrs, c.NetConv.ClientSocketAddress(peer))
 		if peerPort > 0 {
-			attrs = append(attrs, c.NetConv.SockPeerPort(peerPort))
+			attrs = append(attrs, c.NetConv.ClientSocketPort(peerPort))
 		}
 	}
 

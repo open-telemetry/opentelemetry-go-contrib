@@ -50,38 +50,129 @@ func NetServer(address string, ln net.Listener) []attribute.KeyValue {
 	return nc.Server(address, ln)
 }
 
+const (
+	// ServerAddressKey is the attribute Key conforming to the "server.address"
+	// semantic conventions. It represents the logical server hostname, matches
+	// server FQDN if available, and IP or socket address if FQDN is not known.
+	//
+	// Type: string
+	// RequirementLevel: Optional
+	// Stability: stable
+	// Examples: 'example.com'.
+	ServerAddressKey = attribute.Key("server.address")
+
+	// ServerPortKey is the attribute Key conforming to the "server.port"
+	// semantic conventions. It represents the logical server port number
+	//
+	// Type: int
+	// RequirementLevel: Optional
+	// Stability: stable
+	// Examples: 80, 8080, 443.
+	ServerPortKey = attribute.Key("server.port")
+
+	// ServerSocketDomainKey is the attribute Key conforming to the
+	// "server.socket.domain" semantic conventions. It represents the domain
+	// name of an immediate peer.
+	//
+	// Type: string
+	// RequirementLevel: Recommended (If different than `server.address`.)
+	// Stability: stable
+	// Examples: 'proxy.example.com'
+	// Note: Typically observed from the client side, and represents a proxy or
+	// other intermediary domain name.
+	ServerSocketDomainKey = attribute.Key("server.socket.domain")
+
+	// ServerSocketAddressKey is the attribute Key conforming to the
+	// "server.socket.address" semantic conventions. It represents the physical
+	// server IP address or Unix socket address. If set from the client, should
+	// simply use the socket's peer address, and not attempt to find any actual
+	// server IP (i.e., if set from client, this may represent some proxy
+	// server instead of the logical server).
+	//
+	// Type: string
+	// RequirementLevel: Recommended (If different than `server.address`.)
+	// Stability: stable
+	// Examples: '10.5.3.2'.
+	ServerSocketAddressKey = attribute.Key("server.socket.address")
+
+	// ServerSocketPortKey is the attribute Key conforming to the
+	// "server.socket.port" semantic conventions. It represents the physical
+	// server port.
+	//
+	// Type: int
+	// RequirementLevel: Recommended (If different than `server.port`.)
+	// Stability: stable
+	// Examples: 16456.
+	ServerSocketPortKey = attribute.Key("server.socket.port")
+)
+
+const (
+	// ClientSocketAddressKey is the attribute Key conforming to the
+	// "client.socket.address" semantic conventions. It represents the
+	// immediate client peer address - unix domain socket name, IPv4 or IPv6
+	// address.
+	//
+	// Type: string
+	// RequirementLevel: Recommended (If different than `client.address`.)
+	// Stability: stable
+	// Examples: '/tmp/my.sock', '127.0.0.1'.
+	ClientSocketAddressKey = attribute.Key("client.socket.address")
+
+	// ClientSocketPortKey is the attribute Key conforming to the
+	// "client.socket.port" semantic conventions. It represents the immediate
+	// client peer port number
+	//
+	// Type: int
+	// RequirementLevel: Recommended (If different than `client.port`.)
+	// Stability: stable
+	// Examples: 35555.
+	ClientSocketPortKey = attribute.Key("client.socket.port")
+)
+
 // netConv are the network semantic convention attributes defined for a version
 // of the OpenTelemetry specification.
 type netConv struct {
-	NetHostNameKey     attribute.Key
-	NetHostPortKey     attribute.Key
-	NetPeerNameKey     attribute.Key
-	NetPeerPortKey     attribute.Key
-	NetSockFamilyKey   attribute.Key
-	NetSockPeerAddrKey attribute.Key
-	NetSockPeerPortKey attribute.Key
-	NetSockHostAddrKey attribute.Key
-	NetSockHostPortKey attribute.Key
-	NetTransportOther  attribute.KeyValue
-	NetTransportTCP    attribute.KeyValue
-	NetTransportUDP    attribute.KeyValue
-	NetTransportInProc attribute.KeyValue
+	NetHostNameKey         attribute.Key
+	NetHostPortKey         attribute.Key
+	NetPeerNameKey         attribute.Key
+	NetPeerPortKey         attribute.Key
+	NetSockFamilyKey       attribute.Key
+	NetSockPeerAddrKey     attribute.Key
+	NetSockPeerPortKey     attribute.Key
+	NetSockHostAddrKey     attribute.Key
+	NetSockHostPortKey     attribute.Key
+	ServerAddressKey       attribute.Key
+	ServerPortKey          attribute.Key
+	ServerSocketAddressKey attribute.Key
+	ServerSocketPortKey    attribute.Key
+	ClientSocketAddressKey attribute.Key
+	ClientSocketPortKey    attribute.Key
+	NetTransportOther      attribute.KeyValue
+	NetTransportTCP        attribute.KeyValue
+	NetTransportUDP        attribute.KeyValue
+	NetTransportInProc     attribute.KeyValue
 }
 
 var nc = &netConv{
-	NetHostNameKey:     semconv.NetHostNameKey,
-	NetHostPortKey:     semconv.NetHostPortKey,
-	NetPeerNameKey:     semconv.NetPeerNameKey,
-	NetPeerPortKey:     semconv.NetPeerPortKey,
-	NetSockFamilyKey:   semconv.NetSockFamilyKey,
-	NetSockPeerAddrKey: semconv.NetSockPeerAddrKey,
-	NetSockPeerPortKey: semconv.NetSockPeerPortKey,
-	NetSockHostAddrKey: semconv.NetSockHostAddrKey,
-	NetSockHostPortKey: semconv.NetSockHostPortKey,
-	NetTransportOther:  semconv.NetTransportOther,
-	NetTransportTCP:    semconv.NetTransportTCP,
-	NetTransportUDP:    semconv.NetTransportUDP,
-	NetTransportInProc: semconv.NetTransportInProc,
+	NetHostNameKey:         semconv.NetHostNameKey,
+	NetHostPortKey:         semconv.NetHostPortKey,
+	NetPeerNameKey:         semconv.NetPeerNameKey,
+	NetPeerPortKey:         semconv.NetPeerPortKey,
+	NetSockFamilyKey:       semconv.NetSockFamilyKey,
+	NetSockPeerAddrKey:     semconv.NetSockPeerAddrKey,
+	NetSockPeerPortKey:     semconv.NetSockPeerPortKey,
+	NetSockHostAddrKey:     semconv.NetSockHostAddrKey,
+	NetSockHostPortKey:     semconv.NetSockHostPortKey,
+	ServerAddressKey:       ServerAddressKey,
+	ServerPortKey:          ServerPortKey,
+	ServerSocketAddressKey: ServerSocketAddressKey,
+	ServerSocketPortKey:    ServerSocketPortKey,
+	ClientSocketAddressKey: ClientSocketAddressKey,
+	ClientSocketPortKey:    ClientSocketPortKey,
+	NetTransportOther:      semconv.NetTransportOther,
+	NetTransportTCP:        semconv.NetTransportTCP,
+	NetTransportUDP:        semconv.NetTransportUDP,
+	NetTransportInProc:     semconv.NetTransportInProc,
 }
 
 func (c *netConv) Transport(network string) attribute.KeyValue {
@@ -175,6 +266,30 @@ func (c *netConv) HostPort(port int) attribute.KeyValue {
 	return c.NetHostPortKey.Int(port)
 }
 
+func (c *netConv) ServerAddress(name string) attribute.KeyValue {
+	return c.ServerAddressKey.String(name)
+}
+
+func (c *netConv) ServerPort(port int) attribute.KeyValue {
+	return c.ServerPortKey.Int(port)
+}
+
+func (c *netConv) ServerSocketAddress(name string) attribute.KeyValue {
+	return c.ServerSocketAddressKey.String(name)
+}
+
+func (c *netConv) ServerSocketPort(port int) attribute.KeyValue {
+	return c.ServerSocketPortKey.Int(port)
+}
+
+func (c *netConv) ClientSocketAddress(name string) attribute.KeyValue {
+	return c.ClientSocketAddressKey.String(name)
+}
+
+func (c *netConv) ClientSocketPort(port int) attribute.KeyValue {
+	return c.ClientSocketPortKey.Int(port)
+}
+
 // Client returns attributes for a client network connection to address. See
 // net.Dial for information about acceptable address values, address should be
 // the same as the one used to create conn. If conn is nil, only network peer
@@ -225,10 +340,10 @@ func (c *netConv) Client(address string, conn net.Conn) []attribute.KeyValue {
 	n += positiveInt(peerPort, sockPeerPort, sockHostPort)
 	attr := make([]attribute.KeyValue, 0, n)
 	if peerName != "" {
-		attr = append(attr, c.PeerName(peerName))
+		attr = append(attr, c.ServerAddress(peerName))
 		if peerPort > 0 {
 			// Only if net.peer.name is set should net.peer.port be.
-			attr = append(attr, c.PeerPort(peerPort))
+			attr = append(attr, c.ServerPort(peerPort))
 		}
 	}
 	if network != "" {
@@ -238,10 +353,10 @@ func (c *netConv) Client(address string, conn net.Conn) []attribute.KeyValue {
 		attr = append(attr, c.NetSockFamilyKey.String(sockFamily))
 	}
 	if sockPeerAddr != "" {
-		attr = append(attr, c.NetSockPeerAddrKey.String(sockPeerAddr))
+		attr = append(attr, c.ServerSocketAddress(sockPeerAddr))
 		if sockPeerPort > 0 {
 			// Only if net.sock.peer.addr is set should net.sock.peer.port be.
-			attr = append(attr, c.NetSockPeerPortKey.Int(sockPeerPort))
+			attr = append(attr, c.ServerSocketPort(sockPeerPort))
 		}
 	}
 	if sockHostAddr != "" {
