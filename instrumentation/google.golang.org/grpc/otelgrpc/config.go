@@ -37,10 +37,11 @@ type Filter func(*InterceptorInfo) bool
 
 // config is a group of options for this instrumentation.
 type config struct {
-	Filter         Filter
-	Propagators    propagation.TextMapPropagator
-	TracerProvider trace.TracerProvider
-	MeterProvider  metric.MeterProvider
+	Filter           Filter
+	Propagators      propagation.TextMapPropagator
+	TracerProvider   trace.TracerProvider
+	MeterProvider    metric.MeterProvider
+	SpanStartOptions []trace.SpanStartOption
 
 	ReceivedEvent bool
 	SentEvent     bool
@@ -168,4 +169,16 @@ func (m messageEventsProviderOption) apply(c *config) {
 //   - SentEvents: Record the number of bytes written after every gRPC write operation.
 func WithMessageEvents(events ...Event) Option {
 	return messageEventsProviderOption{events: events}
+}
+
+type spanStartOption struct{ opts []trace.SpanStartOption }
+
+func (o spanStartOption) apply(c *config) {
+	c.SpanStartOptions = append(c.SpanStartOptions, o.opts...)
+}
+
+// WithSpanOptions configures an additional set of
+// trace.SpanOptions, which are applied to each new span.
+func WithSpanOptions(opts ...trace.SpanStartOption) Option {
+	return spanStartOption{opts}
 }
