@@ -84,12 +84,17 @@ func UnaryClientInterceptor(opts ...Option) grpc.UnaryClientInterceptor {
 		}
 
 		name, attr := spanInfo(method, cc.Target())
-		var span trace.Span
-		ctx, span = tracer.Start(
+
+		startOpts := append([]trace.SpanStartOption{
+			trace.WithSpanKind(trace.SpanKindClient),
+			trace.WithAttributes(attr...)},
+			cfg.SpanStartOptions...,
+		)
+
+		ctx, span := tracer.Start(
 			ctx,
 			name,
-			trace.WithSpanKind(trace.SpanKindClient),
-			trace.WithAttributes(attr...),
+			startOpts...,
 		)
 		defer span.End()
 
@@ -274,12 +279,17 @@ func StreamClientInterceptor(opts ...Option) grpc.StreamClientInterceptor {
 		}
 
 		name, attr := spanInfo(method, cc.Target())
-		var span trace.Span
-		ctx, span = tracer.Start(
+
+		startOpts := append([]trace.SpanStartOption{
+			trace.WithSpanKind(trace.SpanKindClient),
+			trace.WithAttributes(attr...)},
+			cfg.SpanStartOptions...,
+		)
+
+		ctx, span := tracer.Start(
 			ctx,
 			name,
-			trace.WithSpanKind(trace.SpanKindClient),
-			trace.WithAttributes(attr...),
+			startOpts...,
 		)
 
 		ctx = inject(ctx, cfg.Propagators)
@@ -336,13 +346,18 @@ func UnaryServerInterceptor(opts ...Option) grpc.UnaryServerInterceptor {
 		}
 
 		ctx = extract(ctx, cfg.Propagators)
-
 		name, attr := spanInfo(info.FullMethod, peerFromCtx(ctx))
+
+		startOpts := append([]trace.SpanStartOption{
+			trace.WithSpanKind(trace.SpanKindServer),
+			trace.WithAttributes(attr...)},
+			cfg.SpanStartOptions...,
+		)
+
 		ctx, span := tracer.Start(
 			trace.ContextWithRemoteSpanContext(ctx, trace.SpanContextFromContext(ctx)),
 			name,
-			trace.WithSpanKind(trace.SpanKindServer),
-			trace.WithAttributes(attr...),
+			startOpts...,
 		)
 		defer span.End()
 
@@ -454,13 +469,18 @@ func StreamServerInterceptor(opts ...Option) grpc.StreamServerInterceptor {
 		}
 
 		ctx = extract(ctx, cfg.Propagators)
-
 		name, attr := spanInfo(info.FullMethod, peerFromCtx(ctx))
+
+		startOpts := append([]trace.SpanStartOption{
+			trace.WithSpanKind(trace.SpanKindServer),
+			trace.WithAttributes(attr...)},
+			cfg.SpanStartOptions...,
+		)
+
 		ctx, span := tracer.Start(
 			trace.ContextWithRemoteSpanContext(ctx, trace.SpanContextFromContext(ctx)),
 			name,
-			trace.WithSpanKind(trace.SpanKindServer),
-			trace.WithAttributes(attr...),
+			startOpts...,
 		)
 		defer span.End()
 
