@@ -12,6 +12,7 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 
 - Add the new `go.opentelemetry.io/contrib/instrgen` package to provide auto-generated source code instrumentation. (#3068, #3108)
 - Set the description for the `rpc.server.duration` metric in `go.opentelemetry.io/contrib/instrumentation/google.golang.org/grpc/otelgrpc`. (#4302)
+- Add new Prometheus bridge module in `go.opentelemetry.io/contrib/bridges/prometheus`. (#4227)
 
 ## [1.19.0/0.44.0/0.13.0] - 2023-09-12
 
