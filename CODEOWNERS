@@ -55,7 +55,7 @@ propagators/opencensus/                                                 @open-te
 propagators/ot/                                                         @open-telemetry/go-approvers
 
 samplers/aws/xray/                                                      @open-telemetry/go-approvers @Aneurysm9
-samplers/jaegerremote/                                                  @open-telemetry/go-approvers
+samplers/jaegerremote/                                                  @open-telemetry/go-approvers @yurishkuro
 samplers/probability/consistent/                                        @open-telemetry/go-approvers @MadVikingGod
 
 zpages/                                                                 @open-telemetry/go-approvers @dashpole
