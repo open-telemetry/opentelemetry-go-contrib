@@ -1,0 +1,10 @@
+{
+    "exporter": 
+    {
+        "otlp": {
+            "endpoint": "localhost:4318",
+            "protocol": "http/protobuf",
+            "compression": "gzip"
+        }
+    }
+}

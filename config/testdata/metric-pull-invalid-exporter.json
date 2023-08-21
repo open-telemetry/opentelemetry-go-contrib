@@ -1,0 +1,9 @@
+{
+    "exporter": 
+    {
+        "otlp": {
+            "endpoint": "invalid",
+            "protocol": "http/protobuf"
+        }
+    }
+}

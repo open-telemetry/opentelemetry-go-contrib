@@ -1,0 +1,14 @@
+{
+    "exporter": 
+    {
+        "otlp": {
+            "endpoint": "http://localhost:4318/path/123",
+            "protocol": "http/protobuf",
+            "compression": "none",
+            "timeout": 1000,
+            "headers": {
+                "test": "test1"
+            }
+        }
+    }
+}

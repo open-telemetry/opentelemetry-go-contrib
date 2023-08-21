@@ -14,6 +14,7 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 - Set the description for the `rpc.server.duration` metric in `go.opentelemetry.io/contrib/instrumentation/google.golang.org/grpc/otelgrpc`. (#4302)
 - Add `NewServerHandler` and `NewClientHandler` that return a `grpc.StatsHandler` used for gRPC instrumentation in `go.opentelemetry.io/contrib/instrumentation/google.golang.org/grpc/otelgrpc`. (#3002)
 - Add new Prometheus bridge module in `go.opentelemetry.io/contrib/bridges/prometheus`. (#4227)
+- Add module to parse configuration as per opentelemetry-config schema. (#4228)
 
 ### Changed
 

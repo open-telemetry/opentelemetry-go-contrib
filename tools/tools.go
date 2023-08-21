@@ -18,6 +18,7 @@
 package tools // import "go.opentelemetry.io/contrib/tools"
 
 import (
+	_ "github.com/atombender/go-jsonschema/cmd/gojsonschema"
 	_ "github.com/client9/misspell/cmd/misspell"
 	_ "github.com/golangci/golangci-lint/cmd/golangci-lint"
 	_ "github.com/jcchavezs/porto/cmd/porto"
