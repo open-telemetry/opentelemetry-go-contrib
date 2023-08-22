@@ -73,6 +73,7 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 - Add `WithSpanOptions` option in `go.opentelemetry.io/contrib/instrumentation/google.golang.org/grpc/otelgrpc`. (#3768)
 - Add testing support for Go 1.21. (#4233)
 - Add `WithFilter` option to `go.opentelemetry.io/contrib/instrumentation/github.com/gorilla/mux/otelmux`. (#4230)
+- Add metrics support to `go.opentelemetry.io/contrib/exporters/autoexport`. (#4229)
 
 ### Changed
 
