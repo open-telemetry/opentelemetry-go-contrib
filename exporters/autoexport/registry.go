@@ -22,6 +22,7 @@ import (
 	"sync"
 
 	"go.opentelemetry.io/otel/exporters/otlp/otlpmetric/otlpmetricgrpc"
+	"go.opentelemetry.io/otel/exporters/otlp/otlpmetric/otlpmetrichttp"
 	"go.opentelemetry.io/otel/exporters/otlp/otlptrace/otlptracegrpc"
 	"go.opentelemetry.io/otel/exporters/otlp/otlptrace/otlptracehttp"
 	"go.opentelemetry.io/otel/sdk/metric"
@@ -213,7 +214,7 @@ func buildOTLPMetricReader(ctx context.Context) (metric.Reader, error) {
 		}
 		return metric.NewPeriodicReader(r), nil
 	case "http/protobuf":
-		r, err := otlpmetricgrpc.New(ctx)
+		r, err := otlpmetrichttp.New(ctx)
 		if err != nil {
 			return nil, err
 		}
