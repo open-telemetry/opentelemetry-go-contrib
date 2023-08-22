@@ -36,14 +36,14 @@ var stdoutFactory = func(ctx context.Context) (trace.SpanExporter, error) {
 }
 
 func TestCanStoreExporterFactory(t *testing.T) {
-	r := newRegistry()
+	r := newSpanExporterRegistry()
 	assert.NotPanics(t, func() {
 		require.NoError(t, r.store("first", stdoutFactory))
 	})
 }
 
 func TestLoadOfUnknownExporterReturnsError(t *testing.T) {
-	r := newRegistry()
+	r := newSpanExporterRegistry()
 	assert.NotPanics(t, func() {
 		exp, err := r.load(context.Background(), "non-existent")
 		assert.Equal(t, err, errUnknownExporter, "empty registry should hold nothing")
@@ -54,7 +54,7 @@ func TestLoadOfUnknownExporterReturnsError(t *testing.T) {
 func TestRegistryIsConcurrentSafe(t *testing.T) {
 	const exporterName = "stdout"
 
-	r := newRegistry()
+	r := newSpanExporterRegistry()
 	assert.NotPanics(t, func() {
 		require.NoError(t, r.store(exporterName, stdoutFactory))
 	})
@@ -108,9 +108,9 @@ func TestDefaultOTLPExporterFactoriesAreAutomaticallyRegistered(t *testing.T) {
 func TestEnvRegistryCanRegisterExporterFactory(t *testing.T) {
 	const exporterName = "custom"
 	RegisterSpanExporter(exporterName, stdoutFactory)
-	t.Cleanup(func() { envRegistry.drop(exporterName) })
+	t.Cleanup(func() { spanExporterRegistry.drop(exporterName) })
 
-	exp, err := envRegistry.load(context.Background(), exporterName)
+	exp, err := spanExporterRegistry.load(context.Background(), exporterName)
 	assert.Nil(t, err, "missing exporter in envRegistry")
 	assert.IsType(t, &stdouttrace.Exporter{}, exp)
 }
@@ -118,7 +118,7 @@ func TestEnvRegistryCanRegisterExporterFactory(t *testing.T) {
 func TestEnvRegistryPanicsOnDuplicateRegisterCalls(t *testing.T) {
 	const exporterName = "custom"
 	RegisterSpanExporter(exporterName, stdoutFactory)
-	t.Cleanup(func() { envRegistry.drop(exporterName) })
+	t.Cleanup(func() { spanExporterRegistry.drop(exporterName) })
 
 	errString := fmt.Sprintf("%s: %q", errDuplicateRegistration, exporterName)
 	assert.PanicsWithError(t, errString, func() {

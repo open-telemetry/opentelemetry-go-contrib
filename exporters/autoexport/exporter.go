@@ -18,15 +18,18 @@ import (
 	"context"
 	"os"
 
+	"go.opentelemetry.io/otel/sdk/metric"
 	"go.opentelemetry.io/otel/sdk/trace"
 )
 
 const (
-	otelTracesExportersEnvKey = "OTEL_TRACES_EXPORTER"
+	otelTracesExportersEnvKey  = "OTEL_TRACES_EXPORTER"
+	otelMetricsExportersEnvKey = "OTEL_METRICS_EXPORTER"
 )
 
 type config struct {
-	fallbackExporter trace.SpanExporter
+	fallbackSpanExporter trace.SpanExporter
+	fallbackMetricReader metric.Reader
 }
 
 func newConfig(ctx context.Context, opts ...Option) (config, error) {
@@ -35,14 +38,24 @@ func newConfig(ctx context.Context, opts ...Option) (config, error) {
 		cfg = opt.apply(cfg)
 	}
 
-	// if no fallback exporter is configured, use otlp exporter
-	if cfg.fallbackExporter == nil {
-		exp, err := spanExporter(context.Background(), "otlp")
+	// if no fallback span exporter is configured, use otlp exporter
+	if cfg.fallbackSpanExporter == nil {
+		exp, err := spanExporter(ctx, "otlp")
 		if err != nil {
 			return cfg, err
 		}
-		cfg.fallbackExporter = exp
+		cfg.fallbackSpanExporter = exp
 	}
+
+	// if no fallback metric reader is configured, use otlp exporter
+	if cfg.fallbackMetricReader == nil {
+		r, err := metricReader(ctx, "otlp")
+		if err != nil {
+			return cfg, err
+		}
+		cfg.fallbackMetricReader = r
+	}
+
 	return cfg, nil
 }
 
@@ -61,7 +74,7 @@ func (fn optionFunc) apply(cfg config) config {
 // is configured through the OTEL_TRACES_EXPORTER environment variable.
 func WithFallbackSpanExporter(exporter trace.SpanExporter) Option {
 	return optionFunc(func(cfg config) config {
-		cfg.fallbackExporter = exporter
+		cfg.fallbackSpanExporter = exporter
 		return cfg
 	})
 }
@@ -91,7 +104,7 @@ func WithFallbackSpanExporter(exporter trace.SpanExporter) Option {
 func NewSpanExporter(ctx context.Context, opts ...Option) (trace.SpanExporter, error) {
 	// prefer exporter configured via environment variables over exporter
 	// passed in via exporter parameter
-	envExporter, err := makeExporterFromEnv(ctx)
+	envExporter, err := makeSpanExporterFromEnv(ctx)
 	if err != nil {
 		return nil, err
 	}
@@ -102,16 +115,66 @@ func NewSpanExporter(ctx context.Context, opts ...Option) (trace.SpanExporter, e
 	if err != nil {
 		return nil, err
 	}
-	return config.fallbackExporter, nil
+	return config.fallbackSpanExporter, nil
 }
 
-// makeExporterFromEnv returns a configured SpanExporter defined by the OTEL_TRACES_EXPORTER
+// NewMetricReader returns a configured [go.opentelemetry.io/otel/sdk/metric.Reader]
+// defined using the environment variables described below.
+//
+// OTEL_METRICS_EXPORTER defines the metrics exporter; supported values:
+//   - "none" - "no operation" exporter
+//   - "otlp" (default) - OTLP exporter; see [go.opentelemetry.io/otel/exporters/otlp/otlptrace]
+//
+// OTEL_EXPORTER_OTLP_PROTOCOL defines OTLP exporter's transport protocol;
+// supported values:
+//   - "grpc" - protobuf-encoded data using gRPC wire format over HTTP/2 connection;
+//     see: [go.opentelemetry.io/otel/exporters/otlp/otlptrace/otlptracegrpc]
+//   - "http/protobuf" (default) -  protobuf-encoded data over HTTP connection;
+//     see: [go.opentelemetry.io/otel/exporters/otlp/otlptrace/otlptracehttp]
+//
+// An error is returned if an environment value is set to an unhandled value.
+//
+// Use [RegisterMetricReader] to handle more values of OTEL_METRICS_EXPORTER.
+//
+// Use [WithFallbackMetricReader] option to change the returned exporter
+// when OTEL_TRACES_EXPORTER is unset or empty.
+//
+// Use [IsNoneSpanExporter] to check if the retured exporter is a "no operation" exporter.
+func NewMetricReader(ctx context.Context, opts ...Option) (metric.Reader, error) {
+	// prefer exporter configured via environment variables over exporter
+	// passed in via exporter parameter
+	envReader, err := makeMetricReaderFromEnv(ctx)
+	if err != nil {
+		return nil, err
+	}
+	if envReader != nil {
+		return envReader, nil
+	}
+	config, err := newConfig(ctx, opts...)
+	if err != nil {
+		return nil, err
+	}
+	return config.fallbackMetricReader, nil
+}
+
+// makeSpanExporterFromEnv returns a configured SpanExporter defined by the OTEL_TRACES_EXPORTER
 // environment variable.
 // nil is returned if no exporter is defined for the environment variable.
-func makeExporterFromEnv(ctx context.Context) (trace.SpanExporter, error) {
+func makeSpanExporterFromEnv(ctx context.Context) (trace.SpanExporter, error) {
 	expType := os.Getenv(otelTracesExportersEnvKey)
 	if expType == "" {
 		return nil, nil
 	}
 	return spanExporter(ctx, expType)
+}
+
+// makeMetricReaderFromEnv returns a configured metric.Reader defined by the OTEL_METRICS_EXPORTER
+// environment variable.
+// nil is returned if no exporter is defined for the environment variable.
+func makeMetricReaderFromEnv(ctx context.Context) (metric.Reader, error) {
+	expType := os.Getenv(otelMetricsExportersEnvKey)
+	if expType == "" {
+		return nil, nil
+	}
+	return metricReader(ctx, expType)
 }
