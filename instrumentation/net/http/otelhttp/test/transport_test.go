@@ -16,11 +16,14 @@ package test
 
 import (
 	"context"
+	"fmt"
 	"io"
+	"net"
 	"net/http"
 	"net/http/httptest"
 	"net/http/httptrace"
 	"runtime"
+	"strconv"
 	"strings"
 	"testing"
 
@@ -28,10 +31,16 @@ import (
 	"github.com/stretchr/testify/require"
 
 	"go.opentelemetry.io/contrib/instrumentation/net/http/otelhttp"
+	"go.opentelemetry.io/otel/attribute"
 	"go.opentelemetry.io/otel/codes"
 	"go.opentelemetry.io/otel/propagation"
+	"go.opentelemetry.io/otel/sdk/instrumentation"
+	"go.opentelemetry.io/otel/sdk/metric"
+	"go.opentelemetry.io/otel/sdk/metric/metricdata"
+	"go.opentelemetry.io/otel/sdk/metric/metricdata/metricdatatest"
 	sdktrace "go.opentelemetry.io/otel/sdk/trace"
 	"go.opentelemetry.io/otel/sdk/trace/tracetest"
+	semconv "go.opentelemetry.io/otel/semconv/v1.17.0"
 	"go.opentelemetry.io/otel/trace"
 )
 
@@ -237,4 +246,101 @@ func TestWithHTTPTrace(t *testing.T) {
 	assert.NotEmpty(t, spans[2].Parent().SpanID())
 	assert.Equal(t, spans[2].SpanContext().SpanID(), spans[0].Parent().SpanID())
 	assert.Equal(t, spans[1].SpanContext().SpanID(), spans[2].Parent().SpanID())
+}
+
+func TestTransportMetrics(t *testing.T) {
+	reader := metric.NewManualReader()
+	meterProvider := metric.NewMeterProvider(metric.WithReader(reader))
+
+	content := []byte("Hello, world!")
+
+	ts := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		w.WriteHeader(http.StatusOK)
+		if _, err := w.Write(content); err != nil {
+			t.Fatal(err)
+		}
+	}))
+	defer ts.Close()
+
+	r, err := http.NewRequest(http.MethodGet, ts.URL, nil)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	tr := otelhttp.NewTransport(
+		http.DefaultTransport,
+		otelhttp.WithMeterProvider(meterProvider),
+	)
+
+	c := http.Client{Transport: tr}
+	res, err := c.Do(r)
+	if err != nil {
+		t.Fatal(err)
+	}
+	require.NoError(t, res.Body.Close())
+
+	host, portStr, _ := net.SplitHostPort(r.Host)
+	if host == "" {
+		host = "127.0.0.1"
+	}
+	port, err := strconv.Atoi(portStr)
+	if err != nil {
+		port = 0
+	}
+
+	rm := metricdata.ResourceMetrics{}
+	err = reader.Collect(context.Background(), &rm)
+	require.NoError(t, err)
+	require.Len(t, rm.ScopeMetrics, 1)
+	attrs := attribute.NewSet(
+		semconv.NetPeerName(host),
+		semconv.NetPeerPort(port),
+		semconv.HTTPURL(ts.URL),
+		semconv.HTTPFlavorKey.String(fmt.Sprintf("1.%d", r.ProtoMinor)),
+		semconv.HTTPMethod("GET"),
+		semconv.HTTPResponseContentLength(13),
+		semconv.HTTPStatusCode(200),
+	)
+	assertClientScopeMetrics(t, rm.ScopeMetrics[0], attrs)
+}
+
+func assertClientScopeMetrics(t *testing.T, sm metricdata.ScopeMetrics, attrs attribute.Set) {
+	assert.Equal(t, instrumentation.Scope{
+		Name:    "go.opentelemetry.io/contrib/instrumentation/net/http/otelhttp",
+		Version: otelhttp.Version(),
+	}, sm.Scope)
+
+	require.Len(t, sm.Metrics, 3)
+
+	want := metricdata.Metrics{
+		Name: "http.client.request_content_length",
+		Data: metricdata.Sum[int64]{
+			DataPoints:  []metricdata.DataPoint[int64]{{Attributes: attrs, Value: 0}},
+			Temporality: metricdata.CumulativeTemporality,
+			IsMonotonic: true,
+		},
+	}
+	metricdatatest.AssertEqual(t, want, sm.Metrics[0], metricdatatest.IgnoreTimestamp())
+
+	want = metricdata.Metrics{
+		Name: "http.client.response_content_length",
+		Data: metricdata.Sum[int64]{
+			DataPoints:  []metricdata.DataPoint[int64]{{Attributes: attrs, Value: 13}},
+			Temporality: metricdata.CumulativeTemporality,
+			IsMonotonic: true,
+		},
+	}
+	metricdatatest.AssertEqual(t, want, sm.Metrics[1], metricdatatest.IgnoreTimestamp())
+
+	// Duration value is not predictable.
+	dur := sm.Metrics[2]
+	assert.Equal(t, "http.client.duration", dur.Name)
+	require.IsType(t, dur.Data, metricdata.Histogram[float64]{})
+	hist := dur.Data.(metricdata.Histogram[float64])
+	assert.Equal(t, metricdata.CumulativeTemporality, hist.Temporality)
+	require.Len(t, hist.DataPoints, 1)
+	dPt := hist.DataPoints[0]
+	assert.Equal(t, attrs, dPt.Attributes, "attributes")
+	assert.Equal(t, uint64(1), dPt.Count, "count")
+	assert.Equal(t, []float64{0, 5, 10, 25, 50, 75, 100, 250, 500, 750, 1000, 2500, 5000, 7500, 10000}, dPt.Bounds, "bounds")
 }

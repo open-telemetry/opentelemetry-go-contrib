@@ -19,10 +19,13 @@ import (
 	"io"
 	"net/http"
 	"net/http/httptrace"
+	"time"
 
 	"go.opentelemetry.io/contrib/instrumentation/net/http/otelhttp/internal/semconvutil"
 	"go.opentelemetry.io/otel"
+	"go.opentelemetry.io/otel/attribute"
 	"go.opentelemetry.io/otel/codes"
+	"go.opentelemetry.io/otel/metric"
 	"go.opentelemetry.io/otel/propagation"
 	"go.opentelemetry.io/otel/trace"
 )
@@ -32,12 +35,18 @@ import (
 type Transport struct {
 	rt http.RoundTripper
 
-	tracer            trace.Tracer
-	propagators       propagation.TextMapPropagator
-	spanStartOptions  []trace.SpanStartOption
-	filters           []Filter
-	spanNameFormatter func(string, *http.Request) string
-	clientTrace       func(context.Context) *httptrace.ClientTrace
+	tracer                trace.Tracer
+	meter                 metric.Meter
+	propagators           propagation.TextMapPropagator
+	spanStartOptions      []trace.SpanStartOption
+	readEvent             bool
+	filters               []Filter
+	spanNameFormatter     func(string, *http.Request) string
+	clientTrace           func(context.Context) *httptrace.ClientTrace
+	getRequestAttributes  func(*http.Request) []attribute.KeyValue
+	getResponseAttributes func(response *http.Response) []attribute.KeyValue
+	counters              map[string]metric.Int64Counter
+	valueRecorders        map[string]metric.Float64Histogram
 }
 
 var _ http.RoundTripper = &Transport{}
@@ -63,14 +72,17 @@ func NewTransport(base http.RoundTripper, opts ...Option) *Transport {
 
 	c := newConfig(append(defaultOpts, opts...)...)
 	t.applyConfig(c)
+	t.createMeasures()
 
 	return &t
 }
 
 func (t *Transport) applyConfig(c *config) {
 	t.tracer = c.Tracer
+	t.meter = c.Meter
 	t.propagators = c.Propagators
 	t.spanStartOptions = c.SpanStartOptions
+	t.readEvent = c.ReadEvent
 	t.filters = c.Filters
 	t.spanNameFormatter = c.SpanNameFormatter
 	t.clientTrace = c.ClientTrace
@@ -80,10 +92,29 @@ func defaultTransportFormatter(_ string, r *http.Request) string {
 	return "HTTP " + r.Method
 }
 
+func (t *Transport) createMeasures() {
+	t.counters = make(map[string]metric.Int64Counter)
+	t.valueRecorders = make(map[string]metric.Float64Histogram)
+
+	requestBytesCounter, err := t.meter.Int64Counter(ClientRequestContentLength)
+	handleErr(err)
+
+	responseBytesCounter, err := t.meter.Int64Counter(ClientResponseContentLength)
+	handleErr(err)
+
+	clientLatencyMeasure, err := t.meter.Float64Histogram(ClientLatency)
+	handleErr(err)
+
+	t.counters[ClientRequestContentLength] = requestBytesCounter
+	t.counters[ClientResponseContentLength] = responseBytesCounter
+	t.valueRecorders[ClientLatency] = clientLatencyMeasure
+}
+
 // RoundTrip creates a Span and propagates its context via the provided request's headers
 // before handing the request to the configured base RoundTripper. The created span will
 // end when the response body is closed or when a read from the body returns io.EOF.
 func (t *Transport) RoundTrip(r *http.Request) (*http.Response, error) {
+	requestStartTime := time.Now()
 	for _, f := range t.filters {
 		if !f(r) {
 			// Simply pass through to the base RoundTripper if a filter rejects the request
@@ -109,8 +140,28 @@ func (t *Transport) RoundTrip(r *http.Request) (*http.Response, error) {
 		ctx = httptrace.WithClientTrace(ctx, t.clientTrace(ctx))
 	}
 
+	readRecordFunc := func(int64) {}
+	if t.readEvent {
+		readRecordFunc = func(n int64) {
+			span.AddEvent("read", trace.WithAttributes(ReadBytesKey.Int64(n)))
+		}
+	}
+
+	var bw bodyWrapper
+	// if request body is nil or NoBody, we don't want to mutate the body as it
+	// will affect the identity of it in an unforeseeable way because we assert
+	// ReadCloser fulfills a certain interface, and it is indeed nil or NoBody.
+	if r.Body != nil && r.Body != http.NoBody {
+		bw.ReadCloser = r.Body
+		bw.record = readRecordFunc
+		r.Body = &bw
+	}
+
 	r = r.Clone(ctx) // According to RoundTripper spec, we shouldn't modify the origin request.
 	span.SetAttributes(semconvutil.HTTPClientRequest(r)...)
+	if t.getRequestAttributes != nil {
+		span.SetAttributes(t.getRequestAttributes(r)...)
+	}
 	t.propagators.Inject(ctx, propagation.HeaderCarrier(r.Header))
 
 	res, err := t.rt.RoundTrip(r)
@@ -118,12 +169,35 @@ func (t *Transport) RoundTrip(r *http.Request) (*http.Response, error) {
 		span.RecordError(err)
 		span.SetStatus(codes.Error, err.Error())
 		span.End()
-		return res, err
+	} else {
+		span.SetAttributes(semconvutil.HTTPClientResponse(res)...)
+		if t.getResponseAttributes != nil {
+			span.SetAttributes(t.getResponseAttributes(res)...)
+		}
+		span.SetStatus(semconvutil.HTTPClientStatus(res.StatusCode))
+		res.Body = newWrappedBody(span, res.Body)
 	}
 
-	span.SetAttributes(semconvutil.HTTPClientResponse(res)...)
-	span.SetStatus(semconvutil.HTTPClientStatus(res.StatusCode))
-	res.Body = newWrappedBody(span, res.Body)
+	// Add metrics
+	attributes := semconvutil.HTTPClientRequest(r)
+	if t.getRequestAttributes != nil {
+		attributes = append(attributes, t.getRequestAttributes(r)...)
+	}
+	if err == nil {
+		attributes = append(attributes, semconvutil.HTTPClientResponse(res)...)
+		if t.getResponseAttributes != nil {
+			attributes = append(attributes, t.getResponseAttributes(res)...)
+		}
+	}
+	o := metric.WithAttributes(attributes...)
+	t.counters[ClientRequestContentLength].Add(ctx, bw.read.Load(), o)
+	if err == nil {
+		t.counters[ClientResponseContentLength].Add(ctx, res.ContentLength, o)
+	}
+
+	// Use floating point division here for higher precision (instead of Millisecond method).
+	elapsedTime := float64(time.Since(requestStartTime)) / float64(time.Millisecond)
+	t.valueRecorders[ClientLatency].Record(ctx, elapsedTime, o)
 
 	return res, err
 }
