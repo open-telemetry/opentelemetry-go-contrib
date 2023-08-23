@@ -22,13 +22,14 @@ import (
 	"github.com/stretchr/testify/assert"
 
 	"go.opentelemetry.io/otel/exporters/otlp/otlptrace"
+	"go.opentelemetry.io/otel/sdk/metric"
 	"go.opentelemetry.io/otel/sdk/trace"
 )
 
 func TestOTLPExporterReturnedWhenNoEnvOrFallbackExporterConfigured(t *testing.T) {
 	exporter, err := NewSpanExporter(context.Background())
 	assert.NoError(t, err)
-	assertOTLPHTTPExporter(t, exporter)
+	assertOTLPHTTPSpanExporter(t, exporter)
 }
 
 func TestFallbackExporterReturnedWhenNoEnvExporterConfigured(t *testing.T) {
@@ -51,7 +52,7 @@ func TestEnvExporterIsPreferredOverFallbackExporter(t *testing.T) {
 		WithFallbackSpanExporter(testExporter),
 	)
 	assert.NoError(t, err)
-	assertOTLPHTTPExporter(t, exporter)
+	assertOTLPHTTPSpanExporter(t, exporter)
 }
 
 func TestEnvExporterOTLPOverHTTP(t *testing.T) {
@@ -60,7 +61,7 @@ func TestEnvExporterOTLPOverHTTP(t *testing.T) {
 
 	exporter, err := NewSpanExporter(context.Background())
 	assert.NoError(t, err)
-	assertOTLPHTTPExporter(t, exporter)
+	assertOTLPHTTPSpanExporter(t, exporter)
 }
 
 func TestEnvExporterOTLPOverGRPC(t *testing.T) {
@@ -69,7 +70,7 @@ func TestEnvExporterOTLPOverGRPC(t *testing.T) {
 
 	exporter, err := NewSpanExporter(context.Background())
 	assert.NoError(t, err)
-	assertOTLPGRPCExporter(t, exporter)
+	assertOTLPGRPCSpanExporter(t, exporter)
 }
 
 func TestEnvExporterOTLPOverGRPCOnlyProtocol(t *testing.T) {
@@ -77,7 +78,7 @@ func TestEnvExporterOTLPOverGRPCOnlyProtocol(t *testing.T) {
 
 	exporter, err := NewSpanExporter(context.Background())
 	assert.NoError(t, err)
-	assertOTLPGRPCExporter(t, exporter)
+	assertOTLPGRPCSpanExporter(t, exporter)
 }
 
 func TestEnvExporterOTLPInvalidProtocol(t *testing.T) {
@@ -97,7 +98,19 @@ func TestEnvExporterNone(t *testing.T) {
 	assert.True(t, IsNoneSpanExporter(exporter))
 }
 
-func assertOTLPHTTPExporter(t *testing.T, got trace.SpanExporter) {
+func assertOTLPHTTPMetricReader(t *testing.T, got metric.Reader) {
+	t.Helper()
+
+	if !assert.IsType(t, metric.NewPeriodicReader(nil), got) {
+		return
+	}
+
+	// Implementation detail hack. This may break when bumping OTLP exporter modules as it uses unexported API.
+	clientType := reflect.Indirect(reflect.ValueOf(got)).FieldByName("exporter").Elem().Type().String()
+	assert.Equal(t, "*internal.exporter", clientType)
+}
+
+func assertOTLPHTTPSpanExporter(t *testing.T, got trace.SpanExporter) {
 	t.Helper()
 
 	if !assert.IsType(t, &otlptrace.Exporter{}, got) {
@@ -111,7 +124,7 @@ func assertOTLPHTTPExporter(t *testing.T, got trace.SpanExporter) {
 	assert.False(t, IsNoneSpanExporter(got))
 }
 
-func assertOTLPGRPCExporter(t *testing.T, got trace.SpanExporter) {
+func assertOTLPGRPCSpanExporter(t *testing.T, got trace.SpanExporter) {
 	t.Helper()
 
 	if !assert.IsType(t, &otlptrace.Exporter{}, got) {

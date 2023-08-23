@@ -29,6 +29,22 @@ import (
 	"go.opentelemetry.io/otel/sdk/trace"
 )
 
+type testType struct{ string }
+
+func factory(val string) func(ctx context.Context) (*testType, error) {
+	return func(ctx context.Context) (*testType, error) { return &testType{val}, nil }
+}
+
+func newTestRegistry() registry[*testType] {
+	return registry[*testType]{
+		names: map[string]func(context.Context) (*testType, error){
+			"":     factory(""),
+			"otlp": factory("otlp"),
+			"none": factory("none"),
+		},
+	}
+}
+
 var stdoutMetricFactory = func(ctx context.Context) (metric.Reader, error) {
 	exp, err := stdoutmetric.New()
 	if err != nil {
@@ -46,45 +62,27 @@ var stdoutSpanFactory = func(ctx context.Context) (trace.SpanExporter, error) {
 }
 
 func TestCanStoreExporterFactory(t *testing.T) {
-	t.Run("spans", func(t *testing.T) {
-		r := newSpanExporterRegistry()
-		assert.NotPanics(t, func() {
-			require.NoError(t, r.store("first", stdoutSpanFactory))
-		})
-	})
-	t.Run("metrics", func(t *testing.T) {
-		r := newMetricReaderRegistry()
-		assert.NotPanics(t, func() {
-			require.NoError(t, r.store("first", stdoutMetricFactory))
-		})
+	r := newTestRegistry()
+	assert.NotPanics(t, func() {
+		require.NoError(t, r.store("first", factory("first")))
 	})
 }
 
 func TestLoadOfUnknownExporterReturnsError(t *testing.T) {
-	t.Run("spans", func(t *testing.T) {
-		r := newSpanExporterRegistry()
-		assert.NotPanics(t, func() {
-			exp, err := r.load(context.Background(), "non-existent")
-			assert.Equal(t, err, errUnknownExporter, "empty registry should hold nothing")
-			assert.Nil(t, exp, "non-nil exporter returned")
-		})
-	})
-	t.Run("metrics", func(t *testing.T) {
-		r := newMetricReaderRegistry()
-		assert.NotPanics(t, func() {
-			exp, err := r.load(context.Background(), "non-existent")
-			assert.Equal(t, err, errUnknownExporter, "empty registry should hold nothing")
-			assert.Nil(t, exp, "non-nil exporter returned")
-		})
+	r := newTestRegistry()
+	assert.NotPanics(t, func() {
+		exp, err := r.load(context.Background(), "non-existent")
+		assert.Equal(t, err, errUnknownExporter, "empty registry should hold nothing")
+		assert.Nil(t, exp, "non-nil exporter returned")
 	})
 }
 
 func TestRegistryIsConcurrentSafe(t *testing.T) {
 	const exporterName = "stdout"
 
-	r := newSpanExporterRegistry()
+	r := newTestRegistry()
 	assert.NotPanics(t, func() {
-		require.NoError(t, r.store(exporterName, stdoutSpanFactory))
+		require.NoError(t, r.store(exporterName, factory("stdout")))
 	})
 
 	var wg sync.WaitGroup
@@ -93,7 +91,7 @@ func TestRegistryIsConcurrentSafe(t *testing.T) {
 	go func() {
 		defer wg.Done()
 		assert.NotPanics(t, func() {
-			require.ErrorIs(t, r.store(exporterName, stdoutSpanFactory), errDuplicateRegistration)
+			require.ErrorIs(t, r.store(exporterName, factory("stdout")), errDuplicateRegistration)
 		})
 	}()
 
@@ -101,55 +99,100 @@ func TestRegistryIsConcurrentSafe(t *testing.T) {
 	go func() {
 		defer wg.Done()
 		assert.NotPanics(t, func() {
-			exp, err := r.load(context.Background(), exporterName)
+			_, err := r.load(context.Background(), exporterName)
 			assert.NoError(t, err, "missing exporter in registry")
-			assert.IsType(t, &stdouttrace.Exporter{}, exp)
 		})
 	}()
 
 	wg.Wait()
 }
 
-func TestSubsequentCallsToGetExporterReturnsNewInstances(t *testing.T) {
+type funcs[T any] struct {
+	makeExporter    func(context.Context, string) (T, error)
+	assertOTLPHTTP  func(*testing.T, T)
+	registerFactory func(string, func(context.Context) (T, error))
+	stdoutFactory   func(ctx context.Context) (T, error)
+	registry        *registry[T]
+}
+
+var (
+	spanFuncs = funcs[trace.SpanExporter]{
+		makeExporter:    spanExporter,
+		assertOTLPHTTP:  assertOTLPHTTPSpanExporter,
+		registerFactory: RegisterSpanExporter,
+		stdoutFactory:   stdoutSpanFactory,
+		registry:        &spanExporterRegistry,
+	}
+
+	metricFuncs = funcs[metric.Reader]{
+		makeExporter:    metricReader,
+		assertOTLPHTTP:  assertOTLPHTTPMetricReader,
+		registerFactory: RegisterMetricReader,
+		stdoutFactory:   stdoutMetricFactory,
+		registry:        &metricReaderRegistry,
+	}
+)
+
+func (f funcs[T]) testSubsequentCallsToGetExporterReturnsNewInstances(t *testing.T) {
 	const exporterType = "otlp"
-	exp1, err := spanExporter(context.Background(), exporterType)
+
+	exp1, err := f.makeExporter(context.Background(), exporterType)
 	assert.NoError(t, err)
-	assertOTLPHTTPExporter(t, exp1)
+	f.assertOTLPHTTP(t, exp1)
 
 	exp2, err := spanExporter(context.Background(), exporterType)
 	assert.NoError(t, err)
-	assertOTLPHTTPExporter(t, exp2)
+	assertOTLPHTTPSpanExporter(t, exp2)
 
 	assert.NotSame(t, exp1, exp2)
 }
 
-func TestDefaultOTLPExporterFactoriesAreAutomaticallyRegistered(t *testing.T) {
-	exp1, err := spanExporter(context.Background(), "")
-	assert.Nil(t, err)
-	assertOTLPHTTPExporter(t, exp1)
+func TestSubsequentCallsToGetExporterReturnsNewInstances(t *testing.T) {
+	t.Run("spans", spanFuncs.testSubsequentCallsToGetExporterReturnsNewInstances)
+	t.Run("metrics", metricFuncs.testSubsequentCallsToGetExporterReturnsNewInstances)
+}
 
-	exp2, err := spanExporter(context.Background(), "otlp")
+func (f funcs[T]) testDefaultOTLPExporterFactoriesAreAutomaticallyRegistered(t *testing.T) {
+	exp1, err := f.makeExporter(context.Background(), "")
 	assert.Nil(t, err)
-	assertOTLPHTTPExporter(t, exp2)
+	f.assertOTLPHTTP(t, exp1)
+
+	exp2, err := f.makeExporter(context.Background(), "otlp")
+	assert.Nil(t, err)
+	f.assertOTLPHTTP(t, exp2)
+}
+
+func TestDefaultOTLPExporterFactoriesAreAutomaticallyRegistered(t *testing.T) {
+	t.Run("spans", spanFuncs.testDefaultOTLPExporterFactoriesAreAutomaticallyRegistered)
+	t.Run("metrics", metricFuncs.testDefaultOTLPExporterFactoriesAreAutomaticallyRegistered)
+}
+
+func (f funcs[T]) testEnvRegistryCanRegisterExporterFactory(t *testing.T) {
+	const exporterName = "custom"
+	f.registerFactory(exporterName, f.stdoutFactory)
+	t.Cleanup(func() { f.registry.drop(exporterName) })
+
+	_, err := f.registry.load(context.Background(), exporterName)
+	assert.Nil(t, err, "missing exporter in envRegistry")
 }
 
 func TestEnvRegistryCanRegisterExporterFactory(t *testing.T) {
-	const exporterName = "custom"
-	RegisterSpanExporter(exporterName, stdoutSpanFactory)
-	t.Cleanup(func() { spanExporterRegistry.drop(exporterName) })
-
-	exp, err := spanExporterRegistry.load(context.Background(), exporterName)
-	assert.Nil(t, err, "missing exporter in envRegistry")
-	assert.IsType(t, &stdouttrace.Exporter{}, exp)
+	t.Run("spans", spanFuncs.testEnvRegistryCanRegisterExporterFactory)
+	t.Run("metrics", metricFuncs.testEnvRegistryCanRegisterExporterFactory)
 }
 
-func TestEnvRegistryPanicsOnDuplicateRegisterCalls(t *testing.T) {
+func (f funcs[T]) testEnvRegistryPanicsOnDuplicateRegisterCalls(t *testing.T) {
 	const exporterName = "custom"
-	RegisterSpanExporter(exporterName, stdoutSpanFactory)
-	t.Cleanup(func() { spanExporterRegistry.drop(exporterName) })
+	f.registerFactory(exporterName, f.stdoutFactory)
+	t.Cleanup(func() { f.registry.drop(exporterName) })
 
 	errString := fmt.Sprintf("%s: %q", errDuplicateRegistration, exporterName)
 	assert.PanicsWithError(t, errString, func() {
-		RegisterSpanExporter(exporterName, stdoutSpanFactory)
+		f.registerFactory(exporterName, f.stdoutFactory)
 	})
+}
+
+func TestEnvRegistryPanicsOnDuplicateRegisterCalls(t *testing.T) {
+	t.Run("spans", spanFuncs.testEnvRegistryPanicsOnDuplicateRegisterCalls)
+	t.Run("metrics", metricFuncs.testEnvRegistryPanicsOnDuplicateRegisterCalls)
 }
