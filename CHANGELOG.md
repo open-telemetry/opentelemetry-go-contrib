@@ -8,6 +8,8 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 
 ## [Unreleased]
 
+- Add `WithFilter` option to `go.opentelemetry.io/contrib/instrumentation/github.com/gorilla/mux/otelmux`. (#4230)
+
 ### Added
 
 - Add `NewMiddleware` function in `go.opentelemetry.io/contrib/instrumentation/net/http/otelhttp`. (#2964)
