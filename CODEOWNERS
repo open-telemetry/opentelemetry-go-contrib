@@ -50,13 +50,13 @@ instrumentation/runtime/                                                @open-te
 propagators/autoprop/                                                   @open-telemetry/go-approvers @MrAlias
 propagators/aws/                                                        @open-telemetry/go-approvers @Aneurysm9
 propagators/b3/                                                         @open-telemetry/go-approvers @pellared
-propagators/jaeger/                                                     @open-telemetry/go-approvers
+propagators/jaeger/                                                     @open-telemetry/go-approvers @yurishkuro
 propagators/opencensus/                                                 @open-telemetry/go-approvers @dashpole
-propagators/ot/                                                         @open-telemetry/go-approvers
+propagators/ot/                                                         @open-telemetry/go-approvers @pellared
 
 samplers/aws/xray/                                                      @open-telemetry/go-approvers @Aneurysm9
-samplers/jaegerremote/                                                  @open-telemetry/go-approvers
+samplers/jaegerremote/                                                  @open-telemetry/go-approvers @yurishkuro
 samplers/probability/consistent/                                        @open-telemetry/go-approvers @MadVikingGod
 
-zpages/                                                                 @open-telemetry/go-approvers
+zpages/                                                                 @open-telemetry/go-approvers @dashpole
 instrgen/                                                               @open-telemetry/go-approvers @open-telemetry/go-instrumentation-approvers @MrAlias @pdelewski
