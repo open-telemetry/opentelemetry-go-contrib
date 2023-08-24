@@ -290,6 +290,7 @@ func startProducerSpan(cfg config, version sarama.KafkaVersion, msg *sarama.Prod
 		semconv.MessagingDestinationName(msg.Topic),
 		semconv.MessagingMessagePayloadSizeBytes(msgPayloadSize(msg, version)),
 		semconv.MessagingOperationPublish,
+		semconv.PeerService("kafka"),
 	}
 	opts := []trace.SpanStartOption{
 		trace.WithAttributes(attrs...),
