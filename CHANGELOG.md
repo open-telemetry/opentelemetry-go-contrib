@@ -15,7 +15,7 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 - The `go.opentelemetry.io/contrib/exporters/autoexport` package to provide configuration of trace exporters with useful defaults and envar support. (#2753, #4100, #4129, #4132, #4134)
 - `WithRouteTag` in `go.opentelemetry.io/contrib/instrumentation/net/http/otelhttp` adds HTTP route attribute to metrics. (#615)
 - Add `WithSpanOptions` option in `go.opentelemetry.io/contrib/instrumentation/google.golang.org/grpc/otelgrpc`. (#3768)
-- Add testing support for Go 1.21. (#TBD)
+- Add testing support for Go 1.21. (#4233)
 
 ### Fixed
 
