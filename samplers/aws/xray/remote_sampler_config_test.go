@@ -15,16 +15,13 @@
 package xray
 
 import (
-	"log"
 	"net/url"
-	"os"
 	"testing"
 	"time"
 
 	"github.com/stretchr/testify/require"
 
 	"github.com/go-logr/logr"
-	"github.com/go-logr/stdr"
 	"github.com/stretchr/testify/assert"
 )
 
@@ -51,7 +48,7 @@ func TestDefaultConfig(t *testing.T) {
 
 	assert.Equal(t, cfg.samplingRulesPollingInterval, 300*time.Second)
 	assert.Equal(t, cfg.endpoint, *endpoint)
-	assert.Equal(t, cfg.logger, stdr.NewWithOptions(log.New(os.Stderr, "", log.LstdFlags|log.Lshortfile), stdr.Options{LogCaller: stdr.Error}))
+	assert.Equal(t, cfg.logger, defaultLogger)
 }
 
 // assert when some config is provided by user then other config will be picked up from default config.
@@ -64,7 +61,7 @@ func TestPartialUserProvidedConfig(t *testing.T) {
 
 	assert.Equal(t, cfg.samplingRulesPollingInterval, 500*time.Second)
 	assert.Equal(t, cfg.endpoint, *endpoint)
-	assert.Equal(t, cfg.logger, stdr.NewWithOptions(log.New(os.Stderr, "", log.LstdFlags|log.Lshortfile), stdr.Options{LogCaller: stdr.Error}))
+	assert.Equal(t, cfg.logger, defaultLogger)
 }
 
 // assert that valid endpoint would not result in an error.
