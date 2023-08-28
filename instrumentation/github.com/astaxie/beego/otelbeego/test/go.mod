@@ -7,7 +7,7 @@ require (
 	github.com/elazarl/go-bindata-assetfs v1.0.1
 	github.com/stretchr/testify v1.8.4
 	go.opentelemetry.io/contrib/instrumentation/github.com/astaxie/beego/otelbeego v0.42.0
-	go.opentelemetry.io/contrib/propagators/b3 v1.17.0
+	go.opentelemetry.io/contrib/propagators/b3 v1.18.0
 	go.opentelemetry.io/otel v1.17.0
 	go.opentelemetry.io/otel/sdk v1.17.0
 )
