@@ -8,6 +8,8 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 
 ## [Unreleased]
 
+## [1.18.0/0.43.0/0.12.0] - 2023-08-28
+
 ### Added
 
 - Add `NewMiddleware` function in `go.opentelemetry.io/contrib/instrumentation/net/http/otelhttp`. (#2964)
@@ -766,7 +768,8 @@ First official tagged release of `contrib` repository.
 - Prefix support for dogstatsd (#34)
 - Update Go Runtime package to use batch observer (#44)
 
-[Unreleased]: https://github.com/open-telemetry/opentelemetry-go-contrib/compare/v1.17.0...HEAD
+[Unreleased]: https://github.com/open-telemetry/opentelemetry-go-contrib/compare/v1.18.0...HEAD
+[1.18.0/0.43.0/0.12.0]: https://github.com/open-telemetry/opentelemetry-go-contrib/releases/tag/v1.18.0
 [1.17.0/0.42.0/0.11.0]: https://github.com/open-telemetry/opentelemetry-go-contrib/releases/tag/v1.17.0
 [1.17.0-rc.1/0.42.0-rc.1/0.11.0-rc.1]: https://github.com/open-telemetry/opentelemetry-go-contrib/releases/tag/v1.17.0-rc.1
 [1.16.1/0.41.1/0.10.1]: https://github.com/open-telemetry/opentelemetry-go-contrib/releases/tag/v1.16.1
