@@ -6,7 +6,7 @@ require (
 	github.com/gocql/gocql v1.5.2
 	github.com/stretchr/testify v1.8.4
 	go.opentelemetry.io/contrib v1.18.0
-	go.opentelemetry.io/contrib/instrumentation/github.com/gocql/gocql/otelgocql v0.42.0
+	go.opentelemetry.io/contrib/instrumentation/github.com/gocql/gocql/otelgocql v0.43.0
 	go.opentelemetry.io/otel v1.17.0
 	go.opentelemetry.io/otel/sdk v1.17.0
 	go.opentelemetry.io/otel/sdk/metric v0.40.0
