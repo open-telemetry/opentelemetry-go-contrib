@@ -38,6 +38,7 @@ type metadataClient interface {
 }
 
 // CloudRun collects resource information of Cloud Run instance.
+//
 // Deprecated: Use gcp.NewDetector() instead. Note that it sets faas.* resource attributes instead of service.* attributes.
 type CloudRun struct {
 	mc     metadataClient
@@ -50,6 +51,7 @@ type CloudRun struct {
 var _ resource.Detector = (*CloudRun)(nil)
 
 // NewCloudRun creates a CloudRun detector.
+//
 // Deprecated: Use gcp.NewDetector() instead. Note that it sets faas.* resource attributes instead of service.* attributes.
 func NewCloudRun() *CloudRun {
 	return &CloudRun{
