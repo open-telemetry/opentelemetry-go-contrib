@@ -28,6 +28,7 @@ const (
 )
 
 // NewCloudFunction will return a GCP Cloud Function resource detector.
+//
 // Deprecated: Use gcp.NewDetector() instead, which sets the same resource attributes.
 func NewCloudFunction() resource.Detector {
 	return &cloudFunction{
