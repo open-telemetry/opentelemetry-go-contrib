@@ -14,10 +14,10 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 
 ### Changed
 
-- The semantic conventions used by `go.opentelemetry.io/contrib/detectors/aws/ec2` have been upgraded to v1.21.0. (#TBD)
-- The semantic conventions used by `go.opentelemetry.io/contrib/detectors/aws/ecs` have been upgraded to v1.21.0. (#TBD)
-- The semantic conventions used by `go.opentelemetry.io/contrib/detectors/aws/eks` have been upgraded to v1.21.0. (#TBD)
-- The semantic conventions used by `go.opentelemetry.io/contrib/detectors/aws/lambda` have been upgraded to v1.21.0. (#TBD)
+- The semantic conventions used by `go.opentelemetry.io/contrib/detectors/aws/ec2` have been upgraded to v1.21.0. (#4265)
+- The semantic conventions used by `go.opentelemetry.io/contrib/detectors/aws/ecs` have been upgraded to v1.21.0. (#4265)
+- The semantic conventions used by `go.opentelemetry.io/contrib/detectors/aws/eks` have been upgraded to v1.21.0. (#4265)
+- The semantic conventions used by `go.opentelemetry.io/contrib/detectors/aws/lambda` have been upgraded to v1.21.0. (#4265)
 
 ## [1.18.0/0.43.0/0.12.0] - 2023-08-28
 
