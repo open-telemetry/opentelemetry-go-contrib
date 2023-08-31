@@ -21,6 +21,7 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 - The semantic conventions used by `go.opentelemetry.io/contrib/instrumentation/github.com/aws/aws-lambda-go/otellambda` have been upgraded to v1.21.0. (#4265)
   - The `faas.execution` attribute is now `faas.invocation_id`.
   - The `faas.id` attribute is now `aws.lambda.invoked_arn`.
+- The semantic conventions used by `go.opentelemetry.io/contrib/instrumentation/github.com/aws/aws-sdk-go-v2/otelaws` have been upgraded to v1.21.0. (#4265)
 
 ## [1.18.0/0.43.0/0.12.0] - 2023-08-28
 
