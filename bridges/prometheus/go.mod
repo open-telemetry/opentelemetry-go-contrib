@@ -1,4 +1,4 @@
-module go.opentelemetry.io/contrib/bridge/prometheus
+module go.opentelemetry.io/contrib/bridges/prometheus
 
 go 1.19
 

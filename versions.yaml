@@ -29,6 +29,7 @@ module-sets:
   experimental-instrumentation:
     version: v0.44.0
     modules:
+      - go.opentelemetry.io/contrib/bridges/prometheus
       - go.opentelemetry.io/contrib/detectors/aws/lambda
       - go.opentelemetry.io/contrib/exporters/autoexport
       - go.opentelemetry.io/contrib/propagators/autoprop

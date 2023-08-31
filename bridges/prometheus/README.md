@@ -11,7 +11,7 @@ The Prometheus Bridge allows using the Prometheus Golang client library
 // Make a Promethes bridge "Metric Producer" that adds metrics from the
 // Prometheus DefaultGatherer. Add the WithGatherer(registry) option to add
 // metrics from other registries.
-bridge := prombridge.NewMetricProducer()
+bridge := prometheus.NewMetricProducer()
 // Make a Periodic Reader to periodically gather metrics from the bridge, and
 // push to an OpenTelemetry exporter.
 reader := metric.NewPeriodicReader(otelExporter, metric.WithProducer(bridge))

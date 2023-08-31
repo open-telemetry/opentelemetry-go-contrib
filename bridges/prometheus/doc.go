@@ -13,4 +13,4 @@
 // limitations under the License.
 
 // Package prometheus provides a bridge from Prometheus to OpenTelemetry.
-package prometheus // import "go.opentelemetry.io/contrib/bridge/prometheus"
+package prometheus // import "go.opentelemetry.io/contrib/bridges/prometheus"
