@@ -12,6 +12,13 @@ versions will be. If you are making a release to upgrade the upstream
 go.opentelemetry.io/otel packages, all module sets will likely need to be
 released.
 
+### Breaking changes validation
+
+You can run `make gorelease` that runs [gorelease](https://pkg.go.dev/golang.org/x/exp/cmd/gorelease)
+to ensure that there are no unwanted changes done in the public API.
+
+You can check/report problems with `gorelease` [here](https://golang.org/issues/26420).
+
 ### Create a release branch
 
 Update the versions of the module sets you have identified in `versions.yaml`.

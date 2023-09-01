@@ -1,8 +1,8 @@
 ---
-name: '[detector: aws:gcp] Bug report'
+name: '[detector: gcp] Bug report'
 about: Create a report of invalid behavior about the gcp package to help us improve
 title: ''
-labels: 'bug, area: detector, detector: aws:gcp'
+labels: 'bug, area: detector, detector: gcp'
 
 ---
 
