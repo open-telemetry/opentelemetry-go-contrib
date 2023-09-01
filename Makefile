@@ -71,7 +71,10 @@ $(CROSSLINK): PACKAGE=go.opentelemetry.io/build-tools/crosslink
 GOTMPL = $(TOOLS)/gotmpl
 $(GOTMPL): PACKAGE=go.opentelemetry.io/build-tools/gotmpl
 
-tools: $(GOLANGCI_LINT) $(MISSPELL) $(GOCOVMERGE) $(STRINGER) $(PORTO) $(MULTIMOD) $(DBOTCONF) $(CROSSLINK) $(GOTMPL)
+GORELEASE = $(TOOLS)/gorelease
+$(GORELEASE): PACKAGE=golang.org/x/exp/cmd/gorelease
+
+tools: $(GOLANGCI_LINT) $(MISSPELL) $(GOCOVMERGE) $(STRINGER) $(PORTO) $(MULTIMOD) $(DBOTCONF) $(CROSSLINK) $(GOTMPL) $(GORELEASE)
 
 # Generate
 
@@ -289,12 +292,20 @@ test-gomemcache:
 
 # Releasing
 
+.PHONY: gorelease
+gorelease: $(OTEL_GO_MOD_DIRS:%=gorelease/%)
+gorelease/%: DIR=$*
+gorelease/%:| $(GORELEASE)
+	@echo "gorelease in $(DIR):" \
+		&& cd $(DIR) \
+		&& $(GORELEASE) \
+		|| echo ""
+
 COREPATH ?= "../opentelemetry-go"
 .PHONY: sync-core
 sync-core: | $(MULTIMOD)
 	@[ ! -d $COREPATH ] || ( echo ">> Path to core repository must be set in COREPATH and must exist"; exit 1 )
 	$(MULTIMOD) verify && $(MULTIMOD) sync -a -o ${COREPATH}
-
 
 .PHONY: prerelease
 prerelease: | $(MULTIMOD)
