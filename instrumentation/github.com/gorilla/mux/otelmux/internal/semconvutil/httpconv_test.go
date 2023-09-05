@@ -223,7 +223,7 @@ func TestHTTPProto(t *testing.T) {
 
 	for proto, want := range tests {
 		expect := attribute.String("http.flavor", want)
-		assert.Equal(t, expect, hc.proto(proto), proto)
+		assert.Equal(t, expect, hc.flavor(proto), proto)
 	}
 }
 
