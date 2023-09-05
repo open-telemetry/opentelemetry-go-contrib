@@ -425,15 +425,15 @@ func (c *httpConv) methodMetric(method string) attribute.KeyValue {
 }
 
 var allowedMethods = map[string]struct{}{
-	"CONNECT": struct{}{},
-	"DELETE":  struct{}{},
-	"GET":     struct{}{},
-	"HEAD":    struct{}{},
-	"OPTIONS": struct{}{},
-	"PATCH":   struct{}{},
-	"POST":    struct{}{},
-	"PUT":     struct{}{},
-	"TRACE":   struct{}{},
+	"CONNECT": {},
+	"DELETE":  {},
+	"GET":     {},
+	"HEAD":    {},
+	"OPTIONS": {},
+	"PATCH":   {},
+	"POST":    {},
+	"PUT":     {},
+	"TRACE":   {},
 }
 
 func (c *httpConv) scheme(https bool) attribute.KeyValue { // nolint:revive
