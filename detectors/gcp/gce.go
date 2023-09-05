@@ -28,6 +28,7 @@ import (
 )
 
 // GCE collects resource information of GCE computing instances.
+//
 // Deprecated: Use gcp.NewDetector() instead, which sets the same resource attributes on GCE.
 type GCE struct{}
 
