@@ -29,7 +29,7 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 
 ### Changed
 
-- `go.opentelemetry.io/contrib/detectors/gcp`: Detect faas.instance instead of faas.id, since faas.id is being removed. (#4198)
+- `go.opentelemetry.io/contrib/detectors/gcp`: Detect `faas.instance` instead of `faas.id`, since `faas.id` is being removed. (#4198)
 
 ### Fixed
 
