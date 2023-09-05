@@ -74,6 +74,8 @@ func WithLogger(l logr.Logger) Option {
 	})
 }
 
+var defaultLogger = stdr.NewWithOptions(log.New(os.Stderr, "", log.LstdFlags|log.Lshortfile), stdr.Options{LogCaller: stdr.Error})
+
 func newConfig(opts ...Option) (*config, error) {
 	defaultProxyEndpoint, err := url.Parse("http://127.0.0.1:2000")
 	if err != nil {
@@ -83,7 +85,7 @@ func newConfig(opts ...Option) (*config, error) {
 	cfg := &config{
 		endpoint:                     *defaultProxyEndpoint,
 		samplingRulesPollingInterval: defaultPollingInterval * time.Second,
-		logger:                       stdr.NewWithOptions(log.New(os.Stderr, "", log.LstdFlags|log.Lshortfile), stdr.Options{LogCaller: stdr.Error}),
+		logger:                       defaultLogger,
 	}
 
 	for _, option := range opts {
