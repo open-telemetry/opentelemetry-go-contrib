@@ -38,6 +38,10 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 - Change interceptors in `go.opentelemetry.io/contrib/instrumentation/google.golang.org/grpc/otelgrpc` to disable `SENT`/`RECEIVED` events.
   Use `WithMessageEvents()` to turn back on. (#3964)
 
+### Changed
+
+- `go.opentelemetry.io/contrib/detectors/gcp`: Detect `faas.instance` instead of `faas.id`, since `faas.id` is being removed. (#4198)
+
 ### Fixed
 
 - AWS XRay Remote Sampling to cap `quotaBalance` to 1x quota in `go.opentelemetry.io/contrib/samplers/aws/xray`. (#3651, #3652)
