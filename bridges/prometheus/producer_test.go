@@ -50,6 +50,9 @@ func TestProduce(t *testing.T) {
 				metric := prometheus.NewGauge(prometheus.GaugeOpts{
 					Name: "test_gauge_metric",
 					Help: "A gauge metric for testing",
+					ConstLabels: prometheus.Labels(map[string]string{
+						"foo": "bar",
+					}),
 				})
 				reg.MustRegister(metric)
 				metric.Set(123.4)
@@ -65,7 +68,7 @@ func TestProduce(t *testing.T) {
 						Data: metricdata.Gauge[float64]{
 							DataPoints: []metricdata.DataPoint[float64]{
 								{
-									Attributes: attribute.NewSet(),
+									Attributes: attribute.NewSet(attribute.String("foo", "bar")),
 									Value:      123.4,
 								},
 							},
@@ -80,6 +83,9 @@ func TestProduce(t *testing.T) {
 				metric := prometheus.NewCounter(prometheus.CounterOpts{
 					Name: "test_counter_metric",
 					Help: "A counter metric for testing",
+					ConstLabels: prometheus.Labels(map[string]string{
+						"foo": "bar",
+					}),
 				})
 				reg.MustRegister(metric)
 				metric.(prometheus.ExemplarAdder).AddWithExemplar(
@@ -103,7 +109,7 @@ func TestProduce(t *testing.T) {
 							IsMonotonic: true,
 							DataPoints: []metricdata.DataPoint[float64]{
 								{
-									Attributes: attribute.NewSet(),
+									Attributes: attribute.NewSet(attribute.String("foo", "bar")),
 									Value:      245.3,
 									Exemplars: []metricdata.Exemplar[float64]{
 										{
@@ -126,6 +132,9 @@ func TestProduce(t *testing.T) {
 				metric := prometheus.NewSummary(prometheus.SummaryOpts{
 					Name: "test_summary_metric",
 					Help: "A summary metric for testing",
+					ConstLabels: prometheus.Labels(map[string]string{
+						"foo": "bar",
+					}),
 				})
 				reg.MustRegister(metric)
 				metric.Observe(15.0)
@@ -138,6 +147,9 @@ func TestProduce(t *testing.T) {
 				metric := prometheus.NewHistogram(prometheus.HistogramOpts{
 					Name: "test_histogram_metric",
 					Help: "A histogram metric for testing",
+					ConstLabels: prometheus.Labels(map[string]string{
+						"foo": "bar",
+					}),
 				})
 				reg.MustRegister(metric)
 				metric.(prometheus.ExemplarObserver).ObserveWithExemplar(
@@ -164,7 +176,7 @@ func TestProduce(t *testing.T) {
 									Sum:          578.3,
 									Bounds:       []float64{0.005, 0.01, 0.025, 0.05, 0.1, 0.25, 0.5, 1, 2.5, 5, 10},
 									BucketCounts: []uint64{0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1},
-									Attributes:   attribute.NewSet(),
+									Attributes:   attribute.NewSet(attribute.String("foo", "bar")),
 									Exemplars: []metricdata.Exemplar[float64]{
 										{
 											Value:   578.3,
@@ -188,6 +200,9 @@ func TestProduce(t *testing.T) {
 				metric := prometheus.NewGauge(prometheus.GaugeOpts{
 					Name: "test_gauge_metric",
 					Help: "A gauge metric for testing",
+					ConstLabels: prometheus.Labels(map[string]string{
+						"foo": "bar",
+					}),
 				})
 				reg.MustRegister(metric)
 				metric.Set(123.4)
@@ -209,7 +224,7 @@ func TestProduce(t *testing.T) {
 						Data: metricdata.Gauge[float64]{
 							DataPoints: []metricdata.DataPoint[float64]{
 								{
-									Attributes: attribute.NewSet(),
+									Attributes: attribute.NewSet(attribute.String("foo", "bar")),
 									Value:      123.4,
 								},
 							},
