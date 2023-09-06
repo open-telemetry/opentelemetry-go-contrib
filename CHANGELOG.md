@@ -10,6 +10,7 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 
 ### Added
 
+- Add `gcp.gce.instance.name` and `gcp.gce.instance.hostname` resource attributes to `go.opentelemetry.io/contrib/detectors/gcp`. (#4263)
 - Add the new `go.opentelemetry.io/contrib/instrgen` package to provide auto-generated source code instrumentation. (#3068, #3108)
 
 ### Changed
@@ -33,6 +34,7 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 - [otelgrpc] implement `grpc.StatsHandler` for grpc instrumentation. (#3002)
 - Add `WithSpanOptions` option in `go.opentelemetry.io/contrib/instrumentation/google.golang.org/grpc/otelgrpc`. (#3768)
 - Add testing support for Go 1.21. (#4233)
+- Add `WithFilter` option to `go.opentelemetry.io/contrib/instrumentation/github.com/gorilla/mux/otelmux`. (#4230)
 
 ### Changed
 

@@ -162,3 +162,40 @@ func TestResponseWriterInterfaces(t *testing.T) {
 
 	router.ServeHTTP(w, r)
 }
+
+func TestFilter(t *testing.T) {
+	prop := propagation.TraceContext{}
+
+	router := mux.NewRouter()
+	var calledHealth, calledTest int
+	router.Use(Middleware("foobar", WithFilter(func(r *http.Request) bool {
+		return r.URL.Path != "/health"
+	})))
+	router.HandleFunc("/health", http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		calledHealth++
+		span := trace.SpanFromContext(r.Context())
+		assert.NotEqual(t, sc, span.SpanContext())
+		w.WriteHeader(http.StatusOK)
+	}))
+	router.HandleFunc("/test", http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		calledTest++
+		span := trace.SpanFromContext(r.Context())
+		assert.Equal(t, sc, span.SpanContext())
+		w.WriteHeader(http.StatusOK)
+	}))
+
+	r := httptest.NewRequest("GET", "/health", nil)
+	ctx := trace.ContextWithRemoteSpanContext(context.Background(), sc)
+	prop.Inject(ctx, propagation.HeaderCarrier(r.Header))
+	w := httptest.NewRecorder()
+	router.ServeHTTP(w, r)
+
+	r = httptest.NewRequest("GET", "/test", nil)
+	ctx = trace.ContextWithRemoteSpanContext(context.Background(), sc)
+	prop.Inject(ctx, propagation.HeaderCarrier(r.Header))
+	w = httptest.NewRecorder()
+	router.ServeHTTP(w, r)
+
+	assert.Equal(t, 1, calledHealth, "failed to run test")
+	assert.Equal(t, 1, calledTest, "failed to run test")
+}
