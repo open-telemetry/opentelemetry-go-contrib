@@ -418,22 +418,12 @@ func (c *httpConv) method(method string) attribute.KeyValue {
 
 func (c *httpConv) methodMetric(method string) attribute.KeyValue {
 	method = strings.ToUpper(method)
-	if _, ok := allowedMethods[method]; !ok {
+	switch method{
+	case http.MethodConnect, http.MethodDelete, http.MethodGet, http.MethodHead, http.MethodOptions, http.MethodPatch, http.MethodPost, http.MethodPut, http.MethodTrace:
+	default:
 		method = "_OTHER"
 	}
 	return c.HTTPMethodKey.String(method)
-}
-
-var allowedMethods = map[string]struct{}{
-	"CONNECT": {},
-	"DELETE":  {},
-	"GET":     {},
-	"HEAD":    {},
-	"OPTIONS": {},
-	"PATCH":   {},
-	"POST":    {},
-	"PUT":     {},
-	"TRACE":   {},
 }
 
 func (c *httpConv) scheme(https bool) attribute.KeyValue { // nolint:revive
