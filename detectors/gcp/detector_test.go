@@ -113,7 +113,7 @@ func TestDetect(t *testing.T) {
 				semconv.CloudRegion("us-central1"),
 				semconv.FaaSName("my-service"),
 				semconv.FaaSVersion("123456"),
-				semconv.FaaSID("1472385723456792345"),
+				semconv.FaaSInstance("1472385723456792345"),
 			),
 		},
 		{
@@ -133,7 +133,7 @@ func TestDetect(t *testing.T) {
 				semconv.CloudRegion("us-central1"),
 				semconv.FaaSName("my-service"),
 				semconv.FaaSVersion("123456"),
-				semconv.FaaSID("1472385723456792345"),
+				semconv.FaaSInstance("1472385723456792345"),
 			),
 		},
 		{
@@ -155,7 +155,7 @@ func TestDetect(t *testing.T) {
 				semconv.CloudAvailabilityZone("us-central1-c"),
 				semconv.FaaSName("my-service"),
 				semconv.FaaSVersion("123456"),
-				semconv.FaaSID("1472385723456792345"),
+				semconv.FaaSInstance("1472385723456792345"),
 			),
 		},
 		{
@@ -177,7 +177,7 @@ func TestDetect(t *testing.T) {
 				semconv.CloudAvailabilityZone("us-central1-c"),
 				semconv.FaaSName("my-service"),
 				semconv.FaaSVersion("123456"),
-				semconv.FaaSID("1472385723456792345"),
+				semconv.FaaSInstance("1472385723456792345"),
 			),
 		},
 		{
