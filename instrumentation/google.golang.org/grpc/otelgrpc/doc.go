@@ -32,4 +32,4 @@ Although the implementation `stats.Handler` in experimental stage, we strongly s
 
 - **Performance advantages**: If too many interceptors are registered in a service, the interceptor chain can become too long, which increases the latency and processing time of the entire RPC call.
 */
-package otelgrpc
+package otelgrpc // import "go.opentelemetry.io/contrib/instrumentation/google.golang.org/grpc/otelgrpc"
