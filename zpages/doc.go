@@ -12,13 +12,6 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-// Package otelmemcache instruments github.com/bradfitz/gomemcache/memcache.
-//
-// This instrumentation provided is tracing instrumentation for the memcached
-// client.
-//
-// The instrumentation works by wrapping the memcached client by calling
-// `NewClientWithTracing` and tracing it's every operation.
-//
-// Deprecated: This module is no longer supported.
-package otelmemcache // import "go.opentelemetry.io/contrib/instrumentation/github.com/bradfitz/gomemcache/memcache/otelmemcache"
+// Package zpages implements a collection of HTML pages that display
+// telemetry stats.
+package zpages // import "go.opentelemetry.io/contrib/zpages"

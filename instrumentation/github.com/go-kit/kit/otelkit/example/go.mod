@@ -1,3 +1,4 @@
+// Deprecated: This module is no longer supported.
 module go.opentelemetry.io/contrib/instrumentation/github.com/go-kit/kit/otelkit/example
 
 go 1.18
