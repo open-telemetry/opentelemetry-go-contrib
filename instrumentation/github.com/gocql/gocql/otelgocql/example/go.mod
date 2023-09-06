@@ -1,3 +1,4 @@
+// Deprecated: This module is no longer supported.
 module go.opentelemetry.io/contrib/instrumentation/github.com/gocql/gocql/otelgocql/example
 
 go 1.18
@@ -5,7 +6,7 @@ go 1.18
 replace go.opentelemetry.io/contrib/instrumentation/github.com/gocql/gocql/otelgocql => ../
 
 require (
-	github.com/gocql/gocql v1.5.2
+	github.com/gocql/gocql v1.6.0
 	github.com/prometheus/client_golang v1.16.0
 	go.opentelemetry.io/contrib/instrumentation/github.com/gocql/gocql/otelgocql v0.43.0
 	go.opentelemetry.io/otel v1.17.0

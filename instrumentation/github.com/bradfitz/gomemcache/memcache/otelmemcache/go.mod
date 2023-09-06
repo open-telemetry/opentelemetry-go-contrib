@@ -1,3 +1,4 @@
+// Deprecated: This module is no longer supported.
 module go.opentelemetry.io/contrib/instrumentation/github.com/bradfitz/gomemcache/memcache/otelmemcache
 
 go 1.19

@@ -26,7 +26,7 @@ import (
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 
-	"go.opentelemetry.io/contrib/instrumentation/github.com/gocql/gocql/otelgocql"
+	"go.opentelemetry.io/contrib/instrumentation/github.com/gocql/gocql/otelgocql" //nolint:staticcheck // This is deprecated and will be removed in the next release.
 	"go.opentelemetry.io/contrib/instrumentation/github.com/gocql/gocql/otelgocql/internal"
 	"go.opentelemetry.io/contrib/internal/util"
 	"go.opentelemetry.io/otel/attribute"
