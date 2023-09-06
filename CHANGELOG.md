@@ -50,7 +50,6 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 - The `go.opentelemetry.io/contrib/instrumentation/github.com/Shopify/sarama/otelsarama` module is deprecated. (#4099)
 - The `go.opentelemetry.io/contrib/instrumentation/github.com/bradfitz/gomemcache/memcache/otelmemcache` module is deprecated. (#4164)
 - The `go.opentelemetry.io/contrib/instrumentation/github.com/gocql/gocql/otelgocql` module is deprecated. (#4164)
-- The `go.opentelemetry.io/contrib/zpages` module is deprecated. (#4164)
 
 ### Removed
 
