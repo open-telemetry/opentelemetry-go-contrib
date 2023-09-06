@@ -64,6 +64,7 @@ func Middleware(service string, opts ...Option) mux.MiddlewareFunc {
 			spanNameFormatter: cfg.spanNameFormatter,
 			publicEndpoint:    cfg.PublicEndpoint,
 			publicEndpointFn:  cfg.PublicEndpointFn,
+			filters:           cfg.Filters,
 		}
 	}
 }
@@ -76,6 +77,7 @@ type traceware struct {
 	spanNameFormatter func(string, *http.Request) string
 	publicEndpoint    bool
 	publicEndpointFn  func(*http.Request) bool
+	filters           []Filter
 }
 
 type recordingResponseWriter struct {
@@ -127,6 +129,14 @@ func defaultSpanNameFunc(routeName string, _ *http.Request) string { return rout
 // ServeHTTP implements the http.Handler interface. It does the actual
 // tracing of the request.
 func (tw traceware) ServeHTTP(w http.ResponseWriter, r *http.Request) {
+	for _, f := range tw.filters {
+		if !f(r) {
+			// Simply pass through to the handler if a filter rejects the request
+			tw.handler.ServeHTTP(w, r)
+			return
+		}
+	}
+
 	ctx := tw.propagators.Extract(r.Context(), propagation.HeaderCarrier(r.Header))
 	routeStr := ""
 	route := mux.CurrentRoute(r)
