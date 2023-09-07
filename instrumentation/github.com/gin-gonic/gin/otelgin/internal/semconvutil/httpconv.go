@@ -83,7 +83,7 @@ func HTTPServerRequest(server string, req *http.Request) []attribute.KeyValue {
 	return hc.ServerRequest(server, req)
 }
 
-// HTTPServerRequestMetrics returns trace attributes for an HTTP request received by a
+// HTTPServerRequestMetrics returns metric attributes for an HTTP request received by a
 // server.
 //
 // The server must be the primary server name if it is known. For example this
@@ -373,7 +373,7 @@ func (c *httpConv) ServerRequest(server string, req *http.Request) []attribute.K
 	return attrs
 }
 
-// ServerRequestMetrics returns Metric attributes for an HTTP request received
+// ServerRequestMetrics returns metric attributes for an HTTP request received
 // by a server.
 //
 // The server must be the primary server name if it is known. For example this
@@ -391,10 +391,8 @@ func (c *httpConv) ServerRequest(server string, req *http.Request) []attribute.K
 // The req Host will be used to determine the server instead.
 //
 // The following attributes are always returned: "http.method", "http.scheme",
-// "http.flavor", "http.target", "net.host.name". The following attributes are
-// returned if they related values are defined in req: "net.host.port",
-// "net.sock.peer.addr", "net.sock.peer.port", "http.user_agent", "enduser.id",
-// "http.client_ip".
+// "http.flavor", "net.host.name". The following attributes are
+// returned if they related values are defined in req: "net.host.port".
 func (c *httpConv) ServerRequestMetrics(server string, req *http.Request) []attribute.KeyValue {
 	// TODO: This currently does not add the specification required
 	// `http.target` attribute. It has too high of a cardinality to safely be
