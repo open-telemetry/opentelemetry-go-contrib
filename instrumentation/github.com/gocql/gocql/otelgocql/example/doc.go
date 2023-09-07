@@ -13,4 +13,6 @@
 // limitations under the License.
 
 // Package main provides an example use of the otelgocql instrumentation.
+//
+// Deprecated: This module is no longer supported.
 package main
