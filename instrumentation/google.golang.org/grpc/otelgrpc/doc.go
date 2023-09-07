@@ -35,8 +35,8 @@ Functional advantages: [stats.Handler] has more information for user to build mo
 Performance advantages: If too many interceptors are registered in a service, the interceptor chain can become too long, which increases the latency and processing time of the entire RPC call.
 
 [stats.Handler]: https://pkg.go.dev/google.golang.org/grpc/stats#Handler
-[stats.InPayLoad]: https://pkg.go.dev/google.golang.org/grpc/stats#OutPayLoad
-[stats.OutPayLoad]: https://pkg.go.dev/google.golang.org/grpc/stats#InPayload
+[stats.InPayload]: https://pkg.go.dev/google.golang.org/grpc/stats#OutPayload
+[stats.OutPayload]: https://pkg.go.dev/google.golang.org/grpc/stats#InPayload
 [grpc.UnaryClientInterceptor]: https://pkg.go.dev/google.golang.org/grpc#UnaryClientInterceptor
 [grpc.UnaryServerInterceptor]: https://pkg.go.dev/google.golang.org/grpc#UnaryServerInterceptor
 [grpc.StreamClientInterceptor]: https://pkg.go.dev/google.golang.org/grpc#StreamClientInterceptor
