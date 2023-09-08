@@ -34,7 +34,7 @@ type config struct {
 // be traced. A Filter must return true if the request should be traced.
 type Filter func(*gin.Context) bool
 
-// SpanNameFormatter is used to set span name by http.request.
+// SpanNameFormatter is used to set span name by gin.Context.
 //change the Filter parameter from *http.Request to *gin.Context.
 //gin.Context has FullPath() method, which returns a matched route full path.
 //https://github.com/open-telemetry/opentelemetry-go-contrib/issues/3070
