@@ -8,6 +8,10 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 
 ## [Unreleased]
 
+### Changed
+
+- Update `instrumentation/github.com/gin-gonic/gin/otelgin/option.go` change the Filter parameter from *http.Request to *gin.Context. (#3070)
+
 ### Added
 
 - Add `gcp.gce.instance.name` and `gcp.gce.instance.hostname` resource attributes to `go.opentelemetry.io/contrib/detectors/gcp`. (#4263)
