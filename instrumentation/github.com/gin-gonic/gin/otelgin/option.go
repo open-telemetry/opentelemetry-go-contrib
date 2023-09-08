@@ -18,7 +18,7 @@ package otelgin // import "go.opentelemetry.io/contrib/instrumentation/github.co
 
 import (
 	"net/http"
-
+        "github.com/gin-gonic/gin"
 	"go.opentelemetry.io/otel/propagation"
 	oteltrace "go.opentelemetry.io/otel/trace"
 )
@@ -32,10 +32,13 @@ type config struct {
 
 // Filter is a predicate used to determine whether a given http.request should
 // be traced. A Filter must return true if the request should be traced.
-type Filter func(*http.Request) bool
+type Filter func(*gin.Context) bool
 
 // SpanNameFormatter is used to set span name by http.request.
-type SpanNameFormatter func(r *http.Request) string
+//change the Filter parameter from *http.Request to *gin.Context.
+//gin.Context has FullPath() method, which returns a matched route full path.
+//https://github.com/open-telemetry/opentelemetry-go-contrib/issues/3070
+type SpanNameFormatter func(r *gin.Context) string
 
 // Option specifies instrumentation configuration options.
 type Option interface {
@@ -83,7 +86,7 @@ func WithFilter(f ...Filter) Option {
 
 // WithSpanNameFormatter takes a function that will be called on every
 // request and the returned string will become the Span Name.
-func WithSpanNameFormatter(f func(r *http.Request) string) Option {
+func WithSpanNameFormatter(f func(r *gin.Context) string) Option {
 	return optionFunc(func(c *config) {
 		c.SpanNameFormatter = f
 	})
