@@ -35,9 +35,7 @@ type config struct {
 type Filter func(*gin.Context) bool
 
 // SpanNameFormatter is used to set span name by gin.Context.
-//change the Filter parameter from *http.Request to *gin.Context.
-//gin.Context has FullPath() method, which returns a matched route full path.
-//https://github.com/open-telemetry/opentelemetry-go-contrib/issues/3070
+
 type SpanNameFormatter func(r *gin.Context) string
 
 // Option specifies instrumentation configuration options.
