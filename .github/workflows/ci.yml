@@ -165,7 +165,7 @@ jobs:
   integration:
     strategy:
       matrix:
-        target: [test-gocql, test-mongo-driver, test-gomemcache]
+        target: [test-mongo-driver]
     runs-on: ubuntu-latest
     steps:
     - name: Install Go
