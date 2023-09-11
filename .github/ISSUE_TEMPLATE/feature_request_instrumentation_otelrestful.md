@@ -1,9 +1,9 @@
 ---
-name: '[instrumentation: otelsarama] Feature request'
-about: Suggest an idea for the otelsarama package
+name: '[instrumentation: otelrestful] Feature request'
+about: Suggest an idea for the otelrestful package
 title: ''
 labels: enhancement
-labels: 'enhancement, area: instrumentation, instrumentation: otelsarama'
+labels: 'enhancement, area: instrumentation, instrumentation: otelrestful'
 
 ---
 
