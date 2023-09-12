@@ -4,7 +4,7 @@ go 1.18
 
 require (
 	github.com/davecgh/go-spew v1.1.1
-	go.opentelemetry.io/contrib/samplers/jaegerremote v0.12.0
+	go.opentelemetry.io/contrib/samplers/jaegerremote v0.13.0
 	go.opentelemetry.io/otel v1.18.0
 	go.opentelemetry.io/otel/exporters/stdout/stdouttrace v1.18.0
 	go.opentelemetry.io/otel/sdk v1.18.0
