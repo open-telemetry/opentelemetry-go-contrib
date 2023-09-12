@@ -1,9 +1,9 @@
 ---
-name: '[instrumentation: otelgocql] Feature request'
-about: Suggest an idea for the otelgocql package
+name: '[instrumentation: otelgin] Feature request'
+about: Suggest an idea for the otelgin package
 title: ''
 labels: enhancement
-labels: 'enhancement, area: instrumentation, instrumentation: otelgocql'
+labels: 'enhancement, area: instrumentation, instrumentation: otelgin'
 
 ---
 

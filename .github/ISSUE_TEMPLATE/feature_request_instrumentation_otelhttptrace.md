@@ -1,9 +1,9 @@
 ---
-name: '[instrumentation: otelkit] Feature request'
-about: Suggest an idea for the otelkit package
+name: '[instrumentation: otelhttptrace] Feature request'
+about: Suggest an idea for the otelhttptrace package
 title: ''
 labels: enhancement
-labels: 'enhancement, area: instrumentation, instrumentation: otelkit'
+labels: 'enhancement, area: instrumentation, instrumentation: otelhttptrace'
 
 ---
 
