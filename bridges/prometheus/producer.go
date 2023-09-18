@@ -43,7 +43,7 @@ var (
 )
 
 type producer struct {
-	gatherers []prometheus.Gatherer
+	gatherers prometheus.Gatherers
 }
 
 // NewMetricProducer returns a metric.Producer that fetches metrics from
