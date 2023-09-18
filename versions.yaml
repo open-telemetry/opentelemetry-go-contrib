@@ -14,7 +14,7 @@
 
 module-sets:
   stable-v1:
-    version: v1.18.0
+    version: v1.19.0
     modules:
       - go.opentelemetry.io/contrib
       - go.opentelemetry.io/contrib/tools
@@ -27,7 +27,7 @@ module-sets:
       - go.opentelemetry.io/contrib/detectors/aws/ecs
       - go.opentelemetry.io/contrib/detectors/aws/eks
   experimental-instrumentation:
-    version: v0.43.0
+    version: v0.44.0
     modules:
       - go.opentelemetry.io/contrib/detectors/aws/lambda
       - go.opentelemetry.io/contrib/exporters/autoexport
@@ -57,18 +57,6 @@ module-sets:
       - go.opentelemetry.io/contrib/instrumentation/github.com/labstack/echo/otelecho
       - go.opentelemetry.io/contrib/instrumentation/github.com/labstack/echo/otelecho/example
       - go.opentelemetry.io/contrib/instrumentation/github.com/labstack/echo/otelecho/test
-      - go.opentelemetry.io/contrib/instrumentation/github.com/Shopify/sarama/otelsarama
-      - go.opentelemetry.io/contrib/instrumentation/github.com/Shopify/sarama/otelsarama/example
-      - go.opentelemetry.io/contrib/instrumentation/github.com/Shopify/sarama/otelsarama/test
-      - go.opentelemetry.io/contrib/instrumentation/github.com/go-kit/kit/otelkit
-      - go.opentelemetry.io/contrib/instrumentation/github.com/go-kit/kit/otelkit/example
-      - go.opentelemetry.io/contrib/instrumentation/github.com/go-kit/kit/otelkit/test
-      - go.opentelemetry.io/contrib/instrumentation/github.com/gocql/gocql/otelgocql
-      - go.opentelemetry.io/contrib/instrumentation/github.com/gocql/gocql/otelgocql/example
-      - go.opentelemetry.io/contrib/instrumentation/github.com/gocql/gocql/otelgocql/test
-      - go.opentelemetry.io/contrib/instrumentation/github.com/astaxie/beego/otelbeego
-      - go.opentelemetry.io/contrib/instrumentation/github.com/astaxie/beego/otelbeego/example
-      - go.opentelemetry.io/contrib/instrumentation/github.com/astaxie/beego/otelbeego/test
       - go.opentelemetry.io/contrib/instrumentation/github.com/aws/aws-lambda-go/otellambda/xrayconfig
       - go.opentelemetry.io/contrib/instrumentation/github.com/aws/aws-lambda-go/otellambda
       - go.opentelemetry.io/contrib/instrumentation/github.com/aws/aws-lambda-go/otellambda/example
@@ -76,22 +64,19 @@ module-sets:
       - go.opentelemetry.io/contrib/instrumentation/github.com/aws/aws-sdk-go-v2/otelaws
       - go.opentelemetry.io/contrib/instrumentation/github.com/aws/aws-sdk-go-v2/otelaws/example
       - go.opentelemetry.io/contrib/instrumentation/github.com/aws/aws-sdk-go-v2/otelaws/test
-      - go.opentelemetry.io/contrib/instrumentation/github.com/bradfitz/gomemcache/memcache/otelmemcache
-      - go.opentelemetry.io/contrib/instrumentation/github.com/bradfitz/gomemcache/memcache/otelmemcache/example
-      - go.opentelemetry.io/contrib/instrumentation/github.com/bradfitz/gomemcache/memcache/otelmemcache/test
       - go.opentelemetry.io/contrib/instrumentation/github.com/emicklei/go-restful/otelrestful
       - go.opentelemetry.io/contrib/instrumentation/github.com/emicklei/go-restful/otelrestful/example
       - go.opentelemetry.io/contrib/instrumentation/github.com/emicklei/go-restful/otelrestful/test
       - go.opentelemetry.io/contrib/zpages
   experimental-metrics:
-    version: v0.43.0
+    version: v0.44.0
     modules:
       - go.opentelemetry.io/contrib/instrumentation/host
       - go.opentelemetry.io/contrib/instrumentation/host/example
       - go.opentelemetry.io/contrib/instrumentation/runtime
       - go.opentelemetry.io/contrib/instrumentation/runtime/example
   experimental-samplers:
-    version: v0.12.0
+    version: v0.13.0
     modules:
       - go.opentelemetry.io/contrib/samplers/aws/xray
       - go.opentelemetry.io/contrib/samplers/jaegerremote

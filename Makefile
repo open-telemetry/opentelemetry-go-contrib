@@ -239,23 +239,6 @@ test-coverage/%:
 		&& $$CMD ./... \
 		&& $(GO) tool cover -html=coverage.out -o coverage.html;
 
-.PHONY: test-gocql
-test-gocql:
-	@if ./tools/should_build.sh gocql; then \
-	  set -e; \
-	  docker run --name cass-integ --rm -p 9042:9042 -d cassandra:3; \
-	  CMD=cassandra IMG_NAME=cass-integ ./tools/wait.sh; \
-	  (cd instrumentation/github.com/gocql/gocql/otelgocql/test/ && \
-	    $(GO) test \
-		  -covermode=$(COVERAGE_MODE) \
-		  -coverprofile=$(COVERAGE_PROFILE) \
-		  -coverpkg=go.opentelemetry.io/contrib/instrumentation/github.com/gocql/gocql/otelgocql/...  \
-		  ./... \
-	    && $(GO) tool cover -html=$(COVERAGE_PROFILE) -o coverage.html); \
-	  cp ./instrumentation/github.com/gocql/gocql/otelgocql/test/coverage.out ./; \
-	  docker stop cass-integ; \
-	fi
-
 .PHONY: test-mongo-driver
 test-mongo-driver:
 	@if ./tools/should_build.sh mongo-driver; then \
@@ -271,23 +254,6 @@ test-mongo-driver:
 	    && $(GO) tool cover -html=$(COVERAGE_PROFILE) -o coverage.html); \
 	  cp ./instrumentation/go.mongodb.org/mongo-driver/mongo/otelmongo/test/coverage.out ./; \
 	  docker stop mongo-integ; \
-	fi
-
-.PHONY: test-gomemcache
-test-gomemcache:
-	@if ./tools/should_build.sh gomemcache; then \
-	  set -e; \
-	  docker run --name gomemcache-integ --rm -p 11211:11211 -d memcached; \
-	  CMD=gomemcache IMG_NAME=gomemcache-integ  ./tools/wait.sh; \
-	  (cd instrumentation/github.com/bradfitz/gomemcache/memcache/otelmemcache/test && \
-	    $(GO) test \
-		  -covermode=$(COVERAGE_MODE) \
-		  -coverprofile=$(COVERAGE_PROFILE) \
-		  -coverpkg=go.opentelemetry.io/contrib/instrumentation/github.com/bradfitz/gomemcache/memcache/otelmemcache/...  \
-		  ./... \
-	    && $(GO) tool cover -html=$(COVERAGE_PROFILE) -o coverage.html); \
-	  docker stop gomemcache-integ ; \
-	  cp ./instrumentation/github.com/bradfitz/gomemcache/memcache/otelmemcache/test/coverage.out ./; \
 	fi
 
 # Releasing
