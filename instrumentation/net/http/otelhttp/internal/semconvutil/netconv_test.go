@@ -338,10 +338,10 @@ func TestNetProtocol(t *testing.T) {
 		name, version string
 	}
 	tests := map[string]testCase{
-		"HTTP/1.0":        {version: "1.0"},
-		"HTTP/1.1":        {version: "1.1"},
-		"HTTP/2":          {version: "2"},
-		"HTTP/3":          {version: "3"},
+		"HTTP/1.0":        {name: "http", version: "1.0"},
+		"HTTP/1.1":        {name: "http", version: "1.1"},
+		"HTTP/2":          {name: "http", version: "2"},
+		"HTTP/3":          {name: "http", version: "3"},
 		"SPDY":            {name: "spdy"},
 		"SPDY/2":          {name: "spdy", version: "2"},
 		"QUIC":            {name: "quic"},

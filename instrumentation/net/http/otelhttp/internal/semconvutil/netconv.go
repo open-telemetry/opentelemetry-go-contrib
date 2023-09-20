@@ -374,9 +374,5 @@ func splitHostPort(hostport string) (host string, port int) {
 func netProtocol(proto string) (name string, version string) {
 	name, version, _ = strings.Cut(proto, "/")
 	name = strings.ToLower(name)
-	// If the protocol is http it should be ignored
-	if name == "http" {
-		name = ""
-	}
 	return name, version
 }

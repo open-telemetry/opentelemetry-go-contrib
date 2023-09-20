@@ -188,6 +188,8 @@ func TestHTTPServerRequestMetrics(t *testing.T) {
 			attribute.String("http.scheme", "http"),
 			attribute.String("net.host.name", srvURL.Hostname()),
 			attribute.Int("net.host.port", int(srvPort)),
+			attribute.String("net.protocol.name", "http"),
+			attribute.String("net.protocol.version", "1.1"),
 		},
 		HTTPServerRequestMetrics("", req))
 }

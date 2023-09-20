@@ -189,6 +189,10 @@ var hc = &httpConv{
 //
 //	append(ClientResponse(resp), ClientRequest(resp.Request)...)
 func (c *httpConv) ClientResponse(resp *http.Response) []attribute.KeyValue {
+	/* The following semantic conventions are returned if present:
+	http.status_code				This requires the response.
+	http.response_content_length	his requires the response.
+	*/
 	var n int
 	if resp.StatusCode > 0 {
 		n++
@@ -223,8 +227,8 @@ func (c *httpConv) ClientRequest(req *http.Request) []attribute.KeyValue {
 	*/
 
 	/* The following semantic conventions are not returned:
-	http.status_code				This requires the response.
-	http.response_content_length	his requires the response.
+	http.status_code				This requires the response. See ClientResponse.
+	http.response_content_length	his requires the response. See ClientResponse.
 	net.sock.family					This requires the socket used.
 	net.sock.peer.addr				This requires the socket used.
 	net.sock.peer.name				This requires the socket used.
@@ -320,7 +324,7 @@ func (c *httpConv) ServerRequest(server string, req *http.Request) []attribute.K
 	http.status_code				This requires the response.
 	http.request_content_length		This requires the len() of body, which can mutate it.
 	http.response_content_length	This requires the response.
-	http.route						This is not avaliable.
+	http.route						This is not available.
 	net.sock.peer.name				This would require a DNS lookup.
 	net.sock.host.addr				The request doesn't have access to the underlying socket.
 	net.sock.host.port				The request doesn't have access to the underlying socket.
@@ -367,7 +371,7 @@ func (c *httpConv) ServerRequest(server string, req *http.Request) []attribute.K
 		}
 	}
 	protoName, protoVersion := netProtocol(req.Proto)
-	if protoName != "" {
+	if protoName != "" && protoName != "http" {
 		n++
 	}
 	if protoVersion != "" {
@@ -405,7 +409,7 @@ func (c *httpConv) ServerRequest(server string, req *http.Request) []attribute.K
 		attrs = append(attrs, c.HTTPTargetKey.String(target))
 	}
 
-	if protoName != "" {
+	if protoName != "" && protoName != "http" {
 		attrs = append(attrs, c.NetConv.NetProtocolName.String(protoName))
 	}
 	if protoVersion != "" {
@@ -436,14 +440,22 @@ func (c *httpConv) ServerRequest(server string, req *http.Request) []attribute.K
 // "http.flavor", "net.host.name". The following attributes are
 // returned if they related values are defined in req: "net.host.port".
 func (c *httpConv) ServerRequestMetrics(server string, req *http.Request) []attribute.KeyValue {
-	// TODO: This currently does not add the specification required
-	// `http.target` attribute. It has too high of a cardinality to safely be
-	// added. An alternate should be added, or this comment removed, when it is
-	// addressed by the specification. If it is ultimately decided to continue
-	// not including the attribute, the HTTPTargetKey field of the httpConv
-	// should be removed as well.
+	/* The following semantic conventions are returned if present:
+	http.scheme				string	Required
+	http.route				string	Conditionally Required: If and only if it’s available
+	http.method				string	Required - Note: Only known good headers and _OTHER
+	http.status_code		int		Conditionally Required: If and only if one was received/sent.
+	net.host.name			string	Required
+	net.host.port			int		Conditionally Required: [4]
+	net.protocol.name		string	Recommended
+	net.protocol.version	string	Recommended
+	*/
 
-	n := 4 // Method, scheme, proto, and host name.
+	/* The following semantic conventions are not returned:
+
+	 */
+
+	n := 3 // Method, scheme, and host name.
 	var host string
 	var p int
 	if server == "" {
@@ -459,6 +471,14 @@ func (c *httpConv) ServerRequestMetrics(server string, req *http.Request) []attr
 	if hostPort > 0 {
 		n++
 	}
+	protoName, protoVersion := netProtocol(req.Proto)
+	if protoName != "" {
+		n++
+	}
+	if protoVersion != "" {
+		n++
+	}
+
 	attrs := make([]attribute.KeyValue, 0, n)
 
 	attrs = append(attrs, c.methodMetric(req.Method))
@@ -467,6 +487,12 @@ func (c *httpConv) ServerRequestMetrics(server string, req *http.Request) []attr
 
 	if hostPort > 0 {
 		attrs = append(attrs, c.NetConv.HostPort(hostPort))
+	}
+	if protoName != "" {
+		attrs = append(attrs, c.NetConv.NetProtocolName.String(protoName))
+	}
+	if protoVersion != "" {
+		attrs = append(attrs, c.NetConv.NetProtocolVersion.String(protoVersion))
 	}
 
 	return attrs
