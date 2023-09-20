@@ -332,3 +332,26 @@ func testAddrs(t *testing.T, tests []addrTest, f func(string) []attribute.KeyVal
 		assert.ElementsMatch(t, test.expected, got, test.address)
 	}
 }
+
+func TestNetProtocol(t *testing.T) {
+	type testCase struct {
+		name, version string
+	}
+	tests := map[string]testCase{
+		"HTTP/1.0":        {name: "http", version: "1.0"},
+		"HTTP/1.1":        {name: "http", version: "1.1"},
+		"HTTP/2":          {name: "http", version: "2"},
+		"HTTP/3":          {name: "http", version: "3"},
+		"SPDY":            {name: "spdy"},
+		"SPDY/2":          {name: "spdy", version: "2"},
+		"QUIC":            {name: "quic"},
+		"unknown/proto/2": {name: "unknown", version: "proto/2"},
+		"other":           {name: "other"},
+	}
+
+	for proto, want := range tests {
+		name, version := netProtocol(proto)
+		assert.Equal(t, want.name, name)
+		assert.Equal(t, want.version, version)
+	}
+}

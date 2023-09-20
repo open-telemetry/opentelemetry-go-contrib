@@ -57,11 +57,10 @@ func TestHTTPSClientRequest(t *testing.T) {
 		ProtoMinor: 0,
 	}
 
-	assert.Equal(
+	assert.ElementsMatch(
 		t,
 		[]attribute.KeyValue{
 			attribute.String("http.method", "GET"),
-			attribute.String("http.flavor", "1.0"),
 			attribute.String("http.url", "https://127.0.0.1:443/resource"),
 			attribute.String("net.peer.name", "127.0.0.1"),
 		},
@@ -92,17 +91,15 @@ func TestHTTPClientRequest(t *testing.T) {
 	}
 	req.SetBasicAuth(user, "pswrd")
 
-	assert.Equal(
+	assert.ElementsMatch(
 		t,
 		[]attribute.KeyValue{
 			attribute.String("http.method", "GET"),
-			attribute.String("http.flavor", "1.0"),
 			attribute.String("http.url", "http://127.0.0.1:8080/resource"),
 			attribute.String("net.peer.name", "127.0.0.1"),
 			attribute.Int("net.peer.port", 8080),
-			attribute.String("http.user_agent", agent),
+			attribute.String("user_agent.original", agent),
 			attribute.Int("http.request_content_length", n),
-			attribute.String("enduser.id", user),
 		},
 		HTTPClientRequest(req),
 	)
@@ -114,7 +111,6 @@ func TestHTTPClientRequestRequired(t *testing.T) {
 	assert.NotPanics(t, func() { got = HTTPClientRequest(req) })
 	want := []attribute.KeyValue{
 		attribute.String("http.method", "GET"),
-		attribute.String("http.flavor", ""),
 		attribute.String("http.url", ""),
 		attribute.String("net.peer.name", ""),
 	}
@@ -153,14 +149,14 @@ func TestHTTPServerRequest(t *testing.T) {
 		[]attribute.KeyValue{
 			attribute.String("http.method", "GET"),
 			attribute.String("http.scheme", "http"),
-			attribute.String("http.flavor", "1.1"),
 			attribute.String("net.host.name", srvURL.Hostname()),
 			attribute.Int("net.host.port", int(srvPort)),
 			attribute.String("net.sock.peer.addr", peer),
 			attribute.Int("net.sock.peer.port", peerPort),
-			attribute.String("http.user_agent", "Go-http-client/1.1"),
-			attribute.String("enduser.id", user),
+			attribute.String("user_agent.original", "Go-http-client/1.1"),
 			attribute.String("http.client_ip", clientIP),
+			attribute.String("net.protocol.version", "1.1"),
+			attribute.String("http.target", "/"),
 		},
 		HTTPServerRequest("", req))
 }
@@ -190,9 +186,10 @@ func TestHTTPServerRequestMetrics(t *testing.T) {
 		[]attribute.KeyValue{
 			attribute.String("http.method", "GET"),
 			attribute.String("http.scheme", "http"),
-			attribute.String("http.flavor", "1.1"),
 			attribute.String("net.host.name", srvURL.Hostname()),
 			attribute.Int("net.host.port", int(srvPort)),
+			attribute.String("net.protocol.name", "http"),
+			attribute.String("net.protocol.version", "1.1"),
 		},
 		HTTPServerRequestMetrics("", req))
 }
@@ -225,7 +222,6 @@ func TestHTTPServerRequestFailsGracefully(t *testing.T) {
 	want := []attribute.KeyValue{
 		attribute.String("http.method", "GET"),
 		attribute.String("http.scheme", "http"),
-		attribute.String("http.flavor", ""),
 		attribute.String("net.host.name", ""),
 	}
 	assert.ElementsMatch(t, want, got)
@@ -240,23 +236,6 @@ func TestHTTPMethod(t *testing.T) {
 func TestHTTPScheme(t *testing.T) {
 	assert.Equal(t, attribute.String("http.scheme", "http"), hc.scheme(false))
 	assert.Equal(t, attribute.String("http.scheme", "https"), hc.scheme(true))
-}
-
-func TestHTTPProto(t *testing.T) {
-	tests := map[string]string{
-		"HTTP/1.0": "1.0",
-		"HTTP/1.1": "1.1",
-		"HTTP/2":   "2.0",
-		"HTTP/3":   "3.0",
-		"SPDY":     "SPDY",
-		"QUIC":     "QUIC",
-		"other":    "other",
-	}
-
-	for proto, want := range tests {
-		expect := attribute.String("http.flavor", want)
-		assert.Equal(t, expect, hc.flavor(proto), proto)
-	}
 }
 
 func TestHTTPServerClientIP(t *testing.T) {
