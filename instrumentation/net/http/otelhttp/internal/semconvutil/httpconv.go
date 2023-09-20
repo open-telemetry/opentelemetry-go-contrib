@@ -24,7 +24,7 @@ import (
 
 	"go.opentelemetry.io/otel/attribute"
 	"go.opentelemetry.io/otel/codes"
-	semconv "go.opentelemetry.io/otel/semconv/v1.17.0"
+	semconv "go.opentelemetry.io/otel/semconv/v1.20.0"
 )
 
 // HTTPClientResponse returns trace attributes for an HTTP response received by a
@@ -149,9 +149,7 @@ func HTTPResponseHeader(h http.Header) []attribute.KeyValue {
 type httpConv struct {
 	NetConv *netConv
 
-	EnduserIDKey                 attribute.Key
 	HTTPClientIPKey              attribute.Key
-	HTTPFlavorKey                attribute.Key
 	HTTPMethodKey                attribute.Key
 	HTTPRequestContentLengthKey  attribute.Key
 	HTTPResponseContentLengthKey attribute.Key
@@ -161,15 +159,13 @@ type httpConv struct {
 	HTTPStatusCodeKey            attribute.Key
 	HTTPTargetKey                attribute.Key
 	HTTPURLKey                   attribute.Key
-	HTTPUserAgentKey             attribute.Key
+	UserAgentOriginalKey         attribute.Key
 }
 
 var hc = &httpConv{
 	NetConv: nc,
 
-	EnduserIDKey:                 semconv.EnduserIDKey,
 	HTTPClientIPKey:              semconv.HTTPClientIPKey,
-	HTTPFlavorKey:                semconv.HTTPFlavorKey,
 	HTTPMethodKey:                semconv.HTTPMethodKey,
 	HTTPRequestContentLengthKey:  semconv.HTTPRequestContentLengthKey,
 	HTTPResponseContentLengthKey: semconv.HTTPResponseContentLengthKey,
@@ -179,7 +175,7 @@ var hc = &httpConv{
 	HTTPStatusCodeKey:            semconv.HTTPStatusCodeKey,
 	HTTPTargetKey:                semconv.HTTPTargetKey,
 	HTTPURLKey:                   semconv.HTTPURLKey,
-	HTTPUserAgentKey:             semconv.HTTPUserAgentKey,
+	UserAgentOriginalKey:         semconv.UserAgentOriginalKey,
 }
 
 // ClientResponse returns attributes for an HTTP response received by a client
@@ -211,12 +207,30 @@ func (c *httpConv) ClientResponse(resp *http.Response) []attribute.KeyValue {
 	return attrs
 }
 
-// ClientRequest returns attributes for an HTTP request made by a client. The
-// following attributes are always returned: "http.url", "http.flavor",
-// "http.method", "net.peer.name". The following attributes are returned if the
-// related values are defined in req: "net.peer.port", "http.user_agent",
-// "http.request_content_length", "enduser.id".
+// TraceClientRequest returns attributes for an HTTP request made by a client. The
+// following attributes are always returned: "http.url", "http.method",
+// "net.peer.name". The following attributes are returned if the related values
+// are defined in req: "net.peer.port", "http.user_agent",
+// "http.request_content_length", "user_agent.original".
 func (c *httpConv) ClientRequest(req *http.Request) []attribute.KeyValue {
+	/* The following semantic conventions are returned if present:
+	http.method						string	Required
+	user_agent.original				string	Recommended
+	http.url						string	Required
+	net.peer.name					string	Required
+	net.peer.port					int		Conditionally Required: [5]
+	http.request_content_length		int		Recommended
+	*/
+
+	/* The following semantic conventions are not returned:
+	http.status_code				This requires the response.
+	http.response_content_length	his requires the response.
+	net.sock.family					This requires the socket used.
+	net.sock.peer.addr				This requires the socket used.
+	net.sock.peer.name				This requires the socket used.
+	net.sock.peer.port				This requires the socket used.
+	http.resend_count				This is something outside of a single request.
+	*/
 	n := 3 // URL, peer name, proto, and method.
 	var h string
 	if req.URL != nil {
@@ -234,14 +248,10 @@ func (c *httpConv) ClientRequest(req *http.Request) []attribute.KeyValue {
 	if req.ContentLength > 0 {
 		n++
 	}
-	userID, _, hasUserID := req.BasicAuth()
-	if hasUserID {
-		n++
-	}
+
 	attrs := make([]attribute.KeyValue, 0, n)
 
 	attrs = append(attrs, c.method(req.Method))
-	attrs = append(attrs, c.flavor(req.Proto))
 
 	var u string
 	if req.URL != nil {
@@ -260,15 +270,11 @@ func (c *httpConv) ClientRequest(req *http.Request) []attribute.KeyValue {
 	}
 
 	if useragent != "" {
-		attrs = append(attrs, c.HTTPUserAgentKey.String(useragent))
+		attrs = append(attrs, c.UserAgentOriginalKey.String(useragent))
 	}
 
 	if l := req.ContentLength; l > 0 {
 		attrs = append(attrs, c.HTTPRequestContentLengthKey.Int64(l))
-	}
-
-	if hasUserID {
-		attrs = append(attrs, c.EnduserIDKey.String(userID))
 	}
 
 	return attrs
@@ -291,18 +297,35 @@ func (c *httpConv) ClientRequest(req *http.Request) []attribute.KeyValue {
 // The req Host will be used to determine the server instead.
 //
 // The following attributes are always returned: "http.method", "http.scheme",
-// "http.flavor", "http.target", "net.host.name". The following attributes are
-// returned if they related values are defined in req: "net.host.port",
-// "net.sock.peer.addr", "net.sock.peer.port", "http.user_agent", "enduser.id",
-// "http.client_ip".
+// "http.target", "net.host.name". The following attributes are returned if they
+// related values are defined in req: "net.host.port", "net.sock.peer.addr",
+// "net.sock.peer.port", "user_agent.original", "http.client_ip",
+// "net.protocol.name", "net.protocol.version".
 func (c *httpConv) ServerRequest(server string, req *http.Request) []attribute.KeyValue {
-	// TODO: This currently does not add the specification required
-	// `http.target` attribute. It has too high of a cardinality to safely be
-	// added. An alternate should be added, or this comment removed, when it is
-	// addressed by the specification. If it is ultimately decided to continue
-	// not including the attribute, the HTTPTargetKey field of the httpConv
-	// should be removed as well.
+	/* The following semantic conventions are returned if present:
+	http.method				string
+	http.scheme				string
+	net.host.name			string
+	net.host.port			int
+	net.sock.peer.addr		string
+	net.sock.peer.port		int
+	user_agent.original		string
+	http.client_ip			string
+	net.protocol.name		string
+	net.protocol.version	string
+	http.target				string Note: doesn't include the querry parameter.
+	*/
 
+	/* The following semantic conventions are not returned:
+	http.status_code				This requires the response.
+	http.request_content_length		This requires the len() of body, which can mutate it.
+	http.response_content_length	This requires the response.
+	http.route						This is not avaliable.
+	net.sock.peer.name				This would require a DNS lookup.
+	net.sock.host.addr				The request doesn't have access to the underlying socket.
+	net.sock.host.port				The request doesn't have access to the underlying socket.
+
+	*/
 	n := 4 // Method, scheme, proto, and host name.
 	var host string
 	var p int
@@ -330,19 +353,31 @@ func (c *httpConv) ServerRequest(server string, req *http.Request) []attribute.K
 	if useragent != "" {
 		n++
 	}
-	userID, _, hasUserID := req.BasicAuth()
-	if hasUserID {
-		n++
-	}
+
 	clientIP := serverClientIP(req.Header.Get("X-Forwarded-For"))
 	if clientIP != "" {
 		n++
 	}
+
+	var target string
+	if req.URL != nil {
+		target = req.URL.Path
+		if target != "" {
+			n++
+		}
+	}
+	protoName, protoVersion := netProtocol(req.Proto)
+	if protoName != "" {
+		n++
+	}
+	if protoVersion != "" {
+		n++
+	}
+
 	attrs := make([]attribute.KeyValue, 0, n)
 
 	attrs = append(attrs, c.method(req.Method))
 	attrs = append(attrs, c.scheme(req.TLS != nil))
-	attrs = append(attrs, c.flavor(req.Proto))
 	attrs = append(attrs, c.NetConv.HostName(host))
 
 	if hostPort > 0 {
@@ -359,15 +394,22 @@ func (c *httpConv) ServerRequest(server string, req *http.Request) []attribute.K
 	}
 
 	if useragent != "" {
-		attrs = append(attrs, c.HTTPUserAgentKey.String(useragent))
-	}
-
-	if hasUserID {
-		attrs = append(attrs, c.EnduserIDKey.String(userID))
+		attrs = append(attrs, c.UserAgentOriginalKey.String(useragent))
 	}
 
 	if clientIP != "" {
 		attrs = append(attrs, c.HTTPClientIPKey.String(clientIP))
+	}
+
+	if target != "" {
+		attrs = append(attrs, c.HTTPTargetKey.String(target))
+	}
+
+	if protoName != "" {
+		attrs = append(attrs, c.NetConv.NetProtocolName.String(protoName))
+	}
+	if protoVersion != "" {
+		attrs = append(attrs, c.NetConv.NetProtocolVersion.String(protoVersion))
 	}
 
 	return attrs
@@ -421,7 +463,6 @@ func (c *httpConv) ServerRequestMetrics(server string, req *http.Request) []attr
 
 	attrs = append(attrs, c.methodMetric(req.Method))
 	attrs = append(attrs, c.scheme(req.TLS != nil))
-	attrs = append(attrs, c.flavor(req.Proto))
 	attrs = append(attrs, c.NetConv.HostName(host))
 
 	if hostPort > 0 {
@@ -453,21 +494,6 @@ func (c *httpConv) scheme(https bool) attribute.KeyValue { // nolint:revive
 		return c.HTTPSchemeHTTPS
 	}
 	return c.HTTPSchemeHTTP
-}
-
-func (c *httpConv) flavor(proto string) attribute.KeyValue {
-	switch proto {
-	case "HTTP/1.0":
-		return c.HTTPFlavorKey.String("1.0")
-	case "HTTP/1.1":
-		return c.HTTPFlavorKey.String("1.1")
-	case "HTTP/2":
-		return c.HTTPFlavorKey.String("2.0")
-	case "HTTP/3":
-		return c.HTTPFlavorKey.String("3.0")
-	default:
-		return c.HTTPFlavorKey.String(proto)
-	}
 }
 
 func serverClientIP(xForwardedFor string) string {
