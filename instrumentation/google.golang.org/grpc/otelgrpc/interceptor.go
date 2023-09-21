@@ -368,7 +368,7 @@ func UnaryServerInterceptor(opts ...Option) grpc.UnaryServerInterceptor {
 		var statusCode grpc_codes.Code
 		defer func(t time.Time) {
 			elapsedTime := time.Since(t) / time.Millisecond
-			attr = append(attr, semconv.RPCGRPCStatusCodeKey.Int64(int64(statusCode)))
+			attr := append(metricAttributes(info.FullMethod), semconv.RPCGRPCStatusCodeKey.Int64(int64(statusCode)))
 			o := metric.WithAttributes(attr...)
 			cfg.rpcServerDuration.Record(ctx, int64(elapsedTime), o)
 		}(time.Now())
@@ -496,6 +496,11 @@ func StreamServerInterceptor(opts ...Option) grpc.StreamServerInterceptor {
 
 		return err
 	}
+}
+
+func metricAttributes(fullMethod string) []attribute.KeyValue {
+	_, attrs := internal.ParseFullMethod(fullMethod)
+	return append(attrs, RPCSystemGRPC)
 }
 
 // spanInfo returns a span name and all appropriate attributes from the gRPC
