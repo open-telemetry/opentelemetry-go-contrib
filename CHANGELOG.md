@@ -15,6 +15,10 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 - Add `NewServerHandler` and `NewClientHandler` that return a `grpc.StatsHandler` used for gRPC instrumentation in `go.opentelemetry.io/contrib/instrumentation/google.golang.org/grpc/otelgrpc`. (#3002)
 - Add new Prometheus bridge module in `go.opentelemetry.io/contrib/bridges/prometheus`. (#4227)
 
+### Changed
+
+- Use `grpc.StatsHandler` for gRPC instrumentation in `go.opentelemetry.io/contrib/instrumentation/google.golang.org/grpc/otelgrpc/example`. (#4325)
+
 ## [1.19.0/0.44.0/0.13.0] - 2023-09-12
 
 ### Added
