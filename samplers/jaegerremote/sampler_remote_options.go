@@ -123,7 +123,9 @@ func WithLogger(logger logr.Logger) Option {
 	})
 }
 
-// samplingStrategyFetcher creates a Option that initializes sampling strategy fetcher.
+// WithSamplingStrategyFetcher creates an Option that initializes the sampling strategy fetcher.
+// Custom fetcher can be used for setting custom headers, timeouts, etc., or getting
+// sampling strategies from a different source, like files.
 func WithSamplingStrategyFetcher(fetcher SamplingStrategyFetcher) Option {
 	return optionFunc(func(c *config) {
 		c.samplingFetcher = fetcher
