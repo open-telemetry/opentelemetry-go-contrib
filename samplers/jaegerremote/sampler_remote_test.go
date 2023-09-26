@@ -590,10 +590,7 @@ func TestSamplingStrategyParserImpl_Error(t *testing.T) {
 
 func TestDefaultSamplingStrategyFetcher_Timeout(t *testing.T) {
 	fetcher := newHTTPSamplingStrategyFetcher("")
-
-	customTransport, ok := fetcher.httpClient.Transport.(*http.Transport)
-	require.True(t, ok)
-	assert.Equal(t, defaultRemoteSamplingTimeout, customTransport.ResponseHeaderTimeout)
+	assert.Equal(t, defaultRemoteSamplingTimeout, fetcher.httpClient.Timeout)
 }
 
 func TestDefaultSamplingStrategyFetcher_NoPanic(t *testing.T) {
