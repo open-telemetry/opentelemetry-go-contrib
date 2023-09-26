@@ -19,7 +19,7 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 - Add `NewMiddleware` function in `go.opentelemetry.io/contrib/instrumentation/net/http/otelhttp`. (#2964)
 - The `go.opentelemetry.io/contrib/exporters/autoexport` package to provide configuration of trace exporters with useful defaults and environment variable support. (#2753, #4100, #4130, #4132, #4134)
 - `WithRouteTag` in `go.opentelemetry.io/contrib/instrumentation/net/http/otelhttp` adds HTTP route attribute to metrics. (#615)
-- Add `WithSamplingStrategyFetcher` which sets custom fetcher implementation. (#4045)
+- Add `WithSamplingStrategyFetcher` which sets custom fetcher implementation. Fixed panic when default HTTP round-tripper is not `*http.Transport` (#4045)
 - Add `WithSpanOptions` option in `go.opentelemetry.io/contrib/instrumentation/google.golang.org/grpc/otelgrpc`. (#3768)
 - Add testing support for Go 1.21. (#4233)
 
