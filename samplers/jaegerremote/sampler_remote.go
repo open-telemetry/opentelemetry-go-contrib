@@ -273,15 +273,20 @@ type httpSamplingStrategyFetcher struct {
 }
 
 func newHTTPSamplingStrategyFetcher(serverURL string) *httpSamplingStrategyFetcher {
-	customTransport := http.DefaultTransport.(*http.Transport).Clone()
-	customTransport.ResponseHeaderTimeout = defaultRemoteSamplingTimeout
-
-	return &httpSamplingStrategyFetcher{
+	fetcher := &httpSamplingStrategyFetcher{
 		serverURL: serverURL,
-		httpClient: http.Client{
-			Transport: customTransport,
-		},
 	}
+
+	if customTransport, ok := http.DefaultTransport.(*http.Transport); ok {
+		customTransport = customTransport.Clone()
+		customTransport.ResponseHeaderTimeout = defaultRemoteSamplingTimeout
+
+		fetcher.httpClient = http.Client{
+			Transport: customTransport.Clone(),
+		}
+	}
+
+	return fetcher
 }
 
 func (f *httpSamplingStrategyFetcher) Fetch(serviceName string) ([]byte, error) {

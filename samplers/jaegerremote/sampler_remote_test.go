@@ -81,8 +81,7 @@ func (c *testSamplingStrategyFetcher) Fetch(serviceName string) ([]byte, error) 
 	return c.response, nil
 }
 
-type testSamplingStrategyParser struct {
-}
+type testSamplingStrategyParser struct{}
 
 func (p *testSamplingStrategyParser) Parse(response []byte) (interface{}, error) {
 	strategy := new(jaeger_api_v2.SamplingStrategyResponse)
@@ -335,7 +334,8 @@ func TestRemotelyControlledSampler_multiStrategyResponse(t *testing.T) {
 					Operation: testUnusedOpName,
 					ProbabilisticSampling: &jaeger_api_v2.ProbabilisticSamplingStrategy{
 						SamplingRate: testUnusedOpSamplingRate,
-					}},
+					},
+				},
 			},
 		},
 	}
@@ -588,7 +588,15 @@ func TestSamplingStrategyParserImpl_Error(t *testing.T) {
 	require.Contains(t, err.Error(), `unknown value "foo_bar"`)
 }
 
-func TestDefaultSamplingStrategyFetcher_Panic(t *testing.T) {
+func TestDefaultSamplingStrategyFetcher_Timeout(t *testing.T) {
+	fetcher := newHTTPSamplingStrategyFetcher("")
+
+	customTransport, ok := fetcher.httpClient.Transport.(*http.Transport)
+	require.True(t, ok)
+	assert.Equal(t, defaultRemoteSamplingTimeout, customTransport.ResponseHeaderTimeout)
+}
+
+func TestDefaultSamplingStrategyFetcher_NoPanic(t *testing.T) {
 	defaultTransport := http.DefaultTransport
 	http.DefaultTransport = http.NewFileTransport(http.Dir("/"))
 
@@ -596,7 +604,7 @@ func TestDefaultSamplingStrategyFetcher_Panic(t *testing.T) {
 		http.DefaultTransport = defaultTransport
 	})
 
-	require.Panics(t, func() {
+	require.NotPanics(t, func() {
 		newHTTPSamplingStrategyFetcher("")
 	})
 }
