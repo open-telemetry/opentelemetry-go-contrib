@@ -24,7 +24,7 @@ import (
 	"github.com/stretchr/testify/assert"
 
 	"go.opentelemetry.io/otel/sdk/resource"
-	semconv "go.opentelemetry.io/otel/semconv/v1.17.0"
+	semconv "go.opentelemetry.io/otel/semconv/v1.21.0"
 )
 
 func TestDetect(t *testing.T) {
@@ -77,13 +77,15 @@ func TestDetect(t *testing.T) {
 		{
 			desc: "GCE",
 			detector: &detector{detector: &fakeGCPDetector{
-				projectID:           "my-project",
-				cloudPlatform:       gcp.GCE,
-				gceHostID:           "1472385723456792345",
-				gceHostName:         "my-gke-node-1234",
-				gceHostType:         "n1-standard1",
-				gceAvailabilityZone: "us-central1-c",
-				gceRegion:           "us-central1",
+				projectID:              "my-project",
+				cloudPlatform:          gcp.GCE,
+				gceHostID:              "1472385723456792345",
+				gceHostName:            "my-gke-node-1234",
+				gceHostType:            "n1-standard1",
+				gceAvailabilityZone:    "us-central1-c",
+				gceRegion:              "us-central1",
+				gcpGceInstanceName:     "my-gke-node-1234",
+				gcpGceInstanceHostname: "hostname",
 			}},
 			expectedResource: resource.NewWithAttributes(semconv.SchemaURL,
 				semconv.CloudProviderGCP,
@@ -91,6 +93,8 @@ func TestDetect(t *testing.T) {
 				semconv.CloudPlatformGCPComputeEngine,
 				semconv.HostID("1472385723456792345"),
 				semconv.HostName("my-gke-node-1234"),
+				semconv.GCPGceInstanceNameKey.String("my-gke-node-1234"),
+				semconv.GCPGceInstanceHostnameKey.String("hostname"),
 				semconv.HostType("n1-standard1"),
 				semconv.CloudRegion("us-central1"),
 				semconv.CloudAvailabilityZone("us-central1-c"),
@@ -113,7 +117,7 @@ func TestDetect(t *testing.T) {
 				semconv.CloudRegion("us-central1"),
 				semconv.FaaSName("my-service"),
 				semconv.FaaSVersion("123456"),
-				semconv.FaaSID("1472385723456792345"),
+				semconv.FaaSInstance("1472385723456792345"),
 			),
 		},
 		{
@@ -133,7 +137,7 @@ func TestDetect(t *testing.T) {
 				semconv.CloudRegion("us-central1"),
 				semconv.FaaSName("my-service"),
 				semconv.FaaSVersion("123456"),
-				semconv.FaaSID("1472385723456792345"),
+				semconv.FaaSInstance("1472385723456792345"),
 			),
 		},
 		{
@@ -155,7 +159,7 @@ func TestDetect(t *testing.T) {
 				semconv.CloudAvailabilityZone("us-central1-c"),
 				semconv.FaaSName("my-service"),
 				semconv.FaaSVersion("123456"),
-				semconv.FaaSID("1472385723456792345"),
+				semconv.FaaSInstance("1472385723456792345"),
 			),
 		},
 		{
@@ -177,7 +181,7 @@ func TestDetect(t *testing.T) {
 				semconv.CloudAvailabilityZone("us-central1-c"),
 				semconv.FaaSName("my-service"),
 				semconv.FaaSVersion("123456"),
-				semconv.FaaSID("1472385723456792345"),
+				semconv.FaaSInstance("1472385723456792345"),
 			),
 		},
 		{
@@ -238,6 +242,8 @@ type fakeGCPDetector struct {
 	gceHostType               string
 	gceHostID                 string
 	gceHostName               string
+	gcpGceInstanceName        string
+	gcpGceInstanceHostname    string
 }
 
 func (f *fakeGCPDetector) ProjectID() (string, error) {
@@ -378,4 +384,18 @@ func (f *fakeGCPDetector) GCEHostName() (string, error) {
 		return "", f.err
 	}
 	return f.gceHostName, nil
+}
+
+func (f *fakeGCPDetector) GCEInstanceName() (string, error) {
+	if f.err != nil {
+		return "", f.err
+	}
+	return f.gcpGceInstanceName, nil
+}
+
+func (f *fakeGCPDetector) GCEInstanceHostname() (string, error) {
+	if f.err != nil {
+		return "", f.err
+	}
+	return f.gcpGceInstanceHostname, nil
 }

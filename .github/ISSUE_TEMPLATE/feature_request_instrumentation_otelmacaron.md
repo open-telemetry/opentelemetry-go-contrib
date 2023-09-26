@@ -1,9 +1,9 @@
 ---
-name: '[instrumentation: otelmemcache] Feature request'
-about: Suggest an idea for the otelmemcache package
+name: '[instrumentation: otelmacaron] Feature request'
+about: Suggest an idea for the otelmacaron package
 title: ''
 labels: enhancement
-labels: 'enhancement, area: instrumentation, instrumentation: otelmemcache'
+labels: 'enhancement, area: instrumentation, instrumentation: otelmacaron'
 
 ---
 

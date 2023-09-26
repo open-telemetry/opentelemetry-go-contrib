@@ -12,17 +12,6 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package otelmemcache // import "go.opentelemetry.io/contrib/instrumentation/github.com/bradfitz/gomemcache/memcache/otelmemcache"
-
-// Version is the current release version of the memcached instrumentation.
-func Version() string {
-	return "0.43.0"
-	// This string is updated by the pre_release.sh script during release
-}
-
-// SemVersion is the semantic version to be supplied to tracer/meter creation.
-//
-// Deprecated: Use [Version] instead.
-func SemVersion() string {
-	return Version()
-}
+// Package zpages implements a collection of HTML pages that display
+// telemetry stats.
+package zpages // import "go.opentelemetry.io/contrib/zpages"

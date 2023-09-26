@@ -165,6 +165,38 @@ func TestHTTPServerRequest(t *testing.T) {
 		HTTPServerRequest("", req))
 }
 
+func TestHTTPServerRequestMetrics(t *testing.T) {
+	got := make(chan *http.Request, 1)
+	handler := func(w http.ResponseWriter, r *http.Request) {
+		got <- r
+		w.WriteHeader(http.StatusOK)
+	}
+
+	srv := httptest.NewServer(http.HandlerFunc(handler))
+	defer srv.Close()
+
+	srvURL, err := url.Parse(srv.URL)
+	require.NoError(t, err)
+	srvPort, err := strconv.ParseInt(srvURL.Port(), 10, 32)
+	require.NoError(t, err)
+
+	resp, err := srv.Client().Get(srv.URL)
+	require.NoError(t, err)
+	require.NoError(t, resp.Body.Close())
+
+	req := <-got
+
+	assert.ElementsMatch(t,
+		[]attribute.KeyValue{
+			attribute.String("http.method", "GET"),
+			attribute.String("http.scheme", "http"),
+			attribute.String("http.flavor", "1.1"),
+			attribute.String("net.host.name", srvURL.Hostname()),
+			attribute.Int("net.host.port", int(srvPort)),
+		},
+		HTTPServerRequestMetrics("", req))
+}
+
 func TestHTTPServerName(t *testing.T) {
 	req := new(http.Request)
 	var got []attribute.KeyValue
@@ -223,7 +255,7 @@ func TestHTTPProto(t *testing.T) {
 
 	for proto, want := range tests {
 		expect := attribute.String("http.flavor", want)
-		assert.Equal(t, expect, hc.proto(proto), proto)
+		assert.Equal(t, expect, hc.flavor(proto), proto)
 	}
 }
 
