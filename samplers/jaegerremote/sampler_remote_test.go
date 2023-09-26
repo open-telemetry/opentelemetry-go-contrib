@@ -594,6 +594,10 @@ func TestDefaultSamplingStrategyFetcher_Timeout(t *testing.T) {
 }
 
 func TestDefaultSamplingStrategyFetcher_NoPanic(t *testing.T) {
+	mu := sync.Mutex{}
+	mu.Lock()
+	defer mu.Unlock()
+
 	defaultTransport := http.DefaultTransport
 	http.DefaultTransport = http.NewFileTransport(http.Dir("/"))
 

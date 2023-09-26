@@ -273,10 +273,16 @@ type httpSamplingStrategyFetcher struct {
 }
 
 func newHTTPSamplingStrategyFetcher(serverURL string) *httpSamplingStrategyFetcher {
+	var rt http.RoundTripper
+	if t, ok := http.DefaultTransport.(*http.Transport); ok {
+		rt = t.Clone()
+	}
+
 	return &httpSamplingStrategyFetcher{
 		serverURL: serverURL,
 		httpClient: http.Client{
-			Timeout: defaultRemoteSamplingTimeout,
+			Timeout:   defaultRemoteSamplingTimeout,
+			Transport: rt,
 		},
 	}
 }
