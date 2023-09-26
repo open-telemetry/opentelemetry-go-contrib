@@ -368,7 +368,7 @@ func UnaryServerInterceptor(opts ...Option) grpc.UnaryServerInterceptor {
 		var statusCode grpc_codes.Code
 		defer func(t time.Time) {
 			elapsedTime := time.Since(t) / time.Millisecond
-			attr := append(metricAttrs, semconv.RPCGRPCStatusCodeKey.Int64(int64(statusCode)))
+			attr := append([]attribute.KeyValue{semconv.RPCGRPCStatusCodeKey.Int64(int64(statusCode))}, metricAttrs...)
 			o := metric.WithAttributes(attr...)
 			cfg.rpcServerDuration.Record(ctx, int64(elapsedTime), o)
 		}(time.Now())
