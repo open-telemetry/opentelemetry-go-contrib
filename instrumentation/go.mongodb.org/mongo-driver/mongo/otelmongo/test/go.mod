@@ -1,6 +1,6 @@
 module go.opentelemetry.io/contrib/instrumentation/go.mongodb.org/mongo-driver/mongo/otelmongo/test
 
-go 1.19
+go 1.21.1
 
 require (
 	github.com/stretchr/testify v1.8.4
