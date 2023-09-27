@@ -21,7 +21,7 @@ import (
 
 func ExampleNewMetricProducer() {
 	// Create a Promethes bridge "Metric Producer" which adds metrics from the
-	// [prometheus.DefaultGatherer]. Add the [WithGatherer] option to add metrics
+	// prometheus.DefaultGatherer. Add the WithGatherer option to add metrics
 	// from other registries.
 	bridge := prometheus.NewMetricProducer()
 	// This reader is used as a stand-in for a reader that will actually export
