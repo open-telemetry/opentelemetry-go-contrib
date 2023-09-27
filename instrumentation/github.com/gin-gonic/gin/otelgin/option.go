@@ -36,7 +36,7 @@ type config struct {
 // be traced. A Filter must return true if the request should be traced.
 type Filter func(*gin.Context) bool
 
-// SpanNameFormatter is used to set span name by gin.Context.
+// SpanNameFormatter is used to set span name by http.Request.
 type SpanNameFormatter func(r *http.Request) string
 
 // Option specifies instrumentation configuration options.
