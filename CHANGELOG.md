@@ -13,6 +13,11 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 - Add the new `go.opentelemetry.io/contrib/instrgen` package to provide auto-generated source code instrumentation. (#3068, #3108)
 - Add `WithSamplingStrategyFetcher` which sets custom fetcher implementation. (#4045)
 
+### Changed
+
+- Dropped compatibility testing for [Go 1.19].
+  The project no longer guarantees support for this version of Go. (#4352)
+
 ### Fixed
 
 - Do not panic when the default HTTP round-tripper is not `*http.Transport`. (#4045)
