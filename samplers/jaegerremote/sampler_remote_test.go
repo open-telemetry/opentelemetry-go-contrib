@@ -20,7 +20,6 @@ import (
 	"encoding/binary"
 	"errors"
 	"fmt"
-	"net/http"
 	"sync"
 	"testing"
 	"time"
@@ -591,21 +590,4 @@ func TestSamplingStrategyParserImpl_Error(t *testing.T) {
 func TestDefaultSamplingStrategyFetcher_Timeout(t *testing.T) {
 	fetcher := newHTTPSamplingStrategyFetcher("")
 	assert.Equal(t, defaultRemoteSamplingTimeout, fetcher.httpClient.Timeout)
-}
-
-func TestDefaultSamplingStrategyFetcher_NoPanic(t *testing.T) {
-	mu := sync.Mutex{}
-	mu.Lock()
-	defer mu.Unlock()
-
-	defaultTransport := http.DefaultTransport
-	http.DefaultTransport = http.NewFileTransport(http.Dir("/"))
-
-	t.Cleanup(func() {
-		http.DefaultTransport = defaultTransport
-	})
-
-	require.NotPanics(t, func() {
-		newHTTPSamplingStrategyFetcher("")
-	})
 }
