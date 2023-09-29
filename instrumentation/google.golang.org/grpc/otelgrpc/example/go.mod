@@ -1,6 +1,6 @@
 module go.opentelemetry.io/contrib/instrumentation/google.golang.org/grpc/otelgrpc/example
 
-go 1.18
+go 1.20
 
 replace go.opentelemetry.io/contrib/instrumentation/google.golang.org/grpc/otelgrpc => ../
 
