@@ -15,6 +15,7 @@
 package test
 
 import (
+	"context"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
@@ -24,6 +25,8 @@ import (
 
 	"go.opentelemetry.io/contrib/instrumentation/google.golang.org/grpc/otelgrpc"
 	"go.opentelemetry.io/otel/attribute"
+	"go.opentelemetry.io/otel/sdk/metric"
+	"go.opentelemetry.io/otel/sdk/metric/metricdata"
 	"go.opentelemetry.io/otel/sdk/trace"
 	"go.opentelemetry.io/otel/sdk/trace/tracetest"
 	semconv "go.opentelemetry.io/otel/semconv/v1.17.0"
@@ -32,25 +35,31 @@ import (
 func TestStatsHandler(t *testing.T) {
 	clientSR := tracetest.NewSpanRecorder()
 	clientTP := trace.NewTracerProvider(trace.WithSpanProcessor(clientSR))
+	clientMetricReader := metric.NewManualReader()
+	clientMP := metric.NewMeterProvider(metric.WithReader(clientMetricReader))
 
 	serverSR := tracetest.NewSpanRecorder()
 	serverTP := trace.NewTracerProvider(trace.WithSpanProcessor(serverSR))
+	serverMetricReader := metric.NewManualReader()
+	serverMP := metric.NewMeterProvider(metric.WithReader(serverMetricReader))
 
 	assert.NoError(t, doCalls(
 		[]grpc.DialOption{
-			grpc.WithStatsHandler(otelgrpc.NewClientHandler(otelgrpc.WithTracerProvider(clientTP))),
+			grpc.WithStatsHandler(otelgrpc.NewClientHandler(otelgrpc.WithTracerProvider(clientTP), otelgrpc.WithMeterProvider(clientMP))),
 		},
 		[]grpc.ServerOption{
-			grpc.StatsHandler(otelgrpc.NewServerHandler(otelgrpc.WithTracerProvider(serverTP))),
+			grpc.StatsHandler(otelgrpc.NewServerHandler(otelgrpc.WithTracerProvider(serverTP), otelgrpc.WithMeterProvider(serverMP))),
 		},
 	))
 
-	t.Run("ClientSpans", func(t *testing.T) {
+	t.Run("Client", func(t *testing.T) {
 		checkClientSpans(t, clientSR.Ended())
+		checkClientRecords(t, clientMetricReader)
 	})
 
-	t.Run("ServerSpans", func(t *testing.T) {
+	t.Run("Server", func(t *testing.T) {
 		checkServerSpans(t, serverSR.Ended())
+		checkServerRecords(t, serverMetricReader)
 	})
 }
 
@@ -578,4 +587,50 @@ func checkServerSpans(t *testing.T, spans []trace.ReadOnlySpan) {
 		otelgrpc.RPCSystemGRPC,
 		otelgrpc.GRPCStatusCodeKey.Int64(int64(codes.OK)),
 	}, pingPong.Attributes())
+}
+
+func checkServerRecords(t *testing.T, reader metric.Reader) {
+	rm := metricdata.ResourceMetrics{}
+	err := reader.Collect(context.Background(), &rm)
+	assert.NoError(t, err)
+	require.Len(t, rm.ScopeMetrics, 1)
+	require.Len(t, rm.ScopeMetrics[0].Metrics, 5)
+	for _, m := range rm.ScopeMetrics[0].Metrics {
+		require.IsType(t, m.Data, metricdata.Histogram[int64]{})
+		data := m.Data.(metricdata.Histogram[int64])
+		for _, dpt := range data.DataPoints {
+			attr := dpt.Attributes.ToSlice()
+			method := getRPCMethod(attr)
+			assert.NotEmpty(t, method)
+			assert.ElementsMatch(t, []attribute.KeyValue{
+				semconv.RPCMethod(method),
+				semconv.RPCService("grpc.testing.TestService"),
+				otelgrpc.RPCSystemGRPC,
+				otelgrpc.GRPCStatusCodeKey.Int64(int64(codes.OK)),
+			}, attr)
+		}
+	}
+}
+
+func checkClientRecords(t *testing.T, reader metric.Reader) {
+	rm := metricdata.ResourceMetrics{}
+	err := reader.Collect(context.Background(), &rm)
+	assert.NoError(t, err)
+	require.Len(t, rm.ScopeMetrics, 1)
+	require.Len(t, rm.ScopeMetrics[0].Metrics, 5)
+	for _, m := range rm.ScopeMetrics[0].Metrics {
+		require.IsType(t, m.Data, metricdata.Histogram[int64]{})
+		data := m.Data.(metricdata.Histogram[int64])
+		for _, dpt := range data.DataPoints {
+			attr := dpt.Attributes.ToSlice()
+			method := getRPCMethod(attr)
+			assert.NotEmpty(t, method)
+			assert.ElementsMatch(t, []attribute.KeyValue{
+				semconv.RPCMethod(method),
+				semconv.RPCService("grpc.testing.TestService"),
+				otelgrpc.RPCSystemGRPC,
+				otelgrpc.GRPCStatusCodeKey.Int64(int64(codes.OK)),
+			}, attr)
+		}
+	}
 }
