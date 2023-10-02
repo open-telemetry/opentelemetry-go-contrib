@@ -1,6 +1,6 @@
 module go.opentelemetry.io/contrib/instrumentation/github.com/labstack/echo/otelecho/example
 
-go 1.18
+go 1.20
 
 replace (
 	go.opentelemetry.io/contrib/instrumentation/github.com/labstack/echo/otelecho => ../

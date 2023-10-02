@@ -1,6 +1,6 @@
 module go.opentelemetry.io/contrib/instrumentation/gopkg.in/macaron.v1/otelmacaron
 
-go 1.19
+go 1.20
 
 replace go.opentelemetry.io/contrib/propagators/b3 => ../../../../propagators/b3
 
