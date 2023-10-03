@@ -74,6 +74,9 @@ $(GOTMPL): PACKAGE=go.opentelemetry.io/build-tools/gotmpl
 GORELEASE = $(TOOLS)/gorelease
 $(GORELEASE): PACKAGE=golang.org/x/exp/cmd/gorelease
 
+GOJSONSCHEMA = $(TOOLS)/go-jsonschema
+$(GOJSONSCHEMA): PACKAGE=github.com/atombender/go-jsonschema/cmd/gojsonschema
+
 tools: $(GOLANGCI_LINT) $(MISSPELL) $(GOCOVMERGE) $(STRINGER) $(PORTO) $(MULTIMOD) $(DBOTCONF) $(CROSSLINK) $(GOTMPL) $(GORELEASE)
 
 # Generate
@@ -283,3 +286,35 @@ COMMIT ?= "HEAD"
 add-tags: | $(MULTIMOD)
 	@[ "${MODSET}" ] || ( echo ">> env var MODSET is not set"; exit 1 )
 	$(MULTIMOD) verify && $(MULTIMOD) tag -m ${MODSET} -c ${COMMIT}
+
+# The source directory for opentelemetry-configuration schema.
+OPENTELEMETRY_CONFIGURATION_JSONSCHEMA_SRC_DIR=tmp/opentelememetry-configuration
+
+# The SHA matching the current version of the opentelemetry-configuration schema to use
+OPENTELEMETRY_CONFIGURATION_JSONSCHEMA_VERSION=v0.1
+
+# Cleanup temporary directory
+genjsonschema-cleanup:
+	rm -Rf ${OPENTELEMETRY_CONFIGURATION_JSONSCHEMA_SRC_DIR}
+
+GENERATED_CONFIG=./config/pkg/${OPENTELEMETRY_CONFIGURATION_JSONSCHEMA_VERSION}/generated_config.go
+
+# Generate structs for configuration from opentelemetry-configuration schema
+genjsonschema: genjsonschema-cleanup $(GOJSONSCHEMA)
+	mkdir -p ${OPENTELEMETRY_CONFIGURATION_JSONSCHEMA_SRC_DIR}
+	# TODO: use this line once v0.1 is tagged in repo
+	# curl -sSL https://api.github.com/repos/open-telemetry/opentelemetry-configuration/tarball/${OPENTELEMETRY_CONFIGURATION_JSONSCHEMA_VERSION} | tar xz --strip 1 -C ${OPENTELEMETRY_CONFIGURATION_JSONSCHEMA_SRC_DIR}
+	curl -sSL https://api.github.com/repos/open-telemetry/opentelemetry-configuration/tarball/main | tar xz --strip 1 -C ${OPENTELEMETRY_CONFIGURATION_JSONSCHEMA_SRC_DIR}
+	$(GOJSONSCHEMA) \
+		--capitalization ID \
+		--capitalization OTLP \
+		--struct-name-from-title \
+		--package config \
+		--tags mapstructure \
+		--output ${GENERATED_CONFIG} \
+		${OPENTELEMETRY_CONFIGURATION_JSONSCHEMA_SRC_DIR}/schema/opentelemetry_configuration.json
+	@echo Modify jsonschema generated files.
+	sed -f ./config/jsonschema_patch.sed ${GENERATED_CONFIG} > ${GENERATED_CONFIG}.tmp
+	mv ${GENERATED_CONFIG}.tmp ${GENERATED_CONFIG}
+	$(MAKE) lint
+	$(MAKE) genjsonschema-cleanup
