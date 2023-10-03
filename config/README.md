@@ -9,6 +9,17 @@ The package contains:
 - a `Create` function that interprets [configuration model] and return SDK components (TODO)
 - a `Parse` function that parses and validates a [configuration file] (TODO)
 
+## Using the generate model code
+
+The `generated_config.go` code in versioned submodule can be used directly as-is to programmatically
+produce a configuration model that can be then used as a parameter to the `Create` function. Note
+that the package is versioned to match the release versioning of the opentelemetry-configuration
+repository.
+
+## Using the `Create` function (TODO)
+
+## Using the `Parse` function (TODO)
+
 The original code from the package comes from the [OpenTelemetry Collector's service] telemetry
 configuration code. The intent being to share this code across implementations and reduce
 duplication where possible.
