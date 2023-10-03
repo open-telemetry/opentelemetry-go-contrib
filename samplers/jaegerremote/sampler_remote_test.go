@@ -46,7 +46,7 @@ func TestRemotelyControlledSampler_updateConcurrentSafe(t *testing.T) {
 		WithInitialSampler(initSampler),
 		WithSamplingServerURL("my url"),
 		WithSamplingRefreshInterval(time.Millisecond),
-		withSamplingStrategyFetcher(fetcher),
+		WithSamplingStrategyFetcher(fetcher),
 		withSamplingStrategyParser(parser),
 		withUpdaters(updaters...),
 	)
@@ -80,8 +80,7 @@ func (c *testSamplingStrategyFetcher) Fetch(serviceName string) ([]byte, error) 
 	return c.response, nil
 }
 
-type testSamplingStrategyParser struct {
-}
+type testSamplingStrategyParser struct{}
 
 func (p *testSamplingStrategyParser) Parse(response []byte) (interface{}, error) {
 	strategy := new(jaeger_api_v2.SamplingStrategyResponse)
@@ -117,7 +116,7 @@ func TestRemoteSamplerOptions(t *testing.T) {
 		WithInitialSampler(initSampler),
 		WithSamplingServerURL("my url"),
 		WithSamplingRefreshInterval(42*time.Second),
-		withSamplingStrategyFetcher(fetcher),
+		WithSamplingStrategyFetcher(fetcher),
 		withSamplingStrategyParser(parser),
 		withUpdaters(updaters...),
 		WithLogger(logger),
@@ -302,7 +301,7 @@ func TestRemotelyControlledSampler_ImmediatelyUpdateOnStartup(t *testing.T) {
 		WithInitialSampler(initSampler),
 		WithSamplingServerURL("my url"),
 		WithSamplingRefreshInterval(10*time.Minute),
-		withSamplingStrategyFetcher(fetcher),
+		WithSamplingStrategyFetcher(fetcher),
 		withSamplingStrategyParser(parser),
 		withUpdaters(updaters...),
 	)
@@ -334,7 +333,8 @@ func TestRemotelyControlledSampler_multiStrategyResponse(t *testing.T) {
 					Operation: testUnusedOpName,
 					ProbabilisticSampling: &jaeger_api_v2.ProbabilisticSamplingStrategy{
 						SamplingRate: testUnusedOpSamplingRate,
-					}},
+					},
+				},
 			},
 		},
 	}
@@ -585,4 +585,9 @@ func TestSamplingStrategyParserImpl_Error(t *testing.T) {
 	val, err := new(samplingStrategyParserImpl).Parse([]byte(json))
 	require.Error(t, err, "output: %+v", val)
 	require.Contains(t, err.Error(), `unknown value "foo_bar"`)
+}
+
+func TestDefaultSamplingStrategyFetcher_Timeout(t *testing.T) {
+	fetcher := newHTTPSamplingStrategyFetcher("")
+	assert.Equal(t, defaultRemoteSamplingTimeout, fetcher.httpClient.Timeout)
 }
