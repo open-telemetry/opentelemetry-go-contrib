@@ -26,7 +26,7 @@ import (
 	"go.opentelemetry.io/otel/attribute"
 	"go.opentelemetry.io/otel/codes"
 	"go.opentelemetry.io/otel/propagation"
-	semconv "go.opentelemetry.io/otel/semconv/v1.17.0"
+	semconv "go.opentelemetry.io/otel/semconv/v1.21.0"
 	"go.opentelemetry.io/otel/trace"
 )
 
@@ -156,7 +156,7 @@ func AppendMiddlewares(apiOptions *[]func(*middleware.Stack) error, opts ...Opti
 	}
 
 	m := otelMiddlewares{tracer: cfg.TracerProvider.Tracer(tracerName,
-		trace.WithInstrumentationVersion(SemVersion())),
+		trace.WithInstrumentationVersion(Version())),
 		propagator:      cfg.TextMapPropagator,
 		attributeSetter: cfg.AttributeSetter}
 	*apiOptions = append(*apiOptions, m.initializeMiddlewareBefore, m.initializeMiddlewareAfter, m.finalizeMiddleware, m.deserializeMiddleware)

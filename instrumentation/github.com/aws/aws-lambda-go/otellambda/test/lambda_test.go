@@ -40,7 +40,7 @@ import (
 	"go.opentelemetry.io/otel/sdk/resource"
 	sdktrace "go.opentelemetry.io/otel/sdk/trace"
 	"go.opentelemetry.io/otel/sdk/trace/tracetest"
-	semconv "go.opentelemetry.io/otel/semconv/v1.17.0"
+	semconv "go.opentelemetry.io/otel/semconv/v1.21.0"
 	"go.opentelemetry.io/otel/trace"
 )
 
@@ -136,8 +136,8 @@ var (
 		SpanKind:  trace.SpanKindServer,
 		StartTime: time.Time{},
 		EndTime:   time.Time{},
-		Attributes: []attribute.KeyValue{attribute.String("faas.execution", "123"),
-			attribute.String("faas.id", "arn:partition:service:region:account-id:resource-type:resource-id"),
+		Attributes: []attribute.KeyValue{attribute.String("faas.invocation_id", "123"),
+			attribute.String("aws.lambda.invoked_arn", "arn:partition:service:region:account-id:resource-type:resource-id"),
 			attribute.String("cloud.account.id", "account-id")},
 		Events:            nil,
 		Links:             nil,
@@ -153,7 +153,7 @@ var (
 			attribute.String("faas.version", "$LATEST"),
 			attribute.String("faas.instance", "2023/01/01/[$LATEST]5d1edb9e525d486696cf01a3503487bc"),
 			attribute.Int("faas.max_memory", 128)),
-		InstrumentationLibrary: instrumentation.Library{Name: "go.opentelemetry.io/contrib/instrumentation/github.com/aws/aws-lambda-go/otellambda", Version: otellambda.SemVersion()},
+		InstrumentationLibrary: instrumentation.Library{Name: "go.opentelemetry.io/contrib/instrumentation/github.com/aws/aws-lambda-go/otellambda", Version: otellambda.Version()},
 	}
 )
 
@@ -326,8 +326,8 @@ var (
 		SpanKind:  trace.SpanKindServer,
 		StartTime: time.Time{},
 		EndTime:   time.Time{},
-		Attributes: []attribute.KeyValue{attribute.String("faas.execution", "123"),
-			attribute.String("faas.id", "arn:partition:service:region:account-id:resource-type:resource-id"),
+		Attributes: []attribute.KeyValue{attribute.String("faas.invocation_id", "123"),
+			attribute.String("aws.lambda.invoked_arn", "arn:partition:service:region:account-id:resource-type:resource-id"),
 			attribute.String("cloud.account.id", "account-id")},
 		Events:            nil,
 		Links:             nil,
@@ -343,7 +343,7 @@ var (
 			attribute.String("faas.version", "$LATEST"),
 			attribute.String("faas.instance", "2023/01/01/[$LATEST]5d1edb9e525d486696cf01a3503487bc"),
 			attribute.Int("faas.max_memory", 128)),
-		InstrumentationLibrary: instrumentation.Library{Name: "go.opentelemetry.io/contrib/instrumentation/github.com/aws/aws-lambda-go/otellambda", Version: otellambda.SemVersion()},
+		InstrumentationLibrary: instrumentation.Library{Name: "go.opentelemetry.io/contrib/instrumentation/github.com/aws/aws-lambda-go/otellambda", Version: otellambda.Version()},
 	}
 )
 

@@ -11,33 +11,6 @@ updates:
       interval: weekly
       day: sunday
   - package-ecosystem: docker
-    directory: /instrumentation/github.com/Shopify/sarama/otelsarama/example/consumer
-    labels:
-      - dependencies
-      - docker
-      - Skip Changelog
-    schedule:
-      interval: weekly
-      day: sunday
-  - package-ecosystem: docker
-    directory: /instrumentation/github.com/Shopify/sarama/otelsarama/example/producer
-    labels:
-      - dependencies
-      - docker
-      - Skip Changelog
-    schedule:
-      interval: weekly
-      day: sunday
-  - package-ecosystem: docker
-    directory: /instrumentation/github.com/astaxie/beego/otelbeego/example
-    labels:
-      - dependencies
-      - docker
-      - Skip Changelog
-    schedule:
-      interval: weekly
-      day: sunday
-  - package-ecosystem: docker
     directory: /instrumentation/github.com/aws/aws-lambda-go/otellambda/example
     labels:
       - dependencies
@@ -56,15 +29,6 @@ updates:
       interval: weekly
       day: sunday
   - package-ecosystem: docker
-    directory: /instrumentation/github.com/bradfitz/gomemcache/memcache/otelmemcache/example
-    labels:
-      - dependencies
-      - docker
-      - Skip Changelog
-    schedule:
-      interval: weekly
-      day: sunday
-  - package-ecosystem: docker
     directory: /instrumentation/github.com/emicklei/go-restful/otelrestful/example
     labels:
       - dependencies
@@ -75,15 +39,6 @@ updates:
       day: sunday
   - package-ecosystem: docker
     directory: /instrumentation/github.com/gin-gonic/gin/otelgin/example
-    labels:
-      - dependencies
-      - docker
-      - Skip Changelog
-    schedule:
-      interval: weekly
-      day: sunday
-  - package-ecosystem: docker
-    directory: /instrumentation/github.com/go-kit/kit/otelkit/example
     labels:
       - dependencies
       - docker
@@ -146,6 +101,15 @@ updates:
       interval: weekly
       day: sunday
   - package-ecosystem: gomod
+    directory: /bridges/prometheus
+    labels:
+      - dependencies
+      - go
+      - Skip Changelog
+    schedule:
+      interval: weekly
+      day: sunday
+  - package-ecosystem: gomod
     directory: /detectors/aws/ec2
     labels:
       - dependencies
@@ -191,6 +155,15 @@ updates:
       interval: weekly
       day: sunday
   - package-ecosystem: gomod
+    directory: /exporters/autoexport
+    labels:
+      - dependencies
+      - go
+      - Skip Changelog
+    schedule:
+      interval: weekly
+      day: sunday
+  - package-ecosystem: gomod
     directory: /instrgen
     labels:
       - dependencies
@@ -210,60 +183,6 @@ updates:
       day: sunday
   - package-ecosystem: gomod
     directory: /instrgen/driver/testdata/interface
-    labels:
-      - dependencies
-      - go
-      - Skip Changelog
-    schedule:
-      interval: weekly
-      day: sunday
-  - package-ecosystem: gomod
-    directory: /instrumentation/github.com/Shopify/sarama/otelsarama
-    labels:
-      - dependencies
-      - go
-      - Skip Changelog
-    schedule:
-      interval: weekly
-      day: sunday
-  - package-ecosystem: gomod
-    directory: /instrumentation/github.com/Shopify/sarama/otelsarama/example
-    labels:
-      - dependencies
-      - go
-      - Skip Changelog
-    schedule:
-      interval: weekly
-      day: sunday
-  - package-ecosystem: gomod
-    directory: /instrumentation/github.com/Shopify/sarama/otelsarama/test
-    labels:
-      - dependencies
-      - go
-      - Skip Changelog
-    schedule:
-      interval: weekly
-      day: sunday
-  - package-ecosystem: gomod
-    directory: /instrumentation/github.com/astaxie/beego/otelbeego
-    labels:
-      - dependencies
-      - go
-      - Skip Changelog
-    schedule:
-      interval: weekly
-      day: sunday
-  - package-ecosystem: gomod
-    directory: /instrumentation/github.com/astaxie/beego/otelbeego/example
-    labels:
-      - dependencies
-      - go
-      - Skip Changelog
-    schedule:
-      interval: weekly
-      day: sunday
-  - package-ecosystem: gomod
-    directory: /instrumentation/github.com/astaxie/beego/otelbeego/test
     labels:
       - dependencies
       - go
@@ -335,33 +254,6 @@ updates:
       interval: weekly
       day: sunday
   - package-ecosystem: gomod
-    directory: /instrumentation/github.com/bradfitz/gomemcache/memcache/otelmemcache
-    labels:
-      - dependencies
-      - go
-      - Skip Changelog
-    schedule:
-      interval: weekly
-      day: sunday
-  - package-ecosystem: gomod
-    directory: /instrumentation/github.com/bradfitz/gomemcache/memcache/otelmemcache/example
-    labels:
-      - dependencies
-      - go
-      - Skip Changelog
-    schedule:
-      interval: weekly
-      day: sunday
-  - package-ecosystem: gomod
-    directory: /instrumentation/github.com/bradfitz/gomemcache/memcache/otelmemcache/test
-    labels:
-      - dependencies
-      - go
-      - Skip Changelog
-    schedule:
-      interval: weekly
-      day: sunday
-  - package-ecosystem: gomod
     directory: /instrumentation/github.com/emicklei/go-restful/otelrestful
     labels:
       - dependencies
@@ -408,60 +300,6 @@ updates:
       day: sunday
   - package-ecosystem: gomod
     directory: /instrumentation/github.com/gin-gonic/gin/otelgin/test
-    labels:
-      - dependencies
-      - go
-      - Skip Changelog
-    schedule:
-      interval: weekly
-      day: sunday
-  - package-ecosystem: gomod
-    directory: /instrumentation/github.com/go-kit/kit/otelkit
-    labels:
-      - dependencies
-      - go
-      - Skip Changelog
-    schedule:
-      interval: weekly
-      day: sunday
-  - package-ecosystem: gomod
-    directory: /instrumentation/github.com/go-kit/kit/otelkit/example
-    labels:
-      - dependencies
-      - go
-      - Skip Changelog
-    schedule:
-      interval: weekly
-      day: sunday
-  - package-ecosystem: gomod
-    directory: /instrumentation/github.com/go-kit/kit/otelkit/test
-    labels:
-      - dependencies
-      - go
-      - Skip Changelog
-    schedule:
-      interval: weekly
-      day: sunday
-  - package-ecosystem: gomod
-    directory: /instrumentation/github.com/gocql/gocql/otelgocql
-    labels:
-      - dependencies
-      - go
-      - Skip Changelog
-    schedule:
-      interval: weekly
-      day: sunday
-  - package-ecosystem: gomod
-    directory: /instrumentation/github.com/gocql/gocql/otelgocql/example
-    labels:
-      - dependencies
-      - go
-      - Skip Changelog
-    schedule:
-      interval: weekly
-      day: sunday
-  - package-ecosystem: gomod
-    directory: /instrumentation/github.com/gocql/gocql/otelgocql/test
     labels:
       - dependencies
       - go

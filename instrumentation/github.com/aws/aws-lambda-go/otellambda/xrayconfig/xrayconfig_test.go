@@ -92,7 +92,7 @@ var (
 		})
 
 	expectedSpans = v1trace.ScopeSpans{
-		Scope: &v1common.InstrumentationScope{Name: "go.opentelemetry.io/contrib/instrumentation/github.com/aws/aws-lambda-go/otellambda", Version: otellambda.SemVersion()},
+		Scope: &v1common.InstrumentationScope{Name: "go.opentelemetry.io/contrib/instrumentation/github.com/aws/aws-lambda-go/otellambda", Version: otellambda.Version()},
 		Spans: []*v1trace.Span{{
 			TraceId:           []byte{0x57, 0x59, 0xe9, 0x88, 0xbd, 0x86, 0x2e, 0x3f, 0xe1, 0xbe, 0x46, 0xa9, 0x94, 0x27, 0x27, 0x93},
 			SpanId:            nil,
@@ -102,8 +102,8 @@ var (
 			Kind:              v1trace.Span_SPAN_KIND_SERVER,
 			StartTimeUnixNano: 0,
 			EndTimeUnixNano:   0,
-			Attributes: []*v1common.KeyValue{{Key: "faas.execution", Value: &v1common.AnyValue{Value: &v1common.AnyValue_StringValue{StringValue: "123"}}},
-				{Key: "faas.id", Value: &v1common.AnyValue{Value: &v1common.AnyValue_StringValue{StringValue: "arn:partition:service:region:account-id:resource-type:resource-id"}}},
+			Attributes: []*v1common.KeyValue{{Key: "faas.invocation_id", Value: &v1common.AnyValue{Value: &v1common.AnyValue_StringValue{StringValue: "123"}}},
+				{Key: "aws.lambda.invoked_arn", Value: &v1common.AnyValue{Value: &v1common.AnyValue_StringValue{StringValue: "arn:partition:service:region:account-id:resource-type:resource-id"}}},
 				{Key: "cloud.account.id", Value: &v1common.AnyValue{Value: &v1common.AnyValue_StringValue{StringValue: "account-id"}}}},
 			DroppedAttributesCount: 0,
 			Events:                 nil,
@@ -174,7 +174,7 @@ func TestWrapEndToEnd(t *testing.T) {
 	customerHandler := func() (string, error) {
 		return "hello world", nil
 	}
-	mockCollector := runMockCollectorAtEndpoint(t, ":4317")
+	mockCollector := runMockCollectorAtEndpoint(t, "localhost:4317")
 	defer func() {
 		_ = mockCollector.Stop()
 	}()

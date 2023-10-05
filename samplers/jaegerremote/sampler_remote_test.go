@@ -20,6 +20,7 @@ import (
 	"encoding/binary"
 	"errors"
 	"fmt"
+	"sync"
 	"testing"
 	"time"
 
@@ -33,7 +34,7 @@ import (
 	oteltrace "go.opentelemetry.io/otel/trace"
 )
 
-func TestRemotelyControlledSampler_updateRace(t *testing.T) {
+func TestRemotelyControlledSampler_updateConcurrentSafe(t *testing.T) {
 	initSampler := newProbabilisticSampler(0.123)
 	fetcher := &testSamplingStrategyFetcher{response: []byte("probabilistic")}
 	parser := new(testSamplingStrategyParser)
@@ -45,36 +46,30 @@ func TestRemotelyControlledSampler_updateRace(t *testing.T) {
 		WithInitialSampler(initSampler),
 		WithSamplingServerURL("my url"),
 		WithSamplingRefreshInterval(time.Millisecond),
-		withSamplingStrategyFetcher(fetcher),
+		WithSamplingStrategyFetcher(fetcher),
 		withSamplingStrategyParser(parser),
 		withUpdaters(updaters...),
 	)
 
+	defer sampler.Close()
+
 	s := makeSamplingParameters(1, "test")
-	end := make(chan struct{})
 
-	accessor := func(f func()) {
-		for {
-			select {
-			case <-end:
-				return
-			default:
-				f()
-			}
-		}
-	}
+	var wg sync.WaitGroup
 
-	go accessor(func() {
+	wg.Add(1)
+	go func() {
+		defer wg.Done()
 		sampler.UpdateSampler()
-	})
+	}()
 
-	go accessor(func() {
+	wg.Add(1)
+	go func() {
+		defer wg.Done()
 		sampler.ShouldSample(s)
-	})
+	}()
 
-	time.Sleep(100 * time.Millisecond)
-	close(end)
-	sampler.Close()
+	wg.Wait()
 }
 
 type testSamplingStrategyFetcher struct {
@@ -85,8 +80,7 @@ func (c *testSamplingStrategyFetcher) Fetch(serviceName string) ([]byte, error) 
 	return c.response, nil
 }
 
-type testSamplingStrategyParser struct {
-}
+type testSamplingStrategyParser struct{}
 
 func (p *testSamplingStrategyParser) Parse(response []byte) (interface{}, error) {
 	strategy := new(jaeger_api_v2.SamplingStrategyResponse)
@@ -122,7 +116,7 @@ func TestRemoteSamplerOptions(t *testing.T) {
 		WithInitialSampler(initSampler),
 		WithSamplingServerURL("my url"),
 		WithSamplingRefreshInterval(42*time.Second),
-		withSamplingStrategyFetcher(fetcher),
+		WithSamplingStrategyFetcher(fetcher),
 		withSamplingStrategyParser(parser),
 		withUpdaters(updaters...),
 		WithLogger(logger),
@@ -200,11 +194,15 @@ func TestRemotelyControlledSampler(t *testing.T) {
 	ticker := &time.Ticker{C: c}
 	// reset closed so the next call to Close() correctly stops the polling goroutine
 	remoteSampler.closed = 0
-	go remoteSampler.pollControllerWithTicker(ticker)
+	done := make(chan struct{})
+	go func() {
+		defer close(done)
+		remoteSampler.pollControllerWithTicker(ticker)
+	}()
 
 	c <- time.Now() // force update based on timer
-	time.Sleep(10 * time.Millisecond)
 	remoteSampler.Close()
+	<-done
 
 	s2, ok := remoteSampler.sampler.(*probabilisticSampler)
 	assert.True(t, ok)
@@ -303,7 +301,7 @@ func TestRemotelyControlledSampler_ImmediatelyUpdateOnStartup(t *testing.T) {
 		WithInitialSampler(initSampler),
 		WithSamplingServerURL("my url"),
 		WithSamplingRefreshInterval(10*time.Minute),
-		withSamplingStrategyFetcher(fetcher),
+		WithSamplingStrategyFetcher(fetcher),
 		withSamplingStrategyParser(parser),
 		withUpdaters(updaters...),
 	)
@@ -335,7 +333,8 @@ func TestRemotelyControlledSampler_multiStrategyResponse(t *testing.T) {
 					Operation: testUnusedOpName,
 					ProbabilisticSampling: &jaeger_api_v2.ProbabilisticSamplingStrategy{
 						SamplingRate: testUnusedOpSamplingRate,
-					}},
+					},
+				},
 			},
 		},
 	}
@@ -586,4 +585,9 @@ func TestSamplingStrategyParserImpl_Error(t *testing.T) {
 	val, err := new(samplingStrategyParserImpl).Parse([]byte(json))
 	require.Error(t, err, "output: %+v", val)
 	require.Contains(t, err.Error(), `unknown value "foo_bar"`)
+}
+
+func TestDefaultSamplingStrategyFetcher_Timeout(t *testing.T) {
+	fetcher := newHTTPSamplingStrategyFetcher("")
+	assert.Equal(t, defaultRemoteSamplingTimeout, fetcher.httpClient.Timeout)
 }

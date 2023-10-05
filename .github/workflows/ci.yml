@@ -14,7 +14,7 @@ env:
   # backwards compatibility with the previous two minor releases and we
   # explicitly test our code for these versions so keeping this at prior
   # versions does not add value.
-  DEFAULT_GO_VERSION: "1.20"
+  DEFAULT_GO_VERSION: "~1.21.1"
 jobs:
   lint:
     runs-on: ubuntu-latest
@@ -24,7 +24,7 @@ jobs:
       with:
         go-version: ${{ env.DEFAULT_GO_VERSION }}
     - name: Checkout Repo
-      uses: actions/checkout@v3
+      uses: actions/checkout@v4
     - name: Setup Environment
       run: |
         echo "GOPATH=$(go env GOPATH)" >> $GITHUB_ENV
@@ -43,6 +43,8 @@ jobs:
       with:
         path: ~/.tools
         key: ${{ runner.os }}-${{ env.cache-name }}-${{ hashFiles('./internal/tools/**') }}
+    - name: Generate
+      run: make generate
     - name: Run linters
       run: make dependabot-check license-check lint vanity-import-check
     - name: Build
@@ -58,7 +60,7 @@ jobs:
       with:
         go-version: ${{ env.DEFAULT_GO_VERSION }}
     - name: Checkout Repo
-      uses: actions/checkout@v3
+      uses: actions/checkout@v4
     - name: Setup Environment
       run: |
         echo "GOPATH=$(go env GOPATH)" >> $GITHUB_ENV
@@ -81,7 +83,7 @@ jobs:
       with:
         go-version: ${{ env.DEFAULT_GO_VERSION }}
     - name: Checkout Repo
-      uses: actions/checkout@v3
+      uses: actions/checkout@v4
     - name: Setup Environment
       run: |
         echo "GOPATH=$(go env GOPATH)" >> $GITHUB_ENV
@@ -101,7 +103,7 @@ jobs:
         cp coverage.txt $TEST_RESULTS
         cp coverage.html $TEST_RESULTS
     - name: Upload coverage report
-      uses: codecov/codecov-action@v3.1.3
+      uses: codecov/codecov-action@v3.1.4
       with:
         file: ./coverage.txt
         fail_ci_if_error: true
@@ -115,7 +117,7 @@ jobs:
   compatibility-test:
     strategy:
       matrix:
-        go-version: ["1.20", 1.19]
+        go-version: ["~1.21.1", "~1.20.8"]
         os: [ubuntu-latest, macos-latest, windows-latest]
         # GitHub Actions does not support arm* architectures on default
         # runners. It is possible to acomplish this with a self-hosted runner
@@ -133,7 +135,7 @@ jobs:
       with:
         go-version: ${{ matrix.go-version }}
     - name: Checkout code
-      uses: actions/checkout@v3
+      uses: actions/checkout@v4
     - name: Setup Environment
       run: |
         echo "GOPATH=$(go env GOPATH)" >> $GITHUB_ENV
@@ -163,7 +165,7 @@ jobs:
   integration:
     strategy:
       matrix:
-        target: [test-gocql, test-mongo-driver, test-gomemcache]
+        target: [test-mongo-driver]
     runs-on: ubuntu-latest
     steps:
     - name: Install Go
@@ -171,7 +173,7 @@ jobs:
       with:
         go-version: ${{ env.DEFAULT_GO_VERSION }}
     - name: Checkout Repo
-      uses: actions/checkout@v3
+      uses: actions/checkout@v4
       with:
         fetch-depth: 0
     - name: Setup Environment
@@ -195,7 +197,7 @@ jobs:
         find . -name 'coverage.html' > "${TEST_RESULTS}/coverage.lst"
         tar -n -cf - -T "${TEST_RESULTS}/coverage.lst" | tar -C "${TEST_RESULTS}" -xvf -
     - name: Upload coverage report
-      uses: codecov/codecov-action@v3.1.3
+      uses: codecov/codecov-action@v3.1.4
       if: hashFiles('coverage.out') != ''
       with:
         file: ./coverage.out
