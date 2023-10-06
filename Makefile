@@ -291,7 +291,7 @@ add-tags: | $(MULTIMOD)
 OPENTELEMETRY_CONFIGURATION_JSONSCHEMA_SRC_DIR=tmp/opentelememetry-configuration
 
 # The SHA matching the current version of the opentelemetry-configuration schema to use
-OPENTELEMETRY_CONFIGURATION_JSONSCHEMA_VERSION=v0.1
+OPENTELEMETRY_CONFIGURATION_JSONSCHEMA_VERSION=v0.1.0
 
 # Cleanup temporary directory
 genjsonschema-cleanup:
@@ -302,9 +302,7 @@ GENERATED_CONFIG=./config/pkg/${OPENTELEMETRY_CONFIGURATION_JSONSCHEMA_VERSION}/
 # Generate structs for configuration from opentelemetry-configuration schema
 genjsonschema: genjsonschema-cleanup $(GOJSONSCHEMA)
 	mkdir -p ${OPENTELEMETRY_CONFIGURATION_JSONSCHEMA_SRC_DIR}
-	# TODO: use this line once v0.1 is tagged in repo
-	# curl -sSL https://api.github.com/repos/open-telemetry/opentelemetry-configuration/tarball/${OPENTELEMETRY_CONFIGURATION_JSONSCHEMA_VERSION} | tar xz --strip 1 -C ${OPENTELEMETRY_CONFIGURATION_JSONSCHEMA_SRC_DIR}
-	curl -sSL https://api.github.com/repos/open-telemetry/opentelemetry-configuration/tarball/main | tar xz --strip 1 -C ${OPENTELEMETRY_CONFIGURATION_JSONSCHEMA_SRC_DIR}
+	curl -sSL https://api.github.com/repos/open-telemetry/opentelemetry-configuration/tarball/${OPENTELEMETRY_CONFIGURATION_JSONSCHEMA_VERSION} | tar xz --strip 1 -C ${OPENTELEMETRY_CONFIGURATION_JSONSCHEMA_SRC_DIR}
 	$(GOJSONSCHEMA) \
 		--capitalization ID \
 		--capitalization OTLP \
