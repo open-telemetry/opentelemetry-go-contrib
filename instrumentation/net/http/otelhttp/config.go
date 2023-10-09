@@ -36,6 +36,7 @@ type config struct {
 	Tracer            trace.Tracer
 	Meter             metric.Meter
 	Propagators       propagation.TextMapPropagator
+	CarrierFn         func(*http.Request) propagation.TextMapCarrier
 	SpanStartOptions  []trace.SpanStartOption
 	PublicEndpoint    bool
 	PublicEndpointFn  func(*http.Request) bool
@@ -65,6 +66,9 @@ func newConfig(opts ...Option) *config {
 	c := &config{
 		Propagators:   otel.GetTextMapPropagator(),
 		MeterProvider: otel.GetMeterProvider(),
+		CarrierFn: func(r *http.Request) propagation.TextMapCarrier {
+			return propagation.HeaderCarrier(r.Header)
+		},
 	}
 	for _, opt := range opts {
 		opt.apply(c)
@@ -124,11 +128,21 @@ func WithPublicEndpointFn(fn func(*http.Request) bool) Option {
 }
 
 // WithPropagators configures specific propagators. If this
-// option isn't specified, then the global TextMapPropagator is used.
+// option is not provided, then the global TextMapPropagator is used.
 func WithPropagators(ps propagation.TextMapPropagator) Option {
 	return optionFunc(func(c *config) {
 		if ps != nil {
 			c.Propagators = ps
+		}
+	})
+}
+
+// WithCarrierFn configures specific carrier for the request. If this
+// option is not provided, then the HeaderCarrier is used.
+func WithCarrierFn(fn func(*http.Request) propagation.TextMapCarrier) Option {
+	return optionFunc(func(c *config) {
+		if fn != nil {
+			c.CarrierFn = fn
 		}
 	})
 }

@@ -38,6 +38,7 @@ type middleware struct {
 	tracer            trace.Tracer
 	meter             metric.Meter
 	propagators       propagation.TextMapPropagator
+	carrierFn         func(*http.Request) propagation.TextMapCarrier
 	spanStartOptions  []trace.SpanStartOption
 	readEvent         bool
 	writeEvent        bool
@@ -87,6 +88,7 @@ func (h *middleware) configure(c *config) {
 	h.tracer = c.Tracer
 	h.meter = c.Meter
 	h.propagators = c.Propagators
+	h.carrierFn = c.CarrierFn
 	h.spanStartOptions = c.SpanStartOptions
 	h.readEvent = c.ReadEvent
 	h.writeEvent = c.WriteEvent
@@ -133,7 +135,7 @@ func (h *middleware) serveHTTP(w http.ResponseWriter, r *http.Request, next http
 		}
 	}
 
-	ctx := h.propagators.Extract(r.Context(), propagation.HeaderCarrier(r.Header))
+	ctx := h.propagators.Extract(r.Context(), h.carrierFn(r))
 	opts := []trace.SpanStartOption{
 		trace.WithAttributes(semconvutil.HTTPServerRequest(h.server, r)...),
 	}
