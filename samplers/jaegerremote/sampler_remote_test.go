@@ -130,6 +130,7 @@ func TestRemoteSamplerOptions(t *testing.T) {
 	assert.Same(t, parser, sampler.samplingParser)
 	assert.EqualValues(t, sampler.updaters[0], &perOperationSamplerUpdater{MaxOperations: 42, OperationNameLateBinding: true})
 	assert.Equal(t, logger, sampler.logger)
+	sampler.Close()
 }
 
 func TestRemoteSamplerOptionsDefaults(t *testing.T) {
@@ -496,6 +497,7 @@ func TestRemotelyControlledSampler_updateRateLimitingOrProbabilisticSampler(t *t
 				),
 			)
 			err := remoteSampler.updateSamplerViaUpdaters(testCase.res)
+			remoteSampler.Close()
 			if testCase.shouldErr {
 				require.Error(t, err)
 				return
