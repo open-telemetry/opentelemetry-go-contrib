@@ -1,6 +1,6 @@
 module go.opentelemetry.io/contrib/instrumentation/github.com/emicklei/go-restful/otelrestful/example
 
-go 1.18
+go 1.20
 
 replace (
 	go.opentelemetry.io/contrib/instrumentation/github.com/emicklei/go-restful/otelrestful => ../
@@ -9,11 +9,11 @@ replace (
 
 require (
 	github.com/emicklei/go-restful/v3 v3.11.0
-	go.opentelemetry.io/contrib/instrumentation/github.com/emicklei/go-restful/otelrestful v0.44.0
-	go.opentelemetry.io/otel v1.18.0
-	go.opentelemetry.io/otel/exporters/stdout/stdouttrace v1.18.0
-	go.opentelemetry.io/otel/sdk v1.18.0
-	go.opentelemetry.io/otel/trace v1.18.0
+	go.opentelemetry.io/contrib/instrumentation/github.com/emicklei/go-restful/otelrestful v0.45.0
+	go.opentelemetry.io/otel v1.19.0
+	go.opentelemetry.io/otel/exporters/stdout/stdouttrace v1.19.0
+	go.opentelemetry.io/otel/sdk v1.19.0
+	go.opentelemetry.io/otel/trace v1.19.0
 )
 
 require (
@@ -22,6 +22,6 @@ require (
 	github.com/json-iterator/go v1.1.10 // indirect
 	github.com/modern-go/concurrent v0.0.0-20180228061459-e0a39a4cb421 // indirect
 	github.com/modern-go/reflect2 v0.0.0-20180701023420-4b7aa43c6742 // indirect
-	go.opentelemetry.io/otel/metric v1.18.0 // indirect
+	go.opentelemetry.io/otel/metric v1.19.0 // indirect
 	golang.org/x/sys v0.12.0 // indirect
 )

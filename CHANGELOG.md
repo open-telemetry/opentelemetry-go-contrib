@@ -11,12 +11,28 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 ### Added
 
 - Add the new `go.opentelemetry.io/contrib/instrgen` package to provide auto-generated source code instrumentation. (#3068, #3108)
+- Add `"go.opentelemetry.io/contrib/samplers/jaegerremote".WithSamplingStrategyFetcher` which sets custom fetcher implementation. (#4045)
+
+### Changed
+
+- Dropped compatibility testing for [Go 1.19].
+  The project no longer guarantees support for this version of Go. (#4352)
+
+### Fixed
+
+- The `go.opentelemetry.io/contrib/samplers/jaegerremote` sampler does not panic when the default HTTP round-tripper (`http.DefaultTransport`) is not `*http.Transport`. (#4045)
+
+## [1.20.0/0.45.0/0.14.0] - 2023-09-28
+
+### Added
+
 - Set the description for the `rpc.server.duration` metric in `go.opentelemetry.io/contrib/instrumentation/google.golang.org/grpc/otelgrpc`. (#4302)
 - Add `NewServerHandler` and `NewClientHandler` that return a `grpc.StatsHandler` used for gRPC instrumentation in `go.opentelemetry.io/contrib/instrumentation/google.golang.org/grpc/otelgrpc`. (#3002)
 - Add new Prometheus bridge module in `go.opentelemetry.io/contrib/bridges/prometheus`. (#4227)
 
 ### Changed
 
+- Upgrade dependencies of OpenTelemetry Go to use the new [`v1.19.0`/`v0.42.0`/`v0.0.7` release](https://github.com/open-telemetry/opentelemetry-go/releases/tag/v1.19.0).
 - Use `grpc.StatsHandler` for gRPC instrumentation in `go.opentelemetry.io/contrib/instrumentation/google.golang.org/grpc/otelgrpc/example`. (#4325)
 
 ## [1.19.0/0.44.0/0.13.0] - 2023-09-12
@@ -816,7 +832,8 @@ First official tagged release of `contrib` repository.
 - Prefix support for dogstatsd (#34)
 - Update Go Runtime package to use batch observer (#44)
 
-[Unreleased]: https://github.com/open-telemetry/opentelemetry-go-contrib/compare/v1.19.0...HEAD
+[Unreleased]: https://github.com/open-telemetry/opentelemetry-go-contrib/compare/v1.20.0...HEAD
+[1.20.0/0.45.0/0.14.0]: https://github.com/open-telemetry/opentelemetry-go-contrib/releases/tag/v1.20.0
 [1.19.0/0.44.0/0.13.0]: https://github.com/open-telemetry/opentelemetry-go-contrib/releases/tag/v1.19.0
 [1.18.0/0.43.0/0.12.0]: https://github.com/open-telemetry/opentelemetry-go-contrib/releases/tag/v1.18.0
 [1.17.0/0.42.0/0.11.0]: https://github.com/open-telemetry/opentelemetry-go-contrib/releases/tag/v1.17.0
