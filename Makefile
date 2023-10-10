@@ -75,7 +75,7 @@ GORELEASE = $(TOOLS)/gorelease
 $(GORELEASE): PACKAGE=golang.org/x/exp/cmd/gorelease
 
 GOJSONSCHEMA = $(TOOLS)/go-jsonschema
-$(GOJSONSCHEMA): PACKAGE=github.com/atombender/go-jsonschema/cmd/gojsonschema
+$(GOJSONSCHEMA): PACKAGE=github.com/atombender/go-jsonschema
 
 tools: $(GOLANGCI_LINT) $(MISSPELL) $(GOCOVMERGE) $(STRINGER) $(PORTO) $(MULTIMOD) $(DBOTCONF) $(CROSSLINK) $(GOTMPL) $(GORELEASE)
 

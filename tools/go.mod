@@ -1,11 +1,13 @@
 module go.opentelemetry.io/contrib/tools
 
-go 1.20
+go 1.21
+
+toolchain go1.21.1
 
 exclude github.com/blizzy78/varnamelen v0.6.1
 
 require (
-	github.com/atombender/go-jsonschema v0.13.0
+	github.com/atombender/go-jsonschema v0.14.0
 	github.com/client9/misspell v0.3.4
 	github.com/golangci/golangci-lint v1.54.2
 	github.com/jcchavezs/porto v0.5.1
@@ -14,7 +16,7 @@ require (
 	go.opentelemetry.io/build-tools/dbotconf v0.12.0
 	go.opentelemetry.io/build-tools/gotmpl v0.12.0
 	go.opentelemetry.io/build-tools/multimod v0.12.0
-	golang.org/x/exp v0.0.0-20230905200255-921286631fa9
+	golang.org/x/exp v0.0.0-20231006140011-7918f672742d
 	golang.org/x/tools v0.14.0
 )
 
