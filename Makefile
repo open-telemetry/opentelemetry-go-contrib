@@ -297,7 +297,7 @@ OPENTELEMETRY_CONFIGURATION_JSONSCHEMA_VERSION=v0.1.0
 genjsonschema-cleanup:
 	rm -Rf ${OPENTELEMETRY_CONFIGURATION_JSONSCHEMA_SRC_DIR}
 
-GENERATED_CONFIG=./config/pkg/${OPENTELEMETRY_CONFIGURATION_JSONSCHEMA_VERSION}/generated_config.go
+GENERATED_CONFIG=./config/generated_config.go
 
 # Generate structs for configuration from opentelemetry-configuration schema
 genjsonschema: genjsonschema-cleanup $(GOJSONSCHEMA)
