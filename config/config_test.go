@@ -7,6 +7,7 @@ import (
 	"context"
 	"testing"
 
+	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 
 	"go.opentelemetry.io/otel/metric/noop"
@@ -17,16 +18,16 @@ import (
 
 func TestNewSDK(t *testing.T) {
 	tests := []struct {
-		name           string
-		cfg            []ConfigurationOption
-		tracerProvider any
-		meterProvider  any
-		err            error
+		name               string
+		cfg                []ConfigurationOption
+		wantTracerProvider any
+		wantMeterProvider  any
+		wantErr            error
 	}{
 		{
-			name:           "no-configuration",
-			tracerProvider: trace.NewNoopTracerProvider(),
-			meterProvider:  noop.NewMeterProvider(),
+			name:               "no-configuration",
+			wantTracerProvider: trace.NewNoopTracerProvider(),
+			wantMeterProvider:  noop.NewMeterProvider(),
 		},
 		{
 			name: "with-configuration",
@@ -37,14 +38,14 @@ func TestNewSDK(t *testing.T) {
 					MeterProvider:  &MeterProvider{},
 				}),
 			},
-			tracerProvider: &sdktrace.TracerProvider{},
-			meterProvider:  &sdkmetric.MeterProvider{},
+			wantTracerProvider: &sdktrace.TracerProvider{},
+			wantMeterProvider:  &sdkmetric.MeterProvider{},
 		},
 	}
 	for _, tt := range tests {
 		sdk, err := NewSDK(tt.cfg...)
-		require.Equal(t, tt.err, err)
-		assert.IsType(t, tt.tracerProvider, sdk.TracerProvider())
-		assert.IsType(t, tt.meterProvider, sdk.MeterProvider())
+		require.Equal(t, tt.wantErr, err)
+		assert.IsType(t, tt.wantTracerProvider, sdk.TracerProvider())
+		assert.IsType(t, tt.wantMeterProvider, sdk.MeterProvider())
 	}
 }

@@ -13,16 +13,16 @@ import (
 
 func TestInitTracerPovider(t *testing.T) {
 	tests := []struct {
-		name     string
-		cfg      configOptions
-		provider trace.TracerProvider
+		name         string
+		cfg          configOptions
+		wantProvider trace.TracerProvider
 	}{
 		{
-			name:     "no-tracer-provider-configured",
-			provider: trace.NewNoopTracerProvider(),
+			name:         "no-tracer-provider-configured",
+			wantProvider: trace.NewNoopTracerProvider(),
 		},
 	}
 	for _, tt := range tests {
-		require.Equal(t, tt.provider, initTracerProvider(tt.cfg))
+		require.Equal(t, tt.wantProvider, initTracerProvider(tt.cfg))
 	}
 }

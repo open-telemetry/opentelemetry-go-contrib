@@ -14,16 +14,16 @@ import (
 
 func TestInitMeterProvider(t *testing.T) {
 	tests := []struct {
-		name     string
-		cfg      configOptions
-		provider metric.MeterProvider
+		name         string
+		cfg          configOptions
+		wantProvider metric.MeterProvider
 	}{
 		{
-			name:     "no-meter-provider-configured",
-			provider: noop.NewMeterProvider(),
+			name:         "no-meter-provider-configured",
+			wantProvider: noop.NewMeterProvider(),
 		},
 	}
 	for _, tt := range tests {
-		require.Equal(t, tt.provider, initMeterProvider(tt.cfg))
+		require.Equal(t, tt.wantProvider, initMeterProvider(tt.cfg))
 	}
 }
