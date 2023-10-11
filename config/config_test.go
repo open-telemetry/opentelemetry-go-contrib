@@ -44,7 +44,7 @@ func TestNewSDK(t *testing.T) {
 	for _, tt := range tests {
 		sdk, err := NewSDK(tt.cfg...)
 		require.Equal(t, tt.err, err)
-		require.IsType(t, tt.tracerProvider, sdk.TracerProvider())
-		require.IsType(t, tt.meterProvider, sdk.MeterProvider())
+		assert.IsType(t, tt.tracerProvider, sdk.TracerProvider())
+		assert.IsType(t, tt.meterProvider, sdk.MeterProvider())
 	}
 }
