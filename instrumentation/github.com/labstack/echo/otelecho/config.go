@@ -26,6 +26,7 @@ type config struct {
 	TracerProvider oteltrace.TracerProvider
 	Propagators    propagation.TextMapPropagator
 	Skipper        middleware.Skipper
+	HandleError    bool
 }
 
 // Option specifies instrumentation configuration options.
@@ -64,5 +65,12 @@ func WithTracerProvider(provider oteltrace.TracerProvider) Option {
 func WithSkipper(skipper middleware.Skipper) Option {
 	return optionFunc(func(cfg *config) {
 		cfg.Skipper = skipper
+	})
+}
+
+// WithoutHandleError instructs middleware to not call global error handler when next middleware/handler returns an error.
+func WithoutHandleError() Option {
+	return optionFunc(func(cfg *config) {
+		cfg.HandleError = false
 	})
 }
