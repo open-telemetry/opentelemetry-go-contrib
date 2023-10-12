@@ -28,7 +28,9 @@ const (
 
 // Middleware returns echo middleware which will trace incoming requests.
 func Middleware(serverName string, opts ...Option) echo.MiddlewareFunc {
-	cfg := config{}
+	cfg := config{
+		HandleError: true,
+	}
 	for _, opt := range opts {
 		opt.apply(&cfg)
 	}
@@ -93,8 +95,9 @@ func Middleware(serverName string, opts ...Option) echo.MiddlewareFunc {
 			err := next(c)
 			if err != nil {
 				span.SetAttributes(attribute.String("echo.error", err.Error()))
-				// invokes the registered HTTP error handler
-				c.Error(err)
+				if cfg.HandleError {
+					c.Error(err)
+				}
 			}
 
 			status := c.Response().Status
