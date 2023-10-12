@@ -77,7 +77,10 @@ $(GORELEASE): PACKAGE=golang.org/x/exp/cmd/gorelease
 GOJSONSCHEMA = $(TOOLS)/go-jsonschema
 $(GOJSONSCHEMA): PACKAGE=github.com/atombender/go-jsonschema
 
-tools: $(GOLANGCI_LINT) $(MISSPELL) $(GOCOVMERGE) $(STRINGER) $(PORTO) $(MULTIMOD) $(DBOTCONF) $(CROSSLINK) $(GOTMPL) $(GORELEASE) $(GOJSONSCHEMA)
+GOVULNCHECK = $(TOOLS)/govulncheck
+ $(TOOLS)/govulncheck: PACKAGE=golang.org/x/vuln/cmd/govulncheck
+
+tools: $(GOLANGCI_LINT) $(MISSPELL) $(GOCOVMERGE) $(STRINGER) $(PORTO) $(MULTIMOD) $(DBOTCONF) $(CROSSLINK) $(GOTMPL) $(GORELEASE) $(GOJSONSCHEMA) $(GOVULNCHECK)
 
 # Generate
 
@@ -149,12 +152,20 @@ go-mod-tidy/%:
 misspell: | $(MISSPELL)
 	@$(MISSPELL) -w $(ALL_DOCS)
 
+.PHONY: govulncheck
+govulncheck: $(ALL_GO_MOD_DIRS:%=govulncheck/%)
+govulncheck/%: DIR=$*
+govulncheck/%:
+	@echo "govulncheck in $(DIR)" \
+		&& cd $(DIR) \
+		&& $(GOVULNCHECK) ./...
+
 .PHONY: vanity-import-check
 vanity-import-check: | $(PORTO)
 	@$(PORTO) --include-internal -l . || ( echo "(run: make vanity-import-fix)"; exit 1 )
 
 .PHONY: lint
-lint: go-mod-tidy golangci-lint misspell
+lint: go-mod-tidy golangci-lint misspell govulncheck
 
 .PHONY: license-check
 license-check:
