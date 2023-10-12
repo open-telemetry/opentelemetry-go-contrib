@@ -78,7 +78,7 @@ GOJSONSCHEMA = $(TOOLS)/go-jsonschema
 $(GOJSONSCHEMA): PACKAGE=github.com/atombender/go-jsonschema
 
 GOVULNCHECK = $(TOOLS)/govulncheck
- $(TOOLS)/govulncheck: PACKAGE=golang.org/x/vuln/cmd/govulncheck
+$(GOVULNCHECK): PACKAGE=golang.org/x/vuln/cmd/govulncheck
 
 tools: $(GOLANGCI_LINT) $(MISSPELL) $(GOCOVMERGE) $(STRINGER) $(PORTO) $(MULTIMOD) $(DBOTCONF) $(CROSSLINK) $(GOTMPL) $(GORELEASE) $(GOJSONSCHEMA) $(GOVULNCHECK)
 
@@ -155,7 +155,7 @@ misspell: | $(MISSPELL)
 .PHONY: govulncheck
 govulncheck: $(ALL_GO_MOD_DIRS:%=govulncheck/%)
 govulncheck/%: DIR=$*
-govulncheck/%:
+govulncheck/%: | $(GOVULNCHECK)
 	@echo "govulncheck in $(DIR)" \
 		&& cd $(DIR) \
 		&& $(GOVULNCHECK) ./...
