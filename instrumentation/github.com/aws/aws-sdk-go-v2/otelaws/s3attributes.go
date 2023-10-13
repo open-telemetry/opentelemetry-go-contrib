@@ -386,26 +386,20 @@ func S3AttributeSetter(ctx context.Context, in middleware.InitializeInput) []att
 // https://docs.aws.amazon.com/cli/latest/userguide/cli-usage-shorthand.html
 func s3ShorthandSerializeDelete(d *s3types.Delete) string {
 	var builder strings.Builder
-
 	fmt.Fprint(&builder, "Objects=[")
 	count := len(d.Objects)
 	for i, object := range d.Objects {
 		fmt.Fprint(&builder, "{")
-
 		fmt.Fprintf(&builder, "Key=%s", aws.ToString(object.Key))
-
 		if object.VersionId != nil {
 			fmt.Fprintf(&builder, ",VersionId=%s", aws.ToString(object.VersionId))
 		}
-
 		fmt.Fprint(&builder, "}")
 		if i+1 != count {
 			fmt.Fprint(&builder, ",")
 		}
 	}
 	fmt.Fprint(&builder, "],")
-
 	fmt.Fprintf(&builder, "Quiet=%t", d.Quiet)
-
 	return builder.String()
 }
