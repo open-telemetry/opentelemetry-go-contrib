@@ -51,9 +51,11 @@ func newInstrumentor(opts ...Option) instrumentor {
 		opt.apply(&cfg)
 	}
 
-	return instrumentor{configuration: cfg,
-		tracer:   cfg.TracerProvider.Tracer(tracerName, trace.WithInstrumentationVersion(Version())),
-		resAttrs: []attribute.KeyValue{}}
+	return instrumentor{
+		configuration: cfg,
+		tracer:        cfg.TracerProvider.Tracer(tracerName, trace.WithInstrumentationVersion(Version())),
+		resAttrs:      []attribute.KeyValue{},
+	}
 }
 
 // Logic to start OTel Tracing.

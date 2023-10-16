@@ -38,7 +38,8 @@ func isPath(
 	callGraph map[FuncDescriptor][]FuncDescriptor,
 	current FuncDescriptor,
 	goal FuncDescriptor,
-	visited map[FuncDescriptor]bool) bool {
+	visited map[FuncDescriptor]bool,
+) bool {
 	if current == goal {
 		return true
 	}

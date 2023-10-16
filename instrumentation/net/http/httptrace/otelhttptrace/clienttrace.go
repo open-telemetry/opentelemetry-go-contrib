@@ -44,13 +44,11 @@ var (
 	HTTPDNSAddrs               = attribute.Key("http.dns.addrs")
 )
 
-var (
-	hookMap = map[string]string{
-		"http.dns":     "http.getconn",
-		"http.connect": "http.getconn",
-		"http.tls":     "http.getconn",
-	}
-)
+var hookMap = map[string]string{
+	"http.dns":     "http.getconn",
+	"http.connect": "http.getconn",
+	"http.tls":     "http.getconn",
+}
 
 func parentHook(hook string) string {
 	if strings.HasPrefix(hook, "http.connect") {
