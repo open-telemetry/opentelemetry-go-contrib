@@ -214,7 +214,8 @@ func (h *middleware) serveHTTP(w http.ResponseWriter, r *http.Request, next http
 	labeler := &Labeler{}
 	ctx = injectLabeler(ctx, labeler)
 
-	next.ServeHTTP(w, r.WithContext(ctx))
+	*r = *r.WithContext(ctx)
+	next.ServeHTTP(w, r)
 
 	setAfterServeAttributes(span, bw.read, rww.written, rww.statusCode, bw.err, rww.err)
 
