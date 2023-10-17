@@ -413,7 +413,8 @@ func createInterceptedStreamClient(t *testing.T, method string, opts clientStrea
 			desc *grpc.StreamDesc,
 			cc *grpc.ClientConn,
 			method string,
-			opts ...grpc.CallOption) (grpc.ClientStream, error) {
+			opts ...grpc.CallOption,
+		) (grpc.ClientStream, error) {
 			mockStream.Desc = desc
 			mockStream.Ctx = ctx
 			return mockStream, nil
@@ -668,7 +669,8 @@ func TestStreamClientInterceptorCancelContext(t *testing.T) {
 			desc *grpc.StreamDesc,
 			cc *grpc.ClientConn,
 			method string,
-			opts ...grpc.CallOption) (grpc.ClientStream, error) {
+			opts ...grpc.CallOption,
+		) (grpc.ClientStream, error) {
 			mockClStr = &mockClientStream{Desc: desc, Ctx: ctx}
 			return mockClStr, nil
 		},
@@ -727,7 +729,8 @@ func TestStreamClientInterceptorWithError(t *testing.T) {
 			desc *grpc.StreamDesc,
 			cc *grpc.ClientConn,
 			method string,
-			opts ...grpc.CallOption) (grpc.ClientStream, error) {
+			opts ...grpc.CallOption,
+		) (grpc.ClientStream, error) {
 			mockClStr = &mockClientStream{Desc: desc, Ctx: ctx}
 			return mockClStr, errors.New("test")
 		},

@@ -172,12 +172,16 @@ func (detector *resourceDetector) getLogsAttributes(metadata *ecsmetadata.Contai
 	awsPartition := containerArnParts[arnPartition]
 	awsAccount := containerArnParts[arnAccountId]
 
-	awsLogGroupArn := strings.Join([]string{"arn", awsPartition, "logs",
+	awsLogGroupArn := strings.Join([]string{
+		"arn", awsPartition, "logs",
 		logsRegion, awsAccount, "log-group", logsOptions.AwsLogsGroup,
-		"*"}, ":")
-	awsLogStreamArn := strings.Join([]string{"arn", awsPartition, "logs",
+		"*",
+	}, ":")
+	awsLogStreamArn := strings.Join([]string{
+		"arn", awsPartition, "logs",
 		logsRegion, awsAccount, "log-group", logsOptions.AwsLogsGroup,
-		"log-stream", logsOptions.AwsLogsStream}, ":")
+		"log-stream", logsOptions.AwsLogsStream,
+	}, ":")
 
 	return []attribute.KeyValue{
 		semconv.AWSLogGroupNames(logsOptions.AwsLogsGroup),
