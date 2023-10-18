@@ -13,6 +13,7 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 - Add the new `go.opentelemetry.io/contrib/instrgen` package to provide auto-generated source code instrumentation. (#3068, #3108)
 - Add `"go.opentelemetry.io/contrib/samplers/jaegerremote".WithSamplingStrategyFetcher` which sets custom fetcher implementation. (#4045)
 - Add `"go.opentelemetry.io/contrib/config"` package that includes configuration models generated via go-jsonschema (#4376)
+- S3 spans created with the `go.opentelemetry.io/contrib/instrumentation/github.com/aws/aws-sdk-go-v2/otelaws` package now have the appropriate attributes added for the operation being performed.
 
 ### Changed
 
