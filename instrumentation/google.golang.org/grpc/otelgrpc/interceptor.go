@@ -87,7 +87,8 @@ func UnaryClientInterceptor(opts ...Option) grpc.UnaryClientInterceptor {
 
 		startOpts := append([]trace.SpanStartOption{
 			trace.WithSpanKind(trace.SpanKindClient),
-			trace.WithAttributes(attr...)},
+			trace.WithAttributes(attr...),
+		},
 			cfg.SpanStartOptions...,
 		)
 
@@ -191,7 +192,6 @@ func (w *clientStream) SendMsg(m interface{}) error {
 
 func (w *clientStream) Header() (metadata.MD, error) {
 	md, err := w.ClientStream.Header()
-
 	if err != nil {
 		w.sendStreamEvent(errorEvent, err)
 	}
@@ -201,7 +201,6 @@ func (w *clientStream) Header() (metadata.MD, error) {
 
 func (w *clientStream) CloseSend() error {
 	err := w.ClientStream.CloseSend()
-
 	if err != nil {
 		w.sendStreamEvent(errorEvent, err)
 	}
@@ -282,7 +281,8 @@ func StreamClientInterceptor(opts ...Option) grpc.StreamClientInterceptor {
 
 		startOpts := append([]trace.SpanStartOption{
 			trace.WithSpanKind(trace.SpanKindClient),
-			trace.WithAttributes(attr...)},
+			trace.WithAttributes(attr...),
+		},
 			cfg.SpanStartOptions...,
 		)
 
@@ -350,7 +350,8 @@ func UnaryServerInterceptor(opts ...Option) grpc.UnaryServerInterceptor {
 
 		startOpts := append([]trace.SpanStartOption{
 			trace.WithSpanKind(trace.SpanKindServer),
-			trace.WithAttributes(attr...)},
+			trace.WithAttributes(attr...),
+		},
 			cfg.SpanStartOptions...,
 		)
 
@@ -473,7 +474,8 @@ func StreamServerInterceptor(opts ...Option) grpc.StreamServerInterceptor {
 
 		startOpts := append([]trace.SpanStartOption{
 			trace.WithSpanKind(trace.SpanKindServer),
-			trace.WithAttributes(attr...)},
+			trace.WithAttributes(attr...),
+		},
 			cfg.SpanStartOptions...,
 		)
 

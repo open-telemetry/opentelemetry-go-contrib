@@ -164,7 +164,6 @@ func callSayHelloBidiStream(c api.HelloServiceClient) error {
 	go func() {
 		for i := 0; i < 5; i++ {
 			err := stream.Send(&api.HelloRequest{Greeting: "World"})
-
 			if err != nil {
 				// nolint: revive  // This acts as its own main func.
 				log.Fatalf("Error when sending to SayHelloBidiStream: %s", err)
