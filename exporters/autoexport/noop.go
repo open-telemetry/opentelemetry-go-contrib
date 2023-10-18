@@ -17,6 +17,7 @@ package autoexport // import "go.opentelemetry.io/contrib/exporters/autoexport"
 import (
 	"context"
 
+	"go.opentelemetry.io/otel/sdk/metric"
 	"go.opentelemetry.io/otel/sdk/trace"
 )
 
@@ -40,4 +41,12 @@ func (e noop) Shutdown(ctx context.Context) error {
 func IsNoneSpanExporter(e trace.SpanExporter) bool {
 	_, ok := e.(noop)
 	return ok
+}
+
+var noopMetricReader = metric.NewManualReader()
+
+// IsNoneMetricReader returns true for the exporter returned by [NewMetricReader]
+// when OTEL_METRICS_EXPORTER environment variable is set to "none".
+func IsNoneMetricReader(e metric.Reader) bool {
+	return e == noopMetricReader
 }

@@ -28,7 +28,7 @@ func newMetricReaderRegistry() registry[metric.Reader] {
 		names: map[string]func(context.Context) (metric.Reader, error){
 			"":     buildOTLPMetricReader,
 			"otlp": buildOTLPMetricReader,
-			"none": func(ctx context.Context) (metric.Reader, error) { return metric.NewManualReader(), nil },
+			"none": func(ctx context.Context) (metric.Reader, error) { return noopMetricReader, nil },
 		},
 	}
 }

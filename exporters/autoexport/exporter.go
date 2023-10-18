@@ -157,6 +157,15 @@ func NewMetricReader(ctx context.Context, opts ...Option) (metric.Reader, error)
 	return config.fallbackMetricReader, nil
 }
 
+// WithFallbackMetricReader sets the fallback exporter to use when no exporter
+// is configured through the OTEL_METRICS_EXPORTER environment variable.
+func WithFallbackMetricReader(reader metric.Reader) Option {
+	return optionFunc(func(cfg config) config {
+		cfg.fallbackMetricReader = reader
+		return cfg
+	})
+}
+
 // makeSpanExporterFromEnv returns a configured SpanExporter defined by the OTEL_TRACES_EXPORTER
 // environment variable.
 // nil is returned if no exporter is defined for the environment variable.
