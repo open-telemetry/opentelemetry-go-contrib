@@ -14,35 +14,26 @@ env:
   # backwards compatibility with the previous two minor releases and we
   # explicitly test our code for these versions so keeping this at prior
   # versions does not add value.
-  DEFAULT_GO_VERSION: "~1.21.1"
+  DEFAULT_GO_VERSION: "~1.21.3"
 jobs:
   lint:
     runs-on: ubuntu-latest
     steps:
+    - name: Checkout Repo
+      uses: actions/checkout@v4
     - name: Install Go
       uses: actions/setup-go@v4
       with:
         go-version: ${{ env.DEFAULT_GO_VERSION }}
-    - name: Checkout Repo
-      uses: actions/checkout@v4
-    - name: Setup Environment
-      run: |
-        echo "GOPATH=$(go env GOPATH)" >> $GITHUB_ENV
-        echo "$(go env GOPATH)/bin" >> $GITHUB_PATH
-    - name: Module cache
-      uses: actions/cache@v3
-      env:
-        cache-name: go-mod-cache
-      with:
-        path: ~/go/pkg/mod
-        key: ${{ runner.os }}-${{ env.cache-name }}-${{ hashFiles('**/go.sum') }}
+        check-latest: true
+        cache-dependency-path: "**/go.sum"
     - name: Tools cache
       uses: actions/cache@v3
       env:
         cache-name: go-tools-cache
       with:
-        path: ~/.tools
-        key: ${{ runner.os }}-${{ env.cache-name }}-${{ hashFiles('./internal/tools/**') }}
+        path: .tools
+        key: ${{ runner.os }}-${{ env.cache-name }}-${{ hashFiles('./tools/**') }}
     - name: Generate
       run: make generate
     - name: Run linters
@@ -55,46 +46,28 @@ jobs:
   test-race:
     runs-on: ubuntu-latest
     steps:
+    - name: Checkout Repo
+      uses: actions/checkout@v4
     - name: Install Go
       uses: actions/setup-go@v4
       with:
         go-version: ${{ env.DEFAULT_GO_VERSION }}
-    - name: Checkout Repo
-      uses: actions/checkout@v4
-    - name: Setup Environment
-      run: |
-        echo "GOPATH=$(go env GOPATH)" >> $GITHUB_ENV
-        echo "$(go env GOPATH)/bin" >> $GITHUB_PATH
-    - name: Module cache
-      uses: actions/cache@v3
-      env:
-        cache-name: go-mod-cache
-      with:
-        path: ~/go/pkg/mod
-        key: ${{ runner.os }}-${{ env.cache-name }}-${{ hashFiles('**/go.sum') }}
+        check-latest: true
+        cache-dependency-path: "**/go.sum"
     - name: Run tests with race detector
       run: make test-race
 
   test-coverage:
     runs-on: ubuntu-latest
     steps:
+    - name: Checkout Repo
+      uses: actions/checkout@v4
     - name: Install Go
       uses: actions/setup-go@v4
       with:
         go-version: ${{ env.DEFAULT_GO_VERSION }}
-    - name: Checkout Repo
-      uses: actions/checkout@v4
-    - name: Setup Environment
-      run: |
-        echo "GOPATH=$(go env GOPATH)" >> $GITHUB_ENV
-        echo "$(go env GOPATH)/bin" >> $GITHUB_PATH
-    - name: Module cache
-      uses: actions/cache@v3
-      env:
-        cache-name: go-mod-cache
-      with:
-        path: ~/go/pkg/mod
-        key: ${{ runner.os }}-${{ env.cache-name }}-${{ hashFiles('**/go.sum') }}
+        check-latest: true
+        cache-dependency-path: "**/go.sum"
     - name: Run coverage tests
       run: |
         make test-coverage
@@ -117,7 +90,7 @@ jobs:
   compatibility-test:
     strategy:
       matrix:
-        go-version: ["~1.21.1", "~1.20.8"]
+        go-version: ["~1.21.3", "~1.20.10"]
         os: [ubuntu-latest, macos-latest, windows-latest]
         # GitHub Actions does not support arm* architectures on default
         # runners. It is possible to acomplish this with a self-hosted runner
@@ -130,24 +103,14 @@ jobs:
           arch: "386"
     runs-on: ${{ matrix.os }}
     steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
     - name: Install Go
       uses: actions/setup-go@v4
       with:
         go-version: ${{ matrix.go-version }}
-    - name: Checkout code
-      uses: actions/checkout@v4
-    - name: Setup Environment
-      run: |
-        echo "GOPATH=$(go env GOPATH)" >> $GITHUB_ENV
-        echo "$(go env GOPATH)/bin" >> $GITHUB_PATH
-      shell: bash
-    - name: Module cache
-      uses: actions/cache@v3
-      env:
-        cache-name: go-mod-cache
-      with:
-        path: ~/go/pkg/mod
-        key: ${{ runner.os }}-${{ env.cache-name }}-${{ hashFiles('**/go.sum') }}
+        check-latest: true
+        cache-dependency-path: "**/go.sum"
     - name: Run tests
       env:
         GOARCH: ${{ matrix.arch }}
@@ -168,26 +131,14 @@ jobs:
         target: [test-mongo-driver]
     runs-on: ubuntu-latest
     steps:
+    - name: Checkout Repo
+      uses: actions/checkout@v4
     - name: Install Go
       uses: actions/setup-go@v4
       with:
         go-version: ${{ env.DEFAULT_GO_VERSION }}
-    - name: Checkout Repo
-      uses: actions/checkout@v4
-      with:
-        fetch-depth: 0
-    - name: Setup Environment
-      run: |
-        echo "GOPATH=$(go env GOPATH)" >> $GITHUB_ENV
-        echo "$(go env GOPATH)/bin" >> $GITHUB_PATH
-    - name: Module cache
-      uses: actions/cache@v3
-      env:
-        cache-name: go-mod-cache
-      with:
-        path: ~/go/pkg/mod
-        key: ${{ runner.os }}-${{ env.cache-name }}-${{ hashFiles('**/go.sum') }}
-
+        check-latest: true
+        cache-dependency-path: "**/go.sum"
     - name: Run coverage tests ${{ matrix.target }}
       env:
         INTEGRATION: ${{ matrix.target }}
