@@ -20,45 +20,56 @@ import (
 	"testing"
 
 	"github.com/stretchr/testify/assert"
+	"go.opentelemetry.io/otel/exporters/prometheus"
 	"go.opentelemetry.io/otel/sdk/metric"
 )
 
-func TestMetricOTLPOverHTTP(t *testing.T) {
+func TestMetricExporterNone(t *testing.T) {
+	t.Setenv("OTEL_METRICS_EXPORTER", "none")
+	got, err := NewMetricReader(context.Background())
+	assert.NoError(t, err)
+	assert.True(t, IsNoneMetricReader(got))
+}
+
+func assertPeriodicReaderWithExporter(t *testing.T, got metric.Reader, exporterTypeName string) {
+	t.Helper()
+	assert.IsType(t, &metric.PeriodicReader{}, got)
+
+	// Implementation detail hack. This may break when bumping OTLP exporter modules as it uses unexported API.
+	clientType := reflect.Indirect(reflect.ValueOf(got)).FieldByName("exporter").Elem().Type().String()
+	assert.Equal(t, exporterTypeName, clientType)
+}
+
+func TestMetricExporterOTLPOverHTTP(t *testing.T) {
 	t.Setenv("OTEL_METRICS_EXPORTER", "otlp")
 	t.Setenv("OTEL_EXPORTER_OTLP_PROTOCOL", "http/protobuf")
 
 	got, err := NewMetricReader(context.Background())
 	assert.NoError(t, err)
-
-	if !assert.IsType(t, metric.NewPeriodicReader(nil), got) {
-		return
-	}
-
-	// Implementation detail hack. This may break when bumping OTLP exporter modules as it uses unexported API.
-	clientType := reflect.Indirect(reflect.ValueOf(got)).FieldByName("exporter").Elem().Type().String()
-	assert.Equal(t, "*otlpmetrichttp.Exporter", clientType)
+	assertPeriodicReaderWithExporter(t, got, "*otlpmetrichttp.Exporter")
 }
 
-func TestMetricOTLPOverGRPC(t *testing.T) {
+func TestMetricExporterOTLPOverGRPC(t *testing.T) {
 	t.Setenv("OTEL_METRICS_EXPORTER", "otlp")
 	t.Setenv("OTEL_EXPORTER_OTLP_PROTOCOL", "grpc")
 
 	got, err := NewMetricReader(context.Background())
 	assert.NoError(t, err)
-
-	if !assert.IsType(t, metric.NewPeriodicReader(nil), got) {
-		return
-	}
-
-	// Implementation detail hack. This may break when bumping OTLP exporter modules as it uses unexported API.
-	clientType := reflect.Indirect(reflect.ValueOf(got)).FieldByName("exporter").Elem().Type().String()
-	assert.Equal(t, "*otlpmetricgrpc.Exporter", clientType)
+	assertPeriodicReaderWithExporter(t, got, "*otlpmetricgrpc.Exporter")
 }
 
-func TestMetricOTLPOverInvalidProtocol(t *testing.T) {
+func TestMetricExporterOTLPOverInvalidProtocol(t *testing.T) {
 	t.Setenv("OTEL_METRICS_EXPORTER", "otlp")
-	t.Setenv("OTEL_EXPORTER_OTLP_PROTOCOL", "grpc")
+	t.Setenv("OTEL_EXPORTER_OTLP_PROTOCOL", "invalid-protocol")
 
 	_, err := NewMetricReader(context.Background())
 	assert.Error(t, err)
+}
+
+func TestMetricExporterPrometheus(t *testing.T) {
+	t.Setenv("OTEL_METRICS_EXPORTER", "prometheus")
+
+	got, err := NewMetricReader(context.Background())
+	assert.NoError(t, err)
+	assert.IsType(t, &prometheus.Exporter{}, got)
 }

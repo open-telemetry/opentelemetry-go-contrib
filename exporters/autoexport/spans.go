@@ -100,6 +100,6 @@ func init() {
 		}
 	})
 	RegisterSpanExporter("none", func(ctx context.Context) (trace.SpanExporter, error) {
-		return noop{}, nil
+		return noopSpanExporter{}, nil
 	})
 }

@@ -13,3 +13,55 @@
 // limitations under the License.
 
 package autoexport // import "go.opentelemetry.io/contrib/exporters/autoexport"
+
+import (
+	"context"
+	"reflect"
+	"testing"
+
+	"github.com/stretchr/testify/assert"
+	"go.opentelemetry.io/otel/exporters/otlp/otlptrace"
+	"go.opentelemetry.io/otel/sdk/trace"
+)
+
+func TestSpanExporterNone(t *testing.T) {
+	t.Setenv("OTEL_TRACES_EXPORTER", "none")
+	got, err := NewSpanExporter(context.Background())
+	assert.NoError(t, err)
+	assert.True(t, IsNoneSpanExporter(got))
+}
+
+func assertOTLPExporterWithClientTypeName(t *testing.T, got trace.SpanExporter, clientTypeName string) {
+	t.Helper()
+	assert.IsType(t, &otlptrace.Exporter{}, got)
+
+	// Implementation detail hack. This may break when bumping OTLP exporter modules as it uses unexported API.
+	clientType := reflect.Indirect(reflect.ValueOf(got)).FieldByName("client").Elem().Type().String()
+	assert.Equal(t, clientTypeName, clientType)
+}
+
+func TestSpanExporterOTLPOverHTTP(t *testing.T) {
+	t.Setenv("OTEL_TRACES_EXPORTER", "otlp")
+	t.Setenv("OTEL_EXPORTER_OTLP_PROTOCOL", "http/protobuf")
+
+	got, err := NewSpanExporter(context.Background())
+	assert.NoError(t, err)
+	assertOTLPExporterWithClientTypeName(t, got, "*otlptracehttp.client")
+}
+
+func TestSpanExporterOTLPOverGRPC(t *testing.T) {
+	t.Setenv("OTEL_TRACES_EXPORTER", "otlp")
+	t.Setenv("OTEL_EXPORTER_OTLP_PROTOCOL", "grpc")
+
+	got, err := NewSpanExporter(context.Background())
+	assert.NoError(t, err)
+	assertOTLPExporterWithClientTypeName(t, got, "*otlptracegrpc.client")
+}
+
+func TestSpanExporterOTLPOverInvalidProtocol(t *testing.T) {
+	t.Setenv("OTEL_TRACES_EXPORTER", "otlp")
+	t.Setenv("OTEL_EXPORTER_OTLP_PROTOCOL", "invalid-protocol")
+
+	_, err := NewSpanExporter(context.Background())
+	assert.Error(t, err)
+}
