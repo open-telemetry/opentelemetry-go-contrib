@@ -55,6 +55,7 @@ func TestSpanExporterOTLP(t *testing.T) {
 		})
 	}
 }
+
 func TestSpanExporterOTLPOverInvalidProtocol(t *testing.T) {
 	t.Setenv("OTEL_TRACES_EXPORTER", "otlp")
 	t.Setenv("OTEL_EXPORTER_OTLP_PROTOCOL", "invalid-protocol")
