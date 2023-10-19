@@ -47,8 +47,10 @@ func TestWildCardMatchPositive(t *testing.T) {
 		{"a*a", "aa"},
 		{"a*a", "aba"},
 		{"a*a*", "aaaaaaaaaaaaaaaaaaaaaaa"},
-		{"a*b*a*b*a*b*a*b*a*",
-			"akljd9gsdfbkjhaabajkhbbyiaahkjbjhbuykjakjhabkjhbabjhkaabbabbaaakljdfsjklababkjbsdabab"},
+		{
+			"a*b*a*b*a*b*a*b*a*",
+			"akljd9gsdfbkjhaabajkhbbyiaahkjbjhbuykjakjhabkjhbabjhkaabbabbaaakljdfsjklababkjbsdabab",
+		},
 		{"a*na*ha", "anananahahanahana"},
 		{"***a", "a"},
 		{"**a**", "a"},
