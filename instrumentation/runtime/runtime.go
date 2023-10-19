@@ -95,6 +95,11 @@ func newConfig(opts ...Option) config {
 	return c
 }
 
+// Name returns the scope name of the library
+func Name() string {
+	return "go.opentelemetry.io/contrib/instrumentation/runtime"
+}
+
 // Start initializes reporting of runtime metrics using the supplied config.
 func Start(opts ...Option) error {
 	c := newConfig(opts...)
@@ -106,7 +111,7 @@ func Start(opts ...Option) error {
 	}
 	r := &runtime{
 		meter: c.MeterProvider.Meter(
-			"go.opentelemetry.io/contrib/instrumentation/runtime",
+			Name(),
 			metric.WithInstrumentationVersion(Version()),
 		),
 		config: c,
