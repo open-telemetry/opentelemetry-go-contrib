@@ -61,6 +61,7 @@ type option[T any] interface {
 
 type optionFunc[T any] func(cfg *config[T])
 
+//lint:ignore U1000 https://github.com/dominikh/go-tools/issues/1440
 func (fn optionFunc[T]) apply(cfg *config[T]) {
 	fn(cfg)
 }

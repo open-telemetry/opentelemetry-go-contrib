@@ -70,10 +70,3 @@ func (r *registry[T]) store(key string, factory func(context.Context) (T, error)
 	r.names[key] = factory
 	return nil
 }
-
-// drop removes key from the registry if it exists, otherwise nothing.
-func (r *registry[T]) drop(key string) {
-	r.mu.Lock()
-	defer r.mu.Unlock()
-	delete(r.names, key)
-}
