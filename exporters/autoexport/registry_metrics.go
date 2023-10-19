@@ -20,15 +20,17 @@ import (
 
 	"go.opentelemetry.io/otel/exporters/otlp/otlpmetric/otlpmetricgrpc"
 	"go.opentelemetry.io/otel/exporters/otlp/otlpmetric/otlpmetrichttp"
+	"go.opentelemetry.io/otel/exporters/prometheus"
 	"go.opentelemetry.io/otel/sdk/metric"
 )
 
 func newMetricReaderRegistry() registry[metric.Reader] {
 	return registry[metric.Reader]{
 		names: map[string]func(context.Context) (metric.Reader, error){
-			"":     buildOTLPMetricReader,
-			"otlp": buildOTLPMetricReader,
-			"none": func(ctx context.Context) (metric.Reader, error) { return noopMetricReader, nil },
+			"":           buildOTLPMetricReader,
+			"otlp":       buildOTLPMetricReader,
+			"prometheus": func(ctx context.Context) (metric.Reader, error) { return prometheus.New() },
+			"none":       func(ctx context.Context) (metric.Reader, error) { return noopMetricReader, nil },
 		},
 	}
 }

@@ -123,14 +123,15 @@ func NewSpanExporter(ctx context.Context, opts ...Option) (trace.SpanExporter, e
 //
 // OTEL_METRICS_EXPORTER defines the metrics exporter; supported values:
 //   - "none" - "no operation" exporter
-//   - "otlp" (default) - OTLP exporter; see [go.opentelemetry.io/otel/exporters/otlp/otlptrace]
+//   - "otlp" (default) - OTLP exporter; see [go.opentelemetry.io/otel/exporters/otlp/otlpmetric]
+//   - "prometheus" - Prometheus exporter; see [go.opentelemetry.io/otel/exporters/prometheus]
 //
 // OTEL_EXPORTER_OTLP_PROTOCOL defines OTLP exporter's transport protocol;
 // supported values:
 //   - "grpc" - protobuf-encoded data using gRPC wire format over HTTP/2 connection;
-//     see: [go.opentelemetry.io/otel/exporters/otlp/otlptrace/otlptracegrpc]
+//     see: [go.opentelemetry.io/otel/exporters/otlp/otlpmetric/otlpmetricgrpc]
 //   - "http/protobuf" (default) -  protobuf-encoded data over HTTP connection;
-//     see: [go.opentelemetry.io/otel/exporters/otlp/otlptrace/otlptracehttp]
+//     see: [go.opentelemetry.io/otel/exporters/otlp/otlpmetric/otlpmetrichttp]
 //
 // An error is returned if an environment value is set to an unhandled value.
 //
