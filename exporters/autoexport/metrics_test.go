@@ -37,8 +37,8 @@ func assertPeriodicReaderWithExporter(t *testing.T, got metric.Reader, exporterT
 	assert.IsType(t, &metric.PeriodicReader{}, got)
 
 	// Implementation detail hack. This may break when bumping OTLP exporter modules as it uses unexported API.
-	clientType := reflect.Indirect(reflect.ValueOf(got)).FieldByName("exporter").Elem().Type().String()
-	assert.Equal(t, exporterTypeName, clientType)
+	exporterType := reflect.Indirect(reflect.ValueOf(got)).FieldByName("exporter").Elem().Type()
+	assert.Equal(t, exporterTypeName, exporterType.String())
 }
 
 func TestMetricExporterOTLPOverHTTP(t *testing.T) {

@@ -32,13 +32,13 @@ func TestSpanExporterNone(t *testing.T) {
 	assert.True(t, IsNoneSpanExporter(got))
 }
 
-func assertOTLPExporterWithClientTypeName(t *testing.T, got trace.SpanExporter, clientTypeName string) {
+func assertOTLPExporterWithClient(t *testing.T, got trace.SpanExporter, clientTypeName string) {
 	t.Helper()
 	assert.IsType(t, &otlptrace.Exporter{}, got)
 
 	// Implementation detail hack. This may break when bumping OTLP exporter modules as it uses unexported API.
-	clientType := reflect.Indirect(reflect.ValueOf(got)).FieldByName("client").Elem().Type().String()
-	assert.Equal(t, clientTypeName, clientType)
+	clientType := reflect.Indirect(reflect.ValueOf(got)).FieldByName("client").Elem().Type()
+	assert.Equal(t, clientTypeName, clientType.String())
 }
 
 func TestSpanExporterOTLPOverHTTP(t *testing.T) {
@@ -47,7 +47,7 @@ func TestSpanExporterOTLPOverHTTP(t *testing.T) {
 
 	got, err := NewSpanExporter(context.Background())
 	assert.NoError(t, err)
-	assertOTLPExporterWithClientTypeName(t, got, "*otlptracehttp.client")
+	assertOTLPExporterWithClient(t, got, "*otlptracehttp.client")
 }
 
 func TestSpanExporterOTLPOverGRPC(t *testing.T) {
@@ -56,7 +56,7 @@ func TestSpanExporterOTLPOverGRPC(t *testing.T) {
 
 	got, err := NewSpanExporter(context.Background())
 	assert.NoError(t, err)
-	assertOTLPExporterWithClientTypeName(t, got, "*otlptracegrpc.client")
+	assertOTLPExporterWithClient(t, got, "*otlptracegrpc.client")
 }
 
 func TestSpanExporterOTLPOverInvalidProtocol(t *testing.T) {
