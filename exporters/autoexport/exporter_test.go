@@ -27,15 +27,9 @@ import (
 )
 
 func TestSpans(t *testing.T) {
-	var fallbackExporter testSpanExporter
-
 	fixture[trace.SpanExporter]{
 		newExporter: func() (trace.SpanExporter, error) {
 			return NewSpanExporter(context.Background())
-		},
-		fallbackExporter: &fallbackExporter,
-		newExporterWithFallback: func() (trace.SpanExporter, error) {
-			return NewSpanExporter(context.Background(), WithFallbackSpanExporter(&fallbackExporter))
 		},
 		assertOTLPHTTP: assertOTLPHTTPSpanExporter,
 		assertOTLPGRPC: func(t *testing.T, got trace.SpanExporter) {
@@ -57,15 +51,9 @@ func TestSpans(t *testing.T) {
 }
 
 func TestMetrics(t *testing.T) {
-	fallbackExporter := metric.NewManualReader()
-
 	fixture[metric.Reader]{
 		newExporter: func() (metric.Reader, error) {
 			return NewMetricReader(context.Background())
-		},
-		fallbackExporter: fallbackExporter,
-		newExporterWithFallback: func() (metric.Reader, error) {
-			return NewMetricReader(context.Background(), WithFallbackMetricReader(fallbackExporter))
 		},
 		assertOTLPHTTP: assertOTLPHTTPMetricReader,
 		assertOTLPGRPC: func(t *testing.T, got metric.Reader) {
@@ -85,35 +73,13 @@ func TestMetrics(t *testing.T) {
 }
 
 type fixture[T any] struct {
-	newExporter, newExporterWithFallback func() (T, error)
-	fallbackExporter                     T
-	assertOTLPHTTP, assertOTLPGRPC       func(t *testing.T, got T)
-	isNoneExporter                       func(exporter T) bool
-	envVariable                          string
+	newExporter                    func() (T, error)
+	assertOTLPHTTP, assertOTLPGRPC func(t *testing.T, got T)
+	isNoneExporter                 func(exporter T) bool
+	envVariable                    string
 }
 
 func (s fixture[T]) testAll(t *testing.T) {
-	t.Run("OTLPExporterReturnedWhenNoEnvOrFallbackExporterConfigured", func(t *testing.T) {
-		exporter, err := s.newExporter()
-		assert.NoError(t, err)
-		s.assertOTLPHTTP(t, exporter)
-	})
-
-	t.Run("FallbackExporterReturnedWhenNoEnvExporterConfigured", func(t *testing.T) {
-		exporter, err := s.newExporterWithFallback()
-		assert.NoError(t, err)
-		assert.Equal(t, s.fallbackExporter, exporter)
-		assert.False(t, s.isNoneExporter(exporter))
-	})
-
-	t.Run("EnvExporterIsPreferredOverFallbackExporter", func(t *testing.T) {
-		t.Setenv(s.envVariable, "otlp")
-
-		exporter, err := s.newExporterWithFallback()
-		assert.NoError(t, err)
-		s.assertOTLPHTTP(t, exporter)
-	})
-
 	t.Run("EnvExporterOTLPOverHTTP", func(t *testing.T) {
 		t.Setenv(s.envVariable, "otlp")
 		t.Setenv("OTEL_EXPORTER_OTLP_PROTOCOL", "http/protobuf")
@@ -182,14 +148,4 @@ func assertOTLPHTTPSpanExporter(t *testing.T, got trace.SpanExporter) {
 	assert.Equal(t, "*otlptracehttp.client", clientType)
 
 	assert.False(t, IsNoneSpanExporter(got))
-}
-
-type testSpanExporter struct{}
-
-func (e *testSpanExporter) ExportSpans(ctx context.Context, ss []trace.ReadOnlySpan) error {
-	return nil
-}
-
-func (e *testSpanExporter) Shutdown(ctx context.Context) error {
-	return nil
 }
