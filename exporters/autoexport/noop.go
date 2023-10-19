@@ -43,10 +43,17 @@ func IsNoneSpanExporter(e trace.SpanExporter) bool {
 	return ok
 }
 
-var noopMetricReader = metric.NewManualReader()
+type noopMetricReader struct {
+	*metric.ManualReader
+}
+
+func newNoopMetricReader() noopMetricReader {
+	return noopMetricReader{metric.NewManualReader()}
+}
 
 // IsNoneMetricReader returns true for the exporter returned by [NewMetricReader]
 // when OTEL_METRICS_EXPORTER environment variable is set to "none".
 func IsNoneMetricReader(e metric.Reader) bool {
-	return e == noopMetricReader
+	_, ok := e.(noopMetricReader)
+	return ok
 }
