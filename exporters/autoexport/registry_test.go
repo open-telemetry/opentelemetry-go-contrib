@@ -36,22 +36,6 @@ func newTestRegistry() registry[*testType] {
 	}
 }
 
-// var stdoutMetricFactory = func(ctx context.Context) (metric.Reader, error) {
-// 	exp, err := stdoutmetric.New()
-// 	if err != nil {
-// 		return nil, err
-// 	}
-// 	return metric.NewPeriodicReader(exp), nil
-// }
-
-// var stdoutSpanFactory = func(ctx context.Context) (trace.SpanExporter, error) {
-// 	exp, err := stdouttrace.New()
-// 	if err != nil {
-// 		return nil, err
-// 	}
-// 	return exp, nil
-// }
-
 func TestCanStoreExporterFactory(t *testing.T) {
 	r := newTestRegistry()
 	assert.NotPanics(t, func() {
@@ -102,7 +86,7 @@ func TestSubsequentCallsToGetExporterReturnsNewInstances(t *testing.T) {
 	r := newTestRegistry()
 
 	const key = "key"
-	r.store(key, factory(key))
+	assert.NoError(t, r.store(key, factory(key)))
 
 	exp1, err := r.load(context.Background(), key)
 	assert.NoError(t, err)
@@ -112,21 +96,6 @@ func TestSubsequentCallsToGetExporterReturnsNewInstances(t *testing.T) {
 
 	assert.NotSame(t, exp1, exp2)
 }
-
-// func (f funcs[T]) testDefaultOTLPExporterFactoriesAreAutomaticallyRegistered(t *testing.T) {
-// 	exp1, err := f.makeExporter(context.Background(), "")
-// 	assert.Nil(t, err)
-// 	f.assertOTLPHTTP(t, exp1)
-
-// 	exp2, err := f.makeExporter(context.Background(), "otlp")
-// 	assert.Nil(t, err)
-// 	f.assertOTLPHTTP(t, exp2)
-// }
-
-// func TestDefaultOTLPExporterFactoriesAreAutomaticallyRegistered(t *testing.T) {
-// 	t.Run("spans", spanFuncs.testDefaultOTLPExporterFactoriesAreAutomaticallyRegistered)
-// 	t.Run("metrics", metricFuncs.testDefaultOTLPExporterFactoriesAreAutomaticallyRegistered)
-// }
 
 func TestRegistryErrorsOnDuplicateRegisterCalls(t *testing.T) {
 	r := newTestRegistry()

@@ -28,7 +28,7 @@ type SpanOption = option[trace.SpanExporter]
 
 // Option applies an autoexport configuration option.
 //
-// Deprecated: Use SpanOption
+// Deprecated: Use SpanOption.
 type Option = SpanOption
 
 // WithFallbackSpanExporter sets the fallback exporter to use when no exporter

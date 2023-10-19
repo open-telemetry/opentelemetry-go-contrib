@@ -23,7 +23,7 @@ import (
 
 func TestOTLPExporterReturnedWhenNoEnvOrFallbackExporterConfigured(t *testing.T) {
 	ts := newSignal[*testType]("TEST_TYPE_KEY")
-	ts.registry.store("otlp", factory("test-otlp-exporter"))
+	assert.NoError(t, ts.registry.store("otlp", factory("test-otlp-exporter")))
 	exp, err := ts.create(context.Background())
 	assert.NoError(t, err)
 	assert.Equal(t, exp.string, "test-otlp-exporter")
