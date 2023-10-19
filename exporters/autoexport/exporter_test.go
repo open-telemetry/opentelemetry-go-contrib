@@ -29,7 +29,7 @@ import (
 func TestSpans(t *testing.T) {
 	var fallbackExporter testSpanExporter
 
-	signal[trace.SpanExporter]{
+	fixture[trace.SpanExporter]{
 		newExporter: func() (trace.SpanExporter, error) {
 			return NewSpanExporter(context.Background())
 		},
@@ -59,7 +59,7 @@ func TestSpans(t *testing.T) {
 func TestMetrics(t *testing.T) {
 	fallbackExporter := metric.NewManualReader()
 
-	signal[metric.Reader]{
+	fixture[metric.Reader]{
 		newExporter: func() (metric.Reader, error) {
 			return NewMetricReader(context.Background())
 		},
@@ -84,7 +84,7 @@ func TestMetrics(t *testing.T) {
 	}.testAll(t)
 }
 
-type signal[T any] struct {
+type fixture[T any] struct {
 	newExporter, newExporterWithFallback func() (T, error)
 	fallbackExporter                     T
 	assertOTLPHTTP, assertOTLPGRPC       func(t *testing.T, got T)
@@ -92,7 +92,7 @@ type signal[T any] struct {
 	envVariable                          string
 }
 
-func (s signal[T]) testAll(t *testing.T) {
+func (s fixture[T]) testAll(t *testing.T) {
 	t.Run("OTLPExporterReturnedWhenNoEnvOrFallbackExporterConfigured", func(t *testing.T) {
 		exporter, err := s.newExporter()
 		assert.NoError(t, err)
