@@ -16,6 +16,7 @@ package autoexport // import "go.opentelemetry.io/contrib/exporters/autoexport"
 
 import (
 	"context"
+	"fmt"
 	"reflect"
 	"testing"
 
@@ -32,31 +33,28 @@ func TestMetricExporterNone(t *testing.T) {
 	assert.True(t, IsNoneMetricReader(got))
 }
 
-func assertPeriodicReaderWithExporter(t *testing.T, got metric.Reader, exporterTypeName string) {
-	t.Helper()
-	assert.IsType(t, &metric.PeriodicReader{}, got)
-
-	// Implementation detail hack. This may break when bumping OTLP exporter modules as it uses unexported API.
-	exporterType := reflect.Indirect(reflect.ValueOf(got)).FieldByName("exporter").Elem().Type()
-	assert.Equal(t, exporterTypeName, exporterType.String())
-}
-
-func TestMetricExporterOTLPOverHTTP(t *testing.T) {
+func TestMetricExporterOTLP(t *testing.T) {
 	t.Setenv("OTEL_METRICS_EXPORTER", "otlp")
-	t.Setenv("OTEL_EXPORTER_OTLP_PROTOCOL", "http/protobuf")
 
-	got, err := NewMetricReader(context.Background())
-	assert.NoError(t, err)
-	assertPeriodicReaderWithExporter(t, got, "*otlpmetrichttp.Exporter")
-}
+	for _, tc := range []struct {
+		protocol, exporterType string
+	}{
+		{"http/protobuf", "*otlpmetrichttp.Exporter"},
+		{"", "*otlpmetrichttp.Exporter"},
+		{"grpc", "*otlpmetricgrpc.Exporter"},
+	} {
+		t.Run(fmt.Sprintf("protocol=%q", tc.protocol), func(t *testing.T) {
+			t.Setenv("OTEL_EXPORTER_OTLP_PROTOCOL", tc.protocol)
 
-func TestMetricExporterOTLPOverGRPC(t *testing.T) {
-	t.Setenv("OTEL_METRICS_EXPORTER", "otlp")
-	t.Setenv("OTEL_EXPORTER_OTLP_PROTOCOL", "grpc")
+			got, err := NewMetricReader(context.Background())
+			assert.NoError(t, err)
+			assert.IsType(t, &metric.PeriodicReader{}, got)
 
-	got, err := NewMetricReader(context.Background())
-	assert.NoError(t, err)
-	assertPeriodicReaderWithExporter(t, got, "*otlpmetricgrpc.Exporter")
+			// Implementation detail hack. This may break when bumping OTLP exporter modules as it uses unexported API.
+			exporterType := reflect.Indirect(reflect.ValueOf(got)).FieldByName("exporter").Elem().Type()
+			assert.Equal(t, tc.exporterType, exporterType.String())
+		})
+	}
 }
 
 func TestMetricExporterOTLPOverInvalidProtocol(t *testing.T) {

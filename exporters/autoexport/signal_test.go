@@ -44,7 +44,7 @@ func TestEnvExporterIsPreferredOverFallbackExporter(t *testing.T) {
 	expName := "test-env-exporter-name"
 	t.Setenv(envVariable, expName)
 	fallback := testType{"test-fallback-exporter"}
-	ts.registry.store(expName, factory("test-env-exporter"))
+	assert.NoError(t, ts.registry.store(expName, factory("test-env-exporter")))
 
 	exp, err := ts.create(context.Background(), withFallback(&fallback))
 	assert.NoError(t, err)
