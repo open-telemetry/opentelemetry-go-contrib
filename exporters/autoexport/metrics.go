@@ -64,18 +64,7 @@ func NewMetricReader(ctx context.Context, opts ...MetricOption) (metric.Reader, 
 // OTEL_METRICS_EXPORTERS environment variable contains the exporter name. This
 // will panic if name has already been registered.
 func RegisterMetricReader(name string, factory func(context.Context) (metric.Reader, error)) {
-	if err := metricsSignal.registry.store(name, factory); err != nil {
-		// registry.store will return errDuplicateRegistration if name is already
-		// registered. Panic here so the user is made aware of the duplicate
-		// registration, which could be done by malicious code trying to
-		// intercept cross-cutting concerns.
-		//
-		// Panic for all other errors as well. At this point there should not
-		// be any other errors returned from the store operation. If there
-		// are, alert the developer that adding them as soon as possible that
-		// they need to be handled here.
-		panic(err)
-	}
+	must(metricsSignal.registry.store(name, factory))
 }
 
 var metricsSignal = newSignal[metric.Reader]("OTEL_METRICS_EXPORTER")

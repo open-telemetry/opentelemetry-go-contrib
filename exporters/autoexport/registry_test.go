@@ -16,6 +16,7 @@ package autoexport
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"sync"
 	"testing"
@@ -38,45 +39,35 @@ func newTestRegistry() registry[*testType] {
 
 func TestCanStoreExporterFactory(t *testing.T) {
 	r := newTestRegistry()
-	assert.NotPanics(t, func() {
-		require.NoError(t, r.store("first", factory("first")))
-	})
+	require.NoError(t, r.store("first", factory("first")))
 }
 
 func TestLoadOfUnknownExporterReturnsError(t *testing.T) {
 	r := newTestRegistry()
-	assert.NotPanics(t, func() {
-		exp, err := r.load(context.Background(), "non-existent")
-		assert.Equal(t, err, errUnknownExporter, "empty registry should hold nothing")
-		assert.Nil(t, exp, "non-nil exporter returned")
-	})
+	exp, err := r.load(context.Background(), "non-existent")
+	assert.Equal(t, err, errUnknownExporter, "empty registry should hold nothing")
+	assert.Nil(t, exp, "non-nil exporter returned")
 }
 
 func TestRegistryIsConcurrentSafe(t *testing.T) {
 	const exporterName = "stdout"
 
 	r := newTestRegistry()
-	assert.NotPanics(t, func() {
-		require.NoError(t, r.store(exporterName, factory("stdout")))
-	})
+	require.NoError(t, r.store(exporterName, factory("stdout")))
 
 	var wg sync.WaitGroup
 
 	wg.Add(1)
 	go func() {
 		defer wg.Done()
-		assert.NotPanics(t, func() {
-			require.ErrorIs(t, r.store(exporterName, factory("stdout")), errDuplicateRegistration)
-		})
+		require.ErrorIs(t, r.store(exporterName, factory("stdout")), errDuplicateRegistration)
 	}()
 
 	wg.Add(1)
 	go func() {
 		defer wg.Done()
-		assert.NotPanics(t, func() {
-			_, err := r.load(context.Background(), exporterName)
-			assert.NoError(t, err, "missing exporter in registry")
-		})
+		_, err := r.load(context.Background(), exporterName)
+		assert.NoError(t, err, "missing exporter in registry")
 	}()
 
 	wg.Wait()
@@ -105,4 +96,9 @@ func TestRegistryErrorsOnDuplicateRegisterCalls(t *testing.T) {
 
 	errString := fmt.Sprintf("%s: %q", errDuplicateRegistration, exporterName)
 	assert.ErrorContains(t, r.store(exporterName, factory(exporterName)), errString)
+}
+
+func TestMust(t *testing.T) {
+	assert.Panics(t, func() { must(errors.New("test")) })
+	assert.NotPanics(t, func() { must(nil) })
 }

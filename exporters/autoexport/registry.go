@@ -70,3 +70,9 @@ func (r *registry[T]) store(key string, factory func(context.Context) (T, error)
 	r.names[key] = factory
 	return nil
 }
+
+func must(err error) {
+	if err != nil {
+		panic(err)
+	}
+}
