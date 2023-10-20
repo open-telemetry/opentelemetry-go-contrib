@@ -16,6 +16,7 @@ require (
 	go.opentelemetry.io/build-tools/multimod v0.12.0
 	golang.org/x/exp v0.0.0-20231006140011-7918f672742d
 	golang.org/x/tools v0.14.0
+	golang.org/x/vuln v1.0.1
 )
 
 require (
@@ -215,5 +216,5 @@ require (
 	mvdan.cc/gofumpt v0.5.0 // indirect
 	mvdan.cc/interfacer v0.0.0-20180901003855-c20040233aed // indirect
 	mvdan.cc/lint v0.0.0-20170908181259-adc824a0674b // indirect
-	mvdan.cc/unparam v0.0.0-20221223090309-7455f1af531d // indirect
+	mvdan.cc/unparam v0.0.0-20230312165513-e84e2d14e3b8 // indirect
 )
