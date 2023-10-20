@@ -59,7 +59,7 @@ func WithFallbackSpanExporter(exporter trace.SpanExporter) SpanOption {
 // when OTEL_TRACES_EXPORTER is unset or empty.
 //
 // Use [IsNoneSpanExporter] to check if the retured exporter is a "no operation" exporter.
-func NewSpanExporter(ctx context.Context, opts ...Option) (trace.SpanExporter, error) {
+func NewSpanExporter(ctx context.Context, opts ...SpanOption) (trace.SpanExporter, error) {
 	return tracesSignal.create(ctx, opts...)
 }
 
