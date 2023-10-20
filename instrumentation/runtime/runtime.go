@@ -95,7 +95,7 @@ func newConfig(opts ...Option) config {
 	return c
 }
 
-// Name returns the scope name of the library
+// Name returns the instrumentation scope name.
 func Name() string {
 	return "go.opentelemetry.io/contrib/instrumentation/runtime"
 }
