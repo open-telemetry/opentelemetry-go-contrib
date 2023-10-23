@@ -43,7 +43,7 @@ func main() {
 	}()
 
 	var conn *grpc.ClientConn
-	conn, err = grpc.Dial(":7777", grpc.WithTransportCredentials(insecure.NewCredentials()),
+	conn, err = grpc.Dial("127.0.0.1:7777", grpc.WithTransportCredentials(insecure.NewCredentials()),
 		grpc.WithStatsHandler(otelgrpc.NewClientHandler()),
 	)
 

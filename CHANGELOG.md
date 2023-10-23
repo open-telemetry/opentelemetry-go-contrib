@@ -12,7 +12,8 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 
 - Add the new `go.opentelemetry.io/contrib/instrgen` package to provide auto-generated source code instrumentation. (#3068, #3108)
 - Add `"go.opentelemetry.io/contrib/samplers/jaegerremote".WithSamplingStrategyFetcher` which sets custom fetcher implementation. (#4045)
-- Add `"go.opentelemetry.io/contrib/config"` package that includes configuration models generated via go-jsonschema (#4376)
+- Add `"go.opentelemetry.io/contrib/config"` package that includes configuration models generated via go-jsonschema. (#4376)
+- Add `NewSDK` function to `"go.opentelemetry.io/contrib/config"`. The initial implementation only returns noop providers. (#4414)
 
 ### Changed
 
