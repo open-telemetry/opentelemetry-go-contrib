@@ -16,14 +16,14 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 - Add `NewSDK` function to `"go.opentelemetry.io/contrib/config"`. The initial implementation only returns noop providers. (#4414)
 - Add metrics support to `go.opentelemetry.io/contrib/exporters/autoexport`. (#4229)
 
-### Deprecated
-
-- In `go.opentelemetry.io/contrib/exporters/autoexport`, `Option` was renamed to `SpanOption`. The old name is deprecated but continues to be supported as an alias.
-
 ### Changed
 
 - Dropped compatibility testing for [Go 1.19].
   The project no longer guarantees support for this version of Go. (#4352)
+
+### Deprecated
+
+- In `go.opentelemetry.io/contrib/exporters/autoexport`, `Option` was renamed to `SpanOption`. The old name is deprecated but continues to be supported as an alias. (#4229)
 
 ### Fixed
 
