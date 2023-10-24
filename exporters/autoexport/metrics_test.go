@@ -17,6 +17,8 @@ package autoexport // import "go.opentelemetry.io/contrib/exporters/autoexport"
 import (
 	"context"
 	"fmt"
+	"io"
+	"net/http"
 	"reflect"
 	"testing"
 
@@ -75,4 +77,10 @@ func TestMetricExporterPrometheus(t *testing.T) {
 	if _, ok := r.(*prometheus.Exporter); !ok {
 		t.Errorf("expected *prometheus.Exporter but got %v", r)
 	}
+
+	resp, err := http.Get("http://localhost:12345/metrics")
+	assert.NoError(t, err)
+	body, err := io.ReadAll(resp.Body)
+	assert.NoError(t, err)
+	assert.Contains(t, string(body), "# HELP")
 }

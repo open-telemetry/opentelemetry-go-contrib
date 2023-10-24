@@ -21,6 +21,7 @@ import (
 	"os"
 	"time"
 
+	"github.com/prometheus/client_golang/prometheus/promhttp"
 	"go.opentelemetry.io/otel/exporters/otlp/otlpmetric/otlpmetricgrpc"
 	"go.opentelemetry.io/otel/exporters/otlp/otlpmetric/otlpmetrichttp"
 	"go.opentelemetry.io/otel/exporters/prometheus"
@@ -109,11 +110,15 @@ func init() {
 			port = "9464"
 		}
 
+		mux := http.NewServeMux()
+		mux.Handle("/metrics", promhttp.Handler())
+
 		go serve(ctx, &http.Server{
 			Addr:         host + ":" + port,
 			ReadTimeout:  5 * time.Second,
 			WriteTimeout: 10 * time.Second,
 			IdleTimeout:  120 * time.Second,
+			Handler:      mux,
 		})
 
 		return prometheus.New()
