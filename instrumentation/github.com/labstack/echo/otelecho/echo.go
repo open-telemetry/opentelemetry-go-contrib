@@ -77,7 +77,7 @@ func Middleware(service string, opts ...Option) echo.MiddlewareFunc {
 				rAttr := semconv.HTTPRoute(path)
 				opts = append(opts, oteltrace.WithAttributes(rAttr))
 			}
-			spanName := c.Path()
+			spanName := c.Request().Method + " " + c.Path()
 			if spanName == "" {
 				spanName = fmt.Sprintf("HTTP %s route not found", request.Method)
 			}
