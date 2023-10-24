@@ -69,7 +69,7 @@ type netConv struct {
 }
 
 var nc = &netConv{
-	NetHostNameKey:     semconv.NetHostNameKey,
+	NetHostNameKey:     semconv.ServiceNameKey,
 	NetHostPortKey:     semconv.NetHostPortKey,
 	NetPeerNameKey:     semconv.NetPeerNameKey,
 	NetPeerPortKey:     semconv.NetPeerPortKey,
