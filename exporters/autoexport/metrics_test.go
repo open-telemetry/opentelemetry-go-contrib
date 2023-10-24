@@ -20,6 +20,7 @@ import (
 	"reflect"
 	"testing"
 
+	"go.opentelemetry.io/otel/exporters/prometheus"
 	"go.opentelemetry.io/otel/sdk/metric"
 
 	"github.com/stretchr/testify/assert"
@@ -62,4 +63,16 @@ func TestMetricExporterOTLPOverInvalidProtocol(t *testing.T) {
 
 	_, err := NewMetricReader(context.Background())
 	assert.Error(t, err)
+}
+
+func TestMetricExporterPrometheus(t *testing.T) {
+	t.Setenv("OTEL_METRICS_EXPORTER", "prometheus")
+	t.Setenv("OTEL_EXPORTER_PROMETHEUS_PORT", "12345")
+
+	r, err := NewMetricReader(context.Background())
+	assert.NoError(t, err)
+
+	if _, ok := r.(*prometheus.Exporter); !ok {
+		t.Errorf("expected *prometheus.Exporter but got %v", r)
+	}
 }

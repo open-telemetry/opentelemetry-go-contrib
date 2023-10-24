@@ -16,10 +16,14 @@ package autoexport // import "go.opentelemetry.io/contrib/exporters/autoexport"
 
 import (
 	"context"
+	"log"
+	"net/http"
 	"os"
+	"time"
 
 	"go.opentelemetry.io/otel/exporters/otlp/otlpmetric/otlpmetricgrpc"
 	"go.opentelemetry.io/otel/exporters/otlp/otlpmetric/otlpmetrichttp"
+	"go.opentelemetry.io/otel/exporters/prometheus"
 	"go.opentelemetry.io/otel/sdk/metric"
 )
 
@@ -94,4 +98,43 @@ func init() {
 	RegisterMetricReader("none", func(ctx context.Context) (metric.Reader, error) {
 		return newNoopMetricReader(), nil
 	})
+	RegisterMetricReader("prometheus", func(ctx context.Context) (metric.Reader, error) {
+		host := os.Getenv("OTEL_EXPORTER_PROMETHEUS_HOST")
+		if host == "" {
+			host = "localhost"
+		}
+
+		port := os.Getenv("OTEL_EXPORTER_PROMETHEUS_PORT")
+		if port == "" {
+			port = "9464"
+		}
+
+		go serve(ctx, &http.Server{
+			Addr:         host + ":" + port,
+			ReadTimeout:  5 * time.Second,
+			WriteTimeout: 10 * time.Second,
+			IdleTimeout:  120 * time.Second,
+		})
+
+		return prometheus.New()
+	})
+}
+
+func serve(ctx context.Context, server *http.Server) {
+	serverErr := make(chan error, 1)
+	go func() {
+		serverErr <- server.ListenAndServe()
+	}()
+
+	var err error
+	select {
+	case <-ctx.Done():
+		err = server.Close()
+	case err = <-serverErr:
+	}
+
+	if err != nil && err != http.ErrServerClosed {
+		log.Printf("error closing Prometheus HTTP server: %v", err)
+	}
+
 }
