@@ -17,27 +17,43 @@ package autoexport // import "go.opentelemetry.io/contrib/exporters/autoexport"
 import (
 	"context"
 
+	"go.opentelemetry.io/otel/sdk/metric"
 	"go.opentelemetry.io/otel/sdk/trace"
 )
 
-// noop is an implementation of trace.SpanExporter that performs no operations.
-type noop struct{}
+// noopSpanExporter is an implementation of trace.SpanExporter that performs no operations.
+type noopSpanExporter struct{}
 
-var _ trace.SpanExporter = noop{}
+var _ trace.SpanExporter = noopSpanExporter{}
 
 // ExportSpans is part of trace.SpanExporter interface.
-func (e noop) ExportSpans(ctx context.Context, spans []trace.ReadOnlySpan) error {
+func (e noopSpanExporter) ExportSpans(ctx context.Context, spans []trace.ReadOnlySpan) error {
 	return nil
 }
 
 // Shutdown is part of trace.SpanExporter interface.
-func (e noop) Shutdown(ctx context.Context) error {
+func (e noopSpanExporter) Shutdown(ctx context.Context) error {
 	return nil
 }
 
 // IsNoneSpanExporter returns true for the exporter returned by [NewSpanExporter]
 // when OTEL_TRACES_EXPORTER environment variable is set to "none".
 func IsNoneSpanExporter(e trace.SpanExporter) bool {
-	_, ok := e.(noop)
+	_, ok := e.(noopSpanExporter)
+	return ok
+}
+
+type noopMetricReader struct {
+	*metric.ManualReader
+}
+
+func newNoopMetricReader() noopMetricReader {
+	return noopMetricReader{metric.NewManualReader()}
+}
+
+// IsNoneMetricReader returns true for the exporter returned by [NewMetricReader]
+// when OTEL_METRICS_EXPORTER environment variable is set to "none".
+func IsNoneMetricReader(e metric.Reader) bool {
+	_, ok := e.(noopMetricReader)
 	return ok
 }
