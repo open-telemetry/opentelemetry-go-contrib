@@ -32,6 +32,9 @@ func TestMetricExporterNone(t *testing.T) {
 	t.Setenv("OTEL_METRICS_EXPORTER", "none")
 	got, err := NewMetricReader(context.Background())
 	assert.NoError(t, err)
+	t.Cleanup(func() {
+		assert.NoError(t, got.Shutdown(context.Background()))
+	})
 	assert.True(t, IsNoneMetricReader(got))
 }
 
@@ -50,6 +53,9 @@ func TestMetricExporterOTLP(t *testing.T) {
 
 			got, err := NewMetricReader(context.Background())
 			assert.NoError(t, err)
+			t.Cleanup(func() {
+				assert.NoError(t, got.Shutdown(context.Background()))
+			})
 			assert.IsType(t, &metric.PeriodicReader{}, got)
 
 			// Implementation detail hack. This may break when bumping OTLP exporter modules as it uses unexported API.
@@ -73,6 +79,9 @@ func TestMetricExporterPrometheus(t *testing.T) {
 
 	r, err := NewMetricReader(context.Background())
 	assert.NoError(t, err)
+	t.Cleanup(func() {
+		assert.NoError(t, r.Shutdown(context.Background()))
+	})
 
 	if _, ok := r.(*prometheus.Exporter); !ok {
 		t.Errorf("expected *prometheus.Exporter but got %v", r)
