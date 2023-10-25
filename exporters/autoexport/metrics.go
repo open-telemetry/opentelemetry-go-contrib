@@ -21,10 +21,11 @@ import (
 	"os"
 	"time"
 
+	"github.com/prometheus/client_golang/prometheus"
 	"github.com/prometheus/client_golang/prometheus/promhttp"
 	"go.opentelemetry.io/otel/exporters/otlp/otlpmetric/otlpmetricgrpc"
 	"go.opentelemetry.io/otel/exporters/otlp/otlpmetric/otlpmetrichttp"
-	"go.opentelemetry.io/otel/exporters/prometheus"
+	promexporter "go.opentelemetry.io/otel/exporters/prometheus"
 	"go.opentelemetry.io/otel/sdk/metric"
 )
 
@@ -100,19 +101,17 @@ func init() {
 		return newNoopMetricReader(), nil
 	})
 	RegisterMetricReader("prometheus", func(ctx context.Context) (metric.Reader, error) {
-		host := os.Getenv("OTEL_EXPORTER_PROMETHEUS_HOST")
-		if host == "" {
-			host = "localhost"
-		}
-
-		port := os.Getenv("OTEL_EXPORTER_PROMETHEUS_PORT")
-		if port == "" {
-			port = "9464"
-		}
+		// variable names and defaults specified at https://opentelemetry.io/docs/specs/otel/configuration/sdk-environment-variables/#prometheus-exporter
+		host := getenv("OTEL_EXPORTER_PROMETHEUS_HOST", "localhost")
+		port := getenv("OTEL_EXPORTER_PROMETHEUS_PORT", "9464")
 
 		mux := http.NewServeMux()
-		mux.Handle("/metrics", promhttp.Handler())
+		reg := prometheus.NewRegistry()
+		mux.Handle("/metrics", promhttp.HandlerFor(reg, promhttp.HandlerOpts{Registry: reg}))
 
+		// Timeouts are necessary to make a server resilent to attacks, but
+		// ListenAndServe doesn't set any. We use timeout values from this example: https://blog.cloudflare.com/exposing-go-on-the-internet/#:~:text=There%20are%20three%20main%20timeouts
+		// TODO: find defaults with a better justification, and/or make these configurable
 		go serve(ctx, &http.Server{
 			Addr:         host + ":" + port,
 			ReadTimeout:  5 * time.Second,
@@ -121,7 +120,7 @@ func init() {
 			Handler:      mux,
 		})
 
-		return prometheus.New()
+		return promexporter.New(promexporter.WithRegisterer(reg))
 	})
 }
 
@@ -142,4 +141,12 @@ func serve(ctx context.Context, server *http.Server) {
 		log.Printf("error closing Prometheus HTTP server: %v", err)
 	}
 
+}
+
+func getenv(key, fallback string) string {
+	result := os.Getenv(key)
+	if result == "" {
+		return fallback
+	}
+	return result
 }
