@@ -15,7 +15,8 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 - Add `"go.opentelemetry.io/contrib/config"` package that includes configuration models generated via go-jsonschema. (#4376)
 - Add `NewSDK` function to `"go.opentelemetry.io/contrib/config"`. The initial implementation only returns noop providers. (#4414)
 - Add metrics support to `go.opentelemetry.io/contrib/exporters/autoexport`. (#4229)
-- Add three additional cpu metrics to `go.opentelemetry.io/contrib/instrumentation/host`. It now also tracks: `system.cpu.utilization, system.cpu.logical.count and system.cpu.physical.count`.(#4475)
+- Add additional CPU metrics to `go.opentelemetry.io/contrib/instrumentation/host`: `system.cpu.utilization`, `system.cpu.logical.count`, `system.cpu.physical.count`. (#4475)
+
 ### Changed
 
 - Dropped compatibility testing for [Go 1.19].
