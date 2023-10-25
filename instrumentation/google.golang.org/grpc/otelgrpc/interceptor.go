@@ -366,17 +366,13 @@ func UnaryServerInterceptor(opts ...Option) grpc.UnaryServerInterceptor {
 			messageReceived.Event(ctx, 1, req)
 		}
 
-		var statusCode grpc_codes.Code
-		defer func(t time.Time) {
-			elapsedTime := time.Since(t) / time.Millisecond
-			attr = append(attr, semconv.RPCGRPCStatusCodeKey.Int64(int64(statusCode)))
-			o := metric.WithAttributes(attr...)
-			cfg.rpcServerDuration.Record(ctx, int64(elapsedTime), o)
-		}(time.Now())
+		before := time.Now()
+		var grpcStatusCode grpc_codes.Code
 
 		resp, err := handler(ctx, req)
 		if err != nil {
 			s, _ := status.FromError(err)
+			grpcStatusCode = s.Code()
 			statusCode, msg := serverStatus(s)
 			span.SetStatus(statusCode, msg)
 			span.SetAttributes(statusCodeAttr(s.Code()))
@@ -384,12 +380,17 @@ func UnaryServerInterceptor(opts ...Option) grpc.UnaryServerInterceptor {
 				messageSent.Event(ctx, 1, s.Proto())
 			}
 		} else {
-			statusCode = grpc_codes.OK
+			grpcStatusCode = grpc_codes.OK
 			span.SetAttributes(statusCodeAttr(grpc_codes.OK))
 			if cfg.SentEvent {
 				messageSent.Event(ctx, 1, resp)
 			}
 		}
+
+		elapsedTime := time.Since(before).Milliseconds()
+		attr = append(attr, semconv.RPCGRPCStatusCodeKey.Int64(int64(grpcStatusCode)))
+		o := metric.WithAttributes(attr...)
+		cfg.rpcServerDuration.Record(ctx, elapsedTime, o)
 
 		return resp, err
 	}
