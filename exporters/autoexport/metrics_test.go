@@ -24,6 +24,7 @@ import (
 
 	"go.opentelemetry.io/otel/exporters/prometheus"
 	"go.opentelemetry.io/otel/sdk/metric"
+	"go.uber.org/goleak"
 
 	"github.com/stretchr/testify/assert"
 )
@@ -74,6 +75,8 @@ func TestMetricExporterOTLPOverInvalidProtocol(t *testing.T) {
 }
 
 func TestMetricExporterPrometheus(t *testing.T) {
+	defer goleak.VerifyNone(t)
+
 	t.Setenv("OTEL_METRICS_EXPORTER", "prometheus")
 	t.Setenv("OTEL_EXPORTER_PROMETHEUS_PORT", "12345")
 

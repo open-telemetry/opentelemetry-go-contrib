@@ -16,13 +16,16 @@ package autoexport // import "go.opentelemetry.io/contrib/exporters/autoexport"
 
 import (
 	"context"
-	"log"
+	"errors"
+	"fmt"
+	"net"
 	"net/http"
 	"os"
 	"time"
 
 	"github.com/prometheus/client_golang/prometheus"
 	"github.com/prometheus/client_golang/prometheus/promhttp"
+	"go.opentelemetry.io/otel"
 	"go.opentelemetry.io/otel/exporters/otlp/otlpmetric/otlpmetricgrpc"
 	"go.opentelemetry.io/otel/exporters/otlp/otlpmetric/otlpmetrichttp"
 	promexporter "go.opentelemetry.io/otel/exporters/prometheus"
@@ -101,51 +104,60 @@ func init() {
 		return newNoopMetricReader(), nil
 	})
 	RegisterMetricReader("prometheus", func(ctx context.Context) (metric.Reader, error) {
-		// variable names and defaults specified at https://opentelemetry.io/docs/specs/otel/configuration/sdk-environment-variables/#prometheus-exporter
-		host := getenv("OTEL_EXPORTER_PROMETHEUS_HOST", "localhost")
-		port := getenv("OTEL_EXPORTER_PROMETHEUS_PORT", "9464")
+		// create an isolated registry instead of using the global registry --
+		// the user might not want to mix OTel with non-OTel metrics
+		reg := prometheus.NewRegistry()
 
 		mux := http.NewServeMux()
-		reg := prometheus.NewRegistry()
 		mux.Handle("/metrics", promhttp.HandlerFor(reg, promhttp.HandlerOpts{Registry: reg}))
-
-		// Timeouts are necessary to make a server resilent to attacks, but
-		// ListenAndServe doesn't set any. We use timeout values from this example: https://blog.cloudflare.com/exposing-go-on-the-internet/#:~:text=There%20are%20three%20main%20timeouts
-		// TODO: find defaults with a better justification, and/or make these configurable
-		go serve(ctx, &http.Server{
-			Addr:         host + ":" + port,
+		server := http.Server{
+			// Timeouts are necessary to make a server resilent to attacks, but ListenAndServe doesn't set any.
+			// We use values from this example: https://blog.cloudflare.com/exposing-go-on-the-internet/#:~:text=There%20are%20three%20main%20timeouts
+			// TODO: find defaults with a better justification, and/or make these configurable
 			ReadTimeout:  5 * time.Second,
 			WriteTimeout: 10 * time.Second,
 			IdleTimeout:  120 * time.Second,
 			Handler:      mux,
-		})
+		}
 
-		return promexporter.New(promexporter.WithRegisterer(reg))
+		// environment variable names and defaults specified at https://opentelemetry.io/docs/specs/otel/configuration/sdk-environment-variables/#prometheus-exporter
+		host := getenv("OTEL_EXPORTER_PROMETHEUS_HOST", "localhost")
+		port := getenv("OTEL_EXPORTER_PROMETHEUS_PORT", "9464")
+		addr := host + ":" + port
+		lis, err := net.Listen("tcp", addr)
+		if err != nil {
+			// TODO: retry binding, to handle process restarts
+			otel.Handle(fmt.Errorf("unable to bind address %s for Prometheus exporter: %w", addr, err))
+		}
+
+		reader, err := promexporter.New(promexporter.WithRegisterer(reg))
+		if err != nil {
+			return nil, err
+		}
+
+		go func() {
+			otel.Handle(server.Serve(lis))
+		}()
+
+		return readerWithServer{reader, &server}, err
 	})
 }
 
-func serve(ctx context.Context, server *http.Server) {
-	serverErr := make(chan error, 1)
-	go func() {
-		serverErr <- server.ListenAndServe()
-	}()
+type readerWithServer struct {
+	metric.Reader
+	server *http.Server
+}
 
-	var err error
-	select {
-	case <-ctx.Done():
-		err = server.Close()
-	case err = <-serverErr:
-	}
-
-	if err != nil && err != http.ErrServerClosed {
-		log.Printf("error closing Prometheus HTTP server: %v", err)
-	}
-
+func (rws readerWithServer) Shutdown(ctx context.Context) error {
+	return errors.Join(
+		rws.Reader.Shutdown(ctx),
+		rws.server.Shutdown(ctx),
+	)
 }
 
 func getenv(key, fallback string) string {
-	result := os.Getenv(key)
-	if result == "" {
+	result, ok := os.LookupEnv(key)
+	if !ok {
 		return fallback
 	}
 	return result
