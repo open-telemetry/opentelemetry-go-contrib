@@ -375,13 +375,13 @@ func UnaryServerInterceptor(opts ...Option) grpc.UnaryServerInterceptor {
 			grpcStatusCode = s.Code()
 			statusCode, msg := serverStatus(s)
 			span.SetStatus(statusCode, msg)
-			span.SetAttributes(statusCodeAttr(s.Code()))
+			span.SetAttributes(statusCodeAttr(grpcStatusCode))
 			if cfg.SentEvent {
 				messageSent.Event(ctx, 1, s.Proto())
 			}
 		} else {
 			grpcStatusCode = grpc_codes.OK
-			span.SetAttributes(statusCodeAttr(grpc_codes.OK))
+			span.SetAttributes(statusCodeAttr(grpcStatusCode))
 			if cfg.SentEvent {
 				messageSent.Event(ctx, 1, resp)
 			}
