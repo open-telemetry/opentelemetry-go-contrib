@@ -130,16 +130,16 @@ func init() {
 			otel.Handle(fmt.Errorf("unable to bind address %s for Prometheus exporter: %w", addr, err))
 		}
 
+		go func() {
+			otel.Handle(server.Serve(lis))
+		}()
+
 		reader, err := promexporter.New(promexporter.WithRegisterer(reg))
 		if err != nil {
 			return nil, err
 		}
 
-		go func() {
-			otel.Handle(server.Serve(lis))
-		}()
-
-		return readerWithServer{reader, &server}, err
+		return readerWithServer{reader, &server}, nil
 	})
 }
 
