@@ -21,6 +21,7 @@ import (
 	"testing"
 
 	"go.opentelemetry.io/otel/exporters/otlp/otlptrace"
+	"go.opentelemetry.io/otel/exporters/stdout/stdouttrace"
 
 	"github.com/stretchr/testify/assert"
 )
@@ -33,6 +34,13 @@ func TestSpanExporterNone(t *testing.T) {
 		assert.NoError(t, got.Shutdown(context.Background()))
 	})
 	assert.True(t, IsNoneSpanExporter(got))
+}
+
+func TestSpanExporterConsole(t *testing.T) {
+	t.Setenv("OTEL_TRACES_EXPORTER", "console")
+	got, err := NewSpanExporter(context.Background())
+	assert.NoError(t, err)
+	assert.IsType(t, &stdouttrace.Exporter{}, got)
 }
 
 func TestSpanExporterOTLP(t *testing.T) {
