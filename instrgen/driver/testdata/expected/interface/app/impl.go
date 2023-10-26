@@ -17,6 +17,7 @@ package app
 
 import (
 	"fmt"
+	__atel_runtime "runtime"
 	__atel_context "context"
 	__atel_otel "go.opentelemetry.io/otel"
 )
@@ -24,9 +25,11 @@ import (
 type BasicSerializer struct {
 }
 
-func (b BasicSerializer) Serialize(__atel_tracing_ctx __atel_context.Context,) {
+func (b BasicSerializer) Serialize() {
+	__atel_tracing_ctx := __atel_runtime.InstrgenGetTls().(__atel_context.Context)
+	defer __atel_runtime.InstrgenSetTls(__atel_tracing_ctx)
 	__atel_child_tracing_ctx, __atel_span := __atel_otel.Tracer("Serialize").Start(__atel_tracing_ctx, "Serialize")
-	_ = __atel_child_tracing_ctx
+	__atel_runtime.InstrgenSetTls(__atel_child_tracing_ctx)
 	defer __atel_span.End()
 
 	fmt.Println("Serialize")

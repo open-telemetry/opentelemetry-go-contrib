@@ -191,15 +191,6 @@ updates:
       interval: weekly
       day: sunday
   - package-ecosystem: gomod
-    directory: /instrgen/driver/testdata/interface
-    labels:
-      - dependencies
-      - go
-      - Skip Changelog
-    schedule:
-      interval: weekly
-      day: sunday
-  - package-ecosystem: gomod
     directory: /instrumentation/github.com/aws/aws-lambda-go/otellambda
     labels:
       - dependencies

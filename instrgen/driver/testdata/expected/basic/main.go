@@ -17,18 +17,23 @@ package main
 
 import (
 	"fmt"
+	__atel_runtime "runtime"
 	__atel_context "context"
-
 	"go.opentelemetry.io/contrib/instrgen/rtlib"
 	__atel_otel "go.opentelemetry.io/otel"
+	_ "go.opentelemetry.io/otel"
+	_ "context"
 )
 
-func recur(__atel_tracing_ctx __atel_context.Context, n int) {
+func recur(n int) {
+	__atel_tracing_ctx := __atel_runtime.InstrgenGetTls().(__atel_context.Context)
+	defer __atel_runtime.InstrgenSetTls(__atel_tracing_ctx)
 	__atel_child_tracing_ctx, __atel_span := __atel_otel.Tracer("recur").Start(__atel_tracing_ctx, "recur")
-	_ = __atel_child_tracing_ctx
+	__atel_runtime.InstrgenSetTls(__atel_child_tracing_ctx)
 	defer __atel_span.End()
+
 	if n > 0 {
-		recur(__atel_child_tracing_ctx, n-1)
+		recur(n - 1)
 	}
 }
 
@@ -40,10 +45,12 @@ func main() {
 	__atel_child_tracing_ctx, __atel_span := __atel_otel.Tracer("main").Start(__atel_ctx, "main")
 	_ = __atel_child_tracing_ctx
 	defer __atel_span.End()
+	__atel_runtime.InstrgenSetTls(__atel_child_tracing_ctx)
+
 	rtlib.AutotelEntryPoint()
-	fmt.Println(FibonacciHelper(__atel_child_tracing_ctx, 10))
-	recur(__atel_child_tracing_ctx, 5)
-	goroutines(__atel_child_tracing_ctx)
-	pack(__atel_child_tracing_ctx)
-	methods(__atel_child_tracing_ctx)
+	fmt.Println(FibonacciHelper(10))
+	recur(5)
+	goroutines()
+	pack()
+	methods()
 }

@@ -32,6 +32,7 @@ func (impl Impl) Foo(__atel_tracing_ctx __atel_context.Context, i int) {
 	__atel_child_tracing_ctx, __atel_span := __atel_otel.Tracer("Foo").Start(__atel_tracing_ctx, "Foo")
 	_ = __atel_child_tracing_ctx
 	defer __atel_span.End()
+
 }
 
 func main() {
@@ -42,6 +43,7 @@ func main() {
 	__atel_child_tracing_ctx, __atel_span := __atel_otel.Tracer("main").Start(__atel_ctx, "main")
 	_ = __atel_child_tracing_ctx
 	defer __atel_span.End()
+
 	rtlib.AutotelEntryPoint()
 	a := []Driver{
 		Impl{},

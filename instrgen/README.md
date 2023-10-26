@@ -7,31 +7,62 @@ If you are looking for more details about internal working, see [How it works](.
 
 :construction: This package is currently work in progress.
 
+## Build
+
+From driver directory execute:
+
+```
+go build
+```
+
+## Prerequisites
+
+`instrgen` driver utility needs to be on your PATH environment variable.
+
 ## How to use it
 
-In order to instrument your project you have to add following call in your entry point function, usually main
-(you can look at testdata directory for reference) and invoke instrgen tool.
+Instrgen has to be invoked from main module directory and
+requires three parameters: command, directory (files from specified directory will be rewritten).
 
 ```
-func main() {
-    rtlib.AutotelEntryPoint()
-```
-
-Instrgen requires three parameters: command, path to project and package(s) pattern we
-would like to instrument.
-
-```
-./instrgen --inject [path to your go project] [package(s) pattern]
+./driver --inject [file pattern] [replace input source] [entry point]
 ```
 
 Below concrete example with one of test instrumentation that is part of the project.
 
 ```
-./instrgen --inject ./testdata/basic ./...
+driver --inject  /testdata/basic yes main.main
 ```
 
-```./...``` works like wildcard in this case and it will instrument all packages in this path, but it can be invoked with
-specific package as well.
+Above command will invoke golang compiler under the hood:
+
+```
+go build -work -a -toolexec driver
+```
+
+which means that the above command can be executed directly, however first `instrgen_cmd.json`
+configuration file needs to be provided. This file is created internally by `driver` based on provided
+command line.
+
+Below example content of `instrgen_cmd.json`:
+
+```
+{
+"ProjectPath": ".",
+"FilePattern": "/testdata/basic",
+"Cmd": "inject",
+"Replace": "yes",
+"EntryPoint": {
+    "Pkg": "main",
+    "FunName": "main"
+ }
+}
+```
+
+### Work in progress:
+
+Library instrumentation:
+- HTTP
 
 ### Compatibility
 

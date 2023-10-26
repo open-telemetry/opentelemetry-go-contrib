@@ -15,6 +15,11 @@
 //nolint:all // Linter is executed at the same time as tests which leads to race conditions and failures.
 package main
 
+import (
+	_ "go.opentelemetry.io/otel"
+	_ "context"
+)
+
 type element struct {
 }
 
@@ -35,6 +40,7 @@ func (i impl) anotherfoo(p int) int {
 }
 
 func anotherfoo(p int) int {
+
 	return 1
 }
 
@@ -54,4 +60,5 @@ func methods() {
 	var in i
 	in = impl{}
 	in.anotherfoo(10)
+	anotherfoo(5)
 }

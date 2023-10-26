@@ -17,34 +17,44 @@ package main
 
 import (
 	"fmt"
+	__atel_runtime "runtime"
 	__atel_context "context"
+	_ "go.opentelemetry.io/otel"
 	__atel_otel "go.opentelemetry.io/otel"
+	_ "context"
 )
 
-func foo(__atel_tracing_ctx __atel_context.Context,) {
+func foo() {
+	__atel_tracing_ctx := __atel_runtime.InstrgenGetTls().(__atel_context.Context)
+	defer __atel_runtime.InstrgenSetTls(__atel_tracing_ctx)
 	__atel_child_tracing_ctx, __atel_span := __atel_otel.Tracer("foo").Start(__atel_tracing_ctx, "foo")
-	_ = __atel_child_tracing_ctx
+	__atel_runtime.InstrgenSetTls(__atel_child_tracing_ctx)
 	defer __atel_span.End()
+
 	fmt.Println("foo")
 }
 
-func FibonacciHelper(__atel_tracing_ctx __atel_context.Context, n uint) (uint64, error) {
+func FibonacciHelper(n uint) (uint64, error) {
+	__atel_tracing_ctx := __atel_runtime.InstrgenGetTls().(__atel_context.Context)
+	defer __atel_runtime.InstrgenSetTls(__atel_tracing_ctx)
 	__atel_child_tracing_ctx, __atel_span := __atel_otel.Tracer("FibonacciHelper").Start(__atel_tracing_ctx, "FibonacciHelper")
-	_ = __atel_child_tracing_ctx
+	__atel_runtime.InstrgenSetTls(__atel_child_tracing_ctx)
 	defer __atel_span.End()
+
 	func() {
-		__atel_child_tracing_ctx, __atel_span := __atel_otel.Tracer("anonymous").Start(__atel_child_tracing_ctx, "anonymous")
-		_ = __atel_child_tracing_ctx
-		defer __atel_span.End()
-		foo(__atel_child_tracing_ctx)
+
+		foo()
 	}()
-	return Fibonacci(__atel_child_tracing_ctx, n)
+	return Fibonacci(n)
 }
 
-func Fibonacci(__atel_tracing_ctx __atel_context.Context, n uint) (uint64, error) {
+func Fibonacci(n uint) (uint64, error) {
+	__atel_tracing_ctx := __atel_runtime.InstrgenGetTls().(__atel_context.Context)
+	defer __atel_runtime.InstrgenSetTls(__atel_tracing_ctx)
 	__atel_child_tracing_ctx, __atel_span := __atel_otel.Tracer("Fibonacci").Start(__atel_tracing_ctx, "Fibonacci")
-	_ = __atel_child_tracing_ctx
+	__atel_runtime.InstrgenSetTls(__atel_child_tracing_ctx)
 	defer __atel_span.End()
+
 	if n <= 1 {
 		return uint64(n), nil
 	}

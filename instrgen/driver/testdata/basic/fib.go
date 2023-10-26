@@ -17,6 +17,8 @@ package main
 
 import (
 	"fmt"
+	_ "go.opentelemetry.io/otel"
+	_ "context"
 )
 
 func foo() {
