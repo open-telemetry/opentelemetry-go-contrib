@@ -367,28 +367,26 @@ func UnaryServerInterceptor(opts ...Option) grpc.UnaryServerInterceptor {
 		}
 
 		before := time.Now()
-		var grpcStatusCode grpc_codes.Code
 
 		resp, err := handler(ctx, req)
+
+		s, _ := status.FromError(err)
 		if err != nil {
-			s, _ := status.FromError(err)
-			grpcStatusCode = s.Code()
 			statusCode, msg := serverStatus(s)
 			span.SetStatus(statusCode, msg)
-			span.SetAttributes(statusCodeAttr(grpcStatusCode))
 			if cfg.SentEvent {
 				messageSent.Event(ctx, 1, s.Proto())
 			}
 		} else {
-			grpcStatusCode = grpc_codes.OK
-			span.SetAttributes(statusCodeAttr(grpcStatusCode))
 			if cfg.SentEvent {
 				messageSent.Event(ctx, 1, resp)
 			}
 		}
+		grpcStatusCodeAttr := statusCodeAttr(s.Code())
+		span.SetAttributes(grpcStatusCodeAttr)
 
 		elapsedTime := time.Since(before).Milliseconds()
-		attr = append(attr, statusCodeAttr(grpcStatusCode))
+		attr = append(attr, grpcStatusCodeAttr)
 		cfg.rpcServerDuration.Record(ctx, elapsedTime, metric.WithAttributes(attr...))
 
 		return resp, err
