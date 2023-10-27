@@ -114,16 +114,7 @@ func TestMetricExporterPrometheus(t *testing.T) {
 
 func TestMetricExporterPrometheusInvalidPort(t *testing.T) {
 	t.Setenv("OTEL_METRICS_EXPORTER", "prometheus")
-
-	switch os.Geteuid() {
-	case -1:
-		t.Skip("skipping invalid port check on Windows")
-	case 0:
-		t.Skip("skipping invalid port check because the test is running as root (!!)")
-	}
-
-	// an unprivileged user on Unix should fail to bind a port < 1024
-	t.Setenv("OTEL_EXPORTER_PROMETHEUS_PORT", "10")
+	t.Setenv("OTEL_EXPORTER_PROMETHEUS_PORT", "invalid-port")
 
 	_, err := NewMetricReader(context.Background())
 	assert.ErrorContains(t, err, "binding")
