@@ -19,10 +19,12 @@ import (
 	"fmt"
 	"io"
 	"net/http"
+	"os"
 	"reflect"
+	"runtime/debug"
 	"testing"
 
-	"go.opentelemetry.io/otel/exporters/prometheus"
+	"go.opentelemetry.io/otel"
 	"go.opentelemetry.io/otel/sdk/metric"
 
 	"github.com/stretchr/testify/assert"
@@ -74,25 +76,55 @@ func TestMetricExporterOTLPOverInvalidProtocol(t *testing.T) {
 	assert.Error(t, err)
 }
 
+func assertNoOtelHandleErrors(t *testing.T) {
+	h := otel.GetErrorHandler()
+	t.Cleanup(func() { otel.SetErrorHandler(h) })
+
+	otel.SetErrorHandler(otel.ErrorHandlerFunc(func(cause error) {
+		t.Errorf("expected to calls to otel.Handle but got %v from %s", cause, debug.Stack())
+	}))
+}
+
 func TestMetricExporterPrometheus(t *testing.T) {
-	defer goleak.VerifyNone(t)
+	assertNoOtelHandleErrors(t)
 
 	t.Setenv("OTEL_METRICS_EXPORTER", "prometheus")
-	t.Setenv("OTEL_EXPORTER_PROMETHEUS_PORT", "12345")
+	t.Setenv("OTEL_EXPORTER_PROMETHEUS_PORT", "0")
 
 	r, err := NewMetricReader(context.Background())
 	assert.NoError(t, err)
-	t.Cleanup(func() {
-		assert.NoError(t, r.Shutdown(context.Background()))
-	})
 
-	if _, ok := r.(*prometheus.Exporter); !ok {
-		t.Errorf("expected *prometheus.Exporter but got %v", r)
+	// pull-based exporters like Prometheus need to be registered
+	mp := metric.NewMeterProvider(metric.WithReader(r))
+
+	rws, ok := r.(readerWithServer)
+	if !ok {
+		t.Errorf("expected readerWithServer but got %v", r)
 	}
 
-	resp, err := http.Get("http://localhost:12345/metrics")
+	resp, err := http.Get(fmt.Sprintf("http://%s/metrics", rws.addr))
 	assert.NoError(t, err)
 	body, err := io.ReadAll(resp.Body)
 	assert.NoError(t, err)
 	assert.Contains(t, string(body), "# HELP")
+
+	assert.NoError(t, mp.Shutdown(context.Background()))
+	goleak.VerifyNone(t)
+}
+
+func TestMetricExporterPrometheusInvalidPort(t *testing.T) {
+	t.Setenv("OTEL_METRICS_EXPORTER", "prometheus")
+
+	switch os.Geteuid() {
+	case -1:
+		t.Skip("skipping invalid port check on Windows")
+	case 0:
+		t.Skip("skipping invalid port check because the test is running as root (!!)")
+	}
+
+	// an unprivileged user on Unix should fail to bind a port < 1024
+	t.Setenv("OTEL_EXPORTER_PROMETHEUS_PORT", "10")
+
+	_, err := NewMetricReader(context.Background())
+	assert.ErrorContains(t, err, "binding")
 }

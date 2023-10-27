@@ -109,6 +109,11 @@ func init() {
 		// the user might not want to mix OTel with non-OTel metrics
 		reg := prometheus.NewRegistry()
 
+		reader, err := promexporter.New(promexporter.WithRegisterer(reg))
+		if err != nil {
+			return nil, err
+		}
+
 		mux := http.NewServeMux()
 		mux.Handle("/metrics", promhttp.HandlerFor(reg, promhttp.HandlerOpts{Registry: reg}))
 		server := http.Server{
@@ -126,24 +131,25 @@ func init() {
 		addr := host + ":" + port
 		lis, err := net.Listen("tcp", addr)
 		if err != nil {
-			// TODO: retry binding, to handle process restarts
-			otel.Handle(fmt.Errorf("unable to bind address %s for Prometheus exporter: %w", addr, err))
+			return nil, errors.Join(
+				fmt.Errorf("binding address %s for Prometheus exporter: %w", addr, err),
+				reader.Shutdown(ctx),
+			)
 		}
 
 		go func() {
-			otel.Handle(server.Serve(lis))
+			if err := server.Serve(lis); err != nil && err != http.ErrServerClosed {
+				//lint:ignore ST1005 Prometheus is capitalized because it's a proper noun
+				otel.Handle(fmt.Errorf("Prometheus HTTP server exited unexpectedly: %w", err))
+			}
 		}()
 
-		reader, err := promexporter.New(promexporter.WithRegisterer(reg))
-		if err != nil {
-			return nil, err
-		}
-
-		return readerWithServer{reader, &server}, nil
+		return readerWithServer{lis.Addr(), reader, &server}, nil
 	})
 }
 
 type readerWithServer struct {
+	addr net.Addr
 	metric.Reader
 	server *http.Server
 }
