@@ -146,7 +146,8 @@ func GetMostInnerAstIdent(inSel *ast.SelectorExpr) *ast.Ident {
 // GetPkgPathFromRecvInterface builds package path taking
 // receiver interface into account.
 func GetPkgPathFromRecvInterface(pkg *packages.Package,
-	pkgs []*packages.Package, funDeclNode *ast.FuncDecl, interfaces map[string]bool) string {
+	pkgs []*packages.Package, funDeclNode *ast.FuncDecl, interfaces map[string]bool,
+) string {
 	var pkgPath string
 	for _, v := range funDeclNode.Recv.List {
 		for _, dependentpkg := range pkgs {
@@ -177,7 +178,8 @@ func GetPkgPathFromRecvInterface(pkg *packages.Package,
 
 // GetPkgPathFromFunctionRecv build package path taking function receiver parameters.
 func GetPkgPathFromFunctionRecv(pkg *packages.Package,
-	pkgs []*packages.Package, funDeclNode *ast.FuncDecl, interfaces map[string]bool) string {
+	pkgs []*packages.Package, funDeclNode *ast.FuncDecl, interfaces map[string]bool,
+) string {
 	pkgPath := GetPkgPathFromRecvInterface(pkg, pkgs, funDeclNode, interfaces)
 	if len(pkgPath) != 0 {
 		return pkgPath
@@ -248,7 +250,8 @@ func GetPkgNameFromDefsTable(pkg *packages.Package, ident *ast.Ident) string {
 // GetPkgPathForFunction builds package path, delegates work to
 // other helper functions defined above.
 func GetPkgPathForFunction(pkg *packages.Package,
-	pkgs []*packages.Package, funDecl *ast.FuncDecl, interfaces map[string]bool) string {
+	pkgs []*packages.Package, funDecl *ast.FuncDecl, interfaces map[string]bool,
+) string {
 	if funDecl.Recv != nil {
 		return GetPkgPathFromFunctionRecv(pkg, pkgs, funDecl, interfaces)
 	}
@@ -261,7 +264,8 @@ func BuildCallGraph(
 	projectPath string,
 	packagePattern string,
 	funcDecls map[FuncDescriptor]bool,
-	interfaces map[string]bool) map[FuncDescriptor][]FuncDescriptor {
+	interfaces map[string]bool,
+) map[FuncDescriptor][]FuncDescriptor {
 	fset := token.NewFileSet()
 	pkgs, _ := getPkgs(projectPath, packagePattern, fset)
 	fmt.Println("BuildCallGraph")
