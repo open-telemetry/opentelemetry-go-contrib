@@ -144,8 +144,7 @@ func init() {
 
 		go func() {
 			if err := server.Serve(lis); err != nil && err != http.ErrServerClosed {
-				//lint:ignore ST1005 Prometheus is capitalized because it's a proper noun
-				otel.Handle(fmt.Errorf("Prometheus HTTP server exited unexpectedly: %w", err))
+				otel.Handle(fmt.Errorf("the Prometheus HTTP server exited unexpectedly: %w", err))
 			}
 		}()
 
