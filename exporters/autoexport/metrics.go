@@ -114,7 +114,6 @@ func init() {
 		server := http.Server{
 			// Timeouts are necessary to make a server resilent to attacks, but ListenAndServe doesn't set any.
 			// We use values from this example: https://blog.cloudflare.com/exposing-go-on-the-internet/#:~:text=There%20are%20three%20main%20timeouts
-			// TODO: find defaults with a better justification, and/or make these configurable
 			ReadTimeout:  5 * time.Second,
 			WriteTimeout: 10 * time.Second,
 			IdleTimeout:  120 * time.Second,
