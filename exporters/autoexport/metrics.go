@@ -48,6 +48,7 @@ func WithFallbackMetricReader(exporter metric.Reader) MetricOption {
 // OTEL_METRICS_EXPORTER defines the metrics exporter; supported values:
 //   - "none" - "no operation" exporter
 //   - "otlp" (default) - OTLP exporter; see [go.opentelemetry.io/otel/exporters/otlp/otlpmetric]
+//   - "prometheus" - Prometheus exporter + HTTP server; see [go.opentelemetry.io/otel/exporters/prometheus]
 //
 // OTEL_EXPORTER_OTLP_PROTOCOL defines OTLP exporter's transport protocol;
 // supported values:
@@ -55,6 +56,10 @@ func WithFallbackMetricReader(exporter metric.Reader) MetricOption {
 //     see: [go.opentelemetry.io/otel/exporters/otlp/otlpmetric/otlpmetricgrpc]
 //   - "http/protobuf" (default) -  protobuf-encoded data over HTTP connection;
 //     see: [go.opentelemetry.io/otel/exporters/otlp/otlpmetric/otlpmetrichttp]
+//
+// OTEL_EXPORTER_PROMETHEUS_HOST (defaulting to "localhost") and
+// OTEL_EXPORTER_PROMETHEUS_PORT (defaulting to 9464) define the host and port for the
+// Prometheus exporter's HTTP server.
 //
 // An error is returned if an environment value is set to an unhandled value.
 //
