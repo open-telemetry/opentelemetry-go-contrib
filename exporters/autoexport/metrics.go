@@ -51,7 +51,7 @@ func WithFallbackMetricReader(exporter metric.Reader) MetricOption {
 // Use [RegisterMetricReader] to handle more values of OTEL_METRICS_EXPORTER.
 //
 // Use [WithFallbackMetricReader] option to change the returned exporter
-// when OTEL_TRACES_EXPORTER is unset or empty.
+// when OTEL_METRICS_EXPORTER is unset or empty.
 //
 // Use [IsNoneMetricReader] to check if the retured exporter is a "no operation" exporter.
 func NewMetricReader(ctx context.Context, opts ...MetricOption) (metric.Reader, error) {
