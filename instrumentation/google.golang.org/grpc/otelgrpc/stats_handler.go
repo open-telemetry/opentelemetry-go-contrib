@@ -177,6 +177,7 @@ func handleRPC(ctx context.Context, rs stats.RPCStats) {
 			s, _ := status.FromError(rs.Error)
 			span.SetStatus(codes.Error, s.Message())
 			span.SetAttributes(statusCodeAttr(s.Code()))
+			span.RecordError(rs.Error)
 		} else {
 			span.SetAttributes(statusCodeAttr(grpc_codes.OK))
 		}
