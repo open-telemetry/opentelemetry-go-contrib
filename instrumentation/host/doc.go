@@ -27,6 +27,9 @@
 //
 //	process.cpu.time           state=user|system
 //	system.cpu.time            state=user|system|other|idle
+//	system.cpu.utilization	   state=system
+//	system.cpu.logical.count
+//	system.cpu.physical.count
 //	system.memory.usage        state=used|available
 //	system.memory.utilization  state=used|available
 //	system.network.io          direction=transmit|receive

@@ -72,6 +72,10 @@ var (
 	AttributeCPUTimeOther  = attribute.NewSet(attribute.String("state", "other"))
 	AttributeCPUTimeIdle   = attribute.NewSet(attribute.String("state", "idle"))
 
+	// Attribute sets for CPU measurements.
+
+	AttributeCPUUtilization = attribute.NewSet(attribute.String("state", "system"))
+
 	// Attribute sets used for Memory measurements.
 
 	AttributeMemoryAvailable = attribute.NewSet(attribute.String("state", "available"))
@@ -114,8 +118,11 @@ func (h *host) register() error {
 	var (
 		err error
 
-		processCPUTime metric.Float64ObservableCounter
-		hostCPUTime    metric.Float64ObservableCounter
+		processCPUTime       metric.Float64ObservableCounter
+		hostCPUTime          metric.Float64ObservableCounter
+		hostCPUUtilization   metric.Float64ObservableGauge
+		hostCPULogicalCores  metric.Int64ObservableCounter
+		hostCPUPhysicalCores metric.Int64ObservableCounter
 
 		hostMemoryUsage       metric.Int64ObservableGauge
 		hostMemoryUtilization metric.Float64ObservableGauge
@@ -152,6 +159,38 @@ func (h *host) register() error {
 		metric.WithUnit("s"),
 		metric.WithDescription(
 			"Accumulated CPU time spent by this host attributeed by state (User, System, Other, Idle)",
+		),
+	); err != nil {
+		return err
+	}
+
+	if hostCPUUtilization, err = h.meter.Float64ObservableGauge(
+		"system.cpu.utilization",
+		metric.WithUnit("1"),
+		metric.WithDescription(
+			`Difference in system.cpu.time since the last measurement, divided 
+			by the elapsed time and number of logical CPUs`,
+		),
+	); err != nil {
+		return err
+	}
+
+	if hostCPULogicalCores, err = h.meter.Int64ObservableCounter(
+		"system.cpu.logical.count",
+		metric.WithUnit("{cpu}"),
+		metric.WithDescription(
+			`Reports the number of logical (virtual) processor cores created by 
+			the operating system to manage multitasking`,
+		),
+	); err != nil {
+		return err
+	}
+
+	if hostCPUPhysicalCores, err = h.meter.Int64ObservableCounter(
+		"system.cpu.physical.count",
+		metric.WithUnit("{cpu}"),
+		metric.WithDescription(
+			"Reports the number of actual physical processor cores on the hardware",
 		),
 	); err != nil {
 		return err
@@ -210,6 +249,21 @@ func (h *host) register() error {
 				return fmt.Errorf("host CPU usage: incorrect summary count")
 			}
 
+			cpuPercent, err := cpu.Percent(0, false)
+			if err != nil {
+				return err
+			}
+
+			cpuLogicalCores, err := cpu.Counts(true)
+			if err != nil {
+				return err
+			}
+
+			cpuPhysicalCores, err := cpu.Counts(false)
+			if err != nil {
+				return err
+			}
+
 			vmStats, err := mem.VirtualMemoryWithContext(ctx)
 			if err != nil {
 				return err
@@ -252,6 +306,14 @@ func (h *host) register() error {
 			opt = metric.WithAttributeSet(AttributeCPUTimeIdle)
 			o.ObserveFloat64(hostCPUTime, hostTime.Idle, opt)
 
+			// Host CPU utilization
+			opt = metric.WithAttributeSet(AttributeCPUUtilization)
+			o.ObserveFloat64(hostCPUUtilization, cpuPercent[0]/100, opt)
+
+			// Host CPU # logical and # physical cores
+			o.ObserveInt64(hostCPULogicalCores, int64(cpuLogicalCores))
+			o.ObserveInt64(hostCPUPhysicalCores, int64(cpuPhysicalCores))
+
 			// Host memory usage
 			opt = metric.WithAttributeSet(AttributeMemoryUsed)
 			o.ObserveInt64(hostMemoryUsage, int64(vmStats.Used), opt)
@@ -278,6 +340,9 @@ func (h *host) register() error {
 		},
 		processCPUTime,
 		hostCPUTime,
+		hostCPUUtilization,
+		hostCPULogicalCores,
+		hostCPUPhysicalCores,
 		hostMemoryUsage,
 		hostMemoryUtilization,
 		networkIOUsage,
