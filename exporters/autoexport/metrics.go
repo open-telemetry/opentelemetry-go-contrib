@@ -50,7 +50,7 @@ func WithFallbackMetricReader(exporter metric.Reader) MetricOption {
 //   - "none" - "no operation" exporter
 //   - "otlp" (default) - OTLP exporter; see [go.opentelemetry.io/otel/exporters/otlp/otlpmetric]
 //   - "prometheus" - Prometheus exporter + HTTP server; see [go.opentelemetry.io/otel/exporters/prometheus]
-//   - "console" - Standard output exporter; see [https://pkg.go.dev/go.opentelemetry.io/otel/exporters/stdout/stdoutmetric]
+//   - "console" - Standard output exporter; see [go.opentelemetry.io/otel/exporters/stdout/stdoutmetric]
 //
 // OTEL_EXPORTER_OTLP_PROTOCOL defines OTLP exporter's transport protocol;
 // supported values:

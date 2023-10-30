@@ -44,7 +44,7 @@ func WithFallbackSpanExporter(exporter trace.SpanExporter) SpanOption {
 // OTEL_TRACES_EXPORTER defines the traces exporter; supported values:
 //   - "none" - "no operation" exporter
 //   - "otlp" (default) - OTLP exporter; see [go.opentelemetry.io/otel/exporters/otlp/otlptrace]
-//   - "console" - Standard output exporter; see [https://pkg.go.dev/go.opentelemetry.io/otel/exporters/stdout/stdouttrace]
+//   - "console" - Standard output exporter; see [go.opentelemetry.io/otel/exporters/stdout/stdouttrace]
 //
 // OTEL_EXPORTER_OTLP_PROTOCOL defines OTLP exporter's transport protocol;
 // supported values:
