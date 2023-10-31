@@ -26,6 +26,8 @@ import (
 	"go.opentelemetry.io/contrib/instrumentation/google.golang.org/grpc/otelgrpc"
 	"go.opentelemetry.io/otel/attribute"
 	"go.opentelemetry.io/otel/codes"
+	"go.opentelemetry.io/otel/sdk/metric"
+	"go.opentelemetry.io/otel/sdk/metric/metricdata"
 	"go.opentelemetry.io/otel/sdk/trace"
 	"go.opentelemetry.io/otel/sdk/trace/tracetest"
 	semconv "go.opentelemetry.io/otel/semconv/v1.17.0"
@@ -47,6 +49,19 @@ func getSpanFromRecorder(sr *tracetest.SpanRecorder, name string) (trace.ReadOnl
 	for _, s := range sr.Ended() {
 		if s.Name() == name {
 			return s, true
+		}
+	}
+	return nil, false
+}
+
+func getMetricFromData(data metricdata.Histogram[int64], name string) (*metricdata.HistogramDataPoint[int64], bool) {
+	for _, d := range data.DataPoints {
+		v, ok := d.Attributes.Value(semconv.RPCMethodKey)
+		if !ok {
+			return nil, false
+		}
+		if semconv.RPCMethod(name).Value == v {
+			return &d, true
 		}
 	}
 	return nil, false
@@ -413,7 +428,8 @@ func createInterceptedStreamClient(t *testing.T, method string, opts clientStrea
 			desc *grpc.StreamDesc,
 			cc *grpc.ClientConn,
 			method string,
-			opts ...grpc.CallOption) (grpc.ClientStream, error) {
+			opts ...grpc.CallOption,
+		) (grpc.ClientStream, error) {
 			mockStream.Desc = desc
 			mockStream.Ctx = ctx
 			return mockStream, nil
@@ -668,7 +684,8 @@ func TestStreamClientInterceptorCancelContext(t *testing.T) {
 			desc *grpc.StreamDesc,
 			cc *grpc.ClientConn,
 			method string,
-			opts ...grpc.CallOption) (grpc.ClientStream, error) {
+			opts ...grpc.CallOption,
+		) (grpc.ClientStream, error) {
 			mockClStr = &mockClientStream{Desc: desc, Ctx: ctx}
 			return mockClStr, nil
 		},
@@ -727,7 +744,8 @@ func TestStreamClientInterceptorWithError(t *testing.T) {
 			desc *grpc.StreamDesc,
 			cc *grpc.ClientConn,
 			method string,
-			opts ...grpc.CallOption) (grpc.ClientStream, error) {
+			opts ...grpc.CallOption,
+		) (grpc.ClientStream, error) {
 			mockClStr = &mockClientStream{Desc: desc, Ctx: ctx}
 			return mockClStr, errors.New("test")
 		},
@@ -864,24 +882,34 @@ func assertServerSpan(t *testing.T, wantSpanCode codes.Code, wantSpanStatusDescr
 func TestUnaryServerInterceptor(t *testing.T) {
 	sr := tracetest.NewSpanRecorder()
 	tp := trace.NewTracerProvider(trace.WithSpanProcessor(sr))
+	mr := metric.NewManualReader()
+	mp := metric.NewMeterProvider(metric.WithReader(mr))
 	usi := otelgrpc.UnaryServerInterceptor(
 		otelgrpc.WithTracerProvider(tp),
+		otelgrpc.WithMeterProvider(mp),
 	)
+
 	for _, check := range serverChecks {
 		name := check.grpcCode.String()
 		t.Run(name, func(t *testing.T) {
+			serviceName := "TestGrpcService"
+			methodName := serviceName + "/" + name
+			fullMethodName := "/" + methodName
 			// call the unary interceptor
 			grpcErr := status.Error(check.grpcCode, check.grpcCode.String())
 			handler := func(_ context.Context, _ interface{}) (interface{}, error) {
 				return nil, grpcErr
 			}
-			_, err := usi(context.Background(), &grpc_testing.SimpleRequest{}, &grpc.UnaryServerInfo{FullMethod: name}, handler)
+			_, err := usi(context.Background(), &grpc_testing.SimpleRequest{}, &grpc.UnaryServerInfo{FullMethod: fullMethodName}, handler)
 			assert.Equal(t, grpcErr, err)
 
 			// validate span
-			span, ok := getSpanFromRecorder(sr, name)
-			require.True(t, ok, "missing span %s", name)
+			span, ok := getSpanFromRecorder(sr, methodName)
+			require.True(t, ok, "missing span %s", methodName)
 			assertServerSpan(t, check.wantSpanCode, check.wantSpanStatusDescription, check.grpcCode, span)
+
+			// validate metric
+			checkManualReaderRecords(t, mr, serviceName, name, check.grpcCode)
 		})
 	}
 }
@@ -1065,4 +1093,23 @@ func TestStreamServerInterceptorEvents(t *testing.T) {
 			}
 		})
 	}
+}
+
+func checkManualReaderRecords(t *testing.T, reader metric.Reader, serviceName, name string, code grpc_codes.Code) {
+	rm := metricdata.ResourceMetrics{}
+	err := reader.Collect(context.Background(), &rm)
+	assert.NoError(t, err)
+	require.Len(t, rm.ScopeMetrics, 1)
+	require.Len(t, rm.ScopeMetrics[0].Metrics, 1)
+	require.IsType(t, rm.ScopeMetrics[0].Metrics[0].Data, metricdata.Histogram[int64]{})
+	data := rm.ScopeMetrics[0].Metrics[0].Data.(metricdata.Histogram[int64])
+	dpt, ok := getMetricFromData(data, name)
+	assert.True(t, ok)
+	attr := dpt.Attributes.ToSlice()
+	assert.ElementsMatch(t, []attribute.KeyValue{
+		semconv.RPCMethod(name),
+		semconv.RPCService(serviceName),
+		otelgrpc.RPCSystemGRPC,
+		otelgrpc.GRPCStatusCodeKey.Int64(int64(code)),
+	}, attr)
 }

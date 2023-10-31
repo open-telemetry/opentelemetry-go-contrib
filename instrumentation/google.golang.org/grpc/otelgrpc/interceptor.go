@@ -87,7 +87,8 @@ func UnaryClientInterceptor(opts ...Option) grpc.UnaryClientInterceptor {
 
 		startOpts := append([]trace.SpanStartOption{
 			trace.WithSpanKind(trace.SpanKindClient),
-			trace.WithAttributes(attr...)},
+			trace.WithAttributes(attr...),
+		},
 			cfg.SpanStartOptions...,
 		)
 
@@ -191,7 +192,6 @@ func (w *clientStream) SendMsg(m interface{}) error {
 
 func (w *clientStream) Header() (metadata.MD, error) {
 	md, err := w.ClientStream.Header()
-
 	if err != nil {
 		w.sendStreamEvent(errorEvent, err)
 	}
@@ -201,7 +201,6 @@ func (w *clientStream) Header() (metadata.MD, error) {
 
 func (w *clientStream) CloseSend() error {
 	err := w.ClientStream.CloseSend()
-
 	if err != nil {
 		w.sendStreamEvent(errorEvent, err)
 	}
@@ -282,7 +281,8 @@ func StreamClientInterceptor(opts ...Option) grpc.StreamClientInterceptor {
 
 		startOpts := append([]trace.SpanStartOption{
 			trace.WithSpanKind(trace.SpanKindClient),
-			trace.WithAttributes(attr...)},
+			trace.WithAttributes(attr...),
+		},
 			cfg.SpanStartOptions...,
 		)
 
@@ -350,7 +350,8 @@ func UnaryServerInterceptor(opts ...Option) grpc.UnaryServerInterceptor {
 
 		startOpts := append([]trace.SpanStartOption{
 			trace.WithSpanKind(trace.SpanKindServer),
-			trace.WithAttributes(attr...)},
+			trace.WithAttributes(attr...),
+		},
 			cfg.SpanStartOptions...,
 		)
 
@@ -365,30 +366,28 @@ func UnaryServerInterceptor(opts ...Option) grpc.UnaryServerInterceptor {
 			messageReceived.Event(ctx, 1, req)
 		}
 
-		var statusCode grpc_codes.Code
-		defer func(t time.Time) {
-			elapsedTime := time.Since(t) / time.Millisecond
-			attr = append(attr, semconv.RPCGRPCStatusCodeKey.Int64(int64(statusCode)))
-			o := metric.WithAttributes(attr...)
-			cfg.rpcServerDuration.Record(ctx, int64(elapsedTime), o)
-		}(time.Now())
+		before := time.Now()
 
 		resp, err := handler(ctx, req)
+
+		s, _ := status.FromError(err)
 		if err != nil {
-			s, _ := status.FromError(err)
 			statusCode, msg := serverStatus(s)
 			span.SetStatus(statusCode, msg)
-			span.SetAttributes(statusCodeAttr(s.Code()))
 			if cfg.SentEvent {
 				messageSent.Event(ctx, 1, s.Proto())
 			}
 		} else {
-			statusCode = grpc_codes.OK
-			span.SetAttributes(statusCodeAttr(grpc_codes.OK))
 			if cfg.SentEvent {
 				messageSent.Event(ctx, 1, resp)
 			}
 		}
+		grpcStatusCodeAttr := statusCodeAttr(s.Code())
+		span.SetAttributes(grpcStatusCodeAttr)
+
+		elapsedTime := time.Since(before).Milliseconds()
+		attr = append(attr, grpcStatusCodeAttr)
+		cfg.rpcServerDuration.Record(ctx, elapsedTime, metric.WithAttributes(attr...))
 
 		return resp, err
 	}
@@ -473,7 +472,8 @@ func StreamServerInterceptor(opts ...Option) grpc.StreamServerInterceptor {
 
 		startOpts := append([]trace.SpanStartOption{
 			trace.WithSpanKind(trace.SpanKindServer),
-			trace.WithAttributes(attr...)},
+			trace.WithAttributes(attr...),
+		},
 			cfg.SpanStartOptions...,
 		)
 

@@ -52,6 +52,7 @@ func (*ptrNoop) Inject(context.Context, propagation.TextMapCarrier) {}
 func (*ptrNoop) Extract(context.Context, propagation.TextMapCarrier) context.Context {
 	return context.Background()
 }
+
 func (*ptrNoop) Fields() []string {
 	return nil
 }

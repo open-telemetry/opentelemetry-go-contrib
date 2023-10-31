@@ -133,9 +133,8 @@ func HTML(c *gin.Context, code int, name string, obj interface{}) {
 			span.SetStatus(codes.Error, "template failure")
 			span.End()
 			panic(r)
-		} else {
-			span.End()
 		}
+		span.End()
 	}()
 	c.HTML(code, name, obj)
 }

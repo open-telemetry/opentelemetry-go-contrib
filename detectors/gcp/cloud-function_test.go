@@ -27,9 +27,7 @@ import (
 	semconv "go.opentelemetry.io/otel/semconv/v1.17.0"
 )
 
-var (
-	errTest = errors.New("testError")
-)
+var errTest = errors.New("testError")
 
 const (
 	projectIDValue = "some-projectID"

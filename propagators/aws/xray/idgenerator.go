@@ -69,7 +69,7 @@ func NewIDGenerator() *IDGenerator {
 	gen := &IDGenerator{}
 	var rngSeed int64
 	_ = binary.Read(crand.Reader, binary.LittleEndian, &rngSeed)
-	gen.randSource = rand.New(rand.NewSource(rngSeed))
+	gen.randSource = rand.New(rand.NewSource(rngSeed)) //nolint:gosec // Tracked under: https://github.com/open-telemetry/opentelemetry-go-contrib/issues/4449.
 	return gen
 }
 
