@@ -36,9 +36,22 @@ type gRPCContextKey struct{}
 type gRPCContext struct {
 	messagesReceived int64
 	messagesSent     int64
-	requestSize      int64
-	responseSize     int64
 	metricAttrs      []attribute.KeyValue
+}
+
+type handler struct {
+	tracer             trace.Tracer
+	meter              metric.Meter
+	rpcDuration        metric.Float64Histogram
+	rpcRequestSize     metric.Int64Histogram
+	rpcResponseSize    metric.Int64Histogram
+	rpcRequestsPerRPC  metric.Int64Histogram
+	rpcResponsesPerRPC metric.Int64Histogram
+}
+
+type serverHandler struct {
+	*config
+	r *handler
 }
 
 // NewServerHandler creates a stats.Handler for gRPC server.
@@ -58,7 +71,7 @@ func NewServerHandler(opts ...Option) stats.Handler {
 		metric.WithSchemaURL(semconv.SchemaURL),
 	)
 	var err error
-	h.r.rpcDuration, err = h.r.meter.Int64Histogram("rpc.server.duration",
+	h.r.rpcDuration, err = h.r.meter.Float64Histogram("rpc.server.duration",
 		metric.WithDescription("Measures the duration of inbound RPC."),
 		metric.WithUnit("ms"))
 	if err != nil {
@@ -96,24 +109,21 @@ func NewServerHandler(opts ...Option) stats.Handler {
 	return h
 }
 
-type handler struct {
-	tracer             trace.Tracer
-	meter              metric.Meter
-	rpcDuration        metric.Int64Histogram
-	rpcRequestSize     metric.Int64Histogram
-	rpcResponseSize    metric.Int64Histogram
-	rpcRequestsPerRPC  metric.Int64Histogram
-	rpcResponsesPerRPC metric.Int64Histogram
+// TagConn can attach some information to the given context.
+func (h *serverHandler) TagConn(ctx context.Context, info *stats.ConnTagInfo) context.Context {
+	span := trace.SpanFromContext(ctx)
+	attrs := peerAttr(peerFromCtx(ctx))
+	span.SetAttributes(attrs...)
+
+	return ctx
 }
 
-type serverHandler struct {
-	*config
-	r *handler
+// HandleConn processes the Conn stats.
+func (h *serverHandler) HandleConn(ctx context.Context, info stats.ConnStats) {
 }
 
 // TagRPC can attach some information to the given context.
 func (h *serverHandler) TagRPC(ctx context.Context, info *stats.RPCTagInfo) context.Context {
-	// fmt.Printf("server TagRPC, ctx.Err %v\n", ctx.Err())
 	ctx = extract(ctx, h.config.Propagators)
 
 	name, attrs := internal.ParseFullMethod(info.FullMethodName)
@@ -133,23 +143,12 @@ func (h *serverHandler) TagRPC(ctx context.Context, info *stats.RPCTagInfo) cont
 
 // HandleRPC processes the RPC stats.
 func (h *serverHandler) HandleRPC(ctx context.Context, rs stats.RPCStats) {
-	// fmt.Printf("server HandleRPC, ctx.Err %v\n", ctx.Err())
 	h.r.handleRPC(ctx, rs)
 }
 
-// TagConn can attach some information to the given context.
-func (h *serverHandler) TagConn(ctx context.Context, info *stats.ConnTagInfo) context.Context {
-	// fmt.Printf("server TagConn, ctx.Err %v\n", ctx.Err())
-	span := trace.SpanFromContext(ctx)
-	attrs := peerAttr(peerFromCtx(ctx))
-	span.SetAttributes(attrs...)
-
-	return ctx
-}
-
-// HandleConn processes the Conn stats.
-func (h *serverHandler) HandleConn(ctx context.Context, info stats.ConnStats) {
-	// fmt.Printf("server HandleConn, ctx.Err %v\n", ctx.Err())
+type clientHandler struct {
+	*config
+	r *handler
 }
 
 // NewClientHandler creates a stats.Handler for gRPC client.
@@ -170,7 +169,7 @@ func NewClientHandler(opts ...Option) stats.Handler {
 		metric.WithSchemaURL(semconv.SchemaURL),
 	)
 	var err error
-	h.r.rpcDuration, err = h.r.meter.Int64Histogram("rpc.client.duration",
+	h.r.rpcDuration, err = h.r.meter.Float64Histogram("rpc.client.duration",
 		metric.WithDescription("Measures the duration of inbound RPC."),
 		metric.WithUnit("ms"))
 	if err != nil {
@@ -206,11 +205,6 @@ func NewClientHandler(opts ...Option) stats.Handler {
 	}
 
 	return h
-}
-
-type clientHandler struct {
-	*config
-	r *handler
 }
 
 // TagRPC can attach some information to the given context.
@@ -253,14 +247,17 @@ func (r *handler) handleRPC(ctx context.Context, rs stats.RPCStats) {
 	span := trace.SpanFromContext(ctx)
 	gctx, _ := ctx.Value(gRPCContextKey{}).(*gRPCContext)
 	var messageId int64
+	metricAttrs := make([]attribute.KeyValue, 0, len(gctx.metricAttrs)+1)
+	metricAttrs = append(metricAttrs, gctx.metricAttrs...)
 
 	switch rs := rs.(type) {
 	case *stats.Begin:
 	case *stats.InPayload:
 		if gctx != nil {
 			messageId = atomic.AddInt64(&gctx.messagesReceived, 1)
-			atomic.StoreInt64(&gctx.requestSize, int64(rs.Length))
+			r.rpcRequestSize.Record(ctx, int64(rs.Length), metric.WithAttributes(metricAttrs...))
 		}
+
 		span.AddEvent("message",
 			trace.WithAttributes(
 				semconv.MessageTypeReceived,
@@ -272,7 +269,7 @@ func (r *handler) handleRPC(ctx context.Context, rs stats.RPCStats) {
 	case *stats.OutPayload:
 		if gctx != nil {
 			messageId = atomic.AddInt64(&gctx.messagesSent, 1)
-			atomic.StoreInt64(&gctx.responseSize, int64(rs.Length))
+			r.rpcResponseSize.Record(ctx, int64(rs.Length), metric.WithAttributes(metricAttrs...))
 		}
 
 		span.AddEvent("message",
@@ -283,10 +280,9 @@ func (r *handler) handleRPC(ctx context.Context, rs stats.RPCStats) {
 				semconv.MessageUncompressedSizeKey.Int(rs.Length),
 			),
 		)
+	case *stats.OutTrailer:
 	case *stats.End:
 		var rpcStatusAttr attribute.KeyValue
-		metricAttrs := make([]attribute.KeyValue, 0, len(gctx.metricAttrs)+1)
-		metricAttrs = append(metricAttrs, gctx.metricAttrs...)
 
 		if rs.Error != nil {
 			s, _ := status.FromError(rs.Error)
@@ -299,9 +295,7 @@ func (r *handler) handleRPC(ctx context.Context, rs stats.RPCStats) {
 		span.End()
 
 		metricAttrs = append(metricAttrs, rpcStatusAttr)
-		r.rpcDuration.Record(context.TODO(), int64(rs.EndTime.Sub(rs.BeginTime)), metric.WithAttributes(metricAttrs...))
-		r.rpcRequestSize.Record(context.TODO(), gctx.requestSize, metric.WithAttributes(metricAttrs...))
-		r.rpcResponseSize.Record(context.TODO(), gctx.responseSize, metric.WithAttributes(metricAttrs...))
+		r.rpcDuration.Record(context.TODO(), float64(rs.EndTime.Sub(rs.BeginTime)), metric.WithAttributes(metricAttrs...))
 		r.rpcRequestsPerRPC.Record(context.TODO(), gctx.messagesReceived, metric.WithAttributes(metricAttrs...))
 		r.rpcResponsesPerRPC.Record(context.TODO(), gctx.messagesSent, metric.WithAttributes(metricAttrs...))
 
