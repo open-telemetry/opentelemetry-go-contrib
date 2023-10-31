@@ -24,7 +24,7 @@ import (
 	"go.opentelemetry.io/otel/metric"
 )
 
-// ScopeName the instrumentation scope name for identifying meters.
+// ScopeName is the instrumentation scope name.
 const ScopeName string = "go.opentelemetry.io/contrib/instrumentation/runtime"
 
 // Runtime reports the work-in-progress conventional runtime metrics specified by OpenTelemetry.
