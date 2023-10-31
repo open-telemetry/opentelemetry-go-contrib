@@ -59,7 +59,7 @@ func TestStatsHandler(t *testing.T) {
 	})
 
 	t.Run("ClientMetrics", func(t *testing.T) {
-		checkClientRecords(t, clientMetricReader)
+		checkClientMetrics(t, clientMetricReader)
 	})
 
 	t.Run("ServerSpans", func(t *testing.T) {
@@ -67,7 +67,7 @@ func TestStatsHandler(t *testing.T) {
 	})
 
 	t.Run("ServerMetrics", func(t *testing.T) {
-		checkServerRecords(t, serverMetricReader)
+		checkServerMetrics(t, serverMetricReader)
 	})
 }
 
@@ -597,7 +597,7 @@ func checkServerSpans(t *testing.T, spans []trace.ReadOnlySpan) {
 	}, pingPong.Attributes())
 }
 
-func checkClientRecords(t *testing.T, reader metric.Reader) {
+func checkClientMetrics(t *testing.T, reader metric.Reader) {
 	rm := metricdata.ResourceMetrics{}
 	err := reader.Collect(context.Background(), &rm)
 	assert.NoError(t, err)
@@ -965,7 +965,7 @@ func checkClientRecords(t *testing.T, reader metric.Reader) {
 	}
 }
 
-func checkServerRecords(t *testing.T, reader metric.Reader) {
+func checkServerMetrics(t *testing.T, reader metric.Reader) {
 	rm := metricdata.ResourceMetrics{}
 	err := reader.Collect(context.Background(), &rm)
 	assert.NoError(t, err)
