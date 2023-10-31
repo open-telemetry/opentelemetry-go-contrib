@@ -113,7 +113,7 @@ func (h *middleware) createMeasures() {
 	responseBytesCounter, err := h.meter.Int64Counter(ResponseContentLength)
 	handleErr(err)
 
-	serverLatencyMeasure, err := h.meter.Float64Histogram(ServerLatency)
+	serverLatencyMeasure, err := h.meter.Float64Histogram(ServerLatency, metric.WithUnit("ms"))
 	handleErr(err)
 
 	h.counters[RequestContentLength] = requestBytesCounter
