@@ -29,6 +29,9 @@ func TestSpanExporterNone(t *testing.T) {
 	t.Setenv("OTEL_TRACES_EXPORTER", "none")
 	got, err := NewSpanExporter(context.Background())
 	assert.NoError(t, err)
+	t.Cleanup(func() {
+		assert.NoError(t, got.Shutdown(context.Background()))
+	})
 	assert.True(t, IsNoneSpanExporter(got))
 }
 
@@ -47,6 +50,9 @@ func TestSpanExporterOTLP(t *testing.T) {
 
 			got, err := NewSpanExporter(context.Background())
 			assert.NoError(t, err)
+			t.Cleanup(func() {
+				assert.NoError(t, got.Shutdown(context.Background()))
+			})
 			assert.IsType(t, &otlptrace.Exporter{}, got)
 
 			// Implementation detail hack. This may break when bumping OTLP exporter modules as it uses unexported API.
