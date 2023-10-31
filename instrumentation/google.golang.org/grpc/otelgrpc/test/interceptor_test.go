@@ -28,6 +28,7 @@ import (
 	"go.opentelemetry.io/otel/codes"
 	"go.opentelemetry.io/otel/sdk/metric"
 	"go.opentelemetry.io/otel/sdk/metric/metricdata"
+	"go.opentelemetry.io/otel/sdk/metric/metricdata/metricdatatest"
 	"go.opentelemetry.io/otel/sdk/trace"
 	"go.opentelemetry.io/otel/sdk/trace/tracetest"
 	semconv "go.opentelemetry.io/otel/semconv/v1.17.0"
@@ -49,19 +50,6 @@ func getSpanFromRecorder(sr *tracetest.SpanRecorder, name string) (trace.ReadOnl
 	for _, s := range sr.Ended() {
 		if s.Name() == name {
 			return s, true
-		}
-	}
-	return nil, false
-}
-
-func getMetricFromData(data metricdata.Histogram[int64], name string) (*metricdata.HistogramDataPoint[int64], bool) {
-	for _, d := range data.DataPoints {
-		v, ok := d.Attributes.Value(semconv.RPCMethodKey)
-		if !ok {
-			return nil, false
-		}
-		if semconv.RPCMethod(name).Value == v {
-			return &d, true
 		}
 	}
 	return nil, false
@@ -880,18 +868,20 @@ func assertServerSpan(t *testing.T, wantSpanCode codes.Code, wantSpanStatusDescr
 
 // TestUnaryServerInterceptor tests the server interceptor for unary RPCs.
 func TestUnaryServerInterceptor(t *testing.T) {
-	sr := tracetest.NewSpanRecorder()
-	tp := trace.NewTracerProvider(trace.WithSpanProcessor(sr))
-	mr := metric.NewManualReader()
-	mp := metric.NewMeterProvider(metric.WithReader(mr))
-	usi := otelgrpc.UnaryServerInterceptor(
-		otelgrpc.WithTracerProvider(tp),
-		otelgrpc.WithMeterProvider(mp),
-	)
-
 	for _, check := range serverChecks {
 		name := check.grpcCode.String()
 		t.Run(name, func(t *testing.T) {
+			sr := tracetest.NewSpanRecorder()
+			tp := trace.NewTracerProvider(trace.WithSpanProcessor(sr))
+
+			mr := metric.NewManualReader()
+			mp := metric.NewMeterProvider(metric.WithReader(mr))
+
+			usi := otelgrpc.UnaryServerInterceptor(
+				otelgrpc.WithTracerProvider(tp),
+				otelgrpc.WithMeterProvider(mp),
+			)
+
 			serviceName := "TestGrpcService"
 			methodName := serviceName + "/" + name
 			fullMethodName := "/" + methodName
@@ -909,7 +899,7 @@ func TestUnaryServerInterceptor(t *testing.T) {
 			assertServerSpan(t, check.wantSpanCode, check.wantSpanStatusDescription, check.grpcCode, span)
 
 			// validate metric
-			checkManualReaderRecords(t, mr, serviceName, name, check.grpcCode)
+			assertServerMetrics(t, mr, serviceName, name, check.grpcCode)
 		})
 	}
 }
@@ -1002,14 +992,16 @@ func (m *mockServerStream) RecvMsg(_ interface{}) error {
 
 // TestStreamServerInterceptor tests the server interceptor for streaming RPCs.
 func TestStreamServerInterceptor(t *testing.T) {
-	sr := tracetest.NewSpanRecorder()
-	tp := trace.NewTracerProvider(trace.WithSpanProcessor(sr))
-	usi := otelgrpc.StreamServerInterceptor(
-		otelgrpc.WithTracerProvider(tp),
-	)
 	for _, check := range serverChecks {
 		name := check.grpcCode.String()
 		t.Run(name, func(t *testing.T) {
+			sr := tracetest.NewSpanRecorder()
+			tp := trace.NewTracerProvider(trace.WithSpanProcessor(sr))
+
+			usi := otelgrpc.StreamServerInterceptor(
+				otelgrpc.WithTracerProvider(tp),
+			)
+
 			// call the stream interceptor
 			grpcErr := status.Error(check.grpcCode, check.grpcCode.String())
 			handler := func(_ interface{}, _ grpc.ServerStream) error {
@@ -1095,21 +1087,33 @@ func TestStreamServerInterceptorEvents(t *testing.T) {
 	}
 }
 
-func checkManualReaderRecords(t *testing.T, reader metric.Reader, serviceName, name string, code grpc_codes.Code) {
+func assertServerMetrics(t *testing.T, reader metric.Reader, serviceName, name string, code grpc_codes.Code) {
+	want := metricdata.ScopeMetrics{
+		Scope: wantInstrumentationScope,
+		Metrics: []metricdata.Metrics{
+			{
+				Name:        "rpc.server.duration",
+				Description: "Measures the duration of inbound RPC.",
+				Unit:        "ms",
+				Data: metricdata.Histogram[int64]{
+					Temporality: metricdata.CumulativeTemporality,
+					DataPoints: []metricdata.HistogramDataPoint[int64]{
+						{
+							Attributes: attribute.NewSet(
+								semconv.RPCMethod(name),
+								semconv.RPCService(serviceName),
+								otelgrpc.RPCSystemGRPC,
+								otelgrpc.GRPCStatusCodeKey.Int64(int64(code)),
+							),
+						},
+					},
+				},
+			},
+		},
+	}
 	rm := metricdata.ResourceMetrics{}
 	err := reader.Collect(context.Background(), &rm)
 	assert.NoError(t, err)
 	require.Len(t, rm.ScopeMetrics, 1)
-	require.Len(t, rm.ScopeMetrics[0].Metrics, 1)
-	require.IsType(t, rm.ScopeMetrics[0].Metrics[0].Data, metricdata.Histogram[int64]{})
-	data := rm.ScopeMetrics[0].Metrics[0].Data.(metricdata.Histogram[int64])
-	dpt, ok := getMetricFromData(data, name)
-	assert.True(t, ok)
-	attr := dpt.Attributes.ToSlice()
-	assert.ElementsMatch(t, []attribute.KeyValue{
-		semconv.RPCMethod(name),
-		semconv.RPCService(serviceName),
-		otelgrpc.RPCSystemGRPC,
-		otelgrpc.GRPCStatusCodeKey.Int64(int64(code)),
-	}, attr)
+	metricdatatest.AssertEqual(t, want, rm.ScopeMetrics[0], metricdatatest.IgnoreTimestamp(), metricdatatest.IgnoreValue())
 }

@@ -30,12 +30,20 @@ import (
 
 	"go.opentelemetry.io/contrib/instrumentation/google.golang.org/grpc/otelgrpc"
 	"go.opentelemetry.io/otel/attribute"
+	"go.opentelemetry.io/otel/sdk/instrumentation"
 	"go.opentelemetry.io/otel/sdk/metric"
 	"go.opentelemetry.io/otel/sdk/metric/metricdata"
+	"go.opentelemetry.io/otel/sdk/metric/metricdata/metricdatatest"
 	"go.opentelemetry.io/otel/sdk/trace"
 	"go.opentelemetry.io/otel/sdk/trace/tracetest"
 	semconv "go.opentelemetry.io/otel/semconv/v1.17.0"
 )
+
+var wantInstrumentationScope = instrumentation.Scope{
+	Name:      "go.opentelemetry.io/contrib/instrumentation/google.golang.org/grpc/otelgrpc",
+	SchemaURL: "https://opentelemetry.io/schemas/1.17.0",
+	Version:   otelgrpc.Version(),
+}
 
 const bufSize = 2048
 
@@ -599,32 +607,40 @@ func assertEvents(t *testing.T, expected, actual []trace.Event) bool {
 }
 
 func checkUnaryServerRecords(t *testing.T, reader metric.Reader) {
+	want := metricdata.ScopeMetrics{
+		Scope: wantInstrumentationScope,
+		Metrics: []metricdata.Metrics{
+			{
+				Name:        "rpc.server.duration",
+				Description: "Measures the duration of inbound RPC.",
+				Unit:        "ms",
+				Data: metricdata.Histogram[int64]{
+					Temporality: metricdata.CumulativeTemporality,
+					DataPoints: []metricdata.HistogramDataPoint[int64]{
+						{
+							Attributes: attribute.NewSet(
+								semconv.RPCMethod("EmptyCall"),
+								semconv.RPCService("grpc.testing.TestService"),
+								otelgrpc.RPCSystemGRPC,
+								otelgrpc.GRPCStatusCodeKey.Int64(int64(codes.OK)),
+							),
+						},
+						{
+							Attributes: attribute.NewSet(
+								semconv.RPCMethod("UnaryCall"),
+								semconv.RPCService("grpc.testing.TestService"),
+								otelgrpc.RPCSystemGRPC,
+								otelgrpc.GRPCStatusCodeKey.Int64(int64(codes.OK)),
+							),
+						},
+					},
+				},
+			},
+		},
+	}
 	rm := metricdata.ResourceMetrics{}
 	err := reader.Collect(context.Background(), &rm)
 	assert.NoError(t, err)
 	require.Len(t, rm.ScopeMetrics, 1)
-	require.Len(t, rm.ScopeMetrics[0].Metrics, 1)
-	require.IsType(t, rm.ScopeMetrics[0].Metrics[0].Data, metricdata.Histogram[int64]{})
-	data := rm.ScopeMetrics[0].Metrics[0].Data.(metricdata.Histogram[int64])
-
-	for _, dpt := range data.DataPoints {
-		attr := dpt.Attributes.ToSlice()
-		method := getRPCMethod(attr)
-		assert.NotEmpty(t, method)
-		assert.ElementsMatch(t, []attribute.KeyValue{
-			semconv.RPCMethod(method),
-			semconv.RPCService("grpc.testing.TestService"),
-			otelgrpc.RPCSystemGRPC,
-			otelgrpc.GRPCStatusCodeKey.Int64(int64(codes.OK)),
-		}, attr)
-	}
-}
-
-func getRPCMethod(attrs []attribute.KeyValue) string {
-	for _, kvs := range attrs {
-		if kvs.Key == semconv.RPCMethodKey {
-			return kvs.Value.AsString()
-		}
-	}
-	return ""
+	metricdatatest.AssertEqual(t, want, rm.ScopeMetrics[0], metricdatatest.IgnoreTimestamp(), metricdatatest.IgnoreValue())
 }
