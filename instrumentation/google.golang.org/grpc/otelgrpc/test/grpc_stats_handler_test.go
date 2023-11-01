@@ -25,6 +25,7 @@ import (
 
 	"go.opentelemetry.io/contrib/instrumentation/google.golang.org/grpc/otelgrpc"
 	"go.opentelemetry.io/otel/attribute"
+	"go.opentelemetry.io/otel/sdk/instrumentation"
 	"go.opentelemetry.io/otel/sdk/metric"
 	"go.opentelemetry.io/otel/sdk/metric/metricdata"
 	"go.opentelemetry.io/otel/sdk/metric/metricdata/metricdatatest"
@@ -603,12 +604,14 @@ func checkClientMetrics(t *testing.T, reader metric.Reader) {
 	assert.NoError(t, err)
 	require.Len(t, rm.ScopeMetrics, 1)
 	require.Len(t, rm.ScopeMetrics[0].Metrics, 5)
-	expectedMetrics := []struct {
-		mc   metricdata.Metrics
-		opts []metricdatatest.Option
-	}{
-		{
-			mc: metricdata.Metrics{
+	expectedScopeMetric := metricdata.ScopeMetrics{
+		Scope: instrumentation.Scope{
+			Name:      "go.opentelemetry.io/contrib/instrumentation/google.golang.org/grpc/otelgrpc",
+			Version:   otelgrpc.Version(),
+			SchemaURL: "https://opentelemetry.io/schemas/1.17.0",
+		},
+		Metrics: []metricdata.Metrics{
+			{
 				Name:        "rpc.client.duration",
 				Description: "Measures the duration of inbound RPC.",
 				Unit:        "ms",
@@ -653,10 +656,7 @@ func checkClientMetrics(t *testing.T, reader metric.Reader) {
 					},
 				},
 			},
-			opts: []metricdatatest.Option{metricdatatest.IgnoreTimestamp(), metricdatatest.IgnoreValue()},
-		},
-		{
-			mc: metricdata.Metrics{
+			{
 				Name:        "rpc.client.request.size",
 				Description: "Measures size of RPC request messages (uncompressed).",
 				Unit:        "By",
@@ -726,10 +726,7 @@ func checkClientMetrics(t *testing.T, reader metric.Reader) {
 					},
 				},
 			},
-			opts: []metricdatatest.Option{metricdatatest.IgnoreTimestamp()},
-		},
-		{
-			mc: metricdata.Metrics{
+			{
 				Name:        "rpc.client.response.size",
 				Description: "Measures size of RPC response messages (uncompressed).",
 				Unit:        "By",
@@ -799,10 +796,7 @@ func checkClientMetrics(t *testing.T, reader metric.Reader) {
 					},
 				},
 			},
-			opts: []metricdatatest.Option{metricdatatest.IgnoreTimestamp()},
-		},
-		{
-			mc: metricdata.Metrics{
+			{
 				Name:        "rpc.client.requests_per_rpc",
 				Description: "Measures the number of messages received per RPC. Should be 1 for all non-streaming RPCs.",
 				Unit:        "{count}",
@@ -877,10 +871,7 @@ func checkClientMetrics(t *testing.T, reader metric.Reader) {
 					},
 				},
 			},
-			opts: []metricdatatest.Option{metricdatatest.IgnoreTimestamp()},
-		},
-		{
-			mc: metricdata.Metrics{
+			{
 				Name:        "rpc.client.responses_per_rpc",
 				Description: "Measures the number of messages received per RPC. Should be 1 for all non-streaming RPCs.",
 				Unit:        "{count}",
@@ -955,14 +946,10 @@ func checkClientMetrics(t *testing.T, reader metric.Reader) {
 					},
 				},
 			},
-			opts: []metricdatatest.Option{metricdatatest.IgnoreTimestamp()},
 		},
 	}
-	for i, mc := range rm.ScopeMetrics[0].Metrics {
-		t.Run(mc.Name, func(t *testing.T) {
-			metricdatatest.AssertEqual(t, expectedMetrics[i].mc, mc, expectedMetrics[i].opts...)
-		})
-	}
+	metricdatatest.AssertEqual(t, expectedScopeMetric, rm.ScopeMetrics[0], metricdatatest.IgnoreTimestamp(), metricdatatest.IgnoreValue())
+
 }
 
 func checkServerMetrics(t *testing.T, reader metric.Reader) {
@@ -971,12 +958,14 @@ func checkServerMetrics(t *testing.T, reader metric.Reader) {
 	assert.NoError(t, err)
 	require.Len(t, rm.ScopeMetrics, 1)
 	require.Len(t, rm.ScopeMetrics[0].Metrics, 5)
-	expectedMetrics := []struct {
-		mc   metricdata.Metrics
-		opts []metricdatatest.Option
-	}{
-		{
-			mc: metricdata.Metrics{
+	expectedScopeMetric := metricdata.ScopeMetrics{
+		Scope: instrumentation.Scope{
+			Name:      "go.opentelemetry.io/contrib/instrumentation/google.golang.org/grpc/otelgrpc",
+			Version:   otelgrpc.Version(),
+			SchemaURL: "https://opentelemetry.io/schemas/1.17.0",
+		},
+		Metrics: []metricdata.Metrics{
+			{
 				Name:        "rpc.server.duration",
 				Description: "Measures the duration of inbound RPC.",
 				Unit:        "ms",
@@ -1021,10 +1010,7 @@ func checkServerMetrics(t *testing.T, reader metric.Reader) {
 					},
 				},
 			},
-			opts: []metricdatatest.Option{metricdatatest.IgnoreTimestamp(), metricdatatest.IgnoreValue()},
-		},
-		{
-			mc: metricdata.Metrics{
+			{
 				Name:        "rpc.server.request.size",
 				Description: "Measures size of RPC request messages (uncompressed).",
 				Unit:        "By",
@@ -1094,10 +1080,7 @@ func checkServerMetrics(t *testing.T, reader metric.Reader) {
 					},
 				},
 			},
-			opts: []metricdatatest.Option{metricdatatest.IgnoreTimestamp()},
-		},
-		{
-			mc: metricdata.Metrics{
+			{
 				Name:        "rpc.server.response.size",
 				Description: "Measures size of RPC response messages (uncompressed).",
 				Unit:        "By",
@@ -1167,10 +1150,7 @@ func checkServerMetrics(t *testing.T, reader metric.Reader) {
 					},
 				},
 			},
-			opts: []metricdatatest.Option{metricdatatest.IgnoreTimestamp()},
-		},
-		{
-			mc: metricdata.Metrics{
+			{
 				Name:        "rpc.server.requests_per_rpc",
 				Description: "Measures the number of messages received per RPC. Should be 1 for all non-streaming RPCs.",
 				Unit:        "{count}",
@@ -1245,10 +1225,7 @@ func checkServerMetrics(t *testing.T, reader metric.Reader) {
 					},
 				},
 			},
-			opts: []metricdatatest.Option{metricdatatest.IgnoreTimestamp()},
-		},
-		{
-			mc: metricdata.Metrics{
+			{
 				Name:        "rpc.server.responses_per_rpc",
 				Description: "Measures the number of messages received per RPC. Should be 1 for all non-streaming RPCs.",
 				Unit:        "{count}",
@@ -1323,12 +1300,9 @@ func checkServerMetrics(t *testing.T, reader metric.Reader) {
 					},
 				},
 			},
-			opts: []metricdatatest.Option{metricdatatest.IgnoreTimestamp()},
 		},
 	}
-	for i, mc := range rm.ScopeMetrics[0].Metrics {
-		t.Run(mc.Name, func(t *testing.T) {
-			metricdatatest.AssertEqual(t, expectedMetrics[i].mc, mc, expectedMetrics[i].opts...)
-		})
-	}
+
+	metricdatatest.AssertEqual(t, expectedScopeMetric, rm.ScopeMetrics[0], metricdatatest.IgnoreTimestamp(), metricdatatest.IgnoreValue())
+
 }
