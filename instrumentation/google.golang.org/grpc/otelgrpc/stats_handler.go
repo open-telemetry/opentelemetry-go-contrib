@@ -42,7 +42,7 @@ func NewServerHandler(opts ...Option) stats.Handler {
 	}
 
 	h.tracer = h.config.TracerProvider.Tracer(
-		instrumentationName,
+		ScopeName,
 		trace.WithInstrumentationVersion(SemVersion()),
 	)
 	return h
@@ -94,7 +94,7 @@ func NewClientHandler(opts ...Option) stats.Handler {
 	}
 
 	h.tracer = h.config.TracerProvider.Tracer(
-		instrumentationName,
+		ScopeName,
 		trace.WithInstrumentationVersion(SemVersion()),
 	)
 

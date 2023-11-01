@@ -30,6 +30,9 @@ import (
 	"go.opentelemetry.io/otel/metric"
 )
 
+// ScopeName is the instrumentation scope name.
+const ScopeName string = "go.opentelemetry.io/contrib/instrumentation/host"
+
 // Host reports the work-in-progress conventional host metrics specified by OpenTelemetry.
 type host struct {
 	config config
@@ -102,7 +105,7 @@ func Start(opts ...Option) error {
 	}
 	h := &host{
 		meter: c.MeterProvider.Meter(
-			"go.opentelemetry.io/contrib/instrumentation/host",
+			ScopeName,
 			metric.WithInstrumentationVersion(Version()),
 		),
 		config: c,
