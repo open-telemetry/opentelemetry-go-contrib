@@ -44,6 +44,9 @@ func TestMetricExporterConsole(t *testing.T) {
 	t.Setenv("OTEL_METRICS_EXPORTER", "console")
 	got, err := NewMetricReader(context.Background())
 	assert.NoError(t, err)
+	t.Cleanup(func() {
+		assert.NoError(t, got.Shutdown(context.Background()))
+	})
 	assert.IsType(t, &metric.PeriodicReader{}, got)
 	exporterType := reflect.Indirect(reflect.ValueOf(got)).FieldByName("exporter").Elem().Type()
 	assert.Equal(t, "*stdoutmetric.exporter", exporterType.String())
