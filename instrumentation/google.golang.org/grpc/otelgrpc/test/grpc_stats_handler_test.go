@@ -21,6 +21,7 @@ import (
 	"github.com/stretchr/testify/require"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/codes"
+	"google.golang.org/grpc/test/bufconn"
 
 	"go.opentelemetry.io/contrib/instrumentation/google.golang.org/grpc/otelgrpc"
 	"go.opentelemetry.io/otel/attribute"
@@ -36,14 +37,18 @@ func TestStatsHandler(t *testing.T) {
 	serverSR := tracetest.NewSpanRecorder()
 	serverTP := trace.NewTracerProvider(trace.WithSpanProcessor(serverSR))
 
-	assert.NoError(t, doCalls(
+	listener := bufconn.Listen(bufSize)
+	defer listener.Close()
+	err := newGrpcTest(
+		listener,
 		[]grpc.DialOption{
 			grpc.WithStatsHandler(otelgrpc.NewClientHandler(otelgrpc.WithTracerProvider(clientTP))),
 		},
 		[]grpc.ServerOption{
 			grpc.StatsHandler(otelgrpc.NewServerHandler(otelgrpc.WithTracerProvider(serverTP))),
 		},
-	))
+	)
+	require.NoError(t, err)
 
 	t.Run("ClientSpans", func(t *testing.T) {
 		checkClientSpans(t, clientSR.Ended())
