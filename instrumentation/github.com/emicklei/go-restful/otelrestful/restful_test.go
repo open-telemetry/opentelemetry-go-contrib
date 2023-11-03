@@ -33,8 +33,6 @@ import (
 	oteltrace "go.opentelemetry.io/otel/trace"
 )
 
-const tracerName = "go.opentelemetry.io/contrib/instrumentation/github.com/emicklei/go-restful/otelrestful"
-
 func TestGetSpanNotInstrumented(t *testing.T) {
 	handlerFunc := func(req *restful.Request, resp *restful.Response) {
 		span := oteltrace.SpanFromContext(req.Request.Context())
@@ -69,7 +67,7 @@ func TestPropagationWithGlobalPropagators(t *testing.T) {
 		SpanID:  oteltrace.SpanID{0x01},
 	})
 	ctx = oteltrace.ContextWithRemoteSpanContext(ctx, sc)
-	ctx, _ = provider.Tracer(tracerName).Start(ctx, "test")
+	ctx, _ = provider.Tracer(ScopeName).Start(ctx, "test")
 	otel.GetTextMapPropagator().Inject(ctx, propagation.HeaderCarrier(r.Header))
 
 	handlerFunc := func(req *restful.Request, resp *restful.Response) {
@@ -101,7 +99,7 @@ func TestPropagationWithCustomPropagators(t *testing.T) {
 		SpanID:  oteltrace.SpanID{0x01},
 	})
 	ctx = oteltrace.ContextWithRemoteSpanContext(ctx, sc)
-	ctx, _ = provider.Tracer(tracerName).Start(ctx, "test")
+	ctx, _ = provider.Tracer(ScopeName).Start(ctx, "test")
 	b3.Inject(ctx, propagation.HeaderCarrier(r.Header))
 
 	handlerFunc := func(req *restful.Request, resp *restful.Response) {
