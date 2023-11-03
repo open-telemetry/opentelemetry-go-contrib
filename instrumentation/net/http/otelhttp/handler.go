@@ -121,8 +121,11 @@ func (h *middleware) createMeasures() {
 	)
 	handleErr(err)
 
-	serverLatencyMeasure, err := h.meter.Float64Histogram(ServerLatency, metric.WithUnit("ms"),
-		metric.WithDescription("Measures the duration of HTTP request handling"))
+	serverLatencyMeasure, err := h.meter.Float64Histogram(
+		ServerLatency,
+		metric.WithUnit("ms"),
+		metric.WithDescription("Measures the duration of HTTP request handling"),
+	)
 	handleErr(err)
 
 	h.counters[RequestContentLength] = requestBytesCounter
