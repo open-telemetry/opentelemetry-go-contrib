@@ -114,8 +114,11 @@ func (h *middleware) createMeasures() {
 	)
 	handleErr(err)
 
-	responseBytesCounter, err := h.meter.Int64Counter(ResponseContentLength, metric.WithUnit("By"),
-		metric.WithDescription("Measures the size of HTTP response content length (uncompressed)"))
+	responseBytesCounter, err := h.meter.Int64Counter(
+		ResponseContentLength,
+		metric.WithUnit("By"),
+		metric.WithDescription("Measures the size of HTTP response content length (uncompressed)"),
+	)
 	handleErr(err)
 
 	serverLatencyMeasure, err := h.meter.Float64Histogram(ServerLatency, metric.WithUnit("ms"),
