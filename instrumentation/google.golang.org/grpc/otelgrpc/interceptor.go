@@ -61,7 +61,7 @@ var (
 // UnaryClientInterceptor returns a grpc.UnaryClientInterceptor suitable
 // for use in a grpc.Dial call.
 func UnaryClientInterceptor(opts ...Option) grpc.UnaryClientInterceptor {
-	cfg := newConfig(opts)
+	cfg := newConfig(opts, "client")
 	tracer := cfg.TracerProvider.Tracer(
 		instrumentationName,
 		trace.WithInstrumentationVersion(Version()),
@@ -255,7 +255,7 @@ func (w *clientStream) sendStreamEvent(eventType streamEventType, err error) {
 // StreamClientInterceptor returns a grpc.StreamClientInterceptor suitable
 // for use in a grpc.Dial call.
 func StreamClientInterceptor(opts ...Option) grpc.StreamClientInterceptor {
-	cfg := newConfig(opts)
+	cfg := newConfig(opts, "client")
 	tracer := cfg.TracerProvider.Tracer(
 		instrumentationName,
 		trace.WithInstrumentationVersion(Version()),
@@ -325,7 +325,7 @@ func StreamClientInterceptor(opts ...Option) grpc.StreamClientInterceptor {
 // UnaryServerInterceptor returns a grpc.UnaryServerInterceptor suitable
 // for use in a grpc.NewServer call.
 func UnaryServerInterceptor(opts ...Option) grpc.UnaryServerInterceptor {
-	cfg := newConfig(opts)
+	cfg := newConfig(opts, "server")
 	tracer := cfg.TracerProvider.Tracer(
 		instrumentationName,
 		trace.WithInstrumentationVersion(Version()),
@@ -387,7 +387,7 @@ func UnaryServerInterceptor(opts ...Option) grpc.UnaryServerInterceptor {
 
 		elapsedTime := time.Since(before).Milliseconds()
 		attr = append(attr, grpcStatusCodeAttr)
-		cfg.rpcServerDuration.Record(ctx, elapsedTime, metric.WithAttributes(attr...))
+		cfg.rpcDuration.Record(ctx, float64(elapsedTime), metric.WithAttributes(attr...))
 
 		return resp, err
 	}
@@ -446,7 +446,7 @@ func wrapServerStream(ctx context.Context, ss grpc.ServerStream, cfg *config) *s
 // StreamServerInterceptor returns a grpc.StreamServerInterceptor suitable
 // for use in a grpc.NewServer call.
 func StreamServerInterceptor(opts ...Option) grpc.StreamServerInterceptor {
-	cfg := newConfig(opts)
+	cfg := newConfig(opts, "server")
 	tracer := cfg.TracerProvider.Tracer(
 		instrumentationName,
 		trace.WithInstrumentationVersion(Version()),
