@@ -16,10 +16,8 @@ package xray // import "go.opentelemetry.io/contrib/propagators/aws/xray"
 
 import (
 	"context"
-	crand "crypto/rand"
-	"encoding/binary"
+	"crypto/rand"
 	"encoding/hex"
-	"math/rand"
 	"strconv"
 	"sync"
 	"time"
@@ -31,7 +29,6 @@ import (
 // IDGenerator is used for generating a new traceID and spanID.
 type IDGenerator struct {
 	sync.Mutex
-	randSource *rand.Rand
 }
 
 var _ sdktrace.IDGenerator = &IDGenerator{}
@@ -41,7 +38,7 @@ func (gen *IDGenerator) NewSpanID(ctx context.Context, traceID trace.TraceID) tr
 	gen.Lock()
 	defer gen.Unlock()
 	sid := trace.SpanID{}
-	_, _ = gen.randSource.Read(sid[:])
+	_, _ = rand.Read(sid[:])
 	return sid
 }
 
@@ -57,19 +54,16 @@ func (gen *IDGenerator) NewIDs(ctx context.Context) (trace.TraceID, trace.SpanID
 	tid := trace.TraceID{}
 	currentTime := getCurrentTimeHex()
 	copy(tid[:4], currentTime)
-	_, _ = gen.randSource.Read(tid[4:])
+	_, _ = rand.Read(tid[4:])
 
 	sid := trace.SpanID{}
-	_, _ = gen.randSource.Read(sid[:])
+	_, _ = rand.Read(sid[:])
 	return tid, sid
 }
 
 // NewIDGenerator returns an IDGenerator reference used for sending traces to AWS X-Ray.
 func NewIDGenerator() *IDGenerator {
 	gen := &IDGenerator{}
-	var rngSeed int64
-	_ = binary.Read(crand.Reader, binary.LittleEndian, &rngSeed)
-	gen.randSource = rand.New(rand.NewSource(rngSeed)) //nolint:gosec // Tracked under: https://github.com/open-telemetry/opentelemetry-go-contrib/issues/4449.
 	return gen
 }
 
