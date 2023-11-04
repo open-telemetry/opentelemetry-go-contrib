@@ -949,7 +949,6 @@ func checkClientMetrics(t *testing.T, reader metric.Reader) {
 		},
 	}
 	metricdatatest.AssertEqual(t, expectedScopeMetric, rm.ScopeMetrics[0], metricdatatest.IgnoreTimestamp(), metricdatatest.IgnoreValue())
-
 }
 
 func checkServerMetrics(t *testing.T, reader metric.Reader) {
@@ -1304,5 +1303,4 @@ func checkServerMetrics(t *testing.T, reader metric.Reader) {
 	}
 
 	metricdatatest.AssertEqual(t, expectedScopeMetric, rm.ScopeMetrics[0], metricdatatest.IgnoreTimestamp(), metricdatatest.IgnoreValue())
-
 }
