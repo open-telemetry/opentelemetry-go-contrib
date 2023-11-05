@@ -96,8 +96,8 @@ github.com/ashanbrown/forbidigo v1.6.0 h1:D3aewfM37Yb3pxHujIPSpTf6oQk9sc9WZi8ger
 github.com/ashanbrown/forbidigo v1.6.0/go.mod h1:Y8j9jy9ZYAEHXdu723cUlraTqbzjKF1MUyfOKL+AjcU=
 github.com/ashanbrown/makezero v1.1.1 h1:iCQ87C0V0vSyO+M9E/FZYbu65auqH0lnsOkf5FcB28s=
 github.com/ashanbrown/makezero v1.1.1/go.mod h1:i1bJLCRSCHOcOa9Y6MyF2FTfMZMFdHvxKHxgO5Z1axI=
-github.com/atombender/go-jsonschema v0.14.0 h1:gLzKEXF1Uz6aO7ZV0EALwFcIiP/ZzLQlveisg3U1OOE=
-github.com/atombender/go-jsonschema v0.14.0/go.mod h1:areXJqRRyhijMb0afrbcms1hnL/o8IEwvC/xpMxJBRo=
+github.com/atombender/go-jsonschema v0.14.1 h1:nd2jcgtCJMe16Hl8U4JL3fByimhIGOzZhk3CYOEFVao=
+github.com/atombender/go-jsonschema v0.14.1/go.mod h1:areXJqRRyhijMb0afrbcms1hnL/o8IEwvC/xpMxJBRo=
 github.com/beorn7/perks v0.0.0-20180321164747-3a771d992973/go.mod h1:Dwedo/Wpr24TaqPxmxbtue+5NUziq4I4S80YR8gNf3Q=
 github.com/beorn7/perks v1.0.0/go.mod h1:KWe93zE9D1o94FZ5RNwFwVgaQK1VOXiVxmqh+CedLV8=
 github.com/beorn7/perks v1.0.1 h1:VlbKKnNfV8bJzeqoa4cOKqO6bYr3WgKZxO8Z16+hsOM=

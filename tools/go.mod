@@ -5,7 +5,7 @@ go 1.21
 exclude github.com/blizzy78/varnamelen v0.6.1
 
 require (
-	github.com/atombender/go-jsonschema v0.14.0
+	github.com/atombender/go-jsonschema v0.14.1
 	github.com/client9/misspell v0.3.4
 	github.com/golangci/golangci-lint v1.55.1
 	github.com/jcchavezs/porto v0.5.1
