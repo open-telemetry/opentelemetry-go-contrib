@@ -58,7 +58,7 @@ func newGrpcTest(listener net.Listener, cOpt []grpc.DialOption, sOpt []grpc.Serv
 	}()
 	ctx := context.Background()
 
-	cOpt = append(cOpt, grpc.WithTransportCredentials(insecure.NewCredentials()))
+	cOpt = append(cOpt, grpc.WithBlock(), grpc.WithTransportCredentials(insecure.NewCredentials()))
 
 	if l, ok := listener.(interface{ Dial() (net.Conn, error) }); ok {
 		dial := func(context.Context, string) (net.Conn, error) { return l.Dial() }
