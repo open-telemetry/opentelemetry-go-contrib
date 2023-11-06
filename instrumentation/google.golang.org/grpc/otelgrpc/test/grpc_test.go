@@ -16,6 +16,7 @@ package test
 
 import (
 	"context"
+	"fmt"
 	"net"
 	"strconv"
 	"testing"
@@ -729,7 +730,7 @@ func findScopeMetricAttribute(sm metricdata.ScopeMetrics, key attribute.Key) (at
 				}
 			}
 		default:
-			panic("unexpected data type")
+			panic(fmt.Sprintf("unexpected data type %T - scope %s", d, sm.Scope.Name))
 		}
 	}
 	return attribute.KeyValue{}, false
