@@ -16,7 +16,6 @@ package test
 
 import (
 	"context"
-	"fmt"
 	"net"
 	"strconv"
 	"testing"
@@ -665,12 +664,6 @@ func checkUnaryServerRecords(t *testing.T, reader metric.Reader) {
 	assert.NoError(t, err)
 	require.Len(t, rm.ScopeMetrics, 1)
 
-	// TODO: Remove these #4322
-	address, ok := findScopeMetricAttribute(rm.ScopeMetrics[0], semconv.NetSockPeerAddrKey)
-	assert.True(t, ok)
-	port, ok := findScopeMetricAttribute(rm.ScopeMetrics[0], semconv.NetSockPeerPortKey)
-	assert.True(t, ok)
-
 	want := metricdata.ScopeMetrics{
 		Scope: wantInstrumentationScope,
 		Metrics: []metricdata.Metrics{
@@ -687,8 +680,6 @@ func checkUnaryServerRecords(t *testing.T, reader metric.Reader) {
 								semconv.RPCService("grpc.testing.TestService"),
 								otelgrpc.RPCSystemGRPC,
 								otelgrpc.GRPCStatusCodeKey.Int64(int64(codes.OK)),
-								address,
-								port,
 							),
 						},
 						{
@@ -697,8 +688,6 @@ func checkUnaryServerRecords(t *testing.T, reader metric.Reader) {
 								semconv.RPCService("grpc.testing.TestService"),
 								otelgrpc.RPCSystemGRPC,
 								otelgrpc.GRPCStatusCodeKey.Int64(int64(codes.OK)),
-								address,
-								port,
 							),
 						},
 					},
@@ -714,29 +703,6 @@ func findAttribute(kvs []attribute.KeyValue, key attribute.Key) (attribute.KeyVa
 	for _, kv := range kvs {
 		if kv.Key == key {
 			return kv, true
-		}
-	}
-	return attribute.KeyValue{}, false
-}
-
-func findScopeMetricAttribute(sm metricdata.ScopeMetrics, key attribute.Key) (attribute.KeyValue, bool) {
-	for _, m := range sm.Metrics {
-		// This only needs to cover data types used by the instrumentation.
-		switch d := m.Data.(type) {
-		case metricdata.Histogram[int64]:
-			for _, dp := range d.DataPoints {
-				if kv, ok := findAttribute(dp.Attributes.ToSlice(), key); ok {
-					return kv, true
-				}
-			}
-		case metricdata.Histogram[float64]:
-			for _, dp := range d.DataPoints {
-				if kv, ok := findAttribute(dp.Attributes.ToSlice(), key); ok {
-					return kv, true
-				}
-			}
-		default:
-			panic(fmt.Sprintf("unexpected data type %T - name %s", d, m.Name))
 		}
 	}
 	return attribute.KeyValue{}, false
