@@ -708,26 +708,3 @@ func findAttribute(kvs []attribute.KeyValue, key attribute.Key) (attribute.KeyVa
 	}
 	return attribute.KeyValue{}, false
 }
-
-func findScopeMetricAttribute(sm metricdata.ScopeMetrics, key attribute.Key) (attribute.KeyValue, bool) {
-	for _, m := range sm.Metrics {
-		// This only needs to cover data types used by the instrumentation.
-		switch d := m.Data.(type) {
-		case metricdata.Histogram[int64]:
-			for _, dp := range d.DataPoints {
-				if kv, ok := findAttribute(dp.Attributes.ToSlice(), key); ok {
-					return kv, true
-				}
-			}
-		case metricdata.Histogram[float64]:
-			for _, dp := range d.DataPoints {
-				if kv, ok := findAttribute(dp.Attributes.ToSlice(), key); ok {
-					return kv, true
-				}
-			}
-		default:
-			panic(fmt.Sprintf("unexpected data type %T - name %s", d, m.Name))
-		}
-	}
-	return attribute.KeyValue{}, false
-}
