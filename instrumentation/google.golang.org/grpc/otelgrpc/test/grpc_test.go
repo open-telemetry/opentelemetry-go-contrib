@@ -678,9 +678,9 @@ func checkUnaryServerRecords(t *testing.T, reader metric.Reader) {
 				Name:        "rpc.server.duration",
 				Description: "Measures the duration of inbound RPC.",
 				Unit:        "ms",
-				Data: metricdata.Histogram[int64]{
+				Data: metricdata.Histogram[float64]{
 					Temporality: metricdata.CumulativeTemporality,
-					DataPoints: []metricdata.HistogramDataPoint[int64]{
+					DataPoints: []metricdata.HistogramDataPoint[float64]{
 						{
 							Attributes: attribute.NewSet(
 								semconv.RPCMethod("EmptyCall"),
