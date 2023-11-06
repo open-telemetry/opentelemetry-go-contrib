@@ -49,7 +49,7 @@ var wantInstrumentationScope = instrumentation.Scope{
 const bufSize = 2048
 
 // newGrpcTest creats a grpc server, starts it, and executes all the calls, closes everything down.
-func newGrpcTest(listener net.Listener, cOpt []grpc.DialOption, sOpt []grpc.ServerOption) (err error) {
+func newGrpcTest(listener net.Listener, cOpt []grpc.DialOption, sOpt []grpc.ServerOption) error {
 	grpcServer := grpc.NewServer(sOpt...)
 	pb.RegisterTestServiceServer(grpcServer, interop.NewTestServer())
 	errCh := make(chan error)
