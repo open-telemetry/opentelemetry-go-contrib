@@ -432,15 +432,17 @@ func checkStreamServerSpans(t *testing.T, spans []trace.ReadOnlySpan) {
 			},
 		},
 	}, streamInput.Events())
+	port, ok := findAttribute(streamInput.Attributes(), semconv.NetSockPeerPortKey)
+	assert.True(t, ok)
+
 	assert.ElementsMatch(t, []attribute.KeyValue{
 		semconv.RPCMethod("StreamingInputCall"),
 		semconv.RPCService("grpc.testing.TestService"),
 		otelgrpc.RPCSystemGRPC,
 		otelgrpc.GRPCStatusCodeKey.Int64(int64(codes.OK)),
 		semconv.NetSockPeerAddr("127.0.0.1"),
-	}, filterKVs(streamInput.Attributes(), semconv.NetSockPeerPortKey))
-	// Client port is random
-	assert.True(t, existKVs(streamInput.Attributes(), semconv.NetSockPeerAddrKey))
+		port,
+	}, streamInput.Attributes())
 
 	streamOutput := spans[1]
 	assert.False(t, streamOutput.EndTime().IsZero())
@@ -483,14 +485,18 @@ func checkStreamServerSpans(t *testing.T, spans []trace.ReadOnlySpan) {
 			},
 		},
 	}, streamOutput.Events())
+
+	port, ok = findAttribute(streamOutput.Attributes(), semconv.NetSockPeerPortKey)
+	assert.True(t, ok)
+
 	assert.ElementsMatch(t, []attribute.KeyValue{
 		semconv.RPCMethod("StreamingOutputCall"),
 		semconv.RPCService("grpc.testing.TestService"),
 		otelgrpc.RPCSystemGRPC,
 		otelgrpc.GRPCStatusCodeKey.Int64(int64(codes.OK)),
 		semconv.NetSockPeerAddr("127.0.0.1"),
-	}, filterKVs(streamOutput.Attributes(), semconv.NetSockPeerPortKey))
-	assert.True(t, existKVs(streamOutput.Attributes(), semconv.NetSockPeerPortKey))
+		port,
+	}, streamOutput.Attributes())
 
 	pingPong := spans[2]
 	assert.False(t, pingPong.EndTime().IsZero())
@@ -553,14 +559,16 @@ func checkStreamServerSpans(t *testing.T, spans []trace.ReadOnlySpan) {
 			},
 		},
 	}, pingPong.Events())
+	port, ok = findAttribute(pingPong.Attributes(), semconv.NetSockPeerPortKey)
+	assert.True(t, ok)
 	assert.ElementsMatch(t, []attribute.KeyValue{
 		semconv.RPCMethod("FullDuplexCall"),
 		semconv.RPCService("grpc.testing.TestService"),
 		otelgrpc.RPCSystemGRPC,
 		otelgrpc.GRPCStatusCodeKey.Int64(int64(codes.OK)),
 		semconv.NetSockPeerAddr("127.0.0.1"),
-	}, filterKVs(pingPong.Attributes(), semconv.NetSockPeerPortKey))
-	assert.True(t, existKVs(pingPong.Attributes(), semconv.NetSockPeerPortKey))
+		port,
+	}, pingPong.Attributes())
 }
 
 func checkUnaryServerSpans(t *testing.T, spans []trace.ReadOnlySpan) {
@@ -585,14 +593,17 @@ func checkUnaryServerSpans(t *testing.T, spans []trace.ReadOnlySpan) {
 			},
 		},
 	}, emptySpan.Events())
+
+	port, ok := findAttribute(emptySpan.Attributes(), semconv.NetSockPeerPortKey)
+	assert.True(t, ok)
 	assert.ElementsMatch(t, []attribute.KeyValue{
 		semconv.RPCMethod("EmptyCall"),
 		semconv.RPCService("grpc.testing.TestService"),
 		otelgrpc.RPCSystemGRPC,
 		otelgrpc.GRPCStatusCodeKey.Int64(int64(codes.OK)),
 		semconv.NetSockPeerAddr("127.0.0.1"),
-	}, filterKVs(emptySpan.Attributes(), semconv.NetSockPeerPortKey))
-	assert.True(t, existKVs(emptySpan.Attributes(), semconv.NetSockPeerPortKey))
+		port,
+	}, emptySpan.Attributes())
 
 	largeSpan := spans[1]
 	assert.False(t, largeSpan.EndTime().IsZero())
@@ -615,14 +626,17 @@ func checkUnaryServerSpans(t *testing.T, spans []trace.ReadOnlySpan) {
 			},
 		},
 	}, largeSpan.Events())
+
+	port, ok = findAttribute(largeSpan.Attributes(), semconv.NetSockPeerPortKey)
+	assert.True(t, ok)
 	assert.ElementsMatch(t, []attribute.KeyValue{
 		semconv.RPCMethod("UnaryCall"),
 		semconv.RPCService("grpc.testing.TestService"),
 		otelgrpc.RPCSystemGRPC,
 		otelgrpc.GRPCStatusCodeKey.Int64(int64(codes.OK)),
 		semconv.NetSockPeerAddr("127.0.0.1"),
-	}, filterKVs(largeSpan.Attributes(), semconv.NetSockPeerPortKey))
-	assert.True(t, existKVs(largeSpan.Attributes(), semconv.NetSockPeerPortKey))
+		port,
+	}, largeSpan.Attributes())
 }
 
 func assertEvents(t *testing.T, expected, actual []trace.Event) bool {
@@ -644,6 +658,17 @@ func assertEvents(t *testing.T, expected, actual []trace.Event) bool {
 }
 
 func checkUnaryServerRecords(t *testing.T, reader metric.Reader) {
+	rm := metricdata.ResourceMetrics{}
+	err := reader.Collect(context.Background(), &rm)
+	assert.NoError(t, err)
+	require.Len(t, rm.ScopeMetrics, 1)
+
+	// TODO: Remove these #4322
+	address, ok := findScopeMetricAttribute(rm.ScopeMetrics[0], semconv.NetSockPeerAddrKey)
+	assert.True(t, ok)
+	port, ok := findScopeMetricAttribute(rm.ScopeMetrics[0], semconv.NetSockPeerPortKey)
+	assert.True(t, ok)
+
 	want := metricdata.ScopeMetrics{
 		Scope: wantInstrumentationScope,
 		Metrics: []metricdata.Metrics{
@@ -660,6 +685,8 @@ func checkUnaryServerRecords(t *testing.T, reader metric.Reader) {
 								semconv.RPCService("grpc.testing.TestService"),
 								otelgrpc.RPCSystemGRPC,
 								otelgrpc.GRPCStatusCodeKey.Int64(int64(codes.OK)),
+								address,
+								port,
 							),
 						},
 						{
@@ -668,6 +695,8 @@ func checkUnaryServerRecords(t *testing.T, reader metric.Reader) {
 								semconv.RPCService("grpc.testing.TestService"),
 								otelgrpc.RPCSystemGRPC,
 								otelgrpc.GRPCStatusCodeKey.Int64(int64(codes.OK)),
+								address,
+								port,
 							),
 						},
 					},
@@ -675,33 +704,33 @@ func checkUnaryServerRecords(t *testing.T, reader metric.Reader) {
 			},
 		},
 	}
-	rm := metricdata.ResourceMetrics{}
-	err := reader.Collect(context.Background(), &rm)
-	assert.NoError(t, err)
-	require.Len(t, rm.ScopeMetrics, 1)
+
 	metricdatatest.AssertEqual(t, want, rm.ScopeMetrics[0], metricdatatest.IgnoreTimestamp(), metricdatatest.IgnoreValue())
 }
 
-func existKVs(kvs []attribute.KeyValue, key attribute.Key) bool {
+func findAttribute(kvs []attribute.KeyValue, key attribute.Key) (attribute.KeyValue, bool) {
 	for _, kv := range kvs {
 		if kv.Key == key {
-			return true
+			return kv, true
 		}
 	}
-	return false
+	return attribute.KeyValue{}, false
 }
 
-func filterKVs(kvs []attribute.KeyValue, keys ...attribute.Key) []attribute.KeyValue {
-	keyLookup := make(map[attribute.Key]struct{}, len(keys))
-	for _, key := range keys {
-		keyLookup[key] = struct{}{}
-	}
-
-	output := make([]attribute.KeyValue, 0, len(kvs))
-	for _, kv := range kvs {
-		if _, ok := keyLookup[kv.Key]; !ok {
-			output = append(output, kv)
+func findScopeMetricAttribute(sm metricdata.ScopeMetrics, key attribute.Key) (attribute.KeyValue, bool) {
+	for _, m := range sm.Metrics {
+		// This only needs to cover data types used by the instrumentation.
+		switch d := m.Data.(type) {
+		case metricdata.Histogram[int64]:
+			for _, dp := range d.DataPoints {
+				if kv, ok := findAttribute(dp.Attributes.ToSlice(), key); ok {
+					return kv, true
+				}
+			}
+		default:
+			panic("unexpected data type")
 		}
+
 	}
-	return output
+	return attribute.KeyValue{}, false
 }
