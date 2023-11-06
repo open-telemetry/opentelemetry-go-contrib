@@ -729,8 +729,14 @@ func findScopeMetricAttribute(sm metricdata.ScopeMetrics, key attribute.Key) (at
 					return kv, true
 				}
 			}
+		case metricdata.Histogram[float64]:
+			for _, dp := range d.DataPoints {
+				if kv, ok := findAttribute(dp.Attributes.ToSlice(), key); ok {
+					return kv, true
+				}
+			}
 		default:
-			panic(fmt.Sprintf("unexpected data type %T - scope %s", d, sm.Scope.Name))
+			panic(fmt.Sprintf("unexpected data type %T - name %s", d, m.Name))
 		}
 	}
 	return attribute.KeyValue{}, false
