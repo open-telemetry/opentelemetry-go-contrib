@@ -665,12 +665,6 @@ func checkUnaryServerRecords(t *testing.T, reader metric.Reader) {
 	assert.NoError(t, err)
 	require.Len(t, rm.ScopeMetrics, 1)
 
-	// TODO: Remove these #4322
-	address, ok := findScopeMetricAttribute(rm.ScopeMetrics[0], semconv.NetSockPeerAddrKey)
-	assert.True(t, ok)
-	port, ok := findScopeMetricAttribute(rm.ScopeMetrics[0], semconv.NetSockPeerPortKey)
-	assert.True(t, ok)
-
 	want := metricdata.ScopeMetrics{
 		Scope: wantInstrumentationScope,
 		Metrics: []metricdata.Metrics{
@@ -687,8 +681,6 @@ func checkUnaryServerRecords(t *testing.T, reader metric.Reader) {
 								semconv.RPCService("grpc.testing.TestService"),
 								otelgrpc.RPCSystemGRPC,
 								otelgrpc.GRPCStatusCodeKey.Int64(int64(codes.OK)),
-								address,
-								port,
 							),
 						},
 						{
@@ -697,8 +689,6 @@ func checkUnaryServerRecords(t *testing.T, reader metric.Reader) {
 								semconv.RPCService("grpc.testing.TestService"),
 								otelgrpc.RPCSystemGRPC,
 								otelgrpc.GRPCStatusCodeKey.Int64(int64(codes.OK)),
-								address,
-								port,
 							),
 						},
 					},
