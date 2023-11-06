@@ -24,6 +24,7 @@ import (
 	"github.com/stretchr/testify/require"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/codes"
+	"google.golang.org/grpc/credentials/insecure"
 	"google.golang.org/grpc/interop"
 	pb "google.golang.org/grpc/interop/grpc_testing"
 
@@ -56,7 +57,7 @@ func newGrpcTest(listener net.Listener, cOpt []grpc.DialOption, sOpt []grpc.Serv
 	}()
 	ctx := context.Background()
 
-	cOpt = append(cOpt, grpc.WithInsecure())
+	cOpt = append(cOpt, grpc.WithTransportCredentials(insecure.NewCredentials()))
 
 	if l, ok := listener.(interface{ Dial() (net.Conn, error) }); ok {
 		dial := func(context.Context, string) (net.Conn, error) { return l.Dial() }
@@ -730,7 +731,6 @@ func findScopeMetricAttribute(sm metricdata.ScopeMetrics, key attribute.Key) (at
 		default:
 			panic("unexpected data type")
 		}
-
 	}
 	return attribute.KeyValue{}, false
 }
