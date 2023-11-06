@@ -57,7 +57,6 @@ func (h *serverHandler) TagConn(ctx context.Context, info *stats.ConnTagInfo) co
 	span := trace.SpanFromContext(ctx)
 	attrs := peerAttr(peerFromCtx(ctx))
 	span.SetAttributes(attrs...)
-
 	return ctx
 }
 
