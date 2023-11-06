@@ -30,6 +30,7 @@ import (
 	"go.opentelemetry.io/otel/exporters/otlp/otlpmetric/otlpmetricgrpc"
 	"go.opentelemetry.io/otel/exporters/otlp/otlpmetric/otlpmetrichttp"
 	promexporter "go.opentelemetry.io/otel/exporters/prometheus"
+	"go.opentelemetry.io/otel/exporters/stdout/stdoutmetric"
 	"go.opentelemetry.io/otel/sdk/metric"
 )
 
@@ -49,6 +50,7 @@ func WithFallbackMetricReader(exporter metric.Reader) MetricOption {
 //   - "none" - "no operation" exporter
 //   - "otlp" (default) - OTLP exporter; see [go.opentelemetry.io/otel/exporters/otlp/otlpmetric]
 //   - "prometheus" - Prometheus exporter + HTTP server; see [go.opentelemetry.io/otel/exporters/prometheus]
+//   - "console" - Standard output exporter; see [go.opentelemetry.io/otel/exporters/stdout/stdoutmetric]
 //
 // OTEL_EXPORTER_OTLP_PROTOCOL defines OTLP exporter's transport protocol;
 // supported values:
@@ -105,6 +107,13 @@ func init() {
 		default:
 			return nil, errInvalidOTLPProtocol
 		}
+	})
+	RegisterMetricReader("console", func(ctx context.Context) (metric.Reader, error) {
+		r, err := stdoutmetric.New()
+		if err != nil {
+			return nil, err
+		}
+		return metric.NewPeriodicReader(r), nil
 	})
 	RegisterMetricReader("none", func(ctx context.Context) (metric.Reader, error) {
 		return newNoopMetricReader(), nil
