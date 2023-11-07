@@ -60,6 +60,8 @@ var (
 
 // UnaryClientInterceptor returns a grpc.UnaryClientInterceptor suitable
 // for use in a grpc.Dial call.
+//
+// Deprecated: Use [NewClientHandler] instead.
 func UnaryClientInterceptor(opts ...Option) grpc.UnaryClientInterceptor {
 	cfg := newConfig(opts, "client")
 	tracer := cfg.TracerProvider.Tracer(
@@ -254,6 +256,8 @@ func (w *clientStream) sendStreamEvent(eventType streamEventType, err error) {
 
 // StreamClientInterceptor returns a grpc.StreamClientInterceptor suitable
 // for use in a grpc.Dial call.
+//
+// Deprecated: Use [NewClientHandler] instead.
 func StreamClientInterceptor(opts ...Option) grpc.StreamClientInterceptor {
 	cfg := newConfig(opts, "client")
 	tracer := cfg.TracerProvider.Tracer(
@@ -324,6 +328,8 @@ func StreamClientInterceptor(opts ...Option) grpc.StreamClientInterceptor {
 
 // UnaryServerInterceptor returns a grpc.UnaryServerInterceptor suitable
 // for use in a grpc.NewServer call.
+//
+// Deprecated: Use [NewServerHandler] instead.
 func UnaryServerInterceptor(opts ...Option) grpc.UnaryServerInterceptor {
 	cfg := newConfig(opts, "server")
 	tracer := cfg.TracerProvider.Tracer(
@@ -445,6 +451,8 @@ func wrapServerStream(ctx context.Context, ss grpc.ServerStream, cfg *config) *s
 
 // StreamServerInterceptor returns a grpc.StreamServerInterceptor suitable
 // for use in a grpc.NewServer call.
+//
+// Deprecated: Use [NewServerHandler] instead.
 func StreamServerInterceptor(opts ...Option) grpc.StreamServerInterceptor {
 	cfg := newConfig(opts, "server")
 	tracer := cfg.TracerProvider.Tracer(
