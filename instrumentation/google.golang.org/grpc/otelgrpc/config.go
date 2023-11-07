@@ -73,7 +73,7 @@ func newConfig(opts []Option, role string) *config {
 	}
 
 	c.tracer = c.TracerProvider.Tracer(
-		instrumentationName,
+		ScopeName,
 		trace.WithInstrumentationVersion(SemVersion()),
 	)
 
