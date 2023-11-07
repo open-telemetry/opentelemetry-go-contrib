@@ -133,31 +133,25 @@ func TestInterceptors(t *testing.T) {
 	require.NoError(t, err)
 
 	t.Run("UnaryClientSpans", func(t *testing.T) {
-		require.EventuallyWithT(t, func(c *assert.CollectT) {
-			assert.Len(c, clientUnarySR.Ended(), 2)
-		}, 5*time.Second, 100*time.Millisecond)
 		checkUnaryClientSpans(t, clientUnarySR.Ended(), listener.Addr().String())
 	})
 
 	t.Run("StreamClientSpans", func(t *testing.T) {
+		// StreamClientInterceptor ends the spans asynchronously.
+		// We need to wait for all spans before asserting them.
 		require.EventuallyWithT(t, func(c *assert.CollectT) {
 			assert.Len(c, clientStreamSR.Ended(), 3)
 		}, 5*time.Second, 100*time.Millisecond)
+
 		checkStreamClientSpans(t, clientStreamSR.Ended(), listener.Addr().String())
 	})
 
 	t.Run("UnaryServerSpans", func(t *testing.T) {
-		require.EventuallyWithT(t, func(c *assert.CollectT) {
-			assert.Len(c, serverUnarySR.Ended(), 2)
-		}, 5*time.Second, 100*time.Millisecond)
 		checkUnaryServerSpans(t, serverUnarySR.Ended())
 		checkUnaryServerRecords(t, serverUnaryMetricReader)
 	})
 
 	t.Run("StreamServerSpans", func(t *testing.T) {
-		require.EventuallyWithT(t, func(c *assert.CollectT) {
-			assert.Len(c, serverStreamSR.Ended(), 3)
-		}, 5*time.Second, 100*time.Millisecond)
 		checkStreamServerSpans(t, serverStreamSR.Ended())
 	})
 }
