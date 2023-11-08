@@ -107,16 +107,17 @@ func TestInterceptors(t *testing.T) {
 
 	listener, err := net.Listen("tcp", "127.0.0.1:0")
 	require.NoError(t, err, "failed to open port")
-	err = newGrpcTest(listener, []grpc.DialOption{
-		grpc.WithUnaryInterceptor(otelgrpc.UnaryClientInterceptor(
-			otelgrpc.WithTracerProvider(clientUnaryTP),
-			otelgrpc.WithMessageEvents(otelgrpc.ReceivedEvents, otelgrpc.SentEvents),
-		)),
-		grpc.WithStreamInterceptor(otelgrpc.StreamClientInterceptor(
-			otelgrpc.WithTracerProvider(clientStreamTP),
-			otelgrpc.WithMessageEvents(otelgrpc.ReceivedEvents, otelgrpc.SentEvents),
-		)),
-	},
+	err = newGrpcTest(listener,
+		[]grpc.DialOption{
+			grpc.WithUnaryInterceptor(otelgrpc.UnaryClientInterceptor(
+				otelgrpc.WithTracerProvider(clientUnaryTP),
+				otelgrpc.WithMessageEvents(otelgrpc.ReceivedEvents, otelgrpc.SentEvents),
+			)),
+			grpc.WithStreamInterceptor(otelgrpc.StreamClientInterceptor(
+				otelgrpc.WithTracerProvider(clientStreamTP),
+				otelgrpc.WithMessageEvents(otelgrpc.ReceivedEvents, otelgrpc.SentEvents),
+			)),
+		},
 		[]grpc.ServerOption{
 			grpc.UnaryInterceptor(otelgrpc.UnaryServerInterceptor(
 				otelgrpc.WithTracerProvider(serverUnaryTP),
