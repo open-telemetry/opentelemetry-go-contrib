@@ -29,7 +29,8 @@ import (
 )
 
 const (
-	tracerName = "go.opentelemetry.io/contrib/instrumentation/github.com/aws/aws-lambda-go/otellambda"
+	// ScopeName is the instrumentation scope name.
+	ScopeName = "go.opentelemetry.io/contrib/instrumentation/github.com/aws/aws-lambda-go/otellambda"
 )
 
 var errorLogger = log.New(log.Writer(), "OTel Lambda Error: ", 0)
@@ -53,7 +54,7 @@ func newInstrumentor(opts ...Option) instrumentor {
 
 	return instrumentor{
 		configuration: cfg,
-		tracer:        cfg.TracerProvider.Tracer(tracerName, trace.WithInstrumentationVersion(Version())),
+		tracer:        cfg.TracerProvider.Tracer(ScopeName, trace.WithInstrumentationVersion(Version())),
 		resAttrs:      []attribute.KeyValue{},
 	}
 }
