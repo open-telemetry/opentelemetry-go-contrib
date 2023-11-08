@@ -45,8 +45,6 @@ var wantInstrumentationScope = instrumentation.Scope{
 	Version:   otelgrpc.Version(),
 }
 
-const bufSize = 2048
-
 // newGrpcTest creats a grpc server, starts it, and executes all the calls, closes everything down.
 func newGrpcTest(listener net.Listener, cOpt []grpc.DialOption, sOpt []grpc.ServerOption) error {
 	grpcServer := grpc.NewServer(sOpt...)
