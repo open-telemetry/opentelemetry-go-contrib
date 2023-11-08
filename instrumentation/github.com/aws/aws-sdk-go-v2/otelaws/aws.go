@@ -31,7 +31,8 @@ import (
 )
 
 const (
-	tracerName = "go.opentelemetry.io/contrib/instrumentation/github.com/aws/aws-sdk-go-v2/otelaws"
+	// ScopeName is the instrumentation scope name.
+	ScopeName = "go.opentelemetry.io/contrib/instrumentation/github.com/aws/aws-sdk-go-v2/otelaws"
 )
 
 type spanTimestampKey struct{}
@@ -160,7 +161,7 @@ func AppendMiddlewares(apiOptions *[]func(*middleware.Stack) error, opts ...Opti
 	}
 
 	m := otelMiddlewares{
-		tracer: cfg.TracerProvider.Tracer(tracerName,
+		tracer: cfg.TracerProvider.Tracer(ScopeName,
 			trace.WithInstrumentationVersion(Version())),
 		propagator:      cfg.TextMapPropagator,
 		attributeSetter: cfg.AttributeSetter,
