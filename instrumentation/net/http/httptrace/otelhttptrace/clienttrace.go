@@ -29,6 +29,8 @@ import (
 	"go.opentelemetry.io/otel/trace"
 )
 
+const ScopeName = "go.opentelemetry.io/otel/instrumentation/httptrace"
+
 // HTTP attributes.
 var (
 	HTTPStatus                 = attribute.Key("http.status")
@@ -169,7 +171,7 @@ func NewClientTrace(ctx context.Context, opts ...ClientTraceOption) *httptrace.C
 	}
 
 	ct.tr = ct.tracerProvider.Tracer(
-		"go.opentelemetry.io/otel/instrumentation/httptrace",
+		ScopeName,
 		trace.WithInstrumentationVersion(Version()),
 	)
 
