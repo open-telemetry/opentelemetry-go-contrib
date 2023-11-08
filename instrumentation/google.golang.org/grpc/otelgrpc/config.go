@@ -145,6 +145,8 @@ func (o tracerProviderOption) apply(c *config) {
 }
 
 // WithInterceptorFilter returns an Option to use the request filter.
+//
+// Deprecated: Use stats handlers instead.
 func WithInterceptorFilter(f Filter) Option {
 	return interceptorFilterOption{f: f}
 }
