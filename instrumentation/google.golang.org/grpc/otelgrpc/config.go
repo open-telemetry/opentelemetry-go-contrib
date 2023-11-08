@@ -24,8 +24,8 @@ import (
 )
 
 const (
-	// instrumentationName is the name of this instrumentation package.
-	instrumentationName = "go.opentelemetry.io/contrib/instrumentation/google.golang.org/grpc/otelgrpc"
+	// ScopeName is the instrumentation scope name.
+	ScopeName = "go.opentelemetry.io/contrib/instrumentation/google.golang.org/grpc/otelgrpc"
 	// GRPCStatusCodeKey is convention for numeric status code of a gRPC request.
 	GRPCStatusCodeKey = attribute.Key("rpc.grpc.status_code")
 )
@@ -73,12 +73,12 @@ func newConfig(opts []Option, role string) *config {
 	}
 
 	c.tracer = c.TracerProvider.Tracer(
-		instrumentationName,
+		ScopeName,
 		trace.WithInstrumentationVersion(SemVersion()),
 	)
 
 	c.meter = c.MeterProvider.Meter(
-		instrumentationName,
+		ScopeName,
 		metric.WithInstrumentationVersion(Version()),
 		metric.WithSchemaURL(semconv.SchemaURL),
 	)
