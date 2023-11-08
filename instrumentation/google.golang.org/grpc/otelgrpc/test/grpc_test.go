@@ -19,7 +19,6 @@ import (
 	"net"
 	"strconv"
 	"testing"
-	"time"
 
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
@@ -137,12 +136,6 @@ func TestInterceptors(t *testing.T) {
 	})
 
 	t.Run("StreamClientSpans", func(t *testing.T) {
-		// StreamClientInterceptor ends the spans asynchronously.
-		// We need to wait for all spans before asserting them.
-		require.EventuallyWithT(t, func(c *assert.CollectT) {
-			assert.Len(c, clientStreamSR.Ended(), 3)
-		}, 5*time.Second, 100*time.Millisecond)
-
 		checkStreamClientSpans(t, clientStreamSR.Ended(), listener.Addr().String())
 	})
 
