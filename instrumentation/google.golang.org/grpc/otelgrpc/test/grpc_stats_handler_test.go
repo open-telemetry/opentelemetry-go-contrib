@@ -52,10 +52,18 @@ func TestStatsHandler(t *testing.T) {
 	err = newGrpcTest(
 		listener,
 		[]grpc.DialOption{
-			grpc.WithStatsHandler(otelgrpc.NewClientHandler(otelgrpc.WithTracerProvider(clientTP), otelgrpc.WithMeterProvider(clientMP))),
+			grpc.WithStatsHandler(otelgrpc.NewClientHandler(
+				otelgrpc.WithTracerProvider(clientTP),
+				otelgrpc.WithMeterProvider(clientMP),
+				otelgrpc.WithMessageEvents(otelgrpc.ReceivedEvents, otelgrpc.SentEvents)),
+			),
 		},
 		[]grpc.ServerOption{
-			grpc.StatsHandler(otelgrpc.NewServerHandler(otelgrpc.WithTracerProvider(serverTP), otelgrpc.WithMeterProvider(serverMP))),
+			grpc.StatsHandler(otelgrpc.NewServerHandler(
+				otelgrpc.WithTracerProvider(serverTP),
+				otelgrpc.WithMeterProvider(serverMP),
+				otelgrpc.WithMessageEvents(otelgrpc.ReceivedEvents, otelgrpc.SentEvents)),
+			),
 		},
 	)
 	require.NoError(t, err)
