@@ -32,7 +32,7 @@ import (
 
 const (
 	// ScopeName is the instrumentation scope name.
-	ScopeName string = "go.opentelemetry.io/contrib/instrumentation/github.com/aws/aws-sdk-go-v2/otelaws"
+	ScopeName = "go.opentelemetry.io/contrib/instrumentation/github.com/aws/aws-sdk-go-v2/otelaws"
 )
 
 type spanTimestampKey struct{}

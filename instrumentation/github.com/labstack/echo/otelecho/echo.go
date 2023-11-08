@@ -32,7 +32,7 @@ import (
 const (
 	tracerKey = "otel-go-contrib-tracer-labstack-echo"
 	// ScopeName is the instrumentation scope name.
-	ScopeName string = "go.opentelemetry.io/contrib/instrumentation/github.com/labstack/echo/otelecho"
+	ScopeName = "go.opentelemetry.io/contrib/instrumentation/github.com/labstack/echo/otelecho"
 )
 
 // Middleware returns echo middleware which will trace incoming requests.

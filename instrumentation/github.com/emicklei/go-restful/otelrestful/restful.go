@@ -25,7 +25,7 @@ import (
 )
 
 // ScopeName is the instrumentation scope name.
-const ScopeName string = "go.opentelemetry.io/contrib/instrumentation/github.com/emicklei/go-restful/otelrestful"
+const ScopeName = "go.opentelemetry.io/contrib/instrumentation/github.com/emicklei/go-restful/otelrestful"
 
 // OTelFilter returns a restful.FilterFunction which will trace an incoming request.
 //

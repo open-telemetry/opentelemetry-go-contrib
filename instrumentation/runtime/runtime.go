@@ -25,7 +25,7 @@ import (
 )
 
 // ScopeName is the instrumentation scope name.
-const ScopeName string = "go.opentelemetry.io/contrib/instrumentation/runtime"
+const ScopeName = "go.opentelemetry.io/contrib/instrumentation/runtime"
 
 // Runtime reports the work-in-progress conventional runtime metrics specified by OpenTelemetry.
 type runtime struct {

@@ -26,7 +26,7 @@ import (
 )
 
 // ScopeName is the instrumentation scope name.
-const ScopeName string = "go.opentelemetry.io/contrib/instrumentation/net/http/otelhttp"
+const ScopeName = "go.opentelemetry.io/contrib/instrumentation/net/http/otelhttp"
 
 // config represents the configuration options available for the http.Handler
 // and http.Transport types.

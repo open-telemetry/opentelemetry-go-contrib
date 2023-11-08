@@ -20,7 +20,7 @@ import (
 )
 
 // ScopeName is the instrumentation scope name.
-const ScopeName string = "go.opentelemetry.io/contrib/instrumentation/go.mongodb.org/mongo-driver/mongo/otelmongo"
+const ScopeName = "go.opentelemetry.io/contrib/instrumentation/go.mongodb.org/mongo-driver/mongo/otelmongo"
 
 // config is used to configure the mongo tracer.
 type config struct {

@@ -33,7 +33,7 @@ import (
 const (
 	tracerKey = "otel-go-contrib-tracer"
 	// ScopeName is the instrumentation scope name.
-	ScopeName string = "go.opentelemetry.io/contrib/instrumentation/github.com/gin-gonic/gin/otelgin"
+	ScopeName = "go.opentelemetry.io/contrib/instrumentation/github.com/gin-gonic/gin/otelgin"
 )
 
 // Middleware returns middleware that will trace incoming requests.

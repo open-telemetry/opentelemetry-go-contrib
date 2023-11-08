@@ -30,7 +30,7 @@ import (
 
 const (
 	// ScopeName is the instrumentation scope name.
-	ScopeName string = "go.opentelemetry.io/contrib/instrumentation/github.com/aws/aws-lambda-go/otellambda"
+	ScopeName = "go.opentelemetry.io/contrib/instrumentation/github.com/aws/aws-lambda-go/otellambda"
 )
 
 var errorLogger = log.New(log.Writer(), "OTel Lambda Error: ", 0)

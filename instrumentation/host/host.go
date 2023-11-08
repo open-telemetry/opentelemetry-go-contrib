@@ -31,7 +31,7 @@ import (
 )
 
 // ScopeName is the instrumentation scope name.
-const ScopeName string = "go.opentelemetry.io/contrib/instrumentation/host"
+const ScopeName = "go.opentelemetry.io/contrib/instrumentation/host"
 
 // Host reports the work-in-progress conventional host metrics specified by OpenTelemetry.
 type host struct {

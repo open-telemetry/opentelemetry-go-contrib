@@ -31,7 +31,7 @@ import (
 
 const (
 	// ScopeName is the instrumentation scope name.
-	ScopeName string = "go.opentelemetry.io/contrib/instrumentation/github.com/gorilla/mux/otelmux"
+	ScopeName = "go.opentelemetry.io/contrib/instrumentation/github.com/gorilla/mux/otelmux"
 )
 
 // Middleware sets up a handler to start tracing the incoming
