@@ -153,28 +153,32 @@ func (c *config) handleRPC(ctx context.Context, rs stats.RPCStats) {
 			c.rpcRequestSize.Record(wctx, int64(rs.Length), metric.WithAttributes(metricAttrs...))
 		}
 
-		span.AddEvent("message",
-			trace.WithAttributes(
-				semconv.MessageTypeReceived,
-				semconv.MessageIDKey.Int64(messageId),
-				semconv.MessageCompressedSizeKey.Int(rs.CompressedLength),
-				semconv.MessageUncompressedSizeKey.Int(rs.Length),
-			),
-		)
+		if c.ReceivedEvent {
+			span.AddEvent("message",
+				trace.WithAttributes(
+					semconv.MessageTypeReceived,
+					semconv.MessageIDKey.Int64(messageId),
+					semconv.MessageCompressedSizeKey.Int(rs.CompressedLength),
+					semconv.MessageUncompressedSizeKey.Int(rs.Length),
+				),
+			)
+		}
 	case *stats.OutPayload:
 		if gctx != nil {
 			messageId = atomic.AddInt64(&gctx.messagesSent, 1)
 			c.rpcResponseSize.Record(wctx, int64(rs.Length), metric.WithAttributes(metricAttrs...))
 		}
 
-		span.AddEvent("message",
-			trace.WithAttributes(
-				semconv.MessageTypeSent,
-				semconv.MessageIDKey.Int64(messageId),
-				semconv.MessageCompressedSizeKey.Int(rs.CompressedLength),
-				semconv.MessageUncompressedSizeKey.Int(rs.Length),
-			),
-		)
+		if c.SentEvent {
+			span.AddEvent("message",
+				trace.WithAttributes(
+					semconv.MessageTypeSent,
+					semconv.MessageIDKey.Int64(messageId),
+					semconv.MessageCompressedSizeKey.Int(rs.CompressedLength),
+					semconv.MessageUncompressedSizeKey.Int(rs.Length),
+				),
+			)
+		}
 	case *stats.OutTrailer:
 	case *stats.End:
 		var rpcStatusAttr attribute.KeyValue
