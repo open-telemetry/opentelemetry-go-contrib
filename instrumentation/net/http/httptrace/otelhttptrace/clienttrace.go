@@ -29,6 +29,7 @@ import (
 	"go.opentelemetry.io/otel/trace"
 )
 
+// ScopeName is the instrumentation scope name.
 const ScopeName = "go.opentelemetry.io/otel/instrumentation/httptrace"
 
 // HTTP attributes.
