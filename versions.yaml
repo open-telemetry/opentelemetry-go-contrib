@@ -83,8 +83,11 @@ module-sets:
       - go.opentelemetry.io/contrib/samplers/jaegerremote
       - go.opentelemetry.io/contrib/samplers/jaegerremote/example
       - go.opentelemetry.io/contrib/samplers/probability/consistent
+  experimental-config:
+    version: v0.1.0
+    modules:
+      - go.opentelemetry.io/contrib/config
 excluded-modules:
-  - go.opentelemetry.io/contrib/config
   - go.opentelemetry.io/contrib/instrgen
   - go.opentelemetry.io/contrib/instrgen/driver
   - go.opentelemetry.io/contrib/instrgen/testdata/interface
