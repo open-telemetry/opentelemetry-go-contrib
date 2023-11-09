@@ -46,8 +46,6 @@ var wantInstrumentationScope = instrumentation.Scope{
 	Version:   otelgrpc.Version(),
 }
 
-const bufSize = 2048
-
 // newGrpcTest creats a grpc server, starts it, and executes all the calls, closes everything down.
 func newGrpcTest(listener net.Listener, cOpt []grpc.DialOption, sOpt []grpc.ServerOption) error {
 	grpcServer := grpc.NewServer(sOpt...)
@@ -108,18 +106,19 @@ func TestInterceptors(t *testing.T) {
 
 	listener, err := net.Listen("tcp", "127.0.0.1:0")
 	require.NoError(t, err, "failed to open port")
-	err = newGrpcTest(listener, []grpc.DialOption{
-		//nolint:staticcheck // Interceptors are deprecated and will be removed in the next release.
-		grpc.WithUnaryInterceptor(otelgrpc.UnaryClientInterceptor(
-			otelgrpc.WithTracerProvider(clientUnaryTP),
-			otelgrpc.WithMessageEvents(otelgrpc.ReceivedEvents, otelgrpc.SentEvents),
-		)),
-		//nolint:staticcheck // Interceptors are deprecated and will be removed in the next release.
-		grpc.WithStreamInterceptor(otelgrpc.StreamClientInterceptor(
-			otelgrpc.WithTracerProvider(clientStreamTP),
-			otelgrpc.WithMessageEvents(otelgrpc.ReceivedEvents, otelgrpc.SentEvents),
-		)),
-	},
+	err = newGrpcTest(listener,
+		[]grpc.DialOption{
+			//nolint:staticcheck // Interceptors are deprecated and will be removed in the next release.
+			grpc.WithUnaryInterceptor(otelgrpc.UnaryClientInterceptor(
+				otelgrpc.WithTracerProvider(clientUnaryTP),
+				otelgrpc.WithMessageEvents(otelgrpc.ReceivedEvents, otelgrpc.SentEvents),
+			)),
+			//nolint:staticcheck // Interceptors are deprecated and will be removed in the next release.
+			grpc.WithStreamInterceptor(otelgrpc.StreamClientInterceptor(
+				otelgrpc.WithTracerProvider(clientStreamTP),
+				otelgrpc.WithMessageEvents(otelgrpc.ReceivedEvents, otelgrpc.SentEvents),
+			)),
+		},
 		[]grpc.ServerOption{
 			//nolint:staticcheck // Interceptors are deprecated and will be removed in the next release.
 			grpc.UnaryInterceptor(otelgrpc.UnaryServerInterceptor(
