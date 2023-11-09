@@ -118,11 +118,13 @@ func TestInterceptors(t *testing.T) {
 			)),
 		},
 		[]grpc.ServerOption{
+			//nolint:staticcheck // Interceptors are deprecated and will be removed in the next release.
 			grpc.UnaryInterceptor(otelgrpc.UnaryServerInterceptor(
 				otelgrpc.WithTracerProvider(serverUnaryTP),
 				otelgrpc.WithMeterProvider(serverUnaryMP),
 				otelgrpc.WithMessageEvents(otelgrpc.ReceivedEvents, otelgrpc.SentEvents),
 			)),
+			//nolint:staticcheck // Interceptors are deprecated and will be removed in the next release.
 			grpc.StreamInterceptor(otelgrpc.StreamServerInterceptor(
 				otelgrpc.WithTracerProvider(serverStreamTP),
 				otelgrpc.WithMessageEvents(otelgrpc.ReceivedEvents, otelgrpc.SentEvents),

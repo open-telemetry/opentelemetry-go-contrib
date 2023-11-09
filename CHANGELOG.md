@@ -28,6 +28,7 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 ### Deprecated
 
 - In `go.opentelemetry.io/contrib/exporters/autoexport`, `Option` was renamed to `SpanOption`. The old name is deprecated but continues to be supported as an alias. (#4229)
+- The interceptors (`UnaryClientInterceptor`, `StreamClientInterceptor`, `UnaryServerInterceptor`, `StreamServerInterceptor`, `WithInterceptorFilter`) are deprecated. Use stats handlers (`NewClientHandler`, `NewServerHandler`) instead. (#4534)
 
 ### Fixed
 
