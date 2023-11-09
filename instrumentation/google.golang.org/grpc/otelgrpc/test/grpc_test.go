@@ -108,10 +108,12 @@ func TestInterceptors(t *testing.T) {
 	require.NoError(t, err, "failed to open port")
 	err = newGrpcTest(listener,
 		[]grpc.DialOption{
+			//nolint:staticcheck // Interceptors are deprecated and will be removed in the next release.
 			grpc.WithUnaryInterceptor(otelgrpc.UnaryClientInterceptor(
 				otelgrpc.WithTracerProvider(clientUnaryTP),
 				otelgrpc.WithMessageEvents(otelgrpc.ReceivedEvents, otelgrpc.SentEvents),
 			)),
+			//nolint:staticcheck // Interceptors are deprecated and will be removed in the next release.
 			grpc.WithStreamInterceptor(otelgrpc.StreamClientInterceptor(
 				otelgrpc.WithTracerProvider(clientStreamTP),
 				otelgrpc.WithMessageEvents(otelgrpc.ReceivedEvents, otelgrpc.SentEvents),
