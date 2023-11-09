@@ -41,6 +41,7 @@ type gRPCContext struct {
 
 type serverHandler struct {
 	*config
+	peerAttr []attribute.KeyValue
 }
 
 // NewServerHandler creates a stats.Handler for gRPC server.
@@ -54,9 +55,7 @@ func NewServerHandler(opts ...Option) stats.Handler {
 
 // TagConn can attach some information to the given context.
 func (h *serverHandler) TagConn(ctx context.Context, info *stats.ConnTagInfo) context.Context {
-	span := trace.SpanFromContext(ctx)
-	attrs := peerAttr(peerFromCtx(ctx))
-	span.SetAttributes(attrs...)
+	h.peerAttr = peerAttr(info.RemoteAddr.String())
 	return ctx
 }
 
@@ -75,6 +74,7 @@ func (h *serverHandler) TagRPC(ctx context.Context, info *stats.RPCTagInfo) cont
 		name,
 		trace.WithSpanKind(trace.SpanKindServer),
 		trace.WithAttributes(attrs...),
+		trace.WithAttributes(h.peerAttr...),
 	)
 
 	gctx := gRPCContext{
@@ -90,6 +90,7 @@ func (h *serverHandler) HandleRPC(ctx context.Context, rs stats.RPCStats) {
 
 type clientHandler struct {
 	*config
+	peerAttr []attribute.KeyValue
 }
 
 // NewClientHandler creates a stats.Handler for gRPC client.
@@ -110,6 +111,7 @@ func (h *clientHandler) TagRPC(ctx context.Context, info *stats.RPCTagInfo) cont
 		name,
 		trace.WithSpanKind(trace.SpanKindClient),
 		trace.WithAttributes(attrs...),
+		trace.WithAttributes(h.peerAttr...),
 	)
 
 	gctx := gRPCContext{
@@ -125,10 +127,8 @@ func (h *clientHandler) HandleRPC(ctx context.Context, rs stats.RPCStats) {
 }
 
 // TagConn can attach some information to the given context.
-func (h *clientHandler) TagConn(ctx context.Context, cti *stats.ConnTagInfo) context.Context {
-	span := trace.SpanFromContext(ctx)
-	attrs := peerAttr(cti.RemoteAddr.String())
-	span.SetAttributes(attrs...)
+func (h *clientHandler) TagConn(ctx context.Context, info *stats.ConnTagInfo) context.Context {
+	h.peerAttr = peerAttr(info.RemoteAddr.String())
 	return ctx
 }
 

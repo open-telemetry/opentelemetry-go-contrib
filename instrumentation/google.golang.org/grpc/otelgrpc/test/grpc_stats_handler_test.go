@@ -17,6 +17,7 @@ package test
 import (
 	"context"
 	"net"
+	"strconv"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
@@ -69,7 +70,7 @@ func TestStatsHandler(t *testing.T) {
 	require.NoError(t, err)
 
 	t.Run("ClientSpans", func(t *testing.T) {
-		checkClientSpans(t, clientSR.Ended())
+		checkClientSpans(t, clientSR.Ended(), listener.Addr().String())
 	})
 
 	t.Run("ClientMetrics", func(t *testing.T) {
@@ -85,8 +86,13 @@ func TestStatsHandler(t *testing.T) {
 	})
 }
 
-func checkClientSpans(t *testing.T, spans []trace.ReadOnlySpan) {
+func checkClientSpans(t *testing.T, spans []trace.ReadOnlySpan, addr string) {
 	require.Len(t, spans, 5)
+
+	host, p, err := net.SplitHostPort(addr)
+	require.NoError(t, err)
+	port, err := strconv.Atoi(p)
+	require.NoError(t, err)
 
 	emptySpan := spans[0]
 	assert.False(t, emptySpan.EndTime().IsZero())
@@ -116,6 +122,8 @@ func checkClientSpans(t *testing.T, spans []trace.ReadOnlySpan) {
 		semconv.RPCServiceKey.String("grpc.testing.TestService"),
 		otelgrpc.RPCSystemGRPC,
 		otelgrpc.GRPCStatusCodeKey.Int64(int64(codes.OK)),
+		semconv.NetSockPeerAddr(host),
+		semconv.NetSockPeerPort(port),
 	}, emptySpan.Attributes())
 
 	largeSpan := spans[1]
@@ -146,6 +154,8 @@ func checkClientSpans(t *testing.T, spans []trace.ReadOnlySpan) {
 		semconv.RPCServiceKey.String("grpc.testing.TestService"),
 		otelgrpc.RPCSystemGRPC,
 		otelgrpc.GRPCStatusCodeKey.Int64(int64(codes.OK)),
+		semconv.NetSockPeerAddr(host),
+		semconv.NetSockPeerPort(port),
 	}, largeSpan.Attributes())
 
 	streamInput := spans[2]
@@ -204,6 +214,8 @@ func checkClientSpans(t *testing.T, spans []trace.ReadOnlySpan) {
 		semconv.RPCServiceKey.String("grpc.testing.TestService"),
 		otelgrpc.RPCSystemGRPC,
 		otelgrpc.GRPCStatusCodeKey.Int64(int64(codes.OK)),
+		semconv.NetSockPeerAddr(host),
+		semconv.NetSockPeerPort(port),
 	}, streamInput.Attributes())
 
 	streamOutput := spans[3]
@@ -261,6 +273,8 @@ func checkClientSpans(t *testing.T, spans []trace.ReadOnlySpan) {
 		semconv.RPCServiceKey.String("grpc.testing.TestService"),
 		otelgrpc.RPCSystemGRPC,
 		otelgrpc.GRPCStatusCodeKey.Int64(int64(codes.OK)),
+		semconv.NetSockPeerAddr(host),
+		semconv.NetSockPeerPort(port),
 	}, streamOutput.Attributes())
 
 	pingPong := spans[4]
@@ -345,6 +359,8 @@ func checkClientSpans(t *testing.T, spans []trace.ReadOnlySpan) {
 		semconv.RPCServiceKey.String("grpc.testing.TestService"),
 		otelgrpc.RPCSystemGRPC,
 		otelgrpc.GRPCStatusCodeKey.Int64(int64(codes.OK)),
+		semconv.NetSockPeerAddr(host),
+		semconv.NetSockPeerPort(port),
 	}, pingPong.Attributes())
 }
 
@@ -374,11 +390,15 @@ func checkServerSpans(t *testing.T, spans []trace.ReadOnlySpan) {
 			},
 		},
 	}, emptySpan.Events())
+	port, ok := findAttribute(emptySpan.Attributes(), semconv.NetSockPeerPortKey)
+	assert.True(t, ok)
 	assert.ElementsMatch(t, []attribute.KeyValue{
 		semconv.RPCMethodKey.String("EmptyCall"),
 		semconv.RPCServiceKey.String("grpc.testing.TestService"),
 		otelgrpc.RPCSystemGRPC,
 		otelgrpc.GRPCStatusCodeKey.Int64(int64(codes.OK)),
+		semconv.NetSockPeerAddr("127.0.0.1"),
+		port,
 	}, emptySpan.Attributes())
 
 	largeSpan := spans[1]
@@ -404,11 +424,15 @@ func checkServerSpans(t *testing.T, spans []trace.ReadOnlySpan) {
 			},
 		},
 	}, largeSpan.Events())
+	port, ok = findAttribute(largeSpan.Attributes(), semconv.NetSockPeerPortKey)
+	assert.True(t, ok)
 	assert.ElementsMatch(t, []attribute.KeyValue{
 		semconv.RPCMethodKey.String("UnaryCall"),
 		semconv.RPCServiceKey.String("grpc.testing.TestService"),
 		otelgrpc.RPCSystemGRPC,
 		otelgrpc.GRPCStatusCodeKey.Int64(int64(codes.OK)),
+		semconv.NetSockPeerAddr("127.0.0.1"),
+		port,
 	}, largeSpan.Attributes())
 
 	streamInput := spans[2]
@@ -462,11 +486,15 @@ func checkServerSpans(t *testing.T, spans []trace.ReadOnlySpan) {
 		},
 		// client does not record an event for the server response.
 	}, streamInput.Events())
+	port, ok = findAttribute(streamInput.Attributes(), semconv.NetSockPeerPortKey)
+	assert.True(t, ok)
 	assert.ElementsMatch(t, []attribute.KeyValue{
 		semconv.RPCMethodKey.String("StreamingInputCall"),
 		semconv.RPCServiceKey.String("grpc.testing.TestService"),
 		otelgrpc.RPCSystemGRPC,
 		otelgrpc.GRPCStatusCodeKey.Int64(int64(codes.OK)),
+		semconv.NetSockPeerAddr("127.0.0.1"),
+		port,
 	}, streamInput.Attributes())
 
 	streamOutput := spans[3]
@@ -519,11 +547,15 @@ func checkServerSpans(t *testing.T, spans []trace.ReadOnlySpan) {
 			},
 		},
 	}, streamOutput.Events())
+	port, ok = findAttribute(streamOutput.Attributes(), semconv.NetSockPeerPortKey)
+	assert.True(t, ok)
 	assert.ElementsMatch(t, []attribute.KeyValue{
 		semconv.RPCMethodKey.String("StreamingOutputCall"),
 		semconv.RPCServiceKey.String("grpc.testing.TestService"),
 		otelgrpc.RPCSystemGRPC,
 		otelgrpc.GRPCStatusCodeKey.Int64(int64(codes.OK)),
+		semconv.NetSockPeerAddr("127.0.0.1"),
+		port,
 	}, streamOutput.Attributes())
 
 	pingPong := spans[4]
@@ -603,11 +635,15 @@ func checkServerSpans(t *testing.T, spans []trace.ReadOnlySpan) {
 			},
 		},
 	}, pingPong.Events())
+	port, ok = findAttribute(pingPong.Attributes(), semconv.NetSockPeerPortKey)
+	assert.True(t, ok)
 	assert.ElementsMatch(t, []attribute.KeyValue{
 		semconv.RPCMethodKey.String("FullDuplexCall"),
 		semconv.RPCServiceKey.String("grpc.testing.TestService"),
 		otelgrpc.RPCSystemGRPC,
 		otelgrpc.GRPCStatusCodeKey.Int64(int64(codes.OK)),
+		semconv.NetSockPeerAddr("127.0.0.1"),
+		port,
 	}, pingPong.Attributes())
 }
 
