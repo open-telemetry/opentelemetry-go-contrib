@@ -33,6 +33,8 @@ func (s *SDK) MeterProvider() metric.MeterProvider {
 }
 
 // NewSDK creates SDK providers based on the configuration model.
+//
+// Caution: The implementation only returns noop providers.
 func NewSDK(opts ...ConfigurationOption) (SDK, error) {
 	o := configOptions{}
 	for _, opt := range opts {
