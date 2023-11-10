@@ -72,3 +72,10 @@ func WithOpenTelemetryConfiguration(cfg OpenTelemetryConfiguration) Configuratio
 		return c
 	})
 }
+
+// TODO: implement parsing functionality:
+// - https://github.com/open-telemetry/opentelemetry-go-contrib/issues/4373
+// - https://github.com/open-telemetry/opentelemetry-go-contrib/issues/4412
+
+// TODO: create SDK from the model:
+// - https://github.com/open-telemetry/opentelemetry-go-contrib/issues/4371
