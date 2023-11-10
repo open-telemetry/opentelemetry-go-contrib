@@ -5,7 +5,7 @@ go 1.20
 require (
 	github.com/google/go-cmp v0.6.0
 	github.com/stretchr/testify v1.8.4
-	go.opentelemetry.io/contrib/instrumentation/net/http/otelhttp v0.45.0
+	go.opentelemetry.io/contrib/instrumentation/net/http/otelhttp v0.46.0
 	go.opentelemetry.io/otel v1.20.0
 	go.opentelemetry.io/otel/trace v1.20.0
 )
