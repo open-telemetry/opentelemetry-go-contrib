@@ -44,6 +44,7 @@ type middleware struct {
 	filters           []Filter
 	spanNameFormatter func(string, *http.Request) string
 	counters          map[string]metric.Int64Counter
+	upDownCounters    map[string]metric.Int64UpDownCounter
 	valueRecorders    map[string]metric.Float64Histogram
 	publicEndpoint    bool
 	publicEndpointFn  func(*http.Request) bool
@@ -106,6 +107,7 @@ func handleErr(err error) {
 func (h *middleware) createMeasures() {
 	h.counters = make(map[string]metric.Int64Counter)
 	h.valueRecorders = make(map[string]metric.Float64Histogram)
+	h.upDownCounters = make(map[string]metric.Int64UpDownCounter)
 
 	requestBytesCounter, err := h.meter.Int64Counter(
 		RequestContentLength,
@@ -128,6 +130,14 @@ func (h *middleware) createMeasures() {
 	)
 	handleErr(err)
 
+	activeRequestsMeasure, err := h.meter.Int64UpDownCounter(
+		ActiveRequests,
+		metric.WithUnit("{request}"),
+		metric.WithDescription("Number of active HTTP server requests."),
+	)
+	handleErr(err)
+
+	h.upDownCounters[ActiveRequests] = activeRequestsMeasure
 	h.counters[RequestContentLength] = requestBytesCounter
 	h.counters[ResponseContentLength] = responseBytesCounter
 	h.valueRecorders[ServerLatency] = serverLatencyMeasure
@@ -226,12 +236,17 @@ func (h *middleware) serveHTTP(w http.ResponseWriter, r *http.Request, next http
 	labeler := &Labeler{}
 	ctx = injectLabeler(ctx, labeler)
 
+	reqAttrs := semconvutil.HTTPServerRequestMetrics(h.server, r)
+	ao := metric.WithAttributes(reqAttrs...)
+	h.upDownCounters[ActiveRequests].Add(ctx, 1, ao)
+	defer h.upDownCounters[ActiveRequests].Add(ctx, -1, ao)
+
 	next.ServeHTTP(w, r.WithContext(ctx))
 
 	setAfterServeAttributes(span, bw.read, rww.written, rww.statusCode, bw.err, rww.err)
 
 	// Add metrics
-	attributes := append(labeler.Get(), semconvutil.HTTPServerRequestMetrics(h.server, r)...)
+	attributes := append(labeler.Get(), reqAttrs...)
 	if rww.statusCode > 0 {
 		attributes = append(attributes, semconv.HTTPStatusCode(rww.statusCode))
 	}
