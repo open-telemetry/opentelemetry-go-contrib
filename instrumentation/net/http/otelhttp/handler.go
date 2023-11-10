@@ -130,14 +130,14 @@ func (h *middleware) createMeasures() {
 	)
 	handleErr(err)
 
-	activeRequestsMeasure, err := h.meter.Int64UpDownCounter(
+	activeRequestsCounter, err := h.meter.Int64UpDownCounter(
 		ActiveRequests,
 		metric.WithUnit("{request}"),
 		metric.WithDescription("Number of active HTTP server requests."),
 	)
 	handleErr(err)
 
-	h.upDownCounters[ActiveRequests] = activeRequestsMeasure
+	h.upDownCounters[ActiveRequests] = activeRequestsCounter
 	h.counters[RequestContentLength] = requestBytesCounter
 	h.counters[ResponseContentLength] = responseBytesCounter
 	h.valueRecorders[ServerLatency] = serverLatencyMeasure
