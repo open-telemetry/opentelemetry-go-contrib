@@ -29,10 +29,11 @@ import (
 	"go.opentelemetry.io/otel/propagation"
 	semconv "go.opentelemetry.io/otel/semconv/v1.17.0"
 	"go.opentelemetry.io/otel/trace"
+	"go.opentelemetry.io/otel/trace/noop"
 )
 
 func TestRoundtrip(t *testing.T) {
-	tr := trace.NewNoopTracerProvider().Tracer("httptrace/client")
+	tr := noop.NewTracerProvider().Tracer("httptrace/client")
 
 	var expectedAttrs map[attribute.Key]string
 	expectedCorrs := map[string]string{"foo": "bar"}
@@ -121,7 +122,7 @@ func TestRoundtrip(t *testing.T) {
 }
 
 func TestSpecifyPropagators(t *testing.T) {
-	tr := trace.NewNoopTracerProvider().Tracer("httptrace/client")
+	tr := noop.NewTracerProvider().Tracer("httptrace/client")
 
 	expectedCorrs := map[string]string{"foo": "bar"}
 

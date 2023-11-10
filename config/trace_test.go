@@ -9,6 +9,7 @@ import (
 	"github.com/stretchr/testify/require"
 
 	"go.opentelemetry.io/otel/trace"
+	"go.opentelemetry.io/otel/trace/noop"
 )
 
 func TestInitTracerPovider(t *testing.T) {
@@ -19,7 +20,7 @@ func TestInitTracerPovider(t *testing.T) {
 	}{
 		{
 			name:         "no-tracer-provider-configured",
-			wantProvider: trace.NewNoopTracerProvider(),
+			wantProvider: noop.NewTracerProvider(),
 		},
 	}
 	for _, tt := range tests {
