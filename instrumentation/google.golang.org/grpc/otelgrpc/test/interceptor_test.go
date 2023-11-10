@@ -40,6 +40,7 @@ import (
 	"google.golang.org/grpc"
 	grpc_codes "google.golang.org/grpc/codes"
 	"google.golang.org/grpc/credentials/insecure"
+	"google.golang.org/grpc/interop"
 	"google.golang.org/grpc/interop/grpc_testing"
 	"google.golang.org/grpc/metadata"
 	"google.golang.org/grpc/status"
@@ -1127,4 +1128,21 @@ func assertServerMetrics(t *testing.T, reader metric.Reader, serviceName, name s
 	assert.NoError(t, err)
 	require.Len(t, rm.ScopeMetrics, 1)
 	metricdatatest.AssertEqual(t, want, rm.ScopeMetrics[0], metricdatatest.IgnoreTimestamp(), metricdatatest.IgnoreValue())
+}
+
+func BenchmarkStreamClientInterceptor(b *testing.B) {
+	listener, err := net.Listen("tcp", "127.0.0.1:0")
+	require.NoError(b, err, "failed to open port")
+	client := newGrpcTest(b, listener,
+		[]grpc.DialOption{
+			//nolint:staticcheck // Interceptors are deprecated and will be removed in the next release.
+			grpc.WithStreamInterceptor(otelgrpc.StreamClientInterceptor()),
+		},
+		[]grpc.ServerOption{},
+	)
+
+	b.ResetTimer()
+	for i := 0; i < b.N; i++ {
+		interop.DoClientStreaming(client)
+	}
 }
