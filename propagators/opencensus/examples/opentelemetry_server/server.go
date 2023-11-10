@@ -71,8 +71,7 @@ func main() {
 	// handler to enable tracing.
 	log.Println("Starting the GRPC server, and using the OpenCensus binary propagation format.")
 	s := grpc.NewServer(
-		grpc.UnaryInterceptor(otelgrpc.UnaryServerInterceptor(otelgrpc.WithPropagators(opencensus.Binary{}))),
-		grpc.StreamInterceptor(otelgrpc.StreamServerInterceptor(otelgrpc.WithPropagators(opencensus.Binary{}))))
+		grpc.StatsHandler(otelgrpc.NewServerHandler(otelgrpc.WithPropagators(opencensus.Binary{}))))
 	pb.RegisterGreeterServer(s, &server{})
 
 	if err := s.Serve(lis); err != nil {

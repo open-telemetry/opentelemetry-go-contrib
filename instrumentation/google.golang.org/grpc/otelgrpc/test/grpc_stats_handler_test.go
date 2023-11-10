@@ -16,13 +16,13 @@ package test
 
 import (
 	"context"
+	"net"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/codes"
-	"google.golang.org/grpc/test/bufconn"
 
 	"go.opentelemetry.io/contrib/instrumentation/google.golang.org/grpc/otelgrpc"
 	"go.opentelemetry.io/otel/attribute"
@@ -47,9 +47,9 @@ func TestStatsHandler(t *testing.T) {
 	serverMetricReader := metric.NewManualReader()
 	serverMP := metric.NewMeterProvider(metric.WithReader(serverMetricReader))
 
-	listener := bufconn.Listen(bufSize)
-	defer listener.Close()
-	err := newGrpcTest(
+	listener, err := net.Listen("tcp", "127.0.0.1:0")
+	require.NoError(t, err, "failed to open port")
+	err = newGrpcTest(
 		listener,
 		[]grpc.DialOption{
 			grpc.WithStatsHandler(otelgrpc.NewClientHandler(
