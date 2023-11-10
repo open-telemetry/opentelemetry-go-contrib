@@ -12,6 +12,10 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 
 - Add the new `go.opentelemetry.io/contrib/instrgen` package to provide auto-generated source code instrumentation. (#3068, #3108)
 
+### Fixed
+
+- The `grpc.StatsHandler` now records RPC durations in ms instead of ns. (#4547)
+
 ## [1.21.0/0.46.0/0.15.0/0.1.0] - 2023-11-10
 
 ### Added
