@@ -24,6 +24,8 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 
 - Dropped compatibility testing for [Go 1.19].
   The project no longer guarantees support for this version of Go. (#4352)
+- Upgraded all dependencies on stable modules from go.opentelemetry.io/otel from v1.5.0 to v1.6.1. (#4546)
+- Upgraded all dependencies on metric modules from go.opentelemetry.io/otel from v0.27.0 to v0.28.0. (#4546)
 
 ### Deprecated
 
