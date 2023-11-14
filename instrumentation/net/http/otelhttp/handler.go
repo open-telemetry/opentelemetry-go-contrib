@@ -143,6 +143,14 @@ func (h *middleware) createMeasures() {
 	h.valueRecorders[ServerLatency] = serverLatencyMeasure
 }
 
+func httpSchemeFromRequest(r *http.Request) attribute.KeyValue {
+	if r.TLS != nil {
+		return semconv.HTTPSchemeHTTPS
+	} else {
+		return semconv.HTTPSchemeHTTP
+	}
+}
+
 // serveHTTP sets up tracing and calls the given next http.Handler with the span
 // context injected into the request context.
 func (h *middleware) serveHTTP(w http.ResponseWriter, r *http.Request, next http.Handler) {
@@ -236,17 +244,16 @@ func (h *middleware) serveHTTP(w http.ResponseWriter, r *http.Request, next http
 	labeler := &Labeler{}
 	ctx = injectLabeler(ctx, labeler)
 
-	reqAttrs := semconvutil.HTTPServerRequestMetrics(h.server, r)
-	ao := metric.WithAttributes(reqAttrs...)
-	h.upDownCounters[ActiveRequests].Add(ctx, 1, ao)
-	defer h.upDownCounters[ActiveRequests].Add(ctx, -1, ao)
+	attrs := metric.WithAttributes(httpSchemeFromRequest(r), semconv.HTTPMethod(r.Method))
+	h.upDownCounters[ActiveRequests].Add(ctx, 1, attrs)
+	defer h.upDownCounters[ActiveRequests].Add(ctx, -1, attrs)
 
 	next.ServeHTTP(w, r.WithContext(ctx))
 
 	setAfterServeAttributes(span, bw.read, rww.written, rww.statusCode, bw.err, rww.err)
 
 	// Add metrics
-	attributes := append(labeler.Get(), reqAttrs...)
+	attributes := append(labeler.Get(), semconvutil.HTTPServerRequestMetrics(h.server, r)...)
 	if rww.statusCode > 0 {
 		attributes = append(attributes, semconv.HTTPStatusCode(rww.statusCode))
 	}
