@@ -14,7 +14,7 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 
 ### Fixed
 
-- The `go.opentelemetry.io/contrib/instrumentation/google.golang.org/grpc/otelgrpc` instrumentation now records RPC durations in `ms` instead of `ns`. (#4548)
+- The stats handlers `NewClientHandler`, `NewServerHandler` in `go.opentelemetry.io/contrib/instrumentation/google.golang.org/grpc/otelgrpc` now records RPC durations in `ms` instead of `ns`. (#4548)
 
 ## [1.21.0/0.46.0/0.15.0/0.1.0] - 2023-11-10
 
