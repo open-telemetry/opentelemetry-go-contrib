@@ -11,6 +11,7 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 ### Added
 
 - Add the new `go.opentelemetry.io/contrib/instrgen` package to provide auto-generated source code instrumentation. (#3068, #3108)
+- Add the `http.server.active_requests` metric to `go.opentelemetry.io/contrib/instrumentation/net/http/otelhttp`. (#4543)
 
 ## [1.21.0/0.46.0/0.15.0/0.1.0] - 2023-11-10
 
