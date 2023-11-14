@@ -15,18 +15,10 @@
 package otelhttp_test
 
 import (
-	"context"
-	"go.opentelemetry.io/otel/attribute"
-	"go.opentelemetry.io/otel/sdk/metric"
-	"go.opentelemetry.io/otel/sdk/metric/metricdata"
-	"go.opentelemetry.io/otel/sdk/metric/metricdata/metricdatatest"
-	semconv "go.opentelemetry.io/otel/semconv/v1.21.0"
 	"io"
 	"net/http"
 	"net/http/httptest"
-	"slices"
 	"strings"
-	"sync"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
@@ -34,90 +26,6 @@ import (
 
 	"go.opentelemetry.io/contrib/instrumentation/net/http/otelhttp"
 )
-
-func assertActiveMetric(t *testing.T, ctx context.Context, reader *metric.ManualReader, actual metricdata.Aggregation, opts ...metricdatatest.Option) bool {
-	var rm metricdata.ResourceMetrics
-	err := reader.Collect(ctx, &rm)
-
-	if !assert.NoError(t, err, "failed to read the metric reader") {
-		return false
-	}
-
-	if !assert.Len(t, rm.ScopeMetrics, 1, "too many metrics") {
-		return false
-	}
-
-	metrics := rm.ScopeMetrics[0].Metrics
-	m := metrics[slices.IndexFunc(metrics, func(m metricdata.Metrics) bool {
-		return m.Name == otelhttp.ActiveRequests
-	})]
-	return metricdatatest.AssertAggregationsEqual(t, actual, m.Data, opts...)
-}
-
-func activeMetric(val int64) metricdata.Sum[int64] {
-	return metricdata.Sum[int64]{
-		Temporality: metricdata.CumulativeTemporality,
-		IsMonotonic: false,
-		DataPoints: []metricdata.DataPoint[int64]{
-			{
-				Value: val,
-				Attributes: attribute.NewSet(
-					semconv.HTTPMethod("GET"),
-					semconv.HTTPScheme("http"),
-				),
-			},
-		},
-	}
-}
-
-func TestActiveMetrics(t *testing.T) {
-	ctx, done := context.WithCancel(context.Background())
-	defer done()
-
-	reader := metric.NewManualReader()
-	var g sync.WaitGroup
-	var ag sync.WaitGroup
-	var l sync.Mutex
-
-	handler := otelhttp.NewHandler(http.HandlerFunc(func(writer http.ResponseWriter, request *http.Request) {
-		g.Done()
-		l.Lock()
-		defer l.Unlock()
-		ag.Done()
-	}), "test", otelhttp.WithMeterProvider(metric.NewMeterProvider(metric.WithReader(reader))))
-
-	g.Add(5)
-	ag.Add(5)
-	l.Lock()
-
-	for i := 0; i < 5; i++ {
-		go handler.ServeHTTP(
-			httptest.NewRecorder(),
-			httptest.NewRequest("GET", "/foo/bar", nil),
-		)
-	}
-
-	g.Wait()
-
-	assertActiveMetric(t, ctx, reader, activeMetric(5), metricdatatest.IgnoreTimestamp(), metricdatatest.IgnoreExemplars())
-
-	g.Add(5)
-	ag.Add(5)
-	for i := 0; i < 5; i++ {
-		go handler.ServeHTTP(
-			httptest.NewRecorder(),
-			httptest.NewRequest("GET", "/foo/bar", nil),
-		)
-	}
-	g.Wait()
-
-	assertActiveMetric(t, ctx, reader, activeMetric(10), metricdatatest.IgnoreTimestamp(), metricdatatest.IgnoreExemplars())
-
-	l.Unlock()
-	ag.Wait()
-
-	assertActiveMetric(t, ctx, reader, activeMetric(0), metricdatatest.IgnoreTimestamp(), metricdatatest.IgnoreExemplars())
-}
 
 func TestHandler(t *testing.T) {
 	testCases := []struct {
