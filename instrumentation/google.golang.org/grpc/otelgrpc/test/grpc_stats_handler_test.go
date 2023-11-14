@@ -17,6 +17,7 @@ package test
 import (
 	"context"
 	"net"
+	"sync"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
@@ -1315,4 +1316,28 @@ func checkServerMetrics(t *testing.T, reader metric.Reader) {
 	}
 
 	metricdatatest.AssertEqual(t, expectedScopeMetric, rm.ScopeMetrics[0], metricdatatest.IgnoreTimestamp(), metricdatatest.IgnoreValue())
+}
+
+func TestStatsHandlerConcurrentSafe(t *testing.T) {
+	listener, err := net.Listen("tcp", "127.0.0.1:0")
+	require.NoError(t, err, "failed to open port")
+	client := newGrpcTest(t, listener,
+		[]grpc.DialOption{
+			grpc.WithStatsHandler(otelgrpc.NewClientHandler()),
+		},
+		[]grpc.ServerOption{
+			grpc.StatsHandler(otelgrpc.NewServerHandler()),
+		},
+	)
+
+	wg := &sync.WaitGroup{}
+	const n = 100
+	for i := 0; i < n; i++ {
+		wg.Add(1)
+		go func() {
+			defer wg.Done()
+			doCalls(client)
+		}()
+	}
+	wg.Wait()
 }
