@@ -49,8 +49,7 @@ func TestStatsHandler(t *testing.T) {
 
 	listener, err := net.Listen("tcp", "127.0.0.1:0")
 	require.NoError(t, err, "failed to open port")
-	err = newGrpcTest(
-		listener,
+	client := newGrpcTest(t, listener,
 		[]grpc.DialOption{
 			grpc.WithStatsHandler(otelgrpc.NewClientHandler(
 				otelgrpc.WithTracerProvider(clientTP),
@@ -66,7 +65,7 @@ func TestStatsHandler(t *testing.T) {
 			),
 		},
 	)
-	require.NoError(t, err)
+	doCalls(client)
 
 	t.Run("ClientSpans", func(t *testing.T) {
 		checkClientSpans(t, clientSR.Ended())
