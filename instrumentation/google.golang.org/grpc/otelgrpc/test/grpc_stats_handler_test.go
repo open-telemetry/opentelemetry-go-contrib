@@ -35,10 +35,11 @@ import (
 	"go.opentelemetry.io/otel/sdk/metric/metricdata"
 	"go.opentelemetry.io/otel/sdk/metric/metricdata/metricdatatest"
 
+	testpb "google.golang.org/grpc/interop/grpc_testing"
+
 	"go.opentelemetry.io/otel/sdk/trace"
 	"go.opentelemetry.io/otel/sdk/trace/tracetest"
 	semconv "go.opentelemetry.io/otel/semconv/v1.17.0"
-	testpb "google.golang.org/grpc/interop/grpc_testing"
 )
 
 func TestStatsHandler(t *testing.T) {
