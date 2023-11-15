@@ -16,7 +16,6 @@ package test
 
 import (
 	"context"
-	"fmt"
 	"io"
 	"net"
 	"sync"
