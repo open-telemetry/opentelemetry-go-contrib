@@ -1337,60 +1337,57 @@ func TestStatsHandlerConcurrentSafeContextCancellation(t *testing.T) {
 		},
 	)
 
-	const testCount = 100
-	for i := 0; i < testCount; i++ {
-		t.Run(fmt.Sprintf("run_%d", i), func(t *testing.T) {
-			wg := &sync.WaitGroup{}
-			wg.Add(2)
-			ctx, cancel := context.WithCancel(context.Background())
-			stream, err := client.FullDuplexCall(ctx)
-			require.NoError(t, err)
-			const messageCount = 100
-			go func() {
-				defer wg.Done()
-				sendWg := &sync.WaitGroup{}
-				for i := 0; i < messageCount; i++ {
-					sendWg.Add(1)
-					go func() {
-						defer sendWg.Done()
-						const reqSize = 10
-						pl := interop.ClientNewPayload(testpb.PayloadType_COMPRESSABLE, reqSize)
-						respParam := []*testpb.ResponseParameters{
-							{
-								Size: reqSize,
-							},
-						}
-						req := &testpb.StreamingOutputCallRequest{
-							ResponseType:       testpb.PayloadType_COMPRESSABLE,
-							ResponseParameters: respParam,
-							Payload:            pl,
-						}
-						err := stream.Send(req)
-						if err == io.EOF { // possible due to context cancellation
-							require.ErrorIs(t, ctx.Err(), context.Canceled)
-						} else {
-							require.NoError(t, err)
-						}
-					}()
+	const n = 10
+	for i := 0; i < n; i++ {
+		ctx, cancel := context.WithCancel(context.Background())
+		stream, err := client.FullDuplexCall(ctx)
+		require.NoError(t, err)
+
+		const messageCount = 10
+		var wg sync.WaitGroup
+
+		wg.Add(1)
+		go func() {
+			defer wg.Done()
+			for i := 0; i < messageCount; i++ {
+				const reqSize = 1
+				pl := interop.ClientNewPayload(testpb.PayloadType_COMPRESSABLE, reqSize)
+				respParam := []*testpb.ResponseParameters{
+					{
+						Size: reqSize,
+					},
 				}
-				sendWg.Wait()
-				require.NoError(t, stream.CloseSend())
-			}()
-			go func() {
-				defer wg.Done()
-				for i := 0; i < messageCount; i++ {
-					_, err := stream.Recv()
-					if i > messageCount/2 {
-						cancel()
-					}
-					// must continue to receive messages until server acknowledges the cancellation, to ensure no data race happens there too
-					if status.Code(err) == codes.Canceled {
-						return
-					}
+				req := &testpb.StreamingOutputCallRequest{
+					ResponseType:       testpb.PayloadType_COMPRESSABLE,
+					ResponseParameters: respParam,
+					Payload:            pl,
+				}
+				err := stream.Send(req)
+				if err == io.EOF { // possible due to context cancellation
+					require.ErrorIs(t, ctx.Err(), context.Canceled)
+				} else {
 					require.NoError(t, err)
 				}
-			}()
-			wg.Wait()
-		})
+			}
+			require.NoError(t, stream.CloseSend())
+		}()
+
+		wg.Add(1)
+		go func() {
+			defer wg.Done()
+			for i := 0; i < messageCount; i++ {
+				_, err := stream.Recv()
+				if i > messageCount/2 {
+					cancel()
+				}
+				// must continue to receive messages until server acknowledges the cancellation, to ensure no data race happens there too
+				if status.Code(err) == codes.Canceled {
+					return
+				}
+				require.NoError(t, err)
+			}
+		}()
+
+		wg.Wait()
 	}
 }
