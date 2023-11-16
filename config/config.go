@@ -61,14 +61,8 @@ func NewSDK(opts ...ConfigurationOption) (SDK, error) {
 		meterProvider:  mp,
 		tracerProvider: tp,
 		shutdown: func(ctx context.Context) error {
-			var errs []error
-			if err := mpShutdown(ctx); err != nil {
-				errs = append(errs, err)
-			}
-			if err := tpShutdown(ctx); err != nil {
-				errs = append(errs, err)
-			}
-			return errors.Join(errs...)
+			err := mpShutdown(ctx)
+			return errors.Join(err, tpShutdown(ctx))
 		},
 	}, nil
 }
