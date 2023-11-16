@@ -55,7 +55,8 @@ func makeAnalysis(projectPath string, packagePattern string, debug bool) *alib.P
 		FuncDecls:      funcDecls,
 		Callgraph:      backwardCallGraph,
 		Interfaces:     interfaces,
-		Debug:          debug}
+		Debug:          debug,
+	}
 	return analysis
 }
 

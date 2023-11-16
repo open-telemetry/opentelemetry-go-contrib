@@ -50,7 +50,9 @@ func assertScopeMetrics(t *testing.T, sm metricdata.ScopeMetrics, attrs attribut
 	require.Len(t, sm.Metrics, 3)
 
 	want := metricdata.Metrics{
-		Name: "http.server.request_content_length",
+		Name:        "http.server.request_content_length",
+		Description: "Measures the size of HTTP request content length (uncompressed)",
+		Unit:        "By",
 		Data: metricdata.Sum[int64]{
 			DataPoints:  []metricdata.DataPoint[int64]{{Attributes: attrs, Value: 0}},
 			Temporality: metricdata.CumulativeTemporality,
@@ -60,7 +62,9 @@ func assertScopeMetrics(t *testing.T, sm metricdata.ScopeMetrics, attrs attribut
 	metricdatatest.AssertEqual(t, want, sm.Metrics[0], metricdatatest.IgnoreTimestamp())
 
 	want = metricdata.Metrics{
-		Name: "http.server.response_content_length",
+		Name:        "http.server.response_content_length",
+		Description: "Measures the size of HTTP response content length (uncompressed)",
+		Unit:        "By",
 		Data: metricdata.Sum[int64]{
 			DataPoints:  []metricdata.DataPoint[int64]{{Attributes: attrs, Value: 11}},
 			Temporality: metricdata.CumulativeTemporality,

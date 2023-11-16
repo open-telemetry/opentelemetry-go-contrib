@@ -31,6 +31,7 @@ import (
 	sdktrace "go.opentelemetry.io/otel/sdk/trace"
 	"go.opentelemetry.io/otel/sdk/trace/tracetest"
 	oteltrace "go.opentelemetry.io/otel/trace"
+	"go.opentelemetry.io/otel/trace/noop"
 )
 
 const tracerName = "go.opentelemetry.io/contrib/instrumentation/github.com/emicklei/go-restful/otelrestful"
@@ -57,7 +58,7 @@ func TestPropagationWithGlobalPropagators(t *testing.T) {
 	defer func(p propagation.TextMapPropagator) {
 		otel.SetTextMapPropagator(p)
 	}(otel.GetTextMapPropagator())
-	provider := oteltrace.NewNoopTracerProvider()
+	provider := noop.NewTracerProvider()
 	otel.SetTextMapPropagator(propagation.TraceContext{})
 
 	r := httptest.NewRequest("GET", "/user/123", nil)
@@ -89,7 +90,7 @@ func TestPropagationWithGlobalPropagators(t *testing.T) {
 }
 
 func TestPropagationWithCustomPropagators(t *testing.T) {
-	provider := oteltrace.NewNoopTracerProvider()
+	provider := noop.NewTracerProvider()
 	b3 := b3prop.New()
 
 	r := httptest.NewRequest("GET", "/user/123", nil)

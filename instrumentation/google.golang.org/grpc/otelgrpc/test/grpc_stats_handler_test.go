@@ -15,6 +15,8 @@
 package test
 
 import (
+	"context"
+	"net"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
@@ -24,6 +26,11 @@ import (
 
 	"go.opentelemetry.io/contrib/instrumentation/google.golang.org/grpc/otelgrpc"
 	"go.opentelemetry.io/otel/attribute"
+	"go.opentelemetry.io/otel/sdk/instrumentation"
+	"go.opentelemetry.io/otel/sdk/metric"
+	"go.opentelemetry.io/otel/sdk/metric/metricdata"
+	"go.opentelemetry.io/otel/sdk/metric/metricdata/metricdatatest"
+
 	"go.opentelemetry.io/otel/sdk/trace"
 	"go.opentelemetry.io/otel/sdk/trace/tracetest"
 	semconv "go.opentelemetry.io/otel/semconv/v1.17.0"
@@ -32,25 +39,48 @@ import (
 func TestStatsHandler(t *testing.T) {
 	clientSR := tracetest.NewSpanRecorder()
 	clientTP := trace.NewTracerProvider(trace.WithSpanProcessor(clientSR))
+	clientMetricReader := metric.NewManualReader()
+	clientMP := metric.NewMeterProvider(metric.WithReader(clientMetricReader))
 
 	serverSR := tracetest.NewSpanRecorder()
 	serverTP := trace.NewTracerProvider(trace.WithSpanProcessor(serverSR))
+	serverMetricReader := metric.NewManualReader()
+	serverMP := metric.NewMeterProvider(metric.WithReader(serverMetricReader))
 
-	assert.NoError(t, doCalls(
+	listener, err := net.Listen("tcp", "127.0.0.1:0")
+	require.NoError(t, err, "failed to open port")
+	client := newGrpcTest(t, listener,
 		[]grpc.DialOption{
-			grpc.WithStatsHandler(otelgrpc.NewClientHandler(otelgrpc.WithTracerProvider(clientTP))),
+			grpc.WithStatsHandler(otelgrpc.NewClientHandler(
+				otelgrpc.WithTracerProvider(clientTP),
+				otelgrpc.WithMeterProvider(clientMP),
+				otelgrpc.WithMessageEvents(otelgrpc.ReceivedEvents, otelgrpc.SentEvents)),
+			),
 		},
 		[]grpc.ServerOption{
-			grpc.StatsHandler(otelgrpc.NewServerHandler(otelgrpc.WithTracerProvider(serverTP))),
+			grpc.StatsHandler(otelgrpc.NewServerHandler(
+				otelgrpc.WithTracerProvider(serverTP),
+				otelgrpc.WithMeterProvider(serverMP),
+				otelgrpc.WithMessageEvents(otelgrpc.ReceivedEvents, otelgrpc.SentEvents)),
+			),
 		},
-	))
+	)
+	doCalls(client)
 
 	t.Run("ClientSpans", func(t *testing.T) {
 		checkClientSpans(t, clientSR.Ended())
 	})
 
+	t.Run("ClientMetrics", func(t *testing.T) {
+		checkClientMetrics(t, clientMetricReader)
+	})
+
 	t.Run("ServerSpans", func(t *testing.T) {
 		checkServerSpans(t, serverSR.Ended())
+	})
+
+	t.Run("ServerMetrics", func(t *testing.T) {
+		checkServerMetrics(t, serverMetricReader)
 	})
 }
 
@@ -578,4 +608,711 @@ func checkServerSpans(t *testing.T, spans []trace.ReadOnlySpan) {
 		otelgrpc.RPCSystemGRPC,
 		otelgrpc.GRPCStatusCodeKey.Int64(int64(codes.OK)),
 	}, pingPong.Attributes())
+}
+
+func checkClientMetrics(t *testing.T, reader metric.Reader) {
+	rm := metricdata.ResourceMetrics{}
+	err := reader.Collect(context.Background(), &rm)
+	assert.NoError(t, err)
+	require.Len(t, rm.ScopeMetrics, 1)
+	require.Len(t, rm.ScopeMetrics[0].Metrics, 5)
+	expectedScopeMetric := metricdata.ScopeMetrics{
+		Scope: instrumentation.Scope{
+			Name:      "go.opentelemetry.io/contrib/instrumentation/google.golang.org/grpc/otelgrpc",
+			Version:   otelgrpc.Version(),
+			SchemaURL: "https://opentelemetry.io/schemas/1.17.0",
+		},
+		Metrics: []metricdata.Metrics{
+			{
+				Name:        "rpc.client.duration",
+				Description: "Measures the duration of inbound RPC.",
+				Unit:        "ms",
+				Data: metricdata.Histogram[float64]{
+					Temporality: metricdata.CumulativeTemporality,
+					DataPoints: []metricdata.HistogramDataPoint[float64]{
+						{
+							Attributes: attribute.NewSet(
+								semconv.RPCGRPCStatusCodeOk,
+								semconv.RPCMethod("EmptyCall"),
+								semconv.RPCService("grpc.testing.TestService"),
+								semconv.RPCSystemGRPC),
+						},
+						{
+							Attributes: attribute.NewSet(
+								semconv.RPCGRPCStatusCodeOk,
+								semconv.RPCMethod("UnaryCall"),
+								semconv.RPCService("grpc.testing.TestService"),
+								semconv.RPCSystemGRPC),
+						},
+						{
+							Attributes: attribute.NewSet(
+								semconv.RPCGRPCStatusCodeOk,
+								semconv.RPCMethod("StreamingInputCall"),
+								semconv.RPCService("grpc.testing.TestService"),
+								semconv.RPCSystemGRPC),
+						},
+						{
+							Attributes: attribute.NewSet(
+								semconv.RPCGRPCStatusCodeOk,
+								semconv.RPCMethod("StreamingOutputCall"),
+								semconv.RPCService("grpc.testing.TestService"),
+								semconv.RPCSystemGRPC),
+						},
+						{
+							Attributes: attribute.NewSet(
+								semconv.RPCGRPCStatusCodeOk,
+								semconv.RPCMethod("FullDuplexCall"),
+								semconv.RPCService("grpc.testing.TestService"),
+								semconv.RPCSystemGRPC),
+						},
+					},
+				},
+			},
+			{
+				Name:        "rpc.client.request.size",
+				Description: "Measures size of RPC request messages (uncompressed).",
+				Unit:        "By",
+				Data: metricdata.Histogram[int64]{
+					Temporality: metricdata.CumulativeTemporality,
+					DataPoints: []metricdata.HistogramDataPoint[int64]{
+						{
+							Attributes: attribute.NewSet(
+								semconv.RPCMethod("EmptyCall"),
+								semconv.RPCService("grpc.testing.TestService"),
+								semconv.RPCSystemGRPC),
+							Bounds:       []float64{0, 5, 10, 25, 50, 75, 100, 250, 500, 750, 1000, 2500, 5000, 7500, 10000},
+							BucketCounts: []uint64{1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0},
+							Max:          metricdata.NewExtrema(int64(0)),
+							Min:          metricdata.NewExtrema(int64(0)),
+							Count:        1,
+							Sum:          0,
+						},
+						{
+							Attributes: attribute.NewSet(
+								semconv.RPCMethod("UnaryCall"),
+								semconv.RPCService("grpc.testing.TestService"),
+								semconv.RPCSystemGRPC),
+							Bounds:       []float64{0, 5, 10, 25, 50, 75, 100, 250, 500, 750, 1000, 2500, 5000, 7500, 10000},
+							BucketCounts: []uint64{0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1},
+							Max:          metricdata.NewExtrema(int64(314167)),
+							Min:          metricdata.NewExtrema(int64(314167)),
+							Count:        1,
+							Sum:          314167,
+						},
+						{
+							Attributes: attribute.NewSet(
+								semconv.RPCMethod("StreamingInputCall"),
+								semconv.RPCService("grpc.testing.TestService"),
+								semconv.RPCSystemGRPC),
+							Bounds:       []float64{0, 5, 10, 25, 50, 75, 100, 250, 500, 750, 1000, 2500, 5000, 7500, 10000},
+							BucketCounts: []uint64{0, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0},
+							Max:          metricdata.NewExtrema(int64(4)),
+							Min:          metricdata.NewExtrema(int64(4)),
+							Count:        1,
+							Sum:          4,
+						},
+						{
+							Attributes: attribute.NewSet(
+								semconv.RPCMethod("StreamingOutputCall"),
+								semconv.RPCService("grpc.testing.TestService"),
+								semconv.RPCSystemGRPC),
+							Bounds:       []float64{0, 5, 10, 25, 50, 75, 100, 250, 500, 750, 1000, 2500, 5000, 7500, 10000},
+							BucketCounts: []uint64{0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 2},
+							Max:          metricdata.NewExtrema(int64(58987)),
+							Min:          metricdata.NewExtrema(int64(13)),
+							Count:        4,
+							Sum:          93082,
+						},
+						{
+							Attributes: attribute.NewSet(
+								semconv.RPCMethod("FullDuplexCall"),
+								semconv.RPCService("grpc.testing.TestService"),
+								semconv.RPCSystemGRPC),
+							Bounds:       []float64{0, 5, 10, 25, 50, 75, 100, 250, 500, 750, 1000, 2500, 5000, 7500, 10000},
+							BucketCounts: []uint64{0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 2},
+							Max:          metricdata.NewExtrema(int64(58987)),
+							Min:          metricdata.NewExtrema(int64(13)),
+							Count:        4,
+							Sum:          93082,
+						},
+					},
+				},
+			},
+			{
+				Name:        "rpc.client.response.size",
+				Description: "Measures size of RPC response messages (uncompressed).",
+				Unit:        "By",
+				Data: metricdata.Histogram[int64]{
+					Temporality: metricdata.CumulativeTemporality,
+					DataPoints: []metricdata.HistogramDataPoint[int64]{
+						{
+							Attributes: attribute.NewSet(
+								semconv.RPCMethod("EmptyCall"),
+								semconv.RPCService("grpc.testing.TestService"),
+								semconv.RPCSystemGRPC),
+							Bounds:       []float64{0, 5, 10, 25, 50, 75, 100, 250, 500, 750, 1000, 2500, 5000, 7500, 10000},
+							BucketCounts: []uint64{1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0},
+							Max:          metricdata.NewExtrema(int64(0)),
+							Min:          metricdata.NewExtrema(int64(0)),
+							Count:        1,
+							Sum:          0,
+						},
+						{
+							Attributes: attribute.NewSet(
+								semconv.RPCMethod("UnaryCall"),
+								semconv.RPCService("grpc.testing.TestService"),
+								semconv.RPCSystemGRPC),
+							Bounds:       []float64{0, 5, 10, 25, 50, 75, 100, 250, 500, 750, 1000, 2500, 5000, 7500, 10000},
+							BucketCounts: []uint64{0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1},
+							Max:          metricdata.NewExtrema(int64(271840)),
+							Min:          metricdata.NewExtrema(int64(271840)),
+							Count:        1,
+							Sum:          271840,
+						},
+						{
+							Attributes: attribute.NewSet(
+								semconv.RPCMethod("StreamingInputCall"),
+								semconv.RPCService("grpc.testing.TestService"),
+								semconv.RPCSystemGRPC),
+							Bounds:       []float64{0, 5, 10, 25, 50, 75, 100, 250, 500, 750, 1000, 2500, 5000, 7500, 10000},
+							BucketCounts: []uint64{0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 0, 2},
+							Max:          metricdata.NewExtrema(int64(45912)),
+							Min:          metricdata.NewExtrema(int64(12)),
+							Count:        4,
+							Sum:          74948,
+						},
+						{
+							Attributes: attribute.NewSet(
+								semconv.RPCMethod("StreamingOutputCall"),
+								semconv.RPCService("grpc.testing.TestService"),
+								semconv.RPCSystemGRPC),
+							Bounds:       []float64{0, 5, 10, 25, 50, 75, 100, 250, 500, 750, 1000, 2500, 5000, 7500, 10000},
+							BucketCounts: []uint64{0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0},
+							Max:          metricdata.NewExtrema(int64(21)),
+							Min:          metricdata.NewExtrema(int64(21)),
+							Count:        1,
+							Sum:          21,
+						},
+						{
+							Attributes: attribute.NewSet(
+								semconv.RPCMethod("FullDuplexCall"),
+								semconv.RPCService("grpc.testing.TestService"),
+								semconv.RPCSystemGRPC),
+							Bounds:       []float64{0, 5, 10, 25, 50, 75, 100, 250, 500, 750, 1000, 2500, 5000, 7500, 10000},
+							BucketCounts: []uint64{0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 0, 2},
+							Max:          metricdata.NewExtrema(int64(45918)),
+							Min:          metricdata.NewExtrema(int64(16)),
+							Count:        4,
+							Sum:          74969,
+						},
+					},
+				},
+			},
+			{
+				Name:        "rpc.client.requests_per_rpc",
+				Description: "Measures the number of messages received per RPC. Should be 1 for all non-streaming RPCs.",
+				Unit:        "{count}",
+				Data: metricdata.Histogram[int64]{
+					Temporality: metricdata.CumulativeTemporality,
+					DataPoints: []metricdata.HistogramDataPoint[int64]{
+						{
+							Attributes: attribute.NewSet(
+								semconv.RPCGRPCStatusCodeOk,
+								semconv.RPCMethod("EmptyCall"),
+								semconv.RPCService("grpc.testing.TestService"),
+								semconv.RPCSystemGRPC),
+							Bounds:       []float64{0, 5, 10, 25, 50, 75, 100, 250, 500, 750, 1000, 2500, 5000, 7500, 10000},
+							BucketCounts: []uint64{0, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0},
+							Max:          metricdata.NewExtrema(int64(1)),
+							Min:          metricdata.NewExtrema(int64(1)),
+							Count:        1,
+							Sum:          1,
+						},
+						{
+							Attributes: attribute.NewSet(
+								semconv.RPCGRPCStatusCodeOk,
+								semconv.RPCMethod("UnaryCall"),
+								semconv.RPCService("grpc.testing.TestService"),
+								semconv.RPCSystemGRPC),
+							Bounds:       []float64{0, 5, 10, 25, 50, 75, 100, 250, 500, 750, 1000, 2500, 5000, 7500, 10000},
+							BucketCounts: []uint64{0, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0},
+							Max:          metricdata.NewExtrema(int64(1)),
+							Min:          metricdata.NewExtrema(int64(1)),
+							Count:        1,
+							Sum:          1,
+						},
+						{
+							Attributes: attribute.NewSet(
+								semconv.RPCGRPCStatusCodeOk,
+								semconv.RPCMethod("StreamingInputCall"),
+								semconv.RPCService("grpc.testing.TestService"),
+								semconv.RPCSystemGRPC),
+							Bounds:       []float64{0, 5, 10, 25, 50, 75, 100, 250, 500, 750, 1000, 2500, 5000, 7500, 10000},
+							BucketCounts: []uint64{0, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0},
+							Max:          metricdata.NewExtrema(int64(1)),
+							Min:          metricdata.NewExtrema(int64(1)),
+							Count:        1,
+							Sum:          1,
+						},
+						{
+							Attributes: attribute.NewSet(
+								semconv.RPCGRPCStatusCodeOk,
+								semconv.RPCMethod("StreamingOutputCall"),
+								semconv.RPCService("grpc.testing.TestService"),
+								semconv.RPCSystemGRPC),
+							Bounds:       []float64{0, 5, 10, 25, 50, 75, 100, 250, 500, 750, 1000, 2500, 5000, 7500, 10000},
+							BucketCounts: []uint64{0, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0},
+							Max:          metricdata.NewExtrema(int64(4)),
+							Min:          metricdata.NewExtrema(int64(4)),
+							Count:        1,
+							Sum:          4,
+						},
+						{
+							Attributes: attribute.NewSet(
+								semconv.RPCGRPCStatusCodeOk,
+								semconv.RPCMethod("FullDuplexCall"),
+								semconv.RPCService("grpc.testing.TestService"),
+								semconv.RPCSystemGRPC),
+							Bounds:       []float64{0, 5, 10, 25, 50, 75, 100, 250, 500, 750, 1000, 2500, 5000, 7500, 10000},
+							BucketCounts: []uint64{0, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0},
+							Max:          metricdata.NewExtrema(int64(4)),
+							Min:          metricdata.NewExtrema(int64(4)),
+							Count:        1,
+							Sum:          4,
+						},
+					},
+				},
+			},
+			{
+				Name:        "rpc.client.responses_per_rpc",
+				Description: "Measures the number of messages received per RPC. Should be 1 for all non-streaming RPCs.",
+				Unit:        "{count}",
+				Data: metricdata.Histogram[int64]{
+					Temporality: metricdata.CumulativeTemporality,
+					DataPoints: []metricdata.HistogramDataPoint[int64]{
+						{
+							Attributes: attribute.NewSet(
+								semconv.RPCGRPCStatusCodeOk,
+								semconv.RPCMethod("EmptyCall"),
+								semconv.RPCService("grpc.testing.TestService"),
+								semconv.RPCSystemGRPC),
+							Bounds:       []float64{0, 5, 10, 25, 50, 75, 100, 250, 500, 750, 1000, 2500, 5000, 7500, 10000},
+							BucketCounts: []uint64{0, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0},
+							Max:          metricdata.NewExtrema(int64(1)),
+							Min:          metricdata.NewExtrema(int64(1)),
+							Count:        1,
+							Sum:          1,
+						},
+						{
+							Attributes: attribute.NewSet(
+								semconv.RPCGRPCStatusCodeOk,
+								semconv.RPCMethod("UnaryCall"),
+								semconv.RPCService("grpc.testing.TestService"),
+								semconv.RPCSystemGRPC),
+							Bounds:       []float64{0, 5, 10, 25, 50, 75, 100, 250, 500, 750, 1000, 2500, 5000, 7500, 10000},
+							BucketCounts: []uint64{0, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0},
+							Max:          metricdata.NewExtrema(int64(1)),
+							Min:          metricdata.NewExtrema(int64(1)),
+							Count:        1,
+							Sum:          1,
+						},
+						{
+							Attributes: attribute.NewSet(
+								semconv.RPCGRPCStatusCodeOk,
+								semconv.RPCMethod("StreamingInputCall"),
+								semconv.RPCService("grpc.testing.TestService"),
+								semconv.RPCSystemGRPC),
+							Bounds:       []float64{0, 5, 10, 25, 50, 75, 100, 250, 500, 750, 1000, 2500, 5000, 7500, 10000},
+							BucketCounts: []uint64{0, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0},
+							Max:          metricdata.NewExtrema(int64(4)),
+							Min:          metricdata.NewExtrema(int64(4)),
+							Count:        1,
+							Sum:          4,
+						},
+						{
+							Attributes: attribute.NewSet(
+								semconv.RPCGRPCStatusCodeOk,
+								semconv.RPCMethod("StreamingOutputCall"),
+								semconv.RPCService("grpc.testing.TestService"),
+								semconv.RPCSystemGRPC),
+							Bounds:       []float64{0, 5, 10, 25, 50, 75, 100, 250, 500, 750, 1000, 2500, 5000, 7500, 10000},
+							BucketCounts: []uint64{0, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0},
+							Max:          metricdata.NewExtrema(int64(1)),
+							Min:          metricdata.NewExtrema(int64(1)),
+							Count:        1,
+							Sum:          1,
+						},
+						{
+							Attributes: attribute.NewSet(
+								semconv.RPCGRPCStatusCodeOk,
+								semconv.RPCMethod("FullDuplexCall"),
+								semconv.RPCService("grpc.testing.TestService"),
+								semconv.RPCSystemGRPC),
+							Bounds:       []float64{0, 5, 10, 25, 50, 75, 100, 250, 500, 750, 1000, 2500, 5000, 7500, 10000},
+							BucketCounts: []uint64{0, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0},
+							Max:          metricdata.NewExtrema(int64(4)),
+							Min:          metricdata.NewExtrema(int64(4)),
+							Count:        1,
+							Sum:          4,
+						},
+					},
+				},
+			},
+		},
+	}
+	metricdatatest.AssertEqual(t, expectedScopeMetric, rm.ScopeMetrics[0], metricdatatest.IgnoreTimestamp(), metricdatatest.IgnoreValue())
+}
+
+func checkServerMetrics(t *testing.T, reader metric.Reader) {
+	rm := metricdata.ResourceMetrics{}
+	err := reader.Collect(context.Background(), &rm)
+	assert.NoError(t, err)
+	require.Len(t, rm.ScopeMetrics, 1)
+	require.Len(t, rm.ScopeMetrics[0].Metrics, 5)
+	expectedScopeMetric := metricdata.ScopeMetrics{
+		Scope: instrumentation.Scope{
+			Name:      "go.opentelemetry.io/contrib/instrumentation/google.golang.org/grpc/otelgrpc",
+			Version:   otelgrpc.Version(),
+			SchemaURL: "https://opentelemetry.io/schemas/1.17.0",
+		},
+		Metrics: []metricdata.Metrics{
+			{
+				Name:        "rpc.server.duration",
+				Description: "Measures the duration of inbound RPC.",
+				Unit:        "ms",
+				Data: metricdata.Histogram[float64]{
+					Temporality: metricdata.CumulativeTemporality,
+					DataPoints: []metricdata.HistogramDataPoint[float64]{
+						{
+							Attributes: attribute.NewSet(
+								semconv.RPCGRPCStatusCodeOk,
+								semconv.RPCMethod("EmptyCall"),
+								semconv.RPCService("grpc.testing.TestService"),
+								semconv.RPCSystemGRPC),
+						},
+						{
+							Attributes: attribute.NewSet(
+								semconv.RPCGRPCStatusCodeOk,
+								semconv.RPCMethod("UnaryCall"),
+								semconv.RPCService("grpc.testing.TestService"),
+								semconv.RPCSystemGRPC),
+						},
+						{
+							Attributes: attribute.NewSet(
+								semconv.RPCGRPCStatusCodeOk,
+								semconv.RPCMethod("StreamingInputCall"),
+								semconv.RPCService("grpc.testing.TestService"),
+								semconv.RPCSystemGRPC),
+						},
+						{
+							Attributes: attribute.NewSet(
+								semconv.RPCGRPCStatusCodeOk,
+								semconv.RPCMethod("StreamingOutputCall"),
+								semconv.RPCService("grpc.testing.TestService"),
+								semconv.RPCSystemGRPC),
+						},
+						{
+							Attributes: attribute.NewSet(
+								semconv.RPCGRPCStatusCodeOk,
+								semconv.RPCMethod("FullDuplexCall"),
+								semconv.RPCService("grpc.testing.TestService"),
+								semconv.RPCSystemGRPC),
+						},
+					},
+				},
+			},
+			{
+				Name:        "rpc.server.request.size",
+				Description: "Measures size of RPC request messages (uncompressed).",
+				Unit:        "By",
+				Data: metricdata.Histogram[int64]{
+					Temporality: metricdata.CumulativeTemporality,
+					DataPoints: []metricdata.HistogramDataPoint[int64]{
+						{
+							Attributes: attribute.NewSet(
+								semconv.RPCMethod("EmptyCall"),
+								semconv.RPCService("grpc.testing.TestService"),
+								semconv.RPCSystemGRPC),
+							Bounds:       []float64{0, 5, 10, 25, 50, 75, 100, 250, 500, 750, 1000, 2500, 5000, 7500, 10000},
+							BucketCounts: []uint64{1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0},
+							Max:          metricdata.NewExtrema(int64(0)),
+							Min:          metricdata.NewExtrema(int64(0)),
+							Count:        1,
+							Sum:          0,
+						},
+						{
+							Attributes: attribute.NewSet(
+								semconv.RPCMethod("UnaryCall"),
+								semconv.RPCService("grpc.testing.TestService"),
+								semconv.RPCSystemGRPC),
+							Bounds:       []float64{0, 5, 10, 25, 50, 75, 100, 250, 500, 750, 1000, 2500, 5000, 7500, 10000},
+							BucketCounts: []uint64{0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1},
+							Max:          metricdata.NewExtrema(int64(271840)),
+							Min:          metricdata.NewExtrema(int64(271840)),
+							Count:        1,
+							Sum:          271840,
+						},
+						{
+							Attributes: attribute.NewSet(
+								semconv.RPCMethod("StreamingInputCall"),
+								semconv.RPCService("grpc.testing.TestService"),
+								semconv.RPCSystemGRPC),
+							Bounds:       []float64{0, 5, 10, 25, 50, 75, 100, 250, 500, 750, 1000, 2500, 5000, 7500, 10000},
+							BucketCounts: []uint64{0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 0, 2},
+							Max:          metricdata.NewExtrema(int64(45912)),
+							Min:          metricdata.NewExtrema(int64(12)),
+							Count:        4,
+							Sum:          74948,
+						},
+						{
+							Attributes: attribute.NewSet(
+								semconv.RPCMethod("StreamingOutputCall"),
+								semconv.RPCService("grpc.testing.TestService"),
+								semconv.RPCSystemGRPC),
+							Bounds:       []float64{0, 5, 10, 25, 50, 75, 100, 250, 500, 750, 1000, 2500, 5000, 7500, 10000},
+							BucketCounts: []uint64{0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0},
+							Max:          metricdata.NewExtrema(int64(21)),
+							Min:          metricdata.NewExtrema(int64(21)),
+							Count:        1,
+							Sum:          21,
+						},
+						{
+							Attributes: attribute.NewSet(
+								semconv.RPCMethod("FullDuplexCall"),
+								semconv.RPCService("grpc.testing.TestService"),
+								semconv.RPCSystemGRPC),
+							Bounds:       []float64{0, 5, 10, 25, 50, 75, 100, 250, 500, 750, 1000, 2500, 5000, 7500, 10000},
+							BucketCounts: []uint64{0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 0, 2},
+							Max:          metricdata.NewExtrema(int64(45918)),
+							Min:          metricdata.NewExtrema(int64(16)),
+							Count:        4,
+							Sum:          74969,
+						},
+					},
+				},
+			},
+			{
+				Name:        "rpc.server.response.size",
+				Description: "Measures size of RPC response messages (uncompressed).",
+				Unit:        "By",
+				Data: metricdata.Histogram[int64]{
+					Temporality: metricdata.CumulativeTemporality,
+					DataPoints: []metricdata.HistogramDataPoint[int64]{
+						{
+							Attributes: attribute.NewSet(
+								semconv.RPCMethod("EmptyCall"),
+								semconv.RPCService("grpc.testing.TestService"),
+								semconv.RPCSystemGRPC),
+							Bounds:       []float64{0, 5, 10, 25, 50, 75, 100, 250, 500, 750, 1000, 2500, 5000, 7500, 10000},
+							BucketCounts: []uint64{1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0},
+							Max:          metricdata.NewExtrema(int64(0)),
+							Min:          metricdata.NewExtrema(int64(0)),
+							Count:        1,
+							Sum:          0,
+						},
+						{
+							Attributes: attribute.NewSet(
+								semconv.RPCMethod("UnaryCall"),
+								semconv.RPCService("grpc.testing.TestService"),
+								semconv.RPCSystemGRPC),
+							Bounds:       []float64{0, 5, 10, 25, 50, 75, 100, 250, 500, 750, 1000, 2500, 5000, 7500, 10000},
+							BucketCounts: []uint64{0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1},
+							Max:          metricdata.NewExtrema(int64(314167)),
+							Min:          metricdata.NewExtrema(int64(314167)),
+							Count:        1,
+							Sum:          314167,
+						},
+						{
+							Attributes: attribute.NewSet(
+								semconv.RPCMethod("StreamingInputCall"),
+								semconv.RPCService("grpc.testing.TestService"),
+								semconv.RPCSystemGRPC),
+							Bounds:       []float64{0, 5, 10, 25, 50, 75, 100, 250, 500, 750, 1000, 2500, 5000, 7500, 10000},
+							BucketCounts: []uint64{0, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0},
+							Max:          metricdata.NewExtrema(int64(4)),
+							Min:          metricdata.NewExtrema(int64(4)),
+							Count:        1,
+							Sum:          4,
+						},
+						{
+							Attributes: attribute.NewSet(
+								semconv.RPCMethod("StreamingOutputCall"),
+								semconv.RPCService("grpc.testing.TestService"),
+								semconv.RPCSystemGRPC),
+							Bounds:       []float64{0, 5, 10, 25, 50, 75, 100, 250, 500, 750, 1000, 2500, 5000, 7500, 10000},
+							BucketCounts: []uint64{0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 2},
+							Max:          metricdata.NewExtrema(int64(58987)),
+							Min:          metricdata.NewExtrema(int64(13)),
+							Count:        4,
+							Sum:          93082,
+						},
+						{
+							Attributes: attribute.NewSet(
+								semconv.RPCMethod("FullDuplexCall"),
+								semconv.RPCService("grpc.testing.TestService"),
+								semconv.RPCSystemGRPC),
+							Bounds:       []float64{0, 5, 10, 25, 50, 75, 100, 250, 500, 750, 1000, 2500, 5000, 7500, 10000},
+							BucketCounts: []uint64{0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 2},
+							Max:          metricdata.NewExtrema(int64(58987)),
+							Min:          metricdata.NewExtrema(int64(13)),
+							Count:        4,
+							Sum:          93082,
+						},
+					},
+				},
+			},
+			{
+				Name:        "rpc.server.requests_per_rpc",
+				Description: "Measures the number of messages received per RPC. Should be 1 for all non-streaming RPCs.",
+				Unit:        "{count}",
+				Data: metricdata.Histogram[int64]{
+					Temporality: metricdata.CumulativeTemporality,
+					DataPoints: []metricdata.HistogramDataPoint[int64]{
+						{
+							Attributes: attribute.NewSet(
+								semconv.RPCGRPCStatusCodeOk,
+								semconv.RPCMethod("EmptyCall"),
+								semconv.RPCService("grpc.testing.TestService"),
+								semconv.RPCSystemGRPC),
+							Bounds:       []float64{0, 5, 10, 25, 50, 75, 100, 250, 500, 750, 1000, 2500, 5000, 7500, 10000},
+							BucketCounts: []uint64{0, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0},
+							Max:          metricdata.NewExtrema(int64(1)),
+							Min:          metricdata.NewExtrema(int64(1)),
+							Count:        1,
+							Sum:          1,
+						},
+						{
+							Attributes: attribute.NewSet(
+								semconv.RPCGRPCStatusCodeOk,
+								semconv.RPCMethod("UnaryCall"),
+								semconv.RPCService("grpc.testing.TestService"),
+								semconv.RPCSystemGRPC),
+							Bounds:       []float64{0, 5, 10, 25, 50, 75, 100, 250, 500, 750, 1000, 2500, 5000, 7500, 10000},
+							BucketCounts: []uint64{0, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0},
+							Max:          metricdata.NewExtrema(int64(1)),
+							Min:          metricdata.NewExtrema(int64(1)),
+							Count:        1,
+							Sum:          1,
+						},
+						{
+							Attributes: attribute.NewSet(
+								semconv.RPCGRPCStatusCodeOk,
+								semconv.RPCMethod("StreamingInputCall"),
+								semconv.RPCService("grpc.testing.TestService"),
+								semconv.RPCSystemGRPC),
+							Bounds:       []float64{0, 5, 10, 25, 50, 75, 100, 250, 500, 750, 1000, 2500, 5000, 7500, 10000},
+							BucketCounts: []uint64{0, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0},
+							Max:          metricdata.NewExtrema(int64(4)),
+							Min:          metricdata.NewExtrema(int64(4)),
+							Count:        1,
+							Sum:          4,
+						},
+						{
+							Attributes: attribute.NewSet(
+								semconv.RPCGRPCStatusCodeOk,
+								semconv.RPCMethod("StreamingOutputCall"),
+								semconv.RPCService("grpc.testing.TestService"),
+								semconv.RPCSystemGRPC),
+							Bounds:       []float64{0, 5, 10, 25, 50, 75, 100, 250, 500, 750, 1000, 2500, 5000, 7500, 10000},
+							BucketCounts: []uint64{0, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0},
+							Max:          metricdata.NewExtrema(int64(1)),
+							Min:          metricdata.NewExtrema(int64(1)),
+							Count:        1,
+							Sum:          1,
+						},
+						{
+							Attributes: attribute.NewSet(
+								semconv.RPCGRPCStatusCodeOk,
+								semconv.RPCMethod("FullDuplexCall"),
+								semconv.RPCService("grpc.testing.TestService"),
+								semconv.RPCSystemGRPC),
+							Bounds:       []float64{0, 5, 10, 25, 50, 75, 100, 250, 500, 750, 1000, 2500, 5000, 7500, 10000},
+							BucketCounts: []uint64{0, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0},
+							Max:          metricdata.NewExtrema(int64(4)),
+							Min:          metricdata.NewExtrema(int64(4)),
+							Count:        1,
+							Sum:          4,
+						},
+					},
+				},
+			},
+			{
+				Name:        "rpc.server.responses_per_rpc",
+				Description: "Measures the number of messages received per RPC. Should be 1 for all non-streaming RPCs.",
+				Unit:        "{count}",
+				Data: metricdata.Histogram[int64]{
+					Temporality: metricdata.CumulativeTemporality,
+					DataPoints: []metricdata.HistogramDataPoint[int64]{
+						{
+							Attributes: attribute.NewSet(
+								semconv.RPCGRPCStatusCodeOk,
+								semconv.RPCMethod("EmptyCall"),
+								semconv.RPCService("grpc.testing.TestService"),
+								semconv.RPCSystemGRPC),
+							Bounds:       []float64{0, 5, 10, 25, 50, 75, 100, 250, 500, 750, 1000, 2500, 5000, 7500, 10000},
+							BucketCounts: []uint64{0, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0},
+							Max:          metricdata.NewExtrema(int64(1)),
+							Min:          metricdata.NewExtrema(int64(1)),
+							Count:        1,
+							Sum:          1,
+						},
+						{
+							Attributes: attribute.NewSet(
+								semconv.RPCGRPCStatusCodeOk,
+								semconv.RPCMethod("UnaryCall"),
+								semconv.RPCService("grpc.testing.TestService"),
+								semconv.RPCSystemGRPC),
+							Bounds:       []float64{0, 5, 10, 25, 50, 75, 100, 250, 500, 750, 1000, 2500, 5000, 7500, 10000},
+							BucketCounts: []uint64{0, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0},
+							Max:          metricdata.NewExtrema(int64(1)),
+							Min:          metricdata.NewExtrema(int64(1)),
+							Count:        1,
+							Sum:          1,
+						},
+						{
+							Attributes: attribute.NewSet(
+								semconv.RPCGRPCStatusCodeOk,
+								semconv.RPCMethod("StreamingInputCall"),
+								semconv.RPCService("grpc.testing.TestService"),
+								semconv.RPCSystemGRPC),
+							Bounds:       []float64{0, 5, 10, 25, 50, 75, 100, 250, 500, 750, 1000, 2500, 5000, 7500, 10000},
+							BucketCounts: []uint64{0, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0},
+							Max:          metricdata.NewExtrema(int64(1)),
+							Min:          metricdata.NewExtrema(int64(1)),
+							Count:        1,
+							Sum:          1,
+						},
+						{
+							Attributes: attribute.NewSet(
+								semconv.RPCGRPCStatusCodeOk,
+								semconv.RPCMethod("StreamingOutputCall"),
+								semconv.RPCService("grpc.testing.TestService"),
+								semconv.RPCSystemGRPC),
+							Bounds:       []float64{0, 5, 10, 25, 50, 75, 100, 250, 500, 750, 1000, 2500, 5000, 7500, 10000},
+							BucketCounts: []uint64{0, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0},
+							Max:          metricdata.NewExtrema(int64(4)),
+							Min:          metricdata.NewExtrema(int64(4)),
+							Count:        1,
+							Sum:          4,
+						},
+						{
+							Attributes: attribute.NewSet(
+								semconv.RPCGRPCStatusCodeOk,
+								semconv.RPCMethod("FullDuplexCall"),
+								semconv.RPCService("grpc.testing.TestService"),
+								semconv.RPCSystemGRPC),
+							Bounds:       []float64{0, 5, 10, 25, 50, 75, 100, 250, 500, 750, 1000, 2500, 5000, 7500, 10000},
+							BucketCounts: []uint64{0, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0},
+							Max:          metricdata.NewExtrema(int64(4)),
+							Min:          metricdata.NewExtrema(int64(4)),
+							Count:        1,
+							Sum:          4,
+						},
+					},
+				},
+			},
+		},
+	}
+
+	metricdatatest.AssertEqual(t, expectedScopeMetric, rm.ScopeMetrics[0], metricdatatest.IgnoreTimestamp(), metricdatatest.IgnoreValue())
 }

@@ -31,8 +31,9 @@ import (
 )
 
 const (
-	tracerKey  = "otel-go-contrib-tracer"
-	tracerName = "go.opentelemetry.io/contrib/instrumentation/github.com/gin-gonic/gin/otelgin"
+	tracerKey = "otel-go-contrib-tracer"
+	// ScopeName is the instrumentation scope name.
+	ScopeName = "go.opentelemetry.io/contrib/instrumentation/github.com/gin-gonic/gin/otelgin"
 )
 
 // Middleware returns middleware that will trace incoming requests.
@@ -47,7 +48,7 @@ func Middleware(service string, opts ...Option) gin.HandlerFunc {
 		cfg.TracerProvider = otel.GetTracerProvider()
 	}
 	tracer := cfg.TracerProvider.Tracer(
-		tracerName,
+		ScopeName,
 		oteltrace.WithInstrumentationVersion(Version()),
 	)
 	if cfg.Propagators == nil {
@@ -116,7 +117,7 @@ func HTML(c *gin.Context, code int, name string, obj interface{}) {
 	}
 	if !ok {
 		tracer = otel.GetTracerProvider().Tracer(
-			tracerName,
+			ScopeName,
 			oteltrace.WithInstrumentationVersion(Version()),
 		)
 	}
@@ -133,9 +134,8 @@ func HTML(c *gin.Context, code int, name string, obj interface{}) {
 			span.SetStatus(codes.Error, "template failure")
 			span.End()
 			panic(r)
-		} else {
-			span.End()
 		}
+		span.End()
 	}()
 	c.HTML(code, name, obj)
 }

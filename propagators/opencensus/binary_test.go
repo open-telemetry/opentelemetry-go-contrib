@@ -103,6 +103,7 @@ func TestInject(t *testing.T) {
 		})
 	}
 }
+
 func TestExtract(t *testing.T) {
 	prop := Binary{}
 	for _, tt := range []struct {

@@ -35,7 +35,7 @@ var seed = newSeed()
 func newGlobalRand() *rand.Rand {
 	src := rand.NewSource(seed)
 	if src64, ok := src.(rand.Source64); ok {
-		return rand.New(src64)
+		return rand.New(src64) //nolint:gosec // Tracked under: https://github.com/open-telemetry/opentelemetry-go-contrib/issues/4450.
 	}
-	return rand.New(src)
+	return rand.New(src) //nolint:gosec // Tracked under: https://github.com/open-telemetry/opentelemetry-go-contrib/issues/4450.
 }
