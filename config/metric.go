@@ -9,9 +9,10 @@ import (
 	sdkmetric "go.opentelemetry.io/otel/sdk/metric"
 )
 
-func initMeterProvider(cfg configOptions) metric.MeterProvider {
+func initMeterProvider(cfg configOptions) (metric.MeterProvider, shutdownFunc) {
 	if cfg.opentelemetryConfig.MeterProvider == nil {
-		return noop.NewMeterProvider()
+		return noop.NewMeterProvider(), noopShutdown
 	}
-	return sdkmetric.NewMeterProvider()
+	mp := sdkmetric.NewMeterProvider()
+	return mp, mp.Shutdown
 }

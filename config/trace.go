@@ -9,9 +9,10 @@ import (
 	"go.opentelemetry.io/otel/trace/noop"
 )
 
-func initTracerProvider(cfg configOptions) trace.TracerProvider {
+func initTracerProvider(cfg configOptions) (trace.TracerProvider, shutdownFunc) {
 	if cfg.opentelemetryConfig.TracerProvider == nil {
-		return noop.NewTracerProvider()
+		return noop.NewTracerProvider(), noopShutdown
 	}
-	return sdktrace.NewTracerProvider()
+	tp := sdktrace.NewTracerProvider()
+	return tp, tp.Shutdown
 }

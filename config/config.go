@@ -15,11 +15,18 @@ type configOptions struct {
 	opentelemetryConfig OpenTelemetryConfiguration
 }
 
+type shutdownFunc func(context.Context) error
+
+func noopShutdown(context.Context) error {
+	return nil
+}
+
 // SDK is a struct that contains all the providers
 // configured via the configuration model.
 type SDK struct {
 	meterProvider  metric.MeterProvider
 	tracerProvider trace.TracerProvider
+	shutdown       shutdownFunc
 }
 
 // TracerProvider returns a configured trace.TracerProvider.
@@ -32,6 +39,10 @@ func (s *SDK) MeterProvider() metric.MeterProvider {
 	return s.meterProvider
 }
 
+func (s *SDK) Shutdown(ctx context.Context) {
+	s.shutdown(ctx)
+}
+
 // NewSDK creates SDK providers based on the configuration model.
 //
 // Caution: The implementation only returns noop providers.
@@ -41,9 +52,18 @@ func NewSDK(opts ...ConfigurationOption) (SDK, error) {
 		o = opt.apply(o)
 	}
 
+	mp, mpShutdown := initMeterProvider(o)
+	tp, tpShutdown := initTracerProvider(o)
+
 	return SDK{
-		meterProvider:  initMeterProvider(o),
-		tracerProvider: initTracerProvider(o),
+		meterProvider:  mp,
+		tracerProvider: tp,
+		shutdown: func(ctx context.Context) error {
+			// TODO: handle errors
+			mpShutdown(ctx)
+			tpShutdown(ctx)
+			return nil
+		},
 	}, nil
 }
 
