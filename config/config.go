@@ -5,6 +5,7 @@ package config // import "go.opentelemetry.io/contrib/config"
 
 import (
 	"context"
+	"errors"
 
 	"go.opentelemetry.io/otel/metric"
 	"go.opentelemetry.io/otel/trace"
@@ -39,8 +40,8 @@ func (s *SDK) MeterProvider() metric.MeterProvider {
 	return s.meterProvider
 }
 
-func (s *SDK) Shutdown(ctx context.Context) {
-	s.shutdown(ctx)
+func (s *SDK) Shutdown(ctx context.Context) error {
+	return s.shutdown(ctx)
 }
 
 // NewSDK creates SDK providers based on the configuration model.
@@ -59,10 +60,14 @@ func NewSDK(opts ...ConfigurationOption) (SDK, error) {
 		meterProvider:  mp,
 		tracerProvider: tp,
 		shutdown: func(ctx context.Context) error {
-			// TODO: handle errors
-			mpShutdown(ctx)
-			tpShutdown(ctx)
-			return nil
+			var errs []error
+			if err := mpShutdown(ctx); err != nil {
+				errs = append(errs, err)
+			}
+			if err := tpShutdown(ctx); err != nil {
+				errs = append(errs, err)
+			}
+			return errors.Join(errs...)
 		},
 	}, nil
 }

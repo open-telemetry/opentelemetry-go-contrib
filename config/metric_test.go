@@ -17,6 +17,7 @@ func TestInitMeterProvider(t *testing.T) {
 		name         string
 		cfg          configOptions
 		wantProvider metric.MeterProvider
+		wantErr      error
 	}{
 		{
 			name:         "no-meter-provider-configured",
@@ -24,6 +25,8 @@ func TestInitMeterProvider(t *testing.T) {
 		},
 	}
 	for _, tt := range tests {
-		require.Equal(t, tt.wantProvider, initMeterProvider(tt.cfg))
+		mp, err := initMeterProvider(tt.cfg)
+		require.Equal(t, tt.wantProvider, mp)
+		require.NoError(t, tt.wantErr, err)
 	}
 }
