@@ -40,6 +40,7 @@ func (s *SDK) MeterProvider() metric.MeterProvider {
 	return s.meterProvider
 }
 
+// Shutdown calls shutdown on all configured providers.
 func (s *SDK) Shutdown(ctx context.Context) error {
 	return s.shutdown(ctx)
 }
