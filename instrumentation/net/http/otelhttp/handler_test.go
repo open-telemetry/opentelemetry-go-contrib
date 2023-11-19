@@ -96,3 +96,15 @@ func TestHandler(t *testing.T) {
 		})
 	}
 }
+
+func TestHandler_request_propagation(t *testing.T) {
+	r, err := http.NewRequest(http.MethodGet, "http://localhost/", nil)
+	require.NoError(t, err)
+
+	rr := httptest.NewRecorder()
+	otelhttp.NewHandler(
+		http.HandlerFunc(func(w http.ResponseWriter, r2 *http.Request) {
+			assert.True(t, r == r2)
+		}), "test_handler",
+	).ServeHTTP(rr, r)
+}
