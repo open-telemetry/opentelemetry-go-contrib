@@ -2,8 +2,8 @@ cloud.google.com/go/compute v1.14.0 h1:hfm2+FfxVmnRlh6LpB7cg1ZNU+5edAHmW679JePzt
 cloud.google.com/go/compute v1.14.0/go.mod h1:YfLtxrj9sU4Yxv+sXzZkyPjEyPBZfXHUvjxega5vAdo=
 cloud.google.com/go/compute/metadata v0.2.3 h1:mg4jlk7mCAj6xXp9UJ4fjI9VUI5rubuGBW5aJ7UnBMY=
 cloud.google.com/go/compute/metadata v0.2.3/go.mod h1:VAV5nSsACxMJvgaAuX6Pk2AawlZn8kiOGuCv6gTkwuA=
-github.com/GoogleCloudPlatform/opentelemetry-operations-go/detectors/gcp v1.20.0 h1:tk85AYGwOf6VNtoOQi8w/kVDi2vmPxp3/OU2FsUpdcA=
-github.com/GoogleCloudPlatform/opentelemetry-operations-go/detectors/gcp v1.20.0/go.mod h1:Xx0VKh7GJ4si3rmElbh19Mejxz68ibWg/J30ZOMrqzU=
+github.com/GoogleCloudPlatform/opentelemetry-operations-go/detectors/gcp v1.21.0 h1:aNyyrkRcLMWFum5qgYbXl6Ut+MMOmfH/kLjZJ5YJP/I=
+github.com/GoogleCloudPlatform/opentelemetry-operations-go/detectors/gcp v1.21.0/go.mod h1:BEOBnuYVyPt9wxVRQqqpKUK9FXVcL2+LOjZ8apLa9ao=
 github.com/davecgh/go-spew v1.1.1 h1:vj9j/u1bqnvCEfJOwUhtlOARqs3+rkHYY13jYWTU97c=
 github.com/davecgh/go-spew v1.1.1/go.mod h1:J7Y8YcW2NihsgmVo/mv3lAwl/skON4iLHjSsI+c5H38=
 github.com/go-logr/logr v1.2.2/go.mod h1:jdQByPbusPIv2/zmleS9BjJVeZ6kBagPoEUsqbVz/1A=
