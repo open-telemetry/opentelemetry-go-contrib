@@ -113,7 +113,7 @@ func newConfig(opts []Option, role string) *config {
 	}
 
 	c.rpcResponsesPerRPC, err = c.meter.Int64Histogram("rpc."+role+".responses_per_rpc",
-		metric.WithDescription("Measures the number of messages responded per RPC. Should be 1 for all non-streaming RPCs."),
+		metric.WithDescription("Measures the number of messages received per RPC. Should be 1 for all non-streaming RPCs."),
 		metric.WithUnit("{count}"))
 	if err != nil {
 		otel.Handle(err)

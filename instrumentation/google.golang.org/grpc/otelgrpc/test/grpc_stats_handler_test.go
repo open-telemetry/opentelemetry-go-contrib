@@ -891,7 +891,7 @@ func checkClientMetrics(t *testing.T, reader metric.Reader) {
 			},
 			{
 				Name:        "rpc.client.responses_per_rpc",
-				Description: "Measures the number of messages responded per RPC. Should be 1 for all non-streaming RPCs.",
+				Description: "Measures the number of messages received per RPC. Should be 1 for all non-streaming RPCs.",
 				Unit:        "{count}",
 				Data: metricdata.Histogram[int64]{
 					Temporality: metricdata.CumulativeTemporality,
@@ -1244,7 +1244,7 @@ func checkServerMetrics(t *testing.T, reader metric.Reader) {
 			},
 			{
 				Name:        "rpc.server.responses_per_rpc",
-				Description: "Measures the number of messages responded per RPC. Should be 1 for all non-streaming RPCs.",
+				Description: "Measures the number of messages received per RPC. Should be 1 for all non-streaming RPCs.",
 				Unit:        "{count}",
 				Data: metricdata.Histogram[int64]{
 					Temporality: metricdata.CumulativeTemporality,

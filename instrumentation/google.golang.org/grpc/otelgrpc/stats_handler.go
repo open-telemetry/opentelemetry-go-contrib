@@ -85,7 +85,8 @@ func (h *serverHandler) TagRPC(ctx context.Context, info *stats.RPCTagInfo) cont
 
 // HandleRPC processes the RPC stats.
 func (h *serverHandler) HandleRPC(ctx context.Context, rs stats.RPCStats) {
-	h.handleRPC(ctx, rs, true)
+	isServer := true
+	h.handleRPC(ctx, rs, isServer)
 }
 
 type clientHandler struct {
@@ -121,7 +122,8 @@ func (h *clientHandler) TagRPC(ctx context.Context, info *stats.RPCTagInfo) cont
 
 // HandleRPC processes the RPC stats.
 func (h *clientHandler) HandleRPC(ctx context.Context, rs stats.RPCStats) {
-	h.handleRPC(ctx, rs, false)
+	isServer := false
+	h.handleRPC(ctx, rs, isServer)
 }
 
 // TagConn can attach some information to the given context.
@@ -137,7 +139,7 @@ func (h *clientHandler) HandleConn(context.Context, stats.ConnStats) {
 	// no-op
 }
 
-func (c *config) handleRPC(ctx context.Context, rs stats.RPCStats, isServer bool) {
+func (c *config) handleRPC(ctx context.Context, rs stats.RPCStats, isServer bool) { // nolint: revive  // isServer is not a control flag.
 	span := trace.SpanFromContext(ctx)
 	gctx, _ := ctx.Value(gRPCContextKey{}).(*gRPCContext)
 	var messageId int64
