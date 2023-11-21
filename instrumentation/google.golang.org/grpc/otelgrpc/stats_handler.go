@@ -85,7 +85,8 @@ func (h *serverHandler) TagRPC(ctx context.Context, info *stats.RPCTagInfo) cont
 
 // HandleRPC processes the RPC stats.
 func (h *serverHandler) HandleRPC(ctx context.Context, rs stats.RPCStats) {
-	h.handleRPC(ctx, rs)
+	isServer := true
+	h.handleRPC(ctx, rs, isServer)
 }
 
 type clientHandler struct {
@@ -121,7 +122,8 @@ func (h *clientHandler) TagRPC(ctx context.Context, info *stats.RPCTagInfo) cont
 
 // HandleRPC processes the RPC stats.
 func (h *clientHandler) HandleRPC(ctx context.Context, rs stats.RPCStats) {
-	h.handleRPC(ctx, rs)
+	isServer := false
+	h.handleRPC(ctx, rs, isServer)
 }
 
 // TagConn can attach some information to the given context.
@@ -137,7 +139,7 @@ func (h *clientHandler) HandleConn(context.Context, stats.ConnStats) {
 	// no-op
 }
 
-func (c *config) handleRPC(ctx context.Context, rs stats.RPCStats) {
+func (c *config) handleRPC(ctx context.Context, rs stats.RPCStats, isServer bool) { // nolint: revive  // isServer is not a control flag.
 	span := trace.SpanFromContext(ctx)
 	gctx, _ := ctx.Value(gRPCContextKey{}).(*gRPCContext)
 	var messageId int64
@@ -185,7 +187,12 @@ func (c *config) handleRPC(ctx context.Context, rs stats.RPCStats) {
 
 		if rs.Error != nil {
 			s, _ := status.FromError(rs.Error)
-			span.SetStatus(codes.Error, s.Message())
+			if isServer {
+				statusCode, msg := serverStatus(s)
+				span.SetStatus(statusCode, msg)
+			} else {
+				span.SetStatus(codes.Error, s.Message())
+			}
 			rpcStatusAttr = semconv.RPCGRPCStatusCodeKey.Int(int(s.Code()))
 		} else {
 			rpcStatusAttr = semconv.RPCGRPCStatusCodeKey.Int(int(grpc_codes.OK))
