@@ -20,8 +20,10 @@ import (
 	"io"
 	"net/http"
 	"net/http/httptest"
+	"slices"
 	"strconv"
 	"strings"
+	"sync"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
@@ -47,7 +49,7 @@ func assertScopeMetrics(t *testing.T, sm metricdata.ScopeMetrics, attrs attribut
 		Version: otelhttp.Version(),
 	}, sm.Scope)
 
-	require.Len(t, sm.Metrics, 3)
+	require.Len(t, sm.Metrics, 4)
 
 	want := metricdata.Metrics{
 		Name:        "http.server.request_content_length",
@@ -84,6 +86,90 @@ func assertScopeMetrics(t *testing.T, sm metricdata.ScopeMetrics, attrs attribut
 	assert.Equal(t, attrs, dPt.Attributes, "attributes")
 	assert.Equal(t, uint64(1), dPt.Count, "count")
 	assert.Equal(t, []float64{0, 5, 10, 25, 50, 75, 100, 250, 500, 750, 1000, 2500, 5000, 7500, 10000}, dPt.Bounds, "bounds")
+}
+
+func assertActiveMetric(t *testing.T, ctx context.Context, reader *metric.ManualReader, actual metricdata.Aggregation, opts ...metricdatatest.Option) bool {
+	var rm metricdata.ResourceMetrics
+	err := reader.Collect(ctx, &rm)
+
+	if !assert.NoError(t, err, "failed to read the metric reader") {
+		return false
+	}
+
+	if !assert.Len(t, rm.ScopeMetrics, 1, "too many metrics") {
+		return false
+	}
+
+	metrics := rm.ScopeMetrics[0].Metrics
+	m := metrics[slices.IndexFunc(metrics, func(m metricdata.Metrics) bool {
+		return m.Name == otelhttp.ActiveRequests
+	})]
+	return metricdatatest.AssertAggregationsEqual(t, actual, m.Data, opts...)
+}
+
+func activeMetric(val int64) metricdata.Sum[int64] {
+	return metricdata.Sum[int64]{
+		Temporality: metricdata.CumulativeTemporality,
+		IsMonotonic: false,
+		DataPoints: []metricdata.DataPoint[int64]{
+			{
+				Value: val,
+				Attributes: attribute.NewSet(
+					semconv.HTTPMethod("GET"),
+					semconv.HTTPScheme("http"),
+				),
+			},
+		},
+	}
+}
+
+func TestActiveMetrics(t *testing.T) {
+	ctx, done := context.WithCancel(context.Background())
+	defer done()
+
+	reader := metric.NewManualReader()
+	var g sync.WaitGroup
+	var ag sync.WaitGroup
+	var l sync.Mutex
+
+	handler := otelhttp.NewHandler(http.HandlerFunc(func(writer http.ResponseWriter, request *http.Request) {
+		g.Done()
+		l.Lock()
+		defer l.Unlock()
+		ag.Done()
+	}), "test", otelhttp.WithMeterProvider(metric.NewMeterProvider(metric.WithReader(reader))))
+
+	g.Add(5)
+	ag.Add(5)
+	l.Lock()
+
+	for i := 0; i < 5; i++ {
+		go handler.ServeHTTP(
+			httptest.NewRecorder(),
+			httptest.NewRequest("GET", "/foo/bar", nil),
+		)
+	}
+
+	g.Wait()
+
+	assertActiveMetric(t, ctx, reader, activeMetric(5), metricdatatest.IgnoreTimestamp(), metricdatatest.IgnoreExemplars())
+
+	g.Add(5)
+	ag.Add(5)
+	for i := 0; i < 5; i++ {
+		go handler.ServeHTTP(
+			httptest.NewRecorder(),
+			httptest.NewRequest("GET", "/foo/bar", nil),
+		)
+	}
+	g.Wait()
+
+	assertActiveMetric(t, ctx, reader, activeMetric(10), metricdatatest.IgnoreTimestamp(), metricdatatest.IgnoreExemplars())
+
+	l.Unlock()
+	ag.Wait()
+
+	assertActiveMetric(t, ctx, reader, activeMetric(0), metricdatatest.IgnoreTimestamp(), metricdatatest.IgnoreExemplars())
 }
 
 func TestHandlerBasics(t *testing.T) {
@@ -512,7 +598,11 @@ func TestWithRouteTag(t *testing.T) {
 		switch d := m.Data.(type) {
 		case metricdata.Sum[int64]:
 			require.Len(t, d.DataPoints, 1, "metric '%v' should have exactly one data point", m.Name)
-			require.Contains(t, d.DataPoints[0].Attributes.ToSlice(), want, "should add route to attributes for metric '%v'", m.Name)
+			if m.Name == otelhttp.ActiveRequests {
+				require.NotContains(t, d.DataPoints[0].Attributes.ToSlice(), want, "should not add route to attributes for metric '%v'", m.Name)
+			} else {
+				require.Contains(t, d.DataPoints[0].Attributes.ToSlice(), want, "should add route to attributes for metric '%v'", m.Name)
+			}
 
 		case metricdata.Sum[float64]:
 			require.Len(t, d.DataPoints, 1, "metric '%v' should have exactly one data point", m.Name)

@@ -44,6 +44,7 @@ type middleware struct {
 	filters           []Filter
 	spanNameFormatter func(string, *http.Request) string
 	counters          map[string]metric.Int64Counter
+	upDownCounters    map[string]metric.Int64UpDownCounter
 	valueRecorders    map[string]metric.Float64Histogram
 	publicEndpoint    bool
 	publicEndpointFn  func(*http.Request) bool
@@ -106,6 +107,7 @@ func handleErr(err error) {
 func (h *middleware) createMeasures() {
 	h.counters = make(map[string]metric.Int64Counter)
 	h.valueRecorders = make(map[string]metric.Float64Histogram)
+	h.upDownCounters = make(map[string]metric.Int64UpDownCounter)
 
 	requestBytesCounter, err := h.meter.Int64Counter(
 		RequestContentLength,
@@ -128,9 +130,25 @@ func (h *middleware) createMeasures() {
 	)
 	handleErr(err)
 
+	activeRequestsCounter, err := h.meter.Int64UpDownCounter(
+		ActiveRequests,
+		metric.WithUnit("{request}"),
+		metric.WithDescription("Number of active HTTP server requests."),
+	)
+	handleErr(err)
+
+	h.upDownCounters[ActiveRequests] = activeRequestsCounter
 	h.counters[RequestContentLength] = requestBytesCounter
 	h.counters[ResponseContentLength] = responseBytesCounter
 	h.valueRecorders[ServerLatency] = serverLatencyMeasure
+}
+
+func httpSchemeFromRequest(r *http.Request) attribute.KeyValue {
+	if r.TLS != nil {
+		return semconv.HTTPSchemeHTTPS
+	} else {
+		return semconv.HTTPSchemeHTTP
+	}
 }
 
 // serveHTTP sets up tracing and calls the given next http.Handler with the span
@@ -225,6 +243,10 @@ func (h *middleware) serveHTTP(w http.ResponseWriter, r *http.Request, next http
 
 	labeler := &Labeler{}
 	ctx = injectLabeler(ctx, labeler)
+
+	attrs := metric.WithAttributes(httpSchemeFromRequest(r), semconv.HTTPMethod(r.Method))
+	h.upDownCounters[ActiveRequests].Add(ctx, 1, attrs)
+	defer h.upDownCounters[ActiveRequests].Add(ctx, -1, attrs)
 
 	next.ServeHTTP(w, r.WithContext(ctx))
 
