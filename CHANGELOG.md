@@ -11,6 +11,7 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 ### Added
 
 - Add the new `go.opentelemetry.io/contrib/instrgen` package to provide auto-generated source code instrumentation. (#3068, #3108)
+- Add `Shutdown` function to `SDK` struct of `"go.opentelemetry.io/contrib/config"`. (#4583)
 
 ## [1.21.1/0.46.1/0.15.1/0.1.1] - 2023-11-16
 
