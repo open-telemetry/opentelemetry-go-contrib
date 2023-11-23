@@ -24,6 +24,9 @@ import (
 	"go.opentelemetry.io/otel/metric"
 )
 
+// ScopeName is the instrumentation scope name.
+const ScopeName = "go.opentelemetry.io/contrib/instrumentation/runtime"
+
 // Runtime reports the work-in-progress conventional runtime metrics specified by OpenTelemetry.
 type runtime struct {
 	config config
@@ -106,7 +109,7 @@ func Start(opts ...Option) error {
 	}
 	r := &runtime{
 		meter: c.MeterProvider.Meter(
-			"go.opentelemetry.io/contrib/instrumentation/runtime",
+			ScopeName,
 			metric.WithInstrumentationVersion(Version()),
 		),
 		config: c,

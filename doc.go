@@ -14,5 +14,5 @@
 
 // Package contrib is a collection of extensions for the opentelemetry-go
 // project. It provides 3rd parth resource detectors, propagators, samplers,
-// and instrumentation as submodules.
+// bridges, and instrumentation as submodules.
 package contrib // import "go.opentelemetry.io/contrib"

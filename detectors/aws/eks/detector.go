@@ -31,7 +31,7 @@ import (
 )
 
 const (
-	k8sTokenPath      = "/var/run/secrets/kubernetes.io/serviceaccount/token"
+	k8sTokenPath      = "/var/run/secrets/kubernetes.io/serviceaccount/token" //nolint:gosec // False positive G101: Potential hardcoded credentials. The detector only check if the token exists.
 	k8sCertPath       = "/var/run/secrets/kubernetes.io/serviceaccount/ca.crt"
 	authConfigmapNS   = "kube-system"
 	authConfigmapName = "aws-auth"

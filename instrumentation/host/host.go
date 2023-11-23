@@ -30,6 +30,9 @@ import (
 	"go.opentelemetry.io/otel/metric"
 )
 
+// ScopeName is the instrumentation scope name.
+const ScopeName = "go.opentelemetry.io/contrib/instrumentation/host"
+
 // Host reports the work-in-progress conventional host metrics specified by OpenTelemetry.
 type host struct {
 	config config
@@ -102,7 +105,7 @@ func Start(opts ...Option) error {
 	}
 	h := &host{
 		meter: c.MeterProvider.Meter(
-			"go.opentelemetry.io/contrib/instrumentation/host",
+			ScopeName,
 			metric.WithInstrumentationVersion(Version()),
 		),
 		config: c,
@@ -141,7 +144,7 @@ func (h *host) register() error {
 		"process.cpu.time",
 		metric.WithUnit("s"),
 		metric.WithDescription(
-			"Accumulated CPU time spent by this process attributeed by state (User, System, ...)",
+			"Accumulated CPU time spent by this process attributed by state (User, System, ...)",
 		),
 	); err != nil {
 		return err
@@ -151,7 +154,7 @@ func (h *host) register() error {
 		"system.cpu.time",
 		metric.WithUnit("s"),
 		metric.WithDescription(
-			"Accumulated CPU time spent by this host attributeed by state (User, System, Other, Idle)",
+			"Accumulated CPU time spent by this host attributed by state (User, System, Other, Idle)",
 		),
 	); err != nil {
 		return err
@@ -171,7 +174,7 @@ func (h *host) register() error {
 		"system.memory.utilization",
 		metric.WithUnit("1"),
 		metric.WithDescription(
-			"Memory utilization of this process attributeed by memory state (Used, Available)",
+			"Memory utilization of this process attributed by memory state (Used, Available)",
 		),
 	); err != nil {
 		return err
@@ -181,7 +184,7 @@ func (h *host) register() error {
 		"system.network.io",
 		metric.WithUnit("By"),
 		metric.WithDescription(
-			"Bytes transferred attributeed by direction (Transmit, Receive)",
+			"Bytes transferred attributed by direction (Transmit, Receive)",
 		),
 	); err != nil {
 		return err

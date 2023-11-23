@@ -78,7 +78,7 @@ func main() {
 	otelHandler := otelhttp.NewHandler(http.HandlerFunc(helloHandler), "Hello")
 
 	http.Handle("/hello", otelHandler)
-	err = http.ListenAndServe(":7777", nil)
+	err = http.ListenAndServe(":7777", nil) //nolint:gosec // Ignoring G114: Use of net/http serve function that has no support for setting timeouts.
 	if err != nil {
 		log.Fatal(err)
 	}
