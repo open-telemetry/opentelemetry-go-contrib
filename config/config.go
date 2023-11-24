@@ -6,9 +6,18 @@ package config // import "go.opentelemetry.io/contrib/config"
 import (
 	"context"
 	"errors"
+	"fmt"
+	"strings"
 
 	"go.opentelemetry.io/otel/metric"
+	"go.opentelemetry.io/otel/sdk/resource"
+	semconv "go.opentelemetry.io/otel/semconv/v1.21.0"
 	"go.opentelemetry.io/otel/trace"
+)
+
+const (
+	protocolProtobufHTTP = "http/protobuf"
+	protocolProtobufGRPC = "grpc/protobuf"
 )
 
 type configOptions struct {
@@ -46,16 +55,25 @@ func (s *SDK) Shutdown(ctx context.Context) error {
 }
 
 // NewSDK creates SDK providers based on the configuration model.
-//
-// Caution: The implementation only returns noop providers.
 func NewSDK(opts ...ConfigurationOption) (SDK, error) {
 	o := configOptions{}
 	for _, opt := range opts {
 		o = opt.apply(o)
 	}
 
-	mp, mpShutdown := initMeterProvider(o)
-	tp, tpShutdown := initTracerProvider(o)
+	r, err := newResource(o.opentelemetryConfig.Resource)
+	if err != nil {
+		return SDK{}, err
+	}
+
+	mp, mpShutdown, err := initMeterProvider(o, r)
+	if err != nil {
+		return SDK{}, err
+	}
+	tp, tpShutdown, err := initTracerProvider(o, r)
+	if err != nil {
+		return SDK{}, err
+	}
 
 	return SDK{
 		meterProvider:  mp,
@@ -99,5 +117,19 @@ func WithOpenTelemetryConfiguration(cfg OpenTelemetryConfiguration) Configuratio
 // - https://github.com/open-telemetry/opentelemetry-go-contrib/issues/4373
 // - https://github.com/open-telemetry/opentelemetry-go-contrib/issues/4412
 
-// TODO: create SDK from the model:
-// - https://github.com/open-telemetry/opentelemetry-go-contrib/issues/4371
+func normalizeEndpoint(endpoint string) string {
+	if !strings.HasPrefix(endpoint, "https://") && !strings.HasPrefix(endpoint, "http://") {
+		return fmt.Sprintf("http://%s", endpoint)
+	}
+	return endpoint
+}
+
+func newResource(res *Resource) (*resource.Resource, error) {
+	if res == nil {
+		return resource.Default(), nil
+	}
+	return resource.Merge(resource.Default(),
+		resource.NewWithAttributes(semconv.SchemaURL,
+			semconv.ServiceName(*res.Attributes.ServiceName),
+		))
+}
