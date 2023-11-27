@@ -26,6 +26,7 @@ import (
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/interop"
+	"google.golang.org/grpc/stats"
 	"google.golang.org/grpc/status"
 
 	"go.opentelemetry.io/contrib/instrumentation/google.golang.org/grpc/otelgrpc"
@@ -87,6 +88,65 @@ func TestStatsHandler(t *testing.T) {
 
 	t.Run("ServerMetrics", func(t *testing.T) {
 		checkServerMetrics(t, serverMetricReader)
+	})
+}
+
+type noopHandler struct {
+	handler stats.Handler
+}
+
+func (h *noopHandler) TagRPC(ctx context.Context, _ *stats.RPCTagInfo) context.Context {
+	return ctx
+}
+func (h *noopHandler) HandleRPC(ctx context.Context, rs stats.RPCStats) {
+	h.handler.HandleRPC(ctx, rs)
+}
+func (h *noopHandler) TagConn(ctx context.Context, ci *stats.ConnTagInfo) context.Context {
+	return ctx
+}
+func (h *noopHandler) HandleConn(context.Context, stats.ConnStats) {}
+
+func TestNoopStatsHandler(t *testing.T) {
+	clientSR := tracetest.NewSpanRecorder()
+	clientTP := trace.NewTracerProvider(trace.WithSpanProcessor(clientSR))
+
+	serverSR := tracetest.NewSpanRecorder()
+	serverTP := trace.NewTracerProvider(trace.WithSpanProcessor(serverSR))
+
+	listener, err := net.Listen("tcp", "127.0.0.1:0")
+	require.NoError(t, err, "failed to open port")
+	client := newGrpcTest(t, listener,
+		[]grpc.DialOption{
+			grpc.WithStatsHandler(&noopHandler{
+				handler: otelgrpc.NewClientHandler(
+					otelgrpc.WithTracerProvider(clientTP),
+					otelgrpc.WithMessageEvents(otelgrpc.ReceivedEvents, otelgrpc.SentEvents),
+				)},
+			),
+		},
+		[]grpc.ServerOption{
+			grpc.StatsHandler(&noopHandler{
+				otelgrpc.NewServerHandler(
+					otelgrpc.WithTracerProvider(serverTP),
+					otelgrpc.WithMessageEvents(otelgrpc.ReceivedEvents, otelgrpc.SentEvents),
+				)},
+			),
+		},
+	)
+	doCalls(client)
+
+	t.Run("ClientSpans", func(t *testing.T) {
+		spans := clientSR.Ended()
+		if len(spans) != 0 {
+			t.Fatalf("got %d but want 0", len(spans))
+		}
+	})
+
+	t.Run("ServerSpans", func(t *testing.T) {
+		spans := serverSR.Ended()
+		if len(spans) != 0 {
+			t.Fatalf("got %d but want 0", len(spans))
+		}
 	})
 }
 
