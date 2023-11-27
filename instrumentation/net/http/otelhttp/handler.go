@@ -15,6 +15,7 @@
 package otelhttp // import "go.opentelemetry.io/contrib/instrumentation/net/http/otelhttp"
 
 import (
+	"context"
 	"io"
 	"net/http"
 	"time"
@@ -232,13 +233,14 @@ func (h *middleware) serveHTTP(w http.ResponseWriter, r *http.Request, next http
 		attributes = append(attributes, semconv.HTTPStatusCode(rww.statusCode))
 	}
 	o := metric.WithAttributes(attributes...)
-	h.requestBytesCounter.Add(ctx, bw.read, o)
-	h.responseBytesCounter.Add(ctx, rww.written, o)
+	ctxWithoutCancel := withoutCancel(ctx)
+	h.requestBytesCounter.Add(ctxWithoutCancel, bw.read, o)
+	h.responseBytesCounter.Add(ctxWithoutCancel, rww.written, o)
 
 	// Use floating point division here for higher precision (instead of Millisecond method).
 	elapsedTime := float64(time.Since(requestStartTime)) / float64(time.Millisecond)
 
-	h.serverLatencyMeasure.Record(ctx, elapsedTime, o)
+	h.serverLatencyMeasure.Record(ctxWithoutCancel, elapsedTime, o)
 }
 
 func setAfterServeAttributes(span trace.Span, read, wrote int64, statusCode int, rerr, werr error) {
@@ -280,4 +282,35 @@ func WithRouteTag(route string, h http.Handler) http.Handler {
 
 		h.ServeHTTP(w, r)
 	})
+}
+
+func withoutCancel(parent context.Context) context.Context {
+	if parent == nil {
+		panic("cannot create context from nil parent")
+	}
+	return withoutCancelCtx{parent}
+}
+
+type withoutCancelCtx struct {
+	c context.Context
+}
+
+func (withoutCancelCtx) Deadline() (deadline time.Time, ok bool) {
+	return
+}
+
+func (withoutCancelCtx) Done() <-chan struct{} {
+	return nil
+}
+
+func (withoutCancelCtx) Err() error {
+	return nil
+}
+
+func (w withoutCancelCtx) Value(key any) any {
+	return w.c.Value(key)
+}
+
+func (w withoutCancelCtx) String() string {
+	return "withoutCancel"
 }
