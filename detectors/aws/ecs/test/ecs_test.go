@@ -58,8 +58,7 @@ func TestDetectV4LaunchTypeEc2(t *testing.T) {
 	}))
 	defer testServer.Close()
 
-	os.Clearenv()
-	_ = os.Setenv(metadataV4EnvVar, testServer.URL)
+	t.Setenv(metadataV4EnvVar, testServer.URL)
 
 	hostname, err := os.Hostname()
 	assert.NoError(t, err, "Error")
@@ -229,8 +228,7 @@ func TestDetectV4LaunchTypeFargate(t *testing.T) {
 	}))
 	defer testServer.Close()
 
-	os.Clearenv()
-	_ = os.Setenv(metadataV4EnvVar, testServer.URL)
+	t.Setenv(metadataV4EnvVar, testServer.URL)
 
 	hostname, err := os.Hostname()
 	assert.NoError(t, err, "Error")
