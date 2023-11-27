@@ -143,8 +143,11 @@ func (c *config) handleRPC(ctx context.Context, rs stats.RPCStats, isServer bool
 	span := trace.SpanFromContext(ctx)
 	gctx, _ := ctx.Value(gRPCContextKey{}).(*gRPCContext)
 	var messageId int64
-	metricAttrs := make([]attribute.KeyValue, 0, len(gctx.metricAttrs)+1)
-	metricAttrs = append(metricAttrs, gctx.metricAttrs...)
+	var metricAttrs []attribute.KeyValue
+	if gctx != nil {
+		metricAttrs := make([]attribute.KeyValue, 0, len(gctx.metricAttrs)+1)
+		metricAttrs = append(metricAttrs, gctx.metricAttrs...)
+	}
 	wctx := withoutCancel(ctx)
 
 	switch rs := rs.(type) {
