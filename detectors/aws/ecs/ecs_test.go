@@ -16,7 +16,6 @@ package ecs
 
 import (
 	"context"
-	"os"
 	"testing"
 
 	"go.opentelemetry.io/otel/attribute"
@@ -46,8 +45,7 @@ func (detectorUtils *MockDetectorUtils) getContainerName() (string, error) {
 // successfully returns resource when process is running on Amazon ECS environment
 // with no Metadata v4.
 func TestDetectV3(t *testing.T) {
-	os.Clearenv()
-	_ = os.Setenv(metadataV3EnvVar, "3")
+	t.Setenv(metadataV3EnvVar, "3")
 
 	detectorUtils := new(MockDetectorUtils)
 
@@ -69,8 +67,7 @@ func TestDetectV3(t *testing.T) {
 
 // returns empty resource when detector cannot read container ID.
 func TestDetectCannotReadContainerID(t *testing.T) {
-	os.Clearenv()
-	_ = os.Setenv(metadataV3EnvVar, "3")
+	t.Setenv(metadataV3EnvVar, "3")
 	detectorUtils := new(MockDetectorUtils)
 
 	detectorUtils.On("getContainerName").Return("container-Name", nil)
@@ -92,9 +89,8 @@ func TestDetectCannotReadContainerID(t *testing.T) {
 
 // returns empty resource when detector cannot read container Name.
 func TestDetectCannotReadContainerName(t *testing.T) {
-	os.Clearenv()
-	_ = os.Setenv(metadataV3EnvVar, "3")
-	_ = os.Setenv(metadataV4EnvVar, "4")
+	t.Setenv(metadataV3EnvVar, "3")
+	t.Setenv(metadataV4EnvVar, "4")
 	detectorUtils := new(MockDetectorUtils)
 
 	detectorUtils.On("getContainerName").Return("", errCannotReadContainerName)
@@ -109,7 +105,6 @@ func TestDetectCannotReadContainerName(t *testing.T) {
 
 // returns empty resource when process is not running ECS.
 func TestReturnsIfNoEnvVars(t *testing.T) {
-	os.Clearenv()
 	detector := &resourceDetector{utils: nil}
 	res, err := detector.Detect(context.Background())
 
@@ -120,7 +115,6 @@ func TestReturnsIfNoEnvVars(t *testing.T) {
 
 // handles alternative aws partitions (e.g. AWS GovCloud).
 func TestLogsAttributesAlternatePartition(t *testing.T) {
-	os.Clearenv()
 	detector := &resourceDetector{utils: nil}
 
 	containerMetadata := &metadata.ContainerMetadataV4{
