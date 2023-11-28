@@ -19,7 +19,6 @@ import (
 	"encoding/json"
 	"fmt"
 	"log"
-	"os"
 	"reflect"
 	"strconv"
 	"strings"
@@ -98,13 +97,13 @@ func initMockTracerProvider() (*sdktrace.TracerProvider, *tracetest.InMemoryExpo
 	return tp, exp
 }
 
-func setEnvVars() {
-	_ = os.Setenv("AWS_LAMBDA_FUNCTION_NAME", "testFunction")
-	_ = os.Setenv("AWS_REGION", "us-texas-1")
-	_ = os.Setenv("AWS_LAMBDA_FUNCTION_VERSION", "$LATEST")
-	_ = os.Setenv("AWS_LAMBDA_LOG_STREAM_NAME", "2023/01/01/[$LATEST]5d1edb9e525d486696cf01a3503487bc")
-	_ = os.Setenv("AWS_LAMBDA_FUNCTION_MEMORY_SIZE", "128")
-	_ = os.Setenv("_X_AMZN_TRACE_ID", "Root=1-5759e988-bd862e3fe1be46a994272793;Parent=53995c3f42cd8ad8;Sampled=1")
+func setEnvVars(t *testing.T) {
+	t.Setenv("AWS_LAMBDA_FUNCTION_NAME", "testFunction")
+	t.Setenv("AWS_REGION", "us-texas-1")
+	t.Setenv("AWS_LAMBDA_FUNCTION_VERSION", "$LATEST")
+	t.Setenv("AWS_LAMBDA_LOG_STREAM_NAME", "2023/01/01/[$LATEST]5d1edb9e525d486696cf01a3503487bc")
+	t.Setenv("AWS_LAMBDA_FUNCTION_MEMORY_SIZE", "128")
+	t.Setenv("_X_AMZN_TRACE_ID", "Root=1-5759e988-bd862e3fe1be46a994272793;Parent=53995c3f42cd8ad8;Sampled=1")
 }
 
 // Vars for Tracing and TracingWithFlusher Tests.
@@ -177,7 +176,7 @@ func assertStubEqualsIgnoreTime(t *testing.T, expected tracetest.SpanStub, actua
 }
 
 func TestInstrumentHandlerTracing(t *testing.T) {
-	setEnvVars()
+	setEnvVars(t)
 	tp, memExporter := initMockTracerProvider()
 
 	customerHandler := func() (string, error) {
@@ -198,7 +197,7 @@ func TestInstrumentHandlerTracing(t *testing.T) {
 }
 
 func TestWrapHandlerTracing(t *testing.T) {
-	setEnvVars()
+	setEnvVars(t)
 	tp, memExporter := initMockTracerProvider()
 
 	// No flusher needed as SimpleSpanProcessor is synchronous
@@ -223,7 +222,7 @@ func (mf *mockFlusher) ForceFlush(context.Context) error {
 var _ otellambda.Flusher = &mockFlusher{}
 
 func TestInstrumentHandlerTracingWithFlusher(t *testing.T) {
-	setEnvVars()
+	setEnvVars(t)
 	tp, memExporter := initMockTracerProvider()
 
 	customerHandler := func() (string, error) {
@@ -246,7 +245,7 @@ func TestInstrumentHandlerTracingWithFlusher(t *testing.T) {
 }
 
 func TestWrapHandlerTracingWithFlusher(t *testing.T) {
-	setEnvVars()
+	setEnvVars(t)
 	tp, memExporter := initMockTracerProvider()
 
 	flusher := mockFlusher{}
@@ -362,7 +361,7 @@ func mockRequestCarrier(eventJSON []byte) propagation.TextMapCarrier {
 }
 
 func TestInstrumentHandlerTracingWithMockPropagator(t *testing.T) {
-	setEnvVars()
+	setEnvVars(t)
 	tp, memExporter := initMockTracerProvider()
 
 	customerHandler := func(event mockRequest) (string, error) {
@@ -387,7 +386,7 @@ func TestInstrumentHandlerTracingWithMockPropagator(t *testing.T) {
 }
 
 func TestWrapHandlerTracingWithMockPropagator(t *testing.T) {
-	setEnvVars()
+	setEnvVars(t)
 	tp, memExporter := initMockTracerProvider()
 
 	// No flusher needed as SimpleSpanProcessor is synchronous
