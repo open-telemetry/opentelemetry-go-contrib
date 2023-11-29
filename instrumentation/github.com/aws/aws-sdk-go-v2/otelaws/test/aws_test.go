@@ -23,6 +23,8 @@ import (
 	"github.com/aws/aws-sdk-go-v2/aws"
 	"github.com/aws/aws-sdk-go-v2/service/route53"
 	"github.com/aws/aws-sdk-go-v2/service/route53/types"
+	smithyauth "github.com/aws/smithy-go/auth"
+	smithyhttp "github.com/aws/smithy-go/transport/http"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 
@@ -33,6 +35,14 @@ import (
 	"go.opentelemetry.io/otel/sdk/trace/tracetest"
 	"go.opentelemetry.io/otel/trace"
 )
+
+type route53AuthResolver struct{}
+
+func (r *route53AuthResolver) ResolveAuthSchemes(context.Context, *route53.AuthResolverParameters) ([]*smithyauth.Option, error) {
+	return []*smithyauth.Option{
+		{SchemeID: smithyauth.SchemeIDAnonymous},
+	}, nil
+}
 
 func TestAppendMiddlewares(t *testing.T) {
 	cases := map[string]struct {
@@ -104,20 +114,16 @@ func TestAppendMiddlewares(t *testing.T) {
 			sr := tracetest.NewSpanRecorder()
 			provider := sdktrace.NewTracerProvider(sdktrace.WithSpanProcessor(sr))
 
-			svc := route53.NewFromConfig(aws.Config{
-				Region: c.expectedRegion,
-				EndpointResolverWithOptions: aws.EndpointResolverWithOptionsFunc(
-					func(service, region string, _ ...interface{}) (aws.Endpoint, error) {
-						return aws.Endpoint{
-							URL:         srv.URL,
-							SigningName: "route53",
-						}, nil
-					},
-				),
-				Retryer: func() aws.Retryer {
-					return aws.NopRetryer{}
+			svc := route53.New(route53.Options{
+				Region:             c.expectedRegion,
+				BaseEndpoint:       &srv.URL,
+				AuthSchemeResolver: &route53AuthResolver{},
+				AuthSchemes: []smithyhttp.AuthScheme{
+					smithyhttp.NewAnonymousScheme(),
 				},
+				Retryer: aws.NopRetryer{},
 			})
+
 			_, err := svc.ChangeResourceRecordSets(context.Background(), &route53.ChangeResourceRecordSetsInput{
 				ChangeBatch: &types.ChangeBatch{
 					Changes: []types.Change{},
