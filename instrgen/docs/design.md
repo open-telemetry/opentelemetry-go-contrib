@@ -15,8 +15,7 @@ GO is statically typed, natively compiled programming language which means that 
 virtual machine in between. The only component that lives between your program and machine is operating system.
 Because of this limitation, auto-instrumentation of Go programs is limited to the following:
 
-1) an ebpf (https://ebpf.io/) a technology that allowes "programming" kernel 
-   and can be used by native programming languages in general on platforms that provide it.
+1. Auto-instrument within the kernel itself (i.e. [eBPF](https://ebpf.io/))
    
 2) compile time instrumentation - used by `instrgen`
 
