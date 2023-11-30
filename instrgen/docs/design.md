@@ -1,13 +1,13 @@
 # OpenTelemetry Go Source Automatic Instrumentation - design
 
-This document describes the design of `instrgen` - compile time automatic instrumentation for GO programming language.
+This document describes design of `instrgen` - compile time automatic OpenTelemetry instrumentation for GO programming language.
 
 ## Background
 
 Usually techniques used for instrumenting programs in specific languages are connected to runtimes and type systems
 used by these languages and depend on capabilities offered by them. Methods differs depending on language properties.
-Is executed by virtual machine? Is statically or dynamically typed?
-What's matter is the injection point.
+Are they executed by virtual machine? Are they statically or dynamically typed?
+Language and its internals influence instrumentation techniques.
 In dynamic languages it's very easy to replace original implementation. This is done by providing a new
 implementation built on top of the original one. A technique called monkey patching (i.e. Python decorators).
 
