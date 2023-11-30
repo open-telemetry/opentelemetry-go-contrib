@@ -13,8 +13,7 @@ implementation built on top of the original one. A technique called monkey patch
 
 GO is statically typed, natively compiled programming language which means that works on bare methal without
 virtual machine in between. The only component that lives between your program and machine is operating system.
-Therefore, to instrument GO programs, injection needs to be done at different level. There are two ways
-utilized for now by opentelemetry community for GO:
+Because of this limitation, auto-instrumentation of Go programs is limited to the following:
 
 1) an ebpf (https://ebpf.io/) a technology that allowes "programming" kernel 
    and can be used by native programming languages in general on platforms that provide it.
