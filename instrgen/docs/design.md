@@ -8,8 +8,8 @@ Usually techniques used for instrumenting programs in specific languages are con
 used by these languages and depend on capabilities offered by them. Methods differs depending on language properties.
 Is executed by virtual machine? Is statically or dynamically typed?
 What's matter is the injection point.
-In dynamic languages it's very easy to replace original implementation by providing a new one
-usually build on top of original one, a technique called monkey patching (look at python decorators).
+In dynamic languages it's very easy to replace original implementation. This is done by providing a new
+implementation built on top of the original one. A technique called monkey patching (i.e. Python decorators).
 
 GO is statically typed, natively compiled programming language which means that works on bare methal without
 virtual machine in between. The only component that lives between your program and machine is operating system.
