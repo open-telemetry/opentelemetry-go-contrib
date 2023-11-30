@@ -42,7 +42,7 @@ As mentioned above `instrgen` utilizes toolexec compiler switch (https://github.
 it means that the same process is executed twice in different context.
 
 It was designed and implemented this way to take input directly from user via command line switches and to do some
-initial analysis, however this can be splitted into two separaate tools or processes.
+initial analysis, however this can be spit into two separate tools or processes.
 
 `driver --inject  /testdata/basic yes main.main`
 
