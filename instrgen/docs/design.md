@@ -27,7 +27,7 @@ The fundamental difference is the injection point, instrumentation has to be don
 at compile time which has cons and pros.
 
 GO is perfect language for compile time instrumentation for two main reasons:
-- everything what's needed is in standard library
+- everything that's needed is in standard library
 - it's easy to control compilation process due to go compiler architecture
 
 ## Design
