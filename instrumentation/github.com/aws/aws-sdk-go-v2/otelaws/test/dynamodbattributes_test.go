@@ -23,7 +23,9 @@ import (
 	"github.com/aws/aws-sdk-go-v2/aws"
 	"github.com/aws/aws-sdk-go-v2/service/dynamodb"
 	dtypes "github.com/aws/aws-sdk-go-v2/service/dynamodb/types"
+	smithyauth "github.com/aws/smithy-go/auth"
 	"github.com/aws/smithy-go/middleware"
+	smithyhttp "github.com/aws/smithy-go/transport/http"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 
@@ -34,6 +36,14 @@ import (
 	"go.opentelemetry.io/otel/sdk/trace/tracetest"
 	"go.opentelemetry.io/otel/trace"
 )
+
+type dynamoDBAuthResolver struct{}
+
+func (r *dynamoDBAuthResolver) ResolveAuthSchemes(context.Context, *dynamodb.AuthResolverParameters) ([]*smithyauth.Option, error) {
+	return []*smithyauth.Option{
+		{SchemeID: smithyauth.SchemeIDAnonymous},
+	}, nil
+}
 
 func TestDynamodbTags(t *testing.T) {
 	cases := struct {
@@ -57,20 +67,16 @@ func TestDynamodbTags(t *testing.T) {
 		sr := tracetest.NewSpanRecorder()
 		provider := sdktrace.NewTracerProvider(sdktrace.WithSpanProcessor(sr))
 
-		svc := dynamodb.NewFromConfig(aws.Config{
-			Region: cases.expectedRegion,
-			EndpointResolverWithOptions: aws.EndpointResolverWithOptionsFunc(
-				func(service, region string, _ ...interface{}) (aws.Endpoint, error) {
-					return aws.Endpoint{
-						URL:         server.URL,
-						SigningName: "dynamodb",
-					}, nil
-				},
-			),
-			Retryer: func() aws.Retryer {
-				return aws.NopRetryer{}
+		svc := dynamodb.New(dynamodb.Options{
+			Region:             cases.expectedRegion,
+			BaseEndpoint:       &server.URL,
+			AuthSchemeResolver: &dynamoDBAuthResolver{},
+			AuthSchemes: []smithyhttp.AuthScheme{
+				smithyhttp.NewAnonymousScheme(),
 			},
+			Retryer: aws.NopRetryer{},
 		})
+
 		_, err := svc.GetItem(context.Background(), &dynamodb.GetItemInput{
 			TableName:            aws.String("table1"),
 			ConsistentRead:       aws.Bool(false),
@@ -131,19 +137,11 @@ func TestDynamodbTagsCustomSetter(t *testing.T) {
 		sr := tracetest.NewSpanRecorder()
 		provider := sdktrace.NewTracerProvider(sdktrace.WithSpanProcessor(sr))
 
-		svc := dynamodb.NewFromConfig(aws.Config{
-			Region: cases.expectedRegion,
-			EndpointResolverWithOptions: aws.EndpointResolverWithOptionsFunc(
-				func(service, region string, _ ...interface{}) (aws.Endpoint, error) {
-					return aws.Endpoint{
-						URL:         server.URL,
-						SigningName: "dynamodb",
-					}, nil
-				},
-			),
-			Retryer: func() aws.Retryer {
-				return aws.NopRetryer{}
-			},
+		svc := dynamodb.New(dynamodb.Options{
+			Region:             cases.expectedRegion,
+			BaseEndpoint:       &server.URL,
+			AuthSchemeResolver: &dynamoDBAuthResolver{},
+			Retryer:            aws.NopRetryer{},
 		})
 
 		mycustomsetter := otelaws.AttributeSetter(func(context.Context, middleware.InitializeInput) []attribute.KeyValue {
