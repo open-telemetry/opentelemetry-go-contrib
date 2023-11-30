@@ -16,8 +16,9 @@ virtual machine in between. The only component that lives between your program a
 Because of this limitation, auto-instrumentation of Go programs is limited to the following:
 
 1. Auto-instrument within the kernel itself (i.e. [eBPF](https://ebpf.io/))
-   
-2) compile time instrumentation - used by `instrgen`
+2. Auto-instrument during compilation of the program
+
+The second approach is taken by `instrgen`.
 
 ## Rationale
 
