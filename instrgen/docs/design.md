@@ -1,6 +1,6 @@
 # OpenTelemetry Go Source Automatic Instrumentation - design
 
-This document describes design of `instrgen` - compile time automatic instrumentation for GO programming language.
+This document describes the design of `instrgen` - compile time automatic instrumentation for GO programming language.
 
 ## Background
 
