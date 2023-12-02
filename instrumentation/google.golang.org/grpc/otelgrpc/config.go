@@ -16,7 +16,6 @@ package otelgrpc // import "go.opentelemetry.io/contrib/instrumentation/google.g
 
 import (
 	"go.opentelemetry.io/otel"
-	"go.opentelemetry.io/otel/attribute"
 	"go.opentelemetry.io/otel/metric"
 	"go.opentelemetry.io/otel/propagation"
 	semconv "go.opentelemetry.io/otel/semconv/v1.17.0"
@@ -26,8 +25,6 @@ import (
 const (
 	// ScopeName is the instrumentation scope name.
 	ScopeName = "go.opentelemetry.io/contrib/instrumentation/google.golang.org/grpc/otelgrpc"
-	// GRPCStatusCodeKey is convention for numeric status code of a gRPC request.
-	GRPCStatusCodeKey = attribute.Key("rpc.grpc.status_code")
 )
 
 // Filter is a predicate used to determine whether a given request in
@@ -57,9 +54,7 @@ type config struct {
 }
 
 // Option applies an option value for a config.
-type Option interface {
-	apply(*config)
-}
+type Option func(*config)
 
 // newConfig returns a config configured with all the passed Options.
 func newConfig(opts []Option, role string) *config {
@@ -68,8 +63,8 @@ func newConfig(opts []Option, role string) *config {
 		TracerProvider: otel.GetTracerProvider(),
 		MeterProvider:  otel.GetMeterProvider(),
 	}
-	for _, o := range opts {
-		o.apply(c)
+	for _, fn := range opts {
+		fn(c)
 	}
 
 	c.tracer = c.TracerProvider.Tracer(
@@ -122,25 +117,13 @@ func newConfig(opts []Option, role string) *config {
 	return c
 }
 
-type propagatorsOption struct{ p propagation.TextMapPropagator }
-
-func (o propagatorsOption) apply(c *config) {
-	if o.p != nil {
-		c.Propagators = o.p
-	}
-}
-
 // WithPropagators returns an Option to use the Propagators when extracting
 // and injecting trace context from requests.
 func WithPropagators(p propagation.TextMapPropagator) Option {
-	return propagatorsOption{p: p}
-}
-
-type tracerProviderOption struct{ tp trace.TracerProvider }
-
-func (o tracerProviderOption) apply(c *config) {
-	if o.tp != nil {
-		c.TracerProvider = o.tp
+	return func(c *config) {
+		if p != nil {
+			c.Propagators = p
+		}
 	}
 }
 
@@ -148,37 +131,31 @@ func (o tracerProviderOption) apply(c *config) {
 //
 // Deprecated: Use stats handlers instead.
 func WithInterceptorFilter(f Filter) Option {
-	return interceptorFilterOption{f: f}
-}
-
-type interceptorFilterOption struct {
-	f Filter
-}
-
-func (o interceptorFilterOption) apply(c *config) {
-	if o.f != nil {
-		c.Filter = o.f
+	return func(c *config) {
+		if f != nil {
+			c.Filter = f
+		}
 	}
 }
 
 // WithTracerProvider returns an Option to use the TracerProvider when
 // creating a Tracer.
 func WithTracerProvider(tp trace.TracerProvider) Option {
-	return tracerProviderOption{tp: tp}
-}
-
-type meterProviderOption struct{ mp metric.MeterProvider }
-
-func (o meterProviderOption) apply(c *config) {
-	if o.mp != nil {
-		c.MeterProvider = o.mp
+	return func(c *config) {
+		if tp != nil {
+			c.TracerProvider = tp
+		}
 	}
 }
 
 // WithMeterProvider returns an Option to use the MeterProvider when
 // creating a Meter. If this option is not provide the global MeterProvider will be used.
 func WithMeterProvider(mp metric.MeterProvider) Option {
-	return meterProviderOption{mp: mp}
+	return func(c *config) {
+		if mp != nil {
+			c.MeterProvider = mp
+		}
+	}
 }
 
 // Event type that can be recorded, see WithMessageEvents.
@@ -190,21 +167,6 @@ const (
 	SentEvents
 )
 
-type messageEventsProviderOption struct {
-	events []Event
-}
-
-func (m messageEventsProviderOption) apply(c *config) {
-	for _, e := range m.events {
-		switch e {
-		case ReceivedEvents:
-			c.ReceivedEvent = true
-		case SentEvents:
-			c.SentEvent = true
-		}
-	}
-}
-
 // WithMessageEvents configures the Handler to record the specified events
 // (span.AddEvent) on spans. By default only summary attributes are added at the
 // end of the request.
@@ -213,17 +175,22 @@ func (m messageEventsProviderOption) apply(c *config) {
 //   - ReceivedEvents: Record the number of bytes read after every gRPC read operation.
 //   - SentEvents: Record the number of bytes written after every gRPC write operation.
 func WithMessageEvents(events ...Event) Option {
-	return messageEventsProviderOption{events: events}
-}
-
-type spanStartOption struct{ opts []trace.SpanStartOption }
-
-func (o spanStartOption) apply(c *config) {
-	c.SpanStartOptions = append(c.SpanStartOptions, o.opts...)
+	return func(c *config) {
+		for _, e := range events {
+			switch e {
+			case ReceivedEvents:
+				c.ReceivedEvent = true
+			case SentEvents:
+				c.SentEvent = true
+			}
+		}
+	}
 }
 
 // WithSpanOptions configures an additional set of
 // trace.SpanOptions, which are applied to each new span.
 func WithSpanOptions(opts ...trace.SpanStartOption) Option {
-	return spanStartOption{opts}
+	return func(c *config) {
+		c.SpanStartOptions = append(c.SpanStartOptions, opts...)
+	}
 }

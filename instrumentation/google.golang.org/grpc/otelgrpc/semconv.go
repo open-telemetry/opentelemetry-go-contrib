@@ -36,6 +36,9 @@ const (
 	// The uncompressed size of the message transmitted or received in
 	// bytes.
 	RPCMessageUncompressedSizeKey = attribute.Key("message.uncompressed_size")
+
+	// GRPCStatusCodeKey is convention for numeric status code of a gRPC request.
+	GRPCStatusCodeKey = attribute.Key("rpc.grpc.status_code")
 )
 
 // Semantic conventions for common RPC attributes.
