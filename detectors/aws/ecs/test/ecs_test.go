@@ -114,8 +114,7 @@ func TestDetectV4LaunchTypeEc2BadContainerArn(t *testing.T) {
 	}))
 	defer testServer.Close()
 
-	os.Clearenv()
-	_ = os.Setenv(metadataV4EnvVar, testServer.URL)
+	t.Setenv(metadataV4EnvVar, testServer.URL)
 
 	hostname, err := os.Hostname()
 	assert.NoError(t, err, "Error")
@@ -171,8 +170,7 @@ func TestDetectV4LaunchTypeEc2BadTaskArn(t *testing.T) {
 	}))
 	defer testServer.Close()
 
-	os.Clearenv()
-	_ = os.Setenv(metadataV4EnvVar, testServer.URL)
+	t.Setenv(metadataV4EnvVar, testServer.URL)
 
 	hostname, err := os.Hostname()
 	assert.NoError(t, err, "Error")
