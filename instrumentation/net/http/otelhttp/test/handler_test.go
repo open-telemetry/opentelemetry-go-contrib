@@ -581,7 +581,6 @@ func TestCtxWithoutCancel(t *testing.T) {
 
 	rr := httptest.NewRecorder()
 	otelHandler.ServeHTTP(rr, req)
-	fmt.Println("rr", rr)
 
 	// Check that some metrics were recorded.
 	rm := metricdata.ResourceMetrics{}
