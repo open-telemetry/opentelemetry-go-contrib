@@ -18,11 +18,13 @@ import (
 	"context"
 	"fmt"
 	"io"
+	"net"
 	"net/http"
 	"net/http/httptest"
 	"strconv"
 	"strings"
 	"testing"
+	"time"
 
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
@@ -538,4 +540,67 @@ func TestWithRouteTag(t *testing.T) {
 			require.Fail(t, "metric has unexpected data type", "metric '%v' has unexpected data type %T", m.Name, m.Data)
 		}
 	}
+}
+
+func TestCtxWithoutCancel(t *testing.T) {
+	// Set up a handler that will take longer to respond than the client's timeout.
+	reader := metric.NewManualReader()
+	meterProvider := metric.NewMeterProvider(metric.WithReader(reader))
+
+	otelHandler := otelhttp.NewHandler(
+		http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+			_, err := w.Write([]byte("hello world"))
+			require.NoError(t, err)
+			l, _ := otelhttp.LabelerFromContext(r.Context())
+			l.Add(attribute.String("foo", "bar"))
+		}), "test_handler", otelhttp.WithMeterProvider(meterProvider))
+
+	ctx, cancel := context.WithCancel(context.Background())
+	cancel()
+
+	l, err := net.Listen("tcp", "localhost:12345")
+	require.NoError(t, err)
+
+	srv := &http.Server{
+		BaseContext:  func(_ net.Listener) context.Context { return ctx },
+		ReadTimeout:  time.Second,
+		WriteTimeout: 10 * time.Second,
+		Handler:      otelHandler,
+	}
+
+	go func() {
+		// When Shutdown is called, Serve immediately returns ErrServerClosed.
+		assert.Equal(t, http.ErrServerClosed, srv.Serve(l))
+	}()
+
+	t.Cleanup(func() {
+		assert.NoError(t, srv.Shutdown(context.Background()))
+	})
+
+	req, err := http.NewRequest("GET", "http://"+l.Addr().String(), nil)
+	require.NoError(t, err)
+
+	rr := httptest.NewRecorder()
+	otelHandler.ServeHTTP(rr, req)
+	fmt.Println("rr", rr)
+
+	// Check that some metrics were recorded.
+	rm := metricdata.ResourceMetrics{}
+	err = reader.Collect(ctx, &rm)
+	require.NoError(t, err)
+	require.Len(t, rm.ScopeMetrics, 1)
+
+	port, err := strconv.Atoi(req.URL.Port())
+	require.NoError(t, err)
+
+	attrs := attribute.NewSet(
+		semconv.NetHostName(req.URL.Hostname()),
+		semconv.NetHostPort(port),
+		semconv.HTTPSchemeHTTP,
+		semconv.HTTPFlavorKey.String(fmt.Sprintf("1.%d", req.ProtoMinor)),
+		semconv.HTTPMethod("GET"),
+		attribute.String("foo", "bar"),
+		semconv.HTTPStatusCode(200),
+	)
+	assertScopeMetrics(t, rm.ScopeMetrics[0], attrs)
 }
