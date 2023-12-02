@@ -543,7 +543,6 @@ func TestWithRouteTag(t *testing.T) {
 }
 
 func TestCtxWithoutCancel(t *testing.T) {
-	// Set up a handler that will take longer to respond than the client's timeout.
 	reader := metric.NewManualReader()
 	meterProvider := metric.NewMeterProvider(metric.WithReader(reader))
 
