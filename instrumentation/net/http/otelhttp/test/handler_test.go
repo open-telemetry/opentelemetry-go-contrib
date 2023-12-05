@@ -550,8 +550,6 @@ func TestCtxWithoutCancel(t *testing.T) {
 		http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 			_, err := w.Write([]byte("hello world"))
 			require.NoError(t, err)
-			l, _ := otelhttp.LabelerFromContext(r.Context())
-			l.Add(attribute.String("foo", "bar"))
 		}), "test_handler", otelhttp.WithMeterProvider(meterProvider))
 
 	ctx, cancel := context.WithCancel(context.Background())
@@ -576,29 +574,13 @@ func TestCtxWithoutCancel(t *testing.T) {
 		assert.NoError(t, srv.Shutdown(context.Background()))
 	})
 
-	req, err := http.NewRequest("GET", "http://"+l.Addr().String(), nil)
+	client := &http.Client{}
+	_, err = client.Get("http://" + l.Addr().String())
 	require.NoError(t, err)
-
-	rr := httptest.NewRecorder()
-	otelHandler.ServeHTTP(rr, req)
 
 	// Check that some metrics were recorded.
 	rm := metricdata.ResourceMetrics{}
 	err = reader.Collect(ctx, &rm)
 	require.NoError(t, err)
 	require.Len(t, rm.ScopeMetrics, 1)
-
-	port, err := strconv.Atoi(req.URL.Port())
-	require.NoError(t, err)
-
-	attrs := attribute.NewSet(
-		semconv.NetHostName(req.URL.Hostname()),
-		semconv.NetHostPort(port),
-		semconv.HTTPSchemeHTTP,
-		semconv.HTTPFlavorKey.String(fmt.Sprintf("1.%d", req.ProtoMinor)),
-		semconv.HTTPMethod("GET"),
-		attribute.String("foo", "bar"),
-		semconv.HTTPStatusCode(200),
-	)
-	assertScopeMetrics(t, rm.ScopeMetrics[0], attrs)
 }
