@@ -284,11 +284,11 @@ func WithRouteTag(route string, h http.Handler) http.Handler {
 	})
 }
 
-func withoutCancel(parent context.Context) context.Context {
-	if parent == nil {
-		panic("cannot create context from nil parent")
+func withoutCancel(ctx context.Context) context.Context {
+	if ctx.Done() == nil {
+		return ctx
 	}
-	return withoutCancelCtx{parent}
+	return withoutCancelCtx{ctx}
 }
 
 type withoutCancelCtx struct {
