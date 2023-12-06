@@ -190,8 +190,8 @@ var hc = &httpConv{
 //	append(ClientResponse(resp), ClientRequest(resp.Request)...)
 func (c *httpConv) ClientResponse(resp *http.Response) []attribute.KeyValue {
 	/* The following semantic conventions are returned if present:
-	http.status_code                This requires the response.
-	http.response_content_length    This requires the response.
+	http.status_code                int
+	http.response_content_length    int
 	*/
 	var n int
 	if resp.StatusCode > 0 {
@@ -234,7 +234,7 @@ func (c *httpConv) ClientRequest(req *http.Request) []attribute.KeyValue {
 	net.sock.peer.name              This requires the socket used.
 	net.sock.peer.port              This requires the socket used.
 	http.resend_count               This is something outside of a single request.
-	net.protocol.name               The value is always "http" which is should not be set.
+	net.protocol.name               The value is the Request is ignored, and the go client will always use "http".
 	net.protocol.version            The value in the Request is ignored, and the go client will always use 1.1 or 2.0.
 	*/
 	n := 3 // URL, peer name, proto, and method.
@@ -317,7 +317,7 @@ func (c *httpConv) ServerRequest(server string, req *http.Request) []attribute.K
 	net.sock.peer.port      int
 	user_agent.original     string
 	http.client_ip          string
-	net.protocol.name       string
+	net.protocol.name       string Note: not set if the value is "http".
 	net.protocol.version    string
 	http.target             string Note: doesn't include the query parameter.
 	*/
@@ -449,7 +449,7 @@ func (c *httpConv) ServerRequestMetrics(server string, req *http.Request) []attr
 	http.status_code        int
 	net.host.name           string
 	net.host.port           int
-	net.protocol.name       string
+	net.protocol.name       string Note: not set if the value is "http".
 	net.protocol.version    string
 	*/
 
