@@ -28,6 +28,7 @@ import (
 	"go.opentelemetry.io/otel"
 	"go.opentelemetry.io/otel/propagation"
 	"go.opentelemetry.io/otel/trace"
+	"go.opentelemetry.io/otel/trace/noop"
 
 	b3prop "go.opentelemetry.io/contrib/propagators/b3"
 )
@@ -49,7 +50,7 @@ func TestGetSpanNotInstrumented(t *testing.T) {
 }
 
 func TestPropagationWithGlobalPropagators(t *testing.T) {
-	provider := trace.NewNoopTracerProvider()
+	provider := noop.NewTracerProvider()
 	otel.SetTextMapPropagator(propagation.TraceContext{})
 
 	r := httptest.NewRequest("GET", "/user/123", nil)
@@ -61,7 +62,7 @@ func TestPropagationWithGlobalPropagators(t *testing.T) {
 		SpanID:  trace.SpanID{0x01},
 	})
 	ctx = trace.ContextWithRemoteSpanContext(ctx, sc)
-	ctx, _ = provider.Tracer(tracerName).Start(ctx, "test")
+	ctx, _ = provider.Tracer(ScopeName).Start(ctx, "test")
 	otel.GetTextMapPropagator().Inject(ctx, propagation.HeaderCarrier(r.Header))
 
 	router := echo.New()
@@ -79,7 +80,7 @@ func TestPropagationWithGlobalPropagators(t *testing.T) {
 }
 
 func TestPropagationWithCustomPropagators(t *testing.T) {
-	provider := trace.NewNoopTracerProvider()
+	provider := noop.NewTracerProvider()
 
 	b3 := b3prop.New()
 
@@ -92,7 +93,7 @@ func TestPropagationWithCustomPropagators(t *testing.T) {
 		SpanID:  trace.SpanID{0x01},
 	})
 	ctx = trace.ContextWithRemoteSpanContext(ctx, sc)
-	ctx, _ = provider.Tracer(tracerName).Start(ctx, "test")
+	ctx, _ = provider.Tracer(ScopeName).Start(ctx, "test")
 	b3.Inject(ctx, propagation.HeaderCarrier(r.Header))
 
 	router := echo.New()

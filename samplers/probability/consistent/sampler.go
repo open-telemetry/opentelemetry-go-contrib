@@ -86,7 +86,7 @@ func (s consistentProbabilityBasedRandomSource) apply(cfg *consistentProbability
 // used as the root delegate of a `Parent` sampler.
 func ProbabilityBased(fraction float64, opts ...ProbabilityBasedOption) sdktrace.Sampler {
 	cfg := consistentProbabilityBasedConfig{
-		source: rand.NewSource(rand.Int63()),
+		source: rand.NewSource(rand.Int63()), //nolint:gosec // G404: Use of weak random number generator (math/rand instead of crypto/rand) is ignored as this is not security-sensitive.
 	}
 	for _, opt := range opts {
 		opt.apply(&cfg)
@@ -104,7 +104,7 @@ func ProbabilityBased(fraction float64, opts ...ProbabilityBasedOption) sdktrace
 		lowLAC:  lowLAC,
 		highLAC: highLAC,
 		lowProb: lowProb,
-		rnd:     rand.New(cfg.source),
+		rnd:     rand.New(cfg.source), //nolint:gosec // G404: Use of weak random number generator (math/rand instead of crypto/rand) is ignored as this is not security-sensitive.
 	}
 }
 

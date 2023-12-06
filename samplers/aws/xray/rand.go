@@ -35,7 +35,7 @@ var seed = newSeed()
 func newGlobalRand() *rand.Rand {
 	src := rand.NewSource(seed)
 	if src64, ok := src.(rand.Source64); ok {
-		return rand.New(src64)
+		return rand.New(src64) //nolint:gosec // G404: Use of weak random number generator (math/rand instead of crypto/rand) is ignored as this is not security-sensitive.
 	}
-	return rand.New(src)
+	return rand.New(src) //nolint:gosec // G404: Use of weak random number generator (math/rand instead of crypto/rand) is ignored as this is not security-sensitive.
 }

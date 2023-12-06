@@ -44,7 +44,8 @@ func (s *samplingManager) GetSamplingStrategy(serviceName string) (interface{}, 
 		StrategyType: jaeger_api_v2.SamplingStrategyType_PROBABILISTIC,
 		ProbabilisticSampling: &jaeger_api_v2.ProbabilisticSamplingStrategy{
 			SamplingRate: 0.01,
-		}}, nil
+		},
+	}, nil
 }
 
 // AddSamplingStrategy registers a sampling strategy for a service.

@@ -13,4 +13,16 @@
 // limitations under the License.
 
 // Package prometheus provides a bridge from Prometheus to OpenTelemetry.
+//
+// The Prometheus Bridge allows using the [Prometheus Golang client library]
+// with the OpenTelemetry SDK. This enables prometheus instrumentation libraries
+// to be used with OpenTelemetry exporters, including OTLP.
+//
+// Limitations:
+//   - Summary metrics are dropped by the bridge.
+//   - Start times for histograms and counters are set to the process start time.
+//   - Prometheus histograms are translated to OpenTelemetry fixed-bucket
+//     histograms, rather than exponential histograms.
+//
+// [Prometheus Golang client library]: https://github.com/prometheus/client_golang
 package prometheus // import "go.opentelemetry.io/contrib/bridges/prometheus"

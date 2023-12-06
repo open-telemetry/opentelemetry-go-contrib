@@ -69,7 +69,7 @@ func TestBasicFilter(t *testing.T) {
 }
 
 func TestSpanNameFormatter(t *testing.T) {
-	var testCases = []struct {
+	testCases := []struct {
 		name      string
 		formatter func(s string, r *http.Request) string
 		operation string

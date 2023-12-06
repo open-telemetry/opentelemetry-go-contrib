@@ -35,18 +35,14 @@ import (
 )
 
 func TestEventToCarrier(t *testing.T) {
-	os.Clearenv()
-
-	_ = os.Setenv("_X_AMZN_TRACE_ID", "traceID")
+	t.Setenv("_X_AMZN_TRACE_ID", "traceID")
 	carrier := xrayEventToCarrier([]byte{})
 
 	assert.Equal(t, "traceID", carrier.Get("X-Amzn-Trace-Id"))
 }
 
 func TestEventToCarrierWithPropagator(t *testing.T) {
-	os.Clearenv()
-
-	_ = os.Setenv("_X_AMZN_TRACE_ID", "Root=1-5759e988-bd862e3fe1be46a994272793;Parent=53995c3f42cd8ad8;Sampled=1")
+	t.Setenv("_X_AMZN_TRACE_ID", "Root=1-5759e988-bd862e3fe1be46a994272793;Parent=53995c3f42cd8ad8;Sampled=1")
 	carrier := xrayEventToCarrier([]byte{})
 	ctx := xray.Propagator{}.Extract(context.Background(), carrier)
 
@@ -63,18 +59,18 @@ func TestEventToCarrierWithPropagator(t *testing.T) {
 	assert.Equal(t, expectedCtx, ctx)
 }
 
-func setEnvVars() {
-	_ = os.Setenv("AWS_LAMBDA_FUNCTION_NAME", "testFunction")
-	_ = os.Setenv("AWS_REGION", "us-texas-1")
-	_ = os.Setenv("AWS_LAMBDA_FUNCTION_VERSION", "$LATEST")
-	_ = os.Setenv("AWS_LAMBDA_LOG_STREAM_NAME", "2023/01/01/[$LATEST]5d1edb9e525d486696cf01a3503487bc")
-	_ = os.Setenv("AWS_LAMBDA_FUNCTION_MEMORY_SIZE", "128")
-	_ = os.Setenv("_X_AMZN_TRACE_ID", "Root=1-5759e988-bd862e3fe1be46a994272793;Parent=53995c3f42cd8ad8;Sampled=1")
+func setEnvVars(t *testing.T) {
+	t.Setenv("AWS_LAMBDA_FUNCTION_NAME", "testFunction")
+	t.Setenv("AWS_REGION", "us-texas-1")
+	t.Setenv("AWS_LAMBDA_FUNCTION_VERSION", "$LATEST")
+	t.Setenv("AWS_LAMBDA_LOG_STREAM_NAME", "2023/01/01/[$LATEST]5d1edb9e525d486696cf01a3503487bc")
+	t.Setenv("AWS_LAMBDA_FUNCTION_MEMORY_SIZE", "128")
+	t.Setenv("_X_AMZN_TRACE_ID", "Root=1-5759e988-bd862e3fe1be46a994272793;Parent=53995c3f42cd8ad8;Sampled=1")
 
 	// fix issue: "The requested service provider could not be loaded or initialized."
 	// Guess: The env for Windows in GitHub action is incomplete
 	if runtime.GOOS == "windows" && os.Getenv("SYSTEMROOT") == "" {
-		_ = os.Setenv("SYSTEMROOT", `C:\Windows`)
+		t.Setenv("SYSTEMROOT", `C:\Windows`)
 	}
 }
 
@@ -102,9 +98,11 @@ var (
 			Kind:              v1trace.Span_SPAN_KIND_SERVER,
 			StartTimeUnixNano: 0,
 			EndTimeUnixNano:   0,
-			Attributes: []*v1common.KeyValue{{Key: "faas.invocation_id", Value: &v1common.AnyValue{Value: &v1common.AnyValue_StringValue{StringValue: "123"}}},
+			Attributes: []*v1common.KeyValue{
+				{Key: "faas.invocation_id", Value: &v1common.AnyValue{Value: &v1common.AnyValue_StringValue{StringValue: "123"}}},
 				{Key: "aws.lambda.invoked_arn", Value: &v1common.AnyValue{Value: &v1common.AnyValue_StringValue{StringValue: "arn:partition:service:region:account-id:resource-type:resource-id"}}},
-				{Key: "cloud.account.id", Value: &v1common.AnyValue{Value: &v1common.AnyValue_StringValue{StringValue: "account-id"}}}},
+				{Key: "cloud.account.id", Value: &v1common.AnyValue{Value: &v1common.AnyValue_StringValue{StringValue: "account-id"}}},
+			},
 			DroppedAttributesCount: 0,
 			Events:                 nil,
 			DroppedEventsCount:     0,
@@ -116,12 +114,14 @@ var (
 	}
 
 	expectedSpanResource = v1resource.Resource{
-		Attributes: []*v1common.KeyValue{{Key: "cloud.provider", Value: &v1common.AnyValue{Value: &v1common.AnyValue_StringValue{StringValue: "aws"}}},
+		Attributes: []*v1common.KeyValue{
+			{Key: "cloud.provider", Value: &v1common.AnyValue{Value: &v1common.AnyValue_StringValue{StringValue: "aws"}}},
 			{Key: "cloud.region", Value: &v1common.AnyValue{Value: &v1common.AnyValue_StringValue{StringValue: "us-texas-1"}}},
 			{Key: "faas.instance", Value: &v1common.AnyValue{Value: &v1common.AnyValue_StringValue{StringValue: "2023/01/01/[$LATEST]5d1edb9e525d486696cf01a3503487bc"}}},
 			{Key: "faas.max_memory", Value: &v1common.AnyValue{Value: &v1common.AnyValue_IntValue{IntValue: 128}}},
 			{Key: "faas.name", Value: &v1common.AnyValue{Value: &v1common.AnyValue_StringValue{StringValue: "testFunction"}}},
-			{Key: "faas.version", Value: &v1common.AnyValue{Value: &v1common.AnyValue_StringValue{StringValue: "$LATEST"}}}},
+			{Key: "faas.version", Value: &v1common.AnyValue{Value: &v1common.AnyValue_StringValue{StringValue: "$LATEST"}}},
+		},
 		DroppedAttributesCount: 0,
 	}
 
@@ -165,7 +165,7 @@ func assertSpanEqualsIgnoreTimeAndSpanID(t *testing.T, expected *v1trace.Resourc
 }
 
 func TestWrapEndToEnd(t *testing.T) {
-	setEnvVars()
+	setEnvVars(t)
 
 	ctx := context.Background()
 	tp, err := NewTracerProvider(ctx)

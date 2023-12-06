@@ -16,112 +16,89 @@ package autoexport
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"sync"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
-
-	"go.opentelemetry.io/otel/exporters/stdout/stdouttrace"
-	"go.opentelemetry.io/otel/sdk/trace"
 )
 
-var stdoutFactory = func(ctx context.Context) (trace.SpanExporter, error) {
-	exp, err := stdouttrace.New()
-	if err != nil {
-		return nil, err
+type testType struct{ string }
+
+func factory(val string) func(ctx context.Context) (*testType, error) {
+	return func(ctx context.Context) (*testType, error) { return &testType{val}, nil }
+}
+
+func newTestRegistry() registry[*testType] {
+	return registry[*testType]{
+		names: make(map[string]func(context.Context) (*testType, error)),
 	}
-	return exp, nil
 }
 
 func TestCanStoreExporterFactory(t *testing.T) {
-	r := newRegistry()
-	assert.NotPanics(t, func() {
-		require.NoError(t, r.store("first", stdoutFactory))
-	})
+	r := newTestRegistry()
+	require.NoError(t, r.store("first", factory("first")))
 }
 
 func TestLoadOfUnknownExporterReturnsError(t *testing.T) {
-	r := newRegistry()
-	assert.NotPanics(t, func() {
-		exp, err := r.load(context.Background(), "non-existent")
-		assert.Equal(t, err, errUnknownExporter, "empty registry should hold nothing")
-		assert.Nil(t, exp, "non-nil exporter returned")
-	})
+	r := newTestRegistry()
+	exp, err := r.load(context.Background(), "non-existent")
+	assert.Equal(t, err, errUnknownExporter, "empty registry should hold nothing")
+	assert.Nil(t, exp, "non-nil exporter returned")
 }
 
 func TestRegistryIsConcurrentSafe(t *testing.T) {
 	const exporterName = "stdout"
 
-	r := newRegistry()
-	assert.NotPanics(t, func() {
-		require.NoError(t, r.store(exporterName, stdoutFactory))
-	})
+	r := newTestRegistry()
+	require.NoError(t, r.store(exporterName, factory("stdout")))
 
 	var wg sync.WaitGroup
 
 	wg.Add(1)
 	go func() {
 		defer wg.Done()
-		assert.NotPanics(t, func() {
-			require.ErrorIs(t, r.store(exporterName, stdoutFactory), errDuplicateRegistration)
-		})
+		require.ErrorIs(t, r.store(exporterName, factory("stdout")), errDuplicateRegistration)
 	}()
 
 	wg.Add(1)
 	go func() {
 		defer wg.Done()
-		assert.NotPanics(t, func() {
-			exp, err := r.load(context.Background(), exporterName)
-			assert.NoError(t, err, "missing exporter in registry")
-			assert.IsType(t, &stdouttrace.Exporter{}, exp)
-		})
+		_, err := r.load(context.Background(), exporterName)
+		assert.NoError(t, err, "missing exporter in registry")
 	}()
 
 	wg.Wait()
 }
 
 func TestSubsequentCallsToGetExporterReturnsNewInstances(t *testing.T) {
-	const exporterType = "otlp"
-	exp1, err := spanExporter(context.Background(), exporterType)
-	assert.NoError(t, err)
-	assertOTLPHTTPExporter(t, exp1)
+	r := newTestRegistry()
 
-	exp2, err := spanExporter(context.Background(), exporterType)
+	const key = "key"
+	assert.NoError(t, r.store(key, factory(key)))
+
+	exp1, err := r.load(context.Background(), key)
 	assert.NoError(t, err)
-	assertOTLPHTTPExporter(t, exp2)
+
+	exp2, err := r.load(context.Background(), key)
+	assert.NoError(t, err)
 
 	assert.NotSame(t, exp1, exp2)
 }
 
-func TestDefaultOTLPExporterFactoriesAreAutomaticallyRegistered(t *testing.T) {
-	exp1, err := spanExporter(context.Background(), "")
-	assert.Nil(t, err)
-	assertOTLPHTTPExporter(t, exp1)
+func TestRegistryErrorsOnDuplicateRegisterCalls(t *testing.T) {
+	r := newTestRegistry()
 
-	exp2, err := spanExporter(context.Background(), "otlp")
-	assert.Nil(t, err)
-	assertOTLPHTTPExporter(t, exp2)
-}
-
-func TestEnvRegistryCanRegisterExporterFactory(t *testing.T) {
 	const exporterName = "custom"
-	RegisterSpanExporter(exporterName, stdoutFactory)
-	t.Cleanup(func() { envRegistry.drop(exporterName) })
-
-	exp, err := envRegistry.load(context.Background(), exporterName)
-	assert.Nil(t, err, "missing exporter in envRegistry")
-	assert.IsType(t, &stdouttrace.Exporter{}, exp)
-}
-
-func TestEnvRegistryPanicsOnDuplicateRegisterCalls(t *testing.T) {
-	const exporterName = "custom"
-	RegisterSpanExporter(exporterName, stdoutFactory)
-	t.Cleanup(func() { envRegistry.drop(exporterName) })
+	assert.NoError(t, r.store(exporterName, factory(exporterName)))
 
 	errString := fmt.Sprintf("%s: %q", errDuplicateRegistration, exporterName)
-	assert.PanicsWithError(t, errString, func() {
-		RegisterSpanExporter(exporterName, stdoutFactory)
-	})
+	assert.ErrorContains(t, r.store(exporterName, factory(exporterName)), errString)
+}
+
+func TestMust(t *testing.T) {
+	assert.Panics(t, func() { must(errors.New("test")) })
+	assert.NotPanics(t, func() { must(nil) })
 }

@@ -35,9 +35,11 @@ type mockPropagator struct {
 func (p mockPropagator) Inject(ctx context.Context, carrier propagation.TextMapCarrier) {
 	carrier.Set(p.injectKey, p.injectValue)
 }
+
 func (p mockPropagator) Extract(ctx context.Context, carrier propagation.TextMapCarrier) context.Context {
 	return context.TODO()
 }
+
 func (p mockPropagator) Fields() []string {
 	return []string{}
 }

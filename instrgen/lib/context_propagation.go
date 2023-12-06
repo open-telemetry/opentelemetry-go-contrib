@@ -37,15 +37,15 @@ func isFunPartOfCallGraph(fun FuncDescriptor, callgraph map[FuncDescriptor][]Fun
 }
 
 // ContextPropagationPass.
-type ContextPropagationPass struct {
-}
+type ContextPropagationPass struct{}
 
 // Execute.
 func (pass *ContextPropagationPass) Execute(
 	node *ast.File,
 	analysis *PackageAnalysis,
 	pkg *packages.Package,
-	pkgs []*packages.Package) []Import {
+	pkgs []*packages.Package,
+) []Import {
 	var imports []Import
 	addImports := false
 	// below variable is used
@@ -95,7 +95,8 @@ func (pass *ContextPropagationPass) Execute(
 			fun := FuncDescriptor{
 				Id:              funId,
 				DeclType:        pkg.TypesInfo.Uses[ident].Type().String(),
-				CustomInjection: false}
+				CustomInjection: false,
+			}
 			found := analysis.FuncDecls[fun]
 
 			// inject context parameter only
@@ -137,7 +138,8 @@ func (pass *ContextPropagationPass) Execute(
 			fun := FuncDescriptor{
 				Id:              funId,
 				DeclType:        pkg.TypesInfo.Defs[xNode.Name].Type().String(),
-				CustomInjection: false}
+				CustomInjection: false,
+			}
 			currentFun = fun
 			// inject context only
 			// functions available in the call graph
@@ -193,7 +195,8 @@ func (pass *ContextPropagationPass) Execute(
 				fun := FuncDescriptor{
 					Id:              funId,
 					DeclType:        pkg.TypesInfo.Defs[method.Names[0]].Type().String(),
-					CustomInjection: false}
+					CustomInjection: false,
+				}
 				if isPath(analysis.Callgraph, fun, analysis.RootFunctions[0], visited) {
 					fmt.Println("\t\t\tContext Propagation InterfaceType", fun.Id, fun.DeclType)
 					addImports = true

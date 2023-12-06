@@ -19,7 +19,8 @@ import (
 	"go.opentelemetry.io/otel/trace"
 )
 
-const defaultTracerName = "go.opentelemetry.io/contrib/instrumentation/go.mongodb.org/mongo-driver/mongo/otelmongo"
+// ScopeName is the instrumentation scope name.
+const ScopeName = "go.opentelemetry.io/contrib/instrumentation/go.mongodb.org/mongo-driver/mongo/otelmongo"
 
 // config is used to configure the mongo tracer.
 type config struct {
@@ -41,7 +42,7 @@ func newConfig(opts ...Option) config {
 	}
 
 	cfg.Tracer = cfg.TracerProvider.Tracer(
-		defaultTracerName,
+		ScopeName,
 		trace.WithInstrumentationVersion(Version()),
 	)
 	return cfg

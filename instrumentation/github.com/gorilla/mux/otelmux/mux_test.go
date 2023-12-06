@@ -117,9 +117,11 @@ type testResponseWriter struct {
 func (rw *testResponseWriter) Header() http.Header {
 	return rw.writer.Header()
 }
+
 func (rw *testResponseWriter) Write(b []byte) (int, error) {
 	return rw.writer.Write(b)
 }
+
 func (rw *testResponseWriter) WriteHeader(statusCode int) {
 	rw.writer.WriteHeader(statusCode)
 }

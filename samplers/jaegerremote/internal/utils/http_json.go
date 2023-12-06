@@ -25,7 +25,7 @@ import (
 
 // GetJSON makes an HTTP call to the specified URL and parses the returned JSON into `out`.
 func GetJSON(url string, out interface{}) error {
-	resp, err := http.Get(url)
+	resp, err := http.Get(url) //nolint:gosec // False positive G107: Potential HTTP request made with variable url
 	if err != nil {
 		return err
 	}

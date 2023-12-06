@@ -49,8 +49,7 @@ var (
 )
 
 // OT propagator serializes SpanContext to/from ot-trace-* headers.
-type OT struct {
-}
+type OT struct{}
 
 var _ propagation.TextMapPropagator = OT{}
 

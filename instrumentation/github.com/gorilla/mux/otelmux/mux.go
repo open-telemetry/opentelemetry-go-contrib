@@ -30,7 +30,8 @@ import (
 )
 
 const (
-	tracerName = "go.opentelemetry.io/contrib/instrumentation/github.com/gorilla/mux/otelmux"
+	// ScopeName is the instrumentation scope name.
+	ScopeName = "go.opentelemetry.io/contrib/instrumentation/github.com/gorilla/mux/otelmux"
 )
 
 // Middleware sets up a handler to start tracing the incoming
@@ -45,7 +46,7 @@ func Middleware(service string, opts ...Option) mux.MiddlewareFunc {
 		cfg.TracerProvider = otel.GetTracerProvider()
 	}
 	tracer := cfg.TracerProvider.Tracer(
-		tracerName,
+		ScopeName,
 		trace.WithInstrumentationVersion(Version()),
 	)
 	if cfg.Propagators == nil {

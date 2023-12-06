@@ -92,5 +92,5 @@ Additionally the following guidelines for package composition need to be followe
 - All instrumentation packages MUST provide an option to accept a `TracerProvider` if it uses a Tracer, a `MeterProvider` if it uses a Meter, and `Propagators` if it handles any context propagation.
   Also, packages MUST use the default `TracerProvider`, `MeterProvider`, and `Propagators` supplied by the `global` package if no optional one is provided.
 - All instrumentation packages MUST NOT provide an option to accept a `Tracer` or `Meter`.
-- All instrumentation packages MUST create any used `Tracer` or `Meter` with a name matching the instrumentation package name.
-- All instrumentation packages MUST create any used `Tracer` or `Meter` with a semantic version corresponding to the version of the module containing the instrumentation.
+- All instrumentation packages MUST define a `ScopeName` constant with a value matching the instrumentation package and use it when creating a `Tracer` or `Meter`.
+- All instrumentation packages MUST define a `Version` function returning the version of the module containing the instrumentation and use it when creating a `Tracer` or `Meter`.

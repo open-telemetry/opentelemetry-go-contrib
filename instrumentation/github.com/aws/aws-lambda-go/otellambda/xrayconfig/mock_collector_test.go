@@ -104,7 +104,7 @@ var _ collectortracepb.TraceServiceServer = (*mockTraceService)(nil)
 var errAlreadyStopped = fmt.Errorf("already stopped")
 
 func (mc *mockCollector) stop() error {
-	var err = errAlreadyStopped
+	err := errAlreadyStopped
 	mc.stopOnce.Do(func() {
 		err = nil
 		if mc.stopFunc != nil {

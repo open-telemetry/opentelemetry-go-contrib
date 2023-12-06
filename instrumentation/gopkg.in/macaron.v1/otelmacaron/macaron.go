@@ -26,14 +26,14 @@ import (
 	oteltrace "go.opentelemetry.io/otel/trace"
 )
 
-// instrumentationName is the name of this instrumentation package.
-const instrumentationName = "go.opentelemetry.io/contrib/instrumentation/gopkg.in/macaron.v1/otelmacaron"
+// ScopeName is the instrumentation scope name.
+const ScopeName = "go.opentelemetry.io/contrib/instrumentation/gopkg.in/macaron.v1/otelmacaron"
 
 // Middleware returns a macaron Handler to trace requests to the server.
 func Middleware(service string, opts ...Option) macaron.Handler {
 	cfg := newConfig(opts)
 	tracer := cfg.TracerProvider.Tracer(
-		instrumentationName,
+		ScopeName,
 		oteltrace.WithInstrumentationVersion(Version()),
 	)
 	return func(res http.ResponseWriter, req *http.Request, c *macaron.Context) {

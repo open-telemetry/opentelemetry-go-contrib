@@ -33,7 +33,7 @@ import (
 )
 
 func TestTransportFormatter(t *testing.T) {
-	var httpMethods = []struct {
+	httpMethods := []struct {
 		name     string
 		method   string
 		expected string
@@ -201,6 +201,7 @@ type readCloser struct {
 func (rc readCloser) Read(p []byte) (n int, err error) {
 	return readSize, rc.readErr
 }
+
 func (rc readCloser) Close() error {
 	return rc.closeErr
 }

@@ -23,8 +23,7 @@ import (
 )
 
 // InstrumentationPass.
-type InstrumentationPass struct {
-}
+type InstrumentationPass struct{}
 
 func makeInitStmts(name string) []ast.Stmt {
 	childTracingSupress := &ast.AssignStmt{
@@ -40,30 +39,29 @@ func makeInitStmts(name string) []ast.Stmt {
 			},
 		},
 	}
-	s1 :=
-		&ast.AssignStmt{
-			Lhs: []ast.Expr{
-				&ast.Ident{
-					Name: "__atel_ts",
-				},
+	s1 := &ast.AssignStmt{
+		Lhs: []ast.Expr{
+			&ast.Ident{
+				Name: "__atel_ts",
 			},
-			Tok: token.DEFINE,
+		},
+		Tok: token.DEFINE,
 
-			Rhs: []ast.Expr{
-				&ast.CallExpr{
-					Fun: &ast.SelectorExpr{
-						X: &ast.Ident{
-							Name: "rtlib",
-						},
-						Sel: &ast.Ident{
-							Name: "NewTracingState",
-						},
+		Rhs: []ast.Expr{
+			&ast.CallExpr{
+				Fun: &ast.SelectorExpr{
+					X: &ast.Ident{
+						Name: "rtlib",
 					},
-					Lparen:   54,
-					Ellipsis: 0,
+					Sel: &ast.Ident{
+						Name: "NewTracingState",
+					},
 				},
+				Lparen:   54,
+				Ellipsis: 0,
 			},
-		}
+		},
+	}
 	s2 := &ast.DeferStmt{
 		Defer: 27,
 		Call: &ast.CallExpr{
@@ -285,7 +283,8 @@ func (pass *InstrumentationPass) Execute(
 	node *ast.File,
 	analysis *PackageAnalysis,
 	pkg *packages.Package,
-	pkgs []*packages.Package) []Import {
+	pkgs []*packages.Package,
+) []Import {
 	var imports []Import
 	addImports := false
 	addContext := false
@@ -302,7 +301,8 @@ func (pass *InstrumentationPass) Execute(
 			fun := FuncDescriptor{
 				Id:              fundId,
 				DeclType:        pkg.TypesInfo.Defs[x.Name].Type().String(),
-				CustomInjection: false}
+				CustomInjection: false,
+			}
 			// check if it's root function or
 			// one of function in call graph
 			// and emit proper ast nodes
@@ -342,7 +342,8 @@ func (pass *InstrumentationPass) Execute(
 					fun := FuncDescriptor{
 						Id:              fundId,
 						DeclType:        pkg.TypesInfo.Defs[ident].Type().String(),
-						CustomInjection: true}
+						CustomInjection: true,
+					}
 					_, exists := analysis.Callgraph[fun]
 					if exists {
 						return false

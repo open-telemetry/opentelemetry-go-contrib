@@ -46,7 +46,6 @@ func (p *parentProbabilitySampler) ShouldSample(params sdktrace.SamplingParamete
 	state := psc.TraceState()
 
 	otts, err := parseOTelTraceState(state.Get(traceStateKey), psc.IsSampled())
-
 	if err != nil {
 		otel.Handle(err)
 		value := otts.serialize()

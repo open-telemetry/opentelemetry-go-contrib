@@ -30,8 +30,9 @@ import (
 )
 
 const (
-	tracerKey  = "otel-go-contrib-tracer-labstack-echo"
-	tracerName = "go.opentelemetry.io/contrib/instrumentation/github.com/labstack/echo/otelecho"
+	tracerKey = "otel-go-contrib-tracer-labstack-echo"
+	// ScopeName is the instrumentation scope name.
+	ScopeName = "go.opentelemetry.io/contrib/instrumentation/github.com/labstack/echo/otelecho"
 )
 
 // Middleware returns echo middleware which will trace incoming requests.
@@ -44,7 +45,7 @@ func Middleware(service string, opts ...Option) echo.MiddlewareFunc {
 		cfg.TracerProvider = otel.GetTracerProvider()
 	}
 	tracer := cfg.TracerProvider.Tracer(
-		tracerName,
+		ScopeName,
 		oteltrace.WithInstrumentationVersion(Version()),
 	)
 	if cfg.Propagators == nil {

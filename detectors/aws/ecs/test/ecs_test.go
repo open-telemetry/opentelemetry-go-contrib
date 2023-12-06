@@ -58,8 +58,119 @@ func TestDetectV4LaunchTypeEc2(t *testing.T) {
 	}))
 	defer testServer.Close()
 
-	os.Clearenv()
-	_ = os.Setenv(metadataV4EnvVar, testServer.URL)
+	t.Setenv(metadataV4EnvVar, testServer.URL)
+
+	hostname, err := os.Hostname()
+	assert.NoError(t, err, "Error")
+
+	attributes := []attribute.KeyValue{
+		semconv.CloudProviderAWS,
+		semconv.CloudPlatformAWSECS,
+		semconv.ContainerName(hostname),
+		// We are not running the test in an actual container,
+		// the container id is tested with mocks of the cgroup
+		// file in the unit tests
+		semconv.ContainerID(""),
+		semconv.AWSECSContainerARN("arn:aws:ecs:us-west-2:111122223333:container/0206b271-b33f-47ab-86c6-a0ba208a70a9"),
+		semconv.AWSECSClusterARN("arn:aws:ecs:us-west-2:111122223333:cluster/default"),
+		semconv.AWSECSLaunchtypeKey.String("ec2"),
+		semconv.AWSECSTaskARN("arn:aws:ecs:us-west-2:111122223333:task/default/158d1c8083dd49d6b527399fd6414f5c"),
+		semconv.AWSECSTaskFamily("curltest"),
+		semconv.AWSECSTaskRevision("26"),
+		semconv.AWSLogGroupNames("/ecs/metadata"),
+		semconv.AWSLogGroupARNs("arn:aws:logs:us-west-2:111122223333:log-group:/ecs/metadata:*"),
+		semconv.AWSLogStreamNames("ecs/curl/8f03e41243824aea923aca126495f665"),
+		semconv.AWSLogStreamARNs("arn:aws:logs:us-west-2:111122223333:log-group:/ecs/metadata:log-stream:ecs/curl/8f03e41243824aea923aca126495f665"),
+	}
+	expectedResource := resource.NewWithAttributes(semconv.SchemaURL, attributes...)
+	detector := ecs.NewResourceDetector()
+	res, err := detector.Detect(context.Background())
+
+	assert.Equal(t, nil, err, "Detector should not fail")
+	assert.Equal(t, expectedResource, res, "Resource returned is incorrect")
+}
+
+// successfully returns resource when process is running on Amazon ECS environment
+// with Metadata v4 with the EC2 Launch type and bad ContainerARN.
+func TestDetectV4LaunchTypeEc2BadContainerArn(t *testing.T) {
+	testServer := httptest.NewServer(http.HandlerFunc(func(res http.ResponseWriter, req *http.Request) {
+		if strings.HasSuffix(req.URL.String(), "/task") {
+			content, err := os.ReadFile("metadatav4-response-task-ec2.json")
+			if err == nil {
+				_, err = res.Write(content)
+				if err != nil {
+					t.Fatal(err)
+				}
+			}
+		} else {
+			content, err := os.ReadFile("metadatav4-response-container-ec2-bad-container-arn.json")
+			if err == nil {
+				_, err = res.Write(content)
+				if err != nil {
+					t.Fatal(err)
+				}
+			}
+		}
+	}))
+	defer testServer.Close()
+
+	t.Setenv(metadataV4EnvVar, testServer.URL)
+
+	hostname, err := os.Hostname()
+	assert.NoError(t, err, "Error")
+
+	attributes := []attribute.KeyValue{
+		semconv.CloudProviderAWS,
+		semconv.CloudPlatformAWSECS,
+		semconv.ContainerName(hostname),
+		// We are not running the test in an actual container,
+		// the container id is tested with mocks of the cgroup
+		// file in the unit tests
+		semconv.ContainerID(""),
+		semconv.AWSECSContainerARN("arn:aws:ecs:us-west-2:111122223333:container/0206b271-b33f-47ab-86c6-a0ba208a70a9"),
+		semconv.AWSECSClusterARN("arn:aws:ecs:us-west-2:111122223333:cluster/default"),
+		semconv.AWSECSLaunchtypeKey.String("ec2"),
+		semconv.AWSECSTaskARN("arn:aws:ecs:us-west-2:111122223333:task/default/158d1c8083dd49d6b527399fd6414f5c"),
+		semconv.AWSECSTaskFamily("curltest"),
+		semconv.AWSECSTaskRevision("26"),
+		semconv.AWSLogGroupNames("/ecs/metadata"),
+		semconv.AWSLogGroupARNs("arn:aws:logs:us-west-2:111122223333:log-group:/ecs/metadata:*"),
+		semconv.AWSLogStreamNames("ecs/curl/8f03e41243824aea923aca126495f665"),
+		semconv.AWSLogStreamARNs("arn:aws:logs:us-west-2:111122223333:log-group:/ecs/metadata:log-stream:ecs/curl/8f03e41243824aea923aca126495f665"),
+	}
+	expectedResource := resource.NewWithAttributes(semconv.SchemaURL, attributes...)
+	detector := ecs.NewResourceDetector()
+	res, err := detector.Detect(context.Background())
+
+	assert.Equal(t, nil, err, "Detector should not fail")
+	assert.Equal(t, expectedResource, res, "Resource returned is incorrect")
+}
+
+// successfully returns resource when process is running on Amazon ECS environment
+// with Metadata v4 with the EC2 Launch type and bad TaskARN.
+func TestDetectV4LaunchTypeEc2BadTaskArn(t *testing.T) {
+	testServer := httptest.NewServer(http.HandlerFunc(func(res http.ResponseWriter, req *http.Request) {
+		if strings.HasSuffix(req.URL.String(), "/task") {
+			content, err := os.ReadFile("metadatav4-response-task-ec2-bad-task-arn.json")
+			if err == nil {
+				_, err = res.Write(content)
+				if err != nil {
+					t.Fatal(err)
+				}
+			}
+		} else {
+			content, err := os.ReadFile("metadatav4-response-container-ec2.json")
+			if err == nil {
+				_, err = res.Write(content)
+				if err != nil {
+					t.Fatal(err)
+				}
+			}
+		}
+	}))
+	defer testServer.Close()
+
+	t.Setenv(metadataV4EnvVar, testServer.URL)
 
 	hostname, err := os.Hostname()
 	assert.NoError(t, err, "Error")
@@ -115,8 +226,7 @@ func TestDetectV4LaunchTypeFargate(t *testing.T) {
 	}))
 	defer testServer.Close()
 
-	os.Clearenv()
-	_ = os.Setenv(metadataV4EnvVar, testServer.URL)
+	t.Setenv(metadataV4EnvVar, testServer.URL)
 
 	hostname, err := os.Hostname()
 	assert.NoError(t, err, "Error")

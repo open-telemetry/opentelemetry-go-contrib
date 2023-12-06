@@ -82,8 +82,10 @@ func TestAwsXrayExtract(t *testing.T) {
 	}
 
 	for _, test := range testData {
-		headerVal := strings.Join([]string{traceIDKey, kvDelimiter, test.traceID, traceHeaderDelimiter, parentIDKey, kvDelimiter,
-			test.parentSpanID, traceHeaderDelimiter, sampleFlagKey, kvDelimiter, test.samplingFlag}, "")
+		headerVal := strings.Join([]string{
+			traceIDKey, kvDelimiter, test.traceID, traceHeaderDelimiter, parentIDKey, kvDelimiter,
+			test.parentSpanID, traceHeaderDelimiter, sampleFlagKey, kvDelimiter, test.samplingFlag,
+		}, "")
 
 		sc, err := extract(headerVal)
 

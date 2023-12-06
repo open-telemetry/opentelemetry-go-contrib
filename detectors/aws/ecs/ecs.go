@@ -101,20 +101,28 @@ func (detector *resourceDetector) Detect(ctx context.Context) (*resource.Resourc
 		if err != nil {
 			return empty, err
 		}
-		attributes = append(
-			attributes,
-			semconv.AWSECSContainerARN(containerMetadata.ContainerARN),
-		)
 
 		taskMetadata, err := ecsmetadata.GetTaskV4(ctx, &http.Client{})
 		if err != nil {
 			return empty, err
 		}
 
-		clusterArn := taskMetadata.Cluster
-		if !strings.HasPrefix(clusterArn, "arn:") {
-			baseArn := containerMetadata.ContainerARN[:strings.LastIndex(containerMetadata.ContainerARN, ":")]
-			clusterArn = fmt.Sprintf("%s:cluster/%s", baseArn, clusterArn)
+		baseArn := detector.getBaseArn(
+			taskMetadata.TaskARN,
+			containerMetadata.ContainerARN,
+			taskMetadata.Cluster,
+		)
+
+		if baseArn != "" {
+			if !strings.HasPrefix(taskMetadata.Cluster, "arn:") {
+				taskMetadata.Cluster = fmt.Sprintf("%s:cluster/%s", baseArn, taskMetadata.Cluster)
+			}
+			if !strings.HasPrefix(containerMetadata.ContainerARN, "arn:") {
+				containerMetadata.ContainerARN = fmt.Sprintf("%s:container/%s", baseArn, containerMetadata.ContainerARN)
+			}
+			if !strings.HasPrefix(taskMetadata.TaskARN, "arn:") {
+				taskMetadata.TaskARN = fmt.Sprintf("%s:task/%s", baseArn, taskMetadata.TaskARN)
+			}
 		}
 
 		logAttributes, err := detector.getLogsAttributes(containerMetadata)
@@ -128,7 +136,8 @@ func (detector *resourceDetector) Detect(ctx context.Context) (*resource.Resourc
 
 		attributes = append(
 			attributes,
-			semconv.AWSECSClusterARN(clusterArn),
+			semconv.AWSECSContainerARN(containerMetadata.ContainerARN),
+			semconv.AWSECSClusterARN(taskMetadata.Cluster),
 			semconv.AWSECSLaunchtypeKey.String(strings.ToLower(taskMetadata.LaunchType)),
 			semconv.AWSECSTaskARN(taskMetadata.TaskARN),
 			semconv.AWSECSTaskFamily(taskMetadata.Family),
@@ -137,6 +146,15 @@ func (detector *resourceDetector) Detect(ctx context.Context) (*resource.Resourc
 	}
 
 	return resource.NewWithAttributes(semconv.SchemaURL, attributes...), nil
+}
+
+func (detector *resourceDetector) getBaseArn(arns ...string) string {
+	for _, arn := range arns {
+		if i := strings.LastIndex(arn, ":"); i >= 0 {
+			return arn[:i]
+		}
+	}
+	return ""
 }
 
 func (detector *resourceDetector) getLogsAttributes(metadata *ecsmetadata.ContainerMetadataV4) ([]attribute.KeyValue, error) {
@@ -172,12 +190,16 @@ func (detector *resourceDetector) getLogsAttributes(metadata *ecsmetadata.Contai
 	awsPartition := containerArnParts[arnPartition]
 	awsAccount := containerArnParts[arnAccountId]
 
-	awsLogGroupArn := strings.Join([]string{"arn", awsPartition, "logs",
+	awsLogGroupArn := strings.Join([]string{
+		"arn", awsPartition, "logs",
 		logsRegion, awsAccount, "log-group", logsOptions.AwsLogsGroup,
-		"*"}, ":")
-	awsLogStreamArn := strings.Join([]string{"arn", awsPartition, "logs",
+		"*",
+	}, ":")
+	awsLogStreamArn := strings.Join([]string{
+		"arn", awsPartition, "logs",
 		logsRegion, awsAccount, "log-group", logsOptions.AwsLogsGroup,
-		"log-stream", logsOptions.AwsLogsStream}, ":")
+		"log-stream", logsOptions.AwsLogsStream,
+	}, ":")
 
 	return []attribute.KeyValue{
 		semconv.AWSLogGroupNames(logsOptions.AwsLogsGroup),

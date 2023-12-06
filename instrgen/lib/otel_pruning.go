@@ -34,8 +34,7 @@ func removeExpr(slice []ast.Expr, s int) []ast.Expr {
 }
 
 // OtelPruner.
-type OtelPruner struct {
-}
+type OtelPruner struct{}
 
 func inspectFuncContent(fType *ast.FuncType, fBody *ast.BlockStmt) {
 	for index := 0; index < len(fType.Params.List); index++ {
@@ -98,7 +97,8 @@ func (pass *OtelPruner) Execute(
 	node *ast.File,
 	analysis *PackageAnalysis,
 	pkg *packages.Package,
-	pkgs []*packages.Package) []Import {
+	pkgs []*packages.Package,
+) []Import {
 	var imports []Import
 	ast.Inspect(node, func(n ast.Node) bool {
 		switch x := n.(type) {

@@ -90,5 +90,4 @@ func Shutdown(ts TracingState) {
 
 // AutoEntryPoint.
 func AutotelEntryPoint() {
-
 }
