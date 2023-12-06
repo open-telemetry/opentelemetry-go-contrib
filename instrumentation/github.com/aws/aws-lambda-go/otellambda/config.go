@@ -91,6 +91,15 @@ type config struct {
 	// The default value of Propagator the global otel Propagator
 	// returned by otel.GetTextMapPropagator()
 	Propagator propagation.TextMapPropagator
+
+	// RecordError is used to determine if an error returned from the wrapped
+	// handler should be recorded on the instrumentation-provided span
+	RecordError bool
+
+	// SetError is used to determine if an error returned from the wrapped
+	// handler should cause the instrumentation-provided span to set the
+	// span status to codes.Error
+	SetError bool
 }
 
 // WithTracerProvider configures the TracerProvider used by the
@@ -123,5 +132,26 @@ func WithEventToCarrier(eventToCarrier EventToCarrier) Option {
 func WithPropagator(propagator propagation.TextMapPropagator) Option {
 	return optionFunc(func(c *config) {
 		c.Propagator = propagator
+	})
+}
+
+// WithRecordError configures whether the instrumentation should record an
+// error returned by the wrapped lambda on the instrumentation-provided span.
+//
+// By default, returned errors are not recorded.
+func WithRecordError(recordError bool) Option {
+	return optionFunc(func(c *config) {
+		c.RecordError = recordError
+	})
+}
+
+// WithSetStatus configures whether the instrumentation should set the span
+// status to codes.Error on the instrumentation-provided span when the
+// wrapped handler returns an error.
+//
+// By default, returned the status is not set.
+func WithSetStatus(setError bool) Option {
+	return optionFunc(func(c *config) {
+		c.SetError = setError
 	})
 }

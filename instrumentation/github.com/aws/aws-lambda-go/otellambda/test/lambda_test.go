@@ -18,6 +18,7 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"go.opentelemetry.io/otel/codes"
 	"log"
 	"reflect"
 	"strconv"
@@ -72,6 +73,12 @@ type emptyHandler struct{}
 
 func (h emptyHandler) Invoke(_ context.Context, _ []byte) ([]byte, error) {
 	return nil, nil
+}
+
+type returnErrorHandler struct{}
+
+func (h returnErrorHandler) Invoke(_ context.Context, _ []byte) ([]byte, error) {
+	return nil, fmt.Errorf("this is an error")
 }
 
 var _ lambda.Handler = emptyHandler{}
@@ -258,6 +265,60 @@ func TestWrapHandlerTracingWithFlusher(t *testing.T) {
 	assertStubEqualsIgnoreTime(t, expectedSpanStub, stub)
 
 	assert.Equal(t, 1, flusher.flushCount)
+}
+
+func TestWrapHandlerTracingWithRecordErrorFalse(t *testing.T) {
+	setEnvVars(t)
+	tp, memExporter := initMockTracerProvider()
+
+	wrapped := otellambda.WrapHandler(returnErrorHandler{}, otellambda.WithTracerProvider(tp), otellambda.WithRecordError(false))
+	_, err := wrapped.Invoke(mockContext, []byte{})
+	assert.Error(t, err)
+
+	assert.Len(t, memExporter.GetSpans(), 1)
+	stub := memExporter.GetSpans()[0]
+	assert.Len(t, stub.Events, 0)
+}
+
+func TestWrapHandlerTracingWithRecordErrorTrue(t *testing.T) {
+	setEnvVars(t)
+	tp, memExporter := initMockTracerProvider()
+
+	wrapped := otellambda.WrapHandler(returnErrorHandler{}, otellambda.WithTracerProvider(tp), otellambda.WithRecordError(true))
+	_, err := wrapped.Invoke(mockContext, []byte{})
+	assert.Error(t, err)
+
+	assert.Len(t, memExporter.GetSpans(), 1)
+	stub := memExporter.GetSpans()[0]
+	assert.Len(t, stub.Events, 1)
+	event := stub.Events[0]
+	assert.Equal(t, "exception", event.Name)
+}
+
+func TestWrapHandlerTracingWithSetStatusFalse(t *testing.T) {
+	setEnvVars(t)
+	tp, memExporter := initMockTracerProvider()
+
+	wrapped := otellambda.WrapHandler(returnErrorHandler{}, otellambda.WithTracerProvider(tp), otellambda.WithSetStatus(false))
+	_, err := wrapped.Invoke(mockContext, []byte{})
+	assert.Error(t, err)
+
+	assert.Len(t, memExporter.GetSpans(), 1)
+	stub := memExporter.GetSpans()[0]
+	assert.Equal(t, sdktrace.Status{Code: codes.Unset, Description: ""}, stub.Status)
+}
+
+func TestWrapHandlerTracingWithSetStatusTrue(t *testing.T) {
+	setEnvVars(t)
+	tp, memExporter := initMockTracerProvider()
+
+	wrapped := otellambda.WrapHandler(returnErrorHandler{}, otellambda.WithTracerProvider(tp), otellambda.WithSetStatus(true))
+	_, err := wrapped.Invoke(mockContext, []byte{})
+	assert.Error(t, err)
+
+	assert.Len(t, memExporter.GetSpans(), 1)
+	stub := memExporter.GetSpans()[0]
+	assert.Equal(t, sdktrace.Status{Code: codes.Error, Description: "this is an error"}, stub.Status)
 }
 
 const mockPropagatorKey = "Mockkey"
