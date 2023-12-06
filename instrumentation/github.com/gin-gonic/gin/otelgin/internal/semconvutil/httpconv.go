@@ -190,8 +190,8 @@ var hc = &httpConv{
 //	append(ClientResponse(resp), ClientRequest(resp.Request)...)
 func (c *httpConv) ClientResponse(resp *http.Response) []attribute.KeyValue {
 	/* The following semantic conventions are returned if present:
-	http.status_code				This requires the response.
-	http.response_content_length	his requires the response.
+	http.status_code                This requires the response.
+	http.response_content_length    This requires the response.
 	*/
 	var n int
 	if resp.StatusCode > 0 {
@@ -218,22 +218,24 @@ func (c *httpConv) ClientResponse(resp *http.Response) []attribute.KeyValue {
 // "http.request_content_length", "user_agent.original".
 func (c *httpConv) ClientRequest(req *http.Request) []attribute.KeyValue {
 	/* The following semantic conventions are returned if present:
-	http.method						string	Required
-	user_agent.original				string	Recommended
-	http.url						string	Required
-	net.peer.name					string	Required
-	net.peer.port					int		Conditionally Required: [5]
-	http.request_content_length		int		Recommended
+	http.method                     string
+	user_agent.original             string
+	http.url                        string
+	net.peer.name                   string
+	net.peer.port                   int
+	http.request_content_length     int
 	*/
 
 	/* The following semantic conventions are not returned:
-	http.status_code				This requires the response. See ClientResponse.
-	http.response_content_length	his requires the response. See ClientResponse.
-	net.sock.family					This requires the socket used.
-	net.sock.peer.addr				This requires the socket used.
-	net.sock.peer.name				This requires the socket used.
-	net.sock.peer.port				This requires the socket used.
-	http.resend_count				This is something outside of a single request.
+	http.status_code                This requires the response. See ClientResponse.
+	http.response_content_length    This requires the response. See ClientResponse.
+	net.sock.family                 This requires the socket used.
+	net.sock.peer.addr              This requires the socket used.
+	net.sock.peer.name              This requires the socket used.
+	net.sock.peer.port              This requires the socket used.
+	http.resend_count               This is something outside of a single request.
+	net.protocol.name               The value is always "http" which is should not be set.
+	net.protocol.version            The value in the Request is ignored, and the go client will always use 1.1 or 2.0.
 	*/
 	n := 3 // URL, peer name, proto, and method.
 	var h string
@@ -307,27 +309,27 @@ func (c *httpConv) ClientRequest(req *http.Request) []attribute.KeyValue {
 // "net.protocol.name", "net.protocol.version".
 func (c *httpConv) ServerRequest(server string, req *http.Request) []attribute.KeyValue {
 	/* The following semantic conventions are returned if present:
-	http.method				string
-	http.scheme				string
-	net.host.name			string
-	net.host.port			int
-	net.sock.peer.addr		string
-	net.sock.peer.port		int
-	user_agent.original		string
-	http.client_ip			string
-	net.protocol.name		string
-	net.protocol.version	string
-	http.target				string Note: doesn't include the querry parameter.
+	http.method             string
+	http.scheme             string
+	net.host.name           string
+	net.host.port           int
+	net.sock.peer.addr      string
+	net.sock.peer.port      int
+	user_agent.original     string
+	http.client_ip          string
+	net.protocol.name       string
+	net.protocol.version    string
+	http.target             string Note: doesn't include the query parameter.
 	*/
 
 	/* The following semantic conventions are not returned:
-	http.status_code				This requires the response.
-	http.request_content_length		This requires the len() of body, which can mutate it.
-	http.response_content_length	This requires the response.
-	http.route						This is not available.
-	net.sock.peer.name				This would require a DNS lookup.
-	net.sock.host.addr				The request doesn't have access to the underlying socket.
-	net.sock.host.port				The request doesn't have access to the underlying socket.
+	http.status_code                This requires the response.
+	http.request_content_length     This requires the len() of body, which can mutate it.
+	http.response_content_length    This requires the response.
+	http.route                      This is not available.
+	net.sock.peer.name              This would require a DNS lookup.
+	net.sock.host.addr              The request doesn't have access to the underlying socket.
+	net.sock.host.port              The request doesn't have access to the underlying socket.
 
 	*/
 	n := 4 // Method, scheme, proto, and host name.
@@ -441,19 +443,15 @@ func (c *httpConv) ServerRequest(server string, req *http.Request) []attribute.K
 // returned if they related values are defined in req: "net.host.port".
 func (c *httpConv) ServerRequestMetrics(server string, req *http.Request) []attribute.KeyValue {
 	/* The following semantic conventions are returned if present:
-	http.scheme				string	Required
-	http.route				string	Conditionally Required: If and only if it’s available
-	http.method				string	Required - Note: Only known good headers and _OTHER
-	http.status_code		int		Conditionally Required: If and only if one was received/sent.
-	net.host.name			string	Required
-	net.host.port			int		Conditionally Required: [4]
-	net.protocol.name		string	Recommended
-	net.protocol.version	string	Recommended
+	http.scheme             string
+	http.route              string
+	http.method             string
+	http.status_code        int
+	net.host.name           string
+	net.host.port           int
+	net.protocol.name       string
+	net.protocol.version    string
 	*/
-
-	/* The following semantic conventions are not returned:
-
-	 */
 
 	n := 3 // Method, scheme, and host name.
 	var host string
