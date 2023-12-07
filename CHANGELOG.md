@@ -15,10 +15,10 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 
 ### Fixed
 
-- Mimic the `context.WithoutCancel` behavior introduced in Go 1.21 to fix metric recording on timed out requests in `go.opentelemetry.io/contrib/instrumentation/net/http/otelhttp`. (#4542)
 - Fix `NewServerHandler` in `go.opentelemetry.io/contrib/instrumentation/google.golang.org/grpc/otelgrpc` to correctly set the span status depending on the gRPC status. (#4587)
 - Update `go.opentelemetry.io/contrib/detectors/aws/ecs` to fix the task ARN when it is not valid. (#3583)
 - Do not panic in `go.opentelemetry.io/contrib/detectors/aws/ecs` when the container ARN is not valid. (#3583)
+- Fix `http.Handler` metric instrumentation in `go.opentelemetry.io/contrib/instrumentation/net/http/otelhttp` to record metrics on timed out requests. (#4634)
 
 ## [1.21.1/0.46.1/0.15.1/0.1.1] - 2023-11-16
 
