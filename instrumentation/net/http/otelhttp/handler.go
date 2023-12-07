@@ -284,6 +284,10 @@ func WithRouteTag(route string, h http.Handler) http.Handler {
 	})
 }
 
+// NOTE: This withoutCancel implementation is copied from:
+// https://github.com/open-telemetry/opentelemetry-go-contrib/blob/6009b3188da4f25eb8d2e65ffeefb3bf4b7c3415/instrumentation/google.golang.org/grpc/otelgrpc/stats_handler.go#L216-L245
+// The implementation in otelgrpc is based on:
+// https://cs.opensource.google/go/go/+/refs/tags/go1.21.5:src/context/context.go;l=566
 func withoutCancel(parent context.Context) context.Context {
 	if parent == nil {
 		panic("cannot create context from nil parent")
