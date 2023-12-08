@@ -96,10 +96,9 @@ type config struct {
 	// handler should be recorded on the instrumentation-provided span
 	RecordError bool
 
-	// SetError is used to determine if an error returned from the wrapped
-	// handler should cause the instrumentation-provided span to set the
-	// span status to codes.Error
-	SetError bool
+	// RecordStackTrace is used to determine if the stack trace should be
+	// included when RecordError is true
+	RecordStackTrace bool
 }
 
 // WithTracerProvider configures the TracerProvider used by the
@@ -139,19 +138,9 @@ func WithPropagator(propagator propagation.TextMapPropagator) Option {
 // error returned by the wrapped lambda on the instrumentation-provided span.
 //
 // By default, returned errors are not recorded.
-func WithRecordError(recordError bool) Option {
+func WithRecordError(recordError bool, recordStackTrace bool) Option {
 	return optionFunc(func(c *config) {
 		c.RecordError = recordError
-	})
-}
-
-// WithSetStatus configures whether the instrumentation should set the span
-// status to codes.Error on the instrumentation-provided span when the
-// wrapped handler returns an error.
-//
-// By default, returned the status is not set.
-func WithSetStatus(setError bool) Option {
-	return optionFunc(func(c *config) {
-		c.SetError = setError
+		c.RecordStackTrace = recordError && recordStackTrace
 	})
 }

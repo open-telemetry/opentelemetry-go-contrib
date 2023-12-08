@@ -267,52 +267,60 @@ func TestWrapHandlerTracingWithFlusher(t *testing.T) {
 	assert.Equal(t, 1, flusher.flushCount)
 }
 
-func TestWrapHandlerTracingWithRecordErrorFalse(t *testing.T) {
-	setEnvVars(t)
-	tp, memExporter := initMockTracerProvider()
+func TestWrapHandlerTracingWithRecordError(t *testing.T) {
+	var recordErrorTestCases = []struct {
+		recordError      bool
+		recordStackTrace bool
+	}{
+		{false, false},
+		{false, true},
+		{true, false},
+		{true, true},
+	}
 
-	wrapped := otellambda.WrapHandler(returnErrorHandler{}, otellambda.WithTracerProvider(tp), otellambda.WithRecordError(false))
-	_, err := wrapped.Invoke(mockContext, []byte{})
-	assert.Error(t, err)
+	for _, testCase := range recordErrorTestCases {
+		func(t *testing.T, recordError bool, recordStackTrace bool) {
+			setEnvVars(t)
+			tp, memExporter := initMockTracerProvider()
 
-	assert.Len(t, memExporter.GetSpans(), 1)
-	stub := memExporter.GetSpans()[0]
-	assert.Len(t, stub.Events, 0)
+			wrapped := otellambda.WrapHandler(returnErrorHandler{}, otellambda.WithTracerProvider(tp), otellambda.WithRecordError(recordError, recordStackTrace))
+			_, err := wrapped.Invoke(mockContext, []byte{})
+			assert.Error(t, err)
+
+			assert.Len(t, memExporter.GetSpans(), 1)
+			stub := memExporter.GetSpans()[0]
+
+			if recordError {
+				assert.Len(t, stub.Events, 1)
+				event := stub.Events[0]
+				assert.Equal(t, "exception", event.Name)
+
+				if recordStackTrace {
+					assert.Equal(t, 3, len(event.Attributes))
+
+					found := false
+					for _, attr := range event.Attributes {
+						if attr.Key == "exception.stacktrace" {
+							found = true
+							break
+						}
+					}
+					assert.True(t, found)
+				} else {
+					assert.Equal(t, 2, len(event.Attributes))
+				}
+			} else {
+				assert.Len(t, stub.Events, 0)
+			}
+		}(t, testCase.recordError, testCase.recordStackTrace)
+	}
 }
 
-func TestWrapHandlerTracingWithRecordErrorTrue(t *testing.T) {
+func TestWrapHandlerTracingSetStatusError(t *testing.T) {
 	setEnvVars(t)
 	tp, memExporter := initMockTracerProvider()
 
-	wrapped := otellambda.WrapHandler(returnErrorHandler{}, otellambda.WithTracerProvider(tp), otellambda.WithRecordError(true))
-	_, err := wrapped.Invoke(mockContext, []byte{})
-	assert.Error(t, err)
-
-	assert.Len(t, memExporter.GetSpans(), 1)
-	stub := memExporter.GetSpans()[0]
-	assert.Len(t, stub.Events, 1)
-	event := stub.Events[0]
-	assert.Equal(t, "exception", event.Name)
-}
-
-func TestWrapHandlerTracingWithSetStatusFalse(t *testing.T) {
-	setEnvVars(t)
-	tp, memExporter := initMockTracerProvider()
-
-	wrapped := otellambda.WrapHandler(returnErrorHandler{}, otellambda.WithTracerProvider(tp), otellambda.WithSetStatus(false))
-	_, err := wrapped.Invoke(mockContext, []byte{})
-	assert.Error(t, err)
-
-	assert.Len(t, memExporter.GetSpans(), 1)
-	stub := memExporter.GetSpans()[0]
-	assert.Equal(t, sdktrace.Status{Code: codes.Unset, Description: ""}, stub.Status)
-}
-
-func TestWrapHandlerTracingWithSetStatusTrue(t *testing.T) {
-	setEnvVars(t)
-	tp, memExporter := initMockTracerProvider()
-
-	wrapped := otellambda.WrapHandler(returnErrorHandler{}, otellambda.WithTracerProvider(tp), otellambda.WithSetStatus(true))
+	wrapped := otellambda.WrapHandler(returnErrorHandler{}, otellambda.WithTracerProvider(tp))
 	_, err := wrapped.Invoke(mockContext, []byte{})
 	assert.Error(t, err)
 
