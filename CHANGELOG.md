@@ -75,6 +75,18 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 - Upgrade dependencies of OpenTelemetry Go to use the new [`v1.19.0`/`v0.42.0`/`v0.0.7` release](https://github.com/open-telemetry/opentelemetry-go/releases/tag/v1.19.0).
 - Use `grpc.StatsHandler` for gRPC instrumentation in `go.opentelemetry.io/contrib/instrumentation/google.golang.org/grpc/otelgrpc/example`. (#4325)
 
+### Changed
+
+- The semantic conventions used by `go.opentelemetry.io/contrib/instrumentation/github.com/emicklei/go-restful/otelrestful` have been upgraded to v1.20.0. (#4320)
+- The semantic conventions used by `go.opentelemetry.io/contrib/instrumentation/github.com/gin-gonic/gin/otelgin` have been upgraded to v1.20.0. (#4320)
+- The semantic conventions used by `go.opentelemetry.io/contrib/instrumentation/github.com/gorilla/mux/otelmux` have been upgraded to v1.20.0. (#4320)
+- The semantic conventions used by `go.opentelemetry.io/contrib/instrumentation/github.com/labstack/echo/otelecho` have been upgraded to v1.20.0. (#4320)
+- The semantic conventions used by `go.opentelemetry.io/contrib/instrumentation/gopkg.in/macaron.v1/otelmacaron` have been upgraded to v1.20.0. (#4320)
+- The semantic conventions used by `go.opentelemetry.io/contrib/instrumentation/net/http/httptrace/otelhttptrace` have been upgraded to v1.20.0. (#4320)
+- The semantic conventions used by `go.opentelemetry.io/contrib/instrumentation/net/http/httptrace/otelhttptrace/example` have been upgraded to v1.20.0. (#4320)
+- The semantic conventions used by `go.opentelemetry.io/contrib/instrumentation/net/http/otelhttp/example` have been upgraded to v1.20.0. (#4320)
+- The semantic conventions used by `go.opentelemetry.io/contrib/instrumentation/net/http/otelhttp` have been upgraded to v1.20.0. (#4320)
+
 ## [1.19.0/0.44.0/0.13.0] - 2023-09-12
 
 ### Added

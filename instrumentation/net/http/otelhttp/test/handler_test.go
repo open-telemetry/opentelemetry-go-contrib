@@ -37,7 +37,7 @@ import (
 	"go.opentelemetry.io/otel/sdk/metric/metricdata/metricdatatest"
 	sdktrace "go.opentelemetry.io/otel/sdk/trace"
 	"go.opentelemetry.io/otel/sdk/trace/tracetest"
-	semconv "go.opentelemetry.io/otel/semconv/v1.17.0"
+	semconv "go.opentelemetry.io/otel/semconv/v1.20.0"
 	"go.opentelemetry.io/otel/trace"
 )
 
@@ -122,7 +122,8 @@ func TestHandlerBasics(t *testing.T) {
 	attrs := attribute.NewSet(
 		semconv.NetHostName(r.Host),
 		semconv.HTTPSchemeHTTP,
-		semconv.HTTPFlavorKey.String(fmt.Sprintf("1.%d", r.ProtoMinor)),
+		semconv.NetProtocolName("http"),
+		semconv.NetProtocolVersion(fmt.Sprintf("1.%d", r.ProtoMinor)),
 		semconv.HTTPMethod("GET"),
 		attribute.String("test", "attribute"),
 		semconv.HTTPStatusCode(200),
