@@ -211,7 +211,7 @@ func (c *httpConv) ClientResponse(resp *http.Response) []attribute.KeyValue {
 	return attrs
 }
 
-// TraceClientRequest returns attributes for an HTTP request made by a client. The
+// ClientRequest returns attributes for an HTTP request made by a client. The
 // following attributes are always returned: "http.url", "http.method",
 // "net.peer.name". The following attributes are returned if the related values
 // are defined in req: "net.peer.port", "http.user_agent",
