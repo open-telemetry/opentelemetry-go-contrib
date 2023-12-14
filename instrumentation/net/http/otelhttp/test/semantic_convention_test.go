@@ -40,10 +40,10 @@ func TestSemanticConventions(t *testing.T) {
 	wd, err := os.Getwd()
 	ctx := context.Background()
 	req := testcontainers.ContainerRequest{
-		Image:        "ghcr.io/madvikinggod/semantic-convention-checker:0.0.1",
-		ExposedPorts: []string{"4317/tcp"},
+		Image:        "ghcr.io/madvikinggod/semantic-convention-checker:0.0.4",
+		ExposedPorts: []string{"4318/tcp"},
 		WaitingFor: wait.ForAll(
-			wait.ForListeningPort("4317/tcp"),
+			wait.ForListeningPort("4318/tcp"),
 			wait.ForLog("INFO starting server address="),
 		),
 
@@ -100,7 +100,7 @@ func TestSemanticConventions(t *testing.T) {
 	client := ts.Client()
 	client.Transport = otelhttp.NewTransport(client.Transport, otelhttp.WithSpanNameFormatter(formatter), otelhttp.WithTracerProvider(tp))
 
-	resp, err := client.Get(ts.URL + "/")
+	resp, err := client.Post(ts.URL+"/", "application/text", strings.NewReader("Hello, Server!"))
 	require.NoError(t, err)
 
 	io.Copy(io.Discard, resp.Body)

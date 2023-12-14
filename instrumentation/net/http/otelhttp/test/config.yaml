@@ -1,21 +1,47 @@
 resource:
 trace:
-- semantic_version: v1.20.0
+- semantic_version: "https://opentelemetry.io/schemas/1.20.0"
   match: http.server.*
   groups:
   - trace.http.server
+  - trace.http.common
   ignore:
-  -
+  # The handler func doesn't have access to the route used at the mux level
+  - http.route
+  # The handler func doesn't have access to underlying socket 
+  - http.client_ip
+  - net.sock.host.addr 
+  - net.sock.host.port 
+  - net.sock.peer.name 
+  - net.sock.family 
+  # The server uses HTTP which should not be sent
+  - net.protocol.name
+
+  - http.request_content_length 
+  - http.response_content_length 
+  
   report_additional: true
-- semantic_version: v1.20.0
+- semantic_version: "https://opentelemetry.io/schemas/1.20.0"
   match: http.client.*
   groups:
   - trace.http.client
+  - trace.http.common
   ignore:
-  -
+  # The client will only ever send 1 request
+  - http.resend_count 
+  # The client doesn't have access to the underlying socket
+  - net.sock.peer.addr 
+  - net.sock.peer.port 
+  - net.sock.peer.name 
+  - net.sock.family 
+  # No proxy value is used
+  - user_agent.original 
+  # The client uses HTTP 1.1 or 2 doesn't expose a way to know which
+  - net.protocol.name 
+  - net.protocol.version
   report_additional: true
 metric:
 log:
 report_unmatched: true
-server_address: 0.0.0.0:4317
+server_address: 0.0.0.0:4318
 
