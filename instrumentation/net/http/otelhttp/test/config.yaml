@@ -1,0 +1,21 @@
+resource:
+trace:
+- semantic_version: v1.20.0
+  match: http.server.*
+  groups:
+  - trace.http.server
+  ignore:
+  -
+  report_additional: true
+- semantic_version: v1.20.0
+  match: http.client.*
+  groups:
+  - trace.http.client
+  ignore:
+  -
+  report_additional: true
+metric:
+log:
+report_unmatched: true
+server_address: 0.0.0.0:4317
+
