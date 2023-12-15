@@ -17,6 +17,7 @@ package prometheus // import "go.opentelemetry.io/contrib/bridges/prometheus"
 import (
 	"context"
 	"testing"
+	"time"
 
 	"github.com/prometheus/client_golang/prometheus"
 	"github.com/stretchr/testify/assert"
@@ -247,6 +248,91 @@ func TestProduce(t *testing.T) {
 			require.Equal(t, len(output), len(tt.expected))
 			for i := range output {
 				metricdatatest.AssertEqual(t, tt.expected[i], output[i], metricdatatest.IgnoreTimestamp())
+			}
+		})
+	}
+}
+
+func TestProduceForStartTime(t *testing.T) {
+	testCases := []struct {
+		name        string
+		testFn      func(*prometheus.Registry)
+		startTimeFn func(metricdata.Aggregation) []time.Time
+	}{
+		{
+			name: "counter",
+			testFn: func(reg *prometheus.Registry) {
+				metric := prometheus.NewCounter(prometheus.CounterOpts{
+					Name: "test_counter_metric",
+					Help: "A counter metric for testing",
+					ConstLabels: prometheus.Labels(map[string]string{
+						"foo": "bar",
+					}),
+				})
+				reg.MustRegister(metric)
+				metric.(prometheus.ExemplarAdder).AddWithExemplar(
+					245.3, prometheus.Labels{
+						"trace_id":        traceIDStr,
+						"span_id":         spanIDStr,
+						"other_attribute": "abcd",
+					},
+				)
+			},
+			startTimeFn: func(aggr metricdata.Aggregation) []time.Time {
+				dps := aggr.(metricdata.Sum[float64]).DataPoints
+				sts := make([]time.Time, len(dps))
+				for i, dp := range dps {
+					sts[i] = dp.StartTime
+				}
+				return sts
+			},
+		},
+		{
+			name: "histogram",
+			testFn: func(reg *prometheus.Registry) {
+				metric := prometheus.NewHistogram(prometheus.HistogramOpts{
+					Name: "test_histogram_metric",
+					Help: "A histogram metric for testing",
+					ConstLabels: prometheus.Labels(map[string]string{
+						"foo": "bar",
+					}),
+				})
+				reg.MustRegister(metric)
+				metric.(prometheus.ExemplarObserver).ObserveWithExemplar(
+					578.3, prometheus.Labels{
+						"trace_id":        traceIDStr,
+						"span_id":         spanIDStr,
+						"other_attribute": "efgh",
+					},
+				)
+			},
+			startTimeFn: func(aggr metricdata.Aggregation) []time.Time {
+				dps := aggr.(metricdata.Histogram[float64]).DataPoints
+				sts := make([]time.Time, len(dps))
+				for i, dp := range dps {
+					sts[i] = dp.StartTime
+				}
+				return sts
+			},
+		},
+	}
+	for _, tt := range testCases {
+		t.Run(tt.name, func(t *testing.T) {
+			reg := prometheus.NewRegistry()
+			tt.testFn(reg)
+			p := NewMetricProducer(WithGatherer(reg))
+			output, err := p.Produce(context.Background())
+			assert.NoError(t, err)
+			assert.NotEmpty(t, output)
+			for _, sms := range output {
+				assert.NotEmpty(t, sms.Metrics)
+				for _, ms := range sms.Metrics {
+					sts := tt.startTimeFn(ms.Data)
+					assert.NotEmpty(t, sts)
+					for _, st := range sts {
+						assert.True(t, st.After(processStartTime))
+					}
+				}
 			}
 		})
 	}
