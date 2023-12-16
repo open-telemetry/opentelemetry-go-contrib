@@ -24,8 +24,7 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 - The semantic conventions used by `go.opentelemetry.io/contrib/instrumentation/net/http/httptrace/otelhttptrace/example` are upgraded to v1.20.0. (#4320)
 - The semantic conventions used by `go.opentelemetry.io/contrib/instrumentation/net/http/otelhttp/example` are upgraded to v1.20.0. (#4320)
 - The semantic conventions used by `go.opentelemetry.io/contrib/instrumentation/net/http/otelhttp`are upgraded to v1.20.0. (#4320)
-- Removes the `withoutCancel` implementation and usage in `go.opentelemetry.io/contrib/instrumentation/google.golang.org/grpc/otelgrpc` since measurements now Record when context is Done. (https://github.com/open-telemetry/opentelemetry-go/issues/4750, not sure how to reference the issue if it's in another repo)
-
+- Removes the `withoutCancel` implementation and usage in `go.opentelemetry.io/contrib/instrumentation/google.golang.org/grpc/otelgrpc` since measurements now Record when context is Done. (#4703)
 
 ### Fixed
 
