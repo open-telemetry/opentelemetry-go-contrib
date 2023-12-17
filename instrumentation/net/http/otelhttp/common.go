@@ -31,7 +31,6 @@ const (
 
 // Server HTTP metrics.
 const (
-	RequestCount          = "http.server.request_count"           // Incoming request count total
 	RequestContentLength  = "http.server.request_content_length"  // Incoming request bytes total
 	ResponseContentLength = "http.server.response_content_length" // Incoming response bytes total
 	ServerLatency         = "http.server.duration"                // Incoming end to end duration, milliseconds
