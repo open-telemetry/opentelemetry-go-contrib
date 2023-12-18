@@ -1,3 +1,3 @@
-module go.opentelemetry.io/contrib
+module github.com/Lansweeper/opentelemetry-go-contrib
 
-go 1.20
+go 1.21
