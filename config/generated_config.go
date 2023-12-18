@@ -229,6 +229,12 @@ type Prometheus struct {
 
 	// Port corresponds to the JSON schema field "port".
 	Port *int `mapstructure:"port,omitempty"`
+
+	// WithoutTypeSuffix corresponds to the JSON schema field "without_type_suffix".
+	WithoutTypeSuffix *bool `mapstructure:"without_type_suffix,omitempty"`
+
+	// WithoutUnits corresponds to the JSON schema field "without_units".
+	WithoutUnits *bool `mapstructure:"without_units,omitempty"`
 }
 
 type Propagator struct {
@@ -244,6 +250,9 @@ type PullMetricReader struct {
 type Resource struct {
 	// Attributes corresponds to the JSON schema field "attributes".
 	Attributes *Attributes `mapstructure:"attributes,omitempty"`
+
+	// SchemaUrl corresponds to the JSON schema field "schema_url".
+	SchemaUrl *string `mapstructure:"schema_url,omitempty"`
 }
 
 type Sampler struct {
