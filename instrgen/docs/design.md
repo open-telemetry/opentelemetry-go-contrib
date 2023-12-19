@@ -1,6 +1,6 @@
 # OpenTelemetry Go Source Automatic Instrumentation - design
 
-This document describes design of `instrgen` - compile time automatic OpenTelemetry instrumentation for GO programming language.
+This document describes design of `instrgen` - compile time automatic OpenTelemetry instrumentation for Go programming language.
 
 ## Background
 
@@ -11,7 +11,7 @@ Language and its internals influence instrumentation techniques.
 In dynamic languages it's very easy to replace original implementation. This is done by providing a new
 implementation built on top of the original one. A technique called monkey patching (i.e. Python decorators).
 
-GO is statically typed, natively compiled programming language which means that works on bare methal without
+Go is statically typed, natively compiled programming language which means that works on bare methal without
 virtual machine in between. The only component that lives between your program and machine is operating system.
 Because of this limitation, auto-instrumentation of Go programs is limited to the following:
 
@@ -26,7 +26,7 @@ Compile time instrumentation is not different by other mechanisms described abov
 The fundamental difference is the injection point, instrumentation has to be done 
 at compile time which has cons and pros.
 
-GO is perfect language for compile time instrumentation for two main reasons:
+Go is perfect language for compile time instrumentation for two main reasons:
 - everything that's needed is in standard library
 - it's easy to control compilation process due to go compiler architecture
 
