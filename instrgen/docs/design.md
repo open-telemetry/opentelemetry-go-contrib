@@ -47,10 +47,10 @@ initial analysis, however this can be spit into two separate tools or processes.
 
 Executable takes few parameters:
 
-1) command name
-2) file pattern - determines files taken into instrumentation
-3) yes/no - determines whether code should be injected in-place
-4) entry point - a function from which injection process start
+- command name
+- file pattern - determines files taken into instrumentation
+- yes/no - determines whether code should be injected in-place
+- entry point - a function from which injection process start
 
 ```sh
 usage driver --command [file pattern] replace entrypoint
