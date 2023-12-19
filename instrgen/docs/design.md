@@ -182,4 +182,19 @@ can be selected.
 
 ![image info](./instrgen.png)
 
-### Context passing
+### Scope
+
+First version will provide auto-instrumentation for following libraries:
+
+- HTTP
+- gRPC
+
+In the second phase we plan to add support for auto-instrumentation of selected user defined functions.
+
+`instrgen` can be used in two different contexts:
+
+- as a compile time auto-instrumentation tool.
+- as a utility to help take away all the tedious boilerplate work that needs to be done when starting down the manual instrumentation.
+
+`instrgen` supports two modes, it can instrument code in-place (chaging original code) or in background. In the latter instrumentation
+will be added to result binary without altering input source code.
