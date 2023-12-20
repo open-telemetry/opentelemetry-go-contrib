@@ -22,7 +22,103 @@ import (
 	"go.opentelemetry.io/otel/sdk/resource"
 )
 
-var errNoValidMetricExporter = errors.New("no valid metric exporter")
+var (
+	errNoValidMetricExporter     = errors.New("no valid metric exporter")
+	errNoCriteriaProvidedForView = errors.New("no criteria provided for view")
+)
+
+func instrumentTypeToKind(instrumentType ViewSelectorInstrumentType) (sdkmetric.InstrumentKind, error) {
+	switch instrumentType {
+	case ViewSelectorInstrumentTypeCounter:
+		return sdkmetric.InstrumentKindCounter, nil
+	case ViewSelectorInstrumentTypeObservableCounter:
+		return sdkmetric.InstrumentKindObservableCounter, nil
+	case ViewSelectorInstrumentTypeUpDownCounter:
+		return sdkmetric.InstrumentKindUpDownCounter, nil
+	case ViewSelectorInstrumentTypeHistogram:
+		return sdkmetric.InstrumentKindHistogram, nil
+	case ViewSelectorInstrumentTypeObservableUpDownCounter:
+		return sdkmetric.InstrumentKindObservableUpDownCounter, nil
+	case ViewSelectorInstrumentTypeObservableGauge:
+		return sdkmetric.InstrumentKindObservableGauge, nil
+	}
+	return 0, fmt.Errorf("invalid instrument type: %s", instrumentType)
+}
+
+// // Base2ExponentialBucketHistogram corresponds to the JSON schema field
+// // "base2_exponential_bucket_histogram".
+// Base2ExponentialBucketHistogram *ViewStreamAggregationBase2ExponentialBucketHistogram `mapstructure:"base2_exponential_bucket_histogram,omitempty"`
+
+// // Default corresponds to the JSON schema field "default".
+// Default ViewStreamAggregationDefault `mapstructure:"default,omitempty"`
+
+// // Drop corresponds to the JSON schema field "drop".
+// Drop ViewStreamAggregationDrop `mapstructure:"drop,omitempty"`
+
+// // ExplicitBucketHistogram corresponds to the JSON schema field
+// // "explicit_bucket_histogram".
+// ExplicitBucketHistogram *ViewStreamAggregationExplicitBucketHistogram `mapstructure:"explicit_bucket_histogram,omitempty"`
+
+// // LastValue corresponds to the JSON schema field "last_value".
+// LastValue ViewStreamAggregationLastValue `mapstructure:"last_value,omitempty"`
+
+// // Sum corresponds to the JSON schema field "sum".
+// Sum ViewStreamAggregationSum `mapstructure:"sum,omitempty"`
+
+func viewStreamAggregationToAggregation(agg ViewStreamAggregation) sdkmetric.Aggregation {
+	if agg.Drop != nil {
+		return sdkmetric.AggregationDrop{}
+	}
+	if agg.LastValue != nil {
+		return sdkmetric.AggregationLastValue{}
+	}
+	return sdkmetric.AggregationDefault{}
+}
+
+func initView(v View) (sdkmetric.View, error) {
+	if v.Selector == nil {
+		return nil, errNoCriteriaProvidedForView
+	}
+	instrument := sdkmetric.Instrument{}
+	stream := sdkmetric.Stream{}
+	if v.Selector.InstrumentName != nil {
+		instrument.Name = *v.Selector.InstrumentName
+	}
+	if v.Selector.InstrumentType != nil {
+		kind, err := instrumentTypeToKind(*v.Selector.InstrumentType)
+		if err != nil {
+			return nil, err
+		}
+		instrument.Kind = kind
+	}
+	if v.Selector.MeterName != nil {
+		instrument.Scope.Name = *v.Selector.MeterName
+	}
+	if v.Selector.MeterSchemaUrl != nil {
+		instrument.Scope.SchemaURL = *v.Selector.MeterSchemaUrl
+	}
+	if v.Selector.Unit != nil {
+		instrument.Unit = *v.Selector.Unit
+	}
+
+	if v.Stream != nil {
+		if v.Stream.Aggregation != nil {
+			stream.Aggregation = viewStreamAggregationToAggregation(*v.Stream.Aggregation)
+		}
+		// TODO: attribute filter
+		// if len(v.Stream.AttributeKeys) > 0 {
+		// 	stream.AttributeFilter =
+		// }
+		if v.Stream.Description != nil {
+			stream.Description = *v.Stream.Description
+		}
+		if v.Stream.Name != nil {
+			stream.Name = *v.Stream.Name
+		}
+	}
+
+	return sdkmetric.NewView(instrument, stream), nil
+}
 
 func initMeterProvider(cfg configOptions, res *resource.Resource) (metric.MeterProvider, shutdownFunc, error) {
 	if cfg.opentelemetryConfig.MeterProvider == nil {
@@ -31,8 +127,6 @@ func initMeterProvider(cfg configOptions, res *resource.Resource) (metric.MeterP
 
 	opts := []sdkmetric.Option{
 		sdkmetric.WithResource(res),
-		// TODO: configure views
-		// sdkmetric.WithView(batchViews(disableHighCardinality)...),
 	}
 
 	for _, reader := range cfg.opentelemetryConfig.MeterProvider.Readers {
@@ -41,6 +135,14 @@ func initMeterProvider(cfg configOptions, res *resource.Resource) (metric.MeterP
 			return noop.NewMeterProvider(), noopShutdown, nil
 		}
 		opts = append(opts, sdkmetric.WithReader(r))
+	}
+
+	for _, view := range cfg.opentelemetryConfig.MeterProvider.Views {
+		v, err := initView(view)
+		if err != nil {
+			return noop.NewMeterProvider(), noopShutdown, nil
+		}
+		opts = append(opts, sdkmetric.WithView(v))
 	}
 	mp := sdkmetric.NewMeterProvider(opts...)
 	return mp, mp.Shutdown, nil
@@ -61,8 +163,8 @@ func initPrometheusExporter(prometheusConfig *Prometheus) (sdkmetric.Reader, err
 	//
 	// TODO: how are these options configured?
 	// otelprom.WithRegisterer(prometheus.NewRegistry()),
-	// otelprom.WithoutScopeInfo(),
 	// otelprom.WithProducer(opencensus.NewMetricProducer()),
+	// otelprom.WithoutScopeInfo(),
 	// otelprom.WithNamespace("otelcol"),
 	)
 	if err != nil {

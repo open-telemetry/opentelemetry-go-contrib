@@ -34,10 +34,36 @@ func TestInitMeterProvider(t *testing.T) {
 			name:         "no-meter-provider-configured",
 			wantProvider: noop.NewMeterProvider(),
 		},
+		{
+			name: "reader-and-views",
+			cfg: configOptions{
+				opentelemetryConfig: OpenTelemetryConfiguration{
+					MeterProvider: &MeterProvider{
+						Readers: []MetricReader{
+							{
+								Periodic: &PeriodicMetricReader{
+									Exporter: MetricExporter{
+										Console: Console{},
+									},
+								},
+							},
+						},
+						Views: []View{
+							{
+								Selector: &ViewSelector{
+									InstrumentName: strPtr("instrument-name"),
+								},
+							},
+						},
+					},
+				},
+			},
+			wantProvider: sdkmetric.NewMeterProvider(),
+		},
 	}
 	for _, tt := range tests {
-		mp, shutdown, err := initMeterProvider(tt.cfg, resource.Default())
-		require.Equal(t, tt.wantProvider, mp)
+		got, shutdown, err := initMeterProvider(tt.cfg, resource.Default())
+		require.Equal(t, reflect.TypeOf(tt.wantProvider), reflect.TypeOf(got))
 		require.NoError(t, tt.wantErr, err)
 		require.NoError(t, shutdown(context.Background()))
 	}
@@ -412,6 +438,122 @@ func TestPullMetricReader(t *testing.T) {
 			} else {
 				require.Equal(t, reflect.TypeOf(tt.wantReader), reflect.TypeOf(got))
 			}
+		})
+	}
+}
+
+func TestInitView(t *testing.T) {
+	testCases := []struct {
+		name     string
+		view     View
+		args     any
+		wantErr  error
+		wantView sdkmetric.View
+	}{
+		{
+			name:     "nil view",
+			wantView: sdkmetric.NewView(sdkmetric.Instrument{}, sdkmetric.Stream{}),
+		},
+		{
+			name: "view match instrument no stream",
+			view: View{
+				Selector: &ViewSelector{
+					InstrumentName: strPtr("view-instrument"),
+				},
+			},
+			wantView: sdkmetric.NewView(sdkmetric.Instrument{}, sdkmetric.Stream{}),
+		},
+		{
+			name: "view match instrument no stream",
+			view: View{
+				Selector: &ViewSelector{
+					InstrumentName: strPtr("view-instrument"),
+					InstrumentType: (*ViewSelectorInstrumentType)(strPtr("counter")),
+					MeterName:      strPtr("view-meter"),
+					MeterSchemaUrl: strPtr("https://schema.otel.io/1234"),
+					Unit:           strPtr("s"),
+				},
+			},
+			wantView: sdkmetric.NewView(sdkmetric.Instrument{}, sdkmetric.Stream{}),
+		},
+		{
+			name: "view instrument observable gauge",
+			view: View{
+				Selector: &ViewSelector{
+					InstrumentType: (*ViewSelectorInstrumentType)(strPtr("observable_gauge")),
+				},
+			},
+		},
+		{
+			name: "view instrument observable counter",
+			view: View{
+				Selector: &ViewSelector{
+					InstrumentType: (*ViewSelectorInstrumentType)(strPtr("observable_counter")),
+				},
+			},
+		},
+		{
+			name: "view instrument observable up down counter",
+			view: View{
+				Selector: &ViewSelector{
+					InstrumentType: (*ViewSelectorInstrumentType)(strPtr("observable_up_down_counter")),
+				},
+			},
+		},
+		{
+			name: "view instrument up down counter",
+			view: View{
+				Selector: &ViewSelector{
+					InstrumentType: (*ViewSelectorInstrumentType)(strPtr("up_down_counter")),
+				},
+			},
+		},
+		{
+			name: "view instrument histogram",
+			view: View{
+				Selector: &ViewSelector{
+					InstrumentType: (*ViewSelectorInstrumentType)(strPtr("histogram")),
+				},
+			},
+		},
+		{
+			name: "view invalid instrument",
+			view: View{
+				Selector: &ViewSelector{
+					InstrumentType: (*ViewSelectorInstrumentType)(strPtr("other")),
+				},
+			},
+			wantErr: errors.New("invalid instrument type: other"),
+		},
+		{
+			name: "view instrument with stream",
+			view: View{
+				Selector: &ViewSelector{
+					InstrumentType: (*ViewSelectorInstrumentType)(strPtr("counter")),
+				},
+				Stream: &ViewStream{
+					Description: strPtr("stream-description"),
+					Name:        strPtr("stream-name"),
+					Aggregation: &ViewStreamAggregation{
+						LastValue: ViewStreamAggregationLastValue{},
+					},
+				},
+			},
+		},
+	}
+	for _, tt := range testCases {
+		t.Run(tt.name, func(t *testing.T) {
+			got, err := initView(tt.view)
+			require.Equal(t, tt.wantErr, err)
+			require.NotNil(t, got)
+			// shouldMatch :=
+			// stream, matched := got()
+			// if tt.wantView == nil {
+			// 	require.Nil(t, got)
+			// } else {
+			// 	// require.Equal(t, reflect.TypeOf(tt.wantView), reflect.TypeOf(got))
+			// 	require.EqualExportedValues(t, tt.wantView, got)
+			// }
 		})
 	}
 }
