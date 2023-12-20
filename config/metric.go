@@ -155,18 +155,25 @@ func initPrometheusExporter(prometheusConfig *Prometheus) (sdkmetric.Reader, err
 	if prometheusConfig.Port == nil {
 		return nil, fmt.Errorf("port must be specified")
 	}
-	exporter, err := otelprom.New(
-	//
-	// https://github.com/open-telemetry/opentelemetry-configuration/pull/61
-	// otelprom.WithoutUnits(),
-	// otelprom.WithoutCounterSuffixes(),
-	//
-	// TODO: how are these options configured?
+
+	opts := []otelprom.Option{}
+	if prometheusConfig.WithoutScopeInfo != nil && *prometheusConfig.WithoutScopeInfo {
+		opts = append(opts, otelprom.WithoutScopeInfo())
+	}
+
+	if prometheusConfig.WithoutUnits != nil && *prometheusConfig.WithoutUnits {
+		opts = append(opts, otelprom.WithoutUnits())
+	}
+
+	if prometheusConfig.WithoutTypeSuffix != nil && *prometheusConfig.WithoutTypeSuffix {
+		opts = append(opts, otelprom.WithoutCounterSuffixes())
+	}
+
+	exporter, err := otelprom.New(opts...)
+	// TODO: these options are configured in the collector, are they needed?
 	// otelprom.WithRegisterer(prometheus.NewRegistry()),
 	// otelprom.WithProducer(opencensus.NewMetricProducer()),
-	// otelprom.WithoutScopeInfo(),
 	// otelprom.WithNamespace("otelcol"),
-	)
 	if err != nil {
 		return nil, fmt.Errorf("error creating otel prometheus exporter: %w", err)
 	}
