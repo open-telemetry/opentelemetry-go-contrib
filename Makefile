@@ -302,7 +302,7 @@ add-tags: | $(MULTIMOD)
 OPENTELEMETRY_CONFIGURATION_JSONSCHEMA_SRC_DIR=tmp/opentelememetry-configuration
 
 # The SHA matching the current version of the opentelemetry-configuration schema to use
-OPENTELEMETRY_CONFIGURATION_JSONSCHEMA_VERSION=561a442e0b095f200e713b4e0dc7c24213012aab
+OPENTELEMETRY_CONFIGURATION_JSONSCHEMA_VERSION=f38ac7c3a499ae5f81924ef9c455c27a56130562
 
 # Cleanup temporary directory
 genjsonschema-cleanup:

@@ -230,6 +230,9 @@ type Prometheus struct {
 	// Port corresponds to the JSON schema field "port".
 	Port *int `mapstructure:"port,omitempty"`
 
+	// WithoutScopeInfo corresponds to the JSON schema field "without_scope_info".
+	WithoutScopeInfo *bool `mapstructure:"without_scope_info,omitempty"`
+
 	// WithoutTypeSuffix corresponds to the JSON schema field "without_type_suffix".
 	WithoutTypeSuffix *bool `mapstructure:"without_type_suffix,omitempty"`
 
