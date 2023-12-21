@@ -51,3 +51,7 @@ func TestNewSDK(t *testing.T) {
 		require.Equal(t, tt.wantShutdownErr, sdk.Shutdown(context.Background()))
 	}
 }
+
+func toPtr[V int | string](in V) *V {
+	return &in
+}
