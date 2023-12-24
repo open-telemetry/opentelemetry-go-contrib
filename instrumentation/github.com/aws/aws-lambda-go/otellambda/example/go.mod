@@ -12,7 +12,7 @@ replace (
 require (
 	github.com/aws/aws-lambda-go v1.42.0
 	github.com/aws/aws-sdk-go-v2/config v1.26.1
-	github.com/aws/aws-sdk-go-v2/service/s3 v1.47.5
+	github.com/aws/aws-sdk-go-v2/service/s3 v1.47.7
 	go.opentelemetry.io/contrib/detectors/aws/lambda v0.46.1
 	go.opentelemetry.io/contrib/instrumentation/github.com/aws/aws-lambda-go/otellambda v0.46.1
 	go.opentelemetry.io/contrib/instrumentation/github.com/aws/aws-sdk-go-v2/otelaws v0.0.0-00010101000000-000000000000
