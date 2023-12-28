@@ -90,7 +90,7 @@ type clientHandler struct {
 	*config
 }
 
-// NewClientHandler creates a stats.Handler for gRPC client.
+// NewClientHandler creates a stats.Handler for a gRPC client.
 func NewClientHandler(opts ...Option) stats.Handler {
 	h := &clientHandler{
 		config: newConfig(opts, "client"),
