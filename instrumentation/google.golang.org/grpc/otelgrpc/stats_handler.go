@@ -44,8 +44,6 @@ type serverHandler struct {
 }
 
 // NewServerHandler creates a stats.Handler for a gRPC server.
-//
-// Caution: Do not share the handler across multiple gRPC servers.
 func NewServerHandler(opts ...Option) stats.Handler {
 	h := &serverHandler{
 		config: newConfig(opts, "server"),
@@ -93,8 +91,6 @@ type clientHandler struct {
 }
 
 // NewClientHandler creates a stats.Handler for gRPC client.
-//
-// Caution: Do not share the handler across multiple gRPC clients.
 func NewClientHandler(opts ...Option) stats.Handler {
 	h := &clientHandler{
 		config: newConfig(opts, "client"),
