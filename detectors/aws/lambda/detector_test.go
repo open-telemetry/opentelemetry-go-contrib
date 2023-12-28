@@ -28,12 +28,11 @@ import (
 
 // successfully return resource when process is running on Amazon Lambda environment.
 func TestDetectSuccess(t *testing.T) {
-	os.Clearenv()
-	_ = os.Setenv(lambdaFunctionNameEnvVar, "testFunction")
-	_ = os.Setenv(awsRegionEnvVar, "us-texas-1")
-	_ = os.Setenv(lambdaFunctionVersionEnvVar, "$LATEST")
-	_ = os.Setenv(lambdaLogStreamNameEnvVar, "2023/01/01/[$LATEST]5d1edb9e525d486696cf01a3503487bc")
-	_ = os.Setenv(lambdaMemoryLimitEnvVar, "128")
+	t.Setenv(lambdaFunctionNameEnvVar, "testFunction")
+	t.Setenv(awsRegionEnvVar, "us-texas-1")
+	t.Setenv(lambdaFunctionVersionEnvVar, "$LATEST")
+	t.Setenv(lambdaLogStreamNameEnvVar, "2023/01/01/[$LATEST]5d1edb9e525d486696cf01a3503487bc")
+	t.Setenv(lambdaMemoryLimitEnvVar, "128")
 
 	attributes := []attribute.KeyValue{
 		semconv.CloudProviderAWS,

@@ -19,7 +19,6 @@ import (
 	"net"
 	"strconv"
 	"testing"
-	"time"
 
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
@@ -46,14 +45,18 @@ var wantInstrumentationScope = instrumentation.Scope{
 	Version:   otelgrpc.Version(),
 }
 
-// newGrpcTest creats a grpc server, starts it, and executes all the calls, closes everything down.
-func newGrpcTest(listener net.Listener, cOpt []grpc.DialOption, sOpt []grpc.ServerOption) error {
+// newGrpcTest creats a grpc server, starts it, and returns the client, closes everything down during test cleanup.
+func newGrpcTest(t testing.TB, listener net.Listener, cOpt []grpc.DialOption, sOpt []grpc.ServerOption) pb.TestServiceClient {
 	grpcServer := grpc.NewServer(sOpt...)
 	pb.RegisterTestServiceServer(grpcServer, interop.NewTestServer())
 	errCh := make(chan error)
 	go func() {
 		errCh <- grpcServer.Serve(listener)
 	}()
+	t.Cleanup(func() {
+		grpcServer.Stop()
+		assert.NoError(t, <-errCh)
+	})
 	ctx := context.Background()
 
 	cOpt = append(cOpt, grpc.WithBlock(), grpc.WithTransportCredentials(insecure.NewCredentials()))
@@ -68,17 +71,12 @@ func newGrpcTest(listener net.Listener, cOpt []grpc.DialOption, sOpt []grpc.Serv
 		listener.Addr().String(),
 		cOpt...,
 	)
-	if err != nil {
-		return err
-	}
-	client := pb.NewTestServiceClient(conn)
+	require.NoError(t, err)
+	t.Cleanup(func() {
+		assert.NoError(t, conn.Close())
+	})
 
-	doCalls(client)
-
-	conn.Close()
-	grpcServer.Stop()
-
-	return <-errCh
+	return pb.NewTestServiceClient(conn)
 }
 
 func doCalls(client pb.TestServiceClient) {
@@ -106,7 +104,7 @@ func TestInterceptors(t *testing.T) {
 
 	listener, err := net.Listen("tcp", "127.0.0.1:0")
 	require.NoError(t, err, "failed to open port")
-	err = newGrpcTest(listener,
+	client := newGrpcTest(t, listener,
 		[]grpc.DialOption{
 			//nolint:staticcheck // Interceptors are deprecated and will be removed in the next release.
 			grpc.WithUnaryInterceptor(otelgrpc.UnaryClientInterceptor(
@@ -133,19 +131,13 @@ func TestInterceptors(t *testing.T) {
 			)),
 		},
 	)
-	require.NoError(t, err)
+	doCalls(client)
 
 	t.Run("UnaryClientSpans", func(t *testing.T) {
 		checkUnaryClientSpans(t, clientUnarySR.Ended(), listener.Addr().String())
 	})
 
 	t.Run("StreamClientSpans", func(t *testing.T) {
-		// StreamClientInterceptor ends the spans asynchronously.
-		// We need to wait for all spans before asserting them.
-		require.EventuallyWithT(t, func(c *assert.CollectT) {
-			assert.Len(c, clientStreamSR.Ended(), 3)
-		}, 5*time.Second, 100*time.Millisecond)
-
 		checkStreamClientSpans(t, clientStreamSR.Ended(), listener.Addr().String())
 	})
 

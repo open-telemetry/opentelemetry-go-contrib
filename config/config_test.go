@@ -10,10 +10,10 @@ import (
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 
-	"go.opentelemetry.io/otel/metric/noop"
+	metricnoop "go.opentelemetry.io/otel/metric/noop"
 	sdkmetric "go.opentelemetry.io/otel/sdk/metric"
 	sdktrace "go.opentelemetry.io/otel/sdk/trace"
-	"go.opentelemetry.io/otel/trace"
+	tracenoop "go.opentelemetry.io/otel/trace/noop"
 )
 
 func TestNewSDK(t *testing.T) {
@@ -23,11 +23,12 @@ func TestNewSDK(t *testing.T) {
 		wantTracerProvider any
 		wantMeterProvider  any
 		wantErr            error
+		wantShutdownErr    error
 	}{
 		{
 			name:               "no-configuration",
-			wantTracerProvider: trace.NewNoopTracerProvider(),
-			wantMeterProvider:  noop.NewMeterProvider(),
+			wantTracerProvider: tracenoop.NewTracerProvider(),
+			wantMeterProvider:  metricnoop.NewMeterProvider(),
 		},
 		{
 			name: "with-configuration",
@@ -47,5 +48,6 @@ func TestNewSDK(t *testing.T) {
 		require.Equal(t, tt.wantErr, err)
 		assert.IsType(t, tt.wantTracerProvider, sdk.TracerProvider())
 		assert.IsType(t, tt.wantMeterProvider, sdk.MeterProvider())
+		require.Equal(t, tt.wantShutdownErr, sdk.Shutdown(context.Background()))
 	}
 }

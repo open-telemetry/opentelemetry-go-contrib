@@ -27,6 +27,7 @@ import (
 	"go.opentelemetry.io/otel"
 	"go.opentelemetry.io/otel/propagation"
 	oteltrace "go.opentelemetry.io/otel/trace"
+	"go.opentelemetry.io/otel/trace/noop"
 )
 
 func TestGetSpanNotInstrumented(t *testing.T) {
@@ -45,9 +46,9 @@ func TestGetSpanNotInstrumented(t *testing.T) {
 }
 
 func TestPropagationWithGlobalPropagators(t *testing.T) {
-	tracer := oteltrace.NewNoopTracerProvider().Tracer("test-tracer")
+	tracer := noop.NewTracerProvider().Tracer("test-tracer")
 	otel.SetTextMapPropagator(propagation.TraceContext{})
-	otel.SetTracerProvider(oteltrace.NewNoopTracerProvider())
+	otel.SetTracerProvider(noop.NewTracerProvider())
 
 	r := httptest.NewRequest("GET", "/user/123", nil)
 	w := httptest.NewRecorder()
@@ -74,7 +75,7 @@ func TestPropagationWithGlobalPropagators(t *testing.T) {
 }
 
 func TestPropagationWithCustomPropagators(t *testing.T) {
-	tp := oteltrace.NewNoopTracerProvider()
+	tp := noop.NewTracerProvider()
 	otel.SetTracerProvider(tp)
 	tracer := tp.Tracer("test-tracer")
 	b3 := b3prop.New()

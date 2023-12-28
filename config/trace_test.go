@@ -9,6 +9,7 @@ import (
 	"github.com/stretchr/testify/require"
 
 	"go.opentelemetry.io/otel/trace"
+	"go.opentelemetry.io/otel/trace/noop"
 )
 
 func TestInitTracerPovider(t *testing.T) {
@@ -16,13 +17,16 @@ func TestInitTracerPovider(t *testing.T) {
 		name         string
 		cfg          configOptions
 		wantProvider trace.TracerProvider
+		wantErr      error
 	}{
 		{
 			name:         "no-tracer-provider-configured",
-			wantProvider: trace.NewNoopTracerProvider(),
+			wantProvider: noop.NewTracerProvider(),
 		},
 	}
 	for _, tt := range tests {
-		require.Equal(t, tt.wantProvider, initTracerProvider(tt.cfg))
+		tp, err := initTracerProvider(tt.cfg)
+		require.Equal(t, tt.wantProvider, tp)
+		require.NoError(t, tt.wantErr, err)
 	}
 }
