@@ -52,6 +52,8 @@ func TestNewSDK(t *testing.T) {
 	}
 }
 
-func toPtr[V int | string](in V) *V {
+func ptr[T any](v T) *T {
+	return &v
+}
 	return &in
 }
