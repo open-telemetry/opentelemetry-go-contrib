@@ -12,7 +12,7 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 
 - Add the new `go.opentelemetry.io/contrib/instrgen` package to provide auto-generated source code instrumentation. (#3068, #3108)
 - Add `SDK.Shutdown` method in `"go.opentelemetry.io/contrib/config"`. (#4583)
-- The `config.NewSDK` function now returns a configured SDK with a valid `TracerProvider`. (#4741)
+- `NewSDK` in `go.opentelemetry.io/contrib/config` now returns a configured SDK with a valid `TracerProvider`. (#4741)
 
 ### Changed
 
