@@ -51,6 +51,14 @@ func HTTPClientRequest(req *http.Request) []attribute.KeyValue {
 	return hc.ClientRequest(req)
 }
 
+// HTTPClientRequestMetrics returns metric attributes for an HTTP request made by a client.
+// The following attributes are always returned: "http.method", "net.peer.name".
+// The following attributes are returned if the
+// related values are defined in req: "net.peer.port".
+func HTTPClientRequestMetrics(req *http.Request) []attribute.KeyValue {
+	return hc.ClientRequestMetrics(req)
+}
+
 // HTTPClientStatus returns a span status code and message for an HTTP status code
 // value received by a client.
 func HTTPClientStatus(code int) (codes.Code, string) {
@@ -281,6 +289,38 @@ func (c *httpConv) ClientRequest(req *http.Request) []attribute.KeyValue {
 
 	if l := req.ContentLength; l > 0 {
 		attrs = append(attrs, c.HTTPRequestContentLengthKey.Int64(l))
+	}
+
+	return attrs
+}
+
+// ClientRequestMetrics returns metric attributes for an HTTP request made by a client. The
+// following attributes are always returned: "http.method", "net.peer.name".
+// The following attributes are returned if the related values
+// are defined in req: "net.peer.port".
+func (c *httpConv) ClientRequestMetrics(req *http.Request) []attribute.KeyValue {
+	/* The following semantic conventions are returned if present:
+	http.method                     string
+	net.peer.name                   string
+	net.peer.port                   int
+	*/
+
+	n := 2 // method, peer name.
+	var h string
+	if req.URL != nil {
+		h = req.URL.Host
+	}
+	peer, p := firstHostPort(h, req.Header.Get("Host"))
+	port := requiredHTTPPort(req.URL != nil && req.URL.Scheme == "https", p)
+	if port > 0 {
+		n++
+	}
+
+	attrs := make([]attribute.KeyValue, 0, n)
+	attrs = append(attrs, c.method(req.Method), c.NetConv.PeerName(peer))
+
+	if port > 0 {
+		attrs = append(attrs, c.NetConv.PeerPort(port))
 	}
 
 	return attrs
