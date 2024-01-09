@@ -16,6 +16,8 @@ package otellambda // import "go.opentelemetry.io/contrib/instrumentation/github
 
 import (
 	"context"
+	"go.opentelemetry.io/otel/codes"
+	"go.opentelemetry.io/otel/trace"
 
 	"github.com/aws/aws-lambda-go/lambda"
 )
@@ -38,6 +40,10 @@ func (h wrappedHandler) Invoke(ctx context.Context, payload []byte) ([]byte, err
 
 	response, err := h.handler.Invoke(ctx, payload)
 	if err != nil {
+		if h.instrumentor.configuration.RecordError {
+			span.RecordError(err, trace.WithStackTrace(h.instrumentor.configuration.RecordStackTrace))
+		}
+		span.SetStatus(codes.Error, err.Error())
 		return nil, err
 	}
 

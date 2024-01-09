@@ -12,6 +12,8 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 
 - Add the new `go.opentelemetry.io/contrib/instrgen` package to provide auto-generated source code instrumentation. (#3068, #3108)
 - Add `SDK.Shutdown` method in `"go.opentelemetry.io/contrib/config"`. (#4583)
+- Add `"go.opentelemetry.io/contrib/instrumentation/github.com/aws/aws-lambda-go/otellambda".WithRecordError` which configures the instrumentation to call `span.RecordError(err, trace.WithStackTrace(...))` when an error is returned from a wrapped handler. (#4677)
+- Call `span.SetStatus(codes.Error, err.Error())` when an error is returned from a wrapped handler. (#4677)
 
 ### Changed
 
