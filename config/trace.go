@@ -111,7 +111,7 @@ func otlpGRPCSpanExporter(ctx context.Context, otlpConfig *OTLP) (sdktrace.SpanE
 }
 
 func otlpHTTPSpanExporter(ctx context.Context, otlpConfig *OTLP) (sdktrace.SpanExporter, error) {
-	opts := []otlptracehttp.Option{}
+	var opts []otlptracehttp.Option
 
 	if len(otlpConfig.Endpoint) > 0 {
 		u, err := url.ParseRequestURI(normalizeEndpoint(otlpConfig.Endpoint))
@@ -148,7 +148,7 @@ func otlpHTTPSpanExporter(ctx context.Context, otlpConfig *OTLP) (sdktrace.SpanE
 }
 
 func batchSpanProcessor(bsp *BatchSpanProcessor, exp sdktrace.SpanExporter) (sdktrace.SpanProcessor, error) {
-	opts := []sdktrace.BatchSpanProcessorOption{}
+	var opts []sdktrace.BatchSpanProcessorOption
 	if bsp.ExportTimeout != nil {
 		if *bsp.ExportTimeout < 0 {
 			return nil, fmt.Errorf("invalid export timeout %d", *bsp.ExportTimeout)
