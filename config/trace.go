@@ -19,8 +19,6 @@ import (
 	"go.opentelemetry.io/otel/trace/noop"
 )
 
-var errNoValidSpanExporter = errors.New("no valid span exporter")
-
 func tracerProvider(cfg configOptions, res *resource.Resource) (trace.TracerProvider, shutdownFunc, error) {
 	if cfg.opentelemetryConfig.TracerProvider == nil {
 		return noop.NewTracerProvider(), noopShutdown, nil
@@ -55,7 +53,7 @@ func spanExporter(ctx context.Context, exporter SpanExporter) (sdktrace.SpanExpo
 			return nil, fmt.Errorf("unsupported protocol %q", exporter.OTLP.Protocol)
 		}
 	}
-	return nil, errNoValidSpanExporter
+	return nil, errors.New("no valid span exporter")
 }
 
 func spanProcessor(ctx context.Context, processor SpanProcessor) (sdktrace.SpanProcessor, error) {

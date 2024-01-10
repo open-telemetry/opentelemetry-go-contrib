@@ -70,7 +70,7 @@ func TestSpanProcessor(t *testing.T) {
 					Exporter: SpanExporter{},
 				},
 			},
-			wantErr: errNoValidSpanExporter,
+			wantErr: errors.New("no valid span exporter"),
 		},
 		{
 			name: "batch processor invalid batch size console exporter",
@@ -410,7 +410,7 @@ func TestSpanProcessor(t *testing.T) {
 					Exporter: SpanExporter{},
 				},
 			},
-			wantErr: errNoValidSpanExporter,
+			wantErr: errors.New("no valid span exporter"),
 		},
 		{
 			name: "simple/console-exporter",
