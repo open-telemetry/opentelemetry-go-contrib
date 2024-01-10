@@ -47,9 +47,10 @@ func TestSpanProcessor(t *testing.T) {
 		stdouttrace.WithPrettyPrint(),
 	)
 	require.NoError(t, err)
-	otlpGRPCExporter, err := otlptracegrpc.New(context.TODO())
+	ctx := context.Background()
+	otlpGRPCExporter, err := otlptracegrpc.New(ctx)
 	require.NoError(t, err)
-	otlpHTTPExporter, err := otlptracehttp.New(context.TODO())
+	otlpHTTPExporter, err := otlptracehttp.New(ctx)
 	require.NoError(t, err)
 	testCases := []struct {
 		name          string
