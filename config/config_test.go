@@ -55,5 +55,3 @@ func TestNewSDK(t *testing.T) {
 func ptr[T any](v T) *T {
 	return &v
 }
-	return &in
-}
