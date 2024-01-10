@@ -22,7 +22,7 @@ import (
 	"go.opentelemetry.io/otel/trace/noop"
 )
 
-func TestInitTracerPovider(t *testing.T) {
+func TestTracerPovider(t *testing.T) {
 	tests := []struct {
 		name         string
 		cfg          configOptions
@@ -33,11 +33,53 @@ func TestInitTracerPovider(t *testing.T) {
 			name:         "no-tracer-provider-configured",
 			wantProvider: noop.NewTracerProvider(),
 		},
+		{
+			name: "error-in-config",
+			cfg: configOptions{
+				opentelemetryConfig: OpenTelemetryConfiguration{
+					TracerProvider: &TracerProvider{
+						Processors: []SpanProcessor{
+							{
+								Batch:  &BatchSpanProcessor{},
+								Simple: &SimpleSpanProcessor{},
+							},
+						},
+					},
+				},
+			},
+			wantProvider: noop.NewTracerProvider(),
+			wantErr:      errors.Join(errors.New("must not specify multiple span processor type")),
+		},
+		{
+			name: "multiple-errors-in-config",
+			cfg: configOptions{
+				opentelemetryConfig: OpenTelemetryConfiguration{
+					TracerProvider: &TracerProvider{
+						Processors: []SpanProcessor{
+							{
+								Batch:  &BatchSpanProcessor{},
+								Simple: &SimpleSpanProcessor{},
+							},
+							{
+								Simple: &SimpleSpanProcessor{
+									Exporter: SpanExporter{
+										Console: Console{},
+										OTLP:    &OTLP{},
+									},
+								},
+							},
+						},
+					},
+				},
+			},
+			wantProvider: noop.NewTracerProvider(),
+			wantErr:      errors.Join(errors.New("must not specify multiple span processor type"), errors.New("must not specify multiple exporters")),
+		},
 	}
 	for _, tt := range tests {
 		tp, shutdown, err := tracerProvider(tt.cfg, resource.Default())
 		require.Equal(t, tt.wantProvider, tp)
-		require.NoError(t, tt.wantErr, err)
+		assert.Equal(t, tt.wantErr, err)
 		require.NoError(t, shutdown(context.Background()))
 	}
 }
