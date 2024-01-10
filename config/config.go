@@ -69,7 +69,7 @@ func NewSDK(opts ...ConfigurationOption) (SDK, error) {
 	}
 
 	mp, mpShutdown := initMeterProvider(o)
-	tp, tpShutdown, err := initTracerProvider(o, r)
+	tp, tpShutdown, err := tracerProvider(o, r)
 	if err != nil {
 		return SDK{}, err
 	}

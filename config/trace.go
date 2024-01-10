@@ -21,7 +21,7 @@ import (
 
 var errNoValidSpanExporter = errors.New("no valid span exporter")
 
-func initTracerProvider(cfg configOptions, res *resource.Resource) (trace.TracerProvider, shutdownFunc, error) {
+func tracerProvider(cfg configOptions, res *resource.Resource) (trace.TracerProvider, shutdownFunc, error) {
 	if cfg.opentelemetryConfig.TracerProvider == nil {
 		return noop.NewTracerProvider(), noopShutdown, nil
 	}
@@ -48,9 +48,9 @@ func spanExporter(ctx context.Context, exporter SpanExporter) (sdktrace.SpanExpo
 	if exporter.OTLP != nil {
 		switch exporter.OTLP.Protocol {
 		case protocolProtobufHTTP:
-			return initOTLPHTTPSpanExporter(ctx, exporter.OTLP)
+			return otlpHTTPSpanExporter(ctx, exporter.OTLP)
 		case protocolProtobufGRPC:
-			return initOTLPgRPCSpanExporter(ctx, exporter.OTLP)
+			return otlpGRPCSpanExporter(ctx, exporter.OTLP)
 		default:
 			return nil, fmt.Errorf("unsupported protocol %q", exporter.OTLP.Protocol)
 		}
@@ -76,8 +76,8 @@ func spanProcessor(ctx context.Context, processor SpanProcessor) (sdktrace.SpanP
 	return nil, fmt.Errorf("unsupported span processor type %v", processor)
 }
 
-func initOTLPgRPCSpanExporter(ctx context.Context, otlpConfig *OTLP) (sdktrace.SpanExporter, error) {
-	opts := []otlptracegrpc.Option{}
+func otlpGRPCSpanExporter(ctx context.Context, otlpConfig *OTLP) (sdktrace.SpanExporter, error) {
+	var opts []otlptracegrpc.Option
 
 	if len(otlpConfig.Endpoint) > 0 {
 		u, err := url.ParseRequestURI(normalizeEndpoint(otlpConfig.Endpoint))
@@ -110,7 +110,7 @@ func initOTLPgRPCSpanExporter(ctx context.Context, otlpConfig *OTLP) (sdktrace.S
 	return otlptracegrpc.New(ctx, opts...)
 }
 
-func initOTLPHTTPSpanExporter(ctx context.Context, otlpConfig *OTLP) (sdktrace.SpanExporter, error) {
+func otlpHTTPSpanExporter(ctx context.Context, otlpConfig *OTLP) (sdktrace.SpanExporter, error) {
 	opts := []otlptracehttp.Option{}
 
 	if len(otlpConfig.Endpoint) > 0 {

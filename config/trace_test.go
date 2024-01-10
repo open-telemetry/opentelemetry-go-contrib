@@ -35,7 +35,7 @@ func TestInitTracerPovider(t *testing.T) {
 		},
 	}
 	for _, tt := range tests {
-		tp, shutdown, err := initTracerProvider(tt.cfg, resource.Default())
+		tp, shutdown, err := tracerProvider(tt.cfg, resource.Default())
 		require.Equal(t, tt.wantProvider, tp)
 		require.NoError(t, tt.wantErr, err)
 		require.NoError(t, shutdown(context.Background()))
