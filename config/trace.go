@@ -38,6 +38,10 @@ func tracerProvider(cfg configOptions, res *resource.Resource) (trace.TracerProv
 }
 
 func spanExporter(ctx context.Context, exporter SpanExporter) (sdktrace.SpanExporter, error) {
+	if exporter.Console != nil && exporter.OTLP != nil {
+		return nil, errors.New("must not specify multiple exporters")
+	}
+
 	if exporter.Console != nil {
 		return stdouttrace.New(
 			stdouttrace.WithPrettyPrint(),
@@ -57,6 +61,9 @@ func spanExporter(ctx context.Context, exporter SpanExporter) (sdktrace.SpanExpo
 }
 
 func spanProcessor(ctx context.Context, processor SpanProcessor) (sdktrace.SpanProcessor, error) {
+	if processor.Batch != nil && processor.Simple != nil {
+		return nil, errors.New("must not specify multiple span processor type")
+	}
 	if processor.Batch != nil {
 		exp, err := spanExporter(ctx, processor.Batch.Exporter)
 		if err != nil {

@@ -64,6 +64,16 @@ func TestSpanProcessor(t *testing.T) {
 			wantErr: errors.New("unsupported span processor type {<nil> <nil>}"),
 		},
 		{
+			name: "multiple processor types",
+			processor: SpanProcessor{
+				Batch: &BatchSpanProcessor{
+					Exporter: SpanExporter{},
+				},
+				Simple: &SimpleSpanProcessor{},
+			},
+			wantErr: errors.New("must not specify multiple span processor type"),
+		},
+		{
 			name: "batch processor invalid exporter",
 			processor: SpanProcessor{
 				Batch: &BatchSpanProcessor{
@@ -119,6 +129,18 @@ func TestSpanProcessor(t *testing.T) {
 				},
 			},
 			wantErr: errors.New("invalid schedule delay -4"),
+		},
+		{
+			name: "batch processor with multiple exporters",
+			processor: SpanProcessor{
+				Batch: &BatchSpanProcessor{
+					Exporter: SpanExporter{
+						Console: Console{},
+						OTLP:    &OTLP{},
+					},
+				},
+			},
+			wantErr: errors.New("must not specify multiple exporters"),
 		},
 		{
 			name: "batch processor console exporter",
