@@ -24,6 +24,8 @@ CODEOWNERS @MrAlias @MadVikingGod @pellared
 
 bridges/prometheus/                                                     @open-telemetry/go-approvers @dashpole
 
+config/                                                                 @open-telemetry/go-approvers @MadVikingGod
+
 detectors/aws/                                                          @open-telemetry/go-approvers @Aneurysm9
 detectors/gcp/                                                          @open-telemetry/go-approvers @dashpole
 
