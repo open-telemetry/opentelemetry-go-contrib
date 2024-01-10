@@ -18,6 +18,9 @@ import (
 const (
 	protocolProtobufHTTP = "http/protobuf"
 	protocolProtobufGRPC = "grpc/protobuf"
+
+	compressionGzip = "gzip"
+	compressionNone = "none"
 )
 
 type configOptions struct {

@@ -92,9 +92,9 @@ func otlpGRPCSpanExporter(ctx context.Context, otlpConfig *OTLP) (sdktrace.SpanE
 
 	if otlpConfig.Compression != nil {
 		switch *otlpConfig.Compression {
-		case "gzip":
+		case compressionGzip:
 			opts = append(opts, otlptracegrpc.WithCompressor(*otlpConfig.Compression))
-		case "none":
+		case compressionNone:
 			// none requires no options
 		default:
 			return nil, fmt.Errorf("unsupported compression %q", *otlpConfig.Compression)
@@ -129,9 +129,9 @@ func otlpHTTPSpanExporter(ctx context.Context, otlpConfig *OTLP) (sdktrace.SpanE
 	}
 	if otlpConfig.Compression != nil {
 		switch *otlpConfig.Compression {
-		case "gzip":
+		case compressionGzip:
 			opts = append(opts, otlptracehttp.WithCompression(otlptracehttp.GzipCompression))
-		case "none":
+		case compressionNone:
 			opts = append(opts, otlptracehttp.WithCompression(otlptracehttp.NoCompression))
 		default:
 			return nil, fmt.Errorf("unsupported compression %q", *otlpConfig.Compression)
