@@ -76,7 +76,7 @@ func TestSpanProcessor(t *testing.T) {
 			name: "batch processor invalid batch size console exporter",
 			processor: SpanProcessor{
 				Batch: &BatchSpanProcessor{
-					MaxExportBatchSize: toPtr(-1),
+					MaxExportBatchSize: ptr(-1),
 					Exporter: SpanExporter{
 						Console: Console{},
 					},
@@ -88,7 +88,7 @@ func TestSpanProcessor(t *testing.T) {
 			name: "batch processor invalid export timeout console exporter",
 			processor: SpanProcessor{
 				Batch: &BatchSpanProcessor{
-					ExportTimeout: toPtr(-2),
+					ExportTimeout: ptr(-2),
 					Exporter: SpanExporter{
 						Console: Console{},
 					},
@@ -100,7 +100,7 @@ func TestSpanProcessor(t *testing.T) {
 			name: "batch processor invalid queue size console exporter",
 			processor: SpanProcessor{
 				Batch: &BatchSpanProcessor{
-					MaxQueueSize: toPtr(-3),
+					MaxQueueSize: ptr(-3),
 					Exporter: SpanExporter{
 						Console: Console{},
 					},
@@ -112,7 +112,7 @@ func TestSpanProcessor(t *testing.T) {
 			name: "batch processor invalid schedule delay console exporter",
 			processor: SpanProcessor{
 				Batch: &BatchSpanProcessor{
-					ScheduleDelay: toPtr(-4),
+					ScheduleDelay: ptr(-4),
 					Exporter: SpanExporter{
 						Console: Console{},
 					},
@@ -124,10 +124,10 @@ func TestSpanProcessor(t *testing.T) {
 			name: "batch processor console exporter",
 			processor: SpanProcessor{
 				Batch: &BatchSpanProcessor{
-					MaxExportBatchSize: toPtr(0),
-					ExportTimeout:      toPtr(0),
-					MaxQueueSize:       toPtr(0),
-					ScheduleDelay:      toPtr(0),
+					MaxExportBatchSize: ptr(0),
+					ExportTimeout:      ptr(0),
+					MaxQueueSize:       ptr(0),
+					ScheduleDelay:      ptr(0),
 					Exporter: SpanExporter{
 						Console: Console{},
 					},
@@ -139,13 +139,13 @@ func TestSpanProcessor(t *testing.T) {
 			name: "batch/otlp-exporter-invalid-protocol",
 			processor: SpanProcessor{
 				Batch: &BatchSpanProcessor{
-					MaxExportBatchSize: toPtr(0),
-					ExportTimeout:      toPtr(0),
-					MaxQueueSize:       toPtr(0),
-					ScheduleDelay:      toPtr(0),
+					MaxExportBatchSize: ptr(0),
+					ExportTimeout:      ptr(0),
+					MaxQueueSize:       ptr(0),
+					ScheduleDelay:      ptr(0),
 					Exporter: SpanExporter{
 						OTLP: &OTLP{
-							Protocol: *toPtr("http/invalid"),
+							Protocol: *ptr("http/invalid"),
 						},
 					},
 				},
@@ -156,15 +156,15 @@ func TestSpanProcessor(t *testing.T) {
 			name: "batch/otlp-grpc-exporter-no-endpoint",
 			processor: SpanProcessor{
 				Batch: &BatchSpanProcessor{
-					MaxExportBatchSize: toPtr(0),
-					ExportTimeout:      toPtr(0),
-					MaxQueueSize:       toPtr(0),
-					ScheduleDelay:      toPtr(0),
+					MaxExportBatchSize: ptr(0),
+					ExportTimeout:      ptr(0),
+					MaxQueueSize:       ptr(0),
+					ScheduleDelay:      ptr(0),
 					Exporter: SpanExporter{
 						OTLP: &OTLP{
 							Protocol:    "grpc/protobuf",
-							Compression: toPtr("gzip"),
-							Timeout:     toPtr(1000),
+							Compression: ptr("gzip"),
+							Timeout:     ptr(1000),
 							Headers: map[string]string{
 								"test": "test1",
 							},
@@ -178,16 +178,16 @@ func TestSpanProcessor(t *testing.T) {
 			name: "batch/otlp-grpc-exporter",
 			processor: SpanProcessor{
 				Batch: &BatchSpanProcessor{
-					MaxExportBatchSize: toPtr(0),
-					ExportTimeout:      toPtr(0),
-					MaxQueueSize:       toPtr(0),
-					ScheduleDelay:      toPtr(0),
+					MaxExportBatchSize: ptr(0),
+					ExportTimeout:      ptr(0),
+					MaxQueueSize:       ptr(0),
+					ScheduleDelay:      ptr(0),
 					Exporter: SpanExporter{
 						OTLP: &OTLP{
 							Protocol:    "grpc/protobuf",
 							Endpoint:    "http://localhost:4317",
-							Compression: toPtr("gzip"),
-							Timeout:     toPtr(1000),
+							Compression: ptr("gzip"),
+							Timeout:     ptr(1000),
 							Headers: map[string]string{
 								"test": "test1",
 							},
@@ -201,16 +201,16 @@ func TestSpanProcessor(t *testing.T) {
 			name: "batch/otlp-grpc-exporter-no-scheme",
 			processor: SpanProcessor{
 				Batch: &BatchSpanProcessor{
-					MaxExportBatchSize: toPtr(0),
-					ExportTimeout:      toPtr(0),
-					MaxQueueSize:       toPtr(0),
-					ScheduleDelay:      toPtr(0),
+					MaxExportBatchSize: ptr(0),
+					ExportTimeout:      ptr(0),
+					MaxQueueSize:       ptr(0),
+					ScheduleDelay:      ptr(0),
 					Exporter: SpanExporter{
 						OTLP: &OTLP{
 							Protocol:    "grpc/protobuf",
 							Endpoint:    "localhost:4317",
-							Compression: toPtr("gzip"),
-							Timeout:     toPtr(1000),
+							Compression: ptr("gzip"),
+							Timeout:     ptr(1000),
 							Headers: map[string]string{
 								"test": "test1",
 							},
@@ -224,16 +224,16 @@ func TestSpanProcessor(t *testing.T) {
 			name: "batch/otlp-grpc-invalid-endpoint",
 			processor: SpanProcessor{
 				Batch: &BatchSpanProcessor{
-					MaxExportBatchSize: toPtr(0),
-					ExportTimeout:      toPtr(0),
-					MaxQueueSize:       toPtr(0),
-					ScheduleDelay:      toPtr(0),
+					MaxExportBatchSize: ptr(0),
+					ExportTimeout:      ptr(0),
+					MaxQueueSize:       ptr(0),
+					ScheduleDelay:      ptr(0),
 					Exporter: SpanExporter{
 						OTLP: &OTLP{
 							Protocol:    "grpc/protobuf",
 							Endpoint:    " ",
-							Compression: toPtr("gzip"),
-							Timeout:     toPtr(1000),
+							Compression: ptr("gzip"),
+							Timeout:     ptr(1000),
 							Headers: map[string]string{
 								"test": "test1",
 							},
@@ -247,16 +247,16 @@ func TestSpanProcessor(t *testing.T) {
 			name: "batch/otlp-grpc-invalid-compression",
 			processor: SpanProcessor{
 				Batch: &BatchSpanProcessor{
-					MaxExportBatchSize: toPtr(0),
-					ExportTimeout:      toPtr(0),
-					MaxQueueSize:       toPtr(0),
-					ScheduleDelay:      toPtr(0),
+					MaxExportBatchSize: ptr(0),
+					ExportTimeout:      ptr(0),
+					MaxQueueSize:       ptr(0),
+					ScheduleDelay:      ptr(0),
 					Exporter: SpanExporter{
 						OTLP: &OTLP{
 							Protocol:    "grpc/protobuf",
 							Endpoint:    "localhost:4317",
-							Compression: toPtr("invalid"),
-							Timeout:     toPtr(1000),
+							Compression: ptr("invalid"),
+							Timeout:     ptr(1000),
 							Headers: map[string]string{
 								"test": "test1",
 							},
@@ -270,16 +270,16 @@ func TestSpanProcessor(t *testing.T) {
 			name: "batch/otlp-http-exporter",
 			processor: SpanProcessor{
 				Batch: &BatchSpanProcessor{
-					MaxExportBatchSize: toPtr(0),
-					ExportTimeout:      toPtr(0),
-					MaxQueueSize:       toPtr(0),
-					ScheduleDelay:      toPtr(0),
+					MaxExportBatchSize: ptr(0),
+					ExportTimeout:      ptr(0),
+					MaxQueueSize:       ptr(0),
+					ScheduleDelay:      ptr(0),
 					Exporter: SpanExporter{
 						OTLP: &OTLP{
 							Protocol:    "http/protobuf",
 							Endpoint:    "http://localhost:4318",
-							Compression: toPtr("gzip"),
-							Timeout:     toPtr(1000),
+							Compression: ptr("gzip"),
+							Timeout:     ptr(1000),
 							Headers: map[string]string{
 								"test": "test1",
 							},
@@ -293,16 +293,16 @@ func TestSpanProcessor(t *testing.T) {
 			name: "batch/otlp-http-exporter-with-path",
 			processor: SpanProcessor{
 				Batch: &BatchSpanProcessor{
-					MaxExportBatchSize: toPtr(0),
-					ExportTimeout:      toPtr(0),
-					MaxQueueSize:       toPtr(0),
-					ScheduleDelay:      toPtr(0),
+					MaxExportBatchSize: ptr(0),
+					ExportTimeout:      ptr(0),
+					MaxQueueSize:       ptr(0),
+					ScheduleDelay:      ptr(0),
 					Exporter: SpanExporter{
 						OTLP: &OTLP{
 							Protocol:    "http/protobuf",
 							Endpoint:    "http://localhost:4318/path/123",
-							Compression: toPtr("none"),
-							Timeout:     toPtr(1000),
+							Compression: ptr("none"),
+							Timeout:     ptr(1000),
 							Headers: map[string]string{
 								"test": "test1",
 							},
@@ -316,15 +316,15 @@ func TestSpanProcessor(t *testing.T) {
 			name: "batch/otlp-http-exporter-no-endpoint",
 			processor: SpanProcessor{
 				Batch: &BatchSpanProcessor{
-					MaxExportBatchSize: toPtr(0),
-					ExportTimeout:      toPtr(0),
-					MaxQueueSize:       toPtr(0),
-					ScheduleDelay:      toPtr(0),
+					MaxExportBatchSize: ptr(0),
+					ExportTimeout:      ptr(0),
+					MaxQueueSize:       ptr(0),
+					ScheduleDelay:      ptr(0),
 					Exporter: SpanExporter{
 						OTLP: &OTLP{
 							Protocol:    "http/protobuf",
-							Compression: toPtr("gzip"),
-							Timeout:     toPtr(1000),
+							Compression: ptr("gzip"),
+							Timeout:     ptr(1000),
 							Headers: map[string]string{
 								"test": "test1",
 							},
@@ -338,16 +338,16 @@ func TestSpanProcessor(t *testing.T) {
 			name: "batch/otlp-http-exporter-no-scheme",
 			processor: SpanProcessor{
 				Batch: &BatchSpanProcessor{
-					MaxExportBatchSize: toPtr(0),
-					ExportTimeout:      toPtr(0),
-					MaxQueueSize:       toPtr(0),
-					ScheduleDelay:      toPtr(0),
+					MaxExportBatchSize: ptr(0),
+					ExportTimeout:      ptr(0),
+					MaxQueueSize:       ptr(0),
+					ScheduleDelay:      ptr(0),
 					Exporter: SpanExporter{
 						OTLP: &OTLP{
 							Protocol:    "http/protobuf",
 							Endpoint:    "localhost:4318",
-							Compression: toPtr("gzip"),
-							Timeout:     toPtr(1000),
+							Compression: ptr("gzip"),
+							Timeout:     ptr(1000),
 							Headers: map[string]string{
 								"test": "test1",
 							},
@@ -361,16 +361,16 @@ func TestSpanProcessor(t *testing.T) {
 			name: "batch/otlp-http-invalid-endpoint",
 			processor: SpanProcessor{
 				Batch: &BatchSpanProcessor{
-					MaxExportBatchSize: toPtr(0),
-					ExportTimeout:      toPtr(0),
-					MaxQueueSize:       toPtr(0),
-					ScheduleDelay:      toPtr(0),
+					MaxExportBatchSize: ptr(0),
+					ExportTimeout:      ptr(0),
+					MaxQueueSize:       ptr(0),
+					ScheduleDelay:      ptr(0),
 					Exporter: SpanExporter{
 						OTLP: &OTLP{
 							Protocol:    "http/protobuf",
 							Endpoint:    " ",
-							Compression: toPtr("gzip"),
-							Timeout:     toPtr(1000),
+							Compression: ptr("gzip"),
+							Timeout:     ptr(1000),
 							Headers: map[string]string{
 								"test": "test1",
 							},
@@ -384,16 +384,16 @@ func TestSpanProcessor(t *testing.T) {
 			name: "batch/otlp-http-invalid-compression",
 			processor: SpanProcessor{
 				Batch: &BatchSpanProcessor{
-					MaxExportBatchSize: toPtr(0),
-					ExportTimeout:      toPtr(0),
-					MaxQueueSize:       toPtr(0),
-					ScheduleDelay:      toPtr(0),
+					MaxExportBatchSize: ptr(0),
+					ExportTimeout:      ptr(0),
+					MaxQueueSize:       ptr(0),
+					ScheduleDelay:      ptr(0),
 					Exporter: SpanExporter{
 						OTLP: &OTLP{
 							Protocol:    "http/protobuf",
 							Endpoint:    "localhost:4318",
-							Compression: toPtr("invalid"),
-							Timeout:     toPtr(1000),
+							Compression: ptr("invalid"),
+							Timeout:     ptr(1000),
 							Headers: map[string]string{
 								"test": "test1",
 							},
