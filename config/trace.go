@@ -94,6 +94,11 @@ func otlpGRPCSpanExporter(ctx context.Context, otlpConfig *OTLP) (sdktrace.SpanE
 		if err != nil {
 			return nil, err
 		}
+		// ParseRequestURI leaves the Host field empty when no
+		// scheme is specified (i.e. localhost:4317). This check is
+		// here to support the case where a user may not specify a
+		// scheme. The code does its best effort here by using
+		// otlpConfig.Endpoint as-is in that case
 		if u.Host != "" {
 			opts = append(opts, otlptracegrpc.WithEndpoint(u.Host))
 		} else {
