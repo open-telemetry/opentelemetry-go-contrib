@@ -90,11 +90,16 @@ func otlpGRPCSpanExporter(ctx context.Context, otlpConfig *OTLP) (sdktrace.SpanE
 	var opts []otlptracegrpc.Option
 
 	if len(otlpConfig.Endpoint) > 0 {
-		u, err := url.ParseRequestURI(normalizeEndpoint(otlpConfig.Endpoint))
+		u, err := url.ParseRequestURI(otlpConfig.Endpoint)
 		if err != nil {
 			return nil, err
 		}
-		opts = append(opts, otlptracegrpc.WithEndpoint(u.Host))
+		if u.Host != "" {
+			opts = append(opts, otlptracegrpc.WithEndpoint(u.Host))
+		} else {
+			opts = append(opts, otlptracegrpc.WithEndpoint(otlpConfig.Endpoint))
+		}
+
 		if u.Scheme == "http" {
 			opts = append(opts, otlptracegrpc.WithInsecure())
 		}
@@ -124,7 +129,7 @@ func otlpHTTPSpanExporter(ctx context.Context, otlpConfig *OTLP) (sdktrace.SpanE
 	var opts []otlptracehttp.Option
 
 	if len(otlpConfig.Endpoint) > 0 {
-		u, err := url.ParseRequestURI(normalizeEndpoint(otlpConfig.Endpoint))
+		u, err := url.ParseRequestURI(otlpConfig.Endpoint)
 		if err != nil {
 			return nil, err
 		}

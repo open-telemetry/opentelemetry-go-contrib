@@ -6,8 +6,6 @@ package config // import "go.opentelemetry.io/contrib/config"
 import (
 	"context"
 	"errors"
-	"fmt"
-	"strings"
 
 	"go.opentelemetry.io/otel/metric"
 	"go.opentelemetry.io/otel/sdk/resource"
@@ -121,13 +119,6 @@ func WithOpenTelemetryConfiguration(cfg OpenTelemetryConfiguration) Configuratio
 
 // TODO: create SDK from the model:
 // - https://github.com/open-telemetry/opentelemetry-go-contrib/issues/4371
-
-func normalizeEndpoint(endpoint string) string {
-	if !strings.HasPrefix(endpoint, "https://") && !strings.HasPrefix(endpoint, "http://") {
-		return fmt.Sprintf("http://%s", endpoint)
-	}
-	return endpoint
-}
 
 func newResource(res *Resource) (*resource.Resource, error) {
 	if res == nil {

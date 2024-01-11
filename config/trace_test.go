@@ -305,7 +305,7 @@ func TestSpanProcessor(t *testing.T) {
 					},
 				},
 			},
-			wantErr: &url.Error{Op: "parse", URL: "http:// ", Err: url.InvalidHostError(" ")},
+			wantErr: &url.Error{Op: "parse", URL: " ", Err: errors.New("invalid URI for request")},
 		},
 		{
 			name: "batch/otlp-grpc-invalid-compression",
@@ -442,7 +442,7 @@ func TestSpanProcessor(t *testing.T) {
 					},
 				},
 			},
-			wantErr: &url.Error{Op: "parse", URL: "http:// ", Err: url.InvalidHostError(" ")},
+			wantErr: &url.Error{Op: "parse", URL: " ", Err: errors.New("invalid URI for request")},
 		},
 		{
 			name: "batch/otlp-http-invalid-compression",
@@ -491,7 +491,7 @@ func TestSpanProcessor(t *testing.T) {
 	for _, tt := range testCases {
 		t.Run(tt.name, func(t *testing.T) {
 			got, err := spanProcessor(context.Background(), tt.processor)
-			assert.Equal(t, tt.wantErr, err)
+			require.Equal(t, tt.wantErr, err)
 			if tt.wantProcessor == nil {
 				require.Nil(t, got)
 			} else {
