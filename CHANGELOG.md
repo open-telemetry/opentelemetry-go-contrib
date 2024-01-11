@@ -25,12 +25,12 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 - The semantic conventions used by `go.opentelemetry.io/contrib/instrumentation/net/http/otelhttp/example` are upgraded to v1.20.0. (#4320)
 - The semantic conventions used by `go.opentelemetry.io/contrib/instrumentation/net/http/otelhttp`are upgraded to v1.20.0. (#4320)
 - Updated configuration schema to include `schema_url` for resource definition and `without_type_suffix` and `without_units` for the Prometheus exporter. (#4727)
-- The semantic conventions used by `go.opentelemetry.io/contrib/detectors/aws/ecs`are upgraded to v1.24.0. (#4803)
-- The semantic conventions used by `go.opentelemetry.io/contrib/detectors/aws/lambda`are upgraded to v1.24.0. (#4803)
-- The semantic conventions used by `go.opentelemetry.io/contrib/detectors/aws/ec2`are upgraded to v1.24.0. (#4803)
-- The semantic conventions used by `go.opentelemetry.io/contrib/detectors/aws/eks`are upgraded to v1.24.0. (#4803)
-- The semantic conventions used by `go.opentelemetry.io/contrib/detectors/gcp`are upgraded to v1.24.0. (#4803)
-- The semantic conventions used by `go.opentelemetry.io/contrib/instrumentation/github.com/aws/aws-lambda-go/otellambda/test`are upgraded to v1.24.0. (#4803)
+- The semantic conventions used by `go.opentelemetry.io/contrib/detectors/aws/ecs` are upgraded to v1.24.0. (#4803)
+- The semantic conventions used by `go.opentelemetry.io/contrib/detectors/aws/lambda`.are upgraded to v1.24.0. (#4803)
+- The semantic conventions used by `go.opentelemetry.io/contrib/detectors/aws/ec2`.are upgraded to v1.24.0. (#4803)
+- The semantic conventions used by `go.opentelemetry.io/contrib/detectors/aws/eks`.are upgraded to v1.24.0. (#4803)
+- The semantic conventions used by `go.opentelemetry.io/contrib/detectors/gcp`.are upgraded to v1.24.0. (#4803)
+- The semantic conventions used by `go.opentelemetry.io/contrib/instrumentation/github.com/aws/aws-lambda-go/otellambda/test`.are upgraded to v1.24.0. (#4803)
 
 ### Fixed
 
