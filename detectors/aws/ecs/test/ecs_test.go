@@ -81,6 +81,10 @@ func TestDetectV4LaunchTypeEc2(t *testing.T) {
 		semconv.AWSLogGroupARNs("arn:aws:logs:us-west-2:111122223333:log-group:/ecs/metadata:*"),
 		semconv.AWSLogStreamNames("ecs/curl/8f03e41243824aea923aca126495f665"),
 		semconv.AWSLogStreamARNs("arn:aws:logs:us-west-2:111122223333:log-group:/ecs/metadata:log-stream:ecs/curl/8f03e41243824aea923aca126495f665"),
+		semconv.CloudRegion("us-west-2"),
+		semconv.CloudAccountID("111122223333"),
+		semconv.CloudAvailabilityZone("us-west-2d"),
+		semconv.CloudResourceID("arn:aws:ecs:us-west-2:111122223333:container/0206b271-b33f-47ab-86c6-a0ba208a70a9"),
 	}
 	expectedResource := resource.NewWithAttributes(semconv.SchemaURL, attributes...)
 	detector := ecs.NewResourceDetector()
@@ -137,6 +141,10 @@ func TestDetectV4LaunchTypeEc2BadContainerArn(t *testing.T) {
 		semconv.AWSLogGroupARNs("arn:aws:logs:us-west-2:111122223333:log-group:/ecs/metadata:*"),
 		semconv.AWSLogStreamNames("ecs/curl/8f03e41243824aea923aca126495f665"),
 		semconv.AWSLogStreamARNs("arn:aws:logs:us-west-2:111122223333:log-group:/ecs/metadata:log-stream:ecs/curl/8f03e41243824aea923aca126495f665"),
+		semconv.CloudRegion("us-west-2"),
+		semconv.CloudAccountID("111122223333"),
+		semconv.CloudAvailabilityZone("us-west-2d"),
+		semconv.CloudResourceID("arn:aws:ecs:us-west-2:111122223333:container/0206b271-b33f-47ab-86c6-a0ba208a70a9"),
 	}
 	expectedResource := resource.NewWithAttributes(semconv.SchemaURL, attributes...)
 	detector := ecs.NewResourceDetector()
@@ -193,6 +201,10 @@ func TestDetectV4LaunchTypeEc2BadTaskArn(t *testing.T) {
 		semconv.AWSLogGroupARNs("arn:aws:logs:us-west-2:111122223333:log-group:/ecs/metadata:*"),
 		semconv.AWSLogStreamNames("ecs/curl/8f03e41243824aea923aca126495f665"),
 		semconv.AWSLogStreamARNs("arn:aws:logs:us-west-2:111122223333:log-group:/ecs/metadata:log-stream:ecs/curl/8f03e41243824aea923aca126495f665"),
+		semconv.CloudRegion("us-west-2"),
+		semconv.CloudAccountID("111122223333"),
+		semconv.CloudAvailabilityZone("us-west-2d"),
+		semconv.CloudResourceID("arn:aws:ecs:us-west-2:111122223333:container/0206b271-b33f-47ab-86c6-a0ba208a70a9"),
 	}
 	expectedResource := resource.NewWithAttributes(semconv.SchemaURL, attributes...)
 	detector := ecs.NewResourceDetector()
@@ -249,6 +261,10 @@ func TestDetectV4LaunchTypeFargate(t *testing.T) {
 		semconv.AWSLogGroupARNs("arn:aws:logs:us-west-2:111122223333:log-group:/ecs/containerlogs:*"),
 		semconv.AWSLogStreamNames("ecs/curl/cd189a933e5849daa93386466019ab50"),
 		semconv.AWSLogStreamARNs("arn:aws:logs:us-west-2:111122223333:log-group:/ecs/containerlogs:log-stream:ecs/curl/cd189a933e5849daa93386466019ab50"),
+		semconv.CloudRegion("us-west-2"),
+		semconv.CloudAccountID("111122223333"),
+		semconv.CloudAvailabilityZone("us-west-2a"),
+		semconv.CloudResourceID("arn:aws:ecs:us-west-2:111122223333:container/05966557-f16c-49cb-9352-24b3a0dcd0e1"),
 	}
 	expectedResource := resource.NewWithAttributes(semconv.SchemaURL, attributes...)
 	detector := ecs.NewResourceDetector()

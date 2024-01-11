@@ -134,6 +134,25 @@ func (detector *resourceDetector) Detect(ctx context.Context) (*resource.Resourc
 			attributes = append(attributes, logAttributes...)
 		}
 
+		// Calculate region and account ID from baseArn
+		awsRegion := ""
+		awsAccountId := ""
+		if baseArn != "" {
+			arnParts := strings.Split(baseArn, ":")
+			if len(arnParts) >= 4 {
+				awsRegion = arnParts[3]
+			}
+			if len(arnParts) >= 5 {
+				awsAccountId = arnParts[4]
+			}
+		}
+		if len(awsRegion) > 0 {
+			attributes = append(attributes, semconv.CloudRegion(awsRegion))
+		}
+		if len(awsAccountId) > 0 {
+			attributes = append(attributes, semconv.CloudAccountID(awsAccountId))
+		}
+
 		attributes = append(
 			attributes,
 			semconv.AWSECSContainerARN(containerMetadata.ContainerARN),
@@ -142,6 +161,8 @@ func (detector *resourceDetector) Detect(ctx context.Context) (*resource.Resourc
 			semconv.AWSECSTaskARN(taskMetadata.TaskARN),
 			semconv.AWSECSTaskFamily(taskMetadata.Family),
 			semconv.AWSECSTaskRevision(taskMetadata.Revision),
+			semconv.CloudAvailabilityZone(taskMetadata.AvailabilityZone),
+			semconv.CloudResourceID(containerMetadata.ContainerARN),
 		)
 	}
 

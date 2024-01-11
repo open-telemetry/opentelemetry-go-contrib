@@ -11,6 +11,7 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 ### Added
 
 - Add the new `go.opentelemetry.io/contrib/instrgen` package to provide auto-generated source code instrumentation. (#3068, #3108)
+- `go.opentelemetry.io/contrib/detectors/aws/ecs` attempts to detect and add `semconv.CloudRegion`, `semconv.CloudAccountID`, `semconv.CloudAvailabilityZone` and `semconv.CloudResourceID`
 
 ## [1.22.0/0.47.0/0.16.0/0.2.0] - 2024-01-18
 
