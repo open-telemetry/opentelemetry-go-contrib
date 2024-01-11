@@ -29,6 +29,9 @@ import (
 	"go.opentelemetry.io/contrib/internal/util"
 	"go.opentelemetry.io/otel/attribute"
 	"go.opentelemetry.io/otel/codes"
+	"go.opentelemetry.io/otel/sdk/instrumentation"
+	sdkmetric "go.opentelemetry.io/otel/sdk/metric"
+	"go.opentelemetry.io/otel/sdk/metric/metricdata"
 	sdktrace "go.opentelemetry.io/otel/sdk/trace"
 	"go.opentelemetry.io/otel/sdk/trace/tracetest"
 	"go.opentelemetry.io/otel/trace"
@@ -104,6 +107,7 @@ func TestDBCrudOperation(t *testing.T) {
 		t.Run(title, func(t *testing.T) {
 			sr := tracetest.NewSpanRecorder()
 			provider := sdktrace.NewTracerProvider(sdktrace.WithSpanProcessor(sr))
+			mr := sdkmetric.NewManualReader()
 
 			ctx, cancel := context.WithTimeout(context.Background(), time.Second*3)
 			defer cancel()
@@ -115,6 +119,7 @@ func TestDBCrudOperation(t *testing.T) {
 			opts.Monitor = otelmongo.NewMonitor(
 				otelmongo.WithTracerProvider(provider),
 				otelmongo.WithCommandAttributeDisabled(tc.excludeCommand),
+				otelmongo.WithMeterProvider(sdkmetric.NewMeterProvider(sdkmetric.WithReader(mr))),
 			)
 			opts.ApplyURI(addr)
 			client, err := mongo.Connect(ctx, opts)
@@ -149,6 +154,37 @@ func TestDBCrudOperation(t *testing.T) {
 			for _, v := range tc.validators {
 				assert.True(t, v(s))
 			}
+
+			var md metricdata.ResourceMetrics
+			err = mr.Collect(context.Background(), &md)
+			if !assert.NoError(t, err) {
+				t.FailNow()
+			}
+			assert.Len(t, md.ScopeMetrics, 1)
+			scopedMetrics := md.ScopeMetrics[0]
+			assert.Equal(t, instrumentation.Scope{
+				Name:      otelmongo.ScopeName,
+				Version:   otelmongo.Version(),
+				SchemaURL: "",
+			}, scopedMetrics.Scope)
+			assert.Len(t, scopedMetrics.Metrics, 1)
+			metrics := scopedMetrics.Metrics[0]
+			assert.Equal(t, "command.duration", metrics.Name)
+			assert.Equal(t, "Duration of finished commands", metrics.Description)
+			assert.Equal(t, "ms", metrics.Unit)
+			assert.Len(t, metrics.Data.(metricdata.Histogram[float64]).DataPoints, 1)
+			dp := metrics.Data.(metricdata.Histogram[float64]).DataPoints[0]
+			attrs = dp.Attributes.ToSlice()
+			assert.Contains(t, attrs, attribute.String("db.system", "mongodb"))
+			assert.Contains(t, attrs, attribute.String("db.operation", "insert"))
+			assert.Contains(t, attrs, attribute.String("db.name", "test-database"))
+			assert.Contains(t, attrs, attribute.String("net.peer.name", "localhost"))
+			assert.Contains(t, attrs, attribute.Int64("net.peer.port", int64(27017)))
+			assert.Contains(t, attrs, attribute.String("net.transport", "ip_tcp"))
+			assert.Contains(t, attrs, attribute.String("db.mongodb.collection", "test-collection"))
+			assert.Contains(t, attrs, attribute.String("otel.status_code", "OK"))
+			assert.EqualValues(t, 1, dp.Count)
+			assert.Greater(t, dp.Sum, 0.0)
 		})
 	}
 }
@@ -212,6 +248,7 @@ func TestDBCollectionAttribute(t *testing.T) {
 			opts.Monitor = otelmongo.NewMonitor(
 				otelmongo.WithTracerProvider(provider),
 				otelmongo.WithCommandAttributeDisabled(true),
+				otelmongo.WithMeterProvider(sdkmetric.NewMeterProvider()),
 			)
 			opts.ApplyURI(addr)
 			client, err := mongo.Connect(ctx, opts)

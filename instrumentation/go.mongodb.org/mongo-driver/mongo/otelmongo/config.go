@@ -16,6 +16,7 @@ package otelmongo // import "go.opentelemetry.io/contrib/instrumentation/go.mong
 
 import (
 	"go.opentelemetry.io/otel"
+	"go.opentelemetry.io/otel/metric"
 	"go.opentelemetry.io/otel/trace"
 )
 
@@ -25,8 +26,10 @@ const ScopeName = "go.opentelemetry.io/contrib/instrumentation/go.mongodb.org/mo
 // config is used to configure the mongo tracer.
 type config struct {
 	TracerProvider trace.TracerProvider
+	MeterProvider  metric.MeterProvider
 
 	Tracer trace.Tracer
+	Meter  metric.Meter
 
 	CommandAttributeDisabled bool
 }
@@ -35,6 +38,7 @@ type config struct {
 func newConfig(opts ...Option) config {
 	cfg := config{
 		TracerProvider:           otel.GetTracerProvider(),
+		MeterProvider:            otel.GetMeterProvider(),
 		CommandAttributeDisabled: true,
 	}
 	for _, opt := range opts {
@@ -44,6 +48,10 @@ func newConfig(opts ...Option) config {
 	cfg.Tracer = cfg.TracerProvider.Tracer(
 		ScopeName,
 		trace.WithInstrumentationVersion(Version()),
+	)
+	cfg.Meter = cfg.MeterProvider.Meter(
+		ScopeName,
+		metric.WithInstrumentationVersion(Version()),
 	)
 	return cfg
 }
@@ -65,6 +73,16 @@ func WithTracerProvider(provider trace.TracerProvider) Option {
 	return optionFunc(func(cfg *config) {
 		if provider != nil {
 			cfg.TracerProvider = provider
+		}
+	})
+}
+
+// WithMeterProvider specifies a meter provider to use for recording metrics.
+// If none is specified, the global provider is used.
+func WithMeterProvider(provider metric.MeterProvider) Option {
+	return optionFunc(func(cfg *config) {
+		if provider != nil {
+			cfg.MeterProvider = provider
 		}
 	})
 }

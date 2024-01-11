@@ -21,8 +21,10 @@ import (
 	"strings"
 	"sync"
 
+	"go.opentelemetry.io/otel"
 	"go.opentelemetry.io/otel/attribute"
 	"go.opentelemetry.io/otel/codes"
+	"go.opentelemetry.io/otel/metric"
 	semconv "go.opentelemetry.io/otel/semconv/v1.17.0"
 	"go.opentelemetry.io/otel/trace"
 
@@ -30,15 +32,21 @@ import (
 	"go.mongodb.org/mongo-driver/event"
 )
 
-type spanKey struct {
+type requestKey struct {
 	ConnectionID string
 	RequestID    int64
 }
 
+type request struct {
+	span  trace.Span
+	attrs []attribute.KeyValue
+}
+
 type monitor struct {
 	sync.Mutex
-	spans map[spanKey]trace.Span
-	cfg   config
+	requests  map[requestKey]request
+	cfg       config
+	durations metric.Float64Histogram
 }
 
 func (m *monitor) Started(ctx context.Context, evt *event.CommandStartedEvent) {
@@ -46,53 +54,55 @@ func (m *monitor) Started(ctx context.Context, evt *event.CommandStartedEvent) {
 
 	hostname, port := peerInfo(evt)
 
-	attrs := []attribute.KeyValue{
+	attrs := make([]attribute.KeyValue, 0, 8)
+	attrs = append(attrs,
 		semconv.DBSystemMongoDB,
 		semconv.DBOperation(evt.CommandName),
 		semconv.DBName(evt.DatabaseName),
 		semconv.NetPeerName(hostname),
 		semconv.NetPeerPort(port),
 		semconv.NetTransportTCP,
-	}
-	if !m.cfg.CommandAttributeDisabled {
-		attrs = append(attrs, semconv.DBStatement(sanitizeCommand(evt.Command)))
-	}
+	)
 	if collection, err := extractCollection(evt); err == nil && collection != "" {
 		spanName = collection + "."
 		attrs = append(attrs, semconv.DBMongoDBCollection(collection))
 	}
+	spanAttrs := attrs
+	if !m.cfg.CommandAttributeDisabled {
+		spanAttrs = append(spanAttrs, semconv.DBStatement(sanitizeCommand(evt.Command)))
+	}
 	spanName += evt.CommandName
 	opts := []trace.SpanStartOption{
 		trace.WithSpanKind(trace.SpanKindClient),
-		trace.WithAttributes(attrs...),
+		trace.WithAttributes(spanAttrs...),
 	}
 	_, span := m.cfg.Tracer.Start(ctx, spanName, opts...)
-	key := spanKey{
+	key := requestKey{
 		ConnectionID: evt.ConnectionID,
 		RequestID:    evt.RequestID,
 	}
 	m.Lock()
-	m.spans[key] = span
+	m.requests[key] = request{span, attrs}
 	m.Unlock()
 }
 
 func (m *monitor) Succeeded(ctx context.Context, evt *event.CommandSucceededEvent) {
-	m.Finished(&evt.CommandFinishedEvent, nil)
+	m.Finished(ctx, &evt.CommandFinishedEvent, nil)
 }
 
 func (m *monitor) Failed(ctx context.Context, evt *event.CommandFailedEvent) {
-	m.Finished(&evt.CommandFinishedEvent, fmt.Errorf("%s", evt.Failure))
+	m.Finished(ctx, &evt.CommandFinishedEvent, fmt.Errorf("%s", evt.Failure))
 }
 
-func (m *monitor) Finished(evt *event.CommandFinishedEvent, err error) {
-	key := spanKey{
+func (m *monitor) Finished(ctx context.Context, evt *event.CommandFinishedEvent, err error) {
+	key := requestKey{
 		ConnectionID: evt.ConnectionID,
 		RequestID:    evt.RequestID,
 	}
 	m.Lock()
-	span, ok := m.spans[key]
+	request, ok := m.requests[key]
 	if ok {
-		delete(m.spans, key)
+		delete(m.requests, key)
 	}
 	m.Unlock()
 	if !ok {
@@ -100,10 +110,14 @@ func (m *monitor) Finished(evt *event.CommandFinishedEvent, err error) {
 	}
 
 	if err != nil {
-		span.SetStatus(codes.Error, err.Error())
+		request.span.SetStatus(codes.Error, err.Error())
+		request.attrs = append(request.attrs, semconv.OtelStatusCodeError)
+	} else {
+		request.attrs = append(request.attrs, semconv.OtelStatusCodeOk)
 	}
+	m.durations.Record(ctx, evt.Duration.Seconds()/1000, metric.WithAttributeSet(attribute.NewSet(request.attrs...)))
 
-	span.End()
+	request.span.End()
 }
 
 // TODO sanitize values where possible, then reenable `db.statement` span attributes default.
@@ -135,9 +149,14 @@ func extractCollection(evt *event.CommandStartedEvent) (string, error) {
 // NewMonitor creates a new mongodb event CommandMonitor.
 func NewMonitor(opts ...Option) *event.CommandMonitor {
 	cfg := newConfig(opts...)
+	histogram, err := cfg.Meter.Float64Histogram("command.duration", metric.WithUnit("ms"), metric.WithDescription("Duration of finished commands"))
+	if err != nil {
+		otel.Handle(err)
+	}
 	m := &monitor{
-		spans: make(map[spanKey]trace.Span),
-		cfg:   cfg,
+		requests:  make(map[requestKey]request),
+		cfg:       cfg,
+		durations: histogram,
 	}
 	return &event.CommandMonitor{
 		Started:   m.Started,
