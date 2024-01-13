@@ -5,7 +5,9 @@ package config // import "go.opentelemetry.io/contrib/config"
 
 import (
 	"context"
+	"encoding/json"
 	"errors"
+	"io"
 
 	"go.opentelemetry.io/otel/metric"
 	"go.opentelemetry.io/otel/trace"
@@ -95,9 +97,18 @@ func WithOpenTelemetryConfiguration(cfg OpenTelemetryConfiguration) Configuratio
 	})
 }
 
+// ParseJSON parses a JSON configuration file into an OpenTelemetryConfiguration.
+func ParseJSON(r io.Reader) (*OpenTelemetryConfiguration, error) {
+	var cfg OpenTelemetryConfiguration
+	decoder := json.NewDecoder(r)
+	if err := decoder.Decode(&cfg); err != nil {
+		return nil, err
+	}
+	return &cfg, nil
+}
+
 // TODO: implement parsing functionality:
 // - https://github.com/open-telemetry/opentelemetry-go-contrib/issues/4373
-// - https://github.com/open-telemetry/opentelemetry-go-contrib/issues/4412
 
 // TODO: create SDK from the model:
 // - https://github.com/open-telemetry/opentelemetry-go-contrib/issues/4371

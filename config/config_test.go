@@ -5,6 +5,9 @@ package config
 
 import (
 	"context"
+	"fmt"
+	"io"
+	"strings"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
@@ -49,5 +52,45 @@ func TestNewSDK(t *testing.T) {
 		assert.IsType(t, tt.wantTracerProvider, sdk.TracerProvider())
 		assert.IsType(t, tt.wantMeterProvider, sdk.MeterProvider())
 		require.Equal(t, tt.wantShutdownErr, sdk.Shutdown(context.Background()))
+	}
+}
+
+func TestParseJSON(t *testing.T) {
+	tests := []struct {
+		name     string
+		input    string
+		wantErr  error
+		wantType interface{}
+	}{
+		{
+			name:     "valid JSON",
+			input:    `{"file_format": "json", "disabled": false}`,
+			wantErr:  nil,
+			wantType: &OpenTelemetryConfiguration{},
+		},
+		{
+			name:     "invalid JSON",
+			input:    `{"file_format": "json", "disabled":`,
+			wantErr:  io.ErrUnexpectedEOF,
+			wantType: nil,
+		},
+		{
+			name:     "missing required field",
+			input:    `{"foo": "bar"}`,
+			wantErr:  fmt.Errorf("field file_format in OpenTelemetryConfiguration: required"),
+			wantType: nil,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			r := strings.NewReader(tt.input)
+			got, err := ParseJSON(r)
+			if err != nil {
+				require.Equal(t, tt.wantErr.Error(), err.Error())
+			} else {
+				assert.IsType(t, tt.wantType, got)
+			}
+		})
 	}
 }
