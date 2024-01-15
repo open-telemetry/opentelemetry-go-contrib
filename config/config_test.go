@@ -5,6 +5,8 @@ package config
 
 import (
 	"context"
+	"fmt"
+	"strings"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
@@ -49,5 +51,46 @@ func TestNewSDK(t *testing.T) {
 		assert.IsType(t, tt.wantTracerProvider, sdk.TracerProvider())
 		assert.IsType(t, tt.wantMeterProvider, sdk.MeterProvider())
 		require.Equal(t, tt.wantShutdownErr, sdk.Shutdown(context.Background()))
+	}
+}
+
+func TestParseYAML(t *testing.T) {
+	tests := []struct {
+		name     string
+		input    string
+		wantErr  error
+		wantType interface{}
+	}{
+		{
+			name:     "valid YAML",
+			input:    "file_format: yaml\ndisabled: false\n",
+			wantErr:  nil,
+			wantType: &OpenTelemetryConfiguration{},
+		},
+		{
+			name:     "invalid YAML",
+			input:    "file_format: json\ndisabled:",
+			wantErr:  yaml.ErrSyntax,
+			wantType: nil,
+		},
+		{
+			name:     "missing required field",
+			input:    "foo: bar\n",
+			wantErr:  fmt.Errorf("field file_format in OpenTelemetryConfiguration: required"),
+			wantType: nil,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			r := strings.NewReader(tt.input)
+			got, err := ParseYAML(r)
+			if err != nil {
+				fmt.Println(err)
+				require.Equal(t, tt.wantErr.Error(), err.Error())
+			} else {
+				assert.IsType(t, tt.wantType, got)
+			}
+		})
 	}
 }

@@ -6,9 +6,11 @@ package config // import "go.opentelemetry.io/contrib/config"
 import (
 	"context"
 	"errors"
+	"io"
 
 	"go.opentelemetry.io/otel/metric"
 	"go.opentelemetry.io/otel/trace"
+	"gopkg.in/yaml.v3"
 )
 
 type configOptions struct {
@@ -95,8 +97,16 @@ func WithOpenTelemetryConfiguration(cfg OpenTelemetryConfiguration) Configuratio
 	})
 }
 
+func ParseYAML(r io.Reader) (*OpenTelemetryConfiguration, error) {
+	var cfg OpenTelemetryConfiguration
+	dec := yaml.NewDecoder(r)
+	if err := dec.Decode(&cfg); err != nil {
+		return nil, err
+	}
+	return &cfg, nil
+}
+
 // TODO: implement parsing functionality:
-// - https://github.com/open-telemetry/opentelemetry-go-contrib/issues/4373
 // - https://github.com/open-telemetry/opentelemetry-go-contrib/issues/4412
 
 // TODO: create SDK from the model:
