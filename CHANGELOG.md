@@ -11,6 +11,32 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 ### Added
 
 - Add the new `go.opentelemetry.io/contrib/instrgen` package to provide auto-generated source code instrumentation. (#3068, #3108)
+- Add `SDK.Shutdown` method in `"go.opentelemetry.io/contrib/config"`. (#4583)
+
+### Changed
+
+- The semantic conventions used by `go.opentelemetry.io/contrib/instrumentation/github.com/emicklei/go-restful/otelrestful` are upgraded to v1.20.0. (#4320)
+- The semantic conventions used by `go.opentelemetry.io/contrib/instrumentation/github.com/gin-gonic/gin/otelgin` are upgraded to v1.20.0. (#4320)
+- The semantic conventions used by `go.opentelemetry.io/contrib/instrumentation/github.com/gorilla/mux/otelmux` are upgraded to v1.20.0. (#4320)
+- The semantic conventions used by `go.opentelemetry.io/contrib/instrumentation/github.com/labstack/echo/otelecho` are upgraded to v1.20.0. (#4320)
+- The semantic conventions used by `go.opentelemetry.io/contrib/instrumentation/gopkg.in/macaron.v1/otelmacaron` are upgraded to v1.20.0. (#4320)
+- The semantic conventions used by `go.opentelemetry.io/contrib/instrumentation/net/http/httptrace/otelhttptrace` are upgraded to v1.20.0. (#4320)
+- The semantic conventions used by `go.opentelemetry.io/contrib/instrumentation/net/http/httptrace/otelhttptrace/example` are upgraded to v1.20.0. (#4320)
+- The semantic conventions used by `go.opentelemetry.io/contrib/instrumentation/net/http/otelhttp/example` are upgraded to v1.20.0. (#4320)
+- The semantic conventions used by `go.opentelemetry.io/contrib/instrumentation/net/http/otelhttp`are upgraded to v1.20.0. (#4320)
+- Updated configuration schema to include `schema_url` for resource definition and `without_type_suffix` and `without_units` for the Prometheus exporter. (#4727)
+
+### Fixed
+
+- Fix `NewServerHandler` in `go.opentelemetry.io/contrib/instrumentation/google.golang.org/grpc/otelgrpc` to correctly set the span status depending on the gRPC status. (#4587)
+- Update `go.opentelemetry.io/contrib/detectors/aws/ecs` to fix the task ARN when it is not valid. (#3583)
+- Do not panic in `go.opentelemetry.io/contrib/detectors/aws/ecs` when the container ARN is not valid. (#3583)
+
+## [1.21.1/0.46.1/0.15.1/0.1.1] - 2023-11-16
+
+### Changed
+
+- Upgrade dependencies of OpenTelemetry Go to use the new [`v1.21.0`/`v0.44.0` release](https://github.com/open-telemetry/opentelemetry-go/releases/tag/v1.21.0). (#4582)
 
 ### Changed
 - Remove call to global error handler in `go.opentelemetry.io/contrib/instrumentation/github.com/labstack/echo/otelecho` (#4420)
@@ -18,6 +44,8 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 ### Fixed
 
 - Fix `StreamClientInterceptor` in `go.opentelemetry.io/contrib/instrumentation/google.golang.org/grpc/otelgrpc` to end the spans synchronously. (#4537)
+- Fix data race in stats handlers when processing messages received and sent metrics in `go.opentelemetry.io/contrib/instrumentation/google.golang.org/grpc/otelgrpc`. (#4577)
+- The stats handlers `NewClientHandler`, `NewServerHandler` in `go.opentelemetry.io/contrib/instrumentation/google.golang.org/grpc/otelgrpc` now record RPC durations in `ms` instead of `ns`. (#4548)
 
 ## [1.21.0/0.46.0/0.15.0/0.1.0] - 2023-11-10
 
@@ -860,7 +888,8 @@ First official tagged release of `contrib` repository.
 - Prefix support for dogstatsd (#34)
 - Update Go Runtime package to use batch observer (#44)
 
-[Unreleased]: https://github.com/open-telemetry/opentelemetry-go-contrib/compare/v1.21.0...HEAD
+[Unreleased]: https://github.com/open-telemetry/opentelemetry-go-contrib/compare/v1.21.1...HEAD
+[1.21.1/0.46.1/0.15.1/0.1.1]: https://github.com/open-telemetry/opentelemetry-go-contrib/releases/tag/v1.21.1
 [1.21.0/0.46.0/0.15.0/0.1.0]: https://github.com/open-telemetry/opentelemetry-go-contrib/releases/tag/v1.21.0
 [1.20.0/0.45.0/0.14.0]: https://github.com/open-telemetry/opentelemetry-go-contrib/releases/tag/v1.20.0
 [1.19.0/0.44.0/0.13.0]: https://github.com/open-telemetry/opentelemetry-go-contrib/releases/tag/v1.19.0

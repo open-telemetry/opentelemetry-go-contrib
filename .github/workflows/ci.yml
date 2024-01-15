@@ -22,7 +22,7 @@ jobs:
     - name: Checkout Repo
       uses: actions/checkout@v4
     - name: Install Go
-      uses: actions/setup-go@v4
+      uses: actions/setup-go@v5
       with:
         go-version: ${{ env.DEFAULT_GO_VERSION }}
         check-latest: true
@@ -49,7 +49,7 @@ jobs:
     - name: Checkout Repo
       uses: actions/checkout@v4
     - name: Install Go
-      uses: actions/setup-go@v4
+      uses: actions/setup-go@v5
       with:
         go-version: ${{ env.DEFAULT_GO_VERSION }}
         check-latest: true
@@ -63,7 +63,7 @@ jobs:
     - name: Checkout Repo
       uses: actions/checkout@v4
     - name: Install Go
-      uses: actions/setup-go@v4
+      uses: actions/setup-go@v5
       with:
         go-version: ${{ env.DEFAULT_GO_VERSION }}
         check-latest: true
@@ -82,7 +82,7 @@ jobs:
         fail_ci_if_error: true
         verbose: true
     - name: Store coverage test output
-      uses: actions/upload-artifact@v3
+      uses: actions/upload-artifact@v4
       with:
         name: opentelemetry-go-contrib-test-output
         path: ${{ env.TEST_RESULTS }}
@@ -106,7 +106,7 @@ jobs:
     - name: Checkout code
       uses: actions/checkout@v4
     - name: Install Go
-      uses: actions/setup-go@v4
+      uses: actions/setup-go@v5
       with:
         go-version: ${{ matrix.go-version }}
         check-latest: true
@@ -134,7 +134,7 @@ jobs:
     - name: Checkout Repo
       uses: actions/checkout@v4
     - name: Install Go
-      uses: actions/setup-go@v4
+      uses: actions/setup-go@v5
       with:
         go-version: ${{ env.DEFAULT_GO_VERSION }}
         check-latest: true
@@ -155,9 +155,9 @@ jobs:
         fail_ci_if_error: true
         verbose: true
     - name: Store coverage test output
-      uses: actions/upload-artifact@v3
+      uses: actions/upload-artifact@v4
       with:
-          name: opentelemetry-go-contrib-test-output
+          name: opentelemetry-go-contrib-integration-test-output
           path: ${{ env.TEST_RESULTS }}
 
   test-integration:

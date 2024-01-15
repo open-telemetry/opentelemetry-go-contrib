@@ -16,7 +16,7 @@ package ecs // import "go.opentelemetry.io/contrib/detectors/aws/ecs"
 
 // Version is the current release version of the ECS resource detector.
 func Version() string {
-	return "1.21.0"
+	return "1.21.1"
 	// This string is updated by the pre_release.sh script during release
 }
 
