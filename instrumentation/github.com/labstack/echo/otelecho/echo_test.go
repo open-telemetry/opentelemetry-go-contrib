@@ -149,27 +149,5 @@ func TestHandleErrorDefault(t *testing.T) {
 
 	router.ServeHTTP(w, r)
 	assert.Equal(t, http.StatusTeapot, w.Result().StatusCode, "should call the 'ping' handler")
-	assert.Equal(t, 2, handlerCalled, "global error handler is called twice")
-}
-
-func TestWithoutHandleError(t *testing.T) {
-	r := httptest.NewRequest("GET", "/ping", nil)
-	w := httptest.NewRecorder()
-
-	router := echo.New()
-	router.Use(Middleware("foobar", WithoutHandleError()))
-	router.GET("/ping", func(c echo.Context) error {
-		return assert.AnError
-	})
-
-	handlerCalled := 0
-	router.HTTPErrorHandler = func(err error, c echo.Context) {
-		handlerCalled++
-		assert.ErrorIs(t, err, assert.AnError, "test error is expected in error handler")
-		assert.NoError(t, c.NoContent(http.StatusTeapot))
-	}
-
-	router.ServeHTTP(w, r)
-	assert.Equal(t, http.StatusTeapot, w.Result().StatusCode, "should call the 'ping' handler")
-	assert.Equal(t, 1, handlerCalled, "global error handler is called once")
+	assert.Equal(t, 1, handlerCalled, "global error handler must be called only once")
 }
