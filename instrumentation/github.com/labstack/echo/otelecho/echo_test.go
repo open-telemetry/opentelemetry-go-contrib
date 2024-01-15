@@ -130,7 +130,7 @@ func TestSkipper(t *testing.T) {
 	assert.Equal(t, http.StatusOK, w.Result().StatusCode, "should call the 'ping' handler")
 }
 
-func TestHandleErrorDefault(t *testing.T) {
+func TestHandleErrorHandlerNotCalled(t *testing.T) {
 	r := httptest.NewRequest("GET", "/ping", nil)
 	w := httptest.NewRecorder()
 
