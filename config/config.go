@@ -7,7 +7,6 @@ import (
 	"context"
 	"encoding/json"
 	"errors"
-	"io"
 
 	"go.opentelemetry.io/otel/metric"
 	"go.opentelemetry.io/otel/trace"
@@ -98,10 +97,9 @@ func WithOpenTelemetryConfiguration(cfg OpenTelemetryConfiguration) Configuratio
 }
 
 // ParseJSON parses a JSON configuration file into an OpenTelemetryConfiguration.
-func ParseJSON(r io.Reader) (*OpenTelemetryConfiguration, error) {
+func ParseJSON(data []byte) (*OpenTelemetryConfiguration, error) {
 	var cfg OpenTelemetryConfiguration
-	decoder := json.NewDecoder(r)
-	if err := decoder.Decode(&cfg); err != nil {
+	if err := json.Unmarshal(data, &cfg); err != nil {
 		return nil, err
 	}
 	return &cfg, nil

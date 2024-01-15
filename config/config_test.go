@@ -6,8 +6,6 @@ package config
 import (
 	"context"
 	"fmt"
-	"io"
-	"strings"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
@@ -70,8 +68,14 @@ func TestParseJSON(t *testing.T) {
 		},
 		{
 			name:     "invalid JSON",
-			input:    `{"file_format": "json", "disabled":`,
-			wantErr:  io.ErrUnexpectedEOF,
+			input:    `{"file_format": "json", "disabled":}`,
+			wantErr:  fmt.Errorf("invalid character '}' looking for beginning of value"),
+			wantType: nil,
+		},
+		{
+			name:     "string containing valid JSON",
+			input:    `{"file_format": "json", "disabled": false}I AM INVALID JSON`,
+			wantErr:  fmt.Errorf("invalid character 'I' after top-level value"),
 			wantType: nil,
 		},
 		{
@@ -84,9 +88,7 @@ func TestParseJSON(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			r := strings.NewReader(tt.input)
-			got, err := ParseJSON(r)
-			if err != nil {
+			if got, err := ParseJSON(([]byte)(tt.input)); err != nil {
 				require.Equal(t, tt.wantErr.Error(), err.Error())
 			} else {
 				assert.IsType(t, tt.wantType, got)
