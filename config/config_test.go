@@ -51,3 +51,7 @@ func TestNewSDK(t *testing.T) {
 		require.Equal(t, tt.wantShutdownErr, sdk.Shutdown(context.Background()))
 	}
 }
+
+func ptr[T any](v T) *T {
+	return &v
+}
