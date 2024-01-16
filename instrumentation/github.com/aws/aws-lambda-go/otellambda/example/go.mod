@@ -17,7 +17,7 @@ require (
 	go.opentelemetry.io/contrib/instrumentation/github.com/aws/aws-lambda-go/otellambda v0.46.1
 	go.opentelemetry.io/contrib/instrumentation/github.com/aws/aws-sdk-go-v2/otelaws v0.0.0-00010101000000-000000000000
 	go.opentelemetry.io/contrib/instrumentation/net/http/otelhttp v0.46.1
-	go.opentelemetry.io/otel v1.21.0
+	go.opentelemetry.io/otel v1.21.1-0.20240111115607-01472db75fb1
 	go.opentelemetry.io/otel/exporters/stdout/stdouttrace v1.21.0
 	go.opentelemetry.io/otel/sdk v1.21.0
 )
