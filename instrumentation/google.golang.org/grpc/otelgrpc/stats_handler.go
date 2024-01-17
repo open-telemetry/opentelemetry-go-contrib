@@ -139,14 +139,14 @@ func (h *clientHandler) HandleConn(context.Context, stats.ConnStats) {
 
 func (c *config) handleRPC(ctx context.Context, rs stats.RPCStats, isServer bool) { // nolint: revive  // isServer is not a control flag.
 	span := trace.SpanFromContext(ctx)
-	gctx, ok := ctx.Value(gRPCContextKey{}).(*gRPCContext)
-	if !ok || gctx == nil {
-		otel.Handle(errMissinggRPCContext)
-		return
-	}
+	var metricAttrs []attribute.KeyValue
 	var messageId int64
-	metricAttrs := make([]attribute.KeyValue, 0, len(gctx.metricAttrs)+1)
-	metricAttrs = append(metricAttrs, gctx.metricAttrs...)
+
+	gctx, ok := ctx.Value(gRPCContextKey{}).(*gRPCContext)
+	if ok && gctx != nil {
+		metricAttrs = make([]attribute.KeyValue, 0, len(gctx.metricAttrs)+1)
+		metricAttrs = append(metricAttrs, gctx.metricAttrs...)
+	}
 	wctx := withoutCancel(ctx)
 
 	switch rs := rs.(type) {
