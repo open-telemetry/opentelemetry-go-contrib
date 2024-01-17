@@ -9,7 +9,7 @@ replace (
 
 require (
 	github.com/emicklei/go-restful/v3 v3.11.2
-	go.opentelemetry.io/contrib/instrumentation/github.com/emicklei/go-restful/otelrestful v0.46.1
+	go.opentelemetry.io/contrib/instrumentation/github.com/emicklei/go-restful/otelrestful v0.47.0
 	go.opentelemetry.io/otel v1.22.0
 	go.opentelemetry.io/otel/exporters/stdout/stdouttrace v1.22.0
 	go.opentelemetry.io/otel/sdk v1.22.0
