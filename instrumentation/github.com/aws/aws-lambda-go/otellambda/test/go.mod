@@ -9,12 +9,12 @@ replace (
 )
 
 require (
-	github.com/aws/aws-lambda-go v1.43.0
+	github.com/aws/aws-lambda-go v1.44.0
 	github.com/stretchr/testify v1.8.4
 	go.opentelemetry.io/contrib/detectors/aws/lambda v0.46.1
 	go.opentelemetry.io/contrib/instrumentation/github.com/aws/aws-lambda-go/otellambda v0.46.1
 	go.opentelemetry.io/contrib/propagators/aws v1.21.1
-	go.opentelemetry.io/otel v1.21.0
+	go.opentelemetry.io/otel v1.21.1-0.20240111115607-01472db75fb1
 	go.opentelemetry.io/otel/sdk v1.21.0
 	go.opentelemetry.io/otel/trace v1.21.0
 )
