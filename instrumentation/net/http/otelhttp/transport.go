@@ -226,10 +226,11 @@ func newWrappedBody(span trace.Span, record func(n int64), body io.ReadCloser) i
 // If the response body implements the io.Writer interface (i.e. for
 // successful protocol switches), the wrapped body also will.
 type wrappedBody struct {
-	span   trace.Span
-	record func(n int64)
-	body   io.ReadCloser
-	read   atomic.Int64
+	span     trace.Span
+	recorded atomic.Bool
+	record   func(n int64)
+	body     io.ReadCloser
+	read     atomic.Int64
 }
 
 var _ io.ReadWriteCloser = &wrappedBody{}
@@ -246,15 +247,14 @@ func (wb *wrappedBody) Write(p []byte) (int, error) {
 
 func (wb *wrappedBody) Read(b []byte) (int, error) {
 	n, err := wb.body.Read(b)
-	// Locally record the number of bytes read
+	// Record the number of bytes read
 	wb.read.Add(int64(n))
 
 	switch err {
 	case nil:
 		// nothing to do here but fall through to the return
 	case io.EOF:
-		// Record the total number of bytes read
-		wb.record(wb.read.Load())
+		wb.recordBytesRead()
 		wb.span.End()
 	default:
 		wb.span.RecordError(err)
@@ -263,7 +263,16 @@ func (wb *wrappedBody) Read(b []byte) (int, error) {
 	return n, err
 }
 
+// recordBytesRead is a function that ensures the number of bytes read is recorded once and only once.
+func (wb *wrappedBody) recordBytesRead() {
+	if wb.recorded.CompareAndSwap(false, true) {
+		// Record the total number of bytes read
+		wb.record(wb.read.Load())
+	}
+}
+
 func (wb *wrappedBody) Close() error {
+	wb.recordBytesRead()
 	wb.span.End()
 	if wb.body != nil {
 		return wb.body.Close()

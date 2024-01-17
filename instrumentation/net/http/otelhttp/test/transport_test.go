@@ -309,7 +309,7 @@ func TestTransportMetrics(t *testing.T) {
 			semconv.HTTPMethod("GET"),
 			semconv.HTTPStatusCode(200),
 		)
-		assertClientScopeMetrics(t, rm.ScopeMetrics[0], attrs)
+		assertClientScopeMetrics(t, rm.ScopeMetrics[0], attrs, 13)
 	})
 
 	t.Run("make http request and buffer response", func(t *testing.T) {
@@ -377,11 +377,74 @@ func TestTransportMetrics(t *testing.T) {
 			semconv.HTTPMethod("GET"),
 			semconv.HTTPStatusCode(200),
 		)
-		assertClientScopeMetrics(t, rm.ScopeMetrics[0], attrs)
+		assertClientScopeMetrics(t, rm.ScopeMetrics[0], attrs, 13)
+	})
+
+	t.Run("make http request and close body before reading completely", func(t *testing.T) {
+		reader := metric.NewManualReader()
+		meterProvider := metric.NewMeterProvider(metric.WithReader(reader))
+
+		ts := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+			w.WriteHeader(http.StatusOK)
+			if _, err := w.Write(responseBody); err != nil {
+				t.Fatal(err)
+			}
+		}))
+		defer ts.Close()
+
+		r, err := http.NewRequest(http.MethodGet, ts.URL, bytes.NewReader(requestBody))
+		if err != nil {
+			t.Fatal(err)
+		}
+
+		tr := otelhttp.NewTransport(
+			http.DefaultTransport,
+			otelhttp.WithMeterProvider(meterProvider),
+		)
+
+		c := http.Client{Transport: tr}
+		res, err := c.Do(r)
+		if err != nil {
+			t.Fatal(err)
+		}
+
+		// Must read the body or else we won't get response metrics
+		smallBuf := make([]byte, 10)
+
+		// Read first 10 bytes
+		bc, err := res.Body.Read(smallBuf)
+		if err != nil {
+			t.Fatal(err)
+		}
+		require.Equal(t, 10, bc)
+
+		// close the response body early
+		require.NoError(t, res.Body.Close())
+
+		host, portStr, _ := net.SplitHostPort(r.Host)
+		if host == "" {
+			host = "127.0.0.1"
+		}
+		port, err := strconv.Atoi(portStr)
+		if err != nil {
+			port = 0
+		}
+
+		rm := metricdata.ResourceMetrics{}
+		err = reader.Collect(context.Background(), &rm)
+		require.NoError(t, err)
+		require.Len(t, rm.ScopeMetrics, 1)
+		attrs := attribute.NewSet(
+			semconv.NetPeerName(host),
+			semconv.NetPeerPort(port),
+			semconv.HTTPMethod("GET"),
+			semconv.HTTPStatusCode(200),
+		)
+		assertClientScopeMetrics(t, rm.ScopeMetrics[0], attrs, 10)
 	})
 }
 
-func assertClientScopeMetrics(t *testing.T, sm metricdata.ScopeMetrics, attrs attribute.Set) {
+func assertClientScopeMetrics(t *testing.T, sm metricdata.ScopeMetrics, attrs attribute.Set, rxBytes int64) {
 	assert.Equal(t, instrumentation.Scope{
 		Name:    "go.opentelemetry.io/contrib/instrumentation/net/http/otelhttp",
 		Version: Version(),
@@ -404,7 +467,7 @@ func assertClientScopeMetrics(t *testing.T, sm metricdata.ScopeMetrics, attrs at
 	want = metricdata.Metrics{
 		Name: "http.client.response.size",
 		Data: metricdata.Sum[int64]{
-			DataPoints:  []metricdata.DataPoint[int64]{{Attributes: attrs, Value: 13}},
+			DataPoints:  []metricdata.DataPoint[int64]{{Attributes: attrs, Value: rxBytes}},
 			Temporality: metricdata.CumulativeTemporality,
 			IsMonotonic: true,
 		},
