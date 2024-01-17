@@ -136,6 +136,10 @@ func (h *clientHandler) HandleConn(context.Context, stats.ConnStats) {
 func (c *config) handleRPC(ctx context.Context, rs stats.RPCStats, isServer bool) { // nolint: revive  // isServer is not a control flag.
 	span := trace.SpanFromContext(ctx)
 	gctx, _ := ctx.Value(gRPCContextKey{}).(*gRPCContext)
+	if gctx == nil {
+		// Shouldn't happen because TagRPC populates this information.
+		return
+	}
 	var messageId int64
 	metricAttrs := make([]attribute.KeyValue, 0, len(gctx.metricAttrs)+1)
 	metricAttrs = append(metricAttrs, gctx.metricAttrs...)
