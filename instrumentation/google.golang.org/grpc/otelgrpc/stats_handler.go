@@ -139,8 +139,8 @@ func (h *clientHandler) HandleConn(context.Context, stats.ConnStats) {
 
 func (c *config) handleRPC(ctx context.Context, rs stats.RPCStats, isServer bool) { // nolint: revive  // isServer is not a control flag.
 	span := trace.SpanFromContext(ctx)
-	gctx, _ := ctx.Value(gRPCContextKey{}).(*gRPCContext)
-	if gctx == nil {
+	gctx, ok := ctx.Value(gRPCContextKey{}).(*gRPCContext)
+	if !ok || gctx == nil {
 		otel.Handle(errMissinggRPCContext)
 		return
 	}
