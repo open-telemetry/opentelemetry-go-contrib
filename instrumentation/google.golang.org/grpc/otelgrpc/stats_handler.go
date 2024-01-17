@@ -16,6 +16,7 @@ package otelgrpc // import "go.opentelemetry.io/contrib/instrumentation/google.g
 
 import (
 	"context"
+	"fmt"
 	"sync/atomic"
 	"time"
 
@@ -24,12 +25,15 @@ import (
 	"google.golang.org/grpc/status"
 
 	"go.opentelemetry.io/contrib/instrumentation/google.golang.org/grpc/otelgrpc/internal"
+	"go.opentelemetry.io/otel"
 	"go.opentelemetry.io/otel/attribute"
 	"go.opentelemetry.io/otel/codes"
 	"go.opentelemetry.io/otel/metric"
 	semconv "go.opentelemetry.io/otel/semconv/v1.17.0"
 	"go.opentelemetry.io/otel/trace"
 )
+
+var errMissinggRPCContext = fmt.Errorf("gRPC context not found in stats Handler RPC context")
 
 type gRPCContextKey struct{}
 
@@ -137,7 +141,7 @@ func (c *config) handleRPC(ctx context.Context, rs stats.RPCStats, isServer bool
 	span := trace.SpanFromContext(ctx)
 	gctx, _ := ctx.Value(gRPCContextKey{}).(*gRPCContext)
 	if gctx == nil {
-		// Shouldn't happen because TagRPC populates this information.
+		otel.Handle(errMissinggRPCContext)
 		return
 	}
 	var messageId int64
