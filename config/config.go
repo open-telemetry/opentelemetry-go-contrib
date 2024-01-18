@@ -8,8 +8,6 @@ import (
 	"errors"
 
 	"go.opentelemetry.io/otel/metric"
-	"go.opentelemetry.io/otel/sdk/resource"
-	semconv "go.opentelemetry.io/otel/semconv/v1.17.0"
 	"go.opentelemetry.io/otel/trace"
 )
 
@@ -119,13 +117,3 @@ func WithOpenTelemetryConfiguration(cfg OpenTelemetryConfiguration) Configuratio
 
 // TODO: create SDK from the model:
 // - https://github.com/open-telemetry/opentelemetry-go-contrib/issues/4371
-
-func newResource(res *Resource) (*resource.Resource, error) {
-	if res == nil {
-		return resource.Default(), nil
-	}
-	return resource.Merge(resource.Default(),
-		resource.NewWithAttributes(semconv.SchemaURL,
-			semconv.ServiceName(*res.Attributes.ServiceName),
-		))
-}
