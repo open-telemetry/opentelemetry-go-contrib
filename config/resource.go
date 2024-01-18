@@ -5,7 +5,7 @@ package config // import "go.opentelemetry.io/contrib/config"
 
 import (
 	"go.opentelemetry.io/otel/sdk/resource"
-	semconv "go.opentelemetry.io/otel/semconv/v1.21.0"
+	semconv "go.opentelemetry.io/otel/semconv/v1.24.0"
 )
 
 func newResource(res *Resource) (*resource.Resource, error) {
