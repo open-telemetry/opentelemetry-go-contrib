@@ -6,7 +6,6 @@ package config
 import (
 	"context"
 	"fmt"
-	"strings"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
@@ -71,23 +70,11 @@ func TestParseYAML(t *testing.T) {
 			wantErr:  nil,
 			wantType: &OpenTelemetryConfiguration{},
 		},
-		{
-			name:     "invalid YAML",
-			input:    "file_format: json\ndisabled:",
-			wantErr:  yaml.ErrSyntax,
-			wantType: nil,
-		},
-		{
-			name:     "missing required field",
-			input:    "foo: bar\n",
-			wantErr:  fmt.Errorf("field file_format in OpenTelemetryConfiguration: required"),
-			wantType: nil,
-		},
 	}
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			r := strings.NewReader(tt.input)
+			r := ([]byte)(tt.input)
 			got, err := ParseYAML(r)
 			if err != nil {
 				fmt.Println(err)

@@ -6,7 +6,8 @@ package config // import "go.opentelemetry.io/contrib/config"
 import (
 	"context"
 	"errors"
-	"io"
+	"os"
+	"regexp"
 
 	"go.opentelemetry.io/otel/metric"
 	"go.opentelemetry.io/otel/sdk/resource"
@@ -115,12 +116,30 @@ func WithOpenTelemetryConfiguration(cfg OpenTelemetryConfiguration) Configuratio
 	})
 }
 
-func ParseYAML(r io.Reader) (*OpenTelemetryConfiguration, error) {
+// ParseYAML parses a YAML configuration file into an OpenTelemetryConfiguration.
+func ParseYAML(file []byte) (*OpenTelemetryConfiguration, error) {
+	re := regexp.MustCompile(`\$\{([a-zA-Z_][a-zA-Z0-9_]*)\}`)
+
+	replaceEnvVars := func(input []byte) []byte {
+		return re.ReplaceAllFunc(input, func(s []byte) []byte {
+			match := re.FindSubmatch(s)
+			if len(match) < 2 {
+				return s
+			}
+			envVarName := string(match[1])
+			envVarValue := os.Getenv(envVarName)
+			return []byte(envVarValue)
+		})
+	}
+
+	file = replaceEnvVars(file)
+
 	var cfg OpenTelemetryConfiguration
-	dec := yaml.NewDecoder(r)
-	if err := dec.Decode(&cfg); err != nil {
+	err := yaml.Unmarshal(file, &cfg)
+	if err != nil {
 		return nil, err
 	}
+
 	return &cfg, nil
 }
 
