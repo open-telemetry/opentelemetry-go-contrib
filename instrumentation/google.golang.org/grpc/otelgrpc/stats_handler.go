@@ -139,7 +139,7 @@ func (c *config) handleRPC(ctx context.Context, rs stats.RPCStats, isServer bool
 	var messageId int64
 
 	gctx, _ := ctx.Value(gRPCContextKey{}).(*gRPCContext)
-	if ok && gctx != nil {
+	if gctx != nil {
 		metricAttrs = make([]attribute.KeyValue, 0, len(gctx.metricAttrs)+1)
 		metricAttrs = append(metricAttrs, gctx.metricAttrs...)
 	}
@@ -203,8 +203,10 @@ func (c *config) handleRPC(ctx context.Context, rs stats.RPCStats, isServer bool
 		elapsedTime := float64(rs.EndTime.Sub(rs.BeginTime)) / float64(time.Millisecond)
 
 		c.rpcDuration.Record(ctx, elapsedTime, metric.WithAttributes(metricAttrs...))
-		c.rpcRequestsPerRPC.Record(ctx, atomic.LoadInt64(&gctx.messagesReceived), metric.WithAttributes(metricAttrs...))
-		c.rpcResponsesPerRPC.Record(ctx, atomic.LoadInt64(&gctx.messagesSent), metric.WithAttributes(metricAttrs...))
+		if gctx != nil {
+			c.rpcRequestsPerRPC.Record(ctx, atomic.LoadInt64(&gctx.messagesReceived), metric.WithAttributes(metricAttrs...))
+			c.rpcResponsesPerRPC.Record(ctx, atomic.LoadInt64(&gctx.messagesSent), metric.WithAttributes(metricAttrs...))
+		}
 	default:
 		return
 	}
