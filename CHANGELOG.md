@@ -11,13 +11,21 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 ### Added
 
 - Add the new `go.opentelemetry.io/contrib/instrgen` package to provide auto-generated source code instrumentation. (#3068, #3108)
+- Add client metric support to `go.opentelemetry.io/contrib/instrumentation/net/http/otelhttp`. (#4707)
+
+### Changed
+
+- The semantic conventions used by `go.opentelemetry.io/contrib/instrumentation/net/http/otelhttp` are upgraded to v1.20.0. (#4320, #4707)
+
+### Removed 
+
+- Remove `RequestCount`, `RequestContentLength`, `ResponseContentLength`, `ServerLatency` constants from `go.opentelemetry.io/contrib/instrumentation/net/http/otelhttp`. (#4707)
 
 ## [1.22.0/0.47.0/0.16.0/0.2.0] - 2024-01-18
 
 ### Added
 
 - Add `SDK.Shutdown` method in `"go.opentelemetry.io/contrib/config"`. (#4583)
-- Add client metric support to `go.opentelemetry.io/contrib/instrumentation/net/http/otelhttp`. (#4707)
 - `NewSDK` in `go.opentelemetry.io/contrib/config` now returns a configured SDK with a valid `TracerProvider`. (#4741)
 
 ### Changed
@@ -30,7 +38,6 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 - The semantic conventions used by `go.opentelemetry.io/contrib/instrumentation/net/http/httptrace/otelhttptrace` are upgraded to v1.20.0. (#4320)
 - The semantic conventions used by `go.opentelemetry.io/contrib/instrumentation/net/http/httptrace/otelhttptrace/example` are upgraded to v1.20.0. (#4320)
 - The semantic conventions used by `go.opentelemetry.io/contrib/instrumentation/net/http/otelhttp/example` are upgraded to v1.20.0. (#4320)
-- The semantic conventions used by `go.opentelemetry.io/contrib/instrumentation/net/http/otelhttp` are upgraded to v1.20.0. (#4320, #4707)
 - Updated configuration schema to include `schema_url` for resource definition and `without_type_suffix` and `without_units` for the Prometheus exporter. (#4727)
 - The semantic conventions used by the `go.opentelemetry.io/contrib/detectors/aws/ecs` resource detector are upgraded to v1.24.0. (#4803)
 - The semantic conventions used by the `go.opentelemetry.io/contrib/detectors/aws/lambda` resource detector are upgraded to v1.24.0. (#4803)
@@ -38,10 +45,6 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 - The semantic conventions used by the `go.opentelemetry.io/contrib/detectors/aws/eks` resource detector are upgraded to v1.24.0. (#4803)
 - The semantic conventions used by the `go.opentelemetry.io/contrib/detectors/gcp` resource detector are upgraded to v1.24.0. (#4803)
 - The semantic conventions used in `go.opentelemetry.io/contrib/instrumentation/github.com/aws/aws-lambda-go/otellambda/test` are upgraded to v1.24.0. (#4803)
-
-### Removed 
-
-- Remove `RequestCount`, `RequestContentLength`, `ResponseContentLength`, `ServerLatency` constants from `go.opentelemetry.io/contrib/instrumentation/net/http/otelhttp`. (#4707)
 
 ### Fixed
 
