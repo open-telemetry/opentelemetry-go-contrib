@@ -20,7 +20,7 @@
 
 * @open-telemetry/go-approvers
 
-CODEOWNERS @MrAlias @MadVikingGod @pellared
+CODEOWNERS @MrAlias @MadVikingGod @pellared @dashpole
 
 bridges/prometheus/                                                     @open-telemetry/go-approvers @dashpole
 
