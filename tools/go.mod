@@ -5,7 +5,7 @@ go 1.21
 exclude github.com/blizzy78/varnamelen v0.6.1
 
 require (
-	github.com/atombender/go-jsonschema v0.14.1
+	github.com/atombender/go-jsonschema v0.15.0
 	github.com/client9/misspell v0.3.4
 	github.com/golangci/golangci-lint v1.55.2
 	github.com/jcchavezs/porto v0.6.0
@@ -14,7 +14,7 @@ require (
 	go.opentelemetry.io/build-tools/dbotconf v0.12.0
 	go.opentelemetry.io/build-tools/gotmpl v0.12.0
 	go.opentelemetry.io/build-tools/multimod v0.12.0
-	golang.org/x/exp v0.0.0-20231006140011-7918f672742d
+	golang.org/x/exp v0.0.0-20240112132812-db7319d0e0e3
 	golang.org/x/tools v0.17.0
 	golang.org/x/vuln v1.0.1
 )
@@ -173,7 +173,7 @@ require (
 	github.com/sourcegraph/go-diff v0.7.0 // indirect
 	github.com/spf13/afero v1.9.5 // indirect
 	github.com/spf13/cast v1.5.1 // indirect
-	github.com/spf13/cobra v1.7.0 // indirect
+	github.com/spf13/cobra v1.8.0 // indirect
 	github.com/spf13/jwalterweatherman v1.1.0 // indirect
 	github.com/spf13/pflag v1.0.5 // indirect
 	github.com/spf13/viper v1.16.0 // indirect
