@@ -33,7 +33,7 @@ type config struct {
 
 // Filter is a predicate used to determine whether a given http.request should
 // be traced. A Filter must return true if the request should be traced.
-type Filter func(*http.request) bool
+type Filter func(*http.Request) bool
 
 // SpanNameFormatter is used to set span name by http.request.
 type SpanNameFormatter func(r *http.Request) string
