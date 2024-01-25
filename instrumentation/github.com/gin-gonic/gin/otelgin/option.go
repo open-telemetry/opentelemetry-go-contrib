@@ -31,9 +31,9 @@ type config struct {
 	SpanNameFormatter SpanNameFormatter
 }
 
-// Filter is a predicate used to determine whether a given gin.Context should
+// Filter is a predicate used to determine whether a given http.request should
 // be traced. A Filter must return true if the request should be traced.
-type Filter func(*gin.Context) bool
+type Filter func(*http.request) bool
 
 // SpanNameFormatter is used to set span name by http.request.
 type SpanNameFormatter func(r *http.Request) string
