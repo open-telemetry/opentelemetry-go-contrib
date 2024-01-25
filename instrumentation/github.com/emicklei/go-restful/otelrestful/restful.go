@@ -20,11 +20,12 @@ import (
 	"go.opentelemetry.io/contrib/instrumentation/github.com/emicklei/go-restful/otelrestful/internal/semconvutil"
 	"go.opentelemetry.io/otel"
 	"go.opentelemetry.io/otel/propagation"
-	semconv "go.opentelemetry.io/otel/semconv/v1.17.0"
+	semconv "go.opentelemetry.io/otel/semconv/v1.20.0"
 	oteltrace "go.opentelemetry.io/otel/trace"
 )
 
-const tracerName = "go.opentelemetry.io/contrib/instrumentation/github.com/emicklei/go-restful/otelrestful"
+// ScopeName is the instrumentation scope name.
+const ScopeName = "go.opentelemetry.io/contrib/instrumentation/github.com/emicklei/go-restful/otelrestful"
 
 // OTelFilter returns a restful.FilterFunction which will trace an incoming request.
 //
@@ -40,7 +41,7 @@ func OTelFilter(service string, opts ...Option) restful.FilterFunction {
 		cfg.TracerProvider = otel.GetTracerProvider()
 	}
 	tracer := cfg.TracerProvider.Tracer(
-		tracerName,
+		ScopeName,
 		oteltrace.WithInstrumentationVersion(Version()),
 	)
 	if cfg.Propagators == nil {

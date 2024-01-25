@@ -40,20 +40,24 @@ Changes should be made using [the GitHub flow](https://guides.github.com/introdu
 
 A pull request is considered ready to merge when the following criteria are meet.
 
-* It has received two approvals from Approvers/Maintainers (at different companies).
+* It has received two approvals from Approvers/Maintainers (at different companies), unless the change is for an exempt module[^1].
 * All feedback has been addressed. Be sure to "Resolve" all comments that have been addressed to signal this.
 * Any substantive changes submitted after an Approval removes that Approval.
   You will need to manually clear these prior Approval reviews to indicate to the reviewer that they need to resubmit their review.
   This includes changes resulting from other feedback.
   Unless the approver explicitly stated that their approval will persist across changes it should be assumed that the pull request needs their review again.
   Other project members (e.g. approvers, maintainers) can help with this if there are any questions or if you forget to clear reviews.
-* If the changes are not trivial, cosmetic, or for documentation or dependencies only, the pull request will need to be open for review for at least one working day.
+* If the changes are not trivial, cosmetic, exempt[^1], or for documentation or dependencies only, the pull request will need to be open for review for at least one working day.
   This gives people reasonable time to review.
 * `CHANGELOG.md` has been updated to reflect what has been added, changed, removed, or fixed from the end users perspective.
   See [how to keep a changelog](https://keepachangelog.com/en/1.0.0/).
 * Urgent fixes can take exception as long as it has been actively communicated.
 
 Any Maintainer can merge the pull request once it is ready to merge.
+
+[^1]: The `go.opentelemetry.io/contrib/instrgen` module is exempt from the two approvals and one day requirement.
+  Only one approval is needed to merge a Pull Request for that module and there is no minimum amout of time required for the PR to be open before merging.
+  This exemption is to be removed when that package makes its first tagged release.
 
 ### Draft Pull Requests
 
@@ -76,13 +80,13 @@ Approvers:
 - [Evan Torrie](https://github.com/evantorrie), Verizon Media
 - [Josh MacDonald](https://github.com/jmacd), LightStep
 - [Sam Xie](https://github.com/XSAM), Cisco/AppDynamics
-- [David Ashpole](https://github.com/dashpole), Google
 - [Chester Cheung](https://github.com/hanyuancheung), Tencent
 - [Damien Mathieu](https://github.com/dmathieu), Elastic
 - [Anthony Mirabella](https://github.com/Aneurysm9), Amazon
 
 Maintainers:
 
+- [David Ashpole](https://github.com/dashpole), Google
 - [Aaron Clawson](https://github.com/MadVikingGod), LightStep
 - [Robert Pająk](https://github.com/pellared), Splunk
 - [Tyler Yahn](https://github.com/MrAlias), Splunk

@@ -40,6 +40,7 @@ import (
 	"google.golang.org/grpc"
 	grpc_codes "google.golang.org/grpc/codes"
 	"google.golang.org/grpc/credentials/insecure"
+	"google.golang.org/grpc/interop"
 	"google.golang.org/grpc/interop/grpc_testing"
 	"google.golang.org/grpc/metadata"
 	"google.golang.org/grpc/status"
@@ -92,19 +93,23 @@ func TestUnaryClientInterceptor(t *testing.T) {
 
 	sr := tracetest.NewSpanRecorder()
 	tp := trace.NewTracerProvider(trace.WithSpanProcessor(sr))
+	//nolint:staticcheck // Interceptors are deprecated and will be removed in the next release.
 	unaryInterceptor := otelgrpc.UnaryClientInterceptor(
 		otelgrpc.WithTracerProvider(tp),
 		otelgrpc.WithMessageEvents(otelgrpc.ReceivedEvents, otelgrpc.SentEvents),
 		otelgrpc.WithSpanOptions(oteltrace.WithAttributes(attribute.Bool("custom", true))),
 	)
+	//nolint:staticcheck // Interceptors are deprecated and will be removed in the next release.
 	unaryInterceptorOnlySentEvents := otelgrpc.UnaryClientInterceptor(
 		otelgrpc.WithTracerProvider(tp),
 		otelgrpc.WithMessageEvents(otelgrpc.SentEvents),
 	)
+	//nolint:staticcheck // Interceptors are deprecated and will be removed in the next release.
 	unaryInterceptorOnlyReceivedEvents := otelgrpc.UnaryClientInterceptor(
 		otelgrpc.WithTracerProvider(tp),
 		otelgrpc.WithMessageEvents(otelgrpc.ReceivedEvents),
 	)
+	//nolint:staticcheck // Interceptors are deprecated and will be removed in the next release.
 	unaryInterceptorNoEvents := otelgrpc.UnaryClientInterceptor(
 		otelgrpc.WithTracerProvider(tp),
 	)
@@ -405,6 +410,7 @@ func createInterceptedStreamClient(t *testing.T, method string, opts clientStrea
 	if len(opts.Events) > 0 {
 		interceptorOpts = append(interceptorOpts, otelgrpc.WithMessageEvents(opts.Events...))
 	}
+	//nolint:staticcheck // Interceptors are deprecated and will be removed in the next release.
 	streamCI := otelgrpc.StreamClientInterceptor(interceptorOpts...)
 
 	streamClient, err := streamCI(
@@ -651,6 +657,7 @@ func TestStreamClientInterceptorCancelContext(t *testing.T) {
 	// tracer
 	sr := tracetest.NewSpanRecorder()
 	tp := trace.NewTracerProvider(trace.WithSpanProcessor(sr))
+	//nolint:staticcheck // Interceptors are deprecated and will be removed in the next release.
 	streamCI := otelgrpc.StreamClientInterceptor(
 		otelgrpc.WithTracerProvider(tp),
 		otelgrpc.WithMessageEvents(otelgrpc.ReceivedEvents, otelgrpc.SentEvents),
@@ -714,6 +721,7 @@ func TestStreamClientInterceptorWithError(t *testing.T) {
 	// tracer
 	sr := tracetest.NewSpanRecorder()
 	tp := trace.NewTracerProvider(trace.WithSpanProcessor(sr))
+	//nolint:staticcheck // Interceptors are deprecated and will be removed in the next release.
 	streamCI := otelgrpc.StreamClientInterceptor(
 		otelgrpc.WithTracerProvider(tp),
 		otelgrpc.WithMessageEvents(otelgrpc.ReceivedEvents, otelgrpc.SentEvents),
@@ -877,6 +885,7 @@ func TestUnaryServerInterceptor(t *testing.T) {
 			mr := metric.NewManualReader()
 			mp := metric.NewMeterProvider(metric.WithReader(mr))
 
+			//nolint:staticcheck // Interceptors are deprecated and will be removed in the next release.
 			usi := otelgrpc.UnaryServerInterceptor(
 				otelgrpc.WithTracerProvider(tp),
 				otelgrpc.WithMeterProvider(mp),
@@ -937,6 +946,7 @@ func TestUnaryServerInterceptorEvents(t *testing.T) {
 			if len(testCase.Events) > 0 {
 				opts = append(opts, otelgrpc.WithMessageEvents(testCase.Events...))
 			}
+			//nolint:staticcheck // Interceptors are deprecated and will be removed in the next release.
 			usi := otelgrpc.UnaryServerInterceptor(opts...)
 			grpcCode := grpc_codes.OK
 			name := grpcCode.String()
@@ -998,6 +1008,7 @@ func TestStreamServerInterceptor(t *testing.T) {
 			sr := tracetest.NewSpanRecorder()
 			tp := trace.NewTracerProvider(trace.WithSpanProcessor(sr))
 
+			//nolint:staticcheck // Interceptors are deprecated and will be removed in the next release.
 			usi := otelgrpc.StreamServerInterceptor(
 				otelgrpc.WithTracerProvider(tp),
 			)
@@ -1039,6 +1050,7 @@ func TestStreamServerInterceptorEvents(t *testing.T) {
 			if len(testCase.Events) > 0 {
 				opts = append(opts, otelgrpc.WithMessageEvents(testCase.Events...))
 			}
+			//nolint:staticcheck // Interceptors are deprecated and will be removed in the next release.
 			usi := otelgrpc.StreamServerInterceptor(opts...)
 			stream := &mockServerStream{}
 
@@ -1095,9 +1107,9 @@ func assertServerMetrics(t *testing.T, reader metric.Reader, serviceName, name s
 				Name:        "rpc.server.duration",
 				Description: "Measures the duration of inbound RPC.",
 				Unit:        "ms",
-				Data: metricdata.Histogram[int64]{
+				Data: metricdata.Histogram[float64]{
 					Temporality: metricdata.CumulativeTemporality,
-					DataPoints: []metricdata.HistogramDataPoint[int64]{
+					DataPoints: []metricdata.HistogramDataPoint[float64]{
 						{
 							Attributes: attribute.NewSet(
 								semconv.RPCMethod(name),
@@ -1116,4 +1128,21 @@ func assertServerMetrics(t *testing.T, reader metric.Reader, serviceName, name s
 	assert.NoError(t, err)
 	require.Len(t, rm.ScopeMetrics, 1)
 	metricdatatest.AssertEqual(t, want, rm.ScopeMetrics[0], metricdatatest.IgnoreTimestamp(), metricdatatest.IgnoreValue())
+}
+
+func BenchmarkStreamClientInterceptor(b *testing.B) {
+	listener, err := net.Listen("tcp", "127.0.0.1:0")
+	require.NoError(b, err, "failed to open port")
+	client := newGrpcTest(b, listener,
+		[]grpc.DialOption{
+			//nolint:staticcheck // Interceptors are deprecated and will be removed in the next release.
+			grpc.WithStreamInterceptor(otelgrpc.StreamClientInterceptor()),
+		},
+		[]grpc.ServerOption{},
+	)
+
+	b.ResetTimer()
+	for i := 0; i < b.N; i++ {
+		interop.DoClientStreaming(client)
+	}
 }

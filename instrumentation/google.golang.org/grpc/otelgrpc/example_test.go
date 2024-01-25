@@ -20,18 +20,10 @@ import (
 	"go.opentelemetry.io/contrib/instrumentation/google.golang.org/grpc/otelgrpc"
 )
 
-func ExampleStreamClientInterceptor() {
-	_, _ = grpc.Dial("localhost", grpc.WithStreamInterceptor(otelgrpc.StreamClientInterceptor()))
+func ExampleNewClientHandler() {
+	_, _ = grpc.Dial("localhost", grpc.WithStatsHandler(otelgrpc.NewClientHandler()))
 }
 
-func ExampleUnaryClientInterceptor() {
-	_, _ = grpc.Dial("localhost", grpc.WithUnaryInterceptor(otelgrpc.UnaryClientInterceptor()))
-}
-
-func ExampleStreamServerInterceptor() {
-	_ = grpc.NewServer(grpc.StreamInterceptor(otelgrpc.StreamServerInterceptor()))
-}
-
-func ExampleUnaryServerInterceptor() {
-	_ = grpc.NewServer(grpc.UnaryInterceptor(otelgrpc.UnaryServerInterceptor()))
+func ExampleNewServerHandler() {
+	_ = grpc.NewServer(grpc.StatsHandler(otelgrpc.NewServerHandler()))
 }

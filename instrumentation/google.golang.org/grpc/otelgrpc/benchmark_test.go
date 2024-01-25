@@ -26,12 +26,12 @@ import (
 	"google.golang.org/grpc/test/bufconn"
 
 	"go.opentelemetry.io/contrib/instrumentation/google.golang.org/grpc/otelgrpc"
-	"go.opentelemetry.io/otel/trace"
+	"go.opentelemetry.io/otel/trace/noop"
 )
 
 const bufSize = 2048
 
-var tracerProvider = trace.NewNoopTracerProvider()
+var tracerProvider = noop.NewTracerProvider()
 
 func benchmark(b *testing.B, cOpt []grpc.DialOption, sOpt []grpc.ServerOption) {
 	l := bufconn.Listen(bufSize)

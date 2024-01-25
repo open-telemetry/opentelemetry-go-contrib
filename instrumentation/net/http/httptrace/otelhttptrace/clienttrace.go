@@ -25,9 +25,12 @@ import (
 	"go.opentelemetry.io/otel"
 	"go.opentelemetry.io/otel/attribute"
 	"go.opentelemetry.io/otel/codes"
-	semconv "go.opentelemetry.io/otel/semconv/v1.17.0"
+	semconv "go.opentelemetry.io/otel/semconv/v1.20.0"
 	"go.opentelemetry.io/otel/trace"
 )
+
+// ScopeName is the instrumentation scope name.
+const ScopeName = "go.opentelemetry.io/otel/instrumentation/httptrace"
 
 // HTTP attributes.
 var (
@@ -169,7 +172,7 @@ func NewClientTrace(ctx context.Context, opts ...ClientTraceOption) *httptrace.C
 	}
 
 	ct.tr = ct.tracerProvider.Tracer(
-		"go.opentelemetry.io/otel/instrumentation/httptrace",
+		ScopeName,
 		trace.WithInstrumentationVersion(Version()),
 	)
 

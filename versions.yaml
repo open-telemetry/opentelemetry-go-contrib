@@ -14,7 +14,7 @@
 
 module-sets:
   stable-v1:
-    version: v1.20.0
+    version: v1.22.0
     modules:
       - go.opentelemetry.io/contrib
       - go.opentelemetry.io/contrib/tools
@@ -27,7 +27,7 @@ module-sets:
       - go.opentelemetry.io/contrib/detectors/aws/ecs
       - go.opentelemetry.io/contrib/detectors/aws/eks
   experimental-instrumentation:
-    version: v0.45.0
+    version: v0.47.0
     modules:
       - go.opentelemetry.io/contrib/bridges/prometheus
       - go.opentelemetry.io/contrib/detectors/aws/lambda
@@ -70,21 +70,24 @@ module-sets:
       - go.opentelemetry.io/contrib/instrumentation/github.com/emicklei/go-restful/otelrestful/test
       - go.opentelemetry.io/contrib/zpages
   experimental-metrics:
-    version: v0.45.0
+    version: v0.47.0
     modules:
       - go.opentelemetry.io/contrib/instrumentation/host
       - go.opentelemetry.io/contrib/instrumentation/host/example
       - go.opentelemetry.io/contrib/instrumentation/runtime
       - go.opentelemetry.io/contrib/instrumentation/runtime/example
   experimental-samplers:
-    version: v0.14.0
+    version: v0.16.0
     modules:
       - go.opentelemetry.io/contrib/samplers/aws/xray
       - go.opentelemetry.io/contrib/samplers/jaegerremote
       - go.opentelemetry.io/contrib/samplers/jaegerremote/example
       - go.opentelemetry.io/contrib/samplers/probability/consistent
+  experimental-config:
+    version: v0.2.0
+    modules:
+      - go.opentelemetry.io/contrib/config
 excluded-modules:
-  - go.opentelemetry.io/contrib/config
   - go.opentelemetry.io/contrib/instrgen
   - go.opentelemetry.io/contrib/instrgen/driver
   - go.opentelemetry.io/contrib/instrgen/testdata/interface

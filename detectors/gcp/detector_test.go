@@ -17,20 +17,18 @@ package gcp // import "go.opentelemetry.io/contrib/detectors/gcp"
 import (
 	"context"
 	"fmt"
-	"os"
 	"testing"
 
 	"github.com/GoogleCloudPlatform/opentelemetry-operations-go/detectors/gcp"
 	"github.com/stretchr/testify/assert"
 
 	"go.opentelemetry.io/otel/sdk/resource"
-	semconv "go.opentelemetry.io/otel/semconv/v1.21.0"
+	semconv "go.opentelemetry.io/otel/semconv/v1.24.0"
 )
 
 func TestDetect(t *testing.T) {
 	// Set this before all tests to ensure metadata.onGCE() returns true
-	err := os.Setenv("GCE_METADATA_HOST", "169.254.169.254")
-	assert.NoError(t, err)
+	t.Setenv("GCE_METADATA_HOST", "169.254.169.254")
 
 	for _, tc := range []struct {
 		desc             string
