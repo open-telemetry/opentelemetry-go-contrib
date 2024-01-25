@@ -235,7 +235,7 @@ func TestWithFilter(t *testing.T) {
 		otel.SetTracerProvider(sdktrace.NewTracerProvider(sdktrace.WithSpanProcessor(sr)))
 
 		router := gin.New()
-		f := func(req *gin.Context) bool { return c.Request.URL.Path != "/healthcheck" }
+		f := func(req *http.Request) bool { return req.URL.Path != "/healthcheck" }
 		router.Use(otelgin.Middleware("foobar", otelgin.WithFilter(f)))
 		router.GET("/healthcheck", func(c *gin.Context) {})
 
@@ -251,7 +251,7 @@ func TestWithFilter(t *testing.T) {
 		otel.SetTracerProvider(sdktrace.NewTracerProvider(sdktrace.WithSpanProcessor(sr)))
 
 		router := gin.New()
-		f := func(req *gin.Context) bool { return c.Request.URL.Path != "/healthcheck" }
+		f := func(req *http.Request) bool { return req.URL.Path != "/healthcheck" }
 		router.Use(otelgin.Middleware("foobar", otelgin.WithFilter(f)))
 		router.GET("/user/:id", func(c *gin.Context) {})
 
