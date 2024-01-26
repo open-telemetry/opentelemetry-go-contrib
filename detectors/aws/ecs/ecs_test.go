@@ -154,7 +154,6 @@ func TestDetectCannotReadContainerID(t *testing.T) {
 // returns empty resource when detector cannot read container Name.
 func TestDetectCannotReadContainerName(t *testing.T) {
 	t.Setenv(metadataV3EnvVar, "3")
-	t.Setenv(metadataV4EnvVar, "4")
 	detectorUtils := new(MockDetectorUtils)
 
 	detectorUtils.On("getContainerName").Return("", errCannotReadContainerName)
