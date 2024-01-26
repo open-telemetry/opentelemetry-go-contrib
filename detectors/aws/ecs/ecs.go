@@ -239,34 +239,32 @@ func (detector *resourceDetector) getLogsAttributes(metadata *ecsmetadata.Contai
 	}, nil
 }
 
-// returns the AWS account ID from an ARN
+// returns the AWS account ID from an ARN.
 func (detector *resourceDetector) getAccountID(arn string) (string, error) {
 	arnParts := strings.Split(arn, ":")
 	// a valid arn should have at least 6 parts
 	if len(arnParts) < 6 {
 		return "", errCannotRetrieveAccountID
-	} else {
-		return arnParts[4], nil
 	}
+	return arnParts[4], nil
 }
 
-// returns the AWS region from an ARN
+// returns the AWS region from an ARN.
 func (detector *resourceDetector) getRegion(arn string) (string, error) {
 	arnParts := strings.Split(arn, ":")
 	// a valid arn should have at least 6 parts
 	if len(arnParts) < 6 {
 		return "", errCannotRetrieveRegion
-	} else {
-		return arnParts[3], nil
 	}
+	return arnParts[3], nil
 }
 
-// returns metadata v4 for the container
+// returns metadata v4 for the container.
 func (ecsUtils ecsDetectorUtils) getContainerMetadataV4(ctx context.Context) (*ecsmetadata.ContainerMetadataV4, error) {
 	return ecsmetadata.GetContainerV4(ctx, &http.Client{})
 }
 
-// returns metadata v4 for the task
+// returns metadata v4 for the task.
 func (ecsUtils ecsDetectorUtils) getTaskMetadataV4(ctx context.Context) (*ecsmetadata.TaskMetadataV4, error) {
 	return ecsmetadata.GetTaskV4(ctx, &http.Client{})
 }
