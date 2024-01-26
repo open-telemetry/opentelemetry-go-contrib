@@ -111,6 +111,24 @@ func (detector *resourceDetector) Detect(ctx context.Context) (*resource.Resourc
 			return empty, err
 		}
 
+		baseArn := detector.getBaseArn(
+			taskMetadata.TaskARN,
+			containerMetadata.ContainerARN,
+			taskMetadata.Cluster,
+		)
+
+		if baseArn != "" {
+			if !strings.HasPrefix(taskMetadata.Cluster, "arn:") {
+				taskMetadata.Cluster = fmt.Sprintf("%s:cluster/%s", baseArn, taskMetadata.Cluster)
+			}
+			if !strings.HasPrefix(containerMetadata.ContainerARN, "arn:") {
+				containerMetadata.ContainerARN = fmt.Sprintf("%s:container/%s", baseArn, containerMetadata.ContainerARN)
+			}
+			if !strings.HasPrefix(taskMetadata.TaskARN, "arn:") {
+				taskMetadata.TaskARN = fmt.Sprintf("%s:task/%s", baseArn, taskMetadata.TaskARN)
+			}
+		}
+
 		if accountId, err := detector.getAccountID(taskMetadata.TaskARN); err == nil {
 			attributes = append(
 				attributes,
@@ -131,24 +149,6 @@ func (detector *resourceDetector) Detect(ctx context.Context) (*resource.Resourc
 				attributes,
 				semconv.CloudAvailabilityZone(availabilityZone),
 			)
-		}
-
-		baseArn := detector.getBaseArn(
-			taskMetadata.TaskARN,
-			containerMetadata.ContainerARN,
-			taskMetadata.Cluster,
-		)
-
-		if baseArn != "" {
-			if !strings.HasPrefix(taskMetadata.Cluster, "arn:") {
-				taskMetadata.Cluster = fmt.Sprintf("%s:cluster/%s", baseArn, taskMetadata.Cluster)
-			}
-			if !strings.HasPrefix(containerMetadata.ContainerARN, "arn:") {
-				containerMetadata.ContainerARN = fmt.Sprintf("%s:container/%s", baseArn, containerMetadata.ContainerARN)
-			}
-			if !strings.HasPrefix(taskMetadata.TaskARN, "arn:") {
-				taskMetadata.TaskARN = fmt.Sprintf("%s:task/%s", baseArn, taskMetadata.TaskARN)
-			}
 		}
 
 		logAttributes, err := detector.getLogsAttributes(containerMetadata)

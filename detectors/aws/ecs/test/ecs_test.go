@@ -185,6 +185,8 @@ func TestDetectV4LaunchTypeEc2BadTaskArn(t *testing.T) {
 		semconv.CloudProviderAWS,
 		semconv.CloudPlatformAWSECS,
 		semconv.ContainerName(hostname),
+		semconv.CloudAccountID("111122223333"),
+		semconv.CloudRegion("us-west-2"),
 		semconv.CloudAvailabilityZone("us-west-2d"),
 		// We are not running the test in an actual container,
 		// the container id is tested with mocks of the cgroup
