@@ -80,13 +80,13 @@ Approvers:
 - [Evan Torrie](https://github.com/evantorrie), Verizon Media
 - [Josh MacDonald](https://github.com/jmacd), LightStep
 - [Sam Xie](https://github.com/XSAM), Cisco/AppDynamics
-- [David Ashpole](https://github.com/dashpole), Google
 - [Chester Cheung](https://github.com/hanyuancheung), Tencent
 - [Damien Mathieu](https://github.com/dmathieu), Elastic
 - [Anthony Mirabella](https://github.com/Aneurysm9), Amazon
 
 Maintainers:
 
+- [David Ashpole](https://github.com/dashpole), Google
 - [Aaron Clawson](https://github.com/MadVikingGod), LightStep
 - [Robert Pająk](https://github.com/pellared), Splunk
 - [Tyler Yahn](https://github.com/MrAlias), Splunk

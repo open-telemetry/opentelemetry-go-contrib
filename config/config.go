@@ -11,6 +11,14 @@ import (
 	"go.opentelemetry.io/otel/trace"
 )
 
+const (
+	protocolProtobufHTTP = "http/protobuf"
+	protocolProtobufGRPC = "grpc/protobuf"
+
+	compressionGzip = "gzip"
+	compressionNone = "none"
+)
+
 type configOptions struct {
 	ctx                 context.Context
 	opentelemetryConfig OpenTelemetryConfiguration
@@ -54,8 +62,16 @@ func NewSDK(opts ...ConfigurationOption) (SDK, error) {
 		o = opt.apply(o)
 	}
 
+	r, err := newResource(o.opentelemetryConfig.Resource)
+	if err != nil {
+		return SDK{}, err
+	}
+
 	mp, mpShutdown := initMeterProvider(o)
-	tp, tpShutdown := initTracerProvider(o)
+	tp, tpShutdown, err := tracerProvider(o, r)
+	if err != nil {
+		return SDK{}, err
+	}
 
 	return SDK{
 		meterProvider:  mp,

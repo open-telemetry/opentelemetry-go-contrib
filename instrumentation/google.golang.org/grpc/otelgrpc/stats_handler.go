@@ -43,7 +43,7 @@ type serverHandler struct {
 	*config
 }
 
-// NewServerHandler creates a stats.Handler for gRPC server.
+// NewServerHandler creates a stats.Handler for a gRPC server.
 func NewServerHandler(opts ...Option) stats.Handler {
 	h := &serverHandler{
 		config: newConfig(opts, "server"),
@@ -54,9 +54,6 @@ func NewServerHandler(opts ...Option) stats.Handler {
 
 // TagConn can attach some information to the given context.
 func (h *serverHandler) TagConn(ctx context.Context, info *stats.ConnTagInfo) context.Context {
-	span := trace.SpanFromContext(ctx)
-	attrs := peerAttr(peerFromCtx(ctx))
-	span.SetAttributes(attrs...)
 	return ctx
 }
 
@@ -93,7 +90,7 @@ type clientHandler struct {
 	*config
 }
 
-// NewClientHandler creates a stats.Handler for gRPC client.
+// NewClientHandler creates a stats.Handler for a gRPC client.
 func NewClientHandler(opts ...Option) stats.Handler {
 	h := &clientHandler{
 		config: newConfig(opts, "client"),
@@ -127,10 +124,7 @@ func (h *clientHandler) HandleRPC(ctx context.Context, rs stats.RPCStats) {
 }
 
 // TagConn can attach some information to the given context.
-func (h *clientHandler) TagConn(ctx context.Context, cti *stats.ConnTagInfo) context.Context {
-	span := trace.SpanFromContext(ctx)
-	attrs := peerAttr(cti.RemoteAddr.String())
-	span.SetAttributes(attrs...)
+func (h *clientHandler) TagConn(ctx context.Context, info *stats.ConnTagInfo) context.Context {
 	return ctx
 }
 
@@ -141,18 +135,21 @@ func (h *clientHandler) HandleConn(context.Context, stats.ConnStats) {
 
 func (c *config) handleRPC(ctx context.Context, rs stats.RPCStats, isServer bool) { // nolint: revive  // isServer is not a control flag.
 	span := trace.SpanFromContext(ctx)
-	gctx, _ := ctx.Value(gRPCContextKey{}).(*gRPCContext)
+	var metricAttrs []attribute.KeyValue
 	var messageId int64
-	metricAttrs := make([]attribute.KeyValue, 0, len(gctx.metricAttrs)+1)
-	metricAttrs = append(metricAttrs, gctx.metricAttrs...)
-	wctx := withoutCancel(ctx)
+
+	gctx, _ := ctx.Value(gRPCContextKey{}).(*gRPCContext)
+	if gctx != nil {
+		metricAttrs = make([]attribute.KeyValue, 0, len(gctx.metricAttrs)+1)
+		metricAttrs = append(metricAttrs, gctx.metricAttrs...)
+	}
 
 	switch rs := rs.(type) {
 	case *stats.Begin:
 	case *stats.InPayload:
 		if gctx != nil {
 			messageId = atomic.AddInt64(&gctx.messagesReceived, 1)
-			c.rpcRequestSize.Record(wctx, int64(rs.Length), metric.WithAttributes(metricAttrs...))
+			c.rpcRequestSize.Record(ctx, int64(rs.Length), metric.WithAttributes(metricAttrs...))
 		}
 
 		if c.ReceivedEvent {
@@ -168,7 +165,7 @@ func (c *config) handleRPC(ctx context.Context, rs stats.RPCStats, isServer bool
 	case *stats.OutPayload:
 		if gctx != nil {
 			messageId = atomic.AddInt64(&gctx.messagesSent, 1)
-			c.rpcResponseSize.Record(wctx, int64(rs.Length), metric.WithAttributes(metricAttrs...))
+			c.rpcResponseSize.Record(ctx, int64(rs.Length), metric.WithAttributes(metricAttrs...))
 		}
 
 		if c.SentEvent {
@@ -205,41 +202,12 @@ func (c *config) handleRPC(ctx context.Context, rs stats.RPCStats, isServer bool
 		// Use floating point division here for higher precision (instead of Millisecond method).
 		elapsedTime := float64(rs.EndTime.Sub(rs.BeginTime)) / float64(time.Millisecond)
 
-		c.rpcDuration.Record(wctx, elapsedTime, metric.WithAttributes(metricAttrs...))
-		c.rpcRequestsPerRPC.Record(wctx, atomic.LoadInt64(&gctx.messagesReceived), metric.WithAttributes(metricAttrs...))
-		c.rpcResponsesPerRPC.Record(wctx, atomic.LoadInt64(&gctx.messagesSent), metric.WithAttributes(metricAttrs...))
+		c.rpcDuration.Record(ctx, elapsedTime, metric.WithAttributes(metricAttrs...))
+		if gctx != nil {
+			c.rpcRequestsPerRPC.Record(ctx, atomic.LoadInt64(&gctx.messagesReceived), metric.WithAttributes(metricAttrs...))
+			c.rpcResponsesPerRPC.Record(ctx, atomic.LoadInt64(&gctx.messagesSent), metric.WithAttributes(metricAttrs...))
+		}
 	default:
 		return
 	}
-}
-
-func withoutCancel(parent context.Context) context.Context {
-	if parent == nil {
-		panic("cannot create context from nil parent")
-	}
-	return withoutCancelCtx{parent}
-}
-
-type withoutCancelCtx struct {
-	c context.Context
-}
-
-func (withoutCancelCtx) Deadline() (deadline time.Time, ok bool) {
-	return
-}
-
-func (withoutCancelCtx) Done() <-chan struct{} {
-	return nil
-}
-
-func (withoutCancelCtx) Err() error {
-	return nil
-}
-
-func (w withoutCancelCtx) Value(key any) any {
-	return w.c.Value(key)
-}
-
-func (w withoutCancelCtx) String() string {
-	return "withoutCancel"
 }
