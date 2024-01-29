@@ -11,6 +11,7 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 ### Added
 
 - Add the new `go.opentelemetry.io/contrib/instrgen` package to provide auto-generated source code instrumentation. (#3068, #3108)
+- Added new test in `go.opentelemetry.io/contrib/instrumentation/net/http/otelhttp` to validate it produces the attributes according to the semantic conventions. (#4701)
 
 ## [1.22.0/0.47.0/0.16.0/0.2.0] - 2024-01-18
 
