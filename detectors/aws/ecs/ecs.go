@@ -129,7 +129,7 @@ func (detector *resourceDetector) Detect(ctx context.Context) (*resource.Resourc
 		}
 
 		arnParts := strings.Split(taskMetadata.TaskARN, ":")
-		// a valid arn should have at least 6 parts
+		// A valid ARN should have at least 6 parts.
 		if len(arnParts) < 6 {
 			return empty, errCannotParseTaskArn
 		}
