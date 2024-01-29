@@ -13,9 +13,9 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 - Add the new `go.opentelemetry.io/contrib/instrgen` package to provide auto-generated source code instrumentation. (#3068, #3108)
 - Add client metric support to `go.opentelemetry.io/contrib/instrumentation/net/http/otelhttp`. (#4707)
 
-### Removed 
+### Deprecated
 
-- Remove `RequestCount`, `RequestContentLength`, `ResponseContentLength`, `ServerLatency` constants from `go.opentelemetry.io/contrib/instrumentation/net/http/otelhttp`. (#4707)
+- The `RequestCount`, `RequestContentLength`, `ResponseContentLength`, `ServerLatency` constants in `go.opentelemetry.io/contrib/instrumentation/net/http/otelhttp` are deprecated. (#4707)
 
 ## [1.22.0/0.47.0/0.16.0/0.2.0] - 2024-01-18
 
