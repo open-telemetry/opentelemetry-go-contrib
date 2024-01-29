@@ -42,8 +42,7 @@ const (
 var (
 	empty                                 = resource.Empty()
 	errCannotReadContainerName            = errors.New("failed to read hostname")
-	errCannotRetrieveAccountID            = errors.New("cannot parse the account ID from the ARN")
-	errCannotRetrieveRegion               = errors.New("cannot parse the region from the ARN")
+	errCannotParseTaskArn                 = errors.New("cannot parse region and account ID from the Task's ARN")
 	errCannotRetrieveLogsGroupMetadataV4  = errors.New("the ECS Metadata v4 did not return a AwsLogGroup name")
 	errCannotRetrieveLogsStreamMetadataV4 = errors.New("the ECS Metadata v4 did not return a AwsLogStream name")
 )
@@ -129,24 +128,16 @@ func (detector *resourceDetector) Detect(ctx context.Context) (*resource.Resourc
 			}
 		}
 
-		accountId, err := detector.getAccountID(taskMetadata.TaskARN)
-		if err != nil {
-			return empty, err
+		arnParts := strings.Split(taskMetadata.TaskARN, ":")
+		// a valid arn should have at least 6 parts
+		if len(arnParts) < 6 {
+			return empty, errCannotParseTaskArn
 		}
 
 		attributes = append(
 			attributes,
-			semconv.CloudAccountID(accountId),
-		)
-
-		region, err := detector.getRegion(taskMetadata.TaskARN)
-		if err != nil {
-			return empty, err
-		}
-
-		attributes = append(
-			attributes,
-			semconv.CloudRegion(region),
+			semconv.CloudRegion(arnParts[3]),
+			semconv.CloudAccountID(arnParts[4]),
 		)
 
 		availabilityZone := taskMetadata.AvailabilityZone
@@ -239,26 +230,6 @@ func (detector *resourceDetector) getLogsAttributes(metadata *ecsmetadata.Contai
 		semconv.AWSLogStreamNames(logsOptions.AwsLogsStream),
 		semconv.AWSLogStreamARNs(awsLogStreamArn),
 	}, nil
-}
-
-// returns the AWS account ID from an ARN.
-func (detector *resourceDetector) getAccountID(arn string) (string, error) {
-	arnParts := strings.Split(arn, ":")
-	// a valid arn should have at least 6 parts
-	if len(arnParts) < 6 {
-		return "", errCannotRetrieveAccountID
-	}
-	return arnParts[4], nil
-}
-
-// returns the AWS region from an ARN.
-func (detector *resourceDetector) getRegion(arn string) (string, error) {
-	arnParts := strings.Split(arn, ":")
-	// a valid arn should have at least 6 parts
-	if len(arnParts) < 6 {
-		return "", errCannotRetrieveRegion
-	}
-	return arnParts[3], nil
 }
 
 // returns metadata v4 for the container.
