@@ -129,19 +129,25 @@ func (detector *resourceDetector) Detect(ctx context.Context) (*resource.Resourc
 			}
 		}
 
-		if accountId, err := detector.getAccountID(taskMetadata.TaskARN); err == nil {
-			attributes = append(
-				attributes,
-				semconv.CloudAccountID(accountId),
-			)
+		accountId, err := detector.getAccountID(taskMetadata.TaskARN)
+		if err != nil {
+			return empty, err
 		}
 
-		if region, err := detector.getRegion(taskMetadata.TaskARN); err == nil {
-			attributes = append(
-				attributes,
-				semconv.CloudRegion(region),
-			)
+		attributes = append(
+			attributes,
+			semconv.CloudAccountID(accountId),
+		)
+
+		region, err := detector.getRegion(taskMetadata.TaskARN)
+		if err != nil {
+			return empty, err
 		}
+
+		attributes = append(
+			attributes,
+			semconv.CloudRegion(region),
+		)
 
 		availabilityZone := taskMetadata.AvailabilityZone
 		if len(availabilityZone) > 0 {
