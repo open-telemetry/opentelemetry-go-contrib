@@ -20,7 +20,6 @@
 //
 // Limitations:
 //   - Summary metrics are dropped by the bridge.
-//   - Start times for histograms and counters are set to the process start time.
 //   - Prometheus histograms are translated to OpenTelemetry fixed-bucket
 //     histograms, rather than exponential histograms.
 //
