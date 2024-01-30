@@ -127,6 +127,38 @@ func TestDetectV4(t *testing.T) {
 	assert.Equal(t, expectedResource, res, "Resource returned is incorrect")
 }
 
+// returns empty resource when detector receives a bad task ARN from the Metadata v4 endpoint.
+func TestDetectBadARNsv4(t *testing.T) {
+	t.Setenv(metadataV4EnvVar, "4")
+
+	detectorUtils := new(MockDetectorUtils)
+
+	detectorUtils.On("getContainerName").Return("container-Name", nil)
+	detectorUtils.On("getContainerID").Return("0123456789A", nil)
+	detectorUtils.On("getContainerMetadataV4").Return(&metadata.ContainerMetadataV4{
+		ContainerARN: "container/05966557-f16c-49cb-9352-24b3a0dcd0e1",
+	}, nil)
+	detectorUtils.On("getTaskMetadataV4").Return(&metadata.TaskMetadataV4{
+		Cluster:       "default",
+		TaskARN:       "default/e9028f8d5d8e4f258373e7b93ce9a3c3",
+		Family:        "curltest",
+		Revision:      "3",
+		DesiredStatus: "RUNNING",
+		KnownStatus:   "RUNNING",
+		Limits: metadata.Limits{
+			CPU:    0.25,
+			Memory: 512,
+		},
+		AvailabilityZone: "us-west-2a",
+		LaunchType:       "FARGATE",
+	}, nil)
+
+	detector := &resourceDetector{utils: detectorUtils}
+	_, err := detector.Detect(context.Background())
+
+	assert.Equal(t, errCannotParseTaskArn, err)
+}
+
 // returns empty resource when detector cannot read container ID.
 func TestDetectCannotReadContainerID(t *testing.T) {
 	t.Setenv(metadataV3EnvVar, "3")
