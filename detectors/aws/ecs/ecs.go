@@ -42,7 +42,7 @@ const (
 var (
 	empty                                 = resource.Empty()
 	errCannotReadContainerName            = errors.New("failed to read hostname")
-	errCannotParseTaskArn                 = errors.New("cannot parse region and account ID from the Task's ARN")
+	errCannotParseTaskArn                 = errors.New("cannot parse region and account ID from the Task's ARN: the ARN does not contain at least 6 segments separated by the ':' character")
 	errCannotRetrieveLogsGroupMetadataV4  = errors.New("the ECS Metadata v4 did not return a AwsLogGroup name")
 	errCannotRetrieveLogsStreamMetadataV4 = errors.New("the ECS Metadata v4 did not return a AwsLogStream name")
 )
