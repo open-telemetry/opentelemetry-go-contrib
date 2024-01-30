@@ -11,7 +11,7 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 ### Added
 
 - Add the new `go.opentelemetry.io/contrib/instrgen` package to provide auto-generated source code instrumentation. (#3068, #3108)
-- Add support for `cloud.{account.id,availability_zone,region}` in the AWS ECS detector
+- Add support for `cloud.account.id`, `cloud.availability_zone` and `cloud.region` in the AWS ECS detector
 
 ## [1.22.0/0.47.0/0.16.0/0.2.0] - 2024-01-18
 
