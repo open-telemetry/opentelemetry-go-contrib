@@ -15,12 +15,10 @@
 package otelgrpc // import "go.opentelemetry.io/contrib/instrumentation/google.golang.org/grpc/otelgrpc"
 
 import (
-	"context"
-
 	"go.opentelemetry.io/otel"
 	"go.opentelemetry.io/otel/attribute"
 	"go.opentelemetry.io/otel/metric"
-	"go.opentelemetry.io/otel/metric/embedded"
+	"go.opentelemetry.io/otel/metric/noop"
 	"go.opentelemetry.io/otel/propagation"
 	semconv "go.opentelemetry.io/otel/semconv/v1.17.0"
 	"go.opentelemetry.io/otel/trace"
@@ -93,7 +91,7 @@ func newConfig(opts []Option, role string) *config {
 	if err != nil {
 		otel.Handle(err)
 		if c.rpcDuration == nil {
-			c.rpcDuration = noopFloat64Hist{}
+			c.rpcDuration = noop.Float64Histogram{}
 		}
 	}
 
@@ -103,7 +101,7 @@ func newConfig(opts []Option, role string) *config {
 	if err != nil {
 		otel.Handle(err)
 		if c.rpcRequestSize == nil {
-			c.rpcRequestSize = noopInt64Hist{}
+			c.rpcRequestSize = noop.Int64Histogram{}
 		}
 	}
 
@@ -113,7 +111,7 @@ func newConfig(opts []Option, role string) *config {
 	if err != nil {
 		otel.Handle(err)
 		if c.rpcResponseSize == nil {
-			c.rpcResponseSize = noopInt64Hist{}
+			c.rpcResponseSize = noop.Int64Histogram{}
 		}
 	}
 
@@ -123,7 +121,7 @@ func newConfig(opts []Option, role string) *config {
 	if err != nil {
 		otel.Handle(err)
 		if c.rpcRequestsPerRPC == nil {
-			c.rpcRequestsPerRPC = noopInt64Hist{}
+			c.rpcRequestsPerRPC = noop.Int64Histogram{}
 		}
 	}
 
@@ -133,25 +131,11 @@ func newConfig(opts []Option, role string) *config {
 	if err != nil {
 		otel.Handle(err)
 		if c.rpcResponsesPerRPC == nil {
-			c.rpcResponsesPerRPC = noopInt64Hist{}
+			c.rpcResponsesPerRPC = noop.Int64Histogram{}
 		}
 	}
 
 	return c
-}
-
-type noopHist[N int64 | float64] struct{}
-
-func (noopHist[N]) Record(context.Context, N, ...metric.RecordOption) {}
-
-type noopInt64Hist struct {
-	embedded.Int64Histogram
-	noopHist[int64]
-}
-
-type noopFloat64Hist struct {
-	embedded.Float64Histogram
-	noopHist[float64]
 }
 
 type propagatorsOption struct{ p propagation.TextMapPropagator }
