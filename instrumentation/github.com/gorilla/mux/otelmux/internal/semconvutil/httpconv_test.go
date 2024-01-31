@@ -290,32 +290,6 @@ func TestFirstHostPort(t *testing.T) {
 	}
 }
 
-func TestHTTPRequestHeader(t *testing.T) {
-	ips := []string{"127.0.0.5", "127.0.0.9"}
-	user := []string{"alice"}
-	h := http.Header{"ips": ips, "user": user}
-
-	got := HTTPRequestHeader(h)
-	assert.Equal(t, 2, cap(got), "slice capacity")
-	assert.ElementsMatch(t, []attribute.KeyValue{
-		attribute.StringSlice("http.request.header.ips", ips),
-		attribute.StringSlice("http.request.header.user", user),
-	}, got)
-}
-
-func TestHTTPReponseHeader(t *testing.T) {
-	ips := []string{"127.0.0.5", "127.0.0.9"}
-	user := []string{"alice"}
-	h := http.Header{"ips": ips, "user": user}
-
-	got := HTTPResponseHeader(h)
-	assert.Equal(t, 2, cap(got), "slice capacity")
-	assert.ElementsMatch(t, []attribute.KeyValue{
-		attribute.StringSlice("http.response.header.ips", ips),
-		attribute.StringSlice("http.response.header.user", user),
-	}, got)
-}
-
 func TestHTTPClientStatus(t *testing.T) {
 	tests := []struct {
 		code int
