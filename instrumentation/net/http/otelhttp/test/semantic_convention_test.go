@@ -30,6 +30,7 @@ import (
 	"github.com/stretchr/testify/require"
 	"github.com/testcontainers/testcontainers-go"
 	"github.com/testcontainers/testcontainers-go/wait"
+
 	"go.opentelemetry.io/contrib/instrumentation/net/http/otelhttp"
 	"go.opentelemetry.io/otel"
 	"go.opentelemetry.io/otel/exporters/otlp/otlptrace/otlptracegrpc"
@@ -52,6 +53,7 @@ func TestSemanticConventions(t *testing.T) {
 		t.Skip("Docker not enabled.")
 	}
 	wd, err := os.Getwd()
+	require.NoError(t, err)
 	ctx := context.Background()
 	req := testcontainers.ContainerRequest{
 		Image:        "ghcr.io/madvikinggod/semantic-convention-checker:0.0.4",
@@ -117,8 +119,8 @@ func TestSemanticConventions(t *testing.T) {
 	resp, err := client.Post(ts.URL+"/", "application/text", strings.NewReader("Hello, Server!"))
 	require.NoError(t, err)
 
-	io.Copy(io.Discard, resp.Body)
-	resp.Body.Close()
+	_, _ = io.Copy(io.Discard, resp.Body)
+	_ = resp.Body.Close()
 
 	err = tp.ForceFlush(context.Background())
 	require.NoError(t, err)
