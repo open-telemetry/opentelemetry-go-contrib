@@ -266,6 +266,10 @@ func (wb *wrappedBody) Read(b []byte) (int, error) {
 
 // recordBytesRead is a function that ensures the number of bytes read is recorded once and only once.
 func (wb *wrappedBody) recordBytesRead() {
+	// note: it is more performant (and equally correct) to use atomic.Bool over sync.Once here. In the event that
+	// two goroutines are racing to call this method, the number of bytes read will no longer increase. Using
+	// CompareAndSwap allows later goroutines to return quickly and not block waiting for the race winner to finish
+	// calling wb.record(wb.read.Load()).
 	if wb.recorded.CompareAndSwap(false, true) {
 		// Record the total number of bytes read
 		wb.record(wb.read.Load())
