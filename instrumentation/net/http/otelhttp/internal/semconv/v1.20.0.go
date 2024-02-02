@@ -23,8 +23,9 @@ import (
 	semconv "go.opentelemetry.io/otel/semconv/v1.20.0"
 )
 
-type oldHTTPServer struct {
-}
+type oldHTTPServer struct{}
+
+var _ HTTPServer = oldHTTPServer{}
 
 // TraceRequest returns trace attributes for an HTTP request received by a
 // server.

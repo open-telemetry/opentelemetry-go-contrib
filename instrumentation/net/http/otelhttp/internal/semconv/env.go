@@ -20,6 +20,8 @@ package semconv // import "go.opentelemetry.io/contrib/instrumentation/net/http/
 import (
 	"fmt"
 	"net/http"
+	"os"
+	"strings"
 
 	"go.opentelemetry.io/otel/attribute"
 	"go.opentelemetry.io/otel/codes"
@@ -80,8 +82,16 @@ type HTTPServer interface {
 }
 
 func NewHTTPServer() HTTPServer {
-	//TODO add env switch
-	return oldHTTPServer{}
+	env := strings.ToLower(os.Getenv("OTEL_HTTP_CLIENT_COMPATIBILITY_MODE"))
+	switch env {
+	// TODO: Add support for new semconv
+	// case "http":
+	// 	return compatibilityHttp
+	case "http/dup":
+		return dupHTTPServer{}
+	default:
+		return oldHTTPServer{}
+	}
 }
 
 // ServerStatus returns a span status code and message for an HTTP status code
