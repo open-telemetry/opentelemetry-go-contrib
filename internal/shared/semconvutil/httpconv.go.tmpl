@@ -114,36 +114,6 @@ func HTTPServerStatus(code int) (codes.Code, string) {
 	return hc.ServerStatus(code)
 }
 
-// HTTPRequestHeader returns the contents of h as attributes.
-//
-// Instrumentation should require an explicit configuration of which headers to
-// captured and then prune what they pass here. Including all headers can be a
-// security risk - explicit configuration helps avoid leaking sensitive
-// information.
-//
-// The User-Agent header is already captured in the http.user_agent attribute
-// from ClientRequest and ServerRequest. Instrumentation may provide an option
-// to capture that header here even though it is not recommended. Otherwise,
-// instrumentation should filter that out of what is passed.
-func HTTPRequestHeader(h http.Header) []attribute.KeyValue {
-	return hc.RequestHeader(h)
-}
-
-// HTTPResponseHeader returns the contents of h as attributes.
-//
-// Instrumentation should require an explicit configuration of which headers to
-// captured and then prune what they pass here. Including all headers can be a
-// security risk - explicit configuration helps avoid leaking sensitive
-// information.
-//
-// The User-Agent header is already captured in the http.user_agent attribute
-// from ClientRequest and ServerRequest. Instrumentation may provide an option
-// to capture that header here even though it is not recommended. Otherwise,
-// instrumentation should filter that out of what is passed.
-func HTTPResponseHeader(h http.Header) []attribute.KeyValue {
-	return hc.ResponseHeader(h)
-}
-
 // httpConv are the HTTP semantic convention attributes defined for a version
 // of the OpenTelemetry specification.
 type httpConv struct {
@@ -549,31 +519,6 @@ func firstHostPort(source ...string) (host string, port int) {
 		}
 	}
 	return
-}
-
-// RequestHeader returns the contents of h as OpenTelemetry attributes.
-func (c *httpConv) RequestHeader(h http.Header) []attribute.KeyValue {
-	return c.header("http.request.header", h)
-}
-
-// ResponseHeader returns the contents of h as OpenTelemetry attributes.
-func (c *httpConv) ResponseHeader(h http.Header) []attribute.KeyValue {
-	return c.header("http.response.header", h)
-}
-
-func (c *httpConv) header(prefix string, h http.Header) []attribute.KeyValue {
-	key := func(k string) attribute.Key {
-		k = strings.ToLower(k)
-		k = strings.ReplaceAll(k, "-", "_")
-		k = fmt.Sprintf("%s.%s", prefix, k)
-		return attribute.Key(k)
-	}
-
-	attrs := make([]attribute.KeyValue, 0, len(h))
-	for k, v := range h {
-		attrs = append(attrs, key(k).StringSlice(v))
-	}
-	return attrs
 }
 
 // ClientStatus returns a span status code and message for an HTTP status code
