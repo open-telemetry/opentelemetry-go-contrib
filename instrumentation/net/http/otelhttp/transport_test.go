@@ -312,7 +312,7 @@ func TestWrappedBodyCloseError(t *testing.T) {
 	wb := &wrappedBody{span: trace.Span(s), record: record, body: readCloser{closeErr: expectedErr}}
 	assert.Equal(t, expectedErr, wb.Close())
 	s.assert(t, true, nil, codes.Unset, "")
-	assert.True(t, called, "record should not have been called")
+	assert.True(t, called, "record should have been called")
 }
 
 type readWriteCloser struct {
