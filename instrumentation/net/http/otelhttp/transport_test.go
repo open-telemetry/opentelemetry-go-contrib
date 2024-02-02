@@ -294,7 +294,7 @@ func TestWrappedBodyClose(t *testing.T) {
 	wb := &wrappedBody{span: trace.Span(s), record: record, body: readCloser{}}
 	assert.NoError(t, wb.Close())
 	s.assert(t, true, nil, codes.Unset, "")
-	assert.True(t, called, "record should not have been called")
+	assert.True(t, called, "record should have been called")
 }
 
 func TestWrappedBodyClosePanic(t *testing.T) {
