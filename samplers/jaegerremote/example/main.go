@@ -16,9 +16,12 @@ package main
 
 import (
 	"fmt"
+	stdlog "log"
+	"os"
 	"time"
 
 	"github.com/davecgh/go-spew/spew"
+	"github.com/go-logr/stdr"
 
 	"go.opentelemetry.io/contrib/samplers/jaegerremote"
 	"go.opentelemetry.io/otel"
@@ -27,12 +30,19 @@ import (
 )
 
 func main() {
+	// Optional: an implementation of logr.Logger used for demo purposes to catch potential error logs
+	logger := stdr.NewWithOptions(stdlog.New(os.Stderr, "", stdlog.LstdFlags), stdr.Options{LogCaller: stdr.All})
+
+	samplingRefreshInterval := 1 * time.Minute
 	jaegerRemoteSampler := jaegerremote.New(
 		"foo",
-		jaegerremote.WithSamplingServerURL("http://localhost:5778"),
-		jaegerremote.WithSamplingRefreshInterval(10*time.Second), // decrease polling interval to get quicker feedback
+		jaegerremote.WithSamplingServerURL("http://localhost:5778/sampling"),
+		jaegerremote.WithSamplingRefreshInterval(samplingRefreshInterval), // decrease polling interval to get quicker feedback
 		jaegerremote.WithInitialSampler(trace.TraceIDRatioBased(0.5)),
+		jaegerremote.WithLogger(logger),
 	)
+	// Optional: you can decorate the jaeger sampler with parent based sampler as you wish
+	// parentBasedJaegerRemoteSampler := trace.ParentBased(jaegerRemoteSampler, trace.WithRemoteParentNotSampled(jaegerRemoteSampler))
 
 	exporter, _ := stdouttrace.New()
 
@@ -42,14 +52,18 @@ func main() {
 	)
 	otel.SetTracerProvider(tp)
 
-	ticker := time.Tick(time.Second)
+	fmt.Printf("\n* Initial Jaeger Remote Sampler: %v\n\n", time.Now())
+	spewCfg := spew.ConfigState{
+		Indent:                  "    ",
+		DisablePointerAddresses: true,
+		SortKeys:                true,
+	}
+	spewCfg.Dump(jaegerRemoteSampler)
+
+	ticker := time.Tick(samplingRefreshInterval / 2)
 	for {
 		<-ticker
-		fmt.Printf("\n* Jaeger Remote Sampler %v\n\n", time.Now())
-		spewCfg := spew.ConfigState{
-			Indent:                  "    ",
-			DisablePointerAddresses: true,
-		}
+		fmt.Printf("\n* Jaeger Remote Sampler: %v\n\n", time.Now())
 		spewCfg.Dump(jaegerRemoteSampler)
 	}
 }
