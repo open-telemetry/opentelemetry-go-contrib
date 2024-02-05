@@ -14,6 +14,10 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 - Add client metric support to `go.opentelemetry.io/contrib/instrumentation/net/http/otelhttp`. (#4707)
 - Add peer attributes to spans recorded by `NewClientHandler`, `NewServerHandler` in `go.opentelemetry.io/contrib/instrumentation/google.golang.org/grpc/otelgrpc`. (#4873)
 
+### Changed
+
+- Change the signature of the fallback options in  `go.opentelemetry.io/contrib/exporters/autoexport` to accept a factory function instead. `WithFallbackMetricReader(exporter metric.Reader) MetricOption` method is now replaced with `func WithFallbackMetricReader(metricReaderFactory func(ctx context.Context) (metric.Reader, error)) MetricOption` method. `WithFallbackSpanExporter(exporter trace.SpanExporter) SpanOption` method is now replaced with `WithFallbackSpanExporter(spanExporterFactory func(ctx context.Context) (trace.SpanExporter, error)) SpanOption` method. (#4891)
+
 ### Deprecated
 
 - The `RequestCount`, `RequestContentLength`, `ResponseContentLength`, `ServerLatency` constants in `go.opentelemetry.io/contrib/instrumentation/net/http/otelhttp` are deprecated. (#4707)
