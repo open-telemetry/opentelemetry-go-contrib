@@ -13,7 +13,7 @@ require (
 	github.com/stretchr/testify v1.8.4
 	go.opentelemetry.io/contrib/detectors/aws/lambda v0.47.0
 	go.opentelemetry.io/contrib/instrumentation/github.com/aws/aws-lambda-go/otellambda v0.47.0
-	go.opentelemetry.io/contrib/propagators/aws v1.22.0
+	go.opentelemetry.io/contrib/propagators/aws v1.23.0
 	go.opentelemetry.io/otel v1.23.0
 	go.opentelemetry.io/otel/sdk v1.23.0
 	go.opentelemetry.io/otel/trace v1.23.0
