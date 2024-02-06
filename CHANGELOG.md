@@ -11,6 +11,11 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 ### Added
 
 - Add the new `go.opentelemetry.io/contrib/instrgen` package to provide auto-generated source code instrumentation. (#3068, #3108)
+
+## [1.23.0/0.48.0/0.17.0/0.3.0] - 2024-02-06
+
+### Added
+
 - Add client metric support to `go.opentelemetry.io/contrib/instrumentation/net/http/otelhttp`. (#4707)
 - Add peer attributes to spans recorded by `NewClientHandler`, `NewServerHandler` in `go.opentelemetry.io/contrib/instrumentation/google.golang.org/grpc/otelgrpc`. (#4873)
 - Add support for `cloud.account.id`, `cloud.availability_zone` and `cloud.region` in the AWS ECS detector. (#4860)
@@ -18,8 +23,8 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 ### Changed
 
 - The fallback options in  `go.opentelemetry.io/contrib/exporters/autoexport` now accept factory functions. (#4891)
-  - `WithFallbackMetricReader(metric.Reader) MetricOption` is replaced with `func WithFallbackMetricReader(func(ctx context.Context) (metric.Reader, error)) MetricOption`.
-  - `WithFallbackSpanExporter(trace.SpanExporter) SpanOption` is replaced with `WithFallbackSpanExporter(func(ctx context.Context) (trace.SpanExporter, error)) SpanOption`.
+  - `WithFallbackMetricReader(metric.Reader) MetricOption` is replaced with `func WithFallbackMetricReader(func(context.Context) (metric.Reader, error)) MetricOption`.
+  - `WithFallbackSpanExporter(trace.SpanExporter) SpanOption` is replaced with `WithFallbackSpanExporter(func(context.Context) (trace.SpanExporter, error)) SpanOption`.
 
 ### Deprecated
 
@@ -915,7 +920,8 @@ First official tagged release of `contrib` repository.
 - Prefix support for dogstatsd (#34)
 - Update Go Runtime package to use batch observer (#44)
 
-[Unreleased]: https://github.com/open-telemetry/opentelemetry-go-contrib/compare/v1.22.0...HEAD
+[Unreleased]: https://github.com/open-telemetry/opentelemetry-go-contrib/compare/v1.23.0...HEAD
+[1.23.0/0.48.0/0.17.0/0.3.0]: https://github.com/open-telemetry/opentelemetry-go-contrib/releases/tag/v1.23.0
 [1.22.0/0.47.0/0.16.0/0.2.0]: https://github.com/open-telemetry/opentelemetry-go-contrib/releases/tag/v1.22.0
 [1.21.1/0.46.1/0.15.1/0.1.1]: https://github.com/open-telemetry/opentelemetry-go-contrib/releases/tag/v1.21.1
 [1.21.0/0.46.0/0.15.0/0.1.0]: https://github.com/open-telemetry/opentelemetry-go-contrib/releases/tag/v1.21.0
