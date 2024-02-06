@@ -41,7 +41,7 @@ func (s signal[T]) create(ctx context.Context, opts ...option[T]) (T, error) {
 
 	expType := os.Getenv(s.envKey)
 	if expType == "" {
-		if cfg.hasFallback {
+		if cfg.fallbackFactory != nil {
 			return cfg.fallbackFactory(ctx)
 		}
 		expType = "otlp"
@@ -51,7 +51,6 @@ func (s signal[T]) create(ctx context.Context, opts ...option[T]) (T, error) {
 }
 
 type config[T any] struct {
-	hasFallback     bool
 	fallbackFactory func(ctx context.Context) (T, error)
 }
 
@@ -68,7 +67,6 @@ func (fn optionFunc[T]) apply(cfg *config[T]) {
 
 func withFallbackFactory[T any](fallbackFactory func(ctx context.Context) (T, error)) option[T] {
 	return optionFunc[T](func(cfg *config[T]) {
-		cfg.hasFallback = true
 		cfg.fallbackFactory = fallbackFactory
 	})
 }
