@@ -34,8 +34,8 @@ type Option = SpanOption
 
 // WithFallbackSpanExporter sets the fallback exporter to use when no exporter
 // is configured through the OTEL_TRACES_EXPORTER environment variable.
-func WithFallbackSpanExporter(exporter trace.SpanExporter) SpanOption {
-	return withFallback[trace.SpanExporter](exporter)
+func WithFallbackSpanExporter(spanExporterFactory func(ctx context.Context) (trace.SpanExporter, error)) SpanOption {
+	return withFallbackFactory[trace.SpanExporter](spanExporterFactory)
 }
 
 // NewSpanExporter returns a configured [go.opentelemetry.io/otel/sdk/trace.SpanExporter]
