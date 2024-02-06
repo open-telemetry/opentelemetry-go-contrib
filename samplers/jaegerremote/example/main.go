@@ -33,7 +33,7 @@ func main() {
 	// Optional: an implementation of logr.Logger used for demo purposes to catch potential error logs
 	logger := stdr.NewWithOptions(stdlog.New(os.Stderr, "", stdlog.LstdFlags), stdr.Options{LogCaller: stdr.All})
 
-	samplingRefreshInterval := 1 * time.Minute
+	samplingRefreshInterval := 10 * time.Second
 	jaegerRemoteSampler := jaegerremote.New(
 		"foo",
 		jaegerremote.WithSamplingServerURL("http://localhost:5778/sampling"),
