@@ -16,7 +16,7 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 
 ### Changed
 
-- Updated jaeger version in `go.opentelemetry.io/contrib/samplers/jaegerremote/example` example. (#4892)
+- Updated otel-collector from `otel/openteleemtry-collector` to `otel/opentelemetry-collector-contrib` in `go.opentelemetry.io/contrib/samplers/jaegerremote/example` example. (#4892)
 
 ### Deprecated
 
