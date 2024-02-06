@@ -42,6 +42,7 @@ const (
 var (
 	empty                                 = resource.Empty()
 	errCannotReadContainerName            = errors.New("failed to read hostname")
+	errCannotParseTaskArn                 = errors.New("cannot parse region and account ID from the Task's ARN: the ARN does not contain at least 6 segments separated by the ':' character")
 	errCannotRetrieveLogsGroupMetadataV4  = errors.New("the ECS Metadata v4 did not return a AwsLogGroup name")
 	errCannotRetrieveLogsStreamMetadataV4 = errors.New("the ECS Metadata v4 did not return a AwsLogStream name")
 )
@@ -50,6 +51,8 @@ var (
 type detectorUtils interface {
 	getContainerName() (string, error)
 	getContainerID() (string, error)
+	getContainerMetadataV4(ctx context.Context) (*ecsmetadata.ContainerMetadataV4, error)
+	getTaskMetadataV4(ctx context.Context) (*ecsmetadata.TaskMetadataV4, error)
 }
 
 // struct implements detectorUtils interface.
@@ -97,12 +100,12 @@ func (detector *resourceDetector) Detect(ctx context.Context) (*resource.Resourc
 	}
 
 	if len(metadataURIV4) > 0 {
-		containerMetadata, err := ecsmetadata.GetContainerV4(ctx, &http.Client{})
+		containerMetadata, err := detector.utils.getContainerMetadataV4(ctx)
 		if err != nil {
 			return empty, err
 		}
 
-		taskMetadata, err := ecsmetadata.GetTaskV4(ctx, &http.Client{})
+		taskMetadata, err := detector.utils.getTaskMetadataV4(ctx)
 		if err != nil {
 			return empty, err
 		}
@@ -123,6 +126,26 @@ func (detector *resourceDetector) Detect(ctx context.Context) (*resource.Resourc
 			if !strings.HasPrefix(taskMetadata.TaskARN, "arn:") {
 				taskMetadata.TaskARN = fmt.Sprintf("%s:task/%s", baseArn, taskMetadata.TaskARN)
 			}
+		}
+
+		arnParts := strings.Split(taskMetadata.TaskARN, ":")
+		// A valid ARN should have at least 6 parts.
+		if len(arnParts) < 6 {
+			return empty, errCannotParseTaskArn
+		}
+
+		attributes = append(
+			attributes,
+			semconv.CloudRegion(arnParts[3]),
+			semconv.CloudAccountID(arnParts[4]),
+		)
+
+		availabilityZone := taskMetadata.AvailabilityZone
+		if len(availabilityZone) > 0 {
+			attributes = append(
+				attributes,
+				semconv.CloudAvailabilityZone(availabilityZone),
+			)
 		}
 
 		logAttributes, err := detector.getLogsAttributes(containerMetadata)
@@ -207,6 +230,16 @@ func (detector *resourceDetector) getLogsAttributes(metadata *ecsmetadata.Contai
 		semconv.AWSLogStreamNames(logsOptions.AwsLogsStream),
 		semconv.AWSLogStreamARNs(awsLogStreamArn),
 	}, nil
+}
+
+// returns metadata v4 for the container.
+func (ecsUtils ecsDetectorUtils) getContainerMetadataV4(ctx context.Context) (*ecsmetadata.ContainerMetadataV4, error) {
+	return ecsmetadata.GetContainerV4(ctx, &http.Client{})
+}
+
+// returns metadata v4 for the task.
+func (ecsUtils ecsDetectorUtils) getTaskMetadataV4(ctx context.Context) (*ecsmetadata.TaskMetadataV4, error) {
+	return ecsmetadata.GetTaskV4(ctx, &http.Client{})
 }
 
 // returns docker container ID from default c group path.
