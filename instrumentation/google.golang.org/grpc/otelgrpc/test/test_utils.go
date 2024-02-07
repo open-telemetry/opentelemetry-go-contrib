@@ -1,26 +1,17 @@
-/*
- *
- * Copyright 2014 gRPC authors.
- *
- * Licensed under the Apache License, Version 2.0 (the "License");
- * you may not use this file except in compliance with the License.
- * You may obtain a copy of the License at
- *
- *     http://www.apache.org/licenses/LICENSE-2.0
- *
- * Unless required by applicable law or agreed to in writing, software
- * distributed under the License is distributed on an "AS IS" BASIS,
- * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
- * See the License for the specific language governing permissions and
- * limitations under the License.
- *
- */
+// Copyright The OpenTelemetry Authors
+//
+// Licensed under the Apache License, Version 2.0 (the "License");
+// you may not use this file except in compliance with the License.
+// You may obtain a copy of the License at
+//
+//     http://www.apache.org/licenses/LICENSE-2.0
+//
+// Unless required by applicable law or agreed to in writing, software
+// distributed under the License is distributed on an "AS IS" BASIS,
+// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+// See the License for the specific language governing permissions and
+// limitations under the License.
 
-// Package interop contains functions used by interop client/server.
-//
-// See interop test case descriptions [here].
-//
-// [here]: https://github.com/grpc/grpc/blob/master/doc/interop-test-descriptions.md
 package test
 
 import (
@@ -38,7 +29,6 @@ import (
 	"google.golang.org/grpc/status"
 	"google.golang.org/protobuf/proto"
 
-	testgrpc "go.opentelemetry.io/contrib/instrumentation/google.golang.org/grpc/otelgrpc/grpc_testing"
 	testpb "go.opentelemetry.io/contrib/instrumentation/google.golang.org/grpc/otelgrpc/grpc_testing"
 )
 
@@ -71,7 +61,7 @@ func ClientNewPayload(t testpb.PayloadType, size int) *testpb.Payload {
 }
 
 // DoEmptyUnaryCall performs a unary RPC with empty request and response messages.
-func DoEmptyUnaryCall(ctx context.Context, tc testgrpc.TestServiceClient, args ...grpc.CallOption) {
+func DoEmptyUnaryCall(ctx context.Context, tc testpb.TestServiceClient, args ...grpc.CallOption) {
 	reply, err := tc.EmptyCall(ctx, &testpb.Empty{}, args...)
 	if err != nil {
 		logger.Fatal("/TestService/EmptyCall RPC failed: ", err)
@@ -82,7 +72,7 @@ func DoEmptyUnaryCall(ctx context.Context, tc testgrpc.TestServiceClient, args .
 }
 
 // DoLargeUnaryCall performs a unary RPC with large payload in the request and response.
-func DoLargeUnaryCall(ctx context.Context, tc testgrpc.TestServiceClient, args ...grpc.CallOption) {
+func DoLargeUnaryCall(ctx context.Context, tc testpb.TestServiceClient, args ...grpc.CallOption) {
 	pl := ClientNewPayload(testpb.PayloadType_COMPRESSABLE, largeReqSize)
 	req := &testpb.SimpleRequest{
 		ResponseType: testpb.PayloadType_COMPRESSABLE,
@@ -101,7 +91,7 @@ func DoLargeUnaryCall(ctx context.Context, tc testgrpc.TestServiceClient, args .
 }
 
 // DoClientStreaming performs a client streaming RPC.
-func DoClientStreaming(ctx context.Context, tc testgrpc.TestServiceClient, args ...grpc.CallOption) {
+func DoClientStreaming(ctx context.Context, tc testpb.TestServiceClient, args ...grpc.CallOption) {
 	stream, err := tc.StreamingInputCall(ctx, args...)
 	if err != nil {
 		logger.Fatalf("%v.StreamingInputCall(_) = _, %v", tc, err)
@@ -127,7 +117,7 @@ func DoClientStreaming(ctx context.Context, tc testgrpc.TestServiceClient, args 
 }
 
 // DoServerStreaming performs a server streaming RPC.
-func DoServerStreaming(ctx context.Context, tc testgrpc.TestServiceClient, args ...grpc.CallOption) {
+func DoServerStreaming(ctx context.Context, tc testpb.TestServiceClient, args ...grpc.CallOption) {
 	respParam := make([]*testpb.ResponseParameters, len(respSizes))
 	for i, s := range respSizes {
 		respParam[i] = &testpb.ResponseParameters{
@@ -171,7 +161,7 @@ func DoServerStreaming(ctx context.Context, tc testgrpc.TestServiceClient, args 
 }
 
 // DoPingPong performs ping-pong style bi-directional streaming RPC.
-func DoPingPong(ctx context.Context, tc testgrpc.TestServiceClient, args ...grpc.CallOption) {
+func DoPingPong(ctx context.Context, tc testpb.TestServiceClient, args ...grpc.CallOption) {
 	stream, err := tc.FullDuplexCall(ctx, args...)
 	if err != nil {
 		logger.Fatalf("%v.FullDuplexCall(_) = _, %v", tc, err)
@@ -215,7 +205,7 @@ func DoPingPong(ctx context.Context, tc testgrpc.TestServiceClient, args ...grpc
 }
 
 // DoEmptyStream sets up a bi-directional streaming with zero message.
-func DoEmptyStream(ctx context.Context, tc testgrpc.TestServiceClient, args ...grpc.CallOption) {
+func DoEmptyStream(ctx context.Context, tc testpb.TestServiceClient, args ...grpc.CallOption) {
 	stream, err := tc.FullDuplexCall(ctx, args...)
 	if err != nil {
 		logger.Fatalf("%v.FullDuplexCall(_) = _, %v", tc, err)
@@ -229,7 +219,7 @@ func DoEmptyStream(ctx context.Context, tc testgrpc.TestServiceClient, args ...g
 }
 
 type testServer struct {
-	testgrpc.UnimplementedTestServiceServer
+	testpb.UnimplementedTestServiceServer
 
 	orcaMu          sync.Mutex
 	metricsRecorder orca.ServerMetricsRecorder
@@ -244,7 +234,7 @@ type NewTestServerOptions struct {
 // NewTestServer creates a test server for test service.  opts carries optional
 // settings and does not need to be provided.  If multiple opts are provided,
 // only the first one is used.
-func NewTestServer(opts ...NewTestServerOptions) testgrpc.TestServiceServer {
+func NewTestServer(opts ...NewTestServerOptions) testpb.TestServiceServer {
 	if len(opts) > 0 {
 		return &testServer{metricsRecorder: opts[0].MetricsRecorder}
 	}
@@ -295,7 +285,7 @@ func (s *testServer) UnaryCall(ctx context.Context, in *testpb.SimpleRequest) (*
 	}, nil
 }
 
-func (s *testServer) StreamingOutputCall(args *testpb.StreamingOutputCallRequest, stream testgrpc.TestService_StreamingOutputCallServer) error {
+func (s *testServer) StreamingOutputCall(args *testpb.StreamingOutputCallRequest, stream testpb.TestService_StreamingOutputCallServer) error {
 	cs := args.GetResponseParameters()
 	for _, c := range cs {
 		if us := c.GetIntervalUs(); us > 0 {
@@ -314,7 +304,7 @@ func (s *testServer) StreamingOutputCall(args *testpb.StreamingOutputCallRequest
 	return nil
 }
 
-func (s *testServer) StreamingInputCall(stream testgrpc.TestService_StreamingInputCallServer) error {
+func (s *testServer) StreamingInputCall(stream testpb.TestService_StreamingInputCallServer) error {
 	var sum int
 	for {
 		in, err := stream.Recv()
@@ -331,7 +321,7 @@ func (s *testServer) StreamingInputCall(stream testgrpc.TestService_StreamingInp
 	}
 }
 
-func (s *testServer) FullDuplexCall(stream testgrpc.TestService_FullDuplexCallServer) error {
+func (s *testServer) FullDuplexCall(stream testpb.TestService_FullDuplexCallServer) error {
 	if md, ok := metadata.FromIncomingContext(stream.Context()); ok {
 		if initialMetadata, ok := md[initialMetadataKey]; ok {
 			header := metadata.Pairs(initialMetadataKey, initialMetadata[0])
@@ -374,7 +364,7 @@ func (s *testServer) FullDuplexCall(stream testgrpc.TestService_FullDuplexCallSe
 	}
 }
 
-func (s *testServer) HalfDuplexCall(stream testgrpc.TestService_HalfDuplexCallServer) error {
+func (s *testServer) HalfDuplexCall(stream testpb.TestService_HalfDuplexCallServer) error {
 	var msgBuf []*testpb.StreamingOutputCallRequest
 	for {
 		in, err := stream.Recv()
