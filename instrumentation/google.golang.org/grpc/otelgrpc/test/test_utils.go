@@ -12,20 +12,18 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package test
+package test // import "go.opentelemetry.io/contrib/instrumentation/google.golang.org/grpc/otelgrpc/test"
 
 import (
 	"context"
 	"fmt"
 	"io"
-	"sync"
 	"time"
 
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/grpclog"
 	"google.golang.org/grpc/metadata"
-	"google.golang.org/grpc/orca"
 	"google.golang.org/grpc/status"
 	"google.golang.org/protobuf/proto"
 
@@ -220,24 +218,12 @@ func DoEmptyStream(ctx context.Context, tc testpb.TestServiceClient, args ...grp
 
 type testServer struct {
 	testpb.UnimplementedTestServiceServer
-
-	orcaMu          sync.Mutex
-	metricsRecorder orca.ServerMetricsRecorder
-}
-
-// NewTestServerOptions contains options that control the behavior of the test
-// server returned by NewTestServer.
-type NewTestServerOptions struct {
-	MetricsRecorder orca.ServerMetricsRecorder
 }
 
 // NewTestServer creates a test server for test service.  opts carries optional
 // settings and does not need to be provided.  If multiple opts are provided,
 // only the first one is used.
-func NewTestServer(opts ...NewTestServerOptions) testpb.TestServiceServer {
-	if len(opts) > 0 {
-		return &testServer{metricsRecorder: opts[0].MetricsRecorder}
-	}
+func NewTestServer() testpb.TestServiceServer {
 	return &testServer{}
 }
 
@@ -266,11 +252,11 @@ func (s *testServer) UnaryCall(ctx context.Context, in *testpb.SimpleRequest) (*
 	if md, ok := metadata.FromIncomingContext(ctx); ok {
 		if initialMetadata, ok := md[initialMetadataKey]; ok {
 			header := metadata.Pairs(initialMetadataKey, initialMetadata[0])
-			grpc.SendHeader(ctx, header)
+			_ = grpc.SendHeader(ctx, header)
 		}
 		if trailingMetadata, ok := md[trailingMetadataKey]; ok {
 			trailer := metadata.Pairs(trailingMetadataKey, trailingMetadata[0])
-			grpc.SetTrailer(ctx, trailer)
+			_ = grpc.SetTrailer(ctx, trailer)
 		}
 	}
 	if st != nil && st.Code != 0 {
@@ -325,7 +311,7 @@ func (s *testServer) FullDuplexCall(stream testpb.TestService_FullDuplexCallServ
 	if md, ok := metadata.FromIncomingContext(stream.Context()); ok {
 		if initialMetadata, ok := md[initialMetadataKey]; ok {
 			header := metadata.Pairs(initialMetadataKey, initialMetadata[0])
-			stream.SendHeader(header)
+			_ = stream.SendHeader(header)
 		}
 		if trailingMetadata, ok := md[trailingMetadataKey]; ok {
 			trailer := metadata.Pairs(trailingMetadataKey, trailingMetadata[0])
