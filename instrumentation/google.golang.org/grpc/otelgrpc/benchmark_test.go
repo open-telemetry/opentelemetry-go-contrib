@@ -27,7 +27,7 @@ import (
 	"go.opentelemetry.io/contrib/instrumentation/google.golang.org/grpc/otelgrpc/test"
 	"go.opentelemetry.io/otel/trace/noop"
 
-	pb "go.opentelemetry.io/contrib/instrumentation/google.golang.org/grpc/otelgrpc/grpc_testing"
+	pb "google.golang.org/grpc/interop/grpc_testing"
 )
 
 const bufSize = 2048

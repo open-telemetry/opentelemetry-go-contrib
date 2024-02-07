@@ -29,7 +29,6 @@ import (
 	"google.golang.org/grpc/status"
 
 	"go.opentelemetry.io/contrib/instrumentation/google.golang.org/grpc/otelgrpc"
-	testpb "go.opentelemetry.io/contrib/instrumentation/google.golang.org/grpc/otelgrpc/grpc_testing"
 	"go.opentelemetry.io/otel/attribute"
 	"go.opentelemetry.io/otel/sdk/instrumentation"
 	"go.opentelemetry.io/otel/sdk/metric"
@@ -39,6 +38,8 @@ import (
 	"go.opentelemetry.io/otel/sdk/trace"
 	"go.opentelemetry.io/otel/sdk/trace/tracetest"
 	semconv "go.opentelemetry.io/otel/semconv/v1.17.0"
+
+	testpb "google.golang.org/grpc/interop/grpc_testing"
 )
 
 func TestStatsHandler(t *testing.T) {

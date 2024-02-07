@@ -36,7 +36,7 @@ import (
 	"go.opentelemetry.io/otel/sdk/trace/tracetest"
 	semconv "go.opentelemetry.io/otel/semconv/v1.17.0"
 
-	pb "go.opentelemetry.io/contrib/instrumentation/google.golang.org/grpc/otelgrpc/grpc_testing"
+	pb "google.golang.org/grpc/interop/grpc_testing"
 )
 
 var wantInstrumentationScope = instrumentation.Scope{
