@@ -198,7 +198,7 @@ func checkUnaryClientSpans(t *testing.T, spans []trace.ReadOnlySpan, addr string
 			Attributes: []attribute.KeyValue{
 				otelgrpc.RPCMessageIDKey.Int(1),
 				otelgrpc.RPCMessageTypeKey.String("SENT"),
-				// largeReqSize from "go.opentelemetry.io/contrib/instrumentation/google.golang.org/grpc/otelgrpc/interop" + 12 (overhead).
+				// largeReqSize from "go.opentelemetry.io/contrib/instrumentation/google.golang.org/grpc/otelgrpc/test" + 12 (overhead).
 			},
 		},
 		{
