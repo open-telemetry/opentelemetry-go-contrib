@@ -24,6 +24,7 @@ import (
 	"time"
 
 	"go.opentelemetry.io/contrib/instrumentation/google.golang.org/grpc/otelgrpc"
+	"go.opentelemetry.io/contrib/instrumentation/google.golang.org/grpc/otelgrpc/internal/test"
 	"go.opentelemetry.io/otel/attribute"
 	"go.opentelemetry.io/otel/codes"
 	"go.opentelemetry.io/otel/sdk/metric"
@@ -1145,6 +1146,6 @@ func BenchmarkStreamClientInterceptor(b *testing.B) {
 	ctx, cancel := context.WithCancel(context.Background())
 	defer cancel()
 	for i := 0; i < b.N; i++ {
-		DoClientStreaming(ctx, client)
+		test.DoClientStreaming(ctx, client)
 	}
 }

@@ -27,6 +27,7 @@ import (
 	"google.golang.org/grpc/credentials/insecure"
 
 	"go.opentelemetry.io/contrib/instrumentation/google.golang.org/grpc/otelgrpc"
+	"go.opentelemetry.io/contrib/instrumentation/google.golang.org/grpc/otelgrpc/internal/test"
 	"go.opentelemetry.io/otel/attribute"
 	"go.opentelemetry.io/otel/sdk/instrumentation"
 	"go.opentelemetry.io/otel/sdk/metric"
@@ -48,7 +49,7 @@ var wantInstrumentationScope = instrumentation.Scope{
 // newGrpcTest creats a grpc server, starts it, and returns the client, closes everything down during test cleanup.
 func newGrpcTest(t testing.TB, listener net.Listener, cOpt []grpc.DialOption, sOpt []grpc.ServerOption) pb.TestServiceClient {
 	grpcServer := grpc.NewServer(sOpt...)
-	pb.RegisterTestServiceServer(grpcServer, NewTestServer())
+	pb.RegisterTestServiceServer(grpcServer, test.NewTestServer())
 	errCh := make(chan error)
 	go func() {
 		errCh <- grpcServer.Serve(listener)
@@ -80,11 +81,11 @@ func newGrpcTest(t testing.TB, listener net.Listener, cOpt []grpc.DialOption, sO
 }
 
 func doCalls(ctx context.Context, client pb.TestServiceClient) {
-	DoEmptyUnaryCall(ctx, client)
-	DoLargeUnaryCall(ctx, client)
-	DoClientStreaming(ctx, client)
-	DoServerStreaming(ctx, client)
-	DoPingPong(ctx, client)
+	test.DoEmptyUnaryCall(ctx, client)
+	test.DoLargeUnaryCall(ctx, client)
+	test.DoClientStreaming(ctx, client)
+	test.DoServerStreaming(ctx, client)
+	test.DoPingPong(ctx, client)
 }
 
 func TestInterceptors(t *testing.T) {

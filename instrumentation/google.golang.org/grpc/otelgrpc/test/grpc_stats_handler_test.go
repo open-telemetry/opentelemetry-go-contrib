@@ -29,6 +29,7 @@ import (
 	"google.golang.org/grpc/status"
 
 	"go.opentelemetry.io/contrib/instrumentation/google.golang.org/grpc/otelgrpc"
+	"go.opentelemetry.io/contrib/instrumentation/google.golang.org/grpc/otelgrpc/internal/test"
 	"go.opentelemetry.io/otel/attribute"
 	"go.opentelemetry.io/otel/sdk/instrumentation"
 	"go.opentelemetry.io/otel/sdk/metric"
@@ -1388,7 +1389,7 @@ func TestStatsHandlerConcurrentSafeContextCancellation(t *testing.T) {
 			defer wg.Done()
 			for i := 0; i < messageCount; i++ {
 				const reqSize = 1
-				pl := ClientNewPayload(testpb.PayloadType_COMPRESSABLE, reqSize)
+				pl := test.ClientNewPayload(testpb.PayloadType_COMPRESSABLE, reqSize)
 				respParam := []*testpb.ResponseParameters{
 					{
 						Size: reqSize,
