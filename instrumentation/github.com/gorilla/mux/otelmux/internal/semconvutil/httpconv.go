@@ -83,10 +83,14 @@ func HTTPClientStatus(code int) (codes.Code, string) {
 // The req Host will be used to determine the server instead.
 //
 // The following attributes are always returned: "http.method", "http.scheme",
-// "http.flavor", "http.target", "net.host.name". The following attributes are
+// "http.flavor", "net.host.name". The following attributes are
 // returned if they related values are defined in req: "net.host.port",
 // "net.sock.peer.addr", "net.sock.peer.port", "http.user_agent", "enduser.id",
 // "http.client_ip".
+//
+// NOTE: "http.target" is not returned, despite being required by the spec.
+// It has too high of a cardinality to safely be added to all signal types
+// at this time.
 func HTTPServerRequest(server string, req *http.Request) []attribute.KeyValue {
 	return hc.ServerRequest(server, req)
 }
