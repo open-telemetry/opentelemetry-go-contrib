@@ -452,7 +452,7 @@ func checkStreamServerSpans(t *testing.T, spans []trace.ReadOnlySpan) {
 	streamOutput := spans[1]
 	assert.False(t, streamOutput.EndTime().IsZero())
 	assert.Equal(t, "grpc.testing.TestService/StreamingOutputCall", streamOutput.Name())
-	// sizes from respSizes in "go.opentelemetry.io/contrib/instrumentation/google.golang.org/grpc/otelgrpc/interop".
+	// sizes from respSizes in "go.opentelemetry.io/contrib/instrumentation/google.golang.org/grpc/otelgrpc/test".
 	assertEvents(t, []trace.Event{
 		{
 			Name: "message",
