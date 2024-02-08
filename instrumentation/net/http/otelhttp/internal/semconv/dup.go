@@ -16,9 +16,11 @@ package semconv // import "go.opentelemetry.io/contrib/instrumentation/net/http/
 
 import (
 	"net/http"
+	"strings"
 
 	"go.opentelemetry.io/otel/attribute"
 	semconvOld "go.opentelemetry.io/otel/semconv/v1.20.0"
+	semconvNew "go.opentelemetry.io/otel/semconv/v1.24.0"
 )
 
 type dupHTTPServer struct{}
@@ -42,6 +44,8 @@ var _ HTTPServer = dupHTTPServer{}
 // If the primary server name is not known, server should be an empty string.
 // The req Host will be used to determine the server instead.
 func (d dupHTTPServer) TraceRequest(server string, req *http.Request) []attribute.KeyValue {
+	// old http.target http.scheme net.host.name net.host.port http.scheme net.host.name net.host.port http.method net.sock.peer.addr net.sock.peer.port user_agent.original http.method http.status_code net.protocol.version
+	// new http.request.header server.address server.port network.local.address network.local.port client.address client.port url.path url.query url.scheme user_agent.original server.address server.port url.scheme http.request.method http.response.status_code error.type network.protocol.name network.protocol.version http.request.method_original http.response.header http.request.method network.peer.address network.peer.port network.transport http.request.method http.response.status_code error.type network.protocol.name network.protocol.version
 	// var host string
 	// var p int
 	// if server == "" {
@@ -56,15 +60,33 @@ func (d dupHTTPServer) TraceRequest(server string, req *http.Request) []attribut
 
 	const MaxAttributes = 12
 	attrs := make([]attribute.KeyValue, MaxAttributes)
-	// i := c.NetConv.HostName(host, attrs)
-	// attrs[i] = c.method(req.Method)
-	// i++
-	// attrs[i] = c.scheme(req.TLS != nil)
-	// i++
+	window := attrs[:]
+	var host string
+	var p int
+	if server == "" {
+		host, p = splitHostPort(req.Host)
+	} else {
+		// Prioritize the primary server name.
+		host, p = splitHostPort(server)
+		if p < 0 {
+			_, p = splitHostPort(req.Host)
+		}
+	}
+	hostPort := requiredHTTPPort(req.TLS != nil, p)
+	
+	attrs[0] = semconvOld.
+	attrs = append(attrs, c.method(req.Method))
+	attrs = append(attrs, c.scheme(req.TLS != nil))
+	attrs = append(attrs, c.NetConv.HostName(host))
+	i := c.NetConv.HostName(host, attrs)
+	attrs[i] = c.method(req.Method)
+	i++
+	attrs[i] = c.scheme(req.TLS != nil)
+	i++
 
-	// if hostPort := requiredHTTPPort(req.TLS != nil, p); hostPort > 0 {
-	// 	i += c.NetConv.HostPort(hostPort, attrs[i:])
-	// }
+	if hostPort := requiredHTTPPort(req.TLS != nil, p); hostPort > 0 {
+		i += c.NetConv.HostPort(hostPort, attrs[i:])
+	}
 
 	// if peer, peerPort := splitHostPort(req.RemoteAddr); peer != "" {
 	// 	// The Go HTTP server sets RemoteAddr to "IP:port", this will not be a
@@ -103,8 +125,42 @@ func (d dupHTTPServer) TraceRequest(server string, req *http.Request) []attribut
 	// }
 
 	// // TODO: When we drop go1.20 support use slices.clip().
-	// return attrs[:i:i]
-	return attrs[:0:0]
+	return attrs[:i:i]
+}
+
+var methodLookup=map[string]attribute.KeyValue {
+	http.MethodConnect: semconvNew.HTTPRequestMethodConnect,
+	http.MethodDelete: semconvNew.HTTPRequestMethodDelete,
+	http.MethodGet: semconvNew.HTTPRequestMethodGet,
+	http.MethodHead: semconvNew.HTTPRequestMethodHead,
+	http.MethodOptions: semconvNew.HTTPRequestMethodOptions,
+	http.MethodPatch: semconvNew.HTTPRequestMethodPatch,
+	http.MethodPost: semconvNew.HTTPRequestMethodPost,
+	http.MethodPut: semconvNew.HTTPRequestMethodPut,
+	http.MethodTrace: semconvNew.HTTPRequestMethodTrace,
+}
+
+func (d dupHTTPServer) method(method string, attrs []attribute.KeyValue) int {
+	if method == "" {
+		attrs[0] = semconvOld.HTTPMethod(http.MethodGet)
+		attrs[1] = semconvNew.HTTPRequestMethodGet
+		return 2
+	}
+	attr[0] = semconvOld.HTTPMethod(method)
+	if attr, ok := methodLookup[method]; ok {
+		attr[1] = attr
+		return 2
+	}
+	if attr, ok := methodLookup[strings.ToUpper(method)]; ok {
+		attr[1] = attr
+	}
+	return c
+}
+func (c *httpConv) methodNew(method string) attribute.KeyValue {
+	if method == "" {
+		return semconvNew.HTTPRequestMethod(http.MethodGet)
+	}
+	return c.HTTPMethodKey.String(method)
 }
 
 // MetricsRequest returns metric attributes for an HTTP request received by a
