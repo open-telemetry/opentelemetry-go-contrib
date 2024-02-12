@@ -110,7 +110,6 @@ func (s *server) SayHelloBidiStream(stream api.HelloService_SayHelloBidiStreamSe
 
 		log.Printf("Received: %v\n", in.GetGreeting())
 		err = stream.Send(&api.HelloResponse{Reply: "Hello " + in.Greeting})
-
 		if err != nil {
 			return err
 		}
