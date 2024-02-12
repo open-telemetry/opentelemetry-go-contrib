@@ -285,7 +285,6 @@ func (h *host) register() error {
 		hostMemoryUtilization,
 		networkIOUsage,
 	)
-
 	if err != nil {
 		return err
 	}
