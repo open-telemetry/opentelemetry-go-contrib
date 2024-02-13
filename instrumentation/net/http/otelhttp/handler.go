@@ -21,6 +21,7 @@ import (
 	"github.com/felixge/httpsnoop"
 
 	"go.opentelemetry.io/contrib/instrumentation/net/http/otelhttp/internal/semconv"
+	"go.opentelemetry.io/contrib/instrumentation/net/http/otelhttp/internal/semconvutil"
 	"go.opentelemetry.io/otel"
 	"go.opentelemetry.io/otel/metric"
 	"go.opentelemetry.io/otel/propagation"
@@ -231,7 +232,8 @@ func (h *middleware) serveHTTP(w http.ResponseWriter, r *http.Request, next http
 	})...)
 
 	// Add metrics
-	attributes := append(labeler.Get(), h.traceSemconv.MetricsRequest(h.server, r)...)
+	attributes := append(labeler.Get(), semconvutil.HTTPServerRequestMetrics(h.server, r)...)
+
 	o := metric.WithAttributes(attributes...)
 	h.requestBytesCounter.Add(ctx, bw.read, o)
 	h.responseBytesCounter.Add(ctx, rww.written, o)

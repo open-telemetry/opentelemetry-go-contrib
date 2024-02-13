@@ -98,3 +98,7 @@ func (o oldHTTPServer) TraceResponse(resp ResponseTelemetry) []attribute.KeyValu
 func (o oldHTTPServer) Route(route string) attribute.KeyValue {
 	return semconv.HTTPRoute(route)
 }
+
+func HTTPStatusCode(status int) attribute.KeyValue {
+	return semconv.HTTPStatusCode(status)
+}

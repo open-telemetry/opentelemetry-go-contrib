@@ -58,3 +58,29 @@ func splitHostPort(hostport string) (host string, port int) {
 	}
 	return host, int(p)
 }
+
+func requiredHTTPPort(https bool, port int) int { // nolint:revive
+	if https {
+		if port > 0 && port != 443 {
+			return port
+		}
+	} else {
+		if port > 0 && port != 80 {
+			return port
+		}
+	}
+	return -1
+}
+
+func serverClientIP(xForwardedFor string) string {
+	if idx := strings.Index(xForwardedFor, ","); idx >= 0 {
+		xForwardedFor = xForwardedFor[:idx]
+	}
+	return xForwardedFor
+}
+
+func netProtocol(proto string) (name string, version string) {
+	name, version, _ = strings.Cut(proto, "/")
+	name = strings.ToLower(name)
+	return name, version
+}
