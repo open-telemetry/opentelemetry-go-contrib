@@ -21,12 +21,13 @@ import (
 
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/credentials/insecure"
-	"google.golang.org/grpc/interop"
-	pb "google.golang.org/grpc/interop/grpc_testing"
 	"google.golang.org/grpc/test/bufconn"
 
 	"go.opentelemetry.io/contrib/instrumentation/google.golang.org/grpc/otelgrpc"
+	"go.opentelemetry.io/contrib/instrumentation/google.golang.org/grpc/otelgrpc/internal/test"
 	"go.opentelemetry.io/otel/trace/noop"
+
+	pb "google.golang.org/grpc/interop/grpc_testing"
 )
 
 const bufSize = 2048
@@ -38,7 +39,7 @@ func benchmark(b *testing.B, cOpt []grpc.DialOption, sOpt []grpc.ServerOption) {
 	defer l.Close()
 
 	s := grpc.NewServer(sOpt...)
-	pb.RegisterTestServiceServer(s, interop.NewTestServer())
+	pb.RegisterTestServiceServer(s, test.NewTestServer())
 	go func() {
 		if err := s.Serve(l); err != nil {
 			panic(err)
@@ -66,12 +67,12 @@ func benchmark(b *testing.B, cOpt []grpc.DialOption, sOpt []grpc.ServerOption) {
 	b.ResetTimer()
 
 	for n := 0; n < b.N; n++ {
-		interop.DoEmptyUnaryCall(client)
-		interop.DoLargeUnaryCall(client)
-		interop.DoClientStreaming(client)
-		interop.DoServerStreaming(client)
-		interop.DoPingPong(client)
-		interop.DoEmptyStream(client)
+		test.DoEmptyUnaryCall(ctx, client)
+		test.DoLargeUnaryCall(ctx, client)
+		test.DoClientStreaming(ctx, client)
+		test.DoServerStreaming(ctx, client)
+		test.DoPingPong(ctx, client)
+		test.DoEmptyStream(ctx, client)
 	}
 
 	b.StopTimer()
