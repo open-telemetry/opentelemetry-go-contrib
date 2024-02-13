@@ -48,7 +48,7 @@ type labelerContextKeyType int
 
 const lablelerContextKey labelerContextKeyType = 0
 
-func injectLabeler(ctx context.Context, l *Labeler) context.Context {
+func InjectLabeler(ctx context.Context, l *Labeler) context.Context {
 	return context.WithValue(ctx, lablelerContextKey, l)
 }
 

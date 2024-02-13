@@ -219,8 +219,10 @@ func (h *middleware) serveHTTP(w http.ResponseWriter, r *http.Request, next http
 		},
 	})
 
-	labeler := &Labeler{}
-	ctx = injectLabeler(ctx, labeler)
+	labeler, found := LabelerFromContext(ctx)
+	if !found {
+		ctx = InjectLabeler(ctx, labeler)
+	}
 
 	next.ServeHTTP(w, r.WithContext(ctx))
 
