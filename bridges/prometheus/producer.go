@@ -223,8 +223,8 @@ func convertSummary(metrics []*dto.Metric, now time.Time) metricdata.Summary {
 		if createdTs.IsValid() {
 			dp.StartTime = createdTs.AsTime()
 		}
-		if m.GetTimestampMs() != 0 {
-			dp.Time = time.UnixMilli(m.GetTimestampMs())
+		if t := m.GetTimestampMs(); t != 0 {
+			dp.Time = time.UnixMilli(t)
 		}
 		otelSummary.DataPoints[i] = dp
 	}
