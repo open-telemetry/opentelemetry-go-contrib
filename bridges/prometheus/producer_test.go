@@ -221,6 +221,109 @@ func TestProduce(t *testing.T) {
 			}},
 		},
 		{
+			name: "exponential histogram",
+			testFn: func(reg *prometheus.Registry) {
+				metric := prometheus.NewHistogram(prometheus.HistogramOpts{
+					Name: "test_exponential_histogram_metric",
+					Help: "An exponential histogram metric for testing",
+					// This enables collection of native histograms in the prometheus client.
+					NativeHistogramBucketFactor: 1.5,
+					ConstLabels: prometheus.Labels(map[string]string{
+						"foo": "bar",
+					}),
+				})
+				reg.MustRegister(metric)
+				metric.Observe(78.3)
+				metric.Observe(2.3)
+				metric.Observe(2.3)
+				metric.Observe(.5)
+				metric.Observe(-78.3)
+				metric.Observe(-.15)
+				metric.Observe(0.0)
+			},
+			expected: []metricdata.ScopeMetrics{{
+				Scope: instrumentation.Scope{
+					Name: scopeName,
+				},
+				Metrics: []metricdata.Metrics{
+					{
+						Name:        "test_exponential_histogram_metric",
+						Description: "An exponential histogram metric for testing",
+						Data: metricdata.ExponentialHistogram[float64]{
+							Temporality: metricdata.CumulativeTemporality,
+							DataPoints: []metricdata.ExponentialHistogramDataPoint[float64]{
+								{
+									Count:     7,
+									Sum:       4.949999999999994,
+									Scale:     1,
+									ZeroCount: 1,
+									PositiveBucket: metricdata.ExponentialBucket{
+										Offset: -3,
+										Counts: []uint64{1, 0, 0, 0, 0, 2, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1},
+									},
+									NegativeBucket: metricdata.ExponentialBucket{
+										Offset: -6,
+										Counts: []uint64{1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1},
+									},
+									Attributes:    attribute.NewSet(attribute.String("foo", "bar")),
+									ZeroThreshold: prometheus.DefNativeHistogramZeroThreshold,
+								},
+							},
+						},
+					},
+				},
+			}},
+		},
+		{
+			name: "exponential histogram with only positive observations",
+			testFn: func(reg *prometheus.Registry) {
+				metric := prometheus.NewHistogram(prometheus.HistogramOpts{
+					Name: "test_exponential_histogram_metric",
+					Help: "An exponential histogram metric for testing",
+					// This enables collection of native histograms in the prometheus client.
+					NativeHistogramBucketFactor: 1.5,
+					ConstLabels: prometheus.Labels(map[string]string{
+						"foo": "bar",
+					}),
+				})
+				reg.MustRegister(metric)
+				metric.Observe(78.3)
+				metric.Observe(2.3)
+				metric.Observe(2.3)
+				metric.Observe(.5)
+				metric.Observe(0.0)
+			},
+			expected: []metricdata.ScopeMetrics{{
+				Scope: instrumentation.Scope{
+					Name: scopeName,
+				},
+				Metrics: []metricdata.Metrics{
+					{
+						Name:        "test_exponential_histogram_metric",
+						Description: "An exponential histogram metric for testing",
+						Data: metricdata.ExponentialHistogram[float64]{
+							Temporality: metricdata.CumulativeTemporality,
+							DataPoints: []metricdata.ExponentialHistogramDataPoint[float64]{
+								{
+									Count:     5,
+									Sum:       83.39999999999999,
+									Scale:     1,
+									ZeroCount: 1,
+									PositiveBucket: metricdata.ExponentialBucket{
+										Offset: -3,
+										Counts: []uint64{1, 0, 0, 0, 0, 2, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1},
+									},
+									NegativeBucket: metricdata.ExponentialBucket{},
+									Attributes:     attribute.NewSet(attribute.String("foo", "bar")),
+									ZeroThreshold:  prometheus.DefNativeHistogramZeroThreshold,
+								},
+							},
+						},
+					},
+				},
+			}},
+		},
+		{
 			name: "partial success",
 			testFn: func(reg *prometheus.Registry) {
 				metric := prometheus.NewGauge(prometheus.GaugeOpts{
@@ -352,9 +455,34 @@ func TestProduceForStartTime(t *testing.T) {
 					}),
 				})
 				reg.MustRegister(metric)
+				metric.Observe(78.3)
 			},
 			startTimeFn: func(aggr metricdata.Aggregation) []time.Time {
 				dps := aggr.(metricdata.Summary).DataPoints
+				sts := make([]time.Time, len(dps))
+				for i, dp := range dps {
+					sts[i] = dp.StartTime
+				}
+				return sts
+			},
+		},
+		{
+			name: "exponential histogram",
+			testFn: func(reg *prometheus.Registry) {
+				metric := prometheus.NewHistogram(prometheus.HistogramOpts{
+					Name: "test_exponential_histogram_metric",
+					Help: "An exponential histogram metric for testing",
+					// This enables collection of native histograms in the prometheus client.
+					NativeHistogramBucketFactor: 1.5,
+					ConstLabels: prometheus.Labels(map[string]string{
+						"foo": "bar",
+					}),
+				})
+				reg.MustRegister(metric)
+				metric.Observe(78.3)
+			},
+			startTimeFn: func(aggr metricdata.Aggregation) []time.Time {
+				dps := aggr.(metricdata.ExponentialHistogram[float64]).DataPoints
 				sts := make([]time.Time, len(dps))
 				for i, dp := range dps {
 					sts[i] = dp.StartTime
