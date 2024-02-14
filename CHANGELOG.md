@@ -15,6 +15,8 @@ The next release will require at least [Go 1.21].
 
 - Add the new `go.opentelemetry.io/contrib/instrgen` package to provide auto-generated source code instrumentation. (#3068, #3108)
 - Support [Go 1.22]. (#5082)
+- Implemented setting the `cloud.resource_id` resource attribute in `go.opentelemetry.io/detectors/aws/ecs` based on the ECS Metadata v4 endpoint. (#5091)
+
 
 ### Removed
 
