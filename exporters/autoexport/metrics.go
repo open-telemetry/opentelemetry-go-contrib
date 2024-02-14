@@ -39,8 +39,8 @@ type MetricOption = option[metric.Reader]
 
 // WithFallbackMetricReader sets the fallback exporter to use when no exporter
 // is configured through the OTEL_METRICS_EXPORTER environment variable.
-func WithFallbackMetricReader(exporter metric.Reader) MetricOption {
-	return withFallback[metric.Reader](exporter)
+func WithFallbackMetricReader(metricReaderFactory func(ctx context.Context) (metric.Reader, error)) MetricOption {
+	return withFallbackFactory[metric.Reader](metricReaderFactory)
 }
 
 // NewMetricReader returns a configured [go.opentelemetry.io/otel/sdk/metric.Reader]

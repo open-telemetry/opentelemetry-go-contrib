@@ -16,6 +16,7 @@ package autoexport // import "go.opentelemetry.io/contrib/exporters/autoexport"
 
 import (
 	"context"
+	"errors"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
@@ -31,10 +32,21 @@ func TestOTLPExporterReturnedWhenNoEnvOrFallbackExporterConfigured(t *testing.T)
 
 func TestFallbackExporterReturnedWhenNoEnvExporterConfigured(t *testing.T) {
 	ts := newSignal[*testType]("TEST_TYPE_KEY")
-	fallback := testType{"test-fallback-exporter"}
-	exp, err := ts.create(context.Background(), withFallback(&fallback))
+	exp, err := ts.create(context.Background(), withFallbackFactory(factory("test-fallback-exporter")))
 	assert.NoError(t, err)
-	assert.Same(t, &fallback, exp)
+	assert.Equal(t, exp.string, "test-fallback-exporter")
+}
+
+func TestFallbackExporterFactoryErrorReturnedWhenNoEnvExporterConfiguredAndFallbackFactoryReturnsAnError(t *testing.T) {
+	ts := newSignal[*testType]("TEST_TYPE_KEY")
+
+	expectedErr := errors.New("error expected to return")
+	errFactory := func(ctx context.Context) (*testType, error) {
+		return nil, expectedErr
+	}
+	exp, err := ts.create(context.Background(), withFallbackFactory(errFactory))
+	assert.ErrorIs(t, err, expectedErr)
+	assert.Nil(t, exp)
 }
 
 func TestEnvExporterIsPreferredOverFallbackExporter(t *testing.T) {
@@ -43,10 +55,9 @@ func TestEnvExporterIsPreferredOverFallbackExporter(t *testing.T) {
 
 	expName := "test-env-exporter-name"
 	t.Setenv(envVariable, expName)
-	fallback := testType{"test-fallback-exporter"}
 	assert.NoError(t, ts.registry.store(expName, factory("test-env-exporter")))
 
-	exp, err := ts.create(context.Background(), withFallback(&fallback))
+	exp, err := ts.create(context.Background(), withFallbackFactory(factory("test-fallback-exporter")))
 	assert.NoError(t, err)
 	assert.Equal(t, exp.string, "test-env-exporter")
 }

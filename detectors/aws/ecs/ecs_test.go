@@ -16,6 +16,7 @@ package ecs
 
 import (
 	"context"
+	"fmt"
 	"testing"
 
 	"go.opentelemetry.io/otel/attribute"
@@ -42,6 +43,16 @@ func (detectorUtils *MockDetectorUtils) getContainerName() (string, error) {
 	return args.String(0), args.Error(1)
 }
 
+func (detectorUtils *MockDetectorUtils) getContainerMetadataV4(_ context.Context) (*metadata.ContainerMetadataV4, error) {
+	args := detectorUtils.Called()
+	return args.Get(0).(*metadata.ContainerMetadataV4), args.Error(1)
+}
+
+func (detectorUtils *MockDetectorUtils) getTaskMetadataV4(_ context.Context) (*metadata.TaskMetadataV4, error) {
+	args := detectorUtils.Called()
+	return args.Get(0).(*metadata.TaskMetadataV4), args.Error(1)
+}
+
 // successfully returns resource when process is running on Amazon ECS environment
 // with no Metadata v4.
 func TestDetectV3(t *testing.T) {
@@ -51,6 +62,8 @@ func TestDetectV3(t *testing.T) {
 
 	detectorUtils.On("getContainerName").Return("container-Name", nil)
 	detectorUtils.On("getContainerID").Return("0123456789A", nil)
+	detectorUtils.On("getContainerMetadataV4").Return(nil, fmt.Errorf("not supported"))
+	detectorUtils.On("getTaskMetadataV4").Return(nil, fmt.Errorf("not supported"))
 
 	attributes := []attribute.KeyValue{
 		semconv.CloudProviderAWS,
@@ -65,6 +78,87 @@ func TestDetectV3(t *testing.T) {
 	assert.Equal(t, expectedResource, res, "Resource returned is incorrect")
 }
 
+// successfully returns resource when process is running on Amazon ECS environment
+// with Metadata v4.
+func TestDetectV4(t *testing.T) {
+	t.Setenv(metadataV4EnvVar, "4")
+
+	detectorUtils := new(MockDetectorUtils)
+
+	detectorUtils.On("getContainerName").Return("container-Name", nil)
+	detectorUtils.On("getContainerID").Return("0123456789A", nil)
+	detectorUtils.On("getContainerMetadataV4").Return(&metadata.ContainerMetadataV4{
+		ContainerARN: "arn:aws:ecs:us-west-2:111122223333:container/05966557-f16c-49cb-9352-24b3a0dcd0e1",
+	}, nil)
+	detectorUtils.On("getTaskMetadataV4").Return(&metadata.TaskMetadataV4{
+		Cluster:       "arn:aws:ecs:us-west-2:111122223333:cluster/default",
+		TaskARN:       "arn:aws:ecs:us-west-2:111122223333:task/default/e9028f8d5d8e4f258373e7b93ce9a3c3",
+		Family:        "curltest",
+		Revision:      "3",
+		DesiredStatus: "RUNNING",
+		KnownStatus:   "RUNNING",
+		Limits: metadata.Limits{
+			CPU:    0.25,
+			Memory: 512,
+		},
+		AvailabilityZone: "us-west-2a",
+		LaunchType:       "FARGATE",
+	}, nil)
+
+	attributes := []attribute.KeyValue{
+		semconv.CloudProviderAWS,
+		semconv.CloudPlatformAWSECS,
+		semconv.CloudAccountID("111122223333"),
+		semconv.CloudRegion("us-west-2"),
+		semconv.CloudAvailabilityZone("us-west-2a"),
+		semconv.ContainerName("container-Name"),
+		semconv.ContainerID("0123456789A"),
+		semconv.AWSECSClusterARN("arn:aws:ecs:us-west-2:111122223333:cluster/default"),
+		semconv.AWSECSTaskARN("arn:aws:ecs:us-west-2:111122223333:task/default/e9028f8d5d8e4f258373e7b93ce9a3c3"),
+		semconv.AWSECSLaunchtypeKey.String("fargate"),
+		semconv.AWSECSTaskFamily("curltest"),
+		semconv.AWSECSTaskRevision("3"),
+		semconv.AWSECSContainerARN("arn:aws:ecs:us-west-2:111122223333:container/05966557-f16c-49cb-9352-24b3a0dcd0e1"),
+	}
+	expectedResource := resource.NewWithAttributes(semconv.SchemaURL, attributes...)
+	detector := &resourceDetector{utils: detectorUtils}
+	res, _ := detector.Detect(context.Background())
+
+	assert.Equal(t, expectedResource, res, "Resource returned is incorrect")
+}
+
+// returns empty resource when detector receives a bad task ARN from the Metadata v4 endpoint.
+func TestDetectBadARNsv4(t *testing.T) {
+	t.Setenv(metadataV4EnvVar, "4")
+
+	detectorUtils := new(MockDetectorUtils)
+
+	detectorUtils.On("getContainerName").Return("container-Name", nil)
+	detectorUtils.On("getContainerID").Return("0123456789A", nil)
+	detectorUtils.On("getContainerMetadataV4").Return(&metadata.ContainerMetadataV4{
+		ContainerARN: "container/05966557-f16c-49cb-9352-24b3a0dcd0e1",
+	}, nil)
+	detectorUtils.On("getTaskMetadataV4").Return(&metadata.TaskMetadataV4{
+		Cluster:       "default",
+		TaskARN:       "default/e9028f8d5d8e4f258373e7b93ce9a3c3",
+		Family:        "curltest",
+		Revision:      "3",
+		DesiredStatus: "RUNNING",
+		KnownStatus:   "RUNNING",
+		Limits: metadata.Limits{
+			CPU:    0.25,
+			Memory: 512,
+		},
+		AvailabilityZone: "us-west-2a",
+		LaunchType:       "FARGATE",
+	}, nil)
+
+	detector := &resourceDetector{utils: detectorUtils}
+	_, err := detector.Detect(context.Background())
+
+	assert.Equal(t, errCannotParseTaskArn, err)
+}
+
 // returns empty resource when detector cannot read container ID.
 func TestDetectCannotReadContainerID(t *testing.T) {
 	t.Setenv(metadataV3EnvVar, "3")
@@ -72,6 +166,8 @@ func TestDetectCannotReadContainerID(t *testing.T) {
 
 	detectorUtils.On("getContainerName").Return("container-Name", nil)
 	detectorUtils.On("getContainerID").Return("", nil)
+	detectorUtils.On("getContainerMetadataV4").Return(nil, fmt.Errorf("not supported"))
+	detectorUtils.On("getTaskMetadataV4").Return(nil, fmt.Errorf("not supported"))
 
 	attributes := []attribute.KeyValue{
 		semconv.CloudProviderAWS,
@@ -90,11 +186,12 @@ func TestDetectCannotReadContainerID(t *testing.T) {
 // returns empty resource when detector cannot read container Name.
 func TestDetectCannotReadContainerName(t *testing.T) {
 	t.Setenv(metadataV3EnvVar, "3")
-	t.Setenv(metadataV4EnvVar, "4")
 	detectorUtils := new(MockDetectorUtils)
 
 	detectorUtils.On("getContainerName").Return("", errCannotReadContainerName)
 	detectorUtils.On("getContainerID").Return("0123456789A", nil)
+	detectorUtils.On("getContainerMetadataV4").Return(nil, fmt.Errorf("not supported"))
+	detectorUtils.On("getTaskMetadataV4").Return(nil, fmt.Errorf("not supported"))
 
 	detector := &resourceDetector{utils: detectorUtils}
 	res, err := detector.Detect(context.Background())
