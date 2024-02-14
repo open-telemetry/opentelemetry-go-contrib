@@ -12,10 +12,6 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-// Copied from https://github.com/grpc/grpc-go/tree/v1.61.0/interop
-// That package was never intended to be used by external code.
-// See https://github.com/open-telemetry/opentelemetry-go-contrib/issues/4896
-
 /*
  *
  * Copyright 2014 gRPC authors.
@@ -34,6 +30,11 @@
  *
  */
 
+// Package test contains functions used by interop client/server.
+//
+// Copied from https://github.com/grpc/grpc-go/tree/v1.61.0/interop
+// That package was not intended to be used by external code.
+// See https://github.com/open-telemetry/opentelemetry-go-contrib/issues/4896
 package test // import "go.opentelemetry.io/contrib/instrumentation/google.golang.org/grpc/otelgrpc/internal/test"
 
 import (
