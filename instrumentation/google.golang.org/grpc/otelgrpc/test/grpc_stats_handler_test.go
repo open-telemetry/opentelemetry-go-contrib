@@ -26,21 +26,21 @@ import (
 	"github.com/stretchr/testify/require"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/codes"
-	"google.golang.org/grpc/interop"
 	"google.golang.org/grpc/status"
 
 	"go.opentelemetry.io/contrib/instrumentation/google.golang.org/grpc/otelgrpc"
+	"go.opentelemetry.io/contrib/instrumentation/google.golang.org/grpc/otelgrpc/internal/test"
 	"go.opentelemetry.io/otel/attribute"
 	"go.opentelemetry.io/otel/sdk/instrumentation"
 	"go.opentelemetry.io/otel/sdk/metric"
 	"go.opentelemetry.io/otel/sdk/metric/metricdata"
 	"go.opentelemetry.io/otel/sdk/metric/metricdata/metricdatatest"
 
-	testpb "google.golang.org/grpc/interop/grpc_testing"
-
 	"go.opentelemetry.io/otel/sdk/trace"
 	"go.opentelemetry.io/otel/sdk/trace/tracetest"
 	semconv "go.opentelemetry.io/otel/semconv/v1.17.0"
+
+	testpb "google.golang.org/grpc/interop/grpc_testing"
 )
 
 func TestStatsHandler(t *testing.T) {
@@ -72,7 +72,9 @@ func TestStatsHandler(t *testing.T) {
 			),
 		},
 	)
-	doCalls(client)
+	ctx, cancel := context.WithCancel(context.Background())
+	defer cancel()
+	doCalls(ctx, client)
 
 	t.Run("ClientSpans", func(t *testing.T) {
 		checkClientSpans(t, clientSR.Ended(), listener.Addr().String())
@@ -1387,7 +1389,7 @@ func TestStatsHandlerConcurrentSafeContextCancellation(t *testing.T) {
 			defer wg.Done()
 			for i := 0; i < messageCount; i++ {
 				const reqSize = 1
-				pl := interop.ClientNewPayload(testpb.PayloadType_COMPRESSABLE, reqSize)
+				pl := test.ClientNewPayload(testpb.PayloadType_COMPRESSABLE, reqSize)
 				respParam := []*testpb.ResponseParameters{
 					{
 						Size: reqSize,

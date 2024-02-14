@@ -100,7 +100,6 @@ func main() {
 
 		return err
 	}(ctx)
-
 	if err != nil {
 		log.Fatal(err)
 	}
