@@ -251,3 +251,58 @@ func TestWithFilter(t *testing.T) {
 		assert.Len(t, sr.Ended(), 1)
 	})
 }
+
+func TestRecordPanic(t *testing.T) {
+	recoveryMiddleware := func(c *gin.Context) {
+		// Ensure panics are recovered and don't crash tests/are logged to stdout.
+		defer func() {
+			_ = recover()
+		}()
+		c.Next()
+	}
+
+	t.Run("panic recovered and recorded", func(t *testing.T) {
+		sr := tracetest.NewSpanRecorder()
+		provider := sdktrace.NewTracerProvider()
+		provider.RegisterSpanProcessor(sr)
+		router := gin.New()
+		recordPanicConfig := otelgin.NewRecordPanicConfig(otelgin.WithRecordPanicEnabled(true), otelgin.WithRecordPanicStackTrace(true))
+		router.Use(recoveryMiddleware, otelgin.Middleware("potato", otelgin.WithTracerProvider(provider), otelgin.WithRecordPanicConfig(recordPanicConfig)))
+		router.GET("/user/:id", func(c *gin.Context) { panic("corn") })
+		router.ServeHTTP(httptest.NewRecorder(), httptest.NewRequest("GET", "/user/123", nil))
+
+		require.Len(t, sr.Ended(), 1, "should emit a span")
+		span := sr.Ended()[0]
+		assert.Equal(t, span.Status().Code, codes.Error, "should set Error status for panics")
+		require.Len(t, span.Events(), 1, "should emit an event")
+		event := span.Events()[0]
+		assert.Equal(t, event.Name, "exception")
+
+		var foundStackTrace bool
+
+		for _, attr := range event.Attributes {
+			if attr.Key == "exception.stacktrace" {
+				foundStackTrace = true
+				break
+			}
+		}
+
+		assert.True(t, foundStackTrace, "should record a stack trace")
+	})
+
+	t.Run("panic recovered and not recorded", func(t *testing.T) {
+		sr := tracetest.NewSpanRecorder()
+		provider := sdktrace.NewTracerProvider()
+		provider.RegisterSpanProcessor(sr)
+		router := gin.New()
+		recordPanicConfig := otelgin.NewRecordPanicConfig(otelgin.WithRecordPanicEnabled(false))
+		router.Use(recoveryMiddleware, otelgin.Middleware("potato", otelgin.WithTracerProvider(provider), otelgin.WithRecordPanicConfig(recordPanicConfig)))
+		router.GET("/user/:id", func(c *gin.Context) { panic("corn") })
+		router.ServeHTTP(httptest.NewRecorder(), httptest.NewRequest("GET", "/user/123", nil))
+
+		require.Len(t, sr.Ended(), 1, "should emit a span")
+		span := sr.Ended()[0]
+		assert.Equal(t, span.Status().Code, codes.Unset, "should set Unset status for unrecovered panics")
+		require.Empty(t, span.Events(), "should not emit an event")
+	})
+}

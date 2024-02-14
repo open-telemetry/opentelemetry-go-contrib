@@ -17,6 +17,47 @@ type config struct {
 	Propagators       propagation.TextMapPropagator
 	Filters           []Filter
 	SpanNameFormatter SpanNameFormatter
+	RecordPanicConfig RecordPanicConfig
+}
+
+// RecordPanicConfig is a configuration for panic recording.
+type RecordPanicConfig struct {
+	enabled    bool
+	stackTrace bool
+}
+
+// RecordPanicOption applies a configuration for panic recording.
+type RecordPanicOption interface {
+	apply(*RecordPanicConfig)
+}
+
+type recordPanicOptionFunc func(*RecordPanicConfig)
+
+func (o recordPanicOptionFunc) apply(c *RecordPanicConfig) {
+	o(c)
+}
+
+// WithRecordPanicEnabled enables panic recording based on the provided boolean.
+func WithRecordPanicEnabled(enabled bool) RecordPanicOption {
+	return recordPanicOptionFunc(func(cfg *RecordPanicConfig) {
+		cfg.enabled = enabled
+	})
+}
+
+// WithRecordPanicStackTrace enables recording of the panic stack trace based on the provided boolean.
+func WithRecordPanicStackTrace(stackTrace bool) RecordPanicOption {
+	return recordPanicOptionFunc(func(cfg *RecordPanicConfig) {
+		cfg.stackTrace = stackTrace
+	})
+}
+
+// NewRecordPanicConfig creates a new RecordPanicConfig with the provided options.
+func NewRecordPanicConfig(opts ...RecordPanicOption) RecordPanicConfig {
+	cfg := RecordPanicConfig{}
+	for _, opt := range opts {
+		opt.apply(&cfg)
+	}
+	return cfg
 }
 
 // Filter is a predicate used to determine whether a given http.request should
@@ -75,5 +116,12 @@ func WithFilter(f ...Filter) Option {
 func WithSpanNameFormatter(f func(r *http.Request) string) Option {
 	return optionFunc(func(c *config) {
 		c.SpanNameFormatter = f
+	})
+}
+
+// WithRecordPanicConfig specifies a configuration for panic recording.
+func WithRecordPanicConfig(cfg RecordPanicConfig) Option {
+	return optionFunc(func(c *config) {
+		c.RecordPanicConfig = cfg
 	})
 }
