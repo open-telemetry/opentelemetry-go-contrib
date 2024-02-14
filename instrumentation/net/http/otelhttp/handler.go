@@ -233,7 +233,9 @@ func (h *middleware) serveHTTP(w http.ResponseWriter, r *http.Request, next http
 
 	// Add metrics
 	attributes := append(labeler.Get(), semconvutil.HTTPServerRequestMetrics(h.server, r)...)
-
+	if rww.statusCode > 0 {
+		attributes = append(attributes, semconv.HTTPStatusCode(rww.statusCode))
+	}
 	o := metric.WithAttributes(attributes...)
 	h.requestBytesCounter.Add(ctx, bw.read, o)
 	h.responseBytesCounter.Add(ctx, rww.written, o)

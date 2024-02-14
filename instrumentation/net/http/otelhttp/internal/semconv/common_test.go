@@ -24,6 +24,7 @@ import (
 
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
+
 	"go.opentelemetry.io/otel/attribute"
 )
 
@@ -89,5 +90,4 @@ func testTraceResponse(t *testing.T, serv HTTPServer, want []attribute.KeyValue)
 		WriteError: fmt.Errorf("write error"),
 	}
 	assert.ElementsMatch(t, want, serv.TraceResponse(resp))
-
 }

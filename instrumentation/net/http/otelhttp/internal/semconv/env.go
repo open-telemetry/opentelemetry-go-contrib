@@ -85,8 +85,8 @@ func NewHTTPServer() HTTPServer {
 	env := strings.ToLower(os.Getenv("OTEL_HTTP_CLIENT_COMPATIBILITY_MODE"))
 	switch env {
 	// TODO: Add support for new semconv
-	// case "http":
-	// 	return compatibilityHttp
+	case "http":
+		return newHTTPServer{}
 	case "http/dup":
 		return dupHTTPServer{}
 	default:

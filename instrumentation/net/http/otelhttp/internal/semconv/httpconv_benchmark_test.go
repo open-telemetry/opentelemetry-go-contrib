@@ -14,7 +14,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package semconvutil
+package semconv
 
 import (
 	"net/http"
@@ -26,6 +26,9 @@ import (
 
 var benchHTTPServerRequestResults []attribute.KeyValue
 
+// BenchmarkHTTPServerRequest allows comparison between different version of the HTTP server.
+// To use an alternative start this test with OTEL_HTTP_CLIENT_COMPATIBILITY_MODE set to the
+// version under test.
 func BenchmarkHTTPServerRequest(b *testing.B) {
 	// Request was generated from TestHTTPServerRequest request.
 	req := &http.Request{
@@ -45,39 +48,11 @@ func BenchmarkHTTPServerRequest(b *testing.B) {
 		RemoteAddr: "127.0.0.1:38738",
 		RequestURI: "/",
 	}
+	serv := NewHTTPServer()
 
 	b.ReportAllocs()
 	b.ResetTimer()
 	for i := 0; i < b.N; i++ {
-		benchHTTPServerRequestResults = HTTPServerRequest("", req)
-	}
-}
-
-var benchHTTPServerRequestMetricsResults []attribute.KeyValue
-
-func BenchmarkHTTPServerRequestMetrics(b *testing.B) {
-	// Request was generated from TestHTTPServerRequestMetrics request.
-	req := &http.Request{
-		Method: http.MethodGet,
-		URL: &url.URL{
-			Path: "/",
-		},
-		Proto:      "HTTP/1.1",
-		ProtoMajor: 1,
-		ProtoMinor: 1,
-		Header: http.Header{
-			"User-Agent":      []string{"Go-http-client/1.1"},
-			"Accept-Encoding": []string{"gzip"},
-		},
-		Body:       http.NoBody,
-		Host:       "127.0.0.1:39093",
-		RemoteAddr: "127.0.0.1:38738",
-		RequestURI: "/",
-	}
-
-	b.ReportAllocs()
-	b.ResetTimer()
-	for i := 0; i < b.N; i++ {
-		benchHTTPServerRequestMetricsResults = HTTPServerRequestMetrics("", req)
+		benchHTTPServerRequestResults = serv.TraceRequest("", req)
 	}
 }

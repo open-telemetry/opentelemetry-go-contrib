@@ -16,8 +16,12 @@ package semconv // import "go.opentelemetry.io/contrib/instrumentation/net/http/
 
 import (
 	"net"
+	"net/http"
 	"strconv"
 	"strings"
+
+	"go.opentelemetry.io/otel/attribute"
+	semconvNew "go.opentelemetry.io/otel/semconv/v1.24.0"
 )
 
 // splitHostPort splits a network address hostport of the form "host",
@@ -83,4 +87,16 @@ func netProtocol(proto string) (name string, version string) {
 	name, version, _ = strings.Cut(proto, "/")
 	name = strings.ToLower(name)
 	return name, version
+}
+
+var methodLookup = map[string]attribute.KeyValue{
+	http.MethodConnect: semconvNew.HTTPRequestMethodConnect,
+	http.MethodDelete:  semconvNew.HTTPRequestMethodDelete,
+	http.MethodGet:     semconvNew.HTTPRequestMethodGet,
+	http.MethodHead:    semconvNew.HTTPRequestMethodHead,
+	http.MethodOptions: semconvNew.HTTPRequestMethodOptions,
+	http.MethodPatch:   semconvNew.HTTPRequestMethodPatch,
+	http.MethodPost:    semconvNew.HTTPRequestMethodPost,
+	http.MethodPut:     semconvNew.HTTPRequestMethodPut,
+	http.MethodTrace:   semconvNew.HTTPRequestMethodTrace,
 }

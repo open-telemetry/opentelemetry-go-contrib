@@ -20,13 +20,12 @@ import (
 	"strings"
 
 	"go.opentelemetry.io/otel/attribute"
-	semconvOld "go.opentelemetry.io/otel/semconv/v1.20.0"
 	semconvNew "go.opentelemetry.io/otel/semconv/v1.24.0"
 )
 
-type dupHTTPServer struct{}
+type newHTTPServer struct{}
 
-var _ HTTPServer = dupHTTPServer{}
+var _ HTTPServer = newHTTPServer{}
 
 // TraceRequest returns trace attributes for an HTTP request received by a
 // server.
@@ -44,11 +43,11 @@ var _ HTTPServer = dupHTTPServer{}
 //
 // If the primary server name is not known, server should be an empty string.
 // The req Host will be used to determine the server instead.
-func (d dupHTTPServer) TraceRequest(server string, req *http.Request) []attribute.KeyValue {
+func (n newHTTPServer) TraceRequest(server string, req *http.Request) []attribute.KeyValue {
 	// old http.target http.scheme net.host.name net.host.port http.scheme net.host.name net.host.port http.method net.sock.peer.addr net.sock.peer.port user_agent.original http.method http.status_code net.protocol.version
 	// new http.request.header server.address server.port network.local.address network.local.port client.address client.port url.path url.query url.scheme user_agent.original server.address server.port url.scheme http.request.method http.response.status_code error.type network.protocol.name network.protocol.version http.request.method_original http.response.header http.request.method network.peer.address network.peer.port network.transport http.request.method http.response.status_code error.type network.protocol.name network.protocol.version
 
-	const MaxAttributes = 24
+	const MaxAttributes = 11
 	attrs := make([]attribute.KeyValue, MaxAttributes)
 	var host string
 	var p int
@@ -62,27 +61,23 @@ func (d dupHTTPServer) TraceRequest(server string, req *http.Request) []attribut
 		}
 	}
 
-	attrs[0] = semconvOld.NetHostName(host)
-	attrs[1] = semconvNew.ServerAddress(host)
-	i := 2
+	attrs[0] = semconvNew.ServerAddress(host)
+	i := 1
 	if hostPort := requiredHTTPPort(req.TLS != nil, p); hostPort > 0 {
-		attrs[i] = semconvOld.NetHostPort(hostPort)
-		attrs[i+1] = semconvNew.ServerPort(hostPort)
-		i += 2
+		attrs[i] = semconvNew.ServerPort(hostPort)
+		i += 1
 	}
-	i += d.method(req.Method, attrs[i:])     // Max 3
-	i += d.scheme(req.TLS != nil, attrs[i:]) // Max 2
+	i += n.method(req.Method, attrs[i:])     // Max 2
+	i += n.scheme(req.TLS != nil, attrs[i:]) // Max 1
 
 	if peer, peerPort := splitHostPort(req.RemoteAddr); peer != "" {
 		// The Go HTTP server sets RemoteAddr to "IP:port", this will not be a
 		// file-path that would be interpreted with a sock family.
-		attrs[i] = semconvOld.NetSockPeerAddr(peer)
-		attrs[i+1] = semconvNew.NetworkPeerAddress(peer)
-		i += 2
+		attrs[i] = semconvNew.NetworkPeerAddress(peer)
+		i++
 		if peerPort > 0 {
-			attrs[i] = semconvOld.NetSockPeerPort(peerPort)
-			attrs[i+1] = semconvNew.NetworkPeerPort(peerPort)
-			i += 2
+			attrs[i] = semconvNew.NetworkPeerPort(peerPort)
+			i++
 		}
 	}
 
@@ -93,64 +88,56 @@ func (d dupHTTPServer) TraceRequest(server string, req *http.Request) []attribut
 	}
 
 	if clientIP := serverClientIP(req.Header.Get("X-Forwarded-For")); clientIP != "" {
-		attrs[i] = semconvOld.HTTPClientIP(clientIP)
-		attrs[i+1] = semconvNew.ClientAddress(clientIP)
-		i += 2
+		attrs[i] = semconvNew.ClientAddress(clientIP)
+		i++
 	}
 
 	if req.URL != nil && req.URL.Path != "" {
-		attrs[i] = semconvOld.HTTPTarget(req.URL.Path)
-		attrs[i+1] = semconvNew.URLPath(req.URL.Path)
-		i += 2
+		attrs[i] = semconvNew.URLPath(req.URL.Path)
+		i++
 	}
 
 	protoName, protoVersion := netProtocol(req.Proto)
 	if protoName != "" && protoName != "http" {
-		attrs[i] = semconvOld.NetProtocolName(protoName)
-		attrs[i+1] = semconvNew.NetworkProtocolName(protoName)
-		i += 2
+		attrs[i] = semconvNew.NetworkProtocolName(protoName)
+		i++
 	}
 	if protoVersion != "" {
-		attrs[i] = semconvOld.NetProtocolVersion(protoVersion)
-		attrs[i+1] = semconvNew.NetworkProtocolVersion(protoVersion)
-		i += 2
+		attrs[i] = semconvNew.NetworkProtocolVersion(protoVersion)
+		i++
 	}
 
 	// // TODO: When we drop go1.20 support use slices.clip().
 	return attrs[:i:i]
 }
 
-func (d dupHTTPServer) method(method string, attrs []attribute.KeyValue) int {
+func (n newHTTPServer) method(method string, attrs []attribute.KeyValue) int {
 	if method == "" {
-		attrs[0] = semconvOld.HTTPMethod(http.MethodGet)
-		attrs[1] = semconvNew.HTTPRequestMethodGet
-		return 2
+		attrs[0] = semconvNew.HTTPRequestMethodGet
+		return 1
 	}
-	attrs[0] = semconvOld.HTTPMethod(method)
 	if attr, ok := methodLookup[method]; ok {
-		attrs[1] = attr
-		return 2
+		attrs[0] = attr
+		return 1
 	}
 
 	if attr, ok := methodLookup[strings.ToUpper(method)]; ok {
-		attrs[1] = attr
+		attrs[0] = attr
 	} else {
-		// If the Original method is not a standard HTTP method fallback to GET
-		attrs[1] = semconvNew.HTTPRequestMethodGet
+		// If the Original methos is not a standard HTTP method fallback to GET
+		attrs[0] = semconvNew.HTTPRequestMethodGet
 	}
-	attrs[2] = semconvNew.HTTPRequestMethodOriginal(method)
-	return 3
+	attrs[1] = semconvNew.HTTPRequestMethodOriginal(method)
+	return 2
 }
 
-func (d dupHTTPServer) scheme(https bool, attrs []attribute.KeyValue) int { // nolint:revive
+func (n newHTTPServer) scheme(https bool, attrs []attribute.KeyValue) int { // nolint:revive
 	if https {
-		attrs[0] = semconvOld.HTTPSchemeHTTPS
-		attrs[1] = semconvNew.URLScheme("https")
-		return 2
+		attrs[0] = semconvNew.URLScheme("https")
+		return 1
 	}
-	attrs[0] = semconvOld.HTTPSchemeHTTP
-	attrs[1] = semconvNew.URLScheme("http")
-	return 2
+	attrs[0] = semconvNew.URLScheme("http")
+	return 1
 }
 
 // MetricsRequest returns metric attributes for an HTTP request received by a
@@ -169,19 +156,18 @@ func (d dupHTTPServer) scheme(https bool, attrs []attribute.KeyValue) int { // n
 //
 // If the primary server name is not known, server should be an empty string.
 // The req Host will be used to determine the server instead.
-func (d dupHTTPServer) MetricsRequest(server string, req *http.Request) []attribute.KeyValue {
+func (n newHTTPServer) MetricsRequest(server string, req *http.Request) []attribute.KeyValue {
 	return nil
 }
 
 // TraceRequest returns trace attributes for telemetry from an HTTP response.
 //
 // If any of the fields in the ResponseTelemetry are not set the attribute will be omitted.
-func (d dupHTTPServer) TraceResponse(resp ResponseTelemetry) []attribute.KeyValue {
+func (n newHTTPServer) TraceResponse(resp ResponseTelemetry) []attribute.KeyValue {
 	attributes := []attribute.KeyValue{}
 
 	if resp.ReadBytes > 0 {
 		attributes = append(attributes,
-			semconvOld.HTTPRequestContentLength(resp.ReadBytes),
 			semconvNew.HTTPRequestBodySize(resp.ReadBytes),
 		)
 	}
@@ -191,13 +177,11 @@ func (d dupHTTPServer) TraceResponse(resp ResponseTelemetry) []attribute.KeyValu
 	}
 	if resp.WriteBytes > 0 {
 		attributes = append(attributes,
-			semconvOld.HTTPResponseContentLength(resp.WriteBytes),
 			semconvNew.HTTPResponseBodySize(resp.WriteBytes),
 		)
 	}
 	if resp.StatusCode > 0 {
 		attributes = append(attributes,
-			semconvOld.HTTPStatusCode(resp.StatusCode),
 			semconvNew.HTTPResponseStatusCode(resp.StatusCode),
 		)
 	}
@@ -210,6 +194,6 @@ func (d dupHTTPServer) TraceResponse(resp ResponseTelemetry) []attribute.KeyValu
 }
 
 // Route returns the attribute for the route.
-func (d dupHTTPServer) Route(route string) attribute.KeyValue {
+func (n newHTTPServer) Route(route string) attribute.KeyValue {
 	return semconvNew.HTTPRoute(route)
 }

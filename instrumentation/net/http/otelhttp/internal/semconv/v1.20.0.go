@@ -99,6 +99,8 @@ func (o oldHTTPServer) Route(route string) attribute.KeyValue {
 	return semconv.HTTPRoute(route)
 }
 
+// HTTPStatusCode returns the attribute for the HTTP status code.
+// This is a temporary function needed by metrics.  This will be removed when MetricsRequest is added.
 func HTTPStatusCode(status int) attribute.KeyValue {
 	return semconv.HTTPStatusCode(status)
 }
