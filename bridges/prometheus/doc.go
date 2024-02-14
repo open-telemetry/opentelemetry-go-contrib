@@ -19,7 +19,6 @@
 // to be used with OpenTelemetry exporters, including OTLP.
 //
 // Limitations:
-//   - Summary metrics are dropped by the bridge.
 //   - Prometheus histograms are translated to OpenTelemetry fixed-bucket
 //     histograms, rather than exponential histograms.
 //

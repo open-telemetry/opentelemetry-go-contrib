@@ -101,8 +101,10 @@ func convertPrometheusMetricsInto(promMetrics []*dto.MetricFamily, now time.Time
 			newMetric.Data = convertCounter(pm.GetMetric(), now)
 		case dto.MetricType_HISTOGRAM:
 			newMetric.Data = convertHistogram(pm.GetMetric(), now)
+		case dto.MetricType_SUMMARY:
+			newMetric.Data = convertSummary(pm.GetMetric(), now)
 		default:
-			// MetricType_GAUGE_HISTOGRAM, MetricType_SUMMARY, MetricType_UNTYPED
+			// MetricType_GAUGE_HISTOGRAM, MetricType_UNTYPED
 			errs = append(errs, fmt.Errorf("%w: %v for metric %v", errUnsupportedType, pm.GetType(), pm.GetName()))
 			continue
 		}
@@ -202,6 +204,43 @@ func convertBuckets(buckets []*dto.Bucket) ([]float64, []uint64, []metricdata.Ex
 		}
 	}
 	return bounds, bucketCounts, exemplars
+}
+
+func convertSummary(metrics []*dto.Metric, now time.Time) metricdata.Summary {
+	otelSummary := metricdata.Summary{
+		DataPoints: make([]metricdata.SummaryDataPoint, len(metrics)),
+	}
+	for i, m := range metrics {
+		dp := metricdata.SummaryDataPoint{
+			Attributes:     convertLabels(m.GetLabel()),
+			StartTime:      processStartTime,
+			Time:           now,
+			Count:          m.GetSummary().GetSampleCount(),
+			Sum:            m.GetSummary().GetSampleSum(),
+			QuantileValues: convertQuantiles(m.GetSummary().GetQuantile()),
+		}
+		createdTs := m.GetSummary().GetCreatedTimestamp()
+		if createdTs.IsValid() {
+			dp.StartTime = createdTs.AsTime()
+		}
+		if m.GetTimestampMs() != 0 {
+			dp.Time = time.UnixMilli(m.GetTimestampMs())
+		}
+		otelSummary.DataPoints[i] = dp
+	}
+	return otelSummary
+}
+
+func convertQuantiles(quantiles []*dto.Quantile) []metricdata.QuantileValue {
+	otelQuantiles := make([]metricdata.QuantileValue, len(quantiles))
+	for i, quantile := range quantiles {
+		dp := metricdata.QuantileValue{
+			Quantile: quantile.GetQuantile(),
+			Value:    quantile.GetValue(),
+		}
+		otelQuantiles[i] = dp
+	}
+	return otelQuantiles
 }
 
 func convertLabels(labels []*dto.LabelPair) attribute.Set {
