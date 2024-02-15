@@ -128,11 +128,12 @@ func TestProduce(t *testing.T) {
 			}},
 		},
 		{
-			name: "summary dropped",
+			name: "summary",
 			testFn: func(reg *prometheus.Registry) {
 				metric := prometheus.NewSummary(prometheus.SummaryOpts{
-					Name: "test_summary_metric",
-					Help: "A summary metric for testing",
+					Name:       "test_summary_metric",
+					Help:       "A summary metric for testing",
+					Objectives: map[float64]float64{0.5: 0.05, 0.9: 0.01, 0.99: 0.001},
 					ConstLabels: prometheus.Labels(map[string]string{
 						"foo": "bar",
 					}),
@@ -140,7 +141,31 @@ func TestProduce(t *testing.T) {
 				reg.MustRegister(metric)
 				metric.Observe(15.0)
 			},
-			wantErr: errUnsupportedType,
+			expected: []metricdata.ScopeMetrics{{
+				Scope: instrumentation.Scope{
+					Name: scopeName,
+				},
+				Metrics: []metricdata.Metrics{
+					{
+						Name:        "test_summary_metric",
+						Description: "A summary metric for testing",
+						Data: metricdata.Summary{
+							DataPoints: []metricdata.SummaryDataPoint{
+								{
+									Count: 1,
+									Sum:   15.0,
+									QuantileValues: []metricdata.QuantileValue{
+										{Quantile: 0.5, Value: 15},
+										{Quantile: 0.9, Value: 15},
+										{Quantile: 0.99, Value: 15},
+									},
+									Attributes: attribute.NewSet(attribute.String("foo", "bar")),
+								},
+							},
+						},
+					},
+				},
+			}},
 		},
 		{
 			name: "histogram",
@@ -207,12 +232,13 @@ func TestProduce(t *testing.T) {
 				})
 				reg.MustRegister(metric)
 				metric.Set(123.4)
-				unsupportedMetric := prometheus.NewSummary(prometheus.SummaryOpts{
-					Name: "test_summary_metric",
-					Help: "A summary metric for testing",
+				unsupportedMetric := prometheus.NewUntypedFunc(prometheus.UntypedOpts{
+					Name: "test_untyped_metric",
+					Help: "An untyped metric for testing",
+				}, func() float64 {
+					return 135.8
 				})
 				reg.MustRegister(unsupportedMetric)
-				unsupportedMetric.Observe(15.0)
 			},
 			expected: []metricdata.ScopeMetrics{{
 				Scope: instrumentation.Scope{
@@ -308,6 +334,27 @@ func TestProduceForStartTime(t *testing.T) {
 			},
 			startTimeFn: func(aggr metricdata.Aggregation) []time.Time {
 				dps := aggr.(metricdata.Histogram[float64]).DataPoints
+				sts := make([]time.Time, len(dps))
+				for i, dp := range dps {
+					sts[i] = dp.StartTime
+				}
+				return sts
+			},
+		},
+		{
+			name: "summary",
+			testFn: func(reg *prometheus.Registry) {
+				metric := prometheus.NewSummary(prometheus.SummaryOpts{
+					Name: "test_summary_metric",
+					Help: "A summary metric for testing",
+					ConstLabels: prometheus.Labels(map[string]string{
+						"foo": "bar",
+					}),
+				})
+				reg.MustRegister(metric)
+			},
+			startTimeFn: func(aggr metricdata.Aggregation) []time.Time {
+				dps := aggr.(metricdata.Summary).DataPoints
 				sts := make([]time.Time, len(dps))
 				for i, dp := range dps {
 					sts[i] = dp.StartTime
