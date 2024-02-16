@@ -65,7 +65,7 @@ func (n newHTTPServer) TraceRequest(server string, req *http.Request) []attribut
 	i := 1
 	if hostPort := requiredHTTPPort(req.TLS != nil, p); hostPort > 0 {
 		attrs[i] = semconvNew.ServerPort(hostPort)
-		i += 1
+		i++
 	}
 	i += n.method(req.Method, attrs[i:])     // Max 2
 	i += n.scheme(req.TLS != nil, attrs[i:]) // Max 1
@@ -138,26 +138,6 @@ func (n newHTTPServer) scheme(https bool, attrs []attribute.KeyValue) int { // n
 	}
 	attrs[0] = semconvNew.URLScheme("http")
 	return 1
-}
-
-// MetricsRequest returns metric attributes for an HTTP request received by a
-// server.
-//
-// The server must be the primary server name if it is known. For example this
-// would be the ServerName directive
-// (https://httpd.apache.org/docs/2.4/mod/core.html#servername) for an Apache
-// server, and the server_name directive
-// (http://nginx.org/en/docs/http/ngx_http_core_module.html#server_name) for an
-// nginx server. More generically, the primary server name would be the host
-// header value that matches the default virtual host of an HTTP server. It
-// should include the host identifier and if a port is used to route to the
-// server that port identifier should be included as an appropriate port
-// suffix.
-//
-// If the primary server name is not known, server should be an empty string.
-// The req Host will be used to determine the server instead.
-func (n newHTTPServer) MetricsRequest(server string, req *http.Request) []attribute.KeyValue {
-	return nil
 }
 
 // TraceRequest returns trace attributes for telemetry from an HTTP response.

@@ -18,11 +18,14 @@
 package semconv // import "go.opentelemetry.io/contrib/instrumentation/net/http/otelhttp/internal/semconv"
 
 import (
+	"errors"
 	"fmt"
 	"net/http"
 	"os"
 	"strings"
+	"sync"
 
+	"go.opentelemetry.io/otel"
 	"go.opentelemetry.io/otel/attribute"
 	"go.opentelemetry.io/otel/codes"
 )
@@ -54,24 +57,6 @@ type HTTPServer interface {
 	// The req Host will be used to determine the server instead.
 	TraceRequest(server string, req *http.Request) []attribute.KeyValue
 
-	// MetricsRequest returns metric attributes for an HTTP request received by a
-	// server.
-	//
-	// The server must be the primary server name if it is known. For example this
-	// would be the ServerName directive
-	// (https://httpd.apache.org/docs/2.4/mod/core.html#servername) for an Apache
-	// server, and the server_name directive
-	// (http://nginx.org/en/docs/http/ngx_http_core_module.html#server_name) for an
-	// nginx server. More generically, the primary server name would be the host
-	// header value that matches the default virtual host of an HTTP server. It
-	// should include the host identifier and if a port is used to route to the
-	// server that port identifier should be included as an appropriate port
-	// suffix.
-	//
-	// If the primary server name is not known, server should be an empty string.
-	// The req Host will be used to determine the server instead.
-	MetricsRequest(server string, req *http.Request) []attribute.KeyValue
-
 	// TraceRequest returns trace attributes for telemetry from an HTTP response.
 	//
 	// If any of the fields in the ResponseTelemetry are not set the attribute will be omitted.
@@ -81,15 +66,19 @@ type HTTPServer interface {
 	Route(string) attribute.KeyValue
 }
 
+var warnOnce = sync.OnceFunc(func() {
+	otel.Handle(errors.New("deprecated: old semantic conventions are being used. Use the environment variable OTEL_HTTP_CLIENT_COMPATIBILITY_MODE to opt into the new conventions. This will be removed in a future release"))
+})
+
 func NewHTTPServer() HTTPServer {
 	env := strings.ToLower(os.Getenv("OTEL_HTTP_CLIENT_COMPATIBILITY_MODE"))
 	switch env {
-	// TODO: Add support for new semconv
 	case "http":
 		return newHTTPServer{}
 	case "http/dup":
 		return dupHTTPServer{}
 	default:
+		warnOnce()
 		return oldHTTPServer{}
 	}
 }
