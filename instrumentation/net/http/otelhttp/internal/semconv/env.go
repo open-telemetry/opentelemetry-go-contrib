@@ -66,9 +66,7 @@ type HTTPServer interface {
 	Route(string) attribute.KeyValue
 }
 
-var warnOnce = sync.OnceFunc(func() {
-	otel.Handle(errors.New("deprecated: old semantic conventions are being used. Use the environment variable OTEL_HTTP_CLIENT_COMPATIBILITY_MODE to opt into the new conventions. This will be removed in a future release"))
-})
+var warnOnce = sync.Once{}
 
 func NewHTTPServer() HTTPServer {
 	env := strings.ToLower(os.Getenv("OTEL_HTTP_CLIENT_COMPATIBILITY_MODE"))
@@ -78,7 +76,9 @@ func NewHTTPServer() HTTPServer {
 	case "http/dup":
 		return dupHTTPServer{}
 	default:
-		warnOnce()
+		warnOnce.Do(func() {
+			otel.Handle(errors.New("deprecated: old semantic conventions are being used. Use the environment variable OTEL_HTTP_CLIENT_COMPATIBILITY_MODE to opt into the new conventions. This will be removed in a future release"))
+		})
 		return oldHTTPServer{}
 	}
 }
