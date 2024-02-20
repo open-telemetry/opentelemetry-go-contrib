@@ -116,8 +116,10 @@ func TestSemanticConventions(t *testing.T) {
 	resp, err := client.Post(ts.URL+"/", "application/text", strings.NewReader("Hello, Server!"))
 	require.NoError(t, err)
 
-	_, _ = io.Copy(io.Discard, resp.Body)
-	_ = resp.Body.Close()
+	_, err = io.Copy(io.Discard, resp.Body)
+	assert.NoError(t, err)
+	err = resp.Body.Close()
+	assert.NoError(t, err)
 
 	err = tp.ForceFlush(context.Background())
 	require.NoError(t, err)
