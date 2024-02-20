@@ -24,6 +24,7 @@ import (
 	"time"
 
 	"go.opentelemetry.io/contrib/instrumentation/google.golang.org/grpc/otelgrpc"
+	"go.opentelemetry.io/contrib/instrumentation/google.golang.org/grpc/otelgrpc/internal/test"
 	"go.opentelemetry.io/otel/attribute"
 	"go.opentelemetry.io/otel/codes"
 	"go.opentelemetry.io/otel/sdk/metric"
@@ -40,11 +41,11 @@ import (
 	"google.golang.org/grpc"
 	grpc_codes "google.golang.org/grpc/codes"
 	"google.golang.org/grpc/credentials/insecure"
-	"google.golang.org/grpc/interop"
-	"google.golang.org/grpc/interop/grpc_testing"
 	"google.golang.org/grpc/metadata"
 	"google.golang.org/grpc/status"
 	"google.golang.org/grpc/test/bufconn"
+
+	"google.golang.org/grpc/interop/grpc_testing"
 )
 
 func getSpanFromRecorder(sr *tracetest.SpanRecorder, name string) (trace.ReadOnlySpan, bool) {
@@ -1142,7 +1143,9 @@ func BenchmarkStreamClientInterceptor(b *testing.B) {
 	)
 
 	b.ResetTimer()
+	ctx, cancel := context.WithCancel(context.Background())
+	defer cancel()
 	for i := 0; i < b.N; i++ {
-		interop.DoClientStreaming(client)
+		test.DoClientStreaming(ctx, client)
 	}
 }

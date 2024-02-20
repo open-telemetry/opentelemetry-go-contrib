@@ -43,7 +43,6 @@ func NewTracingState() TracingState {
 	// Write telemetry data to a file.
 	var err error
 	tracingState.File, err = os.Create("traces.txt")
-
 	if err != nil {
 		tracingState.Logger.Fatal(err)
 	}

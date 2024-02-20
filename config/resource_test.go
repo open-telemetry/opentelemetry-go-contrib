@@ -4,7 +4,6 @@
 package config // import "go.opentelemetry.io/contrib/config"
 
 import (
-	"errors"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
@@ -43,8 +42,8 @@ func TestNewResource(t *testing.T) {
 					ServiceName: ptr("service-a"),
 				},
 			},
-			wantResource: resource.Empty(),
-			wantErr:      errors.New("cannot merge resource due to conflicting Schema URL"),
+			wantResource: resource.NewSchemaless(res.Attributes()...),
+			wantErr:      resource.ErrSchemaURLConflict,
 		},
 		{
 			name: "resource-with-attributes-and-schema",
@@ -60,7 +59,7 @@ func TestNewResource(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			got, err := newResource(tt.config)
-			require.Equal(t, tt.wantErr, err)
+			assert.ErrorIs(t, err, tt.wantErr)
 			assert.Equal(t, tt.wantResource, got)
 		})
 	}

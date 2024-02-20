@@ -90,6 +90,10 @@ func convertPrometheusMetricsInto(promMetrics []*dto.MetricFamily, now time.Time
 	var errs multierr
 	otelMetrics := make([]metricdata.Metrics, 0)
 	for _, pm := range promMetrics {
+		if len(pm.GetMetric()) == 0 {
+			// This shouldn't ever happen
+			continue
+		}
 		newMetric := metricdata.Metrics{
 			Name:        pm.GetName(),
 			Description: pm.GetHelp(),
@@ -99,16 +103,32 @@ func convertPrometheusMetricsInto(promMetrics []*dto.MetricFamily, now time.Time
 			newMetric.Data = convertGauge(pm.GetMetric(), now)
 		case dto.MetricType_COUNTER:
 			newMetric.Data = convertCounter(pm.GetMetric(), now)
+		case dto.MetricType_SUMMARY:
+			newMetric.Data = convertSummary(pm.GetMetric(), now)
 		case dto.MetricType_HISTOGRAM:
-			newMetric.Data = convertHistogram(pm.GetMetric(), now)
+			if isExponentialHistogram(pm.GetMetric()[0].GetHistogram()) {
+				newMetric.Data = convertExponentialHistogram(pm.GetMetric(), now)
+			} else {
+				newMetric.Data = convertHistogram(pm.GetMetric(), now)
+			}
 		default:
-			// MetricType_GAUGE_HISTOGRAM, MetricType_SUMMARY, MetricType_UNTYPED
+			// MetricType_GAUGE_HISTOGRAM, MetricType_UNTYPED
 			errs = append(errs, fmt.Errorf("%w: %v for metric %v", errUnsupportedType, pm.GetType(), pm.GetName()))
 			continue
 		}
 		otelMetrics = append(otelMetrics, newMetric)
 	}
 	return otelMetrics, errs.errOrNil()
+}
+
+func isExponentialHistogram(hist *dto.Histogram) bool {
+	// The prometheus go client ensures at least one of these is non-zero
+	// so it can be distinguished from a fixed-bucket histogram.
+	// https://github.com/prometheus/client_golang/blob/7ac90362b02729a65109b33d172bafb65d7dab50/prometheus/histogram.go#L818
+	return hist.GetZeroThreshold() > 0 ||
+		hist.GetZeroCount() > 0 ||
+		len(hist.GetPositiveSpan()) > 0 ||
+		len(hist.GetNegativeSpan()) > 0
 }
 
 func convertGauge(metrics []*dto.Metric, now time.Time) metricdata.Gauge[float64] {
@@ -155,8 +175,88 @@ func convertCounter(metrics []*dto.Metric, now time.Time) metricdata.Sum[float64
 	return otelCounter
 }
 
+func convertExponentialHistogram(metrics []*dto.Metric, now time.Time) metricdata.ExponentialHistogram[float64] {
+	otelExpHistogram := metricdata.ExponentialHistogram[float64]{
+		DataPoints:  make([]metricdata.ExponentialHistogramDataPoint[float64], len(metrics)),
+		Temporality: metricdata.CumulativeTemporality,
+	}
+	for i, m := range metrics {
+		dp := metricdata.ExponentialHistogramDataPoint[float64]{
+			Attributes:    convertLabels(m.GetLabel()),
+			StartTime:     processStartTime,
+			Time:          now,
+			Count:         m.GetHistogram().GetSampleCount(),
+			Sum:           m.GetHistogram().GetSampleSum(),
+			Scale:         m.GetHistogram().GetSchema(),
+			ZeroCount:     m.GetHistogram().GetZeroCount(),
+			ZeroThreshold: m.GetHistogram().GetZeroThreshold(),
+			PositiveBucket: convertExponentialBuckets(
+				m.GetHistogram().GetPositiveSpan(),
+				m.GetHistogram().GetPositiveDelta(),
+			),
+			NegativeBucket: convertExponentialBuckets(
+				m.GetHistogram().GetNegativeSpan(),
+				m.GetHistogram().GetNegativeDelta(),
+			),
+			// TODO: Support exemplars
+		}
+		createdTs := m.GetHistogram().GetCreatedTimestamp()
+		if createdTs.IsValid() {
+			dp.StartTime = createdTs.AsTime()
+		}
+		if t := m.GetTimestampMs(); t != 0 {
+			dp.Time = time.UnixMilli(t)
+		}
+		otelExpHistogram.DataPoints[i] = dp
+	}
+	return otelExpHistogram
+}
+
+func convertExponentialBuckets(bucketSpans []*dto.BucketSpan, deltas []int64) metricdata.ExponentialBucket {
+	if len(bucketSpans) == 0 {
+		return metricdata.ExponentialBucket{}
+	}
+	// Prometheus Native Histograms buckets are indexed by upper boundary
+	// while Exponential Histograms are indexed by lower boundary, the result
+	// being that the Offset fields are different-by-one.
+	initialOffset := bucketSpans[0].GetOffset() - 1
+	// We will have one bucket count for each delta, and zeros for the offsets
+	// after the initial offset.
+	lenCounts := int32(len(deltas))
+	for i, bs := range bucketSpans {
+		if i != 0 {
+			lenCounts += bs.GetOffset()
+		}
+	}
+	counts := make([]uint64, lenCounts)
+	deltaIndex := 0
+	countIndex := int32(0)
+	count := int64(0)
+	for i, bs := range bucketSpans {
+		// Do not insert zeroes if this is the first bucketSpan, since those
+		// zeroes are accounted for in the Offset field.
+		if i != 0 {
+			// Increase the count index by the Offset to insert Offset zeroes
+			countIndex += bs.GetOffset()
+		}
+		for j := uint32(0); j < bs.GetLength(); j++ {
+			// Convert deltas to the cumulative number of observations
+			count += deltas[deltaIndex]
+			deltaIndex++
+			// count should always be positive after accounting for deltas
+			if count > 0 {
+				counts[countIndex] = uint64(count)
+			}
+			countIndex++
+		}
+	}
+	return metricdata.ExponentialBucket{
+		Offset: initialOffset,
+		Counts: counts,
+	}
+}
+
 func convertHistogram(metrics []*dto.Metric, now time.Time) metricdata.Histogram[float64] {
-	// TODO: support converting Prometheus "native" histograms to OTel exponential histograms.
 	otelHistogram := metricdata.Histogram[float64]{
 		DataPoints:  make([]metricdata.HistogramDataPoint[float64], len(metrics)),
 		Temporality: metricdata.CumulativeTemporality,
@@ -186,6 +286,10 @@ func convertHistogram(metrics []*dto.Metric, now time.Time) metricdata.Histogram
 }
 
 func convertBuckets(buckets []*dto.Bucket) ([]float64, []uint64, []metricdata.Exemplar[float64]) {
+	if len(buckets) == 0 {
+		// This should never happen
+		return nil, nil, nil
+	}
 	bounds := make([]float64, len(buckets)-1)
 	bucketCounts := make([]uint64, len(buckets))
 	exemplars := make([]metricdata.Exemplar[float64], 0)
@@ -202,6 +306,43 @@ func convertBuckets(buckets []*dto.Bucket) ([]float64, []uint64, []metricdata.Ex
 		}
 	}
 	return bounds, bucketCounts, exemplars
+}
+
+func convertSummary(metrics []*dto.Metric, now time.Time) metricdata.Summary {
+	otelSummary := metricdata.Summary{
+		DataPoints: make([]metricdata.SummaryDataPoint, len(metrics)),
+	}
+	for i, m := range metrics {
+		dp := metricdata.SummaryDataPoint{
+			Attributes:     convertLabels(m.GetLabel()),
+			StartTime:      processStartTime,
+			Time:           now,
+			Count:          m.GetSummary().GetSampleCount(),
+			Sum:            m.GetSummary().GetSampleSum(),
+			QuantileValues: convertQuantiles(m.GetSummary().GetQuantile()),
+		}
+		createdTs := m.GetSummary().GetCreatedTimestamp()
+		if createdTs.IsValid() {
+			dp.StartTime = createdTs.AsTime()
+		}
+		if t := m.GetTimestampMs(); t != 0 {
+			dp.Time = time.UnixMilli(t)
+		}
+		otelSummary.DataPoints[i] = dp
+	}
+	return otelSummary
+}
+
+func convertQuantiles(quantiles []*dto.Quantile) []metricdata.QuantileValue {
+	otelQuantiles := make([]metricdata.QuantileValue, len(quantiles))
+	for i, quantile := range quantiles {
+		dp := metricdata.QuantileValue{
+			Quantile: quantile.GetQuantile(),
+			Value:    quantile.GetValue(),
+		}
+		otelQuantiles[i] = dp
+	}
+	return otelQuantiles
 }
 
 func convertLabels(labels []*dto.LabelPair) attribute.Set {

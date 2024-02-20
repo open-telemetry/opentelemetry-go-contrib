@@ -50,8 +50,8 @@ func assertScopeMetrics(t *testing.T, sm metricdata.ScopeMetrics, attrs attribut
 	require.Len(t, sm.Metrics, 3)
 
 	want := metricdata.Metrics{
-		Name:        "http.server.request_content_length",
-		Description: "Measures the size of HTTP request content length (uncompressed)",
+		Name:        "http.server.request.size",
+		Description: "Measures the size of HTTP request messages.",
 		Unit:        "By",
 		Data: metricdata.Sum[int64]{
 			DataPoints:  []metricdata.DataPoint[int64]{{Attributes: attrs, Value: 0}},
@@ -62,8 +62,8 @@ func assertScopeMetrics(t *testing.T, sm metricdata.ScopeMetrics, attrs attribut
 	metricdatatest.AssertEqual(t, want, sm.Metrics[0], metricdatatest.IgnoreTimestamp())
 
 	want = metricdata.Metrics{
-		Name:        "http.server.response_content_length",
-		Description: "Measures the size of HTTP response content length (uncompressed)",
+		Name:        "http.server.response.size",
+		Description: "Measures the size of HTTP response messages.",
 		Unit:        "By",
 		Data: metricdata.Sum[int64]{
 			DataPoints:  []metricdata.DataPoint[int64]{{Attributes: attrs, Value: 11}},
@@ -73,17 +73,16 @@ func assertScopeMetrics(t *testing.T, sm metricdata.ScopeMetrics, attrs attribut
 	}
 	metricdatatest.AssertEqual(t, want, sm.Metrics[1], metricdatatest.IgnoreTimestamp())
 
-	// Duration value is not predictable.
-	dur := sm.Metrics[2]
-	assert.Equal(t, "http.server.duration", dur.Name)
-	require.IsType(t, dur.Data, metricdata.Histogram[float64]{})
-	hist := dur.Data.(metricdata.Histogram[float64])
-	assert.Equal(t, metricdata.CumulativeTemporality, hist.Temporality)
-	require.Len(t, hist.DataPoints, 1)
-	dPt := hist.DataPoints[0]
-	assert.Equal(t, attrs, dPt.Attributes, "attributes")
-	assert.Equal(t, uint64(1), dPt.Count, "count")
-	assert.Equal(t, []float64{0, 5, 10, 25, 50, 75, 100, 250, 500, 750, 1000, 2500, 5000, 7500, 10000}, dPt.Bounds, "bounds")
+	want = metricdata.Metrics{
+		Name:        "http.server.duration",
+		Description: "Measures the duration of inbound HTTP requests.",
+		Unit:        "ms",
+		Data: metricdata.Histogram[float64]{
+			DataPoints:  []metricdata.HistogramDataPoint[float64]{{Attributes: attrs}},
+			Temporality: metricdata.CumulativeTemporality,
+		},
+	}
+	metricdatatest.AssertEqual(t, want, sm.Metrics[2], metricdatatest.IgnoreTimestamp(), metricdatatest.IgnoreValue())
 }
 
 func TestHandlerBasics(t *testing.T) {
