@@ -227,7 +227,6 @@ test-default test-race: ARGS=-race
 test-bench:   ARGS=-run=xxxxxMatchNothingxxxxx -test.benchtime=1ms -bench=.
 test-short:   ARGS=-short
 test-verbose: ARGS=-v
-test-semconv: ARGS=-docker -v
 $(TEST_TARGETS): test
 test: $(OTEL_GO_MOD_DIRS:%=test/%)
 test/%: DIR=$*
@@ -270,15 +269,6 @@ test-mongo-driver:
 	  cp ./instrumentation/go.mongodb.org/mongo-driver/mongo/otelmongo/test/coverage.out ./; \
 	  docker stop mongo-integ; \
 	fi
-
-SEMANTIC_CONVENTION_TEST_DIRS = instrumentation/net/http/otelhttp/test 
-test-semconv: $(SEMANTIC_CONVENTION_TEST_DIRS:%=test/%)
-test-semconv/%: DIR=$*
-test-semconv/%:
-	@echo "$(GO) test -timeout $(TIMEOUT)s $(ARGS) $(DIR)/..." \
-		&& cd $(DIR) \
-		&& $(GO) test -timeout $(TIMEOUT)s $(ARGS) ./...
-
 
 # Releasing
 

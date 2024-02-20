@@ -16,7 +16,6 @@ package test
 
 import (
 	"context"
-	"flag"
 	"fmt"
 	"io"
 	"net/http"
@@ -46,11 +45,9 @@ func (l *lc) Accept(log testcontainers.Log) {
 	l.t.Log(string(log.Content))
 }
 
-var docker = flag.Bool("docker", false, "Enable tests that use docker.")
-
 func TestSemanticConventions(t *testing.T) {
-	if !*docker {
-		t.Skip("Docker not enabled.")
+	if testing.Short() {
+		t.Skip("Skipping tests of the semantic conventions in short mode.")
 	}
 	wd, err := os.Getwd()
 	require.NoError(t, err)
