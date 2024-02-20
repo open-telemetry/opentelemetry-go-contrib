@@ -17,7 +17,6 @@ The next release will require at least [Go 1.21].
 - Support [Go 1.22]. (#5082)
 - Implemented setting the `cloud.resource_id` resource attribute in `go.opentelemetry.io/detectors/aws/ecs` based on the ECS Metadata v4 endpoint. (#5091)
 
-
 ### Removed
 
 - The deprecated `RequestCount` constant in `go.opentelemetry.io/contrib/instrumentation/net/http/otelhttp` is removed. (#4894)
