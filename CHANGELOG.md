@@ -14,7 +14,7 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 
 ### Removed
 
-- Drop support for [Go 1.20]. (#TBD)
+- Drop support for [Go 1.20]. (#5163)
 
 ## [1.24.0/0.49.0/0.18.0/0.4.0] - 2024-02-23
 
