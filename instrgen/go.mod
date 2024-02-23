@@ -1,6 +1,6 @@
 module go.opentelemetry.io/contrib/instrgen
 
-go 1.20
+go 1.21
 
 require (
 	go.opentelemetry.io/otel v1.23.1

@@ -1,6 +1,6 @@
 module go.opentelemetry.io/contrib/instrumentation/net/http/httptrace/otelhttptrace/example
 
-go 1.20
+go 1.21
 
 replace (
 	go.opentelemetry.io/contrib/instrumentation/net/http/httptrace/otelhttptrace => ../

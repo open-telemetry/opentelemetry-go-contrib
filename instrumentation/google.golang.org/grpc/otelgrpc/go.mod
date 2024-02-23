@@ -1,6 +1,6 @@
 module go.opentelemetry.io/contrib/instrumentation/google.golang.org/grpc/otelgrpc
 
-go 1.20
+go 1.21
 
 require (
 	github.com/stretchr/testify v1.8.4

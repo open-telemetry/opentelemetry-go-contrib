@@ -1,6 +1,6 @@
 module go.opentelemetry.io/contrib/instrumentation/github.com/gorilla/mux/otelmux/example
 
-go 1.20
+go 1.21
 
 replace go.opentelemetry.io/contrib/instrumentation/github.com/gorilla/mux/otelmux => ../
 
