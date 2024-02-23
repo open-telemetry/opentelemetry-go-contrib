@@ -68,14 +68,12 @@ module-sets:
       - go.opentelemetry.io/contrib/instrumentation/github.com/emicklei/go-restful/otelrestful
       - go.opentelemetry.io/contrib/instrumentation/github.com/emicklei/go-restful/otelrestful/example
       - go.opentelemetry.io/contrib/instrumentation/github.com/emicklei/go-restful/otelrestful/test
-      - go.opentelemetry.io/contrib/zpages
-  experimental-metrics:
-    version: v0.49.0
-    modules:
       - go.opentelemetry.io/contrib/instrumentation/host
       - go.opentelemetry.io/contrib/instrumentation/host/example
       - go.opentelemetry.io/contrib/instrumentation/runtime
       - go.opentelemetry.io/contrib/instrumentation/runtime/example
+      - go.opentelemetry.io/contrib/zpages
+    modules:
   experimental-samplers:
     version: v0.18.0
     modules:
