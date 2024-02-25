@@ -1,15 +1,15 @@
 module go.opentelemetry.io/contrib/instrumentation/github.com/gin-gonic/gin/otelgin
 
-go 1.20
+go 1.21
 
 replace go.opentelemetry.io/contrib/propagators/b3 => ../../../../../propagators/b3
 
 require (
 	github.com/gin-gonic/gin v1.9.1
 	github.com/stretchr/testify v1.8.4
-	go.opentelemetry.io/contrib/propagators/b3 v1.23.0
-	go.opentelemetry.io/otel v1.23.1
-	go.opentelemetry.io/otel/trace v1.23.1
+	go.opentelemetry.io/contrib/propagators/b3 v1.24.0
+	go.opentelemetry.io/otel v1.24.0
+	go.opentelemetry.io/otel/trace v1.24.0
 )
 
 require (
@@ -34,7 +34,7 @@ require (
 	github.com/pmezard/go-difflib v1.0.0 // indirect
 	github.com/twitchyliquid64/golang-asm v0.15.1 // indirect
 	github.com/ugorji/go/codec v1.2.11 // indirect
-	go.opentelemetry.io/otel/metric v1.23.1 // indirect
+	go.opentelemetry.io/otel/metric v1.24.0 // indirect
 	golang.org/x/arch v0.3.0 // indirect
 	golang.org/x/crypto v0.19.0 // indirect
 	golang.org/x/net v0.21.0 // indirect

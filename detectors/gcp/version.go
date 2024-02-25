@@ -16,7 +16,7 @@ package gcp // import "go.opentelemetry.io/contrib/detectors/gcp"
 
 // Version is the current release version of the GCP resource detector.
 func Version() string {
-	return "1.23.0"
+	return "1.24.0"
 	// This string is updated by the pre_release.sh script during release
 }
 
