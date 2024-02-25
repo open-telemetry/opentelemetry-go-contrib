@@ -1,6 +1,6 @@
 module go.opentelemetry.io/contrib/instrumentation/net/http/otelhttp
 
-go 1.20
+go 1.21
 
 require (
 	github.com/felixge/httpsnoop v1.0.4

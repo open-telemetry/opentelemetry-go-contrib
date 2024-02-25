@@ -1,6 +1,6 @@
 module go.opentelemetry.io/contrib/instrgen/testdata/interface
 
-go 1.20
+go 1.21
 
 replace go.opentelemetry.io/contrib/instrgen => ../../..
 

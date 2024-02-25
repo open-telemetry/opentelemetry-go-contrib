@@ -12,6 +12,10 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 
 - Add the new `go.opentelemetry.io/contrib/instrgen` package to provide auto-generated source code instrumentation. (#3068, #3108)
 
+### Removed
+
+- Drop support for [Go 1.20]. (#5163)
+
 ## [1.24.0/0.49.0/0.18.0/0.4.0] - 2024-02-23
 
 This release is the last to support [Go 1.20].
