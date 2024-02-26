@@ -69,6 +69,7 @@ func TestDetectV4LaunchTypeEc2(t *testing.T) {
 		semconv.CloudAccountID("111122223333"),
 		semconv.CloudRegion("us-west-2"),
 		semconv.CloudAvailabilityZone("us-west-2d"),
+		semconv.CloudResourceID("arn:aws:ecs:us-west-2:111122223333:container/0206b271-b33f-47ab-86c6-a0ba208a70a9"),
 		semconv.ContainerName(hostname),
 		// We are not running the test in an actual container,
 		// the container id is tested with mocks of the cgroup
@@ -128,6 +129,7 @@ func TestDetectV4LaunchTypeEc2BadContainerArn(t *testing.T) {
 		semconv.CloudAccountID("111122223333"),
 		semconv.CloudRegion("us-west-2"),
 		semconv.CloudAvailabilityZone("us-west-2d"),
+		semconv.CloudResourceID("arn:aws:ecs:us-west-2:111122223333:container/0206b271-b33f-47ab-86c6-a0ba208a70a9"),
 		semconv.ContainerName(hostname),
 		// We are not running the test in an actual container,
 		// the container id is tested with mocks of the cgroup
@@ -188,6 +190,7 @@ func TestDetectV4LaunchTypeEc2BadTaskArn(t *testing.T) {
 		semconv.CloudAccountID("111122223333"),
 		semconv.CloudRegion("us-west-2"),
 		semconv.CloudAvailabilityZone("us-west-2d"),
+		semconv.CloudResourceID("arn:aws:ecs:us-west-2:111122223333:container/0206b271-b33f-47ab-86c6-a0ba208a70a9"),
 		// We are not running the test in an actual container,
 		// the container id is tested with mocks of the cgroup
 		// file in the unit tests
@@ -247,6 +250,7 @@ func TestDetectV4LaunchTypeFargate(t *testing.T) {
 		semconv.CloudAccountID("111122223333"),
 		semconv.CloudRegion("us-west-2"),
 		semconv.CloudAvailabilityZone("us-west-2a"),
+		semconv.CloudResourceID("arn:aws:ecs:us-west-2:111122223333:container/05966557-f16c-49cb-9352-24b3a0dcd0e1"),
 		// We are not running the test in an actual container,
 		// the container id is tested with mocks of the cgroup
 		// file in the unit tests

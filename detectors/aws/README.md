@@ -10,9 +10,9 @@ resource, err := ec2ResourceDetector.Detect(context.Background())
 
 EC2 resource detector captures following EC2 instance environment attributes
 ```
-region
-availability_zone
-account.id
+cloud.region
+cloud.availability_zone
+cloud.account.id
 host.id
 host.image.id
 host.type
@@ -28,8 +28,22 @@ resource, err := ecsResourceDetector.Detect(context.Background())
 
 ECS resource detector captures following ECS environment attributes
 ```
+cloud.region
+cloud.availability_zone
+cloud.account.id
+cloud.resource_id
 container.name
 container.id
+aws.ecs.cluster.arn
+aws.ecs.container.arn
+aws.ecs.launchtype
+aws.ecs.task.arn
+aws.ecs.task.family
+aws.ecs.task.revision
+aws.log.group.arns
+aws.log.group.names
+aws.log.stream.arns
+aws.log.stream.names
 ```
 
 ## EKS
