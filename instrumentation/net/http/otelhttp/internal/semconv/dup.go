@@ -15,7 +15,6 @@
 package semconv // import "go.opentelemetry.io/contrib/instrumentation/net/http/otelhttp/internal/semconv"
 
 import (
-	"io"
 	"net/http"
 	"strings"
 
@@ -153,7 +152,7 @@ func (d dupHTTPServer) scheme(https bool, attrs []attribute.KeyValue) int { // n
 	return 2
 }
 
-// TraceRequest returns trace attributes for telemetry from an HTTP response.
+// TraceResponse returns trace attributes for telemetry from an HTTP response.
 //
 // If any of the fields in the ResponseTelemetry are not set the attribute will be omitted.
 func (d dupHTTPServer) TraceResponse(resp ResponseTelemetry) []attribute.KeyValue {
@@ -164,10 +163,6 @@ func (d dupHTTPServer) TraceResponse(resp ResponseTelemetry) []attribute.KeyValu
 			semconvOld.HTTPRequestContentLength(resp.ReadBytes),
 			semconvNew.HTTPRequestBodySize(resp.ReadBytes),
 		)
-	}
-	if resp.ReadError != nil && resp.ReadError != io.EOF {
-		// This is not in the semantic conventions, but is historically provided
-		attributes = append(attributes, attribute.String("http.read_error", resp.ReadError.Error()))
 	}
 	if resp.WriteBytes > 0 {
 		attributes = append(attributes,
@@ -180,10 +175,6 @@ func (d dupHTTPServer) TraceResponse(resp ResponseTelemetry) []attribute.KeyValu
 			semconvOld.HTTPStatusCode(resp.StatusCode),
 			semconvNew.HTTPResponseStatusCode(resp.StatusCode),
 		)
-	}
-	if resp.WriteError != nil && resp.WriteError != io.EOF {
-		// This is not in the semantic conventions, but is historically provided
-		attributes = append(attributes, attribute.String("http.write_error", resp.WriteError.Error()))
 	}
 
 	return attributes
