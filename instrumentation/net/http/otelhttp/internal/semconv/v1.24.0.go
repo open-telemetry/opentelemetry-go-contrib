@@ -139,7 +139,7 @@ func (n newHTTPServer) scheme(https bool, attrs []attribute.KeyValue) int { // n
 	return 1
 }
 
-// TraceRequest returns trace attributes for telemetry from an HTTP response.
+// TraceResponse returns trace attributes for telemetry from an HTTP response.
 //
 // If any of the fields in the ResponseTelemetry are not set the attribute will be omitted.
 func (n newHTTPServer) TraceResponse(resp ResponseTelemetry) []attribute.KeyValue {
