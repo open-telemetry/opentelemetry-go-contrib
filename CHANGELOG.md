@@ -8,16 +8,26 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 
 ## [Unreleased]
 
+### Added
+
+- Add the new `go.opentelemetry.io/contrib/instrgen` package to provide auto-generated source code instrumentation. (#3068, #3108)
+- Added new test in `go.opentelemetry.io/contrib/instrumentation/net/http/otelhttp` to validate it produces the attributes according to the semantic conventions. (#4701)
+
+### Removed
+
+- Drop support for [Go 1.20]. (#5163)
+
+## [1.24.0/0.49.0/0.18.0/0.4.0] - 2024-02-23
+
 This release is the last to support [Go 1.20].
 The next release will require at least [Go 1.21].
 
 ### Added
 
-- Add the new `go.opentelemetry.io/contrib/instrgen` package to provide auto-generated source code instrumentation. (#3068, #3108)
-- Added new test in `go.opentelemetry.io/contrib/instrumentation/net/http/otelhttp` to validate it produces the attributes according to the semantic conventions. (#4701)
 - Support [Go 1.22]. (#5082)
 - Add support for Summary metrics to `go.opentelemetry.io/contrib/bridges/prometheus`. (#5089)
 - Add support for Exponential (native) Histograms in `go.opentelemetry.io/contrib/bridges/prometheus`. (#5093)
+- Implemented setting the `cloud.resource_id` resource attribute in `go.opentelemetry.io/detectors/aws/ecs` based on the ECS Metadata v4 endpoint. (#5091)
 
 ### Removed
 
@@ -940,7 +950,8 @@ First official tagged release of `contrib` repository.
 - Prefix support for dogstatsd (#34)
 - Update Go Runtime package to use batch observer (#44)
 
-[Unreleased]: https://github.com/open-telemetry/opentelemetry-go-contrib/compare/v1.23.0...HEAD
+[Unreleased]: https://github.com/open-telemetry/opentelemetry-go-contrib/compare/v1.24.0...HEAD
+[1.24.0/0.49.0/0.18.0/0.4.0]: https://github.com/open-telemetry/opentelemetry-go-contrib/releases/tag/v1.24.0
 [1.23.0/0.48.0/0.17.0/0.3.0]: https://github.com/open-telemetry/opentelemetry-go-contrib/releases/tag/v1.23.0
 [1.22.0/0.47.0/0.16.0/0.2.0]: https://github.com/open-telemetry/opentelemetry-go-contrib/releases/tag/v1.22.0
 [1.21.1/0.46.1/0.15.1/0.1.1]: https://github.com/open-telemetry/opentelemetry-go-contrib/releases/tag/v1.21.1

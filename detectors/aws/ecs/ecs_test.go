@@ -111,6 +111,7 @@ func TestDetectV4(t *testing.T) {
 		semconv.CloudAccountID("111122223333"),
 		semconv.CloudRegion("us-west-2"),
 		semconv.CloudAvailabilityZone("us-west-2a"),
+		semconv.CloudResourceID("arn:aws:ecs:us-west-2:111122223333:container/05966557-f16c-49cb-9352-24b3a0dcd0e1"),
 		semconv.ContainerName("container-Name"),
 		semconv.ContainerID("0123456789A"),
 		semconv.AWSECSClusterARN("arn:aws:ecs:us-west-2:111122223333:cluster/default"),

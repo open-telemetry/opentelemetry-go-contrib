@@ -16,7 +16,7 @@ package test // import "go.opentelemetry.io/contrib/instrumentation/gopkg.in/mac
 
 // Version is the current release version of the macron instrumentation test module.
 func Version() string {
-	return "0.48.0"
+	return "0.49.0"
 	// This string is updated by the pre_release.sh script during release
 }
 
