@@ -18,10 +18,11 @@
 // with the OpenTelemetry SDK. This enables prometheus instrumentation libraries
 // to be used with OpenTelemetry exporters, including OTLP.
 //
-// Limitations:
-//   - Summary metrics are dropped by the bridge.
-//   - Prometheus histograms are translated to OpenTelemetry fixed-bucket
-//     histograms, rather than exponential histograms.
+// Prometheus histograms are translated to OpenTelemetry exponential histograms
+// when native histograms are enabled in the Prometheus client. To enable
+// Prometheus native histograms, set the (currently experimental) NativeHistogram...
+// options of the prometheus [HistogramOpts] when creating prometheus histograms.
 //
 // [Prometheus Golang client library]: https://github.com/prometheus/client_golang
+// [HistogramOpts]: https://pkg.go.dev/github.com/prometheus/client_golang/prometheus#HistogramOpts
 package prometheus // import "go.opentelemetry.io/contrib/bridges/prometheus"

@@ -159,6 +159,7 @@ func (detector *resourceDetector) Detect(ctx context.Context) (*resource.Resourc
 
 		attributes = append(
 			attributes,
+			semconv.CloudResourceID(containerMetadata.ContainerARN),
 			semconv.AWSECSContainerARN(containerMetadata.ContainerARN),
 			semconv.AWSECSClusterARN(taskMetadata.Cluster),
 			semconv.AWSECSLaunchtypeKey.String(strings.ToLower(taskMetadata.LaunchType)),
