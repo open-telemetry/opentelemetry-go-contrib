@@ -15,7 +15,6 @@
 package semconv // import "go.opentelemetry.io/contrib/instrumentation/net/http/otelhttp/internal/semconv"
 
 import (
-	"io"
 	"net/http"
 	"strings"
 
@@ -151,10 +150,6 @@ func (n newHTTPServer) TraceResponse(resp ResponseTelemetry) []attribute.KeyValu
 			semconvNew.HTTPRequestBodySize(resp.ReadBytes),
 		)
 	}
-	if resp.ReadError != nil && resp.ReadError != io.EOF {
-		// This is not in the semantic conventions, but is historically provided
-		attributes = append(attributes, attribute.String("http.read_error", resp.ReadError.Error()))
-	}
 	if resp.WriteBytes > 0 {
 		attributes = append(attributes,
 			semconvNew.HTTPResponseBodySize(resp.WriteBytes),
@@ -164,10 +159,6 @@ func (n newHTTPServer) TraceResponse(resp ResponseTelemetry) []attribute.KeyValu
 		attributes = append(attributes,
 			semconvNew.HTTPResponseStatusCode(resp.StatusCode),
 		)
-	}
-	if resp.WriteError != nil && resp.WriteError != io.EOF {
-		// This is not in the semantic conventions, but is historically provided
-		attributes = append(attributes, attribute.String("http.write_error", resp.WriteError.Error()))
 	}
 
 	return attributes

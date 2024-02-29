@@ -49,9 +49,7 @@ func TestNewTraceResponse(t *testing.T) {
 	serv := NewHTTPServer()
 	want := []attribute.KeyValue{
 		attribute.Int("http.request.body.size", 701),
-		attribute.String("http.read_error", "read error"),
 		attribute.Int("http.response.body.size", 802),
-		attribute.String("http.write_error", "write error"),
 		attribute.Int("http.response.status_code", 200),
 	}
 	testTraceResponse(t, serv, want)

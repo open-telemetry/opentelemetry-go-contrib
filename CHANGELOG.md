@@ -15,6 +15,8 @@ The next release will require at least [Go 1.21].
 
 - Add the new `go.opentelemetry.io/contrib/instrgen` package to provide auto-generated source code instrumentation. (#3068, #3108)
 - Support [Go 1.22]. (#5082)
+- Add support for Semantic Convention v1.24.0 in the server instrumentation of `go.opentelemetry.io/contrib/instrumentation/net/http/otelhttp`. (#5092)
+  - To enable the new semantic conventions set the environment variable `OTEL_HTTP_CLIENT_COMPATIBILITY_MODE` to `http/dup` or `http`.
 
 ### Removed
 
