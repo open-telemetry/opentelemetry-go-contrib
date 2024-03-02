@@ -10,6 +10,7 @@ import (
 	"strings"
 	"testing"
 	"testing/slogtest"
+	"time"
 
 	"go.opentelemetry.io/contrib/bridges/sloghandler"
 	"go.opentelemetry.io/otel/log"
@@ -144,4 +145,87 @@ func TestSLogHandler(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
+}
+
+func BenchmarkHandler(b *testing.B) {
+	var (
+		h   slog.Handler
+		err error
+	)
+
+	attrs := []slog.Attr{slog.Any("Key", "Value")}
+	record := slog.NewRecord(time.Now(), slog.LevelInfo, "body", 0)
+	ctx := context.Background()
+
+	b.Run("Handle", func(b *testing.B) {
+		handlers := make([]*sloghandler.Handler, b.N)
+		for i := range handlers {
+			lp := new(loggerProvider)
+			handlers[i] = sloghandler.New(lp)
+		}
+
+		b.ReportAllocs()
+		b.ResetTimer()
+		for n := 0; n < b.N; n++ {
+			err = handlers[n].Handle(ctx, record)
+		}
+	})
+
+	b.Run("WithAttrs", func(b *testing.B) {
+		handlers := make([]*sloghandler.Handler, b.N)
+		for i := range handlers {
+			lp := new(loggerProvider)
+			handlers[i] = sloghandler.New(lp)
+		}
+
+		b.ReportAllocs()
+		b.ResetTimer()
+		for n := 0; n < b.N; n++ {
+			h = handlers[n].WithAttrs(attrs)
+		}
+	})
+
+	b.Run("WithGroup", func(b *testing.B) {
+		handlers := make([]*sloghandler.Handler, b.N)
+		for i := range handlers {
+			lp := new(loggerProvider)
+			handlers[i] = sloghandler.New(lp)
+		}
+
+		b.ReportAllocs()
+		b.ResetTimer()
+		for n := 0; n < b.N; n++ {
+			h = handlers[n].WithGroup("group")
+		}
+	})
+
+	b.Run("WithGroup.WithAttrs", func(b *testing.B) {
+		handlers := make([]*sloghandler.Handler, b.N)
+		for i := range handlers {
+			lp := new(loggerProvider)
+			handlers[i] = sloghandler.New(lp)
+		}
+
+		b.ReportAllocs()
+		b.ResetTimer()
+		for n := 0; n < b.N; n++ {
+			h = handlers[n].WithGroup("group").WithAttrs(attrs)
+		}
+	})
+
+	b.Run("WithGroup.WithAttrs.Handle", func(b *testing.B) {
+		handlers := make([]*sloghandler.Handler, b.N)
+		for i := range handlers {
+			lp := new(loggerProvider)
+			handlers[i] = sloghandler.New(lp)
+		}
+
+		b.ReportAllocs()
+		b.ResetTimer()
+		for n := 0; n < b.N; n++ {
+			err = handlers[n].WithGroup("group").WithAttrs(attrs).Handle(ctx, record)
+		}
+	})
+
+	_, _ = h, err
 }
