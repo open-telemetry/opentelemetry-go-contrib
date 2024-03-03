@@ -5,7 +5,7 @@ go 1.21
 replace go.opentelemetry.io/contrib/instrgen => ../
 
 require (
-	github.com/stretchr/testify v1.8.4
+	github.com/stretchr/testify v1.9.0
 	go.opentelemetry.io/contrib/instrgen v0.0.0-00010101000000-000000000000
 )
 
