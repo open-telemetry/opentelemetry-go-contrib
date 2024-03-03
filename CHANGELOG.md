@@ -11,6 +11,11 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 ### Added
 
 - Add the new `go.opentelemetry.io/contrib/instrgen` package to provide auto-generated source code instrumentation. (#3068, #3108)
+- Add gRPC trace `Filter` for stats handler to `go.opentelemetry.io/contrib/instrumentation/google.golang.org/grpc/otelgrpc`. (#5196)
+
+### Changed
+
+- The gRPC trace `Filter` for interceptor is moved to `go.opentelemetry.io/contrib/instrumentation/google.golang.org/grpc/otelgrpc/interceptor`. (#5196)
 
 ### Removed
 
