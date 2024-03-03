@@ -27,6 +27,7 @@ type gRPCContext struct {
 	messagesReceived int64
 	messagesSent     int64
 	metricAttrs      []attribute.KeyValue
+	record           bool
 }
 
 type serverHandler struct {
@@ -66,6 +67,10 @@ func (h *serverHandler) TagRPC(ctx context.Context, info *stats.RPCTagInfo) cont
 
 	gctx := gRPCContext{
 		metricAttrs: attrs,
+		record:      true,
+	}
+	if h.config.Filter != nil {
+		gctx.record = h.config.Filter(info)
 	}
 	return context.WithValue(ctx, gRPCContextKey{}, &gctx)
 }
@@ -102,6 +107,10 @@ func (h *clientHandler) TagRPC(ctx context.Context, info *stats.RPCTagInfo) cont
 
 	gctx := gRPCContext{
 		metricAttrs: attrs,
+		record:      true,
+	}
+	if h.config.Filter != nil {
+		gctx.record = h.config.Filter(info)
 	}
 
 	return inject(context.WithValue(ctx, gRPCContextKey{}, &gctx), h.config.Propagators)
@@ -132,6 +141,9 @@ func (c *config) handleRPC(ctx context.Context, rs stats.RPCStats, isServer bool
 	if gctx != nil {
 		metricAttrs = make([]attribute.KeyValue, 0, len(gctx.metricAttrs)+1)
 		metricAttrs = append(metricAttrs, gctx.metricAttrs...)
+		if !gctx.record {
+			return
+		}
 	}
 
 	switch rs := rs.(type) {
