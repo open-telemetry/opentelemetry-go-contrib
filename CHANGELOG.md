@@ -15,7 +15,8 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 
 ### Changed
 
-- The gRPC trace `Filter` for interceptor is moved to `go.opentelemetry.io/contrib/instrumentation/google.golang.org/grpc/otelgrpc/interceptor`. (#5196)
+- The gRPC trace `Filter` for interceptor is renamed to `InterceptorFilter`. (#5196)
+- The gRPC trace filter functions `Any`, `All`, `None`, `Not`, `MethodName`, `MethodPrefix`, `FullMethodName`, `ServiceName`, `ServicePrefix` and `HealthCheck` for interceptor are moved to `go.opentelemetry.io/contrib/instrumentation/google.golang.org/grpc/otelgrpc/filters/interceptor`. (#5196)
 
 ### Removed
 
