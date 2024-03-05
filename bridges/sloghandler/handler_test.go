@@ -20,11 +20,12 @@ import (
 type loggerProvider struct {
 	embedded.LoggerProvider
 
-	logger *logger
+	loggerN int
+	logger  *logger
 }
 
 func (p *loggerProvider) Logger(string, ...log.LoggerOption) log.Logger {
-	p.logger = &logger{}
+	p.logger = newLogger(p.loggerN)
 	return p.logger
 }
 
@@ -36,6 +37,13 @@ type logger struct {
 	embedded.Logger
 
 	Records []log.Record
+}
+
+func newLogger(n int) *logger {
+	if n == 0 {
+		return &logger{}
+	}
+	return &logger{Records: make([]log.Record, 0, n)}
 }
 
 func (l *logger) Emit(_ context.Context, r log.Record) {
@@ -160,7 +168,7 @@ func BenchmarkHandler(b *testing.B) {
 	b.Run("Handle", func(b *testing.B) {
 		handlers := make([]*sloghandler.Handler, b.N)
 		for i := range handlers {
-			lp := new(loggerProvider)
+			lp := &loggerProvider{loggerN: 1}
 			handlers[i] = sloghandler.New(lp)
 		}
 
@@ -216,7 +224,7 @@ func BenchmarkHandler(b *testing.B) {
 	b.Run("WithGroup.WithAttrs.Handle", func(b *testing.B) {
 		handlers := make([]*sloghandler.Handler, b.N)
 		for i := range handlers {
-			lp := new(loggerProvider)
+			lp := &loggerProvider{loggerN: 1}
 			handlers[i] = sloghandler.New(lp)
 		}
 
