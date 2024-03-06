@@ -56,7 +56,9 @@ func (h *Handler) Handle(ctx context.Context, r slog.Record) error {
 	var record log.Record
 	record.SetTimestamp(r.Time)
 	record.SetBody(log.StringValue(r.Message))
-	record.SetSeverity(convertLevel(r.Level))
+
+	const sevOffset = slog.Level(log.SeverityDebug) - slog.LevelDebug
+	record.SetSeverity(log.Severity(r.Level + sevOffset))
 
 	record.AddAttributes(h.attrs...)
 	if h.group != nil {
@@ -124,10 +126,6 @@ func (h *Handler) WithGroup(name string) slog.Handler {
 	h2 := *h
 	h2.group = &group{name: name, prev: h2.group}
 	return &h2
-}
-
-func convertLevel(l slog.Level) log.Severity {
-	return log.Severity(l + 9)
 }
 
 func convertAttr(attr slog.Attr) []log.KeyValue {
