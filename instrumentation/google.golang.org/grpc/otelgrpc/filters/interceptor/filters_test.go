@@ -14,6 +14,7 @@ import (
 type testCase struct {
 	name string
 	i    *otelgrpc.InterceptorInfo
+	//nolint:staticcheck // Interceptors are deprecated and will be removed in the next release.
 	f    otelgrpc.InterceptorFilter
 	want bool
 }

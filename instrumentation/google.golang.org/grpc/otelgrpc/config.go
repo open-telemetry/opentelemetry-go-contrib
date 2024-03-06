@@ -25,6 +25,8 @@ const (
 // InterceptorFilter is a predicate used to determine whether a given request in
 // interceptor info should be traced. A InterceptorFilter must return true if
 // the request should be traced.
+//
+// Deprecated: Use stats handlers instead.
 type InterceptorFilter func(*InterceptorInfo) bool
 
 // Filter is a predicate used to determine whether a given request in
