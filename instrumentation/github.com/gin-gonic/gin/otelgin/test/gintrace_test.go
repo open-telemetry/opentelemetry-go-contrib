@@ -22,6 +22,7 @@ import (
 	"go.opentelemetry.io/otel/codes"
 	sdktrace "go.opentelemetry.io/otel/sdk/trace"
 	"go.opentelemetry.io/otel/sdk/trace/tracetest"
+	"go.opentelemetry.io/otel/trace"
 
 	"go.opentelemetry.io/otel/attribute"
 	oteltrace "go.opentelemetry.io/otel/trace"
@@ -177,6 +178,39 @@ func TestSpanName(t *testing.T) {
 			assert.Equal(t, sr.Ended()[0].Name(), tc.wantSpanName, "span name not correct")
 		})
 	}
+}
+
+func TestWithSpanStartOptions(t *testing.T) {
+	sr := tracetest.NewSpanRecorder()
+	provider := sdktrace.NewTracerProvider(sdktrace.WithSpanProcessor(sr))
+
+	// setup
+	router := gin.New()
+	router.Use(otelgin.Middleware(
+		"foobar",
+		otelgin.WithTracerProvider(provider),
+		otelgin.WithSpanStartOption(
+			trace.WithAttributes(attribute.String("spanStart", "true")),
+		),
+	))
+
+	// configure a handler that returns an error and 5xx status
+	// code
+	router.GET("/", func(c *gin.Context) {
+	})
+	r := httptest.NewRequest("GET", "/", nil)
+	w := httptest.NewRecorder()
+	router.ServeHTTP(w, r)
+	response := w.Result()
+	assert.Equal(t, http.StatusOK, response.StatusCode)
+
+	// verify the errors and status are correct
+	spans := sr.Ended()
+	require.Len(t, spans, 1)
+	span := spans[0]
+	assert.Equal(t, "/", span.Name())
+	attr := span.Attributes()
+	assert.Contains(t, attr, attribute.String("spanStart", "true"))
 }
 
 func TestHTML(t *testing.T) {

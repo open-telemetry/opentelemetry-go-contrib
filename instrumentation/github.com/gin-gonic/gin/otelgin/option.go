@@ -17,6 +17,8 @@ type config struct {
 	Propagators       propagation.TextMapPropagator
 	Filters           []Filter
 	SpanNameFormatter SpanNameFormatter
+	SpanStartOptions  []oteltrace.SpanStartOption
+	SpanEndOptions    []oteltrace.SpanEndOption
 }
 
 // Filter is a predicate used to determine whether a given http.request should
@@ -75,5 +77,21 @@ func WithFilter(f ...Filter) Option {
 func WithSpanNameFormatter(f func(r *http.Request) string) Option {
 	return optionFunc(func(c *config) {
 		c.SpanNameFormatter = f
+	})
+}
+
+// WithSpanStartOption applies options to all the HTTP span created by the
+// instrumentation.
+func WithSpanStartOption(o ...oteltrace.SpanStartOption) Option {
+	return optionFunc(func(c *config) {
+		c.SpanStartOptions = append(c.SpanStartOptions, o...)
+	})
+}
+
+// WithSpanEndOption applies options when ending the HTTP span created by the
+// instrumentation.
+func WithSpanEndOption(o ...oteltrace.SpanEndOption) Option {
+	return optionFunc(func(c *config) {
+		c.SpanEndOptions = append(c.SpanEndOptions, o...)
 	})
 }

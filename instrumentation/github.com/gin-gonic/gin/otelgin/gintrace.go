@@ -58,10 +58,10 @@ func Middleware(service string, opts ...Option) gin.HandlerFunc {
 			c.Request = c.Request.WithContext(savedCtx)
 		}()
 		ctx := cfg.Propagators.Extract(savedCtx, propagation.HeaderCarrier(c.Request.Header))
-		opts := []oteltrace.SpanStartOption{
+		opts := append(cfg.SpanStartOptions, []oteltrace.SpanStartOption{
 			oteltrace.WithAttributes(semconvutil.HTTPServerRequest(service, c.Request)...),
 			oteltrace.WithSpanKind(oteltrace.SpanKindServer),
-		}
+		}...)
 		var spanName string
 		if cfg.SpanNameFormatter == nil {
 			spanName = c.FullPath()
@@ -75,7 +75,7 @@ func Middleware(service string, opts ...Option) gin.HandlerFunc {
 			opts = append(opts, oteltrace.WithAttributes(rAttr))
 		}
 		ctx, span := tracer.Start(ctx, spanName, opts...)
-		defer span.End()
+		defer span.End(cfg.SpanEndOptions...)
 
 		// pass the span through the request context
 		c.Request = c.Request.WithContext(ctx)
