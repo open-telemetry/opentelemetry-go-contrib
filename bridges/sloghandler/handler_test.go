@@ -15,6 +15,7 @@ import (
 	"go.opentelemetry.io/contrib/bridges/sloghandler"
 	"go.opentelemetry.io/otel/log"
 	"go.opentelemetry.io/otel/log/embedded"
+	"go.opentelemetry.io/otel/log/noop"
 )
 
 type loggerProvider struct {
@@ -166,23 +167,26 @@ func BenchmarkHandler(b *testing.B) {
 	ctx := context.Background()
 
 	b.Run("Handle", func(b *testing.B) {
+		const size = 1000
 		handlers := make([]*sloghandler.Handler, b.N)
 		for i := range handlers {
-			lp := &loggerProvider{loggerN: 1}
+			lp := noop.NewLoggerProvider()
 			handlers[i] = sloghandler.New(lp)
 		}
 
 		b.ReportAllocs()
 		b.ResetTimer()
 		for n := 0; n < b.N; n++ {
-			err = handlers[n].Handle(ctx, record)
+			for i := 0; i < size; i++ {
+				err = handlers[n].Handle(ctx, record)
+			}
 		}
 	})
 
 	b.Run("WithAttrs", func(b *testing.B) {
 		handlers := make([]*sloghandler.Handler, b.N)
 		for i := range handlers {
-			lp := new(loggerProvider)
+			lp := noop.NewLoggerProvider()
 			handlers[i] = sloghandler.New(lp)
 		}
 
@@ -196,7 +200,7 @@ func BenchmarkHandler(b *testing.B) {
 	b.Run("WithGroup", func(b *testing.B) {
 		handlers := make([]*sloghandler.Handler, b.N)
 		for i := range handlers {
-			lp := new(loggerProvider)
+			lp := noop.NewLoggerProvider()
 			handlers[i] = sloghandler.New(lp)
 		}
 
@@ -210,7 +214,7 @@ func BenchmarkHandler(b *testing.B) {
 	b.Run("WithGroup.WithAttrs", func(b *testing.B) {
 		handlers := make([]*sloghandler.Handler, b.N)
 		for i := range handlers {
-			lp := new(loggerProvider)
+			lp := noop.NewLoggerProvider()
 			handlers[i] = sloghandler.New(lp)
 		}
 
@@ -224,7 +228,7 @@ func BenchmarkHandler(b *testing.B) {
 	b.Run("WithGroup.WithAttrs.Handle", func(b *testing.B) {
 		handlers := make([]*sloghandler.Handler, b.N)
 		for i := range handlers {
-			lp := &loggerProvider{loggerN: 1}
+			lp := noop.NewLoggerProvider()
 			handlers[i] = sloghandler.New(lp)
 		}
 
