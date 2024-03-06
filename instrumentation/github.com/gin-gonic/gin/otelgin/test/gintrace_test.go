@@ -25,7 +25,6 @@ import (
 	"go.opentelemetry.io/otel/trace"
 
 	"go.opentelemetry.io/otel/attribute"
-	oteltrace "go.opentelemetry.io/otel/trace"
 )
 
 func init() {
@@ -86,7 +85,7 @@ func TestTrace200(t *testing.T) {
 	require.Len(t, spans, 1)
 	span := spans[0]
 	assert.Equal(t, "/user/:id", span.Name())
-	assert.Equal(t, oteltrace.SpanKindServer, span.SpanKind())
+	assert.Equal(t, trace.SpanKindServer, span.SpanKind())
 	attr := span.Attributes()
 	assert.Contains(t, attr, attribute.String("net.host.name", "foobar"))
 	assert.Contains(t, attr, attribute.Int("http.status_code", http.StatusOK))
