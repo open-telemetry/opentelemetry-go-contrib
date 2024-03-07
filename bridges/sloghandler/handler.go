@@ -62,12 +62,37 @@ func (h *Handler) Handle(ctx context.Context, r slog.Record) error {
 
 	record.AddAttributes(h.attrs...)
 	if h.group != nil {
-		if a := h.group.convert(r.NumAttrs(), r.Attrs); a.Value.Kind() != log.KindEmpty {
-			record.AddAttributes(a)
+		n := r.NumAttrs()
+		if n > 0 {
+			h.group.grow(n)
+			r.Attrs(h.group.addAttr)
+		}
+
+		curr := h.group
+		for curr != nil && len(curr.attrs) == 0 {
+			curr = curr.prev
+		}
+		if curr != nil {
+			record.AddAttributes(curr.convert())
 		}
 	} else {
-		r.Attrs(func(a slog.Attr) bool {
-			record.AddAttributes(convertAttr(a)...)
+		r.Attrs(func(attr slog.Attr) bool {
+			if attr.Key == "" {
+				if attr.Value.Kind() == slog.KindGroup {
+					// A Handler should inline the Attrs of a group with an empty key.
+					g := attr.Value.Group()
+					for _, a := range g {
+						record.AddAttributes(convertAttr(a))
+					}
+					return true
+				}
+
+				if attr.Value.Any() == nil {
+					// A Handler should ignore an empty Attr.
+					return true
+				}
+			}
+			record.AddAttributes(convertAttr(attr))
 			return true
 		})
 	}
@@ -100,7 +125,9 @@ func (h *Handler) WithAttrs(attrs []slog.Attr) slog.Handler {
 		g.attrs = slices.Clip(g.attrs)
 		g.attrs = slices.Grow(g.attrs, len(attrs))
 		for _, a := range attrs {
-			g.attrs = append(g.attrs, convertAttr(a)...)
+			syncAttr(func(kv ...log.KeyValue) {
+				g.attrs = append(g.attrs, kv...)
+			}, a)
 		}
 
 		h2.group = &g
@@ -109,7 +136,9 @@ func (h *Handler) WithAttrs(attrs []slog.Attr) slog.Handler {
 		h2.attrs = slices.Clip(h2.attrs)
 		h2.attrs = slices.Grow(h2.attrs, len(attrs))
 		for _, a := range attrs {
-			h2.attrs = append(h2.attrs, convertAttr(a)...)
+			syncAttr(func(kv ...log.KeyValue) {
+				h2.attrs = append(h2.attrs, kv...)
+			}, a)
 		}
 	}
 	return &h2
@@ -128,25 +157,29 @@ func (h *Handler) WithGroup(name string) slog.Handler {
 	return &h2
 }
 
-func convertAttr(attr slog.Attr) []log.KeyValue {
+func syncAttr(sync func(...log.KeyValue), attr slog.Attr) {
 	if attr.Key == "" {
 		if attr.Value.Kind() == slog.KindGroup {
 			// A Handler should inline the Attrs of a group with an empty key.
 			g := attr.Value.Group()
-			out := make([]log.KeyValue, 0, len(g))
 			for _, a := range g {
-				out = append(out, convertAttr(a)...)
+				sync(convertAttr(a))
 			}
-			return out
+			return
 		}
 
 		if attr.Value.Any() == nil {
 			// A Handler should ignore an empty Attr.
-			return nil
+			return
 		}
 	}
+
+	sync(convertAttr(attr))
+}
+
+func convertAttr(attr slog.Attr) log.KeyValue {
 	val := convertValue(attr.Value)
-	return []log.KeyValue{{Key: attr.Key, Value: val}}
+	return log.KeyValue{Key: attr.Key, Value: val}
 }
 
 func convertValue(v slog.Value) log.Value {
@@ -171,7 +204,9 @@ func convertValue(v slog.Value) log.Value {
 		g := v.Group()
 		kvs := make([]log.KeyValue, 0, len(g))
 		for _, a := range g {
-			kvs = append(kvs, convertAttr(a)...)
+			syncAttr(func(kv ...log.KeyValue) {
+				kvs = append(kvs, kv...)
+			}, a)
 		}
 		return log.MapValue(kvs...)
 	case slog.KindLogValuer:
@@ -187,19 +222,32 @@ type group struct {
 	prev  *group
 }
 
-func (g *group) convert(n int, f func(func(slog.Attr) bool)) log.KeyValue {
-	attrs := slices.Clip(g.attrs)
-	attrs = slices.Grow(attrs, n)
-	f(func(a slog.Attr) bool {
-		attrs = append(attrs, convertAttr(a)...)
-		return true
-	})
+func (g *group) grow(n int) {
+	g.attrs = slices.Clip(g.attrs)
+	g.attrs = slices.Grow(g.attrs, n)
+}
 
-	var out log.KeyValue
-	// A Handler should not output groups if there are no attributes.
-	if len(attrs) > 0 {
-		out = log.Map(g.name, attrs...)
+func (g *group) addAttr(attr slog.Attr) bool {
+	if attr.Key == "" {
+		if attr.Value.Kind() == slog.KindGroup {
+			// A Handler should inline the Attrs of a group with an empty key.
+			for _, a := range attr.Value.Group() {
+				g.attrs = append(g.attrs, convertAttr(a))
+			}
+			return true
+		}
+
+		if attr.Value.Any() == nil {
+			// A Handler should ignore an empty Attr.
+			return true
+		}
 	}
+	g.attrs = append(g.attrs, convertAttr(attr))
+	return true
+}
+
+func (g *group) convert() log.KeyValue {
+	out := log.Map(g.name, g.attrs...)
 	g = g.prev
 	for g != nil {
 		// A Handler should not output groups if there are no attributes.
