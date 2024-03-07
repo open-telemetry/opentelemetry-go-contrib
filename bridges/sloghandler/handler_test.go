@@ -167,7 +167,6 @@ func BenchmarkHandler(b *testing.B) {
 	ctx := context.Background()
 
 	b.Run("Handle", func(b *testing.B) {
-		const size = 1000
 		handlers := make([]*sloghandler.Handler, b.N)
 		for i := range handlers {
 			lp := noop.NewLoggerProvider()
@@ -177,9 +176,7 @@ func BenchmarkHandler(b *testing.B) {
 		b.ReportAllocs()
 		b.ResetTimer()
 		for n := 0; n < b.N; n++ {
-			for i := 0; i < size; i++ {
-				err = handlers[n].Handle(ctx, record)
-			}
+			err = handlers[n].Handle(ctx, record)
 		}
 	})
 
@@ -225,17 +222,17 @@ func BenchmarkHandler(b *testing.B) {
 		}
 	})
 
-	b.Run("WithGroup.WithAttrs.Handle", func(b *testing.B) {
-		handlers := make([]*sloghandler.Handler, b.N)
+	b.Run("(WithGroup.WithAttrs).Handle", func(b *testing.B) {
+		handlers := make([]slog.Handler, b.N)
 		for i := range handlers {
 			lp := noop.NewLoggerProvider()
-			handlers[i] = sloghandler.New(lp)
+			handlers[i] = sloghandler.New(lp).WithGroup("group").WithAttrs(attrs)
 		}
 
 		b.ReportAllocs()
 		b.ResetTimer()
 		for n := 0; n < b.N; n++ {
-			err = handlers[n].WithGroup("group").WithAttrs(attrs).Handle(ctx, record)
+			err = handlers[n].Handle(ctx, record)
 		}
 	})
 
