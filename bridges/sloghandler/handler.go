@@ -10,6 +10,7 @@ import (
 	"fmt"
 	"log/slog"
 	"slices"
+	"sync"
 
 	"go.opentelemetry.io/otel/log"
 )
@@ -33,7 +34,7 @@ type Handler struct {
 	// Ensure forward compatibility by explicitly making this not comparable.
 	noCmp [0]func() //nolint: unused  // This is indeed used.
 
-	attrs  []log.KeyValue
+	attrs  *kvBuffer
 	group  *group
 	logger log.Logger
 }
@@ -53,6 +54,11 @@ func New(lp log.LoggerProvider, opts ...Option) *Handler {
 
 // Handle handles the Record.
 func (h *Handler) Handle(ctx context.Context, r slog.Record) error {
+	h.logger.Emit(ctx, h.convertRecord(r))
+	return nil
+}
+
+func (h *Handler) convertRecord(r slog.Record) log.Record {
 	var record log.Record
 	record.SetTimestamp(r.Time)
 	record.SetBody(log.StringValue(r.Message))
@@ -60,45 +66,32 @@ func (h *Handler) Handle(ctx context.Context, r slog.Record) error {
 	const sevOffset = slog.Level(log.SeverityDebug) - slog.LevelDebug
 	record.SetSeverity(log.Severity(r.Level + sevOffset))
 
-	record.AddAttributes(h.attrs...)
-	if h.group != nil {
-		n := r.NumAttrs()
-		if n > 0 {
-			h.group.grow(n)
-			r.Attrs(h.group.addAttr)
-		}
-
-		curr := h.group
-		for curr != nil && len(curr.attrs) == 0 {
-			curr = curr.prev
-		}
-		if curr != nil {
-			record.AddAttributes(curr.convert())
-		}
-	} else {
-		r.Attrs(func(attr slog.Attr) bool {
-			if attr.Key == "" {
-				if attr.Value.Kind() == slog.KindGroup {
-					// A Handler should inline the Attrs of a group with an empty key.
-					g := attr.Value.Group()
-					for _, a := range g {
-						record.AddAttributes(convertAttr(a))
-					}
-					return true
-				}
-
-				if attr.Value.Any() == nil {
-					// A Handler should ignore an empty Attr.
-					return true
-				}
-			}
-			record.AddAttributes(convertAttr(attr))
-			return true
-		})
+	if h.attrs.Len() > 0 {
+		record.AddAttributes(h.attrs.data...)
 	}
 
-	h.logger.Emit(ctx, record)
-	return nil
+	n := r.NumAttrs()
+	if h.group != nil {
+		if n > 0 {
+			buf, free := getKVBuffer()
+			defer free()
+			r.Attrs(buf.AddAttr)
+			record.AddAttributes(h.group.KeyValue(buf.data...))
+		} else {
+			// A Handler should not output groups if there are no attributes.
+			g := h.group.NextNonEmpty()
+			if g != nil {
+				record.AddAttributes(g.KeyValue())
+			}
+		}
+	} else if n > 0 {
+		buf, free := getKVBuffer()
+		defer free()
+		r.Attrs(buf.AddAttr)
+		record.AddAttributes(buf.data...)
+	}
+
+	return record
 }
 
 // Enable returns true if the Handler is enabled to log for the provided
@@ -119,27 +112,14 @@ func (h *Handler) WithAttrs(attrs []slog.Attr) slog.Handler {
 
 	h2 := *h
 	if h2.group != nil {
-		g := *h2.group
-
-		// Do not alter the orig.
-		g.attrs = slices.Clip(g.attrs)
-		g.attrs = slices.Grow(g.attrs, len(attrs))
-		for _, a := range attrs {
-			syncAttr(func(kv ...log.KeyValue) {
-				g.attrs = append(g.attrs, kv...)
-			}, a)
-		}
-
-		h2.group = &g
+		h2.group.AddAttrs(attrs)
 	} else {
-		// Force an append to copy the underlying array.
-		h2.attrs = slices.Clip(h2.attrs)
-		h2.attrs = slices.Grow(h2.attrs, len(attrs))
-		for _, a := range attrs {
-			syncAttr(func(kv ...log.KeyValue) {
-				h2.attrs = append(h2.attrs, kv...)
-			}, a)
+		if h2.attrs == nil {
+			h2.attrs = newKVBuffer(len(attrs))
+		} else {
+			h2.attrs = h.attrs.Clone() // TODO: Is this needed?
 		}
+		h2.attrs.AddAttrs(attrs)
 	}
 	return &h2
 }
@@ -153,28 +133,8 @@ func (h *Handler) WithGroup(name string) slog.Handler {
 	}
 
 	h2 := *h
-	h2.group = &group{name: name, prev: h2.group}
+	h2.group = &group{name: name, next: h2.group}
 	return &h2
-}
-
-func syncAttr(sync func(...log.KeyValue), attr slog.Attr) {
-	if attr.Key == "" {
-		if attr.Value.Kind() == slog.KindGroup {
-			// A Handler should inline the Attrs of a group with an empty key.
-			g := attr.Value.Group()
-			for _, a := range g {
-				sync(convertAttr(a))
-			}
-			return
-		}
-
-		if attr.Value.Any() == nil {
-			// A Handler should ignore an empty Attr.
-			return
-		}
-	}
-
-	sync(convertAttr(attr))
 }
 
 func convertAttr(attr slog.Attr) log.KeyValue {
@@ -201,14 +161,10 @@ func convertValue(v slog.Value) log.Value {
 	case slog.KindUint64:
 		return log.Int64Value(int64(v.Uint64()))
 	case slog.KindGroup:
-		g := v.Group()
-		kvs := make([]log.KeyValue, 0, len(g))
-		for _, a := range g {
-			syncAttr(func(kv ...log.KeyValue) {
-				kvs = append(kvs, kv...)
-			}, a)
-		}
-		return log.MapValue(kvs...)
+		buf, free := getKVBuffer()
+		defer free()
+		buf.AddAttrs(v.Group())
+		return log.MapValue(buf.data...)
 	case slog.KindLogValuer:
 		return convertValue(v.Resolve())
 	default:
@@ -216,23 +172,57 @@ func convertValue(v slog.Value) log.Value {
 	}
 }
 
-type group struct {
-	name  string
-	attrs []log.KeyValue
-	prev  *group
+var kvBufferPool = sync.Pool{
+	New: func() any { return newKVBuffer(10) },
 }
 
-func (g *group) grow(n int) {
-	g.attrs = slices.Clip(g.attrs)
-	g.attrs = slices.Grow(g.attrs, n)
+func getKVBuffer() (buf *kvBuffer, free func()) {
+	buf = kvBufferPool.Get().(*kvBuffer)
+	return buf, func() {
+		// TODO: limit returned size so the pool doesn't hold on to very large
+		// buffers.
+
+		// Do not modify any previously held data.
+		buf.data = buf.data[:0:0]
+		kvBufferPool.Put(buf)
+	}
 }
 
-func (g *group) addAttr(attr slog.Attr) bool {
+type kvBuffer struct {
+	data []log.KeyValue
+}
+
+func newKVBuffer(n int) *kvBuffer {
+	return &kvBuffer{data: make([]log.KeyValue, 0, n)}
+}
+
+func (b *kvBuffer) Len() int {
+	if b == nil {
+		return 0
+	}
+	return len(b.data)
+}
+
+func (b *kvBuffer) Clone() *kvBuffer {
+	if b == nil {
+		return nil
+	}
+	return &kvBuffer{data: slices.Clone(b.data)}
+}
+
+func (b *kvBuffer) AddAttrs(attrs []slog.Attr) {
+	b.data = slices.Grow(b.data, len(attrs))
+	for _, a := range attrs {
+		_ = b.AddAttr(a)
+	}
+}
+
+func (b *kvBuffer) AddAttr(attr slog.Attr) bool {
 	if attr.Key == "" {
 		if attr.Value.Kind() == slog.KindGroup {
 			// A Handler should inline the Attrs of a group with an empty key.
 			for _, a := range attr.Value.Group() {
-				g.attrs = append(g.attrs, convertAttr(a))
+				b.data = append(b.data, convertAttr(a))
 			}
 			return true
 		}
@@ -242,23 +232,49 @@ func (g *group) addAttr(attr slog.Attr) bool {
 			return true
 		}
 	}
-	g.attrs = append(g.attrs, convertAttr(attr))
+	b.data = append(b.data, convertAttr(attr))
 	return true
 }
 
-func (g *group) convert() log.KeyValue {
-	out := log.Map(g.name, g.attrs...)
-	g = g.prev
+type group struct {
+	name  string
+	attrs *kvBuffer
+	next  *group
+}
+
+func (g *group) NextNonEmpty() *group {
+	if g == nil || g.attrs.Len() > 0 {
+		return g
+	}
+	return g.next.NextNonEmpty()
+}
+
+func (g *group) KeyValue(kvs ...log.KeyValue) log.KeyValue {
+	// Assumes checking of group g already performed.
+	var out log.KeyValue
+	if g.attrs != nil {
+		out = log.Map(g.name, append(g.attrs.data, kvs...)...)
+	} else {
+		out = log.Map(g.name, kvs...)
+	}
+	g = g.next
 	for g != nil {
 		// A Handler should not output groups if there are no attributes.
-		if len(g.attrs) > 0 {
+		if g.attrs.Len() > 0 {
 			if out.Value.Kind() != log.KindEmpty {
-				out = log.Map(g.name, append(g.attrs, out)...)
+				out = log.Map(g.name, append(g.attrs.data, out)...)
 			} else {
-				out = log.Map(g.name, g.attrs...)
+				out = log.Map(g.name, g.attrs.data...)
 			}
 		}
-		g = g.prev
+		g = g.next
 	}
 	return out
+}
+
+func (g *group) AddAttrs(attrs []slog.Attr) {
+	if g.attrs == nil {
+		g.attrs = newKVBuffer(len(attrs))
+	}
+	g.attrs.AddAttrs(attrs)
 }
