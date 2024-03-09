@@ -76,14 +76,12 @@ func Middleware(service string, opts ...Option) gin.HandlerFunc {
 		}
 		ctx, span := tracer.Start(ctx, spanName, opts...)
 		defer func() {
-			if cfg.RecordPanicConfig.enabled {
-				if r := recover(); r != nil {
-					err := fmt.Errorf("error handling request: %s", r)
-					span.RecordError(err, oteltrace.WithStackTrace(cfg.RecordPanicConfig.stackTrace))
-					span.SetStatus(codes.Error, "panic recovered")
-					span.End()
-					panic(r)
-				}
+			if r := recover(); r != nil {
+				err := fmt.Errorf("%+v", r)
+				span.RecordError(err, oteltrace.WithStackTrace(cfg.RecordPanicStackTrace))
+				span.SetStatus(codes.Error, err.Error())
+				span.End()
+				panic(r)
 			}
 			span.End()
 		}()
