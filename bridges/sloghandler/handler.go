@@ -67,7 +67,7 @@ func (h *Handler) convertRecord(r slog.Record) log.Record {
 	record.SetSeverity(log.Severity(r.Level + sevOffset))
 
 	if h.attrs.Len() > 0 {
-		record.AddAttributes(h.attrs.data...)
+		record.AddAttributes(h.attrs.KeyValues()...)
 	}
 
 	n := r.NumAttrs()
@@ -76,7 +76,7 @@ func (h *Handler) convertRecord(r slog.Record) log.Record {
 			buf, free := getKVBuffer()
 			defer free()
 			r.Attrs(buf.AddAttr)
-			record.AddAttributes(h.group.KeyValue(buf.data...))
+			record.AddAttributes(h.group.KeyValue(buf.KeyValues()...))
 		} else {
 			// A Handler should not output groups if there are no attributes.
 			g := h.group.NextNonEmpty()
@@ -88,7 +88,7 @@ func (h *Handler) convertRecord(r slog.Record) log.Record {
 		buf, free := getKVBuffer()
 		defer free()
 		r.Attrs(buf.AddAttr)
-		record.AddAttributes(buf.data...)
+		record.AddAttributes(buf.KeyValues()...)
 	}
 
 	return record
@@ -137,39 +137,43 @@ func (h *Handler) WithGroup(name string) slog.Handler {
 	return &h2
 }
 
-func convertAttr(attr slog.Attr) log.KeyValue {
-	val := convertValue(attr.Value)
-	return log.KeyValue{Key: attr.Key, Value: val}
+type group struct {
+	name  string
+	attrs *kvBuffer
+	next  *group
 }
 
-func convertValue(v slog.Value) log.Value {
-	switch v.Kind() {
-	case slog.KindAny:
-		return log.StringValue(fmt.Sprintf("%+v", v.Any()))
-	case slog.KindBool:
-		return log.BoolValue(v.Bool())
-	case slog.KindDuration:
-		return log.Int64Value(v.Duration().Nanoseconds())
-	case slog.KindFloat64:
-		return log.Float64Value(v.Float64())
-	case slog.KindInt64:
-		return log.Int64Value(v.Int64())
-	case slog.KindString:
-		return log.StringValue(v.String())
-	case slog.KindTime:
-		return log.Int64Value(v.Time().UnixNano())
-	case slog.KindUint64:
-		return log.Int64Value(int64(v.Uint64()))
-	case slog.KindGroup:
-		buf, free := getKVBuffer()
-		defer free()
-		buf.AddAttrs(v.Group())
-		return log.MapValue(buf.data...)
-	case slog.KindLogValuer:
-		return convertValue(v.Resolve())
-	default:
-		panic(fmt.Sprintf("unhandled attribute kind: %s", v.Kind()))
+func (g *group) NextNonEmpty() *group {
+	if g == nil || g.attrs.Len() > 0 {
+		return g
 	}
+	return g.next.NextNonEmpty()
+}
+
+func (g *group) KeyValue(kvs ...log.KeyValue) log.KeyValue {
+	// Assumes checking of group g already performed.
+	var out log.KeyValue
+	out = log.Map(g.name, g.attrs.KeyValues(kvs...)...)
+	g = g.next
+	for g != nil {
+		// A Handler should not output groups if there are no attributes.
+		if g.attrs.Len() > 0 {
+			if out.Value.Kind() != log.KindEmpty {
+				out = log.Map(g.name, g.attrs.KeyValues(out)...)
+			} else {
+				out = log.Map(g.name, g.attrs.KeyValues()...)
+			}
+		}
+		g = g.next
+	}
+	return out
+}
+
+func (g *group) AddAttrs(attrs []slog.Attr) {
+	if g.attrs == nil {
+		g.attrs = newKVBuffer(len(attrs))
+	}
+	g.attrs.AddAttrs(attrs)
 }
 
 var kvBufferPool = sync.Pool{
@@ -210,6 +214,13 @@ func (b *kvBuffer) Clone() *kvBuffer {
 	return &kvBuffer{data: slices.Clone(b.data)}
 }
 
+func (b *kvBuffer) KeyValues(kvs ...log.KeyValue) []log.KeyValue {
+	if b == nil {
+		return kvs
+	}
+	return append(b.data, kvs...)
+}
+
 func (b *kvBuffer) AddAttrs(attrs []slog.Attr) {
 	b.data = slices.Grow(b.data, len(attrs))
 	for _, a := range attrs {
@@ -222,7 +233,10 @@ func (b *kvBuffer) AddAttr(attr slog.Attr) bool {
 		if attr.Value.Kind() == slog.KindGroup {
 			// A Handler should inline the Attrs of a group with an empty key.
 			for _, a := range attr.Value.Group() {
-				b.data = append(b.data, convertAttr(a))
+				b.data = append(b.data, log.KeyValue{
+					Key:   a.Key,
+					Value: convertValue(a.Value),
+				})
 			}
 			return true
 		}
@@ -232,49 +246,39 @@ func (b *kvBuffer) AddAttr(attr slog.Attr) bool {
 			return true
 		}
 	}
-	b.data = append(b.data, convertAttr(attr))
+	b.data = append(b.data, log.KeyValue{
+		Key:   attr.Key,
+		Value: convertValue(attr.Value),
+	})
 	return true
 }
 
-type group struct {
-	name  string
-	attrs *kvBuffer
-	next  *group
-}
-
-func (g *group) NextNonEmpty() *group {
-	if g == nil || g.attrs.Len() > 0 {
-		return g
+func convertValue(v slog.Value) log.Value {
+	switch v.Kind() {
+	case slog.KindAny:
+		return log.StringValue(fmt.Sprintf("%+v", v.Any()))
+	case slog.KindBool:
+		return log.BoolValue(v.Bool())
+	case slog.KindDuration:
+		return log.Int64Value(v.Duration().Nanoseconds())
+	case slog.KindFloat64:
+		return log.Float64Value(v.Float64())
+	case slog.KindInt64:
+		return log.Int64Value(v.Int64())
+	case slog.KindString:
+		return log.StringValue(v.String())
+	case slog.KindTime:
+		return log.Int64Value(v.Time().UnixNano())
+	case slog.KindUint64:
+		return log.Int64Value(int64(v.Uint64()))
+	case slog.KindGroup:
+		buf, free := getKVBuffer()
+		defer free()
+		buf.AddAttrs(v.Group())
+		return log.MapValue(buf.data...)
+	case slog.KindLogValuer:
+		return convertValue(v.Resolve())
+	default:
+		panic(fmt.Sprintf("unhandled attribute kind: %s", v.Kind()))
 	}
-	return g.next.NextNonEmpty()
-}
-
-func (g *group) KeyValue(kvs ...log.KeyValue) log.KeyValue {
-	// Assumes checking of group g already performed.
-	var out log.KeyValue
-	if g.attrs != nil {
-		out = log.Map(g.name, append(g.attrs.data, kvs...)...)
-	} else {
-		out = log.Map(g.name, kvs...)
-	}
-	g = g.next
-	for g != nil {
-		// A Handler should not output groups if there are no attributes.
-		if g.attrs.Len() > 0 {
-			if out.Value.Kind() != log.KindEmpty {
-				out = log.Map(g.name, append(g.attrs.data, out)...)
-			} else {
-				out = log.Map(g.name, g.attrs.data...)
-			}
-		}
-		g = g.next
-	}
-	return out
-}
-
-func (g *group) AddAttrs(attrs []slog.Attr) {
-	if g.attrs == nil {
-		g.attrs = newKVBuffer(len(attrs))
-	}
-	g.attrs.AddAttrs(attrs)
 }
