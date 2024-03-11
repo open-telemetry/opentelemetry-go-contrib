@@ -108,10 +108,13 @@ func (h *Handler) Enabled(context.Context, slog.Level) bool {
 func (h *Handler) WithAttrs(attrs []slog.Attr) slog.Handler {
 	h2 := *h
 	if h2.group != nil {
+		h2.group = h2.group.Clone()
 		h2.group.AddAttrs(attrs)
 	} else {
 		if h2.attrs == nil {
 			h2.attrs = newKVBuffer(len(attrs))
+		} else {
+			h2.attrs = h2.attrs.Clone()
 		}
 		h2.attrs.AddAttrs(attrs)
 	}
@@ -153,6 +156,15 @@ func (g *group) KeyValue(kvs ...log.KeyValue) log.KeyValue {
 	return out
 }
 
+func (g *group) Clone() *group {
+	if g == nil {
+		return g
+	}
+	g2 := *g
+	g2.attrs = g2.attrs.Clone()
+	return &g2
+}
+
 func (g *group) AddAttrs(attrs []slog.Attr) {
 	if g.attrs == nil {
 		g.attrs = newKVBuffer(len(attrs))
@@ -189,6 +201,13 @@ func (b *kvBuffer) Len() int {
 		return 0
 	}
 	return len(b.data)
+}
+
+func (b *kvBuffer) Clone() *kvBuffer {
+	if b == nil {
+		return nil
+	}
+	return &kvBuffer{data: slices.Clone(b.data)}
 }
 
 func (b *kvBuffer) KeyValues(kvs ...log.KeyValue) []log.KeyValue {

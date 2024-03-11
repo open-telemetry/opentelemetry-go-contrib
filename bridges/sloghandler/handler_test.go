@@ -313,20 +313,32 @@ var cases = []testCase{
 		f: func(l *slog.Logger) {
 			l1 := l.With("a", "b")
 			l2 := l1.With("c", "d")
+			l3 := l1.With("e", "f")
 
+			l3.Info("msg", "k", "v")
 			l2.Info("msg", "k", "v")
 			l1.Info("msg", "k", "v")
 			l.Info("msg", "k", "v")
 		},
 		checks: [][]check{{
 			hasAttr("a", "b"),
-			hasAttr("c", "d"),
+			hasAttr("e", "f"),
 			hasAttr("k", "v"),
 		}, {
 			hasAttr("a", "b"),
+			hasAttr("c", "d"),
 			hasAttr("k", "v"),
+			missingKey("e"),
+		}, {
+			hasAttr("a", "b"),
+			hasAttr("k", "v"),
+			missingKey("c"),
+			missingKey("e"),
 		}, {
 			hasAttr("k", "v"),
+			missingKey("a"),
+			missingKey("c"),
+			missingKey("e"),
 		}},
 	},
 	{
@@ -335,12 +347,24 @@ var cases = []testCase{
 		f: func(l *slog.Logger) {
 			l1 := l.WithGroup("G").With("a", "b")
 			l2 := l1.WithGroup("H").With("c", "d")
+			l3 := l1.WithGroup("I").With("e", "f")
 
+			l3.Info("msg", "k", "v")
 			l2.Info("msg", "k", "v")
 			l1.Info("msg", "k", "v")
 			l.Info("msg", "k", "v")
 		},
 		checks: [][]check{{
+			hasKey(slog.TimeKey),
+			hasKey(slog.LevelKey),
+			hasAttr(slog.MessageKey, "msg"),
+			missingKey("a"),
+			missingKey("c"),
+			missingKey("H"),
+			inGroup("G", hasAttr("a", "b")),
+			inGroup("G", inGroup("I", hasAttr("e", "f"))),
+			inGroup("G", inGroup("I", hasAttr("k", "v"))),
+		}, {
 			hasKey(slog.TimeKey),
 			hasKey(slog.LevelKey),
 			hasAttr(slog.MessageKey, "msg"),
@@ -367,6 +391,24 @@ var cases = []testCase{
 			missingKey("c"),
 			missingKey("G"),
 			missingKey("H"),
+		}},
+	},
+	{
+		name:        "independent-WithGroup.WithAttrs",
+		explanation: withSource("a Handler should only include group attributes from its own WithAttr origin"),
+		f: func(l *slog.Logger) {
+			l = l.WithGroup("G")
+			l.With("a", "b").Info("msg", "k", "v")
+			l.With("c", "d").Info("msg", "k", "v")
+		},
+		checks: [][]check{{
+			inGroup("G", hasAttr("a", "b")),
+			inGroup("G", hasAttr("k", "v")),
+			inGroup("G", missingKey("c")),
+		}, {
+			inGroup("G", hasAttr("c", "d")),
+			inGroup("G", hasAttr("k", "v")),
+			inGroup("G", missingKey("a")),
 		}},
 	},
 
