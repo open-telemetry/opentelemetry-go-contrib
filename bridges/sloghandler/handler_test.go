@@ -322,12 +322,12 @@ func (h *wrapper) Handle(ctx context.Context, r slog.Record) error {
 
 // embeddedLogger is a type alias so the embedded.Logger type doesn't conflict
 // with the Logger method of the recorder when it is embedded.
-type embeddedLogger = embedded.Logger
+type embeddedLogger = embedded.Logger // nolint:unused  // Used below.
 
 // recorder records all [log.Record]s it is ased to emit.
 type recorder struct {
 	embedded.LoggerProvider
-	embeddedLogger
+	embeddedLogger // nolint:unused  // Used to embed embedded.Logger.
 
 	Records []log.Record
 }

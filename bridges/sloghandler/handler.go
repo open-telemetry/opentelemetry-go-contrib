@@ -250,7 +250,7 @@ func newKVBuffer(n int) *kvBuffer {
 	return &kvBuffer{data: make([]log.KeyValue, 0, n)}
 }
 
-// Len returns the number of [log.KeyValue] held by b
+// Len returns the number of [log.KeyValue] held by b.
 func (b *kvBuffer) Len() int {
 	if b == nil {
 		return 0
@@ -284,7 +284,7 @@ func (b *kvBuffer) AddAttrs(attrs []slog.Attr) {
 
 // AddAttrs adds attr to b and returns true.
 //
-// This is deisgned to be passed to the AddAttributes method of an
+// This is designed to be passed to the AddAttributes method of an
 // [slog.Record].
 //
 // If attr is a group with an empty key, its values will be flattened.
