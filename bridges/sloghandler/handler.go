@@ -106,10 +106,6 @@ func (h *Handler) Enabled(context.Context, slog.Level) bool {
 // WithAttrs returns a new [slog.Handler] based on h that will log using the
 // passed attrs.
 func (h *Handler) WithAttrs(attrs []slog.Attr) slog.Handler {
-	if len(attrs) == 0 {
-		return h
-	}
-
 	h2 := *h
 	if h2.group != nil {
 		h2.group.AddAttrs(attrs)
@@ -125,11 +121,6 @@ func (h *Handler) WithAttrs(attrs []slog.Attr) slog.Handler {
 // WithGroup returns a new [slog.Handler] based on h that will log all messages
 // and attributes within a group using name.
 func (h *Handler) WithGroup(name string) slog.Handler {
-	// Handlers should inline the Attrs of a group with an empty key.
-	if name == "" {
-		return h
-	}
-
 	h2 := *h
 	h2.group = &group{name: name, next: h2.group}
 	return &h2
