@@ -117,7 +117,7 @@ func (h *Handler) WithAttrs(attrs []slog.Attr) slog.Handler {
 		if h2.attrs == nil {
 			h2.attrs = newKVBuffer(len(attrs))
 		} else {
-			h2.attrs = h.attrs.Clone() // TODO: Is this needed?
+			h2.attrs = h.attrs.Clone()
 		}
 		h2.attrs.AddAttrs(attrs)
 	}
