@@ -116,8 +116,6 @@ func (h *Handler) WithAttrs(attrs []slog.Attr) slog.Handler {
 	} else {
 		if h2.attrs == nil {
 			h2.attrs = newKVBuffer(len(attrs))
-		} else {
-			h2.attrs = h.attrs.Clone()
 		}
 		h2.attrs.AddAttrs(attrs)
 	}
@@ -200,13 +198,6 @@ func (b *kvBuffer) Len() int {
 		return 0
 	}
 	return len(b.data)
-}
-
-func (b *kvBuffer) Clone() *kvBuffer {
-	if b == nil {
-		return nil
-	}
-	return &kvBuffer{data: slices.Clone(b.data)}
 }
 
 func (b *kvBuffer) KeyValues(kvs ...log.KeyValue) []log.KeyValue {
