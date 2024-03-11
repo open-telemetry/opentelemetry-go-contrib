@@ -13,6 +13,7 @@ import (
 	"sync"
 
 	"go.opentelemetry.io/otel/log"
+	"go.opentelemetry.io/otel/log/noop"
 )
 
 const (
@@ -28,7 +29,7 @@ type Option interface {
 	apply(config) config
 }
 
-// Handler is a [slog.Handler] that sends all logging records it receives to
+// Handler is an [slog.Handler] that sends all logging records it receives to
 // OpenTelemetry.
 type Handler struct {
 	// Ensure forward compatibility by explicitly making this not comparable.
@@ -43,7 +44,11 @@ type Handler struct {
 var _ slog.Handler = (*Handler)(nil)
 
 // New returns a new [Handler] to be used as an [slog.Handler].
-func New(lp log.LoggerProvider, opts ...Option) *Handler {
+func New(lp log.LoggerProvider, _ ...Option) *Handler {
+	if lp == nil {
+		// Do not panic.
+		lp = noop.NewLoggerProvider()
+	}
 	return &Handler{
 		logger: lp.Logger(
 			bridgeName,
@@ -52,9 +57,9 @@ func New(lp log.LoggerProvider, opts ...Option) *Handler {
 	}
 }
 
-// Handle handles the Record.
-func (h *Handler) Handle(ctx context.Context, r slog.Record) error {
-	h.logger.Emit(ctx, h.convertRecord(r))
+// Handle handles the passed record.
+func (h *Handler) Handle(ctx context.Context, record slog.Record) error {
+	h.logger.Emit(ctx, h.convertRecord(record))
 	return nil
 }
 
@@ -122,19 +127,53 @@ func (h *Handler) WithAttrs(attrs []slog.Attr) slog.Handler {
 }
 
 // WithGroup returns a new [slog.Handler] based on h that will log all messages
-// and attributes within a group using name.
+// and attributes within a group of the provided name.
 func (h *Handler) WithGroup(name string) slog.Handler {
 	h2 := *h
 	h2.group = &group{name: name, next: h2.group}
 	return &h2
 }
 
+// group represents a group received from slog.
 type group struct {
-	name  string
+	// name is the name of the group.
+	name string
+	// attrs are the attributes associated with the group.
 	attrs *kvBuffer
-	next  *group
+	// next points to the next group that holds this group.
+	//
+	// Groups are represented as map value types in OpenTelemetry. This means
+	// that for an slog group hierarchy like the following ...
+	//
+	//   WithGroup("G").WithGroup("H").WithGroup("I")
+	//
+	// the corresponding OpenTelemetry log value types will have the following
+	// hierarchy ...
+	//
+	//   KeyValue{
+	//     Key: "G",
+	//     Value: []KeyValue{{
+	//       Key: "H",
+	//       Value: []KeyValue{{
+	//         Key: "I",
+	//         Value: []KeyValue{},
+	//       }},
+	//     }},
+	//   }
+	//
+	// When attributes are recorded (i.e. Info("msg", "key", value) or
+	// WithAttrs("key", value)) they need to be added to the "leaf" group. In
+	// the above example, that would be group "I". Therefore, groups are
+	// structured as a linked list with the "leaf" node being the head of the
+	// list. Following the above example, the group data representation would
+	// be ...
+	//
+	//   *group{"I", next: *group{"H", next: *group{"G"}}}
+	next *group
 }
 
+// NextNonEmpty returns the next group within g's linked-list that has
+// attributes (including g itself). If no group is found, nil is returned.
 func (g *group) NextNonEmpty() *group {
 	if g == nil || g.attrs.Len() > 0 {
 		return g
@@ -142,6 +181,15 @@ func (g *group) NextNonEmpty() *group {
 	return g.next.NextNonEmpty()
 }
 
+// KeyValue returns group g containing kvs as a [log.KeyValue]. The value of
+// the returned KeyValue will be of type [log.KindMap].
+//
+// The passed kvs are rendered in the returned value, but are not added to the
+// group.
+//
+// This does not check g. It is the callers responsibility to ensure g is
+// non-empty or kvs is non-empty so as to return a valid group representation
+// (according to slog).
 func (g *group) KeyValue(kvs ...log.KeyValue) log.KeyValue {
 	// Assumes checking of group g already performed (i.e. non-empty).
 	out := log.Map(g.name, g.attrs.KeyValues(kvs...)...)
@@ -156,6 +204,7 @@ func (g *group) KeyValue(kvs ...log.KeyValue) log.KeyValue {
 	return out
 }
 
+// Clone returns a copy of g.
 func (g *group) Clone() *group {
 	if g == nil {
 		return g
@@ -165,6 +214,7 @@ func (g *group) Clone() *group {
 	return &g2
 }
 
+// AddAttrs add attrs to g.
 func (g *group) AddAttrs(attrs []slog.Attr) {
 	if g.attrs == nil {
 		g.attrs = newKVBuffer(len(attrs))
@@ -173,7 +223,11 @@ func (g *group) AddAttrs(attrs []slog.Attr) {
 }
 
 var kvBufferPool = sync.Pool{
-	New: func() any { return newKVBuffer(10) },
+	New: func() any {
+		// Based on slog research (https://go.dev/blog/slog#performance), 95%
+		// of use-cases will use 5 or less attributes.
+		return newKVBuffer(5)
+	},
 }
 
 func getKVBuffer() (buf *kvBuffer, free func()) {
@@ -196,6 +250,7 @@ func newKVBuffer(n int) *kvBuffer {
 	return &kvBuffer{data: make([]log.KeyValue, 0, n)}
 }
 
+// Len returns the number of [log.KeyValue] held by b
 func (b *kvBuffer) Len() int {
 	if b == nil {
 		return 0
@@ -203,6 +258,7 @@ func (b *kvBuffer) Len() int {
 	return len(b.data)
 }
 
+// Clone returns a copy of b.
 func (b *kvBuffer) Clone() *kvBuffer {
 	if b == nil {
 		return nil
@@ -210,6 +266,7 @@ func (b *kvBuffer) Clone() *kvBuffer {
 	return &kvBuffer{data: slices.Clone(b.data)}
 }
 
+// KeyValues returns kvs appended to the [log.KeyValue] held by b.
 func (b *kvBuffer) KeyValues(kvs ...log.KeyValue) []log.KeyValue {
 	if b == nil {
 		return kvs
@@ -217,6 +274,7 @@ func (b *kvBuffer) KeyValues(kvs ...log.KeyValue) []log.KeyValue {
 	return append(b.data, kvs...)
 }
 
+// AddAttrs adds attrs to b.
 func (b *kvBuffer) AddAttrs(attrs []slog.Attr) {
 	b.data = slices.Grow(b.data, len(attrs))
 	for _, a := range attrs {
@@ -224,6 +282,14 @@ func (b *kvBuffer) AddAttrs(attrs []slog.Attr) {
 	}
 }
 
+// AddAttrs adds attr to b and returns true.
+//
+// This is deisgned to be passed to the AddAttributes method of an
+// [slog.Record].
+//
+// If attr is a group with an empty key, its values will be flattened.
+//
+// If attr is empty, it will be dropped.
 func (b *kvBuffer) AddAttr(attr slog.Attr) bool {
 	if attr.Key == "" {
 		if attr.Value.Kind() == slog.KindGroup {
