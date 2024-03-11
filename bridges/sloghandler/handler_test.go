@@ -23,6 +23,8 @@ import (
 	"go.opentelemetry.io/otel/log/noop"
 )
 
+var now = time.Now()
+
 // testCase represents a complete setup/run/check of an slog handler to test.
 // It is copied from "testing/slogtest" (1.22.1).
 type testCase struct {
@@ -245,6 +247,36 @@ var cases = []testCase{
 	// OTel specific test cases.
 	// #######################################################################
 
+	{
+		name:        "Values",
+		explanation: withSource("all slog Values need to be supported"),
+		f: func(l *slog.Logger) {
+			l.Info(
+				"msg",
+				"any", struct{ data int64 }{data: 1},
+				"bool", true,
+				"duration", time.Minute,
+				"float64", 3.14159,
+				"int64", -2,
+				"string", "str",
+				"time", now,
+				"uint64", uint64(3),
+				// KindGroup and KindLogValuer are left for tests above.
+			)
+		},
+		checks: [][]check{{
+			hasKey(slog.TimeKey),
+			hasKey(slog.LevelKey),
+			hasAttr("any", "{data:1}"),
+			hasAttr("bool", true),
+			hasAttr("duration", int64(time.Minute)),
+			hasAttr("float64", 3.14159),
+			hasAttr("int64", int64(-2)),
+			hasAttr("string", "str"),
+			hasAttr("time", now.UnixNano()),
+			hasAttr("uint64", int64(3)),
+		}},
+	},
 	{
 		name:        "multi-messages",
 		explanation: withSource("this test expects multiple independent messages"),
@@ -532,13 +564,18 @@ func value2Str(v log.Value) string {
 
 func value2Result(v log.Value) any {
 	switch v.Kind() {
-	case log.KindBool,
-		log.KindFloat64,
-		log.KindInt64,
-		log.KindString,
-		log.KindBytes,
-		log.KindSlice:
-		return value2Str(v)
+	case log.KindBool:
+		return v.AsBool()
+	case log.KindFloat64:
+		return v.AsFloat64()
+	case log.KindInt64:
+		return v.AsInt64()
+	case log.KindString:
+		return v.AsString()
+	case log.KindBytes:
+		return v.AsBytes()
+	case log.KindSlice:
+		return v.AsSlice()
 	case log.KindMap:
 		m := make(map[string]any)
 		for _, val := range v.AsMap() {
