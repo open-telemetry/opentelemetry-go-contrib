@@ -18,57 +18,57 @@ import (
 	"go.opentelemetry.io/otel/log/noop"
 )
 
-type loggerProvider struct {
+func TestSLogHandler(t *testing.T) {
+	r := new(recorder)
+
+	// TODO: Use slogtest.Run when we drop support for Go 1.21.
+	err := slogtest.TestHandler(sloghandler.New(r), r.Results)
+	if err != nil {
+		t.Fatal(err)
+	}
+}
+
+// embeddedLogger is a type alias so the embedded.Logger type doesn't conflict
+// with the Logger method of the recorder when it is embedded.
+type embeddedLogger = embedded.Logger
+
+// recorder records all [log.Record]s it is ased to emit.
+type recorder struct {
 	embedded.LoggerProvider
-
-	loggerN int
-	logger  *logger
-}
-
-func (p *loggerProvider) Logger(string, ...log.LoggerOption) log.Logger {
-	p.logger = newLogger(p.loggerN)
-	return p.logger
-}
-
-func (p *loggerProvider) String() string {
-	return fmt.Sprintf("&loggerProvider{%s}", p.logger.String())
-}
-
-type logger struct {
-	embedded.Logger
+	embeddedLogger
 
 	Records []log.Record
 }
 
-func newLogger(n int) *logger {
-	if n == 0 {
-		return &logger{}
-	}
-	return &logger{Records: make([]log.Record, 0, n)}
+func (r *recorder) Logger(string, ...log.LoggerOption) log.Logger { return r }
+
+func (r *recorder) Emit(_ context.Context, record log.Record) {
+	r.Records = append(r.Records, record)
 }
 
-func (l *logger) Emit(_ context.Context, r log.Record) {
-	l.Records = append(l.Records, r)
-}
+func (r *recorder) Results() []map[string]any {
+	out := make([]map[string]any, len(r.Records))
+	for i := range out {
+		r := r.Records[i]
 
-func (l *logger) String() string {
-	var buf strings.Builder
-	_, _ = buf.WriteString("&logger{")
-	for _, r := range l.Records {
-		_, _ = buf.WriteString("Record{body: ")
-		_, _ = buf.WriteString(value2Str(r.Body()))
-		_, _ = buf.WriteString(", attr: ")
+		m := make(map[string]any)
+		if tStamp := r.Timestamp(); !tStamp.IsZero() {
+			m[slog.TimeKey] = tStamp
+		}
+		if lvl := r.Severity(); lvl != 0 {
+			m[slog.LevelKey] = lvl - 9
+		}
+		if body := r.Body(); body.Kind() != log.KindEmpty {
+			m[slog.MessageKey] = value2Str(body)
+		}
 		r.WalkAttributes(func(kv log.KeyValue) bool {
-			_, _ = buf.WriteString(kv.Key)
-			_, _ = buf.WriteRune(':')
-			_, _ = buf.WriteString(value2Str(kv.Value))
-			_, _ = buf.WriteRune(',')
+			m[kv.Key] = value2Result(kv.Value)
 			return true
 		})
-		_, _ = buf.WriteString("},")
+
+		out[i] = m
 	}
-	_, _ = buf.WriteString("}")
-	return buf.String()
+	return out
 }
 
 func value2Str(v log.Value) string {
@@ -90,18 +90,26 @@ func value2Str(v log.Value) string {
 		_, _ = buf.Write(v.AsBytes())
 	case log.KindSlice:
 		_, _ = buf.WriteRune('[')
-		for _, s := range v.AsSlice() {
-			_, _ = buf.WriteString(value2Str(s))
-			_, _ = buf.WriteRune(',')
+		if data := v.AsSlice(); len(data) > 0 {
+			_, _ = buf.WriteString(value2Str(data[0]))
+			for _, s := range data[1:] {
+				_, _ = buf.WriteRune(',')
+				_, _ = buf.WriteString(value2Str(s))
+			}
 		}
 		_, _ = buf.WriteRune(']')
 	case log.KindMap:
 		_, _ = buf.WriteRune('{')
-		for _, m := range v.AsMap() {
-			_, _ = buf.WriteString(m.Key)
+		if data := v.AsMap(); len(data) > 0 {
+			_, _ = buf.WriteString(data[0].Key)
 			_, _ = buf.WriteRune(':')
-			_, _ = buf.WriteString(value2Str(m.Value))
-			_, _ = buf.WriteRune(',')
+			_, _ = buf.WriteString(value2Str(data[0].Value))
+			for _, m := range data[1:] {
+				_, _ = buf.WriteRune(',')
+				_, _ = buf.WriteString(m.Key)
+				_, _ = buf.WriteRune(':')
+				_, _ = buf.WriteString(value2Str(m.Value))
+			}
 		}
 		_, _ = buf.WriteRune('}')
 	}
@@ -110,7 +118,12 @@ func value2Str(v log.Value) string {
 
 func value2Result(v log.Value) any {
 	switch v.Kind() {
-	case log.KindBool, log.KindFloat64, log.KindInt64, log.KindString, log.KindBytes, log.KindSlice:
+	case log.KindBool,
+		log.KindFloat64,
+		log.KindInt64,
+		log.KindString,
+		log.KindBytes,
+		log.KindSlice:
 		return value2Str(v)
 	case log.KindMap:
 		m := make(map[string]any)
@@ -120,40 +133,6 @@ func value2Result(v log.Value) any {
 		return m
 	}
 	return nil
-}
-
-func TestSLogHandler(t *testing.T) {
-	lp := new(loggerProvider)
-
-	results := func() []map[string]any {
-		out := make([]map[string]any, len(lp.logger.Records))
-		for i := range out {
-			r := lp.logger.Records[i]
-
-			m := make(map[string]any)
-			if tStamp := r.Timestamp(); !tStamp.IsZero() {
-				m[slog.TimeKey] = tStamp
-			}
-			if lvl := r.Severity(); lvl != 0 {
-				m[slog.LevelKey] = lvl - 9
-			}
-			if body := r.Body(); body.Kind() != log.KindEmpty {
-				m[slog.MessageKey] = value2Str(body)
-			}
-			r.WalkAttributes(func(kv log.KeyValue) bool {
-				m[kv.Key] = value2Result(kv.Value)
-				return true
-			})
-
-			out[i] = m
-		}
-		return out
-	}
-	// TODO: Use slogtest.Run when we drop support for Go 1.21.
-	err := slogtest.TestHandler(sloghandler.New(lp), results)
-	if err != nil {
-		t.Fatal(err)
-	}
 }
 
 func BenchmarkHandler(b *testing.B) {
