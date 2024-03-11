@@ -13,7 +13,6 @@ import (
 	"log/slog"
 	"reflect"
 	"runtime"
-	"strings"
 	"testing"
 	"testing/slogtest"
 	"time"
@@ -344,7 +343,7 @@ func (r *recorder) Results() []map[string]any {
 			m[slog.LevelKey] = lvl - 9
 		}
 		if body := r.Body(); body.Kind() != log.KindEmpty {
-			m[slog.MessageKey] = value2Str(body)
+			m[slog.MessageKey] = value2Result(body)
 		}
 		r.WalkAttributes(func(kv log.KeyValue) bool {
 			m[kv.Key] = value2Result(kv.Value)
@@ -354,51 +353,6 @@ func (r *recorder) Results() []map[string]any {
 		out[i] = m
 	}
 	return out
-}
-
-func value2Str(v log.Value) string {
-	var buf strings.Builder
-	switch v.Kind() {
-	case log.KindBool:
-		if v.AsBool() {
-			_, _ = buf.WriteString("true")
-		} else {
-			_, _ = buf.WriteString("false")
-		}
-	case log.KindFloat64:
-		_, _ = buf.WriteString(fmt.Sprintf("%g", v.AsFloat64()))
-	case log.KindInt64:
-		_, _ = buf.WriteString(fmt.Sprintf("%d", v.AsInt64()))
-	case log.KindString:
-		_, _ = buf.WriteString(v.AsString())
-	case log.KindBytes:
-		_, _ = buf.Write(v.AsBytes())
-	case log.KindSlice:
-		_, _ = buf.WriteRune('[')
-		if data := v.AsSlice(); len(data) > 0 {
-			_, _ = buf.WriteString(value2Str(data[0]))
-			for _, s := range data[1:] {
-				_, _ = buf.WriteRune(',')
-				_, _ = buf.WriteString(value2Str(s))
-			}
-		}
-		_, _ = buf.WriteRune(']')
-	case log.KindMap:
-		_, _ = buf.WriteRune('{')
-		if data := v.AsMap(); len(data) > 0 {
-			_, _ = buf.WriteString(data[0].Key)
-			_, _ = buf.WriteRune(':')
-			_, _ = buf.WriteString(value2Str(data[0].Value))
-			for _, m := range data[1:] {
-				_, _ = buf.WriteRune(',')
-				_, _ = buf.WriteString(m.Key)
-				_, _ = buf.WriteRune(':')
-				_, _ = buf.WriteString(value2Str(m.Value))
-			}
-		}
-		_, _ = buf.WriteRune('}')
-	}
-	return buf.String()
 }
 
 func value2Result(v log.Value) any {
