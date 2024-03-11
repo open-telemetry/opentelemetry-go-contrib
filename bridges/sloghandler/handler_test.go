@@ -26,7 +26,7 @@ import (
 var now = time.Now()
 
 // testCase represents a complete setup/run/check of an slog handler to test.
-// It is copied from "testing/slogtest" (1.22.1).
+// It is based on the testCase from "testing/slogtest" (1.22.1).
 type testCase struct {
 	// Subtest name.
 	name string
@@ -247,8 +247,10 @@ func TestSLogHandler(t *testing.T) {
 	}
 }
 
+// copied from slogtest (1.22.1).
 type check func(map[string]any) string
 
+// copied from slogtest (1.22.1).
 func hasKey(key string) check {
 	return func(m map[string]any) string {
 		if _, ok := m[key]; !ok {
@@ -258,6 +260,7 @@ func hasKey(key string) check {
 	}
 }
 
+// copied from slogtest (1.22.1).
 func missingKey(key string) check {
 	return func(m map[string]any) string {
 		if _, ok := m[key]; ok {
@@ -267,6 +270,7 @@ func missingKey(key string) check {
 	}
 }
 
+// copied from slogtest (1.22.1).
 func hasAttr(key string, wantVal any) check {
 	return func(m map[string]any) string {
 		if s := hasKey(key)(m); s != "" {
@@ -280,6 +284,7 @@ func hasAttr(key string, wantVal any) check {
 	}
 }
 
+// copied from slogtest (1.22.1).
 func inGroup(name string, c check) check {
 	return func(m map[string]any) string {
 		v, ok := m[name]
@@ -294,6 +299,7 @@ func inGroup(name string, c check) check {
 	}
 }
 
+// copied from slogtest (1.22.1).
 func withSource(s string) string {
 	_, file, line, ok := runtime.Caller(1)
 	if !ok {
@@ -302,11 +308,13 @@ func withSource(s string) string {
 	return fmt.Sprintf("%s (%s:%d)", s, file, line)
 }
 
+// copied from slogtest (1.22.1).
 type wrapper struct {
 	slog.Handler
 	mod func(*slog.Record)
 }
 
+// copied from slogtest (1.22.1).
 func (h *wrapper) Handle(ctx context.Context, r slog.Record) error {
 	h.mod(&r)
 	return h.Handler.Handle(ctx, r)
