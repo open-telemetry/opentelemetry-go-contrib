@@ -161,12 +161,26 @@ type group struct {
 	//     }},
 	//   }
 	//
-	// When attributes are recorded (i.e. Info("msg", "key", value) or
-	// WithAttrs("key", value)) they need to be added to the "leaf" group. In
-	// the above example, that would be group "I". Therefore, groups are
-	// structured as a linked list with the "leaf" node being the head of the
-	// list. Following the above example, the group data representation would
-	// be ...
+	// When attributes are recorded (i.e. Info("msg", "key", "value") or
+	// WithAttrs("key", "value")) they need to be added to the "leaf" group. In
+	// the above example, that would be group "I":
+	//
+	//   KeyValue{
+	//     Key: "G",
+	//     Value: []KeyValue{{
+	//       Key: "H",
+	//       Value: []KeyValue{{
+	//         Key: "I",
+	//         Value: []KeyValue{
+	//           String("key", "value"),
+	//         },
+	//       }},
+	//     }},
+	//   }
+	//
+	// Therefore, groups are structured as a linked-list with the "leaf" node
+	// being the head of the list. Following the above example, the group data
+	// representation would be ...
 	//
 	//   *group{"I", next: *group{"H", next: *group{"G"}}}
 	next *group
