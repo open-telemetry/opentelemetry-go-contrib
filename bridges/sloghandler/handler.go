@@ -151,18 +151,13 @@ func (g *group) NextNonEmpty() *group {
 }
 
 func (g *group) KeyValue(kvs ...log.KeyValue) log.KeyValue {
-	// Assumes checking of group g already performed.
-	var out log.KeyValue
-	out = log.Map(g.name, g.attrs.KeyValues(kvs...)...)
+	// Assumes checking of group g already performed (i.e. non-empty).
+	out := log.Map(g.name, g.attrs.KeyValues(kvs...)...)
 	g = g.next
 	for g != nil {
 		// A Handler should not output groups if there are no attributes.
 		if g.attrs.Len() > 0 {
-			if out.Value.Kind() != log.KindEmpty {
-				out = log.Map(g.name, g.attrs.KeyValues(out)...)
-			} else {
-				out = log.Map(g.name, g.attrs.KeyValues()...)
-			}
+			out = log.Map(g.name, g.attrs.KeyValues(out)...)
 		}
 		g = g.next
 	}
