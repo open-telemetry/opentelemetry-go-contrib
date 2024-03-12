@@ -250,7 +250,8 @@ func getKVBuffer() (buf *kvBuffer, free func()) {
 	buf = kvBufferPool.Get().(*kvBuffer)
 	return buf, func() {
 		// TODO: limit returned size so the pool doesn't hold on to very large
-		// buffers.
+		// buffers. Idea is based on
+		// https://cs.opensource.google/go/x/exp/+/814bf88c:slog/internal/buffer/buffer.go;l=27-34
 
 		// Do not modify any previously held data.
 		buf.data = buf.data[:0:0]
