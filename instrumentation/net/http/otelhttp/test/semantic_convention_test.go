@@ -53,7 +53,7 @@ func TestSemanticConventions(t *testing.T) {
 	require.NoError(t, err)
 	ctx := context.Background()
 	req := testcontainers.ContainerRequest{
-		Image:        "ghcr.io/madvikinggod/semantic-convention-checker:0.0.4",
+		Image:        "ghcr.io/madvikinggod/semantic-convention-checker:0.0.11",
 		ExposedPorts: []string{"4318/tcp"},
 		WaitingFor: wait.ForAll(
 			wait.ForListeningPort("4318/tcp"),
