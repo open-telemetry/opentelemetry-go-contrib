@@ -355,6 +355,13 @@ func convertValue(v slog.Value) log.Value {
 	case slog.KindLogValuer:
 		return convertValue(v.Resolve())
 	default:
-		panic(fmt.Sprintf("unhandled attribute kind: %s", v.Kind()))
+		// Try to handle this as gracefully as possible.
+		//
+		// Don't panic here. The goal here is to have developers find this
+		// first if a new slog.Kind is added. A test on the new kind will find
+		// this malformed attribute as well as a panic. However, it is
+		// preferable to have user's open issue asking why their attributes
+		// have a "unhandled: " prefix than say that their code is panicking.
+		return log.StringValue(fmt.Sprintf("unhandled: %+v", v.Any()))
 	}
 }
