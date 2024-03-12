@@ -17,6 +17,7 @@ package semconv // import "go.opentelemetry.io/contrib/instrumentation/net/http/
 import (
 	"io"
 	"net/http"
+	"slices"
 	"strings"
 
 	"go.opentelemetry.io/otel/attribute"
@@ -116,8 +117,7 @@ func (d dupHTTPServer) TraceRequest(server string, req *http.Request) []attribut
 		i += 2
 	}
 
-	// // TODO: When we drop go1.20 support use slices.clip().
-	return attrs[:i:i]
+	return slices.Clip(attrs[:i])
 }
 
 func (d dupHTTPServer) method(method string, attrs []attribute.KeyValue) int {

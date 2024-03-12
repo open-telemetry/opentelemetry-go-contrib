@@ -77,7 +77,7 @@ func NewHTTPServer() HTTPServer {
 		return dupHTTPServer{}
 	default:
 		warnOnce.Do(func() {
-			otel.Handle(errors.New("deprecated: old semantic conventions are being used. Use the environment variable OTEL_HTTP_CLIENT_COMPATIBILITY_MODE to opt into the new conventions. This will be removed in a future release"))
+			otel.Handle(errors.New("deprecated: old semantic conventions are being used. Use the environment variable OTEL_HTTP_CLIENT_COMPATIBILITY_MODE to opt into the new conventions. Setting it to `http/dup` will provide combined old-and-new attributes. Setting it to `http` will switch directly to the new attributes. This will be removed in a future release"))
 		})
 		return oldHTTPServer{}
 	}

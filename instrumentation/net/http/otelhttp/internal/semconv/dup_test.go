@@ -97,7 +97,6 @@ func TestDupMethod(t *testing.T) {
 }
 
 func TestDupTraceResponse(t *testing.T) {
-	// Anything but "http" or "http/dup" works
 	t.Setenv("OTEL_HTTP_CLIENT_COMPATIBILITY_MODE", "http/dup")
 	serv := NewHTTPServer()
 	want := []attribute.KeyValue{

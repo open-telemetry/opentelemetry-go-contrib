@@ -16,6 +16,7 @@ package semconv // import "go.opentelemetry.io/contrib/instrumentation/net/http/
 
 import (
 	"net/http"
+	"slices"
 	"strings"
 
 	"go.opentelemetry.io/otel/attribute"
@@ -43,9 +44,6 @@ var _ HTTPServer = newHTTPServer{}
 // If the primary server name is not known, server should be an empty string.
 // The req Host will be used to determine the server instead.
 func (n newHTTPServer) TraceRequest(server string, req *http.Request) []attribute.KeyValue {
-	// old http.target http.scheme net.host.name net.host.port http.scheme net.host.name net.host.port http.method net.sock.peer.addr net.sock.peer.port user_agent.original http.method http.status_code net.protocol.version
-	// new http.request.header server.address server.port network.local.address network.local.port client.address client.port url.path url.query url.scheme user_agent.original server.address server.port url.scheme http.request.method http.response.status_code error.type network.protocol.name network.protocol.version http.request.method_original http.response.header http.request.method network.peer.address network.peer.port network.transport http.request.method http.response.status_code error.type network.protocol.name network.protocol.version
-
 	const MaxAttributes = 11
 	attrs := make([]attribute.KeyValue, MaxAttributes)
 	var host string
@@ -106,8 +104,7 @@ func (n newHTTPServer) TraceRequest(server string, req *http.Request) []attribut
 		i++
 	}
 
-	// // TODO: When we drop go1.20 support use slices.clip().
-	return attrs[:i:i]
+	return slices.Clip(attrs[:i])
 }
 
 func (n newHTTPServer) method(method string, attrs []attribute.KeyValue) int {
