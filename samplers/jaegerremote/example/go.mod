@@ -19,7 +19,7 @@ require (
 	golang.org/x/sys v0.17.0 // indirect
 	google.golang.org/genproto v0.0.0-20230530153820-e85fd2cbaebc // indirect
 	google.golang.org/genproto/googleapis/api v0.0.0-20230526203410-71b5a4ffd15e // indirect
-	google.golang.org/protobuf v1.32.0 // indirect
+	google.golang.org/protobuf v1.33.0 // indirect
 )
 
 replace go.opentelemetry.io/contrib/samplers/jaegerremote => ../
