@@ -44,6 +44,8 @@ type Handler struct {
 var _ slog.Handler = (*Handler)(nil)
 
 // New returns a new [Handler] to be used as an [slog.Handler].
+//
+// If lp is nil, [noop.LoggerProvider] will be used as the default.
 func New(lp log.LoggerProvider, _ ...Option) *Handler {
 	if lp == nil {
 		// Do not panic.
