@@ -13,6 +13,7 @@ import (
 	"log/slog"
 	"reflect"
 	"runtime"
+	"sync"
 	"testing"
 	"testing/slogtest"
 	"time"
@@ -385,6 +386,31 @@ func value2Result(v log.Value) any {
 		return m
 	}
 	return nil
+}
+
+func TestConcurrentSafety(t *testing.T) {
+	lp := noop.NewLoggerProvider()
+	h := sloghandler.New(lp)
+
+	const goroutineN = 10
+
+	var wg sync.WaitGroup
+	wg.Add(goroutineN)
+
+	for i := 0; i < goroutineN; i++ {
+		go func() {
+			defer wg.Done()
+
+			_ = h.Enabled(context.Background(), slog.LevelDebug)
+
+			r := slog.NewRecord(time.Now(), slog.LevelDebug, "msg", 0)
+			_ = h.Handle(context.Background(), r)
+
+			_ = h.WithAttrs([]slog.Attr{slog.Any("key", nil)})
+			_ = h.WithGroup("name")
+		}()
+	}
+	wg.Wait()
 }
 
 func BenchmarkHandler(b *testing.B) {
