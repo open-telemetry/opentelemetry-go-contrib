@@ -21,7 +21,6 @@ import (
 	"go.opentelemetry.io/contrib/bridges/sloghandler"
 	"go.opentelemetry.io/otel/log"
 	"go.opentelemetry.io/otel/log/embedded"
-	"go.opentelemetry.io/otel/log/noop"
 )
 
 var now = time.Now()
@@ -389,8 +388,7 @@ func value2Result(v log.Value) any {
 }
 
 func TestConcurrentSafety(t *testing.T) {
-	lp := noop.NewLoggerProvider()
-	h := sloghandler.New(lp)
+	h := sloghandler.New(nil)
 
 	const goroutineN = 10
 
@@ -426,8 +424,7 @@ func BenchmarkHandler(b *testing.B) {
 	b.Run("Handle", func(b *testing.B) {
 		handlers := make([]*sloghandler.Handler, b.N)
 		for i := range handlers {
-			lp := noop.NewLoggerProvider()
-			handlers[i] = sloghandler.New(lp)
+			handlers[i] = sloghandler.New(nil)
 		}
 
 		b.ReportAllocs()
@@ -440,8 +437,7 @@ func BenchmarkHandler(b *testing.B) {
 	b.Run("WithAttrs", func(b *testing.B) {
 		handlers := make([]*sloghandler.Handler, b.N)
 		for i := range handlers {
-			lp := noop.NewLoggerProvider()
-			handlers[i] = sloghandler.New(lp)
+			handlers[i] = sloghandler.New(nil)
 		}
 
 		b.ReportAllocs()
@@ -454,8 +450,7 @@ func BenchmarkHandler(b *testing.B) {
 	b.Run("WithGroup", func(b *testing.B) {
 		handlers := make([]*sloghandler.Handler, b.N)
 		for i := range handlers {
-			lp := noop.NewLoggerProvider()
-			handlers[i] = sloghandler.New(lp)
+			handlers[i] = sloghandler.New(nil)
 		}
 
 		b.ReportAllocs()
@@ -468,8 +463,7 @@ func BenchmarkHandler(b *testing.B) {
 	b.Run("WithGroup.WithAttrs", func(b *testing.B) {
 		handlers := make([]*sloghandler.Handler, b.N)
 		for i := range handlers {
-			lp := noop.NewLoggerProvider()
-			handlers[i] = sloghandler.New(lp)
+			handlers[i] = sloghandler.New(nil)
 		}
 
 		b.ReportAllocs()
@@ -482,8 +476,7 @@ func BenchmarkHandler(b *testing.B) {
 	b.Run("(WithGroup.WithAttrs).Handle", func(b *testing.B) {
 		handlers := make([]slog.Handler, b.N)
 		for i := range handlers {
-			lp := noop.NewLoggerProvider()
-			handlers[i] = sloghandler.New(lp).WithGroup("group").WithAttrs(attrs)
+			handlers[i] = sloghandler.New(nil).WithGroup("group").WithAttrs(attrs)
 		}
 
 		b.ReportAllocs()
