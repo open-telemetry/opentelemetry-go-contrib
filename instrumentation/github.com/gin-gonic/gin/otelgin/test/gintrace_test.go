@@ -12,6 +12,7 @@ import (
 	"net/http/httptest"
 	"strconv"
 	"testing"
+	"time"
 
 	"github.com/gin-gonic/gin"
 	"github.com/stretchr/testify/assert"
@@ -193,8 +194,6 @@ func TestWithSpanStartOptions(t *testing.T) {
 		),
 	))
 
-	// configure a handler that returns an error and 5xx status
-	// code
 	router.GET("/", func(c *gin.Context) {
 	})
 	r := httptest.NewRequest("GET", "/", nil)
@@ -210,6 +209,39 @@ func TestWithSpanStartOptions(t *testing.T) {
 	assert.Equal(t, "/", span.Name())
 	attr := span.Attributes()
 	assert.Contains(t, attr, attribute.String("spanStart", "true"))
+}
+
+func TestWithSpanEndOptions(t *testing.T) {
+	sr := tracetest.NewSpanRecorder()
+	provider := sdktrace.NewTracerProvider(sdktrace.WithSpanProcessor(sr))
+
+	// setup
+	endTime := time.Now()
+	router := gin.New()
+	router.Use(otelgin.Middleware(
+		"foobar",
+		otelgin.WithTracerProvider(provider),
+		otelgin.WithSpanEndOption(
+			trace.WithTimestamp(endTime),
+		),
+	))
+
+	router.GET("/", func(c *gin.Context) {
+	})
+	r := httptest.NewRequest("GET", "/", nil)
+	w := httptest.NewRecorder()
+	router.ServeHTTP(w, r)
+	response := w.Result()
+	assert.Equal(t, http.StatusOK, response.StatusCode)
+
+	// Verify that the attribute is set as expected
+	spans := sr.Ended()
+	require.Len(t, spans, 1)
+	span := spans[0]
+	assert.Equal(t, "/", span.Name())
+
+	// Assert that the time set in the SpanEndOptions above matches the EndTime of the span
+	assert.Equal(t, span.EndTime(), endTime)
 }
 
 func TestHTML(t *testing.T) {
