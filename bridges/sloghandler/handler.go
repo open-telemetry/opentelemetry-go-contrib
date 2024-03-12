@@ -9,7 +9,9 @@ import (
 	"context"
 	"fmt"
 	"log/slog"
+	"runtime"
 	"slices"
+	"strings"
 	"sync"
 
 	"go.opentelemetry.io/otel/log"
@@ -22,7 +24,18 @@ const (
 	bridgeVersion = "0.0.1-alpha"
 )
 
-type config struct{}
+type config struct {
+	// TODO: add option for users to configure this.
+	loggerFunc func(context.Context, slog.Record) (name string, options []log.LoggerOption)
+}
+
+func newConfig(options []Option) config {
+	var c config
+	for _, opt := range options {
+		c = opt.apply(c)
+	}
+	return c
+}
 
 // Option configures a [Handler].
 type Option interface {
@@ -35,9 +48,9 @@ type Handler struct {
 	// Ensure forward compatibility by explicitly making this not comparable.
 	noCmp [0]func() //nolint: unused  // This is indeed used.
 
-	attrs  *kvBuffer
-	group  *group
-	logger log.Logger
+	attrs *kvBuffer
+	group *group
+	logFn func(context.Context, slog.Record) log.Logger
 }
 
 // Compile-time check *Handler implements slog.Handler.
@@ -46,22 +59,46 @@ var _ slog.Handler = (*Handler)(nil)
 // New returns a new [Handler] to be used as an [slog.Handler].
 //
 // If lp is nil, [noop.LoggerProvider] will be used as the default.
-func New(lp log.LoggerProvider, _ ...Option) *Handler {
+func New(lp log.LoggerProvider, options ...Option) *Handler {
 	if lp == nil {
 		// Do not panic.
 		lp = noop.NewLoggerProvider()
 	}
-	return &Handler{
-		logger: lp.Logger(
-			bridgeName,
-			log.WithInstrumentationVersion(bridgeVersion),
-		),
+
+	c := newConfig(options)
+
+	var logFn func(context.Context, slog.Record) log.Logger
+	if c.loggerFunc != nil {
+		logFn = func(ctx context.Context, r slog.Record) log.Logger {
+			name, opts := c.loggerFunc(ctx, r)
+			return lp.Logger(name, opts...)
+		}
+	} else {
+		logFn = defaultLogFn(lp)
 	}
+
+	return &Handler{logFn: logFn}
+}
+
+func defaultLogFn(lp log.LoggerProvider) func(context.Context, slog.Record) log.Logger {
+	return func(_ context.Context, r slog.Record) log.Logger {
+		fs := runtime.CallersFrames([]uintptr{r.PC})
+		f, _ := fs.Next()
+		return lp.Logger(parsePkg(f.Function, "log/slog"))
+	}
+}
+
+func parsePkg(fName, fallback string) string {
+	pkg, _, found := strings.Cut(fName, ".")
+	if !found {
+		return fallback
+	}
+	return pkg
 }
 
 // Handle handles the passed record.
 func (h *Handler) Handle(ctx context.Context, record slog.Record) error {
-	h.logger.Emit(ctx, h.convertRecord(record))
+	h.logFn(ctx, record).Emit(ctx, h.convertRecord(record))
 	return nil
 }
 
