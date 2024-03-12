@@ -387,7 +387,7 @@ func value2Result(v log.Value) any {
 	return nil
 }
 
-func TestConcurrentSafety(t *testing.T) {
+func TestConcurrentSafe(t *testing.T) {
 	h := sloghandler.New(nil)
 
 	const goroutineN = 10
