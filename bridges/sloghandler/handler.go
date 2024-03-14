@@ -14,13 +14,67 @@ import (
 
 	"go.opentelemetry.io/otel/log"
 	"go.opentelemetry.io/otel/log/noop"
+	"go.opentelemetry.io/otel/sdk/instrumentation"
 )
 
-type config struct{}
+const (
+	bridgeName = "go.opentelemetry.io/contrib/bridge/sloghandler"
+	// TODO: hook this into the release pipeline.
+	bridgeVersion = "0.0.1-alpha"
+)
+
+type config struct {
+	scope instrumentation.Scope
+}
+
+func newConfig(options []Option) config {
+	var c config
+	for _, opt := range options {
+		c = opt.apply(c)
+	}
+
+	var emptyScope instrumentation.Scope
+	if c.scope == emptyScope {
+		c.scope = instrumentation.Scope{
+			Name:    bridgeName,
+			Version: bridgeVersion,
+		}
+	}
+	return c
+}
+
+func (c config) loggerArgs() (string, []log.LoggerOption) {
+	var opts []log.LoggerOption
+	if c.scope.Version != "" {
+		opts = append(opts, log.WithInstrumentationVersion(c.scope.Version))
+	}
+	if c.scope.SchemaURL != "" {
+		opts = append(opts, log.WithSchemaURL(c.scope.SchemaURL))
+	}
+	return c.scope.Name, opts
+}
 
 // Option configures a [Handler].
 type Option interface {
 	apply(config) config
+}
+
+type optFunc func(config) config
+
+func (f optFunc) apply(c config) config { return f(c) }
+
+// WithInstrumentationScope returns an option that configures the scope of the
+// [log.Logger] used by a [Handler].
+//
+// By default if this Option is not provided, the Handler will use a default
+// instrumentation scope describing this bridge package. It is recommended to
+// provide this so log data can be associated with its source package or
+// module.
+func WithInstrumentationScope(scope instrumentation.Scope) Option {
+	return optFunc(func(c config) config {
+		c.scope = scope
+		return c
+	})
 }
 
 // Handler is an [slog.Handler] that sends all logging records it receives to
@@ -40,12 +94,20 @@ var _ slog.Handler = (*Handler)(nil)
 // New returns a new [Handler] to be used as an [slog.Handler].
 //
 // If lp is nil, [noop.LoggerProvider] will be used as the default.
-func New(l log.Logger, _ ...Option) *Handler {
-	if l == nil {
+//
+// By default the returned Handler will use a [log.Logger] that is identified
+// with this bridge package information. [WithInstrumentationScope] should be
+// used to override this with details about the package or module the handler
+// will instrument.
+func New(lp log.LoggerProvider, options ...Option) *Handler {
+	if lp == nil {
 		// Do not panic.
-		l = noop.Logger{}
+		lp = noop.NewLoggerProvider()
 	}
-	return &Handler{logger: l}
+	name, loggerOpts := newConfig(options).loggerArgs()
+	return &Handler{
+		logger: lp.Logger(name, loggerOpts...),
+	}
 }
 
 // Handle handles the passed record.
