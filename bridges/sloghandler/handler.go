@@ -17,11 +17,7 @@ import (
 	"go.opentelemetry.io/otel/sdk/instrumentation"
 )
 
-const (
-	bridgeName = "go.opentelemetry.io/contrib/bridge/sloghandler"
-	// TODO: hook this into the release pipeline.
-	bridgeVersion = "0.0.1-alpha"
-)
+const bridgeName = "go.opentelemetry.io/contrib/bridge/sloghandler"
 
 type config struct {
 	scope instrumentation.Scope
@@ -37,7 +33,7 @@ func newConfig(options []Option) config {
 	if c.scope == emptyScope {
 		c.scope = instrumentation.Scope{
 			Name:    bridgeName,
-			Version: bridgeVersion,
+			Version: Version(),
 		}
 	}
 	return c
