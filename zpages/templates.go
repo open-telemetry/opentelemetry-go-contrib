@@ -19,6 +19,7 @@
 package zpages // import "go.opentelemetry.io/contrib/zpages"
 
 import (
+	"bytes"
 	"fmt"
 	"html/template"
 	"io"
@@ -69,10 +70,21 @@ func spanRowFormatter(r spanRow) template.HTML {
 	if r.SpanContext.IsSampled() {
 		col = "blue"
 	}
+
+	var tpl string
+
 	if r.ParentSpanContext.IsValid() {
-		return template.HTML(fmt.Sprintf(`trace_id: <b style="color:%s">%s</b> span_id: %s parent_span_id: %s`, col, r.SpanContext.TraceID(), r.SpanContext.SpanID(), r.ParentSpanContext.SpanID()))
+		tpl = fmt.Sprintf(`trace_id: <b style="color:%s">%s</b> span_id: %s parent_span_id: %s`, col, r.SpanContext.TraceID(), r.SpanContext.SpanID(), r.ParentSpanContext.SpanID())
+	} else {
+		tpl = fmt.Sprintf(`trace_id: <b style="color:%s">%s</b> span_id: %s `, col, r.SpanContext.TraceID(), r.SpanContext.SpanID())
 	}
-	return template.HTML(fmt.Sprintf(`trace_id: <b style="color:%s">%s</b> span_id: %s`, col, r.SpanContext.TraceID(), r.SpanContext.SpanID()))
+
+	t := template.Must(template.New("spanRow").Parse(tpl))
+	var buf bytes.Buffer
+	if err := t.Execute(&buf, nil); err != nil {
+		return template.HTML(fmt.Sprintf("Error executing template: %v", err))
+	}
+	return template.HTML(buf.String())
 }
 
 func even(x int) bool {

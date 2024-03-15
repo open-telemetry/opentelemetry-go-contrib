@@ -11,6 +11,8 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 ### Added
 
 - Add the new `go.opentelemetry.io/contrib/instrgen` package to provide auto-generated source code instrumentation. (#3068, #3108)
+- Add a new package `go.opentelemetry.io/contrib/zpages/internal` to enable the use of internal.Templates within the parseTemplate function.
+- Refactored the spanRowFormatter function to utilize HTML templates for auto-escaping HTML, ensuring protection against Cross-site Scripting (XSS) vulnerabilities. (#4451)
 
 ### Removed
 
