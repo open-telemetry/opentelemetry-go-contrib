@@ -73,17 +73,17 @@ func spanRowFormatter(r spanRow) template.HTML {
 	var tpl string
 
 	if r.ParentSpanContext.IsValid() {
-		tpl = fmt.Sprintf(`trace_id: <b style="color:%s">%s</b> span_id: %s parent_span_id: %s`, col, r.SpanContext.TraceID(), r.SpanContext.SpanID(), r.ParentSpanContext.SpanID())
+		tpl = fmt.Sprintf(`trace_id: <b style="color:%s">%s</b> span_id: %s parent_span_id: %s`, col, template.HTMLEscapeString(r.SpanContext.TraceID().String()), template.HTMLEscapeString(r.SpanContext.SpanID().String()), template.HTMLEscapeString(r.ParentSpanContext.SpanID().String()))
 	} else {
-		tpl = fmt.Sprintf(`trace_id: <b style="color:%s">%s</b> span_id: %s `, col, r.SpanContext.TraceID(), r.SpanContext.SpanID())
+		tpl = fmt.Sprintf(`trace_id: <b style="color:%s">%s</b> span_id: %s `, col, template.HTMLEscapeString(r.SpanContext.TraceID().String()), template.HTMLEscapeString(r.SpanContext.SpanID().String()))
 	}
 
 	t := template.Must(template.New("spanRow").Parse(tpl))
 	var buf bytes.Buffer
 	if err := t.Execute(&buf, nil); err != nil {
-		return template.HTML(fmt.Sprintf("Error executing template: %v", err))
+		return template.HTML(template.HTMLEscapeString(fmt.Sprintf("Error executing template: %s", err.Error())))
 	}
-	return template.HTML(buf.String())
+	return template.HTML(template.HTMLEscapeString(buf.String()))
 }
 
 func even(x int) bool {
