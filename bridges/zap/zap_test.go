@@ -32,17 +32,18 @@ func NewTestOtelLogger(log log.Logger) zapcore.Core {
 		logger: log,
 	}
 }
+
 func TestZapCore(t *testing.T) {
 	spy := &spyLogger{}
 	logger := zap.New(NewTestOtelLogger(spy))
-	logger.Info(testBodyString, zap.String("username", "johndoe"))
+	logger.Info(testBodyString, zap.Strings("key", []string{"1", "2"}))
 
 	assert.Equal(t, testBodyString, spy.Record.Body().AsString())
 	assert.Equal(t, testSeverity, spy.Record.Severity())
 	assert.Equal(t, 1, spy.Record.AttributesLen())
 	spy.Record.WalkAttributes(func(kv log.KeyValue) bool {
-		assert.Equal(t, "username", string(kv.Key))
-		assert.Equal(t, "johndoe", kv.Value.AsString())
+		assert.Equal(t, "key", string(kv.Key))
+		assert.Equal(t, "1", kv.Value.AsSlice()[0].AsString())
 		return true
 	})
 
@@ -55,3 +56,47 @@ func TestZapCore(t *testing.T) {
 	})
 
 }
+
+type addr struct {
+	IP   string
+	Port int
+}
+
+type request struct {
+	URL    string
+	Listen addr
+	Remote addr
+}
+
+func (a addr) MarshalLogObject(enc zapcore.ObjectEncoder) error {
+	enc.AddString("ip", a.IP)
+	enc.AddInt("port", a.Port)
+	return nil
+}
+
+func (r *request) MarshalLogObject(enc zapcore.ObjectEncoder) error {
+	enc.AddString("url", r.URL)
+	zap.Inline(r.Listen).AddTo(enc)
+	return enc.AddObject("remote", r.Remote)
+}
+
+// func TestObjectEncoder(t *testing.T) {
+// 	spy := &spyLogger{}
+// 	logger := zap.New(NewTestOtelLogger(spy))
+// 	// logger.Info(testBodyString, zap.Strings("key", []string{"1", "2"}))
+// 	req := &request{
+// 		URL:    "/test",
+// 		Listen: addr{"127.0.0.1", 8080},
+// 		Remote: addr{"127.0.0.1", 31200},
+// 	}
+// 	// Use the ObjectValues field constructor when you have a list of
+// 	// objects that do not implement zapcore.ObjectMarshaler directly,
+// 	// but on their pointer receivers.
+// 	logger.Info("new request, in nested object", zap.Object("req", req))
+// 	spy.Record.WalkAttributes(func(kv log.KeyValue) bool {
+// 		assert.Equal(t, "req", string(kv.Key))
+// 		assert.Equal(t, req, kv.Value.AsMap())
+// 		fmt.Println(kv.Value.AsString())
+// 		return true
+// 	})
+// }
