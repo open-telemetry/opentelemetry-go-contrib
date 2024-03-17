@@ -30,7 +30,7 @@ func TestFallbackExporterFactoryErrorReturnedWhenNoEnvExporterConfiguredAndFallb
 	ts := newSignal[*testType]("TEST_TYPE_KEY")
 
 	expectedErr := errors.New("error expected to return")
-	errFactory := func(ctx context.Context) (*testType, error) {
+	errFactory := func(ctx context.Context, _ config[*testType]) (*testType, error) {
 		return nil, expectedErr
 	}
 	exp, err := ts.create(context.Background(), withFallbackFactory(errFactory))

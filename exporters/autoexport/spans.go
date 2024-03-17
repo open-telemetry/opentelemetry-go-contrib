@@ -23,7 +23,7 @@ type Option = SpanOption
 
 // WithFallbackSpanExporter sets the fallback exporter to use when no exporter
 // is configured through the OTEL_TRACES_EXPORTER environment variable.
-func WithFallbackSpanExporter(spanExporterFactory func(ctx context.Context) (trace.SpanExporter, error)) SpanOption {
+func WithFallbackSpanExporter(spanExporterFactory func(ctx context.Context, _ config[trace.SpanExporter]) (trace.SpanExporter, error)) SpanOption {
 	return withFallbackFactory[trace.SpanExporter](spanExporterFactory)
 }
 
@@ -57,14 +57,14 @@ func NewSpanExporter(ctx context.Context, opts ...SpanOption) (trace.SpanExporte
 // RegisterSpanExporter sets the SpanExporter factory to be used when the
 // OTEL_TRACES_EXPORTERS environment variable contains the exporter name. This
 // will panic if name has already been registered.
-func RegisterSpanExporter(name string, factory func(context.Context) (trace.SpanExporter, error)) {
+func RegisterSpanExporter(name string, factory func(context.Context, config[trace.SpanExporter]) (trace.SpanExporter, error)) {
 	must(tracesSignal.registry.store(name, factory))
 }
 
 var tracesSignal = newSignal[trace.SpanExporter]("OTEL_TRACES_EXPORTER")
 
 func init() {
-	RegisterSpanExporter("otlp", func(ctx context.Context) (trace.SpanExporter, error) {
+	RegisterSpanExporter("otlp", func(ctx context.Context, _ config[trace.SpanExporter]) (trace.SpanExporter, error) {
 		proto := os.Getenv(otelExporterOTLPProtoEnvKey)
 		if proto == "" {
 			proto = "http/protobuf"
@@ -79,10 +79,10 @@ func init() {
 			return nil, errInvalidOTLPProtocol
 		}
 	})
-	RegisterSpanExporter("console", func(ctx context.Context) (trace.SpanExporter, error) {
+	RegisterSpanExporter("console", func(ctx context.Context, _ config[trace.SpanExporter]) (trace.SpanExporter, error) {
 		return stdouttrace.New()
 	})
-	RegisterSpanExporter("none", func(ctx context.Context) (trace.SpanExporter, error) {
+	RegisterSpanExporter("none", func(ctx context.Context, _ config[trace.SpanExporter]) (trace.SpanExporter, error) {
 		return noopSpanExporter{}, nil
 	})
 }

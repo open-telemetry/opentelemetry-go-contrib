@@ -28,8 +28,15 @@ type MetricOption = option[metric.Reader]
 
 // WithFallbackMetricReader sets the fallback exporter to use when no exporter
 // is configured through the OTEL_METRICS_EXPORTER environment variable.
-func WithFallbackMetricReader(metricReaderFactory func(ctx context.Context) (metric.Reader, error)) MetricOption {
+func WithFallbackMetricReader(metricReaderFactory func(ctx context.Context, cfg config[metric.Reader]) (metric.Reader, error)) MetricOption {
 	return withFallbackFactory[metric.Reader](metricReaderFactory)
+}
+
+// WithProducer registers producers as an external Producer of metric data for this Reader.
+func WithProducer(producer metric.Producer) MetricOption {
+	return optionFunc[metric.Reader](func(cfg *config[metric.Reader]) {
+		cfg.metricReaderOptions = append(cfg.metricReaderOptions, metric.WithProducer(producer))
+	})
 }
 
 // NewMetricReader returns a configured [go.opentelemetry.io/otel/sdk/metric.Reader]
@@ -67,14 +74,14 @@ func NewMetricReader(ctx context.Context, opts ...MetricOption) (metric.Reader, 
 // RegisterMetricReader sets the MetricReader factory to be used when the
 // OTEL_METRICS_EXPORTERS environment variable contains the exporter name. This
 // will panic if name has already been registered.
-func RegisterMetricReader(name string, factory func(context.Context) (metric.Reader, error)) {
+func RegisterMetricReader(name string, factory func(context.Context, config[metric.Reader]) (metric.Reader, error)) {
 	must(metricsSignal.registry.store(name, factory))
 }
 
 var metricsSignal = newSignal[metric.Reader]("OTEL_METRICS_EXPORTER")
 
 func init() {
-	RegisterMetricReader("otlp", func(ctx context.Context) (metric.Reader, error) {
+	RegisterMetricReader("otlp", func(ctx context.Context, cfg config[metric.Reader]) (metric.Reader, error) {
 		proto := os.Getenv(otelExporterOTLPProtoEnvKey)
 		if proto == "" {
 			proto = "http/protobuf"
@@ -86,28 +93,28 @@ func init() {
 			if err != nil {
 				return nil, err
 			}
-			return metric.NewPeriodicReader(r), nil
+			return metric.NewPeriodicReader(r, cfg.metricReaderOptions...), nil
 		case "http/protobuf":
 			r, err := otlpmetrichttp.New(ctx)
 			if err != nil {
 				return nil, err
 			}
-			return metric.NewPeriodicReader(r), nil
+			return metric.NewPeriodicReader(r, cfg.metricReaderOptions...), nil
 		default:
 			return nil, errInvalidOTLPProtocol
 		}
 	})
-	RegisterMetricReader("console", func(ctx context.Context) (metric.Reader, error) {
+	RegisterMetricReader("console", func(ctx context.Context, cfg config[metric.Reader]) (metric.Reader, error) {
 		r, err := stdoutmetric.New()
 		if err != nil {
 			return nil, err
 		}
-		return metric.NewPeriodicReader(r), nil
+		return metric.NewPeriodicReader(r, cfg.metricReaderOptions...), nil
 	})
-	RegisterMetricReader("none", func(ctx context.Context) (metric.Reader, error) {
+	RegisterMetricReader("none", func(context.Context, config[metric.Reader]) (metric.Reader, error) {
 		return newNoopMetricReader(), nil
 	})
-	RegisterMetricReader("prometheus", func(ctx context.Context) (metric.Reader, error) {
+	RegisterMetricReader("prometheus", func(ctx context.Context, _ config[metric.Reader]) (metric.Reader, error) {
 		// create an isolated registry instead of using the global registry --
 		// the user might not want to mix OTel with non-OTel metrics
 		reg := prometheus.NewRegistry()

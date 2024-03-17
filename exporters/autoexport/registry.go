@@ -17,7 +17,7 @@ const otelExporterOTLPProtoEnvKey = "OTEL_EXPORTER_OTLP_PROTOCOL"
 // goroutines without additional locking or coordination.
 type registry[T any] struct {
 	mu    sync.Mutex
-	names map[string]func(context.Context) (T, error)
+	names map[string]func(context.Context, config[T]) (T, error)
 }
 
 var (
@@ -37,7 +37,7 @@ var (
 // then execute the factory, returning the created SpanExporter.
 // errUnknownExporter is returned if the registration is missing and the error from
 // executing the factory if not nil.
-func (r *registry[T]) load(ctx context.Context, key string) (T, error) {
+func (r *registry[T]) load(ctx context.Context, key string, cfg config[T]) (T, error) {
 	r.mu.Lock()
 	defer r.mu.Unlock()
 	factory, ok := r.names[key]
@@ -45,12 +45,12 @@ func (r *registry[T]) load(ctx context.Context, key string) (T, error) {
 		var zero T
 		return zero, errUnknownExporter
 	}
-	return factory(ctx)
+	return factory(ctx, cfg)
 }
 
 // store sets the factory for a key if is not already in the registry. errDuplicateRegistration
 // is returned if the registry already contains key.
-func (r *registry[T]) store(key string, factory func(context.Context) (T, error)) error {
+func (r *registry[T]) store(key string, factory func(_ context.Context, cfg config[T]) (T, error)) error {
 	r.mu.Lock()
 	defer r.mu.Unlock()
 	if _, ok := r.names[key]; ok {
