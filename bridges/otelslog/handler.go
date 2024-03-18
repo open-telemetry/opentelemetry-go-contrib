@@ -15,9 +15,9 @@ import (
 	"go.opentelemetry.io/otel/sdk/instrumentation"
 )
 
-// New returns a new [slog.Logger] backed by a new [Handler]. See [NewHandler]
-// for details on how the backing Handler is created.
-func New(options ...Option) *slog.Logger {
+// NewLogger returns a new [slog.Logger] backed by a new [Handler]. See
+// [NewHandler] for details on how the backing Handler is created.
+func NewLogger(options ...Option) *slog.Logger {
 	return slog.New(NewHandler(options...))
 }
 
