@@ -15,6 +15,12 @@ import (
 	"go.opentelemetry.io/otel/sdk/instrumentation"
 )
 
+// New returns a new [slog.Logger] backed by a new [Handler]. See [NewHandler]
+// for details on how the backing Handler is created.
+func New(options ...Option) *slog.Logger {
+	return slog.New(NewHandler(options...))
+}
+
 type config struct{}
 
 // Option configures a [Handler].
@@ -26,14 +32,26 @@ type optFunc func(config) config
 
 func (f optFunc) apply(c config) config { return f(c) }
 
-// WithInstrumentationScope returns an option that configures the scope of the
-// [log.Logger] used by a [Handler].
+// WithInstrumentationScope returns an [Option] that configures the scope of
+// the [log.Logger] used by a [Handler].
 //
 // By default if this Option is not provided, the Handler will use a default
 // instrumentation scope describing this bridge package. It is recommended to
 // provide this so log data can be associated with its source package or
 // module.
 func WithInstrumentationScope(scope instrumentation.Scope) Option {
+	return optFunc(func(c config) config {
+		// TODO: implement.
+		return c
+	})
+}
+
+// WithLoggerProvider returns an [Option] that configures [log.LoggerProvider]
+// used by a [Handler] to create its [log.Logger].
+//
+// By default if this Option is not provided, the Handler will use the global
+// LoggerProvider.
+func WithLoggerProvider(provider log.LoggerProvider) Option {
 	return optFunc(func(c config) config {
 		// TODO: implement.
 		return c
@@ -52,15 +70,16 @@ type Handler struct {
 // Compile-time check *Handler implements slog.Handler.
 var _ slog.Handler = (*Handler)(nil)
 
-// New returns a new [Handler] to be used as an [slog.Handler].
+// NewHandler returns a new [Handler] to be used as an [slog.Handler].
 //
-// If lp is nil, [noop.LoggerProvider] will be used as the default.
+// If [WithLoggerProvider] is not provided, the returned Handler will use the
+// global LoggerProvider.
 //
 // By default the returned Handler will use a [log.Logger] that is identified
 // with this bridge package information. [WithInstrumentationScope] should be
 // used to override this with details about the package or module the handler
 // will instrument.
-func New(lp log.LoggerProvider, options ...Option) *Handler {
+func NewHandler(options ...Option) *Handler {
 	// TODO: implement.
 	return &Handler{}
 }
