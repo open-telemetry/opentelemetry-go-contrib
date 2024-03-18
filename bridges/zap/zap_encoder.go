@@ -10,8 +10,13 @@ import (
 
 // not optimizes yet
 // this file implements object and array encoder
+var (
+	_ zapcore.ObjectEncoder = (*OtelObjectEncoder)(nil)
+	_ zapcore.ArrayEncoder  = (*sliceArrayEncoder)(nil)
+)
+
 type OtelObjectEncoder struct {
-	zapcore.Encoder
+
 	// cur is a pointer to the namespace we're currently writing to.
 	cur []log.KeyValue
 }
@@ -142,7 +147,10 @@ func (m *OtelObjectEncoder) AddUintptr(k string, v uintptr) {
 
 // AddReflected implements ObjectEncoder.
 func (m *OtelObjectEncoder) AddReflected(k string, v interface{}) error {
-	m.cur = append(m.cur, log.KeyValue{Key: k, Value: log.BoolValue(true)})
+	// l := NewOtelObjectEncoder()
+	// f := zap.Field{Key: k, Interface: v}
+	// f.AddTo(l)
+	// m.cur = append(m.cur, l.cur...)
 	return nil
 }
 

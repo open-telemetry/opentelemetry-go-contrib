@@ -27,6 +27,10 @@ func (l *spyLogger) Emit(ctx context.Context, r log.Record) {
 	l.Record = r
 }
 
+func (l *spyLogger) Enabled(ctx context.Context, r log.Record) bool {
+	return true
+}
+
 func NewTestOtelLogger(log log.Logger) zapcore.Core {
 	return &OtelZapCore{
 		logger: log,
@@ -80,23 +84,24 @@ func (r *request) MarshalLogObject(enc zapcore.ObjectEncoder) error {
 	return enc.AddObject("remote", r.Remote)
 }
 
-// func TestObjectEncoder(t *testing.T) {
-// 	spy := &spyLogger{}
-// 	logger := zap.New(NewTestOtelLogger(spy))
-// 	// logger.Info(testBodyString, zap.Strings("key", []string{"1", "2"}))
-// 	req := &request{
-// 		URL:    "/test",
-// 		Listen: addr{"127.0.0.1", 8080},
-// 		Remote: addr{"127.0.0.1", 31200},
-// 	}
-// 	// Use the ObjectValues field constructor when you have a list of
-// 	// objects that do not implement zapcore.ObjectMarshaler directly,
-// 	// but on their pointer receivers.
-// 	logger.Info("new request, in nested object", zap.Object("req", req))
-// 	spy.Record.WalkAttributes(func(kv log.KeyValue) bool {
-// 		assert.Equal(t, "req", string(kv.Key))
-// 		assert.Equal(t, req, kv.Value.AsMap())
-// 		fmt.Println(kv.Value.AsString())
-// 		return true
-// 	})
-// }
+func TestObjectEncoder(t *testing.T) {
+	spy := &spyLogger{}
+	logger := zap.New(NewTestOtelLogger(spy))
+	// logger.Info(testBodyString, zap.Strings("key", []string{"1", "2"}))
+	req := &request{
+		URL:    "/test",
+		Listen: addr{"127.0.0.1", 8080},
+		Remote: addr{"127.0.0.1", 31200},
+	}
+	// Use the ObjectValues field constructor when you have a list of
+	// objects that do not implement zapcore.ObjectMarshaler directly,
+	// but on their pointer receivers.
+	logger.Info("new request, in nested object", zap.Object("req", req))
+	spy.Record.WalkAttributes(func(kv log.KeyValue) bool {
+		assert.Equal(t, "req", string(kv.Key))
+		assert.Equal(t, "url", kv.Value.AsMap()[0].Key)
+		assert.Equal(t, "/test", kv.Value.AsMap()[0].Value.AsString())
+
+		return true
+	})
+}

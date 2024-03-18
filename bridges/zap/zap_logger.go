@@ -46,11 +46,7 @@ func (o *OtelZapCore) Enabled(zapcore.Level) bool {
 // return new zapcore with provided attr
 func (o *OtelZapCore) With(fields []zapcore.Field) zapcore.Core {
 	clone := o.clone()
-	enc := NewOtelObjectEncoder()
-	for i := range fields {
-		fields[i].AddTo(enc)
-	}
-	clone.attr = enc.cur
+	clone.attr = getAttr(fields)
 	return clone
 }
 
@@ -68,14 +64,8 @@ func (o *OtelZapCore) Check(ent zapcore.Entry, ce *zapcore.CheckedEntry) *zapcor
 }
 
 func (o *OtelZapCore) Write(ent zapcore.Entry, fields []zapcore.Field) error {
-	var attr []log.KeyValue
-
-	// add fields to attr
-	enc := NewOtelObjectEncoder()
-	for i := range fields {
-		fields[i].AddTo(enc)
-	}
-	attr = enc.cur
+	// get attr from fields
+	attr := getAttr(fields)
 
 	// we create record here to avoid heap allocation
 	r := log.Record{}
@@ -88,11 +78,11 @@ func (o *OtelZapCore) Write(ent zapcore.Entry, fields []zapcore.Field) error {
 
 	// append attributes received from from parent logger``
 	addattr := append(attr, o.attr...)
-
 	if len(addattr) > 0 {
 		r.AddAttributes(addattr...)
 	}
-	// need to check how to pass context here
+
+	// need to check how to propogate context here
 	ctx := context.Background()
 	o.logger.Emit(ctx, r)
 	return nil
@@ -102,6 +92,14 @@ func (o *OtelZapCore) clone() *OtelZapCore {
 	return &OtelZapCore{
 		logger: o.logger,
 	}
+}
+
+func getAttr(fields []zapcore.Field) []log.KeyValue {
+	enc := NewOtelObjectEncoder()
+	for i := range fields {
+		fields[i].AddTo(enc)
+	}
+	return enc.cur
 }
 
 // func convertAttr(f zapcore.Field) log.KeyValue {
