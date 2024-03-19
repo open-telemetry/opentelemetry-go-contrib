@@ -23,7 +23,9 @@ type recorder struct {
 	embedded.LoggerProvider
 	embeddedLogger // nolint:unused  // Used to embed embedded.Logger.
 
-	minSeverity log.Severity
+	// MinSeverity is the minimum severity the recorder will return true for
+	// when Enabled is called (unless enableKey is set).
+	MinSeverity log.Severity
 }
 
 func (r *recorder) Logger(string, ...log.LoggerOption) log.Logger { return r }
@@ -36,12 +38,12 @@ type enablerKey uint
 var enableKey enablerKey
 
 func (r *recorder) Enabled(ctx context.Context, record log.Record) bool {
-	return ctx.Value(enableKey) != nil || record.Severity() >= r.minSeverity
+	return ctx.Value(enableKey) != nil || record.Severity() >= r.MinSeverity
 }
 
 func TestHandlerEnabled(t *testing.T) {
 	r := new(recorder)
-	r.minSeverity = log.SeverityInfo
+	r.MinSeverity = log.SeverityInfo
 
 	h := NewHandler(WithLoggerProvider(r))
 	h.logger = r.Logger("") // TODO: Remove when #5311 merged.
