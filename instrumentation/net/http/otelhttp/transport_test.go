@@ -16,8 +16,11 @@ import (
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 
+	"go.opentelemetry.io/otel/attribute"
 	"go.opentelemetry.io/otel/codes"
 	"go.opentelemetry.io/otel/propagation"
+	"go.opentelemetry.io/otel/sdk/metric"
+	"go.opentelemetry.io/otel/sdk/metric/metricdata"
 	"go.opentelemetry.io/otel/trace"
 )
 
@@ -420,4 +423,75 @@ func TestTransportOriginRequestNotModify(t *testing.T) {
 	t.Cleanup(func() { require.NoError(t, res.Body.Close()) })
 
 	assert.Equal(t, expectedRequest, r)
+}
+
+func TestCustomAttributesHandling(t *testing.T) {
+	var rm metricdata.ResourceMetrics
+
+	ctx := context.TODO()
+	reader := metric.NewManualReader()
+	provider := metric.NewMeterProvider(metric.WithReader(reader))
+	defer func() {
+		err := provider.Shutdown(ctx)
+		if err != nil {
+			t.Errorf("Error shutting down provider: %v", err)
+		}
+	}()
+
+	transport := NewTransport(http.DefaultTransport, WithMeterProvider(provider))
+	client := http.Client{Transport: transport}
+
+	ts := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
+		w.WriteHeader(http.StatusOK)
+	}))
+	defer ts.Close()
+
+	r, err := http.NewRequest(http.MethodGet, ts.URL, nil)
+	require.NoError(t, err)
+	labeler := &Labeler{}
+	labeler.Add(attribute.String("foo", "fooValue"))
+	labeler.Add(attribute.String("bar", "barValue"))
+	ctx = ContextWithLabeler(ctx, labeler)
+	r = r.WithContext(ctx)
+
+	// test bonus: intententionally ignoring response to confirm that
+	// http.client.response.size metric is not recorded
+	// by the Transport.RoundTrip logic
+	_, err = client.Do(r)
+	require.NoError(t, err)
+
+	err = reader.Collect(ctx, &rm)
+	assert.NoError(t, err)
+
+	// http.client.response.size is not recorded so the assert.Len
+	// above should be 2 instead of 3(test bonus)
+	assert.Len(t, rm.ScopeMetrics[0].Metrics, 2)
+	for _, m := range rm.ScopeMetrics[0].Metrics {
+		switch m.Name {
+		case clientRequestSize:
+			d, ok := m.Data.(metricdata.Sum[int64])
+			assert.True(t, ok)
+			assert.Len(t, d.DataPoints, 1)
+			attrSet := d.DataPoints[0].Attributes
+			fooAtrr, ok := attrSet.Value(attribute.Key("foo"))
+			assert.True(t, ok)
+			assert.Equal(t, "fooValue", fooAtrr.AsString())
+			barAtrr, ok := attrSet.Value(attribute.Key("bar"))
+			assert.True(t, ok)
+			assert.Equal(t, "barValue", barAtrr.AsString())
+			assert.False(t, attrSet.HasValue(attribute.Key("baz")))
+		case clientDuration:
+			d, ok := m.Data.(metricdata.Histogram[float64])
+			assert.True(t, ok)
+			assert.Len(t, d.DataPoints, 1)
+			attrSet := d.DataPoints[0].Attributes
+			fooAtrr, ok := attrSet.Value(attribute.Key("foo"))
+			assert.True(t, ok)
+			assert.Equal(t, "fooValue", fooAtrr.AsString())
+			barAtrr, ok := attrSet.Value(attribute.Key("bar"))
+			assert.True(t, ok)
+			assert.Equal(t, "barValue", barAtrr.AsString())
+			assert.False(t, attrSet.HasValue(attribute.Key("baz")))
+		}
+	}
 }

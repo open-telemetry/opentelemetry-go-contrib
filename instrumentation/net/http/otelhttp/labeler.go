@@ -37,8 +37,9 @@ type labelerContextKeyType int
 
 const lablelerContextKey labelerContextKeyType = 0
 
-func injectLabeler(ctx context.Context, l *Labeler) context.Context {
-	return context.WithValue(ctx, lablelerContextKey, l)
+// ContextWithLabeler returns a new context with the provided Labeler instance.
+func ContextWithLabeler(parent context.Context, l *Labeler) context.Context {
+	return context.WithValue(parent, lablelerContextKey, l)
 }
 
 // LabelerFromContext retrieves a Labeler instance from the provided context if
