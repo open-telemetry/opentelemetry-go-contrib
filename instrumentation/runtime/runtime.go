@@ -108,7 +108,7 @@ func Start(opts ...Option) error {
 
 func (r *runtime) register() error {
 	startTime := time.Now()
-	uptime, err := r.meter.Int64ObservableCounter(
+	uptime, err := r.meter.Int64ObservableGauge(
 		"runtime.uptime",
 		metric.WithUnit("ms"),
 		metric.WithDescription("Milliseconds since application was initialized"),
