@@ -13,7 +13,7 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 - Add the new `go.opentelemetry.io/contrib/instrgen` package to provide auto-generated source code instrumentation. (#3068, #3108)
 
 ### Changed
-- Renamed `runtime.uptime` in `/instrumentation/runtime/runtime.go` to `process.runtime.uptime` (#2625)
+- Rename metric `runtime.uptime` in `go.opentelemetry.io/contrib/runtime` to `process.runtime.uptime`. (#5293)
 
 ### Removed
 
