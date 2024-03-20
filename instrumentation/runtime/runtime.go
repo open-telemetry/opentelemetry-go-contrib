@@ -108,11 +108,10 @@ func Start(opts ...Option) error {
 
 func (r *runtime) register() error {
 	startTime := time.Now()
-	// DEPRECATED: This metric is deprecated in favor of processUptime
 	uptime, err := r.meter.Int64ObservableCounter(
 		"runtime.uptime",
 		metric.WithUnit("ms"),
-		metric.WithDescription("Milliseconds since application was initialized"),
+		metric.WithDescription("This metric is deprecated in favor of processUptime"),
 	)
 	if err != nil {
 		return err
