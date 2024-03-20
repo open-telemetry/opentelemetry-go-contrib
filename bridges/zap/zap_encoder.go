@@ -2,6 +2,7 @@ package zap
 
 import (
 	"fmt"
+	"strconv"
 	"time"
 
 	"go.opentelemetry.io/otel/log"
@@ -22,9 +23,10 @@ type OtelObjectEncoder struct {
 }
 
 // NewMapObjectEncoder creates a new map-backed ObjectEncoder.
-func NewOtelObjectEncoder() *OtelObjectEncoder {
-	//m := make(map[string]log.Value)
-	return &OtelObjectEncoder{}
+func NewOtelObjectEncoder(len int) *OtelObjectEncoder {
+	return &OtelObjectEncoder{
+		cur: make([]log.KeyValue, 0, len),
+	}
 }
 
 // AddArray implements ObjectEncoder.
@@ -38,7 +40,7 @@ func (m *OtelObjectEncoder) AddArray(key string, v zapcore.ArrayMarshaler) error
 
 // AddObject implements ObjectEncoder.
 func (m *OtelObjectEncoder) AddObject(k string, v zapcore.ObjectMarshaler) error {
-	newMap := NewOtelObjectEncoder()
+	newMap := NewOtelObjectEncoder(0)
 	fmt.Println(k, "inside map object")
 	err := v.MarshalLogObject(newMap)
 	m.cur = append(m.cur, log.KeyValue{Key: k, Value: log.MapValue(newMap.cur...)})
@@ -61,106 +63,75 @@ func (m *OtelObjectEncoder) AddBool(k string, v bool) {
 }
 
 // AddDuration implements ObjectEncoder.
-func (m OtelObjectEncoder) AddDuration(k string, v time.Duration) {
-	m.cur = append(m.cur, log.KeyValue{Key: k, Value: log.BoolValue(true)})
-}
+func (m *OtelObjectEncoder) AddDuration(k string, v time.Duration) { m.AddInt64(k, v.Nanoseconds()) }
 
 // AddComplex128 implements ObjectEncoder.
 func (m *OtelObjectEncoder) AddComplex128(k string, v complex128) {
-	m.cur = append(m.cur, log.KeyValue{Key: k, Value: log.BoolValue(true)})
+	stringValue := `"` + strconv.FormatComplex(v, 'f', -1, 64) + `"`
+	m.cur = append(m.cur, log.String(k, stringValue))
 }
 
-// AddComplex64 implements ObjectEncoder.
-func (m *OtelObjectEncoder) AddComplex64(k string, v complex64) {
-	m.cur = append(m.cur, log.KeyValue{Key: k, Value: log.BoolValue(true)})
-}
-
-// AddFloat64 implements ObjectEncoder.
 func (m *OtelObjectEncoder) AddFloat64(k string, v float64) {
 	m.cur = append(m.cur, log.Float64(k, v))
 }
 
-// AddFloat32 implements ObjectEncoder.
-func (m *OtelObjectEncoder) AddFloat32(k string, v float32) {
-	m.cur = append(m.cur, log.Float64(k, float64(v)))
+func (m *OtelObjectEncoder) AddInt64(k string, v int64) {
+	m.cur = append(m.cur, log.Int64(k, v))
 }
 
-// AddInt implements ObjectEncoder.
-func (m *OtelObjectEncoder) AddInt(k string, v int) { m.cur = append(m.cur, log.Int(k, v)) }
-
-// AddInt64 implements ObjectEncoder.
-func (m *OtelObjectEncoder) AddInt64(k string, v int64) { m.cur = append(m.cur, log.Int64(k, v)) }
-
-// AddInt32 implements ObjectEncoder.
-func (m *OtelObjectEncoder) AddInt32(k string, v int32) {
-	m.cur = append(m.cur, log.Int64(k, int64(v)))
+func (m *OtelObjectEncoder) AddInt(k string, v int) {
+	m.cur = append(m.cur, log.Int(k, v))
 }
 
-// AddInt16 implements ObjectEncoder.
-func (m *OtelObjectEncoder) AddInt16(k string, v int16) {
-	m.cur = append(m.cur, log.Int64(k, int64(v)))
-}
-
-// AddInt8 implements ObjectEncoder.
-func (m *OtelObjectEncoder) AddInt8(k string, v int8) { m.cur = append(m.cur, log.Int64(k, int64(v))) }
-
-// AddString implements ObjectEncoder.
 func (m *OtelObjectEncoder) AddString(k string, v string) {
-	fmt.Println(k)
 	m.cur = append(m.cur, log.String(k, v))
 }
 
-// AddTime implements ObjectEncoder.
-func (m OtelObjectEncoder) AddTime(k string, v time.Time) {
-	m.cur = append(m.cur, log.KeyValue{Key: k, Value: log.BoolValue(true)})
-}
-
-// AddUint implements ObjectEncoder.
-func (m *OtelObjectEncoder) AddUint(k string, v uint) {
-	m.cur = append(m.cur, log.KeyValue{Key: k, Value: log.BoolValue(true)})
-}
-
-// AddUint64 implements ObjectEncoder.
 func (m *OtelObjectEncoder) AddUint64(k string, v uint64) {
-	m.cur = append(m.cur, log.KeyValue{Key: k, Value: log.BoolValue(true)})
-}
-
-// AddUint32 implements ObjectEncoder.
-func (m *OtelObjectEncoder) AddUint32(k string, v uint32) {
-	m.cur = append(m.cur, log.KeyValue{Key: k, Value: log.BoolValue(true)})
-}
-
-// AddUint16 implements ObjectEncoder.
-func (m *OtelObjectEncoder) AddUint16(k string, v uint16) {
-	m.cur = append(m.cur, log.KeyValue{Key: k, Value: log.BoolValue(true)})
-}
-
-// AddUint8 implements ObjectEncoder.
-func (m *OtelObjectEncoder) AddUint8(k string, v uint8) {
-	m.cur = append(m.cur, log.KeyValue{Key: k, Value: log.BoolValue(true)})
-}
-
-// AddUintptr implements ObjectEncoder.
-func (m *OtelObjectEncoder) AddUintptr(k string, v uintptr) {
-	m.cur = append(m.cur, log.KeyValue{Key: k, Value: log.BoolValue(true)})
+	m.cur = append(m.cur,
+		log.KeyValue{
+			Key:   k,
+			Value: assignUintValue(v),
+		})
 }
 
 // AddReflected implements ObjectEncoder.
+// It falls here if interface cannot be mapped to supported zap types
+// For ex: an array of arrays
 func (m *OtelObjectEncoder) AddReflected(k string, v interface{}) error {
-	// l := NewOtelObjectEncoder()
-	// f := zap.Field{Key: k, Interface: v}
-	// f.AddTo(l)
-	// m.cur = append(m.cur, l.cur...)
+	// don't know
+	fmt.Println(k, v)
 	return nil
 }
 
 // OpenNamespace implements ObjectEncoder.
 func (m *OtelObjectEncoder) OpenNamespace(k string) {
+	//
+}
+func (m *OtelObjectEncoder) AddComplex64(k string, v complex64) { m.AddComplex128(k, complex128(v)) }
+func (m *OtelObjectEncoder) AddFloat32(k string, v float32)     { m.AddFloat64(k, float64(v)) }
+func (m *OtelObjectEncoder) AddInt32(k string, v int32)         { m.AddInt64(k, int64(v)) }
+func (m *OtelObjectEncoder) AddInt16(k string, v int16)         { m.AddInt64(k, int64(v)) }
+func (m *OtelObjectEncoder) AddInt8(k string, v int8)           { m.AddInt64(k, int64(v)) }
+func (m *OtelObjectEncoder) AddTime(k string, v time.Time)      { m.AddInt64(k, v.UnixNano()) }
+func (m *OtelObjectEncoder) AddUint(k string, v uint)           { m.AddUint64(k, uint64(v)) }
+func (m *OtelObjectEncoder) AddUint32(k string, v uint32)       { m.AddInt64(k, int64(v)) }
+func (m *OtelObjectEncoder) AddUint16(k string, v uint16)       { m.AddInt64(k, int64(v)) }
+func (m *OtelObjectEncoder) AddUint8(k string, v uint8)         { m.AddInt64(k, int64(v)) }
+func (m *OtelObjectEncoder) AddUintptr(k string, v uintptr)     { m.AddUint64(k, uint64(v)) }
 
-	m.cur = append(m.cur, log.KeyValue{Key: k, Value: log.BoolValue(true)})
+func assignUintValue(v uint64) log.Value {
+	const maxInt64 = ^uint64(0) >> 1
+	if v > maxInt64 {
+		value := strconv.FormatUint(v, 10)
+		return log.StringValue(value)
+
+	} else {
+		return log.Int64Value(int64(v))
+	}
 }
 
-// can we choose to support only few type for array?
+// sliceArrayEncoder implements zapcore.ArrayEncoder
 type sliceArrayEncoder struct {
 	elems []log.Value
 }
@@ -173,7 +144,7 @@ func (s *sliceArrayEncoder) AppendArray(v zapcore.ArrayMarshaler) error {
 }
 
 func (s *sliceArrayEncoder) AppendObject(v zapcore.ObjectMarshaler) error {
-	m := NewOtelObjectEncoder()
+	m := NewOtelObjectEncoder(0)
 	err := v.MarshalLogObject(m)
 	s.elems = append(s.elems, log.MapValue(m.cur...))
 	return err
@@ -187,58 +158,26 @@ func (s *sliceArrayEncoder) AppendReflected(v interface{}) error {
 func (s *sliceArrayEncoder) AppendBool(v bool)         { s.elems = append(s.elems, log.BoolValue(v)) }
 func (s *sliceArrayEncoder) AppendByteString(v []byte) { s.elems = append(s.elems, log.BytesValue(v)) }
 
-// TODO
 func (s *sliceArrayEncoder) AppendComplex128(v complex128) {
-	s.elems = append(s.elems, log.BoolValue(true))
+	stringValue := `"` + strconv.FormatComplex(v, 'f', -1, 64) + `"`
+	s.elems = append(s.elems, log.StringValue(stringValue))
 }
 
-// TODO
-func (s *sliceArrayEncoder) AppendComplex64(v complex64) {
-	s.elems = append(s.elems, log.BoolValue(true))
-}
-
-// TODO
-func (s *sliceArrayEncoder) AppendDuration(v time.Duration) {
-	s.elems = append(s.elems, log.BoolValue(true))
-}
+func (s *sliceArrayEncoder) AppendUint64(v uint64)   { s.elems = append(s.elems, assignUintValue(v)) }
 func (s *sliceArrayEncoder) AppendFloat64(v float64) { s.elems = append(s.elems, log.Float64Value(v)) }
-func (s *sliceArrayEncoder) AppendFloat32(v float32) {
-	s.elems = append(s.elems, log.Float64Value(float64(v)))
-}
-func (s *sliceArrayEncoder) AppendInt(v int)       { s.elems = append(s.elems, log.IntValue(v)) }
-func (s *sliceArrayEncoder) AppendInt64(v int64)   { s.elems = append(s.elems, log.Int64Value(v)) }
-func (s *sliceArrayEncoder) AppendInt32(v int32)   { s.elems = append(s.elems, log.Int64Value(int64(v))) }
-func (s *sliceArrayEncoder) AppendInt16(v int16)   { s.elems = append(s.elems, log.Int64Value(int64(v))) }
-func (s *sliceArrayEncoder) AppendInt8(v int8)     { s.elems = append(s.elems, log.Int64Value(int64(v))) }
-func (s *sliceArrayEncoder) AppendString(v string) { s.elems = append(s.elems, log.StringValue(v)) }
+func (s *sliceArrayEncoder) AppendInt(v int)         { s.elems = append(s.elems, log.IntValue(v)) }
+func (s *sliceArrayEncoder) AppendInt64(v int64)     { s.elems = append(s.elems, log.Int64Value(v)) }
+func (s *sliceArrayEncoder) AppendString(v string)   { s.elems = append(s.elems, log.StringValue(v)) }
 
-// TO DO
-func (s *sliceArrayEncoder) AppendTime(v time.Time) {
-	s.elems = append(s.elems, log.Int64Value(int64(v.Nanosecond())))
-}
-
-// TO DO
-func (s *sliceArrayEncoder) AppendUint(v uint) { s.elems = append(s.elems, log.Int64Value(int64(v))) }
-
-// TO DO
-func (s *sliceArrayEncoder) AppendUint64(v uint64) {
-	s.elems = append(s.elems, log.Int64Value(int64(v)))
-}
-
-// TO DO
-func (s *sliceArrayEncoder) AppendUint32(v uint32) {
-	s.elems = append(s.elems, log.Int64Value(int64(v)))
-}
-
-// TO DO
-func (s *sliceArrayEncoder) AppendUint16(v uint16) {
-	s.elems = append(s.elems, log.Int64Value(int64(v)))
-}
-
-// TO DO
-func (s *sliceArrayEncoder) AppendUint8(v uint8) { s.elems = append(s.elems, log.Int64Value(int64(v))) }
-
-// TO DO
-func (s *sliceArrayEncoder) AppendUintptr(v uintptr) {
-	s.elems = append(s.elems, log.Int64Value(int64(v)))
-}
+func (s *sliceArrayEncoder) AppendComplex64(v complex64)    { s.AppendComplex128(complex128(v)) }
+func (s *sliceArrayEncoder) AppendDuration(v time.Duration) { s.AppendInt64(v.Nanoseconds()) }
+func (s *sliceArrayEncoder) AppendFloat32(v float32)        { s.AppendFloat64(float64(v)) }
+func (s *sliceArrayEncoder) AppendInt32(v int32)            { s.AppendInt64(int64(v)) }
+func (s *sliceArrayEncoder) AppendInt16(v int16)            { s.AppendInt64(int64(v)) }
+func (s *sliceArrayEncoder) AppendInt8(v int8)              { s.AppendInt64(int64(v)) }
+func (s *sliceArrayEncoder) AppendTime(v time.Time)         { s.AppendInt64(int64(v.UnixNano())) }
+func (s *sliceArrayEncoder) AppendUint(v uint)              { s.AppendUint64(uint64(v)) }
+func (s *sliceArrayEncoder) AppendUint32(v uint32)          { s.AppendInt64(int64(v)) }
+func (s *sliceArrayEncoder) AppendUint16(v uint16)          { s.AppendInt64(int64(v)) }
+func (s *sliceArrayEncoder) AppendUint8(v uint8)            { s.AppendInt64(int64(v)) }
+func (s *sliceArrayEncoder) AppendUintptr(v uintptr)        { s.AppendUint64(uint64(v)) }
