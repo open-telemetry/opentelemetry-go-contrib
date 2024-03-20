@@ -111,7 +111,7 @@ func (r *runtime) register() error {
 	uptime, err := r.meter.Int64ObservableCounter(
 		"runtime.uptime",
 		metric.WithUnit("ms"),
-		metric.WithDescription("This metric is deprecated in favor of processUptime"),
+		metric.WithDescription("Milliseconds since application was initialized. Deprecated metric. Use `process.runtime.runtime` instead."),
 	)
 	if err != nil {
 		return err
