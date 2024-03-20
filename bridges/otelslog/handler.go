@@ -15,8 +15,11 @@ import (
 	"sync"
 
 	"go.opentelemetry.io/otel/log"
+	"go.opentelemetry.io/otel/log/global"
 	"go.opentelemetry.io/otel/sdk/instrumentation"
 )
+
+const bridgeName = "go.opentelemetry.io/contrib/bridges/otelslog"
 
 // NewLogger returns a new [slog.Logger] backed by a new [Handler]. See
 // [NewHandler] for details on how the backing Handler is created.
@@ -24,7 +27,42 @@ func NewLogger(options ...Option) *slog.Logger {
 	return slog.New(NewHandler(options...))
 }
 
-type config struct{}
+type config struct {
+	provider log.LoggerProvider
+	scope    instrumentation.Scope
+}
+
+func newConfig(options []Option) config {
+	var c config
+	for _, opt := range options {
+		c = opt.apply(c)
+	}
+
+	var emptyScope instrumentation.Scope
+	if c.scope == emptyScope {
+		c.scope = instrumentation.Scope{
+			Name:    bridgeName,
+			Version: version,
+		}
+	}
+
+	if c.provider == nil {
+		c.provider = global.GetLoggerProvider()
+	}
+
+	return c
+}
+
+func (c config) logger() log.Logger {
+	var opts []log.LoggerOption
+	if c.scope.Version != "" {
+		opts = append(opts, log.WithInstrumentationVersion(c.scope.Version))
+	}
+	if c.scope.SchemaURL != "" {
+		opts = append(opts, log.WithSchemaURL(c.scope.SchemaURL))
+	}
+	return c.provider.Logger(c.scope.Name, opts...)
+}
 
 // Option configures a [Handler].
 type Option interface {
@@ -44,7 +82,7 @@ func (f optFunc) apply(c config) config { return f(c) }
 // module.
 func WithInstrumentationScope(scope instrumentation.Scope) Option {
 	return optFunc(func(c config) config {
-		// TODO: implement.
+		c.scope = scope
 		return c
 	})
 }
@@ -56,7 +94,7 @@ func WithInstrumentationScope(scope instrumentation.Scope) Option {
 // LoggerProvider.
 func WithLoggerProvider(provider log.LoggerProvider) Option {
 	return optFunc(func(c config) config {
-		// TODO: implement.
+		c.provider = provider
 		return c
 	})
 }
@@ -85,8 +123,8 @@ var _ slog.Handler = (*Handler)(nil)
 // used to override this with details about the package or module the handler
 // will instrument.
 func NewHandler(options ...Option) *Handler {
-	// TODO: implement.
-	return &Handler{}
+	cfg := newConfig(options)
+	return &Handler{logger: cfg.logger()}
 }
 
 // Handle handles the passed record.

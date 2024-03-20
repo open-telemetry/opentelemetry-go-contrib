@@ -10,9 +10,12 @@ import (
 	"testing/slogtest"
 
 	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 
 	"go.opentelemetry.io/otel/log"
 	"go.opentelemetry.io/otel/log/embedded"
+	"go.opentelemetry.io/otel/log/global"
+	"go.opentelemetry.io/otel/sdk/instrumentation"
 )
 
 func TestNewLogger(t *testing.T) {
@@ -28,13 +31,27 @@ type recorder struct {
 	embedded.LoggerProvider
 	embeddedLogger // nolint:unused  // Used to embed embedded.Logger.
 
+	// Records are the records emited.
 	Records []log.Record
+
+	// Scope is the Logger scope recorder received when Logger was called.
+	Scope instrumentation.Scope
+
 	// MinSeverity is the minimum severity the recorder will return true for
 	// when Enabled is called (unless enableKey is set).
 	MinSeverity log.Severity
 }
 
-func (r *recorder) Logger(string, ...log.LoggerOption) log.Logger { return r }
+func (r *recorder) Logger(name string, opts ...log.LoggerOption) log.Logger {
+	cfg := log.NewLoggerConfig(opts...)
+
+	r.Scope = instrumentation.Scope{
+		Name:      name,
+		Version:   cfg.InstrumentationVersion(),
+		SchemaURL: cfg.SchemaURL(),
+	}
+	return r
+}
 
 type enablerKey uint
 
@@ -101,7 +118,6 @@ func TestSLogHandler(t *testing.T) {
 	t.Run("slogtest.TestHandler", func(t *testing.T) {
 		r := new(recorder)
 		h := NewHandler(WithLoggerProvider(r))
-		h.logger = r.Logger("") // TODO: Remove when #5311 merged.
 
 		// TODO: use slogtest.Run when Go 1.21 is no longer supported.
 		err := slogtest.TestHandler(h, r.Results)
@@ -113,12 +129,44 @@ func TestSLogHandler(t *testing.T) {
 	// TODO: Add multi-logged testing. See #5195.
 }
 
+func TestNewHandlerConfiguration(t *testing.T) {
+	t.Run("Default", func(t *testing.T) {
+		r := new(recorder)
+		global.SetLoggerProvider(r)
+
+		var h *Handler
+		assert.NotPanics(t, func() { h = NewHandler() })
+		assert.NotNil(t, h.logger)
+		require.IsType(t, &recorder{}, h.logger)
+
+		l := h.logger.(*recorder)
+		want := instrumentation.Scope{Name: bridgeName, Version: version}
+		assert.Equal(t, want, l.Scope)
+	})
+
+	t.Run("Options", func(t *testing.T) {
+		r := new(recorder)
+		scope := instrumentation.Scope{Name: "name", Version: "ver", SchemaURL: "url"}
+		var h *Handler
+		assert.NotPanics(t, func() {
+			h = NewHandler(
+				WithLoggerProvider(r),
+				WithInstrumentationScope(scope),
+			)
+		})
+		assert.NotNil(t, h.logger)
+		require.IsType(t, &recorder{}, h.logger)
+
+		l := h.logger.(*recorder)
+		assert.Equal(t, scope, l.Scope)
+	})
+}
+
 func TestHandlerEnabled(t *testing.T) {
 	r := new(recorder)
 	r.MinSeverity = log.SeverityInfo
 
 	h := NewHandler(WithLoggerProvider(r))
-	h.logger = r.Logger("") // TODO: Remove when #5311 merged.
 
 	ctx := context.Background()
 	assert.False(t, h.Enabled(ctx, slog.LevelDebug), "level conversion: permissive")
