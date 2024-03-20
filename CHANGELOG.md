@@ -15,7 +15,7 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 
 ### Deprecated
 
-- The `runtime.uptime` metric in `instrumentation/runtime/runtime.go` is deprecated(#5293, #5294)
+- The `runtime.uptime` metric in `go.opentelemetry.io/contrib/runtime` is deprecated. (#5317)
 
 ### Removed
 
