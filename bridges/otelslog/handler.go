@@ -64,7 +64,7 @@ type Handler struct {
 	// Ensure forward compatibility by explicitly making this not comparable.
 	noCmp [0]func() //nolint: unused  // This is indeed used.
 
-	// TODO: implement.
+	logger log.Logger
 }
 
 // Compile-time check *Handler implements slog.Handler.
@@ -92,9 +92,11 @@ func (h *Handler) Handle(ctx context.Context, record slog.Record) error {
 
 // Enable returns true if the Handler is enabled to log for the provided
 // context and Level. Otherwise, false is returned if it is not enabled.
-func (h *Handler) Enabled(context.Context, slog.Level) bool {
-	// TODO: implement.
-	return true
+func (h *Handler) Enabled(ctx context.Context, l slog.Level) bool {
+	var record log.Record
+	const sevOffset = slog.Level(log.SeverityDebug) - slog.LevelDebug
+	record.SetSeverity(log.Severity(l + sevOffset))
+	return h.logger.Enabled(ctx, record)
 }
 
 // WithAttrs returns a new [slog.Handler] based on h that will log using the
