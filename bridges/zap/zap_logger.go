@@ -30,6 +30,7 @@ func NewOtelZapCore(lp log.LoggerProvider, opts ...log.LoggerOption) zapcore.Cor
 		// Do not panic.
 		lp = noop.NewLoggerProvider()
 	}
+
 	// these options
 	return &OtelZapCore{
 		logger: lp.Logger(bridgeName,
@@ -38,15 +39,26 @@ func NewOtelZapCore(lp log.LoggerProvider, opts ...log.LoggerOption) zapcore.Cor
 	}
 }
 
-func (o *OtelZapCore) Enabled(zapcore.Level) bool {
-	return true
-	//return o.logger.Enabled()
+func (o *OtelZapCore) Enabled(level zapcore.Level) bool {
+	r := log.Record{}
+
+	// should confirm this
+	// the logic here is that
+	// zapcore.Debug = -1 & logger.Debug = 3
+	// zapcore.Info = 0   & logger.Info = 7 and so on
+	sevOffset := 4*(level+2) + 1
+	r.SetSeverity(log.Severity(level + sevOffset))
+
+	// check how to propogate context
+	ctx := context.Background()
+	return o.logger.Enabled(ctx, r)
+
 }
 
 // return new zapcore with provided attr
 func (o *OtelZapCore) With(fields []zapcore.Field) zapcore.Core {
 	clone := o.clone()
-	clone.attr = getAttr(fields)
+	clone.attr = append(clone.attr, getAttr(fields)...)
 	return clone
 }
 
@@ -56,7 +68,6 @@ func (o *OtelZapCore) Sync() error {
 }
 
 func (o *OtelZapCore) Check(ent zapcore.Entry, ce *zapcore.CheckedEntry) *zapcore.CheckedEntry {
-	// should change zap level to otel log level?
 	if o.Enabled(ent.Level) {
 		return ce.AddCore(ent, o)
 	}
@@ -72,11 +83,10 @@ func (o *OtelZapCore) Write(ent zapcore.Entry, fields []zapcore.Field) error {
 	r.SetTimestamp(ent.Time)
 	r.SetBody(log.StringValue(ent.Message))
 
-	// should confirm this
 	sevOffset := 4*(ent.Level+2) + 1
 	r.SetSeverity(log.Severity(ent.Level + sevOffset))
 
-	// append attributes received from from parent logger``
+	// append attributes received from from parent logger
 	addattr := append(attr, o.attr...)
 	if len(addattr) > 0 {
 		r.AddAttributes(addattr...)
@@ -91,11 +101,12 @@ func (o *OtelZapCore) Write(ent zapcore.Entry, fields []zapcore.Field) error {
 func (o *OtelZapCore) clone() *OtelZapCore {
 	return &OtelZapCore{
 		logger: o.logger,
+		attr:   o.attr,
 	}
 }
 
 func getAttr(fields []zapcore.Field) []log.KeyValue {
-	enc := NewOtelObjectEncoder()
+	enc := NewOtelObjectEncoder(len(fields))
 	for i := range fields {
 		fields[i].AddTo(enc)
 	}
