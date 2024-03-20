@@ -14,6 +14,10 @@ import (
 	"go.opentelemetry.io/otel/log/embedded"
 )
 
+func TestNewLogger(t *testing.T) {
+	assert.IsType(t, &Handler{}, NewLogger().Handler())
+}
+
 // embeddedLogger is a type alias so the embedded.Logger type doesn't conflict
 // with the Logger method of the recorder when it is embedded.
 type embeddedLogger = embedded.Logger // nolint:unused  // Used below.
