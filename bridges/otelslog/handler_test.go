@@ -1,13 +1,15 @@
 // Copyright The OpenTelemetry Authors
 // SPDX-License-Identifier: Apache-2.0
 
-package otelslog // import "go.opentelemetry.io/contrib/bridges/otelslog"
+package otelslog
 
 import (
 	"context"
 	"log/slog"
 	"testing"
 	"testing/slogtest"
+
+	"github.com/stretchr/testify/assert"
 
 	"go.opentelemetry.io/otel/log"
 	"go.opentelemetry.io/otel/log/embedded"
@@ -23,9 +25,20 @@ type recorder struct {
 	embeddedLogger // nolint:unused  // Used to embed embedded.Logger.
 
 	Records []log.Record
+	// MinSeverity is the minimum severity the recorder will return true for
+	// when Enabled is called (unless enableKey is set).
+	MinSeverity log.Severity
 }
 
 func (r *recorder) Logger(string, ...log.LoggerOption) log.Logger { return r }
+
+type enablerKey uint
+
+var enableKey enablerKey
+
+func (r *recorder) Enabled(ctx context.Context, record log.Record) bool {
+	return ctx.Value(enableKey) != nil || record.Severity() >= r.MinSeverity
+}
 
 func (r *recorder) Emit(_ context.Context, record log.Record) {
 	r.Records = append(r.Records, record)
@@ -94,4 +107,19 @@ func TestSLogHandler(t *testing.T) {
 	})
 
 	// TODO: Add multi-logged testing. See #5195.
+}
+
+func TestHandlerEnabled(t *testing.T) {
+	r := new(recorder)
+	r.MinSeverity = log.SeverityInfo
+
+	h := NewHandler(WithLoggerProvider(r))
+	h.logger = r.Logger("") // TODO: Remove when #5311 merged.
+
+	ctx := context.Background()
+	assert.False(t, h.Enabled(ctx, slog.LevelDebug), "level conversion: permissive")
+	assert.True(t, h.Enabled(ctx, slog.LevelInfo), "level conversion: restrictive")
+
+	ctx = context.WithValue(ctx, enableKey, true)
+	assert.True(t, h.Enabled(ctx, slog.LevelDebug), "context not passed")
 }
