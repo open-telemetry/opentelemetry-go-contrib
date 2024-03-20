@@ -5,6 +5,7 @@ package otelslog
 
 import (
 	"context"
+	"log/slog"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
@@ -25,14 +26,19 @@ type recorder struct {
 	embedded.LoggerProvider
 	embeddedLogger // nolint:unused  // Used to embed embedded.Logger.
 
-	scope instrumentation.Scope
+	// Scope is the Logger scope recorder received when Logger was called.
+	Scope instrumentation.Scope
+
+	// MinSeverity is the minimum severity the recorder will return true for
+	// when Enabled is called (unless enableKey is set).
+	MinSeverity log.Severity
 }
 
 func (r *recorder) Logger(name string, opts ...log.LoggerOption) log.Logger {
 	cfg := log.NewLoggerConfig(opts...)
 
 	r2 := *r
-	r2.scope = instrumentation.Scope{
+	r2.Scope = instrumentation.Scope{
 		Name:      name,
 		Version:   cfg.InstrumentationVersion(),
 		SchemaURL: cfg.SchemaURL(),
@@ -44,8 +50,12 @@ func (r *recorder) Emit(context.Context, log.Record) {
 	// TODO: implement.
 }
 
-func (r *recorder) Enabled(context.Context, log.Record) bool {
-	return true
+type enablerKey uint
+
+var enableKey enablerKey
+
+func (r *recorder) Enabled(ctx context.Context, record log.Record) bool {
+	return ctx.Value(enableKey) != nil || record.Severity() >= r.MinSeverity
 }
 
 func TestNewHandlerConfiguration(t *testing.T) {
@@ -60,7 +70,7 @@ func TestNewHandlerConfiguration(t *testing.T) {
 
 		l := h.logger.(*recorder)
 		want := instrumentation.Scope{Name: bridgeName, Version: version}
-		assert.Equal(t, want, l.scope)
+		assert.Equal(t, want, l.Scope)
 	})
 
 	t.Run("Options", func(t *testing.T) {
@@ -77,6 +87,21 @@ func TestNewHandlerConfiguration(t *testing.T) {
 		require.IsType(t, &recorder{}, h.logger)
 
 		l := h.logger.(*recorder)
-		assert.Equal(t, scope, l.scope)
+		assert.Equal(t, scope, l.Scope)
 	})
+}
+
+func TestHandlerEnabled(t *testing.T) {
+	r := new(recorder)
+	r.MinSeverity = log.SeverityInfo
+
+	h := NewHandler(WithLoggerProvider(r))
+	h.logger = r.Logger("") // TODO: Remove when #5311 merged.
+
+	ctx := context.Background()
+	assert.False(t, h.Enabled(ctx, slog.LevelDebug), "level conversion: permissive")
+	assert.True(t, h.Enabled(ctx, slog.LevelInfo), "level conversion: restrictive")
+
+	ctx = context.WithValue(ctx, enableKey, true)
+	assert.True(t, h.Enabled(ctx, slog.LevelDebug), "context not passed")
 }
