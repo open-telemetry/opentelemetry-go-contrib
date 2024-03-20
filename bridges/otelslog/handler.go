@@ -39,7 +39,7 @@ func newConfig(options []Option) config {
 	if c.scope == emptyScope {
 		c.scope = instrumentation.Scope{
 			Name:    bridgeName,
-			Version: Version(),
+			Version: version,
 		}
 	}
 

@@ -59,7 +59,7 @@ func TestNewHandlerConfiguration(t *testing.T) {
 		require.IsType(t, &recorder{}, h.logger)
 
 		l := h.logger.(*recorder)
-		want := instrumentation.Scope{Name: bridgeName, Version: Version()}
+		want := instrumentation.Scope{Name: bridgeName, Version: version}
 		assert.Equal(t, want, l.scope)
 	})
 
