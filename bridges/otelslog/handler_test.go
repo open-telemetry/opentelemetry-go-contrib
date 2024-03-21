@@ -31,7 +31,7 @@ type recorder struct {
 	embedded.LoggerProvider
 	embeddedLogger // nolint:unused  // Used to embed embedded.Logger.
 
-	// Records are the records emited.
+	// Records are the records emitted.
 	Records []log.Record
 
 	// Scope is the Logger scope recorder received when Logger was called.
