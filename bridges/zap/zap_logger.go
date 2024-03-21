@@ -44,7 +44,7 @@ func (c config) loggerArgs() (string, []log.LoggerOption) {
 	return c.scope.Name, opts
 }
 
-// Option configures a [Handler].
+// Option configures a [Zapcore].
 type Option interface {
 	apply(config) config
 }
@@ -56,7 +56,7 @@ func (f optFunc) apply(c config) config { return f(c) }
 // WithInstrumentationScope returns an option that configures the scope of the
 // [log.Logger] used by  zapcore
 //
-// By default if this Option is not provided, the Handler will use a default
+// By default if this Option is not provided, zapcore will use a default
 // instrumentation scope describing this bridge package. It is recommended to
 // provide this so log data can be associated with its source package or
 // module.
