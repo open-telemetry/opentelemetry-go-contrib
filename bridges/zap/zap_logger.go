@@ -5,12 +5,67 @@ import (
 
 	"go.opentelemetry.io/otel/log"
 	"go.opentelemetry.io/otel/log/noop"
+	"go.opentelemetry.io/otel/sdk/instrumentation"
 	"go.uber.org/zap/zapcore"
 )
 
 const (
 	bridgeName = "go.opentelemetry.io/contrib/bridge/zapcore"
 )
+
+type config struct {
+	scope instrumentation.Scope
+}
+
+func newConfig(options []Option) config {
+	var c config
+	for _, opt := range options {
+		c = opt.apply(c)
+	}
+
+	var emptyScope instrumentation.Scope
+	if c.scope == emptyScope {
+		c.scope = instrumentation.Scope{
+			Name:    bridgeName,
+			Version: Version(),
+		}
+	}
+	return c
+}
+
+func (c config) loggerArgs() (string, []log.LoggerOption) {
+	var opts []log.LoggerOption
+	if c.scope.Version != "" {
+		opts = append(opts, log.WithInstrumentationVersion(c.scope.Version))
+	}
+	if c.scope.SchemaURL != "" {
+		opts = append(opts, log.WithSchemaURL(c.scope.SchemaURL))
+	}
+	return c.scope.Name, opts
+}
+
+// Option configures a [Handler].
+type Option interface {
+	apply(config) config
+}
+
+type optFunc func(config) config
+
+func (f optFunc) apply(c config) config { return f(c) }
+
+// WithInstrumentationScope returns an option that configures the scope of the
+// [log.Logger] used by  zapcore
+//
+// By default if this Option is not provided, the Handler will use a default
+// instrumentation scope describing this bridge package. It is recommended to
+// provide this so log data can be associated with its source package or
+// module.
+func WithInstrumentationScope(scope instrumentation.Scope) Option {
+	return optFunc(func(c config) config {
+		c.scope = scope
+		return c
+	})
+}
 
 type OtelZapCore struct {
 	logger log.Logger
@@ -23,16 +78,17 @@ var (
 
 // this function creates a new zapcore.Core that can be used with zap.New()
 // this instance will translate zap logs to opentelemetry logs and export them
-func NewOtelZapCore(lp log.LoggerProvider, opts ...log.LoggerOption) zapcore.Core {
+func NewOtelZapCore(lp log.LoggerProvider, opts ...Option) zapcore.Core {
 	if lp == nil {
 		// Do not panic.
 		lp = noop.NewLoggerProvider()
 	}
 
+	name, loggerOpts := newConfig(opts).loggerArgs()
 	// these options
 	return &OtelZapCore{
-		logger: lp.Logger(bridgeName,
-			log.WithInstrumentationVersion(Version()),
+		logger: lp.Logger(name,
+			loggerOpts...,
 		),
 	}
 }

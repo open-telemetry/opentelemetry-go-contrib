@@ -69,58 +69,6 @@ func TestZapCore(t *testing.T) {
 
 }
 
-// Test Inline Marshaler and Object Encoder
-type addr struct {
-	IP   string
-	Port int
-}
-
-type request struct {
-	URL    string
-	Listen addr
-	Remote addr
-}
-
-func (a addr) MarshalLogObject(enc zapcore.ObjectEncoder) error {
-	enc.AddString("ip", a.IP)
-	enc.AddInt("port", a.Port)
-	return nil
-}
-
-func (r *request) MarshalLogObject(enc zapcore.ObjectEncoder) error {
-	enc.AddString("url", r.URL)
-	zap.Inline(r.Listen).AddTo(enc)
-	return enc.AddObject("remote", r.Remote)
-}
-
-func TestObjectEncoder(t *testing.T) {
-	spy := &spyLogger{}
-	logger := zap.New(NewTestOtelLogger(spy))
-	req := &request{
-		URL:    "/test",
-		Listen: addr{"127.0.0.1", 8080},
-		Remote: addr{"127.0.0.1", 31200},
-	}
-
-	// expected int values are all of type int64
-	expValue := map[string]any{
-		"url":  "/test",
-		"ip":   "127.0.0.1",
-		"port": int64(8080),
-		"remote": map[string]any{
-			"ip":   "127.0.0.1",
-			"port": int64(31200),
-		},
-	}
-
-	logger.Info("new request, in nested object", zap.Object("req", req))
-	spy.Record.WalkAttributes(func(kv log.KeyValue) bool {
-		assert.Equal(t, "req", string(kv.Key))
-		assert.Equal(t, expValue, value2Result(kv.Value))
-		return true
-	})
-}
-
 // Copied from field_test.go
 type users int
 
@@ -231,6 +179,32 @@ func TestFields(t *testing.T) {
 		f.AddTo(enc)
 		assert.Equal(t, tt.want, value2Result(enc.cur[0].Value), "Unexpected output from field %+v.", f)
 	}
+}
+
+func TestInlineMarshaler(t *testing.T) {
+	enc := NewOtelObjectEncoder(1)
+
+	topLevelStr := zapcore.Field{Key: "k", Type: zapcore.StringType, String: "s"}
+	topLevelStr.AddTo(enc)
+
+	inlineObj := zapcore.Field{Key: "ignored", Type: zapcore.InlineMarshalerType, Interface: users(10)}
+	inlineObj.AddTo(enc)
+
+	nestedObj := zapcore.Field{Key: "nested", Type: zapcore.ObjectMarshalerType, Interface: users(11)}
+	nestedObj.AddTo(enc)
+
+	gotVal := make(map[string]interface{})
+	for _, encc := range enc.cur {
+		gotVal[encc.Key] = value2Result(encc.Value)
+	}
+
+	assert.Equal(t, map[string]interface{}{
+		"k":     "s",
+		"users": int64(10),
+		"nested": map[string]interface{}{
+			"users": int64(11),
+		},
+	}, gotVal)
 }
 
 // converts value to result
