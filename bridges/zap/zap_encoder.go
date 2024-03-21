@@ -17,7 +17,6 @@ var (
 )
 
 type OtelObjectEncoder struct {
-
 	// cur is a pointer to the namespace we're currently writing to.
 	cur []log.KeyValue
 }
@@ -33,33 +32,31 @@ func NewOtelObjectEncoder(len int) *OtelObjectEncoder {
 func (m *OtelObjectEncoder) AddArray(key string, v zapcore.ArrayMarshaler) error {
 	arr := &sliceArrayEncoder{elems: make([]log.Value, 0)}
 	err := v.MarshalLogArray(arr)
-	fmt.Println(arr.elems, "from array")
-	m.cur = append(m.cur, log.KeyValue{Key: key, Value: log.SliceValue(arr.elems...)})
+	m.cur = append(m.cur, log.Slice(key, arr.elems...))
 	return err
 }
 
 // AddObject implements ObjectEncoder.
 func (m *OtelObjectEncoder) AddObject(k string, v zapcore.ObjectMarshaler) error {
-	newMap := NewOtelObjectEncoder(0)
-	fmt.Println(k, "inside map object")
+	newMap := NewOtelObjectEncoder(1) //min
 	err := v.MarshalLogObject(newMap)
-	m.cur = append(m.cur, log.KeyValue{Key: k, Value: log.MapValue(newMap.cur...)})
+	m.cur = append(m.cur, log.Map(k, newMap.cur...))
 	return err
 }
 
 // AddBinary implements ObjectEncoder.
 func (m *OtelObjectEncoder) AddBinary(k string, v []byte) {
-	m.cur = append(m.cur, log.KeyValue{Key: k, Value: log.BytesValue(v)})
+	m.cur = append(m.cur, log.Bytes(k, v))
 }
 
 // AddByteString implements ObjectEncoder.
 func (m *OtelObjectEncoder) AddByteString(k string, v []byte) {
-	m.cur = append(m.cur, log.KeyValue{Key: k, Value: log.BytesValue(v)})
+	m.cur = append(m.cur, log.Bytes(k, v))
 }
 
 // AddBool implements ObjectEncoder.
 func (m *OtelObjectEncoder) AddBool(k string, v bool) {
-	m.cur = append(m.cur, log.KeyValue{Key: k, Value: log.BoolValue(v)})
+	m.cur = append(m.cur, log.Bool(k, v))
 }
 
 // AddDuration implements ObjectEncoder.
@@ -67,7 +64,7 @@ func (m *OtelObjectEncoder) AddDuration(k string, v time.Duration) { m.AddInt64(
 
 // AddComplex128 implements ObjectEncoder.
 func (m *OtelObjectEncoder) AddComplex128(k string, v complex128) {
-	stringValue := `"` + strconv.FormatComplex(v, 'f', -1, 64) + `"`
+	stringValue := strconv.FormatComplex(v, 'f', -1, 64)
 	m.cur = append(m.cur, log.String(k, stringValue))
 }
 
@@ -109,16 +106,21 @@ func (m *OtelObjectEncoder) OpenNamespace(k string) {
 	//
 }
 func (m *OtelObjectEncoder) AddComplex64(k string, v complex64) { m.AddComplex128(k, complex128(v)) }
-func (m *OtelObjectEncoder) AddFloat32(k string, v float32)     { m.AddFloat64(k, float64(v)) }
-func (m *OtelObjectEncoder) AddInt32(k string, v int32)         { m.AddInt64(k, int64(v)) }
-func (m *OtelObjectEncoder) AddInt16(k string, v int16)         { m.AddInt64(k, int64(v)) }
-func (m *OtelObjectEncoder) AddInt8(k string, v int8)           { m.AddInt64(k, int64(v)) }
-func (m *OtelObjectEncoder) AddTime(k string, v time.Time)      { m.AddInt64(k, v.UnixNano()) }
-func (m *OtelObjectEncoder) AddUint(k string, v uint)           { m.AddUint64(k, uint64(v)) }
-func (m *OtelObjectEncoder) AddUint32(k string, v uint32)       { m.AddInt64(k, int64(v)) }
-func (m *OtelObjectEncoder) AddUint16(k string, v uint16)       { m.AddInt64(k, int64(v)) }
-func (m *OtelObjectEncoder) AddUint8(k string, v uint8)         { m.AddInt64(k, int64(v)) }
-func (m *OtelObjectEncoder) AddUintptr(k string, v uintptr)     { m.AddUint64(k, uint64(v)) }
+
+func (m *OtelObjectEncoder) AddFloat32(k string, v float32) {
+	// preserves float32 value
+	value, _ := strconv.ParseFloat(strconv.FormatFloat(float64(v), 'f', -1, 32), 64)
+	m.AddFloat64(k, value)
+}
+func (m *OtelObjectEncoder) AddInt32(k string, v int32)     { m.AddInt64(k, int64(v)) }
+func (m *OtelObjectEncoder) AddInt16(k string, v int16)     { m.AddInt64(k, int64(v)) }
+func (m *OtelObjectEncoder) AddInt8(k string, v int8)       { m.AddInt64(k, int64(v)) }
+func (m *OtelObjectEncoder) AddTime(k string, v time.Time)  { m.AddInt64(k, v.UnixNano()) }
+func (m *OtelObjectEncoder) AddUint(k string, v uint)       { m.AddUint64(k, uint64(v)) }
+func (m *OtelObjectEncoder) AddUint32(k string, v uint32)   { m.AddInt64(k, int64(v)) }
+func (m *OtelObjectEncoder) AddUint16(k string, v uint16)   { m.AddInt64(k, int64(v)) }
+func (m *OtelObjectEncoder) AddUint8(k string, v uint8)     { m.AddInt64(k, int64(v)) }
+func (m *OtelObjectEncoder) AddUintptr(k string, v uintptr) { m.AddUint64(k, uint64(v)) }
 
 func assignUintValue(v uint64) log.Value {
 	const maxInt64 = ^uint64(0) >> 1
@@ -171,13 +173,18 @@ func (s *sliceArrayEncoder) AppendString(v string)   { s.elems = append(s.elems,
 
 func (s *sliceArrayEncoder) AppendComplex64(v complex64)    { s.AppendComplex128(complex128(v)) }
 func (s *sliceArrayEncoder) AppendDuration(v time.Duration) { s.AppendInt64(v.Nanoseconds()) }
-func (s *sliceArrayEncoder) AppendFloat32(v float32)        { s.AppendFloat64(float64(v)) }
-func (s *sliceArrayEncoder) AppendInt32(v int32)            { s.AppendInt64(int64(v)) }
-func (s *sliceArrayEncoder) AppendInt16(v int16)            { s.AppendInt64(int64(v)) }
-func (s *sliceArrayEncoder) AppendInt8(v int8)              { s.AppendInt64(int64(v)) }
-func (s *sliceArrayEncoder) AppendTime(v time.Time)         { s.AppendInt64(int64(v.UnixNano())) }
-func (s *sliceArrayEncoder) AppendUint(v uint)              { s.AppendUint64(uint64(v)) }
-func (s *sliceArrayEncoder) AppendUint32(v uint32)          { s.AppendInt64(int64(v)) }
-func (s *sliceArrayEncoder) AppendUint16(v uint16)          { s.AppendInt64(int64(v)) }
-func (s *sliceArrayEncoder) AppendUint8(v uint8)            { s.AppendInt64(int64(v)) }
-func (s *sliceArrayEncoder) AppendUintptr(v uintptr)        { s.AppendUint64(uint64(v)) }
+
+func (s *sliceArrayEncoder) AppendFloat32(v float32) {
+	// preserves float32 value
+	value, _ := strconv.ParseFloat(strconv.FormatFloat(float64(v), 'f', -1, 32), 64)
+	s.AppendFloat64(value)
+}
+func (s *sliceArrayEncoder) AppendInt32(v int32)     { s.AppendInt64(int64(v)) }
+func (s *sliceArrayEncoder) AppendInt16(v int16)     { s.AppendInt64(int64(v)) }
+func (s *sliceArrayEncoder) AppendInt8(v int8)       { s.AppendInt64(int64(v)) }
+func (s *sliceArrayEncoder) AppendTime(v time.Time)  { s.AppendInt64(int64(v.UnixNano())) }
+func (s *sliceArrayEncoder) AppendUint(v uint)       { s.AppendUint64(uint64(v)) }
+func (s *sliceArrayEncoder) AppendUint32(v uint32)   { s.AppendInt64(int64(v)) }
+func (s *sliceArrayEncoder) AppendUint16(v uint16)   { s.AppendInt64(int64(v)) }
+func (s *sliceArrayEncoder) AppendUint8(v uint8)     { s.AppendInt64(int64(v)) }
+func (s *sliceArrayEncoder) AppendUintptr(v uintptr) { s.AppendUint64(uint64(v)) }
