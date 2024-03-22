@@ -1,6 +1,7 @@
 package zap
 
 import (
+	"encoding/json"
 	"fmt"
 	"strconv"
 	"time"
@@ -9,27 +10,35 @@ import (
 	"go.uber.org/zap/zapcore"
 )
 
-// not optimizes yet
-// this file implements object and array encoder
+// not optimized yet
+// this file implements object and array encoder - similar to memory encoder by zapcore
 var (
 	_ zapcore.ObjectEncoder = (*OtelObjectEncoder)(nil)
 	_ zapcore.ArrayEncoder  = (*sliceArrayEncoder)(nil)
 )
 
 type OtelObjectEncoder struct {
+	// Fields contains the entire encoded log context.
+	Fields []log.KeyValue
 	// cur is a pointer to the namespace we're currently writing to.
 	cur []log.KeyValue
+
+	reflectval log.Value
+	zapcore.Encoder
 }
 
 // NewMapObjectEncoder creates a new map-backed ObjectEncoder.
-func NewOtelObjectEncoder(len int) *OtelObjectEncoder {
+func NewOtelObjectEncoder() *OtelObjectEncoder {
+	m := make([]log.KeyValue, 0)
 	return &OtelObjectEncoder{
-		cur: make([]log.KeyValue, 0, len),
+		Fields: m,
+		cur:    m,
 	}
 }
 
 // AddArray implements ObjectEncoder.
 func (m *OtelObjectEncoder) AddArray(key string, v zapcore.ArrayMarshaler) error {
+	fmt.Println(v, "inside array")
 	arr := &sliceArrayEncoder{elems: make([]log.Value, 0)}
 	err := v.MarshalLogArray(arr)
 	m.cur = append(m.cur, log.Slice(key, arr.elems...))
@@ -38,7 +47,8 @@ func (m *OtelObjectEncoder) AddArray(key string, v zapcore.ArrayMarshaler) error
 
 // AddObject implements ObjectEncoder.
 func (m *OtelObjectEncoder) AddObject(k string, v zapcore.ObjectMarshaler) error {
-	newMap := NewOtelObjectEncoder(1) //min
+	fmt.Println(v, "inside object")
+	newMap := NewOtelObjectEncoder() //min
 	err := v.MarshalLogObject(newMap)
 	m.cur = append(m.cur, log.Map(k, newMap.cur...))
 	return err
@@ -51,7 +61,7 @@ func (m *OtelObjectEncoder) AddBinary(k string, v []byte) {
 
 // AddByteString implements ObjectEncoder.
 func (m *OtelObjectEncoder) AddByteString(k string, v []byte) {
-	m.cur = append(m.cur, log.Bytes(k, v))
+	m.cur = append(m.cur, log.String(k, string(v)))
 }
 
 // AddBool implements ObjectEncoder.
@@ -93,17 +103,28 @@ func (m *OtelObjectEncoder) AddUint64(k string, v uint64) {
 }
 
 // AddReflected implements ObjectEncoder.
-// It falls here if interface cannot be mapped to supported zap types
-// For ex: an array of arrays
+// It calls this func if interface cannot be mapped to supported zap types
+// For ex: an array of arrays or Objects passed using zap.Any()
+// this converts everything else to a JSON string
 func (m *OtelObjectEncoder) AddReflected(k string, v interface{}) error {
-	// don't know
-	fmt.Println(k, v)
+	enc := json.NewEncoder(m)
+	enc.Encode(v)
+	fmt.Println(m.reflectval.AsString(), "inside reflect")
+	m.AddString(k, m.reflectval.AsString())
 	return nil
+}
+
+// Implements Write method to which json encoder writes to
+func (r *OtelObjectEncoder) Write(p []byte) (n int, err error) {
+	r.reflectval = log.StringValue(string(p))
+	return
 }
 
 // OpenNamespace implements ObjectEncoder.
 func (m *OtelObjectEncoder) OpenNamespace(k string) {
-	//
+	ns := make([]log.KeyValue, 0)
+	m.cur = append(m.cur, log.String(k, "Namesspace"))
+	m.cur = ns
 }
 func (m *OtelObjectEncoder) AddComplex64(k string, v complex64) { m.AddComplex128(k, complex128(v)) }
 
@@ -146,7 +167,7 @@ func (s *sliceArrayEncoder) AppendArray(v zapcore.ArrayMarshaler) error {
 }
 
 func (s *sliceArrayEncoder) AppendObject(v zapcore.ObjectMarshaler) error {
-	m := NewOtelObjectEncoder(0)
+	m := NewOtelObjectEncoder()
 	err := v.MarshalLogObject(m)
 	s.elems = append(s.elems, log.MapValue(m.cur...))
 	return err

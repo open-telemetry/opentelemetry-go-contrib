@@ -5,67 +5,12 @@ import (
 
 	"go.opentelemetry.io/otel/log"
 	"go.opentelemetry.io/otel/log/noop"
-	"go.opentelemetry.io/otel/sdk/instrumentation"
 	"go.uber.org/zap/zapcore"
 )
 
 const (
 	bridgeName = "go.opentelemetry.io/contrib/bridge/zapcore"
 )
-
-type config struct {
-	scope instrumentation.Scope
-}
-
-func newConfig(options []Option) config {
-	var c config
-	for _, opt := range options {
-		c = opt.apply(c)
-	}
-
-	var emptyScope instrumentation.Scope
-	if c.scope == emptyScope {
-		c.scope = instrumentation.Scope{
-			Name:    bridgeName,
-			Version: Version(),
-		}
-	}
-	return c
-}
-
-func (c config) loggerArgs() (string, []log.LoggerOption) {
-	var opts []log.LoggerOption
-	if c.scope.Version != "" {
-		opts = append(opts, log.WithInstrumentationVersion(c.scope.Version))
-	}
-	if c.scope.SchemaURL != "" {
-		opts = append(opts, log.WithSchemaURL(c.scope.SchemaURL))
-	}
-	return c.scope.Name, opts
-}
-
-// Option configures a [Zapcore].
-type Option interface {
-	apply(config) config
-}
-
-type optFunc func(config) config
-
-func (f optFunc) apply(c config) config { return f(c) }
-
-// WithInstrumentationScope returns an option that configures the scope of the
-// [log.Logger] used by  zapcore
-//
-// By default if this Option is not provided, zapcore will use a default
-// instrumentation scope describing this bridge package. It is recommended to
-// provide this so log data can be associated with its source package or
-// module.
-func WithInstrumentationScope(scope instrumentation.Scope) Option {
-	return optFunc(func(c config) config {
-		c.scope = scope
-		return c
-	})
-}
 
 type OtelZapCore struct {
 	logger log.Logger
@@ -78,21 +23,22 @@ var (
 
 // this function creates a new zapcore.Core that can be used with zap.New()
 // this instance will translate zap logs to opentelemetry logs and export them
-func NewOtelZapCore(lp log.LoggerProvider, opts ...Option) zapcore.Core {
+func NewOtelZapCore(lp log.LoggerProvider, opts ...log.LoggerOption) zapcore.Core {
 	if lp == nil {
 		// Do not panic.
 		lp = noop.NewLoggerProvider()
 	}
 
-	name, loggerOpts := newConfig(opts).loggerArgs()
 	// these options
 	return &OtelZapCore{
-		logger: lp.Logger(name,
-			loggerOpts...,
+		logger: lp.Logger(bridgeName,
+			log.WithInstrumentationVersion(Version()),
 		),
 	}
 }
 
+// LevelEnabler decides whether a given logging level is enabled when logging a
+// message.
 func (o *OtelZapCore) Enabled(level zapcore.Level) bool {
 	r := log.Record{}
 	r.SetSeverity(getOtelLevel(level))
@@ -103,18 +49,19 @@ func (o *OtelZapCore) Enabled(level zapcore.Level) bool {
 
 }
 
-// return new zapcore with provided attr
+// return child logger with provided field
 func (o *OtelZapCore) With(fields []zapcore.Field) zapcore.Core {
 	clone := o.clone()
 	clone.attr = append(clone.attr, getAttr(fields)...)
 	return clone
 }
 
-// TODO
+// Sync flushes buffered logs (if any).
 func (o *OtelZapCore) Sync() error {
 	return nil
 }
 
+// Check determines whether the supplied Entry should be logged using core.Enabled method
 func (o *OtelZapCore) Check(ent zapcore.Entry, ce *zapcore.CheckedEntry) *zapcore.CheckedEntry {
 	if o.Enabled(ent.Level) {
 		return ce.AddCore(ent, o)
@@ -122,6 +69,7 @@ func (o *OtelZapCore) Check(ent zapcore.Entry, ce *zapcore.CheckedEntry) *zapcor
 	return ce
 }
 
+// Writes to the destination
 func (o *OtelZapCore) Write(ent zapcore.Entry, fields []zapcore.Field) error {
 	// we create record here to avoid heap allocation
 	r := log.Record{}
@@ -151,14 +99,16 @@ func (o *OtelZapCore) clone() *OtelZapCore {
 	}
 }
 
+// converts zap fields to otel's log KeyValue
 func getAttr(fields []zapcore.Field) []log.KeyValue {
-	enc := NewOtelObjectEncoder(len(fields))
+	enc := NewOtelObjectEncoder()
 	for i := range fields {
 		fields[i].AddTo(enc)
 	}
 	return enc.cur
 }
 
+// converts zap level to Otel's log level
 func getOtelLevel(level zapcore.Level) log.Severity {
 	// should confirm this
 	// the logic here is that
