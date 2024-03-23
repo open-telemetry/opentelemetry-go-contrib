@@ -3,7 +3,5 @@
 
 package otelzap // import "go.opentelemetry.io/contrib/bridges/otelzap"
 
-// Version is the current release version of sloghandler in use.
-func Version() string {
-	return "0.0.1-alpha"
-}
+// Version is the current release version of otelzap in use.
+const version = "0.0.1-alpha"

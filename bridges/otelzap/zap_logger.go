@@ -1,6 +1,8 @@
 // Copyright The OpenTelemetry Authors
 // SPDX-License-Identifier: Apache-2.0
 
+// Package otelzap provides a bridge between the ["go.uber.org/zap"] and
+// OpenTelemetry logging.
 package otelzap // import "go.opentelemetry.io/contrib/bridges/otelzap"
 
 import (
@@ -16,12 +18,15 @@ const (
 	bridgeName = "go.opentelemetry.io/contrib/bridge/zapcore"
 )
 
-type OtelZapCore struct {
+// Core is a [zapcore.Core] that sends all logging records it receives to
+// OpenTelemetry.
+type Core struct {
 	logger log.Logger
 	attr   []log.KeyValue
 }
 
-var _ zapcore.Core = (*OtelZapCore)(nil)
+// Compile-time check *Core implements zapcore.Core.
+var _ zapcore.Core = (*Core)(nil)
 
 // this function creates a new zapcore.Core that can be used with zap.New()
 // this instance will translate zap logs to opentelemetry logs and export them.
@@ -32,16 +37,16 @@ func NewOtelZapCore(lp log.LoggerProvider, opts ...log.LoggerOption) zapcore.Cor
 	}
 
 	// these options
-	return &OtelZapCore{
+	return &Core{
 		logger: lp.Logger(bridgeName,
-			log.WithInstrumentationVersion(Version()),
+			log.WithInstrumentationVersion(version),
 		),
 	}
 }
 
 // LevelEnabler decides whether a given logging level is enabled when logging a
 // message.
-func (o *OtelZapCore) Enabled(level zapcore.Level) bool {
+func (o *Core) Enabled(level zapcore.Level) bool {
 	r := log.Record{}
 	r.SetSeverity(getOtelLevel(level))
 
@@ -50,20 +55,21 @@ func (o *OtelZapCore) Enabled(level zapcore.Level) bool {
 	return o.logger.Enabled(ctx, r)
 }
 
-// return child logger with provided field.
-func (o *OtelZapCore) With(fields []zapcore.Field) zapcore.Core {
+// With adds structured context to the Core.
+// by returning a child logger with provided fields.
+func (o *Core) With(fields []zapcore.Field) zapcore.Core {
 	clone := o.clone()
 	clone.attr = append(clone.attr, getAttr(fields)...)
 	return clone
 }
 
 // Sync flushes buffered logs (if any).
-func (o *OtelZapCore) Sync() error {
+func (o *Core) Sync() error {
 	return nil
 }
 
 // Check determines whether the supplied Entry should be logged using core.Enabled method.
-func (o *OtelZapCore) Check(ent zapcore.Entry, ce *zapcore.CheckedEntry) *zapcore.CheckedEntry {
+func (o *Core) Check(ent zapcore.Entry, ce *zapcore.CheckedEntry) *zapcore.CheckedEntry {
 	if o.Enabled(ent.Level) {
 		return ce.AddCore(ent, o)
 	}
@@ -71,8 +77,7 @@ func (o *OtelZapCore) Check(ent zapcore.Entry, ce *zapcore.CheckedEntry) *zapcor
 }
 
 // Writes to the destination.
-func (o *OtelZapCore) Write(ent zapcore.Entry, fields []zapcore.Field) error {
-	// we create record here to avoid heap allocation
+func (o *Core) Write(ent zapcore.Entry, fields []zapcore.Field) error {
 	r := log.Record{}
 	r.SetTimestamp(ent.Time)
 	r.SetBody(log.StringValue(ent.Message))
@@ -93,16 +98,16 @@ func (o *OtelZapCore) Write(ent zapcore.Entry, fields []zapcore.Field) error {
 	return nil
 }
 
-func (o *OtelZapCore) clone() *OtelZapCore {
-	return &OtelZapCore{
+func (o *Core) clone() *Core {
+	return &Core{
 		logger: o.logger,
 		attr:   o.attr,
 	}
 }
 
-// converts zap fields to otel's log KeyValue.
+// converts zap fields to Otel's log attributes.
 func getAttr(fields []zapcore.Field) []log.KeyValue {
-	enc := NewOtelObjectEncoder(len(fields))
+	enc := NewObjectEncoder(len(fields))
 	for i := range fields {
 		fields[i].AddTo(enc)
 	}

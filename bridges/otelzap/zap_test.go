@@ -1,6 +1,7 @@
 // Copyright The OpenTelemetry Authors
 // SPDX-License-Identifier: Apache-2.0
 
+// Copyright (c) 2016-2017 Uber Technologies, Inc.
 package otelzap
 
 import (
@@ -41,7 +42,7 @@ func (l *spyLogger) Enabled(ctx context.Context, r log.Record) bool {
 }
 
 func NewTestOtelLogger(log log.Logger) zapcore.Core {
-	return &OtelZapCore{
+	return &Core{
 		logger: log,
 	}
 }
@@ -184,7 +185,7 @@ func TestFields(t *testing.T) {
 	}
 
 	for _, tt := range tests {
-		enc := NewOtelObjectEncoder(5)
+		enc := NewObjectEncoder(5)
 		f := zapcore.Field{Key: "k", Type: tt.t, Integer: tt.i, Interface: tt.iface, String: tt.s}
 		f.AddTo(enc)
 		assert.Equal(t, tt.want, value2Result(enc.cur[0].Value), "Unexpected output from field %+v.", f)
@@ -192,7 +193,7 @@ func TestFields(t *testing.T) {
 }
 
 func TestInlineMarshaler(t *testing.T) {
-	enc := NewOtelObjectEncoder(3)
+	enc := NewObjectEncoder(3)
 
 	topLevelStr := zapcore.Field{Key: "k", Type: zapcore.StringType, String: "s"}
 	topLevelStr.AddTo(enc)
