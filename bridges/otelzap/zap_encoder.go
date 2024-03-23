@@ -1,17 +1,19 @@
-package zap
+// Copyright The OpenTelemetry Authors
+// SPDX-License-Identifier: Apache-2.0
+
+package otelzap // import "go.opentelemetry.io/contrib/bridges/otelzap"
 
 import (
 	"encoding/json"
-	"fmt"
 	"strconv"
 	"time"
 
-	"go.opentelemetry.io/otel/log"
 	"go.uber.org/zap/zapcore"
+
+	"go.opentelemetry.io/otel/log"
 )
 
-// not optimized yet
-// this file implements object and array encoder - similar to memory encoder by zapcore
+// this file implements object and array encoder - similar to memory encoder by zapcore.
 var (
 	_ zapcore.ObjectEncoder = (*OtelObjectEncoder)(nil)
 	_ zapcore.ArrayEncoder  = (*sliceArrayEncoder)(nil)
@@ -27,9 +29,9 @@ type OtelObjectEncoder struct {
 	zapcore.Encoder
 }
 
-// NewMapObjectEncoder creates a new map-backed ObjectEncoder.
-func NewOtelObjectEncoder() *OtelObjectEncoder {
-	m := make([]log.KeyValue, 0)
+// NewOtelObjectEncoder creates otel encoder
+func NewOtelObjectEncoder(len int) *OtelObjectEncoder {
+	m := make([]log.KeyValue, len)
 	return &OtelObjectEncoder{
 		Fields: m,
 		cur:    m,
@@ -38,7 +40,6 @@ func NewOtelObjectEncoder() *OtelObjectEncoder {
 
 // AddArray implements ObjectEncoder.
 func (m *OtelObjectEncoder) AddArray(key string, v zapcore.ArrayMarshaler) error {
-	fmt.Println(v, "inside array")
 	arr := &sliceArrayEncoder{elems: make([]log.Value, 0)}
 	err := v.MarshalLogArray(arr)
 	m.cur = append(m.cur, log.Slice(key, arr.elems...))
@@ -47,8 +48,8 @@ func (m *OtelObjectEncoder) AddArray(key string, v zapcore.ArrayMarshaler) error
 
 // AddObject implements ObjectEncoder.
 func (m *OtelObjectEncoder) AddObject(k string, v zapcore.ObjectMarshaler) error {
-	fmt.Println(v, "inside object")
-	newMap := NewOtelObjectEncoder() //min
+	// fmt.Println(v, "inside object")
+	newMap := NewOtelObjectEncoder(0) // min
 	err := v.MarshalLogObject(newMap)
 	m.cur = append(m.cur, log.Map(k, newMap.cur...))
 	return err
@@ -105,16 +106,18 @@ func (m *OtelObjectEncoder) AddUint64(k string, v uint64) {
 // AddReflected implements ObjectEncoder.
 // It calls this func if interface cannot be mapped to supported zap types
 // For ex: an array of arrays or Objects passed using zap.Any()
-// this converts everything else to a JSON string
+// this converts everything to a JSON string.
 func (m *OtelObjectEncoder) AddReflected(k string, v interface{}) error {
 	enc := json.NewEncoder(m)
-	enc.Encode(v)
-	fmt.Println(m.reflectval.AsString(), "inside reflect")
+	if err := enc.Encode(v); err != nil {
+		return err
+	}
+	// fmt.Println(m.reflectval.AsString(), "inside reflect")
 	m.AddString(k, m.reflectval.AsString())
 	return nil
 }
 
-// Implements Write method to which json encoder writes to
+// Implements Write method to which json encoder writes to.
 func (r *OtelObjectEncoder) Write(p []byte) (n int, err error) {
 	r.reflectval = log.StringValue(string(p))
 	return
@@ -149,12 +152,12 @@ func assignUintValue(v uint64) log.Value {
 		value := strconv.FormatUint(v, 10)
 		return log.StringValue(value)
 
-	} else {
-		return log.Int64Value(int64(v))
 	}
+	return log.Int64Value(int64(v))
+
 }
 
-// sliceArrayEncoder implements zapcore.ArrayEncoder
+// sliceArrayEncoder implements zapcore.ArrayEncoder.
 type sliceArrayEncoder struct {
 	elems []log.Value
 }
@@ -167,14 +170,15 @@ func (s *sliceArrayEncoder) AppendArray(v zapcore.ArrayMarshaler) error {
 }
 
 func (s *sliceArrayEncoder) AppendObject(v zapcore.ObjectMarshaler) error {
-	m := NewOtelObjectEncoder()
+	// passing 0 here - we do not of object's length
+	m := NewOtelObjectEncoder(0)
 	err := v.MarshalLogObject(m)
 	s.elems = append(s.elems, log.MapValue(m.cur...))
 	return err
 }
 
 func (s *sliceArrayEncoder) AppendReflected(v interface{}) error {
-	//s.elems = append(s.elems, v)
+	// s.elems = append(s.elems, v)
 	return nil
 }
 

@@ -1,4 +1,7 @@
-package zap
+// Copyright The OpenTelemetry Authors
+// SPDX-License-Identifier: Apache-2.0
+
+package otelzap
 
 import (
 	"context"
@@ -7,12 +10,14 @@ import (
 	"math"
 	"net/url"
 	"testing"
+	"time"
 
 	"github.com/stretchr/testify/assert"
-	"go.opentelemetry.io/otel/log"
-	"go.opentelemetry.io/otel/log/embedded"
 	"go.uber.org/zap"
 	"go.uber.org/zap/zapcore"
+
+	"go.opentelemetry.io/otel/log"
+	"go.opentelemetry.io/otel/log/embedded"
 )
 
 var (
@@ -41,20 +46,26 @@ func NewTestOtelLogger(log log.Logger) zapcore.Core {
 	}
 }
 
-// Basic Logger Test and Child Logger test
+type addr struct {
+	IP   string
+	Port int
+}
+
+// Basic Logger Test and Child Logger test.
 func TestZapCore(t *testing.T) {
 	spy := &spyLogger{}
 	logger := zap.New(NewTestOtelLogger(spy))
-	logger.Info(testBodyString, zap.Strings("key", []string{"1", "2"}))
-
+	// logger.Info(testBodyString, zap.Any("key", []string{"1", "2"}))
+	logger.Info(testBodyString, zap.Any("key", &addr{IP: "ip", Port: 1}))
 	a := []interface{}{"1", "2"}
+	// logger.Info("foo", zap.Any("bar", [][]string{{"a", "b"}, {"c", "d"}}))
 	assert.Equal(t, testBodyString, spy.Record.Body().AsString())
 	assert.Equal(t, testSeverity, spy.Record.Severity())
 	assert.Equal(t, 1, spy.Record.AttributesLen())
 	spy.Record.WalkAttributes(func(kv log.KeyValue) bool {
-		assert.Equal(t, "key", string(kv.Key))
+		assert.Equal(t, "b", string(kv.Key))
 		assert.Equal(t, a, value2Result(kv.Value))
-		fmt.Println(value2Result(kv.Value))
+
 		return true
 	})
 
@@ -66,10 +77,9 @@ func TestZapCore(t *testing.T) {
 		assert.Equal(t, "otel", kv.Value.AsString())
 		return true
 	})
-
 }
 
-// Copied from field_test.go
+// Copied from field_test.go.
 type users int
 
 func (u users) String() string {
@@ -131,7 +141,7 @@ func (eobj *errObj) Error() string {
 // NOTE:
 // int, int8, int16, int32 types are converted to int64 by Otel's log
 // Complex types are converted to string of complex values
-// Uint are converted to int64
+// Uint are converted to int64.
 func TestFields(t *testing.T) {
 	tests := []struct {
 		t     zapcore.FieldType
@@ -143,7 +153,7 @@ func TestFields(t *testing.T) {
 		{t: zapcore.ArrayMarshalerType, iface: users(2), want: []any{"user", "user"}},
 		{t: zapcore.ObjectMarshalerType, iface: users(2), want: map[string]interface{}{"users": int64(2)}},
 		{t: zapcore.BoolType, i: 0, want: false},
-		{t: zapcore.ByteStringType, iface: []byte("foo"), want: []byte("foo")},
+		{t: zapcore.ByteStringType, iface: []byte("foo"), want: "foo"},
 		{t: zapcore.Complex128Type, iface: 1 + 2i, want: "(1+2i)"},
 		{t: zapcore.Complex64Type, iface: complex64(1 + 2i), want: "(1+2i)"},
 		{t: zapcore.DurationType, i: 1000, want: int64(1000)},
@@ -174,7 +184,7 @@ func TestFields(t *testing.T) {
 	}
 
 	for _, tt := range tests {
-		enc := NewOtelObjectEncoder(1)
+		enc := NewOtelObjectEncoder(5)
 		f := zapcore.Field{Key: "k", Type: tt.t, Integer: tt.i, Interface: tt.iface, String: tt.s}
 		f.AddTo(enc)
 		assert.Equal(t, tt.want, value2Result(enc.cur[0].Value), "Unexpected output from field %+v.", f)
@@ -182,7 +192,7 @@ func TestFields(t *testing.T) {
 }
 
 func TestInlineMarshaler(t *testing.T) {
-	enc := NewOtelObjectEncoder(1)
+	enc := NewOtelObjectEncoder(3)
 
 	topLevelStr := zapcore.Field{Key: "k", Type: zapcore.StringType, String: "s"}
 	topLevelStr.AddTo(enc)
@@ -207,7 +217,7 @@ func TestInlineMarshaler(t *testing.T) {
 	}, gotVal)
 }
 
-// converts value to result
+// converts value to result.
 func value2Result(v log.Value) any {
 	switch v.Kind() {
 	case log.KindBool:
@@ -234,4 +244,145 @@ func value2Result(v log.Value) any {
 		return m
 	}
 	return nil
+}
+
+// benchmark logging
+// complex attributes take longer time.
+func BenchmarkZapLogging(b *testing.B) {
+	// var (
+	// 	z   zapcore.Core
+	// 	err error
+	// )
+	// testBody := "log message"
+	benchmarks := []struct {
+		name  string
+		field zapcore.Field
+	}{
+		{
+			name:  "Int",
+			field: zap.Int16("a", 1),
+		},
+		{
+			name:  "String",
+			field: zap.String("k", "a"),
+		},
+		{
+			name:  "Time",
+			field: zap.Time("k", time.Unix(1000, 1000)),
+		},
+		{
+			name:  "Binary",
+			field: zap.Binary("k", []byte{1, 2}),
+		},
+		{
+			name:  "ByteString",
+			field: zap.ByteString("k", []byte("abc")),
+		},
+		{
+			name:  "Array",
+			field: zap.Ints("k", []int{1, 2}),
+		},
+		{
+			name:  "Object",
+			field: zap.Object("k", users(10)),
+		},
+		{
+			name:  "Map",
+			field: zap.Any("k", map[string]string{"a": "b"}),
+		},
+
+		{
+			name:  "Dict",
+			field: zap.Dict("k", zap.String("a", "b")),
+		},
+	}
+
+	// entry := zapcore.Entry{
+	// 	Level:   zap.InfoLevel,
+	// 	Message: testBodyString,
+	// }
+	// ctx := context.Background()
+	for _, bm := range benchmarks {
+		b.Run(bm.name, func(b *testing.B) {
+			// zapcore := make([]zapcore.Core, b.N)
+			// for i := 0; i < b.N; i++ {
+			// 	zapcore[i] = NewOtelZapCore(nil)
+			// }
+			zapcore := zap.New(NewOtelZapCore(nil))
+			b.ReportAllocs()
+			b.ResetTimer()
+			for n := 0; n < b.N; n++ {
+				zapcore.Info(testBodyString, bm.field)
+			}
+		})
+	}
+}
+
+func BenchmarkMultipleAttr(b *testing.B) {
+	// testBody := "log message"
+	benchmarks := []struct {
+		name  string
+		field []zapcore.Field
+	}{
+		{
+			name: "With 3 fields",
+			field: []zapcore.Field{
+				zap.Int16("a", 1),
+				zap.String("k", "a"),
+				zap.String("k", "a"),
+				zap.Time("k", time.Unix(1000, 1000)),
+				zap.Binary("k", []byte{1, 2}),
+				zap.Binary("k", []byte{1, 2}),
+				zap.Object("k", users(10)),
+				zap.String("k", "a"),
+				zap.String("k", "a"),
+				zap.String("k", "a"),
+			},
+		},
+		// {name: "String",
+		// 	field: zap.String("k", "a"),
+		// },
+		// {name: "Time",
+		// 	field: zap.Time("k", time.Unix(1000, 1000)),
+		// },
+		// {name: "Binary",
+		// 	field: zap.Binary("k", []byte{1, 2}),
+		// },
+		// {name: "ByteString",
+		// 	field: zap.ByteString("k", []byte("abc")),
+		// },
+		// {name: "Array",
+		// 	field: zap.Ints("k", []int{1, 2}),
+		// },
+		// {name: "Object",
+		// 	field: zap.Object("k", users(10)),
+		// },
+		// {name: "Map",
+		// 	field: zap.Any("k", map[string]string{"a": "b"}),
+		// },
+
+		// {name: "Dict",
+		// 	field: zap.Dict("k", zap.String("a", "b")),
+		// },
+	}
+
+	// ctx := context.Background()
+	for _, bm := range benchmarks {
+		// entry := zapcore.Entry{
+		// 	Level:   zap.InfoLevel,
+		// 	Message: testBodyString,
+		// }
+		b.Run(bm.name, func(b *testing.B) {
+			// zapLogger := make([]*zap.Logger, b.N)
+			// for i := 0; i < b.N; i++ {
+			// 	zapLogger[i] = zap.New(NewOtelZapCore(nil))
+			// }
+			zapcore := zap.New(NewOtelZapCore(nil))
+			b.ReportAllocs()
+			b.ResetTimer()
+			for n := 0; n < b.N; n++ {
+				zapcore.Info(testBodyString, bm.field...)
+			}
+		})
+	}
 }
