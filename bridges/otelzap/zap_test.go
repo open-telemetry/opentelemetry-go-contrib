@@ -41,9 +41,9 @@ func (l *spyLogger) Enabled(ctx context.Context, r log.Record) bool {
 	return true
 }
 
-func NewTestOtelLogger(log log.Logger) zapcore.Core {
+func NewTestOtelLogger(l log.Logger) zapcore.Core {
 	return &Core{
-		logger: log,
+		logger: l,
 	}
 }
 
@@ -80,7 +80,7 @@ func TestZapCore(t *testing.T) {
 	})
 }
 
-// Copied from field_test.go.
+// Copied from field_test.go. https://github.com/uber-go/zap/blob/b39f8b6b6a44d8371a87610be50cce58eeeaabcb/zapcore/field_test.go#L131
 type users int
 
 func (u users) String() string {
@@ -165,29 +165,36 @@ func TestFields(t *testing.T) {
 		{t: zapcore.Int16Type, i: 42, want: int64(42)},
 		{t: zapcore.Int8Type, i: 42, want: int64(42)},
 		{t: zapcore.StringType, s: "foo", want: "foo"},
-		// {t: zapcore.TimeType, i: 1000, iface: time.UTC, want: time.Unix(0, 1000).In(time.UTC)},
-		// {t: zapcore.TimeType, i: 1000, want: time.Unix(0, 1000)},
+		{t: zapcore.TimeType, i: 1000, iface: time.UTC, want: int64(1000)},
+		{t: zapcore.TimeType, i: 1000, want: int64(1000)},
 		// All Uint types are converted to Int64
 		{t: zapcore.Uint64Type, i: 42, want: int64(42)},
 		{t: zapcore.Uint32Type, i: 42, want: int64(42)},
 		{t: zapcore.Uint16Type, i: 42, want: int64(42)},
 		{t: zapcore.Uint8Type, i: 42, want: int64(42)},
 		{t: zapcore.UintptrType, i: 42, want: int64(42)},
-		// {t: zapcore.ReflectType, iface: users(2), want: users(2)},
-		// {t: zapcore.NamespaceType, want: map[string]interface{}{}},
+		// Encode writes the JSON encoding of v to the stream,
+		// followed by a newline character.
+		{t: zapcore.ReflectType, iface: users(2), want: "2\n"},
+		//{t: zapcore.NamespaceType, want: map[string]interface{}{}}, TODO
 		{t: zapcore.StringerType, iface: users(2), want: "2 users"},
 		{t: zapcore.StringerType, iface: &obj{}, want: "obj"},
 		{t: zapcore.StringerType, iface: (*obj)(nil), want: "nil obj"},
-		//{t: zapcore.SkipType, want: interface{}(nil)},
+		{t: zapcore.SkipType, want: nil},
 		{t: zapcore.StringerType, iface: (*url.URL)(nil), want: "<nil>"},
 		{t: zapcore.StringerType, iface: (*users)(nil), want: "<nil>"},
 		{t: zapcore.ErrorType, iface: (*errObj)(nil), want: "<nil>"},
 	}
 
 	for _, tt := range tests {
-		enc := NewObjectEncoder(5)
+		enc := NewObjectEncoder(1)
 		f := zapcore.Field{Key: "k", Type: tt.t, Integer: tt.i, Interface: tt.iface, String: tt.s}
 		f.AddTo(enc)
+		fmt.Println(enc.Fields)
+		if f.Type == zapcore.SkipType {
+			assert.Nil(t, tt.want, enc.cur)
+			continue
+		}
 		assert.Equal(t, tt.want, value2Result(enc.cur[0].Value), "Unexpected output from field %+v.", f)
 	}
 }
