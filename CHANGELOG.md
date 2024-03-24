@@ -12,6 +12,10 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 
 - Add the new `go.opentelemetry.io/contrib/instrgen` package to provide auto-generated source code instrumentation. (#3068, #3108)
 
+### Fixed
+
+- Improved the spanRowFormatter function by using HTML templates that automatically handle HTML escaping. This change strengthens security against Cross-Site Scripting (XSS) vulnerabilities. (Issue #4451)
+
 ### Removed
 
 - Drop support for [Go 1.20]. (#5163)

@@ -19,6 +19,7 @@
 package zpages // import "go.opentelemetry.io/contrib/zpages"
 
 import (
+	"bytes"
 	"fmt"
 	"html/template"
 	"io"
@@ -60,7 +61,6 @@ func parseTemplate(name string) *template.Template {
 	return template.Must(template.New(name).Funcs(templateFunctions).Parse(string(text)))
 }
 
-//nolint:gosec // G203: The used method does not auto-escape HTML. Tracked under https://github.com/open-telemetry/opentelemetry-go-contrib/issues/4451.
 func spanRowFormatter(r spanRow) template.HTML {
 	if !r.SpanContext.IsValid() {
 		return ""
@@ -69,10 +69,21 @@ func spanRowFormatter(r spanRow) template.HTML {
 	if r.SpanContext.IsSampled() {
 		col = "blue"
 	}
+
+	var tpl string
+
 	if r.ParentSpanContext.IsValid() {
-		return template.HTML(fmt.Sprintf(`trace_id: <b style="color:%s">%s</b> span_id: %s parent_span_id: %s`, col, r.SpanContext.TraceID(), r.SpanContext.SpanID(), r.ParentSpanContext.SpanID()))
+		tpl = fmt.Sprintf(`trace_id: <b style="color:%s">%s</b> span_id: %s parent_span_id: %s`, col, template.HTMLEscapeString(r.SpanContext.TraceID().String()), template.HTMLEscapeString(r.SpanContext.SpanID().String()), template.HTMLEscapeString(r.ParentSpanContext.SpanID().String()))
+	} else {
+		tpl = fmt.Sprintf(`trace_id: <b style="color:%s">%s</b> span_id: %s `, col, template.HTMLEscapeString(r.SpanContext.TraceID().String()), template.HTMLEscapeString(r.SpanContext.SpanID().String()))
 	}
-	return template.HTML(fmt.Sprintf(`trace_id: <b style="color:%s">%s</b> span_id: %s`, col, r.SpanContext.TraceID(), r.SpanContext.SpanID()))
+
+	t := template.Must(template.New("spanRow").Parse(tpl))
+	var buf bytes.Buffer
+	if err := t.Execute(&buf, nil); err != nil {
+		return template.HTML(template.HTMLEscapeString(fmt.Sprintf("Error executing template: %s", err.Error())))
+	}
+	return template.HTML(template.HTMLEscapeString(buf.String()))
 }
 
 func even(x int) bool {
