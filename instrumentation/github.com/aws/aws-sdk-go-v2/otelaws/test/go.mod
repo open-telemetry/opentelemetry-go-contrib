@@ -4,7 +4,7 @@ go 1.21
 
 require (
 	github.com/aws/aws-sdk-go-v2 v1.26.0
-	github.com/aws/aws-sdk-go-v2/service/dynamodb v1.30.5
+	github.com/aws/aws-sdk-go-v2/service/dynamodb v1.31.0
 	github.com/aws/aws-sdk-go-v2/service/route53 v1.40.3
 	github.com/aws/smithy-go v1.20.1
 	github.com/stretchr/testify v1.9.0
