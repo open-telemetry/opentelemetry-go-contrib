@@ -6,6 +6,8 @@ package autoexport // import "go.opentelemetry.io/contrib/exporters/autoexport"
 import (
 	"context"
 	"os"
+
+	"go.opentelemetry.io/otel/sdk/metric"
 )
 
 type signal[T any] struct {
@@ -17,7 +19,7 @@ func newSignal[T any](envKey string) signal[T] {
 	return signal[T]{
 		envKey: envKey,
 		registry: &registry[T]{
-			names: make(map[string]func(context.Context) (T, error)),
+			names: make(map[string]func(context.Context, config[T]) (T, error)),
 		},
 	}
 }
@@ -31,16 +33,18 @@ func (s signal[T]) create(ctx context.Context, opts ...option[T]) (T, error) {
 	expType := os.Getenv(s.envKey)
 	if expType == "" {
 		if cfg.fallbackFactory != nil {
-			return cfg.fallbackFactory(ctx)
+			return cfg.fallbackFactory(ctx, cfg)
 		}
 		expType = "otlp"
 	}
 
-	return s.registry.load(ctx, expType)
+	return s.registry.load(ctx, expType, cfg)
 }
 
 type config[T any] struct {
-	fallbackFactory func(ctx context.Context) (T, error)
+	fallbackFactory func(ctx context.Context, _ config[T]) (T, error)
+
+	metricReaderOptions []metric.PeriodicReaderOption
 }
 
 type option[T any] interface {
@@ -54,7 +58,7 @@ func (fn optionFunc[T]) apply(cfg *config[T]) {
 	fn(cfg)
 }
 
-func withFallbackFactory[T any](fallbackFactory func(ctx context.Context) (T, error)) option[T] {
+func withFallbackFactory[T any](fallbackFactory func(ctx context.Context, cfg config[T]) (T, error)) option[T] {
 	return optionFunc[T](func(cfg *config[T]) {
 		cfg.fallbackFactory = fallbackFactory
 	})

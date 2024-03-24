@@ -16,13 +16,13 @@ import (
 
 type testType struct{ string }
 
-func factory(val string) func(ctx context.Context) (*testType, error) {
-	return func(ctx context.Context) (*testType, error) { return &testType{val}, nil }
+func factory(val string) func(ctx context.Context, _ config[*testType]) (*testType, error) {
+	return func(ctx context.Context, _ config[*testType]) (*testType, error) { return &testType{val}, nil }
 }
 
 func newTestRegistry() registry[*testType] {
 	return registry[*testType]{
-		names: make(map[string]func(context.Context) (*testType, error)),
+		names: make(map[string]func(context.Context, config[*testType]) (*testType, error)),
 	}
 }
 
@@ -33,7 +33,7 @@ func TestCanStoreExporterFactory(t *testing.T) {
 
 func TestLoadOfUnknownExporterReturnsError(t *testing.T) {
 	r := newTestRegistry()
-	exp, err := r.load(context.Background(), "non-existent")
+	exp, err := r.load(context.Background(), "non-existent", config[*testType]{})
 	assert.Equal(t, err, errUnknownExporter, "empty registry should hold nothing")
 	assert.Nil(t, exp, "non-nil exporter returned")
 }
@@ -55,7 +55,7 @@ func TestRegistryIsConcurrentSafe(t *testing.T) {
 	wg.Add(1)
 	go func() {
 		defer wg.Done()
-		_, err := r.load(context.Background(), exporterName)
+		_, err := r.load(context.Background(), exporterName, config[*testType]{})
 		assert.NoError(t, err, "missing exporter in registry")
 	}()
 
@@ -68,10 +68,10 @@ func TestSubsequentCallsToGetExporterReturnsNewInstances(t *testing.T) {
 	const key = "key"
 	assert.NoError(t, r.store(key, factory(key)))
 
-	exp1, err := r.load(context.Background(), key)
+	exp1, err := r.load(context.Background(), key, config[*testType]{})
 	assert.NoError(t, err)
 
-	exp2, err := r.load(context.Background(), key)
+	exp2, err := r.load(context.Background(), key, config[*testType]{})
 	assert.NoError(t, err)
 
 	assert.NotSame(t, exp1, exp2)
