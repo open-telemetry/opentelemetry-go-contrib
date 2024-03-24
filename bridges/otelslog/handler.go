@@ -367,7 +367,7 @@ func (b *kvBuffer) AddAttrs(attrs []slog.Attr) {
 	}
 }
 
-// AddAttrs adds attr to b and returns true.
+// AddAttr adds attr to b and returns true.
 //
 // This is designed to be passed to the AddAttributes method of an
 // [slog.Record].
