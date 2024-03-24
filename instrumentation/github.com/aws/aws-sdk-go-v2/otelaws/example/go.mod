@@ -7,7 +7,7 @@ replace go.opentelemetry.io/contrib/instrumentation/github.com/aws/aws-sdk-go-v2
 require (
 	github.com/aws/aws-sdk-go-v2 v1.26.0
 	github.com/aws/aws-sdk-go-v2/config v1.27.8
-	github.com/aws/aws-sdk-go-v2/service/dynamodb v1.30.5
+	github.com/aws/aws-sdk-go-v2/service/dynamodb v1.31.0
 	github.com/aws/aws-sdk-go-v2/service/s3 v1.53.0
 	go.opentelemetry.io/contrib/instrumentation/github.com/aws/aws-sdk-go-v2/otelaws v0.49.0
 	go.opentelemetry.io/otel v1.24.0
