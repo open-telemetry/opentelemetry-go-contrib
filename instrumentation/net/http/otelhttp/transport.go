@@ -14,6 +14,7 @@ import (
 	"go.opentelemetry.io/otel/metric"
 
 	"go.opentelemetry.io/contrib/instrumentation/net/http/otelhttp/internal/semconvutil"
+	"go.opentelemetry.io/contrib/instrumentation/net/http/otelhttp/internal/wrapper"
 	"go.opentelemetry.io/otel"
 	"go.opentelemetry.io/otel/codes"
 	"go.opentelemetry.io/otel/propagation"
@@ -143,14 +144,14 @@ func (t *Transport) RoundTrip(r *http.Request) (*http.Response, error) {
 	r = r.Clone(ctx) // According to RoundTripper spec, we shouldn't modify the origin request.
 
 	// use a body wrapper to determine the request size
-	var bw bodyWrapper
+	var bw wrapper.Body
 	// if request body is nil or NoBody, we don't want to mutate the body as it
 	// will affect the identity of it in an unforeseeable way because we assert
 	// ReadCloser fulfills a certain interface and it is indeed nil or NoBody.
 	if r.Body != nil && r.Body != http.NoBody {
 		bw.ReadCloser = r.Body
 		// noop to prevent nil panic. not using this record fun yet.
-		bw.record = func(int64) {}
+		bw.OnRecordFn = func(int64) {}
 		r.Body = &bw
 	}
 
@@ -171,7 +172,7 @@ func (t *Transport) RoundTrip(r *http.Request) (*http.Response, error) {
 		metricAttrs = append(metricAttrs, semconv.HTTPStatusCode(res.StatusCode))
 	}
 	o := metric.WithAttributes(metricAttrs...)
-	t.requestBytesCounter.Add(ctx, bw.read.Load(), o)
+	t.requestBytesCounter.Add(ctx, bw.ReadLength(), o)
 	// For handling response bytes we leverage a callback when the client reads the http response
 	readRecordFunc := func(n int64) {
 		t.responseBytesCounter.Add(ctx, n, o)

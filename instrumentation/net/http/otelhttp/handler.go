@@ -11,6 +11,7 @@ import (
 	"github.com/felixge/httpsnoop"
 
 	"go.opentelemetry.io/contrib/instrumentation/net/http/otelhttp/internal/semconvutil"
+	"go.opentelemetry.io/contrib/instrumentation/net/http/otelhttp/internal/wrapper"
 	"go.opentelemetry.io/otel"
 	"go.opentelemetry.io/otel/attribute"
 	"go.opentelemetry.io/otel/metric"
@@ -167,13 +168,13 @@ func (h *middleware) serveHTTP(w http.ResponseWriter, r *http.Request, next http
 		}
 	}
 
-	var bw bodyWrapper
+	var bw wrapper.Body
 	// if request body is nil or NoBody, we don't want to mutate the body as it
 	// will affect the identity of it in an unforeseeable way because we assert
 	// ReadCloser fulfills a certain interface and it is indeed nil or NoBody.
 	if r.Body != nil && r.Body != http.NoBody {
 		bw.ReadCloser = r.Body
-		bw.record = readRecordFunc
+		bw.OnRecordFn = readRecordFunc
 		r.Body = &bw
 	}
 
@@ -184,12 +185,10 @@ func (h *middleware) serveHTTP(w http.ResponseWriter, r *http.Request, next http
 		}
 	}
 
-	rww := &respWriterWrapper{
+	rw := &wrapper.ResponseWriter{
 		ResponseWriter: w,
-		record:         writeRecordFunc,
-		ctx:            ctx,
-		props:          h.propagators,
-		statusCode:     http.StatusOK, // default status code in case the Handler doesn't write anything
+		OnRecordFn:     writeRecordFunc,
+		StatusCode:     http.StatusOK, // default status code in case the Handler doesn't write anything
 	}
 
 	// Wrap w to use our ResponseWriter methods while also exposing
@@ -198,13 +197,13 @@ func (h *middleware) serveHTTP(w http.ResponseWriter, r *http.Request, next http
 
 	w = httpsnoop.Wrap(w, httpsnoop.Hooks{
 		Header: func(httpsnoop.HeaderFunc) httpsnoop.HeaderFunc {
-			return rww.Header
+			return rw.Header
 		},
 		Write: func(httpsnoop.WriteFunc) httpsnoop.WriteFunc {
-			return rww.Write
+			return rw.Write
 		},
 		WriteHeader: func(httpsnoop.WriteHeaderFunc) httpsnoop.WriteHeaderFunc {
-			return rww.WriteHeader
+			return rw.WriteHeader
 		},
 	})
 
@@ -213,16 +212,16 @@ func (h *middleware) serveHTTP(w http.ResponseWriter, r *http.Request, next http
 
 	next.ServeHTTP(w, r.WithContext(ctx))
 
-	setAfterServeAttributes(span, bw.read.Load(), rww.written, rww.statusCode, bw.err, rww.err)
+	setAfterServeAttributes(span, rw, &bw)
 
 	// Add metrics
 	attributes := append(labeler.Get(), semconvutil.HTTPServerRequestMetrics(h.server, r)...)
-	if rww.statusCode > 0 {
-		attributes = append(attributes, semconv.HTTPStatusCode(rww.statusCode))
+	if rw.StatusCode > 0 {
+		attributes = append(attributes, semconv.HTTPStatusCode(rw.StatusCode))
 	}
 	o := metric.WithAttributes(attributes...)
-	h.requestBytesCounter.Add(ctx, bw.read.Load(), o)
-	h.responseBytesCounter.Add(ctx, rww.written, o)
+	h.requestBytesCounter.Add(ctx, bw.ReadLength(), o)
+	h.responseBytesCounter.Add(ctx, rw.Written, o)
 
 	// Use floating point division here for higher precision (instead of Millisecond method).
 	elapsedTime := float64(time.Since(requestStartTime)) / float64(time.Millisecond)
@@ -230,27 +229,27 @@ func (h *middleware) serveHTTP(w http.ResponseWriter, r *http.Request, next http
 	h.serverLatencyMeasure.Record(ctx, elapsedTime, o)
 }
 
-func setAfterServeAttributes(span trace.Span, read, wrote int64, statusCode int, rerr, werr error) {
+func setAfterServeAttributes(span trace.Span, rw *wrapper.ResponseWriter, bw *wrapper.Body) {
 	attributes := []attribute.KeyValue{}
 
 	// TODO: Consider adding an event after each read and write, possibly as an
 	// option (defaulting to off), so as to not create needlessly verbose spans.
-	if read > 0 {
-		attributes = append(attributes, ReadBytesKey.Int64(read))
+	if bw.ReadLength() > 0 {
+		attributes = append(attributes, ReadBytesKey.Int64(bw.ReadLength()))
 	}
-	if rerr != nil && rerr != io.EOF {
-		attributes = append(attributes, ReadErrorKey.String(rerr.Error()))
+	if bw.Err != nil && bw.Err != io.EOF {
+		attributes = append(attributes, ReadErrorKey.String(bw.Err.Error()))
 	}
-	if wrote > 0 {
-		attributes = append(attributes, WroteBytesKey.Int64(wrote))
+	if rw.Written > 0 {
+		attributes = append(attributes, WroteBytesKey.Int64(rw.Written))
 	}
-	if statusCode > 0 {
-		attributes = append(attributes, semconv.HTTPStatusCode(statusCode))
+	if rw.StatusCode > 0 {
+		attributes = append(attributes, semconv.HTTPStatusCode(rw.StatusCode))
 	}
-	span.SetStatus(semconvutil.HTTPServerStatus(statusCode))
+	span.SetStatus(semconvutil.HTTPServerStatus(rw.StatusCode))
 
-	if werr != nil && werr != io.EOF {
-		attributes = append(attributes, WriteErrorKey.String(werr.Error()))
+	if rw.Err != nil && rw.Err != io.EOF {
+		attributes = append(attributes, WriteErrorKey.String(rw.Err.Error()))
 	}
 	span.SetAttributes(attributes...)
 }
