@@ -11,7 +11,6 @@ import (
 	"go.uber.org/zap/zapcore"
 
 	"go.opentelemetry.io/otel/log"
-	"go.opentelemetry.io/otel/log/noop"
 )
 
 const (
@@ -30,17 +29,10 @@ var _ zapcore.Core = (*Core)(nil)
 
 // this function creates a new zapcore.Core that can be used with zap.New()
 // this instance will translate zap logs to opentelemetry logs and export them.
-func NewOtelZapCore(lp log.LoggerProvider, opts ...log.LoggerOption) zapcore.Core {
-	if lp == nil {
-		// Do not panic.
-		lp = noop.NewLoggerProvider()
-	}
-
-	// these options
+func NewOtelZapCore(opts ...Option) zapcore.Core {
+	cfg := newConfig(opts)
 	return &Core{
-		logger: lp.Logger(bridgeName,
-			log.WithInstrumentationVersion(version),
-		),
+		logger: cfg.logger(),
 	}
 }
 

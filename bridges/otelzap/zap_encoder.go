@@ -25,8 +25,6 @@ var (
 // Object Encoder implements zapcore.ObjectEncoder.
 // It encodes given fields to OTel attribute.
 type ObjectEncoder struct {
-	// Fields contains the entire encoded log context.
-	Fields []log.KeyValue
 	// cur is a pointer to the namespace we're currently writing to.
 	cur []log.KeyValue
 
@@ -37,8 +35,7 @@ type ObjectEncoder struct {
 func NewObjectEncoder(len int) *ObjectEncoder {
 	m := make([]log.KeyValue, 0, len)
 	return &ObjectEncoder{
-		Fields: m,
-		cur:    m,
+		cur: m,
 	}
 }
 
@@ -81,11 +78,13 @@ func (m *ObjectEncoder) AddDuration(k string, v time.Duration) {
 	m.AddInt64(k, v.Nanoseconds())
 }
 
+// Converts Complex128 to logString.
 func (m *ObjectEncoder) AddComplex128(k string, v complex128) {
 	stringValue := strconv.FormatComplex(v, 'f', -1, 64)
 	m.cur = append(m.cur, log.String(k, stringValue))
 }
 
+// Converts Float64 to logFloat64.
 func (m *ObjectEncoder) AddFloat64(k string, v float64) {
 	m.cur = append(m.cur, log.Float64(k, v))
 }
@@ -110,16 +109,13 @@ func (m *ObjectEncoder) AddUint64(k string, v uint64) {
 		})
 }
 
-// It calls this func if interface cannot be mapped to supported zap types
-// For ex: an array of arrays or complex types passed using zap.Any()
+// It calls this method if interface cannot be mapped to supported zap types
 // this converts everything to a JSON string.
 func (m *ObjectEncoder) AddReflected(k string, v interface{}) error {
-	fmt.Println(v, "inside reflect")
 	enc := json.NewEncoder(m)
 	if err := enc.Encode(v); err != nil {
 		return err
 	}
-	// fmt.Println(m.reflectval.AsString(), "inside reflect")
 	m.AddString(k, m.reflectval.AsString())
 	return nil
 }
@@ -182,7 +178,7 @@ func (a *ArrayEncoder) AppendArray(v zapcore.ArrayMarshaler) error {
 }
 
 func (a *ArrayEncoder) AppendObject(v zapcore.ObjectMarshaler) error {
-	// passing 0 here - we do not object's length
+	// passing 0 here - we do not know object's length
 	// a minimum buffer capacity can be agreed upon?
 	m := NewObjectEncoder(0)
 	err := v.MarshalLogObject(m)
@@ -190,9 +186,11 @@ func (a *ArrayEncoder) AppendObject(v zapcore.ObjectMarshaler) error {
 	return err
 }
 
-// TODO:
 func (a *ArrayEncoder) AppendReflected(v interface{}) error {
-	// a.elems = append(a.elems, v)
+	enc := json.NewEncoder(a)
+	if err := enc.Encode(v); err != nil {
+		return err
+	}
 	return nil
 }
 
@@ -227,3 +225,10 @@ func (a *ArrayEncoder) AppendUint32(v uint32)   { a.AppendInt64(int64(v)) }
 func (a *ArrayEncoder) AppendUint16(v uint16)   { a.AppendInt64(int64(v)) }
 func (a *ArrayEncoder) AppendUint8(v uint8)     { a.AppendInt64(int64(v)) }
 func (a *ArrayEncoder) AppendUintptr(v uintptr) { a.AppendUint64(uint64(v)) }
+
+// Implements Write method to which json encoder writes to.
+// Used by AppendReflected method.
+func (a *ArrayEncoder) Write(p []byte) (n int, err error) {
+	a.elems = append(a.elems, log.StringValue(string(p)))
+	return
+}

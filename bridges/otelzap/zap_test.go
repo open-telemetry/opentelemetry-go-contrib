@@ -190,7 +190,6 @@ func TestFields(t *testing.T) {
 		enc := NewObjectEncoder(1)
 		f := zapcore.Field{Key: "k", Type: tt.t, Integer: tt.i, Interface: tt.iface, String: tt.s}
 		f.AddTo(enc)
-		fmt.Println(enc.Fields)
 		if f.Type == zapcore.SkipType {
 			assert.Nil(t, tt.want, enc.cur)
 			continue
@@ -257,11 +256,7 @@ func value2Result(v log.Value) any {
 // benchmark logging
 // complex attributes take longer time.
 func BenchmarkZapLogging(b *testing.B) {
-	// var (
-	// 	z   zapcore.Core
-	// 	err error
-	// )
-	// testBody := "log message"
+
 	benchmarks := []struct {
 		name  string
 		field zapcore.Field
@@ -316,7 +311,7 @@ func BenchmarkZapLogging(b *testing.B) {
 			// for i := 0; i < b.N; i++ {
 			// 	zapcore[i] = NewOtelZapCore(nil)
 			// }
-			zapcore := zap.New(NewOtelZapCore(nil))
+			zapcore := zap.New(NewOtelZapCore())
 			b.ReportAllocs()
 			b.ResetTimer()
 			for n := 0; n < b.N; n++ {
