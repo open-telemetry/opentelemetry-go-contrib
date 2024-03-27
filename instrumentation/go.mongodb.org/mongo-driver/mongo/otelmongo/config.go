@@ -4,6 +4,8 @@
 package otelmongo // import "go.opentelemetry.io/contrib/instrumentation/go.mongodb.org/mongo-driver/mongo/otelmongo"
 
 import (
+	"go.mongodb.org/mongo-driver/bson"
+
 	"go.opentelemetry.io/otel"
 	"go.opentelemetry.io/otel/trace"
 )
@@ -18,12 +20,15 @@ type config struct {
 	Tracer trace.Tracer
 
 	CommandAttributeDisabled bool
+
+	CommandTransformerFunc CommandTransformer
 }
 
 // newConfig returns a config with all Options set.
 func newConfig(opts ...Option) config {
 	cfg := config{
 		TracerProvider:           otel.GetTracerProvider(),
+		CommandTransformerFunc:   transformCommand,
 		CommandAttributeDisabled: true,
 	}
 	for _, opt := range opts {
@@ -64,5 +69,20 @@ func WithTracerProvider(provider trace.TracerProvider) Option {
 func WithCommandAttributeDisabled(disabled bool) Option {
 	return optionFunc(func(cfg *config) {
 		cfg.CommandAttributeDisabled = disabled
+	})
+}
+
+// CommandTransformer defines a function that transforms a MongoDB command attribute.
+// If the function returns an empty string, the attribute will not be added to the Span.
+type CommandTransformer func(command bson.Raw) string
+
+// WithCommandAttributeTransformer specifies a function to transform the MongoDB command attribute.
+func WithCommandAttributeTransformer(transformer CommandTransformer) Option {
+	return optionFunc(func(cfg *config) {
+		if transformer != nil {
+			cfg.CommandTransformerFunc = transformer
+		} else {
+			cfg.CommandTransformerFunc = transformCommand
+		}
 	})
 }
