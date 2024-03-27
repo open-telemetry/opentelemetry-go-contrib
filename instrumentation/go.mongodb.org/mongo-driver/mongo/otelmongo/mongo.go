@@ -44,7 +44,7 @@ func (m *monitor) Started(ctx context.Context, evt *event.CommandStartedEvent) {
 		semconv.NetTransportTCP,
 	}
 	if !m.cfg.CommandAttributeDisabled {
-		attrs = append(attrs, semconv.DBStatement(sanitizeCommand(evt.Command)))
+		attrs = append(attrs, m.cfg.statementMarshaller.Marshal(evt.Command)...)
 	}
 	if collection, err := extractCollection(evt); err == nil && collection != "" {
 		spanName = collection + "."
@@ -93,13 +93,6 @@ func (m *monitor) Finished(evt *event.CommandFinishedEvent, err error) {
 	}
 
 	span.End()
-}
-
-// TODO sanitize values where possible, then reenable `db.statement` span attributes default.
-// TODO limit maximum size.
-func sanitizeCommand(command bson.Raw) string {
-	b, _ := bson.MarshalExtJSON(command, false, false)
-	return string(b)
 }
 
 // extractCollection extracts the collection for the given mongodb command event.

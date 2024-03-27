@@ -39,3 +39,32 @@ func Example() {
 		panic(err)
 	}
 }
+
+func ExampleLimitedStatementMarshaller() {
+	// connect to MongoDB
+	opts := options.Client()
+	opts.Monitor = otelmongo.NewMonitor(
+		otelmongo.WithMarshaller(otelmongo.NewLimitedStatementMarshaller(50)),
+	)
+	opts.ApplyURI("mongodb://localhost:27017")
+	client, err := mongo.Connect(context.Background(), opts)
+	if err != nil {
+		panic(err)
+	}
+	db := client.Database("example")
+	inventory := db.Collection("inventory")
+
+	_, err = inventory.InsertOne(context.Background(), bson.D{
+		{Key: "item", Value: "canvas"},
+		{Key: "qty", Value: 100},
+		{Key: "attributes", Value: bson.A{"cotton"}},
+		{Key: "size", Value: bson.D{
+			{Key: "h", Value: 28},
+			{Key: "w", Value: 35.5},
+			{Key: "uom", Value: "cm"},
+		}},
+	})
+	if err != nil {
+		panic(err)
+	}
+}
