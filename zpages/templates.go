@@ -79,7 +79,9 @@ func spanRowFormatter(r spanRow) template.HTML {
 		tpl += fmt.Sprintf(` parent_span_id: %s`, r.ParentSpanContext.SpanID())
 	}
 
-	//nolint:gosec // G203: HTML is escaped manually, so this lint issue is a false positive.
+	//nolint:gosec // G203: None of the dynamic attributes (TraceID/SpanID) can
+	// contain characters that need escaping so this lint issue is a false
+	// positive.
 	return template.HTML(tpl)
 }
 
