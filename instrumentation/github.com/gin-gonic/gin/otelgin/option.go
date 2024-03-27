@@ -8,6 +8,7 @@ package otelgin // import "go.opentelemetry.io/contrib/instrumentation/github.co
 import (
 	"net/http"
 
+	"github.com/gin-gonic/gin"
 	"go.opentelemetry.io/otel/propagation"
 	oteltrace "go.opentelemetry.io/otel/trace"
 )
