@@ -11,6 +11,7 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 ### Added
 
 - Add the new `go.opentelemetry.io/contrib/instrgen` package to provide auto-generated source code instrumentation. (#3068, #3108)
+- Add `WithSpanStartOption` and `WithSpanEndOption` to the `go.opentelemetry.io/contrib/github.com/gorilla/mux/otelmux` package to provide options on span start and end. (#5250)
 
 ### Removed
 

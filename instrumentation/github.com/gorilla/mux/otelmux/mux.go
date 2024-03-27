@@ -55,6 +55,8 @@ func Middleware(service string, opts ...Option) mux.MiddlewareFunc {
 			publicEndpoint:    cfg.PublicEndpoint,
 			publicEndpointFn:  cfg.PublicEndpointFn,
 			filters:           cfg.Filters,
+			SpanStartOptions:  cfg.SpanStartOptions,
+			SpanEndOptions:    cfg.SpanEndOptions,
 		}
 	}
 }
@@ -68,6 +70,8 @@ type traceware struct {
 	publicEndpoint    bool
 	publicEndpointFn  func(*http.Request) bool
 	filters           []Filter
+	SpanStartOptions  []trace.SpanStartOption
+	SpanEndOptions    []trace.SpanEndOption
 }
 
 type recordingResponseWriter struct {
@@ -141,10 +145,10 @@ func (tw traceware) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		}
 	}
 
-	opts := []trace.SpanStartOption{
+	opts := append(tw.SpanStartOptions, []trace.SpanStartOption{
 		trace.WithAttributes(semconvutil.HTTPServerRequest(tw.service, r)...),
 		trace.WithSpanKind(trace.SpanKindServer),
-	}
+	}...)
 
 	if tw.publicEndpoint || (tw.publicEndpointFn != nil && tw.publicEndpointFn(r.WithContext(ctx))) {
 		opts = append(opts, trace.WithNewRoot())
@@ -162,7 +166,7 @@ func (tw traceware) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	}
 	spanName := tw.spanNameFormatter(routeStr, r)
 	ctx, span := tw.tracer.Start(ctx, spanName, opts...)
-	defer span.End()
+	defer span.End(tw.SpanEndOptions...)
 	r2 := r.WithContext(ctx)
 	rrw := getRRW(w)
 	defer putRRW(rrw)

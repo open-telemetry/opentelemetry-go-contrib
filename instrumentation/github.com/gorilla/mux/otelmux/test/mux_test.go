@@ -9,6 +9,7 @@ import (
 	"net/http"
 	"net/http/httptest"
 	"testing"
+	"time"
 
 	"github.com/gorilla/mux"
 	"github.com/stretchr/testify/assert"
@@ -281,4 +282,68 @@ func TestWithPublicEndpointFn(t *testing.T) {
 			tt.spansAssert(t, sc, spans)
 		})
 	}
+}
+
+func TestWithSpanStartOptions(t *testing.T) {
+	sr := tracetest.NewSpanRecorder()
+	provider := sdktrace.NewTracerProvider(sdktrace.WithSpanProcessor(sr))
+
+	// Setup
+	router := mux.NewRouter()
+	router.Use(otelmux.Middleware("foobar",
+		otelmux.WithTracerProvider(provider),
+		otelmux.WithSpanStartOption(
+			trace.WithAttributes(attribute.String("spanStart", "true")),
+		),
+	))
+
+	// Configure an empty handler
+	router.HandleFunc("/", func(writer http.ResponseWriter, request *http.Request) {
+	})
+	r := httptest.NewRequest("GET", "/", nil)
+	w := httptest.NewRecorder()
+	router.ServeHTTP(w, r)
+	response := w.Result()
+	assert.Equal(t, http.StatusOK, response.StatusCode)
+
+	// Verify that the attribute is set as expected
+	spans := sr.Ended()
+	require.Len(t, spans, 1)
+	span := spans[0]
+	assert.Equal(t, "/", span.Name())
+	attr := span.Attributes()
+	assert.Contains(t, attr, attribute.String("spanStart", "true"))
+}
+
+func TestWithSpanEndOptions(t *testing.T) {
+	sr := tracetest.NewSpanRecorder()
+	provider := sdktrace.NewTracerProvider(sdktrace.WithSpanProcessor(sr))
+
+	// Setup
+	router := mux.NewRouter()
+	endTime := time.Now()
+	router.Use(otelmux.Middleware("foobar",
+		otelmux.WithTracerProvider(provider),
+		otelmux.WithSpanEndOption(
+			trace.WithTimestamp(endTime),
+		),
+	))
+
+	// Configure an empty handler
+	router.HandleFunc("/", func(writer http.ResponseWriter, request *http.Request) {
+	})
+	r := httptest.NewRequest("GET", "/", nil)
+	w := httptest.NewRecorder()
+	router.ServeHTTP(w, r)
+	response := w.Result()
+	assert.Equal(t, http.StatusOK, response.StatusCode)
+
+	// Verify that the attribute is set as expected
+	spans := sr.Ended()
+	require.Len(t, spans, 1)
+	span := spans[0]
+	assert.Equal(t, "/", span.Name())
+
+	// Assert that the time set in the SpanEndOptions above matches the EndTime of the span
+	assert.Equal(t, span.EndTime(), endTime)
 }
