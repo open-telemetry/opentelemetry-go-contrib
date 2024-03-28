@@ -300,23 +300,19 @@ func BenchmarkZapLogging(b *testing.B) {
 		},
 	}
 
-	// entry := zapcore.Entry{
-	// 	Level:   zap.InfoLevel,
-	// 	Message: testBodyString,
-	// }
-	// ctx := context.Background()
+	entry := zapcore.Entry{
+		Level:   zap.InfoLevel,
+		Message: testBodyString,
+	}
 	for _, bm := range benchmarks {
 		b.Run(bm.name, func(b *testing.B) {
-			// zapcore := make([]zapcore.Core, b.N)
-			// for i := 0; i < b.N; i++ {
-			// 	zapcore[i] = NewOtelZapCore(nil)
-			// }
-			zapcore := zap.New(NewOtelZapCore())
+			zc := NewOtelZapCore()
 			b.ReportAllocs()
-			b.ResetTimer()
-			for n := 0; n < b.N; n++ {
-				zapcore.Info(testBodyString, bm.field)
-			}
+			b.RunParallel(func(pb *testing.PB) {
+				for pb.Next() {
+					zc.Write(entry, []zapcore.Field{bm.field})
+				}
+			})
 		})
 	}
 }
@@ -328,7 +324,7 @@ func BenchmarkMultipleAttr(b *testing.B) {
 		field []zapcore.Field
 	}{
 		{
-			name: "With 3 fields",
+			name: "With 10 fields",
 			field: []zapcore.Field{
 				zap.Int16("a", 1),
 				zap.String("k", "a"),
@@ -340,52 +336,25 @@ func BenchmarkMultipleAttr(b *testing.B) {
 				zap.String("k", "a"),
 				zap.String("k", "a"),
 				zap.String("k", "a"),
+				zap.ByteString("k", []byte("abc")),
 			},
 		},
-		// {name: "String",
-		// 	field: zap.String("k", "a"),
-		// },
-		// {name: "Time",
-		// 	field: zap.Time("k", time.Unix(1000, 1000)),
-		// },
-		// {name: "Binary",
-		// 	field: zap.Binary("k", []byte{1, 2}),
-		// },
-		// {name: "ByteString",
-		// 	field: zap.ByteString("k", []byte("abc")),
-		// },
-		// {name: "Array",
-		// 	field: zap.Ints("k", []int{1, 2}),
-		// },
-		// {name: "Object",
-		// 	field: zap.Object("k", users(10)),
-		// },
-		// {name: "Map",
-		// 	field: zap.Any("k", map[string]string{"a": "b"}),
-		// },
-
-		// {name: "Dict",
-		// 	field: zap.Dict("k", zap.String("a", "b")),
-		// },
 	}
 
-	// ctx := context.Background()
+	entry := zapcore.Entry{
+		Level:   zap.InfoLevel,
+		Message: testBodyString,
+	}
 	for _, bm := range benchmarks {
-		// entry := zapcore.Entry{
-		// 	Level:   zap.InfoLevel,
-		// 	Message: testBodyString,
-		// }
+
 		b.Run(bm.name, func(b *testing.B) {
-			// zapLogger := make([]*zap.Logger, b.N)
-			// for i := 0; i < b.N; i++ {
-			// 	zapLogger[i] = zap.New(NewOtelZapCore(nil))
-			// }
-			zapcore := zap.New(NewOtelZapCore(nil))
+			zc := NewOtelZapCore()
 			b.ReportAllocs()
-			b.ResetTimer()
-			for n := 0; n < b.N; n++ {
-				zapcore.Info(testBodyString, bm.field...)
-			}
+			b.RunParallel(func(pb *testing.PB) {
+				for pb.Next() {
+					zc.Write(entry, bm.field)
+				}
+			})
 		})
 	}
 }

@@ -7,7 +7,6 @@ package otelzap // import "go.opentelemetry.io/contrib/bridges/otelzap"
 
 import (
 	"encoding/json"
-	"fmt"
 	"strconv"
 	"time"
 
@@ -44,14 +43,12 @@ func (m *ObjectEncoder) AddArray(key string, v zapcore.ArrayMarshaler) error {
 	// check if possible to get array length here - to avoid zero memory allocation
 	arr := &ArrayEncoder{elems: make([]log.Value, 0)}
 	err := v.MarshalLogArray(arr)
-	fmt.Println(arr.elems[0].AsString())
 	m.cur = append(m.cur, log.Slice(key, arr.elems...))
 	return err
 }
 
 // Converts Object to logMap.
 func (m *ObjectEncoder) AddObject(k string, v zapcore.ObjectMarshaler) error {
-	fmt.Println("inside map")
 	newMap := NewObjectEncoder(2) // min
 	err := v.MarshalLogObject(newMap)
 	m.cur = append(m.cur, log.Map(k, newMap.cur...))
