@@ -16,6 +16,10 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 
 - Drop support for [Go 1.20]. (#5163)
 
+### Fixed
+
+- Custom attributes targeting metrics recorded by the `go.opentelemetry.io/contrib/instrumentation/net/http/otelhttp` are not ignored anymore. (#5129)
+
 ## [1.24.0/0.49.0/0.18.0/0.4.0] - 2024-02-23
 
 This release is the last to support [Go 1.20].
