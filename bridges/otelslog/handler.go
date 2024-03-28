@@ -4,6 +4,43 @@
 // Package otelslog provides [Handler], an [slog.Handler] implementation, that
 // can be used to bridge between the [log/slog] API and [OpenTelemetry].
 //
+// # Record Convesion
+//
+// The [slog.Record] are converted to OpenTelemetry [log.Record] in the following
+// way:
+//
+//   - Time is set as the Timestamp.
+//   - Message is set as the Body using a [log.StringValue].
+//   - Level is transformed and set as the Severity. The SeverityText is not
+//     set.
+//   - PC is dropped.
+//   - Attr are transformed and set as the Attributes.
+//
+// The Level is transformed by using the static offset to the OpenTelemetry
+// Severity types. For example:
+//
+//   - [slog.LevelDebug] is transformed to [log.SeverityDebug]
+//   - [slog.LevelInfo] is transformed to [log.SeverityInfo]
+//   - [slog.LevelWarn] is transformed to [log.SeverityWarn]
+//   - [slog.LevelError] is transformed to [log.SeverityError]
+//
+// Attribute values are transformed based on their [slog.Kind]:
+//
+//   - [slog.KindAny] are transformed to [log.StringValue]. The value will be
+//     encoded used [fmt.Sprintf].
+//   - [slog.KindBool] are transformed to [log.BoolValue] directly.
+//   - [slog.KindDuration] are transformed to [log.Int64Value] as nanoseconds.
+//   - [slog.KindFloat64] are transformed to [log.Float64Value] directly.
+//   - [slog.KindInt64] are transformed to [log.Int64Value] directly.
+//   - [slog.KindString] are transformed to [log.StringValue] directly.
+//   - [slog.KindTime] are transformed to [log.Int64Value] as nanoseconds since
+//     the Unix epoch.
+//   - [slog.KindUint64] are transformed to [log.Int64Value] using int64
+//     conversion.
+//   - [slog.KindGroup] are transformed to [log.MapValue] using appropriate
+//     transforms for each group value.
+//   - [slog.KindLogValuer] the value is resolved and then transformed.
+//
 // [OpenTelemetry]: https://opentelemetry.io/docs/concepts/signals/logs/
 package otelslog // import "go.opentelemetry.io/contrib/bridges/otelslog"
 
@@ -100,7 +137,7 @@ func WithLoggerProvider(provider log.LoggerProvider) Option {
 }
 
 // Handler is an [slog.Handler] that sends all logging records it receives to
-// OpenTelemetry.
+// OpenTelemetry. See package documentation for how conversions are made.
 type Handler struct {
 	// Ensure forward compatibility by explicitly making this not comparable.
 	noCmp [0]func() //nolint: unused  // This is indeed used.
