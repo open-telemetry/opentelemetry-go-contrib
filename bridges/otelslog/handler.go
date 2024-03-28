@@ -433,6 +433,6 @@ func convertValue(v slog.Value) log.Value {
 		// this malformed attribute as well as a panic. However, it is
 		// preferable to have user's open issue asking why their attributes
 		// have a "unhandled: " prefix than say that their code is panicking.
-		return log.StringValue(fmt.Sprintf("unhandled: %+v", v.Any()))
+		return log.StringValue(fmt.Sprintf("unhandled: (%s) %+v", v.Kind(), v.Any()))
 	}
 }
