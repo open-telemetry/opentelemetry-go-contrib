@@ -8,6 +8,7 @@ import (
 	"log/slog"
 	"testing"
 	"testing/slogtest"
+	"time"
 
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
@@ -174,4 +175,82 @@ func TestHandlerEnabled(t *testing.T) {
 
 	ctx = context.WithValue(ctx, enableKey, true)
 	assert.True(t, h.Enabled(ctx, slog.LevelDebug), "context not passed")
+}
+
+func BenchmarkHandler(b *testing.B) {
+	var (
+		h   slog.Handler
+		err error
+	)
+
+	attrs := []slog.Attr{slog.Any("Key", "Value")}
+	record := slog.NewRecord(time.Now(), slog.LevelInfo, "body", 0)
+	ctx := context.Background()
+
+	b.Run("Handle", func(b *testing.B) {
+		handlers := make([]*Handler, b.N)
+		for i := range handlers {
+			handlers[i] = NewHandler()
+		}
+
+		b.ReportAllocs()
+		b.ResetTimer()
+		for n := 0; n < b.N; n++ {
+			err = handlers[n].Handle(ctx, record)
+		}
+	})
+
+	b.Run("WithAttrs", func(b *testing.B) {
+		handlers := make([]*Handler, b.N)
+		for i := range handlers {
+			handlers[i] = NewHandler()
+		}
+
+		b.ReportAllocs()
+		b.ResetTimer()
+		for n := 0; n < b.N; n++ {
+			h = handlers[n].WithAttrs(attrs)
+		}
+	})
+
+	b.Run("WithGroup", func(b *testing.B) {
+		handlers := make([]*Handler, b.N)
+		for i := range handlers {
+			handlers[i] = NewHandler()
+		}
+
+		b.ReportAllocs()
+		b.ResetTimer()
+		for n := 0; n < b.N; n++ {
+			h = handlers[n].WithGroup("group")
+		}
+	})
+
+	b.Run("WithGroup.WithAttrs", func(b *testing.B) {
+		handlers := make([]*Handler, b.N)
+		for i := range handlers {
+			handlers[i] = NewHandler()
+		}
+
+		b.ReportAllocs()
+		b.ResetTimer()
+		for n := 0; n < b.N; n++ {
+			h = handlers[n].WithGroup("group").WithAttrs(attrs)
+		}
+	})
+
+	b.Run("(WithGroup.WithAttrs).Handle", func(b *testing.B) {
+		handlers := make([]slog.Handler, b.N)
+		for i := range handlers {
+			handlers[i] = NewHandler().WithGroup("group").WithAttrs(attrs)
+		}
+
+		b.ReportAllocs()
+		b.ResetTimer()
+		for n := 0; n < b.N; n++ {
+			err = handlers[n].Handle(ctx, record)
+		}
+	})
+
+	_, _ = h, err
 }
