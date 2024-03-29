@@ -10,8 +10,9 @@ import (
 	"strconv"
 	"time"
 
-	"go.opentelemetry.io/otel/log"
 	"go.uber.org/zap/zapcore"
+
+	"go.opentelemetry.io/otel/log"
 )
 
 // this file implements object and array encoder - similar to memory encoder by zapcore.

@@ -257,7 +257,7 @@ func value2Result(v log.Value) any {
 	return nil
 }
 
-// Benchmark on different Field types
+// Benchmark on different Field types.
 func BenchmarkZapWrite(b *testing.B) {
 	benchmarks := []struct {
 		name  string
@@ -315,7 +315,7 @@ func BenchmarkZapWrite(b *testing.B) {
 	}
 }
 
-// Benchmark with multiple Fields
+// Benchmark with multiple Fields.
 func BenchmarkMultipleFields(b *testing.B) {
 	benchmarks := []struct {
 		name  string
