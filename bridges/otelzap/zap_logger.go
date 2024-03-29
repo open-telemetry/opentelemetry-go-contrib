@@ -1,7 +1,7 @@
 // Copyright The OpenTelemetry Authors
 // SPDX-License-Identifier: Apache-2.0
 
-// Package otelzap provides a bridge between the ["go.uber.org/zap"] and
+// Package otelzap provides a bridge between the [go.uber.org/zap] and
 // OpenTelemetry logging.
 package otelzap // import "go.opentelemetry.io/contrib/bridges/otelzap"
 
