@@ -133,7 +133,7 @@ func (h *middleware) serveHTTP(w http.ResponseWriter, r *http.Request, next http
 
 	ctx := h.propagators.Extract(r.Context(), propagation.HeaderCarrier(r.Header))
 	opts := []trace.SpanStartOption{
-		trace.WithAttributes(h.traceSemconv.TraceRequest(h.server, r)...),
+		trace.WithAttributes(h.traceSemconv.RequestTraceAttrs(h.server, r)...),
 	}
 
 	opts = append(opts, h.spanStartOptions...)
@@ -212,11 +212,11 @@ func (h *middleware) serveHTTP(w http.ResponseWriter, r *http.Request, next http
 	next.ServeHTTP(w, r.WithContext(ctx))
 
 	span.SetStatus(semconv.ServerStatus(rww.statusCode))
-	span.SetAttributes(h.traceSemconv.TraceResponse(semconv.ResponseTelemetry{
+	span.SetAttributes(h.traceSemconv.ResponseTraceAttrs(semconv.ResponseTelemetry{
 		StatusCode: rww.statusCode,
-		ReadBytes:  int(bw.read.Load()),
+		ReadBytes:  bw.read.Load(),
 		ReadError:  bw.err,
-		WriteBytes: int(rww.written),
+		WriteBytes: rww.written,
 		WriteError: rww.err,
 	})...)
 

@@ -27,7 +27,7 @@ type oldHTTPServer struct{}
 
 var _ HTTPServer = oldHTTPServer{}
 
-// TraceRequest returns trace attributes for an HTTP request received by a
+// RequestTraceAttrs returns trace attributes for an HTTP request received by a
 // server.
 //
 // The server must be the primary server name if it is known. For example this
@@ -43,25 +43,25 @@ var _ HTTPServer = oldHTTPServer{}
 //
 // If the primary server name is not known, server should be an empty string.
 // The req Host will be used to determine the server instead.
-func (o oldHTTPServer) TraceRequest(server string, req *http.Request) []attribute.KeyValue {
+func (o oldHTTPServer) RequestTraceAttrs(server string, req *http.Request) []attribute.KeyValue {
 	return semconvutil.HTTPServerRequest(server, req)
 }
 
-// TraceRequest returns trace attributes for telemetry from an HTTP response.
+// ResponseTraceAttrs returns trace attributes for telemetry from an HTTP response.
 //
 // If any of the fields in the ResponseTelemetry are not set the attribute will be omitted.
-func (o oldHTTPServer) TraceResponse(resp ResponseTelemetry) []attribute.KeyValue {
+func (o oldHTTPServer) ResponseTraceAttrs(resp ResponseTelemetry) []attribute.KeyValue {
 	attributes := []attribute.KeyValue{}
 
 	if resp.ReadBytes > 0 {
-		attributes = append(attributes, semconv.HTTPRequestContentLength(resp.ReadBytes))
+		attributes = append(attributes, semconv.HTTPRequestContentLength(int(resp.ReadBytes)))
 	}
 	if resp.ReadError != nil && resp.ReadError != io.EOF {
 		// This is not in the semantic conventions, but is historically provided
 		attributes = append(attributes, attribute.String("http.read_error", resp.ReadError.Error()))
 	}
 	if resp.WriteBytes > 0 {
-		attributes = append(attributes, semconv.HTTPResponseContentLength(resp.WriteBytes))
+		attributes = append(attributes, semconv.HTTPResponseContentLength(int(resp.WriteBytes)))
 	}
 	if resp.StatusCode > 0 {
 		attributes = append(attributes, semconv.HTTPStatusCode(resp.StatusCode))

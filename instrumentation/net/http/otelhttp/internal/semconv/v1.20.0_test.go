@@ -42,7 +42,7 @@ func TestV120TraceRequest(t *testing.T) {
 }
 
 func TestV120TraceResponse(t *testing.T) {
-	// Anything but "http" or "http/dup" works
+	// Anything but "http" or "http/dup" works.
 	t.Setenv("OTEL_HTTP_CLIENT_COMPATIBILITY_MODE", "old")
 	serv := NewHTTPServer()
 	want := []attribute.KeyValue{

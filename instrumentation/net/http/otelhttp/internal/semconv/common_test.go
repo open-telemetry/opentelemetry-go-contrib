@@ -74,13 +74,13 @@ func testTraceRequest(t *testing.T, serv HTTPServer, want func(testServerReq) []
 		clientIP:   clientIP,
 	}
 
-	assert.ElementsMatch(t, want(srvReq), serv.TraceRequest("", req))
+	assert.ElementsMatch(t, want(srvReq), serv.RequestTraceAttrs("", req))
 }
 
 func testTraceResponse(t *testing.T, serv HTTPServer, want []attribute.KeyValue) {
 	t.Helper()
 	emptyResp := ResponseTelemetry{}
-	assert.Len(t, serv.TraceResponse(emptyResp), 0)
+	assert.Len(t, serv.ResponseTraceAttrs(emptyResp), 0)
 
 	resp := ResponseTelemetry{
 		StatusCode: 200,
@@ -89,5 +89,5 @@ func testTraceResponse(t *testing.T, serv HTTPServer, want []attribute.KeyValue)
 		WriteBytes: 802,
 		WriteError: fmt.Errorf("write error"),
 	}
-	assert.ElementsMatch(t, want, serv.TraceResponse(resp))
+	assert.ElementsMatch(t, want, serv.ResponseTraceAttrs(resp))
 }
