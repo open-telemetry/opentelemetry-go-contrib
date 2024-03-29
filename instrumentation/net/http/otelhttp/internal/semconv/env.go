@@ -71,10 +71,10 @@ var warnOnce = sync.Once{}
 func NewHTTPServer() HTTPServer {
 	env := strings.ToLower(os.Getenv("OTEL_HTTP_CLIENT_COMPATIBILITY_MODE"))
 	switch env {
-	case "http":
-		return newHTTPServer{}
-	case "http/dup":
-		return dupHTTPServer{}
+	// case "http":
+	// 	return newHTTPServer{}
+	// case "http/dup":
+	// 	return dupHTTPServer{}
 	default:
 		warnOnce.Do(func() {
 			otel.Handle(errors.New("deprecated: old semantic conventions are being used. Use the environment variable OTEL_HTTP_CLIENT_COMPATIBILITY_MODE to opt into the new conventions. Setting it to `http/dup` will provide combined old-and-new attributes. Setting it to `http` will switch directly to the new attributes. This will be removed in a future release"))
