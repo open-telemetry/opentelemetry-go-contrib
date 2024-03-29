@@ -42,6 +42,7 @@ func (o *Core) Enabled(level zapcore.Level) bool {
 	r := log.Record{}
 	r.SetSeverity(getOtelLevel(level))
 
+	// TODO:
 	// check how to propagate context
 	ctx := context.Background()
 	return o.logger.Enabled(ctx, r)
@@ -84,6 +85,7 @@ func (o *Core) Write(ent zapcore.Entry, fields []zapcore.Field) error {
 		r.AddAttributes(addattr...)
 	}
 
+	// TODO
 	// need to check how to propagate context here
 	ctx := context.Background()
 	o.logger.Emit(ctx, r)

@@ -24,6 +24,10 @@ import (
 var (
 	testBodyString = "log message"
 	testSeverity   = log.SeverityInfo
+	entry          = zapcore.Entry{
+		Level:   zap.InfoLevel,
+		Message: testBodyString,
+	}
 )
 
 type spyLogger struct {
@@ -253,10 +257,8 @@ func value2Result(v log.Value) any {
 	return nil
 }
 
-// benchmark logging
-// complex attributes take longer time.
-func BenchmarkZapLogging(b *testing.B) {
-
+// Benchmark on different Field types
+func BenchmarkZapWrite(b *testing.B) {
 	benchmarks := []struct {
 		name  string
 		field zapcore.Field
@@ -300,10 +302,6 @@ func BenchmarkZapLogging(b *testing.B) {
 		},
 	}
 
-	entry := zapcore.Entry{
-		Level:   zap.InfoLevel,
-		Message: testBodyString,
-	}
 	for _, bm := range benchmarks {
 		b.Run(bm.name, func(b *testing.B) {
 			zc := NewOtelZapCore()
@@ -317,8 +315,8 @@ func BenchmarkZapLogging(b *testing.B) {
 	}
 }
 
-func BenchmarkMultipleAttr(b *testing.B) {
-	// testBody := "log message"
+// Benchmark with multiple Fields
+func BenchmarkMultipleFields(b *testing.B) {
 	benchmarks := []struct {
 		name  string
 		field []zapcore.Field
@@ -341,12 +339,7 @@ func BenchmarkMultipleAttr(b *testing.B) {
 		},
 	}
 
-	entry := zapcore.Entry{
-		Level:   zap.InfoLevel,
-		Message: testBodyString,
-	}
 	for _, bm := range benchmarks {
-
 		b.Run(bm.name, func(b *testing.B) {
 			zc := NewOtelZapCore()
 			b.ReportAllocs()

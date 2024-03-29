@@ -1,4 +1,7 @@
-package otelzap
+// Copyright The OpenTelemetry Authors
+// SPDX-License-Identifier: Apache-2.0
+
+package otelzap // import "go.opentelemetry.io/contrib/bridges/otelzap"
 
 import (
 	"go.opentelemetry.io/otel/log"
