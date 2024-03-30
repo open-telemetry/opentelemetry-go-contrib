@@ -2,6 +2,7 @@
 // SPDX-License-Identifier: Apache-2.0
 
 // Copyright (c) 2016-2017 Uber Technologies, Inc.
+
 package otelzap
 
 import (
@@ -60,17 +61,15 @@ type addr struct {
 func TestZapCore(t *testing.T) {
 	spy := &spyLogger{}
 	logger := zap.New(NewTestOtelLogger(spy))
-	// logger.Info(testBodyString, zap.Any("key", []string{"1", "2"}))
-	logger.Info(testBodyString, zap.Any("key", &addr{IP: "ip", Port: 1}))
-	a := []interface{}{"1", "2"}
-	// logger.Info("foo", zap.Any("bar", [][]string{{"a", "b"}, {"c", "d"}}))
+	logger.Info(testBodyString, zap.Any("key", []string{"1", "2"}))
+	wantVal := []interface{}{"1", "2"}
+
 	assert.Equal(t, testBodyString, spy.Record.Body().AsString())
 	assert.Equal(t, testSeverity, spy.Record.Severity())
 	assert.Equal(t, 1, spy.Record.AttributesLen())
 	spy.Record.WalkAttributes(func(kv log.KeyValue) bool {
-		assert.Equal(t, "b", string(kv.Key))
-		assert.Equal(t, a, value2Result(kv.Value))
-
+		assert.Equal(t, "key", string(kv.Key))
+		assert.Equal(t, wantVal, value2Result(kv.Value))
 		return true
 	})
 
@@ -144,9 +143,10 @@ func (eobj *errObj) Error() string {
 }
 
 // NOTE:
-// int, int8, int16, int32 types are converted to int64 by Otel's log
-// Complex types are converted to string of complex values
+// int, int8, int16, int32 types are converted to int64
+// Complex128 are converted to string of complex values
 // Uint are converted to int64.
+// Reflect Types are converted to JSON string
 func TestFields(t *testing.T) {
 	tests := []struct {
 		t     zapcore.FieldType
@@ -304,7 +304,7 @@ func BenchmarkZapWrite(b *testing.B) {
 
 	for _, bm := range benchmarks {
 		b.Run(bm.name, func(b *testing.B) {
-			zc := NewOtelZapCore()
+			zc := NewOTelZapCore()
 			b.ReportAllocs()
 			b.RunParallel(func(pb *testing.PB) {
 				for pb.Next() {
@@ -341,7 +341,7 @@ func BenchmarkMultipleFields(b *testing.B) {
 
 	for _, bm := range benchmarks {
 		b.Run(bm.name, func(b *testing.B) {
-			zc := NewOtelZapCore()
+			zc := NewOTelZapCore()
 			b.ReportAllocs()
 			b.RunParallel(func(pb *testing.PB) {
 				for pb.Next() {

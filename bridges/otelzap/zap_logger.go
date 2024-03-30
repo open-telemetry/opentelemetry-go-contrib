@@ -7,6 +7,7 @@ package otelzap // import "go.opentelemetry.io/contrib/bridges/otelzap"
 
 import (
 	"context"
+	"slices"
 
 	"go.uber.org/zap/zapcore"
 
@@ -29,7 +30,7 @@ var _ zapcore.Core = (*Core)(nil)
 
 // this function creates a new zapcore.Core that can be used with zap.New()
 // this instance will translate zap logs to opentelemetry logs and export them.
-func NewOtelZapCore(opts ...Option) zapcore.Core {
+func NewOTelZapCore(opts ...Option) zapcore.Core {
 	cfg := newConfig(opts)
 	return &Core{
 		logger: cfg.logger(),
@@ -95,7 +96,7 @@ func (o *Core) Write(ent zapcore.Entry, fields []zapcore.Field) error {
 func (o *Core) clone() *Core {
 	return &Core{
 		logger: o.logger,
-		attr:   o.attr,
+		attr:   slices.Clone(o.attr),
 	}
 }
 
