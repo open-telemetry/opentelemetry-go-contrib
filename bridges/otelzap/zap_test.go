@@ -83,6 +83,28 @@ func TestZapCore(t *testing.T) {
 	})
 }
 
+func TestGetOtelLevel(t *testing.T) {
+	tests := []struct {
+		level       zapcore.Level
+		expectedSev log.Severity
+	}{
+		{zapcore.DebugLevel, log.SeverityDebug}, // Expected value for DebugLevel
+		{zapcore.InfoLevel, log.SeverityInfo},   // Expected value for InfoLevel
+		{zapcore.WarnLevel, log.SeverityWarn},   // Expected value for WarnLevel
+		{zapcore.ErrorLevel, log.SeverityError}, // Expected value for ErrorLevel
+		// {zapcore.DPanicLevel, log.SeverityCritical},  // Expected value for DPanicLevel
+		// {zapcore.PanicLevel, log.SeverityCritical},   // Expected value for PanicLevel
+		{zapcore.FatalLevel, log.SeverityFatal}, // Expected value for FatalLevel
+	}
+
+	for _, test := range tests {
+		result := getOtelLevel(test.level)
+		if result != test.expectedSev {
+			t.Errorf("For level %v, expected %v but got %v", test.level, test.expectedSev, result)
+		}
+	}
+}
+
 // Copied from field_test.go. https://github.com/uber-go/zap/blob/b39f8b6b6a44d8371a87610be50cce58eeeaabcb/zapcore/field_test.go#L131
 type users int
 

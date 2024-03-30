@@ -111,10 +111,24 @@ func getAttr(fields []zapcore.Field) []log.KeyValue {
 
 // converts zap level to Otel's log level.
 func getOtelLevel(level zapcore.Level) log.Severity {
-	// should confirm this
-	// the logic here is that
-	// zapcore.Debug = -1 & logger.Debug = 3
-	// zapcore.Info = 0   & logger.Info = 7 and so on
-	sevOffset := 4*(level+2) + 1
-	return log.Severity(level + sevOffset)
+	switch level {
+	case zapcore.DebugLevel:
+		return log.SeverityDebug
+	case zapcore.InfoLevel:
+		return log.SeverityInfo
+	case zapcore.WarnLevel:
+		return log.SeverityWarn
+	case zapcore.ErrorLevel:
+		return log.SeverityError
+	case zapcore.DPanicLevel:
+		// how to map this?
+		return log.SeverityDebug //dummy
+	case zapcore.PanicLevel:
+		// how to map this?
+		return log.SeverityDebug //dummy
+	case zapcore.FatalLevel:
+		return log.SeverityFatal
+	default:
+		return log.SeverityUndefined
+	}
 }
