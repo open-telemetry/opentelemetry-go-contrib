@@ -1,19 +1,5 @@
-// Code created by gotmpl. DO NOT MODIFY.
-// source: internal/shared/semconv/env.go.tmpl
-
 // Copyright The OpenTelemetry Authors
-//
-// Licensed under the Apache License, Version 2.0 (the "License");
-// you may not use this file except in compliance with the License.
-// You may obtain a copy of the License at
-//
-//     http://www.apache.org/licenses/LICENSE-2.0
-//
-// Unless required by applicable law or agreed to in writing, software
-// distributed under the License is distributed on an "AS IS" BASIS,
-// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-// See the License for the specific language governing permissions and
-// limitations under the License.
+// SPDX-License-Identifier: Apache-2.0
 
 package semconv // import "go.opentelemetry.io/contrib/instrumentation/net/http/otelhttp/internal/semconv"
 
@@ -64,18 +50,9 @@ type HTTPServer interface {
 // var warnOnce = sync.Once{}
 
 func NewHTTPServer() HTTPServer {
-	// env := strings.ToLower(os.Getenv("OTEL_HTTP_CLIENT_COMPATIBILITY_MODE"))
-	// switch env {
-	// case "http":
-	// 	return newHTTPServer{}
-	// case "http/dup":
-	// 	return dupHTTPServer{}
-	// default:
-	// 	warnOnce.Do(func() {
-	// 		otel.Handle(errors.New("deprecated: old semantic conventions are being used. Use the environment variable OTEL_HTTP_CLIENT_COMPATIBILITY_MODE to opt into the new conventions. Setting it to `http/dup` will provide combined old-and-new attributes. Setting it to `http` will switch directly to the new attributes. This will be removed in a future release"))
-	// 	})
+	// TODO (#5331): Detect version based on environment variable OTEL_HTTP_CLIENT_COMPATIBILITY_MODE.
+	// TODO (#5331): Add warning of use of a deprecated version of Semantic Versions.
 	return oldHTTPServer{}
-	// }
 }
 
 // ServerStatus returns a span status code and message for an HTTP status code
