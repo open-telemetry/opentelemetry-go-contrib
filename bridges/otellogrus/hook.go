@@ -37,6 +37,44 @@ func (h *Hook) Levels() []logrus.Level {
 	return h.levels
 }
 
-func (h *Hook) Fire(*logrus.Entry) error {
+func (h *Hook) Fire(entry *logrus.Entry) error {
+	ctx := entry.Context
+	h.logger.Emit(ctx, h.convertEntry(entry))
 	return nil
+}
+
+func (h *Hook) convertEntry(e *logrus.Entry) log.Record {
+	var record log.Record
+	record.SetTimestamp(e.Time)
+	record.SetBody(log.StringValue(e.Message))
+
+	const sevOffset = logrus.Level(log.SeverityDebug) - logrus.DebugLevel
+	record.SetSeverity(log.Severity(e.Level + sevOffset))
+
+	/*if h.attrs.Len() > 0 {
+		record.AddAttributes(h.attrs.KeyValues()...)
+	}
+
+	n := r.NumAttrs()
+	if h.group != nil {
+		if n > 0 {
+			buf, free := getKVBuffer()
+			defer free()
+			r.Attrs(buf.AddAttr)
+			record.AddAttributes(h.group.KeyValue(buf.KeyValues()...))
+		} else {
+			// A Handler should not output groups if there are no attributes.
+			g := h.group.NextNonEmpty()
+			if g != nil {
+				record.AddAttributes(g.KeyValue())
+			}
+		}
+	} else if n > 0 {
+		buf, free := getKVBuffer()
+		defer free()
+		r.Attrs(buf.AddAttr)
+		record.AddAttributes(buf.KeyValues()...)
+	}*/
+
+	return record
 }

@@ -7,6 +7,8 @@ import (
 
 	"github.com/sirupsen/logrus"
 	"github.com/stretchr/testify/assert"
+	"go.opentelemetry.io/otel/log"
+	sdklog "go.opentelemetry.io/otel/sdk/log"
 )
 
 func TestNewHook(t *testing.T) {
@@ -35,6 +37,28 @@ func TestHookLevels(t *testing.T) {
 		t.Run(tt.name, func(t *testing.T) {
 			levels := NewHook(tt.options...).Levels()
 			assert.Equal(t, tt.expectedLevels, levels)
+		})
+	}
+}
+
+func TestHookFire(t *testing.T) {
+	for _, tt := range []struct {
+		name  string
+		entry *logrus.Entry
+
+		expectedRecord log.Record
+		expectedErr    error
+	}{
+		{
+			name:  "emits an empty log entry",
+			entry: &logrus.Entry{},
+		},
+	} {
+		t.Run(tt.name, func(t *testing.T) {
+			lp := sdklog.NewLoggerProvider()
+
+			err := NewHook(WithLoggerProvider(lp)).Fire(tt.entry)
+			assert.Equal(t, tt.expectedErr, err)
 		})
 	}
 }
