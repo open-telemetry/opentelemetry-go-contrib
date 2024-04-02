@@ -121,13 +121,11 @@ func getOtelLevel(level zapcore.Level) log.Severity {
 	case zapcore.ErrorLevel:
 		return log.SeverityError
 	case zapcore.DPanicLevel:
-		// how to map this?
-		return log.SeverityDebug //dummy
+		return log.SeverityFatal1
 	case zapcore.PanicLevel:
-		// how to map this?
-		return log.SeverityDebug //dummy
+		return log.SeverityFatal2
 	case zapcore.FatalLevel:
-		return log.SeverityFatal
+		return log.SeverityFatal3
 	default:
 		return log.SeverityUndefined
 	}

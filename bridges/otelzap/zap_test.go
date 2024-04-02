@@ -6,8 +6,6 @@
 package otelzap
 
 import (
-	"context"
-	"errors"
 	"fmt"
 	"math"
 	"net/url"
@@ -19,7 +17,6 @@ import (
 	"go.uber.org/zap/zapcore"
 
 	"go.opentelemetry.io/otel/log"
-	"go.opentelemetry.io/otel/log/embedded"
 )
 
 var (
@@ -31,52 +28,26 @@ var (
 	}
 )
 
-type spyLogger struct {
-	embedded.Logger
-	Context context.Context
-	Record  log.Record
-}
-
-func (l *spyLogger) Emit(ctx context.Context, r log.Record) {
-	l.Context = ctx
-	l.Record = r
-}
-
-func (l *spyLogger) Enabled(ctx context.Context, r log.Record) bool {
-	return true
-}
-
-func NewTestOtelLogger(l log.Logger) zapcore.Core {
-	return &Core{
-		logger: l,
-	}
-}
-
-type addr struct {
-	IP   string
-	Port int
-}
-
 // Basic Logger Test and Child Logger test.
 func TestZapCore(t *testing.T) {
-	spy := &spyLogger{}
-	logger := zap.New(NewTestOtelLogger(spy))
-	logger.Info(testBodyString, zap.Any("key", []string{"1", "2"}))
-	wantVal := []interface{}{"1", "2"}
+	rec := new(recorder)
+	logger := zap.New(NewOTelZapCore(WithLoggerProvider(rec)))
+	logger.Info(testBodyString, zap.String("key", "testValue"))
 
-	assert.Equal(t, testBodyString, spy.Record.Body().AsString())
-	assert.Equal(t, testSeverity, spy.Record.Severity())
-	assert.Equal(t, 1, spy.Record.AttributesLen())
-	spy.Record.WalkAttributes(func(kv log.KeyValue) bool {
+	assert.Equal(t, testBodyString, rec.Record.Body().AsString())
+	assert.Equal(t, testSeverity, rec.Record.Severity())
+	assert.Equal(t, 1, rec.Record.AttributesLen())
+	rec.Record.WalkAttributes(func(kv log.KeyValue) bool {
 		assert.Equal(t, "key", string(kv.Key))
-		assert.Equal(t, wantVal, value2Result(kv.Value))
+		fmt.Println(kv.Value)
+		assert.Equal(t, "testValue", value2Result(kv.Value))
 		return true
 	})
 
-	// test child logger
+	// test child logger with accumulated fields
 	childlogger := logger.With(zap.String("workplace", "otel"))
 	childlogger.Info(testBodyString)
-	spy.Record.WalkAttributes(func(kv log.KeyValue) bool {
+	rec.Record.WalkAttributes(func(kv log.KeyValue) bool {
 		assert.Equal(t, "workplace", string(kv.Key))
 		assert.Equal(t, "otel", kv.Value.AsString())
 		return true
@@ -88,13 +59,13 @@ func TestGetOtelLevel(t *testing.T) {
 		level       zapcore.Level
 		expectedSev log.Severity
 	}{
-		{zapcore.DebugLevel, log.SeverityDebug}, // Expected value for DebugLevel
-		{zapcore.InfoLevel, log.SeverityInfo},   // Expected value for InfoLevel
-		{zapcore.WarnLevel, log.SeverityWarn},   // Expected value for WarnLevel
-		{zapcore.ErrorLevel, log.SeverityError}, // Expected value for ErrorLevel
-		// {zapcore.DPanicLevel, log.SeverityCritical},  // Expected value for DPanicLevel
-		// {zapcore.PanicLevel, log.SeverityCritical},   // Expected value for PanicLevel
-		{zapcore.FatalLevel, log.SeverityFatal}, // Expected value for FatalLevel
+		{zapcore.DebugLevel, log.SeverityDebug},   // Expected value for DebugLevel
+		{zapcore.InfoLevel, log.SeverityInfo},     // Expected value for InfoLevel
+		{zapcore.WarnLevel, log.SeverityWarn},     // Expected value for WarnLevel
+		{zapcore.ErrorLevel, log.SeverityError},   // Expected value for ErrorLevel
+		{zapcore.DPanicLevel, log.SeverityFatal1}, // Expected value for DPanicLevel
+		{zapcore.PanicLevel, log.SeverityFatal2},  // Expected value for PanicLevel
+		{zapcore.FatalLevel, log.SeverityFatal3},  // Expected value for FatalLevel
 	}
 
 	for _, test := range tests {
@@ -106,63 +77,6 @@ func TestGetOtelLevel(t *testing.T) {
 }
 
 // Copied from field_test.go. https://github.com/uber-go/zap/blob/b39f8b6b6a44d8371a87610be50cce58eeeaabcb/zapcore/field_test.go#L131
-type users int
-
-func (u users) String() string {
-	return fmt.Sprintf("%d users", int(u))
-}
-
-func (u users) MarshalLogObject(enc zapcore.ObjectEncoder) error {
-	if int(u) < 0 {
-		return errors.New("too few users")
-	}
-	enc.AddInt("users", int(u))
-	return nil
-}
-
-func (u users) MarshalLogArray(enc zapcore.ArrayEncoder) error {
-	if int(u) < 0 {
-		return errors.New("too few users")
-	}
-	for i := 0; i < int(u); i++ {
-		enc.AppendString("user")
-	}
-	return nil
-}
-
-type obj struct {
-	kind int
-}
-
-func (o *obj) String() string {
-	if o == nil {
-		return "nil obj"
-	}
-
-	if o.kind == 1 {
-		panic("panic with string")
-	} else if o.kind == 2 {
-		panic(errors.New("panic with error"))
-	} else if o.kind == 3 {
-		// panic with an arbitrary object that causes a panic itself
-		// when being converted to a string
-		panic((*url.URL)(nil))
-	}
-
-	return "obj"
-}
-
-type errObj struct {
-	kind   int
-	errMsg string
-}
-
-func (eobj *errObj) Error() string {
-	if eobj.kind == 1 {
-		panic("panic in Error() method")
-	}
-	return eobj.errMsg
-}
 
 // NOTE:
 // int, int8, int16, int32 types are converted to int64
@@ -224,6 +138,7 @@ func TestFields(t *testing.T) {
 	}
 }
 
+// copied from field_test.go https://github.com/uber-go/zap/blob/b39f8b6b6a44d8371a87610be50cce58eeeaabcb/zapcore/field_test.go#L184
 func TestInlineMarshaler(t *testing.T) {
 	enc := NewObjectEncoder(3)
 
@@ -248,35 +163,6 @@ func TestInlineMarshaler(t *testing.T) {
 			"users": int64(11),
 		},
 	}, gotVal)
-}
-
-// converts value to result.
-func value2Result(v log.Value) any {
-	switch v.Kind() {
-	case log.KindBool:
-		return v.AsBool()
-	case log.KindFloat64:
-		return v.AsFloat64()
-	case log.KindInt64:
-		return v.AsInt64()
-	case log.KindString:
-		return v.AsString()
-	case log.KindBytes:
-		return v.AsBytes()
-	case log.KindSlice:
-		var s []any
-		for _, val := range v.AsSlice() {
-			s = append(s, value2Result(val))
-		}
-		return s
-	case log.KindMap:
-		m := make(map[string]any)
-		for _, val := range v.AsMap() {
-			m[val.Key] = value2Result(val.Value)
-		}
-		return m
-	}
-	return nil
 }
 
 // Benchmark on different Field types.
