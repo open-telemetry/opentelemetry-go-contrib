@@ -54,7 +54,7 @@ func TestZapCore(t *testing.T) {
 	})
 }
 
-func TestGetOtelLevel(t *testing.T) {
+func TestGetOTelLevel(t *testing.T) {
 	tests := []struct {
 		level       zapcore.Level
 		expectedSev log.Severity
@@ -66,6 +66,7 @@ func TestGetOtelLevel(t *testing.T) {
 		{zapcore.DPanicLevel, log.SeverityFatal1}, // Expected value for DPanicLevel
 		{zapcore.PanicLevel, log.SeverityFatal2},  // Expected value for PanicLevel
 		{zapcore.FatalLevel, log.SeverityFatal3},  // Expected value for FatalLevel
+		{zapcore.InvalidLevel, log.SeverityUndefined},
 	}
 
 	for _, test := range tests {
