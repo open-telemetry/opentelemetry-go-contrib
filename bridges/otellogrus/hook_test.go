@@ -53,6 +53,15 @@ func TestHookFire(t *testing.T) {
 			name:  "emits an empty log entry",
 			entry: &logrus.Entry{},
 		},
+		{
+			name: "emits a log entry with data",
+			entry: &logrus.Entry{
+				Data: logrus.Fields{
+					"hello":  "world",
+					"answer": 42,
+				},
+			},
+		},
 	} {
 		t.Run(tt.name, func(t *testing.T) {
 			lp := sdklog.NewLoggerProvider()

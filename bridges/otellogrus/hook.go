@@ -9,6 +9,8 @@
 package otellogrus // import "go.opentelemetry.io/contrib/bridges/otellogrus"
 
 import (
+	"fmt"
+
 	"github.com/sirupsen/logrus"
 
 	"go.opentelemetry.io/otel/log"
@@ -50,31 +52,18 @@ func (h *Hook) convertEntry(e *logrus.Entry) log.Record {
 
 	const sevOffset = logrus.Level(log.SeverityDebug) - logrus.DebugLevel
 	record.SetSeverity(log.Severity(e.Level + sevOffset))
-
-	/*if h.attrs.Len() > 0 {
-		record.AddAttributes(h.attrs.KeyValues()...)
-	}
-
-	n := r.NumAttrs()
-	if h.group != nil {
-		if n > 0 {
-			buf, free := getKVBuffer()
-			defer free()
-			r.Attrs(buf.AddAttr)
-			record.AddAttributes(h.group.KeyValue(buf.KeyValues()...))
-		} else {
-			// A Handler should not output groups if there are no attributes.
-			g := h.group.NextNonEmpty()
-			if g != nil {
-				record.AddAttributes(g.KeyValue())
-			}
-		}
-	} else if n > 0 {
-		buf, free := getKVBuffer()
-		defer free()
-		r.Attrs(buf.AddAttr)
-		record.AddAttributes(buf.KeyValues()...)
-	}*/
+	record.AddAttributes(convertFields(e.Data)...)
 
 	return record
+}
+
+func convertFields(fields logrus.Fields) []log.KeyValue {
+	kvs := make([]log.KeyValue, len(fields))
+
+	i := 0
+	for k, v := range fields {
+		kvs[i] = log.String(k, fmt.Sprintf("%s", v))
+		i++
+	}
+	return kvs
 }
