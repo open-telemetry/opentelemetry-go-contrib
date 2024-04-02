@@ -74,8 +74,11 @@ module-sets:
     version: v0.4.0
     modules:
       - go.opentelemetry.io/contrib/config
+  experimental-bridge:
+    version: v0.0.1
+    modules:
+      - go.opentelemetry.io/contrib/bridges/otelslog
 excluded-modules:
-  - go.opentelemetry.io/contrib/bridges/slog
   - go.opentelemetry.io/contrib/bridges/otelzap
   - go.opentelemetry.io/contrib/instrgen
   - go.opentelemetry.io/contrib/instrgen/driver
