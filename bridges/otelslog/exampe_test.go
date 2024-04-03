@@ -12,6 +12,6 @@ func Example() {
 	// Use a working LoggerProvider implementation instead e.g. using go.opentelemetry.io/otel/sdk/log.
 	provider := noop.NewLoggerProvider()
 
-	// Create an *slog.Logger with *otelslog.Handler and use it in your application.
+	// Create an *slog.Logger and use it in your application.
 	otelslog.NewLogger(otelslog.WithLoggerProvider(provider))
 }
