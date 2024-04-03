@@ -4,8 +4,6 @@
 package otelslog_test
 
 import (
-	"log/slog"
-
 	"go.opentelemetry.io/contrib/bridges/otelslog"
 	"go.opentelemetry.io/otel/log/noop"
 )
