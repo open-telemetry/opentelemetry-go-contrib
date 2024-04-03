@@ -1,4 +1,7 @@
-package otelzap
+// Copyright The OpenTelemetry Authors
+// SPDX-License-Identifier: Apache-2.0
+
+package otelzap // import "go.opentelemetry.io/contrib/bridges/otelzap"
 
 import (
 	"context"
@@ -6,10 +9,11 @@ import (
 	"fmt"
 	"net/url"
 
+	"go.uber.org/zap/zapcore"
+
 	"go.opentelemetry.io/otel/log"
 	"go.opentelemetry.io/otel/log/embedded"
 	"go.opentelemetry.io/otel/sdk/instrumentation"
-	"go.uber.org/zap/zapcore"
 )
 
 // embeddedLogger is a type alias so the embedded.Logger type doesn't conflict
@@ -55,7 +59,7 @@ func (r *recorder) Emit(_ context.Context, record log.Record) {
 	r.Record = record
 }
 
-// To create dummy object/array for zapcore
+// To create dummy object/array for zapcore.
 type users int
 
 func (u users) String() string {

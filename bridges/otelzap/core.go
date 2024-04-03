@@ -9,6 +9,7 @@ import (
 	"context"
 	"slices"
 
+	"go.uber.org/zap"
 	"go.uber.org/zap/zapcore"
 
 	"go.opentelemetry.io/otel/log"
@@ -23,6 +24,7 @@ const (
 type Core struct {
 	logger log.Logger
 	attr   []log.KeyValue
+	ctx    context.Context
 }
 
 // Compile-time check *Core implements zapcore.Core.
@@ -34,6 +36,7 @@ func NewOTelZapCore(opts ...Option) zapcore.Core {
 	cfg := newConfig(opts)
 	return &Core{
 		logger: cfg.logger(),
+		ctx:    context.Background(),
 	}
 }
 
@@ -42,18 +45,16 @@ func NewOTelZapCore(opts ...Option) zapcore.Core {
 func (o *Core) Enabled(level zapcore.Level) bool {
 	r := log.Record{}
 	r.SetSeverity(getOtelLevel(level))
-
-	// TODO:
-	// check how to propagate context
-	ctx := context.Background()
-	return o.logger.Enabled(ctx, r)
+	return o.logger.Enabled(o.ctx, r)
 }
 
 // With adds structured context to the Core.
 // by returning a child logger with provided fields.
 func (o *Core) With(fields []zapcore.Field) zapcore.Core {
 	clone := o.clone()
-	clone.attr = append(clone.attr, getAttr(fields)...)
+	ctx, attr := getAttr(clone.ctx, fields) // uses parent ctx unless overridden using field
+	clone.ctx = ctx
+	clone.attr = append(clone.attr, attr...)
 	return clone
 }
 
@@ -78,7 +79,7 @@ func (o *Core) Write(ent zapcore.Entry, fields []zapcore.Field) error {
 	r.SetSeverity(getOtelLevel(ent.Level))
 
 	// get attr from fields
-	attr := getAttr(fields)
+	ctx, attr := getAttr(o.ctx, fields)
 	// append attributes received from from parent logger
 	addattr := append(attr, o.attr...)
 
@@ -86,9 +87,6 @@ func (o *Core) Write(ent zapcore.Entry, fields []zapcore.Field) error {
 		r.AddAttributes(addattr...)
 	}
 
-	// TODO
-	// need to check how to propagate context here
-	ctx := context.Background()
 	o.logger.Emit(ctx, r)
 	return nil
 }
@@ -97,16 +95,27 @@ func (o *Core) clone() *Core {
 	return &Core{
 		logger: o.logger,
 		attr:   slices.Clone(o.attr),
+		ctx:    o.ctx,
 	}
 }
 
 // converts zap fields to Otel's log attributes.
-func getAttr(fields []zapcore.Field) []log.KeyValue {
-	enc := NewObjectEncoder(len(fields))
+func getAttr(ctx context.Context, fields []zapcore.Field) (context.Context, []log.KeyValue) {
+	enc := newObjectEncoder(len(fields))
 	for i := range fields {
 		fields[i].AddTo(enc)
 	}
-	return enc.cur
+	// check if context is set by encoder
+	if enc.ctxfield != nil {
+		ctx = enc.ctxfield
+	}
+	return ctx, enc.cur
+}
+
+// This func helps pass context to OTel loggger.
+// can be used as logger.Info("msg", otelzap.Context("key", ctx)).
+func Context(key string, val context.Context) zap.Field {
+	return zap.Reflect(key, val)
 }
 
 // converts zap level to Otel's log level.
