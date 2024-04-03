@@ -5,6 +5,25 @@
 // can be used to bridge between the [github.com/sirupsen/logrus] API and
 // [OpenTelemetry].
 //
+// # Record Conversion
+//
+// The [logrus.Entry] records are converted to OpenTelemetry [log.Record] in
+// the following way:
+//
+//   - Time is set as the Timestamp.
+//   - Message is set as the Body using a [log.StringValue].
+//   - Level is transformed and set as the Severity. The SeverityText is not
+//     set.
+//   - Fields are transformed and set as the attributes.
+//
+// The Level is transformed by using the static offset to the OpenTelemetry
+// Severity types. For example:
+//
+//   - [slog.LevelDebug] is transformed to [log.SeverityDebug]
+//   - [slog.LevelInfo] is transformed to [log.SeverityInfo]
+//   - [slog.LevelWarn] is transformed to [log.SeverityWarn]
+//   - [slog.LevelError] is transformed to [log.SeverityError]
+//
 // [OpenTelemetry]: https://opentelemetry.io/docs/concepts/signals/logs/
 package otellogrus // import "go.opentelemetry.io/contrib/bridges/otellogrus"
 

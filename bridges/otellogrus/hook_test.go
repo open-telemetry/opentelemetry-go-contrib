@@ -54,6 +54,12 @@ func TestHookFire(t *testing.T) {
 			entry: &logrus.Entry{},
 		},
 		{
+			name: "emits a log entry with severity level",
+			entry: &logrus.Entry{
+				Level: logrus.FatalLevel,
+			},
+		},
+		{
 			name: "emits a log entry with data",
 			entry: &logrus.Entry{
 				Data: logrus.Fields{
