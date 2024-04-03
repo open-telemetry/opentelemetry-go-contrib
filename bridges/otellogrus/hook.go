@@ -62,8 +62,27 @@ func convertFields(fields logrus.Fields) []log.KeyValue {
 
 	i := 0
 	for k, v := range fields {
-		kvs[i] = log.String(k, fmt.Sprintf("%s", v))
+		kvs[i] = convertKeyValue(k, v)
 		i++
 	}
 	return kvs
+}
+
+func convertKeyValue(k string, v interface{}) log.KeyValue {
+	switch v := v.(type) {
+	case bool:
+		return log.Bool(k, v)
+	case []byte:
+		return log.Bytes(k, v)
+	case float64:
+		return log.Float64(k, v)
+	case int:
+		return log.Int(k, v)
+	case int64:
+		return log.Int64(k, v)
+	case string:
+		return log.String(k, v)
+	default:
+		return log.String(k, fmt.Sprintf("%s", v))
+	}
 }

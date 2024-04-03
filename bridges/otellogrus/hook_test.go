@@ -71,3 +71,65 @@ func TestHookFire(t *testing.T) {
 		})
 	}
 }
+
+func TestConvertFields(t *testing.T) {
+	for _, tt := range []struct {
+		name string
+
+		fields           logrus.Fields
+		expectedKeyValue []log.KeyValue
+	}{
+		{
+			name: "with a boolean",
+
+			fields: logrus.Fields{"hello": true},
+			expectedKeyValue: []log.KeyValue{
+				log.Bool("hello", true),
+			},
+		},
+		{
+			name: "with a bytes array",
+
+			fields: logrus.Fields{"hello": []byte("world")},
+			expectedKeyValue: []log.KeyValue{
+				log.Bytes("hello", []byte("world")),
+			},
+		},
+		{
+			name: "with a float64",
+
+			fields: logrus.Fields{"hello": 6.5},
+			expectedKeyValue: []log.KeyValue{
+				log.Float64("hello", 6.5),
+			},
+		},
+		{
+			name: "with an int",
+
+			fields: logrus.Fields{"hello": 42},
+			expectedKeyValue: []log.KeyValue{
+				log.Int("hello", 42),
+			},
+		},
+		{
+			name: "with an int64",
+
+			fields: logrus.Fields{"hello": int64(42)},
+			expectedKeyValue: []log.KeyValue{
+				log.Int64("hello", 42),
+			},
+		},
+		{
+			name: "with a string",
+
+			fields: logrus.Fields{"hello": "world"},
+			expectedKeyValue: []log.KeyValue{
+				log.String("hello", "world"),
+			},
+		},
+	} {
+		t.Run(tt.name, func(t *testing.T) {
+			assert.Equal(t, convertFields(tt.fields), tt.expectedKeyValue)
+		})
+	}
+}
