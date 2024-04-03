@@ -3,10 +3,10 @@
 
 // Copyright (c) 2016-2017 Uber Technologies, Inc.
 
-package otelzap
+package otelzap // import "go.opentelemetry.io/contrib/bridges/otelzap"
 
 import (
-	"fmt"
+	"context"
 	"math"
 	"net/url"
 	"testing"
@@ -30,7 +30,7 @@ var (
 
 // Basic Logger Test and Child Logger test.
 func TestZapCore(t *testing.T) {
-	rec := new(recorder)
+	rec := &recorder{}
 	logger := zap.New(NewOTelZapCore(WithLoggerProvider(rec)))
 	logger.Info(testBodyString, zap.String("key", "testValue"))
 
@@ -39,7 +39,6 @@ func TestZapCore(t *testing.T) {
 	assert.Equal(t, 1, rec.Record.AttributesLen())
 	rec.Record.WalkAttributes(func(kv log.KeyValue) bool {
 		assert.Equal(t, "key", string(kv.Key))
-		fmt.Println(kv.Value)
 		assert.Equal(t, "testValue", value2Result(kv.Value))
 		return true
 	})
@@ -54,6 +53,7 @@ func TestZapCore(t *testing.T) {
 	})
 }
 
+// Tests Mapping of Logger Level to OTel level.
 func TestGetOTelLevel(t *testing.T) {
 	tests := []struct {
 		level       zapcore.Level
@@ -83,7 +83,7 @@ func TestGetOTelLevel(t *testing.T) {
 // int, int8, int16, int32 types are converted to int64
 // Complex128 are converted to string of complex values
 // Uint are converted to int64.
-// Reflect Types are converted to JSON string
+// Reflect Types are converted to JSON string.
 func TestFields(t *testing.T) {
 	tests := []struct {
 		t     zapcore.FieldType
@@ -128,11 +128,15 @@ func TestFields(t *testing.T) {
 	}
 
 	for _, tt := range tests {
-		enc := NewObjectEncoder(1)
+		enc := newObjectEncoder(1)
 		f := zapcore.Field{Key: "k", Type: tt.t, Integer: tt.i, Interface: tt.iface, String: tt.s}
 		f.AddTo(enc)
 		if f.Type == zapcore.SkipType {
 			assert.Nil(t, tt.want, enc.cur)
+			continue
+		}
+		if f.Type == zapcore.Float32Type {
+			assert.InDelta(t, tt.want, value2Result(enc.cur[0].Value), 0.001)
 			continue
 		}
 		assert.Equal(t, tt.want, value2Result(enc.cur[0].Value), "Unexpected output from field %+v.", f)
@@ -141,7 +145,7 @@ func TestFields(t *testing.T) {
 
 // copied from field_test.go https://github.com/uber-go/zap/blob/b39f8b6b6a44d8371a87610be50cce58eeeaabcb/zapcore/field_test.go#L184
 func TestInlineMarshaler(t *testing.T) {
-	enc := NewObjectEncoder(3)
+	enc := newObjectEncoder(3)
 
 	topLevelStr := zapcore.Field{Key: "k", Type: zapcore.StringType, String: "s"}
 	topLevelStr.AddTo(enc)
@@ -208,6 +212,10 @@ func BenchmarkZapWrite(b *testing.B) {
 		{
 			name:  "Dict",
 			field: zap.Dict("k", zap.String("a", "b")),
+		},
+		{
+			name:  "Context",
+			field: Context("k", context.Background()),
 		},
 	}
 
