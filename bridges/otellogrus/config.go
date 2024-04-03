@@ -4,6 +4,7 @@ package otellogrus // import "go.opentelemetry.io/contrib/bridges/otellogrus"
 
 import (
 	"github.com/sirupsen/logrus"
+
 	"go.opentelemetry.io/otel/log"
 	"go.opentelemetry.io/otel/log/global"
 	"go.opentelemetry.io/otel/sdk/instrumentation"

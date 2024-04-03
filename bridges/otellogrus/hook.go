@@ -49,15 +49,19 @@ func NewHook(options ...Option) logrus.Hook {
 	}
 }
 
+// Hook is a [logrus.Hook] that sends all logging records it receives to
+// OpenTelemetry. See package documentation for how conversions are made.
 type Hook struct {
 	logger log.Logger
 	levels []logrus.Level
 }
 
+// Levels returns the list of log levels we want to be sent to OpenTelemetry.
 func (h *Hook) Levels() []logrus.Level {
 	return h.levels
 }
 
+// Fire handles the passed record, and sends it to OpenTelemetry.
 func (h *Hook) Fire(entry *logrus.Entry) error {
 	ctx := entry.Context
 	h.logger.Emit(ctx, h.convertEntry(entry))
