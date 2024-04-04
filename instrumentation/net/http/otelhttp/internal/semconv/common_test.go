@@ -4,7 +4,6 @@
 package semconv
 
 import (
-	"fmt"
 	"net/http"
 	"net/http/httptest"
 	"net/url"
@@ -65,19 +64,4 @@ func testTraceRequest(t *testing.T, serv HTTPServer, want func(testServerReq) []
 	}
 
 	assert.ElementsMatch(t, want(srvReq), serv.RequestTraceAttrs("", req))
-}
-
-func testTraceResponse(t *testing.T, serv HTTPServer, want []attribute.KeyValue) {
-	t.Helper()
-	emptyResp := ResponseTelemetry{}
-	assert.Len(t, serv.ResponseTraceAttrs(emptyResp), 0)
-
-	resp := ResponseTelemetry{
-		StatusCode: 200,
-		ReadBytes:  701,
-		ReadError:  fmt.Errorf("read error"),
-		WriteBytes: 802,
-		WriteError: fmt.Errorf("write error"),
-	}
-	assert.ElementsMatch(t, want, serv.ResponseTraceAttrs(resp))
 }
