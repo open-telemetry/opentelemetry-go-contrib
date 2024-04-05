@@ -5,6 +5,7 @@ package otelhttp // import "go.opentelemetry.io/contrib/instrumentation/net/http
 
 import (
 	"context"
+	"log/slog"
 	"net/http"
 	"net/http/httptrace"
 
@@ -21,6 +22,7 @@ const ScopeName = "go.opentelemetry.io/contrib/instrumentation/net/http/otelhttp
 // and http.Transport types.
 type config struct {
 	ServerName        string
+	Logger            *slog.Logger
 	Tracer            trace.Tracer
 	Meter             metric.Meter
 	Propagators       propagation.TextMapPropagator
@@ -192,5 +194,12 @@ func WithClientTrace(f func(context.Context) *httptrace.ClientTrace) Option {
 func WithServerName(server string) Option {
 	return optionFunc(func(c *config) {
 		c.ServerName = server
+	})
+}
+
+// WithLogHandler returns an Option that configures the structured log Handler.
+func WithLogger(logger *slog.Logger) Option {
+	return optionFunc(func(c *config) {
+		c.Logger = logger
 	})
 }

@@ -5,6 +5,7 @@ package otelhttp // import "go.opentelemetry.io/contrib/instrumentation/net/http
 
 import (
 	"io"
+	"log/slog"
 	"net/http"
 	"time"
 
@@ -24,6 +25,7 @@ type middleware struct {
 	operation string
 	server    string
 
+	logger            *slog.Logger
 	tracer            trace.Tracer
 	meter             metric.Meter
 	propagators       propagation.TextMapPropagator
@@ -75,6 +77,7 @@ func NewMiddleware(operation string, opts ...Option) func(http.Handler) http.Han
 }
 
 func (h *middleware) configure(c *config) {
+	h.logger = c.Logger
 	h.tracer = c.Tracer
 	h.meter = c.Meter
 	h.propagators = c.Propagators
@@ -228,6 +231,17 @@ func (h *middleware) serveHTTP(w http.ResponseWriter, r *http.Request, next http
 	elapsedTime := float64(time.Since(requestStartTime)) / float64(time.Millisecond)
 
 	h.serverLatencyMeasure.Record(ctx, elapsedTime, o)
+
+	if h.logger != nil {
+		h.logger.Log(ctx, slog.LevelInfo, "HTTP request",
+			slog.String("method", r.Method),
+			slog.String("path", r.URL.EscapedPath()),
+			slog.Int("status", rww.statusCode),
+			slog.Float64("duration", elapsedTime),
+			slog.Int64("bytes_read", bw.read.Load()),
+			slog.Int64("bytes_written", rww.written),
+		)
+	}
 }
 
 func setAfterServeAttributes(span trace.Span, read, wrote int64, statusCode int, rerr, werr error) {
