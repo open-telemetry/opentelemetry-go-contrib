@@ -62,7 +62,6 @@ module-sets:
       - go.opentelemetry.io/contrib/instrumentation/runtime
       - go.opentelemetry.io/contrib/instrumentation/runtime/example
       - go.opentelemetry.io/contrib/zpages
-    modules:
   experimental-samplers:
     version: v0.18.0
     modules:
