@@ -75,7 +75,16 @@ func Middleware(service string, opts ...Option) gin.HandlerFunc {
 			opts = append(opts, oteltrace.WithAttributes(rAttr))
 		}
 		ctx, span := tracer.Start(ctx, spanName, opts...)
-		defer span.End()
+		defer func() {
+			if r := recover(); r != nil {
+				err := fmt.Errorf("%+v", r)
+				span.RecordError(err, oteltrace.WithStackTrace(cfg.RecordPanicStackTrace))
+				span.SetStatus(codes.Error, err.Error())
+				span.End()
+				panic(r)
+			}
+			span.End()
+		}()
 
 		// pass the span through the request context
 		c.Request = c.Request.WithContext(ctx)

@@ -13,10 +13,11 @@ import (
 )
 
 type config struct {
-	TracerProvider    oteltrace.TracerProvider
-	Propagators       propagation.TextMapPropagator
-	Filters           []Filter
-	SpanNameFormatter SpanNameFormatter
+	TracerProvider        oteltrace.TracerProvider
+	Propagators           propagation.TextMapPropagator
+	Filters               []Filter
+	SpanNameFormatter     SpanNameFormatter
+	RecordPanicStackTrace bool
 }
 
 // Filter is a predicate used to determine whether a given http.request should
@@ -75,5 +76,12 @@ func WithFilter(f ...Filter) Option {
 func WithSpanNameFormatter(f func(r *http.Request) string) Option {
 	return optionFunc(func(c *config) {
 		c.SpanNameFormatter = f
+	})
+}
+
+// WithRecordPanicStackTrace specifies whether to record the stack trace of a panic.
+func WithRecordPanicStackTrace(stackTrace bool) Option {
+	return optionFunc(func(c *config) {
+		c.RecordPanicStackTrace = stackTrace
 	})
 }

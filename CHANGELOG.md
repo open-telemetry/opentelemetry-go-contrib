@@ -29,6 +29,7 @@ The next release will require at least [Go 1.21].
 - Add support for Summary metrics to `go.opentelemetry.io/contrib/bridges/prometheus`. (#5089)
 - Add support for Exponential (native) Histograms in `go.opentelemetry.io/contrib/bridges/prometheus`. (#5093)
 - Implemented setting the `cloud.resource_id` resource attribute in `go.opentelemetry.io/detectors/aws/ecs` based on the ECS Metadata v4 endpoint. (#5091)
+- Add support to record panics in `go.opentelemetry.io/contrib/instrumentation/github.com/gin-gonic/gin/otelgin`. (#5090)
 
 ### Removed
 
