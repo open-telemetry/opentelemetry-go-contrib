@@ -9,6 +9,7 @@ import (
 	"context"
 	"math"
 	"net/url"
+	"sync"
 	"testing"
 	"time"
 
@@ -26,6 +27,7 @@ var (
 		Level:   zap.InfoLevel,
 		Message: testBodyString,
 	}
+	field = zap.String("key", "testValue")
 )
 
 // Basic Logger Test and Child Logger test.
@@ -254,6 +256,33 @@ func BenchmarkMultipleFields(b *testing.B) {
 				zap.ByteString("k", []byte("abc")),
 			},
 		},
+		{
+			name: "With 20 fields",
+			field: []zapcore.Field{
+				zap.Int16("a", 1),
+				zap.String("k", "a"),
+				zap.String("k", "a"),
+				zap.Time("k", time.Unix(1000, 1000)),
+				zap.Binary("k", []byte{1, 2}),
+				zap.Binary("k", []byte{1, 2}),
+				zap.Object("k", users(10)),
+				zap.String("k", "a"),
+				zap.String("k", "a"),
+				zap.String("k", "a"),
+				zap.ByteString("k", []byte("abc")),
+				zap.Int16("a", 1),
+				zap.String("k", "a"),
+				zap.String("k", "a"),
+				zap.Time("k", time.Unix(1000, 1000)),
+				zap.Binary("k", []byte{1, 2}),
+				zap.Binary("k", []byte{1, 2}),
+				zap.Object("k", users(10)),
+				zap.String("k", "a"),
+				zap.String("k", "a"),
+				zap.String("k", "a"),
+				zap.ByteString("k", []byte("abc")),
+			},
+		},
 	}
 
 	for _, bm := range benchmarks {
@@ -267,4 +296,26 @@ func BenchmarkMultipleFields(b *testing.B) {
 			})
 		})
 	}
+}
+
+func TestConcurrentSafe(t *testing.T) {
+	h := NewOTelZapCore()
+
+	const goroutineN = 10
+
+	var wg sync.WaitGroup
+	wg.Add(goroutineN)
+
+	for i := 0; i < goroutineN; i++ {
+		go func() {
+			defer wg.Done()
+
+			_ = h.Enabled(zapcore.DebugLevel)
+
+			_ = h.Write(entry, []zapcore.Field{field})
+
+			_ = h.With([]zapcore.Field{field})
+		}()
+	}
+	wg.Wait()
 }

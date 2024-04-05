@@ -19,8 +19,7 @@ const (
 	bridgeName = "go.opentelemetry.io/contrib/bridge/zapcore"
 )
 
-// Core is a [zapcore.Core] that sends all logging records it receives to
-// OpenTelemetry.
+// Core is a [zapcore.Core] that sends logging records to OpenTelemetry.
 type Core struct {
 	logger log.Logger
 	attr   []log.KeyValue
@@ -30,7 +29,7 @@ type Core struct {
 // Compile-time check *Core implements zapcore.Core.
 var _ zapcore.Core = (*Core)(nil)
 
-// this function creates a new zapcore.Core that can be used with zap.New()
+// NewOTelZapCore creates a new [zapcore.Core] that can be used with zap.New()
 // this instance will translate zap logs to opentelemetry logs and export them.
 func NewOTelZapCore(opts ...Option) zapcore.Core {
 	cfg := newConfig(opts)
@@ -40,16 +39,15 @@ func NewOTelZapCore(opts ...Option) zapcore.Core {
 	}
 }
 
-// LevelEnabler decides whether a given logging level is enabled when logging a
-// message.
+// LevelEnabler decides whether a given logging level is enabled when logging a message.
 func (o *Core) Enabled(level zapcore.Level) bool {
 	r := log.Record{}
 	r.SetSeverity(getOtelLevel(level))
+	// how to get context for enabled?
 	return o.logger.Enabled(o.ctx, r)
 }
 
 // With adds structured context to the Core.
-// by returning a child logger with provided fields.
 func (o *Core) With(fields []zapcore.Field) zapcore.Core {
 	clone := o.clone()
 	ctx, attr := getAttr(clone.ctx, fields) // uses parent ctx unless overridden using field
@@ -71,7 +69,7 @@ func (o *Core) Check(ent zapcore.Entry, ce *zapcore.CheckedEntry) *zapcore.Check
 	return ce
 }
 
-// Writes to the destination.
+// Write method encodes zap fields to OTel logs and emits them.
 func (o *Core) Write(ent zapcore.Entry, fields []zapcore.Field) error {
 	r := log.Record{}
 	r.SetTimestamp(ent.Time)
@@ -99,26 +97,25 @@ func (o *Core) clone() *Core {
 	}
 }
 
-// converts zap fields to Otel's log attributes.
+// converts zap fields to OTel log attributes.
 func getAttr(ctx context.Context, fields []zapcore.Field) (context.Context, []log.KeyValue) {
 	enc := newObjectEncoder(len(fields))
 	for i := range fields {
 		fields[i].AddTo(enc)
 	}
-	// check if context is set by encoder
 	if enc.ctxfield != nil {
 		ctx = enc.ctxfield
 	}
 	return ctx, enc.cur
 }
 
-// This func helps pass context to OTel loggger.
-// can be used as logger.Info("msg", otelzap.Context("key", ctx)).
+// Context can be used to pass context to OTel loggger.
+// Ex: logger.Info("msg", otelzap.Context("key", ctx)).
 func Context(key string, val context.Context) zap.Field {
 	return zap.Reflect(key, val)
 }
 
-// converts zap level to Otel's log level.
+// converts zap level to OTel log level.
 func getOtelLevel(level zapcore.Level) log.Severity {
 	switch level {
 	case zapcore.DebugLevel:
