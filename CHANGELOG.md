@@ -16,6 +16,7 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 
 ### Added
 
+- Implemented setting the `cloud.resource_id` resource attribute in `go.opentelemetry.io/detectors/aws/ecs` based on the ECS Metadata v4 endpoint. (#5091)
 - The `go.opentelemetry.io/contrib/bridges/otelslog` module.
   This module provides an OpenTelemetry logging bridge for "log/slog". (#5335)
 
@@ -37,7 +38,6 @@ The next release will require at least [Go 1.21].
 - Support [Go 1.22]. (#5082)
 - Add support for Summary metrics to `go.opentelemetry.io/contrib/bridges/prometheus`. (#5089)
 - Add support for Exponential (native) Histograms in `go.opentelemetry.io/contrib/bridges/prometheus`. (#5093)
-- Implemented setting the `cloud.resource_id` resource attribute in `go.opentelemetry.io/detectors/aws/ecs` based on the ECS Metadata v4 endpoint. (#5091)
 
 ### Removed
 
