@@ -9,7 +9,7 @@ require (
 	github.com/aws/aws-sdk-go-v2/config v1.27.10
 	github.com/aws/aws-sdk-go-v2/service/dynamodb v1.31.1
 	github.com/aws/aws-sdk-go-v2/service/s3 v1.53.1
-	go.opentelemetry.io/contrib/instrumentation/github.com/aws/aws-sdk-go-v2/otelaws v0.49.0
+	go.opentelemetry.io/contrib/instrumentation/github.com/aws/aws-sdk-go-v2/otelaws v0.50.0
 	go.opentelemetry.io/otel v1.25.0
 	go.opentelemetry.io/otel/exporters/stdout/stdouttrace v1.25.0
 	go.opentelemetry.io/otel/sdk v1.25.0

@@ -6,7 +6,7 @@ replace go.opentelemetry.io/contrib/instrumentation/github.com/gorilla/mux/otelm
 
 require (
 	github.com/gorilla/mux v1.8.1
-	go.opentelemetry.io/contrib/instrumentation/github.com/gorilla/mux/otelmux v0.49.0
+	go.opentelemetry.io/contrib/instrumentation/github.com/gorilla/mux/otelmux v0.50.0
 	go.opentelemetry.io/otel v1.25.0
 	go.opentelemetry.io/otel/exporters/stdout/stdouttrace v1.25.0
 	go.opentelemetry.io/otel/sdk v1.25.0

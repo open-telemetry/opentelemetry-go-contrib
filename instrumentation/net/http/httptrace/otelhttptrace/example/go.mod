@@ -8,8 +8,8 @@ replace (
 )
 
 require (
-	go.opentelemetry.io/contrib/instrumentation/net/http/httptrace/otelhttptrace v0.49.0
-	go.opentelemetry.io/contrib/instrumentation/net/http/otelhttp v0.49.0
+	go.opentelemetry.io/contrib/instrumentation/net/http/httptrace/otelhttptrace v0.50.0
+	go.opentelemetry.io/contrib/instrumentation/net/http/otelhttp v0.50.0
 	go.opentelemetry.io/otel v1.25.0
 	go.opentelemetry.io/otel/exporters/stdout/stdouttrace v1.25.0
 	go.opentelemetry.io/otel/sdk v1.25.0
