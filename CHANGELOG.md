@@ -19,6 +19,10 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 - The `go.opentelemetry.io/contrib/bridges/otelslog` module.
   This module provides an OpenTelemetry logging bridge for "log/slog". (#5335)
 
+### Fixed
+
+- Update all dependencies to address [GO-2024-2687]. (#5359)
+
 ### Removed
 
 - Drop support for [Go 1.20]. (#5163)
@@ -45,7 +49,6 @@ The next release will require at least [Go 1.21].
 ### Fixed
 
 - Retrieving the body bytes count in `go.opentelemetry.io/contrib/instrumentation/net/http/otelhttp` does not cause a data race anymore. (#5080)
-- Update all dependencies to address [GO-2024-2687]. (#5359)
 
 ## [1.23.0/0.48.0/0.17.0/0.3.0] - 2024-02-06
 
