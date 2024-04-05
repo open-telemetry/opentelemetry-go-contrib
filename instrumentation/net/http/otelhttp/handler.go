@@ -4,6 +4,7 @@
 package otelhttp // import "go.opentelemetry.io/contrib/instrumentation/net/http/otelhttp"
 
 import (
+	"context"
 	"io"
 	"log/slog"
 	"net/http"
@@ -232,16 +233,42 @@ func (h *middleware) serveHTTP(w http.ResponseWriter, r *http.Request, next http
 
 	h.serverLatencyMeasure.Record(ctx, elapsedTime, o)
 
-	if h.logger != nil {
-		h.logger.Log(ctx, slog.LevelInfo, "HTTP request",
-			slog.String("method", r.Method),
-			slog.String("path", r.URL.EscapedPath()),
-			slog.Int("status", rww.statusCode),
-			slog.Float64("duration", elapsedTime),
-			slog.Int64("bytes_read", bw.read.Load()),
-			slog.Int64("bytes_written", rww.written),
-		)
+	h.logAccess(ctx, attributes, bw.read.Load(), rww.written, bw.err, rww.err, elapsedTime)
+}
+
+func (h middleware) logAccess(ctx context.Context, attributes []attribute.KeyValue, read, wrote int64, rerr, werr error, duration float64) {
+	if h.logger == nil {
+		return
 	}
+
+	attrs := []slog.Attr{}
+	for _, kv := range attributes {
+		switch kv.Value.Type() {
+		case attribute.INT64:
+			attrs = append(attrs, slog.Int64(string(kv.Key), kv.Value.AsInt64()))
+		case attribute.FLOAT64:
+			attrs = append(attrs, slog.Float64(string(kv.Key), kv.Value.AsFloat64()))
+		case attribute.STRING:
+			attrs = append(attrs, slog.String(string(kv.Key), kv.Value.AsString()))
+		default:
+			attrs = append(attrs, slog.String(string(kv.Key), kv.Value.Emit()))
+		}
+	}
+	if read > 0 {
+		attrs = append(attrs, slog.Int64(string(ReadBytesKey), read))
+	}
+	if rerr != nil && rerr != io.EOF {
+		attrs = append(attrs, slog.String(string(ReadErrorKey), rerr.Error()))
+	}
+	if wrote > 0 {
+		attrs = append(attrs, slog.Int64(string(WroteBytesKey), wrote))
+	}
+	if werr != nil && werr != io.EOF {
+		attrs = append(attrs, slog.String(string(WriteErrorKey), werr.Error()))
+	}
+	attrs = append(attrs, slog.Float64(serverDuration, duration))
+
+	h.logger.LogAttrs(ctx, slog.LevelInfo, h.operation, attrs...)
 }
 
 func setAfterServeAttributes(span trace.Span, read, wrote int64, statusCode int, rerr, werr error) {
