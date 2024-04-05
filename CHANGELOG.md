@@ -40,6 +40,7 @@ The next release will require at least [Go 1.21].
 ### Fixed
 
 - Retrieving the body bytes count in `go.opentelemetry.io/contrib/instrumentation/net/http/otelhttp` does not cause a data race anymore. (#5080)
+- Update all dependencies to address [GO-2024-2687]. (#5359)
 
 ## [1.23.0/0.48.0/0.17.0/0.3.0] - 2024-02-06
 
@@ -1014,3 +1015,5 @@ First official tagged release of `contrib` repository.
 [Go 1.20]: https://go.dev/doc/go1.20
 [Go 1.19]: https://go.dev/doc/go1.19
 [Go 1.18]: https://go.dev/doc/go1.18
+
+[GO-2024-2687]: https://pkg.go.dev/vuln/GO-2024-2687
