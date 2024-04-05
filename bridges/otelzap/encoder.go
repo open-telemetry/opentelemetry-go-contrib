@@ -20,36 +20,36 @@ import (
 
 // pool for array encoder
 // used by AddArray() method only.
-var _arrayEncoderPool = sync.Pool{
+var arrayEncoderPool = sync.Pool{
 	New: func() interface{} {
 		return &arrayEncoder{elems: make([]log.Value, 0)}
 	},
 }
 
 func getArrayEncoder() *arrayEncoder {
-	return _arrayEncoderPool.Get().(*arrayEncoder)
+	return arrayEncoderPool.Get().(*arrayEncoder)
 }
 
 func putArrayEncoder(e *arrayEncoder) {
 	e.elems = e.elems[:0]
-	_arrayEncoderPool.Put(e)
+	arrayEncoderPool.Put(e)
 }
 
 // pool for object encoder
 // used by AddObject() method only.
-var _objectEncoderPool = sync.Pool{
+var objectEncoderPool = sync.Pool{
 	New: func() interface{} {
 		return newObjectEncoder(0)
 	},
 }
 
 func getObjectEncoder() *objectEncoder {
-	return _objectEncoderPool.Get().(*objectEncoder)
+	return objectEncoderPool.Get().(*objectEncoder)
 }
 
 func putObjectEncoder(e *objectEncoder) {
 	e.cur = e.cur[:0]
-	_objectEncoderPool.Put(e)
+	objectEncoderPool.Put(e)
 }
 
 var (
