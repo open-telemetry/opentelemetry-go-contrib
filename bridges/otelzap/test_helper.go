@@ -59,6 +59,7 @@ func (r *recorder) Emit(_ context.Context, record log.Record) {
 	r.Record = record
 }
 
+// copied from field_test.go https://github.com/uber-go/zap/blob/b15585bc7a2b383592004f75df35fa2088db5481/zapcore/field_test.go#L39
 // To create dummy object/array for zapcore.
 type users int
 

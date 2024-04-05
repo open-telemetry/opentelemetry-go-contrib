@@ -55,7 +55,7 @@ func TestZapCore(t *testing.T) {
 	})
 }
 
-// Tests Mapping of Logger Level to OTel level.
+// Test conversion of Zap Level to OTel level.
 func TestGetOTelLevel(t *testing.T) {
 	tests := []struct {
 		level       zapcore.Level
@@ -110,16 +110,15 @@ func TestFields(t *testing.T) {
 		{t: zapcore.StringType, s: "foo", want: "foo"},
 		{t: zapcore.TimeType, i: 1000, iface: time.UTC, want: int64(1000)},
 		{t: zapcore.TimeType, i: 1000, want: int64(1000)},
-		// All Uint types are converted to Int64
 		{t: zapcore.Uint64Type, i: 42, want: int64(42)},
 		{t: zapcore.Uint32Type, i: 42, want: int64(42)},
 		{t: zapcore.Uint16Type, i: 42, want: int64(42)},
 		{t: zapcore.Uint8Type, i: 42, want: int64(42)},
 		{t: zapcore.UintptrType, i: 42, want: int64(42)},
-		// Encode writes the JSON encoding of v to the stream,
-		// followed by a newline character.
+		// Encode writes the JSON encoding of v to the stream, followed by a newline character.
 		{t: zapcore.ReflectType, iface: users(2), want: "2\n"},
-		//{t: zapcore.NamespaceType, want: map[string]interface{}{}}, TODO
+		// Opens a new Namespace with the value in Key
+		{t: zapcore.NamespaceType, want: "k"},
 		{t: zapcore.StringerType, iface: users(2), want: "2 users"},
 		{t: zapcore.StringerType, iface: &obj{}, want: "obj"},
 		{t: zapcore.StringerType, iface: (*obj)(nil), want: "nil obj"},
@@ -141,6 +140,7 @@ func TestFields(t *testing.T) {
 			assert.InDelta(t, tt.want, value2Result(enc.cur[0].Value), 0.001)
 			continue
 		}
+
 		assert.Equal(t, tt.want, value2Result(enc.cur[0].Value), "Unexpected output from field %+v.", f)
 	}
 }

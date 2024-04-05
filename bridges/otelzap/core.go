@@ -43,14 +43,13 @@ func NewOTelZapCore(opts ...Option) zapcore.Core {
 func (o *Core) Enabled(level zapcore.Level) bool {
 	r := log.Record{}
 	r.SetSeverity(getOtelLevel(level))
-	// how to get context for enabled?
-	return o.logger.Enabled(o.ctx, r)
+	return o.logger.Enabled(context.Background(), r)
 }
 
 // With adds structured context to the Core.
 func (o *Core) With(fields []zapcore.Field) zapcore.Core {
 	clone := o.clone()
-	ctx, attr := getAttr(clone.ctx, fields) // uses parent ctx unless overridden using field
+	ctx, attr := getAttr(clone.ctx, fields)
 	clone.ctx = ctx
 	clone.attr = append(clone.attr, attr...)
 	return clone
@@ -76,9 +75,7 @@ func (o *Core) Write(ent zapcore.Entry, fields []zapcore.Field) error {
 	r.SetBody(log.StringValue(ent.Message))
 	r.SetSeverity(getOtelLevel(ent.Level))
 
-	// get attr from fields
 	ctx, attr := getAttr(o.ctx, fields)
-	// append attributes received from from parent logger
 	addattr := append(attr, o.attr...)
 
 	if len(addattr) > 0 {
@@ -109,7 +106,7 @@ func getAttr(ctx context.Context, fields []zapcore.Field) (context.Context, []lo
 	return ctx, enc.cur
 }
 
-// Context can be used to pass context to OTel loggger.
+// Method to pass context to OTel loggger as [zap.Field]
 // Ex: logger.Info("msg", otelzap.Context("key", ctx)).
 func Context(key string, val context.Context) zap.Field {
 	return zap.Reflect(key, val)
