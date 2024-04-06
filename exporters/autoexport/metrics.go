@@ -15,6 +15,7 @@ import (
 	"github.com/prometheus/client_golang/prometheus"
 	"github.com/prometheus/client_golang/prometheus/promhttp"
 
+	prometheusbridge "go.opentelemetry.io/contrib/bridges/prometheus"
 	"go.opentelemetry.io/otel"
 	"go.opentelemetry.io/otel/exporters/otlp/otlpmetric/otlpmetricgrpc"
 	"go.opentelemetry.io/otel/exporters/otlp/otlpmetric/otlpmetrichttp"
@@ -71,10 +72,29 @@ func RegisterMetricReader(name string, factory func(context.Context) (metric.Rea
 	must(metricsSignal.registry.store(name, factory))
 }
 
-var metricsSignal = newSignal[metric.Reader]("OTEL_METRICS_EXPORTER")
+// RegisterMetricProducer sets the MetricReader factory to be used when the
+// OTEL_METRICS_PRODUCERS environment variable contains the producer name. This
+// will panic if name has already been registered.
+func RegisterMetricProducer(name string, factory func(context.Context) (metric.Producer, error)) {
+	must(metricsProducers.registry.store(name, factory))
+}
+
+var (
+	metricsSignal    = newSignal[metric.Reader]("OTEL_METRICS_EXPORTER")
+	metricsProducers = newProducerRegistry("OTEL_METRICS_PRODUCERS")
+)
 
 func init() {
 	RegisterMetricReader("otlp", func(ctx context.Context) (metric.Reader, error) {
+		producer, err := metricsProducers.create(ctx)
+		if err != nil {
+			return nil, err
+		}
+		readerOpts := []metric.PeriodicReaderOption{}
+		if producer != nil {
+			readerOpts = append(readerOpts, metric.WithProducer(producer))
+		}
+
 		proto := os.Getenv(otelExporterOTLPProtoEnvKey)
 		if proto == "" {
 			proto = "http/protobuf"
@@ -86,23 +106,32 @@ func init() {
 			if err != nil {
 				return nil, err
 			}
-			return metric.NewPeriodicReader(r), nil
+			return metric.NewPeriodicReader(r, readerOpts...), nil
 		case "http/protobuf":
 			r, err := otlpmetrichttp.New(ctx)
 			if err != nil {
 				return nil, err
 			}
-			return metric.NewPeriodicReader(r), nil
+			return metric.NewPeriodicReader(r, readerOpts...), nil
 		default:
 			return nil, errInvalidOTLPProtocol
 		}
 	})
 	RegisterMetricReader("console", func(ctx context.Context) (metric.Reader, error) {
+		producer, err := metricsProducers.create(ctx)
+		if err != nil {
+			return nil, err
+		}
+		readerOpts := []metric.PeriodicReaderOption{}
+		if producer != nil {
+			readerOpts = append(readerOpts, metric.WithProducer(producer))
+		}
+
 		r, err := stdoutmetric.New()
 		if err != nil {
 			return nil, err
 		}
-		return metric.NewPeriodicReader(r), nil
+		return metric.NewPeriodicReader(r, readerOpts...), nil
 	})
 	RegisterMetricReader("none", func(ctx context.Context) (metric.Reader, error) {
 		return newNoopMetricReader(), nil
@@ -148,6 +177,10 @@ func init() {
 
 		return readerWithServer{lis.Addr(), reader, &server}, nil
 	})
+
+	RegisterMetricProducer("prometheus", func(ctx context.Context) (metric.Producer, error) {
+		return prometheusbridge.NewMetricProducer(), nil
+	})
 }
 
 type readerWithServer struct {
@@ -169,4 +202,27 @@ func getenv(key, fallback string) string {
 		return fallback
 	}
 	return result
+}
+
+type producerRegistry struct {
+	envKey   string
+	registry *registry[metric.Producer]
+}
+
+func newProducerRegistry(envKey string) producerRegistry {
+	return producerRegistry{
+		envKey: envKey,
+		registry: &registry[metric.Producer]{
+			names: make(map[string]func(context.Context) (metric.Producer, error)),
+		},
+	}
+}
+
+func (pr producerRegistry) create(ctx context.Context) (metric.Producer, error) {
+	expType := os.Getenv(pr.envKey)
+	if expType == "" {
+		return nil, nil
+	}
+
+	return pr.registry.load(ctx, expType)
 }

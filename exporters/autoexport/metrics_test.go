@@ -8,10 +8,12 @@ import (
 	"fmt"
 	"io"
 	"net/http"
+	"net/http/httptest"
 	"reflect"
 	"runtime/debug"
 	"testing"
 
+	"go.opentelemetry.io/collector/pdata/pmetric/pmetricotlp"
 	"go.opentelemetry.io/otel"
 	"go.opentelemetry.io/otel/sdk/metric"
 
@@ -118,4 +120,42 @@ func TestMetricExporterPrometheusInvalidPort(t *testing.T) {
 
 	_, err := NewMetricReader(context.Background())
 	assert.ErrorContains(t, err, "binding")
+}
+
+func TestMetricProducerPrometheus(t *testing.T) {
+	assertNoOtelHandleErrors(t)
+
+	requestWaitChan := make(chan struct{})
+	ts := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		body, err := io.ReadAll(r.Body)
+		assert.NoError(t, err)
+		assert.NoError(t, r.Body.Close())
+
+		// Now parse the otlp proto message from request body.
+		req := pmetricotlp.NewExportRequest()
+		assert.NoError(t, req.UnmarshalProto(body))
+
+		// This is 0 without the producer registered.
+		assert.NotZero(t, req.Metrics().MetricCount())
+		close(requestWaitChan)
+	}))
+
+	t.Setenv("OTEL_METRICS_EXPORTER", "otlp")
+	t.Setenv("OTEL_EXPORTER_OTLP_ENDPOINT", ts.URL)
+	t.Setenv("OTEL_EXPORTER_OTLP_PROTOCOL", "http/protobuf")
+	t.Setenv("OTEL_METRICS_PRODUCERS", "prometheus")
+
+	r, err := NewMetricReader(context.Background())
+	assert.NoError(t, err)
+	assert.IsType(t, &metric.PeriodicReader{}, r)
+
+	// Register it with a meter provider to ensure it is used.
+	metric.NewMeterProvider(metric.WithReader(r))
+
+	// Shutdown actually makes an export call.
+	assert.NoError(t, r.Shutdown(context.Background()))
+
+	<-requestWaitChan
+	ts.Close()
+	goleak.VerifyNone(t)
 }
