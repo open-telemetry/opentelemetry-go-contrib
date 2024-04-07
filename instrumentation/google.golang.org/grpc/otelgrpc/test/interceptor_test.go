@@ -69,10 +69,7 @@ func ctxDialer() func(context.Context, string) (net.Conn, error) {
 }
 
 func TestUnaryClientInterceptor(t *testing.T) {
-	ctx, cancel := context.WithCancel(context.Background())
-	t.Cleanup(cancel)
-
-	clientConn, err := grpc.DialContext(ctx, "fake:8906",
+	clientConn, err := grpc.NewClient("fake:8906",
 		grpc.WithContextDialer(ctxDialer()),
 		grpc.WithTransportCredentials(insecure.NewCredentials()),
 	)
@@ -377,11 +374,8 @@ func newMockClientStream(opts clientStreamOpts) *mockClientStream {
 }
 
 func createInterceptedStreamClient(t *testing.T, method string, opts clientStreamOpts) (grpc.ClientStream, *tracetest.SpanRecorder) {
-	ctx, cancel := context.WithCancel(context.Background())
-	t.Cleanup(cancel)
-
 	mockStream := newMockClientStream(opts)
-	clientConn, err := grpc.DialContext(ctx, "fake:8906",
+	clientConn, err := grpc.NewClient("fake:8906",
 		grpc.WithContextDialer(ctxDialer()),
 		grpc.WithTransportCredentials(insecure.NewCredentials()),
 	)
@@ -632,10 +626,7 @@ func TestStreamClientInterceptorOnUnidirectionalClientServerStream(t *testing.T)
 func TestStreamClientInterceptorCancelContext(t *testing.T) {
 	defer goleak.VerifyNone(t)
 
-	ctx, cancel := context.WithCancel(context.Background())
-	t.Cleanup(cancel)
-
-	clientConn, err := grpc.DialContext(ctx, "fake:8906",
+	clientConn, err := grpc.NewClient("fake:8906",
 		grpc.WithContextDialer(ctxDialer()),
 		grpc.WithTransportCredentials(insecure.NewCredentials()),
 	)
@@ -696,10 +687,7 @@ func TestStreamClientInterceptorCancelContext(t *testing.T) {
 func TestStreamClientInterceptorWithError(t *testing.T) {
 	defer goleak.VerifyNone(t)
 
-	ctx, cancel := context.WithCancel(context.Background())
-	t.Cleanup(cancel)
-
-	clientConn, err := grpc.DialContext(ctx, "fake:8906",
+	clientConn, err := grpc.NewClient("fake:8906",
 		grpc.WithContextDialer(ctxDialer()),
 		grpc.WithTransportCredentials(insecure.NewCredentials()),
 	)
