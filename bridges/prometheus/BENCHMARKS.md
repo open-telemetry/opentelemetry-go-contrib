@@ -1,12 +1,12 @@
 ## Summary
 
-Using the Promethues bridge and the OTLP exporter adds roughly ~50% to the CPU and memory overhead of an application compared to serving a Prometheus HTTP endpoint for metrics.
+Using the Prometheus bridge and the OTLP exporter adds roughly ~50% to the CPU and memory overhead of an application compared to serving a Prometheus HTTP endpoint for metrics.
 
 However, unless the application has extremely high cardinality for metrics, this is unlikely to represent a significant amount of additional overhead because the base-line memory consumption of client libraries is relatively low. For an application with 30k timeseries (which is a very high number), the additional overhead is about 50MB and about 0.1 CPU cores.
 
-The using the bridge is particularly useful if you are exporting to an OpenTelemetry Collector, since the OTLP receiver is much more efficient than the Prometheus receiver. For the same 30k timeseries, the Prometheus receiver uses 3x the amount of memory, and 20x the amount of CPU. In concrete numbers, this is an additional 228 MB of memory, and 0.57 CPU cores.
+The bridge is particularly useful if you are exporting to an OpenTelemetry Collector, since the OTLP receiver is much more efficient than the Prometheus receiver. For the same 30k timeseries, the Prometheus receiver uses 3x the amount of memory, and 20x the amount of CPU. In concrete numbers, this is an additional 228 MB of memory, and 0.57 CPU cores.
 
-For an application using the Promethues client library, and exporting to an OpenTelemetry collector, the total CPU usage is 55% lower and total memory usage is 45% lower when using the bridge and the OTLP receiver compared to using a Prometheus endpoint and the collector's Promethehus receiver.
+For an application using the Prometheus client library, and exporting to an OpenTelemetry collector, the total CPU usage is 55% lower and total memory usage is 45% lower when using the bridge and the OTLP receiver compared to using a Prometheus endpoint and the collector's Promethehus receiver.
 
 ## Methods and Results
 
