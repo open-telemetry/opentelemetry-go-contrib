@@ -12,9 +12,9 @@ For an application using the Prometheus client library, and exporting to an Open
 
 The sample application uses the Prometheus client library, and defines one histogram with the default 12 buckets, one counter, and one gauge. Each metric has a single label with 10k values, which are observed every second.
 
-The memory usage of the sample application is measured using the `/memory/classes/total:bytes` metric from the go runtime. The CPU usage of the application is measured using `top`. The CPU and memory usage of the collector are measured using `docker stats`.
+The memory usage of the sample application is measured using the `/memory/classes/total:bytes` metric from the go runtime. The CPU usage of the application is measured using `top`. The CPU and memory usage of the collector are measured using `docker stats`. It was built using v0.50.0 of the bridge, v1.25.0 of the OpenTelemetry API and SDK, and v1.19.0 of the Prometheus client.
 
-The OpenTelemetry Collector is configured with only the OTLP or Prometheus receiver, and the debug (logging) exporter with only the basic output.
+The OpenTelemetry Collector is configured with only the OTLP or Prometheus receiver, and the debug (logging) exporter with only the basic output. The benchmark uses the Contrib distribution at v0.97.0.
 
 | Experiment | Memory Usage (MB) | CPU Usage (millicores) |
 |---|---|---|
