@@ -74,7 +74,6 @@ func newObjectEncoder(len int) *objectEncoder {
 
 // Converts Array to logSlice using ArrayEncoder.
 func (m *objectEncoder) AddArray(key string, v zapcore.ArrayMarshaler) error {
-	// check if possible to get array length here - to avoid zero memory allocation
 	arr := getArrayEncoder()
 	err := v.MarshalLogArray(arr)
 	m.cur = append(m.cur, log.Slice(key, arr.elems...))
