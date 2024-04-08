@@ -10,7 +10,7 @@ For an application using the Prometheus client library, and exporting to an Open
 
 ## Methods and Results
 
-The sample application uses the Prometheus client library, and defines one histogram with the default 12 buckets, one counter, and one gauge. Each metric has a single label with 10k values, which are observed every second.
+The sample application uses the Prometheus client library, and defines one histogram with the default 12 buckets, one counter, and one gauge. Each metric has a single label with 10k values, which are observed every second. See the [sample application's source](https://github.com/dashpole/client_golang/pull/1).
 
 The memory usage of the sample application is measured using the `/memory/classes/total:bytes` metric from the go runtime. The CPU usage of the application is measured using `top`. The CPU and memory usage of the collector are measured using `docker stats`. It was built using v0.50.0 of the bridge, v1.25.0 of the OpenTelemetry API and SDK, and v1.19.0 of the Prometheus client.
 
