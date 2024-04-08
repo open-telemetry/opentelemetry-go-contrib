@@ -6,7 +6,7 @@ However, unless the application has extremely high cardinality for metrics, this
 
 The bridge is particularly useful if you are exporting to an OpenTelemetry Collector, since the OTLP receiver is much more efficient than the Prometheus receiver. For the same 30k timeseries, the Prometheus receiver uses 3x the amount of memory, and 20x the amount of CPU. In concrete numbers, this is an additional 228 MB of memory, and 0.57 CPU cores.
 
-For an application using the Prometheus client library, and exporting to an OpenTelemetry collector, the total CPU usage is 55% lower and total memory usage is 45% lower when using the bridge and the OTLP receiver compared to using a Prometheus endpoint and the collector's Promethehus receiver.
+For an application using the Prometheus client library, and exporting to an OpenTelemetry collector, the total CPU usage is 55% lower and total memory usage is 45% lower when using the bridge and the OTLP receiver compared to using a Prometheus endpoint and the collector's Prometheus receiver.
 
 ## Methods and Results
 
