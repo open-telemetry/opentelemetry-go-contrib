@@ -11,6 +11,8 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 ### Added
 
 - Add the new `go.opentelemetry.io/contrib/instrgen` package to provide auto-generated source code instrumentation. (#3068, #3108)
+- Add support for Semantic Convention v1.24.0 in the server instrumentation of `go.opentelemetry.io/contrib/instrumentation/net/http/otelhttp`. (#5092)
+  - To enable the new semantic conventions set the environment variable `OTEL_HTTP_CLIENT_COMPATIBILITY_MODE` to `http/dup` or `http`.
 
 ## [1.25.0/0.50.0/0.19.0/0.5.0/0.0.1] - 2024-04-05
 
