@@ -246,17 +246,12 @@ func (l *LogSink) Enabled(level int) bool {
 
 // Error logs an error, with the given message and key/value pairs.
 func (l *LogSink) Error(err error, msg string, keysAndValues ...any) {
-	const severity = log.SeverityError
-
-	l.log(err, msg, severity, keysAndValues...)
+	l.log(err, msg, log.SeverityError, keysAndValues...)
 }
 
 // Info logs a non-error message with the given key/value pairs.
 func (l *LogSink) Info(level int, msg string, keysAndValues ...any) {
-	const sevOffset = int(log.SeverityInfo)
-	severity := log.Severity(sevOffset + level)
-
-	l.log(nil, msg, severity, keysAndValues...)
+	l.log(nil, msg, l.levelSeverity(level), keysAndValues...)
 }
 
 // Init receives optional information about the logr library this

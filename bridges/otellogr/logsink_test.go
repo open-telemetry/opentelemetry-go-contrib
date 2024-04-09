@@ -90,10 +90,15 @@ func TestNewLogSinkConfiguration(t *testing.T) {
 			ls = NewLogSink(
 				WithLoggerProvider(r),
 				WithInstrumentationScope(wantScope),
+				WithLevelSeverity(func(i int) log.Severity {
+					return log.SeverityFatal
+				}),
 			)
 		})
 		assert.NotNil(t, ls)
 		require.IsType(t, &recorder{}, ls.logger)
+		assert.NotNil(t, ls.levelSeverity)
+		assert.Equal(t, log.SeverityFatal, ls.levelSeverity(0))
 
 		l := ls.logger.(*recorder)
 		assert.Equal(t, wantScope, l.Scope)
