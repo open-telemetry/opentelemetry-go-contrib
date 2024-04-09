@@ -6,7 +6,6 @@ package main
 
 import (
 	__atel_context "context"
-
 	__atel_otel "go.opentelemetry.io/otel"
 )
 
@@ -47,7 +46,7 @@ func (e element) get(__atel_tracing_ctx __atel_context.Context, a int) {
 	defer __atel_span.End()
 }
 
-func methods(__atel_tracing_ctx __atel_context.Context) {
+func methods(__atel_tracing_ctx __atel_context.Context,) {
 	__atel_child_tracing_ctx, __atel_span := __atel_otel.Tracer("methods").Start(__atel_tracing_ctx, "methods")
 	_ = __atel_child_tracing_ctx
 	defer __atel_span.End()

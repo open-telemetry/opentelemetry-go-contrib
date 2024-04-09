@@ -5,25 +5,20 @@
 Package api is a generated protocol buffer package.
 
 It is generated from these files:
-
 	hello-service.proto
 
 It has these top-level messages:
-
 	HelloRequest
 	HelloResponse
 */
 package api
 
+import proto "github.com/golang/protobuf/proto"
+import fmt "fmt"
+import math "math"
+
 import (
-	fmt "fmt"
-
-	proto "github.com/golang/protobuf/proto"
-
-	math "math"
-
 	context "golang.org/x/net/context"
-
 	grpc "google.golang.org/grpc"
 )
 

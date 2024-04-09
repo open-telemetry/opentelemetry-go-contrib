@@ -5,8 +5,8 @@
 package main
 
 import (
-	__atel_context "context"
 	"fmt"
+	__atel_context "context"
 
 	"go.opentelemetry.io/contrib/instrgen/rtlib"
 	__atel_otel "go.opentelemetry.io/otel"

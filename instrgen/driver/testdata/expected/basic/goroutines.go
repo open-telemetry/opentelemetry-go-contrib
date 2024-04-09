@@ -5,13 +5,12 @@
 package main
 
 import (
-	__atel_context "context"
 	"fmt"
-
+	__atel_context "context"
 	__atel_otel "go.opentelemetry.io/otel"
 )
 
-func goroutines(__atel_tracing_ctx __atel_context.Context) {
+func goroutines(__atel_tracing_ctx __atel_context.Context,) {
 	__atel_child_tracing_ctx, __atel_span := __atel_otel.Tracer("goroutines").Start(__atel_tracing_ctx, "goroutines")
 	_ = __atel_child_tracing_ctx
 	defer __atel_span.End()
