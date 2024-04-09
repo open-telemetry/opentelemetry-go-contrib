@@ -11,6 +11,8 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 ### Added
 
 - Add the new `go.opentelemetry.io/contrib/instrgen` package to provide auto-generated source code instrumentation. (#3068, #3108)
+- The `go.opentelemetry.io/contrib/bridges/otellogr` module.
+  This module provides an OpenTelemetry logging bridge for "github.com/go-logr/logr". (#5357)
 
 ## [1.25.0/0.50.0/0.19.0/0.5.0/0.0.1] - 2024-04-05
 
