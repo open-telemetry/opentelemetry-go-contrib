@@ -4,7 +4,7 @@
 // Package otelslog provides [Handler], an [slog.Handler] implementation, that
 // can be used to bridge between the [log/slog] API and [OpenTelemetry].
 //
-// # Record Convesion
+// # Record Conversion
 //
 // The [slog.Record] are converted to OpenTelemetry [log.Record] in the following
 // way:

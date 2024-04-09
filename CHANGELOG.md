@@ -11,8 +11,18 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 ### Added
 
 - Add the new `go.opentelemetry.io/contrib/instrgen` package to provide auto-generated source code instrumentation. (#3068, #3108)
+
+## [1.25.0/0.50.0/0.19.0/0.5.0/0.0.1] - 2024-04-05
+
+### Added
+
+- Implemented setting the `cloud.resource_id` resource attribute in `go.opentelemetry.io/detectors/aws/ecs` based on the ECS Metadata v4 endpoint. (#5091)
 - The `go.opentelemetry.io/contrib/bridges/otelslog` module.
   This module provides an OpenTelemetry logging bridge for "log/slog". (#5335)
+
+### Fixed
+
+- Update all dependencies to address [GO-2024-2687]. (#5359)
 
 ### Removed
 
@@ -28,7 +38,6 @@ The next release will require at least [Go 1.21].
 - Support [Go 1.22]. (#5082)
 - Add support for Summary metrics to `go.opentelemetry.io/contrib/bridges/prometheus`. (#5089)
 - Add support for Exponential (native) Histograms in `go.opentelemetry.io/contrib/bridges/prometheus`. (#5093)
-- Implemented setting the `cloud.resource_id` resource attribute in `go.opentelemetry.io/detectors/aws/ecs` based on the ECS Metadata v4 endpoint. (#5091)
 
 ### Removed
 
@@ -951,7 +960,8 @@ First official tagged release of `contrib` repository.
 - Prefix support for dogstatsd (#34)
 - Update Go Runtime package to use batch observer (#44)
 
-[Unreleased]: https://github.com/open-telemetry/opentelemetry-go-contrib/compare/v1.24.0...HEAD
+[Unreleased]: https://github.com/open-telemetry/opentelemetry-go-contrib/compare/v1.25.0...HEAD
+[1.25.0/0.50.0/0.19.0/0.5.0/0.0.1]: https://github.com/open-telemetry/opentelemetry-go-contrib/releases/tag/v1.25.0
 [1.24.0/0.49.0/0.18.0/0.4.0]: https://github.com/open-telemetry/opentelemetry-go-contrib/releases/tag/v1.24.0
 [1.23.0/0.48.0/0.17.0/0.3.0]: https://github.com/open-telemetry/opentelemetry-go-contrib/releases/tag/v1.23.0
 [1.22.0/0.47.0/0.16.0/0.2.0]: https://github.com/open-telemetry/opentelemetry-go-contrib/releases/tag/v1.22.0
@@ -1014,3 +1024,5 @@ First official tagged release of `contrib` repository.
 [Go 1.20]: https://go.dev/doc/go1.20
 [Go 1.19]: https://go.dev/doc/go1.19
 [Go 1.18]: https://go.dev/doc/go1.18
+
+[GO-2024-2687]: https://pkg.go.dev/vuln/GO-2024-2687
