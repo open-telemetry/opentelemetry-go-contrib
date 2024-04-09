@@ -12,11 +12,12 @@ import (
 	_ "github.com/golangci/golangci-lint/cmd/golangci-lint"
 	_ "github.com/jcchavezs/porto/cmd/porto"
 	_ "github.com/wadey/gocovmerge"
+	_ "golang.org/x/exp/cmd/gorelease"
+	_ "golang.org/x/tools/cmd/stringer"
+	_ "golang.org/x/vuln/cmd/govulncheck"
+
 	_ "go.opentelemetry.io/build-tools/crosslink"
 	_ "go.opentelemetry.io/build-tools/dbotconf"
 	_ "go.opentelemetry.io/build-tools/gotmpl"
 	_ "go.opentelemetry.io/build-tools/multimod"
-	_ "golang.org/x/exp/cmd/gorelease"
-	_ "golang.org/x/tools/cmd/stringer"
-	_ "golang.org/x/vuln/cmd/govulncheck"
 )

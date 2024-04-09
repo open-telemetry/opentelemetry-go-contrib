@@ -2,9 +2,11 @@
 
 package config
 
-import "encoding/json"
-import "fmt"
-import "reflect"
+import (
+	"encoding/json"
+	"fmt"
+	"reflect"
+)
 
 type AttributeLimits struct {
 	// AttributeCountLimit corresponds to the JSON schema field

@@ -5,11 +5,12 @@
 package main
 
 import (
-	. "go.opentelemetry.io/contrib/instrgen/testdata/interface/app"
-	__atel_otel "go.opentelemetry.io/otel"
 	__atel_context "context"
-	. "go.opentelemetry.io/contrib/instrgen/testdata/interface/serializer"
+
 	"go.opentelemetry.io/contrib/instrgen/rtlib"
+	. "go.opentelemetry.io/contrib/instrgen/testdata/interface/app"
+	. "go.opentelemetry.io/contrib/instrgen/testdata/interface/serializer"
+	__atel_otel "go.opentelemetry.io/otel"
 )
 
 func main() {

@@ -1,6 +1,61 @@
 // Copyright The OpenTelemetry Authors
 // SPDX-License-Identifier: Apache-2.0
 
+// Package otellogr provides [LogSink], an [logr.LogSink] implementation, that
+// can be used to bridge between the [github.com/go-logr/logr] API and
+// [OpenTelemetry].
+//
+// # Record Conversion
+//
+// The logr records are converted to OpenTelemetry [log.Record] in the following
+// way:
+//
+//   - Time is set as the current time of conversion.
+//   - Message is set as the Body using a [log.StringValue].
+//   - Level is transformed and set as the Severity. The SeverityText is not
+//     set.
+//   - PC is dropped.
+//   - KeyAndValues are transformed and set as Attributes.
+//   - Error is always logged as an additional attribute with the key "err" and
+//     with the severity [log.SeverityError].
+//   - Name is logged as an additional attribute with the key "logger".
+//   - Context is not propagated to the OpenTelemetry log record, as logr does
+//     not provide a way to access it.
+//
+// The Level is transformed by using the [WithLevelSeverity] option. If this is
+// not provided it would default to a function that adds an offset to the logr
+// such that [logr.Info] is transformed to [log.SeverityInfo]. For example:
+//
+//   - [logr.Info] is transformed to [log.SeverityInfo].
+//   - [logr.V(0)] is transformed to [log.SeverityInfo].
+//   - [logr.V(1)] is transformed to [log.SeverityInfo2].
+//   - [logr.V(2)] is transformed to [log.SeverityInfo3].
+//   - ...
+//   - [logr.V(15)] is transformed to [log.SeverityFatal4].
+//   - [logr.Error] is transformed to [log.SeverityError].
+//
+// KeysAndValues values are transformed based on their type. The following types are
+// supported:
+//
+//   - [bool] are transformed to [log.BoolValue].
+//   - [string] are transformed to [log.StringValue].
+//   - [int], [int8], [int16], [int32], [int64] are transformed to
+//     [log.Int64Value].
+//   - [uint], [uint8], [uint16], [uint32], [uint64], [uintptr] are transformed
+//     to [log.Int64Value] or [log.StringValue] if the value is too large.
+//   - [float32], [float64] are transformed to [log.Float64Value].
+//   - [time.Duration] are transformed to [log.Int64Value] with the nanoseconds.
+//   - [complex64], [complex128] are transformed to [log.StringValue] with the
+//   - [time.Time] are transformed to [log.Int64Value] with the nanoseconds.
+//   - [[]byte] are transformed to [log.BytesValue].
+//   - [error] are transformed to [log.StringValue] with the error message.
+//   - [nil] are transformed to an empty [log.Value].
+//   - [struct] are transformed to [log.StringValue] with the struct fields.
+//   - [slice], [array] are transformed to [log.SliceValue] with the elements.
+//   - [map] are transformed to [log.MapValue] with the key-value pairs.
+//   - [pointer], [interface] are transformed to the dereferenced value.
+//
+// [OpenTelemetry]: https://opentelemetry.io/docs/concepts/signals/logs/
 package otellogr // import "go.opentelemetry.io/contrib/bridges/otellogr"
 
 import (
@@ -12,17 +67,113 @@ import (
 	"time"
 
 	"github.com/go-logr/logr"
+
 	"go.opentelemetry.io/otel/log"
+	"go.opentelemetry.io/otel/log/global"
+	"go.opentelemetry.io/otel/sdk/instrumentation"
 )
 
 const (
 	bridgeName = "go.opentelemetry.io/contrib/bridges/otellogr"
-
 	// nameKey is used to log the `WithName` values as an additional attribute.
 	nameKey = "logger"
 	// errKey is used to log the error parameter of Error as an additional attribute.
 	errKey = "err"
 )
+
+type config struct {
+	provider      log.LoggerProvider
+	scope         instrumentation.Scope
+	levelSeverity func(int) log.Severity
+}
+
+func newConfig(options []Option) config {
+	var c config
+	for _, opt := range options {
+		c = opt.apply(c)
+	}
+
+	var emptyScope instrumentation.Scope
+	if c.scope == emptyScope {
+		c.scope = instrumentation.Scope{
+			Name:    bridgeName,
+			Version: version,
+		}
+	}
+
+	if c.provider == nil {
+		c.provider = global.GetLoggerProvider()
+	}
+
+	if c.levelSeverity == nil {
+		c.levelSeverity = func(level int) log.Severity {
+			const sevOffset = int(log.SeverityInfo)
+			return log.Severity(level + sevOffset)
+		}
+	}
+
+	return c
+}
+
+func (c config) logger() log.Logger {
+	var opts []log.LoggerOption
+	if c.scope.Version != "" {
+		opts = append(opts, log.WithInstrumentationVersion(c.scope.Version))
+	}
+	if c.scope.SchemaURL != "" {
+		opts = append(opts, log.WithSchemaURL(c.scope.SchemaURL))
+	}
+	return c.provider.Logger(c.scope.Name, opts...)
+}
+
+// Option configures a [LogSink].
+type Option interface {
+	apply(config) config
+}
+
+type optFunc func(config) config
+
+func (f optFunc) apply(c config) config { return f(c) }
+
+// WithInstrumentationScope returns an [Option] that configures the scope of
+// the [log.Logger] used by a [LogSink].
+//
+// By default if this Option is not provided, the LogSink will use a default
+// instrumentation scope describing this bridge package. It is recommended to
+// provide this so log data can be associated with its source package or
+// module.
+func WithInstrumentationScope(scope instrumentation.Scope) Option {
+	return optFunc(func(c config) config {
+		c.scope = scope
+		return c
+	})
+}
+
+// WithLoggerProvider returns an [Option] that configures [log.LoggerProvider]
+// used by a [LogSink] to create its [log.Logger].
+//
+// By default if this Option is not provided, the LogSink will use the global
+// LoggerProvider.
+func WithLoggerProvider(provider log.LoggerProvider) Option {
+	return optFunc(func(c config) config {
+		c.provider = provider
+		return c
+	})
+}
+
+// WithLevelSeverity returns an [Option] that configures the function used to
+// convert logr levels to OpenTelemetry log severities.
+//
+// By default if this Option is not provided, the LogSink will use a default
+// conversion function which adds an offset to the logr level to get the
+// OpenTelemetry severity. The offset is such that logr.Info("message")
+// converts to OpenTelemetry [log.SeverityInfo].
+func WithLevelSeverity(f func(int) log.Severity) Option {
+	return optFunc(func(c config) config {
+		c.levelSeverity = f
+		return c
+	})
+}
 
 // NewLogSink returns a new [LogSink] to be used as a [logr.LogSink].
 //
@@ -31,16 +182,21 @@ const (
 func NewLogSink(options ...Option) *LogSink {
 	c := newConfig(options)
 	return &LogSink{
-		logger: c.logger(),
+		logger:        c.logger(),
+		levelSeverity: c.levelSeverity,
 	}
 }
 
 // LogSink is a [logr.LogSink] that sends all logging records it receives to
 // OpenTelemetry. See package documentation for how conversions are made.
 type LogSink struct {
-	name   string
-	logger log.Logger
-	values []log.KeyValue
+	// Ensure forward compatibility by explicitly making this not comparable.
+	noCmp [0]func() //nolint: unused  // This is indeed used.
+
+	name          string
+	logger        log.Logger
+	levelSeverity func(int) log.Severity
+	values        []log.KeyValue
 }
 
 // Compile-time check *Handler implements logr.LogSink.
@@ -215,8 +371,15 @@ func convertValue(v any) log.Value {
 	case reflect.Map:
 		kvs := make([]log.KeyValue, 0, val.Len())
 		for _, k := range val.MapKeys() {
+			var key string
+			// If the key is a struct, use %+v to print the struct fields.
+			if k.Kind() == reflect.Struct {
+				key = fmt.Sprintf("%+v", k.Interface())
+			} else {
+				key = fmt.Sprintf("%v", k.Interface())
+			}
 			kvs = append(kvs, log.KeyValue{
-				Key:   fmt.Sprintf("%v", k.Interface()),
+				Key:   key,
 				Value: convertValue(val.MapIndex(k).Interface()),
 			})
 		}
@@ -236,6 +399,8 @@ func convertValue(v any) log.Value {
 	return log.StringValue(fmt.Sprintf("unhandled: (%s) %+v", t, v))
 }
 
+// convertUintValue converts a uint64 to a log.Value.
+// If the value is too large to fit in an int64, it is converted to a string.
 func convertUintValue(v uint64) log.Value {
 	if v > math.MaxInt64 {
 		return log.StringValue(strconv.FormatUint(v, 10))

@@ -6,12 +6,13 @@ package api_v2
 import (
 	encoding_binary "encoding/binary"
 	fmt "fmt"
-	_ "github.com/gogo/protobuf/gogoproto"
-	proto "github.com/gogo/protobuf/proto"
-	_ "google.golang.org/genproto/googleapis/api/annotations"
 	io "io"
 	math "math"
 	math_bits "math/bits"
+
+	_ "github.com/gogo/protobuf/gogoproto"
+	proto "github.com/gogo/protobuf/proto"
+	_ "google.golang.org/genproto/googleapis/api/annotations"
 )
 
 // Reference imports to suppress errors if they are not otherwise used.

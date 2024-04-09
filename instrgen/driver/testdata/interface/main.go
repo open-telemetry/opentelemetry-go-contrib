@@ -5,9 +5,9 @@
 package main
 
 import (
+	"go.opentelemetry.io/contrib/instrgen/rtlib"
 	. "go.opentelemetry.io/contrib/instrgen/testdata/interface/app"
 	. "go.opentelemetry.io/contrib/instrgen/testdata/interface/serializer"
-	"go.opentelemetry.io/contrib/instrgen/rtlib"
 )
 
 func main() {

@@ -1,3 +1,6 @@
+// Copyright The OpenTelemetry Authors
+// SPDX-License-Identifier: Apache-2.0
+
 package otellogr
 
 import (
@@ -9,8 +12,11 @@ import (
 
 	"github.com/go-logr/logr"
 	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
+
 	"go.opentelemetry.io/otel/log"
 	"go.opentelemetry.io/otel/log/embedded"
+	"go.opentelemetry.io/otel/log/global"
 	"go.opentelemetry.io/otel/sdk/instrumentation"
 )
 
@@ -61,6 +67,39 @@ type expectedRecord struct {
 
 var now = time.Now()
 
+func TestNewLogSinkConfiguration(t *testing.T) {
+	t.Run("default", func(t *testing.T) {
+		r := new(recorder)
+		global.SetLoggerProvider(r)
+
+		var ls *LogSink
+		assert.NotPanics(t, func() { ls = NewLogSink() })
+		assert.NotNil(t, ls)
+		require.IsType(t, &recorder{}, ls.logger)
+
+		l := ls.logger.(*recorder)
+		want := instrumentation.Scope{Name: bridgeName, Version: version}
+		assert.Equal(t, want, l.Scope)
+	})
+
+	t.Run("with_options", func(t *testing.T) {
+		r := new(recorder)
+		wantScope := instrumentation.Scope{Name: "name", Version: "ver", SchemaURL: "url"}
+		var ls *LogSink
+		assert.NotPanics(t, func() {
+			ls = NewLogSink(
+				WithLoggerProvider(r),
+				WithInstrumentationScope(wantScope),
+			)
+		})
+		assert.NotNil(t, ls)
+		require.IsType(t, &recorder{}, ls.logger)
+
+		l := ls.logger.(*recorder)
+		assert.Equal(t, wantScope, l.Scope)
+	})
+}
+
 func TestLogSink(t *testing.T) {
 	for _, tt := range []struct {
 		name            string
@@ -80,7 +119,7 @@ func TestLogSink(t *testing.T) {
 			},
 		},
 		{
-			name: "info-multi-attrs",
+			name: "info_multi_attrs",
 			f: func(l *logr.Logger) {
 				l.Info("msg",
 					"struct", struct{ data int64 }{data: 1},
@@ -126,7 +165,7 @@ func TestLogSink(t *testing.T) {
 			},
 		},
 		{
-			name: "error-multi-attrs",
+			name: "error_multi_attrs",
 			f: func(l *logr.Logger) {
 				l.Error(errors.New("error"), "msg",
 					"struct", struct{ data int64 }{data: 1},
@@ -158,7 +197,7 @@ func TestLogSink(t *testing.T) {
 			},
 		},
 		{
-			name: "info-with-name",
+			name: "info_with_name",
 			f: func(l *logr.Logger) {
 				l.WithName("test").Info("info message with name")
 			},
@@ -173,7 +212,7 @@ func TestLogSink(t *testing.T) {
 			},
 		},
 		{
-			name: "info-with-name-nested",
+			name: "info_with_name_nested",
 			f: func(l *logr.Logger) {
 				l.WithName("test").WithName("test").Info("info message with name")
 			},
@@ -188,7 +227,7 @@ func TestLogSink(t *testing.T) {
 			},
 		},
 		{
-			name: "info-with-attrs",
+			name: "info_with_attrs",
 			f: func(l *logr.Logger) {
 				l.WithValues("key", "value").Info("info message with attrs")
 			},
@@ -203,7 +242,7 @@ func TestLogSink(t *testing.T) {
 			},
 		},
 		{
-			name: "info-with-attrs-nested",
+			name: "info_with_attrs_nested",
 			f: func(l *logr.Logger) {
 				l.WithValues("key1", "value1").Info("info message with attrs", "key2", "value2")
 			},
@@ -262,14 +301,14 @@ func TestConvertKVs(t *testing.T) {
 			kvs:  nil,
 		},
 		{
-			name: "single-value",
+			name: "single_value",
 			kvs:  []any{"key", "value"},
 			expectedKVs: []log.KeyValue{
 				log.String("key", "value"),
 			},
 		},
 		{
-			name: "multiple-values",
+			name: "multiple_values",
 			kvs:  []any{"key1", "value1", "key2", "value2"},
 			expectedKVs: []log.KeyValue{
 				log.String("key1", "value1"),
@@ -277,7 +316,7 @@ func TestConvertKVs(t *testing.T) {
 			},
 		},
 		{
-			name: "missing-value",
+			name: "missing_value",
 			kvs:  []any{"key1", "value1", "key2"},
 			expectedKVs: []log.KeyValue{
 				log.String("key1", "value1"),
@@ -285,7 +324,7 @@ func TestConvertKVs(t *testing.T) {
 			},
 		},
 		{
-			name: "key-not-string",
+			name: "key_not_string",
 			kvs:  []any{42, "value"},
 			expectedKVs: []log.KeyValue{
 				log.String("42", "value"),
@@ -427,27 +466,32 @@ func TestConvertValue(t *testing.T) {
 			expectedValue: log.Value{},
 		},
 		{
-			name:          "ptrint",
+			name:          "nil_ptr",
+			value:         (*int)(nil),
+			expectedValue: log.Value{},
+		},
+		{
+			name:          "int_ptr",
 			value:         func() *int { i := 93; return &i }(),
 			expectedValue: log.Int64Value(93),
 		},
 		{
-			name:          "ptrstring",
+			name:          "string_ptr",
 			value:         func() *string { s := "hello"; return &s }(),
 			expectedValue: log.StringValue("hello"),
 		},
 		{
-			name:          "ptrbool",
+			name:          "bool_ptr",
 			value:         func() *bool { b := true; return &b }(),
 			expectedValue: log.BoolValue(true),
 		},
 		{
-			name:          "int-empty-array",
+			name:          "int_empty_array",
 			value:         []int{},
 			expectedValue: log.SliceValue([]log.Value{}...),
 		},
 		{
-			name:  "int-array",
+			name:  "int_array",
 			value: []int{1, 2, 3},
 			expectedValue: log.SliceValue([]log.Value{
 				log.Int64Value(1),
@@ -456,17 +500,35 @@ func TestConvertValue(t *testing.T) {
 			}...),
 		},
 		{
-			name:  "key-value-map",
+			name:  "key_value_map",
 			value: map[string]int{"one": 1},
 			expectedValue: log.MapValue(
 				log.Int64("one", 1),
 			),
 		},
 		{
-			name:  "int-string-map",
+			name:  "int_string_map",
 			value: map[int]string{1: "one"},
 			expectedValue: log.MapValue(
 				log.String("1", "one"),
+			),
+		},
+		{
+			name:  "nested_map",
+			value: map[string]map[string]int{"nested": {"one": 1}},
+			expectedValue: log.MapValue(
+				log.Map("nested",
+					log.Int64("one", 1),
+				),
+			),
+		},
+		{
+			name: "struct_key_map",
+			value: map[struct{ Name string }]int{
+				{Name: "John"}: 42,
+			},
+			expectedValue: log.MapValue(
+				log.Int64("{Name:John}", 42),
 			),
 		},
 		{
@@ -479,6 +541,22 @@ func TestConvertValue(t *testing.T) {
 				Age:  42,
 			},
 			expectedValue: log.StringValue("{Name:John Age:42}"),
+		},
+		{
+			name: "struct_ptr",
+			value: &struct {
+				Name string
+				Age  int
+			}{
+				Name: "John",
+				Age:  42,
+			},
+			expectedValue: log.StringValue("{Name:John Age:42}"),
+		},
+		{
+			name:          "ctx",
+			value:         context.Background(),
+			expectedValue: log.StringValue("context.Background"),
 		},
 	} {
 		t.Run(tt.name, func(t *testing.T) {
