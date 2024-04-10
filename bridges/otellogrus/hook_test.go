@@ -58,7 +58,7 @@ func TestHookFire(t *testing.T) {
 			entry: &logrus.Entry{},
 
 			wantRecords: map[string][]log.Record{
-				bridgeName: []log.Record{
+				bridgeName: {
 					buildRecord(log.StringValue(""), time.Time{}, 0, nil),
 				},
 			},
@@ -69,7 +69,7 @@ func TestHookFire(t *testing.T) {
 				Time: now,
 			},
 			wantRecords: map[string][]log.Record{
-				bridgeName: []log.Record{
+				bridgeName: {
 					buildRecord(log.StringValue(""), now, 0, nil),
 				},
 			},
@@ -80,7 +80,7 @@ func TestHookFire(t *testing.T) {
 				Level: logrus.FatalLevel,
 			},
 			wantRecords: map[string][]log.Record{
-				bridgeName: []log.Record{
+				bridgeName: {
 					buildRecord(log.StringValue(""), time.Time{}, log.SeverityTrace1, nil),
 				},
 			},
@@ -94,7 +94,7 @@ func TestHookFire(t *testing.T) {
 				},
 			},
 			wantRecords: map[string][]log.Record{
-				bridgeName: []log.Record{
+				bridgeName: {
 					buildRecord(log.StringValue(""), time.Time{}, 0, []log.KeyValue{
 						log.String("hello", "world"),
 						log.Int("answer", 42),
@@ -178,7 +178,7 @@ func TestConvertFields(t *testing.T) {
 			name:   "with nil",
 			fields: logrus.Fields{"hello": nil},
 			wantKeyValue: []log.KeyValue{
-				log.KeyValue{Key: "hello", Value: log.Value{}},
+				{Key: "hello", Value: log.Value{}},
 			},
 		},
 		{
