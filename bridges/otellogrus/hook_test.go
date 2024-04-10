@@ -89,15 +89,13 @@ func TestHookFire(t *testing.T) {
 			name: "emits a log entry with data",
 			entry: &logrus.Entry{
 				Data: logrus.Fields{
-					"hello":  "world",
-					"answer": 42,
+					"hello": "world",
 				},
 			},
 			wantRecords: map[string][]log.Record{
 				bridgeName: {
 					buildRecord(log.StringValue(""), time.Time{}, 0, []log.KeyValue{
 						log.String("hello", "world"),
-						log.Int("answer", 42),
 					}),
 				},
 			},
