@@ -133,51 +133,83 @@ func TestConvertFields(t *testing.T) {
 		wantKeyValue []log.KeyValue
 	}{
 		{
-			name: "with a boolean",
-
+			name:   "with a boolean",
 			fields: logrus.Fields{"hello": true},
 			wantKeyValue: []log.KeyValue{
 				log.Bool("hello", true),
 			},
 		},
 		{
-			name: "with a bytes array",
-
+			name:   "with a bytes array",
 			fields: logrus.Fields{"hello": []byte("world")},
 			wantKeyValue: []log.KeyValue{
 				log.Bytes("hello", []byte("world")),
 			},
 		},
 		{
-			name: "with a float64",
-
+			name:   "with a float64",
 			fields: logrus.Fields{"hello": 6.5},
 			wantKeyValue: []log.KeyValue{
 				log.Float64("hello", 6.5),
 			},
 		},
 		{
-			name: "with an int",
-
+			name:   "with an int",
 			fields: logrus.Fields{"hello": 42},
 			wantKeyValue: []log.KeyValue{
 				log.Int("hello", 42),
 			},
 		},
 		{
-			name: "with an int64",
-
+			name:   "with an int64",
 			fields: logrus.Fields{"hello": int64(42)},
 			wantKeyValue: []log.KeyValue{
 				log.Int64("hello", 42),
 			},
 		},
 		{
-			name: "with a string",
-
+			name:   "with a string",
 			fields: logrus.Fields{"hello": "world"},
 			wantKeyValue: []log.KeyValue{
 				log.String("hello", "world"),
+			},
+		},
+		{
+			name:   "with nil",
+			fields: logrus.Fields{"hello": nil},
+			wantKeyValue: []log.KeyValue{
+				log.KeyValue{Key: "hello", Value: log.Value{}},
+			},
+		},
+		{
+			name:   "with a struct",
+			fields: logrus.Fields{"hello": struct{ Name string }{Name: "foobar"}},
+			wantKeyValue: []log.KeyValue{
+				log.String("hello", "{Name:foobar}"),
+			},
+		},
+		{
+			name:   "with a slice",
+			fields: logrus.Fields{"hello": []string{"foo", "bar"}},
+			wantKeyValue: []log.KeyValue{
+				log.Slice("hello",
+					log.StringValue("foo"),
+					log.StringValue("bar"),
+				),
+			},
+		},
+		{
+			name:   "with a map",
+			fields: logrus.Fields{"hello": map[string]int{"answer": 42}},
+			wantKeyValue: []log.KeyValue{
+				log.Map("hello", log.Int("answer", 42)),
+			},
+		},
+		{
+			name:   "with a pointer to struct",
+			fields: logrus.Fields{"hello": &struct{ Name string }{Name: "foobar"}},
+			wantKeyValue: []log.KeyValue{
+				log.String("hello", "{Name:foobar}"),
 			},
 		},
 	} {

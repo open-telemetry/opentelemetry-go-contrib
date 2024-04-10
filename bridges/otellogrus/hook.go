@@ -40,6 +40,7 @@ package otellogrus // import "go.opentelemetry.io/contrib/bridges/otellogrus"
 
 import (
 	"fmt"
+	"reflect"
 
 	"github.com/sirupsen/logrus"
 
@@ -188,27 +189,67 @@ func convertFields(fields logrus.Fields) []log.KeyValue {
 
 	i := 0
 	for k, v := range fields {
-		kvs[i] = convertKeyValue(k, v)
+		kvs[i] = log.KeyValue{
+			Key:   k,
+			Value: convertValue(v),
+		}
 		i++
 	}
 	return kvs
 }
 
-func convertKeyValue(k string, v interface{}) log.KeyValue {
+func convertValue(v interface{}) log.Value {
 	switch v := v.(type) {
 	case bool:
-		return log.Bool(k, v)
+		return log.BoolValue(v)
 	case []byte:
-		return log.Bytes(k, v)
+		return log.BytesValue(v)
 	case float64:
-		return log.Float64(k, v)
+		return log.Float64Value(v)
 	case int:
-		return log.Int(k, v)
+		return log.IntValue(v)
 	case int64:
-		return log.Int64(k, v)
+		return log.Int64Value(v)
 	case string:
-		return log.String(k, v)
-	default:
-		return log.String(k, fmt.Sprintf("%s", v))
+		return log.StringValue(v)
 	}
+
+	t := reflect.TypeOf(v)
+	if t == nil {
+		return log.Value{}
+	}
+	val := reflect.ValueOf(v)
+	switch t.Kind() {
+	case reflect.Struct:
+		return log.StringValue(fmt.Sprintf("%+v", v))
+	case reflect.Slice, reflect.Array:
+		items := make([]log.Value, 0, val.Len())
+		for i := 0; i < val.Len(); i++ {
+			items = append(items, convertValue(val.Index(i).Interface()))
+		}
+		return log.SliceValue(items...)
+	case reflect.Map:
+		kvs := make([]log.KeyValue, 0, val.Len())
+		for _, k := range val.MapKeys() {
+			var key string
+			// If the key is a struct, use %+v to print the struct fields.
+			if k.Kind() == reflect.Struct {
+				key = fmt.Sprintf("%+v", k.Interface())
+			} else {
+				key = fmt.Sprintf("%v", k.Interface())
+			}
+			kvs = append(kvs, log.KeyValue{
+				Key:   key,
+				Value: convertValue(val.MapIndex(k).Interface()),
+			})
+		}
+		return log.MapValue(kvs...)
+	case reflect.Ptr, reflect.Interface:
+		if val.IsNil() {
+			return log.Value{}
+		}
+		return convertValue(val.Elem().Interface())
+	}
+
+	return log.StringValue(fmt.Sprintf("unhandled attribute type: (%s) %+v", t, v))
 }
