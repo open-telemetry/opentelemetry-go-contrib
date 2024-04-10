@@ -4,12 +4,13 @@ package otellogrus
 
 import (
 	"testing"
+	"time"
 
 	"github.com/sirupsen/logrus"
 	"github.com/stretchr/testify/assert"
 
 	"go.opentelemetry.io/otel/log"
-	sdklog "go.opentelemetry.io/otel/sdk/log"
+	"go.opentelemetry.io/otel/log/logtest"
 )
 
 func TestNewHook(t *testing.T) {
@@ -43,21 +44,45 @@ func TestHookLevels(t *testing.T) {
 }
 
 func TestHookFire(t *testing.T) {
+	now := time.Now()
+
 	for _, tt := range []struct {
 		name  string
 		entry *logrus.Entry
 
-		expectedRecord log.Record
-		expectedErr    error
+		expectedRecords map[string][]log.Record
+		expectedErr     error
 	}{
 		{
 			name:  "emits an empty log entry",
 			entry: &logrus.Entry{},
+
+			expectedRecords: map[string][]log.Record{
+				bridgeName: []log.Record{
+					buildRecord(log.StringValue(""), time.Time{}, 0, nil),
+				},
+			},
+		},
+		{
+			name: "emits a log entry with a timestamp",
+			entry: &logrus.Entry{
+				Time: now,
+			},
+			expectedRecords: map[string][]log.Record{
+				bridgeName: []log.Record{
+					buildRecord(log.StringValue(""), now, 0, nil),
+				},
+			},
 		},
 		{
 			name: "emits a log entry with severity level",
 			entry: &logrus.Entry{
 				Level: logrus.FatalLevel,
+			},
+			expectedRecords: map[string][]log.Record{
+				bridgeName: []log.Record{
+					buildRecord(log.StringValue(""), time.Time{}, log.SeverityTrace1, nil),
+				},
 			},
 		},
 		{
@@ -68,13 +93,34 @@ func TestHookFire(t *testing.T) {
 					"answer": 42,
 				},
 			},
+			expectedRecords: map[string][]log.Record{
+				bridgeName: []log.Record{
+					buildRecord(log.StringValue(""), time.Time{}, 0, []log.KeyValue{
+						log.String("hello", "world"),
+						log.Int("answer", 42),
+					}),
+				},
+			},
 		},
 	} {
 		t.Run(tt.name, func(t *testing.T) {
-			lp := sdklog.NewLoggerProvider()
+			rec := logtest.NewRecorder()
 
-			err := NewHook(WithLoggerProvider(lp)).Fire(tt.entry)
+			err := NewHook(WithLoggerProvider(rec)).Fire(tt.entry)
 			assert.Equal(t, tt.expectedErr, err)
+
+			for k, v := range tt.expectedRecords {
+				found := false
+
+				for _, s := range rec.Result() {
+					if k == s.Name {
+						assert.Equal(t, v, s.Records)
+						found = true
+					}
+				}
+
+				assert.Truef(t, found, "expected to find records with a scope named %q", k)
+			}
 		})
 	}
 }
@@ -139,4 +185,14 @@ func TestConvertFields(t *testing.T) {
 			assert.Equal(t, convertFields(tt.fields), tt.expectedKeyValue)
 		})
 	}
+}
+
+func buildRecord(body log.Value, timestamp time.Time, severity log.Severity, attrs []log.KeyValue) log.Record {
+	var record log.Record
+	record.SetBody(body)
+	record.SetTimestamp(timestamp)
+	record.SetSeverity(severity)
+	record.AddAttributes(attrs...)
+
+	return record
 }
