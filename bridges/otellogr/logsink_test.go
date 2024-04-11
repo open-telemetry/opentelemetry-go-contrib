@@ -15,49 +15,10 @@ import (
 	"github.com/stretchr/testify/require"
 
 	"go.opentelemetry.io/otel/log"
-	"go.opentelemetry.io/otel/log/embedded"
 	"go.opentelemetry.io/otel/log/global"
+	"go.opentelemetry.io/otel/log/logtest"
 	"go.opentelemetry.io/otel/sdk/instrumentation"
 )
-
-// embeddedLogger is a type alias so the embedded.Logger type doesn't conflict
-// with the Logger method of the recorder when it is embedded.
-type embeddedLogger = embedded.Logger // nolint:unused  // Used below.
-
-// recorder records all [log.Record]s it is ased to emit.
-type recorder struct {
-	embedded.LoggerProvider
-	embeddedLogger // nolint:unused  // Used to embed embedded.Logger.
-
-	// Records are the records emitted.
-	Records []log.Record
-
-	// Scope is the Logger scope recorder received when Logger was called.
-	Scope instrumentation.Scope
-
-	// MinSeverity is the minimum severity the recorder will return true for
-	// when Enabled is called (unless enableKey is set).
-	MinSeverity log.Severity
-}
-
-func (r *recorder) Logger(name string, opts ...log.LoggerOption) log.Logger {
-	cfg := log.NewLoggerConfig(opts...)
-
-	r.Scope = instrumentation.Scope{
-		Name:      name,
-		Version:   cfg.InstrumentationVersion(),
-		SchemaURL: cfg.SchemaURL(),
-	}
-	return r
-}
-
-func (r *recorder) Enabled(ctx context.Context, record log.Record) bool {
-	return record.Severity() >= r.MinSeverity
-}
-
-func (r *recorder) Emit(_ context.Context, record log.Record) {
-	r.Records = append(r.Records, record)
-}
 
 type expectedRecord struct {
 	Body       log.Value
@@ -69,26 +30,26 @@ var now = time.Now()
 
 func TestNewLogSinkConfiguration(t *testing.T) {
 	t.Run("default", func(t *testing.T) {
-		r := new(recorder)
-		global.SetLoggerProvider(r)
+		rec := logtest.NewRecorder()
+		global.SetLoggerProvider(rec)
 
 		var ls *LogSink
 		assert.NotPanics(t, func() { ls = NewLogSink() })
 		assert.NotNil(t, ls)
-		require.IsType(t, &recorder{}, ls.logger)
+		require.IsType(t, &logtest.Recorder{}, ls.logger)
 
-		l := ls.logger.(*recorder)
-		want := instrumentation.Scope{Name: bridgeName, Version: version}
-		assert.Equal(t, want, l.Scope)
+		l := ls.logger.(*logtest.Recorder)
+		assert.Equal(t, version, l.Result()[0].Version)
+		assert.Equal(t, bridgeName, l.Result()[0].Name)
 	})
 
 	t.Run("with_options", func(t *testing.T) {
-		r := new(recorder)
+		rec := logtest.NewRecorder()
 		wantScope := instrumentation.Scope{Name: "name", Version: "ver", SchemaURL: "url"}
 		var ls *LogSink
 		assert.NotPanics(t, func() {
 			ls = NewLogSink(
-				WithLoggerProvider(r),
+				WithLoggerProvider(rec),
 				WithInstrumentationScope(wantScope),
 				WithLevelSeverity(func(i int) log.Severity {
 					return log.SeverityFatal
@@ -96,12 +57,9 @@ func TestNewLogSinkConfiguration(t *testing.T) {
 			)
 		})
 		assert.NotNil(t, ls)
-		require.IsType(t, &recorder{}, ls.logger)
+		require.IsType(t, &logtest.Recorder{}, ls.logger)
 		assert.NotNil(t, ls.levelSeverity)
 		assert.Equal(t, log.SeverityFatal, ls.levelSeverity(0))
-
-		l := ls.logger.(*recorder)
-		assert.Equal(t, wantScope, l.Scope)
 	})
 }
 
@@ -264,13 +222,14 @@ func TestLogSink(t *testing.T) {
 		},
 	} {
 		t.Run(tt.name, func(t *testing.T) {
-			r := new(recorder)
-			ls := NewLogSink(WithLoggerProvider(r))
+			rec := logtest.NewRecorder()
+			ls := NewLogSink(WithLoggerProvider(rec))
 			l := logr.New(ls)
 			tt.f(&l)
 
-			assert.Len(t, r.Records, len(tt.expectedRecords))
-			for i, record := range r.Records {
+			require.Len(t, rec.Result(), 2)
+			assert.Len(t, rec.Result()[1].Records, len(tt.expectedRecords))
+			for i, record := range rec.Result()[1].Records {
 				assert.Equal(t, tt.expectedRecords[i].Body, record.Body())
 				assert.Equal(t, tt.expectedRecords[i].Severity, record.Severity())
 
@@ -286,12 +245,25 @@ func TestLogSink(t *testing.T) {
 }
 
 func TestLogSinkEnabled(t *testing.T) {
-	r := new(recorder)
-	ls := NewLogSink(WithLoggerProvider(r))
+	rec := logtest.NewRecorder(
+		logtest.WithEnabledFunc(func(ctx context.Context, record log.Record) bool {
+			return record.Severity() == log.SeverityInfo
+		}),
+	)
+	ls := NewLogSink(
+		WithLoggerProvider(rec),
+		WithLevelSeverity(func(i int) log.Severity {
+			switch i {
+			case 0:
+				return log.SeverityDebug
+			default:
+				return log.SeverityInfo
+			}
+		}),
+	)
 
+	assert.False(t, ls.Enabled(0))
 	assert.True(t, ls.Enabled(1))
-	assert.True(t, ls.Enabled(0))
-	assert.False(t, ls.Enabled(-10))
 }
 
 func TestConvertKVs(t *testing.T) {

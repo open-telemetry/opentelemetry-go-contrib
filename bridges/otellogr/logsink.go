@@ -238,8 +238,7 @@ func (l *LogSink) log(err error, msg string, serverity log.Severity, kvList ...a
 // verbosity and disable some info logs.
 func (l *LogSink) Enabled(level int) bool {
 	var record log.Record
-	const sevOffset = int(log.SeverityDebug)
-	record.SetSeverity(log.Severity(level + sevOffset))
+	record.SetSeverity(l.levelSeverity(level))
 	ctx := context.Background()
 	return l.logger.Enabled(ctx, record)
 }
