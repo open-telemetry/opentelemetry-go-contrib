@@ -7,7 +7,6 @@ import (
 	"context"
 	"errors"
 	"fmt"
-	"net/url"
 
 	"go.uber.org/zap/zapcore"
 
@@ -83,40 +82,6 @@ func (u users) MarshalLogArray(enc zapcore.ArrayEncoder) error {
 		enc.AppendString("user")
 	}
 	return nil
-}
-
-type obj struct {
-	kind int
-}
-
-func (o *obj) String() string {
-	if o == nil {
-		return "nil obj"
-	}
-
-	if o.kind == 1 {
-		panic("panic with string")
-	} else if o.kind == 2 {
-		panic(errors.New("panic with error"))
-	} else if o.kind == 3 {
-		// panic with an arbitrary object that causes a panic itself
-		// when being converted to a string
-		panic((*url.URL)(nil))
-	}
-
-	return "obj"
-}
-
-type errObj struct {
-	kind   int
-	errMsg string
-}
-
-func (eobj *errObj) Error() string {
-	if eobj.kind == 1 {
-		panic("panic in Error() method")
-	}
-	return eobj.errMsg
 }
 
 // converts value to result.

@@ -8,6 +8,7 @@ package otelzap // import "go.opentelemetry.io/contrib/bridges/otelzap"
 import (
 	"context"
 	"encoding/json"
+	"fmt"
 	"strconv"
 	"sync"
 	"time"
@@ -30,7 +31,7 @@ func getArrayEncoder() *arrayEncoder {
 }
 
 func putArrayEncoder(e *arrayEncoder) {
-	e.elems = e.elems[:0]
+	e.elems = e.elems[:0:0]
 	arrayEncoderPool.Put(e)
 }
 
@@ -42,13 +43,20 @@ var objectEncoderPool = sync.Pool{
 	},
 }
 
-func getObjectEncoder() *objectEncoder {
-	return objectEncoderPool.Get().(*objectEncoder)
-}
+func getObjectEncoder() (obj *objectEncoder, free func()) {
+	obj = objectEncoderPool.Get().(*objectEncoder)
+	return obj, func() {
+		// TODO: limit returned size so the pool doesn't hold on to very large
+		// buffers. Idea is based on
+		// https://cs.opensource.google/go/x/exp/+/814bf88c:slog/internal/buffer/buffer.go;l=27-34
 
-func putObjectEncoder(e *objectEncoder) {
-	e.cur = e.cur[:0]
-	objectEncoderPool.Put(e)
+		// Do not modify any previously held data.
+		obj.root.kv = obj.root.kv[:0:0]
+		obj.root.ns = ""
+		obj.root.next = nil
+		obj.cur = obj.root
+		objectEncoderPool.Put(obj)
+	}
 }
 
 var (
@@ -56,54 +64,81 @@ var (
 	_ zapcore.ArrayEncoder  = (*arrayEncoder)(nil)
 )
 
+type newNameSpace struct {
+	ns   string
+	kv   []log.KeyValue
+	next *newNameSpace
+}
+
 // Object Encoder implements zapcore.ObjectEncoder.
 // It encodes given fields to OTel attribute.
 type objectEncoder struct {
-	cur        []log.KeyValue
+	root *newNameSpace
+	// cur is a pointer to the namespace we're currently writing to.
+	cur        *newNameSpace
 	ctxfield   context.Context
 	reflectval log.Value
 }
 
 // NewObjectEncoder returns new ObjectEncoder.
 func newObjectEncoder(len int) *objectEncoder {
-	m := make([]log.KeyValue, 0, len)
-	return &objectEncoder{
-		cur: m,
+	keyval := make([]log.KeyValue, 0, len)
+	m := &newNameSpace{
+		kv: keyval,
 	}
+	return &objectEncoder{
+		root: m,
+		cur:  m,
+	}
+}
+
+// It iterates to the end of the linked list and appends namespace data.
+func (m *objectEncoder) getObjValue(o *newNameSpace) *newNameSpace {
+	if o.next == nil {
+		return nil
+	}
+	ok := m.getObjValue(o.next)
+	if ok == nil {
+		o.kv = append(o.kv, log.Map(o.next.ns, o.next.kv...))
+		return nil
+	}
+	return o
 }
 
 // Converts Array to logSlice using ArrayEncoder.
 func (m *objectEncoder) AddArray(key string, v zapcore.ArrayMarshaler) error {
-	// check if possible to get array length here - to avoid zero memory allocation
 	arr := getArrayEncoder()
 	err := v.MarshalLogArray(arr)
-	m.cur = append(m.cur, log.Slice(key, arr.elems...))
+	m.cur.kv = append(m.cur.kv, log.Slice(key, arr.elems...))
 	putArrayEncoder(arr)
 	return err
 }
 
 // Converts Object to logMap.
 func (m *objectEncoder) AddObject(k string, v zapcore.ObjectMarshaler) error {
-	newobj := getObjectEncoder()
+	newobj, free := getObjectEncoder()
+	defer free()
 	err := v.MarshalLogObject(newobj)
-	m.cur = append(m.cur, log.Map(k, newobj.cur...))
-	putObjectEncoder(newobj)
+	// use empty value on failure
+	m.getObjValue(newobj.root)
+	m.cur.kv = append(m.cur.kv, log.Map(k, newobj.root.kv...))
+	fmt.Println(m.cur.kv, "insdie obj")
 	return err
 }
 
 // Converts Binary to logBytes.
 func (m *objectEncoder) AddBinary(k string, v []byte) {
-	m.cur = append(m.cur, log.Bytes(k, v))
+	m.cur.kv = append(m.cur.kv, log.Bytes(k, v))
 }
 
 // Converts ByteString to logString.
 func (m *objectEncoder) AddByteString(k string, v []byte) {
-	m.cur = append(m.cur, log.String(k, string(v)))
+	m.cur.kv = append(m.cur.kv, log.String(k, string(v)))
 }
 
 // Converts Bool to logBool.
 func (m *objectEncoder) AddBool(k string, v bool) {
-	m.cur = append(m.cur, log.Bool(k, v))
+	m.cur.kv = append(m.cur.kv, log.Bool(k, v))
 }
 
 // Converts Duration to logInt.
@@ -114,12 +149,12 @@ func (m *objectEncoder) AddDuration(k string, v time.Duration) {
 // Converts Complex128 to logString.
 func (m *objectEncoder) AddComplex128(k string, v complex128) {
 	stringValue := strconv.FormatComplex(v, 'f', -1, 64)
-	m.cur = append(m.cur, log.String(k, stringValue))
+	m.cur.kv = append(m.cur.kv, log.String(k, stringValue))
 }
 
 // Converts Float64 to logFloat64.
 func (m *objectEncoder) AddFloat64(k string, v float64) {
-	m.cur = append(m.cur, log.Float64(k, v))
+	m.cur.kv = append(m.cur.kv, log.Float64(k, v))
 }
 
 // Converts Float32 to logFloat64.
@@ -129,22 +164,22 @@ func (m *objectEncoder) AddFloat32(k string, v float32) {
 
 // Converts Int64 to logInt64.
 func (m *objectEncoder) AddInt64(k string, v int64) {
-	m.cur = append(m.cur, log.Int64(k, v))
+	m.cur.kv = append(m.cur.kv, log.Int64(k, v))
 }
 
 // Converts Int to logInt.
 func (m *objectEncoder) AddInt(k string, v int) {
-	m.cur = append(m.cur, log.Int(k, v))
+	m.cur.kv = append(m.cur.kv, log.Int(k, v))
 }
 
 // Converts String to logString.
 func (m *objectEncoder) AddString(k string, v string) {
-	m.cur = append(m.cur, log.String(k, v))
+	m.cur.kv = append(m.cur.kv, log.String(k, v))
 }
 
-// Converts Uint64 to logInt64/logString
+// Converts Uint64 to logInt64/logString.
 func (m *objectEncoder) AddUint64(k string, v uint64) {
-	m.cur = append(m.cur,
+	m.cur.kv = append(m.cur.kv,
 		log.KeyValue{
 			Key:   k,
 			Value: assignUintValue(v),
@@ -152,7 +187,7 @@ func (m *objectEncoder) AddUint64(k string, v uint64) {
 }
 
 // Converts all non-primitive types to JSON string
-// Also checks for explcit context passed
+// Also checks for explcit context passed.
 func (m *objectEncoder) AddReflected(k string, v interface{}) error {
 	if ctx, ok := v.(context.Context); ok {
 		// assign ctx
@@ -179,8 +214,13 @@ func (m *objectEncoder) Write(p []byte) (n int, err error) {
 // OpenNamespace opens an isolated namespace where all subsequent fields will
 // be added.
 func (m *objectEncoder) OpenNamespace(k string) {
-	m.cur = m.cur[:0]
-	m.cur = append(m.cur, log.String("Namespace", k))
+	keyValue := make([]log.KeyValue, 0, 5)
+	s := &newNameSpace{
+		ns: k,
+		kv: keyValue,
+	}
+	m.cur.next = s
+	m.cur = s
 }
 
 func (m *objectEncoder) AddComplex64(k string, v complex64) { m.AddComplex128(k, complex128(v)) }
@@ -200,16 +240,19 @@ type arrayEncoder struct {
 }
 
 func (a *arrayEncoder) AppendArray(v zapcore.ArrayMarshaler) error {
-	enc := &arrayEncoder{elems: make([]log.Value, 0, 2)}
+	enc := getArrayEncoder()
 	err := v.MarshalLogArray(enc)
-	a.elems = append(a.elems, enc.elems...)
+	a.elems = append(a.elems, log.SliceValue(enc.elems...))
+	putArrayEncoder(enc)
 	return err
 }
 
 func (a *arrayEncoder) AppendObject(v zapcore.ObjectMarshaler) error {
-	m := newObjectEncoder(2)
+	m, free := getObjectEncoder()
+	defer free()
 	err := v.MarshalLogObject(m)
-	a.elems = append(a.elems, log.MapValue(m.cur...))
+	m.getObjValue(m.root)
+	a.elems = append(a.elems, log.MapValue(m.root.kv...))
 	return err
 }
 

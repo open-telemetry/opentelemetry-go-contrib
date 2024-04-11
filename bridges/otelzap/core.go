@@ -9,7 +9,6 @@ import (
 	"context"
 	"slices"
 
-	"go.uber.org/zap"
 	"go.uber.org/zap/zapcore"
 
 	"go.opentelemetry.io/otel/log"
@@ -31,7 +30,7 @@ var _ zapcore.Core = (*Core)(nil)
 
 // NewOTelZapCore creates a new [zapcore.Core] that can be used with zap.New()
 // this instance will translate zap logs to opentelemetry logs and export them.
-func NewOTelZapCore(opts ...Option) zapcore.Core {
+func NewCore(opts ...Option) zapcore.Core {
 	cfg := newConfig(opts)
 	return &Core{
 		logger: cfg.logger(),
@@ -77,8 +76,7 @@ func (o *Core) Write(ent zapcore.Entry, fields []zapcore.Field) error {
 
 	ctx, attr := getAttr(o.ctx, fields)
 	addattr := append(attr, o.attr...)
-
-	if len(addattr) > 0 {
+	if len(fields) > 0 {
 		r.AddAttributes(addattr...)
 	}
 
@@ -96,20 +94,16 @@ func (o *Core) clone() *Core {
 
 // converts zap fields to OTel log attributes.
 func getAttr(ctx context.Context, fields []zapcore.Field) (context.Context, []log.KeyValue) {
-	enc := newObjectEncoder(len(fields))
-	for i := range fields {
-		fields[i].AddTo(enc)
+	m := newObjectEncoder(5)
+	for _, field := range fields {
+		if ctxFld, ok := field.Interface.(context.Context); ok {
+			ctx = ctxFld
+			continue
+		}
+		field.AddTo(m)
 	}
-	if enc.ctxfield != nil {
-		ctx = enc.ctxfield
-	}
-	return ctx, enc.cur
-}
-
-// Method to pass context to OTel loggger as [zap.Field]
-// Ex: logger.Info("msg", otelzap.Context("key", ctx)).
-func Context(key string, val context.Context) zap.Field {
-	return zap.Reflect(key, val)
+	m.getObjValue(m.root)
+	return ctx, m.root.kv
 }
 
 // converts zap level to OTel log level.
