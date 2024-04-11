@@ -35,7 +35,7 @@ var wantInstrumentationScope = instrumentation.Scope{
 	Version:   otelgrpc.Version(),
 }
 
-// newGrpcTest creats a grpc server, starts it, and returns the client, closes everything down during test cleanup.
+// newGrpcTest creates a grpc server, starts it, and returns the client, closes everything down during test cleanup.
 func newGrpcTest(t testing.TB, listener net.Listener, cOpt []grpc.DialOption, sOpt []grpc.ServerOption) pb.TestServiceClient {
 	grpcServer := grpc.NewServer(sOpt...)
 	pb.RegisterTestServiceServer(grpcServer, test.NewTestServer())
@@ -47,17 +47,15 @@ func newGrpcTest(t testing.TB, listener net.Listener, cOpt []grpc.DialOption, sO
 		grpcServer.Stop()
 		assert.NoError(t, <-errCh)
 	})
-	ctx := context.Background()
 
-	cOpt = append(cOpt, grpc.WithBlock(), grpc.WithTransportCredentials(insecure.NewCredentials()))
+	cOpt = append(cOpt, grpc.WithTransportCredentials(insecure.NewCredentials()))
 
 	if l, ok := listener.(interface{ Dial() (net.Conn, error) }); ok {
 		dial := func(context.Context, string) (net.Conn, error) { return l.Dial() }
 		cOpt = append(cOpt, grpc.WithContextDialer(dial))
 	}
 
-	conn, err := grpc.DialContext(
-		ctx,
+	conn, err := grpc.NewClient(
 		listener.Addr().String(),
 		cOpt...,
 	)
