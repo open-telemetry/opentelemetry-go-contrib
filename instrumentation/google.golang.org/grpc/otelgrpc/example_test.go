@@ -10,7 +10,7 @@ import (
 )
 
 func ExampleNewClientHandler() {
-	_, _ = grpc.Dial("localhost", grpc.WithStatsHandler(otelgrpc.NewClientHandler()))
+	_, _ = grpc.NewClient("localhost", grpc.WithStatsHandler(otelgrpc.NewClientHandler()))
 }
 
 func ExampleNewServerHandler() {
