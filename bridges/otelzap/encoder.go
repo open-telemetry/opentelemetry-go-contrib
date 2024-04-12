@@ -6,9 +6,7 @@
 package otelzap // import "go.opentelemetry.io/contrib/bridges/otelzap"
 
 import (
-	"context"
 	"encoding/json"
-	"fmt"
 	"strconv"
 	"sync"
 	"time"
@@ -76,7 +74,6 @@ type objectEncoder struct {
 	root *newNameSpace
 	// cur is a pointer to the namespace we're currently writing to.
 	cur        *newNameSpace
-	ctxfield   context.Context
 	reflectval log.Value
 }
 
@@ -122,7 +119,6 @@ func (m *objectEncoder) AddObject(k string, v zapcore.ObjectMarshaler) error {
 	// use empty value on failure
 	m.getObjValue(newobj.root)
 	m.cur.kv = append(m.cur.kv, log.Map(k, newobj.root.kv...))
-	fmt.Println(m.cur.kv, "insdie obj")
 	return err
 }
 
@@ -189,12 +185,6 @@ func (m *objectEncoder) AddUint64(k string, v uint64) {
 // Converts all non-primitive types to JSON string
 // Also checks for explcit context passed.
 func (m *objectEncoder) AddReflected(k string, v interface{}) error {
-	if ctx, ok := v.(context.Context); ok {
-		// assign ctx
-		m.ctxfield = ctx
-		return nil
-	}
-
 	enc := json.NewEncoder(m)
 	if err := enc.Encode(v); err != nil {
 		return err

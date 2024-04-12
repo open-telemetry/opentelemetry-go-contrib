@@ -72,7 +72,7 @@ func TestGetOTelLevel(t *testing.T) {
 	}
 
 	for _, test := range tests {
-		result := getOtelLevel(test.level)
+		result := getOTelLevel(test.level)
 		if result != test.expectedSev {
 			t.Errorf("For level %v, expected %v but got %v", test.level, test.expectedSev, result)
 		}
@@ -449,7 +449,6 @@ func TestObjectEncoder(t *testing.T) {
 			enc := newObjectEncoder(1)
 			tt.f(enc)
 			enc.getObjValue(enc.root)
-			fmt.Println(enc.root.kv)
 			assert.Equal(t, tt.expected, value2Result((enc.root.kv[0].Value)), "Unexpected encoder output.")
 		})
 	}

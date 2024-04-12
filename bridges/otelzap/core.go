@@ -25,7 +25,7 @@ type Core struct {
 	ctx    context.Context
 }
 
-// Compile-time check *Core implements zapcore.Core.
+// // Compile-time check *Core implements zapcore.Core.
 var _ zapcore.Core = (*Core)(nil)
 
 // NewOTelZapCore creates a new [zapcore.Core] that can be used with zap.New()
@@ -41,16 +41,19 @@ func NewCore(opts ...Option) zapcore.Core {
 // LevelEnabler decides whether a given logging level is enabled when logging a message.
 func (o *Core) Enabled(level zapcore.Level) bool {
 	r := log.Record{}
-	r.SetSeverity(getOtelLevel(level))
+	r.SetSeverity(getOTelLevel(level))
 	return o.logger.Enabled(context.Background(), r)
 }
 
 // With adds structured context to the Core.
 func (o *Core) With(fields []zapcore.Field) zapcore.Core {
 	clone := o.clone()
-	ctx, attr := getAttr(clone.ctx, fields)
-	clone.ctx = ctx
-	clone.attr = append(clone.attr, attr...)
+	if len(fields) > 0 {
+		obj, free := getObjectEncoder()
+		defer free()
+		clone.ctx = getAttr(clone.ctx, &fields, obj)
+		clone.attr = append(clone.attr, obj.root.kv...)
+	}
 	return clone
 }
 
@@ -72,15 +75,17 @@ func (o *Core) Write(ent zapcore.Entry, fields []zapcore.Field) error {
 	r := log.Record{}
 	r.SetTimestamp(ent.Time)
 	r.SetBody(log.StringValue(ent.Message))
-	r.SetSeverity(getOtelLevel(ent.Level))
+	r.SetSeverity(getOTelLevel(ent.Level))
 
-	ctx, attr := getAttr(o.ctx, fields)
-	addattr := append(attr, o.attr...)
 	if len(fields) > 0 {
-		r.AddAttributes(addattr...)
+		obj, free := getObjectEncoder()
+		defer free()
+		o.ctx = getAttr(o.ctx, &fields, obj)
+		obj.root.kv = append(obj.root.kv, o.attr...)
+		r.AddAttributes(obj.root.kv...)
 	}
 
-	o.logger.Emit(ctx, r)
+	o.logger.Emit(o.ctx, r)
 	return nil
 }
 
@@ -93,21 +98,20 @@ func (o *Core) clone() *Core {
 }
 
 // converts zap fields to OTel log attributes.
-func getAttr(ctx context.Context, fields []zapcore.Field) (context.Context, []log.KeyValue) {
-	m := newObjectEncoder(5)
-	for _, field := range fields {
+func getAttr(ctx context.Context, fields *[]zapcore.Field, enc *objectEncoder) context.Context {
+	for _, field := range *fields {
 		if ctxFld, ok := field.Interface.(context.Context); ok {
 			ctx = ctxFld
 			continue
 		}
-		field.AddTo(m)
+		field.AddTo(enc)
 	}
-	m.getObjValue(m.root)
-	return ctx, m.root.kv
+	enc.getObjValue(enc.root)
+	return ctx
 }
 
 // converts zap level to OTel log level.
-func getOtelLevel(level zapcore.Level) log.Severity {
+func getOTelLevel(level zapcore.Level) log.Severity {
 	switch level {
 	case zapcore.DebugLevel:
 		return log.SeverityDebug
