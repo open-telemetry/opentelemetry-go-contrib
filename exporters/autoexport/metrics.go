@@ -79,6 +79,12 @@ func RegisterMetricProducer(name string, factory func(context.Context) (metric.P
 	must(metricsProducers.registry.store(name, factory))
 }
 
+// WithFallbackMetricProducer sets the fallback producer to use when no producer
+// is configured through the OTEL_METRICS_PRODUCERS environment variable.
+func WithFallbackMetricProducer(producerFactory func(ctx context.Context) (metric.Producer, error)) {
+	metricsProducers.fallbackProducer = producerFactory
+}
+
 var (
 	metricsSignal    = newSignal[metric.Reader]("OTEL_METRICS_EXPORTER")
 	metricsProducers = newProducerRegistry("OTEL_METRICS_PRODUCERS")
@@ -217,8 +223,9 @@ func getenv(key, fallback string) string {
 }
 
 type producerRegistry struct {
-	envKey   string
-	registry *registry[metric.Producer]
+	envKey           string
+	fallbackProducer func(context.Context) (metric.Producer, error)
+	registry         *registry[metric.Producer]
 }
 
 func newProducerRegistry(envKey string) producerRegistry {
@@ -233,6 +240,10 @@ func newProducerRegistry(envKey string) producerRegistry {
 func (pr producerRegistry) create(ctx context.Context) (metric.Producer, error) {
 	expType := os.Getenv(pr.envKey)
 	if expType == "" {
+		if pr.fallbackProducer != nil {
+			return pr.fallbackProducer(ctx)
+		}
+
 		return nil, nil
 	}
 

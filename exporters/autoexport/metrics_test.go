@@ -15,9 +15,11 @@ import (
 	"testing"
 
 	"go.opentelemetry.io/collector/pdata/pmetric/pmetricotlp"
+	prometheusbridge "go.opentelemetry.io/contrib/bridges/prometheus"
 	"go.opentelemetry.io/otel"
 	"go.opentelemetry.io/otel/sdk/metric"
 
+	"github.com/prometheus/client_golang/prometheus"
 	"github.com/stretchr/testify/assert"
 	"go.uber.org/goleak"
 )
@@ -188,6 +190,45 @@ func TestMetricProducerPrometheusWithPrometheusExporter(t *testing.T) {
 	// By default there are two metrics exporter. target_info and promhttp_metric_handler_errors_total.
 	// But by including the prometheus producer we should have more.
 	assert.Greater(t, strings.Count(string(body), "# HELP"), 2)
+
+	assert.NoError(t, mp.Shutdown(context.Background()))
+	goleak.VerifyNone(t)
+}
+
+func TestMetricProducerFallbackWithPrometheusExporter(t *testing.T) {
+	assertNoOtelHandleErrors(t)
+
+	reg := prometheus.NewRegistry()
+	someDummyMetric := prometheus.NewCounter(prometheus.CounterOpts{
+		Name: "dummy_metric",
+		Help: "dummy metric",
+	})
+	reg.MustRegister(someDummyMetric)
+
+	WithFallbackMetricProducer(func(context.Context) (metric.Producer, error) {
+		return prometheusbridge.NewMetricProducer(prometheusbridge.WithGatherer(reg)), nil
+	})
+
+	t.Setenv("OTEL_METRICS_EXPORTER", "prometheus")
+	t.Setenv("OTEL_EXPORTER_PROMETHEUS_PORT", "0")
+
+	r, err := NewMetricReader(context.Background())
+	assert.NoError(t, err)
+
+	// pull-based exporters like Prometheus need to be registered
+	mp := metric.NewMeterProvider(metric.WithReader(r))
+
+	rws, ok := r.(readerWithServer)
+	if !ok {
+		t.Errorf("expected readerWithServer but got %v", r)
+	}
+
+	resp, err := http.Get(fmt.Sprintf("http://%s/metrics", rws.addr))
+	assert.NoError(t, err)
+	body, err := io.ReadAll(resp.Body)
+	assert.NoError(t, err)
+
+	assert.Contains(t, string(body), "HELP dummy_metric_total dummy metric")
 
 	assert.NoError(t, mp.Shutdown(context.Background()))
 	goleak.VerifyNone(t)
