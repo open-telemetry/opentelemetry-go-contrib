@@ -138,10 +138,22 @@ func init() {
 	})
 	RegisterMetricReader("prometheus", func(ctx context.Context) (metric.Reader, error) {
 		// create an isolated registry instead of using the global registry --
-		// the user might not want to mix OTel with non-OTel metrics
+		// the user might not want to mix OTel with non-OTel metrics.
+		// Those that want to comingle metrics from global registry can use
+		// OTEL_METRICS_PRODUCERS=prometheus
 		reg := prometheus.NewRegistry()
 
-		reader, err := promexporter.New(promexporter.WithRegisterer(reg))
+		exporterOpts := []promexporter.Option{promexporter.WithRegisterer(reg)}
+
+		producer, err := metricsProducers.create(ctx)
+		if err != nil {
+			return nil, err
+		}
+		if producer != nil {
+			exporterOpts = append(exporterOpts, promexporter.WithProducer(producer))
+		}
+
+		reader, err := promexporter.New(exporterOpts...)
 		if err != nil {
 			return nil, err
 		}

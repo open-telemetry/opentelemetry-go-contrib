@@ -11,6 +11,7 @@ import (
 	"net/http/httptest"
 	"reflect"
 	"runtime/debug"
+	"strings"
 	"testing"
 
 	"go.opentelemetry.io/collector/pdata/pmetric/pmetricotlp"
@@ -122,7 +123,7 @@ func TestMetricExporterPrometheusInvalidPort(t *testing.T) {
 	assert.ErrorContains(t, err, "binding")
 }
 
-func TestMetricProducerPrometheus(t *testing.T) {
+func TestMetricProducerPrometheusWithOTLPExporter(t *testing.T) {
 	assertNoOtelHandleErrors(t)
 
 	requestWaitChan := make(chan struct{})
@@ -150,6 +151,7 @@ func TestMetricProducerPrometheus(t *testing.T) {
 	assert.IsType(t, &metric.PeriodicReader{}, r)
 
 	// Register it with a meter provider to ensure it is used.
+	// mp.Shutdown errors out because r.Shutdown closes the reader.
 	metric.NewMeterProvider(metric.WithReader(r))
 
 	// Shutdown actually makes an export call.
@@ -157,5 +159,36 @@ func TestMetricProducerPrometheus(t *testing.T) {
 
 	<-requestWaitChan
 	ts.Close()
+	goleak.VerifyNone(t)
+}
+
+func TestMetricProducerPrometheusWithPrometheusExporter(t *testing.T) {
+	assertNoOtelHandleErrors(t)
+
+	t.Setenv("OTEL_METRICS_EXPORTER", "prometheus")
+	t.Setenv("OTEL_EXPORTER_PROMETHEUS_PORT", "0")
+	t.Setenv("OTEL_METRICS_PRODUCERS", "prometheus")
+
+	r, err := NewMetricReader(context.Background())
+	assert.NoError(t, err)
+
+	// pull-based exporters like Prometheus need to be registered
+	mp := metric.NewMeterProvider(metric.WithReader(r))
+
+	rws, ok := r.(readerWithServer)
+	if !ok {
+		t.Errorf("expected readerWithServer but got %v", r)
+	}
+
+	resp, err := http.Get(fmt.Sprintf("http://%s/metrics", rws.addr))
+	assert.NoError(t, err)
+	body, err := io.ReadAll(resp.Body)
+	assert.NoError(t, err)
+
+	// By default there are two metrics exporter. target_info and promhttp_metric_handler_errors_total.
+	// But by including the prometheus producer we should have more.
+	assert.Greater(t, strings.Count(string(body), "# HELP"), 2)
+
+	assert.NoError(t, mp.Shutdown(context.Background()))
 	goleak.VerifyNone(t)
 }
