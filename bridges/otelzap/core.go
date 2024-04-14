@@ -49,10 +49,8 @@ func (o *Core) Enabled(level zapcore.Level) bool {
 func (o *Core) With(fields []zapcore.Field) zapcore.Core {
 	clone := o.clone()
 	if len(fields) > 0 {
-		obj, free := getObjectEncoder()
-		defer free()
-		clone.ctx = getAttr(clone.ctx, &fields, obj)
-		clone.attr = append(clone.attr, obj.root.kv...)
+		attrbuf := getAttr(&clone.ctx, &fields)
+		clone.attr = append(clone.attr, attrbuf...)
 	}
 	return clone
 }
@@ -78,11 +76,9 @@ func (o *Core) Write(ent zapcore.Entry, fields []zapcore.Field) error {
 	r.SetSeverity(getOTelLevel(ent.Level))
 
 	if len(fields) > 0 {
-		obj, free := getObjectEncoder()
-		defer free()
-		o.ctx = getAttr(o.ctx, &fields, obj)
-		obj.root.kv = append(obj.root.kv, o.attr...)
-		r.AddAttributes(obj.root.kv...)
+		attrbuf := getAttr(&o.ctx, &fields)
+		attrbuf = append(attrbuf, o.attr...)
+		r.AddAttributes(attrbuf...)
 	}
 
 	o.logger.Emit(o.ctx, r)
@@ -98,16 +94,18 @@ func (o *Core) clone() *Core {
 }
 
 // converts zap fields to OTel log attributes.
-func getAttr(ctx context.Context, fields *[]zapcore.Field, enc *objectEncoder) context.Context {
+func getAttr(ctx *context.Context, fields *[]zapcore.Field) []log.KeyValue {
+	enc, free := getObjectEncoder()
+	defer free()
 	for _, field := range *fields {
 		if ctxFld, ok := field.Interface.(context.Context); ok {
-			ctx = ctxFld
+			*ctx = ctxFld
 			continue
 		}
 		field.AddTo(enc)
 	}
 	enc.getObjValue(enc.root)
-	return ctx
+	return enc.root.kv
 }
 
 // converts zap level to OTel log level.

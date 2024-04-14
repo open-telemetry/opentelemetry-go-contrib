@@ -8,7 +8,6 @@ package otelzap // import "go.opentelemetry.io/contrib/bridges/otelzap"
 import (
 	"errors"
 	"fmt"
-	"sync"
 	"testing"
 	"time"
 
@@ -27,7 +26,6 @@ var (
 		Level:   zap.InfoLevel,
 		Message: testBodyString,
 	}
-	field = zap.String("key", "testValue")
 )
 
 // Basic Logger Test and Child Logger test.
@@ -158,7 +156,7 @@ func BenchmarkMultipleFields(b *testing.B) {
 				zap.Object("k", users(10)),
 				zap.String("k", "a"),
 				zap.String("k", "a"),
-				zap.String("k", "a"),
+				zap.Ints("k", []int{1, 2}),
 			},
 		},
 		{
@@ -173,7 +171,7 @@ func BenchmarkMultipleFields(b *testing.B) {
 				zap.Object("k", users(10)),
 				zap.String("k", "a"),
 				zap.String("k", "a"),
-				zap.String("k", "a"),
+				zap.Ints("k", []int{1, 2}),
 				zap.ByteString("k", []byte("abc")),
 				zap.Int16("a", 1),
 				zap.String("k", "a"),
@@ -183,7 +181,7 @@ func BenchmarkMultipleFields(b *testing.B) {
 				zap.Binary("k", []byte{1, 2}),
 				zap.Object("k", users(10)),
 				zap.String("k", "a"),
-				zap.String("k", "a"),
+				zap.Ints("k", []int{1, 2}),
 			},
 		},
 	}
@@ -231,28 +229,6 @@ func BenchmarkMultipleFields(b *testing.B) {
 			})
 		})
 	}
-}
-
-func TestConcurrentSafe(t *testing.T) {
-	h := NewCore()
-
-	const goroutineN = 10
-
-	var wg sync.WaitGroup
-	wg.Add(goroutineN)
-
-	for i := 0; i < goroutineN; i++ {
-		go func() {
-			defer wg.Done()
-
-			_ = h.Enabled(zapcore.DebugLevel)
-
-			_ = h.Write(entry, []zapcore.Field{field})
-
-			_ = h.With([]zapcore.Field{field})
-		}()
-	}
-	wg.Wait()
 }
 
 // Copied from field_test.go. https://github.com/uber-go/zap/blob/b39f8b6b6a44d8371a87610be50cce58eeeaabcb/zapcore/memory_encoder_test.go

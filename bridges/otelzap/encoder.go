@@ -16,25 +16,23 @@ import (
 	"go.opentelemetry.io/otel/log"
 )
 
-// pool for array encoder
-// used by AddArray() method only.
+// pool for array encoder.
 var arrayEncoderPool = sync.Pool{
 	New: func() interface{} {
 		return &arrayEncoder{elems: make([]log.Value, 0, 5)}
 	},
 }
 
-func getArrayEncoder() *arrayEncoder {
-	return arrayEncoderPool.Get().(*arrayEncoder)
+func getArrayEncoder() (arr *arrayEncoder, free func()) {
+	arr = arrayEncoderPool.Get().(*arrayEncoder)
+	return arr, func() {
+		// TODO: Limit the capacity of the slice
+		arr.elems = arr.elems[:0]
+		arrayEncoderPool.Put(arr)
+	}
 }
 
-func putArrayEncoder(e *arrayEncoder) {
-	e.elems = e.elems[:0:0]
-	arrayEncoderPool.Put(e)
-}
-
-// pool for object encoder
-// used by AddObject() method only.
+// pool for object encoder.
 var objectEncoderPool = sync.Pool{
 	New: func() interface{} {
 		return newObjectEncoder(5)
@@ -44,12 +42,8 @@ var objectEncoderPool = sync.Pool{
 func getObjectEncoder() (obj *objectEncoder, free func()) {
 	obj = objectEncoderPool.Get().(*objectEncoder)
 	return obj, func() {
-		// TODO: limit returned size so the pool doesn't hold on to very large
-		// buffers. Idea is based on
-		// https://cs.opensource.google/go/x/exp/+/814bf88c:slog/internal/buffer/buffer.go;l=27-34
-
-		// Do not modify any previously held data.
-		obj.root.kv = obj.root.kv[:0:0]
+		// TODO: Limit the capacity of the slice
+		obj.root.kv = obj.root.kv[:0]
 		obj.root.ns = ""
 		obj.root.next = nil
 		obj.cur = obj.root
@@ -71,6 +65,7 @@ type newNameSpace struct {
 // Object Encoder implements zapcore.ObjectEncoder.
 // It encodes given fields to OTel attribute.
 type objectEncoder struct {
+	// root is a pointer to the default namespace
 	root *newNameSpace
 	// cur is a pointer to the namespace we're currently writing to.
 	cur        *newNameSpace
@@ -104,10 +99,10 @@ func (m *objectEncoder) getObjValue(o *newNameSpace) *newNameSpace {
 
 // Converts Array to logSlice using ArrayEncoder.
 func (m *objectEncoder) AddArray(key string, v zapcore.ArrayMarshaler) error {
-	arr := getArrayEncoder()
+	arr, free := getArrayEncoder()
+	defer free()
 	err := v.MarshalLogArray(arr)
 	m.cur.kv = append(m.cur.kv, log.Slice(key, arr.elems...))
-	putArrayEncoder(arr)
 	return err
 }
 
@@ -116,7 +111,6 @@ func (m *objectEncoder) AddObject(k string, v zapcore.ObjectMarshaler) error {
 	newobj, free := getObjectEncoder()
 	defer free()
 	err := v.MarshalLogObject(newobj)
-	// use empty value on failure
 	m.getObjValue(newobj.root)
 	m.cur.kv = append(m.cur.kv, log.Map(k, newobj.root.kv...))
 	return err
@@ -182,8 +176,7 @@ func (m *objectEncoder) AddUint64(k string, v uint64) {
 		})
 }
 
-// Converts all non-primitive types to JSON string
-// Also checks for explcit context passed.
+// Converts all non-primitive types to JSON string.
 func (m *objectEncoder) AddReflected(k string, v interface{}) error {
 	enc := json.NewEncoder(m)
 	if err := enc.Encode(v); err != nil {
@@ -200,7 +193,6 @@ func (m *objectEncoder) Write(p []byte) (n int, err error) {
 	return
 }
 
-// Requires confirmation
 // OpenNamespace opens an isolated namespace where all subsequent fields will
 // be added.
 func (m *objectEncoder) OpenNamespace(k string) {
@@ -230,16 +222,15 @@ type arrayEncoder struct {
 }
 
 func (a *arrayEncoder) AppendArray(v zapcore.ArrayMarshaler) error {
-	enc := getArrayEncoder()
-	err := v.MarshalLogArray(enc)
-	a.elems = append(a.elems, log.SliceValue(enc.elems...))
-	putArrayEncoder(enc)
+	arr, free := getArrayEncoder()
+	defer free()
+	err := v.MarshalLogArray(arr)
+	a.elems = append(a.elems, log.SliceValue(arr.elems...))
 	return err
 }
 
 func (a *arrayEncoder) AppendObject(v zapcore.ObjectMarshaler) error {
-	m, free := getObjectEncoder()
-	defer free()
+	m := newObjectEncoder(2)
 	err := v.MarshalLogObject(m)
 	m.getObjValue(m.root)
 	a.elems = append(a.elems, log.MapValue(m.root.kv...))
