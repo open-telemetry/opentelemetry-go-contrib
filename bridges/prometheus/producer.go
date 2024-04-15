@@ -21,7 +21,7 @@ import (
 )
 
 const (
-	scopeName    = "go.opentelemetry.io/otel/bridge/prometheus"
+	scopeName    = "go.opentelemetry.io/contrib/bridges/prometheus"
 	traceIDLabel = "trace_id"
 	spanIDLabel  = "span_id"
 )
