@@ -218,7 +218,7 @@ func TestProduce(t *testing.T) {
 								{
 									Count:        1,
 									Sum:          578.3,
-									Bounds:       prometheus.DefBuckets,
+									Bounds:       []float64{0.005, 0.01, 0.025, 0.05, 0.1, 0.25, 0.5, 1, 2.5, 5, 10},
 									BucketCounts: []uint64{0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1},
 									Attributes:   attribute.NewSet(attribute.String("foo", "bar")),
 									Exemplars:    []metricdata.Exemplar[float64]{},
@@ -262,7 +262,7 @@ func TestProduce(t *testing.T) {
 								{
 									Count:        1,
 									Sum:          578.3,
-									Bounds:       prometheus.DefBuckets,
+									Bounds:       []float64{0.005, 0.01, 0.025, 0.05, 0.1, 0.25, 0.5, 1, 2.5, 5, 10},
 									BucketCounts: []uint64{0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1},
 									Attributes:   attribute.NewSet(attribute.String("foo", "bar")),
 									Exemplars: []metricdata.Exemplar[float64]{
