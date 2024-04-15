@@ -78,6 +78,41 @@ func TestProduce(t *testing.T) {
 					}),
 				})
 				reg.MustRegister(metric)
+				metric.Add(245.3)
+			},
+			expected: []metricdata.ScopeMetrics{{
+				Scope: instrumentation.Scope{
+					Name: scopeName,
+				},
+				Metrics: []metricdata.Metrics{
+					{
+						Name:        "test_counter_metric",
+						Description: "A counter metric for testing",
+						Data: metricdata.Sum[float64]{
+							Temporality: metricdata.CumulativeTemporality,
+							IsMonotonic: true,
+							DataPoints: []metricdata.DataPoint[float64]{
+								{
+									Attributes: attribute.NewSet(attribute.String("foo", "bar")),
+									Value:      245.3,
+								},
+							},
+						},
+					},
+				},
+			}},
+		},
+		{
+			name: "counter with exemplar",
+			testFn: func(reg *prometheus.Registry) {
+				metric := prometheus.NewCounter(prometheus.CounterOpts{
+					Name: "test_counter_metric",
+					Help: "A counter metric for testing",
+					ConstLabels: prometheus.Labels(map[string]string{
+						"foo": "bar",
+					}),
+				})
+				reg.MustRegister(metric)
 				metric.(prometheus.ExemplarAdder).AddWithExemplar(
 					245.3, prometheus.Labels{
 						"trace_id":        traceIDStr,
@@ -167,13 +202,7 @@ func TestProduce(t *testing.T) {
 					}),
 				})
 				reg.MustRegister(metric)
-				metric.(prometheus.ExemplarObserver).ObserveWithExemplar(
-					578.3, prometheus.Labels{
-						"trace_id":        traceIDStr,
-						"span_id":         spanIDStr,
-						"other_attribute": "efgh",
-					},
-				)
+				metric.Observe(578.3)
 			},
 			expected: []metricdata.ScopeMetrics{{
 				Scope: instrumentation.Scope{
@@ -189,7 +218,51 @@ func TestProduce(t *testing.T) {
 								{
 									Count:        1,
 									Sum:          578.3,
-									Bounds:       []float64{0.005, 0.01, 0.025, 0.05, 0.1, 0.25, 0.5, 1, 2.5, 5, 10},
+									Bounds:       prometheus.DefBuckets,
+									BucketCounts: []uint64{0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1},
+									Attributes:   attribute.NewSet(attribute.String("foo", "bar")),
+									Exemplars:    []metricdata.Exemplar[float64]{},
+								},
+							},
+						},
+					},
+				},
+			}},
+		},
+		{
+			name: "histogram with exemplar",
+			testFn: func(reg *prometheus.Registry) {
+				metric := prometheus.NewHistogram(prometheus.HistogramOpts{
+					Name: "test_histogram_metric_with_exemplar",
+					Help: "A histogram metric for testing",
+					ConstLabels: prometheus.Labels(map[string]string{
+						"foo": "bar",
+					}),
+				})
+				reg.MustRegister(metric)
+				metric.(prometheus.ExemplarObserver).ObserveWithExemplar(
+					578.3, prometheus.Labels{
+						"trace_id":        traceIDStr,
+						"span_id":         spanIDStr,
+						"other_attribute": "efgh",
+					},
+				)
+			},
+			expected: []metricdata.ScopeMetrics{{
+				Scope: instrumentation.Scope{
+					Name: scopeName,
+				},
+				Metrics: []metricdata.Metrics{
+					{
+						Name:        "test_histogram_metric_with_exemplar",
+						Description: "A histogram metric for testing",
+						Data: metricdata.Histogram[float64]{
+							Temporality: metricdata.CumulativeTemporality,
+							DataPoints: []metricdata.HistogramDataPoint[float64]{
+								{
+									Count:        1,
+									Sum:          578.3,
+									Bounds:       prometheus.DefBuckets,
 									BucketCounts: []uint64{0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1},
 									Attributes:   attribute.NewSet(attribute.String("foo", "bar")),
 									Exemplars: []metricdata.Exemplar[float64]{
