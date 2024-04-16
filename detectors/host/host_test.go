@@ -16,7 +16,7 @@ import (
 	semconv "go.opentelemetry.io/otel/semconv/v1.24.0"
 )
 
-func Test_DetectLinux(t *testing.T) {
+func Test_Detect(t *testing.T) {
 	detector := NewResourceDetector()
 
 	hostResource, err := detector.Detect(context.Background())
@@ -41,7 +41,7 @@ func Test_DetectLinux(t *testing.T) {
 	assert.Equal(t, expectedResource, hostResource)
 }
 
-func Test_DetectLinux_WithOptIns(t *testing.T) {
+func Test_Detect_WithOptIns(t *testing.T) {
 	detector := NewResourceDetector(
 		WithIPAddresses(),
 		WithMACAddresses(),
