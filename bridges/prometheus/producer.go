@@ -7,6 +7,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"math"
 	"strings"
 	"time"
 
@@ -150,7 +151,9 @@ func convertCounter(metrics []*dto.Metric, now time.Time) metricdata.Sum[float64
 			StartTime:  processStartTime,
 			Time:       now,
 			Value:      m.GetCounter().GetValue(),
-			Exemplars:  []metricdata.Exemplar[float64]{convertExemplar(m.GetCounter().GetExemplar())},
+		}
+		if ex := m.GetCounter().GetExemplar(); ex != nil {
+			dp.Exemplars = []metricdata.Exemplar[float64]{convertExemplar(ex)}
 		}
 		createdTs := m.GetCounter().GetCreatedTimestamp()
 		if createdTs.IsValid() {
@@ -251,7 +254,7 @@ func convertHistogram(metrics []*dto.Metric, now time.Time) metricdata.Histogram
 		Temporality: metricdata.CumulativeTemporality,
 	}
 	for i, m := range metrics {
-		bounds, bucketCounts, exemplars := convertBuckets(m.GetHistogram().GetBucket())
+		bounds, bucketCounts, exemplars := convertBuckets(m.GetHistogram().GetBucket(), m.GetHistogram().GetSampleCount())
 		dp := metricdata.HistogramDataPoint[float64]{
 			Attributes:   convertLabels(m.GetLabel()),
 			StartTime:    processStartTime,
@@ -274,25 +277,41 @@ func convertHistogram(metrics []*dto.Metric, now time.Time) metricdata.Histogram
 	return otelHistogram
 }
 
-func convertBuckets(buckets []*dto.Bucket) ([]float64, []uint64, []metricdata.Exemplar[float64]) {
+func convertBuckets(buckets []*dto.Bucket, sampleCount uint64) ([]float64, []uint64, []metricdata.Exemplar[float64]) {
 	if len(buckets) == 0 {
 		// This should never happen
 		return nil, nil, nil
 	}
-	bounds := make([]float64, len(buckets)-1)
-	bucketCounts := make([]uint64, len(buckets))
+	// buckets will only include the +Inf bucket if there is an exemplar for it
+	// https://github.com/prometheus/client_golang/blob/d038ab96c0c7b9cd217a39072febd610bcdf1fd8/prometheus/metric.go#L189
+	// we need to handle the case where it is present, or where it is missing.
+	hasInf := math.IsInf(buckets[len(buckets)-1].GetUpperBound(), +1)
+	var bounds []float64
+	var bucketCounts []uint64
+	if hasInf {
+		bounds = make([]float64, len(buckets)-1)
+		bucketCounts = make([]uint64, len(buckets))
+	} else {
+		bounds = make([]float64, len(buckets))
+		bucketCounts = make([]uint64, len(buckets)+1)
+	}
 	exemplars := make([]metricdata.Exemplar[float64], 0)
 	for i, bucket := range buckets {
-		// The last bound is the +Inf bound, which is implied in OTel, but is
-		// explicit in Prometheus. Skip the last boundary, and assume it is the
-		// +Inf bound.
-		if i < len(bounds) {
-			bounds[i] = bucket.GetUpperBound()
+		// The last bound may be the +Inf bucket, which is implied in OTel, but
+		// is explicit in Prometheus. Skip the last boundary if it is the +Inf
+		// bound.
+		if bound := bucket.GetUpperBound(); !math.IsInf(bound, +1) {
+			bounds[i] = bound
 		}
 		bucketCounts[i] = bucket.GetCumulativeCount()
-		if bucket.GetExemplar() != nil {
-			exemplars = append(exemplars, convertExemplar(bucket.GetExemplar()))
+		if ex := bucket.GetExemplar(); ex != nil {
+			exemplars = append(exemplars, convertExemplar(ex))
 		}
+	}
+	if !hasInf {
+		// The Inf bucket was missing, so set the last bucket counts to the
+		// overall count
+		bucketCounts[len(bucketCounts)-1] = sampleCount
 	}
 	return bounds, bucketCounts, exemplars
 }

@@ -11,6 +11,12 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 ### Added
 
 - Add the new `go.opentelemetry.io/contrib/instrgen` package to provide auto-generated source code instrumentation. (#3068, #3108)
+- `NewSDK` in `go.opentelemetry.io/contrib/config` now returns a configured SDK with a valid `MeterProvider`. (#4804)
+
+### Fixed
+
+- Fix bug where an empty exemplar was added to counters in `go.opentelemetry.io/contrib/bridges/prometheus`. (#5395)
+- Fix bug where the last histogram bucket was missing in `go.opentelemetry.io/contrib/bridges/prometheus`. (#5395)
 
 ## [1.25.0/0.50.0/0.19.0/0.5.0/0.0.1] - 2024-04-05
 
