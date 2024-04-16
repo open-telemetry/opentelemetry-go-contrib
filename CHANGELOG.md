@@ -17,6 +17,11 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 
 - Change the scope name for the prometheus bridge to `go.opentelemetry.io/contrib/bridges/prometheus` to match the package. (#5396)
 
+### Fixed
+
+- Fix bug where an empty exemplar was added to counters in `go.opentelemetry.io/contrib/bridges/prometheus`. (#5395)
+- Fix bug where the last histogram bucket was missing in `go.opentelemetry.io/contrib/bridges/prometheus`. (#5395)
+
 ## [1.25.0/0.50.0/0.19.0/0.5.0/0.0.1] - 2024-04-05
 
 ### Added
