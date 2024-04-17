@@ -15,9 +15,11 @@
 package semconv
 
 import (
+	"fmt"
 	"net/http"
 	"testing"
 
+	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 
 	"go.opentelemetry.io/otel/attribute"
@@ -97,17 +99,58 @@ func TestDupMethod(t *testing.T) {
 }
 
 func TestDupTraceResponse(t *testing.T) {
-	t.Setenv("OTEL_HTTP_CLIENT_COMPATIBILITY_MODE", "http/dup")
-	serv := NewHTTPServer()
-	want := []attribute.KeyValue{
-		attribute.Int("http.request_content_length", 701),
-		attribute.Int("http.request.body.size", 701),
-		attribute.String("http.read_error", "read error"),
-		attribute.Int("http.response_content_length", 802),
-		attribute.Int("http.response.body.size", 802),
-		attribute.String("http.write_error", "write error"),
-		attribute.Int("http.status_code", 200),
-		attribute.Int("http.response.status_code", 200),
+	testCases := []struct {
+		name string
+		resp ResponseTelemetry
+		want []attribute.KeyValue
+	}{
+		{
+			name: "empty",
+			resp: ResponseTelemetry{},
+			want: nil,
+		},
+		{
+			name: "no errors",
+			resp: ResponseTelemetry{
+				StatusCode: 200,
+				ReadBytes:  701,
+				WriteBytes: 802,
+			},
+			want: []attribute.KeyValue{
+				attribute.Int("http.request_content_length", 701),
+				attribute.Int("http.request.body.size", 701),
+				attribute.Int("http.response_content_length", 802),
+				attribute.Int("http.response.body.size", 802),
+				attribute.Int("http.status_code", 200),
+				attribute.Int("http.response.status_code", 200),
+			},
+		},
+		{
+			name: "with errors",
+			resp: ResponseTelemetry{
+				StatusCode: 200,
+				ReadBytes:  701,
+				ReadError:  fmt.Errorf("read error"),
+				WriteBytes: 802,
+				WriteError: fmt.Errorf("write error"),
+			},
+			want: []attribute.KeyValue{
+				attribute.Int("http.request_content_length", 701),
+				attribute.Int("http.request.body.size", 701),
+				attribute.String("http.read_error", "read error"),
+				attribute.Int("http.response_content_length", 802),
+				attribute.Int("http.response.body.size", 802),
+				attribute.String("http.write_error", "write error"),
+				attribute.Int("http.status_code", 200),
+				attribute.Int("http.response.status_code", 200),
+			},
+		},
 	}
-	testTraceResponse(t, serv, want)
+
+	for _, tt := range testCases {
+		t.Run(tt.name, func(t *testing.T) {
+			got := dupHTTPServer{}.ResponseTraceAttrs(tt.resp)
+			assert.ElementsMatch(t, tt.want, got)
+		})
+	}
 }

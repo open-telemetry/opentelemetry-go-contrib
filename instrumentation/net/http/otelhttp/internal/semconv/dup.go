@@ -29,7 +29,7 @@ type dupHTTPServer struct{}
 
 var _ HTTPServer = dupHTTPServer{}
 
-// TraceRequest returns trace attributes for an HTTP request received by a
+// RequestTraceAttrs returns trace attributes for an HTTP request received by a
 // server.
 //
 // The server must be the primary server name if it is known. For example this
@@ -45,7 +45,7 @@ var _ HTTPServer = dupHTTPServer{}
 //
 // If the primary server name is not known, server should be an empty string.
 // The req Host will be used to determine the server instead.
-func (d dupHTTPServer) TraceRequest(server string, req *http.Request) []attribute.KeyValue {
+func (d dupHTTPServer) RequestTraceAttrs(server string, req *http.Request) []attribute.KeyValue {
 	// old http.target http.scheme net.host.name net.host.port http.scheme net.host.name net.host.port http.method net.sock.peer.addr net.sock.peer.port user_agent.original http.method http.status_code net.protocol.version
 	// new http.request.header server.address server.port network.local.address network.local.port client.address client.port url.path url.query url.scheme user_agent.original server.address server.port url.scheme http.request.method http.response.status_code error.type network.protocol.name network.protocol.version http.request.method_original http.response.header http.request.method network.peer.address network.peer.port network.transport http.request.method http.response.status_code error.type network.protocol.name network.protocol.version
 
@@ -153,16 +153,16 @@ func (d dupHTTPServer) scheme(https bool, attrs []attribute.KeyValue) int { // n
 	return 2
 }
 
-// TraceResponse returns trace attributes for telemetry from an HTTP response.
+// ResponseTraceAttrs returns trace attributes for telemetry from an HTTP response.
 //
 // If any of the fields in the ResponseTelemetry are not set the attribute will be omitted.
-func (d dupHTTPServer) TraceResponse(resp ResponseTelemetry) []attribute.KeyValue {
+func (d dupHTTPServer) ResponseTraceAttrs(resp ResponseTelemetry) []attribute.KeyValue {
 	attributes := []attribute.KeyValue{}
 
 	if resp.ReadBytes > 0 {
 		attributes = append(attributes,
-			semconvOld.HTTPRequestContentLength(resp.ReadBytes),
-			semconvNew.HTTPRequestBodySize(resp.ReadBytes),
+			semconvOld.HTTPRequestContentLength(int(resp.ReadBytes)),
+			semconvNew.HTTPRequestBodySize(int(resp.ReadBytes)),
 		)
 	}
 	if resp.ReadError != nil && resp.ReadError != io.EOF {
@@ -171,8 +171,8 @@ func (d dupHTTPServer) TraceResponse(resp ResponseTelemetry) []attribute.KeyValu
 	}
 	if resp.WriteBytes > 0 {
 		attributes = append(attributes,
-			semconvOld.HTTPResponseContentLength(resp.WriteBytes),
-			semconvNew.HTTPResponseBodySize(resp.WriteBytes),
+			semconvOld.HTTPResponseContentLength(int(resp.WriteBytes)),
+			semconvNew.HTTPResponseBodySize(int(resp.WriteBytes)),
 		)
 	}
 	if resp.WriteError != nil && resp.WriteError != io.EOF {
