@@ -5,7 +5,7 @@ package otelzap // import "go.opentelemetry.io/contrib/bridges/otelzap"
 
 import (
 	"go.opentelemetry.io/otel/log"
-	"go.opentelemetry.io/otel/log/noop"
+	"go.opentelemetry.io/otel/log/global"
 	"go.opentelemetry.io/otel/sdk/instrumentation"
 )
 
@@ -29,7 +29,7 @@ func newConfig(options []Option) config {
 	}
 
 	if c.provider == nil {
-		c.provider = noop.NewLoggerProvider()
+		c.provider = global.GetLoggerProvider()
 	}
 
 	return c

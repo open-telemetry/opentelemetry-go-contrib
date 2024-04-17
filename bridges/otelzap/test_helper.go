@@ -8,11 +8,22 @@ import (
 	"errors"
 	"fmt"
 
+	"go.uber.org/multierr"
+	"go.uber.org/zap"
 	"go.uber.org/zap/zapcore"
 
 	"go.opentelemetry.io/otel/log"
 	"go.opentelemetry.io/otel/log/embedded"
 	"go.opentelemetry.io/otel/sdk/instrumentation"
+)
+
+var (
+	testBodyString = "log message"
+	testSeverity   = log.SeverityInfo
+	entry          = zapcore.Entry{
+		Level:   zap.InfoLevel,
+		Message: testBodyString,
+	}
 )
 
 // embeddedLogger is a type alias so the embedded.Logger type doesn't conflict
@@ -81,6 +92,65 @@ func (u users) MarshalLogArray(enc zapcore.ArrayEncoder) error {
 	for i := 0; i < int(u); i++ {
 		enc.AppendString("user")
 	}
+	return nil
+}
+
+// Copied from field_test.go. https://github.com/uber-go/zap/blob/b39f8b6b6a44d8371a87610be50cce58eeeaabcb/zapcore/memory_encoder_test.go
+type turducken struct{}
+
+func (t turducken) MarshalLogObject(enc zapcore.ObjectEncoder) error {
+	return enc.AddArray("ducks", zapcore.ArrayMarshalerFunc(func(arr zapcore.ArrayEncoder) error {
+		for i := 0; i < 2; i++ {
+			err := arr.AppendObject(zapcore.ObjectMarshalerFunc(func(inner zapcore.ObjectEncoder) error {
+				inner.AddString("in", "chicken")
+				return nil
+			}))
+			if err != nil {
+				return err
+			}
+		}
+		return nil
+	}))
+}
+
+type turduckens int
+
+func (t turduckens) MarshalLogArray(enc zapcore.ArrayEncoder) error {
+	var err error
+	tur := turducken{}
+	for i := 0; i < int(t); i++ {
+		err = multierr.Append(err, enc.AppendObject(tur))
+	}
+	return err
+}
+
+// maybeNamespace is an ObjectMarshaler that sometimes opens a namespace.
+type maybeNamespace struct{ bool }
+
+func (m maybeNamespace) MarshalLogObject(enc zapcore.ObjectEncoder) error {
+	enc.AddString("obj-out", "obj-outside-namespace")
+	if m.bool {
+		enc.OpenNamespace("obj-namespace")
+		enc.AddString("obj-in", "obj-inside-namespace")
+	}
+	return nil
+}
+
+type loggable struct{ bool }
+
+func (l loggable) MarshalLogObject(enc zapcore.ObjectEncoder) error {
+	if !l.bool {
+		return errors.New("can't marshal")
+	}
+	enc.AddString("loggable", "yes")
+	return nil
+}
+
+func (l loggable) MarshalLogArray(enc zapcore.ArrayEncoder) error {
+	if !l.bool {
+		return errors.New("can't marshal")
+	}
+	enc.AppendBool(true)
 	return nil
 }
 

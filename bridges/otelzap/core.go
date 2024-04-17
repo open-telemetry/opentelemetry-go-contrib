@@ -30,7 +30,7 @@ var _ zapcore.Core = (*Core)(nil)
 
 // NewOTelZapCore creates a new [zapcore.Core] that can be used with zap.New()
 // this instance will translate zap logs to opentelemetry logs and export them.
-func NewCore(opts ...Option) zapcore.Core {
+func NewCore(opts ...Option) *Core {
 	cfg := newConfig(opts)
 	return &Core{
 		logger: cfg.logger(),
@@ -42,6 +42,7 @@ func NewCore(opts ...Option) zapcore.Core {
 func (o *Core) Enabled(level zapcore.Level) bool {
 	r := log.Record{}
 	r.SetSeverity(getOTelLevel(level))
+	// should we use the context set on core?
 	return o.logger.Enabled(context.Background(), r)
 }
 

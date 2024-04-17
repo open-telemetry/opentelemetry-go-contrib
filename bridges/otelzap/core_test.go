@@ -6,34 +6,29 @@
 package otelzap // import "go.opentelemetry.io/contrib/bridges/otelzap"
 
 import (
-	"errors"
 	"fmt"
 	"testing"
 	"time"
 
 	"github.com/stretchr/testify/assert"
-	"go.uber.org/multierr"
+	"github.com/stretchr/testify/require"
 	"go.uber.org/zap"
 	"go.uber.org/zap/zapcore"
 
 	"go.opentelemetry.io/otel/log"
-)
-
-var (
-	testBodyString = "log message"
-	testSeverity   = log.SeverityInfo
-	entry          = zapcore.Entry{
-		Level:   zap.InfoLevel,
-		Message: testBodyString,
-	}
+	"go.opentelemetry.io/otel/log/global"
+	"go.opentelemetry.io/otel/sdk/instrumentation"
 )
 
 // Basic Logger Test and Child Logger test.
 func TestZapCore(t *testing.T) {
 	rec := &recorder{}
-	logger := zap.New(NewCore(WithLoggerProvider(rec)))
+	zc := NewCore(WithLoggerProvider(rec))
+	logger := zap.New(zc)
+
 	logger.Info(testBodyString, zap.String("key", "testValue"))
 
+	// test logging behavior
 	assert.Equal(t, testBodyString, rec.Record.Body().AsString())
 	assert.Equal(t, testSeverity, rec.Record.Severity())
 	assert.Equal(t, 1, rec.Record.AttributesLen())
@@ -50,6 +45,58 @@ func TestZapCore(t *testing.T) {
 		assert.Equal(t, "workplace", string(kv.Key))
 		assert.Equal(t, "otel", kv.Value.AsString())
 		return true
+	})
+
+}
+
+// TODO: Test Enabled method
+// func TestHandlerEnabled(t *testing.T) {
+// 	r := new(recorder)
+// 	r.MinSeverity = log.SeverityInfo
+
+// 	zc := NewCore(WithLoggerProvider(r))
+// 	l := zap.New(zc)
+
+// 	ctx := context.Background()
+// 	assert.False(t, zc.Enabled(zap.DebugLevel), "level conversion: permissive")
+// 	assert.True(t, zc.Enabled(zap.InfoLevel), "level conversion: restrictive")
+
+// 	ctx = context.WithValue(ctx, enableKey, true)
+// 	// we set context on zapcore using zap.Reflect
+// 	l.Info("passing context", zap.Reflect("context", ctx))
+// 	assert.True(t, zc.Enabled(zap.DebugLevel), "context not passed")
+// }
+
+func TestNewCoreConfiguration(t *testing.T) {
+	t.Run("Default", func(t *testing.T) {
+		r := new(recorder)
+		global.SetLoggerProvider(r)
+
+		var h *Core
+		assert.NotPanics(t, func() { h = NewCore() })
+		assert.NotNil(t, h.logger)
+		require.IsType(t, &recorder{}, h.logger)
+
+		l := h.logger.(*recorder)
+		want := instrumentation.Scope{Name: bridgeName, Version: version}
+		assert.Equal(t, want, l.Scope)
+	})
+
+	t.Run("Options", func(t *testing.T) {
+		r := new(recorder)
+		scope := instrumentation.Scope{Name: "name", Version: "ver", SchemaURL: "url"}
+		var h *Core
+		assert.NotPanics(t, func() {
+			h = NewCore(
+				WithLoggerProvider(r),
+				WithInstrumentationScope(scope),
+			)
+		})
+		assert.NotNil(t, h.logger)
+		require.IsType(t, &recorder{}, h.logger)
+
+		l := h.logger.(*recorder)
+		assert.Equal(t, scope, l.Scope)
 	})
 }
 
@@ -217,11 +264,11 @@ func BenchmarkMultipleFields(b *testing.B) {
 	for _, bm := range benchmarks {
 		b.Run(fmt.Sprint("Core with", bm.name), func(b *testing.B) {
 			zc := NewCore()
-			zc = zc.With(bm.field)
+			zc1 := zc.With(bm.field)
 			b.ReportAllocs()
 			b.RunParallel(func(pb *testing.PB) {
 				for pb.Next() {
-					err := zc.Write(entry, []zapcore.Field{})
+					err := zc1.Write(entry, []zapcore.Field{})
 					if err != nil {
 						b.Errorf("Unexpected error: %v", err)
 					}
@@ -428,64 +475,6 @@ func TestObjectEncoder(t *testing.T) {
 			assert.Equal(t, tt.expected, value2Result((enc.root.kv[0].Value)), "Unexpected encoder output.")
 		})
 	}
-}
-
-type turducken struct{}
-
-func (t turducken) MarshalLogObject(enc zapcore.ObjectEncoder) error {
-	return enc.AddArray("ducks", zapcore.ArrayMarshalerFunc(func(arr zapcore.ArrayEncoder) error {
-		for i := 0; i < 2; i++ {
-			err := arr.AppendObject(zapcore.ObjectMarshalerFunc(func(inner zapcore.ObjectEncoder) error {
-				inner.AddString("in", "chicken")
-				return nil
-			}))
-			if err != nil {
-				return err
-			}
-		}
-		return nil
-	}))
-}
-
-type turduckens int
-
-func (t turduckens) MarshalLogArray(enc zapcore.ArrayEncoder) error {
-	var err error
-	tur := turducken{}
-	for i := 0; i < int(t); i++ {
-		err = multierr.Append(err, enc.AppendObject(tur))
-	}
-	return err
-}
-
-// maybeNamespace is an ObjectMarshaler that sometimes opens a namespace.
-type maybeNamespace struct{ bool }
-
-func (m maybeNamespace) MarshalLogObject(enc zapcore.ObjectEncoder) error {
-	enc.AddString("obj-out", "obj-outside-namespace")
-	if m.bool {
-		enc.OpenNamespace("obj-namespace")
-		enc.AddString("obj-in", "obj-inside-namespace")
-	}
-	return nil
-}
-
-type loggable struct{ bool }
-
-func (l loggable) MarshalLogObject(enc zapcore.ObjectEncoder) error {
-	if !l.bool {
-		return errors.New("can't marshal")
-	}
-	enc.AddString("loggable", "yes")
-	return nil
-}
-
-func (l loggable) MarshalLogArray(enc zapcore.ArrayEncoder) error {
-	if !l.bool {
-		return errors.New("can't marshal")
-	}
-	enc.AppendBool(true)
-	return nil
 }
 
 func TestArrayEncoder(t *testing.T) {
