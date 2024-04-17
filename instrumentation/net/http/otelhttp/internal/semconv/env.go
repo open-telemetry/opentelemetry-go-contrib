@@ -6,6 +6,8 @@ package semconv // import "go.opentelemetry.io/contrib/instrumentation/net/http/
 import (
 	"fmt"
 	"net/http"
+	"os"
+	"strings"
 
 	"go.opentelemetry.io/otel/attribute"
 	"go.opentelemetry.io/otel/codes"
@@ -52,7 +54,13 @@ type HTTPServer interface {
 func NewHTTPServer() HTTPServer {
 	// TODO (#5331): Detect version based on environment variable OTEL_HTTP_CLIENT_COMPATIBILITY_MODE.
 	// TODO (#5331): Add warning of use of a deprecated version of Semantic Versions.
-	return oldHTTPServer{}
+	env := strings.ToLower(os.Getenv("OTEL_HTTP_CLIENT_COMPATIBILITY_MODE"))
+	switch env {
+	case "http":
+		return newHTTPServer{}
+	default:
+		return oldHTTPServer{}
+	}
 }
 
 // ServerStatus returns a span status code and message for an HTTP status code
