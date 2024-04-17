@@ -43,10 +43,9 @@ func TestZapCore(t *testing.T) {
 	childlogger.Info(testBodyString)
 	rec.Record.WalkAttributes(func(kv log.KeyValue) bool {
 		assert.Equal(t, "workplace", string(kv.Key))
-		assert.Equal(t, "otel", kv.Value.AsString())
+		assert.Equal(t, "otel", value2Result(kv.Value))
 		return true
 	})
-
 }
 
 // TODO: Test Enabled method
@@ -121,160 +120,6 @@ func TestGetOTelLevel(t *testing.T) {
 		if result != test.expectedSev {
 			t.Errorf("For level %v, expected %v but got %v", test.level, test.expectedSev, result)
 		}
-	}
-}
-
-// // Benchmark on different Field types.
-func BenchmarkZapWrite(b *testing.B) {
-	benchmarks := []struct {
-		name  string
-		field zapcore.Field
-	}{
-		{
-			name:  "Int",
-			field: zap.Int16("a", 1),
-		},
-		{
-			name:  "String",
-			field: zap.String("k", "a"),
-		},
-		{
-			name:  "Time",
-			field: zap.Time("k", time.Unix(1000, 1000)),
-		},
-		{
-			name:  "Binary",
-			field: zap.Binary("k", []byte{1, 2}),
-		},
-		{
-			name:  "ByteString",
-			field: zap.ByteString("k", []byte("abc")),
-		},
-		{
-			name:  "Array",
-			field: zap.Ints("k", []int{1, 2}),
-		},
-		{
-			name:  "Object",
-			field: zap.Object("k", users(10)),
-		},
-		{
-			name:  "Map",
-			field: zap.Any("k", map[string]string{"a": "b"}),
-		},
-
-		{
-			name:  "Dict",
-			field: zap.Dict("k", zap.String("a", "b")),
-		},
-	}
-
-	for _, bm := range benchmarks {
-		b.Run(bm.name, func(b *testing.B) {
-			zc := NewCore()
-			b.ReportAllocs()
-			b.RunParallel(func(pb *testing.PB) {
-				for pb.Next() {
-					err := zc.Write(entry, []zapcore.Field{bm.field})
-					if err != nil {
-						b.Errorf("Unexpected error: %v", err)
-					}
-				}
-			})
-		})
-	}
-}
-
-// Benchmark with multiple Fields.
-func BenchmarkMultipleFields(b *testing.B) {
-	benchmarks := []struct {
-		name  string
-		field []zapcore.Field
-	}{
-		{
-			name: "10 fields",
-			field: []zapcore.Field{
-				zap.Int16("a", 1),
-				zap.String("k", "a"),
-				zap.String("k", "a"),
-				zap.Time("k", time.Unix(1000, 1000)),
-				zap.Binary("k", []byte{1, 2}),
-				zap.Binary("k", []byte{1, 2}),
-				zap.Object("k", users(10)),
-				zap.String("k", "a"),
-				zap.String("k", "a"),
-				zap.Ints("k", []int{1, 2}),
-			},
-		},
-		{
-			name: "20 fields",
-			field: []zapcore.Field{
-				zap.Int16("a", 1),
-				zap.String("k", "a"),
-				zap.String("k", "a"),
-				zap.Time("k", time.Unix(1000, 1000)),
-				zap.Binary("k", []byte{1, 2}),
-				zap.Binary("k", []byte{1, 2}),
-				zap.Object("k", users(10)),
-				zap.String("k", "a"),
-				zap.String("k", "a"),
-				zap.Ints("k", []int{1, 2}),
-				zap.ByteString("k", []byte("abc")),
-				zap.Int16("a", 1),
-				zap.String("k", "a"),
-				zap.String("k", "a"),
-				zap.Time("k", time.Unix(1000, 1000)),
-				zap.Binary("k", []byte{1, 2}),
-				zap.Binary("k", []byte{1, 2}),
-				zap.Object("k", users(10)),
-				zap.String("k", "a"),
-				zap.Ints("k", []int{1, 2}),
-			},
-		},
-	}
-
-	b.Run("Core with 0 fields", func(b *testing.B) {
-		zc := NewCore()
-		b.ReportAllocs()
-		b.RunParallel(func(pb *testing.PB) {
-			for pb.Next() {
-				err := zc.Write(entry, []zapcore.Field{})
-				if err != nil {
-					b.Errorf("Unexpected error: %v", err)
-				}
-			}
-		})
-	})
-
-	for _, bm := range benchmarks {
-		b.Run(bm.name, func(b *testing.B) {
-			zc := NewCore()
-			b.ReportAllocs()
-			b.RunParallel(func(pb *testing.PB) {
-				for pb.Next() {
-					err := zc.Write(entry, bm.field)
-					if err != nil {
-						b.Errorf("Unexpected error: %v", err)
-					}
-				}
-			})
-		})
-	}
-
-	for _, bm := range benchmarks {
-		b.Run(fmt.Sprint("Core with", bm.name), func(b *testing.B) {
-			zc := NewCore()
-			zc1 := zc.With(bm.field)
-			b.ReportAllocs()
-			b.RunParallel(func(pb *testing.PB) {
-				for pb.Next() {
-					err := zc1.Write(entry, []zapcore.Field{})
-					if err != nil {
-						b.Errorf("Unexpected error: %v", err)
-					}
-				}
-			})
-		})
 	}
 }
 
@@ -574,6 +419,160 @@ func TestArrayEncoder(t *testing.T) {
 
 			enc.getObjValue(enc.root)
 			assert.Equal(t, []interface{}{tt.expected, tt.expected}, value2Result(enc.root.kv[0].Value), "Unexpected encoder output.")
+		})
+	}
+}
+
+// // Benchmark on different Field types.
+func BenchmarkZapWrite(b *testing.B) {
+	benchmarks := []struct {
+		name  string
+		field zapcore.Field
+	}{
+		{
+			name:  "Int",
+			field: zap.Int16("a", 1),
+		},
+		{
+			name:  "String",
+			field: zap.String("k", "a"),
+		},
+		{
+			name:  "Time",
+			field: zap.Time("k", time.Unix(1000, 1000)),
+		},
+		{
+			name:  "Binary",
+			field: zap.Binary("k", []byte{1, 2}),
+		},
+		{
+			name:  "ByteString",
+			field: zap.ByteString("k", []byte("abc")),
+		},
+		{
+			name:  "Array",
+			field: zap.Ints("k", []int{1, 2}),
+		},
+		{
+			name:  "Object",
+			field: zap.Object("k", users(10)),
+		},
+		{
+			name:  "Map",
+			field: zap.Any("k", map[string]string{"a": "b"}),
+		},
+
+		{
+			name:  "Dict",
+			field: zap.Dict("k", zap.String("a", "b")),
+		},
+	}
+
+	for _, bm := range benchmarks {
+		b.Run(bm.name, func(b *testing.B) {
+			zc := NewCore()
+			b.ReportAllocs()
+			b.RunParallel(func(pb *testing.PB) {
+				for pb.Next() {
+					err := zc.Write(entry, []zapcore.Field{bm.field})
+					if err != nil {
+						b.Errorf("Unexpected error: %v", err)
+					}
+				}
+			})
+		})
+	}
+}
+
+// Benchmark with multiple Fields.
+func BenchmarkMultipleFields(b *testing.B) {
+	benchmarks := []struct {
+		name  string
+		field []zapcore.Field
+	}{
+		{
+			name: "10 fields",
+			field: []zapcore.Field{
+				zap.Int16("a", 1),
+				zap.String("k", "a"),
+				zap.String("k", "a"),
+				zap.Time("k", time.Unix(1000, 1000)),
+				zap.Binary("k", []byte{1, 2}),
+				zap.Binary("k", []byte{1, 2}),
+				zap.Object("k", users(10)),
+				zap.String("k", "a"),
+				zap.String("k", "a"),
+				zap.Ints("k", []int{1, 2}),
+			},
+		},
+		{
+			name: "20 fields",
+			field: []zapcore.Field{
+				zap.Int16("a", 1),
+				zap.String("k", "a"),
+				zap.String("k", "a"),
+				zap.Time("k", time.Unix(1000, 1000)),
+				zap.Binary("k", []byte{1, 2}),
+				zap.Binary("k", []byte{1, 2}),
+				zap.Object("k", users(10)),
+				zap.String("k", "a"),
+				zap.String("k", "a"),
+				zap.Ints("k", []int{1, 2}),
+				zap.ByteString("k", []byte("abc")),
+				zap.Int16("a", 1),
+				zap.String("k", "a"),
+				zap.String("k", "a"),
+				zap.Time("k", time.Unix(1000, 1000)),
+				zap.Binary("k", []byte{1, 2}),
+				zap.Binary("k", []byte{1, 2}),
+				zap.Object("k", users(10)),
+				zap.String("k", "a"),
+				zap.Ints("k", []int{1, 2}),
+			},
+		},
+	}
+
+	b.Run("Core with 0 fields", func(b *testing.B) {
+		zc := NewCore()
+		b.ReportAllocs()
+		b.RunParallel(func(pb *testing.PB) {
+			for pb.Next() {
+				err := zc.Write(entry, []zapcore.Field{})
+				if err != nil {
+					b.Errorf("Unexpected error: %v", err)
+				}
+			}
+		})
+	})
+
+	for _, bm := range benchmarks {
+		b.Run(bm.name, func(b *testing.B) {
+			zc := NewCore()
+			b.ReportAllocs()
+			b.RunParallel(func(pb *testing.PB) {
+				for pb.Next() {
+					err := zc.Write(entry, bm.field)
+					if err != nil {
+						b.Errorf("Unexpected error: %v", err)
+					}
+				}
+			})
+		})
+	}
+
+	for _, bm := range benchmarks {
+		b.Run(fmt.Sprint("Core with", bm.name), func(b *testing.B) {
+			zc := NewCore()
+			zc1 := zc.With(bm.field)
+			b.ReportAllocs()
+			b.RunParallel(func(pb *testing.PB) {
+				for pb.Next() {
+					err := zc1.Write(entry, []zapcore.Field{})
+					if err != nil {
+						b.Errorf("Unexpected error: %v", err)
+					}
+				}
+			})
 		})
 	}
 }

@@ -21,8 +21,9 @@ const (
 // Core is a [zapcore.Core] that sends logging records to OpenTelemetry.
 type Core struct {
 	logger log.Logger
-	attr   []log.KeyValue
-	ctx    context.Context
+	// holds structured context passed using Core.With()
+	attr []log.KeyValue
+	ctx  context.Context
 }
 
 // // Compile-time check *Core implements zapcore.Core.
@@ -50,7 +51,7 @@ func (o *Core) Enabled(level zapcore.Level) bool {
 func (o *Core) With(fields []zapcore.Field) zapcore.Core {
 	clone := o.clone()
 	if len(fields) > 0 {
-		attrbuf := getAttr(&clone.ctx, &fields)
+		attrbuf := convertField(&clone.ctx, &fields)
 		clone.attr = append(clone.attr, attrbuf...)
 	}
 	return clone
@@ -77,9 +78,12 @@ func (o *Core) Write(ent zapcore.Entry, fields []zapcore.Field) error {
 	r.SetSeverity(getOTelLevel(ent.Level))
 
 	if len(fields) > 0 {
-		attrbuf := getAttr(&o.ctx, &fields)
+		attrbuf := convertField(&o.ctx, &fields)
+		attrbuf = slices.Grow(attrbuf, len(o.attr))
 		attrbuf = append(attrbuf, o.attr...)
 		r.AddAttributes(attrbuf...)
+	} else {
+		r.AddAttributes(o.attr...)
 	}
 
 	o.logger.Emit(o.ctx, r)
@@ -95,7 +99,7 @@ func (o *Core) clone() *Core {
 }
 
 // converts zap fields to OTel log attributes.
-func getAttr(ctx *context.Context, fields *[]zapcore.Field) []log.KeyValue {
+func convertField(ctx *context.Context, fields *[]zapcore.Field) []log.KeyValue {
 	enc, free := getObjectEncoder()
 	defer free()
 	for _, field := range *fields {
