@@ -34,14 +34,13 @@ func NewTestExporter() *testExporter {
 }
 
 func TestBaggageSpanProcessorAppendsBaggageAttributes(t *testing.T) {
-	// create ctx with some baggage
-	ctx := context.Background()
-	suitcase := otelbaggage.FromContext(ctx)
+	suitcase, err := otelbaggage.New()
+	require.NoError(t, err)
 	packingCube, err := otelbaggage.NewMemberRaw("baggage.test", "baggage value")
 	require.NoError(t, err)
 	suitcase, err = suitcase.SetMember(packingCube)
 	require.NoError(t, err)
-	ctx = otelbaggage.ContextWithBaggage(ctx, suitcase)
+	ctx := otelbaggage.ContextWithBaggage(context.Background(), suitcase)
 
 	// create trace provider with baggage processor and test exporter
 	exporter := NewTestExporter()
