@@ -9,8 +9,9 @@ import (
 	"testing"
 
 	"github.com/stretchr/testify/assert"
+
 	"go.opentelemetry.io/otel/attribute"
-	"go.opentelemetry.io/otel/baggage"
+	otelbaggage "go.opentelemetry.io/otel/baggage"
 	"go.opentelemetry.io/otel/sdk/trace"
 )
 
@@ -35,10 +36,10 @@ func NewTestExporter() *testExporter {
 func TestBaggageSpanProcessorAppendsBaggageAttributes(t *testing.T) {
 	// create ctx with some baggage
 	ctx := context.Background()
-	suitcase := baggage.FromContext(ctx)
-	packingCube, _ := baggage.NewMember("baggage.test", url.PathEscape("baggage value"))
+	suitcase := otelbaggage.FromContext(ctx)
+	packingCube, _ := otelbaggage.NewMember("baggage.test", url.PathEscape("baggage value"))
 	suitcase, _ = suitcase.SetMember(packingCube)
-	ctx = baggage.ContextWithBaggage(ctx, suitcase)
+	ctx = otelbaggage.ContextWithBaggage(ctx, suitcase)
 
 	// create trace provider with baggage processor and test exporter
 	exporter := NewTestExporter()
