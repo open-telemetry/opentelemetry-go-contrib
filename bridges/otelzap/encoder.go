@@ -87,16 +87,12 @@ func newObjectEncoder(len int) *objectEncoder {
 }
 
 // It iterates to the end of the linked list and appends namespace data.
-func (m *objectEncoder) getObjValue(o *newNameSpace) *newNameSpace {
+func (m *objectEncoder) getObjValue(o *newNameSpace) {
 	if o.next == nil {
-		return nil
+		return
 	}
-	ok := m.getObjValue(o.next)
-	if ok == nil {
-		o.kv = append(o.kv, log.Map(o.next.ns, o.next.kv...))
-		return nil
-	}
-	return o
+	m.getObjValue(o.next)
+	o.kv = append(o.kv, log.Map(o.next.ns, o.next.kv...))
 }
 
 // Converts Array to logSlice using ArrayEncoder.
