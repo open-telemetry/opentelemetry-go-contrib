@@ -57,8 +57,6 @@ func TestBaggageSpanProcessorAppendsBaggageAttributes(t *testing.T) {
 	assert.Len(t, exporter.spans, 1)
 	assert.Len(t, exporter.spans[0].Attributes(), 1)
 
-	for _, attr := range exporter.spans[0].Attributes() {
-		assert.Equal(t, attribute.Key("baggage.test"), attr.Key)
-		assert.Equal(t, "baggage value", attr.Value.AsString())
-	}
+	want := []attribute.KeyValue{ attribute.String("baggage.test", "baggage value") }
+	assert.Equal(t, want, exporter.spans[0].Attributes())
 }
