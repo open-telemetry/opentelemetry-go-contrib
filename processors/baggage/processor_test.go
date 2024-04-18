@@ -5,10 +5,10 @@ package baggage
 
 import (
 	"context"
-	"net/url"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 
 	"go.opentelemetry.io/otel/attribute"
 	otelbaggage "go.opentelemetry.io/otel/baggage"
@@ -37,8 +37,10 @@ func TestBaggageSpanProcessorAppendsBaggageAttributes(t *testing.T) {
 	// create ctx with some baggage
 	ctx := context.Background()
 	suitcase := otelbaggage.FromContext(ctx)
-	packingCube, _ := otelbaggage.NewMember("baggage.test", url.PathEscape("baggage value"))
-	suitcase, _ = suitcase.SetMember(packingCube)
+	packingCube, err := otelbaggage.NewMemberRaw("baggage.test", "baggage value")
+	require.NoError(t, err)
+	suitcase, err = suitcase.SetMember(packingCube)
+	require.NoError(t, err)
 	ctx = otelbaggage.ContextWithBaggage(ctx, suitcase)
 
 	// create trace provider with baggage processor and test exporter
@@ -53,8 +55,8 @@ func TestBaggageSpanProcessorAppendsBaggageAttributes(t *testing.T) {
 	_, span := tracer.Start(ctx, "test")
 	span.End()
 
-	assert.Equal(t, 1, len(exporter.spans))
-	assert.Equal(t, 1, len(exporter.spans[0].Attributes()))
+	assert.Len(t, exporter.spans, 1)
+	assert.Len(t, exporter.spans[0].Attributes(), 1)
 
 	for _, attr := range exporter.spans[0].Attributes() {
 		assert.Equal(t, attribute.Key("baggage.test"), attr.Key)
