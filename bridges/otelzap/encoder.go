@@ -19,7 +19,7 @@ import (
 // pool for array encoder.
 var arrayEncoderPool = sync.Pool{
 	New: func() interface{} {
-		// console_encoder by zap uses capacity of 2
+		// From console_encoder which uses capacity of 2
 		return &arrayEncoder{elems: make([]log.Value, 0, 2)}
 	},
 }
@@ -36,7 +36,7 @@ func getArrayEncoder() (arr *arrayEncoder, free func()) {
 // pool for object encoder.
 var objectEncoderPool = sync.Pool{
 	New: func() interface{} {
-		// console_encoder by zap uses capacity of 2
+		// From console_encoder which uses capacity of 2
 		return newObjectEncoder(2)
 	},
 }
