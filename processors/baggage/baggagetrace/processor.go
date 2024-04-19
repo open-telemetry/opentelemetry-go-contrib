@@ -15,20 +15,27 @@ type SpanProcessor struct{}
 
 var _ trace.SpanProcessor = (*SpanProcessor)(nil)
 
-// NewBaggageSpanProcessor returns a new SpanProcessor.
+// New returns a new SpanProcessor.
 //
 // The Baggage span processor duplicates onto a span the attributes found
 // in Baggage in the parent context at the moment the span is started.
-func NewBaggageSpanProcessor() trace.SpanProcessor {
+func New() trace.SpanProcessor {
 	return &SpanProcessor{}
 }
 
+// OnStart is called when a span is started and adds span attributes for baggage contents.
 func (processor SpanProcessor) OnStart(ctx context.Context, span trace.ReadWriteSpan) {
 	for _, entry := range otelbaggage.FromContext(ctx).Members() {
 		span.SetAttributes(attribute.String(entry.Key(), entry.Value()))
 	}
 }
 
-func (processor SpanProcessor) OnEnd(s trace.ReadOnlySpan)       {}
-func (processor SpanProcessor) Shutdown(context.Context) error   { return nil }
+// OnEnd is called when span is finished and is a no-op for this processor.
+func (processor SpanProcessor) OnEnd(s trace.ReadOnlySpan) {}
+
+// Shutdown is called when the SDK shuts down and is a no-op for this processor.
+func (processor SpanProcessor) Shutdown(context.Context) error { return nil }
+
+// ForceFlush exports all ended spans to the configured Exporter that have not yet
+// been exported and is a no-op for this processor.
 func (processor SpanProcessor) ForceFlush(context.Context) error { return nil }

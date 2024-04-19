@@ -45,7 +45,7 @@ func TestSpanProcessorAppendsBaggageAttributes(t *testing.T) {
 	// create trace provider with baggage processor and test exporter
 	exporter := NewTestExporter()
 	tp := trace.NewTracerProvider(
-		trace.WithSpanProcessor(NewBaggageSpanProcessor()),
+		trace.WithSpanProcessor(New()),
 		trace.WithSpanProcessor(trace.NewSimpleSpanProcessor(exporter)),
 	)
 
