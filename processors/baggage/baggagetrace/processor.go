@@ -11,6 +11,7 @@ import (
 	"go.opentelemetry.io/otel/sdk/trace"
 )
 
+// SpanProcessor is a processing pipeline for spans in the trace signal.
 type SpanProcessor struct{}
 
 var _ trace.SpanProcessor = (*SpanProcessor)(nil)
