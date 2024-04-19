@@ -542,7 +542,7 @@ updates:
       interval: weekly
       day: sunday
   - package-ecosystem: gomod
-    directory: /processors/baggage
+    directory: /processors/baggage/baggagetrace
     labels:
       - dependencies
       - go

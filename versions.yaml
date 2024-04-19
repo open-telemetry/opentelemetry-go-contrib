@@ -80,7 +80,7 @@ module-sets:
   experimental-processors:
     version: v0.0.1
     modules:
-      - go.opentelemetry.io/contrib/processors/baggage
+      - go.opentelemetry.io/contrib/processors/baggage/baggagetrace
 excluded-modules:
   - go.opentelemetry.io/contrib/instrgen
   - go.opentelemetry.io/contrib/instrgen/driver
