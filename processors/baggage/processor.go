@@ -11,24 +11,24 @@ import (
 	"go.opentelemetry.io/otel/sdk/trace"
 )
 
-type baggageSpanProcessor struct{}
+type SpanProcessor struct{}
 
-var _ trace.SpanProcessor = (*baggageSpanProcessor)(nil)
+var _ trace.SpanProcessor = (*SpanProcessor)(nil)
 
-// NewBaggageSpanProcessor returns a new baggageSpanProcessor.
+// NewBaggageSpanProcessor returns a new SpanProcessor.
 //
 // The Baggage span processor duplicates onto a span the attributes found
 // in Baggage in the parent context at the moment the span is started.
 func NewBaggageSpanProcessor() trace.SpanProcessor {
-	return &baggageSpanProcessor{}
+	return &SpanProcessor{}
 }
 
-func (processor baggageSpanProcessor) OnStart(ctx context.Context, span trace.ReadWriteSpan) {
+func (processor SpanProcessor) OnStart(ctx context.Context, span trace.ReadWriteSpan) {
 	for _, entry := range otelbaggage.FromContext(ctx).Members() {
 		span.SetAttributes(attribute.String(entry.Key(), entry.Value()))
 	}
 }
 
-func (processor baggageSpanProcessor) OnEnd(s trace.ReadOnlySpan)       {}
-func (processor baggageSpanProcessor) Shutdown(context.Context) error   { return nil }
-func (processor baggageSpanProcessor) ForceFlush(context.Context) error { return nil }
+func (processor SpanProcessor) OnEnd(s trace.ReadOnlySpan)       {}
+func (processor SpanProcessor) Shutdown(context.Context) error   { return nil }
+func (processor SpanProcessor) ForceFlush(context.Context) error { return nil }

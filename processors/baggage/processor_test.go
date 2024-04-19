@@ -33,7 +33,7 @@ func NewTestExporter() *testExporter {
 	return &testExporter{}
 }
 
-func TestBaggageSpanProcessorAppendsBaggageAttributes(t *testing.T) {
+func TestSpanProcessorAppendsBaggageAttributes(t *testing.T) {
 	suitcase, err := otelbaggage.New()
 	require.NoError(t, err)
 	packingCube, err := otelbaggage.NewMemberRaw("baggage.test", "baggage value")
