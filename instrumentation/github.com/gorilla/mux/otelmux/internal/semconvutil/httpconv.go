@@ -318,13 +318,13 @@ func (c *httpConv) ServerRequest(server string, req *http.Request) []attribute.K
 	net.protocol.name       string Note: not set if the value is "http".
 	net.protocol.version    string
 	http.target             string Note: doesn't include the query parameter.
+	http.route              string Note: doesn't include the query parameter.
 	*/
 
 	/* The following semantic conventions are not returned:
 	http.status_code                This requires the response.
 	http.request_content_length     This requires the len() of body, which can mutate it.
 	http.response_content_length    This requires the response.
-	http.route                      This is not available.
 	net.sock.peer.name              This would require a DNS lookup.
 	net.sock.host.addr              The request doesn't have access to the underlying socket.
 	net.sock.host.port              The request doesn't have access to the underlying socket.
@@ -406,6 +406,7 @@ func (c *httpConv) ServerRequest(server string, req *http.Request) []attribute.K
 	}
 
 	if target != "" {
+		attrs = append(attrs, c.HTTPTargetKey.String(target))
 		attrs = append(attrs, c.HTTPTargetKey.String(target))
 	}
 
