@@ -1,7 +1,5 @@
 // Copyright The OpenTelemetry Authors
 // SPDX-License-Identifier: Apache-2.0
 
-// Package baggagetrace implements the baggage span processor which duplicates
-// onto a span the attributes found in Baggage in the parent context at
-// the moment the span is started.
+// Package baggagetrace implements a baggage span processor.
 package baggagetrace // import "go.opentelemetry.io/contrib/processors/baggage"
