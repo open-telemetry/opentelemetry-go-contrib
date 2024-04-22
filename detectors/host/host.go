@@ -28,7 +28,7 @@ func newConfig(options ...Option) *config {
 	return c
 }
 
-// Option applies an Azure VM detector configuration option.
+// Option applies a host detector configuration option.
 type Option interface {
 	apply(*config)
 }
