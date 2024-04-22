@@ -39,7 +39,7 @@ func (fn optionFunc) apply(c *config) {
 	fn(c)
 }
 
-// WithIPAddresses adds the optional attribute `host.ip`.
+// WithIPAddresses adds the optional attribute "host.ip".
 func WithIPAddresses() Option {
 	return optionFunc(func(c *config) {
 		c.optInIPAddresses = true
