@@ -22,11 +22,15 @@ func TestDetect(t *testing.T) {
 	hostResource, err := detector.Detect(context.Background())
 	assert.NoError(t, err)
 
-	hostName, _ := os.Hostname()
-
 	attributes := []attribute.KeyValue{
 		semconv.HostArchKey.String(runtime.GOARCH),
-		semconv.HostName(hostName),
+	}
+
+	hostName, err := os.Hostname()
+
+	// The host name is added conditionally, as it might not be available under all circumstances
+	if err == nil {
+		attributes = append(attributes, semconv.HostName(hostName))
 	}
 
 	// The host id is added conditionally, as it might not be available under all circumstances (for example in Windows containers)
@@ -54,7 +58,13 @@ func TestDetectWithOptIns(t *testing.T) {
 
 	attributes := []attribute.KeyValue{
 		semconv.HostArchKey.String(runtime.GOARCH),
-		semconv.HostName(hostName),
+	}
+
+	hostName, err := os.Hostname()
+
+	// The host name is added conditionally, as it might not be available under all circumstances
+	if err == nil {
+		attributes = append(attributes, semconv.HostName(hostName))
 	}
 
 	// The host id is added conditionally, as it might not be available under all circumstances (for example in Windows containers)
