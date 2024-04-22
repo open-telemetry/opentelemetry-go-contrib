@@ -20,6 +20,7 @@ module-sets:
     modules:
       - go.opentelemetry.io/contrib/bridges/prometheus
       - go.opentelemetry.io/contrib/detectors/aws/lambda
+      - go.opentelemetry.io/contrib/detectors/azure/vm
       - go.opentelemetry.io/contrib/exporters/autoexport
       - go.opentelemetry.io/contrib/propagators/autoprop
       - go.opentelemetry.io/contrib/propagators/opencensus
