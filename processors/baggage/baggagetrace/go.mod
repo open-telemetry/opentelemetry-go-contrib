@@ -1,4 +1,4 @@
-module go.opentelemetry.io/contrib/processors/baggage
+module go.opentelemetry.io/contrib/processors/baggage/baggagetrace
 
 go 1.21
 
