@@ -17,7 +17,7 @@ import (
 )
 
 func TestDetect(t *testing.T) {
-	detector := NewResourceDetector()
+	detector := New()
 
 	hostResource, err := detector.Detect(context.Background())
 	assert.NoError(t, err)
@@ -45,7 +45,7 @@ func TestDetect(t *testing.T) {
 }
 
 func TestDetectWithOptIns(t *testing.T) {
-	detector := NewResourceDetector(
+	detector := New(
 		WithIPAddresses(),
 		WithMACAddresses(),
 	)
@@ -53,8 +53,6 @@ func TestDetectWithOptIns(t *testing.T) {
 	hostResource, err := detector.Detect(context.Background())
 
 	assert.True(t, err == nil)
-
-	hostName, _ := os.Hostname()
 
 	attributes := []attribute.KeyValue{
 		semconv.HostArchKey.String(runtime.GOARCH),

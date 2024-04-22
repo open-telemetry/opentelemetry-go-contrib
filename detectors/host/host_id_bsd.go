@@ -7,6 +7,7 @@
 package host // import "go.opentelemetry.io/contrib/detectors/host"
 
 import (
+	"errors"
 	"os"
 	"os/exec"
 	"strings"
@@ -18,7 +19,7 @@ func getHostId() (string, error) {
 		return strings.Trim(string(machineId), "\n"), nil
 	}
 
-	machineId, err = exec.Command("kenv", "-q", "smbios.system.uuid")
+	machineId, err = exec.Command("kenv", "-q", "smbios.system.uuid").Output()
 	if err == nil {
 		return strings.Trim(string(machineId), "\n"), nil
 	}

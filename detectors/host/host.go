@@ -19,10 +19,10 @@ type config struct {
 	optInMACAddresses bool
 }
 
-func newConfig(options ...Option) *config {
-	c := &config{}
+func newConfig(options ...Option) config {
+	c := config{}
 	for _, option := range options {
-		option.apply(c)
+		c = option.apply(c)
 	}
 
 	return c
@@ -33,28 +33,32 @@ type Option interface {
 	apply(config) config
 }
 
-type optionFunc func(*config)
+type optionFunc func(config) config
 
-func (fn optionFunc) apply(c *config) {
-	fn(c)
+func (fn optionFunc) apply(c config) config {
+	return fn(c)
 }
 
 // WithIPAddresses adds the optional attribute "host.ip".
 func WithIPAddresses() Option {
-	return optionFunc(func(c *config) {
+	return optionFunc(func(c config) config {
 		c.optInIPAddresses = true
+
+		return c
 	})
 }
 
 // WithMACAddresses adds the optional attribute "host.mac".
 func WithMACAddresses() Option {
-	return optionFunc(func(c *config) {
+	return optionFunc(func(c config) config {
 		c.optInMACAddresses = true
+
+		return c
 	})
 }
 
 type resourceDetector struct {
-	config *config
+	config config
 }
 
 // NewResourceDetector returns a [resource.Detector] that will detect host resources.
