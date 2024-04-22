@@ -20,8 +20,7 @@ func TestDetect(t *testing.T) {
 	detector := NewResourceDetector()
 
 	hostResource, err := detector.Detect(context.Background())
-
-	assert.True(t, err == nil)
+	assert.NoError(t, err)
 
 	hostName, _ := os.Hostname()
 
