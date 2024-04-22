@@ -12,8 +12,7 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 
 - Add the new `go.opentelemetry.io/contrib/instrgen` package to provide auto-generated source code instrumentation. (#3068, #3108)
 - `NewSDK` in `go.opentelemetry.io/contrib/config` now returns a configured SDK with a valid `MeterProvider`. (#4804)
-- The `go.opentelemetry.io/contrib/processors/baggage` module.
-  This module provides a Baggage Span Processor. (#5404)
+- The `go.opentelemetry.io/contrib/processors/baggage` module. This module provides a Baggage Span Processor. (#5404)
 
 ### Changed
 
