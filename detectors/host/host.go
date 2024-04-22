@@ -30,7 +30,7 @@ func newConfig(options ...Option) *config {
 
 // Option applies a host detector configuration option.
 type Option interface {
-	apply(*config)
+	apply(config) config
 }
 
 type optionFunc func(*config)
