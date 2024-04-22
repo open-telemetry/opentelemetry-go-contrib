@@ -6,7 +6,7 @@ The host resource detector supports detecting host-specific attributes on physic
 
 ```golang
 // Instantiate a new host resource detector
-hostResourceDetector := host.NewResourceDetector()
+hostResourceDetector := host.New()
 resource, err := hostResourceDetector.Detect(context.Background())
 ```
 
@@ -14,7 +14,7 @@ To populate optional attributes, the resource detector constructor accepts funct
 
 ```golang
 // Instantiate a new host resource detector with all opt-in attributes
-hostResourceDetector := host.NewResourceDetector(
+hostResourceDetector := host.New(
 	WithIPAddresses(),
 	WithMACAddresses(),
 )
