@@ -16,7 +16,7 @@ import (
 	semconv "go.opentelemetry.io/otel/semconv/v1.24.0"
 )
 
-func Test_Detect(t *testing.T) {
+func TestDetect(t *testing.T) {
 	detector := NewResourceDetector()
 
 	hostResource, err := detector.Detect(context.Background())
