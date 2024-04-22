@@ -57,7 +57,7 @@ type resourceDetector struct {
 	config *config
 }
 
-// NewResourceDetector returns a resource detector that will detect host resources.
+// NewResourceDetector returns a [resource.Detector] that will detect host resources.
 func NewResourceDetector(opts ...Option) resource.Detector {
 	c := newConfig(opts...)
 	return &resourceDetector{config: c}
