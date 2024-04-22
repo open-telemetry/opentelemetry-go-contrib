@@ -23,7 +23,7 @@ resource, err := hostResourceDetector.Detect(context.Background())
 
 ## Supported attributes
 
-According to [semantic conventions for host resources](https://github.com/open-telemetry/semantic-conventions/blob/main/docs/resource/host.md), each of the following attributes is added if it is available:
+According to [semantic conventions for host resources](https://opentelemetry.io/docs/specs/semconv/resource/host/), each of the following attributes is added if it is available:
 
 * `host.arch`
 * `host.id`
