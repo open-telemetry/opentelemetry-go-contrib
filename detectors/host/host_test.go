@@ -40,7 +40,7 @@ func TestDetect(t *testing.T) {
 	assert.Equal(t, expectedResource, hostResource)
 }
 
-func Test_Detect_WithOptIns(t *testing.T) {
+func TestDetectWithOptIns(t *testing.T) {
 	detector := NewResourceDetector(
 		WithIPAddresses(),
 		WithMACAddresses(),
