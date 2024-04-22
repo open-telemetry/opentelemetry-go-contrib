@@ -46,7 +46,7 @@ func WithIPAddresses() Option {
 	})
 }
 
-// WithMACAddresses adds the optional attribute `host.ip`.
+// WithMACAddresses adds the optional attribute "host.mac".
 func WithMACAddresses() Option {
 	return optionFunc(func(c *config) {
 		c.optInMACAddresses = true
