@@ -43,6 +43,24 @@ type BatchLogRecordProcessor struct {
 	ScheduleDelay *int `mapstructure:"schedule_delay,omitempty"`
 }
 
+// UnmarshalJSON implements json.Unmarshaler.
+func (j *BatchLogRecordProcessor) UnmarshalJSON(b []byte) error {
+	var raw map[string]interface{}
+	if err := json.Unmarshal(b, &raw); err != nil {
+		return err
+	}
+	if _, ok := raw["exporter"]; raw != nil && !ok {
+		return fmt.Errorf("field exporter in BatchLogRecordProcessor: required")
+	}
+	type Plain BatchLogRecordProcessor
+	var plain Plain
+	if err := json.Unmarshal(b, &plain); err != nil {
+		return err
+	}
+	*j = BatchLogRecordProcessor(plain)
+	return nil
+}
+
 type BatchSpanProcessor struct {
 	// ExportTimeout corresponds to the JSON schema field "export_timeout".
 	ExportTimeout *int `mapstructure:"export_timeout,omitempty"`
@@ -59,6 +77,24 @@ type BatchSpanProcessor struct {
 
 	// ScheduleDelay corresponds to the JSON schema field "schedule_delay".
 	ScheduleDelay *int `mapstructure:"schedule_delay,omitempty"`
+}
+
+// UnmarshalJSON implements json.Unmarshaler.
+func (j *BatchSpanProcessor) UnmarshalJSON(b []byte) error {
+	var raw map[string]interface{}
+	if err := json.Unmarshal(b, &raw); err != nil {
+		return err
+	}
+	if _, ok := raw["exporter"]; raw != nil && !ok {
+		return fmt.Errorf("field exporter in BatchSpanProcessor: required")
+	}
+	type Plain BatchSpanProcessor
+	var plain Plain
+	if err := json.Unmarshal(b, &plain); err != nil {
+		return err
+	}
+	*j = BatchSpanProcessor(plain)
+	return nil
 }
 
 type Common map[string]interface{}
@@ -196,6 +232,73 @@ type OTLPMetricDefaultHistogramAggregation string
 const OTLPMetricDefaultHistogramAggregationBase2ExponentialBucketHistogram OTLPMetricDefaultHistogramAggregation = "base2_exponential_bucket_histogram"
 const OTLPMetricDefaultHistogramAggregationExplicitBucketHistogram OTLPMetricDefaultHistogramAggregation = "explicit_bucket_histogram"
 
+var enumValues_OTLPMetricDefaultHistogramAggregation = []interface{}{
+	"explicit_bucket_histogram",
+	"base2_exponential_bucket_histogram",
+}
+
+// UnmarshalJSON implements json.Unmarshaler.
+func (j *OTLPMetricDefaultHistogramAggregation) UnmarshalJSON(b []byte) error {
+	var v string
+	if err := json.Unmarshal(b, &v); err != nil {
+		return err
+	}
+	var ok bool
+	for _, expected := range enumValues_OTLPMetricDefaultHistogramAggregation {
+		if reflect.DeepEqual(v, expected) {
+			ok = true
+			break
+		}
+	}
+	if !ok {
+		return fmt.Errorf("invalid value (expected one of %#v): %#v", enumValues_OTLPMetricDefaultHistogramAggregation, v)
+	}
+	*j = OTLPMetricDefaultHistogramAggregation(v)
+	return nil
+}
+
+// UnmarshalJSON implements json.Unmarshaler.
+func (j *OTLPMetric) UnmarshalJSON(b []byte) error {
+	var raw map[string]interface{}
+	if err := json.Unmarshal(b, &raw); err != nil {
+		return err
+	}
+	if _, ok := raw["endpoint"]; raw != nil && !ok {
+		return fmt.Errorf("field endpoint in OTLPMetric: required")
+	}
+	if _, ok := raw["protocol"]; raw != nil && !ok {
+		return fmt.Errorf("field protocol in OTLPMetric: required")
+	}
+	type Plain OTLPMetric
+	var plain Plain
+	if err := json.Unmarshal(b, &plain); err != nil {
+		return err
+	}
+	*j = OTLPMetric(plain)
+	return nil
+}
+
+// UnmarshalJSON implements json.Unmarshaler.
+func (j *OTLP) UnmarshalJSON(b []byte) error {
+	var raw map[string]interface{}
+	if err := json.Unmarshal(b, &raw); err != nil {
+		return err
+	}
+	if _, ok := raw["endpoint"]; raw != nil && !ok {
+		return fmt.Errorf("field endpoint in OTLP: required")
+	}
+	if _, ok := raw["protocol"]; raw != nil && !ok {
+		return fmt.Errorf("field protocol in OTLP: required")
+	}
+	type Plain OTLP
+	var plain Plain
+	if err := json.Unmarshal(b, &plain); err != nil {
+		return err
+	}
+	*j = OTLP(plain)
+	return nil
+}
+
 type OpenTelemetryConfiguration struct {
 	// AttributeLimits corresponds to the JSON schema field "attribute_limits".
 	AttributeLimits *AttributeLimits `mapstructure:"attribute_limits,omitempty"`
@@ -224,6 +327,24 @@ type OpenTelemetryConfiguration struct {
 	AdditionalProperties interface{}
 }
 
+// UnmarshalJSON implements json.Unmarshaler.
+func (j *OpenTelemetryConfiguration) UnmarshalJSON(b []byte) error {
+	var raw map[string]interface{}
+	if err := json.Unmarshal(b, &raw); err != nil {
+		return err
+	}
+	if _, ok := raw["file_format"]; raw != nil && !ok {
+		return fmt.Errorf("field file_format in OpenTelemetryConfiguration: required")
+	}
+	type Plain OpenTelemetryConfiguration
+	var plain Plain
+	if err := json.Unmarshal(b, &plain); err != nil {
+		return err
+	}
+	*j = OpenTelemetryConfiguration(plain)
+	return nil
+}
+
 type PeriodicMetricReader struct {
 	// Exporter corresponds to the JSON schema field "exporter".
 	Exporter MetricExporter `mapstructure:"exporter"`
@@ -233,6 +354,24 @@ type PeriodicMetricReader struct {
 
 	// Timeout corresponds to the JSON schema field "timeout".
 	Timeout *int `mapstructure:"timeout,omitempty"`
+}
+
+// UnmarshalJSON implements json.Unmarshaler.
+func (j *PeriodicMetricReader) UnmarshalJSON(b []byte) error {
+	var raw map[string]interface{}
+	if err := json.Unmarshal(b, &raw); err != nil {
+		return err
+	}
+	if _, ok := raw["exporter"]; raw != nil && !ok {
+		return fmt.Errorf("field exporter in PeriodicMetricReader: required")
+	}
+	type Plain PeriodicMetricReader
+	var plain Plain
+	if err := json.Unmarshal(b, &plain); err != nil {
+		return err
+	}
+	*j = PeriodicMetricReader(plain)
+	return nil
 }
 
 type Prometheus struct {
@@ -262,6 +401,24 @@ type Propagator struct {
 type PullMetricReader struct {
 	// Exporter corresponds to the JSON schema field "exporter".
 	Exporter MetricExporter `mapstructure:"exporter"`
+}
+
+// UnmarshalJSON implements json.Unmarshaler.
+func (j *PullMetricReader) UnmarshalJSON(b []byte) error {
+	var raw map[string]interface{}
+	if err := json.Unmarshal(b, &raw); err != nil {
+		return err
+	}
+	if _, ok := raw["exporter"]; raw != nil && !ok {
+		return fmt.Errorf("field exporter in PullMetricReader: required")
+	}
+	type Plain PullMetricReader
+	var plain Plain
+	if err := json.Unmarshal(b, &plain); err != nil {
+		return err
+	}
+	*j = PullMetricReader(plain)
+	return nil
 }
 
 type Resource struct {
@@ -336,9 +493,45 @@ type SimpleLogRecordProcessor struct {
 	Exporter LogRecordExporter `mapstructure:"exporter"`
 }
 
+// UnmarshalJSON implements json.Unmarshaler.
+func (j *SimpleLogRecordProcessor) UnmarshalJSON(b []byte) error {
+	var raw map[string]interface{}
+	if err := json.Unmarshal(b, &raw); err != nil {
+		return err
+	}
+	if _, ok := raw["exporter"]; raw != nil && !ok {
+		return fmt.Errorf("field exporter in SimpleLogRecordProcessor: required")
+	}
+	type Plain SimpleLogRecordProcessor
+	var plain Plain
+	if err := json.Unmarshal(b, &plain); err != nil {
+		return err
+	}
+	*j = SimpleLogRecordProcessor(plain)
+	return nil
+}
+
 type SimpleSpanProcessor struct {
 	// Exporter corresponds to the JSON schema field "exporter".
 	Exporter SpanExporter `mapstructure:"exporter"`
+}
+
+// UnmarshalJSON implements json.Unmarshaler.
+func (j *SimpleSpanProcessor) UnmarshalJSON(b []byte) error {
+	var raw map[string]interface{}
+	if err := json.Unmarshal(b, &raw); err != nil {
+		return err
+	}
+	if _, ok := raw["exporter"]; raw != nil && !ok {
+		return fmt.Errorf("field exporter in SimpleSpanProcessor: required")
+	}
+	type Plain SimpleSpanProcessor
+	var plain Plain
+	if err := json.Unmarshal(b, &plain); err != nil {
+		return err
+	}
+	*j = SimpleSpanProcessor(plain)
+	return nil
 }
 
 type SpanExporter struct {
@@ -436,6 +629,35 @@ const ViewSelectorInstrumentTypeObservableGauge ViewSelectorInstrumentType = "ob
 const ViewSelectorInstrumentTypeObservableUpDownCounter ViewSelectorInstrumentType = "observable_up_down_counter"
 const ViewSelectorInstrumentTypeUpDownCounter ViewSelectorInstrumentType = "up_down_counter"
 
+var enumValues_ViewSelectorInstrumentType = []interface{}{
+	"counter",
+	"histogram",
+	"observable_counter",
+	"observable_gauge",
+	"observable_up_down_counter",
+	"up_down_counter",
+}
+
+// UnmarshalJSON implements json.Unmarshaler.
+func (j *ViewSelectorInstrumentType) UnmarshalJSON(b []byte) error {
+	var v string
+	if err := json.Unmarshal(b, &v); err != nil {
+		return err
+	}
+	var ok bool
+	for _, expected := range enumValues_ViewSelectorInstrumentType {
+		if reflect.DeepEqual(v, expected) {
+			ok = true
+			break
+		}
+	}
+	if !ok {
+		return fmt.Errorf("invalid value (expected one of %#v): %#v", enumValues_ViewSelectorInstrumentType, v)
+	}
+	*j = ViewSelectorInstrumentType(v)
+	return nil
+}
+
 type ViewStream struct {
 	// Aggregation corresponds to the JSON schema field "aggregation".
 	Aggregation *ViewStreamAggregation `mapstructure:"aggregation,omitempty"`
@@ -507,56 +729,13 @@ type Zipkin struct {
 	Timeout *int `mapstructure:"timeout,omitempty"`
 }
 
-var enumValues_OTLPMetricDefaultHistogramAggregation = []interface{}{
-	"explicit_bucket_histogram",
-	"base2_exponential_bucket_histogram",
-}
-
-// UnmarshalJSON implements json.Unmarshaler.
-func (j *OTLPMetricDefaultHistogramAggregation) UnmarshalJSON(b []byte) error {
-	var v string
-	if err := json.Unmarshal(b, &v); err != nil {
-		return err
-	}
-	var ok bool
-	for _, expected := range enumValues_OTLPMetricDefaultHistogramAggregation {
-		if reflect.DeepEqual(v, expected) {
-			ok = true
-			break
-		}
-	}
-	if !ok {
-		return fmt.Errorf("invalid value (expected one of %#v): %#v", enumValues_OTLPMetricDefaultHistogramAggregation, v)
-	}
-	*j = OTLPMetricDefaultHistogramAggregation(v)
-	return nil
-}
-
-// UnmarshalJSON implements json.Unmarshaler.
-func (j *Attributes) UnmarshalJSON(b []byte) error {
-	var raw map[string]interface{}
-	if err := json.Unmarshal(b, &raw); err != nil {
-		return err
-	}
-	type Plain Attributes
-	var plain Plain
-	if err := json.Unmarshal(b, &plain); err != nil {
-		return err
-	}
-	if v, ok := raw[""]; !ok || v == nil {
-		plain.AdditionalProperties = map[string]interface{}{}
-	}
-	*j = Attributes(plain)
-	return nil
-}
-
 // UnmarshalJSON implements json.Unmarshaler.
 func (j *Zipkin) UnmarshalJSON(b []byte) error {
 	var raw map[string]interface{}
 	if err := json.Unmarshal(b, &raw); err != nil {
 		return err
 	}
-	if v, ok := raw["endpoint"]; !ok || v == nil {
+	if _, ok := raw["endpoint"]; raw != nil && !ok {
 		return fmt.Errorf("field endpoint in Zipkin: required")
 	}
 	type Plain Zipkin
@@ -565,349 +744,5 @@ func (j *Zipkin) UnmarshalJSON(b []byte) error {
 		return err
 	}
 	*j = Zipkin(plain)
-	return nil
-}
-
-var enumValues_ViewSelectorInstrumentType = []interface{}{
-	"counter",
-	"histogram",
-	"observable_counter",
-	"observable_gauge",
-	"observable_up_down_counter",
-	"up_down_counter",
-}
-
-// UnmarshalJSON implements json.Unmarshaler.
-func (j *SpanExporter) UnmarshalJSON(b []byte) error {
-	var raw map[string]interface{}
-	if err := json.Unmarshal(b, &raw); err != nil {
-		return err
-	}
-	type Plain SpanExporter
-	var plain Plain
-	if err := json.Unmarshal(b, &plain); err != nil {
-		return err
-	}
-	if v, ok := raw[""]; !ok || v == nil {
-		plain.AdditionalProperties = map[string]interface{}{}
-	}
-	*j = SpanExporter(plain)
-	return nil
-}
-
-// UnmarshalJSON implements json.Unmarshaler.
-func (j *PullMetricReader) UnmarshalJSON(b []byte) error {
-	var raw map[string]interface{}
-	if err := json.Unmarshal(b, &raw); err != nil {
-		return err
-	}
-	if v, ok := raw["exporter"]; !ok || v == nil {
-		return fmt.Errorf("field exporter in PullMetricReader: required")
-	}
-	type Plain PullMetricReader
-	var plain Plain
-	if err := json.Unmarshal(b, &plain); err != nil {
-		return err
-	}
-	*j = PullMetricReader(plain)
-	return nil
-}
-
-// UnmarshalJSON implements json.Unmarshaler.
-func (j *BatchSpanProcessor) UnmarshalJSON(b []byte) error {
-	var raw map[string]interface{}
-	if err := json.Unmarshal(b, &raw); err != nil {
-		return err
-	}
-	if v, ok := raw["exporter"]; !ok || v == nil {
-		return fmt.Errorf("field exporter in BatchSpanProcessor: required")
-	}
-	type Plain BatchSpanProcessor
-	var plain Plain
-	if err := json.Unmarshal(b, &plain); err != nil {
-		return err
-	}
-	*j = BatchSpanProcessor(plain)
-	return nil
-}
-
-// UnmarshalJSON implements json.Unmarshaler.
-func (j *PeriodicMetricReader) UnmarshalJSON(b []byte) error {
-	var raw map[string]interface{}
-	if err := json.Unmarshal(b, &raw); err != nil {
-		return err
-	}
-	if v, ok := raw["exporter"]; !ok || v == nil {
-		return fmt.Errorf("field exporter in PeriodicMetricReader: required")
-	}
-	type Plain PeriodicMetricReader
-	var plain Plain
-	if err := json.Unmarshal(b, &plain); err != nil {
-		return err
-	}
-	*j = PeriodicMetricReader(plain)
-	return nil
-}
-
-// UnmarshalJSON implements json.Unmarshaler.
-func (j *MetricExporter) UnmarshalJSON(b []byte) error {
-	var raw map[string]interface{}
-	if err := json.Unmarshal(b, &raw); err != nil {
-		return err
-	}
-	type Plain MetricExporter
-	var plain Plain
-	if err := json.Unmarshal(b, &plain); err != nil {
-		return err
-	}
-	if v, ok := raw[""]; !ok || v == nil {
-		plain.AdditionalProperties = map[string]interface{}{}
-	}
-	*j = MetricExporter(plain)
-	return nil
-}
-
-// UnmarshalJSON implements json.Unmarshaler.
-func (j *OTLPMetric) UnmarshalJSON(b []byte) error {
-	var raw map[string]interface{}
-	if err := json.Unmarshal(b, &raw); err != nil {
-		return err
-	}
-	if v, ok := raw["endpoint"]; !ok || v == nil {
-		return fmt.Errorf("field endpoint in OTLPMetric: required")
-	}
-	if v, ok := raw["protocol"]; !ok || v == nil {
-		return fmt.Errorf("field protocol in OTLPMetric: required")
-	}
-	type Plain OTLPMetric
-	var plain Plain
-	if err := json.Unmarshal(b, &plain); err != nil {
-		return err
-	}
-	*j = OTLPMetric(plain)
-	return nil
-}
-
-// UnmarshalJSON implements json.Unmarshaler.
-func (j *ViewSelectorInstrumentType) UnmarshalJSON(b []byte) error {
-	var v string
-	if err := json.Unmarshal(b, &v); err != nil {
-		return err
-	}
-	var ok bool
-	for _, expected := range enumValues_ViewSelectorInstrumentType {
-		if reflect.DeepEqual(v, expected) {
-			ok = true
-			break
-		}
-	}
-	if !ok {
-		return fmt.Errorf("invalid value (expected one of %#v): %#v", enumValues_ViewSelectorInstrumentType, v)
-	}
-	*j = ViewSelectorInstrumentType(v)
-	return nil
-}
-
-// UnmarshalJSON implements json.Unmarshaler.
-func (j *Propagator) UnmarshalJSON(b []byte) error {
-	var raw map[string]interface{}
-	if err := json.Unmarshal(b, &raw); err != nil {
-		return err
-	}
-	type Plain Propagator
-	var plain Plain
-	if err := json.Unmarshal(b, &plain); err != nil {
-		return err
-	}
-	if v, ok := raw[""]; !ok || v == nil {
-		plain.AdditionalProperties = map[string]interface{}{}
-	}
-	*j = Propagator(plain)
-	return nil
-}
-
-// UnmarshalJSON implements json.Unmarshaler.
-func (j *LogRecordProcessor) UnmarshalJSON(b []byte) error {
-	var raw map[string]interface{}
-	if err := json.Unmarshal(b, &raw); err != nil {
-		return err
-	}
-	type Plain LogRecordProcessor
-	var plain Plain
-	if err := json.Unmarshal(b, &plain); err != nil {
-		return err
-	}
-	if v, ok := raw[""]; !ok || v == nil {
-		plain.AdditionalProperties = map[string]interface{}{}
-	}
-	*j = LogRecordProcessor(plain)
-	return nil
-}
-
-// UnmarshalJSON implements json.Unmarshaler.
-func (j *Sampler) UnmarshalJSON(b []byte) error {
-	var raw map[string]interface{}
-	if err := json.Unmarshal(b, &raw); err != nil {
-		return err
-	}
-	type Plain Sampler
-	var plain Plain
-	if err := json.Unmarshal(b, &plain); err != nil {
-		return err
-	}
-	if v, ok := raw[""]; !ok || v == nil {
-		plain.AdditionalProperties = map[string]interface{}{}
-	}
-	*j = Sampler(plain)
-	return nil
-}
-
-// UnmarshalJSON implements json.Unmarshaler.
-func (j *SimpleLogRecordProcessor) UnmarshalJSON(b []byte) error {
-	var raw map[string]interface{}
-	if err := json.Unmarshal(b, &raw); err != nil {
-		return err
-	}
-	if v, ok := raw["exporter"]; !ok || v == nil {
-		return fmt.Errorf("field exporter in SimpleLogRecordProcessor: required")
-	}
-	type Plain SimpleLogRecordProcessor
-	var plain Plain
-	if err := json.Unmarshal(b, &plain); err != nil {
-		return err
-	}
-	*j = SimpleLogRecordProcessor(plain)
-	return nil
-}
-
-// UnmarshalJSON implements json.Unmarshaler.
-func (j *SimpleSpanProcessor) UnmarshalJSON(b []byte) error {
-	var raw map[string]interface{}
-	if err := json.Unmarshal(b, &raw); err != nil {
-		return err
-	}
-	if v, ok := raw["exporter"]; !ok || v == nil {
-		return fmt.Errorf("field exporter in SimpleSpanProcessor: required")
-	}
-	type Plain SimpleSpanProcessor
-	var plain Plain
-	if err := json.Unmarshal(b, &plain); err != nil {
-		return err
-	}
-	*j = SimpleSpanProcessor(plain)
-	return nil
-}
-
-// UnmarshalJSON implements json.Unmarshaler.
-func (j *BatchLogRecordProcessor) UnmarshalJSON(b []byte) error {
-	var raw map[string]interface{}
-	if err := json.Unmarshal(b, &raw); err != nil {
-		return err
-	}
-	if v, ok := raw["exporter"]; !ok || v == nil {
-		return fmt.Errorf("field exporter in BatchLogRecordProcessor: required")
-	}
-	type Plain BatchLogRecordProcessor
-	var plain Plain
-	if err := json.Unmarshal(b, &plain); err != nil {
-		return err
-	}
-	*j = BatchLogRecordProcessor(plain)
-	return nil
-}
-
-// UnmarshalJSON implements json.Unmarshaler.
-func (j *LogRecordExporter) UnmarshalJSON(b []byte) error {
-	var raw map[string]interface{}
-	if err := json.Unmarshal(b, &raw); err != nil {
-		return err
-	}
-	type Plain LogRecordExporter
-	var plain Plain
-	if err := json.Unmarshal(b, &plain); err != nil {
-		return err
-	}
-	if v, ok := raw[""]; !ok || v == nil {
-		plain.AdditionalProperties = map[string]interface{}{}
-	}
-	*j = LogRecordExporter(plain)
-	return nil
-}
-
-// UnmarshalJSON implements json.Unmarshaler.
-func (j *SpanProcessor) UnmarshalJSON(b []byte) error {
-	var raw map[string]interface{}
-	if err := json.Unmarshal(b, &raw); err != nil {
-		return err
-	}
-	type Plain SpanProcessor
-	var plain Plain
-	if err := json.Unmarshal(b, &plain); err != nil {
-		return err
-	}
-	if v, ok := raw[""]; !ok || v == nil {
-		plain.AdditionalProperties = map[string]interface{}{}
-	}
-	*j = SpanProcessor(plain)
-	return nil
-}
-
-// UnmarshalJSON implements json.Unmarshaler.
-func (j *OTLP) UnmarshalJSON(b []byte) error {
-	var raw map[string]interface{}
-	if err := json.Unmarshal(b, &raw); err != nil {
-		return err
-	}
-	if v, ok := raw["endpoint"]; !ok || v == nil {
-		return fmt.Errorf("field endpoint in OTLP: required")
-	}
-	if v, ok := raw["protocol"]; !ok || v == nil {
-		return fmt.Errorf("field protocol in OTLP: required")
-	}
-	type Plain OTLP
-	var plain Plain
-	if err := json.Unmarshal(b, &plain); err != nil {
-		return err
-	}
-	*j = OTLP(plain)
-	return nil
-}
-
-// UnmarshalJSON implements json.Unmarshaler.
-func (j *AttributeLimits) UnmarshalJSON(b []byte) error {
-	var raw map[string]interface{}
-	if err := json.Unmarshal(b, &raw); err != nil {
-		return err
-	}
-	type Plain AttributeLimits
-	var plain Plain
-	if err := json.Unmarshal(b, &plain); err != nil {
-		return err
-	}
-	if v, ok := raw[""]; !ok || v == nil {
-		plain.AdditionalProperties = map[string]interface{}{}
-	}
-	*j = AttributeLimits(plain)
-	return nil
-}
-
-// UnmarshalJSON implements json.Unmarshaler.
-func (j *OpenTelemetryConfiguration) UnmarshalJSON(b []byte) error {
-	var raw map[string]interface{}
-	if err := json.Unmarshal(b, &raw); err != nil {
-		return err
-	}
-	if v, ok := raw["file_format"]; !ok || v == nil {
-		return fmt.Errorf("field file_format in OpenTelemetryConfiguration: required")
-	}
-	type Plain OpenTelemetryConfiguration
-	var plain Plain
-	if err := json.Unmarshal(b, &plain); err != nil {
-		return err
-	}
-	if v, ok := raw[""]; !ok || v == nil {
-		plain.AdditionalProperties = map[string]interface{}{}
-	}
-	*j = OpenTelemetryConfiguration(plain)
 	return nil
 }
