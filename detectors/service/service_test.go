@@ -31,7 +31,7 @@ func TestDetectFormat(t *testing.T) {
 }
 
 func TestDetectRandom(t *testing.T) {
-	uuids := map[string] int{}
+	uuids := map[string]int{}
 
 	for i := 0; i < 10; i++ {
 		detector := New()

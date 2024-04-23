@@ -13,8 +13,7 @@ import (
 	semconv "go.opentelemetry.io/otel/semconv/v1.24.0"
 )
 
-type serviceDetector struct {
-}
+type serviceDetector struct{}
 
 // New returns a [resource.Detector] that will detect service resources.
 func New() resource.Detector {
@@ -24,7 +23,6 @@ func New() resource.Detector {
 // Detect detects resources associated to a service.
 func (detector *serviceDetector) Detect(ctx context.Context) (*resource.Resource, error) {
 	version4Uuid, err := uuid.NewRandom()
-
 	if err != nil {
 		return nil, err
 	}
