@@ -18,10 +18,10 @@ type config struct {
 	client Client
 }
 
-func newConfig(options ...Option) *config {
-	c := &config{&azureInstanceMetadataClient{}}
+func newConfig(options ...Option) config {
+	c := config{&azureInstanceMetadataClient{}}
 	for _, option := range options {
-		option.apply(c)
+		c = option.apply(c)
 	}
 
 	return c
@@ -29,23 +29,25 @@ func newConfig(options ...Option) *config {
 
 // Option applies an Azure VM detector configuration option.
 type Option interface {
-	apply(*config)
+	apply(config) config
 }
 
-type optionFunc func(*config)
+type optionFunc func(config) config
 
-func (fn optionFunc) apply(c *config) {
-	fn(c)
+func (fn optionFunc) apply(c config) config {
+	return fn(c)
 }
 
 // WithClient sets the client for obtaining a Azure instance metadata JSON.
 func WithClient(t Client) Option {
-	return optionFunc(func(c *config) {
+	return optionFunc(func(c config) config {
 		c.client = t
+
+		return c
 	})
 }
 
-func (cfg *config) getClient() Client {
+func (cfg config) getClient() Client {
 	return cfg.client
 }
 
@@ -63,8 +65,8 @@ type vmMetadata struct {
 	Version    *string `json:"version"`
 }
 
-// NewResourceDetector returns a resource detector that will detect Azure VM resources.
-func NewResourceDetector(opts ...Option) resource.Detector {
+// New returns a [resource.Detector] that will detect Azure VM resources.
+func New(opts ...Option) resource.Detector {
 	c := newConfig(opts...)
 	return &resourceDetector{c.getClient()}
 }

@@ -15,7 +15,7 @@ import (
 	semconv "go.opentelemetry.io/otel/semconv/v1.24.0"
 )
 
-func Test_Detect(t *testing.T) {
+func TestDetect(t *testing.T) {
 	type input struct {
 		jsonMetadata string
 		err          error
@@ -81,7 +81,7 @@ func Test_Detect(t *testing.T) {
 	}
 
 	for _, tCase := range testTable {
-		detector := NewResourceDetector(WithClient(&mockClient{
+		detector := New(WithClient(&mockClient{
 			jsonMetadata: []byte(tCase.input.jsonMetadata),
 			err:          tCase.input.err,
 		}))
