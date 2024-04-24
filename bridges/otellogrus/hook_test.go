@@ -11,8 +11,95 @@ import (
 	"github.com/stretchr/testify/assert"
 
 	"go.opentelemetry.io/otel/log"
+	"go.opentelemetry.io/otel/log/embedded"
+	"go.opentelemetry.io/otel/log/global"
 	"go.opentelemetry.io/otel/log/logtest"
+	"go.opentelemetry.io/otel/sdk/instrumentation"
 )
+
+type mockLoggerProvider struct {
+	embedded.LoggerProvider
+}
+
+func (mockLoggerProvider) Logger(name string, options ...log.LoggerOption) log.Logger {
+	return nil
+}
+
+func TestNewConfig(t *testing.T) {
+	customLoggerProvider := mockLoggerProvider{}
+
+	for _, tt := range []struct {
+		name    string
+		options []Option
+
+		wantConfig config
+	}{
+		{
+			name: "with no options",
+
+			wantConfig: config{
+				scope: instrumentation.Scope{
+					Name:    bridgeName,
+					Version: version,
+				},
+				provider: global.GetLoggerProvider(),
+				levels:   logrus.AllLevels,
+			},
+		},
+		{
+			name: "with a custom instrumentation scope",
+			options: []Option{
+				WithInstrumentationScope(instrumentation.Scope{
+					Name:    "test",
+					Version: "42.0",
+				}),
+			},
+
+			wantConfig: config{
+				scope: instrumentation.Scope{
+					Name:    "test",
+					Version: "42.0",
+				},
+				provider: global.GetLoggerProvider(),
+				levels:   logrus.AllLevels,
+			},
+		},
+		{
+			name: "with a custom logger provider",
+			options: []Option{
+				WithLoggerProvider(customLoggerProvider),
+			},
+
+			wantConfig: config{
+				scope: instrumentation.Scope{
+					Name:    bridgeName,
+					Version: version,
+				},
+				provider: customLoggerProvider,
+				levels:   logrus.AllLevels,
+			},
+		},
+		{
+			name: "with custom log levels",
+			options: []Option{
+				WithLevels([]logrus.Level{logrus.FatalLevel}),
+			},
+
+			wantConfig: config{
+				scope: instrumentation.Scope{
+					Name:    bridgeName,
+					Version: version,
+				},
+				provider: global.GetLoggerProvider(),
+				levels:   []logrus.Level{logrus.FatalLevel},
+			},
+		},
+	} {
+		t.Run(tt.name, func(t *testing.T) {
+			assert.Equal(t, tt.wantConfig, newConfig(tt.options))
+		})
+	}
+}
 
 func TestNewHook(t *testing.T) {
 	assert.NotNil(t, NewHook())
