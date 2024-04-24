@@ -3,6 +3,7 @@
 package otellogrus
 
 import (
+	"slices"
 	"testing"
 	"time"
 
@@ -112,7 +113,7 @@ func TestHookFire(t *testing.T) {
 
 				for _, s := range rec.Result() {
 					if k == s.Name {
-						assert.Equal(t, v, s.Records)
+						assertRecords(t, v, s.Records)
 						found = true
 					}
 				}
@@ -212,7 +213,7 @@ func TestConvertFields(t *testing.T) {
 		},
 	} {
 		t.Run(tt.name, func(t *testing.T) {
-			assert.Equal(t, convertFields(tt.fields), tt.wantKeyValue)
+			assertKeyValues(t, tt.wantKeyValue, convertFields(tt.fields))
 		})
 	}
 }
@@ -225,4 +226,52 @@ func buildRecord(body log.Value, timestamp time.Time, severity log.Severity, att
 	record.AddAttributes(attrs...)
 
 	return record
+}
+
+func assertKeyValues(t *testing.T, want, got []log.KeyValue) {
+	t.Helper()
+	if !slices.EqualFunc(want, got, log.KeyValue.Equal) {
+		t.Errorf("KeyValues are not equal:\nwant: %v\ngot:  %v", want, got)
+	}
+}
+
+func assertBody(t *testing.T, want log.Value, got log.Value) {
+	t.Helper()
+	if !got.Equal(want) {
+		t.Errorf("Body value is not equal:\nwant: %v\ngot:  %v", want, got)
+	}
+}
+
+func assertAttributes(t *testing.T, want, got log.Record) {
+	t.Helper()
+
+	var wantAttr []log.KeyValue
+	want.WalkAttributes(func(kv log.KeyValue) bool {
+		wantAttr = append(wantAttr, kv)
+		return true
+	})
+	var gotAttr []log.KeyValue
+	got.WalkAttributes(func(kv log.KeyValue) bool {
+		gotAttr = append(gotAttr, kv)
+		return true
+	})
+
+	if !slices.EqualFunc(wantAttr, gotAttr, log.KeyValue.Equal) {
+		t.Errorf("Attributes are not equal:\nwant: %v\ngot:  %v", want, got)
+	}
+}
+
+func assertRecords(t *testing.T, want, got []log.Record) {
+	t.Helper()
+
+	assert.Equal(t, len(want), len(got))
+
+	for i, j := range want {
+		assert.Equal(t, j.Timestamp(), got[i].Timestamp())
+		assert.Equal(t, j.ObservedTimestamp(), got[i].ObservedTimestamp())
+		assert.Equal(t, j.Severity(), got[i].Severity())
+		assert.Equal(t, j.SeverityText(), got[i].SeverityText())
+		assertBody(t, j.Body(), got[i].Body())
+		assertAttributes(t, j, got[i])
+	}
 }
