@@ -305,6 +305,23 @@ func TestConvertFields(t *testing.T) {
 	}
 }
 
+func BenchmarkHook(b *testing.B) {
+	record := &logrus.Entry{}
+
+	b.Run("Fire", func(b *testing.B) {
+		hooks := make([]*Hook, b.N)
+		for i := range hooks {
+			hooks[i] = NewHook()
+		}
+
+		b.ReportAllocs()
+		b.ResetTimer()
+		for n := 0; n < b.N; n++ {
+			_ = hooks[n].Fire(record)
+		}
+	})
+}
+
 func buildRecord(body log.Value, timestamp time.Time, severity log.Severity, attrs []log.KeyValue) log.Record {
 	var record log.Record
 	record.SetBody(body)

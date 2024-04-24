@@ -33,7 +33,7 @@
 //   - int64 are transformed into [log.Int64]
 //   - string are transformed into [log.String]
 //
-// Any other type is transformed into a string.
+// Any other type is transformed into a string using [fmt.Sprintf].
 //
 // [OpenTelemetry]: https://opentelemetry.io/docs/concepts/signals/logs/
 package otellogrus // import "go.opentelemetry.io/contrib/bridges/otellogrus"
@@ -145,7 +145,7 @@ func WithLevels(l []logrus.Level) Option {
 //
 // If [WithLoggerProvider] is not provided, the returned Hook will use the
 // global LoggerProvider.
-func NewHook(options ...Option) logrus.Hook {
+func NewHook(options ...Option) *Hook {
 	cfg := newConfig(options)
 	return &Hook{
 		logger: cfg.logger(),
