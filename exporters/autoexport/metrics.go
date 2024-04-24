@@ -206,6 +206,9 @@ func init() {
 	RegisterMetricProducer("prometheus", func(ctx context.Context) (metric.Producer, error) {
 		return prometheusbridge.NewMetricProducer(), nil
 	})
+	RegisterMetricProducer("none", func(ctx context.Context) (metric.Producer, error) {
+		return newNoopMetricProducer(), nil
+	})
 }
 
 type readerWithServer struct {
