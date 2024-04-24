@@ -185,15 +185,12 @@ func (h *Hook) convertEntry(e *logrus.Entry) log.Record {
 }
 
 func convertFields(fields logrus.Fields) []log.KeyValue {
-	kvs := make([]log.KeyValue, len(fields))
-
-	i := 0
+	kvs := make([]log.KeyValue, 0, len(fields))
 	for k, v := range fields {
-		kvs[i] = log.KeyValue{
+		kvs = append(kvs, log.KeyValue{
 			Key:   k,
 			Value: convertValue(v),
-		}
-		i++
+		})
 	}
 	return kvs
 }
