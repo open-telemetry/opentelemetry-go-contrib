@@ -233,3 +233,71 @@ func TestMetricProducerFallbackWithPrometheusExporter(t *testing.T) {
 	assert.NoError(t, mp.Shutdown(context.Background()))
 	goleak.VerifyNone(t)
 }
+
+func TestMultipleMetricProducerWithOTLPExporter(t *testing.T) {
+	requestWaitChan := make(chan struct{})
+
+	reg1 := prometheus.NewRegistry()
+	someDummyMetric := prometheus.NewCounter(prometheus.CounterOpts{
+		Name: "dummy_metric_1",
+		Help: "dummy metric ONE",
+	})
+	reg1.MustRegister(someDummyMetric)
+	reg2 := prometheus.NewRegistry()
+	someOtherDummyMetric := prometheus.NewCounter(prometheus.CounterOpts{
+		Name: "dummy_metric_2",
+		Help: "dummy metric TWO",
+	})
+	reg2.MustRegister(someOtherDummyMetric)
+
+	RegisterMetricProducer("first_producer", func(context.Context) (metric.Producer, error) {
+		return prometheusbridge.NewMetricProducer(prometheusbridge.WithGatherer(reg1)), nil
+	})
+	RegisterMetricProducer("second_producer", func(context.Context) (metric.Producer, error) {
+		return prometheusbridge.NewMetricProducer(prometheusbridge.WithGatherer(reg2)), nil
+	})
+
+	ts := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		body, err := io.ReadAll(r.Body)
+		assert.NoError(t, err)
+		assert.NoError(t, r.Body.Close())
+
+		// Now parse the otlp proto message from request body.
+		req := pmetricotlp.NewExportRequest()
+		assert.NoError(t, req.UnmarshalProto(body))
+
+		metricNames := []string{}
+		sm := req.Metrics().ResourceMetrics().At(0).ScopeMetrics()
+
+		for i := 0; i < sm.Len(); i++ {
+			m := sm.At(i).Metrics()
+			for i := 0; i < m.Len(); i++ {
+				metricNames = append(metricNames, m.At(i).Name())
+			}
+		}
+
+		assert.ElementsMatch(t, metricNames, []string{"dummy_metric_1", "dummy_metric_2"})
+
+		close(requestWaitChan)
+	}))
+
+	t.Setenv("OTEL_METRICS_EXPORTER", "otlp")
+	t.Setenv("OTEL_EXPORTER_OTLP_ENDPOINT", ts.URL)
+	t.Setenv("OTEL_EXPORTER_OTLP_PROTOCOL", "http/protobuf")
+	t.Setenv("OTEL_METRICS_PRODUCERS", "first_producer,second_producer,first_producer")
+
+	r, err := NewMetricReader(context.Background())
+	assert.NoError(t, err)
+	assert.IsType(t, &metric.PeriodicReader{}, r)
+
+	// Register it with a meter provider to ensure it is used.
+	// mp.Shutdown errors out because r.Shutdown closes the reader.
+	metric.NewMeterProvider(metric.WithReader(r))
+
+	// Shutdown actually makes an export call.
+	assert.NoError(t, r.Shutdown(context.Background()))
+
+	<-requestWaitChan
+	ts.Close()
+	goleak.VerifyNone(t)
+}

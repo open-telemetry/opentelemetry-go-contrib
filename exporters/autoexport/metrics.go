@@ -10,6 +10,7 @@ import (
 	"net"
 	"net/http"
 	"os"
+	"strings"
 	"time"
 
 	"github.com/prometheus/client_golang/prometheus"
@@ -92,13 +93,15 @@ var (
 
 func init() {
 	RegisterMetricReader("otlp", func(ctx context.Context) (metric.Reader, error) {
-		producer, err := metricsProducers.create(ctx)
+		producers, err := metricsProducers.create(ctx)
 		if err != nil {
 			return nil, err
 		}
 		readerOpts := []metric.PeriodicReaderOption{}
-		if producer != nil {
-			readerOpts = append(readerOpts, metric.WithProducer(producer))
+		if len(producers) > 0 {
+			for _, producer := range producers {
+				readerOpts = append(readerOpts, metric.WithProducer(producer))
+			}
 		}
 
 		proto := os.Getenv(otelExporterOTLPProtoEnvKey)
@@ -124,13 +127,15 @@ func init() {
 		}
 	})
 	RegisterMetricReader("console", func(ctx context.Context) (metric.Reader, error) {
-		producer, err := metricsProducers.create(ctx)
+		producers, err := metricsProducers.create(ctx)
 		if err != nil {
 			return nil, err
 		}
 		readerOpts := []metric.PeriodicReaderOption{}
-		if producer != nil {
-			readerOpts = append(readerOpts, metric.WithProducer(producer))
+		if len(producers) > 0 {
+			for _, producer := range producers {
+				readerOpts = append(readerOpts, metric.WithProducer(producer))
+			}
 		}
 
 		r, err := stdoutmetric.New()
@@ -151,12 +156,14 @@ func init() {
 
 		exporterOpts := []promexporter.Option{promexporter.WithRegisterer(reg)}
 
-		producer, err := metricsProducers.create(ctx)
+		producers, err := metricsProducers.create(ctx)
 		if err != nil {
 			return nil, err
 		}
-		if producer != nil {
-			exporterOpts = append(exporterOpts, promexporter.WithProducer(producer))
+		if len(producers) > 0 {
+			for _, producer := range producers {
+				exporterOpts = append(exporterOpts, promexporter.WithProducer(producer))
+			}
 		}
 
 		reader, err := promexporter.New(exporterOpts...)
@@ -237,15 +244,45 @@ func newProducerRegistry(envKey string) producerRegistry {
 	}
 }
 
-func (pr producerRegistry) create(ctx context.Context) (metric.Producer, error) {
+func (pr producerRegistry) create(ctx context.Context) ([]metric.Producer, error) {
 	expType := os.Getenv(pr.envKey)
 	if expType == "" {
 		if pr.fallbackProducer != nil {
-			return pr.fallbackProducer(ctx)
+			producer, err := pr.fallbackProducer(ctx)
+			if err != nil {
+				return nil, err
+			}
+
+			return []metric.Producer{producer}, nil
 		}
 
 		return nil, nil
 	}
 
-	return pr.registry.load(ctx, expType)
+	producers := dedupedMetricProducers(expType)
+	metricProducers := make([]metric.Producer, 0, len(producers))
+	for _, producer := range producers {
+		producer, err := pr.registry.load(ctx, producer)
+		if err != nil {
+			return nil, err
+		}
+
+		metricProducers = append(metricProducers, producer)
+	}
+
+	return metricProducers, nil
+}
+
+func dedupedMetricProducers(envValue string) []string {
+	producers := make(map[string]struct{})
+	for _, producer := range strings.Split(envValue, ",") {
+		producers[producer] = struct{}{}
+	}
+
+	result := make([]string, 0, len(producers))
+	for producer := range producers {
+		result = append(result, producer)
+	}
+
+	return result
 }
