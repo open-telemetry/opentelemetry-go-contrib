@@ -306,7 +306,17 @@ func TestConvertFields(t *testing.T) {
 }
 
 func BenchmarkHook(b *testing.B) {
-	record := &logrus.Entry{}
+	record := &logrus.Entry{
+		Data: map[string]interface{}{
+			"string": "hello",
+			"int":    42,
+			"float":  1.5,
+			"bool":   false,
+		},
+		Message: "body",
+		Time:    time.Now(),
+		Level:   logrus.InfoLevel,
+	}
 
 	b.Run("Fire", func(b *testing.B) {
 		hooks := make([]*Hook, b.N)
