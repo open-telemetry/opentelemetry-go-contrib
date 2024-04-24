@@ -5,6 +5,7 @@ package otellogrus_test
 
 import (
 	"github.com/sirupsen/logrus"
+
 	"go.opentelemetry.io/contrib/bridges/otellogrus"
 	"go.opentelemetry.io/otel/log/noop"
 )
