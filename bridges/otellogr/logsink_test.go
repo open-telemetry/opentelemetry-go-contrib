@@ -122,7 +122,7 @@ func TestLogSink(t *testing.T) {
 					Body:     log.StringValue("error message"),
 					Severity: log.SeverityError,
 					Attributes: []log.KeyValue{
-						log.String(errKey, "test error"),
+						log.String(errorKey, "test error"),
 					},
 				},
 			},
@@ -146,7 +146,7 @@ func TestLogSink(t *testing.T) {
 					Body:     log.StringValue("msg"),
 					Severity: log.SeverityError,
 					Attributes: []log.KeyValue{
-						log.String(errKey, "error"),
+						log.String(errorKey, "error"),
 						log.String("struct", "{data:1}"),
 						log.Bool("bool", true),
 						log.Int64("duration", 60_000_000_000),
@@ -244,6 +244,15 @@ func TestLogSink(t *testing.T) {
 	}
 }
 
+func TestLogSinkWithName(t *testing.T) {
+	rec := logtest.NewRecorder()
+	ls := NewLogSink(WithLoggerProvider(rec))
+	lsWithName := ls.WithName("test")
+	require.NotEqual(t, ls, lsWithName)
+
+	require.NotEqual(t, lsWithName, ls.WithName("test"))
+}
+
 func TestLogSinkEnabled(t *testing.T) {
 	rec := logtest.NewRecorder(
 		logtest.WithEnabledFunc(func(ctx context.Context, record log.Record) bool {
@@ -267,11 +276,14 @@ func TestLogSinkEnabled(t *testing.T) {
 }
 
 func TestConvertKVs(t *testing.T) {
+	ctx := context.WithValue(context.Background(), "key", "value") // nolint: revive,staticcheck // test context
+
 	for _, tt := range []struct {
 		name string
 
 		kvs         []any
 		expectedKVs []log.KeyValue
+		expectedCtx context.Context
 	}{
 		{
 			name: "empty",
@@ -307,10 +319,26 @@ func TestConvertKVs(t *testing.T) {
 				log.String("42", "value"),
 			},
 		},
+		{
+			name:        "context",
+			kvs:         []any{"ctx", ctx, "key", "value"},
+			expectedKVs: []log.KeyValue{log.String("key", "value")},
+			expectedCtx: ctx,
+		},
+		{
+			name:        "last_context",
+			kvs:         []any{"key", context.Background(), "ctx", ctx},
+			expectedKVs: []log.KeyValue{},
+			expectedCtx: ctx,
+		},
 	} {
 		t.Run(tt.name, func(t *testing.T) {
-			kvs := convertKVs(tt.kvs)
+			ctx, kvs := convertKVs(tt.kvs)
 			assert.Equal(t, tt.expectedKVs, kvs)
+
+			if tt.expectedCtx != nil {
+				assert.Equal(t, tt.expectedCtx, ctx)
+			}
 		})
 	}
 }

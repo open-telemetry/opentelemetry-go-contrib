@@ -19,8 +19,10 @@
 //   - Error is always logged as an additional attribute with the key "err" and
 //     with the severity [log.SeverityError].
 //   - Name is logged as an additional attribute with the key "logger".
-//   - Context is not propagated to the OpenTelemetry log record, as logr does
-//     not provide a way to access it.
+//   - The [context.Context] value in KeyAndValues is propagated to OpenTelemetry
+//     log record. All non-nested [context.Context] values are ignored and not
+//     added as attributes. If there are multiple [context.Context] the last one
+//     is used.
 //
 // The Level is transformed by using the [WithLevelSeverity] option. If this is
 // not provided it would default to a function that adds an offset to the logr
@@ -77,8 +79,8 @@ const (
 	bridgeName = "go.opentelemetry.io/contrib/bridges/otellogr"
 	// nameKey is used to log the `WithName` values as an additional attribute.
 	nameKey = "logger"
-	// errKey is used to log the error parameter of Error as an additional attribute.
-	errKey = "err"
+	// errorKey is used to log the error parameter of Error as an additional attribute.
+	errorKey = "error"
 )
 
 type config struct {
@@ -215,7 +217,7 @@ func (l *LogSink) log(err error, msg string, serverity log.Severity, kvList ...a
 
 	if err != nil {
 		record.AddAttributes(log.KeyValue{
-			Key:   errKey,
+			Key:   errorKey,
 			Value: convertValue(err),
 		})
 	}
@@ -224,12 +226,11 @@ func (l *LogSink) log(err error, msg string, serverity log.Severity, kvList ...a
 		record.AddAttributes(l.values...)
 	}
 
-	kv := convertKVs(kvList)
+	ctx, kv := convertKVs(kvList)
 	if len(kv) > 0 {
 		record.AddAttributes(kv...)
 	}
 
-	ctx := context.Background()
 	l.logger.Emit(ctx, record)
 }
 
@@ -263,23 +264,30 @@ func (l *LogSink) Init(info logr.RuntimeInfo) {
 
 // WithName returns a new LogSink with the specified name appended.
 func (l LogSink) WithName(name string) logr.LogSink {
-	if len(l.name) > 0 {
-		l.name += "/"
+	newLogger := l
+
+	if len(newLogger.name) > 0 {
+		newLogger.name += "/"
 	}
-	l.name += name
-	return &l
+	newLogger.name += name
+
+	return &newLogger
 }
 
 // WithValues returns a new LogSink with additional key/value pairs.
 func (l LogSink) WithValues(keysAndValues ...any) logr.LogSink {
-	attrs := convertKVs(keysAndValues)
+	_, attrs := convertKVs(keysAndValues)
 	l.values = append(l.values, attrs...)
 	return &l
 }
 
-func convertKVs(keysAndValues []any) []log.KeyValue {
+// convertKVs converts a list of key-value pairs to a list of [log.KeyValue].
+// The last [context.Context] value is returned as the context.
+func convertKVs(keysAndValues []any) (context.Context, []log.KeyValue) {
+	ctx := context.Background()
+
 	if len(keysAndValues) == 0 {
-		return nil
+		return ctx, nil
 	}
 	if len(keysAndValues)%2 != 0 {
 		// Ensure an odd number of items here does not corrupt the list
@@ -293,12 +301,20 @@ func convertKVs(keysAndValues []any) []log.KeyValue {
 			// Ensure that the key is a string
 			k = fmt.Sprintf("%v", keysAndValues[i])
 		}
+
+		v := keysAndValues[i+1]
+		if vCtx, ok := v.(context.Context); ok {
+			// Special case when a field is of context.Context type.
+			ctx = vCtx
+			continue
+		}
+
 		kv = append(kv, log.KeyValue{
 			Key:   k,
-			Value: convertValue(keysAndValues[i+1]),
+			Value: convertValue(v),
 		})
 	}
-	return kv
+	return ctx, kv
 }
 
 func convertValue(v any) log.Value {
