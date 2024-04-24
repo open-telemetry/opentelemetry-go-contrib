@@ -62,6 +62,9 @@ func WithFallbackMetricReader(metricReaderFactory func(ctx context.Context) (met
 // when OTEL_METRICS_EXPORTER is unset or empty.
 //
 // Use [IsNoneMetricReader] to check if the retured exporter is a "no operation" exporter.
+//
+// OTEL_METRICS_PRODUCERS can be used to configure metric producers; supported values: prometheus, none.
+// Use [RegisterMetricProducer] to handle more values of OTEL_METRICS_PRODUCERS.
 func NewMetricReader(ctx context.Context, opts ...MetricOption) (metric.Reader, error) {
 	return metricsSignal.create(ctx, opts...)
 }
