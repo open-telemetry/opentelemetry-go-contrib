@@ -6,8 +6,8 @@ toolchain go1.22.2
 
 require (
 	github.com/stretchr/testify v1.9.0
-	go.opentelemetry.io/otel v1.25.0
-	go.opentelemetry.io/otel/sdk v1.25.0
+	go.opentelemetry.io/otel v1.26.0
+	go.opentelemetry.io/otel/sdk v1.26.0
 	k8s.io/apimachinery v0.30.0
 	k8s.io/client-go v0.30.0
 )
@@ -33,8 +33,8 @@ require (
 	github.com/munnerz/goautoneg v0.0.0-20191010083416-a7dc8b61c822 // indirect
 	github.com/pmezard/go-difflib v1.0.0 // indirect
 	github.com/stretchr/objx v0.5.2 // indirect
-	go.opentelemetry.io/otel/metric v1.25.0 // indirect
-	go.opentelemetry.io/otel/trace v1.25.0 // indirect
+	go.opentelemetry.io/otel/metric v1.26.0 // indirect
+	go.opentelemetry.io/otel/trace v1.26.0 // indirect
 	golang.org/x/net v0.24.0 // indirect
 	golang.org/x/oauth2 v0.10.0 // indirect
 	golang.org/x/sys v0.19.0 // indirect
