@@ -101,10 +101,8 @@ func init() {
 			return nil, err
 		}
 		readerOpts := []metric.PeriodicReaderOption{}
-		if len(producers) > 0 {
-			for _, producer := range producers {
-				readerOpts = append(readerOpts, metric.WithProducer(producer))
-			}
+		for _, producer := range producers {
+			readerOpts = append(readerOpts, metric.WithProducer(producer))
 		}
 
 		proto := os.Getenv(otelExporterOTLPProtoEnvKey)
@@ -135,10 +133,8 @@ func init() {
 			return nil, err
 		}
 		readerOpts := []metric.PeriodicReaderOption{}
-		if len(producers) > 0 {
-			for _, producer := range producers {
-				readerOpts = append(readerOpts, metric.WithProducer(producer))
-			}
+		for _, producer := range producers {
+			readerOpts = append(readerOpts, metric.WithProducer(producer))
 		}
 
 		r, err := stdoutmetric.New()
@@ -163,10 +159,8 @@ func init() {
 		if err != nil {
 			return nil, err
 		}
-		if len(producers) > 0 {
-			for _, producer := range producers {
-				exporterOpts = append(exporterOpts, promexporter.WithProducer(producer))
-			}
+		for _, producer := range producers {
+			exporterOpts = append(exporterOpts, promexporter.WithProducer(producer))
 		}
 
 		reader, err := promexporter.New(exporterOpts...)

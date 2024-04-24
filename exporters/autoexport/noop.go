@@ -57,10 +57,3 @@ func (e noopMetricProducer) Produce(ctx context.Context) ([]metricdata.ScopeMetr
 func newNoopMetricProducer() noopMetricProducer {
 	return noopMetricProducer{}
 }
-
-// IsNoneMetricReader returns true for the exporter returned by [NewMetricReader]
-// when OTEL_METRICS_PRODUCERS environment variable is set to "none".
-func IsNoneMetricProducer(e metric.Producer) bool {
-	_, ok := e.(noopMetricProducer)
-	return ok
-}
