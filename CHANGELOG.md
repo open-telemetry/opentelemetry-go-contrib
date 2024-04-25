@@ -11,6 +11,11 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 ### Added
 
 - Add the new `go.opentelemetry.io/contrib/instrgen` package to provide auto-generated source code instrumentation. (#3068, #3108)
+
+## [1.26.0/0.51.0/0.20.0/0.6.0/0.1.0] - 2024-04-24
+
+### Added
+
 - `NewSDK` in `go.opentelemetry.io/contrib/config` now returns a configured SDK with a valid `MeterProvider`. (#4804)
 - The `go.opentelemetry.io/contrib/processors/baggage/baggagetrace` module. This module provides a Baggage Span Processor. (#5404)
 
@@ -971,7 +976,8 @@ First official tagged release of `contrib` repository.
 - Prefix support for dogstatsd (#34)
 - Update Go Runtime package to use batch observer (#44)
 
-[Unreleased]: https://github.com/open-telemetry/opentelemetry-go-contrib/compare/v1.25.0...HEAD
+[Unreleased]: https://github.com/open-telemetry/opentelemetry-go-contrib/compare/v1.26.0...HEAD
+[1.26.0/0.51.0/0.20.0/0.6.0/0.1.0]: https://github.com/open-telemetry/opentelemetry-go-contrib/releases/tag/v1.26.0
 [1.25.0/0.50.0/0.19.0/0.5.0/0.0.1]: https://github.com/open-telemetry/opentelemetry-go-contrib/releases/tag/v1.25.0
 [1.24.0/0.49.0/0.18.0/0.4.0]: https://github.com/open-telemetry/opentelemetry-go-contrib/releases/tag/v1.24.0
 [1.23.0/0.48.0/0.17.0/0.3.0]: https://github.com/open-telemetry/opentelemetry-go-contrib/releases/tag/v1.23.0

@@ -5,7 +5,7 @@ package otellambda // import "go.opentelemetry.io/contrib/instrumentation/github
 
 // Version is the current release version of the AWS Lambda instrumentation.
 func Version() string {
-	return "0.50.0"
+	return "0.51.0"
 	// This string is updated by the pre_release.sh script during release
 }
 
