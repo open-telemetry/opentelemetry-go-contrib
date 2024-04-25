@@ -1,16 +1,5 @@
 // Copyright The OpenTelemetry Authors
-//
-// Licensed under the Apache License, Version 2.0 (the "License");
-// you may not use this file except in compliance with the License.
-// You may obtain a copy of the License at
-//
-//     http://www.apache.org/licenses/LICENSE-2.0
-//
-// Unless required by applicable law or agreed to in writing, software
-// distributed under the License is distributed on an "AS IS" BASIS,
-// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-// See the License for the specific language governing permissions and
-// limitations under the License.
+// SPDX-License-Identifier: Apache-2.0
 
 package semconv // import "go.opentelemetry.io/contrib/instrumentation/net/http/otelhttp/internal/semconv"
 
@@ -46,11 +35,8 @@ var _ HTTPServer = dupHTTPServer{}
 // If the primary server name is not known, server should be an empty string.
 // The req Host will be used to determine the server instead.
 func (d dupHTTPServer) RequestTraceAttrs(server string, req *http.Request) []attribute.KeyValue {
-	// old http.target http.scheme net.host.name net.host.port http.scheme net.host.name net.host.port http.method net.sock.peer.addr net.sock.peer.port user_agent.original http.method http.status_code net.protocol.version
-	// new http.request.header server.address server.port network.local.address network.local.port client.address client.port url.path url.query url.scheme user_agent.original server.address server.port url.scheme http.request.method http.response.status_code error.type network.protocol.name network.protocol.version http.request.method_original http.response.header http.request.method network.peer.address network.peer.port network.transport http.request.method http.response.status_code error.type network.protocol.name network.protocol.version
-
-	const MaxAttributes = 24
-	attrs := make([]attribute.KeyValue, MaxAttributes)
+	const maxAttributes = 24
+	attrs := make([]attribute.KeyValue, 0, maxAttributes)
 	var host string
 	var p int
 	if server == "" {
@@ -63,94 +49,85 @@ func (d dupHTTPServer) RequestTraceAttrs(server string, req *http.Request) []att
 		}
 	}
 
-	attrs[0] = semconvOld.NetHostName(host)
-	attrs[1] = semconvNew.ServerAddress(host)
-	i := 2
+	attrs = append(attrs, semconvOld.NetHostName(host))
+	attrs = append(attrs, semconvNew.ServerAddress(host))
 	if hostPort := requiredHTTPPort(req.TLS != nil, p); hostPort > 0 {
-		attrs[i] = semconvOld.NetHostPort(hostPort)
-		attrs[i+1] = semconvNew.ServerPort(hostPort)
-		i += 2
+		attrs = append(attrs, semconvOld.NetHostPort(hostPort))
+		attrs = append(attrs, semconvNew.ServerPort(hostPort))
 	}
-	i += d.method(req.Method, attrs[i:])     // Max 3
-	i += d.scheme(req.TLS != nil, attrs[i:]) // Max 2
+	attrs = d.method(req.Method, attrs)
+	attrs = d.scheme(req.TLS != nil, attrs)
 
 	if peer, peerPort := splitHostPort(req.RemoteAddr); peer != "" {
 		// The Go HTTP server sets RemoteAddr to "IP:port", this will not be a
 		// file-path that would be interpreted with a sock family.
-		attrs[i] = semconvOld.NetSockPeerAddr(peer)
-		attrs[i+1] = semconvNew.NetworkPeerAddress(peer)
-		i += 2
+		attrs = append(attrs, semconvOld.NetSockPeerAddr(peer))
+		attrs = append(attrs, semconvNew.NetworkPeerAddress(peer))
 		if peerPort > 0 {
-			attrs[i] = semconvOld.NetSockPeerPort(peerPort)
-			attrs[i+1] = semconvNew.NetworkPeerPort(peerPort)
-			i += 2
+			attrs = append(attrs, semconvOld.NetSockPeerPort(peerPort))
+			attrs = append(attrs, semconvNew.NetworkPeerPort(peerPort))
 		}
 	}
 
 	if useragent := req.UserAgent(); useragent != "" {
 		// This is the same between v1.20, and v1.24
-		attrs[i] = semconvNew.UserAgentOriginal(useragent)
-		i++
+		attrs = append(attrs, semconvNew.UserAgentOriginal(useragent))
 	}
 
 	if clientIP := serverClientIP(req.Header.Get("X-Forwarded-For")); clientIP != "" {
-		attrs[i] = semconvOld.HTTPClientIP(clientIP)
-		attrs[i+1] = semconvNew.ClientAddress(clientIP)
-		i += 2
+		attrs = append(attrs, semconvOld.HTTPClientIP(clientIP))
+		attrs = append(attrs, semconvNew.ClientAddress(clientIP))
 	}
 
 	if req.URL != nil && req.URL.Path != "" {
-		attrs[i] = semconvOld.HTTPTarget(req.URL.Path)
-		attrs[i+1] = semconvNew.URLPath(req.URL.Path)
-		i += 2
+		attrs = append(attrs, semconvOld.HTTPTarget(req.URL.Path))
+		attrs = append(attrs, semconvNew.URLPath(req.URL.Path))
 	}
 
 	protoName, protoVersion := netProtocol(req.Proto)
 	if protoName != "" && protoName != "http" {
-		attrs[i] = semconvOld.NetProtocolName(protoName)
-		attrs[i+1] = semconvNew.NetworkProtocolName(protoName)
-		i += 2
+		attrs = append(attrs, semconvOld.NetProtocolName(protoName))
+		attrs = append(attrs, semconvNew.NetworkProtocolName(protoName))
 	}
 	if protoVersion != "" {
-		attrs[i] = semconvOld.NetProtocolVersion(protoVersion)
-		attrs[i+1] = semconvNew.NetworkProtocolVersion(protoVersion)
-		i += 2
+		attrs = append(attrs, semconvOld.NetProtocolVersion(protoVersion))
+		attrs = append(attrs, semconvNew.NetworkProtocolVersion(protoVersion))
 	}
 
-	return slices.Clip(attrs[:i])
+	return slices.Clip(attrs)
 }
 
-func (d dupHTTPServer) method(method string, attrs []attribute.KeyValue) int {
+func (d dupHTTPServer) method(method string, attrs []attribute.KeyValue) []attribute.KeyValue {
 	if method == "" {
-		attrs[0] = semconvOld.HTTPMethod(http.MethodGet)
-		attrs[1] = semconvNew.HTTPRequestMethodGet
-		return 2
+		attrs = append(attrs, semconvOld.HTTPMethod(http.MethodGet))
+		attrs = append(attrs, semconvNew.HTTPRequestMethodGet)
+		return attrs
 	}
-	attrs[0] = semconvOld.HTTPMethod(method)
+	attrs = append(attrs, semconvOld.HTTPMethod(method))
 	if attr, ok := methodLookup[method]; ok {
-		attrs[1] = attr
-		return 2
+		attrs = append(attrs, attr)
+		return attrs
 	}
 
 	if attr, ok := methodLookup[strings.ToUpper(method)]; ok {
-		attrs[1] = attr
+		attrs = append(attrs, attr)
 	} else {
 		// If the Original method is not a standard HTTP method fallback to GET
-		attrs[1] = semconvNew.HTTPRequestMethodGet
+		attrs = append(attrs, semconvNew.HTTPRequestMethodGet)
 	}
-	attrs[2] = semconvNew.HTTPRequestMethodOriginal(method)
-	return 3
+	attrs = append(attrs, semconvNew.HTTPRequestMethodOriginal(method))
+	return attrs
 }
 
-func (d dupHTTPServer) scheme(https bool, attrs []attribute.KeyValue) int { // nolint:revive
+func (d dupHTTPServer) scheme(https bool, attrs []attribute.KeyValue) []attribute.KeyValue { // nolint:revive
 	if https {
-		attrs[0] = semconvOld.HTTPSchemeHTTPS
-		attrs[1] = semconvNew.URLScheme("https")
-		return 2
+		attrs = append(attrs, semconvOld.HTTPSchemeHTTPS)
+		attrs = append(attrs, semconvNew.URLScheme("https"))
+		return attrs
 	}
-	attrs[0] = semconvOld.HTTPSchemeHTTP
-	attrs[1] = semconvNew.URLScheme("http")
-	return 2
+	attrs = append(attrs, semconvOld.HTTPSchemeHTTP)
+	attrs = append(attrs, semconvNew.URLScheme("http"))
+	return attrs
 }
 
 // ResponseTraceAttrs returns trace attributes for telemetry from an HTTP response.

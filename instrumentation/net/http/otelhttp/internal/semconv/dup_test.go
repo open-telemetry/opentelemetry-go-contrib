@@ -1,20 +1,10 @@
 // Copyright The OpenTelemetry Authors
-//
-// Licensed under the Apache License, Version 2.0 (the "License");
-// you may not use this file except in compliance with the License.
-// You may obtain a copy of the License at
-//
-//     http://www.apache.org/licenses/LICENSE-2.0
-//
-// Unless required by applicable law or agreed to in writing, software
-// distributed under the License is distributed on an "AS IS" BASIS,
-// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-// See the License for the specific language governing permissions and
-// limitations under the License.
+// SPDX-License-Identifier: Apache-2.0
 
 package semconv
 
 import (
+	"crypto/tls"
 	"fmt"
 	"net/http"
 	"testing"
@@ -54,6 +44,71 @@ func TestDupTraceRequest(t *testing.T) {
 	testTraceRequest(t, serv, want)
 }
 
+func TestDupServerRequestTraceAttrs(t *testing.T) {
+	// This test covers edge cases not covered by the test above.
+
+	testCases := []struct {
+		name    string
+		server  string
+		request *http.Request
+		want    []attribute.KeyValue
+	}{
+		{
+			name:   "Server No port, request with Port",
+			server: "server",
+			request: &http.Request{
+				Host: "127.0.5.6:8080",
+			},
+			want: []attribute.KeyValue{
+				attribute.String("net.host.name", "server"),
+				attribute.String("server.address", "server"),
+				attribute.Int("net.host.port", 8080),
+				attribute.Int("server.port", 8080),
+			},
+		},
+		{
+			name: "Proto is not HTTP",
+			request: &http.Request{
+				Proto: "ftp/1.0",
+			},
+			want: []attribute.KeyValue{
+				attribute.String("net.protocol.name", "ftp"),
+				attribute.String("network.protocol.name", "ftp"),
+			},
+		},
+		{
+			name: "Method is empty",
+			request: &http.Request{
+				Method: "",
+			},
+			want: []attribute.KeyValue{
+				attribute.String("http.method", "GET"),
+				attribute.String("http.request.method", "GET"),
+			},
+		},
+		{
+			name: "https schema",
+			request: &http.Request{
+				TLS: &tls.ConnectionState{},
+			},
+			want: []attribute.KeyValue{
+				attribute.String("http.scheme", "https"),
+				attribute.String("url.scheme", "https"),
+			},
+		},
+	}
+
+	for _, tt := range testCases {
+		t.Run(tt.name, func(t *testing.T) {
+			got := dupHTTPServer{}.RequestTraceAttrs(tt.server, tt.request)
+			for _, want := range tt.want {
+				assert.Contains(t, got, want)
+			}
+		})
+
+	}
+}
+
 func TestDupMethod(t *testing.T) {
 	testCases := []struct {
 		method string
@@ -90,10 +145,9 @@ func TestDupMethod(t *testing.T) {
 
 	for _, tt := range testCases {
 		t.Run(tt.method, func(t *testing.T) {
-			attrs := make([]attribute.KeyValue, 5)
-			n := dupHTTPServer{}.method(tt.method, attrs[1:])
-			require.Equal(t, tt.n, n, "Length doesn't match")
-			require.ElementsMatch(t, tt.want, attrs[1:n+1])
+			attrs := make([]attribute.KeyValue, 0, 5)
+			gotAttrs := dupHTTPServer{}.method(tt.method, attrs)
+			require.ElementsMatch(t, tt.want, gotAttrs)
 		})
 	}
 }
@@ -152,5 +206,28 @@ func TestDupTraceResponse(t *testing.T) {
 			got := dupHTTPServer{}.ResponseTraceAttrs(tt.resp)
 			assert.ElementsMatch(t, tt.want, got)
 		})
+	}
+}
+
+var benchDupAttrs []attribute.KeyValue
+
+func BenchmarkDupServerRequestTraceAttrs(b *testing.B) {
+	b.Run("NoPort", benchDupServerRequestTraceAttrs("server"))
+	b.Run("WithPort", benchDupServerRequestTraceAttrs("server:8080"))
+}
+
+func benchDupServerRequestTraceAttrs(server string) func(*testing.B) {
+
+	return func(b *testing.B) {
+		b.ReportAllocs()
+		serv := dupHTTPServer{}
+		req := &http.Request{}
+		count := 1000
+		for i := 0; i < b.N; i++ {
+			for j := 0; j < count; j++ {
+				benchDupAttrs = serv.RequestTraceAttrs(server, req)
+			}
+		}
+		b.ReportMetric(float64(len(benchDupAttrs)), "attrs")
 	}
 }
