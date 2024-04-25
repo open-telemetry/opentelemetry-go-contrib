@@ -102,7 +102,42 @@ func TestNewConfig(t *testing.T) {
 }
 
 func TestNewHook(t *testing.T) {
-	assert.NotNil(t, NewHook())
+	provider := global.GetLoggerProvider()
+
+	for _, tt := range []struct {
+		name    string
+		options []Option
+
+		wantLogger log.Logger
+	}{
+		{
+			name: "with the default options",
+
+			wantLogger: provider.Logger(bridgeName, log.WithInstrumentationVersion(version)),
+		},
+		{
+			name: "with a schema URL",
+			options: []Option{
+				WithInstrumentationScope(instrumentation.Scope{
+					Name:      "test",
+					Version:   "42.1",
+					SchemaURL: "https://example.com",
+				}),
+			},
+
+			wantLogger: provider.Logger("test",
+				log.WithInstrumentationVersion("42.1"),
+				log.WithSchemaURL("https://example.com"),
+			),
+		},
+	} {
+		t.Run(tt.name, func(t *testing.T) {
+			hook := NewHook(tt.options...)
+			assert.NotNil(t, hook)
+
+			assert.Equal(t, tt.wantLogger, hook.logger)
+		})
+	}
 }
 
 func TestHookLevels(t *testing.T) {
