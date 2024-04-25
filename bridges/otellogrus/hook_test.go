@@ -292,6 +292,13 @@ func TestConvertFields(t *testing.T) {
 			},
 		},
 		{
+			name:   "with a nested map",
+			fields: logrus.Fields{"hello": map[string]map[string]int{"sublevel": {"answer": 42}}},
+			wantKeyValue: []log.KeyValue{
+				log.Map("hello", log.Map("sublevel", log.Int("answer", 42))),
+			},
+		},
+		{
 			name:   "with a pointer to struct",
 			fields: logrus.Fields{"hello": &struct{ Name string }{Name: "foobar"}},
 			wantKeyValue: []log.KeyValue{
