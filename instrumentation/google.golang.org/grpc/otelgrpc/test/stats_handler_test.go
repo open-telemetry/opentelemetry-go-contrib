@@ -21,6 +21,11 @@ import (
 	"go.opentelemetry.io/otel/sdk/trace"
 	"go.opentelemetry.io/otel/sdk/trace/tracetest"
 	semconv "go.opentelemetry.io/otel/semconv/v1.17.0"
+	oteltrace "go.opentelemetry.io/otel/trace"
+)
+
+const (
+	serviceName = "TestGrpcService"
 )
 
 func TestStatsHandlerHandleRPCServerErrors(t *testing.T) {
@@ -38,7 +43,6 @@ func TestStatsHandlerHandleRPCServerErrors(t *testing.T) {
 				otelgrpc.WithMeterProvider(mp),
 			)
 
-			serviceName := "TestGrpcService"
 			methodName := serviceName + "/" + name
 			fullMethodName := "/" + methodName
 			// call the server handler
@@ -60,6 +64,64 @@ func TestStatsHandlerHandleRPCServerErrors(t *testing.T) {
 			assertStatsHandlerServerMetrics(t, mr, serviceName, name, check.grpcCode)
 		})
 	}
+}
+
+func TestStatsHandlerServerWithSpanOptions(t *testing.T) {
+	sr := tracetest.NewSpanRecorder()
+	tp := trace.NewTracerProvider(trace.WithSpanProcessor(sr))
+	serverHandler := otelgrpc.NewServerHandler(
+		otelgrpc.WithTracerProvider(tp),
+		otelgrpc.WithSpanOptions(oteltrace.WithAttributes(attribute.Bool("custom", true))),
+	)
+
+	methodName := serviceName + "/" + "test"
+	fullMethodName := "/" + methodName
+	// call the server handler
+	ctx := serverHandler.TagRPC(context.Background(), &stats.RPCTagInfo{
+		FullMethodName: fullMethodName,
+	})
+
+	serverHandler.HandleRPC(ctx, &stats.End{})
+
+	expected := []attribute.KeyValue{
+		semconv.RPCSystemGRPC,
+		semconv.RPCService("TestGrpcService"),
+		semconv.RPCMethod("test"),
+		otelgrpc.GRPCStatusCodeKey.Int64(0),
+		attribute.Bool("custom", true),
+	}
+	span, ok := getSpanFromRecorder(sr, methodName)
+	require.True(t, ok, "missing span %q", methodName)
+	assert.ElementsMatch(t, expected, span.Attributes())
+}
+
+func TestStatsHandlerClientWithSpanOptions(t *testing.T) {
+	sr := tracetest.NewSpanRecorder()
+	tp := trace.NewTracerProvider(trace.WithSpanProcessor(sr))
+	clientHandler := otelgrpc.NewClientHandler(
+		otelgrpc.WithTracerProvider(tp),
+		otelgrpc.WithSpanOptions(oteltrace.WithAttributes(attribute.Bool("custom", true))),
+	)
+
+	methodName := serviceName + "/" + "test"
+	fullMethodName := "/" + methodName
+	// call the client handler
+	ctx := clientHandler.TagRPC(context.Background(), &stats.RPCTagInfo{
+		FullMethodName: fullMethodName,
+	})
+
+	clientHandler.HandleRPC(ctx, &stats.End{})
+
+	expected := []attribute.KeyValue{
+		semconv.RPCSystemGRPC,
+		semconv.RPCService("TestGrpcService"),
+		semconv.RPCMethod("test"),
+		otelgrpc.GRPCStatusCodeKey.Int64(0),
+		attribute.Bool("custom", true),
+	}
+	span, ok := getSpanFromRecorder(sr, methodName)
+	require.True(t, ok, "missing span %q", methodName)
+	assert.ElementsMatch(t, expected, span.Attributes())
 }
 
 func assertStatsHandlerServerMetrics(t *testing.T, reader metric.Reader, serviceName, name string, code grpc_codes.Code) {
