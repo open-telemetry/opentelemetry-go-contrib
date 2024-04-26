@@ -4,4 +4,4 @@
 package otelslog // import "go.opentelemetry.io/contrib/bridges/otelslog"
 
 // version is the current release version of otelslog in use.
-const version = "0.0.1"
+const version = "0.1.0"

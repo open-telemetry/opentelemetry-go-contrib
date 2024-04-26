@@ -5,7 +5,7 @@ package host // import "go.opentelemetry.io/contrib/instrumentation/host"
 
 // Version is the current release version of the host instrumentation.
 func Version() string {
-	return "0.50.0"
+	return "0.51.0"
 	// This string is updated by the pre_release.sh script during release
 }
 
