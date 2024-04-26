@@ -103,7 +103,7 @@ func TestSpanProcessor(t *testing.T) {
 	}{
 		{
 			name:    "no processor",
-			wantErr: errors.New("unsupported span processor type {<nil> <nil>}"),
+			wantErr: errors.New("unsupported span processor type {<nil> <nil> <nil>}"),
 		},
 		{
 			name: "multiple processor types",
