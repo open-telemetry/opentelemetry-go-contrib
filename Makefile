@@ -287,6 +287,17 @@ add-tags: | $(MULTIMOD)
 	@[ "${MODSET}" ] || ( echo ">> env var MODSET is not set"; exit 1 )
 	$(MULTIMOD) verify && $(MULTIMOD) tag -m ${MODSET} -c ${COMMIT}
 
+.PHONY: update-all-otel-deps
+update-all-otel-deps:
+	@[ "${GITSHA}" ] || ( echo ">> env var GITSHA is not set"; exit 1 )
+	@echo "Updating OpenTelemetry dependencies to ${GITSHA}"
+	@set -e; \
+		for dir in $(OTEL_GO_MOD_DIRS); do \
+			echo "Updating OpenTelemetry dependencies in $${dir}"; \
+			(cd $${dir} \
+			&& grep -v indirect go.mod | grep -o 'go.opentelemetry.io/otel\S*' | xargs -I {} -n1 $(GO) get {}@${GITSHA}); \
+		done
+
 # The source directory for opentelemetry-configuration schema.
 OPENTELEMETRY_CONFIGURATION_JSONSCHEMA_SRC_DIR=tmp/opentelememetry-configuration
 
