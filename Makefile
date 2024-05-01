@@ -295,7 +295,7 @@ update-all-otel-deps:
 		for dir in $(OTEL_GO_MOD_DIRS); do \
 			echo "Updating OpenTelemetry dependencies in $${dir}"; \
 			(cd $${dir} \
-			&& grep -v indirect go.mod | grep -o 'go.opentelemetry.io/otel\S*' | xargs -I {} -n1 $(GO) get {}@${GITSHA}); \
+			&& grep -o 'go.opentelemetry.io/otel\S*' go.mod | xargs -I {} -n1 $(GO) get {}@${GITSHA}); \
 		done
 
 # The source directory for opentelemetry-configuration schema.
