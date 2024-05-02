@@ -46,7 +46,7 @@ instrumentation/net/http/httptrace/otelhttptrace/                       @open-te
 instrumentation/net/http/otelhttp/                                      @open-telemetry/go-approvers @Aneurysm9 @dmathieu
 instrumentation/runtime/                                                @open-telemetry/go-approvers @MadVikingGod
 
-processors/baggage/baggagetrace                                         @open-telemetry/go-approvers @codeboten
+processors/baggage/baggagetrace                                         @open-telemetry/go-approvers @codeboten @MikeGoldsmith
 
 propagators/autoprop/                                                   @open-telemetry/go-approvers @MrAlias
 propagators/aws/                                                        @open-telemetry/go-approvers @Aneurysm9
