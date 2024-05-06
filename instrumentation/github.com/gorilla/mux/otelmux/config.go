@@ -18,6 +18,8 @@ type config struct {
 	PublicEndpoint    bool
 	PublicEndpointFn  func(*http.Request) bool
 	Filters           []Filter
+	SpanStartOptions  []oteltrace.SpanStartOption
+	SpanEndOptions    []oteltrace.SpanEndOption
 }
 
 // Option specifies instrumentation configuration options.
@@ -83,6 +85,22 @@ func WithTracerProvider(provider oteltrace.TracerProvider) Option {
 func WithSpanNameFormatter(fn func(routeName string, r *http.Request) string) Option {
 	return optionFunc(func(cfg *config) {
 		cfg.spanNameFormatter = fn
+	})
+}
+
+// WithSpanStartOption applies options to all the HTTP span created by the
+// instrumentation.
+func WithSpanStartOption(o ...oteltrace.SpanStartOption) Option {
+	return optionFunc(func(c *config) {
+		c.SpanStartOptions = append(c.SpanStartOptions, o...)
+	})
+}
+
+// WithSpanEndOption applies options when ending the HTTP span created by the
+// instrumentation.
+func WithSpanEndOption(o ...oteltrace.SpanEndOption) Option {
+	return optionFunc(func(c *config) {
+		c.SpanEndOptions = append(c.SpanEndOptions, o...)
 	})
 }
 
