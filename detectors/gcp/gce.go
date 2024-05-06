@@ -71,7 +71,7 @@ func (gce *GCE) Detect(ctx context.Context) (*resource.Resource, error) {
 		attributes = append(attributes, semconv.HostName(hostname))
 	}
 
-	if hostType, err := metadata.Get("instance/machine-type"); hasProblem(err) {
+	if hostType, err := metadata.GetWithContext(ctx, "instance/machine-type"); hasProblem(err) {
 		errInfo = append(errInfo, err.Error())
 	} else if hostType != "" {
 		attributes = append(attributes, semconv.HostType(hostType))
