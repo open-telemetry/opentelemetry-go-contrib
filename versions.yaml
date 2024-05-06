@@ -77,6 +77,10 @@ module-sets:
     version: v0.1.0
     modules:
       - go.opentelemetry.io/contrib/bridges/otelslog
+  experimental-processors:
+    version: v0.0.1
+    modules:
+      - go.opentelemetry.io/contrib/processors/baggage/baggagetrace
 excluded-modules:
   - go.opentelemetry.io/contrib/instrgen
   - go.opentelemetry.io/contrib/instrgen/driver
