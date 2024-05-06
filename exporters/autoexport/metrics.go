@@ -10,11 +10,13 @@ import (
 	"net"
 	"net/http"
 	"os"
+	"strings"
 	"time"
 
 	"github.com/prometheus/client_golang/prometheus"
 	"github.com/prometheus/client_golang/prometheus/promhttp"
 
+	prometheusbridge "go.opentelemetry.io/contrib/bridges/prometheus"
 	"go.opentelemetry.io/otel"
 	"go.opentelemetry.io/otel/exporters/otlp/otlpmetric/otlpmetricgrpc"
 	"go.opentelemetry.io/otel/exporters/otlp/otlpmetric/otlpmetrichttp"
@@ -52,9 +54,13 @@ func WithFallbackMetricReader(metricReaderFactory func(ctx context.Context) (met
 // OTEL_EXPORTER_PROMETHEUS_PORT (defaulting to 9464) define the host and port for the
 // Prometheus exporter's HTTP server.
 //
+// Experimental: OTEL_METRICS_PRODUCERS can be used to configure metric producers.
+// supported values: prometheus, none. Multiple values can be specified separated by commas.
+//
 // An error is returned if an environment value is set to an unhandled value.
 //
 // Use [RegisterMetricReader] to handle more values of OTEL_METRICS_EXPORTER.
+// Use [RegisterMetricProducer] to handle more values of OTEL_METRICS_PRODUCERS.
 //
 // Use [WithFallbackMetricReader] option to change the returned exporter
 // when OTEL_METRICS_EXPORTER is unset or empty.
@@ -71,10 +77,35 @@ func RegisterMetricReader(name string, factory func(context.Context) (metric.Rea
 	must(metricsSignal.registry.store(name, factory))
 }
 
-var metricsSignal = newSignal[metric.Reader]("OTEL_METRICS_EXPORTER")
+// RegisterMetricProducer sets the MetricReader factory to be used when the
+// OTEL_METRICS_PRODUCERS environment variable contains the producer name. This
+// will panic if name has already been registered.
+func RegisterMetricProducer(name string, factory func(context.Context) (metric.Producer, error)) {
+	must(metricsProducers.registry.store(name, factory))
+}
+
+// WithFallbackMetricProducer sets the fallback producer to use when no producer
+// is configured through the OTEL_METRICS_PRODUCERS environment variable.
+func WithFallbackMetricProducer(producerFactory func(ctx context.Context) (metric.Producer, error)) {
+	metricsProducers.fallbackProducer = producerFactory
+}
+
+var (
+	metricsSignal    = newSignal[metric.Reader]("OTEL_METRICS_EXPORTER")
+	metricsProducers = newProducerRegistry("OTEL_METRICS_PRODUCERS")
+)
 
 func init() {
 	RegisterMetricReader("otlp", func(ctx context.Context) (metric.Reader, error) {
+		producers, err := metricsProducers.create(ctx)
+		if err != nil {
+			return nil, err
+		}
+		readerOpts := []metric.PeriodicReaderOption{}
+		for _, producer := range producers {
+			readerOpts = append(readerOpts, metric.WithProducer(producer))
+		}
+
 		proto := os.Getenv(otelExporterOTLPProtoEnvKey)
 		if proto == "" {
 			proto = "http/protobuf"
@@ -86,33 +117,54 @@ func init() {
 			if err != nil {
 				return nil, err
 			}
-			return metric.NewPeriodicReader(r), nil
+			return metric.NewPeriodicReader(r, readerOpts...), nil
 		case "http/protobuf":
 			r, err := otlpmetrichttp.New(ctx)
 			if err != nil {
 				return nil, err
 			}
-			return metric.NewPeriodicReader(r), nil
+			return metric.NewPeriodicReader(r, readerOpts...), nil
 		default:
 			return nil, errInvalidOTLPProtocol
 		}
 	})
 	RegisterMetricReader("console", func(ctx context.Context) (metric.Reader, error) {
+		producers, err := metricsProducers.create(ctx)
+		if err != nil {
+			return nil, err
+		}
+		readerOpts := []metric.PeriodicReaderOption{}
+		for _, producer := range producers {
+			readerOpts = append(readerOpts, metric.WithProducer(producer))
+		}
+
 		r, err := stdoutmetric.New()
 		if err != nil {
 			return nil, err
 		}
-		return metric.NewPeriodicReader(r), nil
+		return metric.NewPeriodicReader(r, readerOpts...), nil
 	})
 	RegisterMetricReader("none", func(ctx context.Context) (metric.Reader, error) {
 		return newNoopMetricReader(), nil
 	})
 	RegisterMetricReader("prometheus", func(ctx context.Context) (metric.Reader, error) {
 		// create an isolated registry instead of using the global registry --
-		// the user might not want to mix OTel with non-OTel metrics
+		// the user might not want to mix OTel with non-OTel metrics.
+		// Those that want to comingle metrics from global registry can use
+		// OTEL_METRICS_PRODUCERS=prometheus
 		reg := prometheus.NewRegistry()
 
-		reader, err := promexporter.New(promexporter.WithRegisterer(reg))
+		exporterOpts := []promexporter.Option{promexporter.WithRegisterer(reg)}
+
+		producers, err := metricsProducers.create(ctx)
+		if err != nil {
+			return nil, err
+		}
+		for _, producer := range producers {
+			exporterOpts = append(exporterOpts, promexporter.WithProducer(producer))
+		}
+
+		reader, err := promexporter.New(exporterOpts...)
 		if err != nil {
 			return nil, err
 		}
@@ -148,6 +200,13 @@ func init() {
 
 		return readerWithServer{lis.Addr(), reader, &server}, nil
 	})
+
+	RegisterMetricProducer("prometheus", func(ctx context.Context) (metric.Producer, error) {
+		return prometheusbridge.NewMetricProducer(), nil
+	})
+	RegisterMetricProducer("none", func(ctx context.Context) (metric.Producer, error) {
+		return newNoopMetricProducer(), nil
+	})
 }
 
 type readerWithServer struct {
@@ -168,5 +227,63 @@ func getenv(key, fallback string) string {
 	if !ok {
 		return fallback
 	}
+	return result
+}
+
+type producerRegistry struct {
+	envKey           string
+	fallbackProducer func(context.Context) (metric.Producer, error)
+	registry         *registry[metric.Producer]
+}
+
+func newProducerRegistry(envKey string) producerRegistry {
+	return producerRegistry{
+		envKey: envKey,
+		registry: &registry[metric.Producer]{
+			names: make(map[string]func(context.Context) (metric.Producer, error)),
+		},
+	}
+}
+
+func (pr producerRegistry) create(ctx context.Context) ([]metric.Producer, error) {
+	expType := os.Getenv(pr.envKey)
+	if expType == "" {
+		if pr.fallbackProducer != nil {
+			producer, err := pr.fallbackProducer(ctx)
+			if err != nil {
+				return nil, err
+			}
+
+			return []metric.Producer{producer}, nil
+		}
+
+		return nil, nil
+	}
+
+	producers := dedupedMetricProducers(expType)
+	metricProducers := make([]metric.Producer, 0, len(producers))
+	for _, producer := range producers {
+		producer, err := pr.registry.load(ctx, producer)
+		if err != nil {
+			return nil, err
+		}
+
+		metricProducers = append(metricProducers, producer)
+	}
+
+	return metricProducers, nil
+}
+
+func dedupedMetricProducers(envValue string) []string {
+	producers := make(map[string]struct{})
+	for _, producer := range strings.Split(envValue, ",") {
+		producers[producer] = struct{}{}
+	}
+
+	result := make([]string, 0, len(producers))
+	for producer := range producers {
+		result = append(result, producer)
+	}
+
 	return result
 }

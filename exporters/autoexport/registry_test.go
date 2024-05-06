@@ -34,7 +34,7 @@ func TestCanStoreExporterFactory(t *testing.T) {
 func TestLoadOfUnknownExporterReturnsError(t *testing.T) {
 	r := newTestRegistry()
 	exp, err := r.load(context.Background(), "non-existent")
-	assert.Equal(t, err, errUnknownExporter, "empty registry should hold nothing")
+	assert.Equal(t, err, errUnknownExporterProducer, "empty registry should hold nothing")
 	assert.Nil(t, exp, "non-nil exporter returned")
 }
 
