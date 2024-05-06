@@ -54,17 +54,18 @@ func WithFallbackMetricReader(metricReaderFactory func(ctx context.Context) (met
 // OTEL_EXPORTER_PROMETHEUS_PORT (defaulting to 9464) define the host and port for the
 // Prometheus exporter's HTTP server.
 //
+// Experimental: OTEL_METRICS_PRODUCERS can be used to configure metric producers.
+// supported values: prometheus, none. Multiple values can be specified separated by commas.
+//
 // An error is returned if an environment value is set to an unhandled value.
 //
 // Use [RegisterMetricReader] to handle more values of OTEL_METRICS_EXPORTER.
+// Use [RegisterMetricProducer] to handle more values of OTEL_METRICS_PRODUCERS.
 //
 // Use [WithFallbackMetricReader] option to change the returned exporter
 // when OTEL_METRICS_EXPORTER is unset or empty.
 //
 // Use [IsNoneMetricReader] to check if the retured exporter is a "no operation" exporter.
-//
-// OTEL_METRICS_PRODUCERS can be used to configure metric producers; supported values: prometheus, none.
-// Use [RegisterMetricProducer] to handle more values of OTEL_METRICS_PRODUCERS.
 func NewMetricReader(ctx context.Context, opts ...MetricOption) (metric.Reader, error) {
 	return metricsSignal.create(ctx, opts...)
 }
