@@ -38,8 +38,7 @@ func benchmark(b *testing.B, cOpt []grpc.DialOption, sOpt []grpc.ServerOption) {
 
 	ctx := context.Background()
 	dial := func(context.Context, string) (net.Conn, error) { return l.Dial() }
-	conn, err := grpc.DialContext(
-		ctx,
+	conn, err := grpc.NewClient(
 		"bufnet",
 		append([]grpc.DialOption{
 			grpc.WithContextDialer(dial),
