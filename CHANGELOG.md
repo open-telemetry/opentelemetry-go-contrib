@@ -11,6 +11,11 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 ### Added
 
 - Add the new `go.opentelemetry.io/contrib/instrgen` package to provide auto-generated source code instrumentation. (#3068, #3108)
+- Add a new metric `process.runtime.uptime` to `go.opentelemetry.io/contrib/runtime` that uses an asynchronous gauge function. (#5317) 
+
+### Deprecated
+
+- The `runtime.uptime` metric in `go.opentelemetry.io/contrib/runtime` is deprecated. (#5317)
 
 ## [1.26.0/0.51.0/0.20.0/0.6.0/0.1.0] - 2024-04-24
 

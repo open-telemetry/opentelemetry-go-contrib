@@ -111,6 +111,15 @@ func (r *runtime) register() error {
 	uptime, err := r.meter.Int64ObservableCounter(
 		"runtime.uptime",
 		metric.WithUnit("ms"),
+		metric.WithDescription("Milliseconds since application was initialized. Deprecated metric. Use `process.runtime.runtime` instead."),
+	)
+	if err != nil {
+		return err
+	}
+
+	processUptime, err := r.meter.Int64ObservableGauge(
+		"process.runtime.uptime",
+		metric.WithUnit("ms"),
 		metric.WithDescription("Milliseconds since application was initialized"),
 	)
 	if err != nil {
@@ -136,10 +145,12 @@ func (r *runtime) register() error {
 	_, err = r.meter.RegisterCallback(
 		func(ctx context.Context, o metric.Observer) error {
 			o.ObserveInt64(uptime, time.Since(startTime).Milliseconds())
+			o.ObserveInt64(processUptime, time.Since(startTime).Milliseconds())
 			o.ObserveInt64(goroutines, int64(goruntime.NumGoroutine()))
 			o.ObserveInt64(cgoCalls, goruntime.NumCgoCall())
 			return nil
 		},
+		processUptime,
 		uptime,
 		goroutines,
 		cgoCalls,
