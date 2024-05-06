@@ -1,31 +1,31 @@
 // Copyright The OpenTelemetry Authors
-//
-// Licensed under the Apache License, Version 2.0 (the "License");
-// you may not use this file except in compliance with the License.
-// You may obtain a copy of the License at
-//
-//     http://www.apache.org/licenses/LICENSE-2.0
-//
-// Unless required by applicable law or agreed to in writing, software
-// distributed under the License is distributed on an "AS IS" BASIS,
-// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-// See the License for the specific language governing permissions and
-// limitations under the License.
+// SPDX-License-Identifier: Apache-2.0
 
 package test
 
 import (
+	"bytes"
 	"context"
 	"io"
+	"net"
 	"net/http"
 	"net/http/httptest"
 	"net/http/httptrace"
 	"runtime"
+	"strconv"
 	"strings"
 	"testing"
 
+	"go.opentelemetry.io/otel/sdk/metric"
+	semconv "go.opentelemetry.io/otel/semconv/v1.20.0"
+
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
+
+	"go.opentelemetry.io/otel/attribute"
+	"go.opentelemetry.io/otel/sdk/instrumentation"
+	"go.opentelemetry.io/otel/sdk/metric/metricdata"
+	"go.opentelemetry.io/otel/sdk/metric/metricdata/metricdatatest"
 
 	"go.opentelemetry.io/contrib/instrumentation/net/http/otelhttp"
 	"go.opentelemetry.io/otel/codes"
@@ -237,4 +237,242 @@ func TestWithHTTPTrace(t *testing.T) {
 	assert.NotEmpty(t, spans[2].Parent().SpanID())
 	assert.Equal(t, spans[2].SpanContext().SpanID(), spans[0].Parent().SpanID())
 	assert.Equal(t, spans[1].SpanContext().SpanID(), spans[2].Parent().SpanID())
+}
+
+func TestTransportMetrics(t *testing.T) {
+	requestBody := []byte("john")
+	responseBody := []byte("Hello, world!")
+
+	t.Run("make http request and read entire response at once", func(t *testing.T) {
+		reader := metric.NewManualReader()
+		meterProvider := metric.NewMeterProvider(metric.WithReader(reader))
+
+		ts := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+			w.WriteHeader(http.StatusOK)
+			if _, err := w.Write(responseBody); err != nil {
+				t.Fatal(err)
+			}
+		}))
+		defer ts.Close()
+
+		r, err := http.NewRequest(http.MethodGet, ts.URL, bytes.NewReader(requestBody))
+		if err != nil {
+			t.Fatal(err)
+		}
+
+		tr := otelhttp.NewTransport(
+			http.DefaultTransport,
+			otelhttp.WithMeterProvider(meterProvider),
+		)
+
+		c := http.Client{Transport: tr}
+		res, err := c.Do(r)
+		if err != nil {
+			t.Fatal(err)
+		}
+
+		// Must read the body or else we won't get response metrics
+		bodyBytes, err := io.ReadAll(res.Body)
+		if err != nil {
+			t.Fatal(err)
+		}
+		require.Len(t, bodyBytes, 13)
+		require.NoError(t, res.Body.Close())
+
+		host, portStr, _ := net.SplitHostPort(r.Host)
+		if host == "" {
+			host = "127.0.0.1"
+		}
+		port, err := strconv.Atoi(portStr)
+		if err != nil {
+			port = 0
+		}
+
+		rm := metricdata.ResourceMetrics{}
+		err = reader.Collect(context.Background(), &rm)
+		require.NoError(t, err)
+		require.Len(t, rm.ScopeMetrics, 1)
+		attrs := attribute.NewSet(
+			semconv.NetPeerName(host),
+			semconv.NetPeerPort(port),
+			semconv.HTTPMethod("GET"),
+			semconv.HTTPStatusCode(200),
+		)
+		assertClientScopeMetrics(t, rm.ScopeMetrics[0], attrs, 13)
+	})
+
+	t.Run("make http request and buffer response", func(t *testing.T) {
+		reader := metric.NewManualReader()
+		meterProvider := metric.NewMeterProvider(metric.WithReader(reader))
+
+		ts := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+			w.WriteHeader(http.StatusOK)
+			if _, err := w.Write(responseBody); err != nil {
+				t.Fatal(err)
+			}
+		}))
+		defer ts.Close()
+
+		r, err := http.NewRequest(http.MethodGet, ts.URL, bytes.NewReader(requestBody))
+		if err != nil {
+			t.Fatal(err)
+		}
+
+		tr := otelhttp.NewTransport(
+			http.DefaultTransport,
+			otelhttp.WithMeterProvider(meterProvider),
+		)
+
+		c := http.Client{Transport: tr}
+		res, err := c.Do(r)
+		if err != nil {
+			t.Fatal(err)
+		}
+
+		// Must read the body or else we won't get response metrics
+		smallBuf := make([]byte, 10)
+
+		// Read first 10 bytes
+		bc, err := res.Body.Read(smallBuf)
+		if err != nil {
+			t.Fatal(err)
+		}
+		require.Equal(t, 10, bc)
+
+		// reset byte array
+		// Read last 3 bytes
+		bc, err = res.Body.Read(smallBuf)
+		require.Equal(t, io.EOF, err)
+		require.Equal(t, 3, bc)
+
+		require.NoError(t, res.Body.Close())
+
+		host, portStr, _ := net.SplitHostPort(r.Host)
+		if host == "" {
+			host = "127.0.0.1"
+		}
+		port, err := strconv.Atoi(portStr)
+		if err != nil {
+			port = 0
+		}
+
+		rm := metricdata.ResourceMetrics{}
+		err = reader.Collect(context.Background(), &rm)
+		require.NoError(t, err)
+		require.Len(t, rm.ScopeMetrics, 1)
+		attrs := attribute.NewSet(
+			semconv.NetPeerName(host),
+			semconv.NetPeerPort(port),
+			semconv.HTTPMethod("GET"),
+			semconv.HTTPStatusCode(200),
+		)
+		assertClientScopeMetrics(t, rm.ScopeMetrics[0], attrs, 13)
+	})
+
+	t.Run("make http request and close body before reading completely", func(t *testing.T) {
+		reader := metric.NewManualReader()
+		meterProvider := metric.NewMeterProvider(metric.WithReader(reader))
+
+		ts := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+			w.WriteHeader(http.StatusOK)
+			if _, err := w.Write(responseBody); err != nil {
+				t.Fatal(err)
+			}
+		}))
+		defer ts.Close()
+
+		r, err := http.NewRequest(http.MethodGet, ts.URL, bytes.NewReader(requestBody))
+		if err != nil {
+			t.Fatal(err)
+		}
+
+		tr := otelhttp.NewTransport(
+			http.DefaultTransport,
+			otelhttp.WithMeterProvider(meterProvider),
+		)
+
+		c := http.Client{Transport: tr}
+		res, err := c.Do(r)
+		if err != nil {
+			t.Fatal(err)
+		}
+
+		// Must read the body or else we won't get response metrics
+		smallBuf := make([]byte, 10)
+
+		// Read first 10 bytes
+		bc, err := res.Body.Read(smallBuf)
+		if err != nil {
+			t.Fatal(err)
+		}
+		require.Equal(t, 10, bc)
+
+		// close the response body early
+		require.NoError(t, res.Body.Close())
+
+		host, portStr, _ := net.SplitHostPort(r.Host)
+		if host == "" {
+			host = "127.0.0.1"
+		}
+		port, err := strconv.Atoi(portStr)
+		if err != nil {
+			port = 0
+		}
+
+		rm := metricdata.ResourceMetrics{}
+		err = reader.Collect(context.Background(), &rm)
+		require.NoError(t, err)
+		require.Len(t, rm.ScopeMetrics, 1)
+		attrs := attribute.NewSet(
+			semconv.NetPeerName(host),
+			semconv.NetPeerPort(port),
+			semconv.HTTPMethod("GET"),
+			semconv.HTTPStatusCode(200),
+		)
+		assertClientScopeMetrics(t, rm.ScopeMetrics[0], attrs, 10)
+	})
+}
+
+func assertClientScopeMetrics(t *testing.T, sm metricdata.ScopeMetrics, attrs attribute.Set, rxBytes int64) {
+	assert.Equal(t, instrumentation.Scope{
+		Name:    "go.opentelemetry.io/contrib/instrumentation/net/http/otelhttp",
+		Version: Version(),
+	}, sm.Scope)
+
+	require.Len(t, sm.Metrics, 3)
+
+	want := metricdata.Metrics{
+		Name: "http.client.request.size",
+		Data: metricdata.Sum[int64]{
+			DataPoints:  []metricdata.DataPoint[int64]{{Attributes: attrs, Value: 4}},
+			Temporality: metricdata.CumulativeTemporality,
+			IsMonotonic: true,
+		},
+		Description: "Measures the size of HTTP request messages.",
+		Unit:        "By",
+	}
+	metricdatatest.AssertEqual(t, want, sm.Metrics[0], metricdatatest.IgnoreTimestamp())
+
+	want = metricdata.Metrics{
+		Name: "http.client.response.size",
+		Data: metricdata.Sum[int64]{
+			DataPoints:  []metricdata.DataPoint[int64]{{Attributes: attrs, Value: rxBytes}},
+			Temporality: metricdata.CumulativeTemporality,
+			IsMonotonic: true,
+		},
+		Description: "Measures the size of HTTP response messages.",
+		Unit:        "By",
+	}
+	metricdatatest.AssertEqual(t, want, sm.Metrics[1], metricdatatest.IgnoreTimestamp())
+
+	want = metricdata.Metrics{
+		Name: "http.client.duration",
+		Data: metricdata.Histogram[float64]{
+			DataPoints:  []metricdata.HistogramDataPoint[float64]{{Attributes: attrs}},
+			Temporality: metricdata.CumulativeTemporality,
+		},
+		Description: "Measures the duration of outbound HTTP requests.",
+		Unit:        "ms",
+	}
+	metricdatatest.AssertEqual(t, want, sm.Metrics[2], metricdatatest.IgnoreTimestamp(), metricdatatest.IgnoreValue())
 }

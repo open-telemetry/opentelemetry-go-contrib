@@ -2,17 +2,7 @@
 // source: internal/shared/semconvutil/httpconv_test.go.tmpl
 
 // Copyright The OpenTelemetry Authors
-// Licensed under the Apache License, Version 2.0 (the "License");
-// you may not use this file except in compliance with the License.
-// You may obtain a copy of the License at
-//
-//     http://www.apache.org/licenses/LICENSE-2.0
-//
-// Unless required by applicable law or agreed to in writing, software
-// distributed under the License is distributed on an "AS IS" BASIS,
-// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-// See the License for the specific language governing permissions and
-// limitations under the License.
+// SPDX-License-Identifier: Apache-2.0
 
 package semconvutil
 
@@ -57,15 +47,37 @@ func TestHTTPSClientRequest(t *testing.T) {
 		ProtoMinor: 0,
 	}
 
-	assert.Equal(
+	assert.ElementsMatch(
 		t,
 		[]attribute.KeyValue{
 			attribute.String("http.method", "GET"),
-			attribute.String("http.flavor", "1.0"),
 			attribute.String("http.url", "https://127.0.0.1:443/resource"),
 			attribute.String("net.peer.name", "127.0.0.1"),
 		},
 		HTTPClientRequest(req),
+	)
+}
+
+func TestHTTPSClientRequestMetrics(t *testing.T) {
+	req := &http.Request{
+		Method: http.MethodGet,
+		URL: &url.URL{
+			Scheme: "https",
+			Host:   "127.0.0.1:443",
+			Path:   "/resource",
+		},
+		Proto:      "HTTP/1.0",
+		ProtoMajor: 1,
+		ProtoMinor: 0,
+	}
+
+	assert.ElementsMatch(
+		t,
+		[]attribute.KeyValue{
+			attribute.String("http.method", "GET"),
+			attribute.String("net.peer.name", "127.0.0.1"),
+		},
+		HTTPClientRequestMetrics(req),
 	)
 }
 
@@ -92,19 +104,51 @@ func TestHTTPClientRequest(t *testing.T) {
 	}
 	req.SetBasicAuth(user, "pswrd")
 
-	assert.Equal(
+	assert.ElementsMatch(
 		t,
 		[]attribute.KeyValue{
 			attribute.String("http.method", "GET"),
-			attribute.String("http.flavor", "1.0"),
 			attribute.String("http.url", "http://127.0.0.1:8080/resource"),
 			attribute.String("net.peer.name", "127.0.0.1"),
 			attribute.Int("net.peer.port", 8080),
-			attribute.String("http.user_agent", agent),
+			attribute.String("user_agent.original", agent),
 			attribute.Int("http.request_content_length", n),
-			attribute.String("enduser.id", user),
 		},
 		HTTPClientRequest(req),
+	)
+}
+
+func TestHTTPClientRequestMetrics(t *testing.T) {
+	const (
+		user  = "alice"
+		n     = 128
+		agent = "Go-http-client/1.1"
+	)
+	req := &http.Request{
+		Method: http.MethodGet,
+		URL: &url.URL{
+			Scheme: "http",
+			Host:   "127.0.0.1:8080",
+			Path:   "/resource",
+		},
+		Proto:      "HTTP/1.0",
+		ProtoMajor: 1,
+		ProtoMinor: 0,
+		Header: http.Header{
+			"User-Agent": []string{agent},
+		},
+		ContentLength: n,
+	}
+	req.SetBasicAuth(user, "pswrd")
+
+	assert.ElementsMatch(
+		t,
+		[]attribute.KeyValue{
+			attribute.String("http.method", "GET"),
+			attribute.String("net.peer.name", "127.0.0.1"),
+			attribute.Int("net.peer.port", 8080),
+		},
+		HTTPClientRequestMetrics(req),
 	)
 }
 
@@ -114,7 +158,6 @@ func TestHTTPClientRequestRequired(t *testing.T) {
 	assert.NotPanics(t, func() { got = HTTPClientRequest(req) })
 	want := []attribute.KeyValue{
 		attribute.String("http.method", "GET"),
-		attribute.String("http.flavor", ""),
 		attribute.String("http.url", ""),
 		attribute.String("net.peer.name", ""),
 	}
@@ -153,14 +196,14 @@ func TestHTTPServerRequest(t *testing.T) {
 		[]attribute.KeyValue{
 			attribute.String("http.method", "GET"),
 			attribute.String("http.scheme", "http"),
-			attribute.String("http.flavor", "1.1"),
 			attribute.String("net.host.name", srvURL.Hostname()),
 			attribute.Int("net.host.port", int(srvPort)),
 			attribute.String("net.sock.peer.addr", peer),
 			attribute.Int("net.sock.peer.port", peerPort),
-			attribute.String("http.user_agent", "Go-http-client/1.1"),
-			attribute.String("enduser.id", user),
+			attribute.String("user_agent.original", "Go-http-client/1.1"),
 			attribute.String("http.client_ip", clientIP),
+			attribute.String("net.protocol.version", "1.1"),
+			attribute.String("http.target", "/"),
 		},
 		HTTPServerRequest("", req))
 }
@@ -190,9 +233,10 @@ func TestHTTPServerRequestMetrics(t *testing.T) {
 		[]attribute.KeyValue{
 			attribute.String("http.method", "GET"),
 			attribute.String("http.scheme", "http"),
-			attribute.String("http.flavor", "1.1"),
 			attribute.String("net.host.name", srvURL.Hostname()),
 			attribute.Int("net.host.port", int(srvPort)),
+			attribute.String("net.protocol.name", "http"),
+			attribute.String("net.protocol.version", "1.1"),
 		},
 		HTTPServerRequestMetrics("", req))
 }
@@ -225,7 +269,6 @@ func TestHTTPServerRequestFailsGracefully(t *testing.T) {
 	want := []attribute.KeyValue{
 		attribute.String("http.method", "GET"),
 		attribute.String("http.scheme", "http"),
-		attribute.String("http.flavor", ""),
 		attribute.String("net.host.name", ""),
 	}
 	assert.ElementsMatch(t, want, got)
@@ -240,23 +283,6 @@ func TestHTTPMethod(t *testing.T) {
 func TestHTTPScheme(t *testing.T) {
 	assert.Equal(t, attribute.String("http.scheme", "http"), hc.scheme(false))
 	assert.Equal(t, attribute.String("http.scheme", "https"), hc.scheme(true))
-}
-
-func TestHTTPProto(t *testing.T) {
-	tests := map[string]string{
-		"HTTP/1.0": "1.0",
-		"HTTP/1.1": "1.1",
-		"HTTP/2":   "2.0",
-		"HTTP/3":   "3.0",
-		"SPDY":     "SPDY",
-		"QUIC":     "QUIC",
-		"other":    "other",
-	}
-
-	for proto, want := range tests {
-		expect := attribute.String("http.flavor", want)
-		assert.Equal(t, expect, hc.flavor(proto), proto)
-	}
 }
 
 func TestHTTPServerClientIP(t *testing.T) {
@@ -309,32 +335,6 @@ func TestFirstHostPort(t *testing.T) {
 		assert.Equal(t, host, h, src)
 		assert.Equal(t, port, p, src)
 	}
-}
-
-func TestHTTPRequestHeader(t *testing.T) {
-	ips := []string{"127.0.0.5", "127.0.0.9"}
-	user := []string{"alice"}
-	h := http.Header{"ips": ips, "user": user}
-
-	got := HTTPRequestHeader(h)
-	assert.Equal(t, 2, cap(got), "slice capacity")
-	assert.ElementsMatch(t, []attribute.KeyValue{
-		attribute.StringSlice("http.request.header.ips", ips),
-		attribute.StringSlice("http.request.header.user", user),
-	}, got)
-}
-
-func TestHTTPReponseHeader(t *testing.T) {
-	ips := []string{"127.0.0.5", "127.0.0.9"}
-	user := []string{"alice"}
-	h := http.Header{"ips": ips, "user": user}
-
-	got := HTTPResponseHeader(h)
-	assert.Equal(t, 2, cap(got), "slice capacity")
-	assert.ElementsMatch(t, []attribute.KeyValue{
-		attribute.StringSlice("http.response.header.ips", ips),
-		attribute.StringSlice("http.response.header.user", user),
-	}, got)
 }
 
 func TestHTTPClientStatus(t *testing.T) {

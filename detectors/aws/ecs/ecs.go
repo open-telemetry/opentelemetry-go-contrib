@@ -1,16 +1,5 @@
 // Copyright The OpenTelemetry Authors
-//
-// Licensed under the Apache License, Version 2.0 (the "License");
-// you may not use this file except in compliance with the License.
-// You may obtain a copy of the License at
-//
-//     http://www.apache.org/licenses/LICENSE-2.0
-//
-// Unless required by applicable law or agreed to in writing, software
-// distributed under the License is distributed on an "AS IS" BASIS,
-// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-// See the License for the specific language governing permissions and
-// limitations under the License.
+// SPDX-License-Identifier: Apache-2.0
 
 package ecs // import "go.opentelemetry.io/contrib/detectors/aws/ecs"
 
@@ -27,7 +16,7 @@ import (
 
 	"go.opentelemetry.io/otel/attribute"
 	"go.opentelemetry.io/otel/sdk/resource"
-	semconv "go.opentelemetry.io/otel/semconv/v1.21.0"
+	semconv "go.opentelemetry.io/otel/semconv/v1.24.0"
 )
 
 const (
@@ -42,6 +31,7 @@ const (
 var (
 	empty                                 = resource.Empty()
 	errCannotReadContainerName            = errors.New("failed to read hostname")
+	errCannotParseTaskArn                 = errors.New("cannot parse region and account ID from the Task's ARN: the ARN does not contain at least 6 segments separated by the ':' character")
 	errCannotRetrieveLogsGroupMetadataV4  = errors.New("the ECS Metadata v4 did not return a AwsLogGroup name")
 	errCannotRetrieveLogsStreamMetadataV4 = errors.New("the ECS Metadata v4 did not return a AwsLogStream name")
 )
@@ -50,6 +40,8 @@ var (
 type detectorUtils interface {
 	getContainerName() (string, error)
 	getContainerID() (string, error)
+	getContainerMetadataV4(ctx context.Context) (*ecsmetadata.ContainerMetadataV4, error)
+	getTaskMetadataV4(ctx context.Context) (*ecsmetadata.TaskMetadataV4, error)
 }
 
 // struct implements detectorUtils interface.
@@ -97,24 +89,52 @@ func (detector *resourceDetector) Detect(ctx context.Context) (*resource.Resourc
 	}
 
 	if len(metadataURIV4) > 0 {
-		containerMetadata, err := ecsmetadata.GetContainerV4(ctx, &http.Client{})
+		containerMetadata, err := detector.utils.getContainerMetadataV4(ctx)
 		if err != nil {
 			return empty, err
 		}
-		attributes = append(
-			attributes,
-			semconv.AWSECSContainerARN(containerMetadata.ContainerARN),
+
+		taskMetadata, err := detector.utils.getTaskMetadataV4(ctx)
+		if err != nil {
+			return empty, err
+		}
+
+		baseArn := detector.getBaseArn(
+			taskMetadata.TaskARN,
+			containerMetadata.ContainerARN,
+			taskMetadata.Cluster,
 		)
 
-		taskMetadata, err := ecsmetadata.GetTaskV4(ctx, &http.Client{})
-		if err != nil {
-			return empty, err
+		if baseArn != "" {
+			if !strings.HasPrefix(taskMetadata.Cluster, "arn:") {
+				taskMetadata.Cluster = fmt.Sprintf("%s:cluster/%s", baseArn, taskMetadata.Cluster)
+			}
+			if !strings.HasPrefix(containerMetadata.ContainerARN, "arn:") {
+				containerMetadata.ContainerARN = fmt.Sprintf("%s:container/%s", baseArn, containerMetadata.ContainerARN)
+			}
+			if !strings.HasPrefix(taskMetadata.TaskARN, "arn:") {
+				taskMetadata.TaskARN = fmt.Sprintf("%s:task/%s", baseArn, taskMetadata.TaskARN)
+			}
 		}
 
-		clusterArn := taskMetadata.Cluster
-		if !strings.HasPrefix(clusterArn, "arn:") {
-			baseArn := containerMetadata.ContainerARN[:strings.LastIndex(containerMetadata.ContainerARN, ":")]
-			clusterArn = fmt.Sprintf("%s:cluster/%s", baseArn, clusterArn)
+		arnParts := strings.Split(taskMetadata.TaskARN, ":")
+		// A valid ARN should have at least 6 parts.
+		if len(arnParts) < 6 {
+			return empty, errCannotParseTaskArn
+		}
+
+		attributes = append(
+			attributes,
+			semconv.CloudRegion(arnParts[3]),
+			semconv.CloudAccountID(arnParts[4]),
+		)
+
+		availabilityZone := taskMetadata.AvailabilityZone
+		if len(availabilityZone) > 0 {
+			attributes = append(
+				attributes,
+				semconv.CloudAvailabilityZone(availabilityZone),
+			)
 		}
 
 		logAttributes, err := detector.getLogsAttributes(containerMetadata)
@@ -128,7 +148,9 @@ func (detector *resourceDetector) Detect(ctx context.Context) (*resource.Resourc
 
 		attributes = append(
 			attributes,
-			semconv.AWSECSClusterARN(clusterArn),
+			semconv.CloudResourceID(containerMetadata.ContainerARN),
+			semconv.AWSECSContainerARN(containerMetadata.ContainerARN),
+			semconv.AWSECSClusterARN(taskMetadata.Cluster),
 			semconv.AWSECSLaunchtypeKey.String(strings.ToLower(taskMetadata.LaunchType)),
 			semconv.AWSECSTaskARN(taskMetadata.TaskARN),
 			semconv.AWSECSTaskFamily(taskMetadata.Family),
@@ -137,6 +159,15 @@ func (detector *resourceDetector) Detect(ctx context.Context) (*resource.Resourc
 	}
 
 	return resource.NewWithAttributes(semconv.SchemaURL, attributes...), nil
+}
+
+func (detector *resourceDetector) getBaseArn(arns ...string) string {
+	for _, arn := range arns {
+		if i := strings.LastIndex(arn, ":"); i >= 0 {
+			return arn[:i]
+		}
+	}
+	return ""
 }
 
 func (detector *resourceDetector) getLogsAttributes(metadata *ecsmetadata.ContainerMetadataV4) ([]attribute.KeyValue, error) {
@@ -189,6 +220,16 @@ func (detector *resourceDetector) getLogsAttributes(metadata *ecsmetadata.Contai
 		semconv.AWSLogStreamNames(logsOptions.AwsLogsStream),
 		semconv.AWSLogStreamARNs(awsLogStreamArn),
 	}, nil
+}
+
+// returns metadata v4 for the container.
+func (ecsUtils ecsDetectorUtils) getContainerMetadataV4(ctx context.Context) (*ecsmetadata.ContainerMetadataV4, error) {
+	return ecsmetadata.GetContainerV4(ctx, &http.Client{})
+}
+
+// returns metadata v4 for the task.
+func (ecsUtils ecsDetectorUtils) getTaskMetadataV4(ctx context.Context) (*ecsmetadata.TaskMetadataV4, error) {
+	return ecsmetadata.GetTaskV4(ctx, &http.Client{})
 }
 
 // returns docker container ID from default c group path.

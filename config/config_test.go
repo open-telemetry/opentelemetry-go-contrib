@@ -23,6 +23,7 @@ func TestNewSDK(t *testing.T) {
 		wantTracerProvider any
 		wantMeterProvider  any
 		wantErr            error
+		wantShutdownErr    error
 	}{
 		{
 			name:               "no-configuration",
@@ -47,5 +48,10 @@ func TestNewSDK(t *testing.T) {
 		require.Equal(t, tt.wantErr, err)
 		assert.IsType(t, tt.wantTracerProvider, sdk.TracerProvider())
 		assert.IsType(t, tt.wantMeterProvider, sdk.MeterProvider())
+		require.Equal(t, tt.wantShutdownErr, sdk.Shutdown(context.Background()))
 	}
+}
+
+func ptr[T any](v T) *T {
+	return &v
 }

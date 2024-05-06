@@ -53,7 +53,7 @@ Of note, `faas.id` and `cloud.account.id` are not set by the Lambda resource det
 
 ## Useful links
 
-- For more on FaaS attribute conventions, visit <https://github.com/open-telemetry/opentelemetry-specification/blob/main/specification/trace/semantic_conventions/faas.md>
+- For more on FaaS attribute conventions, visit <https://opentelemetry.io/docs/specs/semconv/faas/faas-spans/>
 - For more information on OpenTelemetry, visit: <https://opentelemetry.io/>
 - For more about OpenTelemetry Go: <https://github.com/open-telemetry/opentelemetry-go>
 - For help or feedback on this project, join us in [GitHub Discussions][discussions-url]

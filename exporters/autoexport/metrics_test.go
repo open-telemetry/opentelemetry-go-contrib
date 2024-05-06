@@ -1,16 +1,5 @@
 // Copyright The OpenTelemetry Authors
-//
-// Licensed under the Apache License, Version 2.0 (the "License");
-// you may not use this file except in compliance with the License.
-// You may obtain a copy of the License at
-//
-//     http://www.apache.org/licenses/LICENSE-2.0
-//
-// Unless required by applicable law or agreed to in writing, software
-// distributed under the License is distributed on an "AS IS" BASIS,
-// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-// See the License for the specific language governing permissions and
-// limitations under the License.
+// SPDX-License-Identifier: Apache-2.0
 
 package autoexport // import "go.opentelemetry.io/contrib/exporters/autoexport"
 
@@ -19,13 +8,18 @@ import (
 	"fmt"
 	"io"
 	"net/http"
+	"net/http/httptest"
 	"reflect"
 	"runtime/debug"
+	"strings"
 	"testing"
 
+	"go.opentelemetry.io/collector/pdata/pmetric/pmetricotlp"
+	prometheusbridge "go.opentelemetry.io/contrib/bridges/prometheus"
 	"go.opentelemetry.io/otel"
 	"go.opentelemetry.io/otel/sdk/metric"
 
+	"github.com/prometheus/client_golang/prometheus"
 	"github.com/stretchr/testify/assert"
 	"go.uber.org/goleak"
 )
@@ -129,4 +123,181 @@ func TestMetricExporterPrometheusInvalidPort(t *testing.T) {
 
 	_, err := NewMetricReader(context.Background())
 	assert.ErrorContains(t, err, "binding")
+}
+
+func TestMetricProducerPrometheusWithOTLPExporter(t *testing.T) {
+	assertNoOtelHandleErrors(t)
+
+	requestWaitChan := make(chan struct{})
+	ts := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		body, err := io.ReadAll(r.Body)
+		assert.NoError(t, err)
+		assert.NoError(t, r.Body.Close())
+
+		// Now parse the otlp proto message from request body.
+		req := pmetricotlp.NewExportRequest()
+		assert.NoError(t, req.UnmarshalProto(body))
+
+		// This is 0 without the producer registered.
+		assert.NotZero(t, req.Metrics().MetricCount())
+		close(requestWaitChan)
+	}))
+
+	t.Setenv("OTEL_METRICS_EXPORTER", "otlp")
+	t.Setenv("OTEL_EXPORTER_OTLP_ENDPOINT", ts.URL)
+	t.Setenv("OTEL_EXPORTER_OTLP_PROTOCOL", "http/protobuf")
+	t.Setenv("OTEL_METRICS_PRODUCERS", "prometheus")
+
+	r, err := NewMetricReader(context.Background())
+	assert.NoError(t, err)
+	assert.IsType(t, &metric.PeriodicReader{}, r)
+
+	// Register it with a meter provider to ensure it is used.
+	// mp.Shutdown errors out because r.Shutdown closes the reader.
+	metric.NewMeterProvider(metric.WithReader(r))
+
+	// Shutdown actually makes an export call.
+	assert.NoError(t, r.Shutdown(context.Background()))
+
+	<-requestWaitChan
+	ts.Close()
+	goleak.VerifyNone(t)
+}
+
+func TestMetricProducerPrometheusWithPrometheusExporter(t *testing.T) {
+	assertNoOtelHandleErrors(t)
+
+	t.Setenv("OTEL_METRICS_EXPORTER", "prometheus")
+	t.Setenv("OTEL_EXPORTER_PROMETHEUS_PORT", "0")
+	t.Setenv("OTEL_METRICS_PRODUCERS", "prometheus")
+
+	r, err := NewMetricReader(context.Background())
+	assert.NoError(t, err)
+
+	// pull-based exporters like Prometheus need to be registered
+	mp := metric.NewMeterProvider(metric.WithReader(r))
+
+	rws, ok := r.(readerWithServer)
+	if !ok {
+		t.Errorf("expected readerWithServer but got %v", r)
+	}
+
+	resp, err := http.Get(fmt.Sprintf("http://%s/metrics", rws.addr))
+	assert.NoError(t, err)
+	body, err := io.ReadAll(resp.Body)
+	assert.NoError(t, err)
+
+	// By default there are two metrics exporter. target_info and promhttp_metric_handler_errors_total.
+	// But by including the prometheus producer we should have more.
+	assert.Greater(t, strings.Count(string(body), "# HELP"), 2)
+
+	assert.NoError(t, mp.Shutdown(context.Background()))
+	goleak.VerifyNone(t)
+}
+
+func TestMetricProducerFallbackWithPrometheusExporter(t *testing.T) {
+	assertNoOtelHandleErrors(t)
+
+	reg := prometheus.NewRegistry()
+	someDummyMetric := prometheus.NewCounter(prometheus.CounterOpts{
+		Name: "dummy_metric",
+		Help: "dummy metric",
+	})
+	reg.MustRegister(someDummyMetric)
+
+	WithFallbackMetricProducer(func(context.Context) (metric.Producer, error) {
+		return prometheusbridge.NewMetricProducer(prometheusbridge.WithGatherer(reg)), nil
+	})
+
+	t.Setenv("OTEL_METRICS_EXPORTER", "prometheus")
+	t.Setenv("OTEL_EXPORTER_PROMETHEUS_PORT", "0")
+
+	r, err := NewMetricReader(context.Background())
+	assert.NoError(t, err)
+
+	// pull-based exporters like Prometheus need to be registered
+	mp := metric.NewMeterProvider(metric.WithReader(r))
+
+	rws, ok := r.(readerWithServer)
+	if !ok {
+		t.Errorf("expected readerWithServer but got %v", r)
+	}
+
+	resp, err := http.Get(fmt.Sprintf("http://%s/metrics", rws.addr))
+	assert.NoError(t, err)
+	body, err := io.ReadAll(resp.Body)
+	assert.NoError(t, err)
+
+	assert.Contains(t, string(body), "HELP dummy_metric_total dummy metric")
+
+	assert.NoError(t, mp.Shutdown(context.Background()))
+	goleak.VerifyNone(t)
+}
+
+func TestMultipleMetricProducerWithOTLPExporter(t *testing.T) {
+	requestWaitChan := make(chan struct{})
+
+	reg1 := prometheus.NewRegistry()
+	someDummyMetric := prometheus.NewCounter(prometheus.CounterOpts{
+		Name: "dummy_metric_1",
+		Help: "dummy metric ONE",
+	})
+	reg1.MustRegister(someDummyMetric)
+	reg2 := prometheus.NewRegistry()
+	someOtherDummyMetric := prometheus.NewCounter(prometheus.CounterOpts{
+		Name: "dummy_metric_2",
+		Help: "dummy metric TWO",
+	})
+	reg2.MustRegister(someOtherDummyMetric)
+
+	RegisterMetricProducer("first_producer", func(context.Context) (metric.Producer, error) {
+		return prometheusbridge.NewMetricProducer(prometheusbridge.WithGatherer(reg1)), nil
+	})
+	RegisterMetricProducer("second_producer", func(context.Context) (metric.Producer, error) {
+		return prometheusbridge.NewMetricProducer(prometheusbridge.WithGatherer(reg2)), nil
+	})
+
+	ts := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		body, err := io.ReadAll(r.Body)
+		assert.NoError(t, err)
+		assert.NoError(t, r.Body.Close())
+
+		// Now parse the otlp proto message from request body.
+		req := pmetricotlp.NewExportRequest()
+		assert.NoError(t, req.UnmarshalProto(body))
+
+		metricNames := []string{}
+		sm := req.Metrics().ResourceMetrics().At(0).ScopeMetrics()
+
+		for i := 0; i < sm.Len(); i++ {
+			m := sm.At(i).Metrics()
+			for i := 0; i < m.Len(); i++ {
+				metricNames = append(metricNames, m.At(i).Name())
+			}
+		}
+
+		assert.ElementsMatch(t, metricNames, []string{"dummy_metric_1", "dummy_metric_2"})
+
+		close(requestWaitChan)
+	}))
+
+	t.Setenv("OTEL_METRICS_EXPORTER", "otlp")
+	t.Setenv("OTEL_EXPORTER_OTLP_ENDPOINT", ts.URL)
+	t.Setenv("OTEL_EXPORTER_OTLP_PROTOCOL", "http/protobuf")
+	t.Setenv("OTEL_METRICS_PRODUCERS", "first_producer,second_producer,first_producer")
+
+	r, err := NewMetricReader(context.Background())
+	assert.NoError(t, err)
+	assert.IsType(t, &metric.PeriodicReader{}, r)
+
+	// Register it with a meter provider to ensure it is used.
+	// mp.Shutdown errors out because r.Shutdown closes the reader.
+	metric.NewMeterProvider(metric.WithReader(r))
+
+	// Shutdown actually makes an export call.
+	assert.NoError(t, r.Shutdown(context.Background()))
+
+	<-requestWaitChan
+	ts.Close()
+	goleak.VerifyNone(t)
 }
