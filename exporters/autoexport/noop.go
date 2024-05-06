@@ -7,6 +7,7 @@ import (
 	"context"
 
 	"go.opentelemetry.io/otel/sdk/metric"
+	"go.opentelemetry.io/otel/sdk/metric/metricdata"
 	"go.opentelemetry.io/otel/sdk/trace"
 )
 
@@ -45,4 +46,14 @@ func newNoopMetricReader() noopMetricReader {
 func IsNoneMetricReader(e metric.Reader) bool {
 	_, ok := e.(noopMetricReader)
 	return ok
+}
+
+type noopMetricProducer struct{}
+
+func (e noopMetricProducer) Produce(ctx context.Context) ([]metricdata.ScopeMetrics, error) {
+	return nil, nil
+}
+
+func newNoopMetricProducer() noopMetricProducer {
+	return noopMetricProducer{}
 }
