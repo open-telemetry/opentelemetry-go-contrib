@@ -139,11 +139,11 @@ func (c *config) handleRPC(ctx context.Context, rs stats.RPCStats, isServer bool
 
 	gctx, _ := ctx.Value(gRPCContextKey{}).(*gRPCContext)
 	if gctx != nil {
-		metricAttrs = make([]attribute.KeyValue, 0, len(gctx.metricAttrs)+1)
-		metricAttrs = append(metricAttrs, gctx.metricAttrs...)
 		if !gctx.record {
 			return
 		}
+		metricAttrs = make([]attribute.KeyValue, 0, len(gctx.metricAttrs)+1)
+		metricAttrs = append(metricAttrs, gctx.metricAttrs...)
 	}
 
 	switch rs := rs.(type) {
