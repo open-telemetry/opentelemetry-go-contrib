@@ -16,6 +16,7 @@ Collection of 3rd-party packages for [OpenTelemetry-Go](https://github.com/open-
 - [Exporters](./exporters/): Packages providing OpenTelemetry exporters for 3rd-party export formats.
 - [Samplers](./samplers/): Packages providing additional implementations of OpenTelemetry samplers.
 - [Bridges](./bridges/): Packages providing adapters for 3rd-party instrumentation frameworks.
+- [Processors](./processors/): Packages providing additional implementations of OpenTelemetry processors.
 
 ## Project Status
 
