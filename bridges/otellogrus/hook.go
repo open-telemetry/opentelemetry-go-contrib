@@ -24,6 +24,8 @@
 //   - [slog.LevelWarn] is transformed to [log.SeverityWarn]
 //   - [slog.LevelError] is transformed to [log.SeverityError]
 //
+// The log body is transformed into a string value.
+//
 // Attribute values are transformed based on their type into log attributes, or
 // into a string value if there is no matching type.
 //
