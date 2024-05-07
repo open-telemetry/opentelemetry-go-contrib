@@ -320,6 +320,16 @@ func TestConvertFields(t *testing.T) {
 			},
 		},
 		{
+			name:   "with an interface slice",
+			fields: logrus.Fields{"hello": []interface{}{"foo", 42}},
+			wantKeyValue: []log.KeyValue{
+				log.Slice("hello",
+					log.StringValue("foo"),
+					log.Int64Value(42),
+				),
+			},
+		},
+		{
 			name:   "with a map",
 			fields: logrus.Fields{"hello": map[string]int{"answer": 42}},
 			wantKeyValue: []log.KeyValue{
@@ -327,10 +337,24 @@ func TestConvertFields(t *testing.T) {
 			},
 		},
 		{
+			name:   "with an interface map",
+			fields: logrus.Fields{"hello": map[interface{}]interface{}{1: "question", "answer": 42}},
+			wantKeyValue: []log.KeyValue{
+				log.Map("hello", log.String("1", "question"), log.Int("answer", 42)),
+			},
+		},
+		{
 			name:   "with a nested map",
 			fields: logrus.Fields{"hello": map[string]map[string]int{"sublevel": {"answer": 42}}},
 			wantKeyValue: []log.KeyValue{
 				log.Map("hello", log.Map("sublevel", log.Int("answer", 42))),
+			},
+		},
+		{
+			name:   "with a struct map",
+			fields: logrus.Fields{"hello": map[struct{ name string }]string{{name: "hello"}: "world"}},
+			wantKeyValue: []log.KeyValue{
+				log.Map("hello", log.String("{name:hello}", "world")),
 			},
 		},
 		{
