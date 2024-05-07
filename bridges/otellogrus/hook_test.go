@@ -340,7 +340,7 @@ func TestConvertFields(t *testing.T) {
 			name:   "with an interface map",
 			fields: logrus.Fields{"hello": map[interface{}]interface{}{1: "question", "answer": 42}},
 			wantKeyValue: []log.KeyValue{
-				log.Map("hello", log.String("1", "question"), log.Int("answer", 42)),
+				log.Map("hello", log.Int("answer", 42), log.String("1", "question")),
 			},
 		},
 		{
