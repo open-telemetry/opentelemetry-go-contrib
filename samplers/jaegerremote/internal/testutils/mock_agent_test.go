@@ -1,4 +1,6 @@
 // Copyright The OpenTelemetry Authors
+// SPDX-License-Identifier: Apache-2.0
+
 // Copyright (c) 2021 The Jaeger Authors.
 // Copyright (c) 2017 Uber Technologies, Inc.
 //

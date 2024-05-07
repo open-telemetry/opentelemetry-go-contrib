@@ -1,16 +1,5 @@
 # Copyright The OpenTelemetry Authors
-#
-# Licensed under the Apache License, Version 2.0 (the "License");
-# you may not use this file except in compliance with the License.
-# You may obtain a copy of the License at
-#
-#     http://www.apache.org/licenses/LICENSE-2.0
-#
-# Unless required by applicable law or agreed to in writing, software
-# distributed under the License is distributed on an "AS IS" BASIS,
-# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-# See the License for the specific language governing permissions and
-# limitations under the License.
+# SPDX-License-Identifier: Apache-2.0
 
 TOOLS_MOD_DIR := ./tools
 
@@ -146,7 +135,7 @@ go-mod-tidy/%: DIR=$*
 go-mod-tidy/%:
 	@echo "$(GO) mod tidy in $(DIR)" \
 		&& cd $(DIR) \
-		&& $(GO) mod tidy -compat=1.20
+		&& $(GO) mod tidy -compat=1.21
 
 .PHONY: misspell
 misspell: | $(MISSPELL)
@@ -297,6 +286,17 @@ COMMIT ?= "HEAD"
 add-tags: | $(MULTIMOD)
 	@[ "${MODSET}" ] || ( echo ">> env var MODSET is not set"; exit 1 )
 	$(MULTIMOD) verify && $(MULTIMOD) tag -m ${MODSET} -c ${COMMIT}
+
+.PHONY: update-all-otel-deps
+update-all-otel-deps:
+	@[ "${GITSHA}" ] || ( echo ">> env var GITSHA is not set"; exit 1 )
+	@echo "Updating OpenTelemetry dependencies to ${GITSHA}"
+	@set -e; \
+		for dir in $(OTEL_GO_MOD_DIRS); do \
+			echo "Updating OpenTelemetry dependencies in $${dir}"; \
+			(cd $${dir} \
+			&& grep -o 'go.opentelemetry.io/otel\S*' go.mod | xargs -I {} -n1 $(GO) get {}@${GITSHA}); \
+		done
 
 # The source directory for opentelemetry-configuration schema.
 OPENTELEMETRY_CONFIGURATION_JSONSCHEMA_SRC_DIR=tmp/opentelememetry-configuration

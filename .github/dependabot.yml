@@ -101,6 +101,15 @@ updates:
       interval: weekly
       day: sunday
   - package-ecosystem: gomod
+    directory: /bridges/otelslog
+    labels:
+      - dependencies
+      - go
+      - Skip Changelog
+    schedule:
+      interval: weekly
+      day: sunday
+  - package-ecosystem: gomod
     directory: /bridges/prometheus
     labels:
       - dependencies
@@ -525,6 +534,15 @@ updates:
       day: sunday
   - package-ecosystem: gomod
     directory: /instrumentation/runtime/example
+    labels:
+      - dependencies
+      - go
+      - Skip Changelog
+    schedule:
+      interval: weekly
+      day: sunday
+  - package-ecosystem: gomod
+    directory: /processors/baggage/baggagetrace
     labels:
       - dependencies
       - go

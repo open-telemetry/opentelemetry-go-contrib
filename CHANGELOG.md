@@ -11,6 +11,87 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 ### Added
 
 - Add the new `go.opentelemetry.io/contrib/instrgen` package to provide auto-generated source code instrumentation. (#3068, #3108)
+- Add an experimental `OTEL_METRICS_PRODUCERS` environment variable to `go.opentelemetry.io/contrib/autoexport` to be set metrics producers. (#5281)
+  - `prometheus` and `none` are supported values. You can specify multiple producers separated by a comma.
+  - Add `WithFallbackMetricProducer` option that adds a fallback if the `OTEL_METRICS_PRODUCERS` is not set or empty.
+- The `go.opentelemetry.io/contrib/processors/baggage/baggagetrace` module. This module provides a Baggage Span Processor. (#5404)
+
+## [1.26.0/0.51.0/0.20.0/0.6.0/0.1.0] - 2024-04-24
+
+### Added
+
+- `NewSDK` in `go.opentelemetry.io/contrib/config` now returns a configured SDK with a valid `MeterProvider`. (#4804)
+
+### Changed
+
+- Change the scope name for the prometheus bridge to `go.opentelemetry.io/contrib/bridges/prometheus` to match the package. (#5396)
+
+### Fixed
+
+- Fix bug where an empty exemplar was added to counters in `go.opentelemetry.io/contrib/bridges/prometheus`. (#5395)
+- Fix bug where the last histogram bucket was missing in `go.opentelemetry.io/contrib/bridges/prometheus`. (#5395)
+
+## [1.25.0/0.50.0/0.19.0/0.5.0/0.0.1] - 2024-04-05
+
+### Added
+
+- Implemented setting the `cloud.resource_id` resource attribute in `go.opentelemetry.io/detectors/aws/ecs` based on the ECS Metadata v4 endpoint. (#5091)
+- The `go.opentelemetry.io/contrib/bridges/otelslog` module.
+  This module provides an OpenTelemetry logging bridge for "log/slog". (#5335)
+
+### Fixed
+
+- Update all dependencies to address [GO-2024-2687]. (#5359)
+
+### Removed
+
+- Drop support for [Go 1.20]. (#5163)
+
+## [1.24.0/0.49.0/0.18.0/0.4.0] - 2024-02-23
+
+This release is the last to support [Go 1.20].
+The next release will require at least [Go 1.21].
+
+### Added
+
+- Support [Go 1.22]. (#5082)
+- Add support for Summary metrics to `go.opentelemetry.io/contrib/bridges/prometheus`. (#5089)
+- Add support for Exponential (native) Histograms in `go.opentelemetry.io/contrib/bridges/prometheus`. (#5093)
+
+### Removed
+
+- The deprecated `RequestCount` constant in `go.opentelemetry.io/contrib/instrumentation/net/http/otelhttp` is removed. (#4894)
+- The deprecated `RequestContentLength` constant in `go.opentelemetry.io/contrib/instrumentation/net/http/otelhttp` is removed. (#4894)
+- The deprecated `ResponseContentLength` constant in `go.opentelemetry.io/contrib/instrumentation/net/http/otelhttp` is removed. (#4894)
+- The deprecated `ServerLatency` constant in `go.opentelemetry.io/contrib/instrumentation/net/http/otelhttp` is removed. (#4894)
+
+### Fixed
+
+- Retrieving the body bytes count in `go.opentelemetry.io/contrib/instrumentation/net/http/otelhttp` does not cause a data race anymore. (#5080)
+
+## [1.23.0/0.48.0/0.17.0/0.3.0] - 2024-02-06
+
+### Added
+
+- Add client metric support to `go.opentelemetry.io/contrib/instrumentation/net/http/otelhttp`. (#4707)
+- Add peer attributes to spans recorded by `NewClientHandler`, `NewServerHandler` in `go.opentelemetry.io/contrib/instrumentation/google.golang.org/grpc/otelgrpc`. (#4873)
+- Add support for `cloud.account.id`, `cloud.availability_zone` and `cloud.region` in the AWS ECS detector. (#4860)
+
+### Changed
+
+- The fallback options in  `go.opentelemetry.io/contrib/exporters/autoexport` now accept factory functions. (#4891)
+  - `WithFallbackMetricReader(metric.Reader) MetricOption` is replaced with `func WithFallbackMetricReader(func(context.Context) (metric.Reader, error)) MetricOption`.
+  - `WithFallbackSpanExporter(trace.SpanExporter) SpanOption` is replaced with `WithFallbackSpanExporter(func(context.Context) (trace.SpanExporter, error)) SpanOption`.
+- The `http.server.request_content_length` metric in `go.opentelemetry.io/contrib/instrumentation/net/http/otelhttp` is changed to `http.server.request.size`.(#4707)
+- The `http.server.response_content_length` metric in `go.opentelemetry.io/contrib/instrumentation/net/http/otelhttp` is changed to `http.server.response.size`.(#4707)
+
+### Deprecated
+
+- The `RequestCount`, `RequestContentLength`, `ResponseContentLength`, `ServerLatency` constants in `go.opentelemetry.io/contrib/instrumentation/net/http/otelhttp` are deprecated. (#4707)
+
+### Fixed
+
+- Do not panic in `go.opentelemetry.io/contrib/instrumentation/google.golang.org/grpc/otelgrpc` if `MeterProvider` returns a `nil` instrument. (#4875)
 
 ## [1.22.0/0.47.0/0.16.0/0.2.0] - 2024-01-18
 
@@ -898,7 +979,11 @@ First official tagged release of `contrib` repository.
 - Prefix support for dogstatsd (#34)
 - Update Go Runtime package to use batch observer (#44)
 
-[Unreleased]: https://github.com/open-telemetry/opentelemetry-go-contrib/compare/v1.22.0...HEAD
+[Unreleased]: https://github.com/open-telemetry/opentelemetry-go-contrib/compare/v1.26.0...HEAD
+[1.26.0/0.51.0/0.20.0/0.6.0/0.1.0]: https://github.com/open-telemetry/opentelemetry-go-contrib/releases/tag/v1.26.0
+[1.25.0/0.50.0/0.19.0/0.5.0/0.0.1]: https://github.com/open-telemetry/opentelemetry-go-contrib/releases/tag/v1.25.0
+[1.24.0/0.49.0/0.18.0/0.4.0]: https://github.com/open-telemetry/opentelemetry-go-contrib/releases/tag/v1.24.0
+[1.23.0/0.48.0/0.17.0/0.3.0]: https://github.com/open-telemetry/opentelemetry-go-contrib/releases/tag/v1.23.0
 [1.22.0/0.47.0/0.16.0/0.2.0]: https://github.com/open-telemetry/opentelemetry-go-contrib/releases/tag/v1.22.0
 [1.21.1/0.46.1/0.15.1/0.1.1]: https://github.com/open-telemetry/opentelemetry-go-contrib/releases/tag/v1.21.1
 [1.21.0/0.46.0/0.15.0/0.1.0]: https://github.com/open-telemetry/opentelemetry-go-contrib/releases/tag/v1.21.0
@@ -954,6 +1039,10 @@ First official tagged release of `contrib` repository.
 [0.7.0]: https://github.com/open-telemetry/opentelemetry-go-contrib/releases/tag/v0.7.0
 [0.6.1]: https://github.com/open-telemetry/opentelemetry-go-contrib/releases/tag/v0.6.1
 
+[Go 1.22]: https://go.dev/doc/go1.22
+[Go 1.21]: https://go.dev/doc/go1.21
 [Go 1.20]: https://go.dev/doc/go1.20
 [Go 1.19]: https://go.dev/doc/go1.19
 [Go 1.18]: https://go.dev/doc/go1.18
+
+[GO-2024-2687]: https://pkg.go.dev/vuln/GO-2024-2687

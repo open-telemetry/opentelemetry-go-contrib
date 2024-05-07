@@ -1,16 +1,5 @@
 // Copyright The OpenTelemetry Authors
-//
-// Licensed under the Apache License, Version 2.0 (the "License");
-// you may not use this file except in compliance with the License.
-// You may obtain a copy of the License at
-//
-//     http://www.apache.org/licenses/LICENSE-2.0
-//
-// Unless required by applicable law or agreed to in writing, software
-// distributed under the License is distributed on an "AS IS" BASIS,
-// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-// See the License for the specific language governing permissions and
-// limitations under the License.
+// SPDX-License-Identifier: Apache-2.0
 
 package autoexport
 
@@ -45,7 +34,7 @@ func TestCanStoreExporterFactory(t *testing.T) {
 func TestLoadOfUnknownExporterReturnsError(t *testing.T) {
 	r := newTestRegistry()
 	exp, err := r.load(context.Background(), "non-existent")
-	assert.Equal(t, err, errUnknownExporter, "empty registry should hold nothing")
+	assert.Equal(t, err, errUnknownExporterProducer, "empty registry should hold nothing")
 	assert.Nil(t, exp, "non-nil exporter returned")
 }
 

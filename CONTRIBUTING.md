@@ -71,7 +71,7 @@ You can connect with us in our [slack channel](https://cloud-native.slack.com/ar
 
 The Go special interest group (SIG) meets regularly.
 See the OpenTelemetry [community](https://github.com/open-telemetry/community#golang-sdk) repo for information on this and other language SIGs.
-See the [public meeting notes](https://docs.google.com/document/d/1A63zSWX0x2CyCK_LoNhmQC4rqhLpYXJzXbEPDUQ2n6w/edit#heading=h.9tngw7jdwd6b) for a summary description of past meetings.
+See the [public meeting notes](https://docs.google.com/document/d/1E5e7Ld0NuU1iVvf-42tOBpu2VBBLYnh73GJuITGJTTU/edit#heading=h.ru7kpkv1rxlh) for a summary description of past meetings.
 
 ## Approvers and Maintainers
 
