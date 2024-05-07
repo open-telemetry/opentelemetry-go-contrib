@@ -1,4 +1,4 @@
-module otelzap
+module go.opentelemetry.io/contrib/bridges/otelzap
 
 go 1.21
 

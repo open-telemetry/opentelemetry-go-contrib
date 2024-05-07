@@ -3,7 +3,7 @@
 
 // Package otelzap provides a bridge between the [go.uber.org/zap] and
 // OpenTelemetry logging.
-package otelzap // import "otelzap"
+package otelzap // import "go.opentelemetry.io/contrib/bridges/otelzap"
 
 import (
 	"go.uber.org/zap/zapcore"
@@ -43,14 +43,15 @@ func (o *Core) With(fields []zapcore.Field) zapcore.Core {
 	return o
 }
 
+// TODO
 // Sync flushes buffered logs (if any).
 func (o *Core) Sync() error {
 	return nil
 }
 
+// TODO
 // Check determines whether the supplied Entry should be logged using core.Enabled method.
 func (o *Core) Check(ent zapcore.Entry, ce *zapcore.CheckedEntry) *zapcore.CheckedEntry {
-	// TODO
 	return ce
 }
 
