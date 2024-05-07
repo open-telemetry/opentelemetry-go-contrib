@@ -39,7 +39,7 @@ func TestNewCoreConfiguration(t *testing.T) {
 				WithInstrumentationScope(scope),
 			)
 		})
-		assert.NotNil(t, h.logger)
+		require.NotNil(t, h.logger)
 		require.IsType(t, &logtest.Recorder{}, h.logger)
 		l := h.logger.(*logtest.Recorder)
 		require.Len(t, l.Result(), 1)
