@@ -56,7 +56,7 @@ type optFunc func(config) config
 func (f optFunc) apply(c config) config { return f(c) }
 
 // WithInstrumentationScope returns an [Option] that configures the scope of
-// the [log.Logger] used by a [zapcore].
+// the [log.Logger] used by a [Core].
 //
 // By default if this Option is not provided, the zapcore will use a default
 // instrumentation scope describing this bridge package. It is recommended to
