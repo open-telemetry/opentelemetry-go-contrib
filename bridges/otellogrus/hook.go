@@ -25,7 +25,7 @@
 //   - [slog.LevelError] is transformed to [log.SeverityError]
 //
 // Attribute values are transformed based on their type into log attributes, or
-// into a string attribute if there were no matching type.
+// into a string value if there is no matching type.
 //
 // [OpenTelemetry]: https://opentelemetry.io/docs/concepts/signals/logs/
 package otellogrus // import "go.opentelemetry.io/contrib/bridges/otellogrus"
