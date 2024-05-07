@@ -24,16 +24,8 @@
 //   - [slog.LevelWarn] is transformed to [log.SeverityWarn]
 //   - [slog.LevelError] is transformed to [log.SeverityError]
 //
-// Attribute values are transformed based on type:
-//
-//   - booleans are transformed into [log.Bool]
-//   - byte arrays are transformed into [log.Bytes]
-//   - float64 are transformed into [log.Float64]
-//   - int are transformed into [log.Int]
-//   - int64 are transformed into [log.Int64]
-//   - string are transformed into [log.String]
-//
-// Any other type is transformed into a string using [fmt.Sprintf].
+// Attribute values are transformed based on their type into log attributes, or
+// into a string attribute if there were no matching type.
 //
 // [OpenTelemetry]: https://opentelemetry.io/docs/concepts/signals/logs/
 package otellogrus // import "go.opentelemetry.io/contrib/bridges/otellogrus"
