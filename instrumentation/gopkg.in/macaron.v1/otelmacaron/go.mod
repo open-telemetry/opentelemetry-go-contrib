@@ -16,7 +16,7 @@ require (
 	github.com/davecgh/go-spew v1.1.1 // indirect
 	github.com/go-logr/logr v1.4.1 // indirect
 	github.com/go-logr/stdr v1.2.2 // indirect
-	github.com/go-macaron/inject v0.0.0-20160627170012-d8a0b8677191 // indirect
+	github.com/go-macaron/inject v0.0.0-20200308113650-138e5925c53b // indirect
 	github.com/pmezard/go-difflib v1.0.0 // indirect
 	github.com/unknwon/com v0.0.0-20190804042917-757f69c95f3e // indirect
 	go.opentelemetry.io/otel/metric v1.26.0 // indirect
