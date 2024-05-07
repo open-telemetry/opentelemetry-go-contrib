@@ -17,6 +17,8 @@ import (
 func TestNewCoreConfiguration(t *testing.T) {
 	t.Run("Default", func(t *testing.T) {
 		r := logtest.NewRecorder()
+		prev := global.GetLoggerProvider()
+		defer global.SetLoggerProvider(prev)
 		global.SetLoggerProvider(r)
 
 		var h *Core
