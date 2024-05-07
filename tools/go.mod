@@ -16,7 +16,7 @@ require (
 	go.opentelemetry.io/build-tools/dbotconf v0.13.0
 	go.opentelemetry.io/build-tools/gotmpl v0.13.0
 	go.opentelemetry.io/build-tools/multimod v0.13.0
-	golang.org/x/exp v0.0.0-20240416160154-fe59bbe5cc7f
+	golang.org/x/exp v0.0.0-20240506185415-9bf2ced13842
 	golang.org/x/tools v0.21.0
 	golang.org/x/vuln v1.1.0
 )
