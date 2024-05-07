@@ -33,7 +33,7 @@ func TestNewCoreConfiguration(t *testing.T) {
 		r := logtest.NewRecorder()
 		scope := instrumentation.Scope{Name: "name", Version: "ver", SchemaURL: "url"}
 		var h *Core
-		assert.NotPanics(t, func() {
+		require.NotPanics(t, func() {
 			h = NewCore(
 				WithLoggerProvider(r),
 				WithInstrumentationScope(scope),
