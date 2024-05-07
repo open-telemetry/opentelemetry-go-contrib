@@ -4,6 +4,7 @@
     "config:recommended"
   ],
   "ignorePaths": [],
+  "labels": ["Skip Changelog"],
   "separateMajorMinor": true,
   "postUpdateOptions" : [
     "gomodTidy"
