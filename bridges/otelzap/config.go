@@ -46,7 +46,7 @@ func (c config) logger() log.Logger {
 	return c.provider.Logger(c.scope.Name, opts...)
 }
 
-// Option configures a [zapcore].
+// Option configures a [Core].
 type Option interface {
 	apply(config) config
 }
