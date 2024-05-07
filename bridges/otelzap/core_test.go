@@ -27,7 +27,7 @@ func TestNewCoreConfiguration(t *testing.T) {
 		require.IsType(t, &logtest.Recorder{}, h.logger)
 		l := h.logger.(*logtest.Recorder)
 		require.Len(t, l.Result(), 1)
-		
+
 		want := &logtest.ScopeRecords{Name: bridgeName, Version: version}
 		got := l.Result()[0]
 		assert.Equal(t, want, got)
