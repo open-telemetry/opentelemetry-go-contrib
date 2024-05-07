@@ -23,8 +23,7 @@ type Core struct {
 // Compile-time check *Core implements zapcore.Core.
 var _ zapcore.Core = (*Core)(nil)
 
-// NewOTelZapCore creates a new [zapcore.Core] that can be used with zap.New()
-// this instance will translate zap logs to opentelemetry logs and export them.
+// NewCore creates a new [zapcore.Core] that can be used with [go.uber.org/zap.New].
 func NewCore(opts ...Option) *Core {
 	cfg := newConfig(opts)
 	return &Core{
