@@ -41,10 +41,11 @@ func TestNewCoreConfiguration(t *testing.T) {
 		})
 		assert.NotNil(t, h.logger)
 		require.IsType(t, &logtest.Recorder{}, h.logger)
-
 		l := h.logger.(*logtest.Recorder)
-		assert.Equal(t, scope.Name, l.Result()[0].Name)
-		assert.Equal(t, scope.Version, l.Result()[0].Version)
-		assert.Equal(t, scope.SchemaURL, l.Result()[0].SchemaURL)
+		require.Len(t, l.Result(), 1)
+
+		want := &logtest.ScopeRecords{Name: scope.Name, Version: scope.Version, SchemaURL: scope.SchemaURL}
+		got := l.Result()[0]
+		assert.Equal(t, want, got)
 	})
 }
