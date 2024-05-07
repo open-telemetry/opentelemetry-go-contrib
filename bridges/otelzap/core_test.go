@@ -22,13 +22,15 @@ func TestNewCoreConfiguration(t *testing.T) {
 		global.SetLoggerProvider(r)
 
 		var h *Core
-		assert.NotPanics(t, func() { h = NewCore() })
-		assert.NotNil(t, h.logger)
+		require.NotPanics(t, func() { h = NewCore() })
+		require.NotNil(t, h.logger)
 		require.IsType(t, &logtest.Recorder{}, h.logger)
-
 		l := h.logger.(*logtest.Recorder)
+		require.Len(t, l.Result(), 1)
+		
 		want := &logtest.ScopeRecords{Name: bridgeName, Version: version}
-		assert.Equal(t, want, l.Result()[0])
+		got := l.Result()[0]
+		assert.Equal(t, want, got)
 	})
 
 	t.Run("Options", func(t *testing.T) {
