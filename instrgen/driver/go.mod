@@ -6,7 +6,7 @@ replace go.opentelemetry.io/contrib/instrgen => ../
 
 require (
 	github.com/stretchr/testify v1.9.0
-	go.opentelemetry.io/contrib/instrgen v0.0.0-00010101000000-000000000000
+	go.opentelemetry.io/contrib/instrgen v0.0.0-20240507151204-e0376ad806f1
 )
 
 require (

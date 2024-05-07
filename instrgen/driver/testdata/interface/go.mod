@@ -4,7 +4,7 @@ go 1.21
 
 replace go.opentelemetry.io/contrib/instrgen => ../../..
 
-require go.opentelemetry.io/contrib/instrgen v0.0.0-20221228173227-92e0588b124b
+require go.opentelemetry.io/contrib/instrgen v0.0.0-20240507151204-e0376ad806f1
 
 require (
 	github.com/go-logr/logr v1.4.1 // indirect
