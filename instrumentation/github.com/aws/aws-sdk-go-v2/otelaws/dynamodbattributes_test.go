@@ -122,7 +122,7 @@ func TestDynamodbTagsCreateTableInput(t *testing.T) {
 	assert.Contains(t, attributes, attribute.StringSlice(
 		"aws.dynamodb.global_secondary_indexes",
 		[]string{
-			`{"IndexName":"index1","KeySchema":[{"AttributeName":"attributename","KeyType":"HASH"}],"Projection":{"NonKeyAttributes":["non-key-attributes"],"ProjectionType":""},"ProvisionedThroughput":null}`,
+			`{"IndexName":"index1","KeySchema":[{"AttributeName":"attributename","KeyType":"HASH"}],"Projection":{"NonKeyAttributes":["non-key-attributes"],"ProjectionType":""},"OnDemandThroughput":null,"ProvisionedThroughput":null}`,
 		},
 	))
 	assert.Contains(t, attributes, attribute.StringSlice(
@@ -338,7 +338,7 @@ func TestDynamodbTagsUpdateTableInput(t *testing.T) {
 	assert.Contains(t, attributes, attribute.StringSlice(
 		"aws.dynamodb.global_secondary_index_updates",
 		[]string{
-			`{"Create":{"IndexName":"index1","KeySchema":[{"AttributeName":"attribute","KeyType":"HASH"}],"Projection":{"NonKeyAttributes":["attribute1","attribute2"],"ProjectionType":"ALL"},"ProvisionedThroughput":null},"Delete":null,"Update":null}`,
+			`{"Create":{"IndexName":"index1","KeySchema":[{"AttributeName":"attribute","KeyType":"HASH"}],"Projection":{"NonKeyAttributes":["attribute1","attribute2"],"ProjectionType":"ALL"},"OnDemandThroughput":null,"ProvisionedThroughput":null},"Delete":null,"Update":null}`,
 		},
 	))
 	assert.Contains(t, attributes, attribute.Float64("aws.dynamodb.provisioned_read_capacity", 123))
