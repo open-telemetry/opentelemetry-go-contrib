@@ -23,7 +23,7 @@ const (
 )
 
 // InterceptorFilter is a predicate used to determine whether a given request in
-// interceptor info should be traced. A InterceptorFilter must return true if
+// interceptor info should be instrumented. A InterceptorFilter must return true if
 // the request should be traced.
 //
 // Deprecated: Use stats handlers instead.
