@@ -4,7 +4,7 @@
 // Package interceptor provides a set of filters useful with the
 // [otelgrpc.WithInterceptorFilter] option to control which inbound requests are instrumented.
 //
-// Deprecated: Use filters package and otelgrpc.WithFilter() instead.
+// Deprecated: Use filters package and [otelgrpc.WithFilter] instead.
 package interceptor // import "go.opentelemetry.io/contrib/instrumentation/google.golang.org/grpc/otelgrpc/filters/interceptor"
 
 import (
