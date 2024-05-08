@@ -22,6 +22,7 @@
 
 CODEOWNERS @MrAlias @MadVikingGod @pellared @dashpole
 
+bridges/otelslog                                                        @open-telemetry/go-approvers @MrAlias @pellared
 bridges/prometheus/                                                     @open-telemetry/go-approvers @dashpole
 bridges/otelzap/                                                        @open-telemetry/go-approvers @pellared @khushijain21
 
