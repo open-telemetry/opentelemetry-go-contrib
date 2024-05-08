@@ -424,11 +424,13 @@ func TestSLogHandler(t *testing.T) {
 func TestNewHandlerConfiguration(t *testing.T) {
 	t.Run("Default", func(t *testing.T) {
 		r := new(recorder)
+		prev := global.GetLoggerProvider()
+		defer global.SetLoggerProvider(prev)
 		global.SetLoggerProvider(r)
 
 		var h *Handler
-		assert.NotPanics(t, func() { h = NewHandler() })
-		assert.NotNil(t, h.logger)
+		require.NotPanics(t, func() { h = NewHandler() })
+		require.NotNil(t, h.logger)
 		require.IsType(t, &recorder{}, h.logger)
 
 		l := h.logger.(*recorder)
@@ -440,13 +442,13 @@ func TestNewHandlerConfiguration(t *testing.T) {
 		r := new(recorder)
 		scope := instrumentation.Scope{Name: "name", Version: "ver", SchemaURL: "url"}
 		var h *Handler
-		assert.NotPanics(t, func() {
+		require.NotPanics(t, func() {
 			h = NewHandler(
 				WithLoggerProvider(r),
 				WithInstrumentationScope(scope),
 			)
 		})
-		assert.NotNil(t, h.logger)
+		require.NotNil(t, h.logger)
 		require.IsType(t, &recorder{}, h.logger)
 
 		l := h.logger.(*recorder)
