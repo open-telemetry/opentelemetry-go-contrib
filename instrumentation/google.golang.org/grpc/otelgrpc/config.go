@@ -30,8 +30,8 @@ const (
 type InterceptorFilter func(*InterceptorInfo) bool
 
 // Filter is a predicate used to determine whether a given request in
-// interceptor info should be traced. A Filter must return true if
-// the request should be traced.
+// should be instrumented by the attatched RPC tag info.
+// A Filter must return true if the request should be instrumented.
 type Filter func(*stats.RPCTagInfo) bool
 
 // config is a group of options for this instrumentation.
