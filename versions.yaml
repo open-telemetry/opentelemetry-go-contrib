@@ -82,6 +82,7 @@ module-sets:
     modules:
       - go.opentelemetry.io/contrib/processors/baggage/baggagetrace
 excluded-modules:
+  - go.opentelemetry.io/contrib/bridges/otelzap
   - go.opentelemetry.io/contrib/instrgen
   - go.opentelemetry.io/contrib/instrgen/driver
   - go.opentelemetry.io/contrib/instrgen/testdata/interface
