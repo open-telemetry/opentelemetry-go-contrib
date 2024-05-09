@@ -3,7 +3,7 @@ module go.opentelemetry.io/contrib/exporters/autoexport
 go 1.21
 
 require (
-	github.com/prometheus/client_golang v1.19.0
+	github.com/prometheus/client_golang v1.19.1
 	github.com/stretchr/testify v1.9.0
 	go.opentelemetry.io/collector/pdata v1.7.0
 	go.opentelemetry.io/contrib/bridges/prometheus v0.51.0
