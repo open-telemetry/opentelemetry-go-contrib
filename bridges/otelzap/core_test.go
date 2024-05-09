@@ -74,7 +74,6 @@ func TestCoreEnabled(t *testing.T) {
 	}
 
 	r := logtest.NewRecorder(logtest.WithEnabledFunc(enabledFunc))
-	r.Reset()
 	zc := NewCore(WithLoggerProvider(r))
 
 	assert.False(t, zc.Enabled(zap.DebugLevel), "level conversion: permissive")
@@ -106,19 +105,33 @@ func TestGetOTelLevel(t *testing.T) {
 }
 
 // Tests [Core] write method.
-func TestCoreWrite(t *testing.T) {
+func TestCore(t *testing.T) {
 	rec := logtest.NewRecorder()
 	zc := NewCore(WithLoggerProvider(rec))
 
-	err := zc.Write(entry, []zap.Field{field})
-	if err != nil {
-		t.Errorf("Error occurred: %v", err)
-	}
+	t.Run("test Write method of Core", func(t *testing.T) {
+		err := zc.Write(entry, []zap.Field{field})
+		if err != nil {
+			t.Errorf("Error occurred: %v", err)
+		}
 
-	// why is index 1 populated with results and not 0?
-	got := rec.Result()[1].Records[0]
-	assert.Equal(t, testBodyString, got.Body().AsString())
-	assert.Equal(t, testSeverity, got.Severity())
+		// why is index 1 populated with results and not 0?
+		got := rec.Result()[1].Records[0]
+		assert.Equal(t, testBodyString, got.Body().AsString())
+		assert.Equal(t, testSeverity, got.Severity())
 
-	// TODO test record attributes
+		// TODO test record attributes
+
+		rec.Reset()
+	})
+
+	t.Run("test With method of Core", func(t *testing.T) {
+		childCore := zc.With([]zap.Field{field})
+		assert.Equal(t, childCore, zc)
+
+		// TODO test record attributes
+
+		rec.Reset()
+	})
+
 }

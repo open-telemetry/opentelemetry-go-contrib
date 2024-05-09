@@ -96,7 +96,6 @@ func WithLoggerProvider(provider log.LoggerProvider) Option {
 // Core is a [zapcore.Core] that sends logging records to OpenTelemetry.
 type Core struct {
 	logger log.Logger
-	ctx    context.Context
 	attr   []log.KeyValue
 }
 
