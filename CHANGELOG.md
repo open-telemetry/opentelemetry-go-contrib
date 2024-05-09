@@ -16,6 +16,7 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
   - Add `WithFallbackMetricProducer` option that adds a fallback if the `OTEL_METRICS_PRODUCERS` is not set or empty.
 - The `go.opentelemetry.io/contrib/processors/baggage/baggagetrace` module. This module provides a Baggage Span Processor. (#5404)
 - Add gRPC trace `Filter` for stats handler to `go.opentelemetry.io/contrib/instrumentation/google.golang.org/grpc/otelgrpc`. (#5196)
+- Add a repository Code Ownership Policy. (#5555)
 
 ### Changed
 
