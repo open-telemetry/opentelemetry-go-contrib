@@ -9,6 +9,44 @@ Before you start please be sure to read through these contributing requirements 
 All contributions to this project MUST be licensed under this project's [license](LICENSE).
 You will need to sign the [CNCF CLA](https://identity.linuxfoundation.org/projects/cncf) before your contributions will be accepted.
 
+## Becoming a Code Owner
+
+To ensure code that lives in this repository is not abandoned, all modules added are required to have a Code Owner.
+A Code Owner is responsible for a module within this respository.
+This status is identified in the [CODEOWNERS file](./CODEOWNERS).
+That responsibility includes maintaining the component, triaging and responding to issues, and reviewing pull requests.
+
+### Requirements
+
+To become a Code Owner, you will need to meet the following requirements.
+
+1. You will need to be a [member of the OpenTelemetry organization] and maintain that membership.
+2. You need to have good working knowledge of the code you are sponsoring and any project that that code instruments or is based on.
+
+If you are not an existing member, this is not an imediate disqualification.
+You will need to engate with the OpenTelemetry community so you can achieve this membership in the process of becoming a Code Owner.
+
+It is best to have resolved an issue related to the module, contributed directly to the module, and/or review module PRs.
+How much interaction with the module is required before becoming a Code Owner is up to the existing Code Owners.
+
+Code Ownership is ultimately up to the judgement of the existing Code Owners and Maintainers of this repository.
+Meeting the above requirements is not a guarantee to be granted Code Ownership.
+
+[member of the OpenTelemetry organization]: https://github.com/open-telemetry/community/blob/main/community-membership.md#member
+
+### Responsibilities
+
+As a Code Owner you will be responsible for the following.
+
+- You will be responsible for keeping up with the instrumented library. Any "upstream" changes that impact this module need to be proactively handle by you.
+- You will be expected to review any Pull Requests or Issues created that relate to this module.
+- You will be responsible for the stability and versioning compliance of the module.
+- You will be responsible for deciding any additional Code Owners of the module.
+
+### How to become a Code Owner
+
+To become a Code Owner, open [an Issue](https://github.com/open-telemetry/opentelemetry-go-contrib/issues/new?assignees=&labels=&projects=&template=owner.md&title=).
+
 ## Filing Issues
 
 Sensitive security-related issues should be reported to <cncf-opentelemetry-tc@lists.cncf.io>. See the [security policy](https://github.com/open-telemetry/opentelemetry-go-contrib/security/policy) for details.
