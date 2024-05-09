@@ -18,6 +18,7 @@ import (
 	"google.golang.org/grpc/status"
 
 	"go.opentelemetry.io/contrib/instrumentation/google.golang.org/grpc/otelgrpc"
+	"go.opentelemetry.io/contrib/instrumentation/google.golang.org/grpc/otelgrpc/filters"
 	"go.opentelemetry.io/contrib/instrumentation/google.golang.org/grpc/otelgrpc/internal/test"
 	"go.opentelemetry.io/otel/attribute"
 	"go.opentelemetry.io/otel/sdk/instrumentation"
@@ -33,53 +34,100 @@ import (
 )
 
 func TestStatsHandler(t *testing.T) {
-	clientSR := tracetest.NewSpanRecorder()
-	clientTP := trace.NewTracerProvider(trace.WithSpanProcessor(clientSR))
-	clientMetricReader := metric.NewManualReader()
-	clientMP := metric.NewMeterProvider(metric.WithReader(clientMetricReader))
-
-	serverSR := tracetest.NewSpanRecorder()
-	serverTP := trace.NewTracerProvider(trace.WithSpanProcessor(serverSR))
-	serverMetricReader := metric.NewManualReader()
-	serverMP := metric.NewMeterProvider(metric.WithReader(serverMetricReader))
-
-	listener, err := net.Listen("tcp", "127.0.0.1:0")
-	require.NoError(t, err, "failed to open port")
-	client := newGrpcTest(t, listener,
-		[]grpc.DialOption{
-			grpc.WithStatsHandler(otelgrpc.NewClientHandler(
-				otelgrpc.WithTracerProvider(clientTP),
-				otelgrpc.WithMeterProvider(clientMP),
-				otelgrpc.WithMessageEvents(otelgrpc.ReceivedEvents, otelgrpc.SentEvents)),
-			),
+	tests := []struct {
+		name           string
+		filterSvcName  string
+		expectRecorded bool
+	}{
+		{
+			name:           "Recorded",
+			filterSvcName:  "grpc.testing.TestService",
+			expectRecorded: true,
 		},
-		[]grpc.ServerOption{
-			grpc.StatsHandler(otelgrpc.NewServerHandler(
-				otelgrpc.WithTracerProvider(serverTP),
-				otelgrpc.WithMeterProvider(serverMP),
-				otelgrpc.WithMessageEvents(otelgrpc.ReceivedEvents, otelgrpc.SentEvents)),
-			),
+		{
+			name:           "Dropped",
+			filterSvcName:  "grpc.testing.OtherService",
+			expectRecorded: false,
 		},
-	)
-	ctx, cancel := context.WithCancel(context.Background())
-	defer cancel()
-	doCalls(ctx, client)
+	}
 
-	t.Run("ClientSpans", func(t *testing.T) {
-		checkClientSpans(t, clientSR.Ended(), listener.Addr().String())
-	})
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			clientSR := tracetest.NewSpanRecorder()
+			clientTP := trace.NewTracerProvider(trace.WithSpanProcessor(clientSR))
+			clientMetricReader := metric.NewManualReader()
+			clientMP := metric.NewMeterProvider(metric.WithReader(clientMetricReader))
 
-	t.Run("ClientMetrics", func(t *testing.T) {
-		checkClientMetrics(t, clientMetricReader)
-	})
+			serverSR := tracetest.NewSpanRecorder()
+			serverTP := trace.NewTracerProvider(trace.WithSpanProcessor(serverSR))
+			serverMetricReader := metric.NewManualReader()
+			serverMP := metric.NewMeterProvider(metric.WithReader(serverMetricReader))
 
-	t.Run("ServerSpans", func(t *testing.T) {
-		checkServerSpans(t, serverSR.Ended())
-	})
+			listener, err := net.Listen("tcp", "127.0.0.1:0")
+			require.NoError(t, err, "failed to open port")
+			client := newGrpcTest(t, listener,
+				[]grpc.DialOption{
+					grpc.WithStatsHandler(otelgrpc.NewClientHandler(
+						otelgrpc.WithTracerProvider(clientTP),
+						otelgrpc.WithMeterProvider(clientMP),
+						otelgrpc.WithMessageEvents(otelgrpc.ReceivedEvents, otelgrpc.SentEvents),
+						otelgrpc.WithFilter(filters.ServiceName(tt.filterSvcName))),
+					),
+				},
+				[]grpc.ServerOption{
+					grpc.StatsHandler(otelgrpc.NewServerHandler(
+						otelgrpc.WithTracerProvider(serverTP),
+						otelgrpc.WithMeterProvider(serverMP),
+						otelgrpc.WithMessageEvents(otelgrpc.ReceivedEvents, otelgrpc.SentEvents),
+						otelgrpc.WithFilter(filters.ServiceName(tt.filterSvcName))),
+					),
+				},
+			)
+			ctx, cancel := context.WithCancel(context.Background())
+			defer cancel()
+			doCalls(ctx, client)
 
-	t.Run("ServerMetrics", func(t *testing.T) {
-		checkServerMetrics(t, serverMetricReader)
-	})
+			if tt.expectRecorded {
+				t.Run("ClientSpans", func(t *testing.T) {
+					checkClientSpans(t, clientSR.Ended(), listener.Addr().String())
+				})
+
+				t.Run("ClientMetrics", func(t *testing.T) {
+					checkClientMetrics(t, clientMetricReader)
+				})
+
+				t.Run("ServerSpans", func(t *testing.T) {
+					checkServerSpans(t, serverSR.Ended())
+				})
+
+				t.Run("ServerMetrics", func(t *testing.T) {
+					checkServerMetrics(t, serverMetricReader)
+				})
+			} else {
+				t.Run("ClientSpans", func(t *testing.T) {
+					require.Len(t, clientSR.Ended(), 0)
+				})
+
+				t.Run("ClientMetrics", func(t *testing.T) {
+					rm := metricdata.ResourceMetrics{}
+					err := clientMetricReader.Collect(context.Background(), &rm)
+					assert.NoError(t, err)
+					require.Len(t, rm.ScopeMetrics, 0)
+				})
+
+				t.Run("ServerSpans", func(t *testing.T) {
+					require.Len(t, serverSR.Ended(), 0)
+				})
+
+				t.Run("ServerMetrics", func(t *testing.T) {
+					rm := metricdata.ResourceMetrics{}
+					err := serverMetricReader.Collect(context.Background(), &rm)
+					assert.NoError(t, err)
+					require.Len(t, rm.ScopeMetrics, 0)
+				})
+			}
+		})
+	}
 }
 
 func checkClientSpans(t *testing.T, spans []trace.ReadOnlySpan, addr string) {
