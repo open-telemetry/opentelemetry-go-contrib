@@ -114,7 +114,6 @@ func NewCore(opts ...Option) *Core {
 func (o *Core) Enabled(level zapcore.Level) bool {
 	r := log.Record{}
 	r.SetSeverity(getOTelLevel(level))
-	// should Enabled take the context set on Core?
 	return o.logger.Enabled(context.Background(), r)
 }
 
@@ -143,6 +142,7 @@ func (o *Core) Check(ent zapcore.Entry, ce *zapcore.CheckedEntry) *zapcore.Check
 	return ce
 }
 
+// TODO
 // Write method encodes zap fields to OTel logs and emits them.
 func (o *Core) Write(ent zapcore.Entry, fields []zapcore.Field) error {
 	r := log.Record{}
