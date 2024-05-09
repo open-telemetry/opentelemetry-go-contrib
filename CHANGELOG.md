@@ -36,6 +36,7 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 ### Changed
 
 - Change the scope name for the prometheus bridge to `go.opentelemetry.io/contrib/bridges/prometheus` to match the package. (#5396)
+- Add support for settings additional properties for resource configuration in `go.opentelemetry.io/contrib/config`. (#4832)
 
 ### Fixed
 
