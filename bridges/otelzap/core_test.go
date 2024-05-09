@@ -4,14 +4,28 @@
 package otelzap
 
 import (
+	"context"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
+	"go.uber.org/zap"
+	"go.uber.org/zap/zapcore"
 
+	"go.opentelemetry.io/otel/log"
 	"go.opentelemetry.io/otel/log/global"
 	"go.opentelemetry.io/otel/log/logtest"
 	"go.opentelemetry.io/otel/sdk/instrumentation"
+)
+
+var (
+	testBodyString = "log message"
+	testSeverity   = log.SeverityInfo
+	entry          = zapcore.Entry{
+		Level:   zapcore.InfoLevel,
+		Message: testBodyString,
+	}
+	field = zap.String("key", "testValue")
 )
 
 func TestNewCoreConfiguration(t *testing.T) {
@@ -52,4 +66,59 @@ func TestNewCoreConfiguration(t *testing.T) {
 		got := l.Result()[0]
 		assert.Equal(t, want, got)
 	})
+}
+
+func TestCoreEnabled(t *testing.T) {
+	enabledFunc := func(c context.Context, r log.Record) bool {
+		return r.Severity() >= log.SeverityInfo
+	}
+
+	r := logtest.NewRecorder(logtest.WithEnabledFunc(enabledFunc))
+	r.Reset()
+	zc := NewCore(WithLoggerProvider(r))
+
+	assert.False(t, zc.Enabled(zap.DebugLevel), "level conversion: permissive")
+	assert.True(t, zc.Enabled(zap.InfoLevel), "level conversion: restrictive")
+}
+
+// Test conversion of Zap Level to OTel level.
+func TestGetOTelLevel(t *testing.T) {
+	tests := []struct {
+		level       zapcore.Level
+		expectedSev log.Severity
+	}{
+		{zapcore.DebugLevel, log.SeverityDebug},
+		{zapcore.InfoLevel, log.SeverityInfo},
+		{zapcore.WarnLevel, log.SeverityWarn},
+		{zapcore.ErrorLevel, log.SeverityError},
+		{zapcore.DPanicLevel, log.SeverityFatal1},
+		{zapcore.PanicLevel, log.SeverityFatal2},
+		{zapcore.FatalLevel, log.SeverityFatal3},
+		{zapcore.InvalidLevel, log.SeverityUndefined},
+	}
+
+	for _, test := range tests {
+		result := getOTelLevel(test.level)
+		if result != test.expectedSev {
+			t.Errorf("For level %v, expected %v but got %v", test.level, test.expectedSev, result)
+		}
+	}
+}
+
+// Tests [Core] write method.
+func TestCoreWrite(t *testing.T) {
+	rec := logtest.NewRecorder()
+	zc := NewCore(WithLoggerProvider(rec))
+
+	err := zc.Write(entry, []zap.Field{field})
+	if err != nil {
+		t.Errorf("Error occurred: %v", err)
+	}
+
+	// why is index 1 populated with results and not 0?
+	got := rec.Result()[1].Records[0]
+	assert.Equal(t, testBodyString, got.Body().AsString())
+	assert.Equal(t, testSeverity, got.Severity())
+
+	// TODO test record attributes
 }

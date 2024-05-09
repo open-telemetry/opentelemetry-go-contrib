@@ -6,6 +6,10 @@
 package otelzap // import "go.opentelemetry.io/contrib/bridges/otelzap"
 
 import (
+	"context"
+	"fmt"
+	"slices"
+
 	"go.uber.org/zap/zapcore"
 
 	"go.opentelemetry.io/otel/log"
@@ -92,6 +96,8 @@ func WithLoggerProvider(provider log.LoggerProvider) Option {
 // Core is a [zapcore.Core] that sends logging records to OpenTelemetry.
 type Core struct {
 	logger log.Logger
+	ctx    context.Context
+	attr   []log.KeyValue
 }
 
 // Compile-time check *Core implements zapcore.Core.
@@ -105,16 +111,23 @@ func NewCore(opts ...Option) *Core {
 	}
 }
 
-// TODO
 // LevelEnabler decides whether a given logging level is enabled when logging a message.
 func (o *Core) Enabled(level zapcore.Level) bool {
-	return true
+	r := log.Record{}
+	r.SetSeverity(getOTelLevel(level))
+	// should Enabled take the context set on Core?
+	return o.logger.Enabled(context.Background(), r)
 }
 
 // TODO
 // With adds structured context to the Core.
 func (o *Core) With(fields []zapcore.Field) zapcore.Core {
-	return o
+	clone := o.clone()
+	if len(fields) > 0 {
+		// TODO convert zap fields to otel attributes
+		fmt.Println("TODO")
+	}
+	return clone
 }
 
 // TODO
@@ -123,14 +136,57 @@ func (o *Core) Sync() error {
 	return nil
 }
 
-// TODO
 // Check determines whether the supplied Entry should be logged using core.Enabled method.
 func (o *Core) Check(ent zapcore.Entry, ce *zapcore.CheckedEntry) *zapcore.CheckedEntry {
+	if o.Enabled(ent.Level) {
+		return ce.AddCore(ent, o)
+	}
 	return ce
 }
 
-// TODO
 // Write method encodes zap fields to OTel logs and emits them.
 func (o *Core) Write(ent zapcore.Entry, fields []zapcore.Field) error {
+	r := log.Record{}
+	r.SetTimestamp(ent.Time)
+	r.SetBody(log.StringValue(ent.Message))
+	r.SetSeverity(getOTelLevel(ent.Level))
+
+	if len(fields) > 0 {
+		// TODO map zap field to otel attributes
+		fmt.Println("TODO")
+	} else {
+		r.AddAttributes(o.attr...)
+	}
+
+	o.logger.Emit(context.Background(), r)
 	return nil
+}
+
+func (o *Core) clone() *Core {
+	return &Core{
+		logger: o.logger,
+		attr:   slices.Clone(o.attr),
+	}
+}
+
+// converts zap level to OTel log level.
+func getOTelLevel(level zapcore.Level) log.Severity {
+	switch level {
+	case zapcore.DebugLevel:
+		return log.SeverityDebug
+	case zapcore.InfoLevel:
+		return log.SeverityInfo
+	case zapcore.WarnLevel:
+		return log.SeverityWarn
+	case zapcore.ErrorLevel:
+		return log.SeverityError
+	case zapcore.DPanicLevel:
+		return log.SeverityFatal1
+	case zapcore.PanicLevel:
+		return log.SeverityFatal2
+	case zapcore.FatalLevel:
+		return log.SeverityFatal3
+	default:
+		return log.SeverityUndefined
+	}
 }
