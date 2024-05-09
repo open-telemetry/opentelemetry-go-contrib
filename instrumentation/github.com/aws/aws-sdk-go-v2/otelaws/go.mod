@@ -4,8 +4,8 @@ go 1.21
 
 require (
 	github.com/aws/aws-sdk-go-v2 v1.26.1
-	github.com/aws/aws-sdk-go-v2/service/dynamodb v1.31.1
-	github.com/aws/aws-sdk-go-v2/service/sqs v1.31.4
+	github.com/aws/aws-sdk-go-v2/service/dynamodb v1.32.1
+	github.com/aws/aws-sdk-go-v2/service/sqs v1.32.0
 	github.com/aws/smithy-go v1.20.2
 	github.com/stretchr/testify v1.9.0
 	go.opentelemetry.io/otel v1.26.0
