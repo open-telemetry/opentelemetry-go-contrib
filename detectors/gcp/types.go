@@ -28,4 +28,6 @@ type gcpDetector interface {
 	GCEHostName() (string, error)
 	GCEInstanceHostname() (string, error)
 	GCEInstanceName() (string, error)
+	CloudRunJobExecution() (string, error)
+	CloudRunJobTaskIndex() (string, error)
 }
