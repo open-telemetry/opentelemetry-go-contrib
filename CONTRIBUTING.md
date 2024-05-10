@@ -12,7 +12,7 @@ You will need to sign the [CNCF CLA](https://identity.linuxfoundation.org/projec
 ## Becoming a Code Owner
 
 To ensure code that lives in this repository is not abandoned, all modules added are required to have a Code Owner.
-A Code Owner is responsible for a module within this respository.
+A Code Owner is responsible for a module within this repository.
 This status is identified in the [CODEOWNERS file](./CODEOWNERS).
 That responsibility includes maintaining the component, triaging and responding to issues, and reviewing pull requests.
 
