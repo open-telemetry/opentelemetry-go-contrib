@@ -6,20 +6,24 @@ package test
 import (
 	"bytes"
 	"context"
+	"crypto/sha256"
+	"encoding/base64"
+	"fmt"
 	"net/http"
 	"net/http/httptest"
 	"net/http/httptrace"
+	"slices"
 	"testing"
 	"time"
 
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
-
 	"go.opentelemetry.io/contrib/instrumentation/net/http/httptrace/otelhttptrace"
 	"go.opentelemetry.io/otel"
 	"go.opentelemetry.io/otel/attribute"
 	"go.opentelemetry.io/otel/sdk/trace"
 	"go.opentelemetry.io/otel/sdk/trace/tracetest"
+	semconv "go.opentelemetry.io/otel/semconv/v1.24.0"
 )
 
 func getSpanFromRecorder(sr *tracetest.SpanRecorder, name string) (trace.ReadOnlySpan, bool) {
@@ -48,7 +52,7 @@ func TestHTTPRequestWithClientTrace(t *testing.T) {
 	tr := tp.Tracer("httptrace/client")
 
 	// Mock http server
-	ts := httptest.NewServer(
+	ts := httptest.NewTLSServer(
 		http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		}),
 	)
@@ -79,6 +83,21 @@ func TestHTTPRequestWithClientTrace(t *testing.T) {
 		attributes []attribute.KeyValue
 		parent     string
 	}{
+		{
+			name: "http.tls",
+			attributes: []attribute.KeyValue{
+				attribute.Key("tls.server.certificate_chain").StringSlice(
+					[]string{base64.StdEncoding.EncodeToString(ts.Certificate().Raw)},
+				),
+				attribute.Key("tls.server.hash.sha256").
+					String(fmt.Sprintf("%X", sha256.Sum256(ts.Certificate().Raw))),
+				attribute.Key("tls.server.not_after").
+					String(ts.Certificate().NotAfter.UTC().Format(time.RFC3339)),
+				attribute.Key("tls.server.not_before").
+					String(ts.Certificate().NotBefore.UTC().Format(time.RFC3339)),
+			},
+			parent: "http.getconn",
+		},
 		{
 			name: "http.connect",
 			attributes: []attribute.KeyValue{
@@ -115,7 +134,7 @@ func TestHTTPRequestWithClientTrace(t *testing.T) {
 			name: "test",
 		},
 	}
-	for _, tl := range testLen {
+	for i, tl := range testLen {
 		span, ok := getSpanFromRecorder(sr, tl.name)
 		if !assert.True(t, ok) {
 			continue
@@ -141,6 +160,20 @@ func TestHTTPRequestWithClientTrace(t *testing.T) {
 					}
 				}
 				assert.True(t, contains, "missing http.local attribute")
+			}
+			if tl.name == "http.tls" {
+				if i == 0 {
+					tl.attributes = append(tl.attributes, attribute.Key("tls.resumed").Bool(false))
+				} else {
+					tl.attributes = append(tl.attributes, attribute.Key("tls.resumed").Bool(true))
+				}
+				attrs = slices.DeleteFunc(attrs, func(a attribute.KeyValue) bool {
+					// Skip keys that are unable to be detected beforehand.
+					if a.Key == semconv.TLSCipherKey || a.Key == semconv.TLSProtocolVersionKey {
+						return true
+					}
+					return false
+				})
 			}
 			assert.ElementsMatch(t, tl.attributes, attrs)
 		}

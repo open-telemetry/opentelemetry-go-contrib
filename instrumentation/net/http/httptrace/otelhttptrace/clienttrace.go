@@ -5,16 +5,20 @@ package otelhttptrace // import "go.opentelemetry.io/contrib/instrumentation/net
 
 import (
 	"context"
+	"crypto/sha256"
 	"crypto/tls"
+	"encoding/base64"
+	"fmt"
 	"net/http/httptrace"
 	"net/textproto"
 	"strings"
 	"sync"
+	"time"
 
 	"go.opentelemetry.io/otel"
 	"go.opentelemetry.io/otel/attribute"
 	"go.opentelemetry.io/otel/codes"
-	semconv "go.opentelemetry.io/otel/semconv/v1.20.0"
+	semconv "go.opentelemetry.io/otel/semconv/v1.24.0"
 	"go.opentelemetry.io/otel/trace"
 )
 
@@ -262,7 +266,7 @@ func (ct *clientTracer) span(hook string) trace.Span {
 }
 
 func (ct *clientTracer) getConn(host string) {
-	ct.start("http.getconn", "http.getconn", semconv.NetHostName(host))
+	ct.start("http.getconn", "http.getconn", attribute.Key("net.host.name").String(host))
 }
 
 func (ct *clientTracer) gotConn(info httptrace.GotConnInfo) {
@@ -287,7 +291,7 @@ func (ct *clientTracer) gotFirstResponseByte() {
 }
 
 func (ct *clientTracer) dnsStart(info httptrace.DNSStartInfo) {
-	ct.start("http.dns", "http.dns", semconv.NetHostName(info.Host))
+	ct.start("http.dns", "http.dns", attribute.Key("net.host.name").String(info.Host))
 }
 
 func (ct *clientTracer) dnsDone(info httptrace.DNSDoneInfo) {
@@ -316,8 +320,29 @@ func (ct *clientTracer) tlsHandshakeStart() {
 	ct.start("http.tls", "http.tls")
 }
 
-func (ct *clientTracer) tlsHandshakeDone(_ tls.ConnectionState, err error) {
-	ct.end("http.tls", err)
+func (ct *clientTracer) tlsHandshakeDone(state tls.ConnectionState, err error) {
+	attrs := make([]attribute.KeyValue, 0, 7)
+	attrs = append(attrs,
+		semconv.TLSCipher(tls.CipherSuiteName(state.CipherSuite)),
+		semconv.TLSProtocolVersion(tls.VersionName(state.Version)),
+		semconv.TLSResumed(state.DidResume),
+	)
+
+	if len(state.PeerCertificates) > 0 {
+		certChain := make([]string, len(state.PeerCertificates))
+		for i, cert := range state.PeerCertificates {
+			certChain[i] = base64.StdEncoding.EncodeToString(cert.Raw)
+		}
+
+		leafCert := state.PeerCertificates[0]
+		attrs = append(attrs,
+			semconv.TLSServerCertificateChain(certChain...),
+			semconv.TLSServerHashSha256(fmt.Sprintf("%X", sha256.Sum256(leafCert.Raw))),
+			semconv.TLSServerNotAfter(leafCert.NotAfter.UTC().Format(time.RFC3339)),
+			semconv.TLSServerNotBefore(leafCert.NotBefore.UTC().Format(time.RFC3339)),
+		)
+	}
+	ct.end("http.tls", err, attrs...)
 }
 
 func (ct *clientTracer) wroteHeaderField(k string, v []string) {

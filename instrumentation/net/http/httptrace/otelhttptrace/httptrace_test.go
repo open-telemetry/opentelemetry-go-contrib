@@ -5,6 +5,7 @@ package otelhttptrace_test
 
 import (
 	"context"
+	"net"
 	"net/http"
 	"net/http/httptest"
 	"strings"
@@ -30,7 +31,7 @@ func TestRoundtrip(t *testing.T) {
 	props := otelhttptrace.WithPropagators(propagation.NewCompositeTextMapPropagator(propagation.TraceContext{}, propagation.Baggage{}))
 
 	// Mock http server
-	ts := httptest.NewServer(
+	ts := httptest.NewTLSServer(
 		http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 			attrs, corrs, span := otelhttptrace.Extract(r.Context(), r, props)
 
@@ -69,16 +70,16 @@ func TestRoundtrip(t *testing.T) {
 	defer ts.Close()
 
 	address := ts.Listener.Addr()
-	hp := strings.Split(address.String(), ":")
+	host, port, _ := net.SplitHostPort(address.String())
 	expectedAttrs = map[attribute.Key]string{
-		semconv.NetHostNameKey:              hp[0],
-		semconv.NetHostPortKey:              hp[1],
+		semconv.NetHostNameKey:              host,
+		semconv.NetHostPortKey:              port,
 		semconv.NetProtocolVersionKey:       "1.1",
 		semconv.HTTPMethodKey:               "GET",
-		semconv.HTTPSchemeKey:               "http",
+		semconv.HTTPSchemeKey:               "https",
 		semconv.HTTPTargetKey:               "/",
 		semconv.HTTPRequestContentLengthKey: "3",
-		semconv.NetSockPeerAddrKey:          hp[0],
+		semconv.NetSockPeerAddrKey:          host,
 		semconv.NetTransportKey:             "ip_tcp",
 		semconv.UserAgentOriginalKey:        "Go-http-client/1.1",
 	}
