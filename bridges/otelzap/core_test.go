@@ -4,7 +4,6 @@
 package otelzap
 
 import (
-	"context"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
@@ -21,11 +20,7 @@ import (
 var (
 	testBodyString = "log message"
 	testSeverity   = log.SeverityInfo
-	entry          = zapcore.Entry{
-		Level:   zapcore.InfoLevel,
-		Message: testBodyString,
-	}
-	field = zap.String("key", "testValue")
+	testField      = zap.String("key", "testValue")
 )
 
 func TestNewCoreConfiguration(t *testing.T) {
@@ -68,18 +63,6 @@ func TestNewCoreConfiguration(t *testing.T) {
 	})
 }
 
-func TestCoreEnabled(t *testing.T) {
-	enabledFunc := func(c context.Context, r log.Record) bool {
-		return r.Severity() >= log.SeverityInfo
-	}
-
-	r := logtest.NewRecorder(logtest.WithEnabledFunc(enabledFunc))
-	zc := NewCore(WithLoggerProvider(r))
-
-	assert.False(t, zc.Enabled(zap.DebugLevel), "level conversion: permissive")
-	assert.True(t, zc.Enabled(zap.InfoLevel), "level conversion: restrictive")
-}
-
 // Test conversion of Zap Level to OTel level.
 func TestGetOTelLevel(t *testing.T) {
 	tests := []struct {
@@ -110,10 +93,8 @@ func TestCore(t *testing.T) {
 	zc := NewCore(WithLoggerProvider(rec))
 
 	t.Run("test Write method of Core", func(t *testing.T) {
-		err := zc.Write(entry, []zap.Field{field})
-		if err != nil {
-			t.Errorf("Error occurred: %v", err)
-		}
+		logger := zap.New(zc)
+		logger.Info(testBodyString, testField)
 
 		// why is index 1 populated with results and not 0?
 		got := rec.Result()[1].Records[0]
@@ -124,14 +105,4 @@ func TestCore(t *testing.T) {
 
 		rec.Reset()
 	})
-
-	t.Run("test With method of Core", func(t *testing.T) {
-		childCore := zc.With([]zap.Field{field})
-		assert.Equal(t, childCore, zc)
-
-		// TODO test record attributes
-
-		rec.Reset()
-	})
-
 }

@@ -8,7 +8,6 @@ package otelzap // import "go.opentelemetry.io/contrib/bridges/otelzap"
 import (
 	"context"
 	"fmt"
-	"slices"
 
 	"go.uber.org/zap/zapcore"
 
@@ -96,7 +95,6 @@ func WithLoggerProvider(provider log.LoggerProvider) Option {
 // Core is a [zapcore.Core] that sends logging records to OpenTelemetry.
 type Core struct {
 	logger log.Logger
-	attr   []log.KeyValue
 }
 
 // Compile-time check *Core implements zapcore.Core.
@@ -110,22 +108,16 @@ func NewCore(opts ...Option) *Core {
 	}
 }
 
+// TODO
 // LevelEnabler decides whether a given logging level is enabled when logging a message.
 func (o *Core) Enabled(level zapcore.Level) bool {
-	r := log.Record{}
-	r.SetSeverity(getOTelLevel(level))
-	return o.logger.Enabled(context.Background(), r)
+	return true
 }
 
 // TODO
 // With adds structured context to the Core.
 func (o *Core) With(fields []zapcore.Field) zapcore.Core {
-	clone := o.clone()
-	if len(fields) > 0 {
-		// TODO convert zap fields to otel attributes
-		fmt.Println("TODO")
-	}
-	return clone
+	return o
 }
 
 // TODO
@@ -134,12 +126,10 @@ func (o *Core) Sync() error {
 	return nil
 }
 
+// TODO
 // Check determines whether the supplied Entry should be logged using core.Enabled method.
 func (o *Core) Check(ent zapcore.Entry, ce *zapcore.CheckedEntry) *zapcore.CheckedEntry {
-	if o.Enabled(ent.Level) {
-		return ce.AddCore(ent, o)
-	}
-	return ce
+	return ce.AddCore(ent, o)
 }
 
 // TODO
@@ -149,22 +139,15 @@ func (o *Core) Write(ent zapcore.Entry, fields []zapcore.Field) error {
 	r.SetTimestamp(ent.Time)
 	r.SetBody(log.StringValue(ent.Message))
 	r.SetSeverity(getOTelLevel(ent.Level))
-
+	fmt.Println(ent, fields)
 	// TODO: Handle attributes passed via fields (exceptions: context.Context and zap.Namespace).
 	// TODO: Handle attributes passed via With (exceptions: context.Context and zap.Namespace).
-	// TODO: Handle context.Context containg trace context.
+	// TODO: Handle context.Context containing trace context.
 	// TODO: Handle zap.Namespace.
 	// TODO: Handle logger name.
-
+	fmt.Println(r)
 	o.logger.Emit(context.Background(), r)
 	return nil
-}
-
-func (o *Core) clone() *Core {
-	return &Core{
-		logger: o.logger,
-		attr:   slices.Clone(o.attr),
-	}
 }
 
 // converts zap level to OTel log level.
