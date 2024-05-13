@@ -7,7 +7,6 @@ package otelzap // import "go.opentelemetry.io/contrib/bridges/otelzap"
 
 import (
 	"context"
-	"fmt"
 
 	"go.uber.org/zap/zapcore"
 
@@ -141,13 +140,11 @@ func (o *Core) Write(ent zapcore.Entry, fields []zapcore.Field) error {
 	r.SetTimestamp(ent.Time)
 	r.SetBody(log.StringValue(ent.Message))
 	r.SetSeverity(getOTelLevel(ent.Level))
-	fmt.Println(ent, fields)
 	// TODO: Handle attributes passed via fields (exceptions: context.Context and zap.Namespace).
 	// TODO: Handle attributes passed via With (exceptions: context.Context and zap.Namespace).
 	// TODO: Handle context.Context containing trace context.
 	// TODO: Handle zap.Namespace.
 	// TODO: Handle logger name.
-	fmt.Println(r)
 	o.logger.Emit(context.Background(), r)
 	return nil
 }
