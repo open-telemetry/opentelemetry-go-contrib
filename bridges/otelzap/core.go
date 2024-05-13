@@ -150,12 +150,11 @@ func (o *Core) Write(ent zapcore.Entry, fields []zapcore.Field) error {
 	r.SetBody(log.StringValue(ent.Message))
 	r.SetSeverity(getOTelLevel(ent.Level))
 
-	if len(fields) > 0 {
-		// TODO map zap field to otel attributes
-		fmt.Println("TODO")
-	} else {
-		r.AddAttributes(o.attr...)
-	}
+	// TODO: Handle attributes passed via fields (exceptions: context.Context and zap.Namespace).
+	// TODO: Handle attributes passed via With (exceptions: context.Context and zap.Namespace).
+	// TODO: Handle context.Context containg trace context.
+	// TODO: Handle zap.Namespace.
+	// TODO: Handle logger name.
 
 	o.logger.Emit(context.Background(), r)
 	return nil
