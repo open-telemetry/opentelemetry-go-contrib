@@ -82,7 +82,6 @@ Approvers:
 - [Sam Xie](https://github.com/XSAM), Cisco/AppDynamics
 - [Chester Cheung](https://github.com/hanyuancheung), Tencent
 - [Damien Mathieu](https://github.com/dmathieu), Elastic
-- [Anthony Mirabella](https://github.com/Aneurysm9), Amazon
 
 Maintainers:
 
@@ -94,6 +93,7 @@ Maintainers:
 Emeritus:
 
 - [Gustavo Silva Paiva](https://github.com/paivagustavo), LightStep
+- [Anthony Mirabella](https://github.com/Aneurysm9), Amazon
 
 ### Become an Approver or a Maintainer
 
