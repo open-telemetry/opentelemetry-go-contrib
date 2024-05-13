@@ -24,9 +24,9 @@ To become a Code Owner, you will need to meet the following requirements.
 2. You need to have good working knowledge of the code you are sponsoring and any project that that code instruments or is based on.
 
 If you are not an existing member, this is not an imediate disqualification.
-You will need to engate with the OpenTelemetry community so you can achieve this membership in the process of becoming a Code Owner.
+You will need to engage with the OpenTelemetry community so you can achieve this membership in the process of becoming a Code Owner.
 
-It is best to have resolved an issue related to the module, contributed directly to the module, and/or review module PRs.
+It is best to have resolved an issue related to the module, contributed directly to the module, and/or reviewed module PRs.
 How much interaction with the module is required before becoming a Code Owner is up to the existing Code Owners.
 
 Code Ownership is ultimately up to the judgement of the existing Code Owners and Maintainers of this repository.
@@ -36,7 +36,7 @@ Meeting the above requirements is not a guarantee to be granted Code Ownership.
 
 ### Responsibilities
 
-As a Code Owner you will be responsible for the following.
+As a Code Owner you will be responsible for the following:
 
 - You will be responsible for keeping up with the instrumented library. Any "upstream" changes that impact this module need to be proactively handle by you.
 - You will be expected to review any Pull Requests or Issues created that relate to this module.
