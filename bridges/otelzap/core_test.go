@@ -96,7 +96,7 @@ func TestCore(t *testing.T) {
 		logger := zap.New(zc)
 		logger.Info(testBodyString, testField)
 
-		// why is index 1 populated with results and not 0?
+		// not sure index 1 populated with results and not 0
 		got := rec.Result()[1].Records[0]
 		assert.Equal(t, testBodyString, got.Body().AsString())
 		assert.Equal(t, testSeverity, got.Severity())
