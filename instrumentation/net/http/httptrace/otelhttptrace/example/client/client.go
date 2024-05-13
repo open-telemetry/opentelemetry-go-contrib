@@ -58,12 +58,7 @@ func main() {
 	flag.Parse()
 
 	client := http.Client{
-		Transport: otelhttp.NewTransport(
-			http.DefaultTransport,
-			otelhttp.WithClientTrace(func(ctx context.Context) *httptrace.ClientTrace {
-				return otelhttptrace.NewClientTrace(ctx)
-			}),
-		),
+		Transport: otelhttp.NewTransport(http.DefaultTransport),
 	}
 
 	bag, _ := baggage.Parse("username=donuts")
