@@ -126,10 +126,12 @@ func (o *Core) Sync() error {
 	return nil
 }
 
-// TODO
 // Check determines whether the supplied Entry should be logged using core.Enabled method.
 func (o *Core) Check(ent zapcore.Entry, ce *zapcore.CheckedEntry) *zapcore.CheckedEntry {
-	return ce.AddCore(ent, o)
+	if o.Enabled(ent.Level) {
+		return ce.AddCore(ent, o)
+	}
+	return ce
 }
 
 // TODO
