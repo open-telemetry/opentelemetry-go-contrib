@@ -101,8 +101,6 @@ func TestCore(t *testing.T) {
 		assert.Equal(t, testBodyString, got.Body().AsString())
 		assert.Equal(t, testSeverity, got.Severity())
 
-		// TODO test record attributes
-
 		rec.Reset()
 	})
 }
