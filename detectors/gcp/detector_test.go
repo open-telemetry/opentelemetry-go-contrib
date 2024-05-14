@@ -130,6 +130,28 @@ func TestDetect(t *testing.T) {
 			),
 		},
 		{
+			desc: "Cloud Run Job Bad Index",
+			detector: &detector{detector: &fakeGCPDetector{
+				projectID:            "my-project",
+				cloudPlatform:        gcp.CloudRunJob,
+				faaSID:               "1472385723456792345",
+				faaSCloudRegion:      "us-central1",
+				faaSName:             "my-service",
+				cloudRunJobExecution: "my-service-ekdih",
+				cloudRunJobTaskIndex: "bad-value",
+			}},
+			expectedResource: resource.NewWithAttributes(semconv.SchemaURL,
+				semconv.CloudProviderGCP,
+				semconv.CloudAccountID("my-project"),
+				semconv.CloudPlatformGCPCloudRun,
+				semconv.CloudRegion("us-central1"),
+				semconv.FaaSName("my-service"),
+				semconv.GCPCloudRunJobExecution("my-service-ekdih"),
+				semconv.FaaSInstance("1472385723456792345"),
+			),
+			expectErr: true,
+		},
+		{
 			desc: "Cloud Functions",
 			detector: &detector{detector: &fakeGCPDetector{
 				projectID:       "my-project",
