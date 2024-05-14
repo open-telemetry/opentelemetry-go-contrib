@@ -60,6 +60,9 @@ func main() {
 	client := http.Client{
 		Transport: otelhttp.NewTransport(
 			http.DefaultTransport,
+			// By setting the otelhttptrace client in this transport, it can be
+			// injected into the context after the span is started, which makes the
+			// httptrace spans childs of the transport one.
 			otelhttp.WithClientTrace(func(ctx context.Context) *httptrace.ClientTrace {
 				return otelhttptrace.NewClientTrace(ctx)
 			}),
