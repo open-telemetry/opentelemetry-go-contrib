@@ -187,18 +187,20 @@ func parseOTelTraceState(ts string, isSampled bool) (otelTraceState, error) { //
 	return otts, nil
 }
 
-func parseNumber(key string, input string, maximum uint8) (uint8, error) {
+// Here`strconv.ParseInt` is used to parse the input string into an integer. The bit size is specified as 8, which is the bit size of `int8`. The parsed value is then checked against the maximum value, and if it's greater, an error is returned. If the parsed value is within the allowed range, it's returned as an `int8` value.
+
+func parseNumber(key string, input string, maximum int8) (int8, error) {
 	if input == "" {
 		return maximum + 1, nil
 	}
-	value, err := strconv.ParseUint(input, 10, 64)
+	value, err := strconv.ParseInt(input, 10, 8)
 	if err != nil {
 		return maximum + 1, parseError(key, err)
 	}
-	if value > uint64(maximum) {
+	if value > int64(maximum) {
 		return maximum + 1, parseError(key, strconv.ErrRange)
 	}
-	return uint8(value), nil
+	return int8(value), nil
 }
 
 func parseError(key string, err error) error {
