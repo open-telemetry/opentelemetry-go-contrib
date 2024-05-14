@@ -58,7 +58,12 @@ func main() {
 	flag.Parse()
 
 	client := http.Client{
-		Transport: otelhttp.NewTransport(http.DefaultTransport),
+		Transport: otelhttp.NewTransport(
+			http.DefaultTransport,
+			otelhttp.WithClientTrace(func(ctx context.Context) *httptrace.ClientTrace {
+				return otelhttptrace.NewClientTrace(ctx)
+			}),
+		),
 	}
 
 	bag, _ := baggage.Parse("username=donuts")
@@ -71,7 +76,6 @@ func main() {
 		ctx, span := tr.Start(ctx, "say hello", trace.WithAttributes(semconv.PeerService("ExampleService")))
 		defer span.End()
 
-		ctx = httptrace.WithClientTrace(ctx, otelhttptrace.NewClientTrace(ctx))
 		req, _ := http.NewRequestWithContext(ctx, "GET", *url, nil)
 
 		fmt.Printf("Sending request...\n")
