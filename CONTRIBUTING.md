@@ -9,7 +9,7 @@ Before you start please be sure to read through these contributing requirements 
 All contributions to this project MUST be licensed under this project's [license](LICENSE).
 You will need to sign the [CNCF CLA](https://identity.linuxfoundation.org/projects/cncf) before your contributions will be accepted.
 
-## Becoming a Code Owner
+## Code Owners
 
 To ensure code that lives in this repository is not abandoned, all modules added are required to have a Code Owner.
 A Code Owner is responsible for a module within this repository.
@@ -46,6 +46,16 @@ As a Code Owner you will be responsible for the following:
 ### How to become a Code Owner
 
 To become a Code Owner, open [an Issue](https://github.com/open-telemetry/opentelemetry-go-contrib/issues/new?assignees=&labels=&projects=&template=owner.md&title=).
+
+### Removing Code Ownership
+
+Code Owners are expected to remove their ownership if they cannot fulfill their responsibilities anymore.
+
+It is at the discretion of the repository Maintainers and fellow Code Owners to decide if a Code Owner should be considered for removal.
+If a Code Owner is determined to be unable to perform their duty, a repository Maintainer will remove their ownership.
+
+Inactivity greater than 5 months, during which time there are active Issues or Pull Requests to address, is deemed an automatic disqualification from being a Code Owner.
+A repository Maintainer may remove an Code Owner inactive for this length. 
 
 ## Filing Issues
 
