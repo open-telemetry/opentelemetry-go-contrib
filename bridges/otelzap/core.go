@@ -138,12 +138,14 @@ func (o *Core) Write(ent zapcore.Entry, fields []zapcore.Field) error {
 	r := log.Record{}
 	r.SetTimestamp(ent.Time)
 	r.SetBody(log.StringValue(ent.Message))
-	r.SetSeverity(getOTelLevel(ent.Level))
+	r.SetSeverity(convertLevel(ent.Level))
+
 	// TODO: Handle attributes passed via fields (exceptions: context.Context and zap.Namespace).
 	// TODO: Handle attributes passed via With (exceptions: context.Context and zap.Namespace).
 	// TODO: Handle context.Context containing trace context.
 	// TODO: Handle zap.Namespace.
 	// TODO: Handle logger name.
+
 	o.logger.Emit(context.Background(), r)
 	return nil
 }

@@ -80,7 +80,7 @@ func TestGetOTelLevel(t *testing.T) {
 	}
 
 	for _, test := range tests {
-		result := getOTelLevel(test.level)
+		result := convertLevel(test.level)
 		if result != test.expectedSev {
 			t.Errorf("For level %v, expected %v but got %v", test.level, test.expectedSev, result)
 		}
@@ -93,14 +93,13 @@ func TestCore(t *testing.T) {
 	zc := NewCore(WithLoggerProvider(rec))
 
 	t.Run("test Write method of Core", func(t *testing.T) {
+		defer rec.Reset()
 		logger := zap.New(zc)
 		logger.Info(testBodyString, testField)
 
-		// not sure index 1 populated with results and not 0
+		// not sure why index 1 is populated with results and not 0
 		got := rec.Result()[1].Records[0]
 		assert.Equal(t, testBodyString, got.Body().AsString())
 		assert.Equal(t, testSeverity, got.Severity())
-
-		rec.Reset()
 	})
 }
