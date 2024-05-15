@@ -146,7 +146,7 @@ func (o *Core) Write(ent zapcore.Entry, fields []zapcore.Field) error {
 	// TODO: Handle zap.Namespace.
 	// TODO: Handle zap.Object.
 	// TODO: Handle zap.Array.
-	// TODO: Handle logger name.
+	// TODO: Handle ent.LoggerName.
 
 	o.logger.Emit(context.Background(), r)
 	return nil
