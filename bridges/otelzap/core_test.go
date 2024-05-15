@@ -26,7 +26,7 @@ func TestCore(t *testing.T) {
 
 	logger.Info(testMessage)
 
-	// TODO: not sure why index 1 is populated with results and not 0
+	// TODO (#5580): Not sure why index 1 is populated with results and not 0.
 	got := rec.Result()[1].Records[0]
 	assert.Equal(t, testMessage, got.Body().AsString())
 	assert.Equal(t, log.SeverityInfo, got.Severity())
