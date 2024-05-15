@@ -1,12 +1,13 @@
 module go.opentelemetry.io/contrib/detectors/aws/eks
 
 go 1.21
+toolchain go1.22.2
 
 require (
 	github.com/stretchr/testify v1.9.0
 	go.opentelemetry.io/otel v1.26.0
 	go.opentelemetry.io/otel/sdk v1.26.0
-	k8s.io/apimachinery v0.29.4
+	k8s.io/apimachinery v0.30.1
 	k8s.io/client-go v0.29.4
 )
 
