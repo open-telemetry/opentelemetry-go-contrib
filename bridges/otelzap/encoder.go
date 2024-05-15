@@ -16,9 +16,10 @@ var _ zapcore.ObjectEncoder = (*objectEncoder)(nil)
 // objectEncoder implements zapcore.ObjectEncoder.
 // It encodes given fields to OTel key-values.
 type objectEncoder struct {
-	kv []log.KeyValue
+	kv []log.KeyValue // nolint:unused
 }
 
+// nolint:unused
 func newObjectEncoder(len int) *objectEncoder {
 	keyval := make([]log.KeyValue, 0, len)
 
@@ -28,74 +29,71 @@ func newObjectEncoder(len int) *objectEncoder {
 }
 
 // TODO
-// Converts Array to log.Slice using ArrayEncoder.
+// AddArray converts array to log.Slice using ArrayEncoder.
 func (m *objectEncoder) AddArray(key string, v zapcore.ArrayMarshaler) error {
 	return nil
 }
 
 // TODO
-// Converts Object to log.Map.
+// AddObject converts object to log.Map using ObjectEncoder.
 func (m *objectEncoder) AddObject(k string, v zapcore.ObjectMarshaler) error {
 	return nil
 }
 
 // TODO
-// Converts Binary to log.Bytes.
+// AddBinary converts binary to log.Bytes.
 func (m *objectEncoder) AddBinary(k string, v []byte) {
 }
 
 // TODO
-// Converts ByteString to log.String.
+// AddByteString converts byte to log.String.
 func (m *objectEncoder) AddByteString(k string, v []byte) {
 }
 
 // TODO
-// Converts Bool to log.Bool.
+// AddBool converts bool to log.Bool.
 func (m *objectEncoder) AddBool(k string, v bool) {
 }
 
 // TODO
-// Converts Duration to log.Int.
+// AddDuration converts duration to log.Int.
 func (m *objectEncoder) AddDuration(k string, v time.Duration) {
 }
 
 // TODO
-// Converts Complex128 to log.String.
 func (m *objectEncoder) AddComplex128(k string, v complex128) {
 }
 
 // TODO
-// Converts Float64 to log.Float64.
+// AddFloat64 converts float64 to log.Float64.
 func (m *objectEncoder) AddFloat64(k string, v float64) {
 }
 
 // TODO
-// Converts Float32 to log.Float64.
+// AddFloat32 converts float32 to log.Float64.
 func (m *objectEncoder) AddFloat32(k string, v float32) {
 }
 
 // TODO
-// Converts Int64 to logInt64.
+// AddInt64 converts int64 to log.Int64.
 func (m *objectEncoder) AddInt64(k string, v int64) {
 }
 
 // TODO
-// Converts Int to logInt.
+// AddInt converts int to log.Int.
 func (m *objectEncoder) AddInt(k string, v int) {
 }
 
 // TODO
-// Converts String to logString.
+// AddString converts string to log.String.
 func (m *objectEncoder) AddString(k string, v string) {
 }
 
 // TODO
-// Converts Uint64 to logInt64/logString.
 func (m *objectEncoder) AddUint64(k string, v uint64) {
 }
 
 // TODO
-// Converts all non-primitive types to JSON string.
 func (m *objectEncoder) AddReflected(k string, v interface{}) error {
 	return nil
 }
