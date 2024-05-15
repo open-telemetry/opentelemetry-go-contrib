@@ -17,9 +17,8 @@ import (
 	"go.opentelemetry.io/otel/sdk/instrumentation"
 )
 
-var testMessage = "log message"
-
 func TestCore(t *testing.T) {
+	testMessage := "log message"
 	rec := logtest.NewRecorder()
 	zc := NewCore(WithLoggerProvider(rec))
 	logger := zap.New(zc)
