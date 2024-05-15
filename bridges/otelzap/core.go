@@ -148,8 +148,7 @@ func (o *Core) Write(ent zapcore.Entry, fields []zapcore.Field) error {
 	return nil
 }
 
-// converts zap level to OTel log level.
-func getOTelLevel(level zapcore.Level) log.Severity {
+func convertLevel(level zapcore.Level) log.Severity {
 	switch level {
 	case zapcore.DebugLevel:
 		return log.SeverityDebug
