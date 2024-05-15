@@ -18,10 +18,21 @@ import (
 )
 
 var (
-	testBodyString = "log message"
-	testSeverity   = log.SeverityInfo
-	testField      = zap.String("key", "testValue")
+	testMessage = "log message"
 )
+
+func TestCore(t *testing.T) {
+	rec := logtest.NewRecorder()
+	zc := NewCore(WithLoggerProvider(rec))
+	logger := zap.New(zc)
+
+	logger.Info(testMessage)
+
+	// TODO: not sure why index 1 is populated with results and not 0
+	got := rec.Result()[1].Records[0]
+	assert.Equal(t, testMessage, got.Body().AsString())
+	assert.Equal(t, log.SeverityInfo, got.Severity())
+}
 
 func TestNewCoreConfiguration(t *testing.T) {
 	t.Run("Default", func(t *testing.T) {
@@ -63,8 +74,7 @@ func TestNewCoreConfiguration(t *testing.T) {
 	})
 }
 
-// Test conversion of Zap Level to OTel level.
-func TestGetOTelLevel(t *testing.T) {
+func TestConvertLevel(t *testing.T) {
 	tests := []struct {
 		level       zapcore.Level
 		expectedSev log.Severity
@@ -85,21 +95,4 @@ func TestGetOTelLevel(t *testing.T) {
 			t.Errorf("For level %v, expected %v but got %v", test.level, test.expectedSev, result)
 		}
 	}
-}
-
-// Tests [Core] write method.
-func TestCore(t *testing.T) {
-	rec := logtest.NewRecorder()
-	zc := NewCore(WithLoggerProvider(rec))
-
-	t.Run("test Write method of Core", func(t *testing.T) {
-		defer rec.Reset()
-		logger := zap.New(zc)
-		logger.Info(testBodyString, testField)
-
-		// not sure why index 1 is populated with results and not 0
-		got := rec.Result()[1].Records[0]
-		assert.Equal(t, testBodyString, got.Body().AsString())
-		assert.Equal(t, testSeverity, got.Severity())
-	})
 }
