@@ -18,8 +18,8 @@ TIMEOUT = 60
 .DEFAULT_GOAL := precommit
 
 .PHONY: precommit ci
-precommit: generate dependabot-generate license-check misspell go-mod-tidy golangci-lint-fix test-default
-ci: generate dependabot-check license-check lint vanity-import-check build test-default check-clean-work-tree test-coverage
+precommit: generate license-check misspell go-mod-tidy golangci-lint-fix test-default
+ci: generate license-check lint vanity-import-check build test-default check-clean-work-tree test-coverage
 
 # Tools
 
@@ -51,9 +51,6 @@ $(TOOLS)/porto: PACKAGE=github.com/jcchavezs/porto/cmd/porto
 MULTIMOD = $(TOOLS)/multimod
 $(MULTIMOD): PACKAGE=go.opentelemetry.io/build-tools/multimod
 
-DBOTCONF = $(TOOLS)/dbotconf
-$(TOOLS)/dbotconf: PACKAGE=go.opentelemetry.io/build-tools/dbotconf
-
 CROSSLINK = $(TOOLS)/crosslink
 $(CROSSLINK): PACKAGE=go.opentelemetry.io/build-tools/crosslink
 
@@ -69,7 +66,7 @@ $(GOJSONSCHEMA): PACKAGE=github.com/atombender/go-jsonschema
 GOVULNCHECK = $(TOOLS)/govulncheck
 $(GOVULNCHECK): PACKAGE=golang.org/x/vuln/cmd/govulncheck
 
-tools: $(GOLANGCI_LINT) $(MISSPELL) $(GOCOVMERGE) $(STRINGER) $(PORTO) $(MULTIMOD) $(DBOTCONF) $(CROSSLINK) $(GOTMPL) $(GORELEASE) $(GOJSONSCHEMA) $(GOVULNCHECK)
+tools: $(GOLANGCI_LINT) $(MISSPELL) $(GOCOVMERGE) $(STRINGER) $(PORTO) $(MULTIMOD) $(CROSSLINK) $(GOTMPL) $(GORELEASE) $(GOJSONSCHEMA) $(GOVULNCHECK)
 
 # Generate
 
@@ -188,15 +185,6 @@ registry-links-check:
 	if [ -n "$$checkRes" ]; then \
 		echo "WARNING: registry link check failed for the following packages:"; echo "$${checkRes}"; \
 	fi
-
-DEPENDABOT_CONFIG = .github/dependabot.yml
-.PHONY: dependabot-check
-dependabot-check: | $(DBOTCONF)
-	@$(DBOTCONF) verify $(DEPENDABOT_CONFIG) || ( echo "(run: make dependabot-generate)"; exit 1 )
-
-.PHONY: dependabot-generate
-dependabot-generate: | $(DBOTCONF)
-	@$(DBOTCONF) generate > $(DEPENDABOT_CONFIG)
 
 .PHONY: check-clean-work-tree
 check-clean-work-tree:

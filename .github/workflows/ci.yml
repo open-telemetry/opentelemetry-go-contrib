@@ -37,7 +37,7 @@ jobs:
     - name: Generate
       run: make generate
     - name: Run linters
-      run: make dependabot-check license-check lint vanity-import-check
+      run: make license-check lint vanity-import-check
     - name: Build
       run: make build
     - name: Check clean repository
@@ -170,4 +170,3 @@ jobs:
         run: |
           echo ${{ needs.integration.result }}
           test ${{ needs.integration.result }} == "success"
-
