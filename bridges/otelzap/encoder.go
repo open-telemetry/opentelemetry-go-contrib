@@ -13,13 +13,12 @@ import (
 
 var _ zapcore.ObjectEncoder = (*objectEncoder)(nil)
 
-// Object Encoder implements zapcore.ObjectEncoder.
-// It encodes given fields to OTel attribute.
+// objectEncoder implements zapcore.ObjectEncoder.
+// It encodes given fields to OTel key-values.
 type objectEncoder struct {
 	kv []log.KeyValue
 }
 
-// NewObjectEncoder returns new ObjectEncoder.
 func newObjectEncoder(len int) *objectEncoder {
 	keyval := make([]log.KeyValue, 0, len)
 
