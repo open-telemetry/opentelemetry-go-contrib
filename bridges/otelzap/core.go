@@ -133,7 +133,6 @@ func (o *Core) Check(ent zapcore.Entry, ce *zapcore.CheckedEntry) *zapcore.Check
 	return ce
 }
 
-// TODO
 // Write method encodes zap fields to OTel logs and emits them.
 func (o *Core) Write(ent zapcore.Entry, fields []zapcore.Field) error {
 	r := log.Record{}
