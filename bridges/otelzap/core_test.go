@@ -95,7 +95,7 @@ func TestConvertLevel(t *testing.T) {
 	}
 }
 
-// Copied from field_test.go. https://github.com/uber-go/zap/blob/b39f8b6b6a44d8371a87610be50cce58eeeaabcb/zapcore/memory_encoder_test.go
+// Copied from https://github.com/uber-go/zap/blob/b39f8b6b6a44d8371a87610be50cce58eeeaabcb/zapcore/memory_encoder_test.go.
 func TestObjectEncoder(t *testing.T) {
 
 	tests := []struct {
