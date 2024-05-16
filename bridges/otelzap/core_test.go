@@ -45,7 +45,7 @@ func TestCoreEnabled(t *testing.T) {
 		ce.Write()
 	}
 
-	assert.Nil(t, r.Result()[1].Records)
+	assert.Empty(t, r.Result()[1].Records)
 
 	if ce := logger.Check(zap.InfoLevel, testMessage); ce != nil {
 		ce.Write()
