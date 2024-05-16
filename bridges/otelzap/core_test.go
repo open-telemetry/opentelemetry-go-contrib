@@ -4,6 +4,7 @@
 package otelzap
 
 import (
+	"context"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
@@ -29,6 +30,18 @@ func TestCore(t *testing.T) {
 	got := rec.Result()[1].Records[0]
 	assert.Equal(t, testMessage, got.Body().AsString())
 	assert.Equal(t, log.SeverityInfo, got.Severity())
+}
+
+func TestCoreEnabled(t *testing.T) {
+	enabledFunc := func(c context.Context, r log.Record) bool {
+		return r.Severity() >= log.SeverityInfo
+	}
+
+	r := logtest.NewRecorder(logtest.WithEnabledFunc(enabledFunc))
+	zc := NewCore(WithLoggerProvider(r))
+
+	assert.False(t, zc.Enabled(zap.DebugLevel), "level conversion: permissive")
+	assert.True(t, zc.Enabled(zap.InfoLevel), "level conversion: restrictive")
 }
 
 func TestNewCoreConfiguration(t *testing.T) {
