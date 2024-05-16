@@ -60,7 +60,7 @@ func (m *objectEncoder) AddBool(k string, v bool) {
 func (m *objectEncoder) AddDuration(k string, v time.Duration) {
 }
 
-// TODO
+// TODO.
 func (m *objectEncoder) AddComplex128(k string, v complex128) {
 }
 
@@ -89,11 +89,11 @@ func (m *objectEncoder) AddInt(k string, v int) {
 func (m *objectEncoder) AddString(k string, v string) {
 }
 
-// TODO
+// TODO.
 func (m *objectEncoder) AddUint64(k string, v uint64) {
 }
 
-// TODO
+// TODO.
 func (m *objectEncoder) AddReflected(k string, v interface{}) error {
 	return nil
 }
