@@ -111,7 +111,6 @@ func NewCore(opts ...Option) *Core {
 func (o *Core) Enabled(level zapcore.Level) bool {
 	r := log.Record{}
 	r.SetSeverity(convertLevel(level))
-	// TODO How to pass context to Enabled method
 	return o.logger.Enabled(context.Background(), r)
 }
 
