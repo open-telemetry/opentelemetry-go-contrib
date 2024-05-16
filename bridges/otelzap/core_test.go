@@ -46,11 +46,12 @@ func TestCoreEnabled(t *testing.T) {
 	}
 
 	assert.Empty(t, r.Result()[1].Records)
+	logger.Debug(testMessage)
+	assert.Empty(t, r.Result()[1].Records)
 
 	if ce := logger.Check(zap.InfoLevel, testMessage); ce != nil {
 		ce.Write()
 	}
-
 	require.Len(t, r.Result()[1].Records, 1)
 	got := r.Result()[1].Records[0]
 	assert.Equal(t, testMessage, got.Body().AsString())
