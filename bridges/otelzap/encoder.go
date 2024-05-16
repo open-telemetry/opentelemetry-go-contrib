@@ -16,7 +16,7 @@ var _ zapcore.ObjectEncoder = (*objectEncoder)(nil)
 // objectEncoder implements zapcore.ObjectEncoder.
 // It encodes given fields to OTel key-values.
 type objectEncoder struct {
-	kv []log.KeyValue // nolint:unused
+	kv []log.KeyValue
 }
 
 // nolint:unused
@@ -66,27 +66,22 @@ func (m *objectEncoder) AddComplex128(k string, v complex128) {
 
 // AddFloat64 converts float64 to log.Float64.
 func (m *objectEncoder) AddFloat64(k string, v float64) {
-	// TODO
-}
-
-// AddFloat32 converts float32 to log.Float64.
-func (m *objectEncoder) AddFloat32(k string, v float32) {
-	// TODO
+	m.kv = append(m.kv, log.Float64(k, v))
 }
 
 // AddInt64 converts int64 to log.Int64.
 func (m *objectEncoder) AddInt64(k string, v int64) {
-	// TODO
+	m.kv = append(m.kv, log.Int64(k, v))
 }
 
 // AddInt converts int to log.Int.
 func (m *objectEncoder) AddInt(k string, v int) {
-	// TODO
+	m.kv = append(m.kv, log.Int(k, v))
 }
 
 // AddString converts string to log.String.
 func (m *objectEncoder) AddString(k string, v string) {
-	// TODO
+	m.kv = append(m.kv, log.String(k, v))
 }
 
 // TODO.
@@ -105,10 +100,11 @@ func (m *objectEncoder) OpenNamespace(k string) {
 }
 
 // TODO.
+func (m *objectEncoder) AddFloat32(k string, v float32)     { m.AddFloat64(k, float64(v)) }
 func (m *objectEncoder) AddComplex64(k string, v complex64) {}
-func (m *objectEncoder) AddInt32(k string, v int32)         {}
-func (m *objectEncoder) AddInt16(k string, v int16)         {}
-func (m *objectEncoder) AddInt8(k string, v int8)           {}
+func (m *objectEncoder) AddInt32(k string, v int32)         { m.AddInt64(k, int64(v)) }
+func (m *objectEncoder) AddInt16(k string, v int16)         { m.AddInt64(k, int64(v)) }
+func (m *objectEncoder) AddInt8(k string, v int8)           { m.AddInt64(k, int64(v)) }
 func (m *objectEncoder) AddTime(k string, v time.Time)      {}
 func (m *objectEncoder) AddUint(k string, v uint)           {}
 func (m *objectEncoder) AddUint32(k string, v uint32)       {}
