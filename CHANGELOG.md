@@ -15,6 +15,20 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
   - `prometheus` and `none` are supported values. You can specify multiple producers separated by a comma.
   - Add `WithFallbackMetricProducer` option that adds a fallback if the `OTEL_METRICS_PRODUCERS` is not set or empty.
 - The `go.opentelemetry.io/contrib/processors/baggage/baggagetrace` module. This module provides a Baggage Span Processor. (#5404)
+- Add gRPC trace `Filter` for stats handler to `go.opentelemetry.io/contrib/instrumentation/google.golang.org/grpc/otelgrpc`. (#5196)
+- Add a repository Code Ownership Policy. (#5555)
+- The `go.opentelemetry.io/contrib/bridges/otellogrus` module.
+  This module provides an OpenTelemetry logging bridge for `github.com/sirupsen/logrus`. (#5355)
+
+### Changed
+
+- The gRPC trace `Filter` for interceptor is renamed to `InterceptorFilter`. (#5196)
+- The gRPC trace filter functions `Any`, `All`, `None`, `Not`, `MethodName`, `MethodPrefix`, `FullMethodName`, `ServiceName`, `ServicePrefix` and `HealthCheck` for interceptor are moved to `go.opentelemetry.io/contrib/instrumentation/google.golang.org/grpc/otelgrpc/filters/interceptor`.
+  With this change, the filters in `go.opentelemetry.io/contrib/instrumentation/google.golang.org/grpc/otelgrpc` are now working for stats handler. (#5196)
+
+### Deprecated
+
+- The `InterceptorFilter` type in `go.opentelemetry.io/contrib/instrumentation/google.golang.org/grpc/otelgrpc` is deprecated. (#5196)
 
 ## [1.26.0/0.51.0/0.20.0/0.6.0/0.1.0] - 2024-04-24
 
@@ -25,6 +39,7 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 ### Changed
 
 - Change the scope name for the prometheus bridge to `go.opentelemetry.io/contrib/bridges/prometheus` to match the package. (#5396)
+- Add support for settings additional properties for resource configuration in `go.opentelemetry.io/contrib/config`. (#4832)
 
 ### Fixed
 

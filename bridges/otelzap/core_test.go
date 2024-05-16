@@ -8,11 +8,28 @@ import (
 
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
+	"go.uber.org/zap"
+	"go.uber.org/zap/zapcore"
 
+	"go.opentelemetry.io/otel/log"
 	"go.opentelemetry.io/otel/log/global"
 	"go.opentelemetry.io/otel/log/logtest"
 	"go.opentelemetry.io/otel/sdk/instrumentation"
 )
+
+func TestCore(t *testing.T) {
+	testMessage := "log message"
+	rec := logtest.NewRecorder()
+	zc := NewCore(WithLoggerProvider(rec))
+	logger := zap.New(zc)
+
+	logger.Info(testMessage)
+
+	// TODO (#5580): Not sure why index 1 is populated with results and not 0.
+	got := rec.Result()[1].Records[0]
+	assert.Equal(t, testMessage, got.Body().AsString())
+	assert.Equal(t, log.SeverityInfo, got.Severity())
+}
 
 func TestNewCoreConfiguration(t *testing.T) {
 	t.Run("Default", func(t *testing.T) {
@@ -52,4 +69,27 @@ func TestNewCoreConfiguration(t *testing.T) {
 		got := l.Result()[0]
 		assert.Equal(t, want, got)
 	})
+}
+
+func TestConvertLevel(t *testing.T) {
+	tests := []struct {
+		level       zapcore.Level
+		expectedSev log.Severity
+	}{
+		{zapcore.DebugLevel, log.SeverityDebug},
+		{zapcore.InfoLevel, log.SeverityInfo},
+		{zapcore.WarnLevel, log.SeverityWarn},
+		{zapcore.ErrorLevel, log.SeverityError},
+		{zapcore.DPanicLevel, log.SeverityFatal1},
+		{zapcore.PanicLevel, log.SeverityFatal2},
+		{zapcore.FatalLevel, log.SeverityFatal3},
+		{zapcore.InvalidLevel, log.SeverityUndefined},
+	}
+
+	for _, test := range tests {
+		result := convertLevel(test.level)
+		if result != test.expectedSev {
+			t.Errorf("For level %v, expected %v but got %v", test.level, test.expectedSev, result)
+		}
+	}
 }
