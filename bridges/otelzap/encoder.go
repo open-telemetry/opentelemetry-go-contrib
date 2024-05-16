@@ -99,12 +99,13 @@ func (m *objectEncoder) OpenNamespace(k string) {
 	// TODO
 }
 
+func (m *objectEncoder) AddFloat32(k string, v float32) { m.AddFloat64(k, float64(v)) }
+func (m *objectEncoder) AddInt32(k string, v int32)     { m.AddInt64(k, int64(v)) }
+func (m *objectEncoder) AddInt16(k string, v int16)     { m.AddInt64(k, int64(v)) }
+func (m *objectEncoder) AddInt8(k string, v int8)       { m.AddInt64(k, int64(v)) }
+
 // TODO.
-func (m *objectEncoder) AddFloat32(k string, v float32)     { m.AddFloat64(k, float64(v)) }
 func (m *objectEncoder) AddComplex64(k string, v complex64) {}
-func (m *objectEncoder) AddInt32(k string, v int32)         { m.AddInt64(k, int64(v)) }
-func (m *objectEncoder) AddInt16(k string, v int16)         { m.AddInt64(k, int64(v)) }
-func (m *objectEncoder) AddInt8(k string, v int8)           { m.AddInt64(k, int64(v)) }
 func (m *objectEncoder) AddTime(k string, v time.Time)      {}
 func (m *objectEncoder) AddUint(k string, v uint)           {}
 func (m *objectEncoder) AddUint32(k string, v uint32)       {}
