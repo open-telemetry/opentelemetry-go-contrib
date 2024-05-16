@@ -41,12 +41,12 @@ func TestCoreEnabled(t *testing.T) {
 	r := logtest.NewRecorder(logtest.WithEnabledFunc(enabledFunc))
 	logger := zap.New(NewCore(WithLoggerProvider(r)))
 
+	logger.Debug(testMessage)
+	assert.Empty(t, r.Result()[1].Records)
+
 	if ce := logger.Check(zap.DebugLevel, testMessage); ce != nil {
 		ce.Write()
 	}
-
-	assert.Empty(t, r.Result()[1].Records)
-	logger.Debug(testMessage)
 	assert.Empty(t, r.Result()[1].Records)
 
 	if ce := logger.Check(zap.InfoLevel, testMessage); ce != nil {
