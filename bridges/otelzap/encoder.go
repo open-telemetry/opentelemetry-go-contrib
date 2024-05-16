@@ -42,17 +42,17 @@ func (m *objectEncoder) AddObject(k string, v zapcore.ObjectMarshaler) error {
 
 // AddBinary converts binary to log.Bytes.
 func (m *objectEncoder) AddBinary(k string, v []byte) {
-	// TODO
+	m.kv = append(m.kv, log.Bytes(k, v))
 }
 
 // AddByteString converts byte to log.String.
 func (m *objectEncoder) AddByteString(k string, v []byte) {
-	// TODO
+	m.kv = append(m.kv, log.String(k, string(v)))
 }
 
 // AddBool converts bool to log.Bool.
 func (m *objectEncoder) AddBool(k string, v bool) {
-	// TODO
+	m.kv = append(m.kv, log.Bool(k, v))
 }
 
 // AddDuration converts duration to log.Int.
