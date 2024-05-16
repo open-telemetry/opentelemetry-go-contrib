@@ -18,8 +18,9 @@ import (
 	"go.opentelemetry.io/otel/sdk/instrumentation"
 )
 
+var testMessage = "log message"
+
 func TestCore(t *testing.T) {
-	testMessage := "log message"
 	rec := logtest.NewRecorder()
 	zc := NewCore(WithLoggerProvider(rec))
 	logger := zap.New(zc)
@@ -38,10 +39,21 @@ func TestCoreEnabled(t *testing.T) {
 	}
 
 	r := logtest.NewRecorder(logtest.WithEnabledFunc(enabledFunc))
-	zc := NewCore(WithLoggerProvider(r))
+	logger := zap.New(NewCore(WithLoggerProvider(r)))
 
-	assert.False(t, zc.Enabled(zap.DebugLevel), "level conversion: permissive")
-	assert.True(t, zc.Enabled(zap.InfoLevel), "level conversion: restrictive")
+	if ce := logger.Check(zap.DebugLevel, testMessage); ce != nil {
+		ce.Write()
+	}
+
+	assert.Nil(t, r.Result()[1].Records)
+
+	if ce := logger.Check(zap.InfoLevel, testMessage); ce != nil {
+		ce.Write()
+	}
+
+	got := r.Result()[1].Records[0]
+	assert.Equal(t, testMessage, got.Body().AsString())
+	assert.Equal(t, log.SeverityInfo, got.Severity())
 }
 
 func TestNewCoreConfiguration(t *testing.T) {
