@@ -54,8 +54,8 @@ func (m *objectEncoder) AddDuration(k string, v time.Duration) {
 	// TODO
 }
 
-// TODO.
 func (m *objectEncoder) AddComplex128(k string, v complex128) {
+	// TODO.
 }
 
 func (m *objectEncoder) AddFloat64(k string, v float64) {
