@@ -91,12 +91,12 @@ func TestObjectEncoder(t *testing.T) {
 		{
 			desc:     "AddComplex128",
 			f:        func(e zapcore.ObjectEncoder) { e.AddComplex128("k", 1+2i) },
-			expected: "(1+2i)",
+			expected: map[string]interface{}{"i": float64(2), "r": float64(1)},
 		},
 		{
 			desc:     "AddComplex64",
 			f:        func(e zapcore.ObjectEncoder) { e.AddComplex64("k", 1+2i) },
-			expected: "(1+2i)",
+			expected: map[string]interface{}{"i": float64(2), "r": float64(1)},
 		},
 	}
 
