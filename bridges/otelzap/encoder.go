@@ -28,34 +28,28 @@ func newObjectEncoder(len int) *objectEncoder {
 	}
 }
 
-// AddArray converts array to log.Slice using ArrayEncoder.
 func (m *objectEncoder) AddArray(key string, v zapcore.ArrayMarshaler) error {
 	// TODO
 	return nil
 }
 
-// AddObject converts object to log.Map using ObjectEncoder.
 func (m *objectEncoder) AddObject(k string, v zapcore.ObjectMarshaler) error {
 	// TODO
 	return nil
 }
 
-// AddBinary converts binary to log.Bytes.
 func (m *objectEncoder) AddBinary(k string, v []byte) {
 	// TODO
 }
 
-// AddByteString converts byte to log.String.
 func (m *objectEncoder) AddByteString(k string, v []byte) {
 	// TODO
 }
 
-// AddBool converts bool to log.Bool.
 func (m *objectEncoder) AddBool(k string, v bool) {
 	// TODO
 }
 
-// AddDuration converts duration to log.Int.
 func (m *objectEncoder) AddDuration(k string, v time.Duration) {
 	// TODO
 }
@@ -64,27 +58,22 @@ func (m *objectEncoder) AddDuration(k string, v time.Duration) {
 func (m *objectEncoder) AddComplex128(k string, v complex128) {
 }
 
-// AddFloat64 converts float64 to log.Float64.
 func (m *objectEncoder) AddFloat64(k string, v float64) {
 	// TODO
 }
 
-// AddFloat32 converts float32 to log.Float64.
 func (m *objectEncoder) AddFloat32(k string, v float32) {
 	// TODO
 }
 
-// AddInt64 converts int64 to log.Int64.
 func (m *objectEncoder) AddInt64(k string, v int64) {
 	// TODO
 }
 
-// AddInt converts int to log.Int.
 func (m *objectEncoder) AddInt(k string, v int) {
 	// TODO
 }
 
-// AddString converts string to log.String.
 func (m *objectEncoder) AddString(k string, v string) {
 	// TODO
 }
