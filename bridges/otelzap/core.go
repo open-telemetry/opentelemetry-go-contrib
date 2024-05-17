@@ -6,6 +6,8 @@
 package otelzap // import "go.opentelemetry.io/contrib/bridges/otelzap"
 
 import (
+	"context"
+
 	"go.uber.org/zap/zapcore"
 
 	"go.opentelemetry.io/otel/log"
@@ -105,10 +107,11 @@ func NewCore(opts ...Option) *Core {
 	}
 }
 
-// TODO
 // LevelEnabler decides whether a given logging level is enabled when logging a message.
 func (o *Core) Enabled(level zapcore.Level) bool {
-	return true
+	r := log.Record{}
+	r.SetSeverity(convertLevel(level))
+	return o.logger.Enabled(context.Background(), r)
 }
 
 // TODO
@@ -123,14 +126,51 @@ func (o *Core) Sync() error {
 	return nil
 }
 
-// TODO
 // Check determines whether the supplied Entry should be logged using core.Enabled method.
+// If the entry should be logged, the Core adds itself to the CheckedEntry and returns the result.
 func (o *Core) Check(ent zapcore.Entry, ce *zapcore.CheckedEntry) *zapcore.CheckedEntry {
+	if o.Enabled(ent.Level) {
+		return ce.AddCore(ent, o)
+	}
 	return ce
 }
 
-// TODO
 // Write method encodes zap fields to OTel logs and emits them.
 func (o *Core) Write(ent zapcore.Entry, fields []zapcore.Field) error {
+	r := log.Record{}
+	r.SetTimestamp(ent.Time)
+	r.SetBody(log.StringValue(ent.Message))
+	r.SetSeverity(convertLevel(ent.Level))
+
+	// TODO: Handle attributes passed via fields (exceptions: context.Context and zap.Namespace).
+	// TODO: Handle attributes passed via With (exceptions: context.Context and zap.Namespace).
+	// TODO: Handle context.Context containing trace context.
+	// TODO: Handle zap.Namespace.
+	// TODO: Handle zap.Object.
+	// TODO: Handle zap.Array.
+	// TODO: Handle ent.LoggerName.
+
+	o.logger.Emit(context.Background(), r)
 	return nil
+}
+
+func convertLevel(level zapcore.Level) log.Severity {
+	switch level {
+	case zapcore.DebugLevel:
+		return log.SeverityDebug
+	case zapcore.InfoLevel:
+		return log.SeverityInfo
+	case zapcore.WarnLevel:
+		return log.SeverityWarn
+	case zapcore.ErrorLevel:
+		return log.SeverityError
+	case zapcore.DPanicLevel:
+		return log.SeverityFatal1
+	case zapcore.PanicLevel:
+		return log.SeverityFatal2
+	case zapcore.FatalLevel:
+		return log.SeverityFatal3
+	default:
+		return log.SeverityUndefined
+	}
 }

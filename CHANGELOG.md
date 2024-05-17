@@ -16,13 +16,30 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
   - Add `WithFallbackMetricProducer` option that adds a fallback if the `OTEL_METRICS_PRODUCERS` is not set or empty.
 - The `go.opentelemetry.io/contrib/processors/baggage/baggagetrace` module. This module provides a Baggage Span Processor. (#5404)
 - Add gRPC trace `Filter` for stats handler to `go.opentelemetry.io/contrib/instrumentation/google.golang.org/grpc/otelgrpc`. (#5196)
+- Add a repository Code Ownership Policy. (#5555)
+- The `go.opentelemetry.io/contrib/bridges/otellogrus` module.
+  This module provides an OpenTelemetry logging bridge for `github.com/sirupsen/logrus`. (#5355)
+- The `WithVersion` option function in `go.opentelemetry.io/contrib/bridges/otelslog`.
+  This option function is used as a replacement of `WithInstrumentationScope` to specify the logged package version. (#5588)
+- The `WithSchemaURL` option function in `go.opentelemetry.io/contrib/bridges/otelslog`.
+  This option function is used as a replacement of `WithInstrumentationScope` to specify the semantic convention schema URL for the logged records. (#5588)
+- Add support for Cloud Run jobs in `go.opentelemetry.io/contrib/detectors/gcp`. (#5559)
 
 ### Changed
 
 - The gRPC trace `Filter` for interceptor is renamed to `InterceptorFilter`. (#5196)
 - The gRPC trace filter functions `Any`, `All`, `None`, `Not`, `MethodName`, `MethodPrefix`, `FullMethodName`, `ServiceName`, `ServicePrefix` and `HealthCheck` for interceptor are moved to `go.opentelemetry.io/contrib/instrumentation/google.golang.org/grpc/otelgrpc/filters/interceptor`.
   With this change, the filters in `go.opentelemetry.io/contrib/instrumentation/google.golang.org/grpc/otelgrpc` are now working for stats handler. (#5196)
-- Add support for Cloud Run jobs in `go.opentelemetry.io/contrib/detectors/gcp`. (#5559)
+
+- `NewLogger` now accepts a `name` `string` as the first argument.
+  This parameter is used as a replacement of `WithInstrumentationScope` to specify the name of the logger backing the underlying `Handler`. (#5588)
+- `NewHandler` now accepts a `name` `string` as the first argument.
+  This parameter is used as a replacement of `WithInstrumentationScope` to specify the name of the logger backing the returned `Handler`. (#5588)
+
+### Removed
+
+- The `WithInstrumentationScope` option function in `go.opentelemetry.io/contrib/bridges/otelslog` is removed.
+  Use the `name` parameter added to `NewHandler` and `NewLogger` as well as `WithVersion` and `WithSchema` as replacements. (#5588)
 
 ### Deprecated
 

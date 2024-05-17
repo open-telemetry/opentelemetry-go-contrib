@@ -23,6 +23,7 @@
 CODEOWNERS @MrAlias @MadVikingGod @pellared @dashpole
 
 bridges/otelslog                                                        @open-telemetry/go-approvers @MrAlias @pellared
+bridges/otellogrus/                                                     @open-telemetry/go-approvers @dmathieu @pellared
 bridges/prometheus/                                                     @open-telemetry/go-approvers @dashpole
 bridges/otelzap/                                                        @open-telemetry/go-approvers @pellared @khushijain21
 
@@ -35,7 +36,7 @@ exporters/autoexport                                                    @open-te
 
 instrumentation/github.com/aws/aws-lambda-go/otellambda/                @open-telemetry/go-approvers
 instrumentation/github.com/aws/aws-sdk-go-v2/otelaws/                   @open-telemetry/go-approvers
-instrumentation/github.com/emicklei/go-restful/otelrestful/             @open-telemetry/go-approvers
+instrumentation/github.com/emicklei/go-restful/otelrestful/             @open-telemetry/go-approvers @dashpole
 instrumentation/github.com/gin-gonic/gin/otelgin/                       @open-telemetry/go-approvers @hanyuancheung
 instrumentation/github.com/gorilla/mux/otelmux/                         @open-telemetry/go-approvers
 instrumentation/github.com/labstack/echo/otelecho/                      @open-telemetry/go-approvers
