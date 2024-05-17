@@ -51,6 +51,10 @@ func (m *objectEncoder) AddBool(k string, v bool) {
 	m.kv = append(m.kv, log.Bool(k, v))
 }
 
+func (m *objectEncoder) AddDuration(k string, v time.Duration) {
+	m.AddInt64(k, v.Nanoseconds())
+}
+
 func (m *objectEncoder) AddComplex128(k string, v complex128) {
 	stringValue := strconv.FormatComplex(v, 'f', -1, 64)
 	m.kv = append(m.kv, log.String(k, stringValue))
@@ -89,10 +93,6 @@ func (m *objectEncoder) OpenNamespace(k string) {
 
 func (m *objectEncoder) AddComplex64(k string, v complex64) {
 	m.AddComplex128(k, complex128(v))
-}
-
-func (m *objectEncoder) AddDuration(k string, v time.Duration) {
-	m.AddInt64(k, v.Nanoseconds())
 }
 
 func (m *objectEncoder) AddTime(k string, v time.Time) {
