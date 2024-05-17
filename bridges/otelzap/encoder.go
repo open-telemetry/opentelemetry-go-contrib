@@ -4,7 +4,6 @@
 package otelzap // import "go.opentelemetry.io/contrib/bridges/otelzap"
 
 import (
-	"strconv"
 	"time"
 
 	"go.uber.org/zap/zapcore"
