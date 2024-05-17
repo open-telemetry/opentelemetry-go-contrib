@@ -16,7 +16,7 @@ var _ zapcore.ObjectEncoder = (*objectEncoder)(nil)
 // objectEncoder implements zapcore.ObjectEncoder.
 // It encodes given fields to OTel key-values.
 type objectEncoder struct {
-	kv []log.KeyValue // nolint:unused
+	kv []log.KeyValue
 }
 
 // nolint:unused
@@ -39,15 +39,15 @@ func (m *objectEncoder) AddObject(k string, v zapcore.ObjectMarshaler) error {
 }
 
 func (m *objectEncoder) AddBinary(k string, v []byte) {
-	// TODO
+	m.kv = append(m.kv, log.Bytes(k, v))
 }
 
 func (m *objectEncoder) AddByteString(k string, v []byte) {
-	// TODO
+	m.kv = append(m.kv, log.String(k, string(v)))
 }
 
 func (m *objectEncoder) AddBool(k string, v bool) {
-	// TODO
+	m.kv = append(m.kv, log.Bool(k, v))
 }
 
 func (m *objectEncoder) AddDuration(k string, v time.Duration) {
@@ -63,19 +63,19 @@ func (m *objectEncoder) AddFloat64(k string, v float64) {
 }
 
 func (m *objectEncoder) AddFloat32(k string, v float32) {
-	// TODO
+	m.kv = append(m.kv, log.Float64(k, v))
 }
 
 func (m *objectEncoder) AddInt64(k string, v int64) {
-	// TODO
+	m.kv = append(m.kv, log.Int64(k, v))
 }
 
 func (m *objectEncoder) AddInt(k string, v int) {
-	// TODO
+	m.kv = append(m.kv, log.Int(k, v))
 }
 
 func (m *objectEncoder) AddString(k string, v string) {
-	// TODO
+	m.kv = append(m.kv, log.String(k, v))
 }
 
 // TODO.
@@ -93,11 +93,12 @@ func (m *objectEncoder) OpenNamespace(k string) {
 	// TODO
 }
 
+func (m *objectEncoder) AddInt32(k string, v int32) { m.AddInt64(k, int64(v)) }
+func (m *objectEncoder) AddInt16(k string, v int16) { m.AddInt64(k, int64(v)) }
+func (m *objectEncoder) AddInt8(k string, v int8)   { m.AddInt64(k, int64(v)) }
+
 // TODO.
 func (m *objectEncoder) AddComplex64(k string, v complex64) {}
-func (m *objectEncoder) AddInt32(k string, v int32)         {}
-func (m *objectEncoder) AddInt16(k string, v int16)         {}
-func (m *objectEncoder) AddInt8(k string, v int8)           {}
 func (m *objectEncoder) AddTime(k string, v time.Time)      {}
 func (m *objectEncoder) AddUint(k string, v uint)           {}
 func (m *objectEncoder) AddUint32(k string, v uint32)       {}
