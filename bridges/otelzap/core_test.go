@@ -15,14 +15,16 @@ import (
 	"go.opentelemetry.io/otel/log"
 	"go.opentelemetry.io/otel/log/global"
 	"go.opentelemetry.io/otel/log/logtest"
-	"go.opentelemetry.io/otel/sdk/instrumentation"
 )
 
-var testMessage = "log message"
+var (
+	testMessage = "log message"
+	loggerName  = "name"
+)
 
 func TestCore(t *testing.T) {
 	rec := logtest.NewRecorder()
-	zc := NewCore(WithLoggerProvider(rec))
+	zc := NewCore(loggerName, WithLoggerProvider(rec))
 	logger := zap.New(zc)
 
 	logger.Info(testMessage)
@@ -39,7 +41,7 @@ func TestCoreEnabled(t *testing.T) {
 	}
 
 	r := logtest.NewRecorder(logtest.WithEnabledFunc(enabledFunc))
-	logger := zap.New(NewCore(WithLoggerProvider(r)))
+	logger := zap.New(NewCore(loggerName, WithLoggerProvider(r)))
 
 	logger.Debug(testMessage)
 	assert.Empty(t, r.Result()[1].Records)
@@ -66,25 +68,26 @@ func TestNewCoreConfiguration(t *testing.T) {
 		global.SetLoggerProvider(r)
 
 		var h *Core
-		require.NotPanics(t, func() { h = NewCore() })
+		require.NotPanics(t, func() { h = NewCore(loggerName) })
 		require.NotNil(t, h.logger)
 		require.IsType(t, &logtest.Recorder{}, h.logger)
 		l := h.logger.(*logtest.Recorder)
 		require.Len(t, l.Result(), 1)
 
-		want := &logtest.ScopeRecords{Name: bridgeName, Version: version}
+		want := &logtest.ScopeRecords{Name: loggerName}
 		got := l.Result()[0]
 		assert.Equal(t, want, got)
 	})
 
 	t.Run("Options", func(t *testing.T) {
 		r := logtest.NewRecorder()
-		scope := instrumentation.Scope{Name: "name", Version: "ver", SchemaURL: "url"}
 		var h *Core
 		require.NotPanics(t, func() {
 			h = NewCore(
+				loggerName,
 				WithLoggerProvider(r),
-				WithInstrumentationScope(scope),
+				WithVersion("1.0.0"),
+				WithSchemaURL("/got/it"),
 			)
 		})
 		require.NotNil(t, h.logger)
@@ -92,7 +95,7 @@ func TestNewCoreConfiguration(t *testing.T) {
 		l := h.logger.(*logtest.Recorder)
 		require.Len(t, l.Result(), 1)
 
-		want := &logtest.ScopeRecords{Name: scope.Name, Version: scope.Version, SchemaURL: scope.SchemaURL}
+		want := &logtest.ScopeRecords{Name: loggerName, Version: "1.0.0", SchemaURL: "/got/it"}
 		got := l.Result()[0]
 		assert.Equal(t, want, got)
 	})
