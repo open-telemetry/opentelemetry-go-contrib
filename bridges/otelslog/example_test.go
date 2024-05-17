@@ -13,5 +13,5 @@ func Example() {
 	provider := noop.NewLoggerProvider()
 
 	// Create an *slog.Logger and use it in your application.
-	otelslog.NewLogger(otelslog.WithLoggerProvider(provider))
+	otelslog.NewLogger("my/pkg/name", otelslog.WithLoggerProvider(provider))
 }

@@ -4,6 +4,7 @@
 package otelzap
 
 import (
+	"context"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
@@ -17,8 +18,9 @@ import (
 	"go.opentelemetry.io/otel/sdk/instrumentation"
 )
 
+var testMessage = "log message"
+
 func TestCore(t *testing.T) {
-	testMessage := "log message"
 	rec := logtest.NewRecorder()
 	zc := NewCore(WithLoggerProvider(rec))
 	logger := zap.New(zc)
@@ -27,6 +29,31 @@ func TestCore(t *testing.T) {
 
 	// TODO (#5580): Not sure why index 1 is populated with results and not 0.
 	got := rec.Result()[1].Records[0]
+	assert.Equal(t, testMessage, got.Body().AsString())
+	assert.Equal(t, log.SeverityInfo, got.Severity())
+}
+
+func TestCoreEnabled(t *testing.T) {
+	enabledFunc := func(c context.Context, r log.Record) bool {
+		return r.Severity() >= log.SeverityInfo
+	}
+
+	r := logtest.NewRecorder(logtest.WithEnabledFunc(enabledFunc))
+	logger := zap.New(NewCore(WithLoggerProvider(r)))
+
+	logger.Debug(testMessage)
+	assert.Empty(t, r.Result()[1].Records)
+
+	if ce := logger.Check(zap.DebugLevel, testMessage); ce != nil {
+		ce.Write()
+	}
+	assert.Empty(t, r.Result()[1].Records)
+
+	if ce := logger.Check(zap.InfoLevel, testMessage); ce != nil {
+		ce.Write()
+	}
+	require.Len(t, r.Result()[1].Records, 1)
+	got := r.Result()[1].Records[0]
 	assert.Equal(t, testMessage, got.Body().AsString())
 	assert.Equal(t, log.SeverityInfo, got.Severity())
 }
