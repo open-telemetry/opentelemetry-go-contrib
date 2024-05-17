@@ -56,8 +56,9 @@ func (m *objectEncoder) AddDuration(k string, v time.Duration) {
 }
 
 func (m *objectEncoder) AddComplex128(k string, v complex128) {
-	stringValue := strconv.FormatComplex(v, 'f', -1, 64)
-	m.kv = append(m.kv, log.String(k, stringValue))
+	r := log.Float64("r", real(v))
+	i := log.Float64("i", imag(v))
+	m.kv = append(m.kv, log.Map(k, r, i))
 }
 
 func (m *objectEncoder) AddFloat64(k string, v float64) {
