@@ -15,7 +15,7 @@ func Example() {
 	provider := noop.NewLoggerProvider()
 
 	// Create an *otellogrus.Hook and use it in your application.
-	hook := otellogrus.NewHook(otellogrus.WithLoggerProvider(provider))
+	hook := otellogrus.NewHook("my/pkg/name", otellogrus.WithLoggerProvider(provider))
 
 	// Set the newly created hook as a global logrus hook
 	logrus.AddHook(hook)

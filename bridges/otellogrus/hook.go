@@ -38,14 +38,12 @@ import (
 
 	"go.opentelemetry.io/otel/log"
 	"go.opentelemetry.io/otel/log/global"
-	"go.opentelemetry.io/otel/sdk/instrumentation"
 )
 
-const bridgeName = "go.opentelemetry.io/contrib/bridges/otellogrus"
-
 type config struct {
-	provider log.LoggerProvider
-	scope    instrumentation.Scope
+	provider  log.LoggerProvider
+	version   string
+	schemaURL string
 
 	levels []logrus.Level
 }
@@ -54,14 +52,6 @@ func newConfig(options []Option) config {
 	var c config
 	for _, opt := range options {
 		c = opt.apply(c)
-	}
-
-	var emptyScope instrumentation.Scope
-	if c.scope == emptyScope {
-		c.scope = instrumentation.Scope{
-			Name:    bridgeName,
-			Version: version,
-		}
 	}
 
 	if c.provider == nil {
@@ -75,15 +65,15 @@ func newConfig(options []Option) config {
 	return c
 }
 
-func (c config) logger() log.Logger {
+func (c config) logger(name string) log.Logger {
 	var opts []log.LoggerOption
-	if c.scope.Version != "" {
-		opts = append(opts, log.WithInstrumentationVersion(c.scope.Version))
+	if c.version != "" {
+		opts = append(opts, log.WithInstrumentationVersion(c.version))
 	}
-	if c.scope.SchemaURL != "" {
-		opts = append(opts, log.WithSchemaURL(c.scope.SchemaURL))
+	if c.schemaURL != "" {
+		opts = append(opts, log.WithSchemaURL(c.schemaURL))
 	}
-	return c.provider.Logger(c.scope.Name, opts...)
+	return c.provider.Logger(name, opts...)
 }
 
 // Option configures a [Hook].
@@ -95,16 +85,22 @@ type optFunc func(config) config
 
 func (f optFunc) apply(c config) config { return f(c) }
 
-// WithInstrumentationScope returns an [Option] that configures the scope of
-// the logs that will be emitted by the configured [Hook].
-//
-// By default if this Option is not provided, the Hook will use a default
-// instrumentation scope describing this bridge package. It is recommended to
-// provide this so log data can be associated with its source package or
-// module.
-func WithInstrumentationScope(scope instrumentation.Scope) Option {
+// WithVersion returns an [Option] that configures the version of the
+// [log.Logger] used by a [Handler]. The version should be the version of the
+// package that is being logged.
+func WithVersion(version string) Option {
 	return optFunc(func(c config) config {
-		c.scope = scope
+		c.version = version
+		return c
+	})
+}
+
+// WithSchemaURL returns an [Option] that configures the semantic convention
+// schema URL of the [log.Logger] used by a [Handler]. The schemaURL should be
+// the schema URL for the semantic conventions used in log records.
+func WithSchemaURL(schemaURL string) Option {
+	return optFunc(func(c config) config {
+		c.schemaURL = schemaURL
 		return c
 	})
 }
@@ -137,10 +133,10 @@ func WithLevels(l []logrus.Level) Option {
 //
 // If [WithLoggerProvider] is not provided, the returned Hook will use the
 // global LoggerProvider.
-func NewHook(options ...Option) *Hook {
+func NewHook(name string, options ...Option) *Hook {
 	cfg := newConfig(options)
 	return &Hook{
-		logger: cfg.logger(),
+		logger: cfg.logger(name),
 		levels: cfg.levels,
 	}
 }
