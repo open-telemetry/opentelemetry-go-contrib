@@ -87,7 +87,7 @@ func TestNewCoreConfiguration(t *testing.T) {
 				loggerName,
 				WithLoggerProvider(r),
 				WithVersion("1.0.0"),
-				WithSchemaURL("/got/it"),
+				WithSchemaURL("url"),
 			)
 		})
 		require.NotNil(t, h.logger)
@@ -95,7 +95,7 @@ func TestNewCoreConfiguration(t *testing.T) {
 		l := h.logger.(*logtest.Recorder)
 		require.Len(t, l.Result(), 1)
 
-		want := &logtest.ScopeRecords{Name: loggerName, Version: "1.0.0", SchemaURL: "/got/it"}
+		want := &logtest.ScopeRecords{Name: loggerName, Version: "1.0.0", SchemaURL: "url"}
 		got := l.Result()[0]
 		assert.Equal(t, want, got)
 	})
