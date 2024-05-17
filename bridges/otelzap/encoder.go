@@ -87,13 +87,33 @@ func (m *objectEncoder) OpenNamespace(k string) {
 	// TODO
 }
 
-func (m *objectEncoder) AddComplex64(k string, v complex64)    { m.AddComplex128(k, complex128(v)) }
-func (m *objectEncoder) AddDuration(k string, v time.Duration) { m.AddInt64(k, v.Nanoseconds()) }
-func (m *objectEncoder) AddTime(k string, v time.Time)         { m.AddInt64(k, v.UnixNano()) }
-func (m *objectEncoder) AddFloat32(k string, v float32)        { m.AddFloat64(k, float64(v)) }
-func (m *objectEncoder) AddInt32(k string, v int32)            { m.AddInt64(k, int64(v)) }
-func (m *objectEncoder) AddInt16(k string, v int16)            { m.AddInt64(k, int64(v)) }
-func (m *objectEncoder) AddInt8(k string, v int8)              { m.AddInt64(k, int64(v)) }
+func (m *objectEncoder) AddComplex64(k string, v complex64) {
+	m.AddComplex128(k, complex128(v))
+}
+
+func (m *objectEncoder) AddDuration(k string, v time.Duration) {
+	m.AddInt64(k, v.Nanoseconds())
+}
+
+func (m *objectEncoder) AddTime(k string, v time.Time) {
+	m.AddInt64(k, v.UnixNano())
+}
+
+func (m *objectEncoder) AddFloat32(k string, v float32) {
+	m.AddFloat64(k, float64(v))
+}
+
+func (m *objectEncoder) AddInt32(k string, v int32) {
+	m.AddInt64(k, int64(v))
+}
+
+func (m *objectEncoder) AddInt16(k string, v int16) {
+	m.AddInt64(k, int64(v))
+}
+
+func (m *objectEncoder) AddInt8(k string, v int8) {
+	m.AddInt64(k, int64(v))
+}
 
 // TODO.
 func (m *objectEncoder) AddUint(k string, v uint)       {}
