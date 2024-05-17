@@ -35,6 +35,7 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
   This parameter is used as a replacement of `WithInstrumentationScope` to specify the name of the logger backing the underlying `Handler`. (#5588)
 - `NewHandler` now accepts a `name` `string` as the first argument.
   This parameter is used as a replacement of `WithInstrumentationScope` to specify the name of the logger backing the returned `Handler`. (#5588)
+- Upgrade all dependencies of `go.opentelemetry.io/otel/semconv/v1.24.0` to `go.opentelemetry.io/otel/semconv/v1.25.0`. (#5605)
 
 ### Removed
 
