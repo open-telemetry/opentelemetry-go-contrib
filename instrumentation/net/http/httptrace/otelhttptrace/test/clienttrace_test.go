@@ -18,12 +18,12 @@ import (
 
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
+
 	"go.opentelemetry.io/contrib/instrumentation/net/http/httptrace/otelhttptrace"
 	"go.opentelemetry.io/otel"
 	"go.opentelemetry.io/otel/attribute"
 	"go.opentelemetry.io/otel/sdk/trace"
 	"go.opentelemetry.io/otel/sdk/trace/tracetest"
-	semconv "go.opentelemetry.io/otel/semconv/v1.24.0"
 )
 
 func getSpanFromRecorder(sr *tracetest.SpanRecorder, name string) (trace.ReadOnlySpan, bool) {
@@ -169,7 +169,7 @@ func TestHTTPRequestWithClientTrace(t *testing.T) {
 				}
 				attrs = slices.DeleteFunc(attrs, func(a attribute.KeyValue) bool {
 					// Skip keys that are unable to be detected beforehand.
-					if a.Key == semconv.TLSCipherKey || a.Key == semconv.TLSProtocolVersionKey {
+					if a.Key == otelhttptrace.TLSCipher || a.Key == otelhttptrace.TLSProtocolVersion {
 						return true
 					}
 					return false
