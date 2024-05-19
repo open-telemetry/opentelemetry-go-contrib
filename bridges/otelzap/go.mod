@@ -5,7 +5,6 @@ go 1.21
 require (
 	github.com/stretchr/testify v1.9.0
 	go.opentelemetry.io/otel/log v0.2.0-alpha
-	go.opentelemetry.io/otel/sdk v1.26.0
 	go.uber.org/zap v1.27.0
 )
 
