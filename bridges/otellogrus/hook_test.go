@@ -14,7 +14,6 @@ import (
 	"go.opentelemetry.io/otel/log/embedded"
 	"go.opentelemetry.io/otel/log/global"
 	"go.opentelemetry.io/otel/log/logtest"
-	"go.opentelemetry.io/otel/sdk/instrumentation"
 )
 
 type mockLoggerProvider struct {
@@ -38,10 +37,6 @@ func TestNewConfig(t *testing.T) {
 			name: "with no options",
 
 			wantConfig: config{
-				scope: instrumentation.Scope{
-					Name:    bridgeName,
-					Version: version,
-				},
 				provider: global.GetLoggerProvider(),
 				levels:   logrus.AllLevels,
 			},
@@ -49,17 +44,11 @@ func TestNewConfig(t *testing.T) {
 		{
 			name: "with a custom instrumentation scope",
 			options: []Option{
-				WithInstrumentationScope(instrumentation.Scope{
-					Name:    "test",
-					Version: "42.0",
-				}),
+				WithVersion("42.0"),
 			},
 
 			wantConfig: config{
-				scope: instrumentation.Scope{
-					Name:    "test",
-					Version: "42.0",
-				},
+				version:  "42.0",
 				provider: global.GetLoggerProvider(),
 				levels:   logrus.AllLevels,
 			},
@@ -71,10 +60,6 @@ func TestNewConfig(t *testing.T) {
 			},
 
 			wantConfig: config{
-				scope: instrumentation.Scope{
-					Name:    bridgeName,
-					Version: version,
-				},
 				provider: customLoggerProvider,
 				levels:   logrus.AllLevels,
 			},
@@ -86,10 +71,6 @@ func TestNewConfig(t *testing.T) {
 			},
 
 			wantConfig: config{
-				scope: instrumentation.Scope{
-					Name:    bridgeName,
-					Version: version,
-				},
 				provider: global.GetLoggerProvider(),
 				levels:   []logrus.Level{logrus.FatalLevel},
 			},
@@ -102,6 +83,7 @@ func TestNewConfig(t *testing.T) {
 }
 
 func TestNewHook(t *testing.T) {
+	const name = "name"
 	provider := global.GetLoggerProvider()
 
 	for _, tt := range []struct {
@@ -113,26 +95,23 @@ func TestNewHook(t *testing.T) {
 		{
 			name: "with the default options",
 
-			wantLogger: provider.Logger(bridgeName, log.WithInstrumentationVersion(version)),
+			wantLogger: provider.Logger(name),
 		},
 		{
 			name: "with a schema URL",
 			options: []Option{
-				WithInstrumentationScope(instrumentation.Scope{
-					Name:      "test",
-					Version:   "42.1",
-					SchemaURL: "https://example.com",
-				}),
+				WithVersion("42.1"),
+				WithSchemaURL("https://example.com"),
 			},
 
-			wantLogger: provider.Logger("test",
+			wantLogger: provider.Logger(name,
 				log.WithInstrumentationVersion("42.1"),
 				log.WithSchemaURL("https://example.com"),
 			),
 		},
 	} {
 		t.Run(tt.name, func(t *testing.T) {
-			hook := NewHook(tt.options...)
+			hook := NewHook(name, tt.options...)
 			assert.NotNil(t, hook)
 
 			assert.Equal(t, tt.wantLogger, hook.logger)
@@ -160,13 +139,14 @@ func TestHookLevels(t *testing.T) {
 		},
 	} {
 		t.Run(tt.name, func(t *testing.T) {
-			levels := NewHook(tt.options...).Levels()
+			levels := NewHook("", tt.options...).Levels()
 			assert.Equal(t, tt.wantLevels, levels)
 		})
 	}
 }
 
 func TestHookFire(t *testing.T) {
+	const name = "name"
 	now := time.Now()
 
 	for _, tt := range []struct {
@@ -181,7 +161,7 @@ func TestHookFire(t *testing.T) {
 			entry: &logrus.Entry{},
 
 			wantRecords: map[string][]log.Record{
-				bridgeName: {
+				name: {
 					buildRecord(log.StringValue(""), time.Time{}, 0, nil),
 				},
 			},
@@ -192,7 +172,7 @@ func TestHookFire(t *testing.T) {
 				Time: now,
 			},
 			wantRecords: map[string][]log.Record{
-				bridgeName: {
+				name: {
 					buildRecord(log.StringValue(""), now, 0, nil),
 				},
 			},
@@ -203,7 +183,7 @@ func TestHookFire(t *testing.T) {
 				Level: logrus.FatalLevel,
 			},
 			wantRecords: map[string][]log.Record{
-				bridgeName: {
+				name: {
 					buildRecord(log.StringValue(""), time.Time{}, log.SeverityTrace1, nil),
 				},
 			},
@@ -216,7 +196,7 @@ func TestHookFire(t *testing.T) {
 				},
 			},
 			wantRecords: map[string][]log.Record{
-				bridgeName: {
+				name: {
 					buildRecord(log.StringValue(""), time.Time{}, 0, []log.KeyValue{
 						log.String("hello", "world"),
 					}),
@@ -227,7 +207,7 @@ func TestHookFire(t *testing.T) {
 		t.Run(tt.name, func(t *testing.T) {
 			rec := logtest.NewRecorder()
 
-			err := NewHook(WithLoggerProvider(rec)).Fire(tt.entry)
+			err := NewHook(name, WithLoggerProvider(rec)).Fire(tt.entry)
 			assert.Equal(t, tt.wantErr, err)
 
 			for k, v := range tt.wantRecords {
@@ -387,7 +367,7 @@ func BenchmarkHook(b *testing.B) {
 	b.Run("Fire", func(b *testing.B) {
 		hooks := make([]*Hook, b.N)
 		for i := range hooks {
-			hooks[i] = NewHook()
+			hooks[i] = NewHook("")
 		}
 
 		b.ReportAllocs()
