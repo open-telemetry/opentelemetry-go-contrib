@@ -83,7 +83,7 @@ func TestObjectEncoder(t *testing.T) {
 			expected: int64(42),
 		},
 		{
-			desc:     "AddUint64 (Overflow case)",
+			desc:     "AddUint64-Overflow",
 			f:        func(e zapcore.ObjectEncoder) { e.AddUint64("k", ^uint64(0)) },
 			expected: float64(^uint64(0)),
 		},
