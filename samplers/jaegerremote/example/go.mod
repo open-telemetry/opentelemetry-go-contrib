@@ -17,7 +17,7 @@ require (
 	go.opentelemetry.io/otel/metric v1.26.1-0.20240520052501-49c866fbcd20 // indirect
 	go.opentelemetry.io/otel/trace v1.26.1-0.20240520052501-49c866fbcd20 // indirect
 	golang.org/x/sys v0.20.0 // indirect
-	google.golang.org/genproto/googleapis/api v0.0.0-20240515191416-fc5f0ca64291 // indirect
+	google.golang.org/genproto/googleapis/api v0.0.0-20240520151616-dc85e6b867a5 // indirect
 	google.golang.org/protobuf v1.34.1 // indirect
 )
 
