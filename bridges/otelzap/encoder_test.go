@@ -7,6 +7,7 @@ package otelzap
 
 import (
 	"testing"
+	"time"
 
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
@@ -106,6 +107,26 @@ func TestObjectEncoder(t *testing.T) {
 			desc:     "AddUintptr",
 			f:        func(e zapcore.ObjectEncoder) { e.AddUintptr("k", 42) },
 			expected: int64(42),
+		},
+		{
+			desc:     "AddDuration",
+			f:        func(e zapcore.ObjectEncoder) { e.AddDuration("k", time.Millisecond) },
+			expected: int64(1000000),
+		},
+		{
+			desc:     "AddTime",
+			f:        func(e zapcore.ObjectEncoder) { e.AddTime("k", time.Unix(0, 100)) },
+			expected: time.Unix(0, 100).UnixNano(),
+		},
+		{
+			desc:     "AddComplex128",
+			f:        func(e zapcore.ObjectEncoder) { e.AddComplex128("k", 1+2i) },
+			expected: map[string]interface{}{"i": float64(2), "r": float64(1)},
+		},
+		{
+			desc:     "AddComplex64",
+			f:        func(e zapcore.ObjectEncoder) { e.AddComplex64("k", 1+2i) },
+			expected: map[string]interface{}{"i": float64(2), "r": float64(1)},
 		},
 	}
 
