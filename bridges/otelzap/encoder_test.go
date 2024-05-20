@@ -89,6 +89,11 @@ func TestObjectEncoder(t *testing.T) {
 			expected: float64(^uint64(0)),
 		},
 		{
+			desc:     "AddUint",
+			f:        func(e zapcore.ObjectEncoder) { e.AddUint("k", 42) },
+			expected: int64(42),
+		},
+		{
 			desc:     "AddUint32",
 			f:        func(e zapcore.ObjectEncoder) { e.AddUint32("k", 42) },
 			expected: int64(42),
