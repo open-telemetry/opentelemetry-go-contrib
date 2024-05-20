@@ -10,7 +10,6 @@ import (
 	"testing"
 
 	"github.com/stretchr/testify/assert"
-	"github.com/stretchr/testify/require"
 
 	"go.opentelemetry.io/otel/attribute"
 )
@@ -105,49 +104,47 @@ func TestDupServerRequestTraceAttrs(t *testing.T) {
 				assert.Contains(t, got, want)
 			}
 		})
-
 	}
 }
 
 func TestDupMethod(t *testing.T) {
 	testCases := []struct {
-		method string
-		n      int
-		want   []attribute.KeyValue
+		method   string
+		n        int
+		wantOld  attribute.KeyValue
+		wantNew  attribute.KeyValue
+		wantOrig attribute.KeyValue
 	}{
 		{
 			method: http.MethodPost,
 			n:      2,
-			want: []attribute.KeyValue{
-				attribute.String("http.method", "POST"),
-				attribute.String("http.request.method", "POST"),
-			},
+
+			wantOld: attribute.String("http.method", "POST"),
+			wantNew: attribute.String("http.request.method", "POST"),
 		},
 		{
-			method: "Put",
-			n:      3,
-			want: []attribute.KeyValue{
-				attribute.String("http.method", "Put"),
-				attribute.String("http.request.method", "PUT"),
-				attribute.String("http.request.method_original", "Put"),
-			},
+			method:   "Put",
+			n:        3,
+			wantOld:  attribute.String("http.method", "Put"),
+			wantNew:  attribute.String("http.request.method", "PUT"),
+			wantOrig: attribute.String("http.request.method_original", "Put"),
 		},
 		{
 			method: "Unknown",
 			n:      3,
-			want: []attribute.KeyValue{
-				attribute.String("http.method", "Unknown"),
-				attribute.String("http.request.method", "GET"),
-				attribute.String("http.request.method_original", "Unknown"),
-			},
+
+			wantOld:  attribute.String("http.method", "Unknown"),
+			wantNew:  attribute.String("http.request.method", "GET"),
+			wantOrig: attribute.String("http.request.method_original", "Unknown"),
 		},
 	}
 
 	for _, tt := range testCases {
 		t.Run(tt.method, func(t *testing.T) {
-			attrs := make([]attribute.KeyValue, 0, 5)
-			gotAttrs := dupHTTPServer{}.method(tt.method, attrs)
-			require.ElementsMatch(t, tt.want, gotAttrs)
+			gotOld, gotNew, gotOrig := dupHTTPServer{}.method(tt.method)
+			assert.Equal(t, tt.wantOld, gotOld)
+			assert.Equal(t, tt.wantNew, gotNew)
+			assert.Equal(t, tt.wantOrig, gotOrig)
 		})
 	}
 }
@@ -217,16 +214,12 @@ func BenchmarkDupServerRequestTraceAttrs(b *testing.B) {
 }
 
 func benchDupServerRequestTraceAttrs(server string) func(*testing.B) {
-
 	return func(b *testing.B) {
 		b.ReportAllocs()
 		serv := dupHTTPServer{}
 		req := &http.Request{}
-		count := 1000
 		for i := 0; i < b.N; i++ {
-			for j := 0; j < count; j++ {
-				benchDupAttrs = serv.RequestTraceAttrs(server, req)
-			}
+			benchDupAttrs = serv.RequestTraceAttrs(server, req)
 		}
 		b.ReportMetric(float64(len(benchDupAttrs)), "attrs")
 	}
