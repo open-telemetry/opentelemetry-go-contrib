@@ -30,7 +30,7 @@ func TestCore(t *testing.T) {
 	logger.Info(testMessage)
 
 	// TODO (#5580): Not sure why index 1 is populated with results and not 0.
-	got := rec.Result()[1].Records[0]
+	got := rec.Result()[0].Records[0]
 	assert.Equal(t, testMessage, got.Body().AsString())
 	assert.Equal(t, log.SeverityInfo, got.Severity())
 }
@@ -44,18 +44,18 @@ func TestCoreEnabled(t *testing.T) {
 	logger := zap.New(NewCore(loggerName, WithLoggerProvider(r)))
 
 	logger.Debug(testMessage)
-	assert.Empty(t, r.Result()[1].Records)
+	assert.Empty(t, r.Result()[0].Records)
 
 	if ce := logger.Check(zap.DebugLevel, testMessage); ce != nil {
 		ce.Write()
 	}
-	assert.Empty(t, r.Result()[1].Records)
+	assert.Empty(t, r.Result()[0].Records)
 
 	if ce := logger.Check(zap.InfoLevel, testMessage); ce != nil {
 		ce.Write()
 	}
-	require.Len(t, r.Result()[1].Records, 1)
-	got := r.Result()[1].Records[0]
+	require.Len(t, r.Result()[0].Records, 1)
+	got := r.Result()[0].Records[0]
 	assert.Equal(t, testMessage, got.Body().AsString())
 	assert.Equal(t, log.SeverityInfo, got.Severity())
 }
@@ -70,12 +70,10 @@ func TestNewCoreConfiguration(t *testing.T) {
 		var h *Core
 		require.NotPanics(t, func() { h = NewCore(loggerName) })
 		require.NotNil(t, h.logger)
-		require.IsType(t, &logtest.Recorder{}, h.logger)
-		l := h.logger.(*logtest.Recorder)
-		require.Len(t, l.Result(), 1)
+		require.Len(t, r.Result(), 1)
 
 		want := &logtest.ScopeRecords{Name: loggerName}
-		got := l.Result()[0]
+		got := r.Result()[0]
 		assert.Equal(t, want, got)
 	})
 
@@ -91,12 +89,10 @@ func TestNewCoreConfiguration(t *testing.T) {
 			)
 		})
 		require.NotNil(t, h.logger)
-		require.IsType(t, &logtest.Recorder{}, h.logger)
-		l := h.logger.(*logtest.Recorder)
-		require.Len(t, l.Result(), 1)
+		require.Len(t, r.Result(), 1)
 
 		want := &logtest.ScopeRecords{Name: loggerName, Version: "1.0.0", SchemaURL: "url"}
-		got := l.Result()[0]
+		got := r.Result()[0]
 		assert.Equal(t, want, got)
 	})
 }
