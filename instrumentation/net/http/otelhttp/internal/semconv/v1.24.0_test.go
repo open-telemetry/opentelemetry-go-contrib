@@ -9,7 +9,6 @@ import (
 	"testing"
 
 	"github.com/stretchr/testify/assert"
-	"github.com/stretchr/testify/require"
 
 	"go.opentelemetry.io/otel/attribute"
 )
@@ -85,41 +84,35 @@ func TestNewTraceResponse(t *testing.T) {
 
 func TestNewMethod(t *testing.T) {
 	testCases := []struct {
-		method string
-		n      int
-		want   []attribute.KeyValue
+		method   string
+		n        int
+		want     attribute.KeyValue
+		wantOrig attribute.KeyValue
 	}{
 		{
 			method: http.MethodPost,
 			n:      1,
-			want: []attribute.KeyValue{
-				attribute.String("http.request.method", "POST"),
-			},
+			want:   attribute.String("http.request.method", "POST"),
 		},
 		{
-			method: "Put",
-			n:      2,
-			want: []attribute.KeyValue{
-				attribute.String("http.request.method", "PUT"),
-				attribute.String("http.request.method_original", "Put"),
-			},
+			method:   "Put",
+			n:        2,
+			want:     attribute.String("http.request.method", "PUT"),
+			wantOrig: attribute.String("http.request.method_original", "Put"),
 		},
 		{
-			method: "Unknown",
-			n:      2,
-			want: []attribute.KeyValue{
-				attribute.String("http.request.method", "GET"),
-				attribute.String("http.request.method_original", "Unknown"),
-			},
+			method:   "Unknown",
+			n:        2,
+			want:     attribute.String("http.request.method", "GET"),
+			wantOrig: attribute.String("http.request.method_original", "Unknown"),
 		},
 	}
 
 	for _, tt := range testCases {
 		t.Run(tt.method, func(t *testing.T) {
-			attrs := make([]attribute.KeyValue, 5)
-			n := newHTTPServer{}.method(tt.method, attrs[1:])
-			require.Equal(t, tt.n, n, "Length doesn't match")
-			require.ElementsMatch(t, tt.want, attrs[1:n+1])
+			got, gotOrig := newHTTPServer{}.method(tt.method)
+			assert.Equal(t, tt.want, got)
+			assert.Equal(t, tt.wantOrig, gotOrig)
 		})
 	}
 }

@@ -5,7 +5,6 @@ package semconv // import "go.opentelemetry.io/contrib/instrumentation/net/http/
 
 import (
 	"net/http"
-	"slices"
 	"strings"
 
 	"go.opentelemetry.io/otel/attribute"
@@ -33,8 +32,8 @@ var _ HTTPServer = newHTTPServer{}
 // If the primary server name is not known, server should be an empty string.
 // The req Host will be used to determine the server instead.
 func (n newHTTPServer) RequestTraceAttrs(server string, req *http.Request) []attribute.KeyValue {
-	const MaxAttributes = 11
-	attrs := make([]attribute.KeyValue, MaxAttributes)
+	count := 3 // ServerAddress, Method, Scheme
+
 	var host string
 	var p int
 	if server == "" {
@@ -47,89 +46,132 @@ func (n newHTTPServer) RequestTraceAttrs(server string, req *http.Request) []att
 		}
 	}
 
-	attrs[0] = semconvNew.ServerAddress(host)
-	i := 1
-	if hostPort := requiredHTTPPort(req.TLS != nil, p); hostPort > 0 {
-		attrs[i] = semconvNew.ServerPort(hostPort)
-		i++
+	hostPort := requiredHTTPPort(req.TLS != nil, p)
+	if hostPort > 0 {
+		count++
 	}
-	i += n.method(req.Method, attrs[i:])     // Max 2
-	i += n.scheme(req.TLS != nil, attrs[i:]) // Max 1
+
+	method, methodOriginal := n.method(req.Method)
+	if methodOriginal != (attribute.KeyValue{}) {
+		count++
+	}
+
+	scheme := n.scheme(req.TLS != nil)
 
 	if peer, peerPort := splitHostPort(req.RemoteAddr); peer != "" {
 		// The Go HTTP server sets RemoteAddr to "IP:port", this will not be a
 		// file-path that would be interpreted with a sock family.
-		attrs[i] = semconvNew.NetworkPeerAddress(peer)
-		i++
+		count++
 		if peerPort > 0 {
-			attrs[i] = semconvNew.NetworkPeerPort(peerPort)
-			i++
+			count++
 		}
 	}
 
-	if useragent := req.UserAgent(); useragent != "" {
-		// This is the same between v1.20, and v1.24
-		attrs[i] = semconvNew.UserAgentOriginal(useragent)
-		i++
+	useragent := req.UserAgent()
+	if useragent != "" {
+		count++
 	}
 
-	if clientIP := serverClientIP(req.Header.Get("X-Forwarded-For")); clientIP != "" {
-		attrs[i] = semconvNew.ClientAddress(clientIP)
-		i++
+	clientIP := serverClientIP(req.Header.Get("X-Forwarded-For"))
+	if clientIP != "" {
+		count++
 	}
 
 	if req.URL != nil && req.URL.Path != "" {
-		attrs[i] = semconvNew.URLPath(req.URL.Path)
-		i++
+		count++
 	}
 
 	protoName, protoVersion := netProtocol(req.Proto)
 	if protoName != "" && protoName != "http" {
-		attrs[i] = semconvNew.NetworkProtocolName(protoName)
-		i++
+		count++
 	}
 	if protoVersion != "" {
-		attrs[i] = semconvNew.NetworkProtocolVersion(protoVersion)
-		i++
+		count++
 	}
 
-	return slices.Clip(attrs[:i])
+	attrs := []attribute.KeyValue{
+		semconvNew.ServerAddress(host),
+		method,
+		scheme,
+	}
+
+	if hostPort > 0 {
+		attrs = append(attrs, semconvNew.ServerPort(hostPort))
+	}
+	if methodOriginal != (attribute.KeyValue{}) {
+		attrs = append(attrs, methodOriginal)
+	}
+
+	if peer, peerPort := splitHostPort(req.RemoteAddr); peer != "" {
+		// The Go HTTP server sets RemoteAddr to "IP:port", this will not be a
+		// file-path that would be interpreted with a sock family.
+		attrs = append(attrs, semconvNew.NetworkPeerAddress(peer))
+		if peerPort > 0 {
+			attrs = append(attrs, semconvNew.NetworkPeerPort(peerPort))
+		}
+	}
+
+	if useragent := req.UserAgent(); useragent != "" {
+		attrs = append(attrs, semconvNew.UserAgentOriginal(useragent))
+	}
+
+	if clientIP != "" {
+		attrs = append(attrs, semconvNew.ClientAddress(clientIP))
+	}
+
+	if req.URL != nil && req.URL.Path != "" {
+		attrs = append(attrs, semconvNew.URLPath(req.URL.Path))
+	}
+
+	if protoName != "" && protoName != "http" {
+		attrs = append(attrs, semconvNew.NetworkProtocolName(protoName))
+	}
+	if protoVersion != "" {
+		attrs = append(attrs, semconvNew.NetworkProtocolVersion(protoVersion))
+	}
+
+	return attrs
 }
 
-func (n newHTTPServer) method(method string, attrs []attribute.KeyValue) int {
+func (n newHTTPServer) method(method string) (attribute.KeyValue, attribute.KeyValue) {
 	if method == "" {
-		attrs[0] = semconvNew.HTTPRequestMethodGet
-		return 1
+		return semconvNew.HTTPRequestMethodGet, attribute.KeyValue{}
 	}
 	if attr, ok := methodLookup[method]; ok {
-		attrs[0] = attr
-		return 1
+		return attr, attribute.KeyValue{}
 	}
 
+	orig := semconvNew.HTTPRequestMethodOriginal(method)
 	if attr, ok := methodLookup[strings.ToUpper(method)]; ok {
-		attrs[0] = attr
-	} else {
-		// If the Original methos is not a standard HTTP method fallback to GET
-		attrs[0] = semconvNew.HTTPRequestMethodGet
+		return attr, orig
 	}
-	attrs[1] = semconvNew.HTTPRequestMethodOriginal(method)
-	return 2
+	return semconvNew.HTTPRequestMethodGet, orig
 }
 
-func (n newHTTPServer) scheme(https bool, attrs []attribute.KeyValue) int { // nolint:revive
+func (n newHTTPServer) scheme(https bool) attribute.KeyValue { // nolint:revive
 	if https {
-		attrs[0] = semconvNew.URLScheme("https")
-		return 1
+		return semconvNew.URLScheme("https")
 	}
-	attrs[0] = semconvNew.URLScheme("http")
-	return 1
+	return semconvNew.URLScheme("http")
 }
 
 // TraceResponse returns trace attributes for telemetry from an HTTP response.
 //
 // If any of the fields in the ResponseTelemetry are not set the attribute will be omitted.
 func (n newHTTPServer) ResponseTraceAttrs(resp ResponseTelemetry) []attribute.KeyValue {
-	attributes := []attribute.KeyValue{}
+	var count int
+
+	if resp.ReadBytes > 0 {
+		count++
+	}
+	if resp.WriteBytes > 0 {
+		count++
+	}
+	if resp.StatusCode > 0 {
+		count++
+	}
+
+	attributes := make([]attribute.KeyValue, 0, count)
 
 	if resp.ReadBytes > 0 {
 		attributes = append(attributes,
