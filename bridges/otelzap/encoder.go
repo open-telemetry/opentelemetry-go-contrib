@@ -11,7 +11,10 @@ import (
 	"go.opentelemetry.io/otel/log"
 )
 
-var _ zapcore.ObjectEncoder = (*objectEncoder)(nil)
+var (
+	_ zapcore.ObjectEncoder = (*objectEncoder)(nil)
+	_ zapcore.ArrayEncoder  = (*arrayEncoder)(nil)
+)
 
 // objectEncoder implements zapcore.ObjectEncoder.
 // It encodes given fields to OTel key-values.
@@ -102,3 +105,45 @@ func (m *objectEncoder) AddUint32(k string, v uint32)       {}
 func (m *objectEncoder) AddUint16(k string, v uint16)       {}
 func (m *objectEncoder) AddUint8(k string, v uint8)         {}
 func (m *objectEncoder) AddUintptr(k string, v uintptr)     {}
+
+// arrayEncoder implements [zapcore.ArrayEncoder].
+type arrayEncoder struct {
+	elems []log.Value // nolint:unused
+}
+
+// TODO
+func (a *arrayEncoder) AppendArray(v zapcore.ArrayMarshaler) error {
+	return nil
+}
+
+// TODO
+func (a *arrayEncoder) AppendObject(v zapcore.ObjectMarshaler) error {
+	return nil
+}
+
+// TODO
+func (a *arrayEncoder) AppendReflected(v interface{}) error {
+	return nil
+}
+
+// TODO
+func (a *arrayEncoder) AppendComplex128(v complex128)  {}
+func (a *arrayEncoder) AppendFloat32(v float32)        {}
+func (a *arrayEncoder) AppendByteString(v []byte)      {}
+func (a *arrayEncoder) AppendBool(v bool)              {}
+func (a *arrayEncoder) AppendUint64(v uint64)          {}
+func (a *arrayEncoder) AppendFloat64(v float64)        {}
+func (a *arrayEncoder) AppendInt(v int)                {}
+func (a *arrayEncoder) AppendInt64(v int64)            {}
+func (a *arrayEncoder) AppendString(v string)          {}
+func (a *arrayEncoder) AppendComplex64(v complex64)    {}
+func (a *arrayEncoder) AppendDuration(v time.Duration) {}
+func (a *arrayEncoder) AppendInt32(v int32)            {}
+func (a *arrayEncoder) AppendInt16(v int16)            {}
+func (a *arrayEncoder) AppendInt8(v int8)              {}
+func (a *arrayEncoder) AppendTime(v time.Time)         {}
+func (a *arrayEncoder) AppendUint(v uint)              {}
+func (a *arrayEncoder) AppendUint32(v uint32)          {}
+func (a *arrayEncoder) AppendUint16(v uint16)          {}
+func (a *arrayEncoder) AppendUint8(v uint8)            {}
+func (a *arrayEncoder) AppendUintptr(v uintptr)        {}
