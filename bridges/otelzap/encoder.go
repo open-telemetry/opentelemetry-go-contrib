@@ -130,22 +130,22 @@ type arrayEncoder struct {
 	elems []log.Value // nolint:unused
 }
 
-// TODO
+// TODO.
 func (a *arrayEncoder) AppendArray(v zapcore.ArrayMarshaler) error {
 	return nil
 }
 
-// TODO
+// TODO.
 func (a *arrayEncoder) AppendObject(v zapcore.ObjectMarshaler) error {
 	return nil
 }
 
-// TODO
+// TODO.
 func (a *arrayEncoder) AppendReflected(v interface{}) error {
 	return nil
 }
 
-// TODO
+// TODO.
 func (a *arrayEncoder) AppendComplex128(v complex128)  {}
 func (a *arrayEncoder) AppendFloat32(v float32)        {}
 func (a *arrayEncoder) AppendByteString(v []byte)      {}
