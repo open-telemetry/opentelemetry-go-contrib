@@ -7,9 +7,9 @@ require (
 	go.mongodb.org/mongo-driver v1.15.0
 	go.opentelemetry.io/contrib v1.26.0
 	go.opentelemetry.io/contrib/instrumentation/go.mongodb.org/mongo-driver/mongo/otelmongo v0.51.0
-	go.opentelemetry.io/otel v1.26.0
-	go.opentelemetry.io/otel/sdk v1.26.0
-	go.opentelemetry.io/otel/trace v1.26.0
+	go.opentelemetry.io/otel v1.26.1-0.20240519051633-999c6a07b318
+	go.opentelemetry.io/otel/sdk v1.26.1-0.20240519051633-999c6a07b318
+	go.opentelemetry.io/otel/trace v1.26.1-0.20240519051633-999c6a07b318
 )
 
 require (
@@ -24,7 +24,7 @@ require (
 	github.com/xdg-go/scram v1.1.2 // indirect
 	github.com/xdg-go/stringprep v1.0.4 // indirect
 	github.com/youmark/pkcs8 v0.0.0-20181117223130-1be2e3e5546d // indirect
-	go.opentelemetry.io/otel/metric v1.26.0 // indirect
+	go.opentelemetry.io/otel/metric v1.26.1-0.20240519051633-999c6a07b318 // indirect
 	golang.org/x/crypto v0.23.0 // indirect
 	golang.org/x/sync v0.7.0 // indirect
 	golang.org/x/sys v0.20.0 // indirect
