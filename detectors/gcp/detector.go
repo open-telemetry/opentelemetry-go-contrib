@@ -6,6 +6,7 @@ package gcp // import "go.opentelemetry.io/contrib/detectors/gcp"
 import (
 	"context"
 	"fmt"
+	"strconv"
 
 	"cloud.google.com/go/compute/metadata"
 	"github.com/GoogleCloudPlatform/opentelemetry-operations-go/detectors/gcp"
@@ -51,6 +52,13 @@ func (d *detector) Detect(ctx context.Context) (*resource.Resource, error) {
 		b.add(semconv.FaaSVersionKey, d.detector.FaaSVersion)
 		b.add(semconv.FaaSInstanceKey, d.detector.FaaSID)
 		b.add(semconv.CloudRegionKey, d.detector.FaaSCloudRegion)
+	case gcp.CloudRunJob:
+		b.attrs = append(b.attrs, semconv.CloudPlatformGCPCloudRun)
+		b.add(semconv.FaaSNameKey, d.detector.FaaSName)
+		b.add(semconv.FaaSInstanceKey, d.detector.FaaSID)
+		b.add(semconv.GCPCloudRunJobExecutionKey, d.detector.CloudRunJobExecution)
+		b.addInt(semconv.GCPCloudRunJobTaskIndexKey, d.detector.CloudRunJobTaskIndex)
+		b.add(semconv.CloudRegionKey, d.detector.FaaSCloudRegion)
 	case gcp.CloudFunctions:
 		b.attrs = append(b.attrs, semconv.CloudPlatformGCPCloudFunctions)
 		b.add(semconv.FaaSNameKey, d.detector.FaaSName)
@@ -94,6 +102,18 @@ type resourceBuilder struct {
 func (r *resourceBuilder) add(key attribute.Key, detect func() (string, error)) {
 	if v, err := detect(); err == nil {
 		r.attrs = append(r.attrs, key.String(v))
+	} else {
+		r.errs = append(r.errs, err)
+	}
+}
+
+func (r *resourceBuilder) addInt(key attribute.Key, detect func() (string, error)) {
+	if v, err := detect(); err == nil {
+		if vi, err := strconv.Atoi(v); err == nil {
+			r.attrs = append(r.attrs, key.Int(vi))
+		} else {
+			r.errs = append(r.errs, err)
+		}
 	} else {
 		r.errs = append(r.errs, err)
 	}
