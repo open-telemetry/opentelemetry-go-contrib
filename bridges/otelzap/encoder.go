@@ -51,11 +51,13 @@ func (m *objectEncoder) AddBool(k string, v bool) {
 }
 
 func (m *objectEncoder) AddDuration(k string, v time.Duration) {
-	// TODO
+	m.AddInt64(k, v.Nanoseconds())
 }
 
 func (m *objectEncoder) AddComplex128(k string, v complex128) {
-	// TODO.
+	r := log.Float64("r", real(v))
+	i := log.Float64("i", imag(v))
+	m.kv = append(m.kv, log.Map(k, r, i))
 }
 
 func (m *objectEncoder) AddFloat64(k string, v float64) {
@@ -89,16 +91,33 @@ func (m *objectEncoder) OpenNamespace(k string) {
 	// TODO
 }
 
-func (m *objectEncoder) AddFloat32(k string, v float32) { m.AddFloat64(k, float64(v)) }
-func (m *objectEncoder) AddInt32(k string, v int32)     { m.AddInt64(k, int64(v)) }
-func (m *objectEncoder) AddInt16(k string, v int16)     { m.AddInt64(k, int64(v)) }
-func (m *objectEncoder) AddInt8(k string, v int8)       { m.AddInt64(k, int64(v)) }
+func (m *objectEncoder) AddComplex64(k string, v complex64) {
+	m.AddComplex128(k, complex128(v))
+}
+
+func (m *objectEncoder) AddTime(k string, v time.Time) {
+	m.AddInt64(k, v.UnixNano())
+}
+
+func (m *objectEncoder) AddFloat32(k string, v float32) {
+	m.AddFloat64(k, float64(v))
+}
+
+func (m *objectEncoder) AddInt32(k string, v int32) {
+	m.AddInt64(k, int64(v))
+}
+
+func (m *objectEncoder) AddInt16(k string, v int16) {
+	m.AddInt64(k, int64(v))
+}
+
+func (m *objectEncoder) AddInt8(k string, v int8) {
+	m.AddInt64(k, int64(v))
+}
 
 // TODO.
-func (m *objectEncoder) AddComplex64(k string, v complex64) {}
-func (m *objectEncoder) AddTime(k string, v time.Time)      {}
-func (m *objectEncoder) AddUint(k string, v uint)           {}
-func (m *objectEncoder) AddUint32(k string, v uint32)       {}
-func (m *objectEncoder) AddUint16(k string, v uint16)       {}
-func (m *objectEncoder) AddUint8(k string, v uint8)         {}
-func (m *objectEncoder) AddUintptr(k string, v uintptr)     {}
+func (m *objectEncoder) AddUint(k string, v uint)       {}
+func (m *objectEncoder) AddUint32(k string, v uint32)   {}
+func (m *objectEncoder) AddUint16(k string, v uint16)   {}
+func (m *objectEncoder) AddUint8(k string, v uint8)     {}
+func (m *objectEncoder) AddUintptr(k string, v uintptr) {}
