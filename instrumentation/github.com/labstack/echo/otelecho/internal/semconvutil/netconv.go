@@ -4,7 +4,7 @@
 // Copyright The OpenTelemetry Authors
 // SPDX-License-Identifier: Apache-2.0
 
-package semconvutil // import "go.opentelemetry.io/contrib/internal/shared/semconvutil"
+package semconvutil // import "go.opentelemetry.io/contrib/instrumentation/github.com/labstack/echo/otelecho/internal/semconvutil"
 
 import (
 	"net"
