@@ -186,7 +186,7 @@ func TestHTTPRequestWithClientTrace(t *testing.T) {
 					}
 					attrs = slices.DeleteFunc(attrs, func(a attribute.KeyValue) bool {
 						// Skip keys that are unable to be detected beforehand.
-						if a.Key == otelhttptrace.TLSCipher || a.Key == otelhttptrace.TLSProtocolVersion {
+						if a.Key == otelhttptrace.TLSCipherKey || a.Key == otelhttptrace.TLSProtocolVersionKey {
 							return true
 						}
 						return false

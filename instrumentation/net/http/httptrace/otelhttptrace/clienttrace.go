@@ -44,13 +44,13 @@ var (
 //
 // From https://opentelemetry.io/docs/specs/semconv/attributes-registry/tls/ but only present from semconv v1.24.
 var (
-	TLSCipher                 = attribute.Key("tls.cipher")
-	TLSProtocolVersion        = attribute.Key("tls.protocol.version")
-	TLSResumed                = attribute.Key("tls.resumed")
-	TLSServerCertificateChain = attribute.Key("tls.server.certificate_chain")
-	TLSServerHashSha256       = attribute.Key("tls.server.hash.sha256")
-	TLSServerNotAfter         = attribute.Key("tls.server.not_after")
-	TLSServerNotBefore        = attribute.Key("tls.server.not_before")
+	TLSCipherKey                 = attribute.Key("tls.cipher")
+	TLSProtocolVersionKey        = attribute.Key("tls.protocol.version")
+	TLSResumedKey                = attribute.Key("tls.resumed")
+	TLSServerCertificateChainKey = attribute.Key("tls.server.certificate_chain")
+	TLSServerHashSha256Key       = attribute.Key("tls.server.hash.sha256")
+	TLSServerNotAfterKey         = attribute.Key("tls.server.not_after")
+	TLSServerNotBeforeKey        = attribute.Key("tls.server.not_before")
 )
 
 var hookMap = map[string]string{
@@ -336,9 +336,9 @@ func (ct *clientTracer) tlsHandshakeStart() {
 func (ct *clientTracer) tlsHandshakeDone(state tls.ConnectionState, err error) {
 	attrs := make([]attribute.KeyValue, 0, 7)
 	attrs = append(attrs,
-		TLSCipher.String(tls.CipherSuiteName(state.CipherSuite)),
-		TLSProtocolVersion.String(tls.VersionName(state.Version)),
-		TLSResumed.Bool(state.DidResume),
+		TLSCipherKey.String(tls.CipherSuiteName(state.CipherSuite)),
+		TLSProtocolVersionKey.String(tls.VersionName(state.Version)),
+		TLSResumedKey.Bool(state.DidResume),
 	)
 
 	if len(state.PeerCertificates) > 0 {
@@ -349,10 +349,10 @@ func (ct *clientTracer) tlsHandshakeDone(state tls.ConnectionState, err error) {
 
 		leafCert := state.PeerCertificates[0]
 		attrs = append(attrs,
-			TLSServerCertificateChain.StringSlice(certChain),
-			TLSServerHashSha256.String(fmt.Sprintf("%X", sha256.Sum256(leafCert.Raw))),
-			TLSServerNotAfter.String(leafCert.NotAfter.UTC().Format(time.RFC3339)),
-			TLSServerNotBefore.String(leafCert.NotBefore.UTC().Format(time.RFC3339)),
+			TLSServerCertificateChainKey.StringSlice(certChain),
+			TLSServerHashSha256Key.String(fmt.Sprintf("%X", sha256.Sum256(leafCert.Raw))),
+			TLSServerNotAfterKey.String(leafCert.NotAfter.UTC().Format(time.RFC3339)),
+			TLSServerNotBeforeKey.String(leafCert.NotBefore.UTC().Format(time.RFC3339)),
 		)
 	}
 	ct.end("http.tls", err, attrs...)
