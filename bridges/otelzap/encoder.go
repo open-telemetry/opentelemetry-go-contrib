@@ -76,8 +76,12 @@ func (m *objectEncoder) AddString(k string, v string) {
 	m.kv = append(m.kv, log.String(k, v))
 }
 
-// TODO.
 func (m *objectEncoder) AddUint64(k string, v uint64) {
+	m.kv = append(m.kv,
+		log.KeyValue{
+			Key:   k,
+			Value: assignUintValue(v),
+		})
 }
 
 // TODO.
@@ -115,9 +119,30 @@ func (m *objectEncoder) AddInt8(k string, v int8) {
 	m.AddInt64(k, int64(v))
 }
 
-// TODO.
-func (m *objectEncoder) AddUint(k string, v uint)       {}
-func (m *objectEncoder) AddUint32(k string, v uint32)   {}
-func (m *objectEncoder) AddUint16(k string, v uint16)   {}
-func (m *objectEncoder) AddUint8(k string, v uint8)     {}
-func (m *objectEncoder) AddUintptr(k string, v uintptr) {}
+func (m *objectEncoder) AddUint(k string, v uint) {
+	m.AddUint64(k, uint64(v))
+}
+
+func (m *objectEncoder) AddUint32(k string, v uint32) {
+	m.AddInt64(k, int64(v))
+}
+
+func (m *objectEncoder) AddUint16(k string, v uint16) {
+	m.AddInt64(k, int64(v))
+}
+
+func (m *objectEncoder) AddUint8(k string, v uint8) {
+	m.AddInt64(k, int64(v))
+}
+
+func (m *objectEncoder) AddUintptr(k string, v uintptr) {
+	m.AddUint64(k, uint64(v))
+}
+
+func assignUintValue(v uint64) log.Value {
+	const maxInt64 = ^uint64(0) >> 1
+	if v > maxInt64 {
+		return log.Float64Value(float64(v))
+	}
+	return log.Int64Value(int64(v))
+}

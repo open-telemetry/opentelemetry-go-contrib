@@ -29,7 +29,7 @@ TOOLS = $(CURDIR)/.tools
 
 $(TOOLS):
 	@mkdir -p $@
-$(TOOLS)/%: | $(TOOLS)
+$(TOOLS)/%: $(TOOLS_MOD_DIR)/go.mod | $(TOOLS)
 	cd $(TOOLS_MOD_DIR) && \
 	$(GO) build -o $@ $(PACKAGE)
 
@@ -76,18 +76,18 @@ generate: go-generate vanity-import-fix
 .PHONY: go-generate
 go-generate: $(OTEL_GO_MOD_DIRS:%=go-generate/%)
 go-generate/%: DIR=$*
-go-generate/%: | $(STRINGER) $(GOTMPL)
+go-generate/%: $(STRINGER) $(GOTMPL)
 	@echo "$(GO) generate $(DIR)/..." \
 		&& cd $(DIR) \
 		&& PATH="$(TOOLS):$${PATH}" $(GO) generate ./...
 
 .PHONY: vanity-import-fix
-vanity-import-fix: | $(PORTO)
+vanity-import-fix: $(PORTO)
 	@$(PORTO) --include-internal -w .
 
 # Generate go.work file for local development.
 .PHONY: go-work
-go-work: | $(CROSSLINK)
+go-work: $(CROSSLINK)
 	$(CROSSLINK) work --root=$(shell pwd)
 
 # Build
@@ -116,13 +116,13 @@ golangci-lint-fix: ARGS=--fix
 golangci-lint-fix: golangci-lint
 golangci-lint: $(OTEL_GO_MOD_DIRS:%=golangci-lint/%)
 golangci-lint/%: DIR=$*
-golangci-lint/%: | $(GOLANGCI_LINT)
+golangci-lint/%: $(GOLANGCI_LINT)
 	@echo 'golangci-lint $(if $(ARGS),$(ARGS) ,)$(DIR)' \
 		&& cd $(DIR) \
 		&& $(GOLANGCI_LINT) run --allow-serial-runners $(ARGS)
 
 .PHONY: crosslink
-crosslink: | $(CROSSLINK)
+crosslink: $(CROSSLINK)
 	@echo "Updating intra-repository dependencies in all go modules" \
 		&& $(CROSSLINK) --root=$(shell pwd) --prune
 
@@ -135,13 +135,13 @@ go-mod-tidy/%:
 		&& $(GO) mod tidy -compat=1.21
 
 .PHONY: misspell
-misspell: | $(MISSPELL)
+misspell: $(MISSPELL)
 	@$(MISSPELL) -w $(ALL_DOCS)
 
 .PHONY: govulncheck
 govulncheck: $(ALL_GO_MOD_DIRS:%=govulncheck/%)
 govulncheck/%: DIR=$*
-govulncheck/%: | $(GOVULNCHECK)
+govulncheck/%: $(GOVULNCHECK)
 	@echo "govulncheck in $(DIR)" \
 		&& cd $(DIR) \
 		&& $(GOVULNCHECK) ./...
@@ -252,7 +252,7 @@ test-mongo-driver:
 .PHONY: gorelease
 gorelease: $(OTEL_GO_MOD_DIRS:%=gorelease/%)
 gorelease/%: DIR=$*
-gorelease/%:| $(GORELEASE)
+gorelease/%: $(GORELEASE)
 	@echo "gorelease in $(DIR):" \
 		&& cd $(DIR) \
 		&& $(GORELEASE) \
@@ -260,18 +260,18 @@ gorelease/%:| $(GORELEASE)
 
 COREPATH ?= "../opentelemetry-go"
 .PHONY: sync-core
-sync-core: | $(MULTIMOD)
+sync-core: $(MULTIMOD)
 	@[ ! -d $COREPATH ] || ( echo ">> Path to core repository must be set in COREPATH and must exist"; exit 1 )
 	$(MULTIMOD) verify && $(MULTIMOD) sync -a -o ${COREPATH}
 
 .PHONY: prerelease
-prerelease: | $(MULTIMOD)
+prerelease: $(MULTIMOD)
 	@[ "${MODSET}" ] || ( echo ">> env var MODSET is not set"; exit 1 )
 	$(MULTIMOD) verify && $(MULTIMOD) prerelease -m ${MODSET}
 
 COMMIT ?= "HEAD"
 .PHONY: add-tags
-add-tags: | $(MULTIMOD)
+add-tags: $(MULTIMOD)
 	@[ "${MODSET}" ] || ( echo ">> env var MODSET is not set"; exit 1 )
 	$(MULTIMOD) verify && $(MULTIMOD) tag -m ${MODSET} -c ${COMMIT}
 
