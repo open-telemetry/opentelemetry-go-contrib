@@ -5,7 +5,7 @@ go 1.21
 require (
 	github.com/prometheus/client_golang v1.19.1
 	github.com/stretchr/testify v1.9.0
-	go.opentelemetry.io/collector/pdata v1.7.0
+	go.opentelemetry.io/collector/pdata v1.8.0
 	go.opentelemetry.io/contrib/bridges/prometheus v0.52.0
 	go.opentelemetry.io/otel v1.27.0
 	go.opentelemetry.io/otel/exporters/otlp/otlpmetric/otlpmetricgrpc v1.27.0
