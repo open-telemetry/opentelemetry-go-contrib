@@ -101,7 +101,7 @@ func NewCore(name string, opts ...Option) *Core {
 	}
 }
 
-// Enabled method decides whether a given logging level is enabled when logging a message.
+// Enabled decides whether a given logging level is enabled when logging a message.
 func (o *Core) Enabled(level zapcore.Level) bool {
 	r := log.Record{}
 	r.SetSeverity(convertLevel(level))
