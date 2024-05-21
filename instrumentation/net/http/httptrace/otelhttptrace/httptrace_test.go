@@ -31,7 +31,7 @@ func TestRoundtrip(t *testing.T) {
 	props := otelhttptrace.WithPropagators(propagation.NewCompositeTextMapPropagator(propagation.TraceContext{}, propagation.Baggage{}))
 
 	// Mock http server
-	ts := httptest.NewTLSServer(
+	ts := httptest.NewServer(
 		http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 			attrs, corrs, span := otelhttptrace.Extract(r.Context(), r, props)
 
@@ -76,7 +76,7 @@ func TestRoundtrip(t *testing.T) {
 		semconv.NetHostPortKey:              port,
 		semconv.NetProtocolVersionKey:       "1.1",
 		semconv.HTTPMethodKey:               "GET",
-		semconv.HTTPSchemeKey:               "https",
+		semconv.HTTPSchemeKey:               "http",
 		semconv.HTTPTargetKey:               "/",
 		semconv.HTTPRequestContentLengthKey: "3",
 		semconv.NetSockPeerAddrKey:          host,
