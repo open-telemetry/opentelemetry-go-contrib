@@ -19,6 +19,7 @@ import (
 
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
+
 	"go.opentelemetry.io/contrib/instrumentation/net/http/httptrace/otelhttptrace"
 	"go.opentelemetry.io/otel"
 	"go.opentelemetry.io/otel/attribute"
@@ -87,7 +88,6 @@ func TestHTTPRequestWithClientTrace(t *testing.T) {
 			name       string
 			attributes []attribute.KeyValue
 			parent     string
-			onlyTLS    bool
 		}
 
 		testLen := []tc{
