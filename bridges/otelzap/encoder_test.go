@@ -79,6 +79,41 @@ func TestObjectEncoder(t *testing.T) {
 			expected: "v",
 		},
 		{
+			desc:     "AddUint64",
+			f:        func(e zapcore.ObjectEncoder) { e.AddUint64("k", 42) },
+			expected: int64(42),
+		},
+		{
+			desc:     "AddUint64-Overflow",
+			f:        func(e zapcore.ObjectEncoder) { e.AddUint64("k", ^uint64(0)) },
+			expected: float64(^uint64(0)),
+		},
+		{
+			desc:     "AddUint",
+			f:        func(e zapcore.ObjectEncoder) { e.AddUint("k", 42) },
+			expected: int64(42),
+		},
+		{
+			desc:     "AddUint32",
+			f:        func(e zapcore.ObjectEncoder) { e.AddUint32("k", 42) },
+			expected: int64(42),
+		},
+		{
+			desc:     "AddUint16",
+			f:        func(e zapcore.ObjectEncoder) { e.AddUint16("k", 42) },
+			expected: int64(42),
+		},
+		{
+			desc:     "AddUint8",
+			f:        func(e zapcore.ObjectEncoder) { e.AddUint8("k", 42) },
+			expected: int64(42),
+		},
+		{
+			desc:     "AddUintptr",
+			f:        func(e zapcore.ObjectEncoder) { e.AddUintptr("k", 42) },
+			expected: int64(42),
+		},
+		{
 			desc:     "AddDuration",
 			f:        func(e zapcore.ObjectEncoder) { e.AddDuration("k", time.Millisecond) },
 			expected: int64(1000000),
