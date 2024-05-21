@@ -9,11 +9,11 @@ require (
 	github.com/aws/aws-sdk-go-v2/config v1.27.15
 	github.com/aws/aws-sdk-go-v2/service/dynamodb v1.32.3
 	github.com/aws/aws-sdk-go-v2/service/s3 v1.54.2
-	go.opentelemetry.io/contrib/instrumentation/github.com/aws/aws-sdk-go-v2/otelaws v0.51.0
-	go.opentelemetry.io/otel v1.26.1-0.20240519051633-999c6a07b318
-	go.opentelemetry.io/otel/exporters/stdout/stdouttrace v1.26.1-0.20240519051633-999c6a07b318
-	go.opentelemetry.io/otel/sdk v1.26.1-0.20240519051633-999c6a07b318
-	go.opentelemetry.io/otel/trace v1.26.1-0.20240519051633-999c6a07b318
+	go.opentelemetry.io/contrib/instrumentation/github.com/aws/aws-sdk-go-v2/otelaws v0.52.0
+	go.opentelemetry.io/otel v1.27.0
+	go.opentelemetry.io/otel/exporters/stdout/stdouttrace v1.27.0
+	go.opentelemetry.io/otel/sdk v1.27.0
+	go.opentelemetry.io/otel/trace v1.27.0
 )
 
 require (
@@ -34,9 +34,9 @@ require (
 	github.com/aws/aws-sdk-go-v2/service/ssooidc v1.24.2 // indirect
 	github.com/aws/aws-sdk-go-v2/service/sts v1.28.9 // indirect
 	github.com/aws/smithy-go v1.20.2 // indirect
-	github.com/go-logr/logr v1.4.1 // indirect
+	github.com/go-logr/logr v1.4.2 // indirect
 	github.com/go-logr/stdr v1.2.2 // indirect
 	github.com/jmespath/go-jmespath v0.4.0 // indirect
-	go.opentelemetry.io/otel/metric v1.26.1-0.20240519051633-999c6a07b318 // indirect
+	go.opentelemetry.io/otel/metric v1.27.0 // indirect
 	golang.org/x/sys v0.20.0 // indirect
 )

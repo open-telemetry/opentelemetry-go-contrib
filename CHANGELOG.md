@@ -8,6 +8,8 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 
 ## [Unreleased]
 
+## [1.27.0/0.52.0/0.21.0/0.7.0/0.2.0] - 2024-05-21
+
 ### Added
 
 - Add the new `go.opentelemetry.io/contrib/instrgen` package to provide auto-generated source code instrumentation. (#3068, #3108)
@@ -35,6 +37,7 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
   This parameter is used as a replacement of `WithInstrumentationScope` to specify the name of the logger backing the underlying `Handler`. (#5588)
 - `NewHandler` now accepts a `name` `string` as the first argument.
   This parameter is used as a replacement of `WithInstrumentationScope` to specify the name of the logger backing the returned `Handler`. (#5588)
+- Upgrade all dependencies of `go.opentelemetry.io/otel/semconv/v1.24.0` to `go.opentelemetry.io/otel/semconv/v1.25.0`. (#5605)
 
 ### Removed
 
@@ -1013,7 +1016,8 @@ First official tagged release of `contrib` repository.
 - Prefix support for dogstatsd (#34)
 - Update Go Runtime package to use batch observer (#44)
 
-[Unreleased]: https://github.com/open-telemetry/opentelemetry-go-contrib/compare/v1.26.0...HEAD
+[Unreleased]: https://github.com/open-telemetry/opentelemetry-go-contrib/compare/v1.27.0...HEAD
+[1.27.0/0.52.0/0.21.0/0.7.0/0.2.0]: https://github.com/open-telemetry/opentelemetry-go-contrib/releases/tag/v1.27.0
 [1.26.0/0.51.0/0.20.0/0.6.0/0.1.0]: https://github.com/open-telemetry/opentelemetry-go-contrib/releases/tag/v1.26.0
 [1.25.0/0.50.0/0.19.0/0.5.0/0.0.1]: https://github.com/open-telemetry/opentelemetry-go-contrib/releases/tag/v1.25.0
 [1.24.0/0.49.0/0.18.0/0.4.0]: https://github.com/open-telemetry/opentelemetry-go-contrib/releases/tag/v1.24.0
