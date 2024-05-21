@@ -18,6 +18,7 @@ import (
 	"go.opentelemetry.io/otel"
 	"go.opentelemetry.io/otel/attribute"
 	"go.opentelemetry.io/otel/codes"
+	semconv "go.opentelemetry.io/otel/semconv/v1.20.0"
 	"go.opentelemetry.io/otel/trace"
 )
 
@@ -278,7 +279,7 @@ func (ct *clientTracer) span(hook string) trace.Span {
 }
 
 func (ct *clientTracer) getConn(host string) {
-	ct.start("http.getconn", "http.getconn", attribute.Key("net.host.name").String(host))
+	ct.start("http.getconn", "http.getconn", semconv.NetHostName(host))
 }
 
 func (ct *clientTracer) gotConn(info httptrace.GotConnInfo) {
@@ -303,7 +304,7 @@ func (ct *clientTracer) gotFirstResponseByte() {
 }
 
 func (ct *clientTracer) dnsStart(info httptrace.DNSStartInfo) {
-	ct.start("http.dns", "http.dns", attribute.Key("net.host.name").String(info.Host))
+	ct.start("http.dns", "http.dns", semconv.NetHostName(info.Host))
 }
 
 func (ct *clientTracer) dnsDone(info httptrace.DNSDoneInfo) {
