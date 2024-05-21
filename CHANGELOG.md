@@ -24,7 +24,7 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 - The `WithSchemaURL` option function in `go.opentelemetry.io/contrib/bridges/otelslog`.
   This option function is used as a replacement of `WithInstrumentationScope` to specify the semantic convention schema URL for the logged records. (#5588)
 - Add support for Cloud Run jobs in `go.opentelemetry.io/contrib/detectors/gcp`. (#5559)
-- Add TLS information to otelhttptrace http.tls attributes, providing information on the cipher and protocol version used, whether the session was resumed, the SHA256 hash of the leaf certificate, "not before"/"not after" dates, and verified certificate chains.
+- Add TLS information from semantic conventions v1.24.0 to `go.opentelemetry.io/contrib/instrumentation/net/http/httptrace`. (#5563)
 
 ### Changed
 

@@ -12,13 +12,13 @@ import (
 	"net/http"
 	"net/http/httptest"
 	"net/http/httptrace"
+	"net/url"
 	"slices"
 	"testing"
 	"time"
 
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
-
 	"go.opentelemetry.io/contrib/instrumentation/net/http/httptrace/otelhttptrace"
 	"go.opentelemetry.io/otel"
 	"go.opentelemetry.io/otel/attribute"
@@ -46,136 +46,154 @@ func getSpansFromRecorder(sr *tracetest.SpanRecorder, name string) []trace.ReadO
 }
 
 func TestHTTPRequestWithClientTrace(t *testing.T) {
-	sr := tracetest.NewSpanRecorder()
-	tp := trace.NewTracerProvider(trace.WithSpanProcessor(sr))
-	otel.SetTracerProvider(tp)
-	tr := tp.Tracer("httptrace/client")
-
-	// Mock http server
-	ts := httptest.NewTLSServer(
+	// Mock http server, one without TLS and another with TLS.
+	tsHTTP := httptest.NewServer(
 		http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		}),
 	)
-	defer ts.Close()
-	address := ts.Listener.Addr()
+	defer tsHTTP.Close()
 
-	client := ts.Client()
-	err := func(ctx context.Context) error {
-		ctx, span := tr.Start(ctx, "test")
-		defer span.End()
-		req, _ := http.NewRequest("GET", ts.URL, nil)
-		_, req = otelhttptrace.W3C(ctx, req)
+	tsHTTPS := httptest.NewTLSServer(
+		http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		}),
+	)
+	defer tsHTTPS.Close()
 
-		res, err := client.Do(req)
+	for _, ts := range []*httptest.Server{tsHTTP, tsHTTPS} {
+		sr := tracetest.NewSpanRecorder()
+		tp := trace.NewTracerProvider(trace.WithSpanProcessor(sr))
+		otel.SetTracerProvider(tp)
+		tr := tp.Tracer("httptrace/client")
+
+		err := func(ctx context.Context) error {
+			ctx, span := tr.Start(ctx, "test")
+			defer span.End()
+			req, _ := http.NewRequest("GET", ts.URL, nil)
+			_, req = otelhttptrace.W3C(ctx, req)
+
+			res, err := ts.Client().Do(req)
+			if err != nil {
+				t.Fatalf("Request failed: %s", err.Error())
+			}
+			_ = res.Body.Close()
+
+			return nil
+		}(context.Background())
 		if err != nil {
-			t.Fatalf("Request failed: %s", err.Error())
-		}
-		_ = res.Body.Close()
-
-		return nil
-	}(context.Background())
-	if err != nil {
-		panic("unexpected error in http request: " + err.Error())
-	}
-
-	testLen := []struct {
-		name       string
-		attributes []attribute.KeyValue
-		parent     string
-	}{
-		{
-			name: "http.tls",
-			attributes: []attribute.KeyValue{
-				attribute.Key("tls.server.certificate_chain").StringSlice(
-					[]string{base64.StdEncoding.EncodeToString(ts.Certificate().Raw)},
-				),
-				attribute.Key("tls.server.hash.sha256").
-					String(fmt.Sprintf("%X", sha256.Sum256(ts.Certificate().Raw))),
-				attribute.Key("tls.server.not_after").
-					String(ts.Certificate().NotAfter.UTC().Format(time.RFC3339)),
-				attribute.Key("tls.server.not_before").
-					String(ts.Certificate().NotBefore.UTC().Format(time.RFC3339)),
-			},
-			parent: "http.getconn",
-		},
-		{
-			name: "http.connect",
-			attributes: []attribute.KeyValue{
-				attribute.Key("http.conn.done.addr").String(address.String()),
-				attribute.Key("http.conn.done.network").String("tcp"),
-				attribute.Key("http.conn.start.network").String("tcp"),
-				attribute.Key("http.remote").String(address.String()),
-			},
-			parent: "http.getconn",
-		},
-		{
-			name: "http.getconn",
-			attributes: []attribute.KeyValue{
-				attribute.Key("http.remote").String(address.String()),
-				attribute.Key("net.host.name").String(address.String()),
-				attribute.Key("http.conn.reused").Bool(false),
-				attribute.Key("http.conn.wasidle").Bool(false),
-			},
-			parent: "test",
-		},
-		{
-			name:   "http.receive",
-			parent: "test",
-		},
-		{
-			name:   "http.headers",
-			parent: "test",
-		},
-		{
-			name:   "http.send",
-			parent: "test",
-		},
-		{
-			name: "test",
-		},
-	}
-	for i, tl := range testLen {
-		span, ok := getSpanFromRecorder(sr, tl.name)
-		if !assert.True(t, ok) {
-			continue
+			panic("unexpected error in http request: " + err.Error())
 		}
 
-		if tl.parent != "" {
-			parent, ok := getSpanFromRecorder(sr, tl.parent)
-			if assert.True(t, ok) {
-				assert.Equal(t, span.Parent().SpanID(), parent.SpanContext().SpanID())
+		type tc struct {
+			name       string
+			attributes []attribute.KeyValue
+			parent     string
+			onlyTLS    bool
+		}
+
+		testLen := []tc{
+			{
+				name: "http.connect",
+				attributes: []attribute.KeyValue{
+					attribute.Key("http.conn.done.addr").String(ts.Listener.Addr().String()),
+					attribute.Key("http.conn.done.network").String("tcp"),
+					attribute.Key("http.conn.start.network").String("tcp"),
+					attribute.Key("http.remote").String(ts.Listener.Addr().String()),
+				},
+				parent: "http.getconn",
+			},
+			{
+				name: "http.getconn",
+				attributes: []attribute.KeyValue{
+					attribute.Key("http.remote").String(ts.Listener.Addr().String()),
+					attribute.Key("net.host.name").String(ts.Listener.Addr().String()),
+					attribute.Key("http.conn.reused").Bool(false),
+					attribute.Key("http.conn.wasidle").Bool(false),
+				},
+				parent: "test",
+			},
+			{
+				name:   "http.receive",
+				parent: "test",
+			},
+			{
+				name:   "http.headers",
+				parent: "test",
+			},
+			{
+				name:   "http.send",
+				parent: "test",
+			},
+			{
+				name: "test",
+			},
+		}
+
+		u, err := url.Parse(ts.URL)
+		if err != nil {
+			panic("unexpected error in parsing httptest server URL: " + err.Error())
+		}
+		// http.tls only exists on HTTPS connections.
+		if u.Scheme == "https" {
+			testLen = append([]tc{{
+				name: "http.tls",
+				attributes: []attribute.KeyValue{
+					attribute.Key("tls.server.certificate_chain").StringSlice(
+						[]string{base64.StdEncoding.EncodeToString(ts.Certificate().Raw)},
+					),
+					attribute.Key("tls.server.hash.sha256").
+						String(fmt.Sprintf("%X", sha256.Sum256(ts.Certificate().Raw))),
+					attribute.Key("tls.server.not_after").
+						String(ts.Certificate().NotAfter.UTC().Format(time.RFC3339)),
+					attribute.Key("tls.server.not_before").
+						String(ts.Certificate().NotBefore.UTC().Format(time.RFC3339)),
+				},
+				parent: "http.getconn",
+			}}, testLen...)
+		}
+
+		for i, tl := range testLen {
+			span, ok := getSpanFromRecorder(sr, tl.name)
+			if !assert.True(t, ok) {
+				continue
 			}
-		}
-		if len(tl.attributes) > 0 {
-			attrs := span.Attributes()
-			if tl.name == "http.getconn" {
-				// http.local attribute uses a non-deterministic port.
-				local := attribute.Key("http.local")
-				var contains bool
-				for i, a := range attrs {
-					if a.Key == local {
-						attrs = append(attrs[:i], attrs[i+1:]...)
-						contains = true
-						break
-					}
+
+			if tl.parent != "" {
+				parent, ok := getSpanFromRecorder(sr, tl.parent)
+				if assert.True(t, ok) {
+					assert.Equal(t, span.Parent().SpanID(), parent.SpanContext().SpanID())
 				}
-				assert.True(t, contains, "missing http.local attribute")
 			}
-			if tl.name == "http.tls" {
-				if i == 0 {
-					tl.attributes = append(tl.attributes, attribute.Key("tls.resumed").Bool(false))
-				} else {
-					tl.attributes = append(tl.attributes, attribute.Key("tls.resumed").Bool(true))
-				}
-				attrs = slices.DeleteFunc(attrs, func(a attribute.KeyValue) bool {
-					// Skip keys that are unable to be detected beforehand.
-					if a.Key == otelhttptrace.TLSCipher || a.Key == otelhttptrace.TLSProtocolVersion {
-						return true
+			if len(tl.attributes) > 0 {
+				attrs := span.Attributes()
+				if tl.name == "http.getconn" {
+					// http.local attribute uses a non-deterministic port.
+					local := attribute.Key("http.local")
+					var contains bool
+					for i, a := range attrs {
+						if a.Key == local {
+							attrs = append(attrs[:i], attrs[i+1:]...)
+							contains = true
+							break
+						}
 					}
-					return false
-				})
+					assert.True(t, contains, "missing http.local attribute")
+				}
+				if tl.name == "http.tls" {
+					if i == 0 {
+						tl.attributes = append(tl.attributes, attribute.Key("tls.resumed").Bool(false))
+					} else {
+						tl.attributes = append(tl.attributes, attribute.Key("tls.resumed").Bool(true))
+					}
+					attrs = slices.DeleteFunc(attrs, func(a attribute.KeyValue) bool {
+						// Skip keys that are unable to be detected beforehand.
+						if a.Key == otelhttptrace.TLSCipher || a.Key == otelhttptrace.TLSProtocolVersion {
+							return true
+						}
+						return false
+					})
+				}
+				assert.ElementsMatch(t, tl.attributes, attrs)
 			}
-			assert.ElementsMatch(t, tl.attributes, attrs)
 		}
 	}
 }
