@@ -4,7 +4,7 @@
 // Package ec2 provide an OpenTelemetry resource detector for AWS EC2
 // instances.
 //
-// Deprecated: otelmongo has no Code Owner.
+// Deprecated: ec2 has no Code Owner.
 // After August 21, 2024, it may no longer be supported and may stop
 // receiving new releases unless a new Code Owner is found. See
 // [this issue] if you would like to become the Code Owner of this module.
