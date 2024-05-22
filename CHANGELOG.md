@@ -8,6 +8,11 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 
 ## [Unreleased]
 
+### Deprecated
+
+- The `go.opentelemetry.io/contrib/detectors/aws/ec2` package is deprecated.
+  If you would like to become a Code Owner of this module and prevent it from being removed, see [#5542]. (#TBD)
+
 ## [1.27.0/0.52.0/0.21.0/0.7.0/0.2.0] - 2024-05-21
 
 ### Added
