@@ -35,3 +35,26 @@ func TestRespWriterFlush(t *testing.T) {
 	assert.Equal(t, http.StatusOK, rw.statusCode)
 	assert.True(t, rw.wroteHeader)
 }
+
+type nonFlushableResponseWriter struct{}
+
+func (_ nonFlushableResponseWriter) Header() http.Header {
+	return http.Header{}
+}
+
+func (_ nonFlushableResponseWriter) Write([]byte) (int, error) {
+	return 0, nil
+}
+
+func (_ nonFlushableResponseWriter) WriteHeader(int) {}
+
+func TestRespWriterFlushNoFlusher(t *testing.T) {
+	rw := &respWriterWrapper{
+		ResponseWriter: nonFlushableResponseWriter{},
+		record:         func(int64) {},
+	}
+
+	rw.Flush()
+	assert.Equal(t, http.StatusOK, rw.statusCode)
+	assert.True(t, rw.wroteHeader)
+}
