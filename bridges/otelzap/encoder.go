@@ -32,7 +32,7 @@ func newObjectEncoder(len int) *objectEncoder {
 }
 
 func (m *objectEncoder) AddArray(key string, v zapcore.ArrayMarshaler) error {
-	// Use Buffer for arrayEncoder
+	// TODO: Use arrayEncoder from a pool.
 	arr := &arrayEncoder{}
 	err := v.MarshalLogArray(arr)
 	m.kv = append(m.kv, log.Slice(key, arr.elems...))
