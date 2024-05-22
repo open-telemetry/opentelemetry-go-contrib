@@ -15,7 +15,7 @@ import (
 	"github.com/aws/aws-sdk-go-v2/service/s3"
 
 	lambdadetector "go.opentelemetry.io/contrib/detectors/aws/lambda"
-	"go.opentelemetry.io/contrib/instrumentation/github.com/aws/aws-lambda-go/otellambda"
+	"go.opentelemetry.io/contrib/instrumentation/github.com/aws/aws-lambda-go/otellambda" // nolint:staticcheck  // deprecated.
 	"go.opentelemetry.io/contrib/instrumentation/github.com/aws/aws-sdk-go-v2/otelaws"
 	"go.opentelemetry.io/contrib/instrumentation/net/http/otelhttp"
 	"go.opentelemetry.io/otel"
