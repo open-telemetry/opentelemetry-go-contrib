@@ -1,6 +1,6 @@
 # gorilla/mux instrumentation example
 
-:warning: Deprecated: otelaws has no Code Owner.
+:warning: Deprecated: otelmux has no Code Owner.
 
 An HTTP server using gorilla/mux and instrumentation. The server has a
 `/users/{id:[0-9]+}` endpoint. The server generates span information to
