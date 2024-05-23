@@ -9,7 +9,7 @@ import (
 
 	"gopkg.in/macaron.v1"
 
-	"go.opentelemetry.io/contrib/instrumentation/gopkg.in/macaron.v1/otelmacaron"
+	"go.opentelemetry.io/contrib/instrumentation/gopkg.in/macaron.v1/otelmacaron" // nolint:staticcheck  // deprecated.
 
 	"go.opentelemetry.io/otel"
 	"go.opentelemetry.io/otel/attribute"

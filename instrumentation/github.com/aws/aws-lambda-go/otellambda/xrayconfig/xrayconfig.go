@@ -1,15 +1,23 @@
 // Copyright The OpenTelemetry Authors
 // SPDX-License-Identifier: Apache-2.0
 
+// Package xrayconfig provides configuration for the otellambda package.
+//
+// Deprecated: otellambda has no Code Owner.
+// After August 21, 2024, it may no longer be supported and may stop
+// receiving new releases unless a new Code Owner is found. See
+// [this issue] if you would like to become the Code Owner of this module.
+//
+// [this issue]: https://github.com/open-telemetry/opentelemetry-go-contrib/issues/5546
 package xrayconfig // import "go.opentelemetry.io/contrib/instrumentation/github.com/aws/aws-lambda-go/otellambda/xrayconfig"
 
 import (
 	"context"
 	"os"
 
-	lambdadetector "go.opentelemetry.io/contrib/detectors/aws/lambda"
-	"go.opentelemetry.io/contrib/instrumentation/github.com/aws/aws-lambda-go/otellambda"
-	"go.opentelemetry.io/contrib/propagators/aws/xray"
+	lambdadetector "go.opentelemetry.io/contrib/detectors/aws/lambda"                     // nolint:staticcheck  // deprecated.
+	"go.opentelemetry.io/contrib/instrumentation/github.com/aws/aws-lambda-go/otellambda" // nolint:staticcheck  // deprecated.
+	"go.opentelemetry.io/contrib/propagators/aws/xray"                                    // nolint:staticcheck  // deprecated.
 	"go.opentelemetry.io/otel/exporters/otlp/otlptrace/otlptracegrpc"
 	"go.opentelemetry.io/otel/propagation"
 	sdktrace "go.opentelemetry.io/otel/sdk/trace"
