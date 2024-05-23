@@ -40,6 +40,22 @@ func TestCore(t *testing.T) {
 		assert.Equal(t, testValue, value2Result(kv.Value))
 		return true
 	})
+
+	rec.Reset()
+
+	// test child logger with accumulated fields
+	childlogger := logger.With(zap.String("workplace", "otel"))
+	childlogger.Info(testMessage)
+
+	got = rec.Result()[0].Records[0]
+	assert.Equal(t, testMessage, got.Body().AsString())
+	assert.Equal(t, log.SeverityInfo, got.Severity())
+	assert.Equal(t, 1, got.AttributesLen())
+	got.WalkAttributes(func(kv log.KeyValue) bool {
+		assert.Equal(t, "workplace", string(kv.Key))
+		assert.Equal(t, "otel", value2Result(kv.Value))
+		return true
+	})
 }
 
 func TestCoreEnabled(t *testing.T) {
