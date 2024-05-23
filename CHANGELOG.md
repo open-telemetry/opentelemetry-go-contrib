@@ -8,6 +8,13 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 
 ## [Unreleased]
 
+### Deprecated
+
+- The `go.opentelemetry.io/contrib/instrumentation/go.mongodb.org/mongo-driver/mongo/otelmongo` package is deprecated.
+  If you would like to become a Code Owner of this module and prevent it from being removed, see [#5551]. (#5598)
+
+[#5551]: https://github.com/open-telemetry/opentelemetry-go-contrib/issues/5551
+
 ## [1.27.0/0.52.0/0.21.0/0.7.0/0.2.0] - 2024-05-21
 
 ### Added
@@ -47,10 +54,6 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 ### Deprecated
 
 - The `InterceptorFilter` type in `go.opentelemetry.io/contrib/instrumentation/google.golang.org/grpc/otelgrpc` is deprecated. (#5196)
-- The `go.opentelemetry.io/contrib/instrumentation/go.mongodb.org/mongo-driver/mongo/otelmongo` package is deprecated.
-  If you would like to become a Code Owner of this module and prevent it from being removed, see [#5551]. (#5598)
-
-[#5551]: https://github.com/open-telemetry/opentelemetry-go-contrib/issues/5551
 
 ## [1.26.0/0.51.0/0.20.0/0.6.0/0.1.0] - 2024-04-24
 
