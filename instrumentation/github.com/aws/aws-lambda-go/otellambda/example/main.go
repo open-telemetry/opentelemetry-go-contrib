@@ -16,7 +16,7 @@ import (
 
 	lambdadetector "go.opentelemetry.io/contrib/detectors/aws/lambda"                     // nolint:staticcheck  // deprecated.
 	"go.opentelemetry.io/contrib/instrumentation/github.com/aws/aws-lambda-go/otellambda" // nolint:staticcheck  // deprecated.
-	"go.opentelemetry.io/contrib/instrumentation/github.com/aws/aws-sdk-go-v2/otelaws"
+	"go.opentelemetry.io/contrib/instrumentation/github.com/aws/aws-sdk-go-v2/otelaws"    // nolint:staticcheck  // deprecated.
 	"go.opentelemetry.io/contrib/instrumentation/net/http/otelhttp"
 	"go.opentelemetry.io/otel"
 	"go.opentelemetry.io/otel/exporters/stdout/stdouttrace"

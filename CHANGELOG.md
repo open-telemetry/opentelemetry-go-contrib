@@ -22,12 +22,15 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
   If you would like to become a Code Owner of this module and prevent it from being removed, see [#5545]. (#5641)
 - The `go.opentelemetry.io/contrib/instrumentation/github.com/aws/aws-lambda-go/otellambda` package is deprecated.
   If you would like to become a Code Owner of this module and prevent it from being removed, see [#5546]. (#5642)
+- The `go.opentelemetry.io/contrib/instrumentation/github.com/aws/aws-sdk-go-v2/otelaws` package is deprecated.
+  If you would like to become a Code Owner of this module and prevent it from being removed, see [#5547]. (#5643)
 
 [#5542]: https://github.com/open-telemetry/opentelemetry-go-contrib/issues/5542
 [#5543]: https://github.com/open-telemetry/opentelemetry-go-contrib/issues/5543
 [#5544]: https://github.com/open-telemetry/opentelemetry-go-contrib/issues/5544
 [#5545]: https://github.com/open-telemetry/opentelemetry-go-contrib/issues/5545
 [#5546]: https://github.com/open-telemetry/opentelemetry-go-contrib/issues/5546
+[#5547]: https://github.com/open-telemetry/opentelemetry-go-contrib/issues/5547
 [#5551]: https://github.com/open-telemetry/opentelemetry-go-contrib/issues/5551
 
 ## [1.27.0/0.52.0/0.21.0/0.7.0/0.2.0] - 2024-05-21
