@@ -169,8 +169,21 @@ func TestArrayEncoder(t *testing.T) {
 		{"AppendFloat64", func(e zapcore.ArrayEncoder) { e.AppendFloat64(3.14) }, 3.14},
 		{"AppendFloat32", func(e zapcore.ArrayEncoder) { e.AppendFloat32(3.14) }, float64(float32(3.14))},
 		{"AppendInt64", func(e zapcore.ArrayEncoder) { e.AppendInt64(42) }, int64(42)},
+		{"AppendInt32", func(e zapcore.ArrayEncoder) { e.AppendInt32(42) }, int64(42)},
+		{"AppendInt16", func(e zapcore.ArrayEncoder) { e.AppendInt16(42) }, int64(42)},
+		{"AppendInt8", func(e zapcore.ArrayEncoder) { e.AppendInt8(42) }, int64(42)},
 		{"AppendInt", func(e zapcore.ArrayEncoder) { e.AppendInt(42) }, int64(42)},
 		{"AppendString", func(e zapcore.ArrayEncoder) { e.AppendString("foo") }, "foo"},
+		{"AppendComplex128", func(e zapcore.ArrayEncoder) { e.AppendComplex128(1 + 2i) }, map[string]interface{}{"i": float64(2), "r": float64(1)}},
+		{"AppendComplex64", func(e zapcore.ArrayEncoder) { e.AppendComplex64(1 + 2i) }, map[string]interface{}{"i": float64(2), "r": float64(1)}},
+		{"AppendDuration", func(e zapcore.ArrayEncoder) { e.AppendDuration(time.Second) }, int64(1000000000)},
+		{"AppendUint", func(e zapcore.ArrayEncoder) { e.AppendUint(42) }, int64(42)},
+		{"AppendUint64", func(e zapcore.ArrayEncoder) { e.AppendUint64(42) }, int64(42)},
+		{"AppendUint64 - overflow", func(e zapcore.ArrayEncoder) { e.AppendUint64(^uint64(0)) }, float64(^uint64(0))},
+		{"AppendUint32", func(e zapcore.ArrayEncoder) { e.AppendUint32(42) }, int64(42)},
+		{"AppendUint16", func(e zapcore.ArrayEncoder) { e.AppendUint16(42) }, int64(42)},
+		{"AppendUint8", func(e zapcore.ArrayEncoder) { e.AppendUint8(42) }, int64(42)},
+		{"AppendUintptr", func(e zapcore.ArrayEncoder) { e.AppendUintptr(42) }, int64(42)},
 	}
 
 	for _, tt := range tests {
