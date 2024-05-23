@@ -1,3 +1,4 @@
+// Deprecated: ec2 has no Code Owner.
 module go.opentelemetry.io/contrib/detectors/aws/ec2
 
 go 1.21
