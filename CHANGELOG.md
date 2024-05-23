@@ -26,6 +26,8 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
   If you would like to become a Code Owner of this module and prevent it from being removed, see [#5547]. (#5643)
 - The `go.opentelemetry.io/contrib/instrumentation/github.com/gorilla/mux/otelmux` package is deprecated.
   If you would like to become a Code Owner of this module and prevent it from being removed, see [#5549]. (#5644)
+- The `go.opentelemetry.io/contrib/instrumentation/github.com/labstack/echo/otelecho` package is deprecated.
+  If you would like to become a Code Owner of this module and prevent it from being removed, see [#5550]. (#5645)
 
 [#5542]: https://github.com/open-telemetry/opentelemetry-go-contrib/issues/5542
 [#5543]: https://github.com/open-telemetry/opentelemetry-go-contrib/issues/5543
@@ -34,6 +36,7 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 [#5546]: https://github.com/open-telemetry/opentelemetry-go-contrib/issues/5546
 [#5547]: https://github.com/open-telemetry/opentelemetry-go-contrib/issues/5547
 [#5549]: https://github.com/open-telemetry/opentelemetry-go-contrib/issues/5549
+[#5550]: https://github.com/open-telemetry/opentelemetry-go-contrib/issues/5550
 [#5551]: https://github.com/open-telemetry/opentelemetry-go-contrib/issues/5551
 
 ## [1.27.0/0.52.0/0.21.0/0.7.0/0.2.0] - 2024-05-21
