@@ -1,3 +1,4 @@
+// Deprecated: eks has no Code Owner.
 module go.opentelemetry.io/contrib/detectors/aws/eks
 
 go 1.21
