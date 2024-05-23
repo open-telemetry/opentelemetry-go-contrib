@@ -32,8 +32,11 @@ func newObjectEncoder(len int) *objectEncoder {
 }
 
 func (m *objectEncoder) AddArray(key string, v zapcore.ArrayMarshaler) error {
-	// TODO
-	return nil
+	// TODO: Use arrayEncoder from a pool.
+	arr := &arrayEncoder{}
+	err := v.MarshalLogArray(arr)
+	m.kv = append(m.kv, log.Slice(key, arr.elems...))
+	return err
 }
 
 func (m *objectEncoder) AddObject(k string, v zapcore.ObjectMarshaler) error {
@@ -170,16 +173,37 @@ func (a *arrayEncoder) AppendReflected(v interface{}) error {
 	return nil
 }
 
+func (a *arrayEncoder) AppendByteString(v []byte) {
+	a.elems = append(a.elems, log.StringValue(string(v)))
+}
+
+func (a *arrayEncoder) AppendBool(v bool) {
+	a.elems = append(a.elems, log.BoolValue(v))
+}
+
+func (a *arrayEncoder) AppendFloat64(v float64) {
+	a.elems = append(a.elems, log.Float64Value(v))
+}
+
+func (a *arrayEncoder) AppendFloat32(v float32) {
+	a.AppendFloat64(float64(v))
+}
+
+func (a *arrayEncoder) AppendInt(v int) {
+	a.elems = append(a.elems, log.IntValue(v))
+}
+
+func (a *arrayEncoder) AppendInt64(v int64) {
+	a.elems = append(a.elems, log.Int64Value(v))
+}
+
+func (a *arrayEncoder) AppendString(v string) {
+	a.elems = append(a.elems, log.StringValue(v))
+}
+
 // TODO.
 func (a *arrayEncoder) AppendComplex128(v complex128)  {}
-func (a *arrayEncoder) AppendFloat32(v float32)        {}
-func (a *arrayEncoder) AppendByteString(v []byte)      {}
-func (a *arrayEncoder) AppendBool(v bool)              {}
 func (a *arrayEncoder) AppendUint64(v uint64)          {}
-func (a *arrayEncoder) AppendFloat64(v float64)        {}
-func (a *arrayEncoder) AppendInt(v int)                {}
-func (a *arrayEncoder) AppendInt64(v int64)            {}
-func (a *arrayEncoder) AppendString(v string)          {}
 func (a *arrayEncoder) AppendComplex64(v complex64)    {}
 func (a *arrayEncoder) AppendDuration(v time.Duration) {}
 func (a *arrayEncoder) AppendInt32(v int32)            {}
