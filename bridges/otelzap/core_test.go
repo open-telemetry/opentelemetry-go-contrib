@@ -20,6 +20,8 @@ import (
 var (
 	testMessage = "log message"
 	loggerName  = "name"
+	testKey     = "key"
+	testValue   = "value"
 )
 
 func TestCore(t *testing.T) {
@@ -27,12 +29,17 @@ func TestCore(t *testing.T) {
 	zc := NewCore(loggerName, WithLoggerProvider(rec))
 	logger := zap.New(zc)
 
-	logger.Info(testMessage)
+	logger.Info(testMessage, zap.String(testKey, testValue))
 
-	// TODO (#5580): Not sure why index 1 is populated with results and not 0.
 	got := rec.Result()[0].Records[0]
 	assert.Equal(t, testMessage, got.Body().AsString())
 	assert.Equal(t, log.SeverityInfo, got.Severity())
+	assert.Equal(t, 1, got.AttributesLen())
+	got.WalkAttributes(func(kv log.KeyValue) bool {
+		assert.Equal(t, testKey, string(kv.Key))
+		assert.Equal(t, testValue, value2Result(kv.Value))
+		return true
+	})
 }
 
 func TestCoreEnabled(t *testing.T) {
