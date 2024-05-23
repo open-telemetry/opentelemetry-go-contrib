@@ -136,7 +136,6 @@ func (o *Core) Write(ent zapcore.Entry, fields []zapcore.Field) error {
 	r.SetBody(log.StringValue(ent.Message))
 	r.SetSeverity(convertLevel(ent.Level))
 
-	// TODO: Handle attributes passed via fields (exceptions: context.Context and zap.Namespace).
 	// TODO: Handle attributes passed via With (exceptions: context.Context and zap.Namespace).
 	// TODO: Handle context.Context containing trace context.
 	// TODO: Handle zap.Namespace.
@@ -144,8 +143,23 @@ func (o *Core) Write(ent zapcore.Entry, fields []zapcore.Field) error {
 	// TODO: Handle zap.Array.
 	// TODO: Handle ent.LoggerName.
 
+	if len(fields) > 0 {
+		attrbuf := convertField(fields)
+		r.AddAttributes(attrbuf...)
+	}
+
 	o.logger.Emit(context.Background(), r)
 	return nil
+}
+
+func convertField(fields []zapcore.Field) []log.KeyValue {
+	// TODO: Use objectEncoder from a pool instead of newObjectEncoder.
+	enc := newObjectEncoder(len(fields))
+	for _, field := range fields {
+		field.AddTo(enc)
+	}
+
+	return enc.kv
 }
 
 func convertLevel(level zapcore.Level) log.Severity {
