@@ -24,6 +24,18 @@ func TestObjectEncoder(t *testing.T) {
 		expected interface{}
 	}{
 		{
+			desc: "AddArray",
+			f: func(e zapcore.ObjectEncoder) {
+				assert.NoError(t, e.AddArray("k", zapcore.ArrayMarshalerFunc(func(arr zapcore.ArrayEncoder) error {
+					arr.AppendBool(true)
+					arr.AppendBool(false)
+					arr.AppendBool(true)
+					return nil
+				})), "Expected AddArray to succeed.")
+			},
+			expected: []interface{}{true, false, true},
+		},
+		{
 			desc:     "AddBinary",
 			f:        func(e zapcore.ObjectEncoder) { e.AddBinary("k", []byte("foo")) },
 			expected: []byte("foo"),
@@ -141,6 +153,36 @@ func TestObjectEncoder(t *testing.T) {
 			tt.f(enc)
 			require.Len(t, enc.kv, 1)
 			assert.Equal(t, tt.expected, value2Result((enc.kv[0].Value)), "Unexpected encoder output.")
+		})
+	}
+}
+
+// Copied from https://github.com/uber-go/zap/blob/b39f8b6b6a44d8371a87610be50cce58eeeaabcb/zapcore/memory_encoder_test.go.
+func TestArrayEncoder(t *testing.T) {
+	tests := []struct {
+		desc     string
+		f        func(zapcore.ArrayEncoder)
+		expected interface{}
+	}{
+		{"AppendBool", func(e zapcore.ArrayEncoder) { e.AppendBool(true) }, true},
+		{"AppendByteString", func(e zapcore.ArrayEncoder) { e.AppendByteString([]byte("foo")) }, "foo"},
+		{"AppendFloat64", func(e zapcore.ArrayEncoder) { e.AppendFloat64(3.14) }, 3.14},
+		{"AppendFloat32", func(e zapcore.ArrayEncoder) { e.AppendFloat32(3.14) }, float64(float32(3.14))},
+		{"AppendInt64", func(e zapcore.ArrayEncoder) { e.AppendInt64(42) }, int64(42)},
+		{"AppendInt", func(e zapcore.ArrayEncoder) { e.AppendInt(42) }, int64(42)},
+		{"AppendString", func(e zapcore.ArrayEncoder) { e.AppendString("foo") }, "foo"},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.desc, func(t *testing.T) {
+			enc := newObjectEncoder(1)
+			assert.NoError(t, enc.AddArray("k", zapcore.ArrayMarshalerFunc(func(arr zapcore.ArrayEncoder) error {
+				tt.f(arr)
+				tt.f(arr)
+				return nil
+			})), "Expected AddArray to succeed.")
+
+			assert.Equal(t, []interface{}{tt.expected, tt.expected}, value2Result(enc.kv[0].Value), "Unexpected encoder output.")
 		})
 	}
 }
