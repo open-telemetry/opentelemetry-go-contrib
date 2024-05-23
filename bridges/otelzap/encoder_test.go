@@ -177,6 +177,7 @@ func TestArrayEncoder(t *testing.T) {
 		{"AppendComplex128", func(e zapcore.ArrayEncoder) { e.AppendComplex128(1 + 2i) }, map[string]interface{}{"i": float64(2), "r": float64(1)}},
 		{"AppendComplex64", func(e zapcore.ArrayEncoder) { e.AppendComplex64(1 + 2i) }, map[string]interface{}{"i": float64(2), "r": float64(1)}},
 		{"AppendDuration", func(e zapcore.ArrayEncoder) { e.AppendDuration(time.Second) }, int64(1000000000)},
+		{"AppendTime", func(e zapcore.ArrayEncoder) { e.AppendTime(time.Unix(0, 100)) }, time.Unix(0, 100).UnixNano()},
 		{"AppendUint", func(e zapcore.ArrayEncoder) { e.AppendUint(42) }, int64(42)},
 		{"AppendUint64", func(e zapcore.ArrayEncoder) { e.AppendUint64(42) }, int64(42)},
 		{"AppendUint64 - overflow", func(e zapcore.ArrayEncoder) { e.AppendUint64(^uint64(0)) }, float64(^uint64(0))},
