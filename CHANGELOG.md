@@ -12,9 +12,21 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 
 - The `go.opentelemetry.io/contrib/instrumentation/go.mongodb.org/mongo-driver/mongo/otelmongo` package is deprecated.
   If you would like to become a Code Owner of this module and prevent it from being removed, see [#5551]. (#5598)
+- The `go.opentelemetry.io/contrib/detectors/aws/ec2` package is deprecated.
+  If you would like to become a Code Owner of this module and prevent it from being removed, see [#5542]. (#5636)
+- The `go.opentelemetry.io/contrib/detectors/aws/ecs` package is deprecated.
+  If you would like to become a Code Owner of this module and prevent it from being removed, see [#5543]. (#5637)
+- The `go.opentelemetry.io/contrib/detectors/aws/eks` package is deprecated.
+  If you would like to become a Code Owner of this module and prevent it from being removed, see [#5544]. (#5640)
+- The `go.opentelemetry.io/contrib/detectors/aws/lambda` package is deprecated.
+  If you would like to become a Code Owner of this module and prevent it from being removed, see [#5545]. (#5641)
 - The `go.opentelemetry.io/contrib/instrumentation/github.com/aws/aws-lambda-go/otellambda` package is deprecated.
   If you would like to become a Code Owner of this module and prevent it from being removed, see [#5546]. (#5642)
 
+[#5542]: https://github.com/open-telemetry/opentelemetry-go-contrib/issues/5542
+[#5543]: https://github.com/open-telemetry/opentelemetry-go-contrib/issues/5543
+[#5544]: https://github.com/open-telemetry/opentelemetry-go-contrib/issues/5544
+[#5545]: https://github.com/open-telemetry/opentelemetry-go-contrib/issues/5545
 [#5546]: https://github.com/open-telemetry/opentelemetry-go-contrib/issues/5546
 [#5551]: https://github.com/open-telemetry/opentelemetry-go-contrib/issues/5551
 
