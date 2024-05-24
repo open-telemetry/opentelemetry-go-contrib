@@ -1,3 +1,4 @@
+// Deprecated: lambda has no Code Owner.
 module go.opentelemetry.io/contrib/detectors/aws/lambda
 
 go 1.21

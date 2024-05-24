@@ -1,3 +1,4 @@
+// Deprecated: otellambda has no Code Owner.
 module go.opentelemetry.io/contrib/instrumentation/github.com/aws/aws-lambda-go/otellambda/xrayconfig
 
 go 1.21
