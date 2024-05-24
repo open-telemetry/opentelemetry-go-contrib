@@ -112,11 +112,11 @@ func (o *Core) Enabled(level zapcore.Level) bool {
 
 // With adds structured context to the Core.
 func (o *Core) With(fields []zapcore.Field) zapcore.Core {
-	clone := o.clone()
+	cloned := o.clone()
 	if len(fields) > 0 {
-		clone.attr = append(clone.attr, convertField(fields)...)
+		cloned.attr = append(cloned.attr, convertField(fields)...)
 	}
-	return clone
+	return cloned
 }
 
 func (o *Core) clone() *Core {
