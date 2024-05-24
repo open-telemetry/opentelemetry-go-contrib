@@ -9,7 +9,7 @@ import (
 	"strings"
 	"sync"
 
-	"go.opentelemetry.io/contrib/propagators/aws/xray"
+	"go.opentelemetry.io/contrib/propagators/aws/xray" // nolint:staticcheck  // deprecated.
 	"go.opentelemetry.io/contrib/propagators/b3"
 	"go.opentelemetry.io/contrib/propagators/jaeger"
 	"go.opentelemetry.io/contrib/propagators/ot"
