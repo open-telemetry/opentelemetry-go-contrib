@@ -114,8 +114,7 @@ func (o *Core) Enabled(level zapcore.Level) bool {
 func (o *Core) With(fields []zapcore.Field) zapcore.Core {
 	clone := o.clone()
 	if len(fields) > 0 {
-		attrbuf := convertField(fields)
-		clone.attr = append(clone.attr, attrbuf...)
+		clone.attr = append(clone.attr, convertField(fields)...)
 	}
 	return clone
 }
@@ -156,13 +155,9 @@ func (o *Core) Write(ent zapcore.Entry, fields []zapcore.Field) error {
 	// TODO: Handle zap.Array.
 	// TODO: Handle ent.LoggerName.
 
+	r.AddAttributes(o.attr...)
 	if len(fields) > 0 {
-		attrbuf := convertField(fields)
-		attrbuf = slices.Grow(attrbuf, len(o.attr))
-		attrbuf = append(attrbuf, o.attr...)
-		r.AddAttributes(attrbuf...)
-	} else {
-		r.AddAttributes(o.attr...)
+		r.AddAttributes(convertField(fields)...)
 	}
 
 	o.logger.Emit(context.Background(), r)
