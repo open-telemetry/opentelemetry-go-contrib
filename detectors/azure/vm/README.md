@@ -21,6 +21,8 @@ attributes, each of the following attributes is added if it is available:
 
 * `cloud.provider`
 * `cloud.platform`
+* `cloud.region`
+* `cloud.resource_id`
 * `host.id`
 * `host.name`
 * `host.type`
