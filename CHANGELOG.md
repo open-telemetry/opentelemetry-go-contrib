@@ -11,6 +11,7 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 ### Added
 
 - The `go.opentelemetry.io/contrib/config` add support to configure periodic reader interval and timeout. (#5661)
+- Add the new `go.opentelemetry.io/contrib/detectors/azure/vm` package to provide a resource detector for Azure VMs. (#5422)
 
 ### Fixed
 
@@ -107,7 +108,6 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 ### Added
 
 - `NewSDK` in `go.opentelemetry.io/contrib/config` now returns a configured SDK with a valid `MeterProvider`. (#4804)
-- Add the new `go.opentelemetry.io/contrib/detectors/azure/vm` package to provide a resource detector for Azure VMs. (#5421)
 
 ### Changed
 
