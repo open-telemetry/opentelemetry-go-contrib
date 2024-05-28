@@ -48,6 +48,11 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 [#5553]: https://github.com/open-telemetry/opentelemetry-go-contrib/issues/5553
 [#5554]: https://github.com/open-telemetry/opentelemetry-go-contrib/issues/5554
 
+### Changed
+
+- Improve performance of `go.opentelemetry.io/contrib/instrumentation/google.golang.org/grpc/otelgrpc` with the usage of `WithAttributeSet()` instead of `WithAttribute()`. (#5664) 
+- Improve performance of `go.opentelemetry.io/contrib/instrumentation/net/http/otelhttp` with the usage of `WithAttributeSet()` instead of `WithAttribute()`. (#5664) 
+
 ## [1.27.0/0.52.0/0.21.0/0.7.0/0.2.0] - 2024-05-21
 
 ### Added
