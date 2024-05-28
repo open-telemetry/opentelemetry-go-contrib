@@ -9,6 +9,7 @@ import (
 	"net/url"
 	"reflect"
 	"testing"
+	"time"
 
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
@@ -450,6 +451,23 @@ func TestReader(t *testing.T) {
 			},
 			wantReader: sdkmetric.NewPeriodicReader(consoleExporter),
 		},
+		{
+			name: "periodic/console-exporter-with-extra-options",
+			reader: MetricReader{
+				Periodic: &PeriodicMetricReader{
+					Interval: newIntPtr(30_000),
+					Timeout:  newIntPtr(5_000),
+					Exporter: MetricExporter{
+						Console: Console{},
+					},
+				},
+			},
+			wantReader: sdkmetric.NewPeriodicReader(
+				consoleExporter,
+				sdkmetric.WithInterval(30_000*time.Millisecond),
+				sdkmetric.WithTimeout(5_000*time.Millisecond),
+			),
+		},
 	}
 	for _, tt := range testCases {
 		t.Run(tt.name, func(t *testing.T) {
@@ -475,4 +493,8 @@ func TestReader(t *testing.T) {
 			}
 		})
 	}
+}
+
+func newIntPtr(i int) *int {
+	return &i
 }
