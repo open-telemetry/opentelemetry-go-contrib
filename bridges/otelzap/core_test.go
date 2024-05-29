@@ -66,7 +66,7 @@ func TestCore(t *testing.T) {
 
 	rec.Reset()
 
-	t.Run("Test 'With' method - twice", func(t *testing.T) {
+	t.Run("Test 'With` method for nested child loggers ", func(t *testing.T) {
 		testCases := [][]string{{"test1", "value1"}, {"test2", "value2"}, {"test3", "value3"}}
 		childlogger := logger.With(zap.String(testCases[0][0], testCases[0][1]))
 		childlogger2 := childlogger.With(zap.String(testCases[1][0], testCases[1][1]))
