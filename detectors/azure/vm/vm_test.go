@@ -5,7 +5,9 @@ package vm
 
 import (
 	"context"
-	"errors"
+	"fmt"
+	"net/http"
+	"net/http/httptest"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
@@ -18,7 +20,7 @@ import (
 func TestDetect(t *testing.T) {
 	type input struct {
 		jsonMetadata string
-		err          error
+		statusCode   int
 	}
 	type expected struct {
 		resource *resource.Resource
@@ -41,7 +43,7 @@ func TestDetect(t *testing.T) {
 					"osType": "linux",
 					"version": "6.5.0-26-generic"
 				}`,
-				err: nil,
+				statusCode: http.StatusOK, 
 			},
 			expected: expected{
 				resource: resource.NewWithAttributes(semconv.SchemaURL, []attribute.KeyValue{
@@ -61,7 +63,7 @@ func TestDetect(t *testing.T) {
 		{
 			input: input{
 				jsonMetadata: `{`,
-				err:          nil,
+				statusCode: http.StatusOK, 
 			},
 			expected: expected{
 				resource: nil,
@@ -71,7 +73,7 @@ func TestDetect(t *testing.T) {
 		{
 			input: input{
 				jsonMetadata: "",
-				err:          errors.New("cannot get metadata"),
+				statusCode: http.StatusNotFound, 
 			},
 			expected: expected{
 				resource: nil,
@@ -81,23 +83,20 @@ func TestDetect(t *testing.T) {
 	}
 
 	for _, tCase := range testTable {
-		detector := New(WithClient(&mockClient{
-			jsonMetadata: []byte(tCase.input.jsonMetadata),
-			err:          tCase.input.err,
+		svr := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+			w.WriteHeader(http.StatusInternalServerError)
+
+			if r.Header.Get("Metadata") == "True" {
+				fmt.Fprintf(w, tCase.input.jsonMetadata)
+			}
 		}))
+		defer svr.Close()
+
+		detector := New(WithEndpoint(svr.URL))
 
 		azureResource, err := detector.Detect(context.Background())
 
 		assert.Equal(t, err != nil, tCase.expected.err)
 		assert.Equal(t, tCase.expected.resource, azureResource)
 	}
-}
-
-type mockClient struct {
-	jsonMetadata []byte
-	err          error
-}
-
-func (c *mockClient) GetJSONMetadata() ([]byte, error) {
-	return c.jsonMetadata, c.err
 }

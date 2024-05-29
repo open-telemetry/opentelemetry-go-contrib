@@ -14,12 +14,16 @@ import (
 	semconv "go.opentelemetry.io/otel/semconv/v1.24.0"
 )
 
+const (
+	defaultAzureVmMetadataEndpoint = "http://169.254.169.254/metadata/instance/compute?api-version=2021-12-13&format=json"
+)
+
 type config struct {
-	client Client
+	endpoint string
 }
 
 func newConfig(options ...Option) config {
-	c := config{&azureInstanceMetadataClient{}}
+	c := config{defaultAzureVmMetadataEndpoint}
 	for _, option := range options {
 		c = option.apply(c)
 	}
@@ -38,21 +42,17 @@ func (fn optionFunc) apply(c config) config {
 	return fn(c)
 }
 
-// WithClient sets the client for obtaining a Azure instance metadata JSON.
-func WithClient(t Client) Option {
+// WithEndpoint sets the endpoint for obtaining a Azure instance metadata JSON.
+func WithEndpoint(e string) Option {
 	return optionFunc(func(c config) config {
-		c.client = t
+		c.endpoint = e
 
 		return c
 	})
 }
 
-func (cfg config) getClient() Client {
-	return cfg.client
-}
-
 type resourceDetector struct {
-	client Client
+	endpoint string
 }
 
 type vmMetadata struct {
@@ -68,12 +68,12 @@ type vmMetadata struct {
 // New returns a [resource.Detector] that will detect Azure VM resources.
 func New(opts ...Option) resource.Detector {
 	c := newConfig(opts...)
-	return &resourceDetector{c.getClient()}
+	return &resourceDetector{c.endpoint}
 }
 
 // Detect detects associated resources when running on an Azure VM.
 func (detector *resourceDetector) Detect(ctx context.Context) (*resource.Resource, error) {
-	jsonMetadata, err := detector.client.GetJSONMetadata()
+	jsonMetadata, err := detector.getJSONMetadata()
 	if err != nil {
 		return nil, err
 	}
@@ -114,19 +114,12 @@ func (detector *resourceDetector) Detect(ctx context.Context) (*resource.Resourc
 	return resource.NewWithAttributes(semconv.SchemaURL, attributes...), nil
 }
 
-// Client is an interface that allows mocking for testing.
-type Client interface {
-	GetJSONMetadata() ([]byte, error)
-}
-
-type azureInstanceMetadataClient struct{}
-
-func (c *azureInstanceMetadataClient) GetJSONMetadata() ([]byte, error) {
+func (detector *resourceDetector) getJSONMetadata() ([]byte, error) {
 	PTransport := &http.Transport{Proxy: nil}
 
 	client := http.Client{Transport: PTransport}
 
-	req, err := http.NewRequest("GET", "http://169.254.169.254/metadata/instance/compute?api-version=2021-12-13&format=json", nil)
+	req, err := http.NewRequest("GET", detector.endpoint, nil)
 	if err != nil {
 		return nil, err
 	}
