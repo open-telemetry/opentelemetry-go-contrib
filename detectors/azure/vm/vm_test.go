@@ -43,7 +43,7 @@ func TestDetect(t *testing.T) {
 					"osType": "linux",
 					"version": "6.5.0-26-generic"
 				}`,
-				statusCode: http.StatusOK, 
+				statusCode: http.StatusOK,
 			},
 			expected: expected{
 				resource: resource.NewWithAttributes(semconv.SchemaURL, []attribute.KeyValue{
@@ -63,7 +63,7 @@ func TestDetect(t *testing.T) {
 		{
 			input: input{
 				jsonMetadata: `{`,
-				statusCode: http.StatusOK, 
+				statusCode:   http.StatusOK,
 			},
 			expected: expected{
 				resource: nil,
@@ -73,7 +73,7 @@ func TestDetect(t *testing.T) {
 		{
 			input: input{
 				jsonMetadata: "",
-				statusCode: http.StatusNotFound, 
+				statusCode:   http.StatusNotFound,
 			},
 			expected: expected{
 				resource: nil,
