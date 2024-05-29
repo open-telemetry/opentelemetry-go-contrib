@@ -12,7 +12,6 @@ import (
 
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
-	"go.uber.org/multierr"
 	"go.uber.org/zap/zapcore"
 
 	"go.opentelemetry.io/otel/log"
@@ -243,7 +242,7 @@ func (t turduckens) MarshalLogArray(enc zapcore.ArrayEncoder) error {
 	var err error
 	tur := turducken{}
 	for i := 0; i < int(t); i++ {
-		err = multierr.Append(err, enc.AppendObject(tur))
+		err = errors.Join(err, enc.AppendObject(tur))
 	}
 	return err
 }
