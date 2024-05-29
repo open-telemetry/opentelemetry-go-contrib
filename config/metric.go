@@ -59,7 +59,15 @@ func metricReader(ctx context.Context, r MetricReader) (sdkmetric.Reader, error)
 	}
 
 	if r.Periodic != nil {
-		return periodicExporter(ctx, r.Periodic.Exporter)
+		var opts []sdkmetric.PeriodicReaderOption
+		if r.Periodic.Interval != nil {
+			opts = append(opts, sdkmetric.WithInterval(time.Duration(*r.Periodic.Interval)*time.Millisecond))
+		}
+
+		if r.Periodic.Timeout != nil {
+			opts = append(opts, sdkmetric.WithTimeout(time.Duration(*r.Periodic.Timeout)*time.Millisecond))
+		}
+		return periodicExporter(ctx, r.Periodic.Exporter, opts...)
 	}
 
 	if r.Pull != nil {

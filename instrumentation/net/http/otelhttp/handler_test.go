@@ -29,6 +29,9 @@ func TestHandler(t *testing.T) {
 				return otelhttp.NewHandler(
 					http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 						assert.Implements(t, (*http.Flusher)(nil), w)
+
+						w.(http.Flusher).Flush()
+						_, _ = io.WriteString(w, "Hello, world!\n")
 					}), "test_handler",
 				)
 			},
