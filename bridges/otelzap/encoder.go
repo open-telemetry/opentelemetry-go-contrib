@@ -201,17 +201,24 @@ func (a *arrayEncoder) AppendString(v string) {
 	a.elems = append(a.elems, log.StringValue(v))
 }
 
-// TODO.
-func (a *arrayEncoder) AppendComplex128(v complex128)  {}
-func (a *arrayEncoder) AppendUint64(v uint64)          {}
-func (a *arrayEncoder) AppendComplex64(v complex64)    {}
-func (a *arrayEncoder) AppendDuration(v time.Duration) {}
-func (a *arrayEncoder) AppendInt32(v int32)            {}
-func (a *arrayEncoder) AppendInt16(v int16)            {}
-func (a *arrayEncoder) AppendInt8(v int8)              {}
-func (a *arrayEncoder) AppendTime(v time.Time)         {}
-func (a *arrayEncoder) AppendUint(v uint)              {}
-func (a *arrayEncoder) AppendUint32(v uint32)          {}
-func (a *arrayEncoder) AppendUint16(v uint16)          {}
-func (a *arrayEncoder) AppendUint8(v uint8)            {}
-func (a *arrayEncoder) AppendUintptr(v uintptr)        {}
+func (a *arrayEncoder) AppendComplex128(v complex128) {
+	r := log.Float64("r", real(v))
+	i := log.Float64("i", imag(v))
+	a.elems = append(a.elems, log.MapValue(r, i))
+}
+
+func (a *arrayEncoder) AppendUint64(v uint64) {
+	a.elems = append(a.elems, assignUintValue(v))
+}
+
+func (a *arrayEncoder) AppendComplex64(v complex64)    { a.AppendComplex128(complex128(v)) }
+func (a *arrayEncoder) AppendDuration(v time.Duration) { a.AppendInt64(v.Nanoseconds()) }
+func (a *arrayEncoder) AppendInt32(v int32)            { a.AppendInt64(int64(v)) }
+func (a *arrayEncoder) AppendInt16(v int16)            { a.AppendInt64(int64(v)) }
+func (a *arrayEncoder) AppendInt8(v int8)              { a.AppendInt64(int64(v)) }
+func (a *arrayEncoder) AppendTime(v time.Time)         { a.AppendInt64(int64(v.UnixNano())) }
+func (a *arrayEncoder) AppendUint(v uint)              { a.AppendUint64(uint64(v)) }
+func (a *arrayEncoder) AppendUint32(v uint32)          { a.AppendInt64(int64(v)) }
+func (a *arrayEncoder) AppendUint16(v uint16)          { a.AppendInt64(int64(v)) }
+func (a *arrayEncoder) AppendUint8(v uint8)            { a.AppendInt64(int64(v)) }
+func (a *arrayEncoder) AppendUintptr(v uintptr)        { a.AppendUint64(uint64(v)) }
