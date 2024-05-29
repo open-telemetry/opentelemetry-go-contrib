@@ -15,7 +15,7 @@ import (
 )
 
 const (
-	defaultAzureVmMetadataEndpoint = "http://169.254.169.254/metadata/instance/compute?api-version=2021-12-13&format=json"
+	defaultAzureVMMetadataEndpoint = "http://169.254.169.254/metadata/instance/compute?api-version=2021-12-13&format=json"
 )
 
 type config struct {
@@ -23,7 +23,7 @@ type config struct {
 }
 
 func newConfig(options ...Option) config {
-	c := config{defaultAzureVmMetadataEndpoint}
+	c := config{defaultAzureVMMetadataEndpoint}
 	for _, option := range options {
 		c = option.apply(c)
 	}

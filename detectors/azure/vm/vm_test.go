@@ -90,11 +90,12 @@ func TestDetect(t *testing.T) {
 				fmt.Fprintf(w, tCase.input.jsonMetadata)
 			}
 		}))
-		defer svr.Close()
 
 		detector := New(WithEndpoint(svr.URL))
 
 		azureResource, err := detector.Detect(context.Background())
+
+		svr.Close()
 
 		assert.Equal(t, err != nil, tCase.expected.err)
 		assert.Equal(t, tCase.expected.resource, azureResource)
