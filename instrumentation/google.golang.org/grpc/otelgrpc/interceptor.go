@@ -333,7 +333,7 @@ func UnaryServerInterceptor(opts ...Option) grpc.UnaryServerInterceptor {
 		elapsedTime := float64(time.Since(before)) / float64(time.Millisecond)
 
 		metricAttrs = append(metricAttrs, grpcStatusCodeAttr)
-		cfg.rpcDuration.Record(ctx, elapsedTime, metric.WithAttributes(metricAttrs...))
+		cfg.rpcDuration.Record(ctx, elapsedTime, metric.WithAttributeSet(attribute.NewSet(metricAttrs...)))
 
 		return resp, err
 	}
