@@ -21,7 +21,7 @@ import (
 	"go.opentelemetry.io/otel/codes"
 	"go.opentelemetry.io/otel/propagation"
 	"go.opentelemetry.io/otel/sdk/instrumentation"
-	"go.opentelemetry.io/otel/sdk/metric"
+	sdkmetric "go.opentelemetry.io/otel/sdk/metric"
 	"go.opentelemetry.io/otel/sdk/metric/metricdata"
 	"go.opentelemetry.io/otel/sdk/metric/metricdata/metricdatatest"
 	sdktrace "go.opentelemetry.io/otel/sdk/trace"
@@ -80,8 +80,8 @@ func TestHandlerBasics(t *testing.T) {
 	spanRecorder := tracetest.NewSpanRecorder()
 	provider := sdktrace.NewTracerProvider(sdktrace.WithSpanProcessor(spanRecorder))
 
-	reader := metric.NewManualReader()
-	meterProvider := metric.NewMeterProvider(metric.WithReader(reader))
+	reader := sdkmetric.NewManualReader()
+	meterProvider := sdkmetric.NewMeterProvider(sdkmetric.WithReader(reader))
 
 	h := otelhttp.NewHandler(
 		http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
@@ -469,8 +469,8 @@ func TestWithRouteTag(t *testing.T) {
 	tracerProvider := sdktrace.NewTracerProvider()
 	tracerProvider.RegisterSpanProcessor(spanRecorder)
 
-	metricReader := metric.NewManualReader()
-	meterProvider := metric.NewMeterProvider(metric.WithReader(metricReader))
+	metricReader := sdkmetric.NewManualReader()
+	meterProvider := sdkmetric.NewMeterProvider(sdkmetric.WithReader(metricReader))
 
 	h := otelhttp.NewHandler(
 		otelhttp.WithRouteTag(
@@ -526,5 +526,46 @@ func TestWithRouteTag(t *testing.T) {
 		default:
 			require.Fail(t, "metric has unexpected data type", "metric '%v' has unexpected data type %T", m.Name, m.Data)
 		}
+	}
+}
+
+func BenchmarkHandlerServeHTTP(b *testing.B) {
+	tp := sdktrace.NewTracerProvider()
+	mp := sdkmetric.NewMeterProvider()
+
+	r, err := http.NewRequest(http.MethodGet, "http://localhost/", nil)
+	require.NoError(b, err)
+
+	for _, bb := range []struct {
+		name    string
+		handler http.Handler
+	}{
+		{
+			name: "without the otelhttp handler",
+			handler: http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+				fmt.Fprint(w, "Hello World")
+			}),
+		},
+		{
+			name: "with the otelhttp handler",
+			handler: otelhttp.NewHandler(
+				http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+					fmt.Fprint(w, "Hello World")
+				}),
+				"test_handler",
+				otelhttp.WithTracerProvider(tp),
+				otelhttp.WithMeterProvider(mp),
+			),
+		},
+	} {
+		b.Run(bb.name, func(b *testing.B) {
+			rr := httptest.NewRecorder()
+
+			b.ReportAllocs()
+			b.ResetTimer()
+			for i := 0; i < b.N; i++ {
+				bb.handler.ServeHTTP(rr, r)
+			}
+		})
 	}
 }
