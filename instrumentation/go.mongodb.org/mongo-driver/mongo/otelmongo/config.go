@@ -18,6 +18,7 @@ type config struct {
 	Tracer trace.Tracer
 
 	CommandAttributeDisabled bool
+	statementMarshaller      StatementMarshaller
 }
 
 // newConfig returns a config with all Options set.
@@ -25,6 +26,7 @@ func newConfig(opts ...Option) config {
 	cfg := config{
 		TracerProvider:           otel.GetTracerProvider(),
 		CommandAttributeDisabled: true,
+		statementMarshaller:      NewDefaultStatementMarshaller(),
 	}
 	for _, opt := range opts {
 		opt.apply(&cfg)
@@ -64,5 +66,13 @@ func WithTracerProvider(provider trace.TracerProvider) Option {
 func WithCommandAttributeDisabled(disabled bool) Option {
 	return optionFunc(func(cfg *config) {
 		cfg.CommandAttributeDisabled = disabled
+	})
+}
+
+// WithMarshaller sets the marshalled in chargee of managing the bson command that will be marshalled into the
+// db.statement attribute
+func WithMarshaller(marshaller StatementMarshaller) Option {
+	return optionFunc(func(cfg *config) {
+		cfg.statementMarshaller = marshaller
 	})
 }
