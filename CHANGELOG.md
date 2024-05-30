@@ -15,6 +15,7 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 ### Fixed
 
 - The superfluous `response.WriteHeader` call in `go.opentelemetry.io/contrib/instrumentation/net/http/otelhttp` when the response writer is flushed. (#5634)
+- Custom attributes targeting metrics recorded by the `go.opentelemetry.io/contrib/instrumentation/net/http/otelhttp` are not ignored anymore. (#5129)
 
 ### Deprecated
 
@@ -55,6 +56,11 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 [#5552]: https://github.com/open-telemetry/opentelemetry-go-contrib/issues/5552
 [#5553]: https://github.com/open-telemetry/opentelemetry-go-contrib/issues/5553
 [#5554]: https://github.com/open-telemetry/opentelemetry-go-contrib/issues/5554
+
+### Changed
+
+- Improve performance of `go.opentelemetry.io/contrib/instrumentation/google.golang.org/grpc/otelgrpc` with the usage of `WithAttributeSet()` instead of `WithAttribute()`. (#5664) 
+- Improve performance of `go.opentelemetry.io/contrib/instrumentation/net/http/otelhttp` with the usage of `WithAttributeSet()` instead of `WithAttribute()`. (#5664) 
 
 ## [1.27.0/0.52.0/0.21.0/0.7.0/0.2.0] - 2024-05-21
 

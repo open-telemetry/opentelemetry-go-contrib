@@ -27,12 +27,12 @@ import (
 	sdkmetric "go.opentelemetry.io/otel/sdk/metric"
 	"go.opentelemetry.io/otel/sdk/metric/metricdata"
 	"go.opentelemetry.io/otel/sdk/metric/metricdata/metricdatatest"
+	sdktrace "go.opentelemetry.io/otel/sdk/trace"
+	"go.opentelemetry.io/otel/sdk/trace/tracetest"
 
 	"go.opentelemetry.io/contrib/instrumentation/net/http/otelhttp"
 	"go.opentelemetry.io/otel/codes"
 	"go.opentelemetry.io/otel/propagation"
-	sdktrace "go.opentelemetry.io/otel/sdk/trace"
-	"go.opentelemetry.io/otel/sdk/trace/tracetest"
 	"go.opentelemetry.io/otel/trace"
 )
 
@@ -476,6 +476,80 @@ func assertClientScopeMetrics(t *testing.T, sm metricdata.ScopeMetrics, attrs at
 		Unit:        "ms",
 	}
 	metricdatatest.AssertEqual(t, want, sm.Metrics[2], metricdatatest.IgnoreTimestamp(), metricdatatest.IgnoreValue())
+}
+
+func TestCustomAttributesHandling(t *testing.T) {
+	var rm metricdata.ResourceMetrics
+	const (
+		clientRequestSize = "http.client.request.size"
+		clientDuration    = "http.client.duration"
+	)
+	ctx := context.TODO()
+	reader := sdkmetric.NewManualReader()
+	provider := sdkmetric.NewMeterProvider(sdkmetric.WithReader(reader))
+	defer func() {
+		err := provider.Shutdown(ctx)
+		if err != nil {
+			t.Errorf("Error shutting down provider: %v", err)
+		}
+	}()
+
+	transport := otelhttp.NewTransport(http.DefaultTransport, otelhttp.WithMeterProvider(provider))
+	client := http.Client{Transport: transport}
+
+	ts := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
+		w.WriteHeader(http.StatusOK)
+	}))
+	defer ts.Close()
+
+	r, err := http.NewRequest(http.MethodGet, ts.URL, nil)
+	require.NoError(t, err)
+	labeler := &otelhttp.Labeler{}
+	labeler.Add(attribute.String("foo", "fooValue"))
+	labeler.Add(attribute.String("bar", "barValue"))
+	ctx = otelhttp.ContextWithLabeler(ctx, labeler)
+	r = r.WithContext(ctx)
+
+	// test bonus: intententionally ignoring response to confirm that
+	// http.client.response.size metric is not recorded
+	// by the Transport.RoundTrip logic
+	_, err = client.Do(r)
+	require.NoError(t, err)
+
+	err = reader.Collect(ctx, &rm)
+	assert.NoError(t, err)
+
+	// http.client.response.size is not recorded so the assert.Len
+	// above should be 2 instead of 3(test bonus)
+	assert.Len(t, rm.ScopeMetrics[0].Metrics, 2)
+	for _, m := range rm.ScopeMetrics[0].Metrics {
+		switch m.Name {
+		case clientRequestSize:
+			d, ok := m.Data.(metricdata.Sum[int64])
+			assert.True(t, ok)
+			assert.Len(t, d.DataPoints, 1)
+			attrSet := d.DataPoints[0].Attributes
+			fooAtrr, ok := attrSet.Value(attribute.Key("foo"))
+			assert.True(t, ok)
+			assert.Equal(t, "fooValue", fooAtrr.AsString())
+			barAtrr, ok := attrSet.Value(attribute.Key("bar"))
+			assert.True(t, ok)
+			assert.Equal(t, "barValue", barAtrr.AsString())
+			assert.False(t, attrSet.HasValue(attribute.Key("baz")))
+		case clientDuration:
+			d, ok := m.Data.(metricdata.Histogram[float64])
+			assert.True(t, ok)
+			assert.Len(t, d.DataPoints, 1)
+			attrSet := d.DataPoints[0].Attributes
+			fooAtrr, ok := attrSet.Value(attribute.Key("foo"))
+			assert.True(t, ok)
+			assert.Equal(t, "fooValue", fooAtrr.AsString())
+			barAtrr, ok := attrSet.Value(attribute.Key("bar"))
+			assert.True(t, ok)
+			assert.Equal(t, "barValue", barAtrr.AsString())
+			assert.False(t, attrSet.HasValue(attribute.Key("baz")))
+		}
+	}
 }
 
 func BenchmarkTransportRoundTrip(b *testing.B) {
