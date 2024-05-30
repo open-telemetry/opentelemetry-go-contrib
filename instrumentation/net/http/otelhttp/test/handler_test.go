@@ -548,9 +548,10 @@ func BenchmarkHandlerServeHTTP(b *testing.B) {
 		},
 		{
 			name: "with the otelhttp handler",
-			handler: otelhttp.NewHandler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-				fmt.Fprint(w, "Hello World")
-			}),
+			handler: otelhttp.NewHandler(
+				http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+					fmt.Fprint(w, "Hello World")
+				}),
 				"test_handler",
 				otelhttp.WithTracerProvider(tp),
 				otelhttp.WithMeterProvider(mp),
