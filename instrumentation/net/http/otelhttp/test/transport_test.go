@@ -6,6 +6,7 @@ package test
 import (
 	"bytes"
 	"context"
+	"fmt"
 	"io"
 	"net"
 	"net/http"
@@ -16,7 +17,6 @@ import (
 	"strings"
 	"testing"
 
-	"go.opentelemetry.io/otel/sdk/metric"
 	semconv "go.opentelemetry.io/otel/semconv/v1.20.0"
 
 	"github.com/stretchr/testify/assert"
@@ -24,14 +24,15 @@ import (
 
 	"go.opentelemetry.io/otel/attribute"
 	"go.opentelemetry.io/otel/sdk/instrumentation"
+	sdkmetric "go.opentelemetry.io/otel/sdk/metric"
 	"go.opentelemetry.io/otel/sdk/metric/metricdata"
 	"go.opentelemetry.io/otel/sdk/metric/metricdata/metricdatatest"
+	sdktrace "go.opentelemetry.io/otel/sdk/trace"
+	"go.opentelemetry.io/otel/sdk/trace/tracetest"
 
 	"go.opentelemetry.io/contrib/instrumentation/net/http/otelhttp"
 	"go.opentelemetry.io/otel/codes"
 	"go.opentelemetry.io/otel/propagation"
-	sdktrace "go.opentelemetry.io/otel/sdk/trace"
-	"go.opentelemetry.io/otel/sdk/trace/tracetest"
 	"go.opentelemetry.io/otel/trace"
 )
 
@@ -244,8 +245,8 @@ func TestTransportMetrics(t *testing.T) {
 	responseBody := []byte("Hello, world!")
 
 	t.Run("make http request and read entire response at once", func(t *testing.T) {
-		reader := metric.NewManualReader()
-		meterProvider := metric.NewMeterProvider(metric.WithReader(reader))
+		reader := sdkmetric.NewManualReader()
+		meterProvider := sdkmetric.NewMeterProvider(sdkmetric.WithReader(reader))
 
 		ts := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 			w.WriteHeader(http.StatusOK)
@@ -302,8 +303,8 @@ func TestTransportMetrics(t *testing.T) {
 	})
 
 	t.Run("make http request and buffer response", func(t *testing.T) {
-		reader := metric.NewManualReader()
-		meterProvider := metric.NewMeterProvider(metric.WithReader(reader))
+		reader := sdkmetric.NewManualReader()
+		meterProvider := sdkmetric.NewMeterProvider(sdkmetric.WithReader(reader))
 
 		ts := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 			w.WriteHeader(http.StatusOK)
@@ -370,8 +371,8 @@ func TestTransportMetrics(t *testing.T) {
 	})
 
 	t.Run("make http request and close body before reading completely", func(t *testing.T) {
-		reader := metric.NewManualReader()
-		meterProvider := metric.NewMeterProvider(metric.WithReader(reader))
+		reader := sdkmetric.NewManualReader()
+		meterProvider := sdkmetric.NewMeterProvider(sdkmetric.WithReader(reader))
 
 		ts := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 			w.WriteHeader(http.StatusOK)
@@ -484,8 +485,8 @@ func TestCustomAttributesHandling(t *testing.T) {
 		clientDuration    = "http.client.duration"
 	)
 	ctx := context.TODO()
-	reader := metric.NewManualReader()
-	provider := metric.NewMeterProvider(metric.WithReader(reader))
+	reader := sdkmetric.NewManualReader()
+	provider := sdkmetric.NewMeterProvider(sdkmetric.WithReader(reader))
 	defer func() {
 		err := provider.Shutdown(ctx)
 		if err != nil {
@@ -548,5 +549,46 @@ func TestCustomAttributesHandling(t *testing.T) {
 			assert.Equal(t, "barValue", barAtrr.AsString())
 			assert.False(t, attrSet.HasValue(attribute.Key("baz")))
 		}
+	}
+}
+
+func BenchmarkTransportRoundTrip(b *testing.B) {
+	ts := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		fmt.Fprint(w, "Hello World")
+	}))
+	defer ts.Close()
+
+	tp := sdktrace.NewTracerProvider()
+	mp := sdkmetric.NewMeterProvider()
+
+	r, err := http.NewRequest(http.MethodGet, ts.URL, nil)
+	require.NoError(b, err)
+
+	for _, bb := range []struct {
+		name      string
+		transport http.RoundTripper
+	}{
+		{
+			name:      "without the otelhttp transport",
+			transport: http.DefaultTransport,
+		},
+		{
+			name: "with the otelhttp transport",
+			transport: otelhttp.NewTransport(
+				http.DefaultTransport,
+				otelhttp.WithTracerProvider(tp),
+				otelhttp.WithMeterProvider(mp),
+			),
+		},
+	} {
+		b.Run(bb.name, func(b *testing.B) {
+			c := http.Client{Transport: bb.transport}
+
+			b.ReportAllocs()
+			b.ResetTimer()
+			for i := 0; i < b.N; i++ {
+				_, _ = c.Do(r)
+			}
+		})
 	}
 }
