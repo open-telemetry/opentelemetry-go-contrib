@@ -11,10 +11,10 @@ import (
 	"strings"
 	"testing"
 
-	ecs "go.opentelemetry.io/contrib/detectors/aws/ecs"
+	ecs "go.opentelemetry.io/contrib/detectors/aws/ecs" // nolint:staticcheck  // deprecated.
 	"go.opentelemetry.io/otel/attribute"
 	"go.opentelemetry.io/otel/sdk/resource"
-	semconv "go.opentelemetry.io/otel/semconv/v1.24.0"
+	semconv "go.opentelemetry.io/otel/semconv/v1.25.0"
 
 	"github.com/stretchr/testify/assert"
 )

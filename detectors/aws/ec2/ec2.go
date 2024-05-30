@@ -1,6 +1,15 @@
 // Copyright The OpenTelemetry Authors
 // SPDX-License-Identifier: Apache-2.0
 
+// Package ec2 provide an OpenTelemetry resource detector for AWS EC2
+// instances.
+//
+// Deprecated: ec2 has no Code Owner.
+// After August 21, 2024, it may no longer be supported and may stop
+// receiving new releases unless a new Code Owner is found. See
+// [this issue] if you would like to become the Code Owner of this module.
+//
+// [this issue]: https://github.com/open-telemetry/opentelemetry-go-contrib/issues/5542
 package ec2 // import "go.opentelemetry.io/contrib/detectors/aws/ec2"
 
 import (
@@ -14,7 +23,7 @@ import (
 
 	"go.opentelemetry.io/otel/attribute"
 	"go.opentelemetry.io/otel/sdk/resource"
-	semconv "go.opentelemetry.io/otel/semconv/v1.24.0"
+	semconv "go.opentelemetry.io/otel/semconv/v1.25.0"
 )
 
 type config struct {

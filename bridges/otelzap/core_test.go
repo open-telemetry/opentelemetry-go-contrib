@@ -15,22 +15,31 @@ import (
 	"go.opentelemetry.io/otel/log"
 	"go.opentelemetry.io/otel/log/global"
 	"go.opentelemetry.io/otel/log/logtest"
-	"go.opentelemetry.io/otel/sdk/instrumentation"
 )
 
-var testMessage = "log message"
+var (
+	testMessage = "log message"
+	loggerName  = "name"
+	testKey     = "key"
+	testValue   = "value"
+)
 
 func TestCore(t *testing.T) {
 	rec := logtest.NewRecorder()
-	zc := NewCore(WithLoggerProvider(rec))
+	zc := NewCore(loggerName, WithLoggerProvider(rec))
 	logger := zap.New(zc)
 
-	logger.Info(testMessage)
+	logger.Info(testMessage, zap.String(testKey, testValue))
 
-	// TODO (#5580): Not sure why index 1 is populated with results and not 0.
-	got := rec.Result()[1].Records[0]
+	got := rec.Result()[0].Records[0]
 	assert.Equal(t, testMessage, got.Body().AsString())
 	assert.Equal(t, log.SeverityInfo, got.Severity())
+	assert.Equal(t, 1, got.AttributesLen())
+	got.WalkAttributes(func(kv log.KeyValue) bool {
+		assert.Equal(t, testKey, string(kv.Key))
+		assert.Equal(t, testValue, value2Result(kv.Value))
+		return true
+	})
 }
 
 func TestCoreEnabled(t *testing.T) {
@@ -39,21 +48,21 @@ func TestCoreEnabled(t *testing.T) {
 	}
 
 	r := logtest.NewRecorder(logtest.WithEnabledFunc(enabledFunc))
-	logger := zap.New(NewCore(WithLoggerProvider(r)))
+	logger := zap.New(NewCore(loggerName, WithLoggerProvider(r)))
 
 	logger.Debug(testMessage)
-	assert.Empty(t, r.Result()[1].Records)
+	assert.Empty(t, r.Result()[0].Records)
 
 	if ce := logger.Check(zap.DebugLevel, testMessage); ce != nil {
 		ce.Write()
 	}
-	assert.Empty(t, r.Result()[1].Records)
+	assert.Empty(t, r.Result()[0].Records)
 
 	if ce := logger.Check(zap.InfoLevel, testMessage); ce != nil {
 		ce.Write()
 	}
-	require.Len(t, r.Result()[1].Records, 1)
-	got := r.Result()[1].Records[0]
+	require.Len(t, r.Result()[0].Records, 1)
+	got := r.Result()[0].Records[0]
 	assert.Equal(t, testMessage, got.Body().AsString())
 	assert.Equal(t, log.SeverityInfo, got.Severity())
 }
@@ -66,34 +75,31 @@ func TestNewCoreConfiguration(t *testing.T) {
 		global.SetLoggerProvider(r)
 
 		var h *Core
-		require.NotPanics(t, func() { h = NewCore() })
+		require.NotPanics(t, func() { h = NewCore(loggerName) })
 		require.NotNil(t, h.logger)
-		require.IsType(t, &logtest.Recorder{}, h.logger)
-		l := h.logger.(*logtest.Recorder)
-		require.Len(t, l.Result(), 1)
+		require.Len(t, r.Result(), 1)
 
-		want := &logtest.ScopeRecords{Name: bridgeName, Version: version}
-		got := l.Result()[0]
+		want := &logtest.ScopeRecords{Name: loggerName}
+		got := r.Result()[0]
 		assert.Equal(t, want, got)
 	})
 
 	t.Run("Options", func(t *testing.T) {
 		r := logtest.NewRecorder()
-		scope := instrumentation.Scope{Name: "name", Version: "ver", SchemaURL: "url"}
 		var h *Core
 		require.NotPanics(t, func() {
 			h = NewCore(
+				loggerName,
 				WithLoggerProvider(r),
-				WithInstrumentationScope(scope),
+				WithVersion("1.0.0"),
+				WithSchemaURL("url"),
 			)
 		})
 		require.NotNil(t, h.logger)
-		require.IsType(t, &logtest.Recorder{}, h.logger)
-		l := h.logger.(*logtest.Recorder)
-		require.Len(t, l.Result(), 1)
+		require.Len(t, r.Result(), 1)
 
-		want := &logtest.ScopeRecords{Name: scope.Name, Version: scope.Version, SchemaURL: scope.SchemaURL}
-		got := l.Result()[0]
+		want := &logtest.ScopeRecords{Name: loggerName, Version: "1.0.0", SchemaURL: "url"}
+		got := r.Result()[0]
 		assert.Equal(t, want, got)
 	})
 }

@@ -1,6 +1,15 @@
 // Copyright The OpenTelemetry Authors
 // SPDX-License-Identifier: Apache-2.0
 
+// Package ecs provide an OpenTelemetry resource detector for AWS ECS
+// instances.
+//
+// Deprecated: ecs has no Code Owner.
+// After August 21, 2024, it may no longer be supported and may stop
+// receiving new releases unless a new Code Owner is found. See
+// [this issue] if you would like to become the Code Owner of this module.
+//
+// [this issue]: https://github.com/open-telemetry/opentelemetry-go-contrib/issues/5543
 package ecs // import "go.opentelemetry.io/contrib/detectors/aws/ecs"
 
 import (
@@ -16,7 +25,7 @@ import (
 
 	"go.opentelemetry.io/otel/attribute"
 	"go.opentelemetry.io/otel/sdk/resource"
-	semconv "go.opentelemetry.io/otel/semconv/v1.24.0"
+	semconv "go.opentelemetry.io/otel/semconv/v1.25.0"
 )
 
 const (

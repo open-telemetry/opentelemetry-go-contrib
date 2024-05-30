@@ -1,5 +1,7 @@
 # aws/aws-sdk-go-v2 instrumentation example
 
+:warning: Deprecated: otelaws has no Code Owner.
+
 A simple example to demonstrate the AWS SDK V2 for Go instrumentation. In this example, container `aws-sdk-client` initializes a S3 client and a DynamoDB client and runs 2 basic operations: `listS3Buckets` and `listDynamodbTables`.
 
 

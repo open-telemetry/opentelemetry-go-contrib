@@ -1,6 +1,14 @@
 // Copyright The OpenTelemetry Authors
 // SPDX-License-Identifier: Apache-2.0
 
+// Package otelaws instruments the github.com/aws/aws-sdk-go-v2 package.
+//
+// Deprecated: otelaws has no Code Owner.
+// After August 21, 2024, it may no longer be supported and may stop
+// receiving new releases unless a new Code Owner is found. See
+// [this issue] if you would like to become the Code Owner of this module.
+//
+// [this issue]: https://github.com/open-telemetry/opentelemetry-go-contrib/issues/5547
 package otelaws // import "go.opentelemetry.io/contrib/instrumentation/github.com/aws/aws-sdk-go-v2/otelaws"
 
 import (
