@@ -7,6 +7,9 @@
 # Learn about membership in OpenTelemetry community:
 #  https://github.com/open-telemetry/community/blob/main/community-membership.md
 #
+# Learn about Code Owners policy in OpenTelemetry Go Contrib:
+#  https://github.com/open-telemetry/opentelemetry-go-contrib/blob/main/CONTRIBUTING.md#code-owners
+#
 #
 # Learn about CODEOWNERS file format:
 # https://help.github.com/en/articles/about-code-owners
