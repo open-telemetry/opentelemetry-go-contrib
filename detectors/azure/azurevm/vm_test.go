@@ -1,7 +1,7 @@
 // Copyright The OpenTelemetry Authors
 // SPDX-License-Identifier: Apache-2.0
 
-package vm
+package azurevm
 
 import (
 	"context"
@@ -72,19 +72,19 @@ func TestDetect(t *testing.T) {
 		},
 		{
 			input: input{
-				jsonMetadata: "",
+				jsonMetadata: "{}",
 				statusCode:   http.StatusNotFound,
 			},
 			expected: expected{
-				resource: nil,
-				err:      true,
+				resource: resource.Empty(),
+				err:      false,
 			},
 		},
 	}
 
 	for _, tCase := range testTable {
 		svr := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-			w.WriteHeader(http.StatusInternalServerError)
+			w.WriteHeader(tCase.input.statusCode)
 
 			if r.Header.Get("Metadata") == "True" {
 				fmt.Fprintf(w, tCase.input.jsonMetadata)

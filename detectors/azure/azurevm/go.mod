@@ -1,4 +1,4 @@
-module go.opentelemetry.io/contrib/detectors/azure/vm
+module go.opentelemetry.io/contrib/detectors/azure/azurevm
 
 go 1.21
 

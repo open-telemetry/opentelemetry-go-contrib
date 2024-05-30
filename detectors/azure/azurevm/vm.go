@@ -1,11 +1,12 @@
 // Copyright The OpenTelemetry Authors
 // SPDX-License-Identifier: Apache-2.0
 
-package vm // import "go.opentelemetry.io/contrib/detectors/azure/vm"
+package azurevm // import "go.opentelemetry.io/contrib/detectors/azure/azurevm"
 
 import (
 	"context"
 	"encoding/json"
+	"errors"
 	"io"
 	"net/http"
 
@@ -75,7 +76,7 @@ func New(opts ...Option) resource.Detector {
 func (detector *resourceDetector) Detect(ctx context.Context) (*resource.Resource, error) {
 	jsonMetadata, err := detector.getJSONMetadata()
 	if err != nil {
-		return nil, err
+		return resource.Empty(), nil
 	}
 
 	var metadata vmMetadata
@@ -129,6 +130,10 @@ func (detector *resourceDetector) getJSONMetadata() ([]byte, error) {
 	resp, err := client.Do(req)
 	if err != nil {
 		return nil, err
+	}
+
+	if resp.StatusCode != http.StatusOK {
+		return nil, errors.New(http.StatusText(resp.StatusCode))
 	}
 
 	defer resp.Body.Close()
