@@ -220,7 +220,7 @@ func TestLogsAttributesAlternatePartition(t *testing.T) {
 		ContainerARN: "arn:arn-partition:arn-svc:arn-region:arn-account:arn-resource",
 	}
 	actualAttributes, err := detector.getLogsAttributes(containerMetadata)
-	assert.NoError(t, err, "failure with nonstandard partitition")
+	assert.NoError(t, err, "failure with nonstandard partition")
 
 	expectedAttributes := []attribute.KeyValue{
 		semconv.AWSLogGroupNames(containerMetadata.LogOptions.AwsLogsGroup),

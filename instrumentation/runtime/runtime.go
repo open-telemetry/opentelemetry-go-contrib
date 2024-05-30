@@ -24,7 +24,7 @@ type runtime struct {
 
 // config contains optional settings for reporting runtime metrics.
 type config struct {
-	// MinimumReadMemStatsInterval sets the mininum interval
+	// MinimumReadMemStatsInterval sets the minimum interval
 	// between calls to runtime.ReadMemStats().  Negative values
 	// are ignored.
 	MinimumReadMemStatsInterval time.Duration
