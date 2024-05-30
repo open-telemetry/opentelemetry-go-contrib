@@ -5,7 +5,7 @@ The Azure VM resource detector supports detecting attributes specific to Azure V
 ## Usage
 
 ```golang
-// Instantiate a new host resource detector
+// Instantiate a new azure vm resource detector
 azureVmResourceDetector := vm.New()
 resource, err := azureVmResourceDetector.Detect(context.Background())
 ```
