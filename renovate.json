@@ -23,7 +23,7 @@
       "enabled": false
     },
     {
-      "matchManagers": ["pip"],
+      "matchManagers": ["pip_requirements"],
       "packageNames": ["codespell"],
       "enabled": true
     }
