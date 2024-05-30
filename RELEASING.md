@@ -15,7 +15,7 @@ go.opentelemetry.io/otel packages are compatible with the contrib repository.
 Follow the following steps to verify the changes.
 
 1. Pick the GIT SHA on the [main branch](https://github.com/open-telemetry/opentelemetry-go/commits/main) that you want to verify.
-2. Run the following command to update the OTel depencies with the GIT SHA picked in step 1.
+2. Run the following command to update the OTel dependencies with the GIT SHA picked in step 1.
 
    ```sh
    export GITSHA=<the GIT SHA you want to verify>

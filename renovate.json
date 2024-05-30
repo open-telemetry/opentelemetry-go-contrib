@@ -21,6 +21,11 @@
       "matchManagers": ["gomod"],
       "matchDepTypes": ["indirect"],
       "enabled": false
+    },
+    {
+      "matchManagers": ["pip"],
+      "packageNames": ["codespell"],
+      "enabled": true
     }
   ]
 }
