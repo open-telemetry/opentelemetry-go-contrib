@@ -72,12 +72,22 @@ func TestDetect(t *testing.T) {
 		},
 		{
 			input: input{
-				jsonMetadata: "{}",
+				jsonMetadata: "",
 				statusCode:   http.StatusNotFound,
 			},
 			expected: expected{
 				resource: resource.Empty(),
 				err:      false,
+			},
+		},
+		{
+			input: input{
+				jsonMetadata: "",
+				statusCode:   http.StatusInternalServerError,
+			},
+			expected: expected{
+				resource: nil,
+				err:      true,
 			},
 		},
 	}
@@ -91,7 +101,8 @@ func TestDetect(t *testing.T) {
 			}
 		}))
 
-		detector := New(WithEndpoint(svr.URL))
+		detector := New()
+		detector.endpoint = svr.URL
 
 		azureResource, err := detector.Detect(context.Background())
 

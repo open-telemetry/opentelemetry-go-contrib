@@ -1,30 +1,3 @@
 # Azure VM Resource detector
 
-The Azure VM resource detector supports detecting attributes specific to Azure VMs.
-
-## Usage
-
-```golang
-// Instantiate a new Azure VM resource detector
-azureVmResourceDetector := azurevm.New()
-resource, err := azureVmResourceDetector.Detect(context.Background())
-```
-
-## Supported attributes
-
-According to semantic conventions for
-[host](https://github.com/open-telemetry/semantic-conventions/blob/main/docs/resource/host.md),
-[cloud](https://github.com/open-telemetry/semantic-conventions/blob/main/docs/resource/cloud.md),
-and
-[os](https://github.com/open-telemetry/semantic-conventions/blob/main/docs/resource/os.md)
-attributes, each of the following attributes is added if it is available:
-
-* `cloud.provider`
-* `cloud.platform`
-* `cloud.region`
-* `cloud.resource_id`
-* `host.id`
-* `host.name`
-* `host.type`
-* `os.type`
-* `os.version`
+[![PkgGoDev](https://pkg.go.dev/badge/go.opentelemetry.io/contrib/detectors/azure/azurevm)](https://pkg.go.dev/go.opentelemetry.io/contrib/detectors/azure/azurevm)

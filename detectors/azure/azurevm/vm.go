@@ -19,39 +19,6 @@ const (
 	defaultAzureVMMetadataEndpoint = "http://169.254.169.254/metadata/instance/compute?api-version=2021-12-13&format=json"
 )
 
-type config struct {
-	endpoint string
-}
-
-func newConfig(options ...Option) config {
-	c := config{defaultAzureVMMetadataEndpoint}
-	for _, option := range options {
-		c = option.apply(c)
-	}
-
-	return c
-}
-
-// Option applies an Azure VM detector configuration option.
-type Option interface {
-	apply(config) config
-}
-
-type optionFunc func(config) config
-
-func (fn optionFunc) apply(c config) config {
-	return fn(c)
-}
-
-// WithEndpoint sets the endpoint for obtaining a Azure instance metadata JSON.
-func WithEndpoint(e string) Option {
-	return optionFunc(func(c config) config {
-		c.endpoint = e
-
-		return c
-	})
-}
-
 type resourceDetector struct {
 	endpoint string
 }
@@ -67,16 +34,19 @@ type vmMetadata struct {
 }
 
 // New returns a [resource.Detector] that will detect Azure VM resources.
-func New(opts ...Option) resource.Detector {
-	c := newConfig(opts...)
-	return &resourceDetector{c.endpoint}
+func New() *resourceDetector {
+	return &resourceDetector{defaultAzureVMMetadataEndpoint}
 }
 
 // Detect detects associated resources when running on an Azure VM.
 func (detector *resourceDetector) Detect(ctx context.Context) (*resource.Resource, error) {
-	jsonMetadata, err := detector.getJSONMetadata()
+	jsonMetadata, err, runningInAzure := detector.getJSONMetadata()
 	if err != nil {
-		return resource.Empty(), nil
+		if !runningInAzure {
+			return resource.Empty(), nil
+		} else {
+			return nil, err
+		}
 	}
 
 	var metadata vmMetadata
@@ -115,28 +85,31 @@ func (detector *resourceDetector) Detect(ctx context.Context) (*resource.Resourc
 	return resource.NewWithAttributes(semconv.SchemaURL, attributes...), nil
 }
 
-func (detector *resourceDetector) getJSONMetadata() ([]byte, error) {
+func (detector *resourceDetector) getJSONMetadata() ([]byte, error, bool) {
 	pTransport := &http.Transport{Proxy: nil}
 
 	client := http.Client{Transport: pTransport}
 
 	req, err := http.NewRequest("GET", detector.endpoint, nil)
 	if err != nil {
-		return nil, err
+		return nil, err, false
 	}
 
 	req.Header.Add("Metadata", "True")
 
 	resp, err := client.Do(req)
 	if err != nil {
-		return nil, err
-	}
-
-	if resp.StatusCode != http.StatusOK {
-		return nil, errors.New(http.StatusText(resp.StatusCode))
+		return nil, err, false
 	}
 
 	defer resp.Body.Close()
 
-	return io.ReadAll(resp.Body)
+	if resp.StatusCode == http.StatusOK {
+		bytes, err := io.ReadAll(resp.Body)
+		return bytes, err, true
+	}
+
+	runningInAzure := resp.StatusCode < 400 || resp.StatusCode > 499
+
+	return nil, errors.New(http.StatusText(resp.StatusCode)), runningInAzure
 }
