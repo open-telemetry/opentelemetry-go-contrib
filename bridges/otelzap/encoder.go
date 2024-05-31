@@ -158,7 +158,7 @@ func assignUintValue(v uint64) log.Value {
 
 // arrayEncoder implements [zapcore.ArrayEncoder].
 type arrayEncoder struct {
-	elems []log.Value // nolint:unused
+	elems []log.Value
 }
 
 func (a *arrayEncoder) AppendArray(v zapcore.ArrayMarshaler) error {
