@@ -194,8 +194,19 @@ func TestArrayEncoder(t *testing.T) {
 		f        func(zapcore.ArrayEncoder)
 		expected interface{}
 	}{
-		// AppendObject and AppendArray are covered by the AddObject (nested) and
-		// AddArray (nested) cases above.
+		// AppendObject is covered by AddObject (nested) case above.
+		{
+			desc: "AppendArray (arrays of arrays)",
+			f: func(e zapcore.ArrayEncoder) {
+				err := e.AppendArray(zapcore.ArrayMarshalerFunc(func(inner zapcore.ArrayEncoder) error {
+					inner.AppendBool(true)
+					inner.AppendBool(false)
+					return nil
+				}))
+				assert.NoError(t, err)
+			},
+			expected: []interface{}{true, false},
+		},
 		{"AppendBool", func(e zapcore.ArrayEncoder) { e.AppendBool(true) }, true},
 		{"AppendByteString", func(e zapcore.ArrayEncoder) { e.AppendByteString([]byte("foo")) }, "foo"},
 		{"AppendFloat64", func(e zapcore.ArrayEncoder) { e.AppendFloat64(3.14) }, 3.14},
