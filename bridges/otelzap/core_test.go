@@ -29,7 +29,7 @@ func TestCore(t *testing.T) {
 	zc := NewCore(loggerName, WithLoggerProvider(rec))
 	logger := zap.New(zc)
 
-	t.Run("Test 'Write' method", func(t *testing.T) {
+	t.Run("Write", func(t *testing.T) {
 		logger.Info(testMessage, zap.String(testKey, testValue))
 		got := rec.Result()[0].Records[0]
 		assert.Equal(t, testMessage, got.Body().AsString())
