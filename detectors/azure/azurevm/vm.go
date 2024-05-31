@@ -19,6 +19,7 @@ const (
 	defaultAzureVMMetadataEndpoint = "http://169.254.169.254/metadata/instance/compute?api-version=2021-12-13&format=json"
 )
 
+// AzureVMResourceDetector collects resource information of Azure VMs.
 type AzureVMResourceDetector struct {
 	endpoint string
 }
