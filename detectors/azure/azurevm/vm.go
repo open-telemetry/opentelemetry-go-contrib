@@ -44,9 +44,9 @@ func (detector *resourceDetector) Detect(ctx context.Context) (*resource.Resourc
 	if err != nil {
 		if !runningInAzure {
 			return resource.Empty(), nil
-		} else {
-			return nil, err
 		}
+
+		return nil, err
 	}
 
 	var metadata vmMetadata

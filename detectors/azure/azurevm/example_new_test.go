@@ -11,8 +11,8 @@ import (
 )
 
 func ExampleNew() {
-	azureVmResourceDetector := azurevm.New()
-	resource, err := azureVmResourceDetector.Detect(context.Background())
+	azureVMResourceDetector := azurevm.New()
+	resource, err := azureVMResourceDetector.Detect(context.Background())
 
 	if err != nil {
 		panic(err)

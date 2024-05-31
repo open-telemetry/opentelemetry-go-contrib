@@ -2,7 +2,8 @@
 // SPDX-License-Identifier: Apache-2.0
 
 /*
-The Azure VM [resource.Detector] supports detecting attributes specific to Azure VMs.
+Package azurevm provides a [resource.Detector] which supports detecting
+attributes specific to Azure VMs.
 
 According to semantic conventions for [host], [cloud], and [os] attributes,
 each of the following attributes is added if it is available:
