@@ -151,8 +151,6 @@ func (o *Core) Write(ent zapcore.Entry, fields []zapcore.Field) error {
 	// TODO: Handle attributes passed via With (exceptions: context.Context and zap.Namespace).
 	// TODO: Handle context.Context containing trace context.
 	// TODO: Handle zap.Namespace.
-	// TODO: Handle zap.Object.
-	// TODO: Handle zap.Array.
 	// TODO: Handle ent.LoggerName.
 
 	r.AddAttributes(o.attr...)
