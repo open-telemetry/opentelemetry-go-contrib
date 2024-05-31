@@ -45,7 +45,7 @@ func TestCore(t *testing.T) {
 	rec.Reset()
 
 	// test child logger with accumulated fields
-	t.Run("Test 'With' method", func(t *testing.T) {
+	t.Run("With", func(t *testing.T) {
 		testCases := [][]string{{"test1", "value1"}, {"test2", "value2"}}
 		childlogger := logger.With(zap.String(testCases[0][0], testCases[0][1]))
 		childlogger.Info(testMessage, zap.String(testCases[1][0], testCases[1][1]))
