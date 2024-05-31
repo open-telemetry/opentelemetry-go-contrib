@@ -73,7 +73,7 @@ type mockHTTPRequest struct {
 func mockEventToCarrier(eventJSON []byte) propagation.TextMapCarrier{
 	var request mockHTTPRequest
 	_ = json.unmarshal(eventJSON, &request)
-	return propogation.HeaderCarrier{someHeaderKey: []string{request.Headers[someHeaderKey]}}
+	return propagation.HeaderCarrier{someHeaderKey: []string{request.Headers[someHeaderKey]}}
 }
 
 type mockPropagator struct{}

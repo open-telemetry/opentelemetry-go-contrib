@@ -56,7 +56,7 @@ func TestRegistryConcurrentSafe(t *testing.T) {
 		assert.NotPanics(t, func() {
 			v, ok := r.load(propName)
 			assert.True(t, ok, "missing propagator in registry")
-			assert.Equal(t, noop, v, "wrong propagator retuned")
+			assert.Equal(t, noop, v, "wrong propagator returned")
 		})
 	}()
 
