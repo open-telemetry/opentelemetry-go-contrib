@@ -6,6 +6,7 @@
 package otelzap
 
 import (
+	"errors"
 	"testing"
 	"time"
 
@@ -18,11 +19,33 @@ import (
 
 // Copied from https://github.com/uber-go/zap/blob/b39f8b6b6a44d8371a87610be50cce58eeeaabcb/zapcore/memory_encoder_test.go.
 func TestObjectEncoder(t *testing.T) {
+	// Expected output of a turducken.
+	wantTurducken := map[string]interface{}{
+		"ducks": []interface{}{
+			map[string]interface{}{"in": "chicken"},
+			map[string]interface{}{"in": "chicken"},
+		},
+	}
+
 	tests := []struct {
 		desc     string
 		f        func(zapcore.ObjectEncoder)
 		expected interface{}
 	}{
+		{
+			desc: "AddObject",
+			f: func(e zapcore.ObjectEncoder) {
+				assert.NoError(t, e.AddObject("k", loggable{true}), "Expected AddObject to succeed.")
+			},
+			expected: map[string]interface{}{"loggable": "yes"},
+		},
+		{
+			desc: "AddObject (nested)",
+			f: func(e zapcore.ObjectEncoder) {
+				assert.NoError(t, e.AddObject("k", turducken{}), "Expected AddObject to succeed.")
+			},
+			expected: wantTurducken,
+		},
 		{
 			desc: "AddArray",
 			f: func(e zapcore.ObjectEncoder) {
@@ -34,6 +57,13 @@ func TestObjectEncoder(t *testing.T) {
 				})), "Expected AddArray to succeed.")
 			},
 			expected: []interface{}{true, false, true},
+		},
+		{
+			desc: "AddArray (nested)",
+			f: func(e zapcore.ObjectEncoder) {
+				assert.NoError(t, e.AddArray("k", turduckens(2)), "Expected AddArray to succeed.")
+			},
+			expected: []interface{}{wantTurducken, wantTurducken},
 		},
 		{
 			desc:     "AddBinary",
@@ -164,6 +194,8 @@ func TestArrayEncoder(t *testing.T) {
 		f        func(zapcore.ArrayEncoder)
 		expected interface{}
 	}{
+		// AppendObject and AppendArray are covered by the AddObject (nested) and
+		// AddArray (nested) cases above.
 		{"AppendBool", func(e zapcore.ArrayEncoder) { e.AppendBool(true) }, true},
 		{"AppendByteString", func(e zapcore.ArrayEncoder) { e.AppendByteString([]byte("foo")) }, "foo"},
 		{"AppendFloat64", func(e zapcore.ArrayEncoder) { e.AppendFloat64(3.14) }, 3.14},
@@ -199,6 +231,52 @@ func TestArrayEncoder(t *testing.T) {
 			assert.Equal(t, []interface{}{tt.expected, tt.expected}, value2Result(enc.kv[0].Value), "Unexpected encoder output.")
 		})
 	}
+}
+
+type turducken struct{}
+
+func (t turducken) MarshalLogObject(enc zapcore.ObjectEncoder) error {
+	return enc.AddArray("ducks", zapcore.ArrayMarshalerFunc(func(arr zapcore.ArrayEncoder) error {
+		for i := 0; i < 2; i++ {
+			err := arr.AppendObject(zapcore.ObjectMarshalerFunc(func(inner zapcore.ObjectEncoder) error {
+				inner.AddString("in", "chicken")
+				return nil
+			}))
+			if err != nil {
+				return err
+			}
+		}
+		return nil
+	}))
+}
+
+type turduckens int
+
+func (t turduckens) MarshalLogArray(enc zapcore.ArrayEncoder) error {
+	var err error
+	tur := turducken{}
+	for i := 0; i < int(t); i++ {
+		err = errors.Join(err, enc.AppendObject(tur))
+	}
+	return err
+}
+
+type loggable struct{ bool }
+
+func (l loggable) MarshalLogObject(enc zapcore.ObjectEncoder) error {
+	if !l.bool {
+		return errors.New("can't marshal")
+	}
+	enc.AddString("loggable", "yes")
+	return nil
+}
+
+func (l loggable) MarshalLogArray(enc zapcore.ArrayEncoder) error {
+	if !l.bool {
+		return errors.New("can't marshal")
+	}
+	enc.AppendBool(true)
+	return nil
 }
 
 func value2Result(v log.Value) any {

@@ -40,8 +40,11 @@ func (m *objectEncoder) AddArray(key string, v zapcore.ArrayMarshaler) error {
 }
 
 func (m *objectEncoder) AddObject(k string, v zapcore.ObjectMarshaler) error {
-	// TODO
-	return nil
+	// TODO: Use objectEncoder from a pool.
+	newobj := newObjectEncoder(2)
+	err := v.MarshalLogObject(newobj)
+	m.kv = append(m.kv, log.Map(k, newobj.kv...))
+	return err
 }
 
 func (m *objectEncoder) AddBinary(k string, v []byte) {
@@ -158,14 +161,20 @@ type arrayEncoder struct {
 	elems []log.Value // nolint:unused
 }
 
-// TODO.
 func (a *arrayEncoder) AppendArray(v zapcore.ArrayMarshaler) error {
-	return nil
+	// TODO: Use arrayEncoder from a pool.
+	arr := &arrayEncoder{}
+	err := v.MarshalLogArray(arr)
+	a.elems = append(a.elems, log.SliceValue(arr.elems...))
+	return err
 }
 
-// TODO.
 func (a *arrayEncoder) AppendObject(v zapcore.ObjectMarshaler) error {
-	return nil
+	// TODO: Use objectEncoder from a pool.
+	m := newObjectEncoder(2)
+	err := v.MarshalLogObject(m)
+	a.elems = append(a.elems, log.MapValue(m.kv...))
+	return err
 }
 
 // TODO.
