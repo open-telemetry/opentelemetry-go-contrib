@@ -7,6 +7,7 @@ package otelzap // import "go.opentelemetry.io/contrib/bridges/otelzap"
 
 import (
 	"context"
+	"slices"
 
 	"go.uber.org/zap/zapcore"
 
@@ -88,6 +89,7 @@ func WithLoggerProvider(provider log.LoggerProvider) Option {
 // Core is a [zapcore.Core] that sends logging records to OpenTelemetry.
 type Core struct {
 	logger log.Logger
+	attr   []log.KeyValue
 }
 
 // Compile-time check *Core implements zapcore.Core.
@@ -108,10 +110,20 @@ func (o *Core) Enabled(level zapcore.Level) bool {
 	return o.logger.Enabled(context.Background(), r)
 }
 
-// TODO
 // With adds structured context to the Core.
 func (o *Core) With(fields []zapcore.Field) zapcore.Core {
-	return o
+	cloned := o.clone()
+	if len(fields) > 0 {
+		cloned.attr = append(cloned.attr, convertField(fields)...)
+	}
+	return cloned
+}
+
+func (o *Core) clone() *Core {
+	return &Core{
+		logger: o.logger,
+		attr:   slices.Clone(o.attr),
+	}
 }
 
 // TODO
@@ -143,9 +155,9 @@ func (o *Core) Write(ent zapcore.Entry, fields []zapcore.Field) error {
 	// TODO: Handle zap.Array.
 	// TODO: Handle ent.LoggerName.
 
+	r.AddAttributes(o.attr...)
 	if len(fields) > 0 {
-		attrbuf := convertField(fields)
-		r.AddAttributes(attrbuf...)
+		r.AddAttributes(convertField(fields)...)
 	}
 
 	o.logger.Emit(context.Background(), r)
