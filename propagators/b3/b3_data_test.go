@@ -1010,7 +1010,7 @@ var injectInvalidHeaderGenerator = []injectTest{
 var injectInvalidHeader []injectTest
 
 func init() {
-	// Preform a test for each invalid injectTest with all combinations of
+	// Perform a test for each invalid injectTest with all combinations of
 	// encoding values.
 	injectInvalidHeader = make([]injectTest, 0, len(injectInvalidHeaderGenerator)*4)
 	allHeaders := []string{

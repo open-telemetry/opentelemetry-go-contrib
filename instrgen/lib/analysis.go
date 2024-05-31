@@ -14,7 +14,7 @@ import (
 	"golang.org/x/tools/go/packages"
 )
 
-// PackageAnalysis analyze all package set accrding to passed
+// PackageAnalysis analyze all package set according to passed
 // pattern. It requires an information about path, pattern,
 // root functions - entry points, function declarations,
 // and so on.

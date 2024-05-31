@@ -59,7 +59,7 @@ func WithTracerProvider(provider oteltrace.TracerProvider) Option {
 	})
 }
 
-// WithPublicEndpointFn runs with every request, and allows conditionnally
+// WithPublicEndpointFn runs with every request, and allows conditionally
 // configuring the Handler to link the span with an incoming span context. If
 // this option is not provided or returns false, then the association is a
 // child association instead of a link.
