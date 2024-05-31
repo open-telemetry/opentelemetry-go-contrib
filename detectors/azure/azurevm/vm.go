@@ -20,7 +20,7 @@ const (
 )
 
 // AzureVMResourceDetector collects resource information of Azure VMs.
-type AzureVMResourceDetector struct {
+type ResourceDetector struct {
 	endpoint string
 }
 
@@ -35,13 +35,13 @@ type vmMetadata struct {
 }
 
 // New returns a [resource.Detector] that will detect Azure VM resources.
-func New() *AzureVMResourceDetector {
-	return &AzureVMResourceDetector{defaultAzureVMMetadataEndpoint}
+func New() *ResourceDetector {
+	return &ResourceDetector{defaultAzureVMMetadataEndpoint}
 }
 
 // Detect detects associated resources when running on an Azure VM.
-func (detector *AzureVMResourceDetector) Detect(ctx context.Context) (*resource.Resource, error) {
-	jsonMetadata, err, runningInAzure := detector.getJSONMetadata()
+func (detector *ResourceDetector) Detect(ctx context.Context) (*resource.Resource, error) {
+	jsonMetadata, runningInAzure, err := detector.getJSONMetadata()
 	if err != nil {
 		if !runningInAzure {
 			return resource.Empty(), nil
@@ -86,31 +86,31 @@ func (detector *AzureVMResourceDetector) Detect(ctx context.Context) (*resource.
 	return resource.NewWithAttributes(semconv.SchemaURL, attributes...), nil
 }
 
-func (detector *AzureVMResourceDetector) getJSONMetadata() ([]byte, error, bool) {
+func (detector *ResourceDetector) getJSONMetadata() ([]byte, bool, error) {
 	pTransport := &http.Transport{Proxy: nil}
 
 	client := http.Client{Transport: pTransport}
 
 	req, err := http.NewRequest("GET", detector.endpoint, nil)
 	if err != nil {
-		return nil, err, false
+		return nil, false, err
 	}
 
 	req.Header.Add("Metadata", "True")
 
 	resp, err := client.Do(req)
 	if err != nil {
-		return nil, err, false
+		return nil, false, err
 	}
 
 	defer resp.Body.Close()
 
 	if resp.StatusCode == http.StatusOK {
 		bytes, err := io.ReadAll(resp.Body)
-		return bytes, err, true
+		return bytes, true, err
 	}
 
 	runningInAzure := resp.StatusCode < 400 || resp.StatusCode > 499
 
-	return nil, errors.New(http.StatusText(resp.StatusCode)), runningInAzure
+	return nil, runningInAzure, errors.New(http.StatusText(resp.StatusCode))
 }

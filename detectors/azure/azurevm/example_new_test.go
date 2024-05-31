@@ -6,14 +6,13 @@ package azurevm_test
 import (
 	"context"
 	"fmt"
-        
+
 	"go.opentelemetry.io/contrib/detectors/azure/azurevm"
 )
 
 func ExampleNew() {
 	azureVMResourceDetector := azurevm.New()
 	resource, err := azureVMResourceDetector.Detect(context.Background())
-
 	if err != nil {
 		panic(err)
 	}
