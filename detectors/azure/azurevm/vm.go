@@ -19,7 +19,7 @@ const (
 	defaultAzureVMMetadataEndpoint = "http://169.254.169.254/metadata/instance/compute?api-version=2021-12-13&format=json"
 )
 
-type resourceDetector struct {
+type AzureVMResourceDetector struct {
 	endpoint string
 }
 
@@ -34,12 +34,12 @@ type vmMetadata struct {
 }
 
 // New returns a [resource.Detector] that will detect Azure VM resources.
-func New() *resourceDetector {
-	return &resourceDetector{defaultAzureVMMetadataEndpoint}
+func New() *AzureVMResourceDetector {
+	return &AzureVMResourceDetector{defaultAzureVMMetadataEndpoint}
 }
 
 // Detect detects associated resources when running on an Azure VM.
-func (detector *resourceDetector) Detect(ctx context.Context) (*resource.Resource, error) {
+func (detector *AzureVMResourceDetector) Detect(ctx context.Context) (*resource.Resource, error) {
 	jsonMetadata, err, runningInAzure := detector.getJSONMetadata()
 	if err != nil {
 		if !runningInAzure {
@@ -85,7 +85,7 @@ func (detector *resourceDetector) Detect(ctx context.Context) (*resource.Resourc
 	return resource.NewWithAttributes(semconv.SchemaURL, attributes...), nil
 }
 
-func (detector *resourceDetector) getJSONMetadata() ([]byte, error, bool) {
+func (detector *AzureVMResourceDetector) getJSONMetadata() ([]byte, error, bool) {
 	pTransport := &http.Transport{Proxy: nil}
 
 	client := http.Client{Transport: pTransport}
