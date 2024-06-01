@@ -32,7 +32,10 @@ bridges/otelzap/                                                        @open-te
 
 config/                                                                 @open-telemetry/go-approvers @MadVikingGod @pellared @codeboten
 
-detectors/aws/                                                          @open-telemetry/go-approvers
+detectors/aws/ec2                                                       @open-telemetry/go-approvers @pyohannes
+detectors/aws/ecs                                                       @open-telemetry/go-approvers @pyohannes
+detectors/aws/eks                                                       @open-telemetry/go-approvers @pyohannes
+detectors/aws/lambda                                                    @open-telemetry/go-approvers
 detectors/gcp/                                                          @open-telemetry/go-approvers @dashpole
 
 exporters/autoexport                                                    @open-telemetry/go-approvers @MikeGoldsmith @pellared
