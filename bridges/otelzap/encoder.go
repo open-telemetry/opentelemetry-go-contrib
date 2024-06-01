@@ -4,6 +4,7 @@
 package otelzap // import "go.opentelemetry.io/contrib/bridges/otelzap"
 
 import (
+	"encoding/json"
 	"time"
 
 	"go.uber.org/zap/zapcore"
@@ -19,7 +20,8 @@ var (
 // objectEncoder implements zapcore.ObjectEncoder.
 // It encodes given fields to OTel key-values.
 type objectEncoder struct {
-	kv []log.KeyValue
+	kv         []log.KeyValue
+	reflectval log.Value
 }
 
 // nolint:unused
@@ -93,9 +95,21 @@ func (m *objectEncoder) AddUint64(k string, v uint64) {
 		})
 }
 
-// TODO.
+// AddReflected converts all non-primitive type to JSON string.
 func (m *objectEncoder) AddReflected(k string, v interface{}) error {
+	enc := json.NewEncoder(m)
+	if err := enc.Encode(v); err != nil {
+		return err
+	}
+	m.AddString(k, m.reflectval.AsString())
 	return nil
+}
+
+// Implements io.Writer to which json encoder writes to.
+// Used by [AddReflected].
+func (m *objectEncoder) Write(p []byte) (n int, err error) {
+	m.reflectval = log.StringValue(string(p))
+	return len(p), nil
 }
 
 // OpenNamespace opens an isolated namespace where all subsequent fields will
@@ -179,7 +193,15 @@ func (a *arrayEncoder) AppendObject(v zapcore.ObjectMarshaler) error {
 
 // TODO.
 func (a *arrayEncoder) AppendReflected(v interface{}) error {
-	return nil
+	enc := json.NewEncoder(a)
+	return enc.Encode(v)
+}
+
+// Implements io.Writer to which json encoder writes to.
+// Used by [AppendReflected].
+func (a *arrayEncoder) Write(p []byte) (n int, err error) {
+	a.elems = append(a.elems, log.StringValue(string(p)))
+	return len(p), nil
 }
 
 func (a *arrayEncoder) AppendByteString(v []byte) {

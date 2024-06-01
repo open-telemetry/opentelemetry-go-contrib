@@ -66,6 +66,13 @@ func TestObjectEncoder(t *testing.T) {
 			expected: []interface{}{wantTurducken, wantTurducken},
 		},
 		{
+			desc: "AddReflected",
+			f: func(e zapcore.ObjectEncoder) {
+				assert.NoError(t, e.AddReflected("k", map[string]interface{}{"foo": 5}), "Expected AddReflected to succeed.")
+			},
+			expected: "{\"foo\":5}\n",
+		},
+		{
 			desc:     "AddBinary",
 			f:        func(e zapcore.ObjectEncoder) { e.AddBinary("k", []byte("foo")) },
 			expected: []byte("foo"),
@@ -206,6 +213,13 @@ func TestArrayEncoder(t *testing.T) {
 				assert.NoError(t, err)
 			},
 			expected: []interface{}{true, false},
+		},
+		{
+			desc: "AppendReflected",
+			f: func(e zapcore.ArrayEncoder) {
+				assert.NoError(t, e.AppendReflected(map[string]interface{}{"foo": 5}))
+			},
+			expected: "{\"foo\":5}\n",
 		},
 		{"AppendBool", func(e zapcore.ArrayEncoder) { e.AppendBool(true) }, true},
 		{"AppendByteString", func(e zapcore.ArrayEncoder) { e.AppendByteString([]byte("foo")) }, "foo"},
