@@ -90,6 +90,7 @@ func WithLoggerProvider(provider log.LoggerProvider) Option {
 type Core struct {
 	logger log.Logger
 	attr   []log.KeyValue
+	ctx    context.Context
 }
 
 // Compile-time check *Core implements zapcore.Core.
@@ -114,15 +115,21 @@ func (o *Core) Enabled(level zapcore.Level) bool {
 func (o *Core) With(fields []zapcore.Field) zapcore.Core {
 	cloned := o.clone()
 	if len(fields) > 0 {
-		cloned.attr = append(cloned.attr, convertField(fields)...)
+		cloned.attr = append(cloned.attr, convertField(&cloned.ctx, fields)...)
 	}
 	return cloned
+}
+
+// used in test
+func (o *Core) getctx() context.Context {
+	return o.ctx
 }
 
 func (o *Core) clone() *Core {
 	return &Core{
 		logger: o.logger,
 		attr:   slices.Clone(o.attr),
+		ctx:    o.ctx,
 	}
 }
 
@@ -157,17 +164,21 @@ func (o *Core) Write(ent zapcore.Entry, fields []zapcore.Field) error {
 
 	r.AddAttributes(o.attr...)
 	if len(fields) > 0 {
-		r.AddAttributes(convertField(fields)...)
+		r.AddAttributes(convertField(&o.ctx, fields)...)
 	}
 
-	o.logger.Emit(context.Background(), r)
+	o.logger.Emit(o.ctx, r)
 	return nil
 }
 
-func convertField(fields []zapcore.Field) []log.KeyValue {
+func convertField(ctx *context.Context, fields []zapcore.Field) []log.KeyValue {
 	// TODO: Use objectEncoder from a pool instead of newObjectEncoder.
 	enc := newObjectEncoder(len(fields))
 	for _, field := range fields {
+		if ctxFld, ok := field.Interface.(context.Context); ok {
+			*ctx = ctxFld
+			continue
+		}
 		field.AddTo(enc)
 	}
 
