@@ -86,7 +86,8 @@ func newConfig(opts []Option, role string) *config {
 	var err error
 	c.rpcDuration, err = c.meter.Float64Histogram("rpc."+role+".duration",
 		metric.WithDescription("Measures the duration of inbound RPC."),
-		metric.WithUnit("ms"))
+		metric.WithUnit("ms"),
+		metric.WithExplicitBoundaries([]float64{0, 5, 25, 50, 75, 100, 250, 500, 750, 1000, 2500, 5000, 7500, 10000, 25000, 50000, 75000, 100000}...))
 	if err != nil {
 		otel.Handle(err)
 		if c.rpcDuration == nil {
@@ -96,7 +97,8 @@ func newConfig(opts []Option, role string) *config {
 
 	c.rpcRequestSize, err = c.meter.Int64Histogram("rpc."+role+".request.size",
 		metric.WithDescription("Measures size of RPC request messages (uncompressed)."),
-		metric.WithUnit("By"))
+		metric.WithUnit("By"),
+		metric.WithExplicitBoundaries([]int64{0, 256, 512, 1024, 2048, 4096, 8192, 16384, 32768, 65536, 131072, 262144, 524288, 1048576, 2097152, 4194304, 8388608, 16777216}...))
 	if err != nil {
 		otel.Handle(err)
 		if c.rpcRequestSize == nil {
@@ -106,7 +108,8 @@ func newConfig(opts []Option, role string) *config {
 
 	c.rpcResponseSize, err = c.meter.Int64Histogram("rpc."+role+".response.size",
 		metric.WithDescription("Measures size of RPC response messages (uncompressed)."),
-		metric.WithUnit("By"))
+		metric.WithUnit("By"),
+		metric.WithExplicitBoundaries([]int64{0, 256, 512, 1024}...))
 	if err != nil {
 		otel.Handle(err)
 		if c.rpcResponseSize == nil {
@@ -116,7 +119,8 @@ func newConfig(opts []Option, role string) *config {
 
 	c.rpcRequestsPerRPC, err = c.meter.Int64Histogram("rpc."+role+".requests_per_rpc",
 		metric.WithDescription("Measures the number of messages received per RPC. Should be 1 for all non-streaming RPCs."),
-		metric.WithUnit("{count}"))
+		metric.WithUnit("{count}"),
+		metric.WithExplicitBoundaries([]int64{0, 256, 512, 1024}...))
 	if err != nil {
 		otel.Handle(err)
 		if c.rpcRequestsPerRPC == nil {
@@ -126,7 +130,8 @@ func newConfig(opts []Option, role string) *config {
 
 	c.rpcResponsesPerRPC, err = c.meter.Int64Histogram("rpc."+role+".responses_per_rpc",
 		metric.WithDescription("Measures the number of messages received per RPC. Should be 1 for all non-streaming RPCs."),
-		metric.WithUnit("{count}"))
+		metric.WithUnit("{count}"),
+		metric.WithExplicitBoundaries([]int64{0, 256, 512, 1024}...))
 	if err != nil {
 		otel.Handle(err)
 		if c.rpcResponsesPerRPC == nil {

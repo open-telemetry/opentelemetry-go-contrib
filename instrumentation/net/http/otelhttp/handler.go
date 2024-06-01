@@ -116,6 +116,7 @@ func (h *middleware) createMeasures() {
 		serverDuration,
 		metric.WithUnit("ms"),
 		metric.WithDescription("Measures the duration of inbound HTTP requests."),
+		metric.WithExplicitBoundaries([]float64{0, 5, 25, 50, 75, 100, 250, 500, 750, 1000, 2500, 5000, 7500, 10000, 25000, 50000, 75000, 100000}...),
 	)
 	handleErr(err)
 }
