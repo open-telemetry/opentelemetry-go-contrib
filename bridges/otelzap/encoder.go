@@ -97,6 +97,7 @@ func (m *objectEncoder) AddUint64(k string, v uint64) {
 
 // AddReflected converts all non-primitive type to JSON string.
 func (m *objectEncoder) AddReflected(k string, v interface{}) error {
+	// TODO use json Encoder from a pool.
 	enc := json.NewEncoder(m)
 	if err := enc.Encode(v); err != nil {
 		return err
@@ -191,7 +192,6 @@ func (a *arrayEncoder) AppendObject(v zapcore.ObjectMarshaler) error {
 	return err
 }
 
-// TODO.
 func (a *arrayEncoder) AppendReflected(v interface{}) error {
 	enc := json.NewEncoder(a)
 	return enc.Encode(v)
