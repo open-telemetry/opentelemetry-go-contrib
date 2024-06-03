@@ -117,7 +117,7 @@ func (o *Core) With(fields []zapcore.Field) zapcore.Core {
 	cloned := o.clone()
 	if len(fields) > 0 {
 		ctx, attrbuf := convertField(fields)
-		if ctx != nil { 
+		if ctx != nil {
 			cloned.ctx = ctx
 		}
 		cloned.attr = append(cloned.attr, attrbuf...)
@@ -162,7 +162,7 @@ func (o *Core) Write(ent zapcore.Entry, fields []zapcore.Field) error {
 	r.AddAttributes(o.attr...)
 	if len(fields) > 0 {
 		ctx, attrbuf := convertField(fields)
-		if ctx != nil { 
+		if ctx != nil {
 			o.ctx = ctx
 		}
 		r.AddAttributes(attrbuf...)
@@ -172,8 +172,9 @@ func (o *Core) Write(ent zapcore.Entry, fields []zapcore.Field) error {
 	return nil
 }
 
-func convertField(ctx context.Context, fields []zapcore.Field) (context.Context, []log.KeyValue) {
+func convertField(fields []zapcore.Field) (context.Context, []log.KeyValue) {
 	// TODO: Use objectEncoder from a pool instead of newObjectEncoder.
+	var ctx context.Context
 	enc := newObjectEncoder(len(fields))
 	for _, field := range fields {
 		if ctxFld, ok := field.Interface.(context.Context); ok {
