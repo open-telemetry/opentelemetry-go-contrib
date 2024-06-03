@@ -261,3 +261,22 @@ func TestEndpointIsNotReachable(t *testing.T) {
 	_, err = client.getSamplingRules(context.Background())
 	assert.Error(t, err)
 }
+
+func TestRespondsWithErrorStatusCode(t *testing.T) {
+	testServer := httptest.NewServer(http.HandlerFunc(func(res http.ResponseWriter, _ *http.Request) {
+		res.WriteHeader(http.StatusForbidden)
+		_, err := res.Write([]byte(`{}`))
+		require.NoError(t, err)
+	}))
+	t.Cleanup(testServer.Close)
+
+	u, err := url.Parse(testServer.URL)
+	require.NoError(t, err)
+
+	client, err := newClient(*u)
+	require.NoError(t, err)
+
+	samplingRules, err := client.getSamplingRules(context.Background())
+	require.Error(t, err)
+	require.Nil(t, samplingRules)
+}
