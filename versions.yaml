@@ -20,7 +20,6 @@ module-sets:
     modules:
       - go.opentelemetry.io/contrib/bridges/prometheus
       - go.opentelemetry.io/contrib/detectors/aws/lambda
-      - go.opentelemetry.io/contrib/detectors/azure/azurevm
       - go.opentelemetry.io/contrib/exporters/autoexport
       - go.opentelemetry.io/contrib/propagators/autoprop
       - go.opentelemetry.io/contrib/propagators/opencensus
@@ -83,6 +82,10 @@ module-sets:
     version: v0.0.1
     modules:
       - go.opentelemetry.io/contrib/processors/baggage/baggagetrace
+  experimental-detectors:
+    version: v0.0.1
+    modules:
+      - go.opentelemetry.io/contrib/detectors/azure/azurevm
 excluded-modules:
   - go.opentelemetry.io/contrib/bridges/otelzap
   - go.opentelemetry.io/contrib/instrgen
