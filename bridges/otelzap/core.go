@@ -155,7 +155,6 @@ func (o *Core) Write(ent zapcore.Entry, fields []zapcore.Field) error {
 	r.SetBody(log.StringValue(ent.Message))
 	r.SetSeverity(convertLevel(ent.Level))
 
-	// TODO: Handle attributes passed via With (exceptions: context.Context and zap.Namespace).
 	// TODO: Handle zap.Namespace.
 	// TODO: Handle ent.LoggerName.
 
