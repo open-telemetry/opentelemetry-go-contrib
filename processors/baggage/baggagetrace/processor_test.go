@@ -9,7 +9,6 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 
 	"go.opentelemetry.io/otel/attribute"
@@ -56,11 +55,11 @@ func TestSpanProcessorAppendsBaggageAttributes(t *testing.T) {
 	_, span := tracer.Start(ctx, "test")
 	span.End()
 
-	assert.Len(t, exporter.spans, 1)
-	assert.Len(t, exporter.spans[0].Attributes(), 1)
+	require.Len(t, exporter.spans, 1)
+	require.Len(t, exporter.spans[0].Attributes(), 1)
 
 	want := []attribute.KeyValue{attribute.String("baggage.test", "baggage value")}
-	assert.Equal(t, want, exporter.spans[0].Attributes())
+	require.Equal(t, want, exporter.spans[0].Attributes())
 }
 
 func TestSpanProcessorAppendsBaggageAttributesWithHaPrefixPredicate(t *testing.T) {
@@ -88,11 +87,11 @@ func TestSpanProcessorAppendsBaggageAttributesWithHaPrefixPredicate(t *testing.T
 	_, span := tracer.Start(ctx, "test")
 	span.End()
 
-	assert.Len(t, exporter.spans, 1)
-	assert.Len(t, exporter.spans[0].Attributes(), 1)
+	require.Len(t, exporter.spans, 1)
+	require.Len(t, exporter.spans[0].Attributes(), 1)
 
 	want := []attribute.KeyValue{attribute.String("baggage.test", "baggage value")}
-	assert.Equal(t, want, exporter.spans[0].Attributes())
+	require.Equal(t, want, exporter.spans[0].Attributes())
 }
 
 func TestSpanProcessorAppendsBaggageAttributesWithRegexPredicate(t *testing.T) {
@@ -121,9 +120,9 @@ func TestSpanProcessorAppendsBaggageAttributesWithRegexPredicate(t *testing.T) {
 	_, span := tracer.Start(ctx, "test")
 	span.End()
 
-	assert.Len(t, exporter.spans, 1)
-	assert.Len(t, exporter.spans[0].Attributes(), 1)
+	require.Len(t, exporter.spans, 1)
+	require.Len(t, exporter.spans[0].Attributes(), 1)
 
 	want := []attribute.KeyValue{attribute.String("baggage.test", "baggage value")}
-	assert.Equal(t, want, exporter.spans[0].Attributes())
+	require.Equal(t, want, exporter.spans[0].Attributes())
 }
