@@ -20,8 +20,8 @@ import (
 	"github.com/stretchr/testify/assert"
 
 	lambdadetector "go.opentelemetry.io/contrib/detectors/aws/lambda"
-	"go.opentelemetry.io/contrib/instrumentation/github.com/aws/aws-lambda-go/otellambda" // nolint:staticcheck  // deprecated.
-	"go.opentelemetry.io/contrib/propagators/aws/xray"                                    // nolint:staticcheck  // deprecated.
+	"go.opentelemetry.io/contrib/instrumentation/github.com/aws/aws-lambda-go/otellambda"
+	"go.opentelemetry.io/contrib/propagators/aws/xray" // nolint:staticcheck  // deprecated.
 	"go.opentelemetry.io/otel/attribute"
 	"go.opentelemetry.io/otel/propagation"
 	"go.opentelemetry.io/otel/sdk/instrumentation"
