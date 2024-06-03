@@ -101,6 +101,7 @@ func NewCore(name string, opts ...Option) *Core {
 	cfg := newConfig(opts)
 	return &Core{
 		logger: cfg.logger(name),
+		ctx:    context.Background(),
 	}
 }
 
@@ -118,11 +119,6 @@ func (o *Core) With(fields []zapcore.Field) zapcore.Core {
 		cloned.attr = append(cloned.attr, convertField(&cloned.ctx, fields)...)
 	}
 	return cloned
-}
-
-// used in test
-func (o *Core) getctx() context.Context {
-	return o.ctx
 }
 
 func (o *Core) clone() *Core {

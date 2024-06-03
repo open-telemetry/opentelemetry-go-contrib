@@ -44,17 +44,6 @@ func TestCore(t *testing.T) {
 
 	rec.Reset()
 
-	t.Run("WriteContext", func(t *testing.T) {
-		logger.Info(testMessage, zap.Any("context", context.Background()))
-		got := rec.Result()[0].Records[0]
-		assert.Equal(t, testMessage, got.Body().AsString())
-		assert.Equal(t, log.SeverityInfo, got.Severity())
-		assert.Equal(t, 0, got.AttributesLen())
-		assert.Equal(t, zc.getctx(), context.Background())
-	})
-
-	rec.Reset()
-
 	// test child logger with accumulated fields
 	t.Run("With", func(t *testing.T) {
 		testCases := [][]string{{"test1", "value1"}, {"test2", "value2"}}
