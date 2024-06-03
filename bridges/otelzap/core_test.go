@@ -44,8 +44,8 @@ func TestCore(t *testing.T) {
 
 	rec.Reset()
 
-	// TODO WriteContext
-	// TOOD WithContext
+	// TODO: Add WriteContext test case
+	// TOOD: Add WithContext test case
 
 	// test child logger with accumulated fields
 	t.Run("With", func(t *testing.T) {
