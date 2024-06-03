@@ -85,7 +85,6 @@ func TestCore(t *testing.T) {
 			return true
 		})
 	})
-
 }
 
 func TestCoreEnabled(t *testing.T) {
