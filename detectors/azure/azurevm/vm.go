@@ -41,7 +41,7 @@ func New() *ResourceDetector {
 
 // Detect detects associated resources when running on an Azure VM.
 func (detector *ResourceDetector) Detect(ctx context.Context) (*resource.Resource, error) {
-	jsonMetadata, runningInAzure, err := detector.getJSONMetadata()
+	jsonMetadata, runningInAzure, err := detector.getJSONMetadata(ctx)
 	if err != nil {
 		if !runningInAzure {
 			return resource.Empty(), nil
@@ -86,12 +86,12 @@ func (detector *ResourceDetector) Detect(ctx context.Context) (*resource.Resourc
 	return resource.NewWithAttributes(semconv.SchemaURL, attributes...), nil
 }
 
-func (detector *ResourceDetector) getJSONMetadata() ([]byte, bool, error) {
+func (detector *ResourceDetector) getJSONMetadata(ctx context.Context) ([]byte, bool, error) {
 	pTransport := &http.Transport{Proxy: nil}
 
 	client := http.Client{Transport: pTransport}
 
-	req, err := http.NewRequest("GET", detector.endpoint, nil)
+	req, err := http.NewRequestWithContext(ctx, "GET", detector.endpoint, nil)
 	if err != nil {
 		return nil, false, err
 	}
