@@ -159,8 +159,10 @@ func (o *Core) Write(ent zapcore.Entry, fields []zapcore.Field) error {
 
 	r.AddAttributes(o.attr...)
 	if len(fields) > 0 {
-		var attrbuf []log.KeyValue
-		o.ctx, attrbuf = convertField(o.ctx, fields)
+		ctx, attrbuf := convertField(fields)
+		if ctx != nil { 
+			o.ctx = ctx
+		}
 		r.AddAttributes(attrbuf...)
 	}
 
