@@ -86,8 +86,6 @@ func TestCore(t *testing.T) {
 		})
 	})
 
-	rec.Reset()
-
 }
 
 func TestCoreEnabled(t *testing.T) {
