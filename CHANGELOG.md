@@ -21,8 +21,6 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 
 - The `go.opentelemetry.io/contrib/instrumentation/go.mongodb.org/mongo-driver/mongo/otelmongo` package is deprecated.
   If you would like to become a Code Owner of this module and prevent it from being removed, see [#5551]. (#5598)
-- The `go.opentelemetry.io/contrib/instrumentation/github.com/aws/aws-sdk-go-v2/otelaws` package is deprecated.
-  If you would like to become a Code Owner of this module and prevent it from being removed, see [#5547]. (#5643)
 - The `go.opentelemetry.io/contrib/instrumentation/github.com/gorilla/mux/otelmux` package is deprecated.
   If you would like to become a Code Owner of this module and prevent it from being removed, see [#5549]. (#5644)
 - The `go.opentelemetry.io/contrib/instrumentation/github.com/labstack/echo/otelecho` package is deprecated.
@@ -34,7 +32,6 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 - The `go.opentelemetry.io/contrib/samplers/aws/xray` package is deprecated.
   If you would like to become a Code Owner of this module and prevent it from being removed, see [#5554]. (#5647)
 
-[#5547]: https://github.com/open-telemetry/opentelemetry-go-contrib/issues/5547
 [#5549]: https://github.com/open-telemetry/opentelemetry-go-contrib/issues/5549
 [#5550]: https://github.com/open-telemetry/opentelemetry-go-contrib/issues/5550
 [#5551]: https://github.com/open-telemetry/opentelemetry-go-contrib/issues/5551
