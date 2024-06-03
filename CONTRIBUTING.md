@@ -104,7 +104,7 @@ A pull request is considered ready to merge when the following criteria are meet
 Any Maintainer can merge the pull request once it is ready to merge.
 
 [^1]: The `go.opentelemetry.io/contrib/instrgen` module is exempt from the two approvals and one day requirement.
-  Only one approval is needed to merge a Pull Request for that module and there is no minimum amout of time required for the PR to be open before merging.
+  Only one approval is needed to merge a Pull Request for that module and there is no minimum amount of time required for the PR to be open before merging.
   This exemption is to be removed when that package makes its first tagged release.
 
 ### Draft Pull Requests

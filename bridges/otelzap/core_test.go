@@ -20,6 +20,8 @@ import (
 var (
 	testMessage = "log message"
 	loggerName  = "name"
+	testKey     = "key"
+	testValue   = "value"
 )
 
 func TestCore(t *testing.T) {
@@ -27,12 +29,62 @@ func TestCore(t *testing.T) {
 	zc := NewCore(loggerName, WithLoggerProvider(rec))
 	logger := zap.New(zc)
 
-	logger.Info(testMessage)
+	t.Run("Write", func(t *testing.T) {
+		logger.Info(testMessage, zap.String(testKey, testValue))
+		got := rec.Result()[0].Records[0]
+		assert.Equal(t, testMessage, got.Body().AsString())
+		assert.Equal(t, log.SeverityInfo, got.Severity())
+		assert.Equal(t, 1, got.AttributesLen())
+		got.WalkAttributes(func(kv log.KeyValue) bool {
+			assert.Equal(t, testKey, string(kv.Key))
+			assert.Equal(t, testValue, value2Result(kv.Value))
+			return true
+		})
+	})
 
-	// TODO (#5580): Not sure why index 1 is populated with results and not 0.
-	got := rec.Result()[0].Records[0]
-	assert.Equal(t, testMessage, got.Body().AsString())
-	assert.Equal(t, log.SeverityInfo, got.Severity())
+	rec.Reset()
+
+	// test child logger with accumulated fields
+	t.Run("With", func(t *testing.T) {
+		testCases := [][]string{{"test1", "value1"}, {"test2", "value2"}}
+		childlogger := logger.With(zap.String(testCases[0][0], testCases[0][1]))
+		childlogger.Info(testMessage, zap.String(testCases[1][0], testCases[1][1]))
+
+		got := rec.Result()[0].Records[0]
+		assert.Equal(t, testMessage, got.Body().AsString())
+		assert.Equal(t, log.SeverityInfo, got.Severity())
+		assert.Equal(t, 2, got.AttributesLen())
+
+		index := 0
+		got.WalkAttributes(func(kv log.KeyValue) bool {
+			assert.Equal(t, testCases[index][0], string(kv.Key))
+			assert.Equal(t, testCases[index][1], value2Result(kv.Value))
+			index++
+			return true
+		})
+	})
+
+	rec.Reset()
+
+	t.Run("WithMultiple", func(t *testing.T) {
+		testCases := [][]string{{"test1", "value1"}, {"test2", "value2"}, {"test3", "value3"}}
+		childlogger := logger.With(zap.String(testCases[0][0], testCases[0][1]))
+		childlogger2 := childlogger.With(zap.String(testCases[1][0], testCases[1][1]))
+		childlogger2.Info(testMessage, zap.String(testCases[2][0], testCases[2][1]))
+
+		got := rec.Result()[0].Records[0]
+		assert.Equal(t, testMessage, got.Body().AsString())
+		assert.Equal(t, log.SeverityInfo, got.Severity())
+		assert.Equal(t, 3, got.AttributesLen())
+
+		index := 0
+		got.WalkAttributes(func(kv log.KeyValue) bool {
+			assert.Equal(t, testCases[index][0], string(kv.Key))
+			assert.Equal(t, testCases[index][1], value2Result(kv.Value))
+			index++
+			return true
+		})
+	})
 }
 
 func TestCoreEnabled(t *testing.T) {

@@ -10,6 +10,53 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 
 ### Added
 
+- The `go.opentelemetry.io/contrib/config` add support to configure periodic reader interval and timeout. (#5661)
+
+### Fixed
+
+- The superfluous `response.WriteHeader` call in `go.opentelemetry.io/contrib/instrumentation/net/http/otelhttp` when the response writer is flushed. (#5634)
+- Custom attributes targeting metrics recorded by the `go.opentelemetry.io/contrib/instrumentation/net/http/otelhttp` are not ignored anymore. (#5129)
+
+### Deprecated
+
+- The `go.opentelemetry.io/contrib/instrumentation/go.mongodb.org/mongo-driver/mongo/otelmongo` package is deprecated.
+  If you would like to become a Code Owner of this module and prevent it from being removed, see [#5551]. (#5598)
+- The `go.opentelemetry.io/contrib/detectors/aws/lambda` package is deprecated.
+  If you would like to become a Code Owner of this module and prevent it from being removed, see [#5545]. (#5641)
+- The `go.opentelemetry.io/contrib/instrumentation/github.com/aws/aws-lambda-go/otellambda` package is deprecated.
+  If you would like to become a Code Owner of this module and prevent it from being removed, see [#5546]. (#5642)
+- The `go.opentelemetry.io/contrib/instrumentation/github.com/aws/aws-sdk-go-v2/otelaws` package is deprecated.
+  If you would like to become a Code Owner of this module and prevent it from being removed, see [#5547]. (#5643)
+- The `go.opentelemetry.io/contrib/instrumentation/github.com/gorilla/mux/otelmux` package is deprecated.
+  If you would like to become a Code Owner of this module and prevent it from being removed, see [#5549]. (#5644)
+- The `go.opentelemetry.io/contrib/instrumentation/github.com/labstack/echo/otelecho` package is deprecated.
+  If you would like to become a Code Owner of this module and prevent it from being removed, see [#5550]. (#5645)
+- The `go.opentelemetry.io/contrib/instrumentation/gopkg.in/macaron.v1/otelmacaron` package is deprecated.
+  If you would like to become a Code Owner of this module and prevent it from being removed, see [#5552]. (#5646)
+- The `go.opentelemetry.io/contrib/propagators/aws` package is deprecated.
+  If you would like to become a Code Owner of this module and prevent it from being removed, see [#5553]. (#5647)
+- The `go.opentelemetry.io/contrib/samplers/aws/xray` package is deprecated.
+  If you would like to become a Code Owner of this module and prevent it from being removed, see [#5554]. (#5647)
+
+[#5545]: https://github.com/open-telemetry/opentelemetry-go-contrib/issues/5545
+[#5546]: https://github.com/open-telemetry/opentelemetry-go-contrib/issues/5546
+[#5547]: https://github.com/open-telemetry/opentelemetry-go-contrib/issues/5547
+[#5549]: https://github.com/open-telemetry/opentelemetry-go-contrib/issues/5549
+[#5550]: https://github.com/open-telemetry/opentelemetry-go-contrib/issues/5550
+[#5551]: https://github.com/open-telemetry/opentelemetry-go-contrib/issues/5551
+[#5552]: https://github.com/open-telemetry/opentelemetry-go-contrib/issues/5552
+[#5553]: https://github.com/open-telemetry/opentelemetry-go-contrib/issues/5553
+[#5554]: https://github.com/open-telemetry/opentelemetry-go-contrib/issues/5554
+
+### Changed
+
+- Improve performance of `go.opentelemetry.io/contrib/instrumentation/google.golang.org/grpc/otelgrpc` with the usage of `WithAttributeSet()` instead of `WithAttribute()`. (#5664) 
+- Improve performance of `go.opentelemetry.io/contrib/instrumentation/net/http/otelhttp` with the usage of `WithAttributeSet()` instead of `WithAttribute()`. (#5664) 
+
+## [1.27.0/0.52.0/0.21.0/0.7.0/0.2.0] - 2024-05-21
+
+### Added
+
 - Add the new `go.opentelemetry.io/contrib/instrgen` package to provide auto-generated source code instrumentation. (#3068, #3108)
 - Add an experimental `OTEL_METRICS_PRODUCERS` environment variable to `go.opentelemetry.io/contrib/autoexport` to be set metrics producers. (#5281)
   - `prometheus` and `none` are supported values. You can specify multiple producers separated by a comma.
@@ -35,6 +82,7 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
   This parameter is used as a replacement of `WithInstrumentationScope` to specify the name of the logger backing the underlying `Handler`. (#5588)
 - `NewHandler` now accepts a `name` `string` as the first argument.
   This parameter is used as a replacement of `WithInstrumentationScope` to specify the name of the logger backing the returned `Handler`. (#5588)
+- Upgrade all dependencies of `go.opentelemetry.io/otel/semconv/v1.24.0` to `go.opentelemetry.io/otel/semconv/v1.25.0`. (#5605)
 
 - Update the span processor in `go.opentelemetry.io/contrib/processors/baggage/baggagetrace` to require a baggage key predicate. (#5619)
 
@@ -1011,7 +1059,8 @@ First official tagged release of `contrib` repository.
 - Prefix support for dogstatsd (#34)
 - Update Go Runtime package to use batch observer (#44)
 
-[Unreleased]: https://github.com/open-telemetry/opentelemetry-go-contrib/compare/v1.26.0...HEAD
+[Unreleased]: https://github.com/open-telemetry/opentelemetry-go-contrib/compare/v1.27.0...HEAD
+[1.27.0/0.52.0/0.21.0/0.7.0/0.2.0]: https://github.com/open-telemetry/opentelemetry-go-contrib/releases/tag/v1.27.0
 [1.26.0/0.51.0/0.20.0/0.6.0/0.1.0]: https://github.com/open-telemetry/opentelemetry-go-contrib/releases/tag/v1.26.0
 [1.25.0/0.50.0/0.19.0/0.5.0/0.0.1]: https://github.com/open-telemetry/opentelemetry-go-contrib/releases/tag/v1.25.0
 [1.24.0/0.49.0/0.18.0/0.4.0]: https://github.com/open-telemetry/opentelemetry-go-contrib/releases/tag/v1.24.0

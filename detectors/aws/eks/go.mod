@@ -4,16 +4,16 @@ go 1.21
 
 require (
 	github.com/stretchr/testify v1.9.0
-	go.opentelemetry.io/otel v1.26.1-0.20240520052501-49c866fbcd20
-	go.opentelemetry.io/otel/sdk v1.26.1-0.20240520052501-49c866fbcd20
+	go.opentelemetry.io/otel v1.27.0
+	go.opentelemetry.io/otel/sdk v1.27.0
 	k8s.io/apimachinery v0.29.4
 	k8s.io/client-go v0.29.4
 )
 
 require (
 	github.com/davecgh/go-spew v1.1.1 // indirect
-	github.com/emicklei/go-restful/v3 v3.12.0 // indirect
-	github.com/go-logr/logr v1.4.1 // indirect
+	github.com/emicklei/go-restful/v3 v3.12.1 // indirect
+	github.com/go-logr/logr v1.4.2 // indirect
 	github.com/go-logr/stdr v1.2.2 // indirect
 	github.com/go-openapi/jsonpointer v0.21.0 // indirect
 	github.com/go-openapi/jsonreference v0.21.0 // indirect
@@ -31,8 +31,8 @@ require (
 	github.com/munnerz/goautoneg v0.0.0-20191010083416-a7dc8b61c822 // indirect
 	github.com/pmezard/go-difflib v1.0.0 // indirect
 	github.com/stretchr/objx v0.5.2 // indirect
-	go.opentelemetry.io/otel/metric v1.26.1-0.20240520052501-49c866fbcd20 // indirect
-	go.opentelemetry.io/otel/trace v1.26.1-0.20240520052501-49c866fbcd20 // indirect
+	go.opentelemetry.io/otel/metric v1.27.0 // indirect
+	go.opentelemetry.io/otel/trace v1.27.0 // indirect
 	golang.org/x/net v0.25.0 // indirect
 	golang.org/x/oauth2 v0.20.0 // indirect
 	golang.org/x/sys v0.20.0 // indirect
@@ -45,7 +45,7 @@ require (
 	gopkg.in/yaml.v3 v3.0.1 // indirect
 	k8s.io/api v0.29.4 // indirect
 	k8s.io/klog/v2 v2.120.1 //indirect
-	k8s.io/kube-openapi v0.0.0-20240430033511-f0e62f92d13f // indirect
+	k8s.io/kube-openapi v0.0.0-20240521193020-835d969ad83a // indirect
 	k8s.io/utils v0.0.0-20240502163921-fe8a2dddb1d0 // indirect
 	sigs.k8s.io/json v0.0.0-20221116044647-bc3834ca7abd // indirect
 	sigs.k8s.io/structured-merge-diff/v4 v4.4.1 // indirect

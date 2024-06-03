@@ -6,6 +6,7 @@
 package otelzap
 
 import (
+	"errors"
 	"testing"
 	"time"
 
@@ -18,11 +19,52 @@ import (
 
 // Copied from https://github.com/uber-go/zap/blob/b39f8b6b6a44d8371a87610be50cce58eeeaabcb/zapcore/memory_encoder_test.go.
 func TestObjectEncoder(t *testing.T) {
+	// Expected output of a turducken.
+	wantTurducken := map[string]interface{}{
+		"ducks": []interface{}{
+			map[string]interface{}{"in": "chicken"},
+			map[string]interface{}{"in": "chicken"},
+		},
+	}
+
 	tests := []struct {
 		desc     string
 		f        func(zapcore.ObjectEncoder)
 		expected interface{}
 	}{
+		{
+			desc: "AddObject",
+			f: func(e zapcore.ObjectEncoder) {
+				assert.NoError(t, e.AddObject("k", loggable{true}), "Expected AddObject to succeed.")
+			},
+			expected: map[string]interface{}{"loggable": "yes"},
+		},
+		{
+			desc: "AddObject (nested)",
+			f: func(e zapcore.ObjectEncoder) {
+				assert.NoError(t, e.AddObject("k", turducken{}), "Expected AddObject to succeed.")
+			},
+			expected: wantTurducken,
+		},
+		{
+			desc: "AddArray",
+			f: func(e zapcore.ObjectEncoder) {
+				assert.NoError(t, e.AddArray("k", zapcore.ArrayMarshalerFunc(func(arr zapcore.ArrayEncoder) error {
+					arr.AppendBool(true)
+					arr.AppendBool(false)
+					arr.AppendBool(true)
+					return nil
+				})), "Expected AddArray to succeed.")
+			},
+			expected: []interface{}{true, false, true},
+		},
+		{
+			desc: "AddArray (nested)",
+			f: func(e zapcore.ObjectEncoder) {
+				assert.NoError(t, e.AddArray("k", turduckens(2)), "Expected AddArray to succeed.")
+			},
+			expected: []interface{}{wantTurducken, wantTurducken},
+		},
 		{
 			desc:     "AddBinary",
 			f:        func(e zapcore.ObjectEncoder) { e.AddBinary("k", []byte("foo")) },
@@ -79,6 +121,41 @@ func TestObjectEncoder(t *testing.T) {
 			expected: "v",
 		},
 		{
+			desc:     "AddUint64",
+			f:        func(e zapcore.ObjectEncoder) { e.AddUint64("k", 42) },
+			expected: int64(42),
+		},
+		{
+			desc:     "AddUint64-Overflow",
+			f:        func(e zapcore.ObjectEncoder) { e.AddUint64("k", ^uint64(0)) },
+			expected: float64(^uint64(0)),
+		},
+		{
+			desc:     "AddUint",
+			f:        func(e zapcore.ObjectEncoder) { e.AddUint("k", 42) },
+			expected: int64(42),
+		},
+		{
+			desc:     "AddUint32",
+			f:        func(e zapcore.ObjectEncoder) { e.AddUint32("k", 42) },
+			expected: int64(42),
+		},
+		{
+			desc:     "AddUint16",
+			f:        func(e zapcore.ObjectEncoder) { e.AddUint16("k", 42) },
+			expected: int64(42),
+		},
+		{
+			desc:     "AddUint8",
+			f:        func(e zapcore.ObjectEncoder) { e.AddUint8("k", 42) },
+			expected: int64(42),
+		},
+		{
+			desc:     "AddUintptr",
+			f:        func(e zapcore.ObjectEncoder) { e.AddUintptr("k", 42) },
+			expected: int64(42),
+		},
+		{
 			desc:     "AddDuration",
 			f:        func(e zapcore.ObjectEncoder) { e.AddDuration("k", time.Millisecond) },
 			expected: int64(1000000),
@@ -108,6 +185,109 @@ func TestObjectEncoder(t *testing.T) {
 			assert.Equal(t, tt.expected, value2Result((enc.kv[0].Value)), "Unexpected encoder output.")
 		})
 	}
+}
+
+// Copied from https://github.com/uber-go/zap/blob/b39f8b6b6a44d8371a87610be50cce58eeeaabcb/zapcore/memory_encoder_test.go.
+func TestArrayEncoder(t *testing.T) {
+	tests := []struct {
+		desc     string
+		f        func(zapcore.ArrayEncoder)
+		expected interface{}
+	}{
+		// AppendObject is covered by AddObject (nested) case above.
+		{
+			desc: "AppendArray (arrays of arrays)",
+			f: func(e zapcore.ArrayEncoder) {
+				err := e.AppendArray(zapcore.ArrayMarshalerFunc(func(inner zapcore.ArrayEncoder) error {
+					inner.AppendBool(true)
+					inner.AppendBool(false)
+					return nil
+				}))
+				assert.NoError(t, err)
+			},
+			expected: []interface{}{true, false},
+		},
+		{"AppendBool", func(e zapcore.ArrayEncoder) { e.AppendBool(true) }, true},
+		{"AppendByteString", func(e zapcore.ArrayEncoder) { e.AppendByteString([]byte("foo")) }, "foo"},
+		{"AppendFloat64", func(e zapcore.ArrayEncoder) { e.AppendFloat64(3.14) }, 3.14},
+		{"AppendFloat32", func(e zapcore.ArrayEncoder) { e.AppendFloat32(3.14) }, float64(float32(3.14))},
+		{"AppendInt64", func(e zapcore.ArrayEncoder) { e.AppendInt64(42) }, int64(42)},
+		{"AppendInt32", func(e zapcore.ArrayEncoder) { e.AppendInt32(42) }, int64(42)},
+		{"AppendInt16", func(e zapcore.ArrayEncoder) { e.AppendInt16(42) }, int64(42)},
+		{"AppendInt8", func(e zapcore.ArrayEncoder) { e.AppendInt8(42) }, int64(42)},
+		{"AppendInt", func(e zapcore.ArrayEncoder) { e.AppendInt(42) }, int64(42)},
+		{"AppendString", func(e zapcore.ArrayEncoder) { e.AppendString("foo") }, "foo"},
+		{"AppendComplex128", func(e zapcore.ArrayEncoder) { e.AppendComplex128(1 + 2i) }, map[string]interface{}{"i": float64(2), "r": float64(1)}},
+		{"AppendComplex64", func(e zapcore.ArrayEncoder) { e.AppendComplex64(1 + 2i) }, map[string]interface{}{"i": float64(2), "r": float64(1)}},
+		{"AppendDuration", func(e zapcore.ArrayEncoder) { e.AppendDuration(time.Second) }, int64(1000000000)},
+		{"AppendTime", func(e zapcore.ArrayEncoder) { e.AppendTime(time.Unix(0, 100)) }, time.Unix(0, 100).UnixNano()},
+		{"AppendUint", func(e zapcore.ArrayEncoder) { e.AppendUint(42) }, int64(42)},
+		{"AppendUint64", func(e zapcore.ArrayEncoder) { e.AppendUint64(42) }, int64(42)},
+		{"AppendUint64 - overflow", func(e zapcore.ArrayEncoder) { e.AppendUint64(^uint64(0)) }, float64(^uint64(0))},
+		{"AppendUint32", func(e zapcore.ArrayEncoder) { e.AppendUint32(42) }, int64(42)},
+		{"AppendUint16", func(e zapcore.ArrayEncoder) { e.AppendUint16(42) }, int64(42)},
+		{"AppendUint8", func(e zapcore.ArrayEncoder) { e.AppendUint8(42) }, int64(42)},
+		{"AppendUintptr", func(e zapcore.ArrayEncoder) { e.AppendUintptr(42) }, int64(42)},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.desc, func(t *testing.T) {
+			enc := newObjectEncoder(1)
+			assert.NoError(t, enc.AddArray("k", zapcore.ArrayMarshalerFunc(func(arr zapcore.ArrayEncoder) error {
+				tt.f(arr)
+				tt.f(arr)
+				return nil
+			})), "Expected AddArray to succeed.")
+
+			assert.Equal(t, []interface{}{tt.expected, tt.expected}, value2Result(enc.kv[0].Value), "Unexpected encoder output.")
+		})
+	}
+}
+
+type turducken struct{}
+
+func (t turducken) MarshalLogObject(enc zapcore.ObjectEncoder) error {
+	return enc.AddArray("ducks", zapcore.ArrayMarshalerFunc(func(arr zapcore.ArrayEncoder) error {
+		for i := 0; i < 2; i++ {
+			err := arr.AppendObject(zapcore.ObjectMarshalerFunc(func(inner zapcore.ObjectEncoder) error {
+				inner.AddString("in", "chicken")
+				return nil
+			}))
+			if err != nil {
+				return err
+			}
+		}
+		return nil
+	}))
+}
+
+type turduckens int
+
+func (t turduckens) MarshalLogArray(enc zapcore.ArrayEncoder) error {
+	var err error
+	tur := turducken{}
+	for i := 0; i < int(t); i++ {
+		err = errors.Join(err, enc.AppendObject(tur))
+	}
+	return err
+}
+
+type loggable struct{ bool }
+
+func (l loggable) MarshalLogObject(enc zapcore.ObjectEncoder) error {
+	if !l.bool {
+		return errors.New("can't marshal")
+	}
+	enc.AddString("loggable", "yes")
+	return nil
+}
+
+func (l loggable) MarshalLogArray(enc zapcore.ArrayEncoder) error {
+	if !l.bool {
+		return errors.New("can't marshal")
+	}
+	enc.AppendBool(true)
+	return nil
 }
 
 func value2Result(v log.Value) any {

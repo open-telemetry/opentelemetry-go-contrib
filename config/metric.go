@@ -59,7 +59,15 @@ func metricReader(ctx context.Context, r MetricReader) (sdkmetric.Reader, error)
 	}
 
 	if r.Periodic != nil {
-		return periodicExporter(ctx, r.Periodic.Exporter)
+		var opts []sdkmetric.PeriodicReaderOption
+		if r.Periodic.Interval != nil {
+			opts = append(opts, sdkmetric.WithInterval(time.Duration(*r.Periodic.Interval)*time.Millisecond))
+		}
+
+		if r.Periodic.Timeout != nil {
+			opts = append(opts, sdkmetric.WithTimeout(time.Duration(*r.Periodic.Timeout)*time.Millisecond))
+		}
+		return periodicExporter(ctx, r.Periodic.Exporter, opts...)
 	}
 
 	if r.Pull != nil {
@@ -214,7 +222,7 @@ func prometheusReader(ctx context.Context, prometheusConfig *Prometheus) (sdkmet
 	mux := http.NewServeMux()
 	mux.Handle("/metrics", promhttp.HandlerFor(reg, promhttp.HandlerOpts{Registry: reg}))
 	server := http.Server{
-		// Timeouts are necessary to make a server resilent to attacks, but ListenAndServe doesn't set any.
+		// Timeouts are necessary to make a server resilient to attacks, but ListenAndServe doesn't set any.
 		// We use values from this example: https://blog.cloudflare.com/exposing-go-on-the-internet/#:~:text=There%20are%20three%20main%20timeouts
 		ReadTimeout:  5 * time.Second,
 		WriteTimeout: 10 * time.Second,

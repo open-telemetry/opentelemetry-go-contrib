@@ -7,6 +7,7 @@ package otelzap // import "go.opentelemetry.io/contrib/bridges/otelzap"
 
 import (
 	"context"
+	"slices"
 
 	"go.uber.org/zap/zapcore"
 
@@ -88,6 +89,7 @@ func WithLoggerProvider(provider log.LoggerProvider) Option {
 // Core is a [zapcore.Core] that sends logging records to OpenTelemetry.
 type Core struct {
 	logger log.Logger
+	attr   []log.KeyValue
 }
 
 // Compile-time check *Core implements zapcore.Core.
@@ -101,17 +103,27 @@ func NewCore(name string, opts ...Option) *Core {
 	}
 }
 
-// LevelEnabler decides whether a given logging level is enabled when logging a message.
+// Enabled decides whether a given logging level is enabled when logging a message.
 func (o *Core) Enabled(level zapcore.Level) bool {
 	r := log.Record{}
 	r.SetSeverity(convertLevel(level))
 	return o.logger.Enabled(context.Background(), r)
 }
 
-// TODO
 // With adds structured context to the Core.
 func (o *Core) With(fields []zapcore.Field) zapcore.Core {
-	return o
+	cloned := o.clone()
+	if len(fields) > 0 {
+		cloned.attr = append(cloned.attr, convertField(fields)...)
+	}
+	return cloned
+}
+
+func (o *Core) clone() *Core {
+	return &Core{
+		logger: o.logger,
+		attr:   slices.Clone(o.attr),
+	}
 }
 
 // TODO
@@ -136,16 +148,28 @@ func (o *Core) Write(ent zapcore.Entry, fields []zapcore.Field) error {
 	r.SetBody(log.StringValue(ent.Message))
 	r.SetSeverity(convertLevel(ent.Level))
 
-	// TODO: Handle attributes passed via fields (exceptions: context.Context and zap.Namespace).
 	// TODO: Handle attributes passed via With (exceptions: context.Context and zap.Namespace).
 	// TODO: Handle context.Context containing trace context.
 	// TODO: Handle zap.Namespace.
-	// TODO: Handle zap.Object.
-	// TODO: Handle zap.Array.
 	// TODO: Handle ent.LoggerName.
+
+	r.AddAttributes(o.attr...)
+	if len(fields) > 0 {
+		r.AddAttributes(convertField(fields)...)
+	}
 
 	o.logger.Emit(context.Background(), r)
 	return nil
+}
+
+func convertField(fields []zapcore.Field) []log.KeyValue {
+	// TODO: Use objectEncoder from a pool instead of newObjectEncoder.
+	enc := newObjectEncoder(len(fields))
+	for _, field := range fields {
+		field.AddTo(enc)
+	}
+
+	return enc.kv
 }
 
 func convertLevel(level zapcore.Level) log.Severity {

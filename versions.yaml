@@ -3,7 +3,7 @@
 
 module-sets:
   stable-v1:
-    version: v1.26.0
+    version: v1.27.0
     modules:
       - go.opentelemetry.io/contrib
       - go.opentelemetry.io/contrib/tools
@@ -16,7 +16,7 @@ module-sets:
       - go.opentelemetry.io/contrib/detectors/aws/ecs
       - go.opentelemetry.io/contrib/detectors/aws/eks
   experimental-instrumentation:
-    version: v0.51.0
+    version: v0.52.0
     modules:
       - go.opentelemetry.io/contrib/bridges/prometheus
       - go.opentelemetry.io/contrib/detectors/aws/lambda
@@ -63,18 +63,18 @@ module-sets:
       - go.opentelemetry.io/contrib/instrumentation/runtime/example
       - go.opentelemetry.io/contrib/zpages
   experimental-samplers:
-    version: v0.20.0
+    version: v0.21.0
     modules:
       - go.opentelemetry.io/contrib/samplers/aws/xray
       - go.opentelemetry.io/contrib/samplers/jaegerremote
       - go.opentelemetry.io/contrib/samplers/jaegerremote/example
       - go.opentelemetry.io/contrib/samplers/probability/consistent
   experimental-config:
-    version: v0.6.0
+    version: v0.7.0
     modules:
       - go.opentelemetry.io/contrib/config
   experimental-bridge:
-    version: v0.1.0
+    version: v0.2.0
     modules:
       - go.opentelemetry.io/contrib/bridges/otelslog
       - go.opentelemetry.io/contrib/bridges/otellogrus
