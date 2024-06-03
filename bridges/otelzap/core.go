@@ -116,8 +116,10 @@ func (o *Core) Enabled(level zapcore.Level) bool {
 func (o *Core) With(fields []zapcore.Field) zapcore.Core {
 	cloned := o.clone()
 	if len(fields) > 0 {
-		var attrbuf []log.KeyValue
-		cloned.ctx, attrbuf = convertField(cloned.ctx, fields)
+		ctx, attrbuf := convertField(fields)
+		if ctx != nil { 
+			cloned.ctx = ctx
+		}
 		cloned.attr = append(cloned.attr, attrbuf...)
 	}
 	return cloned
