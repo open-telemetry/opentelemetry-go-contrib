@@ -116,7 +116,9 @@ func (o *Core) Enabled(level zapcore.Level) bool {
 func (o *Core) With(fields []zapcore.Field) zapcore.Core {
 	cloned := o.clone()
 	if len(fields) > 0 {
-		cloned.attr = append(cloned.attr, convertField(&cloned.ctx, fields)...)
+		var attrbuf []log.KeyValue
+		cloned.ctx, attrbuf = convertField(cloned.ctx, fields)
+		cloned.attr = append(cloned.attr, attrbuf...)
 	}
 	return cloned
 }
@@ -152,31 +154,32 @@ func (o *Core) Write(ent zapcore.Entry, fields []zapcore.Field) error {
 	r.SetSeverity(convertLevel(ent.Level))
 
 	// TODO: Handle attributes passed via With (exceptions: context.Context and zap.Namespace).
-	// TODO: Handle context.Context containing trace context.
 	// TODO: Handle zap.Namespace.
 	// TODO: Handle ent.LoggerName.
 
 	r.AddAttributes(o.attr...)
 	if len(fields) > 0 {
-		r.AddAttributes(convertField(&o.ctx, fields)...)
+		var attrbuf []log.KeyValue
+		o.ctx, attrbuf = convertField(o.ctx, fields)
+		r.AddAttributes(attrbuf...)
 	}
 
 	o.logger.Emit(o.ctx, r)
 	return nil
 }
 
-func convertField(ctx *context.Context, fields []zapcore.Field) []log.KeyValue {
+func convertField(ctx context.Context, fields []zapcore.Field) (context.Context, []log.KeyValue) {
 	// TODO: Use objectEncoder from a pool instead of newObjectEncoder.
 	enc := newObjectEncoder(len(fields))
 	for _, field := range fields {
 		if ctxFld, ok := field.Interface.(context.Context); ok {
-			*ctx = ctxFld
+			ctx = ctxFld
 			continue
 		}
 		field.AddTo(enc)
 	}
 
-	return enc.kv
+	return ctx, enc.kv
 }
 
 func convertLevel(level zapcore.Level) log.Severity {
