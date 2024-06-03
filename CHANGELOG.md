@@ -25,15 +25,12 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
   If you would like to become a Code Owner of this module and prevent it from being removed, see [#5550]. (#5645)
 - The `go.opentelemetry.io/contrib/instrumentation/gopkg.in/macaron.v1/otelmacaron` package is deprecated.
   If you would like to become a Code Owner of this module and prevent it from being removed, see [#5552]. (#5646)
-- The `go.opentelemetry.io/contrib/propagators/aws` package is deprecated.
-  If you would like to become a Code Owner of this module and prevent it from being removed, see [#5553]. (#5647)
 - The `go.opentelemetry.io/contrib/samplers/aws/xray` package is deprecated.
   If you would like to become a Code Owner of this module and prevent it from being removed, see [#5554]. (#5647)
 
 [#5550]: https://github.com/open-telemetry/opentelemetry-go-contrib/issues/5550
 [#5551]: https://github.com/open-telemetry/opentelemetry-go-contrib/issues/5551
 [#5552]: https://github.com/open-telemetry/opentelemetry-go-contrib/issues/5552
-[#5553]: https://github.com/open-telemetry/opentelemetry-go-contrib/issues/5553
 [#5554]: https://github.com/open-telemetry/opentelemetry-go-contrib/issues/5554
 
 ### Changed
