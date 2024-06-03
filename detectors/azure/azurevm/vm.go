@@ -12,14 +12,12 @@ import (
 
 	"go.opentelemetry.io/otel/attribute"
 	"go.opentelemetry.io/otel/sdk/resource"
-	semconv "go.opentelemetry.io/otel/semconv/v1.24.0"
+	semconv "go.opentelemetry.io/otel/semconv/v1.25.0"
 )
 
-const (
-	defaultAzureVMMetadataEndpoint = "http://169.254.169.254/metadata/instance/compute?api-version=2021-12-13&format=json"
-)
+const defaultAzureVMMetadataEndpoint = "http://169.254.169.254/metadata/instance/compute?api-version=2021-12-13&format=json"
 
-// AzureVMResourceDetector collects resource information of Azure VMs.
+// ResourceDetector collects resource information of Azure VMs.
 type ResourceDetector struct {
 	endpoint string
 }
@@ -34,7 +32,7 @@ type vmMetadata struct {
 	Version    *string `json:"version"`
 }
 
-// New returns a [resource.Detector] that will detect Azure VM resources.
+// New returns a [ResourceDetector] that will detect Azure VM resources.
 func New() *ResourceDetector {
 	return &ResourceDetector{defaultAzureVMMetadataEndpoint}
 }
