@@ -16,6 +16,7 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 
 - The superfluous `response.WriteHeader` call in `go.opentelemetry.io/contrib/instrumentation/net/http/otelhttp` when the response writer is flushed. (#5634)
 - Custom attributes targeting metrics recorded by the `go.opentelemetry.io/contrib/instrumentation/net/http/otelhttp` are not ignored anymore. (#5129)
+- Erroneous response code of `getSamplingRules` in `go.opentelemetry.io/contrib/samplers/aws/xray/internal/client.go` will result in an error despite an empty sampling manifest. (#)
 
 ### Deprecated
 
