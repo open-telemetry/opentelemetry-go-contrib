@@ -1,10 +1,9 @@
-// Deprecated: ec2 has no Code Owner.
 module go.opentelemetry.io/contrib/detectors/aws/ec2
 
 go 1.21
 
 require (
-	github.com/aws/aws-sdk-go v1.53.11
+	github.com/aws/aws-sdk-go v1.53.15
 	github.com/stretchr/testify v1.9.0
 	go.opentelemetry.io/otel v1.27.0
 	go.opentelemetry.io/otel/sdk v1.27.0

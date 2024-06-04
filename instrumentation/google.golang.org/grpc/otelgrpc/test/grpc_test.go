@@ -50,13 +50,16 @@ func newGrpcTest(t testing.TB, listener net.Listener, cOpt []grpc.DialOption, sO
 
 	cOpt = append(cOpt, grpc.WithTransportCredentials(insecure.NewCredentials()))
 
+	dialAddr := listener.Addr().String()
+
 	if l, ok := listener.(interface{ Dial() (net.Conn, error) }); ok {
 		dial := func(context.Context, string) (net.Conn, error) { return l.Dial() }
 		cOpt = append(cOpt, grpc.WithContextDialer(dial))
+		dialAddr = "passthrough:" + dialAddr
 	}
 
 	conn, err := grpc.NewClient(
-		listener.Addr().String(),
+		dialAddr,
 		cOpt...,
 	)
 	require.NoError(t, err)

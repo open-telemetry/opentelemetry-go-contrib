@@ -1,4 +1,3 @@
-// Deprecated: ecs has no Code Owner.
 module go.opentelemetry.io/contrib/detectors/aws/ecs
 
 go 1.21
