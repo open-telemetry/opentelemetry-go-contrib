@@ -140,7 +140,7 @@ func (c *xrayClient) getSamplingRules(ctx context.Context) (*getSamplingRulesOut
 	defer output.Body.Close()
 
 	if output.StatusCode != http.StatusOK {
-		return nil, fmt.Errorf("xray client:  unable to retrieve sampling settings, expected response status code 200, got: %d", output.StatusCode)
+		return nil, fmt.Errorf("xray client: unable to retrieve sampling settings, expected response status code 200, got: %d", output.StatusCode)
 	}
 
 	var samplingRulesOutput *getSamplingRulesOutput
