@@ -1,9 +1,9 @@
 // Copyright The OpenTelemetry Authors
 // SPDX-License-Identifier: Apache-2.0
 
-// This is an OpenTelemetry [Span Processor] that reads key/values stored in
-// [Baggage] in the starting span's parent context and adds them as attributes
-// to the span.
+// Package baggagetrace is an OpenTelemetry [Span Processor] that reads key/values
+// stored in [Baggage] in the starting span's parent context and adds them as
+// attributes to the span.
 //
 // Keys and values added to Baggage will appear on all subsequent child spans for
 // a trace within this service *and* will be propagated to external services via
