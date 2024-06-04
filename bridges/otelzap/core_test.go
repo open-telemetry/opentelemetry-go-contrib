@@ -5,7 +5,9 @@ package otelzap
 
 import (
 	"context"
+	"fmt"
 	"testing"
+	"time"
 
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
@@ -22,6 +24,10 @@ var (
 	loggerName  = "name"
 	testKey     = "key"
 	testValue   = "value"
+	testentry   = zapcore.Entry{
+		Level:   zap.InfoLevel,
+		Message: testMessage,
+	}
 )
 
 func TestCore(t *testing.T) {
@@ -169,5 +175,82 @@ func TestConvertLevel(t *testing.T) {
 		if result != test.expectedSev {
 			t.Errorf("For level %v, expected %v but got %v", test.level, test.expectedSev, result)
 		}
+	}
+}
+
+// Benchmark with multiple Fields.
+func BenchmarkMultipleFields(b *testing.B) {
+	benchmarks := []struct {
+		name  string
+		field []zapcore.Field
+	}{
+		{
+			name: "10 fields",
+			field: []zapcore.Field{
+				zap.Int16("a", 1),
+				zap.String("k", "a"),
+				zap.String("k", "a"),
+				zap.Time("k", time.Unix(1000, 1000)),
+				zap.Binary("k", []byte{1, 2}),
+				zap.Binary("k", []byte{1, 2}),
+				zap.Object("k", loggable{true}),
+				zap.String("k", "a"),
+				zap.String("k", "a"),
+				zap.Ints("k", []int{1, 2}),
+			},
+		},
+		{
+			name: "20 fields",
+			field: []zapcore.Field{
+				zap.Int16("a", 1),
+				zap.String("k", "a"),
+				zap.String("k", "a"),
+				zap.Time("k", time.Unix(1000, 1000)),
+				zap.Binary("k", []byte{1, 2}),
+				zap.Binary("k", []byte{1, 2}),
+				zap.Object("k", loggable{true}),
+				zap.String("k", "a"),
+				zap.String("k", "a"),
+				zap.Ints("k", []int{1, 2}),
+				zap.Int16("a", 1),
+				zap.String("k", "a"),
+				zap.String("k", "a"),
+				zap.Time("k", time.Unix(1000, 1000)),
+				zap.String("k", "a"),
+				zap.Ints("k", []int{1, 2}),
+				zap.Object("k", loggable{true}),
+			},
+		},
+	}
+
+	for _, bm := range benchmarks {
+		b.Run(bm.name, func(b *testing.B) {
+			zc := NewCore(loggerName)
+			b.ReportAllocs()
+			b.RunParallel(func(pb *testing.PB) {
+				for pb.Next() {
+					err := zc.Write(testentry, bm.field)
+					if err != nil {
+						b.Errorf("Unexpected error: %v", err)
+					}
+				}
+			})
+		})
+	}
+
+	for _, bm := range benchmarks {
+		b.Run(fmt.Sprint("Core with", bm.name), func(b *testing.B) {
+			zc := NewCore(loggerName)
+			zc1 := zc.With(bm.field)
+			b.ReportAllocs()
+			b.RunParallel(func(pb *testing.PB) {
+				for pb.Next() {
+					err := zc1.Write(testentry, []zapcore.Field{})
+					if err != nil {
+						b.Errorf("Unexpected error: %v", err)
+					}
+				}
+			})
+		})
 	}
 }
