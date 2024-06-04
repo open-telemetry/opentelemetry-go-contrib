@@ -163,12 +163,11 @@ func (o *Core) Write(ent zapcore.Entry, fields []zapcore.Field) error {
 }
 
 func convertField(fields []zapcore.Field) []log.KeyValue {
-	// TODO: Use objectEncoder from a pool instead of newObjectEncoder.
-	enc := newObjectEncoder(len(fields))
+	enc, free := getObjectEncoder()
+	defer free()
 	for _, field := range fields {
 		field.AddTo(enc)
 	}
-
 	return enc.kv
 }
 

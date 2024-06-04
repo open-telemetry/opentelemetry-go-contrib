@@ -4,12 +4,47 @@
 package otelzap // import "go.opentelemetry.io/contrib/bridges/otelzap"
 
 import (
+	"sync"
 	"time"
 
 	"go.uber.org/zap/zapcore"
 
 	"go.opentelemetry.io/otel/log"
 )
+
+var arrayEncoderPool = sync.Pool{
+	New: func() interface{} {
+		// From console_encoder which uses capacity of 2
+		return &arrayEncoder{elems: make([]log.Value, 0, 2)}
+	},
+}
+
+func getArrayEncoder() (arr *arrayEncoder, free func()) {
+	arr = arrayEncoderPool.Get().(*arrayEncoder)
+	return arr, func() {
+		// TODO: limit returned size so the pool doesn't hold on to very large
+		// buffers.
+		arr.elems = arr.elems[:0]
+		arrayEncoderPool.Put(arr)
+	}
+}
+
+var objectEncoderPool = sync.Pool{
+	New: func() interface{} {
+		// From console_encoder which uses capacity of 2
+		return newObjectEncoder(2)
+	},
+}
+
+func getObjectEncoder() (obj *objectEncoder, free func()) {
+	obj = objectEncoderPool.Get().(*objectEncoder)
+	return obj, func() {
+		// TODO: limit returned size so the pool doesn't hold on to very large
+		// buffers.
+		obj.kv = obj.kv[:0]
+		objectEncoderPool.Put(obj)
+	}
+}
 
 var (
 	_ zapcore.ObjectEncoder = (*objectEncoder)(nil)
@@ -22,7 +57,6 @@ type objectEncoder struct {
 	kv []log.KeyValue
 }
 
-// nolint:unused
 func newObjectEncoder(len int) *objectEncoder {
 	keyval := make([]log.KeyValue, 0, len)
 
@@ -32,16 +66,16 @@ func newObjectEncoder(len int) *objectEncoder {
 }
 
 func (m *objectEncoder) AddArray(key string, v zapcore.ArrayMarshaler) error {
-	// TODO: Use arrayEncoder from a pool.
-	arr := &arrayEncoder{}
+	arr, free := getArrayEncoder()
+	defer free()
 	err := v.MarshalLogArray(arr)
 	m.kv = append(m.kv, log.Slice(key, arr.elems...))
 	return err
 }
 
 func (m *objectEncoder) AddObject(k string, v zapcore.ObjectMarshaler) error {
-	// TODO: Use objectEncoder from a pool.
-	newobj := newObjectEncoder(2)
+	newobj, free := getObjectEncoder()
+	defer free()
 	err := v.MarshalLogObject(newobj)
 	m.kv = append(m.kv, log.Map(k, newobj.kv...))
 	return err
