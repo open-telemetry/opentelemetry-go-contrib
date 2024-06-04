@@ -15,7 +15,7 @@ import (
 type BaggageKeyPredicate func(baggageKey string) bool
 
 // AllowAllBaggageKeys is a BaggageKeyPredicate that allows all baggage keys.
-var AllowAllBaggageKeys BaggageKeyPredicate = func(string) bool { return true }
+var AllowAllBaggageKeys = func(string) bool { return true }
 
 // SpanProcessor is a processing pipeline for spans in the trace signal.
 type SpanProcessor struct {
