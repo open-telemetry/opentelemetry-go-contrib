@@ -1,8 +1,6 @@
 // Copyright The OpenTelemetry Authors
 // SPDX-License-Identifier: Apache-2.0
 
-// Package baggagetrace implements a baggage span processor.
-//
 // This is an OpenTelemetry [Span Processor] that reads key/values stored in
 // [Baggage] in the starting span's parent context and adds them as attributes
 // to the span.
@@ -23,39 +21,10 @@
 //
 // Add the span processor when configuring the tracer provider.
 //
-// The convience function `baggagetrace.AllowAllBaggageKeys` is provided to
+// The convience function [AllowAllBaggageKeys] is provided to
 // allow all baggage keys to be copied to the span. Alternatively, you can
 // provide a custom baggage key predicate to select which baggage keys you want
 // to copy.
-//
-// For example, to use the convience `baggagetrace.AllowAllBaggageKeys` to copy
-// all baggage entries:
-//
-//	import (
-//		"go.opentelemetry.io/contrib/processors/baggage/baggagetrace"
-//	)
-//
-//	tp := trace.NewTracerProvider(
-//		trace.WithSpanProcessor(baggagetrace.New(baggagetrace.AllowAllBaggageKeys)),
-//		// ...
-//	)
-//
-// Alternatively, you can provide a custom baggage key predicate to select
-// which baggage keys you want to copy.
-//
-// For example, to only copy baggage entries that start with 'my-key':
-//
-//	baggagetrace.New(func(baggageKey string) bool {
-//		return strings.HasPrefix(baggageKey, "my-key")
-//	})
-//
-// For example, to only copy baggage entries that match the regex '^key.+':
-//
-//	expr := regexp.MustCompile(`^key.+`)
-//
-//	baggagetrace.New(func(baggageKey string) bool {
-//		return expr.MatchString(baggageKey)
-//	})
 //
 // [Span Processor]: https://opentelemetry.io/docs/specs/otel/trace/sdk/#span-processor
 // [Baggage]: https://opentelemetry.io/docs/specs/otel/api/baggage
