@@ -21,7 +21,7 @@
 //
 // Add the span processor when configuring the tracer provider.
 //
-// The convience function [AllowAllBaggageKeys] is provided to
+// The convenience function [AllowAllBaggageKeys] is provided to
 // allow all baggage keys to be copied to the span. Alternatively, you can
 // provide a custom baggage key predicate to select which baggage keys you want
 // to copy.
