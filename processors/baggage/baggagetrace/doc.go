@@ -13,7 +13,7 @@
 // If the external services also have a Baggage span processor, the keys and
 // values will appear in those child spans as well.
 //
-// ⚠️ Waning ⚠️
+// ⚠️ Warning ⚠️
 // To repeat: a consequence of adding data to Baggage is that the keys and values
 // will appear in all outgoing HTTP baggage headers from the application.
 //
@@ -23,8 +23,13 @@
 //
 // Add the span processor when configuring the tracer provider.
 //
-// To configure the span processor to copy all baggage entries during
-// configuration:
+// The convience function `baggagetrace.AllowAllBaggageKeys` is provided to
+// allow all baggage keys to be copied to the span. Alternatively, you can
+// provide a custom baggage key predicate to select which baggage keys you want
+// to copy.
+//
+// For example, to use the convience `baggagetrace.AllowAllBaggageKeys` to copy
+// all baggage entries:
 //
 //	import (
 //		"go.opentelemetry.io/contrib/processors/baggage/baggagetrace"
