@@ -11,10 +11,6 @@
 // If the external services also have a Baggage span processor, the keys and
 // values will appear in those child spans as well.
 //
-// ⚠️ Warning ⚠️
-// To repeat: a consequence of adding data to Baggage is that the keys and values
-// will appear in all outgoing HTTP baggage headers from the application.
-//
 // Do not put sensitive information in Baggage.
 //
 // # Usage
