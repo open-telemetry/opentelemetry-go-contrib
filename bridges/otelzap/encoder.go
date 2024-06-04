@@ -16,10 +16,19 @@ var (
 	_ zapcore.ArrayEncoder  = (*arrayEncoder)(nil)
 )
 
+type newNameSpace struct {
+	ns   string
+	kv   []log.KeyValue
+	next *newNameSpace
+}
+
 // objectEncoder implements zapcore.ObjectEncoder.
 // It encodes given fields to OTel key-values.
 type objectEncoder struct {
-	kv []log.KeyValue
+	// root is a pointer to the default namespace
+	root *newNameSpace
+	// cur is a pointer to the namespace we're currently writing to.
+	cur *newNameSpace
 }
 
 // nolint:unused
@@ -29,6 +38,15 @@ func newObjectEncoder(len int) *objectEncoder {
 	return &objectEncoder{
 		kv: keyval,
 	}
+}
+
+// It iterates to the end of the linked list and appends namespace data.
+func (m *objectEncoder) getObjValue(o *newNameSpace) {
+	if o.next == nil {
+		return
+	}
+	m.getObjValue(o.next)
+	o.kv = append(o.kv, log.Map(o.next.ns, o.next.kv...))
 }
 
 func (m *objectEncoder) AddArray(key string, v zapcore.ArrayMarshaler) error {
@@ -101,7 +119,14 @@ func (m *objectEncoder) AddReflected(k string, v interface{}) error {
 // OpenNamespace opens an isolated namespace where all subsequent fields will
 // be added.
 func (m *objectEncoder) OpenNamespace(k string) {
-	// TODO
+
+	keyValue := make([]log.KeyValue, 0, 5)
+	s := &newNameSpace{
+		ns: k,
+		kv: keyValue,
+	}
+	m.cur.next = s
+	m.cur = s
 }
 
 func (m *objectEncoder) AddComplex64(k string, v complex64) {
