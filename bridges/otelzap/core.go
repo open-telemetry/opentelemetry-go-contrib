@@ -90,6 +90,7 @@ func WithLoggerProvider(provider log.LoggerProvider) Option {
 type Core struct {
 	logger log.Logger
 	attr   []log.KeyValue
+	ctx    context.Context
 }
 
 // Compile-time check *Core implements zapcore.Core.
@@ -100,6 +101,7 @@ func NewCore(name string, opts ...Option) *Core {
 	cfg := newConfig(opts)
 	return &Core{
 		logger: cfg.logger(name),
+		ctx:    context.Background(),
 	}
 }
 
@@ -114,7 +116,11 @@ func (o *Core) Enabled(level zapcore.Level) bool {
 func (o *Core) With(fields []zapcore.Field) zapcore.Core {
 	cloned := o.clone()
 	if len(fields) > 0 {
-		cloned.attr = append(cloned.attr, convertField(fields)...)
+		ctx, attrbuf := convertField(fields)
+		if ctx != nil {
+			cloned.ctx = ctx
+		}
+		cloned.attr = append(cloned.attr, attrbuf...)
 	}
 	return cloned
 }
@@ -123,6 +129,7 @@ func (o *Core) clone() *Core {
 	return &Core{
 		logger: o.logger,
 		attr:   slices.Clone(o.attr),
+		ctx:    o.ctx,
 	}
 }
 
@@ -148,28 +155,35 @@ func (o *Core) Write(ent zapcore.Entry, fields []zapcore.Field) error {
 	r.SetBody(log.StringValue(ent.Message))
 	r.SetSeverity(convertLevel(ent.Level))
 
-	// TODO: Handle attributes passed via With (exceptions: context.Context and zap.Namespace).
-	// TODO: Handle context.Context containing trace context.
 	// TODO: Handle zap.Namespace.
 	// TODO: Handle ent.LoggerName.
 
 	r.AddAttributes(o.attr...)
 	if len(fields) > 0 {
-		r.AddAttributes(convertField(fields)...)
+		ctx, attrbuf := convertField(fields)
+		if ctx != nil {
+			o.ctx = ctx
+		}
+		r.AddAttributes(attrbuf...)
 	}
 
-	o.logger.Emit(context.Background(), r)
+	o.logger.Emit(o.ctx, r)
 	return nil
 }
 
-func convertField(fields []zapcore.Field) []log.KeyValue {
+func convertField(fields []zapcore.Field) (context.Context, []log.KeyValue) {
 	// TODO: Use objectEncoder from a pool instead of newObjectEncoder.
+	var ctx context.Context
 	enc := newObjectEncoder(len(fields))
 	for _, field := range fields {
+		if ctxFld, ok := field.Interface.(context.Context); ok {
+			ctx = ctxFld
+			continue
+		}
 		field.AddTo(enc)
 	}
 
-	return enc.kv
+	return ctx, enc.kv
 }
 
 func convertLevel(level zapcore.Level) log.Severity {
