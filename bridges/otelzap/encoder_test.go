@@ -70,7 +70,7 @@ func TestObjectEncoder(t *testing.T) {
 			f: func(e zapcore.ObjectEncoder) {
 				assert.NoError(t, e.AddReflected("k", map[string]interface{}{"foo": 5}), "Expected AddReflected to succeed.")
 			},
-			expected: "{\"foo\":5}\n",
+			expected: map[string]interface{}{"foo": int64(5)},
 		},
 		{
 			desc:     "AddBinary",
@@ -219,7 +219,7 @@ func TestArrayEncoder(t *testing.T) {
 			f: func(e zapcore.ArrayEncoder) {
 				assert.NoError(t, e.AppendReflected(map[string]interface{}{"foo": 5}))
 			},
-			expected: "{\"foo\":5}\n",
+			expected: map[string]interface{}{"foo": int64(5)},
 		},
 		{"AppendBool", func(e zapcore.ArrayEncoder) { e.AppendBool(true) }, true},
 		{"AppendByteString", func(e zapcore.ArrayEncoder) { e.AppendByteString([]byte("foo")) }, "foo"},
