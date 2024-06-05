@@ -34,14 +34,10 @@ func NewTestExporter() *testExporter {
 	return &testExporter{}
 }
 
-func TestSpanProcessorAppendsBaggageAttributes(t *testing.T) {
-	suitcase, err := otelbaggage.New()
-	require.NoError(t, err)
-	packingCube, err := otelbaggage.NewMemberRaw("baggage.test", "baggage value")
-	require.NoError(t, err)
-	suitcase, err = suitcase.SetMember(packingCube)
-	require.NoError(t, err)
-	ctx := otelbaggage.ContextWithBaggage(context.Background(), suitcase)
+func TestSpanProcessorAppendsAllBaggageAttributes(t *testing.T) {
+	baggage, _ := otelbaggage.New()
+	baggage = addEntryToBaggage(baggage, "baggage.test", "baggage value")
+	ctx := otelbaggage.ContextWithBaggage(context.Background(), baggage)
 
 	// create trace provider with baggage processor and test exporter
 	exporter := NewTestExporter()
@@ -63,13 +59,9 @@ func TestSpanProcessorAppendsBaggageAttributes(t *testing.T) {
 }
 
 func TestSpanProcessorAppendsBaggageAttributesWithHaPrefixPredicate(t *testing.T) {
-	suitcase, err := otelbaggage.New()
-	require.NoError(t, err)
-	packingCube, err := otelbaggage.NewMemberRaw("baggage.test", "baggage value")
-	require.NoError(t, err)
-	suitcase, err = suitcase.SetMember(packingCube)
-	require.NoError(t, err)
-	ctx := otelbaggage.ContextWithBaggage(context.Background(), suitcase)
+	baggage, _ := otelbaggage.New()
+	baggage = addEntryToBaggage(baggage, "baggage.test", "baggage value")
+	ctx := otelbaggage.ContextWithBaggage(context.Background(), baggage)
 
 	baggageKeyPredicate := func(key string) bool {
 		return strings.HasPrefix(key, "baggage.")
@@ -95,13 +87,9 @@ func TestSpanProcessorAppendsBaggageAttributesWithHaPrefixPredicate(t *testing.T
 }
 
 func TestSpanProcessorAppendsBaggageAttributesWithRegexPredicate(t *testing.T) {
-	suitcase, err := otelbaggage.New()
-	require.NoError(t, err)
-	packingCube, err := otelbaggage.NewMemberRaw("baggage.test", "baggage value")
-	require.NoError(t, err)
-	suitcase, err = suitcase.SetMember(packingCube)
-	require.NoError(t, err)
-	ctx := otelbaggage.ContextWithBaggage(context.Background(), suitcase)
+	baggage, _ := otelbaggage.New()
+	baggage = addEntryToBaggage(baggage, "baggage.test", "baggage value")
+	ctx := otelbaggage.ContextWithBaggage(context.Background(), baggage)
 
 	expr := regexp.MustCompile(`^baggage\..*`)
 	baggageKeyPredicate := func(key string) bool {
@@ -131,7 +119,6 @@ func TestOnlyAddsBaggageEntriesThatMatchPredicate(t *testing.T) {
 	baggage, _ := otelbaggage.New()
 	baggage = addEntryToBaggage(baggage, "foo", "foo value")
 	baggage = addEntryToBaggage(baggage, "bar", "bar value")
-
 	ctx := otelbaggage.ContextWithBaggage(context.Background(), baggage)
 
 	baggageKeyPredicate := func(key string) bool {
