@@ -1,4 +1,3 @@
-// Deprecated: aws has no Code Owner.
 module go.opentelemetry.io/contrib/propagators/aws
 
 go 1.21
