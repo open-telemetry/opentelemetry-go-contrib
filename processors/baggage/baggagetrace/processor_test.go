@@ -36,7 +36,7 @@ func NewTestExporter() *testExporter {
 
 func TestSpanProcessorAppendsAllBaggageAttributes(t *testing.T) {
 	baggage, _ := otelbaggage.New()
-	baggage = addEntryToBaggage(baggage, "baggage.test", "baggage value")
+	baggage = addEntryToBaggage(t, baggage, "baggage.test", "baggage value")
 	ctx := otelbaggage.ContextWithBaggage(context.Background(), baggage)
 
 	// create trace provider with baggage processor and test exporter
@@ -60,7 +60,7 @@ func TestSpanProcessorAppendsAllBaggageAttributes(t *testing.T) {
 
 func TestSpanProcessorAppendsBaggageAttributesWithHaPrefixPredicate(t *testing.T) {
 	baggage, _ := otelbaggage.New()
-	baggage = addEntryToBaggage(baggage, "baggage.test", "baggage value")
+	baggage = addEntryToBaggage(t, baggage, "baggage.test", "baggage value")
 	ctx := otelbaggage.ContextWithBaggage(context.Background(), baggage)
 
 	baggageKeyPredicate := func(key string) bool {
@@ -88,7 +88,7 @@ func TestSpanProcessorAppendsBaggageAttributesWithHaPrefixPredicate(t *testing.T
 
 func TestSpanProcessorAppendsBaggageAttributesWithRegexPredicate(t *testing.T) {
 	baggage, _ := otelbaggage.New()
-	baggage = addEntryToBaggage(baggage, "baggage.test", "baggage value")
+	baggage = addEntryToBaggage(t, baggage, "baggage.test", "baggage value")
 	ctx := otelbaggage.ContextWithBaggage(context.Background(), baggage)
 
 	expr := regexp.MustCompile(`^baggage\..*`)
@@ -117,8 +117,8 @@ func TestSpanProcessorAppendsBaggageAttributesWithRegexPredicate(t *testing.T) {
 
 func TestOnlyAddsBaggageEntriesThatMatchPredicate(t *testing.T) {
 	baggage, _ := otelbaggage.New()
-	baggage = addEntryToBaggage(baggage, "baggage.test", "baggage value")
-	baggage = addEntryToBaggage(baggage, "foo", "bar")
+	baggage = addEntryToBaggage(t, baggage, "baggage.test", "baggage value")
+	baggage = addEntryToBaggage(t, baggage, "foo", "bar")
 	ctx := otelbaggage.ContextWithBaggage(context.Background(), baggage)
 
 	baggageKeyPredicate := func(key string) bool {
@@ -144,8 +144,10 @@ func TestOnlyAddsBaggageEntriesThatMatchPredicate(t *testing.T) {
 	require.Equal(t, want, exporter.spans[0].Attributes()[0])
 }
 
-func addEntryToBaggage(baggage otelbaggage.Baggage, key, value string) otelbaggage.Baggage {
-	member, _ := otelbaggage.NewMemberRaw(key, value)
-	baggage, _ = baggage.SetMember(member)
+func addEntryToBaggage(t *testing.T, baggage otelbaggage.Baggage, key, value string) otelbaggage.Baggage {
+	member, err := otelbaggage.NewMemberRaw(key, value)
+	require.NoError(t, err)
+	baggage, err = baggage.SetMember(member)
+	require.NoError(t, err)
 	return baggage
 }
