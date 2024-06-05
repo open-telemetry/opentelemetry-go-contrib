@@ -126,3 +126,39 @@ func TestSpanProcessorAppendsBaggageAttributesWithRegexPredicate(t *testing.T) {
 	want := []attribute.KeyValue{attribute.String("baggage.test", "baggage value")}
 	require.Equal(t, want, exporter.spans[0].Attributes())
 }
+
+func TestOnlyAddsBaggageEntriesThatMatchPredicate(t *testing.T) {
+	baggage, _ := otelbaggage.New()
+	baggage = addEntryToBaggage(baggage, "foo", "foo value")
+	baggage = addEntryToBaggage(baggage, "bar", "bar value")
+
+	ctx := otelbaggage.ContextWithBaggage(context.Background(), baggage)
+
+	baggageKeyPredicate := func(key string) bool {
+		return key == "foo"
+	}
+
+	// create trace provider with baggage processor and test exporter
+	exporter := NewTestExporter()
+	tp := trace.NewTracerProvider(
+		trace.WithSpanProcessor(New(baggageKeyPredicate)),
+		trace.WithSpanProcessor(trace.NewSimpleSpanProcessor(exporter)),
+	)
+
+	// create tracer and start/end span
+	tracer := tp.Tracer("test")
+	_, span := tracer.Start(ctx, "test")
+	span.End()
+
+	require.Len(t, exporter.spans, 1)
+	require.Len(t, exporter.spans[0].Attributes(), 1)
+	attr := exporter.spans[0].Attributes()[0]
+	expectedAttr := attribute.String("foo", "foo value")
+	require.Equal(t, expectedAttr, attr)
+}
+
+func addEntryToBaggage(baggage otelbaggage.Baggage, key, value string) otelbaggage.Baggage {
+	member, _ := otelbaggage.NewMemberRaw(key, value)
+	baggage, _ = baggage.SetMember(member)
+	return baggage
+}
