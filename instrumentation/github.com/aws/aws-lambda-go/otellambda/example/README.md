@@ -1,7 +1,5 @@
 # aws/aws-lambda-go instrumentation example
 
-:warning: Deprecated: otellambda has no Code Owner.
-
 A simple example to demonstrate the AWS Lambda for Go instrumentation. In this example, container `aws-lambda-client` initializes an S3 client and an HTTP client and runs 2 basic operations: `listS3Buckets` and `GET`.
 
 

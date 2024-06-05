@@ -1,4 +1,3 @@
-// Deprecated: lambda has no Code Owner.
 module go.opentelemetry.io/contrib/detectors/aws/lambda
 
 go 1.21
@@ -16,6 +15,6 @@ require (
 	github.com/pmezard/go-difflib v1.0.0 // indirect
 	go.opentelemetry.io/otel/metric v1.27.0 // indirect
 	go.opentelemetry.io/otel/trace v1.27.0 // indirect
-	golang.org/x/sys v0.20.0 // indirect
+	golang.org/x/sys v0.21.0 // indirect
 	gopkg.in/yaml.v3 v3.0.1 // indirect
 )
