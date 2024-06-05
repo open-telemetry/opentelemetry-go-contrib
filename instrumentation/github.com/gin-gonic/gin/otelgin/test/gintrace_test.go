@@ -7,6 +7,7 @@ package test
 
 import (
 	"errors"
+	"fmt"
 	"html/template"
 	"net/http"
 	"net/http/httptest"
@@ -160,7 +161,7 @@ func TestSpanName(t *testing.T) {
 		wantSpanName      string
 	}{
 		{"/user/1", nil, "/user/:id"},
-		{"/user/1", func(r *http.Request) string { return r.URL.Path }, "/user/1"},
+		{"/user/1", func(route string, r *http.Request) string { return r.URL.Path }, "/user/1"},
 	}
 	for _, tc := range testCases {
 		t.Run(tc.requestPath, func(t *testing.T) {
@@ -177,6 +178,39 @@ func TestSpanName(t *testing.T) {
 			assert.Equal(t, sr.Ended()[0].Name(), tc.wantSpanName, "span name not correct")
 		})
 	}
+}
+
+func TestHTTPRouteWithSpanNameFormatter(t *testing.T) {
+	sr := tracetest.NewSpanRecorder()
+	provider := sdktrace.NewTracerProvider(sdktrace.WithSpanProcessor(sr))
+
+	router := gin.New()
+	router.Use(otelgin.Middleware("foobar",
+		otelgin.WithTracerProvider(provider),
+		otelgin.WithSpanNameFormatter(func(routeName string, r *http.Request) string {
+			return fmt.Sprintf("%s %s", r.Method, routeName)
+		}),
+	))
+	router.GET("/user/:id", func(c *gin.Context) {
+		id := c.Param("id")
+		_, _ = c.Writer.Write([]byte(id))
+	})
+
+	r := httptest.NewRequest("GET", "/user/123", nil)
+	w := httptest.NewRecorder()
+
+	// do and verify the request
+	router.ServeHTTP(w, r)
+	response := w.Result()
+	require.Equal(t, http.StatusOK, response.StatusCode)
+
+	// verify traces look good
+	spans := sr.Ended()
+	span := spans[0]
+	assert.Equal(t, "GET /user/:id", span.Name())
+	attr := span.Attributes()
+	assert.Contains(t, attr, attribute.String("http.method", "GET"))
+	assert.Contains(t, attr, attribute.String("http.route", "/user/:id"))
 }
 
 func TestHTML(t *testing.T) {
