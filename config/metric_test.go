@@ -14,12 +14,14 @@ import (
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 
+	"go.opentelemetry.io/otel/attribute"
 	"go.opentelemetry.io/otel/exporters/otlp/otlpmetric/otlpmetricgrpc"
 	"go.opentelemetry.io/otel/exporters/otlp/otlpmetric/otlpmetrichttp"
 	otelprom "go.opentelemetry.io/otel/exporters/prometheus"
 	"go.opentelemetry.io/otel/exporters/stdout/stdoutmetric"
 	"go.opentelemetry.io/otel/metric"
 	"go.opentelemetry.io/otel/metric/noop"
+	"go.opentelemetry.io/otel/sdk/instrumentation"
 	sdkmetric "go.opentelemetry.io/otel/sdk/metric"
 	"go.opentelemetry.io/otel/sdk/resource"
 )
@@ -495,6 +497,460 @@ func TestReader(t *testing.T) {
 	}
 }
 
+func TestView(t *testing.T) {
+	testCases := []struct {
+		name            string
+		view            View
+		args            any
+		wantErr         string
+		matchInstrument *sdkmetric.Instrument
+		wantStream      sdkmetric.Stream
+		wantResult      bool
+	}{
+		{
+			name:    "no selector",
+			wantErr: "view: no selector provided",
+		},
+		{
+			name: "selector/invalid_type",
+			view: View{
+				Selector: &ViewSelector{
+					InstrumentType: (*ViewSelectorInstrumentType)(newStringPtr("invalid_type")),
+				},
+			},
+			wantErr: "view_selector: instrument_type: invalid value",
+		},
+		{
+			name: "selector/invalid_type",
+			view: View{
+				Selector: &ViewSelector{},
+			},
+			wantErr: "view_selector: empty selector not supporter",
+		},
+		{
+			name: "all selectors match",
+			view: View{
+				Selector: &ViewSelector{
+					InstrumentName: newStringPtr("test_name"),
+					InstrumentType: (*ViewSelectorInstrumentType)(newStringPtr("counter")),
+					Unit:           newStringPtr("test_unit"),
+					MeterName:      newStringPtr("test_meter_name"),
+					MeterVersion:   newStringPtr("test_meter_version"),
+					MeterSchemaUrl: newStringPtr("test_schema_url"),
+				},
+			},
+			matchInstrument: &sdkmetric.Instrument{
+				Name: "test_name",
+				Unit: "test_unit",
+				Kind: sdkmetric.InstrumentKindCounter,
+				Scope: instrumentation.Scope{
+					Name:      "test_meter_name",
+					Version:   "test_meter_version",
+					SchemaURL: "test_schema_url",
+				},
+			},
+			wantStream: sdkmetric.Stream{Name: "test_name", Unit: "test_unit"},
+			wantResult: true,
+		},
+		{
+			name: "all selectors no match name",
+			view: View{
+				Selector: &ViewSelector{
+					InstrumentName: newStringPtr("test_name"),
+					InstrumentType: (*ViewSelectorInstrumentType)(newStringPtr("counter")),
+					Unit:           newStringPtr("test_unit"),
+					MeterName:      newStringPtr("test_meter_name"),
+					MeterVersion:   newStringPtr("test_meter_version"),
+					MeterSchemaUrl: newStringPtr("test_schema_url"),
+				},
+			},
+			matchInstrument: &sdkmetric.Instrument{
+				Name: "not_match",
+				Unit: "test_unit",
+				Kind: sdkmetric.InstrumentKindCounter,
+				Scope: instrumentation.Scope{
+					Name:      "test_meter_name",
+					Version:   "test_meter_version",
+					SchemaURL: "test_schema_url",
+				},
+			},
+			wantStream: sdkmetric.Stream{},
+			wantResult: false,
+		},
+		{
+			name: "all selectors no match unit",
+			view: View{
+				Selector: &ViewSelector{
+					InstrumentName: newStringPtr("test_name"),
+					InstrumentType: (*ViewSelectorInstrumentType)(newStringPtr("counter")),
+					Unit:           newStringPtr("test_unit"),
+					MeterName:      newStringPtr("test_meter_name"),
+					MeterVersion:   newStringPtr("test_meter_version"),
+					MeterSchemaUrl: newStringPtr("test_schema_url"),
+				},
+			},
+			matchInstrument: &sdkmetric.Instrument{
+				Name: "test_name",
+				Unit: "not_match",
+				Kind: sdkmetric.InstrumentKindCounter,
+				Scope: instrumentation.Scope{
+					Name:      "test_meter_name",
+					Version:   "test_meter_version",
+					SchemaURL: "test_schema_url",
+				},
+			},
+			wantStream: sdkmetric.Stream{},
+			wantResult: false,
+		},
+		{
+			name: "all selectors no match kind",
+			view: View{
+				Selector: &ViewSelector{
+					InstrumentName: newStringPtr("test_name"),
+					InstrumentType: (*ViewSelectorInstrumentType)(newStringPtr("histogram")),
+					Unit:           newStringPtr("test_unit"),
+					MeterName:      newStringPtr("test_meter_name"),
+					MeterVersion:   newStringPtr("test_meter_version"),
+					MeterSchemaUrl: newStringPtr("test_schema_url"),
+				},
+			},
+			matchInstrument: &sdkmetric.Instrument{
+				Name: "test_name",
+				Unit: "test_unit",
+				Kind: sdkmetric.InstrumentKindCounter,
+				Scope: instrumentation.Scope{
+					Name:      "test_meter_name",
+					Version:   "test_meter_version",
+					SchemaURL: "test_schema_url",
+				},
+			},
+			wantStream: sdkmetric.Stream{},
+			wantResult: false,
+		},
+		{
+			name: "all selectors no match meter name",
+			view: View{
+				Selector: &ViewSelector{
+					InstrumentName: newStringPtr("test_name"),
+					InstrumentType: (*ViewSelectorInstrumentType)(newStringPtr("counter")),
+					Unit:           newStringPtr("test_unit"),
+					MeterName:      newStringPtr("test_meter_name"),
+					MeterVersion:   newStringPtr("test_meter_version"),
+					MeterSchemaUrl: newStringPtr("test_schema_url"),
+				},
+			},
+			matchInstrument: &sdkmetric.Instrument{
+				Name: "test_name",
+				Unit: "test_unit",
+				Kind: sdkmetric.InstrumentKindCounter,
+				Scope: instrumentation.Scope{
+					Name:      "not_match",
+					Version:   "test_meter_version",
+					SchemaURL: "test_schema_url",
+				},
+			},
+			wantStream: sdkmetric.Stream{},
+			wantResult: false,
+		},
+		{
+			name: "all selectors no match meter version",
+			view: View{
+				Selector: &ViewSelector{
+					InstrumentName: newStringPtr("test_name"),
+					InstrumentType: (*ViewSelectorInstrumentType)(newStringPtr("counter")),
+					Unit:           newStringPtr("test_unit"),
+					MeterName:      newStringPtr("test_meter_name"),
+					MeterVersion:   newStringPtr("test_meter_version"),
+					MeterSchemaUrl: newStringPtr("test_schema_url"),
+				},
+			},
+			matchInstrument: &sdkmetric.Instrument{
+				Name: "test_name",
+				Unit: "test_unit",
+				Kind: sdkmetric.InstrumentKindCounter,
+				Scope: instrumentation.Scope{
+					Name:      "test_meter_name",
+					Version:   "not_match",
+					SchemaURL: "test_schema_url",
+				},
+			},
+			wantStream: sdkmetric.Stream{},
+			wantResult: false,
+		},
+		{
+			name: "all selectors no match meter schema url",
+			view: View{
+				Selector: &ViewSelector{
+					InstrumentName: newStringPtr("test_name"),
+					InstrumentType: (*ViewSelectorInstrumentType)(newStringPtr("counter")),
+					Unit:           newStringPtr("test_unit"),
+					MeterName:      newStringPtr("test_meter_name"),
+					MeterVersion:   newStringPtr("test_meter_version"),
+					MeterSchemaUrl: newStringPtr("test_schema_url"),
+				},
+			},
+			matchInstrument: &sdkmetric.Instrument{
+				Name: "test_name",
+				Unit: "test_unit",
+				Kind: sdkmetric.InstrumentKindCounter,
+				Scope: instrumentation.Scope{
+					Name:      "test_meter_name",
+					Version:   "test_meter_version",
+					SchemaURL: "not_match",
+				},
+			},
+			wantStream: sdkmetric.Stream{},
+			wantResult: false,
+		},
+		{
+			name: "with stream",
+			view: View{
+				Selector: &ViewSelector{
+					InstrumentName: newStringPtr("test_name"),
+					Unit:           newStringPtr("test_unit"),
+				},
+				Stream: &ViewStream{
+					Name:          newStringPtr("new_name"),
+					Description:   newStringPtr("new_description"),
+					AttributeKeys: []string{"foo", "bar"},
+					Aggregation:   &ViewStreamAggregation{Sum: make(ViewStreamAggregationSum)},
+				},
+			},
+			matchInstrument: &sdkmetric.Instrument{
+				Name:        "test_name",
+				Description: "test_description",
+				Unit:        "test_unit",
+			},
+			wantStream: sdkmetric.Stream{
+				Name:        "new_name",
+				Description: "new_description",
+				Unit:        "test_unit",
+				Aggregation: sdkmetric.AggregationSum{},
+			},
+			wantResult: true,
+		},
+	}
+	for _, tt := range testCases {
+		t.Run(tt.name, func(t *testing.T) {
+			got, err := view(tt.view)
+			if tt.wantErr != "" {
+				require.EqualError(t, err, tt.wantErr)
+				require.Nil(t, got)
+			} else {
+				require.NoError(t, err)
+				gotStream, gotResult := got(*tt.matchInstrument)
+				// Remove filter, since it cannot be compared
+				gotStream.AttributeFilter = nil
+				require.Equal(t, tt.wantStream, gotStream)
+				require.Equal(t, tt.wantResult, gotResult)
+			}
+		})
+	}
+}
+
+func TestInstrumentType(t *testing.T) {
+	testCases := []struct {
+		name     string
+		instType *ViewSelectorInstrumentType
+		wantErr  error
+		wantKind sdkmetric.InstrumentKind
+	}{
+		{
+			name:     "nil",
+			wantKind: sdkmetric.InstrumentKind(0),
+		},
+		{
+			name:     "counter",
+			instType: (*ViewSelectorInstrumentType)(newStringPtr("counter")),
+			wantKind: sdkmetric.InstrumentKindCounter,
+		},
+		{
+			name:     "up_down_counter",
+			instType: (*ViewSelectorInstrumentType)(newStringPtr("up_down_counter")),
+			wantKind: sdkmetric.InstrumentKindUpDownCounter,
+		},
+		{
+			name:     "histogram",
+			instType: (*ViewSelectorInstrumentType)(newStringPtr("histogram")),
+			wantKind: sdkmetric.InstrumentKindHistogram,
+		},
+		{
+			name:     "observable_counter",
+			instType: (*ViewSelectorInstrumentType)(newStringPtr("observable_counter")),
+			wantKind: sdkmetric.InstrumentKindObservableCounter,
+		},
+		{
+			name:     "observable_up_down_counter",
+			instType: (*ViewSelectorInstrumentType)(newStringPtr("observable_up_down_counter")),
+			wantKind: sdkmetric.InstrumentKindObservableUpDownCounter,
+		},
+		{
+			name:     "observable_gauge",
+			instType: (*ViewSelectorInstrumentType)(newStringPtr("observable_gauge")),
+			wantKind: sdkmetric.InstrumentKindObservableGauge,
+		},
+		{
+			name:     "invalid",
+			instType: (*ViewSelectorInstrumentType)(newStringPtr("invalid")),
+			wantErr:  errors.New("instrument_type: invalid value"),
+		},
+	}
+	for _, tt := range testCases {
+		t.Run(tt.name, func(t *testing.T) {
+			got, err := instrumentKind(tt.instType)
+			if tt.wantErr != nil {
+				require.Equal(t, err, tt.wantErr)
+				require.Zero(t, got)
+			} else {
+				require.NoError(t, err)
+				require.Equal(t, tt.wantKind, got)
+			}
+		})
+	}
+}
+
+func TestAggregation(t *testing.T) {
+	testCases := []struct {
+		name            string
+		aggregation     *ViewStreamAggregation
+		wantAggregation sdkmetric.Aggregation
+	}{
+		{
+			name:            "nil",
+			wantAggregation: nil,
+		},
+		{
+			name:            "empty",
+			aggregation:     &ViewStreamAggregation{},
+			wantAggregation: nil,
+		},
+		{
+			name: "Base2ExponentialBucketHistogram empty",
+			aggregation: &ViewStreamAggregation{
+				Base2ExponentialBucketHistogram: &ViewStreamAggregationBase2ExponentialBucketHistogram{},
+			},
+			wantAggregation: sdkmetric.AggregationBase2ExponentialHistogram{
+				MaxSize:  0,
+				MaxScale: 0,
+				NoMinMax: true,
+			},
+		},
+		{
+			name: "Base2ExponentialBucketHistogram",
+			aggregation: &ViewStreamAggregation{
+				Base2ExponentialBucketHistogram: &ViewStreamAggregationBase2ExponentialBucketHistogram{
+					MaxSize:      newIntPtr(2),
+					MaxScale:     newIntPtr(3),
+					RecordMinMax: newBoolPtr(true),
+				},
+			},
+			wantAggregation: sdkmetric.AggregationBase2ExponentialHistogram{
+				MaxSize:  2,
+				MaxScale: 3,
+				NoMinMax: false,
+			},
+		},
+		{
+			name: "Default",
+			aggregation: &ViewStreamAggregation{
+				Default: make(ViewStreamAggregationDefault),
+			},
+			wantAggregation: nil,
+		},
+		{
+			name: "Drop",
+			aggregation: &ViewStreamAggregation{
+				Drop: make(ViewStreamAggregationDrop),
+			},
+			wantAggregation: sdkmetric.AggregationDrop{},
+		},
+		{
+			name: "ExplicitBucketHistogram empty",
+			aggregation: &ViewStreamAggregation{
+				ExplicitBucketHistogram: &ViewStreamAggregationExplicitBucketHistogram{},
+			},
+			wantAggregation: sdkmetric.AggregationExplicitBucketHistogram{
+				Boundaries: nil,
+				NoMinMax:   true,
+			},
+		},
+		{
+			name: "ExplicitBucketHistogram",
+			aggregation: &ViewStreamAggregation{
+				ExplicitBucketHistogram: &ViewStreamAggregationExplicitBucketHistogram{
+					Boundaries:   []float64{1, 2, 3},
+					RecordMinMax: newBoolPtr(true),
+				},
+			},
+			wantAggregation: sdkmetric.AggregationExplicitBucketHistogram{
+				Boundaries: []float64{1, 2, 3},
+				NoMinMax:   false,
+			},
+		},
+		{
+			name: "LastValue",
+			aggregation: &ViewStreamAggregation{
+				LastValue: make(ViewStreamAggregationLastValue),
+			},
+			wantAggregation: sdkmetric.AggregationLastValue{},
+		},
+		{
+			name: "Sum",
+			aggregation: &ViewStreamAggregation{
+				Sum: make(ViewStreamAggregationSum),
+			},
+			wantAggregation: sdkmetric.AggregationSum{},
+		},
+	}
+	for _, tt := range testCases {
+		t.Run(tt.name, func(t *testing.T) {
+			got := aggregation(tt.aggregation)
+			require.Equal(t, tt.wantAggregation, got)
+		})
+	}
+}
+
+func TestAttributeFilter(t *testing.T) {
+	testCases := []struct {
+		name          string
+		attributeKeys []string
+		wantPass      []string
+		wantFail      []string
+	}{
+		{
+			name:          "empty",
+			attributeKeys: []string{},
+			wantPass:      nil,
+			wantFail:      []string{"foo", "bar"},
+		},
+		{
+			name:          "filter",
+			attributeKeys: []string{"foo"},
+			wantPass:      []string{"foo"},
+			wantFail:      []string{"bar"},
+		},
+	}
+	for _, tt := range testCases {
+		t.Run(tt.name, func(t *testing.T) {
+			got := attributeFilter(tt.attributeKeys)
+			for _, pass := range tt.wantPass {
+				require.True(t, got(attribute.KeyValue{Key: attribute.Key(pass), Value: attribute.StringValue("")}))
+			}
+			for _, fail := range tt.wantFail {
+				require.False(t, got(attribute.KeyValue{Key: attribute.Key(fail), Value: attribute.StringValue("")}))
+			}
+		})
+	}
+}
+
+func newBoolPtr(b bool) *bool {
+	return &b
+}
+
 func newIntPtr(i int) *int {
 	return &i
+}
+
+func newStringPtr(str string) *string {
+	return &str
 }
