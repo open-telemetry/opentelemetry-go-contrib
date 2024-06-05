@@ -1,4 +1,3 @@
-// Deprecated: otelmux has no Code Owner.
 module go.opentelemetry.io/contrib/instrumentation/github.com/gorilla/mux/otelmux/test
 
 go 1.21

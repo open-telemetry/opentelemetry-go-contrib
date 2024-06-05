@@ -1,15 +1,6 @@
 // Copyright The OpenTelemetry Authors
 // SPDX-License-Identifier: Apache-2.0
 
-// Package lambda provide an OpenTelemetry resource detector for AWS Lambda
-// instances.
-//
-// Deprecated: lambda has no Code Owner.
-// After August 21, 2024, it may no longer be supported and may stop
-// receiving new releases unless a new Code Owner is found. See
-// [this issue] if you would like to become the Code Owner of this module.
-//
-// [this issue]: https://github.com/open-telemetry/opentelemetry-go-contrib/issues/5545
 package lambda // import "go.opentelemetry.io/contrib/detectors/aws/lambda"
 
 import (
