@@ -6,7 +6,7 @@
 // attributes to the span.
 //
 // Keys and values added to Baggage will appear on all subsequent child spans for
-// a trace within this service *and* will be propagated to external services via
+// a trace within this service and will be propagated to external services via
 // propagation headers.
 // If the external services also have a Baggage span processor, the keys and
 // values will appear in those child spans as well.
