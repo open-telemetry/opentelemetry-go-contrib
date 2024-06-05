@@ -13,8 +13,6 @@ import (
 
 type newHTTPServer struct{}
 
-var _ HTTPServer = newHTTPServer{}
-
 // TraceRequest returns trace attributes for an HTTP request received by a
 // server.
 //
@@ -89,11 +87,12 @@ func (n newHTTPServer) RequestTraceAttrs(server string, req *http.Request) []att
 		count++
 	}
 
-	attrs := []attribute.KeyValue{
+	attrs := make([]attribute.KeyValue, 0, count)
+	attrs = append(attrs,
 		semconvNew.ServerAddress(host),
 		method,
 		scheme,
-	}
+	)
 
 	if hostPort > 0 {
 		attrs = append(attrs, semconvNew.ServerPort(hostPort))
