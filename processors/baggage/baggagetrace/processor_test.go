@@ -139,9 +139,9 @@ func TestOnlyAddsBaggageEntriesThatMatchPredicate(t *testing.T) {
 
 	require.Len(t, exporter.spans, 1)
 	require.Len(t, exporter.spans[0].Attributes(), 1)
-	attr := exporter.spans[0].Attributes()[0]
-	expectedAttr := attribute.String("foo", "foo value")
-	require.Equal(t, expectedAttr, attr)
+
+	want := attribute.String("foo", "foo value")
+	require.Equal(t, want, exporter.spans[0].Attributes()[0])
 }
 
 func addEntryToBaggage(baggage otelbaggage.Baggage, key, value string) otelbaggage.Baggage {
