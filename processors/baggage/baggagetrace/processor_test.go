@@ -117,12 +117,12 @@ func TestSpanProcessorAppendsBaggageAttributesWithRegexPredicate(t *testing.T) {
 
 func TestOnlyAddsBaggageEntriesThatMatchPredicate(t *testing.T) {
 	baggage, _ := otelbaggage.New()
-	baggage = addEntryToBaggage(baggage, "foo", "foo value")
-	baggage = addEntryToBaggage(baggage, "bar", "bar value")
+	baggage = addEntryToBaggage(baggage, "baggage.test", "baggage value")
+	baggage = addEntryToBaggage(baggage, "foo", "bar")
 	ctx := otelbaggage.ContextWithBaggage(context.Background(), baggage)
 
 	baggageKeyPredicate := func(key string) bool {
-		return key == "foo"
+		return key == "baggage.test"
 	}
 
 	// create trace provider with baggage processor and test exporter
@@ -140,7 +140,7 @@ func TestOnlyAddsBaggageEntriesThatMatchPredicate(t *testing.T) {
 	require.Len(t, exporter.spans, 1)
 	require.Len(t, exporter.spans[0].Attributes(), 1)
 
-	want := attribute.String("foo", "foo value")
+	want := attribute.String("baggage.test", "baggage value")
 	require.Equal(t, want, exporter.spans[0].Attributes()[0])
 }
 
