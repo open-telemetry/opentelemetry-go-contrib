@@ -17,7 +17,7 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 
 - The superfluous `response.WriteHeader` call in `go.opentelemetry.io/contrib/instrumentation/net/http/otelhttp` when the response writer is flushed. (#5634)
 - Custom attributes targeting metrics recorded by the `go.opentelemetry.io/contrib/instrumentation/net/http/otelhttp` are not ignored anymore. (#5129)
-- Using `c.FullPath()` to set `http.route` attribute in [`otelgin`](https://github.com/NeoCN/opentelemetry-go-contrib/blob/main_backup/go.opentelemetry.io/contrib/instrumentation/github.com/gin-gonic/gin/otelgin)
+- Using `c.FullPath()` to set `http.route` attribute in [`otelgin`](go.opentelemetry.io/contrib/instrumentation/github.com/gin-gonic/gin/otelgin)
 
 ### Deprecated
 
