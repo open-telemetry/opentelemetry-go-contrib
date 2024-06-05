@@ -21,8 +21,7 @@ var (
 // objectEncoder implements zapcore.ObjectEncoder.
 // It encodes given fields to OTel key-values.
 type objectEncoder struct {
-	kv         []log.KeyValue
-	reflectval log.Value
+	kv []log.KeyValue
 }
 
 // nolint:unused
@@ -103,13 +102,6 @@ func (m *objectEncoder) AddReflected(k string, v interface{}) error {
 			Value: convertValue(v),
 		})
 	return nil
-}
-
-// Implements io.Writer to which json encoder writes to.
-// Used by [AddReflected].
-func (m *objectEncoder) Write(p []byte) (n int, err error) {
-	m.reflectval = log.StringValue(string(p))
-	return len(p), nil
 }
 
 // OpenNamespace opens an isolated namespace where all subsequent fields will
@@ -194,13 +186,6 @@ func (a *arrayEncoder) AppendObject(v zapcore.ObjectMarshaler) error {
 func (a *arrayEncoder) AppendReflected(v interface{}) error {
 	a.elems = append(a.elems, convertValue(v))
 	return nil
-}
-
-// Implements io.Writer to which json encoder writes to.
-// Used by [AppendReflected].
-func (a *arrayEncoder) Write(p []byte) (n int, err error) {
-	a.elems = append(a.elems, log.StringValue(string(p)))
-	return len(p), nil
 }
 
 func (a *arrayEncoder) AppendByteString(v []byte) {
