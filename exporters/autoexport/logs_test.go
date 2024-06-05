@@ -10,6 +10,7 @@ import (
 	"testing"
 
 	"github.com/stretchr/testify/assert"
+
 	"go.opentelemetry.io/otel/exporters/stdout/stdoutlog"
 	"go.opentelemetry.io/otel/sdk/log"
 )
@@ -22,7 +23,7 @@ func TestLogExporterNone(t *testing.T) {
 		assert.NoError(t, got.ForceFlush(context.Background()))
 		assert.NoError(t, got.Shutdown(context.Background()))
 	})
-	got.Export(context.Background(), nil)
+	assert.NoError(t, got.Export(context.Background(), nil))
 	assert.True(t, IsNoneLogExporter(got))
 }
 
