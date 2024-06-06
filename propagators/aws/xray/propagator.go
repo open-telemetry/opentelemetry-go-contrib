@@ -1,14 +1,6 @@
 // Copyright The OpenTelemetry Authors
 // SPDX-License-Identifier: Apache-2.0
 
-// Package xray provide an OpenTelemetry propagator for the AWS XRAY platform.
-//
-// Deprecated: aws has no Code Owner.
-// After August 21, 2024, it may no longer be supported and may stop
-// receiving new releases unless a new Code Owner is found. See
-// [this issue] if you would like to become the Code Owner of this module.
-//
-// [this issue]: https://github.com/open-telemetry/opentelemetry-go-contrib/issues/5553
 package xray // import "go.opentelemetry.io/contrib/propagators/aws/xray"
 
 import (

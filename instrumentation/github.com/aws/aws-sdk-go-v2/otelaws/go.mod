@@ -1,4 +1,3 @@
-// Deprecated: otelaws has no Code Owner.
 module go.opentelemetry.io/contrib/instrumentation/github.com/aws/aws-sdk-go-v2/otelaws
 
 go 1.21

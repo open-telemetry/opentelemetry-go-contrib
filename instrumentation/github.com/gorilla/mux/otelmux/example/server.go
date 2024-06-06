@@ -11,7 +11,7 @@ import (
 
 	"github.com/gorilla/mux"
 
-	"go.opentelemetry.io/contrib/instrumentation/github.com/gorilla/mux/otelmux" // nolint:staticcheck  // deprecated.
+	"go.opentelemetry.io/contrib/instrumentation/github.com/gorilla/mux/otelmux"
 	"go.opentelemetry.io/otel"
 	"go.opentelemetry.io/otel/attribute"
 	stdout "go.opentelemetry.io/otel/exporters/stdout/stdouttrace"
