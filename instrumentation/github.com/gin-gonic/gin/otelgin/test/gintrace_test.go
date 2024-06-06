@@ -188,8 +188,8 @@ func TestHTTPRouteWithSpanNameFormatter(t *testing.T) {
 	router := gin.New()
 	router.Use(otelgin.Middleware("foobar",
 		otelgin.WithTracerProvider(provider),
-		otelgin.WithSpanNameFormatter(func(r *http.Request) string {
-			return r.URL.Path
+		otelgin.WithSpanNameFormatter(func(routeName string, r *http.Request) string {
+			return fmt.Sprintf("%s %s", r.Method, routeName)
 		}),
 	),
 	)
@@ -210,7 +210,7 @@ func TestHTTPRouteWithSpanNameFormatter(t *testing.T) {
 	spans := sr.Ended()
 	require.Len(t, spans, 1)
 	span := spans[0]
-	assert.Equal(t, "/user/123", span.Name())
+	assert.Equal(t, "GET /user/:id", span.Name())
 	assert.Equal(t, oteltrace.SpanKindServer, span.SpanKind())
 	attr := span.Attributes()
 	assert.Contains(t, attr, attribute.String("http.method", "GET"))
