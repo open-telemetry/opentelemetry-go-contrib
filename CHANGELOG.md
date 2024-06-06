@@ -71,6 +71,8 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
   This parameter is used as a replacement of `WithInstrumentationScope` to specify the name of the logger backing the returned `Handler`. (#5588)
 - Upgrade all dependencies of `go.opentelemetry.io/otel/semconv/v1.24.0` to `go.opentelemetry.io/otel/semconv/v1.25.0`. (#5605)
 
+- Update the span processor in `go.opentelemetry.io/contrib/processors/baggage/baggagetrace` to require a baggage key predicate. (#5619)
+
 ### Removed
 
 - The `WithInstrumentationScope` option function in `go.opentelemetry.io/contrib/bridges/otelslog` is removed.
