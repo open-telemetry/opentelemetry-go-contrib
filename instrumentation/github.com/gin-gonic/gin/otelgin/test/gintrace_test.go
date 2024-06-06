@@ -7,6 +7,7 @@ package test
 
 import (
 	"errors"
+	"fmt"
 	"html/template"
 	"net/http"
 	"net/http/httptest"
@@ -160,7 +161,8 @@ func TestSpanName(t *testing.T) {
 		wantSpanName      string
 	}{
 		{"/user/1", nil, "/user/:id"},
-		{"/user/1", func(r *http.Request) string { return r.URL.Path }, "/user/1"},
+		{"/user/1", func(routeName string, r *http.Request) string { return r.URL.Path }, "/user/1"},
+		{"/user/1", func(routeName string, r *http.Request) string { return fmt.Sprintf("%s %s", r.Method, routeName) }, "GET /user/:id"},
 	}
 	for _, tc := range testCases {
 		t.Run(tc.requestPath, func(t *testing.T) {
@@ -171,7 +173,7 @@ func TestSpanName(t *testing.T) {
 			router.Use(otelgin.Middleware("foobar", otelgin.WithTracerProvider(provider), otelgin.WithSpanNameFormatter(tc.spanNameFormatter)))
 			router.GET("/user/:id", func(c *gin.Context) {})
 
-			router.ServeHTTP(httptest.NewRecorder(), httptest.NewRequest("GET", tc.requestPath, nil))
+			router.ServeHTTP(httptest.NewRecorder(), httptest.NewRequest(http.MethodGet, tc.requestPath, nil))
 
 			require.Len(t, sr.Ended(), 1, "should emit a span")
 			assert.Equal(t, sr.Ended()[0].Name(), tc.wantSpanName, "span name not correct")
