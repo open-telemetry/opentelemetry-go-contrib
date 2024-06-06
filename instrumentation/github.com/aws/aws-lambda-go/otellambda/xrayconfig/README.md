@@ -3,8 +3,6 @@
 [![Go Reference][goref-image]][goref-url]
 [![Apache License][license-image]][license-url]
 
-:warning: Deprecated: otellambda has no Code Owner.
-
 This module provides recommended configuration options for [`AWS Lambda Instrumentation`](https://github.com/open-telemetry/opentelemetry-go-contrib/tree/main/instrumentation/github.com/aws/aws-lambda-go/otellambda) when using [AWS X-Ray](https://aws.amazon.com/xray/). By using this configuration, trace context will automatically be extracted from incoming requests with the `X-Amzn-Trace-Id` header if present. Trace context will also always be injected using the `X-Amzn-Trace-Id` format into downstream requests from the Lambda function.
 
 ## Installation
