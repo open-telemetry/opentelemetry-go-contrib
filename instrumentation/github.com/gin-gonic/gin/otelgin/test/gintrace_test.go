@@ -181,6 +181,42 @@ func TestSpanName(t *testing.T) {
 	}
 }
 
+func TestHTTPRouteWithSpanNameFormatter(t *testing.T) {
+	sr := tracetest.NewSpanRecorder()
+	provider := sdktrace.NewTracerProvider(sdktrace.WithSpanProcessor(sr))
+
+	router := gin.New()
+	router.Use(otelgin.Middleware("foobar",
+		otelgin.WithTracerProvider(provider),
+		otelgin.WithSpanNameFormatter(func(r *http.Request) string {
+			return r.URL.Path
+		}),
+	),
+	)
+	router.GET("/user/:id", func(c *gin.Context) {
+		id := c.Param("id")
+		_, _ = c.Writer.Write([]byte(id))
+	})
+
+	r := httptest.NewRequest("GET", "/user/123", nil)
+	w := httptest.NewRecorder()
+
+	// do and verify the request
+	router.ServeHTTP(w, r)
+	response := w.Result()
+	require.Equal(t, http.StatusOK, response.StatusCode)
+
+	// verify traces look good
+	spans := sr.Ended()
+	require.Len(t, spans, 1)
+	span := spans[0]
+	assert.Equal(t, "/user/123", span.Name())
+	assert.Equal(t, oteltrace.SpanKindServer, span.SpanKind())
+	attr := span.Attributes()
+	assert.Contains(t, attr, attribute.String("http.method", "GET"))
+	assert.Contains(t, attr, attribute.String("http.route", "/user/:id"))
+}
+
 func TestHTML(t *testing.T) {
 	sr := tracetest.NewSpanRecorder()
 	provider := sdktrace.NewTracerProvider(sdktrace.WithSpanProcessor(sr))
