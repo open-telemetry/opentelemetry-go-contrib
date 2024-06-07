@@ -1,4 +1,3 @@
-// Deprecated: otelaws has no Code Owner.
 module go.opentelemetry.io/contrib/instrumentation/github.com/aws/aws-sdk-go-v2/otelaws/example
 
 go 1.21
@@ -9,7 +8,7 @@ require (
 	github.com/aws/aws-sdk-go-v2 v1.27.1
 	github.com/aws/aws-sdk-go-v2/config v1.27.17
 	github.com/aws/aws-sdk-go-v2/service/dynamodb v1.32.7
-	github.com/aws/aws-sdk-go-v2/service/s3 v1.54.4
+	github.com/aws/aws-sdk-go-v2/service/s3 v1.55.0
 	go.opentelemetry.io/contrib/instrumentation/github.com/aws/aws-sdk-go-v2/otelaws v0.52.0
 	go.opentelemetry.io/otel v1.27.0
 	go.opentelemetry.io/otel/exporters/stdout/stdouttrace v1.27.0
@@ -30,7 +29,7 @@ require (
 	github.com/aws/aws-sdk-go-v2/service/internal/endpoint-discovery v1.9.9 // indirect
 	github.com/aws/aws-sdk-go-v2/service/internal/presigned-url v1.11.10 // indirect
 	github.com/aws/aws-sdk-go-v2/service/internal/s3shared v1.17.8 // indirect
-	github.com/aws/aws-sdk-go-v2/service/sqs v1.32.4 // indirect
+	github.com/aws/aws-sdk-go-v2/service/sqs v1.32.5 // indirect
 	github.com/aws/aws-sdk-go-v2/service/sso v1.20.10 // indirect
 	github.com/aws/aws-sdk-go-v2/service/ssooidc v1.24.4 // indirect
 	github.com/aws/aws-sdk-go-v2/service/sts v1.28.11 // indirect
@@ -39,5 +38,5 @@ require (
 	github.com/go-logr/stdr v1.2.2 // indirect
 	github.com/jmespath/go-jmespath v0.4.0 // indirect
 	go.opentelemetry.io/otel/metric v1.27.0 // indirect
-	golang.org/x/sys v0.20.0 // indirect
+	golang.org/x/sys v0.21.0 // indirect
 )
