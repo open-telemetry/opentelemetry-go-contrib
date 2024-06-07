@@ -183,7 +183,8 @@ func convertField(fields []zapcore.Field) (context.Context, []log.KeyValue) {
 		field.AddTo(enc)
 	}
 
-	return ctx, enc.kv
+	enc.getEncodedResult(enc.root)
+	return ctx, enc.root.kv
 }
 
 func convertLevel(level zapcore.Level) log.Severity {

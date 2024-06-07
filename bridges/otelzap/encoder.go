@@ -33,21 +33,24 @@ type objectEncoder struct {
 	cur *newNameSpace
 }
 
-// nolint:unused
 func newObjectEncoder(len int) *objectEncoder {
 	keyval := make([]log.KeyValue, 0, len)
-
-	return &objectEncoder{
+	m := &newNameSpace{
 		kv: keyval,
+	}
+	return &objectEncoder{
+		root: m,
+		cur:  m,
 	}
 }
 
 // It iterates to the end of the linked list and appends namespace data.
-func (m *objectEncoder) getObjValue(o *newNameSpace) {
+// Run this function before accessing complete result.
+func (m *objectEncoder) getEncodedResult(o *newNameSpace) {
 	if o.next == nil {
 		return
 	}
-	m.getObjValue(o.next)
+	m.getEncodedResult(o.next)
 	o.kv = append(o.kv, log.Map(o.next.ns, o.next.kv...))
 }
 
@@ -55,7 +58,7 @@ func (m *objectEncoder) AddArray(key string, v zapcore.ArrayMarshaler) error {
 	// TODO: Use arrayEncoder from a pool.
 	arr := &arrayEncoder{}
 	err := v.MarshalLogArray(arr)
-	m.kv = append(m.kv, log.Slice(key, arr.elems...))
+	m.cur.kv = append(m.cur.kv, log.Slice(key, arr.elems...))
 	return err
 }
 
@@ -63,20 +66,21 @@ func (m *objectEncoder) AddObject(k string, v zapcore.ObjectMarshaler) error {
 	// TODO: Use objectEncoder from a pool.
 	newobj := newObjectEncoder(2)
 	err := v.MarshalLogObject(newobj)
-	m.kv = append(m.kv, log.Map(k, newobj.kv...))
+	newobj.getEncodedResult(newobj.root)
+	m.cur.kv = append(m.cur.kv, log.Map(k, newobj.root.kv...))
 	return err
 }
 
 func (m *objectEncoder) AddBinary(k string, v []byte) {
-	m.kv = append(m.kv, log.Bytes(k, v))
+	m.cur.kv = append(m.cur.kv, log.Bytes(k, v))
 }
 
 func (m *objectEncoder) AddByteString(k string, v []byte) {
-	m.kv = append(m.kv, log.String(k, string(v)))
+	m.cur.kv = append(m.cur.kv, log.String(k, string(v)))
 }
 
 func (m *objectEncoder) AddBool(k string, v bool) {
-	m.kv = append(m.kv, log.Bool(k, v))
+	m.cur.kv = append(m.cur.kv, log.Bool(k, v))
 }
 
 func (m *objectEncoder) AddDuration(k string, v time.Duration) {
@@ -86,27 +90,27 @@ func (m *objectEncoder) AddDuration(k string, v time.Duration) {
 func (m *objectEncoder) AddComplex128(k string, v complex128) {
 	r := log.Float64("r", real(v))
 	i := log.Float64("i", imag(v))
-	m.kv = append(m.kv, log.Map(k, r, i))
+	m.cur.kv = append(m.cur.kv, log.Map(k, r, i))
 }
 
 func (m *objectEncoder) AddFloat64(k string, v float64) {
-	m.kv = append(m.kv, log.Float64(k, v))
+	m.cur.kv = append(m.cur.kv, log.Float64(k, v))
 }
 
 func (m *objectEncoder) AddInt64(k string, v int64) {
-	m.kv = append(m.kv, log.Int64(k, v))
+	m.cur.kv = append(m.cur.kv, log.Int64(k, v))
 }
 
 func (m *objectEncoder) AddInt(k string, v int) {
-	m.kv = append(m.kv, log.Int(k, v))
+	m.cur.kv = append(m.cur.kv, log.Int(k, v))
 }
 
 func (m *objectEncoder) AddString(k string, v string) {
-	m.kv = append(m.kv, log.String(k, v))
+	m.cur.kv = append(m.cur.kv, log.String(k, v))
 }
 
 func (m *objectEncoder) AddUint64(k string, v uint64) {
-	m.kv = append(m.kv,
+	m.cur.kv = append(m.cur.kv,
 		log.KeyValue{
 			Key:   k,
 			Value: assignUintValue(v),
@@ -114,7 +118,7 @@ func (m *objectEncoder) AddUint64(k string, v uint64) {
 }
 
 func (m *objectEncoder) AddReflected(k string, v interface{}) error {
-	m.kv = append(m.kv,
+	m.cur.kv = append(m.cur.kv,
 		log.KeyValue{
 			Key:   k,
 			Value: convertValue(v),
@@ -125,7 +129,6 @@ func (m *objectEncoder) AddReflected(k string, v interface{}) error {
 // OpenNamespace opens an isolated namespace where all subsequent fields will
 // be added.
 func (m *objectEncoder) OpenNamespace(k string) {
-
 	keyValue := make([]log.KeyValue, 0, 5)
 	s := &newNameSpace{
 		ns: k,
@@ -204,7 +207,8 @@ func (a *arrayEncoder) AppendObject(v zapcore.ObjectMarshaler) error {
 	// TODO: Use objectEncoder from a pool.
 	m := newObjectEncoder(2)
 	err := v.MarshalLogObject(m)
-	a.elems = append(a.elems, log.MapValue(m.kv...))
+	m.getEncodedResult(m.root)
+	a.elems = append(a.elems, log.MapValue(m.root.kv...))
 	return err
 }
 

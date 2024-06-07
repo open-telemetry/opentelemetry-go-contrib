@@ -182,14 +182,52 @@ func TestObjectEncoder(t *testing.T) {
 			f:        func(e zapcore.ObjectEncoder) { e.AddComplex64("k", 1+2i) },
 			expected: map[string]interface{}{"i": float64(2), "r": float64(1)},
 		},
+		{
+			desc: "OpenNamespace",
+			f: func(e zapcore.ObjectEncoder) {
+				e.OpenNamespace("k")
+				e.AddInt("foo", 1)
+				e.OpenNamespace("middle")
+				e.AddInt("foo", 2)
+				e.OpenNamespace("inner")
+				e.AddInt("foo", 3)
+			},
+			expected: map[string]interface{}{
+				"foo": int64(1),
+				"middle": map[string]interface{}{
+					"foo": int64(2),
+					"inner": map[string]interface{}{
+						"foo": int64(3),
+					},
+				},
+			},
+		},
+		{
+			desc: "object (with nested namespace) then string",
+			f: func(e zapcore.ObjectEncoder) {
+				e.OpenNamespace("k")
+				assert.NoError(t, e.AddObject("obj", maybeNamespace{true}))
+				e.AddString("not-obj", "should-be-outside-obj")
+			},
+			expected: map[string]interface{}{
+				"obj": map[string]interface{}{
+					"obj-out": "obj-outside-namespace",
+					"obj-namespace": map[string]interface{}{
+						"obj-in": "obj-inside-namespace",
+					},
+				},
+				"not-obj": "should-be-outside-obj",
+			},
+		},
 	}
 
 	for _, tt := range tests {
 		t.Run(tt.desc, func(t *testing.T) {
 			enc := newObjectEncoder(1)
 			tt.f(enc)
-			require.Len(t, enc.kv, 1)
-			assert.Equal(t, tt.expected, value2Result((enc.kv[0].Value)), "Unexpected encoder output.")
+			enc.getEncodedResult(enc.root)
+			require.Len(t, enc.root.kv, 1)
+			assert.Equal(t, tt.expected, value2Result((enc.root.kv[0].Value)), "Unexpected encoder output.")
 		})
 	}
 }
@@ -220,6 +258,42 @@ func TestArrayEncoder(t *testing.T) {
 				assert.NoError(t, e.AppendReflected(map[string]interface{}{"foo": 5}))
 			},
 			expected: map[string]interface{}{"foo": int64(5)},
+		},
+		{desc: "object (no nested namespace) then string",
+			f: func(e zapcore.ArrayEncoder) {
+				err := e.AppendArray(zapcore.ArrayMarshalerFunc(func(inner zapcore.ArrayEncoder) error {
+					err := inner.AppendObject(maybeNamespace{false})
+					inner.AppendString("should-be-outside-obj")
+					return err
+				}))
+				assert.NoError(t, err)
+			},
+			expected: []interface{}{
+				map[string]interface{}{
+					"obj-out": "obj-outside-namespace",
+				},
+				"should-be-outside-obj",
+			},
+		},
+		{
+			desc: "object (with nested namespace) then string",
+			f: func(e zapcore.ArrayEncoder) {
+				err := e.AppendArray(zapcore.ArrayMarshalerFunc(func(inner zapcore.ArrayEncoder) error {
+					err := inner.AppendObject(maybeNamespace{true})
+					inner.AppendString("should-be-outside-obj")
+					return err
+				}))
+				assert.NoError(t, err)
+			},
+			expected: []interface{}{
+				map[string]interface{}{
+					"obj-out": "obj-outside-namespace",
+					"obj-namespace": map[string]interface{}{
+						"obj-in": "obj-inside-namespace",
+					},
+				},
+				"should-be-outside-obj",
+			},
 		},
 		{"AppendBool", func(e zapcore.ArrayEncoder) { e.AppendBool(true) }, true},
 		{"AppendByteString", func(e zapcore.ArrayEncoder) { e.AppendByteString([]byte("foo")) }, "foo"},
@@ -252,8 +326,8 @@ func TestArrayEncoder(t *testing.T) {
 				tt.f(arr)
 				return nil
 			})), "Expected AddArray to succeed.")
-
-			assert.Equal(t, []interface{}{tt.expected, tt.expected}, value2Result(enc.kv[0].Value), "Unexpected encoder output.")
+			enc.getEncodedResult(enc.root)
+			assert.Equal(t, []interface{}{tt.expected, tt.expected}, value2Result(enc.root.kv[0].Value), "Unexpected encoder output.")
 		})
 	}
 }
@@ -301,6 +375,18 @@ func (l loggable) MarshalLogArray(enc zapcore.ArrayEncoder) error {
 		return errors.New("can't marshal")
 	}
 	enc.AppendBool(true)
+	return nil
+}
+
+// maybeNamespace is an ObjectMarshaler that sometimes opens a namespace.
+type maybeNamespace struct{ bool }
+
+func (m maybeNamespace) MarshalLogObject(enc zapcore.ObjectEncoder) error {
+	enc.AddString("obj-out", "obj-outside-namespace")
+	if m.bool {
+		enc.OpenNamespace("obj-namespace")
+		enc.AddString("obj-in", "obj-inside-namespace")
+	}
 	return nil
 }
 
