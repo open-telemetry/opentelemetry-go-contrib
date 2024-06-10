@@ -18,7 +18,7 @@ TIMEOUT = 60
 .DEFAULT_GOAL := precommit
 
 .PHONY: precommit ci
-precommit: generate license-check misspell go-mod-tidy golangci-lint-fix 
+precommit: generate license-check misspell go-mod-tidy golangci-lint-fix test-default
 ci: generate license-check lint vanity-import-check build test-default check-clean-work-tree test-coverage
 
 # Tools
