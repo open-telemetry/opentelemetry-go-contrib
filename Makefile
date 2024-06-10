@@ -335,4 +335,3 @@ genjsonschema: genjsonschema-cleanup $(GOJSONSCHEMA)
 .PHONY: codespell
 codespell: $(CODESPELL)
 	@$(DOCKERPY) $(CODESPELL)
-
