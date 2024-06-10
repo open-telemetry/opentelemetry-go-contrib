@@ -5,6 +5,7 @@
 // Licensed under the Apache License, Version 2.0 (the "License"); you may
 // not use this file except in compliance with the License. You may obtain
 // a copy of the License at http://www.apache.org/licenses/LICENSE-2.0
+
 package test
 
 import (
@@ -124,11 +125,13 @@ type mockDeployment struct {
 	updates chan description.Topology
 }
 
-var _ driver.Deployment = &mockDeployment{}
-var _ driver.Server = &mockDeployment{}
-var _ driver.Connector = &mockDeployment{}
-var _ driver.Disconnector = &mockDeployment{}
-var _ driver.Subscriber = &mockDeployment{}
+var (
+	_ driver.Deployment   = &mockDeployment{}
+	_ driver.Server       = &mockDeployment{}
+	_ driver.Connector    = &mockDeployment{}
+	_ driver.Disconnector = &mockDeployment{}
+	_ driver.Subscriber   = &mockDeployment{}
+)
 
 // SelectServer implements the Deployment interface. This method does not use the
 // description.SelectedServer provided and instead returns itself. The Connections returned from the
@@ -183,7 +186,7 @@ func (md *mockDeployment) Connect() error {
 	return nil
 }
 
-// Disconnect is a no-op method which implements the driver.Disconnector interface {
+// Disconnect is a no-op method which implements the driver.Disconnector interface {.
 func (md *mockDeployment) Disconnect(context.Context) error {
 	close(md.updates)
 	return nil

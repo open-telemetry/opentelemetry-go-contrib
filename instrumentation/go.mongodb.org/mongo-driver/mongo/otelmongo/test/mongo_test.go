@@ -51,7 +51,7 @@ func TestDBCrudOperation(t *testing.T) {
 			operation: func(ctx context.Context, db *mongo.Database) (interface{}, error) {
 				return db.Collection("test-collection").InsertOne(ctx, bson.D{{Key: "test-item", Value: "test-value"}})
 			},
-			mockResponses:  []bson.D{{{"ok", 1}}},
+			mockResponses:  []bson.D{{{Key: "ok", Value: 1}}},
 			excludeCommand: false,
 			validators: append(commonValidators, func(s sdktrace.ReadOnlySpan) bool {
 				for _, attr := range s.Attributes() {
@@ -67,7 +67,7 @@ func TestDBCrudOperation(t *testing.T) {
 			operation: func(ctx context.Context, db *mongo.Database) (interface{}, error) {
 				return db.Collection("test-collection").InsertOne(ctx, bson.D{{Key: "test-item", Value: "test-value"}})
 			},
-			mockResponses:  []bson.D{{{"ok", 1}}},
+			mockResponses:  []bson.D{{{Key: "ok", Value: 1}}},
 			excludeCommand: true,
 			validators: append(commonValidators, func(s sdktrace.ReadOnlySpan) bool {
 				for _, attr := range s.Attributes() {
@@ -105,6 +105,13 @@ func TestDBCrudOperation(t *testing.T) {
 			opts.ApplyURI(addr)
 
 			mock := newMockDeployment()
+
+			// nolint:staticcheck
+			//
+			// Deployment is not part of the stable API guaruntee of the
+			// mongo-go-driver and is therefore marked as deprecated.
+			//
+			// See jira.mongodb.org/browse/GODRIVER-3241 for a long-term solution.
 			opts.Deployment = mock
 
 			client, err := mongo.Connect(ctx, opts)
@@ -158,7 +165,7 @@ func TestDBCollectionAttribute(t *testing.T) {
 			operation: func(ctx context.Context, db *mongo.Database) (interface{}, error) {
 				return db.Collection("test-collection").DeleteOne(ctx, bson.D{{Key: "test-item"}})
 			},
-			mockResponses: []bson.D{{{"ok", 1}}},
+			mockResponses: []bson.D{{{Key: "ok", Value: 1}}},
 			validators: []validator{
 				func(s sdktrace.ReadOnlySpan) bool {
 					return assert.Equal(t, "test-collection.delete", s.Name())
@@ -179,7 +186,12 @@ func TestDBCollectionAttribute(t *testing.T) {
 			operation: func(ctx context.Context, db *mongo.Database) (interface{}, error) {
 				return db.ListCollectionNames(ctx, bson.D{})
 			},
-			mockResponses: []bson.D{{{"ok", 1}, {"cursor", bson.D{{"firstBatch", bson.A{}}}}}},
+			mockResponses: []bson.D{
+				{
+					{Key: "ok", Value: 1},
+					{Key: "cursor", Value: bson.D{{Key: "firstBatch", Value: bson.A{}}}},
+				},
+			},
 			validators: []validator{
 				func(s sdktrace.ReadOnlySpan) bool {
 					return assert.Equal(t, "listCollections", s.Name())
@@ -213,6 +225,13 @@ func TestDBCollectionAttribute(t *testing.T) {
 			opts.ApplyURI(addr)
 
 			mock := newMockDeployment()
+
+			// nolint:staticcheck
+			//
+			// Deployment is not part of the stable API guaruntee of the
+			// mongo-go-driver and is therefore marked as deprecated.
+			//
+			// See jira.mongodb.org/browse/GODRIVER-3241 for a long-term solution.
 			opts.Deployment = mock
 
 			client, err := mongo.Connect(ctx, opts)
