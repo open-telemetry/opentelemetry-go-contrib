@@ -263,23 +263,6 @@ test-coverage/%:
 		&& $$CMD ./... \
 		&& $(GO) tool cover -html=coverage.out -o coverage.html;
 
-.PHONY: test-mongo-driver
-test-mongo-driver:
-	@if ./tools/should_build.sh mongo-driver; then \
-	  set -e; \
-	  docker run --name mongo-integ --rm -p 27017:27017 -d mongo; \
-	  CMD=mongo IMG_NAME=mongo-integ ./tools/wait.sh; \
-	  (cd instrumentation/go.mongodb.org/mongo-driver/mongo/otelmongo/test && \
-	    $(GO) test \
-		  -covermode=$(COVERAGE_MODE) \
-		  -coverprofile=$(COVERAGE_PROFILE) \
-		  -coverpkg=go.opentelemetry.io/contrib/instrumentation/go.mongodb.org/mongo-driver/mongo/otelmongo/...  \
-		  ./... \
-	    && $(GO) tool cover -html=$(COVERAGE_PROFILE) -o coverage.html); \
-	  cp ./instrumentation/go.mongodb.org/mongo-driver/mongo/otelmongo/test/coverage.out ./; \
-	  docker stop mongo-integ; \
-	fi
-
 # Releasing
 
 .PHONY: gorelease

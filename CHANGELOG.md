@@ -38,6 +38,7 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 
 - Improve performance of `go.opentelemetry.io/contrib/instrumentation/google.golang.org/grpc/otelgrpc` with the usage of `WithAttributeSet()` instead of `WithAttribute()`. (#5664) 
 - Improve performance of `go.opentelemetry.io/contrib/instrumentation/net/http/otelhttp` with the usage of `WithAttributeSet()` instead of `WithAttribute()`. (#5664) 
+- Copy [opmsg_deployment.go](https://github.com/mongodb/mongo-go-driver/blob/d46f29c34e9ff3968a5c00dcdea8fb41a20a2b2f/mongo/integration/mtest/opmsg_deployment.go) from the mongo-go-driver mtest package to create a mock client for testing otelmongo. Remove all helpers specific to running the `test-mongo-driver` integration test. (#39)
 
 ## [1.27.0/0.52.0/0.21.0/0.7.0/0.2.0] - 2024-05-21
 

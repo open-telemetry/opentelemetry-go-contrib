@@ -3,6 +3,8 @@ module go.opentelemetry.io/contrib/instrumentation/go.mongodb.org/mongo-driver/m
 
 go 1.21
 
+replace go.mongodb.org/mongo-driver => /Users/prestonvasquez/Developer/mongo-go-driver
+
 require (
 	github.com/stretchr/testify v1.9.0
 	go.mongodb.org/mongo-driver v1.15.0

@@ -5,7 +5,6 @@ package test
 
 import (
 	"context"
-	"os"
 	"testing"
 	"time"
 
@@ -15,18 +14,12 @@ import (
 	"go.mongodb.org/mongo-driver/mongo/options"
 
 	"go.opentelemetry.io/contrib/instrumentation/go.mongodb.org/mongo-driver/mongo/otelmongo" // nolint:staticcheck  // deprecated.
-	"go.opentelemetry.io/contrib/internal/util"
 	"go.opentelemetry.io/otel/attribute"
 	"go.opentelemetry.io/otel/codes"
 	sdktrace "go.opentelemetry.io/otel/sdk/trace"
 	"go.opentelemetry.io/otel/sdk/trace/tracetest"
 	"go.opentelemetry.io/otel/trace"
 )
-
-func TestMain(m *testing.M) {
-	util.IntegrationShouldRun("test-mongo-driver")
-	os.Exit(m.Run())
-}
 
 type validator func(sdktrace.ReadOnlySpan) bool
 
@@ -49,6 +42,7 @@ func TestDBCrudOperation(t *testing.T) {
 	tt := []struct {
 		title          string
 		operation      func(context.Context, *mongo.Database) (interface{}, error)
+		mockResponses  []bson.D
 		excludeCommand bool
 		validators     []validator
 	}{
@@ -57,6 +51,7 @@ func TestDBCrudOperation(t *testing.T) {
 			operation: func(ctx context.Context, db *mongo.Database) (interface{}, error) {
 				return db.Collection("test-collection").InsertOne(ctx, bson.D{{Key: "test-item", Value: "test-value"}})
 			},
+			mockResponses:  []bson.D{{{"ok", 1}}},
 			excludeCommand: false,
 			validators: append(commonValidators, func(s sdktrace.ReadOnlySpan) bool {
 				for _, attr := range s.Attributes() {
@@ -72,6 +67,7 @@ func TestDBCrudOperation(t *testing.T) {
 			operation: func(ctx context.Context, db *mongo.Database) (interface{}, error) {
 				return db.Collection("test-collection").InsertOne(ctx, bson.D{{Key: "test-item", Value: "test-value"}})
 			},
+			mockResponses:  []bson.D{{{"ok", 1}}},
 			excludeCommand: true,
 			validators: append(commonValidators, func(s sdktrace.ReadOnlySpan) bool {
 				for _, attr := range s.Attributes() {
@@ -105,11 +101,19 @@ func TestDBCrudOperation(t *testing.T) {
 				otelmongo.WithTracerProvider(provider),
 				otelmongo.WithCommandAttributeDisabled(tc.excludeCommand),
 			)
+
 			opts.ApplyURI(addr)
+
+			mock := newMockDeployment()
+			opts.Deployment = mock
+
 			client, err := mongo.Connect(ctx, opts)
 			if err != nil {
 				t.Fatal(err)
 			}
+
+			mock.addResponses(tc.mockResponses...)
+			t.Cleanup(mock.clearResponses)
 
 			_, err = tc.operation(ctx, client.Database("test-database"))
 			if err != nil {
@@ -131,7 +135,7 @@ func TestDBCrudOperation(t *testing.T) {
 			assert.Equal(t, trace.SpanKindClient, s.SpanKind())
 			attrs := s.Attributes()
 			assert.Contains(t, attrs, attribute.String("db.system", "mongodb"))
-			assert.Contains(t, attrs, attribute.String("net.peer.name", "localhost"))
+			assert.Contains(t, attrs, attribute.String("net.peer.name", "<mock_connection>"))
 			assert.Contains(t, attrs, attribute.Int64("net.peer.port", int64(27017)))
 			assert.Contains(t, attrs, attribute.String("net.transport", "ip_tcp"))
 			assert.Contains(t, attrs, attribute.String("db.name", "test-database"))
@@ -144,15 +148,17 @@ func TestDBCrudOperation(t *testing.T) {
 
 func TestDBCollectionAttribute(t *testing.T) {
 	tt := []struct {
-		title      string
-		operation  func(context.Context, *mongo.Database) (interface{}, error)
-		validators []validator
+		title         string
+		operation     func(context.Context, *mongo.Database) (interface{}, error)
+		mockResponses []bson.D
+		validators    []validator
 	}{
 		{
 			title: "delete",
 			operation: func(ctx context.Context, db *mongo.Database) (interface{}, error) {
 				return db.Collection("test-collection").DeleteOne(ctx, bson.D{{Key: "test-item"}})
 			},
+			mockResponses: []bson.D{{{"ok", 1}}},
 			validators: []validator{
 				func(s sdktrace.ReadOnlySpan) bool {
 					return assert.Equal(t, "test-collection.delete", s.Name())
@@ -173,6 +179,7 @@ func TestDBCollectionAttribute(t *testing.T) {
 			operation: func(ctx context.Context, db *mongo.Database) (interface{}, error) {
 				return db.ListCollectionNames(ctx, bson.D{})
 			},
+			mockResponses: []bson.D{{{"ok", 1}, {"cursor", bson.D{{"firstBatch", bson.A{}}}}}},
 			validators: []validator{
 				func(s sdktrace.ReadOnlySpan) bool {
 					return assert.Equal(t, "listCollections", s.Name())
@@ -202,11 +209,19 @@ func TestDBCollectionAttribute(t *testing.T) {
 				otelmongo.WithTracerProvider(provider),
 				otelmongo.WithCommandAttributeDisabled(true),
 			)
+
 			opts.ApplyURI(addr)
+
+			mock := newMockDeployment()
+			opts.Deployment = mock
+
 			client, err := mongo.Connect(ctx, opts)
 			if err != nil {
 				t.Fatal(err)
 			}
+
+			mock.addResponses(tc.mockResponses...)
+			t.Cleanup(mock.clearResponses)
 
 			_, err = tc.operation(ctx, client.Database("test-database"))
 			if err != nil {
@@ -228,7 +243,7 @@ func TestDBCollectionAttribute(t *testing.T) {
 			assert.Equal(t, trace.SpanKindClient, s.SpanKind())
 			attrs := s.Attributes()
 			assert.Contains(t, attrs, attribute.String("db.system", "mongodb"))
-			assert.Contains(t, attrs, attribute.String("net.peer.name", "localhost"))
+			assert.Contains(t, attrs, attribute.String("net.peer.name", "<mock_connection>"))
 			assert.Contains(t, attrs, attribute.Int64("net.peer.port", int64(27017)))
 			assert.Contains(t, attrs, attribute.String("net.transport", "ip_tcp"))
 			assert.Contains(t, attrs, attribute.String("db.name", "test-database"))
