@@ -277,6 +277,9 @@ func extractSingle(ctx context.Context, contextHeader string) (context.Context, 
 		}
 		pos += separatorWidth // {traceID}-
 
+		if headerLen < pos+spanIDWidth {
+			return ctx, empty, errInvalidSpanIDValue
+		}
 		scc.SpanID, err = trace.SpanIDFromHex(contextHeader[pos : pos+spanIDWidth])
 		if err != nil {
 			return ctx, empty, errInvalidSpanIDValue
