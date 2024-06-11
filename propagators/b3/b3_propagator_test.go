@@ -218,12 +218,22 @@ func TestExtractSingle(t *testing.T) {
 		{"000000000000007b00000000000001c8", trace.SpanContextConfig{}, errInvalidScope, false, false},
 		// Support short trace IDs.
 		{
+			"invalid-000000000000007b",
+			trace.SpanContextConfig{},
+			errInvalidTraceIDValue, false, false,
+		},
+		{
 			"00000000000001c8-000000000000007b",
 			trace.SpanContextConfig{
 				TraceID: trace.TraceID{0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0x1, 0xc8},
 				SpanID:  spanID,
 			},
 			nil, false, true,
+		},
+		{
+			"000000000000007b00000000000001c8-invalid",
+			trace.SpanContextConfig{},
+			errInvalidSpanIDValue, false, false,
 		},
 		{
 			"000000000000007b00000000000001c8-000000000000007b",
