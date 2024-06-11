@@ -7,7 +7,8 @@ import (
 	"fmt"
 	"net/http"
 	"sync"
-
+    "net"
+	"bufio"
 	"github.com/felixge/httpsnoop"
 	"github.com/gorilla/mux"
 
@@ -74,6 +75,13 @@ type recordingResponseWriter struct {
 	writer  http.ResponseWriter
 	written bool
 	status  int
+}
+
+func (h *recordingResponseWriter) Hijack() (net.Conn, *bufio.ReadWriter, error) {
+	if hijacker, ok := h.writer.(http.Hijacker); ok {
+		return hijacker.Hijack()
+	}
+	return nil, nil, fmt.Errorf("underlying ResponseWriter does not support hijacking")
 }
 
 var rrwPool = &sync.Pool{
