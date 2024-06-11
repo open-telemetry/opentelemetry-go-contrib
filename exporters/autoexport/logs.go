@@ -27,8 +27,7 @@ var logsSignal = newSignal[log.Exporter]("OTEL_LOGS_EXPORTER")
 //
 // OTEL_EXPORTER_OTLP_PROTOCOL defines OTLP exporter's transport protocol;
 // supported values:
-//   - "grpc" - protobuf-encoded data using gRPC wire format over HTTP/2 connection;
-//     see: [go.opentelemetry.io/otel/exporters/otlp/otlplog/otlploggrpc]
+//   - "none" - "no operation" exporter
 //   - "http/protobuf" (default) -  protobuf-encoded data over HTTP connection;
 //     see: [go.opentelemetry.io/otel/exporters/otlp/otlplog/otlploghttp]
 //
