@@ -18,6 +18,7 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 
 - The superfluous `response.WriteHeader` call in `go.opentelemetry.io/contrib/instrumentation/net/http/otelhttp` when the response writer is flushed. (#5634)
 - Custom attributes targeting metrics recorded by the `go.opentelemetry.io/contrib/instrumentation/net/http/otelhttp` are not ignored anymore. (#5129)
+- Use `c.FullPath()` method to set `http.route` attribute in `go.opentelemetry.io/contrib/instrumentation/github.com/gin-gonic/gin/otelgin`. (#5734)
 
 ### Deprecated
 
@@ -70,6 +71,8 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 - `NewHandler` now accepts a `name` `string` as the first argument.
   This parameter is used as a replacement of `WithInstrumentationScope` to specify the name of the logger backing the returned `Handler`. (#5588)
 - Upgrade all dependencies of `go.opentelemetry.io/otel/semconv/v1.24.0` to `go.opentelemetry.io/otel/semconv/v1.25.0`. (#5605)
+
+- Update the span processor in `go.opentelemetry.io/contrib/processors/baggage/baggagetrace` to require a baggage key predicate. (#5619)
 
 ### Removed
 
