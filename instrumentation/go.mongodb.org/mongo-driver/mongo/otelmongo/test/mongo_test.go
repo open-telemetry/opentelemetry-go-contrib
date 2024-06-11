@@ -101,7 +101,6 @@ func TestDBCrudOperation(t *testing.T) {
 				otelmongo.WithTracerProvider(provider),
 				otelmongo.WithCommandAttributeDisabled(tc.excludeCommand),
 			)
-
 			opts.ApplyURI(addr)
 
 			mock := newMockDeployment()
@@ -111,7 +110,7 @@ func TestDBCrudOperation(t *testing.T) {
 			// Deployment is not part of the stable API guaruntee of the
 			// mongo-go-driver and is therefore marked as deprecated.
 			//
-			// See jira.mongodb.org/browse/GODRIVER-3241 for a long-term solution.
+			// See https://jira.mongodb.org/browse/GODRIVER-3241 for a long-term solution.
 			opts.Deployment = mock
 
 			client, err := mongo.Connect(ctx, opts)
@@ -221,7 +220,6 @@ func TestDBCollectionAttribute(t *testing.T) {
 				otelmongo.WithTracerProvider(provider),
 				otelmongo.WithCommandAttributeDisabled(true),
 			)
-
 			opts.ApplyURI(addr)
 
 			mock := newMockDeployment()
@@ -231,7 +229,7 @@ func TestDBCollectionAttribute(t *testing.T) {
 			// Deployment is not part of the stable API guaruntee of the
 			// mongo-go-driver and is therefore marked as deprecated.
 			//
-			// See jira.mongodb.org/browse/GODRIVER-3241 for a long-term solution.
+			// See https://jira.mongodb.org/browse/GODRIVER-3241 for a long-term solution.
 			opts.Deployment = mock
 
 			client, err := mongo.Connect(ctx, opts)
