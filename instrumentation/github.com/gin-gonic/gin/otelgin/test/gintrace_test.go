@@ -287,3 +287,38 @@ func TestWithFilter(t *testing.T) {
 		assert.Len(t, sr.Ended(), 1)
 	})
 }
+
+func TestWithGinFilter(t *testing.T) {
+    t.Run("custom filter filtering route", func(t *testing.T) {
+        sr := tracetest.NewSpanRecorder()
+        otel.SetTracerProvider(sdktrace.NewTracerProvider(sdktrace.WithSpanProcessor(sr)))
+
+        router := gin.New()
+        f := func(c *gin.Context) bool { return c.Request.URL.Path != "/healthcheck" }
+        router.Use(otelgin.Middleware("foobar", otelgin.WithGinFilter(f)))
+        router.GET("/healthcheck", func(c *gin.Context) {})
+
+        r := httptest.NewRequest("GET", "/healthcheck", nil)
+        w := httptest.NewRecorder()
+
+        router.ServeHTTP(w, r)
+        assert.Len(t, sr.Ended(), 0)
+    })
+
+    t.Run("custom filter not filtering route", func(t *testing.T) {
+        sr := tracetest.NewSpanRecorder()
+        otel.SetTracerProvider(sdktrace.NewTracerProvider(sdktrace.WithSpanProcessor(sr)))
+
+        router := gin.New()
+        f := func(c *gin.Context) bool { return c.Request.URL.Path != "/user/:id" }
+        router.Use(otelgin.Middleware("foobar", otelgin.WithGinFilter(f)))
+        router.GET("/user/:id", func(c *gin.Context) {})
+
+        r := httptest.NewRequest("GET", "/user/123", nil)
+        w := httptest.NewRecorder()
+
+        router.ServeHTTP(w, r)
+        assert.Len(t, sr.Ended(), 1)
+    })
+}
+
