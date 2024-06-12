@@ -20,7 +20,7 @@ Module: [e.g. go.opentelemetry.io/contrib/zpages]
 
 [member of the OpenTelemetry organization]: https://github.com/open-telemetry/community/blob/main/community-membership.md#member
 
-### Relvant experience
+### Relevant experience
 
 List any PRs/Issues you have interacted with in this repository for this module.
 

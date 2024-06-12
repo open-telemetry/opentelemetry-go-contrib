@@ -3,7 +3,7 @@
 
 package test // import "go.opentelemetry.io/contrib/instrumentation/github.com/aws/aws-sdk-go-v2/otelaws/test"
 
-// Version is the current release version of the AWS intstrumentation test module.
+// Version is the current release version of the AWS instrumentation test module.
 func Version() string {
 	return "0.52.0"
 	// This string is updated by the pre_release.sh script during release

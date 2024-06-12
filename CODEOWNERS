@@ -7,6 +7,9 @@
 # Learn about membership in OpenTelemetry community:
 #  https://github.com/open-telemetry/community/blob/main/community-membership.md
 #
+# Learn about Code Owners policy in OpenTelemetry Go Contrib:
+#  https://github.com/open-telemetry/opentelemetry-go-contrib/blob/main/CONTRIBUTING.md#code-owners
+#
 #
 # Learn about CODEOWNERS file format:
 # https://help.github.com/en/articles/about-code-owners
@@ -29,16 +32,19 @@ bridges/otelzap/                                                        @open-te
 
 config/                                                                 @open-telemetry/go-approvers @MadVikingGod @pellared @codeboten
 
-detectors/aws/                                                          @open-telemetry/go-approvers
+detectors/aws/ec2                                                       @open-telemetry/go-approvers @pyohannes @akats7
+detectors/aws/ecs                                                       @open-telemetry/go-approvers @pyohannes @akats7
+detectors/aws/eks                                                       @open-telemetry/go-approvers @pyohannes
+detectors/aws/lambda                                                    @open-telemetry/go-approvers @akats7
 detectors/gcp/                                                          @open-telemetry/go-approvers @dashpole
 
 exporters/autoexport                                                    @open-telemetry/go-approvers @MikeGoldsmith @pellared
 
-instrumentation/github.com/aws/aws-lambda-go/otellambda/                @open-telemetry/go-approvers
-instrumentation/github.com/aws/aws-sdk-go-v2/otelaws/                   @open-telemetry/go-approvers
+instrumentation/github.com/aws/aws-lambda-go/otellambda/                @open-telemetry/go-approvers @akats7
+instrumentation/github.com/aws/aws-sdk-go-v2/otelaws/                   @open-telemetry/go-approvers @akats7
 instrumentation/github.com/emicklei/go-restful/otelrestful/             @open-telemetry/go-approvers @dashpole
 instrumentation/github.com/gin-gonic/gin/otelgin/                       @open-telemetry/go-approvers @hanyuancheung
-instrumentation/github.com/gorilla/mux/otelmux/                         @open-telemetry/go-approvers
+instrumentation/github.com/gorilla/mux/otelmux/                         @open-telemetry/go-approvers @akats7
 instrumentation/github.com/labstack/echo/otelecho/                      @open-telemetry/go-approvers
 instrumentation/go.mongodb.org/mongo-driver/mongo/otelmongo/            @open-telemetry/go-approvers
 instrumentation/google.golang.org/grpc/otelgrpc/                        @open-telemetry/go-approvers @dashpole @hanyuancheung
@@ -52,7 +58,7 @@ instrumentation/runtime/                                                @open-te
 processors/baggage/baggagetrace                                         @open-telemetry/go-approvers @codeboten @MikeGoldsmith
 
 propagators/autoprop/                                                   @open-telemetry/go-approvers @MrAlias
-propagators/aws/                                                        @open-telemetry/go-approvers
+propagators/aws/                                                        @open-telemetry/go-approvers @akats7
 propagators/b3/                                                         @open-telemetry/go-approvers @pellared
 propagators/jaeger/                                                     @open-telemetry/go-approvers @yurishkuro
 propagators/opencensus/                                                 @open-telemetry/go-approvers @dashpole

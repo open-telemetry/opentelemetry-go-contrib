@@ -185,7 +185,7 @@ func (l *listener) Accept() (net.Conn, error) {
 	return conn, nil
 }
 
-// WaitForConn will wait indefintely for a connection to be estabilished with
+// WaitForConn will wait indefintely for a connection to be established with
 // the listener before returning.
 func (l *listener) WaitForConn() {
 	for {

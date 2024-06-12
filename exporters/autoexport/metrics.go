@@ -65,7 +65,7 @@ func WithFallbackMetricReader(metricReaderFactory func(ctx context.Context) (met
 // Use [WithFallbackMetricReader] option to change the returned exporter
 // when OTEL_METRICS_EXPORTER is unset or empty.
 //
-// Use [IsNoneMetricReader] to check if the retured exporter is a "no operation" exporter.
+// Use [IsNoneMetricReader] to check if the returned exporter is a "no operation" exporter.
 func NewMetricReader(ctx context.Context, opts ...MetricOption) (metric.Reader, error) {
 	return metricsSignal.create(ctx, opts...)
 }
@@ -172,7 +172,7 @@ func init() {
 		mux := http.NewServeMux()
 		mux.Handle("/metrics", promhttp.HandlerFor(reg, promhttp.HandlerOpts{Registry: reg}))
 		server := http.Server{
-			// Timeouts are necessary to make a server resilent to attacks, but ListenAndServe doesn't set any.
+			// Timeouts are necessary to make a server resilient to attacks, but ListenAndServe doesn't set any.
 			// We use values from this example: https://blog.cloudflare.com/exposing-go-on-the-internet/#:~:text=There%20are%20three%20main%20timeouts
 			ReadTimeout:  5 * time.Second,
 			WriteTimeout: 10 * time.Second,

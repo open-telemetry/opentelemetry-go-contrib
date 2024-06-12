@@ -49,13 +49,13 @@ func WithFallbackSpanExporter(spanExporterFactory func(ctx context.Context) (tra
 // Use [WithFallbackSpanExporter] option to change the returned exporter
 // when OTEL_TRACES_EXPORTER is unset or empty.
 //
-// Use [IsNoneSpanExporter] to check if the retured exporter is a "no operation" exporter.
+// Use [IsNoneSpanExporter] to check if the returned exporter is a "no operation" exporter.
 func NewSpanExporter(ctx context.Context, opts ...SpanOption) (trace.SpanExporter, error) {
 	return tracesSignal.create(ctx, opts...)
 }
 
 // RegisterSpanExporter sets the SpanExporter factory to be used when the
-// OTEL_TRACES_EXPORTERS environment variable contains the exporter name. This
+// OTEL_TRACES_EXPORTER environment variable contains the exporter name. This
 // will panic if name has already been registered.
 func RegisterSpanExporter(name string, factory func(context.Context) (trace.SpanExporter, error)) {
 	must(tracesSignal.registry.store(name, factory))
