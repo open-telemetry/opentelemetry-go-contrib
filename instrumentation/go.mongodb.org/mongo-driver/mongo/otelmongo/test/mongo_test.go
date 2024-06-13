@@ -226,7 +226,7 @@ func TestDBCollectionAttribute(t *testing.T) {
 
 			// nolint:staticcheck
 			//
-			// Deployment is not part of the stable API guaruntee of the
+			// Deployment is not part of the stable API guarantee of the
 			// mongo-go-driver and is therefore marked as deprecated.
 			//
 			// See https://jira.mongodb.org/browse/GODRIVER-3241 for a long-term solution.
