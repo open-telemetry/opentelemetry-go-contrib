@@ -60,6 +60,9 @@ func main() {
 	client := http.Client{
 		Transport: otelhttp.NewTransport(
 			http.DefaultTransport,
+			// By setting the otelhttptrace client in this transport, it can be
+			// injected into the context after the span is started, which makes the
+			// httptrace spans children of the transport one.
 			otelhttp.WithClientTrace(func(ctx context.Context) *httptrace.ClientTrace {
 				return otelhttptrace.NewClientTrace(ctx)
 			}),
@@ -76,7 +79,6 @@ func main() {
 		ctx, span := tr.Start(ctx, "say hello", trace.WithAttributes(semconv.PeerService("ExampleService")))
 		defer span.End()
 
-		ctx = httptrace.WithClientTrace(ctx, otelhttptrace.NewClientTrace(ctx))
 		req, _ := http.NewRequestWithContext(ctx, "GET", *url, nil)
 
 		fmt.Printf("Sending request...\n")
