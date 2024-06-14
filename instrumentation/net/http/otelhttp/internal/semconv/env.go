@@ -80,3 +80,34 @@ func ServerStatus(code int) (codes.Code, string) {
 	}
 	return codes.Unset, ""
 }
+
+type HTTPClient struct {
+	//TODO (#5332): Support for new semantic conventions
+	// duplicate bool
+}
+
+func NewHTTPClient() HTTPClient {
+	//TODO (#5332): Support for new semantic conventions
+	// env := strings.ToLower(os.Getenv("OTEL_HTTP_CLIENT_COMPATIBILITY_MODE"))
+	return HTTPClient{}
+}
+
+// RequestTraceAttrs returns attributes for an HTTP request made by a client.
+func (c HTTPClient) RequestTraceAttrs(req *http.Request) []attribute.KeyValue {
+	return oldHTTPClient{}.RequestTraceAttrs(req)
+}
+
+// ResponseTraceAttrs returns metric attributes for an HTTP request made by a client.
+func (c HTTPClient) ResponseTraceAttrs(resp *http.Response) []attribute.KeyValue {
+	return oldHTTPClient{}.ResponseTraceAttrs(resp)
+}
+
+func (c HTTPClient) Status(code int) (codes.Code, string) {
+	if code < 100 || code >= 600 {
+		return codes.Error, fmt.Sprintf("Invalid HTTP status code %d", code)
+	}
+	if code >= 400 {
+		return codes.Error, ""
+	}
+	return codes.Unset, ""
+}
