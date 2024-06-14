@@ -9,6 +9,54 @@ Before you start please be sure to read through these contributing requirements 
 All contributions to this project MUST be licensed under this project's [license](LICENSE).
 You will need to sign the [CNCF CLA](https://identity.linuxfoundation.org/projects/cncf) before your contributions will be accepted.
 
+## Code Owners
+
+To ensure code that lives in this repository is not abandoned, all modules added are required to have a Code Owner.
+A Code Owner is responsible for a module within this repository.
+This status is identified in the [CODEOWNERS file](./CODEOWNERS).
+That responsibility includes maintaining the component, triaging and responding to issues, and reviewing pull requests.
+
+### Requirements
+
+To become a Code Owner, you will need to meet the following requirements.
+
+1. You will need to be a [member of the OpenTelemetry organization] and maintain that membership.
+2. You need to have good working knowledge of the code you are sponsoring and any project that that code instruments or is based on.
+
+If you are not an existing member, this is not an immediate disqualification.
+You will need to engage with the OpenTelemetry community so you can achieve this membership in the process of becoming a Code Owner.
+
+It is best to have resolved at least an issue related to the module, contributed directly to the module, and/or reviewed module PRs.
+How much interaction with the module is required before becoming a Code Owner is up to the existing Code Owners.
+
+Code Ownership is ultimately up to the judgement of the existing Code Owners and Maintainers of this repository.
+Meeting the above requirements is not a guarantee to be granted Code Ownership.
+
+[member of the OpenTelemetry organization]: https://github.com/open-telemetry/community/blob/main/community-membership.md#member
+
+### Responsibilities
+
+As a Code Owner you will be responsible for the following:
+
+- You will be responsible for keeping up with the instrumented library. Any "upstream" changes that impact this module need to be proactively handle by you.
+- You will be expected to review any Pull Requests or Issues created that relate to this module.
+- You will be responsible for the stability and versioning compliance of the module.
+- You will be responsible for deciding any additional Code Owners of the module.
+
+### How to become a Code Owner
+
+To become a Code Owner, open [an Issue](https://github.com/open-telemetry/opentelemetry-go-contrib/issues/new?assignees=&labels=&projects=&template=owner.md&title=).
+
+### Removing Code Ownership
+
+Code Owners are expected to remove their ownership if they cannot fulfill their responsibilities anymore.
+
+It is at the discretion of the repository Maintainers and fellow Code Owners to decide if a Code Owner should be considered for removal.
+If a Code Owner is determined to be unable to perform their duty, a repository Maintainer will remove their ownership.
+
+Inactivity greater than 5 months, during which time there are active Issues or Pull Requests to address, is deemed an automatic disqualification from being a Code Owner.
+A repository Maintainer may remove an Code Owner inactive for this length. 
+
 ## Filing Issues
 
 Sensitive security-related issues should be reported to <cncf-opentelemetry-tc@lists.cncf.io>. See the [security policy](https://github.com/open-telemetry/opentelemetry-go-contrib/security/policy) for details.
@@ -56,7 +104,7 @@ A pull request is considered ready to merge when the following criteria are meet
 Any Maintainer can merge the pull request once it is ready to merge.
 
 [^1]: The `go.opentelemetry.io/contrib/instrgen` module is exempt from the two approvals and one day requirement.
-  Only one approval is needed to merge a Pull Request for that module and there is no minimum amout of time required for the PR to be open before merging.
+  Only one approval is needed to merge a Pull Request for that module and there is no minimum amount of time required for the PR to be open before merging.
   This exemption is to be removed when that package makes its first tagged release.
 
 ### Draft Pull Requests
@@ -82,7 +130,6 @@ Approvers:
 - [Sam Xie](https://github.com/XSAM), Cisco/AppDynamics
 - [Chester Cheung](https://github.com/hanyuancheung), Tencent
 - [Damien Mathieu](https://github.com/dmathieu), Elastic
-- [Anthony Mirabella](https://github.com/Aneurysm9), Amazon
 
 Maintainers:
 
@@ -94,6 +141,7 @@ Maintainers:
 Emeritus:
 
 - [Gustavo Silva Paiva](https://github.com/paivagustavo), LightStep
+- [Anthony Mirabella](https://github.com/Aneurysm9), Amazon
 
 ### Become an Approver or a Maintainer
 

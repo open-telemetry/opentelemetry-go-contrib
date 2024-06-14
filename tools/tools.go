@@ -13,7 +13,6 @@ import (
 	_ "github.com/jcchavezs/porto/cmd/porto"
 	_ "github.com/wadey/gocovmerge"
 	_ "go.opentelemetry.io/build-tools/crosslink"
-	_ "go.opentelemetry.io/build-tools/dbotconf"
 	_ "go.opentelemetry.io/build-tools/gotmpl"
 	_ "go.opentelemetry.io/build-tools/multimod"
 	_ "golang.org/x/exp/cmd/gorelease"

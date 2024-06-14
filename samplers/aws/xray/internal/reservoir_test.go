@@ -200,7 +200,7 @@ func TestResetQuotaUsageRotation(t *testing.T) {
 		nowTime: 1500000001,
 	}
 
-	// take() should be true since ununsed quota is available
+	// take() should be true since unused quota is available
 	assert.True(t, r.take(clock.now(), false, 1.0))
 }
 

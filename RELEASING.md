@@ -5,6 +5,40 @@ tool](https://github.com/open-telemetry/opentelemetry-go-build-tools/tree/main/m
 to manage releases. This document will walk you through how to perform a
 release using this tool for this repository.
 
+## Before releasing
+
+### Verify OTel changes
+
+Before releasing, it is important to verify that the changes in the upstream
+go.opentelemetry.io/otel packages are compatible with the contrib repository.
+
+Follow the following steps to verify the changes.
+
+1. Pick the GIT SHA on the [main branch](https://github.com/open-telemetry/opentelemetry-go/commits/main) that you want to verify.
+2. Run the following command to update the OTel dependencies with the GIT SHA picked in step 1.
+
+   ```sh
+   export GITSHA=<the GIT SHA you want to verify>
+   make update-all-otel-deps
+   make go-mod-tidy
+   ```
+
+3. Verify the changes.
+
+   ```sh
+   git diff
+   ```
+
+   This should have changed the version for all OTel modules to be the GIT SHA picked in step 1.
+
+4. Run the lint and tests to verify that the changes are compatible with the contrib repository.
+
+   ```sh
+   make precommit
+   ```
+
+   This command should be passed without any errors.
+
 ## Start a release
 
 First, decide which module sets will have their versions changed and what those

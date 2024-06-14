@@ -12,7 +12,7 @@ import (
 	"github.com/stretchr/testify/assert"
 
 	"go.opentelemetry.io/otel/sdk/resource"
-	semconv "go.opentelemetry.io/otel/semconv/v1.24.0"
+	semconv "go.opentelemetry.io/otel/semconv/v1.25.0"
 )
 
 func TestDetect(t *testing.T) {
@@ -106,6 +106,50 @@ func TestDetect(t *testing.T) {
 				semconv.FaaSVersion("123456"),
 				semconv.FaaSInstance("1472385723456792345"),
 			),
+		},
+		{
+			desc: "Cloud Run Job",
+			detector: &detector{detector: &fakeGCPDetector{
+				projectID:            "my-project",
+				cloudPlatform:        gcp.CloudRunJob,
+				faaSID:               "1472385723456792345",
+				faaSCloudRegion:      "us-central1",
+				faaSName:             "my-service",
+				cloudRunJobExecution: "my-service-ekdih",
+				cloudRunJobTaskIndex: "0",
+			}},
+			expectedResource: resource.NewWithAttributes(semconv.SchemaURL,
+				semconv.CloudProviderGCP,
+				semconv.CloudAccountID("my-project"),
+				semconv.CloudPlatformGCPCloudRun,
+				semconv.CloudRegion("us-central1"),
+				semconv.FaaSName("my-service"),
+				semconv.GCPCloudRunJobExecution("my-service-ekdih"),
+				semconv.GCPCloudRunJobTaskIndex(0),
+				semconv.FaaSInstance("1472385723456792345"),
+			),
+		},
+		{
+			desc: "Cloud Run Job Bad Index",
+			detector: &detector{detector: &fakeGCPDetector{
+				projectID:            "my-project",
+				cloudPlatform:        gcp.CloudRunJob,
+				faaSID:               "1472385723456792345",
+				faaSCloudRegion:      "us-central1",
+				faaSName:             "my-service",
+				cloudRunJobExecution: "my-service-ekdih",
+				cloudRunJobTaskIndex: "bad-value",
+			}},
+			expectedResource: resource.NewWithAttributes(semconv.SchemaURL,
+				semconv.CloudProviderGCP,
+				semconv.CloudAccountID("my-project"),
+				semconv.CloudPlatformGCPCloudRun,
+				semconv.CloudRegion("us-central1"),
+				semconv.FaaSName("my-service"),
+				semconv.GCPCloudRunJobExecution("my-service-ekdih"),
+				semconv.FaaSInstance("1472385723456792345"),
+			),
+			expectErr: true,
 		},
 		{
 			desc: "Cloud Functions",
@@ -231,6 +275,8 @@ type fakeGCPDetector struct {
 	gceHostName               string
 	gcpGceInstanceName        string
 	gcpGceInstanceHostname    string
+	cloudRunJobExecution      string
+	cloudRunJobTaskIndex      string
 }
 
 func (f *fakeGCPDetector) ProjectID() (string, error) {
@@ -385,4 +431,18 @@ func (f *fakeGCPDetector) GCEInstanceHostname() (string, error) {
 		return "", f.err
 	}
 	return f.gcpGceInstanceHostname, nil
+}
+
+func (f *fakeGCPDetector) CloudRunJobExecution() (string, error) {
+	if f.err != nil {
+		return "", f.err
+	}
+	return f.cloudRunJobExecution, nil
+}
+
+func (f *fakeGCPDetector) CloudRunJobTaskIndex() (string, error) {
+	if f.err != nil {
+		return "", f.err
+	}
+	return f.cloudRunJobTaskIndex, nil
 }
