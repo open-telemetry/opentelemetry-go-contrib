@@ -186,9 +186,14 @@ vanity-import-check: | $(PORTO)
 .PHONY: lint
 lint: go-mod-tidy golangci-lint misspell govulncheck
 
+# The following file is a third-party copy from the mongo-go-driver:
+# ./instrumentation/go.mongodb.org/mongo-driver/mongo/otelmongo/test/opmsg_deployment.go
 .PHONY: license-check
 license-check:
-	@licRes=$$(for f in $$(find . -type f \( -iname '*.go' -o -iname '*.sh' \) ! -path './vendor/*' ! -path './exporters/otlp/internal/opentelemetry-proto/*') ; do \
+	@licRes=$$(for f in $$(find . -type f \( -iname '*.go' -o -iname '*.sh' \) \
+		! -path './vendor/*' \
+		! -path './exporters/otlp/internal/opentelemetry-proto/*' \
+		! -path './instrumentation/go.mongodb.org/mongo-driver/mongo/otelmongo/test/opmsg_deployment.go') ; do \
 	           awk '/Copyright The OpenTelemetry Authors|generated|GENERATED/ && NR<=4 { found=1; next } END { if (!found) print FILENAME }' $$f; \
 	   done); \
 	   if [ -n "$${licRes}" ]; then \
@@ -262,23 +267,6 @@ test-coverage/%:
 		cd "$(DIR)" \
 		&& $$CMD ./... \
 		&& $(GO) tool cover -html=coverage.out -o coverage.html;
-
-.PHONY: test-mongo-driver
-test-mongo-driver:
-	@if ./tools/should_build.sh mongo-driver; then \
-	  set -e; \
-	  docker run --name mongo-integ --rm -p 27017:27017 -d mongo; \
-	  CMD=mongo IMG_NAME=mongo-integ ./tools/wait.sh; \
-	  (cd instrumentation/go.mongodb.org/mongo-driver/mongo/otelmongo/test && \
-	    $(GO) test \
-		  -covermode=$(COVERAGE_MODE) \
-		  -coverprofile=$(COVERAGE_PROFILE) \
-		  -coverpkg=go.opentelemetry.io/contrib/instrumentation/go.mongodb.org/mongo-driver/mongo/otelmongo/...  \
-		  ./... \
-	    && $(GO) tool cover -html=$(COVERAGE_PROFILE) -o coverage.html); \
-	  cp ./instrumentation/go.mongodb.org/mongo-driver/mongo/otelmongo/test/coverage.out ./; \
-	  docker stop mongo-integ; \
-	fi
 
 # Releasing
 

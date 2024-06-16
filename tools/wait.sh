@@ -15,18 +15,6 @@ wait_for_cassandra () {
   exit 1
 }
 
-wait_for_mongo () {
-  for ((i = 0; i < 5; ++i)); do
-    if docker exec "$1" mongosh; then
-      exit 0
-    fi
-    echo "Mongo not yet available..."
-    sleep 10
-  done
-  echo "Timeout waiting for mongo to initialize"
-  exit 1
-}
-
 wait_for_gomemcache () {
   for ((i = 0; i < 5; ++i)); do
     if nc -z localhost 11211; then
@@ -49,8 +37,6 @@ fi
 
 if [ "$CMD" == "cassandra" ]; then
   wait_for_cassandra "$IMG_NAME"
-elif [ "$CMD" == "mongo" ]; then
-  wait_for_mongo "$IMG_NAME"
 elif [ "$CMD" == "gomemcache" ]; then
   wait_for_gomemcache
 else

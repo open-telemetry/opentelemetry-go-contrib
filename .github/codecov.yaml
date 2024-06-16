@@ -15,3 +15,7 @@ comment:
   layout: "reach,diff,flags,tree"
   behavior: default
   require_changes: yes
+
+ignore:
+  # opmsg_deployment is copied from mongo-go-driver.
+  - "instrumentation/go.mongodb.org/mongo-driver/mongo/otelmongo/test/opmsg_deployment.go"
