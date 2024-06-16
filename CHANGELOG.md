@@ -11,6 +11,7 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 ### Added
 
 - The `go.opentelemetry.io/contrib/config` add support to configure periodic reader interval and timeout. (#5661)
+- Add the new `go.opentelemetry.io/contrib/detectors/azure/azurevm` package to provide a resource detector for Azure VMs. (#5422)
 - Add support to configure views when creating MeterProvider using the config package. (#5654)
 - Add log support for the autoexport package. (#5733)
 - Add support for disabling the old runtime metrics using the `OTEL_GO_X_DEPRECATED_RUNTIME_METRICS=false` environment variable. (#5747)
