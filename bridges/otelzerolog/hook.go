@@ -1,8 +1,42 @@
-package otelzerolog
+// Copyright The OpenTelemetry Authors
+// SPDX-License-Identifier: Apache-2.0
+
+// Package otelzerolog provides a SeverityHook, a zerolog.Hook implementation that
+// can be used to bridge between the [zerolog] API and [OpenTelemetry].
+//
+// # Record Conversion
+//
+// The zerolog.Event records are converted to OpenTelemetry [log.Record] in
+// the following way:
+//
+//   - Time is set as the Timestamp.
+//   - Message is set as the Body using a [log.StringValue].
+//   - Level is transformed and set as the Severity. The SeverityText is not
+//     set.
+//   - Fields are transformed and set as the attributes.
+//
+// The Level is transformed by using a mapping function to the OpenTelemetry
+// Severity types. For example:
+//
+//   - zerolog.DebugLevel is transformed to [log.SeverityDebug]
+//   - zerolog.InfoLevel is transformed to [log.SeverityInfo]
+//   - zerolog.WarnLevel is transformed to [log.SeverityWarn]
+//   - zerolog.ErrorLevel is transformed to [log.SeverityError]
+//   - zerolog.FatalLevel and zerolog.PanicLevel are mapped to
+//     [log.SeverityError] (consider customization for these levels)
+//
+// Attribute values are transformed based on their type into log attributes, or
+// into a string value if there is no matching type.
+//
+// [zerolog]: https://github.com/rs/zerolog
+// [OpenTelemetry]: https://opentelemetry.io/docs/concepts/signals/logs/
+package otelzerolog // import "go.opentelemetry.io/contrib/bridges/otelzerolog"
 
 import (
-	"github.com/rs/zerolog"
 	"fmt"
+
+	"github.com/rs/zerolog"
+
 	"go.opentelemetry.io/otel/log"
 	"go.opentelemetry.io/otel/log/global"
 )
@@ -11,7 +45,6 @@ type config struct {
 	provider  log.LoggerProvider
 	version   string
 	schemaURL string
-
 }
 
 func newConfig(options []Option) config {
@@ -38,7 +71,7 @@ func (c config) logger(name string) log.Logger {
 	return c.provider.Logger(name, opts...)
 }
 
-// Option configures a Hook.
+// Option configures a SeverityHook.
 type Option interface {
 	apply(config) config
 }
@@ -47,7 +80,7 @@ type optFunc func(config) config
 func (f optFunc) apply(c config) config { return f(c) }
 
 // WithVersion returns an [Option] that configures the version of the
-// [log.Logger] used by a [Hook]. The version should be the version of the
+// [log.Logger] used by a [SeverityHook]. The version should be the version of the
 // package that is being logged.
 func WithVersion(version string) Option {
 	return optFunc(func(c config) config {
@@ -57,7 +90,7 @@ func WithVersion(version string) Option {
 }
 
 // WithSchemaURL returns an [Option] that configures the semantic convention
-// schema URL of the [log.Logger] used by a [Hook]. The schemaURL should be
+// schema URL of the [log.Logger] used by a [SeverityHook]. The schemaURL should be
 // the schema URL for the semantic conventions used in log records.
 func WithSchemaURL(schemaURL string) Option {
 	return optFunc(func(c config) config {
@@ -67,9 +100,9 @@ func WithSchemaURL(schemaURL string) Option {
 }
 
 // WithLoggerProvider returns an [Option] that configures [log.LoggerProvider]
-// used by a [Hook].
+// used by a [SeverityHook].
 //
-// By default if this Option is not provided, the Hook will use the global
+// By default if this Option is not provided, the SeverityHook will use the global
 // LoggerProvider.
 func WithLoggerProvider(provider log.LoggerProvider) Option {
 	return optFunc(func(c config) config {
@@ -77,13 +110,21 @@ func WithLoggerProvider(provider log.LoggerProvider) Option {
 		return c
 	})
 }
-func NewHook(name string, options ...Option) *SeverityHook {
+
+// NewSeverityHook returns a new [SeverityHook] to be used as a [Zerolog.Hook].
+//
+// If [WithLoggerProvider] is not provided, the returned SeverityHook will use the
+// global LoggerProvider.
+func NewSeverityHook(name string, options ...Option) *SeverityHook {
 	cfg := newConfig(options)
 	return &SeverityHook{
 		logger: cfg.logger(name),
 	}
 }
-type SeverityHook struct{
+
+// // Hook is a [zerolog.Hook] that sends all logging records it receives to
+// OpenTelemetry. See package documentation for how conversions are made.
+type SeverityHook struct {
 	logger log.Logger
 	levels zerolog.Level
 }
@@ -93,14 +134,16 @@ func (h *SeverityHook) Levels() zerolog.Level {
 	return h.levels
 }
 
+// Run handles the passed record, and sends it to OpenTelemetry.
 func (h SeverityHook) Run(e *zerolog.Event, level zerolog.Level, msg string) error {
-    if level != zerolog.NoLevel {
-        e.Str("severity", level.String())
-    }
-	h.logger.Emit(e.GetCtx(),h.convertEvent(e,level,msg))
+	if level != zerolog.NoLevel {
+		e.Str("severity", level.String())
+	}
+	h.logger.Emit(e.GetCtx(), h.convertEvent(e, level, msg))
 	return nil
 }
-func(h *SeverityHook) convertEvent(e *zerolog.Event,level zerolog.Level, msg string) log.Record{
+
+func (h *SeverityHook) convertEvent(e *zerolog.Event, level zerolog.Level, msg string) log.Record {
 	var record log.Record
 	record.SetTimestamp(zerolog.TimestampFunc())
 	record.SetBody(log.StringValue(msg))
@@ -108,17 +151,19 @@ func(h *SeverityHook) convertEvent(e *zerolog.Event,level zerolog.Level, msg str
 	record.SetSeverity(log.Severity(level + sevOffset))
 	fields := extractFields(e)
 
-	record.AddAttributes(convertFields(fields,msg)...);
+	record.AddAttributes(convertFields(fields, msg)...)
 	return record
 }
+
 func extractFields(_ *zerolog.Event) map[string]interface{} {
 	// Here you would implement the logic to extract fields from the zerolog event
 	// This might involve using reflection or zerolog internals if necessary
 	fields := make(map[string]interface{})
 	// Dummy implementation - replace with actual field extraction
-	
+
 	return fields
 }
+
 func convertFields(fields map[string]interface{}, msg string) []log.KeyValue {
 	kvs := make([]log.KeyValue, 0, len(fields))
 	kvs = append(kvs, log.String("message", msg))
@@ -130,24 +175,20 @@ func convertFields(fields map[string]interface{}, msg string) []log.KeyValue {
 
 func convertAttribute(key string, value interface{}) log.KeyValue {
 	switch v := value.(type) {
-		case bool:
-			return log.Bool(key, v)
-		case []byte:
-			return log.String(key, string(v))
-		case float64:
-			return log.Float64(key, v)
-		case int:
-			return log.Int(key, v)
-		case int64:
-			return log.Int64(key, v)
-		case string:
-			return log.String(key, v)
-		default:
-			// Fallback to string representation for unhandled types
-			return log.String(key, fmt.Sprintf("%v", v))
+	case bool:
+		return log.Bool(key, v)
+	case []byte:
+		return log.String(key, string(v))
+	case float64:
+		return log.Float64(key, v)
+	case int:
+		return log.Int(key, v)
+	case int64:
+		return log.Int64(key, v)
+	case string:
+		return log.String(key, v)
+	default:
+		// Fallback to string representation for unhandled types
+		return log.String(key, fmt.Sprintf("%v", v))
 	}
 }
-
-
-
-

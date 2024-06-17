@@ -1,3 +1,5 @@
+// Copyright The OpenTelemetry Authors
+// SPDX-License-Identifier: Apache-2.0
 package otelzerolog
 
 import (
@@ -11,14 +13,13 @@ import (
 	"go.opentelemetry.io/otel/log/global"
 )
 
-type mockLoggerProvider struct{
+type mockLoggerProvider struct {
 	embedded.LoggerProvider
 }
 
 func (mockLoggerProvider) Logger(name string, options ...log.LoggerOption) log.Logger {
 	return nil
 }
-
 
 func TestNewConfig(t *testing.T) {
 	customLoggerProvider := mockLoggerProvider{}
@@ -71,7 +72,7 @@ func TestNewConfig(t *testing.T) {
 	}
 }
 
-func TestNewHook(t *testing.T) {
+func TestNewSeverityHook(t *testing.T) {
 	const name = "test-logger"
 	provider := global.GetLoggerProvider()
 
@@ -98,7 +99,7 @@ func TestNewHook(t *testing.T) {
 		},
 	} {
 		t.Run(tt.name, func(t *testing.T) {
-			hook := NewHook(name, tt.options...)
+			hook := NewSeverityHook(name, tt.options...)
 			assert.NotNil(t, hook)
 			assert.Equal(t, tt.wantLogger, hook.logger)
 		})
