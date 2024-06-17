@@ -12,8 +12,7 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 
 - The `go.opentelemetry.io/contrib/config` add support to configure periodic reader interval and timeout. (#5661)
 - Add support to configure views when creating MeterProvider using the config package. (#5654)
-- The `go.opentelemetry.io/contrib/bridges/otelzerolog` module.
-  This module provides an OpenTelemetry logging bridge for `github.com/rs/zerolog`. (#5405)
+
 
 ### Fixed
 
