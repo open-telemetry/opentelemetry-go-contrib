@@ -225,9 +225,9 @@ func TestObjectEncoder(t *testing.T) {
 		t.Run(tt.desc, func(t *testing.T) {
 			enc := newObjectEncoder(1)
 			tt.f(enc)
-			enc.getEncodedResult(enc.root)
-			require.Len(t, enc.root.kv, 1)
-			assert.Equal(t, tt.expected, value2Result((enc.root.kv[0].Value)), "Unexpected encoder output.")
+			enc.calculate(enc.root)
+			require.Len(t, enc.root.attrs, 1)
+			assert.Equal(t, tt.expected, value2Result((enc.root.attrs[0].Value)), "Unexpected encoder output.")
 		})
 	}
 }
@@ -327,8 +327,8 @@ func TestArrayEncoder(t *testing.T) {
 				tt.f(arr)
 				return nil
 			})), "Expected AddArray to succeed.")
-			enc.getEncodedResult(enc.root)
-			assert.Equal(t, []interface{}{tt.expected, tt.expected}, value2Result(enc.root.kv[0].Value), "Unexpected encoder output.")
+			enc.calculate(enc.root)
+			assert.Equal(t, []interface{}{tt.expected, tt.expected}, value2Result(enc.root.attrs[0].Value), "Unexpected encoder output.")
 		})
 	}
 }
