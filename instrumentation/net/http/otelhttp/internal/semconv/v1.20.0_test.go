@@ -101,10 +101,8 @@ func TestV120ClientRequest(t *testing.T) {
 		attribute.Int("http.request_content_length", body.Len()),
 		attribute.String("user_agent.original", "go-test-agent"),
 	}
-
 	got := oldHTTPClient{}.RequestTraceAttrs(req)
 	assert.ElementsMatch(t, want, got)
-
 }
 
 func TestV120ClientResponse(t *testing.T) {

@@ -82,12 +82,12 @@ func ServerStatus(code int) (codes.Code, string) {
 }
 
 type HTTPClient struct {
-	//TODO (#5332): Support for new semantic conventions
+	// TODO (#5332): Support for new semantic conventions
 	// duplicate bool
 }
 
 func NewHTTPClient() HTTPClient {
-	//TODO (#5332): Support for new semantic conventions
+	// TODO (#5332): Support for new semantic conventions
 	// env := strings.ToLower(os.Getenv("OTEL_HTTP_CLIENT_COMPATIBILITY_MODE"))
 	return HTTPClient{}
 }

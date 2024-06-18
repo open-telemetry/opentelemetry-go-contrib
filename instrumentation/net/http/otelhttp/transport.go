@@ -158,7 +158,7 @@ func (t *Transport) RoundTrip(r *http.Request) (*http.Response, error) {
 		r.Body = &bw
 	}
 
-	span.SetAttributes(t.semconv.RequestTraceAttrs()...(r)...)
+	span.SetAttributes(t.semconv.RequestTraceAttrs(r)...)
 	t.propagators.Inject(ctx, propagation.HeaderCarrier(r.Header))
 
 	res, err := t.rt.RoundTrip(r)
