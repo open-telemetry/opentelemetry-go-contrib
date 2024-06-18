@@ -34,5 +34,5 @@ and setting the environment variable will no longer have any effect.
 The value set must be the case-insensitive string of `"true"` to enable the
 feature, and `"false"` to disable the feature. All other values are ignored.
 
-[previous runtime metrics conventions]: go.opentelemetry.io/contrib/instrumentation/runtime/internal/deprecatedruntime
+[previous runtime metrics conventions]: https://pkg.go.dev/go.opentelemetry.io/contrib/instrumentation/runtime@v0.52.0
 [OpenTelemetry Go Runtime conventions]: https://github.com/open-telemetry/semantic-conventions/blob/main/docs/runtime/go-metrics.md
