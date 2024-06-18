@@ -3,9 +3,9 @@ module go.opentelemetry.io/contrib/instrumentation/github.com/aws/aws-sdk-go-v2/
 go 1.21
 
 require (
-	github.com/aws/aws-sdk-go-v2 v1.27.1
-	github.com/aws/aws-sdk-go-v2/service/dynamodb v1.32.7
-	github.com/aws/aws-sdk-go-v2/service/sqs v1.32.4
+	github.com/aws/aws-sdk-go-v2 v1.28.0
+	github.com/aws/aws-sdk-go-v2/service/dynamodb v1.32.9
+	github.com/aws/aws-sdk-go-v2/service/sqs v1.32.7
 	github.com/aws/smithy-go v1.20.2
 	github.com/stretchr/testify v1.9.0
 	go.opentelemetry.io/otel v1.27.0
@@ -13,10 +13,10 @@ require (
 )
 
 require (
-	github.com/aws/aws-sdk-go-v2/internal/configsources v1.3.8 // indirect
-	github.com/aws/aws-sdk-go-v2/internal/endpoints/v2 v2.6.8 // indirect
+	github.com/aws/aws-sdk-go-v2/internal/configsources v1.3.10 // indirect
+	github.com/aws/aws-sdk-go-v2/internal/endpoints/v2 v2.6.10 // indirect
 	github.com/aws/aws-sdk-go-v2/service/internal/accept-encoding v1.11.2 // indirect
-	github.com/aws/aws-sdk-go-v2/service/internal/endpoint-discovery v1.9.9 // indirect
+	github.com/aws/aws-sdk-go-v2/service/internal/endpoint-discovery v1.9.11 // indirect
 	github.com/davecgh/go-spew v1.1.1 // indirect
 	github.com/go-logr/logr v1.4.2 // indirect
 	github.com/go-logr/stdr v1.2.2 // indirect

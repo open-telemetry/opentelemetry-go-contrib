@@ -14,8 +14,6 @@ import (
 
 type oldHTTPServer struct{}
 
-var _ HTTPServer = oldHTTPServer{}
-
 // RequestTraceAttrs returns trace attributes for an HTTP request received by a
 // server.
 //
