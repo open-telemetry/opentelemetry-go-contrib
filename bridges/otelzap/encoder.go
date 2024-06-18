@@ -18,7 +18,7 @@ var (
 	_ zapcore.ArrayEncoder  = (*arrayEncoder)(nil)
 )
 
-type newNameSpace struct {
+type namespace struct {
 	ns   string
 	kv   []log.KeyValue
 	next *newNameSpace
