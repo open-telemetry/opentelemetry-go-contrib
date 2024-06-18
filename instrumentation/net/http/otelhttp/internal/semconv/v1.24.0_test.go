@@ -15,7 +15,7 @@ import (
 
 func TestNewTraceRequest(t *testing.T) {
 	t.Setenv("OTEL_HTTP_CLIENT_COMPATIBILITY_MODE", "http/dup")
-	serv := NewHTTPServer()
+	serv := NewHTTPServer(nil)
 	want := func(req testServerReq) []attribute.KeyValue {
 		return []attribute.KeyValue{
 			attribute.String("http.request.method", "GET"),
