@@ -19,7 +19,7 @@ var (
 )
 
 type namespace struct {
-	ns   string
+	name string
 	kv   []log.KeyValue
 	next *newNameSpace
 }
