@@ -16,7 +16,6 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 - Add log support for the autoexport package. (#5733)
 - Add support for disabling the old runtime metrics using the `OTEL_GO_X_DEPRECATED_RUNTIME_METRICS=false` environment variable. (#5747)
 
-
 ### Fixed
 
 - The superfluous `response.WriteHeader` call in `go.opentelemetry.io/contrib/instrumentation/net/http/otelhttp` when the response writer is flushed. (#5634)
