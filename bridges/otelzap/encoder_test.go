@@ -259,7 +259,8 @@ func TestArrayEncoder(t *testing.T) {
 			},
 			expected: map[string]interface{}{"foo": int64(5)},
 		},
-		{desc: "object (no nested namespace) then string",
+		{
+			desc: "object (no nested namespace) then string",
 			f: func(e zapcore.ArrayEncoder) {
 				err := e.AppendArray(zapcore.ArrayMarshalerFunc(func(inner zapcore.ArrayEncoder) error {
 					err := inner.AppendObject(maybeNamespace{false})
