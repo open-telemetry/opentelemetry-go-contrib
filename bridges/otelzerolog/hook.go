@@ -43,8 +43,6 @@ type config struct {
 	provider  log.LoggerProvider
 	version   string
 	schemaURL string
-	
-	//Question: Do i need to define `levels []zerolog.Level`
 }
 
 func newConfig(options []Option) config {
@@ -56,8 +54,6 @@ func newConfig(options []Option) config {
 	if c.provider == nil {
 		c.provider = global.GetLoggerProvider()
 	}
-
-
 	return c
 }
 
@@ -127,8 +123,9 @@ func NewSeverityHook(name string, options ...Option) *SeverityHook {
 // OpenTelemetry. See package documentation for how conversions are made.
 type SeverityHook struct {
 	logger log.Logger
-	level zerolog.Level
+	level  zerolog.Level
 }
+
 // Level returns the log level configured for the SeverityHook.
 func (h *SeverityHook) Level() zerolog.Level {
 	return h.level

@@ -105,6 +105,7 @@ func TestNewSeverityHook(t *testing.T) {
 		})
 	}
 }
+
 func TestSeverityHook_Levels(t *testing.T) {
 	hook := &SeverityHook{
 		level: zerolog.DebugLevel,
@@ -112,4 +113,3 @@ func TestSeverityHook_Levels(t *testing.T) {
 
 	assert.Equal(t, zerolog.DebugLevel, hook.Level())
 }
-
