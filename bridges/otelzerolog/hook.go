@@ -122,7 +122,7 @@ func NewSeverityHook(name string, options ...Option) *SeverityHook {
 	}
 }
 
-// // Hook is a [zerolog.Hook] that sends all logging records it receives to
+// SeverityHook is a [zerolog.Hook] that sends all logging records it receives to
 // OpenTelemetry. See package documentation for how conversions are made.
 type SeverityHook struct {
 	logger log.Logger
