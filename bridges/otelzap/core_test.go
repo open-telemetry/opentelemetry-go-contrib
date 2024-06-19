@@ -50,6 +50,9 @@ func TestCore(t *testing.T) {
 
 	rec.Reset()
 
+	// TODO: Add WriteContext test case.
+	// TODO: Add WithContext test case.
+
 	// test child logger with accumulated fields
 	t.Run("With", func(t *testing.T) {
 		testCases := [][]string{{"test1", "value1"}, {"test2", "value2"}}
