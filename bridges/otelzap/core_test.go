@@ -192,7 +192,7 @@ func BenchmarkMultipleFields(b *testing.B) {
 			field: []zapcore.Field{
 				zap.Int16("a", 1),
 				zap.String("k", "a"),
-				zap.String("k", "a"),
+				zap.Bool("k", true),
 				zap.Time("k", time.Unix(1000, 1000)),
 				zap.Binary("k", []byte{1, 2}),
 				zap.Binary("k", []byte{1, 2}),
@@ -207,7 +207,7 @@ func BenchmarkMultipleFields(b *testing.B) {
 			field: []zapcore.Field{
 				zap.Int16("a", 1),
 				zap.String("k", "a"),
-				zap.String("k", "a"),
+				zap.Bool("k", true),
 				zap.Time("k", time.Unix(1000, 1000)),
 				zap.Binary("k", []byte{1, 2}),
 				zap.Binary("k", []byte{1, 2}),
@@ -227,7 +227,7 @@ func BenchmarkMultipleFields(b *testing.B) {
 	}
 
 	for _, bm := range benchmarks {
-		b.Run(bm.name, func(b *testing.B) {
+		b.Run(fmt.Sprint("Core Write", bm.name), func(b *testing.B) {
 			zc := NewCore(loggerName)
 			b.ReportAllocs()
 			b.RunParallel(func(pb *testing.PB) {
@@ -242,7 +242,7 @@ func BenchmarkMultipleFields(b *testing.B) {
 	}
 
 	for _, bm := range benchmarks {
-		b.Run(fmt.Sprint("Core with", bm.name), func(b *testing.B) {
+		b.Run(fmt.Sprint("Core Write Accumulated fields", bm.name), func(b *testing.B) {
 			zc := NewCore(loggerName)
 			zc1 := zc.With(bm.field)
 			b.ReportAllocs()
