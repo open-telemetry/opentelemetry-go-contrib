@@ -16,7 +16,6 @@ import (
 type mockLoggerProvider struct {
 	embedded.LoggerProvider
 }
-
 func (mockLoggerProvider) Logger(name string, options ...log.LoggerOption) log.Logger {
 	return nil
 }
@@ -108,10 +107,10 @@ func TestNewSeverityHook(t *testing.T) {
 
 func TestSeverityHook_Levels(t *testing.T) {
 	hook := &SeverityHook{
-		levels: zerolog.DebugLevel,
+		level: zerolog.DebugLevel,
 	}
 
-	assert.Equal(t, zerolog.DebugLevel, hook.Levels())
+	assert.Equal(t, zerolog.DebugLevel, hook.Level())
 }
 
 // TODO: Tests for the Run Method

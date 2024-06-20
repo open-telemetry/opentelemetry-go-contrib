@@ -34,6 +34,8 @@ package otelzerolog // import "go.opentelemetry.io/contrib/bridges/otelzerolog"
 
 import (
 	"fmt"
+	"reflect"
+	"time"
 
 	"github.com/rs/zerolog"
 
@@ -126,18 +128,18 @@ func NewSeverityHook(name string, options ...Option) *SeverityHook {
 // OpenTelemetry. See package documentation for how conversions are made.
 type SeverityHook struct {
 	logger log.Logger
-	levels zerolog.Level
+	level  zerolog.Level
 }
 
 // Levels returns the list of log levels we want to be sent to OpenTelemetry.
-func (h *SeverityHook) Levels() zerolog.Level {
-	return h.levels
+func (h *SeverityHook) Level() zerolog.Level {
+	return h.level
 }
 
 // Run handles the passed record, and sends it to OpenTelemetry.
 func (h SeverityHook) Run(e *zerolog.Event, level zerolog.Level, msg string) error {
 	if level != zerolog.NoLevel {
-		e.Str("severity", level.String())
+		e.Str(level.String(), msg)
 	}
 	h.logger.Emit(e.GetCtx(), h.convertEvent(e, level, msg))
 	return nil
@@ -147,48 +149,75 @@ func (h *SeverityHook) convertEvent(e *zerolog.Event, level zerolog.Level, msg s
 	var record log.Record
 	record.SetTimestamp(zerolog.TimestampFunc())
 	record.SetBody(log.StringValue(msg))
-	const sevOffset = zerolog.Level(log.SeverityDebug) - zerolog.DebugLevel
-	record.SetSeverity(log.Severity(level + sevOffset))
-	fields := extractFields(e)
-
-	record.AddAttributes(convertFields(fields, msg)...)
+	record.SetSeverity(log.Severity(level))
+	record.SetObservedTimestamp(time.Now())
+	record.AddAttributes(convertFields(e)...)
 	return record
 }
 
-func extractFields(_ *zerolog.Event) map[string]interface{} {
-	// Here you would implement the logic to extract fields from the zerolog event
-	// This might involve using reflection or zerolog internals if necessary
-	fields := make(map[string]interface{})
-	// Dummy implementation - replace with actual field extraction
+func convertFields(e *zerolog.Event) []log.KeyValue {
+	kvs := make([]log.KeyValue, 0)
 
-	return fields
-}
+	// Extract fields from the event and convert them
+	e.Fields(func(key string, value interface{}) {
+		kvs = append(kvs, log.KeyValue{
+			Key:   key,
+			Value: convertValue(value),
+		})
+	})
 
-func convertFields(fields map[string]interface{}, msg string) []log.KeyValue {
-	kvs := make([]log.KeyValue, 0, len(fields))
-	kvs = append(kvs, log.String("message", msg))
-	for k, v := range fields {
-		kvs = append(kvs, convertAttribute(k, v))
-	}
 	return kvs
 }
 
-func convertAttribute(key string, value interface{}) log.KeyValue {
-	switch v := value.(type) {
+func convertValue(v interface{}) log.Value {
+	switch v := v.(type) {
 	case bool:
-		return log.Bool(key, v)
+		return log.BoolValue(v)
 	case []byte:
-		return log.String(key, string(v))
+		return log.BytesValue(v)
 	case float64:
-		return log.Float64(key, v)
+		return log.Float64Value(v)
 	case int:
-		return log.Int(key, v)
+		return log.IntValue(v)
 	case int64:
-		return log.Int64(key, v)
+		return log.Int64Value(v)
 	case string:
-		return log.String(key, v)
-	default:
-		// Fallback to string representation for unhandled types
-		return log.String(key, fmt.Sprintf("%v", v))
+		return log.StringValue(v)
 	}
+
+	t := reflect.TypeOf(v)
+	if t == nil {
+		return log.Value{}
+	}
+	val := reflect.ValueOf(v)
+	switch t.Kind() {
+	case reflect.Struct:
+		return log.StringValue(fmt.Sprintf("%+v", v))
+	case reflect.Slice, reflect.Array:
+		items := make([]log.Value, 0, val.Len())
+		for i := 0; i < val.Len(); i++ {
+			items = append(items, convertValue(val.Index(i).Interface()))
+		}
+		return log.SliceValue(items...)
+	case reflect.Map:
+		kvs := make([]log.KeyValue, 0, val.Len())
+		for _, k := range val.MapKeys() {
+			var key string
+			// If the key is a struct, use %+v to print the struct fields.
+			if k.Kind() == reflect.Struct {
+				key = fmt.Sprintf("%+v", k.Interface())
+			} else {
+				key = fmt.Sprintf("%v", k.Interface())
+			}
+			kvs = append(kvs, log.KeyValue{
+				Key:   key,
+				Value: convertValue(val.MapIndex(k).Interface()),
+			})
+		}
+		return log.MapValue(kvs...)
+	case reflect.Ptr, reflect.Interface:
+		return convertValue(val.Elem().Interface())
+	}
+
+	return log.StringValue(fmt.Sprintf("unhandled attribute type: (%s) %+v", t, v))
 }
