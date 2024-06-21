@@ -82,6 +82,10 @@ module-sets:
     version: v0.0.1
     modules:
       - go.opentelemetry.io/contrib/processors/baggage/baggagetrace
+  experimental-detectors:
+    version: v0.0.1
+    modules:
+      - go.opentelemetry.io/contrib/detectors/azure/azurevm
 excluded-modules:
   - go.opentelemetry.io/contrib/bridges/otelzap
   - go.opentelemetry.io/contrib/instrgen
