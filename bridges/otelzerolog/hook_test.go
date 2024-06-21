@@ -1,21 +1,25 @@
 // Copyright The OpenTelemetry Authors
 // SPDX-License-Identifier: Apache-2.0
+
 package otelzerolog
 
 import (
+	"bytes"
+	// "context"
 	"testing"
-
+	// "time"
 	"github.com/rs/zerolog"
 	"github.com/stretchr/testify/assert"
-
 	"go.opentelemetry.io/otel/log"
-	"go.opentelemetry.io/otel/log/embedded"
 	"go.opentelemetry.io/otel/log/global"
+	"go.opentelemetry.io/otel/log/embedded"
+
 )
 
-type mockLoggerProvider struct {
+type mockLoggerProvider struct{
 	embedded.LoggerProvider
 }
+
 func (mockLoggerProvider) Logger(name string, options ...log.LoggerOption) log.Logger {
 	return nil
 }
@@ -26,7 +30,6 @@ func TestNewConfig(t *testing.T) {
 	for _, tt := range []struct {
 		name    string
 		options []Option
-
 		wantConfig config
 	}{
 		{
@@ -36,23 +39,13 @@ func TestNewConfig(t *testing.T) {
 			},
 		},
 		{
-			name: "with a custom version",
+			name: "with a custom instrumentation scope",
 			options: []Option{
-				WithVersion("1.0"),
+				WithVersion("42.0"),
 			},
 			wantConfig: config{
-				version:  "1.0",
+				version:  "42.0",
 				provider: global.GetLoggerProvider(),
-			},
-		},
-		{
-			name: "with a custom schema URL",
-			options: []Option{
-				WithSchemaURL("https://example.com"),
-			},
-			wantConfig: config{
-				schemaURL: "https://example.com",
-				provider:  global.GetLoggerProvider(),
 			},
 		},
 		{
@@ -64,6 +57,16 @@ func TestNewConfig(t *testing.T) {
 				provider: customLoggerProvider,
 			},
 		},
+		{
+			name: "with a schema URL",
+			options: []Option{
+				WithSchemaURL("https://example.com"),
+			},
+			wantConfig: config{
+				schemaURL: "https://example.com",
+				provider:  global.GetLoggerProvider(),
+			},
+		},
 	} {
 		t.Run(tt.name, func(t *testing.T) {
 			assert.Equal(t, tt.wantConfig, newConfig(tt.options))
@@ -72,21 +75,20 @@ func TestNewConfig(t *testing.T) {
 }
 
 func TestNewSeverityHook(t *testing.T) {
-	const name = "test-logger"
+	const name = "test_hook"
 	provider := global.GetLoggerProvider()
 
 	for _, tt := range []struct {
 		name    string
 		options []Option
-
 		wantLogger log.Logger
 	}{
 		{
-			name:       "with the default options",
+			name: "with default options",
 			wantLogger: provider.Logger(name),
 		},
 		{
-			name: "with a schema URL",
+			name: "with version and schema URL",
 			options: []Option{
 				WithVersion("1.0"),
 				WithSchemaURL("https://example.com"),
@@ -105,12 +107,50 @@ func TestNewSeverityHook(t *testing.T) {
 	}
 }
 
-func TestSeverityHook_Levels(t *testing.T) {
-	hook := &SeverityHook{
-		level: zerolog.DebugLevel,
+func TestSeverityHookLevels(t *testing.T) {
+	hook := NewSeverityHook("test")
+	expectedLevels := []zerolog.Level{
+		zerolog.PanicLevel,
+		zerolog.FatalLevel,
+		zerolog.ErrorLevel,
+		zerolog.WarnLevel,
+		zerolog.InfoLevel,
+		zerolog.DebugLevel,
 	}
 
-	assert.Equal(t, zerolog.DebugLevel, hook.Level())
+	assert.Equal(t, expectedLevels, hook.Levels())
 }
 
-// TODO: Tests for the Run Method
+func TestSeverityHookRun(t *testing.T) {
+	var buf bytes.Buffer
+	logger := zerolog.New(&buf).With().Timestamp().Logger()
+	hook := NewSeverityHook("test")
+
+	e := logger.Info()
+	level := zerolog.InfoLevel
+	msg := "test message"
+
+	err := hook.Run(e, level, msg)
+	assert.NoError(t, err)
+}
+
+//TODO
+func TestConvertEvent(t *testing.T) {
+
+}
+
+func BenchmarkSeverityHookRun(b *testing.B) {
+	var buf bytes.Buffer
+	logger := zerolog.New(&buf).With().Timestamp().Logger()
+	hook := NewSeverityHook("test")
+
+	e := logger.Info()
+	level := zerolog.InfoLevel
+	msg := "test message"
+
+	b.ReportAllocs()
+	b.ResetTimer()
+	for n := 0; n < b.N; n++ {
+		_ = hook.Run(e, level, msg)
+	}
+}
