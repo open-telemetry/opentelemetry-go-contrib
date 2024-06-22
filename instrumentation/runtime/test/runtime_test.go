@@ -132,4 +132,18 @@ func TestRuntimeWithLimit(t *testing.T) {
 		},
 	}
 	metricdatatest.AssertEqual(t, expectedScopeMetric, rm.ScopeMetrics[0], metricdatatest.IgnoreTimestamp(), metricdatatest.IgnoreValue())
+	assertNonZeroValues(t, rm.ScopeMetrics[0])
+}
+
+func assertNonZeroValues(t *testing.T, sm metricdata.ScopeMetrics) {
+	for _, m := range sm.Metrics {
+		switch a := m.Data.(type) {
+		case metricdata.Sum[int64]:
+			for _, dp := range a.DataPoints {
+				assert.True(t, dp.Value > 0)
+			}
+		default:
+			t.Fatalf("unexpected data type %v", a)
+		}
+	}
 }

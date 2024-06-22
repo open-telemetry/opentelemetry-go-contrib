@@ -191,9 +191,8 @@ func newCollector(minimumInterval time.Duration) *goCollector {
 		minimumInterval: minimumInterval,
 	}
 	for _, runtimeMetric := range runtimeMetrics {
-		s := metrics.Sample{Name: runtimeMetric}
-		g.sampleBuffer = append(g.sampleBuffer, s)
-		g.sampleMap[runtimeMetric] = &s
+		g.sampleBuffer = append(g.sampleBuffer, metrics.Sample{Name: runtimeMetric})
+		g.sampleMap[runtimeMetric] = &g.sampleBuffer[len(g.sampleBuffer)-1]
 	}
 	return g
 }
@@ -210,7 +209,7 @@ func (g *goCollector) refresh() {
 }
 
 func (g *goCollector) get(name string) int64 {
-	if s, ok := g.sampleMap[name]; ok {
+	if s, ok := g.sampleMap[name]; ok && s.Value.Kind() == metrics.KindUint64 {
 		return int64(s.Value.Uint64())
 	}
 	return 0
