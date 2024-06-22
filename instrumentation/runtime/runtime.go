@@ -186,12 +186,14 @@ type goCollector struct {
 
 func newCollector(minimumInterval time.Duration) *goCollector {
 	g := &goCollector{
-		sampleBuffer: make([]metrics.Sample, 0, len(runtimeMetrics)),
-		sampleMap:    make(map[string]*metrics.Sample, len(runtimeMetrics)),
+		sampleBuffer:    make([]metrics.Sample, 0, len(runtimeMetrics)),
+		sampleMap:       make(map[string]*metrics.Sample, len(runtimeMetrics)),
+		minimumInterval: minimumInterval,
 	}
 	for _, runtimeMetric := range runtimeMetrics {
-		g.sampleBuffer = append(g.sampleBuffer, metrics.Sample{Name: runtimeMetric})
-		g.sampleMap[runtimeMetric] = &g.sampleBuffer[len(g.sampleBuffer)-1]
+		s := metrics.Sample{Name: runtimeMetric}
+		g.sampleBuffer = append(g.sampleBuffer, s)
+		g.sampleMap[runtimeMetric] = &s
 	}
 	return g
 }
