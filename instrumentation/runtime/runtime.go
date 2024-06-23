@@ -197,6 +197,9 @@ func newCollector(minimumInterval time.Duration) *goCollector {
 	}
 	for _, runtimeMetric := range runtimeMetrics {
 		g.sampleBuffer = append(g.sampleBuffer, metrics.Sample{Name: runtimeMetric})
+		// sampleMap references a position in the sampleBuffer slice. If an
+		// element is appended to sampleBuffer, it must be added to sampleMap
+		// for the sample to be accessible in sampleMap.
 		g.sampleMap[runtimeMetric] = &g.sampleBuffer[len(g.sampleBuffer)-1]
 	}
 	return g
