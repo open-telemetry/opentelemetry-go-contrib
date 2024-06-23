@@ -5,6 +5,7 @@ package runtime // import "go.opentelemetry.io/contrib/instrumentation/runtime/t
 
 import (
 	"context"
+	"fmt"
 	"math"
 	"runtime/debug"
 	"testing"
@@ -140,7 +141,7 @@ func assertNonZeroValues(t *testing.T, sm metricdata.ScopeMetrics) {
 		switch a := m.Data.(type) {
 		case metricdata.Sum[int64]:
 			for _, dp := range a.DataPoints {
-				assert.True(t, dp.Value > 0)
+				assert.True(t, dp.Value > 0, fmt.Sprintf("Metric %q should have a non-zero value for point with attributes %+v", m.Name, dp.Attributes))
 			}
 		default:
 			t.Fatalf("unexpected data type %v", a)
