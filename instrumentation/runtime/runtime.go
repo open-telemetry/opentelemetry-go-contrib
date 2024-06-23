@@ -176,7 +176,11 @@ var runtimeMetrics = []string{
 }
 
 type goCollector struct {
-	lastCollect     time.Time
+	// now is used to replace the implementation of time.Now for testing
+	now func() time.Time
+	// lastCollect tracks the last time metrics were refreshed
+	lastCollect time.Time
+	// minimumInterval is the minimum amount of time between calls to metrics.Read
 	minimumInterval time.Duration
 	// sampleBuffer is populated by runtime/metrics
 	sampleBuffer []metrics.Sample
@@ -189,6 +193,7 @@ func newCollector(minimumInterval time.Duration) *goCollector {
 		sampleBuffer:    make([]metrics.Sample, 0, len(runtimeMetrics)),
 		sampleMap:       make(map[string]*metrics.Sample, len(runtimeMetrics)),
 		minimumInterval: minimumInterval,
+		now:             time.Now,
 	}
 	for _, runtimeMetric := range runtimeMetrics {
 		g.sampleBuffer = append(g.sampleBuffer, metrics.Sample{Name: runtimeMetric})
@@ -198,7 +203,7 @@ func newCollector(minimumInterval time.Duration) *goCollector {
 }
 
 func (g *goCollector) refresh() {
-	now := time.Now()
+	now := g.now()
 	if now.Sub(g.lastCollect) < g.minimumInterval {
 		// refresh was invoked more frequently than allowed by the minimum
 		// interval. Do nothing.
