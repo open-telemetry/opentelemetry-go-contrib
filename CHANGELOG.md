@@ -22,7 +22,7 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 - Custom attributes targeting metrics recorded by the `go.opentelemetry.io/contrib/instrumentation/net/http/otelhttp` are not ignored anymore. (#5129)
 - Use `c.FullPath()` method to set `http.route` attribute in `go.opentelemetry.io/contrib/instrumentation/github.com/gin-gonic/gin/otelgin`. (#5734)
 - The double setup in `go.opentelemetry.io/contrib/instrumentation/net/http/httptrace/otelhttptrace/example` that caused duplicate traces. (#5564)
-- Added status code check in `getSamplingRules` method to ensure only successful responses with status 200 are processed in `go.opentelemetry.io/contrib/samplers/aws/xray/internal/client.go`.
+- Added status code check in `getSamplingRules` method to ensure only successful responses with status 200 are processed in `go.opentelemetry.io/contrib/samplers/aws/xray/internal/client.go`. (#5795)
 
 
 ### Deprecated
