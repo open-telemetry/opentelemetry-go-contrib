@@ -261,3 +261,56 @@ func TestEndpointIsNotReachable(t *testing.T) {
 	_, err = client.getSamplingRules(context.Background())
 	assert.Error(t, err)
 }
+
+func TestGetSamplingRulesStatusCodeCheck(t *testing.T) {
+	tests := []struct {
+		name          string
+		statusCode    int
+		body          []byte
+		expectedError bool
+	}{
+		{
+			name:          "Success",
+			statusCode:    http.StatusOK,
+			body:          []byte(`{"SamplingRuleRecords":[{"SamplingRule":{"RuleName":"test-rule"}}]}`),
+			expectedError: false,
+		},
+		{
+			name:          "Client Error",
+			statusCode:    http.StatusBadRequest,
+			body:          []byte(`Bad Request`),
+			expectedError: true,
+		},
+		{
+			name:          "Server Error",
+			statusCode:    http.StatusInternalServerError,
+			body:          []byte(`Internal Server Error`),
+			expectedError: true,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			testServer := httptest.NewServer(http.HandlerFunc(func(res http.ResponseWriter, _ *http.Request) {
+				res.WriteHeader(tt.statusCode)
+				_, err := res.Write(tt.body)
+				require.NoError(t, err)
+			}))
+			t.Cleanup(testServer.Close)
+
+			u, err := url.Parse(testServer.URL)
+			require.NoError(t, err)
+
+			client, err := newClient(*u)
+			require.NoError(t, err)
+
+			ctx := context.Background()
+			_, err = client.getSamplingRules(ctx)
+			if tt.expectedError {
+				assert.Error(t, err)
+			} else {
+				assert.NoError(t, err)
+			}
+		})
+	}
+}

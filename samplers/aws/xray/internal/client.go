@@ -8,6 +8,7 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"io"
 	"net/http"
 	"net/url"
 )
@@ -139,6 +140,12 @@ func (c *xrayClient) getSamplingRules(ctx context.Context) (*getSamplingRulesOut
 	}
 	defer output.Body.Close()
 
+	// Check for a successful status code
+	if output.StatusCode != http.StatusOK {
+		body, _ := io.ReadAll(output.Body)
+		return nil, fmt.Errorf("xray client: received non-200 response: %d %s", output.StatusCode, string(body))
+	}
+
 	var samplingRulesOutput *getSamplingRulesOutput
 	if err := json.NewDecoder(output.Body).Decode(&samplingRulesOutput); err != nil {
 		return nil, fmt.Errorf("xray client: unable to unmarshal the response body: %w", err)
@@ -169,6 +176,12 @@ func (c *xrayClient) getSamplingTargets(ctx context.Context, s []*samplingStatis
 		return nil, fmt.Errorf("xray client: unable to retrieve sampling settings: %w", err)
 	}
 	defer output.Body.Close()
+
+	// Check for a successful status code
+	if output.StatusCode != http.StatusOK {
+		body, _ := io.ReadAll(output.Body)
+		return nil, fmt.Errorf("xray client: received non-200 response: %d %s", output.StatusCode, string(body))
+	}
 
 	var samplingTargetsOutput *getSamplingTargetsOutput
 	if err := json.NewDecoder(output.Body).Decode(&samplingTargetsOutput); err != nil {
