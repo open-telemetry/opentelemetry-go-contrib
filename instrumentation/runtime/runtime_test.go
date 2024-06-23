@@ -19,6 +19,7 @@ func TestRefreshGoCollector(t *testing.T) {
 	// before the first refresh, all counters are zero
 	assert.Zero(t, collector.get(goMemoryAllocations))
 	// after the first refresh, counters are non-zero
+	allocateMemory(buffer)
 	collector.refresh()
 	initialAllocations := collector.get(goMemoryAllocations)
 	assert.NotZero(t, initialAllocations)
@@ -35,13 +36,12 @@ func TestRefreshGoCollector(t *testing.T) {
 	assert.NotEqual(t, initialAllocations, collector.get(goMemoryAllocations))
 }
 
-func allocateMemory(buffer [][]byte) [][]byte {
-	newBuffer := make([]byte, 100000)
+func allocateMemory(buffer [][]byte) {
+	newBuffer := make([]byte, 1000000)
 	for i := range newBuffer {
 		newBuffer[i] = 0
 	}
 	buffer = append(buffer, newBuffer)
-	return buffer
 }
 
 func newClock() *clock {
