@@ -69,7 +69,6 @@ import (
 	"time"
 
 	"github.com/go-logr/logr"
-
 	"go.opentelemetry.io/otel/log"
 	"go.opentelemetry.io/otel/log/global"
 	"go.opentelemetry.io/otel/sdk/instrumentation"
@@ -77,8 +76,6 @@ import (
 
 const (
 	bridgeName = "go.opentelemetry.io/contrib/bridges/otellogr"
-	// nameKey is used to log the `WithName` values as an additional attribute.
-	nameKey = "logger"
 	// errorKey is used to log the error parameter of Error as an additional attribute.
 	errorKey = "error"
 )
@@ -184,6 +181,7 @@ func WithLevelSeverity(f func(int) log.Severity) Option {
 func NewLogSink(options ...Option) *LogSink {
 	c := newConfig(options)
 	return &LogSink{
+		config:        c,
 		logger:        c.logger(),
 		levelSeverity: c.levelSeverity,
 	}
@@ -195,7 +193,7 @@ type LogSink struct {
 	// Ensure forward compatibility by explicitly making this not comparable.
 	noCmp [0]func() //nolint: unused  // This is indeed used.
 
-	name          string
+	config        config
 	logger        log.Logger
 	levelSeverity func(int) log.Severity
 	values        []log.KeyValue
@@ -210,10 +208,6 @@ func (l *LogSink) log(err error, msg string, serverity log.Severity, kvList ...a
 	record.SetTimestamp(time.Now())
 	record.SetBody(log.StringValue(msg))
 	record.SetSeverity(serverity)
-
-	if l.name != "" {
-		record.AddAttributes(log.String(nameKey, l.name))
-	}
 
 	if err != nil {
 		record.AddAttributes(log.KeyValue{
@@ -264,14 +258,15 @@ func (l *LogSink) Init(info logr.RuntimeInfo) {
 
 // WithName returns a new LogSink with the specified name appended.
 func (l LogSink) WithName(name string) logr.LogSink {
-	newLogger := l
+	newConfig := l.config
+	newConfig.scope.Name = fmt.Sprintf("%s/%s", l.config.scope.Name, name)
 
-	if len(newLogger.name) > 0 {
-		newLogger.name += "/"
+	return &LogSink{
+		config:        newConfig,
+		logger:        newConfig.logger(),
+		levelSeverity: newConfig.levelSeverity,
+		values:        l.values,
 	}
-	newLogger.name += name
-
-	return &newLogger
 }
 
 // WithValues returns a new LogSink with additional key/value pairs.

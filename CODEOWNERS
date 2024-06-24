@@ -22,7 +22,7 @@
 
 CODEOWNERS @MrAlias @MadVikingGod @pellared @dashpole
 
-bridges/otellogr/                                                       @open-telemetry/go-approvers
+bridges/otellogr/                                                       @open-telemetry/go-approvers @scorpionknifes
 bridges/prometheus/                                                     @open-telemetry/go-approvers @dashpole
 
 config/                                                                 @open-telemetry/go-approvers @MadVikingGod @pellared @codeboten
