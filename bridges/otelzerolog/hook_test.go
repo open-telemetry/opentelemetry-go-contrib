@@ -72,22 +72,22 @@ func TestNewConfig(t *testing.T) {
 	}
 }
 
+
 func TestNewSeverityHook(t *testing.T) {
-	const name = "test-logger"
+	const name = "test_hook"
 	provider := global.GetLoggerProvider()
 
 	for _, tt := range []struct {
 		name    string
 		options []Option
-
 		wantLogger log.Logger
 	}{
 		{
-			name:       "with the default options",
+			name: "with default options",
 			wantLogger: provider.Logger(name),
 		},
 		{
-			name: "with a schema URL",
+			name: "with version and schema URL",
 			options: []Option{
 				WithVersion("1.0"),
 				WithSchemaURL("https://example.com"),
@@ -106,10 +106,16 @@ func TestNewSeverityHook(t *testing.T) {
 	}
 }
 
-func TestSeverityHook_Levels(t *testing.T) {
-	hook := &SeverityHook{
-		level: zerolog.DebugLevel,
+func TestSeverityHookLevels(t *testing.T) {
+	hook := NewSeverityHook("test")
+	expectedLevels := []zerolog.Level{
+		zerolog.PanicLevel,
+		zerolog.FatalLevel,
+		zerolog.ErrorLevel,
+		zerolog.WarnLevel,
+		zerolog.InfoLevel,
+		zerolog.DebugLevel,
 	}
 
-	assert.Equal(t, zerolog.DebugLevel, hook.Level())
+	assert.Equal(t, expectedLevels, hook.Levels())
 }

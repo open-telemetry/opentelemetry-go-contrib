@@ -116,6 +116,14 @@ func NewSeverityHook(name string, options ...Option) *SeverityHook {
 	cfg := newConfig(options)
 	return &SeverityHook{
 		logger: cfg.logger(name),
+		levels: []zerolog.Level{
+			zerolog.PanicLevel,
+			zerolog.FatalLevel,
+			zerolog.ErrorLevel,
+			zerolog.WarnLevel,
+			zerolog.InfoLevel,
+			zerolog.DebugLevel,
+		},
 	}
 }
 
@@ -123,10 +131,10 @@ func NewSeverityHook(name string, options ...Option) *SeverityHook {
 // OpenTelemetry. See package documentation for how conversions are made.
 type SeverityHook struct {
 	logger log.Logger
-	level  zerolog.Level
+	levels []zerolog.Level
 }
 
-// Level returns the log level configured for the SeverityHook.
-func (h *SeverityHook) Level() zerolog.Level {
-	return h.level
+// Levels returns the list of log levels we want to be sent to OpenTelemetry.
+func (h *SeverityHook) Levels() []zerolog.Level {
+	return h.levels
 }
