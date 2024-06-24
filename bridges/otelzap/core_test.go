@@ -242,7 +242,7 @@ func BenchmarkMultipleFields(b *testing.B) {
 	}
 
 	for _, bm := range benchmarks {
-		b.Run(fmt.Sprint("Core Write Accumulated fields", bm.name), func(b *testing.B) {
+		b.Run(fmt.Sprint("With", bm.name), func(b *testing.B) {
 			zc := NewCore(loggerName)
 			zc1 := zc.With(bm.field)
 			b.ReportAllocs()
