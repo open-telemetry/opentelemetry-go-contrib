@@ -24,7 +24,7 @@ var (
 	loggerName  = "name"
 	testKey     = "key"
 	testValue   = "value"
-	testentry   = zapcore.Entry{
+	testEntry   = zapcore.Entry{
 		Level:   zap.InfoLevel,
 		Message: testMessage,
 	}
