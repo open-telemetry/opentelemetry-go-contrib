@@ -37,7 +37,7 @@ func TestCore(t *testing.T) {
 		assert.Equal(t, zap.InfoLevel.String(), got.SeverityText())
 		assert.Equal(t, 1, got.AttributesLen())
 		got.WalkAttributes(func(kv log.KeyValue) bool {
-			assert.Equal(t, testKey, string(kv.Key))
+			assert.Equal(t, testKey, kv.Key)
 			assert.Equal(t, testValue, value2Result(kv.Value))
 			return true
 		})
@@ -62,7 +62,7 @@ func TestCore(t *testing.T) {
 
 		index := 0
 		got.WalkAttributes(func(kv log.KeyValue) bool {
-			assert.Equal(t, testCases[index][0], string(kv.Key))
+			assert.Equal(t, testCases[index][0], kv.Key)
 			assert.Equal(t, testCases[index][1], value2Result(kv.Value))
 			index++
 			return true
@@ -85,7 +85,7 @@ func TestCore(t *testing.T) {
 
 		index := 0
 		got.WalkAttributes(func(kv log.KeyValue) bool {
-			assert.Equal(t, testCases[index][0], string(kv.Key))
+			assert.Equal(t, testCases[index][0], kv.Key)
 			assert.Equal(t, testCases[index][1], value2Result(kv.Value))
 			index++
 			return true
