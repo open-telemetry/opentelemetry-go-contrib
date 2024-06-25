@@ -183,12 +183,12 @@ func TestConvertLevel(t *testing.T) {
 
 func BenchmarkCoreWrite(b *testing.B) {
 	benchmarks := []struct {
-		name  string
+		name   string
 		fields []zapcore.Field
 	}{
 		{
 			name: "10 fields",
-			field: []zapcore.Field{
+			fields: []zapcore.Field{
 				zap.Int16("a", 1),
 				zap.String("k", "a"),
 				zap.Bool("k", true),
@@ -203,7 +203,7 @@ func BenchmarkCoreWrite(b *testing.B) {
 		},
 		{
 			name: "20 fields",
-			field: []zapcore.Field{
+			fields: []zapcore.Field{
 				zap.Int16("a", 1),
 				zap.String("k", "a"),
 				zap.Bool("k", true),
@@ -223,6 +223,23 @@ func BenchmarkCoreWrite(b *testing.B) {
 				zap.Object("k", loggable{true}),
 			},
 		},
+		{ // Benchmark with nested namespace
+			name: "Namespace",
+			fields: []zapcore.Field{
+				zap.Namespace("a"),
+				zap.Int16("a", 1),
+				zap.String("k", "a"),
+				zap.Bool("k", true),
+				zap.Time("k", time.Unix(1000, 1000)),
+				zap.Binary("k", []byte{1, 2}),
+				zap.Namespace("b"),
+				zap.Binary("k", []byte{1, 2}),
+				zap.Object("k", loggable{true}),
+				zap.String("k", "a"),
+				zap.String("k", "a"),
+				zap.Ints("k", []int{1, 2}),
+			},
+		},
 	}
 
 	for _, bm := range benchmarks {
@@ -231,7 +248,7 @@ func BenchmarkCoreWrite(b *testing.B) {
 			b.ReportAllocs()
 			b.RunParallel(func(pb *testing.PB) {
 				for pb.Next() {
-					err := zc.Write(testentry, bm.field)
+					err := zc.Write(testEntry, bm.fields)
 					if err != nil {
 						b.Errorf("Unexpected error: %v", err)
 					}
@@ -243,11 +260,11 @@ func BenchmarkCoreWrite(b *testing.B) {
 	for _, bm := range benchmarks {
 		b.Run(fmt.Sprint("With", bm.name), func(b *testing.B) {
 			zc := NewCore(loggerName)
-			zc1 := zc.With(bm.field)
+			zc1 := zc.With(bm.fields)
 			b.ReportAllocs()
 			b.RunParallel(func(pb *testing.PB) {
 				for pb.Next() {
-					err := zc1.Write(testentry, []zapcore.Field{})
+					err := zc1.Write(testEntry, []zapcore.Field{})
 					if err != nil {
 						b.Errorf("Unexpected error: %v", err)
 					}
