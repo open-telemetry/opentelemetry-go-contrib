@@ -226,7 +226,7 @@ func BenchmarkCoreWrite(b *testing.B) {
 	}
 
 	for _, bm := range benchmarks {
-		b.Run(fmt.Sprint("Core Write", bm.name), func(b *testing.B) {
+		b.Run(bm.name, func(b *testing.B) {
 			zc := NewCore(loggerName)
 			b.ReportAllocs()
 			b.RunParallel(func(pb *testing.PB) {
