@@ -181,8 +181,7 @@ func TestConvertLevel(t *testing.T) {
 	}
 }
 
-// Benchmark with multiple Fields.
-func BenchmarkMultipleFields(b *testing.B) {
+func BenchmarkCoreWrite(b *testing.B) {
 	benchmarks := []struct {
 		name  string
 		field []zapcore.Field
