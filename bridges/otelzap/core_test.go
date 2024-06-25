@@ -184,7 +184,7 @@ func TestConvertLevel(t *testing.T) {
 func BenchmarkCoreWrite(b *testing.B) {
 	benchmarks := []struct {
 		name  string
-		field []zapcore.Field
+		fields []zapcore.Field
 	}{
 		{
 			name: "10 fields",
