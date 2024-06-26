@@ -29,6 +29,8 @@ var _ trace.SpanProcessor = (*SpanProcessor)(nil)
 // The Baggage span processor duplicates onto a span the attributes found
 // in Baggage in the parent context at the moment the span is started.
 // The predicate function is used to filter which baggage keys are added to the span.
+//
+// If baggageKeyPredicate is nil, all baggage members will be added.
 func New(baggageKeyPredicate BaggageKeyPredicate) trace.SpanProcessor {
 	return &SpanProcessor{
 		baggageKeyPredicate: baggageKeyPredicate,
@@ -37,8 +39,13 @@ func New(baggageKeyPredicate BaggageKeyPredicate) trace.SpanProcessor {
 
 // OnStart is called when a span is started and adds span attributes for baggage contents.
 func (processor SpanProcessor) OnStart(ctx context.Context, span trace.ReadWriteSpan) {
+	filter := processor.baggageKeyPredicate
+	if filter == nil {
+		filter = AllowAllBaggageKeys
+	}
+
 	for _, entry := range otelbaggage.FromContext(ctx).Members() {
-		if processor.baggageKeyPredicate(entry.Key()) {
+		if filter(entry.Key()) {
 			span.SetAttributes(attribute.String(entry.Key(), entry.Value()))
 		}
 	}
