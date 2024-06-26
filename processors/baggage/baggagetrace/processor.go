@@ -11,11 +11,11 @@ import (
 	"go.opentelemetry.io/otel/sdk/trace"
 )
 
-// BaggageKeyPredicate is a function that returns true if the baggage key should be added to the span.
-type BaggageKeyPredicate func(baggageKey string) bool
+// BaggageKeyPredicate is a function that returns true if the baggage member should be added to the span.
+type BaggageKeyPredicate func(member otelbaggage.Member) bool
 
-// AllowAllBaggageKeys is a BaggageKeyPredicate that allows all baggage keys.
-var AllowAllBaggageKeys = func(string) bool { return true }
+// AllowAllMembers is a BaggageKeyPredicate that allows all baggage keys.
+var AllowAllMembers BaggageKeyPredicate = func(otelbaggage.Member) bool { return true }
 
 // SpanProcessor is a processing pipeline for spans in the trace signal.
 type SpanProcessor struct {
@@ -37,9 +37,9 @@ func New(baggageKeyPredicate BaggageKeyPredicate) trace.SpanProcessor {
 
 // OnStart is called when a span is started and adds span attributes for baggage contents.
 func (processor SpanProcessor) OnStart(ctx context.Context, span trace.ReadWriteSpan) {
-	for _, entry := range otelbaggage.FromContext(ctx).Members() {
-		if processor.baggageKeyPredicate(entry.Key()) {
-			span.SetAttributes(attribute.String(entry.Key(), entry.Value()))
+	for _, member := range otelbaggage.FromContext(ctx).Members() {
+		if processor.baggageKeyPredicate(member) {
+			span.SetAttributes(attribute.String(member.Key(), member.Value()))
 		}
 	}
 }

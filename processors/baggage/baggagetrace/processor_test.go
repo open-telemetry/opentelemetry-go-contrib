@@ -42,7 +42,7 @@ func TestSpanProcessorAppendsAllBaggageAttributes(t *testing.T) {
 	// create trace provider with baggage processor and test exporter
 	exporter := NewTestExporter()
 	tp := trace.NewTracerProvider(
-		trace.WithSpanProcessor(New(AllowAllBaggageKeys)),
+		trace.WithSpanProcessor(New(AllowAllMembers)),
 		trace.WithSpanProcessor(trace.NewSimpleSpanProcessor(exporter)),
 	)
 
@@ -63,8 +63,8 @@ func TestSpanProcessorAppendsBaggageAttributesWithHaPrefixPredicate(t *testing.T
 	baggage = addEntryToBaggage(t, baggage, "baggage.test", "baggage value")
 	ctx := otelbaggage.ContextWithBaggage(context.Background(), baggage)
 
-	baggageKeyPredicate := func(key string) bool {
-		return strings.HasPrefix(key, "baggage.")
+	baggageKeyPredicate := func(m otelbaggage.Member) bool {
+		return strings.HasPrefix(m.Key(), "baggage.")
 	}
 
 	// create trace provider with baggage processor and test exporter
@@ -92,8 +92,8 @@ func TestSpanProcessorAppendsBaggageAttributesWithRegexPredicate(t *testing.T) {
 	ctx := otelbaggage.ContextWithBaggage(context.Background(), baggage)
 
 	expr := regexp.MustCompile(`^baggage\..*`)
-	baggageKeyPredicate := func(key string) bool {
-		return expr.MatchString(key)
+	baggageKeyPredicate := func(m otelbaggage.Member) bool {
+		return expr.MatchString(m.Key())
 	}
 
 	// create trace provider with baggage processor and test exporter
@@ -121,8 +121,8 @@ func TestOnlyAddsBaggageEntriesThatMatchPredicate(t *testing.T) {
 	baggage = addEntryToBaggage(t, baggage, "foo", "bar")
 	ctx := otelbaggage.ContextWithBaggage(context.Background(), baggage)
 
-	baggageKeyPredicate := func(key string) bool {
-		return key == "baggage.test"
+	baggageKeyPredicate := func(m otelbaggage.Member) bool {
+		return m.Key() == "baggage.test"
 	}
 
 	// create trace provider with baggage processor and test exporter
