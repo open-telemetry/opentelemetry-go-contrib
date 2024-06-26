@@ -24,6 +24,8 @@ linters:
     - staticcheck
     - tenv
     - typecheck
+    - unconvert
+    - unparam
     - unused
 
 issues:

@@ -138,7 +138,7 @@ func TestNotFoundIsNotError(t *testing.T) {
 
 func assertSpan(t *testing.T, span sdktrace.ReadOnlySpan, name string, kind trace.SpanKind, attrs ...attribute.KeyValue) {
 	assert.Equal(t, name, span.Name())
-	assert.Equal(t, trace.SpanKindServer, span.SpanKind())
+	assert.Equal(t, kind, span.SpanKind())
 
 	got := make(map[attribute.Key]attribute.Value, len(span.Attributes()))
 	for _, a := range span.Attributes() {
