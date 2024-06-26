@@ -14,14 +14,15 @@ import (
 	"strings"
 	"testing"
 
-	"go.opentelemetry.io/collector/pdata/pmetric/pmetricotlp"
-	prometheusbridge "go.opentelemetry.io/contrib/bridges/prometheus"
-	"go.opentelemetry.io/otel"
-	"go.opentelemetry.io/otel/sdk/metric"
-
 	"github.com/prometheus/client_golang/prometheus"
 	"github.com/stretchr/testify/assert"
 	"go.uber.org/goleak"
+	"google.golang.org/protobuf/proto"
+
+	prometheusbridge "go.opentelemetry.io/contrib/bridges/prometheus"
+	"go.opentelemetry.io/otel"
+	"go.opentelemetry.io/otel/sdk/metric"
+	otlpmetrics "go.opentelemetry.io/proto/otlp/collector/metrics/v1"
 )
 
 func TestMetricExporterNone(t *testing.T) {
@@ -135,11 +136,13 @@ func TestMetricProducerPrometheusWithOTLPExporter(t *testing.T) {
 		assert.NoError(t, r.Body.Close())
 
 		// Now parse the otlp proto message from request body.
-		req := pmetricotlp.NewExportRequest()
-		assert.NoError(t, req.UnmarshalProto(body))
+		req := &otlpmetrics.ExportMetricsServiceRequest{}
+		assert.NoError(t, proto.Unmarshal(body, req))
 
 		// This is 0 without the producer registered.
-		assert.NotZero(t, req.Metrics().MetricCount())
+		assert.NotZero(t, req.ResourceMetrics)
+		assert.NotZero(t, req.ResourceMetrics[0].ScopeMetrics)
+		assert.NotZero(t, req.ResourceMetrics[0].ScopeMetrics[0].Metrics)
 		close(requestWaitChan)
 	}))
 
@@ -263,16 +266,16 @@ func TestMultipleMetricProducerWithOTLPExporter(t *testing.T) {
 		assert.NoError(t, r.Body.Close())
 
 		// Now parse the otlp proto message from request body.
-		req := pmetricotlp.NewExportRequest()
-		assert.NoError(t, req.UnmarshalProto(body))
+		req := &otlpmetrics.ExportMetricsServiceRequest{}
+		assert.NoError(t, proto.Unmarshal(body, req))
 
 		metricNames := []string{}
-		sm := req.Metrics().ResourceMetrics().At(0).ScopeMetrics()
+		sm := req.ResourceMetrics[0].ScopeMetrics
 
-		for i := 0; i < sm.Len(); i++ {
-			m := sm.At(i).Metrics()
-			for i := 0; i < m.Len(); i++ {
-				metricNames = append(metricNames, m.At(i).Name())
+		for i := 0; i < len(sm); i++ {
+			m := sm[i].Metrics
+			for i := 0; i < len(m); i++ {
+				metricNames = append(metricNames, m[i].Name)
 			}
 		}
 

@@ -34,6 +34,7 @@ func TestCore(t *testing.T) {
 		got := rec.Result()[0].Records[0]
 		assert.Equal(t, testMessage, got.Body().AsString())
 		assert.Equal(t, log.SeverityInfo, got.Severity())
+		assert.Equal(t, zap.InfoLevel.String(), got.SeverityText())
 		assert.Equal(t, 1, got.AttributesLen())
 		got.WalkAttributes(func(kv log.KeyValue) bool {
 			assert.Equal(t, testKey, string(kv.Key))
@@ -44,6 +45,9 @@ func TestCore(t *testing.T) {
 
 	rec.Reset()
 
+	// TODO: Add WriteContext test case.
+	// TODO: Add WithContext test case.
+
 	// test child logger with accumulated fields
 	t.Run("With", func(t *testing.T) {
 		testCases := [][]string{{"test1", "value1"}, {"test2", "value2"}}
@@ -53,6 +57,7 @@ func TestCore(t *testing.T) {
 		got := rec.Result()[0].Records[0]
 		assert.Equal(t, testMessage, got.Body().AsString())
 		assert.Equal(t, log.SeverityInfo, got.Severity())
+		assert.Equal(t, zap.InfoLevel.String(), got.SeverityText())
 		assert.Equal(t, 2, got.AttributesLen())
 
 		index := 0
@@ -75,6 +80,7 @@ func TestCore(t *testing.T) {
 		got := rec.Result()[0].Records[0]
 		assert.Equal(t, testMessage, got.Body().AsString())
 		assert.Equal(t, log.SeverityInfo, got.Severity())
+		assert.Equal(t, zap.InfoLevel.String(), got.SeverityText())
 		assert.Equal(t, 3, got.AttributesLen())
 
 		index := 0
@@ -110,6 +116,7 @@ func TestCoreEnabled(t *testing.T) {
 	got := r.Result()[0].Records[0]
 	assert.Equal(t, testMessage, got.Body().AsString())
 	assert.Equal(t, log.SeverityInfo, got.Severity())
+	assert.Equal(t, zap.InfoLevel.String(), got.SeverityText())
 }
 
 func TestNewCoreConfiguration(t *testing.T) {

@@ -11,47 +11,38 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 ### Added
 
 - The `go.opentelemetry.io/contrib/config` add support to configure periodic reader interval and timeout. (#5661)
+- Add the new `go.opentelemetry.io/contrib/detectors/azure/azurevm` package to provide a resource detector for Azure VMs. (#5422)
+- Add support to configure views when creating MeterProvider using the config package. (#5654)
+- Add log support for the autoexport package. (#5733)
+- Add support for disabling the old runtime metrics using the `OTEL_GO_X_DEPRECATED_RUNTIME_METRICS=false` environment variable. (#5747)
 
 ### Fixed
 
 - The superfluous `response.WriteHeader` call in `go.opentelemetry.io/contrib/instrumentation/net/http/otelhttp` when the response writer is flushed. (#5634)
 - Custom attributes targeting metrics recorded by the `go.opentelemetry.io/contrib/instrumentation/net/http/otelhttp` are not ignored anymore. (#5129)
+- Use `c.FullPath()` method to set `http.route` attribute in `go.opentelemetry.io/contrib/instrumentation/github.com/gin-gonic/gin/otelgin`. (#5734)
+- The double setup in `go.opentelemetry.io/contrib/instrumentation/net/http/httptrace/otelhttptrace/example` that caused duplicate traces. (#5564)
 
 ### Deprecated
 
 - The `go.opentelemetry.io/contrib/instrumentation/go.mongodb.org/mongo-driver/mongo/otelmongo` package is deprecated.
   If you would like to become a Code Owner of this module and prevent it from being removed, see [#5551]. (#5598)
-- The `go.opentelemetry.io/contrib/detectors/aws/lambda` package is deprecated.
-  If you would like to become a Code Owner of this module and prevent it from being removed, see [#5545]. (#5641)
-- The `go.opentelemetry.io/contrib/instrumentation/github.com/aws/aws-lambda-go/otellambda` package is deprecated.
-  If you would like to become a Code Owner of this module and prevent it from being removed, see [#5546]. (#5642)
-- The `go.opentelemetry.io/contrib/instrumentation/github.com/aws/aws-sdk-go-v2/otelaws` package is deprecated.
-  If you would like to become a Code Owner of this module and prevent it from being removed, see [#5547]. (#5643)
-- The `go.opentelemetry.io/contrib/instrumentation/github.com/gorilla/mux/otelmux` package is deprecated.
-  If you would like to become a Code Owner of this module and prevent it from being removed, see [#5549]. (#5644)
 - The `go.opentelemetry.io/contrib/instrumentation/github.com/labstack/echo/otelecho` package is deprecated.
   If you would like to become a Code Owner of this module and prevent it from being removed, see [#5550]. (#5645)
 - The `go.opentelemetry.io/contrib/instrumentation/gopkg.in/macaron.v1/otelmacaron` package is deprecated.
   If you would like to become a Code Owner of this module and prevent it from being removed, see [#5552]. (#5646)
-- The `go.opentelemetry.io/contrib/propagators/aws` package is deprecated.
-  If you would like to become a Code Owner of this module and prevent it from being removed, see [#5553]. (#5647)
 - The `go.opentelemetry.io/contrib/samplers/aws/xray` package is deprecated.
   If you would like to become a Code Owner of this module and prevent it from being removed, see [#5554]. (#5647)
 
-[#5545]: https://github.com/open-telemetry/opentelemetry-go-contrib/issues/5545
-[#5546]: https://github.com/open-telemetry/opentelemetry-go-contrib/issues/5546
-[#5547]: https://github.com/open-telemetry/opentelemetry-go-contrib/issues/5547
-[#5549]: https://github.com/open-telemetry/opentelemetry-go-contrib/issues/5549
 [#5550]: https://github.com/open-telemetry/opentelemetry-go-contrib/issues/5550
 [#5551]: https://github.com/open-telemetry/opentelemetry-go-contrib/issues/5551
 [#5552]: https://github.com/open-telemetry/opentelemetry-go-contrib/issues/5552
-[#5553]: https://github.com/open-telemetry/opentelemetry-go-contrib/issues/5553
 [#5554]: https://github.com/open-telemetry/opentelemetry-go-contrib/issues/5554
 
 ### Changed
 
-- Improve performance of `go.opentelemetry.io/contrib/instrumentation/google.golang.org/grpc/otelgrpc` with the usage of `WithAttributeSet()` instead of `WithAttribute()`. (#5664) 
-- Improve performance of `go.opentelemetry.io/contrib/instrumentation/net/http/otelhttp` with the usage of `WithAttributeSet()` instead of `WithAttribute()`. (#5664) 
+- Improve performance of `go.opentelemetry.io/contrib/instrumentation/google.golang.org/grpc/otelgrpc` with the usage of `WithAttributeSet()` instead of `WithAttribute()`. (#5664)
+- Improve performance of `go.opentelemetry.io/contrib/instrumentation/net/http/otelhttp` with the usage of `WithAttributeSet()` instead of `WithAttribute()`. (#5664)
 
 ## [1.27.0/0.52.0/0.21.0/0.7.0/0.2.0] - 2024-05-21
 
@@ -77,12 +68,15 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 - The gRPC trace `Filter` for interceptor is renamed to `InterceptorFilter`. (#5196)
 - The gRPC trace filter functions `Any`, `All`, `None`, `Not`, `MethodName`, `MethodPrefix`, `FullMethodName`, `ServiceName`, `ServicePrefix` and `HealthCheck` for interceptor are moved to `go.opentelemetry.io/contrib/instrumentation/google.golang.org/grpc/otelgrpc/filters/interceptor`.
   With this change, the filters in `go.opentelemetry.io/contrib/instrumentation/google.golang.org/grpc/otelgrpc` are now working for stats handler. (#5196)
+- `NewSDK` in `go.opentelemetry.io/contrib/config` now returns a configured SDK with a valid `LoggerProvider`. (#5427)
 
 - `NewLogger` now accepts a `name` `string` as the first argument.
   This parameter is used as a replacement of `WithInstrumentationScope` to specify the name of the logger backing the underlying `Handler`. (#5588)
 - `NewHandler` now accepts a `name` `string` as the first argument.
   This parameter is used as a replacement of `WithInstrumentationScope` to specify the name of the logger backing the returned `Handler`. (#5588)
 - Upgrade all dependencies of `go.opentelemetry.io/otel/semconv/v1.24.0` to `go.opentelemetry.io/otel/semconv/v1.25.0`. (#5605)
+
+- Update the span processor in `go.opentelemetry.io/contrib/processors/baggage/baggagetrace` to require a baggage key predicate. (#5619)
 
 ### Removed
 
