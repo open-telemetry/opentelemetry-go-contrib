@@ -7,7 +7,7 @@ import (
 	"context"
 
 	"go.opentelemetry.io/otel/attribute"
-	otelbaggage "go.opentelemetry.io/otel/baggage"
+	"go.opentelemetry.io/otel/baggage"
 	"go.opentelemetry.io/otel/sdk/trace"
 )
 
@@ -37,7 +37,7 @@ func New(baggageKeyPredicate BaggageKeyPredicate) trace.SpanProcessor {
 
 // OnStart is called when a span is started and adds span attributes for baggage contents.
 func (processor SpanProcessor) OnStart(ctx context.Context, span trace.ReadWriteSpan) {
-	for _, entry := range otelbaggage.FromContext(ctx).Members() {
+	for _, entry := range baggage.FromContext(ctx).Members() {
 		if processor.baggageKeyPredicate(entry.Key()) {
 			span.SetAttributes(attribute.String(entry.Key(), entry.Value()))
 		}
