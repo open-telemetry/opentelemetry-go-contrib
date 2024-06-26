@@ -156,7 +156,6 @@ func (o *Core) Write(ent zapcore.Entry, fields []zapcore.Field) error {
 	r.SetSeverity(convertLevel(ent.Level))
 	r.SetSeverityText(ent.Level.String())
 
-	// TODO: Handle zap.Namespace.
 	// TODO: Handle ent.LoggerName.
 
 	r.AddAttributes(o.attr...)
