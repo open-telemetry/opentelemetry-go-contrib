@@ -44,6 +44,7 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 
 - Improve performance of `go.opentelemetry.io/contrib/instrumentation/google.golang.org/grpc/otelgrpc` with the usage of `WithAttributeSet()` instead of `WithAttribute()`. (#5664)
 - Improve performance of `go.opentelemetry.io/contrib/instrumentation/net/http/otelhttp` with the usage of `WithAttributeSet()` instead of `WithAttribute()`. (#5664)
+- Update `go.opentelemetry.io/contrib/config` to latest released configuration schema which introduces breaking changes where `Attributes` is now a `map[string]interface{}`. (#5758)
 
 ## [1.27.0/0.52.0/0.21.0/0.7.0/0.2.0] - 2024-05-21
 

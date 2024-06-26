@@ -63,8 +63,8 @@ func TestNewResource(t *testing.T) {
 			name: "resource-with-attributes-invalid-schema",
 			config: &Resource{
 				SchemaUrl: ptr("https://opentelemetry.io/invalid-schema"),
-				Attributes: &Attributes{
-					ServiceName: ptr("service-a"),
+				Attributes: Attributes{
+					"service.name": "service-a",
 				},
 			},
 			wantResource: resource.NewSchemaless(res.Attributes()...),
@@ -73,8 +73,8 @@ func TestNewResource(t *testing.T) {
 		{
 			name: "resource-with-attributes-and-schema",
 			config: &Resource{
-				Attributes: &Attributes{
-					ServiceName: ptr("service-a"),
+				Attributes: Attributes{
+					"service.name": "service-a",
 				},
 				SchemaUrl: ptr(semconv.SchemaURL),
 			},
@@ -83,25 +83,23 @@ func TestNewResource(t *testing.T) {
 		{
 			name: "resource-with-additional-attributes-and-schema",
 			config: &Resource{
-				Attributes: &Attributes{
-					ServiceName: ptr("service-a"),
-					AdditionalProperties: map[string]any{
-						"attr-bool":    true,
-						"attr-int64":   int64(-164),
-						"attr-uint64":  uint64(164),
-						"attr-float64": float64(64.0),
-						"attr-int8":    int8(-18),
-						"attr-uint8":   uint8(18),
-						"attr-int16":   int16(-116),
-						"attr-uint16":  uint16(116),
-						"attr-int32":   int32(-132),
-						"attr-uint32":  uint32(132),
-						"attr-float32": float32(32.0),
-						"attr-int":     int(-1),
-						"attr-uint":    uint(1),
-						"attr-string":  "string-val",
-						"attr-default": other,
-					},
+				Attributes: Attributes{
+					"service.name": "service-a",
+					"attr-bool":    true,
+					"attr-int64":   int64(-164),
+					"attr-uint64":  uint64(164),
+					"attr-float64": float64(64.0),
+					"attr-int8":    int8(-18),
+					"attr-uint8":   uint8(18),
+					"attr-int16":   int16(-116),
+					"attr-uint16":  uint16(116),
+					"attr-int32":   int32(-132),
+					"attr-uint32":  uint32(132),
+					"attr-float32": float32(32.0),
+					"attr-int":     int(-1),
+					"attr-uint":    uint(1),
+					"attr-string":  "string-val",
+					"attr-default": other,
 				},
 				SchemaUrl: ptr(semconv.SchemaURL),
 			},
