@@ -17,19 +17,20 @@ type BaggageKeyPredicate func(baggageKey string) bool
 // AllowAllBaggageKeys is a BaggageKeyPredicate that allows all baggage keys.
 var AllowAllBaggageKeys = func(string) bool { return true }
 
-// SpanProcessor is a processing pipeline for spans in the trace signal.
+// SpanProcessor is a [trace.SpanProcessor] implementation that adds baggage
+// members onto a span as attributes.
 type SpanProcessor struct {
 	baggageKeyPredicate BaggageKeyPredicate
 }
 
 var _ trace.SpanProcessor = (*SpanProcessor)(nil)
 
-// New returns a new SpanProcessor.
+// New returns a new [SpanProcessor].
 //
 // The Baggage span processor duplicates onto a span the attributes found
 // in Baggage in the parent context at the moment the span is started.
 // The predicate function is used to filter which baggage keys are added to the span.
-func New(baggageKeyPredicate BaggageKeyPredicate) trace.SpanProcessor {
+func New(baggageKeyPredicate BaggageKeyPredicate) *SpanProcessor {
 	return &SpanProcessor{
 		baggageKeyPredicate: baggageKeyPredicate,
 	}
