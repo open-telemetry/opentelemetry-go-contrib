@@ -24,6 +24,7 @@ linters:
     - staticcheck
     - typecheck
     - unconvert
+    - unparam
     - unused
 
 issues:

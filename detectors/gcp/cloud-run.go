@@ -50,7 +50,7 @@ func NewCloudRun() *CloudRun {
 	}
 }
 
-func (c *CloudRun) cloudRegion(ctx context.Context) (string, error) {
+func (c *CloudRun) cloudRegion() (string, error) {
 	region, err := c.mc.Get("instance/region")
 	if err != nil {
 		return "", err
@@ -84,7 +84,7 @@ func (c *CloudRun) Detect(ctx context.Context) (*resource.Resource, error) {
 		attributes = append(attributes, semconv.CloudAccountID(projectID))
 	}
 
-	if region, err := c.cloudRegion(ctx); hasProblem(err) {
+	if region, err := c.cloudRegion(); hasProblem(err) {
 		errInfo = append(errInfo, err.Error())
 	} else if region != "" {
 		attributes = append(attributes, semconv.CloudRegion(region))
