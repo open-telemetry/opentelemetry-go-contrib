@@ -42,7 +42,7 @@ func getObjectEncoder() (obj *objectEncoder, free func()) {
 		obj.root.attrs = obj.root.attrs[:0]
 		obj.root.name = ""
 		obj.root.next = nil
-		obj.cur = obj.root
+		obj.cur.attrs = obj.cur.attrs[:0]
 		objectEncoderPool.Put(obj)
 	}
 }
@@ -230,7 +230,6 @@ type arrayEncoder struct {
 }
 
 func (a *arrayEncoder) AppendArray(v zapcore.ArrayMarshaler) error {
-	// TODO: Use arrayEncoder from a pool.
 	arr := &arrayEncoder{}
 	err := v.MarshalLogArray(arr)
 	a.elems = append(a.elems, log.SliceValue(arr.elems...))
@@ -238,7 +237,6 @@ func (a *arrayEncoder) AppendArray(v zapcore.ArrayMarshaler) error {
 }
 
 func (a *arrayEncoder) AppendObject(v zapcore.ObjectMarshaler) error {
-	// TODO: Use objectEncoder from a pool.
 	m := newObjectEncoder(2)
 	err := v.MarshalLogObject(m)
 	m.calculate(m.root)
