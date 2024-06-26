@@ -23,7 +23,7 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 - Use `c.FullPath()` method to set `http.route` attribute in `go.opentelemetry.io/contrib/instrumentation/github.com/gin-gonic/gin/otelgin`. (#5734)
 - The double setup in `go.opentelemetry.io/contrib/instrumentation/net/http/httptrace/otelhttptrace/example` that caused duplicate traces. (#5564)
 - Out-of-bounds panic in case of invalid span ID in `go.opentelemetry.io/contrib/propagators/b3`. (#5754)
-- Do not panic if a zero-value `SpanProcessor` is used from `go.opentelemetry.io/contrib/processors/baggage/baggagetrace`. (#TBD)
+- Do not panic if a zero-value `SpanProcessor` is used from `go.opentelemetry.io/contrib/processors/baggage/baggagetrace`. (#5811)
 
 ### Deprecated
 
