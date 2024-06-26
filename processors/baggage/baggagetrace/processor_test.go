@@ -168,8 +168,8 @@ func TestZeroSpanProcessorNoPanic(t *testing.T) {
 	assert.NotPanics(t, func() {
 		sp.OnStart(ctx, rwS)
 		sp.OnEnd(roS)
-		sp.ForceFlush(ctx)
-		sp.Shutdown(ctx)
+		_ = sp.ForceFlush(ctx)
+		_ = sp.Shutdown(ctx)
 	})
 }
 
