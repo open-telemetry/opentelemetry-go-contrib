@@ -125,8 +125,6 @@ See the [public meeting notes](https://docs.google.com/document/d/1E5e7Ld0NuU1iV
 
 Approvers:
 
-- [Evan Torrie](https://github.com/evantorrie), Verizon Media
-- [Josh MacDonald](https://github.com/jmacd), LightStep
 - [Sam Xie](https://github.com/XSAM), Cisco/AppDynamics
 - [Chester Cheung](https://github.com/hanyuancheung), Tencent
 - [Damien Mathieu](https://github.com/dmathieu), Elastic
@@ -141,7 +139,9 @@ Maintainers:
 Emeritus:
 
 - [Gustavo Silva Paiva](https://github.com/paivagustavo), LightStep
+- [Josh MacDonald](https://github.com/jmacd), LightStep
 - [Anthony Mirabella](https://github.com/Aneurysm9), Amazon
+- [Evan Torrie](https://github.com/evantorrie), Yahoo
 
 ### Become an Approver or a Maintainer
 

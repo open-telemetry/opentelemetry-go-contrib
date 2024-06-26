@@ -5,7 +5,9 @@ package otelzap
 
 import (
 	"context"
+	"fmt"
 	"testing"
+	"time"
 
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
@@ -22,6 +24,10 @@ var (
 	loggerName  = "name"
 	testKey     = "key"
 	testValue   = "value"
+	testEntry   = zapcore.Entry{
+		Level:   zap.InfoLevel,
+		Message: testMessage,
+	}
 )
 
 func TestCore(t *testing.T) {
@@ -34,9 +40,10 @@ func TestCore(t *testing.T) {
 		got := rec.Result()[0].Records[0]
 		assert.Equal(t, testMessage, got.Body().AsString())
 		assert.Equal(t, log.SeverityInfo, got.Severity())
+		assert.Equal(t, zap.InfoLevel.String(), got.SeverityText())
 		assert.Equal(t, 1, got.AttributesLen())
 		got.WalkAttributes(func(kv log.KeyValue) bool {
-			assert.Equal(t, testKey, string(kv.Key))
+			assert.Equal(t, testKey, kv.Key)
 			assert.Equal(t, testValue, value2Result(kv.Value))
 			return true
 		})
@@ -56,11 +63,12 @@ func TestCore(t *testing.T) {
 		got := rec.Result()[0].Records[0]
 		assert.Equal(t, testMessage, got.Body().AsString())
 		assert.Equal(t, log.SeverityInfo, got.Severity())
+		assert.Equal(t, zap.InfoLevel.String(), got.SeverityText())
 		assert.Equal(t, 2, got.AttributesLen())
 
 		index := 0
 		got.WalkAttributes(func(kv log.KeyValue) bool {
-			assert.Equal(t, testCases[index][0], string(kv.Key))
+			assert.Equal(t, testCases[index][0], kv.Key)
 			assert.Equal(t, testCases[index][1], value2Result(kv.Value))
 			index++
 			return true
@@ -78,11 +86,12 @@ func TestCore(t *testing.T) {
 		got := rec.Result()[0].Records[0]
 		assert.Equal(t, testMessage, got.Body().AsString())
 		assert.Equal(t, log.SeverityInfo, got.Severity())
+		assert.Equal(t, zap.InfoLevel.String(), got.SeverityText())
 		assert.Equal(t, 3, got.AttributesLen())
 
 		index := 0
 		got.WalkAttributes(func(kv log.KeyValue) bool {
-			assert.Equal(t, testCases[index][0], string(kv.Key))
+			assert.Equal(t, testCases[index][0], kv.Key)
 			assert.Equal(t, testCases[index][1], value2Result(kv.Value))
 			index++
 			return true
@@ -113,6 +122,7 @@ func TestCoreEnabled(t *testing.T) {
 	got := r.Result()[0].Records[0]
 	assert.Equal(t, testMessage, got.Body().AsString())
 	assert.Equal(t, log.SeverityInfo, got.Severity())
+	assert.Equal(t, zap.InfoLevel.String(), got.SeverityText())
 }
 
 func TestNewCoreConfiguration(t *testing.T) {
@@ -172,5 +182,101 @@ func TestConvertLevel(t *testing.T) {
 		if result != test.expectedSev {
 			t.Errorf("For level %v, expected %v but got %v", test.level, test.expectedSev, result)
 		}
+	}
+}
+
+func BenchmarkCoreWrite(b *testing.B) {
+	benchmarks := []struct {
+		name   string
+		fields []zapcore.Field
+	}{
+		{
+			name: "10 fields",
+			fields: []zapcore.Field{
+				zap.Int16("a", 1),
+				zap.String("k", "a"),
+				zap.Bool("k", true),
+				zap.Time("k", time.Unix(1000, 1000)),
+				zap.Binary("k", []byte{1, 2}),
+				zap.ByteString("k", []byte{1, 2}),
+				zap.Object("k", loggable{true}),
+				zap.Array("k", loggable{true}),
+				zap.String("k", "a"),
+				zap.Ints("k", []int{1, 2}),
+			},
+		},
+		{
+			name: "20 fields",
+			fields: []zapcore.Field{
+				zap.Int16("a", 1),
+				zap.String("k", "a"),
+				zap.Bool("k", true),
+				zap.Time("k", time.Unix(1000, 1000)),
+				zap.Binary("k", []byte{1, 2}),
+				zap.ByteString("k", []byte{1, 2}),
+				zap.Object("k", loggable{true}),
+				zap.String("k", "a"),
+				zap.Array("k", loggable{true}),
+				zap.Ints("k", []int{1, 2}),
+				zap.Int16("a", 1),
+				zap.String("k", "a"),
+				zap.Bool("k", true),
+				zap.Time("k", time.Unix(1000, 1000)),
+				zap.Binary("k", []byte{1, 2}),
+				zap.ByteString("k", []byte{1, 2}),
+				zap.Object("k", loggable{true}),
+				zap.Array("k", loggable{true}),
+				zap.String("k", "a"),
+				zap.Ints("k", []int{1, 2}),
+			},
+		},
+		{ // Benchmark with nested namespace
+			name: "Namespace",
+			fields: []zapcore.Field{
+				zap.Namespace("a"),
+				zap.Int16("a", 1),
+				zap.String("k", "a"),
+				zap.Bool("k", true),
+				zap.Time("k", time.Unix(1000, 1000)),
+				zap.Binary("k", []byte{1, 2}),
+				zap.Namespace("b"),
+				zap.Binary("k", []byte{1, 2}),
+				zap.Object("k", loggable{true}),
+				zap.String("k", "a"),
+				zap.Array("k", loggable{true}),
+				zap.Ints("k", []int{1, 2}),
+			},
+		},
+	}
+
+	for _, bm := range benchmarks {
+		b.Run(bm.name, func(b *testing.B) {
+			zc := NewCore(loggerName)
+			b.ReportAllocs()
+			b.RunParallel(func(pb *testing.PB) {
+				for pb.Next() {
+					err := zc.Write(testEntry, bm.fields)
+					if err != nil {
+						b.Errorf("Unexpected error: %v", err)
+					}
+				}
+			})
+		})
+	}
+
+	for _, bm := range benchmarks {
+		b.Run(fmt.Sprint("With", bm.name), func(b *testing.B) {
+			zc := NewCore(loggerName)
+			zc1 := zc.With(bm.fields)
+			b.ReportAllocs()
+			b.RunParallel(func(pb *testing.PB) {
+				for pb.Next() {
+					err := zc1.Write(testEntry, []zapcore.Field{})
+					if err != nil {
+						b.Errorf("Unexpected error: %v", err)
+					}
+				}
+			})
+		})
 	}
 }
