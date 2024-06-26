@@ -23,6 +23,7 @@ linters:
     - revive
     - staticcheck
     - typecheck
+    - unconvert
     - unparam
     - unused
 

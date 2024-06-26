@@ -260,7 +260,7 @@ func (a *arrayEncoder) AppendDuration(v time.Duration) { a.AppendInt64(v.Nanosec
 func (a *arrayEncoder) AppendInt32(v int32)            { a.AppendInt64(int64(v)) }
 func (a *arrayEncoder) AppendInt16(v int16)            { a.AppendInt64(int64(v)) }
 func (a *arrayEncoder) AppendInt8(v int8)              { a.AppendInt64(int64(v)) }
-func (a *arrayEncoder) AppendTime(v time.Time)         { a.AppendInt64(int64(v.UnixNano())) }
+func (a *arrayEncoder) AppendTime(v time.Time)         { a.AppendInt64(v.UnixNano()) }
 func (a *arrayEncoder) AppendUint(v uint)              { a.AppendUint64(uint64(v)) }
 func (a *arrayEncoder) AppendUint32(v uint32)          { a.AppendInt64(int64(v)) }
 func (a *arrayEncoder) AppendUint16(v uint16)          { a.AppendInt64(int64(v)) }
