@@ -165,3 +165,27 @@ func TestLogProcessorNilDownstream(t *testing.T) {
 		assert.NoError(t, p.Shutdown(ctx))
 	})
 }
+
+func BenchmarkLogProcessor(b *testing.B) {
+	rPtr := new(log.Record)
+	rPtr.SetSeverity(api.SeverityTrace)
+	ctx, r := context.Background(), *rPtr
+
+	run := func(p log.Processor) func(b *testing.B) {
+		return func(b *testing.B) {
+			var err error
+			var enabled bool
+			b.ReportAllocs()
+			for n := 0; n < b.N; n++ {
+				enabled = p.Enabled(ctx, r)
+				err = p.OnEmit(ctx, r)
+			}
+
+			_, _ = err, enabled
+		}
+	}
+
+	b.Run("Base", run(defaultProcessor))
+	b.Run("Enabled", run(NewLogProcessor(nil, api.SeverityTrace)))
+	b.Run("Disabled", run(NewLogProcessor(nil, api.SeverityDebug)))
+}
