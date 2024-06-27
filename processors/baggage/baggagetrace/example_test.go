@@ -8,12 +8,13 @@ import (
 	"strings"
 
 	"go.opentelemetry.io/contrib/processors/baggage/baggagetrace"
+	"go.opentelemetry.io/otel/baggage"
 	"go.opentelemetry.io/otel/sdk/trace"
 )
 
 func ExampleNew_allKeys() {
 	trace.NewTracerProvider(
-		trace.WithSpanProcessor(baggagetrace.New(baggagetrace.AllowAllBaggageKeys)),
+		trace.WithSpanProcessor(baggagetrace.New(baggagetrace.AllowAllMembers)),
 	)
 }
 
@@ -21,8 +22,8 @@ func ExampleNew_keysWithPrefix() {
 	trace.NewTracerProvider(
 		trace.WithSpanProcessor(
 			baggagetrace.New(
-				func(baggageKey string) bool {
-					return strings.HasPrefix(baggageKey, "my-key")
+				func(m baggage.Member) bool {
+					return strings.HasPrefix(m.Key(), "my-key")
 				},
 			),
 		),
@@ -34,8 +35,8 @@ func ExampleNew_keysMatchingRegex() {
 	trace.NewTracerProvider(
 		trace.WithSpanProcessor(
 			baggagetrace.New(
-				func(baggageKey string) bool {
-					return expr.MatchString(baggageKey)
+				func(m baggage.Member) bool {
+					return expr.MatchString(m.Key())
 				},
 			),
 		),

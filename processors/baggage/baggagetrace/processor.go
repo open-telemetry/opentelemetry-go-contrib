@@ -11,12 +11,11 @@ import (
 	"go.opentelemetry.io/otel/sdk/trace"
 )
 
-// Filter returns true if the baggage member with key should be added to a
-// span.
-type Filter func(key string) bool
+// Filter returns true if the baggage member should be added to a span.
+type Filter func(member baggage.Member) bool
 
-// AllowAllBaggageKeys allows all baggage members to be added to a span.
-var AllowAllBaggageKeys Filter = func(string) bool { return true }
+// AllowAllMembers allows all baggage members to be added to a span.
+var AllowAllMembers Filter = func(baggage.Member) bool { return true }
 
 // SpanProcessor is a [trace.SpanProcessor] implementation that adds baggage
 // members onto a span as attributes.
@@ -43,12 +42,12 @@ func New(filter Filter) *SpanProcessor {
 func (processor SpanProcessor) OnStart(ctx context.Context, span trace.ReadWriteSpan) {
 	filter := processor.filter
 	if filter == nil {
-		filter = AllowAllBaggageKeys
+		filter = AllowAllMembers
 	}
 
-	for _, entry := range baggage.FromContext(ctx).Members() {
-		if filter(entry.Key()) {
-			span.SetAttributes(attribute.String(entry.Key(), entry.Value()))
+	for _, member := range baggage.FromContext(ctx).Members() {
+		if filter(member) {
+			span.SetAttributes(attribute.String(member.Key(), member.Value()))
 		}
 	}
 }
