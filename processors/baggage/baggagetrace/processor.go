@@ -18,21 +18,22 @@ type Filter func(key string) bool
 // AllowAllBaggageKeys allows all baggage members to be added to a span.
 var AllowAllBaggageKeys Filter = func(string) bool { return true }
 
-// SpanProcessor is a processing pipeline for spans in the trace signal.
+// SpanProcessor is a [trace.SpanProcessor] implementation that adds baggage
+// members onto a span as attributes.
 type SpanProcessor struct {
 	filter Filter
 }
 
 var _ trace.SpanProcessor = (*SpanProcessor)(nil)
 
-// New returns a new SpanProcessor.
+// New returns a new [SpanProcessor].
 //
 // The Baggage span processor duplicates onto a span the attributes found
 // in Baggage in the parent context at the moment the span is started.
 // The passed filter determines which baggage members are added to the span.
 //
 // If filter is nil, all baggage members will be added.
-func New(filter Filter) trace.SpanProcessor {
+func New(filter Filter) *SpanProcessor {
 	return &SpanProcessor{
 		filter: filter,
 	}
