@@ -46,6 +46,7 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 - Improve performance of `go.opentelemetry.io/contrib/instrumentation/net/http/otelhttp` with the usage of `WithAttributeSet()` instead of `WithAttribute()`. (#5664)
 - Update `go.opentelemetry.io/contrib/config` to latest released configuration schema which introduces breaking changes where `Attributes` is now a `map[string]interface{}`. (#5758)
 - Rename `BaggageKeyPredicate` to `Filter` in `go.opentelemetry.io/contrib/processors/baggage/baggagetrace`. (#5809)
+- Return `*SpanProcessor` from `"go.opentelemetry.io/contrib/processors/baggage/baggagetrace".New` instead of the `trace.SpanProcessor` interface. (#5810)
 - The `BaggageKeyPredicate` in `go.opentelemetry.io/contrib/processors/baggage/baggagetrace` now accepts a `baggage.Member` as a parameter instead of a string. (#5813)
 
 ## [1.27.0/0.52.0/0.21.0/0.7.0/0.2.0] - 2024-05-21
