@@ -31,6 +31,8 @@ var _ trace.SpanProcessor = (*SpanProcessor)(nil)
 // The Baggage span processor duplicates onto a span the attributes found
 // in Baggage in the parent context at the moment the span is started.
 // The passed filter determines which baggage members are added to the span.
+//
+// If filter is nil, all baggage members will be added.
 func New(filter Filter) *SpanProcessor {
 	return &SpanProcessor{
 		filter: filter,
@@ -39,8 +41,13 @@ func New(filter Filter) *SpanProcessor {
 
 // OnStart is called when a span is started and adds span attributes for baggage contents.
 func (processor SpanProcessor) OnStart(ctx context.Context, span trace.ReadWriteSpan) {
+	filter := processor.filter
+	if filter == nil {
+		filter = AllowAllBaggageKeys
+	}
+
 	for _, entry := range baggage.FromContext(ctx).Members() {
-		if processor.filter(entry.Key()) {
+		if filter(entry.Key()) {
 			span.SetAttributes(attribute.String(entry.Key(), entry.Value()))
 		}
 	}

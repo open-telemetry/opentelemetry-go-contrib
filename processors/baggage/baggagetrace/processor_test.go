@@ -9,11 +9,13 @@ import (
 	"strings"
 	"testing"
 
+	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 
 	"go.opentelemetry.io/otel/attribute"
 	"go.opentelemetry.io/otel/baggage"
 	"go.opentelemetry.io/otel/sdk/trace"
+	"go.opentelemetry.io/otel/sdk/trace/tracetest"
 )
 
 var _ trace.SpanExporter = &testExporter{}
@@ -151,3 +153,28 @@ func addEntryToBaggage(t *testing.T, b baggage.Baggage, key, value string) bagga
 	require.NoError(t, err)
 	return b
 }
+
+func TestZeroSpanProcessorNoPanic(t *testing.T) {
+	sp := new(SpanProcessor)
+
+	m, err := baggage.NewMember("key", "val")
+	require.NoError(t, err)
+	b, err := baggage.New(m)
+	require.NoError(t, err)
+
+	ctx := baggage.ContextWithBaggage(context.Background(), b)
+	roS := (tracetest.SpanStub{}).Snapshot()
+	rwS := rwSpan{}
+	assert.NotPanics(t, func() {
+		sp.OnStart(ctx, rwS)
+		sp.OnEnd(roS)
+		_ = sp.ForceFlush(ctx)
+		_ = sp.Shutdown(ctx)
+	})
+}
+
+type rwSpan struct {
+	trace.ReadWriteSpan
+}
+
+func (s rwSpan) SetAttributes(kv ...attribute.KeyValue) {}
