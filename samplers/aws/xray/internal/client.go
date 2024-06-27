@@ -130,22 +130,22 @@ func (c *xrayClient) getSamplingRules(ctx context.Context) (*getSamplingRulesOut
 
 	req, err := http.NewRequestWithContext(ctx, http.MethodPost, c.samplingRulesURL, body)
 	if err != nil {
-		return nil, fmt.Errorf("xray client: failed to create http request: %w", err)
+		return nil, fmt.Errorf("unable to retrieve sampling rules, error on http request: %w", err)
 	}
 
 	output, err := c.httpClient.Do(req)
 	if err != nil {
-		return nil, fmt.Errorf("xray client: unable to retrieve sampling settings: %w", err)
+		return nil, fmt.Errorf("xray client: unable to retrieve sampling rules, error on http request:  %w", err)
 	}
 	defer output.Body.Close()
 
 	if output.StatusCode != http.StatusOK {
-		return nil, fmt.Errorf("xray client: unable to retrieve sampling settings, expected response status code 200, got: %d", output.StatusCode)
+		return nil, fmt.Errorf("xray client: unable to retrieve sampling rules, expected response status code 200, got: %d", output.StatusCode)
 	}
 
 	var samplingRulesOutput *getSamplingRulesOutput
 	if err := json.NewDecoder(output.Body).Decode(&samplingRulesOutput); err != nil {
-		return nil, fmt.Errorf("xray client: unable to unmarshal the response body: %w", err)
+		return nil, fmt.Errorf("xray client: unable to retrieve sampling rules, unable to unmarshal the response body: %w", err)
 	}
 
 	return samplingRulesOutput, nil
@@ -170,13 +170,17 @@ func (c *xrayClient) getSamplingTargets(ctx context.Context, s []*samplingStatis
 
 	output, err := c.httpClient.Do(req)
 	if err != nil {
-		return nil, fmt.Errorf("xray client: unable to retrieve sampling settings: %w", err)
+		return nil, fmt.Errorf("xray client: unable to retrieve sampling targets, error on http request: %w", err)
 	}
 	defer output.Body.Close()
 
+	if output.StatusCode != http.StatusOK {
+		return nil, fmt.Errorf("xray client: unable to retrieve sampling targets, expected response status code 200, got: %d", output.StatusCode)
+	}
+
 	var samplingTargetsOutput *getSamplingTargetsOutput
 	if err := json.NewDecoder(output.Body).Decode(&samplingTargetsOutput); err != nil {
-		return nil, fmt.Errorf("xray client: unable to unmarshal the response body: %w", err)
+		return nil, fmt.Errorf("xray client: unable to retrieve sampling targets, unable to unmarshal the response body: %w", err)
 	}
 
 	return samplingTargetsOutput, nil
