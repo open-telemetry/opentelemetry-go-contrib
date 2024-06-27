@@ -7,7 +7,7 @@ import (
 	"context"
 
 	"go.opentelemetry.io/otel/attribute"
-	otelbaggage "go.opentelemetry.io/otel/baggage"
+	"go.opentelemetry.io/otel/baggage"
 	"go.opentelemetry.io/otel/sdk/trace"
 )
 
@@ -46,7 +46,7 @@ func (processor SpanProcessor) OnStart(ctx context.Context, span trace.ReadWrite
 		filter = AllowAllBaggageKeys
 	}
 
-	for _, entry := range otelbaggage.FromContext(ctx).Members() {
+	for _, entry := range baggage.FromContext(ctx).Members() {
 		if filter(entry.Key()) {
 			span.SetAttributes(attribute.String(entry.Key(), entry.Value()))
 		}
