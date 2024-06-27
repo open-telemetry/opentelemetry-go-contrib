@@ -7,6 +7,7 @@ package otelgrpc // import "go.opentelemetry.io/contrib/instrumentation/google.g
 // https://github.com/open-telemetry/opentelemetry-specification/blob/main/specification/trace/semantic_conventions/rpc.md
 import (
 	"context"
+	"errors"
 	"io"
 	"net"
 	"strconv"
@@ -136,7 +137,7 @@ func (w *clientStream) RecvMsg(m interface{}) error {
 
 	if err == nil && !w.desc.ServerStreams {
 		w.endSpan(nil)
-	} else if err == io.EOF {
+	} else if errors.Is(err, io.EOF) {
 		w.endSpan(nil)
 	} else if err != nil {
 		w.endSpan(err)
