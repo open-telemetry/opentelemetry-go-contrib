@@ -49,6 +49,7 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 - Rename `BaggageKeyPredicate` to `Filter` in `go.opentelemetry.io/contrib/processors/baggage/baggagetrace`. (#5809)
 - Return `*SpanProcessor` from `"go.opentelemetry.io/contrib/processors/baggage/baggagetrace".New` instead of the `trace.SpanProcessor` interface. (#5810)
 - The `Filter` in `go.opentelemetry.io/contrib/processors/baggage/baggagetrace` now accepts a `baggage.Member` as a parameter instead of a string. (#5813)
+- Rename `AllowAllBaggageKeys` to `AllowAllMembers` in `go.opentelemetry.io/contrib/processors/baggage/baggagetrace`. (#5813)
 
 ## [1.27.0/0.52.0/0.21.0/0.7.0/0.2.0] - 2024-05-21
 
