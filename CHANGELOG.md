@@ -23,6 +23,7 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 - Use `c.FullPath()` method to set `http.route` attribute in `go.opentelemetry.io/contrib/instrumentation/github.com/gin-gonic/gin/otelgin`. (#5734)
 - The double setup in `go.opentelemetry.io/contrib/instrumentation/net/http/httptrace/otelhttptrace/example` that caused duplicate traces. (#5564)
 - Out-of-bounds panic in case of invalid span ID in `go.opentelemetry.io/contrib/propagators/b3`. (#5754)
+- Do not panic if a zero-value `SpanProcessor` is used from `go.opentelemetry.io/contrib/processors/baggage/baggagetrace`. (#5811)
 
 ### Deprecated
 
@@ -47,7 +48,7 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 - Update `go.opentelemetry.io/contrib/config` to latest released configuration schema which introduces breaking changes where `Attributes` is now a `map[string]interface{}`. (#5758)
 - Rename `BaggageKeyPredicate` to `Filter` in `go.opentelemetry.io/contrib/processors/baggage/baggagetrace`. (#5809)
 - Return `*SpanProcessor` from `"go.opentelemetry.io/contrib/processors/baggage/baggagetrace".New` instead of the `trace.SpanProcessor` interface. (#5810)
-- The `BaggageKeyPredicate` in `go.opentelemetry.io/contrib/processors/baggage/baggagetrace` now accepts a `baggage.Member` as a parameter instead of a string. (#5813)
+- The `Filter` in `go.opentelemetry.io/contrib/processors/baggage/baggagetrace` now accepts a `baggage.Member` as a parameter instead of a string. (#5813)
 
 ## [1.27.0/0.52.0/0.21.0/0.7.0/0.2.0] - 2024-05-21
 
