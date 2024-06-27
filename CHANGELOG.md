@@ -15,6 +15,8 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 - Add support to configure views when creating MeterProvider using the config package. (#5654)
 - Add log support for the autoexport package. (#5733)
 - Add support for disabling the old runtime metrics using the `OTEL_GO_X_DEPRECATED_RUNTIME_METRICS=false` environment variable. (#5747)
+- The `go.opentelemetry.io/contrib/processors/minsev` module is added.
+  This module provides and experimental logging processor with a configurable threshold for the minimum severity records must have to be recorded. (#5817)
 
 ### Fixed
 
