@@ -11,15 +11,16 @@ import (
 	"go.opentelemetry.io/otel/sdk/trace"
 )
 
-// BaggageKeyPredicate is a function that returns true if the baggage key should be added to the span.
-type BaggageKeyPredicate func(baggageKey string) bool
+// Filter returns true if the baggage member with key should be added to a
+// span.
+type Filter func(key string) bool
 
-// AllowAllBaggageKeys is a BaggageKeyPredicate that allows all baggage keys.
-var AllowAllBaggageKeys = func(string) bool { return true }
+// AllowAllBaggageKeys allows all baggage members to be added to a span.
+var AllowAllBaggageKeys Filter = func(string) bool { return true }
 
 // SpanProcessor is a processing pipeline for spans in the trace signal.
 type SpanProcessor struct {
-	baggageKeyPredicate BaggageKeyPredicate
+	filter Filter
 }
 
 var _ trace.SpanProcessor = (*SpanProcessor)(nil)
@@ -28,18 +29,18 @@ var _ trace.SpanProcessor = (*SpanProcessor)(nil)
 //
 // The Baggage span processor duplicates onto a span the attributes found
 // in Baggage in the parent context at the moment the span is started.
-// The predicate function is used to filter which baggage keys are added to the span.
+// The passed filter determines which baggage members are added to the span.
 //
-// If baggageKeyPredicate is nil, all baggage members will be added.
-func New(baggageKeyPredicate BaggageKeyPredicate) trace.SpanProcessor {
+// If filter is nil, all baggage members will be added.
+func New(filter Filter) trace.SpanProcessor {
 	return &SpanProcessor{
-		baggageKeyPredicate: baggageKeyPredicate,
+		filter: filter,
 	}
 }
 
 // OnStart is called when a span is started and adds span attributes for baggage contents.
 func (processor SpanProcessor) OnStart(ctx context.Context, span trace.ReadWriteSpan) {
-	filter := processor.baggageKeyPredicate
+	filter := processor.filter
 	if filter == nil {
 		filter = AllowAllBaggageKeys
 	}
