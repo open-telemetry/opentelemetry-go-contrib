@@ -5,6 +5,7 @@ package gcp // import "go.opentelemetry.io/contrib/detectors/gcp"
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"os"
 	"strings"
@@ -90,7 +91,9 @@ func hasProblem(err error) bool {
 	if err == nil {
 		return false
 	}
-	if _, undefined := err.(metadata.NotDefinedError); undefined {
+
+	var nde metadata.NotDefinedError
+	if undefined := errors.As(err, &nde); undefined {
 		return false
 	}
 	return true
