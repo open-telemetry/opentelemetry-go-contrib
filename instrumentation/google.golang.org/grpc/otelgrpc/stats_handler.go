@@ -58,6 +58,9 @@ func (h *serverHandler) TagRPC(ctx context.Context, info *stats.RPCTagInfo) cont
 
 	name, attrs := internal.ParseFullMethod(info.FullMethodName)
 	attrs = append(attrs, RPCSystemGRPC)
+
+	attrs = append(attrs, h.config.Attributes...)
+
 	ctx, _ = h.tracer.Start(
 		trace.ContextWithRemoteSpanContext(ctx, trace.SpanContextFromContext(ctx)),
 		name,
@@ -98,6 +101,9 @@ func NewClientHandler(opts ...Option) stats.Handler {
 func (h *clientHandler) TagRPC(ctx context.Context, info *stats.RPCTagInfo) context.Context {
 	name, attrs := internal.ParseFullMethod(info.FullMethodName)
 	attrs = append(attrs, RPCSystemGRPC)
+
+	attrs = append(attrs, h.config.Attributes...)
+
 	ctx, _ = h.tracer.Start(
 		ctx,
 		name,
