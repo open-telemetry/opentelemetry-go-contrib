@@ -44,7 +44,7 @@ func TestSpanProcessorAppendsAllBaggageAttributes(t *testing.T) {
 	// create trace provider with baggage processor and test exporter
 	exporter := NewTestExporter()
 	tp := trace.NewTracerProvider(
-		trace.WithSpanProcessor(New(AllowAllMembers)),
+		trace.WithSpanProcessor(NewSpanProcessor(AllowAllMembers)),
 		trace.WithSpanProcessor(trace.NewSimpleSpanProcessor(exporter)),
 	)
 
@@ -72,7 +72,7 @@ func TestSpanProcessorAppendsBaggageAttributesWithHaPrefixPredicate(t *testing.T
 	// create trace provider with baggage processor and test exporter
 	exporter := NewTestExporter()
 	tp := trace.NewTracerProvider(
-		trace.WithSpanProcessor(New(baggageKeyPredicate)),
+		trace.WithSpanProcessor(NewSpanProcessor(baggageKeyPredicate)),
 		trace.WithSpanProcessor(trace.NewSimpleSpanProcessor(exporter)),
 	)
 
@@ -101,7 +101,7 @@ func TestSpanProcessorAppendsBaggageAttributesWithRegexPredicate(t *testing.T) {
 	// create trace provider with baggage processor and test exporter
 	exporter := NewTestExporter()
 	tp := trace.NewTracerProvider(
-		trace.WithSpanProcessor(New(baggageKeyPredicate)),
+		trace.WithSpanProcessor(NewSpanProcessor(baggageKeyPredicate)),
 		trace.WithSpanProcessor(trace.NewSimpleSpanProcessor(exporter)),
 	)
 
@@ -130,7 +130,7 @@ func TestOnlyAddsBaggageEntriesThatMatchPredicate(t *testing.T) {
 	// create trace provider with baggage processor and test exporter
 	exporter := NewTestExporter()
 	tp := trace.NewTracerProvider(
-		trace.WithSpanProcessor(New(baggageKeyPredicate)),
+		trace.WithSpanProcessor(NewSpanProcessor(baggageKeyPredicate)),
 		trace.WithSpanProcessor(trace.NewSimpleSpanProcessor(exporter)),
 	)
 

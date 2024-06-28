@@ -25,14 +25,14 @@ type SpanProcessor struct {
 
 var _ trace.SpanProcessor = (*SpanProcessor)(nil)
 
-// New returns a new [SpanProcessor].
+// NewSpanProcessor returns a new [SpanProcessor].
 //
 // The Baggage span processor duplicates onto a span the attributes found
 // in Baggage in the parent context at the moment the span is started.
 // The passed filter determines which baggage members are added to the span.
 //
 // If filter is nil, all baggage members will be added.
-func New(filter Filter) *SpanProcessor {
+func NewSpanProcessor(filter Filter) *SpanProcessor {
 	return &SpanProcessor{
 		filter: filter,
 	}
