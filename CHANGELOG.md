@@ -38,7 +38,7 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
   If you would like to become a Code Owner of this module and prevent it from being removed, see [#5554]. (#5647)
 - The `go.opentelemetry.io/contrib/processors/baggage/baggagetrace` package is deprecated.
   Use the added `go.opentelemetry.io/contrib/processors/baggagecopy` package instead. (#5824)
-  - Use `baggagecopy.NewSpanProcessor` as a replacement for `baggagetrace.New`
+  - Use `baggagecopy.NewSpanProcessor` as a replacement for `baggagetrace.New`.
     - `NewSpanProcessor` accepts a `Fitler` function type that selects which baggage members are added to a span.
     - `NewSpanProcessor` returns a `*baggagecopy.SpanProcessor` instead of a `trace.SpanProcessor` interface.
       The returned type still implements the interface.
