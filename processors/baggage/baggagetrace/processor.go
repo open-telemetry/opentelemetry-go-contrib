@@ -9,6 +9,8 @@ import (
 	"go.opentelemetry.io/otel/attribute"
 	otelbaggage "go.opentelemetry.io/otel/baggage"
 	"go.opentelemetry.io/otel/sdk/trace"
+
+	"go.opentelemetry.io/contrib/processors/baggagecopy"
 )
 
 // SpanProcessor is a processing pipeline for spans in the trace signal.
@@ -21,7 +23,7 @@ var _ trace.SpanProcessor = (*SpanProcessor)(nil)
 // The Baggage span processor duplicates onto a span the attributes found
 // in Baggage in the parent context at the moment the span is started.
 func New() trace.SpanProcessor {
-	return &SpanProcessor{}
+	return baggagecopy.NewSpanProcessor(baggagecopy.AllowAllMembers)
 }
 
 // OnStart is called when a span is started and adds span attributes for baggage contents.
