@@ -15,6 +15,7 @@ import (
 	"github.com/stretchr/testify/require"
 
 	"go.opentelemetry.io/otel/log"
+	"go.opentelemetry.io/otel/log/global"
 	"go.opentelemetry.io/otel/log/logtest"
 	"go.opentelemetry.io/otel/sdk/instrumentation"
 )
@@ -29,19 +30,30 @@ var now = time.Now()
 
 func TestNewLogSinkConfiguration(t *testing.T) {
 	t.Run("default", func(t *testing.T) {
+		rec := logtest.NewRecorder()
+		prev := global.GetLoggerProvider()
+		defer global.SetLoggerProvider(prev)
+		global.SetLoggerProvider(rec)
+
 		var ls *LogSink
 		assert.NotPanics(t, func() { ls = NewLogSink() })
 		assert.NotNil(t, ls)
+		want := &logtest.ScopeRecords{
+			Name:    bridgeName,
+			Version: version,
+		}
+		got := rec.Result()[0]
+		assert.Equal(t, want, got)
 	})
 
 	t.Run("with_options", func(t *testing.T) {
 		rec := logtest.NewRecorder()
-		wantScope := instrumentation.Scope{Name: "name", Version: "ver", SchemaURL: "url"}
+		scope := instrumentation.Scope{Name: "name", Version: "ver", SchemaURL: "url"}
 		var ls *LogSink
 		assert.NotPanics(t, func() {
 			ls = NewLogSink(
 				WithLoggerProvider(rec),
-				WithInstrumentationScope(wantScope),
+				WithInstrumentationScope(scope),
 				WithLevelSeverity(func(i int) log.Severity {
 					return log.SeverityFatal
 				}),
@@ -50,6 +62,30 @@ func TestNewLogSinkConfiguration(t *testing.T) {
 		assert.NotNil(t, ls)
 		assert.NotNil(t, ls.levelSeverity)
 		assert.Equal(t, log.SeverityFatal, ls.levelSeverity(0))
+
+		want := &logtest.ScopeRecords{
+			Name:      "name",
+			Version:   "ver",
+			SchemaURL: "url",
+		}
+		got := rec.Result()[0]
+		assert.Equal(t, want, got)
+	})
+
+	t.Run("with_name", func(t *testing.T) {
+		rec := logtest.NewRecorder()
+		assert.NotPanics(t, func() {
+			NewLogSink(
+				WithLoggerProvider(rec),
+			).WithName("test")
+		})
+
+		want := &logtest.ScopeRecords{
+			Name:    bridgeName + "/test",
+			Version: version,
+		}
+		got := rec.Result()[1]
+		assert.Equal(t, want, got)
 	})
 }
 
@@ -65,7 +101,6 @@ func TestLogSink(t *testing.T) {
 			f: func(l *logr.Logger) {
 				l.Info("info message")
 			},
-			expectedLoggerCount: 1,
 			expectedRecords: []expectedRecord{
 				{
 					Body:     log.StringValue("info message"),
@@ -87,7 +122,6 @@ func TestLogSink(t *testing.T) {
 					"uint64", uint64(3),
 				)
 			},
-			expectedLoggerCount: 1,
 			expectedRecords: []expectedRecord{
 				{
 					Body:     log.StringValue("msg"),
@@ -110,7 +144,6 @@ func TestLogSink(t *testing.T) {
 			f: func(l *logr.Logger) {
 				l.Error(errors.New("test error"), "error message")
 			},
-			expectedLoggerCount: 1,
 			expectedRecords: []expectedRecord{
 				{
 					Body:     log.StringValue("error message"),
@@ -135,7 +168,6 @@ func TestLogSink(t *testing.T) {
 					"uint64", uint64(3),
 				)
 			},
-			expectedLoggerCount: 1,
 			expectedRecords: []expectedRecord{
 				{
 					Body:     log.StringValue("msg"),
@@ -159,7 +191,6 @@ func TestLogSink(t *testing.T) {
 			f: func(l *logr.Logger) {
 				l.WithName("test").Info("info message with name")
 			},
-			expectedLoggerCount: 2,
 			expectedRecords: []expectedRecord{
 				{
 					Body:     log.StringValue("info message with name"),
@@ -172,7 +203,6 @@ func TestLogSink(t *testing.T) {
 			f: func(l *logr.Logger) {
 				l.WithName("test").WithName("test").Info("info message with name")
 			},
-			expectedLoggerCount: 3,
 			expectedRecords: []expectedRecord{
 				{
 					Body:     log.StringValue("info message with name"),
@@ -185,7 +215,6 @@ func TestLogSink(t *testing.T) {
 			f: func(l *logr.Logger) {
 				l.WithValues("key", "value").Info("info message with attrs")
 			},
-			expectedLoggerCount: 1,
 			expectedRecords: []expectedRecord{
 				{
 					Body:     log.StringValue("info message with attrs"),
@@ -201,7 +230,6 @@ func TestLogSink(t *testing.T) {
 			f: func(l *logr.Logger) {
 				l.WithValues("key1", "value1").Info("info message with attrs", "key2", "value2")
 			},
-			expectedLoggerCount: 1,
 			expectedRecords: []expectedRecord{
 				{
 					Body:     log.StringValue("info message with attrs"),
@@ -220,10 +248,10 @@ func TestLogSink(t *testing.T) {
 			l := logr.New(ls)
 			tt.f(&l)
 
-			require.Len(t, rec.Result(), tt.expectedLoggerCount)
+			last := len(rec.Result()) - 1
 
-			assert.Len(t, rec.Result()[tt.expectedLoggerCount-1].Records, len(tt.expectedRecords))
-			for i, record := range rec.Result()[tt.expectedLoggerCount-1].Records {
+			assert.Len(t, rec.Result()[last].Records, len(tt.expectedRecords))
+			for i, record := range rec.Result()[last].Records {
 				assert.Equal(t, tt.expectedRecords[i].Body, record.Body())
 				assert.Equal(t, tt.expectedRecords[i].Severity, record.Severity())
 
