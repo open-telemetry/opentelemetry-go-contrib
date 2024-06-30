@@ -27,7 +27,8 @@ import (
 
 func TestMetricExporterNone(t *testing.T) {
 	t.Setenv("OTEL_METRICS_EXPORTER", "none")
-	got, err := NewMetricReader(context.Background())
+	readers, err := NewMetricReaders(context.Background())
+	got := readers[0]
 	assert.NoError(t, err)
 	t.Cleanup(func() {
 		assert.NoError(t, got.Shutdown(context.Background()))
@@ -37,7 +38,8 @@ func TestMetricExporterNone(t *testing.T) {
 
 func TestMetricExporterConsole(t *testing.T) {
 	t.Setenv("OTEL_METRICS_EXPORTER", "console")
-	got, err := NewMetricReader(context.Background())
+	readers, err := NewMetricReaders(context.Background())
+	got := readers[0]
 	assert.NoError(t, err)
 	t.Cleanup(func() {
 		assert.NoError(t, got.Shutdown(context.Background()))
@@ -60,8 +62,9 @@ func TestMetricExporterOTLP(t *testing.T) {
 		t.Run(fmt.Sprintf("protocol=%q", tc.protocol), func(t *testing.T) {
 			t.Setenv("OTEL_EXPORTER_OTLP_PROTOCOL", tc.protocol)
 
-			got, err := NewMetricReader(context.Background())
+			readers, err := NewMetricReaders(context.Background())
 			assert.NoError(t, err)
+			got := readers[0]
 			t.Cleanup(func() {
 				assert.NoError(t, got.Shutdown(context.Background()))
 			})
@@ -87,7 +90,8 @@ func TestMetricExporterOTLPWithDedicatedProtocol(t *testing.T) {
 		t.Run(fmt.Sprintf("protocol=%q", tc.protocol), func(t *testing.T) {
 			t.Setenv("OTEL_EXPORTER_OTLP_METRICS_PROTOCOL", tc.protocol)
 
-			got, err := NewMetricReader(context.Background())
+			readers, err := NewMetricReaders(context.Background())
+			got := readers[0]
 			assert.NoError(t, err)
 			t.Cleanup(func() {
 				assert.NoError(t, got.Shutdown(context.Background()))
@@ -101,11 +105,41 @@ func TestMetricExporterOTLPWithDedicatedProtocol(t *testing.T) {
 	}
 }
 
+func TestMetricReaderOTLPMultiple(t *testing.T) {
+	t.Setenv("OTEL_METRICS_EXPORTER", "otlp,console")
+	t.Setenv("OTEL_EXPORTER_OTLP_PROTOCOL", "http/protobuf")
+
+	readers, err := NewMetricReaders(context.Background())
+	assert.NoError(t, err)
+	assert.Len(t, readers, 2)
+
+	assert.Implements(t, new(metric.Reader), readers[0])
+	exporterType := reflect.Indirect(reflect.ValueOf(readers[0])).FieldByName("exporter").Elem().Type()
+	assert.Equal(t, "*otlpmetrichttp.Exporter", exporterType.String())
+
+	assert.Implements(t, new(metric.Reader), readers[1])
+	exporterType = reflect.Indirect(reflect.ValueOf(readers[1])).FieldByName("exporter").Elem().Type()
+	assert.Equal(t, "*stdoutmetric.exporter", exporterType.String())
+
+	t.Cleanup(func() {
+		assert.NoError(t, readers[0].Shutdown(context.Background()))
+		assert.NoError(t, readers[1].Shutdown(context.Background()))
+	})
+}
+
 func TestMetricExporterOTLPOverInvalidProtocol(t *testing.T) {
 	t.Setenv("OTEL_METRICS_EXPORTER", "otlp")
 	t.Setenv("OTEL_EXPORTER_OTLP_PROTOCOL", "invalid-protocol")
 
 	_, err := NewMetricReader(context.Background())
+	assert.Error(t, err)
+}
+
+func TestMetricReaderOTLPMultiple_FailsIfOneValueIsInvalid(t *testing.T) {
+	t.Setenv("OTEL_METRICS_EXPORTER", "otlp,something")
+	t.Setenv("OTEL_EXPORTER_OTLP_PROTOCOL", "http/protobuf")
+
+	_, err := NewMetricReaders(context.Background())
 	assert.Error(t, err)
 }
 
