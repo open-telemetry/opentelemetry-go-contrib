@@ -13,9 +13,7 @@ import (
 	"github.com/go-logr/logr"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
-
 	"go.opentelemetry.io/otel/log"
-	"go.opentelemetry.io/otel/log/global"
 	"go.opentelemetry.io/otel/log/logtest"
 	"go.opentelemetry.io/otel/sdk/instrumentation"
 )
@@ -30,9 +28,6 @@ var now = time.Now()
 
 func TestNewLogSinkConfiguration(t *testing.T) {
 	t.Run("default", func(t *testing.T) {
-		rec := logtest.NewRecorder()
-		global.SetLoggerProvider(rec)
-
 		var ls *LogSink
 		assert.NotPanics(t, func() { ls = NewLogSink() })
 		assert.NotNil(t, ls)
