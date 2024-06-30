@@ -64,15 +64,17 @@ func TestNewLogSinkConfiguration(t *testing.T) {
 
 func TestLogSink(t *testing.T) {
 	for _, tt := range []struct {
-		name            string
-		f               func(*logr.Logger)
-		expectedRecords []expectedRecord
+		name                string
+		f                   func(*logr.Logger)
+		expectedLoggerCount int
+		expectedRecords     []expectedRecord
 	}{
 		{
 			name: "info",
 			f: func(l *logr.Logger) {
 				l.Info("info message")
 			},
+			expectedLoggerCount: 1,
 			expectedRecords: []expectedRecord{
 				{
 					Body:     log.StringValue("info message"),
@@ -94,6 +96,7 @@ func TestLogSink(t *testing.T) {
 					"uint64", uint64(3),
 				)
 			},
+			expectedLoggerCount: 1,
 			expectedRecords: []expectedRecord{
 				{
 					Body:     log.StringValue("msg"),
@@ -116,6 +119,7 @@ func TestLogSink(t *testing.T) {
 			f: func(l *logr.Logger) {
 				l.Error(errors.New("test error"), "error message")
 			},
+			expectedLoggerCount: 1,
 			expectedRecords: []expectedRecord{
 				{
 					Body:     log.StringValue("error message"),
@@ -140,6 +144,7 @@ func TestLogSink(t *testing.T) {
 					"uint64", uint64(3),
 				)
 			},
+			expectedLoggerCount: 1,
 			expectedRecords: []expectedRecord{
 				{
 					Body:     log.StringValue("msg"),
@@ -163,13 +168,11 @@ func TestLogSink(t *testing.T) {
 			f: func(l *logr.Logger) {
 				l.WithName("test").Info("info message with name")
 			},
+			expectedLoggerCount: 2,
 			expectedRecords: []expectedRecord{
 				{
 					Body:     log.StringValue("info message with name"),
 					Severity: log.SeverityInfo,
-					// Attributes: []log.KeyValue{
-					// 	log.String(nameKey, "test"),
-					// },
 				},
 			},
 		},
@@ -178,13 +181,11 @@ func TestLogSink(t *testing.T) {
 			f: func(l *logr.Logger) {
 				l.WithName("test").WithName("test").Info("info message with name")
 			},
+			expectedLoggerCount: 3,
 			expectedRecords: []expectedRecord{
 				{
 					Body:     log.StringValue("info message with name"),
 					Severity: log.SeverityInfo,
-					// Attributes: []log.KeyValue{
-					// 	log.String(nameKey, "test/test"),
-					// },
 				},
 			},
 		},
@@ -193,6 +194,7 @@ func TestLogSink(t *testing.T) {
 			f: func(l *logr.Logger) {
 				l.WithValues("key", "value").Info("info message with attrs")
 			},
+			expectedLoggerCount: 1,
 			expectedRecords: []expectedRecord{
 				{
 					Body:     log.StringValue("info message with attrs"),
@@ -208,6 +210,7 @@ func TestLogSink(t *testing.T) {
 			f: func(l *logr.Logger) {
 				l.WithValues("key1", "value1").Info("info message with attrs", "key2", "value2")
 			},
+			expectedLoggerCount: 1,
 			expectedRecords: []expectedRecord{
 				{
 					Body:     log.StringValue("info message with attrs"),
@@ -226,9 +229,10 @@ func TestLogSink(t *testing.T) {
 			l := logr.New(ls)
 			tt.f(&l)
 
-			require.Len(t, rec.Result(), 2)
-			assert.Len(t, rec.Result()[1].Records, len(tt.expectedRecords))
-			for i, record := range rec.Result()[1].Records {
+			require.Len(t, rec.Result(), tt.expectedLoggerCount+1)
+
+			assert.Len(t, rec.Result()[tt.expectedLoggerCount].Records, len(tt.expectedRecords))
+			for i, record := range rec.Result()[tt.expectedLoggerCount].Records {
 				assert.Equal(t, tt.expectedRecords[i].Body, record.Body())
 				assert.Equal(t, tt.expectedRecords[i].Severity, record.Severity())
 
