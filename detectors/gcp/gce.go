@@ -5,6 +5,7 @@ package gcp // import "go.opentelemetry.io/contrib/detectors/gcp"
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"os"
 	"strings"
@@ -13,7 +14,7 @@ import (
 
 	"go.opentelemetry.io/otel/attribute"
 	"go.opentelemetry.io/otel/sdk/resource"
-	semconv "go.opentelemetry.io/otel/semconv/v1.24.0"
+	semconv "go.opentelemetry.io/otel/semconv/v1.25.0"
 )
 
 // GCE collects resource information of GCE computing instances.
@@ -90,7 +91,9 @@ func hasProblem(err error) bool {
 	if err == nil {
 		return false
 	}
-	if _, undefined := err.(metadata.NotDefinedError); undefined {
+
+	var nde metadata.NotDefinedError
+	if undefined := errors.As(err, &nde); undefined {
 		return false
 	}
 	return true

@@ -13,7 +13,7 @@ import (
 
 	"go.opentelemetry.io/otel/attribute"
 	"go.opentelemetry.io/otel/sdk/resource"
-	semconv "go.opentelemetry.io/otel/semconv/v1.24.0"
+	semconv "go.opentelemetry.io/otel/semconv/v1.25.0"
 )
 
 const serviceNamespace = "cloud-run-managed"
@@ -50,7 +50,7 @@ func NewCloudRun() *CloudRun {
 	}
 }
 
-func (c *CloudRun) cloudRegion(ctx context.Context) (string, error) {
+func (c *CloudRun) cloudRegion() (string, error) {
 	region, err := c.mc.Get("instance/region")
 	if err != nil {
 		return "", err
@@ -84,7 +84,7 @@ func (c *CloudRun) Detect(ctx context.Context) (*resource.Resource, error) {
 		attributes = append(attributes, semconv.CloudAccountID(projectID))
 	}
 
-	if region, err := c.cloudRegion(ctx); hasProblem(err) {
+	if region, err := c.cloudRegion(); hasProblem(err) {
 		errInfo = append(errInfo, err.Error())
 	} else if region != "" {
 		attributes = append(attributes, semconv.CloudRegion(region))

@@ -23,18 +23,21 @@ import (
 	"go.opentelemetry.io/otel/log"
 	"go.opentelemetry.io/otel/log/embedded"
 	"go.opentelemetry.io/otel/log/global"
-	"go.opentelemetry.io/otel/sdk/instrumentation"
 )
 
 var now = time.Now()
 
 func TestNewLogger(t *testing.T) {
-	assert.IsType(t, &Handler{}, NewLogger().Handler())
+	assert.IsType(t, &Handler{}, NewLogger("").Handler())
 }
 
 // embeddedLogger is a type alias so the embedded.Logger type doesn't conflict
 // with the Logger method of the recorder when it is embedded.
 type embeddedLogger = embedded.Logger // nolint:unused  // Used below.
+
+type scope struct {
+	Name, Version, SchemaURL string
+}
 
 // recorder records all [log.Record]s it is ased to emit.
 type recorder struct {
@@ -45,7 +48,7 @@ type recorder struct {
 	Records []log.Record
 
 	// Scope is the Logger scope recorder received when Logger was called.
-	Scope instrumentation.Scope
+	Scope scope
 
 	// MinSeverity is the minimum severity the recorder will return true for
 	// when Enabled is called (unless enableKey is set).
@@ -55,7 +58,7 @@ type recorder struct {
 func (r *recorder) Logger(name string, opts ...log.LoggerOption) log.Logger {
 	cfg := log.NewLoggerConfig(opts...)
 
-	r.Scope = instrumentation.Scope{
+	r.Scope = scope{
 		Name:      name,
 		Version:   cfg.InstrumentationVersion(),
 		SchemaURL: cfg.SchemaURL(),
@@ -389,7 +392,7 @@ func TestSLogHandler(t *testing.T) {
 	for _, c := range cases {
 		t.Run(c.name, func(t *testing.T) {
 			r := new(recorder)
-			var h slog.Handler = NewHandler(WithLoggerProvider(r))
+			var h slog.Handler = NewHandler("", WithLoggerProvider(r))
 			if c.mod != nil {
 				h = &wrapper{h, c.mod}
 			}
@@ -411,7 +414,7 @@ func TestSLogHandler(t *testing.T) {
 
 	t.Run("slogtest.TestHandler", func(t *testing.T) {
 		r := new(recorder)
-		h := NewHandler(WithLoggerProvider(r))
+		h := NewHandler("", WithLoggerProvider(r))
 
 		// TODO: use slogtest.Run when Go 1.21 is no longer supported.
 		err := slogtest.TestHandler(h, r.Results)
@@ -422,34 +425,39 @@ func TestSLogHandler(t *testing.T) {
 }
 
 func TestNewHandlerConfiguration(t *testing.T) {
+	name := "name"
 	t.Run("Default", func(t *testing.T) {
 		r := new(recorder)
+		prev := global.GetLoggerProvider()
+		defer global.SetLoggerProvider(prev)
 		global.SetLoggerProvider(r)
 
 		var h *Handler
-		assert.NotPanics(t, func() { h = NewHandler() })
-		assert.NotNil(t, h.logger)
+		require.NotPanics(t, func() { h = NewHandler(name) })
+		require.NotNil(t, h.logger)
 		require.IsType(t, &recorder{}, h.logger)
 
 		l := h.logger.(*recorder)
-		want := instrumentation.Scope{Name: bridgeName, Version: version}
+		want := scope{Name: name}
 		assert.Equal(t, want, l.Scope)
 	})
 
 	t.Run("Options", func(t *testing.T) {
 		r := new(recorder)
-		scope := instrumentation.Scope{Name: "name", Version: "ver", SchemaURL: "url"}
 		var h *Handler
-		assert.NotPanics(t, func() {
+		require.NotPanics(t, func() {
 			h = NewHandler(
+				name,
 				WithLoggerProvider(r),
-				WithInstrumentationScope(scope),
+				WithVersion("ver"),
+				WithSchemaURL("url"),
 			)
 		})
-		assert.NotNil(t, h.logger)
+		require.NotNil(t, h.logger)
 		require.IsType(t, &recorder{}, h.logger)
 
 		l := h.logger.(*recorder)
+		scope := scope{Name: "name", Version: "ver", SchemaURL: "url"}
 		assert.Equal(t, scope, l.Scope)
 	})
 }
@@ -458,7 +466,7 @@ func TestHandlerEnabled(t *testing.T) {
 	r := new(recorder)
 	r.MinSeverity = log.SeverityInfo
 
-	h := NewHandler(WithLoggerProvider(r))
+	h := NewHandler("name", WithLoggerProvider(r))
 
 	ctx := context.Background()
 	assert.False(t, h.Enabled(ctx, slog.LevelDebug), "level conversion: permissive")
@@ -493,7 +501,7 @@ func BenchmarkHandler(b *testing.B) {
 	b.Run("Handle", func(b *testing.B) {
 		handlers := make([]*Handler, b.N)
 		for i := range handlers {
-			handlers[i] = NewHandler()
+			handlers[i] = NewHandler("")
 		}
 
 		b.ReportAllocs()
@@ -507,7 +515,7 @@ func BenchmarkHandler(b *testing.B) {
 		b.Run("5", func(b *testing.B) {
 			handlers := make([]*Handler, b.N)
 			for i := range handlers {
-				handlers[i] = NewHandler()
+				handlers[i] = NewHandler("")
 			}
 
 			b.ReportAllocs()
@@ -519,7 +527,7 @@ func BenchmarkHandler(b *testing.B) {
 		b.Run("10", func(b *testing.B) {
 			handlers := make([]*Handler, b.N)
 			for i := range handlers {
-				handlers[i] = NewHandler()
+				handlers[i] = NewHandler("")
 			}
 
 			b.ReportAllocs()
@@ -533,7 +541,7 @@ func BenchmarkHandler(b *testing.B) {
 	b.Run("WithGroup", func(b *testing.B) {
 		handlers := make([]*Handler, b.N)
 		for i := range handlers {
-			handlers[i] = NewHandler()
+			handlers[i] = NewHandler("")
 		}
 
 		b.ReportAllocs()
@@ -547,7 +555,7 @@ func BenchmarkHandler(b *testing.B) {
 		b.Run("5", func(b *testing.B) {
 			handlers := make([]*Handler, b.N)
 			for i := range handlers {
-				handlers[i] = NewHandler()
+				handlers[i] = NewHandler("")
 			}
 
 			b.ReportAllocs()
@@ -559,7 +567,7 @@ func BenchmarkHandler(b *testing.B) {
 		b.Run("10", func(b *testing.B) {
 			handlers := make([]*Handler, b.N)
 			for i := range handlers {
-				handlers[i] = NewHandler()
+				handlers[i] = NewHandler("")
 			}
 
 			b.ReportAllocs()
@@ -574,7 +582,7 @@ func BenchmarkHandler(b *testing.B) {
 		b.Run("5", func(b *testing.B) {
 			handlers := make([]slog.Handler, b.N)
 			for i := range handlers {
-				handlers[i] = NewHandler().WithGroup("group").WithAttrs(attrs5)
+				handlers[i] = NewHandler("").WithGroup("group").WithAttrs(attrs5)
 			}
 
 			b.ReportAllocs()
@@ -586,7 +594,7 @@ func BenchmarkHandler(b *testing.B) {
 		b.Run("10", func(b *testing.B) {
 			handlers := make([]slog.Handler, b.N)
 			for i := range handlers {
-				handlers[i] = NewHandler().WithGroup("group").WithAttrs(attrs10)
+				handlers[i] = NewHandler("").WithGroup("group").WithAttrs(attrs10)
 			}
 
 			b.ReportAllocs()

@@ -6,7 +6,9 @@ package autoexport // import "go.opentelemetry.io/contrib/exporters/autoexport"
 import (
 	"context"
 
+	"go.opentelemetry.io/otel/sdk/log"
 	"go.opentelemetry.io/otel/sdk/metric"
+	"go.opentelemetry.io/otel/sdk/metric/metricdata"
 	"go.opentelemetry.io/otel/sdk/trace"
 )
 
@@ -44,5 +46,42 @@ func newNoopMetricReader() noopMetricReader {
 // when OTEL_METRICS_EXPORTER environment variable is set to "none".
 func IsNoneMetricReader(e metric.Reader) bool {
 	_, ok := e.(noopMetricReader)
+	return ok
+}
+
+type noopMetricProducer struct{}
+
+func (e noopMetricProducer) Produce(ctx context.Context) ([]metricdata.ScopeMetrics, error) {
+	return nil, nil
+}
+
+func newNoopMetricProducer() noopMetricProducer {
+	return noopMetricProducer{}
+}
+
+// noopLogExporter is an implementation of log.SpanExporter that performs no operations.
+type noopLogExporter struct{}
+
+var _ log.Exporter = noopLogExporter{}
+
+// ExportSpans is part of log.Exporter interface.
+func (e noopLogExporter) Export(ctx context.Context, records []log.Record) error {
+	return nil
+}
+
+// Shutdown is part of log.Exporter interface.
+func (e noopLogExporter) Shutdown(ctx context.Context) error {
+	return nil
+}
+
+// ForceFlush is part of log.Exporter interface.
+func (e noopLogExporter) ForceFlush(ctx context.Context) error {
+	return nil
+}
+
+// IsNoneLogExporter returns true for the exporter returned by [NewLogExporter]
+// when OTEL_LOGSS_EXPORTER environment variable is set to "none".
+func IsNoneLogExporter(e log.Exporter) bool {
+	_, ok := e.(noopLogExporter)
 	return ok
 }

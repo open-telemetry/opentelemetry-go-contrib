@@ -6,6 +6,7 @@ The GCP resource detector supports detecting resources on:
  * Google Kubernetes Engine (GKE)
  * Google App Engine (GAE)
  * Cloud Run
+ * Cloud Run jobs
  * Cloud Functions
 
 ## Usage

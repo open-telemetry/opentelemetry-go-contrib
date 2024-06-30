@@ -10,7 +10,7 @@ import (
 
 	"go.opentelemetry.io/otel/attribute"
 	"go.opentelemetry.io/otel/sdk/resource"
-	semconv "go.opentelemetry.io/otel/semconv/v1.24.0"
+	semconv "go.opentelemetry.io/otel/semconv/v1.25.0"
 
 	metadata "github.com/brunoscheufler/aws-ecs-metadata-go"
 	"github.com/stretchr/testify/assert"
@@ -220,7 +220,7 @@ func TestLogsAttributesAlternatePartition(t *testing.T) {
 		ContainerARN: "arn:arn-partition:arn-svc:arn-region:arn-account:arn-resource",
 	}
 	actualAttributes, err := detector.getLogsAttributes(containerMetadata)
-	assert.NoError(t, err, "failure with nonstandard partitition")
+	assert.NoError(t, err, "failure with nonstandard partition")
 
 	expectedAttributes := []attribute.KeyValue{
 		semconv.AWSLogGroupNames(containerMetadata.LogOptions.AwsLogsGroup),

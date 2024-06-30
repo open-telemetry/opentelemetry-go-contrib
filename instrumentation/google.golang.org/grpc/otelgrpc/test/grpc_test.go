@@ -50,13 +50,16 @@ func newGrpcTest(t testing.TB, listener net.Listener, cOpt []grpc.DialOption, sO
 
 	cOpt = append(cOpt, grpc.WithTransportCredentials(insecure.NewCredentials()))
 
+	dialAddr := listener.Addr().String()
+
 	if l, ok := listener.(interface{ Dial() (net.Conn, error) }); ok {
 		dial := func(context.Context, string) (net.Conn, error) { return l.Dial() }
 		cOpt = append(cOpt, grpc.WithContextDialer(dial))
+		dialAddr = "passthrough:" + dialAddr
 	}
 
 	conn, err := grpc.NewClient(
-		listener.Addr().String(),
+		dialAddr,
 		cOpt...,
 	)
 	require.NoError(t, err)
@@ -632,7 +635,7 @@ func checkUnaryServerSpans(t *testing.T, spans []trace.ReadOnlySpan) {
 	}, largeSpan.Attributes())
 }
 
-func assertEvents(t *testing.T, expected, actual []trace.Event) bool {
+func assertEvents(t *testing.T, expected, actual []trace.Event) bool { //nolint:unparam
 	if !assert.Len(t, actual, len(expected)) {
 		return false
 	}
@@ -691,7 +694,7 @@ func checkUnaryServerRecords(t *testing.T, reader metric.Reader) {
 	metricdatatest.AssertEqual(t, want, rm.ScopeMetrics[0], metricdatatest.IgnoreTimestamp(), metricdatatest.IgnoreValue())
 }
 
-func findAttribute(kvs []attribute.KeyValue, key attribute.Key) (attribute.KeyValue, bool) {
+func findAttribute(kvs []attribute.KeyValue, key attribute.Key) (attribute.KeyValue, bool) { //nolint:unparam
 	for _, kv := range kvs {
 		if kv.Key == key {
 			return kv, true

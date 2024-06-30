@@ -13,7 +13,7 @@ import (
 
 	"go.opentelemetry.io/otel/attribute"
 	"go.opentelemetry.io/otel/sdk/resource"
-	semconv "go.opentelemetry.io/otel/semconv/v1.24.0"
+	semconv "go.opentelemetry.io/otel/semconv/v1.25.0"
 )
 
 var errTest = errors.New("testError")
@@ -134,7 +134,7 @@ func TestCloudFunctionDetect(t *testing.T) {
 			cloudRun: test.cr,
 		}
 		res, err := detector.Detect(context.Background())
-		if err != test.expected.err {
+		if !errors.Is(err, test.expected.err) {
 			t.Fatalf("got unexpected failure: %v", err)
 		} else if diff := cmp.Diff(test.expected.res, res); diff != "" {
 			t.Errorf("detected resource differ from expected (-want, +got)\n%s", diff)
