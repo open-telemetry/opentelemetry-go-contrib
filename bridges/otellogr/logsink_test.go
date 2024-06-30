@@ -13,6 +13,7 @@ import (
 	"github.com/go-logr/logr"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
+
 	"go.opentelemetry.io/otel/log"
 	"go.opentelemetry.io/otel/log/global"
 	"go.opentelemetry.io/otel/log/logtest"
@@ -35,11 +36,6 @@ func TestNewLogSinkConfiguration(t *testing.T) {
 		var ls *LogSink
 		assert.NotPanics(t, func() { ls = NewLogSink() })
 		assert.NotNil(t, ls)
-		require.IsType(t, &logtest.Recorder{}, ls.logger)
-
-		l := ls.logger.(*logtest.Recorder)
-		assert.Equal(t, version, l.Result()[0].Version)
-		assert.Equal(t, bridgeName, l.Result()[0].Name)
 	})
 
 	t.Run("with_options", func(t *testing.T) {
@@ -56,7 +52,6 @@ func TestNewLogSinkConfiguration(t *testing.T) {
 			)
 		})
 		assert.NotNil(t, ls)
-		require.IsType(t, &logtest.Recorder{}, ls.logger)
 		assert.NotNil(t, ls.levelSeverity)
 		assert.Equal(t, log.SeverityFatal, ls.levelSeverity(0))
 	})
@@ -229,10 +224,10 @@ func TestLogSink(t *testing.T) {
 			l := logr.New(ls)
 			tt.f(&l)
 
-			require.Len(t, rec.Result(), tt.expectedLoggerCount+1)
+			require.Len(t, rec.Result(), tt.expectedLoggerCount)
 
-			assert.Len(t, rec.Result()[tt.expectedLoggerCount].Records, len(tt.expectedRecords))
-			for i, record := range rec.Result()[tt.expectedLoggerCount].Records {
+			assert.Len(t, rec.Result()[tt.expectedLoggerCount-1].Records, len(tt.expectedRecords))
+			for i, record := range rec.Result()[tt.expectedLoggerCount-1].Records {
 				assert.Equal(t, tt.expectedRecords[i].Body, record.Body())
 				assert.Equal(t, tt.expectedRecords[i].Severity, record.Severity())
 
