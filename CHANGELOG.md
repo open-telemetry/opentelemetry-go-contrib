@@ -25,6 +25,7 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 - The double setup in `go.opentelemetry.io/contrib/instrumentation/net/http/httptrace/otelhttptrace/example` that caused duplicate traces. (#5564)
 - Out-of-bounds panic in case of invalid span ID in `go.opentelemetry.io/contrib/propagators/b3`. (#5754)
 - Do not panic if a zero-value `SpanProcessor` is used from `go.opentelemetry.io/contrib/processors/baggage/baggagetrace`. (#5811)
+- Non-200 HTTP status codes when retrieving sampling rules in `go.opentelemetry.io/contrib/samplers/aws/xray` now return an error. (#5718)
 
 ### Deprecated
 
