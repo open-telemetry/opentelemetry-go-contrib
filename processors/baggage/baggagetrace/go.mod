@@ -5,7 +5,7 @@ go 1.21
 
 require (
 	github.com/stretchr/testify v1.9.0
-	go.opentelemetry.io/contrib/processors/baggagecopy v0.0.0-00010101000000-000000000000
+	go.opentelemetry.io/contrib/processors/baggagecopy v0.0.0-20240701214518-6294bb1f8097
 	go.opentelemetry.io/otel v1.27.0
 	go.opentelemetry.io/otel/sdk v1.27.0
 )
