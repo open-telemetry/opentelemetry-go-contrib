@@ -9,6 +9,7 @@ import (
 	"strconv"
 	"strings"
 
+	"go.opentelemetry.io/otel"
 	"go.opentelemetry.io/otel/attribute"
 	semconvNew "go.opentelemetry.io/otel/semconv/v1.24.0"
 )
@@ -88,4 +89,10 @@ var methodLookup = map[string]attribute.KeyValue{
 	http.MethodPost:    semconvNew.HTTPRequestMethodPost,
 	http.MethodPut:     semconvNew.HTTPRequestMethodPut,
 	http.MethodTrace:   semconvNew.HTTPRequestMethodTrace,
+}
+
+func handleErr(err error) {
+	if err != nil {
+		otel.Handle(err)
+	}
 }
