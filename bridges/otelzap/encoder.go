@@ -6,12 +6,46 @@ package otelzap // import "go.opentelemetry.io/contrib/bridges/otelzap"
 import (
 	"fmt"
 	"reflect"
+	"sync"
 	"time"
 
 	"go.uber.org/zap/zapcore"
 
 	"go.opentelemetry.io/otel/log"
 )
+
+var arrayEncoderPool = sync.Pool{
+	New: func() interface{} {
+		// Similar to console_encoder which uses capacity of 2
+		return &arrayEncoder{elems: make([]log.Value, 0, 2)}
+	},
+}
+
+func getArrayEncoder() (arr *arrayEncoder, free func()) {
+	arr = arrayEncoderPool.Get().(*arrayEncoder)
+	return arr, func() {
+		arr.elems = arr.elems[:0]
+		arrayEncoderPool.Put(arr)
+	}
+}
+
+var objectEncoderPool = sync.Pool{
+	New: func() interface{} {
+		// Similar to console_encoder which uses capacity of 2
+		return newObjectEncoder(2)
+	},
+}
+
+func getObjectEncoder() (obj *objectEncoder, free func()) {
+	obj = objectEncoderPool.Get().(*objectEncoder)
+	return obj, func() {
+		obj.root.attrs = obj.root.attrs[:0]
+		obj.root.name = ""
+		obj.root.next = nil
+		obj.cur = obj.root
+		objectEncoderPool.Put(obj)
+	}
+}
 
 var (
 	_ zapcore.ObjectEncoder = (*objectEncoder)(nil)
@@ -55,16 +89,16 @@ func (m *objectEncoder) calculate(o *namespace) {
 }
 
 func (m *objectEncoder) AddArray(key string, v zapcore.ArrayMarshaler) error {
-	// TODO: Use arrayEncoder from a pool.
-	arr := &arrayEncoder{}
+	arr, free := getArrayEncoder()
+	defer free()
 	err := v.MarshalLogArray(arr)
 	m.cur.attrs = append(m.cur.attrs, log.Slice(key, arr.elems...))
 	return err
 }
 
 func (m *objectEncoder) AddObject(k string, v zapcore.ObjectMarshaler) error {
-	// TODO: Use objectEncoder from a pool.
-	newobj := newObjectEncoder(2)
+	newobj, free := getObjectEncoder()
+	defer free()
 	err := v.MarshalLogObject(newobj)
 	newobj.calculate(newobj.root)
 	m.cur.attrs = append(m.cur.attrs, log.Map(k, newobj.root.attrs...))
@@ -196,7 +230,6 @@ type arrayEncoder struct {
 }
 
 func (a *arrayEncoder) AppendArray(v zapcore.ArrayMarshaler) error {
-	// TODO: Use arrayEncoder from a pool.
 	arr := &arrayEncoder{}
 	err := v.MarshalLogArray(arr)
 	a.elems = append(a.elems, log.SliceValue(arr.elems...))
@@ -204,7 +237,6 @@ func (a *arrayEncoder) AppendArray(v zapcore.ArrayMarshaler) error {
 }
 
 func (a *arrayEncoder) AppendObject(v zapcore.ObjectMarshaler) error {
-	// TODO: Use objectEncoder from a pool.
 	m := newObjectEncoder(2)
 	err := v.MarshalLogObject(m)
 	m.calculate(m.root)

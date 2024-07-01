@@ -1,0 +1,66 @@
+goos: linux
+goarch: amd64
+pkg: go.opentelemetry.io/contrib/bridges/otelzap
+cpu: 12th Gen Intel(R) Core(TM) i5-1245U
+BenchmarkCoreWrite/10_fields-12         	 3094474	       416.9 ns/op	     307 B/op	      10 allocs/op
+BenchmarkCoreWrite/10_fields-12         	 2861959	       419.0 ns/op	     307 B/op	      10 allocs/op
+BenchmarkCoreWrite/10_fields-12         	 2747382	       491.8 ns/op	     307 B/op	      10 allocs/op
+BenchmarkCoreWrite/10_fields-12         	 2361176	       669.9 ns/op	     307 B/op	      10 allocs/op
+BenchmarkCoreWrite/10_fields-12         	 1403024	      1379 ns/op	     306 B/op	      10 allocs/op
+BenchmarkCoreWrite/10_fields-12         	 1492218	       977.6 ns/op	     307 B/op	      10 allocs/op
+BenchmarkCoreWrite/10_fields-12         	 1333086	       971.8 ns/op	     307 B/op	      10 allocs/op
+BenchmarkCoreWrite/10_fields-12         	 1556096	      1019 ns/op	     307 B/op	      10 allocs/op
+BenchmarkCoreWrite/10_fields-12         	 1541168	       684.7 ns/op	     307 B/op	      10 allocs/op
+BenchmarkCoreWrite/10_fields-12         	 1525130	       814.2 ns/op	     307 B/op	      10 allocs/op
+BenchmarkCoreWrite/20_fields-12         	  705718	      2284 ns/op	     817 B/op	      17 allocs/op
+BenchmarkCoreWrite/20_fields-12         	  643626	      1567 ns/op	     817 B/op	      17 allocs/op
+BenchmarkCoreWrite/20_fields-12         	 1000000	      1747 ns/op	     816 B/op	      17 allocs/op
+BenchmarkCoreWrite/20_fields-12         	  691274	      1911 ns/op	     817 B/op	      17 allocs/op
+BenchmarkCoreWrite/20_fields-12         	  670533	      1872 ns/op	     816 B/op	      17 allocs/op
+BenchmarkCoreWrite/20_fields-12         	  842696	      1786 ns/op	     817 B/op	      17 allocs/op
+BenchmarkCoreWrite/20_fields-12         	  611466	      1732 ns/op	     817 B/op	      17 allocs/op
+BenchmarkCoreWrite/20_fields-12         	  744956	      1787 ns/op	     817 B/op	      17 allocs/op
+BenchmarkCoreWrite/20_fields-12         	  860582	      1311 ns/op	     818 B/op	      17 allocs/op
+BenchmarkCoreWrite/20_fields-12         	  796299	      1638 ns/op	     816 B/op	      17 allocs/op
+BenchmarkCoreWrite/Namespace-12         	 1230918	      1129 ns/op	     609 B/op	      12 allocs/op
+BenchmarkCoreWrite/Namespace-12         	 1035723	      1098 ns/op	     609 B/op	      12 allocs/op
+BenchmarkCoreWrite/Namespace-12         	 1264596	      1001 ns/op	     609 B/op	      12 allocs/op
+BenchmarkCoreWrite/Namespace-12         	 1240990	      1192 ns/op	     609 B/op	      12 allocs/op
+BenchmarkCoreWrite/Namespace-12         	  962514	      1213 ns/op	     609 B/op	      12 allocs/op
+BenchmarkCoreWrite/Namespace-12         	 1202300	      1131 ns/op	     609 B/op	      12 allocs/op
+BenchmarkCoreWrite/Namespace-12         	 1325752	       987.1 ns/op	     609 B/op	      12 allocs/op
+BenchmarkCoreWrite/Namespace-12         	 1000000	      1277 ns/op	     609 B/op	      12 allocs/op
+BenchmarkCoreWrite/Namespace-12         	 1119668	       965.0 ns/op	     609 B/op	      12 allocs/op
+BenchmarkCoreWrite/Namespace-12         	 1000000	      1041 ns/op	     609 B/op	      12 allocs/op
+BenchmarkCoreWrite/With10_fields-12     	97766108	       219.5 ns/op	     208 B/op	       1 allocs/op
+BenchmarkCoreWrite/With10_fields-12     	 6008856	       203.6 ns/op	     208 B/op	       1 allocs/op
+BenchmarkCoreWrite/With10_fields-12     	 6272293	       193.0 ns/op	     208 B/op	       1 allocs/op
+BenchmarkCoreWrite/With10_fields-12     	 6555595	       210.7 ns/op	     208 B/op	       1 allocs/op
+BenchmarkCoreWrite/With10_fields-12     	 6299338	       195.7 ns/op	     208 B/op	       1 allocs/op
+BenchmarkCoreWrite/With10_fields-12     	 6111976	       200.9 ns/op	     208 B/op	       1 allocs/op
+BenchmarkCoreWrite/With10_fields-12     	 4072090	       279.1 ns/op	     208 B/op	       1 allocs/op
+BenchmarkCoreWrite/With10_fields-12     	 6066678	       201.0 ns/op	     208 B/op	       1 allocs/op
+BenchmarkCoreWrite/With10_fields-12     	 6148065	       195.8 ns/op	     208 B/op	       1 allocs/op
+BenchmarkCoreWrite/With10_fields-12     	 5007072	       225.5 ns/op	     208 B/op	       1 allocs/op
+BenchmarkCoreWrite/With20_fields-12     	 2744989	       577.3 ns/op	     640 B/op	       1 allocs/op
+BenchmarkCoreWrite/With20_fields-12     	 1951476	       540.6 ns/op	     640 B/op	       1 allocs/op
+BenchmarkCoreWrite/With20_fields-12     	 2507559	       466.7 ns/op	     640 B/op	       1 allocs/op
+BenchmarkCoreWrite/With20_fields-12     	 2725330	       471.3 ns/op	     640 B/op	       1 allocs/op
+BenchmarkCoreWrite/With20_fields-12     	 2536676	       458.4 ns/op	     640 B/op	       1 allocs/op
+BenchmarkCoreWrite/With20_fields-12     	 2431834	       499.8 ns/op	     640 B/op	       1 allocs/op
+BenchmarkCoreWrite/With20_fields-12     	 2171806	       654.2 ns/op	     640 B/op	       1 allocs/op
+BenchmarkCoreWrite/With20_fields-12     	 2314248	       568.2 ns/op	     640 B/op	       1 allocs/op
+BenchmarkCoreWrite/With20_fields-12     	 2099668	       639.0 ns/op	     640 B/op	       1 allocs/op
+BenchmarkCoreWrite/With20_fields-12     	 2064679	       615.6 ns/op	     640 B/op	       1 allocs/op
+BenchmarkCoreWrite/WithNamespace-12     	100000000	        12.76 ns/op	       0 B/op	       0 allocs/op
+BenchmarkCoreWrite/WithNamespace-12     	100000000	        17.25 ns/op	       0 B/op	       0 allocs/op
+BenchmarkCoreWrite/WithNamespace-12     	70474212	        20.52 ns/op	       0 B/op	       0 allocs/op
+BenchmarkCoreWrite/WithNamespace-12     	85111983	        13.75 ns/op	       0 B/op	       0 allocs/op
+BenchmarkCoreWrite/WithNamespace-12     	88211587	        14.40 ns/op	       0 B/op	       0 allocs/op
+BenchmarkCoreWrite/WithNamespace-12     	94344598	        12.74 ns/op	       0 B/op	       0 allocs/op
+BenchmarkCoreWrite/WithNamespace-12     	95041298	        12.36 ns/op	       0 B/op	       0 allocs/op
+BenchmarkCoreWrite/WithNamespace-12     	81045355	        13.36 ns/op	       0 B/op	       0 allocs/op
+BenchmarkCoreWrite/WithNamespace-12     	98573088	        13.55 ns/op	       0 B/op	       0 allocs/op
+BenchmarkCoreWrite/WithNamespace-12     	94569451	        12.76 ns/op	       0 B/op	       0 allocs/op
+PASS
+ok  	go.opentelemetry.io/contrib/bridges/otelzap	121.129s

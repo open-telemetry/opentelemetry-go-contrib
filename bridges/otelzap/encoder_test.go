@@ -7,6 +7,7 @@ package otelzap
 
 import (
 	"errors"
+	"fmt"
 	"testing"
 	"time"
 
@@ -55,6 +56,7 @@ func TestObjectEncoder(t *testing.T) {
 					arr.AppendBool(true)
 					return nil
 				})), "Expected AddArray to succeed.")
+
 			},
 			expected: []interface{}{true, false, true},
 		},
@@ -64,6 +66,13 @@ func TestObjectEncoder(t *testing.T) {
 				assert.NoError(t, e.AddArray("k", turduckens(2)), "Expected AddArray to succeed.")
 			},
 			expected: []interface{}{wantTurducken, wantTurducken},
+		},
+		{
+			desc: "AddArray-with AppendArray",
+			f: func(e zapcore.ObjectEncoder) {
+				assert.NoError(t, e.AddArray("k", number(2)), "Expected AddArray to succeed.")
+			},
+			expected: []interface{}{[]interface{}{"1"}, []interface{}{"2"}},
 		},
 		{
 			desc: "AddReflected",
@@ -359,6 +368,23 @@ func (t turduckens) MarshalLogArray(enc zapcore.ArrayEncoder) error {
 		err = errors.Join(err, enc.AppendObject(tur))
 	}
 	return err
+}
+
+type number int
+
+func (t number) MarshalLogArray(enc zapcore.ArrayEncoder) error {
+	var err error
+	for i := 0; i < int(t); i++ {
+		err = errors.Join(err, enc.AppendArray(numberString(fmt.Sprint(i+1))))
+	}
+	return err
+}
+
+type numberString string
+
+func (t numberString) MarshalLogArray(enc zapcore.ArrayEncoder) error {
+	enc.AppendString(string(t))
+	return nil
 }
 
 type loggable struct{ bool }
