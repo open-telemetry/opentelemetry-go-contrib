@@ -25,6 +25,8 @@ import (
 	"go.opentelemetry.io/otel/sdk/metric"
 )
 
+const otelExporterOTLPMetricsProtoEnvKey = "OTEL_EXPORTER_OTLP_METRICS_PROTOCOL"
+
 // MetricOption applies an autoexport configuration option.
 type MetricOption = option[metric.Reader]
 
@@ -49,6 +51,9 @@ func WithFallbackMetricReader(metricReaderFactory func(ctx context.Context) (met
 //     see: [go.opentelemetry.io/otel/exporters/otlp/otlpmetric/otlpmetricgrpc]
 //   - "http/protobuf" (default) -  protobuf-encoded data over HTTP connection;
 //     see: [go.opentelemetry.io/otel/exporters/otlp/otlpmetric/otlpmetrichttp]
+//
+// OTEL_EXPORTER_OTLP_METRICS_PROTOCOL defines OTLP exporter's transport protocol for the metrics signal;
+// supported values are the same as OTEL_EXPORTER_OTLP_PROTOCOL.
 //
 // OTEL_EXPORTER_PROMETHEUS_HOST (defaulting to "localhost") and
 // OTEL_EXPORTER_PROMETHEUS_PORT (defaulting to 9464) define the host and port for the
@@ -106,7 +111,12 @@ func init() {
 			readerOpts = append(readerOpts, metric.WithProducer(producer))
 		}
 
-		proto := os.Getenv(otelExporterOTLPProtoEnvKey)
+		proto := os.Getenv(otelExporterOTLPMetricsProtoEnvKey)
+		if proto == "" {
+			proto = os.Getenv(otelExporterOTLPProtoEnvKey)
+		}
+
+		// Fallback to default, http/protobuf.
 		if proto == "" {
 			proto = "http/protobuf"
 		}
