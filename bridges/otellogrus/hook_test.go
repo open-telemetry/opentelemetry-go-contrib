@@ -213,9 +213,14 @@ func TestHookFire(t *testing.T) {
 			for k, v := range tt.wantRecords {
 				found := false
 
+				want := make([]logtest.EmittedRecord, len(v))
+				for i := range want {
+					want[i] = logtest.EmittedRecord{Record: v[i]}
+				}
+
 				for _, s := range rec.Result() {
 					if k == s.Name {
-						assertRecords(t, v, s.Records)
+						assertRecords(t, want, s.Records)
 						found = true
 					}
 				}
@@ -402,7 +407,7 @@ func assertBody(t *testing.T, want log.Value, got log.Value) {
 	}
 }
 
-func assertAttributes(t *testing.T, want, got log.Record) {
+func assertAttributes(t *testing.T, want, got logtest.EmittedRecord) {
 	t.Helper()
 
 	var wantAttr []log.KeyValue
@@ -421,7 +426,7 @@ func assertAttributes(t *testing.T, want, got log.Record) {
 	}
 }
 
-func assertRecords(t *testing.T, want, got []log.Record) {
+func assertRecords(t *testing.T, want, got []logtest.EmittedRecord) {
 	t.Helper()
 
 	assert.Equal(t, len(want), len(got))
