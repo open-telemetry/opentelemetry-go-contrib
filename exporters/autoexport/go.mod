@@ -1,8 +1,6 @@
 module go.opentelemetry.io/contrib/exporters/autoexport
 
-go 1.21.0
-
-toolchain go1.22.4
+go 1.21
 
 require (
 	github.com/prometheus/client_golang v1.19.1
