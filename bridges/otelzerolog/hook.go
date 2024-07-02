@@ -33,8 +33,6 @@
 package otelzerolog // import "go.opentelemetry.io/contrib/bridges/otelzerolog"
 
 import (
-	"github.com/rs/zerolog"
-
 	"go.opentelemetry.io/otel/log"
 	"go.opentelemetry.io/otel/log/global"
 )
@@ -106,35 +104,4 @@ func WithLoggerProvider(provider log.LoggerProvider) Option {
 		c.provider = provider
 		return c
 	})
-}
-
-// NewSeverityHook returns a new [SeverityHook] to be used as a [Zerolog.Hook].
-//
-// If [WithLoggerProvider] is not provided, the returned SeverityHook will use the
-// global LoggerProvider.
-func NewSeverityHook(name string, options ...Option) *SeverityHook {
-	cfg := newConfig(options)
-	return &SeverityHook{
-		logger: cfg.logger(name),
-		levels: []zerolog.Level{
-			zerolog.PanicLevel,
-			zerolog.FatalLevel,
-			zerolog.ErrorLevel,
-			zerolog.WarnLevel,
-			zerolog.InfoLevel,
-			zerolog.DebugLevel,
-		},
-	}
-}
-
-// SeverityHook is a [zerolog.Hook] that sends all logging records it receives to
-// OpenTelemetry. See package documentation for how conversions are made.
-type SeverityHook struct {
-	logger log.Logger
-	levels []zerolog.Level
-}
-
-// Levels returns the list of log levels we want to be sent to OpenTelemetry.
-func (h *SeverityHook) Levels() []zerolog.Level {
-	return h.levels
 }
