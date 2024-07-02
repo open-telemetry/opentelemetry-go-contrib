@@ -103,6 +103,8 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 ### Added
 
 - `NewSDK` in `go.opentelemetry.io/contrib/config` now returns a configured SDK with a valid `MeterProvider`. (#4804)
+- The `go.opentelemetry.io/contrib/bridges/otellogr` module.
+  This module provides an OpenTelemetry logging bridge for "github.com/go-logr/logr". (#5357)
 
 ### Changed
 
