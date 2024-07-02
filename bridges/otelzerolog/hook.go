@@ -54,17 +54,7 @@ func newConfig(options []Option) config {
 	}
 	return c
 }
-
-func (c config) logger(name string) log.Logger {
-	var opts []log.LoggerOption
-	if c.version != "" {
-		opts = append(opts, log.WithInstrumentationVersion(c.version))
-	}
-	if c.schemaURL != "" {
-		opts = append(opts, log.WithSchemaURL(c.schemaURL))
-	}
-	return c.provider.Logger(name, opts...)
-}
+// TODO: Will add the logger function
 
 // Option configures a SeverityHook.
 type Option interface {
