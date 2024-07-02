@@ -15,6 +15,11 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 - Add support to configure views when creating MeterProvider using the config package. (#5654)
 - Add log support for the autoexport package. (#5733)
 - Add support for disabling the old runtime metrics using the `OTEL_GO_X_DEPRECATED_RUNTIME_METRICS=false` environment variable. (#5747)
+- Add support for signal-specific protocols environment variables (`OTEL_EXPORTER_OTLP_TRACES_PROTOCOL`, `OTEL_EXPORTER_OTLP_LOGS_PROTOCOL`, `OTEL_EXPORTER_OTLP_METRICS_PROTOCOL`) in `go.opentelemetry.io/contrib/exporters/autoexport`. (#5816)
+- The `go.opentelemetry.io/contrib/processors/minsev` module is added.
+  This module provides and experimental logging processor with a configurable threshold for the minimum severity records must have to be recorded. (#5817)
+- The `go.opentelemetry.io/contrib/processors/baggagecopy` module.
+  This module is a replacment of `go.opentelemetry.io/contrib/processors/baggage/baggagetrace`. (#5824)
 
 ### Fixed
 
@@ -22,6 +27,7 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 - Custom attributes targeting metrics recorded by the `go.opentelemetry.io/contrib/instrumentation/net/http/otelhttp` are not ignored anymore. (#5129)
 - Use `c.FullPath()` method to set `http.route` attribute in `go.opentelemetry.io/contrib/instrumentation/github.com/gin-gonic/gin/otelgin`. (#5734)
 - The double setup in `go.opentelemetry.io/contrib/instrumentation/net/http/httptrace/otelhttptrace/example` that caused duplicate traces. (#5564)
+- Out-of-bounds panic in case of invalid span ID in `go.opentelemetry.io/contrib/propagators/b3`. (#5754)
 
 ### Deprecated
 
@@ -33,6 +39,12 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
   If you would like to become a Code Owner of this module and prevent it from being removed, see [#5552]. (#5646)
 - The `go.opentelemetry.io/contrib/samplers/aws/xray` package is deprecated.
   If you would like to become a Code Owner of this module and prevent it from being removed, see [#5554]. (#5647)
+- The `go.opentelemetry.io/contrib/processors/baggage/baggagetrace` package is deprecated.
+  Use the added `go.opentelemetry.io/contrib/processors/baggagecopy` package instead. (#5824)
+  - Use `baggagecopy.NewSpanProcessor` as a replacement for `baggagetrace.New`.
+    - `NewSpanProcessor` accepts a `Fitler` function type that selects which baggage members are added to a span.
+    - `NewSpanProcessor` returns a `*baggagecopy.SpanProcessor` instead of a `trace.SpanProcessor` interface.
+      The returned type still implements the interface.
 
 [#5550]: https://github.com/open-telemetry/opentelemetry-go-contrib/issues/5550
 [#5551]: https://github.com/open-telemetry/opentelemetry-go-contrib/issues/5551
@@ -43,6 +55,7 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 
 - Improve performance of `go.opentelemetry.io/contrib/instrumentation/google.golang.org/grpc/otelgrpc` with the usage of `WithAttributeSet()` instead of `WithAttribute()`. (#5664)
 - Improve performance of `go.opentelemetry.io/contrib/instrumentation/net/http/otelhttp` with the usage of `WithAttributeSet()` instead of `WithAttribute()`. (#5664)
+- Update `go.opentelemetry.io/contrib/config` to latest released configuration schema which introduces breaking changes where `Attributes` is now a `map[string]interface{}`. (#5758)
 
 ## [1.27.0/0.52.0/0.21.0/0.7.0/0.2.0] - 2024-05-21
 
@@ -75,8 +88,6 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 - `NewHandler` now accepts a `name` `string` as the first argument.
   This parameter is used as a replacement of `WithInstrumentationScope` to specify the name of the logger backing the returned `Handler`. (#5588)
 - Upgrade all dependencies of `go.opentelemetry.io/otel/semconv/v1.24.0` to `go.opentelemetry.io/otel/semconv/v1.25.0`. (#5605)
-
-- Update the span processor in `go.opentelemetry.io/contrib/processors/baggage/baggagetrace` to require a baggage key predicate. (#5619)
 
 ### Removed
 
