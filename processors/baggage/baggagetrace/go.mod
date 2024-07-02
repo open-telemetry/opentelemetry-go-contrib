@@ -1,9 +1,11 @@
+// Deprecated: Use go.opentelemetry.io/contrib/processors/baggagecopy instead.
 module go.opentelemetry.io/contrib/processors/baggage/baggagetrace
 
 go 1.21
 
 require (
 	github.com/stretchr/testify v1.9.0
+	go.opentelemetry.io/contrib/processors/baggagecopy v0.0.0-20240701214518-6294bb1f8097
 	go.opentelemetry.io/otel v1.27.0
 	go.opentelemetry.io/otel/sdk v1.27.0
 )
@@ -18,3 +20,5 @@ require (
 	golang.org/x/sys v0.21.0 // indirect
 	gopkg.in/yaml.v3 v3.0.1 // indirect
 )
+
+replace go.opentelemetry.io/contrib/processors/baggagecopy => ../../baggagecopy
