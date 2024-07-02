@@ -11,13 +11,14 @@ import (
 	"sync/atomic"
 	"time"
 
+	"go.opentelemetry.io/contrib/instrumentation/net/http/otelhttp/internal/semconv"
 	"go.opentelemetry.io/contrib/instrumentation/net/http/otelhttp/internal/semconvutil"
 	"go.opentelemetry.io/otel"
 	"go.opentelemetry.io/otel/attribute"
 	"go.opentelemetry.io/otel/codes"
 	"go.opentelemetry.io/otel/metric"
 	"go.opentelemetry.io/otel/propagation"
-	semconv "go.opentelemetry.io/otel/semconv/v1.20.0"
+
 	"go.opentelemetry.io/otel/trace"
 )
 
@@ -34,6 +35,7 @@ type Transport struct {
 	spanNameFormatter func(string, *http.Request) string
 	clientTrace       func(context.Context) *httptrace.ClientTrace
 
+	semconv              semconv.HTTPClient
 	requestBytesCounter  metric.Int64Counter
 	responseBytesCounter metric.Int64Counter
 	latencyMeasure       metric.Float64Histogram
@@ -53,7 +55,8 @@ func NewTransport(base http.RoundTripper, opts ...Option) *Transport {
 	}
 
 	t := Transport{
-		rt: base,
+		rt:      base,
+		semconv: semconv.NewHTTPClient(),
 	}
 
 	defaultOpts := []Option{
@@ -155,7 +158,7 @@ func (t *Transport) RoundTrip(r *http.Request) (*http.Response, error) {
 		r.Body = &bw
 	}
 
-	span.SetAttributes(semconvutil.HTTPClientRequest(r)...)
+	span.SetAttributes(t.semconv.RequestTraceAttrs(r)...)
 	t.propagators.Inject(ctx, propagation.HeaderCarrier(r.Header))
 
 	res, err := t.rt.RoundTrip(r)
@@ -180,8 +183,8 @@ func (t *Transport) RoundTrip(r *http.Request) (*http.Response, error) {
 	}
 
 	// traces
-	span.SetAttributes(semconvutil.HTTPClientResponse(res)...)
-	span.SetStatus(semconvutil.HTTPClientStatus(res.StatusCode))
+	span.SetAttributes(t.semconv.ResponseTraceAttrs(res)...)
+	span.SetStatus(t.semconv.Status(res.StatusCode))
 
 	res.Body = newWrappedBody(span, readRecordFunc, res.Body)
 
