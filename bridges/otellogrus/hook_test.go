@@ -432,11 +432,6 @@ func assertRecords(t *testing.T, want, got []logtest.EmittedRecord) {
 	assert.Equal(t, len(want), len(got))
 
 	for i, j := range want {
-		assert.Equal(t, j.Timestamp(), got[i].Timestamp())
-		assert.Equal(t, j.ObservedTimestamp(), got[i].ObservedTimestamp())
-		assert.Equal(t, j.Severity(), got[i].Severity())
-		assert.Equal(t, j.SeverityText(), got[i].SeverityText())
-		assertBody(t, j.Body(), got[i].Body())
-		assertAttributes(t, j, got[i])
+		logtest.AssertRecordEqual(t, j.Record, got[i].Record)
 	}
 }
