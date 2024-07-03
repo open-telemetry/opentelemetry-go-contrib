@@ -14,7 +14,7 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 
 ### Fixed
 
-- config: Support Console exporter for LoggerProvider (#5850)
+- config: Support Console exporter for LoggerProvider (#5432, #5850)
 
 ## [1.28.0/0.53.0/0.22.0/0.8.0/0.3.0/0.1.0] - 2024-07-02
 
