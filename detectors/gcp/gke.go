@@ -47,7 +47,7 @@ func (gke *GKE) Detect(ctx context.Context) (*resource.Resource, error) {
 		attributes = append(attributes, semconv.ContainerName(containerName))
 	}
 
-	if clusterName, err := metadata.InstanceAttributeValue("cluster-name"); hasProblem(err) {
+	if clusterName, err := metadata.InstanceAttributeValueWithContext(ctx, "cluster-name"); hasProblem(err) {
 		errInfo = append(errInfo, err.Error())
 	} else if clusterName != "" {
 		attributes = append(attributes, semconv.K8SClusterName(clusterName))
