@@ -400,32 +400,6 @@ func assertKeyValues(t *testing.T, want, got []log.KeyValue) {
 	}
 }
 
-func assertBody(t *testing.T, want log.Value, got log.Value) {
-	t.Helper()
-	if !got.Equal(want) {
-		t.Errorf("Body value is not equal:\nwant: %v\ngot:  %v", want, got)
-	}
-}
-
-func assertAttributes(t *testing.T, want, got logtest.EmittedRecord) {
-	t.Helper()
-
-	var wantAttr []log.KeyValue
-	want.WalkAttributes(func(kv log.KeyValue) bool {
-		wantAttr = append(wantAttr, kv)
-		return true
-	})
-	var gotAttr []log.KeyValue
-	got.WalkAttributes(func(kv log.KeyValue) bool {
-		gotAttr = append(gotAttr, kv)
-		return true
-	})
-
-	if !slices.EqualFunc(wantAttr, gotAttr, log.KeyValue.Equal) {
-		t.Errorf("Attributes are not equal:\nwant: %v\ngot:  %v", want, got)
-	}
-}
-
 func assertRecords(t *testing.T, want, got []logtest.EmittedRecord) {
 	t.Helper()
 
