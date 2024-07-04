@@ -264,7 +264,7 @@ func TestReader(t *testing.T) {
 			wantErr: &url.Error{Op: "parse", URL: " ", Err: errors.New("invalid URI for request")},
 		},
 		{
-			name: "periodic/grpc-http-none-compression",
+			name: "periodic/otlp-grpc-none-compression",
 			reader: MetricReader{
 				Periodic: &PeriodicMetricReader{
 					Exporter: MetricExporter{
@@ -281,6 +281,86 @@ func TestReader(t *testing.T) {
 				},
 			},
 			wantReader: sdkmetric.NewPeriodicReader(otlpGRPCExporter),
+		},
+		{
+			name: "periodic/otlp-grpc-delta-temporality",
+			reader: MetricReader{
+				Periodic: &PeriodicMetricReader{
+					Exporter: MetricExporter{
+						OTLP: &OTLPMetric{
+							Protocol:    "grpc/protobuf",
+							Endpoint:    "localhost:4318",
+							Compression: ptr("none"),
+							Timeout:     ptr(1000),
+							Headers: map[string]string{
+								"test": "test1",
+							},
+							TemporalityPreference: ptr("delta"),
+						},
+					},
+				},
+			},
+			wantReader: sdkmetric.NewPeriodicReader(otlpGRPCExporter),
+		},
+		{
+			name: "periodic/otlp-grpc-cumulative-temporality",
+			reader: MetricReader{
+				Periodic: &PeriodicMetricReader{
+					Exporter: MetricExporter{
+						OTLP: &OTLPMetric{
+							Protocol:    "grpc/protobuf",
+							Endpoint:    "localhost:4318",
+							Compression: ptr("none"),
+							Timeout:     ptr(1000),
+							Headers: map[string]string{
+								"test": "test1",
+							},
+							TemporalityPreference: ptr("cumulative"),
+						},
+					},
+				},
+			},
+			wantReader: sdkmetric.NewPeriodicReader(otlpGRPCExporter),
+		},
+		{
+			name: "periodic/otlp-grpc-lowmemory-temporality",
+			reader: MetricReader{
+				Periodic: &PeriodicMetricReader{
+					Exporter: MetricExporter{
+						OTLP: &OTLPMetric{
+							Protocol:    "grpc/protobuf",
+							Endpoint:    "localhost:4318",
+							Compression: ptr("none"),
+							Timeout:     ptr(1000),
+							Headers: map[string]string{
+								"test": "test1",
+							},
+							TemporalityPreference: ptr("lowmemory"),
+						},
+					},
+				},
+			},
+			wantReader: sdkmetric.NewPeriodicReader(otlpGRPCExporter),
+		},
+		{
+			name: "periodic/otlp-grpc-invalid-temporality",
+			reader: MetricReader{
+				Periodic: &PeriodicMetricReader{
+					Exporter: MetricExporter{
+						OTLP: &OTLPMetric{
+							Protocol:    "grpc/protobuf",
+							Endpoint:    "localhost:4318",
+							Compression: ptr("none"),
+							Timeout:     ptr(1000),
+							Headers: map[string]string{
+								"test": "test1",
+							},
+							TemporalityPreference: ptr("invalid"),
+						},
+					},
+				},
+			},
+			wantErr: errors.New("unsupported temporality preference \"invalid\""),
 		},
 		{
 			name: "periodic/otlp-grpc-invalid-compression",
@@ -413,6 +493,86 @@ func TestReader(t *testing.T) {
 				},
 			},
 			wantReader: sdkmetric.NewPeriodicReader(otlpHTTPExporter),
+		},
+		{
+			name: "periodic/otlp-http-cumulative-temporality",
+			reader: MetricReader{
+				Periodic: &PeriodicMetricReader{
+					Exporter: MetricExporter{
+						OTLP: &OTLPMetric{
+							Protocol:    "http/protobuf",
+							Endpoint:    "localhost:4318",
+							Compression: ptr("none"),
+							Timeout:     ptr(1000),
+							Headers: map[string]string{
+								"test": "test1",
+							},
+							TemporalityPreference: ptr("cumulative"),
+						},
+					},
+				},
+			},
+			wantReader: sdkmetric.NewPeriodicReader(otlpHTTPExporter),
+		},
+		{
+			name: "periodic/otlp-http-lowmemory-temporality",
+			reader: MetricReader{
+				Periodic: &PeriodicMetricReader{
+					Exporter: MetricExporter{
+						OTLP: &OTLPMetric{
+							Protocol:    "http/protobuf",
+							Endpoint:    "localhost:4318",
+							Compression: ptr("none"),
+							Timeout:     ptr(1000),
+							Headers: map[string]string{
+								"test": "test1",
+							},
+							TemporalityPreference: ptr("lowmemory"),
+						},
+					},
+				},
+			},
+			wantReader: sdkmetric.NewPeriodicReader(otlpHTTPExporter),
+		},
+		{
+			name: "periodic/otlp-http-delta-temporality",
+			reader: MetricReader{
+				Periodic: &PeriodicMetricReader{
+					Exporter: MetricExporter{
+						OTLP: &OTLPMetric{
+							Protocol:    "http/protobuf",
+							Endpoint:    "localhost:4318",
+							Compression: ptr("none"),
+							Timeout:     ptr(1000),
+							Headers: map[string]string{
+								"test": "test1",
+							},
+							TemporalityPreference: ptr("delta"),
+						},
+					},
+				},
+			},
+			wantReader: sdkmetric.NewPeriodicReader(otlpHTTPExporter),
+		},
+		{
+			name: "periodic/otlp-http-invalid-temporality",
+			reader: MetricReader{
+				Periodic: &PeriodicMetricReader{
+					Exporter: MetricExporter{
+						OTLP: &OTLPMetric{
+							Protocol:    "http/protobuf",
+							Endpoint:    "localhost:4318",
+							Compression: ptr("none"),
+							Timeout:     ptr(1000),
+							Headers: map[string]string{
+								"test": "test1",
+							},
+							TemporalityPreference: ptr("invalid"),
+						},
+					},
+				},
+			},
+			wantErr: errors.New("unsupported temporality preference \"invalid\""),
 		},
 		{
 			name: "periodic/otlp-http-invalid-compression",
