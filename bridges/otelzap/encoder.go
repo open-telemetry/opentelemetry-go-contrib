@@ -42,7 +42,7 @@ func getObjectEncoder() (obj *objectEncoder, free func()) {
 		obj.root.attrs = obj.root.attrs[:0]
 		obj.root.name = ""
 		obj.root.next = nil
-		obj.cur.attrs = obj.cur.attrs[:0]
+		obj.cur = obj.root
 		objectEncoderPool.Put(obj)
 	}
 }

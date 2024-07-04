@@ -199,8 +199,8 @@ func BenchmarkCoreWrite(b *testing.B) {
 				zap.Time("k", time.Unix(1000, 1000)),
 				zap.Binary("k", []byte{1, 2}),
 				zap.ByteString("k", []byte{1, 2}),
-				zap.Object("k", loggable{true}),
-				zap.Array("k", loggable{true}),
+				zap.Object("k", turducken{}),  // also invokes appendObject
+				zap.Array("k", turduckens(1)), // also invokes appendArray
 				zap.String("k", "a"),
 				zap.Ints("k", []int{1, 2}),
 			},
