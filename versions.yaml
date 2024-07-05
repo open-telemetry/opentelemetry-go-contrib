@@ -83,6 +83,7 @@ module-sets:
     modules:
       - go.opentelemetry.io/contrib/processors/baggage/baggagetrace
       - go.opentelemetry.io/contrib/processors/baggagecopy
+      - go.opentelemetry.io/contrib/processors/isolate
       - go.opentelemetry.io/contrib/processors/minsev
   experimental-detectors:
     version: v0.0.1
