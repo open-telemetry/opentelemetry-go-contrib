@@ -21,7 +21,7 @@ func NewLogProcessor(downstream log.Processor) *LogProcessor {
 	return &LogProcessor{Processor: downstream}
 }
 
-// LogProcessor is an [log.Processor] implementation clones the recieved log
+// LogProcessor is an [log.Processor] implementation clones the received log
 // records in order to no share mutable data with subsequent registered processors.
 //
 // If the wrapped [log.Processor] is nil, calls to the LogProcessor methods
