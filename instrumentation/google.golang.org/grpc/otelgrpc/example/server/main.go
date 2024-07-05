@@ -5,6 +5,7 @@ package main
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"io"
 	"log"
@@ -68,7 +69,7 @@ func (s *server) SayHelloClientStream(stream api.HelloService_SayHelloClientStre
 	for {
 		in, err := stream.Recv()
 
-		if err == io.EOF {
+		if errors.Is(err, io.EOF) {
 			break
 		} else if err != nil {
 			log.Printf("Non EOF error: %v\n", err)
@@ -88,7 +89,7 @@ func (s *server) SayHelloBidiStream(stream api.HelloService_SayHelloBidiStreamSe
 	for {
 		in, err := stream.Recv()
 
-		if err == io.EOF {
+		if errors.Is(err, io.EOF) {
 			break
 		} else if err != nil {
 			log.Printf("Non EOF error: %v\n", err)
