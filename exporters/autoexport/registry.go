@@ -9,6 +9,8 @@ import (
 	"sync"
 )
 
+const otelExporterOTLPProtoEnvKey = "OTEL_EXPORTER_OTLP_PROTOCOL"
+
 // registry maintains a map of exporter names to exporter factories
 // func(context.Context) (T, error) that is safe for concurrent use by multiple
 // goroutines without additional locking or coordination.

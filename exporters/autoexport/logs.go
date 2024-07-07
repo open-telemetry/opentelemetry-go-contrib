@@ -99,7 +99,7 @@ func RegisterLogExporter(name string, factoryFn factory[log.Exporter]) {
 }
 
 func init() {
-	RegisterLogExporter(otlp, func(ctx context.Context) (log.Exporter, error) {
+	RegisterLogExporter("otlp", func(ctx context.Context) (log.Exporter, error) {
 		// The transport protocol used by the exporter is determined using the
 		// following environment variables, ordered by priority:
 		//   - OTEL_EXPORTER_OTLP_LOGS_PROTOCOL
@@ -107,24 +107,24 @@ func init() {
 		//   - fallback to 'http/protobuf' if variables above are not set or empty.
 		proto := env.WithDefaultString(
 			otelLogsExporterProtocolEnvKey,
-			env.WithDefaultString(otelExporterOTLPProtoEnvKey, httpProtobuf),
+			env.WithDefaultString(otelExporterOTLPProtoEnvKey, "http/protobuf"),
 		)
 
 		switch proto {
-		case grpc:
+		case "grpc":
 			// grpc is not supported yet, should uncomment when it is supported.
 			// return otlplogrpc.New(ctx)
 			return nil, errLogsUnsupportedGRPCProtocol
-		case httpProtobuf:
+		case "http/protobuf":
 			return otlploghttp.New(ctx)
 		default:
 			return nil, errInvalidOTLPProtocol
 		}
 	})
-	RegisterLogExporter(console, func(_ context.Context) (log.Exporter, error) {
+	RegisterLogExporter("console", func(_ context.Context) (log.Exporter, error) {
 		return stdoutlog.New()
 	})
-	RegisterLogExporter(none, func(_ context.Context) (log.Exporter, error) {
+	RegisterLogExporter("none", func(_ context.Context) (log.Exporter, error) {
 		return noopLogExporter{}, nil
 	})
 }

@@ -104,7 +104,7 @@ func WithFallbackSpanExporter(spanExporterFactory func(ctx context.Context) (tra
 }
 
 func init() {
-	RegisterSpanExporter(otlp, func(ctx context.Context) (trace.SpanExporter, error) {
+	RegisterSpanExporter("otlp", func(ctx context.Context) (trace.SpanExporter, error) {
 		// The transport protocol used by the exporter is determined using the
 		// following environment variables, ordered by priority:
 		//   - OTEL_EXPORTER_OTLP_TRACES_PROTOCOL
@@ -112,22 +112,22 @@ func init() {
 		//   - fallback to 'http/protobuf' if variables above are not set or empty.
 		proto := env.WithDefaultString(
 			otelTracesExporterProtocolEnvKey,
-			env.WithDefaultString(otelExporterOTLPProtoEnvKey, httpProtobuf),
+			env.WithDefaultString(otelExporterOTLPProtoEnvKey, "http/protobuf"),
 		)
 
 		switch proto {
-		case grpc:
+		case "grpc":
 			return otlptracegrpc.New(ctx)
-		case httpProtobuf:
+		case "http/protobuf":
 			return otlptracehttp.New(ctx)
 		default:
 			return nil, errInvalidOTLPProtocol
 		}
 	})
-	RegisterSpanExporter(console, func(_ context.Context) (trace.SpanExporter, error) {
+	RegisterSpanExporter("console", func(_ context.Context) (trace.SpanExporter, error) {
 		return stdouttrace.New()
 	})
-	RegisterSpanExporter(none, func(_ context.Context) (trace.SpanExporter, error) {
+	RegisterSpanExporter("none", func(_ context.Context) (trace.SpanExporter, error) {
 		return noopSpanExporter{}, nil
 	})
 }

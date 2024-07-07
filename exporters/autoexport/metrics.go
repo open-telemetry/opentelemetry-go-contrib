@@ -149,7 +149,7 @@ func WithFallbackMetricProducer(producerFactory func(ctx context.Context) (metri
 }
 
 func init() {
-	RegisterMetricReader(otlp, func(ctx context.Context) (metric.Reader, error) {
+	RegisterMetricReader("otlp", func(ctx context.Context) (metric.Reader, error) {
 		producers, err := metricsProducers.create(ctx)
 		if err != nil {
 			return nil, err
@@ -161,17 +161,17 @@ func init() {
 
 		proto := env.WithDefaultString(
 			otelMetricsExporterProtocolEnvKey,
-			env.WithDefaultString(otelExporterOTLPProtoEnvKey, httpProtobuf),
+			env.WithDefaultString(otelExporterOTLPProtoEnvKey, "http/protobuf"),
 		)
 
 		switch proto {
-		case grpc:
+		case "grpc":
 			r, err := otlpmetricgrpc.New(ctx)
 			if err != nil {
 				return nil, err
 			}
 			return metric.NewPeriodicReader(r, readerOpts...), nil
-		case httpProtobuf:
+		case "http/protobuf":
 			r, err := otlpmetrichttp.New(ctx)
 			if err != nil {
 				return nil, err
@@ -181,7 +181,7 @@ func init() {
 			return nil, errInvalidOTLPProtocol
 		}
 	})
-	RegisterMetricReader(console, func(ctx context.Context) (metric.Reader, error) {
+	RegisterMetricReader("console", func(ctx context.Context) (metric.Reader, error) {
 		producers, err := metricsProducers.create(ctx)
 		if err != nil {
 			return nil, err
@@ -197,7 +197,7 @@ func init() {
 		}
 		return metric.NewPeriodicReader(r, readerOpts...), nil
 	})
-	RegisterMetricReader(none, func(ctx context.Context) (metric.Reader, error) {
+	RegisterMetricReader("none", func(ctx context.Context) (metric.Reader, error) {
 		return newNoopMetricReader(), nil
 	})
 	RegisterMetricReader("prometheus", func(ctx context.Context) (metric.Reader, error) {
@@ -257,7 +257,7 @@ func init() {
 	RegisterMetricProducer("prometheus", func(ctx context.Context) (metric.Producer, error) {
 		return prometheusbridge.NewMetricProducer(), nil
 	})
-	RegisterMetricProducer(none, func(ctx context.Context) (metric.Producer, error) {
+	RegisterMetricProducer("none", func(ctx context.Context) (metric.Producer, error) {
 		return newNoopMetricProducer(), nil
 	})
 }

@@ -35,7 +35,7 @@ func (s signal[T]) create(ctx context.Context, options ...functional.Option[conf
 			executor.Append(cfg.fallbackFactory)
 			return executor.Execute(ctx)
 		}
-		exporters = append(exporters, otlp)
+		exporters = append(exporters, "otlp")
 	}
 
 	for _, expType := range exporters {
