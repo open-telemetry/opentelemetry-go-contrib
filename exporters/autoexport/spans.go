@@ -13,6 +13,8 @@ import (
 	"go.opentelemetry.io/otel/sdk/trace"
 )
 
+const otelExporterOTLPTracesProtoEnvKey = "OTEL_EXPORTER_OTLP_TRACES_PROTOCOL"
+
 // SpanOption applies an autoexport configuration option.
 type SpanOption = option[trace.SpanExporter]
 
@@ -42,6 +44,9 @@ func WithFallbackSpanExporter(spanExporterFactory func(ctx context.Context) (tra
 //   - "http/protobuf" (default) -  protobuf-encoded data over HTTP connection;
 //     see: [go.opentelemetry.io/otel/exporters/otlp/otlptrace/otlptracehttp]
 //
+// OTEL_EXPORTER_OTLP_TRACES_PROTOCOL defines OTLP exporter's transport protocol for the traces signal;
+// supported values are the same as OTEL_EXPORTER_OTLP_PROTOCOL.
+//
 // An error is returned if an environment value is set to an unhandled value.
 //
 // Use [RegisterSpanExporter] to handle more values of OTEL_TRACES_EXPORTER.
@@ -65,7 +70,12 @@ var tracesSignal = newSignal[trace.SpanExporter]("OTEL_TRACES_EXPORTER")
 
 func init() {
 	RegisterSpanExporter("otlp", func(ctx context.Context) (trace.SpanExporter, error) {
-		proto := os.Getenv(otelExporterOTLPProtoEnvKey)
+		proto := os.Getenv(otelExporterOTLPTracesProtoEnvKey)
+		if proto == "" {
+			proto = os.Getenv(otelExporterOTLPProtoEnvKey)
+		}
+
+		// Fallback to default, http/protobuf.
 		if proto == "" {
 			proto = "http/protobuf"
 		}

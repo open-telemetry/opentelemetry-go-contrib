@@ -74,6 +74,33 @@ func TestMetricExporterOTLP(t *testing.T) {
 	}
 }
 
+func TestMetricExporterOTLPWithDedicatedProtocol(t *testing.T) {
+	t.Setenv("OTEL_METRICS_EXPORTER", "otlp")
+
+	for _, tc := range []struct {
+		protocol, exporterType string
+	}{
+		{"http/protobuf", "*otlpmetrichttp.Exporter"},
+		{"", "*otlpmetrichttp.Exporter"},
+		{"grpc", "*otlpmetricgrpc.Exporter"},
+	} {
+		t.Run(fmt.Sprintf("protocol=%q", tc.protocol), func(t *testing.T) {
+			t.Setenv("OTEL_EXPORTER_OTLP_METRICS_PROTOCOL", tc.protocol)
+
+			got, err := NewMetricReader(context.Background())
+			assert.NoError(t, err)
+			t.Cleanup(func() {
+				assert.NoError(t, got.Shutdown(context.Background()))
+			})
+			assert.IsType(t, &metric.PeriodicReader{}, got)
+
+			// Implementation detail hack. This may break when bumping OTLP exporter modules as it uses unexported API.
+			exporterType := reflect.Indirect(reflect.ValueOf(got)).FieldByName("exporter").Elem().Type()
+			assert.Equal(t, tc.exporterType, exporterType.String())
+		})
+	}
+}
+
 func TestMetricExporterOTLPOverInvalidProtocol(t *testing.T) {
 	t.Setenv("OTEL_METRICS_EXPORTER", "otlp")
 	t.Setenv("OTEL_EXPORTER_OTLP_PROTOCOL", "invalid-protocol")

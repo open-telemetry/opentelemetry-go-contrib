@@ -23,7 +23,7 @@
 
 * @open-telemetry/go-approvers
 
-CODEOWNERS @MrAlias @MadVikingGod @pellared @dashpole
+CODEOWNERS @MrAlias @MadVikingGod @pellared @dashpole @XSAM @dmathieu
 
 bridges/otelslog                                                        @open-telemetry/go-approvers @MrAlias @pellared
 bridges/otellogrus/                                                     @open-telemetry/go-approvers @dmathieu @pellared
@@ -57,6 +57,7 @@ instrumentation/net/http/otelhttp/                                      @open-te
 instrumentation/runtime/                                                @open-telemetry/go-approvers @MadVikingGod
 
 processors/baggage/baggagetrace                                         @open-telemetry/go-approvers @codeboten @MikeGoldsmith
+processors/minsev                                                       @open-telemetry/go-approvers @MrAlias
 
 propagators/autoprop/                                                   @open-telemetry/go-approvers @MrAlias
 propagators/aws/                                                        @open-telemetry/go-approvers @akats7

@@ -289,7 +289,7 @@ func (m *Manifest) updateReservoir(t *samplingTargetDocument) (err error) {
 
 // snapshots takes a snapshot of sampling statistics from all rules, resetting
 // statistics counters in the process.
-func (m *Manifest) snapshots() ([]*samplingStatisticsDocument, error) {
+func (m *Manifest) snapshots() ([]*samplingStatisticsDocument, error) { //nolint:unparam
 	statistics := make([]*samplingStatisticsDocument, 0, len(m.Rules))
 
 	// Generate sampling statistics for user-defined rules.
