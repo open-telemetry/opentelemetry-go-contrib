@@ -6,9 +6,8 @@ package autoexport // import "go.opentelemetry.io/contrib/exporters/autoexport"
 import (
 	"context"
 	"errors"
+	"os"
 
-	"go.opentelemetry.io/contrib/exporters/autoexport/utils/env"
-	"go.opentelemetry.io/contrib/exporters/autoexport/utils/functional"
 	"go.opentelemetry.io/otel/exporters/otlp/otlplog/otlploghttp"
 	"go.opentelemetry.io/otel/exporters/stdout/stdoutlog"
 	"go.opentelemetry.io/otel/sdk/log"
@@ -25,12 +24,12 @@ var (
 	errLogsUnsupportedGRPCProtocol = errors.New("log exporter do not support 'grpc' protocol yet - consider using 'http/protobuf' instead")
 )
 
-// LogExporterOption applies an autoexport configuration option.
-type LogExporterOption = functional.Option[config[log.Exporter]]
+// LogOption applies an autoexport configuration option.
+type LogOption = option[log.Exporter]
 
 // WithFallbackLogExporter sets the fallback exporter to use when no exporter
 // is configured through the OTEL_LOGS_EXPORTER environment variable.
-func WithFallbackLogExporter(factoryFn factory[log.Exporter]) LogExporterOption {
+func WithFallbackLogExporter(factoryFn factory[log.Exporter]) LogOption {
 	return withFallbackFactory(factoryFn)
 }
 
@@ -54,7 +53,7 @@ func WithFallbackLogExporter(factoryFn factory[log.Exporter]) LogExporterOption 
 // Use [RegisterLogExporter] to handle more values of OTEL_LOGS_EXPORTER.
 //
 // Use [IsNoneLogExporter] to check if the returned exporter is a "no operation" exporter.
-func NewLogExporters(ctx context.Context, options ...LogExporterOption) ([]log.Exporter, error) {
+func NewLogExporters(ctx context.Context, options ...LogOption) ([]log.Exporter, error) {
 	return logsSignal.create(ctx, options...)
 }
 
@@ -83,7 +82,7 @@ func NewLogExporters(ctx context.Context, options ...LogExporterOption) ([]log.E
 // Use [RegisterLogExporter] to handle more values of OTEL_LOGS_EXPORTER.
 //
 // Use [IsNoneLogExporter] to check if the returned exporter is a "no operation" exporter.
-func NewLogExporter(ctx context.Context, options ...LogExporterOption) (log.Exporter, error) {
+func NewLogExporter(ctx context.Context, options ...LogOption) (log.Exporter, error) {
 	exporters, err := NewLogExporters(ctx, options...)
 	if err != nil {
 		return nil, err
@@ -100,15 +99,15 @@ func RegisterLogExporter(name string, factoryFn factory[log.Exporter]) {
 
 func init() {
 	RegisterLogExporter("otlp", func(ctx context.Context) (log.Exporter, error) {
-		// The transport protocol used by the exporter is determined using the
-		// following environment variables, ordered by priority:
-		//   - OTEL_EXPORTER_OTLP_LOGS_PROTOCOL
-		//   - OTEL_EXPORTER_OTLP_PROTOCOL
-		//   - fallback to 'http/protobuf' if variables above are not set or empty.
-		proto := env.WithDefaultString(
-			otelLogsExporterProtocolEnvKey,
-			env.WithDefaultString(otelExporterOTLPProtoEnvKey, "http/protobuf"),
-		)
+		proto := os.Getenv(otelLogsExporterProtocolEnvKey)
+		if proto == "" {
+			proto = os.Getenv(otelExporterOTLPProtoEnvKey)
+		}
+
+		// Fallback to default, http/protobuf.
+		if proto == "" {
+			proto = "http/protobuf"
+		}
 
 		switch proto {
 		case "grpc":

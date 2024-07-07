@@ -13,9 +13,6 @@ import (
 	"strings"
 	"time"
 
-	"go.opentelemetry.io/contrib/exporters/autoexport/utils/env"
-	"go.opentelemetry.io/contrib/exporters/autoexport/utils/functional"
-
 	"github.com/prometheus/client_golang/prometheus"
 	"github.com/prometheus/client_golang/prometheus/promhttp"
 
@@ -39,12 +36,12 @@ var (
 	metricsProducers = newProducerRegistry(otelMetricsProducerEnvKey)
 )
 
-// MetricReaderOption applies an autoexport configuration option.
-type MetricReaderOption = functional.Option[config[metric.Reader]]
+// MetricOption applies an autoexport configuration option.
+type MetricOption = option[metric.Reader]
 
 // WithFallbackMetricReader sets the fallback exporter to use when no exporter
 // is configured through the OTEL_METRICS_EXPORTER environment variable.
-func WithFallbackMetricReader(metricReaderFactory factory[metric.Reader]) MetricReaderOption {
+func WithFallbackMetricReader(metricReaderFactory factory[metric.Reader]) MetricOption {
 	return withFallbackFactory(metricReaderFactory)
 }
 
@@ -79,7 +76,7 @@ func WithFallbackMetricReader(metricReaderFactory factory[metric.Reader]) Metric
 // Use [RegisterMetricProducer] to handle more values of OTEL_METRICS_PRODUCERS.
 //
 // Use [IsNoneMetricReader] to check if the returned exporter is a "no operation" exporter.
-func NewMetricReaders(ctx context.Context, options ...MetricReaderOption) ([]metric.Reader, error) {
+func NewMetricReaders(ctx context.Context, options ...MetricOption) ([]metric.Reader, error) {
 	return metricsSignal.create(ctx, options...)
 }
 
@@ -120,8 +117,8 @@ func NewMetricReaders(ctx context.Context, options ...MetricReaderOption) ([]met
 // when OTEL_METRICS_EXPORTER is unset or empty.
 //
 // Use [IsNoneMetricReader] to check if the returned exporter is a "no operation" exporter.
-func NewMetricReader(ctx context.Context, options ...MetricReaderOption) (metric.Reader, error) {
-	readers, err := NewMetricReaders(ctx, options...)
+func NewMetricReader(ctx context.Context, opts ...MetricOption) (metric.Reader, error) {
+	readers, err := NewMetricReaders(ctx, opts...)
 	if err != nil {
 		return nil, err
 	}
@@ -159,10 +156,15 @@ func init() {
 			readerOpts = append(readerOpts, metric.WithProducer(producer))
 		}
 
-		proto := env.WithDefaultString(
-			otelMetricsExporterProtocolEnvKey,
-			env.WithDefaultString(otelExporterOTLPProtoEnvKey, "http/protobuf"),
-		)
+		proto := os.Getenv(otelMetricsExporterProtocolEnvKey)
+		if proto == "" {
+			proto = os.Getenv(otelExporterOTLPProtoEnvKey)
+		}
+
+		// Fallback to default, http/protobuf.
+		if proto == "" {
+			proto = "http/protobuf"
+		}
 
 		switch proto {
 		case "grpc":
@@ -234,8 +236,8 @@ func init() {
 		}
 
 		// environment variable names and defaults specified at https://opentelemetry.io/docs/specs/otel/configuration/sdk-environment-variables/#prometheus-exporter
-		host := env.WithDefaultString("OTEL_EXPORTER_PROMETHEUS_HOST", "localhost")
-		port := env.WithDefaultString("OTEL_EXPORTER_PROMETHEUS_PORT", "9464")
+		host := getenv("OTEL_EXPORTER_PROMETHEUS_HOST", "localhost")
+		port := getenv("OTEL_EXPORTER_PROMETHEUS_PORT", "9464")
 		addr := host + ":" + port
 		lis, err := net.Listen("tcp", addr)
 		if err != nil {
@@ -273,6 +275,14 @@ func (rws readerWithServer) Shutdown(ctx context.Context) error {
 		rws.Reader.Shutdown(ctx),
 		rws.server.Shutdown(ctx),
 	)
+}
+
+func getenv(key, fallback string) string {
+	result, ok := os.LookupEnv(key)
+	if !ok {
+		return fallback
+	}
+	return result
 }
 
 type producerRegistry struct {

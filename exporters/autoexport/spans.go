@@ -5,9 +5,8 @@ package autoexport // import "go.opentelemetry.io/contrib/exporters/autoexport"
 
 import (
 	"context"
+	"os"
 
-	"go.opentelemetry.io/contrib/exporters/autoexport/utils/env"
-	"go.opentelemetry.io/contrib/exporters/autoexport/utils/functional"
 	"go.opentelemetry.io/otel/exporters/otlp/otlptrace/otlptracegrpc"
 	"go.opentelemetry.io/otel/exporters/otlp/otlptrace/otlptracehttp"
 	"go.opentelemetry.io/otel/exporters/stdout/stdouttrace"
@@ -22,7 +21,7 @@ const (
 var tracesSignal = newSignal[trace.SpanExporter](otelTracesExporterEnvKey)
 
 // SpanOption applies an autoexport configuration option.
-type SpanOption = functional.Option[config[trace.SpanExporter]]
+type SpanOption = option[trace.SpanExporter]
 
 // Option applies an autoexport configuration option.
 //
@@ -82,8 +81,8 @@ func NewSpanExporters(ctx context.Context, options ...SpanOption) ([]trace.SpanE
 // Use [RegisterSpanExporter] to handle more values of OTEL_TRACES_EXPORTER.
 //
 // Use [IsNoneSpanExporter] to check if the returned exporter is a "no operation" exporter.
-func NewSpanExporter(ctx context.Context, options ...SpanOption) (trace.SpanExporter, error) {
-	exporters, err := NewSpanExporters(ctx, options...)
+func NewSpanExporter(ctx context.Context, opts ...SpanOption) (trace.SpanExporter, error) {
+	exporters, err := NewSpanExporters(ctx, opts...)
 	if err != nil {
 		return nil, err
 	}
@@ -105,15 +104,15 @@ func WithFallbackSpanExporter(spanExporterFactory func(ctx context.Context) (tra
 
 func init() {
 	RegisterSpanExporter("otlp", func(ctx context.Context) (trace.SpanExporter, error) {
-		// The transport protocol used by the exporter is determined using the
-		// following environment variables, ordered by priority:
-		//   - OTEL_EXPORTER_OTLP_TRACES_PROTOCOL
-		//   - OTEL_EXPORTER_OTLP_PROTOCOL
-		//   - fallback to 'http/protobuf' if variables above are not set or empty.
-		proto := env.WithDefaultString(
-			otelTracesExporterProtocolEnvKey,
-			env.WithDefaultString(otelExporterOTLPProtoEnvKey, "http/protobuf"),
-		)
+		proto := os.Getenv(otelTracesExporterProtocolEnvKey)
+		if proto == "" {
+			proto = os.Getenv(otelExporterOTLPProtoEnvKey)
+		}
+
+		// Fallback to default, http/protobuf.
+		if proto == "" {
+			proto = "http/protobuf"
+		}
 
 		switch proto {
 		case "grpc":

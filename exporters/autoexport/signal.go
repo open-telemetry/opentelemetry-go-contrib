@@ -7,7 +7,6 @@ import (
 	"context"
 
 	"go.opentelemetry.io/contrib/exporters/autoexport/utils/env"
-	"go.opentelemetry.io/contrib/exporters/autoexport/utils/functional"
 )
 
 // signal represents a generic OpenTelemetry signal (logs, metrics and traces).
@@ -26,8 +25,13 @@ func newSignal[T any](envKey string) signal[T] {
 	}
 }
 
-func (s signal[T]) create(ctx context.Context, options ...functional.Option[config[T]]) ([]T, error) {
-	cfg, executor := functional.ResolveOptions(options...), newExecutor[T]()
+func (s signal[T]) create(ctx context.Context, opts ...option[T]) ([]T, error) {
+	var cfg config[T]
+	for _, opt := range opts {
+		opt.apply(&cfg)
+	}
+
+	executor := newExecutor[T]()
 
 	exporters, err := env.WithStringList(s.envKey, ",")
 	if err != nil {
@@ -49,16 +53,23 @@ func (s signal[T]) create(ctx context.Context, options ...functional.Option[conf
 	return executor.Execute(ctx)
 }
 
-// config holds common configuration across the different
-// supported signals (logs, traces and metrics).
 type config[T any] struct {
-	fallbackFactory factory[T]
+	fallbackFactory func(ctx context.Context) (T, error)
 }
 
-// withFallbackFactory assigns a fallback factory for the current signal.
-func withFallbackFactory[T any](factoryFn factory[T]) functional.Option[config[T]] {
-	return func(s *config[T]) *config[T] {
-		s.fallbackFactory = factoryFn
-		return s
-	}
+type option[T any] interface {
+	apply(cfg *config[T])
+}
+
+type optionFunc[T any] func(cfg *config[T])
+
+//lint:ignore U1000 https://github.com/dominikh/go-tools/issues/1440
+func (fn optionFunc[T]) apply(cfg *config[T]) {
+	fn(cfg)
+}
+
+func withFallbackFactory[T any](fallbackFactory func(ctx context.Context) (T, error)) option[T] {
+	return optionFunc[T](func(cfg *config[T]) {
+		cfg.fallbackFactory = fallbackFactory
+	})
 }

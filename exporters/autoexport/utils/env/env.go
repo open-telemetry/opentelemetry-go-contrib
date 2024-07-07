@@ -26,16 +26,6 @@ func WithStringList(key string, separator string) ([]string, error) {
 	return strings.Split(val, separator), nil
 }
 
-// WithDefaultString retrieves the value of an environment variable identified by the key.
-// If the environment variable is not set or empty, it returns the fallback default string provided.
-func WithDefaultString(key string, fallback string) string {
-	val, err := WithString(key)
-	if err != nil {
-		return fallback
-	}
-	return val
-}
-
 // WithString retrieves the value of an environment variable identified by the key.
 //
 // ErrUndefinedVariable is returned if the environment variable lookup fails.
