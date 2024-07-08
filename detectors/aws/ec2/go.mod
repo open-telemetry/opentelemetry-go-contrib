@@ -3,7 +3,7 @@ module go.opentelemetry.io/contrib/detectors/aws/ec2
 go 1.21
 
 require (
-	github.com/aws/aws-sdk-go v1.54.14
+	github.com/aws/aws-sdk-go v1.54.15
 	github.com/stretchr/testify v1.9.0
 	go.opentelemetry.io/otel v1.28.0
 	go.opentelemetry.io/otel/sdk v1.28.0
@@ -18,6 +18,6 @@ require (
 	github.com/pmezard/go-difflib v1.0.0 // indirect
 	go.opentelemetry.io/otel/metric v1.28.0 // indirect
 	go.opentelemetry.io/otel/trace v1.28.0 // indirect
-	golang.org/x/sys v0.21.0 // indirect
+	golang.org/x/sys v0.22.0 // indirect
 	gopkg.in/yaml.v3 v3.0.1 // indirect
 )
