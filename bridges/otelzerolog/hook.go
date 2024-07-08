@@ -4,29 +4,6 @@
 // Package otelzerolog provides a SeverityHook, a zerolog.Hook implementation that
 // can be used to bridge between the [zerolog] API and [OpenTelemetry].
 //
-// # Record Conversion
-//
-// The zerolog.Event records are converted to OpenTelemetry [log.Record] in
-// the following way:
-//
-//   - Time is set as the Timestamp.
-//   - Message is set as the Body using a [log.StringValue].
-//   - Level is transformed and set as the Severity. The SeverityText is not
-//     set.
-//   - Fields are transformed and set as the attributes.
-//
-// The Level is transformed by using a mapping function to the OpenTelemetry
-// Severity types. For example:
-//
-//   - zerolog.DebugLevel is transformed to [log.SeverityDebug]
-//   - zerolog.InfoLevel is transformed to [log.SeverityInfo]
-//   - zerolog.WarnLevel is transformed to [log.SeverityWarn]
-//   - zerolog.ErrorLevel is transformed to [log.SeverityError]
-//   - zerolog.FatalLevel and zerolog.PanicLevel are mapped to
-//     [log.SeverityError] (consider customization for these levels)
-//
-// Attribute values are transformed based on their type into log attributes, or
-// into a string value if there is no matching type.
 //
 // [zerolog]: https://github.com/rs/zerolog
 // [OpenTelemetry]: https://opentelemetry.io/docs/concepts/signals/logs/
