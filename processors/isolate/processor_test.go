@@ -97,3 +97,44 @@ func (p *processor) ForceFlush(ctx context.Context) error {
 	p.ForceFlushCalls = append(p.ForceFlushCalls, ctx)
 	return p.ReturnErr
 }
+
+func BenchmarkLogProcessor(b *testing.B) {
+	var ok bool
+	var err error
+
+	var r log.Record
+	r.SetBody(logapi.StringValue("message"))
+
+	var rWithShared log.Record
+	for i := 0; i < testAttrCount; i++ {
+		rWithShared.AddAttributes(logapi.Int(strconv.Itoa(i), i))
+	}
+
+	testCases := []struct {
+		desc string
+		r    log.Record
+	}{
+		{
+			desc: "Record without shared data",
+			r:    r,
+		},
+		{
+			desc: "Record with shared data",
+			r:    rWithShared,
+		},
+	}
+
+	p := NewLogProcessor(noopProcessor{})
+
+	for _, tc := range testCases {
+		b.Run(tc.desc, func(b *testing.B) {
+			b.ReportAllocs()
+			for n := 0; n < b.N; n++ {
+				ok = p.Enabled(testCtx, tc.r)
+				err = p.OnEmit(testCtx, tc.r)
+			}
+		})
+	}
+
+	_, _ = ok, err
+}
