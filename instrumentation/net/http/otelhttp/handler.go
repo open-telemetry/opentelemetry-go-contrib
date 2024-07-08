@@ -11,7 +11,6 @@ import (
 
 	"go.opentelemetry.io/contrib/instrumentation/net/http/otelhttp/internal/semconv"
 	"go.opentelemetry.io/otel"
-	"go.opentelemetry.io/otel/metric"
 	"go.opentelemetry.io/otel/propagation"
 	"go.opentelemetry.io/otel/trace"
 )
@@ -31,10 +30,7 @@ type middleware struct {
 	publicEndpoint    bool
 	publicEndpointFn  func(*http.Request) bool
 
-	semconv              semconv.HTTPServer
-	requestBytesCounter  metric.Int64Counter
-	responseBytesCounter metric.Int64Counter
-	serverLatencyMeasure metric.Float64Histogram
+	semconv semconv.HTTPServer
 }
 
 func defaultHandlerFormatter(operation string, _ *http.Request) string {
