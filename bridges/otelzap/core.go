@@ -154,8 +154,8 @@ func (o *Core) Write(ent zapcore.Entry, fields []zapcore.Field) error {
 	r.SetTimestamp(ent.Time)
 	r.SetBody(log.StringValue(ent.Message))
 	r.SetSeverity(convertLevel(ent.Level))
+	r.SetSeverityText(ent.Level.String())
 
-	// TODO: Handle zap.Namespace.
 	// TODO: Handle ent.LoggerName.
 
 	r.AddAttributes(o.attr...)
@@ -183,7 +183,8 @@ func convertField(fields []zapcore.Field) (context.Context, []log.KeyValue) {
 		field.AddTo(enc)
 	}
 
-	return ctx, enc.kv
+	enc.calculate(enc.root)
+	return ctx, enc.root.attrs
 }
 
 func convertLevel(level zapcore.Level) log.Severity {

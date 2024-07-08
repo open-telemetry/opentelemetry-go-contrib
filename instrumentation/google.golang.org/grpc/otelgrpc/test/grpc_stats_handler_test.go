@@ -5,6 +5,7 @@ package test
 
 import (
 	"context"
+	"errors"
 	"io"
 	"net"
 	"strconv"
@@ -1438,7 +1439,7 @@ func TestStatsHandlerConcurrentSafeContextCancellation(t *testing.T) {
 					Payload:            pl,
 				}
 				err := stream.Send(req)
-				if err == io.EOF { // possible due to context cancellation
+				if errors.Is(err, io.EOF) { // possible due to context cancellation
 					require.ErrorIs(t, ctx.Err(), context.Canceled)
 				} else {
 					require.NoError(t, err)
