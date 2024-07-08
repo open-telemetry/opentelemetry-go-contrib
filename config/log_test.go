@@ -14,6 +14,7 @@ import (
 	"github.com/stretchr/testify/require"
 
 	"go.opentelemetry.io/otel/exporters/otlp/otlplog/otlploghttp"
+	"go.opentelemetry.io/otel/exporters/stdout/stdoutlog"
 	"go.opentelemetry.io/otel/log"
 	"go.opentelemetry.io/otel/log/noop"
 	sdklog "go.opentelemetry.io/otel/sdk/log"
@@ -59,8 +60,15 @@ func TestLoggerProvider(t *testing.T) {
 
 func TestLogProcessor(t *testing.T) {
 	ctx := context.Background()
+
 	otlpHTTPExporter, err := otlploghttp.New(ctx)
 	require.NoError(t, err)
+
+	consoleExporter, err := stdoutlog.New(
+		stdoutlog.WithPrettyPrint(),
+	)
+	require.NoError(t, err)
+
 	testCases := []struct {
 		name          string
 		processor     LogRecordProcessor
@@ -148,6 +156,21 @@ func TestLogProcessor(t *testing.T) {
 				},
 			},
 			wantErr: errors.New("no valid log exporter"),
+		},
+		{
+			name: "batch/console",
+			processor: LogRecordProcessor{
+				Batch: &BatchLogRecordProcessor{
+					MaxExportBatchSize: ptr(0),
+					ExportTimeout:      ptr(0),
+					MaxQueueSize:       ptr(0),
+					ScheduleDelay:      ptr(0),
+					Exporter: LogRecordExporter{
+						Console: map[string]any{},
+					},
+				},
+			},
+			wantProcessor: sdklog.NewBatchProcessor(consoleExporter),
 		},
 		{
 			name: "batch/otlp-http-exporter",
@@ -340,6 +363,17 @@ func TestLogProcessor(t *testing.T) {
 				},
 			},
 			wantErr: errors.New("no valid log exporter"),
+		},
+		{
+			name: "simple/console",
+			processor: LogRecordProcessor{
+				Simple: &SimpleLogRecordProcessor{
+					Exporter: LogRecordExporter{
+						Console: map[string]any{},
+					},
+				},
+			},
+			wantProcessor: sdklog.NewSimpleProcessor(consoleExporter),
 		},
 		{
 			name: "simple/otlp-exporter",
