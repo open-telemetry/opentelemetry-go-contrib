@@ -232,9 +232,9 @@ func (h *middleware) serveHTTP(w http.ResponseWriter, r *http.Request, next http
 		attributes = append(attributes, semconv.HTTPStatusCode(rww.statusCode))
 	}
 	o := metric.WithAttributeSet(attribute.NewSet(attributes...))
-	addOpts := []metric.AddOption{o} // Allocate vararg slice once.
-	h.requestBytesCounter.Add(ctx, bw.read.Load(), addOpts...)
-	h.responseBytesCounter.Add(ctx, rww.written, addOpts...)
+
+	h.requestBytesCounter.Add(ctx, bw.read.Load(), o)
+	h.responseBytesCounter.Add(ctx, rww.written, o)
 
 	// Use floating point division here for higher precision (instead of Millisecond method).
 	elapsedTime := float64(time.Since(requestStartTime)) / float64(time.Millisecond)
