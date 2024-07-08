@@ -12,6 +12,7 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 
 - Add the new `go.opentelemetry.io/contrib/instrgen` package to provide auto-generated source code instrumentation. (#3068, #3108)
 - Support for stdoutlog exporter in `go.opentelemetry.io/contrib/config`. (#5850)
+- MacOS ARM64 platform to the compatibility testing suite. (#5868)
 
 ## [1.28.0/0.53.0/0.22.0/0.8.0/0.3.0/0.1.0] - 2024-07-02
 
