@@ -1,6 +1,8 @@
 // Copyright The OpenTelemetry Authors
 // SPDX-License-Identifier: Apache-2.0
 
+// Package isolate provides an isolating processor that can be used to
+// configure independent processing pipelines.
 package isolate // import "go.opentelemetry.io/contrib/processors/isolate"
 
 import (
