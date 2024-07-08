@@ -14,6 +14,10 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 - Support for stdoutlog exporter in `go.opentelemetry.io/contrib/config`. (#5850)
 - Add macOS ARM64 platform to the compatibility testing suite. (#5868)
 
+### Removed
+
+- The deprecated `go.opentelemetry.io/contrib/processors/baggagecopy` package is removed. (#5853)
+
 ## [1.28.0/0.53.0/0.22.0/0.8.0/0.3.0/0.1.0] - 2024-07-02
 
 ### Added
