@@ -54,10 +54,10 @@ This project is tested on the following systems.
 | Ubuntu   | 1.21       | amd64        |
 | Ubuntu   | 1.22       | 386          |
 | Ubuntu   | 1.21       | 386          |
-| MacOS 13 | 1.22       | amd64        |
-| MacOS 13 | 1.21       | amd64        |
-| MacOS    | 1.22       | arm64        |
-| MacOS    | 1.21       | arm64        |
+| macOS 13 | 1.22       | amd64        |
+| macOS 13 | 1.21       | amd64        |
+| macOS    | 1.22       | arm64        |
+| macOS    | 1.21       | arm64        |
 | Windows  | 1.22       | amd64        |
 | Windows  | 1.21       | amd64        |
 | Windows  | 1.22       | 386          |
