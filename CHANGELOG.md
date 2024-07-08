@@ -15,6 +15,10 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 - Add `go.opentelemetry.io/contrib/processors/isolate` module.
   This module provides an isolating log processor. (#5861)
 
+### Removed
+
+- The deprecated `go.opentelemetry.io/contrib/processors/baggagecopy` package is removed. (#5853)
+
 ## [1.28.0/0.53.0/0.22.0/0.8.0/0.3.0/0.1.0] - 2024-07-02
 
 ### Added
