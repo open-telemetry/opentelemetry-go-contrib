@@ -25,6 +25,10 @@ func getArrayEncoder() (arr *arrayEncoder, free func()) {
 	arr = arrayEncoderPool.Get().(*arrayEncoder)
 	return arr, func() {
 		arr.elems = arr.elems[:0]
+		// TODO: limit returned size so the pool doesn't hold on to very large
+		// buffers. Idea is based on
+		// https://cs.opensource.google/go/x/exp/+/814bf88c:slog/internal/buffer/buffer.go;l=27-34
+
 		arrayEncoderPool.Put(arr)
 	}
 }
@@ -39,6 +43,10 @@ var objectEncoderPool = sync.Pool{
 func getObjectEncoder() (obj *objectEncoder, free func()) {
 	obj = objectEncoderPool.Get().(*objectEncoder)
 	return obj, func() {
+		// TODO: limit returned size so the pool doesn't hold on to very large
+		// buffers. Idea is based on
+		// https://cs.opensource.google/go/x/exp/+/814bf88c:slog/internal/buffer/buffer.go;l=27-34
+
 		obj.root.attrs = obj.root.attrs[:0]
 		obj.root.name = ""
 		obj.root.next = nil

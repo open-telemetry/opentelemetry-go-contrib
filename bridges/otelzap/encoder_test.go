@@ -56,7 +56,6 @@ func TestObjectEncoder(t *testing.T) {
 					arr.AppendBool(true)
 					return nil
 				})), "Expected AddArray to succeed.")
-
 			},
 			expected: []interface{}{true, false, true},
 		},
