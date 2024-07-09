@@ -24,7 +24,7 @@ import (
 func TestRuntimeWithLimit(t *testing.T) {
 	// buffer for allocating memory
 	var buffer [][]byte
-	allocateMemory(buffer)
+	_ = allocateMemory(buffer)
 	t.Setenv("OTEL_GO_X_DEPRECATED_RUNTIME_METRICS", "false")
 	debug.SetMemoryLimit(1234567890)
 	// reset to default
@@ -152,10 +152,6 @@ func assertNonZeroValues(t *testing.T, sm metricdata.ScopeMetrics) {
 	}
 }
 
-func allocateMemory(buffer [][]byte) {
-	newBuffer := make([]byte, 1000000)
-	for i := range newBuffer {
-		newBuffer[i] = 0
-	}
-	buffer = append(buffer, newBuffer)
+func allocateMemory(buffer [][]byte) [][]byte {
+	return append(buffer, make([]byte, 1000000))
 }
