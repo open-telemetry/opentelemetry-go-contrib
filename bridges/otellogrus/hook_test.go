@@ -400,43 +400,12 @@ func assertKeyValues(t *testing.T, want, got []log.KeyValue) {
 	}
 }
 
-func assertBody(t *testing.T, want log.Value, got log.Value) {
-	t.Helper()
-	if !got.Equal(want) {
-		t.Errorf("Body value is not equal:\nwant: %v\ngot:  %v", want, got)
-	}
-}
-
-func assertAttributes(t *testing.T, want, got logtest.EmittedRecord) {
-	t.Helper()
-
-	var wantAttr []log.KeyValue
-	want.WalkAttributes(func(kv log.KeyValue) bool {
-		wantAttr = append(wantAttr, kv)
-		return true
-	})
-	var gotAttr []log.KeyValue
-	got.WalkAttributes(func(kv log.KeyValue) bool {
-		gotAttr = append(gotAttr, kv)
-		return true
-	})
-
-	if !slices.EqualFunc(wantAttr, gotAttr, log.KeyValue.Equal) {
-		t.Errorf("Attributes are not equal:\nwant: %v\ngot:  %v", want, got)
-	}
-}
-
 func assertRecords(t *testing.T, want, got []logtest.EmittedRecord) {
 	t.Helper()
 
 	assert.Equal(t, len(want), len(got))
 
 	for i, j := range want {
-		assert.Equal(t, j.Timestamp(), got[i].Timestamp())
-		assert.Equal(t, j.ObservedTimestamp(), got[i].ObservedTimestamp())
-		assert.Equal(t, j.Severity(), got[i].Severity())
-		assert.Equal(t, j.SeverityText(), got[i].SeverityText())
-		assertBody(t, j.Body(), got[i].Body())
-		assertAttributes(t, j, got[i])
+		logtest.AssertRecordEqual(t, j.Record, got[i].Record)
 	}
 }
