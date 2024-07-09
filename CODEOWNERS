@@ -57,6 +57,7 @@ instrumentation/net/http/otelhttp/                                      @open-te
 instrumentation/runtime/                                                @open-telemetry/go-approvers @MadVikingGod
 
 processors/baggagecopy                                                  @open-telemetry/go-approvers @codeboten @MikeGoldsmith
+processors/isolate                                                      @open-telemetry/go-approvers @pellared
 processors/minsev                                                       @open-telemetry/go-approvers @MrAlias
 
 propagators/autoprop/                                                   @open-telemetry/go-approvers @MrAlias
