@@ -8,9 +8,10 @@
 package otelzerolog // import "go.opentelemetry.io/contrib/bridges/otelzerolog"
 
 import (
+	"github.com/rs/zerolog"
+
 	"go.opentelemetry.io/otel/log"
 	"go.opentelemetry.io/otel/log/global"
-	"github.com/rs/zerolog"
 )
 
 type config struct {
@@ -30,6 +31,7 @@ func newConfig(options []Option) config {
 	}
 	return c
 }
+
 func (c config) logger(name string) log.Logger {
 	var opts []log.LoggerOption
 	if c.version != "" {
@@ -80,25 +82,31 @@ func WithLoggerProvider(provider log.LoggerProvider) Option {
 		return c
 	})
 }
+
 // SeverityHook is a [zerolog.Hook] that sends all logging records it receives to
 // OpenTelemetry. See package documentation for how conversions are made.
 type SeverityHook struct {
 	logger log.Logger
 }
 
+// NewSeverityHook returns a new [SeverityHook] to be used as a [Zerolog.Hook].
+// If [WithLoggerProvider] is not provided, the returned SeverityHook will use the
+// global LoggerProvider.
 func NewSeverityHook(name string, options ...Option) *SeverityHook {
 	cfg := newConfig(options)
 	return &SeverityHook{
 		logger: cfg.logger(name),
 	}
 }
+
 // TODO
 // LevelEnabler decides whether a given logging level is enabled when logging a message.
 func (o *SeverityHook) Enabled(level zerolog.Level) bool {
 	return true
 }
-// Run handles the passed record, and sends it to OpenTelemetry.
-func (h SeverityHook) Run(e *zerolog.Event, level zerolog.Level, msg string)error{
-return nil;
-}
 
+// TODO
+// Run handles the passed record, and sends it to OpenTelemetry.
+func (h SeverityHook) Run(e *zerolog.Event, level zerolog.Level, msg string) error {
+	return nil
+}
