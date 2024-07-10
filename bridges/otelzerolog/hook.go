@@ -99,11 +99,6 @@ func NewSeverityHook(name string, options ...Option) *SeverityHook {
 	}
 }
 
-// TODO
-// Enabled decides whether a given logging level is enabled when logging a message.
-func (o *SeverityHook) Enabled(level zerolog.Level) bool {
-	return true
-}
 
 // TODO
 // Run handles the passed record, and sends it to OpenTelemetry.
