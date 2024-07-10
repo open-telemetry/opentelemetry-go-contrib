@@ -102,6 +102,6 @@ func NewSeverityHook(name string, options ...Option) *SeverityHook {
 
 // TODO
 // Run handles the passed record, and sends it to OpenTelemetry.
-func (h SeverityHook) Run(e *zerolog.Event, level zerolog.Level, msg string) error {
-	return nil
+func (h SeverityHook) Run(e *zerolog.Event, level zerolog.Level, msg string) {
+
 }
