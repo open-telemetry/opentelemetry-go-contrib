@@ -18,15 +18,16 @@ import (
 	"go.opentelemetry.io/otel/log"
 )
 
+var wantTurducken = map[string]interface{}{
+	"ducks": []interface{}{
+		map[string]interface{}{"in": "chicken"},
+		map[string]interface{}{"in": "chicken"},
+	},
+}
+
 // Copied from https://github.com/uber-go/zap/blob/b39f8b6b6a44d8371a87610be50cce58eeeaabcb/zapcore/memory_encoder_test.go.
 func TestObjectEncoder(t *testing.T) {
 	// Expected output of a turducken.
-	wantTurducken := map[string]interface{}{
-		"ducks": []interface{}{
-			map[string]interface{}{"in": "chicken"},
-			map[string]interface{}{"in": "chicken"},
-		},
-	}
 
 	tests := []struct {
 		desc     string
@@ -236,6 +237,51 @@ func TestObjectEncoder(t *testing.T) {
 			enc.calculate(enc.root)
 			require.Len(t, enc.root.attrs, 1)
 			assert.Equal(t, tt.expected, value2Result((enc.root.attrs[0].Value)), "Unexpected encoder output.")
+		})
+	}
+}
+
+// This test checks when multiple fields are added to the objectEncoder
+// It is also a check for any possible shared memory issue on using pools.
+func TestObjectEncoderMultiple(t *testing.T) {
+	tests := []struct {
+		desc     string
+		f        func(zapcore.ObjectEncoder)
+		expected []interface{}
+	}{
+		{
+			desc: "AddArray-with AppendArray",
+			f: func(e zapcore.ObjectEncoder) {
+				assert.NoError(t, e.AddArray("k", number(2)), "Expected AddArray to succeed.")
+				assert.NoError(t, e.AddArray("k", number(3)), "Expected AddArray to succeed.")
+			},
+			expected: []interface{}{
+				[]interface{}{[]interface{}{"1"}, []interface{}{"2"}},
+				[]interface{}{[]interface{}{"1"}, []interface{}{"2"}, []interface{}{"3"}},
+			},
+		},
+		{
+			desc: "AddObject (nested)",
+			f: func(e zapcore.ObjectEncoder) {
+				assert.NoError(t, e.AddObject("k", turducken{}), "Expected AddObject to succeed.")
+				assert.NoError(t, e.AddObject("k", turducken{}), "Expected AddObject to succeed.")
+			},
+			expected: []interface{}{
+				wantTurducken,
+				wantTurducken,
+			},
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.desc, func(t *testing.T) {
+			enc := newObjectEncoder(1)
+			tt.f(enc)
+			enc.calculate(enc.root)
+			require.Len(t, enc.root.attrs, len(tt.expected))
+			for i, outer := range tt.expected {
+				assert.Equal(t, outer, value2Result((enc.root.attrs[i].Value)), "Unexpected encoder output.")
+			}
 		})
 	}
 }
