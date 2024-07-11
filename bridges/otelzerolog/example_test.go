@@ -16,6 +16,7 @@ func Example() {
 	// Use a working LoggerProvider implementation instead e.g. using go.opentelemetry.io/otel/sdk/log.
 	provider := noop.NewLoggerProvider()
 
+	// This will emit logs to both STDOUT and the OTel Go SDK.
 	hook := otelzerolog.NewSeverityHook("my/pkg/name", otelzerolog.WithLoggerProvider(provider))
 
 	logger := zerolog.New(os.Stdout).With().Logger()
