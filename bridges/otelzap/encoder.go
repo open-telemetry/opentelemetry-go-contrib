@@ -55,7 +55,6 @@ func (m *objectEncoder) calculate(o *namespace) {
 }
 
 func (m *objectEncoder) AddArray(key string, v zapcore.ArrayMarshaler) error {
-	// TODO: Use arrayEncoder from a pool.
 	arr := &arrayEncoder{}
 	err := v.MarshalLogArray(arr)
 	m.cur.attrs = append(m.cur.attrs, log.Slice(key, arr.elems...))
@@ -63,7 +62,6 @@ func (m *objectEncoder) AddArray(key string, v zapcore.ArrayMarshaler) error {
 }
 
 func (m *objectEncoder) AddObject(k string, v zapcore.ObjectMarshaler) error {
-	// TODO: Use objectEncoder from a pool.
 	newobj := newObjectEncoder(2)
 	err := v.MarshalLogObject(newobj)
 	newobj.calculate(newobj.root)
@@ -196,7 +194,6 @@ type arrayEncoder struct {
 }
 
 func (a *arrayEncoder) AppendArray(v zapcore.ArrayMarshaler) error {
-	// TODO: Use arrayEncoder from a pool.
 	arr := &arrayEncoder{}
 	err := v.MarshalLogArray(arr)
 	a.elems = append(a.elems, log.SliceValue(arr.elems...))
@@ -204,7 +201,6 @@ func (a *arrayEncoder) AppendArray(v zapcore.ArrayMarshaler) error {
 }
 
 func (a *arrayEncoder) AppendObject(v zapcore.ObjectMarshaler) error {
-	// TODO: Use objectEncoder from a pool.
 	m := newObjectEncoder(2)
 	err := v.MarshalLogObject(m)
 	m.calculate(m.root)
