@@ -3,7 +3,6 @@
 
 // Package otelzerolog provides a [SeverityHook], a [zerolog.Hook] implementation that
 // can be used to bridge between the [zerolog] API and [OpenTelemetry].
-// [zerolog]: https://github.com/rs/zerolog
 // [OpenTelemetry]: https://opentelemetry.io/docs/concepts/signals/logs/
 package otelzerolog // import "go.opentelemetry.io/contrib/bridges/otelzerolog"
 
