@@ -62,7 +62,8 @@ func (m *objectEncoder) AddArray(key string, v zapcore.ArrayMarshaler) error {
 }
 
 func (m *objectEncoder) AddObject(k string, v zapcore.ObjectMarshaler) error {
-	// Similar to console_encoder which uses capacity of 2 - https://github.com/uber-go/zap/blob/bd0cf0447951b77aa98dcfc1ac19e6f58d3ee64f/zapcore/console_encoder.go#L33
+	// Similar to console_encoder which uses capacity of 2:
+	// https://github.com/uber-go/zap/blob/bd0cf0447951b77aa98dcfc1ac19e6f58d3ee64f/zapcore/console_encoder.go#L33.
 	newobj := newObjectEncoder(2)
 	err := v.MarshalLogObject(newobj)
 	newobj.calculate(newobj.root)
@@ -196,7 +197,8 @@ type arrayEncoder struct {
 
 func newArrayEncoder() *arrayEncoder {
 	return &arrayEncoder{
-		// Similar to console_encoder which uses capacity of 2 - https://github.com/uber-go/zap/blob/bd0cf0447951b77aa98dcfc1ac19e6f58d3ee64f/zapcore/console_encoder.go#L33
+		// Similar to console_encoder which uses capacity of 2:
+		// https://github.com/uber-go/zap/blob/bd0cf0447951b77aa98dcfc1ac19e6f58d3ee64f/zapcore/console_encoder.go#L33.
 		elems: make([]log.Value, 0, 2),
 	}
 }
@@ -209,7 +211,8 @@ func (a *arrayEncoder) AppendArray(v zapcore.ArrayMarshaler) error {
 }
 
 func (a *arrayEncoder) AppendObject(v zapcore.ObjectMarshaler) error {
-	// Similar to console_encoder which uses capacity of 2 - https://github.com/uber-go/zap/blob/bd0cf0447951b77aa98dcfc1ac19e6f58d3ee64f/zapcore/console_encoder.go#L33
+	// Similar to console_encoder which uses capacity of 2:
+	// https://github.com/uber-go/zap/blob/bd0cf0447951b77aa98dcfc1ac19e6f58d3ee64f/zapcore/console_encoder.go#L33.
 	m := newObjectEncoder(2)
 	err := v.MarshalLogObject(m)
 	m.calculate(m.root)
