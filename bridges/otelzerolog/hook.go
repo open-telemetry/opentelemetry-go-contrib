@@ -1,7 +1,7 @@
 // Copyright The OpenTelemetry Authors
 // SPDX-License-Identifier: Apache-2.0
 
-// Package otelzerolog provides a SeverityHook, a zerolog.Hook implementation that
+// Package otelzerolog provides a [SeverityHook], a [zerolog.Hook] implementation that
 // can be used to bridge between the [zerolog] API and [OpenTelemetry].
 // [zerolog]: https://github.com/rs/zerolog
 // [OpenTelemetry]: https://opentelemetry.io/docs/concepts/signals/logs/
