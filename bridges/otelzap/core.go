@@ -133,7 +133,6 @@ func (o *Core) clone() *Core {
 	}
 }
 
-// TODO
 // Sync flushes buffered logs (if any).
 func (o *Core) Sync() error {
 	return nil
