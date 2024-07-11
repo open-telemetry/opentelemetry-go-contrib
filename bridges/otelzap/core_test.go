@@ -77,6 +77,24 @@ func TestCore(t *testing.T) {
 
 	rec.Reset()
 
+	t.Run("Named", func(t *testing.T) {
+		name := "my/pkg"
+		childlogger := logger.Named(name)
+		childlogger.Info(testMessage, zap.String(testKey, testValue))
+
+		found := false
+		for _, got := range rec.Result() {
+			found = got.Name == name
+			if found {
+				break
+			}
+
+		}
+		assert.True(t, found)
+	})
+
+	rec.Reset()
+
 	t.Run("WithMultiple", func(t *testing.T) {
 		testCases := [][]string{{"test1", "value1"}, {"test2", "value2"}, {"test3", "value3"}}
 		childlogger := logger.With(zap.String(testCases[0][0], testCases[0][1]))
