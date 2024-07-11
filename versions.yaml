@@ -81,7 +81,6 @@ module-sets:
   experimental-processors:
     version: v0.1.0
     modules:
-      - go.opentelemetry.io/contrib/processors/baggage/baggagetrace
       - go.opentelemetry.io/contrib/processors/baggagecopy
       - go.opentelemetry.io/contrib/processors/minsev
   experimental-detectors:
