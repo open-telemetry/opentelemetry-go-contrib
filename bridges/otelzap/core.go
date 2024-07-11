@@ -89,7 +89,7 @@ var _ zapcore.Core = (*Core)(nil)
 
 // NewCore creates a new [zapcore.Core] that can be used with [go.uber.org/zap.New].
 // The name should be the package import path that is being logged.
-// The name is overrided if [go.uber.org/zap.Logger.Named] is used.
+// The name is ignored for named loggers created using [go.uber.org/zap.Logger.Named].
 func NewCore(name string, opts ...Option) *Core {
 	cfg := newConfig(opts)
 
