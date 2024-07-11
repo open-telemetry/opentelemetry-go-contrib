@@ -51,8 +51,22 @@ func TestCore(t *testing.T) {
 
 	rec.Reset()
 
-	// TODO: Add WriteContext test case.
-	// TODO: Add WithContext test case.
+	t.Run("Write Context", func(t *testing.T) {
+		ctx := context.Background()
+		ctx = context.WithValue(ctx, testEntry, true)
+		logger.Info(testMessage, zap.Reflect("ctx", ctx))
+		got := rec.Result()[0].Records[0]
+		assert.Equal(t, got.Context(), ctx)
+	})
+
+	t.Run("With Context", func(t *testing.T) {
+		ctx := context.Background()
+		ctx = context.WithValue(ctx, testEntry, false)
+		childlogger := logger.With(zap.Reflect("ctx", ctx))
+		childlogger.Info(testMessage)
+		got := rec.Result()[0].Records[0]
+		assert.Equal(t, got.Context(), ctx)
+	})
 
 	// test child logger with accumulated fields
 	t.Run("With", func(t *testing.T) {
