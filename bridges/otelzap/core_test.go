@@ -59,6 +59,8 @@ func TestCore(t *testing.T) {
 		assert.Equal(t, got.Context(), ctx)
 	})
 
+	rec.Reset()
+
 	t.Run("With Context", func(t *testing.T) {
 		ctx := context.Background()
 		ctx = context.WithValue(ctx, testEntry, false)
@@ -67,6 +69,8 @@ func TestCore(t *testing.T) {
 		got := rec.Result()[0].Records[0]
 		assert.Equal(t, got.Context(), ctx)
 	})
+
+	rec.Reset()
 
 	// test child logger with accumulated fields
 	t.Run("With", func(t *testing.T) {
