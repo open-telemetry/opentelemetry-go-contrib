@@ -71,7 +71,7 @@ func TestNewConfig(t *testing.T) {
 	}
 }
 
-func TestNewSeverityHook(t *testing.T) {
+func TestNewHook(t *testing.T) {
 	const name = "test_hook"
 	provider := global.GetLoggerProvider()
 
@@ -97,7 +97,7 @@ func TestNewSeverityHook(t *testing.T) {
 		},
 	} {
 		t.Run(tt.name, func(t *testing.T) {
-			hook := NewSeverityHook(name, tt.options...)
+			hook := NewHook(name, tt.options...)
 			assert.NotNil(t, hook)
 			assert.Equal(t, tt.wantLogger, hook.logger)
 		})

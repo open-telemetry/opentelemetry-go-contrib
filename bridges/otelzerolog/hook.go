@@ -1,7 +1,7 @@
 // Copyright The OpenTelemetry Authors
 // SPDX-License-Identifier: Apache-2.0
 
-// Package otelzerolog provides a [SeverityHook], a [zerolog.Hook] implementation that
+// Package otelzerolog provides a [Hook], a [zerolog.Hook] implementation that
 // can be used to bridge between the [zerolog] API and [OpenTelemetry].
 // [OpenTelemetry]: https://opentelemetry.io/docs/concepts/signals/logs/
 package otelzerolog // import "go.opentelemetry.io/contrib/bridges/otelzerolog"
@@ -42,7 +42,7 @@ func (c config) logger(name string) log.Logger {
 	return c.provider.Logger(name, opts...)
 }
 
-// Option configures a SeverityHook.
+// Option configures a Hook.
 type Option interface {
 	apply(config) config
 }
@@ -51,7 +51,7 @@ type optFunc func(config) config
 func (f optFunc) apply(c config) config { return f(c) }
 
 // WithVersion returns an [Option] that configures the version of the
-// [log.Logger] used by a [SeverityHook]. The version should be the version of the
+// [log.Logger] used by a [Hook]. The version should be the version of the
 // package that is being logged.
 func WithVersion(version string) Option {
 	return optFunc(func(c config) config {
@@ -61,7 +61,7 @@ func WithVersion(version string) Option {
 }
 
 // WithSchemaURL returns an [Option] that configures the semantic convention
-// schema URL of the [log.Logger] used by a [SeverityHook]. The schemaURL should be
+// schema URL of the [log.Logger] used by a [Hook]. The schemaURL should be
 // the schema URL for the semantic conventions used in log records.
 func WithSchemaURL(schemaURL string) Option {
 	return optFunc(func(c config) config {
@@ -71,9 +71,9 @@ func WithSchemaURL(schemaURL string) Option {
 }
 
 // WithLoggerProvider returns an [Option] that configures [log.LoggerProvider]
-// used by a [SeverityHook].
+// used by a [Hook].
 //
-// By default if this Option is not provided, the SeverityHook will use the global
+// By default if this Option is not provided, the Hook will use the global
 // LoggerProvider.
 func WithLoggerProvider(provider log.LoggerProvider) Option {
 	return optFunc(func(c config) config {
@@ -82,23 +82,23 @@ func WithLoggerProvider(provider log.LoggerProvider) Option {
 	})
 }
 
-// SeverityHook is a [zerolog.Hook] that sends all logging records it receives to
+// Hook is a [zerolog.Hook] that sends all logging records it receives to
 // OpenTelemetry. See package documentation for how conversions are made.
-type SeverityHook struct {
+type Hook struct {
 	logger log.Logger
 }
 
-// NewSeverityHook returns a new [SeverityHook] to be used as a [Zerolog.Hook].
-// If [WithLoggerProvider] is not provided, the returned SeverityHook will use the
+// NewHook returns a new [Hook] to be used as a [Zerolog.Hook].
+// If [WithLoggerProvider] is not provided, the returned Hook will use the
 // global LoggerProvider.
-func NewSeverityHook(name string, options ...Option) *SeverityHook {
+func NewHook(name string, options ...Option) *Hook {
 	cfg := newConfig(options)
-	return &SeverityHook{
+	return &Hook{
 		logger: cfg.logger(name),
 	}
 }
 
 // Run handles the passed record, and sends it to OpenTelemetry.
-func (h SeverityHook) Run(e *zerolog.Event, level zerolog.Level, msg string) {
+func (h Hook) Run(e *zerolog.Event, level zerolog.Level, msg string) {
 	// TODO
 }

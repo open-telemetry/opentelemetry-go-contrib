@@ -17,7 +17,7 @@ func Example() {
 	provider := noop.NewLoggerProvider()
 
 	// Create a logger that emits logs to both STDOUT and the OTel Go SDK.
-	hook := otelzerolog.NewSeverityHook("my/pkg/name", otelzerolog.WithLoggerProvider(provider))
+	hook := otelzerolog.NewHook("my/pkg/name", otelzerolog.WithLoggerProvider(provider))
 	logger := zerolog.New(os.Stdout).With().Logger()
 	logger = logger.Hook(hook)
 }
