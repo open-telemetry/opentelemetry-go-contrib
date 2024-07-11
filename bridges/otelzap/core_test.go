@@ -54,7 +54,7 @@ func TestCore(t *testing.T) {
 	t.Run("Write Context", func(t *testing.T) {
 		ctx := context.Background()
 		ctx = context.WithValue(ctx, testEntry, true)
-		logger.Info(testMessage, zap.Reflect("ctx", ctx))
+		logger.Info(testMessage, zap.Any("ctx", ctx))
 		got := rec.Result()[0].Records[0]
 		assert.Equal(t, got.Context(), ctx)
 	})
