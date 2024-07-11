@@ -88,7 +88,6 @@ func TestCore(t *testing.T) {
 			if found {
 				break
 			}
-
 		}
 		assert.True(t, found)
 	})
