@@ -15,6 +15,7 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 - The `go.opentelemetry.io/contrib/bridges/otelzap` module.
   This module provides an OpenTelemetry logging bridge for `go.uber.org/zap`. (#5191)
 - The `go.opentelemetry.io/contrib/config` package supports configuring `with_resource_constant_labels` for the prometheus exporter. (#5890)
+- Allow configuring the `go.opentelemetry.io/contrib/instrumentation/net/http/otelhttp` with the `OTEL_HTTP_CLIENT_COMPATIBILITY_MODE` environment variable to receive both the current v1.20.0 and the new v1.24.0 attributes. (#5333, #5401)
 
 ### Removed
 
