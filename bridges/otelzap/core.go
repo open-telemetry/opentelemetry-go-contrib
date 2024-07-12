@@ -141,7 +141,6 @@ func (o *Core) clone() *Core {
 	}
 }
 
-// TODO
 // Sync flushes buffered logs (if any).
 func (o *Core) Sync() error {
 	return nil
@@ -190,7 +189,6 @@ func (o *Core) Write(ent zapcore.Entry, fields []zapcore.Field) error {
 }
 
 func convertField(fields []zapcore.Field) (context.Context, []log.KeyValue) {
-	// TODO: Use objectEncoder from a pool instead of newObjectEncoder.
 	var ctx context.Context
 	enc := newObjectEncoder(len(fields))
 	for _, field := range fields {
