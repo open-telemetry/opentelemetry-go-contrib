@@ -13,7 +13,7 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 - Support for stdoutlog exporter in `go.opentelemetry.io/contrib/config`. (#5850)
 - Add macOS ARM64 platform to the compatibility testing suite. (#5868)
 - The `go.opentelemetry.io/contrib/bridges/otelzap` module.
-  This module provides an OpenTelemetry logging bridge for "go.uber.org/zap". (#5191)
+  This module provides an OpenTelemetry logging bridge for `go.uber.org/zap`. (#5191)
 
 ### Removed
 
