@@ -34,17 +34,6 @@ func newConfig(options []Option) config {
 	return c
 }
 
-func (c config) logger(name string) log.Logger {
-	var opts []log.LoggerOption
-	if c.version != "" {
-		opts = append(opts, log.WithInstrumentationVersion(c.version))
-	}
-	if c.schemaURL != "" {
-		opts = append(opts, log.WithSchemaURL(c.schemaURL))
-	}
-	return c.provider.Logger(name, opts...)
-}
-
 // Option configures a [Core].
 type Option interface {
 	apply(config) config
@@ -88,20 +77,37 @@ func WithLoggerProvider(provider log.LoggerProvider) Option {
 
 // Core is a [zapcore.Core] that sends logging records to OpenTelemetry.
 type Core struct {
-	logger log.Logger
-	attr   []log.KeyValue
-	ctx    context.Context
+	provider log.LoggerProvider
+	logger   log.Logger
+	opts     []log.LoggerOption
+	attr     []log.KeyValue
+	ctx      context.Context
 }
 
 // Compile-time check *Core implements zapcore.Core.
 var _ zapcore.Core = (*Core)(nil)
 
 // NewCore creates a new [zapcore.Core] that can be used with [go.uber.org/zap.New].
+// The name should be the package import path that is being logged.
+// The name is ignored for named loggers created using [go.uber.org/zap.Logger.Named].
 func NewCore(name string, opts ...Option) *Core {
 	cfg := newConfig(opts)
+
+	var loggerOpts []log.LoggerOption
+	if cfg.version != "" {
+		loggerOpts = append(loggerOpts, log.WithInstrumentationVersion(cfg.version))
+	}
+	if cfg.schemaURL != "" {
+		loggerOpts = append(loggerOpts, log.WithSchemaURL(cfg.schemaURL))
+	}
+
+	logger := cfg.provider.Logger(name, loggerOpts...)
+
 	return &Core{
-		logger: cfg.logger(name),
-		ctx:    context.Background(),
+		provider: cfg.provider,
+		logger:   logger,
+		opts:     loggerOpts,
+		ctx:      context.Background(),
 	}
 }
 
@@ -127,22 +133,31 @@ func (o *Core) With(fields []zapcore.Field) zapcore.Core {
 
 func (o *Core) clone() *Core {
 	return &Core{
-		logger: o.logger,
-		attr:   slices.Clone(o.attr),
-		ctx:    o.ctx,
+		provider: o.provider,
+		opts:     o.opts,
+		logger:   o.logger,
+		attr:     slices.Clone(o.attr),
+		ctx:      o.ctx,
 	}
 }
 
-// TODO
 // Sync flushes buffered logs (if any).
 func (o *Core) Sync() error {
 	return nil
 }
 
-// Check determines whether the supplied Entry should be logged using core.Enabled method.
+// Check determines whether the supplied Entry should be logged.
 // If the entry should be logged, the Core adds itself to the CheckedEntry and returns the result.
 func (o *Core) Check(ent zapcore.Entry, ce *zapcore.CheckedEntry) *zapcore.CheckedEntry {
-	if o.Enabled(ent.Level) {
+	r := log.Record{}
+	r.SetSeverity(convertLevel(ent.Level))
+
+	logger := o.logger
+	if ent.LoggerName != "" {
+		logger = o.provider.Logger(ent.LoggerName, o.opts...)
+	}
+
+	if logger.Enabled(context.Background(), r) {
 		return ce.AddCore(ent, o)
 	}
 	return ce
@@ -156,8 +171,6 @@ func (o *Core) Write(ent zapcore.Entry, fields []zapcore.Field) error {
 	r.SetSeverity(convertLevel(ent.Level))
 	r.SetSeverityText(ent.Level.String())
 
-	// TODO: Handle ent.LoggerName.
-
 	r.AddAttributes(o.attr...)
 	if len(fields) > 0 {
 		ctx, attrbuf := convertField(fields)
@@ -167,12 +180,15 @@ func (o *Core) Write(ent zapcore.Entry, fields []zapcore.Field) error {
 		r.AddAttributes(attrbuf...)
 	}
 
-	o.logger.Emit(o.ctx, r)
+	logger := o.logger
+	if ent.LoggerName != "" {
+		logger = o.provider.Logger(ent.LoggerName, o.opts...)
+	}
+	logger.Emit(o.ctx, r)
 	return nil
 }
 
 func convertField(fields []zapcore.Field) (context.Context, []log.KeyValue) {
-	// TODO: Use objectEncoder from a pool instead of newObjectEncoder.
 	var ctx context.Context
 	enc := newObjectEncoder(len(fields))
 	for _, field := range fields {

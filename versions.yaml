@@ -82,7 +82,6 @@ module-sets:
   experimental-processors:
     version: v0.1.0
     modules:
-      - go.opentelemetry.io/contrib/processors/baggage/baggagetrace
       - go.opentelemetry.io/contrib/processors/baggagecopy
       - go.opentelemetry.io/contrib/processors/minsev
   experimental-detectors:
@@ -90,6 +89,7 @@ module-sets:
     modules:
       - go.opentelemetry.io/contrib/detectors/azure/azurevm
 excluded-modules:
+  - go.opentelemetry.io/contrib/bridges/otelzerolog
   - go.opentelemetry.io/contrib/instrgen
   - go.opentelemetry.io/contrib/instrgen/driver
   - go.opentelemetry.io/contrib/instrgen/testdata/interface
