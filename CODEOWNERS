@@ -29,6 +29,7 @@ bridges/otelslog                                                        @open-te
 bridges/otellogrus/                                                     @open-telemetry/go-approvers @dmathieu @pellared
 bridges/prometheus/                                                     @open-telemetry/go-approvers @dashpole
 bridges/otelzap/                                                        @open-telemetry/go-approvers @pellared @khushijain21
+bridges/otelzerolog/                                                    @open-telemetry/go-approvers @dmathieu @AkhigbeEromo
 
 config/                                                                 @open-telemetry/go-approvers @MadVikingGod @pellared @codeboten
 
