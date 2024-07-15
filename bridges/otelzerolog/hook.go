@@ -7,6 +7,8 @@
 package otelzerolog // import "go.opentelemetry.io/contrib/bridges/otelzerolog"
 
 import (
+	"time"
+
 	"github.com/rs/zerolog"
 
 	"go.opentelemetry.io/otel/log"
@@ -100,5 +102,29 @@ func NewHook(name string, options ...Option) *Hook {
 
 // Run handles the passed record, and sends it to OpenTelemetry.
 func (h Hook) Run(e *zerolog.Event, level zerolog.Level, msg string) {
-	// TODO
+	r := log.Record{}
+	r.SetSeverity(convertLevel(level))
+	r.SetBody(log.StringValue(msg))
+	r.SetTimestamp(time.Now())
+	r.SetSeverityText(level.String())
+	h.logger.Emit(e.GetCtx(), r)
+}
+
+func convertLevel(level zerolog.Level) log.Severity {
+	switch level {
+	case zerolog.DebugLevel:
+		return log.SeverityDebug
+	case zerolog.InfoLevel:
+		return log.SeverityInfo
+	case zerolog.WarnLevel:
+		return log.SeverityWarn
+	case zerolog.ErrorLevel:
+		return log.SeverityError
+	case zerolog.PanicLevel:
+		return log.SeverityFatal1
+	case zerolog.FatalLevel:
+		return log.SeverityFatal2
+	default:
+		return log.SeverityUndefined
+	}
 }
