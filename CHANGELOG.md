@@ -19,6 +19,9 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 
 - The deprecated `go.opentelemetry.io/contrib/processors/baggagecopy` package is removed. (#5853)
 
+<!-- Released section -->
+<!-- Don't change this section unless doing release -->
+
 ## [1.28.0/0.53.0/0.22.0/0.8.0/0.3.0/0.1.0] - 2024-07-02
 
 ### Added
@@ -1133,6 +1136,8 @@ First official tagged release of `contrib` repository.
 [0.8.0]: https://github.com/open-telemetry/opentelemetry-go-contrib/releases/tag/v0.8.0
 [0.7.0]: https://github.com/open-telemetry/opentelemetry-go-contrib/releases/tag/v0.7.0
 [0.6.1]: https://github.com/open-telemetry/opentelemetry-go-contrib/releases/tag/v0.6.1
+
+<!-- Released section ended -->
 
 [Go 1.22]: https://go.dev/doc/go1.22
 [Go 1.21]: https://go.dev/doc/go1.21
