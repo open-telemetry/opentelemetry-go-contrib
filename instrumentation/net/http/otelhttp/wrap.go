@@ -5,37 +5,10 @@ package otelhttp // import "go.opentelemetry.io/contrib/instrumentation/net/http
 
 import (
 	"context"
-	"io"
 	"net/http"
-	"sync/atomic"
 
 	"go.opentelemetry.io/otel/propagation"
 )
-
-var _ io.ReadCloser = &bodyWrapper{}
-
-// bodyWrapper wraps a http.Request.Body (an io.ReadCloser) to track the number
-// of bytes read and the last error.
-type bodyWrapper struct {
-	io.ReadCloser
-	record func(n int64) // must not be nil
-
-	read atomic.Int64
-	err  error
-}
-
-func (w *bodyWrapper) Read(b []byte) (int, error) {
-	n, err := w.ReadCloser.Read(b)
-	n1 := int64(n)
-	w.read.Add(n1)
-	w.err = err
-	w.record(n1)
-	return n, err
-}
-
-func (w *bodyWrapper) Close() error {
-	return w.ReadCloser.Close()
-}
 
 var _ http.ResponseWriter = &respWriterWrapper{}
 

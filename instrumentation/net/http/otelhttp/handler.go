@@ -9,6 +9,7 @@ import (
 
 	"github.com/felixge/httpsnoop"
 
+	"go.opentelemetry.io/contrib/instrumentation/net/http/otelhttp/internal"
 	"go.opentelemetry.io/contrib/instrumentation/net/http/otelhttp/internal/semconv"
 	"go.opentelemetry.io/contrib/instrumentation/net/http/otelhttp/internal/semconvutil"
 	"go.opentelemetry.io/otel"
@@ -166,13 +167,13 @@ func (h *middleware) serveHTTP(w http.ResponseWriter, r *http.Request, next http
 		}
 	}
 
-	var bw bodyWrapper
+	var bw internal.BodyWrapper
 	// if request body is nil or NoBody, we don't want to mutate the body as it
 	// will affect the identity of it in an unforeseeable way because we assert
 	// ReadCloser fulfills a certain interface and it is indeed nil or NoBody.
 	if r.Body != nil && r.Body != http.NoBody {
 		bw.ReadCloser = r.Body
-		bw.record = readRecordFunc
+		bw.OnRead = readRecordFunc
 		r.Body = &bw
 	}
 
@@ -220,8 +221,8 @@ func (h *middleware) serveHTTP(w http.ResponseWriter, r *http.Request, next http
 	span.SetStatus(semconv.ServerStatus(rww.statusCode))
 	span.SetAttributes(h.traceSemconv.ResponseTraceAttrs(semconv.ResponseTelemetry{
 		StatusCode: rww.statusCode,
-		ReadBytes:  bw.read.Load(),
-		ReadError:  bw.err,
+		ReadBytes:  bw.BytesRead(),
+		ReadError:  bw.Error(),
 		WriteBytes: rww.written,
 		WriteError: rww.err,
 	})...)
@@ -233,7 +234,7 @@ func (h *middleware) serveHTTP(w http.ResponseWriter, r *http.Request, next http
 	}
 	o := metric.WithAttributeSet(attribute.NewSet(attributes...))
 
-	h.requestBytesCounter.Add(ctx, bw.read.Load(), o)
+	h.requestBytesCounter.Add(ctx, bw.BytesRead(), o)
 	h.responseBytesCounter.Add(ctx, rww.written, o)
 
 	// Use floating point division here for higher precision (instead of Millisecond method).
