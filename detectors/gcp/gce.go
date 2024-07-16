@@ -14,7 +14,7 @@ import (
 
 	"go.opentelemetry.io/otel/attribute"
 	"go.opentelemetry.io/otel/sdk/resource"
-	semconv "go.opentelemetry.io/otel/semconv/v1.25.0"
+	semconv "go.opentelemetry.io/otel/semconv/v1.26.0"
 )
 
 // GCE collects resource information of GCE computing instances.
@@ -37,13 +37,13 @@ func (gce *GCE) Detect(ctx context.Context) (*resource.Resource, error) {
 
 	var errInfo []string
 
-	if projectID, err := metadata.ProjectID(); hasProblem(err) {
+	if projectID, err := metadata.ProjectIDWithContext(ctx); hasProblem(err) {
 		errInfo = append(errInfo, err.Error())
 	} else if projectID != "" {
 		attributes = append(attributes, semconv.CloudAccountID(projectID))
 	}
 
-	if zone, err := metadata.Zone(); hasProblem(err) {
+	if zone, err := metadata.ZoneWithContext(ctx); hasProblem(err) {
 		errInfo = append(errInfo, err.Error())
 	} else if zone != "" {
 		attributes = append(attributes, semconv.CloudAvailabilityZone(zone))
@@ -54,13 +54,13 @@ func (gce *GCE) Detect(ctx context.Context) (*resource.Resource, error) {
 		}
 	}
 
-	if instanceID, err := metadata.InstanceID(); hasProblem(err) {
+	if instanceID, err := metadata.InstanceIDWithContext(ctx); hasProblem(err) {
 		errInfo = append(errInfo, err.Error())
 	} else if instanceID != "" {
 		attributes = append(attributes, semconv.HostID(instanceID))
 	}
 
-	if name, err := metadata.InstanceName(); hasProblem(err) {
+	if name, err := metadata.InstanceNameWithContext(ctx); hasProblem(err) {
 		errInfo = append(errInfo, err.Error())
 	} else if name != "" {
 		attributes = append(attributes, semconv.HostName(name))
