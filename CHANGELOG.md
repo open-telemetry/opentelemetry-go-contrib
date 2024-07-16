@@ -16,6 +16,8 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
   This module provides an OpenTelemetry logging bridge for `go.uber.org/zap`. (#5191)
 - The `go.opentelemetry.io/contrib/config` package supports configuring `with_resource_constant_labels` for the prometheus exporter. (#5890)
 - Add new runtime metrics to `go.opentelemetry.io/contrib/instrumentation/runtime`, which are still disabled by default. (#5870)
+- The `go.opentelemetry.io/contrib/bridges/otellogr` module.
+  This module provides an OpenTelemetry logging bridge for "github.com/go-logr/logr". (#5357)
 
 ### Removed
 
@@ -118,8 +120,6 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 ### Added
 
 - `NewSDK` in `go.opentelemetry.io/contrib/config` now returns a configured SDK with a valid `MeterProvider`. (#4804)
-- The `go.opentelemetry.io/contrib/bridges/otellogr` module.
-  This module provides an OpenTelemetry logging bridge for "github.com/go-logr/logr". (#5357)
 
 ### Changed
 
