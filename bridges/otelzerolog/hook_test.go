@@ -3,19 +3,23 @@
 package otelzerolog
 
 import (
+	"os"
+	// "reflect".
 	"testing"
+	// "time".
 
+	"github.com/rs/zerolog"
 	"github.com/stretchr/testify/assert"
 
 	"go.opentelemetry.io/otel/log"
 	"go.opentelemetry.io/otel/log/embedded"
 	"go.opentelemetry.io/otel/log/global"
+	"go.opentelemetry.io/otel/log/logtest"
 )
 
 type mockLoggerProvider struct {
 	embedded.LoggerProvider
 }
-
 func (mockLoggerProvider) Logger(name string, options ...log.LoggerOption) log.Logger {
 	return nil
 }
@@ -102,4 +106,31 @@ func TestNewHook(t *testing.T) {
 			assert.Equal(t, tt.wantLogger, hook.logger)
 		})
 	}
+}
+
+var (
+	testMessage = "log message"
+	loggerName  = "name"
+	testKey     = "key"
+	testValue   = "value"
+	testEntry   = zerolog.InfoLevel
+)
+
+func TestHookRun(t *testing.T) {
+	rec := logtest.NewRecorder()
+	hook := NewHook(loggerName, WithLoggerProvider(rec))
+
+	logger := zerolog.New(os.Stderr).Hook(hook)
+
+	t.Run("Run", func(t *testing.T) {
+		// Create an event and run the hook
+		event := logger.Info().Str(testKey, testValue)
+		hook.Run(event, testEntry, testMessage)
+
+		// Check the results
+		got := rec.Result()[0].Records[0]
+		assert.Equal(t, testMessage, got.Body().AsString())
+		assert.Equal(t, log.SeverityInfo, got.Severity())
+		assert.Equal(t, zerolog.InfoLevel.String(), got.SeverityText())
+	})
 }
