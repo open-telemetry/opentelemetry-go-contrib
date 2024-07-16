@@ -20,6 +20,7 @@ import (
 type mockLoggerProvider struct {
 	embedded.LoggerProvider
 }
+
 func (mockLoggerProvider) Logger(name string, options ...log.LoggerOption) log.Logger {
 	return nil
 }
@@ -133,4 +134,55 @@ func TestHookRun(t *testing.T) {
 		assert.Equal(t, log.SeverityInfo, got.Severity())
 		assert.Equal(t, zerolog.InfoLevel.String(), got.SeverityText())
 	})
+}
+
+func TestConvertLevel(t *testing.T) {
+	tests := []struct {
+		name         string
+		zerologLevel zerolog.Level
+		expected     log.Severity
+	}{
+		{
+			name:         "DebugLevel",
+			zerologLevel: zerolog.DebugLevel,
+			expected:     log.SeverityDebug,
+		},
+		{
+			name:         "InfoLevel",
+			zerologLevel: zerolog.InfoLevel,
+			expected:     log.SeverityInfo,
+		},
+		{
+			name:         "WarnLevel",
+			zerologLevel: zerolog.WarnLevel,
+			expected:     log.SeverityWarn,
+		},
+		{
+			name:         "ErrorLevel",
+			zerologLevel: zerolog.ErrorLevel,
+			expected:     log.SeverityError,
+		},
+		{
+			name:         "PanicLevel",
+			zerologLevel: zerolog.PanicLevel,
+			expected:     log.SeverityFatal1,
+		},
+		{
+			name:         "FatalLevel",
+			zerologLevel: zerolog.FatalLevel,
+			expected:     log.SeverityFatal2,
+		},
+		{
+			name:         "UnknownLevel",
+			zerologLevel: zerolog.NoLevel, // An unknown level
+			expected:     log.SeverityUndefined,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			actual := convertLevel(tt.zerologLevel)
+			assert.Equal(t, tt.expected, actual, "severity mismatch")
+		})
+	}
 }
