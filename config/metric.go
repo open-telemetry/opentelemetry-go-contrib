@@ -230,6 +230,22 @@ func prometheusReader(ctx context.Context, prometheusConfig *Prometheus) (sdkmet
 	if prometheusConfig.WithoutUnits != nil && *prometheusConfig.WithoutUnits {
 		opts = append(opts, otelprom.WithoutUnits())
 	}
+	if prometheusConfig.WithResourceConstantLabels != nil {
+		if prometheusConfig.WithResourceConstantLabels.Included != nil {
+			var keys []attribute.Key
+			for _, val := range prometheusConfig.WithResourceConstantLabels.Included {
+				keys = append(keys, attribute.Key(val))
+			}
+			otelprom.WithResourceAsConstantLabels(attribute.NewAllowKeysFilter(keys...))
+		}
+		if prometheusConfig.WithResourceConstantLabels.Excluded != nil {
+			var keys []attribute.Key
+			for _, val := range prometheusConfig.WithResourceConstantLabels.Included {
+				keys = append(keys, attribute.Key(val))
+			}
+			otelprom.WithResourceAsConstantLabels(attribute.NewDenyKeysFilter(keys...))
+		}
+	}
 
 	reg := prometheus.NewRegistry()
 	opts = append(opts, otelprom.WithRegisterer(reg))
@@ -246,9 +262,6 @@ func prometheusReader(ctx context.Context, prometheusConfig *Prometheus) (sdkmet
 	}
 	addr := fmt.Sprintf("%s:%d", *prometheusConfig.Host, *prometheusConfig.Port)
 
-	// TODO: add support for constant label filter
-	// 	otelprom.WithResourceAsConstantLabels(attribute.NewDenyKeysFilter()),
-	// )
 	reader, err := otelprom.New(opts...)
 	if err != nil {
 		return nil, fmt.Errorf("error creating otel prometheus exporter: %w", err)
