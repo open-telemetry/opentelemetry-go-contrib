@@ -2,7 +2,36 @@
 // SPDX-License-Identifier: Apache-2.0
 
 // Package otelzap provides a bridge between the [go.uber.org/zap] and
-// OpenTelemetry logging.
+// [OpenTelemetry].
+
+// # Record Conversion
+//
+// The [zapcore.Entry] and [zapcore.Field] is converted to OpenTelemetry [log.Record] in the following
+// way:
+//
+//   - Time is set as the Timestamp.
+//   - Message is set as the Body using a [log.StringValue].
+//   - Level is transformed and set as the Severity. The SeverityText is also
+//     set.
+//   - Fields are transformed and set as the Attributes.
+//   - For named loggers, LoggerName is used to access [log.Logger] from [log.LoggerProvider]
+
+//
+// The Level is transformed by using the static offset to the OpenTelemetry
+// Severity types. For example:
+//
+//   - [zapcore.DebugLevel] is transformed to [log.SeverityDebug]
+//   - [zapcore.InfoLevel] is transformed to [log.SeverityInfo]
+//   - [zapcore.WarnLevel] is transformed to [log.SeverityWarn]
+//   - [zapcore.ErrorLevel] is transformed to [log.SeverityError]
+//   - [zapcore.DPanicLevel] is transformed to [log.SeverityFatal1]
+//   - [zapcore.PanicLevel] is transformed to [log.SeverityFatal2]
+//   - [zapcore.FatalLevel] is transformed to [log.SeverityFatal3]
+//
+// Attribute values are transformed based on their type into log attributes, or into a string value if there is no matching type.
+//
+// [OpenTelemetry]: https://opentelemetry.io/docs/concepts/signals/logs/
+
 package otelzap // import "go.opentelemetry.io/contrib/bridges/otelzap"
 
 import (
