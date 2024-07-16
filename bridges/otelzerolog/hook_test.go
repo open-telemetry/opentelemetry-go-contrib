@@ -4,10 +4,7 @@ package otelzerolog
 
 import (
 	"os"
-	// "reflect".
 	"testing"
-	// "time".
-
 	"github.com/rs/zerolog"
 	"github.com/stretchr/testify/assert"
 
