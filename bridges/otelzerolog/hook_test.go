@@ -126,6 +126,8 @@ func TestHookRun(t *testing.T) {
 		hook.Run(event, testEntry, testMessage)
 
 		// Check the results
+		require.Len(t, rec.Result(), 1)
+		require.Len(t, rec.Result()[0].Records, 1)
 		got := rec.Result()[0].Records[0]
 		assert.Equal(t, testMessage, got.Body().AsString())
 		assert.Equal(t, log.SeverityInfo, got.Severity())
