@@ -6,7 +6,7 @@
 
 // # Record Conversion
 //
-// The [zapcore.Entry] and [zapcore.Field] is converted to OpenTelemetry [log.Record] in the following
+// The [zapcore.Entry] and [zapcore.Field] are converted to OpenTelemetry [log.Record] in the following
 // way:
 //
 //   - Time is set as the Timestamp.
