@@ -108,6 +108,9 @@ since the last release tag.
 git --no-pager log --pretty=oneline "<last tag>..HEAD"
 ```
 
+Make sure the new released section is under the comment for released section,
+like `<!-- Released section -->`, so it is protected from being overwritten in the future.
+
 Be sure to update all the appropriate links at the bottom of the file.
 
 Finally, commit this change to your release branch.

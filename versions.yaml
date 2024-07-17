@@ -78,6 +78,7 @@ module-sets:
     modules:
       - go.opentelemetry.io/contrib/bridges/otelslog
       - go.opentelemetry.io/contrib/bridges/otellogrus
+      - go.opentelemetry.io/contrib/bridges/otelzap
   experimental-processors:
     version: v0.1.0
     modules:
@@ -89,7 +90,6 @@ module-sets:
       - go.opentelemetry.io/contrib/detectors/azure/azurevm
 excluded-modules:
   - go.opentelemetry.io/contrib/bridges/otelzerolog
-  - go.opentelemetry.io/contrib/bridges/otelzap
   - go.opentelemetry.io/contrib/instrgen
   - go.opentelemetry.io/contrib/instrgen/driver
   - go.opentelemetry.io/contrib/instrgen/testdata/interface
