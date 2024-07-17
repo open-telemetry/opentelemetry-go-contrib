@@ -7,8 +7,6 @@
 package otelzerolog // import "go.opentelemetry.io/contrib/bridges/otelzerolog"
 
 import (
-	"time"
-
 	"github.com/rs/zerolog"
 
 	"go.opentelemetry.io/otel/log"
