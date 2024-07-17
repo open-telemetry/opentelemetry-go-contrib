@@ -18,8 +18,7 @@
 //   - For named loggers, LoggerName is used to access [log.Logger] from [log.LoggerProvider]
 
 //
-// The Level is transformed by using the static offset to the OpenTelemetry
-// Severity types. For example:
+// The Level is transformed to the OpenTelemetry Severity types in the following way.
 //
 //   - [zapcore.DebugLevel] is transformed to [log.SeverityDebug]
 //   - [zapcore.InfoLevel] is transformed to [log.SeverityInfo]
