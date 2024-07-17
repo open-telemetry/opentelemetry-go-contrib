@@ -105,7 +105,6 @@ func (h Hook) Run(e *zerolog.Event, level zerolog.Level, msg string) {
 	r := log.Record{}
 	r.SetSeverity(convertLevel(level))
 	r.SetBody(log.StringValue(msg))
-	r.SetTimestamp(time.Now())
 	r.SetSeverityText(level.String())
 
 	// TODO: add support for attributes
