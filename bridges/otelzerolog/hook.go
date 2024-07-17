@@ -106,7 +106,7 @@ func (h Hook) Run(e *zerolog.Event, level zerolog.Level, msg string) {
 	r.SetSeverityText(level.String())
 
 	// TODO: add support for attributes
-	// This is limited by zerolog's unability to retrieve fields.
+	// This is limited by zerolog's inability to retrieve fields.
 	// https://github.com/rs/zerolog/issues/493
 
 	h.logger.Emit(e.GetCtx(), r)
