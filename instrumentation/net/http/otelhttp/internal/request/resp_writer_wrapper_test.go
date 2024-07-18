@@ -49,3 +49,15 @@ func TestRespWriterFlushNoFlusher(t *testing.T) {
 	assert.Equal(t, http.StatusOK, rw.statusCode)
 	assert.True(t, rw.wroteHeader)
 }
+
+func TestConcurrentRespWriterWrapper(t *testing.T) {
+	rw := NewRespWriterWrapper(&httptest.ResponseRecorder{}, func(int64) {})
+
+	go func() {
+		_, _ = rw.Write([]byte("hello world"))
+	}()
+
+	assert.NotNil(t, rw.BytesWritten())
+	assert.NotNil(t, rw.StatusCode())
+	assert.NoError(t, rw.Error())
+}
