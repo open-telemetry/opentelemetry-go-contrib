@@ -9,7 +9,7 @@ import (
 
 	"github.com/felixge/httpsnoop"
 
-	"go.opentelemetry.io/contrib/instrumentation/net/http/otelhttp/internal"
+	"go.opentelemetry.io/contrib/instrumentation/net/http/otelhttp/internal/request"
 	"go.opentelemetry.io/contrib/instrumentation/net/http/otelhttp/internal/semconv"
 	"go.opentelemetry.io/contrib/instrumentation/net/http/otelhttp/internal/semconvutil"
 	"go.opentelemetry.io/otel"
@@ -170,7 +170,7 @@ func (h *middleware) serveHTTP(w http.ResponseWriter, r *http.Request, next http
 	// if request body is nil or NoBody, we don't want to mutate the body as it
 	// will affect the identity of it in an unforeseeable way because we assert
 	// ReadCloser fulfills a certain interface and it is indeed nil or NoBody.
-	bw := internal.NewBodyWrapper(r.Body, readRecordFunc)
+	bw := request.NewBodyWrapper(r.Body, readRecordFunc)
 	if r.Body != nil && r.Body != http.NoBody {
 		r.Body = bw
 	}
@@ -182,7 +182,7 @@ func (h *middleware) serveHTTP(w http.ResponseWriter, r *http.Request, next http
 		}
 	}
 
-	rww := internal.NewRespWriterWrapper(w, writeRecordFunc)
+	rww := request.NewRespWriterWrapper(w, writeRecordFunc)
 
 	// Wrap w to use our ResponseWriter methods while also exposing
 	// other interfaces that w may implement (http.CloseNotifier,

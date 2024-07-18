@@ -1,7 +1,7 @@
 // Copyright The OpenTelemetry Authors
 // SPDX-License-Identifier: Apache-2.0
 
-package internal // import "go.opentelemetry.io/contrib/instrumentation/net/http/otelhttp/internal"
+package request // import "go.opentelemetry.io/contrib/instrumentation/net/http/otelhttp/internal/request"
 
 import (
 	"net/http"
