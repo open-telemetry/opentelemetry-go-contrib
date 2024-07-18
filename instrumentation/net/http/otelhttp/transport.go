@@ -147,16 +147,12 @@ func (t *Transport) RoundTrip(r *http.Request) (*http.Response, error) {
 
 	r = r.Clone(ctx) // According to RoundTripper spec, we shouldn't modify the origin request.
 
-	// use a body wrapper to determine the request size
-	var bw internal.BodyWrapper
 	// if request body is nil or NoBody, we don't want to mutate the body as it
 	// will affect the identity of it in an unforeseeable way because we assert
 	// ReadCloser fulfills a certain interface and it is indeed nil or NoBody.
+	bw := internal.NewBodyWrapper(r.Body, func(int64) {})
 	if r.Body != nil && r.Body != http.NoBody {
-		bw.ReadCloser = r.Body
-		// noop to prevent nil panic. not using this record fun yet.
-		bw.OnRead = func(int64) {}
-		r.Body = &bw
+		r.Body = bw
 	}
 
 	span.SetAttributes(t.semconv.RequestTraceAttrs(r)...)

@@ -167,14 +167,12 @@ func (h *middleware) serveHTTP(w http.ResponseWriter, r *http.Request, next http
 		}
 	}
 
-	var bw internal.BodyWrapper
 	// if request body is nil or NoBody, we don't want to mutate the body as it
 	// will affect the identity of it in an unforeseeable way because we assert
 	// ReadCloser fulfills a certain interface and it is indeed nil or NoBody.
+	bw := internal.NewBodyWrapper(r.Body, readRecordFunc)
 	if r.Body != nil && r.Body != http.NoBody {
-		bw.ReadCloser = r.Body
-		bw.OnRead = readRecordFunc
-		r.Body = &bw
+		r.Body = bw
 	}
 
 	writeRecordFunc := func(int64) {}

@@ -13,10 +13,7 @@ import (
 )
 
 func TestBodyWrapper(t *testing.T) {
-	bw := &BodyWrapper{
-		ReadCloser: io.NopCloser(strings.NewReader("hello world")),
-		OnRead:     func(int64) {},
-	}
+	bw := NewBodyWrapper(io.NopCloser(strings.NewReader("hello world")), func(int64) {})
 
 	data, err := io.ReadAll(bw)
 	require.NoError(t, err)

@@ -20,6 +20,14 @@ type BodyWrapper struct {
 	err  atomic.Value
 }
 
+// NewBodyWrapper creates a new BodyWrapper.
+func NewBodyWrapper(rc io.ReadCloser, onRead func(int64)) *BodyWrapper {
+	return &BodyWrapper{
+		ReadCloser: rc,
+		OnRead:     onRead,
+	}
+}
+
 // Read reads the data from the io.ReadCloser, and stores the number of bytes
 // read and the error.
 func (w *BodyWrapper) Read(b []byte) (int, error) {
