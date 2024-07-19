@@ -187,3 +187,17 @@ func TestConvertLevel(t *testing.T) {
 		})
 	}
 }
+
+func BenchmarkHookRun(b *testing.B) {
+	rec := logtest.NewRecorder()
+	hook := NewHook(loggerName, WithLoggerProvider(rec))
+	logger := zerolog.New(nil).Hook(hook)
+	level := zerolog.InfoLevel
+	msg := "benchmark log message"
+	event := logger.Info()
+	b.ResetTimer()
+	b.ReportAllocs()
+	for i := 0; i < b.N; i++ {
+		hook.Run(event, level, msg)
+	}
+}
