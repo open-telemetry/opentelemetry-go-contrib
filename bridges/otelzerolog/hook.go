@@ -100,5 +100,33 @@ func NewHook(name string, options ...Option) *Hook {
 
 // Run handles the passed record, and sends it to OpenTelemetry.
 func (h Hook) Run(e *zerolog.Event, level zerolog.Level, msg string) {
-	// TODO
+	r := log.Record{}
+	r.SetSeverity(convertLevel(level))
+	r.SetBody(log.StringValue(msg))
+	r.SetSeverityText(level.String())
+
+	// TODO: add support for attributes
+	// This is limited by zerolog's inability to retrieve fields.
+	// https://github.com/rs/zerolog/issues/493
+
+	h.logger.Emit(e.GetCtx(), r)
+}
+
+func convertLevel(level zerolog.Level) log.Severity {
+	switch level {
+	case zerolog.DebugLevel:
+		return log.SeverityDebug
+	case zerolog.InfoLevel:
+		return log.SeverityInfo
+	case zerolog.WarnLevel:
+		return log.SeverityWarn
+	case zerolog.ErrorLevel:
+		return log.SeverityError
+	case zerolog.PanicLevel:
+		return log.SeverityFatal1
+	case zerolog.FatalLevel:
+		return log.SeverityFatal2
+	default:
+		return log.SeverityUndefined
+	}
 }

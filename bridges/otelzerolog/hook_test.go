@@ -3,13 +3,17 @@
 package otelzerolog
 
 import (
+	"os"
 	"testing"
 
+	"github.com/rs/zerolog"
 	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 
 	"go.opentelemetry.io/otel/log"
 	"go.opentelemetry.io/otel/log/embedded"
 	"go.opentelemetry.io/otel/log/global"
+	"go.opentelemetry.io/otel/log/logtest"
 )
 
 type mockLoggerProvider struct {
@@ -100,6 +104,86 @@ func TestNewHook(t *testing.T) {
 			hook := NewHook(name, tt.options...)
 			assert.NotNil(t, hook)
 			assert.Equal(t, tt.wantLogger, hook.logger)
+		})
+	}
+}
+
+var (
+	testMessage = "log message"
+	loggerName  = "name"
+	testKey     = "key"
+	testValue   = "value"
+	testEntry   = zerolog.InfoLevel
+)
+
+func TestHookRun(t *testing.T) {
+	rec := logtest.NewRecorder()
+	hook := NewHook(loggerName, WithLoggerProvider(rec))
+
+	logger := zerolog.New(os.Stderr).Hook(hook)
+
+	t.Run("Run", func(t *testing.T) {
+		// Create an event and run the hook
+		event := logger.Info().Str(testKey, testValue)
+		hook.Run(event, testEntry, testMessage)
+
+		// Check the results
+		require.Len(t, rec.Result(), 1)
+		require.Len(t, rec.Result()[0].Records, 1)
+		got := rec.Result()[0].Records[0]
+		assert.Equal(t, testMessage, got.Body().AsString())
+		assert.Equal(t, log.SeverityInfo, got.Severity())
+		assert.Equal(t, zerolog.InfoLevel.String(), got.SeverityText())
+	})
+}
+
+func TestConvertLevel(t *testing.T) {
+	tests := []struct {
+		name         string
+		zerologLevel zerolog.Level
+		expected     log.Severity
+	}{
+		{
+			name:         "DebugLevel",
+			zerologLevel: zerolog.DebugLevel,
+			expected:     log.SeverityDebug,
+		},
+		{
+			name:         "InfoLevel",
+			zerologLevel: zerolog.InfoLevel,
+			expected:     log.SeverityInfo,
+		},
+		{
+			name:         "WarnLevel",
+			zerologLevel: zerolog.WarnLevel,
+			expected:     log.SeverityWarn,
+		},
+		{
+			name:         "ErrorLevel",
+			zerologLevel: zerolog.ErrorLevel,
+			expected:     log.SeverityError,
+		},
+		{
+			name:         "PanicLevel",
+			zerologLevel: zerolog.PanicLevel,
+			expected:     log.SeverityFatal1,
+		},
+		{
+			name:         "FatalLevel",
+			zerologLevel: zerolog.FatalLevel,
+			expected:     log.SeverityFatal2,
+		},
+		{
+			name:         "UnknownLevel",
+			zerologLevel: zerolog.NoLevel, // An unknown level
+			expected:     log.SeverityUndefined,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			actual := convertLevel(tt.zerologLevel)
+			assert.Equal(t, tt.expected, actual, "severity mismatch")
 		})
 	}
 }
