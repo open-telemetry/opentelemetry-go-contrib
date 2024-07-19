@@ -17,7 +17,6 @@ import (
 	"go.opentelemetry.io/otel/log"
 	"go.opentelemetry.io/otel/log/global"
 	"go.opentelemetry.io/otel/log/logtest"
-	"go.opentelemetry.io/otel/sdk/instrumentation"
 )
 
 type expectedRecord struct {
@@ -36,24 +35,20 @@ func TestNewLogSinkConfiguration(t *testing.T) {
 		global.SetLoggerProvider(rec)
 
 		var ls *LogSink
-		assert.NotPanics(t, func() { ls = NewLogSink() })
+		assert.NotPanics(t, func() { ls = NewLogSink("name") })
 		assert.NotNil(t, ls)
-		want := &logtest.ScopeRecords{
-			Name:    bridgeName,
-			Version: version,
-		}
-		got := rec.Result()[0]
-		assert.Equal(t, want, got)
+		assert.Equal(t, ls.newLogger("name"), ls.logger)
 	})
 
 	t.Run("with_options", func(t *testing.T) {
 		rec := logtest.NewRecorder()
-		scope := instrumentation.Scope{Name: "name", Version: "ver", SchemaURL: "url"}
 		var ls *LogSink
 		assert.NotPanics(t, func() {
 			ls = NewLogSink(
+				"name",
+				WithVersion("42.0"),
+				WithSchemaURL("https://example.com"),
 				WithLoggerProvider(rec),
-				WithInstrumentationScope(scope),
 				WithLevelSeverity(func(i int) log.Severity {
 					return log.SeverityFatal
 				}),
@@ -62,30 +57,25 @@ func TestNewLogSinkConfiguration(t *testing.T) {
 		assert.NotNil(t, ls)
 		assert.NotNil(t, ls.levelSeverity)
 		assert.Equal(t, log.SeverityFatal, ls.levelSeverity(0))
-
-		want := &logtest.ScopeRecords{
-			Name:      "name",
-			Version:   "ver",
-			SchemaURL: "url",
-		}
-		got := rec.Result()[0]
-		assert.Equal(t, want, got)
+		assert.Equal(t, ls.newLogger("name"), ls.logger)
 	})
 
 	t.Run("with_name", func(t *testing.T) {
 		rec := logtest.NewRecorder()
+		var ls *LogSink
+		var lsWithName logr.LogSink
 		assert.NotPanics(t, func() {
-			NewLogSink(
+			ls = NewLogSink(
+				"name",
 				WithLoggerProvider(rec),
-			).WithName("test")
+			)
+			lsWithName = ls.WithName("test")
 		})
-
-		want := &logtest.ScopeRecords{
-			Name:    bridgeName + "/test",
-			Version: version,
-		}
-		got := rec.Result()[1]
-		assert.Equal(t, want, got)
+		assert.NotNil(t, ls)
+		assert.NotNil(t, lsWithName)
+		assert.NotEqual(t, ls, lsWithName)
+		assert.Equal(t, ls.newLogger("name"), ls.logger)
+		assert.Equal(t, ls.newLogger("test"), lsWithName.(*LogSink).logger)
 	})
 }
 
@@ -244,7 +234,7 @@ func TestLogSink(t *testing.T) {
 	} {
 		t.Run(tt.name, func(t *testing.T) {
 			rec := logtest.NewRecorder()
-			ls := NewLogSink(WithLoggerProvider(rec))
+			ls := NewLogSink("name", WithLoggerProvider(rec))
 			l := logr.New(ls)
 			tt.f(&l)
 
@@ -268,7 +258,7 @@ func TestLogSink(t *testing.T) {
 
 func TestLogSinkWithName(t *testing.T) {
 	rec := logtest.NewRecorder()
-	ls := NewLogSink(WithLoggerProvider(rec))
+	ls := NewLogSink("name", WithLoggerProvider(rec))
 	lsWithName := ls.WithName("test")
 	require.NotEqual(t, ls, lsWithName)
 
@@ -282,6 +272,7 @@ func TestLogSinkEnabled(t *testing.T) {
 		}),
 	)
 	ls := NewLogSink(
+		"name",
 		WithLoggerProvider(rec),
 		WithLevelSeverity(func(i int) log.Severity {
 			switch i {

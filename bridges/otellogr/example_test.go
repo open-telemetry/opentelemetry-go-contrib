@@ -18,6 +18,7 @@ func Example() {
 
 	// Create an logr.Logger with *otellogr.LogSink and use it in your application.
 	logr.New(otellogr.NewLogSink(
+		"my/pkg/name",
 		otellogr.WithLoggerProvider(provider),
 		// Optionally, set the log level severity mapping.
 		otellogr.WithLevelSeverity(func(i int) log.Severity {
