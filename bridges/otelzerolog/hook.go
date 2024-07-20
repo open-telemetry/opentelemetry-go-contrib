@@ -19,7 +19,8 @@
 //   - [zerolog.InfoLevel] is transformed to [log.SeverityInfo]
 //   - [zerolog.WarnLevel] is transformed to [log.SeverityWarn]
 //   - [zerolog.ErrorLevel] is transformed to [log.SeverityError]
-//   - [zerolog.FatalLevel] is transformed to [log.SeverityFatal]
+//   - [zerolog.PanicLevel] is transformed to [log.SeverityFatal1]
+//   - [zerolog.FatalLevel] is transformed to [log.SeverityFatal2]
 // [OpenTelemetry]: https://opentelemetry.io/docs/concepts/signals/logs/
 
 package otelzerolog // import "go.opentelemetry.io/contrib/bridges/otelzerolog"
