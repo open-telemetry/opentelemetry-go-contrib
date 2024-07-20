@@ -3,7 +3,25 @@
 
 // Package otelzerolog provides a [Hook], a [zerolog.Hook] implementation that
 // can be used to bridge between the [zerolog] API and [OpenTelemetry].
+// Note: otelzerolog is a basic implementation and does not support adding custom fields.
+
+// # Record Conversion
+//
+// The [zerolog.event] records are converted to OpenTelemetry [log.Record] in
+// the following way:
+//
+//   - Message is set as the Body using a [log.StringValue].
+//   - Level is transformed and set as the Severity. The SeverityText is also
+//     set.
+// The Level is transformed to the OpenTelemetry Severity types in the following way.
+//
+//   - [zerolog.DebugLevel] is transformed to [log.SeverityDebug]
+//   - [zerolog.InfoLevel] is transformed to [log.SeverityInfo]
+//   - [zerolog.WarnLevel] is transformed to [log.SeverityWarn]
+//   - [zerolog.ErrorLevel] is transformed to [log.SeverityError]
+//   - [zerolog.FatalLevel] is transformed to [log.SeverityFatal]
 // [OpenTelemetry]: https://opentelemetry.io/docs/concepts/signals/logs/
+
 package otelzerolog // import "go.opentelemetry.io/contrib/bridges/otelzerolog"
 
 import (
