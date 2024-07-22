@@ -8,7 +8,7 @@ import (
 	"strings"
 
 	"go.opentelemetry.io/otel/attribute"
-	semconvNew "go.opentelemetry.io/otel/semconv/v1.24.0"
+	semconvNew "go.opentelemetry.io/otel/semconv/v1.26.0"
 )
 
 type newHTTPServer struct{}
