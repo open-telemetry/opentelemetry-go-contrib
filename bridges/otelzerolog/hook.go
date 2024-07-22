@@ -22,7 +22,6 @@
 //   - [zerolog.PanicLevel] is transformed to [log.SeverityFatal1]
 //   - [zerolog.FatalLevel] is transformed to [log.SeverityFatal2]
 //
-//
 // NOTE: Fields are not transformed because of https://github.com/rs/zerolog/issues/493.
 //
 // [OpenTelemetry]: https://opentelemetry.io/docs/concepts/signals/logs/
