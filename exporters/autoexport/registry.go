@@ -4,6 +4,7 @@
 package autoexport // import "go.opentelemetry.io/contrib/exporters/autoexport"
 
 import (
+	"context"
 	"errors"
 	"fmt"
 	"sync"
@@ -16,7 +17,7 @@ const otelExporterOTLPProtoEnvKey = "OTEL_EXPORTER_OTLP_PROTOCOL"
 // goroutines without additional locking or coordination.
 type registry[T any] struct {
 	mu    sync.Mutex
-	names map[string]factory[T]
+	names map[string]func(context.Context) (T, error)
 }
 
 var (
@@ -36,7 +37,7 @@ var (
 // then execute the factory, returning the created SpanExporter.
 // errUnknownExporterProducer is returned if the registration is missing and the error from
 // executing the factory if not nil.
-func (r *registry[T]) load(key string) (factory[T], error) {
+func (r *registry[T]) load(key string) (func(context.Context) (T, error), error) {
 	r.mu.Lock()
 	defer r.mu.Unlock()
 	factory, ok := r.names[key]
@@ -48,13 +49,13 @@ func (r *registry[T]) load(key string) (factory[T], error) {
 
 // store sets the factory for a key if is not already in the registry. errDuplicateRegistration
 // is returned if the registry already contains key.
-func (r *registry[T]) store(key string, factoryFn factory[T]) error {
+func (r *registry[T]) store(key string, factory func(context.Context) (T, error)) error {
 	r.mu.Lock()
 	defer r.mu.Unlock()
 	if _, ok := r.names[key]; ok {
 		return fmt.Errorf("%w: %q", errDuplicateRegistration, key)
 	}
-	r.names[key] = factoryFn
+	r.names[key] = factory
 	return nil
 }
 

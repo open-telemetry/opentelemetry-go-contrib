@@ -29,8 +29,8 @@ type LogOption = option[log.Exporter]
 
 // WithFallbackLogExporter sets the fallback exporter to use when no exporter
 // is configured through the OTEL_LOGS_EXPORTER environment variable.
-func WithFallbackLogExporter(factoryFn factory[log.Exporter]) LogOption {
-	return withFallbackFactory(factoryFn)
+func WithFallbackLogExporter(factory func(context.Context) (log.Exporter, error)) LogOption {
+	return withFallbackFactory(factory)
 }
 
 // NewLogExporters returns one or more configured [go.opentelemetry.io/otel/sdk/log.Exporter]
@@ -93,8 +93,8 @@ func NewLogExporter(ctx context.Context, options ...LogOption) (log.Exporter, er
 // RegisterLogExporter sets the log.Exporter factory to be used when the
 // OTEL_LOGS_EXPORTER environment variable contains the exporter name.
 // This will panic if name has already been registered.
-func RegisterLogExporter(name string, factoryFn factory[log.Exporter]) {
-	must(logsSignal.registry.store(name, factoryFn))
+func RegisterLogExporter(name string, factory func(context.Context) (log.Exporter, error)) {
+	must(logsSignal.registry.store(name, factory))
 }
 
 func init() {

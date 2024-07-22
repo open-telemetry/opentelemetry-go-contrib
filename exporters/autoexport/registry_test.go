@@ -16,21 +16,19 @@ import (
 
 type testType struct{ string }
 
-func testFactory(val string) func(ctx context.Context) (*testType, error) {
-	return func(ctx context.Context) (*testType, error) {
-		return &testType{val}, nil
-	}
+func factory(val string) func(ctx context.Context) (*testType, error) {
+	return func(ctx context.Context) (*testType, error) { return &testType{val}, nil }
 }
 
 func newTestRegistry() registry[*testType] {
 	return registry[*testType]{
-		names: make(map[string]factory[*testType]),
+		names: make(map[string]func(context.Context) (*testType, error)),
 	}
 }
 
 func TestCanStoreExporterFactory(t *testing.T) {
 	r := newTestRegistry()
-	require.NoError(t, r.store("first", testFactory("first")))
+	require.NoError(t, r.store("first", factory("first")))
 }
 
 func TestLoadOfUnknownExporterReturnsError(t *testing.T) {
@@ -44,14 +42,14 @@ func TestRegistryIsConcurrentSafe(t *testing.T) {
 	const exporterName = "stdout"
 
 	r := newTestRegistry()
-	require.NoError(t, r.store(exporterName, testFactory("stdout")))
+	require.NoError(t, r.store(exporterName, factory("stdout")))
 
 	var wg sync.WaitGroup
 
 	wg.Add(1)
 	go func() {
 		defer wg.Done()
-		require.ErrorIs(t, r.store(exporterName, testFactory("stdout")), errDuplicateRegistration)
+		require.ErrorIs(t, r.store(exporterName, factory("stdout")), errDuplicateRegistration)
 	}()
 
 	wg.Add(1)
@@ -68,7 +66,7 @@ func TestSubsequentCallsToGetExporterReturnsNewInstances(t *testing.T) {
 	r := newTestRegistry()
 
 	const key = "key"
-	assert.NoError(t, r.store(key, testFactory(key)))
+	assert.NoError(t, r.store(key, factory(key)))
 
 	exp1, err := r.load(key)
 	assert.NoError(t, err)
@@ -83,10 +81,10 @@ func TestRegistryErrorsOnDuplicateRegisterCalls(t *testing.T) {
 	r := newTestRegistry()
 
 	const exporterName = "custom"
-	assert.NoError(t, r.store(exporterName, testFactory(exporterName)))
+	assert.NoError(t, r.store(exporterName, factory(exporterName)))
 
 	errString := fmt.Sprintf("%s: %q", errDuplicateRegistration, exporterName)
-	assert.ErrorContains(t, r.store(exporterName, testFactory(exporterName)), errString)
+	assert.ErrorContains(t, r.store(exporterName, factory(exporterName)), errString)
 }
 
 func TestMust(t *testing.T) {

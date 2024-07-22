@@ -41,7 +41,7 @@ type MetricOption = option[metric.Reader]
 
 // WithFallbackMetricReader sets the fallback exporter to use when no exporter
 // is configured through the OTEL_METRICS_EXPORTER environment variable.
-func WithFallbackMetricReader(metricReaderFactory factory[metric.Reader]) MetricOption {
+func WithFallbackMetricReader(metricReaderFactory func(ctx context.Context) (metric.Reader, error)) MetricOption {
 	return withFallbackFactory(metricReaderFactory)
 }
 
@@ -128,7 +128,7 @@ func NewMetricReader(ctx context.Context, opts ...MetricOption) (metric.Reader, 
 // RegisterMetricReader sets the MetricReader factory to be used when the
 // OTEL_METRICS_EXPORTERS environment variable contains the exporter name. This
 // will panic if name has already been registered.
-func RegisterMetricReader(name string, factory factory[metric.Reader]) {
+func RegisterMetricReader(name string, factory func(ctx context.Context) (metric.Reader, error)) {
 	must(metricsSignal.registry.store(name, factory))
 }
 
@@ -295,7 +295,7 @@ func newProducerRegistry(envKey string) producerRegistry {
 	return producerRegistry{
 		envKey: envKey,
 		registry: &registry[metric.Producer]{
-			names: make(map[string]factory[metric.Producer]),
+			names: make(map[string]func(ctx context.Context) (metric.Producer, error)),
 		},
 	}
 }

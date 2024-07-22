@@ -7,24 +7,21 @@ import (
 	"context"
 )
 
-// factory is a type alias for a factory method to build a signal-specific exporter.
-type factory[T any] func(ctx context.Context) (T, error)
-
 // executor allows different factories to be registered and executed.
 type executor[T any] struct {
 	// factories holds a list of exporter factory functions.
-	factories []factory[T]
+	factories []func(ctx context.Context) (T, error)
 }
 
 func newExecutor[T any]() *executor[T] {
 	return &executor[T]{
-		factories: make([]factory[T], 0),
+		factories: make([]func(ctx context.Context) (T, error), 0),
 	}
 }
 
 // Append appends the given factory to the executor.
-func (f *executor[T]) Append(fact factory[T]) {
-	f.factories = append(f.factories, fact)
+func (f *executor[T]) Append(factory func(ctx context.Context) (T, error)) {
+	f.factories = append(f.factories, factory)
 }
 
 // Execute executes all the factories and returns the results.

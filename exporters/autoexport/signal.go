@@ -20,7 +20,7 @@ func newSignal[T any](envKey string) signal[T] {
 	return signal[T]{
 		envKey: envKey,
 		registry: &registry[T]{
-			names: make(map[string]factory[T]),
+			names: make(map[string]func(context.Context) (T, error)),
 		},
 	}
 }
