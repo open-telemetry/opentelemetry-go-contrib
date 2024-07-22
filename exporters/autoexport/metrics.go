@@ -295,7 +295,7 @@ func newProducerRegistry(envKey string) producerRegistry {
 	return producerRegistry{
 		envKey: envKey,
 		registry: &registry[metric.Producer]{
-			names: make(map[string]func(ctx context.Context) (metric.Producer, error)),
+			names: make(map[string]func(context.Context) (metric.Producer, error)),
 		},
 	}
 }
