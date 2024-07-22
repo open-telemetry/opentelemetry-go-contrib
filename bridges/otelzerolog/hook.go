@@ -6,7 +6,7 @@
 //
 // # Record Conversion
 //
-// The [zerolog.event] records are converted to OpenTelemetry [log.Record] in
+// The [zerolog.Event] records are converted to OpenTelemetry [log.Record] in
 // the following way:
 //
 //   - Message is set as the Body using a [log.StringValue].
