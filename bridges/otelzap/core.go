@@ -3,7 +3,7 @@
 
 // Package otelzap provides a bridge between the [go.uber.org/zap] and
 // [OpenTelemetry].
-
+//
 // # Record Conversion
 //
 // The [zapcore.Entry] and [zapcore.Field] are converted to OpenTelemetry [log.Record] in the following
@@ -14,9 +14,8 @@
 //   - Level is transformed and set as the Severity. The SeverityText is also
 //     set.
 //   - Fields are transformed and set as the Attributes.
-//   - Field value of type `context.Context` is used as context when emitting log records.
+//   - Field value of type [context.Context] is used as context when emitting log records.
 //   - For named loggers, LoggerName is used to access [log.Logger] from [log.LoggerProvider]
-
 //
 // The Level is transformed to the OpenTelemetry Severity types in the following way.
 //
@@ -31,7 +30,6 @@
 // Fields are transformed based on their type into log attributes, or into a string value if there is no matching type.
 //
 // [OpenTelemetry]: https://opentelemetry.io/docs/concepts/signals/logs/
-
 package otelzap // import "go.opentelemetry.io/contrib/bridges/otelzap"
 
 import (
