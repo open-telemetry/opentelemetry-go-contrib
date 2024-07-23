@@ -44,7 +44,7 @@ func (w *BodyWrapper) updateReadData(n int64, err error) {
 	w.mu.Lock()
 	defer w.mu.Unlock()
 
-	w.read = w.read + n
+	w.read += n
 	if err != nil {
 		w.err = err
 	}
