@@ -22,7 +22,7 @@ type BodyWrapper struct {
 }
 
 // NewBodyWrapper creates a new BodyWrapper.
-func NewBodyWrapper(rc io.ReadCloser, onRead func(int64)) *BodyWrapper {
+func NewBodyWrapper(body io.ReadCloser, onRead func(int64)) *BodyWrapper {
 	return &BodyWrapper{
 		ReadCloser: rc,
 		OnRead:     onRead,
