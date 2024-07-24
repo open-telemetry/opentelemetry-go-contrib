@@ -22,6 +22,9 @@ type BodyWrapper struct {
 }
 
 // NewBodyWrapper creates a new BodyWrapper.
+//
+// The onRead attribute is a callback that will be called every time the data
+// is read, with the number of bytes being read.
 func NewBodyWrapper(body io.ReadCloser, onRead func(int64)) *BodyWrapper {
 	return &BodyWrapper{
 		ReadCloser: body,

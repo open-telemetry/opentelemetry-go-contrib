@@ -27,6 +27,9 @@ type RespWriterWrapper struct {
 }
 
 // NewRespWriterWrapper creates a new RespWriterWrapper.
+//
+// The onWrite attribute is a callback that will be called every time the data
+// is written, with the number of bytes that were written.
 func NewRespWriterWrapper(w http.ResponseWriter, onWrite func(int64)) *RespWriterWrapper {
 	return &RespWriterWrapper{
 		ResponseWriter: w,
