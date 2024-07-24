@@ -35,11 +35,6 @@ func NewRespWriterWrapper(w http.ResponseWriter, onWrite func(int64)) *RespWrite
 	}
 }
 
-// Header returns the response writer HTTP headers.
-func (w *RespWriterWrapper) Header() http.Header {
-	return w.ResponseWriter.Header()
-}
-
 // Write writes the bytes array into the [ResponseWriter], and tracks the
 // number of bytes written and last error.
 func (w *RespWriterWrapper) Write(p []byte) (int, error) {
