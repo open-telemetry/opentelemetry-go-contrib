@@ -41,10 +41,10 @@ func NewRespWriterWrapper(w http.ResponseWriter, onWrite func(int64)) *RespWrite
 // Write writes the bytes array into the [ResponseWriter], and tracks the
 // number of bytes written and last error.
 func (w *RespWriterWrapper) Write(p []byte) (int, error) {
-	w.WriteHeader(http.StatusOK)
-
 	w.mu.RLock()
 	defer w.mu.RUnlock()
+
+	w.writeHeader(http.StatusOK)
 
 	n, err := w.ResponseWriter.Write(p)
 	n1 := int64(n)
@@ -63,6 +63,14 @@ func (w *RespWriterWrapper) WriteHeader(statusCode int) {
 	w.mu.Lock()
 	defer w.mu.Unlock()
 
+	w.writeHeader(statusCode)
+}
+
+// writeHeader persists the status code for span attribution, and propagates
+// the call to the underlying ResponseWriter.
+// It does not acquire a lock, and therefore assumes that is being handled by a
+// parent method.
+func (w *RespWriterWrapper) writeHeader(statusCode int) {
 	if !w.wroteHeader {
 		w.wroteHeader = true
 		w.statusCode = statusCode
