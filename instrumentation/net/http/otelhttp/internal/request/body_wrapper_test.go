@@ -13,6 +13,8 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
+var errFirstCall = errors.New("first call")
+
 func TestBodyWrapper(t *testing.T) {
 	bw := NewBodyWrapper(io.NopCloser(strings.NewReader("hello world")), func(int64) {})
 
@@ -37,7 +39,7 @@ func (errorWrapper) Error() string {
 func (mer *multipleErrorsReader) Read([]byte) (int, error) {
 	mer.calls = mer.calls + 1
 	if mer.calls == 1 {
-		return 0, errors.New("first call")
+		return 0, errFirstCall
 	}
 
 	return 0, errorWrapper{}
@@ -47,9 +49,9 @@ func TestBodyWrapperWithErrors(t *testing.T) {
 	bw := NewBodyWrapper(io.NopCloser(&multipleErrorsReader{}), func(int64) {})
 
 	data, err := io.ReadAll(bw)
-	require.Equal(t, errors.New("first call"), err)
+	require.Equal(t, errFirstCall, err)
 	assert.Equal(t, "", string(data))
-	require.Equal(t, errors.New("first call"), bw.Error())
+	require.Equal(t, errFirstCall, bw.Error())
 
 	data, err = io.ReadAll(bw)
 	require.Equal(t, errorWrapper{}, err)
