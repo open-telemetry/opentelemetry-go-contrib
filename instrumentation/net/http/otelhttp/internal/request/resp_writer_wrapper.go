@@ -41,8 +41,8 @@ func NewRespWriterWrapper(w http.ResponseWriter, onWrite func(int64)) *RespWrite
 // Write writes the bytes array into the [ResponseWriter], and tracks the
 // number of bytes written and last error.
 func (w *RespWriterWrapper) Write(p []byte) (int, error) {
-	w.mu.RLock()
-	defer w.mu.RUnlock()
+	w.mu.Lock()
+	defer w.mu.Unlock()
 
 	w.writeHeader(http.StatusOK)
 
