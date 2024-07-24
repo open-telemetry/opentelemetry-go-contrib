@@ -24,7 +24,7 @@ type BodyWrapper struct {
 // NewBodyWrapper creates a new BodyWrapper.
 func NewBodyWrapper(body io.ReadCloser, onRead func(int64)) *BodyWrapper {
 	return &BodyWrapper{
-		ReadCloser: rc,
+		ReadCloser: body,
 		OnRead:     onRead,
 	}
 }
