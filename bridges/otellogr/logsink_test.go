@@ -13,7 +13,6 @@ import (
 	"github.com/go-logr/logr"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
-
 	"go.opentelemetry.io/otel/log"
 	"go.opentelemetry.io/otel/log/global"
 	"go.opentelemetry.io/otel/log/logtest"
@@ -23,6 +22,14 @@ type expectedRecord struct {
 	Body       log.Value
 	Severity   log.Severity
 	Attributes []log.KeyValue
+}
+
+type errorTest struct {
+	s string
+}
+
+func (e *errorTest) Error() string {
+	return e.s
 }
 
 var now = time.Now()
@@ -132,14 +139,14 @@ func TestLogSink(t *testing.T) {
 		{
 			name: "error",
 			f: func(l *logr.Logger) {
-				l.Error(errors.New("test error"), "error message")
+				l.Error(&errorTest{"test error"}, "error message")
 			},
 			expectedRecords: []expectedRecord{
 				{
 					Body:     log.StringValue("error message"),
 					Severity: log.SeverityError,
 					Attributes: []log.KeyValue{
-						log.String(errorKey, "test error"),
+						log.String(exceptionMessage, "test error"),
 					},
 				},
 			},
@@ -147,7 +154,7 @@ func TestLogSink(t *testing.T) {
 		{
 			name: "error_multi_attrs",
 			f: func(l *logr.Logger) {
-				l.Error(errors.New("error"), "msg",
+				l.Error(errors.New("test error"), "msg",
 					"struct", struct{ data int64 }{data: 1},
 					"bool", true,
 					"duration", time.Minute,
@@ -163,7 +170,7 @@ func TestLogSink(t *testing.T) {
 					Body:     log.StringValue("msg"),
 					Severity: log.SeverityError,
 					Attributes: []log.KeyValue{
-						log.String(errorKey, "error"),
+						log.String(exceptionMessage, "test error"),
 						log.String("struct", "{data:1}"),
 						log.Bool("bool", true),
 						log.Int64("duration", 60_000_000_000),

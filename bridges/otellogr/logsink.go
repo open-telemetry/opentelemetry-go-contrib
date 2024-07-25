@@ -69,14 +69,13 @@ import (
 	"time"
 
 	"github.com/go-logr/logr"
-
 	"go.opentelemetry.io/otel/log"
 	"go.opentelemetry.io/otel/log/global"
 )
 
 const (
-	// errorKey is used to log the error parameter of Error as an additional attribute.
-	errorKey = "error"
+	// exceptionMessage is the key used for the error message.
+	exceptionMessage = "exception.message"
 )
 
 type config struct {
@@ -208,10 +207,12 @@ func (l *LogSink) log(err error, msg string, serverity log.Severity, kvList ...a
 	record.SetSeverity(serverity)
 
 	if err != nil {
-		record.AddAttributes(log.KeyValue{
-			Key:   errorKey,
-			Value: convertValue(err),
-		})
+		record.AddAttributes(
+			log.KeyValue{
+				Key:   exceptionMessage,
+				Value: convertValue(err),
+			},
+		)
 	}
 
 	if len(l.values) > 0 {
@@ -339,15 +340,19 @@ func convertValue(v any) log.Value {
 	case time.Duration:
 		return log.Int64Value(val.Nanoseconds())
 	case complex64:
-		return log.StringValue(strconv.FormatComplex(complex128(val), 'f', -1, 64))
+		r := log.Float64("r", real(complex128(val)))
+		i := log.Float64("i", imag(complex128(val)))
+		return log.MapValue(r, i)
 	case complex128:
-		return log.StringValue(strconv.FormatComplex(val, 'f', -1, 128))
+		r := log.Float64("r", real(val))
+		i := log.Float64("i", imag(val))
+		return log.MapValue(r, i)
 	case time.Time:
 		return log.Int64Value(val.UnixNano())
 	case []byte:
 		return log.BytesValue(val)
 	case error:
-		return log.StringValue(fmt.Sprintf("%+v", val))
+		return log.StringValue(val.Error())
 	}
 
 	t := reflect.TypeOf(v)
