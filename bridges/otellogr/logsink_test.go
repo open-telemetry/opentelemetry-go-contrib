@@ -13,6 +13,7 @@ import (
 	"github.com/go-logr/logr"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
+
 	"go.opentelemetry.io/otel/log"
 	"go.opentelemetry.io/otel/log/global"
 	"go.opentelemetry.io/otel/log/logtest"
@@ -452,13 +453,13 @@ func TestConvertValue(t *testing.T) {
 		},
 		{
 			name:          "complex64",
-			value:         complex(float32(1), float32(2)),
-			expectedValue: log.StringValue("(1+2i)"),
+			value:         complex64(complex(float32(1), float32(2))),
+			expectedValue: log.MapValue(log.Float64("r", 1), log.Float64("i", 2)),
 		},
 		{
 			name:          "complex128",
 			value:         complex(float64(3), float64(4)),
-			expectedValue: log.StringValue("(3+4i)"),
+			expectedValue: log.MapValue(log.Float64("r", 3), log.Float64("i", 4)),
 		},
 		{
 			name:          "time.Time",
