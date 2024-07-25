@@ -6,6 +6,7 @@ package semconv
 import (
 	"fmt"
 	"net/http"
+	"strings"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
@@ -124,5 +125,39 @@ func TestNewMethod(t *testing.T) {
 			assert.Equal(t, tt.want, got)
 			assert.Equal(t, tt.wantOrig, gotOrig)
 		})
+	}
+}
+
+func TestClientRequest(t *testing.T) {
+	body := strings.NewReader("Hello, world!")
+	url := "https://example.com:8888/foo/bar?stuff=morestuff"
+	req, err := http.NewRequest("pOST", url, body)
+	assert.NoError(t, err)
+	req.Header.Set("User-Agent", "go-test-agent")
+
+	want := []attribute.KeyValue{
+		attribute.String("http.request.method", "POST"),
+		attribute.String("http.request.method_original", "POST"),
+		attribute.String("url.full", url),
+		attribute.String("server.address", "example.com"),
+		attribute.Int("server.port", 8888),
+		attribute.String("user_agent.original", "go-test-agent"),
+	}
+	got := newHTTPClient{}.RequestTraceAttrs(req)
+	assert.ElementsMatch(t, want, got)
+}
+
+func TestClientResponse(t *testing.T) {
+	testcases := []struct {
+		resp http.Response
+		want []attribute.KeyValue
+	}{
+		{resp: http.Response{StatusCode: 200, ContentLength: 123}, want: []attribute.KeyValue{attribute.Int("http.response.status_code", 200)}},
+		{resp: http.Response{StatusCode: 404, ContentLength: 0}, want: []attribute.KeyValue{attribute.Int("http.response.status_code", 404), attribute.String("error.type", http.StatusText(404))}},
+	}
+
+	for _, tt := range testcases {
+		got := newHTTPClient{}.ResponseTraceAttrs(&tt.resp)
+		assert.ElementsMatch(t, tt.want, got)
 	}
 }

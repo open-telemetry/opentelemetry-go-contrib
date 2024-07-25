@@ -195,3 +195,143 @@ func (n newHTTPServer) ResponseTraceAttrs(resp ResponseTelemetry) []attribute.Ke
 func (n newHTTPServer) Route(route string) attribute.KeyValue {
 	return semconvNew.HTTPRoute(route)
 }
+
+type newHTTPClient struct{}
+
+// RequestTraceAttrs returns trace attributes for an HTTP request made by a client.
+func (n newHTTPClient) RequestTraceAttrs(req *http.Request) []attribute.KeyValue {
+	/*
+	   below attributes are returned:
+	   - http.request.method
+	   - http.request.method.original
+	   - url.full
+	   - server.address
+	   - server.port
+	   - user.agent.original
+	   - network.protocol.name
+	   - network.protocol.version
+	*/
+	numOfAttributes := 3 // URL, server address, proto, and method.
+
+	var urlHost string
+	if req.URL != nil {
+		urlHost = req.URL.Host
+	}
+	var requestHost string
+	var requestPort int
+	for _, hostport := range []string{urlHost, req.Header.Get("Host")} {
+		requestHost, requestPort = splitHostPort(hostport)
+		if requestHost != "" || requestPort > 0 {
+			break
+		}
+	}
+
+	eligiblePort := requiredHTTPPort(req.URL != nil && req.URL.Scheme == "https", requestPort)
+	if eligiblePort > 0 {
+		numOfAttributes++
+	}
+	useragent := req.UserAgent()
+	if useragent != "" {
+		numOfAttributes++
+	}
+
+	protoName, protoVersion := netProtocol(req.Proto)
+	if protoName != "" && protoName != "http" {
+		numOfAttributes++
+	}
+	if protoVersion != "" {
+		numOfAttributes++
+	}
+
+	method, originalMethod := n.method(req.Method)
+	if originalMethod != (attribute.KeyValue{}) {
+		numOfAttributes++
+	}
+
+	attrs := make([]attribute.KeyValue, 0, numOfAttributes)
+
+	attrs = append(attrs, method)
+	if originalMethod != (attribute.KeyValue{}) {
+		attrs = append(attrs, originalMethod)
+	}
+
+	var u string
+	if req.URL != nil {
+		// Remove any username/password info that may be in the URL.
+		userinfo := req.URL.User
+		req.URL.User = nil
+		u = req.URL.String()
+		// Restore any username/password info that was removed.
+		req.URL.User = userinfo
+	}
+	attrs = append(attrs, semconvNew.URLFull(u))
+
+	attrs = append(attrs, semconvNew.ServerAddress(requestHost))
+	if eligiblePort > 0 {
+		attrs = append(attrs, semconvNew.ServerPort(eligiblePort))
+	}
+
+	// TODO: should we emit this attribute if it's opt-in only?
+	if useragent != "" {
+		attrs = append(attrs, semconvNew.UserAgentOriginal(useragent))
+	}
+
+	if protoName != "" && protoName != "http" {
+		attrs = append(attrs, semconvNew.NetworkProtocolName(protoName))
+	}
+	if protoVersion != "" {
+		attrs = append(attrs, semconvNew.NetworkProtocolVersion(protoVersion))
+	}
+
+	return attrs
+}
+
+// ResponseTraceAttrs returns trace attributes for an HTTP response made by a client.
+func (n newHTTPClient) ResponseTraceAttrs(resp *http.Response) []attribute.KeyValue {
+	/*
+	   below attributes are returned:
+	   - http.response.status_code
+	   - error.type
+	*/
+	var count int
+	if resp.StatusCode > 0 {
+		count++
+	}
+
+	if isErrorStatusCode(resp.StatusCode) {
+		count++
+	}
+
+	attrs := make([]attribute.KeyValue, 0, count)
+	if resp.StatusCode > 0 {
+		attrs = append(attrs, semconvNew.HTTPResponseStatusCode(resp.StatusCode))
+	}
+
+	if isErrorStatusCode(resp.StatusCode) {
+		errorType := http.StatusText(resp.StatusCode)
+		if errorType == "" {
+			errorType = semconvNew.ErrorTypeOther.Value.AsString()
+		}
+		attrs = append(attrs, semconvNew.ErrorTypeKey.String(errorType))
+	}
+	return attrs
+}
+
+func (n newHTTPClient) method(method string) (attribute.KeyValue, attribute.KeyValue) {
+	if method == "" {
+		return semconvNew.HTTPRequestMethodGet, attribute.KeyValue{}
+	}
+	if attr, ok := methodLookup[method]; ok {
+		return attr, attribute.KeyValue{}
+	}
+
+	orig := semconvNew.HTTPRequestMethodOriginal(method)
+	if attr, ok := methodLookup[strings.ToUpper(method)]; ok {
+		return attr, orig
+	}
+	return semconvNew.HTTPRequestMethodGet, orig
+}
+
+func isErrorStatusCode(code int) bool {
+	return code >= 400 || code < 100
+}

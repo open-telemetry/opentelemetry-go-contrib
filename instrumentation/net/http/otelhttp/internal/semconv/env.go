@@ -82,23 +82,28 @@ func ServerStatus(code int) (codes.Code, string) {
 }
 
 type HTTPClient struct {
-	// TODO (#5332): Support for new semantic conventions
-	// duplicate bool
+	duplicate bool
 }
 
 func NewHTTPClient() HTTPClient {
-	// TODO (#5332): Support for new semantic conventions
-	// env := strings.ToLower(os.Getenv("OTEL_HTTP_CLIENT_COMPATIBILITY_MODE"))
-	return HTTPClient{}
+	env := strings.ToLower(os.Getenv("OTEL_HTTP_CLIENT_COMPATIBILITY_MODE"))
+	return HTTPClient{duplicate: env == "http/dup"}
 }
 
 // RequestTraceAttrs returns attributes for an HTTP request made by a client.
 func (c HTTPClient) RequestTraceAttrs(req *http.Request) []attribute.KeyValue {
+	if c.duplicate {
+		return append(oldHTTPClient{}.RequestTraceAttrs(req), newHTTPClient{}.RequestTraceAttrs(req)...)
+	}
 	return oldHTTPClient{}.RequestTraceAttrs(req)
 }
 
 // ResponseTraceAttrs returns metric attributes for an HTTP request made by a client.
 func (c HTTPClient) ResponseTraceAttrs(resp *http.Response) []attribute.KeyValue {
+	if c.duplicate {
+		return append(oldHTTPClient{}.ResponseTraceAttrs(resp), newHTTPClient{}.ResponseTraceAttrs(resp)...)
+	}
+
 	return oldHTTPClient{}.ResponseTraceAttrs(resp)
 }
 
