@@ -20,7 +20,7 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 - The `go.opentelemetry.io/contrib/bridges/otelzerolog` module.
   This module provides an OpenTelemetry logging bridge for `github.com/rs/zerolog`. (#5405)
 - The `go.opentelemetry.io/contrib/bridges/otellogr` module.
-  This module provides an OpenTelemetry logging bridge for "github.com/go-logr/logr". (#5357)
+  This module provides an OpenTelemetry logging bridge for `github.com/go-logr/logr`. (#5357)
 
 ### Removed
 
