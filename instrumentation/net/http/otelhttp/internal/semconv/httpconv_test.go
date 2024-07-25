@@ -137,11 +137,12 @@ func TestClientRequest(t *testing.T) {
 
 	want := []attribute.KeyValue{
 		attribute.String("http.request.method", "POST"),
-		attribute.String("http.request.method_original", "POST"),
+		attribute.String("http.request.method_original", "pOST"),
 		attribute.String("url.full", url),
 		attribute.String("server.address", "example.com"),
 		attribute.Int("server.port", 8888),
 		attribute.String("user_agent.original", "go-test-agent"),
+		attribute.String("network.protocol.version", "1.1"),
 	}
 	got := newHTTPClient{}.RequestTraceAttrs(req)
 	assert.ElementsMatch(t, want, got)
