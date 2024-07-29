@@ -83,7 +83,7 @@ func TestNewLogSinkConfiguration(t *testing.T) {
 		assert.NotNil(t, lsWithName)
 		assert.NotEqual(t, ls, lsWithName)
 		assert.Equal(t, ls.newLogger("name"), ls.logger)
-		assert.Equal(t, ls.newLogger("test"), lsWithName.(*LogSink).logger)
+		assert.Equal(t, ls.newLogger("name/test"), lsWithName.(*LogSink).logger)
 	})
 }
 
@@ -147,7 +147,7 @@ func TestLogSink(t *testing.T) {
 					Body:     log.StringValue("error message"),
 					Severity: log.SeverityError,
 					Attributes: []log.KeyValue{
-						log.String(exceptionMessage, "test error"),
+						log.String(exceptionMessageKey, "test error"),
 					},
 				},
 			},
@@ -171,7 +171,7 @@ func TestLogSink(t *testing.T) {
 					Body:     log.StringValue("msg"),
 					Severity: log.SeverityError,
 					Attributes: []log.KeyValue{
-						log.String(exceptionMessage, "test error"),
+						log.String(exceptionMessageKey, "test error"),
 						log.String("struct", "{data:1}"),
 						log.Bool("bool", true),
 						log.Int64("duration", 60_000_000_000),

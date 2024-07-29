@@ -47,7 +47,9 @@
 //     to [log.Int64Value] or [log.StringValue] if the value is too large.
 //   - [float32], [float64] are transformed to [log.Float64Value].
 //   - [time.Duration] are transformed to [log.Int64Value] with the nanoseconds.
-//   - [complex64], [complex128] are transformed to [log.StringValue] with the
+//   - [complex64], [complex128] are transformed to [log.MapValue] with the keys
+//     "r" and "i" for the real and imaginary parts. The values are
+//     [log.Float64Value].
 //   - [time.Time] are transformed to [log.Int64Value] with the nanoseconds.
 //   - [[]byte] are transformed to [log.BytesValue].
 //   - [error] are transformed to [log.StringValue] with the error message.
@@ -75,8 +77,8 @@ import (
 )
 
 const (
-	// exceptionMessage is the key used for the error message.
-	exceptionMessage = "exception.message"
+	// exceptionMessageKey is the key used for the error message.
+	exceptionMessageKey = "exception.message"
 )
 
 type config struct {
@@ -180,6 +182,7 @@ func WithLevelSeverity(f func(int) log.Severity) Option {
 func NewLogSink(name string, options ...Option) *LogSink {
 	c := newConfig(options)
 	return &LogSink{
+		name:          name,
 		newLogger:     c.logger,
 		logger:        c.logger(name),
 		levelSeverity: c.levelSeverity,
@@ -192,6 +195,7 @@ type LogSink struct {
 	// Ensure forward compatibility by explicitly making this not comparable.
 	noCmp [0]func() //nolint: unused  // This is indeed used.
 
+	name          string
 	newLogger     func(name string) log.Logger
 	logger        log.Logger
 	levelSeverity func(int) log.Severity
@@ -210,7 +214,7 @@ func (l *LogSink) log(err error, msg string, serverity log.Severity, kvList ...a
 	if err != nil {
 		record.AddAttributes(
 			log.KeyValue{
-				Key:   exceptionMessage,
+				Key:   exceptionMessageKey,
 				Value: convertValue(err),
 			},
 		)
@@ -258,7 +262,7 @@ func (l *LogSink) Init(info logr.RuntimeInfo) {
 
 // WithName returns a new LogSink with the specified name appended.
 func (l LogSink) WithName(name string) logr.LogSink {
-	l.logger = l.newLogger(name)
+	l.logger = l.newLogger(l.name + "/" + name)
 	return &l
 }
 
