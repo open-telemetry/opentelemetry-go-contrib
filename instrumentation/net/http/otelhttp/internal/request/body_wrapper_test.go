@@ -8,6 +8,7 @@ import (
 	"io"
 	"strings"
 	"testing"
+	"time"
 
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
@@ -67,5 +68,7 @@ func TestConcurrentBodyWrapper(t *testing.T) {
 	}()
 
 	assert.NotNil(t, bw.BytesRead())
-	assert.NoError(t, bw.Error())
+	assert.Eventually(t, func() bool {
+		return errors.Is(bw.Error(), io.EOF)
+	}, time.Second, 10*time.Millisecond)
 }
