@@ -186,15 +186,9 @@ vanity-import-check: | $(PORTO)
 .PHONY: lint
 lint: go-mod-tidy golangci-lint misspell govulncheck
 
-# The following file is a third-party copy from the mongo-go-driver:
-# ./instrumentation/go.mongodb.org/mongo-driver/mongo/otelmongo/test/opmsg_deployment.go
 .PHONY: license-check
 license-check:
-	@licRes=$$(for f in $$(find . -type f \( -iname '*.go' -o -iname '*.sh' \) \
-		! -path './vendor/*' \
-		! -path './exporters/otlp/internal/opentelemetry-proto/*' \
-		! -path './instrumentation/go.mongodb.org/mongo-driver/mongo/otelmongo/test/opmsg_deployment.go') ; do \
-	           awk '/Copyright The OpenTelemetry Authors|generated|GENERATED/ && NR<=4 { found=1; next } END { if (!found) print FILENAME }' $$f; \
+	@licRes=$$(for f in $$(find . -type f \( -iname '*.go' -o -iname '*.sh' \) ! -path './vendor/*' ! -path './exporters/otlp/internal/opentelemetry-proto/*') ; do \
 	   done); \
 	   if [ -n "$${licRes}" ]; then \
 	           echo "license header checking failed:"; echo "$${licRes}"; \

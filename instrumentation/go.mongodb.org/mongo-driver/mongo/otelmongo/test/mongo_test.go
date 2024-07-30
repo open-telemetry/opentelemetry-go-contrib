@@ -11,6 +11,7 @@ import (
 	"github.com/stretchr/testify/assert"
 	"go.mongodb.org/mongo-driver/bson"
 	"go.mongodb.org/mongo-driver/mongo"
+	"go.mongodb.org/mongo-driver/mongo/integration/mtest"
 	"go.mongodb.org/mongo-driver/mongo/options"
 
 	"go.opentelemetry.io/contrib/instrumentation/go.mongodb.org/mongo-driver/mongo/otelmongo" // nolint:staticcheck  // deprecated.
@@ -24,6 +25,8 @@ import (
 type validator func(sdktrace.ReadOnlySpan) bool
 
 func TestDBCrudOperation(t *testing.T) {
+	t.Parallel()
+
 	commonValidators := []validator{
 		func(s sdktrace.ReadOnlySpan) bool {
 			return assert.Equal(t, "test-collection.insert", s.Name(), "expected %s", s.Name())
@@ -80,13 +83,19 @@ func TestDBCrudOperation(t *testing.T) {
 		},
 	}
 	for _, tc := range tt {
+		tc := tc
+
 		title := tc.title
 		if tc.excludeCommand {
 			title = title + "/excludeCommand"
 		} else {
 			title = title + "/includeCommand"
 		}
-		t.Run(title, func(t *testing.T) {
+
+		mt := mtest.New(t, mtest.NewOptions().ClientType(mtest.Mock))
+		mt.Run(title, func(mt *mtest.T) {
+			mt.Parallel()
+
 			sr := tracetest.NewSpanRecorder()
 			provider := sdktrace.NewTracerProvider(sdktrace.WithSpanProcessor(sr))
 
@@ -103,56 +112,43 @@ func TestDBCrudOperation(t *testing.T) {
 			)
 			opts.ApplyURI(addr)
 
-			mock := newMockDeployment()
+			mt.ResetClient(opts)
+			mt.AddMockResponses(tc.mockResponses...)
 
-			// nolint:staticcheck
-			//
-			// Deployment is not part of the stable API guarantee of the
-			// mongo-go-driver and is therefore marked as deprecated.
-			//
-			// See https://jira.mongodb.org/browse/GODRIVER-3241 for a long-term solution.
-			opts.Deployment = mock
-
-			client, err := mongo.Connect(ctx, opts)
+			_, err := tc.operation(ctx, mt.Client.Database("test-database"))
 			if err != nil {
-				t.Fatal(err)
-			}
-
-			mock.addResponses(tc.mockResponses...)
-			t.Cleanup(mock.clearResponses)
-
-			_, err = tc.operation(ctx, client.Database("test-database"))
-			if err != nil {
-				t.Error(err)
+				mt.Error(err)
 			}
 
 			span.End()
 
 			spans := sr.Ended()
-			if !assert.Len(t, spans, 2, "expected 2 spans, received %d", len(spans)) {
-				t.FailNow()
+			if !assert.Len(mt, spans, 2, "expected 2 spans, received %d", len(spans)) {
+				mt.FailNow()
 			}
-			assert.Len(t, spans, 2)
-			assert.Equal(t, spans[0].SpanContext().TraceID(), spans[1].SpanContext().TraceID())
-			assert.Equal(t, spans[0].Parent().SpanID(), spans[1].SpanContext().SpanID())
-			assert.Equal(t, span.SpanContext().SpanID(), spans[1].SpanContext().SpanID())
+			assert.Len(mt, spans, 2)
+			assert.Equal(mt, spans[0].SpanContext().TraceID(), spans[1].SpanContext().TraceID())
+			assert.Equal(mt, spans[0].Parent().SpanID(), spans[1].SpanContext().SpanID())
+			assert.Equal(mt, span.SpanContext().SpanID(), spans[1].SpanContext().SpanID())
 
 			s := spans[0]
-			assert.Equal(t, trace.SpanKindClient, s.SpanKind())
+			assert.Equal(mt, trace.SpanKindClient, s.SpanKind())
 			attrs := s.Attributes()
-			assert.Contains(t, attrs, attribute.String("db.system", "mongodb"))
-			assert.Contains(t, attrs, attribute.String("net.peer.name", "<mock_connection>"))
-			assert.Contains(t, attrs, attribute.Int64("net.peer.port", int64(27017)))
-			assert.Contains(t, attrs, attribute.String("net.transport", "ip_tcp"))
-			assert.Contains(t, attrs, attribute.String("db.name", "test-database"))
+			assert.Contains(mt, attrs, attribute.String("db.system", "mongodb"))
+			assert.Contains(mt, attrs, attribute.String("net.peer.name", "<mock_connection>"))
+			assert.Contains(mt, attrs, attribute.Int64("net.peer.port", int64(27017)))
+			assert.Contains(mt, attrs, attribute.String("net.transport", "ip_tcp"))
+			assert.Contains(mt, attrs, attribute.String("db.name", "test-database"))
 			for _, v := range tc.validators {
-				assert.True(t, v(s))
+				assert.True(mt, v(s))
 			}
 		})
 	}
 }
 
 func TestDBCollectionAttribute(t *testing.T) {
+	t.Parallel()
+
 	tt := []struct {
 		title         string
 		operation     func(context.Context, *mongo.Database) (interface{}, error)
@@ -205,7 +201,12 @@ func TestDBCollectionAttribute(t *testing.T) {
 		},
 	}
 	for _, tc := range tt {
-		t.Run(tc.title, func(t *testing.T) {
+		tc := tc
+
+		mt := mtest.New(t, mtest.NewOptions().ClientType(mtest.Mock))
+		mt.Run(tc.title, func(mt *mtest.T) {
+			mt.Parallel()
+
 			sr := tracetest.NewSpanRecorder()
 			provider := sdktrace.NewTracerProvider(sdktrace.WithSpanProcessor(sr))
 
@@ -222,50 +223,35 @@ func TestDBCollectionAttribute(t *testing.T) {
 			)
 			opts.ApplyURI(addr)
 
-			mock := newMockDeployment()
+			mt.ResetClient(opts)
+			mt.AddMockResponses(tc.mockResponses...)
 
-			// nolint:staticcheck
-			//
-			// Deployment is not part of the stable API guarantee of the
-			// mongo-go-driver and is therefore marked as deprecated.
-			//
-			// See https://jira.mongodb.org/browse/GODRIVER-3241 for a long-term solution.
-			opts.Deployment = mock
-
-			client, err := mongo.Connect(ctx, opts)
+			_, err := tc.operation(ctx, mt.Client.Database("test-database"))
 			if err != nil {
-				t.Fatal(err)
-			}
-
-			mock.addResponses(tc.mockResponses...)
-			t.Cleanup(mock.clearResponses)
-
-			_, err = tc.operation(ctx, client.Database("test-database"))
-			if err != nil {
-				t.Error(err)
+				mt.Error(err)
 			}
 
 			span.End()
 
 			spans := sr.Ended()
-			if !assert.Len(t, spans, 2, "expected 2 spans, received %d", len(spans)) {
-				t.FailNow()
+			if !assert.Len(mt, spans, 2, "expected 2 spans, received %d", len(spans)) {
+				mt.FailNow()
 			}
-			assert.Len(t, spans, 2)
-			assert.Equal(t, spans[0].SpanContext().TraceID(), spans[1].SpanContext().TraceID())
-			assert.Equal(t, spans[0].Parent().SpanID(), spans[1].SpanContext().SpanID())
-			assert.Equal(t, span.SpanContext().SpanID(), spans[1].SpanContext().SpanID())
+			assert.Len(mt, spans, 2)
+			assert.Equal(mt, spans[0].SpanContext().TraceID(), spans[1].SpanContext().TraceID())
+			assert.Equal(mt, spans[0].Parent().SpanID(), spans[1].SpanContext().SpanID())
+			assert.Equal(mt, span.SpanContext().SpanID(), spans[1].SpanContext().SpanID())
 
 			s := spans[0]
-			assert.Equal(t, trace.SpanKindClient, s.SpanKind())
+			assert.Equal(mt, trace.SpanKindClient, s.SpanKind())
 			attrs := s.Attributes()
-			assert.Contains(t, attrs, attribute.String("db.system", "mongodb"))
-			assert.Contains(t, attrs, attribute.String("net.peer.name", "<mock_connection>"))
-			assert.Contains(t, attrs, attribute.Int64("net.peer.port", int64(27017)))
-			assert.Contains(t, attrs, attribute.String("net.transport", "ip_tcp"))
-			assert.Contains(t, attrs, attribute.String("db.name", "test-database"))
+			assert.Contains(mt, attrs, attribute.String("db.system", "mongodb"))
+			assert.Contains(mt, attrs, attribute.String("net.peer.name", "<mock_connection>"))
+			assert.Contains(mt, attrs, attribute.Int64("net.peer.port", int64(27017)))
+			assert.Contains(mt, attrs, attribute.String("net.transport", "ip_tcp"))
+			assert.Contains(mt, attrs, attribute.String("db.name", "test-database"))
 			for _, v := range tc.validators {
-				assert.True(t, v(s))
+				assert.True(mt, v(s))
 			}
 		})
 	}
