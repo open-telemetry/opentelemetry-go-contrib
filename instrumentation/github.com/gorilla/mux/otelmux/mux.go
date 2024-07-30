@@ -4,11 +4,12 @@
 package otelmux // import "go.opentelemetry.io/contrib/instrumentation/github.com/gorilla/mux/otelmux"
 
 import (
+	"bufio"
 	"fmt"
+	"net"
 	"net/http"
 	"sync"
-        "net"
-	"bufio"
+
 	"github.com/felixge/httpsnoop"
 	"github.com/gorilla/mux"
 
