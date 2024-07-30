@@ -5,6 +5,7 @@ package main
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"io"
 	"log"
@@ -121,7 +122,7 @@ func callSayHelloServerStream(c api.HelloServiceClient) error {
 
 	for {
 		response, err := stream.Recv()
-		if err == io.EOF {
+		if errors.Is(err, io.EOF) {
 			break
 		} else if err != nil {
 			return fmt.Errorf("receiving from SayHelloServerStream: %w", err)
@@ -172,7 +173,7 @@ func callSayHelloBidiStream(c api.HelloServiceClient) error {
 	go func() {
 		for {
 			response, err := stream.Recv()
-			if err == io.EOF {
+			if errors.Is(err, io.EOF) {
 				break
 			} else if err != nil {
 				// nolint: revive  // This acts as its own main func.

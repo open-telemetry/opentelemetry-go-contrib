@@ -5,6 +5,7 @@ package ec2 // import "go.opentelemetry.io/contrib/detectors/aws/ec2"
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"net/http"
 
@@ -14,7 +15,7 @@ import (
 
 	"go.opentelemetry.io/otel/attribute"
 	"go.opentelemetry.io/otel/sdk/resource"
-	semconv "go.opentelemetry.io/otel/semconv/v1.25.0"
+	semconv "go.opentelemetry.io/otel/semconv/v1.26.0"
 )
 
 type config struct {
@@ -139,7 +140,8 @@ func (m *metadata) add(k attribute.Key, n string) {
 		return
 	}
 
-	rf, ok := err.(awserr.RequestFailure)
+	var rf awserr.RequestFailure
+	ok := errors.As(err, &rf)
 	if !ok {
 		m.errs = append(m.errs, fmt.Errorf("%q: %w", n, err))
 		return

@@ -306,7 +306,7 @@ update-all-otel-deps:
 OPENTELEMETRY_CONFIGURATION_JSONSCHEMA_SRC_DIR=tmp/opentelememetry-configuration
 
 # The SHA matching the current version of the opentelemetry-configuration schema to use
-OPENTELEMETRY_CONFIGURATION_JSONSCHEMA_VERSION=f38ac7c3a499ae5f81924ef9c455c27a56130562
+OPENTELEMETRY_CONFIGURATION_JSONSCHEMA_VERSION=v0.2.0
 
 # Cleanup temporary directory
 genjsonschema-cleanup:

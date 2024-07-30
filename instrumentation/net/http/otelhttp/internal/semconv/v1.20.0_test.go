@@ -5,6 +5,8 @@ package semconv
 
 import (
 	"fmt"
+	"net/http"
+	"strings"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
@@ -82,4 +84,38 @@ func TestV120TraceResponse(t *testing.T) {
 			assert.ElementsMatch(t, tt.want, got)
 		})
 	}
+}
+
+func TestV120ClientRequest(t *testing.T) {
+	body := strings.NewReader("Hello, world!")
+	url := "https://example.com:8888/foo/bar?stuff=morestuff"
+	req, err := http.NewRequest("POST", url, body)
+	assert.NoError(t, err)
+	req.Header.Set("User-Agent", "go-test-agent")
+
+	want := []attribute.KeyValue{
+		attribute.String("http.method", "POST"),
+		attribute.String("http.url", url),
+		attribute.String("net.peer.name", "example.com"),
+		attribute.Int("net.peer.port", 8888),
+		attribute.Int("http.request_content_length", body.Len()),
+		attribute.String("user_agent.original", "go-test-agent"),
+	}
+	got := oldHTTPClient{}.RequestTraceAttrs(req)
+	assert.ElementsMatch(t, want, got)
+}
+
+func TestV120ClientResponse(t *testing.T) {
+	resp := http.Response{
+		StatusCode:    200,
+		ContentLength: 123,
+	}
+
+	want := []attribute.KeyValue{
+		attribute.Int("http.response_content_length", 123),
+		attribute.Int("http.status_code", 200),
+	}
+
+	got := oldHTTPClient{}.ResponseTraceAttrs(&resp)
+	assert.ElementsMatch(t, want, got)
 }

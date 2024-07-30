@@ -23,12 +23,13 @@
 
 * @open-telemetry/go-approvers
 
-CODEOWNERS @MrAlias @MadVikingGod @pellared @dashpole
+CODEOWNERS @MrAlias @MadVikingGod @pellared @dashpole @XSAM @dmathieu
 
 bridges/otelslog                                                        @open-telemetry/go-approvers @MrAlias @pellared
 bridges/otellogrus/                                                     @open-telemetry/go-approvers @dmathieu @pellared
 bridges/prometheus/                                                     @open-telemetry/go-approvers @dashpole
 bridges/otelzap/                                                        @open-telemetry/go-approvers @pellared @khushijain21
+bridges/otelzerolog/                                                    @open-telemetry/go-approvers @dmathieu @AkhigbeEromo
 
 config/                                                                 @open-telemetry/go-approvers @MadVikingGod @pellared @codeboten
 
@@ -36,6 +37,7 @@ detectors/aws/ec2                                                       @open-te
 detectors/aws/ecs                                                       @open-telemetry/go-approvers @pyohannes @akats7
 detectors/aws/eks                                                       @open-telemetry/go-approvers @pyohannes
 detectors/aws/lambda                                                    @open-telemetry/go-approvers @akats7
+detectors/azure/                                                        @open-telemetry/go-approvers @pyohannes
 detectors/gcp/                                                          @open-telemetry/go-approvers @dashpole
 
 exporters/autoexport                                                    @open-telemetry/go-approvers @MikeGoldsmith @pellared
@@ -55,7 +57,8 @@ instrumentation/net/http/httptrace/otelhttptrace/                       @open-te
 instrumentation/net/http/otelhttp/                                      @open-telemetry/go-approvers @dmathieu
 instrumentation/runtime/                                                @open-telemetry/go-approvers @MadVikingGod
 
-processors/baggage/baggagetrace                                         @open-telemetry/go-approvers @codeboten @MikeGoldsmith
+processors/baggagecopy                                                  @open-telemetry/go-approvers @codeboten @MikeGoldsmith
+processors/minsev                                                       @open-telemetry/go-approvers @MrAlias
 
 propagators/autoprop/                                                   @open-telemetry/go-approvers @MrAlias
 propagators/aws/                                                        @open-telemetry/go-approvers @akats7
