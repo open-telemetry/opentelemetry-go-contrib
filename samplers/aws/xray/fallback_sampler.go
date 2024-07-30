@@ -50,7 +50,7 @@ func (fs *FallbackSampler) Description() string {
 }
 
 // take consumes quota from reservoir, if any remains, then returns true. False otherwise.
-func (fs *FallbackSampler) take(now time.Time, itemCost float64) bool {
+func (fs *FallbackSampler) take(now time.Time, itemCost float64) bool { //nolint:unparam
 	fs.mu.Lock()
 	defer fs.mu.Unlock()
 

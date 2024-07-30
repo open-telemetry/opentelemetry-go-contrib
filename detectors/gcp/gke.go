@@ -12,7 +12,7 @@ import (
 
 	"go.opentelemetry.io/otel/attribute"
 	"go.opentelemetry.io/otel/sdk/resource"
-	semconv "go.opentelemetry.io/otel/semconv/v1.25.0"
+	semconv "go.opentelemetry.io/otel/semconv/v1.26.0"
 )
 
 // GKE collects resource information of GKE computing instances.
@@ -47,7 +47,7 @@ func (gke *GKE) Detect(ctx context.Context) (*resource.Resource, error) {
 		attributes = append(attributes, semconv.ContainerName(containerName))
 	}
 
-	if clusterName, err := metadata.InstanceAttributeValue("cluster-name"); hasProblem(err) {
+	if clusterName, err := metadata.InstanceAttributeValueWithContext(ctx, "cluster-name"); hasProblem(err) {
 		errInfo = append(errInfo, err.Error())
 	} else if clusterName != "" {
 		attributes = append(attributes, semconv.K8SClusterName(clusterName))

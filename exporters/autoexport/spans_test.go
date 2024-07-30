@@ -59,6 +59,33 @@ func TestSpanExporterOTLP(t *testing.T) {
 	}
 }
 
+func TestSpanExporterOTLPWithDedicatedProtocol(t *testing.T) {
+	t.Setenv("OTEL_TRACES_EXPORTER", "otlp")
+
+	for _, tc := range []struct {
+		protocol, clientType string
+	}{
+		{"http/protobuf", "*otlptracehttp.client"},
+		{"", "*otlptracehttp.client"},
+		{"grpc", "*otlptracegrpc.client"},
+	} {
+		t.Run(fmt.Sprintf("protocol=%q", tc.protocol), func(t *testing.T) {
+			t.Setenv("OTEL_EXPORTER_OTLP_TRACES_PROTOCOL", tc.protocol)
+
+			got, err := NewSpanExporter(context.Background())
+			assert.NoError(t, err)
+			t.Cleanup(func() {
+				assert.NoError(t, got.Shutdown(context.Background()))
+			})
+			assert.IsType(t, &otlptrace.Exporter{}, got)
+
+			// Implementation detail hack. This may break when bumping OTLP exporter modules as it uses unexported API.
+			clientType := reflect.Indirect(reflect.ValueOf(got)).FieldByName("client").Elem().Type()
+			assert.Equal(t, tc.clientType, clientType.String())
+		})
+	}
+}
+
 func TestSpanExporterOTLPOverInvalidProtocol(t *testing.T) {
 	t.Setenv("OTEL_TRACES_EXPORTER", "otlp")
 	t.Setenv("OTEL_EXPORTER_OTLP_PROTOCOL", "invalid-protocol")

@@ -44,7 +44,7 @@ func (r *reservoir) expired(now time.Time) bool {
 }
 
 // take consumes quota from reservoir, if any remains, then returns true. False otherwise.
-func (r *reservoir) take(now time.Time, borrowed bool, itemCost float64) bool { // nolint: revive  // borrowed is not a control flag.
+func (r *reservoir) take(now time.Time, borrowed bool, itemCost float64) bool { // nolint:unparam,revive  // borrowed is not a control flag.
 	r.mu.Lock()
 	defer r.mu.Unlock()
 

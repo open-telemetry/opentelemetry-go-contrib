@@ -28,6 +28,7 @@ package test // import "go.opentelemetry.io/contrib/instrumentation/google.golan
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"io"
 	"time"
@@ -162,7 +163,7 @@ func DoServerStreaming(ctx context.Context, tc testpb.TestServiceClient, args ..
 		index++
 		respCnt++
 	}
-	if rpcStatus != io.EOF {
+	if !errors.Is(rpcStatus, io.EOF) {
 		logger.Fatalf("Failed to finish the server streaming rpc: %v", rpcStatus)
 	}
 	if respCnt != len(respSizes) {
@@ -209,7 +210,7 @@ func DoPingPong(ctx context.Context, tc testpb.TestServiceClient, args ...grpc.C
 	if err := stream.CloseSend(); err != nil {
 		logger.Fatalf("%v.CloseSend() got %v, want %v", stream, err, nil)
 	}
-	if _, err := stream.Recv(); err != io.EOF {
+	if _, err := stream.Recv(); !errors.Is(err, io.EOF) {
 		logger.Fatalf("%v failed to complele the ping pong test: %v", stream, err)
 	}
 }
@@ -223,7 +224,7 @@ func DoEmptyStream(ctx context.Context, tc testpb.TestServiceClient, args ...grp
 	if err := stream.CloseSend(); err != nil {
 		logger.Fatalf("%v.CloseSend() got %v, want %v", stream, err, nil)
 	}
-	if _, err := stream.Recv(); err != io.EOF {
+	if _, err := stream.Recv(); !errors.Is(err, io.EOF) {
 		logger.Fatalf("%v failed to complete the empty stream test: %v", stream, err)
 	}
 }
@@ -306,7 +307,7 @@ func (s *testServer) StreamingInputCall(stream testpb.TestService_StreamingInput
 	var sum int
 	for {
 		in, err := stream.Recv()
-		if err == io.EOF {
+		if errors.Is(err, io.EOF) {
 			return stream.SendAndClose(&testpb.StreamingInputCallResponse{
 				AggregatedPayloadSize: int32(sum),
 			})
@@ -332,7 +333,7 @@ func (s *testServer) FullDuplexCall(stream testpb.TestService_FullDuplexCallServ
 	}
 	for {
 		in, err := stream.Recv()
-		if err == io.EOF {
+		if errors.Is(err, io.EOF) {
 			// read done.
 			return nil
 		}
@@ -366,7 +367,7 @@ func (s *testServer) HalfDuplexCall(stream testpb.TestService_HalfDuplexCallServ
 	var msgBuf []*testpb.StreamingOutputCallRequest
 	for {
 		in, err := stream.Recv()
-		if err == io.EOF {
+		if errors.Is(err, io.EOF) {
 			// read done.
 			break
 		}

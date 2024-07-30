@@ -635,7 +635,7 @@ func checkUnaryServerSpans(t *testing.T, spans []trace.ReadOnlySpan) {
 	}, largeSpan.Attributes())
 }
 
-func assertEvents(t *testing.T, expected, actual []trace.Event) bool {
+func assertEvents(t *testing.T, expected, actual []trace.Event) bool { //nolint:unparam
 	if !assert.Len(t, actual, len(expected)) {
 		return false
 	}
@@ -694,7 +694,7 @@ func checkUnaryServerRecords(t *testing.T, reader metric.Reader) {
 	metricdatatest.AssertEqual(t, want, rm.ScopeMetrics[0], metricdatatest.IgnoreTimestamp(), metricdatatest.IgnoreValue())
 }
 
-func findAttribute(kvs []attribute.KeyValue, key attribute.Key) (attribute.KeyValue, bool) {
+func findAttribute(kvs []attribute.KeyValue, key attribute.Key) (attribute.KeyValue, bool) { //nolint:unparam
 	for _, kv := range kvs {
 		if kv.Key == key {
 			return kv, true

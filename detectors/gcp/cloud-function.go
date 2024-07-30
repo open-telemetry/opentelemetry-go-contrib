@@ -9,7 +9,7 @@ import (
 
 	"go.opentelemetry.io/otel/attribute"
 	"go.opentelemetry.io/otel/sdk/resource"
-	semconv "go.opentelemetry.io/otel/semconv/v1.25.0"
+	semconv "go.opentelemetry.io/otel/semconv/v1.26.0"
 )
 
 const (
@@ -41,7 +41,7 @@ func (f *cloudFunction) Detect(ctx context.Context) (*resource.Resource, error) 
 	if err != nil {
 		return nil, err
 	}
-	region, err := f.cloudRun.cloudRegion(ctx)
+	region, err := f.cloudRun.cloudRegion()
 	if err != nil {
 		return nil, err
 	}

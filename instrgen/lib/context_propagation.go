@@ -41,7 +41,7 @@ func (pass *ContextPropagationPass) Execute(
 	// when callexpr is inside var decl
 	// instead of functiondecl
 	currentFun := FuncDescriptor{}
-	emitEmptyContext := func(callExpr *ast.CallExpr, fun FuncDescriptor, ctxArg *ast.Ident) {
+	emitEmptyContext := func(callExpr *ast.CallExpr, ctxArg *ast.Ident) {
 		addImports = true
 		if currentFun != (FuncDescriptor{}) {
 			visited := map[FuncDescriptor]bool{}
@@ -96,7 +96,7 @@ func (pass *ContextPropagationPass) Execute(
 				visited := map[FuncDescriptor]bool{}
 				if isPath(analysis.Callgraph, fun, analysis.RootFunctions[0], visited) {
 					fmt.Println("\t\t\tContextPropagation FuncCall:", funId, pkg.TypesInfo.Uses[ident].Type().String())
-					emitEmptyContext(callExpr, fun, ctxArg)
+					emitEmptyContext(callExpr, ctxArg)
 				}
 			}
 		}

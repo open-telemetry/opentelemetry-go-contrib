@@ -1,7 +1,7 @@
 // Copyright The OpenTelemetry Authors
 // SPDX-License-Identifier: Apache-2.0
 
-// Package baggagetrace is an OpenTelemetry [Span Processor] that reads key/values
+// Package baggagecopy is an OpenTelemetry [Span Processor] that reads key/values
 // stored in [Baggage] in the starting span's parent context and adds them as
 // attributes to the span.
 //
@@ -24,4 +24,4 @@
 //
 // [Span Processor]: https://opentelemetry.io/docs/specs/otel/trace/sdk/#span-processor
 // [Baggage]: https://opentelemetry.io/docs/specs/otel/api/baggage
-package baggagetrace // import "go.opentelemetry.io/contrib/processors/baggage/baggagetrace"
+package baggagecopy // import "go.opentelemetry.io/contrib/processors/baggagecopy"

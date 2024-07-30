@@ -20,7 +20,7 @@ import (
 	"github.com/stretchr/testify/assert"
 )
 
-func createSamplingTargetDocument(name string, interval int64, rate, quota, ttl float64) *samplingTargetDocument {
+func createSamplingTargetDocument(name string, interval int64, rate, quota, ttl float64) *samplingTargetDocument { //nolint:unparam
 	return &samplingTargetDocument{
 		FixedRate:         &rate,
 		Interval:          &interval,

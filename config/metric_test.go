@@ -148,8 +148,15 @@ func TestReader(t *testing.T) {
 				Pull: &PullMetricReader{
 					Exporter: MetricExporter{
 						Prometheus: &Prometheus{
-							Host: ptr("localhost"),
-							Port: ptr(8888),
+							Host:              ptr("localhost"),
+							Port:              ptr(8888),
+							WithoutScopeInfo:  ptr(true),
+							WithoutUnits:      ptr(true),
+							WithoutTypeSuffix: ptr(true),
+							WithResourceConstantLabels: &IncludeExclude{
+								Included: []string{"include"},
+								Excluded: []string{"exclude"},
+							},
 						},
 					},
 				},
