@@ -4,7 +4,10 @@
 package semconv // import "go.opentelemetry.io/contrib/instrumentation/net/http/otelhttp/internal/semconv"
 
 import (
+	"fmt"
 	"net/http"
+	"reflect"
+	"strconv"
 	"strings"
 
 	"go.opentelemetry.io/otel/attribute"
@@ -207,7 +210,6 @@ func (n newHTTPClient) RequestTraceAttrs(req *http.Request) []attribute.KeyValue
 	   - url.full
 	   - server.address
 	   - server.port
-	   - user.agent.original
 	   - network.protocol.name
 	   - network.protocol.version
 	*/
@@ -271,11 +273,6 @@ func (n newHTTPClient) RequestTraceAttrs(req *http.Request) []attribute.KeyValue
 		attrs = append(attrs, semconvNew.ServerPort(eligiblePort))
 	}
 
-	// TODO: should we emit this attribute if it's opt-in only?
-	if useragent != "" {
-		attrs = append(attrs, semconvNew.UserAgentOriginal(useragent))
-	}
-
 	if protoName != "" && protoName != "http" {
 		attrs = append(attrs, semconvNew.NetworkProtocolName(protoName))
 	}
@@ -308,13 +305,27 @@ func (n newHTTPClient) ResponseTraceAttrs(resp *http.Response) []attribute.KeyVa
 	}
 
 	if isErrorStatusCode(resp.StatusCode) {
-		errorType := http.StatusText(resp.StatusCode)
-		if errorType == "" {
-			errorType = semconvNew.ErrorTypeOther.Value.AsString()
-		}
+		errorType := strconv.Itoa(resp.StatusCode)
 		attrs = append(attrs, semconvNew.ErrorTypeKey.String(errorType))
 	}
 	return attrs
+}
+
+func (n newHTTPClient) ErrorType(err error) attribute.KeyValue {
+	t := reflect.TypeOf(err)
+	var value string
+	if t.PkgPath() == "" && t.Name() == "" {
+		// Likely a builtin type.
+		value = t.String()
+	} else {
+		value = fmt.Sprintf("%s.%s", t.PkgPath(), t.Name())
+	}
+
+	if value == "" {
+		return semconvNew.ErrorTypeOther
+	}
+
+	return semconvNew.ErrorTypeKey.String(value)
 }
 
 func (n newHTTPClient) method(method string) (attribute.KeyValue, attribute.KeyValue) {

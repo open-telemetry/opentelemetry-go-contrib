@@ -116,3 +116,11 @@ func (c HTTPClient) Status(code int) (codes.Code, string) {
 	}
 	return codes.Unset, ""
 }
+
+func (c HTTPClient) ErrorType(err error) attribute.KeyValue {
+	if c.duplicate {
+		return newHTTPClient{}.ErrorType(err)
+	}
+
+	return attribute.KeyValue{}
+}
