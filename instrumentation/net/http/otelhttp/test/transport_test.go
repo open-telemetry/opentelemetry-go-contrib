@@ -101,13 +101,11 @@ func TestTransportErrorStatus(t *testing.T) {
 	}
 	resp, err := c.Do(r)
 	if err == nil {
-		t.Fatal("transport should have returned an error, it didn't")
-	}
-	defer func() {
 		if err := resp.Body.Close(); err != nil {
 			t.Errorf("close response body: %v", err)
 		}
-	}()
+		t.Fatal("transport should have returned an error, it didn't")
+	}
 
 	// Check span.
 	spans := spanRecorder.Ended()
