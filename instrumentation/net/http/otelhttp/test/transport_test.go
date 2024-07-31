@@ -99,10 +99,15 @@ func TestTransportErrorStatus(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	_, err = c.Do(r)
+	resp, err := c.Do(r)
 	if err == nil {
 		t.Fatal("transport should have returned an error, it didn't")
 	}
+	defer func() {
+		if err := resp.Body.Close(); err != nil {
+			t.Errorf("close response body: %v", err)
+		}
+	}()
 
 	// Check span.
 	spans := spanRecorder.Ended()
@@ -160,6 +165,7 @@ func TestTransportRequestWithTraceContext(t *testing.T) {
 	c := http.Client{Transport: tr}
 	res, err := c.Do(r)
 	require.NoError(t, err)
+	defer func() { assert.NoError(t, res.Body.Close()) }()
 
 	span.End()
 
@@ -220,6 +226,7 @@ func TestWithHTTPTrace(t *testing.T) {
 	c := http.Client{Transport: tr}
 	res, err := c.Do(r)
 	require.NoError(t, err)
+	defer func() { assert.NoError(t, res.Body.Close()) }()
 
 	span.End()
 
@@ -513,8 +520,9 @@ func TestCustomAttributesHandling(t *testing.T) {
 	// test bonus: intententionally ignoring response to confirm that
 	// http.client.response.size metric is not recorded
 	// by the Transport.RoundTrip logic
-	_, err = client.Do(r)
+	resp, err := client.Do(r)
 	require.NoError(t, err)
+	defer func() { assert.NoError(t, resp.Body.Close()) }()
 
 	err = reader.Collect(ctx, &rm)
 	assert.NoError(t, err)
@@ -587,7 +595,8 @@ func BenchmarkTransportRoundTrip(b *testing.B) {
 			b.ReportAllocs()
 			b.ResetTimer()
 			for i := 0; i < b.N; i++ {
-				_, _ = c.Do(r)
+				resp, _ := c.Do(r)
+				resp.Body.Close()
 			}
 		})
 	}
