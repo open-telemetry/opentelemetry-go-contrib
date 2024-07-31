@@ -163,7 +163,6 @@ func (t *Transport) RoundTrip(r *http.Request) (*http.Response, error) {
 
 	res, err := t.rt.RoundTrip(r)
 	if err != nil {
-
 		// set error type attribute if the error is part of the predefined
 		// error types.
 		// otherwise, record it as an exception
