@@ -119,3 +119,47 @@ func NewHTTPServer(meter metric.Meter) HTTPServer {
 	server.requestBytesCounter, server.responseBytesCounter, server.serverLatencyMeasure = oldHTTPServer{}.createMeasures(meter)
 	return server
 }
+
+type HTTPClient struct {
+	duplicate bool
+}
+
+func NewHTTPClient() HTTPClient {
+	env := strings.ToLower(os.Getenv("OTEL_HTTP_CLIENT_COMPATIBILITY_MODE"))
+	return HTTPClient{duplicate: env == "http/dup"}
+}
+
+// RequestTraceAttrs returns attributes for an HTTP request made by a client.
+func (c HTTPClient) RequestTraceAttrs(req *http.Request) []attribute.KeyValue {
+	if c.duplicate {
+		return append(oldHTTPClient{}.RequestTraceAttrs(req), newHTTPClient{}.RequestTraceAttrs(req)...)
+	}
+	return oldHTTPClient{}.RequestTraceAttrs(req)
+}
+
+// ResponseTraceAttrs returns metric attributes for an HTTP request made by a client.
+func (c HTTPClient) ResponseTraceAttrs(resp *http.Response) []attribute.KeyValue {
+	if c.duplicate {
+		return append(oldHTTPClient{}.ResponseTraceAttrs(resp), newHTTPClient{}.ResponseTraceAttrs(resp)...)
+	}
+
+	return oldHTTPClient{}.ResponseTraceAttrs(resp)
+}
+
+func (c HTTPClient) Status(code int) (codes.Code, string) {
+	if code < 100 || code >= 600 {
+		return codes.Error, fmt.Sprintf("Invalid HTTP status code %d", code)
+	}
+	if code >= 400 {
+		return codes.Error, ""
+	}
+	return codes.Unset, ""
+}
+
+func (c HTTPClient) ErrorType(err error) attribute.KeyValue {
+	if c.duplicate {
+		return newHTTPClient{}.ErrorType(err)
+	}
+
+	return attribute.KeyValue{}
+}

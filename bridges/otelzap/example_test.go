@@ -4,6 +4,7 @@
 package otelzap_test
 
 import (
+	"context"
 	"os"
 
 	"go.opentelemetry.io/contrib/bridges/otelzap"
@@ -24,6 +25,10 @@ func Example() {
 
 	// You can now use your logger in your code.
 	logger.Info("something really cool")
+
+	// You can set context for trace correlation using zap.Any or zap.Reflect
+	ctx := context.Background()
+	logger.Info("setting context", zap.Any("context", ctx))
 }
 
 func Example_multiple() {

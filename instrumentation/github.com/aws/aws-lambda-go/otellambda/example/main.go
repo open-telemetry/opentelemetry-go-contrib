@@ -6,7 +6,6 @@ package main
 import (
 	"context"
 	"encoding/json"
-	"io"
 	"log"
 	"net/http"
 
@@ -65,12 +64,12 @@ func lambdaHandler(ctx context.Context) error {
 		return err
 	}
 
-	defer func(Body io.ReadCloser) {
-		err := Body.Close()
+	defer func() {
+		err := res.Body.Close()
 		if err != nil {
 			log.Printf("failed to close http response body, %v\n", err)
 		}
-	}(res.Body)
+	}()
 
 	var data map[string]interface{}
 	err = json.NewDecoder(res.Body).Decode(&data)

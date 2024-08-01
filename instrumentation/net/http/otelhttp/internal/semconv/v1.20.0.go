@@ -180,3 +180,13 @@ func (o oldHTTPServer) scheme(https bool) attribute.KeyValue { // nolint:revive
 	}
 	return semconv.HTTPSchemeHTTP
 }
+
+type oldHTTPClient struct{}
+
+func (o oldHTTPClient) RequestTraceAttrs(req *http.Request) []attribute.KeyValue {
+	return semconvutil.HTTPClientRequest(req)
+}
+
+func (o oldHTTPClient) ResponseTraceAttrs(resp *http.Response) []attribute.KeyValue {
+	return semconvutil.HTTPClientResponse(resp)
+}

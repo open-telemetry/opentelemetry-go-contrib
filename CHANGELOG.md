@@ -10,12 +10,22 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 
 ### Added
 
-- Add the new `go.opentelemetry.io/contrib/instrgen` package to provide auto-generated source code instrumentation. (#3068, #3108)
 - Support for stdoutlog exporter in `go.opentelemetry.io/contrib/config`. (#5850)
+- Add macOS ARM64 platform to the compatibility testing suite. (#5868)
+- The `go.opentelemetry.io/contrib/bridges/otelzap` module.
+  This module provides an OpenTelemetry logging bridge for `go.uber.org/zap`. (#5191)
+- The `go.opentelemetry.io/contrib/config` package supports configuring `with_resource_constant_labels` for the prometheus exporter. (#5890)
+- Add new runtime metrics to `go.opentelemetry.io/contrib/instrumentation/runtime`, which are still disabled by default. (#5870)
+- Support for the `OTEL_HTTP_CLIENT_COMPATIBILITY_MODE=http/dup` environment variable in `go.opentelemetry.io/contrib/instrumentation/net/http/otelhttp` to emit attributes for both the v1.20.0 and v1.26.0 semantic conventions. (#5401)
+- The `go.opentelemetry.io/contrib/bridges/otelzerolog` module.
+  This module provides an OpenTelemetry logging bridge for `github.com/rs/zerolog`. (#5405)
 
 ### Removed
 
 - The deprecated `go.opentelemetry.io/contrib/processors/baggagecopy` package is removed. (#5853)
+
+<!-- Released section -->
+<!-- Don't change this section unless doing release -->
 
 ## [1.28.0/0.53.0/0.22.0/0.8.0/0.3.0/0.1.0] - 2024-07-02
 
@@ -1131,6 +1141,8 @@ First official tagged release of `contrib` repository.
 [0.8.0]: https://github.com/open-telemetry/opentelemetry-go-contrib/releases/tag/v0.8.0
 [0.7.0]: https://github.com/open-telemetry/opentelemetry-go-contrib/releases/tag/v0.7.0
 [0.6.1]: https://github.com/open-telemetry/opentelemetry-go-contrib/releases/tag/v0.6.1
+
+<!-- Released section ended -->
 
 [Go 1.22]: https://go.dev/doc/go1.22
 [Go 1.21]: https://go.dev/doc/go1.21
