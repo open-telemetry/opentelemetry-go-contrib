@@ -123,6 +123,7 @@ func TestV120RecordMetrics(t *testing.T) {
 	assert.ElementsMatch(t, want, server.responseBytesCounter.(*testInst).attributes)
 	assert.ElementsMatch(t, want, server.serverLatencyMeasure.(*testInst).attributes)
 }
+
 func TestV120ClientRequest(t *testing.T) {
 	body := strings.NewReader("Hello, world!")
 	url := "https://example.com:8888/foo/bar?stuff=morestuff"
