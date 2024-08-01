@@ -95,7 +95,7 @@ type MetricData struct {
 }
 
 func (s HTTPServer) RecordMetrics(ctx context.Context, md MetricData) {
-	if s.requestBytesCounter == nil {
+	if s.requestBytesCounter == nil || s.responseBytesCounter == nil || s.serverLatencyMeasure == nil {
 		// This will happen if an HTTPServer{} is used insted of NewHTTPServer.
 		return
 	}
