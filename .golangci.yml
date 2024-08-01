@@ -11,6 +11,7 @@ linters:
   # Specifically enable linters we want to use.
   enable:
     - asasalint
+    - bodyclose
     - depguard
     - errcheck
     - errorlint
