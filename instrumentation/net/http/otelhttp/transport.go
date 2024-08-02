@@ -160,7 +160,15 @@ func (t *Transport) RoundTrip(r *http.Request) (*http.Response, error) {
 
 	res, err := t.rt.RoundTrip(r)
 	if err != nil {
-		span.RecordError(err)
+		// set error type attribute if the error is part of the predefined
+		// error types.
+		// otherwise, record it as an exception
+		if errType := t.semconv.ErrorType(err); errType.Valid() {
+			span.SetAttributes(errType)
+		} else {
+			span.RecordError(err)
+		}
+
 		span.SetStatus(codes.Error, err.Error())
 		span.End()
 		return res, err
