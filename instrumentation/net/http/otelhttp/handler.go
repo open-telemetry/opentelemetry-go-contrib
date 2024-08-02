@@ -9,6 +9,7 @@ import (
 
 	"github.com/felixge/httpsnoop"
 
+	"go.opentelemetry.io/contrib/instrumentation/net/http/otelhttp/internal/request"
 	"go.opentelemetry.io/contrib/instrumentation/net/http/otelhttp/internal/semconv"
 	"go.opentelemetry.io/contrib/instrumentation/net/http/otelhttp/internal/semconvutil"
 	"go.opentelemetry.io/otel"
@@ -166,14 +167,12 @@ func (h *middleware) serveHTTP(w http.ResponseWriter, r *http.Request, next http
 		}
 	}
 
-	var bw bodyWrapper
 	// if request body is nil or NoBody, we don't want to mutate the body as it
 	// will affect the identity of it in an unforeseeable way because we assert
 	// ReadCloser fulfills a certain interface and it is indeed nil or NoBody.
+	bw := request.NewBodyWrapper(r.Body, readRecordFunc)
 	if r.Body != nil && r.Body != http.NoBody {
-		bw.ReadCloser = r.Body
-		bw.record = readRecordFunc
-		r.Body = &bw
+		r.Body = bw
 	}
 
 	writeRecordFunc := func(int64) {}
@@ -183,13 +182,7 @@ func (h *middleware) serveHTTP(w http.ResponseWriter, r *http.Request, next http
 		}
 	}
 
-	rww := &respWriterWrapper{
-		ResponseWriter: w,
-		record:         writeRecordFunc,
-		ctx:            ctx,
-		props:          h.propagators,
-		statusCode:     http.StatusOK, // default status code in case the Handler doesn't write anything
-	}
+	rww := request.NewRespWriterWrapper(w, writeRecordFunc)
 
 	// Wrap w to use our ResponseWriter methods while also exposing
 	// other interfaces that w may implement (http.CloseNotifier,
@@ -217,24 +210,26 @@ func (h *middleware) serveHTTP(w http.ResponseWriter, r *http.Request, next http
 
 	next.ServeHTTP(w, r.WithContext(ctx))
 
-	span.SetStatus(semconv.ServerStatus(rww.statusCode))
+	statusCode := rww.StatusCode()
+	bytesWritten := rww.BytesWritten()
+	span.SetStatus(semconv.ServerStatus(statusCode))
 	span.SetAttributes(h.traceSemconv.ResponseTraceAttrs(semconv.ResponseTelemetry{
-		StatusCode: rww.statusCode,
-		ReadBytes:  bw.read.Load(),
-		ReadError:  bw.err,
-		WriteBytes: rww.written,
-		WriteError: rww.err,
+		StatusCode: statusCode,
+		ReadBytes:  bw.BytesRead(),
+		ReadError:  bw.Error(),
+		WriteBytes: bytesWritten,
+		WriteError: rww.Error(),
 	})...)
 
 	// Add metrics
 	attributes := append(labeler.Get(), semconvutil.HTTPServerRequestMetrics(h.server, r)...)
-	if rww.statusCode > 0 {
-		attributes = append(attributes, semconv.HTTPStatusCode(rww.statusCode))
+	if statusCode > 0 {
+		attributes = append(attributes, semconv.HTTPStatusCode(statusCode))
 	}
 	o := metric.WithAttributeSet(attribute.NewSet(attributes...))
 
-	h.requestBytesCounter.Add(ctx, bw.read.Load(), o)
-	h.responseBytesCounter.Add(ctx, rww.written, o)
+	h.requestBytesCounter.Add(ctx, bw.BytesRead(), o)
+	h.responseBytesCounter.Add(ctx, bytesWritten, o)
 
 	// Use floating point division here for higher precision (instead of Millisecond method).
 	elapsedTime := float64(time.Since(requestStartTime)) / float64(time.Millisecond)
