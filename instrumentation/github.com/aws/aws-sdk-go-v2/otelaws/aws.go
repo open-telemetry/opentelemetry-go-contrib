@@ -8,6 +8,7 @@ import (
 	"time"
 
 	v2Middleware "github.com/aws/aws-sdk-go-v2/aws/middleware"
+	v4Signer "github.com/aws/aws-sdk-go-v2/aws/signer/v4"
 	"github.com/aws/smithy-go/middleware"
 	smithyhttp "github.com/aws/smithy-go/transport/http"
 
@@ -25,6 +26,7 @@ const (
 )
 
 type spanTimestampKey struct{}
+type isRequestSignedKey struct{}
 
 // AttributeSetter returns an array of KeyValue pairs, it can be used to set custom attributes.
 type AttributeSetter func(context.Context, middleware.InitializeInput) []attribute.KeyValue
@@ -83,6 +85,15 @@ func (m otelMiddlewares) initializeMiddlewareAfter(stack *middleware.Stack) erro
 		middleware.After)
 }
 
+func (m otelMiddlewares) buildMiddlewareBefore(stack *middleware.Stack) error {
+	return stack.Build.Add(middleware.BuildMiddlewareFunc(("OTelBuildMiddlewareBefore"), func(ctx context.Context, in middleware.BuildInput, next middleware.BuildHandler) (middleware.BuildOutput, middleware.Metadata, error) {
+		_, isSignedReq := in.Request.(*v4Signer.PresignedHTTPRequest)
+		ctx = context.WithValue(ctx, isRequestSignedKey{}, isSignedReq)
+
+		return next.HandleBuild(ctx, in)
+	}), middleware.Before)
+}
+
 func (m otelMiddlewares) deserializeMiddleware(stack *middleware.Stack) error {
 	return stack.Deserialize.Add(middleware.DeserializeMiddlewareFunc("OTelDeserializeMiddleware", func(
 		ctx context.Context, in middleware.DeserializeInput, next middleware.DeserializeHandler) (
@@ -113,10 +124,14 @@ func (m otelMiddlewares) finalizeMiddleware(stack *middleware.Stack) error {
 		ctx context.Context, in middleware.FinalizeInput, next middleware.FinalizeHandler) (
 		out middleware.FinalizeOutput, metadata middleware.Metadata, err error,
 	) {
+		requestIsSigned := ctx.Value(isRequestSignedKey{}).(bool)
+
 		// Propagate the Trace information by injecting it into the HTTP request.
 		switch req := in.Request.(type) {
 		case *smithyhttp.Request:
-			m.propagator.Inject(ctx, propagation.HeaderCarrier(req.Header))
+			if !requestIsSigned {
+				m.propagator.Inject(ctx, propagation.HeaderCarrier(req.Header))
+			}
 		default:
 		}
 
@@ -155,5 +170,5 @@ func AppendMiddlewares(apiOptions *[]func(*middleware.Stack) error, opts ...Opti
 		propagator:      cfg.TextMapPropagator,
 		attributeSetter: cfg.AttributeSetter,
 	}
-	*apiOptions = append(*apiOptions, m.initializeMiddlewareBefore, m.initializeMiddlewareAfter, m.finalizeMiddleware, m.deserializeMiddleware)
+	*apiOptions = append(*apiOptions, m.initializeMiddlewareBefore, m.initializeMiddlewareAfter, m.buildMiddlewareBefore, m.finalizeMiddleware, m.deserializeMiddleware)
 }
