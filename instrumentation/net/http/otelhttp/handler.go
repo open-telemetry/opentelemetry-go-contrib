@@ -9,6 +9,7 @@ import (
 
 	"github.com/felixge/httpsnoop"
 
+	"go.opentelemetry.io/contrib/instrumentation/net/http/otelhttp/internal/request"
 	"go.opentelemetry.io/contrib/instrumentation/net/http/otelhttp/internal/semconv"
 	"go.opentelemetry.io/otel"
 	"go.opentelemetry.io/otel/propagation"
@@ -132,14 +133,12 @@ func (h *middleware) serveHTTP(w http.ResponseWriter, r *http.Request, next http
 		}
 	}
 
-	var bw bodyWrapper
 	// if request body is nil or NoBody, we don't want to mutate the body as it
 	// will affect the identity of it in an unforeseeable way because we assert
 	// ReadCloser fulfills a certain interface and it is indeed nil or NoBody.
+	bw := request.NewBodyWrapper(r.Body, readRecordFunc)
 	if r.Body != nil && r.Body != http.NoBody {
-		bw.ReadCloser = r.Body
-		bw.record = readRecordFunc
-		r.Body = &bw
+		r.Body = bw
 	}
 
 	writeRecordFunc := func(int64) {}
@@ -149,13 +148,7 @@ func (h *middleware) serveHTTP(w http.ResponseWriter, r *http.Request, next http
 		}
 	}
 
-	rww := &respWriterWrapper{
-		ResponseWriter: w,
-		record:         writeRecordFunc,
-		ctx:            ctx,
-		props:          h.propagators,
-		statusCode:     http.StatusOK, // default status code in case the Handler doesn't write anything
-	}
+	rww := request.NewRespWriterWrapper(w, writeRecordFunc)
 
 	// Wrap w to use our ResponseWriter methods while also exposing
 	// other interfaces that w may implement (http.CloseNotifier,
@@ -183,13 +176,15 @@ func (h *middleware) serveHTTP(w http.ResponseWriter, r *http.Request, next http
 
 	next.ServeHTTP(w, r.WithContext(ctx))
 
-	span.SetStatus(h.semconv.Status(rww.statusCode))
+	statusCode := rww.StatusCode()
+	bytesWritten := rww.BytesWritten()
+	span.SetStatus(h.semconv.Status(statusCode))
 	span.SetAttributes(h.semconv.ResponseTraceAttrs(semconv.ResponseTelemetry{
-		StatusCode: rww.statusCode,
-		ReadBytes:  bw.read.Load(),
-		ReadError:  bw.err,
-		WriteBytes: rww.written,
-		WriteError: rww.err,
+		StatusCode: statusCode,
+		ReadBytes:  bw.BytesRead(),
+		ReadError:  bw.Error(),
+		WriteBytes: bytesWritten,
+		WriteError: rww.Error(),
 	})...)
 
 	// Use floating point division here for higher precision (instead of Millisecond method).
@@ -198,10 +193,10 @@ func (h *middleware) serveHTTP(w http.ResponseWriter, r *http.Request, next http
 	h.semconv.RecordMetrics(ctx, semconv.MetricData{
 		ServerName:           h.server,
 		Req:                  r,
-		StatusCode:           rww.statusCode,
+		StatusCode:           statusCode,
 		AdditionalAttributes: labeler.Get(),
-		RequestSize:          bw.read.Load(),
-		ResponseSize:         rww.written,
+		RequestSize:          bw.BytesRead(),
+		ResponseSize:         bytesWritten,
 		ElapsedTime:          elapsedTime,
 	})
 }
