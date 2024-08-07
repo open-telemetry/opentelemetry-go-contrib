@@ -154,7 +154,7 @@ func TestWithPublicEndpoint(t *testing.T) {
 
 	rr := httptest.NewRecorder()
 	container.ServeHTTP(rr, r)
-	assert.Equal(t, 200, rr.Result().StatusCode)
+	assert.Equal(t, 200, rr.Result().StatusCode) //nolint:bodyclose // False positive for httptest.ResponseRecorder: https://github.com/timakin/bodyclose/issues/59.
 
 	// Recorded span should be linked with an incoming span context.
 	assert.NoError(t, spanRecorder.ForceFlush(ctx))
@@ -244,7 +244,7 @@ func TestWithPublicEndpointFn(t *testing.T) {
 
 			rr := httptest.NewRecorder()
 			container.ServeHTTP(rr, r)
-			assert.Equal(t, http.StatusOK, rr.Result().StatusCode)
+			assert.Equal(t, http.StatusOK, rr.Result().StatusCode) //nolint:bodyclose // False positive for httptest.ResponseRecorder: https://github.com/timakin/bodyclose/issues/59.
 
 			// Recorded span should be linked with an incoming span context.
 			assert.NoError(t, spanRecorder.ForceFlush(ctx))

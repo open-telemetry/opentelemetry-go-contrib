@@ -32,7 +32,7 @@ How much interaction with the module is required before becoming a Code Owner is
 Code Ownership is ultimately up to the judgement of the existing Code Owners and Maintainers of this repository.
 Meeting the above requirements is not a guarantee to be granted Code Ownership.
 
-[member of the OpenTelemetry organization]: https://github.com/open-telemetry/community/blob/main/community-membership.md#member
+[member of the OpenTelemetry organization]: https://github.com/open-telemetry/community/blob/main/guides/contributor/membership.md#member
 
 ### Responsibilities
 
@@ -55,7 +55,7 @@ It is at the discretion of the repository Maintainers and fellow Code Owners to 
 If a Code Owner is determined to be unable to perform their duty, a repository Maintainer will remove their ownership.
 
 Inactivity greater than 5 months, during which time there are active Issues or Pull Requests to address, is deemed an automatic disqualification from being a Code Owner.
-A repository Maintainer may remove an Code Owner inactive for this length. 
+A repository Maintainer may remove an Code Owner inactive for this length.
 
 ## Filing Issues
 
@@ -146,4 +146,4 @@ Emeritus:
 ### Become an Approver or a Maintainer
 
 See the [community membership document in OpenTelemetry community
-repo](https://github.com/open-telemetry/community/blob/main/community-membership.md).
+repo](https://github.com/open-telemetry/community/blob/main/guides/contributor/membership.md).

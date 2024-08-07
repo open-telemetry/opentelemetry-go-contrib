@@ -35,7 +35,7 @@ func BenchmarkHTTPServerRequest(b *testing.B) {
 		RemoteAddr: "127.0.0.1:38738",
 		RequestURI: "/",
 	}
-	serv := NewHTTPServer()
+	serv := NewHTTPServer(nil)
 
 	b.ReportAllocs()
 	b.ResetTimer()

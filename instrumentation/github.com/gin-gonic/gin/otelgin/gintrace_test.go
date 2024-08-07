@@ -38,7 +38,7 @@ func TestGetSpanNotInstrumented(t *testing.T) {
 	r := httptest.NewRequest("GET", "/ping", nil)
 	w := httptest.NewRecorder()
 	router.ServeHTTP(w, r)
-	response := w.Result()
+	response := w.Result() //nolint:bodyclose // False positive for httptest.ResponseRecorder: https://github.com/timakin/bodyclose/issues/59.
 	assert.Equal(t, http.StatusOK, response.StatusCode)
 }
 

@@ -34,7 +34,7 @@ func TestGetSpanNotInstrumented(t *testing.T) {
 	r := httptest.NewRequest("GET", "/ping", nil)
 	w := httptest.NewRecorder()
 	router.ServeHTTP(w, r)
-	response := w.Result()
+	response := w.Result() //nolint:bodyclose // False positive for httptest.ResponseRecorder: https://github.com/timakin/bodyclose/issues/59.
 	assert.Equal(t, http.StatusOK, response.StatusCode)
 }
 
@@ -65,7 +65,7 @@ func TestPropagationWithGlobalPropagators(t *testing.T) {
 
 	router.ServeHTTP(w, r)
 	otel.SetTextMapPropagator(propagation.NewCompositeTextMapPropagator())
-	assert.Equal(t, http.StatusOK, w.Result().StatusCode, "should call the 'user' handler")
+	assert.Equal(t, http.StatusOK, w.Result().StatusCode, "should call the 'user' handler") //nolint:bodyclose // False positive for httptest.ResponseRecorder: https://github.com/timakin/bodyclose/issues/59.
 }
 
 func TestPropagationWithCustomPropagators(t *testing.T) {
@@ -95,7 +95,7 @@ func TestPropagationWithCustomPropagators(t *testing.T) {
 	})
 
 	router.ServeHTTP(w, r)
-	assert.Equal(t, http.StatusOK, w.Result().StatusCode, "should call the 'user' handler")
+	assert.Equal(t, http.StatusOK, w.Result().StatusCode, "should call the 'user' handler") //nolint:bodyclose // False positive for httptest.ResponseRecorder: https://github.com/timakin/bodyclose/issues/59.
 }
 
 func TestSkipper(t *testing.T) {
@@ -116,5 +116,5 @@ func TestSkipper(t *testing.T) {
 	})
 
 	router.ServeHTTP(w, r)
-	assert.Equal(t, http.StatusOK, w.Result().StatusCode, "should call the 'ping' handler")
+	assert.Equal(t, http.StatusOK, w.Result().StatusCode, "should call the 'ping' handler") //nolint:bodyclose // False positive for httptest.ResponseRecorder: https://github.com/timakin/bodyclose/issues/59.
 }

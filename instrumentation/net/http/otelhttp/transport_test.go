@@ -124,6 +124,11 @@ func TestTransportBasics(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
+	defer func() {
+		if err := res.Body.Close(); err != nil {
+			t.Errorf("close response body: %v", err)
+		}
+	}()
 
 	body, err := io.ReadAll(res.Body)
 	if err != nil {
@@ -170,6 +175,11 @@ func TestNilTransport(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
+	defer func() {
+		if err := res.Body.Close(); err != nil {
+			t.Errorf("close response body: %v", err)
+		}
+	}()
 
 	body, err := io.ReadAll(res.Body)
 	if err != nil {

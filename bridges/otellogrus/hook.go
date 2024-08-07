@@ -19,12 +19,12 @@
 // The Level is transformed by using the static offset to the OpenTelemetry
 // Severity types. For example:
 //
-//   - [slog.LevelDebug] is transformed to [log.SeverityDebug]
-//   - [slog.LevelInfo] is transformed to [log.SeverityInfo]
-//   - [slog.LevelWarn] is transformed to [log.SeverityWarn]
-//   - [slog.LevelError] is transformed to [log.SeverityError]
+//   - [logrus.DebugLevel] is transformed to [log.SeverityDebug]
+//   - [logrus.InfoLevel] is transformed to [log.SeverityTrace4]
+//   - [logrus.WarnLevel] is transformed to [log.SeverityTrace3]
+//   - [logrus.ErrorLevel] is transformed to [log.SeverityTrace2]
 //
-// Attribute values are transformed based on their type into log attributes, or
+// Field values are transformed based on their type into log attributes, or
 // into a string value if there is no matching type.
 //
 // [OpenTelemetry]: https://opentelemetry.io/docs/concepts/signals/logs/

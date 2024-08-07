@@ -18,7 +18,7 @@ Module: [e.g. go.opentelemetry.io/contrib/zpages]
 - [ ] I understand I will be responsible for the stability and versioning compliance of the module
 - [ ] I understand I will be responsible for deciding any additional Code Owners of the module
 
-[member of the OpenTelemetry organization]: https://github.com/open-telemetry/community/blob/main/community-membership.md#member
+[member of the OpenTelemetry organization]: https://github.com/open-telemetry/community/blob/main/guides/contributor/membership.md#member
 
 ### Relevant experience
 
