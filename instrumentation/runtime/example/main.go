@@ -27,13 +27,17 @@ var res = resource.NewWithAttributes(
 )
 
 func main() {
-	exp, err := stdoutmetric.New()
+	exp, err := stdoutmetric.New(stdoutmetric.WithPrettyPrint())
 	if err != nil {
 		log.Fatal(err)
 	}
 
 	// Register the exporter with an SDK via a periodic reader.
-	read := metric.NewPeriodicReader(exp, metric.WithInterval(1*time.Second))
+	read := metric.NewPeriodicReader(
+		exp,
+		metric.WithInterval(1*time.Second),
+		metric.WithProducer(runtime.NewProducer()),
+	)
 	provider := metric.NewMeterProvider(metric.WithResource(res), metric.WithReader(read))
 	defer func() {
 		err := provider.Shutdown(context.Background())

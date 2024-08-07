@@ -13,27 +13,27 @@ import (
 func TestRefreshGoCollector(t *testing.T) {
 	// buffer for allocating memory
 	var buffer [][]byte
-	collector := newCollector(10 * time.Second)
+	collector := newCollector(10*time.Second, runtimeMetrics)
 	testClock := newClock()
 	collector.now = testClock.now
 	// before the first refresh, all counters are zero
-	assert.Zero(t, collector.get(goMemoryAllocations))
+	assert.Zero(t, collector.getInt(goMemoryAllocations))
 	// after the first refresh, counters are non-zero
 	buffer = allocateMemory(buffer)
 	collector.refresh()
-	initialAllocations := collector.get(goMemoryAllocations)
+	initialAllocations := collector.getInt(goMemoryAllocations)
 	assert.NotZero(t, initialAllocations)
 	// if less than the refresh time has elapsed, the value is not updated
 	// on refresh.
 	testClock.increment(9 * time.Second)
 	collector.refresh()
 	buffer = allocateMemory(buffer)
-	assert.Equal(t, initialAllocations, collector.get(goMemoryAllocations))
+	assert.Equal(t, initialAllocations, collector.getInt(goMemoryAllocations))
 	// if greater than the refresh time has elapsed, the value changes.
 	testClock.increment(2 * time.Second)
 	collector.refresh()
 	_ = allocateMemory(buffer)
-	assert.NotEqual(t, initialAllocations, collector.get(goMemoryAllocations))
+	assert.NotEqual(t, initialAllocations, collector.getInt(goMemoryAllocations))
 }
 
 func allocateMemory(buffer [][]byte) [][]byte {
