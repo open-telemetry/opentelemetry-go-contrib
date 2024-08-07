@@ -1,7 +1,7 @@
 // Copyright The OpenTelemetry Authors
 // SPDX-License-Identifier: Apache-2.0
 
-package runtime // import "go.opentelemetry.io/contrib/instrumentation/runtime/test"
+package runtime // import "go.opentelemetry.io/contrib/instrumentation/runtime"
 
 import (
 	"context"
@@ -10,15 +10,14 @@ import (
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 
-	"go.opentelemetry.io/contrib/instrumentation/runtime"
 	"go.opentelemetry.io/otel/sdk/instrumentation"
 	"go.opentelemetry.io/otel/sdk/metric"
 	"go.opentelemetry.io/otel/sdk/metric/metricdata"
 	"go.opentelemetry.io/otel/sdk/metric/metricdata/metricdatatest"
 )
 
-func TestProducer(t *testing.T) {
-	reader := metric.NewManualReader(metric.WithProducer(runtime.NewProducer()))
+func TestNewProducer(t *testing.T) {
+	reader := metric.NewManualReader(metric.WithProducer(NewProducer()))
 	_ = metric.NewMeterProvider(metric.WithReader(reader))
 	rm := metricdata.ResourceMetrics{}
 	err := reader.Collect(context.Background(), &rm)
@@ -29,7 +28,7 @@ func TestProducer(t *testing.T) {
 	expectedScopeMetric := metricdata.ScopeMetrics{
 		Scope: instrumentation.Scope{
 			Name:    "go.opentelemetry.io/contrib/instrumentation/runtime",
-			Version: runtime.Version(),
+			Version: Version(),
 		},
 		Metrics: []metricdata.Metrics{
 			{
