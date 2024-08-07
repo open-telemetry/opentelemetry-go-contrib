@@ -76,6 +76,7 @@ module-sets:
   experimental-bridge:
     version: v0.3.0
     modules:
+      - go.opentelemetry.io/contrib/bridges/otellogr
       - go.opentelemetry.io/contrib/bridges/otelslog
       - go.opentelemetry.io/contrib/bridges/otellogrus
       - go.opentelemetry.io/contrib/bridges/otelzap
