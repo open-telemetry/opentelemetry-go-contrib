@@ -82,8 +82,6 @@ func Middleware(service string, opts ...Option) echo.MiddlewareFunc {
 			err := next(c)
 			if err != nil {
 				span.SetAttributes(attribute.String("echo.error", err.Error()))
-				// invokes the registered HTTP error handler
-				c.Error(err)
 			}
 
 			status := c.Response().Status
