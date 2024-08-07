@@ -4,11 +4,14 @@
 package test
 
 import (
+	"bufio"
 	"context"
 	"fmt"
+	"net"
 	"net/http"
 	"net/http/httptest"
 	"testing"
+	"time"
 
 	"github.com/gorilla/mux"
 	"github.com/stretchr/testify/assert"
@@ -280,5 +283,51 @@ func TestWithPublicEndpointFn(t *testing.T) {
 			spans := sr.Ended()
 			tt.spansAssert(t, sc, spans)
 		})
+	}
+}
+
+type mockConn struct{}
+
+func (m *mockConn) Read(b []byte) (n int, err error)   { return 0, nil }
+func (m *mockConn) Write(b []byte) (n int, err error)  { return 0, nil }
+func (m *mockConn) Close() error                       { return nil }
+func (m *mockConn) LocalAddr() net.Addr                { return nil }
+func (m *mockConn) RemoteAddr() net.Addr               { return nil }
+func (m *mockConn) SetDeadline(t time.Time) error      { return nil }
+func (m *mockConn) SetReadDeadline(t time.Time) error  { return nil }
+func (m *mockConn) SetWriteDeadline(t time.Time) error { return nil }
+
+// Mock recordingResponseWriter for testing purposes.
+type recordingResponseWriter struct {
+	hijacked bool
+	conn     net.Conn
+	rw       *bufio.ReadWriter
+}
+
+func (h *recordingResponseWriter) Hijack() (net.Conn, *bufio.ReadWriter, error) {
+	h.hijacked = true
+	h.conn = &mockConn{}
+	h.rw = bufio.NewReadWriter(bufio.NewReader(h.conn), bufio.NewWriter(h.conn))
+	return h.conn, h.rw, nil
+}
+
+func TestHijack(t *testing.T) {
+	// Arrange
+	h := &recordingResponseWriter{}
+
+	// Act
+	conn, rw, err := h.Hijack()
+	// Assert
+	if err != nil {
+		t.Fatalf("expected no error, got %v", err)
+	}
+	if conn == nil {
+		t.Fatalf("expected non-nil conn, got nil")
+	}
+	if rw == nil {
+		t.Fatalf("expected non-nil ReadWriter, got nil")
+	}
+	if !h.hijacked {
+		t.Fatalf("expected hijacked to be true, got false")
 	}
 }
