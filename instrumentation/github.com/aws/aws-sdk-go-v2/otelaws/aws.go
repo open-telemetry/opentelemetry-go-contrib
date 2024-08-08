@@ -83,6 +83,23 @@ func (m otelMiddlewares) initializeMiddlewareAfter(stack *middleware.Stack) erro
 		middleware.After)
 }
 
+func (m otelMiddlewares) finalizeMiddlewareAfter(stack *middleware.Stack) error {
+	return stack.Finalize.Add(middleware.FinalizeMiddlewareFunc("OTelFinalizeMiddleware", func(
+		ctx context.Context, in middleware.FinalizeInput, next middleware.FinalizeHandler) (
+		out middleware.FinalizeOutput, metadata middleware.Metadata, err error,
+	) {
+		// Propagate the Trace information by injecting it into the HTTP request.
+		switch req := in.Request.(type) {
+		case *smithyhttp.Request:
+			m.propagator.Inject(ctx, propagation.HeaderCarrier(req.Header))
+		default:
+		}
+
+		return next.HandleFinalize(ctx, in)
+	}),
+		middleware.After)
+}
+
 func (m otelMiddlewares) deserializeMiddleware(stack *middleware.Stack) error {
 	return stack.Deserialize.Add(middleware.DeserializeMiddlewareFunc("OTelDeserializeMiddleware", func(
 		ctx context.Context, in middleware.DeserializeInput, next middleware.DeserializeHandler) (
@@ -104,23 +121,6 @@ func (m otelMiddlewares) deserializeMiddleware(stack *middleware.Stack) error {
 		}
 
 		return out, metadata, err
-	}),
-		middleware.Before)
-}
-
-func (m otelMiddlewares) finalizeMiddleware(stack *middleware.Stack) error {
-	return stack.Finalize.Add(middleware.FinalizeMiddlewareFunc("OTelFinalizeMiddleware", func(
-		ctx context.Context, in middleware.FinalizeInput, next middleware.FinalizeHandler) (
-		out middleware.FinalizeOutput, metadata middleware.Metadata, err error,
-	) {
-		// Propagate the Trace information by injecting it into the HTTP request.
-		switch req := in.Request.(type) {
-		case *smithyhttp.Request:
-			m.propagator.Inject(ctx, propagation.HeaderCarrier(req.Header))
-		default:
-		}
-
-		return next.HandleFinalize(ctx, in)
 	}),
 		middleware.Before)
 }
@@ -155,5 +155,5 @@ func AppendMiddlewares(apiOptions *[]func(*middleware.Stack) error, opts ...Opti
 		propagator:      cfg.TextMapPropagator,
 		attributeSetter: cfg.AttributeSetter,
 	}
-	*apiOptions = append(*apiOptions, m.initializeMiddlewareBefore, m.initializeMiddlewareAfter, m.finalizeMiddleware, m.deserializeMiddleware)
+	*apiOptions = append(*apiOptions, m.initializeMiddlewareBefore, m.initializeMiddlewareAfter, m.finalizeMiddlewareAfter, m.deserializeMiddleware)
 }
