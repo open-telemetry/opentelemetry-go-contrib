@@ -36,6 +36,7 @@ func TestStatsHandlerHandleRPCServerErrors(t *testing.T) {
 			serverHandler := otelgrpc.NewServerHandler(
 				otelgrpc.WithTracerProvider(tp),
 				otelgrpc.WithMeterProvider(mp),
+				otelgrpc.WithMetricAttributes(testMetricAttr),
 			)
 
 			serviceName := "TestGrpcService"
@@ -79,6 +80,7 @@ func assertStatsHandlerServerMetrics(t *testing.T, reader metric.Reader, service
 								semconv.RPCService(serviceName),
 								otelgrpc.RPCSystemGRPC,
 								otelgrpc.GRPCStatusCodeKey.Int64(int64(code)),
+								testMetricAttr,
 							),
 						},
 					},
@@ -97,6 +99,7 @@ func assertStatsHandlerServerMetrics(t *testing.T, reader metric.Reader, service
 								semconv.RPCService(serviceName),
 								otelgrpc.RPCSystemGRPC,
 								otelgrpc.GRPCStatusCodeKey.Int64(int64(code)),
+								testMetricAttr,
 							),
 						},
 					},
@@ -115,6 +118,7 @@ func assertStatsHandlerServerMetrics(t *testing.T, reader metric.Reader, service
 								semconv.RPCService(serviceName),
 								otelgrpc.RPCSystemGRPC,
 								otelgrpc.GRPCStatusCodeKey.Int64(int64(code)),
+								testMetricAttr,
 							),
 						},
 					},
