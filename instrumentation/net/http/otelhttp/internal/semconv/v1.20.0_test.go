@@ -17,7 +17,7 @@ import (
 
 func TestV120TraceRequest(t *testing.T) {
 	// Anything but "http" or "http/dup" works.
-	t.Setenv("OTEL_HTTP_CLIENT_COMPATIBILITY_MODE", "old")
+	t.Setenv("OTEL_SEMCONV_STABILITY_OPT_IN", "old")
 	serv := NewHTTPServer(nil)
 	want := func(req testServerReq) []attribute.KeyValue {
 		return []attribute.KeyValue{
