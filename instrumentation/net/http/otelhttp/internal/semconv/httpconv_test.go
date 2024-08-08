@@ -17,7 +17,7 @@ import (
 )
 
 func TestNewTraceRequest(t *testing.T) {
-	t.Setenv("OTEL_HTTP_CLIENT_COMPATIBILITY_MODE", "http/dup")
+	t.Setenv("OTEL_SEMCONV_STABILITY_OPT_IN", "http/dup")
 	serv := NewHTTPServer(nil)
 	want := func(req testServerReq) []attribute.KeyValue {
 		return []attribute.KeyValue{
@@ -131,7 +131,7 @@ func TestNewMethod(t *testing.T) {
 }
 
 func TestNewTraceRequest_Client(t *testing.T) {
-	t.Setenv("OTEL_HTTP_CLIENT_COMPATIBILITY_MODE", "http/dup")
+	t.Setenv("OTEL_SEMCONV_STABILITY_OPT_IN", "http/dup")
 	body := strings.NewReader("Hello, world!")
 	url := "https://example.com:8888/foo/bar?stuff=morestuff"
 	req := httptest.NewRequest("pOST", url, body)
@@ -156,7 +156,7 @@ func TestNewTraceRequest_Client(t *testing.T) {
 }
 
 func TestNewTraceResponse_Client(t *testing.T) {
-	t.Setenv("OTEL_HTTP_CLIENT_COMPATIBILITY_MODE", "http/dup")
+	t.Setenv("OTEL_SEMCONV_STABILITY_OPT_IN", "http/dup")
 	testcases := []struct {
 		resp http.Response
 		want []attribute.KeyValue
