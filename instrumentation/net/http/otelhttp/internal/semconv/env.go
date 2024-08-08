@@ -83,18 +83,26 @@ func (s HTTPServer) Status(code int) (codes.Code, string) {
 	return codes.Unset, ""
 }
 
-type MetricData struct {
-	ServerName           string
+type ServerMetricData struct {
+	ServerName   string
+	ResponseSize int64
+
+	MetricData
+	MetricAttributes
+}
+
+type MetricAttributes struct {
 	Req                  *http.Request
 	StatusCode           int
 	AdditionalAttributes []attribute.KeyValue
-
-	RequestSize  int64
-	ResponseSize int64
-	ElapsedTime  float64
 }
 
-func (s HTTPServer) RecordMetrics(ctx context.Context, md MetricData) {
+type MetricData struct {
+	RequestSize int64
+	ElapsedTime float64
+}
+
+func (s HTTPServer) RecordMetrics(ctx context.Context, md ServerMetricData) {
 	if s.requestBytesCounter == nil || s.responseBytesCounter == nil || s.serverLatencyMeasure == nil {
 		// This will happen if an HTTPServer{} is used insted of NewHTTPServer.
 		return
@@ -122,11 +130,21 @@ func NewHTTPServer(meter metric.Meter) HTTPServer {
 
 type HTTPClient struct {
 	duplicate bool
+
+	meter metric.Meter
+	// old metrics
+	requestBytesCounter  metric.Int64Counter
+	responseBytesCounter metric.Int64Counter
+	latencyMeasure       metric.Float64Histogram
 }
 
-func NewHTTPClient() HTTPClient {
+func NewHTTPClient(meter metric.Meter) HTTPClient {
 	env := strings.ToLower(os.Getenv("OTEL_HTTP_CLIENT_COMPATIBILITY_MODE"))
-	return HTTPClient{duplicate: env == "http/dup"}
+	client := HTTPClient{
+		duplicate: env == "http/dup",
+	}
+	client.requestBytesCounter, client.responseBytesCounter, client.latencyMeasure = oldHTTPClient{}.createMeasures(meter)
+	return client
 }
 
 // RequestTraceAttrs returns attributes for an HTTP request made by a client.
@@ -162,4 +180,50 @@ func (c HTTPClient) ErrorType(err error) attribute.KeyValue {
 	}
 
 	return attribute.KeyValue{}
+}
+
+type metricOpts struct {
+	measurement metric.MeasurementOption
+	addOptions  []metric.AddOption
+}
+
+func (o metricOpts) MeasurementOption() metric.MeasurementOption {
+	return o.measurement
+}
+
+func (o metricOpts) AddOptions() []metric.AddOption {
+	return o.addOptions
+}
+
+func (c HTTPClient) MetricOptions(ma MetricAttributes) metricOpts {
+	attributes := oldHTTPClient{}.MetricAttributes(ma.Req, ma.StatusCode, ma.AdditionalAttributes)
+	// TODO: Duplicate Metrics
+	set := metric.WithAttributeSet(attribute.NewSet(attributes...))
+	return metricOpts{
+		measurement: set,
+		addOptions:  []metric.AddOption{set},
+	}
+}
+
+func (s HTTPClient) RecordMetrics(ctx context.Context, md MetricData, opts metricOpts) {
+	if s.requestBytesCounter == nil || s.latencyMeasure == nil {
+		// This will happen if an HTTPClient{} is used insted of NewHTTPClient().
+		return
+	}
+
+	s.requestBytesCounter.Add(ctx, md.RequestSize, opts.AddOptions()...)
+	s.latencyMeasure.Record(ctx, md.ElapsedTime, opts.MeasurementOption())
+
+	// TODO: Duplicate Metrics
+}
+
+func (s HTTPClient) RecordResponseSize(ctx context.Context, responseData int64, opts []metric.AddOption) {
+	if s.responseBytesCounter == nil {
+		// This will happen if an HTTPClient{} is used insted of NewHTTPClient().
+		return
+	}
+
+	s.responseBytesCounter.Add(ctx, int64(responseData), opts...)
+	// TODO: Duplicate Metrics
+
 }
