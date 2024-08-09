@@ -81,12 +81,6 @@ func (h *middleware) configure(c *config) {
 	h.semconv = semconv.NewHTTPServer(c.Meter)
 }
 
-func handleErr(err error) {
-	if err != nil {
-		otel.Handle(err)
-	}
-}
-
 // serveHTTP sets up tracing and calls the given next http.Handler with the span
 // context injected into the request context.
 func (h *middleware) serveHTTP(w http.ResponseWriter, r *http.Request, next http.Handler) {

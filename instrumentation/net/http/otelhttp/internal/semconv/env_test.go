@@ -92,7 +92,6 @@ func TestHTTPClientDoesNotPanic(t *testing.T) {
 			})
 		})
 	}
-
 }
 
 type testInst struct {
