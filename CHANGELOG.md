@@ -19,6 +19,7 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 - Support for the `OTEL_HTTP_CLIENT_COMPATIBILITY_MODE=http/dup` environment variable in `go.opentelemetry.io/contrib/instrumentation/net/http/otelhttp` to emit attributes for both the v1.20.0 and v1.26.0 semantic conventions. (#5401)
 - The `go.opentelemetry.io/contrib/bridges/otelzerolog` module.
   This module provides an OpenTelemetry logging bridge for `github.com/rs/zerolog`. (#5405)
+- Add `WithGinFilter` filter parameter in `go.opentelemetry.io/contrib/instrumentation/github.com/gin-gonic/gin/otelgin` to allow filtering requests with `*gin.Context`. (#5743)
 
 ### Removed
 
