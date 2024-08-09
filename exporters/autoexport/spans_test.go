@@ -9,6 +9,8 @@ import (
 	"reflect"
 	"testing"
 
+	"go.opentelemetry.io/otel/sdk/trace"
+
 	"go.opentelemetry.io/otel/exporters/otlp/otlptrace"
 	"go.opentelemetry.io/otel/exporters/stdout/stdouttrace"
 
@@ -17,7 +19,8 @@ import (
 
 func TestSpanExporterNone(t *testing.T) {
 	t.Setenv("OTEL_TRACES_EXPORTER", "none")
-	got, err := NewSpanExporter(context.Background())
+	exporters, err := NewSpanExporters(context.Background())
+	got := exporters[0]
 	assert.NoError(t, err)
 	t.Cleanup(func() {
 		assert.NoError(t, got.Shutdown(context.Background()))
@@ -27,8 +30,10 @@ func TestSpanExporterNone(t *testing.T) {
 
 func TestSpanExporterConsole(t *testing.T) {
 	t.Setenv("OTEL_TRACES_EXPORTER", "console")
-	got, err := NewSpanExporter(context.Background())
+	exporters, err := NewSpanExporters(context.Background())
 	assert.NoError(t, err)
+
+	got := exporters[0]
 	assert.IsType(t, &stdouttrace.Exporter{}, got)
 }
 
@@ -45,8 +50,9 @@ func TestSpanExporterOTLP(t *testing.T) {
 		t.Run(fmt.Sprintf("protocol=%q", tc.protocol), func(t *testing.T) {
 			t.Setenv("OTEL_EXPORTER_OTLP_PROTOCOL", tc.protocol)
 
-			got, err := NewSpanExporter(context.Background())
+			exporters, err := NewSpanExporters(context.Background())
 			assert.NoError(t, err)
+			got := exporters[0]
 			t.Cleanup(func() {
 				assert.NoError(t, got.Shutdown(context.Background()))
 			})
@@ -72,7 +78,8 @@ func TestSpanExporterOTLPWithDedicatedProtocol(t *testing.T) {
 		t.Run(fmt.Sprintf("protocol=%q", tc.protocol), func(t *testing.T) {
 			t.Setenv("OTEL_EXPORTER_OTLP_TRACES_PROTOCOL", tc.protocol)
 
-			got, err := NewSpanExporter(context.Background())
+			exporters, err := NewSpanExporters(context.Background())
+			got := exporters[0]
 			assert.NoError(t, err)
 			t.Cleanup(func() {
 				assert.NoError(t, got.Shutdown(context.Background()))
@@ -86,10 +93,46 @@ func TestSpanExporterOTLPWithDedicatedProtocol(t *testing.T) {
 	}
 }
 
+func TestSpanExporterOTLPMultiple(t *testing.T) {
+	t.Setenv("OTEL_TRACES_EXPORTER", "otlp,console")
+	t.Setenv("OTEL_EXPORTER_OTLP_PROTOCOL", "http/protobuf")
+
+	exporters, err := NewSpanExporters(context.Background())
+	assert.NoError(t, err)
+	assert.Len(t, exporters, 2)
+
+	assert.Implements(t, new(trace.SpanExporter), exporters[0])
+	assert.IsType(t, &otlptrace.Exporter{}, exporters[0])
+
+	assert.Implements(t, new(trace.SpanExporter), exporters[1])
+	assert.IsType(t, &stdouttrace.Exporter{}, exporters[1])
+
+	t.Cleanup(func() {
+		assert.NoError(t, exporters[0].Shutdown(context.Background()))
+		assert.NoError(t, exporters[1].Shutdown(context.Background()))
+	})
+}
+
+func TestSpanExporterOTLPMultiple_FailsIfOneValueIsInvalid(t *testing.T) {
+	t.Setenv("OTEL_TRACES_EXPORTER", "otlp,something")
+	t.Setenv("OTEL_EXPORTER_OTLP_PROTOCOL", "http/protobuf")
+
+	_, err := NewSpanExporters(context.Background())
+	assert.Error(t, err)
+}
+
 func TestSpanExporterOTLPOverInvalidProtocol(t *testing.T) {
 	t.Setenv("OTEL_TRACES_EXPORTER", "otlp")
 	t.Setenv("OTEL_EXPORTER_OTLP_PROTOCOL", "invalid-protocol")
 
 	_, err := NewSpanExporter(context.Background())
 	assert.Error(t, err)
+}
+
+func TestSpanExporterDeprecatedNewSpanExporterReturnsTheFirstExporter(t *testing.T) {
+	t.Setenv("OTEL_TRACES_EXPORTER", "console,otlp")
+	got, err := NewSpanExporter(context.Background())
+
+	assert.NoError(t, err)
+	assert.IsType(t, &stdouttrace.Exporter{}, got)
 }

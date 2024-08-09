@@ -25,7 +25,16 @@ import (
 	"go.opentelemetry.io/otel/sdk/metric"
 )
 
-const otelExporterOTLPMetricsProtoEnvKey = "OTEL_EXPORTER_OTLP_METRICS_PROTOCOL"
+const (
+	otelMetricsExporterEnvKey         = "OTEL_METRICS_EXPORTER"
+	otelMetricsProducerEnvKey         = "OTEL_METRICS_PRODUCERS"
+	otelMetricsExporterProtocolEnvKey = "OTEL_EXPORTER_OTLP_METRICS_PROTOCOL"
+)
+
+var (
+	metricsSignal    = newSignal[metric.Reader](otelMetricsExporterEnvKey)
+	metricsProducers = newProducerRegistry(otelMetricsProducerEnvKey)
+)
 
 // MetricOption applies an autoexport configuration option.
 type MetricOption = option[metric.Reader]
@@ -33,11 +42,48 @@ type MetricOption = option[metric.Reader]
 // WithFallbackMetricReader sets the fallback exporter to use when no exporter
 // is configured through the OTEL_METRICS_EXPORTER environment variable.
 func WithFallbackMetricReader(metricReaderFactory func(ctx context.Context) (metric.Reader, error)) MetricOption {
-	return withFallbackFactory[metric.Reader](metricReaderFactory)
+	return withFallbackFactory(metricReaderFactory)
+}
+
+// NewMetricReaders returns one or more configured [go.opentelemetry.io/otel/sdk/metric.Reader]
+// defined using the environment variables described below.
+//
+// OTEL_METRICS_EXPORTER defines the metrics exporter; this value accepts a comma-separated list of values to enable multiple exporters; supported values:
+//   - "none" - "no operation" exporter
+//   - "otlp" (default) - OTLP exporter; see [go.opentelemetry.io/otel/exporters/otlp/otlpmetric]
+//   - "prometheus" - Prometheus exporter + HTTP server; see [go.opentelemetry.io/otel/exporters/prometheus]
+//   - "console" - Standard output exporter; see [go.opentelemetry.io/otel/exporters/stdout/stdoutmetric]
+//
+// OTEL_EXPORTER_OTLP_PROTOCOL defines OTLP exporter's transport protocol;
+// supported values:
+//   - "grpc" - protobuf-encoded data using gRPC wire format over HTTP/2 connection;
+//     see: [go.opentelemetry.io/otel/exporters/otlp/otlpmetric/otlpmetricgrpc]
+//   - "http/protobuf" (default) -  protobuf-encoded data over HTTP connection;
+//     see: [go.opentelemetry.io/otel/exporters/otlp/otlpmetric/otlpmetrichttp]
+//
+// OTEL_EXPORTER_PROMETHEUS_HOST (defaulting to "localhost") and
+// OTEL_EXPORTER_PROMETHEUS_PORT (defaulting to 9464) define the host and port for the
+// Prometheus exporter's HTTP server.
+//
+// Experimental: OTEL_METRICS_PRODUCERS can be used to configure metric producers.
+// supported values: prometheus, none. Multiple values can be specified separated by commas.
+//
+// An error is returned if an environment value is set to an unhandled value.
+// Use [WithFallbackMetricReader] option to change the returned exporter
+// when OTEL_METRICS_EXPORTER is unset or empty.
+//
+// Use [RegisterMetricReader] to handle more values of OTEL_METRICS_EXPORTER.
+// Use [RegisterMetricProducer] to handle more values of OTEL_METRICS_PRODUCERS.
+//
+// Use [IsNoneMetricReader] to check if the returned exporter is a "no operation" exporter.
+func NewMetricReaders(ctx context.Context, options ...MetricOption) ([]metric.Reader, error) {
+	return metricsSignal.create(ctx, options...)
 }
 
 // NewMetricReader returns a configured [go.opentelemetry.io/otel/sdk/metric.Reader]
 // defined using the environment variables described below.
+//
+// DEPRECATED: consider using [NewMetricReaders] instead.
 //
 // OTEL_METRICS_EXPORTER defines the metrics exporter; supported values:
 //   - "none" - "no operation" exporter
@@ -72,13 +118,17 @@ func WithFallbackMetricReader(metricReaderFactory func(ctx context.Context) (met
 //
 // Use [IsNoneMetricReader] to check if the returned exporter is a "no operation" exporter.
 func NewMetricReader(ctx context.Context, opts ...MetricOption) (metric.Reader, error) {
-	return metricsSignal.create(ctx, opts...)
+	readers, err := NewMetricReaders(ctx, opts...)
+	if err != nil {
+		return nil, err
+	}
+	return readers[0], nil
 }
 
 // RegisterMetricReader sets the MetricReader factory to be used when the
 // OTEL_METRICS_EXPORTERS environment variable contains the exporter name. This
 // will panic if name has already been registered.
-func RegisterMetricReader(name string, factory func(context.Context) (metric.Reader, error)) {
+func RegisterMetricReader(name string, factory func(ctx context.Context) (metric.Reader, error)) {
 	must(metricsSignal.registry.store(name, factory))
 }
 
@@ -95,11 +145,6 @@ func WithFallbackMetricProducer(producerFactory func(ctx context.Context) (metri
 	metricsProducers.fallbackProducer = producerFactory
 }
 
-var (
-	metricsSignal    = newSignal[metric.Reader]("OTEL_METRICS_EXPORTER")
-	metricsProducers = newProducerRegistry("OTEL_METRICS_PRODUCERS")
-)
-
 func init() {
 	RegisterMetricReader("otlp", func(ctx context.Context) (metric.Reader, error) {
 		producers, err := metricsProducers.create(ctx)
@@ -111,7 +156,7 @@ func init() {
 			readerOpts = append(readerOpts, metric.WithProducer(producer))
 		}
 
-		proto := os.Getenv(otelExporterOTLPMetricsProtoEnvKey)
+		proto := os.Getenv(otelMetricsExporterProtocolEnvKey)
 		if proto == "" {
 			proto = os.Getenv(otelExporterOTLPProtoEnvKey)
 		}
@@ -273,7 +318,12 @@ func (pr producerRegistry) create(ctx context.Context) ([]metric.Producer, error
 	producers := dedupedMetricProducers(expType)
 	metricProducers := make([]metric.Producer, 0, len(producers))
 	for _, producer := range producers {
-		producer, err := pr.registry.load(ctx, producer)
+		producerFactory, err := pr.registry.load(producer)
+		if err != nil {
+			return nil, err
+		}
+
+		producer, err := producerFactory(ctx)
 		if err != nil {
 			return nil, err
 		}
