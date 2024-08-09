@@ -20,6 +20,7 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 - The `go.opentelemetry.io/contrib/bridges/otelzerolog` module.
   This module provides an OpenTelemetry logging bridge for `github.com/rs/zerolog`. (#5405)
 - Add `WithGinFilter` filter parameter in `go.opentelemetry.io/contrib/instrumentation/github.com/gin-gonic/gin/otelgin` to allow filtering requests with `*gin.Context`. (#5743)
+- Add the `WithMetricsAttirbutesFn` option to allow setting dynamic, per-request metric attributes in `go.opentelemetry.io/contrib/instrumentation/net/http/otelhttp`. (#5876)
 
 ### Removed
 
