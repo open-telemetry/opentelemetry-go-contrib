@@ -27,6 +27,13 @@ type Option interface {
 	apply(*config)
 }
 
+// ProducerOption supports configuring optional settings for runtime metrics using a
+// metric producer in addition to standard instrumentation.
+type ProducerOption interface {
+	Option
+	applyProducer(*config)
+}
+
 // DefaultMinimumReadMemStatsInterval is the default minimum interval
 // between calls to runtime.ReadMemStats().  Use the
 // WithMinimumReadMemStatsInterval() option to modify this setting in
@@ -36,7 +43,7 @@ const DefaultMinimumReadMemStatsInterval time.Duration = 15 * time.Second
 // WithMinimumReadMemStatsInterval sets a minimum interval between calls to
 // runtime.ReadMemStats(), which is a relatively expensive call to make
 // frequently.  This setting is ignored when `d` is negative.
-func WithMinimumReadMemStatsInterval(d time.Duration) Option {
+func WithMinimumReadMemStatsInterval(d time.Duration) ProducerOption {
 	return minimumReadMemStatsIntervalOption(d)
 }
 
@@ -47,6 +54,8 @@ func (o minimumReadMemStatsIntervalOption) apply(c *config) {
 		c.MinimumReadMemStatsInterval = time.Duration(o)
 	}
 }
+
+func (o minimumReadMemStatsIntervalOption) applyProducer(c *config) { o.apply(c) }
 
 // WithMeterProvider sets the Metric implementation to use for
 // reporting.  If this option is not used, the global metric.MeterProvider
@@ -66,11 +75,25 @@ func (o metricProviderOption) apply(c *config) {
 // newConfig computes a config from the supplied Options.
 func newConfig(opts ...Option) config {
 	c := config{
-		MeterProvider:               otel.GetMeterProvider(),
-		MinimumReadMemStatsInterval: DefaultMinimumReadMemStatsInterval,
+		MeterProvider: otel.GetMeterProvider(),
 	}
 	for _, opt := range opts {
 		opt.apply(&c)
+	}
+	if c.MinimumReadMemStatsInterval <= 0 {
+		c.MinimumReadMemStatsInterval = DefaultMinimumReadMemStatsInterval
+	}
+	return c
+}
+
+// newConfig computes a config from the supplied ProducerOptions.
+func newProducerConfig(opts ...ProducerOption) config {
+	c := config{}
+	for _, opt := range opts {
+		opt.applyProducer(&c)
+	}
+	if c.MinimumReadMemStatsInterval <= 0 {
+		c.MinimumReadMemStatsInterval = DefaultMinimumReadMemStatsInterval
 	}
 	return c
 }
