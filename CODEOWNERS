@@ -5,7 +5,7 @@
 #####################################################
 #
 # Learn about membership in OpenTelemetry community:
-#  https://github.com/open-telemetry/community/blob/main/community-membership.md
+#  https://github.com/open-telemetry/community/blob/main/guides/contributor/membership.md#member
 #
 # Learn about Code Owners policy in OpenTelemetry Go Contrib:
 #  https://github.com/open-telemetry/opentelemetry-go-contrib/blob/main/CONTRIBUTING.md#code-owners
@@ -29,7 +29,6 @@ bridges/otelslog                                                        @open-te
 bridges/otellogrus/                                                     @open-telemetry/go-approvers @dmathieu @pellared
 bridges/prometheus/                                                     @open-telemetry/go-approvers @dashpole
 bridges/otelzap/                                                        @open-telemetry/go-approvers @pellared @khushijain21
-bridges/otelzerolog/                                                    @open-telemetry/go-approvers @dmathieu @AkhigbeEromo
 
 config/                                                                 @open-telemetry/go-approvers @MadVikingGod @pellared @codeboten
 
