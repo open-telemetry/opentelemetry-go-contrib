@@ -43,7 +43,7 @@ const DefaultMinimumReadMemStatsInterval time.Duration = 15 * time.Second
 // WithMinimumReadMemStatsInterval sets a minimum interval between calls to
 // runtime.ReadMemStats(), which is a relatively expensive call to make
 // frequently.  This setting is ignored when `d` is negative.
-func WithMinimumReadMemStatsInterval(d time.Duration) ProducerOption {
+func WithMinimumReadMemStatsInterval(d time.Duration) Option {
 	return minimumReadMemStatsIntervalOption(d)
 }
 
