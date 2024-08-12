@@ -8,6 +8,7 @@ import (
 	"fmt"
 	"math"
 	"runtime/metrics"
+	"sync"
 	"time"
 
 	"go.opentelemetry.io/otel/attribute"
@@ -26,6 +27,7 @@ var histogramMetrics = []string{goSchedLatencies}
 
 // Producer is a metric.Producer, which provides precomputed histogram metrics from the go runtime.
 type Producer struct {
+	lock      sync.Mutex
 	collector *goCollector
 }
 
@@ -41,9 +43,12 @@ func NewProducer(opts ...ProducerOption) *Producer {
 
 // Produce returns precomputed histogram metrics from the go runtime, or an error if unsuccessful.
 func (p *Producer) Produce(context.Context) ([]metricdata.ScopeMetrics, error) {
+	p.lock.Lock()
 	p.collector.refresh()
+	schedHist := p.collector.getHistogram(goSchedLatencies)
+	p.lock.Unlock()
 	// Use the last collection time (which may or may not be now) for the timestamp.
-	histDp := convertRuntimeHistogram(p.collector.getHistogram(goSchedLatencies), p.collector.lastCollect)
+	histDp := convertRuntimeHistogram(schedHist, p.collector.lastCollect)
 	if len(histDp) == 0 {
 		return nil, fmt.Errorf("unable to obtain go.schedule.duration metric from the runtime")
 	}
