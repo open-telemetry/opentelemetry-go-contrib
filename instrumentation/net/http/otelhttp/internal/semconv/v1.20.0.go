@@ -163,6 +163,7 @@ func (o oldHTTPServer) MetricAttributes(server string, req *http.Request, status
 	}
 	return attributes
 }
+
 func (o oldHTTPServer) scheme(https bool) attribute.KeyValue { // nolint:revive
 	if https {
 		return semconv.HTTPSchemeHTTPS
