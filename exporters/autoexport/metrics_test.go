@@ -16,6 +16,7 @@ import (
 
 	"github.com/prometheus/client_golang/prometheus"
 	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 	"go.uber.org/goleak"
 	"google.golang.org/protobuf/proto"
 
@@ -136,9 +137,10 @@ func TestMetricExporterPrometheus(t *testing.T) {
 	}
 
 	resp, err := http.Get(fmt.Sprintf("http://%s/metrics", rws.addr))
-	assert.NoError(t, err)
+	require.NoError(t, err)
+	defer func() { assert.NoError(t, resp.Body.Close()) }()
 	body, err := io.ReadAll(resp.Body)
-	assert.NoError(t, err)
+	require.NoError(t, err)
 	assert.Contains(t, string(body), "# HELP")
 
 	assert.NoError(t, mp.Shutdown(context.Background()))
@@ -213,9 +215,10 @@ func TestMetricProducerPrometheusWithPrometheusExporter(t *testing.T) {
 	}
 
 	resp, err := http.Get(fmt.Sprintf("http://%s/metrics", rws.addr))
-	assert.NoError(t, err)
+	require.NoError(t, err)
+	defer func() { assert.NoError(t, resp.Body.Close()) }()
 	body, err := io.ReadAll(resp.Body)
-	assert.NoError(t, err)
+	require.NoError(t, err)
 
 	// By default there are two metrics exporter. target_info and promhttp_metric_handler_errors_total.
 	// But by including the prometheus producer we should have more.
@@ -254,9 +257,10 @@ func TestMetricProducerFallbackWithPrometheusExporter(t *testing.T) {
 	}
 
 	resp, err := http.Get(fmt.Sprintf("http://%s/metrics", rws.addr))
-	assert.NoError(t, err)
+	require.NoError(t, err)
+	defer func() { assert.NoError(t, resp.Body.Close()) }()
 	body, err := io.ReadAll(resp.Body)
-	assert.NoError(t, err)
+	require.NoError(t, err)
 
 	assert.Contains(t, string(body), "HELP dummy_metric_total dummy metric")
 
