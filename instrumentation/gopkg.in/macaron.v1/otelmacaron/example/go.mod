@@ -24,7 +24,7 @@ require (
 	github.com/google/uuid v1.6.0 // indirect
 	github.com/unknwon/com v1.0.1 // indirect
 	go.opentelemetry.io/otel/metric v1.28.0 // indirect
-	golang.org/x/crypto v0.25.0 // indirect
-	golang.org/x/sys v0.22.0 // indirect
+	golang.org/x/crypto v0.26.0 // indirect
+	golang.org/x/sys v0.24.0 // indirect
 	gopkg.in/ini.v1 v1.67.0 // indirect
 )

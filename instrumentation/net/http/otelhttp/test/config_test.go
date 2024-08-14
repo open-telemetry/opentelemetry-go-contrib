@@ -39,7 +39,7 @@ func TestBasicFilter(t *testing.T) {
 		t.Fatal(err)
 	}
 	h.ServeHTTP(rr, r)
-	if got, expected := rr.Result().StatusCode, http.StatusOK; got != expected {
+	if got, expected := rr.Result().StatusCode, http.StatusOK; got != expected { //nolint:bodyclose // False positive for httptest.ResponseRecorder: https://github.com/timakin/bodyclose/issues/59.
 		t.Fatalf("got %d, expected %d", got, expected)
 	}
 	if got := rr.Header().Get("Traceparent"); got != "" {
@@ -48,7 +48,7 @@ func TestBasicFilter(t *testing.T) {
 	if got, expected := len(spanRecorder.Ended()), 0; got != expected {
 		t.Fatalf("got %d recorded spans, expected %d", got, expected)
 	}
-	d, err := io.ReadAll(rr.Result().Body)
+	d, err := io.ReadAll(rr.Result().Body) //nolint:bodyclose // False positive for httptest.ResponseRecorder: https://github.com/timakin/bodyclose/issues/59.
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -111,7 +111,7 @@ func TestSpanNameFormatter(t *testing.T) {
 				t.Fatal(err)
 			}
 			h.ServeHTTP(rr, r)
-			if got, expected := rr.Result().StatusCode, http.StatusOK; got != expected {
+			if got, expected := rr.Result().StatusCode, http.StatusOK; got != expected { //nolint:bodyclose // False positive for httptest.ResponseRecorder: https://github.com/timakin/bodyclose/issues/59.
 				t.Fatalf("got %d, expected %d", got, expected)
 			}
 

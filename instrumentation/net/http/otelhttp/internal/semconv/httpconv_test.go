@@ -4,8 +4,11 @@
 package semconv
 
 import (
+	"errors"
 	"fmt"
 	"net/http"
+	"net/http/httptest"
+	"strings"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
@@ -15,7 +18,7 @@ import (
 
 func TestNewTraceRequest(t *testing.T) {
 	t.Setenv("OTEL_HTTP_CLIENT_COMPATIBILITY_MODE", "http/dup")
-	serv := NewHTTPServer()
+	serv := NewHTTPServer(nil)
 	want := func(req testServerReq) []attribute.KeyValue {
 		return []attribute.KeyValue{
 			attribute.String("http.request.method", "GET"),
@@ -125,4 +128,99 @@ func TestNewMethod(t *testing.T) {
 			assert.Equal(t, tt.wantOrig, gotOrig)
 		})
 	}
+}
+
+func TestNewTraceRequest_Client(t *testing.T) {
+	t.Setenv("OTEL_HTTP_CLIENT_COMPATIBILITY_MODE", "http/dup")
+	body := strings.NewReader("Hello, world!")
+	url := "https://example.com:8888/foo/bar?stuff=morestuff"
+	req := httptest.NewRequest("pOST", url, body)
+	req.Header.Set("User-Agent", "go-test-agent")
+
+	want := []attribute.KeyValue{
+		attribute.String("http.request.method", "POST"),
+		attribute.String("http.request.method_original", "pOST"),
+		attribute.String("http.method", "pOST"),
+		attribute.String("url.full", url),
+		attribute.String("http.url", url),
+		attribute.String("server.address", "example.com"),
+		attribute.Int("server.port", 8888),
+		attribute.String("network.protocol.version", "1.1"),
+		attribute.String("net.peer.name", "example.com"),
+		attribute.Int("net.peer.port", 8888),
+		attribute.String("user_agent.original", "go-test-agent"),
+		attribute.Int("http.request_content_length", 13),
+	}
+	client := NewHTTPClient()
+	assert.ElementsMatch(t, want, client.RequestTraceAttrs(req))
+}
+
+func TestNewTraceResponse_Client(t *testing.T) {
+	t.Setenv("OTEL_HTTP_CLIENT_COMPATIBILITY_MODE", "http/dup")
+	testcases := []struct {
+		resp http.Response
+		want []attribute.KeyValue
+	}{
+		{resp: http.Response{StatusCode: 200, ContentLength: 123}, want: []attribute.KeyValue{attribute.Int("http.response.status_code", 200), attribute.Int("http.status_code", 200), attribute.Int("http.response_content_length", 123)}},
+		{resp: http.Response{StatusCode: 404, ContentLength: 0}, want: []attribute.KeyValue{attribute.Int("http.response.status_code", 404), attribute.Int("http.status_code", 404), attribute.String("error.type", "404")}},
+	}
+
+	for _, tt := range testcases {
+		client := NewHTTPClient()
+		assert.ElementsMatch(t, tt.want, client.ResponseTraceAttrs(&tt.resp))
+	}
+}
+
+func TestClientRequest(t *testing.T) {
+	body := strings.NewReader("Hello, world!")
+	url := "https://example.com:8888/foo/bar?stuff=morestuff"
+	req := httptest.NewRequest("pOST", url, body)
+	req.Header.Set("User-Agent", "go-test-agent")
+
+	want := []attribute.KeyValue{
+		attribute.String("http.request.method", "POST"),
+		attribute.String("http.request.method_original", "pOST"),
+		attribute.String("url.full", url),
+		attribute.String("server.address", "example.com"),
+		attribute.Int("server.port", 8888),
+		attribute.String("network.protocol.version", "1.1"),
+	}
+	got := newHTTPClient{}.RequestTraceAttrs(req)
+	assert.ElementsMatch(t, want, got)
+}
+
+func TestClientResponse(t *testing.T) {
+	testcases := []struct {
+		resp http.Response
+		want []attribute.KeyValue
+	}{
+		{resp: http.Response{StatusCode: 200, ContentLength: 123}, want: []attribute.KeyValue{attribute.Int("http.response.status_code", 200)}},
+		{resp: http.Response{StatusCode: 404, ContentLength: 0}, want: []attribute.KeyValue{attribute.Int("http.response.status_code", 404), attribute.String("error.type", "404")}},
+	}
+
+	for _, tt := range testcases {
+		got := newHTTPClient{}.ResponseTraceAttrs(&tt.resp)
+		assert.ElementsMatch(t, tt.want, got)
+	}
+}
+
+func TestRequestErrorType(t *testing.T) {
+	testcases := []struct {
+		err  error
+		want attribute.KeyValue
+	}{
+		{err: errors.New("http: nil Request.URL"), want: attribute.String("error.type", "*errors.errorString")},
+		{err: customError{}, want: attribute.String("error.type", "go.opentelemetry.io/contrib/instrumentation/net/http/otelhttp/internal/semconv.customError")},
+	}
+
+	for _, tt := range testcases {
+		got := newHTTPClient{}.ErrorType(tt.err)
+		assert.Equal(t, tt.want, got)
+	}
+}
+
+type customError struct{}
+
+func (customError) Error() string {
+	return "custom error"
 }
