@@ -8,7 +8,7 @@ require (
 	github.com/stretchr/testify v1.9.0
 	go.opentelemetry.io/otel/sdk v1.28.0
 	go.opentelemetry.io/otel/trace v1.28.0
-	google.golang.org/genproto/googleapis/api v0.0.0-20240812133136-8ffd90a71988
+	google.golang.org/genproto/googleapis/api v0.0.0-20240814211410-ddb44dafa142
 )
 
 require (
