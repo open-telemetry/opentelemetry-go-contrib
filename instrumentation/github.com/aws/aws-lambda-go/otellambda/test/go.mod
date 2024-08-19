@@ -14,9 +14,9 @@ require (
 	go.opentelemetry.io/contrib/detectors/aws/lambda v0.53.0
 	go.opentelemetry.io/contrib/instrumentation/github.com/aws/aws-lambda-go/otellambda v0.53.0
 	go.opentelemetry.io/contrib/propagators/aws v1.28.0
-	go.opentelemetry.io/otel v1.28.1-0.20240807055449-d0a45b887546
-	go.opentelemetry.io/otel/sdk v1.28.1-0.20240807055449-d0a45b887546
-	go.opentelemetry.io/otel/trace v1.28.1-0.20240807055449-d0a45b887546
+	go.opentelemetry.io/otel v1.28.1-0.20240819151922-772d3d734bf9
+	go.opentelemetry.io/otel/sdk v1.28.1-0.20240819151922-772d3d734bf9
+	go.opentelemetry.io/otel/trace v1.28.1-0.20240819151922-772d3d734bf9
 )
 
 require (
@@ -25,7 +25,7 @@ require (
 	github.com/go-logr/stdr v1.2.2 // indirect
 	github.com/google/uuid v1.6.0 // indirect
 	github.com/pmezard/go-difflib v1.0.0 // indirect
-	go.opentelemetry.io/otel/metric v1.28.1-0.20240807055449-d0a45b887546 // indirect
+	go.opentelemetry.io/otel/metric v1.28.1-0.20240819151922-772d3d734bf9 // indirect
 	golang.org/x/sys v0.24.0 // indirect
 	gopkg.in/yaml.v3 v3.0.1 // indirect
 )
