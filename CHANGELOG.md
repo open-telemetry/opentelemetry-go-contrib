@@ -23,7 +23,7 @@ The next release will require at least [Go 1.22].
 - The `go.opentelemetry.io/contrib/bridges/otelzerolog` module.
   This module provides an OpenTelemetry logging bridge for `github.com/rs/zerolog`. (#5405)
 - Add `WithGinFilter` filter parameter in `go.opentelemetry.io/contrib/instrumentation/github.com/gin-gonic/gin/otelgin` to allow filtering requests with `*gin.Context`. (#5743)
-- Support [Go 1.23]. (TBD)
+- Support [Go 1.23]. (#6017)
 
 ### Removed
 
