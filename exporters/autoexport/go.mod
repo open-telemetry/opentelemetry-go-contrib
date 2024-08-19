@@ -3,7 +3,7 @@ module go.opentelemetry.io/contrib/exporters/autoexport
 go 1.21
 
 require (
-	github.com/prometheus/client_golang v1.19.1
+	github.com/prometheus/client_golang v1.20.0
 	github.com/stretchr/testify v1.9.0
 	go.opentelemetry.io/contrib/bridges/prometheus v0.53.0
 	go.opentelemetry.io/otel v1.28.0
@@ -34,6 +34,7 @@ require (
 	github.com/go-logr/stdr v1.2.2 // indirect
 	github.com/google/uuid v1.6.0 // indirect
 	github.com/grpc-ecosystem/grpc-gateway/v2 v2.21.0 // indirect
+	github.com/klauspost/compress v1.17.9 // indirect
 	github.com/munnerz/goautoneg v0.0.0-20191010083416-a7dc8b61c822 // indirect
 	github.com/pmezard/go-difflib v1.0.0 // indirect
 	github.com/prometheus/client_model v0.6.1 // indirect
