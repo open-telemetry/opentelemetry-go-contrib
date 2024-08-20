@@ -36,12 +36,13 @@ type Filter func(*stats.RPCTagInfo) bool
 
 // config is a group of options for this instrumentation.
 type config struct {
-	Filter            Filter
-	InterceptorFilter InterceptorFilter
-	Propagators       propagation.TextMapPropagator
-	TracerProvider    trace.TracerProvider
-	MeterProvider     metric.MeterProvider
-	SpanStartOptions  []trace.SpanStartOption
+	Filter                      Filter
+	InterceptorFilter           InterceptorFilter
+	Propagators                 propagation.TextMapPropagator
+	TracerProvider              trace.TracerProvider
+	MeterProvider               metric.MeterProvider
+	SpanStartOptions            []trace.SpanStartOption
+	MetricAttributesFromPayload metricAttributesFromPayloadFn
 
 	ReceivedEvent bool
 	SentEvent     bool
@@ -256,4 +257,20 @@ func (o spanStartOption) apply(c *config) {
 // trace.SpanOptions, which are applied to each new span.
 func WithSpanOptions(opts ...trace.SpanStartOption) Option {
 	return spanStartOption{opts}
+}
+
+type metricAttributesFromPayloadOption struct {
+	f metricAttributesFromPayloadFn
+}
+
+func (o metricAttributesFromPayloadOption) apply(c *config) {
+	if o.f != nil {
+		c.MetricAttributesFromPayload = o.f
+	}
+}
+
+type metricAttributesFromPayloadFn func(payload any) []attribute.KeyValue
+
+func WithMetricAttributesFromPayload(f metricAttributesFromPayloadFn) Option {
+	return metricAttributesFromPayloadOption{f: f}
 }

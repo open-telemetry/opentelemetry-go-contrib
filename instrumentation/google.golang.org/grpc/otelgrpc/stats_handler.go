@@ -152,6 +152,23 @@ func (c *config) handleRPC(ctx context.Context, rs stats.RPCStats, isServer bool
 		if gctx != nil {
 			messageId = atomic.AddInt64(&gctx.messagesReceived, 1)
 			c.rpcRequestSize.Record(ctx, int64(rs.Length), metric.WithAttributeSet(attribute.NewSet(metricAttrs...)))
+
+			if c.MetricAttributesFromPayload != nil {
+				attrs := c.MetricAttributesFromPayload(rs.Payload)
+				for _, newAttr := range attrs {
+					attrAlreadyPresent := false
+					for _, existingAttr := range gctx.metricAttrs {
+						if existingAttr.Key == newAttr.Key {
+							attrAlreadyPresent = true
+							existingAttr.Value = newAttr.Value
+							break
+						}
+					}
+					if !attrAlreadyPresent {
+						gctx.metricAttrs = append(gctx.metricAttrs, newAttr)
+					}
+				}
+			}
 		}
 
 		if c.ReceivedEvent {
