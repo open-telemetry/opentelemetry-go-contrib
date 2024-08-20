@@ -144,7 +144,7 @@ func (o oldHTTPServer) MetricAttributes(server string, req *http.Request, status
 
 	attributes := slices.Grow(additionalAttributes, n)
 	attributes = append(attributes,
-		methodMetric(req.Method),
+		standardizeHTTPMethodMetric(req.Method),
 		o.scheme(req.TLS != nil),
 		semconv.NetHostName(host))
 
@@ -214,7 +214,7 @@ func (o oldHTTPClient) MetricAttributes(req *http.Request, statusCode int, addit
 
 	attributes := slices.Grow(additionalAttributes, n)
 	attributes = append(attributes,
-		methodMetric(req.Method),
+		standardizeHTTPMethodMetric(req.Method),
 		semconv.NetPeerName(requestHost),
 	)
 
@@ -263,7 +263,7 @@ func (o oldHTTPClient) createMeasures(meter metric.Meter) (metric.Int64Counter, 
 	return requestBytesCounter, responseBytesCounter, latencyMeasure
 }
 
-func methodMetric(method string) attribute.KeyValue {
+func standardizeHTTPMethodMetric(method string) attribute.KeyValue {
 	method = strings.ToUpper(method)
 	switch method {
 	case http.MethodConnect, http.MethodDelete, http.MethodGet, http.MethodHead, http.MethodOptions, http.MethodPatch, http.MethodPost, http.MethodPut, http.MethodTrace:
