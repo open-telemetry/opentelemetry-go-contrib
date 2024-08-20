@@ -111,7 +111,7 @@ func (s HTTPServer) RecordMetrics(ctx context.Context, md MetricData) {
 }
 
 func NewHTTPServer(meter metric.Meter) HTTPServer {
-	env := strings.ToLower(os.Getenv("OTEL_HTTP_CLIENT_COMPATIBILITY_MODE"))
+	env := strings.ToLower(os.Getenv("OTEL_SEMCONV_STABILITY_OPT_IN"))
 	duplicate := env == "http/dup"
 	server := HTTPServer{
 		duplicate: duplicate,
@@ -125,7 +125,7 @@ type HTTPClient struct {
 }
 
 func NewHTTPClient() HTTPClient {
-	env := strings.ToLower(os.Getenv("OTEL_HTTP_CLIENT_COMPATIBILITY_MODE"))
+	env := strings.ToLower(os.Getenv("OTEL_SEMCONV_STABILITY_OPT_IN"))
 	return HTTPClient{duplicate: env == "http/dup"}
 }
 
