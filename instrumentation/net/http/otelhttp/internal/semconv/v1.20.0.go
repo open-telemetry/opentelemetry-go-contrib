@@ -184,7 +184,7 @@ func (o oldHTTPClient) ResponseTraceAttrs(resp *http.Response) []attribute.KeyVa
 func (o oldHTTPClient) MetricAttributes(req *http.Request, statusCode int, additionalAttributes []attribute.KeyValue) []attribute.KeyValue {
 	/* The following semantic conventions are returned if present:
 		http.method                     string
-	    http.status_code                int
+		http.status_code             int
 		net.peer.name                   string
 		net.peer.port                   int
 	*/
