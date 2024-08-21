@@ -584,7 +584,8 @@ func TestDefaultAttributesHandling(t *testing.T) {
 	r, err := http.NewRequest(http.MethodGet, ts.URL, nil)
 	require.NoError(t, err)
 
-	_, err = client.Do(r)
+	resp, err := client.Do(r)
+	resp.Body.Close()
 	require.NoError(t, err)
 
 	err = reader.Collect(ctx, &rm)
