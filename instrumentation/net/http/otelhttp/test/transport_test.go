@@ -585,15 +585,14 @@ func TestDefaultAttributesHandling(t *testing.T) {
 	require.NoError(t, err)
 
 	resp, err := client.Do(r)
-	resp.Body.Close()
 	require.NoError(t, err)
+
+	_ = resp.Body.Close()
 
 	err = reader.Collect(ctx, &rm)
 	assert.NoError(t, err)
 
-	// http.client.response.size is not recorded so the assert.Len
-	// above should be 2 instead of 3(test bonus)
-	assert.Len(t, rm.ScopeMetrics[0].Metrics, 2)
+	assert.Len(t, rm.ScopeMetrics[0].Metrics, 3)
 	for _, m := range rm.ScopeMetrics[0].Metrics {
 		switch m.Name {
 		case clientRequestSize:
