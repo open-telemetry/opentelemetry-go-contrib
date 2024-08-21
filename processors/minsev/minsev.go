@@ -44,7 +44,7 @@ var _ log.Processor = (*LogProcessor)(nil)
 // OnEmit passes ctx and r to the [log.Processor] that p wraps if the severity
 // of record is greater than or equal to p.Minimum. Otherwise, record is
 // dropped.
-func (p *LogProcessor) OnEmit(ctx context.Context, record log.Record) error {
+func (p *LogProcessor) OnEmit(ctx context.Context, record *log.Record) error {
 	if record.Severity() >= p.Minimum {
 		return p.Processor.OnEmit(ctx, record)
 	}
@@ -62,7 +62,7 @@ var defaultProcessor = noopProcessor{}
 
 type noopProcessor struct{}
 
-func (p noopProcessor) OnEmit(context.Context, log.Record) error { return nil }
-func (p noopProcessor) Enabled(context.Context, log.Record) bool { return false }
-func (p noopProcessor) Shutdown(context.Context) error           { return nil }
-func (p noopProcessor) ForceFlush(context.Context) error         { return nil }
+func (p noopProcessor) OnEmit(context.Context, *log.Record) error { return nil }
+func (p noopProcessor) Enabled(context.Context, log.Record) bool  { return false }
+func (p noopProcessor) Shutdown(context.Context) error            { return nil }
+func (p noopProcessor) ForceFlush(context.Context) error          { return nil }
