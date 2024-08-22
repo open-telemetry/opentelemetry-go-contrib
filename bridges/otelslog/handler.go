@@ -425,7 +425,12 @@ func convertValue(v slog.Value) log.Value {
 	case slog.KindTime:
 		return log.Int64Value(v.Time().UnixNano())
 	case slog.KindUint64:
-		return log.Int64Value(int64(v.Uint64()))
+		const maxInt64 = ^uint64(0) >> 1
+		u := v.Uint64()
+		if u > maxInt64 {
+			return log.Float64Value(float64(u))
+		}
+		return log.Int64Value(int64(u)) // nolint:gosec  // Overflow checked above.
 	case slog.KindGroup:
 		g := v.Group()
 		buf := newKVBuffer(len(g))
