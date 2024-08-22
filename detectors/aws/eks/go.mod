@@ -45,7 +45,7 @@ require (
 	gopkg.in/yaml.v3 v3.0.1 // indirect
 	k8s.io/api v0.29.4 // indirect
 	k8s.io/klog/v2 v2.130.1 // indirect
-	k8s.io/kube-openapi v0.0.0-20240816214639-573285566f34 // indirect
+	k8s.io/kube-openapi v0.0.0-20240822171749-76de80e0abd9 // indirect
 	k8s.io/utils v0.0.0-20240821151609-f90d01438635 // indirect
 	sigs.k8s.io/json v0.0.0-20221116044647-bc3834ca7abd // indirect
 	sigs.k8s.io/structured-merge-diff/v4 v4.4.1 // indirect
