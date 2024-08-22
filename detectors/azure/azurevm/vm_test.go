@@ -97,7 +97,7 @@ func TestDetect(t *testing.T) {
 			w.WriteHeader(tCase.input.statusCode)
 
 			if r.Header.Get("Metadata") == "True" {
-				fmt.Fprintf(w, tCase.input.jsonMetadata)
+				fmt.Fprint(w, tCase.input.jsonMetadata)
 			}
 		}))
 
