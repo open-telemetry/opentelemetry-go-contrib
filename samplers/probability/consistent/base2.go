@@ -14,13 +14,13 @@ const (
 )
 
 // expFromFloat64 returns floor(log2(x)).
-func expFromFloat64(x float64) int {
-	return int((math.Float64bits(x)&offsetExponentMask)>>significandBits) - offsetExponentBias
+func expFromFloat64(x float64) uint64 {
+	return (math.Float64bits(x)&offsetExponentMask)>>significandBits - offsetExponentBias
 }
 
 // expToFloat64 returns 2^x.
-func expToFloat64(x int) float64 {
-	return math.Float64frombits(uint64(offsetExponentBias+x) << significandBits)
+func expToFloat64(x uint64) float64 {
+	return math.Float64frombits((offsetExponentBias - x) << significandBits)
 }
 
 // splitProb returns the two values of log-adjusted-count nearest to p
@@ -50,8 +50,8 @@ func splitProb(p float64) (uint8, uint8, float64) {
 	// Return these to probability values and use linear
 	// interpolation to compute the required probability of
 	// choosing the low-probability Sampler.
-	lowP := expToFloat64(-low)
-	highP := expToFloat64(-high)
+	lowP := expToFloat64(low)
+	highP := expToFloat64(high)
 	lowProb := (highP - p) / (highP - lowP)
 
 	return uint8(low), uint8(high), lowProb

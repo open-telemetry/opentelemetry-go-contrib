@@ -161,8 +161,8 @@ func (cs *consistentProbabilityBased) ShouldSample(p sdktrace.SamplingParameters
 func (cs *consistentProbabilityBased) Description() string {
 	var prob float64
 	if cs.lowLAC != pZeroValue {
-		prob = cs.lowProb * expToFloat64(-int(cs.lowLAC))
-		prob += (1 - cs.lowProb) * expToFloat64(-int(cs.highLAC))
+		prob = cs.lowProb * expToFloat64(uint64(cs.lowLAC))
+		prob += (1 - cs.lowProb) * expToFloat64(uint64(cs.highLAC))
 	}
 	return fmt.Sprintf("ProbabilityBased{%g}", prob)
 }
