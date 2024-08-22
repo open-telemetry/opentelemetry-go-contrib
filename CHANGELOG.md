@@ -25,6 +25,7 @@ The next release will require at least [Go 1.22].
 - Add `WithGinFilter` filter parameter in `go.opentelemetry.io/contrib/instrumentation/github.com/gin-gonic/gin/otelgin` to allow filtering requests with `*gin.Context`. (#5743)
 - Support [Go 1.23]. (#6017)
 - Add the `WithMetricsAttributesFn` option to allow setting dynamic, per-request metric attributes in `go.opentelemetry.io/contrib/instrumentation/net/http/otelhttp`. (#5876)
+- Add the `WithSpanAttributes` and `WithMetricAttributes` methods to set custom attributes to the stats handler in `go.opentelemetry.io/contrib/instrumentation/google.golang.org/grpc/otelgrpc`. (#5133)
 
 ### Removed
 
