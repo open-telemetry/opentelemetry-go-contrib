@@ -175,7 +175,7 @@ func (m *objectEncoder) AddUint16(k string, v uint16) {
 }
 
 func (m *objectEncoder) AddUint8(k string, v uint8) {
-	m.AddInt64(k, int64(v)) // nolint: gosec  // https://github.com/securego/gosec/issues/1185
+	m.AddInt64(k, int64(v))
 }
 
 func (m *objectEncoder) AddUintptr(k string, v uintptr) {
@@ -272,10 +272,8 @@ func (a *arrayEncoder) AppendTime(v time.Time)         { a.AppendInt64(v.UnixNan
 func (a *arrayEncoder) AppendUint(v uint)              { a.AppendUint64(uint64(v)) }
 func (a *arrayEncoder) AppendUint32(v uint32)          { a.AppendInt64(int64(v)) }
 func (a *arrayEncoder) AppendUint16(v uint16)          { a.AppendInt64(int64(v)) }
+func (a *arrayEncoder) AppendUint8(v uint8)            { a.AppendInt64(int64(v)) }
 func (a *arrayEncoder) AppendUintptr(v uintptr)        { a.AppendUint64(uint64(v)) }
-func (a *arrayEncoder) AppendUint8(v uint8) {
-	a.AppendInt64(int64(v)) // nolint: gosec  // https://github.com/securego/gosec/issues/1185
-}
 
 func convertValue(v interface{}) log.Value {
 	switch v := v.(type) {
