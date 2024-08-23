@@ -14,6 +14,7 @@ The next release will require at least [Go 1.22].
 ### Added
 
 - Support for stdoutlog exporter in `go.opentelemetry.io/contrib/config`. (#5850)
+- Support for comma-separated values for the `OTEL_TRACES_EXPORTER`, `OTEL_LOGS_EXPORTER`, `OTEL_METRICS_EXPORTER` environment variables in `go.opentelemetry.io/contrib/exporters/autoexport`. (#5830)
 - Add macOS ARM64 platform to the compatibility testing suite. (#5868)
 - The `go.opentelemetry.io/contrib/bridges/otelzap` module.
   This module provides an OpenTelemetry logging bridge for `go.uber.org/zap`. (#5191)

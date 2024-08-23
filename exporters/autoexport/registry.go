@@ -29,7 +29,7 @@ var (
 	// the OTEL_EXPORTER_OTLP_PROTOCOL environment variable.
 	errInvalidOTLPProtocol = errors.New("invalid OTLP protocol - should be one of ['grpc', 'http/protobuf']")
 
-	// errDuplicateRegistration is returned when an duplicate registration is detected.
+	// errDuplicateRegistration is returned when a duplicate registration is detected.
 	errDuplicateRegistration = errors.New("duplicate registration")
 )
 
@@ -37,15 +37,14 @@ var (
 // then execute the factory, returning the created SpanExporter.
 // errUnknownExporterProducer is returned if the registration is missing and the error from
 // executing the factory if not nil.
-func (r *registry[T]) load(ctx context.Context, key string) (T, error) {
+func (r *registry[T]) load(key string) (func(context.Context) (T, error), error) {
 	r.mu.Lock()
 	defer r.mu.Unlock()
 	factory, ok := r.names[key]
 	if !ok {
-		var zero T
-		return zero, errUnknownExporterProducer
+		return nil, errUnknownExporterProducer
 	}
-	return factory(ctx)
+	return factory, nil
 }
 
 // store sets the factory for a key if is not already in the registry. errDuplicateRegistration

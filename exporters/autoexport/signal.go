@@ -5,14 +5,17 @@ package autoexport // import "go.opentelemetry.io/contrib/exporters/autoexport"
 
 import (
 	"context"
-	"os"
+
+	"go.opentelemetry.io/contrib/exporters/autoexport/utils/env"
 )
 
+// signal represents a generic OpenTelemetry signal (logs, metrics and traces).
 type signal[T any] struct {
 	envKey   string
 	registry *registry[T]
 }
 
+// newSignal initializes a new OpenTelemetry signal for the given type T.
 func newSignal[T any](envKey string) signal[T] {
 	return signal[T]{
 		envKey: envKey,
@@ -22,21 +25,32 @@ func newSignal[T any](envKey string) signal[T] {
 	}
 }
 
-func (s signal[T]) create(ctx context.Context, opts ...option[T]) (T, error) {
+func (s signal[T]) create(ctx context.Context, opts ...option[T]) ([]T, error) {
 	var cfg config[T]
 	for _, opt := range opts {
 		opt.apply(&cfg)
 	}
 
-	expType := os.Getenv(s.envKey)
-	if expType == "" {
+	executor := newExecutor[T]()
+
+	exporters, err := env.WithStringList(s.envKey, ",")
+	if err != nil {
 		if cfg.fallbackFactory != nil {
-			return cfg.fallbackFactory(ctx)
+			executor.Append(cfg.fallbackFactory)
+			return executor.Execute(ctx)
 		}
-		expType = "otlp"
+		exporters = append(exporters, "otlp")
 	}
 
-	return s.registry.load(ctx, expType)
+	for _, expType := range exporters {
+		factory, err := s.registry.load(expType)
+		if err != nil {
+			return nil, err
+		}
+		executor.Append(factory)
+	}
+
+	return executor.Execute(ctx)
 }
 
 type config[T any] struct {
