@@ -507,11 +507,15 @@ func TestCustomAttributesHandling(t *testing.T) {
 	}))
 	defer ts.Close()
 
+	expectedAttributes := []attribute.KeyValue{
+		attribute.String("foo", "fooValue"),
+		attribute.String("bar", "barValue"),
+	}
+
 	r, err := http.NewRequest(http.MethodGet, ts.URL, nil)
 	require.NoError(t, err)
 	labeler := &otelhttp.Labeler{}
-	labeler.Add(attribute.String("foo", "fooValue"))
-	labeler.Add(attribute.String("bar", "barValue"))
+	labeler.Add(expectedAttributes...)
 	ctx = otelhttp.ContextWithLabeler(ctx, labeler)
 	r = r.WithContext(ctx)
 
@@ -534,27 +538,82 @@ func TestCustomAttributesHandling(t *testing.T) {
 			d, ok := m.Data.(metricdata.Sum[int64])
 			assert.True(t, ok)
 			assert.Len(t, d.DataPoints, 1)
-			attrSet := d.DataPoints[0].Attributes
-			fooAtrr, ok := attrSet.Value(attribute.Key("foo"))
-			assert.True(t, ok)
-			assert.Equal(t, "fooValue", fooAtrr.AsString())
-			barAtrr, ok := attrSet.Value(attribute.Key("bar"))
-			assert.True(t, ok)
-			assert.Equal(t, "barValue", barAtrr.AsString())
-			assert.False(t, attrSet.HasValue(attribute.Key("baz")))
+			containsAttributes(t, d.DataPoints[0].Attributes, expectedAttributes)
 		case clientDuration:
 			d, ok := m.Data.(metricdata.Histogram[float64])
 			assert.True(t, ok)
 			assert.Len(t, d.DataPoints, 1)
-			attrSet := d.DataPoints[0].Attributes
-			fooAtrr, ok := attrSet.Value(attribute.Key("foo"))
-			assert.True(t, ok)
-			assert.Equal(t, "fooValue", fooAtrr.AsString())
-			barAtrr, ok := attrSet.Value(attribute.Key("bar"))
-			assert.True(t, ok)
-			assert.Equal(t, "barValue", barAtrr.AsString())
-			assert.False(t, attrSet.HasValue(attribute.Key("baz")))
+			containsAttributes(t, d.DataPoints[0].Attributes, expectedAttributes)
 		}
+	}
+}
+
+func TestDefaultAttributesHandling(t *testing.T) {
+	var rm metricdata.ResourceMetrics
+	const (
+		clientRequestSize = "http.client.request.size"
+		clientDuration    = "http.client.duration"
+	)
+	ctx := context.TODO()
+	reader := sdkmetric.NewManualReader()
+	provider := sdkmetric.NewMeterProvider(sdkmetric.WithReader(reader))
+	defer func() {
+		err := provider.Shutdown(ctx)
+		if err != nil {
+			t.Errorf("Error shutting down provider: %v", err)
+		}
+	}()
+
+	defaultAttributes := []attribute.KeyValue{
+		attribute.String("defaultFoo", "fooValue"),
+		attribute.String("defaultBar", "barValue"),
+	}
+
+	transport := otelhttp.NewTransport(
+		http.DefaultTransport, otelhttp.WithMeterProvider(provider),
+		otelhttp.WithMetricAttributesFn(func(_ *http.Request) []attribute.KeyValue {
+			return defaultAttributes
+		}))
+	client := http.Client{Transport: transport}
+
+	ts := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
+		w.WriteHeader(http.StatusOK)
+	}))
+	defer ts.Close()
+
+	r, err := http.NewRequest(http.MethodGet, ts.URL, nil)
+	require.NoError(t, err)
+
+	resp, err := client.Do(r)
+	require.NoError(t, err)
+
+	_ = resp.Body.Close()
+
+	err = reader.Collect(ctx, &rm)
+	assert.NoError(t, err)
+
+	assert.Len(t, rm.ScopeMetrics[0].Metrics, 3)
+	for _, m := range rm.ScopeMetrics[0].Metrics {
+		switch m.Name {
+		case clientRequestSize:
+			d, ok := m.Data.(metricdata.Sum[int64])
+			assert.True(t, ok)
+			assert.Len(t, d.DataPoints, 1)
+			containsAttributes(t, d.DataPoints[0].Attributes, defaultAttributes)
+		case clientDuration:
+			d, ok := m.Data.(metricdata.Histogram[float64])
+			assert.True(t, ok)
+			assert.Len(t, d.DataPoints, 1)
+			containsAttributes(t, d.DataPoints[0].Attributes, defaultAttributes)
+		}
+	}
+}
+
+func containsAttributes(t *testing.T, attrSet attribute.Set, expected []attribute.KeyValue) {
+	for _, att := range expected {
+		actualValue, ok := attrSet.Value(att.Key)
+		assert.True(t, ok)
+		assert.Equal(t, att.Value.AsString(), actualValue.AsString())
 	}
 }
 

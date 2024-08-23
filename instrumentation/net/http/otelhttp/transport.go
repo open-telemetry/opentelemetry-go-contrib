@@ -14,6 +14,7 @@ import (
 	"go.opentelemetry.io/contrib/instrumentation/net/http/otelhttp/internal/request"
 	"go.opentelemetry.io/contrib/instrumentation/net/http/otelhttp/internal/semconv"
 	"go.opentelemetry.io/otel"
+	"go.opentelemetry.io/otel/attribute"
 	"go.opentelemetry.io/otel/codes"
 	"go.opentelemetry.io/otel/propagation"
 
@@ -25,12 +26,13 @@ import (
 type Transport struct {
 	rt http.RoundTripper
 
-	tracer            trace.Tracer
-	propagators       propagation.TextMapPropagator
-	spanStartOptions  []trace.SpanStartOption
-	filters           []Filter
-	spanNameFormatter func(string, *http.Request) string
-	clientTrace       func(context.Context) *httptrace.ClientTrace
+	tracer             trace.Tracer
+	propagators        propagation.TextMapPropagator
+	spanStartOptions   []trace.SpanStartOption
+	filters            []Filter
+	spanNameFormatter  func(string, *http.Request) string
+	clientTrace        func(context.Context) *httptrace.ClientTrace
+	metricAttributesFn func(*http.Request) []attribute.KeyValue
 
 	semconv semconv.HTTPClient
 }
@@ -71,6 +73,7 @@ func (t *Transport) applyConfig(c *config) {
 	t.spanNameFormatter = c.SpanNameFormatter
 	t.clientTrace = c.ClientTrace
 	t.semconv = semconv.NewHTTPClient(c.Meter)
+	t.metricAttributesFn = c.MetricAttributesFn
 }
 
 func defaultTransportFormatter(_ string, r *http.Request) string {
@@ -145,7 +148,7 @@ func (t *Transport) RoundTrip(r *http.Request) (*http.Response, error) {
 	metricOpts := t.semconv.MetricOptions(semconv.MetricAttributes{
 		Req:                  r,
 		StatusCode:           res.StatusCode,
-		AdditionalAttributes: labeler.Get(),
+		AdditionalAttributes: append(labeler.Get(), t.metricAttributesFromRequest(r)...),
 	})
 
 	// For handling response bytes we leverage a callback when the client reads the http response
@@ -168,6 +171,14 @@ func (t *Transport) RoundTrip(r *http.Request) (*http.Response, error) {
 	}, metricOpts)
 
 	return res, err
+}
+
+func (t *Transport) metricAttributesFromRequest(r *http.Request) []attribute.KeyValue {
+	var attributeForRequest []attribute.KeyValue
+	if t.metricAttributesFn != nil {
+		attributeForRequest = t.metricAttributesFn(r)
+	}
+	return attributeForRequest
 }
 
 // newWrappedBody returns a new and appropriately scoped *wrappedBody as an
