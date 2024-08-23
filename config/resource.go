@@ -23,7 +23,7 @@ func keyVal(k string, v any) attribute.KeyValue {
 	case int8:
 		return attribute.Int64(k, int64(val))
 	case uint8:
-		return attribute.Int64(k, int64(val))
+		return attribute.Int64(k, int64(val)) // nolint: gosec  // https://github.com/securego/gosec/issues/1185
 	case int16:
 		return attribute.Int64(k, int64(val))
 	case uint16:

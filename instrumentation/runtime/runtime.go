@@ -218,7 +218,11 @@ func (g *goCollector) refresh() {
 
 func (g *goCollector) get(name string) int64 {
 	if s, ok := g.sampleMap[name]; ok && s.Value.Kind() == metrics.KindUint64 {
-		return int64(s.Value.Uint64())
+		v := s.Value.Uint64()
+		if v > math.MaxInt64 {
+			return math.MaxInt64
+		}
+		return int64(v) // nolint: gosec  // Overflow checked above.
 	}
 	return 0
 }
