@@ -70,5 +70,5 @@ func splitProb(p float64) (uint8, uint8, float64) {
 	highP := expToFloat64(-high)
 	lowProb := (highP - p) / (highP - lowP)
 
-	return uint8(low), uint8(high), lowProb
+	return uint8(low), uint8(high), lowProb // nolint: gosec  // 8-bit sample.
 }

@@ -100,7 +100,7 @@ func ProbabilityBased(fraction float64, opts ...ProbabilityBasedOption) sdktrace
 func (cs *consistentProbabilityBased) newR() uint8 {
 	cs.lock.Lock()
 	defer cs.lock.Unlock()
-	return uint8(bits.LeadingZeros64(uint64(cs.rnd.Int63())) - 1)
+	return uint8(bits.LeadingZeros64(uint64(cs.rnd.Int63())) - 1) // nolint: gosec  // 8-bit sample.
 }
 
 func (cs *consistentProbabilityBased) lowChoice() bool {
@@ -161,8 +161,8 @@ func (cs *consistentProbabilityBased) ShouldSample(p sdktrace.SamplingParameters
 func (cs *consistentProbabilityBased) Description() string {
 	var prob float64
 	if cs.lowLAC != pZeroValue {
-		prob = cs.lowProb * expToFloat64(-int(cs.lowLAC))         // nolint: gosec  // https://github.com/securego/gosec/issues/1185
-		prob += (1 - cs.lowProb) * expToFloat64(-int(cs.highLAC)) // nolint: gosec  // https://github.com/securego/gosec/issues/1185
+		prob = cs.lowProb * expToFloat64(-int(cs.lowLAC))
+		prob += (1 - cs.lowProb) * expToFloat64(-int(cs.highLAC))
 	}
 	return fmt.Sprintf("ProbabilityBased{%g}", prob)
 }
