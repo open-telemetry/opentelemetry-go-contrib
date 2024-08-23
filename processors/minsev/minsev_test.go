@@ -171,7 +171,12 @@ func BenchmarkLogProcessor(b *testing.B) {
 	r.SetSeverity(api.SeverityTrace)
 	ctx := context.Background()
 
-	run := func(p log.Processor) func(b *testing.B) {
+	type combo interface {
+		log.Processor
+		filterProcessor
+	}
+
+	run := func(p combo) func(b *testing.B) {
 		return func(b *testing.B) {
 			var err error
 			var enabled bool
