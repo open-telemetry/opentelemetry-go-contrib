@@ -52,22 +52,16 @@ This project is tested on the following systems.
 | -------- | ---------- | ------------ |
 | Ubuntu   | 1.23       | amd64        |
 | Ubuntu   | 1.22       | amd64        |
-| Ubuntu   | 1.21       | amd64        |
 | Ubuntu   | 1.23       | 386          |
 | Ubuntu   | 1.22       | 386          |
-| Ubuntu   | 1.21       | 386          |
 | macOS 13 | 1.23       | amd64        |
 | macOS 13 | 1.22       | amd64        |
-| macOS 13 | 1.21       | amd64        |
 | macOS    | 1.23       | arm64        |
 | macOS    | 1.22       | arm64        |
-| macOS    | 1.21       | arm64        |
 | Windows  | 1.23       | amd64        |
 | Windows  | 1.22       | amd64        |
-| Windows  | 1.21       | amd64        |
 | Windows  | 1.23       | 386          |
 | Windows  | 1.22       | 386          |
-| Windows  | 1.21       | 386          |
 
 While this project should work for other systems, no compatibility guarantees
 are made for those systems currently.
