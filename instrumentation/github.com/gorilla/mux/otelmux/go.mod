@@ -1,6 +1,6 @@
 module go.opentelemetry.io/contrib/instrumentation/github.com/gorilla/mux/otelmux
 
-go 1.21
+go 1.22
 
 require (
 	github.com/felixge/httpsnoop v1.0.4

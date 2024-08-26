@@ -1,6 +1,6 @@
 module go.opentelemetry.io/contrib/propagators/autoprop
 
-go 1.21
+go 1.22
 
 require (
 	github.com/stretchr/testify v1.9.0
