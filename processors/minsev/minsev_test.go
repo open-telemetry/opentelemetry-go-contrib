@@ -24,7 +24,7 @@ var severities = []api.Severity{
 
 type args struct {
 	Ctx    context.Context
-	Record log.Record
+	Record *log.Record
 }
 
 type processor struct {
@@ -36,13 +36,13 @@ type processor struct {
 	ShutdownCalls   []context.Context
 }
 
-func (p *processor) OnEmit(ctx context.Context, r log.Record) error {
+func (p *processor) OnEmit(ctx context.Context, r *log.Record) error {
 	p.OnEmitCalls = append(p.OnEmitCalls, args{ctx, r})
 	return p.ReturnErr
 }
 
 func (p *processor) Enabled(ctx context.Context, r log.Record) bool {
-	p.EnabledCalls = append(p.EnabledCalls, args{ctx, r})
+	p.EnabledCalls = append(p.EnabledCalls, args{ctx, &r})
 	return true
 }
 
@@ -72,11 +72,11 @@ func TestLogProcessorOnEmit(t *testing.T) {
 		r := &log.Record{}
 		for _, sev := range severities {
 			r.SetSeverity(sev)
-			assert.ErrorIs(t, p.OnEmit(ctx, *r), assert.AnError, sev.String())
+			assert.ErrorIs(t, p.OnEmit(ctx, r), assert.AnError, sev.String())
 
 			if assert.Lenf(t, wrapped.OnEmitCalls, 1, "Record with severity %s not passed-through", sev) {
 				assert.Equal(t, ctx, wrapped.OnEmitCalls[0].Ctx, sev.String())
-				assert.Equal(t, *r, wrapped.OnEmitCalls[0].Record, sev.String())
+				assert.Equal(t, r, wrapped.OnEmitCalls[0].Record, sev.String())
 			}
 			wrapped.Reset()
 		}
@@ -90,7 +90,7 @@ func TestLogProcessorOnEmit(t *testing.T) {
 		r := &log.Record{}
 		for _, sev := range severities {
 			r.SetSeverity(sev)
-			assert.NoError(t, p.OnEmit(ctx, *r), assert.AnError, sev.String())
+			assert.NoError(t, p.OnEmit(ctx, r), assert.AnError, sev.String())
 
 			if !assert.Lenf(t, wrapped.OnEmitCalls, 0, "Record with severity %s passed-through", sev) {
 				wrapped.Reset()
@@ -112,7 +112,7 @@ func TestLogProcessorEnabled(t *testing.T) {
 
 			if assert.Lenf(t, wrapped.EnabledCalls, 1, "Record with severity %s not passed-through", sev) {
 				assert.Equal(t, ctx, wrapped.EnabledCalls[0].Ctx, sev.String())
-				assert.Equal(t, *r, wrapped.EnabledCalls[0].Record, sev.String())
+				assert.Equal(t, r, wrapped.EnabledCalls[0].Record, sev.String())
 			}
 			wrapped.Reset()
 		}
@@ -156,28 +156,33 @@ func TestLogProcessorShutdownPassthrough(t *testing.T) {
 func TestLogProcessorNilDownstream(t *testing.T) {
 	p := NewLogProcessor(nil, api.SeverityTrace1)
 	ctx := context.Background()
-	r := log.Record{}
+	r := new(log.Record)
 	r.SetSeverity(api.SeverityTrace1)
 	assert.NotPanics(t, func() {
 		assert.NoError(t, p.OnEmit(ctx, r))
-		assert.False(t, p.Enabled(ctx, r))
+		assert.False(t, p.Enabled(ctx, *r))
 		assert.NoError(t, p.ForceFlush(ctx))
 		assert.NoError(t, p.Shutdown(ctx))
 	})
 }
 
 func BenchmarkLogProcessor(b *testing.B) {
-	rPtr := new(log.Record)
-	rPtr.SetSeverity(api.SeverityTrace)
-	ctx, r := context.Background(), *rPtr
+	r := new(log.Record)
+	r.SetSeverity(api.SeverityTrace)
+	ctx := context.Background()
 
-	run := func(p log.Processor) func(b *testing.B) {
+	type combo interface {
+		log.Processor
+		filterProcessor
+	}
+
+	run := func(p combo) func(b *testing.B) {
 		return func(b *testing.B) {
 			var err error
 			var enabled bool
 			b.ReportAllocs()
 			for n := 0; n < b.N; n++ {
-				enabled = p.Enabled(ctx, r)
+				enabled = p.Enabled(ctx, *r)
 				err = p.OnEmit(ctx, r)
 			}
 

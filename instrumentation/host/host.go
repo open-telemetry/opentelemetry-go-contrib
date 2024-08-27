@@ -6,6 +6,7 @@ package host // import "go.opentelemetry.io/contrib/instrumentation/host"
 import (
 	"context"
 	"fmt"
+	"math"
 	"os"
 	"sync"
 
@@ -118,7 +119,11 @@ func (h *host) register() error {
 		lock sync.Mutex
 	)
 
-	proc, err := process.NewProcess(int32(os.Getpid()))
+	pid := os.Getpid()
+	if pid > math.MaxInt32 || pid < math.MinInt32 {
+		return fmt.Errorf("invalid process ID: %d", pid)
+	}
+	proc, err := process.NewProcess(int32(pid)) // nolint: gosec  // Overflow checked above.
 	if err != nil {
 		return fmt.Errorf("could not find this process: %w", err)
 	}
@@ -246,9 +251,9 @@ func (h *host) register() error {
 
 			// Host memory usage
 			opt = metric.WithAttributeSet(AttributeMemoryUsed)
-			o.ObserveInt64(hostMemoryUsage, int64(vmStats.Used), opt)
+			o.ObserveInt64(hostMemoryUsage, clampInt64(vmStats.Used), opt)
 			opt = metric.WithAttributeSet(AttributeMemoryAvailable)
-			o.ObserveInt64(hostMemoryUsage, int64(vmStats.Available), opt)
+			o.ObserveInt64(hostMemoryUsage, clampInt64(vmStats.Available), opt)
 
 			// Host memory utilization
 			opt = metric.WithAttributeSet(AttributeMemoryUsed)
@@ -262,9 +267,9 @@ func (h *host) register() error {
 			// interface, with similar questions to those posed
 			// about per-CPU measurements above.
 			opt = metric.WithAttributeSet(AttributeNetworkTransmit)
-			o.ObserveInt64(networkIOUsage, int64(ioStats[0].BytesSent), opt)
+			o.ObserveInt64(networkIOUsage, clampInt64(ioStats[0].BytesSent), opt)
 			opt = metric.WithAttributeSet(AttributeNetworkReceive)
-			o.ObserveInt64(networkIOUsage, int64(ioStats[0].BytesRecv), opt)
+			o.ObserveInt64(networkIOUsage, clampInt64(ioStats[0].BytesRecv), opt)
 
 			return nil
 		},
@@ -279,4 +284,11 @@ func (h *host) register() error {
 	}
 
 	return nil
+}
+
+func clampInt64(v uint64) int64 {
+	if v > math.MaxInt64 {
+		return math.MaxInt64
+	}
+	return int64(v) // nolint: gosec  // Overflow checked.
 }
