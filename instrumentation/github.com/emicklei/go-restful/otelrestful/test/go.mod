@@ -1,6 +1,6 @@
 module go.opentelemetry.io/contrib/instrumentation/github.com/emicklei/go-restful/otelrestful/test
 
-go 1.21
+go 1.22
 
 require (
 	github.com/emicklei/go-restful/v3 v3.12.1

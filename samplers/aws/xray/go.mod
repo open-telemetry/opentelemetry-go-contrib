@@ -1,7 +1,7 @@
 // Deprecated: xray has no Code Owner.
 module go.opentelemetry.io/contrib/samplers/aws/xray
 
-go 1.21
+go 1.22
 
 require (
 	github.com/go-logr/logr v1.4.2

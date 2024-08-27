@@ -1,7 +1,7 @@
 // Deprecated: otelmacaron has no Code Owner.
 module go.opentelemetry.io/contrib/instrumentation/gopkg.in/macaron.v1/otelmacaron/test
 
-go 1.21
+go 1.22
 
 require (
 	github.com/stretchr/testify v1.9.0
