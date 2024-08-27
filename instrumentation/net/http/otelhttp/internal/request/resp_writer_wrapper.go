@@ -74,8 +74,8 @@ func (w *RespWriterWrapper) writeHeader(statusCode int) {
 	if !w.wroteHeader {
 		w.wroteHeader = true
 		w.statusCode = statusCode
+		w.ResponseWriter.WriteHeader(statusCode)
 	}
-	w.ResponseWriter.WriteHeader(statusCode)
 }
 
 // Flush implements [http.Flusher].
