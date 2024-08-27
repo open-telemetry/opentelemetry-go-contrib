@@ -12,6 +12,10 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 
 - Drop support for [Go 1.21]. (#6046, #6047)
 
+### Fixes
+
+- Superfluous `response.WriteHeader` call in `go.opentelemetry.io/contrib/instrumentation/net/http/otelhttp`. (#6054)
+
 <!-- Released section -->
 <!-- Don't change this section unless doing release -->
 
