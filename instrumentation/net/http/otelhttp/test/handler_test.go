@@ -250,6 +250,21 @@ func TestHandlerPropagateWriteHeaderCalls(t *testing.T) {
 			},
 			expectHeadersWritten: []int{http.StatusInternalServerError, http.StatusOK},
 		},
+		{
+			name: "When writing the header indirectly through body write",
+			handler: func(w http.ResponseWriter, r *http.Request) {
+				_, _ = w.Write([]byte("hello"))
+			},
+			expectHeadersWritten: []int{http.StatusOK},
+		},
+		{
+			name: "With a header already written when writing the body",
+			handler: func(w http.ResponseWriter, r *http.Request) {
+				w.WriteHeader(http.StatusBadRequest)
+				_, _ = w.Write([]byte("hello"))
+			},
+			expectHeadersWritten: []int{http.StatusBadRequest},
+		},
 	}
 
 	for _, tc := range testCases {
