@@ -89,7 +89,7 @@ The next release will require at least [Go 1.22].
 - The `go.opentelemetry.io/contrib/processors/baggage/baggagetrace` package is deprecated.
   Use the added `go.opentelemetry.io/contrib/processors/baggagecopy` package instead. (#5824)
   - Use `baggagecopy.NewSpanProcessor` as a replacement for `baggagetrace.New`.
-    - `NewSpanProcessor` accepts a `Fitler` function type that selects which baggage members are added to a span.
+    - `NewSpanProcessor` accepts a `Filter` function type that selects which baggage members are added to a span.
     - `NewSpanProcessor` returns a `*baggagecopy.SpanProcessor` instead of a `trace.SpanProcessor` interface.
       The returned type still implements the interface.
 
