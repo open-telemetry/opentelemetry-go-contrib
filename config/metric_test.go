@@ -480,7 +480,7 @@ func TestReader(t *testing.T) {
 	}
 	for _, tt := range testCases {
 		t.Run(tt.name, func(t *testing.T) {
-			got, err := metricReader(context.Background(), tt.reader)
+			got, err := metricReader(configOptions{}, tt.reader)
 			require.Equal(t, tt.wantErr, err)
 			if tt.wantReader == nil {
 				require.Nil(t, got)

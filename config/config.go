@@ -7,6 +7,7 @@ import (
 	"context"
 	"errors"
 
+	"github.com/prometheus/client_golang/prometheus"
 	"go.opentelemetry.io/otel/log"
 	"go.opentelemetry.io/otel/metric"
 	"go.opentelemetry.io/otel/trace"
@@ -23,6 +24,7 @@ const (
 type configOptions struct {
 	ctx                 context.Context
 	opentelemetryConfig OpenTelemetryConfiguration
+	prometheusRegistry  *prometheus.Registry
 }
 
 type shutdownFunc func(context.Context) error
@@ -123,6 +125,17 @@ func WithContext(ctx context.Context) ConfigurationOption {
 func WithOpenTelemetryConfiguration(cfg OpenTelemetryConfiguration) ConfigurationOption {
 	return configurationOptionFunc(func(c configOptions) configOptions {
 		c.opentelemetryConfig = cfg
+		return c
+	})
+}
+
+// WithPrometheusRegistry sets a Prometheus registered to be used by
+// any Prometheus exporters configured in this SDK. Note: if this option
+// is set, the caller is expected to initialize their own handler to
+// expose Prometheus metrics.
+func WithPrometheusRegistry(reg *prometheus.Registry) ConfigurationOption {
+	return configurationOptionFunc(func(c configOptions) configOptions {
+		c.prometheusRegistry = reg
 		return c
 	})
 }

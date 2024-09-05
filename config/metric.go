@@ -45,7 +45,7 @@ func meterProvider(cfg configOptions, res *resource.Resource) (metric.MeterProvi
 
 	var errs []error
 	for _, reader := range cfg.opentelemetryConfig.MeterProvider.Readers {
-		r, err := metricReader(cfg.ctx, reader)
+		r, err := metricReader(cfg, reader)
 		if err == nil {
 			opts = append(opts, sdkmetric.WithReader(r))
 		} else {
@@ -69,7 +69,7 @@ func meterProvider(cfg configOptions, res *resource.Resource) (metric.MeterProvi
 	return mp, mp.Shutdown, nil
 }
 
-func metricReader(ctx context.Context, r MetricReader) (sdkmetric.Reader, error) {
+func metricReader(cfg configOptions, r MetricReader) (sdkmetric.Reader, error) {
 	if r.Periodic != nil && r.Pull != nil {
 		return nil, errors.New("must not specify multiple metric reader type")
 	}
@@ -83,18 +83,18 @@ func metricReader(ctx context.Context, r MetricReader) (sdkmetric.Reader, error)
 		if r.Periodic.Timeout != nil {
 			opts = append(opts, sdkmetric.WithTimeout(time.Duration(*r.Periodic.Timeout)*time.Millisecond))
 		}
-		return periodicExporter(ctx, r.Periodic.Exporter, opts...)
+		return periodicExporter(cfg.ctx, r.Periodic.Exporter, opts...)
 	}
 
 	if r.Pull != nil {
-		return pullReader(ctx, r.Pull.Exporter)
+		return pullReader(cfg, r.Pull.Exporter)
 	}
 	return nil, errors.New("no valid metric reader")
 }
 
-func pullReader(ctx context.Context, exporter MetricExporter) (sdkmetric.Reader, error) {
+func pullReader(cfg configOptions, exporter MetricExporter) (sdkmetric.Reader, error) {
 	if exporter.Prometheus != nil {
-		return prometheusReader(ctx, exporter.Prometheus)
+		return prometheusReader(cfg, exporter.Prometheus)
 	}
 	return nil, errors.New("no valid metric exporter")
 }
@@ -214,7 +214,7 @@ func otlpGRPCMetricExporter(ctx context.Context, otlpConfig *OTLPMetric) (sdkmet
 	return otlpmetricgrpc.New(ctx, opts...)
 }
 
-func prometheusReader(ctx context.Context, prometheusConfig *Prometheus) (sdkmetric.Reader, error) {
+func prometheusReader(cfg configOptions, prometheusConfig *Prometheus) (sdkmetric.Reader, error) {
 	var opts []otelprom.Option
 	if prometheusConfig.Host == nil {
 		return nil, fmt.Errorf("host must be specified")
@@ -248,6 +248,14 @@ func prometheusReader(ctx context.Context, prometheusConfig *Prometheus) (sdkmet
 		}
 	}
 
+	// if a registry is set, the caller is expected
+	// to setup a prometheus server, all that's needed
+	// is to pass the option and return the reader here
+	if cfg.prometheusRegistry != nil {
+		opts = append(opts, otelprom.WithRegisterer(cfg.prometheusRegistry))
+		return otelprom.New(opts...)
+	}
+
 	reg := prometheus.NewRegistry()
 	opts = append(opts, otelprom.WithRegisterer(reg))
 
@@ -271,7 +279,7 @@ func prometheusReader(ctx context.Context, prometheusConfig *Prometheus) (sdkmet
 	if err != nil {
 		return nil, errors.Join(
 			fmt.Errorf("binding address %s for Prometheus exporter: %w", addr, err),
-			reader.Shutdown(ctx),
+			reader.Shutdown(cfg.ctx),
 		)
 	}
 
