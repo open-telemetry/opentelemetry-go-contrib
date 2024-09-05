@@ -60,8 +60,6 @@ module-sets:
       - go.opentelemetry.io/contrib/instrumentation/host
       - go.opentelemetry.io/contrib/instrumentation/host/example
       - go.opentelemetry.io/contrib/instrumentation/runtime
-      - go.opentelemetry.io/contrib/instrumentation/runtime/example
-      - go.opentelemetry.io/contrib/instrumentation/runtime/test
       - go.opentelemetry.io/contrib/zpages
   experimental-samplers:
     version: v0.23.0
