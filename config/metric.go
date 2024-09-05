@@ -251,8 +251,8 @@ func prometheusReader(cfg configOptions, prometheusConfig *Prometheus) (sdkmetri
 	// if a registry is set, the caller is expected
 	// to setup a prometheus server, all that's needed
 	// is to pass the option and return the reader here
-	if cfg.prometheusRegistry != nil {
-		opts = append(opts, otelprom.WithRegisterer(cfg.prometheusRegistry))
+	if cfg.prometheusRegisterer != nil {
+		opts = append(opts, otelprom.WithRegisterer(cfg.prometheusRegisterer))
 		return otelprom.New(opts...)
 	}
 
