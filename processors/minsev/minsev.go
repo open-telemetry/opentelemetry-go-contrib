@@ -21,7 +21,17 @@ func NewLogProcessor(downstream log.Processor, minimum api.Severity) *LogProcess
 	if downstream == nil {
 		downstream = defaultProcessor
 	}
-	return &LogProcessor{Processor: downstream, Minimum: minimum}
+	p := &LogProcessor{Processor: downstream, Minimum: minimum}
+	if fp, ok := downstream.(filterProcessor); ok {
+		p.filter = fp
+	}
+	return p
+}
+
+// filterProcessor is the experimental optional interface a Processor can
+// implement (go.opentelemetry.io/otel/sdk/log/internal/x).
+type filterProcessor interface {
+	Enabled(ctx context.Context, record log.Record) bool
 }
 
 // LogProcessor is an [log.Processor] implementation that wraps another
@@ -35,6 +45,7 @@ func NewLogProcessor(downstream log.Processor, minimum api.Severity) *LogProcess
 type LogProcessor struct {
 	log.Processor
 
+	filter  filterProcessor
 	Minimum api.Severity
 }
 
@@ -55,7 +66,10 @@ func (p *LogProcessor) OnEmit(ctx context.Context, record *log.Record) error {
 // severity of record is greater than or equal to p.Minimum. Otherwise false is
 // returned.
 func (p *LogProcessor) Enabled(ctx context.Context, record log.Record) bool {
-	return record.Severity() >= p.Minimum && p.Processor.Enabled(ctx, record)
+	if p.filter != nil {
+		return record.Severity() >= p.Minimum && p.filter.Enabled(ctx, record)
+	}
+	return record.Severity() >= p.Minimum
 }
 
 var defaultProcessor = noopProcessor{}
