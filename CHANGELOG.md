@@ -11,7 +11,7 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 ### Added
 
 - Add `NewProducer` to `go.opentelemetry.io/contrib/instrumentation/runtime`, which allows collecting the `go.schedule.duration` histogram metric from the Go runtime. (#5991)
-- Add `WithRegistry` to `go.opentelemetry.io/contrib/config` to allow users to configure their own prometheus registry and server.
+- Add `WithRegistry` to `go.opentelemetry.io/contrib/config` to allow users to configure their own prometheus registry and server. (#6091)
 
 ### Removed
 
