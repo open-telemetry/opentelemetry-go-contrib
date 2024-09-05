@@ -110,9 +110,9 @@ func (s HTTPServer) RecordMetrics(ctx context.Context, md ServerMetricData) {
 
 	attributes := oldHTTPServer{}.MetricAttributes(md.ServerName, md.Req, md.StatusCode, md.AdditionalAttributes)
 	o := metric.WithAttributeSet(attribute.NewSet(attributes...))
-	addOpts := []metric.AddOption{o} // Allocate vararg slice once.
-	s.requestBytesCounter.Add(ctx, md.RequestSize, addOpts...)
-	s.responseBytesCounter.Add(ctx, md.ResponseSize, addOpts...)
+	addOpts := metric.AddOption(o)
+	s.requestBytesCounter.Add(ctx, md.RequestSize, addOpts)
+	s.responseBytesCounter.Add(ctx, md.ResponseSize, addOpts)
 	s.serverLatencyMeasure.Record(ctx, md.ElapsedTime, o)
 
 	// TODO: Duplicate Metrics
@@ -183,14 +183,14 @@ func (c HTTPClient) ErrorType(err error) attribute.KeyValue {
 
 type MetricOpts struct {
 	measurement metric.MeasurementOption
-	addOptions  []metric.AddOption
+	addOptions  metric.AddOption
 }
 
 func (o MetricOpts) MeasurementOption() metric.MeasurementOption {
 	return o.measurement
 }
 
-func (o MetricOpts) AddOptions() []metric.AddOption {
+func (o MetricOpts) AddOptions() metric.AddOption {
 	return o.addOptions
 }
 
@@ -200,7 +200,7 @@ func (c HTTPClient) MetricOptions(ma MetricAttributes) MetricOpts {
 	set := metric.WithAttributeSet(attribute.NewSet(attributes...))
 	return MetricOpts{
 		measurement: set,
-		addOptions:  []metric.AddOption{set},
+		addOptions:  set,
 	}
 }
 
@@ -210,7 +210,7 @@ func (s HTTPClient) RecordMetrics(ctx context.Context, md MetricData, opts Metri
 		return
 	}
 
-	s.requestBytesCounter.Add(ctx, md.RequestSize, opts.AddOptions()...)
+	s.requestBytesCounter.Add(ctx, md.RequestSize, opts.AddOptions())
 	s.latencyMeasure.Record(ctx, md.ElapsedTime, opts.MeasurementOption())
 
 	// TODO: Duplicate Metrics
