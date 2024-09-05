@@ -24,7 +24,7 @@ const (
 type configOptions struct {
 	ctx                  context.Context
 	opentelemetryConfig  OpenTelemetryConfiguration
-	prometheusRegisterer *prometheus.Registerer
+	prometheusRegisterer prometheus.Registerer
 }
 
 type shutdownFunc func(context.Context) error
@@ -133,7 +133,7 @@ func WithOpenTelemetryConfiguration(cfg OpenTelemetryConfiguration) Configuratio
 // any Prometheus exporters configured in this SDK. Note: if this option
 // is set, the caller is expected to initialize their own handler to
 // expose Prometheus metrics.
-func WithPrometheusRegisterer(reg *prometheus.Registerer) ConfigurationOption {
+func WithPrometheusRegisterer(reg prometheus.Registerer) ConfigurationOption {
 	return configurationOptionFunc(func(c configOptions) configOptions {
 		c.prometheusRegisterer = reg
 		return c
