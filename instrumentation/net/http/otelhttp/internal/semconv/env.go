@@ -216,12 +216,12 @@ func (s HTTPClient) RecordMetrics(ctx context.Context, md MetricData, opts Metri
 	// TODO: Duplicate Metrics
 }
 
-func (s HTTPClient) RecordResponseSize(ctx context.Context, responseData int64, opts []metric.AddOption) {
+func (s HTTPClient) RecordResponseSize(ctx context.Context, responseData int64, opts metric.AddOption) {
 	if s.responseBytesCounter == nil {
 		// This will happen if an HTTPClient{} is used insted of NewHTTPClient().
 		return
 	}
 
-	s.responseBytesCounter.Add(ctx, responseData, opts...)
+	s.responseBytesCounter.Add(ctx, responseData, opts)
 	// TODO: Duplicate Metrics
 }
