@@ -4,6 +4,8 @@
 package otelgrpc // import "go.opentelemetry.io/contrib/instrumentation/google.golang.org/grpc/otelgrpc"
 
 import (
+	"context"
+
 	"google.golang.org/grpc/stats"
 
 	"go.opentelemetry.io/otel"
@@ -36,14 +38,15 @@ type Filter func(*stats.RPCTagInfo) bool
 
 // config is a group of options for this instrumentation.
 type config struct {
-	Filter            Filter
-	InterceptorFilter InterceptorFilter
-	Propagators       propagation.TextMapPropagator
-	TracerProvider    trace.TracerProvider
-	MeterProvider     metric.MeterProvider
-	SpanStartOptions  []trace.SpanStartOption
-	SpanAttributes    []attribute.KeyValue
-	MetricAttributes  []attribute.KeyValue
+	Filter             Filter
+	InterceptorFilter  InterceptorFilter
+	Propagators        propagation.TextMapPropagator
+	TracerProvider     trace.TracerProvider
+	MeterProvider      metric.MeterProvider
+	SpanStartOptions   []trace.SpanStartOption
+	SpanAttributes     []attribute.KeyValue
+	MetricAttributes   []attribute.KeyValue
+	MetricAttributesFn func(ctx context.Context, payload any) []attribute.KeyValue
 
 	ReceivedEvent bool
 	SentEvent     bool
@@ -284,4 +287,20 @@ func (o metricAttributesOption) apply(c *config) {
 // WithMetricAttributes returns an Option to add custom attributes to the metrics.
 func WithMetricAttributes(a ...attribute.KeyValue) Option {
 	return metricAttributesOption{a: a}
+}
+
+type metricAttributesFnOption struct {
+	f func(ctx context.Context, payload any) []attribute.KeyValue
+}
+
+func (o metricAttributesFnOption) apply(c *config) {
+	if o.f != nil {
+		c.MetricAttributesFn = o.f
+	}
+}
+
+// WithMetricAttributesFn returns an Option to add custom attributes to the metrics
+// based on the incoming request.
+func WithMetricAttributesFn(f func(ctx context.Context, payload any) []attribute.KeyValue) Option {
+	return metricAttributesFnOption{f: f}
 }
