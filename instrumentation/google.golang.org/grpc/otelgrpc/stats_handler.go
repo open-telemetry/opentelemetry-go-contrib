@@ -149,6 +149,8 @@ func (c *config) handleRPC(ctx context.Context, rs stats.RPCStats, isServer bool
 	switch rs := rs.(type) {
 	case *stats.InPayload:
 		if gctx != nil {
+			messageId = atomic.AddInt64(&gctx.messagesReceived, 1)
+
 			// Run this once on InPayload and record the attributes for the entire RPC.
 			if c.MetricAttributesFn != nil {
 				fnMetricAttrs := c.MetricAttributesFn(ctx, rs.Payload)
