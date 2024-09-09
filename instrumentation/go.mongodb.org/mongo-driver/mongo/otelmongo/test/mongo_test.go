@@ -14,7 +14,7 @@ import (
 	"go.mongodb.org/mongo-driver/mongo/integration/mtest"
 	"go.mongodb.org/mongo-driver/mongo/options"
 
-	"go.opentelemetry.io/contrib/instrumentation/go.mongodb.org/mongo-driver/mongo/otelmongo" // nolint:staticcheck  // deprecated.
+	"go.opentelemetry.io/contrib/instrumentation/go.mongodb.org/mongo-driver/mongo/otelmongo"
 	"go.opentelemetry.io/otel/attribute"
 	"go.opentelemetry.io/otel/codes"
 	sdktrace "go.opentelemetry.io/otel/sdk/trace"
@@ -25,8 +25,6 @@ import (
 type validator func(sdktrace.ReadOnlySpan) bool
 
 func TestDBCrudOperation(t *testing.T) {
-	t.Parallel()
-
 	commonValidators := []validator{
 		func(s sdktrace.ReadOnlySpan) bool {
 			return assert.Equal(t, "test-collection.insert", s.Name(), "expected %s", s.Name())
@@ -94,8 +92,6 @@ func TestDBCrudOperation(t *testing.T) {
 
 		mt := mtest.New(t, mtest.NewOptions().ClientType(mtest.Mock))
 		mt.Run(title, func(mt *mtest.T) {
-			mt.Parallel()
-
 			sr := tracetest.NewSpanRecorder()
 			provider := sdktrace.NewTracerProvider(sdktrace.WithSpanProcessor(sr))
 
@@ -147,8 +143,6 @@ func TestDBCrudOperation(t *testing.T) {
 }
 
 func TestDBCollectionAttribute(t *testing.T) {
-	t.Parallel()
-
 	tt := []struct {
 		title         string
 		operation     func(context.Context, *mongo.Database) (interface{}, error)
@@ -205,8 +199,6 @@ func TestDBCollectionAttribute(t *testing.T) {
 
 		mt := mtest.New(t, mtest.NewOptions().ClientType(mtest.Mock))
 		mt.Run(tc.title, func(mt *mtest.T) {
-			mt.Parallel()
-
 			sr := tracetest.NewSpanRecorder()
 			provider := sdktrace.NewTracerProvider(sdktrace.WithSpanProcessor(sr))
 
