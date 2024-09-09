@@ -44,7 +44,9 @@ func (w *RespWriterWrapper) Write(p []byte) (int, error) {
 	w.mu.Lock()
 	defer w.mu.Unlock()
 
-	w.writeHeader(http.StatusOK)
+	if !w.wroteHeader {
+		w.writeHeader(http.StatusOK)
+	}
 
 	n, err := w.ResponseWriter.Write(p)
 	n1 := int64(n)
