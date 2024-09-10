@@ -4,7 +4,9 @@
 package otelmux // import "go.opentelemetry.io/contrib/instrumentation/github.com/gorilla/mux/otelmux"
 
 import (
+	"bufio"
 	"fmt"
+	"net"
 	"net/http"
 	"sync"
 
@@ -74,6 +76,13 @@ type recordingResponseWriter struct {
 	writer  http.ResponseWriter
 	written bool
 	status  int
+}
+
+func (h *recordingResponseWriter) Hijack() (net.Conn, *bufio.ReadWriter, error) {
+	if hijacker, ok := h.writer.(http.Hijacker); ok {
+		return hijacker.Hijack()
+	}
+	return nil, nil, fmt.Errorf("underlying ResponseWriter does not support hijacking")
 }
 
 var rrwPool = &sync.Pool{
