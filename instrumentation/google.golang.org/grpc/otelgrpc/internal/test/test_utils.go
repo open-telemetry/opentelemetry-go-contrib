@@ -273,7 +273,7 @@ func (s *testServer) UnaryCall(ctx context.Context, in *testpb.SimpleRequest) (*
 		}
 	}
 	if st != nil && st.Code != 0 {
-		return nil, status.Error(codes.Code(st.Code), st.Message)
+		return nil, status.Error(codes.Code(st.Code), st.Message) // nolint:gosec // Status code can't be negative.
 	}
 	pl, err := serverNewPayload(in.GetResponseType(), in.GetResponseSize())
 	if err != nil {
@@ -344,7 +344,7 @@ func (s *testServer) FullDuplexCall(stream testpb.TestService_FullDuplexCallServ
 		}
 		st := in.GetResponseStatus()
 		if st != nil && st.Code != 0 {
-			return status.Error(codes.Code(st.Code), st.Message)
+			return status.Error(codes.Code(st.Code), st.Message) // nolint:gosec // Status code can't be negative.
 		}
 
 		cs := in.GetResponseParameters()
