@@ -8,6 +8,10 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 
 ## [Unreleased]
 
+### Fixed
+
+- Possible nil dereference panic in `go.opentelemetry.io/contrib/instrumentation/net/http/httptrace/otelhttptrace`. (#5965)
+
 <!-- Released section -->
 <!-- Don't change this section unless doing release -->
 
@@ -26,7 +30,6 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 
 - Superfluous call to `WriteHeader` when flushing after setting a status code in `go.opentelemetry.io/contrib/instrumentation/net/http/otelhttp`. (#6074)
 - Superfluous call to `WriteHeader` when writing the response body after setting a status code in `go.opentelemetry.io/contrib/instrumentation/net/http/otelhttp`. (#6055)
-- Possible nil dereference panic in `go.opentelemetry.io/contrib/instrumentation/net/http/httptrace/otelhttptrace`. (#5965)
 
 ## [1.29.0/0.54.0/0.23.0/0.9.0/0.4.0/0.2.0/0.1.0] - 2024-08-23
 
