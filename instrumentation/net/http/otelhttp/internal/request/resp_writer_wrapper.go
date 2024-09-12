@@ -73,11 +73,13 @@ func (w *RespWriterWrapper) WriteHeader(statusCode int) {
 // It does not acquire a lock, and therefore assumes that is being handled by a
 // parent method.
 func (w *RespWriterWrapper) writeHeader(statusCode int) {
+	// Make sure we only write the header once.
 	if !w.wroteHeader {
 		w.wroteHeader = true
 		w.statusCode = statusCode
+
+		w.ResponseWriter.WriteHeader(statusCode)
 	}
-	w.ResponseWriter.WriteHeader(statusCode)
 }
 
 // Flush implements [http.Flusher].
