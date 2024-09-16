@@ -11,9 +11,10 @@ import (
 )
 
 func TestSeverityVarConcurrentSafe(t *testing.T) {
-	var sev SeverityVar
-
-	var wg sync.WaitGroup
+	var (
+		sev SeverityVar
+		wg  sync.WaitGroup
+	)
 
 	wg.Add(1)
 	go func() {
