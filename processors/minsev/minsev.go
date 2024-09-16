@@ -18,7 +18,7 @@ import (
 // LogProcessor discards records with lower severities. If severity is nil,
 // SeverityInfo is used as a default. The LogProcessor calls severity.Severity
 // for each record processed or queried; to adjust the minimum level
-// dynamically, use a SeverityVar.
+// dynamically, use a [SeverityVar].
 //
 // If downstream is nil a default No-Op [log.Processor] is used. The returned
 // processor will not be enabled for nor emit any records.
