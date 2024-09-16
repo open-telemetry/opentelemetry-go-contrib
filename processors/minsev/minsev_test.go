@@ -67,6 +67,28 @@ func (p *processor) Reset() {
 	p.ForceFlushCalls = p.ForceFlushCalls[:0]
 }
 
+func TestLogProcessorDynamicSeverity(t *testing.T) {
+	sev := new(SeverityVar)
+	wrapped := new(processor)
+	p := NewLogProcessor(wrapped, sev)
+
+	ctx := context.Background()
+	r := &log.Record{}
+	r.SetSeverity(api.SeverityDebug)
+	assert.False(t, p.Enabled(ctx, *r), api.SeverityDebug.String())
+
+	r.SetSeverity(api.SeverityInfo)
+	assert.True(t, p.Enabled(ctx, *r), api.SeverityInfo.String())
+
+	sev.Set(SeverityError)
+
+	r.SetSeverity(api.SeverityInfo)
+	assert.False(t, p.Enabled(ctx, *r), api.SeverityInfo.String())
+
+	r.SetSeverity(api.SeverityError)
+	assert.True(t, p.Enabled(ctx, *r), api.SeverityError.String())
+}
+
 func TestLogProcessorOnEmit(t *testing.T) {
 	t.Run("Passthrough", func(t *testing.T) {
 		wrapped := &processor{ReturnErr: assert.AnError}
