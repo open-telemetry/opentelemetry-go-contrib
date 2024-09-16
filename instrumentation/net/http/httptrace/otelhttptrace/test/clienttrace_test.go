@@ -250,6 +250,22 @@ func TestEndBeforeStartCreatesSpan(t *testing.T) {
 	require.Len(t, spans, 1)
 }
 
+func TestEndBeforeStartWithoutSubSpansDoesNotPanic(t *testing.T) {
+	sr := tracetest.NewSpanRecorder()
+	tp := trace.NewTracerProvider(trace.WithSpanProcessor(sr))
+	otel.SetTracerProvider(tp)
+
+	ct := otelhttptrace.NewClientTrace(context.Background(), otelhttptrace.WithoutSubSpans())
+
+	require.NotPanics(t, func() {
+		ct.DNSDone(httptrace.DNSDoneInfo{})
+	})
+
+	// no spans created because we were just using background context without span
+	// and Start wasn't called which would have started a span
+	require.Len(t, sr.Ended(), 0)
+}
+
 type clientTraceTestFixture struct {
 	Address      string
 	URL          string

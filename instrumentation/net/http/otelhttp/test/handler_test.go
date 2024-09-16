@@ -215,6 +215,12 @@ func (rw *respWriteHeaderCounter) WriteHeader(statusCode int) {
 	rw.ResponseWriter.WriteHeader(statusCode)
 }
 
+func (rw *respWriteHeaderCounter) Flush() {
+	if f, ok := rw.ResponseWriter.(http.Flusher); ok {
+		f.Flush()
+	}
+}
+
 func TestHandlerPropagateWriteHeaderCalls(t *testing.T) {
 	testCases := []struct {
 		name                 string
@@ -262,6 +268,23 @@ func TestHandlerPropagateWriteHeaderCalls(t *testing.T) {
 			handler: func(w http.ResponseWriter, r *http.Request) {
 				w.WriteHeader(http.StatusBadRequest)
 				_, _ = w.Write([]byte("hello"))
+			},
+			expectHeadersWritten: []int{http.StatusBadRequest},
+		},
+		{
+			name: "When writing the header indirectly through flush",
+			handler: func(w http.ResponseWriter, r *http.Request) {
+				f := w.(http.Flusher)
+				f.Flush()
+			},
+			expectHeadersWritten: []int{http.StatusOK},
+		},
+		{
+			name: "With a header already written when flushing",
+			handler: func(w http.ResponseWriter, r *http.Request) {
+				w.WriteHeader(http.StatusBadRequest)
+				f := w.(http.Flusher)
+				f.Flush()
 			},
 			expectHeadersWritten: []int{http.StatusBadRequest},
 		},
