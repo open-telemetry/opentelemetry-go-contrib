@@ -19,7 +19,7 @@ func TestSeverityVarConcurrentSafe(t *testing.T) {
 	wg.Add(1)
 	go func() {
 		defer wg.Done()
-		for s := SeverityUndefined; s <= SeverityFatal4; s++ {
+		for s := SeverityTrace1; s <= SeverityFatal4; s++ {
 			sev.Set(s)
 		}
 	}()
@@ -28,7 +28,7 @@ func TestSeverityVarConcurrentSafe(t *testing.T) {
 	go func() {
 		defer wg.Done()
 		var got log.Severity
-		for i := SeverityFatal4 - SeverityUndefined; i >= 0; i-- {
+		for i := SeverityFatal4 - SeverityTrace1; i >= 0; i-- {
 			got = sev.Severity()
 		}
 		_ = got

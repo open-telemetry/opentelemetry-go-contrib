@@ -17,9 +17,6 @@ type Severity int
 
 // Severity values defined by OpenTelemetry.
 const (
-	// SeverityUndefined represents an unset Severity.
-	SeverityUndefined Severity = -9 // UNDEFINED
-
 	// A fine-grained debugging log record. Typically disabled in default
 	// configurations.
 	SeverityTrace1 Severity = -8 // TRACE
@@ -76,31 +73,30 @@ func (s Severity) Severity() log.Severity {
 }
 
 var translations = map[Severity]log.Severity{
-	SeverityUndefined: log.SeverityUndefined,
-	SeverityTrace1:    log.SeverityTrace1,
-	SeverityTrace2:    log.SeverityTrace2,
-	SeverityTrace3:    log.SeverityTrace3,
-	SeverityTrace4:    log.SeverityTrace4,
-	SeverityDebug1:    log.SeverityDebug1,
-	SeverityDebug2:    log.SeverityDebug2,
-	SeverityDebug3:    log.SeverityDebug3,
-	SeverityDebug4:    log.SeverityDebug4,
-	SeverityInfo1:     log.SeverityInfo1,
-	SeverityInfo2:     log.SeverityInfo2,
-	SeverityInfo3:     log.SeverityInfo3,
-	SeverityInfo4:     log.SeverityInfo4,
-	SeverityWarn1:     log.SeverityWarn1,
-	SeverityWarn2:     log.SeverityWarn2,
-	SeverityWarn3:     log.SeverityWarn3,
-	SeverityWarn4:     log.SeverityWarn4,
-	SeverityError1:    log.SeverityError1,
-	SeverityError2:    log.SeverityError2,
-	SeverityError3:    log.SeverityError3,
-	SeverityError4:    log.SeverityError4,
-	SeverityFatal1:    log.SeverityFatal1,
-	SeverityFatal2:    log.SeverityFatal2,
-	SeverityFatal3:    log.SeverityFatal3,
-	SeverityFatal4:    log.SeverityFatal4,
+	SeverityTrace1: log.SeverityTrace1,
+	SeverityTrace2: log.SeverityTrace2,
+	SeverityTrace3: log.SeverityTrace3,
+	SeverityTrace4: log.SeverityTrace4,
+	SeverityDebug1: log.SeverityDebug1,
+	SeverityDebug2: log.SeverityDebug2,
+	SeverityDebug3: log.SeverityDebug3,
+	SeverityDebug4: log.SeverityDebug4,
+	SeverityInfo1:  log.SeverityInfo1,
+	SeverityInfo2:  log.SeverityInfo2,
+	SeverityInfo3:  log.SeverityInfo3,
+	SeverityInfo4:  log.SeverityInfo4,
+	SeverityWarn1:  log.SeverityWarn1,
+	SeverityWarn2:  log.SeverityWarn2,
+	SeverityWarn3:  log.SeverityWarn3,
+	SeverityWarn4:  log.SeverityWarn4,
+	SeverityError1: log.SeverityError1,
+	SeverityError2: log.SeverityError2,
+	SeverityError3: log.SeverityError3,
+	SeverityError4: log.SeverityError4,
+	SeverityFatal1: log.SeverityFatal1,
+	SeverityFatal2: log.SeverityFatal2,
+	SeverityFatal3: log.SeverityFatal3,
+	SeverityFatal4: log.SeverityFatal4,
 }
 
 // A SeverityVar is a [Severity] variable, to allow a [LogProcessor] severity
