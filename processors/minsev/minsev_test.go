@@ -22,6 +22,10 @@ var severities = []api.Severity{
 	api.SeverityFatal, api.SeverityFatal1, api.SeverityFatal2, api.SeverityFatal3, api.SeverityFatal4,
 }
 
+type apiSev api.Severity
+
+func (s apiSev) Severity() api.Severity { return api.Severity(s) }
+
 type args struct {
 	Ctx    context.Context
 	Record *log.Record
@@ -67,7 +71,7 @@ func TestLogProcessorOnEmit(t *testing.T) {
 	t.Run("Passthrough", func(t *testing.T) {
 		wrapped := &processor{ReturnErr: assert.AnError}
 
-		p := NewLogProcessor(wrapped, api.SeverityTrace1)
+		p := NewLogProcessor(wrapped, SeverityTrace1)
 		ctx := context.Background()
 		r := &log.Record{}
 		for _, sev := range severities {
@@ -85,12 +89,12 @@ func TestLogProcessorOnEmit(t *testing.T) {
 	t.Run("Dropped", func(t *testing.T) {
 		wrapped := &processor{ReturnErr: assert.AnError}
 
-		p := NewLogProcessor(wrapped, api.SeverityFatal4+1)
+		p := NewLogProcessor(wrapped, apiSev(api.SeverityFatal4+1))
 		ctx := context.Background()
 		r := &log.Record{}
 		for _, sev := range severities {
 			r.SetSeverity(sev)
-			assert.NoError(t, p.OnEmit(ctx, r), assert.AnError, sev.String())
+			assert.NoError(t, p.OnEmit(ctx, r), sev.String())
 
 			if !assert.Lenf(t, wrapped.OnEmitCalls, 0, "Record with severity %s passed-through", sev) {
 				wrapped.Reset()
@@ -103,7 +107,7 @@ func TestLogProcessorEnabled(t *testing.T) {
 	t.Run("Passthrough", func(t *testing.T) {
 		wrapped := &processor{}
 
-		p := NewLogProcessor(wrapped, api.SeverityTrace1)
+		p := NewLogProcessor(wrapped, SeverityTrace1)
 		ctx := context.Background()
 		r := &log.Record{}
 		for _, sev := range severities {
@@ -121,7 +125,7 @@ func TestLogProcessorEnabled(t *testing.T) {
 	t.Run("NotEnabled", func(t *testing.T) {
 		wrapped := &processor{}
 
-		p := NewLogProcessor(wrapped, api.SeverityFatal4+1)
+		p := NewLogProcessor(wrapped, apiSev(api.SeverityFatal4+1))
 		ctx := context.Background()
 		r := &log.Record{}
 		for _, sev := range severities {
@@ -138,7 +142,7 @@ func TestLogProcessorEnabled(t *testing.T) {
 func TestLogProcessorForceFlushPassthrough(t *testing.T) {
 	wrapped := &processor{ReturnErr: assert.AnError}
 
-	p := NewLogProcessor(wrapped, api.SeverityTrace1)
+	p := NewLogProcessor(wrapped, SeverityTrace1)
 	ctx := context.Background()
 	assert.ErrorIs(t, p.ForceFlush(ctx), assert.AnError)
 	assert.Len(t, wrapped.ForceFlushCalls, 1, "ForceFlush not passed-through")
@@ -147,14 +151,19 @@ func TestLogProcessorForceFlushPassthrough(t *testing.T) {
 func TestLogProcessorShutdownPassthrough(t *testing.T) {
 	wrapped := &processor{ReturnErr: assert.AnError}
 
-	p := NewLogProcessor(wrapped, api.SeverityTrace1)
+	p := NewLogProcessor(wrapped, SeverityTrace1)
 	ctx := context.Background()
 	assert.ErrorIs(t, p.Shutdown(ctx), assert.AnError)
 	assert.Len(t, wrapped.ShutdownCalls, 1, "Shutdown not passed-through")
 }
 
+func TestLogProcessorNilSeverity(t *testing.T) {
+	p := NewLogProcessor(nil, nil)
+	assert.Equal(t, SeverityInfo, p.sev.(Severity))
+}
+
 func TestLogProcessorNilDownstream(t *testing.T) {
-	p := NewLogProcessor(nil, api.SeverityTrace1)
+	p := NewLogProcessor(nil, SeverityTrace1)
 	ctx := context.Background()
 	r := new(log.Record)
 	r.SetSeverity(api.SeverityTrace1)
@@ -191,6 +200,6 @@ func BenchmarkLogProcessor(b *testing.B) {
 	}
 
 	b.Run("Base", run(defaultProcessor))
-	b.Run("Enabled", run(NewLogProcessor(nil, api.SeverityTrace)))
-	b.Run("Disabled", run(NewLogProcessor(nil, api.SeverityDebug)))
+	b.Run("Enabled", run(NewLogProcessor(nil, SeverityTrace)))
+	b.Run("Disabled", run(NewLogProcessor(nil, SeverityDebug)))
 }
