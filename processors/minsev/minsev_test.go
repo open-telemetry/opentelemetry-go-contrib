@@ -159,6 +159,26 @@ func TestLogProcessorEnabled(t *testing.T) {
 			}
 		}
 	})
+
+	t.Run("NoFiltered", func(t *testing.T) {
+		wrapped := &processor{}
+
+		pruned := struct{ log.Processor }{wrapped} // Remove the Enabled method.
+		p := NewLogProcessor(pruned, SeverityInfo)
+		ctx := context.Background()
+		r := &log.Record{}
+
+		r.SetSeverity(api.SeverityDebug)
+		assert.False(t, p.Enabled(ctx, *r))
+
+		r.SetSeverity(api.SeverityInfo)
+		assert.True(t, p.Enabled(ctx, *r))
+
+		r.SetSeverity(api.SeverityError)
+		assert.True(t, p.Enabled(ctx, *r))
+
+		assert.Len(t, wrapped.EnabledCalls, 0)
+	})
 }
 
 func TestLogProcessorForceFlushPassthrough(t *testing.T) {
