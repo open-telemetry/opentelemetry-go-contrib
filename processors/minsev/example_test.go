@@ -23,7 +23,7 @@ var getSeverity = sync.OnceValue(func() log.Severity {
 		"warn":  log.SeverityWarn,
 		"error": log.SeverityError,
 	}
-	// log.SeverityUnknown for unknown values.
+	// log.SeverityUndefined for unknown values.
 	return conv[strings.ToLower(os.Getenv(key))]
 })
 
