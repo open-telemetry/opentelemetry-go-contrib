@@ -10,19 +10,18 @@ import (
 	"strings"
 	"sync"
 
-	api "go.opentelemetry.io/otel/log"
-	"go.opentelemetry.io/otel/sdk/log"
+	"go.opentelemetry.io/otel/log"
 )
 
 const key = "OTEL_LOG_LEVEL"
 
-var getSeverity = sync.OnceValue(func() api.Severity {
-	conv := map[string]api.Severity{
-		"":      api.SeverityInfo, // Default to SeverityInfo for unset.
-		"debug": api.SeverityDebug,
-		"info":  api.SeverityInfo,
-		"warn":  api.SeverityWarn,
-		"error": api.SeverityError,
+var getSeverity = sync.OnceValue(func() log.Severity {
+	conv := map[string]log.Severity{
+		"":      log.SeverityInfo, // Default to SeverityInfo for unset.
+		"debug": log.SeverityDebug,
+		"info":  log.SeverityInfo,
+		"warn":  log.SeverityWarn,
+		"error": log.SeverityError,
 	}
 	// log.SeverityUnknown for unknown values.
 	return conv[strings.ToLower(os.Getenv(key))]
@@ -30,7 +29,7 @@ var getSeverity = sync.OnceValue(func() api.Severity {
 
 type EnvSeverity struct{}
 
-func (EnvSeverity) Severity() api.Severity { return getSeverity() }
+func (EnvSeverity) Severity() log.Severity { return getSeverity() }
 
 func ExampleSeveritier() {
 	// Mock an environment variable setup that would be done externally.
@@ -38,12 +37,12 @@ func ExampleSeveritier() {
 
 	p := NewLogProcessor(&processor{}, EnvSeverity{})
 
-	ctx, r := context.Background(), log.Record{}
-	r.SetSeverity(api.SeverityDebug)
-	fmt.Println(p.Enabled(ctx, r))
+	ctx, params := context.Background(), log.EnabledParameters{}
+	params.SetSeverity(log.SeverityDebug)
+	fmt.Println(p.Enabled(ctx, params))
 
-	r.SetSeverity(api.SeverityError)
-	fmt.Println(p.Enabled(ctx, r))
+	params.SetSeverity(log.SeverityError)
+	fmt.Println(p.Enabled(ctx, params))
 
 	// Output:
 	// false

@@ -8,6 +8,7 @@ package minsev // import "go.opentelemetry.io/contrib/processors/minsev"
 import (
 	"context"
 
+	api "go.opentelemetry.io/otel/log"
 	"go.opentelemetry.io/otel/sdk/log"
 )
 
@@ -39,7 +40,7 @@ func NewLogProcessor(downstream log.Processor, severity Severitier) *LogProcesso
 // filterProcessor is the experimental optional interface a Processor can
 // implement (go.opentelemetry.io/otel/sdk/log/internal/x).
 type filterProcessor interface {
-	Enabled(ctx context.Context, record log.Record) bool
+	Enabled(ctx context.Context, param api.EnabledParameters) bool
 }
 
 // LogProcessor is an [log.Processor] implementation that wraps another
@@ -71,21 +72,26 @@ func (p *LogProcessor) OnEmit(ctx context.Context, record *log.Record) error {
 }
 
 // Enabled returns if the [log.Processor] that p wraps is enabled if the
-// severity of record is greater than or equal to p.Minimum. Otherwise false is
+// severity of param is greater than or equal to p.Minimum. Otherwise false is
 // returned.
-func (p *LogProcessor) Enabled(ctx context.Context, record log.Record) bool {
-	if p.filter != nil {
-		return record.Severity() >= p.sev.Severity() &&
-			p.filter.Enabled(ctx, record)
+func (p *LogProcessor) Enabled(ctx context.Context, param api.EnabledParameters) bool {
+	sev, ok := param.Severity()
+	if !ok {
+		return true
 	}
-	return record.Severity() >= p.sev.Severity()
+
+	if p.filter != nil {
+		return sev >= p.sev.Severity() &&
+			p.filter.Enabled(ctx, param)
+	}
+	return sev >= p.sev.Severity()
 }
 
 var defaultProcessor = noopProcessor{}
 
 type noopProcessor struct{}
 
-func (p noopProcessor) OnEmit(context.Context, *log.Record) error { return nil }
-func (p noopProcessor) Enabled(context.Context, log.Record) bool  { return false }
-func (p noopProcessor) Shutdown(context.Context) error            { return nil }
-func (p noopProcessor) ForceFlush(context.Context) error          { return nil }
+func (p noopProcessor) OnEmit(context.Context, *log.Record) error           { return nil }
+func (p noopProcessor) Enabled(context.Context, api.EnabledParameters) bool { return false }
+func (p noopProcessor) Shutdown(context.Context) error                      { return nil }
+func (p noopProcessor) ForceFlush(context.Context) error                    { return nil }

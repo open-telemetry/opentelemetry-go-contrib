@@ -201,10 +201,10 @@ func (h *Handler) convertRecord(r slog.Record) log.Record {
 // Enable returns true if the Handler is enabled to log for the provided
 // context and Level. Otherwise, false is returned if it is not enabled.
 func (h *Handler) Enabled(ctx context.Context, l slog.Level) bool {
-	var record log.Record
+	var param log.EnabledParameters
 	const sevOffset = slog.Level(log.SeverityDebug) - slog.LevelDebug
-	record.SetSeverity(log.Severity(l + sevOffset))
-	return h.logger.Enabled(ctx, record)
+	param.SetSeverity(log.Severity(l + sevOffset))
+	return h.logger.Enabled(ctx, param)
 }
 
 // WithAttrs returns a new [slog.Handler] based on h that will log using the

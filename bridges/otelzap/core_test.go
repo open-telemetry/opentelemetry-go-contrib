@@ -135,8 +135,12 @@ func TestCore(t *testing.T) {
 }
 
 func TestCoreEnabled(t *testing.T) {
-	enabledFunc := func(c context.Context, r log.Record) bool {
-		return r.Severity() >= log.SeverityInfo
+	enabledFunc := func(c context.Context, param log.EnabledParameters) bool {
+		lvl, ok := param.Severity()
+		if !ok {
+			return true
+		}
+		return lvl >= log.SeverityInfo
 	}
 
 	r := logtest.NewRecorder(logtest.WithEnabledFunc(enabledFunc))
