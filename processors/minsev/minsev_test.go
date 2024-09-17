@@ -22,27 +22,32 @@ var severities = []api.Severity{
 	api.SeverityFatal, api.SeverityFatal1, api.SeverityFatal2, api.SeverityFatal3, api.SeverityFatal4,
 }
 
-type args struct {
+type emitArgs struct {
 	Ctx    context.Context
 	Record *log.Record
+}
+
+type enabledArgs struct {
+	Ctx   context.Context
+	Param api.EnabledParameters
 }
 
 type processor struct {
 	ReturnErr error
 
-	OnEmitCalls     []args
-	EnabledCalls    []args
+	OnEmitCalls     []emitArgs
+	EnabledCalls    []enabledArgs
 	ForceFlushCalls []context.Context
 	ShutdownCalls   []context.Context
 }
 
 func (p *processor) OnEmit(ctx context.Context, r *log.Record) error {
-	p.OnEmitCalls = append(p.OnEmitCalls, args{ctx, r})
+	p.OnEmitCalls = append(p.OnEmitCalls, emitArgs{ctx, r})
 	return p.ReturnErr
 }
 
-func (p *processor) Enabled(ctx context.Context, r log.Record) bool {
-	p.EnabledCalls = append(p.EnabledCalls, args{ctx, &r})
+func (p *processor) Enabled(ctx context.Context, param api.EnabledParameters) bool {
+	p.EnabledCalls = append(p.EnabledCalls, enabledArgs{ctx, param})
 	return true
 }
 
@@ -105,14 +110,14 @@ func TestLogProcessorEnabled(t *testing.T) {
 
 		p := NewLogProcessor(wrapped, api.SeverityTrace1)
 		ctx := context.Background()
-		r := &log.Record{}
+		param := api.EnabledParameters{}
 		for _, sev := range severities {
-			r.SetSeverity(sev)
-			assert.True(t, p.Enabled(ctx, *r), sev.String())
+			param.SetSeverity(sev)
+			assert.True(t, p.Enabled(ctx, param), sev.String())
 
 			if assert.Lenf(t, wrapped.EnabledCalls, 1, "Record with severity %s not passed-through", sev) {
 				assert.Equal(t, ctx, wrapped.EnabledCalls[0].Ctx, sev.String())
-				assert.Equal(t, r, wrapped.EnabledCalls[0].Record, sev.String())
+				assert.Equal(t, param, wrapped.EnabledCalls[0].Param, sev.String())
 			}
 			wrapped.Reset()
 		}
@@ -123,10 +128,10 @@ func TestLogProcessorEnabled(t *testing.T) {
 
 		p := NewLogProcessor(wrapped, api.SeverityFatal4+1)
 		ctx := context.Background()
-		r := &log.Record{}
+		param := api.EnabledParameters{}
 		for _, sev := range severities {
-			r.SetSeverity(sev)
-			assert.False(t, p.Enabled(ctx, *r), sev.String())
+			param.SetSeverity(sev)
+			assert.False(t, p.Enabled(ctx, param), sev.String())
 
 			if !assert.Lenf(t, wrapped.EnabledCalls, 0, "Record with severity %s passed-through", sev) {
 				wrapped.Reset()
@@ -158,9 +163,11 @@ func TestLogProcessorNilDownstream(t *testing.T) {
 	ctx := context.Background()
 	r := new(log.Record)
 	r.SetSeverity(api.SeverityTrace1)
+	param := api.EnabledParameters{}
+	param.SetSeverity(api.SeverityTrace1)
 	assert.NotPanics(t, func() {
 		assert.NoError(t, p.OnEmit(ctx, r))
-		assert.False(t, p.Enabled(ctx, *r))
+		assert.False(t, p.Enabled(ctx, param))
 		assert.NoError(t, p.ForceFlush(ctx))
 		assert.NoError(t, p.Shutdown(ctx))
 	})
@@ -169,6 +176,8 @@ func TestLogProcessorNilDownstream(t *testing.T) {
 func BenchmarkLogProcessor(b *testing.B) {
 	r := new(log.Record)
 	r.SetSeverity(api.SeverityTrace)
+	param := api.EnabledParameters{}
+	param.SetSeverity(api.SeverityTrace)
 	ctx := context.Background()
 
 	type combo interface {
@@ -182,7 +191,7 @@ func BenchmarkLogProcessor(b *testing.B) {
 			var enabled bool
 			b.ReportAllocs()
 			for n := 0; n < b.N; n++ {
-				enabled = p.Enabled(ctx, *r)
+				enabled = p.Enabled(ctx, param)
 				err = p.OnEmit(ctx, r)
 			}
 
