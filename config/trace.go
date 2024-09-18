@@ -52,14 +52,14 @@ func spanExporter(ctx context.Context, exporter SpanExporter) (sdktrace.SpanExpo
 			stdouttrace.WithPrettyPrint(),
 		)
 	}
-	if exporter.OTLP != nil {
-		switch exporter.OTLP.Protocol {
+	if exporter.OTLP != nil && exporter.OTLP.Protocol != nil {
+		switch *exporter.OTLP.Protocol {
 		case protocolProtobufHTTP:
 			return otlpHTTPSpanExporter(ctx, exporter.OTLP)
 		case protocolProtobufGRPC:
 			return otlpGRPCSpanExporter(ctx, exporter.OTLP)
 		default:
-			return nil, fmt.Errorf("unsupported protocol %q", exporter.OTLP.Protocol)
+			return nil, fmt.Errorf("unsupported protocol %q", *exporter.OTLP.Protocol)
 		}
 	}
 	return nil, errors.New("no valid span exporter")
@@ -89,8 +89,8 @@ func spanProcessor(ctx context.Context, processor SpanProcessor) (sdktrace.SpanP
 func otlpGRPCSpanExporter(ctx context.Context, otlpConfig *OTLP) (sdktrace.SpanExporter, error) {
 	var opts []otlptracegrpc.Option
 
-	if len(otlpConfig.Endpoint) > 0 {
-		u, err := url.ParseRequestURI(otlpConfig.Endpoint)
+	if otlpConfig.Endpoint != nil {
+		u, err := url.ParseRequestURI(*otlpConfig.Endpoint)
 		if err != nil {
 			return nil, err
 		}
@@ -102,7 +102,7 @@ func otlpGRPCSpanExporter(ctx context.Context, otlpConfig *OTLP) (sdktrace.SpanE
 		if u.Host != "" {
 			opts = append(opts, otlptracegrpc.WithEndpoint(u.Host))
 		} else {
-			opts = append(opts, otlptracegrpc.WithEndpoint(otlpConfig.Endpoint))
+			opts = append(opts, otlptracegrpc.WithEndpoint(*otlpConfig.Endpoint))
 		}
 
 		if u.Scheme == "http" {
@@ -133,8 +133,8 @@ func otlpGRPCSpanExporter(ctx context.Context, otlpConfig *OTLP) (sdktrace.SpanE
 func otlpHTTPSpanExporter(ctx context.Context, otlpConfig *OTLP) (sdktrace.SpanExporter, error) {
 	var opts []otlptracehttp.Option
 
-	if len(otlpConfig.Endpoint) > 0 {
-		u, err := url.ParseRequestURI(otlpConfig.Endpoint)
+	if otlpConfig.Endpoint != nil {
+		u, err := url.ParseRequestURI(*otlpConfig.Endpoint)
 		if err != nil {
 			return nil, err
 		}
