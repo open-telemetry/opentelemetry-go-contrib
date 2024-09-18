@@ -13,8 +13,8 @@ github.com/stretchr/testify v1.9.0 h1:HtqpIVDClZ4nwg75+f6Lvsy/wHu+3BoSGCbBAcpTsT
 github.com/stretchr/testify v1.9.0/go.mod h1:r2ic/lqez/lEtzL7wO/rwa5dbSLXVDPFyf8C91i36aY=
 go.opentelemetry.io/otel v1.30.0 h1:F2t8sK4qf1fAmY9ua4ohFS/K+FUuOPemHUIXHtktrts=
 go.opentelemetry.io/otel v1.30.0/go.mod h1:tFw4Br9b7fOS+uEao81PJjVMjW/5fvNCbpsDIXqP0pc=
-go.opentelemetry.io/otel/log v0.6.1-0.20240917111249-534ce5ab0991 h1:XHrQ0qdcgVduI31C+Yd/r3xEOQbktWdw2hBXLd2aZLs=
-go.opentelemetry.io/otel/log v0.6.1-0.20240917111249-534ce5ab0991/go.mod h1:KdySypjQHhP069JX0z/t26VHwa8vSwzgaKmXtIB3fJM=
+go.opentelemetry.io/otel/log v0.6.1-0.20240918061713-7bd1c85f9905 h1:w5NKAj+i6l2LP7b6h2iHIWFeSk3NuC4Z1jOp1KClzQw=
+go.opentelemetry.io/otel/log v0.6.1-0.20240918061713-7bd1c85f9905/go.mod h1:KdySypjQHhP069JX0z/t26VHwa8vSwzgaKmXtIB3fJM=
 go.opentelemetry.io/otel/metric v1.30.0 h1:4xNulvn9gjzo4hjg+wzIKG7iNFEaBMX00Qd4QIZs7+w=
 go.opentelemetry.io/otel/metric v1.30.0/go.mod h1:aXTfST94tswhWEb+5QjlSqG+cZlmyXy/u8jFpor3WqQ=
 go.opentelemetry.io/otel/trace v1.30.0 h1:7UBkkYzeg3C7kQX8VAidWh2biiQbtAKjyIML8dQ9wmc=
