@@ -97,7 +97,7 @@ func TestLogProcessorOnEmit(t *testing.T) {
 			r.SetSeverity(sev)
 			assert.NoError(t, p.OnEmit(ctx, r), assert.AnError, sev.String())
 
-			if !assert.Lenf(t, wrapped.OnEmitCalls, 0, "Record with severity %s passed-through", sev) {
+			if !assert.Emptyf(t, wrapped.OnEmitCalls, "Record with severity %s passed-through", sev) {
 				wrapped.Reset()
 			}
 		}
@@ -133,7 +133,7 @@ func TestLogProcessorEnabled(t *testing.T) {
 			param.SetSeverity(sev)
 			assert.False(t, p.Enabled(ctx, param), sev.String())
 
-			if !assert.Lenf(t, wrapped.EnabledCalls, 0, "Record with severity %s passed-through", sev) {
+			if !assert.Emptyf(t, wrapped.EnabledCalls, "Record with severity %s passed-through", sev) {
 				wrapped.Reset()
 			}
 		}

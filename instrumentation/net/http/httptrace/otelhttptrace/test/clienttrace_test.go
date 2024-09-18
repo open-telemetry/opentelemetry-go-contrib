@@ -263,7 +263,7 @@ func TestEndBeforeStartWithoutSubSpansDoesNotPanic(t *testing.T) {
 
 	// no spans created because we were just using background context without span
 	// and Start wasn't called which would have started a span
-	require.Len(t, sr.Ended(), 0)
+	require.Empty(t, sr.Ended())
 }
 
 type clientTraceTestFixture struct {
@@ -306,7 +306,7 @@ func TestWithoutSubSpans(t *testing.T) {
 	require.NoError(t, err)
 	require.NoError(t, resp.Body.Close())
 	// no spans created because we were just using background context without span
-	require.Len(t, fixture.SpanRecorder.Ended(), 0)
+	require.Empty(t, fixture.SpanRecorder.Ended())
 
 	// Start again with a "real" span in the context, now tracing should add
 	// events and annotations.
@@ -443,7 +443,7 @@ func TestWithoutHeaders(t *testing.T) {
 	recSpan := fixture.SpanRecorder.Ended()[0]
 
 	gotAttributes := recSpan.Attributes()
-	require.Len(t, gotAttributes, 0)
+	require.Empty(t, gotAttributes)
 }
 
 func TestWithInsecureHeaders(t *testing.T) {

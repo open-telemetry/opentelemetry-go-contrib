@@ -26,6 +26,7 @@ linters:
     - revive
     - staticcheck
     - tenv
+    - testifylint
     - typecheck
     - unconvert
     - unparam
@@ -243,3 +244,16 @@ linters-settings:
       # https://github.com/mgechev/revive/blob/master/RULES_DESCRIPTIONS.md#waitgroup-by-value
       - name: waitgroup-by-value
         disabled: false
+  testifylint:
+    enable-all: true
+    disable:
+      - compares
+      - error-is-as
+      - error-nil
+      - expected-actual
+      - float-compare
+      - formatter
+      - go-require
+      - negative-positive
+      - nil-compare
+      - require-error

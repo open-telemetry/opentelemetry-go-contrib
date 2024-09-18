@@ -268,7 +268,7 @@ func TestWithFilter(t *testing.T) {
 		w := httptest.NewRecorder()
 
 		router.ServeHTTP(w, r)
-		assert.Len(t, sr.Ended(), 0)
+		assert.Empty(t, sr.Ended())
 	})
 
 	t.Run("custom filter not filtering route", func(t *testing.T) {
@@ -302,7 +302,7 @@ func TestWithGinFilter(t *testing.T) {
 		w := httptest.NewRecorder()
 
 		router.ServeHTTP(w, r)
-		assert.Len(t, sr.Ended(), 0)
+		assert.Empty(t, sr.Ended())
 	})
 
 	t.Run("custom filter not filtering route", func(t *testing.T) {
