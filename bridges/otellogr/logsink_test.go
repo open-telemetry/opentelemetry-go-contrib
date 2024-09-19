@@ -69,7 +69,7 @@ func TestNewConfig(t *testing.T) {
 }
 
 func TestNewLogSink(t *testing.T) {
-	const name = "test_logsink"
+	const name = "name"
 
 	for _, tt := range []struct {
 		name             string
@@ -219,7 +219,7 @@ func TestLogSink(t *testing.T) {
 	} {
 		t.Run(tt.name, func(t *testing.T) {
 			rec := logtest.NewRecorder()
-			ls := NewLogSink("name", WithLoggerProvider(rec))
+			ls := NewLogSink(name, WithLoggerProvider(rec))
 			l := logr.New(ls)
 			tt.f(&l)
 
