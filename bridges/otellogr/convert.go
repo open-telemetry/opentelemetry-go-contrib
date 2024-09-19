@@ -30,7 +30,7 @@ func convertKVs(ctx context.Context, keysAndValues ...any) (context.Context, []l
 	for i := 0; i < len(keysAndValues); i += 2 {
 		k, ok := keysAndValues[i].(string)
 		if !ok {
-			// Ensure that the key is a string
+			// Ensure that the key is a string.
 			k = fmt.Sprintf("%v", keysAndValues[i])
 		}
 
