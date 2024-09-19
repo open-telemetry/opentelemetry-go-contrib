@@ -9,23 +9,13 @@
 // The logr records are converted to OpenTelemetry [log.Record] in the following
 // way:
 //
-//   - Time is set as the current time of conversion.
 //   - Message is set as the Body using a [log.StringValue].
-//   - Level is transformed and set as the Severity. The SeverityText is not
-//     set.
+//   - TODO: Level
 //   - KeyAndValues are transformed and set as Attributes.
-//   - Name is logged as an additional attribute with the key "logger".
 //   - The [context.Context] value in KeyAndValues is propagated to OpenTelemetry
 //     log record. All non-nested [context.Context] values are ignored and not
 //     added as attributes. If there are multiple [context.Context] the last one
 //     is used.
-//
-// The Level is transformed by using the [WithLevels] option. If the option is
-// not provided, all logr levels will be mapped to [log.SeverityInfo].
-// The levels are mapped in order, with the first level in the list corresponding
-// to the logr level 0, the second level corresponding to logr level 1, and so on.
-// If the logr level is greater than the number of levels provided, it will be
-// mapped to [log.SeverityInfo].
 //
 // KeysAndValues values are transformed based on their type. The following types are
 // supported:
@@ -66,7 +56,6 @@ type config struct {
 	provider  log.LoggerProvider
 	version   string
 	schemaURL string
-	levels    []log.Severity
 }
 
 func newConfig(options []Option) config {
@@ -92,7 +81,7 @@ type optFunc func(config) config
 func (f optFunc) apply(c config) config { return f(c) }
 
 // WithVersion returns an [Option] that configures the version of the
-// [log.Logger] used by a [Hook]. The version should be the version of the
+// [log.Logger] used by a [LogSink]. The version should be the version of the
 // package that is being logged.
 func WithVersion(version string) Option {
 	return optFunc(func(c config) config {
@@ -102,7 +91,7 @@ func WithVersion(version string) Option {
 }
 
 // WithSchemaURL returns an [Option] that configures the semantic convention
-// schema URL of the [log.Logger] used by a [Hook]. The schemaURL should be
+// schema URL of the [log.Logger] used by a [LogSink]. The schemaURL should be
 // the schema URL for the semantic conventions used in log records.
 func WithSchemaURL(schemaURL string) Option {
 	return optFunc(func(c config) config {
@@ -123,24 +112,9 @@ func WithLoggerProvider(provider log.LoggerProvider) Option {
 	})
 }
 
-// WithLevels returns an [Option] that configures the mapping of logr levels to
-// OpenTelemetry log levels. The levels are mapped in order, with the first
-// level in the list corresponding to the logr level 0, the second level
-// corresponding to logr level 1, and so on.
-//
-// By default if this Option is not provided, all logr levels will be mapped to
-// Info level in OpenTelemetry.
-// LoggerProvider.
-func WithLevels(l []log.Severity) Option {
-	return optFunc(func(c config) config {
-		c.levels = l
-		return c
-	})
-}
-
 // NewLogSink returns a new [LogSink] to be used as a [logr.LogSink].
 //
-// If [WithLoggerProvider] is not provided, the returned LogSink will use the
+// If [WithLoggerProvider] is not provided, the returned [LogSink] will use the
 // global LoggerProvider.
 func NewLogSink(name string, options ...Option) *LogSink {
 	c := newConfig(options)
@@ -158,7 +132,6 @@ func NewLogSink(name string, options ...Option) *LogSink {
 		provider: c.provider,
 		logger:   c.provider.Logger(name, opts...),
 		opts:     opts,
-		levels:   c.levels,
 	}
 }
 
@@ -172,7 +145,6 @@ type LogSink struct {
 	provider log.LoggerProvider
 	logger   log.Logger
 	opts     []log.LoggerOption
-	levels   []log.Severity
 	attr     []log.KeyValue
 	ctx      context.Context
 }
@@ -184,9 +156,8 @@ var _ logr.LogSink = (*LogSink)(nil)
 // For example, commandline flags might be used to set the logging
 // verbosity and disable some info logs.
 func (l *LogSink) Enabled(level int) bool {
-	var record log.Record
-	record.SetSeverity(l.convertLevel(level))
-	return l.logger.Enabled(context.Background(), record)
+	// TODO
+	return true
 }
 
 // Error logs an error, with the given message and key/value pairs.
@@ -198,7 +169,7 @@ func (l *LogSink) Error(err error, msg string, keysAndValues ...any) {
 func (l *LogSink) Info(level int, msg string, keysAndValues ...any) {
 	var record log.Record
 	record.SetBody(log.StringValue(msg))
-	record.SetSeverity(l.convertLevel(level))
+	record.SetSeverity(log.SeverityInfo) // TODO: level
 
 	record.AddAttributes(l.attr...)
 
@@ -215,7 +186,8 @@ func (l *LogSink) Init(info logr.RuntimeInfo) {
 
 // WithName returns a new LogSink with the specified name appended.
 func (l LogSink) WithName(name string) logr.LogSink {
-	l.logger = l.provider.Logger(l.name+"/"+name, l.opts...)
+	l.name = l.name + "/" + name
+	l.logger = l.provider.Logger(l.name, l.opts...)
 	return &l
 }
 
@@ -225,12 +197,4 @@ func (l LogSink) WithValues(keysAndValues ...any) logr.LogSink {
 	l.attr = append(l.attr, attr...)
 	l.ctx = ctx
 	return &l
-}
-
-func (l *LogSink) convertLevel(level int) log.Severity {
-	if len(l.levels) <= level {
-		return log.SeverityInfo
-	}
-
-	return l.levels[level]
 }
