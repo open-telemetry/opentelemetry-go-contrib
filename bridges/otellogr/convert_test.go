@@ -80,8 +80,6 @@ func TestConvertKVs(t *testing.T) {
 }
 
 func TestConvertValue(t *testing.T) {
-	now := time.Now()
-
 	for _, tt := range []struct {
 		name      string
 		value     any
@@ -179,8 +177,8 @@ func TestConvertValue(t *testing.T) {
 		},
 		{
 			name:      "time.Time",
-			value:     now,
-			wantValue: log.Int64Value(now.UnixNano()),
+			value:     time.Unix(1000, 1000),
+			wantValue: log.Int64Value(time.Unix(1000, 1000).UnixNano()),
 		},
 		{
 			name:      "[]byte",

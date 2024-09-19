@@ -114,7 +114,6 @@ func TestNewLogSink(t *testing.T) {
 
 func TestLogSink(t *testing.T) {
 	const name = "name"
-	now := time.Now()
 
 	for _, tt := range []struct {
 		name        string
@@ -149,7 +148,7 @@ func TestLogSink(t *testing.T) {
 					"float64", 3.14159,
 					"int64", -2,
 					"string", "str",
-					"time", now,
+					"time", time.Unix(1000, 1000),
 					"uint64", uint64(3),
 				)
 			},
@@ -162,7 +161,7 @@ func TestLogSink(t *testing.T) {
 						log.Float64("float64", 3.14159),
 						log.Int64("int64", -2),
 						log.String("string", "str"),
-						log.Int64("time", now.UnixNano()),
+						log.Int64("time", time.Unix(1000, 1000).UnixNano()),
 						log.Int64("uint64", 3),
 					}),
 				},
