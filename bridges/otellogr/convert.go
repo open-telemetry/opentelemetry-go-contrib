@@ -119,11 +119,11 @@ func convertValue(v any) log.Value {
 		kvs := make([]log.KeyValue, 0, val.Len())
 		for _, k := range val.MapKeys() {
 			var key string
-			// If the key is a struct, use %+v to print the struct fields.
-			if k.Kind() == reflect.Struct {
+			switch k.Kind() {
+			case reflect.String:
+				key = k.String()
+			default:
 				key = fmt.Sprintf("%+v", k.Interface())
-			} else {
-				key = fmt.Sprintf("%v", k.Interface())
 			}
 			kvs = append(kvs, log.KeyValue{
 				Key:   key,
