@@ -22,7 +22,7 @@ func convertKVs(ctx context.Context, keysAndValues ...any) (context.Context, []l
 		return ctx, nil
 	}
 	if len(keysAndValues)%2 != 0 {
-		// Ensure an odd number of items here does not corrupt the list
+		// Ensure an odd number of items here does not corrupt the list.
 		keysAndValues = append(keysAndValues, nil)
 	}
 
