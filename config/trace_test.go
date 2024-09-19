@@ -229,8 +229,8 @@ func TestSpanProcessor(t *testing.T) {
 							Protocol:    ptr("grpc/protobuf"),
 							Compression: ptr("gzip"),
 							Timeout:     ptr(1000),
-							Headers: map[string]string{
-								"test": "test1",
+							Headers: []NameStringValuePair{
+								{Name: "test", Value: ptr("test1")},
 							},
 						},
 					},
@@ -252,8 +252,8 @@ func TestSpanProcessor(t *testing.T) {
 							Endpoint:    ptr("http://localhost:4317"),
 							Compression: ptr("gzip"),
 							Timeout:     ptr(1000),
-							Headers: map[string]string{
-								"test": "test1",
+							Headers: []NameStringValuePair{
+								{Name: "test", Value: ptr("test1")},
 							},
 						},
 					},
@@ -275,8 +275,8 @@ func TestSpanProcessor(t *testing.T) {
 							Endpoint:    ptr("localhost:4317"),
 							Compression: ptr("gzip"),
 							Timeout:     ptr(1000),
-							Headers: map[string]string{
-								"test": "test1",
+							Headers: []NameStringValuePair{
+								{Name: "test", Value: ptr("test1")},
 							},
 						},
 					},
@@ -298,8 +298,8 @@ func TestSpanProcessor(t *testing.T) {
 							Endpoint:    ptr(" "),
 							Compression: ptr("gzip"),
 							Timeout:     ptr(1000),
-							Headers: map[string]string{
-								"test": "test1",
+							Headers: []NameStringValuePair{
+								{Name: "test", Value: ptr("test1")},
 							},
 						},
 					},
@@ -321,8 +321,8 @@ func TestSpanProcessor(t *testing.T) {
 							Endpoint:    ptr("localhost:4317"),
 							Compression: ptr("invalid"),
 							Timeout:     ptr(1000),
-							Headers: map[string]string{
-								"test": "test1",
+							Headers: []NameStringValuePair{
+								{Name: "test", Value: ptr("test1")},
 							},
 						},
 					},
@@ -344,8 +344,8 @@ func TestSpanProcessor(t *testing.T) {
 							Endpoint:    ptr("http://localhost:4318"),
 							Compression: ptr("gzip"),
 							Timeout:     ptr(1000),
-							Headers: map[string]string{
-								"test": "test1",
+							Headers: []NameStringValuePair{
+								{Name: "test", Value: ptr("test1")},
 							},
 						},
 					},
@@ -367,8 +367,8 @@ func TestSpanProcessor(t *testing.T) {
 							Endpoint:    ptr("http://localhost:4318/path/123"),
 							Compression: ptr("none"),
 							Timeout:     ptr(1000),
-							Headers: map[string]string{
-								"test": "test1",
+							Headers: []NameStringValuePair{
+								{Name: "test", Value: ptr("test1")},
 							},
 						},
 					},
@@ -389,8 +389,8 @@ func TestSpanProcessor(t *testing.T) {
 							Protocol:    ptr("http/protobuf"),
 							Compression: ptr("gzip"),
 							Timeout:     ptr(1000),
-							Headers: map[string]string{
-								"test": "test1",
+							Headers: []NameStringValuePair{
+								{Name: "test", Value: ptr("test1")},
 							},
 						},
 					},
@@ -412,8 +412,8 @@ func TestSpanProcessor(t *testing.T) {
 							Endpoint:    ptr("localhost:4318"),
 							Compression: ptr("gzip"),
 							Timeout:     ptr(1000),
-							Headers: map[string]string{
-								"test": "test1",
+							Headers: []NameStringValuePair{
+								{Name: "test", Value: ptr("test1")},
 							},
 						},
 					},
@@ -435,8 +435,8 @@ func TestSpanProcessor(t *testing.T) {
 							Endpoint:    ptr(" "),
 							Compression: ptr("gzip"),
 							Timeout:     ptr(1000),
-							Headers: map[string]string{
-								"test": "test1",
+							Headers: []NameStringValuePair{
+								{Name: "test", Value: ptr("test1")},
 							},
 						},
 					},
@@ -458,8 +458,8 @@ func TestSpanProcessor(t *testing.T) {
 							Endpoint:    ptr("localhost:4318"),
 							Compression: ptr("none"),
 							Timeout:     ptr(1000),
-							Headers: map[string]string{
-								"test": "test1",
+							Headers: []NameStringValuePair{
+								{Name: "test", Value: ptr("test1")},
 							},
 						},
 					},
@@ -481,8 +481,8 @@ func TestSpanProcessor(t *testing.T) {
 							Endpoint:    ptr("localhost:4318"),
 							Compression: ptr("invalid"),
 							Timeout:     ptr(1000),
-							Headers: map[string]string{
-								"test": "test1",
+							Headers: []NameStringValuePair{
+								{Name: "test", Value: ptr("test1")},
 							},
 						},
 					},

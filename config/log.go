@@ -148,7 +148,7 @@ func otlpHTTPLogExporter(ctx context.Context, otlpConfig *OTLP) (sdklog.Exporter
 		opts = append(opts, otlploghttp.WithTimeout(time.Millisecond*time.Duration(*otlpConfig.Timeout)))
 	}
 	if len(otlpConfig.Headers) > 0 {
-		opts = append(opts, otlploghttp.WithHeaders(otlpConfig.Headers))
+		opts = append(opts, otlploghttp.WithHeaders(toStringMap(otlpConfig.Headers)))
 	}
 
 	return otlploghttp.New(ctx, opts...)

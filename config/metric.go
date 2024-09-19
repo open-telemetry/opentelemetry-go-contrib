@@ -166,7 +166,7 @@ func otlpHTTPMetricExporter(ctx context.Context, otlpConfig *OTLPMetric) (sdkmet
 		opts = append(opts, otlpmetrichttp.WithTimeout(time.Millisecond*time.Duration(*otlpConfig.Timeout)))
 	}
 	if len(otlpConfig.Headers) > 0 {
-		opts = append(opts, otlpmetrichttp.WithHeaders(otlpConfig.Headers))
+		opts = append(opts, otlpmetrichttp.WithHeaders(toStringMap(otlpConfig.Headers)))
 	}
 	if otlpConfig.TemporalityPreference != nil {
 		switch *otlpConfig.TemporalityPreference {
@@ -221,7 +221,7 @@ func otlpGRPCMetricExporter(ctx context.Context, otlpConfig *OTLPMetric) (sdkmet
 		opts = append(opts, otlpmetricgrpc.WithTimeout(time.Millisecond*time.Duration(*otlpConfig.Timeout)))
 	}
 	if len(otlpConfig.Headers) > 0 {
-		opts = append(opts, otlpmetricgrpc.WithHeaders(otlpConfig.Headers))
+		opts = append(opts, otlpmetricgrpc.WithHeaders(toStringMap(otlpConfig.Headers)))
 	}
 	if otlpConfig.TemporalityPreference != nil {
 		switch *otlpConfig.TemporalityPreference {

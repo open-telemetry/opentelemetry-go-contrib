@@ -124,7 +124,7 @@ func otlpGRPCSpanExporter(ctx context.Context, otlpConfig *OTLP) (sdktrace.SpanE
 		opts = append(opts, otlptracegrpc.WithTimeout(time.Millisecond*time.Duration(*otlpConfig.Timeout)))
 	}
 	if len(otlpConfig.Headers) > 0 {
-		opts = append(opts, otlptracegrpc.WithHeaders(otlpConfig.Headers))
+		opts = append(opts, otlptracegrpc.WithHeaders(toStringMap(otlpConfig.Headers)))
 	}
 
 	return otlptracegrpc.New(ctx, opts...)
@@ -161,7 +161,7 @@ func otlpHTTPSpanExporter(ctx context.Context, otlpConfig *OTLP) (sdktrace.SpanE
 		opts = append(opts, otlptracehttp.WithTimeout(time.Millisecond*time.Duration(*otlpConfig.Timeout)))
 	}
 	if len(otlpConfig.Headers) > 0 {
-		opts = append(opts, otlptracehttp.WithHeaders(otlpConfig.Headers))
+		opts = append(opts, otlptracehttp.WithHeaders(toStringMap(otlpConfig.Headers)))
 	}
 
 	return otlptracehttp.New(ctx, opts...)
