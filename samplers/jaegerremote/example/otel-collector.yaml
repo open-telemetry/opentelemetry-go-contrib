@@ -8,10 +8,10 @@ receivers:
       strategy_file: "/etc/strategies.json"
 
 exporters:
-  logging:
+  debug:
 
 service:
   pipelines:
     traces:
       receivers: [ jaeger ]
-      exporters: [ logging ]
+      exporters: [ debug ]
