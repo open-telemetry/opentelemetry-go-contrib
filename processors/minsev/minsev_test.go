@@ -182,7 +182,7 @@ func TestLogProcessorEnabled(t *testing.T) {
 		params.SetSeverity(api.SeverityError)
 		assert.True(t, p.Enabled(ctx, *params))
 
-		assert.Len(t, wrapped.EnabledCalls, 0)
+		assert.Empty(t, wrapped.EnabledCalls)
 	})
 }
 
