@@ -89,5 +89,5 @@ func TestBucketZeroCapacity(t *testing.T) {
 	assert.Equal(t, 0, bkt.len())
 	bkt.add(&testSpan{endTime: time.Unix(1, 0)})
 	assert.Equal(t, 0, bkt.len())
-	assert.Len(t, bkt.spans(), 0)
+	assert.Empty(t, bkt.spans())
 }

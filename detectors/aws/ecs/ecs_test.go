@@ -187,7 +187,7 @@ func TestDetectCannotReadContainerName(t *testing.T) {
 	res, err := detector.Detect(context.Background())
 
 	assert.Equal(t, errCannotReadContainerName, err)
-	assert.Equal(t, 0, len(res.Attributes()))
+	assert.Empty(t, res.Attributes())
 }
 
 // returns empty resource when process is not running ECS.
