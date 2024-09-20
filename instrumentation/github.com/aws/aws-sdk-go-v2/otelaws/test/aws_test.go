@@ -126,7 +126,7 @@ func TestAppendMiddlewares(t *testing.T) {
 			if c.expectedError == codes.Unset {
 				assert.NoError(t, err)
 			} else {
-				assert.NotNil(t, err)
+				assert.Error(t, err)
 			}
 
 			spans := sr.Ended()

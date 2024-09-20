@@ -211,7 +211,7 @@ func TestMatchAgainstManifestRulesAttributeWildCardMatch(t *testing.T) {
 	require.NoError(t, err)
 
 	// assert that manifest rule r1 is a match
-	assert.Nil(t, err)
+	assert.NoError(t, err)
 	assert.Equal(t, *exp, r1)
 }
 
