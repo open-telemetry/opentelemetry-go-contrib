@@ -476,7 +476,7 @@ func TestRefreshManifestMissingRuleName(t *testing.T) {
 	require.NoError(t, err)
 
 	// assert on rule not added
-	require.Len(t, m.Rules, 0)
+	require.Empty(t, m.Rules)
 }
 
 // assert that rule with version greater than one does not update to the manifest.
@@ -520,7 +520,7 @@ func TestRefreshManifestIncorrectVersion(t *testing.T) {
 	require.NoError(t, err)
 
 	// assert on rule not added
-	require.Len(t, m.Rules, 0)
+	require.Empty(t, m.Rules)
 }
 
 // assert that 1 valid and 1 invalid rule update only valid rule gets stored to the manifest.

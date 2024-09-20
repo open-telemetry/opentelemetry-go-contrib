@@ -115,25 +115,25 @@ func TestStatsHandler(t *testing.T) {
 				})
 			} else {
 				t.Run("ClientSpans", func(t *testing.T) {
-					require.Len(t, clientSR.Ended(), 0)
+					require.Empty(t, clientSR.Ended())
 				})
 
 				t.Run("ClientMetrics", func(t *testing.T) {
 					rm := metricdata.ResourceMetrics{}
 					err := clientMetricReader.Collect(context.Background(), &rm)
 					assert.NoError(t, err)
-					require.Len(t, rm.ScopeMetrics, 0)
+					require.Empty(t, rm.ScopeMetrics)
 				})
 
 				t.Run("ServerSpans", func(t *testing.T) {
-					require.Len(t, serverSR.Ended(), 0)
+					require.Empty(t, serverSR.Ended())
 				})
 
 				t.Run("ServerMetrics", func(t *testing.T) {
 					rm := metricdata.ResourceMetrics{}
 					err := serverMetricReader.Collect(context.Background(), &rm)
 					assert.NoError(t, err)
-					require.Len(t, rm.ScopeMetrics, 0)
+					require.Empty(t, rm.ScopeMetrics)
 				})
 			}
 		})
