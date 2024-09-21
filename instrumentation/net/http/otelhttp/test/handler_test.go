@@ -12,6 +12,7 @@ import (
 	"strconv"
 	"strings"
 	"testing"
+	"time"
 
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
@@ -72,6 +73,9 @@ func assertScopeMetrics(t *testing.T, sm metricdata.ScopeMetrics, attrs attribut
 		},
 	}
 	metricdatatest.AssertEqual(t, want, sm.Metrics[2], metricdatatest.IgnoreTimestamp(), metricdatatest.IgnoreValue())
+
+	// verify that the custom start time, which is 10 minutes in the past, is respected.
+	assert.Greater(t, sm.Metrics[2].Data.(metricdata.Histogram[float64]).DataPoints[0].Sum, float64(10*time.Minute/time.Millisecond))
 }
 
 func TestHandlerBasics(t *testing.T) {
@@ -101,6 +105,8 @@ func TestHandlerBasics(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
+	// set a custom start time 10 minutes in the past.
+	r = r.WithContext(otelhttp.ContextWithStartTime(r.Context(), time.Now().Add(-10*time.Minute)))
 	h.ServeHTTP(rr, r)
 
 	rm := metricdata.ResourceMetrics{}
