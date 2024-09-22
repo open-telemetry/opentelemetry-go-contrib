@@ -169,7 +169,7 @@ func TestDetectCannotReadContainerID(t *testing.T) {
 	detector := &resourceDetector{utils: detectorUtils}
 	res, err := detector.Detect(context.Background())
 
-	assert.Equal(t, nil, err)
+	assert.NoError(t, err)
 	assert.Equal(t, expectedResource, res, "Resource returned is incorrect")
 }
 
