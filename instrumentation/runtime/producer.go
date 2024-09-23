@@ -12,9 +12,9 @@ import (
 	"time"
 
 	"go.opentelemetry.io/otel/attribute"
-	"go.opentelemetry.io/otel/sdk/instrumentation"   //nolint:depguard // We rely on instrumentation.Scope.
-	"go.opentelemetry.io/otel/sdk/metric"            //nolint:depguard // We rely on metric.Producer.
-	"go.opentelemetry.io/otel/sdk/metric/metricdata" // nolint:depguard // We rely on metricdata.
+	"go.opentelemetry.io/otel/sdk/instrumentation"
+	"go.opentelemetry.io/otel/sdk/metric"
+	"go.opentelemetry.io/otel/sdk/metric/metricdata"
 )
 
 var startTime time.Time

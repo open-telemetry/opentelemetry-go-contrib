@@ -16,9 +16,9 @@ import (
 
 	"go.opentelemetry.io/otel"
 	"go.opentelemetry.io/otel/attribute"
-	"go.opentelemetry.io/otel/sdk/instrumentation"   //nolint:depguard
-	"go.opentelemetry.io/otel/sdk/metric"            //nolint:depguard
-	"go.opentelemetry.io/otel/sdk/metric/metricdata" //nolint:depguard
+	"go.opentelemetry.io/otel/sdk/instrumentation"
+	"go.opentelemetry.io/otel/sdk/metric"
+	"go.opentelemetry.io/otel/sdk/metric/metricdata"
 )
 
 const (

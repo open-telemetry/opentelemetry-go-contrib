@@ -5,7 +5,7 @@ package prometheus_test
 
 import (
 	"go.opentelemetry.io/contrib/bridges/prometheus"
-	"go.opentelemetry.io/otel/sdk/metric" //nolint:depguard
+	"go.opentelemetry.io/otel/sdk/metric"
 )
 
 func ExampleNewMetricProducer() {
