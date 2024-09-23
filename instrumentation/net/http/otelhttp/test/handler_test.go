@@ -106,7 +106,8 @@ func TestHandlerBasics(t *testing.T) {
 		t.Fatal(err)
 	}
 	// set a custom start time 10 minutes in the past.
-	r = r.WithContext(otelhttp.ContextWithStartTime(r.Context(), time.Now().Add(-10*time.Minute)))
+	startTime := time.Now().Add(-10 * time.Minute)
+	r = r.WithContext(otelhttp.ContextWithStartTime(r.Context(), startTime))
 	h.ServeHTTP(rr, r)
 
 	rm := metricdata.ResourceMetrics{}
@@ -143,6 +144,7 @@ func TestHandlerBasics(t *testing.T) {
 	if got, expected := string(d), "hello world"; got != expected {
 		t.Fatalf("got %q, expected %q", got, expected)
 	}
+	assert.Equal(t, startTime, spans[0].StartTime())
 }
 
 func TestHandlerEmittedAttributes(t *testing.T) {
