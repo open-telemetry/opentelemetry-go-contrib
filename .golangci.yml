@@ -79,7 +79,9 @@ linters-settings:
         files:
           - "**/*/instrumentation/**/*.go"
           - "!**/*test/*.go"
+          - "!**/*test/**/*.go"
           - "!**/*example/*.go"
+          - "!**/*example/**/*.go"
         deny:
           - pkg: go.opentelemetry.io/otel/sdk
             desc: "Instrumentations should not use the SDKs, except in test or example modules"
