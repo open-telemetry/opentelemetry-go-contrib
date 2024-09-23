@@ -27,5 +27,3 @@ func StartTimeFromContext(ctx context.Context) time.Time {
 	t, _ := ctx.Value(startTimeContextKey).(time.Time)
 	return t
 }
-
-var zeroTime time.Time
