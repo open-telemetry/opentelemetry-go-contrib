@@ -15,10 +15,10 @@ import (
 	"github.com/stretchr/testify/require"
 
 	"go.opentelemetry.io/otel/attribute"
-	"go.opentelemetry.io/otel/sdk/instrumentation"
-	"go.opentelemetry.io/otel/sdk/metric"
-	"go.opentelemetry.io/otel/sdk/metric/metricdata"
-	"go.opentelemetry.io/otel/sdk/metric/metricdata/metricdatatest"
+	"go.opentelemetry.io/otel/sdk/instrumentation"                  //nolint:depguard
+	"go.opentelemetry.io/otel/sdk/metric"                           //nolint:depguard
+	"go.opentelemetry.io/otel/sdk/metric/metricdata"                //nolint:depguard
+	"go.opentelemetry.io/otel/sdk/metric/metricdata/metricdatatest" //nolint:depguard
 )
 
 func TestRefreshGoCollector(t *testing.T) {
