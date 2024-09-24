@@ -28,7 +28,7 @@ import (
 	"go.opentelemetry.io/otel/sdk/resource"
 	sdktrace "go.opentelemetry.io/otel/sdk/trace"
 	"go.opentelemetry.io/otel/sdk/trace/tracetest"
-	semconv "go.opentelemetry.io/otel/semconv/v1.25.0"
+	semconv "go.opentelemetry.io/otel/semconv/v1.26.0"
 	"go.opentelemetry.io/otel/trace"
 )
 
@@ -143,7 +143,10 @@ var (
 			attribute.String("faas.version", "$LATEST"),
 			attribute.String("faas.instance", "2023/01/01/[$LATEST]5d1edb9e525d486696cf01a3503487bc"),
 			attribute.Int("faas.max_memory", 128)),
-		InstrumentationLibrary: instrumentation.Library{Name: "go.opentelemetry.io/contrib/instrumentation/github.com/aws/aws-lambda-go/otellambda", Version: otellambda.Version()},
+		InstrumentationScope: instrumentation.Scope{
+			Name:    "go.opentelemetry.io/contrib/instrumentation/github.com/aws/aws-lambda-go/otellambda",
+			Version: otellambda.Version(),
+		},
 	}
 )
 
@@ -161,7 +164,7 @@ func assertStubEqualsIgnoreTime(t *testing.T, expected tracetest.SpanStub, actua
 	assert.Equal(t, expected.DroppedLinks, actual.DroppedLinks)
 	assert.Equal(t, expected.ChildSpanCount, actual.ChildSpanCount)
 	assert.Equal(t, expected.Resource, actual.Resource)
-	assert.Equal(t, expected.InstrumentationLibrary, actual.InstrumentationLibrary)
+	assert.Equal(t, expected.InstrumentationScope, actual.InstrumentationScope)
 }
 
 func TestInstrumentHandlerTracing(t *testing.T) {
@@ -335,7 +338,10 @@ var (
 			attribute.String("faas.version", "$LATEST"),
 			attribute.String("faas.instance", "2023/01/01/[$LATEST]5d1edb9e525d486696cf01a3503487bc"),
 			attribute.Int("faas.max_memory", 128)),
-		InstrumentationLibrary: instrumentation.Library{Name: "go.opentelemetry.io/contrib/instrumentation/github.com/aws/aws-lambda-go/otellambda", Version: otellambda.Version()},
+		InstrumentationScope: instrumentation.Scope{
+			Name:    "go.opentelemetry.io/contrib/instrumentation/github.com/aws/aws-lambda-go/otellambda",
+			Version: otellambda.Version(),
+		},
 	}
 )
 

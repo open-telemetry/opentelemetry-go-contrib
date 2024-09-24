@@ -11,6 +11,7 @@ import (
 	"time"
 
 	"go.opentelemetry.io/otel/exporters/otlp/otlplog/otlploghttp"
+	"go.opentelemetry.io/otel/exporters/stdout/stdoutlog"
 	"go.opentelemetry.io/otel/log"
 	"go.opentelemetry.io/otel/log/noop"
 	sdklog "go.opentelemetry.io/otel/sdk/log"
@@ -64,6 +65,16 @@ func logProcessor(ctx context.Context, processor LogRecordProcessor) (sdklog.Pro
 }
 
 func logExporter(ctx context.Context, exporter LogRecordExporter) (sdklog.Exporter, error) {
+	if exporter.Console != nil && exporter.OTLP != nil {
+		return nil, errors.New("must not specify multiple exporters")
+	}
+
+	if exporter.Console != nil {
+		return stdoutlog.New(
+			stdoutlog.WithPrettyPrint(),
+		)
+	}
+
 	if exporter.OTLP != nil {
 		switch exporter.OTLP.Protocol {
 		case protocolProtobufHTTP:

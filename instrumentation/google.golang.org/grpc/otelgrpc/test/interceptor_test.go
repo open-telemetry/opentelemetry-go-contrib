@@ -581,7 +581,7 @@ func TestStreamClientInterceptorOnUnidirectionalClientServerStream(t *testing.T)
 	// and RecvMsg() calls.
 	_ = streamClient.CloseSend()
 	err := streamClient.RecvMsg(reply)
-	require.Nil(t, err)
+	require.NoError(t, err)
 
 	// wait for span end that is called in separate go routine
 	var span trace.ReadOnlySpan

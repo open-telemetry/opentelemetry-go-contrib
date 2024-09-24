@@ -77,7 +77,7 @@ func TestTrace200(t *testing.T) {
 
 	// do and verify the request
 	router.ServeHTTP(w, r)
-	response := w.Result()
+	response := w.Result() //nolint:bodyclose // False positive for httptest.ResponseRecorder: https://github.com/timakin/bodyclose/issues/59.
 	require.Equal(t, http.StatusOK, response.StatusCode)
 
 	// verify traces look good
@@ -109,7 +109,7 @@ func TestError(t *testing.T) {
 	r := httptest.NewRequest("GET", "/server_err", nil)
 	w := httptest.NewRecorder()
 	router.ServeHTTP(w, r)
-	response := w.Result()
+	response := w.Result() //nolint:bodyclose // False positive for httptest.ResponseRecorder: https://github.com/timakin/bodyclose/issues/59.
 	assert.Equal(t, http.StatusInternalServerError, response.StatusCode)
 
 	// verify the errors and status are correct
@@ -201,7 +201,7 @@ func TestHTTPRouteWithSpanNameFormatter(t *testing.T) {
 
 	// do and verify the request
 	router.ServeHTTP(w, r)
-	response := w.Result()
+	response := w.Result() //nolint:bodyclose // False positive for httptest.ResponseRecorder: https://github.com/timakin/bodyclose/issues/59.
 	require.Equal(t, http.StatusOK, response.StatusCode)
 
 	// verify traces look good
@@ -234,7 +234,7 @@ func TestHTML(t *testing.T) {
 	r := httptest.NewRequest("GET", "/hello", nil)
 	w := httptest.NewRecorder()
 	router.ServeHTTP(w, r)
-	response := w.Result()
+	response := w.Result() //nolint:bodyclose // False positive for httptest.ResponseRecorder: https://github.com/timakin/bodyclose/issues/59.
 	assert.Equal(t, http.StatusOK, response.StatusCode)
 	assert.Equal(t, "hello world", w.Body.String())
 
@@ -268,7 +268,7 @@ func TestWithFilter(t *testing.T) {
 		w := httptest.NewRecorder()
 
 		router.ServeHTTP(w, r)
-		assert.Len(t, sr.Ended(), 0)
+		assert.Empty(t, sr.Ended())
 	})
 
 	t.Run("custom filter not filtering route", func(t *testing.T) {
@@ -278,6 +278,40 @@ func TestWithFilter(t *testing.T) {
 		router := gin.New()
 		f := func(req *http.Request) bool { return req.URL.Path != "/healthcheck" }
 		router.Use(otelgin.Middleware("foobar", otelgin.WithFilter(f)))
+		router.GET("/user/:id", func(c *gin.Context) {})
+
+		r := httptest.NewRequest("GET", "/user/123", nil)
+		w := httptest.NewRecorder()
+
+		router.ServeHTTP(w, r)
+		assert.Len(t, sr.Ended(), 1)
+	})
+}
+
+func TestWithGinFilter(t *testing.T) {
+	t.Run("custom filter filtering route", func(t *testing.T) {
+		sr := tracetest.NewSpanRecorder()
+		otel.SetTracerProvider(sdktrace.NewTracerProvider(sdktrace.WithSpanProcessor(sr)))
+
+		router := gin.New()
+		f := func(c *gin.Context) bool { return c.Request.URL.Path != "/healthcheck" }
+		router.Use(otelgin.Middleware("foobar", otelgin.WithGinFilter(f)))
+		router.GET("/healthcheck", func(c *gin.Context) {})
+
+		r := httptest.NewRequest("GET", "/healthcheck", nil)
+		w := httptest.NewRecorder()
+
+		router.ServeHTTP(w, r)
+		assert.Empty(t, sr.Ended())
+	})
+
+	t.Run("custom filter not filtering route", func(t *testing.T) {
+		sr := tracetest.NewSpanRecorder()
+		otel.SetTracerProvider(sdktrace.NewTracerProvider(sdktrace.WithSpanProcessor(sr)))
+
+		router := gin.New()
+		f := func(c *gin.Context) bool { return c.Request.URL.Path != "/user/:id" }
+		router.Use(otelgin.Middleware("foobar", otelgin.WithGinFilter(f)))
 		router.GET("/user/:id", func(c *gin.Context) {})
 
 		r := httptest.NewRequest("GET", "/user/123", nil)

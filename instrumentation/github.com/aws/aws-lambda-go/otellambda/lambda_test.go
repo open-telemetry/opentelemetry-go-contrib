@@ -124,7 +124,7 @@ func TestLambdaHandlerSignatures(t *testing.T) {
 			lambdaHandler := InstrumentHandler(testCase.handler)
 			handler := reflect.ValueOf(lambdaHandler)
 			resp := handler.Call(testCase.args)
-			assert.Equal(t, 2, len(resp))
+			assert.Len(t, resp, 2)
 			assert.Equal(t, testCase.expected, resp[1].Interface())
 		})
 	}
@@ -228,7 +228,7 @@ func TestHandlerInvokes(t *testing.T) {
 				args = append(args, reflect.ValueOf(testCase.input))
 			}
 			response := handler.Call(args)
-			assert.Equal(t, 2, len(response))
+			assert.Len(t, response, 2)
 			if testCase.expected.err != nil {
 				assert.Equal(t, testCase.expected.err, response[handlerType.NumOut()-1].Interface())
 			} else {

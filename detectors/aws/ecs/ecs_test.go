@@ -10,7 +10,7 @@ import (
 
 	"go.opentelemetry.io/otel/attribute"
 	"go.opentelemetry.io/otel/sdk/resource"
-	semconv "go.opentelemetry.io/otel/semconv/v1.25.0"
+	semconv "go.opentelemetry.io/otel/semconv/v1.26.0"
 
 	metadata "github.com/brunoscheufler/aws-ecs-metadata-go"
 	"github.com/stretchr/testify/assert"
@@ -169,7 +169,7 @@ func TestDetectCannotReadContainerID(t *testing.T) {
 	detector := &resourceDetector{utils: detectorUtils}
 	res, err := detector.Detect(context.Background())
 
-	assert.Equal(t, nil, err)
+	assert.NoError(t, err)
 	assert.Equal(t, expectedResource, res, "Resource returned is incorrect")
 }
 
@@ -187,7 +187,7 @@ func TestDetectCannotReadContainerName(t *testing.T) {
 	res, err := detector.Detect(context.Background())
 
 	assert.Equal(t, errCannotReadContainerName, err)
-	assert.Equal(t, 0, len(res.Attributes()))
+	assert.Empty(t, res.Attributes())
 }
 
 // returns empty resource when process is not running ECS.

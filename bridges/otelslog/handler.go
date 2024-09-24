@@ -49,7 +49,6 @@ import (
 	"fmt"
 	"log/slog"
 	"slices"
-	"sync"
 
 	"go.opentelemetry.io/otel/log"
 	"go.opentelemetry.io/otel/log/global"
@@ -180,8 +179,7 @@ func (h *Handler) convertRecord(r slog.Record) log.Record {
 	n := r.NumAttrs()
 	if h.group != nil {
 		if n > 0 {
-			buf, free := getKVBuffer()
-			defer free()
+			buf := newKVBuffer(n)
 			r.Attrs(buf.AddAttr)
 			record.AddAttributes(h.group.KeyValue(buf.KeyValues()...))
 		} else {
@@ -192,8 +190,7 @@ func (h *Handler) convertRecord(r slog.Record) log.Record {
 			}
 		}
 	} else if n > 0 {
-		buf, free := getKVBuffer()
-		defer free()
+		buf := newKVBuffer(n)
 		r.Attrs(buf.AddAttr)
 		record.AddAttributes(buf.KeyValues()...)
 	}
@@ -204,10 +201,10 @@ func (h *Handler) convertRecord(r slog.Record) log.Record {
 // Enable returns true if the Handler is enabled to log for the provided
 // context and Level. Otherwise, false is returned if it is not enabled.
 func (h *Handler) Enabled(ctx context.Context, l slog.Level) bool {
-	var record log.Record
+	var param log.EnabledParameters
 	const sevOffset = slog.Level(log.SeverityDebug) - slog.LevelDebug
-	record.SetSeverity(log.Severity(l + sevOffset))
-	return h.logger.Enabled(ctx, record)
+	param.SetSeverity(log.Severity(l + sevOffset))
+	return h.logger.Enabled(ctx, param)
 }
 
 // WithAttrs returns a new [slog.Handler] based on h that will log using the
@@ -338,27 +335,6 @@ func (g *group) AddAttrs(attrs []slog.Attr) {
 	g.attrs.AddAttrs(attrs)
 }
 
-var kvBufferPool = sync.Pool{
-	New: func() any {
-		// Based on slog research (https://go.dev/blog/slog#performance), 95%
-		// of use-cases will use 5 or less attributes.
-		return newKVBuffer(5)
-	},
-}
-
-func getKVBuffer() (buf *kvBuffer, free func()) {
-	buf = kvBufferPool.Get().(*kvBuffer)
-	return buf, func() {
-		// TODO: limit returned size so the pool doesn't hold on to very large
-		// buffers. Idea is based on
-		// https://cs.opensource.google/go/x/exp/+/814bf88c:slog/internal/buffer/buffer.go;l=27-34
-
-		// Do not modify any previously held data.
-		buf.data = buf.data[:0:0]
-		kvBufferPool.Put(buf)
-	}
-}
-
 type kvBuffer struct {
 	data []log.KeyValue
 }
@@ -449,11 +425,16 @@ func convertValue(v slog.Value) log.Value {
 	case slog.KindTime:
 		return log.Int64Value(v.Time().UnixNano())
 	case slog.KindUint64:
-		return log.Int64Value(int64(v.Uint64()))
+		const maxInt64 = ^uint64(0) >> 1
+		u := v.Uint64()
+		if u > maxInt64 {
+			return log.Float64Value(float64(u))
+		}
+		return log.Int64Value(int64(u)) // nolint:gosec  // Overflow checked above.
 	case slog.KindGroup:
-		buf, free := getKVBuffer()
-		defer free()
-		buf.AddAttrs(v.Group())
+		g := v.Group()
+		buf := newKVBuffer(len(g))
+		buf.AddAttrs(g)
 		return log.MapValue(buf.data...)
 	case slog.KindLogValuer:
 		return convertValue(v.Resolve())

@@ -188,7 +188,7 @@ func TestWithPublicEndpoint(t *testing.T) {
 	prop.Inject(ctx, propagation.HeaderCarrier(r0.Header))
 
 	router.ServeHTTP(w, r0)
-	assert.Equal(t, http.StatusOK, w.Result().StatusCode)
+	assert.Equal(t, http.StatusOK, w.Result().StatusCode) //nolint:bodyclose // False positive for httptest.ResponseRecorder: https://github.com/timakin/bodyclose/issues/59.
 
 	// Recorded span should be linked with an incoming span context.
 	assert.NoError(t, sr.ForceFlush(ctx))
@@ -243,7 +243,7 @@ func TestWithPublicEndpointFn(t *testing.T) {
 			},
 			spansAssert: func(t *testing.T, _ trace.SpanContext, spans []sdktrace.ReadOnlySpan) {
 				require.Len(t, spans, 1)
-				require.Len(t, spans[0].Links(), 0, "should not contain link")
+				require.Empty(t, spans[0].Links(), "should not contain link")
 			},
 		},
 	}
@@ -273,7 +273,7 @@ func TestWithPublicEndpointFn(t *testing.T) {
 			prop.Inject(ctx, propagation.HeaderCarrier(r0.Header))
 
 			router.ServeHTTP(w, r0)
-			assert.Equal(t, http.StatusOK, w.Result().StatusCode)
+			assert.Equal(t, http.StatusOK, w.Result().StatusCode) //nolint:bodyclose // False positive for httptest.ResponseRecorder: https://github.com/timakin/bodyclose/issues/59.
 
 			// Recorded span should be linked with an incoming span context.
 			assert.NoError(t, sr.ForceFlush(ctx))

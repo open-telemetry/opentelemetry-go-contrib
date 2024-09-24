@@ -14,7 +14,7 @@ env:
   # backwards compatibility with the previous two minor releases and we
   # explicitly test our code for these versions so keeping this at prior
   # versions does not add value.
-  DEFAULT_GO_VERSION: "~1.22.5"
+  DEFAULT_GO_VERSION: "~1.23.0"
 jobs:
   lint:
     runs-on: ubuntu-latest
@@ -101,18 +101,21 @@ jobs:
   compatibility-test:
     strategy:
       matrix:
-        go-version: ["~1.22.4", "~1.21.12"]
-        os: [ubuntu-latest, macos-latest, windows-latest]
-        # GitHub Actions does not support arm* architectures on default
-        # runners. It is possible to accomplish this with a self-hosted runner
-        # if we want to add this in the future:
-        # https://docs.github.com/en/actions/hosting-your-own-runners/using-self-hosted-runners-in-a-workflow
-        arch: ["386", amd64]
-        exclude:
-        # Not a supported Go OS/architecture.
-        - os: macos-latest
-          arch: "386"
-    runs-on: ${{ matrix.os }}
+        go-version: ["1.23.0", "~1.22.4"]
+        platform:
+          - os: ubuntu-latest
+            arch: "386"
+          - os: ubuntu-latest
+            arch: amd64
+          - os: macos-13
+            arch: amd64
+          - os: macos-latest
+            arch: arm64
+          - os: windows-latest
+            arch: "386"
+          - os: windows-latest
+            arch: amd64
+    runs-on: ${{ matrix.platform.os }}
     steps:
     - name: Checkout code
       uses: actions/checkout@v4
@@ -124,7 +127,7 @@ jobs:
         cache-dependency-path: "**/go.sum"
     - name: Run tests
       env:
-        GOARCH: ${{ matrix.arch }}
+        GOARCH: ${{ matrix.platform.arch }}
       run: make test-short
 
   test-compatibility:
@@ -136,47 +139,3 @@ jobs:
           echo ${{ needs.compatibility-test.result }}
           test ${{ needs.compatibility-test.result }} == "success"
 
-  integration:
-    strategy:
-      matrix:
-        target: [test-mongo-driver]
-    runs-on: ubuntu-latest
-    steps:
-    - name: Checkout Repo
-      uses: actions/checkout@v4
-    - name: Install Go
-      uses: actions/setup-go@v5
-      with:
-        go-version: ${{ env.DEFAULT_GO_VERSION }}
-        check-latest: true
-        cache-dependency-path: "**/go.sum"
-    - name: Run coverage tests ${{ matrix.target }}
-      env:
-        INTEGRATION: ${{ matrix.target }}
-      run: |
-        make ${{ matrix.target }}
-        mkdir -p $TEST_RESULTS
-        find . -name 'coverage.html' > "${TEST_RESULTS}/coverage.lst"
-        tar -n -cf - -T "${TEST_RESULTS}/coverage.lst" | tar -C "${TEST_RESULTS}" -xvf -
-    - name: Upload coverage report
-      uses: codecov/codecov-action@v4.5.0
-      if: hashFiles('coverage.out') != ''
-      with:
-        file: ./coverage.out
-        fail_ci_if_error: true
-        verbose: true
-        token: ${{ secrets.CODECOV_TOKEN }}
-    - name: Store coverage test output
-      uses: actions/upload-artifact@v4
-      with:
-          name: opentelemetry-go-contrib-integration-test-output
-          path: ${{ env.TEST_RESULTS }}
-
-  test-integration:
-    runs-on: ubuntu-latest
-    needs: [integration]
-    steps:
-      - name: Test if integration workflow passed
-        run: |
-          echo ${{ needs.integration.result }}
-          test ${{ needs.integration.result }} == "success"

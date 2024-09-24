@@ -10,23 +10,97 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 
 ### Added
 
-- The `go.opentelemetry.io/contrib/config` add support to configure periodic reader interval and timeout. (#5661)
+- The `Severitier` and `SeverityVar` types are added to `go.opentelemetry.io/contrib/processors/minsev` allowing dynamic configuration of the severity used by the `LogProcessor`. (#6116)
+
+### Changed
+
+- The function signature of `NewLogProcessor` in `go.opentelemetry.io/contrib/processors/minsev` has changed to accept the added `Severitier` interface instead of a `log.Severity`. (#6116)
+
+### Fixed
+
+- Possible nil dereference panic in `go.opentelemetry.io/contrib/instrumentation/net/http/httptrace/otelhttptrace`. (#5965)
+
+### Removed
+
+- The `Minimum` field of the `LogProcessor` in `go.opentelemetry.io/contrib/processors/minsev` is removed.
+  Use `NewLogProcessor` to configure this setting. (#6116)
+
+<!-- Released section -->
+<!-- Don't change this section unless doing release -->
+
+## [1.30.0/0.55.0/0.24.0/0.10.0/0.5.0/0.3.0/0.2.0] - 2024-09-10
+
+### Added
+
+- Add `NewProducer` to `go.opentelemetry.io/contrib/instrumentation/runtime`, which allows collecting the `go.schedule.duration` histogram metric from the Go runtime. (#5991)
+- Add gRPC protocol support for OTLP log exporter in `go.opentelemetry.io/contrib/exporters/autoexport`. (#6083)
+
+### Removed
+
+- Drop support for [Go 1.21]. (#6046, #6047)
+
+### Fixed
+
+- Superfluous call to `WriteHeader` when flushing after setting a status code in `go.opentelemetry.io/contrib/instrumentation/net/http/otelhttp`. (#6074)
+- Superfluous call to `WriteHeader` when writing the response body after setting a status code in `go.opentelemetry.io/contrib/instrumentation/net/http/otelhttp`. (#6055)
+
+## [1.29.0/0.54.0/0.23.0/0.9.0/0.4.0/0.2.0/0.1.0] - 2024-08-23
+
+This release is the last to support [Go 1.21].
+The next release will require at least [Go 1.22].
+
+### Added
+
+- Add the `WithSpanAttributes` and `WithMetricAttributes` methods to set custom attributes to the stats handler in `go.opentelemetry.io/contrib/instrumentation/google.golang.org/grpc/otelgrpc`. (#5133)
+- The `go.opentelemetry.io/contrib/bridges/otelzap` module.
+  This module provides an OpenTelemetry logging bridge for `go.uber.org/zap`. (#5191)
+- Support for the `OTEL_HTTP_CLIENT_COMPATIBILITY_MODE=http/dup` environment variable in `go.opentelemetry.io/contrib/instrumentation/net/http/otelhttp` to emit attributes for both the v1.20.0 and v1.26.0 semantic conventions. (#5401)
+- The `go.opentelemetry.io/contrib/bridges/otelzerolog` module.
+  This module provides an OpenTelemetry logging bridge for `github.com/rs/zerolog`. (#5405)
+- Add `WithGinFilter` filter parameter in `go.opentelemetry.io/contrib/instrumentation/github.com/gin-gonic/gin/otelgin` to allow filtering requests with `*gin.Context`. (#5743)
+- Support for stdoutlog exporter in `go.opentelemetry.io/contrib/config`. (#5850)
+- Add macOS ARM64 platform to the compatibility testing suite. (#5868)
+- Add new runtime metrics to `go.opentelemetry.io/contrib/instrumentation/runtime`, which are still disabled by default. (#5870)
+- Add the `WithMetricsAttributesFn` option to allow setting dynamic, per-request metric attributes in `go.opentelemetry.io/contrib/instrumentation/net/http/otelhttp`. (#5876)
+- The `go.opentelemetry.io/contrib/config` package supports configuring `with_resource_constant_labels` for the prometheus exporter. (#5890)
+- Support [Go 1.23]. (#6017)
+
+### Removed
+
+- The deprecated `go.opentelemetry.io/contrib/processors/baggagecopy` package is removed. (#5853)
+
+### Fixed
+
+- Race condition when reading the HTTP body and writing the response in `go.opentelemetry.io/contrib/instrumentation/net/http/otelhttp`. (#5916)
+
+## [1.28.0/0.53.0/0.22.0/0.8.0/0.3.0/0.1.0] - 2024-07-02
+
+### Added
+
 - Add the new `go.opentelemetry.io/contrib/detectors/azure/azurevm` package to provide a resource detector for Azure VMs. (#5422)
 - Add support to configure views when creating MeterProvider using the config package. (#5654)
+- The `go.opentelemetry.io/contrib/config` add support to configure periodic reader interval and timeout. (#5661)
 - Add log support for the autoexport package. (#5733)
 - Add support for disabling the old runtime metrics using the `OTEL_GO_X_DEPRECATED_RUNTIME_METRICS=false` environment variable. (#5747)
 - Add support for signal-specific protocols environment variables (`OTEL_EXPORTER_OTLP_TRACES_PROTOCOL`, `OTEL_EXPORTER_OTLP_LOGS_PROTOCOL`, `OTEL_EXPORTER_OTLP_METRICS_PROTOCOL`) in `go.opentelemetry.io/contrib/exporters/autoexport`. (#5816)
 - The `go.opentelemetry.io/contrib/processors/minsev` module is added.
   This module provides and experimental logging processor with a configurable threshold for the minimum severity records must have to be recorded. (#5817)
 - The `go.opentelemetry.io/contrib/processors/baggagecopy` module.
-  This module is a replacment of `go.opentelemetry.io/contrib/processors/baggage/baggagetrace`. (#5824)
+  This module is a replacement of `go.opentelemetry.io/contrib/processors/baggage/baggagetrace`. (#5824)
+
+### Changed
+
+- Improve performance of `go.opentelemetry.io/contrib/instrumentation/google.golang.org/grpc/otelgrpc` with the usage of `WithAttributeSet()` instead of `WithAttribute()`. (#5664)
+- Improve performance of `go.opentelemetry.io/contrib/instrumentation/net/http/otelhttp` with the usage of `WithAttributeSet()` instead of `WithAttribute()`. (#5664)
+- Update `go.opentelemetry.io/contrib/config` to latest released configuration schema which introduces breaking changes where `Attributes` is now a `map[string]interface{}`. (#5758)
+- Upgrade all dependencies of `go.opentelemetry.io/otel/semconv/v1.25.0` to `go.opentelemetry.io/otel/semconv/v1.26.0`. (#5847)
 
 ### Fixed
 
-- The superfluous `response.WriteHeader` call in `go.opentelemetry.io/contrib/instrumentation/net/http/otelhttp` when the response writer is flushed. (#5634)
 - Custom attributes targeting metrics recorded by the `go.opentelemetry.io/contrib/instrumentation/net/http/otelhttp` are not ignored anymore. (#5129)
-- Use `c.FullPath()` method to set `http.route` attribute in `go.opentelemetry.io/contrib/instrumentation/github.com/gin-gonic/gin/otelgin`. (#5734)
 - The double setup in `go.opentelemetry.io/contrib/instrumentation/net/http/httptrace/otelhttptrace/example` that caused duplicate traces. (#5564)
+- The superfluous `response.WriteHeader` call in `go.opentelemetry.io/contrib/instrumentation/net/http/otelhttp` when the response writer is flushed. (#5634)
+- Use `c.FullPath()` method to set `http.route` attribute in `go.opentelemetry.io/contrib/instrumentation/github.com/gin-gonic/gin/otelgin`. (#5734)
 - Out-of-bounds panic in case of invalid span ID in `go.opentelemetry.io/contrib/propagators/b3`. (#5754)
 - Non-200 HTTP status codes when retrieving sampling rules in `go.opentelemetry.io/contrib/samplers/aws/xray` now return an error. (#5718)
 
@@ -41,7 +115,7 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 - The `go.opentelemetry.io/contrib/processors/baggage/baggagetrace` package is deprecated.
   Use the added `go.opentelemetry.io/contrib/processors/baggagecopy` package instead. (#5824)
   - Use `baggagecopy.NewSpanProcessor` as a replacement for `baggagetrace.New`.
-    - `NewSpanProcessor` accepts a `Fitler` function type that selects which baggage members are added to a span.
+    - `NewSpanProcessor` accepts a `Filter` function type that selects which baggage members are added to a span.
     - `NewSpanProcessor` returns a `*baggagecopy.SpanProcessor` instead of a `trace.SpanProcessor` interface.
       The returned type still implements the interface.
 
@@ -49,17 +123,10 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 [#5552]: https://github.com/open-telemetry/opentelemetry-go-contrib/issues/5552
 [#5554]: https://github.com/open-telemetry/opentelemetry-go-contrib/issues/5554
 
-### Changed
-
-- Improve performance of `go.opentelemetry.io/contrib/instrumentation/google.golang.org/grpc/otelgrpc` with the usage of `WithAttributeSet()` instead of `WithAttribute()`. (#5664)
-- Improve performance of `go.opentelemetry.io/contrib/instrumentation/net/http/otelhttp` with the usage of `WithAttributeSet()` instead of `WithAttribute()`. (#5664)
-- Update `go.opentelemetry.io/contrib/config` to latest released configuration schema which introduces breaking changes where `Attributes` is now a `map[string]interface{}`. (#5758)
-
 ## [1.27.0/0.52.0/0.21.0/0.7.0/0.2.0] - 2024-05-21
 
 ### Added
 
-- Add the new `go.opentelemetry.io/contrib/instrgen` package to provide auto-generated source code instrumentation. (#3068, #3108)
 - Add an experimental `OTEL_METRICS_PRODUCERS` environment variable to `go.opentelemetry.io/contrib/autoexport` to be set metrics producers. (#5281)
   - `prometheus` and `none` are supported values. You can specify multiple producers separated by a comma.
   - Add `WithFallbackMetricProducer` option that adds a fallback if the `OTEL_METRICS_PRODUCERS` is not set or empty.
@@ -1060,7 +1127,10 @@ First official tagged release of `contrib` repository.
 - Prefix support for dogstatsd (#34)
 - Update Go Runtime package to use batch observer (#44)
 
-[Unreleased]: https://github.com/open-telemetry/opentelemetry-go-contrib/compare/v1.27.0...HEAD
+[Unreleased]: https://github.com/open-telemetry/opentelemetry-go-contrib/compare/v1.30.0...HEAD
+[1.30.0/0.55.0/0.24.0/0.10.0/0.5.0/0.3.0/0.2.0]: https://github.com/open-telemetry/opentelemetry-go-contrib/releases/tag/v1.30.0
+[1.29.0/0.54.0/0.23.0/0.9.0/0.4.0/0.2.0/0.1.0]: https://github.com/open-telemetry/opentelemetry-go-contrib/releases/tag/v1.29.0
+[1.28.0/0.53.0/0.22.0/0.8.0/0.3.0/0.1.0]: https://github.com/open-telemetry/opentelemetry-go-contrib/releases/tag/v1.28.0
 [1.27.0/0.52.0/0.21.0/0.7.0/0.2.0]: https://github.com/open-telemetry/opentelemetry-go-contrib/releases/tag/v1.27.0
 [1.26.0/0.51.0/0.20.0/0.6.0/0.1.0]: https://github.com/open-telemetry/opentelemetry-go-contrib/releases/tag/v1.26.0
 [1.25.0/0.50.0/0.19.0/0.5.0/0.0.1]: https://github.com/open-telemetry/opentelemetry-go-contrib/releases/tag/v1.25.0
@@ -1121,6 +1191,9 @@ First official tagged release of `contrib` repository.
 [0.7.0]: https://github.com/open-telemetry/opentelemetry-go-contrib/releases/tag/v0.7.0
 [0.6.1]: https://github.com/open-telemetry/opentelemetry-go-contrib/releases/tag/v0.6.1
 
+<!-- Released section ended -->
+
+[Go 1.23]: https://go.dev/doc/go1.23
 [Go 1.22]: https://go.dev/doc/go1.22
 [Go 1.21]: https://go.dev/doc/go1.21
 [Go 1.20]: https://go.dev/doc/go1.20

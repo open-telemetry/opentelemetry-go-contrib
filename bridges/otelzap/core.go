@@ -2,7 +2,34 @@
 // SPDX-License-Identifier: Apache-2.0
 
 // Package otelzap provides a bridge between the [go.uber.org/zap] and
-// OpenTelemetry logging.
+// [OpenTelemetry].
+//
+// # Record Conversion
+//
+// The [zapcore.Entry] and [zapcore.Field] are converted to OpenTelemetry [log.Record] in the following
+// way:
+//
+//   - Time is set as the Timestamp.
+//   - Message is set as the Body using a [log.StringValue].
+//   - Level is transformed and set as the Severity. The SeverityText is also
+//     set.
+//   - Fields are transformed and set as the Attributes.
+//   - Field value of type [context.Context] is used as context when emitting log records.
+//   - For named loggers, LoggerName is used to access [log.Logger] from [log.LoggerProvider]
+//
+// The Level is transformed to the OpenTelemetry Severity types in the following way.
+//
+//   - [zapcore.DebugLevel] is transformed to [log.SeverityDebug]
+//   - [zapcore.InfoLevel] is transformed to [log.SeverityInfo]
+//   - [zapcore.WarnLevel] is transformed to [log.SeverityWarn]
+//   - [zapcore.ErrorLevel] is transformed to [log.SeverityError]
+//   - [zapcore.DPanicLevel] is transformed to [log.SeverityFatal1]
+//   - [zapcore.PanicLevel] is transformed to [log.SeverityFatal2]
+//   - [zapcore.FatalLevel] is transformed to [log.SeverityFatal3]
+//
+// Fields are transformed based on their type into log attributes, or into a string value if there is no matching type.
+//
+// [OpenTelemetry]: https://opentelemetry.io/docs/concepts/signals/logs/
 package otelzap // import "go.opentelemetry.io/contrib/bridges/otelzap"
 
 import (
@@ -32,17 +59,6 @@ func newConfig(options []Option) config {
 	}
 
 	return c
-}
-
-func (c config) logger(name string) log.Logger {
-	var opts []log.LoggerOption
-	if c.version != "" {
-		opts = append(opts, log.WithInstrumentationVersion(c.version))
-	}
-	if c.schemaURL != "" {
-		opts = append(opts, log.WithSchemaURL(c.schemaURL))
-	}
-	return c.provider.Logger(name, opts...)
 }
 
 // Option configures a [Core].
@@ -88,28 +104,45 @@ func WithLoggerProvider(provider log.LoggerProvider) Option {
 
 // Core is a [zapcore.Core] that sends logging records to OpenTelemetry.
 type Core struct {
-	logger log.Logger
-	attr   []log.KeyValue
-	ctx    context.Context
+	provider log.LoggerProvider
+	logger   log.Logger
+	opts     []log.LoggerOption
+	attr     []log.KeyValue
+	ctx      context.Context
 }
 
 // Compile-time check *Core implements zapcore.Core.
 var _ zapcore.Core = (*Core)(nil)
 
 // NewCore creates a new [zapcore.Core] that can be used with [go.uber.org/zap.New].
+// The name should be the package import path that is being logged.
+// The name is ignored for named loggers created using [go.uber.org/zap.Logger.Named].
 func NewCore(name string, opts ...Option) *Core {
 	cfg := newConfig(opts)
+
+	var loggerOpts []log.LoggerOption
+	if cfg.version != "" {
+		loggerOpts = append(loggerOpts, log.WithInstrumentationVersion(cfg.version))
+	}
+	if cfg.schemaURL != "" {
+		loggerOpts = append(loggerOpts, log.WithSchemaURL(cfg.schemaURL))
+	}
+
+	logger := cfg.provider.Logger(name, loggerOpts...)
+
 	return &Core{
-		logger: cfg.logger(name),
-		ctx:    context.Background(),
+		provider: cfg.provider,
+		logger:   logger,
+		opts:     loggerOpts,
+		ctx:      context.Background(),
 	}
 }
 
 // Enabled decides whether a given logging level is enabled when logging a message.
 func (o *Core) Enabled(level zapcore.Level) bool {
-	r := log.Record{}
-	r.SetSeverity(convertLevel(level))
-	return o.logger.Enabled(context.Background(), r)
+	param := log.EnabledParameters{}
+	param.SetSeverity(convertLevel(level))
+	return o.logger.Enabled(context.Background(), param)
 }
 
 // With adds structured context to the Core.
@@ -127,22 +160,31 @@ func (o *Core) With(fields []zapcore.Field) zapcore.Core {
 
 func (o *Core) clone() *Core {
 	return &Core{
-		logger: o.logger,
-		attr:   slices.Clone(o.attr),
-		ctx:    o.ctx,
+		provider: o.provider,
+		opts:     o.opts,
+		logger:   o.logger,
+		attr:     slices.Clone(o.attr),
+		ctx:      o.ctx,
 	}
 }
 
-// TODO
 // Sync flushes buffered logs (if any).
 func (o *Core) Sync() error {
 	return nil
 }
 
-// Check determines whether the supplied Entry should be logged using core.Enabled method.
+// Check determines whether the supplied Entry should be logged.
 // If the entry should be logged, the Core adds itself to the CheckedEntry and returns the result.
 func (o *Core) Check(ent zapcore.Entry, ce *zapcore.CheckedEntry) *zapcore.CheckedEntry {
-	if o.Enabled(ent.Level) {
+	param := log.EnabledParameters{}
+	param.SetSeverity(convertLevel(ent.Level))
+
+	logger := o.logger
+	if ent.LoggerName != "" {
+		logger = o.provider.Logger(ent.LoggerName, o.opts...)
+	}
+
+	if logger.Enabled(context.Background(), param) {
 		return ce.AddCore(ent, o)
 	}
 	return ce
@@ -156,8 +198,6 @@ func (o *Core) Write(ent zapcore.Entry, fields []zapcore.Field) error {
 	r.SetSeverity(convertLevel(ent.Level))
 	r.SetSeverityText(ent.Level.String())
 
-	// TODO: Handle ent.LoggerName.
-
 	r.AddAttributes(o.attr...)
 	if len(fields) > 0 {
 		ctx, attrbuf := convertField(fields)
@@ -167,12 +207,15 @@ func (o *Core) Write(ent zapcore.Entry, fields []zapcore.Field) error {
 		r.AddAttributes(attrbuf...)
 	}
 
-	o.logger.Emit(o.ctx, r)
+	logger := o.logger
+	if ent.LoggerName != "" {
+		logger = o.provider.Logger(ent.LoggerName, o.opts...)
+	}
+	logger.Emit(o.ctx, r)
 	return nil
 }
 
 func convertField(fields []zapcore.Field) (context.Context, []log.KeyValue) {
-	// TODO: Use objectEncoder from a pool instead of newObjectEncoder.
 	var ctx context.Context
 	enc := newObjectEncoder(len(fields))
 	for _, field := range fields {

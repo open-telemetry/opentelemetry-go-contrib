@@ -47,10 +47,10 @@ func TestCommands(t *testing.T) {
 func TestCallGraph(t *testing.T) {
 	cg := makeCallGraph("./testdata/dummy", "./...")
 	dumpCallGraph(cg)
-	assert.Equal(t, len(cg), 0, "callgraph should contain 0 elems")
+	assert.Empty(t, cg, "callgraph should contain 0 elems")
 	rf := makeRootFunctions("./testdata/dummy", "./...")
 	dumpRootFunctions(rf)
-	assert.Equal(t, len(rf), 0, "rootfunctions set should be empty")
+	assert.Empty(t, rf, "rootfunctions set should be empty")
 }
 
 func TestArgs(t *testing.T) {

@@ -8,6 +8,7 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"math"
 	"net"
 	"net/http"
 	"net/url"
@@ -230,6 +231,22 @@ func prometheusReader(ctx context.Context, prometheusConfig *Prometheus) (sdkmet
 	if prometheusConfig.WithoutUnits != nil && *prometheusConfig.WithoutUnits {
 		opts = append(opts, otelprom.WithoutUnits())
 	}
+	if prometheusConfig.WithResourceConstantLabels != nil {
+		if prometheusConfig.WithResourceConstantLabels.Included != nil {
+			var keys []attribute.Key
+			for _, val := range prometheusConfig.WithResourceConstantLabels.Included {
+				keys = append(keys, attribute.Key(val))
+			}
+			otelprom.WithResourceAsConstantLabels(attribute.NewAllowKeysFilter(keys...))
+		}
+		if prometheusConfig.WithResourceConstantLabels.Excluded != nil {
+			var keys []attribute.Key
+			for _, val := range prometheusConfig.WithResourceConstantLabels.Included {
+				keys = append(keys, attribute.Key(val))
+			}
+			otelprom.WithResourceAsConstantLabels(attribute.NewDenyKeysFilter(keys...))
+		}
+	}
 
 	reg := prometheus.NewRegistry()
 	opts = append(opts, otelprom.WithRegisterer(reg))
@@ -246,9 +263,6 @@ func prometheusReader(ctx context.Context, prometheusConfig *Prometheus) (sdkmet
 	}
 	addr := fmt.Sprintf("%s:%d", *prometheusConfig.Host, *prometheusConfig.Port)
 
-	// TODO: add support for constant label filter
-	// 	otelprom.WithResourceAsConstantLabels(attribute.NewDenyKeysFilter()),
-	// )
 	reader, err := otelprom.New(opts...)
 	if err != nil {
 		return nil, fmt.Errorf("error creating otel prometheus exporter: %w", err)
@@ -345,8 +359,8 @@ func aggregation(aggr *ViewStreamAggregation) sdkmetric.Aggregation {
 
 	if aggr.Base2ExponentialBucketHistogram != nil {
 		return sdkmetric.AggregationBase2ExponentialHistogram{
-			MaxSize:  int32(intOrZero(aggr.Base2ExponentialBucketHistogram.MaxSize)),
-			MaxScale: int32(intOrZero(aggr.Base2ExponentialBucketHistogram.MaxScale)),
+			MaxSize:  int32OrZero(aggr.Base2ExponentialBucketHistogram.MaxSize),
+			MaxScale: int32OrZero(aggr.Base2ExponentialBucketHistogram.MaxScale),
 			// Need to negate because config has the positive action RecordMinMax.
 			NoMinMax: !boolOrFalse(aggr.Base2ExponentialBucketHistogram.RecordMinMax),
 		}
@@ -413,11 +427,18 @@ func boolOrFalse(pBool *bool) bool {
 	return *pBool
 }
 
-func intOrZero(pInt *int) int {
+func int32OrZero(pInt *int) int32 {
 	if pInt == nil {
 		return 0
 	}
-	return *pInt
+	i := *pInt
+	if i > math.MaxInt32 {
+		return math.MaxInt32
+	}
+	if i < math.MinInt32 {
+		return math.MinInt32
+	}
+	return int32(i) // nolint: gosec  // Overflow and underflow checked above.
 }
 
 func strOrEmpty(pStr *string) string {

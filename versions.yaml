@@ -3,7 +3,7 @@
 
 module-sets:
   stable-v1:
-    version: v1.27.0
+    version: v1.30.0
     modules:
       - go.opentelemetry.io/contrib
       - go.opentelemetry.io/contrib/tools
@@ -16,7 +16,7 @@ module-sets:
       - go.opentelemetry.io/contrib/detectors/aws/ecs
       - go.opentelemetry.io/contrib/detectors/aws/eks
   experimental-instrumentation:
-    version: v0.52.0
+    version: v0.55.0
     modules:
       - go.opentelemetry.io/contrib/bridges/prometheus
       - go.opentelemetry.io/contrib/detectors/aws/lambda
@@ -60,36 +60,35 @@ module-sets:
       - go.opentelemetry.io/contrib/instrumentation/host
       - go.opentelemetry.io/contrib/instrumentation/host/example
       - go.opentelemetry.io/contrib/instrumentation/runtime
-      - go.opentelemetry.io/contrib/instrumentation/runtime/example
       - go.opentelemetry.io/contrib/zpages
   experimental-samplers:
-    version: v0.21.0
+    version: v0.24.0
     modules:
       - go.opentelemetry.io/contrib/samplers/aws/xray
       - go.opentelemetry.io/contrib/samplers/jaegerremote
       - go.opentelemetry.io/contrib/samplers/jaegerremote/example
       - go.opentelemetry.io/contrib/samplers/probability/consistent
   experimental-config:
-    version: v0.7.0
+    version: v0.10.0
     modules:
       - go.opentelemetry.io/contrib/config
   experimental-bridge:
-    version: v0.2.0
+    version: v0.5.0
     modules:
       - go.opentelemetry.io/contrib/bridges/otelslog
       - go.opentelemetry.io/contrib/bridges/otellogrus
+      - go.opentelemetry.io/contrib/bridges/otelzap
   experimental-processors:
-    version: v0.0.1
+    version: v0.3.0
     modules:
-      - go.opentelemetry.io/contrib/processors/baggage/baggagetrace
       - go.opentelemetry.io/contrib/processors/baggagecopy
       - go.opentelemetry.io/contrib/processors/minsev
   experimental-detectors:
-    version: v0.0.1
+    version: v0.2.0
     modules:
       - go.opentelemetry.io/contrib/detectors/azure/azurevm
 excluded-modules:
-  - go.opentelemetry.io/contrib/bridges/otelzap
+  - go.opentelemetry.io/contrib/bridges/otellogr
   - go.opentelemetry.io/contrib/instrgen
   - go.opentelemetry.io/contrib/instrgen/driver
   - go.opentelemetry.io/contrib/instrgen/testdata/interface

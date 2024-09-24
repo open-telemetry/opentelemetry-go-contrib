@@ -10,6 +10,8 @@ linters:
   disable-all: true
   # Specifically enable linters we want to use.
   enable:
+    - asasalint
+    - bodyclose
     - depguard
     - errcheck
     - errorlint
@@ -24,6 +26,7 @@ linters:
     - revive
     - staticcheck
     - tenv
+    - testifylint
     - typecheck
     - unconvert
     - unparam
@@ -241,3 +244,14 @@ linters-settings:
       # https://github.com/mgechev/revive/blob/master/RULES_DESCRIPTIONS.md#waitgroup-by-value
       - name: waitgroup-by-value
         disabled: false
+  testifylint:
+    enable-all: true
+    disable:
+      - compares
+      - error-is-as
+      - expected-actual
+      - float-compare
+      - formatter
+      - go-require
+      - negative-positive
+      - require-error
