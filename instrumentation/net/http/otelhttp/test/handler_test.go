@@ -314,7 +314,7 @@ func TestHandlerRequestWithTraceContext(t *testing.T) {
 	h := otelhttp.NewHandler(
 		http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 			_, err := w.Write([]byte("hello world"))
-			require.NoError(t, err)
+			assert.NoError(t, err)
 		}), "test_handler")
 
 	r, err := http.NewRequest(http.MethodGet, "http://localhost/", nil)

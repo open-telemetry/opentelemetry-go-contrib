@@ -382,12 +382,12 @@ func TestTransportProtocolSwitch(t *testing.T) {
 
 	ts := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
 		conn, buf, err := w.(http.Hijacker).Hijack()
-		require.NoError(t, err)
+		assert.NoError(t, err)
 
 		_, err = buf.Write(response)
-		require.NoError(t, err)
-		require.NoError(t, buf.Flush())
-		require.NoError(t, conn.Close())
+		assert.NoError(t, err)
+		assert.NoError(t, buf.Flush())
+		assert.NoError(t, conn.Close())
 	}))
 	defer ts.Close()
 
