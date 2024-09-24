@@ -248,7 +248,6 @@ linters-settings:
     enable-all: true
     disable:
       - compares
-      - error-is-as
       - expected-actual
       - float-compare
       - formatter
