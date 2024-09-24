@@ -434,7 +434,7 @@ func TestProduce(t *testing.T) {
 			p := NewMetricProducer(WithGatherer(reg))
 			output, err := p.Produce(context.Background())
 			if tt.wantErr == nil {
-				assert.Nil(t, err)
+				assert.NoError(t, err)
 			}
 			require.Equal(t, len(output), len(tt.expected))
 			for i := range output {
