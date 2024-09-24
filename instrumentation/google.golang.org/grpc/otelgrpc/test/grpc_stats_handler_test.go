@@ -1509,12 +1509,12 @@ func TestStatsHandlerConcurrentSafeContextCancellation(t *testing.T) {
 				}
 				err := stream.Send(req)
 				if errors.Is(err, io.EOF) { // possible due to context cancellation
-					require.ErrorIs(t, ctx.Err(), context.Canceled)
+					assert.ErrorIs(t, ctx.Err(), context.Canceled)
 				} else {
-					require.NoError(t, err)
+					assert.NoError(t, err)
 				}
 			}
-			require.NoError(t, stream.CloseSend())
+			assert.NoError(t, stream.CloseSend())
 		}()
 
 		wg.Add(1)
@@ -1529,7 +1529,7 @@ func TestStatsHandlerConcurrentSafeContextCancellation(t *testing.T) {
 				if status.Code(err) == codes.Canceled {
 					return
 				}
-				require.NoError(t, err)
+				assert.NoError(t, err)
 			}
 		}()
 
