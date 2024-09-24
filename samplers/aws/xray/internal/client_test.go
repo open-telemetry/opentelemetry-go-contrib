@@ -100,26 +100,26 @@ func TestGetSamplingRules(t *testing.T) {
 	samplingRules, err := client.getSamplingRules(ctx)
 	require.NoError(t, err)
 
-	assert.Equal(t, samplingRules.SamplingRuleRecords[0].SamplingRule.RuleName, "Default")
-	assert.Equal(t, samplingRules.SamplingRuleRecords[0].SamplingRule.ServiceType, "*")
-	assert.Equal(t, samplingRules.SamplingRuleRecords[0].SamplingRule.Host, "*")
-	assert.Equal(t, samplingRules.SamplingRuleRecords[0].SamplingRule.URLPath, "*")
-	assert.Equal(t, samplingRules.SamplingRuleRecords[0].SamplingRule.ReservoirSize, 60.0)
-	assert.Equal(t, samplingRules.SamplingRuleRecords[0].SamplingRule.FixedRate, 0.5)
+	assert.Equal(t, "Default", samplingRules.SamplingRuleRecords[0].SamplingRule.RuleName)
+	assert.Equal(t, "*", samplingRules.SamplingRuleRecords[0].SamplingRule.ServiceType)
+	assert.Equal(t, "*", samplingRules.SamplingRuleRecords[0].SamplingRule.Host)
+	assert.Equal(t, "*", samplingRules.SamplingRuleRecords[0].SamplingRule.URLPath)
+	assert.Equal(t, 60.0, samplingRules.SamplingRuleRecords[0].SamplingRule.ReservoirSize)
+	assert.Equal(t, 0.5, samplingRules.SamplingRuleRecords[0].SamplingRule.FixedRate)
 
-	assert.Equal(t, samplingRules.SamplingRuleRecords[1].SamplingRule.RuleName, "test-rule")
-	assert.Equal(t, samplingRules.SamplingRuleRecords[1].SamplingRule.ServiceType, "local")
-	assert.Equal(t, samplingRules.SamplingRuleRecords[1].SamplingRule.Host, "*")
-	assert.Equal(t, samplingRules.SamplingRuleRecords[1].SamplingRule.URLPath, "/aws-sdk-call")
-	assert.Equal(t, samplingRules.SamplingRuleRecords[1].SamplingRule.ReservoirSize, 3.0)
-	assert.Equal(t, samplingRules.SamplingRuleRecords[1].SamplingRule.FixedRate, 0.09)
+	assert.Equal(t, "test-rule", samplingRules.SamplingRuleRecords[1].SamplingRule.RuleName)
+	assert.Equal(t, "local", samplingRules.SamplingRuleRecords[1].SamplingRule.ServiceType)
+	assert.Equal(t, "*", samplingRules.SamplingRuleRecords[1].SamplingRule.Host)
+	assert.Equal(t, "/aws-sdk-call", samplingRules.SamplingRuleRecords[1].SamplingRule.URLPath)
+	assert.Equal(t, 3.0, samplingRules.SamplingRuleRecords[1].SamplingRule.ReservoirSize)
+	assert.Equal(t, 0.09, samplingRules.SamplingRuleRecords[1].SamplingRule.FixedRate)
 
-	assert.Equal(t, samplingRules.SamplingRuleRecords[2].SamplingRule.RuleName, "test-rule-1")
-	assert.Equal(t, samplingRules.SamplingRuleRecords[2].SamplingRule.ServiceType, "*")
-	assert.Equal(t, samplingRules.SamplingRuleRecords[2].SamplingRule.Host, "*")
-	assert.Equal(t, samplingRules.SamplingRuleRecords[2].SamplingRule.URLPath, "*")
-	assert.Equal(t, samplingRules.SamplingRuleRecords[2].SamplingRule.ReservoirSize, 100.0)
-	assert.Equal(t, samplingRules.SamplingRuleRecords[2].SamplingRule.FixedRate, 0.09)
+	assert.Equal(t, "test-rule-1", samplingRules.SamplingRuleRecords[2].SamplingRule.RuleName)
+	assert.Equal(t, "*", samplingRules.SamplingRuleRecords[2].SamplingRule.ServiceType)
+	assert.Equal(t, "*", samplingRules.SamplingRuleRecords[2].SamplingRule.Host)
+	assert.Equal(t, "*", samplingRules.SamplingRuleRecords[2].SamplingRule.URLPath)
+	assert.Equal(t, 100.0, samplingRules.SamplingRuleRecords[2].SamplingRule.ReservoirSize)
+	assert.Equal(t, 0.09, samplingRules.SamplingRuleRecords[2].SamplingRule.FixedRate)
 }
 
 func TestGetSamplingRulesWithMissingValues(t *testing.T) {
@@ -153,11 +153,11 @@ func TestGetSamplingRulesWithMissingValues(t *testing.T) {
 	require.NoError(t, err)
 
 	// Priority and ReservoirSize are missing in API response so they are assigned as nil
-	assert.Equal(t, samplingRules.SamplingRuleRecords[0].SamplingRule.Priority, int64(0))
-	assert.Equal(t, samplingRules.SamplingRuleRecords[0].SamplingRule.ReservoirSize, 0.0)
+	assert.Equal(t, int64(0), samplingRules.SamplingRuleRecords[0].SamplingRule.Priority)
+	assert.Equal(t, 0.0, samplingRules.SamplingRuleRecords[0].SamplingRule.ReservoirSize)
 
 	// other values are stored as expected
-	assert.Equal(t, samplingRules.SamplingRuleRecords[0].SamplingRule.RuleName, "Default")
+	assert.Equal(t, "Default", samplingRules.SamplingRuleRecords[0].SamplingRule.RuleName)
 }
 
 func TestGetSamplingTargets(t *testing.T) {
@@ -188,15 +188,15 @@ func TestGetSamplingTargets(t *testing.T) {
 	samplingTragets, err := client.getSamplingTargets(ctx, nil)
 	require.NoError(t, err)
 
-	assert.Equal(t, *samplingTragets.LastRuleModification, float64(123456))
-	assert.Equal(t, *samplingTragets.SamplingTargetDocuments[0].FixedRate, float64(5))
-	assert.Equal(t, *samplingTragets.SamplingTargetDocuments[0].Interval, int64(5))
-	assert.Equal(t, *samplingTragets.SamplingTargetDocuments[0].ReservoirQuota, 3.0)
-	assert.Equal(t, *samplingTragets.SamplingTargetDocuments[0].ReservoirQuotaTTL, float64(456789))
-	assert.Equal(t, *samplingTragets.SamplingTargetDocuments[0].RuleName, "r1")
-	assert.Equal(t, *samplingTragets.UnprocessedStatistics[0].RuleName, "r1")
-	assert.Equal(t, *samplingTragets.UnprocessedStatistics[0].ErrorCode, "200")
-	assert.Equal(t, *samplingTragets.UnprocessedStatistics[0].Message, "ok")
+	assert.Equal(t, float64(123456), *samplingTragets.LastRuleModification)
+	assert.Equal(t, float64(5), *samplingTragets.SamplingTargetDocuments[0].FixedRate)
+	assert.Equal(t, int64(5), *samplingTragets.SamplingTargetDocuments[0].Interval)
+	assert.Equal(t, 3.0, *samplingTragets.SamplingTargetDocuments[0].ReservoirQuota)
+	assert.Equal(t, float64(456789), *samplingTragets.SamplingTargetDocuments[0].ReservoirQuotaTTL)
+	assert.Equal(t, "r1", *samplingTragets.SamplingTargetDocuments[0].RuleName)
+	assert.Equal(t, "r1", *samplingTragets.UnprocessedStatistics[0].RuleName)
+	assert.Equal(t, "200", *samplingTragets.UnprocessedStatistics[0].ErrorCode)
+	assert.Equal(t, "ok", *samplingTragets.UnprocessedStatistics[0].Message)
 }
 
 func TestGetSamplingTargetsMissingValues(t *testing.T) {
