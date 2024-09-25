@@ -75,6 +75,18 @@ issues:
 linters-settings:
   depguard:
     rules:
+      no-sdk-instrumentation:
+        files:
+          - "**/*/{bridges,instrumentation}/**/*.go"
+          - "!**/*/bridges/prometheus/*.go" # prometheus bridge is meant to use the SDK
+          - "!**/*/instrumentation/runtime/*.go" # runtime instrumentation is meant to use the SDK
+          - "!**/*test/*.go"
+          - "!**/*test/**/*.go"
+          - "!**/*example/*.go"
+          - "!**/*example/**/*.go"
+        deny:
+          - pkg: go.opentelemetry.io/otel/sdk
+            desc: "Bridges and instrumentations should not use the SDKs, except in test or example modules"
       non-tests:
         files:
           - "!$test"
