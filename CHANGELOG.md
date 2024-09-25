@@ -19,6 +19,7 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 ### Fixed
 
 - Possible nil dereference panic in `go.opentelemetry.io/contrib/instrumentation/net/http/httptrace/otelhttptrace`. (#5965)
+- Non-200 HTTP status codes when retrieving sampling rules in `go.opentelemetry.io/contrib/samplers/aws/xray` now return an error. (#5718)
 
 ### Removed
 
@@ -102,7 +103,6 @@ The next release will require at least [Go 1.22].
 - The superfluous `response.WriteHeader` call in `go.opentelemetry.io/contrib/instrumentation/net/http/otelhttp` when the response writer is flushed. (#5634)
 - Use `c.FullPath()` method to set `http.route` attribute in `go.opentelemetry.io/contrib/instrumentation/github.com/gin-gonic/gin/otelgin`. (#5734)
 - Out-of-bounds panic in case of invalid span ID in `go.opentelemetry.io/contrib/propagators/b3`. (#5754)
-- Non-200 HTTP status codes when retrieving sampling rules in `go.opentelemetry.io/contrib/samplers/aws/xray` now return an error. (#5718)
 
 ### Deprecated
 
