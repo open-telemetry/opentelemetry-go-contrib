@@ -1625,7 +1625,7 @@ func TestUpdatingRulesAndTargetsWhileMatchingConcurrentSafe(t *testing.T) {
 			manifest := m.deepCopy()
 
 			err := manifest.updateReservoir(createSamplingTargetDocument("r1", 0, 0.05, 10, 13000000))
-			require.NoError(t, err)
+			assert.NoError(t, err)
 			time.Sleep(time.Millisecond)
 
 			m.mu.Lock()
@@ -1827,7 +1827,7 @@ func TestUpdatingSamplingStatisticsWhenSamplingConcurrentSafe(t *testing.T) {
 			manifest := m.deepCopy()
 
 			_, err := manifest.snapshots()
-			require.NoError(t, err)
+			assert.NoError(t, err)
 
 			m.mu.Lock()
 			m.Rules = manifest.Rules
