@@ -314,7 +314,7 @@ func TestHandlerRequestWithTraceContext(t *testing.T) {
 	h := otelhttp.NewHandler(
 		http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 			_, err := w.Write([]byte("hello world"))
-			require.NoError(t, err)
+			assert.NoError(t, err)
 		}), "test_handler")
 
 	r, err := http.NewRequest(http.MethodGet, "http://localhost/", nil)
@@ -432,7 +432,7 @@ func TestWithPublicEndpointFn(t *testing.T) {
 			},
 			spansAssert: func(t *testing.T, _ trace.SpanContext, spans []sdktrace.ReadOnlySpan) {
 				require.Len(t, spans, 1)
-				require.Len(t, spans[0].Links(), 0, "should not contain link")
+				require.Empty(t, spans[0].Links(), "should not contain link")
 			},
 		},
 	} {
@@ -495,7 +495,7 @@ func TestSpanStatus(t *testing.T) {
 			h.ServeHTTP(httptest.NewRecorder(), httptest.NewRequest("GET", "/", nil))
 
 			require.Len(t, sr.Ended(), 1, "should emit a span")
-			assert.Equal(t, sr.Ended()[0].Status().Code, tc.wantSpanStatus, "should only set Error status for HTTP statuses >= 500")
+			assert.Equal(t, tc.wantSpanStatus, sr.Ended()[0].Status().Code, "should only set Error status for HTTP statuses >= 500")
 		})
 	}
 }

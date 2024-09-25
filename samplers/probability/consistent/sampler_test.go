@@ -212,9 +212,9 @@ func TestSamplerBehavior(t *testing.T) {
 						}
 
 						if test.hasErrors {
-							require.Less(t, 0, len(handler.Errors()))
+							require.NotEmpty(t, handler.Errors())
 						} else {
-							require.Equal(t, 0, len(handler.Errors()))
+							require.Empty(t, handler.Errors())
 						}
 					}
 				})

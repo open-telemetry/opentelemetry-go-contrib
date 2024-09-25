@@ -806,7 +806,7 @@ func TestInstrumentType(t *testing.T) {
 		t.Run(tt.name, func(t *testing.T) {
 			got, err := instrumentKind(tt.instType)
 			if tt.wantErr != nil {
-				require.Equal(t, err, tt.wantErr)
+				require.Equal(t, tt.wantErr, err)
 				require.Zero(t, got)
 			} else {
 				require.NoError(t, err)

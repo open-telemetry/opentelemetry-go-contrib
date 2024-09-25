@@ -15,13 +15,22 @@ import (
 // NewLogProcessor returns a new [LogProcessor] that wraps the downstream
 // [log.Processor].
 //
+// severity reports the minimum record severity that will be logged. The
+// LogProcessor discards records with lower severities. If severity is nil,
+// SeverityInfo is used as a default. The LogProcessor calls severity.Severity
+// for each record processed or queried; to adjust the minimum level
+// dynamically, use a [SeverityVar].
+//
 // If downstream is nil a default No-Op [log.Processor] is used. The returned
 // processor will not be enabled for nor emit any records.
-func NewLogProcessor(downstream log.Processor, minimum api.Severity) *LogProcessor {
+func NewLogProcessor(downstream log.Processor, severity Severitier) *LogProcessor {
 	if downstream == nil {
 		downstream = defaultProcessor
 	}
-	p := &LogProcessor{Processor: downstream, Minimum: minimum}
+	if severity == nil {
+		severity = SeverityInfo
+	}
+	p := &LogProcessor{Processor: downstream, sev: severity}
 	if fp, ok := downstream.(filterProcessor); ok {
 		p.filter = fp
 	}
@@ -45,8 +54,8 @@ type filterProcessor interface {
 type LogProcessor struct {
 	log.Processor
 
-	filter  filterProcessor
-	Minimum api.Severity
+	filter filterProcessor
+	sev    Severitier
 }
 
 // Compile time assertion that LogProcessor implements log.Processor.
@@ -56,7 +65,7 @@ var _ log.Processor = (*LogProcessor)(nil)
 // of record is greater than or equal to p.Minimum. Otherwise, record is
 // dropped.
 func (p *LogProcessor) OnEmit(ctx context.Context, record *log.Record) error {
-	if record.Severity() >= p.Minimum {
+	if record.Severity() >= p.sev.Severity() {
 		return p.Processor.OnEmit(ctx, record)
 	}
 	return nil
@@ -66,15 +75,16 @@ func (p *LogProcessor) OnEmit(ctx context.Context, record *log.Record) error {
 // severity of param is greater than or equal to p.Minimum. Otherwise false is
 // returned.
 func (p *LogProcessor) Enabled(ctx context.Context, param api.EnabledParameters) bool {
-	lvl, ok := param.Severity()
+	sev, ok := param.Severity()
 	if !ok {
 		return true
 	}
 
 	if p.filter != nil {
-		return lvl >= p.Minimum && p.filter.Enabled(ctx, param)
+		return sev >= p.sev.Severity() &&
+			p.filter.Enabled(ctx, param)
 	}
-	return lvl >= p.Minimum
+	return sev >= p.sev.Severity()
 }
 
 var defaultProcessor = noopProcessor{}

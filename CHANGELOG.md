@@ -8,9 +8,23 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 
 ## [Unreleased]
 
+### Added
+
+- The `Severitier` and `SeverityVar` types are added to `go.opentelemetry.io/contrib/processors/minsev` allowing dynamic configuration of the severity used by the `LogProcessor`. (#6116)
+
+### Changed
+
+- The function signature of `NewLogProcessor` in `go.opentelemetry.io/contrib/processors/minsev` has changed to accept the added `Severitier` interface instead of a `log.Severity`. (#6116)
+
 ### Fixed
 
 - Possible nil dereference panic in `go.opentelemetry.io/contrib/instrumentation/net/http/httptrace/otelhttptrace`. (#5965)
+- Non-200 HTTP status codes when retrieving sampling rules in `go.opentelemetry.io/contrib/samplers/aws/xray` now return an error. (#5718)
+
+### Removed
+
+- The `Minimum` field of the `LogProcessor` in `go.opentelemetry.io/contrib/processors/minsev` is removed.
+  Use `NewLogProcessor` to configure this setting. (#6116)
 
 <!-- Released section -->
 <!-- Don't change this section unless doing release -->

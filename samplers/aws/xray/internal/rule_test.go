@@ -209,7 +209,7 @@ func TestTraceIDRatioBasedSamplerFixedRateZero(t *testing.T) {
 	now := time.Unix(1500000000, 0)
 	sd := r1.Sample(trace.SamplingParameters{}, now)
 
-	assert.Equal(t, sd.Decision, trace.Drop)
+	assert.Equal(t, trace.Drop, sd.Decision)
 }
 
 func TestAppliesToMatchingWithAllAttrs(t *testing.T) {
@@ -634,7 +634,7 @@ func TestUpdatingRulesAndTargetsWhileSamplingConcurrentSafe(t *testing.T) {
 			manifest := m.deepCopy()
 
 			err := manifest.updateReservoir(&st)
-			require.NoError(t, err)
+			assert.NoError(t, err)
 			time.Sleep(time.Millisecond)
 
 			m.mu.Lock()
