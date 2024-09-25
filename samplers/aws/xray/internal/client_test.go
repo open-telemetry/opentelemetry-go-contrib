@@ -5,6 +5,7 @@ package internal
 
 import (
 	"context"
+	"fmt"
 	"net/http"
 	"net/http/httptest"
 	"net/url"
@@ -15,7 +16,12 @@ import (
 )
 
 func createTestClient(t *testing.T, body []byte) *xrayClient {
+	return createTestClientWithStatusCode(t, http.StatusOK, body)
+}
+
+func createTestClientWithStatusCode(t *testing.T, status int, body []byte) *xrayClient {
 	testServer := httptest.NewServer(http.HandlerFunc(func(res http.ResponseWriter, _ *http.Request) {
+		res.WriteHeader(status)
 		_, err := res.Write(body)
 		assert.NoError(t, err)
 	}))
@@ -26,7 +32,6 @@ func createTestClient(t *testing.T, body []byte) *xrayClient {
 
 	client, err := newClient(*u)
 	require.NoError(t, err)
-
 	return client
 }
 
@@ -222,22 +227,11 @@ func TestGetSamplingTargetsMissingValues(t *testing.T) {
 
 	client := createTestClient(t, body)
 
-	samplingTragets, err := client.getSamplingTargets(ctx, nil)
+	samplingTargets, err := client.getSamplingTargets(ctx, nil)
 	require.NoError(t, err)
 
-	assert.Nil(t, samplingTragets.SamplingTargetDocuments[0].Interval)
-	assert.Nil(t, samplingTragets.SamplingTargetDocuments[0].ReservoirQuota)
-}
-
-func TestNilContext(t *testing.T) {
-	client := createTestClient(t, []byte(``))
-	samplingRulesOutput, err := client.getSamplingRules(context.TODO())
-	require.Error(t, err)
-	require.Nil(t, samplingRulesOutput)
-
-	samplingTargetsOutput, err := client.getSamplingTargets(context.TODO(), nil)
-	require.Error(t, err)
-	require.Nil(t, samplingTargetsOutput)
+	assert.Nil(t, samplingTargets.SamplingTargetDocuments[0].Interval)
+	assert.Nil(t, samplingTargets.SamplingTargetDocuments[0].ReservoirQuota)
 }
 
 func TestNewClient(t *testing.T) {
@@ -258,6 +252,59 @@ func TestEndpointIsNotReachable(t *testing.T) {
 	client, err := newClient(*endpoint)
 	require.NoError(t, err)
 
-	_, err = client.getSamplingRules(context.Background())
+	actualRules, err := client.getSamplingRules(context.Background())
 	assert.Error(t, err)
+	assert.ErrorContains(t, err, "xray client: unable to retrieve sampling rules, error on http request: ")
+	assert.Nil(t, actualRules)
+
+	actualTargets, err := client.getSamplingTargets(context.Background(), nil)
+	assert.Error(t, err)
+	assert.ErrorContains(t, err, "xray client: unable to retrieve sampling targets, error on http request: ")
+	assert.Nil(t, actualTargets)
+}
+
+func TestRespondsWithErrorStatusCode(t *testing.T) {
+	client := createTestClientWithStatusCode(t, http.StatusForbidden, []byte("{}"))
+
+	actualRules, err := client.getSamplingRules(context.Background())
+	assert.Error(t, err)
+	assert.EqualError(t, err, fmt.Sprintf("xray client: unable to retrieve sampling rules, expected response status code 200, got: %d", http.StatusForbidden))
+	assert.Nil(t, actualRules)
+
+	actualTargets, err := client.getSamplingTargets(context.Background(), nil)
+	assert.Error(t, err)
+	assert.EqualError(t, err, fmt.Sprintf("xray client: unable to retrieve sampling targets, expected response status code 200, got: %d", http.StatusForbidden))
+	assert.Nil(t, actualTargets)
+}
+
+func TestInvalidResponseBody(t *testing.T) {
+	type scenarios struct {
+		name     string
+		response string
+	}
+	for _, scenario := range []scenarios{
+		{
+			name:     "empty response",
+			response: "",
+		},
+		{
+			name:     "malformed json",
+			response: "",
+		},
+	} {
+		t.Run(scenario.name, func(t *testing.T) {
+			client := createTestClient(t, []byte(scenario.response))
+
+			actualRules, err := client.getSamplingRules(context.TODO())
+
+			assert.Error(t, err)
+			assert.Nil(t, actualRules)
+			assert.ErrorContains(t, err, "xray client: unable to retrieve sampling rules, unable to unmarshal the response body:"+scenario.response)
+
+			actualTargets, err := client.getSamplingTargets(context.TODO(), nil)
+			assert.Error(t, err)
+			assert.Nil(t, actualTargets)
+			assert.ErrorContains(t, err, "xray client: unable to retrieve sampling targets, unable to unmarshal the response body: "+scenario.response)
+		})
+	}
 }
