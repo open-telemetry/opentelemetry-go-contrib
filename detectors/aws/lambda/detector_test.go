@@ -35,7 +35,7 @@ func TestDetectSuccess(t *testing.T) {
 	detector := resourceDetector{}
 	res, err := detector.Detect(context.Background())
 
-	assert.Nil(t, err, "Detector unexpectedly returned error")
+	assert.NoError(t, err, "Detector unexpectedly returned error")
 	assert.Equal(t, expectedResource, res, "Resource returned is incorrect")
 }
 
