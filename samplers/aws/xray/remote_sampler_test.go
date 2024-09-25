@@ -14,5 +14,5 @@ func TestRemoteSamplerDescription(t *testing.T) {
 	rs := &remoteSampler{}
 
 	s := rs.Description()
-	assert.Equal(t, s, "AWSXRayRemoteSampler{remote sampling with AWS X-Ray}")
+	assert.Equal(t, "AWSXRayRemoteSampler{remote sampling with AWS X-Ray}", s)
 }

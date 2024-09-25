@@ -16,7 +16,7 @@ import (
 func TestSampleUsingFallbackSampler(t *testing.T) {
 	fs := NewFallbackSampler()
 	assert.NotEmpty(t, fs.defaultSampler)
-	assert.Equal(t, fs.quotaBalance, 1.0)
+	assert.Equal(t, 1.0, fs.quotaBalance)
 
 	sd := fs.ShouldSample(trace.SamplingParameters{})
 	assert.Equal(t, trace.RecordAndSample, sd.Decision)
@@ -52,12 +52,12 @@ func TestBorrowWithLargeElapsedTime(t *testing.T) {
 	// Increase the time by 9 seconds
 	borrowed = fs.take(time.Unix(1500000009, 0), 1.0)
 	assert.True(t, borrowed)
-	assert.Equal(t, fs.quotaBalance, 0.0)
+	assert.Equal(t, 0.0, fs.quotaBalance)
 }
 
 // assert fallback sampling description.
 func TestFallbackSamplerDescription(t *testing.T) {
 	fs := NewFallbackSampler()
 	s := fs.Description()
-	assert.Equal(t, s, "FallbackSampler{fallback sampling with sampling config of 1 req/sec and 5% of additional requests}")
+	assert.Equal(t, "FallbackSampler{fallback sampling with sampling config of 1 req/sec and 5% of additional requests}", s)
 }

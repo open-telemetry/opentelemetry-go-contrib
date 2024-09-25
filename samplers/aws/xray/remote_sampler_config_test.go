@@ -22,9 +22,9 @@ func TestNewConfig(t *testing.T) {
 	cfg, err := newConfig(WithSamplingRulesPollingInterval(400*time.Second), WithEndpoint(*endpoint), WithLogger(logr.Logger{}))
 	require.NoError(t, err)
 
-	assert.Equal(t, cfg.samplingRulesPollingInterval, 400*time.Second)
+	assert.Equal(t, 400*time.Second, cfg.samplingRulesPollingInterval)
 	assert.Equal(t, cfg.endpoint, *endpoint)
-	assert.Equal(t, cfg.logger, logr.Logger{})
+	assert.Equal(t, logr.Logger{}, cfg.logger)
 }
 
 // assert that when user did not provide values are then config would be picked up from default values.
@@ -35,7 +35,7 @@ func TestDefaultConfig(t *testing.T) {
 	cfg, err := newConfig()
 	require.NoError(t, err)
 
-	assert.Equal(t, cfg.samplingRulesPollingInterval, 300*time.Second)
+	assert.Equal(t, 300*time.Second, cfg.samplingRulesPollingInterval)
 	assert.Equal(t, cfg.endpoint, *endpoint)
 	assert.Equal(t, cfg.logger, defaultLogger)
 }
@@ -48,7 +48,7 @@ func TestPartialUserProvidedConfig(t *testing.T) {
 	cfg, err := newConfig(WithSamplingRulesPollingInterval(500 * time.Second))
 	require.NoError(t, err)
 
-	assert.Equal(t, cfg.samplingRulesPollingInterval, 500*time.Second)
+	assert.Equal(t, 500*time.Second, cfg.samplingRulesPollingInterval)
 	assert.Equal(t, cfg.endpoint, *endpoint)
 	assert.Equal(t, cfg.logger, defaultLogger)
 }

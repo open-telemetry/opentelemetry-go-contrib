@@ -148,7 +148,7 @@ func TestSpanStatus(t *testing.T) {
 			router.ServeHTTP(httptest.NewRecorder(), httptest.NewRequest("GET", "/", nil))
 
 			require.Len(t, sr.Ended(), 1, "should emit a span")
-			assert.Equal(t, sr.Ended()[0].Status().Code, tc.wantSpanStatus, "should only set Error status for HTTP statuses >= 500")
+			assert.Equal(t, tc.wantSpanStatus, sr.Ended()[0].Status().Code, "should only set Error status for HTTP statuses >= 500")
 		})
 	}
 }
@@ -174,7 +174,7 @@ func TestSpanName(t *testing.T) {
 			router.ServeHTTP(httptest.NewRecorder(), httptest.NewRequest("GET", tc.requestPath, nil))
 
 			require.Len(t, sr.Ended(), 1, "should emit a span")
-			assert.Equal(t, sr.Ended()[0].Name(), tc.wantSpanName, "span name not correct")
+			assert.Equal(t, tc.wantSpanName, sr.Ended()[0].Name(), "span name not correct")
 		})
 	}
 }
