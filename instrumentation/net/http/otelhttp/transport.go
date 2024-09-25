@@ -200,7 +200,7 @@ func (t *Transport) RoundTrip(r *http.Request) (*http.Response, error) {
 
 	t.latencyMeasure.Record(ctx, elapsedTime, o)
 
-	return res, err
+	return res, nil
 }
 
 func (t *Transport) metricAttributesFromRequest(r *http.Request) []attribute.KeyValue {
