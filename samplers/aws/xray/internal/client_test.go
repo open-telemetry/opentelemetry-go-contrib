@@ -17,7 +17,7 @@ import (
 func createTestClient(t *testing.T, body []byte) *xrayClient {
 	testServer := httptest.NewServer(http.HandlerFunc(func(res http.ResponseWriter, _ *http.Request) {
 		_, err := res.Write(body)
-		require.NoError(t, err)
+		assert.NoError(t, err)
 	}))
 	t.Cleanup(testServer.Close)
 

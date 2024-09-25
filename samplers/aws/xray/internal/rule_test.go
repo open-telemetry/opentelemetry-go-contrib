@@ -634,7 +634,7 @@ func TestUpdatingRulesAndTargetsWhileSamplingConcurrentSafe(t *testing.T) {
 			manifest := m.deepCopy()
 
 			err := manifest.updateReservoir(&st)
-			require.NoError(t, err)
+			assert.NoError(t, err)
 			time.Sleep(time.Millisecond)
 
 			m.mu.Lock()
