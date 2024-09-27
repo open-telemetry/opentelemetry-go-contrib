@@ -117,7 +117,7 @@ func TestAdaptiveSampler(t *testing.T) {
 	assert.Equal(t, 42, sampler.maxOperations)
 
 	sampler = newPerOperationSampler(perOperationSamplerParams{Strategies: strategies})
-	assert.Equal(t, sampler.maxOperations, 2000, "default MaxOperations applied")
+	assert.Equal(t, 2000, sampler.maxOperations, "default MaxOperations applied")
 
 	sampler = newPerOperationSampler(perOperationSamplerParams{
 		MaxOperations: testDefaultMaxOperations,

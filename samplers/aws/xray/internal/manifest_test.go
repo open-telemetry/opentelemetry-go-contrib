@@ -712,8 +712,8 @@ func TestRefreshManifestTargets(t *testing.T) {
 
 	// assert target updates
 	require.Len(t, m.Rules, 1)
-	assert.Equal(t, m.Rules[0].ruleProperties.FixedRate, 0.06)
-	assert.Equal(t, m.Rules[0].reservoir.quota, 23.0)
+	assert.Equal(t, 0.06, m.Rules[0].ruleProperties.FixedRate)
+	assert.Equal(t, 23.0, m.Rules[0].reservoir.quota)
 	assert.Equal(t, m.Rules[0].reservoir.expiresAt, time.Unix(15000000, 0))
 	assert.Equal(t, m.Rules[0].reservoir.interval, time.Duration(25))
 }
@@ -1773,13 +1773,13 @@ func TestDoNotPreserveRulesWithDifferentRuleProperties(t *testing.T) {
 		SamplingRuleRecords: []*samplingRuleRecords{&ruleRecords},
 	})
 
-	require.Equal(t, m.Rules[0].reservoir.quota, 0.0)
-	require.Equal(t, m.Rules[0].reservoir.quotaBalance, 0.0)
-	require.Equal(t, *m.Rules[0].samplingStatistics, samplingStatistics{
+	require.Equal(t, 0.0, m.Rules[0].reservoir.quota)
+	require.Equal(t, 0.0, m.Rules[0].reservoir.quotaBalance)
+	require.Equal(t, samplingStatistics{
 		matchedRequests:  0,
 		sampledRequests:  0,
 		borrowedRequests: 0,
-	})
+	}, *m.Rules[0].samplingStatistics)
 }
 
 // validate no data race is when capturing sampling statistics in manifest while sampling.

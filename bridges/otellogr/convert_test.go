@@ -300,7 +300,7 @@ func TestConvertValue(t *testing.T) {
 		},
 	} {
 		t.Run(tt.name, func(t *testing.T) {
-			assert.Equal(t, convertValue(tt.value), tt.wantValue)
+			assert.Equal(t, tt.wantValue, convertValue(tt.value))
 		})
 	}
 }
