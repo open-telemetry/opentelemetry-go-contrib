@@ -42,7 +42,7 @@ func rolldice(w http.ResponseWriter, r *http.Request) {
 	ctx, span := tracer.Start(r.Context(), "roll")
 	defer span.End()
 
-	roll := 1 + rand.Intn(6)
+	roll := 1 + rand.Intn(6) //nolint:gosec // G404: Use of weak random number generator (math/rand instead of crypto/rand) is ignored as this is not security-sensitive.
 
 	var msg string
 	if player := r.PathValue("player"); player != "" {
