@@ -24,7 +24,7 @@ import (
 const meterName = "go.opentelemetry.io/contrib/examples/prometheus"
 
 func main() {
-	rng := rand.New(rand.NewSource(time.Now().UnixNano()))
+	rng := rand.New(rand.NewSource(time.Now().UnixNano())) //nolint:gosec // G404: Use of weak random number generator (math/rand instead of crypto/rand) is ignored as this is not security-sensitive.
 	ctx := context.Background()
 
 	// The exporter embeds a default OpenTelemetry Reader and
