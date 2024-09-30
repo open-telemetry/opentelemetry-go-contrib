@@ -260,5 +260,4 @@ linters-settings:
     enable-all: true
     disable:
       - float-compare
-      - formatter
       - require-error
