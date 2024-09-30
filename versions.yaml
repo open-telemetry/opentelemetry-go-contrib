@@ -89,6 +89,13 @@ module-sets:
       - go.opentelemetry.io/contrib/detectors/azure/azurevm
 excluded-modules:
   - go.opentelemetry.io/contrib/bridges/otellogr
+  - go.opentelemetry.io/contrib/examples/dice
+  - go.opentelemetry.io/contrib/examples/namedtracer
+  - go.opentelemetry.io/contrib/examples/opencensus
+  - go.opentelemetry.io/contrib/examples/otel-collector
+  - go.opentelemetry.io/contrib/examples/passthrough
+  - go.opentelemetry.io/contrib/examples/prometheus
+  - go.opentelemetry.io/contrib/examples/zipkin
   - go.opentelemetry.io/contrib/instrgen
   - go.opentelemetry.io/contrib/instrgen/driver
   - go.opentelemetry.io/contrib/instrgen/testdata/interface
