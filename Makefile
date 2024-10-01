@@ -54,6 +54,9 @@ $(MULTIMOD): PACKAGE=go.opentelemetry.io/build-tools/multimod
 CROSSLINK = $(TOOLS)/crosslink
 $(CROSSLINK): PACKAGE=go.opentelemetry.io/build-tools/crosslink
 
+GOJQ = $(TOOLS)/gojq
+$(TOOLS)/gojq: PACKAGE=github.com/itchyny/gojq/cmd/gojq
+
 GOTMPL = $(TOOLS)/gotmpl
 $(GOTMPL): PACKAGE=go.opentelemetry.io/build-tools/gotmpl
 
@@ -66,7 +69,7 @@ $(GOJSONSCHEMA): PACKAGE=github.com/atombender/go-jsonschema
 GOVULNCHECK = $(TOOLS)/govulncheck
 $(GOVULNCHECK): PACKAGE=golang.org/x/vuln/cmd/govulncheck
 
-tools: $(GOLANGCI_LINT) $(MISSPELL) $(GOCOVMERGE) $(STRINGER) $(PORTO) $(MULTIMOD) $(CROSSLINK) $(GOTMPL) $(GORELEASE) $(GOJSONSCHEMA) $(GOVULNCHECK)
+tools: $(GOLANGCI_LINT) $(MISSPELL) $(GOCOVMERGE) $(STRINGER) $(PORTO) $(GOJQ) $(MULTIMOD) $(CROSSLINK) $(GOTMPL) $(GORELEASE) $(GOJSONSCHEMA) $(GOVULNCHECK)
 
 # Virtualized python tools via docker
 
