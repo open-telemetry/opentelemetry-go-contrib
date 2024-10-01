@@ -6,14 +6,11 @@ package main
 import (
 	"fmt"
 	"io"
-	"log/slog"
 	"math/rand"
 	"net/http"
-	"os"
 	"strconv"
 
-	// TODO: https://github.com/open-telemetry/opentelemetry-go/issues/5801
-	// "go.opentelemetry.io/contrib/bridges/otelslog".
+	"go.opentelemetry.io/contrib/bridges/otelslog"
 	"go.opentelemetry.io/otel"
 	"go.opentelemetry.io/otel/attribute"
 	"go.opentelemetry.io/otel/metric"
@@ -24,7 +21,7 @@ const name = "go.opentelemetry.io/contrib/examples/dice"
 var (
 	tracer  = otel.Tracer(name)
 	meter   = otel.Meter(name)
-	logger  = slog.New(slog.NewJSONHandler(os.Stdout, nil)) // TODO: logger  = otelslog.NewLogger(name).
+	logger  = otelslog.NewLogger(name)
 	rollCnt metric.Int64Counter
 )
 
