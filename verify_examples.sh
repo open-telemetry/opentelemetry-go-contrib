@@ -9,27 +9,27 @@ cd $(dirname $0)
 TOOLS_DIR=$(pwd)/.tools
 GOPATH=$(go env GOPATH)
 
-# if [ -z "${GOPATH}" ] ; then
-# 	printf "GOPATH is not defined.\n"
-# 	exit -1
-# fi
+if [ -z "${GOPATH}" ] ; then
+	printf "GOPATH is not defined.\n"
+	exit -1
+fi
 
-# if [ ! -d "${GOPATH}" ] ; then
-# 	printf "GOPATH ${GOPATH} is invalid \n"
-# 	exit -1
-# fi
+if [ ! -d "${GOPATH}" ] ; then
+	printf "GOPATH ${GOPATH} is invalid \n"
+	exit -1
+fi
 
-# # Pre-requisites
-# if ! git diff --quiet; then \
-# 	git status
-# 	printf "\n\nError: working tree is not clean\n"
-# 	exit -1
-# fi
+# Pre-requisites
+if ! git diff --quiet; then \
+	git status
+	printf "\n\nError: working tree is not clean\n"
+	exit -1
+fi
 
-# if [ "$(git tag --contains $(git log -1 --pretty=format:"%H"))" = "" ] ; then
-# 	printf "$(git log -1)"
-# 	printf "\n\nError: HEAD is not pointing to a tagged version"
-# fi
+if [ "$(git tag --contains $(git log -1 --pretty=format:"%H"))" = "" ] ; then
+	printf "$(git log -1)"
+	printf "\n\nError: HEAD is not pointing to a tagged version"
+fi
 
 make ${TOOLS_DIR}/gojq
 
