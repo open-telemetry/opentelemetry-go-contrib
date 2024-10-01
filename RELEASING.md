@@ -159,3 +159,14 @@ different module sets, be sure to use the stable release tag but be sure to
 include each version in the release title (i.e. `Release v1.0.0/v0.25.0`). The
 release body should include all the curated changes from the Changelog for this
 release.
+
+## Verify Examples
+
+After releasing verify that examples build outside of the repository.
+
+```sh
+./verify_examples.sh
+```
+
+The script copies examples into a different directory removes any `replace` declarations in `go.mod` and builds them.
+This ensures they build with the published release, not the local copy.
