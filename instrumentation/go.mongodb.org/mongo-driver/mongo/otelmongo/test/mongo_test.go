@@ -30,10 +30,10 @@ func TestDBCrudOperation(t *testing.T) {
 			return assert.Equal(t, "test-collection.insert", s.Name(), "expected %s", s.Name())
 		},
 		func(s sdktrace.ReadOnlySpan) bool {
-			return assert.Contains(t, s.Attributes(), attribute.String("db.operation", "insert"))
+			return assert.Contains(t, s.Attributes(), attribute.String("db.operation.name", "insert"))
 		},
 		func(s sdktrace.ReadOnlySpan) bool {
-			return assert.Contains(t, s.Attributes(), attribute.String("db.mongodb.collection", "test-collection"))
+			return assert.Contains(t, s.Attributes(), attribute.String("db.collection.name", "test-collection"))
 		},
 		func(s sdktrace.ReadOnlySpan) bool {
 			return assert.Equal(t, codes.Unset, s.Status().Code)
@@ -56,7 +56,7 @@ func TestDBCrudOperation(t *testing.T) {
 			excludeCommand: false,
 			validators: append(commonValidators, func(s sdktrace.ReadOnlySpan) bool {
 				for _, attr := range s.Attributes() {
-					if attr.Key == "db.statement" {
+					if attr.Key == "db.query.text" {
 						return assert.Contains(t, attr.Value.AsString(), `"test-item":"test-value"`)
 					}
 				}
@@ -72,7 +72,7 @@ func TestDBCrudOperation(t *testing.T) {
 			excludeCommand: true,
 			validators: append(commonValidators, func(s sdktrace.ReadOnlySpan) bool {
 				for _, attr := range s.Attributes() {
-					if attr.Key == "db.statement" {
+					if attr.Key == "db.query.text" {
 						return false
 					}
 				}
@@ -131,10 +131,10 @@ func TestDBCrudOperation(t *testing.T) {
 			assert.Equal(mt, trace.SpanKindClient, s.SpanKind())
 			attrs := s.Attributes()
 			assert.Contains(mt, attrs, attribute.String("db.system", "mongodb"))
-			assert.Contains(mt, attrs, attribute.String("net.peer.name", "<mock_connection>"))
-			assert.Contains(mt, attrs, attribute.Int64("net.peer.port", int64(27017)))
-			assert.Contains(mt, attrs, attribute.String("net.transport", "ip_tcp"))
-			assert.Contains(mt, attrs, attribute.String("db.name", "test-database"))
+			assert.Contains(mt, attrs, attribute.String("network.peer.address", "<mock_connection>:27017"))
+			assert.Contains(mt, attrs, attribute.Int64("network.peer.port", int64(27017)))
+			assert.Contains(mt, attrs, attribute.String("network.transport", "tcp"))
+			assert.Contains(mt, attrs, attribute.String("db.namespace", "test-database"))
 			for _, v := range tc.validators {
 				assert.True(mt, v(s))
 			}
@@ -160,10 +160,10 @@ func TestDBCollectionAttribute(t *testing.T) {
 					return assert.Equal(t, "test-collection.delete", s.Name())
 				},
 				func(s sdktrace.ReadOnlySpan) bool {
-					return assert.Contains(t, s.Attributes(), attribute.String("db.operation", "delete"))
+					return assert.Contains(t, s.Attributes(), attribute.String("db.operation.name", "delete"))
 				},
 				func(s sdktrace.ReadOnlySpan) bool {
-					return assert.Contains(t, s.Attributes(), attribute.String("db.mongodb.collection", "test-collection"))
+					return assert.Contains(t, s.Attributes(), attribute.String("db.collection.name", "test-collection"))
 				},
 				func(s sdktrace.ReadOnlySpan) bool {
 					return assert.Equal(t, codes.Unset, s.Status().Code)
@@ -186,7 +186,7 @@ func TestDBCollectionAttribute(t *testing.T) {
 					return assert.Equal(t, "listCollections", s.Name())
 				},
 				func(s sdktrace.ReadOnlySpan) bool {
-					return assert.Contains(t, s.Attributes(), attribute.String("db.operation", "listCollections"))
+					return assert.Contains(t, s.Attributes(), attribute.String("db.operation.name", "listCollections"))
 				},
 				func(s sdktrace.ReadOnlySpan) bool {
 					return assert.Equal(t, codes.Unset, s.Status().Code)
@@ -238,10 +238,10 @@ func TestDBCollectionAttribute(t *testing.T) {
 			assert.Equal(mt, trace.SpanKindClient, s.SpanKind())
 			attrs := s.Attributes()
 			assert.Contains(mt, attrs, attribute.String("db.system", "mongodb"))
-			assert.Contains(mt, attrs, attribute.String("net.peer.name", "<mock_connection>"))
-			assert.Contains(mt, attrs, attribute.Int64("net.peer.port", int64(27017)))
-			assert.Contains(mt, attrs, attribute.String("net.transport", "ip_tcp"))
-			assert.Contains(mt, attrs, attribute.String("db.name", "test-database"))
+			assert.Contains(mt, attrs, attribute.String("network.peer.address", "<mock_connection>:27017"))
+			assert.Contains(mt, attrs, attribute.Int64("network.peer.port", int64(27017)))
+			assert.Contains(mt, attrs, attribute.String("network.transport", "tcp"))
+			assert.Contains(mt, attrs, attribute.String("db.namespace", "test-database"))
 			for _, v := range tc.validators {
 				assert.True(mt, v(s))
 			}
