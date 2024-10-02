@@ -5,7 +5,7 @@ go 1.22
 require (
 	github.com/sirupsen/logrus v1.9.3
 	github.com/stretchr/testify v1.9.0
-	go.opentelemetry.io/otel/log v0.6.1-0.20240921150428-063239fa3703
+	go.opentelemetry.io/otel/log v0.6.1-0.20241002081240-cabe9567c827
 )
 
 require (
