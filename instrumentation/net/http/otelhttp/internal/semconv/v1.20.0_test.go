@@ -199,7 +199,6 @@ func TestV120ClientMetrics(t *testing.T) {
 	assert.ElementsMatch(t, want, client.latencyMeasure.(*testInst).attributes)
 }
 
-// TestStandardizeHTTPMethodMetric
 func TestStandardizeHTTPMethodMetric(t *testing.T) {
 	testCases := []struct {
 		method string
