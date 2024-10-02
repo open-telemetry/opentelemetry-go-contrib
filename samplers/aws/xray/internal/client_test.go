@@ -5,6 +5,7 @@ package internal
 
 import (
 	"context"
+	"fmt"
 	"net/http"
 	"net/http/httptest"
 	"net/url"
@@ -15,9 +16,14 @@ import (
 )
 
 func createTestClient(t *testing.T, body []byte) *xrayClient {
+	return createTestClientWithStatusCode(t, http.StatusOK, body)
+}
+
+func createTestClientWithStatusCode(t *testing.T, status int, body []byte) *xrayClient {
 	testServer := httptest.NewServer(http.HandlerFunc(func(res http.ResponseWriter, _ *http.Request) {
+		res.WriteHeader(status)
 		_, err := res.Write(body)
-		require.NoError(t, err)
+		assert.NoError(t, err)
 	}))
 	t.Cleanup(testServer.Close)
 
@@ -26,7 +32,6 @@ func createTestClient(t *testing.T, body []byte) *xrayClient {
 
 	client, err := newClient(*u)
 	require.NoError(t, err)
-
 	return client
 }
 
@@ -100,26 +105,26 @@ func TestGetSamplingRules(t *testing.T) {
 	samplingRules, err := client.getSamplingRules(ctx)
 	require.NoError(t, err)
 
-	assert.Equal(t, samplingRules.SamplingRuleRecords[0].SamplingRule.RuleName, "Default")
-	assert.Equal(t, samplingRules.SamplingRuleRecords[0].SamplingRule.ServiceType, "*")
-	assert.Equal(t, samplingRules.SamplingRuleRecords[0].SamplingRule.Host, "*")
-	assert.Equal(t, samplingRules.SamplingRuleRecords[0].SamplingRule.URLPath, "*")
-	assert.Equal(t, samplingRules.SamplingRuleRecords[0].SamplingRule.ReservoirSize, 60.0)
-	assert.Equal(t, samplingRules.SamplingRuleRecords[0].SamplingRule.FixedRate, 0.5)
+	assert.Equal(t, "Default", samplingRules.SamplingRuleRecords[0].SamplingRule.RuleName)
+	assert.Equal(t, "*", samplingRules.SamplingRuleRecords[0].SamplingRule.ServiceType)
+	assert.Equal(t, "*", samplingRules.SamplingRuleRecords[0].SamplingRule.Host)
+	assert.Equal(t, "*", samplingRules.SamplingRuleRecords[0].SamplingRule.URLPath)
+	assert.Equal(t, 60.0, samplingRules.SamplingRuleRecords[0].SamplingRule.ReservoirSize)
+	assert.Equal(t, 0.5, samplingRules.SamplingRuleRecords[0].SamplingRule.FixedRate)
 
-	assert.Equal(t, samplingRules.SamplingRuleRecords[1].SamplingRule.RuleName, "test-rule")
-	assert.Equal(t, samplingRules.SamplingRuleRecords[1].SamplingRule.ServiceType, "local")
-	assert.Equal(t, samplingRules.SamplingRuleRecords[1].SamplingRule.Host, "*")
-	assert.Equal(t, samplingRules.SamplingRuleRecords[1].SamplingRule.URLPath, "/aws-sdk-call")
-	assert.Equal(t, samplingRules.SamplingRuleRecords[1].SamplingRule.ReservoirSize, 3.0)
-	assert.Equal(t, samplingRules.SamplingRuleRecords[1].SamplingRule.FixedRate, 0.09)
+	assert.Equal(t, "test-rule", samplingRules.SamplingRuleRecords[1].SamplingRule.RuleName)
+	assert.Equal(t, "local", samplingRules.SamplingRuleRecords[1].SamplingRule.ServiceType)
+	assert.Equal(t, "*", samplingRules.SamplingRuleRecords[1].SamplingRule.Host)
+	assert.Equal(t, "/aws-sdk-call", samplingRules.SamplingRuleRecords[1].SamplingRule.URLPath)
+	assert.Equal(t, 3.0, samplingRules.SamplingRuleRecords[1].SamplingRule.ReservoirSize)
+	assert.Equal(t, 0.09, samplingRules.SamplingRuleRecords[1].SamplingRule.FixedRate)
 
-	assert.Equal(t, samplingRules.SamplingRuleRecords[2].SamplingRule.RuleName, "test-rule-1")
-	assert.Equal(t, samplingRules.SamplingRuleRecords[2].SamplingRule.ServiceType, "*")
-	assert.Equal(t, samplingRules.SamplingRuleRecords[2].SamplingRule.Host, "*")
-	assert.Equal(t, samplingRules.SamplingRuleRecords[2].SamplingRule.URLPath, "*")
-	assert.Equal(t, samplingRules.SamplingRuleRecords[2].SamplingRule.ReservoirSize, 100.0)
-	assert.Equal(t, samplingRules.SamplingRuleRecords[2].SamplingRule.FixedRate, 0.09)
+	assert.Equal(t, "test-rule-1", samplingRules.SamplingRuleRecords[2].SamplingRule.RuleName)
+	assert.Equal(t, "*", samplingRules.SamplingRuleRecords[2].SamplingRule.ServiceType)
+	assert.Equal(t, "*", samplingRules.SamplingRuleRecords[2].SamplingRule.Host)
+	assert.Equal(t, "*", samplingRules.SamplingRuleRecords[2].SamplingRule.URLPath)
+	assert.Equal(t, 100.0, samplingRules.SamplingRuleRecords[2].SamplingRule.ReservoirSize)
+	assert.Equal(t, 0.09, samplingRules.SamplingRuleRecords[2].SamplingRule.FixedRate)
 }
 
 func TestGetSamplingRulesWithMissingValues(t *testing.T) {
@@ -153,11 +158,11 @@ func TestGetSamplingRulesWithMissingValues(t *testing.T) {
 	require.NoError(t, err)
 
 	// Priority and ReservoirSize are missing in API response so they are assigned as nil
-	assert.Equal(t, samplingRules.SamplingRuleRecords[0].SamplingRule.Priority, int64(0))
-	assert.Equal(t, samplingRules.SamplingRuleRecords[0].SamplingRule.ReservoirSize, 0.0)
+	assert.Equal(t, int64(0), samplingRules.SamplingRuleRecords[0].SamplingRule.Priority)
+	assert.Equal(t, 0.0, samplingRules.SamplingRuleRecords[0].SamplingRule.ReservoirSize)
 
 	// other values are stored as expected
-	assert.Equal(t, samplingRules.SamplingRuleRecords[0].SamplingRule.RuleName, "Default")
+	assert.Equal(t, "Default", samplingRules.SamplingRuleRecords[0].SamplingRule.RuleName)
 }
 
 func TestGetSamplingTargets(t *testing.T) {
@@ -188,15 +193,15 @@ func TestGetSamplingTargets(t *testing.T) {
 	samplingTragets, err := client.getSamplingTargets(ctx, nil)
 	require.NoError(t, err)
 
-	assert.Equal(t, *samplingTragets.LastRuleModification, float64(123456))
-	assert.Equal(t, *samplingTragets.SamplingTargetDocuments[0].FixedRate, float64(5))
-	assert.Equal(t, *samplingTragets.SamplingTargetDocuments[0].Interval, int64(5))
-	assert.Equal(t, *samplingTragets.SamplingTargetDocuments[0].ReservoirQuota, 3.0)
-	assert.Equal(t, *samplingTragets.SamplingTargetDocuments[0].ReservoirQuotaTTL, float64(456789))
-	assert.Equal(t, *samplingTragets.SamplingTargetDocuments[0].RuleName, "r1")
-	assert.Equal(t, *samplingTragets.UnprocessedStatistics[0].RuleName, "r1")
-	assert.Equal(t, *samplingTragets.UnprocessedStatistics[0].ErrorCode, "200")
-	assert.Equal(t, *samplingTragets.UnprocessedStatistics[0].Message, "ok")
+	assert.Equal(t, float64(123456), *samplingTragets.LastRuleModification)
+	assert.Equal(t, float64(5), *samplingTragets.SamplingTargetDocuments[0].FixedRate)
+	assert.Equal(t, int64(5), *samplingTragets.SamplingTargetDocuments[0].Interval)
+	assert.Equal(t, 3.0, *samplingTragets.SamplingTargetDocuments[0].ReservoirQuota)
+	assert.Equal(t, float64(456789), *samplingTragets.SamplingTargetDocuments[0].ReservoirQuotaTTL)
+	assert.Equal(t, "r1", *samplingTragets.SamplingTargetDocuments[0].RuleName)
+	assert.Equal(t, "r1", *samplingTragets.UnprocessedStatistics[0].RuleName)
+	assert.Equal(t, "200", *samplingTragets.UnprocessedStatistics[0].ErrorCode)
+	assert.Equal(t, "ok", *samplingTragets.UnprocessedStatistics[0].Message)
 }
 
 func TestGetSamplingTargetsMissingValues(t *testing.T) {
@@ -222,22 +227,11 @@ func TestGetSamplingTargetsMissingValues(t *testing.T) {
 
 	client := createTestClient(t, body)
 
-	samplingTragets, err := client.getSamplingTargets(ctx, nil)
+	samplingTargets, err := client.getSamplingTargets(ctx, nil)
 	require.NoError(t, err)
 
-	assert.Nil(t, samplingTragets.SamplingTargetDocuments[0].Interval)
-	assert.Nil(t, samplingTragets.SamplingTargetDocuments[0].ReservoirQuota)
-}
-
-func TestNilContext(t *testing.T) {
-	client := createTestClient(t, []byte(``))
-	samplingRulesOutput, err := client.getSamplingRules(context.TODO())
-	require.Error(t, err)
-	require.Nil(t, samplingRulesOutput)
-
-	samplingTargetsOutput, err := client.getSamplingTargets(context.TODO(), nil)
-	require.Error(t, err)
-	require.Nil(t, samplingTargetsOutput)
+	assert.Nil(t, samplingTargets.SamplingTargetDocuments[0].Interval)
+	assert.Nil(t, samplingTargets.SamplingTargetDocuments[0].ReservoirQuota)
 }
 
 func TestNewClient(t *testing.T) {
@@ -258,6 +252,59 @@ func TestEndpointIsNotReachable(t *testing.T) {
 	client, err := newClient(*endpoint)
 	require.NoError(t, err)
 
-	_, err = client.getSamplingRules(context.Background())
+	actualRules, err := client.getSamplingRules(context.Background())
 	assert.Error(t, err)
+	assert.ErrorContains(t, err, "xray client: unable to retrieve sampling rules, error on http request: ")
+	assert.Nil(t, actualRules)
+
+	actualTargets, err := client.getSamplingTargets(context.Background(), nil)
+	assert.Error(t, err)
+	assert.ErrorContains(t, err, "xray client: unable to retrieve sampling targets, error on http request: ")
+	assert.Nil(t, actualTargets)
+}
+
+func TestRespondsWithErrorStatusCode(t *testing.T) {
+	client := createTestClientWithStatusCode(t, http.StatusForbidden, []byte("{}"))
+
+	actualRules, err := client.getSamplingRules(context.Background())
+	assert.Error(t, err)
+	assert.EqualError(t, err, fmt.Sprintf("xray client: unable to retrieve sampling rules, expected response status code 200, got: %d", http.StatusForbidden))
+	assert.Nil(t, actualRules)
+
+	actualTargets, err := client.getSamplingTargets(context.Background(), nil)
+	assert.Error(t, err)
+	assert.EqualError(t, err, fmt.Sprintf("xray client: unable to retrieve sampling targets, expected response status code 200, got: %d", http.StatusForbidden))
+	assert.Nil(t, actualTargets)
+}
+
+func TestInvalidResponseBody(t *testing.T) {
+	type scenarios struct {
+		name     string
+		response string
+	}
+	for _, scenario := range []scenarios{
+		{
+			name:     "empty response",
+			response: "",
+		},
+		{
+			name:     "malformed json",
+			response: "",
+		},
+	} {
+		t.Run(scenario.name, func(t *testing.T) {
+			client := createTestClient(t, []byte(scenario.response))
+
+			actualRules, err := client.getSamplingRules(context.TODO())
+
+			assert.Error(t, err)
+			assert.Nil(t, actualRules)
+			assert.ErrorContains(t, err, "xray client: unable to retrieve sampling rules, unable to unmarshal the response body:"+scenario.response)
+
+			actualTargets, err := client.getSamplingTargets(context.TODO(), nil)
+			assert.Error(t, err)
+			assert.Nil(t, actualTargets)
+			assert.ErrorContains(t, err, "xray client: unable to retrieve sampling targets, unable to unmarshal the response body: "+scenario.response)
+		})
+	}
 }

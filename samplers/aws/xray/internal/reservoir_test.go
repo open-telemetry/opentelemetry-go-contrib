@@ -121,11 +121,11 @@ func TestConsumeFromReservoir(t *testing.T) {
 
 	// reservoir updates the quotaBalance for new second and allows to consume
 	// quota balance is 0 because we are consuming from reservoir for the first time
-	assert.Equal(t, r.quotaBalance, 0.0)
+	assert.Equal(t, 0.0, r.quotaBalance)
 	assert.True(t, r.take(clock.now(), false, 1.0))
-	assert.Equal(t, r.quotaBalance, 1.0)
+	assert.Equal(t, 1.0, r.quotaBalance)
 	assert.True(t, r.take(clock.now(), false, 1.0))
-	assert.Equal(t, r.quotaBalance, 0.0)
+	assert.Equal(t, 0.0, r.quotaBalance)
 	// once assigned quota is consumed reservoir does not allow to consume in that second
 	assert.False(t, r.take(clock.now(), false, 1.0))
 
@@ -133,11 +133,11 @@ func TestConsumeFromReservoir(t *testing.T) {
 	clock.nowTime = 1500000001
 
 	// reservoir updates the quotaBalance for new second and allows to consume
-	assert.Equal(t, r.quotaBalance, 0.0)
+	assert.Equal(t, 0.0, r.quotaBalance)
 	assert.True(t, r.take(clock.now(), false, 1.0))
-	assert.Equal(t, r.quotaBalance, 1.0)
+	assert.Equal(t, 1.0, r.quotaBalance)
 	assert.True(t, r.take(clock.now(), false, 1.0))
-	assert.Equal(t, r.quotaBalance, 0.0)
+	assert.Equal(t, 0.0, r.quotaBalance)
 	// once assigned quota is consumed reservoir does not allow to consume in that second
 	assert.False(t, r.take(clock.now(), false, 1.0))
 
@@ -145,11 +145,11 @@ func TestConsumeFromReservoir(t *testing.T) {
 	clock.nowTime = 1500000005
 
 	// reservoir updates the quotaBalance with one second worth of quota (even though 4 seconds have passed) and allows to consume
-	assert.Equal(t, r.quotaBalance, 0.0)
+	assert.Equal(t, 0.0, r.quotaBalance)
 	assert.True(t, r.take(clock.now(), false, 1.0))
-	assert.Equal(t, r.quotaBalance, 1.0)
+	assert.Equal(t, 1.0, r.quotaBalance)
 	assert.True(t, r.take(clock.now(), false, 1.0))
-	assert.Equal(t, r.quotaBalance, 0.0)
+	assert.Equal(t, 0.0, r.quotaBalance)
 }
 
 func TestZeroCapacityFailBorrow(t *testing.T) {
@@ -163,7 +163,7 @@ func TestZeroCapacityFailBorrow(t *testing.T) {
 	}
 
 	// start with no quota balance
-	assert.Equal(t, r.quotaBalance, 0.0)
+	assert.Equal(t, 0.0, r.quotaBalance)
 	// attempt to borrow from reservoir, and should fail since there is no capacity
 	assert.False(t, r.take(clock.now(), true, 1.0))
 
@@ -171,7 +171,7 @@ func TestZeroCapacityFailBorrow(t *testing.T) {
 	clock.nowTime = 1500000005
 
 	// validate there is still no quota balance
-	assert.Equal(t, r.quotaBalance, 0.0)
+	assert.Equal(t, 0.0, r.quotaBalance)
 	// again, attempt to borrow from reservoir, and should fail since there is no capacity
 	assert.False(t, r.take(clock.now(), true, 1.0))
 }
@@ -219,7 +219,7 @@ func TestQuotaBalanceAfterPortionOfSecond(t *testing.T) {
 	r.refreshQuotaBalanceLocked(clock.now(), false)
 
 	// assert that after half a second, quotaBalance is now quota*0.5 = 3
-	assert.Equal(t, r.quotaBalance, 3.0)
+	assert.Equal(t, 3.0, r.quotaBalance)
 }
 
 // assert quotaBalance and capacity of borrowing case.

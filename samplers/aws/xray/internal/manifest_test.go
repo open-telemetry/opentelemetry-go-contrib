@@ -211,7 +211,7 @@ func TestMatchAgainstManifestRulesAttributeWildCardMatch(t *testing.T) {
 	require.NoError(t, err)
 
 	// assert that manifest rule r1 is a match
-	assert.Nil(t, err)
+	assert.NoError(t, err)
 	assert.Equal(t, *exp, r1)
 }
 
@@ -476,7 +476,7 @@ func TestRefreshManifestMissingRuleName(t *testing.T) {
 	require.NoError(t, err)
 
 	// assert on rule not added
-	require.Len(t, m.Rules, 0)
+	require.Empty(t, m.Rules)
 }
 
 // assert that rule with version greater than one does not update to the manifest.
@@ -520,7 +520,7 @@ func TestRefreshManifestIncorrectVersion(t *testing.T) {
 	require.NoError(t, err)
 
 	// assert on rule not added
-	require.Len(t, m.Rules, 0)
+	require.Empty(t, m.Rules)
 }
 
 // assert that 1 valid and 1 invalid rule update only valid rule gets stored to the manifest.
@@ -712,8 +712,8 @@ func TestRefreshManifestTargets(t *testing.T) {
 
 	// assert target updates
 	require.Len(t, m.Rules, 1)
-	assert.Equal(t, m.Rules[0].ruleProperties.FixedRate, 0.06)
-	assert.Equal(t, m.Rules[0].reservoir.quota, 23.0)
+	assert.Equal(t, 0.06, m.Rules[0].ruleProperties.FixedRate)
+	assert.Equal(t, 23.0, m.Rules[0].reservoir.quota)
 	assert.Equal(t, m.Rules[0].reservoir.expiresAt, time.Unix(15000000, 0))
 	assert.Equal(t, m.Rules[0].reservoir.interval, time.Duration(25))
 }
@@ -1625,7 +1625,7 @@ func TestUpdatingRulesAndTargetsWhileMatchingConcurrentSafe(t *testing.T) {
 			manifest := m.deepCopy()
 
 			err := manifest.updateReservoir(createSamplingTargetDocument("r1", 0, 0.05, 10, 13000000))
-			require.NoError(t, err)
+			assert.NoError(t, err)
 			time.Sleep(time.Millisecond)
 
 			m.mu.Lock()
@@ -1773,13 +1773,13 @@ func TestDoNotPreserveRulesWithDifferentRuleProperties(t *testing.T) {
 		SamplingRuleRecords: []*samplingRuleRecords{&ruleRecords},
 	})
 
-	require.Equal(t, m.Rules[0].reservoir.quota, 0.0)
-	require.Equal(t, m.Rules[0].reservoir.quotaBalance, 0.0)
-	require.Equal(t, *m.Rules[0].samplingStatistics, samplingStatistics{
+	require.Equal(t, 0.0, m.Rules[0].reservoir.quota)
+	require.Equal(t, 0.0, m.Rules[0].reservoir.quotaBalance)
+	require.Equal(t, samplingStatistics{
 		matchedRequests:  0,
 		sampledRequests:  0,
 		borrowedRequests: 0,
-	})
+	}, *m.Rules[0].samplingStatistics)
 }
 
 // validate no data race is when capturing sampling statistics in manifest while sampling.
@@ -1827,7 +1827,7 @@ func TestUpdatingSamplingStatisticsWhenSamplingConcurrentSafe(t *testing.T) {
 			manifest := m.deepCopy()
 
 			_, err := manifest.snapshots()
-			require.NoError(t, err)
+			assert.NoError(t, err)
 
 			m.mu.Lock()
 			m.Rules = manifest.Rules

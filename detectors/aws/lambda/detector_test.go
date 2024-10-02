@@ -35,7 +35,7 @@ func TestDetectSuccess(t *testing.T) {
 	detector := resourceDetector{}
 	res, err := detector.Detect(context.Background())
 
-	assert.Nil(t, err, "Detector unexpectedly returned error")
+	assert.NoError(t, err, "Detector unexpectedly returned error")
 	assert.Equal(t, expectedResource, res, "Resource returned is incorrect")
 }
 
@@ -46,5 +46,5 @@ func TestReturnsIfNoEnvVars(t *testing.T) {
 	res, err := detector.Detect(context.Background())
 
 	assert.Equal(t, errNotOnLambda, err)
-	assert.Equal(t, 0, len(res.Attributes()))
+	assert.Empty(t, res.Attributes())
 }

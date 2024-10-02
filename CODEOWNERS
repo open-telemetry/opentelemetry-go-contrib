@@ -23,14 +23,15 @@
 
 * @open-telemetry/go-approvers
 
-CODEOWNERS @MrAlias @MadVikingGod @pellared @dashpole @XSAM @dmathieu
+CODEOWNERS @MrAlias @pellared @dashpole @XSAM @dmathieu
 
 bridges/otelslog                                                        @open-telemetry/go-approvers @MrAlias @pellared
 bridges/otellogrus/                                                     @open-telemetry/go-approvers @dmathieu @pellared
 bridges/prometheus/                                                     @open-telemetry/go-approvers @dashpole
 bridges/otelzap/                                                        @open-telemetry/go-approvers @pellared @khushijain21
+bridges/otellogr/                                                       @open-telemetry/go-approvers @scorpionknifes @pellared
 
-config/                                                                 @open-telemetry/go-approvers @MadVikingGod @pellared @codeboten
+config/                                                                 @open-telemetry/go-approvers @pellared @codeboten
 
 detectors/aws/ec2                                                       @open-telemetry/go-approvers @pyohannes @akats7
 detectors/aws/ecs                                                       @open-telemetry/go-approvers @pyohannes @akats7
@@ -51,10 +52,10 @@ instrumentation/go.mongodb.org/mongo-driver/mongo/otelmongo/            @open-te
 instrumentation/google.golang.org/grpc/otelgrpc/                        @open-telemetry/go-approvers @dashpole @hanyuancheung
 instrumentation/gopkg.in/macaron.v1/otelmacaron/                        @open-telemetry/go-approvers
 
-instrumentation/host/                                                   @open-telemetry/go-approvers @MadVikingGod
+instrumentation/host/                                                   @open-telemetry/go-approvers
 instrumentation/net/http/httptrace/otelhttptrace/                       @open-telemetry/go-approvers @dmathieu
 instrumentation/net/http/otelhttp/                                      @open-telemetry/go-approvers @dmathieu
-instrumentation/runtime/                                                @open-telemetry/go-approvers @MadVikingGod
+instrumentation/runtime/                                                @open-telemetry/go-approvers
 
 processors/baggagecopy                                                  @open-telemetry/go-approvers @codeboten @MikeGoldsmith
 processors/minsev                                                       @open-telemetry/go-approvers @MrAlias
@@ -68,7 +69,7 @@ propagators/ot/                                                         @open-te
 
 samplers/aws/xray/                                                      @open-telemetry/go-approvers
 samplers/jaegerremote/                                                  @open-telemetry/go-approvers @yurishkuro
-samplers/probability/consistent/                                        @open-telemetry/go-approvers @MadVikingGod
+samplers/probability/consistent/                                        @open-telemetry/go-approvers
 
 zpages/                                                                 @open-telemetry/go-approvers @dashpole
 instrgen/                                                               @open-telemetry/go-approvers @open-telemetry/go-instrumentation-approvers @MrAlias @pdelewski

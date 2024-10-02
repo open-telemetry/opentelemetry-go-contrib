@@ -170,7 +170,7 @@ func (t *Transport) RoundTrip(r *http.Request) (*http.Response, error) {
 		ElapsedTime: elapsedTime,
 	}, metricOpts)
 
-	return res, err
+	return res, nil
 }
 
 func (t *Transport) metricAttributesFromRequest(r *http.Request) []attribute.KeyValue {

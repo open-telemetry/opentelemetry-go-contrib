@@ -10,6 +10,7 @@ Collection of 3rd-party packages for [OpenTelemetry-Go](https://github.com/open-
 
 ## Contents
 
+- [Examples](./examples/): Examples of OpenTelemetry libraries usage.
 - [Instrumentation](./instrumentation/): Packages providing OpenTelemetry instrumentation for 3rd-party libraries.
 - [Propagators](./propagators/): Packages providing OpenTelemetry context propagators for 3rd-party propagation formats.
 - [Detectors](./detectors/): Packages providing OpenTelemetry resource detectors for 3rd-party cloud computing environments.
