@@ -2,7 +2,7 @@ module go.opentelemetry.io/contrib/instrumentation/github.com/gin-gonic/gin/otel
 
 go 1.22
 
-toolchain go1.23.0
+toolchain go1.23.2
 
 replace (
 	go.opentelemetry.io/contrib/instrumentation/github.com/gin-gonic/gin/otelgin => ../
