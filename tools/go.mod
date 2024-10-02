@@ -1,6 +1,8 @@
 module go.opentelemetry.io/contrib/tools
 
-go 1.22.1
+go 1.23
+
+toolchain go1.23.2
 
 exclude github.com/blizzy78/varnamelen v0.6.1
 
@@ -9,7 +11,7 @@ require (
 	github.com/client9/misspell v0.3.4
 	github.com/golangci/golangci-lint v1.61.0
 	github.com/itchyny/gojq v0.12.16
-	github.com/jcchavezs/porto v0.6.0
+	github.com/jcchavezs/porto v0.7.0
 	github.com/wadey/gocovmerge v0.0.0-20160331181800-b5bfa59ec0ad
 	go.opentelemetry.io/build-tools/crosslink v0.14.0
 	go.opentelemetry.io/build-tools/gotmpl v0.14.0
