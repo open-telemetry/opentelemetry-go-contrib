@@ -52,10 +52,10 @@ instrumentation/go.mongodb.org/mongo-driver/mongo/otelmongo/            @open-te
 instrumentation/google.golang.org/grpc/otelgrpc/                        @open-telemetry/go-approvers @dashpole @hanyuancheung
 instrumentation/gopkg.in/macaron.v1/otelmacaron/                        @open-telemetry/go-approvers
 
-instrumentation/host/                                                   @open-telemetry/go-approvers
+instrumentation/host/                                                   @open-telemetry/go-approvers @dmathieu
 instrumentation/net/http/httptrace/otelhttptrace/                       @open-telemetry/go-approvers @dmathieu
 instrumentation/net/http/otelhttp/                                      @open-telemetry/go-approvers @dmathieu
-instrumentation/runtime/                                                @open-telemetry/go-approvers
+instrumentation/runtime/                                                @open-telemetry/go-approvers @dmathieu
 
 processors/baggagecopy                                                  @open-telemetry/go-approvers @codeboten @MikeGoldsmith
 processors/minsev                                                       @open-telemetry/go-approvers @MrAlias
