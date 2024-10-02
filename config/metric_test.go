@@ -1088,8 +1088,8 @@ func TestNewIncludeExcludeFilter(t *testing.T) {
 		{
 			name:          "empty",
 			attributeKeys: nil,
-			wantPass:      nil,
-			wantFail:      []string{"foo", "bar"},
+			wantPass:      []string{"foo", "bar"},
+			wantFail:      nil,
 		},
 		{
 			name: "filter-with-include",

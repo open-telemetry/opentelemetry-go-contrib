@@ -268,7 +268,7 @@ func lowMemory(ik sdkmetric.InstrumentKind) metricdata.Temporality {
 // If IncludeExclude is empty a include-all filter is returned.
 func newIncludeExcludeFilter(lists *IncludeExclude) (attribute.Filter, error) {
 	if lists == nil {
-		return func(kv attribute.KeyValue) bool { return false }, nil
+		return func(kv attribute.KeyValue) bool { return true }, nil
 	}
 
 	included := make(map[attribute.Key]struct{})
