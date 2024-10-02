@@ -7,10 +7,11 @@ import (
 	"context"
 	"errors"
 
+	"gopkg.in/yaml.v3"
+
 	"go.opentelemetry.io/otel/log"
 	"go.opentelemetry.io/otel/metric"
 	"go.opentelemetry.io/otel/trace"
-	"gopkg.in/yaml.v3"
 )
 
 const (
