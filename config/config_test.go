@@ -5,6 +5,7 @@ package config
 
 import (
 	"context"
+	"fmt"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
@@ -61,4 +62,33 @@ func TestNewSDK(t *testing.T) {
 
 func ptr[T any](v T) *T {
 	return &v
+}
+
+func TestParseYAML(t *testing.T) {
+	tests := []struct {
+		name     string
+		input    string
+		wantErr  error
+		wantType interface{}
+	}{
+		{
+			name:     "valid YAML",
+			input:    "file_format: yaml\ndisabled: false\n",
+			wantErr:  nil,
+			wantType: &OpenTelemetryConfiguration{},
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			r := ([]byte)(tt.input)
+			got, err := ParseYAML(r)
+			if err != nil {
+				fmt.Println(err)
+				require.Equal(t, tt.wantErr.Error(), err.Error())
+			} else {
+				assert.IsType(t, tt.wantType, got)
+			}
+		})
+	}
 }
