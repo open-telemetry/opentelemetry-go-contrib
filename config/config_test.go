@@ -306,8 +306,7 @@ func TestParseYAML(t *testing.T) {
 			b, err := os.ReadFile(filepath.Join("testdata", tt.input))
 			require.NoError(t, err)
 
-			r := []byte(b)
-			got, err := ParseYAML(r)
+			got, err := ParseYAML(b)
 			if tt.wantErr != nil {
 				require.Equal(t, tt.wantErr.Error(), err.Error())
 			} else {
@@ -351,9 +350,8 @@ func TestSerializeJSON(t *testing.T) {
 			b, err := os.ReadFile(filepath.Join("testdata", tt.input))
 			require.NoError(t, err)
 
-			r := []byte(b)
 			var got OpenTelemetryConfiguration
-			err = json.Unmarshal(r, &got)
+			err = json.Unmarshal(b, &got)
 
 			if tt.wantErr != nil {
 				require.Equal(t, tt.wantErr.Error(), err.Error())
