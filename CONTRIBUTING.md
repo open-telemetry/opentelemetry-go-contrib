@@ -125,8 +125,6 @@ See the [public meeting notes](https://docs.google.com/document/d/1E5e7Ld0NuU1iV
 
 Approvers:
 
-- [Chester Cheung](https://github.com/hanyuancheung), Tencent
-
 Maintainers:
 
 - [Damien Mathieu](https://github.com/dmathieu), Elastic
@@ -139,6 +137,7 @@ Emeritus:
 
 - [Aaron Clawson](https://github.com/MadVikingGod), LightStep
 - [Anthony Mirabella](https://github.com/Aneurysm9), Amazon
+- [Chester Cheung](https://github.com/hanyuancheung), Tencent
 - [Evan Torrie](https://github.com/evantorrie), Yahoo
 - [Gustavo Silva Paiva](https://github.com/paivagustavo), LightStep
 - [Josh MacDonald](https://github.com/jmacd), LightStep
