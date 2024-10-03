@@ -67,7 +67,6 @@ propagators/jaeger/                                                     @open-te
 propagators/opencensus/                                                 @open-telemetry/go-approvers @dashpole
 propagators/ot/                                                         @open-telemetry/go-approvers @pellared
 
-samplers/aws/xray/                                                      @open-telemetry/go-approvers
 samplers/jaegerremote/                                                  @open-telemetry/go-approvers @yurishkuro
 samplers/probability/consistent/                                        @open-telemetry/go-approvers
 
