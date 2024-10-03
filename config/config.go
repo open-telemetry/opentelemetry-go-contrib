@@ -73,8 +73,6 @@ var noopSDK = SDK{
 }
 
 // NewSDK creates SDK providers based on the configuration model.
-//
-// Caution: The implementation only returns noop providers.
 func NewSDK(opts ...ConfigurationOption) (SDK, error) {
 	o := configOptions{}
 	for _, opt := range opts {
@@ -141,9 +139,6 @@ func WithOpenTelemetryConfiguration(cfg OpenTelemetryConfiguration) Configuratio
 		return c
 	})
 }
-
-// TODO: implement parsing functionality:
-// - https://github.com/open-telemetry/opentelemetry-go-contrib/issues/4412
 
 // ParseYAML parses a YAML configuration file into an OpenTelemetryConfiguration.
 func ParseYAML(file []byte) (*OpenTelemetryConfiguration, error) {
