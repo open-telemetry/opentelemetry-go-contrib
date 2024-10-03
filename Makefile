@@ -326,7 +326,6 @@ genjsonschema: genjsonschema-cleanup $(GOJSONSCHEMA)
 		--capitalization OTLP \
 		--struct-name-from-title \
 		--package config \
-		--tags mapstructure \
 		--output ${GENERATED_CONFIG} \
 		${OPENTELEMETRY_CONFIGURATION_JSONSCHEMA_SRC_DIR}/schema/opentelemetry_configuration.json
 	@echo Modify jsonschema generated files.
