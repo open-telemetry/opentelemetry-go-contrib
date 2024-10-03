@@ -4,7 +4,6 @@
 package consistent
 
 import (
-	"errors"
 	"strconv"
 	"strings"
 	"testing"
@@ -91,7 +90,7 @@ func TestParseTraceStateUnsampled(t *testing.T) {
 			require.False(t, otts.hasPValue(), "should have no p-value")
 
 			if test.expectErr != nil {
-				require.True(t, errors.Is(err, test.expectErr), "not expecting %v", err)
+				require.ErrorIs(t, err, test.expectErr, "not expecting %v", err)
 			}
 			if test.rval != notset {
 				require.True(t, otts.hasRValue())
@@ -168,7 +167,7 @@ func TestParseTraceStateSampled(t *testing.T) {
 			otts, err := parseOTelTraceState(test.in, true)
 
 			if test.expectErr != nil {
-				require.True(t, errors.Is(err, test.expectErr), "not expecting %v", err)
+				require.ErrorIs(t, err, test.expectErr, "not expecting %v", err)
 			} else {
 				require.NoError(t, err)
 			}
@@ -252,7 +251,7 @@ func TestParseTraceStateExtra(t *testing.T) {
 			otts, err := parseOTelTraceState(test.in, test.sampled)
 
 			if test.expectErr != nil {
-				require.True(t, errors.Is(err, test.expectErr), "not expecting %v", err)
+				require.ErrorIs(t, err, test.expectErr, "not expecting %v", err)
 			} else {
 				require.NoError(t, err)
 			}

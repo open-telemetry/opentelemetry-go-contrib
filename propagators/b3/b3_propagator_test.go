@@ -301,7 +301,7 @@ func TestB3EncodingOperations(t *testing.T) {
 	for i, e := range encodings {
 		for j := i + 1; j < i+len(encodings); j++ {
 			o := encodings[j%len(encodings)]
-			assert.False(t, e == o, "%v == %v", e, o)
+			assert.NotEqual(t, e, o, "%v == %v", e, o)
 		}
 	}
 
