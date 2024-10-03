@@ -30,7 +30,7 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 
 - The `Minimum` field of the `LogProcessor` in `go.opentelemetry.io/contrib/processors/minsev` is removed.
   Use `NewLogProcessor` to configure this setting. (#6116)
-- The deprecated `go.opentelemetry.io/contrib/instrumentation/gopkg.in/macaron.v1/otelmacaron` package removed. (#6186)
+- The deprecated `go.opentelemetry.io/contrib/instrumentation/gopkg.in/macaron.v1/otelmacaron` package is removed. (#6186)
 - The deprecated `go.opentelemetry.io/contrib/samplers/aws/xray` package is removed. (#6187)
 
 <!-- Released section -->
