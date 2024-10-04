@@ -52,6 +52,21 @@ func TestNewSDK(t *testing.T) {
 			wantMeterProvider:  &sdkmetric.MeterProvider{},
 			wantLoggerProvider: &sdklog.LoggerProvider{},
 		},
+		{
+			name: "with-sdk-disabled",
+			cfg: []ConfigurationOption{
+				WithContext(context.Background()),
+				WithOpenTelemetryConfiguration(OpenTelemetryConfiguration{
+					Disabled:       ptr(true),
+					TracerProvider: &TracerProvider{},
+					MeterProvider:  &MeterProvider{},
+					LoggerProvider: &LoggerProvider{},
+				}),
+			},
+			wantTracerProvider: tracenoop.NewTracerProvider(),
+			wantMeterProvider:  metricnoop.NewMeterProvider(),
+			wantLoggerProvider: lognoop.NewLoggerProvider(),
+		},
 	}
 	for _, tt := range tests {
 		sdk, err := NewSDK(tt.cfg...)
