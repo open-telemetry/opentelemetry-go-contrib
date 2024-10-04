@@ -16,7 +16,8 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 ### Changed
 
 - The function signature of `NewLogProcessor` in `go.opentelemetry.io/contrib/processors/minsev` has changed to accept the added `Severitier` interface instead of a `log.Severity`. (#6116)
-- Attributes for otelmongo will change to reflect [semconv/v1.26.0](https://github.com/open-telemetry/opentelemetry-go/pull/5476). `db.operation` will change to `db.operation.name`, `db.name` will change to `db.namespace`, `net.peer.port` will change to `network.peer.port`, `net.transport` will change to `network.transport`, and `db.statement` will change to `db.query.text`. 
+- Upgrade the `go.opentelemetry.io/otel/semconv/v1.17.0` dependency to `go.opentelemetry.io/otel/semconv/v1.26.0` in `go.opentelemetry.io/contrib/instrumentation/go.mongodb.org/mongo-driver/mongo/otelmongo`. (#6172)
+- Rename attributes `db.operation` to `db.operation.name`, `db.name` to `db.namespace`, `net.peer.port` to `network.peer.port`, `net.transport` to `network.transport` and `db.statement` to `db.query.text` in `go.opentelemetry.io/contrib/instrumentation/go.mongodb.org/mongo-driver/mongo/otelmongo`. (#6172)
 
 ### Fixed
 
