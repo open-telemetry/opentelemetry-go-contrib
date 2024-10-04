@@ -46,7 +46,7 @@ type remoteSampler struct {
 // Compile time assertion that remoteSampler implements the Sampler interface.
 var _ sdktrace.Sampler = (*remoteSampler)(nil)
 
-// NewRemoteSampler returns a sampler which decides to sample a given request or not
+// NewRemoteSampler returns a ParentBased XRay Sampler which decides to sample a given request or not
 // based on the sampling rules set by users on AWS X-Ray console. Sampler also periodically polls
 // sampling rules and sampling targets.
 // NOTE: ctx passed in NewRemoteSampler API is being used in background go routine. Cancellation to this context can kill the background go routine.
@@ -77,7 +77,7 @@ func NewRemoteSampler(ctx context.Context, serviceName string, cloudPlatform str
 
 	remoteSampler.start(ctx)
 
-	return remoteSampler, nil
+	return sdktrace.ParentBased(remoteSampler), nil
 }
 
 // ShouldSample matches span attributes with retrieved sampling rules and returns a sampling result.
