@@ -16,13 +16,15 @@
 //     set.
 //   - Fields are transformed and set as the attributes.
 //
-// The Level is transformed by using the static offset to the OpenTelemetry
+// The Level is transformed to the OpenTelemetry
 // Severity types. For example:
 //
 //   - [logrus.DebugLevel] is transformed to [log.SeverityDebug]
-//   - [logrus.InfoLevel] is transformed to [log.SeverityTrace4]
-//   - [logrus.WarnLevel] is transformed to [log.SeverityTrace3]
-//   - [logrus.ErrorLevel] is transformed to [log.SeverityTrace2]
+//   - [logrus.InfoLevel] is transformed to [log.SeverityInfo]
+//   - [logrus.WarnLevel] is transformed to [log.SeverityWarn]
+//   - [logrus.ErrorLevel] is transformed to [log.SeverityError]
+//   - [logrus.FatalLevel] is transformed to [log.SeverityFatal]
+//   - [logrus.PanicLevel] is transformed to [log.SeverityFatal4]
 //
 // Field values are transformed based on their type into log attributes, or
 // into a string value if there is no matching type.
