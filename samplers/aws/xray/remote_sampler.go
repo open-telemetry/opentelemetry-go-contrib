@@ -77,7 +77,7 @@ func NewRemoteSampler(ctx context.Context, serviceName string, cloudPlatform str
 
 	remoteSampler.start(ctx)
 
-	return remoteSampler, nil
+	return sdktrace.ParentBased(remoteSampler), nil
 }
 
 // ShouldSample matches span attributes with retrieved sampling rules and returns a sampling result.
