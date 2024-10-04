@@ -24,6 +24,7 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 
 - Possible nil dereference panic in `go.opentelemetry.io/contrib/instrumentation/net/http/httptrace/otelhttptrace`. (#5965)
 - Non-200 HTTP status codes when retrieving sampling rules in `go.opentelemetry.io/contrib/samplers/aws/xray` now return an error. (#5718)
+- Ensure all AWS XRay Remote Sampler logic is under a ParentBased Sampler in `go.opentelemetry.io/contrib/samplers/aws/xray`. (#6205)
 
 ### Removed
 
