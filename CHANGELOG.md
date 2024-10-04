@@ -14,6 +14,7 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 - Move examples from `go.opentelemetry.io/otel` to this repository under `examples` directory. (#6158)
 - Support yaml/json struct tags for generated code in `go.opentelemetry.io/contrib/config`. (#5433)
 - Add support for parsing YAML configuration via `ParseYAML` in `go.opentelemetry.io/contrib/config`. (#5433)
+- Severities levels for `go.opentelemetry.io/contrib/bridges/otellogrus` transformed to appropriate otel severities. (#6191)
 
 ### Changed
 
