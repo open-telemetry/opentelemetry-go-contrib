@@ -45,11 +45,11 @@ exporters/autoexport                                                    @open-te
 instrumentation/github.com/aws/aws-lambda-go/otellambda/                @open-telemetry/go-approvers @akats7
 instrumentation/github.com/aws/aws-sdk-go-v2/otelaws/                   @open-telemetry/go-approvers @akats7
 instrumentation/github.com/emicklei/go-restful/otelrestful/             @open-telemetry/go-approvers @dashpole
-instrumentation/github.com/gin-gonic/gin/otelgin/                       @open-telemetry/go-approvers @hanyuancheung
+instrumentation/github.com/gin-gonic/gin/otelgin/                       @open-telemetry/go-approvers
 instrumentation/github.com/gorilla/mux/otelmux/                         @open-telemetry/go-approvers @akats7
 instrumentation/github.com/labstack/echo/otelecho/                      @open-telemetry/go-approvers
 instrumentation/go.mongodb.org/mongo-driver/mongo/otelmongo/            @open-telemetry/go-approvers
-instrumentation/google.golang.org/grpc/otelgrpc/                        @open-telemetry/go-approvers @dashpole @hanyuancheung
+instrumentation/google.golang.org/grpc/otelgrpc/                        @open-telemetry/go-approvers @dashpole
 instrumentation/gopkg.in/macaron.v1/otelmacaron/                        @open-telemetry/go-approvers
 
 instrumentation/host/                                                   @open-telemetry/go-approvers @dmathieu
