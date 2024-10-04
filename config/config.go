@@ -7,6 +7,8 @@ import (
 	"context"
 	"errors"
 
+	"gopkg.in/yaml.v3"
+
 	"go.opentelemetry.io/otel/log"
 	"go.opentelemetry.io/otel/metric"
 	"go.opentelemetry.io/otel/trace"
@@ -61,8 +63,6 @@ func (s *SDK) Shutdown(ctx context.Context) error {
 }
 
 // NewSDK creates SDK providers based on the configuration model.
-//
-// Caution: The implementation only returns noop providers.
 func NewSDK(opts ...ConfigurationOption) (SDK, error) {
 	o := configOptions{}
 	for _, opt := range opts {
@@ -127,6 +127,13 @@ func WithOpenTelemetryConfiguration(cfg OpenTelemetryConfiguration) Configuratio
 	})
 }
 
-// TODO: implement parsing functionality:
-// - https://github.com/open-telemetry/opentelemetry-go-contrib/issues/4373
-// - https://github.com/open-telemetry/opentelemetry-go-contrib/issues/4412
+// ParseYAML parses a YAML configuration file into an OpenTelemetryConfiguration.
+func ParseYAML(file []byte) (*OpenTelemetryConfiguration, error) {
+	var cfg OpenTelemetryConfiguration
+	err := yaml.Unmarshal(file, &cfg)
+	if err != nil {
+		return nil, err
+	}
+
+	return &cfg, nil
+}
