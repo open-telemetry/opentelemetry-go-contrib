@@ -21,8 +21,8 @@ func TestRemoteSamplerDescription(t *testing.T) {
 }
 
 func TestNewRemoteSamplerDescription(t *testing.T) {
-	endpointUrl, _ := url.Parse("http://localhost:2000")
-	rs, _ := NewRemoteSampler(context.Background(), "otel-test", "", WithEndpoint(*endpointUrl), WithSamplingRulesPollingInterval(300*time.Second))
+	endpointURL, _ := url.Parse("http://localhost:2000")
+	rs, _ := NewRemoteSampler(context.Background(), "otel-test", "", WithEndpoint(*endpointURL), WithSamplingRulesPollingInterval(300*time.Second))
 
 	s := rs.Description()
 	assert.Equal(t, "ParentBased{root:AWSXRayRemoteSampler{remote sampling with AWS X-Ray},remoteParentSampled:AlwaysOnSampler,remoteParentNotSampled:AlwaysOffSampler,localParentSampled:AlwaysOnSampler,localParentNotSampled:AlwaysOffSampler}", s)
