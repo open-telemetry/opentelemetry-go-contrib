@@ -94,11 +94,12 @@ func newSemconvRegistry(versions ...string) *semconvRegistry {
 	return reg
 }
 
-func appendAttrs[T any](
+func appendAttrs[T string | int](
 	attrs []attribute.KeyValue,
 	reg *semconvRegistry,
 	semconvMap map[string]func(T) attribute.KeyValue,
-	val T) []attribute.KeyValue {
+	val T,
+) []attribute.KeyValue {
 	if reg.dup {
 		for _, fn := range semconvMap {
 			attrs = append(attrs, fn(val))
