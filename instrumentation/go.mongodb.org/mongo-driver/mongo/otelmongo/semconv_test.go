@@ -11,13 +11,15 @@ import (
 )
 
 func Test_appendOpNameAttrs(t *testing.T) {
-	const opName = "opName"
-	const dbNamespace = "dbNamespace"
-	const port = 1
-	const host = "host"
-	const address = "host:1"
-	const stmt = `{insert: "users"}`
-	const coll = "coll"
+	const (
+		opName      = "opName"
+		dbNamespace = "dbNamespace"
+		port        = 1
+		host        = "host"
+		address     = "host:1"
+		stmt        = `{insert: "users"}`
+		coll        = "coll"
+	)
 
 	v1170 := []attribute.KeyValue{
 		{Key: "db.operation", Value: attribute.StringValue(opName)},

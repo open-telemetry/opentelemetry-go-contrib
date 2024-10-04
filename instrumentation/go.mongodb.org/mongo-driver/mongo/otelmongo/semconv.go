@@ -34,7 +34,16 @@ type semconvRegistry struct {
 }
 
 func newSemconvRegistry(versions ...string) *semconvRegistry {
-	reg := &semconvRegistry{}
+	reg := &semconvRegistry{
+		opName:           make(map[string]func(string) attribute.KeyValue),
+		dbNamespace:      make(map[string]func(string) attribute.KeyValue),
+		dbStatement:      make(map[string]func(string) attribute.KeyValue),
+		networkPort:      make(map[string]func(int) attribute.KeyValue),
+		networkHost:      make(map[string]func(string) attribute.KeyValue),
+		networkAddress:   make(map[string]func(string) attribute.KeyValue),
+		networkTransport: make(map[string]func(string) attribute.KeyValue),
+		collection:       make(map[string]func(string) attribute.KeyValue),
+	}
 
 	// Don't include unknown versions
 	for _, version := range versions {
@@ -53,43 +62,23 @@ func newSemconvRegistry(versions ...string) *semconvRegistry {
 		reg.versions = append(reg.versions, semconvOptIn1170)
 	}
 
-	reg.opName = map[string]func(string) attribute.KeyValue{
-		semconvOptIn1170: func(op string) attribute.KeyValue { return semconv1170.DBOperation(op) },
-		semconvOptIn1260: func(op string) attribute.KeyValue { return semconv1260.DBOperationName(op) },
-	}
+	// v1.17.0
+	reg.opName[semconvOptIn1170] = semconv1170.DBOperation
+	reg.dbNamespace[semconvOptIn1170] = semconv1170.DBName
+	reg.dbStatement[semconvOptIn1170] = semconv1170.DBStatement
+	reg.networkPort[semconvOptIn1170] = semconv1170.NetPeerPort
+	reg.networkHost[semconvOptIn1170] = semconv1170.NetPeerName
+	reg.collection[semconvOptIn1170] = semconv1170.DBMongoDBCollection
+	reg.networkTransport[semconvOptIn1170] = func(string) attribute.KeyValue { return semconv1170.NetTransportTCP }
 
-	reg.dbNamespace = map[string]func(string) attribute.KeyValue{
-		semconvOptIn1170: func(ns string) attribute.KeyValue { return semconv1170.DBName(ns) },
-		semconvOptIn1260: func(ns string) attribute.KeyValue { return semconv1260.DBNamespace(ns) },
-	}
-
-	reg.dbStatement = map[string]func(string) attribute.KeyValue{
-		semconvOptIn1170: func(stmt string) attribute.KeyValue { return semconv1170.DBStatement(stmt) },
-		semconvOptIn1260: func(stmt string) attribute.KeyValue { return semconv1260.DBQueryText(stmt) },
-	}
-
-	reg.networkPort = map[string]func(int) attribute.KeyValue{
-		semconvOptIn1170: func(p int) attribute.KeyValue { return semconv1170.NetPeerPort(p) },
-		semconvOptIn1260: func(p int) attribute.KeyValue { return semconv1260.NetworkPeerPort(p) },
-	}
-
-	reg.networkHost = map[string]func(string) attribute.KeyValue{
-		semconvOptIn1170: func(ns string) attribute.KeyValue { return semconv1170.NetPeerName(ns) },
-	}
-
-	reg.networkAddress = map[string]func(string) attribute.KeyValue{
-		semconvOptIn1260: func(addr string) attribute.KeyValue { return semconv1260.NetworkPeerAddress(addr) },
-	}
-
-	reg.networkTransport = map[string]func(string) attribute.KeyValue{
-		semconvOptIn1170: func(string) attribute.KeyValue { return semconv1170.NetTransportTCP },
-		semconvOptIn1260: func(string) attribute.KeyValue { return semconv1260.NetworkTransportTCP },
-	}
-
-	reg.collection = map[string]func(string) attribute.KeyValue{
-		semconvOptIn1170: func(coll string) attribute.KeyValue { return semconv1170.DBMongoDBCollection(coll) },
-		semconvOptIn1260: func(coll string) attribute.KeyValue { return semconv1260.DBCollectionName(coll) },
-	}
+	// v1.26.0
+	reg.opName[semconvOptIn1260] = semconv1260.DBOperationName
+	reg.dbNamespace[semconvOptIn1260] = semconv1260.DBNamespace
+	reg.dbStatement[semconvOptIn1260] = semconv1260.DBQueryText
+	reg.networkPort[semconvOptIn1260] = semconv1260.NetworkPeerPort
+	reg.networkAddress[semconvOptIn1260] = semconv1260.NetworkPeerAddress
+	reg.collection[semconvOptIn1260] = semconv1260.DBCollectionName
+	reg.networkTransport[semconvOptIn1260] = func(string) attribute.KeyValue { return semconv1260.NetworkTransportTCP }
 
 	return reg
 }
