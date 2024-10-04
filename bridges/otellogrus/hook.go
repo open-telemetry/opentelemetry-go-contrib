@@ -201,9 +201,9 @@ func convertSeverity(level logrus.Level) log.Severity {
 	case logrus.TraceLevel:
 		return log.SeverityTrace
 	default:
-		// If the level is not recognized, use Trace as the lowest severity.
+		// If the level is not recognized, use SeverityUndefined as the lowest severity.
 		// we should never reach this point as logrus only uses the above levels.
-		return log.SeverityTrace
+		return log.SeverityUndefined
 	}
 }
 
