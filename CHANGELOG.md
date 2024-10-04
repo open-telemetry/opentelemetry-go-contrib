@@ -18,7 +18,7 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 ### Changed
 
 - The function signature of `NewLogProcessor` in `go.opentelemetry.io/contrib/processors/minsev` has changed to accept the added `Severitier` interface instead of a `log.Severity`. (#6116)
-- `NewSDK` now returns a no-op SDK if `disabled` is set to `true` via configuration. (#6185)
+- `NewSDK` in `go.opentelemetry.io/contrib/config` now returns a no-op SDK if `disabled` is set to `true`. (#6185)
 
 ### Fixed
 
