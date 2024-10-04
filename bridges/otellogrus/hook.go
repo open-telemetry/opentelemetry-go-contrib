@@ -166,25 +166,7 @@ func (h *Hook) convertEntry(e *logrus.Entry) log.Record {
 	var record log.Record
 	record.SetTimestamp(e.Time)
 	record.SetBody(log.StringValue(e.Message))
-
-	var severity log.Severity
-	switch e.Level {
-	case logrus.PanicLevel:
-		severity = log.SeverityFatal4
-	case logrus.FatalLevel:
-		severity = log.SeverityFatal
-	case logrus.ErrorLevel:
-		severity = log.SeverityError
-	case logrus.WarnLevel:
-		severity = log.SeverityWarn
-	case logrus.InfoLevel:
-		severity = log.SeverityInfo
-	case logrus.DebugLevel:
-		severity = log.SeverityDebug
-	case logrus.TraceLevel:
-		severity = log.SeverityTrace
-	}
-	record.SetSeverity(severity)
+	record.SetSeverity(convertSeverity(e.Level))
 	record.AddAttributes(convertFields(e.Data)...)
 
 	return record
@@ -199,6 +181,30 @@ func convertFields(fields logrus.Fields) []log.KeyValue {
 		})
 	}
 	return kvs
+}
+
+func convertSeverity(level logrus.Level) log.Severity {
+	switch level {
+	case logrus.PanicLevel:
+		// PanicLevel is not supported by OpenTelemetry, use Fatal4 as the highest severity.
+		return log.SeverityFatal4
+	case logrus.FatalLevel:
+		return log.SeverityFatal
+	case logrus.ErrorLevel:
+		return log.SeverityError
+	case logrus.WarnLevel:
+		return log.SeverityWarn
+	case logrus.InfoLevel:
+		return log.SeverityInfo
+	case logrus.DebugLevel:
+		return log.SeverityDebug
+	case logrus.TraceLevel:
+		return log.SeverityTrace
+	default:
+		// If the level is not recognized, use Trace as the lowest severity.
+		// we should never reach this point as logrus only uses the above levels.
+		return log.SeverityTrace
+	}
 }
 
 func convertValue(v interface{}) log.Value {
