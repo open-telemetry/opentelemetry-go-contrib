@@ -162,7 +162,7 @@ func TestHookFire(t *testing.T) {
 
 			wantRecords: map[string][]log.Record{
 				name: {
-					buildRecord(log.StringValue(""), time.Time{}, 0, nil),
+					buildRecord(log.StringValue(""), time.Time{}, log.SeverityFatal4, nil),
 				},
 			},
 		},
@@ -173,7 +173,7 @@ func TestHookFire(t *testing.T) {
 			},
 			wantRecords: map[string][]log.Record{
 				name: {
-					buildRecord(log.StringValue(""), now, 0, nil),
+					buildRecord(log.StringValue(""), now, log.SeverityFatal4, nil),
 				},
 			},
 		},
@@ -184,7 +184,7 @@ func TestHookFire(t *testing.T) {
 			},
 			wantRecords: map[string][]log.Record{
 				name: {
-					buildRecord(log.StringValue(""), time.Time{}, log.SeverityTrace1, nil),
+					buildRecord(log.StringValue(""), time.Time{}, log.SeverityFatal, nil),
 				},
 			},
 		},
@@ -197,7 +197,7 @@ func TestHookFire(t *testing.T) {
 			},
 			wantRecords: map[string][]log.Record{
 				name: {
-					buildRecord(log.StringValue(""), time.Time{}, 0, []log.KeyValue{
+					buildRecord(log.StringValue(""), time.Time{}, log.SeverityFatal4, []log.KeyValue{
 						log.String("hello", "world"),
 					}),
 				},

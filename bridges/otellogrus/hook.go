@@ -165,8 +165,24 @@ func (h *Hook) convertEntry(e *logrus.Entry) log.Record {
 	record.SetTimestamp(e.Time)
 	record.SetBody(log.StringValue(e.Message))
 
-	const sevOffset = logrus.Level(log.SeverityDebug) - logrus.DebugLevel
-	record.SetSeverity(log.Severity(e.Level + sevOffset))
+	var severity log.Severity
+	switch e.Level {
+	case logrus.PanicLevel:
+		severity = log.SeverityFatal4
+	case logrus.FatalLevel:
+		severity = log.SeverityFatal
+	case logrus.ErrorLevel:
+		severity = log.SeverityError
+	case logrus.WarnLevel:
+		severity = log.SeverityWarn
+	case logrus.InfoLevel:
+		severity = log.SeverityInfo
+	case logrus.DebugLevel:
+		severity = log.SeverityDebug
+	case logrus.TraceLevel:
+		severity = log.SeverityTrace
+	}
+	record.SetSeverity(severity)
 	record.AddAttributes(convertFields(e.Data)...)
 
 	return record
