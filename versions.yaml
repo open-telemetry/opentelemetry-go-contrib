@@ -64,7 +64,6 @@ module-sets:
   experimental-samplers:
     version: v0.24.0
     modules:
-      - go.opentelemetry.io/contrib/samplers/aws/xray
       - go.opentelemetry.io/contrib/samplers/jaegerremote
       - go.opentelemetry.io/contrib/samplers/jaegerremote/example
       - go.opentelemetry.io/contrib/samplers/probability/consistent
