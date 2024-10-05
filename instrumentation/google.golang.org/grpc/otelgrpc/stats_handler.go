@@ -147,10 +147,21 @@ func (c *config) handleRPC(ctx context.Context, rs stats.RPCStats, isServer bool
 	}
 
 	switch rs := rs.(type) {
-	case *stats.Begin:
 	case *stats.InPayload:
 		if gctx != nil {
 			messageId = atomic.AddInt64(&gctx.messagesReceived, 1)
+
+			// Run this once on InPayload and record the attributes for the entire RPC.
+			if c.MetricAttributesFn != nil {
+				fnMetricAttrs := c.MetricAttributesFn(ctx, rs.Payload)
+
+				// Record them for the entire RPC.
+				gctx.metricAttrs = append(gctx.metricAttrs, fnMetricAttrs...)
+
+				// For this run we need to manually add them to the metricAttrs slice.
+				metricAttrs = append(metricAttrs, fnMetricAttrs...)
+			}
+
 			c.rpcRequestSize.Record(ctx, int64(rs.Length), metric.WithAttributeSet(attribute.NewSet(metricAttrs...)))
 		}
 
@@ -164,6 +175,7 @@ func (c *config) handleRPC(ctx context.Context, rs stats.RPCStats, isServer bool
 				),
 			)
 		}
+
 	case *stats.OutPayload:
 		if gctx != nil {
 			messageId = atomic.AddInt64(&gctx.messagesSent, 1)
@@ -180,11 +192,12 @@ func (c *config) handleRPC(ctx context.Context, rs stats.RPCStats, isServer bool
 				),
 			)
 		}
-	case *stats.OutTrailer:
+
 	case *stats.OutHeader:
 		if p, ok := peer.FromContext(ctx); ok {
 			span.SetAttributes(peerAttr(p.Addr.String())...)
 		}
+
 	case *stats.End:
 		var rpcStatusAttr attribute.KeyValue
 
@@ -216,6 +229,7 @@ func (c *config) handleRPC(ctx context.Context, rs stats.RPCStats, isServer bool
 			c.rpcRequestsPerRPC.Record(ctx, atomic.LoadInt64(&gctx.messagesReceived), recordOpts...)
 			c.rpcResponsesPerRPC.Record(ctx, atomic.LoadInt64(&gctx.messagesSent), recordOpts...)
 		}
+
 	default:
 		return
 	}
