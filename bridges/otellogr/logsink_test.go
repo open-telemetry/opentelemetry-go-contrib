@@ -3,6 +3,7 @@
 package otellogr
 
 import (
+	"context"
 	"testing"
 	"time"
 
@@ -286,6 +287,33 @@ func TestLogSink(t *testing.T) {
 			}
 		})
 	}
+}
+
+func TestLogSinkEnabled(t *testing.T) {
+	enabledFunc := func(ctx context.Context, param log.EnabledParameters) bool {
+		lvl, ok := param.Severity()
+		if !ok {
+			return true
+		}
+		return lvl == log.SeverityInfo
+	}
+
+	rec := logtest.NewRecorder(logtest.WithEnabledFunc(enabledFunc))
+	ls := NewLogSink(
+		"name",
+		WithLoggerProvider(rec),
+		WithLevelSeverity(func(i int) log.Severity {
+			switch i {
+			case 0:
+				return log.SeverityDebug
+			default:
+				return log.SeverityInfo
+			}
+		}),
+	)
+
+	assert.False(t, ls.Enabled(0))
+	assert.True(t, ls.Enabled(1))
 }
 
 func buildRecord(body log.Value, timestamp time.Time, severity log.Severity, attrs []log.KeyValue) log.Record {
