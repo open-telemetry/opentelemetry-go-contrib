@@ -10,12 +10,25 @@
 // way:
 //
 //   - Message is set as the Body using a [log.StringValue].
-//   - TODO: Level
+//   - Level is transformed and set as the Severity. The SeverityText is not
+//     set.
 //   - KeyAndValues are transformed and set as Attributes.
 //   - The [context.Context] value in KeyAndValues is propagated to OpenTelemetry
 //     log record. All non-nested [context.Context] values are ignored and not
 //     added as attributes. If there are multiple [context.Context] the last one
 //     is used.
+//
+// The Level is transformed by using the [WithLevelSeverity] option. If this is
+// not provided it would default to a function that adds an offset to the logr
+// such that [logr.Info] is transformed to [log.SeverityInfo]. For example:
+//
+//   - [logr.Info] is transformed to [log.SeverityInfo].
+//   - [logr.V(0)] is transformed to [log.SeverityInfo].
+//   - [logr.V(1)] is transformed to [log.SeverityInfo2].
+//   - [logr.V(2)] is transformed to [log.SeverityInfo3].
+//   - ...
+//   - [logr.V(15)] is transformed to [log.SeverityFatal4].
+//   - [logr.Error] is transformed to [log.SeverityError].
 //
 // KeysAndValues values are transformed based on their type. The following types are
 // supported:
@@ -56,6 +69,8 @@ type config struct {
 	provider  log.LoggerProvider
 	version   string
 	schemaURL string
+
+	levelSeverity func(int) log.Severity
 }
 
 func newConfig(options []Option) config {
@@ -66,6 +81,13 @@ func newConfig(options []Option) config {
 
 	if c.provider == nil {
 		c.provider = global.GetLoggerProvider()
+	}
+
+	if c.levelSeverity == nil {
+		c.levelSeverity = func(level int) log.Severity {
+			const sevOffset = int(log.SeverityInfo)
+			return log.Severity(level + sevOffset)
+		}
 	}
 
 	return c
@@ -112,6 +134,20 @@ func WithLoggerProvider(provider log.LoggerProvider) Option {
 	})
 }
 
+// WithLevelSeverity returns an [Option] that configures the function used to
+// convert logr levels to OpenTelemetry log severities.
+//
+// By default if this Option is not provided, the LogSink will use a default
+// conversion function which adds an offset to the logr level to get the
+// OpenTelemetry severity. The offset is such that logr.Info("message")
+// converts to OpenTelemetry [log.SeverityInfo].
+func WithLevelSeverity(f func(int) log.Severity) Option {
+	return optFunc(func(c config) config {
+		c.levelSeverity = f
+		return c
+	})
+}
+
 // NewLogSink returns a new [LogSink] to be used as a [logr.LogSink].
 //
 // If [WithLoggerProvider] is not provided, the returned [LogSink] will use the
@@ -128,10 +164,11 @@ func NewLogSink(name string, options ...Option) *LogSink {
 	}
 
 	return &LogSink{
-		name:     name,
-		provider: c.provider,
-		logger:   c.provider.Logger(name, opts...),
-		opts:     opts,
+		name:          name,
+		provider:      c.provider,
+		logger:        c.provider.Logger(name, opts...),
+		levelSeverity: c.levelSeverity,
+		opts:          opts,
 	}
 }
 
@@ -141,12 +178,13 @@ type LogSink struct {
 	// Ensure forward compatibility by explicitly making this not comparable.
 	noCmp [0]func() //nolint: unused  // This is indeed used.
 
-	name     string
-	provider log.LoggerProvider
-	logger   log.Logger
-	opts     []log.LoggerOption
-	attr     []log.KeyValue
-	ctx      context.Context
+	name          string
+	provider      log.LoggerProvider
+	logger        log.Logger
+	levelSeverity func(int) log.Severity
+	opts          []log.LoggerOption
+	attr          []log.KeyValue
+	ctx           context.Context
 }
 
 // Compile-time check *Handler implements logr.LogSink.
@@ -156,8 +194,10 @@ var _ logr.LogSink = (*LogSink)(nil)
 // For example, commandline flags might be used to set the logging
 // verbosity and disable some info logs.
 func (l *LogSink) Enabled(level int) bool {
-	// TODO
-	return true
+	var param log.EnabledParameters
+	param.SetSeverity(l.levelSeverity(level))
+	ctx := context.Background()
+	return l.logger.Enabled(ctx, param)
 }
 
 // Error logs an error, with the given message and key/value pairs.
@@ -169,7 +209,7 @@ func (l *LogSink) Error(err error, msg string, keysAndValues ...any) {
 func (l *LogSink) Info(level int, msg string, keysAndValues ...any) {
 	var record log.Record
 	record.SetBody(log.StringValue(msg))
-	record.SetSeverity(log.SeverityInfo) // TODO: level
+	record.SetSeverity(l.levelSeverity(level))
 
 	record.AddAttributes(l.attr...)
 
