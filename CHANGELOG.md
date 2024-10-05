@@ -30,6 +30,11 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
   Use `NewLogProcessor` to configure this setting. (#6116)
 - The deprecated `go.opentelemetry.io/contrib/samplers/aws/xray` package is removed. (#6187)
 
+### Deprecated
+
+- The deprecated `go.opentelemetry.io/contrib/instrumentation/github.com/labstack/echo/otelecho` package has found a Code Owner.
+  The package is no longer deprecated. (#)
+
 <!-- Released section -->
 <!-- Don't change this section unless doing release -->
 
