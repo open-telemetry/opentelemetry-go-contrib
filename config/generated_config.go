@@ -2,10 +2,6 @@
 
 package config
 
-import "encoding/json"
-import "fmt"
-import "reflect"
-
 type AttributeLimits struct {
 	// AttributeCountLimit corresponds to the JSON schema field
 	// "attribute_count_limit".
@@ -33,66 +29,6 @@ type AttributeNameValueType struct {
 	Value interface{}
 }
 
-// MarshalJSON implements json.Marshaler.
-func (j *AttributeNameValueType) MarshalJSON() ([]byte, error) {
-	return json.Marshal(j.Value)
-}
-
-var enumValues_AttributeNameValueType = []interface{}{
-	nil,
-	"string",
-	"bool",
-	"int",
-	"double",
-	"string_array",
-	"bool_array",
-	"int_array",
-	"double_array",
-}
-
-// UnmarshalJSON implements json.Unmarshaler.
-func (j *AttributeNameValueType) UnmarshalJSON(b []byte) error {
-	var v struct {
-		Value interface{}
-	}
-	if err := json.Unmarshal(b, &v.Value); err != nil {
-		return err
-	}
-	var ok bool
-	for _, expected := range enumValues_AttributeNameValueType {
-		if reflect.DeepEqual(v.Value, expected) {
-			ok = true
-			break
-		}
-	}
-	if !ok {
-		return fmt.Errorf("invalid value (expected one of %#v): %#v", enumValues_AttributeNameValueType, v.Value)
-	}
-	*j = AttributeNameValueType(v)
-	return nil
-}
-
-// UnmarshalJSON implements json.Unmarshaler.
-func (j *AttributeNameValue) UnmarshalJSON(b []byte) error {
-	var raw map[string]interface{}
-	if err := json.Unmarshal(b, &raw); err != nil {
-		return err
-	}
-	if _, ok := raw["name"]; raw != nil && !ok {
-		return fmt.Errorf("field name in AttributeNameValue: required")
-	}
-	if _, ok := raw["value"]; raw != nil && !ok {
-		return fmt.Errorf("field value in AttributeNameValue: required")
-	}
-	type Plain AttributeNameValue
-	var plain Plain
-	if err := json.Unmarshal(b, &plain); err != nil {
-		return err
-	}
-	*j = AttributeNameValue(plain)
-	return nil
-}
-
 type BatchLogRecordProcessor struct {
 	// ExportTimeout corresponds to the JSON schema field "export_timeout".
 	ExportTimeout *int `json:"export_timeout,omitempty" yaml:"export_timeout,omitempty" mapstructure:"export_timeout,omitempty"`
@@ -111,24 +47,6 @@ type BatchLogRecordProcessor struct {
 	ScheduleDelay *int `json:"schedule_delay,omitempty" yaml:"schedule_delay,omitempty" mapstructure:"schedule_delay,omitempty"`
 }
 
-// UnmarshalJSON implements json.Unmarshaler.
-func (j *BatchLogRecordProcessor) UnmarshalJSON(b []byte) error {
-	var raw map[string]interface{}
-	if err := json.Unmarshal(b, &raw); err != nil {
-		return err
-	}
-	if _, ok := raw["exporter"]; raw != nil && !ok {
-		return fmt.Errorf("field exporter in BatchLogRecordProcessor: required")
-	}
-	type Plain BatchLogRecordProcessor
-	var plain Plain
-	if err := json.Unmarshal(b, &plain); err != nil {
-		return err
-	}
-	*j = BatchLogRecordProcessor(plain)
-	return nil
-}
-
 type BatchSpanProcessor struct {
 	// ExportTimeout corresponds to the JSON schema field "export_timeout".
 	ExportTimeout *int `json:"export_timeout,omitempty" yaml:"export_timeout,omitempty" mapstructure:"export_timeout,omitempty"`
@@ -145,24 +63,6 @@ type BatchSpanProcessor struct {
 
 	// ScheduleDelay corresponds to the JSON schema field "schedule_delay".
 	ScheduleDelay *int `json:"schedule_delay,omitempty" yaml:"schedule_delay,omitempty" mapstructure:"schedule_delay,omitempty"`
-}
-
-// UnmarshalJSON implements json.Unmarshaler.
-func (j *BatchSpanProcessor) UnmarshalJSON(b []byte) error {
-	var raw map[string]interface{}
-	if err := json.Unmarshal(b, &raw); err != nil {
-		return err
-	}
-	if _, ok := raw["exporter"]; raw != nil && !ok {
-		return fmt.Errorf("field exporter in BatchSpanProcessor: required")
-	}
-	type Plain BatchSpanProcessor
-	var plain Plain
-	if err := json.Unmarshal(b, &plain); err != nil {
-		return err
-	}
-	*j = BatchSpanProcessor(plain)
-	return nil
 }
 
 type Common map[string]interface{}
@@ -229,27 +129,6 @@ type GeneralInstrumentationPeerServiceMappingElem struct {
 
 	// Service corresponds to the JSON schema field "service".
 	Service string `json:"service" yaml:"service" mapstructure:"service"`
-}
-
-// UnmarshalJSON implements json.Unmarshaler.
-func (j *GeneralInstrumentationPeerServiceMappingElem) UnmarshalJSON(b []byte) error {
-	var raw map[string]interface{}
-	if err := json.Unmarshal(b, &raw); err != nil {
-		return err
-	}
-	if _, ok := raw["peer"]; raw != nil && !ok {
-		return fmt.Errorf("field peer in GeneralInstrumentationPeerServiceMappingElem: required")
-	}
-	if _, ok := raw["service"]; raw != nil && !ok {
-		return fmt.Errorf("field service in GeneralInstrumentationPeerServiceMappingElem: required")
-	}
-	type Plain GeneralInstrumentationPeerServiceMappingElem
-	var plain Plain
-	if err := json.Unmarshal(b, &plain); err != nil {
-		return err
-	}
-	*j = GeneralInstrumentationPeerServiceMappingElem(plain)
-	return nil
 }
 
 type IncludeExclude struct {
@@ -374,27 +253,6 @@ type NameStringValuePair struct {
 	Value *string `json:"value" yaml:"value" mapstructure:"value"`
 }
 
-// UnmarshalJSON implements json.Unmarshaler.
-func (j *NameStringValuePair) UnmarshalJSON(b []byte) error {
-	var raw map[string]interface{}
-	if err := json.Unmarshal(b, &raw); err != nil {
-		return err
-	}
-	if _, ok := raw["name"]; raw != nil && !ok {
-		return fmt.Errorf("field name in NameStringValuePair: required")
-	}
-	if _, ok := raw["value"]; raw != nil && !ok {
-		return fmt.Errorf("field value in NameStringValuePair: required")
-	}
-	type Plain NameStringValuePair
-	var plain Plain
-	if err := json.Unmarshal(b, &plain); err != nil {
-		return err
-	}
-	*j = NameStringValuePair(plain)
-	return nil
-}
-
 type OTLP struct {
 	// Certificate corresponds to the JSON schema field "certificate".
 	Certificate *string `json:"certificate,omitempty" yaml:"certificate,omitempty" mapstructure:"certificate,omitempty"`
@@ -472,73 +330,6 @@ type OTLPMetricDefaultHistogramAggregation string
 const OTLPMetricDefaultHistogramAggregationBase2ExponentialBucketHistogram OTLPMetricDefaultHistogramAggregation = "base2_exponential_bucket_histogram"
 const OTLPMetricDefaultHistogramAggregationExplicitBucketHistogram OTLPMetricDefaultHistogramAggregation = "explicit_bucket_histogram"
 
-var enumValues_OTLPMetricDefaultHistogramAggregation = []interface{}{
-	"explicit_bucket_histogram",
-	"base2_exponential_bucket_histogram",
-}
-
-// UnmarshalJSON implements json.Unmarshaler.
-func (j *OTLPMetricDefaultHistogramAggregation) UnmarshalJSON(b []byte) error {
-	var v string
-	if err := json.Unmarshal(b, &v); err != nil {
-		return err
-	}
-	var ok bool
-	for _, expected := range enumValues_OTLPMetricDefaultHistogramAggregation {
-		if reflect.DeepEqual(v, expected) {
-			ok = true
-			break
-		}
-	}
-	if !ok {
-		return fmt.Errorf("invalid value (expected one of %#v): %#v", enumValues_OTLPMetricDefaultHistogramAggregation, v)
-	}
-	*j = OTLPMetricDefaultHistogramAggregation(v)
-	return nil
-}
-
-// UnmarshalJSON implements json.Unmarshaler.
-func (j *OTLPMetric) UnmarshalJSON(b []byte) error {
-	var raw map[string]interface{}
-	if err := json.Unmarshal(b, &raw); err != nil {
-		return err
-	}
-	if _, ok := raw["endpoint"]; raw != nil && !ok {
-		return fmt.Errorf("field endpoint in OTLPMetric: required")
-	}
-	if _, ok := raw["protocol"]; raw != nil && !ok {
-		return fmt.Errorf("field protocol in OTLPMetric: required")
-	}
-	type Plain OTLPMetric
-	var plain Plain
-	if err := json.Unmarshal(b, &plain); err != nil {
-		return err
-	}
-	*j = OTLPMetric(plain)
-	return nil
-}
-
-// UnmarshalJSON implements json.Unmarshaler.
-func (j *OTLP) UnmarshalJSON(b []byte) error {
-	var raw map[string]interface{}
-	if err := json.Unmarshal(b, &raw); err != nil {
-		return err
-	}
-	if _, ok := raw["endpoint"]; raw != nil && !ok {
-		return fmt.Errorf("field endpoint in OTLP: required")
-	}
-	if _, ok := raw["protocol"]; raw != nil && !ok {
-		return fmt.Errorf("field protocol in OTLP: required")
-	}
-	type Plain OTLP
-	var plain Plain
-	if err := json.Unmarshal(b, &plain); err != nil {
-		return err
-	}
-	*j = OTLP(plain)
-	return nil
-}
-
 type OpenTelemetryConfiguration struct {
 	// AttributeLimits corresponds to the JSON schema field "attribute_limits".
 	AttributeLimits *AttributeLimits `json:"attribute_limits,omitempty" yaml:"attribute_limits,omitempty" mapstructure:"attribute_limits,omitempty"`
@@ -570,24 +361,6 @@ type OpenTelemetryConfiguration struct {
 	AdditionalProperties interface{}
 }
 
-// UnmarshalJSON implements json.Unmarshaler.
-func (j *OpenTelemetryConfiguration) UnmarshalJSON(b []byte) error {
-	var raw map[string]interface{}
-	if err := json.Unmarshal(b, &raw); err != nil {
-		return err
-	}
-	if _, ok := raw["file_format"]; raw != nil && !ok {
-		return fmt.Errorf("field file_format in OpenTelemetryConfiguration: required")
-	}
-	type Plain OpenTelemetryConfiguration
-	var plain Plain
-	if err := json.Unmarshal(b, &plain); err != nil {
-		return err
-	}
-	*j = OpenTelemetryConfiguration(plain)
-	return nil
-}
-
 type PeriodicMetricReader struct {
 	// Exporter corresponds to the JSON schema field "exporter".
 	Exporter PushMetricExporter `json:"exporter" yaml:"exporter" mapstructure:"exporter"`
@@ -597,24 +370,6 @@ type PeriodicMetricReader struct {
 
 	// Timeout corresponds to the JSON schema field "timeout".
 	Timeout *int `json:"timeout,omitempty" yaml:"timeout,omitempty" mapstructure:"timeout,omitempty"`
-}
-
-// UnmarshalJSON implements json.Unmarshaler.
-func (j *PeriodicMetricReader) UnmarshalJSON(b []byte) error {
-	var raw map[string]interface{}
-	if err := json.Unmarshal(b, &raw); err != nil {
-		return err
-	}
-	if _, ok := raw["exporter"]; raw != nil && !ok {
-		return fmt.Errorf("field exporter in PeriodicMetricReader: required")
-	}
-	type Plain PeriodicMetricReader
-	var plain Plain
-	if err := json.Unmarshal(b, &plain); err != nil {
-		return err
-	}
-	*j = PeriodicMetricReader(plain)
-	return nil
 }
 
 type Prometheus struct {
@@ -655,24 +410,6 @@ type PullMetricExporter struct {
 type PullMetricReader struct {
 	// Exporter corresponds to the JSON schema field "exporter".
 	Exporter PullMetricExporter `json:"exporter" yaml:"exporter" mapstructure:"exporter"`
-}
-
-// UnmarshalJSON implements json.Unmarshaler.
-func (j *PullMetricReader) UnmarshalJSON(b []byte) error {
-	var raw map[string]interface{}
-	if err := json.Unmarshal(b, &raw); err != nil {
-		return err
-	}
-	if _, ok := raw["exporter"]; raw != nil && !ok {
-		return fmt.Errorf("field exporter in PullMetricReader: required")
-	}
-	type Plain PullMetricReader
-	var plain Plain
-	if err := json.Unmarshal(b, &plain); err != nil {
-		return err
-	}
-	*j = PullMetricReader(plain)
-	return nil
 }
 
 type PushMetricExporter struct {
@@ -763,45 +500,9 @@ type SimpleLogRecordProcessor struct {
 	Exporter LogRecordExporter `json:"exporter" yaml:"exporter" mapstructure:"exporter"`
 }
 
-// UnmarshalJSON implements json.Unmarshaler.
-func (j *SimpleLogRecordProcessor) UnmarshalJSON(b []byte) error {
-	var raw map[string]interface{}
-	if err := json.Unmarshal(b, &raw); err != nil {
-		return err
-	}
-	if _, ok := raw["exporter"]; raw != nil && !ok {
-		return fmt.Errorf("field exporter in SimpleLogRecordProcessor: required")
-	}
-	type Plain SimpleLogRecordProcessor
-	var plain Plain
-	if err := json.Unmarshal(b, &plain); err != nil {
-		return err
-	}
-	*j = SimpleLogRecordProcessor(plain)
-	return nil
-}
-
 type SimpleSpanProcessor struct {
 	// Exporter corresponds to the JSON schema field "exporter".
 	Exporter SpanExporter `json:"exporter" yaml:"exporter" mapstructure:"exporter"`
-}
-
-// UnmarshalJSON implements json.Unmarshaler.
-func (j *SimpleSpanProcessor) UnmarshalJSON(b []byte) error {
-	var raw map[string]interface{}
-	if err := json.Unmarshal(b, &raw); err != nil {
-		return err
-	}
-	if _, ok := raw["exporter"]; raw != nil && !ok {
-		return fmt.Errorf("field exporter in SimpleSpanProcessor: required")
-	}
-	type Plain SimpleSpanProcessor
-	var plain Plain
-	if err := json.Unmarshal(b, &plain); err != nil {
-		return err
-	}
-	*j = SimpleSpanProcessor(plain)
-	return nil
 }
 
 type SpanExporter struct {
@@ -899,35 +600,6 @@ const ViewSelectorInstrumentTypeObservableGauge ViewSelectorInstrumentType = "ob
 const ViewSelectorInstrumentTypeObservableUpDownCounter ViewSelectorInstrumentType = "observable_up_down_counter"
 const ViewSelectorInstrumentTypeUpDownCounter ViewSelectorInstrumentType = "up_down_counter"
 
-var enumValues_ViewSelectorInstrumentType = []interface{}{
-	"counter",
-	"histogram",
-	"observable_counter",
-	"observable_gauge",
-	"observable_up_down_counter",
-	"up_down_counter",
-}
-
-// UnmarshalJSON implements json.Unmarshaler.
-func (j *ViewSelectorInstrumentType) UnmarshalJSON(b []byte) error {
-	var v string
-	if err := json.Unmarshal(b, &v); err != nil {
-		return err
-	}
-	var ok bool
-	for _, expected := range enumValues_ViewSelectorInstrumentType {
-		if reflect.DeepEqual(v, expected) {
-			ok = true
-			break
-		}
-	}
-	if !ok {
-		return fmt.Errorf("invalid value (expected one of %#v): %#v", enumValues_ViewSelectorInstrumentType, v)
-	}
-	*j = ViewSelectorInstrumentType(v)
-	return nil
-}
-
 type ViewStream struct {
 	// Aggregation corresponds to the JSON schema field "aggregation".
 	Aggregation *ViewStreamAggregation `json:"aggregation,omitempty" yaml:"aggregation,omitempty" mapstructure:"aggregation,omitempty"`
@@ -997,22 +669,4 @@ type Zipkin struct {
 
 	// Timeout corresponds to the JSON schema field "timeout".
 	Timeout *int `json:"timeout,omitempty" yaml:"timeout,omitempty" mapstructure:"timeout,omitempty"`
-}
-
-// UnmarshalJSON implements json.Unmarshaler.
-func (j *Zipkin) UnmarshalJSON(b []byte) error {
-	var raw map[string]interface{}
-	if err := json.Unmarshal(b, &raw); err != nil {
-		return err
-	}
-	if _, ok := raw["endpoint"]; raw != nil && !ok {
-		return fmt.Errorf("field endpoint in Zipkin: required")
-	}
-	type Plain Zipkin
-	var plain Plain
-	if err := json.Unmarshal(b, &plain); err != nil {
-		return err
-	}
-	*j = Zipkin(plain)
-	return nil
 }
