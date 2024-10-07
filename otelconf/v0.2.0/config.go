@@ -7,6 +7,7 @@ package otelconf // import "go.opentelemetry.io/contrib/otelconf/v0.2.0"
 import (
 	"context"
 	"errors"
+	"regexp"
 
 	"go.opentelemetry.io/otel/log"
 	nooplog "go.opentelemetry.io/otel/log/noop"
@@ -142,6 +143,20 @@ func WithOpenTelemetryConfiguration(cfg OpenTelemetryConfiguration) Configuratio
 
 // ParseYAML parses a YAML configuration file into an OpenTelemetryConfiguration.
 func ParseYAML(file []byte) (*OpenTelemetryConfiguration, error) {
+	re := regexp.MustCompile(`\$\{([a-zA-Z_][a-zA-Z0-9_]*[-]?.*)\}`)
+
+	replaceEnvVars := func(input []byte) []byte {
+		return re.ReplaceAllFunc(input, func(s []byte) []byte {
+			match := re.FindSubmatch(s)
+			if len(match) < 2 {
+				return s
+			}
+			return replaceEnvVar(string(match[1]))
+		})
+	}
+
+	file = replaceEnvVars(file)
+
 	var cfg OpenTelemetryConfiguration
 	err := yaml.Unmarshal(file, &cfg)
 	if err != nil {
