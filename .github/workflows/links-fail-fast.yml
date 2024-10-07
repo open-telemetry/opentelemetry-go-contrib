@@ -25,4 +25,4 @@ jobs:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         with:
           fail: true
-          args: --max-concurrency 5 --cache --max-cache-age 1d .
+          args: --max-concurrency 5 --cache --max-cache-age 1d --accept 100..=103,200..=299,429 .
