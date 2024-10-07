@@ -6,13 +6,15 @@ package otelmongo // import "go.opentelemetry.io/contrib/instrumentation/go.mong
 import (
 	"context"
 	"fmt"
+	"net"
+	"os"
 	"strconv"
 	"strings"
 	"sync"
 
 	"go.opentelemetry.io/otel/attribute"
 	"go.opentelemetry.io/otel/codes"
-	semconv "go.opentelemetry.io/otel/semconv/v1.17.0"
+	semconv "go.opentelemetry.io/otel/semconv/v1.26.0"
 	"go.opentelemetry.io/otel/trace"
 
 	"go.mongodb.org/mongo-driver/bson"
@@ -26,30 +28,34 @@ type spanKey struct {
 
 type monitor struct {
 	sync.Mutex
-	spans map[spanKey]trace.Span
-	cfg   config
+	spans           map[spanKey]trace.Span
+	cfg             config
+	semconvRegistry *semconvRegistry
 }
 
 func (m *monitor) Started(ctx context.Context, evt *event.CommandStartedEvent) {
-	var spanName string
-
 	hostname, port := peerInfo(evt)
 
-	attrs := []attribute.KeyValue{
-		semconv.DBSystemMongoDB,
-		semconv.DBOperation(evt.CommandName),
-		semconv.DBName(evt.DatabaseName),
-		semconv.NetPeerName(hostname),
-		semconv.NetPeerPort(port),
-		semconv.NetTransportTCP,
-	}
+	attrs := []attribute.KeyValue{semconv.DBSystemMongoDB}
+
+	attrs = appendOpNameAttrs(attrs, m.semconvRegistry, evt.CommandName)
+	attrs = appendDBNamespace(attrs, m.semconvRegistry, evt.DatabaseName)
+	attrs = appendNetworkPort(attrs, m.semconvRegistry, port)
+	attrs = appendNetworkHost(attrs, m.semconvRegistry, hostname)
+	attrs = appendNetworkAddress(attrs, m.semconvRegistry, net.JoinHostPort(hostname, strconv.Itoa(port)))
+	attrs = appendNetworkTransport(attrs, m.semconvRegistry)
+
 	if !m.cfg.CommandAttributeDisabled {
-		attrs = append(attrs, semconv.DBStatement(sanitizeCommand(evt.Command)))
+		attrs = appendDBStatement(attrs, m.semconvRegistry, sanitizeCommand(evt.Command))
 	}
+
+	var spanName string
 	if collection, err := extractCollection(evt); err == nil && collection != "" {
 		spanName = collection + "."
-		attrs = append(attrs, semconv.DBMongoDBCollection(collection))
+
+		attrs = appendCollection(attrs, m.semconvRegistry, collection)
 	}
+
 	spanName += evt.CommandName
 	opts := []trace.SpanStartOption{
 		trace.WithSpanKind(trace.SpanKindClient),
@@ -125,8 +131,9 @@ func extractCollection(evt *event.CommandStartedEvent) (string, error) {
 func NewMonitor(opts ...Option) *event.CommandMonitor {
 	cfg := newConfig(opts...)
 	m := &monitor{
-		spans: make(map[spanKey]trace.Span),
-		cfg:   cfg,
+		spans:           make(map[spanKey]trace.Span),
+		cfg:             cfg,
+		semconvRegistry: newSemconvRegistry(strings.Split(os.Getenv(semconvOptIn), ",")...),
 	}
 	return &event.CommandMonitor{
 		Started:   m.Started,
