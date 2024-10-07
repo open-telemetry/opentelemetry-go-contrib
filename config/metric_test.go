@@ -624,8 +624,8 @@ func TestReader(t *testing.T) {
 			name: "periodic/console-exporter-with-extra-options",
 			reader: MetricReader{
 				Periodic: &PeriodicMetricReader{
-					Interval: newIntPtr(30_000),
-					Timeout:  newIntPtr(5_000),
+					Interval: ptr(30_000),
+					Timeout:  ptr(5_000),
 					Exporter: MetricExporter{
 						Console: Console{},
 					},
@@ -682,7 +682,7 @@ func TestView(t *testing.T) {
 			name: "selector/invalid_type",
 			view: View{
 				Selector: &ViewSelector{
-					InstrumentType: (*ViewSelectorInstrumentType)(newStringPtr("invalid_type")),
+					InstrumentType: (*ViewSelectorInstrumentType)(ptr("invalid_type")),
 				},
 			},
 			wantErr: "view_selector: instrument_type: invalid value",
@@ -698,12 +698,12 @@ func TestView(t *testing.T) {
 			name: "all selectors match",
 			view: View{
 				Selector: &ViewSelector{
-					InstrumentName: newStringPtr("test_name"),
-					InstrumentType: (*ViewSelectorInstrumentType)(newStringPtr("counter")),
-					Unit:           newStringPtr("test_unit"),
-					MeterName:      newStringPtr("test_meter_name"),
-					MeterVersion:   newStringPtr("test_meter_version"),
-					MeterSchemaUrl: newStringPtr("test_schema_url"),
+					InstrumentName: ptr("test_name"),
+					InstrumentType: (*ViewSelectorInstrumentType)(ptr("counter")),
+					Unit:           ptr("test_unit"),
+					MeterName:      ptr("test_meter_name"),
+					MeterVersion:   ptr("test_meter_version"),
+					MeterSchemaUrl: ptr("test_schema_url"),
 				},
 			},
 			matchInstrument: &sdkmetric.Instrument{
@@ -723,12 +723,12 @@ func TestView(t *testing.T) {
 			name: "all selectors no match name",
 			view: View{
 				Selector: &ViewSelector{
-					InstrumentName: newStringPtr("test_name"),
-					InstrumentType: (*ViewSelectorInstrumentType)(newStringPtr("counter")),
-					Unit:           newStringPtr("test_unit"),
-					MeterName:      newStringPtr("test_meter_name"),
-					MeterVersion:   newStringPtr("test_meter_version"),
-					MeterSchemaUrl: newStringPtr("test_schema_url"),
+					InstrumentName: ptr("test_name"),
+					InstrumentType: (*ViewSelectorInstrumentType)(ptr("counter")),
+					Unit:           ptr("test_unit"),
+					MeterName:      ptr("test_meter_name"),
+					MeterVersion:   ptr("test_meter_version"),
+					MeterSchemaUrl: ptr("test_schema_url"),
 				},
 			},
 			matchInstrument: &sdkmetric.Instrument{
@@ -748,12 +748,12 @@ func TestView(t *testing.T) {
 			name: "all selectors no match unit",
 			view: View{
 				Selector: &ViewSelector{
-					InstrumentName: newStringPtr("test_name"),
-					InstrumentType: (*ViewSelectorInstrumentType)(newStringPtr("counter")),
-					Unit:           newStringPtr("test_unit"),
-					MeterName:      newStringPtr("test_meter_name"),
-					MeterVersion:   newStringPtr("test_meter_version"),
-					MeterSchemaUrl: newStringPtr("test_schema_url"),
+					InstrumentName: ptr("test_name"),
+					InstrumentType: (*ViewSelectorInstrumentType)(ptr("counter")),
+					Unit:           ptr("test_unit"),
+					MeterName:      ptr("test_meter_name"),
+					MeterVersion:   ptr("test_meter_version"),
+					MeterSchemaUrl: ptr("test_schema_url"),
 				},
 			},
 			matchInstrument: &sdkmetric.Instrument{
@@ -773,12 +773,12 @@ func TestView(t *testing.T) {
 			name: "all selectors no match kind",
 			view: View{
 				Selector: &ViewSelector{
-					InstrumentName: newStringPtr("test_name"),
-					InstrumentType: (*ViewSelectorInstrumentType)(newStringPtr("histogram")),
-					Unit:           newStringPtr("test_unit"),
-					MeterName:      newStringPtr("test_meter_name"),
-					MeterVersion:   newStringPtr("test_meter_version"),
-					MeterSchemaUrl: newStringPtr("test_schema_url"),
+					InstrumentName: ptr("test_name"),
+					InstrumentType: (*ViewSelectorInstrumentType)(ptr("histogram")),
+					Unit:           ptr("test_unit"),
+					MeterName:      ptr("test_meter_name"),
+					MeterVersion:   ptr("test_meter_version"),
+					MeterSchemaUrl: ptr("test_schema_url"),
 				},
 			},
 			matchInstrument: &sdkmetric.Instrument{
@@ -798,12 +798,12 @@ func TestView(t *testing.T) {
 			name: "all selectors no match meter name",
 			view: View{
 				Selector: &ViewSelector{
-					InstrumentName: newStringPtr("test_name"),
-					InstrumentType: (*ViewSelectorInstrumentType)(newStringPtr("counter")),
-					Unit:           newStringPtr("test_unit"),
-					MeterName:      newStringPtr("test_meter_name"),
-					MeterVersion:   newStringPtr("test_meter_version"),
-					MeterSchemaUrl: newStringPtr("test_schema_url"),
+					InstrumentName: ptr("test_name"),
+					InstrumentType: (*ViewSelectorInstrumentType)(ptr("counter")),
+					Unit:           ptr("test_unit"),
+					MeterName:      ptr("test_meter_name"),
+					MeterVersion:   ptr("test_meter_version"),
+					MeterSchemaUrl: ptr("test_schema_url"),
 				},
 			},
 			matchInstrument: &sdkmetric.Instrument{
@@ -823,12 +823,12 @@ func TestView(t *testing.T) {
 			name: "all selectors no match meter version",
 			view: View{
 				Selector: &ViewSelector{
-					InstrumentName: newStringPtr("test_name"),
-					InstrumentType: (*ViewSelectorInstrumentType)(newStringPtr("counter")),
-					Unit:           newStringPtr("test_unit"),
-					MeterName:      newStringPtr("test_meter_name"),
-					MeterVersion:   newStringPtr("test_meter_version"),
-					MeterSchemaUrl: newStringPtr("test_schema_url"),
+					InstrumentName: ptr("test_name"),
+					InstrumentType: (*ViewSelectorInstrumentType)(ptr("counter")),
+					Unit:           ptr("test_unit"),
+					MeterName:      ptr("test_meter_name"),
+					MeterVersion:   ptr("test_meter_version"),
+					MeterSchemaUrl: ptr("test_schema_url"),
 				},
 			},
 			matchInstrument: &sdkmetric.Instrument{
@@ -848,12 +848,12 @@ func TestView(t *testing.T) {
 			name: "all selectors no match meter schema url",
 			view: View{
 				Selector: &ViewSelector{
-					InstrumentName: newStringPtr("test_name"),
-					InstrumentType: (*ViewSelectorInstrumentType)(newStringPtr("counter")),
-					Unit:           newStringPtr("test_unit"),
-					MeterName:      newStringPtr("test_meter_name"),
-					MeterVersion:   newStringPtr("test_meter_version"),
-					MeterSchemaUrl: newStringPtr("test_schema_url"),
+					InstrumentName: ptr("test_name"),
+					InstrumentType: (*ViewSelectorInstrumentType)(ptr("counter")),
+					Unit:           ptr("test_unit"),
+					MeterName:      ptr("test_meter_name"),
+					MeterVersion:   ptr("test_meter_version"),
+					MeterSchemaUrl: ptr("test_schema_url"),
 				},
 			},
 			matchInstrument: &sdkmetric.Instrument{
@@ -873,12 +873,12 @@ func TestView(t *testing.T) {
 			name: "with stream",
 			view: View{
 				Selector: &ViewSelector{
-					InstrumentName: newStringPtr("test_name"),
-					Unit:           newStringPtr("test_unit"),
+					InstrumentName: ptr("test_name"),
+					Unit:           ptr("test_unit"),
 				},
 				Stream: &ViewStream{
-					Name:          newStringPtr("new_name"),
-					Description:   newStringPtr("new_description"),
+					Name:          ptr("new_name"),
+					Description:   ptr("new_description"),
 					AttributeKeys: []string{"foo", "bar"},
 					Aggregation:   &ViewStreamAggregation{Sum: make(ViewStreamAggregationSum)},
 				},
@@ -928,37 +928,37 @@ func TestInstrumentType(t *testing.T) {
 		},
 		{
 			name:     "counter",
-			instType: (*ViewSelectorInstrumentType)(newStringPtr("counter")),
+			instType: (*ViewSelectorInstrumentType)(ptr("counter")),
 			wantKind: sdkmetric.InstrumentKindCounter,
 		},
 		{
 			name:     "up_down_counter",
-			instType: (*ViewSelectorInstrumentType)(newStringPtr("up_down_counter")),
+			instType: (*ViewSelectorInstrumentType)(ptr("up_down_counter")),
 			wantKind: sdkmetric.InstrumentKindUpDownCounter,
 		},
 		{
 			name:     "histogram",
-			instType: (*ViewSelectorInstrumentType)(newStringPtr("histogram")),
+			instType: (*ViewSelectorInstrumentType)(ptr("histogram")),
 			wantKind: sdkmetric.InstrumentKindHistogram,
 		},
 		{
 			name:     "observable_counter",
-			instType: (*ViewSelectorInstrumentType)(newStringPtr("observable_counter")),
+			instType: (*ViewSelectorInstrumentType)(ptr("observable_counter")),
 			wantKind: sdkmetric.InstrumentKindObservableCounter,
 		},
 		{
 			name:     "observable_up_down_counter",
-			instType: (*ViewSelectorInstrumentType)(newStringPtr("observable_up_down_counter")),
+			instType: (*ViewSelectorInstrumentType)(ptr("observable_up_down_counter")),
 			wantKind: sdkmetric.InstrumentKindObservableUpDownCounter,
 		},
 		{
 			name:     "observable_gauge",
-			instType: (*ViewSelectorInstrumentType)(newStringPtr("observable_gauge")),
+			instType: (*ViewSelectorInstrumentType)(ptr("observable_gauge")),
 			wantKind: sdkmetric.InstrumentKindObservableGauge,
 		},
 		{
 			name:     "invalid",
-			instType: (*ViewSelectorInstrumentType)(newStringPtr("invalid")),
+			instType: (*ViewSelectorInstrumentType)(ptr("invalid")),
 			wantErr:  errors.New("instrument_type: invalid value"),
 		},
 	}
@@ -966,7 +966,7 @@ func TestInstrumentType(t *testing.T) {
 		t.Run(tt.name, func(t *testing.T) {
 			got, err := instrumentKind(tt.instType)
 			if tt.wantErr != nil {
-				require.Equal(t, err, tt.wantErr)
+				require.Equal(t, tt.wantErr, err)
 				require.Zero(t, got)
 			} else {
 				require.NoError(t, err)
@@ -1006,9 +1006,9 @@ func TestAggregation(t *testing.T) {
 			name: "Base2ExponentialBucketHistogram",
 			aggregation: &ViewStreamAggregation{
 				Base2ExponentialBucketHistogram: &ViewStreamAggregationBase2ExponentialBucketHistogram{
-					MaxSize:      newIntPtr(2),
-					MaxScale:     newIntPtr(3),
-					RecordMinMax: newBoolPtr(true),
+					MaxSize:      ptr(2),
+					MaxScale:     ptr(3),
+					RecordMinMax: ptr(true),
 				},
 			},
 			wantAggregation: sdkmetric.AggregationBase2ExponentialHistogram{
@@ -1046,7 +1046,7 @@ func TestAggregation(t *testing.T) {
 			aggregation: &ViewStreamAggregation{
 				ExplicitBucketHistogram: &ViewStreamAggregationExplicitBucketHistogram{
 					Boundaries:   []float64{1, 2, 3},
-					RecordMinMax: newBoolPtr(true),
+					RecordMinMax: ptr(true),
 				},
 			},
 			wantAggregation: sdkmetric.AggregationExplicitBucketHistogram{
@@ -1108,16 +1108,4 @@ func TestAttributeFilter(t *testing.T) {
 			}
 		})
 	}
-}
-
-func newBoolPtr(b bool) *bool {
-	return &b
-}
-
-func newIntPtr(i int) *int {
-	return &i
-}
-
-func newStringPtr(str string) *string {
-	return &str
 }

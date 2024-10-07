@@ -49,7 +49,7 @@ func TestRegistryIsConcurrentSafe(t *testing.T) {
 	wg.Add(1)
 	go func() {
 		defer wg.Done()
-		require.ErrorIs(t, r.store(exporterName, factory("stdout")), errDuplicateRegistration)
+		assert.ErrorIs(t, r.store(exporterName, factory("stdout")), errDuplicateRegistration)
 	}()
 
 	wg.Add(1)

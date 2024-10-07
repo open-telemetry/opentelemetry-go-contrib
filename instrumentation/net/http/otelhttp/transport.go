@@ -28,13 +28,14 @@ import (
 type Transport struct {
 	rt http.RoundTripper
 
-	tracer            trace.Tracer
-	meter             metric.Meter
-	propagators       propagation.TextMapPropagator
-	spanStartOptions  []trace.SpanStartOption
-	filters           []Filter
-	spanNameFormatter func(string, *http.Request) string
-	clientTrace       func(context.Context) *httptrace.ClientTrace
+	tracer             trace.Tracer
+	meter              metric.Meter
+	propagators        propagation.TextMapPropagator
+	spanStartOptions   []trace.SpanStartOption
+	filters            []Filter
+	spanNameFormatter  func(string, *http.Request) string
+	clientTrace        func(context.Context) *httptrace.ClientTrace
+	metricAttributesFn func(*http.Request) []attribute.KeyValue
 
 	semconv              semconv.HTTPClient
 	requestBytesCounter  metric.Int64Counter
@@ -80,6 +81,7 @@ func (t *Transport) applyConfig(c *config) {
 	t.filters = c.Filters
 	t.spanNameFormatter = c.SpanNameFormatter
 	t.clientTrace = c.ClientTrace
+	t.metricAttributesFn = c.MetricAttributesFn
 }
 
 func (t *Transport) createMeasures() {
@@ -175,7 +177,7 @@ func (t *Transport) RoundTrip(r *http.Request) (*http.Response, error) {
 	}
 
 	// metrics
-	metricAttrs := append(labeler.Get(), semconvutil.HTTPClientRequestMetrics(r)...)
+	metricAttrs := append(append(labeler.Get(), semconvutil.HTTPClientRequestMetrics(r)...), t.metricAttributesFromRequest(r)...)
 	if res.StatusCode > 0 {
 		metricAttrs = append(metricAttrs, semconv.HTTPStatusCode(res.StatusCode))
 	}
@@ -198,7 +200,15 @@ func (t *Transport) RoundTrip(r *http.Request) (*http.Response, error) {
 
 	t.latencyMeasure.Record(ctx, elapsedTime, o)
 
-	return res, err
+	return res, nil
+}
+
+func (t *Transport) metricAttributesFromRequest(r *http.Request) []attribute.KeyValue {
+	var attributeForRequest []attribute.KeyValue
+	if t.metricAttributesFn != nil {
+		attributeForRequest = t.metricAttributesFn(r)
+	}
+	return attributeForRequest
 }
 
 // newWrappedBody returns a new and appropriately scoped *wrappedBody as an

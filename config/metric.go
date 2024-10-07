@@ -8,6 +8,7 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"math"
 	"net"
 	"net/http"
 	"net/url"
@@ -405,8 +406,8 @@ func aggregation(aggr *ViewStreamAggregation) sdkmetric.Aggregation {
 
 	if aggr.Base2ExponentialBucketHistogram != nil {
 		return sdkmetric.AggregationBase2ExponentialHistogram{
-			MaxSize:  int32(intOrZero(aggr.Base2ExponentialBucketHistogram.MaxSize)),
-			MaxScale: int32(intOrZero(aggr.Base2ExponentialBucketHistogram.MaxScale)),
+			MaxSize:  int32OrZero(aggr.Base2ExponentialBucketHistogram.MaxSize),
+			MaxScale: int32OrZero(aggr.Base2ExponentialBucketHistogram.MaxScale),
 			// Need to negate because config has the positive action RecordMinMax.
 			NoMinMax: !boolOrFalse(aggr.Base2ExponentialBucketHistogram.RecordMinMax),
 		}
@@ -473,11 +474,18 @@ func boolOrFalse(pBool *bool) bool {
 	return *pBool
 }
 
-func intOrZero(pInt *int) int {
+func int32OrZero(pInt *int) int32 {
 	if pInt == nil {
 		return 0
 	}
-	return *pInt
+	i := *pInt
+	if i > math.MaxInt32 {
+		return math.MaxInt32
+	}
+	if i < math.MinInt32 {
+		return math.MinInt32
+	}
+	return int32(i) // nolint: gosec  // Overflow and underflow checked above.
 }
 
 func strOrEmpty(pStr *string) string {
