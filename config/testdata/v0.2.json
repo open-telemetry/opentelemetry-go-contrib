@@ -1,0 +1,243 @@
+{
+  "file_format": "0.2",
+  "disabled": false,
+  "attribute_limits": {
+      "attribute_value_length_limit": 4096,
+      "attribute_count_limit": 128
+  },
+  "logger_provider": {
+      "processors": [
+          {
+              "batch": {
+                  "schedule_delay": 5000,
+                  "export_timeout": 30000,
+                  "max_queue_size": 2048,
+                  "max_export_batch_size": 512,
+                  "exporter": {
+                      "otlp": {
+                          "protocol": "http/protobuf",
+                          "endpoint": "http://localhost:4318",
+                          "certificate": "/app/cert.pem",
+                          "client_key": "/app/cert.pem",
+                          "client_certificate": "/app/cert.pem",
+                          "headers": {
+                              "api-key": "1234"
+                          },
+                          "compression": "gzip",
+                          "timeout": 10000,
+                          "insecure": false
+                      }
+                  }
+              }
+          },
+          {
+              "simple": {
+                  "exporter": {
+                      "console": {}
+                  }
+              }
+          }
+      ],
+      "limits": {
+          "attribute_value_length_limit": 4096,
+          "attribute_count_limit": 128
+      }
+  },
+  "meter_provider": {
+      "readers": [
+          {
+              "pull": {
+                  "exporter": {
+                      "prometheus": {
+                          "host": "localhost",
+                          "port": 9464,
+                          "without_units": false,
+                          "without_type_suffix": false,
+                          "without_scope_info": false,
+                          "with_resource_constant_labels": {
+                              "included": [
+                                  "service*"
+                              ],
+                              "excluded": [
+                                  "service.attr1"
+                              ]
+                          }
+                      }
+                  }
+              }
+          },
+          {
+              "periodic": {
+                  "interval": 5000,
+                  "timeout": 30000,
+                  "exporter": {
+                      "otlp": {
+                          "protocol": "http/protobuf",
+                          "endpoint": "http://localhost:4318",
+                          "certificate": "/app/cert.pem",
+                          "client_key": "/app/cert.pem",
+                          "client_certificate": "/app/cert.pem",
+                          "headers": {
+                              "api-key": "1234"
+                          },
+                          "compression": "gzip",
+                          "timeout": 10000,
+                          "insecure": false,
+                          "temporality_preference": "delta",
+                          "default_histogram_aggregation": "base2_exponential_bucket_histogram"
+                      }
+                  }
+              }
+          },
+          {
+              "periodic": {
+                  "exporter": {
+                      "console": {}
+                  }
+              }
+          }
+      ],
+      "views": [
+          {
+              "selector": {
+                  "instrument_name": "my-instrument",
+                  "instrument_type": "histogram",
+                  "unit": "ms",
+                  "meter_name": "my-meter",
+                  "meter_version": "1.0.0",
+                  "meter_schema_url": "https://opentelemetry.io/schemas/1.16.0"
+              },
+              "stream": {
+                  "name": "new_instrument_name",
+                  "description": "new_description",
+                  "aggregation": {
+                      "explicit_bucket_histogram": {
+                          "boundaries": [
+                              0,
+                              5,
+                              10,
+                              25,
+                              50,
+                              75,
+                              100,
+                              250,
+                              500,
+                              750,
+                              1000,
+                              2500,
+                              5000,
+                              7500,
+                              10000
+                          ],
+                          "record_min_max": true
+                      }
+                  },
+                  "attribute_keys": [
+                      "key1",
+                      "key2"
+                  ]
+              }
+          }
+      ]
+  },
+  "propagator": {
+      "composite": [
+          "tracecontext",
+          "baggage",
+          "b3",
+          "b3multi",
+          "jaeger",
+          "xray",
+          "ottrace"
+      ]
+  },
+  "tracer_provider": {
+      "processors": [
+          {
+              "batch": {
+                  "schedule_delay": 5000,
+                  "export_timeout": 30000,
+                  "max_queue_size": 2048,
+                  "max_export_batch_size": 512,
+                  "exporter": {
+                      "otlp": {
+                          "protocol": "http/protobuf",
+                          "endpoint": "http://localhost:4318",
+                          "certificate": "/app/cert.pem",
+                          "client_key": "/app/cert.pem",
+                          "client_certificate": "/app/cert.pem",
+                          "headers": {
+                              "api-key": "1234"
+                          },
+                          "compression": "gzip",
+                          "timeout": 10000,
+                          "insecure": false
+                      }
+                  }
+              }
+          },
+          {
+              "batch": {
+                  "exporter": {
+                      "zipkin": {
+                          "endpoint": "http://localhost:9411/api/v2/spans",
+                          "timeout": 10000
+                      }
+                  }
+              }
+          },
+          {
+              "simple": {
+                  "exporter": {
+                      "console": {}
+                  }
+              }
+          }
+      ],
+      "limits": {
+          "attribute_value_length_limit": 4096,
+          "attribute_count_limit": 128,
+          "event_count_limit": 128,
+          "link_count_limit": 128,
+          "event_attribute_count_limit": 128,
+          "link_attribute_count_limit": 128
+      },
+      "sampler": {
+          "parent_based": {
+              "root": {
+                  "trace_id_ratio_based": {
+                      "ratio": 0.0001
+                  }
+              },
+              "remote_parent_sampled": {
+                  "always_on": {}
+              },
+              "remote_parent_not_sampled": {
+                  "always_off": {}
+              },
+              "local_parent_sampled": {
+                  "always_on": {}
+              },
+              "local_parent_not_sampled": {
+                  "always_off": {}
+              }
+          }
+      }
+  },
+  "resource": {
+      "attributes": {
+          "service.name": "unknown_service"
+      },
+      "detectors": {
+          "attributes": {
+              "included": [
+                  "process.*"
+              ],
+              "excluded": [
+                  "process.command_args"
+              ]
+          }
+      },
+      "schema_url": "https://opentelemetry.io/schemas/1.16.0"
+  }
+}
