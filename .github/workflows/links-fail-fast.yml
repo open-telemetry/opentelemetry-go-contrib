@@ -25,4 +25,5 @@ jobs:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         with:
           fail: true
+          # TODO: Remove 429s exception once https://github.com/open-telemetry/opentelemetry-go-contrib/issues/6183 is resolved
           args: --max-concurrency 5 --cache --max-cache-age 1d --accept 100..=103,200..=299,429 .
