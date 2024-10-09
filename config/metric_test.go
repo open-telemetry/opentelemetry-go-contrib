@@ -294,14 +294,14 @@ func TestReader(t *testing.T) {
 			name: "periodic/otlp-grpc-delta-temporality",
 			reader: MetricReader{
 				Periodic: &PeriodicMetricReader{
-					Exporter: MetricExporter{
+					Exporter: PushMetricExporter{
 						OTLP: &OTLPMetric{
-							Protocol:    "grpc/protobuf",
-							Endpoint:    "localhost:4318",
+							Protocol:    ptr("grpc/protobuf"),
+							Endpoint:    ptr("localhost:4318"),
 							Compression: ptr("none"),
 							Timeout:     ptr(1000),
-							Headers: map[string]string{
-								"test": "test1",
+							Headers: []NameStringValuePair{
+								{Name: "test", Value: ptr("test1")},
 							},
 							TemporalityPreference: ptr("delta"),
 						},
@@ -314,14 +314,14 @@ func TestReader(t *testing.T) {
 			name: "periodic/otlp-grpc-cumulative-temporality",
 			reader: MetricReader{
 				Periodic: &PeriodicMetricReader{
-					Exporter: MetricExporter{
+					Exporter: PushMetricExporter{
 						OTLP: &OTLPMetric{
-							Protocol:    "grpc/protobuf",
-							Endpoint:    "localhost:4318",
+							Protocol:    ptr("grpc/protobuf"),
+							Endpoint:    ptr("localhost:4318"),
 							Compression: ptr("none"),
 							Timeout:     ptr(1000),
-							Headers: map[string]string{
-								"test": "test1",
+							Headers: []NameStringValuePair{
+								{Name: "test", Value: ptr("test1")},
 							},
 							TemporalityPreference: ptr("cumulative"),
 						},
@@ -334,14 +334,14 @@ func TestReader(t *testing.T) {
 			name: "periodic/otlp-grpc-lowmemory-temporality",
 			reader: MetricReader{
 				Periodic: &PeriodicMetricReader{
-					Exporter: MetricExporter{
+					Exporter: PushMetricExporter{
 						OTLP: &OTLPMetric{
-							Protocol:    "grpc/protobuf",
-							Endpoint:    "localhost:4318",
+							Protocol:    ptr("grpc/protobuf"),
+							Endpoint:    ptr("localhost:4318"),
 							Compression: ptr("none"),
 							Timeout:     ptr(1000),
-							Headers: map[string]string{
-								"test": "test1",
+							Headers: []NameStringValuePair{
+								{Name: "test", Value: ptr("test1")},
 							},
 							TemporalityPreference: ptr("lowmemory"),
 						},
@@ -354,14 +354,14 @@ func TestReader(t *testing.T) {
 			name: "periodic/otlp-grpc-invalid-temporality",
 			reader: MetricReader{
 				Periodic: &PeriodicMetricReader{
-					Exporter: MetricExporter{
+					Exporter: PushMetricExporter{
 						OTLP: &OTLPMetric{
-							Protocol:    "grpc/protobuf",
-							Endpoint:    "localhost:4318",
+							Protocol:    ptr("grpc/protobuf"),
+							Endpoint:    ptr("localhost:4318"),
 							Compression: ptr("none"),
 							Timeout:     ptr(1000),
-							Headers: map[string]string{
-								"test": "test1",
+							Headers: []NameStringValuePair{
+								{Name: "test", Value: ptr("test1")},
 							},
 							TemporalityPreference: ptr("invalid"),
 						},
@@ -506,14 +506,14 @@ func TestReader(t *testing.T) {
 			name: "periodic/otlp-http-cumulative-temporality",
 			reader: MetricReader{
 				Periodic: &PeriodicMetricReader{
-					Exporter: MetricExporter{
+					Exporter: PushMetricExporter{
 						OTLP: &OTLPMetric{
-							Protocol:    "http/protobuf",
-							Endpoint:    "localhost:4318",
+							Protocol:    ptr("http/protobuf"),
+							Endpoint:    ptr("localhost:4318"),
 							Compression: ptr("none"),
 							Timeout:     ptr(1000),
-							Headers: map[string]string{
-								"test": "test1",
+							Headers: []NameStringValuePair{
+								{Name: "test", Value: ptr("test1")},
 							},
 							TemporalityPreference: ptr("cumulative"),
 						},
@@ -526,14 +526,14 @@ func TestReader(t *testing.T) {
 			name: "periodic/otlp-http-lowmemory-temporality",
 			reader: MetricReader{
 				Periodic: &PeriodicMetricReader{
-					Exporter: MetricExporter{
+					Exporter: PushMetricExporter{
 						OTLP: &OTLPMetric{
-							Protocol:    "http/protobuf",
-							Endpoint:    "localhost:4318",
+							Protocol:    ptr("http/protobuf"),
+							Endpoint:    ptr("localhost:4318"),
 							Compression: ptr("none"),
 							Timeout:     ptr(1000),
-							Headers: map[string]string{
-								"test": "test1",
+							Headers: []NameStringValuePair{
+								{Name: "test", Value: ptr("test1")},
 							},
 							TemporalityPreference: ptr("lowmemory"),
 						},
@@ -546,14 +546,14 @@ func TestReader(t *testing.T) {
 			name: "periodic/otlp-http-delta-temporality",
 			reader: MetricReader{
 				Periodic: &PeriodicMetricReader{
-					Exporter: MetricExporter{
+					Exporter: PushMetricExporter{
 						OTLP: &OTLPMetric{
-							Protocol:    "http/protobuf",
-							Endpoint:    "localhost:4318",
+							Protocol:    ptr("http/protobuf"),
+							Endpoint:    ptr("localhost:4318"),
 							Compression: ptr("none"),
 							Timeout:     ptr(1000),
-							Headers: map[string]string{
-								"test": "test1",
+							Headers: []NameStringValuePair{
+								{Name: "test", Value: ptr("test1")},
 							},
 							TemporalityPreference: ptr("delta"),
 						},
@@ -566,14 +566,14 @@ func TestReader(t *testing.T) {
 			name: "periodic/otlp-http-invalid-temporality",
 			reader: MetricReader{
 				Periodic: &PeriodicMetricReader{
-					Exporter: MetricExporter{
+					Exporter: PushMetricExporter{
 						OTLP: &OTLPMetric{
-							Protocol:    "http/protobuf",
-							Endpoint:    "localhost:4318",
+							Protocol:    ptr("http/protobuf"),
+							Endpoint:    ptr("localhost:4318"),
 							Compression: ptr("none"),
 							Timeout:     ptr(1000),
-							Headers: map[string]string{
-								"test": "test1",
+							Headers: []NameStringValuePair{
+								{Name: "test", Value: ptr("test1")},
 							},
 							TemporalityPreference: ptr("invalid"),
 						},
