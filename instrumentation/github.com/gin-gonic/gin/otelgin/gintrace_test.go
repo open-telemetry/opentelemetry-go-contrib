@@ -32,8 +32,9 @@ func TestGetSpanNotInstrumented(t *testing.T) {
 		// Assert we don't have a span on the context.
 		span := trace.SpanFromContext(c.Request.Context())
 		ok := !span.SpanContext().IsValid()
-		assert.True(t, ok)
-		_, _ = c.Writer.Write([]byte("ok"))
+		if !ok {
+			c.Status(http.StatusInternalServerError)
+		}
 	})
 	r := httptest.NewRequest("GET", "/ping", nil)
 	w := httptest.NewRecorder()

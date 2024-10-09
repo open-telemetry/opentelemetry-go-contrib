@@ -33,7 +33,7 @@ func Middleware(service string, opts ...Option) macaron.Handler {
 
 		ctx := cfg.Propagators.Extract(savedCtx, propagation.HeaderCarrier(c.Req.Header))
 		opts := []oteltrace.SpanStartOption{
-			oteltrace.WithAttributes(semconvutil.HTTPServerRequest(service, c.Req.Request)...),
+			oteltrace.WithAttributes(semconvutil.HTTPServerRequest(service, c.Req.Request, semconvutil.HTTPServerRequestOptions{})...),
 			oteltrace.WithSpanKind(oteltrace.SpanKindServer),
 		}
 		// TODO: span name should be router template not the actual request path, eg /user/:id vs /user/123

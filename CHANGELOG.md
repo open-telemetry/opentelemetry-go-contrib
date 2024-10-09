@@ -24,6 +24,7 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 ### Fixed
 
 - Possible nil dereference panic in `go.opentelemetry.io/contrib/instrumentation/net/http/httptrace/otelhttptrace`. (#5965)
+- Use Gin's own `ClientIP` method to detect the client's IP, which supports custom proxy headers in `go.opentelemetry.io/contrib/instrumentation/github.com/gin-gonic/gin/otelgin`. (#6095)
 
 ### Removed
 

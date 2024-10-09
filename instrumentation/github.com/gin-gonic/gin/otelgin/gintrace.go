@@ -66,11 +66,17 @@ func Middleware(service string, opts ...Option) gin.HandlerFunc {
 			c.Request = c.Request.WithContext(savedCtx)
 		}()
 		ctx := cfg.Propagators.Extract(savedCtx, propagation.HeaderCarrier(c.Request.Header))
+
+		serverRequestOpts := semconvutil.HTTPServerRequestOptions{
+			// Gin's ClientIP method can detect the client's IP from various headers set by proxies, and it's configurable
+			HTTPClientIP: c.ClientIP(),
+		}
 		opts := []oteltrace.SpanStartOption{
-			oteltrace.WithAttributes(semconvutil.HTTPServerRequest(service, c.Request)...),
+			oteltrace.WithAttributes(semconvutil.HTTPServerRequest(service, c.Request, serverRequestOpts)...),
 			oteltrace.WithAttributes(semconv.HTTPRoute(c.FullPath())),
 			oteltrace.WithSpanKind(oteltrace.SpanKindServer),
 		}
+
 		var spanName string
 		if cfg.SpanNameFormatter == nil {
 			spanName = c.FullPath()

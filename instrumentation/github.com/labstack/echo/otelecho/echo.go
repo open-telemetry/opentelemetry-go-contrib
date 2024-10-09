@@ -60,7 +60,7 @@ func Middleware(service string, opts ...Option) echo.MiddlewareFunc {
 			}()
 			ctx := cfg.Propagators.Extract(savedCtx, propagation.HeaderCarrier(request.Header))
 			opts := []oteltrace.SpanStartOption{
-				oteltrace.WithAttributes(semconvutil.HTTPServerRequest(service, request)...),
+				oteltrace.WithAttributes(semconvutil.HTTPServerRequest(service, request, semconvutil.HTTPServerRequestOptions{})...),
 				oteltrace.WithSpanKind(oteltrace.SpanKindServer),
 			}
 			if path := c.Path(); path != "" {

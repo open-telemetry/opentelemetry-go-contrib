@@ -142,7 +142,7 @@ func (tw traceware) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	}
 
 	opts := []trace.SpanStartOption{
-		trace.WithAttributes(semconvutil.HTTPServerRequest(tw.service, r)...),
+		trace.WithAttributes(semconvutil.HTTPServerRequest(tw.service, r, semconvutil.HTTPServerRequestOptions{})...),
 		trace.WithSpanKind(trace.SpanKindServer),
 	}
 

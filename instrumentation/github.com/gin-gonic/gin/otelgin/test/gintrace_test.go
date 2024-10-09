@@ -12,6 +12,7 @@ import (
 	"net/http/httptest"
 	"strconv"
 	"testing"
+	"time"
 
 	"github.com/gin-gonic/gin"
 	"github.com/stretchr/testify/assert"
@@ -320,4 +321,93 @@ func TestWithGinFilter(t *testing.T) {
 		router.ServeHTTP(w, r)
 		assert.Len(t, sr.Ended(), 1)
 	})
+}
+
+func TestClientIP(t *testing.T) {
+	testFn := func(requestFn func(r *http.Request), ginFn func(router *gin.Engine), expect string) func(t *testing.T) {
+		return func(t *testing.T) {
+			r := httptest.NewRequest("GET", "/ping", nil)
+			r.RemoteAddr = "1.2.3.4:5678"
+
+			if requestFn != nil {
+				requestFn(r)
+			}
+
+			sr := tracetest.NewSpanRecorder()
+			provider := sdktrace.NewTracerProvider()
+			provider.RegisterSpanProcessor(sr)
+
+			doneCh := make(chan struct{})
+			router := gin.New()
+
+			if ginFn != nil {
+				ginFn(router)
+			}
+
+			router.Use(otelgin.Middleware("foobar", otelgin.WithTracerProvider(provider)))
+			router.GET("/ping", func(c *gin.Context) {
+				close(doneCh)
+			})
+
+			w := httptest.NewRecorder()
+			router.ServeHTTP(w, r)
+			response := w.Result() //nolint:bodyclose // False positive for httptest.ResponseRecorder: https://github.com/timakin/bodyclose/issues/59.
+			assert.Equal(t, http.StatusOK, response.StatusCode)
+
+			select {
+			case <-doneCh:
+				// nop
+			case <-time.After(5 * time.Second):
+				t.Fatal("did not receive signal in 5s")
+			}
+
+			res := sr.Ended()
+			require.Len(t, res, 1)
+
+			got := make(map[attribute.Key]attribute.Value, len(res[0].Attributes()))
+			for _, a := range res[0].Attributes() {
+				got[a.Key] = a.Value
+			}
+
+			require.NotEmpty(t, got["http.client_ip"])
+			assert.Equal(t, expect, got["http.client_ip"].AsString())
+		}
+	}
+
+	t.Run("no header", testFn(nil, nil, "1.2.3.4"))
+
+	t.Run("header is not trusted", testFn(
+		func(r *http.Request) {
+			r.Header.Set("X-Forwarded-For", "9.8.7.6")
+		},
+		func(router *gin.Engine) {
+			//nolint:errcheck
+			router.SetTrustedProxies(nil)
+		},
+		"1.2.3.4",
+	))
+
+	t.Run("client IP in X-Forwarded-For header", testFn(
+		func(r *http.Request) {
+			r.Header.Set("X-Forwarded-For", "9.8.7.6")
+		},
+		func(router *gin.Engine) {
+			//nolint:errcheck
+			router.SetTrustedProxies([]string{"0.0.0.0/0"})
+		},
+		"9.8.7.6",
+	))
+
+	t.Run("client IP in X-Custom-IP", testFn(
+		func(r *http.Request) {
+			r.Header.Set("X-Forwarded-For", "2.3.2.3") // not used
+			r.Header.Set("X-Custom-IP", "9.8.7.6")
+		},
+		func(router *gin.Engine) {
+			router.RemoteIPHeaders = []string{"X-Custom-IP", "X-Forwarded-For"}
+			//nolint:errcheck
+			router.SetTrustedProxies([]string{"0.0.0.0/0"})
+		},
+		"9.8.7.6",
+	))
 }

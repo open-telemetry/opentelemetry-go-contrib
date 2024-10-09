@@ -36,7 +36,7 @@ type oldHTTPServer struct{}
 // If the primary server name is not known, server should be an empty string.
 // The req Host will be used to determine the server instead.
 func (o oldHTTPServer) RequestTraceAttrs(server string, req *http.Request) []attribute.KeyValue {
-	return semconvutil.HTTPServerRequest(server, req)
+	return semconvutil.HTTPServerRequest(server, req, semconvutil.HTTPServerRequestOptions{})
 }
 
 // ResponseTraceAttrs returns trace attributes for telemetry from an HTTP response.
