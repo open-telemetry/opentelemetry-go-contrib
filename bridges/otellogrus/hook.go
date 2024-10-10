@@ -16,13 +16,15 @@
 //     set.
 //   - Fields are transformed and set as the attributes.
 //
-// The Level is transformed by using the static offset to the OpenTelemetry
+// The Level is transformed to the OpenTelemetry
 // Severity types. For example:
 //
 //   - [logrus.DebugLevel] is transformed to [log.SeverityDebug]
-//   - [logrus.InfoLevel] is transformed to [log.SeverityTrace4]
-//   - [logrus.WarnLevel] is transformed to [log.SeverityTrace3]
-//   - [logrus.ErrorLevel] is transformed to [log.SeverityTrace2]
+//   - [logrus.InfoLevel] is transformed to [log.SeverityInfo]
+//   - [logrus.WarnLevel] is transformed to [log.SeverityWarn]
+//   - [logrus.ErrorLevel] is transformed to [log.SeverityError]
+//   - [logrus.FatalLevel] is transformed to [log.SeverityFatal]
+//   - [logrus.PanicLevel] is transformed to [log.SeverityFatal4]
 //
 // Field values are transformed based on their type into log attributes, or
 // into a string value if there is no matching type.
@@ -164,9 +166,7 @@ func (h *Hook) convertEntry(e *logrus.Entry) log.Record {
 	var record log.Record
 	record.SetTimestamp(e.Time)
 	record.SetBody(log.StringValue(e.Message))
-
-	const sevOffset = logrus.Level(log.SeverityDebug) - logrus.DebugLevel
-	record.SetSeverity(log.Severity(e.Level + sevOffset))
+	record.SetSeverity(convertSeverity(e.Level))
 	record.AddAttributes(convertFields(e.Data)...)
 
 	return record
@@ -181,6 +181,30 @@ func convertFields(fields logrus.Fields) []log.KeyValue {
 		})
 	}
 	return kvs
+}
+
+func convertSeverity(level logrus.Level) log.Severity {
+	switch level {
+	case logrus.PanicLevel:
+		// PanicLevel is not supported by OpenTelemetry, use Fatal4 as the highest severity.
+		return log.SeverityFatal4
+	case logrus.FatalLevel:
+		return log.SeverityFatal
+	case logrus.ErrorLevel:
+		return log.SeverityError
+	case logrus.WarnLevel:
+		return log.SeverityWarn
+	case logrus.InfoLevel:
+		return log.SeverityInfo
+	case logrus.DebugLevel:
+		return log.SeverityDebug
+	case logrus.TraceLevel:
+		return log.SeverityTrace
+	default:
+		// If the level is not recognized, use SeverityUndefined as the lowest severity.
+		// we should never reach this point as logrus only uses the above levels.
+		return log.SeverityUndefined
+	}
 }
 
 func convertValue(v interface{}) log.Value {
