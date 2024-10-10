@@ -309,7 +309,7 @@ update-all-otel-deps:
 OPENTELEMETRY_CONFIGURATION_JSONSCHEMA_SRC_DIR=tmp/opentelememetry-configuration
 
 # The SHA matching the current version of the opentelemetry-configuration schema to use
-OPENTELEMETRY_CONFIGURATION_JSONSCHEMA_VERSION=v0.2.0
+OPENTELEMETRY_CONFIGURATION_JSONSCHEMA_VERSION=v0.3.0
 
 # Cleanup temporary directory
 genjsonschema-cleanup:
@@ -326,6 +326,7 @@ genjsonschema: genjsonschema-cleanup $(GOJSONSCHEMA)
 		--capitalization OTLP \
 		--struct-name-from-title \
 		--package config \
+		--only-models \
 		--output ${GENERATED_CONFIG} \
 		${OPENTELEMETRY_CONFIGURATION_JSONSCHEMA_SRC_DIR}/schema/opentelemetry_configuration.json
 	@echo Modify jsonschema generated files.
