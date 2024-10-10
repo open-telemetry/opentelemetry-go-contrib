@@ -55,7 +55,7 @@ instrumentation/gopkg.in/macaron.v1/otelmacaron/                        @open-te
 instrumentation/host/                                                   @open-telemetry/go-approvers @dmathieu
 instrumentation/net/http/httptrace/otelhttptrace/                       @open-telemetry/go-approvers @dmathieu
 instrumentation/net/http/otelhttp/                                      @open-telemetry/go-approvers @dmathieu
-instrumentation/runtime/                                                @open-telemetry/go-approvers @dmathieu
+instrumentation/runtime/                                                @open-telemetry/go-approvers @dmathieu @dashpole
 
 processors/baggagecopy                                                  @open-telemetry/go-approvers @codeboten @MikeGoldsmith
 processors/minsev                                                       @open-telemetry/go-approvers @MrAlias
@@ -67,7 +67,6 @@ propagators/jaeger/                                                     @open-te
 propagators/opencensus/                                                 @open-telemetry/go-approvers @dashpole
 propagators/ot/                                                         @open-telemetry/go-approvers @pellared
 
-samplers/aws/xray/                                                      @open-telemetry/go-approvers
 samplers/jaegerremote/                                                  @open-telemetry/go-approvers @yurishkuro
 samplers/probability/consistent/                                        @open-telemetry/go-approvers
 
