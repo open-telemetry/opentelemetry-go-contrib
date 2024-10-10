@@ -24,6 +24,7 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 ### Fixed
 
 - Possible nil dereference panic in `go.opentelemetry.io/contrib/instrumentation/net/http/httptrace/otelhttptrace`. (#5965)
+- `logrus.Level` transformed to appropriate `log.Severity` in `go.opentelemetry.io/contrib/bridges/otellogrus`. (#6191)
 
 ### Removed
 
