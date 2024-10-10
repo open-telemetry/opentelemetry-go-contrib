@@ -1,15 +1,11 @@
 {
   "$schema": "https://docs.renovatebot.com/renovate-schema.json",
-  "extends": [
-    "config:recommended"
-  ],
+  "extends": ["config:recommended"],
   "ignorePaths": [],
-  "ignoreDeps": [ "go.opentelemetry.io/contrib/instrgen" ],
+  "ignoreDeps": ["go.opentelemetry.io/contrib/instrgen"],
   "labels": ["Skip Changelog", "dependencies"],
   "separateMajorMinor": true,
-  "postUpdateOptions" : [
-    "gomodTidy"
-  ],
+  "postUpdateOptions": ["gomodTidy"],
   "packageRules": [
     {
       "matchManagers": ["gomod"],
@@ -28,7 +24,16 @@
     },
     {
       "matchPackageNames": ["go.opentelemetry.io/otel/**"],
-      "allowedVersions": "/^v[0-9]+\\.[0-9]+\\.[0-9]+/"
+      "allowedVersions": "^v[0-9]+\\.[0-9]+\\.[0-9]+",
+      "enabled": true,
+      "ignore": {
+        "matchUpdateTypes": ["pin", "digest"]
+      }
+    },
+    {
+      "matchPackageNames": ["go.opentelemetry.io/otel/**"],
+      "sourceUrlPrefixes": ["https://github.com/open-telemetry/opentelemetry-go"],
+      "enabled": false
     }
   ]
 }
