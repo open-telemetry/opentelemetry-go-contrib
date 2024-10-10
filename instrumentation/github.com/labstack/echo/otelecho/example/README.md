@@ -1,7 +1,5 @@
 # labstack echo instrumentation example
 
-:warning: Deprecated: otelecho has no Code Owner.
-
 An HTTP server using labstack echo and instrumentation. The server has a
 `/users/:id` endpoint. The server generates span information to
 `stdout`.
