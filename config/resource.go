@@ -51,8 +51,8 @@ func newResource(res *Resource) (*resource.Resource, error) {
 	}
 	var attrs []attribute.KeyValue
 
-	for k, v := range res.Attributes {
-		attrs = append(attrs, keyVal(k, v))
+	for _, v := range res.Attributes {
+		attrs = append(attrs, keyVal(v.Name, v.Value))
 	}
 
 	return resource.Merge(resource.Default(),
