@@ -98,7 +98,7 @@ func TestLogProcessor(t *testing.T) {
 					MaxExportBatchSize: ptr(-1),
 					Exporter: LogRecordExporter{
 						OTLP: &OTLP{
-							Protocol: "http/protobuf",
+							Protocol: ptr("http/protobuf"),
 						},
 					},
 				},
@@ -112,7 +112,7 @@ func TestLogProcessor(t *testing.T) {
 					ExportTimeout: ptr(-2),
 					Exporter: LogRecordExporter{
 						OTLP: &OTLP{
-							Protocol: "http/protobuf",
+							Protocol: ptr("http/protobuf"),
 						},
 					},
 				},
@@ -127,7 +127,7 @@ func TestLogProcessor(t *testing.T) {
 					MaxQueueSize: ptr(-3),
 					Exporter: LogRecordExporter{
 						OTLP: &OTLP{
-							Protocol: "http/protobuf",
+							Protocol: ptr("http/protobuf"),
 						},
 					},
 				},
@@ -141,7 +141,7 @@ func TestLogProcessor(t *testing.T) {
 					ScheduleDelay: ptr(-4),
 					Exporter: LogRecordExporter{
 						OTLP: &OTLP{
-							Protocol: "http/protobuf",
+							Protocol: ptr("http/protobuf"),
 						},
 					},
 				},
@@ -182,12 +182,12 @@ func TestLogProcessor(t *testing.T) {
 					ScheduleDelay:      ptr(0),
 					Exporter: LogRecordExporter{
 						OTLP: &OTLP{
-							Protocol:    "http/protobuf",
-							Endpoint:    "http://localhost:4318",
+							Protocol:    ptr("http/protobuf"),
+							Endpoint:    ptr("http://localhost:4318"),
 							Compression: ptr("gzip"),
 							Timeout:     ptr(1000),
-							Headers: map[string]string{
-								"test": "test1",
+							Headers: []NameStringValuePair{
+								{Name: "test", Value: ptr("test1")},
 							},
 						},
 					},
@@ -205,12 +205,12 @@ func TestLogProcessor(t *testing.T) {
 					ScheduleDelay:      ptr(0),
 					Exporter: LogRecordExporter{
 						OTLP: &OTLP{
-							Protocol:    "http/protobuf",
-							Endpoint:    "http://localhost:4318/path/123",
+							Protocol:    ptr("http/protobuf"),
+							Endpoint:    ptr("http://localhost:4318/path/123"),
 							Compression: ptr("none"),
 							Timeout:     ptr(1000),
-							Headers: map[string]string{
-								"test": "test1",
+							Headers: []NameStringValuePair{
+								{Name: "test", Value: ptr("test1")},
 							},
 						},
 					},
@@ -228,11 +228,11 @@ func TestLogProcessor(t *testing.T) {
 					ScheduleDelay:      ptr(0),
 					Exporter: LogRecordExporter{
 						OTLP: &OTLP{
-							Protocol:    "http/protobuf",
+							Protocol:    ptr("http/protobuf"),
 							Compression: ptr("gzip"),
 							Timeout:     ptr(1000),
-							Headers: map[string]string{
-								"test": "test1",
+							Headers: []NameStringValuePair{
+								{Name: "test", Value: ptr("test1")},
 							},
 						},
 					},
@@ -250,12 +250,12 @@ func TestLogProcessor(t *testing.T) {
 					ScheduleDelay:      ptr(0),
 					Exporter: LogRecordExporter{
 						OTLP: &OTLP{
-							Protocol:    "http/protobuf",
-							Endpoint:    "localhost:4318",
+							Protocol:    ptr("http/protobuf"),
+							Endpoint:    ptr("localhost:4318"),
 							Compression: ptr("gzip"),
 							Timeout:     ptr(1000),
-							Headers: map[string]string{
-								"test": "test1",
+							Headers: []NameStringValuePair{
+								{Name: "test", Value: ptr("test1")},
 							},
 						},
 					},
@@ -273,12 +273,12 @@ func TestLogProcessor(t *testing.T) {
 					ScheduleDelay:      ptr(0),
 					Exporter: LogRecordExporter{
 						OTLP: &OTLP{
-							Protocol:    "invalid",
-							Endpoint:    "https://10.0.0.0:443",
+							Protocol:    ptr("invalid"),
+							Endpoint:    ptr("https://10.0.0.0:443"),
 							Compression: ptr("gzip"),
 							Timeout:     ptr(1000),
-							Headers: map[string]string{
-								"test": "test1",
+							Headers: []NameStringValuePair{
+								{Name: "test", Value: ptr("test1")},
 							},
 						},
 					},
@@ -296,12 +296,12 @@ func TestLogProcessor(t *testing.T) {
 					ScheduleDelay:      ptr(0),
 					Exporter: LogRecordExporter{
 						OTLP: &OTLP{
-							Protocol:    "http/protobuf",
-							Endpoint:    " ",
+							Protocol:    ptr("http/protobuf"),
+							Endpoint:    ptr(" "),
 							Compression: ptr("gzip"),
 							Timeout:     ptr(1000),
-							Headers: map[string]string{
-								"test": "test1",
+							Headers: []NameStringValuePair{
+								{Name: "test", Value: ptr("test1")},
 							},
 						},
 					},
@@ -319,12 +319,12 @@ func TestLogProcessor(t *testing.T) {
 					ScheduleDelay:      ptr(0),
 					Exporter: LogRecordExporter{
 						OTLP: &OTLP{
-							Protocol:    "http/protobuf",
-							Endpoint:    "localhost:4318",
+							Protocol:    ptr("http/protobuf"),
+							Endpoint:    ptr("localhost:4318"),
 							Compression: ptr("none"),
 							Timeout:     ptr(1000),
-							Headers: map[string]string{
-								"test": "test1",
+							Headers: []NameStringValuePair{
+								{Name: "test", Value: ptr("test1")},
 							},
 						},
 					},
@@ -342,12 +342,12 @@ func TestLogProcessor(t *testing.T) {
 					ScheduleDelay:      ptr(0),
 					Exporter: LogRecordExporter{
 						OTLP: &OTLP{
-							Protocol:    "http/protobuf",
-							Endpoint:    "localhost:4318",
+							Protocol:    ptr("http/protobuf"),
+							Endpoint:    ptr("localhost:4318"),
 							Compression: ptr("invalid"),
 							Timeout:     ptr(1000),
-							Headers: map[string]string{
-								"test": "test1",
+							Headers: []NameStringValuePair{
+								{Name: "test", Value: ptr("test1")},
 							},
 						},
 					},
@@ -381,12 +381,12 @@ func TestLogProcessor(t *testing.T) {
 				Simple: &SimpleLogRecordProcessor{
 					Exporter: LogRecordExporter{
 						OTLP: &OTLP{
-							Protocol:    "http/protobuf",
-							Endpoint:    "localhost:4318",
+							Protocol:    ptr("http/protobuf"),
+							Endpoint:    ptr("localhost:4318"),
 							Compression: ptr("gzip"),
 							Timeout:     ptr(1000),
-							Headers: map[string]string{
-								"test": "test1",
+							Headers: []NameStringValuePair{
+								{Name: "test", Value: ptr("test1")},
 							},
 						},
 					},

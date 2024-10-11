@@ -24,9 +24,6 @@ module-sets:
       - go.opentelemetry.io/contrib/propagators/autoprop
       - go.opentelemetry.io/contrib/propagators/opencensus
       - go.opentelemetry.io/contrib/propagators/opencensus/examples
-      - go.opentelemetry.io/contrib/instrumentation/gopkg.in/macaron.v1/otelmacaron
-      - go.opentelemetry.io/contrib/instrumentation/gopkg.in/macaron.v1/otelmacaron/example
-      - go.opentelemetry.io/contrib/instrumentation/gopkg.in/macaron.v1/otelmacaron/test
       - go.opentelemetry.io/contrib/instrumentation/net/http/otelhttp
       - go.opentelemetry.io/contrib/instrumentation/net/http/otelhttp/example
       - go.opentelemetry.io/contrib/instrumentation/net/http/otelhttp/test

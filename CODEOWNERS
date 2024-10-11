@@ -47,10 +47,9 @@ instrumentation/github.com/aws/aws-sdk-go-v2/otelaws/                   @open-te
 instrumentation/github.com/emicklei/go-restful/otelrestful/             @open-telemetry/go-approvers @dashpole
 instrumentation/github.com/gin-gonic/gin/otelgin/                       @open-telemetry/go-approvers
 instrumentation/github.com/gorilla/mux/otelmux/                         @open-telemetry/go-approvers @akats7
-instrumentation/github.com/labstack/echo/otelecho/                      @open-telemetry/go-approvers
+instrumentation/github.com/labstack/echo/otelecho/                      @open-telemetry/go-approvers @scorpionknifes
 instrumentation/go.mongodb.org/mongo-driver/mongo/otelmongo/            @open-telemetry/go-approvers
 instrumentation/google.golang.org/grpc/otelgrpc/                        @open-telemetry/go-approvers @dashpole
-instrumentation/gopkg.in/macaron.v1/otelmacaron/                        @open-telemetry/go-approvers
 
 instrumentation/host/                                                   @open-telemetry/go-approvers @dmathieu
 instrumentation/net/http/httptrace/otelhttptrace/                       @open-telemetry/go-approvers @dmathieu

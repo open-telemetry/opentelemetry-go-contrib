@@ -92,17 +92,20 @@ func TestV120RecordMetrics(t *testing.T) {
 	req, err := http.NewRequest("POST", "http://example.com", nil)
 	assert.NoError(t, err)
 
-	server.RecordMetrics(context.Background(), MetricData{
-		ServerName: "stuff",
-		Req:        req,
-		StatusCode: 301,
-		AdditionalAttributes: []attribute.KeyValue{
-			attribute.String("key", "value"),
-		},
-
-		RequestSize:  100,
+	server.RecordMetrics(context.Background(), ServerMetricData{
+		ServerName:   "stuff",
 		ResponseSize: 200,
-		ElapsedTime:  300,
+		MetricAttributes: MetricAttributes{
+			Req:        req,
+			StatusCode: 301,
+			AdditionalAttributes: []attribute.KeyValue{
+				attribute.String("key", "value"),
+			},
+		},
+		MetricData: MetricData{
+			RequestSize: 100,
+			ElapsedTime: 300,
+		},
 	})
 
 	assert.Equal(t, int64(100), server.requestBytesCounter.(*testInst).intValue)
@@ -156,4 +159,96 @@ func TestV120ClientResponse(t *testing.T) {
 
 	got := oldHTTPClient{}.ResponseTraceAttrs(&resp)
 	assert.ElementsMatch(t, want, got)
+}
+
+func TestV120ClientMetrics(t *testing.T) {
+	client := NewTestHTTPClient()
+	req, err := http.NewRequest("POST", "http://example.com", nil)
+	assert.NoError(t, err)
+
+	opts := client.MetricOptions(MetricAttributes{
+		Req:        req,
+		StatusCode: 301,
+		AdditionalAttributes: []attribute.KeyValue{
+			attribute.String("key", "value"),
+		},
+	})
+
+	ctx := context.Background()
+
+	client.RecordResponseSize(ctx, 200, opts.AddOptions())
+
+	client.RecordMetrics(ctx, MetricData{
+		RequestSize: 100,
+		ElapsedTime: 300,
+	}, opts)
+
+	assert.Equal(t, int64(100), client.requestBytesCounter.(*testInst).intValue)
+	assert.Equal(t, int64(200), client.responseBytesCounter.(*testInst).intValue)
+	assert.Equal(t, float64(300), client.latencyMeasure.(*testInst).floatValue)
+
+	want := []attribute.KeyValue{
+		attribute.String("http.method", "POST"),
+		attribute.Int64("http.status_code", 301),
+		attribute.String("key", "value"),
+		attribute.String("net.peer.name", "example.com"),
+	}
+
+	assert.ElementsMatch(t, want, client.requestBytesCounter.(*testInst).attributes)
+	assert.ElementsMatch(t, want, client.responseBytesCounter.(*testInst).attributes)
+	assert.ElementsMatch(t, want, client.latencyMeasure.(*testInst).attributes)
+}
+
+func TestStandardizeHTTPMethodMetric(t *testing.T) {
+	testCases := []struct {
+		method string
+		want   attribute.KeyValue
+	}{
+		{
+			method: "GET",
+			want:   attribute.String("http.method", "GET"),
+		},
+		{
+			method: "POST",
+			want:   attribute.String("http.method", "POST"),
+		},
+		{
+			method: "PUT",
+			want:   attribute.String("http.method", "PUT"),
+		},
+		{
+			method: "DELETE",
+			want:   attribute.String("http.method", "DELETE"),
+		},
+		{
+			method: "HEAD",
+			want:   attribute.String("http.method", "HEAD"),
+		},
+		{
+			method: "OPTIONS",
+			want:   attribute.String("http.method", "OPTIONS"),
+		},
+		{
+			method: "CONNECT",
+			want:   attribute.String("http.method", "CONNECT"),
+		},
+		{
+			method: "TRACE",
+			want:   attribute.String("http.method", "TRACE"),
+		},
+		{
+			method: "PATCH",
+			want:   attribute.String("http.method", "PATCH"),
+		},
+		{
+			method: "test",
+			want:   attribute.String("http.method", "_OTHER"),
+		},
+	}
+	for _, tt := range testCases {
+		t.Run(tt.method, func(t *testing.T) {
+			got := standardizeHTTPMethodMetric(tt.method)
+			assert.Equal(t, tt.want, got)
+		})
+	}
 }
