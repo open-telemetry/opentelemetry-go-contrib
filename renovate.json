@@ -23,6 +23,10 @@
       "groupName": "googleapis"
     },
     {
+      "matchPackageNames": ["golang.org/x/**"],
+      "groupName": "golang.org/x"
+    },
+    {
       "matchPackageNames": ["go.opentelemetry.io/otel/**"],
       "allowedVersions": "^v[0-9]+\\.[0-9]+\\.[0-9]+",
       "enabled": true,

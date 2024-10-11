@@ -133,9 +133,9 @@ jobs:
   test-compatibility:
     runs-on: ubuntu-latest
     needs: [compatibility-test]
+    if: always()
     steps:
       - name: Test if compatibility-test workflow passed
         run: |
           echo ${{ needs.compatibility-test.result }}
           test ${{ needs.compatibility-test.result }} == "success"
-

@@ -14,20 +14,24 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 - Move examples from `go.opentelemetry.io/otel` to this repository under `examples` directory. (#6158)
 - Support yaml/json struct tags for generated code in `go.opentelemetry.io/contrib/config`. (#5433)
 - Add support for parsing YAML configuration via `ParseYAML` in `go.opentelemetry.io/contrib/config`. (#5433)
+- Add support for temporality preference configuration in `go.opentelemetry.io/contrib/config`. (#5860)
 
 ### Changed
 
 - The function signature of `NewLogProcessor` in `go.opentelemetry.io/contrib/processors/minsev` has changed to accept the added `Severitier` interface instead of a `log.Severity`. (#6116)
+- `NewSDK` in `go.opentelemetry.io/contrib/config` now returns a no-op SDK if `disabled` is set to `true`. (#6185)
 
 ### Fixed
 
 - Possible nil dereference panic in `go.opentelemetry.io/contrib/instrumentation/net/http/httptrace/otelhttptrace`. (#5965)
-- Non-200 HTTP status codes when retrieving sampling rules in `go.opentelemetry.io/contrib/samplers/aws/xray` now return an error. (#5718)
+- `logrus.Level` transformed to appropriate `log.Severity` in `go.opentelemetry.io/contrib/bridges/otellogrus`. (#6191)
 
 ### Removed
 
 - The `Minimum` field of the `LogProcessor` in `go.opentelemetry.io/contrib/processors/minsev` is removed.
   Use `NewLogProcessor` to configure this setting. (#6116)
+- The deprecated `go.opentelemetry.io/contrib/instrumentation/gopkg.in/macaron.v1/otelmacaron` package is removed. (#6186)
+- The deprecated `go.opentelemetry.io/contrib/samplers/aws/xray` package is removed. (#6187)
 
 <!-- Released section -->
 <!-- Don't change this section unless doing release -->
