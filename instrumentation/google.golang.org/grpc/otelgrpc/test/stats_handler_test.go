@@ -27,6 +27,7 @@ func TestStatsHandlerHandleRPCServerErrors(t *testing.T) {
 	for _, check := range serverChecks {
 		name := check.grpcCode.String()
 		t.Run(name, func(t *testing.T) {
+			t.Setenv("OTEL_METRICS_EXEMPLAR_FILTER", "always_off")
 			sr := tracetest.NewSpanRecorder()
 			tp := trace.NewTracerProvider(trace.WithSpanProcessor(sr))
 

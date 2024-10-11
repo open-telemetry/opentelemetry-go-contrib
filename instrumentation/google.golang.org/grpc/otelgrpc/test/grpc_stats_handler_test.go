@@ -59,6 +59,7 @@ func TestStatsHandler(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
+			t.Setenv("OTEL_METRICS_EXEMPLAR_FILTER", "always_off")
 			clientSR := tracetest.NewSpanRecorder()
 			clientTP := trace.NewTracerProvider(trace.WithSpanProcessor(clientSR))
 			clientMetricReader := metric.NewManualReader()
