@@ -254,6 +254,9 @@ func convertValue(v interface{}) log.Value {
 		}
 		return log.MapValue(kvs...)
 	case reflect.Ptr, reflect.Interface:
+		if val.IsNil() {
+			return log.Value{}
+		}
 		return convertValue(val.Elem().Interface())
 	}
 
