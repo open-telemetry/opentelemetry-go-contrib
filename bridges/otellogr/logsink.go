@@ -45,6 +45,7 @@ package otellogr // import "go.opentelemetry.io/contrib/bridges/otellogr"
 
 import (
 	"context"
+	"fmt"
 
 	"github.com/go-logr/logr"
 
@@ -197,4 +198,40 @@ func (l LogSink) WithValues(keysAndValues ...any) logr.LogSink {
 	l.attr = append(l.attr, attr...)
 	l.ctx = ctx
 	return &l
+}
+
+// convertKVs converts a list of key-value pairs to a list of [log.KeyValue].
+// The last [context.Context] value is returned as the context.
+// If no context is found, the original context is returned.
+func convertKVs(ctx context.Context, keysAndValues ...any) (context.Context, []log.KeyValue) {
+	if len(keysAndValues) == 0 {
+		return ctx, nil
+	}
+	if len(keysAndValues)%2 != 0 {
+		// Ensure an odd number of items here does not corrupt the list.
+		keysAndValues = append(keysAndValues, nil)
+	}
+
+	kvs := make([]log.KeyValue, 0, len(keysAndValues)/2)
+	for i := 0; i < len(keysAndValues); i += 2 {
+		k, ok := keysAndValues[i].(string)
+		if !ok {
+			// Ensure that the key is a string.
+			k = fmt.Sprintf("%v", keysAndValues[i])
+		}
+
+		v := keysAndValues[i+1]
+		if vCtx, ok := v.(context.Context); ok {
+			// Special case when a field is of context.Context type.
+			ctx = vCtx
+			continue
+		}
+
+		kvs = append(kvs, log.KeyValue{
+			Key:   k,
+			Value: ConvertValue(v),
+		})
+	}
+
+	return ctx, kvs
 }

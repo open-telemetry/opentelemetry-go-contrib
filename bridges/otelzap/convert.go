@@ -4,7 +4,7 @@
 // Copyright The OpenTelemetry Authors
 // SPDX-License-Identifier: Apache-2.0
 
-package otellogr // import "go.opentelemetry.io/contrib/bridges/otellogr"
+package otelzap // import "go.opentelemetry.io/contrib/bridges/otelzap"
 
 import (
 	"fmt"
