@@ -191,7 +191,7 @@ func (c *config) handleRPC(ctx context.Context, rs stats.RPCStats, isServer bool
 		if rs.Error != nil {
 			s, _ := status.FromError(rs.Error)
 			if isServer {
-				statusCode, msg := serverStatus(s)
+				statusCode, msg := c.GRPCCodesToStatus(s)
 				span.SetStatus(statusCode, msg)
 			} else {
 				span.SetStatus(codes.Error, s.Message())

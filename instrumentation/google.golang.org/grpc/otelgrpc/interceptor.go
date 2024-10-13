@@ -317,7 +317,7 @@ func UnaryServerInterceptor(opts ...Option) grpc.UnaryServerInterceptor {
 
 		s, _ := status.FromError(err)
 		if err != nil {
-			statusCode, msg := serverStatus(s)
+			statusCode, msg := cfg.GRPCCodesToStatus(s)
 			span.SetStatus(statusCode, msg)
 			if cfg.SentEvent {
 				messageSent.Event(ctx, 1, s.Proto())
@@ -436,7 +436,7 @@ func StreamServerInterceptor(opts ...Option) grpc.StreamServerInterceptor {
 		err := handler(srv, wrapServerStream(ctx, ss, cfg))
 		if err != nil {
 			s, _ := status.FromError(err)
-			statusCode, msg := serverStatus(s)
+			statusCode, msg := cfg.GRPCCodesToStatus(s)
 			span.SetStatus(statusCode, msg)
 			span.SetAttributes(statusCodeAttr(s.Code()))
 		} else {

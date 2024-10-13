@@ -5,9 +5,11 @@ package otelgrpc // import "go.opentelemetry.io/contrib/instrumentation/google.g
 
 import (
 	"google.golang.org/grpc/stats"
+	"google.golang.org/grpc/status"
 
 	"go.opentelemetry.io/otel"
 	"go.opentelemetry.io/otel/attribute"
+	"go.opentelemetry.io/otel/codes"
 	"go.opentelemetry.io/otel/metric"
 	"go.opentelemetry.io/otel/metric/noop"
 	"go.opentelemetry.io/otel/propagation"
@@ -56,6 +58,8 @@ type config struct {
 	rpcResponseSize    metric.Int64Histogram
 	rpcRequestsPerRPC  metric.Int64Histogram
 	rpcResponsesPerRPC metric.Int64Histogram
+
+	GRPCCodesToStatus func(*status.Status) (codes.Code, string)
 }
 
 // Option applies an option value for a config.
@@ -66,9 +70,10 @@ type Option interface {
 // newConfig returns a config configured with all the passed Options.
 func newConfig(opts []Option, role string) *config {
 	c := &config{
-		Propagators:    otel.GetTextMapPropagator(),
-		TracerProvider: otel.GetTracerProvider(),
-		MeterProvider:  otel.GetMeterProvider(),
+		Propagators:       otel.GetTextMapPropagator(),
+		TracerProvider:    otel.GetTracerProvider(),
+		MeterProvider:     otel.GetMeterProvider(),
+		GRPCCodesToStatus: serverStatus,
 	}
 	for _, o := range opts {
 		o.apply(c)
@@ -284,4 +289,19 @@ func (o metricAttributesOption) apply(c *config) {
 // WithMetricAttributes returns an Option to add custom attributes to the metrics.
 func WithMetricAttributes(a ...attribute.KeyValue) Option {
 	return metricAttributesOption{a: a}
+}
+
+type grpcCodesToStatusOption struct {
+	f func(*status.Status) (codes.Code, string)
+}
+
+func (o grpcCodesToStatusOption) apply(c *config) {
+	if o.f != nil {
+		c.GRPCCodesToStatus = o.f
+	}
+}
+
+// WithGRPCCodesToStatus returns an Option to convert gRPC status to OpenTelemetry status.
+func WithGRPCCodesToStatus(f func(*status.Status) (codes.Code, string)) Option {
+	return grpcCodesToStatusOption{f: f}
 }
