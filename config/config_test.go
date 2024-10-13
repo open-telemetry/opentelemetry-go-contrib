@@ -78,12 +78,87 @@ func TestNewSDK(t *testing.T) {
 	}
 }
 
-var v02OpenTelemetryConfig = OpenTelemetryConfiguration{
+var v03OpenTelemetryConfig = OpenTelemetryConfiguration{
 	Disabled:   ptr(false),
-	FileFormat: "0.2",
+	FileFormat: ptr("0.3"),
 	AttributeLimits: &AttributeLimits{
 		AttributeCountLimit:       ptr(128),
 		AttributeValueLengthLimit: ptr(4096),
+	},
+	Instrumentation: &Instrumentation{
+		Cpp: LanguageSpecificInstrumentation{
+			"example": map[string]interface{}{
+				"property": "value",
+			},
+		},
+		Dotnet: LanguageSpecificInstrumentation{
+			"example": map[string]interface{}{
+				"property": "value",
+			},
+		},
+		Erlang: LanguageSpecificInstrumentation{
+			"example": map[string]interface{}{
+				"property": "value",
+			},
+		},
+		General: &GeneralInstrumentation{
+			Http: &GeneralInstrumentationHttp{
+				Client: &GeneralInstrumentationHttpClient{
+					RequestCapturedHeaders:  []string{"Content-Type", "Accept"},
+					ResponseCapturedHeaders: []string{"Content-Type", "Content-Encoding"},
+				},
+				Server: &GeneralInstrumentationHttpServer{
+					RequestCapturedHeaders:  []string{"Content-Type", "Accept"},
+					ResponseCapturedHeaders: []string{"Content-Type", "Content-Encoding"},
+				},
+			},
+			Peer: &GeneralInstrumentationPeer{
+				ServiceMapping: []GeneralInstrumentationPeerServiceMappingElem{
+					{Peer: "1.2.3.4", Service: "FooService"},
+					{Peer: "2.3.4.5", Service: "BarService"},
+				},
+			},
+		},
+		Go: LanguageSpecificInstrumentation{
+			"example": map[string]interface{}{
+				"property": "value",
+			},
+		},
+		Java: LanguageSpecificInstrumentation{
+			"example": map[string]interface{}{
+				"property": "value",
+			},
+		},
+		Js: LanguageSpecificInstrumentation{
+			"example": map[string]interface{}{
+				"property": "value",
+			},
+		},
+		Php: LanguageSpecificInstrumentation{
+			"example": map[string]interface{}{
+				"property": "value",
+			},
+		},
+		Python: LanguageSpecificInstrumentation{
+			"example": map[string]interface{}{
+				"property": "value",
+			},
+		},
+		Ruby: LanguageSpecificInstrumentation{
+			"example": map[string]interface{}{
+				"property": "value",
+			},
+		},
+		Rust: LanguageSpecificInstrumentation{
+			"example": map[string]interface{}{
+				"property": "value",
+			},
+		},
+		Swift: LanguageSpecificInstrumentation{
+			"example": map[string]interface{}{
+				"property": "value",
+			},
+		},
 	},
 	LoggerProvider: &LoggerProvider{
 		Limits: &LogRecordLimits{
@@ -100,13 +175,14 @@ var v02OpenTelemetryConfig = OpenTelemetryConfiguration{
 							ClientCertificate: ptr("/app/cert.pem"),
 							ClientKey:         ptr("/app/cert.pem"),
 							Compression:       ptr("gzip"),
-							Endpoint:          "http://localhost:4318",
-							Headers: Headers{
-								"api-key": "1234",
+							Endpoint:          ptr("http://localhost:4318/v1/logs"),
+							Headers: []NameStringValuePair{
+								{Name: "api-key", Value: ptr("1234")},
 							},
-							Insecure: ptr(false),
-							Protocol: "http/protobuf",
-							Timeout:  ptr(10000),
+							HeadersList: ptr("api-key=1234"),
+							Insecure:    ptr(false),
+							Protocol:    ptr("http/protobuf"),
+							Timeout:     ptr(10000),
 						},
 					},
 					MaxExportBatchSize: ptr(512),
@@ -126,8 +202,11 @@ var v02OpenTelemetryConfig = OpenTelemetryConfiguration{
 	MeterProvider: &MeterProvider{
 		Readers: []MetricReader{
 			{
+				Producers: []MetricProducer{
+					{Opencensus: MetricProducerOpencensus{}},
+				},
 				Pull: &PullMetricReader{
-					Exporter: MetricExporter{
+					Exporter: PullMetricExporter{
 						Prometheus: &Prometheus{
 							Host: ptr("localhost"),
 							Port: ptr(9464),
@@ -143,20 +222,24 @@ var v02OpenTelemetryConfig = OpenTelemetryConfiguration{
 				},
 			},
 			{
+				Producers: []MetricProducer{
+					{},
+				},
 				Periodic: &PeriodicMetricReader{
-					Exporter: MetricExporter{
+					Exporter: PushMetricExporter{
 						OTLP: &OTLPMetric{
 							Certificate:                 ptr("/app/cert.pem"),
 							ClientCertificate:           ptr("/app/cert.pem"),
 							ClientKey:                   ptr("/app/cert.pem"),
 							Compression:                 ptr("gzip"),
 							DefaultHistogramAggregation: ptr(OTLPMetricDefaultHistogramAggregationBase2ExponentialBucketHistogram),
-							Endpoint:                    "http://localhost:4318",
-							Headers: Headers{
-								"api-key": "1234",
+							Endpoint:                    ptr("http://localhost:4318/v1/metrics"),
+							Headers: []NameStringValuePair{
+								{Name: "api-key", Value: ptr("1234")},
 							},
+							HeadersList:           ptr("api-key=1234"),
 							Insecure:              ptr(false),
-							Protocol:              "http/protobuf",
+							Protocol:              ptr("http/protobuf"),
 							TemporalityPreference: ptr("delta"),
 							Timeout:               ptr(10000),
 						},
@@ -167,7 +250,7 @@ var v02OpenTelemetryConfig = OpenTelemetryConfiguration{
 			},
 			{
 				Periodic: &PeriodicMetricReader{
-					Exporter: MetricExporter{
+					Exporter: PushMetricExporter{
 						Console: Console{},
 					},
 				},
@@ -190,20 +273,32 @@ var v02OpenTelemetryConfig = OpenTelemetryConfiguration{
 							RecordMinMax: ptr(true),
 						},
 					},
-					AttributeKeys: []string{"key1", "key2"},
-					Description:   ptr("new_description"),
-					Name:          ptr("new_instrument_name"),
+					AttributeKeys: &IncludeExclude{
+						Included: []string{"key1", "key2"},
+						Excluded: []string{"key3"},
+					},
+					Description: ptr("new_description"),
+					Name:        ptr("new_instrument_name"),
 				},
 			},
 		},
 	},
 	Propagator: &Propagator{
-		Composite: []string{"tracecontext", "baggage", "b3", "b3multi", "jaeger", "xray", "ottrace"},
+		Composite: []*string{ptr("tracecontext"), ptr("baggage"), ptr("b3"), ptr("b3multi"), ptr("jaeger"), ptr("xray"), ptr("ottrace")},
 	},
 	Resource: &Resource{
-		Attributes: Attributes{
-			"service.name": "unknown_service",
+		Attributes: []AttributeNameValue{
+			{Name: "service.name", Value: "unknown_service"},
+			{Name: "string_key", Type: &AttributeNameValueType{Value: "string"}, Value: "value"},
+			{Name: "bool_key", Type: &AttributeNameValueType{Value: "bool"}, Value: true},
+			{Name: "int_key", Type: &AttributeNameValueType{Value: "int"}, Value: 1},
+			{Name: "double_key", Type: &AttributeNameValueType{Value: "double"}, Value: 1.1},
+			{Name: "string_array_key", Type: &AttributeNameValueType{Value: "string_array"}, Value: []interface{}{"value1", "value2"}},
+			{Name: "bool_array_key", Type: &AttributeNameValueType{Value: "bool_array"}, Value: []interface{}{true, false}},
+			{Name: "int_array_key", Type: &AttributeNameValueType{Value: "int_array"}, Value: []interface{}{1, 2}},
+			{Name: "double_array_key", Type: &AttributeNameValueType{Value: "double_array"}, Value: []interface{}{1.1, 2.2}},
 		},
+		AttributesList: ptr("service.namespace=my-namespace,service.version=1.0.0"),
 		Detectors: &Detectors{
 			Attributes: &DetectorsAttributes{
 				Excluded: []string{"process.command_args"},
@@ -231,13 +326,14 @@ var v02OpenTelemetryConfig = OpenTelemetryConfiguration{
 							ClientCertificate: ptr("/app/cert.pem"),
 							ClientKey:         ptr("/app/cert.pem"),
 							Compression:       ptr("gzip"),
-							Endpoint:          "http://localhost:4318",
-							Headers: Headers{
-								"api-key": "1234",
+							Endpoint:          ptr("http://localhost:4318/v1/traces"),
+							Headers: []NameStringValuePair{
+								{Name: "api-key", Value: ptr("1234")},
 							},
-							Insecure: ptr(false),
-							Protocol: "http/protobuf",
-							Timeout:  ptr(10000),
+							HeadersList: ptr("api-key=1234"),
+							Insecure:    ptr(false),
+							Protocol:    ptr("http/protobuf"),
+							Timeout:     ptr(10000),
 						},
 					},
 					MaxExportBatchSize: ptr(512),
@@ -249,7 +345,7 @@ var v02OpenTelemetryConfig = OpenTelemetryConfiguration{
 				Batch: &BatchSpanProcessor{
 					Exporter: SpanExporter{
 						Zipkin: &Zipkin{
-							Endpoint: "http://localhost:9411/api/v2/spans",
+							Endpoint: ptr("http://localhost:9411/api/v2/spans"),
 							Timeout:  ptr(10000),
 						},
 					},
@@ -300,7 +396,7 @@ func TestParseYAML(t *testing.T) {
 			wantErr: nil,
 			wantType: &OpenTelemetryConfiguration{
 				Disabled:   ptr(false),
-				FileFormat: "0.1",
+				FileFormat: ptr("0.1"),
 			},
 		},
 		{
@@ -310,9 +406,19 @@ func TestParseYAML(t *testing.T) {
   line 2: cannot unmarshal !!str ` + "`notabool`" + ` into bool`),
 		},
 		{
-			name:     "valid v0.2 config",
-			input:    "v0.2.yaml",
-			wantType: &v02OpenTelemetryConfig,
+			name:  "valid v0.2 config",
+			input: "v0.2.yaml",
+			wantErr: errors.New(`yaml: unmarshal errors:
+  line 81: cannot unmarshal !!map into []config.NameStringValuePair
+  line 185: cannot unmarshal !!map into []config.NameStringValuePair
+  line 244: cannot unmarshal !!seq into config.IncludeExclude
+  line 305: cannot unmarshal !!map into []config.NameStringValuePair
+  line 408: cannot unmarshal !!map into []config.AttributeNameValue`),
+		},
+		{
+			name:     "valid v0.3 config",
+			input:    "v0.3.yaml",
+			wantType: &v03OpenTelemetryConfig,
 		},
 	}
 
@@ -345,7 +451,7 @@ func TestSerializeJSON(t *testing.T) {
 			wantErr: nil,
 			wantType: OpenTelemetryConfiguration{
 				Disabled:   ptr(false),
-				FileFormat: "0.1",
+				FileFormat: ptr("0.1"),
 			},
 		},
 		{
@@ -354,9 +460,14 @@ func TestSerializeJSON(t *testing.T) {
 			wantErr: errors.New(`json: cannot unmarshal string into Go struct field Plain.disabled of type bool`),
 		},
 		{
-			name:     "valid v0.2 config",
-			input:    "v0.2.json",
-			wantType: v02OpenTelemetryConfig,
+			name:    "valid v0.2 config",
+			input:   "v0.2.json",
+			wantErr: errors.New(`json: cannot unmarshal object into Go struct field LogRecordProcessor.logger_provider.processors.batch of type []config.NameStringValuePair`),
+		},
+		{
+			name:     "valid v0.3 config",
+			input:    "v0.3.json",
+			wantType: v03OpenTelemetryConfig,
 		},
 	}
 
