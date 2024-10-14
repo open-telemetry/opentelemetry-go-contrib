@@ -174,7 +174,7 @@ func convertFields(fields logrus.Fields) []log.KeyValue {
 	for k, v := range fields {
 		kvs = append(kvs, log.KeyValue{
 			Key:   k,
-			Value: ConvertValue(v),
+			Value: convertValue(v),
 		})
 	}
 	return kvs

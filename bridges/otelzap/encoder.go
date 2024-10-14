@@ -119,7 +119,7 @@ func (m *objectEncoder) AddReflected(k string, v interface{}) error {
 	m.cur.attrs = append(m.cur.attrs,
 		log.KeyValue{
 			Key:   k,
-			Value: ConvertValue(v),
+			Value: convertValue(v),
 		})
 	return nil
 }
@@ -219,7 +219,7 @@ func (a *arrayEncoder) AppendObject(v zapcore.ObjectMarshaler) error {
 }
 
 func (a *arrayEncoder) AppendReflected(v interface{}) error {
-	a.elems = append(a.elems, ConvertValue(v))
+	a.elems = append(a.elems, convertValue(v))
 	return nil
 }
 

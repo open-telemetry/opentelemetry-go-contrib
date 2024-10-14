@@ -252,13 +252,13 @@ func TestConvertValue(t *testing.T) {
 		},
 	} {
 		t.Run(tt.name, func(t *testing.T) {
-			assert.Equal(t, tt.wantValue, ConvertValue(tt.value))
+			assert.Equal(t, tt.wantValue, convertValue(tt.value))
 		})
 	}
 }
 
 func TestConvertValueFloat32(t *testing.T) {
-	value := ConvertValue(float32(3.14))
+	value := convertValue(float32(3.14))
 	want := log.Float64Value(3.14)
 
 	assert.InDelta(t, value.AsFloat64(), want.AsFloat64(), 0.0001)

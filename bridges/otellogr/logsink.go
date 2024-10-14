@@ -229,7 +229,7 @@ func convertKVs(ctx context.Context, keysAndValues ...any) (context.Context, []l
 
 		kvs = append(kvs, log.KeyValue{
 			Key:   k,
-			Value: ConvertValue(v),
+			Value: convertValue(v),
 		})
 	}
 

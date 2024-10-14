@@ -16,8 +16,8 @@ import (
 	"go.opentelemetry.io/otel/log"
 )
 
-// Convert various types to log.Value.
-func ConvertValue(v any) log.Value {
+// convertValue converts various types to log.Value.
+func convertValue(v any) log.Value {
 	// Handling the most common types without reflect is a small perf win.
 	switch val := v.(type) {
 	case bool:
@@ -79,7 +79,7 @@ func ConvertValue(v any) log.Value {
 	case reflect.Slice, reflect.Array:
 		items := make([]log.Value, 0, val.Len())
 		for i := 0; i < val.Len(); i++ {
-			items = append(items, ConvertValue(val.Index(i).Interface()))
+			items = append(items, convertValue(val.Index(i).Interface()))
 		}
 		return log.SliceValue(items...)
 	case reflect.Map:
@@ -94,7 +94,7 @@ func ConvertValue(v any) log.Value {
 			}
 			kvs = append(kvs, log.KeyValue{
 				Key:   key,
-				Value: ConvertValue(val.MapIndex(k).Interface()),
+				Value: convertValue(val.MapIndex(k).Interface()),
 			})
 		}
 		return log.MapValue(kvs...)
@@ -102,7 +102,7 @@ func ConvertValue(v any) log.Value {
 		if val.IsNil() {
 			return log.Value{}
 		}
-		return ConvertValue(val.Elem().Interface())
+		return convertValue(val.Elem().Interface())
 	}
 
 	// Try to handle this as gracefully as possible.
