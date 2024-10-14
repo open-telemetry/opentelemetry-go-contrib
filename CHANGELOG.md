@@ -34,7 +34,6 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 - The deprecated `go.opentelemetry.io/contrib/instrumentation/github.com/labstack/echo/otelecho` package has found a Code Owner.
   The package is no longer deprecated. (#6207)
 
-
 ### Fixed
 
 - Possible nil dereference panic in `go.opentelemetry.io/contrib/instrumentation/net/http/httptrace/otelhttptrace`. (#5965)
