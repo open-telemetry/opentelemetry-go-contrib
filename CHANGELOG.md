@@ -8,6 +8,11 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 
 ## [Unreleased]
 
+### Fixed
+
+- Transform nil attribute values to `log.Value` zero value instead of panicking in `go.opentelemetry.io/contrib/bridges/otellogrus`. (#6237)
+- Transform nil attribute values to `log.Value` zero value instead of panicking in `go.opentelemetry.io/contrib/bridges/otelzap`. (#6237)
+
 <!-- Released section -->
 <!-- Don't change this section unless doing release -->
 
@@ -28,14 +33,12 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 - `NewSDK` in `go.opentelemetry.io/contrib/config` now returns a no-op SDK if `disabled` is set to `true`. (#6185)
 - The deprecated `go.opentelemetry.io/contrib/instrumentation/github.com/labstack/echo/otelecho` package has found a Code Owner.
   The package is no longer deprecated. (#6207)
-- Aligned convertvalue in `otellogr`, `otellogrus` and `otelzap` with convert tmpl. (#6237)
+
 
 ### Fixed
 
 - Possible nil dereference panic in `go.opentelemetry.io/contrib/instrumentation/net/http/httptrace/otelhttptrace`. (#5965)
 - `logrus.Level` transformed to appropriate `log.Severity` in `go.opentelemetry.io/contrib/bridges/otellogrus`. (#6191)
-- Possible nil dereference panic in `go.opentelemetry.io/contrib/bridges/otellogrus`. (#6237)
-- Possible nil dereference panic in `go.opentelemetry.io/contrib/bridges/otelzap`. (#6237)
 
 ### Removed
 
