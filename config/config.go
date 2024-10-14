@@ -7,8 +7,14 @@ import (
 	"context"
 	"errors"
 
+	"gopkg.in/yaml.v3"
+
+	"go.opentelemetry.io/otel/log"
+	nooplog "go.opentelemetry.io/otel/log/noop"
 	"go.opentelemetry.io/otel/metric"
+	noopmetric "go.opentelemetry.io/otel/metric/noop"
 	"go.opentelemetry.io/otel/trace"
+	nooptrace "go.opentelemetry.io/otel/trace/noop"
 )
 
 const (
@@ -35,6 +41,7 @@ func noopShutdown(context.Context) error {
 type SDK struct {
 	meterProvider  metric.MeterProvider
 	tracerProvider trace.TracerProvider
+	loggerProvider log.LoggerProvider
 	shutdown       shutdownFunc
 }
 
@@ -48,37 +55,59 @@ func (s *SDK) MeterProvider() metric.MeterProvider {
 	return s.meterProvider
 }
 
+// LoggerProvider returns a configured log.LoggerProvider.
+func (s *SDK) LoggerProvider() log.LoggerProvider {
+	return s.loggerProvider
+}
+
 // Shutdown calls shutdown on all configured providers.
 func (s *SDK) Shutdown(ctx context.Context) error {
 	return s.shutdown(ctx)
 }
 
+var noopSDK = SDK{
+	loggerProvider: nooplog.LoggerProvider{},
+	meterProvider:  noopmetric.MeterProvider{},
+	tracerProvider: nooptrace.TracerProvider{},
+	shutdown:       func(ctx context.Context) error { return nil },
+}
+
 // NewSDK creates SDK providers based on the configuration model.
-//
-// Caution: The implementation only returns noop providers.
 func NewSDK(opts ...ConfigurationOption) (SDK, error) {
 	o := configOptions{}
 	for _, opt := range opts {
 		o = opt.apply(o)
 	}
+	if o.opentelemetryConfig.Disabled != nil && *o.opentelemetryConfig.Disabled {
+		return noopSDK, nil
+	}
 
 	r, err := newResource(o.opentelemetryConfig.Resource)
 	if err != nil {
-		return SDK{}, err
+		return noopSDK, err
 	}
 
-	mp, mpShutdown := initMeterProvider(o)
+	mp, mpShutdown, err := meterProvider(o, r)
+	if err != nil {
+		return noopSDK, err
+	}
+
 	tp, tpShutdown, err := tracerProvider(o, r)
 	if err != nil {
-		return SDK{}, err
+		return noopSDK, err
+	}
+
+	lp, lpShutdown, err := loggerProvider(o, r)
+	if err != nil {
+		return noopSDK, err
 	}
 
 	return SDK{
 		meterProvider:  mp,
 		tracerProvider: tp,
+		loggerProvider: lp,
 		shutdown: func(ctx context.Context) error {
-			err := mpShutdown(ctx)
-			return errors.Join(err, tpShutdown(ctx))
+			return errors.Join(mpShutdown(ctx), tpShutdown(ctx), lpShutdown(ctx))
 		},
 	}, nil
 }
@@ -111,9 +140,21 @@ func WithOpenTelemetryConfiguration(cfg OpenTelemetryConfiguration) Configuratio
 	})
 }
 
-// TODO: implement parsing functionality:
-// - https://github.com/open-telemetry/opentelemetry-go-contrib/issues/4373
-// - https://github.com/open-telemetry/opentelemetry-go-contrib/issues/4412
+// ParseYAML parses a YAML configuration file into an OpenTelemetryConfiguration.
+func ParseYAML(file []byte) (*OpenTelemetryConfiguration, error) {
+	var cfg OpenTelemetryConfiguration
+	err := yaml.Unmarshal(file, &cfg)
+	if err != nil {
+		return nil, err
+	}
 
-// TODO: create SDK from the model:
-// - https://github.com/open-telemetry/opentelemetry-go-contrib/issues/4371
+	return &cfg, nil
+}
+
+func toStringMap(pairs []NameStringValuePair) map[string]string {
+	output := make(map[string]string)
+	for _, v := range pairs {
+		output[v.Name] = *v.Value
+	}
+	return output
+}

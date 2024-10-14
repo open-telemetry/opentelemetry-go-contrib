@@ -1,16 +1,5 @@
 // Copyright The OpenTelemetry Authors
-//
-// Licensed under the Apache License, Version 2.0 (the "License");
-// you may not use this file except in compliance with the License.
-// You may obtain a copy of the License at
-//
-//     http://www.apache.org/licenses/LICENSE-2.0
-//
-// Unless required by applicable law or agreed to in writing, software
-// distributed under the License is distributed on an "AS IS" BASIS,
-// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-// See the License for the specific language governing permissions and
-// limitations under the License.
+// SPDX-License-Identifier: Apache-2.0
 
 package test
 
@@ -38,6 +27,7 @@ func TestStatsHandlerHandleRPCServerErrors(t *testing.T) {
 	for _, check := range serverChecks {
 		name := check.grpcCode.String()
 		t.Run(name, func(t *testing.T) {
+			t.Setenv("OTEL_METRICS_EXEMPLAR_FILTER", "always_off")
 			sr := tracetest.NewSpanRecorder()
 			tp := trace.NewTracerProvider(trace.WithSpanProcessor(sr))
 
@@ -47,6 +37,7 @@ func TestStatsHandlerHandleRPCServerErrors(t *testing.T) {
 			serverHandler := otelgrpc.NewServerHandler(
 				otelgrpc.WithTracerProvider(tp),
 				otelgrpc.WithMeterProvider(mp),
+				otelgrpc.WithMetricAttributes(testMetricAttr),
 			)
 
 			serviceName := "TestGrpcService"
@@ -90,6 +81,7 @@ func assertStatsHandlerServerMetrics(t *testing.T, reader metric.Reader, service
 								semconv.RPCService(serviceName),
 								otelgrpc.RPCSystemGRPC,
 								otelgrpc.GRPCStatusCodeKey.Int64(int64(code)),
+								testMetricAttr,
 							),
 						},
 					},
@@ -108,6 +100,7 @@ func assertStatsHandlerServerMetrics(t *testing.T, reader metric.Reader, service
 								semconv.RPCService(serviceName),
 								otelgrpc.RPCSystemGRPC,
 								otelgrpc.GRPCStatusCodeKey.Int64(int64(code)),
+								testMetricAttr,
 							),
 						},
 					},
@@ -126,6 +119,7 @@ func assertStatsHandlerServerMetrics(t *testing.T, reader metric.Reader, service
 								semconv.RPCService(serviceName),
 								otelgrpc.RPCSystemGRPC,
 								otelgrpc.GRPCStatusCodeKey.Int64(int64(code)),
+								testMetricAttr,
 							),
 						},
 					},

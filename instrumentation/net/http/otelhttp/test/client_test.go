@@ -1,16 +1,5 @@
 // Copyright The OpenTelemetry Authors
-//
-// Licensed under the Apache License, Version 2.0 (the "License");
-// you may not use this file except in compliance with the License.
-// You may obtain a copy of the License at
-//
-//     http://www.apache.org/licenses/LICENSE-2.0
-//
-// Unless required by applicable law or agreed to in writing, software
-// distributed under the License is distributed on an "AS IS" BASIS,
-// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-// See the License for the specific language governing permissions and
-// limitations under the License.
+// SPDX-License-Identifier: Apache-2.0
 
 package test
 
@@ -79,7 +68,7 @@ func TestConvenienceWrappers(t *testing.T) {
 	res.Body.Close()
 
 	spans := sr.Ended()
-	require.Equal(t, 4, len(spans))
+	require.Len(t, spans, 4)
 	assert.Equal(t, "HTTP GET", spans[0].Name())
 	assert.Equal(t, "HTTP HEAD", spans[1].Name())
 	assert.Equal(t, "HTTP POST", spans[2].Name())
@@ -111,7 +100,7 @@ func TestClientWithTraceContext(t *testing.T) {
 	span.End()
 
 	spans := sr.Ended()
-	require.Equal(t, 2, len(spans))
+	require.Len(t, spans, 2)
 	assert.Equal(t, "HTTP GET", spans[0].Name())
 	assert.Equal(t, "http requests", spans[1].Name())
 	assert.NotEmpty(t, spans[0].Parent().SpanID())

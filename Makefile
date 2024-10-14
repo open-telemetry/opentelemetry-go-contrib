@@ -1,16 +1,5 @@
 # Copyright The OpenTelemetry Authors
-#
-# Licensed under the Apache License, Version 2.0 (the "License");
-# you may not use this file except in compliance with the License.
-# You may obtain a copy of the License at
-#
-#     http://www.apache.org/licenses/LICENSE-2.0
-#
-# Unless required by applicable law or agreed to in writing, software
-# distributed under the License is distributed on an "AS IS" BASIS,
-# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-# See the License for the specific language governing permissions and
-# limitations under the License.
+# SPDX-License-Identifier: Apache-2.0
 
 TOOLS_MOD_DIR := ./tools
 
@@ -29,8 +18,8 @@ TIMEOUT = 60
 .DEFAULT_GOAL := precommit
 
 .PHONY: precommit ci
-precommit: generate dependabot-generate license-check misspell go-mod-tidy golangci-lint-fix test-default
-ci: generate dependabot-check license-check lint vanity-import-check build test-default check-clean-work-tree test-coverage
+precommit: generate license-check misspell go-mod-tidy golangci-lint-fix test-default
+ci: generate license-check lint vanity-import-check build test-default check-clean-work-tree test-coverage
 
 # Tools
 
@@ -40,7 +29,7 @@ TOOLS = $(CURDIR)/.tools
 
 $(TOOLS):
 	@mkdir -p $@
-$(TOOLS)/%: | $(TOOLS)
+$(TOOLS)/%: $(TOOLS_MOD_DIR)/go.mod | $(TOOLS)
 	cd $(TOOLS_MOD_DIR) && \
 	$(GO) build -o $@ $(PACKAGE)
 
@@ -62,11 +51,11 @@ $(TOOLS)/porto: PACKAGE=github.com/jcchavezs/porto/cmd/porto
 MULTIMOD = $(TOOLS)/multimod
 $(MULTIMOD): PACKAGE=go.opentelemetry.io/build-tools/multimod
 
-DBOTCONF = $(TOOLS)/dbotconf
-$(TOOLS)/dbotconf: PACKAGE=go.opentelemetry.io/build-tools/dbotconf
-
 CROSSLINK = $(TOOLS)/crosslink
 $(CROSSLINK): PACKAGE=go.opentelemetry.io/build-tools/crosslink
+
+GOJQ = $(TOOLS)/gojq
+$(TOOLS)/gojq: PACKAGE=github.com/itchyny/gojq/cmd/gojq
 
 GOTMPL = $(TOOLS)/gotmpl
 $(GOTMPL): PACKAGE=go.opentelemetry.io/build-tools/gotmpl
@@ -80,7 +69,40 @@ $(GOJSONSCHEMA): PACKAGE=github.com/atombender/go-jsonschema
 GOVULNCHECK = $(TOOLS)/govulncheck
 $(GOVULNCHECK): PACKAGE=golang.org/x/vuln/cmd/govulncheck
 
-tools: $(GOLANGCI_LINT) $(MISSPELL) $(GOCOVMERGE) $(STRINGER) $(PORTO) $(MULTIMOD) $(DBOTCONF) $(CROSSLINK) $(GOTMPL) $(GORELEASE) $(GOJSONSCHEMA) $(GOVULNCHECK)
+tools: $(GOLANGCI_LINT) $(MISSPELL) $(GOCOVMERGE) $(STRINGER) $(PORTO) $(GOJQ) $(MULTIMOD) $(CROSSLINK) $(GOTMPL) $(GORELEASE) $(GOJSONSCHEMA) $(GOVULNCHECK)
+
+# Virtualized python tools via docker
+
+# The directory where the virtual environment is created.
+VENVDIR := venv
+
+# The directory where the python tools are installed.
+PYTOOLS := $(VENVDIR)/bin
+
+# The pip executable in the virtual environment.
+PIP := $(PYTOOLS)/pip
+
+# The directory in the docker image where the current directory is mounted.
+WORKDIR := /workdir
+
+# The python image to use for the virtual environment.
+PYTHONIMAGE := python:3.11.3-slim-bullseye
+
+# Run the python image with the current directory mounted.
+DOCKERPY := docker run --rm -v "$(CURDIR):$(WORKDIR)" -w $(WORKDIR) $(PYTHONIMAGE)
+
+# Create a virtual environment for Python tools.
+$(PYTOOLS):
+# The `--upgrade` flag is needed to ensure that the virtual environment is
+# created with the latest pip version.
+	@$(DOCKERPY) bash -c "python3 -m venv $(VENVDIR) && $(PIP) install --upgrade pip"
+
+# Install python packages into the virtual environment.
+$(PYTOOLS)/%: $(PYTOOLS)
+	@$(DOCKERPY) $(PIP) install -r requirements.txt
+
+CODESPELL = $(PYTOOLS)/codespell
+$(CODESPELL): PACKAGE=codespell
 
 # Generate
 
@@ -90,18 +112,18 @@ generate: go-generate vanity-import-fix
 .PHONY: go-generate
 go-generate: $(OTEL_GO_MOD_DIRS:%=go-generate/%)
 go-generate/%: DIR=$*
-go-generate/%: | $(STRINGER) $(GOTMPL)
+go-generate/%: $(STRINGER) $(GOTMPL)
 	@echo "$(GO) generate $(DIR)/..." \
 		&& cd $(DIR) \
 		&& PATH="$(TOOLS):$${PATH}" $(GO) generate ./...
 
 .PHONY: vanity-import-fix
-vanity-import-fix: | $(PORTO)
+vanity-import-fix: $(PORTO)
 	@$(PORTO) --include-internal -w .
 
 # Generate go.work file for local development.
 .PHONY: go-work
-go-work: | $(CROSSLINK)
+go-work: $(CROSSLINK)
 	$(CROSSLINK) work --root=$(shell pwd)
 
 # Build
@@ -130,13 +152,13 @@ golangci-lint-fix: ARGS=--fix
 golangci-lint-fix: golangci-lint
 golangci-lint: $(OTEL_GO_MOD_DIRS:%=golangci-lint/%)
 golangci-lint/%: DIR=$*
-golangci-lint/%: | $(GOLANGCI_LINT)
+golangci-lint/%: $(GOLANGCI_LINT)
 	@echo 'golangci-lint $(if $(ARGS),$(ARGS) ,)$(DIR)' \
 		&& cd $(DIR) \
 		&& $(GOLANGCI_LINT) run --allow-serial-runners $(ARGS)
 
 .PHONY: crosslink
-crosslink: | $(CROSSLINK)
+crosslink: $(CROSSLINK)
 	@echo "Updating intra-repository dependencies in all go modules" \
 		&& $(CROSSLINK) --root=$(shell pwd) --prune
 
@@ -146,16 +168,16 @@ go-mod-tidy/%: DIR=$*
 go-mod-tidy/%:
 	@echo "$(GO) mod tidy in $(DIR)" \
 		&& cd $(DIR) \
-		&& $(GO) mod tidy -compat=1.20
+		&& $(GO) mod tidy -compat=1.21
 
 .PHONY: misspell
-misspell: | $(MISSPELL)
+misspell: $(MISSPELL)
 	@$(MISSPELL) -w $(ALL_DOCS)
 
 .PHONY: govulncheck
 govulncheck: $(ALL_GO_MOD_DIRS:%=govulncheck/%)
 govulncheck/%: DIR=$*
-govulncheck/%: | $(GOVULNCHECK)
+govulncheck/%: $(GOVULNCHECK)
 	@echo "govulncheck in $(DIR)" \
 		&& cd $(DIR) \
 		&& $(GOVULNCHECK) ./...
@@ -199,15 +221,6 @@ registry-links-check:
 	if [ -n "$$checkRes" ]; then \
 		echo "WARNING: registry link check failed for the following packages:"; echo "$${checkRes}"; \
 	fi
-
-DEPENDABOT_CONFIG = .github/dependabot.yml
-.PHONY: dependabot-check
-dependabot-check: | $(DBOTCONF)
-	@$(DBOTCONF) verify $(DEPENDABOT_CONFIG) || ( echo "(run: make dependabot-generate)"; exit 1 )
-
-.PHONY: dependabot-generate
-dependabot-generate: | $(DBOTCONF)
-	@$(DBOTCONF) generate > $(DEPENDABOT_CONFIG)
 
 .PHONY: check-clean-work-tree
 check-clean-work-tree:
@@ -253,29 +266,12 @@ test-coverage/%:
 		&& $$CMD ./... \
 		&& $(GO) tool cover -html=coverage.out -o coverage.html;
 
-.PHONY: test-mongo-driver
-test-mongo-driver:
-	@if ./tools/should_build.sh mongo-driver; then \
-	  set -e; \
-	  docker run --name mongo-integ --rm -p 27017:27017 -d mongo; \
-	  CMD=mongo IMG_NAME=mongo-integ ./tools/wait.sh; \
-	  (cd instrumentation/go.mongodb.org/mongo-driver/mongo/otelmongo/test && \
-	    $(GO) test \
-		  -covermode=$(COVERAGE_MODE) \
-		  -coverprofile=$(COVERAGE_PROFILE) \
-		  -coverpkg=go.opentelemetry.io/contrib/instrumentation/go.mongodb.org/mongo-driver/mongo/otelmongo/...  \
-		  ./... \
-	    && $(GO) tool cover -html=$(COVERAGE_PROFILE) -o coverage.html); \
-	  cp ./instrumentation/go.mongodb.org/mongo-driver/mongo/otelmongo/test/coverage.out ./; \
-	  docker stop mongo-integ; \
-	fi
-
 # Releasing
 
 .PHONY: gorelease
 gorelease: $(OTEL_GO_MOD_DIRS:%=gorelease/%)
 gorelease/%: DIR=$*
-gorelease/%:| $(GORELEASE)
+gorelease/%: $(GORELEASE)
 	@echo "gorelease in $(DIR):" \
 		&& cd $(DIR) \
 		&& $(GORELEASE) \
@@ -283,26 +279,37 @@ gorelease/%:| $(GORELEASE)
 
 COREPATH ?= "../opentelemetry-go"
 .PHONY: sync-core
-sync-core: | $(MULTIMOD)
+sync-core: $(MULTIMOD)
 	@[ ! -d $COREPATH ] || ( echo ">> Path to core repository must be set in COREPATH and must exist"; exit 1 )
 	$(MULTIMOD) verify && $(MULTIMOD) sync -a -o ${COREPATH}
 
 .PHONY: prerelease
-prerelease: | $(MULTIMOD)
+prerelease: $(MULTIMOD)
 	@[ "${MODSET}" ] || ( echo ">> env var MODSET is not set"; exit 1 )
 	$(MULTIMOD) verify && $(MULTIMOD) prerelease -m ${MODSET}
 
 COMMIT ?= "HEAD"
 .PHONY: add-tags
-add-tags: | $(MULTIMOD)
+add-tags: $(MULTIMOD)
 	@[ "${MODSET}" ] || ( echo ">> env var MODSET is not set"; exit 1 )
 	$(MULTIMOD) verify && $(MULTIMOD) tag -m ${MODSET} -c ${COMMIT}
+
+.PHONY: update-all-otel-deps
+update-all-otel-deps:
+	@[ "${GITSHA}" ] || ( echo ">> env var GITSHA is not set"; exit 1 )
+	@echo "Updating OpenTelemetry dependencies to ${GITSHA}"
+	@set -e; \
+		for dir in $(OTEL_GO_MOD_DIRS); do \
+			echo "Updating OpenTelemetry dependencies in $${dir}"; \
+			(cd $${dir} \
+			&& grep -o 'go.opentelemetry.io/otel\S*' go.mod | xargs -I {} -n1 $(GO) get {}@${GITSHA}); \
+		done
 
 # The source directory for opentelemetry-configuration schema.
 OPENTELEMETRY_CONFIGURATION_JSONSCHEMA_SRC_DIR=tmp/opentelememetry-configuration
 
 # The SHA matching the current version of the opentelemetry-configuration schema to use
-OPENTELEMETRY_CONFIGURATION_JSONSCHEMA_VERSION=f38ac7c3a499ae5f81924ef9c455c27a56130562
+OPENTELEMETRY_CONFIGURATION_JSONSCHEMA_VERSION=v0.3.0
 
 # Cleanup temporary directory
 genjsonschema-cleanup:
@@ -319,7 +326,7 @@ genjsonschema: genjsonschema-cleanup $(GOJSONSCHEMA)
 		--capitalization OTLP \
 		--struct-name-from-title \
 		--package config \
-		--tags mapstructure \
+		--only-models \
 		--output ${GENERATED_CONFIG} \
 		${OPENTELEMETRY_CONFIGURATION_JSONSCHEMA_SRC_DIR}/schema/opentelemetry_configuration.json
 	@echo Modify jsonschema generated files.
@@ -327,3 +334,7 @@ genjsonschema: genjsonschema-cleanup $(GOJSONSCHEMA)
 	mv ${GENERATED_CONFIG}.tmp ${GENERATED_CONFIG}
 	$(MAKE) lint
 	$(MAKE) genjsonschema-cleanup
+
+.PHONY: codespell
+codespell: $(CODESPELL)
+	@$(DOCKERPY) $(CODESPELL)

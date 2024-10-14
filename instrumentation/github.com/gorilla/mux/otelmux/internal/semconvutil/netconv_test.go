@@ -2,27 +2,14 @@
 // source: internal/shared/semconvutil/netconv_test.go.tmpl
 
 // Copyright The OpenTelemetry Authors
-// Licensed under the Apache License, Version 2.0 (the "License");
-// you may not use this file except in compliance with the License.
-// You may obtain a copy of the License at
-//
-//     http://www.apache.org/licenses/LICENSE-2.0
-//
-// Unless required by applicable law or agreed to in writing, software
-// distributed under the License is distributed on an "AS IS" BASIS,
-// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-// See the License for the specific language governing permissions and
-// limitations under the License.
+// SPDX-License-Identifier: Apache-2.0
 
 package semconvutil
 
 import (
-	"net"
-	"strconv"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
-	"github.com/stretchr/testify/require"
 
 	"go.opentelemetry.io/otel/attribute"
 )
@@ -54,53 +41,6 @@ func TestNetTransport(t *testing.T) {
 	}
 }
 
-func TestNetServerNilListener(t *testing.T) {
-	const addr = "127.0.0.1:8080"
-	got := NetServer(addr, nil)
-	expected := nc.Host(addr)
-	assert.Equal(t, cap(expected), cap(got), "slice capacity")
-	assert.ElementsMatch(t, expected, got)
-}
-
-type listener struct{ net.Listener }
-
-func (listener) Addr() net.Addr { return nil }
-
-func TestNetServerNilAddr(t *testing.T) {
-	const addr = "127.0.0.1:8080"
-	got := NetServer(addr, listener{})
-	expected := nc.Host(addr)
-	assert.Equal(t, cap(expected), cap(got), "slice capacity")
-	assert.ElementsMatch(t, expected, got)
-}
-
-func newTCPListener() (net.Listener, error) {
-	return net.Listen("tcp4", "127.0.0.1:0")
-}
-
-func TestNetServerTCP(t *testing.T) {
-	ln, err := newTCPListener()
-	require.NoError(t, err)
-	defer func() { require.NoError(t, ln.Close()) }()
-
-	host, pStr, err := net.SplitHostPort(ln.Addr().String())
-	require.NoError(t, err)
-	port, err := strconv.Atoi(pStr)
-	require.NoError(t, err)
-
-	got := NetServer("example.com:8080", ln)
-	expected := []attribute.KeyValue{
-		nc.HostName("example.com"),
-		nc.HostPort(8080),
-		nc.NetTransportTCP,
-		nc.NetSockFamilyKey.String("inet"),
-		nc.NetSockHostAddrKey.String(host),
-		nc.NetSockHostPortKey.Int(port),
-	}
-	assert.Equal(t, cap(expected), cap(got), "slice capacity")
-	assert.ElementsMatch(t, expected, got)
-}
-
 func TestNetHost(t *testing.T) {
 	testAddrs(t, []addrTest{
 		{address: "", expected: nil},
@@ -122,103 +62,6 @@ func TestNetHostName(t *testing.T) {
 func TestNetHostPort(t *testing.T) {
 	expected := attribute.Key("net.host.port").Int(port)
 	assert.Equal(t, expected, nc.HostPort(port))
-}
-
-func TestNetClientNilConn(t *testing.T) {
-	const addr = "127.0.0.1:8080"
-	got := NetClient(addr, nil)
-	expected := nc.Peer(addr)
-	assert.Equal(t, cap(expected), cap(got), "slice capacity")
-	assert.ElementsMatch(t, expected, got)
-}
-
-type conn struct{ net.Conn }
-
-func (conn) LocalAddr() net.Addr  { return nil }
-func (conn) RemoteAddr() net.Addr { return nil }
-
-func TestNetClientNilAddr(t *testing.T) {
-	const addr = "127.0.0.1:8080"
-	got := NetClient(addr, conn{})
-	expected := nc.Peer(addr)
-	assert.Equal(t, cap(expected), cap(got), "slice capacity")
-	assert.ElementsMatch(t, expected, got)
-}
-
-func newTCPConn() (net.Conn, net.Listener, error) {
-	ln, err := newTCPListener()
-	if err != nil {
-		return nil, nil, err
-	}
-
-	conn, err := net.Dial("tcp4", ln.Addr().String())
-	if err != nil {
-		_ = ln.Close()
-		return nil, nil, err
-	}
-
-	return conn, ln, nil
-}
-
-func TestNetClientTCP(t *testing.T) {
-	conn, ln, err := newTCPConn()
-	require.NoError(t, err)
-	defer func() { require.NoError(t, ln.Close()) }()
-	defer func() { require.NoError(t, conn.Close()) }()
-
-	lHost, pStr, err := net.SplitHostPort(conn.LocalAddr().String())
-	require.NoError(t, err)
-	lPort, err := strconv.Atoi(pStr)
-	require.NoError(t, err)
-
-	rHost, pStr, err := net.SplitHostPort(conn.RemoteAddr().String())
-	require.NoError(t, err)
-	rPort, err := strconv.Atoi(pStr)
-	require.NoError(t, err)
-
-	got := NetClient("example.com:8080", conn)
-	expected := []attribute.KeyValue{
-		nc.PeerName("example.com"),
-		nc.PeerPort(8080),
-		nc.NetTransportTCP,
-		nc.NetSockFamilyKey.String("inet"),
-		nc.NetSockPeerAddrKey.String(rHost),
-		nc.NetSockPeerPortKey.Int(rPort),
-		nc.NetSockHostAddrKey.String(lHost),
-		nc.NetSockHostPortKey.Int(lPort),
-	}
-	assert.Equal(t, cap(expected), cap(got), "slice capacity")
-	assert.ElementsMatch(t, expected, got)
-}
-
-type remoteOnlyConn struct{ net.Conn }
-
-func (remoteOnlyConn) LocalAddr() net.Addr { return nil }
-
-func TestNetClientTCPNilLocal(t *testing.T) {
-	conn, ln, err := newTCPConn()
-	require.NoError(t, err)
-	defer func() { require.NoError(t, ln.Close()) }()
-	defer func() { require.NoError(t, conn.Close()) }()
-
-	conn = remoteOnlyConn{conn}
-
-	rHost, pStr, err := net.SplitHostPort(conn.RemoteAddr().String())
-	require.NoError(t, err)
-	rPort, err := strconv.Atoi(pStr)
-	require.NoError(t, err)
-
-	got := NetClient("example.com:8080", conn)
-	expected := []attribute.KeyValue{
-		nc.PeerName("example.com"),
-		nc.PeerPort(8080),
-		nc.NetTransportTCP,
-		nc.NetSockFamilyKey.String("inet"),
-		nc.NetSockPeerAddrKey.String(rHost),
-		nc.NetSockPeerPortKey.Int(rPort),
-	}
-	assert.Equal(t, cap(expected), cap(got), "slice capacity")
-	assert.ElementsMatch(t, expected, got)
 }
 
 func TestNetPeer(t *testing.T) {

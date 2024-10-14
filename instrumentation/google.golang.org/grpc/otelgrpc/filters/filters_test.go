@@ -1,43 +1,26 @@
 // Copyright The OpenTelemetry Authors
-//
-// Licensed under the Apache License, Version 2.0 (the "License");
-// you may not use this file except in compliance with the License.
-// You may obtain a copy of the License at
-//
-//     http://www.apache.org/licenses/LICENSE-2.0
-//
-// Unless required by applicable law or agreed to in writing, software
-// distributed under the License is distributed on an "AS IS" BASIS,
-// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-// See the License for the specific language governing permissions and
-// limitations under the License.
+// SPDX-License-Identifier: Apache-2.0
 
 package filters // import "go.opentelemetry.io/contrib/instrumentation/google.golang.org/grpc/otelgrpc/filters"
 
 import (
 	"testing"
 
-	"google.golang.org/grpc"
+	"google.golang.org/grpc/stats"
 
 	"go.opentelemetry.io/contrib/instrumentation/google.golang.org/grpc/otelgrpc"
 )
 
 type testCase struct {
 	name string
-	i    *otelgrpc.InterceptorInfo
+	i    *stats.RPCTagInfo
 	f    otelgrpc.Filter
 	want bool
 }
 
-func dummyUnaryServerInfo(n string) *grpc.UnaryServerInfo {
-	return &grpc.UnaryServerInfo{
-		FullMethod: n,
-	}
-}
-
-func dummyStreamServerInfo(n string) *grpc.StreamServerInfo {
-	return &grpc.StreamServerInfo{
-		FullMethod: n,
+func dummyRPCTagInfo(n string) *stats.RPCTagInfo {
+	return &stats.RPCTagInfo{
+		FullMethodName: n,
 	}
 }
 
@@ -45,32 +28,14 @@ func TestMethodName(t *testing.T) {
 	const dummyFullMethodName = "/example.HelloService/Hello"
 	tcs := []testCase{
 		{
-			name: "unary client interceptor",
-			i:    &otelgrpc.InterceptorInfo{Method: dummyFullMethodName, Type: otelgrpc.UnaryClient},
+			name: "true",
+			i:    dummyRPCTagInfo(dummyFullMethodName),
 			f:    MethodName("Hello"),
 			want: true,
 		},
 		{
-			name: "stream client interceptor",
-			i:    &otelgrpc.InterceptorInfo{Method: dummyFullMethodName, Type: otelgrpc.StreamClient},
-			f:    MethodName("Hello"),
-			want: true,
-		},
-		{
-			name: "unary server interceptor",
-			i:    &otelgrpc.InterceptorInfo{UnaryServerInfo: dummyUnaryServerInfo(dummyFullMethodName), Type: otelgrpc.UnaryServer},
-			f:    MethodName("Hello"),
-			want: true,
-		},
-		{
-			name: "stream server interceptor",
-			i:    &otelgrpc.InterceptorInfo{StreamServerInfo: dummyStreamServerInfo(dummyFullMethodName), Type: otelgrpc.StreamServer},
-			f:    MethodName("Hello"),
-			want: true,
-		},
-		{
-			name: "unary client interceptor fail",
-			i:    &otelgrpc.InterceptorInfo{Method: dummyFullMethodName, Type: otelgrpc.UnaryClient},
+			name: "false",
+			i:    dummyRPCTagInfo(dummyFullMethodName),
 			f:    MethodName("Goodbye"),
 			want: false,
 		},
@@ -88,32 +53,14 @@ func TestMethodPrefix(t *testing.T) {
 	const dummyFullMethodName = "/example.HelloService/FoobarHello"
 	tcs := []testCase{
 		{
-			name: "unary client interceptor",
-			i:    &otelgrpc.InterceptorInfo{Method: dummyFullMethodName, Type: otelgrpc.UnaryClient},
+			name: "true",
+			i:    dummyRPCTagInfo(dummyFullMethodName),
 			f:    MethodPrefix("Foobar"),
 			want: true,
 		},
 		{
-			name: "stream client interceptor",
-			i:    &otelgrpc.InterceptorInfo{Method: dummyFullMethodName, Type: otelgrpc.StreamClient},
-			f:    MethodPrefix("Foobar"),
-			want: true,
-		},
-		{
-			name: "unary server interceptor",
-			i:    &otelgrpc.InterceptorInfo{UnaryServerInfo: dummyUnaryServerInfo(dummyFullMethodName), Type: otelgrpc.UnaryServer},
-			f:    MethodPrefix("Foobar"),
-			want: true,
-		},
-		{
-			name: "stream server interceptor",
-			i:    &otelgrpc.InterceptorInfo{StreamServerInfo: dummyStreamServerInfo(dummyFullMethodName), Type: otelgrpc.StreamServer},
-			f:    MethodPrefix("Foobar"),
-			want: true,
-		},
-		{
-			name: "unary client interceptor fail",
-			i:    &otelgrpc.InterceptorInfo{Method: dummyFullMethodName, Type: otelgrpc.UnaryClient},
+			name: "false",
+			i:    dummyRPCTagInfo(dummyFullMethodName),
 			f:    MethodPrefix("Barfoo"),
 			want: false,
 		},
@@ -130,32 +77,14 @@ func TestFullMethodName(t *testing.T) {
 	const dummyFullMethodName = "/example.HelloService/Hello"
 	tcs := []testCase{
 		{
-			name: "unary client interceptor",
-			i:    &otelgrpc.InterceptorInfo{Method: dummyFullMethodName, Type: otelgrpc.UnaryClient},
+			name: "true",
+			i:    dummyRPCTagInfo(dummyFullMethodName),
 			f:    FullMethodName(dummyFullMethodName),
 			want: true,
 		},
 		{
-			name: "stream client interceptor",
-			i:    &otelgrpc.InterceptorInfo{Method: dummyFullMethodName, Type: otelgrpc.StreamClient},
-			f:    FullMethodName(dummyFullMethodName),
-			want: true,
-		},
-		{
-			name: "unary server interceptor",
-			i:    &otelgrpc.InterceptorInfo{UnaryServerInfo: dummyUnaryServerInfo(dummyFullMethodName), Type: otelgrpc.UnaryServer},
-			f:    FullMethodName(dummyFullMethodName),
-			want: true,
-		},
-		{
-			name: "stream server interceptor",
-			i:    &otelgrpc.InterceptorInfo{StreamServerInfo: dummyStreamServerInfo(dummyFullMethodName), Type: otelgrpc.StreamServer},
-			f:    FullMethodName(dummyFullMethodName),
-			want: true,
-		},
-		{
-			name: "unary client interceptor fail",
-			i:    &otelgrpc.InterceptorInfo{Method: dummyFullMethodName, Type: otelgrpc.UnaryClient},
+			name: "false",
+			i:    dummyRPCTagInfo(dummyFullMethodName),
 			f:    FullMethodName("/example.HelloService/Goodbye"),
 			want: false,
 		},
@@ -174,32 +103,14 @@ func TestServiceName(t *testing.T) {
 
 	tcs := []testCase{
 		{
-			name: "unary client interceptor",
-			i:    &otelgrpc.InterceptorInfo{Method: dummyFullMethodName, Type: otelgrpc.UnaryClient},
+			name: "true",
+			i:    dummyRPCTagInfo(dummyFullMethodName),
 			f:    ServiceName("example.HelloService"),
 			want: true,
 		},
 		{
-			name: "stream client interceptor",
-			i:    &otelgrpc.InterceptorInfo{Method: dummyFullMethodName, Type: otelgrpc.StreamClient},
-			f:    ServiceName("example.HelloService"),
-			want: true,
-		},
-		{
-			name: "unary server interceptor",
-			i:    &otelgrpc.InterceptorInfo{UnaryServerInfo: dummyUnaryServerInfo(dummyFullMethodName), Type: otelgrpc.UnaryServer},
-			f:    ServiceName("example.HelloService"),
-			want: true,
-		},
-		{
-			name: "stream server interceptor",
-			i:    &otelgrpc.InterceptorInfo{StreamServerInfo: dummyStreamServerInfo(dummyFullMethodName), Type: otelgrpc.StreamServer},
-			f:    ServiceName("example.HelloService"),
-			want: true,
-		},
-		{
-			name: "unary client interceptor fail",
-			i:    &otelgrpc.InterceptorInfo{Method: dummyFullMethodName, Type: otelgrpc.UnaryClient},
+			name: "false",
+			i:    dummyRPCTagInfo(dummyFullMethodName),
 			f:    ServiceName("opentelemetry.HelloService"),
 			want: false,
 		},
@@ -217,32 +128,14 @@ func TestServicePrefix(t *testing.T) {
 	const dummyFullMethodName = "/example.HelloService/FoobarHello"
 	tcs := []testCase{
 		{
-			name: "unary client interceptor",
-			i:    &otelgrpc.InterceptorInfo{Method: dummyFullMethodName, Type: otelgrpc.UnaryClient},
+			name: "true",
+			i:    dummyRPCTagInfo(dummyFullMethodName),
 			f:    ServicePrefix("example"),
 			want: true,
 		},
 		{
-			name: "stream client interceptor",
-			i:    &otelgrpc.InterceptorInfo{Method: dummyFullMethodName, Type: otelgrpc.StreamClient},
-			f:    ServicePrefix("example"),
-			want: true,
-		},
-		{
-			name: "unary server interceptor",
-			i:    &otelgrpc.InterceptorInfo{UnaryServerInfo: dummyUnaryServerInfo(dummyFullMethodName), Type: otelgrpc.UnaryServer},
-			f:    ServicePrefix("example"),
-			want: true,
-		},
-		{
-			name: "stream server interceptor",
-			i:    &otelgrpc.InterceptorInfo{StreamServerInfo: dummyStreamServerInfo(dummyFullMethodName), Type: otelgrpc.StreamServer},
-			f:    ServicePrefix("example"),
-			want: true,
-		},
-		{
-			name: "unary client interceptor fail",
-			i:    &otelgrpc.InterceptorInfo{Method: dummyFullMethodName, Type: otelgrpc.UnaryClient},
+			name: "false",
+			i:    dummyRPCTagInfo(dummyFullMethodName),
 			f:    ServicePrefix("opentelemetry"),
 			want: false,
 		},
@@ -259,20 +152,20 @@ func TestAny(t *testing.T) {
 	const dummyFullMethodName = "/example.HelloService/FoobarHello"
 	tcs := []testCase{
 		{
-			name: "unary client interceptor true && true",
-			i:    &otelgrpc.InterceptorInfo{Method: dummyFullMethodName, Type: otelgrpc.UnaryClient},
+			name: "true && true",
+			i:    dummyRPCTagInfo(dummyFullMethodName),
 			f:    Any(MethodName("FoobarHello"), MethodPrefix("Foobar")),
 			want: true,
 		},
 		{
-			name: "unary client interceptor false && true",
-			i:    &otelgrpc.InterceptorInfo{Method: dummyFullMethodName, Type: otelgrpc.UnaryClient},
+			name: "false && true",
+			i:    dummyRPCTagInfo(dummyFullMethodName),
 			f:    Any(MethodName("Hello"), MethodPrefix("Foobar")),
 			want: true,
 		},
 		{
-			name: "unary client interceptor false && false",
-			i:    &otelgrpc.InterceptorInfo{Method: dummyFullMethodName, Type: otelgrpc.UnaryClient},
+			name: "false && false",
+			i:    dummyRPCTagInfo(dummyFullMethodName),
 			f:    Any(MethodName("Goodbye"), MethodPrefix("Barfoo")),
 			want: false,
 		},
@@ -289,20 +182,20 @@ func TestAll(t *testing.T) {
 	const dummyFullMethodName = "/example.HelloService/FoobarHello"
 	tcs := []testCase{
 		{
-			name: "unary client interceptor true && true",
-			i:    &otelgrpc.InterceptorInfo{Method: dummyFullMethodName, Type: otelgrpc.UnaryClient},
+			name: "true && true",
+			i:    dummyRPCTagInfo(dummyFullMethodName),
 			f:    All(MethodName("FoobarHello"), MethodPrefix("Foobar")),
 			want: true,
 		},
 		{
-			name: "unary client interceptor true && false",
-			i:    &otelgrpc.InterceptorInfo{Method: dummyFullMethodName, Type: otelgrpc.UnaryClient},
+			name: "true && false",
+			i:    dummyRPCTagInfo(dummyFullMethodName),
 			f:    All(MethodName("FoobarHello"), MethodPrefix("Barfoo")),
 			want: false,
 		},
 		{
-			name: "unary client interceptor false && false",
-			i:    &otelgrpc.InterceptorInfo{Method: dummyFullMethodName, Type: otelgrpc.UnaryClient},
+			name: "false && false",
+			i:    dummyRPCTagInfo(dummyFullMethodName),
 			f:    All(MethodName("FoobarGoodbye"), MethodPrefix("Barfoo")),
 			want: false,
 		},
@@ -319,20 +212,20 @@ func TestNone(t *testing.T) {
 	const dummyFullMethodName = "/example.HelloService/FoobarHello"
 	tcs := []testCase{
 		{
-			name: "unary client interceptor true && true",
-			i:    &otelgrpc.InterceptorInfo{Method: dummyFullMethodName, Type: otelgrpc.UnaryClient},
+			name: "true && true",
+			i:    dummyRPCTagInfo(dummyFullMethodName),
 			f:    None(MethodName("FoobarHello"), MethodPrefix("Foobar")),
 			want: false,
 		},
 		{
-			name: "unary client interceptor true && false",
-			i:    &otelgrpc.InterceptorInfo{Method: dummyFullMethodName, Type: otelgrpc.UnaryClient},
+			name: "true && false",
+			i:    dummyRPCTagInfo(dummyFullMethodName),
 			f:    None(MethodName("FoobarHello"), MethodPrefix("Barfoo")),
 			want: false,
 		},
 		{
-			name: "unary client interceptor false && false",
-			i:    &otelgrpc.InterceptorInfo{Method: dummyFullMethodName, Type: otelgrpc.UnaryClient},
+			name: "false && false",
+			i:    dummyRPCTagInfo(dummyFullMethodName),
 			f:    None(MethodName("FoobarGoodbye"), MethodPrefix("Barfoo")),
 			want: true,
 		},
@@ -350,19 +243,19 @@ func TestNot(t *testing.T) {
 	tcs := []testCase{
 		{
 			name: "methodname not",
-			i:    &otelgrpc.InterceptorInfo{Method: dummyFullMethodName, Type: otelgrpc.UnaryClient},
+			i:    dummyRPCTagInfo(dummyFullMethodName),
 			f:    Not(MethodName("FoobarHello")),
 			want: false,
 		},
 		{
 			name: "method prefix not",
-			i:    &otelgrpc.InterceptorInfo{UnaryServerInfo: dummyUnaryServerInfo(dummyFullMethodName), Type: otelgrpc.UnaryServer},
+			i:    dummyRPCTagInfo(dummyFullMethodName),
 			f:    Not(MethodPrefix("FoobarHello")),
 			want: false,
 		},
 		{
-			name: "unary client interceptor not all(true && true)",
-			i:    &otelgrpc.InterceptorInfo{Method: dummyFullMethodName, Type: otelgrpc.UnaryClient},
+			name: "not all(true && true)",
+			i:    dummyRPCTagInfo(dummyFullMethodName),
 			f:    Not(All(MethodName("FoobarHello"), MethodPrefix("Foobar"))),
 			want: false,
 		},
@@ -383,50 +276,14 @@ func TestHealthCheck(t *testing.T) {
 	)
 	tcs := []testCase{
 		{
-			name: "unary client interceptor healthcheck",
-			i:    &otelgrpc.InterceptorInfo{Method: healthCheck, Type: otelgrpc.UnaryClient},
+			name: "true",
+			i:    dummyRPCTagInfo(healthCheck),
 			f:    HealthCheck(),
 			want: true,
 		},
 		{
-			name: "stream client interceptor healthcheck",
-			i:    &otelgrpc.InterceptorInfo{Method: healthCheck, Type: otelgrpc.StreamClient},
-			f:    HealthCheck(),
-			want: true,
-		},
-		{
-			name: "unary server interceptor healthcheck",
-			i:    &otelgrpc.InterceptorInfo{UnaryServerInfo: dummyUnaryServerInfo(healthCheck), Type: otelgrpc.UnaryServer},
-			f:    HealthCheck(),
-			want: true,
-		},
-		{
-			name: "stream server interceptor healthcheck",
-			i:    &otelgrpc.InterceptorInfo{StreamServerInfo: dummyStreamServerInfo(healthCheck), Type: otelgrpc.StreamServer},
-			f:    HealthCheck(),
-			want: true,
-		},
-		{
-			name: "unary client interceptor",
-			i:    &otelgrpc.InterceptorInfo{Method: dummyFullMethod, Type: otelgrpc.UnaryClient},
-			f:    HealthCheck(),
-			want: false,
-		},
-		{
-			name: "stream client interceptor",
-			i:    &otelgrpc.InterceptorInfo{Method: dummyFullMethod, Type: otelgrpc.StreamClient},
-			f:    HealthCheck(),
-			want: false,
-		},
-		{
-			name: "unary server interceptor",
-			i:    &otelgrpc.InterceptorInfo{UnaryServerInfo: dummyUnaryServerInfo(dummyFullMethod), Type: otelgrpc.UnaryServer},
-			f:    HealthCheck(),
-			want: false,
-		},
-		{
-			name: "stream server interceptor",
-			i:    &otelgrpc.InterceptorInfo{StreamServerInfo: dummyStreamServerInfo(dummyFullMethod), Type: otelgrpc.StreamServer},
+			name: "false",
+			i:    dummyRPCTagInfo(dummyFullMethod),
 			f:    HealthCheck(),
 			want: false,
 		},

@@ -1,16 +1,5 @@
 // Copyright The OpenTelemetry Authors
-//
-// Licensed under the Apache License, Version 2.0 (the "License");
-// you may not use this file except in compliance with the License.
-// You may obtain a copy of the License at
-//
-//     http://www.apache.org/licenses/LICENSE-2.0
-//
-// Unless required by applicable law or agreed to in writing, software
-// distributed under the License is distributed on an "AS IS" BASIS,
-// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-// See the License for the specific language governing permissions and
-// limitations under the License.
+// SPDX-License-Identifier: Apache-2.0
 
 package test
 
@@ -50,7 +39,7 @@ func TestBasicFilter(t *testing.T) {
 		t.Fatal(err)
 	}
 	h.ServeHTTP(rr, r)
-	if got, expected := rr.Result().StatusCode, http.StatusOK; got != expected {
+	if got, expected := rr.Result().StatusCode, http.StatusOK; got != expected { //nolint:bodyclose // False positive for httptest.ResponseRecorder: https://github.com/timakin/bodyclose/issues/59.
 		t.Fatalf("got %d, expected %d", got, expected)
 	}
 	if got := rr.Header().Get("Traceparent"); got != "" {
@@ -59,7 +48,7 @@ func TestBasicFilter(t *testing.T) {
 	if got, expected := len(spanRecorder.Ended()), 0; got != expected {
 		t.Fatalf("got %d recorded spans, expected %d", got, expected)
 	}
-	d, err := io.ReadAll(rr.Result().Body)
+	d, err := io.ReadAll(rr.Result().Body) //nolint:bodyclose // False positive for httptest.ResponseRecorder: https://github.com/timakin/bodyclose/issues/59.
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -122,7 +111,7 @@ func TestSpanNameFormatter(t *testing.T) {
 				t.Fatal(err)
 			}
 			h.ServeHTTP(rr, r)
-			if got, expected := rr.Result().StatusCode, http.StatusOK; got != expected {
+			if got, expected := rr.Result().StatusCode, http.StatusOK; got != expected { //nolint:bodyclose // False positive for httptest.ResponseRecorder: https://github.com/timakin/bodyclose/issues/59.
 				t.Fatalf("got %d, expected %d", got, expected)
 			}
 

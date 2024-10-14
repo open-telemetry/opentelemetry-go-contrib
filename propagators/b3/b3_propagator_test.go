@@ -1,16 +1,5 @@
 // Copyright The OpenTelemetry Authors
-//
-// Licensed under the Apache License, Version 2.0 (the "License");
-// you may not use this file except in compliance with the License.
-// You may obtain a copy of the License at
-//
-//     http://www.apache.org/licenses/LICENSE-2.0
-//
-// Unless required by applicable law or agreed to in writing, software
-// distributed under the License is distributed on an "AS IS" BASIS,
-// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-// See the License for the specific language governing permissions and
-// limitations under the License.
+// SPDX-License-Identifier: Apache-2.0
 
 package b3
 
@@ -227,6 +216,18 @@ func TestExtractSingle(t *testing.T) {
 		{"3", trace.SpanContextConfig{}, errInvalidSampledByte, false, false},
 		{"000000000000007b", trace.SpanContextConfig{}, errInvalidScope, false, false},
 		{"000000000000007b00000000000001c8", trace.SpanContextConfig{}, errInvalidScope, false, false},
+		// TraceID with illegal length
+		{
+			"000001c8-000000000000007b",
+			trace.SpanContextConfig{},
+			errInvalidTraceIDValue, false, false,
+		},
+		// SpanID with illegal length
+		{
+			"000000000000007b00000000000001c8-0000007b",
+			trace.SpanContextConfig{},
+			errInvalidSpanIDValue, false, false,
+		},
 		// Support short trace IDs.
 		{
 			"00000000000001c8-000000000000007b",
@@ -300,7 +301,7 @@ func TestB3EncodingOperations(t *testing.T) {
 	for i, e := range encodings {
 		for j := i + 1; j < i+len(encodings); j++ {
 			o := encodings[j%len(encodings)]
-			assert.False(t, e == o, "%v == %v", e, o)
+			assert.NotEqual(t, e, o, "%v == %v", e, o)
 		}
 	}
 

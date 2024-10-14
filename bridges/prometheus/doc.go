@@ -1,16 +1,5 @@
 // Copyright The OpenTelemetry Authors
-//
-// Licensed under the Apache License, Version 2.0 (the "License");
-// you may not use this file except in compliance with the License.
-// You may obtain a copy of the License at
-//
-//     http://www.apache.org/licenses/LICENSE-2.0
-//
-// Unless required by applicable law or agreed to in writing, software
-// distributed under the License is distributed on an "AS IS" BASIS,
-// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-// See the License for the specific language governing permissions and
-// limitations under the License.
+// SPDX-License-Identifier: Apache-2.0
 
 // Package prometheus provides a bridge from Prometheus to OpenTelemetry.
 //
@@ -18,11 +7,16 @@
 // with the OpenTelemetry SDK. This enables prometheus instrumentation libraries
 // to be used with OpenTelemetry exporters, including OTLP.
 //
-// Limitations:
-//   - Summary metrics are dropped by the bridge.
-//   - Start times for histograms and counters are set to the process start time.
-//   - Prometheus histograms are translated to OpenTelemetry fixed-bucket
-//     histograms, rather than exponential histograms.
+// Prometheus histograms are translated to OpenTelemetry exponential histograms
+// when native histograms are enabled in the Prometheus client. To enable
+// Prometheus native histograms, set the (currently experimental) NativeHistogram...
+// options of the prometheus [HistogramOpts] when creating prometheus histograms.
+//
+// While the Prometheus Bridge has some overhead, it can significantly reduce the
+// combined overall CPU and Memory footprint when sending to an OpenTelemetry
+// Collector. See the [benchmarks] for more details.
 //
 // [Prometheus Golang client library]: https://github.com/prometheus/client_golang
+// [HistogramOpts]: https://pkg.go.dev/github.com/prometheus/client_golang/prometheus#HistogramOpts
+// [benchmarks]: https://github.com/open-telemetry/opentelemetry-go-contrib/blob/main/bridges/prometheus/BENCHMARKS.md
 package prometheus // import "go.opentelemetry.io/contrib/bridges/prometheus"

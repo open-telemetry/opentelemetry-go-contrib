@@ -1,16 +1,5 @@
 // Copyright The OpenTelemetry Authors
-//
-// Licensed under the Apache License, Version 2.0 (the "License");
-// you may not use this file except in compliance with the License.
-// You may obtain a copy of the License at
-//
-//     http://www.apache.org/licenses/LICENSE-2.0
-//
-// Unless required by applicable law or agreed to in writing, software
-// distributed under the License is distributed on an "AS IS" BASIS,
-// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-// See the License for the specific language governing permissions and
-// limitations under the License.
+// SPDX-License-Identifier: Apache-2.0
 
 // Based on https://github.com/DataDog/dd-trace-go/blob/8fb554ff7cf694267f9077ae35e27ce4689ed8b6/contrib/gin-gonic/gin/gintrace_test.go
 
@@ -88,7 +77,7 @@ func TestTrace200(t *testing.T) {
 
 	// do and verify the request
 	router.ServeHTTP(w, r)
-	response := w.Result()
+	response := w.Result() //nolint:bodyclose // False positive for httptest.ResponseRecorder: https://github.com/timakin/bodyclose/issues/59.
 	require.Equal(t, http.StatusOK, response.StatusCode)
 
 	// verify traces look good
@@ -120,7 +109,7 @@ func TestError(t *testing.T) {
 	r := httptest.NewRequest("GET", "/server_err", nil)
 	w := httptest.NewRecorder()
 	router.ServeHTTP(w, r)
-	response := w.Result()
+	response := w.Result() //nolint:bodyclose // False positive for httptest.ResponseRecorder: https://github.com/timakin/bodyclose/issues/59.
 	assert.Equal(t, http.StatusInternalServerError, response.StatusCode)
 
 	// verify the errors and status are correct
@@ -159,7 +148,7 @@ func TestSpanStatus(t *testing.T) {
 			router.ServeHTTP(httptest.NewRecorder(), httptest.NewRequest("GET", "/", nil))
 
 			require.Len(t, sr.Ended(), 1, "should emit a span")
-			assert.Equal(t, sr.Ended()[0].Status().Code, tc.wantSpanStatus, "should only set Error status for HTTP statuses >= 500")
+			assert.Equal(t, tc.wantSpanStatus, sr.Ended()[0].Status().Code, "should only set Error status for HTTP statuses >= 500")
 		})
 	}
 }
@@ -185,9 +174,45 @@ func TestSpanName(t *testing.T) {
 			router.ServeHTTP(httptest.NewRecorder(), httptest.NewRequest("GET", tc.requestPath, nil))
 
 			require.Len(t, sr.Ended(), 1, "should emit a span")
-			assert.Equal(t, sr.Ended()[0].Name(), tc.wantSpanName, "span name not correct")
+			assert.Equal(t, tc.wantSpanName, sr.Ended()[0].Name(), "span name not correct")
 		})
 	}
+}
+
+func TestHTTPRouteWithSpanNameFormatter(t *testing.T) {
+	sr := tracetest.NewSpanRecorder()
+	provider := sdktrace.NewTracerProvider(sdktrace.WithSpanProcessor(sr))
+
+	router := gin.New()
+	router.Use(otelgin.Middleware("foobar",
+		otelgin.WithTracerProvider(provider),
+		otelgin.WithSpanNameFormatter(func(r *http.Request) string {
+			return r.URL.Path
+		}),
+	),
+	)
+	router.GET("/user/:id", func(c *gin.Context) {
+		id := c.Param("id")
+		_, _ = c.Writer.Write([]byte(id))
+	})
+
+	r := httptest.NewRequest("GET", "/user/123", nil)
+	w := httptest.NewRecorder()
+
+	// do and verify the request
+	router.ServeHTTP(w, r)
+	response := w.Result() //nolint:bodyclose // False positive for httptest.ResponseRecorder: https://github.com/timakin/bodyclose/issues/59.
+	require.Equal(t, http.StatusOK, response.StatusCode)
+
+	// verify traces look good
+	spans := sr.Ended()
+	require.Len(t, spans, 1)
+	span := spans[0]
+	assert.Equal(t, "/user/123", span.Name())
+	assert.Equal(t, oteltrace.SpanKindServer, span.SpanKind())
+	attr := span.Attributes()
+	assert.Contains(t, attr, attribute.String("http.method", "GET"))
+	assert.Contains(t, attr, attribute.String("http.route", "/user/:id"))
 }
 
 func TestHTML(t *testing.T) {
@@ -209,7 +234,7 @@ func TestHTML(t *testing.T) {
 	r := httptest.NewRequest("GET", "/hello", nil)
 	w := httptest.NewRecorder()
 	router.ServeHTTP(w, r)
-	response := w.Result()
+	response := w.Result() //nolint:bodyclose // False positive for httptest.ResponseRecorder: https://github.com/timakin/bodyclose/issues/59.
 	assert.Equal(t, http.StatusOK, response.StatusCode)
 	assert.Equal(t, "hello world", w.Body.String())
 
@@ -243,7 +268,7 @@ func TestWithFilter(t *testing.T) {
 		w := httptest.NewRecorder()
 
 		router.ServeHTTP(w, r)
-		assert.Len(t, sr.Ended(), 0)
+		assert.Empty(t, sr.Ended())
 	})
 
 	t.Run("custom filter not filtering route", func(t *testing.T) {
@@ -253,6 +278,40 @@ func TestWithFilter(t *testing.T) {
 		router := gin.New()
 		f := func(req *http.Request) bool { return req.URL.Path != "/healthcheck" }
 		router.Use(otelgin.Middleware("foobar", otelgin.WithFilter(f)))
+		router.GET("/user/:id", func(c *gin.Context) {})
+
+		r := httptest.NewRequest("GET", "/user/123", nil)
+		w := httptest.NewRecorder()
+
+		router.ServeHTTP(w, r)
+		assert.Len(t, sr.Ended(), 1)
+	})
+}
+
+func TestWithGinFilter(t *testing.T) {
+	t.Run("custom filter filtering route", func(t *testing.T) {
+		sr := tracetest.NewSpanRecorder()
+		otel.SetTracerProvider(sdktrace.NewTracerProvider(sdktrace.WithSpanProcessor(sr)))
+
+		router := gin.New()
+		f := func(c *gin.Context) bool { return c.Request.URL.Path != "/healthcheck" }
+		router.Use(otelgin.Middleware("foobar", otelgin.WithGinFilter(f)))
+		router.GET("/healthcheck", func(c *gin.Context) {})
+
+		r := httptest.NewRequest("GET", "/healthcheck", nil)
+		w := httptest.NewRecorder()
+
+		router.ServeHTTP(w, r)
+		assert.Empty(t, sr.Ended())
+	})
+
+	t.Run("custom filter not filtering route", func(t *testing.T) {
+		sr := tracetest.NewSpanRecorder()
+		otel.SetTracerProvider(sdktrace.NewTracerProvider(sdktrace.WithSpanProcessor(sr)))
+
+		router := gin.New()
+		f := func(c *gin.Context) bool { return c.Request.URL.Path != "/user/:id" }
+		router.Use(otelgin.Middleware("foobar", otelgin.WithGinFilter(f)))
 		router.GET("/user/:id", func(c *gin.Context) {})
 
 		r := httptest.NewRequest("GET", "/user/123", nil)

@@ -1,16 +1,5 @@
 // Copyright The OpenTelemetry Authors
-//
-// Licensed under the Apache License, Version 2.0 (the "License");
-// you may not use this file except in compliance with the License.
-// You may obtain a copy of the License at
-//
-//     http://www.apache.org/licenses/LICENSE-2.0
-//
-// Unless required by applicable law or agreed to in writing, software
-// distributed under the License is distributed on an "AS IS" BASIS,
-// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-// See the License for the specific language governing permissions and
-// limitations under the License.
+// SPDX-License-Identifier: Apache-2.0
 
 // Package runtime implements the conventional runtime metrics specified by OpenTelemetry.
 //
@@ -30,4 +19,16 @@
 //	runtime.go.mem.heap_sys      (bytes)    Bytes of heap memory obtained from the OS
 //	runtime.go.mem.live_objects  -          Number of live objects is the number of cumulative Mallocs - Frees
 //	runtime.uptime               (ms)       Milliseconds since application was initialized
+//
+// When the OTEL_GO_X_DEPRECATED_RUNTIME_METRICS environment variable is set to
+// false, the metrics produced are:
+//
+//	go.memory.used          By            Memory used by the Go runtime.
+//	go.memory.limit         By            Go runtime memory limit configured by the user, if a limit exists.
+//	go.memory.allocated     By            Memory allocated to the heap by the application.
+//	go.memory.allocations   {allocation}  Count of allocations to the heap by the application.
+//	go.memory.gc.goal       By            Heap size target for the end of the GC cycle.
+//	go.goroutine.count      {goroutine}   Count of live goroutines.
+//	go.processor.limit      {thread}      The number of OS threads that can execute user-level Go code simultaneously.
+//	go.config.gogc          %             Heap size target percentage configured by the user, otherwise 100.
 package runtime // import "go.opentelemetry.io/contrib/instrumentation/runtime"

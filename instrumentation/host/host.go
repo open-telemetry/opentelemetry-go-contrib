@@ -1,29 +1,19 @@
 // Copyright The OpenTelemetry Authors
-//
-// Licensed under the Apache License, Version 2.0 (the "License");
-// you may not use this file except in compliance with the License.
-// You may obtain a copy of the License at
-//
-//     http://www.apache.org/licenses/LICENSE-2.0
-//
-// Unless required by applicable law or agreed to in writing, software
-// distributed under the License is distributed on an "AS IS" BASIS,
-// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-// See the License for the specific language governing permissions and
-// limitations under the License.
+// SPDX-License-Identifier: Apache-2.0
 
 package host // import "go.opentelemetry.io/contrib/instrumentation/host"
 
 import (
 	"context"
 	"fmt"
+	"math"
 	"os"
 	"sync"
 
-	"github.com/shirou/gopsutil/v3/cpu"
-	"github.com/shirou/gopsutil/v3/mem"
-	"github.com/shirou/gopsutil/v3/net"
-	"github.com/shirou/gopsutil/v3/process"
+	"github.com/shirou/gopsutil/v4/cpu"
+	"github.com/shirou/gopsutil/v4/mem"
+	"github.com/shirou/gopsutil/v4/net"
+	"github.com/shirou/gopsutil/v4/process"
 
 	"go.opentelemetry.io/otel"
 	"go.opentelemetry.io/otel/attribute"
@@ -129,7 +119,11 @@ func (h *host) register() error {
 		lock sync.Mutex
 	)
 
-	proc, err := process.NewProcess(int32(os.Getpid()))
+	pid := os.Getpid()
+	if pid > math.MaxInt32 || pid < math.MinInt32 {
+		return fmt.Errorf("invalid process ID: %d", pid)
+	}
+	proc, err := process.NewProcess(int32(pid)) // nolint: gosec  // Overflow checked above.
 	if err != nil {
 		return fmt.Errorf("could not find this process: %w", err)
 	}
@@ -257,9 +251,9 @@ func (h *host) register() error {
 
 			// Host memory usage
 			opt = metric.WithAttributeSet(AttributeMemoryUsed)
-			o.ObserveInt64(hostMemoryUsage, int64(vmStats.Used), opt)
+			o.ObserveInt64(hostMemoryUsage, clampInt64(vmStats.Used), opt)
 			opt = metric.WithAttributeSet(AttributeMemoryAvailable)
-			o.ObserveInt64(hostMemoryUsage, int64(vmStats.Available), opt)
+			o.ObserveInt64(hostMemoryUsage, clampInt64(vmStats.Available), opt)
 
 			// Host memory utilization
 			opt = metric.WithAttributeSet(AttributeMemoryUsed)
@@ -273,9 +267,9 @@ func (h *host) register() error {
 			// interface, with similar questions to those posed
 			// about per-CPU measurements above.
 			opt = metric.WithAttributeSet(AttributeNetworkTransmit)
-			o.ObserveInt64(networkIOUsage, int64(ioStats[0].BytesSent), opt)
+			o.ObserveInt64(networkIOUsage, clampInt64(ioStats[0].BytesSent), opt)
 			opt = metric.WithAttributeSet(AttributeNetworkReceive)
-			o.ObserveInt64(networkIOUsage, int64(ioStats[0].BytesRecv), opt)
+			o.ObserveInt64(networkIOUsage, clampInt64(ioStats[0].BytesRecv), opt)
 
 			return nil
 		},
@@ -285,10 +279,16 @@ func (h *host) register() error {
 		hostMemoryUtilization,
 		networkIOUsage,
 	)
-
 	if err != nil {
 		return err
 	}
 
 	return nil
+}
+
+func clampInt64(v uint64) int64 {
+	if v > math.MaxInt64 {
+		return math.MaxInt64
+	}
+	return int64(v) // nolint: gosec  // Overflow checked.
 }

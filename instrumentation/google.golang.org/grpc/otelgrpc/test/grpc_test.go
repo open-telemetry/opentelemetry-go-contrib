@@ -1,16 +1,5 @@
 // Copyright The OpenTelemetry Authors
-//
-// Licensed under the Apache License, Version 2.0 (the "License");
-// you may not use this file except in compliance with the License.
-// You may obtain a copy of the License at
-//
-//     http://www.apache.org/licenses/LICENSE-2.0
-//
-// Unless required by applicable law or agreed to in writing, software
-// distributed under the License is distributed on an "AS IS" BASIS,
-// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-// See the License for the specific language governing permissions and
-// limitations under the License.
+// SPDX-License-Identifier: Apache-2.0
 
 package test
 
@@ -25,10 +14,9 @@ import (
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/credentials/insecure"
-	"google.golang.org/grpc/interop"
-	pb "google.golang.org/grpc/interop/grpc_testing"
 
 	"go.opentelemetry.io/contrib/instrumentation/google.golang.org/grpc/otelgrpc"
+	"go.opentelemetry.io/contrib/instrumentation/google.golang.org/grpc/otelgrpc/internal/test"
 	"go.opentelemetry.io/otel/attribute"
 	"go.opentelemetry.io/otel/sdk/instrumentation"
 	"go.opentelemetry.io/otel/sdk/metric"
@@ -37,6 +25,8 @@ import (
 	"go.opentelemetry.io/otel/sdk/trace"
 	"go.opentelemetry.io/otel/sdk/trace/tracetest"
 	semconv "go.opentelemetry.io/otel/semconv/v1.17.0"
+
+	pb "google.golang.org/grpc/interop/grpc_testing"
 )
 
 var wantInstrumentationScope = instrumentation.Scope{
@@ -45,10 +35,10 @@ var wantInstrumentationScope = instrumentation.Scope{
 	Version:   otelgrpc.Version(),
 }
 
-// newGrpcTest creats a grpc server, starts it, and returns the client, closes everything down during test cleanup.
+// newGrpcTest creates a grpc server, starts it, and returns the client, closes everything down during test cleanup.
 func newGrpcTest(t testing.TB, listener net.Listener, cOpt []grpc.DialOption, sOpt []grpc.ServerOption) pb.TestServiceClient {
 	grpcServer := grpc.NewServer(sOpt...)
-	pb.RegisterTestServiceServer(grpcServer, interop.NewTestServer())
+	pb.RegisterTestServiceServer(grpcServer, test.NewTestServer())
 	errCh := make(chan error)
 	go func() {
 		errCh <- grpcServer.Serve(listener)
@@ -57,18 +47,19 @@ func newGrpcTest(t testing.TB, listener net.Listener, cOpt []grpc.DialOption, sO
 		grpcServer.Stop()
 		assert.NoError(t, <-errCh)
 	})
-	ctx := context.Background()
 
-	cOpt = append(cOpt, grpc.WithBlock(), grpc.WithTransportCredentials(insecure.NewCredentials()))
+	cOpt = append(cOpt, grpc.WithTransportCredentials(insecure.NewCredentials()))
+
+	dialAddr := listener.Addr().String()
 
 	if l, ok := listener.(interface{ Dial() (net.Conn, error) }); ok {
 		dial := func(context.Context, string) (net.Conn, error) { return l.Dial() }
 		cOpt = append(cOpt, grpc.WithContextDialer(dial))
+		dialAddr = "passthrough:" + dialAddr
 	}
 
-	conn, err := grpc.DialContext(
-		ctx,
-		listener.Addr().String(),
+	conn, err := grpc.NewClient(
+		dialAddr,
 		cOpt...,
 	)
 	require.NoError(t, err)
@@ -79,15 +70,16 @@ func newGrpcTest(t testing.TB, listener net.Listener, cOpt []grpc.DialOption, sO
 	return pb.NewTestServiceClient(conn)
 }
 
-func doCalls(client pb.TestServiceClient) {
-	interop.DoEmptyUnaryCall(client)
-	interop.DoLargeUnaryCall(client)
-	interop.DoClientStreaming(client)
-	interop.DoServerStreaming(client)
-	interop.DoPingPong(client)
+func doCalls(ctx context.Context, client pb.TestServiceClient) {
+	test.DoEmptyUnaryCall(ctx, client)
+	test.DoLargeUnaryCall(ctx, client)
+	test.DoClientStreaming(ctx, client)
+	test.DoServerStreaming(ctx, client)
+	test.DoPingPong(ctx, client)
 }
 
 func TestInterceptors(t *testing.T) {
+	t.Setenv("OTEL_METRICS_EXEMPLAR_FILTER", "always_off")
 	clientUnarySR := tracetest.NewSpanRecorder()
 	clientUnaryTP := trace.NewTracerProvider(trace.WithSpanProcessor(clientUnarySR))
 
@@ -131,7 +123,9 @@ func TestInterceptors(t *testing.T) {
 			)),
 		},
 	)
-	doCalls(client)
+	ctx, cancel := context.WithCancel(context.Background())
+	defer cancel()
+	doCalls(ctx, client)
 
 	t.Run("UnaryClientSpans", func(t *testing.T) {
 		checkUnaryClientSpans(t, clientUnarySR.Ended(), listener.Addr().String())
@@ -196,7 +190,7 @@ func checkUnaryClientSpans(t *testing.T, spans []trace.ReadOnlySpan, addr string
 			Attributes: []attribute.KeyValue{
 				otelgrpc.RPCMessageIDKey.Int(1),
 				otelgrpc.RPCMessageTypeKey.String("SENT"),
-				// largeReqSize from "google.golang.org/grpc/interop" + 12 (overhead).
+				// largeReqSize from "go.opentelemetry.io/contrib/instrumentation/google.golang.org/grpc/otelgrpc/test" + 12 (overhead).
 			},
 		},
 		{
@@ -204,7 +198,7 @@ func checkUnaryClientSpans(t *testing.T, spans []trace.ReadOnlySpan, addr string
 			Attributes: []attribute.KeyValue{
 				otelgrpc.RPCMessageIDKey.Int(1),
 				otelgrpc.RPCMessageTypeKey.String("RECEIVED"),
-				// largeRespSize from "google.golang.org/grpc/interop" + 8 (overhead).
+				// largeRespSize from "go.opentelemetry.io/contrib/instrumentation/google.golang.org/grpc/otelgrpc/test" + 8 (overhead).
 			},
 		},
 	}, largeSpan.Events())
@@ -229,7 +223,7 @@ func checkStreamClientSpans(t *testing.T, spans []trace.ReadOnlySpan, addr strin
 	streamInput := spans[0]
 	assert.False(t, streamInput.EndTime().IsZero())
 	assert.Equal(t, "grpc.testing.TestService/StreamingInputCall", streamInput.Name())
-	// sizes from reqSizes in "google.golang.org/grpc/interop".
+	// sizes from reqSizes in "go.opentelemetry.io/contrib/instrumentation/google.golang.org/grpc/otelgrpc/test".
 	assertEvents(t, []trace.Event{
 		{
 			Name: "message",
@@ -273,7 +267,7 @@ func checkStreamClientSpans(t *testing.T, spans []trace.ReadOnlySpan, addr strin
 	streamOutput := spans[1]
 	assert.False(t, streamOutput.EndTime().IsZero())
 	assert.Equal(t, "grpc.testing.TestService/StreamingOutputCall", streamOutput.Name())
-	// sizes from respSizes in "google.golang.org/grpc/interop".
+	// sizes from respSizes in "go.opentelemetry.io/contrib/instrumentation/google.golang.org/grpc/otelgrpc/test".
 	assertEvents(t, []trace.Event{
 		{
 			Name: "message",
@@ -397,7 +391,7 @@ func checkStreamServerSpans(t *testing.T, spans []trace.ReadOnlySpan) {
 	streamInput := spans[0]
 	assert.False(t, streamInput.EndTime().IsZero())
 	assert.Equal(t, "grpc.testing.TestService/StreamingInputCall", streamInput.Name())
-	// sizes from reqSizes in "google.golang.org/grpc/interop".
+	// sizes from reqSizes in "go.opentelemetry.io/contrib/instrumentation/google.golang.org/grpc/otelgrpc/test".
 	assertEvents(t, []trace.Event{
 		{
 			Name: "message",
@@ -450,7 +444,7 @@ func checkStreamServerSpans(t *testing.T, spans []trace.ReadOnlySpan) {
 	streamOutput := spans[1]
 	assert.False(t, streamOutput.EndTime().IsZero())
 	assert.Equal(t, "grpc.testing.TestService/StreamingOutputCall", streamOutput.Name())
-	// sizes from respSizes in "google.golang.org/grpc/interop".
+	// sizes from respSizes in "go.opentelemetry.io/contrib/instrumentation/google.golang.org/grpc/otelgrpc/test".
 	assertEvents(t, []trace.Event{
 		{
 			Name: "message",
@@ -617,7 +611,7 @@ func checkUnaryServerSpans(t *testing.T, spans []trace.ReadOnlySpan) {
 			Attributes: []attribute.KeyValue{
 				otelgrpc.RPCMessageIDKey.Int(1),
 				otelgrpc.RPCMessageTypeKey.String("RECEIVED"),
-				// largeReqSize from "google.golang.org/grpc/interop" + 12 (overhead).
+				// largeReqSize from "go.opentelemetry.io/contrib/instrumentation/google.golang.org/grpc/otelgrpc/test" + 12 (overhead).
 			},
 		},
 		{
@@ -625,7 +619,7 @@ func checkUnaryServerSpans(t *testing.T, spans []trace.ReadOnlySpan) {
 			Attributes: []attribute.KeyValue{
 				otelgrpc.RPCMessageIDKey.Int(1),
 				otelgrpc.RPCMessageTypeKey.String("SENT"),
-				// largeRespSize from "google.golang.org/grpc/interop" + 8 (overhead).
+				// largeRespSize from "go.opentelemetry.io/contrib/instrumentation/google.golang.org/grpc/otelgrpc/test" + 8 (overhead).
 			},
 		},
 	}, largeSpan.Events())
@@ -642,7 +636,7 @@ func checkUnaryServerSpans(t *testing.T, spans []trace.ReadOnlySpan) {
 	}, largeSpan.Attributes())
 }
 
-func assertEvents(t *testing.T, expected, actual []trace.Event) bool {
+func assertEvents(t *testing.T, expected, actual []trace.Event) bool { //nolint:unparam
 	if !assert.Len(t, actual, len(expected)) {
 		return false
 	}
@@ -701,7 +695,7 @@ func checkUnaryServerRecords(t *testing.T, reader metric.Reader) {
 	metricdatatest.AssertEqual(t, want, rm.ScopeMetrics[0], metricdatatest.IgnoreTimestamp(), metricdatatest.IgnoreValue())
 }
 
-func findAttribute(kvs []attribute.KeyValue, key attribute.Key) (attribute.KeyValue, bool) {
+func findAttribute(kvs []attribute.KeyValue, key attribute.Key) (attribute.KeyValue, bool) { //nolint:unparam
 	for _, kv := range kvs {
 		if kv.Key == key {
 			return kv, true

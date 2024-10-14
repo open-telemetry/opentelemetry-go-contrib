@@ -1,16 +1,5 @@
 // Copyright The OpenTelemetry Authors
-//
-// Licensed under the Apache License, Version 2.0 (the "License");
-// you may not use this file except in compliance with the License.
-// You may obtain a copy of the License at
-//
-//     http://www.apache.org/licenses/LICENSE-2.0
-//
-// Unless required by applicable law or agreed to in writing, software
-// distributed under the License is distributed on an "AS IS" BASIS,
-// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-// See the License for the specific language governing permissions and
-// limitations under the License.
+// SPDX-License-Identifier: Apache-2.0
 
 package test
 
@@ -24,6 +13,7 @@ import (
 	"time"
 
 	"go.opentelemetry.io/contrib/instrumentation/google.golang.org/grpc/otelgrpc"
+	"go.opentelemetry.io/contrib/instrumentation/google.golang.org/grpc/otelgrpc/internal/test"
 	"go.opentelemetry.io/otel/attribute"
 	"go.opentelemetry.io/otel/codes"
 	"go.opentelemetry.io/otel/sdk/metric"
@@ -40,11 +30,11 @@ import (
 	"google.golang.org/grpc"
 	grpc_codes "google.golang.org/grpc/codes"
 	"google.golang.org/grpc/credentials/insecure"
-	"google.golang.org/grpc/interop"
-	"google.golang.org/grpc/interop/grpc_testing"
 	"google.golang.org/grpc/metadata"
 	"google.golang.org/grpc/status"
 	"google.golang.org/grpc/test/bufconn"
+
+	"google.golang.org/grpc/interop/grpc_testing"
 )
 
 func getSpanFromRecorder(sr *tracetest.SpanRecorder, name string) (trace.ReadOnlySpan, bool) {
@@ -79,10 +69,7 @@ func ctxDialer() func(context.Context, string) (net.Conn, error) {
 }
 
 func TestUnaryClientInterceptor(t *testing.T) {
-	ctx, cancel := context.WithCancel(context.Background())
-	t.Cleanup(cancel)
-
-	clientConn, err := grpc.DialContext(ctx, "fake:8906",
+	clientConn, err := grpc.NewClient("fake:8906",
 		grpc.WithContextDialer(ctxDialer()),
 		grpc.WithTransportCredentials(insecure.NewCredentials()),
 	)
@@ -387,11 +374,8 @@ func newMockClientStream(opts clientStreamOpts) *mockClientStream {
 }
 
 func createInterceptedStreamClient(t *testing.T, method string, opts clientStreamOpts) (grpc.ClientStream, *tracetest.SpanRecorder) {
-	ctx, cancel := context.WithCancel(context.Background())
-	t.Cleanup(cancel)
-
 	mockStream := newMockClientStream(opts)
-	clientConn, err := grpc.DialContext(ctx, "fake:8906",
+	clientConn, err := grpc.NewClient("fake:8906",
 		grpc.WithContextDialer(ctxDialer()),
 		grpc.WithTransportCredentials(insecure.NewCredentials()),
 	)
@@ -597,7 +581,7 @@ func TestStreamClientInterceptorOnUnidirectionalClientServerStream(t *testing.T)
 	// and RecvMsg() calls.
 	_ = streamClient.CloseSend()
 	err := streamClient.RecvMsg(reply)
-	require.Nil(t, err)
+	require.NoError(t, err)
 
 	// wait for span end that is called in separate go routine
 	var span trace.ReadOnlySpan
@@ -642,10 +626,7 @@ func TestStreamClientInterceptorOnUnidirectionalClientServerStream(t *testing.T)
 func TestStreamClientInterceptorCancelContext(t *testing.T) {
 	defer goleak.VerifyNone(t)
 
-	ctx, cancel := context.WithCancel(context.Background())
-	t.Cleanup(cancel)
-
-	clientConn, err := grpc.DialContext(ctx, "fake:8906",
+	clientConn, err := grpc.NewClient("fake:8906",
 		grpc.WithContextDialer(ctxDialer()),
 		grpc.WithTransportCredentials(insecure.NewCredentials()),
 	)
@@ -706,10 +687,7 @@ func TestStreamClientInterceptorCancelContext(t *testing.T) {
 func TestStreamClientInterceptorWithError(t *testing.T) {
 	defer goleak.VerifyNone(t)
 
-	ctx, cancel := context.WithCancel(context.Background())
-	t.Cleanup(cancel)
-
-	clientConn, err := grpc.DialContext(ctx, "fake:8906",
+	clientConn, err := grpc.NewClient("fake:8906",
 		grpc.WithContextDialer(ctxDialer()),
 		grpc.WithTransportCredentials(insecure.NewCredentials()),
 	)
@@ -879,6 +857,7 @@ func TestUnaryServerInterceptor(t *testing.T) {
 	for _, check := range serverChecks {
 		name := check.grpcCode.String()
 		t.Run(name, func(t *testing.T) {
+			t.Setenv("OTEL_METRICS_EXEMPLAR_FILTER", "always_off")
 			sr := tracetest.NewSpanRecorder()
 			tp := trace.NewTracerProvider(trace.WithSpanProcessor(sr))
 
@@ -1142,7 +1121,9 @@ func BenchmarkStreamClientInterceptor(b *testing.B) {
 	)
 
 	b.ResetTimer()
+	ctx, cancel := context.WithCancel(context.Background())
+	defer cancel()
 	for i := 0; i < b.N; i++ {
-		interop.DoClientStreaming(client)
+		test.DoClientStreaming(ctx, client)
 	}
 }

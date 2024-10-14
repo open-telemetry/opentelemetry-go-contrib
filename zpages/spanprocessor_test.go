@@ -1,16 +1,5 @@
 // Copyright The OpenTelemetry Authors
-//
-// Licensed under the Apache License, Version 2.0 (the "License");
-// you may not use this file except in compliance with the License.
-// You may obtain a copy of the License at
-//
-//     http://www.apache.org/licenses/LICENSE-2.0
-//
-// Unless required by applicable law or agreed to in writing, software
-// distributed under the License is distributed on an "AS IS" BASIS,
-// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-// See the License for the specific language governing permissions and
-// limitations under the License.
+// SPDX-License-Identifier: Apache-2.0
 
 package zpages
 
@@ -63,12 +52,12 @@ func TestSpanProcessor(t *testing.T) {
 		assert.Same(t, spans[i], activeSpans[i])
 	}
 	// No ended spans so there will be no error, no latency samples.
-	assert.Len(t, zsp.errorSpans(spanName), 0)
+	assert.Empty(t, zsp.errorSpans(spanName))
 	for i := 0; i < defaultBoundaries.numBuckets(); i++ {
-		assert.Len(t, zsp.spansByLatency(spanName, i), 0)
+		assert.Empty(t, zsp.spansByLatency(spanName, i))
 	}
 	spansPM := zsp.spansPerMethod()
-	require.Equal(t, 1, len(spansPM))
+	require.Len(t, spansPM, 1)
 	assert.Equal(t, numSpans, spansPM[spanName].activeSpans)
 
 	// End all Spans, they will end pretty fast, so we can only check that we have at least one in
@@ -77,7 +66,7 @@ func TestSpanProcessor(t *testing.T) {
 		s.End()
 	}
 	// Test that no more active spans.
-	assert.Len(t, zsp.activeSpans(spanName), 0)
+	assert.Empty(t, zsp.activeSpans(spanName))
 	assert.LessOrEqual(t, 1, len(zsp.errorSpans(spanName)))
 	numLatencySamples := 0
 	for i := 0; i < defaultBoundaries.numBuckets(); i++ {
@@ -169,13 +158,13 @@ func TestSpanProcessorNegativeLatency(t *testing.T) {
 	zsp.OnStart(context.Background(), ts)
 
 	spansPM := zsp.spansPerMethod()
-	require.Equal(t, 1, len(spansPM))
+	require.Len(t, spansPM, 1)
 	assert.Equal(t, 1, spansPM["test"].activeSpans)
 
 	zsp.OnEnd(ts)
 
 	spansPM = zsp.spansPerMethod()
-	require.Equal(t, 1, len(spansPM))
+	require.Len(t, spansPM, 1)
 	assert.Equal(t, 1, spansPM["test"].latencySpans[0])
 }
 

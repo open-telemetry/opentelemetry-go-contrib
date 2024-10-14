@@ -1,16 +1,5 @@
 // Copyright The OpenTelemetry Authors
-//
-// Licensed under the Apache License, Version 2.0 (the "License");
-// you may not use this file except in compliance with the License.
-// You may obtain a copy of the License at
-//
-//     http://www.apache.org/licenses/LICENSE-2.0
-//
-// Unless required by applicable law or agreed to in writing, software
-// distributed under the License is distributed on an "AS IS" BASIS,
-// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-// See the License for the specific language governing permissions and
-// limitations under the License.
+// SPDX-License-Identifier: Apache-2.0
 
 package autoexport // import "go.opentelemetry.io/contrib/exporters/autoexport"
 
@@ -55,6 +44,33 @@ func TestSpanExporterOTLP(t *testing.T) {
 	} {
 		t.Run(fmt.Sprintf("protocol=%q", tc.protocol), func(t *testing.T) {
 			t.Setenv("OTEL_EXPORTER_OTLP_PROTOCOL", tc.protocol)
+
+			got, err := NewSpanExporter(context.Background())
+			assert.NoError(t, err)
+			t.Cleanup(func() {
+				assert.NoError(t, got.Shutdown(context.Background()))
+			})
+			assert.IsType(t, &otlptrace.Exporter{}, got)
+
+			// Implementation detail hack. This may break when bumping OTLP exporter modules as it uses unexported API.
+			clientType := reflect.Indirect(reflect.ValueOf(got)).FieldByName("client").Elem().Type()
+			assert.Equal(t, tc.clientType, clientType.String())
+		})
+	}
+}
+
+func TestSpanExporterOTLPWithDedicatedProtocol(t *testing.T) {
+	t.Setenv("OTEL_TRACES_EXPORTER", "otlp")
+
+	for _, tc := range []struct {
+		protocol, clientType string
+	}{
+		{"http/protobuf", "*otlptracehttp.client"},
+		{"", "*otlptracehttp.client"},
+		{"grpc", "*otlptracegrpc.client"},
+	} {
+		t.Run(fmt.Sprintf("protocol=%q", tc.protocol), func(t *testing.T) {
+			t.Setenv("OTEL_EXPORTER_OTLP_TRACES_PROTOCOL", tc.protocol)
 
 			got, err := NewSpanExporter(context.Background())
 			assert.NoError(t, err)

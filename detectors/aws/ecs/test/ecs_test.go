@@ -1,16 +1,5 @@
 // Copyright The OpenTelemetry Authors
-//
-// Licensed under the Apache License, Version 2.0 (the "License");
-// you may not use this file except in compliance with the License.
-// You may obtain a copy of the License at
-//
-//     http://www.apache.org/licenses/LICENSE-2.0
-//
-// Unless required by applicable law or agreed to in writing, software
-// distributed under the License is distributed on an "AS IS" BASIS,
-// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-// See the License for the specific language governing permissions and
-// limitations under the License.
+// SPDX-License-Identifier: Apache-2.0
 
 package ecs
 
@@ -25,7 +14,7 @@ import (
 	ecs "go.opentelemetry.io/contrib/detectors/aws/ecs"
 	"go.opentelemetry.io/otel/attribute"
 	"go.opentelemetry.io/otel/sdk/resource"
-	semconv "go.opentelemetry.io/otel/semconv/v1.24.0"
+	semconv "go.opentelemetry.io/otel/semconv/v1.26.0"
 
 	"github.com/stretchr/testify/assert"
 )
@@ -66,6 +55,10 @@ func TestDetectV4LaunchTypeEc2(t *testing.T) {
 	attributes := []attribute.KeyValue{
 		semconv.CloudProviderAWS,
 		semconv.CloudPlatformAWSECS,
+		semconv.CloudAccountID("111122223333"),
+		semconv.CloudRegion("us-west-2"),
+		semconv.CloudAvailabilityZone("us-west-2d"),
+		semconv.CloudResourceID("arn:aws:ecs:us-west-2:111122223333:container/0206b271-b33f-47ab-86c6-a0ba208a70a9"),
 		semconv.ContainerName(hostname),
 		// We are not running the test in an actual container,
 		// the container id is tested with mocks of the cgroup
@@ -86,7 +79,7 @@ func TestDetectV4LaunchTypeEc2(t *testing.T) {
 	detector := ecs.NewResourceDetector()
 	res, err := detector.Detect(context.Background())
 
-	assert.Equal(t, nil, err, "Detector should not fail")
+	assert.NoError(t, err, "Detector should not fail")
 	assert.Equal(t, expectedResource, res, "Resource returned is incorrect")
 }
 
@@ -122,6 +115,10 @@ func TestDetectV4LaunchTypeEc2BadContainerArn(t *testing.T) {
 	attributes := []attribute.KeyValue{
 		semconv.CloudProviderAWS,
 		semconv.CloudPlatformAWSECS,
+		semconv.CloudAccountID("111122223333"),
+		semconv.CloudRegion("us-west-2"),
+		semconv.CloudAvailabilityZone("us-west-2d"),
+		semconv.CloudResourceID("arn:aws:ecs:us-west-2:111122223333:container/0206b271-b33f-47ab-86c6-a0ba208a70a9"),
 		semconv.ContainerName(hostname),
 		// We are not running the test in an actual container,
 		// the container id is tested with mocks of the cgroup
@@ -142,7 +139,7 @@ func TestDetectV4LaunchTypeEc2BadContainerArn(t *testing.T) {
 	detector := ecs.NewResourceDetector()
 	res, err := detector.Detect(context.Background())
 
-	assert.Equal(t, nil, err, "Detector should not fail")
+	assert.NoError(t, err, "Detector should not fail")
 	assert.Equal(t, expectedResource, res, "Resource returned is incorrect")
 }
 
@@ -179,6 +176,10 @@ func TestDetectV4LaunchTypeEc2BadTaskArn(t *testing.T) {
 		semconv.CloudProviderAWS,
 		semconv.CloudPlatformAWSECS,
 		semconv.ContainerName(hostname),
+		semconv.CloudAccountID("111122223333"),
+		semconv.CloudRegion("us-west-2"),
+		semconv.CloudAvailabilityZone("us-west-2d"),
+		semconv.CloudResourceID("arn:aws:ecs:us-west-2:111122223333:container/0206b271-b33f-47ab-86c6-a0ba208a70a9"),
 		// We are not running the test in an actual container,
 		// the container id is tested with mocks of the cgroup
 		// file in the unit tests
@@ -198,7 +199,7 @@ func TestDetectV4LaunchTypeEc2BadTaskArn(t *testing.T) {
 	detector := ecs.NewResourceDetector()
 	res, err := detector.Detect(context.Background())
 
-	assert.Equal(t, nil, err, "Detector should not fail")
+	assert.NoError(t, err, "Detector should not fail")
 	assert.Equal(t, expectedResource, res, "Resource returned is incorrect")
 }
 
@@ -235,6 +236,10 @@ func TestDetectV4LaunchTypeFargate(t *testing.T) {
 		semconv.CloudProviderAWS,
 		semconv.CloudPlatformAWSECS,
 		semconv.ContainerName(hostname),
+		semconv.CloudAccountID("111122223333"),
+		semconv.CloudRegion("us-west-2"),
+		semconv.CloudAvailabilityZone("us-west-2a"),
+		semconv.CloudResourceID("arn:aws:ecs:us-west-2:111122223333:container/05966557-f16c-49cb-9352-24b3a0dcd0e1"),
 		// We are not running the test in an actual container,
 		// the container id is tested with mocks of the cgroup
 		// file in the unit tests
@@ -254,6 +259,6 @@ func TestDetectV4LaunchTypeFargate(t *testing.T) {
 	detector := ecs.NewResourceDetector()
 	res, err := detector.Detect(context.Background())
 
-	assert.Equal(t, nil, err, "Detector should not fail")
+	assert.NoError(t, err, "Detector should not fail")
 	assert.Equal(t, expectedResource, res, "Resource returned is incorrect")
 }

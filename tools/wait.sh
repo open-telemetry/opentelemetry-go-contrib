@@ -1,18 +1,7 @@
 #!/bin/bash
 
 # Copyright The OpenTelemetry Authors
-#
-# Licensed under the Apache License, Version 2.0 (the "License");
-# you may not use this file except in compliance with the License.
-# You may obtain a copy of the License at
-#
-#     http://www.apache.org/licenses/LICENSE-2.0
-#
-# Unless required by applicable law or agreed to in writing, software
-# distributed under the License is distributed on an "AS IS" BASIS,
-# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-# See the License for the specific language governing permissions and
-# limitations under the License.
+# SPDX-License-Identifier: Apache-2.0
 
 wait_for_cassandra () {
   for ((i = 0; i < 5; ++i)); do
@@ -23,18 +12,6 @@ wait_for_cassandra () {
     sleep 10
   done
   echo "Timeout waiting for cassandra to initialize"
-  exit 1
-}
-
-wait_for_mongo () {
-  for ((i = 0; i < 5; ++i)); do
-    if docker exec "$1" mongosh; then
-      exit 0
-    fi
-    echo "Mongo not yet available..."
-    sleep 10
-  done
-  echo "Timeout waiting for mongo to initialize"
   exit 1
 }
 
@@ -60,8 +37,6 @@ fi
 
 if [ "$CMD" == "cassandra" ]; then
   wait_for_cassandra "$IMG_NAME"
-elif [ "$CMD" == "mongo" ]; then
-  wait_for_mongo "$IMG_NAME"
 elif [ "$CMD" == "gomemcache" ]; then
   wait_for_gomemcache
 else

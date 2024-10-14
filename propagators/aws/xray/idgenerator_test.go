@@ -1,16 +1,5 @@
 // Copyright The OpenTelemetry Authors
-//
-// Licensed under the Apache License, Version 2.0 (the "License");
-// you may not use this file except in compliance with the License.
-// You may obtain a copy of the License at
-//
-//     http://www.apache.org/licenses/LICENSE-2.0
-//
-// Unless required by applicable law or agreed to in writing, software
-// distributed under the License is distributed on an "AS IS" BASIS,
-// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-// See the License for the specific language governing permissions and
-// limitations under the License.
+// SPDX-License-Identifier: Apache-2.0
 
 package xray
 
@@ -32,7 +21,7 @@ func TestTraceIDIsValidLength(t *testing.T) {
 	traceID, _ := idg.NewIDs(context.Background())
 
 	expectedTraceIDLength := 32
-	assert.Equal(t, len(traceID.String()), expectedTraceIDLength, "TraceID has incorrect length.")
+	assert.Len(t, traceID.String(), expectedTraceIDLength, "TraceID has incorrect length.")
 }
 
 func TestTraceIDIsUnique(t *testing.T) {
@@ -74,8 +63,8 @@ func TestSpanIDIsValidLength(t *testing.T) {
 	spanID2 := idg.NewSpanID(context.Background(), traceID)
 	expectedSpanIDLength := 16
 
-	assert.Equal(t, len(spanID1.String()), expectedSpanIDLength, "SpanID has incorrect length")
-	assert.Equal(t, len(spanID2.String()), expectedSpanIDLength, "SpanID has incorrect length")
+	assert.Len(t, spanID1.String(), expectedSpanIDLength, "SpanID has incorrect length")
+	assert.Len(t, spanID2.String(), expectedSpanIDLength, "SpanID has incorrect length")
 }
 
 func TestSpanIDIsUnique(t *testing.T) {

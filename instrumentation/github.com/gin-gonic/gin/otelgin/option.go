@@ -1,16 +1,5 @@
 // Copyright The OpenTelemetry Authors
-//
-// Licensed under the Apache License, Version 2.0 (the "License");
-// you may not use this file except in compliance with the License.
-// You may obtain a copy of the License at
-//
-//     http://www.apache.org/licenses/LICENSE-2.0
-//
-// Unless required by applicable law or agreed to in writing, software
-// distributed under the License is distributed on an "AS IS" BASIS,
-// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-// See the License for the specific language governing permissions and
-// limitations under the License.
+// SPDX-License-Identifier: Apache-2.0
 
 // Based on https://github.com/DataDog/dd-trace-go/blob/8fb554ff7cf694267f9077ae35e27ce4689ed8b6/contrib/gin-gonic/gin/option.go
 
@@ -18,6 +7,8 @@ package otelgin // import "go.opentelemetry.io/contrib/instrumentation/github.co
 
 import (
 	"net/http"
+
+	"github.com/gin-gonic/gin"
 
 	otelmetric "go.opentelemetry.io/otel/metric"
 	"go.opentelemetry.io/otel/propagation"
@@ -29,6 +20,7 @@ type config struct {
 	MeterProvider     otelmetric.MeterProvider
 	Propagators       propagation.TextMapPropagator
 	Filters           []Filter
+	GinFilters        []GinFilter
 	SpanNameFormatter SpanNameFormatter
 
 	reqDuration otelmetric.Float64Histogram
@@ -40,6 +32,10 @@ type config struct {
 // Filter is a predicate used to determine whether a given http.request should
 // be traced. A Filter must return true if the request should be traced.
 type Filter func(*http.Request) bool
+
+// Adding new Filter parameter (*gin.Context)
+// gin.Context has FullPath() method, which returns a matched route full path.
+type GinFilter func(*gin.Context) bool
 
 // SpanNameFormatter is used to set span name by http.request.
 type SpanNameFormatter func(r *http.Request) string
@@ -88,13 +84,20 @@ func WithMeterProvider(provider otelmetric.MeterProvider) Option {
 
 // WithFilter adds a filter to the list of filters used by the handler.
 // If any filter indicates to exclude a request then the request will not be
-// traced. All filters must allow a request to be traced for a Span to be created.
+// traced. All gin and net/http filters must allow a request to be traced for a Span to be created.
 // If no filters are provided then all requests are traced.
 // Filters will be invoked for each processed request, it is advised to make them
 // simple and fast.
 func WithFilter(f ...Filter) Option {
 	return optionFunc(func(c *config) {
 		c.Filters = append(c.Filters, f...)
+	})
+}
+
+// WithGinFilter adds a gin filter to the list of filters used by the handler.
+func WithGinFilter(f ...GinFilter) Option {
+	return optionFunc(func(c *config) {
+		c.GinFilters = append(c.GinFilters, f...)
 	})
 }
 

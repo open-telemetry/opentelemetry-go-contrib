@@ -1,16 +1,5 @@
 // Copyright The OpenTelemetry Authors
-//
-// Licensed under the Apache License, Version 2.0 (the "License");
-// you may not use this file except in compliance with the License.
-// You may obtain a copy of the License at
-//
-//     http://www.apache.org/licenses/LICENSE-2.0
-//
-// Unless required by applicable law or agreed to in writing, software
-// distributed under the License is distributed on an "AS IS" BASIS,
-// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-// See the License for the specific language governing permissions and
-// limitations under the License.
+// SPDX-License-Identifier: Apache-2.0
 
 package gcp
 
@@ -24,7 +13,7 @@ import (
 
 	"go.opentelemetry.io/otel/attribute"
 	"go.opentelemetry.io/otel/sdk/resource"
-	semconv "go.opentelemetry.io/otel/semconv/v1.24.0"
+	semconv "go.opentelemetry.io/otel/semconv/v1.26.0"
 )
 
 var errTest = errors.New("testError")
@@ -145,7 +134,7 @@ func TestCloudFunctionDetect(t *testing.T) {
 			cloudRun: test.cr,
 		}
 		res, err := detector.Detect(context.Background())
-		if err != test.expected.err {
+		if !errors.Is(err, test.expected.err) {
 			t.Fatalf("got unexpected failure: %v", err)
 		} else if diff := cmp.Diff(test.expected.res, res); diff != "" {
 			t.Errorf("detected resource differ from expected (-want, +got)\n%s", diff)
