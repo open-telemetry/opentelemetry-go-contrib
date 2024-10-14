@@ -26,8 +26,9 @@
 //
 // Attribute values are transformed based on their [slog.Kind]:
 //
-//   - [slog.KindAny] are transformed to [log.StringValue]. The value is
+//   - [slog.KindAny] non-nil values are transformed to [log.StringValue]
 //     encoded using [fmt.Sprintf].
+//     Nil values are transformed to a zero value of [log.Value].
 //   - [slog.KindBool] are transformed to [log.BoolValue] directly.
 //   - [slog.KindDuration] are transformed to [log.Int64Value] as nanoseconds.
 //   - [slog.KindFloat64] are transformed to [log.Float64Value] directly.
