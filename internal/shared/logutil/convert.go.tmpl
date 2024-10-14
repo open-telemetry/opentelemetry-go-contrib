@@ -113,7 +113,7 @@ func ConvertValue(v any) log.Value {
 	return log.StringValue(fmt.Sprintf("unhandled: (%s) %+v", t, v))
 }
 
-// ConvertUintValue converts a uint64 to a log.Value.
+// convertUintValue converts a uint64 to a log.Value.
 // If the value is too large to fit in an int64, it is converted to a string.
 func convertUintValue(v uint64) log.Value {
 	if v > math.MaxInt64 {
