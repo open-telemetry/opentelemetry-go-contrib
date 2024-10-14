@@ -10,7 +10,7 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 
 ### Fixed
 
-- Transform nil attribute values to `log.Value` zero value instead of `log.StringValue("<nil>")`. (#6246)
+- Transform nil attribute values to `log.Value` zero value instead of `log.StringValue("<nil>")` in `go.opentelemetry.io/contrib/bridges/otelslog`. (#6246)
 
 <!-- Released section -->
 <!-- Don't change this section unless doing release -->
