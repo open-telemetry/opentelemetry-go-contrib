@@ -136,9 +136,7 @@ func Middleware(service string, opts ...Option) gin.HandlerFunc {
 		if spanName == "" {
 			spanName = fmt.Sprintf("HTTP %s route not found", c.Request.Method)
 		} else {
-			rAttr := semconv.HTTPRoute(spanName)
-			opts = append(opts, oteltrace.WithAttributes(rAttr))
-			metricAttrs = append(metricAttrs, rAttr)
+			metricAttrs = append(metricAttrs, semconv.HTTPRoute(spanName))
 		}
 		ctx, span := tracer.Start(ctx, spanName, opts...)
 		defer span.End()
