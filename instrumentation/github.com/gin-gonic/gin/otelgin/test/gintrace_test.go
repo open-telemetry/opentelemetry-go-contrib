@@ -6,6 +6,7 @@
 package test
 
 import (
+	"context"
 	"errors"
 	"html/template"
 	"net/http"
@@ -20,8 +21,13 @@ import (
 	"go.opentelemetry.io/contrib/instrumentation/github.com/gin-gonic/gin/otelgin"
 	"go.opentelemetry.io/otel"
 	"go.opentelemetry.io/otel/codes"
+	"go.opentelemetry.io/otel/sdk/instrumentation"
+	"go.opentelemetry.io/otel/sdk/metric"
+	"go.opentelemetry.io/otel/sdk/metric/metricdata"
+	"go.opentelemetry.io/otel/sdk/metric/metricdata/metricdatatest"
 	sdktrace "go.opentelemetry.io/otel/sdk/trace"
 	"go.opentelemetry.io/otel/sdk/trace/tracetest"
+	semconv "go.opentelemetry.io/otel/semconv/v1.20.0"
 
 	"go.opentelemetry.io/otel/attribute"
 	oteltrace "go.opentelemetry.io/otel/trace"
@@ -320,4 +326,118 @@ func TestWithGinFilter(t *testing.T) {
 		router.ServeHTTP(w, r)
 		assert.Len(t, sr.Ended(), 1)
 	})
+}
+
+func TestMetric(t *testing.T) {
+	t.Setenv("OTEL_METRICS_EXEMPLAR_FILTER", "always_off")
+	sr := tracetest.NewSpanRecorder()
+	provider := sdktrace.NewTracerProvider(sdktrace.WithSpanProcessor(sr))
+
+	mr := metric.NewManualReader()
+	mp := metric.NewMeterProvider(metric.WithReader(mr))
+
+	router := gin.New()
+	router.Use(otelgin.Middleware("foobar",
+		otelgin.WithTracerProvider(provider),
+		otelgin.WithMeterProvider(mp),
+	),
+	)
+	router.GET("/user/:id", func(c *gin.Context) {
+		id := c.Param("id")
+		_, _ = c.Writer.Write([]byte(id))
+	})
+
+	r := httptest.NewRequest("GET", "/user/123", nil)
+	w := httptest.NewRecorder()
+
+	// do and verify the request
+	router.ServeHTTP(w, r)
+	response := w.Result() //nolint:bodyclose // False positive for httptest.ResponseRecorder: https://github.com/timakin/bodyclose/issues/59.
+	require.Equal(t, http.StatusOK, response.StatusCode)
+
+	// verify traces look good
+	spans := sr.Ended()
+	require.Len(t, spans, 1)
+	span := spans[0]
+	assert.Equal(t, "/user/:id", span.Name())
+	assert.Equal(t, oteltrace.SpanKindServer, span.SpanKind())
+	attr := span.Attributes()
+	assert.Contains(t, attr, attribute.String("http.method", "GET"))
+	assert.Contains(t, attr, attribute.String("http.route", "/user/:id"))
+
+	// verify metrics look good.
+	rm := metricdata.ResourceMetrics{}
+	err := mr.Collect(context.Background(), &rm)
+	assert.NoError(t, err)
+	require.Len(t, rm.ScopeMetrics, 1)
+	attrs := []attribute.KeyValue{
+		semconv.HTTPMethod("GET"),
+		semconv.HTTPRoute("/user/:id"),
+		semconv.HTTPSchemeHTTP,
+		semconv.HTTPStatusCode(200),
+		semconv.NetHostName("foobar"),
+		semconv.NetProtocolName("http"),
+		semconv.NetProtocolVersion("1.1"),
+	}
+	want := metricdata.ScopeMetrics{
+		Scope: instrumentation.Scope{
+			Name:    "go.opentelemetry.io/contrib/instrumentation/github.com/gin-gonic/gin/otelgin",
+			Version: otelgin.Version(),
+		},
+		Metrics: []metricdata.Metrics{
+			{
+				Name:        "http.server.request.duration",
+				Description: "Duration of HTTP server requests.",
+				Unit:        "ms",
+				Data: metricdata.Histogram[float64]{
+					Temporality: metricdata.CumulativeTemporality,
+					DataPoints: []metricdata.HistogramDataPoint[float64]{
+						{
+							Attributes: attribute.NewSet(attrs...),
+						},
+					},
+				},
+			},
+			{
+				Name:        "http.server.request.body.size",
+				Description: "Size of HTTP server request bodies.",
+				Unit:        "By",
+				Data: metricdata.Sum[int64]{
+					Temporality: metricdata.CumulativeTemporality,
+					DataPoints: []metricdata.DataPoint[int64]{
+						{
+							Attributes: attribute.NewSet(attrs...),
+						},
+					},
+				},
+			},
+			{
+				Name:        "http.server.response.body.size",
+				Description: "Size of HTTP server response bodies.",
+				Unit:        "By",
+				Data: metricdata.Sum[int64]{
+					Temporality: metricdata.CumulativeTemporality,
+					DataPoints: []metricdata.DataPoint[int64]{
+						{
+							Attributes: attribute.NewSet(attrs...),
+						},
+					},
+				},
+			},
+			{
+				Name:        "http.server.active_requests",
+				Description: "Number of active HTTP server requests.",
+				Unit:        "{request}",
+				Data: metricdata.Sum[int64]{
+					Temporality: metricdata.CumulativeTemporality,
+					DataPoints: []metricdata.DataPoint[int64]{
+						{
+							Attributes: attribute.NewSet(attrs...),
+						},
+					},
+				},
+			},
+		},
+	}
+	metricdatatest.AssertEqual(t, want, rm.ScopeMetrics[0], metricdatatest.IgnoreTimestamp(), metricdatatest.IgnoreValue())
 }

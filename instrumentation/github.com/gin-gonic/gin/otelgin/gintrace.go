@@ -59,7 +59,7 @@ func Middleware(service string, opts ...Option) gin.HandlerFunc {
 
 	var err error
 	cfg.reqDuration, err = meter.Float64Histogram("http.server.request.duration",
-		otelmetric.WithDescription("Measures the duration of inbound RPC."),
+		otelmetric.WithDescription("Duration of HTTP server requests."),
 		otelmetric.WithUnit("ms"))
 	if err != nil {
 		otel.Handle(err)
@@ -69,7 +69,7 @@ func Middleware(service string, opts ...Option) gin.HandlerFunc {
 	}
 
 	cfg.reqSize, err = meter.Int64UpDownCounter("http.server.request.body.size",
-		otelmetric.WithDescription("Measures size of RPC request messages (uncompressed)."),
+		otelmetric.WithDescription("Size of HTTP server request bodies."),
 		otelmetric.WithUnit("By"))
 	if err != nil {
 		otel.Handle(err)
@@ -79,7 +79,7 @@ func Middleware(service string, opts ...Option) gin.HandlerFunc {
 	}
 
 	cfg.respSize, err = meter.Int64UpDownCounter("http.server.response.body.size",
-		otelmetric.WithDescription("Measures size of RPC response messages (uncompressed)."),
+		otelmetric.WithDescription("Size of HTTP server response bodies."),
 		otelmetric.WithUnit("By"))
 	if err != nil {
 		otel.Handle(err)
@@ -89,8 +89,8 @@ func Middleware(service string, opts ...Option) gin.HandlerFunc {
 	}
 
 	cfg.activeReqs, err = meter.Int64UpDownCounter("http.server.active_requests",
-		otelmetric.WithDescription("Measures the number of messages received per RPC. Should be 1 for all non-streaming RPCs."),
-		otelmetric.WithUnit("{count}"))
+		otelmetric.WithDescription("Number of active HTTP server requests."),
+		otelmetric.WithUnit("{request}"))
 	if err != nil {
 		otel.Handle(err)
 		if cfg.activeReqs == nil {
@@ -161,22 +161,22 @@ func Middleware(service string, opts ...Option) gin.HandlerFunc {
 		status := c.Writer.Status()
 		span.SetStatus(semconvutil.HTTPServerStatus(status))
 
+		if status > 0 {
+			statCodeAttr := semconv.HTTPStatusCode(status)
+			metricAttrs = append(metricAttrs, statCodeAttr)
+			span.SetAttributes(statCodeAttr)
+		}
+		if len(c.Errors) > 0 {
+			ginErrAttr := attribute.String("gin.errors", c.Errors.String())
+			metricAttrs = append(metricAttrs, ginErrAttr)
+			span.SetAttributes(ginErrAttr)
+		}
+
 		metricAttrSet := attribute.NewSet(metricAttrs...) // create a set to minimize alloc
 		cfg.reqSize.Add(ctx, int64(reqSize), otelmetric.WithAttributeSet(metricAttrSet))
 		cfg.respSize.Add(ctx, int64(respSize), otelmetric.WithAttributeSet(metricAttrSet))
-
-		extraAttrs := make([]attribute.KeyValue, 0, 2) // pre-alloc cap of 2
-		if status > 0 {
-			extraAttrs = append(extraAttrs, semconv.HTTPStatusCode(status))
-		}
-		if len(c.Errors) > 0 {
-			extraAttrs = append(extraAttrs, attribute.String("gin.errors", c.Errors.String()))
-		}
-		span.SetAttributes(extraAttrs...) // call set just once
-
-		extraMetricAttrSet := attribute.NewSet(extraAttrs...) // create another set to minimize alloc
-		cfg.reqDuration.Record(ctx, elapsedTime, otelmetric.WithAttributeSet(metricAttrSet), otelmetric.WithAttributeSet(extraMetricAttrSet))
-		cfg.activeReqs.Add(ctx, 1, otelmetric.WithAttributeSet(metricAttrSet), otelmetric.WithAttributeSet(extraMetricAttrSet))
+		cfg.reqDuration.Record(ctx, elapsedTime, otelmetric.WithAttributeSet(metricAttrSet))
+		cfg.activeReqs.Add(ctx, 1, otelmetric.WithAttributeSet(metricAttrSet))
 	}
 }
 
