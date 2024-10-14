@@ -17,7 +17,10 @@
 package otelgin // import "go.opentelemetry.io/contrib/instrumentation/github.com/gin-gonic/gin/otelgin"
 
 import (
+	"bytes"
 	"fmt"
+	"io"
+	"time"
 
 	"github.com/gin-gonic/gin"
 
@@ -25,6 +28,8 @@ import (
 	"go.opentelemetry.io/otel"
 	"go.opentelemetry.io/otel/attribute"
 	"go.opentelemetry.io/otel/codes"
+	otelmetric "go.opentelemetry.io/otel/metric"
+	"go.opentelemetry.io/otel/metric/noop"
 	"go.opentelemetry.io/otel/propagation"
 	semconv "go.opentelemetry.io/otel/semconv/v1.20.0"
 	oteltrace "go.opentelemetry.io/otel/trace"
@@ -54,6 +59,56 @@ func Middleware(service string, opts ...Option) gin.HandlerFunc {
 	if cfg.Propagators == nil {
 		cfg.Propagators = otel.GetTextMapPropagator()
 	}
+
+	if cfg.MeterProvider == nil {
+		cfg.MeterProvider = otel.GetMeterProvider()
+	}
+	meter := cfg.MeterProvider.Meter(
+		ScopeName,
+		otelmetric.WithInstrumentationVersion(Version()),
+	)
+
+	var err error
+	cfg.reqDuration, err = meter.Float64Histogram("http.server.request.duration",
+		otelmetric.WithDescription("Measures the duration of inbound RPC."),
+		otelmetric.WithUnit("ms"))
+	if err != nil {
+		otel.Handle(err)
+		if cfg.reqDuration == nil {
+			cfg.reqDuration = noop.Float64Histogram{}
+		}
+	}
+
+	cfg.reqSize, err = meter.Int64UpDownCounter("http.server.request.body.size",
+		otelmetric.WithDescription("Measures size of RPC request messages (uncompressed)."),
+		otelmetric.WithUnit("By"))
+	if err != nil {
+		otel.Handle(err)
+		if cfg.reqSize == nil {
+			cfg.reqSize = noop.Int64UpDownCounter{}
+		}
+	}
+
+	cfg.respSize, err = meter.Int64UpDownCounter("http.server.response.body.size",
+		otelmetric.WithDescription("Measures size of RPC response messages (uncompressed)."),
+		otelmetric.WithUnit("By"))
+	if err != nil {
+		otel.Handle(err)
+		if cfg.respSize == nil {
+			cfg.respSize = noop.Int64UpDownCounter{}
+		}
+	}
+
+	cfg.activeReqs, err = meter.Int64UpDownCounter("http.server.active_requests",
+		otelmetric.WithDescription("Measures the number of messages received per RPC. Should be 1 for all non-streaming RPCs."),
+		otelmetric.WithUnit("{count}"))
+	if err != nil {
+		otel.Handle(err)
+		if cfg.activeReqs == nil {
+			cfg.activeReqs = noop.Int64UpDownCounter{}
+		}
+	}
+
 	return func(c *gin.Context) {
 		for _, f := range cfg.Filters {
 			if !f(c.Request) {
@@ -73,6 +128,7 @@ func Middleware(service string, opts ...Option) gin.HandlerFunc {
 			oteltrace.WithAttributes(semconvutil.HTTPServerRequest(service, c.Request)...),
 			oteltrace.WithSpanKind(oteltrace.SpanKindServer),
 		}
+		metricAttrs := semconvutil.HTTPServerRequestMetrics(service, c.Request)
 		var spanName string
 		if cfg.SpanNameFormatter == nil {
 			spanName = c.FullPath()
@@ -84,24 +140,47 @@ func Middleware(service string, opts ...Option) gin.HandlerFunc {
 		} else {
 			rAttr := semconv.HTTPRoute(spanName)
 			opts = append(opts, oteltrace.WithAttributes(rAttr))
+			metricAttrs = append(metricAttrs, rAttr)
 		}
 		ctx, span := tracer.Start(ctx, spanName, opts...)
 		defer span.End()
 
 		// pass the span through the request context
 		c.Request = c.Request.WithContext(ctx)
+		// calculate the size of the request.
+		reqSize := calcReqSize(c)
+		before := time.Now()
 
 		// serve the request to the next middleware
 		c.Next()
 
+		// Use floating point division here for higher precision (instead of Millisecond method).
+		elapsedTime := float64(time.Since(before)) / float64(time.Millisecond)
+		respSize := c.Writer.Size()
+		// If nothing written in the response yet, a value of -1 may be returned.
+		if respSize < 0 {
+			respSize = 0
+		}
+
 		status := c.Writer.Status()
 		span.SetStatus(semconvutil.HTTPServerStatus(status))
+
+		metricAttrSet := attribute.NewSet(metricAttrs...) // create a set to minimize alloc
+		cfg.reqSize.Add(ctx, int64(reqSize), otelmetric.WithAttributeSet(metricAttrSet))
+		cfg.respSize.Add(ctx, int64(respSize), otelmetric.WithAttributeSet(metricAttrSet))
+
+		extraAttrs := make([]attribute.KeyValue, 0, 2) // pre-alloc cap of 2
 		if status > 0 {
-			span.SetAttributes(semconv.HTTPStatusCode(status))
+			extraAttrs = append(extraAttrs, semconv.HTTPStatusCode(status))
 		}
 		if len(c.Errors) > 0 {
-			span.SetAttributes(attribute.String("gin.errors", c.Errors.String()))
+			extraAttrs = append(extraAttrs, attribute.String("gin.errors", c.Errors.String()))
 		}
+		span.SetAttributes(extraAttrs...) // call set just once
+
+		extraMetricAttrSet := attribute.NewSet(extraAttrs...) // create another set to minimize alloc
+		cfg.reqDuration.Record(ctx, elapsedTime, otelmetric.WithAttributeSet(metricAttrSet), otelmetric.WithAttributeSet(extraMetricAttrSet))
+		cfg.activeReqs.Add(ctx, 1, otelmetric.WithAttributeSet(metricAttrSet), otelmetric.WithAttributeSet(extraMetricAttrSet))
 	}
 }
 
@@ -138,4 +217,31 @@ func HTML(c *gin.Context, code int, name string, obj interface{}) {
 		span.End()
 	}()
 	c.HTML(code, name, obj)
+}
+
+// calcReqSize returns the total size of the request.
+// It will calculate the header size by iterate all the header KVs
+// and add with body size.
+func calcReqSize(c *gin.Context) int {
+	// Calculate the size of headers
+	headerSize := 0
+	for name, values := range c.Request.Header {
+		headerSize += len(name) + 2 // Colon and space
+		for _, value := range values {
+			headerSize += len(value)
+		}
+	}
+
+	// Read the request body
+	body, err := io.ReadAll(c.Request.Body)
+	if err != nil {
+		// can't read the body, just return the headerSize.
+		return headerSize
+	}
+
+	// Restore the request body for further processing
+	c.Request.Body = io.NopCloser(bytes.NewReader(body))
+
+	// Calculate the total size of the request (headers + body)
+	return headerSize + len(body)
 }

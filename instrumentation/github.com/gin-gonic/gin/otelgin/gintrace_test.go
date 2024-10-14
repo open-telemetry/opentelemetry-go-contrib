@@ -17,7 +17,9 @@
 package otelgin
 
 import (
+	"bytes"
 	"context"
+	"io"
 	"net/http"
 	"net/http/httptest"
 	"testing"
@@ -105,4 +107,71 @@ func TestPropagationWithCustomPropagators(t *testing.T) {
 	})
 
 	router.ServeHTTP(w, r)
+}
+
+// TestCalcReqSize tests the calcReqSize function.
+func TestCalcReqSize(t *testing.T) {
+	// Create a sample request with a body and headers
+	body := []byte("sample body")
+	req, err := http.NewRequest("POST", "/test", bytes.NewReader(body))
+	if err != nil {
+		t.Fatalf("Failed to create request: %v", err)
+	}
+	req.Header.Set("Content-Type", "application/json")
+	req.Header.Set("Authorization", "Bearer token")
+
+	// Create a Gin context with the request
+	w := httptest.NewRecorder()
+	c, _ := gin.CreateTestContext(w)
+	c.Request = req
+
+	// Call the function to calculate the request size
+	size := calcReqSize(c)
+
+	// Calculate the expected size (body + headers + extra bytes for header formatting)
+	expectedSize := len(body) + len("Content-Type") + len("application/json") + len("Authorization") + len("Bearer token") + 4 // 4 extra bytes for ": " and "\r\n"
+
+	// Check if the calculated size matches the expected size
+	if size != expectedSize {
+		t.Errorf("Expected request size %d, got %d", expectedSize, size)
+	}
+}
+
+// TestCalcReqSizeWithBodyRead tests the calcReqSize function and ensures the request body can still be read afterward.
+func TestCalcReqSizeWithBodyRead(t *testing.T) {
+	// Create a sample request with a body and headers
+	body := []byte("sample body")
+	req, err := http.NewRequest("POST", "/test", bytes.NewReader(body))
+	if err != nil {
+		t.Fatalf("Failed to create request: %v", err)
+	}
+	req.Header.Set("Content-Type", "application/json")
+	req.Header.Set("Authorization", "Bearer token")
+
+	// Create a Gin context with the request
+	w := httptest.NewRecorder()
+	c, _ := gin.CreateTestContext(w)
+	c.Request = req
+
+	// Call the function to calculate the request size
+	size := calcReqSize(c)
+
+	// Calculate the expected size (body + headers + extra bytes for header formatting)
+	expectedSize := len(body) + len("Content-Type") + len("application/json") + len("Authorization") + len("Bearer token") + 4 // 4 extra bytes for ": " and "\r\n"
+
+	// Check if the calculated size matches the expected size
+	if size != expectedSize {
+		t.Errorf("Expected request size %d, got %d", expectedSize, size)
+	}
+
+	// Read the request body again
+	newBody, err := io.ReadAll(c.Request.Body)
+	if err != nil {
+		t.Fatalf("Failed to read request body: %v", err)
+	}
+
+	// Check if the body is unchanged
+	if !bytes.Equal(newBody, body) {
+		t.Errorf("Expected request body %q, got %q", body, newBody)
+	}
 }

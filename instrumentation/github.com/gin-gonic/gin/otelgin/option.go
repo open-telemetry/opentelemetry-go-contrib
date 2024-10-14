@@ -19,15 +19,22 @@ package otelgin // import "go.opentelemetry.io/contrib/instrumentation/github.co
 import (
 	"net/http"
 
+	otelmetric "go.opentelemetry.io/otel/metric"
 	"go.opentelemetry.io/otel/propagation"
 	oteltrace "go.opentelemetry.io/otel/trace"
 )
 
 type config struct {
 	TracerProvider    oteltrace.TracerProvider
+	MeterProvider     otelmetric.MeterProvider
 	Propagators       propagation.TextMapPropagator
 	Filters           []Filter
 	SpanNameFormatter SpanNameFormatter
+
+	reqDuration otelmetric.Float64Histogram
+	reqSize     otelmetric.Int64UpDownCounter
+	respSize    otelmetric.Int64UpDownCounter
+	activeReqs  otelmetric.Int64UpDownCounter
 }
 
 // Filter is a predicate used to determine whether a given http.request should
@@ -65,6 +72,16 @@ func WithTracerProvider(provider oteltrace.TracerProvider) Option {
 	return optionFunc(func(cfg *config) {
 		if provider != nil {
 			cfg.TracerProvider = provider
+		}
+	})
+}
+
+// WithMeterProvider specifies a meter provider to use for creating a meter.
+// If none is specified, the global provider is used.
+func WithMeterProvider(provider otelmetric.MeterProvider) Option {
+	return optionFunc(func(cfg *config) {
+		if provider != nil {
+			cfg.MeterProvider = provider
 		}
 	})
 }
