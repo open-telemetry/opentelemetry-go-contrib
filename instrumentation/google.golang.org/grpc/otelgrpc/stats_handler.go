@@ -17,7 +17,7 @@ import (
 	"go.opentelemetry.io/otel/attribute"
 	"go.opentelemetry.io/otel/codes"
 	"go.opentelemetry.io/otel/metric"
-	semconv "go.opentelemetry.io/otel/semconv/v1.17.0"
+	semconv "go.opentelemetry.io/otel/semconv/v1.26.0"
 	"go.opentelemetry.io/otel/trace"
 )
 
@@ -157,10 +157,10 @@ func (c *config) handleRPC(ctx context.Context, rs stats.RPCStats, isServer bool
 		if c.ReceivedEvent {
 			span.AddEvent("message",
 				trace.WithAttributes(
-					semconv.MessageTypeReceived,
-					semconv.MessageIDKey.Int64(messageId),
-					semconv.MessageCompressedSizeKey.Int(rs.CompressedLength),
-					semconv.MessageUncompressedSizeKey.Int(rs.Length),
+					semconv.MessagingOperationTypeReceive,
+					semconv.MessagingMessageIDKey.Int64(messageId),
+					semconv.RPCMessageCompressedSize(rs.CompressedLength),
+					semconv.RPCMessageUncompressedSize(rs.Length),
 				),
 			)
 		}
@@ -173,10 +173,10 @@ func (c *config) handleRPC(ctx context.Context, rs stats.RPCStats, isServer bool
 		if c.SentEvent {
 			span.AddEvent("message",
 				trace.WithAttributes(
-					semconv.MessageTypeSent,
-					semconv.MessageIDKey.Int64(messageId),
-					semconv.MessageCompressedSizeKey.Int(rs.CompressedLength),
-					semconv.MessageUncompressedSizeKey.Int(rs.Length),
+					semconv.RPCMessageTypeSent,
+					semconv.MessagingMessageIDKey.Int64(messageId),
+					semconv.RPCMessageCompressedSize(rs.CompressedLength),
+					semconv.RPCMessageUncompressedSize(rs.Length),
 				),
 			)
 		}
