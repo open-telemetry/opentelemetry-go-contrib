@@ -391,7 +391,7 @@ func (b *kvBuffer) AddAttr(attr slog.Attr) bool {
 			for _, a := range attr.Value.Group() {
 				b.data = append(b.data, log.KeyValue{
 					Key:   a.Key,
-					Value: convertValue(a.Value),
+					Value: convert(a.Value),
 				})
 			}
 			return true
@@ -404,12 +404,12 @@ func (b *kvBuffer) AddAttr(attr slog.Attr) bool {
 	}
 	b.data = append(b.data, log.KeyValue{
 		Key:   attr.Key,
-		Value: convertValue(attr.Value),
+		Value: convert(attr.Value),
 	})
 	return true
 }
 
-func convertValue(v slog.Value) log.Value {
+func convert(v slog.Value) log.Value {
 	switch v.Kind() {
 	case slog.KindAny:
 		if v.Any() == nil {
@@ -441,7 +441,7 @@ func convertValue(v slog.Value) log.Value {
 		buf.AddAttrs(g)
 		return log.MapValue(buf.data...)
 	case slog.KindLogValuer:
-		return convertValue(v.Resolve())
+		return convert(v.Resolve())
 	default:
 		// Try to handle this as gracefully as possible.
 		//
