@@ -28,7 +28,6 @@
     },
     {
       "matchPackageNames": ["go.opentelemetry.io/otel/**"],
-      "allowedVersions": "^v[0-9]+\\.[0-9]+\\.[0-9]+",
       "enabled": true,
       "ignore": {
         "matchUpdateTypes": ["pin", "digest"]
@@ -37,13 +36,8 @@
     {
       "matchPackageNames": ["go.opentelemetry.io/otel/**"],
       "sourceUrlPrefixes": ["https://github.com/open-telemetry/opentelemetry-go"],
-      "enabled": false,
-      
-      "_comment": {
-        "matchPackageNames": "Matches any package names that start with 'go.opentelemetry.io/otel/'",
-        "sourceUrlPrefixes": "Ensures that the source URL prefix matches 'https://github.com/open-telemetry/opentelemetry-go'",
-        "enabled": "Disables updates for the matched packages from the specified source URL prefix"
-      }
+      "enabled": false
     }
-  ]
+  ],
+  "yamlConfig": "# Configuration for package matching and source URL prefixes\n matchPackageNames:\n    - \"go.opentelemetry.io/otel/**\"  # Matches all packages under the OpenTelemetry Go library\n  # List of source URL prefixes that correspond to the matched packages.\n  sourceUrlPrefixes:\n    - \"https://github.com/open-telemetry/opentelemetry-go\"  # Base URL for the OpenTelemetry Go repository\n  # Flag to enable or disable this configuration.\n  enabled: false  # Currently set to false, meaning this configuration is not active"
 }
