@@ -3,7 +3,7 @@ module go.opentelemetry.io/contrib/exporters/autoexport
 go 1.22
 
 require (
-	github.com/prometheus/client_golang v1.20.4
+	github.com/prometheus/client_golang v1.20.5
 	github.com/stretchr/testify v1.9.0
 	go.opentelemetry.io/contrib/bridges/prometheus v0.56.0
 	go.opentelemetry.io/otel v1.31.0
