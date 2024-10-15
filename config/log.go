@@ -75,12 +75,12 @@ func logExporter(ctx context.Context, exporter LogRecordExporter) (sdklog.Export
 		)
 	}
 
-	if exporter.OTLP != nil {
-		switch exporter.OTLP.Protocol {
+	if exporter.OTLP != nil && exporter.OTLP.Protocol != nil {
+		switch *exporter.OTLP.Protocol {
 		case protocolProtobufHTTP:
 			return otlpHTTPLogExporter(ctx, exporter.OTLP)
 		default:
-			return nil, fmt.Errorf("unsupported protocol %q", exporter.OTLP.Protocol)
+			return nil, fmt.Errorf("unsupported protocol %q", *exporter.OTLP.Protocol)
 		}
 	}
 	return nil, errors.New("no valid log exporter")
@@ -120,8 +120,8 @@ func batchLogProcessor(blp *BatchLogRecordProcessor, exp sdklog.Exporter) (*sdkl
 func otlpHTTPLogExporter(ctx context.Context, otlpConfig *OTLP) (sdklog.Exporter, error) {
 	var opts []otlploghttp.Option
 
-	if len(otlpConfig.Endpoint) > 0 {
-		u, err := url.ParseRequestURI(otlpConfig.Endpoint)
+	if otlpConfig.Endpoint != nil {
+		u, err := url.ParseRequestURI(*otlpConfig.Endpoint)
 		if err != nil {
 			return nil, err
 		}
@@ -148,7 +148,7 @@ func otlpHTTPLogExporter(ctx context.Context, otlpConfig *OTLP) (sdklog.Exporter
 		opts = append(opts, otlploghttp.WithTimeout(time.Millisecond*time.Duration(*otlpConfig.Timeout)))
 	}
 	if len(otlpConfig.Headers) > 0 {
-		opts = append(opts, otlploghttp.WithHeaders(otlpConfig.Headers))
+		opts = append(opts, otlploghttp.WithHeaders(toStringMap(otlpConfig.Headers)))
 	}
 
 	return otlploghttp.New(ctx, opts...)

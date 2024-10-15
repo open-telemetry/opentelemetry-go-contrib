@@ -28,6 +28,7 @@ import (
 	"go.opentelemetry.io/otel/metric/noop"
 	"go.opentelemetry.io/otel/sdk/instrumentation"
 	sdkmetric "go.opentelemetry.io/otel/sdk/metric"
+	"go.opentelemetry.io/otel/sdk/metric/metricdata"
 	"go.opentelemetry.io/otel/sdk/resource"
 )
 
@@ -92,14 +93,14 @@ func metricReader(ctx context.Context, r MetricReader) (sdkmetric.Reader, error)
 	return nil, errors.New("no valid metric reader")
 }
 
-func pullReader(ctx context.Context, exporter MetricExporter) (sdkmetric.Reader, error) {
+func pullReader(ctx context.Context, exporter PullMetricExporter) (sdkmetric.Reader, error) {
 	if exporter.Prometheus != nil {
 		return prometheusReader(ctx, exporter.Prometheus)
 	}
 	return nil, errors.New("no valid metric exporter")
 }
 
-func periodicExporter(ctx context.Context, exporter MetricExporter, opts ...sdkmetric.PeriodicReaderOption) (sdkmetric.Reader, error) {
+func periodicExporter(ctx context.Context, exporter PushMetricExporter, opts ...sdkmetric.PeriodicReaderOption) (sdkmetric.Reader, error) {
 	if exporter.Console != nil && exporter.OTLP != nil {
 		return nil, errors.New("must not specify multiple exporters")
 	}
@@ -115,16 +116,16 @@ func periodicExporter(ctx context.Context, exporter MetricExporter, opts ...sdkm
 		}
 		return sdkmetric.NewPeriodicReader(exp, opts...), nil
 	}
-	if exporter.OTLP != nil {
+	if exporter.OTLP != nil && exporter.OTLP.Protocol != nil {
 		var err error
 		var exp sdkmetric.Exporter
-		switch exporter.OTLP.Protocol {
+		switch *exporter.OTLP.Protocol {
 		case protocolProtobufHTTP:
 			exp, err = otlpHTTPMetricExporter(ctx, exporter.OTLP)
 		case protocolProtobufGRPC:
 			exp, err = otlpGRPCMetricExporter(ctx, exporter.OTLP)
 		default:
-			return nil, fmt.Errorf("unsupported protocol %q", exporter.OTLP.Protocol)
+			return nil, fmt.Errorf("unsupported protocol %q", *exporter.OTLP.Protocol)
 		}
 		if err != nil {
 			return nil, err
@@ -137,8 +138,8 @@ func periodicExporter(ctx context.Context, exporter MetricExporter, opts ...sdkm
 func otlpHTTPMetricExporter(ctx context.Context, otlpConfig *OTLPMetric) (sdkmetric.Exporter, error) {
 	opts := []otlpmetrichttp.Option{}
 
-	if len(otlpConfig.Endpoint) > 0 {
-		u, err := url.ParseRequestURI(otlpConfig.Endpoint)
+	if otlpConfig.Endpoint != nil {
+		u, err := url.ParseRequestURI(*otlpConfig.Endpoint)
 		if err != nil {
 			return nil, err
 		}
@@ -165,7 +166,19 @@ func otlpHTTPMetricExporter(ctx context.Context, otlpConfig *OTLPMetric) (sdkmet
 		opts = append(opts, otlpmetrichttp.WithTimeout(time.Millisecond*time.Duration(*otlpConfig.Timeout)))
 	}
 	if len(otlpConfig.Headers) > 0 {
-		opts = append(opts, otlpmetrichttp.WithHeaders(otlpConfig.Headers))
+		opts = append(opts, otlpmetrichttp.WithHeaders(toStringMap(otlpConfig.Headers)))
+	}
+	if otlpConfig.TemporalityPreference != nil {
+		switch *otlpConfig.TemporalityPreference {
+		case "delta":
+			opts = append(opts, otlpmetrichttp.WithTemporalitySelector(deltaTemporality))
+		case "cumulative":
+			opts = append(opts, otlpmetrichttp.WithTemporalitySelector(cumulativeTemporality))
+		case "lowmemory":
+			opts = append(opts, otlpmetrichttp.WithTemporalitySelector(lowMemory))
+		default:
+			return nil, fmt.Errorf("unsupported temporality preference %q", *otlpConfig.TemporalityPreference)
+		}
 	}
 
 	return otlpmetrichttp.New(ctx, opts...)
@@ -174,8 +187,8 @@ func otlpHTTPMetricExporter(ctx context.Context, otlpConfig *OTLPMetric) (sdkmet
 func otlpGRPCMetricExporter(ctx context.Context, otlpConfig *OTLPMetric) (sdkmetric.Exporter, error) {
 	var opts []otlpmetricgrpc.Option
 
-	if len(otlpConfig.Endpoint) > 0 {
-		u, err := url.ParseRequestURI(otlpConfig.Endpoint)
+	if otlpConfig.Endpoint != nil {
+		u, err := url.ParseRequestURI(*otlpConfig.Endpoint)
 		if err != nil {
 			return nil, err
 		}
@@ -187,7 +200,7 @@ func otlpGRPCMetricExporter(ctx context.Context, otlpConfig *OTLPMetric) (sdkmet
 		if u.Host != "" {
 			opts = append(opts, otlpmetricgrpc.WithEndpoint(u.Host))
 		} else {
-			opts = append(opts, otlpmetricgrpc.WithEndpoint(otlpConfig.Endpoint))
+			opts = append(opts, otlpmetricgrpc.WithEndpoint(*otlpConfig.Endpoint))
 		}
 		if u.Scheme == "http" {
 			opts = append(opts, otlpmetricgrpc.WithInsecure())
@@ -208,10 +221,80 @@ func otlpGRPCMetricExporter(ctx context.Context, otlpConfig *OTLPMetric) (sdkmet
 		opts = append(opts, otlpmetricgrpc.WithTimeout(time.Millisecond*time.Duration(*otlpConfig.Timeout)))
 	}
 	if len(otlpConfig.Headers) > 0 {
-		opts = append(opts, otlpmetricgrpc.WithHeaders(otlpConfig.Headers))
+		opts = append(opts, otlpmetricgrpc.WithHeaders(toStringMap(otlpConfig.Headers)))
+	}
+	if otlpConfig.TemporalityPreference != nil {
+		switch *otlpConfig.TemporalityPreference {
+		case "delta":
+			opts = append(opts, otlpmetricgrpc.WithTemporalitySelector(deltaTemporality))
+		case "cumulative":
+			opts = append(opts, otlpmetricgrpc.WithTemporalitySelector(cumulativeTemporality))
+		case "lowmemory":
+			opts = append(opts, otlpmetricgrpc.WithTemporalitySelector(lowMemory))
+		default:
+			return nil, fmt.Errorf("unsupported temporality preference %q", *otlpConfig.TemporalityPreference)
+		}
 	}
 
 	return otlpmetricgrpc.New(ctx, opts...)
+}
+
+func cumulativeTemporality(sdkmetric.InstrumentKind) metricdata.Temporality {
+	return metricdata.CumulativeTemporality
+}
+
+func deltaTemporality(ik sdkmetric.InstrumentKind) metricdata.Temporality {
+	switch ik {
+	case sdkmetric.InstrumentKindCounter, sdkmetric.InstrumentKindHistogram, sdkmetric.InstrumentKindObservableCounter:
+		return metricdata.DeltaTemporality
+	default:
+		return metricdata.CumulativeTemporality
+	}
+}
+
+func lowMemory(ik sdkmetric.InstrumentKind) metricdata.Temporality {
+	switch ik {
+	case sdkmetric.InstrumentKindCounter, sdkmetric.InstrumentKindHistogram:
+		return metricdata.DeltaTemporality
+	default:
+		return metricdata.CumulativeTemporality
+	}
+}
+
+// newIncludeExcludeFilter returns a Filter that includes attributes
+// in the include list and excludes attributes in the excludes list.
+// It returns an error if an attribute is in both lists
+//
+// If IncludeExclude is empty a include-all filter is returned.
+func newIncludeExcludeFilter(lists *IncludeExclude) (attribute.Filter, error) {
+	if lists == nil {
+		return func(kv attribute.KeyValue) bool { return true }, nil
+	}
+
+	included := make(map[attribute.Key]struct{})
+	for _, k := range lists.Included {
+		included[attribute.Key(k)] = struct{}{}
+	}
+	excluded := make(map[attribute.Key]struct{})
+	for _, k := range lists.Excluded {
+		if _, ok := included[attribute.Key(k)]; ok {
+			return nil, fmt.Errorf("attribute cannot be in both include and exclude list: %s", k)
+		}
+		excluded[attribute.Key(k)] = struct{}{}
+	}
+	return func(kv attribute.KeyValue) bool {
+		// check if a value is excluded first
+		if _, ok := excluded[kv.Key]; ok {
+			return false
+		}
+
+		if len(included) == 0 {
+			return true
+		}
+
+		_, ok := included[kv.Key]
+		return ok
+	}, nil
 }
 
 func prometheusReader(ctx context.Context, prometheusConfig *Prometheus) (sdkmetric.Reader, error) {
@@ -232,20 +315,11 @@ func prometheusReader(ctx context.Context, prometheusConfig *Prometheus) (sdkmet
 		opts = append(opts, otelprom.WithoutUnits())
 	}
 	if prometheusConfig.WithResourceConstantLabels != nil {
-		if prometheusConfig.WithResourceConstantLabels.Included != nil {
-			var keys []attribute.Key
-			for _, val := range prometheusConfig.WithResourceConstantLabels.Included {
-				keys = append(keys, attribute.Key(val))
-			}
-			otelprom.WithResourceAsConstantLabels(attribute.NewAllowKeysFilter(keys...))
+		f, err := newIncludeExcludeFilter(prometheusConfig.WithResourceConstantLabels)
+		if err != nil {
+			return nil, err
 		}
-		if prometheusConfig.WithResourceConstantLabels.Excluded != nil {
-			var keys []attribute.Key
-			for _, val := range prometheusConfig.WithResourceConstantLabels.Included {
-				keys = append(keys, attribute.Key(val))
-			}
-			otelprom.WithResourceAsConstantLabels(attribute.NewDenyKeysFilter(keys...))
-		}
+		otelprom.WithResourceAsConstantLabels(f)
 	}
 
 	reg := prometheus.NewRegistry()
@@ -306,7 +380,11 @@ func view(v View) (sdkmetric.View, error) {
 		return nil, err
 	}
 
-	return sdkmetric.NewView(inst, stream(v.Stream)), nil
+	s, err := stream(v.Stream)
+	if err != nil {
+		return nil, err
+	}
+	return sdkmetric.NewView(inst, s), nil
 }
 
 func instrument(vs ViewSelector) (sdkmetric.Instrument, error) {
@@ -331,25 +409,21 @@ func instrument(vs ViewSelector) (sdkmetric.Instrument, error) {
 	return inst, nil
 }
 
-func stream(vs *ViewStream) sdkmetric.Stream {
+func stream(vs *ViewStream) (sdkmetric.Stream, error) {
 	if vs == nil {
-		return sdkmetric.Stream{}
+		return sdkmetric.Stream{}, nil
 	}
 
+	f, err := newIncludeExcludeFilter(vs.AttributeKeys)
+	if err != nil {
+		return sdkmetric.Stream{}, err
+	}
 	return sdkmetric.Stream{
 		Name:            strOrEmpty(vs.Name),
 		Description:     strOrEmpty(vs.Description),
 		Aggregation:     aggregation(vs.Aggregation),
-		AttributeFilter: attributeFilter(vs.AttributeKeys),
-	}
-}
-
-func attributeFilter(attributeKeys []string) attribute.Filter {
-	var attrKeys []attribute.Key
-	for _, attrStr := range attributeKeys {
-		attrKeys = append(attrKeys, attribute.Key(attrStr))
-	}
-	return attribute.NewAllowKeysFilter(attrKeys...)
+		AttributeFilter: f,
+	}, nil
 }
 
 func aggregation(aggr *ViewStreamAggregation) sdkmetric.Aggregation {

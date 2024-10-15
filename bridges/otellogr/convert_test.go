@@ -1,3 +1,6 @@
+// Code created by gotmpl. DO NOT MODIFY.
+// source: internal/shared/logutil/convert_test.go.tmpl
+
 // Copyright The OpenTelemetry Authors
 // SPDX-License-Identifier: Apache-2.0
 
@@ -14,70 +17,6 @@ import (
 
 	"go.opentelemetry.io/otel/log"
 )
-
-func TestConvertKVs(t *testing.T) {
-	ctx := context.WithValue(context.Background(), "key", "value") // nolint: revive,staticcheck // test context
-
-	for _, tt := range []struct {
-		name    string
-		kvs     []any
-		wantKVs []log.KeyValue
-		wantCtx context.Context
-	}{
-		{
-			name: "empty",
-			kvs:  []any{},
-		},
-		{
-			name: "single_value",
-			kvs:  []any{"key", "value"},
-			wantKVs: []log.KeyValue{
-				log.String("key", "value"),
-			},
-		},
-		{
-			name: "multiple_values",
-			kvs:  []any{"key1", "value1", "key2", "value2"},
-			wantKVs: []log.KeyValue{
-				log.String("key1", "value1"),
-				log.String("key2", "value2"),
-			},
-		},
-		{
-			name: "missing_value",
-			kvs:  []any{"key1", "value1", "key2"},
-			wantKVs: []log.KeyValue{
-				log.String("key1", "value1"),
-				{Key: "key2", Value: log.Value{}},
-			},
-		},
-		{
-			name: "key_not_string",
-			kvs:  []any{42, "value"},
-			wantKVs: []log.KeyValue{
-				log.String("42", "value"),
-			},
-		},
-		{
-			name:    "context",
-			kvs:     []any{"ctx", ctx, "key", "value"},
-			wantKVs: []log.KeyValue{log.String("key", "value")},
-			wantCtx: ctx,
-		},
-		{
-			name:    "last_context",
-			kvs:     []any{"key", context.Background(), "ctx", ctx},
-			wantKVs: []log.KeyValue{},
-			wantCtx: ctx,
-		},
-	} {
-		t.Run(tt.name, func(t *testing.T) {
-			ctx, kvs := convertKVs(nil, tt.kvs...) // nolint: staticcheck // pass nil context
-			assert.Equal(t, tt.wantKVs, kvs)
-			assert.Equal(t, tt.wantCtx, ctx)
-		})
-	}
-}
 
 func TestConvertValue(t *testing.T) {
 	for _, tt := range []struct {
@@ -294,9 +233,22 @@ func TestConvertValue(t *testing.T) {
 			wantValue: log.StringValue("{Name:John Age:42}"),
 		},
 		{
+			name: "nil_struct_ptr",
+			value: (*struct {
+				Name string
+				Age  int
+			})(nil),
+			wantValue: log.Value{},
+		},
+		{
 			name:      "ctx",
 			value:     context.Background(),
 			wantValue: log.StringValue("context.Background"),
+		},
+		{
+			name:      "unhandled type",
+			value:     chan int(nil),
+			wantValue: log.StringValue("unhandled: (chan int) <nil>"),
 		},
 	} {
 		t.Run(tt.name, func(t *testing.T) {

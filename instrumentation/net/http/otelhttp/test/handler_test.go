@@ -79,6 +79,7 @@ func assertScopeMetrics(t *testing.T, sm metricdata.ScopeMetrics, attrs attribut
 }
 
 func TestHandlerBasics(t *testing.T) {
+	t.Setenv("OTEL_METRICS_EXEMPLAR_FILTER", "always_off")
 	rr := httptest.NewRecorder()
 
 	spanRecorder := tracetest.NewSpanRecorder()
@@ -509,6 +510,7 @@ func TestSpanStatus(t *testing.T) {
 }
 
 func TestWithRouteTag(t *testing.T) {
+	t.Setenv("OTEL_METRICS_EXEMPLAR_FILTER", "always_off")
 	route := "/some/route"
 
 	spanRecorder := tracetest.NewSpanRecorder()

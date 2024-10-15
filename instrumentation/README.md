@@ -49,7 +49,6 @@ The following instrumentation packages are provided for popular Go packages and 
 | [github.com/labstack/echo](./github.com/labstack/echo/otelecho) |  | ✓ |
 | [go.mongodb.org/mongo-driver](./go.mongodb.org/mongo-driver/mongo/otelmongo) |  | ✓ |
 | [google.golang.org/grpc](./google.golang.org/grpc/otelgrpc) | ✓ | ✓ |
-| [gopkg.in/macaron.v1](./gopkg.in/macaron.v1/otelmacaron) |  | ✓ |
 | [host](./host) | ✓ |  |
 | [net/http](./net/http/otelhttp) | ✓ | ✓ |
 | [net/http/httptrace](./net/http/httptrace/otelhttptrace) |  | ✓ |

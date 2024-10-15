@@ -79,6 +79,7 @@ func doCalls(ctx context.Context, client pb.TestServiceClient) {
 }
 
 func TestInterceptors(t *testing.T) {
+	t.Setenv("OTEL_METRICS_EXEMPLAR_FILTER", "always_off")
 	clientUnarySR := tracetest.NewSpanRecorder()
 	clientUnaryTP := trace.NewTracerProvider(trace.WithSpanProcessor(clientUnarySR))
 
