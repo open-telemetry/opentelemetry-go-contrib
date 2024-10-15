@@ -148,6 +148,7 @@ func TestHookLevels(t *testing.T) {
 func TestHookFire(t *testing.T) {
 	const name = "name"
 	now := time.Now()
+	var nilPointer *struct{}
 
 	for _, tt := range []struct {
 		name  string
@@ -265,6 +266,21 @@ func TestHookFire(t *testing.T) {
 				name: {
 					buildRecord(log.StringValue(""), time.Time{}, log.SeverityFatal4, []log.KeyValue{
 						log.String("hello", "world"),
+					}),
+				},
+			},
+		},
+		{
+			name: "emits a log entry with data containing a nil pointer",
+			entry: &logrus.Entry{
+				Data: logrus.Fields{
+					"nil_pointer": nilPointer,
+				},
+			},
+			wantRecords: map[string][]log.Record{
+				name: {
+					buildRecord(log.StringValue(""), time.Time{}, log.SeverityFatal4, []log.KeyValue{
+						{Key: "nil_pointer", Value: log.Value{}},
 					}),
 				},
 			},
