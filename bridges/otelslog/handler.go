@@ -412,10 +412,7 @@ func (b *kvBuffer) AddAttr(attr slog.Attr) bool {
 func convert(v slog.Value) log.Value {
 	switch v.Kind() {
 	case slog.KindAny:
-		if v.Any() == nil {
-			return log.Value{}
-		}
-		return log.StringValue(fmt.Sprintf("%+v", v.Any()))
+		return convertValue(v.Any())
 	case slog.KindBool:
 		return log.BoolValue(v.Bool())
 	case slog.KindDuration:

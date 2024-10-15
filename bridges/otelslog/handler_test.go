@@ -120,7 +120,7 @@ func value2Result(v log.Value) any {
 	case log.KindBytes:
 		return v.AsBytes()
 	case log.KindSlice:
-		return v.AsSlice()
+		return v
 	case log.KindMap:
 		m := make(map[string]any)
 		for _, val := range v.AsMap() {
@@ -241,6 +241,7 @@ func TestSLogHandler(t *testing.T) {
 					"time", now,
 					"uint64", uint64(3),
 					"nil", nil,
+					"slice", []string{"foo", "bar"},
 					// KindGroup and KindLogValuer are left for slogtest.TestHandler.
 				)
 			},
@@ -256,6 +257,7 @@ func TestSLogHandler(t *testing.T) {
 				hasAttr("time", now.UnixNano()),
 				hasAttr("uint64", int64(3)),
 				hasAttr("nil", nil),
+				hasAttr("slice", log.SliceValue(log.StringValue("foo"), log.StringValue("bar"))),
 			}},
 		},
 		{
