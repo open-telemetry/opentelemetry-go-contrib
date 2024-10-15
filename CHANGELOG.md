@@ -8,6 +8,10 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 
 ## [Unreleased]
 
+### Fixed
+
+- Fix request/response metrics. In StatsHandler In means response for Client. (#6250)
+
 <!-- Released section -->
 <!-- Don't change this section unless doing release -->
 
