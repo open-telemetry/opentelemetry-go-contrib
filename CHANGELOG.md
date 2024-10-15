@@ -14,6 +14,10 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 - Transform nil attribute values to `log.Value` zero value instead of panicking in `go.opentelemetry.io/contrib/bridges/otelzap`. (#6237)
 - Transform nil attribute values to `log.Value` zero value instead of `log.StringValue("<nil>")` in `go.opentelemetry.io/contrib/bridges/otelslog`. (#6246)
 
+### Added
+
+- Add the `WithSource` option to the `go.opentelemetry.io/contrib/bridges/otelslog` log bridge to set the `source` attribute in the log record that includes the source location where the record was emitted. (#6253)
+
 <!-- Released section -->
 <!-- Don't change this section unless doing release -->
 
