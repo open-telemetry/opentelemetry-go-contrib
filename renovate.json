@@ -37,7 +37,13 @@
     {
       "matchPackageNames": ["go.opentelemetry.io/otel/**"],
       "sourceUrlPrefixes": ["https://github.com/open-telemetry/opentelemetry-go"],
-      "enabled": false
+      "enabled": false,
+      
+      "_comment": {
+        "matchPackageNames": "Matches any package names that start with 'go.opentelemetry.io/otel/'",
+        "sourceUrlPrefixes": "Ensures that the source URL prefix matches 'https://github.com/open-telemetry/opentelemetry-go'",
+        "enabled": "Disables updates for the matched packages from the specified source URL prefix"
+      }
     }
   ]
 }
