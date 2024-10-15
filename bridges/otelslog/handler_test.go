@@ -457,6 +457,7 @@ func TestNewHandlerConfiguration(t *testing.T) {
 				WithLoggerProvider(r),
 				WithVersion("ver"),
 				WithSchemaURL("url"),
+				WithSource(true),
 			)
 		})
 		require.NotNil(t, h.logger)
@@ -612,4 +613,58 @@ func BenchmarkHandler(b *testing.B) {
 	})
 
 	_, _ = h, err
+}
+
+func TestHandler_convertRecord(t *testing.T) {
+	// Capture the PC of this line
+	pc, file, line, _ := runtime.Caller(0)
+	funcName := runtime.FuncForPC(pc).Name()
+
+	tests := []struct {
+		name      string
+		handler   Handler
+		wantAttrs []log.KeyValue
+	}{
+		{
+			name:      "empty",
+			handler:   Handler{},
+			wantAttrs: []log.KeyValue{},
+		},
+		{
+			name:    "with source",
+			handler: Handler{source: true},
+			wantAttrs: []log.KeyValue{
+				{Key: "source", Value: log.MapValue(
+					log.String("function", funcName),
+					log.String("file", file),
+					log.Int("line", line),
+				)},
+			},
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			slogRecord := slog.NewRecord(time.Now(), slog.LevelInfo, "body", pc)
+			record := tt.handler.convertRecord(slogRecord)
+
+			// Validate attributes
+			attrMap := make(map[string]bool)
+			for _, attr := range tt.wantAttrs {
+				attrMap[attr.String()] = true
+			}
+
+			record.WalkAttributes(func(kv log.KeyValue) bool {
+				if !attrMap[kv.String()] {
+					t.Errorf("Unexpected attribute: %v", kv)
+					return false
+				}
+				delete(attrMap, kv.String())
+				return true
+			})
+
+			if len(attrMap) > 0 {
+				t.Errorf("Missing expected attributes: %v", attrMap)
+			}
+		})
+	}
 }

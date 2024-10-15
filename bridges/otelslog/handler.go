@@ -49,6 +49,7 @@ import (
 	"context"
 	"fmt"
 	"log/slog"
+	"runtime"
 	"slices"
 
 	"go.opentelemetry.io/otel/log"
@@ -65,6 +66,7 @@ type config struct {
 	provider  log.LoggerProvider
 	version   string
 	schemaURL string
+	source    bool
 }
 
 func newConfig(options []Option) config {
@@ -132,6 +134,15 @@ func WithLoggerProvider(provider log.LoggerProvider) Option {
 	})
 }
 
+// WithSource returns an [Option] that configures the [log.Logger] to include
+// the source location of the log record in log attributes.
+func WithSource(source bool) Option {
+	return optFunc(func(c config) config {
+		c.source = source
+		return c
+	})
+}
+
 // Handler is an [slog.Handler] that sends all logging records it receives to
 // OpenTelemetry. See package documentation for how conversions are made.
 type Handler struct {
@@ -141,6 +152,8 @@ type Handler struct {
 	attrs  *kvBuffer
 	group  *group
 	logger log.Logger
+
+	source bool
 }
 
 // Compile-time check *Handler implements slog.Handler.
@@ -156,7 +169,10 @@ var _ slog.Handler = (*Handler)(nil)
 // [log.Logger] implementation may override this value with a default.
 func NewHandler(name string, options ...Option) *Handler {
 	cfg := newConfig(options)
-	return &Handler{logger: cfg.logger(name)}
+	return &Handler{
+		logger: cfg.logger(name),
+		source: cfg.source,
+	}
 }
 
 // Handle handles the passed record.
@@ -172,6 +188,16 @@ func (h *Handler) convertRecord(r slog.Record) log.Record {
 
 	const sevOffset = slog.Level(log.SeverityDebug) - slog.LevelDebug
 	record.SetSeverity(log.Severity(r.Level + sevOffset))
+
+	if h.source {
+		fs := runtime.CallersFrames([]uintptr{r.PC})
+		f, _ := fs.Next()
+		record.AddAttributes(log.Map("source",
+			log.String("function", f.Function),
+			log.String("file", f.File),
+			log.Int("line", f.Line)),
+		)
+	}
 
 	if h.attrs.Len() > 0 {
 		record.AddAttributes(h.attrs.KeyValues()...)
