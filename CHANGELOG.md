@@ -8,6 +8,11 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 
 ## [Unreleased]
 
+### Added
+
+- Transform raw (`slog.KindAny`) attribute values to matching `log.Value` types.
+  For example, `[]string{"foo", "bar"}` attribute value is now transformed to `log.SliceValue(log.StringValue("foo"), log.StringValue("bar"))` instead of `log.String("[foo bar"])`. (#6254)
+
 ### Fixed
 
 - Transform nil attribute values to `log.Value` zero value instead of panicking in `go.opentelemetry.io/contrib/bridges/otellogrus`. (#6237)

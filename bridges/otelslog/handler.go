@@ -26,9 +26,8 @@
 //
 // Attribute values are transformed based on their [slog.Kind]:
 //
-//   - [slog.KindAny] non-nil values are transformed to [log.StringValue]
-//     encoded using [fmt.Sprintf].
-//     Nil values are transformed to a zero value of [log.Value].
+//   - [slog.KindAny] values are transformed based on their type or
+//     into a string value encoded using [fmt.Sprintf] if there is no matching type.
 //   - [slog.KindBool] are transformed to [log.BoolValue] directly.
 //   - [slog.KindDuration] are transformed to [log.Int64Value] as nanoseconds.
 //   - [slog.KindFloat64] are transformed to [log.Float64Value] directly.
@@ -391,7 +390,7 @@ func (b *kvBuffer) AddAttr(attr slog.Attr) bool {
 			for _, a := range attr.Value.Group() {
 				b.data = append(b.data, log.KeyValue{
 					Key:   a.Key,
-					Value: convertValue(a.Value),
+					Value: convert(a.Value),
 				})
 			}
 			return true
@@ -404,18 +403,15 @@ func (b *kvBuffer) AddAttr(attr slog.Attr) bool {
 	}
 	b.data = append(b.data, log.KeyValue{
 		Key:   attr.Key,
-		Value: convertValue(attr.Value),
+		Value: convert(attr.Value),
 	})
 	return true
 }
 
-func convertValue(v slog.Value) log.Value {
+func convert(v slog.Value) log.Value {
 	switch v.Kind() {
 	case slog.KindAny:
-		if v.Any() == nil {
-			return log.Value{}
-		}
-		return log.StringValue(fmt.Sprintf("%+v", v.Any()))
+		return convertValue(v.Any())
 	case slog.KindBool:
 		return log.BoolValue(v.Bool())
 	case slog.KindDuration:
@@ -441,7 +437,7 @@ func convertValue(v slog.Value) log.Value {
 		buf.AddAttrs(g)
 		return log.MapValue(buf.data...)
 	case slog.KindLogValuer:
-		return convertValue(v.Resolve())
+		return convert(v.Resolve())
 	default:
 		// Try to handle this as gracefully as possible.
 		//
