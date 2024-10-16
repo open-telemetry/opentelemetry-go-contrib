@@ -297,28 +297,6 @@ func newIncludeExcludeFilter(lists *IncludeExclude) (attribute.Filter, error) {
 	}, nil
 }
 
-func prometheusReaderOpts(prometheusConfig *Prometheus) ([]otelprom.Option, error) {
-	var opts []otelprom.Option
-	if prometheusConfig.WithoutScopeInfo != nil && *prometheusConfig.WithoutScopeInfo {
-		opts = append(opts, otelprom.WithoutScopeInfo())
-	}
-	if prometheusConfig.WithoutTypeSuffix != nil && *prometheusConfig.WithoutTypeSuffix {
-		opts = append(opts, otelprom.WithoutCounterSuffixes())
-	}
-	if prometheusConfig.WithoutUnits != nil && *prometheusConfig.WithoutUnits {
-		opts = append(opts, otelprom.WithoutUnits())
-	}
-	if prometheusConfig.WithResourceConstantLabels != nil {
-		f, err := newIncludeExcludeFilter(prometheusConfig.WithResourceConstantLabels)
-		if err != nil {
-			return nil, err
-		}
-		opts = append(opts, otelprom.WithResourceAsConstantLabels(f))
-	}
-
-	return opts, nil
-}
-
 func prometheusReader(ctx context.Context, prometheusConfig *Prometheus) (sdkmetric.Reader, error) {
 	if prometheusConfig.Host == nil {
 		return nil, fmt.Errorf("host must be specified")
@@ -366,6 +344,28 @@ func prometheusReader(ctx context.Context, prometheusConfig *Prometheus) (sdkmet
 	}()
 
 	return readerWithServer{reader, &server}, nil
+}
+
+func prometheusReaderOpts(prometheusConfig *Prometheus) ([]otelprom.Option, error) {
+	var opts []otelprom.Option
+	if prometheusConfig.WithoutScopeInfo != nil && *prometheusConfig.WithoutScopeInfo {
+		opts = append(opts, otelprom.WithoutScopeInfo())
+	}
+	if prometheusConfig.WithoutTypeSuffix != nil && *prometheusConfig.WithoutTypeSuffix {
+		opts = append(opts, otelprom.WithoutCounterSuffixes())
+	}
+	if prometheusConfig.WithoutUnits != nil && *prometheusConfig.WithoutUnits {
+		opts = append(opts, otelprom.WithoutUnits())
+	}
+	if prometheusConfig.WithResourceConstantLabels != nil {
+		f, err := newIncludeExcludeFilter(prometheusConfig.WithResourceConstantLabels)
+		if err != nil {
+			return nil, err
+		}
+		opts = append(opts, otelprom.WithResourceAsConstantLabels(f))
+	}
+
+	return opts, nil
 }
 
 type readerWithServer struct {
