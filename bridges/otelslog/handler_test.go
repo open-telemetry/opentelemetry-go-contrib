@@ -23,6 +23,7 @@ import (
 	"go.opentelemetry.io/otel/log"
 	"go.opentelemetry.io/otel/log/embedded"
 	"go.opentelemetry.io/otel/log/global"
+	semconv "go.opentelemetry.io/otel/semconv/v1.26.0"
 )
 
 var now = time.Now()
@@ -402,7 +403,7 @@ func TestSLogHandler(t *testing.T) {
 		},
 		{
 			name:        "WithSource",
-			explanation: withSource("a Handler using the WithSource Option should include a source attribute containing the source location of where the file was emitted"),
+			explanation: withSource("a Handler using the WithSource Option should include file attributes from where the log was emitted"),
 			f: func(l *slog.Logger) {
 				l.Info("msg")
 			},
@@ -411,7 +412,9 @@ func TestSLogHandler(t *testing.T) {
 				r.PC = pc
 			},
 			checks: [][]check{{
-				hasAttr("source", map[string]any{"function": funcName, "file": file, "line": int64(line)}),
+				hasAttr(string(semconv.CodeFilepathKey), file),
+				hasAttr(string(semconv.CodeFunctionKey), funcName),
+				hasAttr(string(semconv.CodeLineNumberKey), int64(line)),
 			}},
 			options: []Option{WithSource(true)},
 		},
