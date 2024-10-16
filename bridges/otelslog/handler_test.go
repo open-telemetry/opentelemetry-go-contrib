@@ -149,6 +149,8 @@ type testCase struct {
 	// checks is a list of checks to run on the result. Each item is a slice of
 	// checks that will be evaluated for the corresponding record emitted.
 	checks [][]check
+	// options are passed to the Handler constructed for this test case.
+	options []Option
 }
 
 // copied from slogtest (1.22.1).
@@ -225,6 +227,10 @@ func (h *wrapper) Handle(ctx context.Context, r slog.Record) error {
 }
 
 func TestSLogHandler(t *testing.T) {
+	// Capture the PC of this line
+	pc, file, line, _ := runtime.Caller(0)
+	funcName := runtime.FuncForPC(pc).Name()
+
 	cases := []testCase{
 		{
 			name:        "Values",
@@ -392,13 +398,29 @@ func TestSLogHandler(t *testing.T) {
 				inGroup("G", missingKey("a")),
 			}},
 		},
+		{
+			name:        "WithSource",
+			explanation: withSource("a Handler using the WithSource Option should include a source attribute containing the source location of where the file was emitted"),
+			f: func(l *slog.Logger) {
+				l.Info("msg")
+			},
+			mod: func(r *slog.Record) {
+				// Assign the PC of record to the one captured above.
+				r.PC = pc
+			},
+			checks: [][]check{{
+				hasAttr("source", map[string]any{"function": funcName, "file": file, "line": int64(line)}),
+			}},
+			options: []Option{WithSource(true)},
+		},
 	}
 
 	// Based on slogtest.Run.
 	for _, c := range cases {
 		t.Run(c.name, func(t *testing.T) {
 			r := new(recorder)
-			var h slog.Handler = NewHandler("", WithLoggerProvider(r))
+			opts := append([]Option{WithLoggerProvider(r)}, c.options...)
+			var h slog.Handler = NewHandler("", opts...)
 			if c.mod != nil {
 				h = &wrapper{h, c.mod}
 			}
@@ -613,58 +635,4 @@ func BenchmarkHandler(b *testing.B) {
 	})
 
 	_, _ = h, err
-}
-
-func TestHandler_convertRecord(t *testing.T) {
-	// Capture the PC of this line
-	pc, file, line, _ := runtime.Caller(0)
-	funcName := runtime.FuncForPC(pc).Name()
-
-	tests := []struct {
-		name      string
-		handler   Handler
-		wantAttrs []log.KeyValue
-	}{
-		{
-			name:      "empty",
-			handler:   Handler{},
-			wantAttrs: []log.KeyValue{},
-		},
-		{
-			name:    "with source",
-			handler: Handler{source: true},
-			wantAttrs: []log.KeyValue{
-				{Key: "source", Value: log.MapValue(
-					log.String("function", funcName),
-					log.String("file", file),
-					log.Int("line", line),
-				)},
-			},
-		},
-	}
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			slogRecord := slog.NewRecord(time.Now(), slog.LevelInfo, "body", pc)
-			record := tt.handler.convertRecord(slogRecord)
-
-			// Validate attributes
-			attrMap := make(map[string]bool)
-			for _, attr := range tt.wantAttrs {
-				attrMap[attr.String()] = true
-			}
-
-			record.WalkAttributes(func(kv log.KeyValue) bool {
-				if !attrMap[kv.String()] {
-					t.Errorf("Unexpected attribute: %v", kv)
-					return false
-				}
-				delete(attrMap, kv.String())
-				return true
-			})
-
-			if len(attrMap) > 0 {
-				t.Errorf("Missing expected attributes: %v", attrMap)
-			}
-		})
-	}
 }
