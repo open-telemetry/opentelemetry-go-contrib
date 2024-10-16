@@ -240,6 +240,7 @@ func TestSLogHandler(t *testing.T) {
 					"string", "str",
 					"time", now,
 					"uint64", uint64(3),
+					"nil", nil,
 					// KindGroup and KindLogValuer are left for slogtest.TestHandler.
 				)
 			},
@@ -254,6 +255,7 @@ func TestSLogHandler(t *testing.T) {
 				hasAttr("string", "str"),
 				hasAttr("time", now.UnixNano()),
 				hasAttr("uint64", int64(3)),
+				hasAttr("nil", nil),
 			}},
 		},
 		{
