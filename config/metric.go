@@ -297,14 +297,8 @@ func newIncludeExcludeFilter(lists *IncludeExclude) (attribute.Filter, error) {
 	}, nil
 }
 
-func prometheusReader(ctx context.Context, prometheusConfig *Prometheus) (sdkmetric.Reader, error) {
+func prometheusReaderOpts(prometheusConfig *Prometheus) ([]otelprom.Option, error) {
 	var opts []otelprom.Option
-	if prometheusConfig.Host == nil {
-		return nil, fmt.Errorf("host must be specified")
-	}
-	if prometheusConfig.Port == nil {
-		return nil, fmt.Errorf("port must be specified")
-	}
 	if prometheusConfig.WithoutScopeInfo != nil && *prometheusConfig.WithoutScopeInfo {
 		opts = append(opts, otelprom.WithoutScopeInfo())
 	}
@@ -319,7 +313,23 @@ func prometheusReader(ctx context.Context, prometheusConfig *Prometheus) (sdkmet
 		if err != nil {
 			return nil, err
 		}
-		otelprom.WithResourceAsConstantLabels(f)
+		opts = append(opts, otelprom.WithResourceAsConstantLabels(f))
+	}
+
+	return opts, nil
+}
+
+func prometheusReader(ctx context.Context, prometheusConfig *Prometheus) (sdkmetric.Reader, error) {
+	if prometheusConfig.Host == nil {
+		return nil, fmt.Errorf("host must be specified")
+	}
+	if prometheusConfig.Port == nil {
+		return nil, fmt.Errorf("port must be specified")
+	}
+
+	opts, err := prometheusReaderOpts(prometheusConfig)
+	if err != nil {
+		return nil, err
 	}
 
 	reg := prometheus.NewRegistry()
