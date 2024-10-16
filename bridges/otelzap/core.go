@@ -27,7 +27,8 @@
 //   - [zapcore.PanicLevel] is transformed to [log.SeverityFatal2]
 //   - [zapcore.FatalLevel] is transformed to [log.SeverityFatal3]
 //
-// Fields are transformed based on their type into log attributes, or into a string value if there is no matching type.
+// Fields are transformed based on their type into log attributes, or
+// into a string value encoded using [fmt.Sprintf] if there is no matching type.
 //
 // [OpenTelemetry]: https://opentelemetry.io/docs/concepts/signals/logs/
 package otelzap // import "go.opentelemetry.io/contrib/bridges/otelzap"
