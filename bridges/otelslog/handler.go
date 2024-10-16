@@ -133,7 +133,7 @@ func WithLoggerProvider(provider log.LoggerProvider) Option {
 	})
 }
 
-// WithSource returns an [Option] that configures the [log.Logger] to include
+// WithSource returns an [Option] that configures the [Handler] to include
 // the source location of the log record in log attributes.
 func WithSource(source bool) Option {
 	return optFunc(func(c config) config {
