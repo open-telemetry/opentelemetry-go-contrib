@@ -1138,3 +1138,44 @@ func TestNewIncludeExcludeFilterError(t *testing.T) {
 	}))
 	require.Equal(t, fmt.Errorf("attribute cannot be in both include and exclude list: foo"), err)
 }
+
+func TestPrometheusReaderOpts(t *testing.T) {
+	testCases := []struct {
+		name        string
+		cfg         Prometheus
+		wantOptions int
+	}{
+		{
+			name:        "no options",
+			cfg:         Prometheus{},
+			wantOptions: 0,
+		},
+		{
+			name: "all set",
+			cfg: Prometheus{
+				WithoutScopeInfo:           ptr(true),
+				WithoutTypeSuffix:          ptr(true),
+				WithoutUnits:               ptr(true),
+				WithResourceConstantLabels: &IncludeExclude{},
+			},
+			wantOptions: 4,
+		},
+		{
+			name: "all set false",
+			cfg: Prometheus{
+				WithoutScopeInfo:           ptr(false),
+				WithoutTypeSuffix:          ptr(false),
+				WithoutUnits:               ptr(false),
+				WithResourceConstantLabels: &IncludeExclude{},
+			},
+			wantOptions: 1,
+		},
+	}
+	for _, tt := range testCases {
+		t.Run(tt.name, func(t *testing.T) {
+			opts, err := prometheusReaderOpts(&tt.cfg)
+			require.NoError(t, err)
+			require.Len(t, opts, tt.wantOptions)
+		})
+	}
+}
