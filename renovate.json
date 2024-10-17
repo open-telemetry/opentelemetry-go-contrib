@@ -39,6 +39,5 @@
       "sourceUrlPrefixes": ["https://github.com/open-telemetry/opentelemetry-go"],
       "enabled": false
     }
-  ],
-  "yamlConfig": "# Configuration for package matching and source URL prefixes\n matchPackageNames:\n    - \"go.opentelemetry.io/otel/**\"  # Matches all packages under the OpenTelemetry Go library\n  # List of source URL prefixes that correspond to the matched packages.\n  sourceUrlPrefixes:\n    - \"https://github.com/open-telemetry/opentelemetry-go\"  # Base URL for the OpenTelemetry Go repository\n  # Flag to enable or disable this configuration.\n  enabled: false  # Currently set to false, meaning this configuration is not active"
+  ]
 }
