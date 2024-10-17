@@ -27,6 +27,7 @@
       "groupName": "golang.org/x"
     },
     {
+        "_description": "Ignore pin and digest upgrades. We only want published releases of the SDK to trigger upgrades",   
       "matchPackageNames": ["go.opentelemetry.io/otel/**"],
       "enabled": true,
       "ignore": {
