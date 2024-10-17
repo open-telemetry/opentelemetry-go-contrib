@@ -35,6 +35,7 @@
       }
     },
     {
+        "_description": "Any SDK upgrade that made it through here is a pin/digest. DIsable it",
       "matchPackageNames": ["go.opentelemetry.io/otel/**"],
       "sourceUrlPrefixes": ["https://github.com/open-telemetry/opentelemetry-go"],
       "enabled": false
