@@ -23,6 +23,7 @@ import (
 	"go.opentelemetry.io/otel/log"
 	"go.opentelemetry.io/otel/log/embedded"
 	"go.opentelemetry.io/otel/log/global"
+	semconv "go.opentelemetry.io/otel/semconv/v1.26.0"
 )
 
 var now = time.Now()
@@ -149,6 +150,8 @@ type testCase struct {
 	// checks is a list of checks to run on the result. Each item is a slice of
 	// checks that will be evaluated for the corresponding record emitted.
 	checks [][]check
+	// options are passed to the Handler constructed for this test case.
+	options []Option
 }
 
 // copied from slogtest (1.22.1).
@@ -225,6 +228,10 @@ func (h *wrapper) Handle(ctx context.Context, r slog.Record) error {
 }
 
 func TestSLogHandler(t *testing.T) {
+	// Capture the PC of this line
+	pc, file, line, _ := runtime.Caller(0)
+	funcName := runtime.FuncForPC(pc).Name()
+
 	cases := []testCase{
 		{
 			name:        "Values",
@@ -394,13 +401,31 @@ func TestSLogHandler(t *testing.T) {
 				inGroup("G", missingKey("a")),
 			}},
 		},
+		{
+			name:        "WithSource",
+			explanation: withSource("a Handler using the WithSource Option should include file attributes from where the log was emitted"),
+			f: func(l *slog.Logger) {
+				l.Info("msg")
+			},
+			mod: func(r *slog.Record) {
+				// Assign the PC of record to the one captured above.
+				r.PC = pc
+			},
+			checks: [][]check{{
+				hasAttr(string(semconv.CodeFilepathKey), file),
+				hasAttr(string(semconv.CodeFunctionKey), funcName),
+				hasAttr(string(semconv.CodeLineNumberKey), int64(line)),
+			}},
+			options: []Option{WithSource(true)},
+		},
 	}
 
 	// Based on slogtest.Run.
 	for _, c := range cases {
 		t.Run(c.name, func(t *testing.T) {
 			r := new(recorder)
-			var h slog.Handler = NewHandler("", WithLoggerProvider(r))
+			opts := append([]Option{WithLoggerProvider(r)}, c.options...)
+			var h slog.Handler = NewHandler("", opts...)
 			if c.mod != nil {
 				h = &wrapper{h, c.mod}
 			}
@@ -459,6 +484,7 @@ func TestNewHandlerConfiguration(t *testing.T) {
 				WithLoggerProvider(r),
 				WithVersion("ver"),
 				WithSchemaURL("url"),
+				WithSource(true),
 			)
 		})
 		require.NotNil(t, h.logger)
