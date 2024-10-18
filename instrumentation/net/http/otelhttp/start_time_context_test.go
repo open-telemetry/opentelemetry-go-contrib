@@ -15,9 +15,9 @@ func TestStartTimeFromContext(t *testing.T) {
 	ctx := context.Background()
 	startTime := StartTimeFromContext(ctx)
 	assert.True(t, startTime.IsZero())
+
 	now := time.Now()
 	ctx = ContextWithStartTime(ctx, now)
 	startTime = StartTimeFromContext(ctx)
-	assert.False(t, startTime.IsZero())
 	assert.True(t, startTime.Equal(now))
 }
