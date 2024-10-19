@@ -26,8 +26,9 @@
 //
 // Attribute values are transformed based on their [slog.Kind]:
 //
-//   - [slog.KindAny] are transformed to [log.StringValue]. The value is
+//   - [slog.KindAny] non-nil values are transformed to [log.StringValue]
 //     encoded using [fmt.Sprintf].
+//     Nil values are transformed to a zero value of [log.Value].
 //   - [slog.KindBool] are transformed to [log.BoolValue] directly.
 //   - [slog.KindDuration] are transformed to [log.Int64Value] as nanoseconds.
 //   - [slog.KindFloat64] are transformed to [log.Float64Value] directly.
@@ -411,6 +412,9 @@ func (b *kvBuffer) AddAttr(attr slog.Attr) bool {
 func convertValue(v slog.Value) log.Value {
 	switch v.Kind() {
 	case slog.KindAny:
+		if v.Any() == nil {
+			return log.Value{}
+		}
 		return log.StringValue(fmt.Sprintf("%+v", v.Any()))
 	case slog.KindBool:
 		return log.BoolValue(v.Bool())

@@ -8,6 +8,17 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 
 ## [Unreleased]
 
+### Fixed
+
+- Transform nil attribute values to `log.Value` zero value instead of panicking in `go.opentelemetry.io/contrib/bridges/otellogrus`. (#6237)
+- Transform nil attribute values to `log.Value` zero value instead of panicking in `go.opentelemetry.io/contrib/bridges/otelzap`. (#6237)
+- Transform nil attribute values to `log.Value` zero value instead of `log.StringValue("<nil>")` in `go.opentelemetry.io/contrib/bridges/otelslog`. (#6246)
+
+<!-- Released section -->
+<!-- Don't change this section unless doing release -->
+
+## [1.31.0/0.56.0/0.25.0/0.11.0/0.6.0/0.4.0/0.3.0] - 2024-10-14
+
 ### Added
 
 - The `Severitier` and `SeverityVar` types are added to `go.opentelemetry.io/contrib/processors/minsev` allowing dynamic configuration of the severity used by the `LogProcessor`. (#6116)
@@ -19,6 +30,7 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 ### Changed
 
 - The function signature of `NewLogProcessor` in `go.opentelemetry.io/contrib/processors/minsev` has changed to accept the added `Severitier` interface instead of a `log.Severity`. (#6116)
+- Updated `go.opentelemetry.io/contrib/config` to use the [v0.3.0](https://github.com/open-telemetry/opentelemetry-configuration/releases/tag/v0.3.0) release of schema which includes backwards incompatible changes. (#6126)
 - `NewSDK` in `go.opentelemetry.io/contrib/config` now returns a no-op SDK if `disabled` is set to `true`. (#6185)
 - The deprecated `go.opentelemetry.io/contrib/instrumentation/github.com/labstack/echo/otelecho` package has found a Code Owner.
   The package is no longer deprecated. (#6207)
@@ -34,13 +46,6 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
   Use `NewLogProcessor` to configure this setting. (#6116)
 - The deprecated `go.opentelemetry.io/contrib/instrumentation/gopkg.in/macaron.v1/otelmacaron` package is removed. (#6186)
 - The deprecated `go.opentelemetry.io/contrib/samplers/aws/xray` package is removed. (#6187)
-
-### Changed
-
-- Updated `go.opentelemetry.io/contrib/config` to use the [v0.3.0](https://github.com/open-telemetry/opentelemetry-configuration/releases/tag/v0.3.0) release of schema which includes backwards incompatible changes. (#6126)
-
-<!-- Released section -->
-<!-- Don't change this section unless doing release -->
 
 ## [1.30.0/0.55.0/0.24.0/0.10.0/0.5.0/0.3.0/0.2.0] - 2024-09-10
 
@@ -1140,7 +1145,8 @@ First official tagged release of `contrib` repository.
 - Prefix support for dogstatsd (#34)
 - Update Go Runtime package to use batch observer (#44)
 
-[Unreleased]: https://github.com/open-telemetry/opentelemetry-go-contrib/compare/v1.30.0...HEAD
+[Unreleased]: https://github.com/open-telemetry/opentelemetry-go-contrib/compare/v1.31.0...HEAD
+[1.31.0/0.56.0/0.25.0/0.11.0/0.6.0/0.4.0/0.3.0]: https://github.com/open-telemetry/opentelemetry-go-contrib/releases/tag/v1.31.0
 [1.30.0/0.55.0/0.24.0/0.10.0/0.5.0/0.3.0/0.2.0]: https://github.com/open-telemetry/opentelemetry-go-contrib/releases/tag/v1.30.0
 [1.29.0/0.54.0/0.23.0/0.9.0/0.4.0/0.2.0/0.1.0]: https://github.com/open-telemetry/opentelemetry-go-contrib/releases/tag/v1.29.0
 [1.28.0/0.53.0/0.22.0/0.8.0/0.3.0/0.1.0]: https://github.com/open-telemetry/opentelemetry-go-contrib/releases/tag/v1.28.0

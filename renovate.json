@@ -27,6 +27,7 @@
       "groupName": "golang.org/x"
     },
     {
+        "_description": "Ignore pin and digest upgrades. We only want published releases of the SDK to trigger upgrades",   
       "matchPackageNames": ["go.opentelemetry.io/otel/**"],
       "enabled": true,
       "ignore": {
@@ -34,11 +35,11 @@
       }
     },
     {
+        "_description": "Any SDK upgrade that made it through here is a pin/digest. DIsable it",
       "matchPackageNames": ["go.opentelemetry.io/otel/**"],
       "sourceUrlPrefixes": ["https://github.com/open-telemetry/opentelemetry-go"],
       "enabled": false
     }
-  ],
-  "yamlConfig": "# Configuration for package matching and source URL prefixes\n matchPackageNames:\n    - \"go.opentelemetry.io/otel/**\"  # Matches all packages under the OpenTelemetry Go library\n  # List of source URL prefixes that correspond to the matched packages.\n  sourceUrlPrefixes:\n    - \"https://github.com/open-telemetry/opentelemetry-go\"  # Base URL for the OpenTelemetry Go repository\n  # Flag to enable or disable this configuration.\n  enabled: false  # Currently set to false, meaning this configuration is not active"
+  ]
 }
 
