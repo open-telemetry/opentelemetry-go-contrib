@@ -148,6 +148,7 @@ func TestHookLevels(t *testing.T) {
 func TestHookFire(t *testing.T) {
 	const name = "name"
 	now := time.Now()
+	var nilPointer *struct{}
 
 	for _, tt := range []struct {
 		name  string
@@ -162,7 +163,7 @@ func TestHookFire(t *testing.T) {
 
 			wantRecords: map[string][]log.Record{
 				name: {
-					buildRecord(log.StringValue(""), time.Time{}, 0, nil),
+					buildRecord(log.StringValue(""), time.Time{}, log.SeverityFatal4, nil),
 				},
 			},
 		},
@@ -173,18 +174,84 @@ func TestHookFire(t *testing.T) {
 			},
 			wantRecords: map[string][]log.Record{
 				name: {
-					buildRecord(log.StringValue(""), now, 0, nil),
+					buildRecord(log.StringValue(""), now, log.SeverityFatal4, nil),
 				},
 			},
 		},
 		{
-			name: "emits a log entry with severity level",
+			name: "emits a log entry with panic severity level",
+			entry: &logrus.Entry{
+				Level: logrus.PanicLevel,
+			},
+			wantRecords: map[string][]log.Record{
+				name: {
+					buildRecord(log.StringValue(""), time.Time{}, log.SeverityFatal4, nil),
+				},
+			},
+		},
+		{
+			name: "emits a log entry with fatal severity level",
 			entry: &logrus.Entry{
 				Level: logrus.FatalLevel,
 			},
 			wantRecords: map[string][]log.Record{
 				name: {
-					buildRecord(log.StringValue(""), time.Time{}, log.SeverityTrace1, nil),
+					buildRecord(log.StringValue(""), time.Time{}, log.SeverityFatal, nil),
+				},
+			},
+		},
+		{
+			name: "emits a log entry with error severity level",
+			entry: &logrus.Entry{
+				Level: logrus.ErrorLevel,
+			},
+			wantRecords: map[string][]log.Record{
+				name: {
+					buildRecord(log.StringValue(""), time.Time{}, log.SeverityError, nil),
+				},
+			},
+		},
+		{
+			name: "emits a log entry with warn severity level",
+			entry: &logrus.Entry{
+				Level: logrus.WarnLevel,
+			},
+			wantRecords: map[string][]log.Record{
+				name: {
+					buildRecord(log.StringValue(""), time.Time{}, log.SeverityWarn, nil),
+				},
+			},
+		},
+		{
+			name: "emits a log entry with info severity level",
+			entry: &logrus.Entry{
+				Level: logrus.InfoLevel,
+			},
+			wantRecords: map[string][]log.Record{
+				name: {
+					buildRecord(log.StringValue(""), time.Time{}, log.SeverityInfo, nil),
+				},
+			},
+		},
+		{
+			name: "emits a log entry with info severity level",
+			entry: &logrus.Entry{
+				Level: logrus.DebugLevel,
+			},
+			wantRecords: map[string][]log.Record{
+				name: {
+					buildRecord(log.StringValue(""), time.Time{}, log.SeverityDebug, nil),
+				},
+			},
+		},
+		{
+			name: "emits a log entry with info severity level",
+			entry: &logrus.Entry{
+				Level: logrus.TraceLevel,
+			},
+			wantRecords: map[string][]log.Record{
+				name: {
+					buildRecord(log.StringValue(""), time.Time{}, log.SeverityTrace, nil),
 				},
 			},
 		},
@@ -197,8 +264,23 @@ func TestHookFire(t *testing.T) {
 			},
 			wantRecords: map[string][]log.Record{
 				name: {
-					buildRecord(log.StringValue(""), time.Time{}, 0, []log.KeyValue{
+					buildRecord(log.StringValue(""), time.Time{}, log.SeverityFatal4, []log.KeyValue{
 						log.String("hello", "world"),
+					}),
+				},
+			},
+		},
+		{
+			name: "emits a log entry with data containing a nil pointer",
+			entry: &logrus.Entry{
+				Data: logrus.Fields{
+					"nil_pointer": nilPointer,
+				},
+			},
+			wantRecords: map[string][]log.Record{
+				name: {
+					buildRecord(log.StringValue(""), time.Time{}, log.SeverityFatal4, []log.KeyValue{
+						{Key: "nil_pointer", Value: log.Value{}},
 					}),
 				},
 			},

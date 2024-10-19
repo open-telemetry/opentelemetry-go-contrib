@@ -1,10 +1,12 @@
+// Code created by gotmpl. DO NOT MODIFY.
+// source: internal/shared/logutil/convert.go.tmpl
+
 // Copyright The OpenTelemetry Authors
 // SPDX-License-Identifier: Apache-2.0
 
 package otellogr // import "go.opentelemetry.io/contrib/bridges/otellogr"
 
 import (
-	"context"
 	"fmt"
 	"math"
 	"reflect"
@@ -14,42 +16,7 @@ import (
 	"go.opentelemetry.io/otel/log"
 )
 
-// convertKVs converts a list of key-value pairs to a list of [log.KeyValue].
-// The last [context.Context] value is returned as the context.
-// If no context is found, the original context is returned.
-func convertKVs(ctx context.Context, keysAndValues ...any) (context.Context, []log.KeyValue) {
-	if len(keysAndValues) == 0 {
-		return ctx, nil
-	}
-	if len(keysAndValues)%2 != 0 {
-		// Ensure an odd number of items here does not corrupt the list.
-		keysAndValues = append(keysAndValues, nil)
-	}
-
-	kvs := make([]log.KeyValue, 0, len(keysAndValues)/2)
-	for i := 0; i < len(keysAndValues); i += 2 {
-		k, ok := keysAndValues[i].(string)
-		if !ok {
-			// Ensure that the key is a string.
-			k = fmt.Sprintf("%v", keysAndValues[i])
-		}
-
-		v := keysAndValues[i+1]
-		if vCtx, ok := v.(context.Context); ok {
-			// Special case when a field is of context.Context type.
-			ctx = vCtx
-			continue
-		}
-
-		kvs = append(kvs, log.KeyValue{
-			Key:   k,
-			Value: convertValue(v),
-		})
-	}
-
-	return ctx, kvs
-}
-
+// convertValue converts various types to log.Value.
 func convertValue(v any) log.Value {
 	// Handling the most common types without reflect is a small perf win.
 	switch val := v.(type) {

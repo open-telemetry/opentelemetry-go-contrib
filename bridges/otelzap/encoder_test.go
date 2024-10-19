@@ -73,6 +73,14 @@ func TestObjectEncoder(t *testing.T) {
 			expected: map[string]interface{}{"foo": int64(5)},
 		},
 		{
+			desc: "AddReflected (nil pointer)",
+			f: func(e zapcore.ObjectEncoder) {
+				var p *struct{}
+				assert.NoError(t, e.AddReflected("k", p), "Expected AddReflected to succeed.")
+			},
+			expected: nil,
+		},
+		{
 			desc:     "AddBinary",
 			f:        func(e zapcore.ObjectEncoder) { e.AddBinary("k", []byte("foo")) },
 			expected: []byte("foo"),

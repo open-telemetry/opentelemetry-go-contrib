@@ -258,6 +258,21 @@ func TestLogSink(t *testing.T) {
 				},
 			},
 		},
+		{
+			name: "info_with_normal_attr_and_nil_pointer_attr",
+			f: func(l *logr.Logger) {
+				var p *int
+				l.WithValues("key", "value", "nil_pointer", p).Info("info message with attrs")
+			},
+			wantRecords: map[string][]log.Record{
+				name: {
+					buildRecord(log.StringValue("info message with attrs"), time.Time{}, log.SeverityInfo, []log.KeyValue{
+						log.String("key", "value"),
+						log.Empty("nil_pointer"),
+					}),
+				},
+			},
+		},
 	} {
 		t.Run(tt.name, func(t *testing.T) {
 			rec := logtest.NewRecorder()
@@ -333,5 +348,69 @@ func assertRecords(t *testing.T, want, got []logtest.EmittedRecord) {
 
 	for i, j := range want {
 		logtest.AssertRecordEqual(t, j.Record, got[i].Record)
+	}
+}
+
+func TestConvertKVs(t *testing.T) {
+	ctx := context.WithValue(context.Background(), "key", "value") // nolint: revive,staticcheck // test context
+
+	for _, tt := range []struct {
+		name    string
+		kvs     []any
+		wantKVs []log.KeyValue
+		wantCtx context.Context
+	}{
+		{
+			name: "empty",
+			kvs:  []any{},
+		},
+		{
+			name: "single_value",
+			kvs:  []any{"key", "value"},
+			wantKVs: []log.KeyValue{
+				log.String("key", "value"),
+			},
+		},
+		{
+			name: "multiple_values",
+			kvs:  []any{"key1", "value1", "key2", "value2"},
+			wantKVs: []log.KeyValue{
+				log.String("key1", "value1"),
+				log.String("key2", "value2"),
+			},
+		},
+		{
+			name: "missing_value",
+			kvs:  []any{"key1", "value1", "key2"},
+			wantKVs: []log.KeyValue{
+				log.String("key1", "value1"),
+				{Key: "key2", Value: log.Value{}},
+			},
+		},
+		{
+			name: "key_not_string",
+			kvs:  []any{42, "value"},
+			wantKVs: []log.KeyValue{
+				log.String("42", "value"),
+			},
+		},
+		{
+			name:    "context",
+			kvs:     []any{"ctx", ctx, "key", "value"},
+			wantKVs: []log.KeyValue{log.String("key", "value")},
+			wantCtx: ctx,
+		},
+		{
+			name:    "last_context",
+			kvs:     []any{"key", context.Background(), "ctx", ctx},
+			wantKVs: []log.KeyValue{},
+			wantCtx: ctx,
+		},
+	} {
+		t.Run(tt.name, func(t *testing.T) {
+			ctx, kvs := convertKVs(nil, tt.kvs...) // nolint: staticcheck // pass nil context
+			assert.Equal(t, tt.wantKVs, kvs)
+			assert.Equal(t, tt.wantCtx, ctx)
+		})
 	}
 }
