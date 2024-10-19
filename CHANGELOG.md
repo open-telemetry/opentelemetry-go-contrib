@@ -8,11 +8,19 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 
 ## [Unreleased]
 
+### Added
+
+- Transform raw (`slog.KindAny`) attribute values to matching `log.Value` types.
+  For example, `[]string{"foo", "bar"}` attribute value is now transformed to `log.SliceValue(log.StringValue("foo"), log.StringValue("bar"))` instead of `log.String("[foo bar"])`. (#6254)
+- Add the `WithSource` option to the `go.opentelemetry.io/contrib/bridges/otelslog` log bridge to set the `code.*` attributes in the log record that includes the source location where the record was emitted. (#6253)
+
 ### Fixed
 
 - Transform nil attribute values to `log.Value` zero value instead of panicking in `go.opentelemetry.io/contrib/bridges/otellogrus`. (#6237)
 - Transform nil attribute values to `log.Value` zero value instead of panicking in `go.opentelemetry.io/contrib/bridges/otelzap`. (#6237)
 - Transform nil attribute values to `log.Value` zero value instead of `log.StringValue("<nil>")` in `go.opentelemetry.io/contrib/bridges/otelslog`. (#6246)
+- Fix `NewClientHandler` so that `rpc.client.request.*` metrics measure requests instead of responses and `rpc.client.responses.*` metrics measure responses instead of requests in `go.opentelemetry.io/contrib/instrumentation/google.golang.org/grpc/otelgrpc`. (#6250)
+- Fix issue in `go.opentelemetry.io/contrib/config` causing `otelprom.WithResourceAsConstantLabels` configuration to not be respected. (#6260)
 
 <!-- Released section -->
 <!-- Don't change this section unless doing release -->
