@@ -147,11 +147,17 @@ func TestLogSink(t *testing.T) {
 			f: func(l *logr.Logger) {
 				l.V(1).Info("msg")
 				l.V(4).Info("msg")
+				l.V(8).Info("msg")
+				l.V(9).Info("msg")
+				l.V(10).Info("msg")
 			},
 			wantRecords: map[string][]log.Record{
 				name: {
-					buildRecord(log.StringValue("msg"), time.Time{}, log.SeverityInfo2, nil),
-					buildRecord(log.StringValue("msg"), time.Time{}, log.SeverityWarn, nil),
+					buildRecord(log.StringValue("msg"), time.Time{}, log.SeverityDebug4, nil),
+					buildRecord(log.StringValue("msg"), time.Time{}, log.SeverityDebug, nil),
+					buildRecord(log.StringValue("msg"), time.Time{}, log.SeverityTrace, nil),
+					buildRecord(log.StringValue("msg"), time.Time{}, log.SeverityUndefined, nil),
+					buildRecord(log.StringValue("msg"), time.Time{}, log.Severity(-1), nil),
 				},
 			},
 		},

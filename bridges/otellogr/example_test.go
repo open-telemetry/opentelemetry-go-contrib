@@ -25,9 +25,9 @@ func Example() {
 			case 0:
 				return log.SeverityInfo
 			case 1:
-				return log.SeverityWarn
+				return log.SeverityDebug
 			default:
-				return log.SeverityFatal
+				return log.SeverityTrace
 			}
 		}),
 	))

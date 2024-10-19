@@ -18,17 +18,28 @@
 //     added as attributes. If there are multiple [context.Context] the last one
 //     is used.
 //
-// The Level is transformed by using the [WithLevelSeverity] option. If this is
-// not provided it would default to a function that adds an offset to the logr
-// such that [logr.Info] is transformed to [log.SeverityInfo]. For example:
+// The V-level is transformed by using the [WithLevelSeverity] option. If this is
+// not provided it would default to a function that inverses the level with an
+// offset such that [logr.Info] is transformed to [log.SeverityInfo] as the higher
+// the V-level of a log line, the less critical it is considered. By default,
+// V-level higher than 8 is not supported and will result in negative severity.
+// For example:
 //
 //   - [logr.Info] is transformed to [log.SeverityInfo].
 //   - [logr.V(0)] is transformed to [log.SeverityInfo].
-//   - [logr.V(1)] is transformed to [log.SeverityInfo2].
-//   - [logr.V(2)] is transformed to [log.SeverityInfo3].
+//   - [logr.V(1)] is transformed to [log.SeverityDebug4].
+//   - [logr.V(2)] is transformed to [log.SeverityDebug3].
 //   - ...
-//   - [logr.V(15)] is transformed to [log.SeverityFatal4].
+//   - [logr.V(8)] is transformed to [log.SeverityTrace].
+//   - [logr.V(9)] is transformed to [log.SeverityUndefined].
+//   - [logr.V(10)] is transformed to log.Severity(-1).
 //   - [logr.Error] is transformed to [log.SeverityError].
+//
+// If possible, look at alternative log bridges that provide less abstract log
+// level mapping such as [go.opentelemetry.io/contrib/bridges/otelslog],
+// [go.opentelemetry.io/contrib/bridges/otelzap], or
+// [go.opentelemetry.io/contrib/bridges/otellogrus]. Which provide more direct
+// translation of log levels.
 //
 // KeysAndValues values are transformed based on their type. The following types are
 // supported:
@@ -87,7 +98,7 @@ func newConfig(options []Option) config {
 	if c.levelSeverity == nil {
 		c.levelSeverity = func(level int) log.Severity {
 			const sevOffset = int(log.SeverityInfo)
-			return log.Severity(level + sevOffset)
+			return log.Severity(sevOffset - level)
 		}
 	}
 
