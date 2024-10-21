@@ -28,6 +28,7 @@ package test // import "go.opentelemetry.io/contrib/instrumentation/google.golan
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"io"
 	"time"
@@ -43,12 +44,12 @@ import (
 )
 
 var (
-	reqSizes            = []int{27182, 8, 1828, 45904}
-	respSizes           = []int{31415, 9, 2653, 58979}
-	largeReqSize        = 271828
-	largeRespSize       = 314159
-	initialMetadataKey  = "x-grpc-test-echo-initial"
-	trailingMetadataKey = "x-grpc-test-echo-trailing-bin"
+	reqSizes                  = []int32{27182, 8, 1828, 45904}
+	respSizes                 = []int32{31415, 9, 2653, 58979}
+	largeReqSize              = 271828
+	largeRespSize       int32 = 314159
+	initialMetadataKey        = "x-grpc-test-echo-initial"
+	trailingMetadataKey       = "x-grpc-test-echo-trailing-bin"
 
 	logger = grpclog.Component("interop")
 )
@@ -86,7 +87,7 @@ func DoLargeUnaryCall(ctx context.Context, tc testpb.TestServiceClient, args ...
 	pl := ClientNewPayload(testpb.PayloadType_COMPRESSABLE, largeReqSize)
 	req := &testpb.SimpleRequest{
 		ResponseType: testpb.PayloadType_COMPRESSABLE,
-		ResponseSize: int32(largeRespSize),
+		ResponseSize: largeRespSize,
 		Payload:      pl,
 	}
 	reply, err := tc.UnaryCall(ctx, req, args...)
@@ -95,7 +96,7 @@ func DoLargeUnaryCall(ctx context.Context, tc testpb.TestServiceClient, args ...
 	}
 	t := reply.GetPayload().GetType()
 	s := len(reply.GetPayload().GetBody())
-	if t != testpb.PayloadType_COMPRESSABLE || s != largeRespSize {
+	if t != testpb.PayloadType_COMPRESSABLE || s != int(largeRespSize) {
 		logger.Fatalf("Got the reply with type %d len %d; want %d, %d", t, s, testpb.PayloadType_COMPRESSABLE, largeRespSize)
 	}
 }
@@ -106,9 +107,9 @@ func DoClientStreaming(ctx context.Context, tc testpb.TestServiceClient, args ..
 	if err != nil {
 		logger.Fatalf("%v.StreamingInputCall(_) = _, %v", tc, err)
 	}
-	var sum int
+	var sum int32
 	for _, s := range reqSizes {
-		pl := ClientNewPayload(testpb.PayloadType_COMPRESSABLE, s)
+		pl := ClientNewPayload(testpb.PayloadType_COMPRESSABLE, int(s))
 		req := &testpb.StreamingInputCallRequest{
 			Payload: pl,
 		}
@@ -121,7 +122,7 @@ func DoClientStreaming(ctx context.Context, tc testpb.TestServiceClient, args ..
 	if err != nil {
 		logger.Fatalf("%v.CloseAndRecv() got error %v, want %v", stream, err, nil)
 	}
-	if reply.GetAggregatedPayloadSize() != int32(sum) {
+	if reply.GetAggregatedPayloadSize() != sum {
 		logger.Fatalf("%v.CloseAndRecv().GetAggregatePayloadSize() = %v; want %v", stream, reply.GetAggregatedPayloadSize(), sum)
 	}
 }
@@ -131,7 +132,7 @@ func DoServerStreaming(ctx context.Context, tc testpb.TestServiceClient, args ..
 	respParam := make([]*testpb.ResponseParameters, len(respSizes))
 	for i, s := range respSizes {
 		respParam[i] = &testpb.ResponseParameters{
-			Size: int32(s),
+			Size: s,
 		}
 	}
 	req := &testpb.StreamingOutputCallRequest{
@@ -156,13 +157,13 @@ func DoServerStreaming(ctx context.Context, tc testpb.TestServiceClient, args ..
 			logger.Fatalf("Got the reply of type %d, want %d", t, testpb.PayloadType_COMPRESSABLE)
 		}
 		size := len(reply.GetPayload().GetBody())
-		if size != respSizes[index] {
+		if size != int(respSizes[index]) {
 			logger.Fatalf("Got reply body of length %d, want %d", size, respSizes[index])
 		}
 		index++
 		respCnt++
 	}
-	if rpcStatus != io.EOF {
+	if !errors.Is(rpcStatus, io.EOF) {
 		logger.Fatalf("Failed to finish the server streaming rpc: %v", rpcStatus)
 	}
 	if respCnt != len(respSizes) {
@@ -180,10 +181,10 @@ func DoPingPong(ctx context.Context, tc testpb.TestServiceClient, args ...grpc.C
 	for index < len(reqSizes) {
 		respParam := []*testpb.ResponseParameters{
 			{
-				Size: int32(respSizes[index]),
+				Size: respSizes[index],
 			},
 		}
-		pl := ClientNewPayload(testpb.PayloadType_COMPRESSABLE, reqSizes[index])
+		pl := ClientNewPayload(testpb.PayloadType_COMPRESSABLE, int(reqSizes[index]))
 		req := &testpb.StreamingOutputCallRequest{
 			ResponseType:       testpb.PayloadType_COMPRESSABLE,
 			ResponseParameters: respParam,
@@ -201,7 +202,7 @@ func DoPingPong(ctx context.Context, tc testpb.TestServiceClient, args ...grpc.C
 			logger.Fatalf("Got the reply of type %d, want %d", t, testpb.PayloadType_COMPRESSABLE)
 		}
 		size := len(reply.GetPayload().GetBody())
-		if size != respSizes[index] {
+		if size != int(respSizes[index]) {
 			logger.Fatalf("Got reply body of length %d, want %d", size, respSizes[index])
 		}
 		index++
@@ -209,7 +210,7 @@ func DoPingPong(ctx context.Context, tc testpb.TestServiceClient, args ...grpc.C
 	if err := stream.CloseSend(); err != nil {
 		logger.Fatalf("%v.CloseSend() got %v, want %v", stream, err, nil)
 	}
-	if _, err := stream.Recv(); err != io.EOF {
+	if _, err := stream.Recv(); !errors.Is(err, io.EOF) {
 		logger.Fatalf("%v failed to complele the ping pong test: %v", stream, err)
 	}
 }
@@ -223,7 +224,7 @@ func DoEmptyStream(ctx context.Context, tc testpb.TestServiceClient, args ...grp
 	if err := stream.CloseSend(); err != nil {
 		logger.Fatalf("%v.CloseSend() got %v, want %v", stream, err, nil)
 	}
-	if _, err := stream.Recv(); err != io.EOF {
+	if _, err := stream.Recv(); !errors.Is(err, io.EOF) {
 		logger.Fatalf("%v failed to complete the empty stream test: %v", stream, err)
 	}
 }
@@ -272,7 +273,7 @@ func (s *testServer) UnaryCall(ctx context.Context, in *testpb.SimpleRequest) (*
 		}
 	}
 	if st != nil && st.Code != 0 {
-		return nil, status.Error(codes.Code(st.Code), st.Message)
+		return nil, status.Error(codes.Code(st.Code), st.Message) // nolint:gosec // Status code can't be negative.
 	}
 	pl, err := serverNewPayload(in.GetResponseType(), in.GetResponseSize())
 	if err != nil {
@@ -303,19 +304,21 @@ func (s *testServer) StreamingOutputCall(args *testpb.StreamingOutputCallRequest
 }
 
 func (s *testServer) StreamingInputCall(stream testpb.TestService_StreamingInputCallServer) error {
-	var sum int
+	var sum int32
 	for {
 		in, err := stream.Recv()
-		if err == io.EOF {
+		if errors.Is(err, io.EOF) {
 			return stream.SendAndClose(&testpb.StreamingInputCallResponse{
-				AggregatedPayloadSize: int32(sum),
+				AggregatedPayloadSize: sum,
 			})
 		}
 		if err != nil {
 			return err
 		}
-		p := in.GetPayload().GetBody()
-		sum += len(p)
+		n := len(in.GetPayload().GetBody())
+		// This could overflow, but given this is a test and the negative value
+		// should be detectable this should be good enough.
+		sum += int32(n) // nolint: gosec
 	}
 }
 
@@ -332,7 +335,7 @@ func (s *testServer) FullDuplexCall(stream testpb.TestService_FullDuplexCallServ
 	}
 	for {
 		in, err := stream.Recv()
-		if err == io.EOF {
+		if errors.Is(err, io.EOF) {
 			// read done.
 			return nil
 		}
@@ -341,7 +344,7 @@ func (s *testServer) FullDuplexCall(stream testpb.TestService_FullDuplexCallServ
 		}
 		st := in.GetResponseStatus()
 		if st != nil && st.Code != 0 {
-			return status.Error(codes.Code(st.Code), st.Message)
+			return status.Error(codes.Code(st.Code), st.Message) // nolint:gosec // Status code can't be negative.
 		}
 
 		cs := in.GetResponseParameters()
@@ -366,7 +369,7 @@ func (s *testServer) HalfDuplexCall(stream testpb.TestService_HalfDuplexCallServ
 	var msgBuf []*testpb.StreamingOutputCallRequest
 	for {
 		in, err := stream.Recv()
-		if err == io.EOF {
+		if errors.Is(err, io.EOF) {
 			// read done.
 			break
 		}

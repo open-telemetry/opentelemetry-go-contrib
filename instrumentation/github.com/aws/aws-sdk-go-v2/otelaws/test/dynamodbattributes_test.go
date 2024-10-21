@@ -81,7 +81,7 @@ func TestDynamodbTags(t *testing.T) {
 		if cases.expectedError == codes.Unset {
 			assert.NoError(t, err)
 		} else {
-			assert.NotNil(t, err)
+			assert.Error(t, err)
 		}
 
 		spans := sr.Ended()
@@ -163,7 +163,7 @@ func TestDynamodbTagsCustomSetter(t *testing.T) {
 		if cases.expectedError == codes.Unset {
 			assert.NoError(t, err)
 		} else {
-			assert.NotNil(t, err)
+			assert.Error(t, err)
 		}
 
 		spans := sr.Ended()

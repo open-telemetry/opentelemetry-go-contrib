@@ -10,8 +10,11 @@ linters:
   disable-all: true
   # Specifically enable linters we want to use.
   enable:
+    - asasalint
+    - bodyclose
     - depguard
     - errcheck
+    - errorlint
     - godot
     - gofumpt
     - goimports
@@ -22,7 +25,11 @@ linters:
     - misspell
     - revive
     - staticcheck
+    - tenv
+    - testifylint
     - typecheck
+    - unconvert
+    - unparam
     - unused
 
 issues:
@@ -68,6 +75,18 @@ issues:
 linters-settings:
   depguard:
     rules:
+      no-sdk-instrumentation:
+        files:
+          - "**/*/{bridges,instrumentation}/**/*.go"
+          - "!**/*/bridges/prometheus/*.go" # prometheus bridge is meant to use the SDK
+          - "!**/*/instrumentation/runtime/*.go" # runtime instrumentation is meant to use the SDK
+          - "!**/*test/*.go"
+          - "!**/*test/**/*.go"
+          - "!**/*example/*.go"
+          - "!**/*example/**/*.go"
+        deny:
+          - pkg: go.opentelemetry.io/otel/sdk
+            desc: "Bridges and instrumentations should not use the SDKs, except in test or example modules"
       non-tests:
         files:
           - "!$test"
@@ -237,3 +256,8 @@ linters-settings:
       # https://github.com/mgechev/revive/blob/master/RULES_DESCRIPTIONS.md#waitgroup-by-value
       - name: waitgroup-by-value
         disabled: false
+  testifylint:
+    enable-all: true
+    disable:
+      - float-compare
+      - require-error

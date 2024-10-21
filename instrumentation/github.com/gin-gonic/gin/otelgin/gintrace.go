@@ -52,6 +52,14 @@ func Middleware(service string, opts ...Option) gin.HandlerFunc {
 				return
 			}
 		}
+		for _, f := range cfg.GinFilters {
+			if !f(c) {
+				// Serve the request to the next middleware
+				// if a filter rejects the request.
+				c.Next()
+				return
+			}
+		}
 		c.Set(tracerKey, tracer)
 		savedCtx := c.Request.Context()
 		defer func() {

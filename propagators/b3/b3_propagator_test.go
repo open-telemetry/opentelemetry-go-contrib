@@ -216,6 +216,18 @@ func TestExtractSingle(t *testing.T) {
 		{"3", trace.SpanContextConfig{}, errInvalidSampledByte, false, false},
 		{"000000000000007b", trace.SpanContextConfig{}, errInvalidScope, false, false},
 		{"000000000000007b00000000000001c8", trace.SpanContextConfig{}, errInvalidScope, false, false},
+		// TraceID with illegal length
+		{
+			"000001c8-000000000000007b",
+			trace.SpanContextConfig{},
+			errInvalidTraceIDValue, false, false,
+		},
+		// SpanID with illegal length
+		{
+			"000000000000007b00000000000001c8-0000007b",
+			trace.SpanContextConfig{},
+			errInvalidSpanIDValue, false, false,
+		},
 		// Support short trace IDs.
 		{
 			"00000000000001c8-000000000000007b",
@@ -289,7 +301,7 @@ func TestB3EncodingOperations(t *testing.T) {
 	for i, e := range encodings {
 		for j := i + 1; j < i+len(encodings); j++ {
 			o := encodings[j%len(encodings)]
-			assert.False(t, e == o, "%v == %v", e, o)
+			assert.NotEqual(t, e, o, "%v == %v", e, o)
 		}
 	}
 

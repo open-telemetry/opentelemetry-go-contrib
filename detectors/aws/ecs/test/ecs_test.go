@@ -14,7 +14,7 @@ import (
 	ecs "go.opentelemetry.io/contrib/detectors/aws/ecs"
 	"go.opentelemetry.io/otel/attribute"
 	"go.opentelemetry.io/otel/sdk/resource"
-	semconv "go.opentelemetry.io/otel/semconv/v1.25.0"
+	semconv "go.opentelemetry.io/otel/semconv/v1.26.0"
 
 	"github.com/stretchr/testify/assert"
 )
@@ -79,7 +79,7 @@ func TestDetectV4LaunchTypeEc2(t *testing.T) {
 	detector := ecs.NewResourceDetector()
 	res, err := detector.Detect(context.Background())
 
-	assert.Equal(t, nil, err, "Detector should not fail")
+	assert.NoError(t, err, "Detector should not fail")
 	assert.Equal(t, expectedResource, res, "Resource returned is incorrect")
 }
 
@@ -139,7 +139,7 @@ func TestDetectV4LaunchTypeEc2BadContainerArn(t *testing.T) {
 	detector := ecs.NewResourceDetector()
 	res, err := detector.Detect(context.Background())
 
-	assert.Equal(t, nil, err, "Detector should not fail")
+	assert.NoError(t, err, "Detector should not fail")
 	assert.Equal(t, expectedResource, res, "Resource returned is incorrect")
 }
 
@@ -199,7 +199,7 @@ func TestDetectV4LaunchTypeEc2BadTaskArn(t *testing.T) {
 	detector := ecs.NewResourceDetector()
 	res, err := detector.Detect(context.Background())
 
-	assert.Equal(t, nil, err, "Detector should not fail")
+	assert.NoError(t, err, "Detector should not fail")
 	assert.Equal(t, expectedResource, res, "Resource returned is incorrect")
 }
 
@@ -259,6 +259,6 @@ func TestDetectV4LaunchTypeFargate(t *testing.T) {
 	detector := ecs.NewResourceDetector()
 	res, err := detector.Detect(context.Background())
 
-	assert.Equal(t, nil, err, "Detector should not fail")
+	assert.NoError(t, err, "Detector should not fail")
 	assert.Equal(t, expectedResource, res, "Resource returned is incorrect")
 }

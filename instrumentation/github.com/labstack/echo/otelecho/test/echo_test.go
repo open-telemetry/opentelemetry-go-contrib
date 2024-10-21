@@ -16,7 +16,7 @@ import (
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 
-	"go.opentelemetry.io/contrib/instrumentation/github.com/labstack/echo/otelecho" // nolint:staticcheck  // deprecated.
+	"go.opentelemetry.io/contrib/instrumentation/github.com/labstack/echo/otelecho"
 	"go.opentelemetry.io/otel"
 	"go.opentelemetry.io/otel/codes"
 	"go.opentelemetry.io/otel/sdk/trace"
@@ -41,7 +41,7 @@ func TestChildSpanFromGlobalTracer(t *testing.T) {
 	w := httptest.NewRecorder()
 
 	router.ServeHTTP(w, r)
-	assert.Equal(t, http.StatusOK, w.Result().StatusCode, "should call the 'user' handler")
+	assert.Equal(t, http.StatusOK, w.Result().StatusCode, "should call the 'user' handler") //nolint:bodyclose // False positive for httptest.ResponseRecorder: https://github.com/timakin/bodyclose/issues/59.
 	assert.Len(t, sr.Ended(), 1)
 }
 
@@ -59,7 +59,7 @@ func TestChildSpanFromCustomTracer(t *testing.T) {
 	w := httptest.NewRecorder()
 
 	router.ServeHTTP(w, r)
-	assert.Equal(t, http.StatusOK, w.Result().StatusCode, "should call the 'user' handler")
+	assert.Equal(t, http.StatusOK, w.Result().StatusCode, "should call the 'user' handler") //nolint:bodyclose // False positive for httptest.ResponseRecorder: https://github.com/timakin/bodyclose/issues/59.
 	assert.Len(t, sr.Ended(), 1)
 }
 
@@ -79,7 +79,7 @@ func TestTrace200(t *testing.T) {
 
 	// do and verify the request
 	router.ServeHTTP(w, r)
-	response := w.Result()
+	response := w.Result() //nolint:bodyclose // False positive for httptest.ResponseRecorder: https://github.com/timakin/bodyclose/issues/59.
 	require.Equal(t, http.StatusOK, response.StatusCode)
 
 	// verify traces look good
@@ -111,7 +111,7 @@ func TestError(t *testing.T) {
 	r := httptest.NewRequest("GET", "/server_err", nil)
 	w := httptest.NewRecorder()
 	router.ServeHTTP(w, r)
-	response := w.Result()
+	response := w.Result() //nolint:bodyclose // False positive for httptest.ResponseRecorder: https://github.com/timakin/bodyclose/issues/59.
 	assert.Equal(t, http.StatusInternalServerError, response.StatusCode)
 
 	// verify the errors and status are correct

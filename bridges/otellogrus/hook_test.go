@@ -148,6 +148,7 @@ func TestHookLevels(t *testing.T) {
 func TestHookFire(t *testing.T) {
 	const name = "name"
 	now := time.Now()
+	var nilPointer *struct{}
 
 	for _, tt := range []struct {
 		name  string
@@ -162,7 +163,7 @@ func TestHookFire(t *testing.T) {
 
 			wantRecords: map[string][]log.Record{
 				name: {
-					buildRecord(log.StringValue(""), time.Time{}, 0, nil),
+					buildRecord(log.StringValue(""), time.Time{}, log.SeverityFatal4, nil),
 				},
 			},
 		},
@@ -173,18 +174,84 @@ func TestHookFire(t *testing.T) {
 			},
 			wantRecords: map[string][]log.Record{
 				name: {
-					buildRecord(log.StringValue(""), now, 0, nil),
+					buildRecord(log.StringValue(""), now, log.SeverityFatal4, nil),
 				},
 			},
 		},
 		{
-			name: "emits a log entry with severity level",
+			name: "emits a log entry with panic severity level",
+			entry: &logrus.Entry{
+				Level: logrus.PanicLevel,
+			},
+			wantRecords: map[string][]log.Record{
+				name: {
+					buildRecord(log.StringValue(""), time.Time{}, log.SeverityFatal4, nil),
+				},
+			},
+		},
+		{
+			name: "emits a log entry with fatal severity level",
 			entry: &logrus.Entry{
 				Level: logrus.FatalLevel,
 			},
 			wantRecords: map[string][]log.Record{
 				name: {
-					buildRecord(log.StringValue(""), time.Time{}, log.SeverityTrace1, nil),
+					buildRecord(log.StringValue(""), time.Time{}, log.SeverityFatal, nil),
+				},
+			},
+		},
+		{
+			name: "emits a log entry with error severity level",
+			entry: &logrus.Entry{
+				Level: logrus.ErrorLevel,
+			},
+			wantRecords: map[string][]log.Record{
+				name: {
+					buildRecord(log.StringValue(""), time.Time{}, log.SeverityError, nil),
+				},
+			},
+		},
+		{
+			name: "emits a log entry with warn severity level",
+			entry: &logrus.Entry{
+				Level: logrus.WarnLevel,
+			},
+			wantRecords: map[string][]log.Record{
+				name: {
+					buildRecord(log.StringValue(""), time.Time{}, log.SeverityWarn, nil),
+				},
+			},
+		},
+		{
+			name: "emits a log entry with info severity level",
+			entry: &logrus.Entry{
+				Level: logrus.InfoLevel,
+			},
+			wantRecords: map[string][]log.Record{
+				name: {
+					buildRecord(log.StringValue(""), time.Time{}, log.SeverityInfo, nil),
+				},
+			},
+		},
+		{
+			name: "emits a log entry with info severity level",
+			entry: &logrus.Entry{
+				Level: logrus.DebugLevel,
+			},
+			wantRecords: map[string][]log.Record{
+				name: {
+					buildRecord(log.StringValue(""), time.Time{}, log.SeverityDebug, nil),
+				},
+			},
+		},
+		{
+			name: "emits a log entry with info severity level",
+			entry: &logrus.Entry{
+				Level: logrus.TraceLevel,
+			},
+			wantRecords: map[string][]log.Record{
+				name: {
+					buildRecord(log.StringValue(""), time.Time{}, log.SeverityTrace, nil),
 				},
 			},
 		},
@@ -197,8 +264,23 @@ func TestHookFire(t *testing.T) {
 			},
 			wantRecords: map[string][]log.Record{
 				name: {
-					buildRecord(log.StringValue(""), time.Time{}, 0, []log.KeyValue{
+					buildRecord(log.StringValue(""), time.Time{}, log.SeverityFatal4, []log.KeyValue{
 						log.String("hello", "world"),
+					}),
+				},
+			},
+		},
+		{
+			name: "emits a log entry with data containing a nil pointer",
+			entry: &logrus.Entry{
+				Data: logrus.Fields{
+					"nil_pointer": nilPointer,
+				},
+			},
+			wantRecords: map[string][]log.Record{
+				name: {
+					buildRecord(log.StringValue(""), time.Time{}, log.SeverityFatal4, []log.KeyValue{
+						{Key: "nil_pointer", Value: log.Value{}},
 					}),
 				},
 			},
@@ -213,9 +295,14 @@ func TestHookFire(t *testing.T) {
 			for k, v := range tt.wantRecords {
 				found := false
 
+				want := make([]logtest.EmittedRecord, len(v))
+				for i := range want {
+					want[i] = logtest.EmittedRecord{Record: v[i]}
+				}
+
 				for _, s := range rec.Result() {
 					if k == s.Name {
-						assertRecords(t, v, s.Records)
+						assertRecords(t, want, s.Records)
 						found = true
 					}
 				}
@@ -395,43 +482,12 @@ func assertKeyValues(t *testing.T, want, got []log.KeyValue) {
 	}
 }
 
-func assertBody(t *testing.T, want log.Value, got log.Value) {
-	t.Helper()
-	if !got.Equal(want) {
-		t.Errorf("Body value is not equal:\nwant: %v\ngot:  %v", want, got)
-	}
-}
-
-func assertAttributes(t *testing.T, want, got log.Record) {
-	t.Helper()
-
-	var wantAttr []log.KeyValue
-	want.WalkAttributes(func(kv log.KeyValue) bool {
-		wantAttr = append(wantAttr, kv)
-		return true
-	})
-	var gotAttr []log.KeyValue
-	got.WalkAttributes(func(kv log.KeyValue) bool {
-		gotAttr = append(gotAttr, kv)
-		return true
-	})
-
-	if !slices.EqualFunc(wantAttr, gotAttr, log.KeyValue.Equal) {
-		t.Errorf("Attributes are not equal:\nwant: %v\ngot:  %v", want, got)
-	}
-}
-
-func assertRecords(t *testing.T, want, got []log.Record) {
+func assertRecords(t *testing.T, want, got []logtest.EmittedRecord) {
 	t.Helper()
 
 	assert.Equal(t, len(want), len(got))
 
 	for i, j := range want {
-		assert.Equal(t, j.Timestamp(), got[i].Timestamp())
-		assert.Equal(t, j.ObservedTimestamp(), got[i].ObservedTimestamp())
-		assert.Equal(t, j.Severity(), got[i].Severity())
-		assert.Equal(t, j.SeverityText(), got[i].SeverityText())
-		assertBody(t, j.Body(), got[i].Body())
-		assertAttributes(t, j, got[i])
+		logtest.AssertRecordEqual(t, j.Record, got[i].Record)
 	}
 }

@@ -12,7 +12,7 @@ import (
 
 	"go.opentelemetry.io/otel/attribute"
 	"go.opentelemetry.io/otel/sdk/resource"
-	semconv "go.opentelemetry.io/otel/semconv/v1.25.0"
+	semconv "go.opentelemetry.io/otel/semconv/v1.26.0"
 )
 
 type mockType struct{}
@@ -63,8 +63,8 @@ func TestNewResource(t *testing.T) {
 			name: "resource-with-attributes-invalid-schema",
 			config: &Resource{
 				SchemaUrl: ptr("https://opentelemetry.io/invalid-schema"),
-				Attributes: &Attributes{
-					ServiceName: ptr("service-a"),
+				Attributes: []AttributeNameValue{
+					{Name: "service.name", Value: "service-a"},
 				},
 			},
 			wantResource: resource.NewSchemaless(res.Attributes()...),
@@ -73,8 +73,8 @@ func TestNewResource(t *testing.T) {
 		{
 			name: "resource-with-attributes-and-schema",
 			config: &Resource{
-				Attributes: &Attributes{
-					ServiceName: ptr("service-a"),
+				Attributes: []AttributeNameValue{
+					{Name: "service.name", Value: "service-a"},
 				},
 				SchemaUrl: ptr(semconv.SchemaURL),
 			},
@@ -83,25 +83,23 @@ func TestNewResource(t *testing.T) {
 		{
 			name: "resource-with-additional-attributes-and-schema",
 			config: &Resource{
-				Attributes: &Attributes{
-					ServiceName: ptr("service-a"),
-					AdditionalProperties: map[string]any{
-						"attr-bool":    true,
-						"attr-int64":   int64(-164),
-						"attr-uint64":  uint64(164),
-						"attr-float64": float64(64.0),
-						"attr-int8":    int8(-18),
-						"attr-uint8":   uint8(18),
-						"attr-int16":   int16(-116),
-						"attr-uint16":  uint16(116),
-						"attr-int32":   int32(-132),
-						"attr-uint32":  uint32(132),
-						"attr-float32": float32(32.0),
-						"attr-int":     int(-1),
-						"attr-uint":    uint(1),
-						"attr-string":  "string-val",
-						"attr-default": other,
-					},
+				Attributes: []AttributeNameValue{
+					{Name: "service.name", Value: "service-a"},
+					{Name: "attr-bool", Value: true},
+					{Name: "attr-int64", Value: int64(-164)},
+					{Name: "attr-uint64", Value: uint64(164)},
+					{Name: "attr-float64", Value: float64(64.0)},
+					{Name: "attr-int8", Value: int8(-18)},
+					{Name: "attr-uint8", Value: uint8(18)},
+					{Name: "attr-int16", Value: int16(-116)},
+					{Name: "attr-uint16", Value: uint16(116)},
+					{Name: "attr-int32", Value: int32(-132)},
+					{Name: "attr-uint32", Value: uint32(132)},
+					{Name: "attr-float32", Value: float32(32.0)},
+					{Name: "attr-int", Value: int(-1)},
+					{Name: "attr-uint", Value: uint(1)},
+					{Name: "attr-string", Value: "string-val"},
+					{Name: "attr-default", Value: other},
 				},
 				SchemaUrl: ptr(semconv.SchemaURL),
 			},

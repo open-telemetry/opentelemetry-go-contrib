@@ -5,6 +5,7 @@ package test
 
 import (
 	"context"
+	"errors"
 	"io"
 	"net"
 	"strconv"
@@ -15,22 +16,26 @@ import (
 	"github.com/stretchr/testify/require"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/codes"
+	testpb "google.golang.org/grpc/interop/grpc_testing"
 	"google.golang.org/grpc/status"
 
-	"go.opentelemetry.io/contrib/instrumentation/google.golang.org/grpc/otelgrpc"
-	"go.opentelemetry.io/contrib/instrumentation/google.golang.org/grpc/otelgrpc/filters"
-	"go.opentelemetry.io/contrib/instrumentation/google.golang.org/grpc/otelgrpc/internal/test"
 	"go.opentelemetry.io/otel/attribute"
 	"go.opentelemetry.io/otel/sdk/instrumentation"
 	"go.opentelemetry.io/otel/sdk/metric"
 	"go.opentelemetry.io/otel/sdk/metric/metricdata"
 	"go.opentelemetry.io/otel/sdk/metric/metricdata/metricdatatest"
-
 	"go.opentelemetry.io/otel/sdk/trace"
 	"go.opentelemetry.io/otel/sdk/trace/tracetest"
 	semconv "go.opentelemetry.io/otel/semconv/v1.17.0"
 
-	testpb "google.golang.org/grpc/interop/grpc_testing"
+	"go.opentelemetry.io/contrib/instrumentation/google.golang.org/grpc/otelgrpc"
+	"go.opentelemetry.io/contrib/instrumentation/google.golang.org/grpc/otelgrpc/filters"
+	"go.opentelemetry.io/contrib/instrumentation/google.golang.org/grpc/otelgrpc/internal/test"
+)
+
+var (
+	testSpanAttr   = attribute.String("test_span", "OK")
+	testMetricAttr = attribute.String("test_metric", "OK")
 )
 
 func TestStatsHandler(t *testing.T) {
@@ -53,6 +58,7 @@ func TestStatsHandler(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
+			t.Setenv("OTEL_METRICS_EXEMPLAR_FILTER", "always_off")
 			clientSR := tracetest.NewSpanRecorder()
 			clientTP := trace.NewTracerProvider(trace.WithSpanProcessor(clientSR))
 			clientMetricReader := metric.NewManualReader()
@@ -71,7 +77,9 @@ func TestStatsHandler(t *testing.T) {
 						otelgrpc.WithTracerProvider(clientTP),
 						otelgrpc.WithMeterProvider(clientMP),
 						otelgrpc.WithMessageEvents(otelgrpc.ReceivedEvents, otelgrpc.SentEvents),
-						otelgrpc.WithFilter(filters.ServiceName(tt.filterSvcName))),
+						otelgrpc.WithFilter(filters.ServiceName(tt.filterSvcName)),
+						otelgrpc.WithSpanAttributes(testSpanAttr),
+						otelgrpc.WithMetricAttributes(testMetricAttr)),
 					),
 				},
 				[]grpc.ServerOption{
@@ -79,7 +87,9 @@ func TestStatsHandler(t *testing.T) {
 						otelgrpc.WithTracerProvider(serverTP),
 						otelgrpc.WithMeterProvider(serverMP),
 						otelgrpc.WithMessageEvents(otelgrpc.ReceivedEvents, otelgrpc.SentEvents),
-						otelgrpc.WithFilter(filters.ServiceName(tt.filterSvcName))),
+						otelgrpc.WithFilter(filters.ServiceName(tt.filterSvcName)),
+						otelgrpc.WithSpanAttributes(testSpanAttr),
+						otelgrpc.WithMetricAttributes(testMetricAttr)),
 					),
 				},
 			)
@@ -105,25 +115,25 @@ func TestStatsHandler(t *testing.T) {
 				})
 			} else {
 				t.Run("ClientSpans", func(t *testing.T) {
-					require.Len(t, clientSR.Ended(), 0)
+					require.Empty(t, clientSR.Ended())
 				})
 
 				t.Run("ClientMetrics", func(t *testing.T) {
 					rm := metricdata.ResourceMetrics{}
 					err := clientMetricReader.Collect(context.Background(), &rm)
 					assert.NoError(t, err)
-					require.Len(t, rm.ScopeMetrics, 0)
+					require.Empty(t, rm.ScopeMetrics)
 				})
 
 				t.Run("ServerSpans", func(t *testing.T) {
-					require.Len(t, serverSR.Ended(), 0)
+					require.Empty(t, serverSR.Ended())
 				})
 
 				t.Run("ServerMetrics", func(t *testing.T) {
 					rm := metricdata.ResourceMetrics{}
 					err := serverMetricReader.Collect(context.Background(), &rm)
 					assert.NoError(t, err)
-					require.Len(t, rm.ScopeMetrics, 0)
+					require.Empty(t, rm.ScopeMetrics)
 				})
 			}
 		})
@@ -168,6 +178,7 @@ func checkClientSpans(t *testing.T, spans []trace.ReadOnlySpan, addr string) {
 		otelgrpc.GRPCStatusCodeKey.Int64(int64(codes.OK)),
 		semconv.NetSockPeerAddr(host),
 		semconv.NetSockPeerPort(port),
+		testSpanAttr,
 	}, emptySpan.Attributes())
 
 	largeSpan := spans[1]
@@ -200,6 +211,7 @@ func checkClientSpans(t *testing.T, spans []trace.ReadOnlySpan, addr string) {
 		otelgrpc.GRPCStatusCodeKey.Int64(int64(codes.OK)),
 		semconv.NetSockPeerAddr(host),
 		semconv.NetSockPeerPort(port),
+		testSpanAttr,
 	}, largeSpan.Attributes())
 
 	streamInput := spans[2]
@@ -260,6 +272,7 @@ func checkClientSpans(t *testing.T, spans []trace.ReadOnlySpan, addr string) {
 		otelgrpc.GRPCStatusCodeKey.Int64(int64(codes.OK)),
 		semconv.NetSockPeerAddr(host),
 		semconv.NetSockPeerPort(port),
+		testSpanAttr,
 	}, streamInput.Attributes())
 
 	streamOutput := spans[3]
@@ -319,6 +332,7 @@ func checkClientSpans(t *testing.T, spans []trace.ReadOnlySpan, addr string) {
 		otelgrpc.GRPCStatusCodeKey.Int64(int64(codes.OK)),
 		semconv.NetSockPeerAddr(host),
 		semconv.NetSockPeerPort(port),
+		testSpanAttr,
 	}, streamOutput.Attributes())
 
 	pingPong := spans[4]
@@ -405,6 +419,7 @@ func checkClientSpans(t *testing.T, spans []trace.ReadOnlySpan, addr string) {
 		otelgrpc.GRPCStatusCodeKey.Int64(int64(codes.OK)),
 		semconv.NetSockPeerAddr(host),
 		semconv.NetSockPeerPort(port),
+		testSpanAttr,
 	}, pingPong.Attributes())
 }
 
@@ -443,6 +458,7 @@ func checkServerSpans(t *testing.T, spans []trace.ReadOnlySpan) {
 		otelgrpc.GRPCStatusCodeKey.Int64(int64(codes.OK)),
 		semconv.NetSockPeerAddr("127.0.0.1"),
 		port,
+		testSpanAttr,
 	}, emptySpan.Attributes())
 
 	largeSpan := spans[1]
@@ -477,6 +493,7 @@ func checkServerSpans(t *testing.T, spans []trace.ReadOnlySpan) {
 		otelgrpc.GRPCStatusCodeKey.Int64(int64(codes.OK)),
 		semconv.NetSockPeerAddr("127.0.0.1"),
 		port,
+		testSpanAttr,
 	}, largeSpan.Attributes())
 
 	streamInput := spans[2]
@@ -539,6 +556,7 @@ func checkServerSpans(t *testing.T, spans []trace.ReadOnlySpan) {
 		otelgrpc.GRPCStatusCodeKey.Int64(int64(codes.OK)),
 		semconv.NetSockPeerAddr("127.0.0.1"),
 		port,
+		testSpanAttr,
 	}, streamInput.Attributes())
 
 	streamOutput := spans[3]
@@ -600,6 +618,7 @@ func checkServerSpans(t *testing.T, spans []trace.ReadOnlySpan) {
 		otelgrpc.GRPCStatusCodeKey.Int64(int64(codes.OK)),
 		semconv.NetSockPeerAddr("127.0.0.1"),
 		port,
+		testSpanAttr,
 	}, streamOutput.Attributes())
 
 	pingPong := spans[4]
@@ -688,6 +707,7 @@ func checkServerSpans(t *testing.T, spans []trace.ReadOnlySpan) {
 		otelgrpc.GRPCStatusCodeKey.Int64(int64(codes.OK)),
 		semconv.NetSockPeerAddr("127.0.0.1"),
 		port,
+		testSpanAttr,
 	}, pingPong.Attributes())
 }
 
@@ -716,35 +736,40 @@ func checkClientMetrics(t *testing.T, reader metric.Reader) {
 								semconv.RPCGRPCStatusCodeOk,
 								semconv.RPCMethod("EmptyCall"),
 								semconv.RPCService("grpc.testing.TestService"),
-								semconv.RPCSystemGRPC),
+								semconv.RPCSystemGRPC,
+								testMetricAttr),
 						},
 						{
 							Attributes: attribute.NewSet(
 								semconv.RPCGRPCStatusCodeOk,
 								semconv.RPCMethod("UnaryCall"),
 								semconv.RPCService("grpc.testing.TestService"),
-								semconv.RPCSystemGRPC),
+								semconv.RPCSystemGRPC,
+								testMetricAttr),
 						},
 						{
 							Attributes: attribute.NewSet(
 								semconv.RPCGRPCStatusCodeOk,
 								semconv.RPCMethod("StreamingInputCall"),
 								semconv.RPCService("grpc.testing.TestService"),
-								semconv.RPCSystemGRPC),
+								semconv.RPCSystemGRPC,
+								testMetricAttr),
 						},
 						{
 							Attributes: attribute.NewSet(
 								semconv.RPCGRPCStatusCodeOk,
 								semconv.RPCMethod("StreamingOutputCall"),
 								semconv.RPCService("grpc.testing.TestService"),
-								semconv.RPCSystemGRPC),
+								semconv.RPCSystemGRPC,
+								testMetricAttr),
 						},
 						{
 							Attributes: attribute.NewSet(
 								semconv.RPCGRPCStatusCodeOk,
 								semconv.RPCMethod("FullDuplexCall"),
 								semconv.RPCService("grpc.testing.TestService"),
-								semconv.RPCSystemGRPC),
+								semconv.RPCSystemGRPC,
+								testMetricAttr),
 						},
 					},
 				},
@@ -760,7 +785,8 @@ func checkClientMetrics(t *testing.T, reader metric.Reader) {
 							Attributes: attribute.NewSet(
 								semconv.RPCMethod("EmptyCall"),
 								semconv.RPCService("grpc.testing.TestService"),
-								semconv.RPCSystemGRPC),
+								semconv.RPCSystemGRPC,
+								testMetricAttr),
 							Bounds:       []float64{0, 5, 10, 25, 50, 75, 100, 250, 500, 750, 1000, 2500, 5000, 7500, 10000},
 							BucketCounts: []uint64{1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0},
 							Max:          metricdata.NewExtrema(int64(0)),
@@ -772,49 +798,53 @@ func checkClientMetrics(t *testing.T, reader metric.Reader) {
 							Attributes: attribute.NewSet(
 								semconv.RPCMethod("UnaryCall"),
 								semconv.RPCService("grpc.testing.TestService"),
-								semconv.RPCSystemGRPC),
+								semconv.RPCSystemGRPC,
+								testMetricAttr),
 							Bounds:       []float64{0, 5, 10, 25, 50, 75, 100, 250, 500, 750, 1000, 2500, 5000, 7500, 10000},
 							BucketCounts: []uint64{0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1},
-							Max:          metricdata.NewExtrema(int64(314167)),
-							Min:          metricdata.NewExtrema(int64(314167)),
+							Max:          metricdata.NewExtrema(int64(271840)),
+							Min:          metricdata.NewExtrema(int64(271840)),
 							Count:        1,
-							Sum:          314167,
+							Sum:          271840,
 						},
 						{
 							Attributes: attribute.NewSet(
 								semconv.RPCMethod("StreamingInputCall"),
 								semconv.RPCService("grpc.testing.TestService"),
-								semconv.RPCSystemGRPC),
+								semconv.RPCSystemGRPC,
+								testMetricAttr),
 							Bounds:       []float64{0, 5, 10, 25, 50, 75, 100, 250, 500, 750, 1000, 2500, 5000, 7500, 10000},
-							BucketCounts: []uint64{0, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0},
-							Max:          metricdata.NewExtrema(int64(4)),
-							Min:          metricdata.NewExtrema(int64(4)),
-							Count:        1,
-							Sum:          4,
+							BucketCounts: []uint64{0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 0, 2},
+							Max:          metricdata.NewExtrema(int64(45912)),
+							Min:          metricdata.NewExtrema(int64(12)),
+							Count:        4,
+							Sum:          74948,
 						},
 						{
 							Attributes: attribute.NewSet(
 								semconv.RPCMethod("StreamingOutputCall"),
 								semconv.RPCService("grpc.testing.TestService"),
-								semconv.RPCSystemGRPC),
+								semconv.RPCSystemGRPC,
+								testMetricAttr),
 							Bounds:       []float64{0, 5, 10, 25, 50, 75, 100, 250, 500, 750, 1000, 2500, 5000, 7500, 10000},
-							BucketCounts: []uint64{0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 2},
-							Max:          metricdata.NewExtrema(int64(58987)),
-							Min:          metricdata.NewExtrema(int64(13)),
-							Count:        4,
-							Sum:          93082,
+							BucketCounts: []uint64{0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0},
+							Max:          metricdata.NewExtrema(int64(21)),
+							Min:          metricdata.NewExtrema(int64(21)),
+							Count:        1,
+							Sum:          21,
 						},
 						{
 							Attributes: attribute.NewSet(
 								semconv.RPCMethod("FullDuplexCall"),
 								semconv.RPCService("grpc.testing.TestService"),
-								semconv.RPCSystemGRPC),
+								semconv.RPCSystemGRPC,
+								testMetricAttr),
 							Bounds:       []float64{0, 5, 10, 25, 50, 75, 100, 250, 500, 750, 1000, 2500, 5000, 7500, 10000},
-							BucketCounts: []uint64{0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 2},
-							Max:          metricdata.NewExtrema(int64(58987)),
-							Min:          metricdata.NewExtrema(int64(13)),
+							BucketCounts: []uint64{0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 0, 2},
+							Max:          metricdata.NewExtrema(int64(45918)),
+							Min:          metricdata.NewExtrema(int64(16)),
 							Count:        4,
-							Sum:          93082,
+							Sum:          74969,
 						},
 					},
 				},
@@ -830,7 +860,8 @@ func checkClientMetrics(t *testing.T, reader metric.Reader) {
 							Attributes: attribute.NewSet(
 								semconv.RPCMethod("EmptyCall"),
 								semconv.RPCService("grpc.testing.TestService"),
-								semconv.RPCSystemGRPC),
+								semconv.RPCSystemGRPC,
+								testMetricAttr),
 							Bounds:       []float64{0, 5, 10, 25, 50, 75, 100, 250, 500, 750, 1000, 2500, 5000, 7500, 10000},
 							BucketCounts: []uint64{1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0},
 							Max:          metricdata.NewExtrema(int64(0)),
@@ -842,49 +873,53 @@ func checkClientMetrics(t *testing.T, reader metric.Reader) {
 							Attributes: attribute.NewSet(
 								semconv.RPCMethod("UnaryCall"),
 								semconv.RPCService("grpc.testing.TestService"),
-								semconv.RPCSystemGRPC),
+								semconv.RPCSystemGRPC,
+								testMetricAttr),
 							Bounds:       []float64{0, 5, 10, 25, 50, 75, 100, 250, 500, 750, 1000, 2500, 5000, 7500, 10000},
 							BucketCounts: []uint64{0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1},
-							Max:          metricdata.NewExtrema(int64(271840)),
-							Min:          metricdata.NewExtrema(int64(271840)),
+							Max:          metricdata.NewExtrema(int64(314167)),
+							Min:          metricdata.NewExtrema(int64(314167)),
 							Count:        1,
-							Sum:          271840,
+							Sum:          314167,
 						},
 						{
 							Attributes: attribute.NewSet(
 								semconv.RPCMethod("StreamingInputCall"),
 								semconv.RPCService("grpc.testing.TestService"),
-								semconv.RPCSystemGRPC),
+								semconv.RPCSystemGRPC,
+								testMetricAttr),
 							Bounds:       []float64{0, 5, 10, 25, 50, 75, 100, 250, 500, 750, 1000, 2500, 5000, 7500, 10000},
-							BucketCounts: []uint64{0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 0, 2},
-							Max:          metricdata.NewExtrema(int64(45912)),
-							Min:          metricdata.NewExtrema(int64(12)),
-							Count:        4,
-							Sum:          74948,
+							BucketCounts: []uint64{0, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0},
+							Max:          metricdata.NewExtrema(int64(4)),
+							Min:          metricdata.NewExtrema(int64(4)),
+							Count:        1,
+							Sum:          4,
 						},
 						{
 							Attributes: attribute.NewSet(
 								semconv.RPCMethod("StreamingOutputCall"),
 								semconv.RPCService("grpc.testing.TestService"),
-								semconv.RPCSystemGRPC),
+								semconv.RPCSystemGRPC,
+								testMetricAttr),
 							Bounds:       []float64{0, 5, 10, 25, 50, 75, 100, 250, 500, 750, 1000, 2500, 5000, 7500, 10000},
-							BucketCounts: []uint64{0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0},
-							Max:          metricdata.NewExtrema(int64(21)),
-							Min:          metricdata.NewExtrema(int64(21)),
-							Count:        1,
-							Sum:          21,
+							BucketCounts: []uint64{0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 2},
+							Max:          metricdata.NewExtrema(int64(58987)),
+							Min:          metricdata.NewExtrema(int64(13)),
+							Count:        4,
+							Sum:          93082,
 						},
 						{
 							Attributes: attribute.NewSet(
 								semconv.RPCMethod("FullDuplexCall"),
 								semconv.RPCService("grpc.testing.TestService"),
-								semconv.RPCSystemGRPC),
+								semconv.RPCSystemGRPC,
+								testMetricAttr),
 							Bounds:       []float64{0, 5, 10, 25, 50, 75, 100, 250, 500, 750, 1000, 2500, 5000, 7500, 10000},
-							BucketCounts: []uint64{0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 0, 2},
-							Max:          metricdata.NewExtrema(int64(45918)),
-							Min:          metricdata.NewExtrema(int64(16)),
+							BucketCounts: []uint64{0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 2},
+							Max:          metricdata.NewExtrema(int64(58987)),
+							Min:          metricdata.NewExtrema(int64(13)),
 							Count:        4,
-							Sum:          74969,
+							Sum:          93082,
 						},
 					},
 				},
@@ -901,7 +936,8 @@ func checkClientMetrics(t *testing.T, reader metric.Reader) {
 								semconv.RPCGRPCStatusCodeOk,
 								semconv.RPCMethod("EmptyCall"),
 								semconv.RPCService("grpc.testing.TestService"),
-								semconv.RPCSystemGRPC),
+								semconv.RPCSystemGRPC,
+								testMetricAttr),
 							Bounds:       []float64{0, 5, 10, 25, 50, 75, 100, 250, 500, 750, 1000, 2500, 5000, 7500, 10000},
 							BucketCounts: []uint64{0, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0},
 							Max:          metricdata.NewExtrema(int64(1)),
@@ -914,7 +950,8 @@ func checkClientMetrics(t *testing.T, reader metric.Reader) {
 								semconv.RPCGRPCStatusCodeOk,
 								semconv.RPCMethod("UnaryCall"),
 								semconv.RPCService("grpc.testing.TestService"),
-								semconv.RPCSystemGRPC),
+								semconv.RPCSystemGRPC,
+								testMetricAttr),
 							Bounds:       []float64{0, 5, 10, 25, 50, 75, 100, 250, 500, 750, 1000, 2500, 5000, 7500, 10000},
 							BucketCounts: []uint64{0, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0},
 							Max:          metricdata.NewExtrema(int64(1)),
@@ -927,20 +964,8 @@ func checkClientMetrics(t *testing.T, reader metric.Reader) {
 								semconv.RPCGRPCStatusCodeOk,
 								semconv.RPCMethod("StreamingInputCall"),
 								semconv.RPCService("grpc.testing.TestService"),
-								semconv.RPCSystemGRPC),
-							Bounds:       []float64{0, 5, 10, 25, 50, 75, 100, 250, 500, 750, 1000, 2500, 5000, 7500, 10000},
-							BucketCounts: []uint64{0, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0},
-							Max:          metricdata.NewExtrema(int64(1)),
-							Min:          metricdata.NewExtrema(int64(1)),
-							Count:        1,
-							Sum:          1,
-						},
-						{
-							Attributes: attribute.NewSet(
-								semconv.RPCGRPCStatusCodeOk,
-								semconv.RPCMethod("StreamingOutputCall"),
-								semconv.RPCService("grpc.testing.TestService"),
-								semconv.RPCSystemGRPC),
+								semconv.RPCSystemGRPC,
+								testMetricAttr),
 							Bounds:       []float64{0, 5, 10, 25, 50, 75, 100, 250, 500, 750, 1000, 2500, 5000, 7500, 10000},
 							BucketCounts: []uint64{0, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0},
 							Max:          metricdata.NewExtrema(int64(4)),
@@ -951,9 +976,24 @@ func checkClientMetrics(t *testing.T, reader metric.Reader) {
 						{
 							Attributes: attribute.NewSet(
 								semconv.RPCGRPCStatusCodeOk,
+								semconv.RPCMethod("StreamingOutputCall"),
+								semconv.RPCService("grpc.testing.TestService"),
+								semconv.RPCSystemGRPC,
+								testMetricAttr),
+							Bounds:       []float64{0, 5, 10, 25, 50, 75, 100, 250, 500, 750, 1000, 2500, 5000, 7500, 10000},
+							BucketCounts: []uint64{0, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0},
+							Max:          metricdata.NewExtrema(int64(1)),
+							Min:          metricdata.NewExtrema(int64(1)),
+							Count:        1,
+							Sum:          1,
+						},
+						{
+							Attributes: attribute.NewSet(
+								semconv.RPCGRPCStatusCodeOk,
 								semconv.RPCMethod("FullDuplexCall"),
 								semconv.RPCService("grpc.testing.TestService"),
-								semconv.RPCSystemGRPC),
+								semconv.RPCSystemGRPC,
+								testMetricAttr),
 							Bounds:       []float64{0, 5, 10, 25, 50, 75, 100, 250, 500, 750, 1000, 2500, 5000, 7500, 10000},
 							BucketCounts: []uint64{0, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0},
 							Max:          metricdata.NewExtrema(int64(4)),
@@ -976,7 +1016,8 @@ func checkClientMetrics(t *testing.T, reader metric.Reader) {
 								semconv.RPCGRPCStatusCodeOk,
 								semconv.RPCMethod("EmptyCall"),
 								semconv.RPCService("grpc.testing.TestService"),
-								semconv.RPCSystemGRPC),
+								semconv.RPCSystemGRPC,
+								testMetricAttr),
 							Bounds:       []float64{0, 5, 10, 25, 50, 75, 100, 250, 500, 750, 1000, 2500, 5000, 7500, 10000},
 							BucketCounts: []uint64{0, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0},
 							Max:          metricdata.NewExtrema(int64(1)),
@@ -989,7 +1030,8 @@ func checkClientMetrics(t *testing.T, reader metric.Reader) {
 								semconv.RPCGRPCStatusCodeOk,
 								semconv.RPCMethod("UnaryCall"),
 								semconv.RPCService("grpc.testing.TestService"),
-								semconv.RPCSystemGRPC),
+								semconv.RPCSystemGRPC,
+								testMetricAttr),
 							Bounds:       []float64{0, 5, 10, 25, 50, 75, 100, 250, 500, 750, 1000, 2500, 5000, 7500, 10000},
 							BucketCounts: []uint64{0, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0},
 							Max:          metricdata.NewExtrema(int64(1)),
@@ -1002,20 +1044,8 @@ func checkClientMetrics(t *testing.T, reader metric.Reader) {
 								semconv.RPCGRPCStatusCodeOk,
 								semconv.RPCMethod("StreamingInputCall"),
 								semconv.RPCService("grpc.testing.TestService"),
-								semconv.RPCSystemGRPC),
-							Bounds:       []float64{0, 5, 10, 25, 50, 75, 100, 250, 500, 750, 1000, 2500, 5000, 7500, 10000},
-							BucketCounts: []uint64{0, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0},
-							Max:          metricdata.NewExtrema(int64(4)),
-							Min:          metricdata.NewExtrema(int64(4)),
-							Count:        1,
-							Sum:          4,
-						},
-						{
-							Attributes: attribute.NewSet(
-								semconv.RPCGRPCStatusCodeOk,
-								semconv.RPCMethod("StreamingOutputCall"),
-								semconv.RPCService("grpc.testing.TestService"),
-								semconv.RPCSystemGRPC),
+								semconv.RPCSystemGRPC,
+								testMetricAttr),
 							Bounds:       []float64{0, 5, 10, 25, 50, 75, 100, 250, 500, 750, 1000, 2500, 5000, 7500, 10000},
 							BucketCounts: []uint64{0, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0},
 							Max:          metricdata.NewExtrema(int64(1)),
@@ -1026,9 +1056,24 @@ func checkClientMetrics(t *testing.T, reader metric.Reader) {
 						{
 							Attributes: attribute.NewSet(
 								semconv.RPCGRPCStatusCodeOk,
+								semconv.RPCMethod("StreamingOutputCall"),
+								semconv.RPCService("grpc.testing.TestService"),
+								semconv.RPCSystemGRPC,
+								testMetricAttr),
+							Bounds:       []float64{0, 5, 10, 25, 50, 75, 100, 250, 500, 750, 1000, 2500, 5000, 7500, 10000},
+							BucketCounts: []uint64{0, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0},
+							Max:          metricdata.NewExtrema(int64(4)),
+							Min:          metricdata.NewExtrema(int64(4)),
+							Count:        1,
+							Sum:          4,
+						},
+						{
+							Attributes: attribute.NewSet(
+								semconv.RPCGRPCStatusCodeOk,
 								semconv.RPCMethod("FullDuplexCall"),
 								semconv.RPCService("grpc.testing.TestService"),
-								semconv.RPCSystemGRPC),
+								semconv.RPCSystemGRPC,
+								testMetricAttr),
 							Bounds:       []float64{0, 5, 10, 25, 50, 75, 100, 250, 500, 750, 1000, 2500, 5000, 7500, 10000},
 							BucketCounts: []uint64{0, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0},
 							Max:          metricdata.NewExtrema(int64(4)),
@@ -1069,35 +1114,40 @@ func checkServerMetrics(t *testing.T, reader metric.Reader) {
 								semconv.RPCGRPCStatusCodeOk,
 								semconv.RPCMethod("EmptyCall"),
 								semconv.RPCService("grpc.testing.TestService"),
-								semconv.RPCSystemGRPC),
+								semconv.RPCSystemGRPC,
+								testMetricAttr),
 						},
 						{
 							Attributes: attribute.NewSet(
 								semconv.RPCGRPCStatusCodeOk,
 								semconv.RPCMethod("UnaryCall"),
 								semconv.RPCService("grpc.testing.TestService"),
-								semconv.RPCSystemGRPC),
+								semconv.RPCSystemGRPC,
+								testMetricAttr),
 						},
 						{
 							Attributes: attribute.NewSet(
 								semconv.RPCGRPCStatusCodeOk,
 								semconv.RPCMethod("StreamingInputCall"),
 								semconv.RPCService("grpc.testing.TestService"),
-								semconv.RPCSystemGRPC),
+								semconv.RPCSystemGRPC,
+								testMetricAttr),
 						},
 						{
 							Attributes: attribute.NewSet(
 								semconv.RPCGRPCStatusCodeOk,
 								semconv.RPCMethod("StreamingOutputCall"),
 								semconv.RPCService("grpc.testing.TestService"),
-								semconv.RPCSystemGRPC),
+								semconv.RPCSystemGRPC,
+								testMetricAttr),
 						},
 						{
 							Attributes: attribute.NewSet(
 								semconv.RPCGRPCStatusCodeOk,
 								semconv.RPCMethod("FullDuplexCall"),
 								semconv.RPCService("grpc.testing.TestService"),
-								semconv.RPCSystemGRPC),
+								semconv.RPCSystemGRPC,
+								testMetricAttr),
 						},
 					},
 				},
@@ -1113,7 +1163,8 @@ func checkServerMetrics(t *testing.T, reader metric.Reader) {
 							Attributes: attribute.NewSet(
 								semconv.RPCMethod("EmptyCall"),
 								semconv.RPCService("grpc.testing.TestService"),
-								semconv.RPCSystemGRPC),
+								semconv.RPCSystemGRPC,
+								testMetricAttr),
 							Bounds:       []float64{0, 5, 10, 25, 50, 75, 100, 250, 500, 750, 1000, 2500, 5000, 7500, 10000},
 							BucketCounts: []uint64{1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0},
 							Max:          metricdata.NewExtrema(int64(0)),
@@ -1125,7 +1176,8 @@ func checkServerMetrics(t *testing.T, reader metric.Reader) {
 							Attributes: attribute.NewSet(
 								semconv.RPCMethod("UnaryCall"),
 								semconv.RPCService("grpc.testing.TestService"),
-								semconv.RPCSystemGRPC),
+								semconv.RPCSystemGRPC,
+								testMetricAttr),
 							Bounds:       []float64{0, 5, 10, 25, 50, 75, 100, 250, 500, 750, 1000, 2500, 5000, 7500, 10000},
 							BucketCounts: []uint64{0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1},
 							Max:          metricdata.NewExtrema(int64(271840)),
@@ -1137,7 +1189,8 @@ func checkServerMetrics(t *testing.T, reader metric.Reader) {
 							Attributes: attribute.NewSet(
 								semconv.RPCMethod("StreamingInputCall"),
 								semconv.RPCService("grpc.testing.TestService"),
-								semconv.RPCSystemGRPC),
+								semconv.RPCSystemGRPC,
+								testMetricAttr),
 							Bounds:       []float64{0, 5, 10, 25, 50, 75, 100, 250, 500, 750, 1000, 2500, 5000, 7500, 10000},
 							BucketCounts: []uint64{0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 0, 2},
 							Max:          metricdata.NewExtrema(int64(45912)),
@@ -1149,7 +1202,8 @@ func checkServerMetrics(t *testing.T, reader metric.Reader) {
 							Attributes: attribute.NewSet(
 								semconv.RPCMethod("StreamingOutputCall"),
 								semconv.RPCService("grpc.testing.TestService"),
-								semconv.RPCSystemGRPC),
+								semconv.RPCSystemGRPC,
+								testMetricAttr),
 							Bounds:       []float64{0, 5, 10, 25, 50, 75, 100, 250, 500, 750, 1000, 2500, 5000, 7500, 10000},
 							BucketCounts: []uint64{0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0},
 							Max:          metricdata.NewExtrema(int64(21)),
@@ -1161,7 +1215,8 @@ func checkServerMetrics(t *testing.T, reader metric.Reader) {
 							Attributes: attribute.NewSet(
 								semconv.RPCMethod("FullDuplexCall"),
 								semconv.RPCService("grpc.testing.TestService"),
-								semconv.RPCSystemGRPC),
+								semconv.RPCSystemGRPC,
+								testMetricAttr),
 							Bounds:       []float64{0, 5, 10, 25, 50, 75, 100, 250, 500, 750, 1000, 2500, 5000, 7500, 10000},
 							BucketCounts: []uint64{0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 0, 2},
 							Max:          metricdata.NewExtrema(int64(45918)),
@@ -1183,7 +1238,8 @@ func checkServerMetrics(t *testing.T, reader metric.Reader) {
 							Attributes: attribute.NewSet(
 								semconv.RPCMethod("EmptyCall"),
 								semconv.RPCService("grpc.testing.TestService"),
-								semconv.RPCSystemGRPC),
+								semconv.RPCSystemGRPC,
+								testMetricAttr),
 							Bounds:       []float64{0, 5, 10, 25, 50, 75, 100, 250, 500, 750, 1000, 2500, 5000, 7500, 10000},
 							BucketCounts: []uint64{1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0},
 							Max:          metricdata.NewExtrema(int64(0)),
@@ -1195,7 +1251,8 @@ func checkServerMetrics(t *testing.T, reader metric.Reader) {
 							Attributes: attribute.NewSet(
 								semconv.RPCMethod("UnaryCall"),
 								semconv.RPCService("grpc.testing.TestService"),
-								semconv.RPCSystemGRPC),
+								semconv.RPCSystemGRPC,
+								testMetricAttr),
 							Bounds:       []float64{0, 5, 10, 25, 50, 75, 100, 250, 500, 750, 1000, 2500, 5000, 7500, 10000},
 							BucketCounts: []uint64{0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1},
 							Max:          metricdata.NewExtrema(int64(314167)),
@@ -1207,7 +1264,8 @@ func checkServerMetrics(t *testing.T, reader metric.Reader) {
 							Attributes: attribute.NewSet(
 								semconv.RPCMethod("StreamingInputCall"),
 								semconv.RPCService("grpc.testing.TestService"),
-								semconv.RPCSystemGRPC),
+								semconv.RPCSystemGRPC,
+								testMetricAttr),
 							Bounds:       []float64{0, 5, 10, 25, 50, 75, 100, 250, 500, 750, 1000, 2500, 5000, 7500, 10000},
 							BucketCounts: []uint64{0, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0},
 							Max:          metricdata.NewExtrema(int64(4)),
@@ -1219,7 +1277,8 @@ func checkServerMetrics(t *testing.T, reader metric.Reader) {
 							Attributes: attribute.NewSet(
 								semconv.RPCMethod("StreamingOutputCall"),
 								semconv.RPCService("grpc.testing.TestService"),
-								semconv.RPCSystemGRPC),
+								semconv.RPCSystemGRPC,
+								testMetricAttr),
 							Bounds:       []float64{0, 5, 10, 25, 50, 75, 100, 250, 500, 750, 1000, 2500, 5000, 7500, 10000},
 							BucketCounts: []uint64{0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 2},
 							Max:          metricdata.NewExtrema(int64(58987)),
@@ -1231,7 +1290,8 @@ func checkServerMetrics(t *testing.T, reader metric.Reader) {
 							Attributes: attribute.NewSet(
 								semconv.RPCMethod("FullDuplexCall"),
 								semconv.RPCService("grpc.testing.TestService"),
-								semconv.RPCSystemGRPC),
+								semconv.RPCSystemGRPC,
+								testMetricAttr),
 							Bounds:       []float64{0, 5, 10, 25, 50, 75, 100, 250, 500, 750, 1000, 2500, 5000, 7500, 10000},
 							BucketCounts: []uint64{0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 2},
 							Max:          metricdata.NewExtrema(int64(58987)),
@@ -1254,7 +1314,8 @@ func checkServerMetrics(t *testing.T, reader metric.Reader) {
 								semconv.RPCGRPCStatusCodeOk,
 								semconv.RPCMethod("EmptyCall"),
 								semconv.RPCService("grpc.testing.TestService"),
-								semconv.RPCSystemGRPC),
+								semconv.RPCSystemGRPC,
+								testMetricAttr),
 							Bounds:       []float64{0, 5, 10, 25, 50, 75, 100, 250, 500, 750, 1000, 2500, 5000, 7500, 10000},
 							BucketCounts: []uint64{0, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0},
 							Max:          metricdata.NewExtrema(int64(1)),
@@ -1267,7 +1328,8 @@ func checkServerMetrics(t *testing.T, reader metric.Reader) {
 								semconv.RPCGRPCStatusCodeOk,
 								semconv.RPCMethod("UnaryCall"),
 								semconv.RPCService("grpc.testing.TestService"),
-								semconv.RPCSystemGRPC),
+								semconv.RPCSystemGRPC,
+								testMetricAttr),
 							Bounds:       []float64{0, 5, 10, 25, 50, 75, 100, 250, 500, 750, 1000, 2500, 5000, 7500, 10000},
 							BucketCounts: []uint64{0, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0},
 							Max:          metricdata.NewExtrema(int64(1)),
@@ -1280,7 +1342,8 @@ func checkServerMetrics(t *testing.T, reader metric.Reader) {
 								semconv.RPCGRPCStatusCodeOk,
 								semconv.RPCMethod("StreamingInputCall"),
 								semconv.RPCService("grpc.testing.TestService"),
-								semconv.RPCSystemGRPC),
+								semconv.RPCSystemGRPC,
+								testMetricAttr),
 							Bounds:       []float64{0, 5, 10, 25, 50, 75, 100, 250, 500, 750, 1000, 2500, 5000, 7500, 10000},
 							BucketCounts: []uint64{0, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0},
 							Max:          metricdata.NewExtrema(int64(4)),
@@ -1293,7 +1356,8 @@ func checkServerMetrics(t *testing.T, reader metric.Reader) {
 								semconv.RPCGRPCStatusCodeOk,
 								semconv.RPCMethod("StreamingOutputCall"),
 								semconv.RPCService("grpc.testing.TestService"),
-								semconv.RPCSystemGRPC),
+								semconv.RPCSystemGRPC,
+								testMetricAttr),
 							Bounds:       []float64{0, 5, 10, 25, 50, 75, 100, 250, 500, 750, 1000, 2500, 5000, 7500, 10000},
 							BucketCounts: []uint64{0, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0},
 							Max:          metricdata.NewExtrema(int64(1)),
@@ -1306,7 +1370,8 @@ func checkServerMetrics(t *testing.T, reader metric.Reader) {
 								semconv.RPCGRPCStatusCodeOk,
 								semconv.RPCMethod("FullDuplexCall"),
 								semconv.RPCService("grpc.testing.TestService"),
-								semconv.RPCSystemGRPC),
+								semconv.RPCSystemGRPC,
+								testMetricAttr),
 							Bounds:       []float64{0, 5, 10, 25, 50, 75, 100, 250, 500, 750, 1000, 2500, 5000, 7500, 10000},
 							BucketCounts: []uint64{0, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0},
 							Max:          metricdata.NewExtrema(int64(4)),
@@ -1329,7 +1394,8 @@ func checkServerMetrics(t *testing.T, reader metric.Reader) {
 								semconv.RPCGRPCStatusCodeOk,
 								semconv.RPCMethod("EmptyCall"),
 								semconv.RPCService("grpc.testing.TestService"),
-								semconv.RPCSystemGRPC),
+								semconv.RPCSystemGRPC,
+								testMetricAttr),
 							Bounds:       []float64{0, 5, 10, 25, 50, 75, 100, 250, 500, 750, 1000, 2500, 5000, 7500, 10000},
 							BucketCounts: []uint64{0, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0},
 							Max:          metricdata.NewExtrema(int64(1)),
@@ -1342,7 +1408,8 @@ func checkServerMetrics(t *testing.T, reader metric.Reader) {
 								semconv.RPCGRPCStatusCodeOk,
 								semconv.RPCMethod("UnaryCall"),
 								semconv.RPCService("grpc.testing.TestService"),
-								semconv.RPCSystemGRPC),
+								semconv.RPCSystemGRPC,
+								testMetricAttr),
 							Bounds:       []float64{0, 5, 10, 25, 50, 75, 100, 250, 500, 750, 1000, 2500, 5000, 7500, 10000},
 							BucketCounts: []uint64{0, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0},
 							Max:          metricdata.NewExtrema(int64(1)),
@@ -1355,7 +1422,8 @@ func checkServerMetrics(t *testing.T, reader metric.Reader) {
 								semconv.RPCGRPCStatusCodeOk,
 								semconv.RPCMethod("StreamingInputCall"),
 								semconv.RPCService("grpc.testing.TestService"),
-								semconv.RPCSystemGRPC),
+								semconv.RPCSystemGRPC,
+								testMetricAttr),
 							Bounds:       []float64{0, 5, 10, 25, 50, 75, 100, 250, 500, 750, 1000, 2500, 5000, 7500, 10000},
 							BucketCounts: []uint64{0, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0},
 							Max:          metricdata.NewExtrema(int64(1)),
@@ -1368,7 +1436,8 @@ func checkServerMetrics(t *testing.T, reader metric.Reader) {
 								semconv.RPCGRPCStatusCodeOk,
 								semconv.RPCMethod("StreamingOutputCall"),
 								semconv.RPCService("grpc.testing.TestService"),
-								semconv.RPCSystemGRPC),
+								semconv.RPCSystemGRPC,
+								testMetricAttr),
 							Bounds:       []float64{0, 5, 10, 25, 50, 75, 100, 250, 500, 750, 1000, 2500, 5000, 7500, 10000},
 							BucketCounts: []uint64{0, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0},
 							Max:          metricdata.NewExtrema(int64(4)),
@@ -1381,7 +1450,8 @@ func checkServerMetrics(t *testing.T, reader metric.Reader) {
 								semconv.RPCGRPCStatusCodeOk,
 								semconv.RPCMethod("FullDuplexCall"),
 								semconv.RPCService("grpc.testing.TestService"),
-								semconv.RPCSystemGRPC),
+								semconv.RPCSystemGRPC,
+								testMetricAttr),
 							Bounds:       []float64{0, 5, 10, 25, 50, 75, 100, 250, 500, 750, 1000, 2500, 5000, 7500, 10000},
 							BucketCounts: []uint64{0, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0},
 							Max:          metricdata.NewExtrema(int64(4)),
@@ -1438,13 +1508,13 @@ func TestStatsHandlerConcurrentSafeContextCancellation(t *testing.T) {
 					Payload:            pl,
 				}
 				err := stream.Send(req)
-				if err == io.EOF { // possible due to context cancellation
-					require.ErrorIs(t, ctx.Err(), context.Canceled)
+				if errors.Is(err, io.EOF) { // possible due to context cancellation
+					assert.ErrorIs(t, ctx.Err(), context.Canceled)
 				} else {
-					require.NoError(t, err)
+					assert.NoError(t, err)
 				}
 			}
-			require.NoError(t, stream.CloseSend())
+			assert.NoError(t, stream.CloseSend())
 		}()
 
 		wg.Add(1)
@@ -1459,7 +1529,7 @@ func TestStatsHandlerConcurrentSafeContextCancellation(t *testing.T) {
 				if status.Code(err) == codes.Canceled {
 					return
 				}
-				require.NoError(t, err)
+				assert.NoError(t, err)
 			}
 		}()
 

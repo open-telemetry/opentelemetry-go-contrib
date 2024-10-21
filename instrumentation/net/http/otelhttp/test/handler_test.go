@@ -75,6 +75,7 @@ func assertScopeMetrics(t *testing.T, sm metricdata.ScopeMetrics, attrs attribut
 }
 
 func TestHandlerBasics(t *testing.T) {
+	t.Setenv("OTEL_METRICS_EXEMPLAR_FILTER", "always_off")
 	rr := httptest.NewRecorder()
 
 	spanRecorder := tracetest.NewSpanRecorder()
@@ -118,7 +119,7 @@ func TestHandlerBasics(t *testing.T) {
 	)
 	assertScopeMetrics(t, rm.ScopeMetrics[0], attrs)
 
-	if got, expected := rr.Result().StatusCode, http.StatusOK; got != expected {
+	if got, expected := rr.Result().StatusCode, http.StatusOK; got != expected { //nolint:bodyclose // False positive for httptest.ResponseRecorder: https://github.com/timakin/bodyclose/issues/59.
 		t.Fatalf("got %d, expected %d", got, expected)
 	}
 
@@ -130,7 +131,7 @@ func TestHandlerBasics(t *testing.T) {
 		t.Fatalf("invalid span created: %#v", spans[0].SpanContext())
 	}
 
-	d, err := io.ReadAll(rr.Result().Body)
+	d, err := io.ReadAll(rr.Result().Body) //nolint:bodyclose // False positive for httptest.ResponseRecorder: https://github.com/timakin/bodyclose/issues/59.
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -215,6 +216,12 @@ func (rw *respWriteHeaderCounter) WriteHeader(statusCode int) {
 	rw.ResponseWriter.WriteHeader(statusCode)
 }
 
+func (rw *respWriteHeaderCounter) Flush() {
+	if f, ok := rw.ResponseWriter.(http.Flusher); ok {
+		f.Flush()
+	}
+}
+
 func TestHandlerPropagateWriteHeaderCalls(t *testing.T) {
 	testCases := []struct {
 		name                 string
@@ -250,6 +257,38 @@ func TestHandlerPropagateWriteHeaderCalls(t *testing.T) {
 			},
 			expectHeadersWritten: []int{http.StatusInternalServerError, http.StatusOK},
 		},
+		{
+			name: "When writing the header indirectly through body write",
+			handler: func(w http.ResponseWriter, r *http.Request) {
+				_, _ = w.Write([]byte("hello"))
+			},
+			expectHeadersWritten: []int{http.StatusOK},
+		},
+		{
+			name: "With a header already written when writing the body",
+			handler: func(w http.ResponseWriter, r *http.Request) {
+				w.WriteHeader(http.StatusBadRequest)
+				_, _ = w.Write([]byte("hello"))
+			},
+			expectHeadersWritten: []int{http.StatusBadRequest},
+		},
+		{
+			name: "When writing the header indirectly through flush",
+			handler: func(w http.ResponseWriter, r *http.Request) {
+				f := w.(http.Flusher)
+				f.Flush()
+			},
+			expectHeadersWritten: []int{http.StatusOK},
+		},
+		{
+			name: "With a header already written when flushing",
+			handler: func(w http.ResponseWriter, r *http.Request) {
+				w.WriteHeader(http.StatusBadRequest)
+				f := w.(http.Flusher)
+				f.Flush()
+			},
+			expectHeadersWritten: []int{http.StatusBadRequest},
+		},
 	}
 
 	for _, tc := range testCases {
@@ -276,7 +315,7 @@ func TestHandlerRequestWithTraceContext(t *testing.T) {
 	h := otelhttp.NewHandler(
 		http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 			_, err := w.Write([]byte("hello world"))
-			require.NoError(t, err)
+			assert.NoError(t, err)
 		}), "test_handler")
 
 	r, err := http.NewRequest(http.MethodGet, "http://localhost/", nil)
@@ -291,7 +330,7 @@ func TestHandlerRequestWithTraceContext(t *testing.T) {
 	r = r.WithContext(ctx)
 
 	h.ServeHTTP(rr, r)
-	assert.Equal(t, http.StatusOK, rr.Result().StatusCode)
+	assert.Equal(t, http.StatusOK, rr.Result().StatusCode) //nolint:bodyclose // False positive for httptest.ResponseRecorder: https://github.com/timakin/bodyclose/issues/59.
 
 	span.End()
 
@@ -339,7 +378,7 @@ func TestWithPublicEndpoint(t *testing.T) {
 
 	rr := httptest.NewRecorder()
 	h.ServeHTTP(rr, r)
-	assert.Equal(t, http.StatusOK, rr.Result().StatusCode)
+	assert.Equal(t, http.StatusOK, rr.Result().StatusCode) //nolint:bodyclose // False positive for httptest.ResponseRecorder: https://github.com/timakin/bodyclose/issues/59.
 
 	// Recorded span should be linked with an incoming span context.
 	assert.NoError(t, spanRecorder.ForceFlush(ctx))
@@ -394,7 +433,7 @@ func TestWithPublicEndpointFn(t *testing.T) {
 			},
 			spansAssert: func(t *testing.T, _ trace.SpanContext, spans []sdktrace.ReadOnlySpan) {
 				require.Len(t, spans, 1)
-				require.Len(t, spans[0].Links(), 0, "should not contain link")
+				require.Empty(t, spans[0].Links(), "should not contain link")
 			},
 		},
 	} {
@@ -423,7 +462,7 @@ func TestWithPublicEndpointFn(t *testing.T) {
 
 			rr := httptest.NewRecorder()
 			h.ServeHTTP(rr, r)
-			assert.Equal(t, http.StatusOK, rr.Result().StatusCode)
+			assert.Equal(t, http.StatusOK, rr.Result().StatusCode) //nolint:bodyclose // False positive for httptest.ResponseRecorder: https://github.com/timakin/bodyclose/issues/59.
 
 			// Recorded span should be linked with an incoming span context.
 			assert.NoError(t, spanRecorder.ForceFlush(ctx))
@@ -457,12 +496,13 @@ func TestSpanStatus(t *testing.T) {
 			h.ServeHTTP(httptest.NewRecorder(), httptest.NewRequest("GET", "/", nil))
 
 			require.Len(t, sr.Ended(), 1, "should emit a span")
-			assert.Equal(t, sr.Ended()[0].Status().Code, tc.wantSpanStatus, "should only set Error status for HTTP statuses >= 500")
+			assert.Equal(t, tc.wantSpanStatus, sr.Ended()[0].Status().Code, "should only set Error status for HTTP statuses >= 500")
 		})
 	}
 }
 
 func TestWithRouteTag(t *testing.T) {
+	t.Setenv("OTEL_METRICS_EXEMPLAR_FILTER", "always_off")
 	route := "/some/route"
 
 	spanRecorder := tracetest.NewSpanRecorder()

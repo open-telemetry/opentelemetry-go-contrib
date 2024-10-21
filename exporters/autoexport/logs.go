@@ -7,10 +7,13 @@ import (
 	"context"
 	"os"
 
+	"go.opentelemetry.io/otel/exporters/otlp/otlplog/otlploggrpc"
 	"go.opentelemetry.io/otel/exporters/otlp/otlplog/otlploghttp"
 	"go.opentelemetry.io/otel/exporters/stdout/stdoutlog"
 	"go.opentelemetry.io/otel/sdk/log"
 )
+
+const otelExporterOTLPLogsProtoEnvKey = "OTEL_EXPORTER_OTLP_LOGS_PROTOCOL"
 
 // LogOption applies an autoexport configuration option.
 type LogOption = option[log.Exporter]
@@ -29,6 +32,11 @@ var logsSignal = newSignal[log.Exporter]("OTEL_LOGS_EXPORTER")
 // supported values:
 //   - "http/protobuf" (default) -  protobuf-encoded data over HTTP connection;
 //     see: [go.opentelemetry.io/otel/exporters/otlp/otlplog/otlploghttp]
+//   - "grpc" - gRPC with protobuf-encoded data over HTTP/2 connection;
+//     see: [go.opentelemetry.io/otel/exporters/otlp/otlplog/otlploggrpc]
+//
+// OTEL_EXPORTER_OTLP_LOGS_PROTOCOL defines OTLP exporter's transport protocol for the logs signal;
+// supported values are the same as OTEL_EXPORTER_OTLP_PROTOCOL.
 //
 // An error is returned if an environment value is set to an unhandled value.
 //
@@ -51,15 +59,19 @@ func RegisterLogExporter(name string, factory func(context.Context) (log.Exporte
 
 func init() {
 	RegisterLogExporter("otlp", func(ctx context.Context) (log.Exporter, error) {
-		proto := os.Getenv(otelExporterOTLPProtoEnvKey)
+		proto := os.Getenv(otelExporterOTLPLogsProtoEnvKey)
+		if proto == "" {
+			proto = os.Getenv(otelExporterOTLPProtoEnvKey)
+		}
+
+		// Fallback to default, http/protobuf.
 		if proto == "" {
 			proto = "http/protobuf"
 		}
 
 		switch proto {
-		// grpc is not supported yet, should comment out when it is supported
-		// case "grpc":
-		// 	return otlploggrpc.New(ctx)
+		case "grpc":
+			return otlploggrpc.New(ctx)
 		case "http/protobuf":
 			return otlploghttp.New(ctx)
 		default:

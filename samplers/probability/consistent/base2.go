@@ -15,12 +15,28 @@ const (
 
 // expFromFloat64 returns floor(log2(x)).
 func expFromFloat64(x float64) int {
-	return int((math.Float64bits(x)&offsetExponentMask)>>significandBits) - offsetExponentBias
+	biased := (math.Float64bits(x) & offsetExponentMask) >> significandBits
+	// The biased exponent can only be expressed with 11 bits (size (i.e. 64) -
+	// significant (i.e 52) - sign (i.e. 1)). Meaning the int conversion below
+	// is guaranteed to be lossless.
+	return int(biased) - offsetExponentBias // nolint: gosec  // See above comment.
 }
 
 // expToFloat64 returns 2^x.
 func expToFloat64(x int) float64 {
-	return math.Float64frombits(uint64(offsetExponentBias+x) << significandBits)
+	// The exponent field is an 11-bit unsigned integer from 0 to 2047, in
+	// biased form: an exponent value of 1023 represents the actual zero.
+	// Exponents range from -1022 to +1023 because exponents of -1023 (all 0s)
+	// and +1024 (all 1s) are reserved for special numbers.
+	const low, high = -1022, 1023
+	if x < low {
+		x = low
+	}
+	if x > high {
+		x = high
+	}
+	biased := uint64(offsetExponentBias + x) // nolint: gosec  // See comment and guard above.
+	return math.Float64frombits(biased << significandBits)
 }
 
 // splitProb returns the two values of log-adjusted-count nearest to p
@@ -54,5 +70,5 @@ func splitProb(p float64) (uint8, uint8, float64) {
 	highP := expToFloat64(-high)
 	lowProb := (highP - p) / (highP - lowP)
 
-	return uint8(low), uint8(high), lowProb
+	return uint8(low), uint8(high), lowProb // nolint: gosec  // 8-bit sample.
 }

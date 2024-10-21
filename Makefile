@@ -54,6 +54,9 @@ $(MULTIMOD): PACKAGE=go.opentelemetry.io/build-tools/multimod
 CROSSLINK = $(TOOLS)/crosslink
 $(CROSSLINK): PACKAGE=go.opentelemetry.io/build-tools/crosslink
 
+GOJQ = $(TOOLS)/gojq
+$(TOOLS)/gojq: PACKAGE=github.com/itchyny/gojq/cmd/gojq
+
 GOTMPL = $(TOOLS)/gotmpl
 $(GOTMPL): PACKAGE=go.opentelemetry.io/build-tools/gotmpl
 
@@ -66,7 +69,7 @@ $(GOJSONSCHEMA): PACKAGE=github.com/atombender/go-jsonschema
 GOVULNCHECK = $(TOOLS)/govulncheck
 $(GOVULNCHECK): PACKAGE=golang.org/x/vuln/cmd/govulncheck
 
-tools: $(GOLANGCI_LINT) $(MISSPELL) $(GOCOVMERGE) $(STRINGER) $(PORTO) $(MULTIMOD) $(CROSSLINK) $(GOTMPL) $(GORELEASE) $(GOJSONSCHEMA) $(GOVULNCHECK)
+tools: $(GOLANGCI_LINT) $(MISSPELL) $(GOCOVMERGE) $(STRINGER) $(PORTO) $(GOJQ) $(MULTIMOD) $(CROSSLINK) $(GOTMPL) $(GORELEASE) $(GOJSONSCHEMA) $(GOVULNCHECK)
 
 # Virtualized python tools via docker
 
@@ -263,23 +266,6 @@ test-coverage/%:
 		&& $$CMD ./... \
 		&& $(GO) tool cover -html=coverage.out -o coverage.html;
 
-.PHONY: test-mongo-driver
-test-mongo-driver:
-	@if ./tools/should_build.sh mongo-driver; then \
-	  set -e; \
-	  docker run --name mongo-integ --rm -p 27017:27017 -d mongo; \
-	  CMD=mongo IMG_NAME=mongo-integ ./tools/wait.sh; \
-	  (cd instrumentation/go.mongodb.org/mongo-driver/mongo/otelmongo/test && \
-	    $(GO) test \
-		  -covermode=$(COVERAGE_MODE) \
-		  -coverprofile=$(COVERAGE_PROFILE) \
-		  -coverpkg=go.opentelemetry.io/contrib/instrumentation/go.mongodb.org/mongo-driver/mongo/otelmongo/...  \
-		  ./... \
-	    && $(GO) tool cover -html=$(COVERAGE_PROFILE) -o coverage.html); \
-	  cp ./instrumentation/go.mongodb.org/mongo-driver/mongo/otelmongo/test/coverage.out ./; \
-	  docker stop mongo-integ; \
-	fi
-
 # Releasing
 
 .PHONY: gorelease
@@ -323,7 +309,7 @@ update-all-otel-deps:
 OPENTELEMETRY_CONFIGURATION_JSONSCHEMA_SRC_DIR=tmp/opentelememetry-configuration
 
 # The SHA matching the current version of the opentelemetry-configuration schema to use
-OPENTELEMETRY_CONFIGURATION_JSONSCHEMA_VERSION=f38ac7c3a499ae5f81924ef9c455c27a56130562
+OPENTELEMETRY_CONFIGURATION_JSONSCHEMA_VERSION=v0.3.0
 
 # Cleanup temporary directory
 genjsonschema-cleanup:
@@ -340,7 +326,7 @@ genjsonschema: genjsonschema-cleanup $(GOJSONSCHEMA)
 		--capitalization OTLP \
 		--struct-name-from-title \
 		--package config \
-		--tags mapstructure \
+		--only-models \
 		--output ${GENERATED_CONFIG} \
 		${OPENTELEMETRY_CONFIGURATION_JSONSCHEMA_SRC_DIR}/schema/opentelemetry_configuration.json
 	@echo Modify jsonschema generated files.
