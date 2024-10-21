@@ -6,7 +6,6 @@ package otelzap
 import (
 	"context"
 	"fmt"
-	semconv "go.opentelemetry.io/otel/semconv/v1.26.0"
 	"testing"
 	"time"
 
@@ -18,6 +17,7 @@ import (
 	"go.opentelemetry.io/otel/log"
 	"go.opentelemetry.io/otel/log/global"
 	"go.opentelemetry.io/otel/log/logtest"
+	semconv "go.opentelemetry.io/otel/semconv/v1.26.0"
 )
 
 var (
