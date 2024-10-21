@@ -200,6 +200,13 @@ func (o *Core) Write(ent zapcore.Entry, fields []zapcore.Field) error {
 	r.SetSeverityText(ent.Level.String())
 
 	r.AddAttributes(o.attr...)
+	if ent.Caller.Defined {
+		r.AddAttributes(
+			log.String("file", ent.Caller.File),
+			log.Int("line", ent.Caller.Line),
+			log.String("function", ent.Caller.Function),
+		)
+	}
 	if len(fields) > 0 {
 		ctx, attrbuf := convertField(fields)
 		if ctx != nil {
