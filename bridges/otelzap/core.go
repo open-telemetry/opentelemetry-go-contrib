@@ -208,6 +208,9 @@ func (o *Core) Write(ent zapcore.Entry, fields []zapcore.Field) error {
 			log.String(string(semconv.CodeFunctionKey), ent.Caller.Function),
 		)
 	}
+	if ent.Stack != "" {
+		r.AddAttributes(log.String(string(semconv.CodeStacktraceKey), ent.Stack))
+	}
 	if len(fields) > 0 {
 		ctx, attrbuf := convertField(fields)
 		if ctx != nil {
