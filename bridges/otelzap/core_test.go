@@ -182,7 +182,7 @@ func TestCoreWithCaller(t *testing.T) {
 			case string(semconv.CodeFilepathKey):
 				assert.Contains(t, kv.Value.AsString(), "core_test.go")
 			case string(semconv.CodeLineNumberKey):
-				assert.Greater(t, kv.Value.AsInt64(), int64(0))
+				assert.Positive(t, kv.Value.AsInt64())
 			case string(semconv.CodeFunctionKey):
 				assert.Contains(t, kv.Value.AsString(), "TestCoreWithCaller")
 			default:
