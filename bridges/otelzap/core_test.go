@@ -233,11 +233,6 @@ func TestCoreWithStacktrace(t *testing.T) {
 		assert.Equal(t, log.SeverityWarn, got.Severity())
 		assert.Equal(t, zap.WarnLevel.String(), got.SeverityText())
 		assert.Equal(t, 0, got.AttributesLen())
-		got.WalkAttributes(func(kv log.KeyValue) bool {
-			println(kv.Key)
-			println(kv.Value.AsString())
-			return true
-		})
 	})
 }
 
