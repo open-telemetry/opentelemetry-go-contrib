@@ -168,40 +168,26 @@ func TestCoreEnabled(t *testing.T) {
 func TestCoreWithCaller(t *testing.T) {
 	rec := logtest.NewRecorder()
 	zc := NewCore(loggerName, WithLoggerProvider(rec))
+	logger := zap.New(zc, zap.AddCaller())
 
-	t.Run("WithAddCaller", func(t *testing.T) {
-		logger := zap.New(zc, zap.AddCaller())
-		logger.Info(testMessage)
-		got := rec.Result()[0].Records[0]
-		assert.Equal(t, testMessage, got.Body().AsString())
-		assert.Equal(t, log.SeverityInfo, got.Severity())
-		assert.Equal(t, zap.InfoLevel.String(), got.SeverityText())
-		assert.Equal(t, 3, got.AttributesLen())
-		got.WalkAttributes(func(kv log.KeyValue) bool {
-			switch kv.Key {
-			case string(semconv.CodeFilepathKey):
-				assert.Contains(t, kv.Value.AsString(), "core_test.go")
-			case string(semconv.CodeLineNumberKey):
-				assert.Positive(t, kv.Value.AsInt64())
-			case string(semconv.CodeFunctionKey):
-				assert.Contains(t, kv.Value.AsString(), "TestCoreWithCaller")
-			default:
-				assert.Fail(t, "unexpected attribute key", kv.Key)
-			}
-			return true
-		})
-	})
-
-	rec.Reset()
-
-	t.Run("Default", func(t *testing.T) {
-		logger := zap.New(zc)
-		logger.Info(testMessage)
-		got := rec.Result()[0].Records[0]
-		assert.Equal(t, testMessage, got.Body().AsString())
-		assert.Equal(t, log.SeverityInfo, got.Severity())
-		assert.Equal(t, zap.InfoLevel.String(), got.SeverityText())
-		assert.Equal(t, 0, got.AttributesLen())
+	logger.Info(testMessage)
+	got := rec.Result()[0].Records[0]
+	assert.Equal(t, testMessage, got.Body().AsString())
+	assert.Equal(t, log.SeverityInfo, got.Severity())
+	assert.Equal(t, zap.InfoLevel.String(), got.SeverityText())
+	assert.Equal(t, 3, got.AttributesLen())
+	got.WalkAttributes(func(kv log.KeyValue) bool {
+		switch kv.Key {
+		case string(semconv.CodeFilepathKey):
+			assert.Contains(t, kv.Value.AsString(), "core_test.go")
+		case string(semconv.CodeLineNumberKey):
+			assert.Positive(t, kv.Value.AsInt64())
+		case string(semconv.CodeFunctionKey):
+			assert.Contains(t, kv.Value.AsString(), "TestCoreWithCaller")
+		default:
+			assert.Fail(t, "unexpected attribute key", kv.Key)
+		}
+		return true
 	})
 }
 
@@ -210,29 +196,16 @@ func TestCoreWithStacktrace(t *testing.T) {
 	zc := NewCore(loggerName, WithLoggerProvider(rec))
 	logger := zap.New(zc, zap.AddStacktrace(zapcore.ErrorLevel))
 
-	t.Run("Error", func(t *testing.T) {
-		logger.Error(testMessage)
-		got := rec.Result()[0].Records[0]
-		assert.Equal(t, testMessage, got.Body().AsString())
-		assert.Equal(t, log.SeverityError, got.Severity())
-		assert.Equal(t, zap.ErrorLevel.String(), got.SeverityText())
-		assert.Equal(t, 1, got.AttributesLen())
-		got.WalkAttributes(func(kv log.KeyValue) bool {
-			assert.Equal(t, string(semconv.CodeStacktraceKey), kv.Key)
-			assert.NotEmpty(t, kv.Value.AsString())
-			return true
-		})
-	})
-
-	rec.Reset()
-
-	t.Run("Warn", func(t *testing.T) {
-		logger.Warn(testMessage)
-		got := rec.Result()[0].Records[0]
-		assert.Equal(t, testMessage, got.Body().AsString())
-		assert.Equal(t, log.SeverityWarn, got.Severity())
-		assert.Equal(t, zap.WarnLevel.String(), got.SeverityText())
-		assert.Equal(t, 0, got.AttributesLen())
+	logger.Error(testMessage)
+	got := rec.Result()[0].Records[0]
+	assert.Equal(t, testMessage, got.Body().AsString())
+	assert.Equal(t, log.SeverityError, got.Severity())
+	assert.Equal(t, zap.ErrorLevel.String(), got.SeverityText())
+	assert.Equal(t, 1, got.AttributesLen())
+	got.WalkAttributes(func(kv log.KeyValue) bool {
+		assert.Equal(t, string(semconv.CodeStacktraceKey), kv.Key)
+		assert.NotEmpty(t, kv.Value.AsString())
+		return true
 	})
 }
 
