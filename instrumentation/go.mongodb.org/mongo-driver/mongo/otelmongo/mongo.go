@@ -39,9 +39,9 @@ func (m *monitor) Started(ctx context.Context, evt *event.CommandStartedEvent) {
 		semconv.DBSystemMongoDB,
 		semconv.DBOperation(evt.CommandName),
 		semconv.DBName(evt.DatabaseName),
-		semconv.NetPeerName(hostname),
-		semconv.NetPeerPort(port),
-		semconv.NetTransportTCP,
+		semconv.NetPeerName(hostname), //nolint:staticcheck
+		semconv.NetPeerPort(port),     //nolint:staticcheck
+		semconv.NetTransportTCP,       //nolint:staticcheck
 	}
 	if !m.cfg.CommandAttributeDisabled {
 		attrs = append(attrs, semconv.DBStatement(sanitizeCommand(evt.Command)))
