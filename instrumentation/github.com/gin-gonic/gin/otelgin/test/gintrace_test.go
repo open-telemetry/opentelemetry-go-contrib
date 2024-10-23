@@ -7,6 +7,7 @@ package test
 
 import (
 	"errors"
+	"fmt"
 	"html/template"
 	"net/http"
 	"net/http/httptest"
@@ -160,7 +161,8 @@ func TestSpanName(t *testing.T) {
 		wantSpanName      string
 	}{
 		{"/user/1", nil, "/user/:id"},
-		{"/user/1", func(r *http.Request) string { return r.URL.Path }, "/user/1"},
+		{"/user/1", func(routeName string, r *http.Request) string { return r.URL.Path }, "/user/1"},
+		{"/user/1", func(routeName string, r *http.Request) string { return fmt.Sprintf("%s %s", r.Method, routeName) }, "GET /user/:id"},
 	}
 	for _, tc := range testCases {
 		t.Run(tc.requestPath, func(t *testing.T) {
@@ -171,7 +173,7 @@ func TestSpanName(t *testing.T) {
 			router.Use(otelgin.Middleware("foobar", otelgin.WithTracerProvider(provider), otelgin.WithSpanNameFormatter(tc.spanNameFormatter)))
 			router.GET("/user/:id", func(c *gin.Context) {})
 
-			router.ServeHTTP(httptest.NewRecorder(), httptest.NewRequest("GET", tc.requestPath, nil))
+			router.ServeHTTP(httptest.NewRecorder(), httptest.NewRequest(http.MethodGet, tc.requestPath, nil))
 
 			require.Len(t, sr.Ended(), 1, "should emit a span")
 			assert.Equal(t, tc.wantSpanName, sr.Ended()[0].Name(), "span name not correct")
@@ -186,8 +188,8 @@ func TestHTTPRouteWithSpanNameFormatter(t *testing.T) {
 	router := gin.New()
 	router.Use(otelgin.Middleware("foobar",
 		otelgin.WithTracerProvider(provider),
-		otelgin.WithSpanNameFormatter(func(r *http.Request) string {
-			return r.URL.Path
+		otelgin.WithSpanNameFormatter(func(routeName string, r *http.Request) string {
+			return fmt.Sprintf("%s %s", r.Method, routeName)
 		}),
 	),
 	)
@@ -208,7 +210,7 @@ func TestHTTPRouteWithSpanNameFormatter(t *testing.T) {
 	spans := sr.Ended()
 	require.Len(t, spans, 1)
 	span := spans[0]
-	assert.Equal(t, "/user/123", span.Name())
+	assert.Equal(t, "GET /user/:id", span.Name())
 	assert.Equal(t, oteltrace.SpanKindServer, span.SpanKind())
 	attr := span.Attributes()
 	assert.Contains(t, attr, attribute.String("http.method", "GET"))

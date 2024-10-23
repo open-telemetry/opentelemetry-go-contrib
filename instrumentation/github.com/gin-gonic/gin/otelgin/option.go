@@ -30,8 +30,8 @@ type Filter func(*http.Request) bool
 // gin.Context has FullPath() method, which returns a matched route full path.
 type GinFilter func(*gin.Context) bool
 
-// SpanNameFormatter is used to set span name by http.request.
-type SpanNameFormatter func(r *http.Request) string
+// SpanNameFormatter is used to set span name by http.Request.
+type SpanNameFormatter func(routeName string, r *http.Request) string
 
 // Option specifies instrumentation configuration options.
 type Option interface {
@@ -84,9 +84,11 @@ func WithGinFilter(f ...GinFilter) Option {
 	})
 }
 
-// WithSpanNameFormatter takes a function that will be called on every
-// request and the returned string will become the Span Name.
-func WithSpanNameFormatter(f func(r *http.Request) string) Option {
+// WithSpanNameFormatter specifies a function to use for generating a custom span
+// name. By default, the route name (path template or regexp) is used. The route
+// name is provided so you can use it in the span name without needing to
+// duplicate the logic for extracting it from the request.
+func WithSpanNameFormatter(f func(routeName string, r *http.Request) string) Option {
 	return optionFunc(func(c *config) {
 		c.SpanNameFormatter = f
 	})
