@@ -35,6 +35,7 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 - Support yaml/json struct tags for generated code in `go.opentelemetry.io/contrib/config`. (#5433)
 - Add support for parsing YAML configuration via `ParseYAML` in `go.opentelemetry.io/contrib/config`. (#5433)
 - Add support for temporality preference configuration in `go.opentelemetry.io/contrib/config`. (#5860)
+- Parsing via ParseYAML in `go.opentelemetry.io/contrib/config` now support environment variables in the format `${VAR_NAME}`. (#6215)
 
 ### Changed
 
