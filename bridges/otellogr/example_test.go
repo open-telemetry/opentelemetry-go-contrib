@@ -20,8 +20,8 @@ func Example() {
 		"my/pkg/name",
 		otellogr.WithLoggerProvider(provider),
 		// Optionally, set the log level severity mapping.
-		otellogr.WithLevelSeverity(func(i int) log.Severity {
-			switch i {
+		otellogr.WithLevelSeverity(func(level int) log.Severity {
+			switch level {
 			case 0:
 				return log.SeverityInfo
 			case 1:
