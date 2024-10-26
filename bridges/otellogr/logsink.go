@@ -146,9 +146,11 @@ func WithLoggerProvider(provider log.LoggerProvider) Option {
 // convert logr levels to OpenTelemetry log severities.
 //
 // By default if this Option is not provided, the LogSink will use a default
-// conversion function which adds an offset to the logr level to get the
-// OpenTelemetry severity. The offset is such that logr.Info("message")
-// converts to OpenTelemetry [log.SeverityInfo].
+// conversion function that transforms in the following way:
+//
+//   - logr.Info and logr.V(0) are transformed to [log.SeverityInfo].
+//   - logr.V(1) is transformed to [log.SeverityDebug].
+//   - logr.V(2) and higher are transformed to [log.SeverityTrace].
 func WithLevelSeverity(f func(int) log.Severity) Option {
 	return optFunc(func(c config) config {
 		c.levelSeverity = f
