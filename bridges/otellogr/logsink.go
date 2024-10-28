@@ -25,12 +25,6 @@
 //   - logr.V(1) is transformed to [log.SeverityDebug].
 //   - logr.V(2) and higher are transformed to [log.SeverityTrace].
 //
-// If possible, look at alternative log bridges that provide less abstract log
-// level mapping such as [go.opentelemetry.io/contrib/bridges/otelslog],
-// [go.opentelemetry.io/contrib/bridges/otelzap], or
-// [go.opentelemetry.io/contrib/bridges/otellogrus]. They provide more direct
-// translation of log levels.
-//
 // KeysAndValues values are transformed based on their type. The following types are
 // supported:
 //
