@@ -17,7 +17,7 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 
 ### Changed 
 
-- Bump otelmongo go.opentelemetry.io/otel/semconv/v1.17.0 to go.opentelemetry.io/otel/semconv/v1.21.0. (#6272)
+- Upgrade `go.opentelemetry.io/otel/semconv/v1.17.0` to `go.opentelemetry.io/otel/semconv/v1.21.0` in `go.opentelemetry.io/contrib/instrumentation/go.mongodb.org/mongo-driver/mongo/otelmongo`. (#6272)
 
 ### Fixed
 
