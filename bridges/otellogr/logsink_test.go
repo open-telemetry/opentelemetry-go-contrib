@@ -324,15 +324,15 @@ func TestLogSinkEnabled(t *testing.T) {
 		WithLevelSeverity(func(i int) log.Severity {
 			switch i {
 			case 0:
-				return log.SeverityDebug
-			default:
 				return log.SeverityInfo
+			default:
+				return log.SeverityDebug
 			}
 		}),
 	)
 
-	assert.False(t, ls.Enabled(0))
-	assert.True(t, ls.Enabled(1))
+	assert.True(t, ls.Enabled(0))
+	assert.False(t, ls.Enabled(1))
 }
 
 func buildRecord(body log.Value, timestamp time.Time, severity log.Severity, attrs []log.KeyValue) log.Record {
