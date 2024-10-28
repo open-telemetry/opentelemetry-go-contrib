@@ -64,7 +64,7 @@ func TestLogProcessorAppendsAllBaggageAttributes(t *testing.T) {
 	require.Equal(t, want, got)
 }
 
-func TestLogProcessorAppendsBaggageAttributesWithHaPrefixPredicate(t *testing.T) {
+func TestLogProcessorAppendsBaggageAttributesWithHasPrefixPredicate(t *testing.T) {
 	b, _ := baggage.New()
 	b = addEntryToBaggage(t, b, "baggage.test", "baggage value")
 	ctx := baggage.ContextWithBaggage(context.Background(), b)
