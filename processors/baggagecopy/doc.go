@@ -14,7 +14,7 @@
 // values will appear in those child spans as well.
 //
 // The LogProcessor retrieves [Baggage] from the the context provided when
-// emitting the log dds them as attributes to the log.
+// emitting the log and adds them as attributes to the log.
 // Baggage may be propagated to external services via propagation headers.
 // and be used to add context to logs if the service also has a Baggage log processor.
 //
