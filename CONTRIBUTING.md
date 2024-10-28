@@ -123,6 +123,10 @@ See the [public meeting notes](https://docs.google.com/document/d/1E5e7Ld0NuU1iV
 
 ## Approvers and Maintainers
 
+Triagers:
+
+- [Cheng-Zhen Yang](https://github.com/scorpionknifes), Independent
+
 Approvers:
 
 Maintainers:
