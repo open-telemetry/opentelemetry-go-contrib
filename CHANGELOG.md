@@ -15,6 +15,10 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 - Add the `WithSource` option to the `go.opentelemetry.io/contrib/bridges/otelslog` log bridge to set the `code.*` attributes in the log record that includes the source location where the record was emitted. (#6253)
 - Add `ContextWithStartTime` and `StartTimeFromContext` to `go.opentelemetry.io/contrib/instrumentation/net/http/otelhttp`, which allows setting the start time using go context. (#6137)
 
+### Changed 
+
+- Bump otelmongo go.opentelemetry.io/otel/semconv/v1.17.0 to go.opentelemetry.io/otel/semconv/v1.21.0. (#6272)
+
 ### Fixed
 
 - Transform nil attribute values to `log.Value` zero value instead of panicking in `go.opentelemetry.io/contrib/bridges/otellogrus`. (#6237)
@@ -22,7 +26,6 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 - Transform nil attribute values to `log.Value` zero value instead of `log.StringValue("<nil>")` in `go.opentelemetry.io/contrib/bridges/otelslog`. (#6246)
 - Fix `NewClientHandler` so that `rpc.client.request.*` metrics measure requests instead of responses and `rpc.client.responses.*` metrics measure responses instead of requests in `go.opentelemetry.io/contrib/instrumentation/google.golang.org/grpc/otelgrpc`. (#6250)
 - Fix issue in `go.opentelemetry.io/contrib/config` causing `otelprom.WithResourceAsConstantLabels` configuration to not be respected. (#6260)
-- Bump otelmongo semconv from 1.17.0 to 1.21.0. (#6272)
 
 <!-- Released section -->
 <!-- Don't change this section unless doing release -->
