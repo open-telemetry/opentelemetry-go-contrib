@@ -19,6 +19,10 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
   - Use `baggagecopy.NewLogProcessor` when configuring a Log Provider.
     - `NewLogProcessor` accepts a `Filter` function type that selects which baggage members are added to the log record.
 
+### Changed 
+
+- Upgrade `go.opentelemetry.io/otel/semconv/v1.17.0` to `go.opentelemetry.io/otel/semconv/v1.21.0` in `go.opentelemetry.io/contrib/instrumentation/go.mongodb.org/mongo-driver/mongo/otelmongo`. (#6272)
+
 ### Fixed
 
 - Transform nil attribute values to `log.Value` zero value instead of panicking in `go.opentelemetry.io/contrib/bridges/otellogrus`. (#6237)

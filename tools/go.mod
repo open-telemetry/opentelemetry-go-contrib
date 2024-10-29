@@ -5,7 +5,7 @@ go 1.22.1
 exclude github.com/blizzy78/varnamelen v0.6.1
 
 require (
-	github.com/atombender/go-jsonschema v0.16.0
+	github.com/atombender/go-jsonschema v0.17.0
 	github.com/client9/misspell v0.3.4
 	github.com/golangci/golangci-lint v1.61.0
 	github.com/itchyny/gojq v0.12.16
@@ -14,7 +14,7 @@ require (
 	go.opentelemetry.io/build-tools/crosslink v0.14.0
 	go.opentelemetry.io/build-tools/gotmpl v0.14.0
 	go.opentelemetry.io/build-tools/multimod v0.14.0
-	golang.org/x/exp v0.0.0-20241004190924-225e2abe05e6
+	golang.org/x/exp v0.0.0-20241009180824-f66d83c29e7c
 	golang.org/x/tools v0.26.0
 	golang.org/x/vuln v1.1.3
 )
@@ -84,7 +84,7 @@ require (
 	github.com/go-viper/mapstructure/v2 v2.1.0 // indirect
 	github.com/go-xmlfmt/xmlfmt v1.1.2 // indirect
 	github.com/gobwas/glob v0.2.3 // indirect
-	github.com/goccy/go-yaml v1.11.3 // indirect
+	github.com/goccy/go-yaml v1.12.0 // indirect
 	github.com/gofrs/flock v0.12.1 // indirect
 	github.com/golang/groupcache v0.0.0-20210331224755-41bb18bfe9da // indirect
 	github.com/golangci/dupl v0.0.0-20180902072040-3e9179ac440a // indirect
@@ -214,7 +214,7 @@ require (
 	golang.org/x/sys v0.26.0 // indirect
 	golang.org/x/telemetry v0.0.0-20240522233618-39ace7a40ae7 // indirect
 	golang.org/x/text v0.19.0 // indirect
-	golang.org/x/xerrors v0.0.0-20231012003039-104605ab7028 // indirect
+	golang.org/x/xerrors v0.0.0-20240903120638-7835f813f4da // indirect
 	google.golang.org/protobuf v1.34.2 // indirect
 	gopkg.in/ini.v1 v1.67.0 // indirect
 	gopkg.in/warnings.v0 v0.1.2 // indirect
