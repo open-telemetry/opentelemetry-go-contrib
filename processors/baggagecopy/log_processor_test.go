@@ -41,14 +41,12 @@ func TestLogProcessorAppendsAllBaggageAttributes(t *testing.T) {
 	b = addEntryToBaggage(t, b, "baggage.test", "baggage value")
 	ctx := baggage.ContextWithBaggage(context.Background(), b)
 
-	// create log provider with the baggage log processor and a log processor used to capture emitted record
 	wrapped := &processor{}
 	lp := log.NewLoggerProvider(
 		log.WithProcessor(NewLogProcessor(AllowAllMembers)),
 		log.WithProcessor(wrapped),
 	)
 
-	// log a test record
 	lp.Logger("test").Emit(ctx, api.Record{})
 
 	require.Len(t, wrapped.records, 1)
@@ -73,14 +71,12 @@ func TestLogProcessorAppendsBaggageAttributesWithHasPrefixPredicate(t *testing.T
 		return strings.HasPrefix(m.Key(), "baggage.")
 	}
 
-	// create log provider with the baggage log processor and a log processor used to capture emitted record
 	wrapped := &processor{}
 	lp := log.NewLoggerProvider(
 		log.WithProcessor(NewLogProcessor(baggageKeyPredicate)),
 		log.WithProcessor(wrapped),
 	)
 
-	// log a test record
 	lp.Logger("test").Emit(ctx, api.Record{})
 
 	require.Len(t, wrapped.records, 1)
@@ -106,14 +102,12 @@ func TestLogProcessorAppendsBaggageAttributesWithRegexPredicate(t *testing.T) {
 		return expr.MatchString(m.Key())
 	}
 
-	// create log provider with the baggage log processor and a log processor used to capture emitted record
 	wrapped := &processor{}
 	lp := log.NewLoggerProvider(
 		log.WithProcessor(NewLogProcessor(baggageKeyPredicate)),
 		log.WithProcessor(wrapped),
 	)
 
-	// log a test record
 	lp.Logger("test").Emit(ctx, api.Record{})
 
 	require.Len(t, wrapped.records, 1)
@@ -139,14 +133,12 @@ func TestLogProcessorOnlyAddsBaggageEntriesThatMatchPredicate(t *testing.T) {
 		return m.Key() == "baggage.test"
 	}
 
-	// create log provider with the baggage log processor and a log processor used to capture emitted record
 	wrapped := &processor{}
 	lp := log.NewLoggerProvider(
 		log.WithProcessor(NewLogProcessor(baggageKeyPredicate)),
 		log.WithProcessor(wrapped),
 	)
 
-	// log a test record
 	lp.Logger("test").Emit(ctx, api.Record{})
 
 	require.Len(t, wrapped.records, 1)
