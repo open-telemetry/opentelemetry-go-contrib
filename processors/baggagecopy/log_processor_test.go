@@ -36,122 +36,85 @@ func NewTestProcessor() *processor {
 	return &processor{}
 }
 
-func TestLogProcessorAppendsAllBaggageAttributes(t *testing.T) {
-	b, _ := baggage.New()
-	b = addEntryToBaggage(t, b, "baggage.test", "baggage value")
-	ctx := baggage.ContextWithBaggage(context.Background(), b)
-
-	wrapped := &processor{}
-	lp := log.NewLoggerProvider(
-		log.WithProcessor(NewLogProcessor(AllowAllMembers)),
-		log.WithProcessor(wrapped),
-	)
-
-	lp.Logger("test").Emit(ctx, api.Record{})
-
-	require.Len(t, wrapped.records, 1)
-	require.Equal(t, 1, wrapped.records[0].AttributesLen())
-
-	want := []api.KeyValue{api.String("baggage.test", "baggage value")}
-	var got []api.KeyValue
-	wrapped.records[0].WalkAttributes(func(kv api.KeyValue) bool {
-		got = append(got, kv)
-		return true
-	})
-
-	require.Equal(t, want, got)
-}
-
-func TestLogProcessorAppendsBaggageAttributesWithHasPrefixPredicate(t *testing.T) {
-	b, _ := baggage.New()
-	b = addEntryToBaggage(t, b, "baggage.test", "baggage value")
-	ctx := baggage.ContextWithBaggage(context.Background(), b)
-
-	baggageKeyPredicate := func(m baggage.Member) bool {
-		return strings.HasPrefix(m.Key(), "baggage.")
+func TestLogProcessor_OnEmit(t *testing.T) {
+	tests := []struct {
+		name    string
+		baggage baggage.Baggage
+		filter  Filter
+		want    []api.KeyValue
+	}{
+		{
+			name: "all baggage attributes",
+			baggage: func() baggage.Baggage {
+				b, _ := baggage.New()
+				b = addEntryToBaggage(t, b, "baggage.test", "baggage value")
+				return b
+			}(),
+			filter: AllowAllMembers,
+			want:   []api.KeyValue{api.String("baggage.test", "baggage value")},
+		},
+		{
+			name: "baggage attributes with prefix",
+			baggage: func() baggage.Baggage {
+				b, _ := baggage.New()
+				b = addEntryToBaggage(t, b, "baggage.test", "baggage value")
+				return b
+			}(),
+			filter: func(m baggage.Member) bool {
+				return strings.HasPrefix(m.Key(), "baggage.")
+			},
+			want: []api.KeyValue{api.String("baggage.test", "baggage value")},
+		},
+		{
+			name: "baggage attributes with regex",
+			baggage: func() baggage.Baggage {
+				b, _ := baggage.New()
+				b = addEntryToBaggage(t, b, "baggage.test", "baggage value")
+				return b
+			}(),
+			filter: func(m baggage.Member) bool {
+				return regexp.MustCompile(`^baggage\..*`).MatchString(m.Key())
+			},
+			want: []api.KeyValue{api.String("baggage.test", "baggage value")},
+		},
+		{
+			name: "only adds baggage entries that match predicate",
+			baggage: func() baggage.Baggage {
+				b, _ := baggage.New()
+				b = addEntryToBaggage(t, b, "baggage.test", "baggage value")
+				b = addEntryToBaggage(t, b, "foo", "bar")
+				return b
+			}(),
+			filter: func(m baggage.Member) bool {
+				return m.Key() == "baggage.test"
+			},
+			want: []api.KeyValue{api.String("baggage.test", "baggage value")},
+		},
 	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			ctx := baggage.ContextWithBaggage(context.Background(), tt.baggage)
 
-	wrapped := &processor{}
-	lp := log.NewLoggerProvider(
-		log.WithProcessor(NewLogProcessor(baggageKeyPredicate)),
-		log.WithProcessor(wrapped),
-	)
+			wrapped := &processor{}
+			lp := log.NewLoggerProvider(
+				log.WithProcessor(NewLogProcessor(tt.filter)),
+				log.WithProcessor(wrapped),
+			)
 
-	lp.Logger("test").Emit(ctx, api.Record{})
+			lp.Logger("test").Emit(ctx, api.Record{})
 
-	require.Len(t, wrapped.records, 1)
-	require.Equal(t, 1, wrapped.records[0].AttributesLen())
+			require.Len(t, wrapped.records, 1)
+			require.Equal(t, len(tt.want), wrapped.records[0].AttributesLen())
 
-	want := []api.KeyValue{api.String("baggage.test", "baggage value")}
-	var got []api.KeyValue
-	wrapped.records[0].WalkAttributes(func(kv api.KeyValue) bool {
-		got = append(got, kv)
-		return true
-	})
+			var got []api.KeyValue
+			wrapped.records[0].WalkAttributes(func(kv api.KeyValue) bool {
+				got = append(got, kv)
+				return true
+			})
 
-	require.Equal(t, want, got)
-}
-
-func TestLogProcessorAppendsBaggageAttributesWithRegexPredicate(t *testing.T) {
-	b, _ := baggage.New()
-	b = addEntryToBaggage(t, b, "baggage.test", "baggage value")
-	ctx := baggage.ContextWithBaggage(context.Background(), b)
-
-	expr := regexp.MustCompile(`^baggage\..*`)
-	baggageKeyPredicate := func(m baggage.Member) bool {
-		return expr.MatchString(m.Key())
+			require.Equal(t, tt.want, got)
+		})
 	}
-
-	wrapped := &processor{}
-	lp := log.NewLoggerProvider(
-		log.WithProcessor(NewLogProcessor(baggageKeyPredicate)),
-		log.WithProcessor(wrapped),
-	)
-
-	lp.Logger("test").Emit(ctx, api.Record{})
-
-	require.Len(t, wrapped.records, 1)
-	require.Equal(t, 1, wrapped.records[0].AttributesLen())
-
-	want := []api.KeyValue{api.String("baggage.test", "baggage value")}
-	var got []api.KeyValue
-	wrapped.records[0].WalkAttributes(func(kv api.KeyValue) bool {
-		got = append(got, kv)
-		return true
-	})
-
-	require.Equal(t, want, got)
-}
-
-func TestLogProcessorOnlyAddsBaggageEntriesThatMatchPredicate(t *testing.T) {
-	b, _ := baggage.New()
-	b = addEntryToBaggage(t, b, "baggage.test", "baggage value")
-	b = addEntryToBaggage(t, b, "foo", "bar")
-	ctx := baggage.ContextWithBaggage(context.Background(), b)
-
-	baggageKeyPredicate := func(m baggage.Member) bool {
-		return m.Key() == "baggage.test"
-	}
-
-	wrapped := &processor{}
-	lp := log.NewLoggerProvider(
-		log.WithProcessor(NewLogProcessor(baggageKeyPredicate)),
-		log.WithProcessor(wrapped),
-	)
-
-	lp.Logger("test").Emit(ctx, api.Record{})
-
-	require.Len(t, wrapped.records, 1)
-	require.Equal(t, 1, wrapped.records[0].AttributesLen())
-
-	want := []api.KeyValue{api.String("baggage.test", "baggage value")}
-	var got []api.KeyValue
-	wrapped.records[0].WalkAttributes(func(kv api.KeyValue) bool {
-		got = append(got, kv)
-		return true
-	})
-
-	require.Equal(t, want, got)
 }
 
 func TestZeroLogProcessorNoPanic(t *testing.T) {
