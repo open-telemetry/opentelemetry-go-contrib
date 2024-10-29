@@ -38,14 +38,23 @@ func TestStatsHandlerHandleRPCServerErrors(t *testing.T) {
 				otelgrpc.WithTracerProvider(tp),
 				otelgrpc.WithMeterProvider(mp),
 				otelgrpc.WithMetricAttributes(testMetricAttr),
+				otelgrpc.WithMetricAttributesFn(func(context.Context, any) []attribute.KeyValue {
+					return []attribute.KeyValue{customTestMetricAttr}
+				}),
 			)
 
 			serviceName := "TestGrpcService"
 			methodName := serviceName + "/" + name
 			fullMethodName := "/" + methodName
+
 			// call the server handler
 			ctx := serverHandler.TagRPC(context.Background(), &stats.RPCTagInfo{
 				FullMethodName: fullMethodName,
+			})
+
+			// Ensure dynamic metrics are added
+			serverHandler.HandleRPC(ctx, &stats.InPayload{
+				Payload: []byte(""),
 			})
 
 			grpcErr := status.Error(check.grpcCode, check.grpcCode.String())
@@ -82,6 +91,26 @@ func assertStatsHandlerServerMetrics(t *testing.T, reader metric.Reader, service
 								otelgrpc.RPCSystemGRPC,
 								otelgrpc.GRPCStatusCodeKey.Int64(int64(code)),
 								testMetricAttr,
+								customTestMetricAttr,
+							),
+						},
+					},
+				},
+			},
+			{
+				Name:        "rpc.server.request.size",
+				Description: "Measures size of RPC request messages (uncompressed).",
+				Unit:        "By",
+				Data: metricdata.Histogram[int64]{
+					Temporality: metricdata.CumulativeTemporality,
+					DataPoints: []metricdata.HistogramDataPoint[int64]{
+						{
+							Attributes: attribute.NewSet(
+								semconv.RPCMethod(name),
+								semconv.RPCService(serviceName),
+								semconv.RPCSystemGRPC,
+								testMetricAttr,
+								customTestMetricAttr,
 							),
 						},
 					},
@@ -101,6 +130,7 @@ func assertStatsHandlerServerMetrics(t *testing.T, reader metric.Reader, service
 								otelgrpc.RPCSystemGRPC,
 								otelgrpc.GRPCStatusCodeKey.Int64(int64(code)),
 								testMetricAttr,
+								customTestMetricAttr,
 							),
 						},
 					},
@@ -120,6 +150,7 @@ func assertStatsHandlerServerMetrics(t *testing.T, reader metric.Reader, service
 								otelgrpc.RPCSystemGRPC,
 								otelgrpc.GRPCStatusCodeKey.Int64(int64(code)),
 								testMetricAttr,
+								customTestMetricAttr,
 							),
 						},
 					},

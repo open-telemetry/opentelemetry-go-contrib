@@ -4,6 +4,8 @@
 package otelgrpc // import "go.opentelemetry.io/contrib/instrumentation/google.golang.org/grpc/otelgrpc"
 
 import (
+	"context"
+
 	"google.golang.org/grpc/stats"
 
 	"go.opentelemetry.io/otel"
@@ -29,6 +31,10 @@ const (
 // Deprecated: Use stats handlers instead.
 type InterceptorFilter func(*InterceptorInfo) bool
 
+// MetricAttributesFn is a optional function which will be called per request returning a slice
+// of attribute.KeyValue to be appended to metric attributes recorded by the stats.Handler.
+type MetricAttributesFn func(ctx context.Context, payload any) []attribute.KeyValue
+
 // Filter is a predicate used to determine whether a given request in
 // should be instrumented by the attached RPC tag info.
 // A Filter must return true if the request should be instrumented.
@@ -36,14 +42,15 @@ type Filter func(*stats.RPCTagInfo) bool
 
 // config is a group of options for this instrumentation.
 type config struct {
-	Filter            Filter
-	InterceptorFilter InterceptorFilter
-	Propagators       propagation.TextMapPropagator
-	TracerProvider    trace.TracerProvider
-	MeterProvider     metric.MeterProvider
-	SpanStartOptions  []trace.SpanStartOption
-	SpanAttributes    []attribute.KeyValue
-	MetricAttributes  []attribute.KeyValue
+	Filter             Filter
+	InterceptorFilter  InterceptorFilter
+	Propagators        propagation.TextMapPropagator
+	TracerProvider     trace.TracerProvider
+	MeterProvider      metric.MeterProvider
+	SpanStartOptions   []trace.SpanStartOption
+	SpanAttributes     []attribute.KeyValue
+	MetricAttributes   []attribute.KeyValue
+	MetricAttributesFn MetricAttributesFn
 
 	ReceivedEvent bool
 	SentEvent     bool
@@ -302,4 +309,19 @@ func (o metricAttributesOption) apply(c *config) {
 // WithMetricAttributes returns an Option to add custom attributes to the metrics.
 func WithMetricAttributes(a ...attribute.KeyValue) Option {
 	return metricAttributesOption{a: a}
+}
+
+type metricAttributesFnOption struct{ f MetricAttributesFn }
+
+func (o metricAttributesFnOption) apply(c *config) {
+	if o.f != nil {
+		c.MetricAttributesFn = o.f
+	}
+}
+
+// WithMetricAttributesFn returns an Option to set the MetricAttributesFn function which
+// will be called on each gRPC request to append metric attributes to recorded instruments
+// by the stats.Handler.
+func WithMetricAttributesFn(f MetricAttributesFn) Option {
+	return metricAttributesFnOption{f: f}
 }
