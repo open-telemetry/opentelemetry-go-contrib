@@ -45,9 +45,9 @@ func keyVal(k string, v any) attribute.KeyValue {
 	}
 }
 
-func newResource(res *Resource) (*resource.Resource, error) {
+func newResource(res *Resource) *resource.Resource {
 	if res == nil || res.Attributes == nil {
-		return resource.Default(), nil
+		return resource.Default()
 	}
 	var attrs []attribute.KeyValue
 
@@ -57,5 +57,5 @@ func newResource(res *Resource) (*resource.Resource, error) {
 
 	return resource.NewWithAttributes(*res.SchemaUrl,
 		attrs...,
-	), nil
+	)
 }

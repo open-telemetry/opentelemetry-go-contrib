@@ -43,7 +43,6 @@ func TestNewResource(t *testing.T) {
 		name         string
 		config       *Resource
 		wantResource *resource.Resource
-		wantErr      error
 	}{
 		{
 			name:         "no-resource-configuration",
@@ -92,8 +91,7 @@ func TestNewResource(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			got, err := newResource(tt.config)
-			assert.ErrorIs(t, err, tt.wantErr)
+			got := newResource(tt.config)
 			assert.Equal(t, tt.wantResource, got)
 		})
 	}
