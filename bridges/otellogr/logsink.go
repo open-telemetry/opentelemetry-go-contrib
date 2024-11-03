@@ -61,6 +61,11 @@ import (
 	"go.opentelemetry.io/otel/log/global"
 )
 
+const (
+	// exceptionMessageKey is the key used for the error message.
+	exceptionMessageKey = "exception.message"
+)
+
 type config struct {
 	provider  log.LoggerProvider
 	version   string
@@ -206,7 +211,23 @@ func (l *LogSink) Enabled(level int) bool {
 
 // Error logs an error, with the given message and key/value pairs.
 func (l *LogSink) Error(err error, msg string, keysAndValues ...any) {
-	// TODO
+	var record log.Record
+	record.SetBody(log.StringValue(msg))
+	record.SetSeverity(log.SeverityError)
+
+	record.AddAttributes(
+		log.KeyValue{
+			Key:   exceptionMessageKey,
+			Value: convertValue(err),
+		},
+	)
+
+	record.AddAttributes(l.attr...)
+
+	ctx, attr := convertKVs(l.ctx, keysAndValues...)
+	record.AddAttributes(attr...)
+
+	l.logger.Emit(ctx, record)
 }
 
 // Info logs a non-error message with the given key/value pairs.
@@ -223,9 +244,12 @@ func (l *LogSink) Info(level int, msg string, keysAndValues ...any) {
 	l.logger.Emit(ctx, record)
 }
 
-// Init initializes the LogSink.
+// Init receives optional information about the logr library this
+// implementation does not use it.
 func (l *LogSink) Init(info logr.RuntimeInfo) {
-	// TODO
+	// We don't need to do anything here.
+	// CallDepth is used to calculate the caller's PC.
+	// PC is dropped as part of the conversion to the OpenTelemetry log.Record.
 }
 
 // WithName returns a new LogSink with the specified name appended.

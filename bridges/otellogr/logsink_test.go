@@ -4,6 +4,7 @@ package otellogr
 
 import (
 	"context"
+	"errors"
 	"testing"
 	"time"
 
@@ -273,6 +274,49 @@ func TestLogSink(t *testing.T) {
 					buildRecord(log.StringValue("info message with attrs"), time.Time{}, log.SeverityInfo, []log.KeyValue{
 						log.String("key", "value"),
 						log.Empty("nil_pointer"),
+					}),
+				},
+			},
+		},
+		{
+			name: "error",
+			f: func(l *logr.Logger) {
+				l.Error(errors.New("test"), "error message")
+			},
+			wantRecords: map[string][]log.Record{
+				name: {
+					buildRecord(log.StringValue("error message"), time.Time{}, log.SeverityError, []log.KeyValue{
+						{Key: exceptionMessageKey, Value: log.StringValue("test")},
+					}),
+				},
+			},
+		},
+		{
+			name: "error_multi_attrs",
+			f: func(l *logr.Logger) {
+				l.Error(errors.New("test error"), "msg",
+					"struct", struct{ data int64 }{data: 1},
+					"bool", true,
+					"duration", time.Minute,
+					"float64", 3.14159,
+					"int64", -2,
+					"string", "str",
+					"time", time.Unix(1000, 1000),
+					"uint64", uint64(3),
+				)
+			},
+			wantRecords: map[string][]log.Record{
+				name: {
+					buildRecord(log.StringValue("msg"), time.Time{}, log.SeverityError, []log.KeyValue{
+						{Key: exceptionMessageKey, Value: log.StringValue("test error")},
+						log.String("struct", "{data:1}"),
+						log.Bool("bool", true),
+						log.Int64("duration", 60_000_000_000),
+						log.Float64("float64", 3.14159),
+						log.Int64("int64", -2),
+						log.String("string", "str"),
+						log.Int64("time", time.Unix(1000, 1000).UnixNano()),
+						log.Int64("uint64", 3),
 					}),
 				},
 			},
