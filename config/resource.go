@@ -55,8 +55,7 @@ func newResource(res *Resource) (*resource.Resource, error) {
 		attrs = append(attrs, keyVal(v.Name, v.Value))
 	}
 
-	return resource.Merge(resource.Default(),
-		resource.NewWithAttributes(*res.SchemaUrl,
-			attrs...,
-		))
+	return resource.NewWithAttributes(*res.SchemaUrl,
+		attrs...,
+	), nil
 }
