@@ -152,6 +152,16 @@ func (c *config) handleRPC(ctx context.Context, rs stats.RPCStats, isServer bool
 	case *stats.InPayload:
 		if gctx != nil {
 			messageId = atomic.AddInt64(&gctx.inMessages, 1)
+
+			// If a MetricAttributesFn is defined call this function and update the gRPCContext with the metric attributes
+			// returned by ths function.
+			if f := c.MetricAttributesFn; f != nil {
+				attrs := f(ctx, rs.Payload)
+
+				gctx.metricAttrs = append(gctx.metricAttrs, attrs...)
+				metricAttrs = append(metricAttrs, attrs...)
+			}
+
 			c.rpcInBytes.Record(ctx, int64(rs.Length), metric.WithAttributeSet(attribute.NewSet(metricAttrs...)))
 		}
 
