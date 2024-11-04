@@ -36,7 +36,7 @@ func NewTestProcessor() *processor {
 	return &processor{}
 }
 
-func TestLogProcessor_OnEmit(t *testing.T) {
+func TestLogProcessorOnEmit(t *testing.T) {
 	tests := []struct {
 		name    string
 		baggage baggage.Baggage
