@@ -15,6 +15,9 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 - Add the `WithSource` option to the `go.opentelemetry.io/contrib/bridges/otelslog` log bridge to set the `code.*` attributes in the log record that includes the source location where the record was emitted. (#6253)
 - Add `ContextWithStartTime` and `StartTimeFromContext` to `go.opentelemetry.io/contrib/instrumentation/net/http/otelhttp`, which allows setting the start time using go context. (#6137)
 - Set the `code.*` attributes in `go.opentelemetry.io/contrib/bridges/otelzap` if the `zap.Logger` was created with the `AddCaller` or `AddStacktrace` option. (#6268)
+- Add a `LogProcessor` to `go.opentelemetry.io/contrib/processors/baggagecopy` to copy baggage members to log records. (#6277)
+  - Use `baggagecopy.NewLogProcessor` when configuring a Log Provider.
+    - `NewLogProcessor` accepts a `Filter` function type that selects which baggage members are added to the log record.
 
 ### Changed 
 
