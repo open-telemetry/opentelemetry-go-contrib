@@ -13,6 +13,8 @@
 //   - Level is transformed and set as the Severity. The SeverityText is not
 //     set.
 //   - KeyAndValues are transformed and set as Attributes.
+//   - Error is always logged as an additional attribute with the key
+//     "exception.message" and with the severity [log.SeverityError].
 //   - The [context.Context] value in KeyAndValues is propagated to OpenTelemetry
 //     log record. All non-nested [context.Context] values are ignored and not
 //     added as attributes. If there are multiple [context.Context] the last one
