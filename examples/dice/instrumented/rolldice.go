@@ -6,22 +6,25 @@ package main
 import (
 	"fmt"
 	"io"
+	"log/slog"
 	"math/rand"
 	"net/http"
+	"os"
 	"strconv"
 
-	"go.opentelemetry.io/contrib/bridges/otelslog"
+	// TODO: https://github.com/open-telemetry/opentelemetry-go/issues/5801
+	// "go.opentelemetry.io/contrib/bridges/otelslog".
 	"go.opentelemetry.io/otel"
 	"go.opentelemetry.io/otel/attribute"
 	"go.opentelemetry.io/otel/metric"
 )
 
-const name = "go.opentelemetry.io/contrib/examples/dice"
+const name = "go.opentelemetry.io/otel/example/dice"
 
 var (
 	tracer  = otel.Tracer(name)
 	meter   = otel.Meter(name)
-	logger  = otelslog.NewLogger(name)
+	logger  = slog.New(slog.NewJSONHandler(os.Stdout, nil)) // TODO: logger  = otelslog.NewLogger(name).
 	rollCnt metric.Int64Counter
 )
 
@@ -39,7 +42,7 @@ func rolldice(w http.ResponseWriter, r *http.Request) {
 	ctx, span := tracer.Start(r.Context(), "roll")
 	defer span.End()
 
-	roll := 1 + rand.Intn(6) //nolint:gosec // G404: Use of weak random number generator (math/rand instead of crypto/rand) is ignored as this is not security-sensitive.
+	roll := 1 + rand.Intn(6)
 
 	var msg string
 	if player := r.PathValue("player"); player != "" {
