@@ -19,6 +19,9 @@
 package jaegerremote // import "go.opentelemetry.io/contrib/samplers/jaegerremote"
 
 import (
+	"os"
+	"strconv"
+	"strings"
 	"time"
 
 	"github.com/go-logr/logr"
@@ -35,6 +38,36 @@ type config struct {
 	updaters                []samplerUpdater
 	posParams               perOperationSamplerParams
 	logger                  logr.Logger
+}
+
+func getEnvOverrideOptions() []Option {
+	var options []Option
+	if os.Getenv("OTEL_TRACES_SAMPLER") == "jaeger_remote" {
+		args := strings.Split(os.Getenv("OTEL_TRACES_SAMPLER_ARG"), ",")
+		for _, arg := range args {
+			keyValue := strings.Split(arg, "=")
+			if len(keyValue) != 2 {
+				continue
+			}
+			switch keyValue[0] {
+			case "endpoint":
+				options = append(options, WithSamplingServerURL(keyValue[1]))
+			case "pollingIntervalMs":
+				intervalMs, err := strconv.Atoi(keyValue[1])
+				if err != nil {
+					continue
+				}
+				options = append(options, WithSamplingRefreshInterval(time.Duration(intervalMs)))
+			case "initialSamplingRate":
+				samplingRate, err := strconv.ParseFloat(keyValue[1], 64)
+				if err != nil {
+					continue
+				}
+				options = append(options, WithInitialSampler(trace.TraceIDRatioBased(samplingRate)))
+			}
+		}
+	}
+	return options
 }
 
 // newConfig returns an appropriately configured config.
@@ -58,6 +91,11 @@ func newConfig(options ...Option) config {
 	for _, option := range options {
 		option.apply(&c)
 	}
+
+	for _, option := range getEnvOverrideOptions() {
+		option.apply(&c)
+	}
+
 	c.updaters = append([]samplerUpdater{&perOperationSamplerUpdater{
 		MaxOperations:            c.posParams.MaxOperations,
 		OperationNameLateBinding: c.posParams.OperationNameLateBinding,
