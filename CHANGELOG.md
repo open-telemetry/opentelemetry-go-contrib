@@ -23,6 +23,7 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 
 - Upgrade `go.opentelemetry.io/otel/semconv/v1.17.0` to `go.opentelemetry.io/otel/semconv/v1.21.0` in `go.opentelemetry.io/contrib/instrumentation/go.mongodb.org/mongo-driver/mongo/otelmongo`. (#6272)
 - Resource doesn't merge with defaults if a valid resource is configured in `go.opentelemetry.io/contrib/config`. (#6289)
+- `otel.Handle` is no longer called on a successful shutdown of the Prometheus exporter in `go.opentelemetry.io/contrib/config`. (#6299)
 
 ### Fixed
 
