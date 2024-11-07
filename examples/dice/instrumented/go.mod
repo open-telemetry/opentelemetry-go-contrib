@@ -1,4 +1,4 @@
-module go.opentelemetry.io/contrib/examples/dice
+module go.opentelemetry.io/contrib/examples/dice/instrumented
 
 go 1.22
 
