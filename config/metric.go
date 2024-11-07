@@ -338,7 +338,7 @@ func prometheusReader(ctx context.Context, prometheusConfig *Prometheus) (sdkmet
 	}
 
 	go func() {
-		if err := server.Serve(lis); err != nil && errors.Is(err, http.ErrServerClosed) {
+		if err := server.Serve(lis); err != nil && !errors.Is(err, http.ErrServerClosed) {
 			otel.Handle(fmt.Errorf("the Prometheus HTTP server exited unexpectedly: %w", err))
 		}
 	}()
