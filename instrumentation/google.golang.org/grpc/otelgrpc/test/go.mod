@@ -1,6 +1,8 @@
 module go.opentelemetry.io/contrib/instrumentation/google.golang.org/grpc/otelgrpc/test
 
-go 1.22
+go 1.22.7
+
+toolchain go1.23.3
 
 require (
 	github.com/stretchr/testify v1.9.0
@@ -10,7 +12,7 @@ require (
 	go.opentelemetry.io/otel/sdk/metric v1.31.0
 	go.opentelemetry.io/otel/trace v1.31.0
 	go.uber.org/goleak v1.3.0
-	google.golang.org/grpc v1.67.1
+	google.golang.org/grpc v1.68.0
 )
 
 require (

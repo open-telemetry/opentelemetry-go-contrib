@@ -1,6 +1,8 @@
 module go.opentelemetry.io/contrib/propagators/opencensus/examples
 
-go 1.22
+go 1.22.7
+
+toolchain go1.23.3
 
 require (
 	go.opencensus.io v0.24.0
@@ -9,7 +11,7 @@ require (
 	go.opentelemetry.io/otel v1.31.0
 	go.opentelemetry.io/otel/exporters/stdout/stdouttrace v1.31.0
 	go.opentelemetry.io/otel/sdk v1.31.0
-	google.golang.org/grpc v1.67.1
+	google.golang.org/grpc v1.68.0
 )
 
 require (
