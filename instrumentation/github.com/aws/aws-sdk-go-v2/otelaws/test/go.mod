@@ -8,7 +8,7 @@ require (
 	github.com/aws/aws-sdk-go-v2/service/route53 v1.46.1
 	github.com/aws/smithy-go v1.22.0
 	github.com/stretchr/testify v1.9.0
-	go.opentelemetry.io/contrib/instrumentation/github.com/aws/aws-sdk-go-v2/otelaws v0.56.0
+	go.opentelemetry.io/contrib/instrumentation/github.com/aws/aws-sdk-go-v2/otelaws v0.57.0
 	go.opentelemetry.io/otel v1.32.0
 	go.opentelemetry.io/otel/sdk v1.32.0
 	go.opentelemetry.io/otel/trace v1.32.0
