@@ -1,6 +1,6 @@
 module go.opentelemetry.io/contrib/exporters/autoexport
 
-go 1.22
+go 1.22.7
 
 require (
 	github.com/prometheus/client_golang v1.20.5
@@ -49,7 +49,7 @@ require (
 	golang.org/x/text v0.19.0 // indirect
 	google.golang.org/genproto/googleapis/api v0.0.0-20241104194629-dd2ea8efbc28 // indirect
 	google.golang.org/genproto/googleapis/rpc v0.0.0-20241104194629-dd2ea8efbc28 // indirect
-	google.golang.org/grpc v1.67.1 // indirect
+	google.golang.org/grpc v1.68.0 // indirect
 	gopkg.in/yaml.v3 v3.0.1 // indirect
 )
 
