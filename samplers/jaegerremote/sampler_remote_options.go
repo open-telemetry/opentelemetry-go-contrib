@@ -88,11 +88,11 @@ func newConfig(options ...Option) config {
 		},
 		logger: logr.Discard(),
 	}
-	for _, option := range options {
+	for _, option := range getEnvOverrideOptions() {
 		option.apply(&c)
 	}
 
-	for _, option := range getEnvOverrideOptions() {
+	for _, option := range options {
 		option.apply(&c)
 	}
 
