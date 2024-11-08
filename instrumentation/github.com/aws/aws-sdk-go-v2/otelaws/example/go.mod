@@ -10,10 +10,10 @@ require (
 	github.com/aws/aws-sdk-go-v2/service/dynamodb v1.36.5
 	github.com/aws/aws-sdk-go-v2/service/s3 v1.66.3
 	go.opentelemetry.io/contrib/instrumentation/github.com/aws/aws-sdk-go-v2/otelaws v0.56.0
-	go.opentelemetry.io/otel v1.31.0
-	go.opentelemetry.io/otel/exporters/stdout/stdouttrace v1.31.0
-	go.opentelemetry.io/otel/sdk v1.31.0
-	go.opentelemetry.io/otel/trace v1.31.0
+	go.opentelemetry.io/otel v1.32.0
+	go.opentelemetry.io/otel/exporters/stdout/stdouttrace v1.32.0
+	go.opentelemetry.io/otel/sdk v1.32.0
+	go.opentelemetry.io/otel/trace v1.32.0
 )
 
 require (
@@ -38,6 +38,6 @@ require (
 	github.com/go-logr/stdr v1.2.2 // indirect
 	github.com/google/uuid v1.6.0 // indirect
 	github.com/jmespath/go-jmespath v0.4.0 // indirect
-	go.opentelemetry.io/otel/metric v1.31.0 // indirect
-	golang.org/x/sys v0.26.0 // indirect
+	go.opentelemetry.io/otel/metric v1.32.0 // indirect
+	golang.org/x/sys v0.27.0 // indirect
 )
