@@ -2,8 +2,6 @@ module go.opentelemetry.io/contrib/propagators/opencensus/examples
 
 go 1.22.7
 
-toolchain go1.23.3
-
 require (
 	go.opencensus.io v0.24.0
 	go.opentelemetry.io/contrib/instrumentation/google.golang.org/grpc/otelgrpc v0.56.0

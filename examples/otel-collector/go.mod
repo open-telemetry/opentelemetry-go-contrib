@@ -2,8 +2,6 @@ module go.opentelemetry.io/contrib/examples/otel-collector
 
 go 1.22.7
 
-toolchain go1.23.3
-
 require (
 	go.opentelemetry.io/otel v1.31.0
 	go.opentelemetry.io/otel/exporters/otlp/otlpmetric/otlpmetricgrpc v1.31.0

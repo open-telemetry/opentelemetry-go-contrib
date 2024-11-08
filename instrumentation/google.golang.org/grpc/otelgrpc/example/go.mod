@@ -2,8 +2,6 @@ module go.opentelemetry.io/contrib/instrumentation/google.golang.org/grpc/otelgr
 
 go 1.22.7
 
-toolchain go1.23.3
-
 replace go.opentelemetry.io/contrib/instrumentation/google.golang.org/grpc/otelgrpc => ../
 
 require (
