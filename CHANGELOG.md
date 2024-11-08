@@ -28,7 +28,6 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 
 - Upgrade `go.opentelemetry.io/otel/semconv/v1.17.0` to `go.opentelemetry.io/otel/semconv/v1.21.0` in `go.opentelemetry.io/contrib/instrumentation/go.mongodb.org/mongo-driver/mongo/otelmongo`. (#6272)
 - Resource doesn't merge with defaults if a valid resource is configured in `go.opentelemetry.io/contrib/config`. (#6289)
-- `otel.Handle` is no longer called on a successful shutdown of the Prometheus exporter in `go.opentelemetry.io/contrib/config`. (#6299)
 
 ### Fixed
 
@@ -37,6 +36,7 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 - Transform nil attribute values to `log.Value` zero value instead of `log.StringValue("<nil>")` in `go.opentelemetry.io/contrib/bridges/otelslog`. (#6246)
 - Fix `NewClientHandler` so that `rpc.client.request.*` metrics measure requests instead of responses and `rpc.client.responses.*` metrics measure responses instead of requests in `go.opentelemetry.io/contrib/instrumentation/google.golang.org/grpc/otelgrpc`. (#6250)
 - Fix issue in `go.opentelemetry.io/contrib/config` causing `otelprom.WithResourceAsConstantLabels` configuration to not be respected. (#6260)
+- `otel.Handle` is no longer called on a successful shutdown of the Prometheus exporter in `go.opentelemetry.io/contrib/config`. (#6299)
 
 ## [1.31.0/0.56.0/0.25.0/0.11.0/0.6.0/0.4.0/0.3.0] - 2024-10-14
 
