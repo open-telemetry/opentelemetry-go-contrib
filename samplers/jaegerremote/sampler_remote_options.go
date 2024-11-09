@@ -41,7 +41,7 @@ type config struct {
 	logger                  logr.Logger
 }
 
-func getEnvOverrideOptions() ([]Option, []error) {
+func getEnvOptions() ([]Option, []error) {
 	var options []Option
 	// list of errors which will be logged once logger is set by the user
 	var errs []error
@@ -57,12 +57,12 @@ func getEnvOverrideOptions() ([]Option, []error) {
 			case "endpoint":
 				options = append(options, WithSamplingServerURL(keyValue[1]))
 			case "pollingIntervalMs":
-				intervalMs, err := strconv.Atoi(keyValue[1])
+				intervalMs, err := strconv.ParseUint(keyValue[1], 10, 0)
 				if err != nil {
 					errs = append(errs, err)
 					continue
 				}
-				options = append(options, WithSamplingRefreshInterval(time.Duration(intervalMs)))
+				options = append(options, WithSamplingRefreshInterval(time.Duration(intervalMs)*time.Millisecond))
 			case "initialSamplingRate":
 				samplingRate, err := strconv.ParseFloat(keyValue[1], 64)
 				if err != nil {
@@ -70,6 +70,8 @@ func getEnvOverrideOptions() ([]Option, []error) {
 					continue
 				}
 				options = append(options, WithInitialSampler(trace.TraceIDRatioBased(samplingRate)))
+			default:
+				errs = append(errs, fmt.Errorf("invalid argument %s in OTEL_TRACE_SAMPLER_ARG", keyValue[0]))
 			}
 		}
 	}
@@ -95,7 +97,7 @@ func newConfig(options ...Option) config {
 		logger: logr.Discard(),
 	}
 
-	envOptions, errs := getEnvOverrideOptions()
+	envOptions, errs := getEnvOptions()
 	for _, option := range envOptions {
 		option.apply(&c)
 	}

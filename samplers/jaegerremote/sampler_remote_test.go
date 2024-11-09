@@ -595,3 +595,69 @@ func TestDefaultSamplingStrategyFetcher_Timeout(t *testing.T) {
 	fetcher := newHTTPSamplingStrategyFetcher("")
 	assert.Equal(t, defaultRemoteSamplingTimeout, fetcher.httpClient.Timeout)
 }
+
+func TestEnvVarSettingForNewTracer(t *testing.T) {
+	type testConfig struct {
+		samplingServerURL       string
+		samplingRefreshInterval time.Duration
+	}
+
+	tests := []struct {
+		otelTraceSampler     string
+		otelTraceSamplerArgs string
+		expErrs              []string
+		codeOptions          []Option
+		expConfig            testConfig
+	}{
+		{
+			otelTraceSampler:     "jaeger_remote",
+			otelTraceSamplerArgs: "endpoint=http://localhost:14250,pollingIntervalMs=5000,initialSamplingRate=0.25",
+			expErrs:              []string{},
+		},
+		{
+			otelTraceSampler:     "jaeger_remote",
+			otelTraceSamplerArgs: "endpointhttp://localhost:14250,pollingIntervalMs=5000,initialSamplingRate=0.25,invalidKey=invalidValue",
+			expErrs: []string{
+				"argument endpointhttp://localhost:14250 is not of type '<key>=<value>'",
+				"invalid argument invalidKey in OTEL_TRACE_SAMPLER_ARG",
+			},
+		},
+		{
+			otelTraceSampler: "some_sampler",
+			expErrs:          []string{},
+		},
+		{
+			// Make sure we don't override values provided in code
+			otelTraceSampler:     "jaeger_remote",
+			otelTraceSamplerArgs: "endpoint=http://localhost:14250,pollingIntervalMs=5000,initialSamplingRate=0.25",
+			expErrs:              []string{},
+			codeOptions: []Option{
+				WithSamplingServerURL("http://localhost:5778"),
+			},
+			expConfig: testConfig{
+				samplingServerURL:       "http://localhost:5778",
+				samplingRefreshInterval: time.Millisecond * 5000,
+			},
+		},
+	}
+
+	for _, test := range tests {
+		t.Run("", func(t *testing.T) {
+			t.Setenv("OTEL_TRACES_SAMPLER", test.otelTraceSampler)
+			t.Setenv("OTEL_TRACES_SAMPLER_ARG", test.otelTraceSamplerArgs)
+
+			_, errs := getEnvOptions()
+			require.Equal(t, len(test.expErrs), len(errs))
+
+			for i := range len(errs) {
+				require.EqualError(t, errs[i], test.expErrs[i])
+			}
+
+			if test.codeOptions != nil {
+				cfg := newConfig(test.codeOptions...)
+				require.Equal(t, test.expConfig.samplingServerURL, cfg.samplingServerURL)
+				require.Equal(t, test.expConfig.samplingRefreshInterval, cfg.samplingRefreshInterval)
+			}
+		})
+	}
+}
