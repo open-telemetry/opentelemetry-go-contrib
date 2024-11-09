@@ -19,6 +19,7 @@
 package jaegerremote // import "go.opentelemetry.io/contrib/samplers/jaegerremote"
 
 import (
+	"fmt"
 	"os"
 	"strconv"
 	"strings"
@@ -40,13 +41,16 @@ type config struct {
 	logger                  logr.Logger
 }
 
-func getEnvOverrideOptions() []Option {
+func getEnvOverrideOptions() ([]Option, []error) {
 	var options []Option
+	// list of errors which will be logged once logger is set by the user
+	var errs []error
 	if os.Getenv("OTEL_TRACES_SAMPLER") == "jaeger_remote" {
 		args := strings.Split(os.Getenv("OTEL_TRACES_SAMPLER_ARG"), ",")
 		for _, arg := range args {
 			keyValue := strings.Split(arg, "=")
 			if len(keyValue) != 2 {
+				errs = append(errs, fmt.Errorf("argument %s is not of type '<key>=<value>'", arg))
 				continue
 			}
 			switch keyValue[0] {
@@ -55,19 +59,21 @@ func getEnvOverrideOptions() []Option {
 			case "pollingIntervalMs":
 				intervalMs, err := strconv.Atoi(keyValue[1])
 				if err != nil {
+					errs = append(errs, err)
 					continue
 				}
 				options = append(options, WithSamplingRefreshInterval(time.Duration(intervalMs)))
 			case "initialSamplingRate":
 				samplingRate, err := strconv.ParseFloat(keyValue[1], 64)
 				if err != nil {
+					errs = append(errs, err)
 					continue
 				}
 				options = append(options, WithInitialSampler(trace.TraceIDRatioBased(samplingRate)))
 			}
 		}
 	}
-	return options
+	return options, errs
 }
 
 // newConfig returns an appropriately configured config.
@@ -88,12 +94,18 @@ func newConfig(options ...Option) config {
 		},
 		logger: logr.Discard(),
 	}
-	for _, option := range getEnvOverrideOptions() {
+
+	envOptions, errs := getEnvOverrideOptions()
+	for _, option := range envOptions {
 		option.apply(&c)
 	}
 
 	for _, option := range options {
 		option.apply(&c)
+	}
+
+	for _, err := range errs {
+		c.logger.Error(err, "env variable parsing failure")
 	}
 
 	c.updaters = append([]samplerUpdater{&perOperationSamplerUpdater{
