@@ -2,8 +2,6 @@ module go.opentelemetry.io/contrib/instrgen
 
 go 1.22.0
 
-toolchain go1.23.3
-
 require (
 	go.opentelemetry.io/otel v1.32.0
 	go.opentelemetry.io/otel/exporters/stdout/stdouttrace v1.32.0
