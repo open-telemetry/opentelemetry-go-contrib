@@ -61,7 +61,7 @@ func logProcessor(ctx context.Context, processor LogRecordProcessor) (sdklog.Pro
 		}
 		return sdklog.NewSimpleProcessor(exp), nil
 	}
-	return nil, fmt.Errorf("unsupported log processor type, must be one of simple or batch")
+	return nil, errors.New("unsupported log processor type, must be one of simple or batch")
 }
 
 func logExporter(ctx context.Context, exporter LogRecordExporter) (sdklog.Exporter, error) {
