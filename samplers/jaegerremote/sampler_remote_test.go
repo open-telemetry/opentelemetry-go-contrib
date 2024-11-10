@@ -603,32 +603,26 @@ func TestEnvVarSettingForNewTracer(t *testing.T) {
 	}
 
 	tests := []struct {
-		otelTraceSampler     string
 		otelTraceSamplerArgs string
 		expErrs              []string
 		codeOptions          []Option
 		expConfig            testConfig
 	}{
 		{
-			otelTraceSampler:     "jaeger_remote",
 			otelTraceSamplerArgs: "endpoint=http://localhost:14250,pollingIntervalMs=5000,initialSamplingRate=0.25",
 			expErrs:              []string{},
 		},
 		{
-			otelTraceSampler:     "jaeger_remote",
-			otelTraceSamplerArgs: "endpointhttp://localhost:14250,pollingIntervalMs=5000,initialSamplingRate=0.25,invalidKey=invalidValue",
+			otelTraceSamplerArgs: "endpointhttp://localhost:14250,pollingIntervalMs=5x000,initialSamplingRate=0.xyz25,invalidKey=invalidValue",
 			expErrs: []string{
 				"argument endpointhttp://localhost:14250 is not of type '<key>=<value>'",
+				"pollingIntervalMs parsing failed",
+				"initialSamplingRate parsing failed",
 				"invalid argument invalidKey in OTEL_TRACE_SAMPLER_ARG",
 			},
 		},
 		{
-			otelTraceSampler: "some_sampler",
-			expErrs:          []string{},
-		},
-		{
 			// Make sure we don't override values provided in code
-			otelTraceSampler:     "jaeger_remote",
 			otelTraceSamplerArgs: "endpoint=http://localhost:14250,pollingIntervalMs=5000,initialSamplingRate=0.25",
 			expErrs:              []string{},
 			codeOptions: []Option{
@@ -643,14 +637,13 @@ func TestEnvVarSettingForNewTracer(t *testing.T) {
 
 	for _, test := range tests {
 		t.Run("", func(t *testing.T) {
-			t.Setenv("OTEL_TRACES_SAMPLER", test.otelTraceSampler)
 			t.Setenv("OTEL_TRACES_SAMPLER_ARG", test.otelTraceSamplerArgs)
 
 			_, errs := getEnvOptions()
 			require.Equal(t, len(test.expErrs), len(errs))
 
 			for i := range len(errs) {
-				require.EqualError(t, errs[i], test.expErrs[i])
+				require.ErrorContains(t, errs[i], test.expErrs[i])
 			}
 
 			if test.codeOptions != nil {
