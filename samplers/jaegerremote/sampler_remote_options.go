@@ -53,28 +53,28 @@ func getEnvOptions() ([]Option, []error) {
 			errs = append(errs, fmt.Errorf("argument %s is not of type '<key>=<value>'", arg))
 			continue
 		}
-		keyValue[0] = strings.Trim(keyValue[0], " ")
-		keyValue[1] = strings.Trim(keyValue[1], " ")
+		key := strings.Trim(keyValue[0], " ")
+		value := strings.Trim(keyValue[1], " ")
 
-		switch keyValue[0] {
+		switch key {
 		case "endpoint":
-			options = append(options, WithSamplingServerURL(keyValue[1]))
+			options = append(options, WithSamplingServerURL(value))
 		case "pollingIntervalMs":
-			intervalMs, err := strconv.ParseUint(keyValue[1], 10, 0)
+			intervalMs, err := strconv.ParseUint(value, 10, 0)
 			if err != nil {
-				errs = append(errs, fmt.Errorf("%s parsing failed with :%w", keyValue[0], err))
+				errs = append(errs, fmt.Errorf("%s parsing failed with :%w", key, err))
 				continue
 			}
 			options = append(options, WithSamplingRefreshInterval(time.Duration(intervalMs)*time.Millisecond))
 		case "initialSamplingRate":
-			samplingRate, err := strconv.ParseFloat(keyValue[1], 64)
+			samplingRate, err := strconv.ParseFloat(value, 64)
 			if err != nil {
-				errs = append(errs, fmt.Errorf("%s parsing failed with :%w", keyValue[0], err))
+				errs = append(errs, fmt.Errorf("%s parsing failed with :%w", key, err))
 				continue
 			}
 			options = append(options, WithInitialSampler(trace.TraceIDRatioBased(samplingRate)))
 		default:
-			errs = append(errs, fmt.Errorf("invalid argument %s in OTEL_TRACE_SAMPLER_ARG", keyValue[0]))
+			errs = append(errs, fmt.Errorf("invalid argument %s in OTEL_TRACE_SAMPLER_ARG", key))
 		}
 	}
 	return options, errs
