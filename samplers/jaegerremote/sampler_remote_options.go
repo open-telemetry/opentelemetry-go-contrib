@@ -60,7 +60,7 @@ func getEnvOptions() ([]Option, []error) {
 		case "endpoint":
 			options = append(options, WithSamplingServerURL(value))
 		case "pollingIntervalMs":
-			intervalMs, err := strconv.ParseUint(value, 10, 0)
+			intervalMs, err := strconv.Atoi(value)
 			if err != nil {
 				errs = append(errs, fmt.Errorf("%s parsing failed with :%w", key, err))
 				continue
