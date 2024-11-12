@@ -31,8 +31,8 @@ type objectEncoder struct {
 	cur *namespace
 }
 
-func newObjectEncoder(len int) *objectEncoder {
-	keyval := make([]log.KeyValue, 0, len)
+func newObjectEncoder(le int) *objectEncoder {
+	keyval := make([]log.KeyValue, 0, le)
 	m := &namespace{
 		attrs: keyval,
 	}
