@@ -7,6 +7,7 @@ import (
 	"github.com/go-logr/logr"
 
 	"go.opentelemetry.io/contrib/bridges/otellogr"
+	"go.opentelemetry.io/otel/log"
 	"go.opentelemetry.io/otel/log/noop"
 )
 
@@ -17,6 +18,17 @@ func Example() {
 	// Create an logr.Logger with *otellogr.LogSink and use it in your application.
 	logr.New(otellogr.NewLogSink(
 		"my/pkg/name",
-		otellogr.WithLoggerProvider(provider)),
-	)
+		otellogr.WithLoggerProvider(provider),
+		// Optionally, set the log level severity mapping.
+		otellogr.WithLevelSeverity(func(level int) log.Severity {
+			switch level {
+			case 0:
+				return log.SeverityInfo
+			case 1:
+				return log.SeverityDebug
+			default:
+				return log.SeverityTrace
+			}
+		}),
+	))
 }

@@ -123,6 +123,10 @@ See the [public meeting notes](https://docs.google.com/document/d/1E5e7Ld0NuU1iV
 
 ## Approvers and Maintainers
 
+Triagers:
+
+- [Cheng-Zhen Yang](https://github.com/scorpionknifes), Independent
+
 Approvers:
 
 Maintainers:
@@ -135,12 +139,12 @@ Maintainers:
 
 Emeritus:
 
-- [Aaron Clawson](https://github.com/MadVikingGod), LightStep
-- [Anthony Mirabella](https://github.com/Aneurysm9), Amazon
-- [Chester Cheung](https://github.com/hanyuancheung), Tencent
-- [Evan Torrie](https://github.com/evantorrie), Yahoo
-- [Gustavo Silva Paiva](https://github.com/paivagustavo), LightStep
-- [Josh MacDonald](https://github.com/jmacd), LightStep
+- [Aaron Clawson](https://github.com/MadVikingGod)
+- [Anthony Mirabella](https://github.com/Aneurysm9)
+- [Chester Cheung](https://github.com/hanyuancheung)
+- [Evan Torrie](https://github.com/evantorrie)
+- [Gustavo Silva Paiva](https://github.com/paivagustavo)
+- [Josh MacDonald](https://github.com/jmacd)
 
 ### Become an Approver or a Maintainer
 

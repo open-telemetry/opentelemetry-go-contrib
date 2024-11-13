@@ -16,8 +16,8 @@
 // The "OTEL_SEMCONV_STABILITY_OPT_IN" environment variable  can be used to opt
 // into semconv/v1.26.0:
 //   - "mongo": emit v1.26.0 semantic conventions
-//   - "": emit v1.17.0 (default) semantic conventions
-//   - "mongo/dup": emit v1.17.0 (default) and v1.26.0
+//   - "": emit v1.21.0 (default) semantic conventions
+//   - "mongo/dup": emit v1.21.0 (default) and v1.26.0
 //
-// By default, otelmongo only emits v1.17.0.
+// By default, otelmongo only emits v1.21.0.
 package otelmongo // import "go.opentelemetry.io/contrib/instrumentation/go.mongodb.org/mongo-driver/mongo/otelmongo"

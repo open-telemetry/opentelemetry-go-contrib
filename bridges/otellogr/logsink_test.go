@@ -64,7 +64,9 @@ func TestNewConfig(t *testing.T) {
 		},
 	} {
 		t.Run(tt.name, func(t *testing.T) {
-			assert.Equal(t, tt.wantConfig, newConfig(tt.options))
+			config := newConfig(tt.options)
+			config.levelSeverity = nil // Ignore asserting level severity function, assert.Equal does not support function comparison
+			assert.Equal(t, tt.wantConfig, config)
 		})
 	}
 }
@@ -117,9 +119,10 @@ func TestLogSink(t *testing.T) {
 	const name = "name"
 
 	for _, tt := range []struct {
-		name        string
-		f           func(*logr.Logger)
-		wantRecords map[string][]log.Record
+		name          string
+		f             func(*logr.Logger)
+		levelSeverity func(int) log.Severity
+		wantRecords   map[string][]log.Record
 	}{
 		{
 			name: "no_log",
@@ -136,6 +139,48 @@ func TestLogSink(t *testing.T) {
 			wantRecords: map[string][]log.Record{
 				name: {
 					buildRecord(log.StringValue("msg"), time.Time{}, log.SeverityInfo, nil),
+				},
+			},
+		},
+		{
+			name: "info_with_level_severity",
+			f: func(l *logr.Logger) {
+				l.V(0).Info("msg")
+				l.V(1).Info("msg")
+				l.V(2).Info("msg")
+				l.V(3).Info("msg")
+			},
+			wantRecords: map[string][]log.Record{
+				name: {
+					buildRecord(log.StringValue("msg"), time.Time{}, log.SeverityInfo, nil),
+					buildRecord(log.StringValue("msg"), time.Time{}, log.SeverityDebug, nil),
+					buildRecord(log.StringValue("msg"), time.Time{}, log.SeverityTrace, nil),
+					buildRecord(log.StringValue("msg"), time.Time{}, log.SeverityTrace, nil),
+				},
+			},
+		},
+		{
+			name: "info_with_custom_level_severity",
+			f: func(l *logr.Logger) {
+				l.Info("msg")
+				l.V(1).Info("msg")
+				l.V(2).Info("msg")
+			},
+			levelSeverity: func(level int) log.Severity {
+				switch level {
+				case 1:
+					return log.SeverityError
+				case 2:
+					return log.SeverityWarn
+				default:
+					return log.SeverityInfo
+				}
+			},
+			wantRecords: map[string][]log.Record{
+				name: {
+					buildRecord(log.StringValue("msg"), time.Time{}, log.SeverityInfo, nil),
+					buildRecord(log.StringValue("msg"), time.Time{}, log.SeverityError, nil),
+					buildRecord(log.StringValue("msg"), time.Time{}, log.SeverityWarn, nil),
 				},
 			},
 		},
@@ -235,7 +280,10 @@ func TestLogSink(t *testing.T) {
 	} {
 		t.Run(tt.name, func(t *testing.T) {
 			rec := logtest.NewRecorder()
-			ls := NewLogSink(name, WithLoggerProvider(rec))
+			ls := NewLogSink(name,
+				WithLoggerProvider(rec),
+				WithLevelSeverity(tt.levelSeverity),
+			)
 			l := logr.New(ls)
 			tt.f(&l)
 
@@ -258,6 +306,33 @@ func TestLogSink(t *testing.T) {
 			}
 		})
 	}
+}
+
+func TestLogSinkEnabled(t *testing.T) {
+	enabledFunc := func(ctx context.Context, param log.EnabledParameters) bool {
+		lvl, ok := param.Severity()
+		if !ok {
+			return true
+		}
+		return lvl == log.SeverityInfo
+	}
+
+	rec := logtest.NewRecorder(logtest.WithEnabledFunc(enabledFunc))
+	ls := NewLogSink(
+		"name",
+		WithLoggerProvider(rec),
+		WithLevelSeverity(func(i int) log.Severity {
+			switch i {
+			case 0:
+				return log.SeverityInfo
+			default:
+				return log.SeverityDebug
+			}
+		}),
+	)
+
+	assert.True(t, ls.Enabled(0))
+	assert.False(t, ls.Enabled(1))
 }
 
 func buildRecord(body log.Value, timestamp time.Time, severity log.Severity, attrs []log.KeyValue) log.Record {

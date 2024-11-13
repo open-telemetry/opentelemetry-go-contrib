@@ -82,10 +82,7 @@ func NewSDK(opts ...ConfigurationOption) (SDK, error) {
 		return noopSDK, nil
 	}
 
-	r, err := newResource(o.opentelemetryConfig.Resource)
-	if err != nil {
-		return noopSDK, err
-	}
+	r := newResource(o.opentelemetryConfig.Resource)
 
 	mp, mpShutdown, err := meterProvider(o, r)
 	if err != nil {

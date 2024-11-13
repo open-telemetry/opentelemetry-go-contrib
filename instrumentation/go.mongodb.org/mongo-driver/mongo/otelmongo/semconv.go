@@ -7,7 +7,7 @@ import (
 	"os"
 
 	"go.opentelemetry.io/otel/attribute"
-	semconv1170 "go.opentelemetry.io/otel/semconv/v1.17.0"
+	semconv1210 "go.opentelemetry.io/otel/semconv/v1.21.0"
 	semconv1260 "go.opentelemetry.io/otel/semconv/v1.26.0"
 )
 
@@ -19,7 +19,7 @@ const (
 
 func appendAttrs[T string | int](
 	attrs []attribute.KeyValue,
-	semconvMap1170 func(T) attribute.KeyValue,
+	semconvMap1210 func(T) attribute.KeyValue,
 	semconvMap1260 func(T) attribute.KeyValue,
 	val T,
 ) []attribute.KeyValue {
@@ -29,16 +29,16 @@ func appendAttrs[T string | int](
 			attrs = append(attrs, semconvMap1260(val))
 		}
 	case semconvOptInDup:
-		if semconvMap1170 != nil {
-			attrs = append(attrs, semconvMap1170(val))
+		if semconvMap1210 != nil {
+			attrs = append(attrs, semconvMap1210(val))
 		}
 
 		if semconvMap1260 != nil {
 			attrs = append(attrs, semconvMap1260(val))
 		}
 	default:
-		if semconvMap1170 != nil {
-			attrs = append(attrs, semconvMap1170(val))
+		if semconvMap1210 != nil {
+			attrs = append(attrs, semconvMap1210(val))
 		}
 	}
 
@@ -46,23 +46,23 @@ func appendAttrs[T string | int](
 }
 
 func appendOpNameAttrs(attrs []attribute.KeyValue, op string) []attribute.KeyValue {
-	return appendAttrs(attrs, semconv1170.DBOperation, semconv1260.DBOperationName, op)
+	return appendAttrs(attrs, semconv1210.DBOperation, semconv1260.DBOperationName, op)
 }
 
 func appendDBNamespace(attrs []attribute.KeyValue, ns string) []attribute.KeyValue {
-	return appendAttrs(attrs, semconv1170.DBName, semconv1260.DBNamespace, ns)
+	return appendAttrs(attrs, semconv1210.DBName, semconv1260.DBNamespace, ns)
 }
 
 func appendDBStatement(attrs []attribute.KeyValue, stmt string) []attribute.KeyValue {
-	return appendAttrs(attrs, semconv1170.DBStatement, semconv1260.DBQueryText, stmt)
+	return appendAttrs(attrs, semconv1210.DBStatement, semconv1260.DBQueryText, stmt)
 }
 
 func appendNetworkPort(attrs []attribute.KeyValue, p int) []attribute.KeyValue {
-	return appendAttrs(attrs, semconv1170.NetPeerPort, semconv1260.NetworkPeerPort, p)
+	return appendAttrs(attrs, semconv1210.NetPeerPort, semconv1260.NetworkPeerPort, p)
 }
 
 func appendNetworkHost(attrs []attribute.KeyValue, h string) []attribute.KeyValue {
-	return appendAttrs(attrs, semconv1170.NetPeerName, nil, h)
+	return appendAttrs(attrs, semconv1210.NetPeerName, nil, h)
 }
 
 func appendNetworkAddress(attrs []attribute.KeyValue, addr string) []attribute.KeyValue {
@@ -79,12 +79,12 @@ func appendNetworkTransport(attrs []attribute.KeyValue) []attribute.KeyValue {
 	}
 
 	if !useSemconv1260 || useSemconvDup {
-		attrs = append(attrs, semconv1170.NetTransportTCP)
+		attrs = append(attrs, semconv1210.NetTransportTCP)
 	}
 
 	return attrs
 }
 
 func appendCollection(attrs []attribute.KeyValue, coll string) []attribute.KeyValue {
-	return appendAttrs(attrs, semconv1170.DBMongoDBCollection, semconv1260.DBCollectionName, coll)
+	return appendAttrs(attrs, semconv1210.DBMongoDBCollection, semconv1260.DBCollectionName, coll)
 }
