@@ -10,7 +10,7 @@ import (
 
 const (
 	semconvOptIn     = "OTEL_SEMCONV_STABILITY_OPT_IN"
-	semconvOptIn1260 = "mongo/v1.26.0"
+	semconvOptIn1260 = "mongo"
 	semconvOptInDup  = "mongo/dup"
 )
 

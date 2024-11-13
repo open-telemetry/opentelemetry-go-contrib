@@ -61,9 +61,9 @@ func Test_appendOpNameAttrs(t *testing.T) {
 			want:      v1170,
 		},
 		{
-			name:      "mongo/v1.26.0",
+			name:      "mongo",
 			initAttrs: []attribute.KeyValue{},
-			version:   "mongo/v1.26.0",
+			version:   "mongo",
 			want:      v1260,
 		},
 		{
