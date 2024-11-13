@@ -70,15 +70,13 @@ func appendNetworkAddress(attrs []attribute.KeyValue, addr string) []attribute.K
 }
 
 func appendNetworkTransport(attrs []attribute.KeyValue) []attribute.KeyValue {
-	optIn := os.Getenv(semconvOptIn)
-	useSemconv1260 := optIn == semconvOptIn1260
-	useSemconvDup := optIn == semconvOptInDup
-
-	if useSemconv1260 || useSemconvDup {
+	switch os.Getenv(semconvOptIn) {
+	case semconvOptIn1260:
 		attrs = append(attrs, semconv1260.NetworkTransportTCP)
-	}
-
-	if !useSemconv1260 || useSemconvDup {
+	case semconvOptInDup:
+		attrs = append(attrs, semconv1260.NetworkTransportTCP)
+		fallthrough
+	default:
 		attrs = append(attrs, semconv1210.NetTransportTCP)
 	}
 
