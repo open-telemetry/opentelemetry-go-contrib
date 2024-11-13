@@ -18,7 +18,6 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 - Add a `LogProcessor` to `go.opentelemetry.io/contrib/processors/baggagecopy` to copy baggage members to log records. (#6277)
   - Use `baggagecopy.NewLogProcessor` when configuring a Log Provider.
     - `NewLogProcessor` accepts a `Filter` function type that selects which baggage members are added to the log record.
-- The `go.opentelemetry.io/contrib/bridges/otellogr` module. This module provides an OpenTelemetry logging bridge for `github.com/go-logr/logr`. (#6295)
 
 ### Changed 
 

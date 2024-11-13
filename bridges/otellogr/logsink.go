@@ -61,11 +61,7 @@ import (
 
 	"go.opentelemetry.io/otel/log"
 	"go.opentelemetry.io/otel/log/global"
-)
-
-const (
-	// exceptionMessageKey is the key used for the error message.
-	exceptionMessageKey = "exception.message"
+	semconv "go.opentelemetry.io/otel/semconv/v1.4.0"
 )
 
 type config struct {
@@ -218,10 +214,7 @@ func (l *LogSink) Error(err error, msg string, keysAndValues ...any) {
 	record.SetSeverity(log.SeverityError)
 
 	record.AddAttributes(
-		log.KeyValue{
-			Key:   exceptionMessageKey,
-			Value: convertValue(err),
-		},
+		log.String(string(semconv.ExceptionMessageKey), err.Error()),
 	)
 
 	record.AddAttributes(l.attr...)

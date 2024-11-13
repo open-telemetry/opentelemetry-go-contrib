@@ -286,7 +286,7 @@ func TestLogSink(t *testing.T) {
 			wantRecords: map[string][]log.Record{
 				name: {
 					buildRecord(log.StringValue("error message"), time.Time{}, log.SeverityError, []log.KeyValue{
-						{Key: exceptionMessageKey, Value: log.StringValue("test")},
+						{Key: "exception.message", Value: log.StringValue("test")},
 					}),
 				},
 			},
@@ -308,7 +308,7 @@ func TestLogSink(t *testing.T) {
 			wantRecords: map[string][]log.Record{
 				name: {
 					buildRecord(log.StringValue("msg"), time.Time{}, log.SeverityError, []log.KeyValue{
-						{Key: exceptionMessageKey, Value: log.StringValue("test error")},
+						{Key: "exception.message", Value: log.StringValue("test error")},
 						log.String("struct", "{data:1}"),
 						log.Bool("bool", true),
 						log.Int64("duration", 60_000_000_000),

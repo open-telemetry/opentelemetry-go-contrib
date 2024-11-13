@@ -74,7 +74,6 @@ module-sets:
       - go.opentelemetry.io/contrib/bridges/otelslog
       - go.opentelemetry.io/contrib/bridges/otellogrus
       - go.opentelemetry.io/contrib/bridges/otelzap
-      - go.opentelemetry.io/contrib/bridges/otellogr
   experimental-processors:
     version: v0.4.0
     modules:
