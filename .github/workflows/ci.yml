@@ -90,7 +90,7 @@ jobs:
       env:
         CODECOV_TOKEN: ${{ secrets.CODECOV_TOKEN }}
       with:
-        file: ./coverage.txt
+        files: ./coverage.txt
         verbose: true
     - name: Store coverage test output
       uses: actions/upload-artifact@v4
