@@ -6,6 +6,7 @@ package otellambda // import "go.opentelemetry.io/contrib/instrumentation/github
 import (
 	"context"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"reflect"
 )
@@ -47,14 +48,14 @@ func validateReturns(handler reflect.Type) error {
 
 	switch n := handler.NumOut(); {
 	case n > 2:
-		return fmt.Errorf("handler may not return more than two values")
+		return errors.New("handler may not return more than two values")
 	case n == 2:
 		if !handler.Out(1).Implements(errorType) {
-			return fmt.Errorf("handler returns two values, but the second does not implement error")
+			return errors.New("handler returns two values, but the second does not implement error")
 		}
 	case n == 1:
 		if !handler.Out(0).Implements(errorType) {
-			return fmt.Errorf("handler returns a single value, but it does not implement error")
+			return errors.New("handler returns a single value, but it does not implement error")
 		}
 	}
 
@@ -88,7 +89,7 @@ func InstrumentHandler(handlerFunc interface{}, options ...Option) interface{} {
 	whf := wrappedHandlerFunction{instrumentor: newInstrumentor(options...)}
 
 	if handlerFunc == nil {
-		return errorHandler(fmt.Errorf("handler is nil"))
+		return errorHandler(errors.New("handler is nil"))
 	}
 	handlerType := reflect.TypeOf(handlerFunc)
 	if handlerType.Kind() != reflect.Func {
