@@ -116,7 +116,7 @@ func Test_otelMiddlewares_presignedRequests(t *testing.T) {
 		propagator: propagator,
 	}
 
-	err := m.finalizeMiddlewareAfter(&stack)
+	err = m.finalizeMiddlewareAfter(&stack)
 	require.NoError(t, err)
 
 	input := &smithyhttp.Request{
