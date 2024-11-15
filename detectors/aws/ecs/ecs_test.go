@@ -169,7 +169,7 @@ func TestDetectCannotReadContainerID(t *testing.T) {
 	detector := &resourceDetector{utils: detectorUtils}
 	res, err := detector.Detect(context.Background())
 
-	assert.Equal(t, nil, err)
+	assert.NoError(t, err)
 	assert.Equal(t, expectedResource, res, "Resource returned is incorrect")
 }
 
@@ -187,7 +187,7 @@ func TestDetectCannotReadContainerName(t *testing.T) {
 	res, err := detector.Detect(context.Background())
 
 	assert.Equal(t, errCannotReadContainerName, err)
-	assert.Equal(t, 0, len(res.Attributes()))
+	assert.Empty(t, res.Attributes())
 }
 
 // returns empty resource when process is not running ECS.

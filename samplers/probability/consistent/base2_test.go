@@ -10,8 +10,8 @@ import (
 )
 
 func TestSplitProb(t *testing.T) {
-	require.Equal(t, -1, expFromFloat64(0.6))
-	require.Equal(t, -2, expFromFloat64(0.4))
+	require.Equal(t, -1, expFromFloat64(0.6)) //nolint:testifylint // false positive on expected-actual
+	require.Equal(t, -2, expFromFloat64(0.4)) //nolint:testifylint // false positive on expected-actual
 	require.Equal(t, 0.5, expToFloat64(-1))
 	require.Equal(t, 0.25, expToFloat64(-2))
 

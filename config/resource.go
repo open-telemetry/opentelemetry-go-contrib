@@ -5,6 +5,7 @@ package config // import "go.opentelemetry.io/contrib/config"
 
 import (
 	"fmt"
+	"strconv"
 
 	"go.opentelemetry.io/otel/attribute"
 	"go.opentelemetry.io/otel/sdk/resource"
@@ -17,7 +18,7 @@ func keyVal(k string, v any) attribute.KeyValue {
 	case int64:
 		return attribute.Int64(k, val)
 	case uint64:
-		return attribute.String(k, fmt.Sprintf("%d", val))
+		return attribute.String(k, strconv.FormatUint(val, 10))
 	case float64:
 		return attribute.Float64(k, val)
 	case int8:
@@ -37,7 +38,7 @@ func keyVal(k string, v any) attribute.KeyValue {
 	case int:
 		return attribute.Int(k, val)
 	case uint:
-		return attribute.String(k, fmt.Sprintf("%d", val))
+		return attribute.String(k, strconv.FormatUint(uint64(val), 10))
 	case string:
 		return attribute.String(k, val)
 	default:
@@ -45,18 +46,17 @@ func keyVal(k string, v any) attribute.KeyValue {
 	}
 }
 
-func newResource(res *Resource) (*resource.Resource, error) {
+func newResource(res *Resource) *resource.Resource {
 	if res == nil || res.Attributes == nil {
-		return resource.Default(), nil
+		return resource.Default()
 	}
 	var attrs []attribute.KeyValue
 
-	for k, v := range res.Attributes {
-		attrs = append(attrs, keyVal(k, v))
+	for _, v := range res.Attributes {
+		attrs = append(attrs, keyVal(v.Name, v.Value))
 	}
 
-	return resource.Merge(resource.Default(),
-		resource.NewWithAttributes(*res.SchemaUrl,
-			attrs...,
-		))
+	return resource.NewWithAttributes(*res.SchemaUrl,
+		attrs...,
+	)
 }

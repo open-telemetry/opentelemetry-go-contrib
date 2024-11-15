@@ -21,6 +21,18 @@
       "matchManagers": ["gomod"],
       "matchDepTypes": ["indirect"],
       "enabled": false
+    },
+    {
+      "matchPackageNames": ["google.golang.org/genproto/googleapis/**"],
+      "groupName": "googleapis"
+    },
+    {
+      "matchPackageNames": ["golang.org/x/**"],
+      "groupName": "golang.org/x"
+    },
+    {
+      "matchPackageNames": ["go.opentelemetry.io/otel/**"],
+      "allowedVersions": "/^v[0-9]+\\.[0-9]+\\.[0-9]+/"
     }
   ]
 }

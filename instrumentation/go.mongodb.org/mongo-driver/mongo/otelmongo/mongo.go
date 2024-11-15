@@ -5,6 +5,7 @@ package otelmongo // import "go.opentelemetry.io/contrib/instrumentation/go.mong
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"strconv"
 	"strings"
@@ -12,7 +13,7 @@ import (
 
 	"go.opentelemetry.io/otel/attribute"
 	"go.opentelemetry.io/otel/codes"
-	semconv "go.opentelemetry.io/otel/semconv/v1.17.0"
+	semconv "go.opentelemetry.io/otel/semconv/v1.21.0"
 	"go.opentelemetry.io/otel/trace"
 
 	"go.mongodb.org/mongo-driver/bson"
@@ -118,7 +119,7 @@ func extractCollection(evt *event.CommandStartedEvent) (string, error) {
 		}
 		return v.StringValue(), nil
 	}
-	return "", fmt.Errorf("collection name not found")
+	return "", errors.New("collection name not found")
 }
 
 // NewMonitor creates a new mongodb event CommandMonitor.

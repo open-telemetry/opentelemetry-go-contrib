@@ -23,9 +23,11 @@ linters:
     - govet
     - ineffassign
     - misspell
+    - perfsprint
     - revive
     - staticcheck
     - tenv
+    - testifylint
     - typecheck
     - unconvert
     - unparam
@@ -61,10 +63,11 @@ issues:
       text: "calls to (.+) only in main[(][)] or init[(][)] functions"
       linters:
         - revive
-    # It's okay to not run gosec in a test.
+    # It's okay to not run gosec and perfsprint in a test.
     - path: _test\.go
       linters:
         - gosec
+        - perfsprint
   include:
     # revive exported should have comment or be unexported.
     - EXC0012
@@ -74,6 +77,18 @@ issues:
 linters-settings:
   depguard:
     rules:
+      no-sdk-instrumentation:
+        files:
+          - "**/*/{bridges,instrumentation}/**/*.go"
+          - "!**/*/bridges/prometheus/*.go" # prometheus bridge is meant to use the SDK
+          - "!**/*/instrumentation/runtime/*.go" # runtime instrumentation is meant to use the SDK
+          - "!**/*test/*.go"
+          - "!**/*test/**/*.go"
+          - "!**/*example/*.go"
+          - "!**/*example/**/*.go"
+        deny:
+          - pkg: go.opentelemetry.io/otel/sdk
+            desc: "Bridges and instrumentations should not use the SDKs, except in test or example modules"
       non-tests:
         files:
           - "!$test"
@@ -96,6 +111,12 @@ linters-settings:
     locale: US
     ignore-words:
       - cancelled
+  perfsprint:
+    err-error: true
+    errorf: true
+    int-conversion: true
+    sprintf1: true
+    strconcat: true
   revive:
     # Sets the default failure confidence.
     # This means that linting errors with less than 0.8 confidence will be ignored.
@@ -243,3 +264,8 @@ linters-settings:
       # https://github.com/mgechev/revive/blob/master/RULES_DESCRIPTIONS.md#waitgroup-by-value
       - name: waitgroup-by-value
         disabled: false
+  testifylint:
+    enable-all: true
+    disable:
+      - float-compare
+      - require-error

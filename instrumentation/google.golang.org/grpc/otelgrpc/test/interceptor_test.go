@@ -581,7 +581,7 @@ func TestStreamClientInterceptorOnUnidirectionalClientServerStream(t *testing.T)
 	// and RecvMsg() calls.
 	_ = streamClient.CloseSend()
 	err := streamClient.RecvMsg(reply)
-	require.Nil(t, err)
+	require.NoError(t, err)
 
 	// wait for span end that is called in separate go routine
 	var span trace.ReadOnlySpan
@@ -857,6 +857,7 @@ func TestUnaryServerInterceptor(t *testing.T) {
 	for _, check := range serverChecks {
 		name := check.grpcCode.String()
 		t.Run(name, func(t *testing.T) {
+			t.Setenv("OTEL_METRICS_EXEMPLAR_FILTER", "always_off")
 			sr := tracetest.NewSpanRecorder()
 			tp := trace.NewTracerProvider(trace.WithSpanProcessor(sr))
 

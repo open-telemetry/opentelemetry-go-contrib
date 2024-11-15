@@ -133,7 +133,7 @@ func TestNotFoundIsNotError(t *testing.T) {
 		attribute.String("http.method", "GET"),
 		attribute.String("http.route", "/does/not/exist"),
 	)
-	assert.Equal(t, sr.Ended()[0].Status().Code, codes.Unset)
+	assert.Equal(t, codes.Unset, sr.Ended()[0].Status().Code)
 }
 
 func assertSpan(t *testing.T, span sdktrace.ReadOnlySpan, name string, kind trace.SpanKind, attrs ...attribute.KeyValue) {
@@ -148,7 +148,7 @@ func assertSpan(t *testing.T, span sdktrace.ReadOnlySpan, name string, kind trac
 		if !assert.Contains(t, got, want.Key) {
 			continue
 		}
-		assert.Equal(t, got[want.Key], want.Value)
+		assert.Equal(t, want.Value, got[want.Key])
 	}
 }
 
@@ -243,7 +243,7 @@ func TestWithPublicEndpointFn(t *testing.T) {
 			},
 			spansAssert: func(t *testing.T, _ trace.SpanContext, spans []sdktrace.ReadOnlySpan) {
 				require.Len(t, spans, 1)
-				require.Len(t, spans[0].Links(), 0, "should not contain link")
+				require.Empty(t, spans[0].Links(), "should not contain link")
 			},
 		},
 	}

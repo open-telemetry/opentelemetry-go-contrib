@@ -4,6 +4,7 @@
 package consistent // import "go.opentelemetry.io/contrib/samplers/probability/consistent"
 
 import (
+	"errors"
 	"fmt"
 	"strconv"
 	"strings"
@@ -20,7 +21,7 @@ const (
 
 var (
 	errTraceStateSyntax       = fmt.Errorf("otel tracestate: %w", strconv.ErrSyntax)
-	errTraceStateInconsistent = fmt.Errorf("r-value and p-value are inconsistent")
+	errTraceStateInconsistent = errors.New("r-value and p-value are inconsistent")
 )
 
 type otelTraceState struct {
@@ -199,7 +200,7 @@ func parseNumber(key string, input string, maximum uint8) (uint8, error) {
 		return maximum + 1, parseError(key, strconv.ErrRange)
 	}
 	// `value` is strictly less then the uint8 maximum. This cast is safe.
-	return uint8(value), nil
+	return uint8(value), nil // nolint: gosec
 }
 
 func parseError(key string, err error) error {

@@ -1,7 +1,7 @@
 // Copyright The OpenTelemetry Authors
 // SPDX-License-Identifier: Apache-2.0
 
-// Package x contains support for OTel runtime instrumentaiton experimental features.
+// Package x contains support for OTel runtime instrumentation experimental features.
 //
 // This package should only be used for features defined in the specification.
 // It should not be used for experiments or new project ideas.

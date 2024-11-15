@@ -12,7 +12,7 @@ import (
 	"go.opentelemetry.io/contrib/propagators/aws/xray"
 	"go.opentelemetry.io/otel/exporters/otlp/otlptrace/otlptracegrpc"
 	"go.opentelemetry.io/otel/propagation"
-	sdktrace "go.opentelemetry.io/otel/sdk/trace"
+	sdktrace "go.opentelemetry.io/otel/sdk/trace" //nolint:depguard // NewTracerProvider requires the SDK
 )
 
 func xrayEventToCarrier([]byte) propagation.TextMapCarrier {

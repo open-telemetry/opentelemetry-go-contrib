@@ -152,7 +152,7 @@ func Test_Span_name(t *testing.T) {
 	operation1 := ""
 	operation2 := "Operation"
 
-	assert.Equal(t, spanName(serviceID1, operation1), "")
+	assert.Equal(t, "", spanName(serviceID1, operation1))
 	assert.Equal(t, spanName(serviceID1, operation2), "."+operation2)
 	assert.Equal(t, spanName(serviceID2, operation1), serviceID2)
 	assert.Equal(t, spanName(serviceID2, operation2), serviceID2+"."+operation2)

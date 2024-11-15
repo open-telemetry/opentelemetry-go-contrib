@@ -10,7 +10,6 @@ import (
 	"sync"
 	"time"
 
-	"go.opentelemetry.io/otel"
 	"go.opentelemetry.io/otel/attribute"
 	"go.opentelemetry.io/otel/metric"
 
@@ -32,17 +31,12 @@ const (
 	goGoroutines        = "/sched/goroutines:goroutines"
 	goMaxProcs          = "/sched/gomaxprocs:threads"
 	goConfigGC          = "/gc/gogc:percent"
+	goSchedLatencies    = "/sched/latencies:seconds"
 )
 
 // Start initializes reporting of runtime metrics using the supplied config.
 func Start(opts ...Option) error {
 	c := newConfig(opts...)
-	if c.MinimumReadMemStatsInterval < 0 {
-		c.MinimumReadMemStatsInterval = DefaultMinimumReadMemStatsInterval
-	}
-	if c.MeterProvider == nil {
-		c.MeterProvider = otel.GetMeterProvider()
-	}
 	meter := c.MeterProvider.Meter(
 		ScopeName,
 		metric.WithInstrumentationVersion(Version()),
@@ -121,28 +115,28 @@ func Start(opts ...Option) error {
 	stackMemoryOpt := metric.WithAttributeSet(
 		attribute.NewSet(attribute.String("go.memory.type", "stack")),
 	)
-	collector := newCollector(c.MinimumReadMemStatsInterval)
+	collector := newCollector(c.MinimumReadMemStatsInterval, runtimeMetrics)
 	var lock sync.Mutex
 	_, err = meter.RegisterCallback(
 		func(ctx context.Context, o metric.Observer) error {
 			lock.Lock()
 			defer lock.Unlock()
 			collector.refresh()
-			stackMemory := collector.get(goHeapMemory)
+			stackMemory := collector.getInt(goHeapMemory)
 			o.ObserveInt64(memoryUsedInstrument, stackMemory, stackMemoryOpt)
-			totalMemory := collector.get(goTotalMemory) - collector.get(goMemoryReleased)
+			totalMemory := collector.getInt(goTotalMemory) - collector.getInt(goMemoryReleased)
 			otherMemory := totalMemory - stackMemory
 			o.ObserveInt64(memoryUsedInstrument, otherMemory, otherMemoryOpt)
 			// Only observe the limit metric if a limit exists
-			if limit := collector.get(goMemoryLimit); limit != math.MaxInt64 {
+			if limit := collector.getInt(goMemoryLimit); limit != math.MaxInt64 {
 				o.ObserveInt64(memoryLimitInstrument, limit)
 			}
-			o.ObserveInt64(memoryAllocatedInstrument, collector.get(goMemoryAllocated))
-			o.ObserveInt64(memoryAllocationsInstrument, collector.get(goMemoryAllocations))
-			o.ObserveInt64(memoryGCGoalInstrument, collector.get(goMemoryGoal))
-			o.ObserveInt64(goroutineCountInstrument, collector.get(goGoroutines))
-			o.ObserveInt64(processorLimitInstrument, collector.get(goMaxProcs))
-			o.ObserveInt64(gogcConfigInstrument, collector.get(goConfigGC))
+			o.ObserveInt64(memoryAllocatedInstrument, collector.getInt(goMemoryAllocated))
+			o.ObserveInt64(memoryAllocationsInstrument, collector.getInt(goMemoryAllocations))
+			o.ObserveInt64(memoryGCGoalInstrument, collector.getInt(goMemoryGoal))
+			o.ObserveInt64(goroutineCountInstrument, collector.getInt(goGoroutines))
+			o.ObserveInt64(processorLimitInstrument, collector.getInt(goMaxProcs))
+			o.ObserveInt64(gogcConfigInstrument, collector.getInt(goConfigGC))
 			return nil
 		},
 		memoryUsedInstrument,
@@ -157,7 +151,6 @@ func Start(opts ...Option) error {
 	if err != nil {
 		return err
 	}
-	// TODO (#5655) support go.schedule.duration
 	return nil
 }
 
@@ -188,19 +181,19 @@ type goCollector struct {
 	sampleMap map[string]*metrics.Sample
 }
 
-func newCollector(minimumInterval time.Duration) *goCollector {
+func newCollector(minimumInterval time.Duration, metricNames []string) *goCollector {
 	g := &goCollector{
-		sampleBuffer:    make([]metrics.Sample, 0, len(runtimeMetrics)),
-		sampleMap:       make(map[string]*metrics.Sample, len(runtimeMetrics)),
+		sampleBuffer:    make([]metrics.Sample, 0, len(metricNames)),
+		sampleMap:       make(map[string]*metrics.Sample, len(metricNames)),
 		minimumInterval: minimumInterval,
 		now:             time.Now,
 	}
-	for _, runtimeMetric := range runtimeMetrics {
-		g.sampleBuffer = append(g.sampleBuffer, metrics.Sample{Name: runtimeMetric})
+	for _, metricName := range metricNames {
+		g.sampleBuffer = append(g.sampleBuffer, metrics.Sample{Name: metricName})
 		// sampleMap references a position in the sampleBuffer slice. If an
 		// element is appended to sampleBuffer, it must be added to sampleMap
 		// for the sample to be accessible in sampleMap.
-		g.sampleMap[runtimeMetric] = &g.sampleBuffer[len(g.sampleBuffer)-1]
+		g.sampleMap[metricName] = &g.sampleBuffer[len(g.sampleBuffer)-1]
 	}
 	return g
 }
@@ -216,9 +209,20 @@ func (g *goCollector) refresh() {
 	g.lastCollect = now
 }
 
-func (g *goCollector) get(name string) int64 {
+func (g *goCollector) getInt(name string) int64 {
 	if s, ok := g.sampleMap[name]; ok && s.Value.Kind() == metrics.KindUint64 {
-		return int64(s.Value.Uint64())
+		v := s.Value.Uint64()
+		if v > math.MaxInt64 {
+			return math.MaxInt64
+		}
+		return int64(v) // nolint: gosec  // Overflow checked above.
 	}
 	return 0
+}
+
+func (g *goCollector) getHistogram(name string) *metrics.Float64Histogram {
+	if s, ok := g.sampleMap[name]; ok && s.Value.Kind() == metrics.KindFloat64Histogram {
+		return s.Value.Float64Histogram()
+	}
+	return nil
 }

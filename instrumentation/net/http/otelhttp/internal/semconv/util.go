@@ -50,7 +50,7 @@ func splitHostPort(hostport string) (host string, port int) {
 	if err != nil {
 		return
 	}
-	return host, int(p)
+	return host, int(p) // nolint: gosec  // Byte size checked 16 above.
 }
 
 func requiredHTTPPort(https bool, port int) int { // nolint:revive
