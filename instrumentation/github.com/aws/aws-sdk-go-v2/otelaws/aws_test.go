@@ -16,6 +16,7 @@ import (
 
 	"github.com/aws/aws-sdk-go-v2/aws"
 	awsSignerV4 "github.com/aws/aws-sdk-go-v2/aws/signer/v4"
+
 	"go.opentelemetry.io/otel/propagation"
 )
 
@@ -103,7 +104,8 @@ func Test_otelMiddlewares_presignedRequests(t *testing.T) {
 		LogSigning:          false,
 	})
 
-	stack.Finalize.Add(presignedHTTPMiddleware, middleware.After)
+	err := stack.Finalize.Add(presignedHTTPMiddleware, middleware.After)
+	require.NoError(t, err)
 
 	propagator := mockPropagator{
 		injectKey:   "mock-key",
@@ -134,7 +136,7 @@ func Test_otelMiddlewares_presignedRequests(t *testing.T) {
 	require.NoError(t, err)
 	presignedReq, ok := url.(*awsSignerV4.PresignedHTTPRequest)
 	require.True(t, ok)
-	require.Equal(t, presignedReq.URL, "mock-url")
+	require.Equal(t, "mock-url", presignedReq.URL)
 
 	// Assert header has NOT been updated with injected values, as the presign middleware should short circuit
 	key := http.CanonicalHeaderKey(propagator.injectKey)
