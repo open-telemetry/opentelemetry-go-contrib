@@ -151,7 +151,7 @@ func TestNewTraceRequest_Client(t *testing.T) {
 		attribute.String("user_agent.original", "go-test-agent"),
 		attribute.Int("http.request_content_length", 13),
 	}
-	client := NewHTTPClient()
+	client := NewHTTPClient(nil)
 	assert.ElementsMatch(t, want, client.RequestTraceAttrs(req))
 }
 
@@ -166,7 +166,7 @@ func TestNewTraceResponse_Client(t *testing.T) {
 	}
 
 	for _, tt := range testcases {
-		client := NewHTTPClient()
+		client := NewHTTPClient(nil)
 		assert.ElementsMatch(t, tt.want, client.ResponseTraceAttrs(&tt.resp))
 	}
 }

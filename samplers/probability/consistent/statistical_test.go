@@ -256,7 +256,7 @@ func sampleTrials(t *testing.T, prob float64, degrees testDegrees, upperP pValue
 	//
 	// The test specification ensures the test ensures there are
 	// at least 20 expected items per category in these tests.
-	require.NotEqual(t, 0, len(counts))
+	require.NotEmpty(t, counts)
 
 	if degrees == 2 {
 		// Note: because the test is probabilistic, we can't be

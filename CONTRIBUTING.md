@@ -123,13 +123,14 @@ See the [public meeting notes](https://docs.google.com/document/d/1E5e7Ld0NuU1iV
 
 ## Approvers and Maintainers
 
-Approvers:
+Triagers:
 
-- [Chester Cheung](https://github.com/hanyuancheung), Tencent
+- [Cheng-Zhen Yang](https://github.com/scorpionknifes), Independent
+
+Approvers:
 
 Maintainers:
 
-- [Aaron Clawson](https://github.com/MadVikingGod), LightStep
 - [Damien Mathieu](https://github.com/dmathieu), Elastic
 - [David Ashpole](https://github.com/dashpole), Google
 - [Robert Pająk](https://github.com/pellared), Splunk
@@ -138,10 +139,12 @@ Maintainers:
 
 Emeritus:
 
-- [Gustavo Silva Paiva](https://github.com/paivagustavo), LightStep
-- [Josh MacDonald](https://github.com/jmacd), LightStep
-- [Anthony Mirabella](https://github.com/Aneurysm9), Amazon
-- [Evan Torrie](https://github.com/evantorrie), Yahoo
+- [Aaron Clawson](https://github.com/MadVikingGod)
+- [Anthony Mirabella](https://github.com/Aneurysm9)
+- [Chester Cheung](https://github.com/hanyuancheung)
+- [Evan Torrie](https://github.com/evantorrie)
+- [Gustavo Silva Paiva](https://github.com/paivagustavo)
+- [Josh MacDonald](https://github.com/jmacd)
 
 ### Become an Approver or a Maintainer
 

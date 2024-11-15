@@ -21,7 +21,7 @@ func TestTraceIDIsValidLength(t *testing.T) {
 	traceID, _ := idg.NewIDs(context.Background())
 
 	expectedTraceIDLength := 32
-	assert.Equal(t, len(traceID.String()), expectedTraceIDLength, "TraceID has incorrect length.")
+	assert.Len(t, traceID.String(), expectedTraceIDLength, "TraceID has incorrect length.")
 }
 
 func TestTraceIDIsUnique(t *testing.T) {
@@ -63,8 +63,8 @@ func TestSpanIDIsValidLength(t *testing.T) {
 	spanID2 := idg.NewSpanID(context.Background(), traceID)
 	expectedSpanIDLength := 16
 
-	assert.Equal(t, len(spanID1.String()), expectedSpanIDLength, "SpanID has incorrect length")
-	assert.Equal(t, len(spanID2.String()), expectedSpanIDLength, "SpanID has incorrect length")
+	assert.Len(t, spanID1.String(), expectedSpanIDLength, "SpanID has incorrect length")
+	assert.Len(t, spanID2.String(), expectedSpanIDLength, "SpanID has incorrect length")
 }
 
 func TestSpanIDIsUnique(t *testing.T) {

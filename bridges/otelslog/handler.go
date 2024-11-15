@@ -26,8 +26,8 @@
 //
 // Attribute values are transformed based on their [slog.Kind]:
 //
-//   - [slog.KindAny] are transformed to [log.StringValue]. The value is
-//     encoded using [fmt.Sprintf].
+//   - [slog.KindAny] values are transformed based on their type or
+//     into a string value encoded using [fmt.Sprintf] if there is no matching type.
 //   - [slog.KindBool] are transformed to [log.BoolValue] directly.
 //   - [slog.KindDuration] are transformed to [log.Int64Value] as nanoseconds.
 //   - [slog.KindFloat64] are transformed to [log.Float64Value] directly.
@@ -48,10 +48,12 @@ import (
 	"context"
 	"fmt"
 	"log/slog"
+	"runtime"
 	"slices"
 
 	"go.opentelemetry.io/otel/log"
 	"go.opentelemetry.io/otel/log/global"
+	semconv "go.opentelemetry.io/otel/semconv/v1.26.0"
 )
 
 // NewLogger returns a new [slog.Logger] backed by a new [Handler]. See
@@ -64,6 +66,7 @@ type config struct {
 	provider  log.LoggerProvider
 	version   string
 	schemaURL string
+	source    bool
 }
 
 func newConfig(options []Option) config {
@@ -131,6 +134,15 @@ func WithLoggerProvider(provider log.LoggerProvider) Option {
 	})
 }
 
+// WithSource returns an [Option] that configures the [Handler] to include
+// the source location of the log record in log attributes.
+func WithSource(source bool) Option {
+	return optFunc(func(c config) config {
+		c.source = source
+		return c
+	})
+}
+
 // Handler is an [slog.Handler] that sends all logging records it receives to
 // OpenTelemetry. See package documentation for how conversions are made.
 type Handler struct {
@@ -140,6 +152,8 @@ type Handler struct {
 	attrs  *kvBuffer
 	group  *group
 	logger log.Logger
+
+	source bool
 }
 
 // Compile-time check *Handler implements slog.Handler.
@@ -155,7 +169,10 @@ var _ slog.Handler = (*Handler)(nil)
 // [log.Logger] implementation may override this value with a default.
 func NewHandler(name string, options ...Option) *Handler {
 	cfg := newConfig(options)
-	return &Handler{logger: cfg.logger(name)}
+	return &Handler{
+		logger: cfg.logger(name),
+		source: cfg.source,
+	}
 }
 
 // Handle handles the passed record.
@@ -171,6 +188,16 @@ func (h *Handler) convertRecord(r slog.Record) log.Record {
 
 	const sevOffset = slog.Level(log.SeverityDebug) - slog.LevelDebug
 	record.SetSeverity(log.Severity(r.Level + sevOffset))
+
+	if h.source {
+		fs := runtime.CallersFrames([]uintptr{r.PC})
+		f, _ := fs.Next()
+		record.AddAttributes(
+			log.String(string(semconv.CodeFilepathKey), f.File),
+			log.String(string(semconv.CodeFunctionKey), f.Function),
+			log.Int(string(semconv.CodeLineNumberKey), f.Line),
+		)
+	}
 
 	if h.attrs.Len() > 0 {
 		record.AddAttributes(h.attrs.KeyValues()...)
@@ -201,10 +228,10 @@ func (h *Handler) convertRecord(r slog.Record) log.Record {
 // Enable returns true if the Handler is enabled to log for the provided
 // context and Level. Otherwise, false is returned if it is not enabled.
 func (h *Handler) Enabled(ctx context.Context, l slog.Level) bool {
-	var record log.Record
+	var param log.EnabledParameters
 	const sevOffset = slog.Level(log.SeverityDebug) - slog.LevelDebug
-	record.SetSeverity(log.Severity(l + sevOffset))
-	return h.logger.Enabled(ctx, record)
+	param.SetSeverity(log.Severity(l + sevOffset))
+	return h.logger.Enabled(ctx, param)
 }
 
 // WithAttrs returns a new [slog.Handler] based on h that will log using the
@@ -390,7 +417,7 @@ func (b *kvBuffer) AddAttr(attr slog.Attr) bool {
 			for _, a := range attr.Value.Group() {
 				b.data = append(b.data, log.KeyValue{
 					Key:   a.Key,
-					Value: convertValue(a.Value),
+					Value: convert(a.Value),
 				})
 			}
 			return true
@@ -403,15 +430,15 @@ func (b *kvBuffer) AddAttr(attr slog.Attr) bool {
 	}
 	b.data = append(b.data, log.KeyValue{
 		Key:   attr.Key,
-		Value: convertValue(attr.Value),
+		Value: convert(attr.Value),
 	})
 	return true
 }
 
-func convertValue(v slog.Value) log.Value {
+func convert(v slog.Value) log.Value {
 	switch v.Kind() {
 	case slog.KindAny:
-		return log.StringValue(fmt.Sprintf("%+v", v.Any()))
+		return convertValue(v.Any())
 	case slog.KindBool:
 		return log.BoolValue(v.Bool())
 	case slog.KindDuration:
@@ -425,14 +452,19 @@ func convertValue(v slog.Value) log.Value {
 	case slog.KindTime:
 		return log.Int64Value(v.Time().UnixNano())
 	case slog.KindUint64:
-		return log.Int64Value(int64(v.Uint64()))
+		const maxInt64 = ^uint64(0) >> 1
+		u := v.Uint64()
+		if u > maxInt64 {
+			return log.Float64Value(float64(u))
+		}
+		return log.Int64Value(int64(u)) // nolint:gosec  // Overflow checked above.
 	case slog.KindGroup:
 		g := v.Group()
 		buf := newKVBuffer(len(g))
 		buf.AddAttrs(g)
 		return log.MapValue(buf.data...)
 	case slog.KindLogValuer:
-		return convertValue(v.Resolve())
+		return convert(v.Resolve())
 	default:
 		// Try to handle this as gracefully as possible.
 		//

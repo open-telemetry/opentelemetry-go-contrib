@@ -5,6 +5,7 @@ package deprecatedruntime // import "go.opentelemetry.io/contrib/instrumentation
 
 import (
 	"context"
+	"math"
 	goruntime "runtime"
 	"sync"
 	"time"
@@ -203,16 +204,16 @@ func (r *runtime) registerMemStats() error {
 				lastMemStats = now
 			}
 
-			o.ObserveInt64(heapAlloc, int64(memStats.HeapAlloc))
-			o.ObserveInt64(heapIdle, int64(memStats.HeapIdle))
-			o.ObserveInt64(heapInuse, int64(memStats.HeapInuse))
-			o.ObserveInt64(heapObjects, int64(memStats.HeapObjects))
-			o.ObserveInt64(heapReleased, int64(memStats.HeapReleased))
-			o.ObserveInt64(heapSys, int64(memStats.HeapSys))
-			o.ObserveInt64(liveObjects, int64(memStats.Mallocs-memStats.Frees))
-			o.ObserveInt64(ptrLookups, int64(memStats.Lookups))
+			o.ObserveInt64(heapAlloc, clampUint64(memStats.HeapAlloc))
+			o.ObserveInt64(heapIdle, clampUint64(memStats.HeapIdle))
+			o.ObserveInt64(heapInuse, clampUint64(memStats.HeapInuse))
+			o.ObserveInt64(heapObjects, clampUint64(memStats.HeapObjects))
+			o.ObserveInt64(heapReleased, clampUint64(memStats.HeapReleased))
+			o.ObserveInt64(heapSys, clampUint64(memStats.HeapSys))
+			o.ObserveInt64(liveObjects, clampUint64(memStats.Mallocs-memStats.Frees))
+			o.ObserveInt64(ptrLookups, clampUint64(memStats.Lookups))
 			o.ObserveInt64(gcCount, int64(memStats.NumGC))
-			o.ObserveInt64(pauseTotalNs, int64(memStats.PauseTotalNs))
+			o.ObserveInt64(pauseTotalNs, clampUint64(memStats.PauseTotalNs))
 
 			computeGCPauses(ctx, gcPauseNs, memStats.PauseNs[:], lastNumGC, memStats.NumGC)
 
@@ -239,6 +240,13 @@ func (r *runtime) registerMemStats() error {
 	return nil
 }
 
+func clampUint64(v uint64) int64 {
+	if v > math.MaxInt64 {
+		return math.MaxInt64
+	}
+	return int64(v) // nolint: gosec  // Overflow checked above.
+}
+
 func computeGCPauses(
 	ctx context.Context,
 	recorder metric.Int64Histogram,
@@ -257,10 +265,16 @@ func computeGCPauses(
 		return
 	}
 
-	length := uint32(len(circular))
+	n := len(circular)
+	if n < 0 {
+		// Only the case in error situations.
+		return
+	}
 
-	i := lastNumGC % length
-	j := currentNumGC % length
+	length := uint64(n) // nolint: gosec  // n >= 0
+
+	i := uint64(lastNumGC) % length
+	j := uint64(currentNumGC) % length
 
 	if j < i { // wrap around the circular buffer
 		recordGCPauses(ctx, recorder, circular[i:])
@@ -277,6 +291,6 @@ func recordGCPauses(
 	pauses []uint64,
 ) {
 	for _, pause := range pauses {
-		recorder.Record(ctx, int64(pause))
+		recorder.Record(ctx, clampUint64(pause))
 	}
 }
