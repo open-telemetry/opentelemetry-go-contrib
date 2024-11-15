@@ -87,9 +87,8 @@ jobs:
         cp coverage.html $TEST_RESULTS
     - name: Upload coverage report
       uses: codecov/codecov-action@v5.0.0
-      env:
-        CODECOV_TOKEN: ${{ secrets.CODECOV_TOKEN }}
       with:
+        fail_ci_if_error: true
         files: ./coverage.txt
         verbose: true
     - name: Store coverage test output
