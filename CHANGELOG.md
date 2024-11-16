@@ -8,6 +8,12 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 
 ## [Unreleased]
 
+### Added
+
+- Added support for providing `endpoint`, `pollingIntervalMs` and `initialSamplingRate` using environment variable `OTEL_TRACES_SAMPLER_ARG` in `go.opentelemetry.io/contrib/samples/jaegerremote`. (#6310)
+
+### Fixed
+
 - Fix broken AWS presigned URLs when using instrumentation in `go.opentelemetry.io/contrib/instrumentation/github.com/aws/aws-sdk-go-v2/otelaws`. (#5975)
 
 <!-- Released section -->
