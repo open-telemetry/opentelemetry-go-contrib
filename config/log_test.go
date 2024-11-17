@@ -13,6 +13,7 @@ import (
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 
+	"go.opentelemetry.io/otel/exporters/otlp/otlplog/otlploggrpc"
 	"go.opentelemetry.io/otel/exporters/otlp/otlplog/otlploghttp"
 	"go.opentelemetry.io/otel/exporters/stdout/stdoutlog"
 	"go.opentelemetry.io/otel/log"
@@ -62,6 +63,9 @@ func TestLogProcessor(t *testing.T) {
 	ctx := context.Background()
 
 	otlpHTTPExporter, err := otlploghttp.New(ctx)
+	require.NoError(t, err)
+
+	otlpGRPCExporter, err := otlploggrpc.New(ctx)
 	require.NoError(t, err)
 
 	consoleExporter, err := stdoutlog.New(
@@ -171,6 +175,119 @@ func TestLogProcessor(t *testing.T) {
 				},
 			},
 			wantProcessor: sdklog.NewBatchProcessor(consoleExporter),
+		}, {
+			name: "batch/otlp-grpc-exporter-no-endpoint",
+			processor: LogRecordProcessor{
+				Batch: &BatchLogRecordProcessor{
+					MaxExportBatchSize: ptr(0),
+					ExportTimeout:      ptr(0),
+					MaxQueueSize:       ptr(0),
+					ScheduleDelay:      ptr(0),
+					Exporter: LogRecordExporter{
+						OTLP: &OTLP{
+							Protocol:    ptr("grpc"),
+							Compression: ptr("gzip"),
+							Timeout:     ptr(1000),
+							Headers: []NameStringValuePair{
+								{Name: "test", Value: ptr("test1")},
+							},
+						},
+					},
+				},
+			},
+			wantProcessor: sdklog.NewBatchProcessor(otlpGRPCExporter),
+		},
+		{
+			name: "batch/otlp-grpc-exporter",
+			processor: LogRecordProcessor{
+				Batch: &BatchLogRecordProcessor{
+					MaxExportBatchSize: ptr(0),
+					ExportTimeout:      ptr(0),
+					MaxQueueSize:       ptr(0),
+					ScheduleDelay:      ptr(0),
+					Exporter: LogRecordExporter{
+						OTLP: &OTLP{
+							Protocol:    ptr("grpc"),
+							Endpoint:    ptr("http://localhost:4317"),
+							Compression: ptr("gzip"),
+							Timeout:     ptr(1000),
+							Headers: []NameStringValuePair{
+								{Name: "test", Value: ptr("test1")},
+							},
+						},
+					},
+				},
+			},
+			wantProcessor: sdklog.NewBatchProcessor(otlpGRPCExporter),
+		},
+		{
+			name: "batch/otlp-grpc-exporter-no-scheme",
+			processor: LogRecordProcessor{
+				Batch: &BatchLogRecordProcessor{
+					MaxExportBatchSize: ptr(0),
+					ExportTimeout:      ptr(0),
+					MaxQueueSize:       ptr(0),
+					ScheduleDelay:      ptr(0),
+					Exporter: LogRecordExporter{
+						OTLP: &OTLP{
+							Protocol:    ptr("grpc"),
+							Endpoint:    ptr("localhost:4317"),
+							Compression: ptr("gzip"),
+							Timeout:     ptr(1000),
+							Headers: []NameStringValuePair{
+								{Name: "test", Value: ptr("test1")},
+							},
+						},
+					},
+				},
+			},
+			wantProcessor: sdklog.NewBatchProcessor(otlpGRPCExporter),
+		},
+		{
+			name: "batch/otlp-grpc-invalid-endpoint",
+			processor: LogRecordProcessor{
+				Batch: &BatchLogRecordProcessor{
+					MaxExportBatchSize: ptr(0),
+					ExportTimeout:      ptr(0),
+					MaxQueueSize:       ptr(0),
+					ScheduleDelay:      ptr(0),
+					Exporter: LogRecordExporter{
+						OTLP: &OTLP{
+							Protocol:    ptr("grpc"),
+							Endpoint:    ptr(" "),
+							Compression: ptr("gzip"),
+							Timeout:     ptr(1000),
+							Headers: []NameStringValuePair{
+								{Name: "test", Value: ptr("test1")},
+							},
+						},
+					},
+				},
+			},
+			wantErr: &url.Error{Op: "parse", URL: " ", Err: errors.New("invalid URI for request")},
+		},
+		{
+			name: "batch/otlp-grpc-invalid-compression",
+			processor: LogRecordProcessor{
+				Batch: &BatchLogRecordProcessor{
+					MaxExportBatchSize: ptr(0),
+					ExportTimeout:      ptr(0),
+					MaxQueueSize:       ptr(0),
+					ScheduleDelay:      ptr(0),
+					Exporter: LogRecordExporter{
+						OTLP: &OTLP{
+							Protocol:    ptr("grpc"),
+							Endpoint:    ptr("localhost:4317"),
+							Compression: ptr("invalid"),
+							Timeout:     ptr(1000),
+							Headers: []NameStringValuePair{
+								{Name: "test", Value: ptr("test1")},
+							},
+						},
+					},
+				},
+			},
+			wantErr: errors.New("unsupported compression \"invalid\""),
 		},
 		{
 			name: "batch/otlp-http-exporter",
