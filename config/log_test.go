@@ -175,7 +175,8 @@ func TestLogProcessor(t *testing.T) {
 				},
 			},
 			wantProcessor: sdklog.NewBatchProcessor(consoleExporter),
-		}, {
+		},
+		{
 			name: "batch/otlp-grpc-exporter-no-endpoint",
 			processor: LogRecordProcessor{
 				Batch: &BatchLogRecordProcessor{
