@@ -299,10 +299,10 @@ func newIncludeExcludeFilter(lists *IncludeExclude) (attribute.Filter, error) {
 
 func prometheusReader(ctx context.Context, prometheusConfig *Prometheus) (sdkmetric.Reader, error) {
 	if prometheusConfig.Host == nil {
-		return nil, fmt.Errorf("host must be specified")
+		return nil, errors.New("host must be specified")
 	}
 	if prometheusConfig.Port == nil {
-		return nil, fmt.Errorf("port must be specified")
+		return nil, errors.New("port must be specified")
 	}
 
 	opts, err := prometheusReaderOpts(prometheusConfig)
@@ -338,7 +338,7 @@ func prometheusReader(ctx context.Context, prometheusConfig *Prometheus) (sdkmet
 	}
 
 	go func() {
-		if err := server.Serve(lis); err != nil && errors.Is(err, http.ErrServerClosed) {
+		if err := server.Serve(lis); err != nil && !errors.Is(err, http.ErrServerClosed) {
 			otel.Handle(fmt.Errorf("the Prometheus HTTP server exited unexpectedly: %w", err))
 		}
 	}()

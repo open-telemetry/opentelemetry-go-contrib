@@ -5,6 +5,7 @@ package host // import "go.opentelemetry.io/contrib/instrumentation/host"
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"math"
 	"os"
@@ -204,7 +205,7 @@ func (h *host) register() error {
 				return err
 			}
 			if len(hostTimeSlice) != 1 {
-				return fmt.Errorf("host CPU usage: incorrect summary count")
+				return errors.New("host CPU usage: incorrect summary count")
 			}
 
 			vmStats, err := mem.VirtualMemoryWithContext(ctx)
@@ -217,7 +218,7 @@ func (h *host) register() error {
 				return err
 			}
 			if len(ioStats) != 1 {
-				return fmt.Errorf("host network usage: incorrect summary count")
+				return errors.New("host network usage: incorrect summary count")
 			}
 
 			hostTime := hostTimeSlice[0]

@@ -226,7 +226,7 @@ func TestSpanProcessor(t *testing.T) {
 					ScheduleDelay:      ptr(0),
 					Exporter: SpanExporter{
 						OTLP: &OTLP{
-							Protocol:    ptr("grpc/protobuf"),
+							Protocol:    ptr("grpc"),
 							Compression: ptr("gzip"),
 							Timeout:     ptr(1000),
 							Headers: []NameStringValuePair{
@@ -248,7 +248,7 @@ func TestSpanProcessor(t *testing.T) {
 					ScheduleDelay:      ptr(0),
 					Exporter: SpanExporter{
 						OTLP: &OTLP{
-							Protocol:    ptr("grpc/protobuf"),
+							Protocol:    ptr("grpc"),
 							Endpoint:    ptr("http://localhost:4317"),
 							Compression: ptr("gzip"),
 							Timeout:     ptr(1000),
@@ -271,7 +271,7 @@ func TestSpanProcessor(t *testing.T) {
 					ScheduleDelay:      ptr(0),
 					Exporter: SpanExporter{
 						OTLP: &OTLP{
-							Protocol:    ptr("grpc/protobuf"),
+							Protocol:    ptr("grpc"),
 							Endpoint:    ptr("localhost:4317"),
 							Compression: ptr("gzip"),
 							Timeout:     ptr(1000),
@@ -294,7 +294,7 @@ func TestSpanProcessor(t *testing.T) {
 					ScheduleDelay:      ptr(0),
 					Exporter: SpanExporter{
 						OTLP: &OTLP{
-							Protocol:    ptr("grpc/protobuf"),
+							Protocol:    ptr("grpc"),
 							Endpoint:    ptr(" "),
 							Compression: ptr("gzip"),
 							Timeout:     ptr(1000),
@@ -317,7 +317,7 @@ func TestSpanProcessor(t *testing.T) {
 					ScheduleDelay:      ptr(0),
 					Exporter: SpanExporter{
 						OTLP: &OTLP{
-							Protocol:    ptr("grpc/protobuf"),
+							Protocol:    ptr("grpc"),
 							Endpoint:    ptr("localhost:4317"),
 							Compression: ptr("invalid"),
 							Timeout:     ptr(1000),

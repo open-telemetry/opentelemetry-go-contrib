@@ -20,10 +20,9 @@ jobs:
           restore-keys: cache-lychee-
 
       - name: Link Checker
-        uses: lycheeverse/lychee-action@v1.10.0
+        uses: lycheeverse/lychee-action@v2.1.0
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         with:
           fail: true
-          # TODO: Remove 429s exception once https://github.com/open-telemetry/opentelemetry-go-contrib/issues/6183 is resolved
-          args: --max-concurrency 5 --cache --max-cache-age 1d --accept 100..=103,200..=299,429 .
+          args: --max-concurrency 5 --cache --max-cache-age 1d --cache-exclude-status 300..=599 .
