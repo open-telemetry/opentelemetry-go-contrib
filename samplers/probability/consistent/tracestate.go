@@ -4,6 +4,7 @@
 package consistent // import "go.opentelemetry.io/contrib/samplers/probability/consistent"
 
 import (
+	"errors"
 	"fmt"
 	"strconv"
 	"strings"
@@ -20,7 +21,7 @@ const (
 
 var (
 	errTraceStateSyntax       = fmt.Errorf("otel tracestate: %w", strconv.ErrSyntax)
-	errTraceStateInconsistent = fmt.Errorf("r-value and p-value are inconsistent")
+	errTraceStateInconsistent = errors.New("r-value and p-value are inconsistent")
 )
 
 type otelTraceState struct {

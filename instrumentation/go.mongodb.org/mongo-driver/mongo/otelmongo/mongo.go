@@ -5,6 +5,7 @@ package otelmongo // import "go.opentelemetry.io/contrib/instrumentation/go.mong
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"strconv"
 	"strings"
@@ -118,7 +119,7 @@ func extractCollection(evt *event.CommandStartedEvent) (string, error) {
 		}
 		return v.StringValue(), nil
 	}
-	return "", fmt.Errorf("collection name not found")
+	return "", errors.New("collection name not found")
 }
 
 // NewMonitor creates a new mongodb event CommandMonitor.

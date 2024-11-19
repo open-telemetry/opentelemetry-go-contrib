@@ -13,6 +13,8 @@
 //   - Level is transformed and set as the Severity. The SeverityText is not
 //     set.
 //   - KeyAndValues are transformed and set as Attributes.
+//   - Error is always logged as an additional attribute with the key
+//     "exception.message" and with the severity [log.SeverityError].
 //   - The [context.Context] value in KeyAndValues is propagated to OpenTelemetry
 //     log record. All non-nested [context.Context] values are ignored and not
 //     added as attributes. If there are multiple [context.Context] the last one
@@ -59,6 +61,7 @@ import (
 
 	"go.opentelemetry.io/otel/log"
 	"go.opentelemetry.io/otel/log/global"
+	semconv "go.opentelemetry.io/otel/semconv/v1.27.0"
 )
 
 type config struct {
@@ -206,7 +209,20 @@ func (l *LogSink) Enabled(level int) bool {
 
 // Error logs an error, with the given message and key/value pairs.
 func (l *LogSink) Error(err error, msg string, keysAndValues ...any) {
-	// TODO
+	var record log.Record
+	record.SetBody(log.StringValue(msg))
+	record.SetSeverity(log.SeverityError)
+
+	record.AddAttributes(
+		log.String(string(semconv.ExceptionMessageKey), err.Error()),
+	)
+
+	record.AddAttributes(l.attr...)
+
+	ctx, attr := convertKVs(l.ctx, keysAndValues...)
+	record.AddAttributes(attr...)
+
+	l.logger.Emit(ctx, record)
 }
 
 // Info logs a non-error message with the given key/value pairs.
@@ -223,9 +239,12 @@ func (l *LogSink) Info(level int, msg string, keysAndValues ...any) {
 	l.logger.Emit(ctx, record)
 }
 
-// Init initializes the LogSink.
+// Init receives optional information about the logr library this
+// implementation does not use it.
 func (l *LogSink) Init(info logr.RuntimeInfo) {
-	// TODO
+	// We don't need to do anything here.
+	// CallDepth is used to calculate the caller's PC.
+	// PC is dropped as part of the conversion to the OpenTelemetry log.Record.
 }
 
 // WithName returns a new LogSink with the specified name appended.
