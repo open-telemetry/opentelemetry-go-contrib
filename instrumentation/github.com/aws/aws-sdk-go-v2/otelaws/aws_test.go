@@ -75,6 +75,34 @@ func Test_otelMiddlewares_finalizeMiddlewareAfter(t *testing.T) {
 	assert.Contains(t, input.Header[key], value)
 }
 
+func Test_otelMiddlewares_finalizeMiddlewareAfter_Noop(t *testing.T) {
+	stack := middleware.Stack{
+		Finalize: middleware.NewFinalizeStep(),
+	}
+
+	propagator := mockPropagator{
+		injectKey:   "mock-key",
+		injectValue: "mock-value",
+	}
+
+	m := otelMiddlewares{
+		propagator: propagator,
+	}
+
+	err := m.finalizeMiddlewareAfter(&stack)
+	require.NoError(t, err)
+
+	// Non request input should trigger noop
+	input := &struct{}{}
+
+	next := middleware.HandlerFunc(func(ctx context.Context, input interface{}) (output interface{}, metadata middleware.Metadata, err error) {
+		return nil, middleware.Metadata{}, nil
+	})
+
+	_, _, err = stack.Finalize.HandleMiddleware(context.Background(), input, next)
+	assert.NoError(t, err)
+}
+
 type mockCredentialsProvider struct{}
 
 func (mockCredentialsProvider) Retrieve(context.Context) (aws.Credentials, error) {
