@@ -5,6 +5,7 @@ package config // import "go.opentelemetry.io/contrib/config"
 
 import (
 	"encoding/json"
+	"errors"
 	"fmt"
 	"reflect"
 )
@@ -55,7 +56,7 @@ func (j *BatchLogRecordProcessor) UnmarshalJSON(b []byte) error {
 		return err
 	}
 	if _, ok := raw["exporter"]; raw != nil && !ok {
-		return fmt.Errorf("field exporter in BatchLogRecordProcessor: required")
+		return errors.New("field exporter in BatchLogRecordProcessor: required")
 	}
 	type Plain BatchLogRecordProcessor
 	var plain Plain
@@ -73,7 +74,7 @@ func (j *BatchSpanProcessor) UnmarshalJSON(b []byte) error {
 		return err
 	}
 	if _, ok := raw["exporter"]; raw != nil && !ok {
-		return fmt.Errorf("field exporter in BatchSpanProcessor: required")
+		return errors.New("field exporter in BatchSpanProcessor: required")
 	}
 	type Plain BatchSpanProcessor
 	var plain Plain
@@ -91,10 +92,10 @@ func (j *GeneralInstrumentationPeerServiceMappingElem) UnmarshalJSON(b []byte) e
 		return err
 	}
 	if _, ok := raw["peer"]; raw != nil && !ok {
-		return fmt.Errorf("field peer in GeneralInstrumentationPeerServiceMappingElem: required")
+		return errors.New("field peer in GeneralInstrumentationPeerServiceMappingElem: required")
 	}
 	if _, ok := raw["service"]; raw != nil && !ok {
-		return fmt.Errorf("field service in GeneralInstrumentationPeerServiceMappingElem: required")
+		return errors.New("field service in GeneralInstrumentationPeerServiceMappingElem: required")
 	}
 	type Plain GeneralInstrumentationPeerServiceMappingElem
 	var plain Plain
@@ -112,10 +113,10 @@ func (j *NameStringValuePair) UnmarshalJSON(b []byte) error {
 		return err
 	}
 	if _, ok := raw["name"]; raw != nil && !ok {
-		return fmt.Errorf("field name in NameStringValuePair: required")
+		return errors.New("field name in NameStringValuePair: required")
 	}
 	if _, ok := raw["value"]; raw != nil && !ok {
-		return fmt.Errorf("field value in NameStringValuePair: required")
+		return errors.New("field value in NameStringValuePair: required")
 	}
 	type Plain NameStringValuePair
 	var plain Plain
@@ -158,10 +159,10 @@ func (j *OTLPMetric) UnmarshalJSON(b []byte) error {
 		return err
 	}
 	if _, ok := raw["endpoint"]; raw != nil && !ok {
-		return fmt.Errorf("field endpoint in OTLPMetric: required")
+		return errors.New("field endpoint in OTLPMetric: required")
 	}
 	if _, ok := raw["protocol"]; raw != nil && !ok {
-		return fmt.Errorf("field protocol in OTLPMetric: required")
+		return errors.New("field protocol in OTLPMetric: required")
 	}
 	type Plain OTLPMetric
 	var plain Plain
@@ -179,10 +180,10 @@ func (j *OTLP) UnmarshalJSON(b []byte) error {
 		return err
 	}
 	if _, ok := raw["endpoint"]; raw != nil && !ok {
-		return fmt.Errorf("field endpoint in OTLP: required")
+		return errors.New("field endpoint in OTLP: required")
 	}
 	if _, ok := raw["protocol"]; raw != nil && !ok {
-		return fmt.Errorf("field protocol in OTLP: required")
+		return errors.New("field protocol in OTLP: required")
 	}
 	type Plain OTLP
 	var plain Plain
@@ -200,7 +201,7 @@ func (j *OpenTelemetryConfiguration) UnmarshalJSON(b []byte) error {
 		return err
 	}
 	if _, ok := raw["file_format"]; raw != nil && !ok {
-		return fmt.Errorf("field file_format in OpenTelemetryConfiguration: required")
+		return errors.New("field file_format in OpenTelemetryConfiguration: required")
 	}
 	type Plain OpenTelemetryConfiguration
 	var plain Plain
@@ -218,7 +219,7 @@ func (j *PeriodicMetricReader) UnmarshalJSON(b []byte) error {
 		return err
 	}
 	if _, ok := raw["exporter"]; raw != nil && !ok {
-		return fmt.Errorf("field exporter in PeriodicMetricReader: required")
+		return errors.New("field exporter in PeriodicMetricReader: required")
 	}
 	type Plain PeriodicMetricReader
 	var plain Plain
@@ -236,7 +237,7 @@ func (j *PullMetricReader) UnmarshalJSON(b []byte) error {
 		return err
 	}
 	if _, ok := raw["exporter"]; raw != nil && !ok {
-		return fmt.Errorf("field exporter in PullMetricReader: required")
+		return errors.New("field exporter in PullMetricReader: required")
 	}
 	type Plain PullMetricReader
 	var plain Plain
@@ -254,7 +255,7 @@ func (j *SimpleLogRecordProcessor) UnmarshalJSON(b []byte) error {
 		return err
 	}
 	if _, ok := raw["exporter"]; raw != nil && !ok {
-		return fmt.Errorf("field exporter in SimpleLogRecordProcessor: required")
+		return errors.New("field exporter in SimpleLogRecordProcessor: required")
 	}
 	type Plain SimpleLogRecordProcessor
 	var plain Plain
@@ -272,7 +273,7 @@ func (j *SimpleSpanProcessor) UnmarshalJSON(b []byte) error {
 		return err
 	}
 	if _, ok := raw["exporter"]; raw != nil && !ok {
-		return fmt.Errorf("field exporter in SimpleSpanProcessor: required")
+		return errors.New("field exporter in SimpleSpanProcessor: required")
 	}
 	type Plain SimpleSpanProcessor
 	var plain Plain
@@ -319,7 +320,7 @@ func (j *Zipkin) UnmarshalJSON(b []byte) error {
 		return err
 	}
 	if _, ok := raw["endpoint"]; raw != nil && !ok {
-		return fmt.Errorf("field endpoint in Zipkin: required")
+		return errors.New("field endpoint in Zipkin: required")
 	}
 	type Plain Zipkin
 	var plain Plain
@@ -337,10 +338,10 @@ func (j *AttributeNameValue) UnmarshalJSON(b []byte) error {
 		return err
 	}
 	if _, ok := raw["name"]; raw != nil && !ok {
-		return fmt.Errorf("field name in AttributeNameValue: required")
+		return errors.New("field name in AttributeNameValue: required")
 	}
 	if _, ok := raw["value"]; raw != nil && !ok {
-		return fmt.Errorf("field value in AttributeNameValue: required")
+		return errors.New("field value in AttributeNameValue: required")
 	}
 	type Plain AttributeNameValue
 	var plain Plain

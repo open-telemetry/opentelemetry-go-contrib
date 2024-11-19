@@ -5,7 +5,7 @@ package runtime // import "go.opentelemetry.io/contrib/instrumentation/runtime"
 
 import (
 	"context"
-	"fmt"
+	"errors"
 	"math"
 	"runtime/metrics"
 	"sync"
@@ -50,7 +50,7 @@ func (p *Producer) Produce(context.Context) ([]metricdata.ScopeMetrics, error) {
 	// Use the last collection time (which may or may not be now) for the timestamp.
 	histDp := convertRuntimeHistogram(schedHist, p.collector.lastCollect)
 	if len(histDp) == 0 {
-		return nil, fmt.Errorf("unable to obtain go.schedule.duration metric from the runtime")
+		return nil, errors.New("unable to obtain go.schedule.duration metric from the runtime")
 	}
 	return []metricdata.ScopeMetrics{
 		{
