@@ -16,6 +16,7 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 ### Fixed
 
 - Fixed the value for configuring the OTLP exporter to use `grpc` instead of `grpc/protobuf` in `go.opentelemetry.io/contrib/config`. (#6338)
+- Allow marshaling types in `config` package. (#6347)
 
 <!-- Released section -->
 <!-- Don't change this section unless doing release -->
