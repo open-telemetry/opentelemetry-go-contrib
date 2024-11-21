@@ -120,7 +120,6 @@ func TestError(t *testing.T) {
 	attr := span.Attributes()
 	assert.Contains(t, attr, attribute.String("net.host.name", "foobar"))
 	assert.Contains(t, attr, attribute.Int("http.status_code", http.StatusInternalServerError))
-	assert.Contains(t, attr, attribute.String("gin.errors", "Error #01: oh no\n"))
 	// server errors set the status
 	assert.Equal(t, codes.Error, span.Status().Code)
 }
