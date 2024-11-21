@@ -353,7 +353,6 @@ func TestSpanRecordError(t *testing.T) {
 		assert.Empty(t, span.Events)
 	})
 
-	// test success
 	t.Run("test error", func(t *testing.T) {
 		defer exporter.Reset()
 		assert.Empty(t, exporter.GetSpans())
