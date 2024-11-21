@@ -316,7 +316,7 @@ update-all-otel-deps:
 		done
 
 # The source directory for opentelemetry-configuration schema.
-OPENTELEMETRY_CONFIGURATION_JSONSCHEMA_SRC_DIR=tmp/opentelememetry-configuration
+OPENTELEMETRY_CONFIGURATION_JSONSCHEMA_SRC_DIR=tmp/opentelemetry-configuration
 
 # The SHA matching the current version of the opentelemetry-configuration schema to use
 OPENTELEMETRY_CONFIGURATION_JSONSCHEMA_VERSION=v0.3.0
