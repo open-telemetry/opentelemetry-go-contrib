@@ -378,7 +378,6 @@ func TestSpanRecordError(t *testing.T) {
 		span := exporter.GetSpans()[0]
 		assert.Equal(t, "/error", span.Name)
 		assert.Equal(t, codes.Error, span.Status.Code)
-		assert.Len(t, span.Events, 1)
 
 		// Assert span events
 		assert.Len(t, span.Events, 1)
