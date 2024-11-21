@@ -15,7 +15,10 @@ import (
 	"github.com/stretchr/testify/assert"
 
 	"go.opentelemetry.io/otel"
+	"go.opentelemetry.io/otel/codes"
 	"go.opentelemetry.io/otel/propagation"
+	tracesdk "go.opentelemetry.io/otel/sdk/trace"
+	"go.opentelemetry.io/otel/sdk/trace/tracetest"
 	"go.opentelemetry.io/otel/trace"
 	"go.opentelemetry.io/otel/trace/noop"
 
@@ -94,4 +97,61 @@ func TestPropagationWithCustomPropagators(t *testing.T) {
 	})
 
 	router.ServeHTTP(w, r)
+}
+
+func TestSpanRecordError(t *testing.T) {
+	exporter := tracetest.NewInMemoryExporter()
+
+	router := gin.New()
+	router.Use(Middleware("foobar", WithTracerProvider(
+		tracesdk.NewTracerProvider(
+			tracesdk.WithSyncer(exporter),
+		)),
+	))
+
+	t.Run("test success", func(t *testing.T) {
+		defer exporter.Reset()
+		assert.Empty(t, exporter.GetSpans())
+
+		router.GET("/success", func(c *gin.Context) {
+			c.Status(http.StatusOK)
+		})
+		r := httptest.NewRequest("GET", "/success", nil)
+		w := httptest.NewRecorder()
+		router.ServeHTTP(w, r)
+
+		assert.Equal(t, http.StatusOK, w.Code)
+		assert.Len(t, exporter.GetSpans(), 1)
+
+		// Assert span status
+		span := exporter.GetSpans()[0]
+		assert.Equal(t, "/success", span.Name)
+		assert.NotEqual(t, codes.Error, span.Status.Code)
+		assert.Empty(t, span.Events)
+	})
+
+	// test success
+	t.Run("test error", func(t *testing.T) {
+		defer exporter.Reset()
+		assert.Empty(t, exporter.GetSpans())
+
+		router.GET("/error", func(c *gin.Context) {
+			assert.Error(t, c.AbortWithError(http.StatusInternalServerError, assert.AnError))
+		})
+		r := httptest.NewRequest("GET", "/error", nil)
+		w := httptest.NewRecorder()
+		router.ServeHTTP(w, r)
+
+		assert.Equal(t, http.StatusInternalServerError, w.Code)
+		assert.Len(t, exporter.GetSpans(), 1)
+
+		// Assert span
+		span := exporter.GetSpans()[0]
+		assert.Equal(t, "/error", span.Name)
+		assert.Equal(t, codes.Error, span.Status.Code)
+		assert.Len(t, span.Events, 1)
+
+		// Assert span events
+		assert.Equal(t, "exception", span.Events[0].Name)
+	})
 }
