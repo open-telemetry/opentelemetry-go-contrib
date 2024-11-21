@@ -342,8 +342,8 @@ genjsonschema: genjsonschema-cleanup $(GOJSONSCHEMA)
 	@echo Modify jsonschema generated files.
 	sed -f ./config/jsonschema_patch.sed ${GENERATED_CONFIG} > ${GENERATED_CONFIG}.tmp
 	mv ${GENERATED_CONFIG}.tmp ${GENERATED_CONFIG}
-	$(MAKE) lint
 	$(MAKE) genjsonschema-cleanup
+	$(MAKE) lint
 
 .PHONY: codespell
 codespell: $(CODESPELL)
