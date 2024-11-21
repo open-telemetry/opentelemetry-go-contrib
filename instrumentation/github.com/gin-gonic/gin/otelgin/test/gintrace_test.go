@@ -91,6 +91,7 @@ func TestTrace200(t *testing.T) {
 	assert.Contains(t, attr, attribute.Int("http.status_code", http.StatusOK))
 	assert.Contains(t, attr, attribute.String("http.method", "GET"))
 	assert.Contains(t, attr, attribute.String("http.route", "/user/:id"))
+	assert.Empty(t, span.Events())
 }
 
 func TestError(t *testing.T) {
@@ -120,6 +121,13 @@ func TestError(t *testing.T) {
 	attr := span.Attributes()
 	assert.Contains(t, attr, attribute.String("net.host.name", "foobar"))
 	assert.Contains(t, attr, attribute.Int("http.status_code", http.StatusInternalServerError))
+
+	// verify the error event
+	events := span.Events()
+	assert.Len(t, events, 1)
+	assert.Equal(t, "exception", events[0].Name)
+	assert.Contains(t, events[0].Attributes, attribute.String("exception.type", "*errors.errorString"))
+	assert.Contains(t, events[0].Attributes, attribute.String("exception.message", "Error #01: oh no\n"))
 	// server errors set the status
 	assert.Equal(t, codes.Error, span.Status().Code)
 }
@@ -373,6 +381,9 @@ func TestSpanRecordError(t *testing.T) {
 		assert.Len(t, span.Events, 1)
 
 		// Assert span events
+		assert.Len(t, span.Events, 1)
 		assert.Equal(t, "exception", span.Events[0].Name)
+		assert.Contains(t, span.Events[0].Attributes, attribute.String("exception.type", "*errors.errorString"))
+		assert.Contains(t, span.Events[0].Attributes, attribute.String("exception.message", "Error #01: "+assert.AnError.Error()+"\n"))
 	})
 }

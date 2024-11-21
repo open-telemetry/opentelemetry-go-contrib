@@ -97,7 +97,7 @@ func Middleware(service string, opts ...Option) gin.HandlerFunc {
 			span.SetAttributes(semconv.HTTPStatusCode(status))
 		}
 		if len(c.Errors) > 0 {
-			span.RecordError(errors.Join(c.Errors))
+			span.RecordError(errors.New(c.Errors.String()))
 		}
 	}
 }
