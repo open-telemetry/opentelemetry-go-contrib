@@ -18,7 +18,7 @@ TIMEOUT = 60
 .DEFAULT_GOAL := precommit
 
 .PHONY: precommit ci
-precommit: generate toolchain-check license-check misspell go-mod-tidy golangci-lint-fix test-default
+precommit: generate jsonschemagen toolchain-check license-check misspell go-mod-tidy golangci-lint-fix test-default
 ci: generate toolchain-check license-check lint vanity-import-check build test-default check-clean-work-tree test-coverage
 
 # Tools
@@ -343,7 +343,6 @@ genjsonschema: genjsonschema-cleanup $(GOJSONSCHEMA)
 	sed -f ./config/jsonschema_patch.sed ${GENERATED_CONFIG} > ${GENERATED_CONFIG}.tmp
 	mv ${GENERATED_CONFIG}.tmp ${GENERATED_CONFIG}
 	$(MAKE) genjsonschema-cleanup
-	$(MAKE) lint
 
 .PHONY: codespell
 codespell: $(CODESPELL)
