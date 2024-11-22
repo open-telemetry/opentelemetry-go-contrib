@@ -14,17 +14,14 @@ case "$1" in
   instrumented)
     echo "Running instrumented example..."
     cd instrumented || exit
-    go mod tidy
+    source tidy.sh
     go mod download
-    export OTEL_RESOURCE_ATTRIBUTES="service.name=dice,service.version=0.1.0"
-    go run .
+    source run.sh
     ;;
   uninstrumented)
     echo "Running uninstrumented example..."
     cd uninstrumented || exit
-    go mod tidy
-    go mod download
-    go run .
+    source run.sh
     ;;
   *)
     echo "Invalid argument: $1. Use 'instrumented' or 'uninstrumented'."

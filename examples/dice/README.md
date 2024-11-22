@@ -1,6 +1,8 @@
 # Dice example
 
-Instructions on how to run instrumented and uninstrumented examples.
+This is the foundation example for [Getting Started](https://opentelemetry.io/docs/languages/go/getting-started/) with OpenTelemetry.
+
+Below, you will see instructions on how to run this application, either with or without instrumentation.
 
 ## Usage
 
