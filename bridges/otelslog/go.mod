@@ -3,7 +3,7 @@ module go.opentelemetry.io/contrib/bridges/otelslog
 go 1.22
 
 require (
-	github.com/stretchr/testify v1.9.0
+	github.com/stretchr/testify v1.10.0
 	go.opentelemetry.io/otel v1.32.0
 	go.opentelemetry.io/otel/log v0.8.0
 )
