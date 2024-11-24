@@ -18,14 +18,14 @@ import (
 	"github.com/stretchr/testify/require"
 
 	"go.opentelemetry.io/otel"
+	"go.opentelemetry.io/otel/attribute"
 	"go.opentelemetry.io/otel/codes"
 	sdktrace "go.opentelemetry.io/otel/sdk/trace"
 	"go.opentelemetry.io/otel/sdk/trace/tracetest"
+	semconv "go.opentelemetry.io/otel/semconv/v1.20.0"
+	oteltrace "go.opentelemetry.io/otel/trace"
 
 	"go.opentelemetry.io/contrib/instrumentation/github.com/gin-gonic/gin/otelgin"
-
-	"go.opentelemetry.io/otel/attribute"
-	oteltrace "go.opentelemetry.io/otel/trace"
 )
 
 func init() {
@@ -150,7 +150,8 @@ func TestPanic(t *testing.T) {
 	// verify the event
 	events := sr.Ended()[0].Events()
 	assert.Len(t, events, 2)
-	// todo: attr
+	assert.Contains(t, events[0].Attributes, semconv.ExceptionMessage("panic: oh no"))
+	assert.Contains(t, events[1].Attributes, semconv.ExceptionMessage("oh no"))
 }
 
 func TestSpanStatus(t *testing.T) {
