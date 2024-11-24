@@ -89,7 +89,7 @@ func (detector *ResourceDetector) getJSONMetadata(ctx context.Context) ([]byte, 
 
 	client := http.Client{Transport: pTransport}
 
-	req, err := http.NewRequestWithContext(ctx, "GET", detector.endpoint, nil)
+	req, err := http.NewRequestWithContext(ctx, http.MethodGet, detector.endpoint, nil)
 	if err != nil {
 		return nil, false, err
 	}
