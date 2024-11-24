@@ -16,11 +16,12 @@ import (
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 
-	"go.opentelemetry.io/contrib/instrumentation/github.com/labstack/echo/otelecho"
 	"go.opentelemetry.io/otel"
 	"go.opentelemetry.io/otel/codes"
 	"go.opentelemetry.io/otel/sdk/trace"
 	"go.opentelemetry.io/otel/sdk/trace/tracetest"
+
+	"go.opentelemetry.io/contrib/instrumentation/github.com/labstack/echo/otelecho"
 
 	"go.opentelemetry.io/otel/attribute"
 	oteltrace "go.opentelemetry.io/otel/trace"
@@ -201,4 +202,51 @@ func TestErrorNotSwallowedByMiddleware(t *testing.T) {
 
 	err := h(c)
 	assert.Equal(t, assert.AnError, err)
+}
+
+func TestSpanNameFormatter(t *testing.T) {
+	imsb := tracetest.NewInMemoryExporter()
+	otel.SetTracerProvider(trace.NewTracerProvider(
+		trace.WithSyncer(imsb),
+	))
+
+	tests := []struct {
+		name      string
+		formatter otelecho.SpanNameFormatter
+		expected  string
+	}{
+		{
+			name:      "default",
+			formatter: nil,
+			expected:  "/user/:id",
+		},
+		{
+			name: "custom",
+			formatter: func(c echo.Context) string {
+				return "custom " + c.Path()
+			},
+			expected: "custom /user/:id",
+		},
+	}
+
+	for _, test := range tests {
+		t.Run(test.name, func(t *testing.T) {
+			defer imsb.Reset()
+
+			router := echo.New()
+			router.Use(otelecho.Middleware("foobar", otelecho.WithSpanNameFormatter(test.formatter)))
+			router.GET("/user/:id", func(c echo.Context) error {
+				return c.NoContent(http.StatusOK)
+			})
+
+			r := httptest.NewRequest("GET", "/user/123", nil)
+			w := httptest.NewRecorder()
+
+			router.ServeHTTP(w, r)
+
+			spans := imsb.GetSpans()
+			assert.Len(t, spans, 1)
+			assert.Equal(t, test.expected, spans[0].Name)
+		})
+	}
 }

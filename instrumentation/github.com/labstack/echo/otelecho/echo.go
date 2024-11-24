@@ -11,11 +11,12 @@ import (
 
 	"go.opentelemetry.io/otel"
 
-	"go.opentelemetry.io/contrib/instrumentation/github.com/labstack/echo/otelecho/internal/semconvutil"
 	"go.opentelemetry.io/otel/attribute"
 	"go.opentelemetry.io/otel/propagation"
 	semconv "go.opentelemetry.io/otel/semconv/v1.20.0"
 	oteltrace "go.opentelemetry.io/otel/trace"
+
+	"go.opentelemetry.io/contrib/instrumentation/github.com/labstack/echo/otelecho/internal/semconvutil"
 )
 
 const (
@@ -45,6 +46,10 @@ func Middleware(service string, opts ...Option) echo.MiddlewareFunc {
 		cfg.Skipper = middleware.DefaultSkipper
 	}
 
+	if cfg.spanNameFormatter == nil {
+		cfg.spanNameFormatter = defaultSpanNameFormatter
+	}
+
 	return func(next echo.HandlerFunc) echo.HandlerFunc {
 		return func(c echo.Context) error {
 			if cfg.Skipper(c) {
@@ -67,7 +72,7 @@ func Middleware(service string, opts ...Option) echo.MiddlewareFunc {
 				rAttr := semconv.HTTPRoute(path)
 				opts = append(opts, oteltrace.WithAttributes(rAttr))
 			}
-			spanName := c.Path()
+			spanName := cfg.spanNameFormatter(c)
 			if spanName == "" {
 				spanName = fmt.Sprintf("HTTP %s route not found", request.Method)
 			}
