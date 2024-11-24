@@ -10,13 +10,14 @@ import (
 
 	"github.com/gin-gonic/gin"
 
-	"go.opentelemetry.io/contrib/instrumentation/github.com/gin-gonic/gin/otelgin/internal/semconvutil"
 	"go.opentelemetry.io/otel"
 	"go.opentelemetry.io/otel/attribute"
 	"go.opentelemetry.io/otel/codes"
 	"go.opentelemetry.io/otel/propagation"
 	semconv "go.opentelemetry.io/otel/semconv/v1.20.0"
 	oteltrace "go.opentelemetry.io/otel/trace"
+
+	"go.opentelemetry.io/contrib/instrumentation/github.com/gin-gonic/gin/otelgin/internal/semconvutil"
 )
 
 const (
@@ -82,6 +83,15 @@ func Middleware(service string, opts ...Option) gin.HandlerFunc {
 		}
 		ctx, span := tracer.Start(ctx, spanName, opts...)
 		defer span.End()
+
+		// support recovery
+		defer func() {
+			if rec := recover(); rec != nil {
+				span.SetStatus(codes.Error, fmt.Sprintf("panic: %v", rec))
+				span.RecordError(fmt.Errorf("panic: %v", rec))
+				panic(rec)
+			}
+		}()
 
 		// pass the span through the request context
 		c.Request = c.Request.WithContext(ctx)

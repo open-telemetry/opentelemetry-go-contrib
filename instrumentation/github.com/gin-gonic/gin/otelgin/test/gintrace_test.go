@@ -17,11 +17,12 @@ import (
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 
-	"go.opentelemetry.io/contrib/instrumentation/github.com/gin-gonic/gin/otelgin"
 	"go.opentelemetry.io/otel"
 	"go.opentelemetry.io/otel/codes"
 	sdktrace "go.opentelemetry.io/otel/sdk/trace"
 	"go.opentelemetry.io/otel/sdk/trace/tracetest"
+
+	"go.opentelemetry.io/contrib/instrumentation/github.com/gin-gonic/gin/otelgin"
 
 	"go.opentelemetry.io/otel/attribute"
 	oteltrace "go.opentelemetry.io/otel/trace"
@@ -123,6 +124,33 @@ func TestError(t *testing.T) {
 	assert.Contains(t, attr, attribute.String("gin.errors", "Error #01: oh no\n"))
 	// server errors set the status
 	assert.Equal(t, codes.Error, span.Status().Code)
+}
+
+func TestPanic(t *testing.T) {
+	sr := tracetest.NewSpanRecorder()
+	provider := sdktrace.NewTracerProvider(sdktrace.WithSpanProcessor(sr))
+
+	router := gin.New()
+	router.Use(otelgin.Middleware("foobar", otelgin.WithTracerProvider(provider)))
+	router.GET("/panic", func(c *gin.Context) {
+		panic("oh no")
+	})
+	r := httptest.NewRequest("GET", "/panic", nil)
+	w := httptest.NewRecorder()
+	assert.Panics(t, func() {
+		router.ServeHTTP(w, r)
+	})
+
+	// verify the errors and status are correct
+	spans := sr.Ended()
+	require.Len(t, spans, 1)
+	assert.Equal(t, "/panic", spans[0].Name())
+	assert.Equal(t, codes.Error, spans[0].Status().Code)
+
+	// verify the event
+	events := sr.Ended()[0].Events()
+	assert.Len(t, events, 2)
+	// todo: attr
 }
 
 func TestSpanStatus(t *testing.T) {
