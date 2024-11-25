@@ -15,7 +15,6 @@ case "$1" in
     echo "Running instrumented example..."
     cd instrumented || exit
     source tidy.sh
-    go mod download
     source run.sh
     ;;
   uninstrumented)
