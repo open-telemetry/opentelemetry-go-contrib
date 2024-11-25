@@ -23,6 +23,7 @@ linters:
     - govet
     - ineffassign
     - misspell
+    - perfsprint
     - revive
     - staticcheck
     - tenv
@@ -62,10 +63,11 @@ issues:
       text: "calls to (.+) only in main[(][)] or init[(][)] functions"
       linters:
         - revive
-    # It's okay to not run gosec in a test.
+    # It's okay to not run gosec and perfsprint in a test.
     - path: _test\.go
       linters:
         - gosec
+        - perfsprint
   include:
     # revive exported should have comment or be unexported.
     - EXC0012
@@ -109,6 +111,12 @@ linters-settings:
     locale: US
     ignore-words:
       - cancelled
+  perfsprint:
+    err-error: true
+    errorf: true
+    int-conversion: true
+    sprintf1: true
+    strconcat: true
   revive:
     # Sets the default failure confidence.
     # This means that linting errors with less than 0.8 confidence will be ignored.

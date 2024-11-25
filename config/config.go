@@ -19,7 +19,7 @@ import (
 
 const (
 	protocolProtobufHTTP = "http/protobuf"
-	protocolProtobufGRPC = "grpc/protobuf"
+	protocolProtobufGRPC = "grpc"
 
 	compressionGzip = "gzip"
 	compressionNone = "none"

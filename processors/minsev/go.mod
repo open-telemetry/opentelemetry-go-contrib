@@ -3,7 +3,7 @@ module go.opentelemetry.io/contrib/processors/minsev
 go 1.22
 
 require (
-	github.com/stretchr/testify v1.9.0
+	github.com/stretchr/testify v1.10.0
 	go.opentelemetry.io/otel/log v0.8.0
 	go.opentelemetry.io/otel/sdk/log v0.8.0
 )

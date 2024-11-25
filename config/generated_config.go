@@ -11,7 +11,7 @@ type AttributeLimits struct {
 	// "attribute_value_length_limit".
 	AttributeValueLengthLimit *int `json:"attribute_value_length_limit,omitempty" yaml:"attribute_value_length_limit,omitempty" mapstructure:"attribute_value_length_limit,omitempty"`
 
-	AdditionalProperties interface{}
+	AdditionalProperties interface{} `mapstructure:",remain"`
 }
 
 type AttributeNameValue struct {
@@ -186,7 +186,7 @@ type LogRecordExporter struct {
 	// OTLP corresponds to the JSON schema field "otlp".
 	OTLP *OTLP `json:"otlp,omitempty" yaml:"otlp,omitempty" mapstructure:"otlp,omitempty"`
 
-	AdditionalProperties interface{}
+	AdditionalProperties interface{} `mapstructure:",remain"`
 }
 
 type LogRecordLimits struct {
@@ -206,7 +206,7 @@ type LogRecordProcessor struct {
 	// Simple corresponds to the JSON schema field "simple".
 	Simple *SimpleLogRecordProcessor `json:"simple,omitempty" yaml:"simple,omitempty" mapstructure:"simple,omitempty"`
 
-	AdditionalProperties interface{}
+	AdditionalProperties interface{} `mapstructure:",remain"`
 }
 
 type LoggerProvider struct {
@@ -229,7 +229,7 @@ type MetricProducer struct {
 	// Opencensus corresponds to the JSON schema field "opencensus".
 	Opencensus MetricProducerOpencensus `json:"opencensus,omitempty" yaml:"opencensus,omitempty" mapstructure:"opencensus,omitempty"`
 
-	AdditionalProperties interface{}
+	AdditionalProperties interface{} `mapstructure:",remain"`
 }
 
 type MetricProducerOpencensus map[string]interface{}
@@ -358,7 +358,7 @@ type OpenTelemetryConfiguration struct {
 	// TracerProvider corresponds to the JSON schema field "tracer_provider".
 	TracerProvider *TracerProvider `json:"tracer_provider,omitempty" yaml:"tracer_provider,omitempty" mapstructure:"tracer_provider,omitempty"`
 
-	AdditionalProperties interface{}
+	AdditionalProperties interface{} `mapstructure:",remain"`
 }
 
 type PeriodicMetricReader struct {
@@ -397,14 +397,14 @@ type Propagator struct {
 	// Composite corresponds to the JSON schema field "composite".
 	Composite []*string `json:"composite,omitempty" yaml:"composite,omitempty" mapstructure:"composite,omitempty"`
 
-	AdditionalProperties interface{}
+	AdditionalProperties interface{} `mapstructure:",remain"`
 }
 
 type PullMetricExporter struct {
 	// Prometheus corresponds to the JSON schema field "prometheus".
 	Prometheus *Prometheus `json:"prometheus,omitempty" yaml:"prometheus,omitempty" mapstructure:"prometheus,omitempty"`
 
-	AdditionalProperties interface{}
+	AdditionalProperties interface{} `mapstructure:",remain"`
 }
 
 type PullMetricReader struct {
@@ -419,7 +419,7 @@ type PushMetricExporter struct {
 	// OTLP corresponds to the JSON schema field "otlp".
 	OTLP *OTLPMetric `json:"otlp,omitempty" yaml:"otlp,omitempty" mapstructure:"otlp,omitempty"`
 
-	AdditionalProperties interface{}
+	AdditionalProperties interface{} `mapstructure:",remain"`
 }
 
 type Resource struct {
@@ -452,7 +452,7 @@ type Sampler struct {
 	// TraceIDRatioBased corresponds to the JSON schema field "trace_id_ratio_based".
 	TraceIDRatioBased *SamplerTraceIDRatioBased `json:"trace_id_ratio_based,omitempty" yaml:"trace_id_ratio_based,omitempty" mapstructure:"trace_id_ratio_based,omitempty"`
 
-	AdditionalProperties interface{}
+	AdditionalProperties interface{} `mapstructure:",remain"`
 }
 
 type SamplerAlwaysOff map[string]interface{}
@@ -515,7 +515,7 @@ type SpanExporter struct {
 	// Zipkin corresponds to the JSON schema field "zipkin".
 	Zipkin *Zipkin `json:"zipkin,omitempty" yaml:"zipkin,omitempty" mapstructure:"zipkin,omitempty"`
 
-	AdditionalProperties interface{}
+	AdditionalProperties interface{} `mapstructure:",remain"`
 }
 
 type SpanLimits struct {
@@ -549,7 +549,7 @@ type SpanProcessor struct {
 	// Simple corresponds to the JSON schema field "simple".
 	Simple *SimpleSpanProcessor `json:"simple,omitempty" yaml:"simple,omitempty" mapstructure:"simple,omitempty"`
 
-	AdditionalProperties interface{}
+	AdditionalProperties interface{} `mapstructure:",remain"`
 }
 
 type TracerProvider struct {
