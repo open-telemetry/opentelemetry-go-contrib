@@ -4,7 +4,8 @@
 package otelecho // import "go.opentelemetry.io/contrib/instrumentation/github.com/labstack/echo/otelecho"
 
 import (
-	"github.com/labstack/echo/v4"
+	"net/http"
+
 	"github.com/labstack/echo/v4/middleware"
 
 	"go.opentelemetry.io/otel/propagation"
@@ -12,12 +13,12 @@ import (
 )
 
 // defaultSpanNameFormatter is the default function used for formatting span names.
-var defaultSpanNameFormatter = func(c echo.Context) string {
-	return c.Path()
+var defaultSpanNameFormatter = func(path string, _ *http.Request) string {
+	return path
 }
 
-// SpanNameFormatter is a function that takes an echo.Context and returns a span name.
-type SpanNameFormatter func(c echo.Context) string
+// SpanNameFormatter is a function that takes a path and an HTTP request and returns a span name.
+type SpanNameFormatter func(string, *http.Request) string
 
 // config is used to configure the mux middleware.
 type config struct {

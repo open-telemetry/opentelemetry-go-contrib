@@ -222,10 +222,17 @@ func TestSpanNameFormatter(t *testing.T) {
 		},
 		{
 			name: "custom",
-			formatter: func(c echo.Context) string {
-				return "custom " + c.Path()
+			formatter: func(path string, req *http.Request) string {
+				return "custom " + path
 			},
 			expected: "custom /user/:id",
+		},
+		{
+			name: "has_request",
+			formatter: func(path string, req *http.Request) string {
+				return req.Method + " " + path
+			},
+			expected: "GET /user/:id",
 		},
 	}
 
