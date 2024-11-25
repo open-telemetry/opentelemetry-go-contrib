@@ -123,7 +123,7 @@ func TestError(t *testing.T) {
 	assert.Contains(t, attr, attribute.String("net.host.name", "foobar"))
 	assert.Contains(t, attr, attribute.Int("http.status_code", http.StatusInternalServerError))
 
-	// verify the error event
+	// verify the error events
 	events := span.Events()
 	assert.Len(t, events, 2)
 	assert.Equal(t, "exception", events[0].Name)
