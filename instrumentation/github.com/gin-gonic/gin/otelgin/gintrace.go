@@ -95,7 +95,9 @@ func Middleware(service string, opts ...Option) gin.HandlerFunc {
 			span.SetAttributes(semconv.HTTPStatusCode(status))
 		}
 		if len(c.Errors) > 0 {
-			span.SetAttributes(attribute.String("gin.errors", c.Errors.String()))
+			for _, err := range c.Errors {
+				span.RecordError(err.Err)
+			}
 		}
 	}
 }
