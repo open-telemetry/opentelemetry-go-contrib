@@ -236,6 +236,27 @@ func TestSpanStatus(t *testing.T) {
 			assert.Equal(t, tc.wantSpanStatus, sr.Ended()[0].Status().Code, "should only set Error status for HTTP statuses >= 500")
 		})
 	}
+
+	t.Run("The status code is 200, but an error is returned", func(t *testing.T) {
+		sr := tracetest.NewSpanRecorder()
+		provider := sdktrace.NewTracerProvider(
+			sdktrace.WithSpanProcessor(sr),
+		)
+
+		router := gin.New()
+		router.Use(otelgin.Middleware("foobar", otelgin.WithTracerProvider(provider)))
+		router.GET("/", func(c *gin.Context) {
+			_ = c.Error(errors.New("something went wrong"))
+			c.JSON(http.StatusOK, nil)
+		})
+
+		router.ServeHTTP(httptest.NewRecorder(), httptest.NewRequest("GET", "/", nil))
+
+		require.Len(t, sr.Ended(), 1)
+		assert.Equal(t, codes.Error, sr.Ended()[0].Status().Code)
+		require.Len(t, sr.Ended()[0].Events(), 1)
+		assert.Contains(t, sr.Ended()[0].Events()[0].Attributes, attribute.String("exception.message", "something went wrong"))
+	})
 }
 
 func TestSpanName(t *testing.T) {
