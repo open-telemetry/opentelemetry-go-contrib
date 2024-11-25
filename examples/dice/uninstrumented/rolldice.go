@@ -17,7 +17,7 @@ func rolldice(w http.ResponseWriter, r *http.Request) {
 
 	var msg string
 	if player := r.PathValue("player"); player != "" {
-		msg = fmt.Sprintf("%s is rolling the dice", player)
+		msg = fmt.Sprintf("%s is rolling the dice", player) //nolint:perfsprint
 	} else {
 		msg = "Anonymous player is rolling the dice"
 	}
