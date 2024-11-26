@@ -198,7 +198,7 @@ func TestError(t *testing.T) {
 
 	// verify the error events
 	events := span.Events()
-	assert.Len(t, events, 2)
+	require.Len(t, events, 2)
 	assert.Equal(t, "exception", events[0].Name)
 	assert.Contains(t, events[0].Attributes, attribute.String("exception.type", "*errors.errorString"))
 	assert.Contains(t, events[0].Attributes, attribute.String("exception.message", "oh no one"))
