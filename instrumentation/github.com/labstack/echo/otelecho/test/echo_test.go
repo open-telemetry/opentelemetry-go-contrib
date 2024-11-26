@@ -249,7 +249,7 @@ func TestSpanNameFormatter(t *testing.T) {
 			router.ServeHTTP(w, r)
 
 			spans := imsb.GetSpans()
-			assert.Len(t, spans, 1)
+			require.Len(t, spans, 1)
 			assert.Equal(t, test.expected, spans[0].Name)
 		})
 	}
@@ -269,7 +269,7 @@ func TestSpanNameFormatter(t *testing.T) {
 			router.ServeHTTP(w, r)
 
 			spans := imsb.GetSpans()
-			assert.Len(t, spans, 1)
+			require.Len(t, spans, 1)
 			assert.Equal(t, "GET /user/:id", spans[0].Name)
 
 			imsb.Reset()
