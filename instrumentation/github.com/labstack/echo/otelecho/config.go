@@ -4,29 +4,17 @@
 package otelecho // import "go.opentelemetry.io/contrib/instrumentation/github.com/labstack/echo/otelecho"
 
 import (
-	"net/http"
-	"strings"
-
 	"github.com/labstack/echo/v4/middleware"
 
 	"go.opentelemetry.io/otel/propagation"
 	oteltrace "go.opentelemetry.io/otel/trace"
 )
 
-// defaultSpanNameFormatter is the default function used for formatting span names.
-var defaultSpanNameFormatter = func(path string, req *http.Request) string {
-	return strings.ToUpper(req.Method) + " " + path
-}
-
-// SpanNameFormatter is a function that takes a path and an HTTP request and returns a span name.
-type SpanNameFormatter func(string, *http.Request) string
-
 // config is used to configure the mux middleware.
 type config struct {
-	TracerProvider    oteltrace.TracerProvider
-	Propagators       propagation.TextMapPropagator
-	Skipper           middleware.Skipper
-	spanNameFormatter SpanNameFormatter
+	TracerProvider oteltrace.TracerProvider
+	Propagators    propagation.TextMapPropagator
+	Skipper        middleware.Skipper
 }
 
 // Option specifies instrumentation configuration options.
@@ -65,14 +53,5 @@ func WithTracerProvider(provider oteltrace.TracerProvider) Option {
 func WithSkipper(skipper middleware.Skipper) Option {
 	return optionFunc(func(cfg *config) {
 		cfg.Skipper = skipper
-	})
-}
-
-// WithSpanNameFormatter specifies a function to use for formatting span names.
-func WithSpanNameFormatter(formatter SpanNameFormatter) Option {
-	return optionFunc(func(cfg *config) {
-		if formatter != nil {
-			cfg.spanNameFormatter = formatter
-		}
 	})
 }
