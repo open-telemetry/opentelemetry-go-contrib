@@ -1,11 +1,10 @@
-apiVersion: backstage.io/v1alpha1
-kind: Component
+apiVersion: lansweeper.com/v1alpha1
+kind: Repository
 metadata:
-  name: opentelemetry-go-contrib
-  description: Collection of extensions for OpenTelemetry-Go.
   annotations:
     github.com/project-slug: Lansweeper/opentelemetry-go-contrib
+  description: Collection of extensions for OpenTelemetry-Go.
+  name: opentelemetry-go-contrib
 spec:
-  type: github-repository
-  owner: user:open-telemetry/go-approvers
   lifecycle: stable
+  owner: user:open-telemetry/go-approvers
