@@ -3,4 +3,4 @@
 
 #!/bin/bash
 
-module go.opentelemetry.io/contrib/examples/dice/instrumented
+go mod init go.opentelemetry.io/contrib/examples/dice/instrumented
