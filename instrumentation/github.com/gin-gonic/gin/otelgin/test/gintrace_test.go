@@ -18,8 +18,6 @@ import (
 	"github.com/stretchr/testify/require"
 	"golang.org/x/net/context"
 
-	"go.opentelemetry.io/contrib/instrumentation/github.com/gin-gonic/gin/otelgin"
-	b3prop "go.opentelemetry.io/contrib/propagators/b3"
 	"go.opentelemetry.io/otel"
 	"go.opentelemetry.io/otel/attribute"
 	"go.opentelemetry.io/otel/codes"
@@ -28,6 +26,9 @@ import (
 	"go.opentelemetry.io/otel/sdk/trace/tracetest"
 	"go.opentelemetry.io/otel/trace"
 	"go.opentelemetry.io/otel/trace/noop"
+
+	"go.opentelemetry.io/contrib/instrumentation/github.com/gin-gonic/gin/otelgin"
+	b3prop "go.opentelemetry.io/contrib/propagators/b3"
 )
 
 func init() {
@@ -165,6 +166,8 @@ func TestTrace200(t *testing.T) {
 	assert.Contains(t, attr, attribute.String("http.method", "GET"))
 	assert.Contains(t, attr, attribute.String("http.route", "/user/:id"))
 	assert.Empty(t, span.Events())
+	assert.Equal(t, codes.Unset, span.Status().Code)
+	assert.Empty(t, span.Status().Description)
 }
 
 func TestError(t *testing.T) {
@@ -208,6 +211,7 @@ func TestError(t *testing.T) {
 
 	// server errors set the status
 	assert.Equal(t, codes.Error, span.Status().Code)
+	assert.Equal(t, "Error #01: oh no one\nError #02: oh no two\n", span.Status().Description)
 }
 
 func TestSpanStatus(t *testing.T) {
