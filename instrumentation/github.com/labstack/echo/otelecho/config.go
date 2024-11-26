@@ -13,8 +13,8 @@ import (
 )
 
 // defaultSpanNameFormatter is the default function used for formatting span names.
-var defaultSpanNameFormatter = func(path string, _ *http.Request) string {
-	return path
+var defaultSpanNameFormatter = func(path string, req *http.Request) string {
+	return req.Method + " " + path
 }
 
 // SpanNameFormatter is a function that takes a path and an HTTP request and returns a span name.

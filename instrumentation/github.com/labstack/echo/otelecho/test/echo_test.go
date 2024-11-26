@@ -203,9 +203,7 @@ func TestErrorNotSwallowedByMiddleware(t *testing.T) {
 
 func TestSpanNameFormatter(t *testing.T) {
 	imsb := tracetest.NewInMemoryExporter()
-	otel.SetTracerProvider(trace.NewTracerProvider(
-		trace.WithSyncer(imsb),
-	))
+	provider := trace.NewTracerProvider(trace.WithSyncer(imsb))
 
 	tests := []struct {
 		name      string
@@ -215,7 +213,7 @@ func TestSpanNameFormatter(t *testing.T) {
 		{
 			name:      "default",
 			formatter: nil,
-			expected:  "/user/:id",
+			expected:  "GET /user/:id",
 		},
 		{
 			name: "custom",
@@ -225,11 +223,11 @@ func TestSpanNameFormatter(t *testing.T) {
 			expected: "custom /user/:id",
 		},
 		{
-			name: "has_request",
+			name: "use request",
 			formatter: func(path string, req *http.Request) string {
-				return req.Method + " " + path
+				return req.Method + " " + req.URL.String()
 			},
-			expected: "GET /user/:id",
+			expected: "GET /user/123",
 		},
 	}
 
@@ -238,7 +236,10 @@ func TestSpanNameFormatter(t *testing.T) {
 			defer imsb.Reset()
 
 			router := echo.New()
-			router.Use(otelecho.Middleware("foobar", otelecho.WithSpanNameFormatter(test.formatter)))
+			router.Use(otelecho.Middleware("foobar",
+				otelecho.WithSpanNameFormatter(test.formatter),
+				otelecho.WithTracerProvider(provider)),
+			)
 			router.GET("/user/:id", func(c echo.Context) error {
 				return c.NoContent(http.StatusOK)
 			})
