@@ -5,6 +5,7 @@ package otelecho // import "go.opentelemetry.io/contrib/instrumentation/github.c
 
 import (
 	"net/http"
+	"strings"
 
 	"github.com/labstack/echo/v4/middleware"
 
@@ -14,7 +15,7 @@ import (
 
 // defaultSpanNameFormatter is the default function used for formatting span names.
 var defaultSpanNameFormatter = func(path string, req *http.Request) string {
-	return req.Method + " " + path
+	return strings.ToUpper(req.Method) + " " + path
 }
 
 // SpanNameFormatter is a function that takes a path and an HTTP request and returns a span name.

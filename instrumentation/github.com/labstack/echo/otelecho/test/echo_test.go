@@ -217,7 +217,7 @@ func TestSpanNameFormatter(t *testing.T) {
 		},
 		{
 			name: "custom",
-			formatter: func(path string, req *http.Request) string {
+			formatter: func(path string, _ *http.Request) string {
 				return "custom " + path
 			},
 			expected: "custom /user/:id",
@@ -244,9 +244,8 @@ func TestSpanNameFormatter(t *testing.T) {
 				return c.NoContent(http.StatusOK)
 			})
 
-			r := httptest.NewRequest("GET", "/user/123", nil)
+			r := httptest.NewRequest(http.MethodGet, "/user/123", nil)
 			w := httptest.NewRecorder()
-
 			router.ServeHTTP(w, r)
 
 			spans := imsb.GetSpans()
@@ -254,4 +253,26 @@ func TestSpanNameFormatter(t *testing.T) {
 			assert.Equal(t, test.expected, spans[0].Name)
 		})
 	}
+
+	t.Run("test default span name formatter with lowercase method", func(t *testing.T) {
+		router := echo.New()
+		router.Use(otelecho.Middleware("foobar",
+			otelecho.WithTracerProvider(provider)),
+		)
+		router.GET("/user/:id", func(c echo.Context) error {
+			return c.NoContent(http.StatusOK)
+		})
+
+		for _, method := range []string{"Get", "GET", "get"} {
+			r := httptest.NewRequest(method, "/user/123", nil)
+			w := httptest.NewRecorder()
+			router.ServeHTTP(w, r)
+
+			spans := imsb.GetSpans()
+			assert.Len(t, spans, 1)
+			assert.Equal(t, "GET /user/:id", spans[0].Name)
+
+			imsb.Reset()
+		}
+	})
 }
