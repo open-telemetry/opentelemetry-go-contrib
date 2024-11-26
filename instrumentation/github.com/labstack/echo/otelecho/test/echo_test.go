@@ -84,7 +84,7 @@ func TestTrace200(t *testing.T) {
 	spans := sr.Ended()
 	require.Len(t, spans, 1)
 	span := spans[0]
-	assert.Equal(t, "/user/:id", span.Name())
+	assert.Equal(t, "GET /user/:id", span.Name())
 	assert.Equal(t, oteltrace.SpanKindServer, span.SpanKind())
 	attrs := span.Attributes()
 	assert.Contains(t, attrs, attribute.String("net.host.name", "foobar"))
@@ -116,7 +116,7 @@ func TestError(t *testing.T) {
 	spans := sr.Ended()
 	require.Len(t, spans, 1)
 	span := spans[0]
-	assert.Equal(t, "/server_err", span.Name())
+	assert.Equal(t, "GET /server_err", span.Name())
 	attrs := span.Attributes()
 	assert.Contains(t, attrs, attribute.String("net.host.name", "foobar"))
 	assert.Contains(t, attrs, attribute.Int("http.status_code", http.StatusInternalServerError))
@@ -175,7 +175,7 @@ func TestStatusError(t *testing.T) {
 			spans := sr.Ended()
 			require.Len(t, spans, 1)
 			span := spans[0]
-			assert.Equal(t, "/err", span.Name())
+			assert.Equal(t, "GET /err", span.Name())
 			assert.Equal(t, tc.spanCode, span.Status().Code)
 
 			attrs := span.Attributes()
