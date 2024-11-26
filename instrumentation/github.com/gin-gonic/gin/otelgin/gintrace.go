@@ -13,7 +13,6 @@ import (
 	"go.opentelemetry.io/contrib/instrumentation/github.com/gin-gonic/gin/otelgin/internal/semconvutil"
 	"go.opentelemetry.io/otel"
 	"go.opentelemetry.io/otel/attribute"
-	"go.opentelemetry.io/otel/codes"
 	"go.opentelemetry.io/otel/propagation"
 	semconv "go.opentelemetry.io/otel/semconv/v1.20.0"
 	oteltrace "go.opentelemetry.io/otel/trace"
@@ -122,15 +121,6 @@ func HTML(c *gin.Context, code int, name string, obj interface{}) {
 	}()
 	opt := oteltrace.WithAttributes(attribute.String("go.template", name))
 	_, span := tracer.Start(savedContext, "gin.renderer.html", opt)
-	defer func() {
-		if r := recover(); r != nil {
-			err := fmt.Errorf("error rendering template:%s: %s", name, r)
-			span.RecordError(err)
-			span.SetStatus(codes.Error, "template failure")
-			span.End()
-			panic(r)
-		}
-		span.End()
-	}()
+	defer span.End()
 	c.HTML(code, name, obj)
 }
