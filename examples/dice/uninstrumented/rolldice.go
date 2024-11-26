@@ -4,7 +4,6 @@
 package main
 
 import (
-	"fmt"
 	"io"
 	"log"
 	"math/rand"
@@ -17,7 +16,7 @@ func rolldice(w http.ResponseWriter, r *http.Request) {
 
 	var msg string
 	if player := r.PathValue("player"); player != "" {
-		msg = fmt.Sprintf("%s is rolling the dice", player) //nolint:perfsprint
+		msg = player + " is rolling the dice"
 	} else {
 		msg = "Anonymous player is rolling the dice"
 	}
