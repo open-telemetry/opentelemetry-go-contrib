@@ -18,8 +18,8 @@ TIMEOUT = 60
 .DEFAULT_GOAL := precommit
 
 .PHONY: precommit ci
-precommit: generate jsonschemagen toolchain-check license-check misspell go-mod-tidy golangci-lint-fix test-default
-ci: generate jsonschemagen toolchain-check license-check lint vanity-import-check build test-default check-clean-work-tree test-coverage
+precommit: generate toolchain-check license-check misspell go-mod-tidy golangci-lint-fix test-default
+ci: generate toolchain-check license-check lint vanity-import-check build test-default check-clean-work-tree test-coverage
 
 # Tools
 
@@ -107,7 +107,7 @@ $(CODESPELL): PACKAGE=codespell
 # Generate
 
 .PHONY: generate
-generate: go-generate vanity-import-fix
+generate: go-generate genjsonschema vanity-import-fix
 
 .PHONY: go-generate
 go-generate: $(OTEL_GO_MOD_DIRS:%=go-generate/%)
