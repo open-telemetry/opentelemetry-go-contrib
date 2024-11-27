@@ -156,6 +156,14 @@ func otlpHTTPLogExporter(ctx context.Context, otlpConfig *OTLP) (sdklog.Exporter
 		opts = append(opts, otlploghttp.WithHeaders(toStringMap(otlpConfig.Headers)))
 	}
 
+	if otlpConfig.Certificate != nil {
+		creds, err := createTLSConfig(*otlpConfig.Certificate)
+		if err != nil {
+			return nil, fmt.Errorf("could not create client tls credentials: %w", err)
+		}
+		opts = append(opts, otlploghttp.WithTLSClientConfig(creds))
+	}
+
 	return otlploghttp.New(ctx, opts...)
 }
 
@@ -180,13 +188,6 @@ func otlpGRPCLogExporter(ctx context.Context, otlpConfig *OTLP) (sdklog.Exporter
 		if u.Scheme == "http" {
 			opts = append(opts, otlploggrpc.WithInsecure())
 		}
-		if otlpConfig.Certificate != nil {
-			creds, err := credentials.NewClientTLSFromFile(*otlpConfig.Certificate, "")
-			if err != nil {
-				return nil, fmt.Errorf("could not create client tls credentials: %w", err)
-			}
-			opts = append(opts, otlploggrpc.WithTLSCredentials(creds))
-		}
 	}
 	if otlpConfig.Compression != nil {
 		switch *otlpConfig.Compression {
@@ -203,6 +204,14 @@ func otlpGRPCLogExporter(ctx context.Context, otlpConfig *OTLP) (sdklog.Exporter
 	}
 	if len(otlpConfig.Headers) > 0 {
 		opts = append(opts, otlploggrpc.WithHeaders(toStringMap(otlpConfig.Headers)))
+	}
+
+	if otlpConfig.Certificate != nil {
+		creds, err := credentials.NewClientTLSFromFile(*otlpConfig.Certificate, "")
+		if err != nil {
+			return nil, fmt.Errorf("could not create client tls credentials: %w", err)
+		}
+		opts = append(opts, otlploggrpc.WithTLSCredentials(creds))
 	}
 
 	return otlploggrpc.New(ctx, opts...)
