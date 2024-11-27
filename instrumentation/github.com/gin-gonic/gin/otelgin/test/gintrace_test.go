@@ -164,6 +164,9 @@ func TestTrace200(t *testing.T) {
 	assert.Contains(t, attr, attribute.Int("http.status_code", http.StatusOK))
 	assert.Contains(t, attr, attribute.String("http.method", "GET"))
 	assert.Contains(t, attr, attribute.String("http.route", "/user/:id"))
+	assert.Empty(t, span.Events())
+	assert.Equal(t, codes.Unset, span.Status().Code)
+	assert.Empty(t, span.Status().Description)
 }
 
 func TestError(t *testing.T) {
@@ -177,7 +180,8 @@ func TestError(t *testing.T) {
 	// configure a handler that returns an error and 5xx status
 	// code
 	router.GET("/server_err", func(c *gin.Context) {
-		_ = c.AbortWithError(http.StatusInternalServerError, errors.New("oh no"))
+		_ = c.Error(errors.New("oh no one"))
+		_ = c.AbortWithError(http.StatusInternalServerError, errors.New("oh no two"))
 	})
 	r := httptest.NewRequest("GET", "/server_err", nil)
 	w := httptest.NewRecorder()
@@ -193,9 +197,20 @@ func TestError(t *testing.T) {
 	attr := span.Attributes()
 	assert.Contains(t, attr, attribute.String("net.host.name", "foobar"))
 	assert.Contains(t, attr, attribute.Int("http.status_code", http.StatusInternalServerError))
-	assert.Contains(t, attr, attribute.String("gin.errors", "Error #01: oh no\n"))
+
+	// verify the error events
+	events := span.Events()
+	require.Len(t, events, 2)
+	assert.Equal(t, "exception", events[0].Name)
+	assert.Contains(t, events[0].Attributes, attribute.String("exception.type", "*errors.errorString"))
+	assert.Contains(t, events[0].Attributes, attribute.String("exception.message", "oh no one"))
+	assert.Equal(t, "exception", events[1].Name)
+	assert.Contains(t, events[1].Attributes, attribute.String("exception.type", "*errors.errorString"))
+	assert.Contains(t, events[1].Attributes, attribute.String("exception.message", "oh no two"))
+
 	// server errors set the status
 	assert.Equal(t, codes.Error, span.Status().Code)
+	assert.Equal(t, "Error #01: oh no one\nError #02: oh no two\n", span.Status().Description)
 }
 
 func TestSpanStatus(t *testing.T) {
@@ -224,6 +239,27 @@ func TestSpanStatus(t *testing.T) {
 			assert.Equal(t, tc.wantSpanStatus, sr.Ended()[0].Status().Code, "should only set Error status for HTTP statuses >= 500")
 		})
 	}
+
+	t.Run("The status code is 200, but an error is returned", func(t *testing.T) {
+		sr := tracetest.NewSpanRecorder()
+		provider := sdktrace.NewTracerProvider(
+			sdktrace.WithSpanProcessor(sr),
+		)
+
+		router := gin.New()
+		router.Use(otelgin.Middleware("foobar", otelgin.WithTracerProvider(provider)))
+		router.GET("/", func(c *gin.Context) {
+			_ = c.Error(errors.New("something went wrong"))
+			c.JSON(http.StatusOK, nil)
+		})
+
+		router.ServeHTTP(httptest.NewRecorder(), httptest.NewRequest("GET", "/", nil))
+
+		require.Len(t, sr.Ended(), 1)
+		assert.Equal(t, codes.Error, sr.Ended()[0].Status().Code)
+		require.Len(t, sr.Ended()[0].Events(), 1)
+		assert.Contains(t, sr.Ended()[0].Events()[0].Attributes, attribute.String("exception.message", "something went wrong"))
+	})
 }
 
 func TestSpanName(t *testing.T) {
