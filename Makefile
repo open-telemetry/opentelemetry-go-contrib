@@ -19,7 +19,7 @@ TIMEOUT = 60
 
 .PHONY: precommit ci
 precommit: generate jsonschemagen toolchain-check license-check misspell go-mod-tidy golangci-lint-fix test-default
-ci: generate toolchain-check license-check lint vanity-import-check build test-default check-clean-work-tree test-coverage
+ci: generate jsonschemagen toolchain-check license-check lint vanity-import-check build test-default check-clean-work-tree test-coverage
 
 # Tools
 
