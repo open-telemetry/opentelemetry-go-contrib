@@ -125,15 +125,6 @@ func HTML(c *gin.Context, code int, name string, obj interface{}) {
 	}()
 	opt := oteltrace.WithAttributes(attribute.String("go.template", name))
 	_, span := tracer.Start(savedContext, "gin.renderer.html", opt)
-	defer func() {
-		if r := recover(); r != nil {
-			err := fmt.Errorf("error rendering template:%s: %s", name, r)
-			span.RecordError(err)
-			span.SetStatus(codes.Error, "template failure")
-			span.End()
-			panic(r)
-		}
-		span.End()
-	}()
+	defer span.End()
 	c.HTML(code, name, obj)
 }
