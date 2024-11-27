@@ -17,6 +17,7 @@ import (
 	"go.opentelemetry.io/otel/log/noop"
 	sdklog "go.opentelemetry.io/otel/sdk/log"
 	"go.opentelemetry.io/otel/sdk/resource"
+	"google.golang.org/grpc/credentials"
 )
 
 func loggerProvider(cfg configOptions, res *resource.Resource) (log.LoggerProvider, shutdownFunc, error) {
@@ -177,6 +178,13 @@ func otlpGRPCLogExporter(ctx context.Context, otlpConfig *OTLP) (sdklog.Exporter
 		}
 		if u.Scheme == "http" {
 			opts = append(opts, otlploggrpc.WithInsecure())
+		}
+		if otlpConfig.Certificate != nil {
+			creds, err := credentials.NewClientTLSFromFile(*otlpConfig.Certificate, "")
+			if err != nil {
+				return nil, fmt.Errorf("could not create client tls credentials: %w", err)
+			}
+			opts = append(opts, otlploggrpc.WithTLSCredentials(creds))
 		}
 	}
 	if otlpConfig.Compression != nil {
