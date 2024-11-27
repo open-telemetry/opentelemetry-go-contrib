@@ -213,27 +213,27 @@ func TestSpanNameFormatter(t *testing.T) {
 		expected string
 	}{
 		// Test for standard methods
-		{"", http.MethodGet, "/user/:id", "/user/123", "GET /user/:id"},
-		{"", http.MethodHead, "/user/:id", "/user/123", "HEAD /user/:id"},
-		{"", http.MethodPost, "/user/:id", "/user/123", "POST /user/:id"},
-		{"", http.MethodPut, "/user/:id", "/user/123", "PUT /user/:id"},
-		{"", http.MethodPatch, "/user/:id", "/user/123", "PATCH /user/:id"},
-		{"", http.MethodDelete, "/user/:id", "/user/123", "DELETE /user/:id"},
-		{"", http.MethodConnect, "/user/:id", "/user/123", "CONNECT /user/:id"},
-		{"", http.MethodOptions, "/user/:id", "/user/123", "OPTIONS /user/:id"},
-		{"", http.MethodTrace, "/user/:id", "/user/123", "TRACE /user/:id"},
-		{"", http.MethodGet, "/", "/", "GET /"},
+		{"standard method of GET", http.MethodGet, "/user/:id", "/user/123", "GET /user/:id"},
+		{"standard method of HEAD", http.MethodHead, "/user/:id", "/user/123", "HEAD /user/:id"},
+		{"standard method of POST", http.MethodPost, "/user/:id", "/user/123", "POST /user/:id"},
+		{"standard method of PUT", http.MethodPut, "/user/:id", "/user/123", "PUT /user/:id"},
+		{"standard method of PATCH", http.MethodPatch, "/user/:id", "/user/123", "PATCH /user/:id"},
+		{"standard method of DELETE", http.MethodDelete, "/user/:id", "/user/123", "DELETE /user/:id"},
+		{"standard method of CONNECT", http.MethodConnect, "/user/:id", "/user/123", "CONNECT /user/:id"},
+		{"standard method of OPTIONS", http.MethodOptions, "/user/:id", "/user/123", "OPTIONS /user/:id"},
+		{"standard method of TRACE", http.MethodTrace, "/user/:id", "/user/123", "TRACE /user/:id"},
+		{"standard method of GET, but it's another route.", http.MethodGet, "/", "/", "GET /"},
 
 		// Test for no route
-		{"", http.MethodGet, "/", "/user/id", "GET"},
+		{"no route", http.MethodGet, "/", "/user/id", "GET"},
 
 		// Test for case-insensitive method
-		{"", "get", "/user/123", "/user/123", "GET /user/123"},
-		{"", "Get", "/user/123", "/user/123", "GET /user/123"},
-		{"", "GET", "/user/:id", "/user/123", "GET /user/:id"},
+		{"all lowercase", "get", "/user/123", "/user/123", "GET /user/123"},
+		{"partial capitalization", "Get", "/user/123", "/user/123", "GET /user/123"},
+		{"full capitalization", "GET", "/user/:id", "/user/123", "GET /user/:id"},
 
 		// Test for invalid method
-		{"", "INVALID", "/user/123", "/user/123", "HTTP /user/123"},
+		{"invalid method", "INVALID", "/user/123", "/user/123", "HTTP /user/123"},
 	}
 
 	for _, test := range tests {
