@@ -15,7 +15,7 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 
 ### Removed
 
-- Removed the handling of panic from `HTML` function in `go.opentelemetry.io/contrib/instrumentation/github.com/gin-gonic/gin/otelgin`. (#6373)
+- Removed the redundant handling of panic from the `HTML` function in `go.opentelemetry.io/contrib/instrumentation/github.com/gin-gonic/gin/otelgin`. (#6373)
 
 ### Fixed
 
