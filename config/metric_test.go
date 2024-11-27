@@ -444,6 +444,40 @@ func TestReader(t *testing.T) {
 			wantReader: sdkmetric.NewPeriodicReader(otlpHTTPExporter),
 		},
 		{
+			name: "periodic/otlp-http-good-ca-certificate",
+			reader: MetricReader{
+				Periodic: &PeriodicMetricReader{
+					Exporter: PushMetricExporter{
+						OTLP: &OTLPMetric{
+							Protocol:    ptr("http/protobuf"),
+							Endpoint:    ptr("https://localhost:4317"),
+							Compression: ptr("gzip"),
+							Timeout:     ptr(1000),
+							Certificate: ptr(filepath.Join("testdata", "ca.crt")),
+						},
+					},
+				},
+			},
+			wantReader: sdkmetric.NewPeriodicReader(otlpHTTPExporter),
+		},
+		{
+			name: "periodic/otlp-http-bad-ca-certificate",
+			reader: MetricReader{
+				Periodic: &PeriodicMetricReader{
+					Exporter: PushMetricExporter{
+						OTLP: &OTLPMetric{
+							Protocol:    ptr("http/protobuf"),
+							Endpoint:    ptr("https://localhost:4317"),
+							Compression: ptr("gzip"),
+							Timeout:     ptr(1000),
+							Certificate: ptr(filepath.Join("testdata", "bad_cert.crt")),
+						},
+					},
+				},
+			},
+			wantErr: fmt.Errorf("could not create client tls credentials: %w", errors.New("failed to append certificate to the cert pool")),
+		},
+		{
 			name: "periodic/otlp-http-exporter-with-path",
 			reader: MetricReader{
 				Periodic: &PeriodicMetricReader{
