@@ -390,6 +390,40 @@ func TestSpanProcessor(t *testing.T) {
 			wantProcessor: sdktrace.NewBatchSpanProcessor(otlpHTTPExporter),
 		},
 		{
+			name: "batch/otlp-http-good-ca-certificate",
+			processor: SpanProcessor{
+				Batch: &BatchSpanProcessor{
+					Exporter: SpanExporter{
+						OTLP: &OTLP{
+							Protocol:    ptr("http/protobuf"),
+							Endpoint:    ptr("localhost:4317"),
+							Compression: ptr("gzip"),
+							Timeout:     ptr(1000),
+							Certificate: ptr(filepath.Join("testdata", "ca.crt")),
+						},
+					},
+				},
+			},
+			wantProcessor: sdktrace.NewBatchSpanProcessor(otlpHTTPExporter),
+		},
+		{
+			name: "batch/otlp-http-bad-ca-certificate",
+			processor: SpanProcessor{
+				Batch: &BatchSpanProcessor{
+					Exporter: SpanExporter{
+						OTLP: &OTLP{
+							Protocol:    ptr("http/protobuf"),
+							Endpoint:    ptr("localhost:4317"),
+							Compression: ptr("gzip"),
+							Timeout:     ptr(1000),
+							Certificate: ptr(filepath.Join("testdata", "bad_cert.crt")),
+						},
+					},
+				},
+			},
+			wantErr: fmt.Errorf("could not create client tls credentials: %w", errors.New("failed to append certificate to the cert pool")),
+		},
+		{
 			name: "batch/otlp-http-exporter-with-path",
 			processor: SpanProcessor{
 				Batch: &BatchSpanProcessor{
