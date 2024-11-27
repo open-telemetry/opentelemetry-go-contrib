@@ -79,7 +79,7 @@ func main() {
 		ctx, span := tr.Start(ctx, "say hello", trace.WithAttributes(semconv.PeerService("ExampleService")))
 		defer span.End()
 
-		req, _ := http.NewRequestWithContext(ctx, "GET", *url, nil)
+		req, _ := http.NewRequestWithContext(ctx, http.MethodGet, *url, nil)
 
 		fmt.Printf("Sending request...\n")
 		res, err := client.Do(req)
