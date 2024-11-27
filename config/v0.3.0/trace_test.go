@@ -278,7 +278,7 @@ func TestSpanProcessor(t *testing.T) {
 					},
 				},
 			},
-			wantProcessor: sdktrace.NewBatchProcessor(otlpGRPCExporter),
+			wantProcessor: sdktrace.NewBatchSpanProcessor(otlpGRPCExporter),
 		},
 		{
 			name: "batch/otlp-grpc-bad-ca-certificate",
