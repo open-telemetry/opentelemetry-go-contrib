@@ -14,6 +14,7 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 - Added support exporting logs via OTLP over gRPC in `go.opentelemetry.io/contrib/config`. (#6340)
 - The `go.opentelemetry.io/contrib/bridges/otellogr` module.
   This module provides an OpenTelemetry logging bridge for `github.com/go-logr/logr`. (#6386)
+- Added support for configuring certificates when exporting OTLP over gRPC in `go.opentelemetry.io/contrib/config`. (#6376)
 
 ### Changed
 
