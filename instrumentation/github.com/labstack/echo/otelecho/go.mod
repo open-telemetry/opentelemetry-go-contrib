@@ -1,6 +1,6 @@
 module go.opentelemetry.io/contrib/instrumentation/github.com/labstack/echo/otelecho
 
-go 1.22
+go 1.22.0
 
 replace go.opentelemetry.io/contrib/propagators/b3 => ../../../../../propagators/b3
 

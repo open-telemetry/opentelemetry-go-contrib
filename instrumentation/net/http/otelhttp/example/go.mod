@@ -1,6 +1,6 @@
 module go.opentelemetry.io/contrib/instrumentation/net/http/otelhttp/example
 
-go 1.22
+go 1.22.0
 
 replace go.opentelemetry.io/contrib/instrumentation/net/http/otelhttp => ../
 

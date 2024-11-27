@@ -1,6 +1,6 @@
 module go.opentelemetry.io/contrib/bridges/otellogr
 
-go 1.22
+go 1.22.0
 
 require (
 	github.com/go-logr/logr v1.4.2

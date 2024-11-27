@@ -1,6 +1,6 @@
 module go.opentelemetry.io/contrib/instrumentation/github.com/gorilla/mux/otelmux/test
 
-go 1.22
+go 1.22.0
 
 require (
 	github.com/gorilla/mux v1.8.1

@@ -1,7 +1,7 @@
 // Deprecated: otelecho has no Code Owner.
 module go.opentelemetry.io/contrib/instrumentation/github.com/labstack/echo/otelecho/test
 
-go 1.22
+go 1.22.0
 
 require (
 	github.com/labstack/echo/v4 v4.12.0

@@ -1,6 +1,6 @@
 module go.opentelemetry.io/contrib/examples/opencensus
 
-go 1.22
+go 1.22.0
 
 require (
 	go.opencensus.io v0.24.0

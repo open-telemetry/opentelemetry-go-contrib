@@ -1,6 +1,6 @@
 module go.opentelemetry.io/contrib/instrumentation/github.com/gin-gonic/gin/otelgin
 
-go 1.22
+go 1.22.0
 
 require (
 	github.com/gin-gonic/gin v1.10.0

@@ -1,6 +1,6 @@
 module go.opentelemetry.io/contrib/instrumentation/net/http/httptrace/otelhttptrace
 
-go 1.22
+go 1.22.0
 
 require (
 	github.com/google/go-cmp v0.6.0

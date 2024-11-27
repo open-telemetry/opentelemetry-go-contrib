@@ -1,6 +1,6 @@
 module go.opentelemetry.io/contrib/detectors/aws/lambda
 
-go 1.22
+go 1.22.0
 
 require (
 	github.com/stretchr/testify v1.10.0

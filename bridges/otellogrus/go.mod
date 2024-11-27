@@ -1,6 +1,6 @@
 module go.opentelemetry.io/contrib/bridges/otellogrus
 
-go 1.22
+go 1.22.0
 
 require (
 	github.com/sirupsen/logrus v1.9.3

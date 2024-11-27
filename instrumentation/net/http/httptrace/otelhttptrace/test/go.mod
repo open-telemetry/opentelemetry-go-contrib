@@ -1,6 +1,6 @@
 module go.opentelemetry.io/contrib/instrumentation/net/http/httptrace/otelhttptrace/test
 
-go 1.22
+go 1.22.0
 
 require (
 	github.com/stretchr/testify v1.10.0
