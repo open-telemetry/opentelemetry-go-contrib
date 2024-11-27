@@ -183,7 +183,7 @@ func TestReader(t *testing.T) {
 				Periodic: &PeriodicMetricReader{
 					Exporter: PushMetricExporter{
 						OTLP: &OTLPMetric{
-							Protocol:    ptr("grpc/protobuf"),
+							Protocol:    ptr("grpc"),
 							Endpoint:    ptr("http://localhost:4318"),
 							Compression: ptr("gzip"),
 							Timeout:     ptr(1000),
@@ -202,7 +202,7 @@ func TestReader(t *testing.T) {
 				Periodic: &PeriodicMetricReader{
 					Exporter: PushMetricExporter{
 						OTLP: &OTLPMetric{
-							Protocol:    ptr("grpc/protobuf"),
+							Protocol:    ptr("grpc"),
 							Endpoint:    ptr("http://localhost:4318/path/123"),
 							Compression: ptr("gzip"),
 							Timeout:     ptr(1000),
@@ -221,7 +221,7 @@ func TestReader(t *testing.T) {
 				Periodic: &PeriodicMetricReader{
 					Exporter: PushMetricExporter{
 						OTLP: &OTLPMetric{
-							Protocol:    ptr("grpc/protobuf"),
+							Protocol:    ptr("grpc"),
 							Compression: ptr("gzip"),
 							Timeout:     ptr(1000),
 							Headers: []NameStringValuePair{
@@ -239,7 +239,7 @@ func TestReader(t *testing.T) {
 				Periodic: &PeriodicMetricReader{
 					Exporter: PushMetricExporter{
 						OTLP: &OTLPMetric{
-							Protocol:    ptr("grpc/protobuf"),
+							Protocol:    ptr("grpc"),
 							Endpoint:    ptr("localhost:4318"),
 							Compression: ptr("gzip"),
 							Timeout:     ptr(1000),
@@ -258,7 +258,7 @@ func TestReader(t *testing.T) {
 				Periodic: &PeriodicMetricReader{
 					Exporter: PushMetricExporter{
 						OTLP: &OTLPMetric{
-							Protocol:    ptr("grpc/protobuf"),
+							Protocol:    ptr("grpc"),
 							Endpoint:    ptr(" "),
 							Compression: ptr("gzip"),
 							Timeout:     ptr(1000),
@@ -277,7 +277,7 @@ func TestReader(t *testing.T) {
 				Periodic: &PeriodicMetricReader{
 					Exporter: PushMetricExporter{
 						OTLP: &OTLPMetric{
-							Protocol:    ptr("grpc/protobuf"),
+							Protocol:    ptr("grpc"),
 							Endpoint:    ptr("localhost:4318"),
 							Compression: ptr("none"),
 							Timeout:     ptr(1000),
@@ -296,7 +296,7 @@ func TestReader(t *testing.T) {
 				Periodic: &PeriodicMetricReader{
 					Exporter: PushMetricExporter{
 						OTLP: &OTLPMetric{
-							Protocol:    ptr("grpc/protobuf"),
+							Protocol:    ptr("grpc"),
 							Endpoint:    ptr("localhost:4318"),
 							Compression: ptr("none"),
 							Timeout:     ptr(1000),
@@ -316,7 +316,7 @@ func TestReader(t *testing.T) {
 				Periodic: &PeriodicMetricReader{
 					Exporter: PushMetricExporter{
 						OTLP: &OTLPMetric{
-							Protocol:    ptr("grpc/protobuf"),
+							Protocol:    ptr("grpc"),
 							Endpoint:    ptr("localhost:4318"),
 							Compression: ptr("none"),
 							Timeout:     ptr(1000),
@@ -336,7 +336,7 @@ func TestReader(t *testing.T) {
 				Periodic: &PeriodicMetricReader{
 					Exporter: PushMetricExporter{
 						OTLP: &OTLPMetric{
-							Protocol:    ptr("grpc/protobuf"),
+							Protocol:    ptr("grpc"),
 							Endpoint:    ptr("localhost:4318"),
 							Compression: ptr("none"),
 							Timeout:     ptr(1000),
@@ -356,7 +356,7 @@ func TestReader(t *testing.T) {
 				Periodic: &PeriodicMetricReader{
 					Exporter: PushMetricExporter{
 						OTLP: &OTLPMetric{
-							Protocol:    ptr("grpc/protobuf"),
+							Protocol:    ptr("grpc"),
 							Endpoint:    ptr("localhost:4318"),
 							Compression: ptr("none"),
 							Timeout:     ptr(1000),
@@ -376,7 +376,7 @@ func TestReader(t *testing.T) {
 				Periodic: &PeriodicMetricReader{
 					Exporter: PushMetricExporter{
 						OTLP: &OTLPMetric{
-							Protocol:    ptr("grpc/protobuf"),
+							Protocol:    ptr("grpc"),
 							Endpoint:    ptr("localhost:4318"),
 							Compression: ptr("invalid"),
 							Timeout:     ptr(1000),

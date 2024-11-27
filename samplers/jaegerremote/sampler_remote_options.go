@@ -19,6 +19,10 @@
 package jaegerremote // import "go.opentelemetry.io/contrib/samplers/jaegerremote"
 
 import (
+	"fmt"
+	"os"
+	"strconv"
+	"strings"
 	"time"
 
 	"github.com/go-logr/logr"
@@ -35,6 +39,45 @@ type config struct {
 	updaters                []samplerUpdater
 	posParams               perOperationSamplerParams
 	logger                  logr.Logger
+}
+
+func getEnvOptions() ([]Option, []error) {
+	var options []Option
+	// list of errors which will be logged once logger is set by the user
+	var errs []error
+
+	args := strings.Split(os.Getenv("OTEL_TRACES_SAMPLER_ARG"), ",")
+	for _, arg := range args {
+		keyValue := strings.Split(arg, "=")
+		if len(keyValue) != 2 {
+			errs = append(errs, fmt.Errorf("argument %s is not of type '<key>=<value>'", arg))
+			continue
+		}
+		key := strings.Trim(keyValue[0], " ")
+		value := strings.Trim(keyValue[1], " ")
+
+		switch key {
+		case "endpoint":
+			options = append(options, WithSamplingServerURL(value))
+		case "pollingIntervalMs":
+			intervalMs, err := strconv.Atoi(value)
+			if err != nil {
+				errs = append(errs, fmt.Errorf("%s parsing failed with :%w", key, err))
+				continue
+			}
+			options = append(options, WithSamplingRefreshInterval(time.Duration(intervalMs)*time.Millisecond))
+		case "initialSamplingRate":
+			samplingRate, err := strconv.ParseFloat(value, 64)
+			if err != nil {
+				errs = append(errs, fmt.Errorf("%s parsing failed with :%w", key, err))
+				continue
+			}
+			options = append(options, WithInitialSampler(trace.TraceIDRatioBased(samplingRate)))
+		default:
+			errs = append(errs, fmt.Errorf("invalid argument %s in OTEL_TRACE_SAMPLER_ARG", key))
+		}
+	}
+	return options, errs
 }
 
 // newConfig returns an appropriately configured config.
@@ -55,9 +98,20 @@ func newConfig(options ...Option) config {
 		},
 		logger: logr.Discard(),
 	}
+
+	envOptions, errs := getEnvOptions()
+	for _, option := range envOptions {
+		option.apply(&c)
+	}
+
 	for _, option := range options {
 		option.apply(&c)
 	}
+
+	for _, err := range errs {
+		c.logger.Error(err, "env variable parsing failure")
+	}
+
 	c.updaters = append([]samplerUpdater{&perOperationSamplerUpdater{
 		MaxOperations:            c.posParams.MaxOperations,
 		OperationNameLateBinding: c.posParams.OperationNameLateBinding,

@@ -95,7 +95,10 @@ func Middleware(service string, opts ...Option) gin.HandlerFunc {
 			span.SetAttributes(semconv.HTTPStatusCode(status))
 		}
 		if len(c.Errors) > 0 {
-			span.SetAttributes(attribute.String("gin.errors", c.Errors.String()))
+			span.SetStatus(codes.Error, c.Errors.String())
+			for _, err := range c.Errors {
+				span.RecordError(err.Err)
+			}
 		}
 	}
 }
@@ -122,15 +125,6 @@ func HTML(c *gin.Context, code int, name string, obj interface{}) {
 	}()
 	opt := oteltrace.WithAttributes(attribute.String("go.template", name))
 	_, span := tracer.Start(savedContext, "gin.renderer.html", opt)
-	defer func() {
-		if r := recover(); r != nil {
-			err := fmt.Errorf("error rendering template:%s: %s", name, r)
-			span.RecordError(err)
-			span.SetStatus(codes.Error, "template failure")
-			span.End()
-			panic(r)
-		}
-		span.End()
-	}()
+	defer span.End()
 	c.HTML(code, name, obj)
 }
