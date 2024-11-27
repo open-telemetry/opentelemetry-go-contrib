@@ -17,6 +17,7 @@ import (
 
 	"github.com/prometheus/client_golang/prometheus"
 	"github.com/prometheus/client_golang/prometheus/promhttp"
+	"google.golang.org/grpc/credentials"
 
 	"go.opentelemetry.io/otel"
 	"go.opentelemetry.io/otel/attribute"
@@ -204,6 +205,13 @@ func otlpGRPCMetricExporter(ctx context.Context, otlpConfig *OTLPMetric) (sdkmet
 		}
 		if u.Scheme == "http" {
 			opts = append(opts, otlpmetricgrpc.WithInsecure())
+		}
+		if otlpConfig.Certificate != nil {
+			creds, err := credentials.NewClientTLSFromFile(*otlpConfig.Certificate, "")
+			if err != nil {
+				return nil, fmt.Errorf("could not create client tls credentials: %w", err)
+			}
+			opts = append(opts, otlpmetricgrpc.WithTLSCredentials(creds))
 		}
 	}
 

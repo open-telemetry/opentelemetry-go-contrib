@@ -6,7 +6,9 @@ package config
 import (
 	"context"
 	"errors"
+	"fmt"
 	"net/url"
+	"path/filepath"
 	"reflect"
 	"testing"
 
@@ -260,6 +262,40 @@ func TestSpanProcessor(t *testing.T) {
 				},
 			},
 			wantProcessor: sdktrace.NewBatchSpanProcessor(otlpGRPCExporter),
+		},
+		{
+			name: "batch/otlp-grpc-good-ca-certificate",
+			processor: SpanProcessor{
+				Batch: &BatchSpanProcessor{
+					Exporter: SpanExporter{
+						OTLP: &OTLP{
+							Protocol:    ptr("grpc"),
+							Endpoint:    ptr("localhost:4317"),
+							Compression: ptr("gzip"),
+							Timeout:     ptr(1000),
+							Certificate: ptr(filepath.Join("testdata", "ca.crt")),
+						},
+					},
+				},
+			},
+			wantProcessor: sdktrace.NewBatchProcessor(otlpGRPCExporter),
+		},
+		{
+			name: "batch/otlp-grpc-bad-ca-certificate",
+			processor: SpanProcessor{
+				Batch: &BatchSpanProcessor{
+					Exporter: SpanExporter{
+						OTLP: &OTLP{
+							Protocol:    ptr("grpc"),
+							Endpoint:    ptr("localhost:4317"),
+							Compression: ptr("gzip"),
+							Timeout:     ptr(1000),
+							Certificate: ptr(filepath.Join("testdata", "bad_cert.crt")),
+						},
+					},
+				},
+			},
+			wantErr: fmt.Errorf("could not create client tls credentials: %w", errors.New("credentials: failed to append certificates")),
 		},
 		{
 			name: "batch/otlp-grpc-exporter-no-scheme",
