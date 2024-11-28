@@ -14,12 +14,11 @@ import (
 	"github.com/labstack/echo/v4"
 	"github.com/stretchr/testify/assert"
 
+	b3prop "go.opentelemetry.io/contrib/propagators/b3"
 	"go.opentelemetry.io/otel"
 	"go.opentelemetry.io/otel/propagation"
 	"go.opentelemetry.io/otel/trace"
 	"go.opentelemetry.io/otel/trace/noop"
-
-	b3prop "go.opentelemetry.io/contrib/propagators/b3"
 )
 
 func TestGetSpanNotInstrumented(t *testing.T) {

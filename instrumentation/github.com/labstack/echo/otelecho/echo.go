@@ -4,14 +4,15 @@
 package otelecho // import "go.opentelemetry.io/contrib/instrumentation/github.com/labstack/echo/otelecho"
 
 import (
-	"fmt"
+	"net/http"
+	"slices"
+	"strings"
 
 	"github.com/labstack/echo/v4"
 	"github.com/labstack/echo/v4/middleware"
 
-	"go.opentelemetry.io/otel"
-
 	"go.opentelemetry.io/contrib/instrumentation/github.com/labstack/echo/otelecho/internal/semconvutil"
+	"go.opentelemetry.io/otel"
 	"go.opentelemetry.io/otel/attribute"
 	"go.opentelemetry.io/otel/propagation"
 	semconv "go.opentelemetry.io/otel/semconv/v1.20.0"
@@ -67,10 +68,7 @@ func Middleware(service string, opts ...Option) echo.MiddlewareFunc {
 				rAttr := semconv.HTTPRoute(path)
 				opts = append(opts, oteltrace.WithAttributes(rAttr))
 			}
-			spanName := c.Path()
-			if spanName == "" {
-				spanName = fmt.Sprintf("HTTP %s route not found", request.Method)
-			}
+			spanName := spanNameFormatter(c)
 
 			ctx, span := tracer.Start(ctx, spanName, opts...)
 			defer span.End()
@@ -95,4 +93,23 @@ func Middleware(service string, opts ...Option) echo.MiddlewareFunc {
 			return err
 		}
 	}
+}
+
+func spanNameFormatter(c echo.Context) string {
+	method, path := strings.ToUpper(c.Request().Method), c.Path()
+	if !slices.Contains([]string{
+		http.MethodGet, http.MethodHead,
+		http.MethodPost, http.MethodPut,
+		http.MethodPatch, http.MethodDelete,
+		http.MethodConnect, http.MethodOptions,
+		http.MethodTrace,
+	}, method) {
+		method = "HTTP"
+	}
+
+	if path != "" {
+		return method + " " + path
+	}
+
+	return method
 }
