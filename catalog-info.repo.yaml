@@ -6,5 +6,6 @@ metadata:
   description: Collection of extensions for OpenTelemetry-Go.
   name: opentelemetry-go-contrib
 spec:
+  type: github-repository
   lifecycle: stable
-  owner: user:open-telemetry/go-approvers
+  owner: cloud-security-team
