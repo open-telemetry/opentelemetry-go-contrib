@@ -38,6 +38,7 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 - Add a `LogProcessor` to `go.opentelemetry.io/contrib/processors/baggagecopy` to copy baggage members to log records. (#6277)
   - Use `baggagecopy.NewLogProcessor` when configuring a Log Provider.
     - `NewLogProcessor` accepts a `Filter` function type that selects which baggage members are added to the log record.
+- Parsing via ParseYAML in `go.opentelemetry.io/contrib/config` now support environment variables in the format `${VAR_NAME}`. (#6215)
 
 ### Changed 
 
