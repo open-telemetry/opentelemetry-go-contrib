@@ -12,6 +12,8 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 
 - Added support for providing `endpoint`, `pollingIntervalMs` and `initialSamplingRate` using environment variable `OTEL_TRACES_SAMPLER_ARG` in `go.opentelemetry.io/contrib/samples/jaegerremote`. (#6310)
 - Added support exporting logs via OTLP over gRPC in `go.opentelemetry.io/contrib/config`. (#6340)
+- The `go.opentelemetry.io/contrib/bridges/otellogr` module.
+  This module provides an OpenTelemetry logging bridge for `github.com/go-logr/logr`.
 
 ### Changed
 
