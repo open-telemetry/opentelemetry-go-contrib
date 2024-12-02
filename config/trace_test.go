@@ -6,7 +6,9 @@ package config
 import (
 	"context"
 	"errors"
+	"fmt"
 	"net/url"
+	"path/filepath"
 	"reflect"
 	"testing"
 
@@ -262,6 +264,58 @@ func TestSpanProcessor(t *testing.T) {
 			wantProcessor: sdktrace.NewBatchSpanProcessor(otlpGRPCExporter),
 		},
 		{
+			name: "batch/otlp-grpc-good-ca-certificate",
+			processor: SpanProcessor{
+				Batch: &BatchSpanProcessor{
+					Exporter: SpanExporter{
+						OTLP: &OTLP{
+							Protocol:    ptr("grpc"),
+							Endpoint:    ptr("localhost:4317"),
+							Compression: ptr("gzip"),
+							Timeout:     ptr(1000),
+							Certificate: ptr(filepath.Join("testdata", "ca.crt")),
+						},
+					},
+				},
+			},
+			wantProcessor: sdktrace.NewBatchSpanProcessor(otlpGRPCExporter),
+		},
+		{
+			name: "batch/otlp-grpc-bad-ca-certificate",
+			processor: SpanProcessor{
+				Batch: &BatchSpanProcessor{
+					Exporter: SpanExporter{
+						OTLP: &OTLP{
+							Protocol:    ptr("grpc"),
+							Endpoint:    ptr("localhost:4317"),
+							Compression: ptr("gzip"),
+							Timeout:     ptr(1000),
+							Certificate: ptr(filepath.Join("testdata", "bad_cert.crt")),
+						},
+					},
+				},
+			},
+			wantErr: errors.New("could not create certificate authority chain from certificate"),
+		},
+		{
+			name: "batch/otlp-grpc-bad-client-certificate",
+			processor: SpanProcessor{
+				Batch: &BatchSpanProcessor{
+					Exporter: SpanExporter{
+						OTLP: &OTLP{
+							Protocol:          ptr("grpc"),
+							Endpoint:          ptr("localhost:4317"),
+							Compression:       ptr("gzip"),
+							Timeout:           ptr(1000),
+							ClientCertificate: ptr(filepath.Join("testdata", "bad_cert.crt")),
+							ClientKey:         ptr(filepath.Join("testdata", "bad_cert.crt")),
+						},
+					},
+				},
+			},
+			wantErr: fmt.Errorf("could not use client certificate: %w", errors.New("tls: failed to find any PEM data in certificate input")),
+		},
+		{
 			name: "batch/otlp-grpc-exporter-no-scheme",
 			processor: SpanProcessor{
 				Batch: &BatchSpanProcessor{
@@ -420,6 +474,58 @@ func TestSpanProcessor(t *testing.T) {
 				},
 			},
 			wantProcessor: sdktrace.NewBatchSpanProcessor(otlpHTTPExporter),
+		},
+		{
+			name: "batch/otlp-http-good-ca-certificate",
+			processor: SpanProcessor{
+				Batch: &BatchSpanProcessor{
+					Exporter: SpanExporter{
+						OTLP: &OTLP{
+							Protocol:    ptr("http/protobuf"),
+							Endpoint:    ptr("localhost:4317"),
+							Compression: ptr("gzip"),
+							Timeout:     ptr(1000),
+							Certificate: ptr(filepath.Join("testdata", "ca.crt")),
+						},
+					},
+				},
+			},
+			wantProcessor: sdktrace.NewBatchSpanProcessor(otlpHTTPExporter),
+		},
+		{
+			name: "batch/otlp-http-bad-ca-certificate",
+			processor: SpanProcessor{
+				Batch: &BatchSpanProcessor{
+					Exporter: SpanExporter{
+						OTLP: &OTLP{
+							Protocol:    ptr("http/protobuf"),
+							Endpoint:    ptr("localhost:4317"),
+							Compression: ptr("gzip"),
+							Timeout:     ptr(1000),
+							Certificate: ptr(filepath.Join("testdata", "bad_cert.crt")),
+						},
+					},
+				},
+			},
+			wantErr: errors.New("could not create certificate authority chain from certificate"),
+		},
+		{
+			name: "batch/otlp-http-bad-client-certificate",
+			processor: SpanProcessor{
+				Batch: &BatchSpanProcessor{
+					Exporter: SpanExporter{
+						OTLP: &OTLP{
+							Protocol:          ptr("http/protobuf"),
+							Endpoint:          ptr("localhost:4317"),
+							Compression:       ptr("gzip"),
+							Timeout:           ptr(1000),
+							ClientCertificate: ptr(filepath.Join("testdata", "bad_cert.crt")),
+							ClientKey:         ptr(filepath.Join("testdata", "bad_cert.crt")),
+						},
+					},
+				},
+			},
+			wantErr: fmt.Errorf("could not use client certificate: %w", errors.New("tls: failed to find any PEM data in certificate input")),
 		},
 		{
 			name: "batch/otlp-http-invalid-endpoint",

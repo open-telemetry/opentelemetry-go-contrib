@@ -10,6 +10,8 @@ import (
 	"net/url"
 	"time"
 
+	"google.golang.org/grpc/credentials"
+
 	"go.opentelemetry.io/otel/exporters/otlp/otlplog/otlploggrpc"
 	"go.opentelemetry.io/otel/exporters/otlp/otlplog/otlploghttp"
 	"go.opentelemetry.io/otel/exporters/stdout/stdoutlog"
@@ -154,6 +156,12 @@ func otlpHTTPLogExporter(ctx context.Context, otlpConfig *OTLP) (sdklog.Exporter
 		opts = append(opts, otlploghttp.WithHeaders(toStringMap(otlpConfig.Headers)))
 	}
 
+	tlsConfig, err := createTLSConfig(otlpConfig.Certificate, otlpConfig.ClientCertificate, otlpConfig.ClientKey)
+	if err != nil {
+		return nil, err
+	}
+	opts = append(opts, otlploghttp.WithTLSClientConfig(tlsConfig))
+
 	return otlploghttp.New(ctx, opts...)
 }
 
@@ -195,6 +203,12 @@ func otlpGRPCLogExporter(ctx context.Context, otlpConfig *OTLP) (sdklog.Exporter
 	if len(otlpConfig.Headers) > 0 {
 		opts = append(opts, otlploggrpc.WithHeaders(toStringMap(otlpConfig.Headers)))
 	}
+
+	tlsConfig, err := createTLSConfig(otlpConfig.Certificate, otlpConfig.ClientCertificate, otlpConfig.ClientKey)
+	if err != nil {
+		return nil, err
+	}
+	opts = append(opts, otlploggrpc.WithTLSCredentials(credentials.NewTLS(tlsConfig)))
 
 	return otlploggrpc.New(ctx, opts...)
 }
