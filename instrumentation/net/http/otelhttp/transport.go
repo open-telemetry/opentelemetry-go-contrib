@@ -234,8 +234,7 @@ func (wb *wrappedBody) Read(b []byte) (int, error) {
 	case nil:
 		// nothing to do here but fall through to the return
 	case io.EOF:
-		wb.recordBytesRead()
-		wb.span.End()
+		wb.endSpan()
 	default:
 		wb.span.RecordError(err)
 		wb.span.SetStatus(codes.Error, err.Error())
@@ -243,8 +242,8 @@ func (wb *wrappedBody) Read(b []byte) (int, error) {
 	return n, err
 }
 
-// recordBytesRead is a function that ensures the number of bytes read is recorded once and only once.
-func (wb *wrappedBody) recordBytesRead() {
+// endSpan is a function that ensures the number of bytes read is recorded once and only once and that the span is ended only once.
+func (wb *wrappedBody) endSpan() {
 	// note: it is more performant (and equally correct) to use atomic.Bool over sync.Once here. In the event that
 	// two goroutines are racing to call this method, the number of bytes read will no longer increase. Using
 	// CompareAndSwap allows later goroutines to return quickly and not block waiting for the race winner to finish
@@ -252,12 +251,12 @@ func (wb *wrappedBody) recordBytesRead() {
 	if wb.recorded.CompareAndSwap(false, true) {
 		// Record the total number of bytes read
 		wb.record(wb.read.Load())
+		wb.span.End()
 	}
 }
 
 func (wb *wrappedBody) Close() error {
-	wb.recordBytesRead()
-	wb.span.End()
+	wb.endSpan()
 	if wb.body != nil {
 		return wb.body.Close()
 	}
