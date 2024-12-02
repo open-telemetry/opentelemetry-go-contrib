@@ -9,6 +9,7 @@ import (
 	"net/http"
 	"os"
 	"strings"
+	"sync"
 
 	"go.opentelemetry.io/otel/attribute"
 	"go.opentelemetry.io/otel/codes"
@@ -116,6 +117,30 @@ func (s HTTPServer) RecordMetrics(ctx context.Context, md ServerMetricData) {
 	s.serverLatencyMeasure.Record(ctx, md.ElapsedTime, o)
 
 	// TODO: Duplicate Metrics
+}
+
+var metricAddOptionPool = &sync.Pool{
+	New: func() interface{} {
+		return &[]metric.AddOption{}
+	},
+}
+
+// RecordMetricsPooled is an implementation of RecordMetrics() where []metric.AddOption is pulled from a pool
+func (s HTTPServer) RecordMetricsPooled(ctx context.Context, md ServerMetricData) {
+	if s.requestBytesCounter == nil || s.responseBytesCounter == nil || s.serverLatencyMeasure == nil {
+		// This will happen if an HTTPServer{} is used instead of NewHTTPServer.
+		return
+	}
+
+	attributes := oldHTTPServer{}.MetricAttributes(md.ServerName, md.Req, md.StatusCode, md.AdditionalAttributes)
+	o := metric.WithAttributeSet(attribute.NewSet(attributes...))
+	addOpts := metricAddOptionPool.Get().(*[]metric.AddOption)
+	*addOpts = append(*addOpts, o)
+	s.requestBytesCounter.Add(ctx, md.RequestSize, *addOpts...)
+	s.responseBytesCounter.Add(ctx, md.ResponseSize, *addOpts...)
+	s.serverLatencyMeasure.Record(ctx, md.ElapsedTime, o)
+	*addOpts = (*addOpts)[:0]
+	metricAddOptionPool.Put(addOpts)
 }
 
 func NewHTTPServer(meter metric.Meter) HTTPServer {
