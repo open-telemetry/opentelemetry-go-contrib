@@ -7,8 +7,6 @@ package otelgin // import "go.opentelemetry.io/contrib/instrumentation/github.co
 
 import (
 	"net/http"
-	"slices"
-	"strings"
 
 	"github.com/gin-gonic/gin"
 
@@ -16,31 +14,11 @@ import (
 	oteltrace "go.opentelemetry.io/otel/trace"
 )
 
-var defaultSpanNameFormatter = func(path string, r *http.Request) string {
-	method := strings.ToUpper(r.Method)
-	if !slices.Contains([]string{
-		http.MethodGet, http.MethodHead,
-		http.MethodPost, http.MethodPut,
-		http.MethodPatch, http.MethodDelete,
-		http.MethodConnect, http.MethodOptions,
-		http.MethodTrace,
-	}, method) {
-		method = "HTTP"
-	}
-
-	if path != "" {
-		return method + " " + path
-	}
-
-	return method
-}
-
 type config struct {
-	TracerProvider    oteltrace.TracerProvider
-	Propagators       propagation.TextMapPropagator
-	Filters           []Filter
-	GinFilters        []GinFilter
-	spanNameFormatter SpanNameFormatter
+	TracerProvider oteltrace.TracerProvider
+	Propagators    propagation.TextMapPropagator
+	Filters        []Filter
+	GinFilters     []GinFilter
 }
 
 // Filter is a predicate used to determine whether a given http.request should
@@ -50,9 +28,6 @@ type Filter func(*http.Request) bool
 // Adding new Filter parameter (*gin.Context)
 // gin.Context has FullPath() method, which returns a matched route full path.
 type GinFilter func(*gin.Context) bool
-
-// SpanNameFormatter is used to set span name by http.request.
-type SpanNameFormatter func(path string, r *http.Request) string
 
 // Option specifies instrumentation configuration options.
 type Option interface {
@@ -102,15 +77,5 @@ func WithFilter(f ...Filter) Option {
 func WithGinFilter(f ...GinFilter) Option {
 	return optionFunc(func(c *config) {
 		c.GinFilters = append(c.GinFilters, f...)
-	})
-}
-
-// WithSpanNameFormatter takes a function that will be called on every
-// request and the returned string will become the Span Name.
-func WithSpanNameFormatter(f func(path string, r *http.Request) string) Option {
-	return optionFunc(func(c *config) {
-		if f != nil {
-			c.spanNameFormatter = f
-		}
 	})
 }

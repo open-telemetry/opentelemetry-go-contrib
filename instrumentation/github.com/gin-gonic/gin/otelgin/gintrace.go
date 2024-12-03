@@ -6,7 +6,9 @@
 package otelgin // import "go.opentelemetry.io/contrib/instrumentation/github.com/gin-gonic/gin/otelgin"
 
 import (
-	"fmt"
+	"net/http"
+	"slices"
+	"strings"
 
 	"github.com/gin-gonic/gin"
 
@@ -43,9 +45,6 @@ func Middleware(service string, opts ...Option) gin.HandlerFunc {
 	if cfg.Propagators == nil {
 		cfg.Propagators = otel.GetTextMapPropagator()
 	}
-	if cfg.spanNameFormatter == nil {
-		cfg.spanNameFormatter = defaultSpanNameFormatter
-	}
 	return func(c *gin.Context) {
 		for _, f := range cfg.Filters {
 			if !f(c.Request) {
@@ -74,10 +73,7 @@ func Middleware(service string, opts ...Option) gin.HandlerFunc {
 			oteltrace.WithAttributes(semconv.HTTPRoute(c.FullPath())),
 			oteltrace.WithSpanKind(oteltrace.SpanKindServer),
 		}
-		spanName := cfg.spanNameFormatter(c.FullPath(), c.Request)
-		if spanName == "" {
-			spanName = fmt.Sprintf("HTTP %s route not found", c.Request.Method)
-		}
+		spanName := spanNameFormatter(c.FullPath(), c.Request)
 		ctx, span := tracer.Start(ctx, spanName, opts...)
 		defer span.End()
 
@@ -125,4 +121,23 @@ func HTML(c *gin.Context, code int, name string, obj interface{}) {
 	_, span := tracer.Start(savedContext, "gin.renderer.html", opt)
 	defer span.End()
 	c.HTML(code, name, obj)
+}
+
+func spanNameFormatter(path string, r *http.Request) string {
+	method := strings.ToUpper(r.Method)
+	if !slices.Contains([]string{
+		http.MethodGet, http.MethodHead,
+		http.MethodPost, http.MethodPut,
+		http.MethodPatch, http.MethodDelete,
+		http.MethodConnect, http.MethodOptions,
+		http.MethodTrace,
+	}, method) {
+		method = "HTTP"
+	}
+
+	if path != "" {
+		return method + " " + path
+	}
+
+	return method
 }
