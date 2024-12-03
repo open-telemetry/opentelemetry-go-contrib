@@ -72,7 +72,8 @@ issues:
         - usestdlibvars
     # Ignoring gosec G402: TLS MinVersion too low
     # as the https://pkg.go.dev/crypto/tls#Config handles MinVersion default well.
-    - text: "G402: TLS MinVersion too low."
+    - path: config/*.go
+      text: "G402: TLS MinVersion too low."
       linters:
         - gosec
   include:
