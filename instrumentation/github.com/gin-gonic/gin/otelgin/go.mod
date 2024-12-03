@@ -2,18 +2,15 @@ module go.opentelemetry.io/contrib/instrumentation/github.com/gin-gonic/gin/otel
 
 go 1.22
 
-replace go.opentelemetry.io/contrib/propagators/b3 => ../../../../../propagators/b3
-
 require (
 	github.com/gin-gonic/gin v1.10.0
-	github.com/stretchr/testify v1.9.0
-	go.opentelemetry.io/contrib/propagators/b3 v1.32.0
+	github.com/stretchr/testify v1.10.0
 	go.opentelemetry.io/otel v1.32.0
 	go.opentelemetry.io/otel/trace v1.32.0
 )
 
 require (
-	github.com/bytedance/sonic v1.12.4 // indirect
+	github.com/bytedance/sonic v1.12.5 // indirect
 	github.com/bytedance/sonic/loader v0.2.1 // indirect
 	github.com/cloudwego/base64x v0.1.4 // indirect
 	github.com/cloudwego/iasm v0.2.0 // indirect

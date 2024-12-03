@@ -462,3 +462,92 @@ func TestConvertKVs(t *testing.T) {
 		})
 	}
 }
+
+func BenchmarkLogSink(b *testing.B) {
+	message := "body"
+	keyValues := []any{
+		"string", "hello",
+		"int", 42,
+		"float", 3.14,
+		"bool", false,
+	}
+	err := errors.New("error")
+
+	b.Run("Info", func(b *testing.B) {
+		logSinks := make([]logr.LogSink, b.N)
+		for i := range logSinks {
+			logSinks[i] = NewLogSink("")
+		}
+
+		b.ReportAllocs()
+		b.ResetTimer()
+		for n := 0; n < b.N; n++ {
+			logSinks[n].Info(0, message, keyValues...)
+		}
+	})
+
+	b.Run("Error", func(b *testing.B) {
+		logSinks := make([]logr.LogSink, b.N)
+		for i := range logSinks {
+			logSinks[i] = NewLogSink("")
+		}
+
+		b.ReportAllocs()
+		b.ResetTimer()
+		for n := 0; n < b.N; n++ {
+			logSinks[n].Error(err, message, keyValues...)
+		}
+	})
+
+	b.Run("WithValues", func(b *testing.B) {
+		logSinks := make([]logr.LogSink, b.N)
+		for i := range logSinks {
+			logSinks[i] = NewLogSink("")
+		}
+
+		b.ReportAllocs()
+		b.ResetTimer()
+		for n := 0; n < b.N; n++ {
+			logSinks[n].WithValues(keyValues...)
+		}
+	})
+
+	b.Run("WithName", func(b *testing.B) {
+		logSinks := make([]logr.LogSink, b.N)
+		for i := range logSinks {
+			logSinks[i] = NewLogSink("")
+		}
+
+		b.ReportAllocs()
+		b.ResetTimer()
+		for n := 0; n < b.N; n++ {
+			logSinks[n].WithName("name")
+		}
+	})
+
+	b.Run("WithName.WithValues", func(b *testing.B) {
+		logSinks := make([]logr.LogSink, b.N)
+		for i := range logSinks {
+			logSinks[i] = NewLogSink("")
+		}
+
+		b.ReportAllocs()
+		b.ResetTimer()
+		for n := 0; n < b.N; n++ {
+			logSinks[n].WithName("name").WithValues(keyValues...)
+		}
+	})
+
+	b.Run("(WithName.WithValues).Info", func(b *testing.B) {
+		logSinks := make([]logr.LogSink, b.N)
+		for i := range logSinks {
+			logSinks[i] = NewLogSink("").WithName("name").WithValues(keyValues...)
+		}
+
+		b.ReportAllocs()
+		b.ResetTimer()
+		for n := 0; n < b.N; n++ {
+			logSinks[n].Info(0, message)
+		}
+	})
+}
