@@ -209,6 +209,7 @@ type span struct {
 	trace.Span
 
 	ended       bool
+	endCount    int
 	recordedErr error
 
 	statusCode codes.Code
@@ -216,6 +217,7 @@ type span struct {
 }
 
 func (s *span) End(...trace.SpanEndOption) {
+	s.endCount++
 	s.ended = true
 }
 
@@ -230,8 +232,10 @@ func (s *span) SetStatus(c codes.Code, d string) {
 func (s *span) assert(t *testing.T, ended bool, err error, c codes.Code, d string) { // nolint: revive  // ended is not a control flag.
 	if ended {
 		assert.True(t, s.ended, "not ended")
+		assert.Equal(t, 1, s.endCount, "not ended exactly once")
 	} else {
 		assert.False(t, s.ended, "ended")
+		assert.Zero(t, s.endCount, "span end implementation is not consistent")
 	}
 
 	if err == nil {
@@ -271,6 +275,25 @@ func TestWrappedBodyReadEOFError(t *testing.T) {
 	s.assert(t, true, nil, codes.Unset, "")
 	assert.True(t, called, "record should have been called")
 	assert.Equal(t, int64(readSize), numRecorded, "record recorded wrong number of bytes")
+}
+
+func TestWrappedBodyReadEOFErrorThenClose(t *testing.T) {
+	s := new(span)
+	called := false
+	numRecorded := int64(0)
+	record := func(numBytes int64) {
+		called = true
+		numRecorded = numBytes
+	}
+	wb := newWrappedBody(s, record, readCloser{readErr: io.EOF})
+	n, err := wb.Read([]byte{})
+	assert.Equal(t, readSize, n, "wrappedBody returned wrong bytes")
+	assert.Equal(t, io.EOF, err)
+	assert.NoError(t, wb.Close(), "wrappedBody returned an error on close")
+	s.assert(t, true, nil, codes.Unset, "")
+	assert.True(t, called, "record should have been called")
+	assert.Equal(t, int64(readSize), numRecorded, "record recorded wrong number of bytes")
+	assert.Equal(t, 1, s.endCount, "span should have been ended exactly once")
 }
 
 func TestWrappedBodyReadError(t *testing.T) {
