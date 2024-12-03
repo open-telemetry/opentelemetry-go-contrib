@@ -188,21 +188,22 @@ func BenchmarkRecordMetricsPooled(b *testing.B) {
 			server: NewHTTPServer(noop.Meter{}),
 		},
 	}
-	for _, tt := range testCases {
-		req, _ := http.NewRequest("GET", "http://example.com", nil)
-
-		_ = tt.server.RequestTraceAttrs("stuff", req)
-		_ = tt.server.ResponseTraceAttrs(ResponseTelemetry{StatusCode: 200})
-		tt.server.RecordMetricsPooled(context.Background(), ServerMetricData{
-			ServerName: "stuff",
-			MetricAttributes: MetricAttributes{
-				Req: req,
-			},
-		})
-	}
 
 	b.ReportAllocs()
 	b.ResetTimer()
+	for i := 0; i < b.N; i++ {
+		for _, tt := range testCases {
+			req, _ := http.NewRequest("GET", "http://example.com", nil)
+			_ = tt.server.RequestTraceAttrs("stuff", req)
+			_ = tt.server.ResponseTraceAttrs(ResponseTelemetry{StatusCode: 200})
+			tt.server.RecordMetricsPooled(context.Background(), ServerMetricData{
+				ServerName: "stuff",
+				MetricAttributes: MetricAttributes{
+					Req: req,
+				},
+			})
+		}
+	}
 }
 
 func BenchmarkRecordMetrics(b *testing.B) {
@@ -223,19 +224,20 @@ func BenchmarkRecordMetrics(b *testing.B) {
 			server: NewHTTPServer(noop.Meter{}),
 		},
 	}
-	for _, tt := range testCases {
-		req, _ := http.NewRequest("GET", "http://example.com", nil)
-
-		_ = tt.server.RequestTraceAttrs("stuff", req)
-		_ = tt.server.ResponseTraceAttrs(ResponseTelemetry{StatusCode: 200})
-		tt.server.RecordMetrics(context.Background(), ServerMetricData{
-			ServerName: "stuff",
-			MetricAttributes: MetricAttributes{
-				Req: req,
-			},
-		})
-	}
-
 	b.ReportAllocs()
 	b.ResetTimer()
+	for i := 0; i < b.N; i++ {
+		for _, tt := range testCases {
+			req, _ := http.NewRequest("GET", "http://example.com", nil)
+	
+			_ = tt.server.RequestTraceAttrs("stuff", req)
+			_ = tt.server.ResponseTraceAttrs(ResponseTelemetry{StatusCode: 200})
+			tt.server.RecordMetrics(context.Background(), ServerMetricData{
+				ServerName: "stuff",
+				MetricAttributes: MetricAttributes{
+					Req: req,
+				},
+			})
+		}
+	}
 }
