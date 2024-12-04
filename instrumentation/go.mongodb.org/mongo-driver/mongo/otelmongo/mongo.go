@@ -7,13 +7,14 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"net"
 	"strconv"
 	"strings"
 	"sync"
 
 	"go.opentelemetry.io/otel/attribute"
 	"go.opentelemetry.io/otel/codes"
-	semconv "go.opentelemetry.io/otel/semconv/v1.21.0"
+	semconv "go.opentelemetry.io/otel/semconv/v1.26.0"
 	"go.opentelemetry.io/otel/trace"
 
 	"go.mongodb.org/mongo-driver/bson"
@@ -32,25 +33,28 @@ type monitor struct {
 }
 
 func (m *monitor) Started(ctx context.Context, evt *event.CommandStartedEvent) {
-	var spanName string
-
 	hostname, port := peerInfo(evt)
 
-	attrs := []attribute.KeyValue{
-		semconv.DBSystemMongoDB,
-		semconv.DBOperation(evt.CommandName),
-		semconv.DBName(evt.DatabaseName),
-		semconv.NetPeerName(hostname),
-		semconv.NetPeerPort(port),
-		semconv.NetTransportTCP,
-	}
+	attrs := []attribute.KeyValue{semconv.DBSystemMongoDB}
+
+	attrs = appendOpNameAttrs(attrs, evt.CommandName)
+	attrs = appendDBNamespace(attrs, evt.DatabaseName)
+	attrs = appendNetworkPort(attrs, port)
+	attrs = appendNetworkHost(attrs, hostname)
+	attrs = appendNetworkAddress(attrs, net.JoinHostPort(hostname, strconv.Itoa(port)))
+	attrs = appendNetworkTransport(attrs)
+
 	if !m.cfg.CommandAttributeDisabled {
-		attrs = append(attrs, semconv.DBStatement(sanitizeCommand(evt.Command)))
+		attrs = appendDBStatement(attrs, sanitizeCommand(evt.Command))
 	}
+
+	var spanName string
 	if collection, err := extractCollection(evt); err == nil && collection != "" {
 		spanName = collection + "."
-		attrs = append(attrs, semconv.DBMongoDBCollection(collection))
+
+		attrs = appendCollection(attrs, collection)
 	}
+
 	spanName += evt.CommandName
 	opts := []trace.SpanStartOption{
 		trace.WithSpanKind(trace.SpanKindClient),
