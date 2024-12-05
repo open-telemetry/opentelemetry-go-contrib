@@ -107,7 +107,7 @@ $(CODESPELL): PACKAGE=codespell
 # Generate
 
 .PHONY: generate
-generate: go-generate vanity-import-fix
+generate: go-generate genjsonschema vanity-import-fix
 
 .PHONY: go-generate
 go-generate: $(OTEL_GO_MOD_DIRS:%=go-generate/%)
@@ -316,7 +316,7 @@ update-all-otel-deps:
 		done
 
 # The source directory for opentelemetry-configuration schema.
-OPENTELEMETRY_CONFIGURATION_JSONSCHEMA_SRC_DIR=tmp/opentelememetry-configuration
+OPENTELEMETRY_CONFIGURATION_JSONSCHEMA_SRC_DIR=tmp/opentelemetry-configuration
 
 # The SHA matching the current version of the opentelemetry-configuration schema to use
 OPENTELEMETRY_CONFIGURATION_JSONSCHEMA_VERSION=v0.3.0
@@ -342,7 +342,6 @@ genjsonschema: genjsonschema-cleanup $(GOJSONSCHEMA)
 	@echo Modify jsonschema generated files.
 	sed -f ./config/jsonschema_patch.sed ${GENERATED_CONFIG} > ${GENERATED_CONFIG}.tmp
 	mv ${GENERATED_CONFIG}.tmp ${GENERATED_CONFIG}
-	$(MAKE) lint
 	$(MAKE) genjsonschema-cleanup
 
 .PHONY: codespell
