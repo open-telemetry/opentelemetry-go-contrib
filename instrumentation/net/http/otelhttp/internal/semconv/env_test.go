@@ -134,7 +134,7 @@ func NewTestHTTPClient() HTTPClient {
 }
 
 func BenchmarkRecordMetrics(b *testing.B) {
-	testCases := []struct {
+	benchmarks := []struct {
 		name   string
 		server HTTPServer
 	}{
@@ -151,17 +151,18 @@ func BenchmarkRecordMetrics(b *testing.B) {
 			server: NewHTTPServer(noop.Meter{}),
 		},
 	}
-	b.ReportAllocs()
-	b.ResetTimer()
-	for _, tt := range testCases {
-		t.Run(tt.name, func(t *testing.T) {
-			req, _ := http.NewRequest("GET", "http://example.com", nil)
 
-			_ = tt.server.RequestTraceAttrs("stuff", req)
-			_ = tt.server.ResponseTraceAttrs(ResponseTelemetry{StatusCode: 200})
+	for _, bm := range benchmarks {
+		b.Run(bm.name, func(b *testing.B) {
+			req, _ := http.NewRequest("GET", "http://example.com", nil)
+			_ = bm.server.RequestTraceAttrs("stuff", req)
+			_ = bm.server.ResponseTraceAttrs(ResponseTelemetry{StatusCode: 200})
+
+			b.ReportAllocs()
+			b.ResetTimer()
 			for i := 0; i < b.N; i++ {
-				tt.server.RecordMetrics(context.Background(), ServerMetricData{
-					ServerName: "stuff",
+				bm.server.RecordMetrics(context.Background(), ServerMetricData{
+					ServerName: bm.name,
 					MetricAttributes: MetricAttributes{
 						Req: req,
 					},
