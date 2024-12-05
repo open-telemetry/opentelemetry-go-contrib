@@ -1,6 +1,6 @@
 module go.opentelemetry.io/contrib/instrumentation/net/http/otelhttp/internal/semconv/test
 
-go 1.23.3
+go 1.22
 
 require (
 	github.com/stretchr/testify v1.10.0
