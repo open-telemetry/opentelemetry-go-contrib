@@ -53,43 +53,6 @@ func TestHTTPServerDoesNotPanic(t *testing.T) {
 	}
 }
 
-func TestHTTPServerDoesNotPanicPooled(t *testing.T) {
-	testCases := []struct {
-		name   string
-		server HTTPServer
-	}{
-		{
-			name:   "empty",
-			server: HTTPServer{},
-		},
-		{
-			name:   "nil meter",
-			server: NewHTTPServer(nil),
-		},
-		{
-			name:   "with Meter",
-			server: NewHTTPServer(noop.Meter{}),
-		},
-	}
-	for _, tt := range testCases {
-		t.Run(tt.name, func(t *testing.T) {
-			require.NotPanics(t, func() {
-				req, err := http.NewRequest("GET", "http://example.com", nil)
-				require.NoError(t, err)
-
-				_ = tt.server.RequestTraceAttrs("stuff", req)
-				_ = tt.server.ResponseTraceAttrs(ResponseTelemetry{StatusCode: 200})
-				tt.server.RecordMetricsPooled(context.Background(), ServerMetricData{
-					ServerName: "stuff",
-					MetricAttributes: MetricAttributes{
-						Req: req,
-					},
-				})
-			})
-		})
-	}
-}
-
 func TestHTTPClientDoesNotPanic(t *testing.T) {
 	testCases := []struct {
 		name   string
@@ -170,42 +133,6 @@ func NewTestHTTPClient() HTTPClient {
 	}
 }
 
-func BenchmarkRecordMetricsPooled(b *testing.B) {
-	testCases := []struct {
-		name   string
-		server HTTPServer
-	}{
-		{
-			name:   "empty",
-			server: HTTPServer{},
-		},
-		{
-			name:   "nil meter",
-			server: NewHTTPServer(nil),
-		},
-		{
-			name:   "with Meter",
-			server: NewHTTPServer(noop.Meter{}),
-		},
-	}
-
-	b.ReportAllocs()
-	b.ResetTimer()
-	for i := 0; i < b.N; i++ {
-		for _, tt := range testCases {
-			req, _ := http.NewRequest("GET", "http://example.com", nil)
-			_ = tt.server.RequestTraceAttrs("stuff", req)
-			_ = tt.server.ResponseTraceAttrs(ResponseTelemetry{StatusCode: 200})
-			tt.server.RecordMetricsPooled(context.Background(), ServerMetricData{
-				ServerName: "stuff",
-				MetricAttributes: MetricAttributes{
-					Req: req,
-				},
-			})
-		}
-	}
-}
-
 func BenchmarkRecordMetrics(b *testing.B) {
 	testCases := []struct {
 		name   string
@@ -229,7 +156,7 @@ func BenchmarkRecordMetrics(b *testing.B) {
 	for i := 0; i < b.N; i++ {
 		for _, tt := range testCases {
 			req, _ := http.NewRequest("GET", "http://example.com", nil)
-	
+
 			_ = tt.server.RequestTraceAttrs("stuff", req)
 			_ = tt.server.ResponseTraceAttrs(ResponseTelemetry{StatusCode: 200})
 			tt.server.RecordMetrics(context.Background(), ServerMetricData{
