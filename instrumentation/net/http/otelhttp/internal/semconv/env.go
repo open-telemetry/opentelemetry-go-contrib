@@ -104,7 +104,7 @@ type MetricData struct {
 
 func (s HTTPServer) RecordMetrics(ctx context.Context, md ServerMetricData) {
 	if s.requestBytesCounter == nil || s.responseBytesCounter == nil || s.serverLatencyMeasure == nil {
-		// This will happen if an HTTPServer{} is used insted of NewHTTPServer.
+		// This will happen if an HTTPServer{} is used instead of NewHTTPServer.
 		return
 	}
 
@@ -206,7 +206,7 @@ func (c HTTPClient) MetricOptions(ma MetricAttributes) MetricOpts {
 
 func (s HTTPClient) RecordMetrics(ctx context.Context, md MetricData, opts MetricOpts) {
 	if s.requestBytesCounter == nil || s.latencyMeasure == nil {
-		// This will happen if an HTTPClient{} is used insted of NewHTTPClient().
+		// This will happen if an HTTPClient{} is used instead of NewHTTPClient().
 		return
 	}
 
@@ -218,7 +218,7 @@ func (s HTTPClient) RecordMetrics(ctx context.Context, md MetricData, opts Metri
 
 func (s HTTPClient) RecordResponseSize(ctx context.Context, responseData int64, opts metric.AddOption) {
 	if s.responseBytesCounter == nil {
-		// This will happen if an HTTPClient{} is used insted of NewHTTPClient().
+		// This will happen if an HTTPClient{} is used instead of NewHTTPClient().
 		return
 	}
 
