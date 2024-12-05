@@ -1,4 +1,4 @@
-module go.opentelemetry.io/contrib/examples/dice
+module go.opentelemetry.io/contrib/examples/dice/instrumented
 
 go 1.22
 
@@ -26,6 +26,6 @@ require (
 )
 
 replace (
-	go.opentelemetry.io/contrib/bridges/otelslog => ../../bridges/otelslog
-	go.opentelemetry.io/contrib/instrumentation/net/http/otelhttp => ../../instrumentation/net/http/otelhttp
+	go.opentelemetry.io/contrib/bridges/otelslog => ../../../bridges/otelslog
+	go.opentelemetry.io/contrib/instrumentation/net/http/otelhttp => ../../../instrumentation/net/http/otelhttp
 )
