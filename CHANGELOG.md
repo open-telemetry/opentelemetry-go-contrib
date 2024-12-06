@@ -14,7 +14,7 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 - Added support exporting logs via OTLP over gRPC in `go.opentelemetry.io/contrib/config`. (#6340)
 - The `go.opentelemetry.io/contrib/bridges/otellogr` module.
   This module provides an OpenTelemetry logging bridge for `github.com/go-logr/logr`. (#6386)
-- Updated the `go.opentelemetry.io/contrib/instrumentation/net/http/otelhttp/internal/semconv` `RecordMetrics()` to used a pool for the addOptions slice which reduced allocs/op. (#6394)
+- Use a pool for the semantic convention metrics options in `go.opentelemetry.io/contrib/instrumentation/net/http/otelhttp`. (#6394)
 
 ### Changed
 
