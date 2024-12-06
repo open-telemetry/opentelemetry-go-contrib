@@ -15,11 +15,10 @@ import (
 )
 
 type config struct {
-	TracerProvider    oteltrace.TracerProvider
-	Propagators       propagation.TextMapPropagator
-	Filters           []Filter
-	GinFilters        []GinFilter
-	SpanNameFormatter SpanNameFormatter
+	TracerProvider oteltrace.TracerProvider
+	Propagators    propagation.TextMapPropagator
+	Filters        []Filter
+	GinFilters     []GinFilter
 }
 
 // Filter is a predicate used to determine whether a given http.request should
@@ -29,9 +28,6 @@ type Filter func(*http.Request) bool
 // Adding new Filter parameter (*gin.Context)
 // gin.Context has FullPath() method, which returns a matched route full path.
 type GinFilter func(*gin.Context) bool
-
-// SpanNameFormatter is used to set span name by http.request.
-type SpanNameFormatter func(r *http.Request) string
 
 // Option specifies instrumentation configuration options.
 type Option interface {
@@ -81,13 +77,5 @@ func WithFilter(f ...Filter) Option {
 func WithGinFilter(f ...GinFilter) Option {
 	return optionFunc(func(c *config) {
 		c.GinFilters = append(c.GinFilters, f...)
-	})
-}
-
-// WithSpanNameFormatter takes a function that will be called on every
-// request and the returned string will become the Span Name.
-func WithSpanNameFormatter(f func(r *http.Request) string) Option {
-	return optionFunc(func(c *config) {
-		c.SpanNameFormatter = f
 	})
 }
