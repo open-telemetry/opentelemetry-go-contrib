@@ -12,7 +12,8 @@ coverage.*
 go.work
 go.work.sum
 
-examples/dice/dice
+examples/dice/instrumented/instrumented
+examples/dice/uninstrumented/uninstrumented
 examples/namedtracer/namedtracer
 examples/otel-collector/otel-collector
 examples/opencensus/opencensus
