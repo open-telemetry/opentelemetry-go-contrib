@@ -157,11 +157,11 @@ func BenchmarkRecordMetrics(b *testing.B) {
 			req, _ := http.NewRequest("GET", "http://example.com", nil)
 			_ = bm.server.RequestTraceAttrs("stuff", req)
 			_ = bm.server.ResponseTraceAttrs(ResponseTelemetry{StatusCode: 200})
-
+			ctx := context.Background()
 			b.ReportAllocs()
 			b.ResetTimer()
 			for i := 0; i < b.N; i++ {
-				bm.server.RecordMetrics(context.Background(), ServerMetricData{
+				bm.server.RecordMetrics(ctx, ServerMetricData{
 					ServerName: bm.name,
 					MetricAttributes: MetricAttributes{
 						Req: req,
