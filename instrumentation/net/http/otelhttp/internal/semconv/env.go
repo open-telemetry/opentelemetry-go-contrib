@@ -122,7 +122,8 @@ func (s HTTPServer) RecordMetrics(ctx context.Context, md ServerMetricData) {
 	s.requestBytesCounter.Add(ctx, md.RequestSize, *addOpts...)
 	s.responseBytesCounter.Add(ctx, md.ResponseSize, *addOpts...)
 	s.serverLatencyMeasure.Record(ctx, md.ElapsedTime, o)
-	metricAddOptionPool.Put((*addOpts)[:0])
+	*addOpts = (*addOpts)[:0]
+	metricAddOptionPool.Put(addOpts)
 
 	// TODO: Duplicate Metrics
 }
