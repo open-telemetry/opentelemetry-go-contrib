@@ -43,6 +43,9 @@ func Middleware(service string, opts ...Option) gin.HandlerFunc {
 	if cfg.Propagators == nil {
 		cfg.Propagators = otel.GetTextMapPropagator()
 	}
+	if cfg.spanNameFormatter == nil {
+		cfg.spanNameFormatter = defaultSpanNameFormatter
+	}
 	return func(c *gin.Context) {
 		for _, f := range cfg.Filters {
 			if !f(c.Request) {
@@ -71,12 +74,7 @@ func Middleware(service string, opts ...Option) gin.HandlerFunc {
 			oteltrace.WithAttributes(semconv.HTTPRoute(c.FullPath())),
 			oteltrace.WithSpanKind(oteltrace.SpanKindServer),
 		}
-		var spanName string
-		if cfg.SpanNameFormatter == nil {
-			spanName = c.FullPath()
-		} else {
-			spanName = cfg.SpanNameFormatter(c.Request)
-		}
+		spanName := cfg.spanNameFormatter(c.FullPath(), c.Request)
 		if spanName == "" {
 			spanName = fmt.Sprintf("HTTP %s route not found", c.Request.Method)
 		}
