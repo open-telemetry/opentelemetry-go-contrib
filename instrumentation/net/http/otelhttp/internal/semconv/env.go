@@ -118,12 +118,11 @@ func (s HTTPServer) RecordMetrics(ctx context.Context, md ServerMetricData) {
 	attributes := oldHTTPServer{}.MetricAttributes(md.ServerName, md.Req, md.StatusCode, md.AdditionalAttributes)
 	o := metric.WithAttributeSet(attribute.NewSet(attributes...))
 	addOpts := metricAddOptionPool.Get().(*[]metric.AddOption)
-	*addOpts = append((*addOpts)[:0], o)
+	*addOpts = append(*addOpts, o)
 	s.requestBytesCounter.Add(ctx, md.RequestSize, *addOpts...)
 	s.responseBytesCounter.Add(ctx, md.ResponseSize, *addOpts...)
 	s.serverLatencyMeasure.Record(ctx, md.ElapsedTime, o)
-	*addOpts = (*addOpts)[:0]
-	metricAddOptionPool.Put(addOpts)
+	metricAddOptionPool.Put((*addOpts)[:0])
 
 	// TODO: Duplicate Metrics
 }
