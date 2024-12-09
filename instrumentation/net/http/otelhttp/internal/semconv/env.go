@@ -117,7 +117,7 @@ func (s HTTPServer) RecordMetrics(ctx context.Context, md ServerMetricData) {
 		s.serverLatencyMeasure.Record(ctx, md.ElapsedTime, o)
 	}
 
-	if s.requestDurationHistogram != nil && s.requestBodySizeHistogram != nil && s.responseBodySizeHistogram != nil {
+	if s.duplicate && s.requestDurationHistogram != nil && s.requestBodySizeHistogram != nil && s.responseBodySizeHistogram != nil {
 		attributes := newHTTPServer{}.MetricAttributes(md.ServerName, md.Req, md.StatusCode, md.AdditionalAttributes)
 		o := metric.WithAttributeSet(attribute.NewSet(attributes...))
 		s.requestDurationHistogram.Record(ctx, md.ElapsedTime, o)
@@ -217,7 +217,7 @@ func (c HTTPClient) MetricOptions(ma MetricAttributes) MetricOpts {
 
 func (s HTTPClient) RecordMetrics(ctx context.Context, md MetricData, opts MetricOpts) {
 	if s.requestBytesCounter == nil || s.latencyMeasure == nil {
-		// This will happen if an HTTPClient{} is used insted of NewHTTPClient().
+		// This will happen if an HTTPClient{} is used instead of NewHTTPClient().
 		return
 	}
 
@@ -229,7 +229,7 @@ func (s HTTPClient) RecordMetrics(ctx context.Context, md MetricData, opts Metri
 
 func (s HTTPClient) RecordResponseSize(ctx context.Context, responseData int64, opts metric.AddOption) {
 	if s.responseBytesCounter == nil {
-		// This will happen if an HTTPClient{} is used insted of NewHTTPClient().
+		// This will happen if an HTTPClient{} is used instead of NewHTTPClient().
 		return
 	}
 
