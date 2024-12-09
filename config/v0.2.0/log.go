@@ -1,7 +1,7 @@
 // Copyright The OpenTelemetry Authors
 // SPDX-License-Identifier: Apache-2.0
 
-package config // import "go.opentelemetry.io/contrib/config"
+package config // import "go.opentelemetry.io/contrib/config/v0.2.0"
 
 import (
 	"context"
@@ -10,7 +10,6 @@ import (
 	"net/url"
 	"time"
 
-	"go.opentelemetry.io/otel/exporters/otlp/otlplog/otlploggrpc"
 	"go.opentelemetry.io/otel/exporters/otlp/otlplog/otlploghttp"
 	"go.opentelemetry.io/otel/exporters/stdout/stdoutlog"
 	"go.opentelemetry.io/otel/log"
@@ -62,7 +61,7 @@ func logProcessor(ctx context.Context, processor LogRecordProcessor) (sdklog.Pro
 		}
 		return sdklog.NewSimpleProcessor(exp), nil
 	}
-	return nil, errors.New("unsupported log processor type, must be one of simple or batch")
+	return nil, fmt.Errorf("unsupported log processor type, must be one of simple or batch")
 }
 
 func logExporter(ctx context.Context, exporter LogRecordExporter) (sdklog.Exporter, error) {
@@ -76,14 +75,12 @@ func logExporter(ctx context.Context, exporter LogRecordExporter) (sdklog.Export
 		)
 	}
 
-	if exporter.OTLP != nil && exporter.OTLP.Protocol != nil {
-		switch *exporter.OTLP.Protocol {
+	if exporter.OTLP != nil {
+		switch exporter.OTLP.Protocol {
 		case protocolProtobufHTTP:
 			return otlpHTTPLogExporter(ctx, exporter.OTLP)
-		case protocolProtobufGRPC:
-			return otlpGRPCLogExporter(ctx, exporter.OTLP)
 		default:
-			return nil, fmt.Errorf("unsupported protocol %q", *exporter.OTLP.Protocol)
+			return nil, fmt.Errorf("unsupported protocol %q", exporter.OTLP.Protocol)
 		}
 	}
 	return nil, errors.New("no valid log exporter")
@@ -123,8 +120,8 @@ func batchLogProcessor(blp *BatchLogRecordProcessor, exp sdklog.Exporter) (*sdkl
 func otlpHTTPLogExporter(ctx context.Context, otlpConfig *OTLP) (sdklog.Exporter, error) {
 	var opts []otlploghttp.Option
 
-	if otlpConfig.Endpoint != nil {
-		u, err := url.ParseRequestURI(*otlpConfig.Endpoint)
+	if len(otlpConfig.Endpoint) > 0 {
+		u, err := url.ParseRequestURI(otlpConfig.Endpoint)
 		if err != nil {
 			return nil, err
 		}
@@ -151,50 +148,8 @@ func otlpHTTPLogExporter(ctx context.Context, otlpConfig *OTLP) (sdklog.Exporter
 		opts = append(opts, otlploghttp.WithTimeout(time.Millisecond*time.Duration(*otlpConfig.Timeout)))
 	}
 	if len(otlpConfig.Headers) > 0 {
-		opts = append(opts, otlploghttp.WithHeaders(toStringMap(otlpConfig.Headers)))
+		opts = append(opts, otlploghttp.WithHeaders(otlpConfig.Headers))
 	}
 
 	return otlploghttp.New(ctx, opts...)
-}
-
-func otlpGRPCLogExporter(ctx context.Context, otlpConfig *OTLP) (sdklog.Exporter, error) {
-	var opts []otlploggrpc.Option
-
-	if otlpConfig.Endpoint != nil {
-		u, err := url.ParseRequestURI(*otlpConfig.Endpoint)
-		if err != nil {
-			return nil, err
-		}
-		// ParseRequestURI leaves the Host field empty when no
-		// scheme is specified (i.e. localhost:4317). This check is
-		// here to support the case where a user may not specify a
-		// scheme. The code does its best effort here by using
-		// otlpConfig.Endpoint as-is in that case
-		if u.Host != "" {
-			opts = append(opts, otlploggrpc.WithEndpoint(u.Host))
-		} else {
-			opts = append(opts, otlploggrpc.WithEndpoint(*otlpConfig.Endpoint))
-		}
-		if u.Scheme == "http" {
-			opts = append(opts, otlploggrpc.WithInsecure())
-		}
-	}
-	if otlpConfig.Compression != nil {
-		switch *otlpConfig.Compression {
-		case compressionGzip:
-			opts = append(opts, otlploggrpc.WithCompressor(*otlpConfig.Compression))
-		case compressionNone:
-			// none requires no options
-		default:
-			return nil, fmt.Errorf("unsupported compression %q", *otlpConfig.Compression)
-		}
-	}
-	if otlpConfig.Timeout != nil && *otlpConfig.Timeout > 0 {
-		opts = append(opts, otlploggrpc.WithTimeout(time.Millisecond*time.Duration(*otlpConfig.Timeout)))
-	}
-	if len(otlpConfig.Headers) > 0 {
-		opts = append(opts, otlploggrpc.WithHeaders(toStringMap(otlpConfig.Headers)))
-	}
-
-	return otlploggrpc.New(ctx, opts...)
 }
