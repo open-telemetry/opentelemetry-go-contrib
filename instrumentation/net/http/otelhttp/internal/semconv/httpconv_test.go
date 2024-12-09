@@ -133,9 +133,9 @@ func TestNewRecordMetrics(t *testing.T) {
 				assert.Equal(t, int64(0), server.responseBodySizeHistogram.(*testRecorder[int64]).value)
 				assert.Equal(t, float64(0), server.requestDurationHistogram.(*testRecorder[float64]).value)
 
-				assert.Len(t, server.requestBodySizeHistogram.(*testRecorder[int64]).attributes, 0)
-				assert.Len(t, server.responseBodySizeHistogram.(*testRecorder[int64]).attributes, 0)
-				assert.Len(t, server.requestDurationHistogram.(*testRecorder[float64]).attributes, 0)
+				assert.Empty(t, server.requestBodySizeHistogram.(*testRecorder[int64]).attributes)
+				assert.Empty(t, server.responseBodySizeHistogram.(*testRecorder[int64]).attributes)
+				assert.Empty(t, server.requestDurationHistogram.(*testRecorder[float64]).attributes)
 			},
 		},
 	}
