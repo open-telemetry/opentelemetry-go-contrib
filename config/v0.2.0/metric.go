@@ -264,10 +264,10 @@ func lowMemory(ik sdkmetric.InstrumentKind) metricdata.Temporality {
 func prometheusReader(ctx context.Context, prometheusConfig *Prometheus) (sdkmetric.Reader, error) {
 	var opts []otelprom.Option
 	if prometheusConfig.Host == nil {
-		return nil, fmt.Errorf("host must be specified")
+		return nil, errors.New("host must be specified")
 	}
 	if prometheusConfig.Port == nil {
-		return nil, fmt.Errorf("port must be specified")
+		return nil, errors.New("port must be specified")
 	}
 	if prometheusConfig.WithoutScopeInfo != nil && *prometheusConfig.WithoutScopeInfo {
 		opts = append(opts, otelprom.WithoutScopeInfo())
