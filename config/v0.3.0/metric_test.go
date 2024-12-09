@@ -150,7 +150,7 @@ func TestReader(t *testing.T) {
 					Exporter: PullMetricExporter{
 						Prometheus: &Prometheus{
 							Host:              ptr("localhost"),
-							Port:              ptr(8888),
+							Port:              ptr(0),
 							WithoutScopeInfo:  ptr(true),
 							WithoutUnits:      ptr(true),
 							WithoutTypeSuffix: ptr(true),
