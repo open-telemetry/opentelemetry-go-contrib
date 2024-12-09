@@ -14,7 +14,7 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 - Added support exporting logs via OTLP over gRPC in `go.opentelemetry.io/contrib/config`. (#6340)
 - The `go.opentelemetry.io/contrib/bridges/otellogr` module.
   This module provides an OpenTelemetry logging bridge for `github.com/go-logr/logr`. (#6386)
-- Generate New Server Metrics when set env `OTEL_SEMCONV_STABILITY_OPT_IN=http/dup` in `go.opentelemetry.io/contrib/instrumentation/net/http/otelhttp`. (#6411)
+- Generate new server metrics upon setting the environment variable `OTEL_SEMCONV_STABILITY_OPT_IN=http/dup` within `go.opentelemetry.io/contrib/instrumentation/net/http/otelhttp`. (#6411)
 
 
 ### Changed
