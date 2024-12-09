@@ -424,7 +424,7 @@ func TestParseYAML(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			b, err := os.ReadFile(filepath.Join("testdata", tt.input))
+			b, err := os.ReadFile(filepath.Join("..", "testdata", tt.input))
 			require.NoError(t, err)
 
 			got, err := ParseYAML(b)
@@ -473,7 +473,7 @@ func TestSerializeJSON(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			b, err := os.ReadFile(filepath.Join("testdata", tt.input))
+			b, err := os.ReadFile(filepath.Join("..", "testdata", tt.input))
 			require.NoError(t, err)
 
 			var got OpenTelemetryConfiguration

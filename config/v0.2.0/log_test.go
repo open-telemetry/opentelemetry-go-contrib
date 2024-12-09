@@ -1,7 +1,7 @@
 // Copyright The OpenTelemetry Authors
 // SPDX-License-Identifier: Apache-2.0
 
-package config // import "go.opentelemetry.io/contrib/config"
+package config
 
 import (
 	"context"
@@ -13,7 +13,6 @@ import (
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 
-	"go.opentelemetry.io/otel/exporters/otlp/otlplog/otlploggrpc"
 	"go.opentelemetry.io/otel/exporters/otlp/otlplog/otlploghttp"
 	"go.opentelemetry.io/otel/exporters/stdout/stdoutlog"
 	"go.opentelemetry.io/otel/log"
@@ -65,9 +64,6 @@ func TestLogProcessor(t *testing.T) {
 	otlpHTTPExporter, err := otlploghttp.New(ctx)
 	require.NoError(t, err)
 
-	otlpGRPCExporter, err := otlploggrpc.New(ctx)
-	require.NoError(t, err)
-
 	consoleExporter, err := stdoutlog.New(
 		stdoutlog.WithPrettyPrint(),
 	)
@@ -102,7 +98,7 @@ func TestLogProcessor(t *testing.T) {
 					MaxExportBatchSize: ptr(-1),
 					Exporter: LogRecordExporter{
 						OTLP: &OTLP{
-							Protocol: ptr("http/protobuf"),
+							Protocol: "http/protobuf",
 						},
 					},
 				},
@@ -116,7 +112,7 @@ func TestLogProcessor(t *testing.T) {
 					ExportTimeout: ptr(-2),
 					Exporter: LogRecordExporter{
 						OTLP: &OTLP{
-							Protocol: ptr("http/protobuf"),
+							Protocol: "http/protobuf",
 						},
 					},
 				},
@@ -131,7 +127,7 @@ func TestLogProcessor(t *testing.T) {
 					MaxQueueSize: ptr(-3),
 					Exporter: LogRecordExporter{
 						OTLP: &OTLP{
-							Protocol: ptr("http/protobuf"),
+							Protocol: "http/protobuf",
 						},
 					},
 				},
@@ -145,7 +141,7 @@ func TestLogProcessor(t *testing.T) {
 					ScheduleDelay: ptr(-4),
 					Exporter: LogRecordExporter{
 						OTLP: &OTLP{
-							Protocol: ptr("http/protobuf"),
+							Protocol: "http/protobuf",
 						},
 					},
 				},
@@ -177,120 +173,6 @@ func TestLogProcessor(t *testing.T) {
 			wantProcessor: sdklog.NewBatchProcessor(consoleExporter),
 		},
 		{
-			name: "batch/otlp-grpc-exporter-no-endpoint",
-			processor: LogRecordProcessor{
-				Batch: &BatchLogRecordProcessor{
-					MaxExportBatchSize: ptr(0),
-					ExportTimeout:      ptr(0),
-					MaxQueueSize:       ptr(0),
-					ScheduleDelay:      ptr(0),
-					Exporter: LogRecordExporter{
-						OTLP: &OTLP{
-							Protocol:    ptr("grpc"),
-							Compression: ptr("gzip"),
-							Timeout:     ptr(1000),
-							Headers: []NameStringValuePair{
-								{Name: "test", Value: ptr("test1")},
-							},
-						},
-					},
-				},
-			},
-			wantProcessor: sdklog.NewBatchProcessor(otlpGRPCExporter),
-		},
-		{
-			name: "batch/otlp-grpc-exporter",
-			processor: LogRecordProcessor{
-				Batch: &BatchLogRecordProcessor{
-					MaxExportBatchSize: ptr(0),
-					ExportTimeout:      ptr(0),
-					MaxQueueSize:       ptr(0),
-					ScheduleDelay:      ptr(0),
-					Exporter: LogRecordExporter{
-						OTLP: &OTLP{
-							Protocol:    ptr("grpc"),
-							Endpoint:    ptr("http://localhost:4317"),
-							Compression: ptr("gzip"),
-							Timeout:     ptr(1000),
-							Headers: []NameStringValuePair{
-								{Name: "test", Value: ptr("test1")},
-							},
-						},
-					},
-				},
-			},
-			wantProcessor: sdklog.NewBatchProcessor(otlpGRPCExporter),
-		},
-		{
-			name: "batch/otlp-grpc-exporter-no-scheme",
-			processor: LogRecordProcessor{
-				Batch: &BatchLogRecordProcessor{
-					MaxExportBatchSize: ptr(0),
-					ExportTimeout:      ptr(0),
-					MaxQueueSize:       ptr(0),
-					ScheduleDelay:      ptr(0),
-					Exporter: LogRecordExporter{
-						OTLP: &OTLP{
-							Protocol:    ptr("grpc"),
-							Endpoint:    ptr("localhost:4317"),
-							Compression: ptr("gzip"),
-							Timeout:     ptr(1000),
-							Headers: []NameStringValuePair{
-								{Name: "test", Value: ptr("test1")},
-							},
-						},
-					},
-				},
-			},
-			wantProcessor: sdklog.NewBatchProcessor(otlpGRPCExporter),
-		},
-		{
-			name: "batch/otlp-grpc-invalid-endpoint",
-			processor: LogRecordProcessor{
-				Batch: &BatchLogRecordProcessor{
-					MaxExportBatchSize: ptr(0),
-					ExportTimeout:      ptr(0),
-					MaxQueueSize:       ptr(0),
-					ScheduleDelay:      ptr(0),
-					Exporter: LogRecordExporter{
-						OTLP: &OTLP{
-							Protocol:    ptr("grpc"),
-							Endpoint:    ptr(" "),
-							Compression: ptr("gzip"),
-							Timeout:     ptr(1000),
-							Headers: []NameStringValuePair{
-								{Name: "test", Value: ptr("test1")},
-							},
-						},
-					},
-				},
-			},
-			wantErr: &url.Error{Op: "parse", URL: " ", Err: errors.New("invalid URI for request")},
-		},
-		{
-			name: "batch/otlp-grpc-invalid-compression",
-			processor: LogRecordProcessor{
-				Batch: &BatchLogRecordProcessor{
-					MaxExportBatchSize: ptr(0),
-					ExportTimeout:      ptr(0),
-					MaxQueueSize:       ptr(0),
-					ScheduleDelay:      ptr(0),
-					Exporter: LogRecordExporter{
-						OTLP: &OTLP{
-							Protocol:    ptr("grpc"),
-							Endpoint:    ptr("localhost:4317"),
-							Compression: ptr("invalid"),
-							Timeout:     ptr(1000),
-							Headers: []NameStringValuePair{
-								{Name: "test", Value: ptr("test1")},
-							},
-						},
-					},
-				},
-			},
-			wantErr: errors.New("unsupported compression \"invalid\""),
-		},
-		{
 			name: "batch/otlp-http-exporter",
 			processor: LogRecordProcessor{
 				Batch: &BatchLogRecordProcessor{
@@ -300,12 +182,12 @@ func TestLogProcessor(t *testing.T) {
 					ScheduleDelay:      ptr(0),
 					Exporter: LogRecordExporter{
 						OTLP: &OTLP{
-							Protocol:    ptr("http/protobuf"),
-							Endpoint:    ptr("http://localhost:4318"),
+							Protocol:    "http/protobuf",
+							Endpoint:    "http://localhost:4318",
 							Compression: ptr("gzip"),
 							Timeout:     ptr(1000),
-							Headers: []NameStringValuePair{
-								{Name: "test", Value: ptr("test1")},
+							Headers: map[string]string{
+								"test": "test1",
 							},
 						},
 					},
@@ -323,12 +205,12 @@ func TestLogProcessor(t *testing.T) {
 					ScheduleDelay:      ptr(0),
 					Exporter: LogRecordExporter{
 						OTLP: &OTLP{
-							Protocol:    ptr("http/protobuf"),
-							Endpoint:    ptr("http://localhost:4318/path/123"),
+							Protocol:    "http/protobuf",
+							Endpoint:    "http://localhost:4318/path/123",
 							Compression: ptr("none"),
 							Timeout:     ptr(1000),
-							Headers: []NameStringValuePair{
-								{Name: "test", Value: ptr("test1")},
+							Headers: map[string]string{
+								"test": "test1",
 							},
 						},
 					},
@@ -346,11 +228,11 @@ func TestLogProcessor(t *testing.T) {
 					ScheduleDelay:      ptr(0),
 					Exporter: LogRecordExporter{
 						OTLP: &OTLP{
-							Protocol:    ptr("http/protobuf"),
+							Protocol:    "http/protobuf",
 							Compression: ptr("gzip"),
 							Timeout:     ptr(1000),
-							Headers: []NameStringValuePair{
-								{Name: "test", Value: ptr("test1")},
+							Headers: map[string]string{
+								"test": "test1",
 							},
 						},
 					},
@@ -368,12 +250,12 @@ func TestLogProcessor(t *testing.T) {
 					ScheduleDelay:      ptr(0),
 					Exporter: LogRecordExporter{
 						OTLP: &OTLP{
-							Protocol:    ptr("http/protobuf"),
-							Endpoint:    ptr("localhost:4318"),
+							Protocol:    "http/protobuf",
+							Endpoint:    "localhost:4318",
 							Compression: ptr("gzip"),
 							Timeout:     ptr(1000),
-							Headers: []NameStringValuePair{
-								{Name: "test", Value: ptr("test1")},
+							Headers: map[string]string{
+								"test": "test1",
 							},
 						},
 					},
@@ -391,12 +273,12 @@ func TestLogProcessor(t *testing.T) {
 					ScheduleDelay:      ptr(0),
 					Exporter: LogRecordExporter{
 						OTLP: &OTLP{
-							Protocol:    ptr("invalid"),
-							Endpoint:    ptr("https://10.0.0.0:443"),
+							Protocol:    "invalid",
+							Endpoint:    "https://10.0.0.0:443",
 							Compression: ptr("gzip"),
 							Timeout:     ptr(1000),
-							Headers: []NameStringValuePair{
-								{Name: "test", Value: ptr("test1")},
+							Headers: map[string]string{
+								"test": "test1",
 							},
 						},
 					},
@@ -414,12 +296,12 @@ func TestLogProcessor(t *testing.T) {
 					ScheduleDelay:      ptr(0),
 					Exporter: LogRecordExporter{
 						OTLP: &OTLP{
-							Protocol:    ptr("http/protobuf"),
-							Endpoint:    ptr(" "),
+							Protocol:    "http/protobuf",
+							Endpoint:    " ",
 							Compression: ptr("gzip"),
 							Timeout:     ptr(1000),
-							Headers: []NameStringValuePair{
-								{Name: "test", Value: ptr("test1")},
+							Headers: map[string]string{
+								"test": "test1",
 							},
 						},
 					},
@@ -437,12 +319,12 @@ func TestLogProcessor(t *testing.T) {
 					ScheduleDelay:      ptr(0),
 					Exporter: LogRecordExporter{
 						OTLP: &OTLP{
-							Protocol:    ptr("http/protobuf"),
-							Endpoint:    ptr("localhost:4318"),
+							Protocol:    "http/protobuf",
+							Endpoint:    "localhost:4318",
 							Compression: ptr("none"),
 							Timeout:     ptr(1000),
-							Headers: []NameStringValuePair{
-								{Name: "test", Value: ptr("test1")},
+							Headers: map[string]string{
+								"test": "test1",
 							},
 						},
 					},
@@ -460,12 +342,12 @@ func TestLogProcessor(t *testing.T) {
 					ScheduleDelay:      ptr(0),
 					Exporter: LogRecordExporter{
 						OTLP: &OTLP{
-							Protocol:    ptr("http/protobuf"),
-							Endpoint:    ptr("localhost:4318"),
+							Protocol:    "http/protobuf",
+							Endpoint:    "localhost:4318",
 							Compression: ptr("invalid"),
 							Timeout:     ptr(1000),
-							Headers: []NameStringValuePair{
-								{Name: "test", Value: ptr("test1")},
+							Headers: map[string]string{
+								"test": "test1",
 							},
 						},
 					},
@@ -499,12 +381,12 @@ func TestLogProcessor(t *testing.T) {
 				Simple: &SimpleLogRecordProcessor{
 					Exporter: LogRecordExporter{
 						OTLP: &OTLP{
-							Protocol:    ptr("http/protobuf"),
-							Endpoint:    ptr("localhost:4318"),
+							Protocol:    "http/protobuf",
+							Endpoint:    "localhost:4318",
 							Compression: ptr("gzip"),
 							Timeout:     ptr(1000),
-							Headers: []NameStringValuePair{
-								{Name: "test", Value: ptr("test1")},
+							Headers: map[string]string{
+								"test": "test1",
 							},
 						},
 					},
