@@ -17,7 +17,7 @@ import (
 
 func TestV120TraceRequest(t *testing.T) {
 	// Anything but "http" or "http/dup" works.
-	t.Setenv("OTEL_SEMCONV_STABILITY_OPT_IN", "old")
+	t.Setenv(OTelSemConvStabilityOptIn, "old")
 	serv := NewHTTPServer(nil)
 	want := func(req testServerReq) []attribute.KeyValue {
 		return []attribute.KeyValue{
@@ -108,9 +108,9 @@ func TestV120RecordMetrics(t *testing.T) {
 		},
 	})
 
-	assert.Equal(t, int64(100), server.requestBytesCounter.(*testInst).intValue)
-	assert.Equal(t, int64(200), server.responseBytesCounter.(*testInst).intValue)
-	assert.Equal(t, float64(300), server.serverLatencyMeasure.(*testInst).floatValue)
+	assert.Equal(t, int64(100), server.requestBytesCounter.(*testRecorder[int64]).value)
+	assert.Equal(t, int64(200), server.responseBytesCounter.(*testRecorder[int64]).value)
+	assert.Equal(t, float64(300), server.serverLatencyMeasure.(*testRecorder[float64]).value)
 
 	want := []attribute.KeyValue{
 		attribute.String("http.scheme", "http"),
@@ -122,9 +122,9 @@ func TestV120RecordMetrics(t *testing.T) {
 		attribute.String("net.protocol.version", "1.1"),
 	}
 
-	assert.ElementsMatch(t, want, server.requestBytesCounter.(*testInst).attributes)
-	assert.ElementsMatch(t, want, server.responseBytesCounter.(*testInst).attributes)
-	assert.ElementsMatch(t, want, server.serverLatencyMeasure.(*testInst).attributes)
+	assert.ElementsMatch(t, want, server.requestBytesCounter.(*testRecorder[int64]).attributes)
+	assert.ElementsMatch(t, want, server.responseBytesCounter.(*testRecorder[int64]).attributes)
+	assert.ElementsMatch(t, want, server.serverLatencyMeasure.(*testRecorder[float64]).attributes)
 }
 
 func TestV120ClientRequest(t *testing.T) {
@@ -183,9 +183,9 @@ func TestV120ClientMetrics(t *testing.T) {
 		ElapsedTime: 300,
 	}, opts)
 
-	assert.Equal(t, int64(100), client.requestBytesCounter.(*testInst).intValue)
-	assert.Equal(t, int64(200), client.responseBytesCounter.(*testInst).intValue)
-	assert.Equal(t, float64(300), client.latencyMeasure.(*testInst).floatValue)
+	assert.Equal(t, int64(100), client.requestBytesCounter.(*testRecorder[int64]).value)
+	assert.Equal(t, int64(200), client.responseBytesCounter.(*testRecorder[int64]).value)
+	assert.Equal(t, float64(300), client.latencyMeasure.(*testRecorder[float64]).value)
 
 	want := []attribute.KeyValue{
 		attribute.String("http.method", "POST"),
@@ -194,9 +194,9 @@ func TestV120ClientMetrics(t *testing.T) {
 		attribute.String("net.peer.name", "example.com"),
 	}
 
-	assert.ElementsMatch(t, want, client.requestBytesCounter.(*testInst).attributes)
-	assert.ElementsMatch(t, want, client.responseBytesCounter.(*testInst).attributes)
-	assert.ElementsMatch(t, want, client.latencyMeasure.(*testInst).attributes)
+	assert.ElementsMatch(t, want, client.requestBytesCounter.(*testRecorder[int64]).attributes)
+	assert.ElementsMatch(t, want, client.responseBytesCounter.(*testRecorder[int64]).attributes)
+	assert.ElementsMatch(t, want, client.latencyMeasure.(*testRecorder[float64]).attributes)
 }
 
 func TestStandardizeHTTPMethodMetric(t *testing.T) {

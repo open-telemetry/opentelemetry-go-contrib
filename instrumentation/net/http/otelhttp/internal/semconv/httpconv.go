@@ -202,19 +202,12 @@ func (n newHTTPServer) Route(route string) attribute.KeyValue {
 	return semconvNew.HTTPRoute(route)
 }
 
-func (n newHTTPServer) createMeasures(meter metric.Meter) (metric.Float64Histogram, metric.Int64Histogram, metric.Int64Histogram) {
+func (n newHTTPServer) createMeasures(meter metric.Meter) (metric.Int64Histogram, metric.Int64Histogram, metric.Float64Histogram) {
 	if meter == nil {
-		return noop.Float64Histogram{}, noop.Int64Histogram{}, noop.Int64Histogram{}
+		return noop.Int64Histogram{}, noop.Int64Histogram{}, noop.Float64Histogram{}
 	}
 
 	var err error
-	requestDurationHistogram, err := meter.Float64Histogram(
-		semconvNew.HTTPServerRequestDurationName,
-		metric.WithUnit(semconvNew.HTTPServerRequestDurationUnit),
-		metric.WithDescription(semconvNew.HTTPServerRequestDurationDescription),
-	)
-	handleErr(err)
-
 	requestBodySizeHistogram, err := meter.Int64Histogram(
 		semconvNew.HTTPServerRequestBodySizeName,
 		metric.WithUnit(semconvNew.HTTPServerRequestBodySizeUnit),
@@ -228,8 +221,14 @@ func (n newHTTPServer) createMeasures(meter metric.Meter) (metric.Float64Histogr
 		metric.WithDescription(semconvNew.HTTPServerResponseBodySizeDescription),
 	)
 	handleErr(err)
+	requestDurationHistogram, err := meter.Float64Histogram(
+		semconvNew.HTTPServerRequestDurationName,
+		metric.WithUnit(semconvNew.HTTPServerRequestDurationUnit),
+		metric.WithDescription(semconvNew.HTTPServerRequestDurationDescription),
+	)
+	handleErr(err)
 
-	return requestDurationHistogram, requestBodySizeHistogram, responseBodySizeHistogram
+	return requestBodySizeHistogram, responseBodySizeHistogram, requestDurationHistogram
 }
 
 func (n newHTTPServer) MetricAttributes(server string, req *http.Request, statusCode int, additionalAttributes []attribute.KeyValue) []attribute.KeyValue {

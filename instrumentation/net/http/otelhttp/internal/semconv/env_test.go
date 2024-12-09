@@ -94,24 +94,31 @@ func TestHTTPClientDoesNotPanic(t *testing.T) {
 	}
 }
 
-type testInst struct {
+type testRecorder[T any] struct {
 	embedded.Int64Counter
+	embedded.Int64Histogram
 	embedded.Float64Histogram
 
-	intValue   int64
-	floatValue float64
+	value      T
 	attributes []attribute.KeyValue
 }
 
-func (t *testInst) Add(ctx context.Context, incr int64, options ...metric.AddOption) {
-	t.intValue = incr
+var (
+	_ metric.Int64Counter     = (*testRecorder[int64])(nil)
+	_ metric.Float64Histogram = (*testRecorder[float64])(nil)
+	_ metric.Int64Histogram   = (*testRecorder[int64])(nil)
+	_ metric.Float64Histogram = (*testRecorder[float64])(nil)
+)
+
+func (t *testRecorder[T]) Add(_ context.Context, incr T, options ...metric.AddOption) {
+	t.value = incr
 	cfg := metric.NewAddConfig(options)
 	attr := cfg.Attributes()
 	t.attributes = attr.ToSlice()
 }
 
-func (t *testInst) Record(ctx context.Context, value float64, options ...metric.RecordOption) {
-	t.floatValue = value
+func (t *testRecorder[T]) Record(_ context.Context, value T, options ...metric.RecordOption) {
+	t.value = value
 	cfg := metric.NewRecordConfig(options)
 	attr := cfg.Attributes()
 	t.attributes = attr.ToSlice()
@@ -119,16 +126,19 @@ func (t *testInst) Record(ctx context.Context, value float64, options ...metric.
 
 func NewTestHTTPServer() HTTPServer {
 	return HTTPServer{
-		requestBytesCounter:  &testInst{},
-		responseBytesCounter: &testInst{},
-		serverLatencyMeasure: &testInst{},
+		requestBytesCounter:       &testRecorder[int64]{},
+		responseBytesCounter:      &testRecorder[int64]{},
+		serverLatencyMeasure:      &testRecorder[float64]{},
+		requestBodySizeHistogram:  &testRecorder[int64]{},
+		responseBodySizeHistogram: &testRecorder[int64]{},
+		requestDurationHistogram:  &testRecorder[float64]{},
 	}
 }
 
 func NewTestHTTPClient() HTTPClient {
 	return HTTPClient{
-		requestBytesCounter:  &testInst{},
-		responseBytesCounter: &testInst{},
-		latencyMeasure:       &testInst{},
+		requestBytesCounter:  &testRecorder[int64]{},
+		responseBytesCounter: &testRecorder[int64]{},
+		latencyMeasure:       &testRecorder[float64]{},
 	}
 }
