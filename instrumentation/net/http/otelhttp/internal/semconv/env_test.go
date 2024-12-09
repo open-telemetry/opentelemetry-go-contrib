@@ -125,14 +125,14 @@ func (t *testRecorder[T]) Record(_ context.Context, value T, options ...metric.R
 }
 
 func NewTestHTTPServer() HTTPServer {
-	return HTTPServer{
-		requestBytesCounter:       &testRecorder[int64]{},
-		responseBytesCounter:      &testRecorder[int64]{},
-		serverLatencyMeasure:      &testRecorder[float64]{},
-		requestBodySizeHistogram:  &testRecorder[int64]{},
-		responseBodySizeHistogram: &testRecorder[int64]{},
-		requestDurationHistogram:  &testRecorder[float64]{},
-	}
+	httpServer := NewHTTPServer(nil)
+	httpServer.requestBytesCounter = &testRecorder[int64]{}
+	httpServer.responseBytesCounter = &testRecorder[int64]{}
+	httpServer.serverLatencyMeasure = &testRecorder[float64]{}
+	httpServer.requestBodySizeHistogram = &testRecorder[int64]{}
+	httpServer.responseBodySizeHistogram = &testRecorder[int64]{}
+	httpServer.requestDurationHistogram = &testRecorder[float64]{}
+	return httpServer
 }
 
 func NewTestHTTPClient() HTTPClient {
