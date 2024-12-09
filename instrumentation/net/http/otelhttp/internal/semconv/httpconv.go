@@ -7,10 +7,13 @@ import (
 	"fmt"
 	"net/http"
 	"reflect"
+	"slices"
 	"strconv"
 	"strings"
 
 	"go.opentelemetry.io/otel/attribute"
+	"go.opentelemetry.io/otel/metric"
+	"go.opentelemetry.io/otel/metric/noop"
 	semconvNew "go.opentelemetry.io/otel/semconv/v1.26.0"
 )
 
@@ -199,6 +202,87 @@ func (n newHTTPServer) Route(route string) attribute.KeyValue {
 	return semconvNew.HTTPRoute(route)
 }
 
+func (n newHTTPServer) createMeasures(meter metric.Meter) (metric.Float64Histogram, metric.Int64Histogram, metric.Int64Histogram) {
+	if meter == nil {
+		return noop.Float64Histogram{}, noop.Int64Histogram{}, noop.Int64Histogram{}
+	}
+
+	var err error
+	requestDurationHistogram, err := meter.Float64Histogram(
+		semconvNew.HTTPServerRequestDurationName,
+		metric.WithUnit(semconvNew.HTTPServerRequestDurationUnit),
+		metric.WithDescription(semconvNew.HTTPServerRequestDurationDescription),
+	)
+	handleErr(err)
+
+	requestBodySizeHistogram, err := meter.Int64Histogram(
+		semconvNew.HTTPServerRequestBodySizeName,
+		metric.WithUnit(semconvNew.HTTPServerRequestBodySizeUnit),
+		metric.WithDescription(semconvNew.HTTPServerRequestBodySizeDescription),
+	)
+	handleErr(err)
+
+	responseBodySizeHistogram, err := meter.Int64Histogram(
+		semconvNew.HTTPServerResponseBodySizeName,
+		metric.WithUnit(semconvNew.HTTPServerResponseBodySizeUnit),
+		metric.WithDescription(semconvNew.HTTPServerResponseBodySizeDescription),
+	)
+	handleErr(err)
+
+	return requestDurationHistogram, requestBodySizeHistogram, responseBodySizeHistogram
+}
+
+func (n newHTTPServer) MetricAttributes(server string, req *http.Request, statusCode int, additionalAttributes []attribute.KeyValue) []attribute.KeyValue {
+	num := len(additionalAttributes) + 3
+	var host string
+	var p int
+	if server == "" {
+		host, p = splitHostPort(req.Host)
+	} else {
+		// Prioritize the primary server name.
+		host, p = splitHostPort(server)
+		if p < 0 {
+			_, p = splitHostPort(req.Host)
+		}
+	}
+	hostPort := requiredHTTPPort(req.TLS != nil, p)
+	if hostPort > 0 {
+		num++
+	}
+	protoName, protoVersion := netProtocol(req.Proto)
+	if protoName != "" {
+		num++
+	}
+	if protoVersion != "" {
+		num++
+	}
+
+	if statusCode > 0 {
+		num++
+	}
+
+	attributes := slices.Grow(additionalAttributes, num)
+	attributes = append(attributes,
+		standardizeNewHTTPMethodMetric(req.Method),
+		n.scheme(req.TLS != nil),
+		semconvNew.ServerAddress(host))
+
+	if hostPort > 0 {
+		attributes = append(attributes, semconvNew.ServerPort(hostPort))
+	}
+	if protoName != "" {
+		attributes = append(attributes, semconvNew.NetworkProtocolName(protoName))
+	}
+	if protoVersion != "" {
+		attributes = append(attributes, semconvNew.NetworkProtocolVersion(protoVersion))
+	}
+
+	if statusCode > 0 {
+		attributes = append(attributes, semconvNew.HTTPResponseStatusCode(statusCode))
+	}
+	return attributes
+}
+
 type newHTTPClient struct{}
 
 // RequestTraceAttrs returns trace attributes for an HTTP request made by a client.
@@ -345,4 +429,14 @@ func (n newHTTPClient) method(method string) (attribute.KeyValue, attribute.KeyV
 
 func isErrorStatusCode(code int) bool {
 	return code >= 400 || code < 100
+}
+
+func standardizeNewHTTPMethodMetric(method string) attribute.KeyValue {
+	method = strings.ToUpper(method)
+	switch method {
+	case http.MethodConnect, http.MethodDelete, http.MethodGet, http.MethodHead, http.MethodOptions, http.MethodPatch, http.MethodPost, http.MethodPut, http.MethodTrace:
+	default:
+		method = "_OTHER"
+	}
+	return semconvNew.HTTPRequestMethodKey.String(method)
 }

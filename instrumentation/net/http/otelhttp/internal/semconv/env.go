@@ -30,6 +30,11 @@ type HTTPServer struct {
 	requestBytesCounter  metric.Int64Counter
 	responseBytesCounter metric.Int64Counter
 	serverLatencyMeasure metric.Float64Histogram
+
+	// New metrics
+	requestDurationHistogram  metric.Float64Histogram
+	requestBodySizeHistogram  metric.Int64Histogram
+	responseBodySizeHistogram metric.Int64Histogram
 }
 
 // RequestTraceAttrs returns trace attributes for an HTTP request received by a
@@ -103,19 +108,22 @@ type MetricData struct {
 }
 
 func (s HTTPServer) RecordMetrics(ctx context.Context, md ServerMetricData) {
-	if s.requestBytesCounter == nil || s.responseBytesCounter == nil || s.serverLatencyMeasure == nil {
-		// This will happen if an HTTPServer{} is used instead of NewHTTPServer.
-		return
+	if s.requestBytesCounter != nil && s.responseBytesCounter != nil && s.serverLatencyMeasure != nil {
+		attributes := oldHTTPServer{}.MetricAttributes(md.ServerName, md.Req, md.StatusCode, md.AdditionalAttributes)
+		o := metric.WithAttributeSet(attribute.NewSet(attributes...))
+		addOpts := []metric.AddOption{o}
+		s.requestBytesCounter.Add(ctx, md.RequestSize, addOpts...)
+		s.responseBytesCounter.Add(ctx, md.ResponseSize, addOpts...)
+		s.serverLatencyMeasure.Record(ctx, md.ElapsedTime, o)
 	}
 
-	attributes := oldHTTPServer{}.MetricAttributes(md.ServerName, md.Req, md.StatusCode, md.AdditionalAttributes)
-	o := metric.WithAttributeSet(attribute.NewSet(attributes...))
-	addOpts := []metric.AddOption{o}
-	s.requestBytesCounter.Add(ctx, md.RequestSize, addOpts...)
-	s.responseBytesCounter.Add(ctx, md.ResponseSize, addOpts...)
-	s.serverLatencyMeasure.Record(ctx, md.ElapsedTime, o)
-
-	// TODO: Duplicate Metrics
+	if s.requestDurationHistogram != nil && s.requestBodySizeHistogram != nil && s.responseBodySizeHistogram != nil {
+		attributes := newHTTPServer{}.MetricAttributes(md.ServerName, md.Req, md.StatusCode, md.AdditionalAttributes)
+		o := metric.WithAttributeSet(attribute.NewSet(attributes...))
+		s.requestDurationHistogram.Record(ctx, md.ElapsedTime, o)
+		s.requestBodySizeHistogram.Record(ctx, md.RequestSize, o)
+		s.responseBodySizeHistogram.Record(ctx, md.ResponseSize, o)
+	}
 }
 
 func NewHTTPServer(meter metric.Meter) HTTPServer {
@@ -125,6 +133,9 @@ func NewHTTPServer(meter metric.Meter) HTTPServer {
 		duplicate: duplicate,
 	}
 	server.requestBytesCounter, server.responseBytesCounter, server.serverLatencyMeasure = oldHTTPServer{}.createMeasures(meter)
+	if duplicate {
+		server.requestDurationHistogram, server.requestBodySizeHistogram, server.responseBodySizeHistogram = newHTTPServer{}.createMeasures(meter)
+	}
 	return server
 }
 
@@ -206,7 +217,7 @@ func (c HTTPClient) MetricOptions(ma MetricAttributes) MetricOpts {
 
 func (s HTTPClient) RecordMetrics(ctx context.Context, md MetricData, opts MetricOpts) {
 	if s.requestBytesCounter == nil || s.latencyMeasure == nil {
-		// This will happen if an HTTPClient{} is used instead of NewHTTPClient().
+		// This will happen if an HTTPClient{} is used insted of NewHTTPClient().
 		return
 	}
 
@@ -218,7 +229,7 @@ func (s HTTPClient) RecordMetrics(ctx context.Context, md MetricData, opts Metri
 
 func (s HTTPClient) RecordResponseSize(ctx context.Context, responseData int64, opts metric.AddOption) {
 	if s.responseBytesCounter == nil {
-		// This will happen if an HTTPClient{} is used instead of NewHTTPClient().
+		// This will happen if an HTTPClient{} is used insted of NewHTTPClient().
 		return
 	}
 
