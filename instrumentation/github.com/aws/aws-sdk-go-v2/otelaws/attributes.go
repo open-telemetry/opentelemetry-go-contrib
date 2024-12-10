@@ -8,6 +8,7 @@ import (
 
 	v2Middleware "github.com/aws/aws-sdk-go-v2/aws/middleware"
 	"github.com/aws/aws-sdk-go-v2/service/dynamodb"
+	"github.com/aws/aws-sdk-go-v2/service/sns"
 	"github.com/aws/aws-sdk-go-v2/service/sqs"
 	"github.com/aws/smithy-go/middleware"
 
@@ -25,6 +26,7 @@ const (
 var servicemap = map[string]AttributeSetter{
 	dynamodb.ServiceID: DynamoDBAttributeSetter,
 	sqs.ServiceID:      SQSAttributeSetter,
+	sns.ServiceID:      SNSAttributeSetter,
 }
 
 // SystemAttr return the AWS RPC system attribute.
