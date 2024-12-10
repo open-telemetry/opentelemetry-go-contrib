@@ -19,7 +19,7 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 
 - Change the span name to be `GET /path` so it complies with the OTel HTTP semantic conventions in `go.opentelemetry.io/contrib/instrumentation/github.com/labstack/echo/otelecho`. (#6365)
 - Record errors instead of setting the `gin.errors` attribute in `go.opentelemetry.io/contrib/instrumentation/github.com/gin-gonic/gin/otelgin`. (#6346)
-- The `go.opentelemetry.io/contrib/config` now supports multiple schemas in subdirectories (ie. `go.opentelemetry.io/contrib/config/v0.3.0`) for easier migrationg. (#6412)
+- The `go.opentelemetry.io/contrib/config` now supports multiple schemas in subdirectories (ie. `go.opentelemetry.io/contrib/config/v0.3.0`) for easier migration. (#6412)
 
 ### Fixed
 
