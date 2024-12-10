@@ -639,5 +639,18 @@ func BenchmarkHandler(b *testing.B) {
 		})
 	})
 
+	b.Run("(WithSource).Handle", func(b *testing.B) {
+		handlers := make([]*Handler, b.N)
+		for i := range handlers {
+			handlers[i] = NewHandler("", WithSource(true))
+		}
+
+		b.ReportAllocs()
+		b.ResetTimer()
+		for n := 0; n < b.N; n++ {
+			err = handlers[n].Handle(ctx, record)
+		}
+	})
+
 	_, _ = h, err
 }
