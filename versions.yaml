@@ -71,10 +71,10 @@ module-sets:
   experimental-bridge:
     version: v0.7.0
     modules:
-      - go.opentelemetry.io/contrib/bridges/otelslog
+      - go.opentelemetry.io/contrib/bridges/otellogr    
       - go.opentelemetry.io/contrib/bridges/otellogrus
+      - go.opentelemetry.io/contrib/bridges/otelslog
       - go.opentelemetry.io/contrib/bridges/otelzap
-      - go.opentelemetry.io/contrib/bridges/otellogr
   experimental-processors:
     version: v0.5.0
     modules:
@@ -85,7 +85,6 @@ module-sets:
     modules:
       - go.opentelemetry.io/contrib/detectors/azure/azurevm
 excluded-modules:
-  - go.opentelemetry.io/contrib/bridges/otellogr
   - go.opentelemetry.io/contrib/examples/dice
   - go.opentelemetry.io/contrib/examples/namedtracer
   - go.opentelemetry.io/contrib/examples/opencensus
