@@ -4,6 +4,7 @@
 package semconv
 
 import (
+	"context"
 	"errors"
 	"fmt"
 	"net/http"
@@ -17,7 +18,7 @@ import (
 )
 
 func TestNewTraceRequest(t *testing.T) {
-	t.Setenv("OTEL_SEMCONV_STABILITY_OPT_IN", "http/dup")
+	t.Setenv(OTelSemConvStabilityOptIn, "http/dup")
 	serv := NewHTTPServer(nil)
 	want := func(req testServerReq) []attribute.KeyValue {
 		return []attribute.KeyValue{
@@ -95,6 +96,81 @@ func TestNewTraceResponse(t *testing.T) {
 	}
 }
 
+func TestNewRecordMetrics(t *testing.T) {
+	tests := []struct {
+		name         string
+		setEnv       bool
+		expectedFunc func(server HTTPServer, t *testing.T)
+	}{
+		{
+			name:   "set env",
+			setEnv: true,
+			expectedFunc: func(server HTTPServer, t *testing.T) {
+				assert.Equal(t, int64(100), server.requestBodySizeHistogram.(*testRecorder[int64]).value)
+				assert.Equal(t, int64(200), server.responseBodySizeHistogram.(*testRecorder[int64]).value)
+				assert.Equal(t, float64(300), server.requestDurationHistogram.(*testRecorder[float64]).value)
+
+				want := []attribute.KeyValue{
+					attribute.String("url.scheme", "http"),
+					attribute.String("http.request.method", "POST"),
+					attribute.Int64("http.response.status_code", 301),
+					attribute.String("key", "value"),
+					attribute.String("server.address", "stuff"),
+					attribute.String("network.protocol.name", "http"),
+					attribute.String("network.protocol.version", "1.1"),
+				}
+
+				assert.ElementsMatch(t, want, server.requestBodySizeHistogram.(*testRecorder[int64]).attributes)
+				assert.ElementsMatch(t, want, server.responseBodySizeHistogram.(*testRecorder[int64]).attributes)
+				assert.ElementsMatch(t, want, server.requestDurationHistogram.(*testRecorder[float64]).attributes)
+			},
+		},
+		{
+			name:   "not set env",
+			setEnv: false,
+			expectedFunc: func(server HTTPServer, t *testing.T) {
+				assert.Equal(t, int64(0), server.requestBodySizeHistogram.(*testRecorder[int64]).value)
+				assert.Equal(t, int64(0), server.responseBodySizeHistogram.(*testRecorder[int64]).value)
+				assert.Equal(t, float64(0), server.requestDurationHistogram.(*testRecorder[float64]).value)
+
+				assert.Empty(t, server.requestBodySizeHistogram.(*testRecorder[int64]).attributes)
+				assert.Empty(t, server.responseBodySizeHistogram.(*testRecorder[int64]).attributes)
+				assert.Empty(t, server.requestDurationHistogram.(*testRecorder[float64]).attributes)
+			},
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			if tt.setEnv {
+				t.Setenv(OTelSemConvStabilityOptIn, "http/dup")
+			}
+
+			server := NewTestHTTPServer()
+			req, err := http.NewRequest("POST", "http://example.com", nil)
+			assert.NoError(t, err)
+
+			server.RecordMetrics(context.Background(), ServerMetricData{
+				ServerName:   "stuff",
+				ResponseSize: 200,
+				MetricAttributes: MetricAttributes{
+					Req:        req,
+					StatusCode: 301,
+					AdditionalAttributes: []attribute.KeyValue{
+						attribute.String("key", "value"),
+					},
+				},
+				MetricData: MetricData{
+					RequestSize: 100,
+					ElapsedTime: 300,
+				},
+			})
+
+			tt.expectedFunc(server, t)
+		})
+	}
+}
+
 func TestNewMethod(t *testing.T) {
 	testCases := []struct {
 		method   string
@@ -131,7 +207,7 @@ func TestNewMethod(t *testing.T) {
 }
 
 func TestNewTraceRequest_Client(t *testing.T) {
-	t.Setenv("OTEL_SEMCONV_STABILITY_OPT_IN", "http/dup")
+	t.Setenv(OTelSemConvStabilityOptIn, "http/dup")
 	body := strings.NewReader("Hello, world!")
 	url := "https://example.com:8888/foo/bar?stuff=morestuff"
 	req := httptest.NewRequest("pOST", url, body)
@@ -156,7 +232,7 @@ func TestNewTraceRequest_Client(t *testing.T) {
 }
 
 func TestNewTraceResponse_Client(t *testing.T) {
-	t.Setenv("OTEL_SEMCONV_STABILITY_OPT_IN", "http/dup")
+	t.Setenv(OTelSemConvStabilityOptIn, "http/dup")
 	testcases := []struct {
 		resp http.Response
 		want []attribute.KeyValue
