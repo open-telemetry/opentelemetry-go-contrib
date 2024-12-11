@@ -6,7 +6,9 @@ package config
 import (
 	"context"
 	"errors"
+	"fmt"
 	"net/url"
+	"path/filepath"
 	"reflect"
 	"testing"
 
@@ -222,6 +224,40 @@ func TestLogProcessor(t *testing.T) {
 			wantProcessor: sdklog.NewBatchProcessor(otlpGRPCExporter),
 		},
 		{
+			name: "batch/otlp-grpc-good-ca-certificate",
+			processor: LogRecordProcessor{
+				Batch: &BatchLogRecordProcessor{
+					Exporter: LogRecordExporter{
+						OTLP: &OTLP{
+							Protocol:    ptr("grpc"),
+							Endpoint:    ptr("localhost:4317"),
+							Compression: ptr("gzip"),
+							Timeout:     ptr(1000),
+							Certificate: ptr(filepath.Join("..", "testdata", "ca.crt")),
+						},
+					},
+				},
+			},
+			wantProcessor: sdklog.NewBatchProcessor(otlpGRPCExporter),
+		},
+		{
+			name: "batch/otlp-grpc-bad-ca-certificate",
+			processor: LogRecordProcessor{
+				Batch: &BatchLogRecordProcessor{
+					Exporter: LogRecordExporter{
+						OTLP: &OTLP{
+							Protocol:    ptr("grpc"),
+							Endpoint:    ptr("localhost:4317"),
+							Compression: ptr("gzip"),
+							Timeout:     ptr(1000),
+							Certificate: ptr(filepath.Join("..", "testdata", "bad_cert.crt")),
+						},
+					},
+				},
+			},
+			wantErr: fmt.Errorf("could not create client tls credentials: %w", errors.New("credentials: failed to append certificates")),
+		},
+		{
 			name: "batch/otlp-grpc-exporter-no-scheme",
 			processor: LogRecordProcessor{
 				Batch: &BatchLogRecordProcessor{
@@ -312,6 +348,40 @@ func TestLogProcessor(t *testing.T) {
 				},
 			},
 			wantProcessor: sdklog.NewBatchProcessor(otlpHTTPExporter),
+		},
+		{
+			name: "batch/otlp-http-good-ca-certificate",
+			processor: LogRecordProcessor{
+				Batch: &BatchLogRecordProcessor{
+					Exporter: LogRecordExporter{
+						OTLP: &OTLP{
+							Protocol:    ptr("http/protobuf"),
+							Endpoint:    ptr("localhost:4317"),
+							Compression: ptr("gzip"),
+							Timeout:     ptr(1000),
+							Certificate: ptr(filepath.Join("..", "testdata", "ca.crt")),
+						},
+					},
+				},
+			},
+			wantProcessor: sdklog.NewBatchProcessor(otlpHTTPExporter),
+		},
+		{
+			name: "batch/otlp-http-bad-ca-certificate",
+			processor: LogRecordProcessor{
+				Batch: &BatchLogRecordProcessor{
+					Exporter: LogRecordExporter{
+						OTLP: &OTLP{
+							Protocol:    ptr("http/protobuf"),
+							Endpoint:    ptr("localhost:4317"),
+							Compression: ptr("gzip"),
+							Timeout:     ptr(1000),
+							Certificate: ptr(filepath.Join("..", "testdata", "bad_cert.crt")),
+						},
+					},
+				},
+			},
+			wantErr: fmt.Errorf("could not create client tls credentials: %w", errors.New("failed to append certificate to the cert pool")),
 		},
 		{
 			name: "batch/otlp-http-exporter-with-path",
