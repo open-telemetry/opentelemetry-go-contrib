@@ -283,6 +283,12 @@ func TestSplitFuncName(t *testing.T) {
 			wantNamespace: "github.com/my/repo/pkg",
 		},
 		{
+			// anonymous function
+			fullFuncName:  "github.com/my/repo/pkg.foo.func5",
+			wantFuncName:  "func5",
+			wantNamespace: "github.com/my/repo/pkg.foo",
+		},
+		{
 			fullFuncName:  "net/http.Get",
 			wantFuncName:  "Get",
 			wantNamespace: "net/http",
