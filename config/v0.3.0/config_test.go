@@ -406,6 +406,11 @@ func TestParseYAML(t *testing.T) {
   line 2: cannot unmarshal !!str ` + "`notabool`" + ` into bool`),
 		},
 		{
+			name:    "invalid nil name",
+			input:   "invalid_nil_name.yaml",
+			wantErr: errors.New(`yaml: cannot unmarshal field name in NameStringValuePair required`),
+		},
+		{
 			name:    "invalid nil value",
 			input:   "invalid_nil_value.yaml",
 			wantErr: errors.New(`yaml: cannot unmarshal field value in NameStringValuePair required`),
@@ -464,6 +469,11 @@ func TestSerializeJSON(t *testing.T) {
 			name:    "invalid config",
 			input:   "invalid_bool.json",
 			wantErr: errors.New(`json: cannot unmarshal string into Go struct field Plain.disabled of type bool`),
+		},
+		{
+			name:    "invalid nil name",
+			input:   "invalid_nil_name.json",
+			wantErr: errors.New(`json: cannot unmarshal field name in NameStringValuePair required`),
 		},
 		{
 			name:    "invalid nil value",
