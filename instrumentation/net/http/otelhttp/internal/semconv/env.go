@@ -59,9 +59,9 @@ type HTTPServer struct {
 // The req Host will be used to determine the server instead.
 func (s HTTPServer) RequestTraceAttrs(server string, req *http.Request) []attribute.KeyValue {
 	if s.duplicate {
-		return append(oldHTTPServer{}.RequestTraceAttrs(server, req), newHTTPServer{}.RequestTraceAttrs(server, req)...)
+		return append(OldHTTPServer{}.RequestTraceAttrs(server, req), CurrentHTTPServer{}.RequestTraceAttrs(server, req)...)
 	}
-	return oldHTTPServer{}.RequestTraceAttrs(server, req)
+	return OldHTTPServer{}.RequestTraceAttrs(server, req)
 }
 
 // ResponseTraceAttrs returns trace attributes for telemetry from an HTTP response.
@@ -69,14 +69,14 @@ func (s HTTPServer) RequestTraceAttrs(server string, req *http.Request) []attrib
 // If any of the fields in the ResponseTelemetry are not set the attribute will be omitted.
 func (s HTTPServer) ResponseTraceAttrs(resp ResponseTelemetry) []attribute.KeyValue {
 	if s.duplicate {
-		return append(oldHTTPServer{}.ResponseTraceAttrs(resp), newHTTPServer{}.ResponseTraceAttrs(resp)...)
+		return append(OldHTTPServer{}.ResponseTraceAttrs(resp), CurrentHTTPServer{}.ResponseTraceAttrs(resp)...)
 	}
-	return oldHTTPServer{}.ResponseTraceAttrs(resp)
+	return OldHTTPServer{}.ResponseTraceAttrs(resp)
 }
 
 // Route returns the attribute for the route.
 func (s HTTPServer) Route(route string) attribute.KeyValue {
-	return oldHTTPServer{}.Route(route)
+	return OldHTTPServer{}.Route(route)
 }
 
 // Status returns a span status code and message for an HTTP status code
@@ -113,7 +113,7 @@ type MetricData struct {
 
 func (s HTTPServer) RecordMetrics(ctx context.Context, md ServerMetricData) {
 	if s.requestBytesCounter != nil && s.responseBytesCounter != nil && s.serverLatencyMeasure != nil {
-		attributes := oldHTTPServer{}.MetricAttributes(md.ServerName, md.Req, md.StatusCode, md.AdditionalAttributes)
+		attributes := OldHTTPServer{}.MetricAttributes(md.ServerName, md.Req, md.StatusCode, md.AdditionalAttributes)
 		o := metric.WithAttributeSet(attribute.NewSet(attributes...))
 		addOpts := []metric.AddOption{o}
 		s.requestBytesCounter.Add(ctx, md.RequestSize, addOpts...)
@@ -136,7 +136,7 @@ func NewHTTPServer(meter metric.Meter) HTTPServer {
 	server := HTTPServer{
 		duplicate: duplicate,
 	}
-	server.requestBytesCounter, server.responseBytesCounter, server.serverLatencyMeasure = oldHTTPServer{}.createMeasures(meter)
+	server.requestBytesCounter, server.responseBytesCounter, server.serverLatencyMeasure = OldHTTPServer{}.createMeasures(meter)
 	if duplicate {
 		server.requestBodySizeHistogram, server.responseBodySizeHistogram, server.requestDurationHistogram = newHTTPServer{}.createMeasures(meter)
 	}
@@ -157,25 +157,25 @@ func NewHTTPClient(meter metric.Meter) HTTPClient {
 	client := HTTPClient{
 		duplicate: env == "http/dup",
 	}
-	client.requestBytesCounter, client.responseBytesCounter, client.latencyMeasure = oldHTTPClient{}.createMeasures(meter)
+	client.requestBytesCounter, client.responseBytesCounter, client.latencyMeasure = OldHTTPClient{}.createMeasures(meter)
 	return client
 }
 
 // RequestTraceAttrs returns attributes for an HTTP request made by a client.
 func (c HTTPClient) RequestTraceAttrs(req *http.Request) []attribute.KeyValue {
 	if c.duplicate {
-		return append(oldHTTPClient{}.RequestTraceAttrs(req), newHTTPClient{}.RequestTraceAttrs(req)...)
+		return append(OldHTTPClient{}.RequestTraceAttrs(req), CurrentHTTPClient{}.RequestTraceAttrs(req)...)
 	}
-	return oldHTTPClient{}.RequestTraceAttrs(req)
+	return OldHTTPClient{}.RequestTraceAttrs(req)
 }
 
 // ResponseTraceAttrs returns metric attributes for an HTTP request made by a client.
 func (c HTTPClient) ResponseTraceAttrs(resp *http.Response) []attribute.KeyValue {
 	if c.duplicate {
-		return append(oldHTTPClient{}.ResponseTraceAttrs(resp), newHTTPClient{}.ResponseTraceAttrs(resp)...)
+		return append(OldHTTPClient{}.ResponseTraceAttrs(resp), CurrentHTTPClient{}.ResponseTraceAttrs(resp)...)
 	}
 
-	return oldHTTPClient{}.ResponseTraceAttrs(resp)
+	return OldHTTPClient{}.ResponseTraceAttrs(resp)
 }
 
 func (c HTTPClient) Status(code int) (codes.Code, string) {
@@ -190,7 +190,7 @@ func (c HTTPClient) Status(code int) (codes.Code, string) {
 
 func (c HTTPClient) ErrorType(err error) attribute.KeyValue {
 	if c.duplicate {
-		return newHTTPClient{}.ErrorType(err)
+		return CurrentHTTPClient{}.ErrorType(err)
 	}
 
 	return attribute.KeyValue{}
@@ -210,7 +210,7 @@ func (o MetricOpts) AddOptions() metric.AddOption {
 }
 
 func (c HTTPClient) MetricOptions(ma MetricAttributes) MetricOpts {
-	attributes := oldHTTPClient{}.MetricAttributes(ma.Req, ma.StatusCode, ma.AdditionalAttributes)
+	attributes := OldHTTPClient{}.MetricAttributes(ma.Req, ma.StatusCode, ma.AdditionalAttributes)
 	// TODO: Duplicate Metrics
 	set := metric.WithAttributeSet(attribute.NewSet(attributes...))
 	return MetricOpts{
