@@ -10,9 +10,6 @@ import (
 
 	"github.com/stretchr/testify/require"
 
-	"go.opentelemetry.io/otel/attribute"
-	"go.opentelemetry.io/otel/metric"
-	"go.opentelemetry.io/otel/metric/embedded"
 	"go.opentelemetry.io/otel/metric/noop"
 )
 
@@ -91,45 +88,6 @@ func TestHTTPClientDoesNotPanic(t *testing.T) {
 				}, opts)
 			})
 		})
-	}
-}
-
-type testInst struct {
-	embedded.Int64Counter
-	embedded.Float64Histogram
-
-	intValue   int64
-	floatValue float64
-	attributes []attribute.KeyValue
-}
-
-func (t *testInst) Add(ctx context.Context, incr int64, options ...metric.AddOption) {
-	t.intValue = incr
-	cfg := metric.NewAddConfig(options)
-	attr := cfg.Attributes()
-	t.attributes = attr.ToSlice()
-}
-
-func (t *testInst) Record(ctx context.Context, value float64, options ...metric.RecordOption) {
-	t.floatValue = value
-	cfg := metric.NewRecordConfig(options)
-	attr := cfg.Attributes()
-	t.attributes = attr.ToSlice()
-}
-
-func NewTestHTTPServer() HTTPServer {
-	return HTTPServer{
-		requestBytesCounter:  &testInst{},
-		responseBytesCounter: &testInst{},
-		serverLatencyMeasure: &testInst{},
-	}
-}
-
-func NewTestHTTPClient() HTTPClient {
-	return HTTPClient{
-		requestBytesCounter:  &testInst{},
-		responseBytesCounter: &testInst{},
-		latencyMeasure:       &testInst{},
 	}
 }
 

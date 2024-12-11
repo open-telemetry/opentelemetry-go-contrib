@@ -50,6 +50,7 @@ import (
 	"log/slog"
 	"runtime"
 	"slices"
+	"strings"
 
 	"go.opentelemetry.io/otel/log"
 	"go.opentelemetry.io/otel/log/global"
@@ -192,9 +193,11 @@ func (h *Handler) convertRecord(r slog.Record) log.Record {
 	if h.source {
 		fs := runtime.CallersFrames([]uintptr{r.PC})
 		f, _ := fs.Next()
+		funcName, namespace := splitFuncName(f.Function)
 		record.AddAttributes(
 			log.String(string(semconv.CodeFilepathKey), f.File),
-			log.String(string(semconv.CodeFunctionKey), f.Function),
+			log.String(string(semconv.CodeFunctionKey), funcName),
+			log.String(string(semconv.CodeNamespaceKey), namespace),
 			log.Int(string(semconv.CodeLineNumberKey), f.Line),
 		)
 	}
@@ -475,4 +478,16 @@ func convert(v slog.Value) log.Value {
 		// have a "unhandled: " prefix than say that their code is panicking.
 		return log.StringValue(fmt.Sprintf("unhandled: (%s) %+v", v.Kind(), v.Any()))
 	}
+}
+
+// splitFuncName splits package path-qualified function name into
+// function name and package full name (namespace). E.g. it splits
+// "github.com/my/repo/pkg.foo" into
+// "foo" and "github.com/my/repo/pkg".
+func splitFuncName(f string) (string, string) {
+	i := strings.LastIndexByte(f, '.')
+	if i < 0 {
+		return "", ""
+	}
+	return f[i+1:], f[:i]
 }
