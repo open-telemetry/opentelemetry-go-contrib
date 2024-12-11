@@ -175,7 +175,7 @@ func TestCoreWithCaller(t *testing.T) {
 	assert.Equal(t, testMessage, got.Body().AsString())
 	assert.Equal(t, log.SeverityInfo, got.Severity())
 	assert.Equal(t, zap.InfoLevel.String(), got.SeverityText())
-	assert.Equal(t, 3, got.AttributesLen())
+	assert.Equal(t, 4, got.AttributesLen())
 	got.WalkAttributes(func(kv log.KeyValue) bool {
 		switch kv.Key {
 		case string(semconv.CodeFilepathKey):
@@ -183,7 +183,9 @@ func TestCoreWithCaller(t *testing.T) {
 		case string(semconv.CodeLineNumberKey):
 			assert.Positive(t, kv.Value.AsInt64())
 		case string(semconv.CodeFunctionKey):
-			assert.Contains(t, kv.Value.AsString(), "TestCoreWithCaller")
+			assert.Equal(t, t.Name(), kv.Value.AsString())
+		case string(semconv.CodeNamespaceKey):
+			assert.Equal(t, "go.opentelemetry.io/contrib/bridges/otelzap", kv.Value.AsString())
 		default:
 			assert.Fail(t, "unexpected attribute key", kv.Key)
 		}
@@ -266,6 +268,42 @@ func TestConvertLevel(t *testing.T) {
 		if result != test.expectedSev {
 			t.Errorf("For level %v, expected %v but got %v", test.level, test.expectedSev, result)
 		}
+	}
+}
+
+func TestSplitFuncName(t *testing.T) {
+	testCases := []struct {
+		fullFuncName  string
+		wantFuncName  string
+		wantNamespace string
+	}{
+		{
+			fullFuncName:  "github.com/my/repo/pkg.foo",
+			wantFuncName:  "foo",
+			wantNamespace: "github.com/my/repo/pkg",
+		},
+		{
+			fullFuncName:  "net/http.Get",
+			wantFuncName:  "Get",
+			wantNamespace: "net/http",
+		},
+		{
+			fullFuncName:  "invalid",
+			wantFuncName:  "",
+			wantNamespace: "",
+		},
+		{
+			fullFuncName:  ".",
+			wantFuncName:  "",
+			wantNamespace: "",
+		},
+	}
+	for _, tc := range testCases {
+		t.Run(tc.fullFuncName, func(t *testing.T) {
+			gotFuncName, gotNamespace := splitFuncName(tc.fullFuncName)
+			assert.Equal(t, tc.wantFuncName, gotFuncName)
+			assert.Equal(t, tc.wantNamespace, gotNamespace)
+		})
 	}
 }
 
