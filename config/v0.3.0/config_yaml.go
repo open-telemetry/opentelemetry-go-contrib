@@ -31,7 +31,7 @@ func (j *AttributeNameValueType) UnmarshalYAML(unmarshal func(interface{}) error
 	return nil
 }
 
-// UnmarshalYAML implements json.Unmarshaler.
+// UnmarshalYAML implements yaml.Unmarshaler.
 func (j *NameStringValuePair) UnmarshalYAML(unmarshal func(interface{}) error) error {
 	var raw map[string]interface{}
 	if err := unmarshal(&raw); err != nil {
