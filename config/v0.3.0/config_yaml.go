@@ -4,6 +4,7 @@
 package config // import "go.opentelemetry.io/contrib/config/v0.3.0"
 
 import (
+	"errors"
 	"fmt"
 	"reflect"
 )
@@ -27,6 +28,27 @@ func (j *AttributeNameValueType) UnmarshalYAML(unmarshal func(interface{}) error
 		return fmt.Errorf("invalid value (expected one of %#v): %#v", enumValuesAttributeNameValueType, v.Value)
 	}
 	*j = AttributeNameValueType(v)
+	return nil
+}
+
+// UnmarshalYAML implements json.Unmarshaler.
+func (j *NameStringValuePair) UnmarshalYAML(unmarshal func(interface{}) error) error {
+	var raw map[string]interface{}
+	if err := unmarshal(&raw); err != nil {
+		return err
+	}
+	if _, ok := raw["name"]; raw != nil && !ok {
+		return errors.New("yaml: cannot unmarshal field name in NameStringValuePair required")
+	}
+	if _, ok := raw["value"]; raw != nil && !ok {
+		return errors.New("yaml: cannot unmarshal field value in NameStringValuePair required")
+	}
+	type Plain NameStringValuePair
+	var plain Plain
+	if err := unmarshal(&plain); err != nil {
+		return err
+	}
+	*j = NameStringValuePair(plain)
 	return nil
 }
 

@@ -113,10 +113,10 @@ func (j *NameStringValuePair) UnmarshalJSON(b []byte) error {
 		return err
 	}
 	if _, ok := raw["name"]; raw != nil && !ok {
-		return errors.New("field name in NameStringValuePair: required")
+		return errors.New("json: cannot unmarshal field name in NameStringValuePair required")
 	}
 	if _, ok := raw["value"]; raw != nil && !ok {
-		return errors.New("field value in NameStringValuePair: required")
+		return errors.New("json: cannot unmarshal field value in NameStringValuePair required")
 	}
 	type Plain NameStringValuePair
 	var plain Plain

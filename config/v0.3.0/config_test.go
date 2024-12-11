@@ -406,6 +406,11 @@ func TestParseYAML(t *testing.T) {
   line 2: cannot unmarshal !!str ` + "`notabool`" + ` into bool`),
 		},
 		{
+			name:    "invalid nil value",
+			input:   "invalid_nil_value.yaml",
+			wantErr: errors.New(`yaml: cannot unmarshal field value in NameStringValuePair required`),
+		},
+		{
 			name:  "valid v0.2 config",
 			input: "v0.2.yaml",
 			wantErr: errors.New(`yaml: unmarshal errors:
@@ -429,6 +434,7 @@ func TestParseYAML(t *testing.T) {
 
 			got, err := ParseYAML(b)
 			if tt.wantErr != nil {
+				require.Error(t, err)
 				require.Equal(t, tt.wantErr.Error(), err.Error())
 			} else {
 				require.NoError(t, err)
@@ -460,6 +466,11 @@ func TestSerializeJSON(t *testing.T) {
 			wantErr: errors.New(`json: cannot unmarshal string into Go struct field Plain.disabled of type bool`),
 		},
 		{
+			name:    "invalid nil value",
+			input:   "invalid_nil_value.json",
+			wantErr: errors.New(`json: cannot unmarshal field value in NameStringValuePair required`),
+		},
+		{
 			name:    "valid v0.2 config",
 			input:   "v0.2.json",
 			wantErr: errors.New(`json: cannot unmarshal object into Go struct field LogRecordProcessor.logger_provider.processors.batch of type []config.NameStringValuePair`),
@@ -480,6 +491,7 @@ func TestSerializeJSON(t *testing.T) {
 			err = json.Unmarshal(b, &got)
 
 			if tt.wantErr != nil {
+				require.Error(t, err)
 				require.Equal(t, tt.wantErr.Error(), err.Error())
 			} else {
 				require.NoError(t, err)
