@@ -37,10 +37,10 @@ func (j *NameStringValuePair) UnmarshalYAML(unmarshal func(interface{}) error) e
 	if err := unmarshal(&raw); err != nil {
 		return err
 	}
-	if _, ok := raw["name"]; raw != nil && !ok {
+	if _, ok := raw["name"]; !ok {
 		return errors.New("yaml: cannot unmarshal field name in NameStringValuePair required")
 	}
-	if _, ok := raw["value"]; raw != nil && !ok {
+	if _, ok := raw["value"]; !ok {
 		return errors.New("yaml: cannot unmarshal field value in NameStringValuePair required")
 	}
 	type Plain NameStringValuePair
