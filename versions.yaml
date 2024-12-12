@@ -3,7 +3,7 @@
 
 module-sets:
   stable-v1:
-    version: v1.32.0
+    version: v1.33.0
     modules:
       - go.opentelemetry.io/contrib
       - go.opentelemetry.io/contrib/tools
@@ -16,7 +16,7 @@ module-sets:
       - go.opentelemetry.io/contrib/detectors/aws/ecs
       - go.opentelemetry.io/contrib/detectors/aws/eks
   experimental-instrumentation:
-    version: v0.57.0
+    version: v0.58.0
     modules:
       - go.opentelemetry.io/contrib/bridges/prometheus
       - go.opentelemetry.io/contrib/detectors/aws/lambda
@@ -59,29 +59,29 @@ module-sets:
       - go.opentelemetry.io/contrib/instrumentation/runtime
       - go.opentelemetry.io/contrib/zpages
   experimental-samplers:
-    version: v0.26.0
+    version: v0.27.0
     modules:
       - go.opentelemetry.io/contrib/samplers/jaegerremote
       - go.opentelemetry.io/contrib/samplers/jaegerremote/example
       - go.opentelemetry.io/contrib/samplers/probability/consistent
   experimental-config:
-    version: v0.12.0
+    version: v0.13.0
     modules:
       - go.opentelemetry.io/contrib/config
   experimental-bridge:
-    version: v0.7.0
+    version: v0.8.0
     modules:
       - go.opentelemetry.io/contrib/bridges/otellogr
       - go.opentelemetry.io/contrib/bridges/otellogrus
       - go.opentelemetry.io/contrib/bridges/otelslog
       - go.opentelemetry.io/contrib/bridges/otelzap
   experimental-processors:
-    version: v0.5.0
+    version: v0.6.0
     modules:
       - go.opentelemetry.io/contrib/processors/baggagecopy
       - go.opentelemetry.io/contrib/processors/minsev
   experimental-detectors:
-    version: v0.4.0
+    version: v0.5.0
     modules:
       - go.opentelemetry.io/contrib/detectors/azure/azurevm
 excluded-modules:
