@@ -75,11 +75,7 @@ func (p *LogProcessor) OnEmit(ctx context.Context, record *log.Record) error {
 // severity of param is greater than or equal to p.Minimum. Otherwise false is
 // returned.
 func (p *LogProcessor) Enabled(ctx context.Context, param api.EnabledParameters) bool {
-	sev, ok := param.Severity()
-	if !ok {
-		return true
-	}
-
+	sev := param.Severity
 	if p.filter != nil {
 		return sev >= p.sev.Severity() &&
 			p.filter.Enabled(ctx, param)
