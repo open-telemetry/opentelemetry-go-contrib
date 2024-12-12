@@ -37,11 +37,11 @@ func ExampleSeveritier() {
 
 	p := NewLogProcessor(&processor{}, EnvSeverity{})
 
-	ctx, params := context.Background(), log.EnabledParameters{}
-	params.SetSeverity(log.SeverityDebug)
+	ctx := context.Background()
+	params := log.EnabledParameters{Severity: log.SeverityDebug}
 	fmt.Println(p.Enabled(ctx, params))
 
-	params.SetSeverity(log.SeverityError)
+	params.Severity = log.SeverityError
 	fmt.Println(p.Enabled(ctx, params))
 
 	// Output:
