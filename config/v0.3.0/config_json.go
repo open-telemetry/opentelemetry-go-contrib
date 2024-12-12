@@ -112,18 +112,25 @@ func (j *NameStringValuePair) UnmarshalJSON(b []byte) error {
 	if err := json.Unmarshal(b, &raw); err != nil {
 		return err
 	}
-	if _, ok := raw["name"]; raw != nil && !ok {
-		return errors.New("field name in NameStringValuePair: required")
+	if _, ok := raw["name"]; !ok {
+		return errors.New("json: cannot unmarshal field name in NameStringValuePair required")
 	}
-	if _, ok := raw["value"]; raw != nil && !ok {
-		return errors.New("field value in NameStringValuePair: required")
+	if _, ok := raw["value"]; !ok {
+		return errors.New("json: cannot unmarshal field value in NameStringValuePair required")
 	}
-	type Plain NameStringValuePair
-	var plain Plain
-	if err := json.Unmarshal(b, &plain); err != nil {
-		return err
+	var name, value string
+	var ok bool
+	if name, ok = raw["name"].(string); !ok {
+		return errors.New("yaml: cannot unmarshal field name in NameStringValuePair must be string")
 	}
-	*j = NameStringValuePair(plain)
+	if value, ok = raw["value"].(string); !ok {
+		return errors.New("yaml: cannot unmarshal field value in NameStringValuePair must be string")
+	}
+
+	*j = NameStringValuePair{
+		Name:  name,
+		Value: &value,
+	}
 	return nil
 }
 
