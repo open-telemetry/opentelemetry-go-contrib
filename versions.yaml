@@ -85,7 +85,8 @@ module-sets:
     modules:
       - go.opentelemetry.io/contrib/detectors/azure/azurevm
 excluded-modules:
-  - go.opentelemetry.io/contrib/examples/dice
+  - go.opentelemetry.io/contrib/examples/dice/instrumented
+  - go.opentelemetry.io/contrib/examples/dice/uninstrumented
   - go.opentelemetry.io/contrib/examples/namedtracer
   - go.opentelemetry.io/contrib/examples/opencensus
   - go.opentelemetry.io/contrib/examples/otel-collector
