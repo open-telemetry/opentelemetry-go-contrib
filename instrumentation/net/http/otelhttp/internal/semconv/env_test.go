@@ -134,11 +134,3 @@ func NewTestHTTPServer() HTTPServer {
 	httpServer.requestDurationHistogram = &testRecorder[float64]{}
 	return httpServer
 }
-
-func NewTestHTTPClient() HTTPClient {
-	return HTTPClient{
-		requestBytesCounter:  &testRecorder[int64]{},
-		responseBytesCounter: &testRecorder[int64]{},
-		latencyMeasure:       &testRecorder[float64]{},
-	}
-}
