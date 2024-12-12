@@ -17,7 +17,6 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 - Added SNS instrumentation in `go.opentelemetry.io/contrib/instrumentation/github.com/aws/aws-sdk-go-v2/otelaws`. (#6388)
 - Generate new server metrics upon setting the environment variable `OTEL_SEMCONV_STABILITY_OPT_IN=http/dup` within `go.opentelemetry.io/contrib/instrumentation/net/http/otelhttp`. (#6411)
 
-
 ### Changed
 
 - Change the span name to be `GET /path` so it complies with the OTel HTTP semantic conventions in `go.opentelemetry.io/contrib/instrumentation/github.com/labstack/echo/otelecho`. (#6365)
