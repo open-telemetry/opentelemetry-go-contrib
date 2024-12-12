@@ -15,6 +15,7 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 - The `go.opentelemetry.io/contrib/bridges/otellogr` module.
   This module provides an OpenTelemetry logging bridge for `github.com/go-logr/logr`. (#6386)
 - Added SNS instrumentation in `go.opentelemetry.io/contrib/instrumentation/github.com/aws/aws-sdk-go-v2/otelaws`. (#6388)
+- Use a `sync.Pool` for metric options in `go.opentelemetry.io/contrib/instrumentation/net/http/otelhttp`. (#6394)
 - Added support for configuring `Certificate` field when configuring OTLP exporters in `go.opentelemetry.io/contrib/config`. (#6376)
 
 ### Changed
@@ -30,6 +31,8 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 - Allow marshaling types in `go.opentelemetry.io/contrib/config`. (#6347)
 - Removed the redundant handling of panic from the `HTML` function in `go.opentelemetry.io/contrib/instrumentation/github.com/gin-gonic/gin/otelgin`. (#6373)
 - The `code.function` attribute emitted by `go.opentelemetry.io/contrib/bridges/otelslog` now stores just the function name instead the package path-qualified function name. The `code.namespace` attribute now stores the package path. (#6415)
+- The `code.function` attribute emitted by `go.opentelemetry.io/contrib/bridges/otelzap` now stores just the function name instead the package path-qualified function name. The `code.namespace` attribute now stores the package path. (#6423)
+- Return an error for `nil` values when unmarshaling `NameStringValuePair` in `go.opentelemetry.io/contrib/config`. (#6425)
 
 <!-- Released section -->
 <!-- Don't change this section unless doing release -->
