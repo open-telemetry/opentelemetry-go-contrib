@@ -15,7 +15,7 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 - The `go.opentelemetry.io/contrib/bridges/otellogr` module.
   This module provides an OpenTelemetry logging bridge for `github.com/go-logr/logr`. (#6386)
 - Added SNS instrumentation in `go.opentelemetry.io/contrib/instrumentation/github.com/aws/aws-sdk-go-v2/otelaws`. (#6388)
-- Use a pool for the semantic convention metrics options in `go.opentelemetry.io/contrib/instrumentation/net/http/otelhttp`. (#6394)
+- Use a `sync.Pool` for metric options in `go.opentelemetry.io/contrib/instrumentation/net/http/otelhttp`. (#6394)
 
 ### Changed
 
