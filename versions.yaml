@@ -26,6 +26,7 @@ module-sets:
       - go.opentelemetry.io/contrib/propagators/opencensus/examples
       - go.opentelemetry.io/contrib/instrumentation/net/http/otelhttp
       - go.opentelemetry.io/contrib/instrumentation/net/http/otelhttp/example
+      - go.opentelemetry.io/contrib/instrumentation/net/http/otelhttp/internal/semconv/test
       - go.opentelemetry.io/contrib/instrumentation/net/http/otelhttp/test
       - go.opentelemetry.io/contrib/instrumentation/net/http/httptrace/otelhttptrace
       - go.opentelemetry.io/contrib/instrumentation/net/http/httptrace/otelhttptrace/example
