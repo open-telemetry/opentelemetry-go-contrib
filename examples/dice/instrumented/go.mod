@@ -3,7 +3,7 @@ module go.opentelemetry.io/contrib/examples/dice/instrumented
 go 1.22.0
 
 require (
-	go.opentelemetry.io/contrib/bridges/otelslog v0.7.0
+	go.opentelemetry.io/contrib/bridges/otelslog v0.8.0
 	go.opentelemetry.io/contrib/instrumentation/net/http/otelhttp v0.57.0
 	go.opentelemetry.io/otel v1.33.0
 	go.opentelemetry.io/otel/exporters/stdout/stdoutlog v0.9.0
