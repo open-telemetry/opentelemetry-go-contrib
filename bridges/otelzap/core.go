@@ -36,6 +36,7 @@ package otelzap // import "go.opentelemetry.io/contrib/bridges/otelzap"
 import (
 	"context"
 	"slices"
+	"strings"
 
 	"go.uber.org/zap/zapcore"
 
@@ -202,10 +203,12 @@ func (o *Core) Write(ent zapcore.Entry, fields []zapcore.Field) error {
 
 	r.AddAttributes(o.attr...)
 	if ent.Caller.Defined {
+		funcName, namespace := splitFuncName(ent.Caller.Function)
 		r.AddAttributes(
 			log.String(string(semconv.CodeFilepathKey), ent.Caller.File),
 			log.Int(string(semconv.CodeLineNumberKey), ent.Caller.Line),
-			log.String(string(semconv.CodeFunctionKey), ent.Caller.Function),
+			log.String(string(semconv.CodeFunctionKey), funcName),
+			log.String(string(semconv.CodeNamespaceKey), namespace),
 		)
 	}
 	if ent.Stack != "" {
@@ -261,4 +264,16 @@ func convertLevel(level zapcore.Level) log.Severity {
 	default:
 		return log.SeverityUndefined
 	}
+}
+
+// splitFuncName splits package path-qualified function name into
+// function name and package full name (namespace). E.g. it splits
+// "github.com/my/repo/pkg.foo" into
+// "foo" and "github.com/my/repo/pkg".
+func splitFuncName(f string) (string, string) {
+	i := strings.LastIndexByte(f, '.')
+	if i < 0 {
+		return "", ""
+	}
+	return f[i+1:], f[:i]
 }
