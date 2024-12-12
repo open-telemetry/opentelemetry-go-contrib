@@ -5,7 +5,10 @@ package config // import "go.opentelemetry.io/contrib/config/v0.3.0"
 
 import (
 	"context"
+	"crypto/tls"
+	"crypto/x509"
 	"errors"
+	"os"
 
 	"gopkg.in/yaml.v3"
 
@@ -154,4 +157,21 @@ func toStringMap(pairs []NameStringValuePair) map[string]string {
 		output[v.Name] = *v.Value
 	}
 	return output
+}
+
+// createTLSConfig creates a tls.Config from a raw certificate bytes
+// to verify a server certificate.
+func createTLSConfig(certFile string) (*tls.Config, error) {
+	b, err := os.ReadFile(certFile)
+	if err != nil {
+		return nil, err
+	}
+	cp := x509.NewCertPool()
+	if ok := cp.AppendCertsFromPEM(b); !ok {
+		return nil, errors.New("failed to append certificate to the cert pool")
+	}
+
+	return &tls.Config{
+		RootCAs: cp,
+	}, nil
 }

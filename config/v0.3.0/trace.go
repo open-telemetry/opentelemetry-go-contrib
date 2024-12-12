@@ -10,6 +10,8 @@ import (
 	"net/url"
 	"time"
 
+	"google.golang.org/grpc/credentials"
+
 	"go.opentelemetry.io/otel/exporters/otlp/otlptrace/otlptracegrpc"
 	"go.opentelemetry.io/otel/exporters/otlp/otlptrace/otlptracehttp"
 	"go.opentelemetry.io/otel/exporters/stdout/stdouttrace"
@@ -127,6 +129,14 @@ func otlpGRPCSpanExporter(ctx context.Context, otlpConfig *OTLP) (sdktrace.SpanE
 		opts = append(opts, otlptracegrpc.WithHeaders(toStringMap(otlpConfig.Headers)))
 	}
 
+	if otlpConfig.Certificate != nil {
+		creds, err := credentials.NewClientTLSFromFile(*otlpConfig.Certificate, "")
+		if err != nil {
+			return nil, fmt.Errorf("could not create client tls credentials: %w", err)
+		}
+		opts = append(opts, otlptracegrpc.WithTLSCredentials(creds))
+	}
+
 	return otlptracegrpc.New(ctx, opts...)
 }
 
@@ -162,6 +172,14 @@ func otlpHTTPSpanExporter(ctx context.Context, otlpConfig *OTLP) (sdktrace.SpanE
 	}
 	if len(otlpConfig.Headers) > 0 {
 		opts = append(opts, otlptracehttp.WithHeaders(toStringMap(otlpConfig.Headers)))
+	}
+
+	if otlpConfig.Certificate != nil {
+		creds, err := createTLSConfig(*otlpConfig.Certificate)
+		if err != nil {
+			return nil, fmt.Errorf("could not create client tls credentials: %w", err)
+		}
+		opts = append(opts, otlptracehttp.WithTLSClientConfig(creds))
 	}
 
 	return otlptracehttp.New(ctx, opts...)
