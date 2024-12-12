@@ -2,8 +2,6 @@ module go.opentelemetry.io/contrib/instrumentation/go.mongodb.org/mongo-driver/m
 
 go 1.22.0
 
-toolchain go1.23.4
-
 require (
 	go.mongodb.org/mongo-driver v1.17.1
 	go.opentelemetry.io/otel v1.33.0

@@ -2,8 +2,6 @@ module go.opentelemetry.io/contrib/instrumentation/github.com/emicklei/go-restfu
 
 go 1.22.0
 
-toolchain go1.23.4
-
 replace go.opentelemetry.io/contrib/propagators/b3 => ../../../../../propagators/b3
 
 require (

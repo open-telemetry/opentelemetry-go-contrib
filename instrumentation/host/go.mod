@@ -2,8 +2,6 @@ module go.opentelemetry.io/contrib/instrumentation/host
 
 go 1.22.0
 
-toolchain go1.23.4
-
 require (
 	github.com/shirou/gopsutil/v4 v4.24.11
 	go.opentelemetry.io/otel v1.33.0

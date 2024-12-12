@@ -2,8 +2,6 @@ module go.opentelemetry.io/contrib/instrumentation/github.com/gorilla/mux/otelmu
 
 go 1.22.0
 
-toolchain go1.23.4
-
 replace go.opentelemetry.io/contrib/instrumentation/github.com/gorilla/mux/otelmux => ../
 
 require (

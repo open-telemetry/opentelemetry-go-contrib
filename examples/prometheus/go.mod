@@ -2,8 +2,6 @@ module go.opentelemetry.io/contrib/examples/prometheus
 
 go 1.22.0
 
-toolchain go1.23.4
-
 require (
 	github.com/prometheus/client_golang v1.20.5
 	go.opentelemetry.io/otel v1.33.0

@@ -2,8 +2,6 @@ module go.opentelemetry.io/contrib/propagators/autoprop
 
 go 1.22.0
 
-toolchain go1.23.4
-
 require (
 	github.com/stretchr/testify v1.10.0
 	go.opentelemetry.io/contrib/propagators/aws v1.33.0

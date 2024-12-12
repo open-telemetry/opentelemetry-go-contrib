@@ -2,8 +2,6 @@ module go.opentelemetry.io/contrib/detectors/aws/ecs
 
 go 1.22.0
 
-toolchain go1.23.4
-
 require (
 	github.com/brunoscheufler/aws-ecs-metadata-go v0.0.0-20221221133751-67e37ae746cd
 	github.com/stretchr/testify v1.10.0

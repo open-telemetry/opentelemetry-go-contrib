@@ -2,8 +2,6 @@ module go.opentelemetry.io/contrib/instrumentation/github.com/emicklei/go-restfu
 
 go 1.22.0
 
-toolchain go1.23.4
-
 require (
 	github.com/emicklei/go-restful/v3 v3.12.1
 	github.com/stretchr/testify v1.10.0

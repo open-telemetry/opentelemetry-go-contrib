@@ -2,8 +2,6 @@ module go.opentelemetry.io/contrib/processors/minsev
 
 go 1.22.0
 
-toolchain go1.23.4
-
 require (
 	github.com/stretchr/testify v1.10.0
 	go.opentelemetry.io/otel/log v0.9.0

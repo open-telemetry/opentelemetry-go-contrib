@@ -2,8 +2,6 @@ module go.opentelemetry.io/contrib/bridges/otellogrus
 
 go 1.22.0
 
-toolchain go1.23.4
-
 require (
 	github.com/sirupsen/logrus v1.9.3
 	github.com/stretchr/testify v1.10.0

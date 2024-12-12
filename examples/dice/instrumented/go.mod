@@ -2,8 +2,6 @@ module go.opentelemetry.io/contrib/examples/dice/instrumented
 
 go 1.22.0
 
-toolchain go1.23.4
-
 require (
 	go.opentelemetry.io/contrib/bridges/otelslog v0.7.0
 	go.opentelemetry.io/contrib/instrumentation/net/http/otelhttp v0.57.0

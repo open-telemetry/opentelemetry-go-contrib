@@ -2,8 +2,6 @@ module go.opentelemetry.io/contrib/examples/zipkin
 
 go 1.22.0
 
-toolchain go1.23.4
-
 require (
 	go.opentelemetry.io/otel v1.33.0
 	go.opentelemetry.io/otel/exporters/zipkin v1.33.0

@@ -2,8 +2,6 @@ module go.opentelemetry.io/contrib/instrumentation/github.com/aws/aws-sdk-go-v2/
 
 go 1.22.0
 
-toolchain go1.23.4
-
 require (
 	github.com/aws/aws-sdk-go-v2 v1.32.6
 	github.com/aws/aws-sdk-go-v2/service/dynamodb v1.38.0

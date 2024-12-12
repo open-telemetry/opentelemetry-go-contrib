@@ -2,8 +2,6 @@ module go.opentelemetry.io/contrib/samplers/jaegerremote/example
 
 go 1.22.0
 
-toolchain go1.23.4
-
 require (
 	github.com/davecgh/go-spew v1.1.1
 	go.opentelemetry.io/contrib/samplers/jaegerremote v0.27.0

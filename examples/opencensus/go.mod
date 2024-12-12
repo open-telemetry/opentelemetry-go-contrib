@@ -2,8 +2,6 @@ module go.opentelemetry.io/contrib/examples/opencensus
 
 go 1.22.0
 
-toolchain go1.23.4
-
 require (
 	go.opencensus.io v0.24.0
 	go.opentelemetry.io/otel v1.33.0
