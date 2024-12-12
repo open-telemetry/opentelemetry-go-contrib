@@ -7,14 +7,17 @@ import (
 	"fmt"
 	"net/http"
 	"reflect"
+	"slices"
 	"strconv"
 	"strings"
 
 	"go.opentelemetry.io/otel/attribute"
+	"go.opentelemetry.io/otel/metric"
+	"go.opentelemetry.io/otel/metric/noop"
 	semconvNew "go.opentelemetry.io/otel/semconv/v1.26.0"
 )
 
-type newHTTPServer struct{}
+type CurrentHTTPServer struct{}
 
 // TraceRequest returns trace attributes for an HTTP request received by a
 // server.
@@ -199,8 +202,7 @@ func (n CurrentHTTPServer) Route(route string) attribute.KeyValue {
 	return semconvNew.HTTPRoute(route)
 }
 
-type CurrentHTTPClient struct{}
-func (n newHTTPServer) createMeasures(meter metric.Meter) (metric.Int64Histogram, metric.Int64Histogram, metric.Float64Histogram) {
+func (n CurrentHTTPServer) createMeasures(meter metric.Meter) (metric.Int64Histogram, metric.Int64Histogram, metric.Float64Histogram) {
 	if meter == nil {
 		return noop.Int64Histogram{}, noop.Int64Histogram{}, noop.Float64Histogram{}
 	}
@@ -229,17 +231,17 @@ func (n newHTTPServer) createMeasures(meter metric.Meter) (metric.Int64Histogram
 	return requestBodySizeHistogram, responseBodySizeHistogram, requestDurationHistogram
 }
 
-func (n newHTTPServer) MetricAttributes(server string, req *http.Request, statusCode int, additionalAttributes []attribute.KeyValue) []attribute.KeyValue {
+func (n CurrentHTTPServer) MetricAttributes(server string, req *http.Request, statusCode int, additionalAttributes []attribute.KeyValue) []attribute.KeyValue {
 	num := len(additionalAttributes) + 3
 	var host string
 	var p int
 	if server == "" {
-		host, p = splitHostPort(req.Host)
+		host, p = SplitHostPort(req.Host)
 	} else {
 		// Prioritize the primary server name.
-		host, p = splitHostPort(server)
+		host, p = SplitHostPort(server)
 		if p < 0 {
-			_, p = splitHostPort(req.Host)
+			_, p = SplitHostPort(req.Host)
 		}
 	}
 	hostPort := requiredHTTPPort(req.TLS != nil, p)
@@ -280,7 +282,7 @@ func (n newHTTPServer) MetricAttributes(server string, req *http.Request, status
 	return attributes
 }
 
-type newHTTPClient struct{}
+type CurrentHTTPClient struct{}
 
 // RequestTraceAttrs returns trace attributes for an HTTP request made by a client.
 func (n CurrentHTTPClient) RequestTraceAttrs(req *http.Request) []attribute.KeyValue {

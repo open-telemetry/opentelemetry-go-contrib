@@ -122,7 +122,7 @@ func (s HTTPServer) RecordMetrics(ctx context.Context, md ServerMetricData) {
 	}
 
 	if s.duplicate && s.requestDurationHistogram != nil && s.requestBodySizeHistogram != nil && s.responseBodySizeHistogram != nil {
-		attributes := newHTTPServer{}.MetricAttributes(md.ServerName, md.Req, md.StatusCode, md.AdditionalAttributes)
+		attributes := CurrentHTTPServer{}.MetricAttributes(md.ServerName, md.Req, md.StatusCode, md.AdditionalAttributes)
 		o := metric.WithAttributeSet(attribute.NewSet(attributes...))
 		s.requestBodySizeHistogram.Record(ctx, md.RequestSize, o)
 		s.responseBodySizeHistogram.Record(ctx, md.ResponseSize, o)
@@ -138,7 +138,7 @@ func NewHTTPServer(meter metric.Meter) HTTPServer {
 	}
 	server.requestBytesCounter, server.responseBytesCounter, server.serverLatencyMeasure = OldHTTPServer{}.createMeasures(meter)
 	if duplicate {
-		server.requestBodySizeHistogram, server.responseBodySizeHistogram, server.requestDurationHistogram = newHTTPServer{}.createMeasures(meter)
+		server.requestBodySizeHistogram, server.responseBodySizeHistogram, server.requestDurationHistogram = CurrentHTTPServer{}.createMeasures(meter)
 	}
 	return server
 }
