@@ -10,6 +10,7 @@ require (
 	github.com/golangci/golangci-lint v1.62.2
 	github.com/itchyny/gojq v0.12.17
 	github.com/jcchavezs/porto v0.6.0
+	github.com/stretchr/testify v1.10.0
 	github.com/wadey/gocovmerge v0.0.0-20160331181800-b5bfa59ec0ad
 	go.opentelemetry.io/build-tools/crosslink v0.15.0
 	go.opentelemetry.io/build-tools/gotmpl v0.15.0
@@ -184,7 +185,6 @@ require (
 	github.com/ssgreg/nlreturn/v2 v2.2.1 // indirect
 	github.com/stbenjam/no-sprintf-host-port v0.1.1 // indirect
 	github.com/stretchr/objx v0.5.2 // indirect
-	github.com/stretchr/testify v1.10.0 // indirect
 	github.com/subosito/gotenv v1.6.0 // indirect
 	github.com/tdakkota/asciicheck v0.2.0 // indirect
 	github.com/tetafro/godot v1.4.18 // indirect
