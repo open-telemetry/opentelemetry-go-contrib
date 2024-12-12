@@ -233,7 +233,7 @@ func (h *Handler) convertRecord(r slog.Record) log.Record {
 func (h *Handler) Enabled(ctx context.Context, l slog.Level) bool {
 	var param log.EnabledParameters
 	const sevOffset = slog.Level(log.SeverityDebug) - slog.LevelDebug
-	param.SetSeverity(log.Severity(l + sevOffset))
+	param.Severity = log.Severity(l + sevOffset)
 	return h.logger.Enabled(ctx, param)
 }
 

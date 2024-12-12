@@ -72,10 +72,7 @@ type enablerKey uint
 var enableKey enablerKey
 
 func (r *recorder) Enabled(ctx context.Context, param log.EnabledParameters) bool {
-	lvl, ok := param.Severity()
-	if !ok {
-		return true
-	}
+	lvl := param.Severity
 	return ctx.Value(enableKey) != nil || lvl >= r.MinSeverity
 }
 
