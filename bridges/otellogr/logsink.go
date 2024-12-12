@@ -201,9 +201,8 @@ var _ logr.LogSink = (*LogSink)(nil)
 // For example, commandline flags might be used to set the logging
 // verbosity and disable some info logs.
 func (l *LogSink) Enabled(level int) bool {
-	var param log.EnabledParameters
-	param.SetSeverity(l.levelSeverity(level))
 	ctx := context.Background()
+	param := log.EnabledParameters{Severity: l.levelSeverity(level)}
 	return l.logger.Enabled(ctx, param)
 }
 
