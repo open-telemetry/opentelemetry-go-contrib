@@ -4,8 +4,8 @@ go 1.22.7
 
 require (
 	go.opencensus.io v0.24.0
-	go.opentelemetry.io/contrib/instrumentation/google.golang.org/grpc/otelgrpc v0.57.0
-	go.opentelemetry.io/contrib/propagators/opencensus v0.57.0
+	go.opentelemetry.io/contrib/instrumentation/google.golang.org/grpc/otelgrpc v0.58.0
+	go.opentelemetry.io/contrib/propagators/opencensus v0.58.0
 	go.opentelemetry.io/otel v1.32.0
 	go.opentelemetry.io/otel/exporters/stdout/stdouttrace v1.32.0
 	go.opentelemetry.io/otel/sdk v1.32.0
