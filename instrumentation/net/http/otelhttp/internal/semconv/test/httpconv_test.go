@@ -4,6 +4,7 @@
 package test
 
 import (
+	"context"
 	"errors"
 	"fmt"
 	"net/http"
@@ -11,10 +12,13 @@ import (
 	"strings"
 	"testing"
 
+	"github.com/davecgh/go-spew/spew"
 	"github.com/stretchr/testify/assert"
-
+	"github.com/stretchr/testify/require"
 	"go.opentelemetry.io/contrib/instrumentation/net/http/otelhttp/internal/semconv"
 	"go.opentelemetry.io/otel/attribute"
+	sdkmetric "go.opentelemetry.io/otel/sdk/metric"
+	"go.opentelemetry.io/otel/sdk/metric/metricdata"
 )
 
 func TestNewTraceRequest(t *testing.T) {
@@ -45,6 +49,110 @@ func TestNewTraceRequest(t *testing.T) {
 		}
 	}
 	testTraceRequest(t, serv, want)
+}
+
+func TestNewRecordMetrics(t *testing.T) {
+	reader := sdkmetric.NewManualReader()
+	mp := sdkmetric.NewMeterProvider(sdkmetric.WithReader(reader))
+
+	tests := []struct {
+		name         string
+		setEnv       bool
+		serverFunc   func() semconv.HTTPServer
+		expectedFunc func(t *testing.T, rm metricdata.ResourceMetrics)
+	}{
+		{
+			name:   "not set env and the nil meter",
+			setEnv: false,
+			serverFunc: func() semconv.HTTPServer {
+				return semconv.NewHTTPServer(nil)
+			},
+			expectedFunc: func(t *testing.T, rm metricdata.ResourceMetrics) {
+				assert.Empty(t, rm.ScopeMetrics)
+			},
+		},
+		{
+			name:   "not set env and the meter",
+			setEnv: false,
+			serverFunc: func() semconv.HTTPServer {
+				return semconv.NewHTTPServer(mp.Meter("test"))
+			},
+			expectedFunc: func(t *testing.T, rm metricdata.ResourceMetrics) {
+				assert.Len(t, rm.ScopeMetrics, 1)
+			},
+		},
+		{
+			name:   "set env and the nil meter",
+			setEnv: true,
+			serverFunc: func() semconv.HTTPServer {
+				return semconv.NewHTTPServer(nil)
+			},
+			expectedFunc: func(t *testing.T, rm metricdata.ResourceMetrics) {
+				assert.Empty(t, rm.ScopeMetrics)
+			},
+		},
+		{
+			name:   "set env and the nil meter",
+			setEnv: true,
+			serverFunc: func() semconv.HTTPServer {
+				return semconv.NewHTTPServer(mp.Meter("test"))
+			},
+			expectedFunc: func(t *testing.T, rm metricdata.ResourceMetrics) {
+				// assert.Len(t, rm.ScopeMetrics, 1)
+				// assert.Equal(t, int64(100), server.requestBodySizeHistogram.(*testRecorder[int64]).value)
+				// assert.Equal(t, int64(200), server.responseBodySizeHistogram.(*testRecorder[int64]).value)
+				// assert.Equal(t, float64(300), server.requestDurationHistogram.(*testRecorder[float64]).value)
+				//
+				// want := []attribute.KeyValue{
+				// 	attribute.String("url.scheme", "http"),
+				// 	attribute.String("http.request.method", "POST"),
+				// 	attribute.Int64("http.response.status_code", 301),
+				// 	attribute.String("key", "value"),
+				// 	attribute.String("server.address", "stuff"),
+				// 	attribute.String("network.protocol.name", "http"),
+				// 	attribute.String("network.protocol.version", "1.1"),
+				// }
+				//
+				// assert.ElementsMatch(t, want, server.requestBodySizeHistogram.(*testRecorder[int64]).attributes)
+				// assert.ElementsMatch(t, want, server.responseBodySizeHistogram.(*testRecorder[int64]).attributes)
+				// assert.ElementsMatch(t, want, server.requestDurationHistogram.(*testRecorder[float64]).attributes)
+			},
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			if tt.setEnv {
+				t.Setenv(semconv.OTelSemConvStabilityOptIn, "http/dup")
+			}
+
+			server := tt.serverFunc()
+			req, err := http.NewRequest("POST", "http://example.com", nil)
+			assert.NoError(t, err)
+
+			server.RecordMetrics(context.Background(), semconv.ServerMetricData{
+				ServerName:   "stuff",
+				ResponseSize: 200,
+				MetricAttributes: semconv.MetricAttributes{
+					Req:        req,
+					StatusCode: 301,
+					AdditionalAttributes: []attribute.KeyValue{
+						attribute.String("key", "value"),
+					},
+				},
+				MetricData: semconv.MetricData{
+					RequestSize: 100,
+					ElapsedTime: 300,
+				},
+			})
+
+			rm := metricdata.ResourceMetrics{}
+			require.NoError(t, reader.Collect(context.Background(), &rm))
+			spew.Dump(rm)
+
+			tt.expectedFunc(t, rm)
+		})
+	}
 }
 
 func TestNewTraceResponse(t *testing.T) {
