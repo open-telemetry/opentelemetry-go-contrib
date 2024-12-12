@@ -51,12 +51,10 @@ func (j *NameStringValuePair) UnmarshalYAML(unmarshal func(interface{}) error) e
 	if value, ok = raw["value"].(string); !ok {
 		return errors.New("yaml: cannot unmarshal field value in NameStringValuePair must be string")
 	}
-	type Plain NameStringValuePair
-	plain := Plain{
+	*j = NameStringValuePair{
 		Name:  name,
 		Value: &value,
 	}
-	*j = NameStringValuePair(plain)
 	return nil
 }
 
