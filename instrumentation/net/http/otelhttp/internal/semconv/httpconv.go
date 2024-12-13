@@ -262,7 +262,7 @@ func (n CurrentHTTPServer) MetricAttributes(server string, req *http.Request, st
 
 	attributes := slices.Grow(additionalAttributes, num)
 	attributes = append(attributes,
-		standardizeNewHTTPMethodMetric(req.Method),
+		semconvNew.HTTPRequestMethodKey.String(standardizeHTTPMethod(req.Method)),
 		n.scheme(req.TLS != nil),
 		semconvNew.ServerAddress(host))
 
@@ -428,14 +428,4 @@ func (n CurrentHTTPClient) method(method string) (attribute.KeyValue, attribute.
 
 func isErrorStatusCode(code int) bool {
 	return code >= 400 || code < 100
-}
-
-func standardizeNewHTTPMethodMetric(method string) attribute.KeyValue {
-	method = strings.ToUpper(method)
-	switch method {
-	case http.MethodConnect, http.MethodDelete, http.MethodGet, http.MethodHead, http.MethodOptions, http.MethodPatch, http.MethodPost, http.MethodPut, http.MethodTrace:
-	default:
-		method = "_OTHER"
-	}
-	return semconvNew.HTTPRequestMethodKey.String(method)
 }

@@ -96,3 +96,13 @@ func handleErr(err error) {
 		otel.Handle(err)
 	}
 }
+
+func standardizeHTTPMethod(method string) string {
+	method = strings.ToUpper(method)
+	switch method {
+	case http.MethodConnect, http.MethodDelete, http.MethodGet, http.MethodHead, http.MethodOptions, http.MethodPatch, http.MethodPost, http.MethodPut, http.MethodTrace:
+	default:
+		method = "_OTHER"
+	}
+	return method
+}
