@@ -112,15 +112,22 @@ type MetricData struct {
 	ElapsedTime float64
 }
 
-var metricAddOptionPool = &sync.Pool{
-	New: func() interface{} {
-		return &[]metric.AddOption{}
-	},
-}
+var (
+	metricAddOptionPool = &sync.Pool{
+		New: func() interface{} {
+			return &[]metric.AddOption{}
+		},
+	}
+
+	metricRecordOptionPool = &sync.Pool{
+		New: func() interface{} {
+			return &[]metric.RecordOption{}
+		},
+	}
+)
 
 func (s HTTPServer) RecordMetrics(ctx context.Context, md ServerMetricData) {
 	if s.requestBytesCounter != nil && s.responseBytesCounter != nil && s.serverLatencyMeasure != nil {
-
 		attributes := OldHTTPServer{}.MetricAttributes(md.ServerName, md.Req, md.StatusCode, md.AdditionalAttributes)
 		o := metric.WithAttributeSet(attribute.NewSet(attributes...))
 		addOpts := metricAddOptionPool.Get().(*[]metric.AddOption)
@@ -135,9 +142,13 @@ func (s HTTPServer) RecordMetrics(ctx context.Context, md ServerMetricData) {
 	if s.duplicate && s.requestDurationHistogram != nil && s.requestBodySizeHistogram != nil && s.responseBodySizeHistogram != nil {
 		attributes := CurrentHTTPServer{}.MetricAttributes(md.ServerName, md.Req, md.StatusCode, md.AdditionalAttributes)
 		o := metric.WithAttributeSet(attribute.NewSet(attributes...))
-		s.requestBodySizeHistogram.Record(ctx, md.RequestSize, o)
-		s.responseBodySizeHistogram.Record(ctx, md.ResponseSize, o)
+		recordOpts := metricRecordOptionPool.Get().(*[]metric.RecordOption)
+		*recordOpts = append(*recordOpts, o)
+		s.requestBodySizeHistogram.Record(ctx, md.RequestSize, *recordOpts...)
+		s.responseBodySizeHistogram.Record(ctx, md.ResponseSize, *recordOpts...)
 		s.requestDurationHistogram.Record(ctx, md.ElapsedTime, o)
+		*recordOpts = (*recordOpts)[:0]
+		metricRecordOptionPool.Put(recordOpts)
 	}
 }
 

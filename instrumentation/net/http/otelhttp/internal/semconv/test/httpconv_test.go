@@ -14,6 +14,7 @@ import (
 
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
+
 	"go.opentelemetry.io/contrib/instrumentation/net/http/otelhttp/internal/semconv"
 	"go.opentelemetry.io/otel/attribute"
 	"go.opentelemetry.io/otel/metric"
@@ -128,7 +129,6 @@ func TestNewRecordMetrics(t *testing.T) {
 	expectedCurrentScopeMetric := expectedOldScopeMetric
 	expectedCurrentScopeMetric.Metrics = append(expectedCurrentScopeMetric.Metrics, []metricdata.Metrics{
 		{
-
 			Name:        "http.server.request.body.size",
 			Description: "Size of HTTP server request bodies.",
 			Unit:        "By",
