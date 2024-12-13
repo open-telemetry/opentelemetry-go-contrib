@@ -89,3 +89,42 @@ func TestHTTPClientDoesNotPanic(t *testing.T) {
 		})
 	}
 }
+
+func BenchmarkRecordMetrics(b *testing.B) {
+	benchmarks := []struct {
+		name   string
+		server HTTPServer
+	}{
+		{
+			name:   "empty",
+			server: HTTPServer{},
+		},
+		{
+			name:   "nil meter",
+			server: NewHTTPServer(nil),
+		},
+		{
+			name:   "with Meter",
+			server: NewHTTPServer(noop.Meter{}),
+		},
+	}
+
+	for _, bm := range benchmarks {
+		b.Run(bm.name, func(b *testing.B) {
+			req, _ := http.NewRequest("GET", "http://example.com", nil)
+			_ = bm.server.RequestTraceAttrs("stuff", req)
+			_ = bm.server.ResponseTraceAttrs(ResponseTelemetry{StatusCode: 200})
+			ctx := context.Background()
+			b.ReportAllocs()
+			b.ResetTimer()
+			for i := 0; i < b.N; i++ {
+				bm.server.RecordMetrics(ctx, ServerMetricData{
+					ServerName: bm.name,
+					MetricAttributes: MetricAttributes{
+						Req: req,
+					},
+				})
+			}
+		})
+	}
+}

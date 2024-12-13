@@ -1,3 +1,3 @@
-module go.opentelemetry.io/otel/example/dice/uninstrumented
+module go.opentelemetry.io/contrib/examples/dice/uninstrumented
 
 go 1.22

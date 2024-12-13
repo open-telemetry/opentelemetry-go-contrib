@@ -9,6 +9,7 @@ import (
 	"net/http"
 	"os"
 	"strings"
+	"sync"
 
 	"go.opentelemetry.io/otel/attribute"
 	"go.opentelemetry.io/otel/codes"
@@ -111,14 +112,24 @@ type MetricData struct {
 	ElapsedTime float64
 }
 
+var metricAddOptionPool = &sync.Pool{
+	New: func() interface{} {
+		return &[]metric.AddOption{}
+	},
+}
+
 func (s HTTPServer) RecordMetrics(ctx context.Context, md ServerMetricData) {
 	if s.requestBytesCounter != nil && s.responseBytesCounter != nil && s.serverLatencyMeasure != nil {
+
 		attributes := OldHTTPServer{}.MetricAttributes(md.ServerName, md.Req, md.StatusCode, md.AdditionalAttributes)
 		o := metric.WithAttributeSet(attribute.NewSet(attributes...))
-		addOpts := []metric.AddOption{o}
-		s.requestBytesCounter.Add(ctx, md.RequestSize, addOpts...)
-		s.responseBytesCounter.Add(ctx, md.ResponseSize, addOpts...)
+		addOpts := metricAddOptionPool.Get().(*[]metric.AddOption)
+		*addOpts = append(*addOpts, o)
+		s.requestBytesCounter.Add(ctx, md.RequestSize, *addOpts...)
+		s.responseBytesCounter.Add(ctx, md.ResponseSize, *addOpts...)
 		s.serverLatencyMeasure.Record(ctx, md.ElapsedTime, o)
+		*addOpts = (*addOpts)[:0]
+		metricAddOptionPool.Put(addOpts)
 	}
 
 	if s.duplicate && s.requestDurationHistogram != nil && s.requestBodySizeHistogram != nil && s.responseBodySizeHistogram != nil {

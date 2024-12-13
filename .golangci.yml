@@ -70,6 +70,12 @@ issues:
         - gosec
         - perfsprint
         - usestdlibvars
+    # Ignoring gosec G402: TLS MinVersion too low
+    # as the https://pkg.go.dev/crypto/tls#Config handles MinVersion default well.
+    - path: config/*.go
+      text: "G402: TLS MinVersion too low."
+      linters:
+        - gosec
   include:
     # revive exported should have comment or be unexported.
     - EXC0012
