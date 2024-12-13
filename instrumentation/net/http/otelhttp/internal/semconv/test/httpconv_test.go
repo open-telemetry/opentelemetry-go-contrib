@@ -192,7 +192,7 @@ func TestNewRecordMetrics(t *testing.T) {
 				return semconv.NewHTTPServer(mp.Meter("test"))
 			},
 			wantFunc: func(t *testing.T, rm metricdata.ResourceMetrics) {
-				assert.Len(t, rm.ScopeMetrics, 1)
+				require.Len(t, rm.ScopeMetrics, 1)
 
 				// because of OldHTTPServer
 				require.Len(t, rm.ScopeMetrics[0].Metrics, 3)
@@ -216,7 +216,7 @@ func TestNewRecordMetrics(t *testing.T) {
 				return semconv.NewHTTPServer(mp.Meter("test"))
 			},
 			wantFunc: func(t *testing.T, rm metricdata.ResourceMetrics) {
-				assert.Len(t, rm.ScopeMetrics, 1)
+				require.Len(t, rm.ScopeMetrics, 1)
 				require.Len(t, rm.ScopeMetrics[0].Metrics, 6)
 				metricdatatest.AssertEqual(t, expectedCurrentScopeMetric, rm.ScopeMetrics[0], metricdatatest.IgnoreTimestamp(), metricdatatest.IgnoreValue())
 			},
