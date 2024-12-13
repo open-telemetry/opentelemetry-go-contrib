@@ -10,7 +10,7 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 
 ### Added
 
-- Generate new server metrics upon setting the environment variable `OTEL_SEMCONV_STABILITY_OPT_IN=http/dup` within `go.opentelemetry.io/contrib/instrumentation/net/http/otelhttp`. (#6411)
+- Set the environment variable `OTEL_SEMCONV_STABILITY_OPT_IN` to `http/dup` to generate new server metric information based on the `semconv` 1.26 version in `go.opentelemetry.io/contrib/instrumentation/net/http/otelhttp`. (#6411)
 
 ## [1.33.0/0.58.0/0.27.0/0.13.0/0.8.0/0.6.0/0.5.0] - 2024-12-12
 
