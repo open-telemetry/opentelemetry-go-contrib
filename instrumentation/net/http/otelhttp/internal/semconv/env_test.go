@@ -9,10 +9,6 @@ import (
 	"testing"
 
 	"github.com/stretchr/testify/require"
-	"go.opentelemetry.io/otel/attribute"
-	"go.opentelemetry.io/otel/metric"
-	"go.opentelemetry.io/otel/metric/embedded"
-
 	"go.opentelemetry.io/otel/metric/noop"
 )
 
@@ -92,45 +88,4 @@ func TestHTTPClientDoesNotPanic(t *testing.T) {
 			})
 		})
 	}
-}
-
-type testRecorder[T any] struct {
-	embedded.Int64Counter
-	embedded.Int64Histogram
-	embedded.Float64Histogram
-
-	value      T
-	attributes []attribute.KeyValue
-}
-
-var (
-	_ metric.Int64Counter     = (*testRecorder[int64])(nil)
-	_ metric.Float64Histogram = (*testRecorder[float64])(nil)
-	_ metric.Int64Histogram   = (*testRecorder[int64])(nil)
-	_ metric.Float64Histogram = (*testRecorder[float64])(nil)
-)
-
-func (t *testRecorder[T]) Add(_ context.Context, incr T, options ...metric.AddOption) {
-	t.value = incr
-	cfg := metric.NewAddConfig(options)
-	attr := cfg.Attributes()
-	t.attributes = attr.ToSlice()
-}
-
-func (t *testRecorder[T]) Record(_ context.Context, value T, options ...metric.RecordOption) {
-	t.value = value
-	cfg := metric.NewRecordConfig(options)
-	attr := cfg.Attributes()
-	t.attributes = attr.ToSlice()
-}
-
-func NewTestHTTPServer() HTTPServer {
-	httpServer := NewHTTPServer(nil)
-	httpServer.requestBytesCounter = &testRecorder[int64]{}
-	httpServer.responseBytesCounter = &testRecorder[int64]{}
-	httpServer.serverLatencyMeasure = &testRecorder[float64]{}
-	httpServer.requestBodySizeHistogram = &testRecorder[int64]{}
-	httpServer.responseBodySizeHistogram = &testRecorder[int64]{}
-	httpServer.requestDurationHistogram = &testRecorder[float64]{}
-	return httpServer
 }
