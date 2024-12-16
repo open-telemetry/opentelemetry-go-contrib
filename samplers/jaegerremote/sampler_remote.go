@@ -288,7 +288,7 @@ func (f *httpSamplingStrategyFetcher) Fetch(serviceName string) ([]byte, error) 
 	v.Set("service", serviceName)
 	uri := f.serverURL + "?" + v.Encode()
 
-	resp, err := f.httpClient.Get(uri)
+	resp, err := f.httpClient.Get(uri) // nolint:bodyclose  // False-positive.
 	if err != nil {
 		return nil, err
 	}

@@ -66,10 +66,8 @@ func TestTransportUsesFormatter(t *testing.T) {
 	)
 
 	c := http.Client{Transport: tr}
-	res, err := c.Do(r)
-	if err != nil {
-		t.Fatal(err)
-	}
+	res, err := c.Do(r) // nolint:bodyclose  // False-positive.
+	require.NoError(t, err)
 	require.NoError(t, res.Body.Close())
 
 	spans := spanRecorder.Ended()
@@ -99,10 +97,10 @@ func TestTransportErrorStatus(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	resp, err := c.Do(r)
+	resp, err := c.Do(r) // nolint:bodyclose  // False-positive.
 	if err == nil {
-		if err := resp.Body.Close(); err != nil {
-			t.Errorf("close response body: %v", err)
+		if e := resp.Body.Close(); e != nil {
+			t.Errorf("close response body: %v", e)
 		}
 		t.Fatal("transport should have returned an error, it didn't")
 	}
@@ -276,6 +274,7 @@ func TestTransportMetrics(t *testing.T) {
 		if err != nil {
 			t.Fatal(err)
 		}
+		defer res.Body.Close()
 
 		// Must read the body or else we won't get response metrics
 		bodyBytes, err := io.ReadAll(res.Body)
@@ -334,6 +333,7 @@ func TestTransportMetrics(t *testing.T) {
 		if err != nil {
 			t.Fatal(err)
 		}
+		defer res.Body.Close()
 
 		// Must read the body or else we won't get response metrics
 		smallBuf := make([]byte, 10)
@@ -402,6 +402,7 @@ func TestTransportMetrics(t *testing.T) {
 		if err != nil {
 			t.Fatal(err)
 		}
+		defer res.Body.Close()
 
 		// Must read the body or else we won't get response metrics
 		smallBuf := make([]byte, 10)
