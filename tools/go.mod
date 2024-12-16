@@ -218,7 +218,7 @@ require (
 	golang.org/x/sys v0.28.0 // indirect
 	golang.org/x/telemetry v0.0.0-20241212155558-b40c91e7e8c7 // indirect
 	golang.org/x/text v0.21.0 // indirect
-	google.golang.org/protobuf v1.35.2 // indirect
+	google.golang.org/protobuf v1.36.0 // indirect
 	gopkg.in/ini.v1 v1.67.0 // indirect
 	gopkg.in/warnings.v0 v0.1.2 // indirect
 	gopkg.in/yaml.v2 v2.4.0 // indirect
