@@ -1,6 +1,6 @@
 module go.opentelemetry.io/contrib/tools
 
-go 1.22.1
+go 1.22.9
 
 exclude github.com/blizzy78/varnamelen v0.6.1
 
@@ -99,7 +99,7 @@ require (
 	github.com/google/go-cmp v0.6.0 // indirect
 	github.com/gordonklaus/ineffassign v0.1.0 // indirect
 	github.com/gostaticanalysis/analysisutil v0.7.1 // indirect
-	github.com/gostaticanalysis/comment v1.4.2 // indirect
+	github.com/gostaticanalysis/comment v1.5.0 // indirect
 	github.com/gostaticanalysis/forcetypeassert v0.1.0 // indirect
 	github.com/gostaticanalysis/nilerr v0.1.1 // indirect
 	github.com/hashicorp/go-version v1.7.0 // indirect
