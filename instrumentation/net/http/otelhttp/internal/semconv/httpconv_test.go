@@ -9,10 +9,71 @@ import (
 	"testing"
 
 	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 
 	"go.opentelemetry.io/otel/attribute"
 	"go.opentelemetry.io/otel/codes"
 )
+
+func TestCurrentHttpServer_MetricAttributes(t *testing.T) {
+	defaultRequest, err := http.NewRequest("GET", "http://example.com/path?query=test", nil)
+	require.NoError(t, err)
+
+	tests := []struct {
+		name                 string
+		server               string
+		req                  *http.Request
+		statusCode           int
+		additionalAttributes []attribute.KeyValue
+		wantFunc             func(t *testing.T, attrs []attribute.KeyValue)
+	}{
+		{
+			name:                 "routine testing",
+			server:               "",
+			req:                  defaultRequest,
+			statusCode:           200,
+			additionalAttributes: []attribute.KeyValue{attribute.String("test", "test")},
+			wantFunc: func(t *testing.T, attrs []attribute.KeyValue) {
+				require.Len(t, attrs, 7)
+				assert.ElementsMatch(t, []attribute.KeyValue{
+					attribute.String("http.request.method", "GET"),
+					attribute.String("url.scheme", "http"),
+					attribute.String("server.address", "example.com"),
+					attribute.String("network.protocol.name", "http"),
+					attribute.String("network.protocol.version", "1.1"),
+					attribute.Int64("http.response.status_code", 200),
+					attribute.String("test", "test"),
+				}, attrs)
+			},
+		},
+		{
+			name:                 "use server address",
+			server:               "example.com:9999",
+			req:                  defaultRequest,
+			statusCode:           200,
+			additionalAttributes: nil,
+			wantFunc: func(t *testing.T, attrs []attribute.KeyValue) {
+				require.Len(t, attrs, 7)
+				assert.ElementsMatch(t, []attribute.KeyValue{
+					attribute.String("http.request.method", "GET"),
+					attribute.String("url.scheme", "http"),
+					attribute.String("server.address", "example.com"),
+					attribute.Int("server.port", 9999),
+					attribute.String("network.protocol.name", "http"),
+					attribute.String("network.protocol.version", "1.1"),
+					attribute.Int64("http.response.status_code", 200),
+				}, attrs)
+			},
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			got := CurrentHTTPServer{}.MetricAttributes(tt.server, tt.req, tt.statusCode, tt.additionalAttributes)
+			tt.wantFunc(t, got)
+		})
+	}
+}
 
 func TestNewMethod(t *testing.T) {
 	testCases := []struct {

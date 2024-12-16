@@ -7,10 +7,13 @@ import (
 	"fmt"
 	"net/http"
 	"reflect"
+	"slices"
 	"strconv"
 	"strings"
 
 	"go.opentelemetry.io/otel/attribute"
+	"go.opentelemetry.io/otel/metric"
+	"go.opentelemetry.io/otel/metric/noop"
 	semconvNew "go.opentelemetry.io/otel/semconv/v1.26.0"
 )
 
@@ -197,6 +200,86 @@ func (n CurrentHTTPServer) ResponseTraceAttrs(resp ResponseTelemetry) []attribut
 // Route returns the attribute for the route.
 func (n CurrentHTTPServer) Route(route string) attribute.KeyValue {
 	return semconvNew.HTTPRoute(route)
+}
+
+func (n CurrentHTTPServer) createMeasures(meter metric.Meter) (metric.Int64Histogram, metric.Int64Histogram, metric.Float64Histogram) {
+	if meter == nil {
+		return noop.Int64Histogram{}, noop.Int64Histogram{}, noop.Float64Histogram{}
+	}
+
+	var err error
+	requestBodySizeHistogram, err := meter.Int64Histogram(
+		semconvNew.HTTPServerRequestBodySizeName,
+		metric.WithUnit(semconvNew.HTTPServerRequestBodySizeUnit),
+		metric.WithDescription(semconvNew.HTTPServerRequestBodySizeDescription),
+	)
+	handleErr(err)
+
+	responseBodySizeHistogram, err := meter.Int64Histogram(
+		semconvNew.HTTPServerResponseBodySizeName,
+		metric.WithUnit(semconvNew.HTTPServerResponseBodySizeUnit),
+		metric.WithDescription(semconvNew.HTTPServerResponseBodySizeDescription),
+	)
+	handleErr(err)
+	requestDurationHistogram, err := meter.Float64Histogram(
+		semconvNew.HTTPServerRequestDurationName,
+		metric.WithUnit(semconvNew.HTTPServerRequestDurationUnit),
+		metric.WithDescription(semconvNew.HTTPServerRequestDurationDescription),
+	)
+	handleErr(err)
+
+	return requestBodySizeHistogram, responseBodySizeHistogram, requestDurationHistogram
+}
+
+func (n CurrentHTTPServer) MetricAttributes(server string, req *http.Request, statusCode int, additionalAttributes []attribute.KeyValue) []attribute.KeyValue {
+	num := len(additionalAttributes) + 3
+	var host string
+	var p int
+	if server == "" {
+		host, p = SplitHostPort(req.Host)
+	} else {
+		// Prioritize the primary server name.
+		host, p = SplitHostPort(server)
+		if p < 0 {
+			_, p = SplitHostPort(req.Host)
+		}
+	}
+	hostPort := requiredHTTPPort(req.TLS != nil, p)
+	if hostPort > 0 {
+		num++
+	}
+	protoName, protoVersion := netProtocol(req.Proto)
+	if protoName != "" {
+		num++
+	}
+	if protoVersion != "" {
+		num++
+	}
+
+	if statusCode > 0 {
+		num++
+	}
+
+	attributes := slices.Grow(additionalAttributes, num)
+	attributes = append(attributes,
+		semconvNew.HTTPRequestMethodKey.String(standardizeHTTPMethod(req.Method)),
+		n.scheme(req.TLS != nil),
+		semconvNew.ServerAddress(host))
+
+	if hostPort > 0 {
+		attributes = append(attributes, semconvNew.ServerPort(hostPort))
+	}
+	if protoName != "" {
+		attributes = append(attributes, semconvNew.NetworkProtocolName(protoName))
+	}
+	if protoVersion != "" {
+		attributes = append(attributes, semconvNew.NetworkProtocolVersion(protoVersion))
+	}
+
+	if statusCode > 0 {
+		attributes = append(attributes, semconvNew.HTTPResponseStatusCode(statusCode))
+	}
+	return attributes
 }
 
 type CurrentHTTPClient struct{}

@@ -16,6 +16,10 @@ import (
 	"go.opentelemetry.io/otel/metric"
 )
 
+// OTelSemConvStabilityOptIn is an environment variable.
+// That can be set to "old" or "http/dup" to opt into the new HTTP semantic conventions.
+const OTelSemConvStabilityOptIn = "OTEL_SEMCONV_STABILITY_OPT_IN"
+
 type ResponseTelemetry struct {
 	StatusCode int
 	ReadBytes  int64
@@ -31,6 +35,11 @@ type HTTPServer struct {
 	requestBytesCounter  metric.Int64Counter
 	responseBytesCounter metric.Int64Counter
 	serverLatencyMeasure metric.Float64Histogram
+
+	// New metrics
+	requestBodySizeHistogram  metric.Int64Histogram
+	responseBodySizeHistogram metric.Int64Histogram
+	requestDurationHistogram  metric.Float64Histogram
 }
 
 // RequestTraceAttrs returns trace attributes for an HTTP request received by a
@@ -103,38 +112,56 @@ type MetricData struct {
 	ElapsedTime float64
 }
 
-var metricAddOptionPool = &sync.Pool{
-	New: func() interface{} {
-		return &[]metric.AddOption{}
-	},
-}
-
-func (s HTTPServer) RecordMetrics(ctx context.Context, md ServerMetricData) {
-	if s.requestBytesCounter == nil || s.responseBytesCounter == nil || s.serverLatencyMeasure == nil {
-		// This will happen if an HTTPServer{} is used instead of NewHTTPServer.
-		return
+var (
+	metricAddOptionPool = &sync.Pool{
+		New: func() interface{} {
+			return &[]metric.AddOption{}
+		},
 	}
 
-	attributes := OldHTTPServer{}.MetricAttributes(md.ServerName, md.Req, md.StatusCode, md.AdditionalAttributes)
-	o := metric.WithAttributeSet(attribute.NewSet(attributes...))
-	addOpts := metricAddOptionPool.Get().(*[]metric.AddOption)
-	*addOpts = append(*addOpts, o)
-	s.requestBytesCounter.Add(ctx, md.RequestSize, *addOpts...)
-	s.responseBytesCounter.Add(ctx, md.ResponseSize, *addOpts...)
-	s.serverLatencyMeasure.Record(ctx, md.ElapsedTime, o)
-	*addOpts = (*addOpts)[:0]
-	metricAddOptionPool.Put(addOpts)
+	metricRecordOptionPool = &sync.Pool{
+		New: func() interface{} {
+			return &[]metric.RecordOption{}
+		},
+	}
+)
 
-	// TODO: Duplicate Metrics
+func (s HTTPServer) RecordMetrics(ctx context.Context, md ServerMetricData) {
+	if s.requestBytesCounter != nil && s.responseBytesCounter != nil && s.serverLatencyMeasure != nil {
+		attributes := OldHTTPServer{}.MetricAttributes(md.ServerName, md.Req, md.StatusCode, md.AdditionalAttributes)
+		o := metric.WithAttributeSet(attribute.NewSet(attributes...))
+		addOpts := metricAddOptionPool.Get().(*[]metric.AddOption)
+		*addOpts = append(*addOpts, o)
+		s.requestBytesCounter.Add(ctx, md.RequestSize, *addOpts...)
+		s.responseBytesCounter.Add(ctx, md.ResponseSize, *addOpts...)
+		s.serverLatencyMeasure.Record(ctx, md.ElapsedTime, o)
+		*addOpts = (*addOpts)[:0]
+		metricAddOptionPool.Put(addOpts)
+	}
+
+	if s.duplicate && s.requestDurationHistogram != nil && s.requestBodySizeHistogram != nil && s.responseBodySizeHistogram != nil {
+		attributes := CurrentHTTPServer{}.MetricAttributes(md.ServerName, md.Req, md.StatusCode, md.AdditionalAttributes)
+		o := metric.WithAttributeSet(attribute.NewSet(attributes...))
+		recordOpts := metricRecordOptionPool.Get().(*[]metric.RecordOption)
+		*recordOpts = append(*recordOpts, o)
+		s.requestBodySizeHistogram.Record(ctx, md.RequestSize, *recordOpts...)
+		s.responseBodySizeHistogram.Record(ctx, md.ResponseSize, *recordOpts...)
+		s.requestDurationHistogram.Record(ctx, md.ElapsedTime, o)
+		*recordOpts = (*recordOpts)[:0]
+		metricRecordOptionPool.Put(recordOpts)
+	}
 }
 
 func NewHTTPServer(meter metric.Meter) HTTPServer {
-	env := strings.ToLower(os.Getenv("OTEL_SEMCONV_STABILITY_OPT_IN"))
+	env := strings.ToLower(os.Getenv(OTelSemConvStabilityOptIn))
 	duplicate := env == "http/dup"
 	server := HTTPServer{
 		duplicate: duplicate,
 	}
 	server.requestBytesCounter, server.responseBytesCounter, server.serverLatencyMeasure = OldHTTPServer{}.createMeasures(meter)
+	if duplicate {
+		server.requestBodySizeHistogram, server.responseBodySizeHistogram, server.requestDurationHistogram = CurrentHTTPServer{}.createMeasures(meter)
+	}
 	return server
 }
 
@@ -148,7 +175,7 @@ type HTTPClient struct {
 }
 
 func NewHTTPClient(meter metric.Meter) HTTPClient {
-	env := strings.ToLower(os.Getenv("OTEL_SEMCONV_STABILITY_OPT_IN"))
+	env := strings.ToLower(os.Getenv(OTelSemConvStabilityOptIn))
 	client := HTTPClient{
 		duplicate: env == "http/dup",
 	}

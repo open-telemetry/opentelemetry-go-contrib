@@ -4,6 +4,7 @@
 package test
 
 import (
+	"context"
 	"errors"
 	"fmt"
 	"net/http"
@@ -12,9 +13,15 @@ import (
 	"testing"
 
 	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 
 	"go.opentelemetry.io/contrib/instrumentation/net/http/otelhttp/internal/semconv"
 	"go.opentelemetry.io/otel/attribute"
+	"go.opentelemetry.io/otel/metric"
+	"go.opentelemetry.io/otel/sdk/instrumentation"
+	sdkmetric "go.opentelemetry.io/otel/sdk/metric"
+	"go.opentelemetry.io/otel/sdk/metric/metricdata"
+	"go.opentelemetry.io/otel/sdk/metric/metricdata/metricdatatest"
 )
 
 func TestNewTraceRequest(t *testing.T) {
@@ -45,6 +52,211 @@ func TestNewTraceRequest(t *testing.T) {
 		}
 	}
 	testTraceRequest(t, serv, want)
+}
+
+func TestNewRecordMetrics(t *testing.T) {
+	oldAttrs := attribute.NewSet(
+		attribute.String("http.scheme", "http"),
+		attribute.String("http.method", "POST"),
+		attribute.Int64("http.status_code", 301),
+		attribute.String("key", "value"),
+		attribute.String("net.host.name", "stuff"),
+		attribute.String("net.protocol.name", "http"),
+		attribute.String("net.protocol.version", "1.1"),
+	)
+
+	currAttrs := attribute.NewSet(
+		attribute.String("http.request.method", "POST"),
+		attribute.Int64("http.response.status_code", 301),
+		attribute.String("key", "value"),
+		attribute.String("network.protocol.name", "http"),
+		attribute.String("network.protocol.version", "1.1"),
+		attribute.String("server.address", "stuff"),
+		attribute.String("url.scheme", "http"),
+	)
+
+	// The OldHTTPServer version
+	expectedOldScopeMetric := metricdata.ScopeMetrics{
+		Scope: instrumentation.Scope{
+			Name: "test",
+		},
+		Metrics: []metricdata.Metrics{
+			{
+				Name:        "http.server.request.size",
+				Description: "Measures the size of HTTP request messages.",
+				Unit:        "By",
+				Data: metricdata.Sum[int64]{
+					Temporality: metricdata.CumulativeTemporality,
+					IsMonotonic: true,
+					DataPoints: []metricdata.DataPoint[int64]{
+						{
+							Attributes: oldAttrs,
+						},
+					},
+				},
+			},
+			{
+				Name:        "http.server.response.size",
+				Description: "Measures the size of HTTP response messages.",
+				Unit:        "By",
+				Data: metricdata.Sum[int64]{
+					Temporality: metricdata.CumulativeTemporality,
+					IsMonotonic: true,
+					DataPoints: []metricdata.DataPoint[int64]{
+						{
+							Attributes: oldAttrs,
+						},
+					},
+				},
+			},
+			{
+				Name:        "http.server.duration",
+				Description: "Measures the duration of inbound HTTP requests.",
+				Unit:        "ms",
+				Data: metricdata.Histogram[float64]{
+					Temporality: metricdata.CumulativeTemporality,
+					DataPoints: []metricdata.HistogramDataPoint[float64]{
+						{
+							Attributes: oldAttrs,
+						},
+					},
+				},
+			},
+		},
+	}
+
+	// the CurrentHTTPServer version
+	expectedCurrentScopeMetric := expectedOldScopeMetric
+	expectedCurrentScopeMetric.Metrics = append(expectedCurrentScopeMetric.Metrics, []metricdata.Metrics{
+		{
+			Name:        "http.server.request.body.size",
+			Description: "Size of HTTP server request bodies.",
+			Unit:        "By",
+			Data: metricdata.Histogram[int64]{
+				Temporality: metricdata.CumulativeTemporality,
+				DataPoints: []metricdata.HistogramDataPoint[int64]{
+					{
+						Attributes: currAttrs,
+					},
+				},
+			},
+		},
+		{
+			Name:        "http.server.response.body.size",
+			Description: "Size of HTTP server response bodies.",
+			Unit:        "By",
+			Data: metricdata.Histogram[int64]{
+				Temporality: metricdata.CumulativeTemporality,
+				DataPoints: []metricdata.HistogramDataPoint[int64]{
+					{
+						Attributes: currAttrs,
+					},
+				},
+			},
+		},
+		{
+			Name:        "http.server.request.duration",
+			Description: "Duration of HTTP server requests.",
+			Unit:        "s",
+			Data: metricdata.Histogram[float64]{
+				Temporality: metricdata.CumulativeTemporality,
+				DataPoints: []metricdata.HistogramDataPoint[float64]{
+					{
+						Attributes: currAttrs,
+					},
+				},
+			},
+		},
+	}...)
+
+	tests := []struct {
+		name       string
+		setEnv     bool
+		serverFunc func(metric.MeterProvider) semconv.HTTPServer
+		wantFunc   func(t *testing.T, rm metricdata.ResourceMetrics)
+	}{
+		{
+			name:   "No environment variable set, and no Meter",
+			setEnv: false,
+			serverFunc: func(metric.MeterProvider) semconv.HTTPServer {
+				return semconv.NewHTTPServer(nil)
+			},
+			wantFunc: func(t *testing.T, rm metricdata.ResourceMetrics) {
+				assert.Empty(t, rm.ScopeMetrics)
+			},
+		},
+		{
+			name:   "No environment variable set, but with Meter",
+			setEnv: false,
+			serverFunc: func(mp metric.MeterProvider) semconv.HTTPServer {
+				return semconv.NewHTTPServer(mp.Meter("test"))
+			},
+			wantFunc: func(t *testing.T, rm metricdata.ResourceMetrics) {
+				require.Len(t, rm.ScopeMetrics, 1)
+
+				// because of OldHTTPServer
+				require.Len(t, rm.ScopeMetrics[0].Metrics, 3)
+				metricdatatest.AssertEqual(t, expectedOldScopeMetric, rm.ScopeMetrics[0], metricdatatest.IgnoreTimestamp(), metricdatatest.IgnoreValue())
+			},
+		},
+		{
+			name:   "Set environment variable, but no Meter",
+			setEnv: true,
+			serverFunc: func(metric.MeterProvider) semconv.HTTPServer {
+				return semconv.NewHTTPServer(nil)
+			},
+			wantFunc: func(t *testing.T, rm metricdata.ResourceMetrics) {
+				assert.Empty(t, rm.ScopeMetrics)
+			},
+		},
+		{
+			name:   "Set environment variable and Meter",
+			setEnv: true,
+			serverFunc: func(mp metric.MeterProvider) semconv.HTTPServer {
+				return semconv.NewHTTPServer(mp.Meter("test"))
+			},
+			wantFunc: func(t *testing.T, rm metricdata.ResourceMetrics) {
+				require.Len(t, rm.ScopeMetrics, 1)
+				require.Len(t, rm.ScopeMetrics[0].Metrics, 6)
+				metricdatatest.AssertEqual(t, expectedCurrentScopeMetric, rm.ScopeMetrics[0], metricdatatest.IgnoreTimestamp(), metricdatatest.IgnoreValue())
+			},
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			if tt.setEnv {
+				t.Setenv(semconv.OTelSemConvStabilityOptIn, "http/dup")
+			}
+
+			reader := sdkmetric.NewManualReader()
+			mp := sdkmetric.NewMeterProvider(sdkmetric.WithReader(reader))
+
+			server := tt.serverFunc(mp)
+			req, err := http.NewRequest("POST", "http://example.com", nil)
+			assert.NoError(t, err)
+
+			server.RecordMetrics(context.Background(), semconv.ServerMetricData{
+				ServerName:   "stuff",
+				ResponseSize: 200,
+				MetricAttributes: semconv.MetricAttributes{
+					Req:        req,
+					StatusCode: 301,
+					AdditionalAttributes: []attribute.KeyValue{
+						attribute.String("key", "value"),
+					},
+				},
+				MetricData: semconv.MetricData{
+					RequestSize: 100,
+					ElapsedTime: 300,
+				},
+			})
+
+			rm := metricdata.ResourceMetrics{}
+			require.NoError(t, reader.Collect(context.Background(), &rm))
+			tt.wantFunc(t, rm)
+		})
+	}
 }
 
 func TestNewTraceResponse(t *testing.T) {

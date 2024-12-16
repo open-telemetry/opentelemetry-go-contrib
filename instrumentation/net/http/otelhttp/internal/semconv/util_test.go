@@ -39,3 +39,34 @@ func TestSplitHostPort(t *testing.T) {
 		assert.Equal(t, test.port, p, test.hostport)
 	}
 }
+
+func TestStandardizeHTTPMethod(t *testing.T) {
+	tests := []struct {
+		method string
+		want   string
+	}{
+		{"GET", "GET"},
+		{"get", "GET"},
+		{"POST", "POST"},
+		{"post", "POST"},
+		{"PUT", "PUT"},
+		{"put", "PUT"},
+		{"DELETE", "DELETE"},
+		{"delete", "DELETE"},
+		{"HEAD", "HEAD"},
+		{"head", "HEAD"},
+		{"OPTIONS", "OPTIONS"},
+		{"options", "OPTIONS"},
+		{"CONNECT", "CONNECT"},
+		{"connect", "CONNECT"},
+		{"TRACE", "TRACE"},
+		{"trace", "TRACE"},
+		{"PATCH", "PATCH"},
+		{"patch", "PATCH"},
+		{"unknown", "_OTHER"},
+		{"", "_OTHER"},
+	}
+	for _, test := range tests {
+		assert.Equal(t, test.want, standardizeHTTPMethod(test.method))
+	}
+}
