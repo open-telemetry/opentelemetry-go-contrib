@@ -22,6 +22,7 @@ import (
 	"encoding/binary"
 	"errors"
 	"fmt"
+	"os"
 	"sync"
 	"testing"
 	"time"
@@ -653,4 +654,16 @@ func TestEnvVarSettingForNewTracer(t *testing.T) {
 			}
 		})
 	}
+
+	t.Run("No-op when env var not set", func(t *testing.T) {
+		// t.Setenv to restore this environment variable at the end of the test
+		t.Setenv("OTEL_TRACES_SAMPLER_ARG", "")
+		// unset it during the test
+		require.NoError(t, os.Unsetenv("OTEL_TRACES_SAMPLER_ARG"))
+
+		opts, errs := getEnvOptions()
+
+		require.Empty(t, errs)
+		require.Empty(t, opts)
+	})
 }
