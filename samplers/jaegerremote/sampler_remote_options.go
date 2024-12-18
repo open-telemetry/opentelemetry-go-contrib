@@ -46,7 +46,12 @@ func getEnvOptions() ([]Option, []error) {
 	// list of errors which will be logged once logger is set by the user
 	var errs []error
 
-	args := strings.Split(os.Getenv("OTEL_TRACES_SAMPLER_ARG"), ",")
+	rawEnvArgs, ok := os.LookupEnv("OTEL_TRACES_SAMPLER_ARG")
+	if !ok {
+		return nil, nil
+	}
+
+	args := strings.Split(rawEnvArgs, ",")
 	for _, arg := range args {
 		keyValue := strings.Split(arg, "=")
 		if len(keyValue) != 2 {
