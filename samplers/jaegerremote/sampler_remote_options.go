@@ -46,8 +46,8 @@ func getEnvOptions() ([]Option, []error) {
 	// list of errors which will be logged once logger is set by the user
 	var errs []error
 
-	rawEnvArgs, ok := os.LookupEnv("OTEL_TRACES_SAMPLER_ARG")
-	if !ok {
+	rawEnvArgs := os.Getenv("OTEL_TRACES_SAMPLER_ARG")
+	if rawEnvArgs == "" {
 		return nil, nil
 	}
 
