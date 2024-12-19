@@ -12,6 +12,9 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 
 - Generate server metrics with semantic conventions v1.26 in `go.opentelemetry.io/contrib/instrumentation/net/http/otelhttp` when `OTEL_SEMCONV_STABILITY_OPT_IN` is set to `http/dup`. (#6411)
 
+<!-- Released section -->
+<!-- Don't change this section unless doing release -->
+
 ## [1.33.0/0.58.0/0.27.0/0.13.0/0.8.0/0.6.0/0.5.0] - 2024-12-12
 
 ### Added
@@ -41,9 +44,6 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 - The `code.function` attribute emitted by `go.opentelemetry.io/contrib/bridges/otelzap` now stores just the function name instead the package path-qualified function name.
   The `code.namespace` attribute now stores the package path. (#6423)
 - Return an error for `nil` values when unmarshaling `NameStringValuePair` in `go.opentelemetry.io/contrib/config`. (#6425)
-
-<!-- Released section -->
-<!-- Don't change this section unless doing release -->
 
 ## [1.32.0/0.57.0/0.26.0/0.12.0/0.7.0/0.5.0/0.4.0] - 2024-11-08
 
