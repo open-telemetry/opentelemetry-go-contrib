@@ -400,6 +400,13 @@ func TestLogSinkWithContext(t *testing.T) {
 		assert.Empty(t, rec.Result()[0].Records[0].Context())
 	})
 
+	t.Run("with nil context", func(t *testing.T) {
+		defer rec.Reset()
+
+		ls2 := ls.WithContext(nil)
+		assert.Same(t, ls, ls2)
+	})
+
 	t.Run("with context", func(t *testing.T) {
 		defer rec.Reset()
 
