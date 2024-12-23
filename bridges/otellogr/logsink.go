@@ -65,10 +65,10 @@ import (
 )
 
 type config struct {
-	provider  log.LoggerProvider
-	version   string
-	schemaURL string
-
+	provider      log.LoggerProvider
+	version       string
+	schemaURL     string
+	ctx           context.Context
 	levelSeverity func(int) log.Severity
 }
 
@@ -80,6 +80,10 @@ func newConfig(options []Option) config {
 
 	if c.provider == nil {
 		c.provider = global.GetLoggerProvider()
+	}
+
+	if c.ctx == nil {
+		c.ctx = context.Background()
 	}
 
 	if c.levelSeverity == nil {
@@ -139,6 +143,18 @@ func WithLoggerProvider(provider log.LoggerProvider) Option {
 	})
 }
 
+// WithContext returns an [Option] that configures the [context.Context] used by
+// a [LogSink].
+//
+// By default if this Option is not provided, the LogSink will use the
+// background context.
+func WithContext(ctx context.Context) Option {
+	return optFunc(func(c config) config {
+		c.ctx = ctx
+		return c
+	})
+}
+
 // WithLevelSeverity returns an [Option] that configures the function used to
 // convert logr levels to OpenTelemetry log severities.
 //
@@ -176,6 +192,7 @@ func NewLogSink(name string, options ...Option) *LogSink {
 		logger:        c.provider.Logger(name, opts...),
 		levelSeverity: c.levelSeverity,
 		opts:          opts,
+		ctx:           c.ctx,
 	}
 }
 
@@ -201,9 +218,8 @@ var _ logr.LogSink = (*LogSink)(nil)
 // For example, commandline flags might be used to set the logging
 // verbosity and disable some info logs.
 func (l *LogSink) Enabled(level int) bool {
-	ctx := context.Background()
 	param := log.EnabledParameters{Severity: l.levelSeverity(level)}
-	return l.logger.Enabled(ctx, param)
+	return l.logger.Enabled(l.ctx, param)
 }
 
 // Error logs an error, with the given message and key/value pairs.
@@ -238,9 +254,19 @@ func (l *LogSink) Info(level int, msg string, keysAndValues ...any) {
 	l.logger.Emit(ctx, record)
 }
 
+func (l *LogSink) WithContext(ctx context.Context) *LogSink {
+	if ctx == nil {
+		return l
+	}
+	sink := new(LogSink)
+	*sink = *l
+	sink.ctx = ctx
+	return sink
+}
+
 // Init receives optional information about the logr library this
 // implementation does not use it.
-func (l *LogSink) Init(info logr.RuntimeInfo) {
+func (l *LogSink) Init(logr.RuntimeInfo) {
 	// We don't need to do anything here.
 	// CallDepth is used to calculate the caller's PC.
 	// PC is dropped as part of the conversion to the OpenTelemetry log.Record.

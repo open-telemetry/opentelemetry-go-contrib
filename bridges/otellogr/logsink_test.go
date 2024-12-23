@@ -30,16 +30,14 @@ func TestNewConfig(t *testing.T) {
 	customLoggerProvider := mockLoggerProvider{}
 
 	for _, tt := range []struct {
-		name    string
-		options []Option
-
-		wantConfig config
+		name     string
+		options  []Option
+		wantFunc func(config)
 	}{
 		{
 			name: "with no options",
-
-			wantConfig: config{
-				provider: global.GetLoggerProvider(),
+			wantFunc: func(c config) {
+				assert.Equal(t, global.GetLoggerProvider(), c.provider)
 			},
 		},
 		{
@@ -47,10 +45,8 @@ func TestNewConfig(t *testing.T) {
 			options: []Option{
 				WithVersion("42.0"),
 			},
-
-			wantConfig: config{
-				version:  "42.0",
-				provider: global.GetLoggerProvider(),
+			wantFunc: func(c config) {
+				assert.Equal(t, "42.0", c.version)
 			},
 		},
 		{
@@ -58,16 +54,29 @@ func TestNewConfig(t *testing.T) {
 			options: []Option{
 				WithLoggerProvider(customLoggerProvider),
 			},
-
-			wantConfig: config{
-				provider: customLoggerProvider,
+			wantFunc: func(c config) {
+				assert.Equal(t, customLoggerProvider, c.provider)
+			},
+		},
+		{
+			name:    "default context",
+			options: []Option{},
+			wantFunc: func(c config) {
+				assert.Equal(t, context.Background(), c.ctx)
+			},
+		},
+		{
+			name: "with a custom context",
+			options: []Option{
+				WithContext(context.WithValue(context.Background(), "key", "value")),
+			},
+			wantFunc: func(c config) {
+				assert.Equal(t, context.WithValue(context.Background(), "key", "value"), c.ctx)
 			},
 		},
 	} {
 		t.Run(tt.name, func(t *testing.T) {
-			config := newConfig(tt.options)
-			config.levelSeverity = nil // Ignore asserting level severity function, assert.Equal does not support function comparison
-			assert.Equal(t, tt.wantConfig, config)
+			tt.wantFunc(newConfig(tt.options))
 		})
 	}
 }
@@ -373,6 +382,35 @@ func TestLogSinkEnabled(t *testing.T) {
 
 	assert.True(t, ls.Enabled(0))
 	assert.False(t, ls.Enabled(1))
+}
+
+func TestLogSinkWithContext(t *testing.T) {
+	rec := logtest.NewRecorder()
+	ls := NewLogSink(
+		"name",
+		WithLoggerProvider(rec),
+	)
+
+	t.Run("no context", func(t *testing.T) {
+		defer rec.Reset()
+		ls.Info(0, "msg")
+		require.Len(t, rec.Result(), 1)
+		require.Len(t, rec.Result()[0].Records, 1)
+		assert.Empty(t, rec.Result()[0].Records[0].Context())
+	})
+
+	t.Run("with context", func(t *testing.T) {
+		defer rec.Reset()
+
+		ctx := context.WithValue(context.Background(), "key", "value")
+		ls2 := ls.WithContext(ctx)
+		assert.NotSame(t, ls, ls2)
+
+		ls2.Info(0, "msg")
+		require.Len(t, rec.Result(), 1)
+		require.Len(t, rec.Result()[0].Records, 1)
+		assert.Equal(t, "value", rec.Result()[0].Records[0].Context().Value("key"))
+	})
 }
 
 func buildRecord(body log.Value, timestamp time.Time, severity log.Severity, attrs []log.KeyValue) log.Record {
