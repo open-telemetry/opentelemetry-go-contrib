@@ -254,6 +254,7 @@ func (l *LogSink) Info(level int, msg string, keysAndValues ...any) {
 	l.logger.Emit(ctx, record)
 }
 
+// WithContext returns a new LogSink with the specified context.
 func (l *LogSink) WithContext(ctx context.Context) *LogSink {
 	if ctx == nil {
 		return l
