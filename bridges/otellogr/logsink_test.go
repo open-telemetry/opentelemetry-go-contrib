@@ -403,7 +403,7 @@ func TestLogSinkWithContext(t *testing.T) {
 	t.Run("with nil context", func(t *testing.T) {
 		defer rec.Reset()
 
-		ls2 := ls.WithContext(nil)
+		ls2 := ls.WithContext(nil) //nolint:staticcheck
 		assert.Same(t, ls, ls2)
 	})
 
