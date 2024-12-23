@@ -16,7 +16,6 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 
 - Fixed an issue where otellogr emits nil context which leads to panic in exporters `go.opentelemetry.io/contrib/bridges/otellogr`. (#6527)
 
-
 ## [1.33.0/0.58.0/0.27.0/0.13.0/0.8.0/0.6.0/0.5.0] - 2024-12-12
 
 ### Added
