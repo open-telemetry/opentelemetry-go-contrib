@@ -86,6 +86,7 @@ func (d *detector) Detect(ctx context.Context) (*resource.Resource, error) {
 		b.add(semconv.HostNameKey, d.detector.GCEHostName)
 		b.add(semconv.GCPGceInstanceNameKey, d.detector.GCEInstanceName)
 		b.add(semconv.GCPGceInstanceHostnameKey, d.detector.GCEInstanceHostname)
+		b.addMIG(d.detector.GCEManagedInstanceGroup)
 	default:
 		// We don't support this platform yet, so just return with what we have
 	}
@@ -138,6 +139,31 @@ func (r *resourceBuilder) addZoneOrRegion(detect func() (string, gcp.LocationTyp
 			r.attrs = append(r.attrs, semconv.CloudRegion(v))
 		default:
 			r.errs = append(r.errs, fmt.Errorf("location must be zone or region. Got %v", locType))
+		}
+	} else {
+		r.errs = append(r.errs, err)
+	}
+}
+
+var (
+	// TODO: semconv.GCPGceInstanceGroupManagerNameKey
+	gcpGceInstanceGroupManagerNameKey = attribute.Key("gcp.gce.instance_group_manager.name")
+	// TODO: semconv.GCPGceInstanceGroupManagerZoneKey
+	gcpGceInstanceGroupManagerZoneKey = attribute.Key("gcp.gce.instance_group_manager.zone")
+	// TODO: semconv.GCPGceInstanceGroupManagerRegionKey
+	gcpGceInstanceGroupManagerRegionKey = attribute.Key("gcp.gce.instance_group_manager.region")
+)
+
+func (r *resourceBuilder) addMIG(detect func() (gcp.ManagedInstanceGroup, error)) {
+	if mig, err := detect(); err == nil {
+		if mig.Name != "" {
+			r.attrs = append(r.attrs, gcpGceInstanceGroupManagerNameKey.String(mig.Name))
+		}
+		switch mig.Type {
+		case gcp.Zone:
+			r.attrs = append(r.attrs, gcpGceInstanceGroupManagerZoneKey.String(mig.Location))
+		case gcp.Region:
+			r.attrs = append(r.attrs, gcpGceInstanceGroupManagerRegionKey.String(mig.Location))
 		}
 	} else {
 		r.errs = append(r.errs, err)

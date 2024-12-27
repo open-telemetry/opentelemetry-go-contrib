@@ -88,6 +88,72 @@ func TestDetect(t *testing.T) {
 			),
 		},
 		{
+			desc: "GCE with zonal MIG",
+			detector: &detector{detector: &fakeGCPDetector{
+				projectID:              "my-project",
+				cloudPlatform:          gcp.GCE,
+				gceHostID:              "1472385723456792345",
+				gceHostName:            "my-gke-node-1234",
+				gceHostType:            "n1-standard1",
+				gceAvailabilityZone:    "us-central1-c",
+				gceRegion:              "us-central1",
+				gcpGceInstanceName:     "my-gke-node-1234",
+				gcpGceInstanceHostname: "hostname",
+				managedInstanceGroup: gcp.ManagedInstanceGroup{
+					Name:     "my-instance-group",
+					Location: "us-central1-c",
+					Type:     gcp.Zone,
+				},
+			}},
+			expectedResource: resource.NewWithAttributes(semconv.SchemaURL,
+				semconv.CloudProviderGCP,
+				semconv.CloudAccountID("my-project"),
+				semconv.CloudPlatformGCPComputeEngine,
+				semconv.HostID("1472385723456792345"),
+				semconv.HostName("my-gke-node-1234"),
+				semconv.GCPGceInstanceNameKey.String("my-gke-node-1234"),
+				semconv.GCPGceInstanceHostnameKey.String("hostname"),
+				semconv.HostType("n1-standard1"),
+				semconv.CloudRegion("us-central1"),
+				semconv.CloudAvailabilityZone("us-central1-c"),
+				gcpGceInstanceGroupManagerNameKey.String("my-instance-group"),
+				gcpGceInstanceGroupManagerZoneKey.String("us-central1-c"),
+			),
+		},
+		{
+			desc: "GCE with regional MIG",
+			detector: &detector{detector: &fakeGCPDetector{
+				projectID:              "my-project",
+				cloudPlatform:          gcp.GCE,
+				gceHostID:              "1472385723456792345",
+				gceHostName:            "my-gke-node-1234",
+				gceHostType:            "n1-standard1",
+				gceAvailabilityZone:    "us-central1-c",
+				gceRegion:              "us-central1",
+				gcpGceInstanceName:     "my-gke-node-1234",
+				gcpGceInstanceHostname: "hostname",
+				managedInstanceGroup: gcp.ManagedInstanceGroup{
+					Name:     "my-instance-group",
+					Location: "us-central1",
+					Type:     gcp.Region,
+				},
+			}},
+			expectedResource: resource.NewWithAttributes(semconv.SchemaURL,
+				semconv.CloudProviderGCP,
+				semconv.CloudAccountID("my-project"),
+				semconv.CloudPlatformGCPComputeEngine,
+				semconv.HostID("1472385723456792345"),
+				semconv.HostName("my-gke-node-1234"),
+				semconv.GCPGceInstanceNameKey.String("my-gke-node-1234"),
+				semconv.GCPGceInstanceHostnameKey.String("hostname"),
+				semconv.HostType("n1-standard1"),
+				semconv.CloudRegion("us-central1"),
+				semconv.CloudAvailabilityZone("us-central1-c"),
+				gcpGceInstanceGroupManagerNameKey.String("my-instance-group"),
+				gcpGceInstanceGroupManagerRegionKey.String("us-central1"),
+			),
+		},
+		{
 			desc: "Cloud Run",
 			detector: &detector{detector: &fakeGCPDetector{
 				projectID:       "my-project",
@@ -277,6 +343,7 @@ type fakeGCPDetector struct {
 	gcpGceInstanceHostname    string
 	cloudRunJobExecution      string
 	cloudRunJobTaskIndex      string
+	managedInstanceGroup      gcp.ManagedInstanceGroup
 }
 
 func (f *fakeGCPDetector) ProjectID() (string, error) {
@@ -445,4 +512,11 @@ func (f *fakeGCPDetector) CloudRunJobTaskIndex() (string, error) {
 		return "", f.err
 	}
 	return f.cloudRunJobTaskIndex, nil
+}
+
+func (f *fakeGCPDetector) GCEManagedInstanceGroup() (gcp.ManagedInstanceGroup, error) {
+	if f.err != nil {
+		return gcp.ManagedInstanceGroup{}, f.err
+	}
+	return f.managedInstanceGroup, nil
 }
