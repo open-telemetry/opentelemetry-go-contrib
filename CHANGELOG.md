@@ -11,6 +11,13 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 ### Added
 
 - Generate server metrics with semantic conventions v1.26 in `go.opentelemetry.io/contrib/instrumentation/net/http/otelhttp` when `OTEL_SEMCONV_STABILITY_OPT_IN` is set to `http/dup`. (#6411)
+- `go.opentelemetry.io/contrib/instrumentation/github.com/aws/aws-sdk-go-v2/otelaws` change: Added new `AttributeBuilder` interface to support adding attributes based on input and output instead of input only. It is also now possible to provide a custom function to set attributes using `WithAttributeBuilder`
+
+### Changed
+
+- `go.opentelemetry.io/contrib/instrumentation/github.com/aws/aws-sdk-go-v2/otelaws` change: Use of `AttributeBuilder` interface instead of `AttributeSetter`. Previous usage of `AttributeSetter` were backward compatibly changed to use `AttributeBuilder` interface.
+- `go.opentelemetry.io/contrib/instrumentation/github.com/aws/aws-sdk-go-v2/otelaws` change: Attributes are added to the span after the execution instead of before the execution of AWS SDK
+  
 
 ## [1.33.0/0.58.0/0.27.0/0.13.0/0.8.0/0.6.0/0.5.0] - 2024-12-12
 

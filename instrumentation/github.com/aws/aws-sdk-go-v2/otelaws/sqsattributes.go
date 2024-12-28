@@ -14,7 +14,13 @@ import (
 )
 
 // SQSAttributeSetter sets SQS specific attributes depending on the SQS operation being performed.
+// Deprecated: Kept for backward compatibility, use SQSAttributeBuilder instead. This will be removed in a future release.
 func SQSAttributeSetter(ctx context.Context, in middleware.InitializeInput) []attribute.KeyValue {
+	return SQSAttributeBuilder(ctx, in, middleware.InitializeOutput{})
+}
+
+// SQSAttributeBuilder sets SQS specific attributes depending on the SQS operation being performed.
+func SQSAttributeBuilder(ctx context.Context, in middleware.InitializeInput, out middleware.InitializeOutput) []attribute.KeyValue {
 	sqsAttributes := []attribute.KeyValue{semconv.MessagingSystem("AmazonSQS")}
 
 	key := semconv.NetPeerNameKey

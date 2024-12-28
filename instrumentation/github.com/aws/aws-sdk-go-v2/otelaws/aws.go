@@ -27,12 +27,16 @@ const (
 type spanTimestampKey struct{}
 
 // AttributeSetter returns an array of KeyValue pairs, it can be used to set custom attributes.
+// Deprecated: Kept for backward compatibility, use AttributeBuilder instead. This will be removed in a future release.
 type AttributeSetter func(context.Context, middleware.InitializeInput) []attribute.KeyValue
 
+// AttributeBuilder returns an array of KeyValue pairs, it can be used to set custom attributes.
+type AttributeBuilder func(ctx context.Context, in middleware.InitializeInput, out middleware.InitializeOutput) []attribute.KeyValue
+
 type otelMiddlewares struct {
-	tracer          trace.Tracer
-	propagator      propagation.TextMapPropagator
-	attributeSetter []AttributeSetter
+	tracer            trace.Tracer
+	propagator        propagation.TextMapPropagator
+	attributeBuilders []AttributeBuilder
 }
 
 func (m otelMiddlewares) initializeMiddlewareBefore(stack *middleware.Stack) error {
@@ -61,9 +65,6 @@ func (m otelMiddlewares) initializeMiddlewareAfter(stack *middleware.Stack) erro
 			RegionAttr(region),
 			OperationAttr(operation),
 		}
-		for _, setter := range m.attributeSetter {
-			attributes = append(attributes, setter(ctx, in)...)
-		}
 
 		ctx, span := m.tracer.Start(ctx, spanName(serviceID, operation),
 			trace.WithTimestamp(ctx.Value(spanTimestampKey{}).(time.Time)),
@@ -73,6 +74,7 @@ func (m otelMiddlewares) initializeMiddlewareAfter(stack *middleware.Stack) erro
 		defer span.End()
 
 		out, metadata, err = next.HandleInitialize(ctx, in)
+		span.SetAttributes(m.buildAttributes(ctx, in, out)...)
 		if err != nil {
 			span.RecordError(err)
 			span.SetStatus(codes.Error, err.Error())
@@ -125,6 +127,14 @@ func (m otelMiddlewares) deserializeMiddleware(stack *middleware.Stack) error {
 		middleware.Before)
 }
 
+func (m otelMiddlewares) buildAttributes(ctx context.Context, in middleware.InitializeInput, out middleware.InitializeOutput) (attributes []attribute.KeyValue) {
+	for _, builder := range m.attributeBuilders {
+		attributes = append(attributes, builder(ctx, in, out)...)
+	}
+
+	return attributes
+}
+
 func spanName(serviceID, operation string) string {
 	spanName := serviceID
 	if operation != "" {
@@ -145,15 +155,15 @@ func AppendMiddlewares(apiOptions *[]func(*middleware.Stack) error, opts ...Opti
 		opt.apply(&cfg)
 	}
 
-	if cfg.AttributeSetter == nil {
-		cfg.AttributeSetter = []AttributeSetter{DefaultAttributeSetter}
+	if cfg.AttributeBuilders == nil {
+		cfg.AttributeBuilders = []AttributeBuilder{DefaultAttributeBuilder}
 	}
 
 	m := otelMiddlewares{
 		tracer: cfg.TracerProvider.Tracer(ScopeName,
 			trace.WithInstrumentationVersion(Version())),
-		propagator:      cfg.TextMapPropagator,
-		attributeSetter: cfg.AttributeSetter,
+		propagator:        cfg.TextMapPropagator,
+		attributeBuilders: cfg.AttributeBuilders,
 	}
 	*apiOptions = append(*apiOptions, m.initializeMiddlewareBefore, m.initializeMiddlewareAfter, m.finalizeMiddlewareAfter, m.deserializeMiddleware)
 }

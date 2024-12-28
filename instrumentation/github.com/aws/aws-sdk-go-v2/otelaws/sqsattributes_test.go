@@ -22,7 +22,7 @@ func TestSQSDeleteMessageBatchInput(t *testing.T) {
 		},
 	}
 
-	attributes := SQSAttributeSetter(context.TODO(), input)
+	attributes := SQSAttributeBuilder(context.TODO(), input, middleware.InitializeOutput{})
 
 	assert.Contains(t, attributes, semconv.NetPeerName("test-queue-url"))
 }
@@ -34,7 +34,7 @@ func TestSQSDeleteMessageInput(t *testing.T) {
 		},
 	}
 
-	attributes := SQSAttributeSetter(context.TODO(), input)
+	attributes := SQSAttributeBuilder(context.TODO(), input, middleware.InitializeOutput{})
 
 	assert.Contains(t, attributes, semconv.NetPeerName("test-queue-url"))
 }
@@ -46,7 +46,7 @@ func TestSQSDeleteQueueInput(t *testing.T) {
 		},
 	}
 
-	attributes := SQSAttributeSetter(context.TODO(), input)
+	attributes := SQSAttributeBuilder(context.TODO(), input, middleware.InitializeOutput{})
 
 	assert.Contains(t, attributes, semconv.NetPeerName("test-queue-url"))
 }
@@ -58,7 +58,7 @@ func TestSQSGetQueueAttributesInput(t *testing.T) {
 		},
 	}
 
-	attributes := SQSAttributeSetter(context.TODO(), input)
+	attributes := SQSAttributeBuilder(context.TODO(), input, middleware.InitializeOutput{})
 
 	assert.Contains(t, attributes, semconv.NetPeerName("test-queue-url"))
 }
@@ -70,7 +70,7 @@ func TestSQSListDeadLetterSourceQueuesInput(t *testing.T) {
 		},
 	}
 
-	attributes := SQSAttributeSetter(context.TODO(), input)
+	attributes := SQSAttributeBuilder(context.TODO(), input, middleware.InitializeOutput{})
 
 	assert.Contains(t, attributes, semconv.NetPeerName("test-queue-url"))
 }
@@ -82,7 +82,7 @@ func TestSQSListQueueTagsInput(t *testing.T) {
 		},
 	}
 
-	attributes := SQSAttributeSetter(context.TODO(), input)
+	attributes := SQSAttributeBuilder(context.TODO(), input, middleware.InitializeOutput{})
 
 	assert.Contains(t, attributes, semconv.NetPeerName("test-queue-url"))
 }
@@ -94,7 +94,7 @@ func TestSQSPurgeQueueInput(t *testing.T) {
 		},
 	}
 
-	attributes := SQSAttributeSetter(context.TODO(), input)
+	attributes := SQSAttributeBuilder(context.TODO(), input, middleware.InitializeOutput{})
 
 	assert.Contains(t, attributes, semconv.NetPeerName("test-queue-url"))
 }
@@ -106,7 +106,7 @@ func TestSQSReceiveMessageInput(t *testing.T) {
 		},
 	}
 
-	attributes := SQSAttributeSetter(context.TODO(), input)
+	attributes := SQSAttributeBuilder(context.TODO(), input, middleware.InitializeOutput{})
 
 	assert.Contains(t, attributes, semconv.NetPeerName("test-queue-url"))
 }
@@ -118,7 +118,7 @@ func TestSQSRemovePermissionInput(t *testing.T) {
 		},
 	}
 
-	attributes := SQSAttributeSetter(context.TODO(), input)
+	attributes := SQSAttributeBuilder(context.TODO(), input, middleware.InitializeOutput{})
 
 	assert.Contains(t, attributes, semconv.NetPeerName("test-queue-url"))
 }
@@ -130,7 +130,7 @@ func TestSQSSendMessageBatchInput(t *testing.T) {
 		},
 	}
 
-	attributes := SQSAttributeSetter(context.TODO(), input)
+	attributes := SQSAttributeBuilder(context.TODO(), input, middleware.InitializeOutput{})
 
 	assert.Contains(t, attributes, semconv.NetPeerName("test-queue-url"))
 }
@@ -142,7 +142,7 @@ func TestSQSSendMessageInput(t *testing.T) {
 		},
 	}
 
-	attributes := SQSAttributeSetter(context.TODO(), input)
+	attributes := SQSAttributeBuilder(context.TODO(), input, middleware.InitializeOutput{})
 
 	assert.Contains(t, attributes, semconv.NetPeerName("test-queue-url"))
 }
@@ -154,7 +154,7 @@ func TestSQSSetQueueAttributesInput(t *testing.T) {
 		},
 	}
 
-	attributes := SQSAttributeSetter(context.TODO(), input)
+	attributes := SQSAttributeBuilder(context.TODO(), input, middleware.InitializeOutput{})
 
 	assert.Contains(t, attributes, semconv.NetPeerName("test-queue-url"))
 }
@@ -166,7 +166,7 @@ func TestSQSTagQueueInput(t *testing.T) {
 		},
 	}
 
-	attributes := SQSAttributeSetter(context.TODO(), input)
+	attributes := SQSAttributeBuilder(context.TODO(), input, middleware.InitializeOutput{})
 
 	assert.Contains(t, attributes, semconv.NetPeerName("test-queue-url"))
 }
@@ -178,7 +178,7 @@ func TestSQSUntagQueueInput(t *testing.T) {
 		},
 	}
 
-	attributes := SQSAttributeSetter(context.TODO(), input)
+	attributes := SQSAttributeBuilder(context.TODO(), input, middleware.InitializeOutput{})
 
 	assert.Contains(t, attributes, semconv.NetPeerName("test-queue-url"))
 }
