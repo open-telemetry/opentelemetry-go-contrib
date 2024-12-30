@@ -1,4 +1,4 @@
-module go.opentelemetry.io/contrib/examples/dice
+module go.opentelemetry.io/contrib/examples/dice/instrumented
 
 go 1.22
 
@@ -22,10 +22,10 @@ require (
 	github.com/go-logr/stdr v1.2.2 // indirect
 	github.com/google/uuid v1.6.0 // indirect
 	go.opentelemetry.io/otel/trace v1.32.0 // indirect
-	golang.org/x/sys v0.27.0 // indirect
+	golang.org/x/sys v0.28.0 // indirect
 )
 
 replace (
-	go.opentelemetry.io/contrib/bridges/otelslog => ../../bridges/otelslog
-	go.opentelemetry.io/contrib/instrumentation/net/http/otelhttp => ../../instrumentation/net/http/otelhttp
+	go.opentelemetry.io/contrib/bridges/otelslog => ../../../bridges/otelslog
+	go.opentelemetry.io/contrib/instrumentation/net/http/otelhttp => ../../../instrumentation/net/http/otelhttp
 )

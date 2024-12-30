@@ -107,7 +107,7 @@ $(CODESPELL): PACKAGE=codespell
 # Generate
 
 .PHONY: generate
-generate: go-generate vanity-import-fix
+generate: go-generate genjsonschema vanity-import-fix
 
 .PHONY: go-generate
 go-generate: $(OTEL_GO_MOD_DIRS:%=go-generate/%)
@@ -316,7 +316,7 @@ update-all-otel-deps:
 		done
 
 # The source directory for opentelemetry-configuration schema.
-OPENTELEMETRY_CONFIGURATION_JSONSCHEMA_SRC_DIR=tmp/opentelememetry-configuration
+OPENTELEMETRY_CONFIGURATION_JSONSCHEMA_SRC_DIR=tmp/opentelemetry-configuration
 
 # The SHA matching the current version of the opentelemetry-configuration schema to use
 OPENTELEMETRY_CONFIGURATION_JSONSCHEMA_VERSION=v0.3.0
@@ -325,11 +325,12 @@ OPENTELEMETRY_CONFIGURATION_JSONSCHEMA_VERSION=v0.3.0
 genjsonschema-cleanup:
 	rm -Rf ${OPENTELEMETRY_CONFIGURATION_JSONSCHEMA_SRC_DIR}
 
-GENERATED_CONFIG=./config/generated_config.go
+GENERATED_CONFIG=./config/${OPENTELEMETRY_CONFIGURATION_JSONSCHEMA_VERSION}/generated_config.go
 
 # Generate structs for configuration from opentelemetry-configuration schema
 genjsonschema: genjsonschema-cleanup $(GOJSONSCHEMA)
 	mkdir -p ${OPENTELEMETRY_CONFIGURATION_JSONSCHEMA_SRC_DIR}
+	mkdir -p ./config/${OPENTELEMETRY_CONFIGURATION_JSONSCHEMA_VERSION}
 	curl -sSL https://api.github.com/repos/open-telemetry/opentelemetry-configuration/tarball/${OPENTELEMETRY_CONFIGURATION_JSONSCHEMA_VERSION} | tar xz --strip 1 -C ${OPENTELEMETRY_CONFIGURATION_JSONSCHEMA_SRC_DIR}
 	$(GOJSONSCHEMA) \
 		--capitalization ID \
@@ -342,7 +343,6 @@ genjsonschema: genjsonschema-cleanup $(GOJSONSCHEMA)
 	@echo Modify jsonschema generated files.
 	sed -f ./config/jsonschema_patch.sed ${GENERATED_CONFIG} > ${GENERATED_CONFIG}.tmp
 	mv ${GENERATED_CONFIG}.tmp ${GENERATED_CONFIG}
-	$(MAKE) lint
 	$(MAKE) genjsonschema-cleanup
 
 .PHONY: codespell
