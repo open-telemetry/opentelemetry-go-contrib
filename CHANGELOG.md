@@ -12,6 +12,10 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 
 - Generate server metrics with semantic conventions v1.26 in `go.opentelemetry.io/contrib/instrumentation/net/http/otelhttp` when `OTEL_SEMCONV_STABILITY_OPT_IN` is set to `http/dup`. (#6411)
 
+### Changed 
+
+- Support both `go.opentelemetry.io/otel/semconv/v1.21.0` (default) and `go.opentelemetry.io/otel/semconv/v1.26.0` (opt-in) in `go.opentelemetry.io/contrib/instrumentation/go.mongodb.org/mongo-driver/mongo/otelmongo` per the [Database semantic convention stability migration guide](https://github.com/open-telemetry/semantic-conventions/blob/main/docs/non-normative/db-migration.md#database-semantic-convention-stability-migration-guide) (#6172)
+
 ## [1.33.0/0.58.0/0.27.0/0.13.0/0.8.0/0.6.0/0.5.0] - 2024-12-12
 
 ### Added
@@ -29,10 +33,6 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 - Change the span name to be `GET /path` so it complies with the OTel HTTP semantic conventions in `go.opentelemetry.io/contrib/instrumentation/github.com/labstack/echo/otelecho`. (#6365)
 - Record errors instead of setting the `gin.errors` attribute in `go.opentelemetry.io/contrib/instrumentation/github.com/gin-gonic/gin/otelgin`. (#6346)
 - The `go.opentelemetry.io/contrib/config` now supports multiple schemas in subdirectories (i.e. `go.opentelemetry.io/contrib/config/v0.3.0`) for easier migration. (#6412)
-
-### Changed 
-
-- Support both `go.opentelemetry.io/otel/semconv/v1.21.0` (default) and `go.opentelemetry.io/otel/semconv/v1.26.0` (opt-in) in `go.opentelemetry.io/contrib/instrumentation/go.mongodb.org/mongo-driver/mongo/otelmongo` per the [Database semantic convention stability migration guide](https://github.com/open-telemetry/semantic-conventions/blob/main/docs/non-normative/db-migration.md#database-semantic-convention-stability-migration-guide) (#6172)
 
 ### Fixed
 
