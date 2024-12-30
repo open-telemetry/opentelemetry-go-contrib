@@ -83,7 +83,8 @@ func peerInfo(evt *event.CommandStartedEvent) (hostname string, port int) {
 
 	host, portStr, err := net.SplitHostPort(hostname)
 	if err != nil {
-		// If there's an error (likely because there's no port), assume default port and use ConnectionID as hostname
+		// If there's an error (likely because there's no port), assume default port
+		// and use ConnectionID as hostname
 		return hostname, port
 	}
 

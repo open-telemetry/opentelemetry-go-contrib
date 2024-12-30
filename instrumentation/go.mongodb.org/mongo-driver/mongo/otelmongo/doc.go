@@ -13,7 +13,7 @@
 //   - https://github.com/DataDog/dd-trace-go/tree/02f0449efa3cb382d499fadc873957385dcb2192/contrib/go.mongodb.org/mongo-driver/mongo
 //   - https://github.com/DataDog/dd-trace-go/tree/v1.23.3/ddtrace/ext
 //
-// The "OTEL_SEMCONV_STABILITY_OPT_IN" environment variable  can be used to opt
+// The "OTEL_SEMCONV_STABILITY_OPT_IN" environment variable can be used to opt
 // into semconv/v1.26.0:
 //   - "mongo": emit v1.26.0 semantic conventions
 //   - "": emit v1.21.0 (default) semantic conventions
