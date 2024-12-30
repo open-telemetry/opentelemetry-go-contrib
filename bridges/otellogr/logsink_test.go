@@ -354,11 +354,7 @@ func TestLogSink(t *testing.T) {
 
 func TestLogSinkEnabled(t *testing.T) {
 	enabledFunc := func(ctx context.Context, param log.EnabledParameters) bool {
-		lvl, ok := param.Severity()
-		if !ok {
-			return true
-		}
-		return lvl == log.SeverityInfo
+		return param.Severity == log.SeverityInfo
 	}
 
 	rec := logtest.NewRecorder(logtest.WithEnabledFunc(enabledFunc))

@@ -78,19 +78,18 @@ func TestLogProcessorDynamicSeverity(t *testing.T) {
 	p := NewLogProcessor(wrapped, sev)
 
 	ctx := context.Background()
-	params := &api.EnabledParameters{}
-	params.SetSeverity(api.SeverityDebug)
+	params := &api.EnabledParameters{Severity: api.SeverityDebug}
 	assert.False(t, p.Enabled(ctx, *params), api.SeverityDebug.String())
 
-	params.SetSeverity(api.SeverityInfo)
+	params.Severity = api.SeverityInfo
 	assert.True(t, p.Enabled(ctx, *params), api.SeverityInfo.String())
 
 	sev.Set(SeverityError)
 
-	params.SetSeverity(api.SeverityInfo)
+	params.Severity = api.SeverityInfo
 	assert.False(t, p.Enabled(ctx, *params), api.SeverityInfo.String())
 
-	params.SetSeverity(api.SeverityError)
+	params.Severity = api.SeverityError
 	assert.True(t, p.Enabled(ctx, *params), api.SeverityError.String())
 }
 
@@ -138,7 +137,7 @@ func TestLogProcessorEnabled(t *testing.T) {
 		ctx := context.Background()
 		param := api.EnabledParameters{}
 		for _, sev := range severities {
-			param.SetSeverity(sev)
+			param.Severity = sev
 			assert.True(t, p.Enabled(ctx, param), sev.String())
 
 			if assert.Lenf(t, wrapped.EnabledCalls, 1, "Record with severity %s not passed-through", sev) {
@@ -156,7 +155,7 @@ func TestLogProcessorEnabled(t *testing.T) {
 		ctx := context.Background()
 		param := api.EnabledParameters{}
 		for _, sev := range severities {
-			param.SetSeverity(sev)
+			param.Severity = sev
 			assert.False(t, p.Enabled(ctx, param), sev.String())
 
 			if !assert.Emptyf(t, wrapped.EnabledCalls, "Record with severity %s passed-through", sev) {
@@ -173,13 +172,13 @@ func TestLogProcessorEnabled(t *testing.T) {
 		ctx := context.Background()
 		params := &api.EnabledParameters{}
 
-		params.SetSeverity(api.SeverityDebug)
+		params.Severity = api.SeverityDebug
 		assert.False(t, p.Enabled(ctx, *params))
 
-		params.SetSeverity(api.SeverityInfo)
+		params.Severity = api.SeverityInfo
 		assert.True(t, p.Enabled(ctx, *params))
 
-		params.SetSeverity(api.SeverityError)
+		params.Severity = api.SeverityError
 		assert.True(t, p.Enabled(ctx, *params))
 
 		assert.Empty(t, wrapped.EnabledCalls)
@@ -214,8 +213,7 @@ func TestLogProcessorNilDownstream(t *testing.T) {
 	ctx := context.Background()
 	r := new(log.Record)
 	r.SetSeverity(api.SeverityTrace1)
-	param := api.EnabledParameters{}
-	param.SetSeverity(api.SeverityTrace1)
+	param := api.EnabledParameters{Severity: api.SeverityTrace1}
 	assert.NotPanics(t, func() {
 		assert.NoError(t, p.OnEmit(ctx, r))
 		assert.False(t, p.Enabled(ctx, param))
@@ -227,8 +225,7 @@ func TestLogProcessorNilDownstream(t *testing.T) {
 func BenchmarkLogProcessor(b *testing.B) {
 	r := new(log.Record)
 	r.SetSeverity(api.SeverityTrace)
-	param := api.EnabledParameters{}
-	param.SetSeverity(api.SeverityTrace)
+	param := api.EnabledParameters{Severity: api.SeverityTrace}
 	ctx := context.Background()
 
 	type combo interface {

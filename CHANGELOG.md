@@ -10,17 +10,25 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 
 ### Added
 
+- Generate server metrics with semantic conventions v1.26 in `go.opentelemetry.io/contrib/instrumentation/net/http/otelhttp` when `OTEL_SEMCONV_STABILITY_OPT_IN` is set to `http/dup`. (#6411)
+
+## [1.33.0/0.58.0/0.27.0/0.13.0/0.8.0/0.6.0/0.5.0] - 2024-12-12
+
+### Added
+
 - Added support for providing `endpoint`, `pollingIntervalMs` and `initialSamplingRate` using environment variable `OTEL_TRACES_SAMPLER_ARG` in `go.opentelemetry.io/contrib/samples/jaegerremote`. (#6310)
 - Added support exporting logs via OTLP over gRPC in `go.opentelemetry.io/contrib/config`. (#6340)
 - The `go.opentelemetry.io/contrib/bridges/otellogr` module.
   This module provides an OpenTelemetry logging bridge for `github.com/go-logr/logr`. (#6386)
 - Added SNS instrumentation in `go.opentelemetry.io/contrib/instrumentation/github.com/aws/aws-sdk-go-v2/otelaws`. (#6388)
+- Use a `sync.Pool` for metric options in `go.opentelemetry.io/contrib/instrumentation/net/http/otelhttp`. (#6394)
+- Added support for configuring `Certificate` field when configuring OTLP exporters in `go.opentelemetry.io/contrib/config`. (#6376)
 
 ### Changed
 
 - Change the span name to be `GET /path` so it complies with the OTel HTTP semantic conventions in `go.opentelemetry.io/contrib/instrumentation/github.com/labstack/echo/otelecho`. (#6365)
 - Record errors instead of setting the `gin.errors` attribute in `go.opentelemetry.io/contrib/instrumentation/github.com/gin-gonic/gin/otelgin`. (#6346)
-- The `go.opentelemetry.io/contrib/config` now supports multiple schemas in subdirectories (ie. `go.opentelemetry.io/contrib/config/v0.3.0`) for easier migration. (#6412)
+- The `go.opentelemetry.io/contrib/config` now supports multiple schemas in subdirectories (i.e. `go.opentelemetry.io/contrib/config/v0.3.0`) for easier migration. (#6412)
 
 ### Changed 
 
@@ -32,6 +40,11 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 - Fixed the value for configuring the OTLP exporter to use `grpc` instead of `grpc/protobuf` in `go.opentelemetry.io/contrib/config`. (#6338)
 - Allow marshaling types in `go.opentelemetry.io/contrib/config`. (#6347)
 - Removed the redundant handling of panic from the `HTML` function in `go.opentelemetry.io/contrib/instrumentation/github.com/gin-gonic/gin/otelgin`. (#6373)
+- The `code.function` attribute emitted by `go.opentelemetry.io/contrib/bridges/otelslog` now stores just the function name instead the package path-qualified function name.
+  The `code.namespace` attribute now stores the package path. (#6415)
+- The `code.function` attribute emitted by `go.opentelemetry.io/contrib/bridges/otelzap` now stores just the function name instead the package path-qualified function name.
+  The `code.namespace` attribute now stores the package path. (#6423)
+- Return an error for `nil` values when unmarshaling `NameStringValuePair` in `go.opentelemetry.io/contrib/config`. (#6425)
 
 <!-- Released section -->
 <!-- Don't change this section unless doing release -->
@@ -1191,7 +1204,8 @@ First official tagged release of `contrib` repository.
 - Prefix support for dogstatsd (#34)
 - Update Go Runtime package to use batch observer (#44)
 
-[Unreleased]: https://github.com/open-telemetry/opentelemetry-go-contrib/compare/v1.32.0...HEAD
+[Unreleased]: https://github.com/open-telemetry/opentelemetry-go-contrib/compare/v1.33.0...HEAD
+[1.33.0/0.58.0/0.27.0/0.13.0/0.8.0/0.6.0/0.5.0]: https://github.com/open-telemetry/opentelemetry-go-contrib/releases/tag/v1.33.0
 [1.32.0/0.57.0/0.26.0/0.12.0/0.7.0/0.5.0/0.4.0]: https://github.com/open-telemetry/opentelemetry-go-contrib/releases/tag/v1.32.0
 [1.31.0/0.56.0/0.25.0/0.11.0/0.6.0/0.4.0/0.3.0]: https://github.com/open-telemetry/opentelemetry-go-contrib/releases/tag/v1.31.0
 [1.30.0/0.55.0/0.24.0/0.10.0/0.5.0/0.3.0/0.2.0]: https://github.com/open-telemetry/opentelemetry-go-contrib/releases/tag/v1.30.0

@@ -72,11 +72,7 @@ type enablerKey uint
 var enableKey enablerKey
 
 func (r *recorder) Enabled(ctx context.Context, param log.EnabledParameters) bool {
-	lvl, ok := param.Severity()
-	if !ok {
-		return true
-	}
-	return ctx.Value(enableKey) != nil || lvl >= r.MinSeverity
+	return ctx.Value(enableKey) != nil || param.Severity >= r.MinSeverity
 }
 
 func (r *recorder) Emit(_ context.Context, record log.Record) {
@@ -230,7 +226,7 @@ func (h *wrapper) Handle(ctx context.Context, r slog.Record) error {
 func TestSLogHandler(t *testing.T) {
 	// Capture the PC of this line
 	pc, file, line, _ := runtime.Caller(0)
-	funcName := runtime.FuncForPC(pc).Name()
+	funcName, namespace := splitFuncName(runtime.FuncForPC(pc).Name())
 
 	cases := []testCase{
 		{
@@ -414,6 +410,7 @@ func TestSLogHandler(t *testing.T) {
 			checks: [][]check{{
 				hasAttr(string(semconv.CodeFilepathKey), file),
 				hasAttr(string(semconv.CodeFunctionKey), funcName),
+				hasAttr(string(semconv.CodeNamespaceKey), namespace),
 				hasAttr(string(semconv.CodeLineNumberKey), int64(line)),
 			}},
 			options: []Option{WithSource(true)},
@@ -508,6 +505,48 @@ func TestHandlerEnabled(t *testing.T) {
 
 	ctx = context.WithValue(ctx, enableKey, true)
 	assert.True(t, h.Enabled(ctx, slog.LevelDebug), "context not passed")
+}
+
+func TestSplitFuncName(t *testing.T) {
+	testCases := []struct {
+		fullFuncName  string
+		wantFuncName  string
+		wantNamespace string
+	}{
+		{
+			fullFuncName:  "github.com/my/repo/pkg.foo",
+			wantFuncName:  "foo",
+			wantNamespace: "github.com/my/repo/pkg",
+		},
+		{
+			// anonymous function
+			fullFuncName:  "github.com/my/repo/pkg.foo.func5",
+			wantFuncName:  "func5",
+			wantNamespace: "github.com/my/repo/pkg.foo",
+		},
+		{
+			fullFuncName:  "net/http.Get",
+			wantFuncName:  "Get",
+			wantNamespace: "net/http",
+		},
+		{
+			fullFuncName:  "invalid",
+			wantFuncName:  "",
+			wantNamespace: "",
+		},
+		{
+			fullFuncName:  ".",
+			wantFuncName:  "",
+			wantNamespace: "",
+		},
+	}
+	for _, tc := range testCases {
+		t.Run(tc.fullFuncName, func(t *testing.T) {
+			gotFuncName, gotNamespace := splitFuncName(tc.fullFuncName)
+			assert.Equal(t, tc.wantFuncName, gotFuncName)
+			assert.Equal(t, tc.wantNamespace, gotNamespace)
+		})
+	}
 }
 
 func BenchmarkHandler(b *testing.B) {
@@ -637,6 +676,19 @@ func BenchmarkHandler(b *testing.B) {
 				err = handlers[n].Handle(ctx, record)
 			}
 		})
+	})
+
+	b.Run("(WithSource).Handle", func(b *testing.B) {
+		handlers := make([]*Handler, b.N)
+		for i := range handlers {
+			handlers[i] = NewHandler("", WithSource(true))
+		}
+
+		b.ReportAllocs()
+		b.ResetTimer()
+		for n := 0; n < b.N; n++ {
+			err = handlers[n].Handle(ctx, record)
+		}
 	})
 
 	_, _ = h, err
