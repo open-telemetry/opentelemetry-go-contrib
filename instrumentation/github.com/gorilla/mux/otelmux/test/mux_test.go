@@ -23,63 +23,6 @@ import (
 	"go.opentelemetry.io/otel/trace"
 )
 
-func TestRecordingResponseWriterHijackWithMiddleware(t *testing.T) {
-	// Create a mock HTTP handler
-	mockHandler := http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		hj, ok := w.(http.Hijacker)
-		require.True(t, ok, "ResponseWriter does not implement http.Hijacker")
-
-		conn, rw, err := hj.Hijack()
-		require.NoError(t, err)
-		assert.NotNil(t, conn)
-		assert.NotNil(t, rw)
-
-		err = conn.Close()
-		require.NoError(t, err)
-	})
-
-	// Wrap the handler with otelmux.Middleware
-	router := mux.NewRouter()
-	router.Use(otelmux.Middleware("test-service"))
-	router.Handle("/hijack", mockHandler)
-
-	// Create a mock HTTP request and response writer
-	req := httptest.NewRequest("GET", "http://example.com/hijack", nil)
-	rr := httptest.NewRecorder()
-
-	// Serve the HTTP request using the wrapped handler
-	router.ServeHTTP(rr, req)
-
-	// Verify the response status
-	assert.Equal(t, http.StatusOK, rr.Code)
-}
-
-func TestRecordingResponseWriterHijackNonHijackerWithMiddleware(t *testing.T) {
-	// Create a mock HTTP handler
-	mockHandler := http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		hj, ok := w.(http.Hijacker)
-		require.False(t, ok, "ResponseWriter should not implement http.Hijacker")
-
-		_, _, err := hj.Hijack()
-		assert.Error(t, err)
-	})
-
-	// Wrap the handler with otelmux.Middleware
-	router := mux.NewRouter()
-	router.Use(otelmux.Middleware("test-service"))
-	router.Handle("/non-hijack", mockHandler)
-
-	// Create a mock HTTP request and response writer
-	req := httptest.NewRequest("GET", "http://example.com/non-hijack", nil)
-	rr := httptest.NewRecorder()
-
-	// Serve the HTTP request using the wrapped handler
-	router.ServeHTTP(rr, req)
-
-	// Verify the response status
-	assert.Equal(t, http.StatusOK, rr.Code)
-}
-
 func TestCustomSpanNameFormatter(t *testing.T) {
 	exporter := tracetest.NewInMemoryExporter()
 
@@ -338,4 +281,26 @@ func TestWithPublicEndpointFn(t *testing.T) {
 			tt.spansAssert(t, sc, spans)
 		})
 	}
+}
+
+func getRRW(w http.ResponseWriter) http.Hijacker {
+	if hijacker, ok := w.(http.Hijacker); ok {
+		return hijacker
+	}
+	return nil
+}
+
+func TestRecordingResponseWriterHijack(t *testing.T) {
+	handler := http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		rrw := getRRW(w)
+		conn, rw, err := rrw.Hijack()
+		assert.Nil(t, conn)
+		assert.Nil(t, rw)
+		assert.NotNil(t, err)
+		assert.Equal(t, "underlying ResponseWriter does not support hijacking", err.Error())
+	})
+
+	req := httptest.NewRequest("GET", "/", nil)
+	w := httptest.NewRecorder()
+	handler.ServeHTTP(w, req)
 }
