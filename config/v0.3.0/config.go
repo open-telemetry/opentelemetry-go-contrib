@@ -8,6 +8,7 @@ import (
 	"crypto/tls"
 	"crypto/x509"
 	"errors"
+	"fmt"
 	"os"
 
 	"gopkg.in/yaml.v3"
@@ -159,19 +160,29 @@ func toStringMap(pairs []NameStringValuePair) map[string]string {
 	return output
 }
 
-// createTLSConfig creates a tls.Config from a raw certificate bytes
-// to verify a server certificate.
-func createTLSConfig(certFile string) (*tls.Config, error) {
-	b, err := os.ReadFile(certFile)
-	if err != nil {
-		return nil, err
+// createTLSConfig creates a tls.Config from certificate files.
+func createTLSConfig(caCertFile *string, clientCertFile *string, clientKeyFile *string) (*tls.Config, error) {
+	tlsConfig := &tls.Config{}
+	if caCertFile != nil {
+		caText, err := os.ReadFile(*caCertFile)
+		if err != nil {
+			return nil, err
+		}
+		certPool := x509.NewCertPool()
+		if !certPool.AppendCertsFromPEM(caText) {
+			return nil, errors.New("could not create certificate authority chain from certificate")
+		}
+		tlsConfig.RootCAs = certPool
 	}
-	cp := x509.NewCertPool()
-	if ok := cp.AppendCertsFromPEM(b); !ok {
-		return nil, errors.New("failed to append certificate to the cert pool")
+	if clientCertFile != nil {
+		if clientKeyFile == nil {
+			return nil, errors.New("client certificate was provided but no client key was provided")
+		}
+		clientCert, err := tls.LoadX509KeyPair(*clientCertFile, *clientKeyFile)
+		if err != nil {
+			return nil, fmt.Errorf("could not use client certificate: %w", err)
+		}
+		tlsConfig.Certificates = []tls.Certificate{clientCert}
 	}
-
-	return &tls.Config{
-		RootCAs: cp,
-	}, nil
+	return tlsConfig, nil
 }

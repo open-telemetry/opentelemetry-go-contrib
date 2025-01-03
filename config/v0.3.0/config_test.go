@@ -5,6 +5,7 @@ package config
 
 import (
 	"context"
+	"crypto/tls"
 	"encoding/json"
 	"errors"
 	"os"
@@ -506,6 +507,62 @@ func TestSerializeJSON(t *testing.T) {
 			} else {
 				require.NoError(t, err)
 				assert.Equal(t, tt.wantType, got)
+			}
+		})
+	}
+}
+
+func TestCreateTLSConfig(t *testing.T) {
+	tests := []struct {
+		name           string
+		caCertFile     *string
+		clientCertFile *string
+		clientKeyFile  *string
+		wantErr        error
+		want           func(*tls.Config, *testing.T)
+	}{
+		{
+			name: "no-input",
+			want: func(result *tls.Config, t *testing.T) {
+				require.Nil(t, result.Certificates)
+				require.Nil(t, result.RootCAs)
+			},
+		},
+		{
+			name:       "only-cacert-provided",
+			caCertFile: ptr(filepath.Join("..", "testdata", "ca.crt")),
+			want: func(result *tls.Config, t *testing.T) {
+				require.Nil(t, result.Certificates)
+				require.NotNil(t, result.RootCAs)
+			},
+		},
+		{
+			name:       "nonexistent-cacert-file",
+			caCertFile: ptr("nowhere.crt"),
+			wantErr:    errors.New("open nowhere.crt: no such file or directory"),
+		},
+		{
+			name:           "nonexistent-clientcert-file",
+			clientCertFile: ptr("nowhere.crt"),
+			clientKeyFile:  ptr("nowhere.crt"),
+			wantErr:        errors.New("could not use client certificate: open nowhere.crt: no such file or directory"),
+		},
+		{
+			name:       "bad-cacert-file",
+			caCertFile: ptr(filepath.Join("..", "testdata", "bad_cert.crt")),
+			wantErr:    errors.New("could not create certificate authority chain from certificate"),
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			got, err := createTLSConfig(tt.caCertFile, tt.clientCertFile, tt.clientKeyFile)
+
+			if tt.wantErr != nil {
+				require.Equal(t, tt.wantErr.Error(), err.Error())
+			} else {
+				require.NoError(t, err)
+				tt.want(got, t)
 			}
 		})
 	}
