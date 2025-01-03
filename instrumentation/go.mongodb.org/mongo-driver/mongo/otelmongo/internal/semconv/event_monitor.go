@@ -1,7 +1,7 @@
 // Copyright The OpenTelemetry Authors
 // SPDX-License-Identifier: Apache-2.0
 
-package semconv
+package semconv // import "go.opentelemetry.io/contrib/instrumentation/go.mongodb.org/mongo-driver/mongo/otelmongo/internal/semconv"
 
 import (
 	"net"
@@ -11,13 +11,14 @@ import (
 
 	"go.mongodb.org/mongo-driver/bson"
 	"go.mongodb.org/mongo-driver/event"
+
 	"go.opentelemetry.io/otel/attribute"
 
 	semconv1210 "go.opentelemetry.io/otel/semconv/v1.21.0"
 	semconv1260 "go.opentelemetry.io/otel/semconv/v1.26.0"
 )
 
-// Constants for environment variable keys and versions
+// Constants for environment variable keys and versions.
 const (
 	semconvOptIn     = "OTEL_SEMCONV_STABILITY_OPT_IN"
 	semconvOptInDup  = "mongo/dup"
@@ -25,7 +26,7 @@ const (
 )
 
 // EventMonitor is responsible for monitoring events with a specified semantic
-// version
+// version.
 type EventMonitor struct {
 	version string
 }
@@ -64,7 +65,7 @@ func WithCommandAttributeDisabled(disabled bool) AttributeOption {
 }
 
 // CommandStartedTraceAttrs generates trace attributes for a CommandStartedEvent
-// based on the EventMonitor version
+// based on the EventMonitor version.
 func (m EventMonitor) CommandStartedTraceAttrs(
 	evt *event.CommandStartedEvent,
 	opts ...AttributeOption,
@@ -79,7 +80,7 @@ func (m EventMonitor) CommandStartedTraceAttrs(
 	}
 }
 
-// peerInfo extracts the hostname and port from a CommandStartedEvent
+// peerInfo extracts the hostname and port from a CommandStartedEvent.
 func peerInfo(evt *event.CommandStartedEvent) (hostname string, port int) {
 	hostname = evt.ConnectionID
 	port = 27017 // Default MongoDB port
@@ -99,7 +100,7 @@ func peerInfo(evt *event.CommandStartedEvent) (hostname string, port int) {
 }
 
 // sanitizeCommand converts a BSON command to a sanitized JSON string.
-// TODO: Sanitize values where possible and limit maximum size
+// TODO: Sanitize values where possible and limit maximum size.
 func sanitizeCommand(command bson.Raw) string {
 	b, _ := bson.MarshalExtJSON(command, false, false)
 
