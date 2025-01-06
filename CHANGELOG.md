@@ -23,7 +23,7 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 - Added SNS instrumentation in `go.opentelemetry.io/contrib/instrumentation/github.com/aws/aws-sdk-go-v2/otelaws`. (#6388)
 - Use a `sync.Pool` for metric options in `go.opentelemetry.io/contrib/instrumentation/net/http/otelhttp`. (#6394)
 - Added support for configuring `Certificate` field when configuring OTLP exporters in `go.opentelemetry.io/contrib/config`. (#6376)
-- Added `metricAttributesFn` to `go.opentelemetry.io/contrib/instrumentation/net/http/otelhttp` to allow setting dynamic, per-request metric attributes for http server metrics. (#6542)
+- Added support for the `WithMetricAttributesFn` option to middlewares in `go.opentelemetry.io/contrib/instrumentation/net/http/otelhttp`. (#6542)
 
 ### Changed
 
