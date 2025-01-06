@@ -12,6 +12,10 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 
 - Generate server metrics with semantic conventions v1.26 in `go.opentelemetry.io/contrib/instrumentation/net/http/otelhttp` when `OTEL_SEMCONV_STABILITY_OPT_IN` is set to `http/dup`. (#6411)
 
+### Fixed
+
+- Fix error logged by Jaeger remote sampler on empty or unset `OTEL_TRACES_SAMPLER_ARG` environment variable (#6511)
+
 <!-- Released section -->
 <!-- Don't change this section unless doing release -->
 
@@ -26,6 +30,7 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 - Added SNS instrumentation in `go.opentelemetry.io/contrib/instrumentation/github.com/aws/aws-sdk-go-v2/otelaws`. (#6388)
 - Use a `sync.Pool` for metric options in `go.opentelemetry.io/contrib/instrumentation/net/http/otelhttp`. (#6394)
 - Added support for configuring `Certificate` field when configuring OTLP exporters in `go.opentelemetry.io/contrib/config`. (#6376)
+- Added support for the `WithMetricAttributesFn` option to middlewares in `go.opentelemetry.io/contrib/instrumentation/net/http/otelhttp`. (#6542)
 
 ### Changed
 
