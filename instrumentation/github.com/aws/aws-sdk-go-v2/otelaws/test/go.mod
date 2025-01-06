@@ -20,7 +20,7 @@ require (
 	github.com/aws/aws-sdk-go-v2/service/internal/accept-encoding v1.12.1 // indirect
 	github.com/aws/aws-sdk-go-v2/service/internal/endpoint-discovery v1.10.7 // indirect
 	github.com/aws/aws-sdk-go-v2/service/sns v1.33.8 // indirect
-	github.com/aws/aws-sdk-go-v2/service/sqs v1.37.3 // indirect
+	github.com/aws/aws-sdk-go-v2/service/sqs v1.37.4 // indirect
 	github.com/davecgh/go-spew v1.1.1 // indirect
 	github.com/go-logr/logr v1.4.2 // indirect
 	github.com/go-logr/stdr v1.2.2 // indirect
