@@ -68,7 +68,6 @@ type config struct {
 	provider      log.LoggerProvider
 	version       string
 	schemaURL     string
-	ctx           context.Context
 	levelSeverity func(int) log.Severity
 }
 
@@ -80,10 +79,6 @@ func newConfig(options []Option) config {
 
 	if c.provider == nil {
 		c.provider = global.GetLoggerProvider()
-	}
-
-	if c.ctx == nil {
-		c.ctx = context.Background()
 	}
 
 	if c.levelSeverity == nil {
@@ -180,7 +175,7 @@ func NewLogSink(name string, options ...Option) *LogSink {
 		logger:        c.provider.Logger(name, opts...),
 		levelSeverity: c.levelSeverity,
 		opts:          opts,
-		ctx:           c.ctx,
+		ctx:           context.Background(),
 	}
 }
 
@@ -207,7 +202,7 @@ var _ logr.LogSink = (*LogSink)(nil)
 // verbosity and disable some info logs.
 func (l *LogSink) Enabled(level int) bool {
 	param := log.EnabledParameters{Severity: l.levelSeverity(level)}
-	return l.logger.Enabled(l.ctx, param)
+	return l.logger.Enabled(context.Background(), param)
 }
 
 // Error logs an error, with the given message and key/value pairs.
@@ -240,17 +235,6 @@ func (l *LogSink) Info(level int, msg string, keysAndValues ...any) {
 	record.AddAttributes(attr...)
 
 	l.logger.Emit(ctx, record)
-}
-
-// WithContext returns a new LogSink with the specified context.
-func (l *LogSink) WithContext(ctx context.Context) *LogSink {
-	if ctx == nil {
-		return l
-	}
-	sink := new(LogSink)
-	*sink = *l
-	sink.ctx = ctx
-	return sink
 }
 
 // Init receives optional information about the logr library this

@@ -58,13 +58,6 @@ func TestNewConfig(t *testing.T) {
 				assert.Equal(t, customLoggerProvider, c.provider)
 			},
 		},
-		{
-			name:    "default context",
-			options: []Option{},
-			wantFunc: func(c config) {
-				assert.Equal(t, context.Background(), c.ctx)
-			},
-		},
 	} {
 		t.Run(tt.name, func(t *testing.T) {
 			tt.wantFunc(newConfig(tt.options))
@@ -373,42 +366,6 @@ func TestLogSinkEnabled(t *testing.T) {
 
 	assert.True(t, ls.Enabled(0))
 	assert.False(t, ls.Enabled(1))
-}
-
-func TestLogSinkWithContext(t *testing.T) {
-	rec := logtest.NewRecorder()
-	ls := NewLogSink(
-		"name",
-		WithLoggerProvider(rec),
-	)
-
-	t.Run("no context", func(t *testing.T) {
-		defer rec.Reset()
-		ls.Info(0, "msg")
-		require.Len(t, rec.Result(), 1)
-		require.Len(t, rec.Result()[0].Records, 1)
-		assert.Empty(t, rec.Result()[0].Records[0].Context())
-	})
-
-	t.Run("with nil context", func(t *testing.T) {
-		defer rec.Reset()
-
-		ls2 := ls.WithContext(nil) //nolint:staticcheck
-		assert.Same(t, ls, ls2)
-	})
-
-	t.Run("with context", func(t *testing.T) {
-		defer rec.Reset()
-
-		ctx := context.WithValue(context.Background(), "key", "value") //nolint:revive,staticcheck
-		ls2 := ls.WithContext(ctx)
-		assert.NotSame(t, ls, ls2)
-
-		ls2.Info(0, "msg")
-		require.Len(t, rec.Result(), 1)
-		require.Len(t, rec.Result()[0].Records, 1)
-		assert.Equal(t, "value", rec.Result()[0].Records[0].Context().Value("key"))
-	})
 }
 
 func buildRecord(body log.Value, timestamp time.Time, severity log.Severity, attrs []log.KeyValue) log.Record {
