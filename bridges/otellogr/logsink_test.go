@@ -28,7 +28,6 @@ func (mockLoggerProvider) Logger(name string, options ...log.LoggerOption) log.L
 
 func TestNewConfig(t *testing.T) {
 	customLoggerProvider := mockLoggerProvider{}
-	ctx := context.WithValue(context.Background(), "key", "value") // nolint:revive,staticcheck
 
 	for _, tt := range []struct {
 		name     string
@@ -64,15 +63,6 @@ func TestNewConfig(t *testing.T) {
 			options: []Option{},
 			wantFunc: func(c config) {
 				assert.Equal(t, context.Background(), c.ctx)
-			},
-		},
-		{
-			name: "with a custom context",
-			options: []Option{
-				WithContext(ctx),
-			},
-			wantFunc: func(c config) {
-				assert.Equal(t, ctx, c.ctx)
 			},
 		},
 	} {

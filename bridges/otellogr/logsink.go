@@ -143,18 +143,6 @@ func WithLoggerProvider(provider log.LoggerProvider) Option {
 	})
 }
 
-// WithContext returns an [Option] that configures the [context.Context] used by
-// a [LogSink].
-//
-// By default if this Option is not provided, the LogSink will use the
-// background context.
-func WithContext(ctx context.Context) Option {
-	return optFunc(func(c config) config {
-		c.ctx = ctx
-		return c
-	})
-}
-
 // WithLevelSeverity returns an [Option] that configures the function used to
 // convert logr levels to OpenTelemetry log severities.
 //
