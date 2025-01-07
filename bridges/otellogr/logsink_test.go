@@ -30,8 +30,9 @@ func TestNewConfig(t *testing.T) {
 	customLoggerProvider := mockLoggerProvider{}
 
 	for _, tt := range []struct {
-		name       string
-		options    []Option
+		name    string
+		options []Option
+
 		wantConfig config
 	}{
 		{
