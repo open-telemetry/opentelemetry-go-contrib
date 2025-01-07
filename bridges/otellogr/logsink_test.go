@@ -30,14 +30,15 @@ func TestNewConfig(t *testing.T) {
 	customLoggerProvider := mockLoggerProvider{}
 
 	for _, tt := range []struct {
-		name     string
-		options  []Option
-		wantFunc func(config)
+		name       string
+		options    []Option
+		wantConfig config
 	}{
 		{
 			name: "with no options",
-			wantFunc: func(c config) {
-				assert.Equal(t, global.GetLoggerProvider(), c.provider)
+
+			wantConfig: config{
+				provider: global.GetLoggerProvider(),
 			},
 		},
 		{
@@ -45,8 +46,10 @@ func TestNewConfig(t *testing.T) {
 			options: []Option{
 				WithVersion("42.0"),
 			},
-			wantFunc: func(c config) {
-				assert.Equal(t, "42.0", c.version)
+
+			wantConfig: config{
+				version:  "42.0",
+				provider: global.GetLoggerProvider(),
 			},
 		},
 		{
@@ -54,13 +57,16 @@ func TestNewConfig(t *testing.T) {
 			options: []Option{
 				WithLoggerProvider(customLoggerProvider),
 			},
-			wantFunc: func(c config) {
-				assert.Equal(t, customLoggerProvider, c.provider)
+
+			wantConfig: config{
+				provider: customLoggerProvider,
 			},
 		},
 	} {
 		t.Run(tt.name, func(t *testing.T) {
-			tt.wantFunc(newConfig(tt.options))
+			config := newConfig(tt.options)
+			config.levelSeverity = nil // Ignore asserting level severity function, assert.Equal does not support function comparison
+			assert.Equal(t, tt.wantConfig, config)
 		})
 	}
 }
