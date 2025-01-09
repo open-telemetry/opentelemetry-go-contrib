@@ -13,7 +13,6 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 - Generate server metrics with semantic conventions v1.26 in `go.opentelemetry.io/contrib/instrumentation/net/http/otelhttp` when `OTEL_SEMCONV_STABILITY_OPT_IN` is set to `http/dup`. (#6411)
 - Added support for configuring `ClientCertificate` and `ClientKey` field when exporting OTLP over gRPC in `go.opentelemetry.io/contrib/config`. (#6378)
 
-
 ### Fixed
 
 - Fix error logged by Jaeger remote sampler on empty or unset `OTEL_TRACES_SAMPLER_ARG` environment variable (#6511)
