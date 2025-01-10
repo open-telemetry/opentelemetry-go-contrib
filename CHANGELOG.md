@@ -15,6 +15,7 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 ### Fixed
 
 - Fix error logged by Jaeger remote sampler on empty or unset `OTEL_TRACES_SAMPLER_ARG` environment variable (#6511)
+- Relax minimum Go version to 1.22.0 in various modules. (#6595)
 
 <!-- Released section -->
 <!-- Don't change this section unless doing release -->
