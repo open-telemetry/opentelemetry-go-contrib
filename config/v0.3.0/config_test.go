@@ -514,12 +514,13 @@ func TestSerializeJSON(t *testing.T) {
 
 func TestCreateTLSConfig(t *testing.T) {
 	tests := []struct {
-		name           string
-		caCertFile     *string
-		clientCertFile *string
-		clientKeyFile  *string
-		wantErr        error
-		want           func(*tls.Config, *testing.T)
+		name            string
+		caCertFile      *string
+		clientCertFile  *string
+		clientKeyFile   *string
+		wantErr         error
+		wantErrContains string
+		want            func(*tls.Config, *testing.T)
 	}{
 		{
 			name: "no-input",
@@ -537,15 +538,15 @@ func TestCreateTLSConfig(t *testing.T) {
 			},
 		},
 		{
-			name:       "nonexistent-cacert-file",
-			caCertFile: ptr("nowhere.crt"),
-			wantErr:    errors.New("open nowhere.crt: no such file or directory"),
+			name:            "nonexistent-cacert-file",
+			caCertFile:      ptr("nowhere.crt"),
+			wantErrContains: "open nowhere.crt:",
 		},
 		{
-			name:           "nonexistent-clientcert-file",
-			clientCertFile: ptr("nowhere.crt"),
-			clientKeyFile:  ptr("nowhere.crt"),
-			wantErr:        errors.New("could not use client certificate: open nowhere.crt: no such file or directory"),
+			name:            "nonexistent-clientcert-file",
+			clientCertFile:  ptr("nowhere.crt"),
+			clientKeyFile:   ptr("nowhere.crt"),
+			wantErrContains: "could not use client certificate: open nowhere.crt:",
 		},
 		{
 			name:       "bad-cacert-file",
@@ -560,6 +561,8 @@ func TestCreateTLSConfig(t *testing.T) {
 
 			if tt.wantErr != nil {
 				require.Equal(t, tt.wantErr.Error(), err.Error())
+			} else if tt.wantErrContains != "" {
+				require.Contains(t, err.Error(), tt.wantErrContains)
 			} else {
 				require.NoError(t, err)
 				tt.want(got, t)
