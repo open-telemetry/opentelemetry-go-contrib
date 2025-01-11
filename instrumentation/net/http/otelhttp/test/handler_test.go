@@ -577,6 +577,78 @@ func TestWithRouteTag(t *testing.T) {
 	}
 }
 
+func TestHandlerWithMetricAttributesFn(t *testing.T) {
+	const (
+		serverRequestSize  = "http.server.request.size"
+		serverResponseSize = "http.server.response.size"
+		serverDuration     = "http.server.duration"
+	)
+	testCases := []struct {
+		name                        string
+		fn                          func(r *http.Request) []attribute.KeyValue
+		expectedAdditionalAttribute []attribute.KeyValue
+	}{
+		{
+			name:                        "With a nil function",
+			fn:                          nil,
+			expectedAdditionalAttribute: []attribute.KeyValue{},
+		},
+		{
+			name: "With a function that returns an additional attribute",
+			fn: func(r *http.Request) []attribute.KeyValue {
+				return []attribute.KeyValue{
+					attribute.String("fooKey", "fooValue"),
+					attribute.String("barKey", "barValue"),
+				}
+			},
+			expectedAdditionalAttribute: []attribute.KeyValue{
+				attribute.String("fooKey", "fooValue"),
+				attribute.String("barKey", "barValue"),
+			},
+		},
+	}
+
+	for _, tc := range testCases {
+		reader := sdkmetric.NewManualReader()
+		meterProvider := sdkmetric.NewMeterProvider(sdkmetric.WithReader(reader))
+
+		h := otelhttp.NewHandler(
+			http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+				w.WriteHeader(http.StatusOK)
+			}), "test_handler",
+			otelhttp.WithMeterProvider(meterProvider),
+			otelhttp.WithMetricAttributesFn(tc.fn),
+		)
+
+		r, err := http.NewRequest(http.MethodGet, "http://localhost/", nil)
+		require.NoError(t, err)
+		rr := httptest.NewRecorder()
+		h.ServeHTTP(rr, r)
+
+		rm := metricdata.ResourceMetrics{}
+		err = reader.Collect(context.Background(), &rm)
+		require.NoError(t, err)
+		require.Len(t, rm.ScopeMetrics, 1)
+		assert.Len(t, rm.ScopeMetrics[0].Metrics, 3)
+
+		// Verify that the additional attribute is present in the metrics.
+		for _, m := range rm.ScopeMetrics[0].Metrics {
+			switch m.Name {
+			case serverRequestSize, serverResponseSize:
+				d, ok := m.Data.(metricdata.Sum[int64])
+				assert.True(t, ok)
+				assert.Len(t, d.DataPoints, 1)
+				containsAttributes(t, d.DataPoints[0].Attributes, testCases[0].expectedAdditionalAttribute)
+			case serverDuration:
+				d, ok := m.Data.(metricdata.Histogram[float64])
+				assert.True(t, ok)
+				assert.Len(t, d.DataPoints, 1)
+				containsAttributes(t, d.DataPoints[0].Attributes, testCases[0].expectedAdditionalAttribute)
+			}
+		}
+	}
+}
+
 func BenchmarkHandlerServeHTTP(b *testing.B) {
 	tp := sdktrace.NewTracerProvider()
 	mp := sdkmetric.NewMeterProvider()
