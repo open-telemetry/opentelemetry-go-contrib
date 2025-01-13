@@ -357,7 +357,7 @@ func TestLogSinkCtxInInfo(t *testing.T) {
 	rec := logtest.NewRecorder()
 	ls := NewLogSink("name", WithLoggerProvider(rec))
 	l := logr.New(ls)
-	ctx := context.WithValue(context.Background(), "key", "value")
+	ctx := context.WithValue(context.Background(), "key", "value") // nolint:revive,staticcheck
 
 	tests := []struct {
 		name        string
