@@ -71,7 +71,7 @@ func (m *monitor) Succeeded(ctx context.Context, evt *event.CommandSucceededEven
 }
 
 func (m *monitor) Failed(ctx context.Context, evt *event.CommandFailedEvent) {
-	m.Finished(&evt.CommandFinishedEvent, fmt.Errorf("%s", evt.Failure))
+	m.Finished(&evt.CommandFinishedEvent, fmt.Errorf("%w", evt.Failure))
 }
 
 func (m *monitor) Finished(evt *event.CommandFinishedEvent, err error) {
