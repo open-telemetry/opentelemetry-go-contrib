@@ -443,12 +443,11 @@ func TestTemporaryFormFileRemove(t *testing.T) {
 	router.Use(otelgin.Middleware("foobar", otelgin.WithTracerProvider(provider)))
 	var fileHeader *multipart.FileHeader
 	router.POST("/upload", func(c *gin.Context) {
-		ff, err := c.FormFile("file")
+		_, err := c.FormFile("file")
 		if err != nil {
 			_ = c.AbortWithError(http.StatusInternalServerError, err)
 			return
 		}
-		_ = ff
 		fileHeader = c.Request.MultipartForm.File["file"][0]
 		_, err = fileHeader.Open()
 		require.NoError(t, err)
