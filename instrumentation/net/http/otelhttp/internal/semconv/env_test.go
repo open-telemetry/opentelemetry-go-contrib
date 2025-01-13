@@ -81,7 +81,7 @@ func TestHTTPClientDoesNotPanic(t *testing.T) {
 					Req:        req,
 					StatusCode: 200,
 				})
-				tt.client.RecordResponseSize(context.Background(), 40, opts.AddOptions())
+				tt.client.RecordResponseSize(context.Background(), 40, opts)
 				tt.client.RecordMetrics(context.Background(), MetricData{
 					RequestSize: 20,
 					ElapsedTime: 1,

@@ -54,7 +54,7 @@ func TestNewTraceRequest(t *testing.T) {
 	testTraceRequest(t, serv, want)
 }
 
-func TestNewRecordMetrics(t *testing.T) {
+func TestNewServerRecordMetrics(t *testing.T) {
 	oldAttrs := attribute.NewSet(
 		attribute.String("http.scheme", "http"),
 		attribute.String("http.method", "POST"),
@@ -394,6 +394,283 @@ func TestRequestErrorType(t *testing.T) {
 	for _, tt := range testcases {
 		got := semconv.CurrentHTTPClient{}.ErrorType(tt.err)
 		assert.Equal(t, tt.want, got)
+	}
+}
+
+func TestNewClientRecordMetrics(t *testing.T) {
+	oldAttrs := attribute.NewSet(
+		attribute.String("http.method", "POST"),
+		attribute.Int64("http.status_code", 301),
+		attribute.String("net.peer.name", "example.com"),
+	)
+
+	currAttrs := attribute.NewSet(
+		attribute.String("http.request.method", "POST"),
+		attribute.Int64("http.response.status_code", 301),
+		attribute.String("network.protocol.name", "http"),
+		attribute.String("network.protocol.version", "1.1"),
+		attribute.String("server.address", "example.com"),
+		attribute.String("url.scheme", "http"),
+	)
+
+	// The OldHTTPClient version
+	expectedOldScopeMetric := metricdata.ScopeMetrics{
+		Scope: instrumentation.Scope{
+			Name: "test",
+		},
+		Metrics: []metricdata.Metrics{
+			{
+				Name:        "http.client.request.size",
+				Description: "Measures the size of HTTP request messages.",
+				Unit:        "By",
+				Data: metricdata.Sum[int64]{
+					Temporality: metricdata.CumulativeTemporality,
+					IsMonotonic: true,
+					DataPoints: []metricdata.DataPoint[int64]{
+						{
+							Attributes: oldAttrs,
+						},
+					},
+				},
+			},
+			{
+				Name:        "http.client.duration",
+				Description: "Measures the duration of outbound HTTP requests.",
+				Unit:        "ms",
+				Data: metricdata.Histogram[float64]{
+					Temporality: metricdata.CumulativeTemporality,
+					DataPoints: []metricdata.HistogramDataPoint[float64]{
+						{
+							Attributes: oldAttrs,
+						},
+					},
+				},
+			},
+		},
+	}
+
+	// the CurrentHTTPClient version
+	expectedCurrentScopeMetric := expectedOldScopeMetric
+	expectedCurrentScopeMetric.Metrics = append(expectedCurrentScopeMetric.Metrics, []metricdata.Metrics{
+		{
+			Name:        "http.client.request.body.size",
+			Description: "Size of HTTP client request bodies.",
+			Unit:        "By",
+			Data: metricdata.Histogram[int64]{
+				Temporality: metricdata.CumulativeTemporality,
+				DataPoints: []metricdata.HistogramDataPoint[int64]{
+					{
+						Attributes: currAttrs,
+					},
+				},
+			},
+		},
+		{
+			Name:        "http.client.request.duration",
+			Description: "Duration of HTTP client requests.",
+			Unit:        "s",
+			Data: metricdata.Histogram[float64]{
+				Temporality: metricdata.CumulativeTemporality,
+				DataPoints: []metricdata.HistogramDataPoint[float64]{
+					{
+						Attributes: currAttrs,
+					},
+				},
+			},
+		},
+	}...)
+
+	tests := []struct {
+		name       string
+		setEnv     bool
+		clientFunc func(metric.MeterProvider) semconv.HTTPClient
+		wantFunc   func(t *testing.T, rm metricdata.ResourceMetrics)
+	}{
+		{
+			name:   "No environment variable set, and no Meter",
+			setEnv: false,
+			clientFunc: func(metric.MeterProvider) semconv.HTTPClient {
+				return semconv.NewHTTPClient(nil)
+			},
+			wantFunc: func(t *testing.T, rm metricdata.ResourceMetrics) {
+				assert.Empty(t, rm.ScopeMetrics)
+			},
+		},
+		{
+			name:   "No environment variable set, but with Meter",
+			setEnv: false,
+			clientFunc: func(mp metric.MeterProvider) semconv.HTTPClient {
+				return semconv.NewHTTPClient(mp.Meter("test"))
+			},
+			wantFunc: func(t *testing.T, rm metricdata.ResourceMetrics) {
+				require.Len(t, rm.ScopeMetrics, 1)
+
+				// because of OldHTTPClient
+				require.Len(t, rm.ScopeMetrics[0].Metrics, 2)
+				metricdatatest.AssertEqual(t, expectedOldScopeMetric, rm.ScopeMetrics[0], metricdatatest.IgnoreTimestamp(), metricdatatest.IgnoreValue())
+			},
+		},
+		{
+			name:   "Set environment variable, but no Meter",
+			setEnv: true,
+			clientFunc: func(metric.MeterProvider) semconv.HTTPClient {
+				return semconv.NewHTTPClient(nil)
+			},
+			wantFunc: func(t *testing.T, rm metricdata.ResourceMetrics) {
+				assert.Empty(t, rm.ScopeMetrics)
+			},
+		},
+		{
+			name:   "Set environment variable and Meter",
+			setEnv: true,
+			clientFunc: func(mp metric.MeterProvider) semconv.HTTPClient {
+				return semconv.NewHTTPClient(mp.Meter("test"))
+			},
+			wantFunc: func(t *testing.T, rm metricdata.ResourceMetrics) {
+				require.Len(t, rm.ScopeMetrics, 1)
+				require.Len(t, rm.ScopeMetrics[0].Metrics, 4)
+				metricdatatest.AssertEqual(t, expectedCurrentScopeMetric, rm.ScopeMetrics[0], metricdatatest.IgnoreTimestamp(), metricdatatest.IgnoreValue())
+			},
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			if tt.setEnv {
+				t.Setenv(semconv.OTelSemConvStabilityOptIn, "http/dup")
+			}
+
+			reader := sdkmetric.NewManualReader()
+			mp := sdkmetric.NewMeterProvider(sdkmetric.WithReader(reader))
+
+			client := tt.clientFunc(mp)
+			req, err := http.NewRequest("POST", "http://example.com", nil)
+			assert.NoError(t, err)
+
+			client.RecordMetrics(context.Background(), semconv.MetricData{
+				RequestSize: 100,
+				ElapsedTime: 300,
+			}, client.MetricOptions(semconv.MetricAttributes{
+				Req:        req,
+				StatusCode: 301,
+			}))
+
+			rm := metricdata.ResourceMetrics{}
+			require.NoError(t, reader.Collect(context.Background(), &rm))
+			tt.wantFunc(t, rm)
+		})
+	}
+}
+
+func TestClientRecordResponseSize(t *testing.T) {
+	oldAttrs := attribute.NewSet(
+		attribute.String("http.method", "POST"),
+		attribute.Int64("http.status_code", 301),
+		attribute.String("net.peer.name", "example.com"),
+	)
+
+	// The OldHTTPClient version
+	expectedOldScopeMetric := metricdata.ScopeMetrics{
+		Scope: instrumentation.Scope{
+			Name: "test",
+		},
+		Metrics: []metricdata.Metrics{
+			{
+				Name:        "http.client.response.size",
+				Description: "Measures the size of HTTP response messages.",
+				Unit:        "By",
+				Data: metricdata.Sum[int64]{
+					Temporality: metricdata.CumulativeTemporality,
+					IsMonotonic: true,
+					DataPoints: []metricdata.DataPoint[int64]{
+						{
+							Attributes: oldAttrs,
+						},
+					},
+				},
+			},
+		},
+	}
+
+	// the CurrentHTTPClient version
+	expectedCurrentScopeMetric := expectedOldScopeMetric
+
+	tests := []struct {
+		name       string
+		setEnv     bool
+		clientFunc func(metric.MeterProvider) semconv.HTTPClient
+		wantFunc   func(t *testing.T, rm metricdata.ResourceMetrics)
+	}{
+		{
+			name:   "No environment variable set, and no Meter",
+			setEnv: false,
+			clientFunc: func(metric.MeterProvider) semconv.HTTPClient {
+				return semconv.NewHTTPClient(nil)
+			},
+			wantFunc: func(t *testing.T, rm metricdata.ResourceMetrics) {
+				assert.Empty(t, rm.ScopeMetrics)
+			},
+		},
+		{
+			name:   "No environment variable set, but with Meter",
+			setEnv: false,
+			clientFunc: func(mp metric.MeterProvider) semconv.HTTPClient {
+				return semconv.NewHTTPClient(mp.Meter("test"))
+			},
+			wantFunc: func(t *testing.T, rm metricdata.ResourceMetrics) {
+				require.Len(t, rm.ScopeMetrics, 1)
+
+				// because of OldHTTPClient
+				require.Len(t, rm.ScopeMetrics[0].Metrics, 1)
+				metricdatatest.AssertEqual(t, expectedOldScopeMetric, rm.ScopeMetrics[0], metricdatatest.IgnoreTimestamp(), metricdatatest.IgnoreValue())
+			},
+		},
+		{
+			name:   "Set environment variable, but no Meter",
+			setEnv: true,
+			clientFunc: func(metric.MeterProvider) semconv.HTTPClient {
+				return semconv.NewHTTPClient(nil)
+			},
+			wantFunc: func(t *testing.T, rm metricdata.ResourceMetrics) {
+				assert.Empty(t, rm.ScopeMetrics)
+			},
+		},
+		{
+			name:   "Set environment variable and Meter",
+			setEnv: true,
+			clientFunc: func(mp metric.MeterProvider) semconv.HTTPClient {
+				return semconv.NewHTTPClient(mp.Meter("test"))
+			},
+			wantFunc: func(t *testing.T, rm metricdata.ResourceMetrics) {
+				require.Len(t, rm.ScopeMetrics, 1)
+				require.Len(t, rm.ScopeMetrics[0].Metrics, 1)
+				metricdatatest.AssertEqual(t, expectedCurrentScopeMetric, rm.ScopeMetrics[0], metricdatatest.IgnoreTimestamp(), metricdatatest.IgnoreValue())
+			},
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			if tt.setEnv {
+				t.Setenv(semconv.OTelSemConvStabilityOptIn, "http/dup")
+			}
+
+			reader := sdkmetric.NewManualReader()
+			mp := sdkmetric.NewMeterProvider(sdkmetric.WithReader(reader))
+
+			client := tt.clientFunc(mp)
+			req, err := http.NewRequest("POST", "http://example.com", nil)
+			assert.NoError(t, err)
+
+			client.RecordResponseSize(context.Background(), 100, client.MetricOptions(semconv.MetricAttributes{
+				Req:        req,
+				StatusCode: 301,
+			}))
+
+			rm := metricdata.ResourceMetrics{}
+			require.NoError(t, reader.Collect(context.Background(), &rm))
+			tt.wantFunc(t, rm)
+		})
 	}
 }
 
