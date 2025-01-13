@@ -359,9 +359,9 @@ func TestLogSinkCtxInInfo(t *testing.T) {
 	ctx := context.WithValue(context.Background(), "key", "value")
 
 	tests := []struct {
-		name       string
-		keyValues  []any
-		wantCtxFun func(ctx context.Context)
+		name        string
+		keyValues   []any
+		wantCtxFunc func(ctx context.Context)
 	}{
 		{"default", nil, func(ctx context.Context) {
 			assert.Equal(t, context.Background(), ctx)
@@ -380,7 +380,7 @@ func TestLogSinkCtxInInfo(t *testing.T) {
 
 			got := rec.Result()[0]
 			require.Len(t, got.Records, 1)
-			tt.wantCtxFun(got.Records[0].Context())
+			tt.wantCtxFunc(got.Records[0].Context())
 		})
 	}
 }
