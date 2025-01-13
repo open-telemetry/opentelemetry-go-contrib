@@ -352,6 +352,7 @@ func TestLogSink(t *testing.T) {
 	}
 }
 
+// fix https://github.com/open-telemetry/opentelemetry-go-contrib/issues/6509
 func TestLogSinkCtxInInfo(t *testing.T) {
 	rec := logtest.NewRecorder()
 	ls := NewLogSink("name", WithLoggerProvider(rec))
