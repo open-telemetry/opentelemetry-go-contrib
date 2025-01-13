@@ -14,6 +14,7 @@ CONTRIB_REPO_URL = https://github.com/open-telemetry/opentelemetry-go-contrib/tr
 
 GO = go
 TIMEOUT = 60
+FUZZTIME = 180
 
 .DEFAULT_GOAL := precommit
 
@@ -275,6 +276,18 @@ test-coverage/%:
 		cd "$(DIR)" \
 		&& $$CMD ./... \
 		&& $(GO) tool cover -html=coverage.out -o coverage.html;
+
+# Fuzzing
+
+.PHONY: fuzz-config-json
+fuzz-config-json:
+	cd config/v0.3.0 \
+	&& $(GO) test -run=^$ -fuzztime=$(FUZZTIME) -fuzz=FuzzJSON
+
+.PHONY: fuzz-config-yaml
+fuzz-config-yaml:
+	cd config/v0.3.0 \
+	&& $(GO) test -run=^$ -fuzztime=$(FUZZTIME) -fuzz=FuzzYAML
 
 # Releasing
 

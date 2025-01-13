@@ -67,6 +67,25 @@ jobs:
     - name: Run tests with race detector
       run: make test-race
 
+  test-fuzz:
+    strategy:
+      matrix:
+        target:
+          - fuzz-config-json
+          - fuzz-config-yaml
+    runs-on: ubuntu-latest
+    steps:
+    - name: Checkout Repo
+      uses: actions/checkout@v4
+    - name: Install Go
+      uses: actions/setup-go@v5
+      with:
+        go-version: ${{ env.DEFAULT_GO_VERSION }}
+        check-latest: true
+        cache-dependency-path: "**/go.sum"
+    - name: Fuzzing
+      run: make ${{ matrix.target }}
+
   test-coverage:
     runs-on: ubuntu-latest
     steps:
