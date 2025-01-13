@@ -450,6 +450,8 @@ func TestTemporaryFormFileRemove(t *testing.T) {
 		}
 		_ = ff
 		fileHeader = c.Request.MultipartForm.File["file"][0]
+		_, err = fileHeader.Open()
+		require.NoError(t, err)
 		c.JSON(http.StatusOK, nil)
 	})
 
