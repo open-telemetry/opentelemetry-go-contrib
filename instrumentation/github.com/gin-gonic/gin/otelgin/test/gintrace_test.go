@@ -472,5 +472,4 @@ func TestTemporaryFormFileRemove(t *testing.T) {
 	require.Equal(t, http.StatusOK, w.Code)
 	_, err = fileHeader.Open()
 	require.ErrorIs(t, err, fs.ErrNotExist)
-
 }
