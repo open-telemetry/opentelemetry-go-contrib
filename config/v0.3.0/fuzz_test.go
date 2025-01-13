@@ -20,7 +20,7 @@ func FuzzJSON(f *testing.F) {
 	f.Add(b)
 
 	f.Fuzz(func(t *testing.T, data []byte) {
-		t.Log("JSON\n:" + string(data))
+		t.Log("JSON:\n" + string(data))
 
 		var cfg OpenTelemetryConfiguration
 		err := json.Unmarshal(b, &cfg)
@@ -43,7 +43,7 @@ func FuzzYAML(f *testing.F) {
 	f.Add(b)
 
 	f.Fuzz(func(t *testing.T, data []byte) {
-		t.Log("YAML\n:" + string(data))
+		t.Log("YAML:\n" + string(data))
 
 		cfg, err := ParseYAML(data)
 		if err != nil {
