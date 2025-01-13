@@ -47,8 +47,7 @@ func keyVal(k string, v any) attribute.KeyValue {
 }
 
 func newResource(res *Resource) *resource.Resource {
-	if res == nil ||
-		res.SchemaUrl == nil && res.Attributes == nil && res.AttributesList == nil && res.Detectors == nil {
+	if res == nil {
 		return resource.Default()
 	}
 

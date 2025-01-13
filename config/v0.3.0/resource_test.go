@@ -30,7 +30,7 @@ func TestNewResource(t *testing.T) {
 		{
 			name:         "resource-no-attributes",
 			config:       &Resource{},
-			wantResource: resource.Default(),
+			wantResource: resource.NewSchemaless(),
 		},
 		{
 			name: "resource-with-schema",
