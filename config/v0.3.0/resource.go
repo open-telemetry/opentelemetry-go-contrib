@@ -51,15 +51,13 @@ func newResource(res *Resource) *resource.Resource {
 		return resource.Default()
 	}
 
-	schemaURL := ""
-	if res.SchemaUrl != nil {
-		schemaURL = *res.SchemaUrl
-	}
-
 	var attrs []attribute.KeyValue
 	for _, v := range res.Attributes {
 		attrs = append(attrs, keyVal(v.Name, v.Value))
 	}
 
-	return resource.NewWithAttributes(schemaURL, attrs...)
+	if res.SchemaUrl == nil {
+		return resource.NewSchemaless(attrs...)
+	}
+	return resource.NewWithAttributes(*res.SchemaUrl, attrs...)
 }
