@@ -236,7 +236,7 @@ func TestV120ClientMetrics(t *testing.T) {
 
 	ctx := context.Background()
 
-	client.RecordResponseSize(ctx, 200, opts.AddOptions())
+	client.RecordResponseSize(ctx, 200, opts)
 
 	client.RecordMetrics(ctx, semconv.MetricData{
 		RequestSize: 100,
