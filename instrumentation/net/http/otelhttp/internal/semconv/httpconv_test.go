@@ -196,3 +196,60 @@ func TestHTTPClientStatus(t *testing.T) {
 		})
 	}
 }
+
+func TestCurrentHttpClient_MetricAttributes(t *testing.T) {
+	defaultRequest, err := http.NewRequest("GET", "http://example.com/path?query=test", nil)
+	require.NoError(t, err)
+
+	tests := []struct {
+		name                 string
+		server               string
+		req                  *http.Request
+		statusCode           int
+		additionalAttributes []attribute.KeyValue
+		wantFunc             func(t *testing.T, attrs []attribute.KeyValue)
+	}{
+		{
+			name:                 "routine testing",
+			req:                  defaultRequest,
+			statusCode:           200,
+			additionalAttributes: []attribute.KeyValue{attribute.String("test", "test")},
+			wantFunc: func(t *testing.T, attrs []attribute.KeyValue) {
+				require.Len(t, attrs, 7)
+				assert.ElementsMatch(t, []attribute.KeyValue{
+					attribute.String("http.request.method", "GET"),
+					attribute.String("server.address", "example.com"),
+					attribute.String("url.scheme", "http"),
+					attribute.String("network.protocol.name", "http"),
+					attribute.String("network.protocol.version", "1.1"),
+					attribute.Int64("http.response.status_code", 200),
+					attribute.String("test", "test"),
+				}, attrs)
+			},
+		},
+		{
+			name:                 "use server address",
+			req:                  defaultRequest,
+			statusCode:           200,
+			additionalAttributes: nil,
+			wantFunc: func(t *testing.T, attrs []attribute.KeyValue) {
+				require.Len(t, attrs, 6)
+				assert.ElementsMatch(t, []attribute.KeyValue{
+					attribute.String("http.request.method", "GET"),
+					attribute.String("server.address", "example.com"),
+					attribute.String("url.scheme", "http"),
+					attribute.String("network.protocol.name", "http"),
+					attribute.String("network.protocol.version", "1.1"),
+					attribute.Int64("http.response.status_code", 200),
+				}, attrs)
+			},
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			got := CurrentHTTPClient{}.MetricAttributes(tt.req, tt.statusCode, tt.additionalAttributes)
+			tt.wantFunc(t, got)
+		})
+	}
+}
