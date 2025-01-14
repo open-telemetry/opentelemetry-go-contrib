@@ -17,28 +17,7 @@ import (
 type mockType struct{}
 
 func TestNewResource(t *testing.T) {
-	res := resource.NewWithAttributes(semconv.SchemaURL,
-		semconv.ServiceName("service-a"),
-	)
 	other := mockType{}
-	resWithAttrs := resource.NewWithAttributes(semconv.SchemaURL,
-		semconv.ServiceName("service-a"),
-		attribute.Bool("attr-bool", true),
-		attribute.String("attr-uint64", fmt.Sprintf("%d", 164)),
-		attribute.Int64("attr-int64", int64(-164)),
-		attribute.Float64("attr-float64", float64(64.0)),
-		attribute.Int64("attr-int8", int64(-18)),
-		attribute.Int64("attr-uint8", int64(18)),
-		attribute.Int64("attr-int16", int64(-116)),
-		attribute.Int64("attr-uint16", int64(116)),
-		attribute.Int64("attr-int32", int64(-132)),
-		attribute.Int64("attr-uint32", int64(132)),
-		attribute.Float64("attr-float32", float64(32.0)),
-		attribute.Int64("attr-int", int64(-1)),
-		attribute.String("attr-uint", fmt.Sprintf("%d", 1)),
-		attribute.String("attr-string", "string-val"),
-		attribute.String("attr-default", fmt.Sprintf("%v", other)),
-	)
 	tests := []struct {
 		name         string
 		config       *Resource
@@ -51,7 +30,25 @@ func TestNewResource(t *testing.T) {
 		{
 			name:         "resource-no-attributes",
 			config:       &Resource{},
-			wantResource: resource.Default(),
+			wantResource: resource.NewSchemaless(),
+		},
+		{
+			name: "resource-with-schema",
+			config: &Resource{
+				SchemaUrl: ptr(semconv.SchemaURL),
+			},
+			wantResource: resource.NewWithAttributes(semconv.SchemaURL),
+		},
+		{
+			name: "resource-with-attributes",
+			config: &Resource{
+				Attributes: []AttributeNameValue{
+					{Name: "service.name", Value: "service-a"},
+				},
+			},
+			wantResource: resource.NewWithAttributes("",
+				semconv.ServiceName("service-a"),
+			),
 		},
 		{
 			name: "resource-with-attributes-and-schema",
@@ -61,7 +58,9 @@ func TestNewResource(t *testing.T) {
 				},
 				SchemaUrl: ptr(semconv.SchemaURL),
 			},
-			wantResource: res,
+			wantResource: resource.NewWithAttributes(semconv.SchemaURL,
+				semconv.ServiceName("service-a"),
+			),
 		},
 		{
 			name: "resource-with-additional-attributes-and-schema",
@@ -86,7 +85,23 @@ func TestNewResource(t *testing.T) {
 				},
 				SchemaUrl: ptr(semconv.SchemaURL),
 			},
-			wantResource: resWithAttrs,
+			wantResource: resource.NewWithAttributes(semconv.SchemaURL,
+				semconv.ServiceName("service-a"),
+				attribute.Bool("attr-bool", true),
+				attribute.String("attr-uint64", fmt.Sprintf("%d", 164)),
+				attribute.Int64("attr-int64", int64(-164)),
+				attribute.Float64("attr-float64", float64(64.0)),
+				attribute.Int64("attr-int8", int64(-18)),
+				attribute.Int64("attr-uint8", int64(18)),
+				attribute.Int64("attr-int16", int64(-116)),
+				attribute.Int64("attr-uint16", int64(116)),
+				attribute.Int64("attr-int32", int64(-132)),
+				attribute.Int64("attr-uint32", int64(132)),
+				attribute.Float64("attr-float32", float64(32.0)),
+				attribute.Int64("attr-int", int64(-1)),
+				attribute.String("attr-uint", fmt.Sprintf("%d", 1)),
+				attribute.String("attr-string", "string-val"),
+				attribute.String("attr-default", fmt.Sprintf("%v", other))),
 		},
 	}
 	for _, tt := range tests {
