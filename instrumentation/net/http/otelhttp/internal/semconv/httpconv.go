@@ -426,6 +426,91 @@ func (n CurrentHTTPClient) method(method string) (attribute.KeyValue, attribute.
 	return semconvNew.HTTPRequestMethodGet, orig
 }
 
+func (n CurrentHTTPClient) createMeasures(meter metric.Meter) (metric.Int64Histogram, metric.Float64Histogram) {
+	if meter == nil {
+		return noop.Int64Histogram{}, noop.Float64Histogram{}
+	}
+
+	var err error
+	requestBodySize, err := meter.Int64Histogram(
+		semconvNew.HTTPClientRequestBodySizeName,
+		metric.WithUnit(semconvNew.HTTPClientRequestBodySizeUnit),
+		metric.WithDescription(semconvNew.HTTPClientRequestBodySizeDescription),
+	)
+	handleErr(err)
+
+	requestDuration, err := meter.Float64Histogram(
+		semconvNew.HTTPClientRequestDurationName,
+		metric.WithUnit(semconvNew.HTTPClientRequestDurationUnit),
+		metric.WithDescription(semconvNew.HTTPClientRequestDurationDescription),
+	)
+	handleErr(err)
+
+	return requestBodySize, requestDuration
+}
+
+func (n CurrentHTTPClient) MetricAttributes(req *http.Request, statusCode int, additionalAttributes []attribute.KeyValue) []attribute.KeyValue {
+	num := len(additionalAttributes) + 2
+	var h string
+	if req.URL != nil {
+		h = req.URL.Host
+	}
+	var requestHost string
+	var requestPort int
+	for _, hostport := range []string{h, req.Header.Get("Host")} {
+		requestHost, requestPort = SplitHostPort(hostport)
+		if requestHost != "" || requestPort > 0 {
+			break
+		}
+	}
+
+	port := requiredHTTPPort(req.URL != nil && req.URL.Scheme == "https", requestPort)
+	if port > 0 {
+		num++
+	}
+
+	protoName, protoVersion := netProtocol(req.Proto)
+	if protoName != "" {
+		num++
+	}
+	if protoVersion != "" {
+		num++
+	}
+
+	if statusCode > 0 {
+		num++
+	}
+
+	attributes := slices.Grow(additionalAttributes, num)
+	attributes = append(attributes,
+		semconvNew.HTTPRequestMethodKey.String(standardizeHTTPMethod(req.Method)),
+		semconvNew.ServerAddress(requestHost),
+		n.scheme(req.TLS != nil),
+	)
+
+	if port > 0 {
+		attributes = append(attributes, semconvNew.ServerPort(port))
+	}
+	if protoName != "" {
+		attributes = append(attributes, semconvNew.NetworkProtocolName(protoName))
+	}
+	if protoVersion != "" {
+		attributes = append(attributes, semconvNew.NetworkProtocolVersion(protoVersion))
+	}
+
+	if statusCode > 0 {
+		attributes = append(attributes, semconvNew.HTTPResponseStatusCode(statusCode))
+	}
+	return attributes
+}
+
+func (n CurrentHTTPClient) scheme(https bool) attribute.KeyValue { // nolint:revive
+	if https {
+		return semconvNew.URLScheme("https")
+	}
+	return semconvNew.URLScheme("http")
+}
+
 func isErrorStatusCode(code int) bool {
 	return code >= 400 || code < 100
 }
