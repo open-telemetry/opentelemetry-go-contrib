@@ -6,10 +6,14 @@
 package test
 
 import (
+	"bytes"
 	"errors"
 	"html/template"
+	"io/fs"
+	"mime/multipart"
 	"net/http"
 	"net/http/httptest"
+	"runtime"
 	"strconv"
 	"testing"
 
@@ -429,4 +433,46 @@ func TestWithGinFilter(t *testing.T) {
 		router.ServeHTTP(w, r)
 		assert.Len(t, sr.Ended(), 1)
 	})
+}
+
+func TestTemporaryFormFileRemove(t *testing.T) {
+	if runtime.GOOS == "windows" {
+		// Windows sometimes refuses to remove a file that was just closed.
+		t.Skip("https://go.dev/issue/25965")
+	}
+	sr := tracetest.NewSpanRecorder()
+	provider := sdktrace.NewTracerProvider(sdktrace.WithSpanProcessor(sr))
+
+	router := gin.New()
+	router.MaxMultipartMemory = 1
+	router.Use(otelgin.Middleware("foobar", otelgin.WithTracerProvider(provider)))
+	var fileHeader *multipart.FileHeader
+	router.POST("/upload", func(c *gin.Context) {
+		_, err := c.FormFile("file")
+		require.NoError(t, err)
+		fileHeader = c.Request.MultipartForm.File["file"][0]
+		_, err = fileHeader.Open()
+		require.NoError(t, err)
+		c.JSON(http.StatusOK, nil)
+	})
+
+	var body bytes.Buffer
+
+	mw := multipart.NewWriter(&body)
+	fw, err := mw.CreateFormFile("file", "file")
+	require.NoError(t, err)
+
+	_, err = fw.Write([]byte("hello world"))
+	require.NoError(t, err)
+	err = mw.Close()
+	require.NoError(t, err)
+	r := httptest.NewRequest("POST", "/upload", &body)
+	r.Header.Add("Content-Type", mw.FormDataContentType())
+	w := httptest.NewRecorder()
+
+	router.ServeHTTP(w, r)
+	assert.Len(t, sr.Ended(), 1)
+	require.Equal(t, http.StatusOK, w.Code)
+	_, err = fileHeader.Open()
+	require.ErrorIs(t, err, fs.ErrNotExist)
 }
