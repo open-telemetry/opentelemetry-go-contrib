@@ -47,16 +47,17 @@ func keyVal(k string, v any) attribute.KeyValue {
 }
 
 func newResource(res *Resource) *resource.Resource {
-	if res == nil || res.Attributes == nil {
+	if res == nil {
 		return resource.Default()
 	}
-	var attrs []attribute.KeyValue
 
+	var attrs []attribute.KeyValue
 	for _, v := range res.Attributes {
 		attrs = append(attrs, keyVal(v.Name, v.Value))
 	}
 
-	return resource.NewWithAttributes(*res.SchemaUrl,
-		attrs...,
-	)
+	if res.SchemaUrl == nil {
+		return resource.NewSchemaless(attrs...)
+	}
+	return resource.NewWithAttributes(*res.SchemaUrl, attrs...)
 }

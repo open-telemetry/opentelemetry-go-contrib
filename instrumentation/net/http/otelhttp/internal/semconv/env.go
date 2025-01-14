@@ -172,14 +172,23 @@ type HTTPClient struct {
 	requestBytesCounter  metric.Int64Counter
 	responseBytesCounter metric.Int64Counter
 	latencyMeasure       metric.Float64Histogram
+
+	// new metrics
+	requestBodySize metric.Int64Histogram
+	requestDuration metric.Float64Histogram
 }
 
 func NewHTTPClient(meter metric.Meter) HTTPClient {
 	env := strings.ToLower(os.Getenv(OTelSemConvStabilityOptIn))
+	duplicate := env == "http/dup"
 	client := HTTPClient{
-		duplicate: env == "http/dup",
+		duplicate: duplicate,
 	}
 	client.requestBytesCounter, client.responseBytesCounter, client.latencyMeasure = OldHTTPClient{}.createMeasures(meter)
+	if duplicate {
+		client.requestBodySize, client.requestDuration = CurrentHTTPClient{}.createMeasures(meter)
+	}
+
 	return client
 }
 
@@ -231,34 +240,48 @@ func (o MetricOpts) AddOptions() metric.AddOption {
 	return o.addOptions
 }
 
-func (c HTTPClient) MetricOptions(ma MetricAttributes) MetricOpts {
+func (c HTTPClient) MetricOptions(ma MetricAttributes) map[string]MetricOpts {
+	opts := map[string]MetricOpts{}
+
 	attributes := OldHTTPClient{}.MetricAttributes(ma.Req, ma.StatusCode, ma.AdditionalAttributes)
-	// TODO: Duplicate Metrics
 	set := metric.WithAttributeSet(attribute.NewSet(attributes...))
-	return MetricOpts{
+	opts["old"] = MetricOpts{
 		measurement: set,
 		addOptions:  set,
 	}
+
+	if c.duplicate {
+		attributes := CurrentHTTPClient{}.MetricAttributes(ma.Req, ma.StatusCode, ma.AdditionalAttributes)
+		set := metric.WithAttributeSet(attribute.NewSet(attributes...))
+		opts["new"] = MetricOpts{
+			measurement: set,
+			addOptions:  set,
+		}
+	}
+
+	return opts
 }
 
-func (s HTTPClient) RecordMetrics(ctx context.Context, md MetricData, opts MetricOpts) {
+func (s HTTPClient) RecordMetrics(ctx context.Context, md MetricData, opts map[string]MetricOpts) {
 	if s.requestBytesCounter == nil || s.latencyMeasure == nil {
 		// This will happen if an HTTPClient{} is used instead of NewHTTPClient().
 		return
 	}
 
-	s.requestBytesCounter.Add(ctx, md.RequestSize, opts.AddOptions())
-	s.latencyMeasure.Record(ctx, md.ElapsedTime, opts.MeasurementOption())
+	s.requestBytesCounter.Add(ctx, md.RequestSize, opts["old"].AddOptions())
+	s.latencyMeasure.Record(ctx, md.ElapsedTime, opts["old"].MeasurementOption())
 
-	// TODO: Duplicate Metrics
+	if s.duplicate {
+		s.requestBodySize.Record(ctx, md.RequestSize, opts["new"].MeasurementOption())
+		s.requestDuration.Record(ctx, md.ElapsedTime, opts["new"].MeasurementOption())
+	}
 }
 
-func (s HTTPClient) RecordResponseSize(ctx context.Context, responseData int64, opts metric.AddOption) {
+func (s HTTPClient) RecordResponseSize(ctx context.Context, responseData int64, opts map[string]MetricOpts) {
 	if s.responseBytesCounter == nil {
 		// This will happen if an HTTPClient{} is used instead of NewHTTPClient().
 		return
 	}
 
-	s.responseBytesCounter.Add(ctx, responseData, opts)
-	// TODO: Duplicate Metrics
+	s.responseBytesCounter.Add(ctx, responseData, opts["old"].AddOptions())
 }

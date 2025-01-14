@@ -11,11 +11,14 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 ### Added
 
 - Generate server metrics with semantic conventions v1.26 in `go.opentelemetry.io/contrib/instrumentation/net/http/otelhttp` when `OTEL_SEMCONV_STABILITY_OPT_IN` is set to `http/dup`. (#6411)
+- Generate client metrics with semantic conventions v1.26 in `go.opentelemetry.io/contrib/instrumentation/net/http/otelhttp` when `OTEL_SEMCONV_STABILITY_OPT_IN` is set to `http/dup`. (#6607)
 
 ### Fixed
 
 - Fix error logged by Jaeger remote sampler on empty or unset `OTEL_TRACES_SAMPLER_ARG` environment variable (#6511)
 - Relax minimum Go version to 1.22.0 in various modules. (#6595)
+- `NewSDK` handles empty `OpenTelemetryConfiguration.Resource` properly in `go.opentelemetry.io/contrib/config/v0.3.0`. (#6606)
+- Fix a possible nil dereference panic in `NewSDK` of `go.opentelemetry.io/contrib/config/v0.3.0`. (#6606)
 
 <!-- Released section -->
 <!-- Don't change this section unless doing release -->
