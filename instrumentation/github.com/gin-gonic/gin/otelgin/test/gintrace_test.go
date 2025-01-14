@@ -13,6 +13,7 @@ import (
 	"mime/multipart"
 	"net/http"
 	"net/http/httptest"
+	"runtime"
 	"strconv"
 	"testing"
 
@@ -435,6 +436,10 @@ func TestWithGinFilter(t *testing.T) {
 }
 
 func TestTemporaryFormFileRemove(t *testing.T) {
+	if runtime.GOOS == "windows" {
+		// Windows sometimes refuses to remove a file that was just closed.
+		t.Skip("https://go.dev/issue/25965")
+	}
 	sr := tracetest.NewSpanRecorder()
 	provider := sdktrace.NewTracerProvider(sdktrace.WithSpanProcessor(sr))
 
@@ -444,10 +449,7 @@ func TestTemporaryFormFileRemove(t *testing.T) {
 	var fileHeader *multipart.FileHeader
 	router.POST("/upload", func(c *gin.Context) {
 		_, err := c.FormFile("file")
-		if err != nil {
-			_ = c.AbortWithError(http.StatusInternalServerError, err)
-			return
-		}
+		require.NoError(t, err)
 		fileHeader = c.Request.MultipartForm.File["file"][0]
 		_, err = fileHeader.Open()
 		require.NoError(t, err)

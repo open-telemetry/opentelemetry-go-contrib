@@ -93,7 +93,10 @@ func Middleware(service string, opts ...Option) gin.HandlerFunc {
 			// This means that when we are on returning path from handler middlewares up in chain from this middleware
 			// can not access these temporary files anymore because we deleted them here.
 			if c.Request.MultipartForm != nil {
-				_ = c.Request.MultipartForm.RemoveAll()
+				err := c.Request.MultipartForm.RemoveAll()
+				if err != nil {
+					otel.Handle(err)
+				}
 			}
 		}()
 
