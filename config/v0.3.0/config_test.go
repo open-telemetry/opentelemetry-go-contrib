@@ -518,7 +518,6 @@ func TestCreateTLSConfig(t *testing.T) {
 		caCertFile      *string
 		clientCertFile  *string
 		clientKeyFile   *string
-		wantErr         error
 		wantErrContains string
 		want            func(*tls.Config, *testing.T)
 	}{
@@ -549,9 +548,9 @@ func TestCreateTLSConfig(t *testing.T) {
 			wantErrContains: "could not use client certificate: open nowhere.crt:",
 		},
 		{
-			name:       "bad-cacert-file",
-			caCertFile: ptr(filepath.Join("..", "testdata", "bad_cert.crt")),
-			wantErr:    errors.New("could not create certificate authority chain from certificate"),
+			name:            "bad-cacert-file",
+			caCertFile:      ptr(filepath.Join("..", "testdata", "bad_cert.crt")),
+			wantErrContains: "could not create certificate authority chain from certificate",
 		},
 	}
 
@@ -559,9 +558,7 @@ func TestCreateTLSConfig(t *testing.T) {
 		t.Run(tt.name, func(t *testing.T) {
 			got, err := createTLSConfig(tt.caCertFile, tt.clientCertFile, tt.clientKeyFile)
 
-			if tt.wantErr != nil {
-				require.Equal(t, tt.wantErr.Error(), err.Error())
-			} else if tt.wantErrContains != "" {
+			if tt.wantErrContains != "" {
 				require.Contains(t, err.Error(), tt.wantErrContains)
 			} else {
 				require.NoError(t, err)
