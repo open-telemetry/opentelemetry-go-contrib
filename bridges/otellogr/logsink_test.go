@@ -352,6 +352,40 @@ func TestLogSink(t *testing.T) {
 	}
 }
 
+// fix https://github.com/open-telemetry/opentelemetry-go-contrib/issues/6509
+func TestLogSinkCtxInInfo(t *testing.T) {
+	rec := logtest.NewRecorder()
+	ls := NewLogSink("name", WithLoggerProvider(rec))
+	l := logr.New(ls)
+	ctx := context.WithValue(context.Background(), "key", "value") // nolint:revive,staticcheck
+
+	tests := []struct {
+		name        string
+		keyValues   []any
+		wantCtxFunc func(ctx context.Context)
+	}{
+		{"default", nil, func(ctx context.Context) {
+			assert.Equal(t, context.Background(), ctx)
+		}},
+		{"default with context", []any{"ctx", ctx}, func(ctx context.Context) {
+			assert.Equal(t, "value", ctx.Value("key"))
+		}},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			defer rec.Reset()
+
+			l.Info("msg", tt.keyValues...)
+			require.Len(t, rec.Result(), 1)
+
+			got := rec.Result()[0]
+			require.Len(t, got.Records, 1)
+			tt.wantCtxFunc(got.Records[0].Context())
+		})
+	}
+}
+
 func TestLogSinkEnabled(t *testing.T) {
 	enabledFunc := func(ctx context.Context, param log.EnabledParameters) bool {
 		return param.Severity == log.SeverityInfo
