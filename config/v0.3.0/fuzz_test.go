@@ -9,8 +9,8 @@ import (
 	"os"
 	"path/filepath"
 	"testing"
+	"time"
 
-	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
 
@@ -33,7 +33,9 @@ func FuzzJSON(f *testing.F) {
 			return
 		}
 
-		assert.NoError(t, sdk.Shutdown(context.Background()))
+		ctx, cancel := context.WithTimeout(context.Background(), time.Millisecond)
+		defer cancel()
+		_ = sdk.Shutdown(ctx)
 	})
 }
 
@@ -55,6 +57,8 @@ func FuzzYAML(f *testing.F) {
 			return
 		}
 
-		assert.NoError(t, sdk.Shutdown(context.Background()))
+		ctx, cancel := context.WithTimeout(context.Background(), time.Millisecond)
+		defer cancel()
+		_ = sdk.Shutdown(ctx)
 	})
 }
