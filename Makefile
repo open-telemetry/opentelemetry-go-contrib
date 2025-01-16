@@ -277,18 +277,6 @@ test-coverage/%:
 		&& $$CMD ./... \
 		&& $(GO) tool cover -html=coverage.out -o coverage.html;
 
-# Fuzzing
-
-.PHONY: fuzz-config-json
-fuzz-config-json:
-	cd config/v0.3.0 \
-	&& $(GO) test -run=^$ -fuzztime=$(FUZZTIME) -fuzz=FuzzJSON
-
-.PHONY: fuzz-config-yaml
-fuzz-config-yaml:
-	cd config/v0.3.0 \
-	&& $(GO) test -run=^$ -fuzztime=$(FUZZTIME) -fuzz=FuzzYAML
-
 # Releasing
 
 .PHONY: gorelease
