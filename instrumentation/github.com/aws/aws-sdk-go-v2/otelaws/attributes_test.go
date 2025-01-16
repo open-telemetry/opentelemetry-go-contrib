@@ -4,8 +4,12 @@
 package otelaws
 
 import (
+	"context"
 	"testing"
 
+	awsMiddleware "github.com/aws/aws-sdk-go-v2/aws/middleware"
+	"github.com/aws/aws-sdk-go-v2/service/sqs"
+	"github.com/aws/smithy-go/middleware"
 	"github.com/stretchr/testify/assert"
 
 	"go.opentelemetry.io/otel/attribute"
@@ -39,4 +43,30 @@ func TestRequestIDAttr(t *testing.T) {
 func TestSystemAttribute(t *testing.T) {
 	attr := SystemAttr()
 	assert.Equal(t, semconv.RPCSystemKey.String("aws-api"), attr)
+}
+
+func TestDefaultAttributeBuilder_ShouldReturnNoAttributesOnNotSupportedService(t *testing.T) {
+	// GIVEN
+	testCtx := awsMiddleware.SetServiceID(context.TODO(), "not-implemented-service")
+
+	// WHEN
+	attr := DefaultAttributeBuilder(testCtx, middleware.InitializeInput{}, middleware.InitializeOutput{})
+	assert.Empty(t, attr)
+}
+
+func TestDefaultAttributeBuilder_ShouldReturnAttributesOnSupportedService(t *testing.T) {
+	// GIVEN
+	testCtx := awsMiddleware.SetServiceID(context.TODO(), sqs.ServiceID)
+	testQueueURL := "test-queue-url"
+
+	// WHEN
+	attr := DefaultAttributeBuilder(testCtx, middleware.InitializeInput{
+		Parameters: &sqs.SendMessageInput{
+			QueueUrl: &testQueueURL,
+		},
+	}, middleware.InitializeOutput{})
+	assert.ElementsMatch(t, []attribute.KeyValue{
+		semconv.MessagingSystem("AmazonSQS"),
+		semconv.NetPeerName(testQueueURL),
+	}, attr)
 }
