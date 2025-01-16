@@ -282,3 +282,25 @@ func TestWithPublicEndpointFn(t *testing.T) {
 		})
 	}
 }
+
+func getRRW(w http.ResponseWriter) http.Hijacker {
+	if hijacker, ok := w.(http.Hijacker); ok {
+		return hijacker
+	}
+	return nil
+}
+
+func TestRecordingResponseWriterHijack(t *testing.T) {
+	handler := http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		rrw := getRRW(w)
+		conn, rw, err := rrw.Hijack()
+		assert.Nil(t, conn)
+		assert.Nil(t, rw)
+		assert.NotNil(t, err)
+		assert.Equal(t, "underlying ResponseWriter does not support hijacking", err.Error())
+	})
+
+	req := httptest.NewRequest("GET", "/", nil)
+	w := httptest.NewRecorder()
+	handler.ServeHTTP(w, req)
+}
