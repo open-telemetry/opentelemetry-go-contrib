@@ -14,7 +14,6 @@ CONTRIB_REPO_URL = https://github.com/open-telemetry/opentelemetry-go-contrib/tr
 
 GO = go
 TIMEOUT = 60
-FUZZTIME = 3m
 
 .DEFAULT_GOAL := precommit
 
