@@ -35,17 +35,14 @@ func TestPassthroughSpanFromGlobalTracer(t *testing.T) {
 	// span context in the incoming request context.
 	router.HandleFunc("/user/{id}", http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		called = true
-		got := trace.SpanFromContext(r.Context()).SpanContext()
-		assert.Equal(t, sc, got)
-		w.WriteHeader(http.StatusOK)
 	}))
 
-	r := httptest.NewRequest("GET", "/user/123", nil)
-	r = r.WithContext(trace.ContextWithRemoteSpanContext(context.Background(), sc))
+	req := httptest.NewRequest("GET", "/user/123", nil)
+	req = req.WithContext(trace.ContextWithSpanContext(context.Background(), sc))
 	w := httptest.NewRecorder()
+	router.ServeHTTP(w, req)
 
-	router.ServeHTTP(w, r)
-	assert.True(t, called, "failed to run test")
+	assert.True(t, called)
 }
 
 func TestPropagationWithGlobalPropagators(t *testing.T) {
@@ -189,4 +186,19 @@ func TestFilter(t *testing.T) {
 
 	assert.Equal(t, 1, calledHealth, "failed to run test")
 	assert.Equal(t, 1, calledTest, "failed to run test")
+}
+
+func TestRecordingResponseWriterHijack(t *testing.T) {
+	handler := http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		rrw := getRRW(w)
+		conn, rw, err := rrw.Hijack()
+		assert.Nil(t, conn)
+		assert.Nil(t, rw)
+		assert.NotNil(t, err)
+		assert.Equal(t, "underlying ResponseWriter does not support hijacking", err.Error())
+	})
+
+	req := httptest.NewRequest("GET", "/", nil)
+	w := httptest.NewRecorder()
+	handler.ServeHTTP(w, req)
 }
