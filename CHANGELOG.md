@@ -8,10 +8,15 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 
 ## [Unreleased]
 
+<!-- Released section -->
+<!-- Don't change this section unless doing release -->
+
+## [1.34.0/0.59.0/0.28.0/0.14.0/0.9.0/0.7.0/0.6.0] - 2025-01-17
+
 ### Added
 
-- Generate server metrics with semantic conventions v1.26 in `go.opentelemetry.io/contrib/instrumentation/net/http/otelhttp` when `OTEL_SEMCONV_STABILITY_OPT_IN` is set to `http/dup`. (#6411)
-- Generate client metrics with semantic conventions v1.26 in `go.opentelemetry.io/contrib/instrumentation/net/http/otelhttp` when `OTEL_SEMCONV_STABILITY_OPT_IN` is set to `http/dup`. (#6607)
+- Generate server metrics with semantic conventions `v1.26.0` in `go.opentelemetry.io/contrib/instrumentation/net/http/otelhttp` when `OTEL_SEMCONV_STABILITY_OPT_IN` is set to `http/dup`. (#6411)
+- Generate client metrics with semantic conventions `v1.26.0` in `go.opentelemetry.io/contrib/instrumentation/net/http/otelhttp` when `OTEL_SEMCONV_STABILITY_OPT_IN` is set to `http/dup`. (#6607)
 
 ### Fixed
 
@@ -19,9 +24,6 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 - Relax minimum Go version to 1.22.0 in various modules. (#6595)
 - `NewSDK` handles empty `OpenTelemetryConfiguration.Resource` properly in `go.opentelemetry.io/contrib/config/v0.3.0`. (#6606)
 - Fix a possible nil dereference panic in `NewSDK` of `go.opentelemetry.io/contrib/config/v0.3.0`. (#6606)
-
-<!-- Released section -->
-<!-- Don't change this section unless doing release -->
 
 ## [1.33.0/0.58.0/0.27.0/0.13.0/0.8.0/0.6.0/0.5.0] - 2024-12-12
 
@@ -1209,7 +1211,8 @@ First official tagged release of `contrib` repository.
 - Prefix support for dogstatsd (#34)
 - Update Go Runtime package to use batch observer (#44)
 
-[Unreleased]: https://github.com/open-telemetry/opentelemetry-go-contrib/compare/v1.33.0...HEAD
+[Unreleased]: https://github.com/open-telemetry/opentelemetry-go-contrib/compare/v1.34.0...HEAD
+[1.34.0/0.59.0/0.28.0/0.14.0/0.9.0/0.7.0/0.6.0]: https://github.com/open-telemetry/opentelemetry-go-contrib/releases/tag/v1.34.0
 [1.33.0/0.58.0/0.27.0/0.13.0/0.8.0/0.6.0/0.5.0]: https://github.com/open-telemetry/opentelemetry-go-contrib/releases/tag/v1.33.0
 [1.32.0/0.57.0/0.26.0/0.12.0/0.7.0/0.5.0/0.4.0]: https://github.com/open-telemetry/opentelemetry-go-contrib/releases/tag/v1.32.0
 [1.31.0/0.56.0/0.25.0/0.11.0/0.6.0/0.4.0/0.3.0]: https://github.com/open-telemetry/opentelemetry-go-contrib/releases/tag/v1.31.0
