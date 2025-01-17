@@ -269,6 +269,25 @@ func TestReader(t *testing.T) {
 			wantReader: sdkmetric.NewPeriodicReader(otlpGRPCExporter),
 		},
 		{
+			name: "periodic/otlp-grpc-exporter-socket-endpoint",
+			reader: MetricReader{
+				Periodic: &PeriodicMetricReader{
+					Exporter: PushMetricExporter{
+						OTLP: &OTLPMetric{
+							Protocol:    ptr("grpc"),
+							Endpoint:    ptr("unix:collector.sock"),
+							Compression: ptr("gzip"),
+							Timeout:     ptr(1000),
+							Headers: []NameStringValuePair{
+								{Name: "test", Value: ptr("test1")},
+							},
+						},
+					},
+				},
+			},
+			wantReader: sdkmetric.NewPeriodicReader(otlpGRPCExporter),
+		},
+		{
 			name: "periodic/otlp-grpc-exporter-no-scheme",
 			reader: MetricReader{
 				Periodic: &PeriodicMetricReader{
