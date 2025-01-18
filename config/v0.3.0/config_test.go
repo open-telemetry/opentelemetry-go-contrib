@@ -400,6 +400,12 @@ func TestParseYAML(t *testing.T) {
 			},
 		},
 		{
+			name:  "invalid empty config",
+			input: "invalid_empty.yaml",
+			wantErr: errors.New(`yaml: unmarshal errors:
+			line 3: cannot unmarshal null values`),
+		},
+		{
 			name:  "invalid config",
 			input: "invalid_bool.yaml",
 			wantErr: errors.New(`yaml: unmarshal errors:
