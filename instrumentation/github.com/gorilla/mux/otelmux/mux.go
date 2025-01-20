@@ -7,6 +7,7 @@ import (
 	"fmt"
 	"net/http"
 
+	"github.com/felixge/httpsnoop"
 	"github.com/gorilla/mux"
 
 	"go.opentelemetry.io/contrib/instrumentation/github.com/gorilla/mux/otelmux/internal/semconvutil"
@@ -120,8 +121,7 @@ func (tw traceware) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	ctx, span := tw.tracer.Start(ctx, spanName, opts...)
 	defer span.End()
 
-	var readRecordFunc, writeRecordFunc func(int64)
-
+	readRecordFunc := func(int64) {}
 	// if request body is nil or NoBody, we don't want to mutate the body as it
 	// will affect the identity of it in an unforeseeable way because we assert
 	// ReadCloser fulfills a certain interface and it is indeed nil or NoBody.
@@ -130,10 +130,29 @@ func (tw traceware) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		r.Body = bw
 	}
 
-	rrw := request.NewRespWriterWrapper(w, writeRecordFunc)
+	writeRecordFunc := func(int64) {}
+	rww := request.NewRespWriterWrapper(w, writeRecordFunc)
+
+	// Wrap w to use our ResponseWriter methods while also exposing
+	// other interfaces that w may implement (http.CloseNotifier,
+	// http.Flusher, http.Hijacker, http.Pusher, io.ReaderFrom).
+	w = httpsnoop.Wrap(w, httpsnoop.Hooks{
+		Header: func(httpsnoop.HeaderFunc) httpsnoop.HeaderFunc {
+			return rww.Header
+		},
+		Write: func(httpsnoop.WriteFunc) httpsnoop.WriteFunc {
+			return rww.Write
+		},
+		WriteHeader: func(httpsnoop.WriteHeaderFunc) httpsnoop.WriteHeaderFunc {
+			return rww.WriteHeader
+		},
+		Flush: func(httpsnoop.FlushFunc) httpsnoop.FlushFunc {
+			return rww.Flush
+		},
+	})
 
 	tw.handler.ServeHTTP(w, r.WithContext(ctx))
-	statusCode := rrw.StatusCode()
+	statusCode := rww.StatusCode()
 	if statusCode > 0 {
 		span.SetAttributes(semconv.HTTPStatusCode(statusCode))
 	}
