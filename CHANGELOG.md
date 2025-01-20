@@ -15,10 +15,6 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 
 ### Added
 
-- Setup & Implementation of a body wrapper in `go.opentelemetry.io/contrib/instrumentation/github.com/gorilla/mux/otelmux` #(6650)
-
-### Added
-
 - Generate server metrics with semantic conventions `v1.26.0` in `go.opentelemetry.io/contrib/instrumentation/net/http/otelhttp` when `OTEL_SEMCONV_STABILITY_OPT_IN` is set to `http/dup`. (#6411)
 - Generate client metrics with semantic conventions `v1.26.0` in `go.opentelemetry.io/contrib/instrumentation/net/http/otelhttp` when `OTEL_SEMCONV_STABILITY_OPT_IN` is set to `http/dup`. (#6607)
 
@@ -71,7 +67,7 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
   - Use `baggagecopy.NewLogProcessor` when configuring a Log Provider.
     - `NewLogProcessor` accepts a `Filter` function type that selects which baggage members are added to the log record.
 
-### Changed
+### Changed 
 
 - Transform raw (`slog.KindAny`) attribute values to matching `log.Value` types.
   For example, `[]string{"foo", "bar"}` attribute value is now transformed to `log.SliceValue(log.StringValue("foo"), log.StringValue("bar"))` instead of `log.String("[foo bar"])`. (#6254)
@@ -315,7 +311,7 @@ The next release will require at least [Go 1.21].
 
 ### Changed
 
-- The fallback options in `go.opentelemetry.io/contrib/exporters/autoexport` now accept factory functions. (#4891)
+- The fallback options in  `go.opentelemetry.io/contrib/exporters/autoexport` now accept factory functions. (#4891)
   - `WithFallbackMetricReader(metric.Reader) MetricOption` is replaced with `func WithFallbackMetricReader(func(context.Context) (metric.Reader, error)) MetricOption`.
   - `WithFallbackSpanExporter(trace.SpanExporter) SpanOption` is replaced with `WithFallbackSpanExporter(func(context.Context) (trace.SpanExporter, error)) SpanOption`.
 - The `http.server.request_content_length` metric in `go.opentelemetry.io/contrib/instrumentation/net/http/otelhttp` is changed to `http.server.request.size`.(#4707)
@@ -593,7 +589,7 @@ The next release will require at least [Go 1.19].
 ### Changed
 
 - Change `runtime.uptime` instrument in `go.opentelemetry.io/contrib/instrumentation/runtime` from `Int64ObservableUpDownCounter` to `Int64ObservableCounter`,
-  since the value is monotonic. (#3347)
+ since the value is monotonic. (#3347)
 - `samplers/jaegerremote`: change to use protobuf parser instead of encoding/json to accept enums as strings. (#3183)
 
 ### Fixed
@@ -867,7 +863,7 @@ Update dependency on the `go.opentelemetry.io/otel` project to `v1.1.0`.
 ## [1.0.0/0.25.0] - 2021-10-06
 
 - Resource detectors and propagators (with the exception of `go.
-opentelemetry.io/contrib/propagators/opencensus`) are now stable and
+  opentelemetry.io/contrib/propagators/opencensus`) are now stable and
   released at v1.0.0.
 - Update dependency on the `go.opentelemetry.io/otel` project to `v1.0.1`.
 - Update dependency on `go.opentelemetry.io/otel/metric` to `v0.24.0`.
@@ -931,7 +927,7 @@ opentelemetry.io/contrib/propagators/opencensus`) are now stable and
 ### Changed
 
 - The `go.opentelemetry.io/contrib/instrumentation/go.mongodb.org/mongo-driver/mongo/otelmongo` instrumentation now accepts a `WithCommandAttributeDisabled`,
-  so the caller can specify whether to opt-out of tracing the mongo command. (#712)
+   so the caller can specify whether to opt-out of tracing the mongo command. (#712)
 - Upgrade to v0.20.0 of `go.opentelemetry.io/otel`. (#758)
 - The B3 and Jaeger propagators now store their debug or deferred state in the context.Context instead of the SpanContext. (#758)
 
@@ -1026,7 +1022,7 @@ opentelemetry.io/contrib/propagators/opencensus`) are now stable and
 ## Changed
 
 - The `go.opentelemetry.io/contrib/instrumentation/google.golang.org/grpc/otelgrpc` package instrumentation no longer accepts a `Tracer` as an argument to the interceptor function.
-  Instead, a new `WithTracerProvider` option is added to configure the `TracerProvider` used when creating the `Tracer` for the instrumentation. (#373)
+   Instead, a new `WithTracerProvider` option is added to configure the `TracerProvider` used when creating the `Tracer` for the instrumentation. (#373)
 - The `go.opentelemetry.io/contrib/instrumentation/gopkg.in/macaron.v1/otelmacaron` instrumentation now accepts a `TracerProvider` rather than a `Tracer`. (#374)
 - Remove `go.opentelemetry.io/otel/sdk` dependency from instrumentation. (#381)
 - Use `httpsnoop` in `go.opentelemetry.io/contrib/instrumentation/github.com/gorilla/mux/otelmux` to ensure `http.ResponseWriter` additional interfaces are preserved. (#388)
@@ -1053,7 +1049,7 @@ opentelemetry.io/contrib/propagators/opencensus`) are now stable and
 - Update instrumentation guidelines about uniform provider options. Also, update style guide. (#303)
 - Make config struct of instrumentation unexported. (#303)
 - Instrumentations have been updated to adhere to the [configuration style guide's](https://github.com/open-telemetry/opentelemetry-go/blob/master/CONTRIBUTING.md#config)
-  updated recommendation to use `newConfig()` instead of `configure()`. (#336)
+   updated recommendation to use `newConfig()` instead of `configure()`. (#336)
 - A new instrumentation naming scheme is implemented to avoid package name conflicts for instrumented packages while still remaining discoverable. (#359)
   - `google.golang.org/grpc` -> `google.golang.org/grpc/otelgrpc`
   - `go.mongodb.org/mongo-driver` -> `go.mongodb.org/mongo-driver/mongo/otelmongo`
@@ -1163,7 +1159,7 @@ This release upgrades its [go.opentelemetry.io/otel](https://github.com/open-tel
 ### Fixed
 
 - Update README to include information about external instrumentation.
-  To start, this includes native instrumentation found in the `go-redis/redis` package. (#117)
+   To start, this includes native instrumentation found in the `go-redis/redis` package. (#117)
 - Bump github.com/golangci/golangci-lint from 1.27.0 to 1.28.2 in /tools. (#122, #123, #125)
 - Bump go.mongodb.org/mongo-driver from 1.3.4 to 1.3.5 in /instrumentation/go.mongodb.org/mongo-driver. (#124)
 
@@ -1291,4 +1287,5 @@ First official tagged release of `contrib` repository.
 [Go 1.20]: https://go.dev/doc/go1.20
 [Go 1.19]: https://go.dev/doc/go1.19
 [Go 1.18]: https://go.dev/doc/go1.18
+
 [GO-2024-2687]: https://pkg.go.dev/vuln/GO-2024-2687
