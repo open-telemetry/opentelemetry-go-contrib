@@ -15,7 +15,13 @@ import (
 )
 
 // DynamoDBAttributeSetter sets DynamoDB specific attributes depending on the DynamoDB operation being performed.
+// Deprecated: Kept for backward compatibility, use DynamoDBAttributeBuilder instead. This will be removed in a future release.
 func DynamoDBAttributeSetter(ctx context.Context, in middleware.InitializeInput) []attribute.KeyValue {
+	return DynamoDBAttributeBuilder(ctx, in, middleware.InitializeOutput{})
+}
+
+// DynamoDBAttributeBuilder sets DynamoDB specific attributes depending on the DynamoDB operation being performed.
+func DynamoDBAttributeBuilder(ctx context.Context, in middleware.InitializeInput, out middleware.InitializeOutput) []attribute.KeyValue {
 	dynamodbAttributes := []attribute.KeyValue{semconv.DBSystemDynamoDB}
 
 	switch v := in.Parameters.(type) {
