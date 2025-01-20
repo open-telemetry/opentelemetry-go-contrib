@@ -12,7 +12,7 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 
 - Generate server metrics with semantic conventions v1.26 in `go.opentelemetry.io/contrib/instrumentation/net/http/otelhttp` when `OTEL_SEMCONV_STABILITY_OPT_IN` is set to `http/dup`. (#6411)
 - Generate client metrics with semantic conventions v1.26 in `go.opentelemetry.io/contrib/instrumentation/net/http/otelhttp` when `OTEL_SEMCONV_STABILITY_OPT_IN` is set to `http/dup`. (#6607)
-- Added support for configuring `ClientCertificate` and `ClientKey` field when exporting OTLP over gRPC in `go.opentelemetry.io/contrib/config`. (#6378)
+- Add support for configuring `ClientCertificate` and `ClientKey` field for OTLP exporters in `go.opentelemetry.io/contrib/config`. (#6378)
 
 ### Fixed
 
