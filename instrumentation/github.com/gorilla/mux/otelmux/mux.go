@@ -11,10 +11,10 @@ import (
 	"github.com/felixge/httpsnoop"
 	"github.com/gorilla/mux"
 
-	"go.opentelemetry.io/contrib/instrumentation/github.com/gorilla/mux/otelmux/internal/semconvutil"
+	"go.opentelemetry.io/contrib/instrumentation/github.com/gorilla/mux/otelmux/internal/semconv"
 	"go.opentelemetry.io/otel"
+	"go.opentelemetry.io/otel/metric"
 	"go.opentelemetry.io/otel/propagation"
-	semconv "go.opentelemetry.io/otel/semconv/v1.20.0"
 	"go.opentelemetry.io/otel/trace"
 )
 
@@ -44,6 +44,13 @@ func Middleware(service string, opts ...Option) mux.MiddlewareFunc {
 	if cfg.spanNameFormatter == nil {
 		cfg.spanNameFormatter = defaultSpanNameFunc
 	}
+	if cfg.MeterProvider == nil {
+		cfg.MeterProvider = otel.GetMeterProvider()
+	}
+	meter := cfg.MeterProvider.Meter(
+		ScopeName,
+		metric.WithInstrumentationVersion(Version()),
+	)
 
 	return func(handler http.Handler) http.Handler {
 		return traceware{
@@ -55,6 +62,7 @@ func Middleware(service string, opts ...Option) mux.MiddlewareFunc {
 			publicEndpoint:    cfg.PublicEndpoint,
 			publicEndpointFn:  cfg.PublicEndpointFn,
 			filters:           cfg.Filters,
+			semconv:           semconv.NewHTTPServer(meter),
 		}
 	}
 }
@@ -68,6 +76,7 @@ type traceware struct {
 	publicEndpoint    bool
 	publicEndpointFn  func(*http.Request) bool
 	filters           []Filter
+	semconv           semconv.HTTPServer
 }
 
 type recordingResponseWriter struct {
@@ -128,22 +137,8 @@ func (tw traceware) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	}
 
 	ctx := tw.propagators.Extract(r.Context(), propagation.HeaderCarrier(r.Header))
-	routeStr := ""
-	route := mux.CurrentRoute(r)
-	if route != nil {
-		var err error
-		routeStr, err = route.GetPathTemplate()
-		if err != nil {
-			routeStr, err = route.GetPathRegexp()
-			if err != nil {
-				routeStr = ""
-			}
-		}
-	}
-
 	opts := []trace.SpanStartOption{
-		trace.WithAttributes(semconvutil.HTTPServerRequest(tw.service, r)...),
-		trace.WithSpanKind(trace.SpanKindServer),
+		trace.WithAttributes(tw.semconv.RequestTraceAttrs(tw.service, r)...),
 	}
 
 	if tw.publicEndpoint || (tw.publicEndpointFn != nil && tw.publicEndpointFn(r.WithContext(ctx))) {
@@ -154,14 +149,22 @@ func (tw traceware) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		}
 	}
 
+	routeStr := ""
+	route := mux.CurrentRoute(r)
+	if route != nil {
+		routeStr, _ = route.GetPathTemplate()
+		if routeStr == "" {
+			routeStr, _ = route.GetPathRegexp()
+		}
+	}
+
 	if routeStr == "" {
 		routeStr = fmt.Sprintf("HTTP %s route not found", r.Method)
 	} else {
-		rAttr := semconv.HTTPRoute(routeStr)
+		rAttr := tw.semconv.Route(routeStr)
 		opts = append(opts, trace.WithAttributes(rAttr))
 	}
-	spanName := tw.spanNameFormatter(routeStr, r)
-	ctx, span := tw.tracer.Start(ctx, spanName, opts...)
+	ctx, span := tw.tracer.Start(ctx, tw.spanNameFormatter(routeStr, r), opts...)
 	defer span.End()
 	r2 := r.WithContext(ctx)
 	rrw := getRRW(w)
@@ -170,5 +173,5 @@ func (tw traceware) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	if rrw.status > 0 {
 		span.SetAttributes(semconv.HTTPStatusCode(rrw.status))
 	}
-	span.SetStatus(semconvutil.HTTPServerStatus(rrw.status))
+	span.SetStatus(tw.semconv.Status(rrw.status))
 }

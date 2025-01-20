@@ -6,18 +6,22 @@ package otelmux // import "go.opentelemetry.io/contrib/instrumentation/github.co
 import (
 	"net/http"
 
+	"go.opentelemetry.io/otel/attribute"
+	"go.opentelemetry.io/otel/metric"
 	"go.opentelemetry.io/otel/propagation"
 	oteltrace "go.opentelemetry.io/otel/trace"
 )
 
 // config is used to configure the mux middleware.
 type config struct {
-	TracerProvider    oteltrace.TracerProvider
-	Propagators       propagation.TextMapPropagator
-	spanNameFormatter func(string, *http.Request) string
-	PublicEndpoint    bool
-	PublicEndpointFn  func(*http.Request) bool
-	Filters           []Filter
+	TracerProvider     oteltrace.TracerProvider
+	Propagators        propagation.TextMapPropagator
+	spanNameFormatter  func(string, *http.Request) string
+	PublicEndpoint     bool
+	PublicEndpointFn   func(*http.Request) bool
+	Filters            []Filter
+	MeterProvider      metric.MeterProvider
+	MetricAttributesFn func(*http.Request) []attribute.KeyValue
 }
 
 // Option specifies instrumentation configuration options.
@@ -95,5 +99,23 @@ func WithSpanNameFormatter(fn func(routeName string, r *http.Request) string) Op
 func WithFilter(f Filter) Option {
 	return optionFunc(func(c *config) {
 		c.Filters = append(c.Filters, f)
+	})
+}
+
+// WithMeterProvider specifies a meter provider to use for creating a meter.
+// If none is specified, the global provider is used.
+func WithMeterProvider(provider metric.MeterProvider) Option {
+	return optionFunc(func(cfg *config) {
+		if provider != nil {
+			cfg.MeterProvider = provider
+		}
+	})
+}
+
+// WithMetricAttributesFn returns an Option to set a function that maps an HTTP request to a slice of attribute.KeyValue.
+// These attributes will be included in metrics for every request.
+func WithMetricAttributesFn(metricAttributesFn func(r *http.Request) []attribute.KeyValue) Option {
+	return optionFunc(func(c *config) {
+		c.MetricAttributesFn = metricAttributesFn
 	})
 }
