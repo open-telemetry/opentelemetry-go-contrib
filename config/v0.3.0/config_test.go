@@ -568,6 +568,99 @@ func TestCreateTLSConfig(t *testing.T) {
 	}
 }
 
+func TestCreateHeadersConfig(t *testing.T) {
+	tests := []struct {
+		name        string
+		headers     []NameStringValuePair
+		headersList *string
+		wantHeaders map[string]string
+		wantErr     string
+	}{
+		{
+			name:        "no headers",
+			headers:     []NameStringValuePair{},
+			headersList: nil,
+			wantHeaders: map[string]string{},
+		},
+		{
+			name:        "headerslist only",
+			headers:     []NameStringValuePair{},
+			headersList: ptr("a=b,c=d"),
+			wantHeaders: map[string]string{
+				"a": "b",
+				"c": "d",
+			},
+		},
+		{
+			name: "headers only",
+			headers: []NameStringValuePair{
+				{
+					Name:  "a",
+					Value: ptr("b"),
+				},
+				{
+					Name:  "c",
+					Value: ptr("d"),
+				},
+			},
+			headersList: nil,
+			wantHeaders: map[string]string{
+				"a": "b",
+				"c": "d",
+			},
+		},
+		{
+			name: "both headers and headerslist",
+			headers: []NameStringValuePair{
+				{
+					Name:  "a",
+					Value: ptr("b"),
+				},
+			},
+			headersList: ptr("c=d"),
+			wantHeaders: map[string]string{
+				"a": "b",
+				"c": "d",
+			},
+		},
+		{
+			name: "headers supercedes headerslist",
+			headers: []NameStringValuePair{
+				{
+					Name:  "a",
+					Value: ptr("b"),
+				},
+				{
+					Name:  "c",
+					Value: ptr("override"),
+				},
+			},
+			headersList: ptr("c=d"),
+			wantHeaders: map[string]string{
+				"a": "b",
+				"c": "override",
+			},
+		},
+		{
+			name:        "invalid headerslist",
+			headersList: ptr("==="),
+			wantErr:     "invalid headers list: invalid key: \"\"",
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			headersMap, err := createHeadersConfig(tt.headers, tt.headersList)
+			if tt.wantErr != "" {
+				require.Error(t, err)
+				require.Equal(t, tt.wantErr, err.Error())
+			} else {
+				require.NoError(t, err)
+			}
+			require.Equal(t, tt.wantHeaders, headersMap)
+		})
+	}
+}
+
 func ptr[T any](v T) *T {
 	return &v
 }
