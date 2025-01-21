@@ -463,7 +463,7 @@ func TestLogProcessor(t *testing.T) {
 				Batch: &BatchLogRecordProcessor{
 					Exporter: LogRecordExporter{
 						OTLP: &OTLP{
-							Protocol:    ptr("grpc"),
+							Protocol:    ptr("http/protobuf"),
 							Endpoint:    ptr("localhost:4317"),
 							Compression: ptr("gzip"),
 							Timeout:     ptr(1000),
