@@ -264,6 +264,29 @@ func TestSpanProcessor(t *testing.T) {
 			wantProcessor: sdktrace.NewBatchSpanProcessor(otlpGRPCExporter),
 		},
 		{
+			name: "batch/otlp-grpc-exporter-socket-endpoint",
+			processor: SpanProcessor{
+				Batch: &BatchSpanProcessor{
+					MaxExportBatchSize: ptr(0),
+					ExportTimeout:      ptr(0),
+					MaxQueueSize:       ptr(0),
+					ScheduleDelay:      ptr(0),
+					Exporter: SpanExporter{
+						OTLP: &OTLP{
+							Protocol:    ptr("grpc"),
+							Endpoint:    ptr("unix:collector.sock"),
+							Compression: ptr("gzip"),
+							Timeout:     ptr(1000),
+							Headers: []NameStringValuePair{
+								{Name: "test", Value: ptr("test1")},
+							},
+						},
+					},
+				},
+			},
+			wantProcessor: sdktrace.NewBatchSpanProcessor(otlpGRPCExporter),
+		},
+		{
 			name: "batch/otlp-grpc-good-ca-certificate",
 			processor: SpanProcessor{
 				Batch: &BatchSpanProcessor{
