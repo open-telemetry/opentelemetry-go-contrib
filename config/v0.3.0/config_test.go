@@ -624,7 +624,7 @@ func TestCreateHeadersConfig(t *testing.T) {
 			},
 		},
 		{
-			name: "headers supercedes headerslist",
+			name: "headers supersedes headerslist",
 			headers: []NameStringValuePair{
 				{
 					Name:  "a",
