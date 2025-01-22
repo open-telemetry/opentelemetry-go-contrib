@@ -146,9 +146,6 @@ func ParseYAML(file []byte) (*OpenTelemetryConfiguration, error) {
 	if err := yaml.Unmarshal(file, &cfg); err != nil {
 		return nil, err
 	}
-	if err, ok := validateConfig(&cfg); err != nil || !ok {
-		return nil, err
-	}
 	return &cfg, nil
 }
 
