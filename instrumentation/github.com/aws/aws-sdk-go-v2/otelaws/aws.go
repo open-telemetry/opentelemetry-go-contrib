@@ -27,7 +27,8 @@ const (
 type spanTimestampKey struct{}
 
 // AttributeSetter returns an array of KeyValue pairs, it can be used to set custom attributes.
-// Deprecated: Kept for backward compatibility, use AttributeBuilder instead. This will be removed in a future release.
+//
+// Deprecated: Use AttributeBuilder instead. This will be removed in a future release.
 type AttributeSetter func(context.Context, middleware.InitializeInput) []attribute.KeyValue
 
 // AttributeBuilder returns an array of KeyValue pairs, it can be used to set custom attributes.

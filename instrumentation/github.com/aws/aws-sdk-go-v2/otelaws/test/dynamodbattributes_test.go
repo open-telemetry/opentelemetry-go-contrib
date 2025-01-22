@@ -105,6 +105,7 @@ func TestDynamodbTags(t *testing.T) {
 	})
 }
 
+//nolint:staticcheck // Tests for deprecated AttributeSetter that will be removed in the future release.
 func TestDynamodbTagsCustomSetter(t *testing.T) {
 	cases := struct {
 		responseStatus     int

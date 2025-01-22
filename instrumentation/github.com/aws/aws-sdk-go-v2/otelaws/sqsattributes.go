@@ -14,7 +14,8 @@ import (
 )
 
 // SQSAttributeSetter sets SQS specific attributes depending on the SQS operation being performed.
-// Deprecated: Kept for backward compatibility, use SQSAttributeBuilder instead. This will be removed in a future release.
+//
+// Deprecated: Use SQSAttributeBuilder instead. This will be removed in a future release.
 func SQSAttributeSetter(ctx context.Context, in middleware.InitializeInput) []attribute.KeyValue {
 	return SQSAttributeBuilder(ctx, in, middleware.InitializeOutput{})
 }

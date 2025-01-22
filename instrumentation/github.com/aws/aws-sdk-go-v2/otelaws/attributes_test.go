@@ -45,21 +45,17 @@ func TestSystemAttribute(t *testing.T) {
 	assert.Equal(t, semconv.RPCSystemKey.String("aws-api"), attr)
 }
 
-func TestDefaultAttributeBuilder_ShouldReturnNoAttributesOnNotSupportedService(t *testing.T) {
-	// GIVEN
+func TestDefaultAttributeBuilderNotSupportedService(t *testing.T) {
 	testCtx := awsMiddleware.SetServiceID(context.TODO(), "not-implemented-service")
 
-	// WHEN
 	attr := DefaultAttributeBuilder(testCtx, middleware.InitializeInput{}, middleware.InitializeOutput{})
 	assert.Empty(t, attr)
 }
 
-func TestDefaultAttributeBuilder_ShouldReturnAttributesOnSupportedService(t *testing.T) {
-	// GIVEN
+func TestDefaultAttributeBuilderOnSupportedService(t *testing.T) {
 	testCtx := awsMiddleware.SetServiceID(context.TODO(), sqs.ServiceID)
 	testQueueURL := "test-queue-url"
 
-	// WHEN
 	attr := DefaultAttributeBuilder(testCtx, middleware.InitializeInput{
 		Parameters: &sqs.SendMessageInput{
 			QueueUrl: &testQueueURL,

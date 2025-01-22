@@ -56,7 +56,8 @@ func RequestIDAttr(requestID string) attribute.KeyValue {
 
 // DefaultAttributeSetter checks to see if there are service specific attributes available to set for the AWS service.
 // If there are service specific attributes available then they will be included.
-// Deprecated: Kept for backward compatibility, use DefaultAttributeBuilder instead. This will be removed in a future release.
+//
+// Deprecated: Use DefaultAttributeBuilder instead. This will be removed in a future release.
 func DefaultAttributeSetter(ctx context.Context, in middleware.InitializeInput) []attribute.KeyValue {
 	return DefaultAttributeBuilder(ctx, in, middleware.InitializeOutput{})
 }
