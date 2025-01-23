@@ -4,7 +4,6 @@
     "config:recommended"
   ],
   "ignorePaths": [],
-  "ignoreDeps": [ "go.opentelemetry.io/contrib/instrgen" ],
   "labels": ["Skip Changelog", "dependencies"],
   "separateMajorMinor": true,
   "postUpdateOptions" : [
