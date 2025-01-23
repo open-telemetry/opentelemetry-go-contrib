@@ -88,7 +88,7 @@ Changes should be made using [the GitHub flow](https://guides.github.com/introdu
 
 A pull request is considered ready to merge when the following criteria are meet.
 
-* It has received two approvals from Code Owners/Approvers/Maintainers (at different companies), unless the change is for an exempt module[^1].
+* It has received two approvals from Code Owners/Approvers/Maintainers (at different companies).
 * All feedback has been addressed. Be sure to "Resolve" all comments that have been addressed to signal this.
 * Any substantive changes submitted after an Approval removes that Approval.
   You will need to manually clear these prior Approval reviews to indicate to the reviewer that they need to resubmit their review.
