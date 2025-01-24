@@ -11,7 +11,16 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 ### Added
 
 - Add support for configuring `ClientCertificate` and `ClientKey` field for OTLP exporters in `go.opentelemetry.io/contrib/config`. (#6378)
+- Add `WithAttributeBuilder`, `AttributeBuilder`, `DefaultAttributeBuilder`, `DynamoDBAttributeBuilder`, `SNSAttributeBuilder` to support adding attributes based on SDK input and output in `go.opentelemetry.io/contrib/instrumentation/github.com/aws/aws-sdk-go-v2/otelaws`. (#6543)
 - Add support for configuring `HeadersList` field for OTLP exporters in `go.opentelemetry.io/contrib/config`. (#6657)
+
+### Changed
+
+- Add custom attribute to the span after execution of the SDK rather than before in `go.opentelemetry.io/contrib/instrumentation/github.com/aws/aws-sdk-go-v2/otelaws`. (#6543)
+
+### Deprecated
+
+- Deprecate `WithAttributeSetter`, `AttributeSetter`, `DefaultAttributeSetter`, `DynamoDBAttributeSetter`, `SNSAttributeSetter` in favor of `WithAttributeBuilder`, `AttributeBuilder`, `DefaultAttributeBuilder`, `DynamoDBAttributeBuilder`, `SNSAttributeBuilder` in `go.opentelemetry.io/contrib/instrumentation/github.com/aws/aws-sdk-go-v2/otelaws` (#6543)
 
 ### Fixed
 
