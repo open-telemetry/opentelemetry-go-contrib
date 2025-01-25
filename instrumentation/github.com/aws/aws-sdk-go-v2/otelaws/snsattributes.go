@@ -15,7 +15,14 @@ import (
 )
 
 // SNSAttributeSetter sets SNS specific attributes depending on the SNS operation is being performed.
+//
+// Deprecated: Use SNSAttributeBuilder instead. This will be removed in a future release.
 func SNSAttributeSetter(ctx context.Context, in middleware.InitializeInput) []attribute.KeyValue {
+	return SNSAttributeBuilder(ctx, in, middleware.InitializeOutput{})
+}
+
+// SNSAttributeBuilder sets SNS specific attributes depending on the SNS operation is being performed.
+func SNSAttributeBuilder(ctx context.Context, in middleware.InitializeInput, out middleware.InitializeOutput) []attribute.KeyValue {
 	snsAttributes := []attribute.KeyValue{semconv.MessagingSystemKey.String("aws_sns")}
 
 	switch v := in.Parameters.(type) {
