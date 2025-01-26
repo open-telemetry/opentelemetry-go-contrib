@@ -152,8 +152,12 @@ func otlpHTTPLogExporter(ctx context.Context, otlpConfig *OTLP) (sdklog.Exporter
 	if otlpConfig.Timeout != nil && *otlpConfig.Timeout > 0 {
 		opts = append(opts, otlploghttp.WithTimeout(time.Millisecond*time.Duration(*otlpConfig.Timeout)))
 	}
-	if len(otlpConfig.Headers) > 0 {
-		opts = append(opts, otlploghttp.WithHeaders(toStringMap(otlpConfig.Headers)))
+	headersConfig, err := createHeadersConfig(otlpConfig.Headers, otlpConfig.HeadersList)
+	if err != nil {
+		return nil, err
+	}
+	if len(headersConfig) > 0 {
+		opts = append(opts, otlploghttp.WithHeaders(headersConfig))
 	}
 
 	tlsConfig, err := createTLSConfig(otlpConfig.Certificate, otlpConfig.ClientCertificate, otlpConfig.ClientKey)
@@ -200,8 +204,12 @@ func otlpGRPCLogExporter(ctx context.Context, otlpConfig *OTLP) (sdklog.Exporter
 	if otlpConfig.Timeout != nil && *otlpConfig.Timeout > 0 {
 		opts = append(opts, otlploggrpc.WithTimeout(time.Millisecond*time.Duration(*otlpConfig.Timeout)))
 	}
-	if len(otlpConfig.Headers) > 0 {
-		opts = append(opts, otlploggrpc.WithHeaders(toStringMap(otlpConfig.Headers)))
+	headersConfig, err := createHeadersConfig(otlpConfig.Headers, otlpConfig.HeadersList)
+	if err != nil {
+		return nil, err
+	}
+	if len(headersConfig) > 0 {
+		opts = append(opts, otlploggrpc.WithHeaders(headersConfig))
 	}
 
 	tlsConfig, err := createTLSConfig(otlpConfig.Certificate, otlpConfig.ClientCertificate, otlpConfig.ClientKey)
