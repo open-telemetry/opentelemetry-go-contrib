@@ -7,6 +7,8 @@ import (
 	"errors"
 	"fmt"
 	"reflect"
+
+	"gopkg.in/yaml.v3"
 )
 
 // UnmarshalYAML implements yaml.Unmarshaler.
@@ -28,6 +30,49 @@ func (j *AttributeNameValueType) UnmarshalYAML(unmarshal func(interface{}) error
 		return fmt.Errorf("invalid value (expected one of %#v): %#v", enumValuesAttributeNameValueType, v.Value)
 	}
 	*j = AttributeNameValueType(v)
+	return nil
+}
+
+// UnmarshalYAML implements yaml.Unmarshaler.
+func (j *AttributeNameValue) UnmarshalYAML(b []byte) error {
+	var raw map[string]interface{}
+	if err := yaml.Unmarshal(b, &raw); err != nil {
+		return err
+	}
+	if _, ok := raw["name"]; raw != nil && !ok {
+		return errors.New("field name in AttributeNameValue: required")
+	}
+	if _, ok := raw["value"]; raw != nil && !ok {
+		return errors.New("field value in AttributeNameValue: required")
+	}
+	type Plain AttributeNameValue
+	var plain Plain
+	if err := yaml.Unmarshal(b, &plain); err != nil {
+		return err
+	}
+	if plain.Type != nil && plain.Type.Value == "int" {
+		val, ok := plain.Value.(float64)
+		if ok {
+			plain.Value = int(val)
+		}
+	}
+	if plain.Type != nil && plain.Type.Value == "int_array" {
+		m, ok := plain.Value.([]interface{})
+		if ok {
+			var vals []interface{}
+			for _, v := range m {
+				val, ok := v.(float64)
+				if ok {
+					vals = append(vals, int(val))
+				} else {
+					vals = append(vals, val)
+				}
+			}
+			plain.Value = vals
+		}
+	}
+
+	*j = AttributeNameValue(plain)
 	return nil
 }
 
