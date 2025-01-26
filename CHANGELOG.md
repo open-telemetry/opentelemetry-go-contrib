@@ -8,6 +8,8 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 
 ## [Unreleased]
 
+- Implement `http.Hijacker` in`go.opentelemetry.io/contrib/instrumentation/github.com/gorilla/mux/otelmux`. (#5402)
+
 ### Added
 
 - Add support for configuring `ClientCertificate` and `ClientKey` field for OTLP exporters in `go.opentelemetry.io/contrib/config`. (#6378)
