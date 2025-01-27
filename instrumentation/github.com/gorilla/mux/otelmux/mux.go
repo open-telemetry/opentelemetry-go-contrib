@@ -7,14 +7,17 @@ import (
 	"fmt"
 	"net/http"
 	"sync"
+	"time"
 
 	"github.com/felixge/httpsnoop"
 	"github.com/gorilla/mux"
 
+	"go.opentelemetry.io/contrib/instrumentation/github.com/gorilla/mux/otelmux/internal/semconv"
 	"go.opentelemetry.io/contrib/instrumentation/github.com/gorilla/mux/otelmux/internal/semconvutil"
 	"go.opentelemetry.io/otel"
+	"go.opentelemetry.io/otel/attribute"
+	"go.opentelemetry.io/otel/metric"
 	"go.opentelemetry.io/otel/propagation"
-	semconv "go.opentelemetry.io/otel/semconv/v1.20.0"
 	"go.opentelemetry.io/otel/trace"
 )
 
@@ -44,6 +47,13 @@ func Middleware(service string, opts ...Option) mux.MiddlewareFunc {
 	if cfg.spanNameFormatter == nil {
 		cfg.spanNameFormatter = defaultSpanNameFunc
 	}
+	if cfg.MeterProvider == nil {
+		cfg.MeterProvider = otel.GetMeterProvider()
+	}
+	meter := cfg.MeterProvider.Meter(
+		ScopeName,
+		metric.WithInstrumentationVersion(Version()),
+	)
 
 	return func(handler http.Handler) http.Handler {
 		return traceware{
@@ -55,19 +65,22 @@ func Middleware(service string, opts ...Option) mux.MiddlewareFunc {
 			publicEndpoint:    cfg.PublicEndpoint,
 			publicEndpointFn:  cfg.PublicEndpointFn,
 			filters:           cfg.Filters,
+			semconv:           semconv.NewHTTPServer(meter),
 		}
 	}
 }
 
 type traceware struct {
-	service           string
-	tracer            trace.Tracer
-	propagators       propagation.TextMapPropagator
-	handler           http.Handler
-	spanNameFormatter func(string, *http.Request) string
-	publicEndpoint    bool
-	publicEndpointFn  func(*http.Request) bool
-	filters           []Filter
+	service            string
+	tracer             trace.Tracer
+	propagators        propagation.TextMapPropagator
+	handler            http.Handler
+	spanNameFormatter  func(string, *http.Request) string
+	publicEndpoint     bool
+	publicEndpointFn   func(*http.Request) bool
+	filters            []Filter
+	metricAttributesFn func(*http.Request) []attribute.KeyValue
+	semconv            semconv.HTTPServer
 }
 
 type recordingResponseWriter struct {
@@ -119,6 +132,7 @@ func defaultSpanNameFunc(routeName string, _ *http.Request) string { return rout
 // ServeHTTP implements the http.Handler interface. It does the actual
 // tracing of the request.
 func (tw traceware) ServeHTTP(w http.ResponseWriter, r *http.Request) {
+	requestStartTime := time.Now()
 	for _, f := range tw.filters {
 		if !f(r) {
 			// Simply pass through to the handler if a filter rejects the request
@@ -157,7 +171,7 @@ func (tw traceware) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	if routeStr == "" {
 		routeStr = fmt.Sprintf("HTTP %s route not found", r.Method)
 	} else {
-		rAttr := semconv.HTTPRoute(routeStr)
+		rAttr := tw.semconv.Route(routeStr)
 		opts = append(opts, trace.WithAttributes(rAttr))
 	}
 	spanName := tw.spanNameFormatter(routeStr, r)
@@ -170,5 +184,24 @@ func (tw traceware) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	if rrw.status > 0 {
 		span.SetAttributes(semconv.HTTPStatusCode(rrw.status))
 	}
-	span.SetStatus(semconvutil.HTTPServerStatus(rrw.status))
+	span.SetStatus(tw.semconv.Status(rrw.status))
+
+	// Use floating point division here for higher precision (instead of Millisecond method).
+	elapsedTime := float64(time.Since(requestStartTime)) / float64(time.Millisecond)
+	var attributeForRequest []attribute.KeyValue
+	if tw.metricAttributesFn != nil {
+		attributeForRequest = append(attributeForRequest, tw.metricAttributesFn(r)...)
+	}
+
+	metricAttributes := semconv.MetricAttributes{Req: r, StatusCode: rrw.status}
+	metricAttributes.AdditionalAttributes = append(metricAttributes.AdditionalAttributes, attributeForRequest...)
+
+	// TODO : add response and request size
+	tw.semconv.RecordMetrics(ctx, semconv.ServerMetricData{
+		ServerName:       tw.service,
+		MetricAttributes: metricAttributes,
+		MetricData: semconv.MetricData{
+			ElapsedTime: elapsedTime,
+		},
+	})
 }
