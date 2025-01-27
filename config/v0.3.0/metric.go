@@ -182,13 +182,11 @@ func otlpHTTPMetricExporter(ctx context.Context, otlpConfig *OTLPMetric) (sdkmet
 		}
 	}
 
-	if otlpConfig.Certificate != nil {
-		creds, err := createTLSConfig(*otlpConfig.Certificate)
-		if err != nil {
-			return nil, fmt.Errorf("could not create client tls credentials: %w", err)
-		}
-		opts = append(opts, otlpmetrichttp.WithTLSClientConfig(creds))
+	tlsConfig, err := createTLSConfig(otlpConfig.Certificate, otlpConfig.ClientCertificate, otlpConfig.ClientKey)
+	if err != nil {
+		return nil, err
 	}
+	opts = append(opts, otlpmetrichttp.WithTLSClientConfig(tlsConfig))
 
 	return otlpmetrichttp.New(ctx, opts...)
 }
@@ -245,13 +243,11 @@ func otlpGRPCMetricExporter(ctx context.Context, otlpConfig *OTLPMetric) (sdkmet
 		}
 	}
 
-	if otlpConfig.Certificate != nil {
-		creds, err := credentials.NewClientTLSFromFile(*otlpConfig.Certificate, "")
-		if err != nil {
-			return nil, fmt.Errorf("could not create client tls credentials: %w", err)
-		}
-		opts = append(opts, otlpmetricgrpc.WithTLSCredentials(creds))
+	tlsConfig, err := createTLSConfig(otlpConfig.Certificate, otlpConfig.ClientCertificate, otlpConfig.ClientKey)
+	if err != nil {
+		return nil, err
 	}
+	opts = append(opts, otlpmetricgrpc.WithTLSCredentials(credentials.NewTLS(tlsConfig)))
 
 	return otlpmetricgrpc.New(ctx, opts...)
 }

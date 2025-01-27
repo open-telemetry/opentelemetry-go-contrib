@@ -224,6 +224,29 @@ func TestLogProcessor(t *testing.T) {
 			wantProcessor: sdklog.NewBatchProcessor(otlpGRPCExporter),
 		},
 		{
+			name: "batch/otlp-grpc-exporter-socket-endpoint",
+			processor: LogRecordProcessor{
+				Batch: &BatchLogRecordProcessor{
+					MaxExportBatchSize: ptr(0),
+					ExportTimeout:      ptr(0),
+					MaxQueueSize:       ptr(0),
+					ScheduleDelay:      ptr(0),
+					Exporter: LogRecordExporter{
+						OTLP: &OTLP{
+							Protocol:    ptr("grpc"),
+							Endpoint:    ptr("unix:collector.sock"),
+							Compression: ptr("gzip"),
+							Timeout:     ptr(1000),
+							Headers: []NameStringValuePair{
+								{Name: "test", Value: ptr("test1")},
+							},
+						},
+					},
+				},
+			},
+			wantProcessor: sdklog.NewBatchProcessor(otlpGRPCExporter),
+		},
+		{
 			name: "batch/otlp-grpc-good-ca-certificate",
 			processor: LogRecordProcessor{
 				Batch: &BatchLogRecordProcessor{
@@ -255,7 +278,25 @@ func TestLogProcessor(t *testing.T) {
 					},
 				},
 			},
-			wantErr: fmt.Errorf("could not create client tls credentials: %w", errors.New("credentials: failed to append certificates")),
+			wantErr: fmt.Errorf("could not create certificate authority chain from certificate"),
+		},
+		{
+			name: "batch/otlp-grpc-bad-client-certificate",
+			processor: LogRecordProcessor{
+				Batch: &BatchLogRecordProcessor{
+					Exporter: LogRecordExporter{
+						OTLP: &OTLP{
+							Protocol:          ptr("grpc"),
+							Endpoint:          ptr("localhost:4317"),
+							Compression:       ptr("gzip"),
+							Timeout:           ptr(1000),
+							ClientCertificate: ptr(filepath.Join("..", "testdata", "bad_cert.crt")),
+							ClientKey:         ptr(filepath.Join("..", "testdata", "bad_cert.crt")),
+						},
+					},
+				},
+			},
+			wantErr: fmt.Errorf("could not use client certificate: %w", errors.New("tls: failed to find any PEM data in certificate input")),
 		},
 		{
 			name: "batch/otlp-grpc-exporter-no-scheme",
@@ -381,7 +422,25 @@ func TestLogProcessor(t *testing.T) {
 					},
 				},
 			},
-			wantErr: fmt.Errorf("could not create client tls credentials: %w", errors.New("failed to append certificate to the cert pool")),
+			wantErr: fmt.Errorf("could not create certificate authority chain from certificate"),
+		},
+		{
+			name: "batch/otlp-http-bad-client-certificate",
+			processor: LogRecordProcessor{
+				Batch: &BatchLogRecordProcessor{
+					Exporter: LogRecordExporter{
+						OTLP: &OTLP{
+							Protocol:          ptr("http/protobuf"),
+							Endpoint:          ptr("localhost:4317"),
+							Compression:       ptr("gzip"),
+							Timeout:           ptr(1000),
+							ClientCertificate: ptr(filepath.Join("..", "testdata", "bad_cert.crt")),
+							ClientKey:         ptr(filepath.Join("..", "testdata", "bad_cert.crt")),
+						},
+					},
+				},
+			},
+			wantErr: fmt.Errorf("could not use client certificate: %w", errors.New("tls: failed to find any PEM data in certificate input")),
 		},
 		{
 			name: "batch/otlp-http-exporter-with-path",
