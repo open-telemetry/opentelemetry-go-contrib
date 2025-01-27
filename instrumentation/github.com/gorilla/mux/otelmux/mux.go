@@ -13,7 +13,7 @@ import (
 
 	"go.opentelemetry.io/contrib/instrumentation/github.com/gorilla/mux/otelmux/internal/semconv"
 	"go.opentelemetry.io/otel"
-	"go.opentelemetry.io/otel/metric"
+	"go.opentelemetry.io/otel/metric/noop"
 	"go.opentelemetry.io/otel/propagation"
 	"go.opentelemetry.io/otel/trace"
 )
@@ -44,14 +44,6 @@ func Middleware(service string, opts ...Option) mux.MiddlewareFunc {
 	if cfg.spanNameFormatter == nil {
 		cfg.spanNameFormatter = defaultSpanNameFunc
 	}
-	if cfg.MeterProvider == nil {
-		cfg.MeterProvider = otel.GetMeterProvider()
-	}
-	meter := cfg.MeterProvider.Meter(
-		ScopeName,
-		metric.WithInstrumentationVersion(Version()),
-	)
-
 	return func(handler http.Handler) http.Handler {
 		return traceware{
 			service:           service,
@@ -62,7 +54,7 @@ func Middleware(service string, opts ...Option) mux.MiddlewareFunc {
 			publicEndpoint:    cfg.PublicEndpoint,
 			publicEndpointFn:  cfg.PublicEndpointFn,
 			filters:           cfg.Filters,
-			semconv:           semconv.NewHTTPServer(meter),
+			semconv:           semconv.NewHTTPServer(noop.Meter{}),
 		}
 	}
 }
@@ -139,6 +131,7 @@ func (tw traceware) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	ctx := tw.propagators.Extract(r.Context(), propagation.HeaderCarrier(r.Header))
 	opts := []trace.SpanStartOption{
 		trace.WithAttributes(tw.semconv.RequestTraceAttrs(tw.service, r)...),
+		trace.WithSpanKind(trace.SpanKindServer),
 	}
 
 	if tw.publicEndpoint || (tw.publicEndpointFn != nil && tw.publicEndpointFn(r.WithContext(ctx))) {

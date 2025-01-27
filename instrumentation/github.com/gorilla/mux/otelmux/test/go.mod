@@ -23,3 +23,5 @@ require (
 	golang.org/x/sys v0.29.0 // indirect
 	gopkg.in/yaml.v3 v3.0.1 // indirect
 )
+
+replace go.opentelemetry.io/contrib/instrumentation/github.com/gorilla/mux/otelmux => ../
