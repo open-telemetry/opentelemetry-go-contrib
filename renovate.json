@@ -4,7 +4,6 @@
     "config:recommended"
   ],
   "ignorePaths": [],
-  "ignoreDeps": [ "go.opentelemetry.io/contrib/instrgen" ],
   "labels": ["Skip Changelog", "dependencies"],
   "separateMajorMinor": true,
   "postUpdateOptions" : [
@@ -15,6 +14,10 @@
       "matchManagers": ["gomod"],
       "matchDepTypes": ["indirect"],
       "enabled": true
+    },
+    {
+      "matchPackageNames": ["go.opentelemetry.io/build-tools/**"],
+      "groupName": "build-tools"
     },
     {
       "matchPackageNames": ["google.golang.org/genproto/googleapis/**"],
