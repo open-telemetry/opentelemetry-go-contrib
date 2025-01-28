@@ -192,7 +192,7 @@ func TestFilter(t *testing.T) {
 	assert.Equal(t, 1, calledTest, "failed to run test")
 }
 
-func TestPassthroughSpanFromGlobalTracerWithPost(t *testing.T) {
+func TestPassthroughSpanFromGlobalTracerWithBody(t *testing.T) {
 	expectedBody := `{"message":"successfully"}`
 	router := mux.NewRouter()
 	router.Use(Middleware("foobar"))
