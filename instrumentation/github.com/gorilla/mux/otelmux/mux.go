@@ -5,6 +5,7 @@ package otelmux // import "go.opentelemetry.io/contrib/instrumentation/github.co
 
 import (
 	"fmt"
+	"io"
 	"net/http"
 	"sync"
 
@@ -75,6 +76,9 @@ type recordingResponseWriter struct {
 	writer  http.ResponseWriter
 	written bool
 	status  int
+
+	bytesWritten int64 // Track bytes written to the response
+	writeError   error // Track errors from writing to the response
 }
 
 var rrwPool = &sync.Pool{
@@ -93,7 +97,12 @@ func getRRW(writer http.ResponseWriter) *recordingResponseWriter {
 				if !rrw.written {
 					rrw.written = true
 				}
-				return next(b)
+				n, err := next(b)
+				rrw.bytesWritten += int64(n)
+				if err != nil {
+					rrw.writeError = err
+				}
+				return n, err
 			}
 		},
 		WriteHeader: func(next httpsnoop.WriteHeaderFunc) httpsnoop.WriteHeaderFunc {
@@ -102,6 +111,7 @@ func getRRW(writer http.ResponseWriter) *recordingResponseWriter {
 					rrw.written = true
 					rrw.status = statusCode
 				}
+
 				next(statusCode)
 			}
 		},
@@ -111,7 +121,67 @@ func getRRW(writer http.ResponseWriter) *recordingResponseWriter {
 
 func putRRW(rrw *recordingResponseWriter) {
 	rrw.writer = nil
+	rrw.bytesWritten = 0
+	rrw.writeError = nil
 	rrwPool.Put(rrw)
+}
+
+type bodyWrapper struct {
+	io.ReadCloser
+	OnRead func(n int64) // must not be nil
+
+	mu   sync.Mutex
+	read int64
+	err  error
+}
+
+func newBodyWrapper(body io.ReadCloser, onRead func(int64)) *bodyWrapper {
+	return &bodyWrapper{
+		ReadCloser: body,
+		OnRead:     onRead,
+	}
+}
+
+// Read reads the data from the io.ReadCloser, and stores the number of bytes
+// read and the error.
+func (w *bodyWrapper) Read(b []byte) (int, error) {
+	n, err := w.ReadCloser.Read(b)
+	n1 := int64(n)
+
+	w.updateReadData(n1, err)
+	w.OnRead(n1)
+	return n, err
+}
+
+func (w *bodyWrapper) updateReadData(n int64, err error) {
+	w.mu.Lock()
+	defer w.mu.Unlock()
+
+	w.read += n
+	if err != nil {
+		w.err = err
+	}
+}
+
+// Close closes the io.ReadCloser.
+func (w *bodyWrapper) Close() error {
+	return w.ReadCloser.Close()
+}
+
+// BytesRead returns the number of bytes read up to this point.
+func (w *bodyWrapper) BytesRead() int64 {
+	w.mu.Lock()
+	defer w.mu.Unlock()
+
+	return w.read
+}
+
+// Error returns the last error.
+func (w *bodyWrapper) Error() error {
+	w.mu.Lock()
+	defer w.mu.Unlock()
+
+	return w.err
 }
 
 // defaultSpanNameFunc just reuses the route name as the span name.
@@ -126,6 +196,14 @@ func (tw traceware) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 			tw.handler.ServeHTTP(w, r)
 			return
 		}
+	}
+
+	// if request body is nil or NoBody, we don't want to mutate the body as it
+	// will affect the identity of it in an unforeseeable way because we assert
+	// ReadCloser fulfills a certain interface and it is indeed nil or NoBody.
+	bw := newBodyWrapper(r.Body, func(int64) {})
+	if r.Body != nil && r.Body != http.NoBody {
+		r.Body = bw
 	}
 
 	ctx := tw.propagators.Extract(r.Context(), propagation.HeaderCarrier(r.Header))
@@ -167,4 +245,12 @@ func (tw traceware) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		span.SetAttributes(semconv.HTTPStatusCode(rrw.status))
 	}
 	span.SetStatus(tw.semconv.Status(rrw.status))
+
+	span.SetAttributes(tw.semconv.ResponseTraceAttrs(semconv.ResponseTelemetry{
+		StatusCode: rrw.status,
+		ReadBytes:  bw.BytesRead(),
+		ReadError:  bw.Error(),
+		WriteBytes: rrw.bytesWritten,
+		WriteError: rrw.writeError,
+	})...)
 }

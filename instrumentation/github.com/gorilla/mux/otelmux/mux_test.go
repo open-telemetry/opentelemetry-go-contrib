@@ -10,6 +10,7 @@ import (
 	"net"
 	"net/http"
 	"net/http/httptest"
+	"strings"
 	"testing"
 
 	"github.com/gorilla/mux"
@@ -189,4 +190,40 @@ func TestFilter(t *testing.T) {
 
 	assert.Equal(t, 1, calledHealth, "failed to run test")
 	assert.Equal(t, 1, calledTest, "failed to run test")
+}
+
+func TestPassthroughSpanFromGlobalTracerWithPost(t *testing.T) {
+	expectedBody := `{"message":"successfully"}`
+	router := mux.NewRouter()
+	router.Use(Middleware("foobar"))
+
+	var called bool
+	router.HandleFunc("/user", http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		called = true
+		got := trace.SpanFromContext(r.Context()).SpanContext()
+		assert.Equal(t, sc, got)
+
+		body, err := io.ReadAll(r.Body)
+		assert.NoError(t, err)
+		defer r.Body.Close()
+
+		assert.JSONEq(t, `{"name":"John Doe","age":30}`, string(body), "request body does not match")
+
+		w.Header().Set("Content-Type", "application/json")
+		w.WriteHeader(http.StatusCreated)
+		_, err = w.Write([]byte(expectedBody))
+		assert.NoError(t, err)
+	})).Methods(http.MethodPost)
+
+	r := httptest.NewRequest(http.MethodPost, "/user", strings.NewReader(`{"name":"John Doe","age":30}`))
+	r.Header.Set("Content-Type", "application/json")
+	r = r.WithContext(trace.ContextWithRemoteSpanContext(context.Background(), sc))
+	w := httptest.NewRecorder()
+
+	router.ServeHTTP(w, r)
+
+	// Validate the assertions
+	assert.True(t, called, "failed to run test")
+	assert.Equal(t, http.StatusCreated, w.Code, "unexpected status code")
+	assert.JSONEq(t, expectedBody, w.Body.String(), "unexpected response body")
 }
