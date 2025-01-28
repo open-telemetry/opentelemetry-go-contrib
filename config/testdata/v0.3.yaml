@@ -57,7 +57,7 @@ logger_provider:
             compression: gzip
             # Configure max time (in milliseconds) to wait for each export.
             timeout: 10000
-            # Configure client transport security for the exporter's connection.
+            # Configure client transport security for the exporter's connection when http/https is not specified for gRPC connections.
             insecure: false
     - # Configure a simple log record processor.
       simple:
@@ -141,7 +141,7 @@ meter_provider:
             compression: gzip
             # Configure max time (in milliseconds) to wait for each export.
             timeout: 10000
-            # Configure client transport security for the exporter's connection.
+            # Configure client transport security for the exporter's connection when http/https is not specified for gRPC connections.
             insecure: false
             # Configure temporality preference.
             temporality_preference: delta
@@ -258,7 +258,7 @@ tracer_provider:
             compression: gzip
             # Configure max time (in milliseconds) to wait for each export.
             timeout: 10000
-            # Configure client transport security for the exporter's connection.
+            # Configure client transport security for the exporter's connection when http/https is not specified for gRPC connections.
             insecure: false
     - # Configure a batch span processor.
       batch:
