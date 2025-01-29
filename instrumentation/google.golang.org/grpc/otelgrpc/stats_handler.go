@@ -65,14 +65,11 @@ func (h *serverHandler) TagRPC(ctx context.Context, info *stats.RPCTagInfo) cont
 		record:      true,
 	}
 
-	record := true
 	if h.config.Filter != nil {
-		record = h.config.Filter(info)
-		gctx.record = record
-
+		gctx.record = h.config.Filter(info)
 	}
 
-	if record {
+	if gctx.record {
 		ctx, _ = h.tracer.Start(
 			ctx,
 			name,
@@ -113,13 +110,11 @@ func (h *clientHandler) TagRPC(ctx context.Context, info *stats.RPCTagInfo) cont
 		record:      true,
 	}
 
-	record := true
 	if h.config.Filter != nil {
-		record = h.config.Filter(info)
-		gctx.record = record
+		gctx.record = h.config.Filter(info)
 	}
 
-	if record {
+	if gctx.record {
 		ctx, _ = h.tracer.Start(
 			ctx,
 			name,
