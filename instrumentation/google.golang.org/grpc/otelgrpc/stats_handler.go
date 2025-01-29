@@ -65,19 +65,22 @@ func (h *serverHandler) TagRPC(ctx context.Context, info *stats.RPCTagInfo) cont
 		record:      true,
 	}
 
+	record := true
 	if h.config.Filter != nil {
-		record := h.config.Filter(info)
+		record = h.config.Filter(info)
 		gctx.record = record
 
-		if record {
-			ctx, _ = h.tracer.Start(
-				ctx,
-				name,
-				trace.WithSpanKind(trace.SpanKindServer),
-				trace.WithAttributes(append(attrs, h.config.SpanAttributes...)...),
-			)
-		}
 	}
+
+	if record {
+		ctx, _ = h.tracer.Start(
+			ctx,
+			name,
+			trace.WithSpanKind(trace.SpanKindServer),
+			trace.WithAttributes(append(attrs, h.config.SpanAttributes...)...),
+		)
+	}
+
 	return context.WithValue(ctx, gRPCContextKey{}, &gctx)
 }
 
@@ -110,18 +113,19 @@ func (h *clientHandler) TagRPC(ctx context.Context, info *stats.RPCTagInfo) cont
 		record:      true,
 	}
 
+	record := true
 	if h.config.Filter != nil {
-		record := h.config.Filter(info)
+		record = h.config.Filter(info)
 		gctx.record = record
+	}
 
-		if record {
-			ctx, _ = h.tracer.Start(
-				ctx,
-				name,
-				trace.WithSpanKind(trace.SpanKindClient),
-				trace.WithAttributes(append(attrs, h.config.SpanAttributes...)...),
-			)
-		}
+	if record {
+		ctx, _ = h.tracer.Start(
+			ctx,
+			name,
+			trace.WithSpanKind(trace.SpanKindClient),
+			trace.WithAttributes(append(attrs, h.config.SpanAttributes...)...),
+		)
 	}
 
 	return inject(context.WithValue(ctx, gRPCContextKey{}, &gctx), h.config.Propagators)
