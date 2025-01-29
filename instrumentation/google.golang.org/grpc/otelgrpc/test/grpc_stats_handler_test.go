@@ -1580,14 +1580,14 @@ func TestServerHandler_TagRPC(t *testing.T) {
 		},
 	}
 
-	for _, test := range tests {
+	for _, tt := range tests {
 		t.Run(t.Name(), func(t *testing.T) {
-			ctx := test.server.TagRPC(test.ctx, test.info)
+			ctx := tt.server.TagRPC(tt.ctx, tt.info)
 
 			got := oteltrace.SpanFromContext(ctx).IsRecording()
 
-			if test.exp != got {
-				t.Errorf("expected %t, got %t", test.exp, got)
+			if tt.exp != got {
+				t.Errorf("expected %t, got %t", tt.exp, got)
 			}
 		})
 	}
@@ -1634,14 +1634,14 @@ func TestClientHandler_TagRPC(t *testing.T) {
 		},
 	}
 
-	for _, test := range tests {
+	for _, tt := range tests {
 		t.Run(t.Name(), func(t *testing.T) {
-			ctx := test.client.TagRPC(test.ctx, test.info)
+			ctx := tt.client.TagRPC(tt.ctx, tt.info)
 
 			got := oteltrace.SpanFromContext(ctx).IsRecording()
 
-			if test.exp != got {
-				t.Errorf("expected %t, got %t", test.exp, got)
+			if tt.exp != got {
+				t.Errorf("expected %t, got %t", tt.exp, got)
 			}
 		})
 	}
