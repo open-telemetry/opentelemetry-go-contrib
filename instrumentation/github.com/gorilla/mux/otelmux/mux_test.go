@@ -227,3 +227,28 @@ func TestPassthroughSpanFromGlobalTracerWithBody(t *testing.T) {
 	assert.Equal(t, http.StatusCreated, w.Code, "unexpected status code")
 	assert.JSONEq(t, expectedBody, w.Body.String(), "unexpected response body")
 }
+
+func TestHeaderAlreadyWrittenWhenFlushing(t *testing.T) {
+	var called bool
+
+	router := mux.NewRouter()
+	router.Use(Middleware("foobar"))
+
+	router.HandleFunc("/user/{id}", func(w http.ResponseWriter, r *http.Request) {
+		called = true
+
+		w.WriteHeader(http.StatusBadRequest)
+		f := w.(http.Flusher)
+		f.Flush()
+	})
+
+	r := httptest.NewRequest("GET", "/user/123", nil)
+	r = r.WithContext(trace.ContextWithRemoteSpanContext(context.Background(), sc))
+	w := httptest.NewRecorder()
+
+	router.ServeHTTP(w, r)
+
+	// Assertions
+	assert.True(t, called, "failed to run test")
+	assert.Equal(t, http.StatusBadRequest, w.Code, "Header was not set before flushing")
+}
