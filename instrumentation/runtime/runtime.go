@@ -35,6 +35,7 @@ const (
 )
 
 // Start initializes reporting of runtime metrics using the supplied config.
+// For goroutine scheduling metrics, additionally see [NewProducer].
 func Start(opts ...Option) error {
 	c := newConfig(opts...)
 	meter := c.MeterProvider.Meter(
