@@ -25,6 +25,7 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 
 - Use `context.Background()` as default context instead of nil in `go.opentelemetry.io/contrib/bridges/otellogr`. (#6527)
 - Convert Prometheus histogram buckets to non-cumulative otel histogram buckets in `go.opentelemetry.io/contrib/bridges/prometheus`. (#6685)
+- Don't start spans that never end for filtered out gRPC stats handler in `go.opentelemetry.io/contrib/instrumentation/google.golang.org/grpc/otelgrpc`. (#6695)
 
 <!-- Released section -->
 <!-- Don't change this section unless doing release -->
