@@ -1539,7 +1539,7 @@ func TestStatsHandlerConcurrentSafeContextCancellation(t *testing.T) {
 	}
 }
 
-func TestServerHandler_TagRPC(t *testing.T) {
+func TestServerHandlerTagRPC(t *testing.T) {
 	tests := []struct {
 		name   string
 		server stats.Handler
