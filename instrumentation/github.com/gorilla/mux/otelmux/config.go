@@ -6,6 +6,7 @@ package otelmux // import "go.opentelemetry.io/contrib/instrumentation/github.co
 import (
 	"net/http"
 
+	"go.opentelemetry.io/otel/metric"
 	"go.opentelemetry.io/otel/propagation"
 	oteltrace "go.opentelemetry.io/otel/trace"
 )
@@ -18,6 +19,7 @@ type config struct {
 	PublicEndpoint    bool
 	PublicEndpointFn  func(*http.Request) bool
 	Filters           []Filter
+	MeterProvider     metric.MeterProvider
 }
 
 // Option specifies instrumentation configuration options.
@@ -95,5 +97,15 @@ func WithSpanNameFormatter(fn func(routeName string, r *http.Request) string) Op
 func WithFilter(f Filter) Option {
 	return optionFunc(func(c *config) {
 		c.Filters = append(c.Filters, f)
+	})
+}
+
+// WithMeterProvider specifies a meter provider to use for creating a metric.
+// If none is specified, the global provider is used.
+func WithMeterProvider(provider metric.MeterProvider) Option {
+	return optionFunc(func(cfg *config) {
+		if provider != nil {
+			cfg.MeterProvider = provider
+		}
 	})
 }

@@ -6,6 +6,7 @@ package otelmux // import "go.opentelemetry.io/contrib/instrumentation/github.co
 import (
 	"fmt"
 	"net/http"
+	"time"
 
 	"github.com/felixge/httpsnoop"
 	"github.com/gorilla/mux"
@@ -14,6 +15,8 @@ import (
 	"go.opentelemetry.io/contrib/instrumentation/github.com/gorilla/mux/otelmux/internal/semconvutil"
 
 	"go.opentelemetry.io/otel"
+	"go.opentelemetry.io/otel/attribute"
+	"go.opentelemetry.io/otel/metric"
 	"go.opentelemetry.io/otel/propagation"
 	semconv "go.opentelemetry.io/otel/semconv/v1.20.0"
 	"go.opentelemetry.io/otel/trace"
@@ -45,6 +48,13 @@ func Middleware(service string, opts ...Option) mux.MiddlewareFunc {
 	if cfg.spanNameFormatter == nil {
 		cfg.spanNameFormatter = defaultSpanNameFunc
 	}
+	if cfg.MeterProvider == nil {
+		cfg.MeterProvider = otel.GetMeterProvider()
+	}
+	meter := cfg.MeterProvider.Meter(
+		ScopeName,
+		metric.WithInstrumentationVersion(Version()),
+	)
 
 	return func(handler http.Handler) http.Handler {
 		return traceware{
@@ -56,6 +66,7 @@ func Middleware(service string, opts ...Option) mux.MiddlewareFunc {
 			publicEndpoint:    cfg.PublicEndpoint,
 			publicEndpointFn:  cfg.PublicEndpointFn,
 			filters:           cfg.Filters,
+			meter:             meter,
 		}
 	}
 }
@@ -69,7 +80,19 @@ type traceware struct {
 	publicEndpoint    bool
 	publicEndpointFn  func(*http.Request) bool
 	filters           []Filter
+	meter             metric.Meter
+
+	requestBytesCounter  metric.Int64Counter
+	responseBytesCounter metric.Int64Counter
+	serverLatencyMeasure metric.Float64Histogram
 }
+
+// Server HTTP metrics.
+const (
+	serverRequestSize  = "http.server.request.size"  // Incoming request bytes total
+	serverResponseSize = "http.server.response.size" // Incoming response bytes total
+	serverDuration     = "http.server.duration"      // Incoming end to end duration, milliseconds
+)
 
 // defaultSpanNameFunc just reuses the route name as the span name.
 func defaultSpanNameFunc(routeName string, _ *http.Request) string { return routeName }
@@ -77,6 +100,7 @@ func defaultSpanNameFunc(routeName string, _ *http.Request) string { return rout
 // ServeHTTP implements the http.Handler interface. It does the actual
 // tracing of the request.
 func (tw traceware) ServeHTTP(w http.ResponseWriter, r *http.Request) {
+	requestStartTime := time.Now()
 	for _, f := range tw.filters {
 		if !f(r) {
 			// Simply pass through to the handler if a filter rejects the request
@@ -85,6 +109,7 @@ func (tw traceware) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		}
 	}
 
+	tw.createMeasures()
 	ctx := tw.propagators.Extract(r.Context(), propagation.HeaderCarrier(r.Header))
 	routeStr := ""
 	route := mux.CurrentRoute(r)
@@ -158,4 +183,48 @@ func (tw traceware) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		span.SetAttributes(semconv.HTTPStatusCode(statusCode))
 	}
 	span.SetStatus(semconvutil.HTTPServerStatus(statusCode))
+
+	// Add metrics
+	attributes := append([]attribute.KeyValue{}, semconvutil.HTTPServerRequestMetrics(tw.service, r)...)
+	if statusCode > 0 {
+		attributes = append(attributes, semconv.HTTPStatusCode(statusCode))
+	}
+	o := metric.WithAttributeSet(attribute.NewSet(attributes...))
+	addOpts := []metric.AddOption{o} // Allocate vararg slice once.
+	tw.requestBytesCounter.Add(ctx, bw.BytesRead(), addOpts...)
+	tw.responseBytesCounter.Add(ctx, rww.BytesWritten(), addOpts...)
+
+	// Use floating point division here for higher precision (instead of Millisecond method).
+	elapsedTime := float64(time.Since(requestStartTime)) / float64(time.Millisecond)
+	tw.serverLatencyMeasure.Record(ctx, elapsedTime, o)
+}
+
+func handleErr(err error) {
+	if err != nil {
+		otel.Handle(err)
+	}
+}
+
+func (tw *traceware) createMeasures() {
+	var err error
+	tw.requestBytesCounter, err = tw.meter.Int64Counter(
+		serverRequestSize,
+		metric.WithUnit("By"),
+		metric.WithDescription("Measures the size of HTTP request messages."),
+	)
+	handleErr(err)
+
+	tw.responseBytesCounter, err = tw.meter.Int64Counter(
+		serverResponseSize,
+		metric.WithUnit("By"),
+		metric.WithDescription("Measures the size of HTTP response messages."),
+	)
+	handleErr(err)
+
+	tw.serverLatencyMeasure, err = tw.meter.Float64Histogram(
+		serverDuration,
+		metric.WithUnit("ms"),
+		metric.WithDescription("Measures the duration of inbound HTTP requests."),
+	)
+	handleErr(err)
 }
