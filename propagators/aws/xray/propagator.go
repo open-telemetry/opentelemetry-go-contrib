@@ -90,7 +90,7 @@ func (xray Propagator) Inject(ctx context.Context, carrier propagation.TextMapCa
 		headers = append(headers, traceHeaderDelimiter, lineageKey, kvDelimiter, lineage.Value())
 	}
 
-	carrier.Set(traceHeaderKey, strings.Join(headers, ""))
+	carrier.Set(traceHeaderKey, strings.Join(headers, "")[:256])
 }
 
 // Extract gets a context from the carrier if it contains AWS X-Ray headers.
