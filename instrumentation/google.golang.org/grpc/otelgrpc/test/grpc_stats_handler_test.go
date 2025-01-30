@@ -17,6 +17,7 @@ import (
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/codes"
 	testpb "google.golang.org/grpc/interop/grpc_testing"
+	"google.golang.org/grpc/stats"
 	"google.golang.org/grpc/status"
 
 	"go.opentelemetry.io/otel/attribute"
@@ -27,6 +28,7 @@ import (
 	"go.opentelemetry.io/otel/sdk/trace"
 	"go.opentelemetry.io/otel/sdk/trace/tracetest"
 	semconv "go.opentelemetry.io/otel/semconv/v1.17.0"
+	oteltrace "go.opentelemetry.io/otel/trace"
 
 	"go.opentelemetry.io/contrib/instrumentation/google.golang.org/grpc/otelgrpc"
 	"go.opentelemetry.io/contrib/instrumentation/google.golang.org/grpc/otelgrpc/filters"
@@ -1534,5 +1536,113 @@ func TestStatsHandlerConcurrentSafeContextCancellation(t *testing.T) {
 		}()
 
 		wg.Wait()
+	}
+}
+
+func TestServerHandlerTagRPC(t *testing.T) {
+	tests := []struct {
+		name   string
+		server stats.Handler
+		ctx    context.Context
+		info   *stats.RPCTagInfo
+		exp    bool
+	}{
+		{
+			name:   "start a span without filters",
+			server: otelgrpc.NewServerHandler(otelgrpc.WithTracerProvider(trace.NewTracerProvider())),
+			ctx:    context.Background(),
+			info: &stats.RPCTagInfo{
+				FullMethodName: "/grpc.health.v1.Health/Check",
+			},
+			exp: true,
+		},
+		{
+			name: "don't start a span with filter and match",
+			server: otelgrpc.NewServerHandler(otelgrpc.WithTracerProvider(trace.NewTracerProvider()), otelgrpc.WithFilter(func(ri *stats.RPCTagInfo) bool {
+				return ri.FullMethodName != "/grpc.health.v1.Health/Check"
+			})),
+			ctx: context.Background(),
+			info: &stats.RPCTagInfo{
+				FullMethodName: "/grpc.health.v1.Health/Check",
+			},
+			exp: false,
+		},
+		{
+			name: "start a span with filter and no match",
+			server: otelgrpc.NewServerHandler(otelgrpc.WithTracerProvider(trace.NewTracerProvider()), otelgrpc.WithFilter(func(ri *stats.RPCTagInfo) bool {
+				return ri.FullMethodName != "/grpc.health.v1.Health/Check"
+			})),
+			ctx: context.Background(),
+			info: &stats.RPCTagInfo{
+				FullMethodName: "/app.v1.Service/Get",
+			},
+			exp: true,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(t.Name(), func(t *testing.T) {
+			ctx := tt.server.TagRPC(tt.ctx, tt.info)
+
+			got := oteltrace.SpanFromContext(ctx).IsRecording()
+
+			if tt.exp != got {
+				t.Errorf("expected %t, got %t", tt.exp, got)
+			}
+		})
+	}
+}
+
+func TestClientHandlerTagRPC(t *testing.T) {
+	tests := []struct {
+		name   string
+		client stats.Handler
+		ctx    context.Context
+		info   *stats.RPCTagInfo
+		exp    bool
+	}{
+		{
+			name:   "start a span without filters",
+			client: otelgrpc.NewClientHandler(otelgrpc.WithTracerProvider(trace.NewTracerProvider())),
+			ctx:    context.Background(),
+			info: &stats.RPCTagInfo{
+				FullMethodName: "/grpc.health.v1.Health/Check",
+			},
+			exp: true,
+		},
+		{
+			name: "don't start a span with filter and match",
+			client: otelgrpc.NewClientHandler(otelgrpc.WithTracerProvider(trace.NewTracerProvider()), otelgrpc.WithFilter(func(ri *stats.RPCTagInfo) bool {
+				return ri.FullMethodName != "/grpc.health.v1.Health/Check"
+			})),
+			ctx: context.Background(),
+			info: &stats.RPCTagInfo{
+				FullMethodName: "/grpc.health.v1.Health/Check",
+			},
+			exp: false,
+		},
+		{
+			name: "start a span with filter and no match",
+			client: otelgrpc.NewClientHandler(otelgrpc.WithTracerProvider(trace.NewTracerProvider()), otelgrpc.WithFilter(func(ri *stats.RPCTagInfo) bool {
+				return ri.FullMethodName != "/grpc.health.v1.Health/Check"
+			})),
+			ctx: context.Background(),
+			info: &stats.RPCTagInfo{
+				FullMethodName: "/app.v1.Service/Get",
+			},
+			exp: true,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(t.Name(), func(t *testing.T) {
+			ctx := tt.client.TagRPC(tt.ctx, tt.info)
+
+			got := oteltrace.SpanFromContext(ctx).IsRecording()
+
+			if tt.exp != got {
+				t.Errorf("expected %t, got %t", tt.exp, got)
+			}
+		})
 	}
 }
