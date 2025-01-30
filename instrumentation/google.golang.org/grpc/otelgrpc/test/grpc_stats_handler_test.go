@@ -1593,7 +1593,7 @@ func TestServerHandlerTagRPC(t *testing.T) {
 	}
 }
 
-func TestClientHandler_TagRPC(t *testing.T) {
+func TestClientHandlerTagRPC(t *testing.T) {
 	tests := []struct {
 		name   string
 		client stats.Handler
