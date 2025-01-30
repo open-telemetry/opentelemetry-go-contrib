@@ -60,22 +60,23 @@ func (h *serverHandler) TagRPC(ctx context.Context, info *stats.RPCTagInfo) cont
 	name, attrs := internal.ParseFullMethod(info.FullMethodName)
 	attrs = append(attrs, RPCSystemGRPC)
 
-	gctx := gRPCContext{
-		metricAttrs: append(attrs, h.config.MetricAttributes...),
-		record:      true,
-	}
-
+	record := true
 	if h.config.Filter != nil {
-		gctx.record = h.config.Filter(info)
+		record = h.config.Filter(info)
 	}
 
-	if gctx.record {
+	if record {
 		ctx, _ = h.tracer.Start(
-			ctx,
+			trace.ContextWithRemoteSpanContext(ctx, trace.SpanContextFromContext(ctx)),
 			name,
 			trace.WithSpanKind(trace.SpanKindServer),
 			trace.WithAttributes(append(attrs, h.config.SpanAttributes...)...),
 		)
+	}
+
+	gctx := gRPCContext{
+		metricAttrs: append(attrs, h.config.MetricAttributes...),
+		record:      record,
 	}
 
 	return context.WithValue(ctx, gRPCContextKey{}, &gctx)
@@ -105,22 +106,23 @@ func (h *clientHandler) TagRPC(ctx context.Context, info *stats.RPCTagInfo) cont
 	name, attrs := internal.ParseFullMethod(info.FullMethodName)
 	attrs = append(attrs, RPCSystemGRPC)
 
-	gctx := gRPCContext{
-		metricAttrs: append(attrs, h.config.MetricAttributes...),
-		record:      true,
-	}
-
+	record := true
 	if h.config.Filter != nil {
-		gctx.record = h.config.Filter(info)
+		record = h.config.Filter(info)
 	}
 
-	if gctx.record {
+	if record {
 		ctx, _ = h.tracer.Start(
 			ctx,
 			name,
 			trace.WithSpanKind(trace.SpanKindClient),
 			trace.WithAttributes(append(attrs, h.config.SpanAttributes...)...),
 		)
+	}
+
+	gctx := gRPCContext{
+		metricAttrs: append(attrs, h.config.MetricAttributes...),
+		record:      record,
 	}
 
 	return inject(context.WithValue(ctx, gRPCContextKey{}, &gctx), h.config.Propagators)
