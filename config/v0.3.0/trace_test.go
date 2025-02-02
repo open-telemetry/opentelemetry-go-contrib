@@ -6,8 +6,6 @@ package config
 import (
 	"context"
 	"errors"
-	"fmt"
-	"net/url"
 	"path/filepath"
 	"reflect"
 	"testing"
@@ -100,12 +98,12 @@ func TestSpanProcessor(t *testing.T) {
 		name          string
 		processor     SpanProcessor
 		args          any
-		wantErr       error
+		wantErr       string
 		wantProcessor sdktrace.SpanProcessor
 	}{
 		{
 			name:    "no processor",
-			wantErr: errors.New("unsupported span processor type, must be one of simple or batch"),
+			wantErr: "unsupported span processor type, must be one of simple or batch",
 		},
 		{
 			name: "multiple processor types",
@@ -115,7 +113,7 @@ func TestSpanProcessor(t *testing.T) {
 				},
 				Simple: &SimpleSpanProcessor{},
 			},
-			wantErr: errors.New("must not specify multiple span processor type"),
+			wantErr: "must not specify multiple span processor type",
 		},
 		{
 			name: "batch processor invalid exporter",
@@ -124,7 +122,7 @@ func TestSpanProcessor(t *testing.T) {
 					Exporter: SpanExporter{},
 				},
 			},
-			wantErr: errors.New("no valid span exporter"),
+			wantErr: "no valid span exporter",
 		},
 		{
 			name: "batch processor invalid batch size console exporter",
@@ -136,7 +134,7 @@ func TestSpanProcessor(t *testing.T) {
 					},
 				},
 			},
-			wantErr: errors.New("invalid batch size -1"),
+			wantErr: "invalid batch size -1",
 		},
 		{
 			name: "batch processor invalid export timeout console exporter",
@@ -148,7 +146,7 @@ func TestSpanProcessor(t *testing.T) {
 					},
 				},
 			},
-			wantErr: errors.New("invalid export timeout -2"),
+			wantErr: "invalid export timeout -2",
 		},
 		{
 			name: "batch processor invalid queue size console exporter",
@@ -160,7 +158,7 @@ func TestSpanProcessor(t *testing.T) {
 					},
 				},
 			},
-			wantErr: errors.New("invalid queue size -3"),
+			wantErr: "invalid queue size -3",
 		},
 		{
 			name: "batch processor invalid schedule delay console exporter",
@@ -172,7 +170,7 @@ func TestSpanProcessor(t *testing.T) {
 					},
 				},
 			},
-			wantErr: errors.New("invalid schedule delay -4"),
+			wantErr: "invalid schedule delay -4",
 		},
 		{
 			name: "batch processor with multiple exporters",
@@ -184,7 +182,7 @@ func TestSpanProcessor(t *testing.T) {
 					},
 				},
 			},
-			wantErr: errors.New("must not specify multiple exporters"),
+			wantErr: "must not specify multiple exporters",
 		},
 		{
 			name: "batch processor console exporter",
@@ -216,7 +214,7 @@ func TestSpanProcessor(t *testing.T) {
 					},
 				},
 			},
-			wantErr: errors.New("unsupported protocol \"http/invalid\""),
+			wantErr: "unsupported protocol \"http/invalid\"",
 		},
 		{
 			name: "batch/otlp-grpc-exporter-no-endpoint",
@@ -318,7 +316,7 @@ func TestSpanProcessor(t *testing.T) {
 					},
 				},
 			},
-			wantErr: errors.New("could not create certificate authority chain from certificate"),
+			wantErr: "could not create certificate authority chain from certificate",
 		},
 		{
 			name: "batch/otlp-grpc-bad-client-certificate",
@@ -336,7 +334,24 @@ func TestSpanProcessor(t *testing.T) {
 					},
 				},
 			},
-			wantErr: fmt.Errorf("could not use client certificate: %w", errors.New("tls: failed to find any PEM data in certificate input")),
+			wantErr: "could not use client certificate: tls: failed to find any PEM data in certificate input",
+		},
+		{
+			name: "batch/otlp-grpc-bad-headerslist",
+			processor: SpanProcessor{
+				Batch: &BatchSpanProcessor{
+					Exporter: SpanExporter{
+						OTLP: &OTLP{
+							Protocol:    ptr("grpc"),
+							Endpoint:    ptr("localhost:4317"),
+							Compression: ptr("gzip"),
+							Timeout:     ptr(1000),
+							HeadersList: ptr("==="),
+						},
+					},
+				},
+			},
+			wantErr: "invalid headers list: invalid key: \"\"",
 		},
 		{
 			name: "batch/otlp-grpc-exporter-no-scheme",
@@ -382,7 +397,7 @@ func TestSpanProcessor(t *testing.T) {
 					},
 				},
 			},
-			wantErr: &url.Error{Op: "parse", URL: " ", Err: errors.New("invalid URI for request")},
+			wantErr: "parse \" \": invalid URI for request",
 		},
 		{
 			name: "batch/otlp-grpc-invalid-compression",
@@ -405,7 +420,7 @@ func TestSpanProcessor(t *testing.T) {
 					},
 				},
 			},
-			wantErr: errors.New("unsupported compression \"invalid\""),
+			wantErr: "unsupported compression \"invalid\"",
 		},
 		{
 			name: "batch/otlp-http-exporter",
@@ -462,7 +477,7 @@ func TestSpanProcessor(t *testing.T) {
 					},
 				},
 			},
-			wantErr: errors.New("could not create certificate authority chain from certificate"),
+			wantErr: "could not create certificate authority chain from certificate",
 		},
 		{
 			name: "batch/otlp-http-bad-client-certificate",
@@ -480,7 +495,24 @@ func TestSpanProcessor(t *testing.T) {
 					},
 				},
 			},
-			wantErr: fmt.Errorf("could not use client certificate: %w", errors.New("tls: failed to find any PEM data in certificate input")),
+			wantErr: "could not use client certificate: tls: failed to find any PEM data in certificate input",
+		},
+		{
+			name: "batch/otlp-http-bad-headerslist",
+			processor: SpanProcessor{
+				Batch: &BatchSpanProcessor{
+					Exporter: SpanExporter{
+						OTLP: &OTLP{
+							Protocol:    ptr("http/protobuf"),
+							Endpoint:    ptr("localhost:4317"),
+							Compression: ptr("gzip"),
+							Timeout:     ptr(1000),
+							HeadersList: ptr("==="),
+						},
+					},
+				},
+			},
+			wantErr: "invalid headers list: invalid key: \"\"",
 		},
 		{
 			name: "batch/otlp-http-exporter-with-path",
@@ -571,7 +603,7 @@ func TestSpanProcessor(t *testing.T) {
 					},
 				},
 			},
-			wantErr: &url.Error{Op: "parse", URL: " ", Err: errors.New("invalid URI for request")},
+			wantErr: "parse \" \": invalid URI for request",
 		},
 		{
 			name: "batch/otlp-http-none-compression",
@@ -617,7 +649,7 @@ func TestSpanProcessor(t *testing.T) {
 					},
 				},
 			},
-			wantErr: errors.New("unsupported compression \"invalid\""),
+			wantErr: "unsupported compression \"invalid\"",
 		},
 		{
 			name: "simple/no-exporter",
@@ -626,7 +658,7 @@ func TestSpanProcessor(t *testing.T) {
 					Exporter: SpanExporter{},
 				},
 			},
-			wantErr: errors.New("no valid span exporter"),
+			wantErr: "no valid span exporter",
 		},
 		{
 			name: "simple/console-exporter",
@@ -643,7 +675,12 @@ func TestSpanProcessor(t *testing.T) {
 	for _, tt := range testCases {
 		t.Run(tt.name, func(t *testing.T) {
 			got, err := spanProcessor(context.Background(), tt.processor)
-			require.Equal(t, tt.wantErr, err)
+			if tt.wantErr != "" {
+				require.Error(t, err)
+				require.Equal(t, tt.wantErr, err.Error())
+			} else {
+				require.NoError(t, err)
+			}
 			if tt.wantProcessor == nil {
 				require.Nil(t, got)
 			} else {
