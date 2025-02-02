@@ -150,13 +150,12 @@ func (tw traceware) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 
 	tw.handler.ServeHTTP(w, r.WithContext(ctx))
 	statusCode := rww.StatusCode()
-	byesWritten := rww.BytesWritten()
 	span.SetStatus(tw.semconv.Status(statusCode))
 	span.SetAttributes(tw.semconv.ResponseTraceAttrs(semconv.ResponseTelemetry{
 		StatusCode: statusCode,
 		ReadBytes:  bw.BytesRead(),
 		ReadError:  bw.Error(),
-		WriteBytes: byesWritten,
+		WriteBytes: rww.BytesWritten(),
 		WriteError: rww.Error(),
 	})...)
 }
