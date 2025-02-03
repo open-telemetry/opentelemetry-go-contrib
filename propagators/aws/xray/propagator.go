@@ -35,13 +35,13 @@ const (
 	traceIDFirstPartLength  = 8
 	sampledFlagLength       = 1
 
-	lineageMaxLength         = 18
-	lineageMinLength         = 12
-	lineageHashLength        = 8
-	lineageMaxLoopCounter    = 32767
-	lineageMaxRequestCounter = 255
-	lineageMinCounter        = 0
-	invalidLineage           = "-1:11111111:0"
+	lineageMaxLength   = 18
+	lineageMinLength   = 12
+	lineageHashLength  = 8
+	lineageMaxCounter1 = 32767
+	lineageMaxCounter2 = 255
+	lineageMinCounter  = 0
+	invalidLineage     = "-1:11111111:0"
 )
 
 var (
@@ -215,14 +215,14 @@ func parseLineageHeader(xrayLineageHeader string) string {
 func isValidLineage(lineage string) bool {
 	split := strings.Split(lineage, lineageDelimiter)
 	hash := split[1]
-	loopCounter := parseIntWithBase(split[0], 10)
-	requestCounter := parseIntWithBase(split[2], 10)
+	counter1 := parseIntWithBase(split[0], 10)
+	counter2 := parseIntWithBase(split[2], 10)
 
 	isHashValid := len(hash) == lineageHashLength && parseIntWithBase(hash, 16) != -1
-	isValidRequestCounter := requestCounter <= lineageMaxRequestCounter && requestCounter >= lineageMinCounter
-	isValidLoopCounter := loopCounter <= lineageMaxLoopCounter && loopCounter >= lineageMinCounter
+	isValidCounter2 := counter2 <= lineageMaxCounter2 && counter2 >= lineageMinCounter
+	isValidCounter1 := counter1 <= lineageMaxCounter1 && counter1 >= lineageMinCounter
 
-	return isHashValid && isValidRequestCounter && isValidLoopCounter
+	return isHashValid && isValidCounter1 && isValidCounter2
 }
 
 func parseIntWithBase(s string, base int) int64 {
