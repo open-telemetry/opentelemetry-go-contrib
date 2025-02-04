@@ -65,6 +65,7 @@ func Middleware(service string, opts ...Option) mux.MiddlewareFunc {
 			publicEndpoint:    cfg.PublicEndpoint,
 			publicEndpointFn:  cfg.PublicEndpointFn,
 			filters:           cfg.Filters,
+			meter:             meter,
 			semconv:           semconv.NewHTTPServer(meter),
 		}
 	}
