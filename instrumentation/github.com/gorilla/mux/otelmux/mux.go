@@ -13,7 +13,6 @@ import (
 
 	"go.opentelemetry.io/contrib/instrumentation/github.com/gorilla/mux/otelmux/internal/request"
 	"go.opentelemetry.io/contrib/instrumentation/github.com/gorilla/mux/otelmux/internal/semconv"
-	"go.opentelemetry.io/contrib/instrumentation/github.com/gorilla/mux/otelmux/internal/semconvutil"
 
 	"go.opentelemetry.io/otel"
 	"go.opentelemetry.io/otel/attribute"
@@ -57,43 +56,34 @@ func Middleware(service string, opts ...Option) mux.MiddlewareFunc {
 	)
 	return func(handler http.Handler) http.Handler {
 		return traceware{
-			service:           service,
-			tracer:            tracer,
-			propagators:       cfg.Propagators,
-			handler:           handler,
-			spanNameFormatter: cfg.spanNameFormatter,
-			publicEndpoint:    cfg.PublicEndpoint,
-			publicEndpointFn:  cfg.PublicEndpointFn,
-			filters:           cfg.Filters,
-			meter:             meter,
-			semconv:           semconv.NewHTTPServer(meter),
+			service:            service,
+			tracer:             tracer,
+			propagators:        cfg.Propagators,
+			handler:            handler,
+			spanNameFormatter:  cfg.spanNameFormatter,
+			publicEndpoint:     cfg.PublicEndpoint,
+			publicEndpointFn:   cfg.PublicEndpointFn,
+			filters:            cfg.Filters,
+			meter:              meter,
+			semconv:            semconv.NewHTTPServer(meter),
+			metricAttributesFn: cfg.MetricAttributesFn,
 		}
 	}
 }
 
 type traceware struct {
-	service           string
-	tracer            trace.Tracer
-	propagators       propagation.TextMapPropagator
-	handler           http.Handler
-	spanNameFormatter func(string, *http.Request) string
-	publicEndpoint    bool
-	publicEndpointFn  func(*http.Request) bool
-	filters           []Filter
-	meter             metric.Meter
-	semconv           semconv.HTTPServer
-
-	requestBytesCounter  metric.Int64Counter
-	responseBytesCounter metric.Int64Counter
-	serverLatencyMeasure metric.Float64Histogram
+	service            string
+	tracer             trace.Tracer
+	propagators        propagation.TextMapPropagator
+	handler            http.Handler
+	spanNameFormatter  func(string, *http.Request) string
+	publicEndpoint     bool
+	publicEndpointFn   func(*http.Request) bool
+	filters            []Filter
+	meter              metric.Meter
+	semconv            semconv.HTTPServer
+	metricAttributesFn func(*http.Request) []attribute.KeyValue
 }
-
-// Server HTTP metrics.
-const (
-	serverRequestSize  = "http.server.request.size"  // Incoming request bytes total
-	serverResponseSize = "http.server.response.size" // Incoming response bytes total
-	serverDuration     = "http.server.duration"      // Incoming end to end duration, milliseconds
-)
 
 // defaultSpanNameFunc just reuses the route name as the span name.
 func defaultSpanNameFunc(routeName string, _ *http.Request) string { return routeName }
@@ -110,7 +100,6 @@ func (tw traceware) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		}
 	}
 
-	tw.createMeasures()
 	ctx := tw.propagators.Extract(r.Context(), propagation.HeaderCarrier(r.Header))
 	opts := []trace.SpanStartOption{
 		trace.WithAttributes(tw.semconv.RequestTraceAttrs(tw.service, r)...),
@@ -184,47 +173,30 @@ func (tw traceware) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		WriteError: rww.Error(),
 	})...)
 
-	// Add metrics
-	attributes := append([]attribute.KeyValue{}, semconvutil.HTTPServerRequestMetrics(tw.service, r)...)
-	if statusCode > 0 {
-		attributes = append(attributes, semconv.HTTPStatusCode(statusCode))
-	}
-	o := metric.WithAttributeSet(attribute.NewSet(attributes...))
-	addOpts := []metric.AddOption{o} // Allocate vararg slice once.
-	tw.requestBytesCounter.Add(ctx, bw.BytesRead(), addOpts...)
-	tw.responseBytesCounter.Add(ctx, rww.BytesWritten(), addOpts...)
-
 	// Use floating point division here for higher precision (instead of Millisecond method).
 	elapsedTime := float64(time.Since(requestStartTime)) / float64(time.Millisecond)
-	tw.serverLatencyMeasure.Record(ctx, elapsedTime, o)
-}
 
-func handleErr(err error) {
-	if err != nil {
-		otel.Handle(err)
+	metricAttributes := semconv.MetricAttributes{
+		Req:                  r,
+		StatusCode:           statusCode,
+		AdditionalAttributes: tw.metricAttributesFromRequest(r),
 	}
+
+	tw.semconv.RecordMetrics(ctx, semconv.ServerMetricData{
+		ServerName:       tw.service,
+		ResponseSize:     rww.BytesWritten(),
+		MetricAttributes: metricAttributes,
+		MetricData: semconv.MetricData{
+			RequestSize: bw.BytesRead(),
+			ElapsedTime: elapsedTime,
+		},
+	})
 }
 
-func (tw *traceware) createMeasures() {
-	var err error
-	tw.requestBytesCounter, err = tw.meter.Int64Counter(
-		serverRequestSize,
-		metric.WithUnit("By"),
-		metric.WithDescription("Measures the size of HTTP request messages."),
-	)
-	handleErr(err)
-
-	tw.responseBytesCounter, err = tw.meter.Int64Counter(
-		serverResponseSize,
-		metric.WithUnit("By"),
-		metric.WithDescription("Measures the size of HTTP response messages."),
-	)
-	handleErr(err)
-
-	tw.serverLatencyMeasure, err = tw.meter.Float64Histogram(
-		serverDuration,
-		metric.WithUnit("ms"),
-		metric.WithDescription("Measures the duration of inbound HTTP requests."),
-	)
-	handleErr(err)
+func (tw traceware) metricAttributesFromRequest(r *http.Request) []attribute.KeyValue {
+	var attributeForRequest []attribute.KeyValue
+	if tw.metricAttributesFn != nil {
+		attributeForRequest = tw.metricAttributesFn(r)
+	}
+	return attributeForRequest
 }

@@ -18,6 +18,8 @@ import (
 	"go.opentelemetry.io/otel/attribute"
 	"go.opentelemetry.io/otel/codes"
 	"go.opentelemetry.io/otel/propagation"
+	sdkmetric "go.opentelemetry.io/otel/sdk/metric"
+	"go.opentelemetry.io/otel/sdk/metric/metricdata"
 	sdktrace "go.opentelemetry.io/otel/sdk/trace"
 	"go.opentelemetry.io/otel/sdk/trace/tracetest"
 	"go.opentelemetry.io/otel/trace"
@@ -81,8 +83,14 @@ func TestSDKIntegration(t *testing.T) {
 	provider := sdktrace.NewTracerProvider()
 	provider.RegisterSpanProcessor(sr)
 
+	reader := sdkmetric.NewManualReader()
+	meterProvider := sdkmetric.NewMeterProvider(sdkmetric.WithReader(reader))
+
 	router := mux.NewRouter()
-	router.Use(otelmux.Middleware("foobar", otelmux.WithTracerProvider(provider)))
+	router.Use(otelmux.Middleware("foobar",
+		otelmux.WithTracerProvider(provider),
+		otelmux.WithMeterProvider(meterProvider)))
+
 	router.HandleFunc("/user/{id:[0-9]+}", ok)
 	router.HandleFunc("/book/{title}", ok)
 
@@ -280,5 +288,84 @@ func TestWithPublicEndpointFn(t *testing.T) {
 			spans := sr.Ended()
 			tt.spansAssert(t, sc, spans)
 		})
+	}
+}
+
+func TestHandlerWithMetricAttributesFn(t *testing.T) {
+	const (
+		serverRequestSize  = "http.server.request.size"
+		serverResponseSize = "http.server.response.size"
+		serverDuration     = "http.server.duration"
+	)
+	testCases := []struct {
+		name                        string
+		fn                          func(r *http.Request) []attribute.KeyValue
+		expectedAdditionalAttribute []attribute.KeyValue
+	}{
+		{
+			name:                        "With a nil function",
+			fn:                          nil,
+			expectedAdditionalAttribute: []attribute.KeyValue{},
+		},
+		{
+			name: "With a function that returns an additional attribute",
+			fn: func(r *http.Request) []attribute.KeyValue {
+				return []attribute.KeyValue{
+					attribute.String("fooKey", "fooValue"),
+					attribute.String("barKey", "barValue"),
+				}
+			},
+			expectedAdditionalAttribute: []attribute.KeyValue{
+				attribute.String("fooKey", "fooValue"),
+				attribute.String("barKey", "barValue"),
+			},
+		},
+	}
+
+	for _, tc := range testCases {
+		reader := sdkmetric.NewManualReader()
+		meterProvider := sdkmetric.NewMeterProvider(sdkmetric.WithReader(reader))
+
+		router := mux.NewRouter()
+		router.Use(otelmux.Middleware("foobar",
+			otelmux.WithMeterProvider(meterProvider),
+			otelmux.WithMetricAttributesFn(tc.fn),
+		))
+
+		router.HandleFunc("/user/{id:[0-9]+}", ok)
+		r, err := http.NewRequest(http.MethodGet, "http://localhost/user/123", nil)
+		require.NoError(t, err)
+		rr := httptest.NewRecorder()
+		router.ServeHTTP(rr, r)
+
+		rm := metricdata.ResourceMetrics{}
+		err = reader.Collect(context.Background(), &rm)
+		require.NoError(t, err)
+		require.Len(t, rm.ScopeMetrics, 1)
+		assert.Len(t, rm.ScopeMetrics[0].Metrics, 3)
+
+		// Verify that the additional attribute is present in the metrics.
+		for _, m := range rm.ScopeMetrics[0].Metrics {
+			switch m.Name {
+			case serverRequestSize, serverResponseSize:
+				d, ok := m.Data.(metricdata.Sum[int64])
+				assert.True(t, ok)
+				assert.Len(t, d.DataPoints, 1)
+				containsAttributes(t, d.DataPoints[0].Attributes, testCases[0].expectedAdditionalAttribute)
+			case serverDuration:
+				d, ok := m.Data.(metricdata.Histogram[float64])
+				assert.True(t, ok)
+				assert.Len(t, d.DataPoints, 1)
+				containsAttributes(t, d.DataPoints[0].Attributes, testCases[0].expectedAdditionalAttribute)
+			}
+		}
+	}
+}
+
+func containsAttributes(t *testing.T, attrSet attribute.Set, expected []attribute.KeyValue) {
+	for _, att := range expected {
+		actualValue, ok := attrSet.Value(att.Key)
+		assert.True(t, ok)
+		assert.Equal(t, att.Value.AsString(), actualValue.AsString())
 	}
 }
