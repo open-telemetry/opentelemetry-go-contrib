@@ -264,3 +264,10 @@ func (o OldHTTPClient) createMeasures(meter metric.Meter) (metric.Int64Counter, 
 
 	return requestBytesCounter, responseBytesCounter, latencyMeasure
 }
+
+// Attributes for httptrace.
+func (c OldHTTPClient) TraceAttributes(host string) []attribute.KeyValue {
+	return []attribute.KeyValue{
+		semconv.NetHostName(host),
+	}
+}

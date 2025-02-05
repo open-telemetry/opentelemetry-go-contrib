@@ -288,3 +288,11 @@ func (s HTTPClient) RecordResponseSize(ctx context.Context, responseData int64, 
 
 	s.responseBytesCounter.Add(ctx, responseData, opts["old"].AddOptions())
 }
+
+func (s HTTPClient) TraceAttributes(host string) []attribute.KeyValue {
+	if s.duplicate {
+		return append(OldHTTPClient{}.TraceAttributes(host), CurrentHTTPClient{}.TraceAttributes(host)...)
+	}
+
+	return OldHTTPClient{}.TraceAttributes(host)
+}

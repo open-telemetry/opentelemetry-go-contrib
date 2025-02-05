@@ -94,6 +94,48 @@ func TestHTTPClientDoesNotPanic(t *testing.T) {
 	}
 }
 
+func TestHTTPClientTraceAttributes(t *testing.T) {
+	for _, tt := range []struct {
+		name     string
+		optinVal string
+
+		wantAttributes []attribute.KeyValue
+	}{
+		{
+			name: "with no optin set",
+
+			wantAttributes: []attribute.KeyValue{
+				attribute.String("net.host.name", "example.com"),
+			},
+		},
+		{
+			name:     "with optin set to old only",
+			optinVal: "old",
+
+			wantAttributes: []attribute.KeyValue{
+				attribute.String("net.host.name", "example.com"),
+			},
+		},
+		{
+			name:     "with optin set to duplicate",
+			optinVal: "http/dup",
+
+			wantAttributes: []attribute.KeyValue{
+				attribute.String("net.host.name", "example.com"),
+				attribute.String("server.address", "example.com"),
+			},
+		},
+	} {
+		t.Run(tt.name, func(t *testing.T) {
+			t.Setenv(OTelSemConvStabilityOptIn, tt.optinVal)
+
+			c := NewHTTPClient(nil)
+			a := c.TraceAttributes("example.com")
+			assert.Equal(t, tt.wantAttributes, a)
+		})
+	}
+}
+
 func BenchmarkRecordMetrics(b *testing.B) {
 	benchmarks := []struct {
 		name   string

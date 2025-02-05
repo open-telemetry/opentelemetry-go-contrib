@@ -507,6 +507,13 @@ func (n CurrentHTTPClient) MetricAttributes(req *http.Request, statusCode int, a
 	return attributes
 }
 
+// Attributes for httptrace.
+func (n CurrentHTTPClient) TraceAttributes(host string) []attribute.KeyValue {
+	return []attribute.KeyValue{
+		semconvNew.ServerAddress(host),
+	}
+}
+
 func (n CurrentHTTPClient) scheme(https bool) attribute.KeyValue { // nolint:revive
 	if https {
 		return semconvNew.URLScheme("https")
