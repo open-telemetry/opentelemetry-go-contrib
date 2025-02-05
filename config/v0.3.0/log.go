@@ -183,7 +183,7 @@ func otlpGRPCLogExporter(ctx context.Context, otlpConfig *OTLP) (sdklog.Exporter
 		} else {
 			opts = append(opts, otlploggrpc.WithEndpoint(*otlpConfig.Endpoint))
 		}
-		if u.Scheme == "http" {
+		if u.Scheme == "http" || (u.Scheme != "https" && otlpConfig.Insecure != nil && *otlpConfig.Insecure) {
 			opts = append(opts, otlploggrpc.WithInsecure())
 		}
 	}

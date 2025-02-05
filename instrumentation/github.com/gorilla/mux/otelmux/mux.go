@@ -6,6 +6,7 @@ package otelmux // import "go.opentelemetry.io/contrib/instrumentation/github.co
 import (
 	"fmt"
 	"net/http"
+	"time"
 
 	"github.com/felixge/httpsnoop"
 	"github.com/gorilla/mux"
@@ -14,7 +15,8 @@ import (
 	"go.opentelemetry.io/contrib/instrumentation/github.com/gorilla/mux/otelmux/internal/semconv"
 
 	"go.opentelemetry.io/otel"
-	"go.opentelemetry.io/otel/metric/noop"
+	"go.opentelemetry.io/otel/attribute"
+	"go.opentelemetry.io/otel/metric"
 	"go.opentelemetry.io/otel/propagation"
 	"go.opentelemetry.io/otel/trace"
 )
@@ -45,31 +47,42 @@ func Middleware(service string, opts ...Option) mux.MiddlewareFunc {
 	if cfg.spanNameFormatter == nil {
 		cfg.spanNameFormatter = defaultSpanNameFunc
 	}
+	if cfg.MeterProvider == nil {
+		cfg.MeterProvider = otel.GetMeterProvider()
+	}
+	meter := cfg.MeterProvider.Meter(
+		ScopeName,
+		metric.WithInstrumentationVersion(Version()),
+	)
 	return func(handler http.Handler) http.Handler {
 		return traceware{
-			service:           service,
-			tracer:            tracer,
-			propagators:       cfg.Propagators,
-			handler:           handler,
-			spanNameFormatter: cfg.spanNameFormatter,
-			publicEndpoint:    cfg.PublicEndpoint,
-			publicEndpointFn:  cfg.PublicEndpointFn,
-			filters:           cfg.Filters,
-			semconv:           semconv.NewHTTPServer(noop.Meter{}),
+			service:            service,
+			tracer:             tracer,
+			propagators:        cfg.Propagators,
+			handler:            handler,
+			spanNameFormatter:  cfg.spanNameFormatter,
+			publicEndpoint:     cfg.PublicEndpoint,
+			publicEndpointFn:   cfg.PublicEndpointFn,
+			filters:            cfg.Filters,
+			meter:              meter,
+			semconv:            semconv.NewHTTPServer(meter),
+			metricAttributesFn: cfg.MetricAttributesFn,
 		}
 	}
 }
 
 type traceware struct {
-	service           string
-	tracer            trace.Tracer
-	propagators       propagation.TextMapPropagator
-	handler           http.Handler
-	spanNameFormatter func(string, *http.Request) string
-	publicEndpoint    bool
-	publicEndpointFn  func(*http.Request) bool
-	filters           []Filter
-	semconv           semconv.HTTPServer
+	service            string
+	tracer             trace.Tracer
+	propagators        propagation.TextMapPropagator
+	handler            http.Handler
+	spanNameFormatter  func(string, *http.Request) string
+	publicEndpoint     bool
+	publicEndpointFn   func(*http.Request) bool
+	filters            []Filter
+	meter              metric.Meter
+	semconv            semconv.HTTPServer
+	metricAttributesFn func(*http.Request) []attribute.KeyValue
 }
 
 // defaultSpanNameFunc just reuses the route name as the span name.
@@ -78,6 +91,7 @@ func defaultSpanNameFunc(routeName string, _ *http.Request) string { return rout
 // ServeHTTP implements the http.Handler interface. It does the actual
 // tracing of the request.
 func (tw traceware) ServeHTTP(w http.ResponseWriter, r *http.Request) {
+	requestStartTime := time.Now()
 	for _, f := range tw.filters {
 		if !f(r) {
 			// Simply pass through to the handler if a filter rejects the request
@@ -158,4 +172,31 @@ func (tw traceware) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		WriteBytes: rww.BytesWritten(),
 		WriteError: rww.Error(),
 	})...)
+
+	// Use floating point division here for higher precision (instead of Millisecond method).
+	elapsedTime := float64(time.Since(requestStartTime)) / float64(time.Millisecond)
+
+	metricAttributes := semconv.MetricAttributes{
+		Req:                  r,
+		StatusCode:           statusCode,
+		AdditionalAttributes: tw.metricAttributesFromRequest(r),
+	}
+
+	tw.semconv.RecordMetrics(ctx, semconv.ServerMetricData{
+		ServerName:       tw.service,
+		ResponseSize:     rww.BytesWritten(),
+		MetricAttributes: metricAttributes,
+		MetricData: semconv.MetricData{
+			RequestSize: bw.BytesRead(),
+			ElapsedTime: elapsedTime,
+		},
+	})
+}
+
+func (tw traceware) metricAttributesFromRequest(r *http.Request) []attribute.KeyValue {
+	var attributeForRequest []attribute.KeyValue
+	if tw.metricAttributesFn != nil {
+		attributeForRequest = tw.metricAttributesFn(r)
+	}
+	return attributeForRequest
 }
