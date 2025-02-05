@@ -12,6 +12,10 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 
 - Add support for configuring `ClientCertificate` and `ClientKey` field for OTLP exporters in `go.opentelemetry.io/contrib/config`. (#6378)
 - Add `WithAttributeBuilder`, `AttributeBuilder`, `DefaultAttributeBuilder`, `DynamoDBAttributeBuilder`, `SNSAttributeBuilder` to support adding attributes based on SDK input and output in `go.opentelemetry.io/contrib/instrumentation/github.com/aws/aws-sdk-go-v2/otelaws`. (#6543)
+- Support for the OTEL_HTTP_CLIENT_COMPATIBILITY_MODE=http/dup environment variable in `go.opentelemetry.io/contrib/instrumentation/github.com/gorilla/mux/otelmux` to emit attributes for both the v1.20.0 and v1.26.0 semantic conventions. (#6652)
+- Added the `WithMeterProvider` option to allow passing a custom meter provider to `go.opentelemetry.io/contrib/instrumentation/github.com/gorilla/mux/otelmux`. (#6648)
+- Added the `WithMetricAttributesFn` option to allow setting dynamic, per-request metric attributes in `go.opentelemetry.io/contrib/instrumentation/github.com/gorilla/mux/otelmux`. (#6648)
+- Added metrics support, and emit all stable metrics from the [Semantic Conventions](https://github.com/open-telemetry/semantic-conventions/blob/main/docs/http/http-metrics.md) in `go.opentelemetry.io/contrib/instrumentation/github.com/gorilla/mux/otelmux`. (#6648)
 - Add support for configuring `Insecure` field for OTLP exporters in `go.opentelemetry.io/contrib/config`. (#6658)
 
 ### Changed
@@ -25,6 +29,8 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 ### Fixed
 
 - Use `context.Background()` as default context instead of nil in `go.opentelemetry.io/contrib/bridges/otellogr`. (#6527)
+- Convert Prometheus histogram buckets to non-cumulative otel histogram buckets in `go.opentelemetry.io/contrib/bridges/prometheus`. (#6685)
+- Don't start spans that never end for filtered out gRPC stats handler in `go.opentelemetry.io/contrib/instrumentation/google.golang.org/grpc/otelgrpc`. (#6695)
 
 <!-- Released section -->
 <!-- Don't change this section unless doing release -->
@@ -85,7 +91,7 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
   - Use `baggagecopy.NewLogProcessor` when configuring a Log Provider.
     - `NewLogProcessor` accepts a `Filter` function type that selects which baggage members are added to the log record.
 
-### Changed 
+### Changed
 
 - Transform raw (`slog.KindAny`) attribute values to matching `log.Value` types.
   For example, `[]string{"foo", "bar"}` attribute value is now transformed to `log.SliceValue(log.StringValue("foo"), log.StringValue("bar"))` instead of `log.String("[foo bar"])`. (#6254)
