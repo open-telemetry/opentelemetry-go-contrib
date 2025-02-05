@@ -8,7 +8,6 @@ import (
 	"net/http"
 
 	"go.opentelemetry.io/contrib/instrumentation/net/http/httptrace/otelhttptrace/internal/semconv"
-	"go.opentelemetry.io/contrib/instrumentation/net/http/httptrace/otelhttptrace/internal/semconvutil"
 	"go.opentelemetry.io/otel"
 	"go.opentelemetry.io/otel/attribute"
 	"go.opentelemetry.io/otel/baggage"
@@ -56,7 +55,7 @@ func Extract(ctx context.Context, req *http.Request, opts ...Option) ([]attribut
 
 	semconvSrv := semconv.NewHTTPServer(nil)
 
-	attrs := append(semconvSrv.RequestTraceAttrs("", req), semconvutil.NetTransport("tcp"))
+	attrs := append(semconvSrv.RequestTraceAttrs("", req), semconvSrv.NetworkTransportAttr("tcp")...)
 	attrs = append(attrs, semconvSrv.ResponseTraceAttrs(semconv.ResponseTelemetry{
 		ReadBytes: req.ContentLength,
 	})...)

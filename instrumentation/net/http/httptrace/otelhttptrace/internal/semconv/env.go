@@ -68,6 +68,15 @@ func (s HTTPServer) RequestTraceAttrs(server string, req *http.Request) []attrib
 	return OldHTTPServer{}.RequestTraceAttrs(server, req)
 }
 
+func (s HTTPServer) NetworkTransportAttr(network string) []attribute.KeyValue {
+	if s.duplicate {
+		return append([]attribute.KeyValue{OldHTTPServer{}.NetworkTransportAttr(network)}, CurrentHTTPServer{}.NetworkTransportAttr(network))
+	}
+	return []attribute.KeyValue{
+		OldHTTPServer{}.NetworkTransportAttr(network),
+	}
+}
+
 // ResponseTraceAttrs returns trace attributes for telemetry from an HTTP response.
 //
 // If any of the fields in the ResponseTelemetry are not set the attribute will be omitted.
