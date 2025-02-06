@@ -18,23 +18,21 @@ func propagator(cfg configOptions) (propagation.TextMapPropagator, error) {
 		return propagation.NewCompositeTextMapPropagator(), nil
 	}
 
-	var errs []error
+	var rErr error
 	var ps []propagation.TextMapPropagator
 	for _, name := range cfg.opentelemetryConfig.Propagator.Composite {
 		if name == nil || *name == "" {
 			continue
 		}
-
 		p, err := propagatorByName(*name)
-		if err == nil {
-			ps = append(ps, p)
-		} else {
-			errs = append(errs, err)
+		if err != nil {
+			rErr = errors.Join(rErr, err)
+			continue
 		}
+		ps = append(ps, p)
 	}
-
-	if len(errs) > 0 {
-		return nil, errors.Join(errs...)
+	if rErr != nil {
+		return nil, rErr
 	}
 
 	return propagation.NewCompositeTextMapPropagator(ps...), nil
