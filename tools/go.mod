@@ -1,6 +1,8 @@
 module go.opentelemetry.io/contrib/tools
 
-go 1.22.9
+go 1.23
+
+toolchain go1.23.6
 
 exclude github.com/blizzy78/varnamelen v0.6.1
 
@@ -209,7 +211,7 @@ require (
 	github.com/ykadowak/zerologlint v0.1.5 // indirect
 	gitlab.com/bosi/decorder v0.4.2 // indirect
 	go-simpler.org/musttag v0.13.0 // indirect
-	go-simpler.org/sloglint v0.7.2 // indirect
+	go-simpler.org/sloglint v0.8.0 // indirect
 	go.opentelemetry.io/build-tools v0.18.0 // indirect
 	go.uber.org/automaxprocs v1.6.0 // indirect
 	go.uber.org/multierr v1.11.0 // indirect
