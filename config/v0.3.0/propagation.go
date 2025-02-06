@@ -1,4 +1,7 @@
-package config
+// Copyright The OpenTelemetry Authors
+// SPDX-License-Identifier: Apache-2.0
+
+package config // import "go.opentelemetry.io/contrib/config/v0.3.0"
 
 import (
 	"errors"
@@ -26,7 +29,6 @@ func propagator(cfg configOptions) (propagation.TextMapPropagator, error) {
 		if err == nil {
 			ps = append(ps, p)
 		} else {
-
 			errs = append(errs, err)
 		}
 	}
