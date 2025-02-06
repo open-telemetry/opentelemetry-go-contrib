@@ -66,7 +66,7 @@ func (s *SDK) LoggerProvider() log.LoggerProvider {
 	return s.loggerProvider
 }
 
-// LoggerProvider returns a configured log.LoggerProvider.
+// Propagator returns a configured propagation.TextMapPropagator.
 func (s *SDK) Propagator() propagation.TextMapPropagator {
 	return s.propagator
 }
@@ -80,7 +80,7 @@ var noopSDK = SDK{
 	loggerProvider: nooplog.LoggerProvider{},
 	meterProvider:  noopmetric.MeterProvider{},
 	tracerProvider: nooptrace.TracerProvider{},
-	propagator:     nil,
+	propagator:     propagation.NewCompositeTextMapPropagator(),
 	shutdown:       func(ctx context.Context) error { return nil },
 }
 

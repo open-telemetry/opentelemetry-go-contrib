@@ -15,7 +15,7 @@ import (
 
 func propagator(cfg configOptions) (propagation.TextMapPropagator, error) {
 	if cfg.opentelemetryConfig.Propagator == nil {
-		return nil, nil
+		return propagation.NewCompositeTextMapPropagator(), nil
 	}
 
 	var errs []error
@@ -37,12 +37,7 @@ func propagator(cfg configOptions) (propagation.TextMapPropagator, error) {
 		return nil, errors.Join(errs...)
 	}
 
-	if len(ps) == 0 {
-		return nil, nil
-	}
-
-	res := propagation.NewCompositeTextMapPropagator(ps...)
-	return res, nil
+	return propagation.NewCompositeTextMapPropagator(ps...), nil
 }
 
 func propagatorByName(name string) (propagation.TextMapPropagator, error) {
