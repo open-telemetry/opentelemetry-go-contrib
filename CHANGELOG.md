@@ -21,6 +21,7 @@ The next release will require at least [Go 1.23].
 - Added metrics support, and emit all stable metrics from the [Semantic Conventions](https://github.com/open-telemetry/semantic-conventions/blob/main/docs/http/http-metrics.md) in `go.opentelemetry.io/contrib/instrumentation/github.com/gorilla/mux/otelmux`. (#6648)
 - Add support for configuring `Insecure` field for OTLP exporters in `go.opentelemetry.io/contrib/config`. (#6658)
 - Support for the `OTEL_HTTP_CLIENT_COMPATIBILITY_MODE=http/dup` environment variable in `instrumentation/net/http/httptrace/otelhttptrace` to emit attributes for both the v1.20.0 and v1.26.0 semantic conventions. (#6720)
+- Add support for configuring propagators in `go.opentelemetry.io/contrib/config`. (#6727)
 - Support for the `OTEL_HTTP_CLIENT_COMPATIBILITY_MODE=http/dup` environment variable in `instrumentation/github.com/emicklei/go-restful/otelrestful` to emit attributes for both the v1.20.0 and v1.26.0 semantic conventions. (#6710)
 - Added metrics support, and emit all stable metrics from the [Semantic Conventions](https://github.com/open-telemetry/semantic-conventions/blob/main/docs/http/http-metrics.md) in `go.opentelemetry.io/contrib/instrumentation/github.com/gin-gonic/gin/otelgin`. (#6747)
 - Support [Go 1.24]. (#6765)

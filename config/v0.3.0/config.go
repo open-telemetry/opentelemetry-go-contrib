@@ -94,6 +94,11 @@ func NewSDK(opts ...ConfigurationOption) (SDK, error) {
 		return noopSDK, nil
 	}
 
+	propagator, err := propagator(o)
+	if err != nil {
+		return noopSDK, err
+	}
+
 	r := newResource(o.opentelemetryConfig.Resource)
 
 	mp, mpShutdown, err := meterProvider(o, r)
@@ -107,11 +112,6 @@ func NewSDK(opts ...ConfigurationOption) (SDK, error) {
 	}
 
 	lp, lpShutdown, err := loggerProvider(o, r)
-	if err != nil {
-		return noopSDK, err
-	}
-
-	propagator, err := propagator(o)
 	if err != nil {
 		return noopSDK, err
 	}
