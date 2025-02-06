@@ -30,6 +30,7 @@ func TestNewSDK(t *testing.T) {
 		wantTracerProvider any
 		wantMeterProvider  any
 		wantLoggerProvider any
+		wantPropagators    any
 		wantErr            error
 		wantShutdownErr    error
 	}{
@@ -75,6 +76,7 @@ func TestNewSDK(t *testing.T) {
 		assert.IsType(t, tt.wantTracerProvider, sdk.TracerProvider())
 		assert.IsType(t, tt.wantMeterProvider, sdk.MeterProvider())
 		assert.IsType(t, tt.wantLoggerProvider, sdk.LoggerProvider())
+		assert.Equal(t, tt.wantPropagators, sdk.Propagator())
 		require.Equal(t, tt.wantShutdownErr, sdk.Shutdown(context.Background()))
 	}
 }
