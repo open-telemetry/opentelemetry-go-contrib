@@ -17,6 +17,7 @@ import (
 
 	lognoop "go.opentelemetry.io/otel/log/noop"
 	metricnoop "go.opentelemetry.io/otel/metric/noop"
+	"go.opentelemetry.io/otel/propagation"
 	sdklog "go.opentelemetry.io/otel/sdk/log"
 	sdkmetric "go.opentelemetry.io/otel/sdk/metric"
 	sdktrace "go.opentelemetry.io/otel/sdk/trace"
@@ -30,6 +31,7 @@ func TestNewSDK(t *testing.T) {
 		wantTracerProvider any
 		wantMeterProvider  any
 		wantLoggerProvider any
+		wantPropagators    any
 		wantErr            error
 		wantShutdownErr    error
 	}{
@@ -38,6 +40,7 @@ func TestNewSDK(t *testing.T) {
 			wantTracerProvider: tracenoop.NewTracerProvider(),
 			wantMeterProvider:  metricnoop.NewMeterProvider(),
 			wantLoggerProvider: lognoop.NewLoggerProvider(),
+			wantPropagators:    propagation.NewCompositeTextMapPropagator(),
 		},
 		{
 			name: "with-configuration",
@@ -52,6 +55,7 @@ func TestNewSDK(t *testing.T) {
 			wantTracerProvider: &sdktrace.TracerProvider{},
 			wantMeterProvider:  &sdkmetric.MeterProvider{},
 			wantLoggerProvider: &sdklog.LoggerProvider{},
+			wantPropagators:    propagation.NewCompositeTextMapPropagator(),
 		},
 		{
 			name: "with-sdk-disabled",
@@ -67,6 +71,7 @@ func TestNewSDK(t *testing.T) {
 			wantTracerProvider: tracenoop.NewTracerProvider(),
 			wantMeterProvider:  metricnoop.NewMeterProvider(),
 			wantLoggerProvider: lognoop.NewLoggerProvider(),
+			wantPropagators:    propagation.NewCompositeTextMapPropagator(),
 		},
 	}
 	for _, tt := range tests {
@@ -75,6 +80,7 @@ func TestNewSDK(t *testing.T) {
 		assert.IsType(t, tt.wantTracerProvider, sdk.TracerProvider())
 		assert.IsType(t, tt.wantMeterProvider, sdk.MeterProvider())
 		assert.IsType(t, tt.wantLoggerProvider, sdk.LoggerProvider())
+		assert.Equal(t, tt.wantPropagators, sdk.Propagator())
 		require.Equal(t, tt.wantShutdownErr, sdk.Shutdown(context.Background()))
 	}
 }
