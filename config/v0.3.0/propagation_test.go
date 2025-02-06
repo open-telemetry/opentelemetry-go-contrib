@@ -30,7 +30,7 @@ func TestPropagator(t *testing.T) {
 					Propagator: nil,
 				},
 			},
-			want:    nil,
+			want:    propagation.NewCompositeTextMapPropagator(),
 			wantErr: false,
 		},
 		{
@@ -138,7 +138,7 @@ func TestPropagator(t *testing.T) {
 					},
 				},
 			},
-			want:    nil,
+			want:    propagation.NewCompositeTextMapPropagator(),
 			wantErr: false,
 		},
 		{
@@ -162,7 +162,7 @@ func TestPropagator(t *testing.T) {
 					},
 				},
 			},
-			want:    nil,
+			want:    propagation.NewCompositeTextMapPropagator(),
 			wantErr: true,
 			errMsg:  "unsupported propagator",
 		},
