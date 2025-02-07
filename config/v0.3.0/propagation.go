@@ -13,5 +13,12 @@ func propagator(cfg configOptions) (propagation.TextMapPropagator, error) {
 		return autoprop.NewTextMapPropagator(), nil
 	}
 
-	return autoprop.TextMapPropagator(cfg.opentelemetryConfig.Propagator.Composite...)
+	names := make([]string, 0, len(cfg.opentelemetryConfig.Propagator.Composite))
+	for _, name := range cfg.opentelemetryConfig.Propagator.Composite {
+		if name != nil && *name != "" {
+			names = append(names, *name)
+		}
+	}
+
+	return autoprop.TextMapPropagator(names...)
 }

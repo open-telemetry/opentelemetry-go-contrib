@@ -52,7 +52,7 @@ func TestNewSDK(t *testing.T) {
 					MeterProvider:  &MeterProvider{},
 					LoggerProvider: &LoggerProvider{},
 					Propagator: &Propagator{
-						Composite: []string{"b3"},
+						Composite: []*string{ptr("b3")},
 					},
 				}),
 			},
@@ -297,7 +297,7 @@ var v03OpenTelemetryConfig = OpenTelemetryConfiguration{
 		},
 	},
 	Propagator: &Propagator{
-		Composite: []string{"tracecontext", "baggage", "b3", "b3multi", "jaeger", "xray", "ottrace"},
+		Composite: []*string{ptr("tracecontext"), ptr("baggage"), ptr("b3"), ptr("b3multi"), ptr("jaeger"), ptr("xray"), ptr("ottrace")},
 	},
 	Resource: &Resource{
 		Attributes: []AttributeNameValue{

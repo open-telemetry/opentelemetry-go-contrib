@@ -395,7 +395,7 @@ type Prometheus struct {
 
 type Propagator struct {
 	// Composite corresponds to the JSON schema field "composite".
-	Composite []string `json:"composite,omitempty" yaml:"composite,omitempty" mapstructure:"composite,omitempty"`
+	Composite []*string `json:"composite,omitempty" yaml:"composite,omitempty" mapstructure:"composite,omitempty"`
 
 	AdditionalProperties interface{} `mapstructure:",remain"`
 }

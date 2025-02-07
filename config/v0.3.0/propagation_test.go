@@ -38,7 +38,7 @@ func TestPropagator(t *testing.T) {
 			cfg: configOptions{
 				opentelemetryConfig: OpenTelemetryConfiguration{
 					Propagator: &Propagator{
-						Composite: []string{"tracecontext"},
+						Composite: []*string{ptr("tracecontext")},
 					},
 				},
 			},
@@ -50,7 +50,7 @@ func TestPropagator(t *testing.T) {
 			cfg: configOptions{
 				opentelemetryConfig: OpenTelemetryConfiguration{
 					Propagator: &Propagator{
-						Composite: []string{"baggage"},
+						Composite: []*string{ptr("baggage")},
 					},
 				},
 			},
@@ -62,7 +62,7 @@ func TestPropagator(t *testing.T) {
 			cfg: configOptions{
 				opentelemetryConfig: OpenTelemetryConfiguration{
 					Propagator: &Propagator{
-						Composite: []string{"b3"},
+						Composite: []*string{ptr("b3")},
 					},
 				},
 			},
@@ -74,7 +74,7 @@ func TestPropagator(t *testing.T) {
 			cfg: configOptions{
 				opentelemetryConfig: OpenTelemetryConfiguration{
 					Propagator: &Propagator{
-						Composite: []string{"b3multi"},
+						Composite: []*string{ptr("b3multi")},
 					},
 				},
 			},
@@ -86,7 +86,7 @@ func TestPropagator(t *testing.T) {
 			cfg: configOptions{
 				opentelemetryConfig: OpenTelemetryConfiguration{
 					Propagator: &Propagator{
-						Composite: []string{"jaeger"},
+						Composite: []*string{ptr("jaeger")},
 					},
 				},
 			},
@@ -98,7 +98,7 @@ func TestPropagator(t *testing.T) {
 			cfg: configOptions{
 				opentelemetryConfig: OpenTelemetryConfiguration{
 					Propagator: &Propagator{
-						Composite: []string{"xray"},
+						Composite: []*string{ptr("xray")},
 					},
 				},
 			},
@@ -110,7 +110,7 @@ func TestPropagator(t *testing.T) {
 			cfg: configOptions{
 				opentelemetryConfig: OpenTelemetryConfiguration{
 					Propagator: &Propagator{
-						Composite: []string{"ottrace"},
+						Composite: []*string{ptr("ottrace")},
 					},
 				},
 			},
@@ -122,7 +122,7 @@ func TestPropagator(t *testing.T) {
 			cfg: configOptions{
 				opentelemetryConfig: OpenTelemetryConfiguration{
 					Propagator: &Propagator{
-						Composite: []string{"tracecontext", "baggage", "b3"},
+						Composite: []*string{ptr("tracecontext"), ptr("baggage"), ptr("b3")},
 					},
 				},
 			},
@@ -134,7 +134,7 @@ func TestPropagator(t *testing.T) {
 			cfg: configOptions{
 				opentelemetryConfig: OpenTelemetryConfiguration{
 					Propagator: &Propagator{
-						Composite: []string{},
+						Composite: []*string{},
 					},
 				},
 			},
@@ -146,7 +146,7 @@ func TestPropagator(t *testing.T) {
 			cfg: configOptions{
 				opentelemetryConfig: OpenTelemetryConfiguration{
 					Propagator: &Propagator{
-						Composite: []string{"", "tracecontext"},
+						Composite: []*string{nil, ptr("tracecontext")},
 					},
 				},
 			},
@@ -158,7 +158,7 @@ func TestPropagator(t *testing.T) {
 			cfg: configOptions{
 				opentelemetryConfig: OpenTelemetryConfiguration{
 					Propagator: &Propagator{
-						Composite: []string{"unknown"},
+						Composite: []*string{ptr("unknown")},
 					},
 				},
 			},
