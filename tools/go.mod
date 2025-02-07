@@ -12,10 +12,10 @@ require (
 	github.com/jcchavezs/porto v0.6.0
 	github.com/stretchr/testify v1.10.0
 	github.com/wadey/gocovmerge v0.0.0-20160331181800-b5bfa59ec0ad
-	go.opentelemetry.io/build-tools/crosslink v0.17.0
-	go.opentelemetry.io/build-tools/gotmpl v0.17.0
-	go.opentelemetry.io/build-tools/multimod v0.17.0
-	golang.org/x/exp v0.0.0-20250128182459-e0ece0dbea4c
+	go.opentelemetry.io/build-tools/crosslink v0.18.0
+	go.opentelemetry.io/build-tools/gotmpl v0.18.0
+	go.opentelemetry.io/build-tools/multimod v0.18.0
+	golang.org/x/exp v0.0.0-20250207012021-f9890c6ad9f3
 	golang.org/x/tools v0.29.0
 	golang.org/x/vuln v1.1.4
 )
@@ -210,19 +210,19 @@ require (
 	gitlab.com/bosi/decorder v0.4.2 // indirect
 	go-simpler.org/musttag v0.13.0 // indirect
 	go-simpler.org/sloglint v0.7.2 // indirect
-	go.opentelemetry.io/build-tools v0.17.0 // indirect
+	go.opentelemetry.io/build-tools v0.18.0 // indirect
 	go.uber.org/automaxprocs v1.6.0 // indirect
 	go.uber.org/multierr v1.11.0 // indirect
 	go.uber.org/zap v1.27.0 // indirect
 	golang.org/x/crypto v0.32.0 // indirect
-	golang.org/x/exp/typeparams v0.0.0-20250128182459-e0ece0dbea4c // indirect
+	golang.org/x/exp/typeparams v0.0.0-20250207012021-f9890c6ad9f3 // indirect
 	golang.org/x/mod v0.23.0 // indirect
 	golang.org/x/net v0.34.0 // indirect
 	golang.org/x/sync v0.11.0 // indirect
 	golang.org/x/sys v0.30.0 // indirect
-	golang.org/x/telemetry v0.0.0-20250205183316-c67c2d15c073 // indirect
+	golang.org/x/telemetry v0.0.0-20250206143958-557cf9c30e9f // indirect
 	golang.org/x/text v0.22.0 // indirect
-	google.golang.org/protobuf v1.36.4 // indirect
+	google.golang.org/protobuf v1.36.5 // indirect
 	gopkg.in/ini.v1 v1.67.0 // indirect
 	gopkg.in/warnings.v0 v0.1.2 // indirect
 	gopkg.in/yaml.v2 v2.4.0 // indirect
