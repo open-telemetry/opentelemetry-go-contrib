@@ -14,5 +14,4 @@ func propagator(cfg configOptions) (propagation.TextMapPropagator, error) {
 	}
 
 	return autoprop.TextMapPropagator(cfg.opentelemetryConfig.Propagator.Composite...)
-
 }
