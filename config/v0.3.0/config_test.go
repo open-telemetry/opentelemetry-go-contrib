@@ -291,7 +291,7 @@ var v03OpenTelemetryConfig = OpenTelemetryConfiguration{
 		},
 	},
 	Propagator: &Propagator{
-		Composite: []*string{ptr("tracecontext"), ptr("baggage"), ptr("b3"), ptr("b3multi"), ptr("jaeger"), ptr("xray"), ptr("ottrace")},
+		Composite: []string{"tracecontext", "baggage", "b3", "b3multi", "jaeger", "xray", "ottrace"},
 	},
 	Resource: &Resource{
 		Attributes: []AttributeNameValue{

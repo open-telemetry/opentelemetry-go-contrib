@@ -30,7 +30,7 @@ func TestPropagator(t *testing.T) {
 					Propagator: nil,
 				},
 			},
-			want:    propagation.NewCompositeTextMapPropagator(),
+			want:    propagation.NewCompositeTextMapPropagator(propagation.TraceContext{}, propagation.Baggage{}),
 			wantErr: false,
 		},
 		{
@@ -38,11 +38,11 @@ func TestPropagator(t *testing.T) {
 			cfg: configOptions{
 				opentelemetryConfig: OpenTelemetryConfiguration{
 					Propagator: &Propagator{
-						Composite: []*string{strPtr("tracecontext")},
+						Composite: []string{"tracecontext"},
 					},
 				},
 			},
-			want:    propagation.NewCompositeTextMapPropagator(propagation.TraceContext{}),
+			want:    propagation.TraceContext{},
 			wantErr: false,
 		},
 		{
@@ -50,11 +50,11 @@ func TestPropagator(t *testing.T) {
 			cfg: configOptions{
 				opentelemetryConfig: OpenTelemetryConfiguration{
 					Propagator: &Propagator{
-						Composite: []*string{strPtr("baggage")},
+						Composite: []string{"baggage"},
 					},
 				},
 			},
-			want:    propagation.NewCompositeTextMapPropagator(propagation.Baggage{}),
+			want:    propagation.Baggage{},
 			wantErr: false,
 		},
 		{
@@ -62,11 +62,11 @@ func TestPropagator(t *testing.T) {
 			cfg: configOptions{
 				opentelemetryConfig: OpenTelemetryConfiguration{
 					Propagator: &Propagator{
-						Composite: []*string{strPtr("b3")},
+						Composite: []string{"b3"},
 					},
 				},
 			},
-			want:    propagation.NewCompositeTextMapPropagator(b3.New()),
+			want:    b3.New(),
 			wantErr: false,
 		},
 		{
@@ -74,11 +74,11 @@ func TestPropagator(t *testing.T) {
 			cfg: configOptions{
 				opentelemetryConfig: OpenTelemetryConfiguration{
 					Propagator: &Propagator{
-						Composite: []*string{strPtr("b3multi")},
+						Composite: []string{"b3multi"},
 					},
 				},
 			},
-			want:    propagation.NewCompositeTextMapPropagator(b3.New(b3.WithInjectEncoding(b3.B3MultipleHeader))),
+			want:    b3.New(b3.WithInjectEncoding(b3.B3MultipleHeader)),
 			wantErr: false,
 		},
 		{
@@ -86,11 +86,11 @@ func TestPropagator(t *testing.T) {
 			cfg: configOptions{
 				opentelemetryConfig: OpenTelemetryConfiguration{
 					Propagator: &Propagator{
-						Composite: []*string{strPtr("jaeger")},
+						Composite: []string{"jaeger"},
 					},
 				},
 			},
-			want:    propagation.NewCompositeTextMapPropagator(jaeger.Jaeger{}),
+			want:    jaeger.Jaeger{},
 			wantErr: false,
 		},
 		{
@@ -98,11 +98,11 @@ func TestPropagator(t *testing.T) {
 			cfg: configOptions{
 				opentelemetryConfig: OpenTelemetryConfiguration{
 					Propagator: &Propagator{
-						Composite: []*string{strPtr("xray")},
+						Composite: []string{"xray"},
 					},
 				},
 			},
-			want:    propagation.NewCompositeTextMapPropagator(xray.Propagator{}),
+			want:    xray.Propagator{},
 			wantErr: false,
 		},
 		{
@@ -110,11 +110,11 @@ func TestPropagator(t *testing.T) {
 			cfg: configOptions{
 				opentelemetryConfig: OpenTelemetryConfiguration{
 					Propagator: &Propagator{
-						Composite: []*string{strPtr("ottrace")},
+						Composite: []string{"ottrace"},
 					},
 				},
 			},
-			want:    propagation.NewCompositeTextMapPropagator(ot.OT{}),
+			want:    ot.OT{},
 			wantErr: false,
 		},
 		{
@@ -122,7 +122,7 @@ func TestPropagator(t *testing.T) {
 			cfg: configOptions{
 				opentelemetryConfig: OpenTelemetryConfiguration{
 					Propagator: &Propagator{
-						Composite: []*string{strPtr("tracecontext"), strPtr("baggage"), strPtr("b3")},
+						Composite: []string{"tracecontext", "baggage", "b3"},
 					},
 				},
 			},
@@ -134,11 +134,11 @@ func TestPropagator(t *testing.T) {
 			cfg: configOptions{
 				opentelemetryConfig: OpenTelemetryConfiguration{
 					Propagator: &Propagator{
-						Composite: []*string{},
+						Composite: []string{},
 					},
 				},
 			},
-			want:    propagation.NewCompositeTextMapPropagator(),
+			want:    propagation.NewCompositeTextMapPropagator(propagation.TraceContext{}, propagation.Baggage{}),
 			wantErr: false,
 		},
 		{
@@ -146,11 +146,11 @@ func TestPropagator(t *testing.T) {
 			cfg: configOptions{
 				opentelemetryConfig: OpenTelemetryConfiguration{
 					Propagator: &Propagator{
-						Composite: []*string{nil, strPtr("tracecontext")},
+						Composite: []string{"", "tracecontext"},
 					},
 				},
 			},
-			want:    propagation.NewCompositeTextMapPropagator(propagation.TraceContext{}),
+			want:    propagation.TraceContext{},
 			wantErr: false,
 		},
 		{
@@ -158,13 +158,13 @@ func TestPropagator(t *testing.T) {
 			cfg: configOptions{
 				opentelemetryConfig: OpenTelemetryConfiguration{
 					Propagator: &Propagator{
-						Composite: []*string{strPtr("unknown")},
+						Composite: []string{"unknown"},
 					},
 				},
 			},
 			want:    propagation.NewCompositeTextMapPropagator(),
 			wantErr: true,
-			errMsg:  "unsupported propagator",
+			errMsg:  "unknown propagator",
 		},
 	}
 
@@ -180,8 +180,4 @@ func TestPropagator(t *testing.T) {
 			assert.Equal(t, tt.want, got)
 		})
 	}
-}
-
-func strPtr(s string) *string {
-	return &s
 }

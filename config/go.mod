@@ -5,6 +5,7 @@ go 1.22.0
 require (
 	github.com/prometheus/client_golang v1.20.5
 	github.com/stretchr/testify v1.10.0
+	go.opentelemetry.io/contrib/propagators/autoprop v0.59.0
 	go.opentelemetry.io/contrib/propagators/aws v1.34.0
 	go.opentelemetry.io/contrib/propagators/b3 v1.34.0
 	go.opentelemetry.io/contrib/propagators/jaeger v1.34.0
@@ -56,3 +57,6 @@ require (
 	google.golang.org/genproto/googleapis/rpc v0.0.0-20250212204824-5a70512c5d8b // indirect
 	google.golang.org/protobuf v1.36.5 // indirect
 )
+
+// remove after v0.59.0 of autoprop
+replace go.opentelemetry.io/contrib/propagators/autoprop => ../propagators/autoprop
