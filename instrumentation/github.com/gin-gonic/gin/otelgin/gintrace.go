@@ -116,12 +116,18 @@ func Middleware(service string, opts ...Option) gin.HandlerFunc {
 		}
 
 		// Record the server-side attributes.
+		var additionalAttributes []attribute.KeyValue
+		if cfg.MetricAttributesFn != nil {
+			additionalAttributes = cfg.MetricAttributesFn(c.Request)
+		}
+
 		sc.RecordMetrics(ctx, internalsemconv.ServerMetricData{
 			ServerName:   service,
 			ResponseSize: int64(c.Writer.Size()),
 			MetricAttributes: internalsemconv.MetricAttributes{
-				Req:        c.Request,
-				StatusCode: status,
+				Req:                  c.Request,
+				StatusCode:           status,
+				AdditionalAttributes: additionalAttributes,
 			},
 			MetricData: internalsemconv.MetricData{
 				RequestSize: c.Request.ContentLength,

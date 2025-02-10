@@ -9,6 +9,7 @@ import (
 	"net/http"
 
 	"github.com/gin-gonic/gin"
+	"go.opentelemetry.io/otel/attribute"
 
 	"go.opentelemetry.io/otel/metric"
 	"go.opentelemetry.io/otel/propagation"
@@ -16,12 +17,13 @@ import (
 )
 
 type config struct {
-	TracerProvider    oteltrace.TracerProvider
-	Propagators       propagation.TextMapPropagator
-	Filters           []Filter
-	GinFilters        []GinFilter
-	SpanNameFormatter SpanNameFormatter
-	MeterProvider     metric.MeterProvider
+	TracerProvider     oteltrace.TracerProvider
+	Propagators        propagation.TextMapPropagator
+	Filters            []Filter
+	GinFilters         []GinFilter
+	SpanNameFormatter  SpanNameFormatter
+	MeterProvider      metric.MeterProvider
+	MetricAttributesFn func(*http.Request) []attribute.KeyValue
 }
 
 // Filter is a predicate used to determine whether a given http.request should
@@ -99,5 +101,13 @@ func WithSpanNameFormatter(f func(r *http.Request) string) Option {
 func WithMeterProvider(mp metric.MeterProvider) Option {
 	return optionFunc(func(c *config) {
 		c.MeterProvider = mp
+	})
+}
+
+// WithMetricAttributesFn specifies a function that will be called on every
+// request to get additional metric attributes.
+func WithMetricAttributesFn(f func(*http.Request) []attribute.KeyValue) Option {
+	return optionFunc(func(c *config) {
+		c.MetricAttributesFn = f
 	})
 }
