@@ -15,7 +15,7 @@ require (
 	go.opentelemetry.io/build-tools/crosslink v0.18.0
 	go.opentelemetry.io/build-tools/gotmpl v0.18.0
 	go.opentelemetry.io/build-tools/multimod v0.18.0
-	golang.org/x/exp v0.0.0-20250207012021-f9890c6ad9f3
+	golang.org/x/exp v0.0.0-20250210185358-939b2ce775ac
 	golang.org/x/tools v0.30.0
 	golang.org/x/vuln v1.1.4
 )
