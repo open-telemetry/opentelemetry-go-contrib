@@ -2,7 +2,7 @@ name: "Close stale issues and pull requests"
 on:
   workflow_dispatch:
   schedule:
-    - cron: "8 5 * * *" # arbitrary time not to DDOS GitHub
+    - cron: "8 7 * * *" # arbitrary time not to DDOS GitHub
 
 permissions:
   issues: write
