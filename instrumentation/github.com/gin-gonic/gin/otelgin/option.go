@@ -10,6 +10,7 @@ import (
 
 	"github.com/gin-gonic/gin"
 
+	"go.opentelemetry.io/otel/metric"
 	"go.opentelemetry.io/otel/propagation"
 	oteltrace "go.opentelemetry.io/otel/trace"
 )
@@ -20,6 +21,7 @@ type config struct {
 	Filters           []Filter
 	GinFilters        []GinFilter
 	SpanNameFormatter SpanNameFormatter
+	MeterProvider     metric.MeterProvider
 }
 
 // Filter is a predicate used to determine whether a given http.request should
@@ -89,5 +91,13 @@ func WithGinFilter(f ...GinFilter) Option {
 func WithSpanNameFormatter(f func(r *http.Request) string) Option {
 	return optionFunc(func(c *config) {
 		c.SpanNameFormatter = f
+	})
+}
+
+// WithMeterProvider specifies a meter provider to use for creating a meter.
+// If none is specified, the global provider is used.
+func WithMeterProvider(mp metric.MeterProvider) Option {
+	return optionFunc(func(c *config) {
+		c.MeterProvider = mp
 	})
 }

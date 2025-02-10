@@ -7,13 +7,16 @@ package otelgin // import "go.opentelemetry.io/contrib/instrumentation/github.co
 
 import (
 	"fmt"
+	"time"
 
 	"github.com/gin-gonic/gin"
 
+	internalsemconv "go.opentelemetry.io/contrib/instrumentation/github.com/gin-gonic/gin/otelgin/internal/semconv"
 	"go.opentelemetry.io/contrib/instrumentation/github.com/gin-gonic/gin/otelgin/internal/semconvutil"
 	"go.opentelemetry.io/otel"
 	"go.opentelemetry.io/otel/attribute"
 	"go.opentelemetry.io/otel/codes"
+	"go.opentelemetry.io/otel/metric"
 	"go.opentelemetry.io/otel/propagation"
 	semconv "go.opentelemetry.io/otel/semconv/v1.20.0"
 	oteltrace "go.opentelemetry.io/otel/trace"
@@ -43,7 +46,18 @@ func Middleware(service string, opts ...Option) gin.HandlerFunc {
 	if cfg.Propagators == nil {
 		cfg.Propagators = otel.GetTextMapPropagator()
 	}
+
+	if cfg.MeterProvider == nil {
+		cfg.MeterProvider = otel.GetMeterProvider()
+	}
+	meter := cfg.MeterProvider.Meter(
+		ScopeName,
+		metric.WithInstrumentationVersion(Version()),
+	)
+	sc := internalsemconv.NewHTTPServer(meter)
 	return func(c *gin.Context) {
+		requestStartTime := time.Now()
+
 		for _, f := range cfg.Filters {
 			if !f(c.Request) {
 				// Serve the request to the next middleware
@@ -100,6 +114,20 @@ func Middleware(service string, opts ...Option) gin.HandlerFunc {
 				span.RecordError(err.Err)
 			}
 		}
+
+		// Record the server-side attributes.
+		sc.RecordMetrics(ctx, internalsemconv.ServerMetricData{
+			ServerName:   service,
+			ResponseSize: int64(c.Writer.Size()),
+			MetricAttributes: internalsemconv.MetricAttributes{
+				Req:        c.Request,
+				StatusCode: status,
+			},
+			MetricData: internalsemconv.MetricData{
+				RequestSize: c.Request.ContentLength,
+				ElapsedTime: float64(time.Since(requestStartTime)) / float64(time.Millisecond),
+			},
+		})
 	}
 }
 
