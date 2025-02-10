@@ -8,19 +8,6 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 
 ## [Unreleased]
 
-### ⚠️ Notice ⚠️
-
-This is the last version to use Semantic Conventions v1.20.0 for HTTP libraries
-by default. The next version (0.61.0) will default to v1.26.0, and the
-following one (0.62.0) will drop support for Semantic Conventions v1.20.0
-
-You can switch to the new Semantic Conventions right now by setting the
-`OTEL_HTTP_CLIENT_COMPATIBILITY_MODE=http/dup` environment variable in your
-application.
-
-See also the [HTTP semantic conventions stability
-migration](https://github.com/open-telemetry/semantic-conventions/blob/main/docs/non-normative/http-migration.md)
-
 ### Added
 
 - Add support for configuring `ClientCertificate` and `ClientKey` field for OTLP exporters in `go.opentelemetry.io/contrib/config`. (#6378)
@@ -40,6 +27,18 @@ migration](https://github.com/open-telemetry/semantic-conventions/blob/main/docs
 ### Deprecated
 
 - Deprecate `WithAttributeSetter`, `AttributeSetter`, `DefaultAttributeSetter`, `DynamoDBAttributeSetter`, `SNSAttributeSetter` in favor of `WithAttributeBuilder`, `AttributeBuilder`, `DefaultAttributeBuilder`, `DynamoDBAttributeBuilder`, `SNSAttributeBuilder` in `go.opentelemetry.io/contrib/instrumentation/github.com/aws/aws-sdk-go-v2/otelaws` (#6543)
+
+> [!WARNING]
+> This is the last version to use Semantic Conventions v1.20.0 for HTTP libraries
+by default. The next version (0.61.0) will default to v1.26.0, and the
+following one (0.62.0) will drop support for Semantic Conventions v1.20.0
+>
+> You can switch to the new Semantic Conventions right now by setting the
+`OTEL_HTTP_CLIENT_COMPATIBILITY_MODE=http/dup` environment variable in your
+application.
+>
+> See also the [HTTP semantic conventions stability
+migration](https://github.com/open-telemetry/semantic-conventions/blob/main/docs/non-normative/http-migration.md)
 
 ### Fixed
 
