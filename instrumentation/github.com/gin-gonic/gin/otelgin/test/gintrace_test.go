@@ -505,7 +505,7 @@ func TestMetrics(t *testing.T) {
 					Temporality: metricdata.CumulativeTemporality,
 					IsMonotonic: true,
 				},
-			}, sm.Metrics[0], metricdatatest.IgnoreTimestamp())
+			}, sm.Metrics[0], metricdatatest.IgnoreTimestamp(), metricdatatest.IgnoreExemplars())
 
 			metricdatatest.AssertEqual(t, metricdata.Metrics{
 				Name:        "http.server.response.size",
@@ -518,7 +518,7 @@ func TestMetrics(t *testing.T) {
 					Temporality: metricdata.CumulativeTemporality,
 					IsMonotonic: true,
 				},
-			}, sm.Metrics[1], metricdatatest.IgnoreTimestamp())
+			}, sm.Metrics[1], metricdatatest.IgnoreTimestamp(), metricdatatest.IgnoreExemplars())
 
 			metricdatatest.AssertEqual(t, metricdata.Metrics{
 				Name:        "http.server.duration",
@@ -528,7 +528,7 @@ func TestMetrics(t *testing.T) {
 					DataPoints:  []metricdata.HistogramDataPoint[float64]{{Attributes: attribute.NewSet(attrs...)}},
 					Temporality: metricdata.CumulativeTemporality,
 				},
-			}, sm.Metrics[2], metricdatatest.IgnoreTimestamp(), metricdatatest.IgnoreValue())
+			}, sm.Metrics[2], metricdatatest.IgnoreTimestamp(), metricdatatest.IgnoreValue(), metricdatatest.IgnoreExemplars())
 		})
 	}
 }
