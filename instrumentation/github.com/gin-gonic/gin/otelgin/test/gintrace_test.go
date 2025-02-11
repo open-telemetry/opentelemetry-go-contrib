@@ -7,15 +7,20 @@ package test
 
 import (
 	"errors"
+	"fmt"
 	"html/template"
 	"net/http"
 	"net/http/httptest"
 	"strconv"
+	"strings"
 	"testing"
 
 	"github.com/gin-gonic/gin"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
+	"go.opentelemetry.io/otel/sdk/metric/metricdata"
+	"go.opentelemetry.io/otel/sdk/metric/metricdata/metricdatatest"
+	semconv "go.opentelemetry.io/otel/semconv/v1.20.0"
 	"golang.org/x/net/context"
 
 	"go.opentelemetry.io/contrib/instrumentation/github.com/gin-gonic/gin/otelgin"
@@ -24,6 +29,7 @@ import (
 	"go.opentelemetry.io/otel/attribute"
 	"go.opentelemetry.io/otel/codes"
 	"go.opentelemetry.io/otel/propagation"
+	sdkmetric "go.opentelemetry.io/otel/sdk/metric"
 	sdktrace "go.opentelemetry.io/otel/sdk/trace"
 	"go.opentelemetry.io/otel/sdk/trace/tracetest"
 	"go.opentelemetry.io/otel/trace"
@@ -429,4 +435,100 @@ func TestWithGinFilter(t *testing.T) {
 		router.ServeHTTP(w, r)
 		assert.Len(t, sr.Ended(), 1)
 	})
+}
+
+func TestMetrics(t *testing.T) {
+	tests := []struct {
+		name        string
+		attributeFn func(*http.Request) []attribute.KeyValue
+	}{
+		{"default", nil},
+		{"with metric attributes callback", func(req *http.Request) []attribute.KeyValue {
+			return []attribute.KeyValue{
+				attribute.String("key1", "value1"),
+				attribute.String("key2", "value"),
+				attribute.String("method", strings.ToUpper(req.Method)),
+			}
+		}},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			reader := sdkmetric.NewManualReader()
+			meterProvider := sdkmetric.NewMeterProvider(sdkmetric.WithReader(reader))
+
+			router := gin.New()
+			router.Use(otelgin.Middleware("foobar",
+				otelgin.WithMeterProvider(meterProvider),
+				otelgin.WithMetricAttributesFn(tt.attributeFn),
+			))
+			router.GET("/user/:id", func(c *gin.Context) {
+				id := c.Param("id")
+				assert.Equal(t, "123", id)
+				_, _ = c.Writer.Write([]byte(id))
+			})
+
+			r := httptest.NewRequest("GET", "/user/123", nil)
+			w := httptest.NewRecorder()
+			router.ServeHTTP(w, r)
+
+			// verify metrics
+			rm := metricdata.ResourceMetrics{}
+			require.NoError(t, reader.Collect(context.Background(), &rm))
+
+			require.Len(t, rm.ScopeMetrics, 1)
+			sm := rm.ScopeMetrics[0]
+			assert.Equal(t, otelgin.ScopeName, sm.Scope.Name)
+			assert.Equal(t, otelgin.Version(), sm.Scope.Version)
+
+			attrs := []attribute.KeyValue{
+				semconv.NetHostName("foobar"),
+				semconv.HTTPSchemeHTTP,
+				semconv.NetProtocolName("http"),
+				semconv.NetProtocolVersion(fmt.Sprintf("1.%d", r.ProtoMinor)),
+				semconv.HTTPMethod(http.MethodGet),
+				semconv.HTTPStatusCode(200),
+			}
+
+			if tt.attributeFn != nil {
+				attrs = append(attrs, tt.attributeFn(r)...)
+			}
+
+			metricdatatest.AssertEqual(t, metricdata.Metrics{
+				Name:        "http.server.request.size",
+				Description: "Measures the size of HTTP request messages.",
+				Unit:        "By",
+				Data: metricdata.Sum[int64]{
+					DataPoints: []metricdata.DataPoint[int64]{{
+						Attributes: attribute.NewSet(attrs...), Value: 0,
+					}},
+					Temporality: metricdata.CumulativeTemporality,
+					IsMonotonic: true,
+				},
+			}, sm.Metrics[0], metricdatatest.IgnoreTimestamp())
+
+			metricdatatest.AssertEqual(t, metricdata.Metrics{
+				Name:        "http.server.response.size",
+				Description: "Measures the size of HTTP response messages.",
+				Unit:        "By",
+				Data: metricdata.Sum[int64]{
+					DataPoints: []metricdata.DataPoint[int64]{{
+						Attributes: attribute.NewSet(attrs...), Value: 3,
+					}},
+					Temporality: metricdata.CumulativeTemporality,
+					IsMonotonic: true,
+				},
+			}, sm.Metrics[1], metricdatatest.IgnoreTimestamp())
+
+			metricdatatest.AssertEqual(t, metricdata.Metrics{
+				Name:        "http.server.duration",
+				Description: "Measures the duration of inbound HTTP requests.",
+				Unit:        "ms",
+				Data: metricdata.Histogram[float64]{
+					DataPoints:  []metricdata.HistogramDataPoint[float64]{{Attributes: attribute.NewSet(attrs...)}},
+					Temporality: metricdata.CumulativeTemporality,
+				},
+			}, sm.Metrics[2], metricdatatest.IgnoreTimestamp(), metricdatatest.IgnoreValue())
+		})
+	}
 }
