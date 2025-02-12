@@ -85,6 +85,7 @@ module-sets:
     version: v0.6.0
     modules:
       - go.opentelemetry.io/contrib/detectors/azure/azurevm
+      - go.opentelemetry.io/contrib/detectors/cicd/gitlab
 excluded-modules:
   - go.opentelemetry.io/contrib/examples/dice/instrumented
   - go.opentelemetry.io/contrib/examples/dice/uninstrumented
