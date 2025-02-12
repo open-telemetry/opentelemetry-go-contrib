@@ -1,7 +1,7 @@
 // Copyright The OpenTelemetry Authors
 // SPDX-License-Identifier: Apache-2.0
 
-package test
+package otelhttp_test
 
 import (
 	"bytes"
@@ -443,7 +443,7 @@ func TestTransportMetrics(t *testing.T) {
 func assertClientScopeMetrics(t *testing.T, sm metricdata.ScopeMetrics, attrs attribute.Set, rxBytes int64) {
 	assert.Equal(t, instrumentation.Scope{
 		Name:    "go.opentelemetry.io/contrib/instrumentation/net/http/otelhttp",
-		Version: Version(),
+		Version: otelhttp.Version(),
 	}, sm.Scope)
 
 	require.Len(t, sm.Metrics, 3)
