@@ -6,21 +6,17 @@ import (
 	"go.opentelemetry.io/otel/attribute"
 	"go.opentelemetry.io/otel/sdk/resource"
 	semconv "go.opentelemetry.io/otel/semconv/v1.27.0"
-	"os"
 	"testing"
 )
 
-type EnvPair struct {
+type envPair struct {
 	Key   string
 	Value string
 }
 
-func setTestEnv(t *testing.T, envs []EnvPair) {
+func setTestEnv(t *testing.T, envs []envPair) {
 	for _, env := range envs {
-		err := os.Setenv(env.Key, env.Value)
-		if err != nil {
-			t.Fatalf("Failed to set environment variable %s: %v", env.Key, err)
-		}
+		t.Setenv(env.Key, env.Value)
 	}
 }
 
@@ -28,13 +24,13 @@ func TestGitlabDetector(t *testing.T) {
 
 	tcs := []struct {
 		scenario         string
-		envs             []EnvPair
+		envs             []envPair
 		expectedError    error
 		expectedResource *resource.Resource
 	}{
 		{
 			scenario: "all env configured",
-			envs: []EnvPair{
+			envs: []envPair{
 				{"CI", "true"},
 				{"GITLAB_CI", "true"},
 				{"CI_PIPELINE_NAME", "pipeline_name"},
@@ -66,7 +62,6 @@ func TestGitlabDetector(t *testing.T) {
 	}
 	for _, tc := range tcs {
 		t.Run(tc.scenario, func(t *testing.T) {
-			os.Clearenv()
 			setTestEnv(t, tc.envs)
 
 			detector := NewResourceDetector()

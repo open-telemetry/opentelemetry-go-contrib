@@ -56,32 +56,32 @@ func detectCICDAttributes() []attribute.KeyValue {
 
 	ciPipelineName := os.Getenv(gitlabPipelineNameEnvVar)
 	if ciPipelineName != "" {
-		attributes = append(attributes, attribute.String(string(semconv.CICDPipelineNameKey), ciPipelineName))
+		attributes = append(attributes, semconv.CICDPipelineNameKey.String(ciPipelineName))
 	}
 
 	ciJobId := os.Getenv(gitlabJobIdEnvVar)
 	if ciJobId != "" {
-		attributes = append(attributes, attribute.String(string(semconv.CICDPipelineTaskRunIDKey), ciJobId))
+		attributes = append(attributes, semconv.CICDPipelineTaskRunIDKey.String(ciJobId))
 	}
 
 	ciJobName := os.Getenv(gitlabJobNameEnvVar)
 	if ciJobName != "" {
-		attributes = append(attributes, attribute.String(string(semconv.CICDPipelineTaskNameKey), ciJobName))
+		attributes = append(attributes, semconv.CICDPipelineTaskNameKey.String(ciJobName))
 	}
 
 	ciJobStage := os.Getenv(gitlabJobStageEnvVar)
 	if ciJobStage != "" {
-		attributes = append(attributes, attribute.String(string(semconv.CICDPipelineTaskTypeKey), ciJobStage))
+		attributes = append(attributes, semconv.CICDPipelineTaskTypeKey.String(ciJobStage))
 	}
 
 	ciPipelineId := os.Getenv(gitlabPipelineIdEnvVar)
 	if ciPipelineId != "" {
-		attributes = append(attributes, attribute.String(string(semconv.CICDPipelineRunIDKey), ciPipelineId))
+		attributes = append(attributes, semconv.CICDPipelineRunIDKey.String(ciPipelineId))
 	}
 
 	ciPipelineUrl := os.Getenv(gitlabJobUrlEnvVar)
 	if ciPipelineUrl != "" {
-		attributes = append(attributes, attribute.String(string(semconv.CICDPipelineTaskRunURLFullKey), ciPipelineUrl))
+		attributes = append(attributes, semconv.CICDPipelineTaskRunURLFullKey.String(ciPipelineUrl))
 	}
 	return attributes
 }
@@ -92,7 +92,7 @@ func detectVCSAttributes() []attribute.KeyValue {
 
 	ciRefName := os.Getenv(gitlabCommitRefNameEnvVar)
 	if ciRefName != "" {
-		attributes = append(attributes, attribute.String(string(semconv.VCSRepositoryRefNameKey), ciRefName))
+		attributes = append(attributes, semconv.VCSRepositoryRefNameKey.String(ciRefName))
 	}
 
 	ciTag := os.Getenv(gitlabCommitTagEnvVar)
@@ -104,18 +104,18 @@ func detectVCSAttributes() []attribute.KeyValue {
 
 	mrID := os.Getenv(gitlabMergeRequestIIDEnvVar)
 	if mrID != "" {
-		attributes = append(attributes, attribute.String(string(semconv.VCSRepositoryChangeIDKey), mrID))
+		attributes = append(attributes, semconv.VCSRepositoryChangeIDKey.String(mrID))
 	}
 
 	projectUrl := os.Getenv(gitlabProjectUrlEnvVar)
 	if projectUrl != "" {
-		attributes = append(attributes, attribute.String(string(semconv.VCSRepositoryURLFullKey), projectUrl))
+		attributes = append(attributes, semconv.VCSRepositoryURLFullKey.String(projectUrl))
 	}
 
 	// There is no SemConv for the ProjectID var
 	//projectID := os.Getenv(gitlabProjectIDEnvVar)
 	//if projectID != "" {
-	//	attributes = append(attributes, attribute.String(string(semconv.VCSRepositoryProjectID), projectID))
+	//	attributes = append(attributes, semconv.VCSRepositoryProjectID.String(projectID))
 	//}
 
 	return attributes

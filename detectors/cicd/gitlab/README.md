@@ -55,6 +55,8 @@ Now your `TracerProvider` will have the following resource attributes and attach
 
 ## Useful links
 
+- For more on CI/CD Gitlab Predefined variables,
+  visit <https://docs.gitlab.com/ee/ci/variables/predefined_variables.html#predefined-variables>
 - For more on CI/CD pipeline attribute conventions,
   visit <https://opentelemetry.io/docs/specs/semconv/attributes-registry/cicd/>
 - For more on VCS attribute conventions, visit <https://opentelemetry.io/docs/specs/semconv/attributes-registry/vcs/>
