@@ -155,7 +155,9 @@ func ParseYAML(file []byte) (*OpenTelemetryConfiguration, error) {
 func toStringMap(pairs []NameStringValuePair) map[string]string {
 	output := make(map[string]string)
 	for _, v := range pairs {
-		output[v.Name] = *v.Value
+		if v.Value != nil && len(v.Name) > 0 {
+			output[v.Name] = *v.Value
+		}
 	}
 	return output
 }
