@@ -1,7 +1,7 @@
 // Copyright The OpenTelemetry Authors
 // SPDX-License-Identifier: Apache-2.0
 
-package otelhttp_test
+package otelhttp
 
 import (
 	"context"
@@ -17,7 +17,6 @@ import (
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 
-	"go.opentelemetry.io/contrib/instrumentation/net/http/otelhttp"
 	"go.opentelemetry.io/otel/attribute"
 	"go.opentelemetry.io/otel/codes"
 	"go.opentelemetry.io/otel/propagation"
@@ -41,7 +40,7 @@ func TestHandler(t *testing.T) {
 		{
 			name: "implements flusher",
 			handler: func(t *testing.T) http.Handler {
-				return otelhttp.NewHandler(
+				return NewHandler(
 					http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 						assert.Implements(t, (*http.Flusher)(nil), w)
 
@@ -55,7 +54,7 @@ func TestHandler(t *testing.T) {
 		{
 			name: "succeeds",
 			handler: func(t *testing.T) http.Handler {
-				return otelhttp.NewHandler(
+				return NewHandler(
 					http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 						assert.NotNil(t, r.Body)
 
@@ -71,7 +70,7 @@ func TestHandler(t *testing.T) {
 		{
 			name: "succeeds with a nil body",
 			handler: func(t *testing.T) http.Handler {
-				return otelhttp.NewHandler(
+				return NewHandler(
 					http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 						assert.Nil(t, r.Body)
 					}), "test_handler",
@@ -82,7 +81,7 @@ func TestHandler(t *testing.T) {
 		{
 			name: "succeeds with an http.NoBody",
 			handler: func(t *testing.T) http.Handler {
-				return otelhttp.NewHandler(
+				return NewHandler(
 					http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 						assert.Equal(t, http.NoBody, r.Body)
 					}), "test_handler",
@@ -114,18 +113,18 @@ func TestHandlerBasics(t *testing.T) {
 	reader := sdkmetric.NewManualReader()
 	meterProvider := sdkmetric.NewMeterProvider(sdkmetric.WithReader(reader))
 
-	h := otelhttp.NewHandler(
+	h := NewHandler(
 		http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-			l, _ := otelhttp.LabelerFromContext(r.Context())
+			l, _ := LabelerFromContext(r.Context())
 			l.Add(attribute.String("test", "attribute"))
 
 			if _, err := io.WriteString(w, "hello world"); err != nil {
 				t.Fatal(err)
 			}
 		}), "test_handler",
-		otelhttp.WithTracerProvider(provider),
-		otelhttp.WithMeterProvider(meterProvider),
-		otelhttp.WithPropagators(propagation.TraceContext{}),
+		WithTracerProvider(provider),
+		WithMeterProvider(meterProvider),
+		WithPropagators(propagation.TraceContext{}),
 	)
 
 	r, err := http.NewRequest(http.MethodGet, "http://localhost/", strings.NewReader("foo"))
@@ -134,7 +133,7 @@ func TestHandlerBasics(t *testing.T) {
 	}
 	// set a custom start time 10 minutes in the past.
 	startTime := time.Now().Add(-10 * time.Minute)
-	r = r.WithContext(otelhttp.ContextWithStartTime(r.Context(), startTime))
+	r = r.WithContext(ContextWithStartTime(r.Context(), startTime))
 	h.ServeHTTP(rr, r)
 
 	rm := metricdata.ResourceMetrics{}
@@ -177,7 +176,7 @@ func TestHandlerBasics(t *testing.T) {
 func assertScopeMetrics(t *testing.T, sm metricdata.ScopeMetrics, attrs attribute.Set) {
 	assert.Equal(t, instrumentation.Scope{
 		Name:    "go.opentelemetry.io/contrib/instrumentation/net/http/otelhttp",
-		Version: otelhttp.Version(),
+		Version: Version(),
 	}, sm.Scope)
 
 	require.Len(t, sm.Metrics, 3)
@@ -269,9 +268,9 @@ func TestHandlerEmittedAttributes(t *testing.T) {
 			sr := tracetest.NewSpanRecorder()
 			provider := sdktrace.NewTracerProvider()
 			provider.RegisterSpanProcessor(sr)
-			h := otelhttp.NewHandler(
+			h := NewHandler(
 				http.HandlerFunc(tc.handler), "test_handler",
-				otelhttp.WithTracerProvider(provider),
+				WithTracerProvider(provider),
 			)
 
 			h.ServeHTTP(httptest.NewRecorder(), httptest.NewRequest("GET", "/", nil))
@@ -377,9 +376,9 @@ func TestHandlerPropagateWriteHeaderCalls(t *testing.T) {
 			sr := tracetest.NewSpanRecorder()
 			provider := sdktrace.NewTracerProvider()
 			provider.RegisterSpanProcessor(sr)
-			h := otelhttp.NewHandler(
+			h := NewHandler(
 				http.HandlerFunc(tc.handler), "test_handler",
-				otelhttp.WithTracerProvider(provider),
+				WithTracerProvider(provider),
 			)
 
 			recorder := httptest.NewRecorder()
@@ -393,7 +392,7 @@ func TestHandlerPropagateWriteHeaderCalls(t *testing.T) {
 func TestHandlerRequestWithTraceContext(t *testing.T) {
 	rr := httptest.NewRecorder()
 
-	h := otelhttp.NewHandler(
+	h := NewHandler(
 		http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 			_, err := w.Write([]byte("hello world"))
 			assert.NoError(t, err)
@@ -435,7 +434,7 @@ func TestWithPublicEndpoint(t *testing.T) {
 		Remote:  true,
 	}
 	prop := propagation.TraceContext{}
-	h := otelhttp.NewHandler(
+	h := NewHandler(
 		http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 			s := trace.SpanFromContext(r.Context())
 			sc := s.SpanContext()
@@ -445,9 +444,9 @@ func TestWithPublicEndpoint(t *testing.T) {
 			assert.False(t, sc.IsRemote())
 			assert.NotEqual(t, remoteSpan.TraceID, sc.TraceID())
 		}), "test_handler",
-		otelhttp.WithPublicEndpoint(),
-		otelhttp.WithPropagators(prop),
-		otelhttp.WithTracerProvider(provider),
+		WithPublicEndpoint(),
+		WithPropagators(prop),
+		WithTracerProvider(provider),
 	)
 
 	r, err := http.NewRequest(http.MethodGet, "http://localhost/", nil)
@@ -524,14 +523,14 @@ func TestWithPublicEndpointFn(t *testing.T) {
 				sdktrace.WithSpanProcessor(spanRecorder),
 			)
 
-			h := otelhttp.NewHandler(
+			h := NewHandler(
 				http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 					s := trace.SpanFromContext(r.Context())
 					tt.handlerAssert(t, s.SpanContext())
 				}), "test_handler",
-				otelhttp.WithPublicEndpointFn(tt.fn),
-				otelhttp.WithPropagators(prop),
-				otelhttp.WithTracerProvider(provider),
+				WithPublicEndpointFn(tt.fn),
+				WithPropagators(prop),
+				WithTracerProvider(provider),
 			)
 
 			r, err := http.NewRequest(http.MethodGet, "http://localhost/", nil)
@@ -567,11 +566,11 @@ func TestSpanStatus(t *testing.T) {
 			sr := tracetest.NewSpanRecorder()
 			provider := sdktrace.NewTracerProvider()
 			provider.RegisterSpanProcessor(sr)
-			h := otelhttp.NewHandler(
+			h := NewHandler(
 				http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 					w.WriteHeader(tc.httpStatusCode)
 				}), "test_handler",
-				otelhttp.WithTracerProvider(provider),
+				WithTracerProvider(provider),
 			)
 
 			h.ServeHTTP(httptest.NewRecorder(), httptest.NewRequest("GET", "/", nil))
@@ -593,16 +592,16 @@ func TestWithRouteTag(t *testing.T) {
 	metricReader := sdkmetric.NewManualReader()
 	meterProvider := sdkmetric.NewMeterProvider(sdkmetric.WithReader(metricReader))
 
-	h := otelhttp.NewHandler(
-		otelhttp.WithRouteTag(
+	h := NewHandler(
+		WithRouteTag(
 			route,
 			http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 				w.WriteHeader(http.StatusTeapot)
 			}),
 		),
 		"test_handler",
-		otelhttp.WithTracerProvider(tracerProvider),
-		otelhttp.WithMeterProvider(meterProvider),
+		WithTracerProvider(tracerProvider),
+		WithMeterProvider(meterProvider),
 	)
 
 	h.ServeHTTP(httptest.NewRecorder(), httptest.NewRequest(http.MethodGet, "/", nil))
@@ -685,12 +684,12 @@ func TestHandlerWithMetricAttributesFn(t *testing.T) {
 		reader := sdkmetric.NewManualReader()
 		meterProvider := sdkmetric.NewMeterProvider(sdkmetric.WithReader(reader))
 
-		h := otelhttp.NewHandler(
+		h := NewHandler(
 			http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 				w.WriteHeader(http.StatusOK)
 			}), "test_handler",
-			otelhttp.WithMeterProvider(meterProvider),
-			otelhttp.WithMetricAttributesFn(tc.fn),
+			WithMeterProvider(meterProvider),
+			WithMetricAttributesFn(tc.fn),
 		)
 
 		r, err := http.NewRequest(http.MethodGet, "http://localhost/", nil)
@@ -741,13 +740,13 @@ func BenchmarkHandlerServeHTTP(b *testing.B) {
 		},
 		{
 			name: "with the otelhttp handler",
-			handler: otelhttp.NewHandler(
+			handler: NewHandler(
 				http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 					fmt.Fprint(w, "Hello World")
 				}),
 				"test_handler",
-				otelhttp.WithTracerProvider(tp),
-				otelhttp.WithMeterProvider(mp),
+				WithTracerProvider(tp),
+				WithMeterProvider(mp),
 			),
 		},
 	} {
