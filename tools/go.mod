@@ -1,6 +1,8 @@
 module go.opentelemetry.io/contrib/tools
 
-go 1.22.9
+go 1.23
+
+toolchain go1.24.0
 
 exclude github.com/blizzy78/varnamelen v0.6.1
 
@@ -229,5 +231,5 @@ require (
 	gopkg.in/yaml.v3 v3.0.1 // indirect
 	honnef.co/go/tools v0.5.1 // indirect
 	mvdan.cc/gofumpt v0.7.0 // indirect
-	mvdan.cc/unparam v0.0.0-20241226123437-447d509598f3 // indirect
+	mvdan.cc/unparam v0.0.0-20250211232406-0e51248738fc // indirect
 )
