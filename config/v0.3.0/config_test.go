@@ -568,6 +568,12 @@ func TestCreateTLSConfig(t *testing.T) {
 	}
 }
 
+func TestToStringMap(t *testing.T) {
+	require.Equal(t, map[string]string{}, toStringMap([]NameStringValuePair{}))
+	require.Equal(t, map[string]string{}, toStringMap([]NameStringValuePair{{Name: "test"}}))
+	require.Equal(t, map[string]string{}, toStringMap([]NameStringValuePair{{Value: ptr("test")}}))
+}
+
 func ptr[T any](v T) *T {
 	return &v
 }
