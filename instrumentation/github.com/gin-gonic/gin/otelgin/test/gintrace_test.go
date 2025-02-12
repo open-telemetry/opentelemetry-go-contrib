@@ -439,8 +439,8 @@ func TestWithGinFilter(t *testing.T) {
 
 func TestMetrics(t *testing.T) {
 	tests := []struct {
-		name        string
-		attributeFn func(*http.Request) []attribute.KeyValue
+		name                     string
+		metricAttributeExtractor func(*http.Request) []attribute.KeyValue
 	}{
 		{"default", nil},
 		{"with metric attributes callback", func(req *http.Request) []attribute.KeyValue {
@@ -460,7 +460,7 @@ func TestMetrics(t *testing.T) {
 			router := gin.New()
 			router.Use(otelgin.Middleware("foobar",
 				otelgin.WithMeterProvider(meterProvider),
-				otelgin.WithMetricAttributesFn(tt.attributeFn),
+				otelgin.WithMetricAttributeExtractor(tt.metricAttributeExtractor),
 			))
 			router.GET("/user/:id", func(c *gin.Context) {
 				id := c.Param("id")
@@ -490,8 +490,8 @@ func TestMetrics(t *testing.T) {
 				semconv.HTTPStatusCode(200),
 			}
 
-			if tt.attributeFn != nil {
-				attrs = append(attrs, tt.attributeFn(r)...)
+			if tt.metricAttributeExtractor != nil {
+				attrs = append(attrs, tt.metricAttributeExtractor(r)...)
 			}
 
 			metricdatatest.AssertEqual(t, metricdata.Metrics{

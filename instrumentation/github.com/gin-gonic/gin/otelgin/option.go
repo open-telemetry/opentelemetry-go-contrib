@@ -17,13 +17,13 @@ import (
 )
 
 type config struct {
-	TracerProvider     oteltrace.TracerProvider
-	Propagators        propagation.TextMapPropagator
-	Filters            []Filter
-	GinFilters         []GinFilter
-	SpanNameFormatter  SpanNameFormatter
-	MeterProvider      metric.MeterProvider
-	MetricAttributesFn func(*http.Request) []attribute.KeyValue
+	TracerProvider           oteltrace.TracerProvider
+	Propagators              propagation.TextMapPropagator
+	Filters                  []Filter
+	GinFilters               []GinFilter
+	SpanNameFormatter        SpanNameFormatter
+	MeterProvider            metric.MeterProvider
+	MetricAttributeExtractor MetricAttributeExtractor
 }
 
 // Filter is a predicate used to determine whether a given http.request should
@@ -36,6 +36,9 @@ type GinFilter func(*gin.Context) bool
 
 // SpanNameFormatter is used to set span name by http.request.
 type SpanNameFormatter func(r *http.Request) string
+
+// MetricAttributeExtractor is used to extract additional attributes from the http.Request
+type MetricAttributeExtractor func(*http.Request) []attribute.KeyValue
 
 // Option specifies instrumentation configuration options.
 type Option interface {
@@ -104,10 +107,10 @@ func WithMeterProvider(mp metric.MeterProvider) Option {
 	})
 }
 
-// WithMetricAttributesFn specifies a function that will be called on every
-// request to get additional metric attributes.
-func WithMetricAttributesFn(f func(*http.Request) []attribute.KeyValue) Option {
+// WithMetricAttributeExtractor specifies a function that extracts additional attributes from the http.Request
+// and returns them as a slice of attribute.KeyValue.
+func WithMetricAttributeExtractor(f MetricAttributeExtractor) Option {
 	return optionFunc(func(c *config) {
-		c.MetricAttributesFn = f
+		c.MetricAttributeExtractor = f
 	})
 }
