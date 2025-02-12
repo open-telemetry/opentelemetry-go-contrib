@@ -38,6 +38,7 @@ type GinFilter func(*gin.Context) bool
 type SpanNameFormatter func(r *http.Request) string
 
 // MetricAttributeExtractor is used to extract additional attributes from the http.Request
+// and return them as a slice of attribute.KeyValue.
 type MetricAttributeExtractor func(*http.Request) []attribute.KeyValue
 
 // Option specifies instrumentation configuration options.
