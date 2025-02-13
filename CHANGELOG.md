@@ -27,6 +27,7 @@ The next release will require at least [Go 1.23].
 ### Changed
 
 - Add custom attribute to the span after execution of the SDK rather than before in `go.opentelemetry.io/contrib/instrumentation/github.com/aws/aws-sdk-go-v2/otelaws`. (#6543)
+- Refactor HTTP server attributes to use new `semconv` package in `go.opentelemetry.io/contrib/instrumentation/github.com/gin-gonic/gin/otelgin`. (#6778)
 
 ### Deprecated
 
