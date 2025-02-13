@@ -10,12 +10,11 @@ import (
 
 	"github.com/gin-gonic/gin"
 
-	"go.opentelemetry.io/contrib/instrumentation/github.com/gin-gonic/gin/otelgin/internal/semconvutil"
+	"go.opentelemetry.io/contrib/instrumentation/github.com/gin-gonic/gin/otelgin/internal/semconv"
 	"go.opentelemetry.io/otel"
 	"go.opentelemetry.io/otel/attribute"
 	"go.opentelemetry.io/otel/codes"
 	"go.opentelemetry.io/otel/propagation"
-	semconv "go.opentelemetry.io/otel/semconv/v1.20.0"
 	oteltrace "go.opentelemetry.io/otel/trace"
 )
 
@@ -43,6 +42,9 @@ func Middleware(service string, opts ...Option) gin.HandlerFunc {
 	if cfg.Propagators == nil {
 		cfg.Propagators = otel.GetTextMapPropagator()
 	}
+
+	var hs semconv.HTTPServer
+
 	return func(c *gin.Context) {
 		for _, f := range cfg.Filters {
 			if !f(c.Request) {
@@ -67,8 +69,8 @@ func Middleware(service string, opts ...Option) gin.HandlerFunc {
 		}()
 		ctx := cfg.Propagators.Extract(savedCtx, propagation.HeaderCarrier(c.Request.Header))
 		opts := []oteltrace.SpanStartOption{
-			oteltrace.WithAttributes(semconvutil.HTTPServerRequest(service, c.Request)...),
-			oteltrace.WithAttributes(semconv.HTTPRoute(c.FullPath())),
+			oteltrace.WithAttributes(hs.RequestTraceAttrs(service, c.Request)...),
+			oteltrace.WithAttributes(hs.Route(c.FullPath())),
 			oteltrace.WithSpanKind(oteltrace.SpanKindServer),
 		}
 		var spanName string
@@ -90,8 +92,9 @@ func Middleware(service string, opts ...Option) gin.HandlerFunc {
 		c.Next()
 
 		status := c.Writer.Status()
-		span.SetStatus(semconvutil.HTTPServerStatus(status))
+		span.SetStatus(hs.Status(status))
 		if status > 0 {
+			semconv.HTTPStatusCode(status)
 			span.SetAttributes(semconv.HTTPStatusCode(status))
 		}
 		if len(c.Errors) > 0 {
