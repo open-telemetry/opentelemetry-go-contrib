@@ -26,13 +26,13 @@ linters:
     - perfsprint
     - revive
     - staticcheck
-    - tenv
     - testifylint
     - typecheck
     - unconvert
     - unparam
     - unused
     - usestdlibvars
+    - usetesting
 
 issues:
   # Maximum issues count per one linter.
