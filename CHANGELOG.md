@@ -8,6 +8,9 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 
 ## [Unreleased]
 
+This release is the last to support [Go 1.22].
+The next release will require at least [Go 1.23].
+
 > [!WARNING]
 > This is the last version to use Semantic Conventions v1.20.0 for HTTP libraries
 by default. The next version (0.61.0) will default to v1.26.0, and the
@@ -31,6 +34,7 @@ migration](https://github.com/open-telemetry/semantic-conventions/blob/main/docs
 - Add support for configuring `Insecure` field for OTLP exporters in `go.opentelemetry.io/contrib/config`. (#6658)
 - Support for the `OTEL_HTTP_CLIENT_COMPATIBILITY_MODE=http/dup` environment variable in `instrumentation/net/http/httptrace/otelhttptrace` to emit attributes for both the v1.20.0 and v1.26.0 semantic conventions. (#6720)
 - Support for the `OTEL_HTTP_CLIENT_COMPATIBILITY_MODE=http/dup` environment variable in `instrumentation/github.com/emicklei/go-restful/otelrestful` to emit attributes for both the v1.20.0 and v1.26.0 semantic conventions. (#6710)
+- Support [Go 1.24]. (#6765)
 
 ### Changed
 
@@ -45,6 +49,7 @@ migration](https://github.com/open-telemetry/semantic-conventions/blob/main/docs
 - Use `context.Background()` as default context instead of nil in `go.opentelemetry.io/contrib/bridges/otellogr`. (#6527)
 - Convert Prometheus histogram buckets to non-cumulative otel histogram buckets in `go.opentelemetry.io/contrib/bridges/prometheus`. (#6685)
 - Don't start spans that never end for filtered out gRPC stats handler in `go.opentelemetry.io/contrib/instrumentation/google.golang.org/grpc/otelgrpc`. (#6695)
+- Fix a possible nil dereference panic in `NewSDK` of `go.opentelemetry.io/contrib/config/v0.3.0`. (#6752)
 
 <!-- Released section -->
 <!-- Don't change this section unless doing release -->
@@ -1319,6 +1324,7 @@ First official tagged release of `contrib` repository.
 
 <!-- Released section ended -->
 
+[Go 1.24]: https://go.dev/doc/go1.24
 [Go 1.23]: https://go.dev/doc/go1.23
 [Go 1.22]: https://go.dev/doc/go1.22
 [Go 1.21]: https://go.dev/doc/go1.21
