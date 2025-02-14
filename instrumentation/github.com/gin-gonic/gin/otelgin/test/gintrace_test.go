@@ -460,7 +460,7 @@ func TestMetrics(t *testing.T) {
 			router := gin.New()
 			router.Use(otelgin.Middleware("foobar",
 				otelgin.WithMeterProvider(meterProvider),
-				otelgin.WithMetricAttributeExtractor(tt.metricAttributeExtractor),
+				otelgin.WithMetricAttributeFn(tt.metricAttributeExtractor),
 			))
 			router.GET("/user/:id", func(c *gin.Context) {
 				id := c.Param("id")

@@ -117,8 +117,8 @@ func Middleware(service string, opts ...Option) gin.HandlerFunc {
 
 		// Record the server-side attributes.
 		var additionalAttributes []attribute.KeyValue
-		if cfg.MetricAttributeExtractor != nil {
-			additionalAttributes = cfg.MetricAttributeExtractor(c.Request)
+		if cfg.MetricAttributeFn != nil {
+			additionalAttributes = cfg.MetricAttributeFn(c.Request)
 		}
 
 		sc.RecordMetrics(ctx, internalsemconv.ServerMetricData{
