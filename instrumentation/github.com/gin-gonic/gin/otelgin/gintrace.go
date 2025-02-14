@@ -11,8 +11,6 @@ import (
 
 	"github.com/gin-gonic/gin"
 
-	internalsemconv "go.opentelemetry.io/contrib/instrumentation/github.com/gin-gonic/gin/otelgin/internal/semconv"
-	"go.opentelemetry.io/contrib/instrumentation/github.com/gin-gonic/gin/otelgin/internal/semconvutil"
 	"go.opentelemetry.io/contrib/instrumentation/github.com/gin-gonic/gin/otelgin/internal/semconv"
 	"go.opentelemetry.io/otel"
 	"go.opentelemetry.io/otel/attribute"
@@ -49,7 +47,6 @@ func Middleware(service string, opts ...Option) gin.HandlerFunc {
 
 	var hs semconv.HTTPServer
 
-
 	if cfg.MeterProvider == nil {
 		cfg.MeterProvider = otel.GetMeterProvider()
 	}
@@ -57,7 +54,7 @@ func Middleware(service string, opts ...Option) gin.HandlerFunc {
 		ScopeName,
 		metric.WithInstrumentationVersion(Version()),
 	)
-	sc := internalsemconv.NewHTTPServer(meter)
+	sc := semconv.NewHTTPServer(meter)
 	return func(c *gin.Context) {
 		requestStartTime := time.Now()
 
@@ -124,15 +121,15 @@ func Middleware(service string, opts ...Option) gin.HandlerFunc {
 			additionalAttributes = cfg.MetricAttributeFn(c.Request)
 		}
 
-		sc.RecordMetrics(ctx, internalsemconv.ServerMetricData{
+		sc.RecordMetrics(ctx, semconv.ServerMetricData{
 			ServerName:   service,
 			ResponseSize: int64(c.Writer.Size()),
-			MetricAttributes: internalsemconv.MetricAttributes{
+			MetricAttributes: semconv.MetricAttributes{
 				Req:                  c.Request,
 				StatusCode:           status,
 				AdditionalAttributes: additionalAttributes,
 			},
-			MetricData: internalsemconv.MetricData{
+			MetricData: semconv.MetricData{
 				RequestSize: c.Request.ContentLength,
 				ElapsedTime: float64(time.Since(requestStartTime)) / float64(time.Millisecond),
 			},
